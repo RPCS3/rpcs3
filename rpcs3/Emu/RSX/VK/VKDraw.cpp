@@ -1005,40 +1005,6 @@ void VKGSRender::end()
 	load_program_env();
 	m_frame_stats.setup_time += m_profiler.duration();
 
-	for (int binding_attempts = 0; binding_attempts < 3; binding_attempts++)
-	{
-		bool out_of_memory;
-		if (!m_shader_interpreter.is_interpreter(m_program)) [[likely]]
-		{
-			out_of_memory = bind_texture_env();
-		}
-		else
-		{
-			out_of_memory = bind_interpreter_texture_env();
-		}
-
-		// TODO: Replace OOM tracking with ref-counting to simplify the logic
-		if (!out_of_memory)
-		{
-			break;
-		}
-
-		if (!on_vram_exhausted(rsx::problem_severity::fatal))
-		{
-			// It is not possible to free memory. Just use placeholder textures. Can cause graphics glitches but shouldn't crash otherwise
-			break;
-		}
-
-		if (m_samplers_dirty)
-		{
-			// Reload texture env if referenced objects were invalidated during OOO handling.
-			load_texture_env();
-		}
-	}
-
-	m_texture_cache.release_uncached_temporary_subresources();
-	m_frame_stats.textures_upload_time += m_profiler.duration();
-
 	// Apply write memory barriers
 	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil)) ds->write_barrier(*m_current_command_buffer);
 
@@ -1049,6 +1015,37 @@ void VKGSRender::end()
 			surface->write_barrier(*m_current_command_buffer);
 		}
 	}
+
+	m_frame_stats.setup_time += m_profiler.duration();
+
+	// Now bind the shader resources. It is important that this takes place after the barriers so that we don't end up with stale descriptors
+	for (int retry = 0; retry < 3; ++retry)
+	{
+		if (m_samplers_dirty) [[ unlikely ]]
+		{
+			// Reload texture env if referenced objects were invalidated during OOM handling.
+			load_texture_env();
+		}
+
+		const bool out_of_memory = m_shader_interpreter.is_interpreter(m_program)
+			? bind_interpreter_texture_env()
+			: bind_texture_env();
+
+		if (!out_of_memory)
+		{
+			break;
+		}
+
+		// Handle OOM
+		if (!on_vram_exhausted(rsx::problem_severity::fatal))
+		{
+			// It is not possible to free memory. Just use placeholder textures. Can cause graphics glitches but shouldn't crash otherwise
+			break;
+		}
+	}
+
+	m_texture_cache.release_uncached_temporary_subresources();
+	m_frame_stats.textures_upload_time += m_profiler.duration();
 
 	// Final heap check...
 	check_heap_status(VK_HEAP_CHECK_VERTEX_STORAGE | VK_HEAP_CHECK_VERTEX_LAYOUT_STORAGE);
