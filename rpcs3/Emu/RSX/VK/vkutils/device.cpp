@@ -686,13 +686,9 @@ namespace vk
 			m_allocator = std::make_unique<vk::mem_allocator_vma>(dev, pdev);
 		}
 
-		if (pgpu->props.deviceID == 0x13c2)
-		{
-			// GTX970 workaround/hack
-			// The driver reports a full working 4GB of memory which is incorrect.
-			// Limit to ~2.5GB to allow vma to avoid running over the headroom of 0.5G.
-			memory_map.device_local_total_bytes = 2560ULL * 0x100000ULL;
-		}
+		// Useful for debugging different VRAM configurations
+		const u64 vram_allocation_limit = g_cfg.video.vk.vram_allocation_limit * 0x100000ull;
+		memory_map.device_local_total_bytes = std::min(memory_map.device_local_total_bytes, vram_allocation_limit);
 	}
 
 	void render_device::destroy()

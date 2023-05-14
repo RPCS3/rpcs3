@@ -162,6 +162,23 @@ namespace vk
 		allocatorInfo.physicalDevice = pdev;
 		allocatorInfo.device = dev;
 
+		std::vector<VkDeviceSize> heap_limits;
+		const auto vram_allocation_limit = g_cfg.video.vk.vram_allocation_limit * 0x100000ull;
+		if (vram_allocation_limit < g_render_device->get_memory_mapping().device_local_total_bytes)
+		{
+			VkPhysicalDeviceMemoryProperties memory_properties;
+			vkGetPhysicalDeviceMemoryProperties(pdev, &memory_properties);
+			for (int i = 0; i < memory_properties.memoryHeapCount; ++i)
+			{
+				const u64 max_sz = (memory_properties.memoryHeaps[i].flags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+					? vram_allocation_limit
+					: VK_WHOLE_SIZE;
+
+				heap_limits.push_back(max_sz);
+			}
+			allocatorInfo.pHeapSizeLimit = heap_limits.data();
+		}
+
 		CHECK_RESULT(vmaCreateAllocator(&allocatorInfo, &m_allocator));
 
 		// Allow fastest possible allocation on start
