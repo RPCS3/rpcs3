@@ -1141,23 +1141,30 @@ bool VKGSRender::on_vram_exhausted(rsx::problem_severity severity)
 	}
 
 	const bool any_cache_relieved = (texture_cache_relieved || surface_cache_relieved);
-	if (severity <= rsx::problem_severity::moderate)
+	if (severity < rsx::problem_severity::fatal)
 	{
 		return any_cache_relieved;
 	}
 
-	ensure(severity >= rsx::problem_severity::fatal);
 	if (surface_cache_relieved && !m_samplers_dirty)
 	{
 		// If surface cache was modified destructively, then we must reload samplers touching the surface cache.
 		bool invalidate_samplers = false;
 		auto scan_array = [&](const auto& texture_array, const auto& sampler_states)
 		{
-			for (auto i = 0ull; i < texture_array.size() && !invalidate_samplers; ++i)
+			if (invalidate_samplers)
 			{
-				if (texture_array[i].enabled() && sampler_states[i])
+				return;
+			}
+
+			for (auto i = 0ull; i < texture_array.size(); ++i)
+			{
+				if (texture_array[i].enabled() &&
+					sampler_states[i] &&
+					sampler_states[i]->upload_context == rsx::texture_upload_context::framebuffer_storage)
 				{
-					invalidate_samplers = (sampler_states[i]->upload_context == rsx::texture_upload_context::framebuffer_storage);
+					invalidate_samplers = true;
+					break;
 				}
 			}
 		};
