@@ -1259,11 +1259,21 @@ namespace vk
 		}
 
 		// Nuke temporary resources. They will still be visible to the GPU.
+		auto gc = vk::get_resource_manager();
 		any_released |= !m_cached_images.empty();
+		for (auto& img : m_cached_images)
+		{
+			gc->dispose(img.data);
+		}
 		m_cached_images.clear();
 		m_cached_memory_size = 0;
 
 		any_released |= !m_temporary_subresource_cache.empty();
+		for (auto& e : m_temporary_subresource_cache)
+		{
+			ensure(e.second.second);
+			release_temporary_subresource(e.second.second);
+		}
 		m_temporary_subresource_cache.clear();
 
 		return any_released;
