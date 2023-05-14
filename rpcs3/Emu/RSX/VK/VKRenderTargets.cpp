@@ -219,6 +219,7 @@ namespace vk
 			case rsx::problem_severity::severe:
 			case rsx::problem_severity::fatal:
 				// We're almost dead anyway. Remove forcefully.
+				vk::get_resource_manager()->dispose(rtt);
 				return true;
 			default:
 				fmt::throw_exception("Unreachable");
