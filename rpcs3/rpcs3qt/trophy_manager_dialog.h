@@ -80,6 +80,8 @@ private:
 	void closeEvent(QCloseEvent *event) override;
 	bool eventFilter(QObject *object, QEvent *event) override;
 
+	static QDateTime TickToDateTime(u64 tick);
+
 	std::shared_ptr<gui_settings> m_gui_settings;
 
 	std::vector<std::unique_ptr<GameTrophiesData>> m_trophies_db; //! Holds all the trophy information.
