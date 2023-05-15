@@ -8865,11 +8865,10 @@ public:
 			register_intrinsic("spu_frest", [&](llvm::CallInst* ci)
 			{
 				const auto a = value<f32[4]>(ci->getOperand(0));
-				const auto acc_result = fsplat<f32[4]>(1.0) / a;
-				// Determines accuracy penalty, frest result is always slightly closer to 0 than actual value and provides ~12 bits accuracy
-				const auto acc_penalty = fsplat<f32[4]>(0x1p-13f) * acc_result;
+				// Gives accuracy penalty, frest result is within one newton-raphson iteration for accuracy
+				const auto approx_result = fsplat<f32[4]>(0.999875069f) / a;
 				// Zeroes the last 11 bytes of the mantissa so FI calculations end up correct if needed
-				return bitcast<f32[4]>(bitcast<u32[4]>(acc_result - acc_penalty) & splat<u32[4]>(0xFFFFF800));
+				return bitcast<f32[4]>(bitcast<u32[4]>(approx_result) & splat<u32[4]>(0xFFFFF800));
 			});
 		}
 		else
@@ -8905,11 +8904,10 @@ public:
 			register_intrinsic("spu_frsqest", [&](llvm::CallInst* ci)
 			{
 				const auto a = value<f32[4]>(ci->getOperand(0));
-				const auto acc_result = fsplat<f32[4]>(1.0) / fsqrt(fabs(a));
-				// Determines accuracy penalty, frsqest result is always slightly closer to 0 than actual value and provides ~12 bits accuracy
-				const auto acc_penalty = fsplat<f32[4]>(0x1p-13f) * acc_result;
+				// Gives accuracy penalty, frsqest result is within one newton-raphson iteration for accuracy
+				const auto approx_result = fsplat<f32[4]>(0.999763668f) / fsqrt(fabs(a));
 				// Zeroes the last 11 bytes of the mantissa so FI calculations end up correct if needed
-				return bitcast<f32[4]>(bitcast<u32[4]>(acc_result - acc_penalty) & splat<u32[4]>(0xFFFFF800));
+				return bitcast<f32[4]>(bitcast<u32[4]>(approx_result) & splat<u32[4]>(0xFFFFF800));
 			});
 		}
 		else
@@ -9648,19 +9646,17 @@ public:
 			register_intrinsic("spu_re", [&](llvm::CallInst* ci)
 			{
 				const auto a = value<f32[4]>(ci->getOperand(0));
-				const auto acc_result = fsplat<f32[4]>(1.0) / a;
-				// Determines accuracy penalty, frest result is always slightly closer to 0 than actual value and provides ~12 bits accuracy
-				const auto acc_penalty = fsplat<f32[4]>(0x1p-13f) * acc_result;
-				return acc_result - acc_penalty;
+				// Gives accuracy penalty, frest result is within one newton-raphson iteration for accuracy
+				const auto approx_result = fsplat<f32[4]>(0.999875069f) / a;
+				return approx_result;
 			});
 
 			register_intrinsic("spu_rsqrte", [&](llvm::CallInst* ci)
 			{
 				const auto a = value<f32[4]>(ci->getOperand(0));
-				const auto acc_result = fsplat<f32[4]>(1.0) / fsqrt(fabs(a));
-				// Determines accuracy penalty, frsqest result is always slightly closer to 0 than actual value and provides ~12 bits accuracy
-				const auto acc_penalty = fsplat<f32[4]>(0x1p-13f) * acc_result;
-				return acc_result - acc_penalty;
+				// Gives accuracy penalty, frsqest result is within one newton-raphson iteration for accuracy
+				const auto approx_result = fsplat<f32[4]>(0.999763668f) / fsqrt(fabs(a));
+				return approx_result;
 			});
 		}
 		else
