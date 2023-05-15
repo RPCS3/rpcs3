@@ -10,6 +10,9 @@
 #include "util/sysinfo.hpp"
 #include "util/asm.hpp"
 
+// FIXME: namespace pollution
+#include "../VKResourceManager.h"
+
 namespace vk
 {
 	fence::fence(VkDevice dev)
@@ -167,6 +170,135 @@ namespace vk
 		{
 			return (*m_value == 0xCAFEBABE) ? VK_EVENT_RESET : VK_EVENT_SET;
 		}
+	}
+
+	device_marker_pool::device_marker_pool(const vk::render_device& dev, u32 count)
+		: pdev(&dev), m_count(count)
+	{}
+
+	std::tuple<VkBuffer, u64, volatile u32*> device_marker_pool::allocate()
+	{
+		if (!m_buffer || m_offset >= m_count)
+		{
+			create_impl();
+		}
+
+		const auto out_offset = m_offset;
+		m_offset ++;
+		return { m_buffer->value, out_offset * 4, m_mapped + out_offset };
+	}
+
+	void device_marker_pool::create_impl()
+	{
+		if (m_buffer)
+		{
+			m_buffer->unmap();
+			vk::get_resource_manager()->dispose(m_buffer);
+		}
+
+		m_buffer = std::make_unique<buffer>
+		(
+			*pdev,
+			m_count * 4,
+			pdev->get_memory_mapping().host_visible_coherent,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+			VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+			0,
+			VMM_ALLOCATION_POOL_SYSTEM
+		);
+
+		m_mapped = reinterpret_cast<volatile u32*>(m_buffer->map(0, VK_WHOLE_SIZE));
+		m_offset = 0;
+	}
+
+	device_debug_marker::device_debug_marker(device_marker_pool& pool, std::string message)
+		: m_device(*pool.pdev), m_message(std::move(message))
+	{
+		std::tie(m_buffer, m_buffer_offset, m_value) = pool.allocate();
+		*m_value = 0xCAFEBABE;
+	}
+
+	device_debug_marker::~device_debug_marker()
+	{
+		if (!m_printed)
+		{
+			dump();
+		}
+
+		m_value = nullptr;
+	}
+
+	void device_debug_marker::signal(const command_buffer& cmd, VkPipelineStageFlags stages, VkAccessFlags access)
+	{
+		insert_global_memory_barrier(cmd, stages, VK_PIPELINE_STAGE_TRANSFER_BIT, access, VK_ACCESS_TRANSFER_WRITE_BIT);
+		vkCmdFillBuffer(cmd, m_buffer, m_buffer_offset, 4, 0xDEADBEEF);
+	}
+
+	void device_debug_marker::dump()
+	{
+		if (*m_value == 0xCAFEBABE)
+		{
+			rsx_log.error("DEBUG MARKER NOT REACHED: %s", m_message);
+		}
+
+		m_printed = true;
+	}
+
+	void device_debug_marker::dump() const
+	{
+		if (*m_value == 0xCAFEBABE)
+		{
+			rsx_log.error("DEBUG MARKER NOT REACHED: %s", m_message);
+		}
+		else
+		{
+			rsx_log.error("DEBUG MARKER: %s", m_message);
+		}
+	}
+
+	// FIXME
+	static std::unique_ptr<device_marker_pool> g_device_marker_pool;
+
+	device_marker_pool& get_shared_marker_pool(const vk::render_device& dev)
+	{
+		if (!g_device_marker_pool)
+		{
+			g_device_marker_pool = std::make_unique<device_marker_pool>(dev, 65536);
+		}
+		return *g_device_marker_pool;
+	}
+
+	void device_debug_marker::insert(
+		const vk::render_device& dev,
+		const vk::command_buffer& cmd,
+		std::string message,
+		VkPipelineStageFlags stages,
+		VkAccessFlags access)
+	{
+		auto result = std::make_unique<device_debug_marker>(get_shared_marker_pool(dev), message);
+		result->signal(cmd, stages, access);
+		vk::get_resource_manager()->dispose(result);
+	}
+
+	debug_marker_scope::debug_marker_scope(const vk::command_buffer& cmd, const std::string& message)
+		: dev(&cmd.get_command_pool().get_owner()), cb(&cmd), message(message)
+	{
+		vk::device_debug_marker::insert(
+			*dev,
+			*cb,
+			fmt::format("0x%x: Enter %s", rsx::get_shared_tag(), message)
+		);
+	}
+
+	debug_marker_scope::~debug_marker_scope()
+	{
+		ensure(cb && cb->is_recording());
+
+		vk::device_debug_marker::insert(
+			*dev,
+			*cb,
+			fmt::format("0x%x: Exit %s", rsx::get_shared_tag(), message)
+		);
 	}
 
 	VkResult wait_for_fence(fence* pFence, u64 timeout)

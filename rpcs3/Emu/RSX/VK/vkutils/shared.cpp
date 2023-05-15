@@ -7,6 +7,8 @@
 
 namespace vk
 {
+	extern void print_debug_markers();
+
 	void die_with_error(VkResult error_code, std::string message,
 		const char* file,
 		const char* func,
@@ -103,6 +105,8 @@ namespace vk
 		{
 		default:
 		case 0:
+			print_debug_markers();
+
 			if (!message.empty()) message += "\n\n";
 			fmt::throw_exception("%sAssertion Failed! Vulkan API call failed with unrecoverable error: %s%s", message, error_message, src_loc{line, col, file, func});
 		case 1:
