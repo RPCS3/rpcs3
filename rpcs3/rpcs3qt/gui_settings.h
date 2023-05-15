@@ -47,6 +47,7 @@ namespace gui
 		is_unlocked = 4,
 		id = 5,
 		platinum_link = 6,
+		time_unlocked = 7,
 
 		count
 	};
