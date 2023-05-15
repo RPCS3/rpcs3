@@ -98,6 +98,14 @@ namespace vk
 		g_last_completed_event = std::max(event_id, g_last_completed_event.load());
 	}
 
+	void print_debug_markers()
+	{
+		for (const auto marker : g_resource_manager.gather_debug_markers())
+		{
+			marker->dump();
+		}
+	}
+
 	static constexpr f32 size_in_GiB(u64 size)
 	{
 		return size / (1024.f * 1024.f * 1024.f);

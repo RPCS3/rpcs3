@@ -87,6 +87,60 @@ namespace vk
 		operator VkSemaphore() const;
 	};
 
+	class device_marker_pool
+	{
+		std::unique_ptr<buffer> m_buffer;
+		volatile u32* m_mapped = nullptr;
+		u64 m_offset = 0;
+		u32 m_count = 0;
+
+		void create_impl();
+
+	public:
+		device_marker_pool(const vk::render_device& dev, u32 count);
+		std::tuple<VkBuffer, u64, volatile u32*> allocate();
+
+		const vk::render_device* pdev = nullptr;
+	};
+
+	class device_debug_marker
+	{
+		std::string m_message;
+		bool m_printed = false;
+
+		VkDevice m_device = VK_NULL_HANDLE;
+		VkBuffer m_buffer = VK_NULL_HANDLE;
+		u64 m_buffer_offset = 0;
+		volatile u32* m_value = nullptr;
+
+	public:
+		device_debug_marker(device_marker_pool& pool, std::string message);
+		~device_debug_marker();
+		device_debug_marker(const event&) = delete;
+
+		void signal(const command_buffer& cmd, VkPipelineStageFlags stages, VkAccessFlags access);
+		void dump();
+		void dump() const;
+
+		static void insert(
+			const vk::render_device& dev,
+			const vk::command_buffer& cmd,
+			std::string message,
+			VkPipelineStageFlags stages = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+			VkAccessFlags access = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT);
+	};
+
+	class debug_marker_scope
+	{
+		const vk::render_device* dev;
+		const vk::command_buffer* cb;
+		std::string message;
+
+	public:
+		debug_marker_scope(const vk::command_buffer& cmd, const std::string& text);
+		~debug_marker_scope();
+	};
+
 	VkResult wait_for_fence(fence* pFence, u64 timeout = 0ull);
 	VkResult wait_for_event(event* pEvent, u64 timeout = 0ull);
 }
