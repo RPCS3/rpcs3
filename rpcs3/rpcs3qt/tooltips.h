@@ -208,6 +208,7 @@ public:
 		const QString discord_state      = tr("Tell your friends what you are doing.");
 		const QString custom_colors      = tr("Prioritize custom user interface colors over properties set in stylesheet.");
 		const QString uuid               = tr("This is the ID used for hardware statistics.\nIt should only be reset if you change your hardware configuration or if you copied RPCS3 to another PC.");
+		const QString gamepad_input      = tr("Allows the user to navigate the user interface with some gamepads.");
 
 		// input
 

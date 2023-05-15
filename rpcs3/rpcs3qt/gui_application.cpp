@@ -107,6 +107,10 @@ bool gui_application::Init()
 		return false;
 	}
 
+	m_gamepad_key_navigation = new QGamepadKeyNavigation(this);
+	connect(QGamepadManager::instance(), &QGamepadManager::gamepadAxisEvent, this, &gui_application::OnGamepadAxisChanged);
+	OnGamepadInputChanged();
+
 	// The user might be set by cli arg. If not, set another user.
 	if (m_active_user.empty())
 	{
@@ -265,6 +269,7 @@ QStringList gui_application::GetAvailableLanguageCodes()
 
 void gui_application::InitializeConnects()
 {
+	connect(&m_gamepad_timer, &QTimer::timeout, this, &gui_application::UpdateMouseCursor);
 	connect(&m_timer, &QTimer::timeout, this, &gui_application::UpdatePlaytime);
 	connect(this, &gui_application::OnEmulatorRun, this, &gui_application::StartPlaytime);
 	connect(this, &gui_application::OnEmulatorStop, this, &gui_application::StopPlaytime);
@@ -276,6 +281,7 @@ void gui_application::InitializeConnects()
 	{
 		connect(m_main_window, &main_window::RequestLanguageChange, this, &gui_application::LoadLanguage);
 		connect(m_main_window, &main_window::RequestGlobalStylesheetChange, this, &gui_application::OnChangeStyleSheetRequest);
+		connect(m_main_window, &main_window::RequestGamepadSettingsChange, this, &gui_application::OnGamepadInputChanged);
 		connect(m_main_window, &main_window::NotifyEmuSettingsChange, this, [this](){ OnEmuSettingsChange(); });
 
 		connect(this, &gui_application::OnEmulatorRun, m_main_window, &main_window::OnEmuRun);
@@ -787,6 +793,92 @@ void gui_application::OnChangeStyleSheetRequest()
 	if (m_main_window)
 	{
 		m_main_window->RepaintGui();
+	}
+}
+
+void gui_application::OnGamepadAxisChanged(int deviceId, QGamepadManager::GamepadAxis axis, double value)
+{
+	Q_UNUSED(deviceId);
+
+	if (!m_gamepad_navigation_enabled)
+	{
+		m_gamepad_axis_x = 0.0;
+		m_gamepad_axis_y = 0.0;
+		return;
+	}
+
+	switch(axis)
+	{
+	case QGamepadManager::GamepadAxis::AxisLeftX:
+	{
+		m_gamepad_axis_x = value;
+		break;
+	}
+	case QGamepadManager::GamepadAxis::AxisLeftY:
+	{
+		m_gamepad_axis_y = value;
+		break;
+	}
+	case QGamepadManager::GamepadAxis::AxisRightX:
+	case QGamepadManager::GamepadAxis::AxisRightY:
+	case QGamepadManager::GamepadAxis::AxisInvalid:
+	default:
+	{
+		return;
+	}
+	}
+}
+
+void gui_application::UpdateMouseCursor()
+{
+	if (!m_gamepad_navigation_enabled || !m_gamepad_axis_x || !m_gamepad_axis_y)
+	{
+		return;
+	}
+
+	const QPoint pos = QCursor::pos();
+	QCursor::setPos(pos + QPoint(m_gamepad_axis_x * m_gamepad_axis_speed, m_gamepad_axis_y * m_gamepad_axis_speed));
+}
+
+void gui_application::OnGamepadInputChanged()
+{
+	const auto setting_to_key = [this](const gui_save& setting) -> Qt::Key
+	{
+		const QKeySequence sequence = QKeySequence::fromString(m_gui_settings->GetValue(setting).toString());
+		return sequence.count() > 0 ? static_cast<Qt::Key>(sequence[0]) : Qt::Key::Key_unknown;
+	};
+
+	if (m_gamepad_key_navigation && m_gui_settings)
+	{
+		m_gamepad_axis_speed = m_gui_settings->GetValue(gui::i_gamepad_input_axis_speed).toDouble();
+		m_gamepad_navigation_enabled = m_gui_settings->GetValue(gui::i_gamepad_input_enabled).toBool();
+		m_gamepad_key_navigation->setActive(m_gamepad_navigation_enabled);
+		m_gamepad_key_navigation->setButtonAKey(setting_to_key(gui::i_gamepad_input_Key_A));
+		m_gamepad_key_navigation->setButtonBKey(setting_to_key(gui::i_gamepad_input_Key_B));
+		m_gamepad_key_navigation->setButtonXKey(setting_to_key(gui::i_gamepad_input_Key_X));
+		m_gamepad_key_navigation->setButtonYKey(setting_to_key(gui::i_gamepad_input_Key_Y));
+		m_gamepad_key_navigation->setButtonL1Key(setting_to_key(gui::i_gamepad_input_Key_L1));
+		m_gamepad_key_navigation->setButtonL2Key(setting_to_key(gui::i_gamepad_input_Key_L2));
+		m_gamepad_key_navigation->setButtonL3Key(setting_to_key(gui::i_gamepad_input_Key_L3));
+		m_gamepad_key_navigation->setButtonR1Key(setting_to_key(gui::i_gamepad_input_Key_R1));
+		m_gamepad_key_navigation->setButtonR2Key(setting_to_key(gui::i_gamepad_input_Key_R2));
+		m_gamepad_key_navigation->setButtonR3Key(setting_to_key(gui::i_gamepad_input_Key_R3));
+		m_gamepad_key_navigation->setButtonGuideKey(setting_to_key(gui::i_gamepad_input_Key_Guide));
+		m_gamepad_key_navigation->setButtonSelectKey(setting_to_key(gui::i_gamepad_input_Key_Select));
+		m_gamepad_key_navigation->setButtonStartKey(setting_to_key(gui::i_gamepad_input_Key_Start));
+		m_gamepad_key_navigation->setDownKey(setting_to_key(gui::i_gamepad_input_Key_Down));
+		m_gamepad_key_navigation->setLeftKey(setting_to_key(gui::i_gamepad_input_Key_Left));
+		m_gamepad_key_navigation->setRightKey(setting_to_key(gui::i_gamepad_input_Key_Right));
+		m_gamepad_key_navigation->setUpKey(setting_to_key(gui::i_gamepad_input_Key_Up));
+	}
+
+	if (m_gamepad_navigation_enabled)
+	{
+		m_gamepad_timer.start(16);
+	}
+	else
+	{
+		m_gamepad_timer.stop();
 	}
 }
 

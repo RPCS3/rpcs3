@@ -88,6 +88,7 @@ namespace gui
 	const QString DefaultStylesheet = "default";
 	const QString NoStylesheet = "none";
 
+	const QString input        = "input";
 	const QString main_window  = "main_window";
 	const QString game_list    = "GameList";
 	const QString logger       = "Logger";
@@ -264,6 +265,26 @@ namespace gui
 	const gui_save lv_log_levels      = gui_save(log_viewer, "log_levels",      0b11111111u);
 
 	const gui_save sc_shortcuts = gui_save(sc, "shortcuts", QVariantMap());
+
+	const gui_save i_gamepad_input_enabled    = gui_save(input, "gamepad_input_enabled",    false);
+	const gui_save i_gamepad_input_axis_speed = gui_save(input, "gamepad_input_axis_speed", 10.0);
+	const gui_save i_gamepad_input_Key_A      = gui_save(input, "gamepad_input_Key_A",      "Space");
+	const gui_save i_gamepad_input_Key_B      = gui_save(input, "gamepad_input_Key_B",      "Escape");
+	const gui_save i_gamepad_input_Key_X      = gui_save(input, "gamepad_input_Key_X",      "Tab");
+	const gui_save i_gamepad_input_Key_Y      = gui_save(input, "gamepad_input_Key_Y",      "Tab");
+	const gui_save i_gamepad_input_Key_L1     = gui_save(input, "gamepad_input_Key_L1",     "Home");
+	const gui_save i_gamepad_input_Key_L2     = gui_save(input, "gamepad_input_Key_L2",     "PageUp");
+	const gui_save i_gamepad_input_Key_L3     = gui_save(input, "gamepad_input_Key_L3",     "");
+	const gui_save i_gamepad_input_Key_R1     = gui_save(input, "gamepad_input_Key_R1",     "End");
+	const gui_save i_gamepad_input_Key_R2     = gui_save(input, "gamepad_input_Key_R2",     "PageDown");
+	const gui_save i_gamepad_input_Key_R3     = gui_save(input, "gamepad_input_Key_R3",     "");
+	const gui_save i_gamepad_input_Key_Guide  = gui_save(input, "gamepad_input_Key_Guide",  "");
+	const gui_save i_gamepad_input_Key_Select = gui_save(input, "gamepad_input_Key_Select", "Escape");
+	const gui_save i_gamepad_input_Key_Start  = gui_save(input, "gamepad_input_Key_Start",  "Return");
+	const gui_save i_gamepad_input_Key_Down   = gui_save(input, "gamepad_input_Key_Down",   "Down");
+	const gui_save i_gamepad_input_Key_Left   = gui_save(input, "gamepad_input_Key_Left",   "Left");
+	const gui_save i_gamepad_input_Key_Right  = gui_save(input, "gamepad_input_Key_Right",  "Right");
+	const gui_save i_gamepad_input_Key_Up     = gui_save(input, "gamepad_input_Key_Up",     "Up");
 }
 
 /** Class for GUI settings..

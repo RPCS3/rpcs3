@@ -94,6 +94,7 @@ public:
 Q_SIGNALS:
 	void RequestLanguageChange(const QString& language);
 	void RequestGlobalStylesheetChange();
+	void RequestGamepadSettingsChange();
 	void RequestTrophyManagerRepaint();
 	void NotifyEmuSettingsChange();
 	void NotifyWindowCloseEvent(bool closed);

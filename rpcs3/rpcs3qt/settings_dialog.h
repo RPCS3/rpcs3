@@ -25,6 +25,7 @@ public:
 	~settings_dialog();
 	int exec() override;
 Q_SIGNALS:
+	void GamepadSettingsRequest();
 	void GuiStylesheetRequest();
 	void GuiRepaintRequest();
 	void EmuSettingsApplied();

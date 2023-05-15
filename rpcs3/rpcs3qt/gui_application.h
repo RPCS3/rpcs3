@@ -8,6 +8,8 @@
 #include <QTimer>
 #include <QTranslator>
 #include <QSoundEffect>
+#include <QGamepadManager>
+#include <QGamepadKeyNavigation>
 
 #include "main_application.h"
 
@@ -81,6 +83,13 @@ private:
 	void UpdatePlaytime();
 	void StopPlaytime();
 
+	QTimer m_gamepad_timer;
+	QGamepadKeyNavigation* m_gamepad_key_navigation = nullptr;
+	bool m_gamepad_navigation_enabled = false;
+	double m_gamepad_axis_x = 0.0;
+	double m_gamepad_axis_y = 0.0;
+	double m_gamepad_axis_speed = 1.0;
+
 	QTranslator m_translator;
 	QTranslator m_translator_qt;
 	QString m_language_code;
@@ -105,10 +114,6 @@ private:
 	typename Emulator::stop_counter_t m_emu_focus_out_emulation_id{};
 	bool m_is_pause_on_focus_loss_active = false;
 
-private Q_SLOTS:
-	void OnChangeStyleSheetRequest();
-	void OnAppStateChanged(Qt::ApplicationState state);
-
 Q_SIGNALS:
 	void OnEmulatorRun(bool start_playtime);
 	void OnEmulatorPause();
@@ -121,5 +126,10 @@ Q_SIGNALS:
 	void RequestCallFromMainThread(std::function<void()> func, atomic_t<u32>* wake_up);
 
 private Q_SLOTS:
+	void UpdateMouseCursor();
+	void OnAppStateChanged(Qt::ApplicationState state);
+	void OnGamepadAxisChanged(int deviceId, QGamepadManager::GamepadAxis axis, double value);
+	void OnGamepadInputChanged();
+	void OnChangeStyleSheetRequest();
 	static void CallFromMainThread(const std::function<void()>& func, atomic_t<u32>* wake_up);
 };

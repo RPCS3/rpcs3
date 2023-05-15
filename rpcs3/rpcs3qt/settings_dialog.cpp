@@ -2106,6 +2106,15 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			m_gui_settings->SetValue(gui::l_limit_tty, ui->spinbox_tty_limit->value());
 		});
 
+		// Gamepad Input
+		SubscribeTooltip(ui->gb_gui_input, tooltips.settings.gamepad_input);
+		ui->cb_gui_gamepad_input->setChecked(m_gui_settings->GetValue(gui::i_gamepad_input_enabled).toBool());
+		connect(ui->cb_gui_gamepad_input, &QCheckBox::toggled, [this](bool checked)
+		{
+			m_gui_settings->SetValue(gui::i_gamepad_input_enabled, checked);
+			Q_EMIT GamepadSettingsRequest();
+		});
+
 		// colorize preview icons
 		const auto add_colored_icon = [this](QPushButton *button, const QColor& color, const QIcon& icon = QIcon(), const QColor& iconColor = QColor())
 		{
