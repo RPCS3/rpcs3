@@ -412,6 +412,7 @@ void log_frame::LoadSettings()
 	m_stack_log = m_gui_settings->GetValue(gui::l_stack).toBool();
 	m_stack_tty = m_gui_settings->GetValue(gui::l_stack_tty).toBool();
 	m_ansi_tty = m_gui_settings->GetValue(gui::l_ansi_code).toBool();
+	g_log_all_errors = !m_gui_settings->GetValue(gui::l_stack_err).toBool();
 	m_stack_act_log->setChecked(m_stack_log);
 	m_stack_act_tty->setChecked(m_stack_tty);
 	m_ansi_act_tty->setChecked(m_ansi_tty);

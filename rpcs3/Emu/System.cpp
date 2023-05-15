@@ -774,7 +774,7 @@ void Emulator::SetForceBoot(bool force_boot)
 	m_force_boot = force_boot;
 }
 
-game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch)
+game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch, usz recursion_count)
 {
 	m_ar.reset();
 
@@ -1707,14 +1707,27 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch)
 		}
 
 		// Check game updates
-		const std::string hdd0_boot = hdd0_game + m_title_id + "/USRDIR/EBOOT.BIN";
-
-		if (!m_ar && disc.empty() && !bdvd_dir.empty() && !m_title_id.empty() && resolved_path == GetCallbacks().resolve_path(vfs::get("/dev_bdvd/PS3_GAME/USRDIR/EBOOT.BIN")) && resolved_path != GetCallbacks().resolve_path(hdd0_boot) && fs::is_file(hdd0_boot))
+		if (const std::string hdd0_boot = hdd0_game + m_title_id + "/USRDIR/EBOOT.BIN"; !m_ar
+				&& recursion_count == 0 && disc.empty() && !bdvd_dir.empty() && !m_title_id.empty()
+				&& resolved_path == GetCallbacks().resolve_path(vfs::get("/dev_bdvd/PS3_GAME/USRDIR/EBOOT.BIN"))
+				&& resolved_path != GetCallbacks().resolve_path(hdd0_boot) && fs::is_file(hdd0_boot))
 		{
-			// Booting game update
-			sys_log.success("Updates found at /dev_hdd0/game/%s/", m_title_id);
-			m_path = hdd0_boot;
-			return Load(m_title_id, true);
+			if (const psf::registry update_sfo = psf::load(hdd0_game + m_title_id + "/PARAM.SFO").sfo;
+				psf::get_string(update_sfo, "TITLE_ID") == m_title_id && psf::get_string(update_sfo, "CATEGORY") == "GD")
+			{
+				// Booting game update
+				sys_log.success("Updates found at /dev_hdd0/game/%s/", m_title_id);
+				m_path = hdd0_boot;
+
+				const game_boot_result boot_result = Load(m_title_id, true, recursion_count + 1);
+				if (boot_result == game_boot_result::no_errors)
+				{
+					return game_boot_result::no_errors;
+				}
+
+				sys_log.error("Failed to boot update at \"%s\", game update may be corrupted! Consider uninstalling or reinstalling it. (reason: %s)", m_path, boot_result);
+				return boot_result;
+			}
 		}
 
 		if (!disc_psf_obj.empty())
