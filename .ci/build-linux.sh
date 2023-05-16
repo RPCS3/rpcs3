@@ -40,6 +40,7 @@ cmake ..                                               \
     -DCMAKE_RANLIB="$RANLIB"                           \
     -DUSE_SYSTEM_CURL=ON                               \
     -DUSE_SDL=ON                                       \
+    -DUSE_SYSTEM_FFMPEG=OFF                            \
     -DOpenGL_GL_PREFERENCE=LEGACY                      \
     -DLLVM_DIR=/opt/llvm/lib/cmake/llvm                \
     -DSTATIC_LINK_LLVM=ON                              \
