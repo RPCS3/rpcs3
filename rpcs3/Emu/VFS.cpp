@@ -154,7 +154,7 @@ bool vfs::unmount(std::string_view vpath)
 	std::lock_guard lock(table.mutex);
 
 	// Search entry recursively and remove it (including all children)
-	std::function<void(vfs_directory&, int)> unmount_children;
+	std::function<void(vfs_directory&, usz)> unmount_children;
 	unmount_children = [&entry_list, &unmount_children](vfs_directory& dir, usz depth) -> void
 	{
 		if (depth >= entry_list.size())
