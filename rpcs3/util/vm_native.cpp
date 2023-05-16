@@ -82,7 +82,7 @@ namespace utils
 
 #if defined(MFD_HUGETLB) && defined(MFD_HUGE_2MB)
 	constexpr int c_mfd_huge_2mb = MFD_HUGETLB | MFD_HUGE_2MB;
-#else
+#elif defined(__linux__) || defined(__FreeBSD__)
 	constexpr int c_mfd_huge_2mb = 0;
 #endif
 
