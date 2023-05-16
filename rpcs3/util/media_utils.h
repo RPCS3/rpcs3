@@ -14,6 +14,16 @@ namespace utils
 {
 	std::string av_error_to_string(int error);
 
+	struct ffmpeg_codec
+	{
+		int codec_id{};
+		std::string name;
+		std::string long_name;
+	};
+
+	std::vector<ffmpeg_codec> list_ffmpeg_decoders();
+	std::vector<ffmpeg_codec> list_ffmpeg_encoders();
+
 	struct media_info
 	{
 		std::string path;
