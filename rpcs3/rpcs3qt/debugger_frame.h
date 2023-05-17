@@ -71,6 +71,7 @@ class debugger_frame : public custom_dock_widget
 	call_stack_list* m_call_stack_list;
 	instruction_editor_dialog* m_inst_editor = nullptr;
 	register_editor_dialog* m_reg_editor = nullptr;
+	QDialog* m_goto_dialog = nullptr;
 
 	std::shared_ptr<gui_settings> m_gui_settings;
 
@@ -91,6 +92,7 @@ public:
 	void WritePanels();
 	void EnableButtons(bool enable);
 	void ShowGotoAddressDialog();
+	void PerformGoToRequest(const QString& text_argument);
 	u64 EvaluateExpression(const QString& expression);
 	void ClearBreakpoints() const; // Fallthrough method into breakpoint_list.
 	void ClearCallStack();
