@@ -352,7 +352,7 @@ namespace rsx
 				const size2u src_size = { dimensions.width / section_bpp, dimensions.height };
 
 				const u32 dst_slice_begin = slice * attr.slice_h;      // Output slice low watermark
-				const u32 dst_slice_end = slice_begin + attr.height;   // Output slice high watermark
+				const u32 dst_slice_end = dst_slice_begin + attr.height;   // Output slice high watermark
 
 				const auto dst_y = dst_offset.y;
 				const auto dst_h = dst_size.height;
@@ -400,7 +400,7 @@ namespace rsx
 						static_cast<u16>(src_offset.x),         // src.x
 						static_cast<u16>(src_offset.y),         // src.y
 						static_cast<u16>(dst_offset.x),         // dst.x
-						static_cast<u16>(dst_y - slice_begin),  // dst.y
+						static_cast<u16>(dst_y - dst_slice_begin),  // dst.y
 						0,
 						src_w,
 						height,
