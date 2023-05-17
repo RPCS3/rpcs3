@@ -2793,6 +2793,22 @@ void main_window::CreateDockWindows()
 		}
 	});
 
+	connect(m_log_frame, &log_frame::PerformGoToOnDebugger, this, [this](const QString& text_argument, bool test_only, std::shared_ptr<bool> signal_accepted)
+	{
+		if (m_debugger_frame && m_debugger_frame->isVisible())
+		{
+			if (signal_accepted)
+			{
+				*signal_accepted = true;
+			}
+
+			if (!test_only)
+			{
+				m_debugger_frame->PerformGoToRequest(text_argument);
+			}
+		}
+	});
+
 	connect(m_debugger_frame, &debugger_frame::DebugFrameClosed, this, [this]()
 	{
 		if (ui->showDebuggerAct->isChecked())

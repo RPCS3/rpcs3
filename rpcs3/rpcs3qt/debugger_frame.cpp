@@ -859,6 +859,7 @@ void debugger_frame::UpdateUnitList()
 	{
 		if (m_reg_editor) m_reg_editor->close();
 		if (m_inst_editor) m_inst_editor->close();
+		if (m_goto_dialog) m_goto_dialog->close();
 	}
 
 	if (emu_state == system_state::stopped)
@@ -1008,9 +1009,16 @@ void debugger_frame::WritePanels()
 
 void debugger_frame::ShowGotoAddressDialog()
 {
-	QDialog* dlg = new QDialog(this);
-	dlg->setWindowTitle(tr("Go To Address"));
-	dlg->setModal(true);
+	if (m_goto_dialog)
+	{
+		m_goto_dialog->move(QCursor::pos());
+		m_goto_dialog->show();
+		m_goto_dialog->setFocus();
+		return;
+	}
+
+	m_goto_dialog = new QDialog(this);
+	m_goto_dialog->setWindowTitle(tr("Go To Address"));
 
 	// Panels
 	QVBoxLayout* vbox_panel(new QVBoxLayout());
@@ -1018,7 +1026,7 @@ void debugger_frame::ShowGotoAddressDialog()
 	QHBoxLayout* hbox_button_panel(new QHBoxLayout());
 
 	// Address expression input
-	QLineEdit* expression_input(new QLineEdit(dlg));
+	QLineEdit* expression_input(new QLineEdit(m_goto_dialog));
 	expression_input->setFont(m_mono);
 	expression_input->setMaxLength(18);
 
@@ -1044,9 +1052,10 @@ void debugger_frame::ShowGotoAddressDialog()
 	vbox_panel->addSpacing(8);
 	vbox_panel->addLayout(hbox_button_panel);
 
-	dlg->setLayout(vbox_panel);
+	m_goto_dialog->setLayout(vbox_panel);
 
-	const auto cpu = get_cpu();
+	const auto cpu_check = make_check_cpu(get_cpu());
+	const auto cpu = cpu_check();
 	const QFont font = expression_input->font();
 
 	// -1 from get_pc() turns into 0
@@ -1054,18 +1063,35 @@ void debugger_frame::ShowGotoAddressDialog()
 	expression_input->setPlaceholderText(QString("0x%1").arg(pc, 16, 16, QChar('0')));
 	expression_input->setFixedWidth(gui::utils::get_label_width(expression_input->placeholderText(), &font));
 
-	connect(button_ok, &QAbstractButton::clicked, dlg, &QDialog::accept);
-	connect(button_cancel, &QAbstractButton::clicked, dlg, &QDialog::reject);
+	connect(button_ok, &QAbstractButton::clicked, m_goto_dialog, &QDialog::accept);
+	connect(button_cancel, &QAbstractButton::clicked, m_goto_dialog, &QDialog::reject);
 
-	dlg->move(QCursor::pos());
+	m_goto_dialog->move(QCursor::pos());
+	m_goto_dialog->setAttribute(Qt::WA_DeleteOnClose);
 
-	if (dlg->exec() == QDialog::Accepted)
+	connect(m_goto_dialog, &QDialog::finished, this, [this, cpu, cpu_check, expression_input](int result)
 	{
-		const u32 address = EvaluateExpression(expression_input->text());
-		m_debugger_list->ShowAddress(address, true);
-	}
+		// Check if the thread has not been destroyed and is still the focused since
+		// This also works if no thread is selected and has been selected before
+		if (result == QDialog::Accepted && cpu == get_cpu() && cpu == cpu_check())
+		{
+			PerformGoToRequest(expression_input->text());
+		}
 
-	dlg->deleteLater();
+		m_goto_dialog = nullptr;
+	});
+
+	m_goto_dialog->show();
+}
+
+void debugger_frame::PerformGoToRequest(const QString& text_argument)
+{
+	const u64 address = EvaluateExpression(text_argument);
+
+	if (address != umax)
+	{
+		m_debugger_list->ShowAddress(static_cast<u32>(address), true);
+	}
 }
 
 u64 debugger_frame::EvaluateExpression(const QString& expression)
@@ -1077,8 +1103,8 @@ u64 debugger_frame::EvaluateExpression(const QString& expression)
 	const u64 res = static_cast<u64>(fixed_expression.toULong(&ok, 16));
 
 	if (ok) return res;
-	if (const auto thread = get_cpu()) return thread->get_pc();
-	return 0;
+	if (const auto thread = get_cpu(); thread && expression.isEmpty()) return thread->get_pc();
+	return umax;
 }
 
 void debugger_frame::ClearBreakpoints() const
