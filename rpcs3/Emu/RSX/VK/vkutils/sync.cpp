@@ -172,11 +172,11 @@ namespace vk
 		}
 	}
 
-	device_marker_pool::device_marker_pool(const vk::render_device& dev, u32 count)
-		: pdev(&dev), m_count(count)
+	gpu_debug_marker_pool::gpu_debug_marker_pool(const vk::render_device& dev, u32 count)
+		: m_count(count), pdev(&dev)
 	{}
 
-	std::tuple<VkBuffer, u64, volatile u32*> device_marker_pool::allocate()
+	std::tuple<VkBuffer, u64, volatile u32*> gpu_debug_marker_pool::allocate()
 	{
 		if (!m_buffer || m_offset >= m_count)
 		{
@@ -188,7 +188,7 @@ namespace vk
 		return { m_buffer->value, out_offset * 4, m_mapped + out_offset };
 	}
 
-	void device_marker_pool::create_impl()
+	void gpu_debug_marker_pool::create_impl()
 	{
 		if (m_buffer)
 		{
@@ -211,7 +211,7 @@ namespace vk
 		m_offset = 0;
 	}
 
-	gpu_debug_marker::gpu_debug_marker(device_marker_pool& pool, std::string message)
+	gpu_debug_marker::gpu_debug_marker(gpu_debug_marker_pool& pool, std::string message)
 		: m_device(*pool.pdev), m_message(std::move(message))
 	{
 		std::tie(m_buffer, m_buffer_offset, m_value) = pool.allocate();
@@ -257,15 +257,15 @@ namespace vk
 	}
 
 	// FIXME
-	static std::unique_ptr<device_marker_pool> g_device_marker_pool;
+	static std::unique_ptr<gpu_debug_marker_pool> g_gpu_debug_marker_pool;
 
-	device_marker_pool& get_shared_marker_pool(const vk::render_device& dev)
+	gpu_debug_marker_pool& get_shared_marker_pool(const vk::render_device& dev)
 	{
-		if (!g_device_marker_pool)
+		if (!g_gpu_debug_marker_pool)
 		{
-			g_device_marker_pool = std::make_unique<device_marker_pool>(dev, 65536);
+			g_gpu_debug_marker_pool = std::make_unique<gpu_debug_marker_pool>(dev, 65536);
 		}
-		return *g_device_marker_pool;
+		return *g_gpu_debug_marker_pool;
 	}
 
 	void gpu_debug_marker::insert(
