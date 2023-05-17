@@ -87,7 +87,7 @@ namespace vk
 		operator VkSemaphore() const;
 	};
 
-	class device_marker_pool
+	class gpu_debug_marker_pool
 	{
 		std::unique_ptr<buffer> m_buffer;
 		volatile u32* m_mapped = nullptr;
@@ -97,7 +97,7 @@ namespace vk
 		void create_impl();
 
 	public:
-		device_marker_pool(const vk::render_device& dev, u32 count);
+		gpu_debug_marker_pool(const vk::render_device& dev, u32 count);
 		std::tuple<VkBuffer, u64, volatile u32*> allocate();
 
 		const vk::render_device* pdev = nullptr;
@@ -114,7 +114,7 @@ namespace vk
 		volatile u32* m_value = nullptr;
 
 	public:
-		gpu_debug_marker(device_marker_pool& pool, std::string message);
+		gpu_debug_marker(gpu_debug_marker_pool& pool, std::string message);
 		~gpu_debug_marker();
 		gpu_debug_marker(const event&) = delete;
 
