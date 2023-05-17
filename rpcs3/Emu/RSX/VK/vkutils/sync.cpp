@@ -212,7 +212,7 @@ namespace vk
 	}
 
 	gpu_debug_marker::gpu_debug_marker(gpu_debug_marker_pool& pool, std::string message)
-		: m_device(*pool.pdev), m_message(std::move(message))
+		: m_message(std::move(message)), m_device(*pool.pdev)
 	{
 		std::tie(m_buffer, m_buffer_offset, m_value) = pool.allocate();
 		*m_value = 0xCAFEBABE;
