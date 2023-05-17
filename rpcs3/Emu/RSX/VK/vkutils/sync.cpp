@@ -211,14 +211,14 @@ namespace vk
 		m_offset = 0;
 	}
 
-	device_debug_marker::device_debug_marker(device_marker_pool& pool, std::string message)
+	gpu_debug_marker::gpu_debug_marker(device_marker_pool& pool, std::string message)
 		: m_device(*pool.pdev), m_message(std::move(message))
 	{
 		std::tie(m_buffer, m_buffer_offset, m_value) = pool.allocate();
 		*m_value = 0xCAFEBABE;
 	}
 
-	device_debug_marker::~device_debug_marker()
+	gpu_debug_marker::~gpu_debug_marker()
 	{
 		if (!m_printed)
 		{
@@ -228,13 +228,13 @@ namespace vk
 		m_value = nullptr;
 	}
 
-	void device_debug_marker::signal(const command_buffer& cmd, VkPipelineStageFlags stages, VkAccessFlags access)
+	void gpu_debug_marker::signal(const command_buffer& cmd, VkPipelineStageFlags stages, VkAccessFlags access)
 	{
 		insert_global_memory_barrier(cmd, stages, VK_PIPELINE_STAGE_TRANSFER_BIT, access, VK_ACCESS_TRANSFER_WRITE_BIT);
 		vkCmdFillBuffer(cmd, m_buffer, m_buffer_offset, 4, 0xDEADBEEF);
 	}
 
-	void device_debug_marker::dump()
+	void gpu_debug_marker::dump()
 	{
 		if (*m_value == 0xCAFEBABE)
 		{
@@ -244,7 +244,7 @@ namespace vk
 		m_printed = true;
 	}
 
-	void device_debug_marker::dump() const
+	void gpu_debug_marker::dump() const
 	{
 		if (*m_value == 0xCAFEBABE)
 		{
@@ -268,14 +268,14 @@ namespace vk
 		return *g_device_marker_pool;
 	}
 
-	void device_debug_marker::insert(
+	void gpu_debug_marker::insert(
 		const vk::render_device& dev,
 		const vk::command_buffer& cmd,
 		std::string message,
 		VkPipelineStageFlags stages,
 		VkAccessFlags access)
 	{
-		auto result = std::make_unique<device_debug_marker>(get_shared_marker_pool(dev), message);
+		auto result = std::make_unique<gpu_debug_marker>(get_shared_marker_pool(dev), message);
 		result->signal(cmd, stages, access);
 		vk::get_resource_manager()->dispose(result);
 	}
@@ -283,7 +283,7 @@ namespace vk
 	debug_marker_scope::debug_marker_scope(const vk::command_buffer& cmd, const std::string& message)
 		: m_device(&cmd.get_command_pool().get_owner()), m_cb(&cmd), m_message(message), m_tag(rsx::get_shared_tag())
 	{
-		vk::device_debug_marker::insert(
+		vk::gpu_debug_marker::insert(
 			*m_device,
 			*m_cb,
 			fmt::format("0x%x: Enter %s", m_tag, m_message)
@@ -294,7 +294,7 @@ namespace vk
 	{
 		ensure(m_cb && m_cb->is_recording());
 
-		vk::device_debug_marker::insert(
+		vk::gpu_debug_marker::insert(
 			*m_device,
 			*m_cb,
 			fmt::format("0x%x: Exit %s", m_tag, m_message)

@@ -103,7 +103,7 @@ namespace vk
 		const vk::render_device* pdev = nullptr;
 	};
 
-	class device_debug_marker
+	class gpu_debug_marker
 	{
 		std::string m_message;
 		bool m_printed = false;
@@ -114,9 +114,9 @@ namespace vk
 		volatile u32* m_value = nullptr;
 
 	public:
-		device_debug_marker(device_marker_pool& pool, std::string message);
-		~device_debug_marker();
-		device_debug_marker(const event&) = delete;
+		gpu_debug_marker(device_marker_pool& pool, std::string message);
+		~gpu_debug_marker();
+		gpu_debug_marker(const event&) = delete;
 
 		void signal(const command_buffer& cmd, VkPipelineStageFlags stages, VkAccessFlags access);
 		void dump();
