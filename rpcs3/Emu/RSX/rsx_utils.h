@@ -559,8 +559,8 @@ namespace rsx
 	 * Extracts from 'parent' a region that fits in 'child'
 	 */
 	static inline std::tuple<position2u, position2u, size2u> intersect_region(
-		u32 parent_address, u16 parent_w, u16 parent_h, u16 parent_bpp,
-		u32 child_address, u16 child_w, u16 child_h, u32 child_bpp,
+		u32 parent_address, u16 parent_w, u16 parent_h,
+		u32 child_address, u16 child_w, u16 child_h,
 		u32 pitch)
 	{
 		if (child_address < parent_address)
@@ -569,7 +569,7 @@ namespace rsx
 			const auto src_x = 0u;
 			const auto src_y = 0u;
 			const auto dst_y = (offset / pitch);
-			const auto dst_x = (offset % pitch) / child_bpp;
+			const auto dst_x = (offset % pitch);
 			const auto w = std::min<u32>(parent_w, std::max<u32>(child_w, dst_x) - dst_x); // Clamp negatives to 0!
 			const auto h = std::min<u32>(parent_h, std::max<u32>(child_h, dst_y) - dst_y);
 
@@ -579,7 +579,7 @@ namespace rsx
 		{
 			const auto offset = child_address - parent_address;
 			const auto src_y = (offset / pitch);
-			const auto src_x = (offset % pitch) / parent_bpp;
+			const auto src_x = (offset % pitch);
 			const auto dst_x = 0u;
 			const auto dst_y = 0u;
 			const auto w = std::min<u32>(child_w, std::max<u32>(parent_w, src_x) - src_x);
