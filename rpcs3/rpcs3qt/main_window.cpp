@@ -1842,7 +1842,7 @@ void main_window::OnEmuStop()
 	ui->confCamerasAct->setEnabled(true);
 
 	// Refresh game list in order to update time played
-	if (m_game_list_frame)
+	if (m_game_list_frame && m_is_list_mode)
 	{
 		m_game_list_frame->Refresh();
 	}
