@@ -117,23 +117,25 @@ void vfs_dialog_usb_tab::show_usb_input_dialog(int index)
 	}
 
 	const QString device_name = get_device_name(index);
-	const cfg::device_info default_info = get_device_info(device_name, m_cfg_node->get_default());
-	cfg::device_info info{};
+	const auto default_info = std::make_shared<cfg::device_info>(get_device_info(device_name, m_cfg_node->get_default()));
+	auto info = std::make_shared<cfg::device_info>();
 
-	info.path   = m_usb_table->item(index, usb_column::usb_path)->text().toStdString();
-	info.vid    = m_usb_table->item(index, usb_column::usb_vid)->text().toStdString();
-	info.pid    = m_usb_table->item(index, usb_column::usb_pid)->text().toStdString();
-	info.serial = m_usb_table->item(index, usb_column::usb_serial)->text().toStdString();
+	info->path   = m_usb_table->item(index, usb_column::usb_path)->text().toStdString();
+	info->vid    = m_usb_table->item(index, usb_column::usb_vid)->text().toStdString();
+	info->pid    = m_usb_table->item(index, usb_column::usb_pid)->text().toStdString();
+	info->serial = m_usb_table->item(index, usb_column::usb_serial)->text().toStdString();
 
-	vfs_dialog_usb_input* input_dialog = new vfs_dialog_usb_input(device_name, default_info, &info, m_gui_settings, this);
-	if (input_dialog->exec() == QDialog::Accepted)
+	vfs_dialog_usb_input* input_dialog = new vfs_dialog_usb_input(device_name, *default_info, info.get(), m_gui_settings, this);
+	input_dialog->open();
+
+	// Capture default_info as well for ownership sharing
+	connect(input_dialog, QDialog::accepted, this, [this, info, default_info]()
 	{
-		m_usb_table->item(index, usb_column::usb_path)->setText(QString::fromStdString(info.path));
-		m_usb_table->item(index, usb_column::usb_vid)->setText(QString::fromStdString(info.vid));
-		m_usb_table->item(index, usb_column::usb_pid)->setText(QString::fromStdString(info.pid));
-		m_usb_table->item(index, usb_column::usb_serial)->setText(QString::fromStdString(info.serial));
-	}
-	input_dialog->deleteLater();
+		m_usb_table->item(index, usb_column::usb_path)->setText(QString::fromStdString(info->path));
+		m_usb_table->item(index, usb_column::usb_vid)->setText(QString::fromStdString(info->vid));
+		m_usb_table->item(index, usb_column::usb_pid)->setText(QString::fromStdString(info->pid));
+		m_usb_table->item(index, usb_column::usb_serial)->setText(QString::fromStdString(info->serial));
+	});
 }
 
 void vfs_dialog_usb_tab::show_context_menu(const QPoint& pos)

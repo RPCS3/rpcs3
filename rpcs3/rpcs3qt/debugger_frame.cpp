@@ -263,7 +263,7 @@ void debugger_frame::open_breakpoints_settings()
 	hbox_layout->addWidget(button_ok);
 	dlg->setLayout(hbox_layout);
 	dlg->setAttribute(Qt::WA_DeleteOnClose);
-	dlg->exec();
+	dlg->open();
 }
 
 void debugger_frame::keyPressEvent(QKeyEvent* event)

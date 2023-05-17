@@ -18,6 +18,7 @@ vfs_dialog::vfs_dialog(std::shared_ptr<gui_settings> _gui_settings, QWidget* par
 	: QDialog(parent), m_gui_settings(std::move(_gui_settings))
 {
 	setWindowTitle(tr("Virtual File System"));
+	setAttribute(Qt::WA_DeleteOnClose);
 	setObjectName("vfs_dialog");
 
 	QTabWidget* tabs = new QTabWidget();

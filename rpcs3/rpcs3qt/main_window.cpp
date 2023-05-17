@@ -274,18 +274,17 @@ bool main_window::OnMissingFw()
 	const QString message = tr("Commercial games require the firmware (PS3UPDAT.PUP file) to be installed."
 				"\n<br>For information about how to obtain the required firmware read the <a href=\"https://rpcs3.net/quickstart\">quickstart guide</a>.");
 
-	QMessageBox mb(QMessageBox::Question, title, message, QMessageBox::Ok | QMessageBox::Cancel, this, Qt::Dialog | Qt::MSWindowsFixedSizeDialogHint | Qt::WindowStaysOnTopHint);
-	mb.setTextFormat(Qt::RichText);
+	QMessageBox* mb = new QMessageBox(QMessageBox::Question, title, message, QMessageBox::Ok | QMessageBox::Cancel, this, Qt::Dialog | Qt::MSWindowsFixedSizeDialogHint | Qt::WindowStaysOnTopHint);
+	mb->setTextFormat(Qt::RichText);
 
-	mb.button(QMessageBox::Ok)->setText(tr("Locate PS3UPDAT.PUP"));
+	mb->button(QMessageBox::Ok)->setText(tr("Locate PS3UPDAT.PUP"));
+	mb->setAttribute(Qt::WA_DeleteOnClose);
+	mb->open();
 
-	if (mb.exec() == QMessageBox::Ok)
+	connect(mb, &QDialog::accepted, this, [this]()
 	{
 		InstallPup();
-		return true;
-	}
-
-	return false;
+	});
 }
 
 void main_window::ResizeIcons(int index)
@@ -434,7 +433,7 @@ void main_window::show_boot_error(game_boot_result status)
 		message = tr("Savestate data is corrupted or it's not an RPCS3 savestate.");
 		break;
 	case game_boot_result::savestate_version_unsupported:
-		message = tr("Savestate versioning data differes from your RPCS3 build.");
+		message = tr("Savestate versioning data differs from your RPCS3 build.");
 		break;
 	case game_boot_result::firmware_missing: // Handled elsewhere
 	case game_boot_result::no_errors:
@@ -443,15 +442,17 @@ void main_window::show_boot_error(game_boot_result status)
 		message = tr("Unknown error.");
 		break;
 	}
+
 	const QString link = tr("<br /><br />For information on setting up the emulator and dumping your PS3 games, read the <a href=\"https://rpcs3.net/quickstart\">quickstart guide</a>.");
 
-	QMessageBox msg;
-	msg.setWindowTitle(tr("Boot Failed"));
-	msg.setIcon(QMessageBox::Critical);
-	msg.setTextFormat(Qt::RichText);
-	msg.setStandardButtons(QMessageBox::Ok);
-	msg.setText(tr("Booting failed: %1 %2").arg(message).arg(link));
-	msg.exec();
+	QMessageBox* msg = new QMessageBox(this);
+	msg->setWindowTitle(tr("Boot Failed"));
+	msg->setIcon(QMessageBox::Critical);
+	msg->setTextFormat(Qt::RichText);
+	msg->setStandardButtons(QMessageBox::Ok);
+	msg->setText(tr("Booting failed: %1 %2").arg(message).arg(link));
+	msg->setAttribute(Qt::WA_DeleteOnClose);
+	msg->open();
 }
 
 void main_window::Boot(const std::string& path, const std::string& title_id, bool direct, bool refresh_list, cfg_mode config_mode, const std::string& config_path)
@@ -2331,12 +2332,12 @@ void main_window::CreateConnects()
 
 	const auto open_settings = [this](int tabIndex)
 	{
-		settings_dialog dlg(m_gui_settings, m_emu_settings, tabIndex, this);
-		connect(&dlg, &settings_dialog::GuiStylesheetRequest, this, &main_window::RequestGlobalStylesheetChange);
-		connect(&dlg, &settings_dialog::GuiRepaintRequest, this, &main_window::RepaintGui);
-		connect(&dlg, &settings_dialog::EmuSettingsApplied, this, &main_window::NotifyEmuSettingsChange);
-		connect(&dlg, &settings_dialog::EmuSettingsApplied, m_log_frame, &log_frame::LoadSettings);
-		dlg.exec();
+		settings_dialog* dlg = new settings_dialog(m_gui_settings, m_emu_settings, tabIndex, this);
+		connect(dlg, &settings_dialog::GuiStylesheetRequest, this, &main_window::RequestGlobalStylesheetChange);
+		connect(dlg, &settings_dialog::GuiRepaintRequest, this, &main_window::RepaintGui);
+		connect(dlg, &settings_dialog::EmuSettingsApplied, this, &main_window::NotifyEmuSettingsChange);
+		connect(dlg, &settings_dialog::EmuSettingsApplied, m_log_frame, &log_frame::LoadSettings);
+		dlg->open();
 	};
 
 	connect(ui->confCPUAct,    &QAction::triggered, this, [open_settings]() { open_settings(0); });
@@ -2389,10 +2390,14 @@ void main_window::CreateConnects()
 
 	connect(ui->confVFSDialogAct, &QAction::triggered, this, [this]()
 	{
-		vfs_dialog dlg(m_gui_settings, this);
-		dlg.exec();
-		ui->bootVSHAct->setEnabled(fs::is_file(g_cfg_vfs.get_dev_flash() + "vsh/module/vsh.self")); // dev_flash may have changed. Disable vsh if not present.
-		m_game_list_frame->Refresh(true); // dev_hdd0 may have changed. Refresh just in case.
+		vfs_dialog* dlg = new vfs_dialog(m_gui_settings, this);
+		dlg->open();
+
+		connect(dlg, &QDialog::finished, this, [this]()
+		{
+			ui->bootVSHAct->setEnabled(fs::is_file(g_cfg_vfs.get_dev_flash() + "vsh/module/vsh.self")); // dev_flash may have changed. Disable vsh if not present.
+			m_game_list_frame->Refresh(true); // dev_hdd0 may have changed. Refresh just in case.
+		});
 	});
 
 	connect(ui->confSavedataManagerAct, &QAction::triggered, this, [this]
@@ -2500,7 +2505,7 @@ void main_window::CreateConnects()
 		m_gui_settings->SetValue(gui::fd_cfg_check, file_info.path());
 
 		config_checker* dlg = new config_checker(this, file.readAll(), file_path.endsWith(".log"));
-		dlg->exec();
+		dlg->open();
 	});
 
 	connect(ui->toolskernel_explorerAct, &QAction::triggered, this, [this]
@@ -2656,8 +2661,8 @@ void main_window::CreateConnects()
 
 	connect(ui->aboutAct, &QAction::triggered, this, [this]
 	{
-		about_dialog dlg(this);
-		dlg.exec();
+		about_dialog* dlg = new about_dialog(this);
+		dlg->open();
 	});
 
 	connect(ui->aboutQtAct, &QAction::triggered, qApp, &QApplication::aboutQt);

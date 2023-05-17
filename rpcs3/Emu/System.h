@@ -66,7 +66,7 @@ struct EmuCallbacks
 	std::function<void()> on_resume;
 	std::function<void()> on_stop;
 	std::function<void()> on_ready;
-	std::function<bool()> on_missing_fw;
+	std::function<void()> on_missing_fw;
 	std::function<void(bool enabled)> enable_disc_eject;
 	std::function<void(bool enabled)> enable_disc_insert;
 	std::function<bool(bool, std::function<void()>)> try_to_quit; // (force_quit, on_exit) Try to close RPCS3
