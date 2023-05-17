@@ -281,23 +281,23 @@ namespace vk
 	}
 
 	debug_marker_scope::debug_marker_scope(const vk::command_buffer& cmd, const std::string& message)
-		: dev(&cmd.get_command_pool().get_owner()), cb(&cmd), message(message)
+		: m_device(&cmd.get_command_pool().get_owner()), m_cb(&cmd), m_message(message), m_tag(rsx::get_shared_tag())
 	{
 		vk::device_debug_marker::insert(
-			*dev,
-			*cb,
-			fmt::format("0x%x: Enter %s", rsx::get_shared_tag(), message)
+			*m_device,
+			*m_cb,
+			fmt::format("0x%x: Enter %s", m_tag, m_message)
 		);
 	}
 
 	debug_marker_scope::~debug_marker_scope()
 	{
-		ensure(cb && cb->is_recording());
+		ensure(m_cb && m_cb->is_recording());
 
 		vk::device_debug_marker::insert(
-			*dev,
-			*cb,
-			fmt::format("0x%x: Exit %s", rsx::get_shared_tag(), message)
+			*m_device,
+			*m_cb,
+			fmt::format("0x%x: Exit %s", m_tag, m_message)
 		);
 	}
 
