@@ -125,7 +125,7 @@ namespace vk
 			m_program->bind_uniform({ VK_NULL_HANDLE, resolved_view->value, resolve->current_layout }, "resolve", VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, m_descriptor_set);
 		}
 
-		void run(VkCommandBuffer cmd, vk::viewable_image* msaa_image, vk::viewable_image* resolve_image)
+		void run(const vk::command_buffer& cmd, vk::viewable_image* msaa_image, vk::viewable_image* resolve_image)
 		{
 			ensure(msaa_image->samples() > 1);
 			ensure(resolve_image->samples() == 1);

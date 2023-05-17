@@ -49,10 +49,10 @@ namespace vk
 		virtual void bind_resources() {}
 		virtual void declare_inputs() {}
 
-		void load_program(VkCommandBuffer cmd);
+		void load_program(const vk::command_buffer& cmd);
 
-		void run(VkCommandBuffer cmd, u32 invocations_x, u32 invocations_y, u32 invocations_z);
-		void run(VkCommandBuffer cmd, u32 num_invocations);
+		void run(const vk::command_buffer& cmd, u32 invocations_x, u32 invocations_y, u32 invocations_z);
+		void run(const vk::command_buffer& cmd, u32 num_invocations);
 	};
 
 	struct cs_shuffle_base : compute_task
@@ -71,9 +71,9 @@ namespace vk
 
 		void bind_resources() override;
 
-		void set_parameters(VkCommandBuffer cmd, const u32* params, u8 count);
+		void set_parameters(const vk::command_buffer& cmd, const u32* params, u8 count);
 
-		void run(VkCommandBuffer cmd, const vk::buffer* data, u32 data_length, u32 data_offset = 0);
+		void run(const vk::command_buffer& cmd, const vk::buffer* data, u32 data_length, u32 data_offset = 0);
 	};
 
 	struct cs_shuffle_16 : cs_shuffle_base
@@ -139,7 +139,7 @@ namespace vk
 
 		void bind_resources() override;
 
-		void run(VkCommandBuffer cmd, const vk::buffer* data, u32 data_offset, u32 data_length, u32 zeta_offset, u32 stencil_offset);
+		void run(const vk::command_buffer& cmd, const vk::buffer* data, u32 data_offset, u32 data_length, u32 zeta_offset, u32 stencil_offset);
 	};
 
 	template<bool _SwapBytes = false>
@@ -359,7 +359,7 @@ namespace vk
 			m_program->bind_buffer({ m_data->value, m_data_offset, m_ssbo_length }, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
 		}
 
-		void run(VkCommandBuffer cmd, const vk::buffer* data, u32 src_offset, u32 src_length, u32 dst_offset)
+		void run(const vk::command_buffer& cmd, const vk::buffer* data, u32 src_offset, u32 src_length, u32 dst_offset)
 		{
 			u32 data_offset;
 			if (src_offset > dst_offset)
@@ -382,7 +382,7 @@ namespace vk
 	// Reverse morton-order block arrangement
 	struct cs_deswizzle_base : compute_task
 	{
-		virtual void run(VkCommandBuffer cmd, const vk::buffer* dst, u32 out_offset, const vk::buffer* src, u32 in_offset, u32 data_length, u32 width, u32 height, u32 depth, u32 mipmaps) = 0;
+		virtual void run(const vk::command_buffer& cmd, const vk::buffer* dst, u32 out_offset, const vk::buffer* src, u32 in_offset, u32 data_length, u32 width, u32 height, u32 depth, u32 mipmaps) = 0;
 	};
 
 	template <typename _BlockType, typename _BaseType, bool _SwapBytes>
@@ -461,12 +461,12 @@ namespace vk
 			m_program->bind_buffer({ dst_buffer->value, out_offset, block_length }, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
 		}
 
-		void set_parameters(VkCommandBuffer cmd)
+		void set_parameters(const vk::command_buffer& cmd)
 		{
 			vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, push_constants_size, params.data);
 		}
 
-		void run(VkCommandBuffer cmd, const vk::buffer* dst, u32 out_offset, const vk::buffer* src, u32 in_offset, u32 data_length, u32 width, u32 height, u32 depth, u32 mipmaps) override
+		void run(const vk::command_buffer& cmd, const vk::buffer* dst, u32 out_offset, const vk::buffer* src, u32 in_offset, u32 data_length, u32 width, u32 height, u32 depth, u32 mipmaps) override
 		{
 			dst_buffer = dst;
 			src_buffer = src;
@@ -501,7 +501,7 @@ namespace vk
 
 		void bind_resources() override;
 
-		void run(VkCommandBuffer cmd, const vk::buffer* dst, const vk::buffer* src, u32 num_words);
+		void run(const vk::command_buffer& cmd, const vk::buffer* dst, const vk::buffer* src, u32 num_words);
 	};
 
 	// TODO: Replace with a proper manager

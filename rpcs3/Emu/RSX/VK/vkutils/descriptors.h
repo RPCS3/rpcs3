@@ -67,8 +67,7 @@ namespace vk
 		void push(const VkDescriptorImageInfo* image_info, u32 count, VkDescriptorType type, u32 binding);
 		void push(rsx::simple_array<VkCopyDescriptorSet>& copy_cmd, u32 type_mask = umax);
 
-		void bind(VkCommandBuffer cmd, VkPipelineBindPoint bind_point, VkPipelineLayout layout);
-		void bind(const command_buffer& cmd, VkPipelineBindPoint bind_point, VkPipelineLayout layout);
+		void bind(const vk::command_buffer& cmd, VkPipelineBindPoint bind_point, VkPipelineLayout layout);
 
 		void flush();
 

@@ -360,7 +360,7 @@ namespace vk
 		}
 	}
 
-	void descriptor_set::bind(VkCommandBuffer cmd, VkPipelineBindPoint bind_point, VkPipelineLayout layout)
+	void descriptor_set::bind(const vk::command_buffer& cmd, VkPipelineBindPoint bind_point, VkPipelineLayout layout)
 	{
 		if ((m_push_type_mask & ~m_update_after_bind_mask) || (m_pending_writes.size() >= max_cache_size))
 		{
@@ -368,11 +368,6 @@ namespace vk
 		}
 
 		vkCmdBindDescriptorSets(cmd, bind_point, layout, 0, 1, &m_handle, 0, nullptr);
-	}
-
-	void descriptor_set::bind(const command_buffer& cmd, VkPipelineBindPoint bind_point, VkPipelineLayout layout)
-	{
-		bind(static_cast<VkCommandBuffer>(cmd), bind_point, layout);
 	}
 
 	void descriptor_set::flush()
