@@ -831,7 +831,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 	}
 
 	bool reload_state = (!m_current_draw.subdraw_id++);
-	vk::renderpass_op(*m_current_command_buffer, [&](VkCommandBuffer cmd, VkRenderPass pass, VkFramebuffer fbo)
+	vk::renderpass_op(*m_current_command_buffer, [&](const vk::command_buffer& cmd, VkRenderPass pass, VkFramebuffer fbo)
 	{
 		if (get_render_pass() == pass && m_draw_fbo->value == fbo)
 		{

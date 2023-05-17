@@ -128,7 +128,7 @@ namespace vk
 		m_used_descriptors = 0;
 	}
 
-	void compute_task::load_program(VkCommandBuffer cmd)
+	void compute_task::load_program(const vk::command_buffer& cmd)
 	{
 		if (!m_program)
 		{
@@ -170,7 +170,7 @@ namespace vk
 		m_descriptor_set.bind(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, m_pipeline_layout);
 	}
 
-	void compute_task::run(VkCommandBuffer cmd, u32 invocations_x, u32 invocations_y, u32 invocations_z)
+	void compute_task::run(const vk::command_buffer& cmd, u32 invocations_x, u32 invocations_y, u32 invocations_z)
 	{
 		// CmdDispatch is outside renderpass scope only
 		if (vk::is_renderpass_open(cmd))
@@ -182,7 +182,7 @@ namespace vk
 		vkCmdDispatch(cmd, invocations_x, invocations_y, invocations_z);
 	}
 
-	void compute_task::run(VkCommandBuffer cmd, u32 num_invocations)
+	void compute_task::run(const vk::command_buffer& cmd, u32 num_invocations)
 	{
 		u32 invocations_x, invocations_y;
 		if (num_invocations > max_invocations_x)
@@ -282,13 +282,13 @@ namespace vk
 		m_program->bind_buffer({ m_data->value, m_data_offset, m_data_length }, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
 	}
 
-	void cs_shuffle_base::set_parameters(VkCommandBuffer cmd, const u32* params, u8 count)
+	void cs_shuffle_base::set_parameters(const vk::command_buffer& cmd, const u32* params, u8 count)
 	{
 		ensure(use_push_constants);
 		vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, count * 4, params);
 	}
 
-	void cs_shuffle_base::run(VkCommandBuffer cmd, const vk::buffer* data, u32 data_length, u32 data_offset)
+	void cs_shuffle_base::run(const vk::command_buffer& cmd, const vk::buffer* data, u32 data_length, u32 data_offset)
 	{
 		m_data = data;
 		m_data_offset = data_offset;
@@ -328,7 +328,7 @@ namespace vk
 		m_program->bind_buffer({ m_data->value, m_data_offset, m_ssbo_length }, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
 	}
 
-	void cs_interleave_task::run(VkCommandBuffer cmd, const vk::buffer* data, u32 data_offset, u32 data_length, u32 zeta_offset, u32 stencil_offset)
+	void cs_interleave_task::run(const vk::command_buffer& cmd, const vk::buffer* data, u32 data_offset, u32 data_length, u32 zeta_offset, u32 stencil_offset)
 	{
 		u32 parameters[4] = { data_length, zeta_offset - data_offset, stencil_offset - data_offset, 0 };
 		set_parameters(cmd, parameters, 4);
@@ -389,7 +389,7 @@ namespace vk
 		m_program->bind_buffer({ dst->value, 0, 4 }, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
 	}
 
-	void cs_aggregator::run(VkCommandBuffer cmd, const vk::buffer* dst, const vk::buffer* src, u32 num_words)
+	void cs_aggregator::run(const vk::command_buffer& cmd, const vk::buffer* dst, const vk::buffer* src, u32 num_words)
 	{
 		this->dst = dst;
 		this->src = src;

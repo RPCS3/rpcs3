@@ -341,7 +341,7 @@ namespace vk
 		g_renderpass_cache.clear();
 	}
 
-	void begin_renderpass(VkCommandBuffer cmd, VkRenderPass pass, VkFramebuffer target, const coordu& framebuffer_region)
+	void begin_renderpass(const vk::command_buffer& cmd, VkRenderPass pass, VkFramebuffer target, const coordu& framebuffer_region)
 	{
 		auto& renderpass_info = g_current_renderpass[cmd];
 		if (renderpass_info.pass == pass && renderpass_info.fbo == target)
@@ -366,7 +366,7 @@ namespace vk
 		renderpass_info = { pass, target };
 	}
 
-	void begin_renderpass(VkDevice dev, VkCommandBuffer cmd, u64 renderpass_key, VkFramebuffer target, const coordu& framebuffer_region)
+	void begin_renderpass(VkDevice dev, const vk::command_buffer& cmd, u64 renderpass_key, VkFramebuffer target, const coordu& framebuffer_region)
 	{
 		if (renderpass_key != g_cached_renderpass_key)
 		{
@@ -377,18 +377,18 @@ namespace vk
 		begin_renderpass(cmd, g_cached_renderpass, target, framebuffer_region);
 	}
 
-	void end_renderpass(VkCommandBuffer cmd)
+	void end_renderpass(const vk::command_buffer& cmd)
 	{
 		vkCmdEndRenderPass(cmd);
 		g_current_renderpass[cmd] = {};
 	}
 
-	bool is_renderpass_open(VkCommandBuffer cmd)
+	bool is_renderpass_open(const vk::command_buffer& cmd)
 	{
 		return g_current_renderpass[cmd].pass != VK_NULL_HANDLE;
 	}
 
-	void renderpass_op(VkCommandBuffer cmd, const renderpass_op_callback_t& op)
+	void renderpass_op(const vk::command_buffer& cmd, const renderpass_op_callback_t& op)
 	{
 		const auto& active = g_current_renderpass[cmd];
 		op(cmd, active.pass, active.fbo);
