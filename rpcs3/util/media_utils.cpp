@@ -73,11 +73,11 @@ namespace utils
 		{
 			if (list_decoders ? av_codec_is_decoder(codec) : av_codec_is_encoder(codec))
 			{
-				codecs.emplace_back(
-					static_cast<int>(codec->id),
-					codec->name ? codec->name : "unknown",
-					codec->long_name ? codec->long_name : "unknown"
-				);
+				codecs.emplace_back(ffmpeg_codec{
+					.codec_id = static_cast<int>(codec->id),
+					.name = codec->name ? codec->name : "unknown",
+					.long_name = codec->long_name ? codec->long_name : "unknown"
+				});
 			}
 		}
 		std::sort(codecs.begin(), codecs.end(), [](const ffmpeg_codec& l, const ffmpeg_codec& r){ return l.name < r.name; });
