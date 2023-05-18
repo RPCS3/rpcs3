@@ -310,7 +310,7 @@ namespace rpcn
 		bool handle_input();
 		bool handle_output();
 
-		void add_packet(const std::vector<u8> packet);
+		void add_packet(std::vector<u8> packet);
 
 	private:
 		enum class recvn_result

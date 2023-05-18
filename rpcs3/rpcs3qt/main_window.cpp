@@ -1842,7 +1842,7 @@ void main_window::OnEmuStop()
 	ui->confCamerasAct->setEnabled(true);
 
 	// Refresh game list in order to update time played
-	if (m_game_list_frame)
+	if (m_game_list_frame && m_is_list_mode)
 	{
 		m_game_list_frame->Refresh();
 	}
@@ -2790,6 +2790,22 @@ void main_window::CreateDockWindows()
 		{
 			ui->showLogAct->setChecked(false);
 			m_gui_settings->SetValue(gui::mw_logger, false);
+		}
+	});
+
+	connect(m_log_frame, &log_frame::PerformGoToOnDebugger, this, [this](const QString& text_argument, bool test_only, std::shared_ptr<bool> signal_accepted)
+	{
+		if (m_debugger_frame && m_debugger_frame->isVisible())
+		{
+			if (signal_accepted)
+			{
+				*signal_accepted = true;
+			}
+
+			if (!test_only)
+			{
+				m_debugger_frame->PerformGoToRequest(text_argument);
+			}
 		}
 	});
 

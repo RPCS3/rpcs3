@@ -28,6 +28,7 @@ namespace utils
 
 	public:
 		cpu_stats();
+		~cpu_stats();
 
 		double get_usage();
 
