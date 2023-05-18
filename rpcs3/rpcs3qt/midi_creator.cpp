@@ -23,10 +23,11 @@ void midi_creator::refresh_list()
 	m_midi_list.clear();
 	m_midi_list.append(get_none());
 
-	RtMidiInPtr midi_in = rtmidi_in_create_default();
+	const auto deleter = [](RtMidiWrapper* ptr) { if (ptr) rtmidi_in_free(ptr); };
+	std::unique_ptr<RtMidiWrapper, decltype(deleter)> midi_in(rtmidi_in_create_default());
 	ensure(midi_in);
 
-	cfg_log.notice("MIDI: Using %s api", rtmidi_api_name(rtmidi_in_get_current_api(midi_in)));
+	cfg_log.notice("MIDI: Using %s api", rtmidi_api_name(rtmidi_in_get_current_api(midi_in.get())));
 
 	if (!midi_in->ok)
 	{
@@ -34,7 +35,7 @@ void midi_creator::refresh_list()
 		return;
 	}
 
-	const s32 port_count = rtmidi_get_port_count(midi_in);
+	const s32 port_count = rtmidi_get_port_count(midi_in.get());
 
 	if (port_count == -1)
 	{
@@ -46,7 +47,7 @@ void midi_creator::refresh_list()
 	{
 		char buf[128]{};
 		s32 size = sizeof(buf);
-		if (rtmidi_get_port_name(midi_in, port_number, buf, &size) == -1)
+		if (rtmidi_get_port_name(midi_in.get(), port_number, buf, &size) == -1)
 		{
 			cfg_log.error("Error getting midi port name for port %d: %s", port_number, midi_in->msg);
 			continue;
@@ -55,8 +56,6 @@ void midi_creator::refresh_list()
 		cfg_log.notice("Found midi device with name: %s", buf);
 		m_midi_list.append(QString::fromUtf8(buf));
 	}
-
-	rtmidi_in_free(midi_in);
 }
 
 QStringList midi_creator::get_midi_list() const
