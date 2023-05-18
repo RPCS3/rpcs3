@@ -790,8 +790,6 @@ void PadHandlerBase::process()
 			}
 			continue;
 		}
-		default:
-			break;
 		}
 
 		get_mapping(m_bindings[i]);
