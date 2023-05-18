@@ -40,7 +40,7 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <AdditionalIncludeDirectories>..\3rdparty\miniupnp\miniupnp\miniupnpc\include;..\3rdparty\wolfssl\wolfssl;..\3rdparty\flatbuffers\include;..\3rdparty\libusb\libusb\libusb;..\3rdparty\yaml-cpp\yaml-cpp\include;..\3rdparty\SoundTouch\soundtouch\include;..\3rdparty\zlib\zlib;..\3rdparty\llvm\llvm\include;..\3rdparty\llvm\llvm\llvm\include;..\3rdparty\llvm\llvm_build\include;$(VULKAN_SDK)\Include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\3rdparty\miniupnp\miniupnp\miniupnpc\include;..\3rdparty\wolfssl\wolfssl;..\3rdparty\flatbuffers\include;..\3rdparty\libusb\libusb\libusb;..\3rdparty\yaml-cpp\yaml-cpp\include;..\3rdparty\SoundTouch\soundtouch\include;..\3rdparty\rtmidi\rtmidi;..\3rdparty\zlib\zlib;..\3rdparty\llvm\llvm\include;..\3rdparty\llvm\llvm\llvm\include;..\3rdparty\llvm\llvm_build\include;$(VULKAN_SDK)\Include</AdditionalIncludeDirectories>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MaxSpeed</Optimization>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MINIUPNP_STATICLIB;HAVE_VULKAN;HAVE_SDL2;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MINIUPNP_STATICLIB;HAVE_VULKAN;HAVE_SDL2;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -69,6 +69,9 @@
     <ClCompile Include="Emu\Cell\Modules\HLE_PATCHES.cpp" />
     <ClCompile Include="Emu\games_config.cpp" />
     <ClCompile Include="Emu\Io\camera_config.cpp" />
+    <ClCompile Include="Emu\Io\midi_config_types.cpp" />
+    <ClCompile Include="Emu\Io\RB3MidiGuitar.cpp" />
+    <ClCompile Include="Emu\Io\RB3MidiKeyboard.cpp" />
     <ClCompile Include="Emu\Io\recording_config.cpp" />
     <ClCompile Include="Emu\Io\Turntable.cpp" />
     <ClCompile Include="Emu\Io\GHLtar.cpp" />
@@ -380,6 +383,7 @@
     <ClCompile Include="Emu\Cell\SPUDisAsm.cpp" />
     <ClCompile Include="Emu\Cell\SPUInterpreter.cpp" />
     <ClCompile Include="Emu\IdManager.cpp" />
+    <ClCompile Include="Emu\Io\Infinity.cpp" />
     <ClCompile Include="Emu\Io\Skylander.cpp" />
     <ClCompile Include="Emu\Io\usb_device.cpp" />
     <ClCompile Include="Emu\Io\usb_vfs.cpp" />
@@ -502,9 +506,12 @@
     <ClInclude Include="Emu\games_config.h" />
     <ClInclude Include="Emu\Io\camera_config.h" />
     <ClInclude Include="Emu\Io\camera_handler_base.h" />
+    <ClInclude Include="Emu\Io\midi_config_types.h" />
     <ClInclude Include="Emu\Io\music_handler_base.h" />
     <ClInclude Include="Emu\Io\Null\null_camera_handler.h" />
     <ClInclude Include="Emu\Io\Null\null_music_handler.h" />
+    <ClInclude Include="Emu\Io\RB3MidiGuitar.h" />
+    <ClInclude Include="Emu\Io\RB3MidiKeyboard.h" />
     <ClInclude Include="Emu\Io\recording_config.h" />
     <ClInclude Include="Emu\Io\Turntable.h" />
     <ClInclude Include="Emu\Io\GHLtar.h" />
@@ -666,6 +673,7 @@
     <ClInclude Include="Emu\Cell\PPUAnalyser.h" />
     <ClInclude Include="Emu\Cell\PPUTranslator.h" />
     <ClInclude Include="Emu\CPU\CPUTranslator.h" />
+    <ClInclude Include="Emu\Io\Infinity.h" />
     <ClInclude Include="Emu\Io\Skylander.h" />
     <ClInclude Include="Emu\Io\usb_device.h" />
     <ClInclude Include="Emu\Io\usb_vfs.h" />

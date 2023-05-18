@@ -11,7 +11,6 @@
 #include "Emu/vfs_config.h"
 #include "Utilities/StrUtil.h"
 
-#include <QApplication>
 #include <QHeaderView>
 #include <QScrollBar>
 #include <QStringBuilder>
@@ -32,7 +31,6 @@ game_list_table::game_list_table(game_list_frame* frame, std::shared_ptr<persist
 	horizontalScrollBar()->setSingleStep(20);
 	verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
 	verticalHeader()->setVisible(false);
-	horizontalHeader()->setContextMenuPolicy(Qt::CustomContextMenu);
 	horizontalHeader()->setHighlightSections(false);
 	horizontalHeader()->setSortIndicatorShown(true);
 	horizontalHeader()->setStretchLastSection(true);
@@ -40,13 +38,13 @@ game_list_table::game_list_table(game_list_frame* frame, std::shared_ptr<persist
 	horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
 	setContextMenuPolicy(Qt::CustomContextMenu);
 	setAlternatingRowColors(true);
-	setColumnCount(gui::column_count);
+	setColumnCount(static_cast<int>(gui::game_list_columns::count));
 	setMouseTracking(true);
 
 	connect(this, &game_list_table::size_on_disk_ready, this, [this](const game_info& game)
 	{
 		if (!game || !game->item) return;
-		if (QTableWidgetItem* size_item = item(static_cast<movie_item*>(game->item)->row(), gui::column_dir_size))
+		if (QTableWidgetItem* size_item = item(static_cast<movie_item*>(game->item)->row(), static_cast<int>(gui::game_list_columns::dir_size)))
 		{
 			const u64& game_size = game->info.size_on_disk;
 			size_item->setText(game_size != umax ? gui::utils::format_byte_size(game_size) : tr("Unknown"));
@@ -65,7 +63,7 @@ void game_list_table::restore_layout(const QByteArray& state)
 {
 	// Resize to fit and get the ideal icon column width
 	resize_columns_to_contents();
-	const int icon_column_width = columnWidth(gui::column_icon);
+	const int icon_column_width = columnWidth(static_cast<int>(gui::game_list_columns::icon));
 
 	// Restore header layout from last session
 	if (!horizontalHeader()->restoreState(state) && rowCount())
@@ -78,29 +76,10 @@ void game_list_table::restore_layout(const QByteArray& state)
 
 	// Make sure that the icon column is large enough for the actual items.
 	// This is important if the list appeared as empty when closing the software before.
-	horizontalHeader()->resizeSection(gui::column_icon, icon_column_width);
+	horizontalHeader()->resizeSection(static_cast<int>(gui::game_list_columns::icon), icon_column_width);
 
 	// Save new header state
 	horizontalHeader()->restoreState(horizontalHeader()->saveState());
-}
-
-void game_list_table::fix_narrow_columns()
-{
-	QApplication::processEvents();
-
-	// handle columns (other than the icon column) that have zero width after showing them (stuck between others)
-	for (int col = 1; col < columnCount(); ++col)
-	{
-		if (isColumnHidden(col))
-		{
-			continue;
-		}
-
-		if (columnWidth(col) <= horizontalHeader()->minimumSectionSize())
-		{
-			setColumnWidth(col, horizontalHeader()->minimumSectionSize());
-		}
-	}
 }
 
 void game_list_table::resize_columns_to_contents(int spacing)
@@ -128,10 +107,10 @@ void game_list_table::adjust_icon_column()
 	verticalHeader()->setMaximumSectionSize(m_icon_size.height());
 
 	// Resize the icon column
-	resizeColumnToContents(gui::column_icon);
+	resizeColumnToContents(static_cast<int>(gui::game_list_columns::icon));
 
 	// Shorten the last section to remove horizontal scrollbar if possible
-	resizeColumnToContents(gui::column_count - 1);
+	resizeColumnToContents(static_cast<int>(gui::game_list_columns::count) - 1);
 }
 
 void game_list_table::sort(int game_count, int sort_column, Qt::SortOrder col_sort_order)
@@ -175,7 +154,7 @@ void game_list_table::sort(int game_count, int sort_column, Qt::SortOrder col_so
 			setColumnWidth(i, column_widths[i]);
 		}
 
-		horizontalHeader()->setSectionResizeMode(gui::column_icon, QHeaderView::Fixed);
+		horizontalHeader()->setSectionResizeMode(static_cast<int>(gui::game_list_columns::icon), QHeaderView::Fixed);
 		return;
 	}
 
@@ -191,14 +170,14 @@ void game_list_table::sort(int game_count, int sort_column, Qt::SortOrder col_so
 	}
 	else
 	{
-		resizeColumnToContents(gui::column_icon);
+		resizeColumnToContents(static_cast<int>(gui::game_list_columns::icon));
 	}
 
 	// Fixate icon column
-	horizontalHeader()->setSectionResizeMode(gui::column_icon, QHeaderView::Fixed);
+	horizontalHeader()->setSectionResizeMode(static_cast<int>(gui::game_list_columns::icon), QHeaderView::Fixed);
 
 	// Shorten the last section to remove horizontal scrollbar if possible
-	resizeColumnToContents(gui::column_count - 1);
+	resizeColumnToContents(static_cast<int>(gui::game_list_columns::count) - 1);
 }
 
 void game_list_table::set_custom_config_icon(const game_info& game)
@@ -212,9 +191,9 @@ void game_list_table::set_custom_config_icon(const game_info& game)
 
 	for (int row = 0; row < rowCount(); ++row)
 	{
-		if (QTableWidgetItem* title_item = item(row, gui::column_name))
+		if (QTableWidgetItem* title_item = item(row, static_cast<int>(gui::game_list_columns::name)))
 		{
-			if (const QTableWidgetItem* serial_item = item(row, gui::column_serial); serial_item && serial_item->text() == serial)
+			if (const QTableWidgetItem* serial_item = item(row, static_cast<int>(gui::game_list_columns::serial)); serial_item && serial_item->text() == serial)
 			{
 				title_item->setIcon(game_list_base::GetCustomConfigIcon(game));
 			}
@@ -379,21 +358,21 @@ void game_list_table::populate(
 
 		const u64 game_size = game->info.size_on_disk;
 
-		setItem(row, gui::column_icon,       icon_item);
-		setItem(row, gui::column_name,       title_item);
-		setItem(row, gui::column_serial,     serial_item);
-		setItem(row, gui::column_firmware,   new custom_table_widget_item(game->info.fw));
-		setItem(row, gui::column_version,    new custom_table_widget_item(app_version));
-		setItem(row, gui::column_category,   new custom_table_widget_item(game->localized_category));
-		setItem(row, gui::column_path,       new custom_table_widget_item(game->info.path));
-		setItem(row, gui::column_move,       new custom_table_widget_item((supports_move ? tr("Supported") : tr("Not Supported")).toStdString(), Qt::UserRole, !supports_move));
-		setItem(row, gui::column_resolution, new custom_table_widget_item(Localized::GetStringFromU32(game->info.resolution, localized.resolution.mode, true)));
-		setItem(row, gui::column_sound,      new custom_table_widget_item(Localized::GetStringFromU32(game->info.sound_format, localized.sound.format, true)));
-		setItem(row, gui::column_parental,   new custom_table_widget_item(Localized::GetStringFromU32(game->info.parental_lvl, localized.parental.level), Qt::UserRole, game->info.parental_lvl));
-		setItem(row, gui::column_last_play,  new custom_table_widget_item(locale.toString(last_played, last_played >= QDateTime::currentDateTime().addDays(-7) ? gui::persistent::last_played_date_with_time_of_day_format : gui::persistent::last_played_date_format_new), Qt::UserRole, last_played));
-		setItem(row, gui::column_playtime,   new custom_table_widget_item(elapsed_ms == 0 ? tr("Never played") : localized.GetVerboseTimeByMs(elapsed_ms), Qt::UserRole, elapsed_ms));
-		setItem(row, gui::column_compat,     compat_item);
-		setItem(row, gui::column_dir_size,   new custom_table_widget_item(game_size != umax ? gui::utils::format_byte_size(game_size) : tr("Unknown"), Qt::UserRole, QVariant::fromValue<qulonglong>(game_size)));
+		setItem(row, static_cast<int>(gui::game_list_columns::icon),       icon_item);
+		setItem(row, static_cast<int>(gui::game_list_columns::name),       title_item);
+		setItem(row, static_cast<int>(gui::game_list_columns::serial),     serial_item);
+		setItem(row, static_cast<int>(gui::game_list_columns::firmware),   new custom_table_widget_item(game->info.fw));
+		setItem(row, static_cast<int>(gui::game_list_columns::version),    new custom_table_widget_item(app_version));
+		setItem(row, static_cast<int>(gui::game_list_columns::category),   new custom_table_widget_item(game->localized_category));
+		setItem(row, static_cast<int>(gui::game_list_columns::path),       new custom_table_widget_item(game->info.path));
+		setItem(row, static_cast<int>(gui::game_list_columns::move),       new custom_table_widget_item((supports_move ? tr("Supported") : tr("Not Supported")).toStdString(), Qt::UserRole, !supports_move));
+		setItem(row, static_cast<int>(gui::game_list_columns::resolution), new custom_table_widget_item(Localized::GetStringFromU32(game->info.resolution, localized.resolution.mode, true)));
+		setItem(row, static_cast<int>(gui::game_list_columns::sound),      new custom_table_widget_item(Localized::GetStringFromU32(game->info.sound_format, localized.sound.format, true)));
+		setItem(row, static_cast<int>(gui::game_list_columns::parental),   new custom_table_widget_item(Localized::GetStringFromU32(game->info.parental_lvl, localized.parental.level), Qt::UserRole, game->info.parental_lvl));
+		setItem(row, static_cast<int>(gui::game_list_columns::last_play),  new custom_table_widget_item(locale.toString(last_played, last_played >= QDateTime::currentDateTime().addDays(-7) ? gui::persistent::last_played_date_with_time_of_day_format : gui::persistent::last_played_date_format_new), Qt::UserRole, last_played));
+		setItem(row, static_cast<int>(gui::game_list_columns::playtime),   new custom_table_widget_item(elapsed_ms == 0 ? tr("Never played") : localized.GetVerboseTimeByMs(elapsed_ms), Qt::UserRole, elapsed_ms));
+		setItem(row, static_cast<int>(gui::game_list_columns::compat),     compat_item);
+		setItem(row, static_cast<int>(gui::game_list_columns::dir_size),   new custom_table_widget_item(game_size != umax ? gui::utils::format_byte_size(game_size) : tr("Unknown"), Qt::UserRole, QVariant::fromValue<qulonglong>(game_size)));
 
 		if (selected_item_id == game->info.path + game->info.icon_path)
 		{

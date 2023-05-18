@@ -247,7 +247,7 @@ u32 usb_device_emulated::get_descriptor(u8 type, u8 index, u8* buf, u32 buf_size
 				const std::u16string u16str = utf8_to_utf16(strings[index - 1]);
 				const u8 len = static_cast<u8>(std::min(u16str.size() * sizeof(u16) + 2, static_cast<usz>(0xFF)));
 				buf[0] = len;
-				expected_count = std::min(len, ::narrow<u8>(buf_size));
+				expected_count = std::min(len, ::narrow<u8>(std::min<u32>(255, buf_size)));
 				memcpy(buf + 2, u16str.data(), expected_count - 2);
 			}
 		}
@@ -316,7 +316,7 @@ void usb_device_emulated::isochronous_transfer(UsbTransfer* transfer)
 {
 }
 
-void usb_device_emulated::add_string(char* str)
+void usb_device_emulated::add_string(std::string str)
 {
-	strings.emplace_back(str);
+	strings.emplace_back(std::move(str));
 }

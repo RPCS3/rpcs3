@@ -235,7 +235,7 @@ public:
 	void isochronous_transfer(UsbTransfer* transfer) override;
 
 	// Emulated specific functions
-	void add_string(char* str);
+	void add_string(std::string str);
 	u32 get_descriptor(u8 type, u8 index, u8* buf, u32 buf_size);
 	u32 get_status(bool self_powered, bool remote_wakeup, u8* buf, u32 buf_size);
 

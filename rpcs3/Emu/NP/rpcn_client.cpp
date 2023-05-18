@@ -327,7 +327,11 @@ namespace rpcn
 						{
 							duration = 500ms - (now - last_ping_time);
 						}
-						sem_rpcn.try_acquire_for(duration);
+
+						if (!sem_rpcn.try_acquire_for(duration))
+						{
+							// TODO
+						}
 					}
 				}
 			}
@@ -441,7 +445,7 @@ namespace rpcn
 		return true;
 	}
 
-	void rpcn_client::add_packet(const std::vector<u8> packet)
+	void rpcn_client::add_packet(std::vector<u8> packet)
 	{
 		std::lock_guard lock(mutex_packets_to_send);
 		packets_to_send.push_back(std::move(packet));
@@ -626,7 +630,7 @@ namespace rpcn
 	{
 		// TODO: add a check for status?
 
-		const auto sent_packet = forge_request(command, packet_id, data);
+		std::vector<u8> sent_packet = forge_request(command, packet_id, data);
 		add_packet(std::move(sent_packet));
 		return true;
 	}

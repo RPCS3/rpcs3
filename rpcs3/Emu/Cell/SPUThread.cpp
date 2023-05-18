@@ -5083,7 +5083,11 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 
 				spu_log.trace("sys_spu_thread_throw_event(spup=%d, data0=0x%x, data1=0x%x)", spup, value & 0x00ffffff, data);
 
-				const auto queue = (std::lock_guard{group->mutex}, this->spup[spup]);
+				std::shared_ptr<lv2_event_queue> queue;
+				{
+					std::lock_guard lock{group->mutex};
+					queue = this->spup[spup];
+				}
 
 				// TODO: check passing spup value
 				if (auto res = queue ? queue->send(SYS_SPU_THREAD_EVENT_USER_KEY, lv2_id, (u64{spup} << 32) | (value & 0x00ffffff), data) : CELL_ENOTCONN)
@@ -5980,8 +5984,6 @@ spu_exec_object spu_thread::capture_memory_as_elf(std::span<spu_memory_segment_d
 	{
 		for (pc0 = 0; pc0 < SPU_LS_SIZE; pc0 += 4)
 		{
-			const spu_opcode_t op{read_from_ptr<be_t<u32>>(all_data.data(), pc0)};
-
 			// Try to find a function entry (very basic)
 			if (is_exec_code(pc0, all_data.data()))
 				break;

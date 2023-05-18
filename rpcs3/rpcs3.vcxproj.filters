@@ -101,6 +101,9 @@
     <Filter Include="Io\DS3">
       <UniqueIdentifier>{66e6027b-d3dd-4894-814c-cc4444a4c7df}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Gui\infinity">
+      <UniqueIdentifier>{f5fcca0d-918b-46ba-bb91-2f2f9d9ddbba}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Gui\skylanders">
       <UniqueIdentifier>{c25f8f80-cc74-4760-8488-a291b3026b1d}</UniqueIdentifier>
     </Filter>
@@ -546,6 +549,9 @@
     <ClCompile Include="headless_application.cpp">
       <Filter>rpcs3</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\infinity_dialog.cpp">
+      <Filter>Gui\infinity</Filter>
+    </ClCompile>
     <ClCompile Include="rpcs3qt\skylander_dialog.cpp">
       <Filter>Gui\skylanders</Filter>
     </ClCompile>
@@ -646,6 +652,12 @@
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_screenshot_preview.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_infinity_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_infinity_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_skylander_dialog.cpp">
@@ -1011,6 +1023,9 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_elf_memory_dumping_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\midi_creator.cpp">
+      <Filter>Gui\settings</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -1187,6 +1202,9 @@
     <ClInclude Include="rpcs3qt\movie_item_base.h">
       <Filter>Gui\custom items</Filter>
     </ClInclude>
+    <ClInclude Include="rpcs3qt\midi_creator.h">
+      <Filter>Gui\settings</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="debug\moc_predefs.h.cbt">
@@ -1356,6 +1374,9 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\screenshot_preview.h">
       <Filter>Gui\screenshot manager</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\infinity_dialog.h">
+      <Filter>Gui\infinity</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\skylander_dialog.h">
       <Filter>Gui\skylanders</Filter>

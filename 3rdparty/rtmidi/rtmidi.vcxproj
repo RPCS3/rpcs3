@@ -11,33 +11,16 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="soundtouch\include\FIFOSampleBuffer.h" />
-    <ClInclude Include="soundtouch\include\FIFOSamplePipe.h" />
-    <ClInclude Include="soundtouch\include\SoundTouch.h" />
-    <ClInclude Include="soundtouch\include\STTypes.h" />
-    <ClInclude Include="soundtouch\source\SoundTouch\AAFilter.h" />
-    <ClInclude Include="soundtouch\source\SoundTouch\FIRFilter.h" />
-    <ClInclude Include="soundtouch\source\SoundTouch\InterpolateCubic.h" />
-    <ClInclude Include="soundtouch\source\SoundTouch\InterpolateLinear.h" />
-    <ClInclude Include="soundtouch\source\SoundTouch\InterpolateShannon.h" />
-    <ClInclude Include="soundtouch\source\SoundTouch\RateTransposer.h" />
-    <ClInclude Include="soundtouch\source\SoundTouch\TDStretch.h" />
+    <ClInclude Include="rtmidi\RtMidi.h" />
+    <ClInclude Include="rtmidi\rtmidi_c.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="soundtouch\source\SoundTouch\AAFilter.cpp" />
-    <ClCompile Include="soundtouch\source\SoundTouch\FIFOSampleBuffer.cpp" />
-    <ClCompile Include="soundtouch\source\SoundTouch\FIRFilter.cpp" />
-    <ClCompile Include="soundtouch\source\SoundTouch\InterpolateCubic.cpp" />
-    <ClCompile Include="soundtouch\source\SoundTouch\InterpolateLinear.cpp" />
-    <ClCompile Include="soundtouch\source\SoundTouch\InterpolateShannon.cpp" />
-    <ClCompile Include="soundtouch\source\SoundTouch\RateTransposer.cpp" />
-    <ClCompile Include="soundtouch\source\SoundTouch\SoundTouch.cpp" />
-    <ClCompile Include="soundtouch\source\SoundTouch\sse_optimized.cpp" />
-    <ClCompile Include="soundtouch\source\SoundTouch\TDStretch.cpp" />
+    <ClCompile Include="rtmidi\RtMidi.cpp" />
+    <ClCompile Include="rtmidi\rtmidi_c.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{508c291a-3d18-49f5-b25d-f7c8db92cb21}</ProjectGuid>
-    <RootNamespace>soundtouch</RootNamespace>
+    <ProjectGuid>{2C902C67-985C-4BE0-94A3-E0FE2EB929A3}</ProjectGuid>
+    <RootNamespace>rtmidi</RootNamespace>
   </PropertyGroup>
   <Import Project="$(SolutionDir)\buildfiles\msvc\common_default.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -67,10 +50,9 @@
     <ClCompile>
       <WarningLevel>TurnOffAllWarnings</WarningLevel>
       <SDLCheck>false</SDLCheck>
-      <PreprocessorDefinitions>SOUNDTOUCH_ALLOW_SSE;ST_NO_EXCEPTION_HANDLING;USE_MULTICH_ALWAYS;SOUNDTOUCH_FLOAT_SAMPLES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>./soundtouch/source/SoundTouch;./soundtouch/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>__WINDOWS_MM__;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>./rtmidi/;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ProgramDatabase</DebugInformationFormat>
-      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MaxSpeed</Optimization>
     </ClCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

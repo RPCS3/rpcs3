@@ -17,67 +17,52 @@ namespace gui
 		game_role = Qt::UserRole + 1337,
 	};
 
-	enum game_list_columns
+	enum class game_list_columns
 	{
-		column_icon,
-		column_name,
-		column_serial,
-		column_firmware,
-		column_version,
-		column_category,
-		column_path,
-		column_move,
-		column_resolution,
-		column_sound,
-		column_parental,
-		column_last_play,
-		column_playtime,
-		column_compat,
-		column_dir_size,
+		icon,
+		name,
+		serial,
+		firmware,
+		version,
+		category,
+		path,
+		move,
+		resolution,
+		sound,
+		parental,
+		last_play,
+		playtime,
+		compat,
+		dir_size,
 
-		column_count
+		count
 	};
 
-	inline QString get_game_list_column_name(game_list_columns col)
+	enum class trophy_list_columns
 	{
-		switch (col)
-		{
-		case column_icon:
-			return "column_icon";
-		case column_name:
-			return "column_name";
-		case column_serial:
-			return "column_serial";
-		case column_firmware:
-			return "column_firmware";
-		case column_version:
-			return "column_version";
-		case column_category:
-			return "column_category";
-		case column_path:
-			return "column_path";
-		case column_move:
-			return "column_move";
-		case column_resolution:
-			return "column_resolution";
-		case column_sound:
-			return "column_sound";
-		case column_parental:
-			return "column_parental";
-		case column_last_play:
-			return "column_last_play";
-		case column_playtime:
-			return "column_playtime";
-		case column_compat:
-			return "column_compat";
-		case column_dir_size:
-			return "column_dir_size";
-		case column_count:
-			return "";
-		}
+		icon = 0,
+		name = 1,
+		description = 2,
+		type = 3,
+		is_unlocked = 4,
+		id = 5,
+		platinum_link = 6,
 
-		fmt::throw_exception("get_game_list_column_name: Invalid column");
-	}
+		count
+	};
+
+	enum class trophy_game_list_columns
+	{
+		icon = 0,
+		name = 1,
+		progress = 2,
+
+		count
+	};
+
+	QString get_trophy_game_list_column_name(trophy_game_list_columns col);
+	QString get_trophy_list_column_name(trophy_list_columns col);
+	QString get_game_list_column_name(game_list_columns col);
 
 	const QSize gl_icon_size_min    = QSize(40, 22);
 	const QSize gl_icon_size_small  = QSize(80, 44);
@@ -295,23 +280,29 @@ public:
 	bool GetBootConfirmation(QWidget* parent, const gui_save& gui_save_entry = gui_save());
 
 	logs::level GetLogLevel() const;
-	bool GetGamelistColVisibility(int col) const;
+	bool GetTrophyGamelistColVisibility(gui::trophy_game_list_columns col) const;
+	bool GetTrophylistColVisibility(gui::trophy_list_columns col) const;
+	bool GetGamelistColVisibility(gui::game_list_columns col) const;
 	QColor GetCustomColor(int col) const;
 	QStringList GetStylesheetEntries() const;
 	QStringList GetGameListCategoryFilters(bool is_list_mode) const;
 
-public Q_SLOTS:
+	static QSize SizeFromSlider(int pos);
+
 	/** Sets the visibility of the chosen category. */
 	void SetCategoryVisibility(int cat, bool val, bool is_list_mode) const;
 
-	void SetGamelistColVisibility(int col, bool val) const;
+	void SetTrophyGamelistColVisibility(gui::trophy_game_list_columns col, bool val) const;
+	void SetTrophylistColVisibility(gui::trophy_list_columns col, bool val) const;
+	void SetGamelistColVisibility(gui::game_list_columns col, bool val) const;
 
 	void SetCustomColor(int col, const QColor& val) const;
 
-	static QSize SizeFromSlider(int pos);
-	static gui_save GetGuiSaveForColumn(int col);
+private:
+	static gui_save GetGuiSaveForTrophyGameColumn(gui::trophy_game_list_columns col);
+	static gui_save GetGuiSaveForTrophyColumn(gui::trophy_list_columns col);
+	static gui_save GetGuiSaveForGameColumn(gui::game_list_columns col);
 	static gui_save GetGuiSaveForCategory(int cat, bool is_list_mode);
 
-private:
 	void ShowBox(QMessageBox::Icon icon, const QString& title, const QString& text, const gui_save& entry, int* result, QWidget* parent, bool always_on_top);
 };

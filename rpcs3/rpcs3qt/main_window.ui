@@ -260,6 +260,7 @@
     <addaction name="actionManage_RAP_Licenses"/>
     <addaction name="actionManage_Trophy_Data"/>
     <addaction name="actionManage_Skylanders_Portal"/>
+    <addaction name="actionManage_Infinity_Base"/>
     <addaction name="actionManage_Cheats"/>
     <addaction name="actionManage_Game_Patches"/>
     <addaction name="actionManage_Screenshots"/>
@@ -1102,6 +1103,11 @@
   <action name="actionManage_Skylanders_Portal">
    <property name="text">
     <string>Skylanders Portal</string>
+   </property>
+  </action>
+  <action name="actionManage_Infinity_Base">
+   <property name="text">
+    <string>Infinity Base</string>
    </property>
   </action>
   <action name="actionManage_Cheats">

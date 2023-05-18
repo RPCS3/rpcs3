@@ -20,6 +20,7 @@
 #include "pad_settings_dialog.h"
 #include "progress_dialog.h"
 #include "skylander_dialog.h"
+#include "infinity_dialog.h"
 #include "cheat_manager.h"
 #include "patch_manager_dialog.h"
 #include "patch_creator_dialog.h"
@@ -1841,7 +1842,7 @@ void main_window::OnEmuStop()
 	ui->confCamerasAct->setEnabled(true);
 
 	// Refresh game list in order to update time played
-	if (m_game_list_frame)
+	if (m_game_list_frame && m_is_list_mode)
 	{
 		m_game_list_frame->Refresh();
 	}
@@ -2415,6 +2416,12 @@ void main_window::CreateConnects()
 		sky_diag->show();
 	});
 
+	connect(ui->actionManage_Infinity_Base, &QAction::triggered, this, [this]
+	{
+		infinity_dialog* inf_dlg = infinity_dialog::get_dlg(this);
+		inf_dlg->show();
+	});
+
 	connect(ui->actionManage_Cheats, &QAction::triggered, this, [this]
 	{
 		cheat_manager_dialog* cheat_manager = cheat_manager_dialog::get_dlg(this);
@@ -2783,6 +2790,22 @@ void main_window::CreateDockWindows()
 		{
 			ui->showLogAct->setChecked(false);
 			m_gui_settings->SetValue(gui::mw_logger, false);
+		}
+	});
+
+	connect(m_log_frame, &log_frame::PerformGoToOnDebugger, this, [this](const QString& text_argument, bool test_only, std::shared_ptr<bool> signal_accepted)
+	{
+		if (m_debugger_frame && m_debugger_frame->isVisible())
+		{
+			if (signal_accepted)
+			{
+				*signal_accepted = true;
+			}
+
+			if (!test_only)
+			{
+				m_debugger_frame->PerformGoToRequest(text_argument);
+			}
 		}
 	});
 
