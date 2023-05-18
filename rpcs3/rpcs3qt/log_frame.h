@@ -30,6 +30,7 @@ public Q_SLOTS:
 
 Q_SIGNALS:
 	void LogFrameClosed();
+	void PerformGoToOnDebugger(const QString& text_argument, bool test_only = false, std::shared_ptr<bool> signal_accepted = nullptr);
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
 	void closeEvent(QCloseEvent* event) override;
@@ -71,6 +72,7 @@ private:
 
 	QAction* m_clear_act = nullptr;
 	QAction* m_clear_tty_act = nullptr;
+	QAction* m_perform_goto_on_debugger = nullptr;
 
 	QActionGroup* m_log_level_acts = nullptr;
 	QAction* m_nothing_act = nullptr;
