@@ -273,6 +273,7 @@ struct cfg_root : cfg::node
 		cfg::_enum<turntable_handler> turntable{this, "Turntable emulated controller", turntable_handler::null};
 		cfg::_enum<ghltar_handler> ghltar{this, "GHLtar emulated controller", ghltar_handler::null};
 		cfg::_enum<pad_handler_mode> pad_mode{this, "Pad handler mode", pad_handler_mode::single_threaded, true};
+		cfg::_bool keep_pads_connected{this, "Keep pads connected", false, true};
 		cfg::uint<0, 100'000> pad_sleep{this, "Pad handler sleep (microseconds)", 1'000, true};
 		cfg::_bool background_input_enabled{this, "Background input enabled", true, true};
 		cfg::_bool show_move_cursor{this, "Show move cursor", false, true};

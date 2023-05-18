@@ -75,6 +75,7 @@ namespace rsx
 			: home_menu_settings_page(x, y, width, height, use_separators, parent, get_localized_string(localized_string_id::HOME_MENU_SETTINGS_INPUT))
 		{
 			add_checkbox(&g_cfg.io.background_input_enabled, "Background Input Enabled");
+			add_checkbox(&g_cfg.io.keep_pads_connected, "Keep Pads Connected");
 			add_checkbox(&g_cfg.io.show_move_cursor, "Show PS Move Cursor");
 
 			if (g_cfg.io.camera == camera_handler::qt)

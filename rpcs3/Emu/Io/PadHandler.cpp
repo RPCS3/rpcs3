@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "PadHandler.h"
 #include "Emu/system_utils.hpp"
+#include "Emu/system_config.h"
 #include "Input/pad_thread.h"
 #include "Input/product_info.h"
 
@@ -766,6 +767,19 @@ void PadHandlerBase::process()
 		}
 		case connection::disconnected:
 		{
+			if (g_cfg.io.keep_pads_connected)
+			{
+				if (!last_connection_status[i])
+				{
+					input_log.success("%s device %d connected by force", m_type, i);
+					pad->m_port_status |= CELL_PAD_STATUS_CONNECTED;
+					pad->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
+					last_connection_status[i] = true;
+					connected_devices++;
+				}
+				continue;
+			}
+
 			if (last_connection_status[i])
 			{
 				input_log.error("%s device %d disconnected", m_type, i);
