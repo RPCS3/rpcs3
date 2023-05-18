@@ -10,7 +10,6 @@ constexpr auto qstr = QString::fromStdString;
 microphone_creator::microphone_creator()
 {
 	setObjectName("microphone_creator");
-	refresh_list();
 }
 
 // We need to recreate the localized string because the microphone creator is currently only created once.
