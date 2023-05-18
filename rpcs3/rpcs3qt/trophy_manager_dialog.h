@@ -90,6 +90,9 @@ private:
 	game_list* m_trophy_table; //! UI element to display trophy stuff.
 	game_list* m_game_table; //! UI element to display games.
 
+	QList<QAction*> m_trophy_column_acts;
+	QList<QAction*> m_game_column_acts;
+
 	bool m_show_hidden_trophies = false;
 	bool m_show_unlocked_trophies = true;
 	bool m_show_locked_trophies = true;

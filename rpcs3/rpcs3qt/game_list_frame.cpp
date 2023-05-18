@@ -118,25 +118,25 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	// Actions regarding showing/hiding columns
 	auto add_column = [this](gui::game_list_columns col, const QString& header_text, const QString& action_text)
 	{
-		m_game_list->setHorizontalHeaderItem(col, new QTableWidgetItem(header_text));
+		m_game_list->setHorizontalHeaderItem(static_cast<int>(col), new QTableWidgetItem(header_text));
 		m_columnActs.append(new QAction(action_text, this));
 	};
 
-	add_column(gui::column_icon,       tr("Icon"),                  tr("Show Icons"));
-	add_column(gui::column_name,       tr("Name"),                  tr("Show Names"));
-	add_column(gui::column_serial,     tr("Serial"),                tr("Show Serials"));
-	add_column(gui::column_firmware,   tr("Firmware"),              tr("Show Firmwares"));
-	add_column(gui::column_version,    tr("Version"),               tr("Show Versions"));
-	add_column(gui::column_category,   tr("Category"),              tr("Show Categories"));
-	add_column(gui::column_path,       tr("Path"),                  tr("Show Paths"));
-	add_column(gui::column_move,       tr("PlayStation Move"),      tr("Show PlayStation Move"));
-	add_column(gui::column_resolution, tr("Supported Resolutions"), tr("Show Supported Resolutions"));
-	add_column(gui::column_sound,      tr("Sound Formats"),         tr("Show Sound Formats"));
-	add_column(gui::column_parental,   tr("Parental Level"),        tr("Show Parental Levels"));
-	add_column(gui::column_last_play,  tr("Last Played"),           tr("Show Last Played"));
-	add_column(gui::column_playtime,   tr("Time Played"),           tr("Show Time Played"));
-	add_column(gui::column_compat,     tr("Compatibility"),         tr("Show Compatibility"));
-	add_column(gui::column_dir_size,   tr("Space On Disk"),         tr("Show Space On Disk"));
+	add_column(gui::game_list_columns::icon,       tr("Icon"),                  tr("Show Icons"));
+	add_column(gui::game_list_columns::name,       tr("Name"),                  tr("Show Names"));
+	add_column(gui::game_list_columns::serial,     tr("Serial"),                tr("Show Serials"));
+	add_column(gui::game_list_columns::firmware,   tr("Firmware"),              tr("Show Firmwares"));
+	add_column(gui::game_list_columns::version,    tr("Version"),               tr("Show Versions"));
+	add_column(gui::game_list_columns::category,   tr("Category"),              tr("Show Categories"));
+	add_column(gui::game_list_columns::path,       tr("Path"),                  tr("Show Paths"));
+	add_column(gui::game_list_columns::move,       tr("PlayStation Move"),      tr("Show PlayStation Move"));
+	add_column(gui::game_list_columns::resolution, tr("Supported Resolutions"), tr("Show Supported Resolutions"));
+	add_column(gui::game_list_columns::sound,      tr("Sound Formats"),         tr("Show Sound Formats"));
+	add_column(gui::game_list_columns::parental,   tr("Parental Level"),        tr("Show Parental Levels"));
+	add_column(gui::game_list_columns::last_play,  tr("Last Played"),           tr("Show Last Played"));
+	add_column(gui::game_list_columns::playtime,   tr("Time Played"),           tr("Show Time Played"));
+	add_column(gui::game_list_columns::compat,     tr("Compatibility"),         tr("Show Compatibility"));
+	add_column(gui::game_list_columns::dir_size,   tr("Space On Disk"),         tr("Show Space On Disk"));
 
 	// Events
 	connect(&m_parsing_watcher, &QFutureWatcher<void>::finished, this, &game_list_frame::OnParsingFinished);
@@ -169,12 +169,6 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	connect(m_game_list, &QTableWidget::itemDoubleClicked, this, QOverload<QTableWidgetItem*>::of(&game_list_frame::doubleClickedSlot));
 
 	connect(m_game_list->horizontalHeader(), &QHeaderView::sectionClicked, this, &game_list_frame::OnColClicked);
-	connect(m_game_list->horizontalHeader(), &QHeaderView::customContextMenuRequested, this, [this](const QPoint& pos)
-	{
-		QMenu* configure = new QMenu(this);
-		configure->addActions(m_columnActs);
-		configure->exec(m_game_list->horizontalHeader()->viewport()->mapToGlobal(pos));
-	});
 
 	connect(m_game_grid, &QWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
 	connect(m_game_grid, &game_list_grid::ItemSelectionChanged, this, &game_list_frame::NotifyGameSelection);
@@ -199,35 +193,9 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	connect(m_game_list, &game_list::FocusToSearchBar, this, &game_list_frame::FocusToSearchBar);
 	connect(m_game_grid, &game_list_grid::FocusToSearchBar, this, &game_list_frame::FocusToSearchBar);
 
-	for (int col = 0; col < m_columnActs.count(); ++col)
-	{
-		m_columnActs[col]->setCheckable(true);
-
-		connect(m_columnActs[col], &QAction::triggered, this, [this, col](bool checked)
-		{
-			if (!checked) // be sure to have at least one column left so you can call the context menu at all time
-			{
-				int c = 0;
-				for (int i = 0; i < m_columnActs.count(); ++i)
-				{
-					if (m_gui_settings->GetGamelistColVisibility(i) && ++c > 1)
-						break;
-				}
-				if (c < 2)
-				{
-					m_columnActs[col]->setChecked(true); // re-enable the checkbox if we don't change the actual state
-					return;
-				}
-			}
-			m_game_list->setColumnHidden(col, !checked); // Negate because it's a set col hidden and we have menu say show.
-			m_gui_settings->SetGamelistColVisibility(col, checked);
-
-			if (checked) // handle hidden columns that have zero width after showing them (stuck between others)
-			{
-				m_game_list->fix_narrow_columns();
-			}
-		});
-	}
+	m_game_list->create_header_actions(m_columnActs,
+		[this](int col) { return m_gui_settings->GetGamelistColVisibility(static_cast<gui::game_list_columns>(col)); },
+		[this](int col, bool visible) { m_gui_settings->SetGamelistColVisibility(static_cast<gui::game_list_columns>(col), visible); });
 }
 
 void game_list_frame::LoadSettings()
@@ -242,7 +210,7 @@ void game_list_frame::LoadSettings()
 
 	for (int col = 0; col < m_columnActs.count(); ++col)
 	{
-		const bool vis = m_gui_settings->GetGamelistColVisibility(col);
+		const bool vis = m_gui_settings->GetGamelistColVisibility(static_cast<gui::game_list_columns>(col));
 		m_columnActs[col]->setChecked(vis);
 		m_game_list->setColumnHidden(col, !vis);
 	}
@@ -260,7 +228,7 @@ game_list_frame::~game_list_frame()
 
 void game_list_frame::OnColClicked(int col)
 {
-	if (col == gui::column_icon) return; // Don't "sort" icons.
+	if (col == static_cast<int>(gui::game_list_columns::icon)) return; // Don't "sort" icons.
 
 	if (col == m_sort_column)
 	{
@@ -862,7 +830,7 @@ void game_list_frame::SaveSettings()
 {
 	for (int col = 0; col < m_columnActs.count(); ++col)
 	{
-		m_gui_settings->SetGamelistColVisibility(col, m_columnActs[col]->isChecked());
+		m_gui_settings->SetGamelistColVisibility(static_cast<gui::game_list_columns>(col), m_columnActs[col]->isChecked());
 	}
 	m_gui_settings->SetValue(gui::gl_sortCol, m_sort_column);
 	m_gui_settings->SetValue(gui::gl_sortAsc, m_col_sort_order == Qt::AscendingOrder);
@@ -896,7 +864,7 @@ void game_list_frame::ItemSelectionChangedSlot()
 
 	if (m_is_list_layout)
 	{
-		if (const auto item = m_game_list->item(m_game_list->currentRow(), gui::column_icon); item && item->isSelected())
+		if (const auto item = m_game_list->item(m_game_list->currentRow(), static_cast<int>(gui::game_list_columns::icon)); item && item->isSelected())
 		{
 			game = GetGameInfoByMode(item);
 		}
@@ -1017,7 +985,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 
 	if (m_is_list_layout)
 	{
-		QTableWidgetItem* item = m_game_list->item(m_game_list->indexAt(pos).row(), gui::column_icon);
+		QTableWidgetItem* item = m_game_list->item(m_game_list->indexAt(pos).row(), static_cast<int>(gui::game_list_columns::icon));
 		global_pos = m_game_list->viewport()->mapToGlobal(pos);
 		gameinfo = GetGameInfoFromItem(item);
 	}
@@ -2302,7 +2270,7 @@ bool game_list_frame::eventFilter(QObject *object, QEvent *event)
 
 				if (object == m_game_list)
 				{
-					QTableWidgetItem* item = m_game_list->item(m_game_list->currentRow(), gui::column_icon);
+					QTableWidgetItem* item = m_game_list->item(m_game_list->currentRow(), static_cast<int>(gui::game_list_columns::icon));
 
 					if (!item || !item->isSelected())
 						return false;
@@ -2418,7 +2386,7 @@ game_info game_list_frame::GetGameInfoByMode(const QTableWidgetItem* item) const
 
 	if (m_is_list_layout)
 	{
-		return GetGameInfoFromItem(m_game_list->item(item->row(), gui::column_icon));
+		return GetGameInfoFromItem(m_game_list->item(item->row(), static_cast<int>(gui::game_list_columns::icon)));
 	}
 
 	return GetGameInfoFromItem(item);

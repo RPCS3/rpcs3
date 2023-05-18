@@ -26,7 +26,7 @@ void table_item_delegate::initStyleOption(QStyleOptionViewItem *option, const QM
 
 void table_item_delegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
-	if (m_has_icons && index.column() == gui::game_list_columns::column_icon && option.state & QStyle::State_Selected)
+	if (m_has_icons && index.column() == static_cast<int>(gui::game_list_columns::icon) && option.state & QStyle::State_Selected)
 	{
 		// Add background highlight color to icons
 		painter->fillRect(option.rect, option.palette.color(QPalette::Highlight));

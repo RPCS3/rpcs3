@@ -15,9 +15,6 @@ public:
 	/** Restores the initial layout of the table */
 	void restore_layout(const QByteArray& state);
 
-	/** Fix columns with width smaller than the minimal section size */
-	void fix_narrow_columns();
-
 	/** Resizes the columns to their contents and adds a small spacing */
 	void resize_columns_to_contents(int spacing = 20);
 

@@ -1,11 +1,15 @@
 #pragma once
 
+#include <QAction>
+#include <QList>
 #include <QTableWidget>
 #include <QMouseEvent>
 #include <QKeyEvent>
 
 #include "game_list_base.h"
 #include "util/atomic.hpp"
+
+#include <functional>
 
 class movie_item;
 
@@ -20,7 +24,12 @@ class game_list : public QTableWidget, public game_list_base
 public:
 	game_list();
 
+	void create_header_actions(QList<QAction*>& actions, std::function<bool(int)> get_visibility, std::function<void(int, bool)> set_visibility);
+
 	void clear_list() override; // Use this instead of clearContents
+
+	/** Fix columns with width smaller than the minimal section size */
+	void fix_narrow_columns();
 
 public Q_SLOTS:
 	void FocusAndSelectFirstEntryIfNoneIs();
