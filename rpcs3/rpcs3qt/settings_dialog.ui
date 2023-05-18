@@ -1811,6 +1811,13 @@
               </widget>
              </item>
              <item>
+              <widget class="QCheckBox" name="padConnectionBox">
+               <property name="text">
+                <string>Keep Pads Connected</string>
+               </property>
+              </widget>
+             </item>
+             <item>
               <widget class="QCheckBox" name="showMoveCursorBox">
                <property name="text">
                 <string>Show PS Move Cursor</string>
