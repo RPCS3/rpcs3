@@ -499,7 +499,7 @@ void pad_settings_dialog::InitButtons()
 
 		if (data.has_new_data)
 		{
-			if (data.status == PadHandlerBase::disconnected)
+			if (data.status == PadHandlerBase::connection::disconnected)
 			{
 				fail_callback(data.pad_name);
 			}
