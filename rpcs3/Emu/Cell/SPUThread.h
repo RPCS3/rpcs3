@@ -782,7 +782,7 @@ public:
 
 	std::vector<mfc_cmd_dump> mfc_history;
 	u64 mfc_dump_idx = 0;
-	static constexpr u32 max_mfc_dump_idx = 2048;
+	static constexpr u32 max_mfc_dump_idx = 4096;
 
 	bool in_cpu_work = false;
 	bool allow_interrupts_in_cpu_work = false;

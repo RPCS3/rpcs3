@@ -14,6 +14,11 @@
 	std::memcpy(ppu.syscall_args, ppu.gpr + 3, sizeof(ppu.syscall_args)); \
 	ppu_func_detail::do_call(ppu, func);\
 	static_cast<void>(ppu.test_stopped());\
+	auto& history = ppu.syscall_history.data[ppu.syscall_history.index++ % ppu.syscall_history.data.size()];\
+	history.cia = ppu.cia;\
+	history.func_name = ppu.current_function;\
+	history.error = ppu.gpr[3];\
+	if (ppu.syscall_history.count_debug_arguments) std::copy_n(ppu.syscall_args, std::size(history.args), history.args.data());\
 	ppu.current_function = old_f;\
 	ppu.cia += 4;\
 	__VA_ARGS__;\
