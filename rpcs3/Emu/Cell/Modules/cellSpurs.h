@@ -798,7 +798,7 @@ struct alignas(128) CellSpurs
 
 	atomic_t<u8>& readyCount(u32 wid)
 	{
-		if (wid & 0x10)
+		if (wid < 0x10)
 		{
 			return wklReadyCount1[wid & 0xf];
 		}
