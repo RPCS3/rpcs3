@@ -3091,7 +3091,8 @@ s32 _cellSpursWorkloadFlagReceiver(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u3
 		u8 FlagReceiver; // 0x77
 	};
 
-	s32 res;
+	s32 res = CELL_OK;
+
 	vm::reservation_op(ppu, vm::unsafe_ptr_cast<wklFlagOp>(spurs), [&](wklFlagOp& val)
 	{
 		if (is_set)
@@ -3129,17 +3130,83 @@ s32 _cellSpursWorkloadFlagReceiver(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u3
 		}
 
 		res = CELL_OK;
-		return;
 	});
 
 	return res;
 }
 
 /// Set/unset the recipient of the workload flag
-s32 _cellSpursWorkloadFlagReceiver2()
+s32 _cellSpursWorkloadFlagReceiver2(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 wid, u32 is_set, u32 print_debug_output)
 {
-	UNIMPLEMENTED_FUNC(cellSpurs);
-	return CELL_OK;
+	cellSpurs.warning("_cellSpursWorkloadFlagReceiver2(spurs=*0x%x, wid=%d, is_set=%d, print_debug_output=%d)", spurs, wid, is_set, print_debug_output);
+
+	if (!spurs)
+	{
+		return CELL_SPURS_POLICY_MODULE_ERROR_NULL_POINTER;
+	}
+
+	if (!spurs.aligned())
+	{
+		return CELL_SPURS_POLICY_MODULE_ERROR_ALIGN;
+	}
+
+	if (wid >= spurs->max_workloads())
+	{
+		return CELL_SPURS_POLICY_MODULE_ERROR_INVAL;
+	}
+
+	if ((spurs->wklEnabled.load() & (0x80000000u >> wid)) == 0u)
+	{
+		return CELL_SPURS_POLICY_MODULE_ERROR_SRCH;
+	}
+
+	if (spurs->exception)
+	{
+		return CELL_SPURS_POLICY_MODULE_ERROR_STAT;
+	}
+
+	atomic_fence_acq_rel();
+
+	s32 res = CELL_OK;
+
+	vm::atomic_op<true>(spurs->wklFlagReceiver, [&](u8& FlagReceiver)
+	{
+		if (is_set)
+		{
+			if (FlagReceiver != 0xff)
+			{
+				res = CELL_SPURS_POLICY_MODULE_ERROR_BUSY;
+				return;
+			}
+		}
+		else
+		{
+			if (FlagReceiver != wid)
+			{
+				res = CELL_SPURS_POLICY_MODULE_ERROR_PERM;
+				return;
+			}
+		}
+
+		if (is_set)
+		{
+			if (FlagReceiver == 0xff)
+			{
+				FlagReceiver = static_cast<u8>(wid);
+			}
+		}
+		else
+		{
+			if (FlagReceiver == wid)
+			{
+				FlagReceiver = 0xff;
+			}
+		}
+
+		res = CELL_OK;
+	});
+
+	return res;
 }
 
 /// Request assignment of idle SPUs
@@ -3961,19 +4028,46 @@ s32 cellSpursGetTasksetId(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> wid)
 		return CELL_SPURS_TASK_ERROR_ALIGN;
 	}
 
-	if (taskset->wid >= CELL_SPURS_MAX_WORKLOAD)
-	{
-		return CELL_SPURS_TASK_ERROR_INVAL;
-	}
-
+	// Does not check its validity
 	*wid = taskset->wid;
 	return CELL_OK;
 }
 
-s32 cellSpursShutdownTaskset(vm::ptr<CellSpursTaskset> taskset)
+s32 cellSpursShutdownTaskset(ppu_thread& ppu, vm::ptr<CellSpursTaskset> taskset)
 {
-	UNIMPLEMENTED_FUNC(cellSpurs);
-	return CELL_OK;
+	cellSpurs.warning("cellSpursShutdownTaskset(taskset=*0x%x)", taskset);
+
+	if (!taskset)
+	{
+		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
+	}
+
+	if (!taskset.aligned())
+	{
+		return CELL_SPURS_TASK_ERROR_ALIGN;
+	}
+
+	const u32 wid = taskset->wid;
+
+	if (wid >= CELL_SPURS_MAX_WORKLOAD)
+	{
+		return CELL_SPURS_TASK_ERROR_INVAL;
+	}
+
+	const auto spurs = +taskset->spurs;
+	u32 shutdown_error = ppu_execute<&cellSpursShutdownWorkload>(ppu, spurs, wid);
+
+	if (shutdown_error == CELL_SPURS_POLICY_MODULE_ERROR_STAT)
+	{
+		shutdown_error = CELL_SPURS_TASK_ERROR_STAT;
+	}
+	else if (shutdown_error == CELL_SPURS_POLICY_MODULE_ERROR_ALIGN || shutdown_error == CELL_SPURS_POLICY_MODULE_ERROR_SRCH)
+	{
+		// printf is used on fw in this case
+		cellSpurs.error("cellSpursShutdownTaskset(taskset=*0x%x): Failed with %s (spurs=0x%x, wid=%d)", CellError{ shutdown_error }, spurs, wid);
+	}
+
+	return shutdown_error;
 }
 
 s32 _spurs::create_task(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> task_id, vm::cptr<void> elf, vm::cptr<void> context, u32 size, vm::ptr<CellSpursTaskLsPattern> ls_pattern, vm::ptr<CellSpursTaskArgument> arg)
