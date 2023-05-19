@@ -4,6 +4,7 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/lv2/sys_mmapper.h"
 #include "Emu/Cell/lv2/sys_event.h"
+#include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/RSX/RSXThread.h"
 #include "Thread.h"
 #include "Utilities/JIT.h"
@@ -1514,7 +1515,7 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 			}
 		}
 
-		if (pf_port_id)
+		if (auto pf_port = idm::get<lv2_obj, lv2_event_port>(pf_port_id); pf_port && pf_port->queue)
 		{
 			// We notify the game that a page fault occurred so it can rectify it.
 			// Note, for data3, were the memory readable AND we got a page fault, it must be due to a write violation since reads are allowed.
@@ -1552,20 +1553,33 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 				}
 			}
 
-			// Deschedule
-			if (cpu->id_type() == 1)
-			{
-				lv2_obj::sleep(*cpu);
-			}
 
 			// Now, place the page fault event onto table so that other functions [sys_mmapper_free_address and pagefault recovery funcs etc]
 			// know that this thread is page faulted and where.
 
 			auto& pf_events = g_fxo->get<page_fault_event_entries>();
+
+			// De-schedule
+			if (cpu->id_type() == 1)
 			{
-				std::lock_guard pf_lock(pf_events.pf_mutex);
-				pf_events.events.emplace(cpu, addr);
+				cpu->state -= cpu_flag::signal; // Cannot use check_state here and signal must be removed if exists
+				lv2_obj::sleep(*cpu);
 			}
+
+			auto send_event = [&]() -> error_code
+			{
+				lv2_obj::notify_all_t notify_later{};
+
+				std::lock_guard pf_lock(pf_events.pf_mutex);
+
+				if (auto error = pf_port->queue->send(pf_port->name ? pf_port->name : ((u64{process_getpid() + 0u} << 32) | u64{pf_port_id}), data1, data2, data3))
+				{
+					return error;
+				}
+
+				pf_events.events.emplace(cpu, addr);
+				return {};
+			};
 
 			sig_log.warning("Page_fault %s location 0x%x because of %s memory", is_writing ? "writing" : "reading",
 				addr, data3 == SYS_MEMORY_PAGE_FAULT_CAUSE_READ_ONLY ? "writing read-only" : "using unmapped");
@@ -1578,13 +1592,12 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 				}
 			}
 
-			error_code sending_error = sys_event_port_send(pf_port_id, data1, data2, data3);
+			error_code sending_error = not_an_error(CELL_EBUSY);
 
 			// If we fail due to being busy, wait a bit and try again.
-			while (static_cast<u32>(sending_error) == CELL_EBUSY)
+			for (; static_cast<u32>(sending_error) == CELL_EBUSY; thread_ctrl::wait_for(1000))
 			{
-				thread_ctrl::wait_for(1000);
-				sending_error = sys_event_port_send(pf_port_id, data1, data2, data3);
+				sending_error = send_event();
 
 				if (cpu->is_stopped())
 				{
