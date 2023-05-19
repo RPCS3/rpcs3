@@ -5335,7 +5335,7 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 
 	case SPU_WrEventMask:
 	{
-		get_events(value);
+		get_events(value | static_cast<u32>(ch_events.load().mask));
 
 		if (ch_events.atomic_op([&](ch_events_t& events)
 		{
@@ -5347,7 +5347,7 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 				return true;
 			}
 
-			return false;
+			return !!events.count;
 		}))
 		{
 			// Check interrupts in case count is 1
@@ -5363,7 +5363,7 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 	case SPU_WrEventAck:
 	{
 		// "Collect" events before final acknowledgment
-		get_events(value);
+		get_events(value | static_cast<u32>(ch_events.load().mask));
 
 		bool freeze_dec = false;
 
@@ -5379,7 +5379,7 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 				return true;
 			}
 
-			return false;
+			return !!events.count;
 		});
 
 		if (!is_dec_frozen && freeze_dec)
