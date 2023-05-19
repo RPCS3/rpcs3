@@ -9147,7 +9147,7 @@ public:
 
 			if (g_cfg.core.spu_approx_xfloat)
 			{
-				if (op.ra == op.rb && !m_interp_magn)
+				if (a.value == b.value)
 				{
 					return eval(a * b);
 				}
@@ -9162,7 +9162,15 @@ public:
 			}
 		});
 
-		set_vr(op.rt, fm(get_vr<f32[4]>(op.ra), get_vr<f32[4]>(op.rb)));
+		const auto [a, b] = get_vrs<f32[4]>(op.ra, op.rb);
+
+		if (op.ra == op.rb && !m_interp_magn)
+		{
+			set_vr(op.rt, fm(a, a));
+			return;
+		}
+
+		set_vr(op.rt, fm(a, b));
 	}
 
 	template <typename T>
