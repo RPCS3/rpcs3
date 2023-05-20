@@ -1,7 +1,6 @@
 #pragma once
 
-#include "Utilities/Config.h"
-#include "pad_types.h"
+#include "emulated_pad_config.h"
 
 #include <array>
 
@@ -22,40 +21,26 @@ enum class turntable_btn
 	triangle
 };
 
-struct cfg_turntable final : cfg::node
+struct cfg_turntable final : public emulated_pad_config<turntable_btn>
 {
-	cfg_turntable(node* owner, const std::string& name) : cfg::node(owner, name) {}
+	cfg_turntable(node* owner, const std::string& name) : emulated_pad_config(owner, name) {}
 
-	cfg::_enum<pad_button> blue{ this, "Blue", pad_button::square };
-	cfg::_enum<pad_button> green{ this, "Green", pad_button::cross };
-	cfg::_enum<pad_button> red{ this, "Red", pad_button::circle };
-	cfg::_enum<pad_button> dpad_up{ this, "D-Pad Up", pad_button::dpad_up };
-	cfg::_enum<pad_button> dpad_down{ this, "D-Pad Down", pad_button::dpad_down };
-	cfg::_enum<pad_button> dpad_left{ this, "D-Pad Left", pad_button::dpad_left };
-	cfg::_enum<pad_button> dpad_right{ this, "D-Pad Right", pad_button::dpad_right };
-	cfg::_enum<pad_button> start{ this, "Start", pad_button::start };
-	cfg::_enum<pad_button> select{ this, "Select", pad_button::select };
-	cfg::_enum<pad_button> square{ this, "Square", pad_button::R2 };
-	cfg::_enum<pad_button> circle{ this, "Circle", pad_button::L1 };
-	cfg::_enum<pad_button> cross{ this, "Cross", pad_button::R1 };
-	cfg::_enum<pad_button> triangle{ this, "Triangle", pad_button::triangle };
-
-	std::map<u32, std::map<u32, turntable_btn>> buttons;
-	std::optional<turntable_btn> find_button(u32 offset, u32 keycode) const;
+	cfg_pad_btn<turntable_btn> blue{ this, "Blue", turntable_btn::blue, pad_button::square };
+	cfg_pad_btn<turntable_btn> green{ this, "Green", turntable_btn::green, pad_button::cross };
+	cfg_pad_btn<turntable_btn> red{ this, "Red", turntable_btn::red, pad_button::circle };
+	cfg_pad_btn<turntable_btn> dpad_up{ this, "D-Pad Up", turntable_btn::dpad_up, pad_button::dpad_up };
+	cfg_pad_btn<turntable_btn> dpad_down{ this, "D-Pad Down", turntable_btn::dpad_down, pad_button::dpad_down };
+	cfg_pad_btn<turntable_btn> dpad_left{ this, "D-Pad Left", turntable_btn::dpad_left, pad_button::dpad_left };
+	cfg_pad_btn<turntable_btn> dpad_right{ this, "D-Pad Right", turntable_btn::dpad_right, pad_button::dpad_right };
+	cfg_pad_btn<turntable_btn> start{ this, "Start", turntable_btn::start, pad_button::start };
+	cfg_pad_btn<turntable_btn> select{ this, "Select", turntable_btn::select, pad_button::select };
+	cfg_pad_btn<turntable_btn> square{ this, "Square", turntable_btn::square, pad_button::R2 };
+	cfg_pad_btn<turntable_btn> circle{ this, "Circle", turntable_btn::circle, pad_button::L1 };
+	cfg_pad_btn<turntable_btn> cross{ this, "Cross", turntable_btn::cross, pad_button::R1 };
+	cfg_pad_btn<turntable_btn> triangle{ this, "Triangle", turntable_btn::triangle, pad_button::triangle };
 };
 
-struct cfg_turntables final : cfg::node
+struct cfg_turntables final : public emulated_pads_config<cfg_turntable>
 {
-	cfg_turntable player1{ this, "Player 1" };
-	cfg_turntable player2{ this, "Player 2" };
-	cfg_turntable player3{ this, "Player 3" };
-	cfg_turntable player4{ this, "Player 4" };
-	cfg_turntable player5{ this, "Player 5" };
-	cfg_turntable player6{ this, "Player 6" };
-	cfg_turntable player7{ this, "Player 7" };
-
-	std::array<cfg_turntable*, 7> players{ &player1, &player2, &player3, &player4, &player5, &player6, &player7 }; // Thanks gcc!
-
-	bool load();
-	void save() const;
+	cfg_turntables() : emulated_pads_config<cfg_turntable>("turntable") {};
 };

@@ -1,7 +1,6 @@
 #pragma once
 
-#include "Utilities/Config.h"
-#include "pad_types.h"
+#include "emulated_pad_config.h"
 
 #include <array>
 
@@ -14,32 +13,18 @@ enum class buzz_btn
 	blue
 };
 
-struct cfg_buzzer final : cfg::node
+struct cfg_buzzer final : public emulated_pad_config<buzz_btn>
 {
-	cfg_buzzer(node* owner, const std::string& name) : cfg::node(owner, name) {}
+	cfg_buzzer(node* owner, const std::string& name) : emulated_pad_config(owner, name) {}
 
-	cfg::_enum<pad_button> red{ this, "Red", pad_button::R1 };
-	cfg::_enum<pad_button> yellow{ this, "Yellow", pad_button::cross };
-	cfg::_enum<pad_button> green{ this, "Green", pad_button::circle };
-	cfg::_enum<pad_button> orange{ this, "Orange", pad_button::square };
-	cfg::_enum<pad_button> blue{ this, "Blue", pad_button::triangle };
-
-	std::map<u32, std::map<u32, buzz_btn>> buttons;
-	std::optional<buzz_btn> find_button(u32 offset, u32 keycode) const;
+	cfg_pad_btn<buzz_btn> red{ this, "Red", buzz_btn::red, pad_button::R1 };
+	cfg_pad_btn<buzz_btn> yellow{ this, "Yellow", buzz_btn::yellow, pad_button::cross };
+	cfg_pad_btn<buzz_btn> green{ this, "Green", buzz_btn::green, pad_button::circle };
+	cfg_pad_btn<buzz_btn> orange{ this, "Orange", buzz_btn::orange, pad_button::square };
+	cfg_pad_btn<buzz_btn> blue{ this, "Blue", buzz_btn::blue, pad_button::triangle };
 };
 
-struct cfg_buzz final : cfg::node
+struct cfg_buzz final : public emulated_pads_config<cfg_buzzer>
 {
-	cfg_buzzer player1{ this, "Player 1" };
-	cfg_buzzer player2{ this, "Player 2" };
-	cfg_buzzer player3{ this, "Player 3" };
-	cfg_buzzer player4{ this, "Player 4" };
-	cfg_buzzer player5{ this, "Player 5" };
-	cfg_buzzer player6{ this, "Player 6" };
-	cfg_buzzer player7{ this, "Player 7" };
-
-	std::array<cfg_buzzer*, 7> players{ &player1, &player2, &player3, &player4, &player5, &player6, &player7 }; // Thanks gcc!
-
-	bool load();
-	void save() const;
+	cfg_buzz() : emulated_pads_config<cfg_buzzer>("buzz") {};
 };

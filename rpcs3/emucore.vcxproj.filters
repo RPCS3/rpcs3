@@ -1162,19 +1162,7 @@
     <ClCompile Include="Emu\Io\midi_config_types.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\Io\buzz_config.cpp">
-      <Filter>Emu\Io</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\Io\pad_types.cpp">
-      <Filter>Emu\Io</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\Io\turntable_config.cpp">
-      <Filter>Emu\Io</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\Io\ghltar_config.cpp">
-      <Filter>Emu\Io</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\Io\usio_config.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
   </ItemGroup>
@@ -2369,6 +2357,12 @@
       <Filter>Emu\Io</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Io\usio_config.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\gem_config.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\emulated_pad_config.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
   </ItemGroup>
