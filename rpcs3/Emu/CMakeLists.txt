@@ -393,6 +393,7 @@ target_sources(rpcs3_emu PRIVATE
     Io/pad_config.cpp
     Io/pad_config_types.cpp
     Io/PadHandler.cpp
+    Io/pad_types.cpp
     Io/usb_device.cpp
     Io/usb_vfs.cpp
     Io/Infinity.cpp

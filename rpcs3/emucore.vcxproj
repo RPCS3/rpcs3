@@ -68,9 +68,7 @@
     <ClCompile Include="Emu\Cell\Modules\sys_crashdump.cpp" />
     <ClCompile Include="Emu\Cell\Modules\HLE_PATCHES.cpp" />
     <ClCompile Include="Emu\games_config.cpp" />
-    <ClCompile Include="Emu\Io\buzz_config.cpp" />
     <ClCompile Include="Emu\Io\camera_config.cpp" />
-    <ClCompile Include="Emu\Io\ghltar_config.cpp" />
     <ClCompile Include="Emu\Io\midi_config_types.cpp" />
     <ClCompile Include="Emu\Io\pad_types.cpp" />
     <ClCompile Include="Emu\Io\RB3MidiGuitar.cpp" />
@@ -79,14 +77,12 @@
     <ClCompile Include="Emu\Io\Turntable.cpp" />
     <ClCompile Include="Emu\Io\GHLtar.cpp" />
     <ClCompile Include="Emu\Io\Buzz.cpp" />
-    <ClCompile Include="Emu\Io\turntable_config.cpp" />
     <ClCompile Include="Emu\Io\usio.cpp" />
     <ClCompile Include="Emu\Audio\AudioBackend.cpp" />
     <ClCompile Include="Emu\Io\interception.cpp" />
     <ClCompile Include="Emu\Io\KeyboardHandler.cpp" />
     <ClCompile Include="Emu\Io\pad_config.cpp" />
     <ClCompile Include="Emu\Io\pad_config_types.cpp" />
-    <ClCompile Include="Emu\Io\usio_config.cpp" />
     <ClCompile Include="Emu\IPC_config.cpp" />
     <ClCompile Include="Emu\IPC_socket.cpp" />
     <ClCompile Include="Emu\localized_string.cpp" />
@@ -512,6 +508,8 @@
     <ClInclude Include="Emu\Io\buzz_config.h" />
     <ClInclude Include="Emu\Io\camera_config.h" />
     <ClInclude Include="Emu\Io\camera_handler_base.h" />
+    <ClInclude Include="Emu\Io\emulated_pad_config.h" />
+    <ClInclude Include="Emu\Io\gem_config.h" />
     <ClInclude Include="Emu\Io\ghltar_config.h" />
     <ClInclude Include="Emu\Io\midi_config_types.h" />
     <ClInclude Include="Emu\Io\music_handler_base.h" />
