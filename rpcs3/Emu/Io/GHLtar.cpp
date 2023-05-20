@@ -5,9 +5,9 @@
 #include "Emu/Cell/lv2/sys_usbd.h"
 #include "Input/pad_thread.h"
 
-LOG_CHANNEL(ghltar_log);
+LOG_CHANNEL(ghltar_log, "GHLTAR");
 
-usb_device_ghltar::usb_device_ghltar(int controller_index, const std::array<u8, 7>& location)
+usb_device_ghltar::usb_device_ghltar(u32 controller_index, const std::array<u8, 7>& location)
 	: usb_device_emulated(location), m_controller_index(controller_index)
 {
 	device        = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE, UsbDeviceDescriptor{0x0200, 0x00, 0x00, 0x00, 0x20, 0x12BA, 0x074B, 0x0100, 0x01, 0x02, 0x00, 0x01});
@@ -16,6 +16,11 @@ usb_device_ghltar::usb_device_ghltar(int controller_index, const std::array<u8, 
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_HID, UsbDeviceHID{0x0111, 0x00, 0x01, 0x22, 0x001d}));
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_ENDPOINT, UsbDeviceEndpoint{0x81, 0x03, 0x0020, 0x01}));
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_ENDPOINT, UsbDeviceEndpoint{0x01, 0x03, 0x0020, 0x01}));
+
+	if (!m_cfg.load())
+	{
+		ghltar_log.notice("Could not load ghltar config. Using defaults.");
+	}
 }
 
 usb_device_ghltar::~usb_device_ghltar()
@@ -110,6 +115,7 @@ void usb_device_ghltar::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint
 	std::lock_guard lock(pad::g_pad_mutex);
 	const auto handler = pad::get_current_handler();
 	const auto& pad    = ::at32(handler->GetPads(), m_controller_index);
+	const auto& cfg    = ::at32(m_cfg.players, m_controller_index);
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 	{
@@ -123,62 +129,53 @@ void usb_device_ghltar::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint
 			continue;
 		}
 
-		if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL2)
+		if (const auto btn = cfg->find_button(button.m_offset, button.m_outKeyCode))
 		{
-			switch (button.m_outKeyCode)
+			switch (btn.value())
 			{
-			case CELL_PAD_CTRL_SQUARE:
+			case ghltar_btn::w1:
 				buf[0] += 0x01; // W1
 				break;
-			case CELL_PAD_CTRL_CROSS:
+			case ghltar_btn::b1:
 				buf[0] += 0x02; // B1
 				break;
-			case CELL_PAD_CTRL_CIRCLE:
+			case ghltar_btn::b2:
 				buf[0] += 0x04; // B2
 				break;
-			case CELL_PAD_CTRL_TRIANGLE:
+			case ghltar_btn::b3:
 				buf[0] += 0x08; // B3
 				break;
-			case CELL_PAD_CTRL_R1:
+			case ghltar_btn::w3:
 				buf[0] += 0x20; // W3
 				break;
-			case CELL_PAD_CTRL_L1:
+			case ghltar_btn::w2:
 				buf[0] += 0x10; // W2
 				break;
-			default:
-				break;
-			}
-		}
-		else if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL1)
-		{
-			switch (button.m_outKeyCode)
-			{
-			case CELL_PAD_CTRL_DOWN:
+			case ghltar_btn::strum_down:
 				buf[4] = 0xFF; // Strum Down
 				break;
-			case CELL_PAD_CTRL_UP:
+			case ghltar_btn::strum_up:
 				buf[4] = 0x00; // Strum Up
 				break;
-			case CELL_PAD_CTRL_LEFT:
+			case ghltar_btn::dpad_left:
 				buf[2] = 0x02; // Left D-Pad (Unused)
 				break;
-			case CELL_PAD_CTRL_RIGHT:
+			case ghltar_btn::dpad_right:
 				buf[2] = 0x06; // Right D-Pad (Unused)
 				break;
-			case CELL_PAD_CTRL_START:
+			case ghltar_btn::start:
 				buf[1] += 0x02; // Pause
 				break;
-			case CELL_PAD_CTRL_SELECT:
+			case ghltar_btn::hero_power:
 				buf[1] += 0x01; // Hero Power
 				break;
-			case CELL_PAD_CTRL_L3:
+			case ghltar_btn::ghtv:
 				buf[1] += 0x04; // GHTV Button
-				break;
-			default:
 				break;
 			}
 		}
 	}
+
 	for (const AnalogStick& stick : pad->m_sticks)
 	{
 		switch (stick.m_offset)

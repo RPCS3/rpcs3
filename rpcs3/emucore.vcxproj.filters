@@ -1171,6 +1171,9 @@
     <ClCompile Include="Emu\Io\turntable_config.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Io\ghltar_config.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -2357,6 +2360,9 @@
       <Filter>Emu\Io</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Io\turntable_config.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\ghltar_config.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
   </ItemGroup>
