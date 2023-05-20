@@ -86,6 +86,7 @@
     <ClCompile Include="Emu\Io\KeyboardHandler.cpp" />
     <ClCompile Include="Emu\Io\pad_config.cpp" />
     <ClCompile Include="Emu\Io\pad_config_types.cpp" />
+    <ClCompile Include="Emu\Io\usio_config.cpp" />
     <ClCompile Include="Emu\IPC_config.cpp" />
     <ClCompile Include="Emu\IPC_socket.cpp" />
     <ClCompile Include="Emu\localized_string.cpp" />
@@ -529,6 +530,7 @@
     <ClInclude Include="Emu\Io\Keyboard.h" />
     <ClInclude Include="Emu\Io\pad_config.h" />
     <ClInclude Include="Emu\Io\pad_config_types.h" />
+    <ClInclude Include="Emu\Io\usio_config.h" />
     <ClInclude Include="Emu\IPC_config.h" />
     <ClInclude Include="Emu\IPC_socket.h" />
     <ClInclude Include="Emu\localized_string.h" />

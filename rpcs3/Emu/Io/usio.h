@@ -2,6 +2,7 @@
 
 #include "Emu/system_utils.hpp"
 #include "Emu/Io/usb_device.h"
+#include "Emu/Io/usio_config.h"
 
 class usb_device_usio : public usb_device_emulated
 {
@@ -28,4 +29,5 @@ private:
 	le_t<u16> coin_counter = 0;
 	const std::string usio_backup_path = rpcs3::utils::get_hdd1_dir() + "/caches/usiobackup.bin";
 	std::vector<u8> response;
+	cfg_usios m_cfg;
 };
