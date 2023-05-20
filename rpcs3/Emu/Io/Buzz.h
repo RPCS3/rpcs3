@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Emu/Io/usb_device.h"
+#include "Emu/Io/buzz_config.h"
 
 class usb_device_buzz : public usb_device_emulated
 {
@@ -14,4 +15,5 @@ public:
 private:
 	u32 m_first_controller;
 	u32 m_last_controller;
+	cfg_buzz m_cfg;
 };

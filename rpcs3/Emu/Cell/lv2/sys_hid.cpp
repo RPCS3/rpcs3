@@ -35,7 +35,7 @@ error_code sys_hid_manager_open(u64 device_type, u64 port_no, vm::ptr<u32> handl
 	if (device_type == 1)
 	{
 		cellPadInit(7);
-		cellPadSetPortSetting(port_no /* 0 */, CELL_PAD_SETTING_LDD | CELL_PAD_SETTING_PRESS_ON | CELL_PAD_SETTING_SENSOR_ON);
+		cellPadSetPortSetting(::narrow<u32>(port_no) /* 0 */, CELL_PAD_SETTING_LDD | CELL_PAD_SETTING_PRESS_ON | CELL_PAD_SETTING_SENSOR_ON);
 	}
 
 	return CELL_OK;
