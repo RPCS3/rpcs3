@@ -67,7 +67,7 @@ namespace rsx
 			compiled_resource get_compiled() override;
 
 			void update() override;
-			void on_button_pressed(pad_button button_press) override;
+			void on_button_pressed(pad_button button_press, bool is_auto_repeat) override;
 			void close(bool use_callback, bool stop_pad_interception) override;
 
 			error_code show(bool is_blocking, const std::string& text, const MsgDialogType& type, std::function<void(s32 status)> on_close);

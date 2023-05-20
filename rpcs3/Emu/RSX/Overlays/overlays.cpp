@@ -94,7 +94,7 @@ namespace rsx
 						timestamp[pad_index] = steady_clock::now();
 						initial_timestamp[pad_index] = timestamp[pad_index];
 						last_auto_repeat_button[pad_index] = is_auto_repeat_button ? button_id : pad_button::pad_button_max_enum;
-						on_button_pressed(static_cast<pad_button>(button_id));
+						on_button_pressed(static_cast<pad_button>(button_id), false);
 					}
 					else if (is_auto_repeat_button)
 					{
@@ -104,7 +104,7 @@ namespace rsx
 						{
 							// The auto-repeat button was pressed for at least the given threshold in ms and will trigger at an interval.
 							timestamp[pad_index] = steady_clock::now();
-							on_button_pressed(static_cast<pad_button>(button_id));
+							on_button_pressed(static_cast<pad_button>(button_id), true);
 						}
 						else if (last_auto_repeat_button[pad_index] == pad_button::pad_button_max_enum)
 						{

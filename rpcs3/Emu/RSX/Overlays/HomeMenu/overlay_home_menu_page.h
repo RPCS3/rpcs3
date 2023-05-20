@@ -16,7 +16,7 @@ namespace rsx
 
 			void set_current_page(home_menu_page* page);
 			home_menu_page* get_current_page(bool include_this);
-			page_navigation handle_button_press(pad_button button_press);
+			page_navigation handle_button_press(pad_button button_press, bool is_auto_repeat, u64 auto_repeat_interval_ms);
 
 			void translate(s16 _x, s16 _y) override;
 			compiled_resource& get_compiled() override;

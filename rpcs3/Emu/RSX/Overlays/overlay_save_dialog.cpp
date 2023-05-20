@@ -121,7 +121,7 @@ namespace rsx
 			}
 		}
 
-		void save_dialog::on_button_pressed(pad_button button_press)
+		void save_dialog::on_button_pressed(pad_button button_press, bool is_auto_repeat)
 		{
 			if (fade_animation.active) return;
 
@@ -170,7 +170,8 @@ namespace rsx
 					close(true, true);
 				};
 			}
-			else
+			// Play a sound unless this is a fast auto repeat which would induce a nasty noise
+			else if (!is_auto_repeat || m_auto_repeat_ms_interval >= m_auto_repeat_ms_interval_default)
 			{
 				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_cursor.wav");
 			}
