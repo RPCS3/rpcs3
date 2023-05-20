@@ -5,9 +5,9 @@
 #include "Emu/Cell/lv2/sys_usbd.h"
 #include "Input/pad_thread.h"
 
-LOG_CHANNEL(turntable_log);
+LOG_CHANNEL(turntable_log, "TURN");
 
-usb_device_turntable::usb_device_turntable(int controller_index, const std::array<u8, 7>& location)
+usb_device_turntable::usb_device_turntable(u32 controller_index, const std::array<u8, 7>& location)
 	: usb_device_emulated(location), m_controller_index(controller_index)
 {
 	device        = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE, UsbDeviceDescriptor{0x0100, 0x00, 0x00, 0x00, 0x40, 0x12BA, 0x0140, 0x0005, 0x01, 0x02, 0x00, 0x01});
@@ -16,6 +16,11 @@ usb_device_turntable::usb_device_turntable(int controller_index, const std::arra
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_HID, UsbDeviceHID{0x0110, 0x00, 0x01, 0x22, 0x0089}));
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_ENDPOINT, UsbDeviceEndpoint{0x81, 0x03, 0x0040, 0x0a}));
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_ENDPOINT, UsbDeviceEndpoint{0x02, 0x03, 0x0040, 0x0a}));
+
+	if (!m_cfg.load())
+	{
+		turntable_log.notice("Could not load turntable config. Using defaults.");
+	}
 }
 
 usb_device_turntable::~usb_device_turntable()
@@ -121,130 +126,123 @@ void usb_device_turntable::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpo
 
 	std::lock_guard lock(pad::g_pad_mutex);
 	const auto handler = pad::get_current_handler();
-	const auto& pad    = handler->GetPads()[m_controller_index];
+	const auto& pads   = handler->GetPads();
+	const auto& pad    = ::at32(pads, m_controller_index);
+	const auto& cfg    = ::at32(m_cfg.players, m_controller_index);
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return;
 
 	for (const Button& button : pad->m_buttons)
 	{
-		if (button.m_pressed)
+		if (!button.m_pressed)
+			continue;
+
+		if (const auto btn = cfg->find_button(button.m_offset, button.m_outKeyCode))
 		{
-			if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL2)
+			switch (btn.value())
 			{
-				switch (button.m_outKeyCode)
+			case turntable_btn::blue:
+				buf[0] |= 0x01;   // Square Button
+				buf[7] = ~buf[7]; // Square Button
+				buf[23] |= 0x04;  // Right Platter Blue
+				break;
+			case turntable_btn::green:
+				buf[0] |= 0x02;   // Cross Button
+				buf[9] = ~buf[9]; // Cross Button
+				buf[23] |= 0x01;  // Right Platter Green
+				break;
+			case turntable_btn::red:
+				buf[0] |= 0x04;     // Circle Button
+				buf[12] = ~buf[12]; // Circle Button
+				buf[23] |= 0x02;    // Right Platter Red
+				break;
+			case turntable_btn::triangle:
+				buf[0] |= 0x08;     // Triangle Button / Euphoria
+				buf[11] = ~buf[11]; // Triangle Button / Euphoria
+				break;
+			case turntable_btn::cross:
+				buf[0] |= 0x02;   // Cross Button Only
+				buf[9] = ~buf[9]; // Cross Button Only
+				break;
+			case turntable_btn::circle:
+				buf[0] |= 0x04;     // Circle Button Only
+				buf[12] = ~buf[12]; // Circle Button Only
+				break;
+			case turntable_btn::square:
+				buf[0] |= 0x01;   // Square Button Only
+				buf[7] = ~buf[7]; // Square Button Only
+				break;
+			case turntable_btn::dpad_down:
+				if (buf[2] == 0x02) // Right D-Pad
 				{
-					case CELL_PAD_CTRL_SQUARE:
-						buf[0] |= 0x01;   // Square Button
-						buf[7] = ~buf[7]; // Square Button
-						buf[23] |= 0x04;  // Right Platter Blue
-						break;
-					case CELL_PAD_CTRL_CROSS:
-						buf[0] |= 0x02;   // Cross Button
-						buf[9] = ~buf[9]; // Cross Button
-						buf[23] |= 0x01;  // Right Platter Green
-						break;
-					case CELL_PAD_CTRL_CIRCLE:
-						buf[0] |= 0x04;     // Circle Button
-						buf[12] = ~buf[12]; // Circle Button
-						buf[23] |= 0x02;    // Right Platter Red
-						break;
-					case CELL_PAD_CTRL_TRIANGLE:
-						buf[0] |= 0x08;     // Triangle Button / Euphoria
-						buf[11] = ~buf[11]; // Triangle Button / Euphoria
-						break;
-					case CELL_PAD_CTRL_R1:
-						buf[0] |= 0x02;   // Cross Button Only
-						buf[9] = ~buf[9]; // Cross Button Only
-						break;
-					case CELL_PAD_CTRL_L1:
-						buf[0] |= 0x04;     // Circle Button Only
-						buf[12] = ~buf[12]; // Circle Button Only
-						break;
-					case CELL_PAD_CTRL_R2:
-						buf[0] |= 0x01;   // Square Button Only
-						buf[7] = ~buf[7]; // Square Button Only
-						break;
-					default:
-						break;
+					buf[2] = 0x03; // Right-Down D-Pad
 				}
-			}
-			else if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL1)
-			{
-				switch (button.m_outKeyCode)
+				else if (buf[2] == 0x06) // Left D-Pad
 				{
-					case CELL_PAD_CTRL_DOWN:
-						if (buf[2] == 0x02) // Right D-Pad
-						{
-							buf[2] = 0x03; // Right-Down D-Pad
-						}
-						else if (buf[2] == 0x06) // Left D-Pad
-						{
-							buf[2] = 0x05; // Left-Down D-Pad
-						}
-						else
-						{
-							buf[2] = 0x04; // Down D-Pad
-						}
-						buf[10] = ~buf[10]; // Down D-Pad;
-						break;
-					case CELL_PAD_CTRL_UP:
-						if (buf[2] == 0x02) // Right D-Pad
-						{
-							buf[2] = 0x01; // Right-Up D-Pad
-						}
-						else if (buf[2] == 0x06) // Left D-Pad
-						{
-							buf[2] = 0x07; // Left-Up D-Pad
-						}
-						else
-						{
-							buf[2] = 0x00; // Up D-Pad
-						}
-						buf[9] = ~buf[9]; // Up D-Pad;
-						break;
-					case CELL_PAD_CTRL_LEFT:
-						if (buf[2] == 0x00) // Up D-Pad
-						{
-							buf[2] = 0x07; // Left-Up D-Pad
-						}
-						else if (buf[2] == 0x04) // Down D-Pad
-						{
-							buf[2] = 0x05; // Left-Down D-Pad
-						}
-						else
-						{
-							buf[2] = 0x06; // Left D-Pad
-						}
-						buf[8] = ~buf[8]; // Left D-Pad;
-						break;
-					case CELL_PAD_CTRL_RIGHT:
-						if (buf[2] == 0x00) // Up D-Pad
-						{
-							buf[2] = 0x01; // Right-Up D-Pad
-						}
-						else if (buf[2] == 0x04) // Down D-Pad
-						{
-							buf[2] = 0x03; // Right-Down D-Pad
-						}
-						else
-						{
-							buf[2] = 0x02; // Right D-Pad
-						}
-						buf[7] = ~buf[7]; // Right D-Pad
-						break;
-					case CELL_PAD_CTRL_START:
-						buf[1] |= 0x02; // Start
-						break;
-					case CELL_PAD_CTRL_SELECT:
-						buf[1] |= 0x01; // Select
-						break;
-					default:
-						break;
+					buf[2] = 0x05; // Left-Down D-Pad
 				}
+				else
+				{
+					buf[2] = 0x04; // Down D-Pad
+				}
+				buf[10] = ~buf[10]; // Down D-Pad;
+				break;
+			case turntable_btn::dpad_up:
+				if (buf[2] == 0x02) // Right D-Pad
+				{
+					buf[2] = 0x01; // Right-Up D-Pad
+				}
+				else if (buf[2] == 0x06) // Left D-Pad
+				{
+					buf[2] = 0x07; // Left-Up D-Pad
+				}
+				else
+				{
+					buf[2] = 0x00; // Up D-Pad
+				}
+				buf[9] = ~buf[9]; // Up D-Pad;
+				break;
+			case turntable_btn::dpad_left:
+				if (buf[2] == 0x00) // Up D-Pad
+				{
+					buf[2] = 0x07; // Left-Up D-Pad
+				}
+				else if (buf[2] == 0x04) // Down D-Pad
+				{
+					buf[2] = 0x05; // Left-Down D-Pad
+				}
+				else
+				{
+					buf[2] = 0x06; // Left D-Pad
+				}
+				buf[8] = ~buf[8]; // Left D-Pad;
+				break;
+			case turntable_btn::dpad_right:
+				if (buf[2] == 0x00) // Up D-Pad
+				{
+					buf[2] = 0x01; // Right-Up D-Pad
+				}
+				else if (buf[2] == 0x04) // Down D-Pad
+				{
+					buf[2] = 0x03; // Right-Down D-Pad
+				}
+				else
+				{
+					buf[2] = 0x02; // Right D-Pad
+				}
+				buf[7] = ~buf[7]; // Right D-Pad
+				break;
+			case turntable_btn::start:
+				buf[1] |= 0x02; // Start
+				break;
+			case turntable_btn::select:
+				buf[1] |= 0x01; // Select
+				break;
 			}
 		}
 	}
+
 	for (const AnalogStick& stick : pad->m_sticks)
 	{
 		switch (stick.m_offset)
