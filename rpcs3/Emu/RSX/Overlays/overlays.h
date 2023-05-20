@@ -91,9 +91,10 @@ namespace rsx
 				interrupted = -4
 			};
 
+			static constexpr u64 m_auto_repeat_ms_interval_default = 200;
+
 		protected:
 			Timer m_input_timer;
-			static constexpr u64 m_auto_repeat_ms_interval_default = 200;
 			u64 m_auto_repeat_ms_interval = m_auto_repeat_ms_interval_default;
 			std::set<u8> m_auto_repeat_buttons = {
 				pad_button::dpad_up,
@@ -156,7 +157,7 @@ namespace rsx
 
 			compiled_resource get_compiled() override = 0;
 
-			virtual void on_button_pressed(pad_button /*button_press*/) {}
+			virtual void on_button_pressed(pad_button /*button_press*/, bool /*is_auto_repeat*/) {}
 			virtual void on_key_pressed(u32 /*led*/, u32 /*mkey*/, u32 /*key_code*/, u32 /*out_key_code*/, bool /*pressed*/, std::u32string /*key*/) {}
 
 			virtual void close(bool use_callback, bool stop_pad_interception);

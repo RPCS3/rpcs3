@@ -68,7 +68,7 @@ namespace rsx
 			}
 		}
 
-		void home_menu_dialog::on_button_pressed(pad_button button_press)
+		void home_menu_dialog::on_button_pressed(pad_button button_press, bool is_auto_repeat)
 		{
 			if (fade_animation.active) return;
 
@@ -86,7 +86,7 @@ namespace rsx
 				break;
 			}
 
-			const page_navigation navigation = m_main_menu.handle_button_press(button_press);
+			const page_navigation navigation = m_main_menu.handle_button_press(button_press, is_auto_repeat, m_auto_repeat_ms_interval);
 
 			switch (navigation)
 			{

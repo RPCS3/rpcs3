@@ -128,7 +128,7 @@ namespace rsx
 			return result;
 		}
 
-		void message_dialog::on_button_pressed(pad_button button_press)
+		void message_dialog::on_button_pressed(pad_button button_press, bool /*is_auto_repeat*/)
 		{
 			if (fade_animation.active) return;
 

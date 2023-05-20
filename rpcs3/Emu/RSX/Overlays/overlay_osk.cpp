@@ -642,7 +642,7 @@ namespace rsx
 			}
 		}
 
-		void osk_dialog::on_button_pressed(pad_button button_press)
+		void osk_dialog::on_button_pressed(pad_button button_press, bool is_auto_repeat)
 		{
 			if (!pad_input_enabled)
 				return;
@@ -886,7 +886,8 @@ namespace rsx
 				break;
 			}
 
-			if (play_cursor_sound)
+			// Play a sound unless this is a fast auto repeat which would induce a nasty noise
+			if (play_cursor_sound && (!is_auto_repeat || m_auto_repeat_ms_interval >= m_auto_repeat_ms_interval_default))
 			{
 				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_cursor.wav");
 			}
