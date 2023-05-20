@@ -32,12 +32,12 @@ void usb_device_ghltar::control_transfer(u8 bmRequestType, u8 bRequest, u16 wVal
 		case 0x21:
 			switch (bRequest)
 			{
-				case 0x09:
-					// Do nothing here - not sure what it should do.
-					break;
-				default:
-					ghltar_log.error("Unhandled Query Type: 0x%02X", buf[0]);
-					break;
+			case 0x09:
+				// Do nothing here - not sure what it should do.
+				break;
+			default:
+				ghltar_log.error("Unhandled Query: buf_size=0x%02X, Type=0x%02X, bRequest=0x%02X, bmRequestType=0x%02X", buf_size, (buf_size > 0) ? buf[0] : -1, bRequest, bmRequestType);
+				break;
 			}
 			break;
 		default:
@@ -50,6 +50,8 @@ extern bool is_input_allowed();
 
 void usb_device_ghltar::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint*/, UsbTransfer* transfer)
 {
+	ensure(buf_size >= 27);
+
 	transfer->fake            = true;
 	transfer->expected_count  = buf_size;
 	transfer->expected_result = HC_CC_NOERR;
