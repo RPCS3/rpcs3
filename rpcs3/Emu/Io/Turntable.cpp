@@ -134,9 +134,9 @@ void usb_device_turntable::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpo
 		if (!button.m_pressed)
 			continue;
 
-		if (const auto btn = cfg->find_button(button.m_offset, button.m_outKeyCode))
+		if (const auto btn = cfg->find_button(button.m_offset, button.m_outKeyCode); btn.has_value() && btn.value())
 		{
-			switch (btn.value())
+			switch (btn.value()->btn_id())
 			{
 			case turntable_btn::blue:
 				buf[0] |= 0x01;   // Square Button

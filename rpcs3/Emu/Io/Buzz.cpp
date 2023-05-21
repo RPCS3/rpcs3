@@ -92,9 +92,9 @@ void usb_device_buzz::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint*/
 				continue;
 			}
 
-			if (const auto btn = cfg->find_button(button.m_offset, button.m_outKeyCode))
+			if (const auto btn = cfg->find_button(button.m_offset, button.m_outKeyCode); btn.has_value() && btn.value())
 			{
-				switch (btn.value())
+				switch (btn.value()->btn_id())
 				{
 				case buzz_btn::red:
 					buf[2 + (0 + 5 * index) / 8] |= 1 << ((0 + 5 * index) % 8); // Red
