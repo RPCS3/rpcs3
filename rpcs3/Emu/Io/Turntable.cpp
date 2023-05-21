@@ -235,6 +235,8 @@ void usb_device_turntable::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpo
 			case turntable_btn::select:
 				buf[1] |= 0x01; // Select
 				break;
+			case turntable_btn::count:
+				break;
 			}
 		}
 	}

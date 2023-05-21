@@ -18,7 +18,9 @@ enum class ghltar_btn
 	strum_down,
 	strum_up,
 	dpad_left,
-	dpad_right
+	dpad_right,
+
+	count
 };
 
 struct cfg_ghltar final : public emulated_pad_config<ghltar_btn>

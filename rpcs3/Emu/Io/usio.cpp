@@ -245,6 +245,8 @@ void usb_device_usio::translate_input()
 					if (button.m_pressed)
 						std::memcpy(input_buf.data() + 38 + offset, &c_small_hit, sizeof(u16));
 					break;
+				case usio_btn::count:
+					break;
 				}
 			}
 		}

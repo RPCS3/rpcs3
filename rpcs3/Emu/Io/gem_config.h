@@ -14,6 +14,8 @@ enum class gem_btn
 	square,
 	move,
 	t,
+
+	count
 };
 
 struct cfg_gem final : public emulated_pad_config<gem_btn>

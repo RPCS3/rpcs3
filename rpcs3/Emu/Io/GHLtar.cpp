@@ -168,6 +168,8 @@ void usb_device_ghltar::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint
 			case ghltar_btn::ghtv:
 				buf[1] += 0x04; // GHTV Button
 				break;
+			case ghltar_btn::count:
+				break;
 			}
 		}
 	}
