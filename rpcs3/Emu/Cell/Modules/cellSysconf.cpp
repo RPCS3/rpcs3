@@ -42,6 +42,12 @@ error_code cellSysconfOpen(u32 type, vm::ptr<CellSysconfCallback> func, vm::ptr<
 error_code cellSysconfBtGetDeviceList(vm::ptr<CellSysconfBtDeviceList> deviceList)
 {
 	cellSysconf.todo("cellSysconfBtGetDeviceList(deviceList=*0x%x)", deviceList);
+
+	if (!deviceList)
+	{
+		return CELL_SYSCONF_ERROR_PARAM;
+	}
+
 	return CELL_OK;
 }
 

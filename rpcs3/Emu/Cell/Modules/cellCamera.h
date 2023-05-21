@@ -375,6 +375,8 @@ struct CellCameraInfoEx
 	be_t<u32> container;
 	be_t<s32> read_mode;
 	vm::bptr<u8> pbuf[2];
+
+	ENABLE_BITWISE_SERIALIZATION;
 };
 
 struct CellCameraReadEx
@@ -382,7 +384,7 @@ struct CellCameraReadEx
 	be_t<s32> version;
 	be_t<u32> frame;
 	be_t<u32> bytesread;
-	be_t<s64> timestamp;
+	be_t<u64> timestamp; // system_time_t (microseconds)
 	vm::bptr<u8> pbuf;
 };
 
@@ -392,6 +394,8 @@ class camera_context
 	{
 		u64 source;
 		u64 flag;
+
+		ENABLE_BITWISE_SERIALIZATION;
 	};
 
 public:
@@ -418,7 +422,7 @@ public:
 
 	shared_mutex mutex;
 	shared_mutex mutex_notify_data_map;
-	u64 start_timestamp = 0;
+	u64 start_timestamp_us = 0;
 
 	atomic_t<u8> read_mode{CELL_CAMERA_READ_FUNCCALL};
 	atomic_t<bool> is_streaming{false};
@@ -433,14 +437,23 @@ public:
 	struct attr_t
 	{
 		u32 v1, v2;
+
+		ENABLE_BITWISE_SERIALIZATION;
 	};
+
 	attr_t attr[500]{};
 	atomic_t<bool> has_new_frame = false;
 	atomic_t<u32> frame_num = 0;
-	atomic_t<u32> frame_timestamp = 0;
+	atomic_t<u64> frame_timestamp_us = 0;
 	atomic_t<u32> bytes_read = 0;
 
-	atomic_t<u32> init = 0;
+	atomic_t<u8> init = 0;
+
+	SAVESTATE_INIT_POS(16);
+
+	camera_context() = default;
+	camera_context(utils::serial& ar);
+	void save(utils::serial& ar);
 
 	static constexpr auto thread_name = "Camera Thread"sv;
 
@@ -458,11 +471,9 @@ using camera_thread = named_thread<camera_context>;
 /// Shared data between cellGem and cellCamera
 struct gem_camera_shared
 {
-	atomic_t<s64> frame_timestamp{}; // latest read timestamp from cellCamera (cellCameraRead(Ex))
+	atomic_t<u64> frame_timestamp_us{}; // latest read timestamp from cellCamera (cellCameraRead(Ex))
 	atomic_t<s32> width{640};
 	atomic_t<s32> height{480};
 	atomic_t<s32> size{0};
 	atomic_t<CellCameraFormat> format{CELL_CAMERA_RAW8};
 };
-
-static inline s32 get_video_buffer_size(s32 width, s32 height);

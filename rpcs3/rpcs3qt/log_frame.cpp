@@ -5,6 +5,7 @@
 #include "rpcs3_version.h"
 #include "Utilities/mutex.h"
 #include "Utilities/lockless.h"
+#include "util/asm.hpp"
 
 #include <QMenu>
 #include <QActionGroup>
@@ -79,7 +80,6 @@ struct gui_listener : logs::listener
 			}
 
 			_new->msg += text;
-			_new->msg += '\n';
 
 			queue.push(std::move(p));
 		}
@@ -156,11 +156,10 @@ log_frame::log_frame(std::shared_ptr<gui_settings> _gui_settings, QWidget* paren
 	m_tty_file.open(fs::get_cache_dir() + "TTY.log", fs::read + fs::create);
 
 	CreateAndConnectActions();
+	LoadSettings();
 
-	// Check for updates every ~10 ms
-	QTimer *timer = new QTimer(this);
-	connect(timer, &QTimer::timeout, this, &log_frame::UpdateUI);
-	timer->start(10);
+	m_timer = new QTimer(this);
+	connect(m_timer, &QTimer::timeout, this, &log_frame::UpdateUI);
 }
 
 void log_frame::SetLogLevel(logs::level lev) const
@@ -231,15 +230,22 @@ void log_frame::CreateAndConnectActions()
 	m_clear_act = new QAction(tr("Clear"), this);
 	connect(m_clear_act, &QAction::triggered, [this]()
 	{
-		m_old_log_text = "";
+		m_old_log_text.clear();
 		m_log->clear();
 	});
 
 	m_clear_tty_act = new QAction(tr("Clear"), this);
 	connect(m_clear_tty_act, &QAction::triggered, [this]()
 	{
-		m_old_tty_text = "";
+		m_old_tty_text.clear();
 		m_tty->clear();
+	});
+
+	m_perform_goto_on_debugger = new QAction(tr("Go-To On The Debugger"), this);
+	connect(m_perform_goto_on_debugger, &QAction::triggered, [this]()
+	{
+		QPlainTextEdit* pte = (m_tabWidget->currentIndex() == 1 ? m_tty : m_log);
+		Q_EMIT PerformGoToOnDebugger(pte->textCursor().selectedText());
 	});
 
 	m_stack_act_tty = new QAction(tr("Stack Mode (TTY)"), this);
@@ -249,6 +255,14 @@ void log_frame::CreateAndConnectActions()
 		m_gui_settings->SetValue(gui::l_stack_tty, checked);
 		m_stack_tty = checked;
 	});
+
+	m_ansi_act_tty = new QAction(tr("ANSI Code (TTY)"), this);
+	m_ansi_act_tty->setCheckable(true);
+	connect(m_ansi_act_tty, &QAction::toggled, [this](bool checked)
+		{
+			m_gui_settings->SetValue(gui::l_ansi_code, checked);
+			m_ansi_tty = checked;
+		});
 
 	m_tty_channel_acts = new QActionGroup(this);
 	// Special Channel: All
@@ -329,6 +343,13 @@ void log_frame::CreateAndConnectActions()
 	{
 		QMenu* menu = m_log->createStandardContextMenu();
 		menu->addAction(m_clear_act);
+		menu->addAction(m_perform_goto_on_debugger);
+
+		std::shared_ptr<bool> goto_signal_accepted = std::make_shared<bool>(false);
+		Q_EMIT PerformGoToOnDebugger("", true, goto_signal_accepted);
+		m_perform_goto_on_debugger->setEnabled(m_log->textCursor().hasSelection() && *goto_signal_accepted);
+		m_perform_goto_on_debugger->setToolTip(tr("Jump to the selected hexadecimal address from the log text on the debugger."));
+
 		menu->addSeparator();
 		menu->addActions(m_log_level_acts->actions());
 		menu->addSeparator();
@@ -342,9 +363,17 @@ void log_frame::CreateAndConnectActions()
 	{
 		QMenu* menu = m_tty->createStandardContextMenu();
 		menu->addAction(m_clear_tty_act);
+		menu->addAction(m_perform_goto_on_debugger);
+
+		std::shared_ptr<bool> goto_signal_accepted = std::make_shared<bool>(false);
+		Q_EMIT PerformGoToOnDebugger("", true, goto_signal_accepted);
+		m_perform_goto_on_debugger->setEnabled(m_tty->textCursor().hasSelection() && *goto_signal_accepted);
+		m_perform_goto_on_debugger->setToolTip(tr("Jump to the selected hexadecimal address from the TTY text on the debugger."));
+
 		menu->addSeparator();
 		menu->addAction(m_tty_act);
 		menu->addAction(m_stack_act_tty);
+		menu->addAction(m_ansi_act_tty);
 		menu->addSeparator();
 		menu->addActions(m_tty_channel_acts->actions());
 		menu->exec(m_tty->viewport()->mapToGlobal(pos));
@@ -395,8 +424,6 @@ void log_frame::CreateAndConnectActions()
 
 		m_tty_input->clear();
 	});
-
-	LoadSettings();
 }
 
 void log_frame::LoadSettings()
@@ -405,8 +432,11 @@ void log_frame::LoadSettings()
 	SetTTYLogging(m_gui_settings->GetValue(gui::l_tty).toBool());
 	m_stack_log = m_gui_settings->GetValue(gui::l_stack).toBool();
 	m_stack_tty = m_gui_settings->GetValue(gui::l_stack_tty).toBool();
+	m_ansi_tty = m_gui_settings->GetValue(gui::l_ansi_code).toBool();
+	g_log_all_errors = !m_gui_settings->GetValue(gui::l_stack_err).toBool();
 	m_stack_act_log->setChecked(m_stack_log);
 	m_stack_act_tty->setChecked(m_stack_tty);
+	m_ansi_act_tty->setChecked(m_ansi_tty);
 	m_stack_act_err->setChecked(!g_log_all_errors);
 
 	s_gui_listener.show_prefix = m_gui_settings->GetValue(gui::l_prefix).toBool();
@@ -420,6 +450,14 @@ void log_frame::LoadSettings()
 	if (m_tty)
 	{
 		m_tty->document()->setMaximumBlockCount(m_gui_settings->GetValue(gui::l_limit_tty).toInt());
+	}
+
+	// Note: There's an issue where the scrollbar value won't be set to max if we start the log frame too early,
+	//       so let's delay the timer until we load the settings from the main window for the first time.
+	if (m_timer && !m_timer->isActive())
+	{
+		// Check for updates every ~10 ms
+		m_timer->start(10);
 	}
 }
 
@@ -501,25 +539,30 @@ void log_frame::RepaintTextColors()
 
 void log_frame::UpdateUI()
 {
-	const auto start = steady_clock::now();
+	const std::chrono::time_point start = steady_clock::now();
+	const std::chrono::time_point tty_timeout = start + 4ms;
+	const std::chrono::time_point log_timeout = start + 7ms;
 
 	// Check TTY logs
-	while (const u64 size = std::max<s64>(0, g_tty_size.load() - (m_tty_file ? m_tty_file.pos() : 0)))
+	if (u64 size = std::max<s64>(0, m_tty_file ? (g_tty_size.load() - m_tty_file.pos()) : 0))
 	{
-		std::string buf;
-		buf.resize(size);
-		buf.resize(m_tty_file.read(&buf.front(), buf.size()));
-
-		// Ignore control characters and greater/equal to 0x80
-		buf.erase(std::remove_if(buf.begin(), buf.end(), [](s8 c) { return c <= 0x8 || c == 0x7F || (c >= 0xE && c <= 0x1F); }), buf.end());
-
-		if (!buf.empty() && m_tty_act->isChecked())
+		if (m_tty_act->isChecked())
 		{
-			std::stringstream buf_stream;
-			buf_stream.str(buf);
+			m_tty_buf.resize(std::min<u64>(size, m_tty_limited_read ? m_tty_limited_read : usz{umax}));
+			m_tty_buf.resize(m_tty_file.read(&m_tty_buf.front(), m_tty_buf.size()));
+			m_tty_limited_read = 0;
+
+			usz str_index = 0;
 			std::string buf_line;
-			while (std::getline(buf_stream, buf_line))
+
+			while (str_index < m_tty_buf.size())
 			{
+				buf_line.assign(std::string_view(m_tty_buf).substr(str_index, m_tty_buf.find_first_of('\n', str_index) - str_index));
+				str_index += buf_line.size() + 1;
+
+				// Ignore control characters and greater/equal to 0x80
+				buf_line.erase(std::remove_if(buf_line.begin(), buf_line.end(), [](s8 c) { return c <= 0x8 || c == 0x7F || (c >= 0xE && c <= 0x1F); }), buf_line.end());
+
 				// save old scroll bar state
 				QScrollBar* sb = m_tty->verticalScrollBar();
 				const int sb_pos = sb->value();
@@ -534,7 +577,18 @@ void log_frame::UpdateUI()
 				// clear selection or else it will get colorized as well
 				text_cursor.clearSelection();
 
-				const QString tty_text = QString::fromStdString(buf_line);
+				QString tty_text;
+
+				if (m_ansi_tty)
+				{
+					tty_text = QString::fromStdString(buf_line);
+				}
+				else
+				{
+					// Strip ANSI color code
+					static const QRegularExpression ansi_color_code("\\[\\d+;\\d+(;\\d+)?m|\\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]");
+					tty_text = QString::fromStdString(buf_line).remove(ansi_color_code);
+				}
 
 				// create counter suffix and remove recurring line if needed
 				if (m_stack_tty)
@@ -576,20 +630,153 @@ void log_frame::UpdateUI()
 
 				// set scrollbar to max means auto-scroll
 				sb->setValue(is_max ? sb->maximum() : sb_pos);
+
+				// Limit processing time
+				if (steady_clock::now() >= tty_timeout)
+				{
+					const s64 back = ::narrow<s64>(str_index) - ::narrow<s64>(m_tty_buf.size());
+					ensure(back <= 1);
+
+					if (back < 0)
+					{
+						// If more than two thirds of the buffer are unprocessed make the next fs::file::read read only that
+						// This is because reading is also costly on performance, and if we already know half of that takes more time than our limit..
+						const usz third_size = utils::aligned_div(m_tty_buf.size(), 3);
+
+						if (back <= -16384 && static_cast<usz>(0 - back) >= third_size * 2)
+						{
+							// This only really works if there is a newline somewhere
+							const usz known_term = std::string_view(m_tty_buf).substr(str_index, str_index * 2).find_last_of('\n', str_index * 2 - 4096);
+
+							if (known_term != umax)
+							{
+								m_tty_limited_read = known_term + 1 - str_index;
+							}
+						}
+
+						// Revert unprocessed reads
+						m_tty_file.seek(back, fs::seek_cur);
+					}
+
+					break;
+				}
 			}
 		}
-
-		// Limit processing time
-		if (steady_clock::now() >= start + 4ms || buf.empty()) break;
+		else
+		{
+			// Advance in position without printing
+			m_tty_file.seek(size, fs::seek_cur);
+			m_tty_limited_read = 0;
+		}
 	}
 
 	const auto font_start_tag = [](const QColor& color) -> const QString { return QStringLiteral("<font color = \"") % color.name() % QStringLiteral("\">"); };
 	const QString font_start_tag_stack = "<font color = \"" % m_color_stack.name() % "\">";
 	const QString font_end_tag = QStringLiteral("</font>");
 
-	static constexpr auto escaped = [](QString& text)
+	static constexpr auto escaped = [](const QString& text)
 	{
 		return text.toHtmlEscaped().replace(QStringLiteral("\n"), QStringLiteral("<br/>"));
+	};
+
+	// Preserve capacity
+	m_log_text.resize(0);
+
+	// Handle a common case in which we may need to override the previous repetition count
+	bool is_first_rep = m_stack_log;
+	usz first_rep_counter = m_log_counter;
+
+	// Batch output of multiple lines if possible (optimization)
+	auto flush = [&]()
+	{
+		if (m_log_text.isEmpty() && !is_first_rep)
+		{
+			return;
+		}
+
+		// save old log state
+		QScrollBar* sb = m_log->verticalScrollBar();
+		const bool is_max = sb->value() == sb->maximum();
+		const int sb_pos = sb->value();
+
+		QTextCursor text_cursor = m_log->textCursor();
+		const int sel_pos = text_cursor.position();
+		int sel_start = text_cursor.selectionStart();
+		int sel_end = text_cursor.selectionEnd();
+
+		// clear selection or else it will get colorized as well
+		text_cursor.clearSelection();
+
+		m_log->setTextCursor(text_cursor);
+
+		if (is_first_rep)
+		{
+			// Overwrite existing repetition counter in our text document.
+			ensure(first_rep_counter > m_log_counter); // Anything else is a bug
+
+			text_cursor.movePosition(QTextCursor::End, QTextCursor::MoveAnchor);
+
+			if (m_log_counter > 1)
+			{
+				constexpr int size_of_x = 2; // " x"
+				const int size_of_number = static_cast<int>(QString::number(m_log_counter).size());
+
+				text_cursor.movePosition(QTextCursor::PreviousCharacter, QTextCursor::KeepAnchor, size_of_x + size_of_number);
+			}
+
+			text_cursor.insertHtml(font_start_tag_stack % QStringLiteral("&nbsp;x") % QString::number(first_rep_counter) % font_end_tag);
+		}
+		else
+		{
+			// Insert both messages and repetition prefix (append is more optimized than concatenation)
+			m_log_text += font_end_tag;
+
+			if (m_log_counter > 1)
+			{
+				m_log_text += font_start_tag_stack;
+				m_log_text += QStringLiteral(" x");
+				m_log_text += QString::number(m_log_counter);
+				m_log_text += font_end_tag;
+			}
+
+			m_log->appendHtml(m_log_text);
+		}
+
+		// if we mark text from right to left we need to swap sides (start is always smaller than end)
+		if (sel_pos < sel_end)
+		{
+			std::swap(sel_start, sel_end);
+		}
+
+		// reset old text cursor and selection
+		text_cursor.setPosition(sel_start);
+		text_cursor.setPosition(sel_end, QTextCursor::KeepAnchor);
+		m_log->setTextCursor(text_cursor);
+
+		// set scrollbar to max means auto-scroll
+		sb->setValue(is_max ? sb->maximum() : sb_pos);
+		m_log_text.clear();
+	};
+
+	const auto patch_first_stacked_message = [&]() -> bool
+	{
+		if (is_first_rep)
+		{
+			const bool needs_update = first_rep_counter > m_log_counter;
+
+			if (needs_update)
+			{
+				// Update the existing stack suffix.
+				flush();
+			}
+
+			is_first_rep = false;
+			m_log_counter = first_rep_counter;
+
+			return needs_update;
+		}
+
+		return false;
 	};
 
 	// Check main logs
@@ -598,83 +785,87 @@ void log_frame::UpdateUI()
 		// Confirm log level
 		if (packet->sev <= s_gui_listener.enabled)
 		{
-			QString text;
-			switch (packet->sev)
+			// Check if we can stack this log message.
+			if (m_stack_log && m_old_log_level == packet->sev && packet->msg == m_old_log_text)
 			{
-			case logs::level::always: text = QStringLiteral("- "); break;
-			case logs::level::fatal: text = QStringLiteral("F "); break;
-			case logs::level::error: text = QStringLiteral("E "); break;
-			case logs::level::todo: text = QStringLiteral("U "); break;
-			case logs::level::success: text = QStringLiteral("S "); break;
-			case logs::level::warning: text = QStringLiteral("W "); break;
-			case logs::level::notice: text = QStringLiteral("! "); break;
-			case logs::level::trace: text = QStringLiteral("T "); break;
-			}
-
-			// Print UTF-8 text.
-			text += qstr(packet->msg);
-
-			// save old log state
-			QScrollBar* sb = m_log->verticalScrollBar();
-			const bool isMax = sb->value() == sb->maximum();
-			const int sb_pos = sb->value();
-
-			QTextCursor text_cursor = m_log->textCursor();
-			const int sel_pos = text_cursor.position();
-			int sel_start = text_cursor.selectionStart();
-			int sel_end = text_cursor.selectionEnd();
-
-			// clear selection or else it will get colorized as well
-			text_cursor.clearSelection();
-
-			// remove the new line because Qt's append adds a new line already.
-			text.chop(1);
-
-			// create counter suffix and remove recurring line if needed
-			if (m_stack_log)
-			{
-				// add counter suffix if needed
-				if (text == m_old_log_text)
+				if (is_first_rep)
 				{
-					text_cursor.movePosition(QTextCursor::End, QTextCursor::MoveAnchor);
-					text_cursor.movePosition(QTextCursor::StartOfBlock, QTextCursor::KeepAnchor);
-					text_cursor.insertHtml(font_start_tag(m_color[static_cast<int>(packet->sev)]) % escaped(text) % font_start_tag_stack % QStringLiteral(" x") % QString::number(++m_log_counter) % font_end_tag % font_end_tag);
+					// Keep tracking the old stack suffix count as long as the last known message keeps repeating.
+					first_rep_counter++;
 				}
 				else
 				{
-					m_log_counter = 1;
-					m_old_log_text = text;
-
-					m_log->setTextCursor(text_cursor);
-					m_log->appendHtml(font_start_tag(m_color[static_cast<int>(packet->sev)]) % escaped(text) % font_end_tag);
+					m_log_counter++;
 				}
+
+				s_gui_listener.pop();
+
+				if (steady_clock::now() >= log_timeout)
+				{
+					// Must break eventually
+					break;
+				}
+
+				continue;
+			}
+
+			// Add/update counter suffix if needed. Try not to hold too much data at a time so the frame content will be updated frequently.
+			if (!patch_first_stacked_message() && (m_log_counter > 1 || m_log_text.size() > 0x1000))
+			{
+				flush();
+			}
+
+			if (m_log_text.isEmpty())
+			{
+				m_old_log_level = packet->sev;
+				m_log_text += font_start_tag(m_color[static_cast<int>(m_old_log_level)]);
 			}
 			else
 			{
-				m_log->setTextCursor(text_cursor);
-				m_log->appendHtml(font_start_tag(m_color[static_cast<int>(packet->sev)]) % escaped(text) % font_end_tag);
+				if (packet->sev != m_old_log_level)
+				{
+					flush();
+					m_old_log_level = packet->sev;
+					m_log_text += font_start_tag(m_color[static_cast<int>(m_old_log_level)]);
+				}
+				else
+				{
+					m_log_text += QStringLiteral("<br/>");
+				}
 			}
 
-			// if we mark text from right to left we need to swap sides (start is always smaller than end)
-			if (sel_pos < sel_end)
+			switch (packet->sev)
 			{
-				std::swap(sel_start, sel_end);
+			case logs::level::always: m_log_text += QStringLiteral("- "); break;
+			case logs::level::fatal: m_log_text += QStringLiteral("F "); break;
+			case logs::level::error: m_log_text += QStringLiteral("E "); break;
+			case logs::level::todo: m_log_text += QStringLiteral("U "); break;
+			case logs::level::success: m_log_text += QStringLiteral("S "); break;
+			case logs::level::warning: m_log_text += QStringLiteral("W "); break;
+			case logs::level::notice: m_log_text += QStringLiteral("! "); break;
+			case logs::level::trace: m_log_text += QStringLiteral("T "); break;
 			}
 
-			// reset old text cursor and selection
-			text_cursor.setPosition(sel_start);
-			text_cursor.setPosition(sel_end, QTextCursor::KeepAnchor);
-			m_log->setTextCursor(text_cursor);
+			// Print UTF-8 text.
+			m_log_text += escaped(qstr(packet->msg));
 
-			// set scrollbar to max means auto-scroll
-			sb->setValue(isMax ? sb->maximum() : sb_pos);
+			if (m_stack_log)
+			{
+				m_log_counter = 1;
+				m_old_log_text = std::move(packet->msg);
+			}
 		}
 
 		// Drop packet
 		s_gui_listener.pop();
 
 		// Limit processing time
-		if (steady_clock::now() >= start + 7ms) break;
+		if (steady_clock::now() >= log_timeout) break;
+	}
+
+	if (!patch_first_stacked_message())
+	{
+		flush();
 	}
 }
 

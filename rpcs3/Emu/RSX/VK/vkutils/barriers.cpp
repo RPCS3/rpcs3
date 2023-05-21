@@ -8,7 +8,7 @@
 namespace vk
 {
 	void insert_image_memory_barrier(
-		VkCommandBuffer cmd, VkImage image,
+		const vk::command_buffer& cmd, VkImage image,
 		VkImageLayout current_layout, VkImageLayout new_layout,
 		VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage,
 		VkAccessFlags src_mask, VkAccessFlags dst_mask,
@@ -33,7 +33,7 @@ namespace vk
 		vkCmdPipelineBarrier(cmd, src_stage, dst_stage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 	}
 
-	void insert_buffer_memory_barrier(VkCommandBuffer cmd, VkBuffer buffer, VkDeviceSize offset, VkDeviceSize length, VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage, VkAccessFlags src_mask, VkAccessFlags dst_mask)
+	void insert_buffer_memory_barrier(const vk::command_buffer& cmd, VkBuffer buffer, VkDeviceSize offset, VkDeviceSize length, VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage, VkAccessFlags src_mask, VkAccessFlags dst_mask)
 	{
 		if (vk::is_renderpass_open(cmd))
 		{
@@ -53,7 +53,7 @@ namespace vk
 		vkCmdPipelineBarrier(cmd, src_stage, dst_stage, 0, 0, nullptr, 1, &barrier, 0, nullptr);
 	}
 
-	void insert_global_memory_barrier(VkCommandBuffer cmd, VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage, VkAccessFlags src_access, VkAccessFlags dst_access)
+	void insert_global_memory_barrier(const vk::command_buffer& cmd, VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage, VkAccessFlags src_access, VkAccessFlags dst_access)
 	{
 		if (vk::is_renderpass_open(cmd))
 		{
@@ -67,7 +67,7 @@ namespace vk
 		vkCmdPipelineBarrier(cmd, src_stage, dst_stage, 0, 1, &barrier, 0, nullptr, 0, nullptr);
 	}
 
-	void insert_texture_barrier(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, VkImageSubresourceRange range)
+	void insert_texture_barrier(const vk::command_buffer& cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, VkImageSubresourceRange range)
 	{
 		// NOTE: Sampling from an attachment in ATTACHMENT_OPTIMAL layout on some hw ends up with garbage output
 		// Transition to GENERAL if this resource is both input and output
@@ -87,12 +87,6 @@ namespace vk
 		}
 		else
 		{
-			if (!rsx::method_registers.depth_write_enabled() && current_layout == new_layout)
-			{
-				// Nothing to do
-				return;
-			}
-
 			src_access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 			src_stage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
 		}
@@ -111,7 +105,7 @@ namespace vk
 		vkCmdPipelineBarrier(cmd, src_stage, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 	}
 
-	void insert_texture_barrier(VkCommandBuffer cmd, vk::image* image, VkImageLayout new_layout)
+	void insert_texture_barrier(const vk::command_buffer& cmd, vk::image* image, VkImageLayout new_layout)
 	{
 		insert_texture_barrier(cmd, image->value, image->current_layout, new_layout, { image->aspect(), 0, 1, 0, 1 });
 		image->current_layout = new_layout;

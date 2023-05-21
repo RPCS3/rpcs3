@@ -20,7 +20,7 @@ struct np_in_addr
 
 using sys_memory_container_t = u32;
 
-using system_time_t = s64;
+using system_time_t = u64; // s64 in documentation. But since this is in microseconds, it doesn't seem to make much sense.
 using second_t = u32;
 using usecond_t = u64;
 
@@ -1057,7 +1057,7 @@ struct SceNpManagerCacheParam
 // Message attachment data
 struct SceNpBasicAttachmentData
 {
-	be_t<u32> id; // SceNpBasicAttachmentDataId
+	be_t<SceNpBasicAttachmentDataId> id;
 	be_t<u32> size;
 };
 
@@ -1068,7 +1068,7 @@ struct SceNpBasicExtendedAttachmentData
 	be_t<u64> msgId;
 	SceNpBasicAttachmentData data;
 	be_t<u32> userAction;
-	b8 markedAsUsed;
+	u8 markedAsUsed;
 	u8 reserved[3];
 };
 
@@ -1157,9 +1157,9 @@ struct SceNpScoreRankData
 	be_t<u32> serialRank;
 	be_t<u32> rank;
 	be_t<u32> highestRank;
-	be_t<s64> scoreValue;
 	be_t<s32> hasGameData;
 	u8 pad0[4];
+	be_t<s64> scoreValue;
 	CellRtcTick recordDate;
 };
 
@@ -1393,14 +1393,14 @@ struct SceNpMatchingReqRange
 
 struct SceNpScoreVariableSizeGameInfo
 {
-	be_t<u64> infoSize;
+	be_t<u32> infoSize;
 	u8 data[SCE_NP_SCORE_VARIABLE_SIZE_GAMEINFO_MAXSIZE];
 	u8 pad[3];
 };
 
 struct SceNpScoreRecordOptParam
 {
-	be_t<u64> size;
+	be_t<u32> size;
 	vm::bptr<SceNpScoreVariableSizeGameInfo> vsInfo;
 	vm::bptr<CellRtcTick> reserved;
 };

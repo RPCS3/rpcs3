@@ -17,7 +17,7 @@ s32 send_packet_from_p2p_port(const std::vector<u8>& data, const sockaddr_in& ad
 		std::lock_guard list_lock(nc.list_p2p_ports_mutex);
 		if (nc.list_p2p_ports.contains(SCE_NP_PORT))
 		{
-			auto& def_port = nc.list_p2p_ports.at(SCE_NP_PORT);
+			auto& def_port = ::at32(nc.list_p2p_ports, SCE_NP_PORT);
 			res            = ::sendto(def_port.p2p_socket, reinterpret_cast<const char*>(data.data()), data.size(), 0, reinterpret_cast<const sockaddr*>(&addr), sizeof(sockaddr_in));
 		}
 		else
@@ -37,7 +37,7 @@ std::vector<std::vector<u8>> get_rpcn_msgs()
 		std::lock_guard list_lock(nc.list_p2p_ports_mutex);
 		if (nc.list_p2p_ports.contains(SCE_NP_PORT))
 		{
-			auto& def_port = nc.list_p2p_ports.at(SCE_NP_PORT);
+			auto& def_port = ::at32(nc.list_p2p_ports, SCE_NP_PORT);
 			{
 				std::lock_guard lock(def_port.s_rpcn_mutex);
 				msgs = std::move(def_port.rpcn_msgs);
@@ -53,15 +53,15 @@ std::vector<std::vector<u8>> get_rpcn_msgs()
 	return msgs;
 }
 
-std::vector<std::pair<std::pair<u32, u16>, std::vector<u8>>> get_sign_msgs()
+std::vector<signaling_message> get_sign_msgs()
 {
-	std::vector<std::pair<std::pair<u32, u16>, std::vector<u8>>> msgs;
+	std::vector<signaling_message> msgs;
 	auto& nc = g_fxo->get<network_context>();
 	{
 		std::lock_guard list_lock(nc.list_p2p_ports_mutex);
 		if (nc.list_p2p_ports.contains(SCE_NP_PORT))
 		{
-			auto& def_port = nc.list_p2p_ports.at(SCE_NP_PORT);
+			auto& def_port = ::at32(nc.list_p2p_ports, SCE_NP_PORT);
 			{
 				std::lock_guard lock(def_port.s_sign_mutex);
 				msgs = std::move(def_port.sign_msgs);
@@ -83,14 +83,10 @@ void need_network()
 	initialize_tcp_timeout_monitor();
 }
 
-network_thread::network_thread() noexcept
+void network_thread::bind_sce_np_port()
 {
-	if (g_cfg.net.psn_status == np_psn_status::psn_rpcn)
-		list_p2p_ports.emplace(std::piecewise_construct, std::forward_as_tuple(SCE_NP_PORT), std::forward_as_tuple(SCE_NP_PORT));
-}
-
-network_thread::~network_thread()
-{
+	std::lock_guard list_lock(list_p2p_ports_mutex);
+	list_p2p_ports.emplace(std::piecewise_construct, std::forward_as_tuple(SCE_NP_PORT), std::forward_as_tuple(SCE_NP_PORT));
 }
 
 void network_thread::operator()()

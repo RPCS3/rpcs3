@@ -53,9 +53,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Emu\Audio\Cubeb\CubebBackend.h" />
+    <ClInclude Include="Emu\Audio\Cubeb\cubeb_enumerator.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Emu\Audio\Cubeb\CubebBackend.cpp" />
+    <ClCompile Include="Emu\Audio\Cubeb\cubeb_enumerator.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

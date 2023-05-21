@@ -22,26 +22,82 @@ public:
 	rpcn_account_dialog(QWidget* parent = nullptr);
 
 private:
-	bool save_config();
+	void refresh_combobox();
 
-private Q_SLOTS:	
-	void create_account();
-	void resend_token();
+private:
+	QComboBox* cbx_servers = nullptr;
+};
 
-protected:
-	QLineEdit *m_edit_host, *m_edit_npid, *m_edit_token;
+class rpcn_add_server_dialog : public QDialog
+{
+	Q_OBJECT
+public:
+	rpcn_add_server_dialog(QWidget* parent = nullptr);
+	const std::optional<std::pair<std::string, std::string>>& get_new_server() const;
+
+private:
+	std::optional<std::pair<std::string, std::string>> m_new_server;
+};
+
+class rpcn_ask_username_dialog : public QDialog
+{
+	Q_OBJECT
+public:
+	rpcn_ask_username_dialog(QWidget* parent, const QString& description);
+	const std::optional<std::string>& get_username() const;
+
+private:
+	std::optional<std::string> m_username;
 };
 
 class rpcn_ask_password_dialog : public QDialog
 {
 	Q_OBJECT
 public:
-	rpcn_ask_password_dialog(QWidget* parent = nullptr);
-	std::optional<std::string> get_password();
+	rpcn_ask_password_dialog(QWidget* parent, const QString& description);
+	const std::optional<std::string>& get_password() const;
 
 private:
-	QLineEdit *m_edit_pass1, *m_edit_pass2;
 	std::optional<std::string> m_password;
+};
+
+class rpcn_ask_email_dialog : public QDialog
+{
+	Q_OBJECT
+public:
+	rpcn_ask_email_dialog(QWidget* parent, const QString& description);
+	const std::optional<std::string>& get_email() const;
+
+private:
+	std::optional<std::string> m_email;
+};
+
+class rpcn_ask_token_dialog : public QDialog
+{
+	Q_OBJECT
+public:
+	rpcn_ask_token_dialog(QWidget* parent, const QString& description);
+	const std::optional<std::string>& get_token() const;
+
+private:
+	std::optional<std::string> m_token;
+};
+
+class rpcn_account_edit_dialog : public QDialog
+{
+	Q_OBJECT
+public:
+	rpcn_account_edit_dialog(QWidget* parent = nullptr);
+
+private:
+	bool save_config();
+
+private Q_SLOTS:
+	void resend_token();
+	void change_password();
+
+protected:
+	QLineEdit *m_edit_username, *m_edit_token;
 };
 
 class rpcn_friends_dialog : public QDialog

@@ -5,6 +5,8 @@
 #include "util/logs.hpp"
 #include "util/v128.hpp"
 
+#include <locale>
+#include <codecvt>
 #include <algorithm>
 #include <string_view>
 #include "Thread.h"
@@ -13,8 +15,6 @@
 #include <Windows.h>
 #else
 #include <errno.h>
-#include <locale>
-#include <codecvt>
 #endif
 
 std::string wchar_to_utf8(std::wstring_view src)
@@ -26,9 +26,21 @@ std::string wchar_to_utf8(std::wstring_view src)
 	WideCharToMultiByte(CP_UTF8, 0, src.data(), src.size(), utf8_string.data(), tmp_size, nullptr, nullptr);
 	return utf8_string;
 #else
-	std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t> converter{};
+	std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter{};
 	return converter.to_bytes(src.data());
 #endif
+}
+
+std::string utf16_to_utf8(std::u16string_view src)
+{
+	std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> converter{};
+	return converter.to_bytes(src.data());
+}
+
+std::u16string utf8_to_utf16(std::string_view src)
+{
+	std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> converter{};
+	return converter.from_bytes(src.data());
 }
 
 std::wstring utf8_to_wchar(std::string_view src)
@@ -66,6 +78,17 @@ std::string fmt::win_error_to_string(unsigned long error, void* module_handle)
 	}
 
 	return message;
+}
+
+std::string fmt::win_error_to_string(const fmt::win_error& error)
+{
+	return fmt::win_error_to_string(error.error, error.module_handle);
+}
+
+template <>
+void fmt_class_string<fmt::win_error>::format(std::string& out, u64 arg)
+{
+	fmt::append(out, "%s", fmt::win_error_to_string(get_object(arg)));
 }
 #endif
 
@@ -189,6 +212,26 @@ void fmt_class_string<std::vector<char8_t>>::format(std::string& out, u64 arg)
 {
 	const std::vector<char8_t>& obj = get_object(arg);
 	out.append(obj.cbegin(), obj.cend());
+}
+
+template <>
+void fmt_class_string<fmt::buf_to_hexstring>::format(std::string& out, u64 arg)
+{
+	const auto& _arg = get_object(arg);
+	const std::vector<u8> buf(_arg.buf, _arg.buf + _arg.len);
+	out.reserve(out.size() + (buf.size() * 3));
+	static constexpr char hex[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
+
+	for (usz index = 0; index < buf.size(); index++)
+	{
+		out += hex[buf[index] >> 4];
+		out += hex[buf[index] & 15];
+
+		if (((index + 1) % 16) == 0)
+			out += '\n';
+		else
+			out += ' ';
+	}
 }
 
 void format_byte_array(std::string& out, const uchar* data, usz size)
@@ -443,7 +486,7 @@ struct fmt::cfmt_src
 	{
 // Hack: use known function pointers to determine type
 #define TYPE(type) \
-	if (sup[extra].fmt_string == &fmt_class_string<type>::format) return sizeof(type);
+		if (sup[extra].fmt_string == &fmt_class_string<type>::format) return sizeof(type);
 
 		TYPE(int);
 		TYPE(llong);
@@ -451,10 +494,11 @@ struct fmt::cfmt_src
 		TYPE(short);
 		if (std::is_signed<char>::value) TYPE(char);
 		TYPE(long);
-		TYPE(u128);
 		TYPE(s128);
 
 #undef TYPE
+		if (sup[extra].fmt_string == &fmt_class_string<u128>::format)
+			return -1;
 
 		return 0;
 	}
@@ -555,7 +599,7 @@ std::string fmt::trim(const std::string& source, const std::string& values)
 	return source.substr(begin, source.find_last_not_of(values) + 1);
 }
 
-std::string fmt::to_upper(const std::string& string)
+std::string fmt::to_upper(std::string_view string)
 {
 	std::string result;
 	result.resize(string.size());
@@ -563,7 +607,7 @@ std::string fmt::to_upper(const std::string& string)
 	return result;
 }
 
-std::string fmt::to_lower(const std::string& string)
+std::string fmt::to_lower(std::string_view string)
 {
 	std::string result;
 	result.resize(string.size());
@@ -608,4 +652,14 @@ bool fmt::match(const std::string& source, const std::string& mask)
 		return false;
 
 	return true;
+}
+
+std::string get_file_extension(const std::string& file_path)
+{
+	if (usz dotpos = file_path.find_last_of('.'); dotpos != std::string::npos && dotpos + 1 < file_path.size())
+	{
+		return file_path.substr(dotpos + 1);
+	}
+
+	return {};
 }

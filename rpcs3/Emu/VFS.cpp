@@ -31,10 +31,19 @@ struct vfs_manager
 
 	// VFS root
 	vfs_directory root{};
+
+	SAVESTATE_INIT_POS(48);
 };
 
-bool vfs::mount(std::string_view vpath, std::string_view path)
+bool vfs::mount(std::string_view vpath, std::string_view path, bool is_dir)
 {
+	if (vpath.empty())
+	{
+		// Empty relative path, should set relative path base; unsupported
+		vfs_log.error("Cannot mount empty path to \"%s\"", path);
+		return false;
+	}
+
 	// Workaround
 	g_fxo->need<vfs_manager>();
 
@@ -43,13 +52,6 @@ bool vfs::mount(std::string_view vpath, std::string_view path)
 	// TODO: scan roots of mounted devices for undeleted vfs::host::unlink remnants, and try to delete them (_WIN32 only)
 
 	std::lock_guard lock(table.mutex);
-
-	if (vpath.empty())
-	{
-		// Empty relative path, should set relative path base; unsupported
-		vfs_log.error("Cannot mount empty path to \"%s\"", path);
-		return false;
-	}
 
 	const std::string_view vpath_backup = vpath;
 
@@ -67,9 +69,19 @@ bool vfs::mount(std::string_view vpath, std::string_view path)
 
 		if (pos == umax)
 		{
-			// Mounting completed
-			list.back()->path = path;
-			vfs_log.notice("Mounted path \"%s\" to \"%s\"", vpath_backup, path);
+			// Mounting completed; fixup for directories due to resolve_path messing with trailing /
+			list.back()->path = Emu.GetCallbacks().resolve_path(path);
+			if (list.back()->path.empty())
+				list.back()->path = std::string(path); // Fallback when resolving failed
+			if (is_dir && !list.back()->path.ends_with('/'))
+				list.back()->path += '/';
+			if (!is_dir && list.back()->path.ends_with('/'))
+				vfs_log.error("File mounted with trailing /.");
+
+			if (path == "/") // Special
+				list.back()->path = "/";
+
+			vfs_log.notice("Mounted path \"%s\" to \"%s\"", vpath_backup, list.back()->path);
 			return true;
 		}
 
@@ -114,6 +126,69 @@ bool vfs::mount(std::string_view vpath, std::string_view path)
 			list.push_back(&last->dirs.emplace_back(name, vfs_directory{}).second);
 		}
 	}
+}
+
+bool vfs::unmount(std::string_view vpath)
+{
+	if (vpath.empty())
+	{
+		vfs_log.error("Cannot unmount empty path");
+		return false;
+	}
+
+	const std::vector<std::string> entry_list = fmt::split(vpath, {"/"});
+
+	if (entry_list.empty())
+	{
+		vfs_log.error("Cannot unmount path: '%s'", vpath);
+		return false;
+	}
+
+	vfs_log.notice("About to unmount '%s'", vpath);
+
+	// Workaround
+	g_fxo->need<vfs_manager>();
+
+	auto& table = g_fxo->get<vfs_manager>();
+
+	std::lock_guard lock(table.mutex);
+
+	// Search entry recursively and remove it (including all children)
+	std::function<void(vfs_directory&, usz)> unmount_children;
+	unmount_children = [&entry_list, &unmount_children](vfs_directory& dir, usz depth) -> void
+	{
+		if (depth >= entry_list.size())
+		{
+			return;
+		}
+
+		// Get the current name based on the depth
+		const std::string& name = ::at32(entry_list, depth);
+
+		// Go through all children of this node
+		for (auto it = dir.dirs.begin(); it != dir.dirs.end();)
+		{
+			// Find the matching node
+			if (it->first == name)
+			{
+				// Remove the matching node if we reached the maximum depth
+				if (depth + 1 == entry_list.size())
+				{
+					vfs_log.notice("Unmounting '%s' = '%s'", it->first, it->second.path);
+					it = dir.dirs.erase(it);
+					continue;
+				}
+
+				// Otherwise continue searching in the next level of depth
+				unmount_children(it->second, depth + 1);
+			}
+
+			++it;
+		}
+	};
+	unmount_children(table.root, 0);
+
+	return true;
 }
 
 std::string vfs::get(std::string_view vpath, std::vector<std::string>* out_dir, std::string* out_path)
@@ -253,7 +328,8 @@ std::string vfs::get(std::string_view vpath, std::vector<std::string>* out_dir, 
 					// Handle /host_root (not escaped, not processed)
 					if (out_path)
 					{
-						*out_path =  "/";
+						out_path->clear();
+						*out_path += '/';
 						*out_path += fmt::merge(name_list, "/");
 						*out_path += vpath;
 					}
@@ -275,7 +351,8 @@ std::string vfs::get(std::string_view vpath, std::vector<std::string>* out_dir, 
 	// Merge path fragments
 	if (out_path)
 	{
-		*out_path =  "/";
+		out_path->clear();
+		*out_path += '/';
 		*out_path += fmt::merge(name_list, "/");
 	}
 
@@ -288,11 +365,122 @@ std::string vfs::get(std::string_view vpath, std::vector<std::string>* out_dir, 
 	return std::string{result_base} + fmt::merge(escaped, "/");
 }
 
-#if __cpp_char8_t >= 201811
 using char2 = char8_t;
-#else
-using char2 = char;
-#endif
+
+std::string vfs::retrieve(std::string_view path, const vfs_directory* node, std::vector<std::string_view>* mount_path)
+{
+	auto& table = g_fxo->get<vfs_manager>();
+
+	if (!node)
+	{
+		if (path.starts_with(".") || path.empty())
+		{
+			return {};
+		}
+
+		reader_lock lock(table.mutex);
+
+		std::vector<std::string_view> mount_path_empty;
+
+		const std::string rpath = Emu.GetCallbacks().resolve_path(path);
+
+		if (!rpath.empty())
+		{
+			if (std::string res = vfs::retrieve(rpath, &table.root, &mount_path_empty); !res.empty())
+			{
+				return res;
+			}
+		}
+
+		mount_path_empty.clear();
+
+		return vfs::retrieve(path, &table.root, &mount_path_empty);
+	}
+
+	mount_path->emplace_back();
+
+	// Try to extract host root mount point name (if exists)
+	std::string_view host_root_name;
+
+	std::string result;
+	std::string result_dir;
+
+	for (const auto& [name, dir] : node->dirs)
+	{
+		mount_path->back() = name;
+
+		if (std::string res = vfs::retrieve(path, &dir, mount_path); !res.empty())
+		{
+			// Avoid app_home
+			// Prefer dev_bdvd over dev_hdd0
+			if (result.empty() || (name == "app_home") < (result_dir == "app_home") ||
+				(name == "dev_bdvd") > (result_dir == "dev_bdvd"))
+			{
+				result = std::move(res);
+				result_dir = name;
+			}
+		}
+
+		if (dir.path == "/"sv)
+		{
+			host_root_name = name;
+		}
+	}
+
+	if (!result.empty())
+	{
+		return result;
+	}
+
+	mount_path->pop_back();
+
+	if (node->path.size() > 1 && path.starts_with(node->path))
+	{
+		auto unescape_path = [](std::string_view path)
+		{
+			// Unescape from host FS
+			std::vector<std::string> escaped = fmt::split(path, {std::string_view{&fs::delim[0], 1}, std::string_view{&fs::delim[1], 1}});
+			std::vector<std::string> result;
+			for (auto& sv : escaped)
+				result.emplace_back(vfs::unescape(sv));
+
+			return fmt::merge(result, "/");
+		};
+
+		std::string result{"/"};
+
+		for (const auto& name : *mount_path)
+		{
+			result += name;
+			result += '/';
+		}
+
+		result += unescape_path(path.substr(node->path.size()));
+		return result;
+	}
+
+	if (!host_root_name.empty())
+	{
+		// If failed to find mount point for path and /host_root is mounted
+		// Prepend "/host_root" to path and return the constructed string
+		result.clear();
+		result += '/';
+
+		for (const auto& name : *mount_path)
+		{
+			result += name;
+			result += '/';
+		}
+
+		result += host_root_name;
+		result += '/';
+
+		result += path;
+		return result;
+	}
+
+	return result;
+}
 
 std::string vfs::escape(std::string_view name, bool escape_slash)
 {

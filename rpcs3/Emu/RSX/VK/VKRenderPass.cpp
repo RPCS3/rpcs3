@@ -31,12 +31,14 @@ namespace vk
 		// Internal utils
 		static u64 encode_layout(VkImageLayout layout)
 		{
-			switch (layout)
+			switch (+layout)
 			{
 			case VK_IMAGE_LAYOUT_GENERAL:
 			case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
 			case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
 				return static_cast<u64>(layout);
+			case VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT:
+				return 4ull;
 			default:
 				fmt::throw_exception("Unsupported layout 0x%llx here", static_cast<usz>(layout));
 			}
@@ -50,6 +52,8 @@ namespace vk
 			case 2:
 			case 3:
 				return static_cast<VkImageLayout>(encoded);
+			case 4:
+				return VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT;
 			default:
 				fmt::throw_exception("Unsupported layout encoding 0x%llx here", encoded);
 			}
@@ -73,8 +77,9 @@ namespace vk
 		// Encoders
 		inline void set_layout(u32 index, VkImageLayout layout)
 		{
-			switch (layout)
+			switch (+layout)
 			{
+			case VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT:
 			case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
 			case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
 			case VK_IMAGE_LAYOUT_GENERAL:
@@ -148,9 +153,9 @@ namespace vk
 
 			for (u32 i = 0, layout_offset = 0; i < 5; ++i, layout_offset += 3)
 			{
-				if (const auto layout = VkImageLayout((layout_blob >> layout_offset) & 0x7))
+				if (const auto layout_encoding = (layout_blob >> layout_offset) & 0x7)
 				{
-					result.push_back(layout);
+					result.push_back(decode_layout(layout_encoding));
 				}
 				else
 				{
@@ -336,7 +341,7 @@ namespace vk
 		g_renderpass_cache.clear();
 	}
 
-	void begin_renderpass(VkCommandBuffer cmd, VkRenderPass pass, VkFramebuffer target, const coordu& framebuffer_region)
+	void begin_renderpass(const vk::command_buffer& cmd, VkRenderPass pass, VkFramebuffer target, const coordu& framebuffer_region)
 	{
 		auto& renderpass_info = g_current_renderpass[cmd];
 		if (renderpass_info.pass == pass && renderpass_info.fbo == target)
@@ -361,7 +366,7 @@ namespace vk
 		renderpass_info = { pass, target };
 	}
 
-	void begin_renderpass(VkDevice dev, VkCommandBuffer cmd, u64 renderpass_key, VkFramebuffer target, const coordu& framebuffer_region)
+	void begin_renderpass(VkDevice dev, const vk::command_buffer& cmd, u64 renderpass_key, VkFramebuffer target, const coordu& framebuffer_region)
 	{
 		if (renderpass_key != g_cached_renderpass_key)
 		{
@@ -372,18 +377,18 @@ namespace vk
 		begin_renderpass(cmd, g_cached_renderpass, target, framebuffer_region);
 	}
 
-	void end_renderpass(VkCommandBuffer cmd)
+	void end_renderpass(const vk::command_buffer& cmd)
 	{
 		vkCmdEndRenderPass(cmd);
 		g_current_renderpass[cmd] = {};
 	}
 
-	bool is_renderpass_open(VkCommandBuffer cmd)
+	bool is_renderpass_open(const vk::command_buffer& cmd)
 	{
 		return g_current_renderpass[cmd].pass != VK_NULL_HANDLE;
 	}
 
-	void renderpass_op(VkCommandBuffer cmd, const renderpass_op_callback_t& op)
+	void renderpass_op(const vk::command_buffer& cmd, const renderpass_op_callback_t& op)
 	{
 		const auto& active = g_current_renderpass[cmd];
 		op(cmd, active.pass, active.fbo);

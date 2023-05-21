@@ -29,8 +29,8 @@ struct lv2_rwlock final : lv2_obj
 
 	shared_mutex mutex;
 	atomic_t<s64> owner{0};
-	std::deque<cpu_thread*> rq;
-	std::deque<cpu_thread*> wq;
+	ppu_thread* rq{};
+	ppu_thread* wq{};
 
 	lv2_rwlock(u32 protocol, u64 key, u64 name) noexcept
 		: protocol{static_cast<u8>(protocol)}
@@ -38,6 +38,10 @@ struct lv2_rwlock final : lv2_obj
 		, name(name)
 	{
 	}
+
+	lv2_rwlock(utils::serial& ar);
+	static std::shared_ptr<void> load(utils::serial& ar);
+	void save(utils::serial& ar);
 };
 
 // Aux

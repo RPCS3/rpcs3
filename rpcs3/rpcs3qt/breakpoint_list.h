@@ -30,7 +30,7 @@ private Q_SLOTS:
 	void OnBreakpointListRightClicked(const QPoint &pos);
 	void OnBreakpointListDelete();
 private:
-	breakpoint_handler* m_breakpoint_handler;
+	breakpoint_handler* m_ppu_breakpoint_handler;
 	QMenu* m_context_menu = nullptr;
 	QAction* m_delete_action;
 	cpu_thread* m_cpu = nullptr;

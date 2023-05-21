@@ -4,11 +4,16 @@
 #include "key_vault.h"
 #include "util/logs.hpp"
 #include "Utilities/StrUtil.h"
+#include "Utilities/Thread.h"
+#include "Utilities/mutex.h"
 #include "Emu/System.h"
 #include "Emu/system_utils.hpp"
 #include "Emu/VFS.h"
 #include "unpkg.h"
+#include "util/sysinfo.hpp"
 #include "Loader/PSF.h"
+
+#include <filesystem>
 
 LOG_CHANNEL(pkg_log, "PKG");
 
@@ -61,6 +66,7 @@ bool package_reader::read_header()
 		return false;
 	}
 
+	pkg_log.notice("Path: '%s'", m_path);
 	pkg_log.notice("Header: pkg_magic = 0x%x = \"%s\"", +m_header.pkg_magic, std::string(reinterpret_cast<const char*>(&m_header.pkg_magic), 4));
 	pkg_log.notice("Header: pkg_type = 0x%x = %d", m_header.pkg_type, m_header.pkg_type);
 	pkg_log.notice("Header: pkg_platform = 0x%x = %d", m_header.pkg_platform, m_header.pkg_platform);
@@ -189,8 +195,7 @@ bool package_reader::read_metadata()
 
 	// Read title ID and use it as an installation directory
 	m_install_dir.resize(9);
-	archive_seek(55);
-	archive_read(&m_install_dir.front(), m_install_dir.size());
+	archive_read_block(55, &m_install_dir.front(), m_install_dir.size());
 
 	// Read package metadata
 
@@ -286,7 +291,7 @@ bool package_reader::read_metadata()
 
 			if (packet.size == m_metadata.title_id.size())
 			{
-				archive_read(&m_metadata.title_id, m_metadata.title_id.size());
+				archive_read(&m_metadata.title_id.front(), m_metadata.title_id.size());
 				m_metadata.title_id = fmt::trim(m_metadata.title_id);
 				pkg_log.notice("Metadata: Title ID = %s", m_metadata.title_id);
 				continue;
@@ -509,9 +514,9 @@ bool package_reader::read_param_sfo()
 
 	std::vector<PKGEntry> entries(m_header.file_count);
 
-	std::memcpy(entries.data(), m_buf.get(), entries.size() * sizeof(PKGEntry));
+	std::memcpy(entries.data(), m_bufs.back().get(), entries.size() * sizeof(PKGEntry));
 
-	for (const auto& entry : entries)
+	for (const PKGEntry& entry : entries)
 	{
 		if (entry.name_size > 256)
 		{
@@ -523,7 +528,7 @@ bool package_reader::read_param_sfo()
 
 		decrypt(entry.name_offset, entry.name_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data());
 
-		const std::string_view name{reinterpret_cast<char*>(m_buf.get()), entry.name_size};
+		const std::string_view name{reinterpret_cast<char*>(m_bufs.back().get()), entry.name_size};
 
 		// We're looking for the PARAM.SFO file, if there is any
 		if (usz ndelim = name.find_first_not_of('/'); ndelim == umax || name.substr(ndelim) != "PARAM.SFO")
@@ -538,13 +543,13 @@ bool package_reader::read_param_sfo()
 			{
 				const u64 block_size = std::min<u64>(BUF_SIZE, entry.file_size - pos);
 
-				if (decrypt(entry.file_offset + pos, block_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data()) != block_size)
+				if (decrypt(entry.file_offset + pos, block_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data()).size() != block_size)
 				{
 					pkg_log.error("Failed to decrypt PARAM.SFO file");
 					return false;
 				}
 
-				if (tmp.write(m_buf.get(), block_size) != block_size)
+				if (tmp.write(m_bufs.back().get(), block_size) != block_size)
 				{
 					pkg_log.error("Failed to write to temporary PARAM.SFO file");
 					return false;
@@ -553,7 +558,7 @@ bool package_reader::read_param_sfo()
 
 			tmp.seek(0);
 
-			m_psf = psf::load_object(tmp);
+			m_psf = psf::load_object(tmp, name);
 
 			if (m_psf.empty())
 			{
@@ -563,11 +568,9 @@ bool package_reader::read_param_sfo()
 
 			return true;
 		}
-		else
-		{
-			pkg_log.error("Failed to create temporary PARAM.SFO file");
-			return false;
-		}
+
+		pkg_log.error("Failed to create temporary PARAM.SFO file");
+		return false;
 	}
 
 	return false;
@@ -610,13 +613,14 @@ package_error package_reader::check_target_app_version() const
 		return package_error::no_error;
 	}
 
-	const fs::file installed_sfo_file(rpcs3::utils::get_hdd0_dir() + "game/" + std::string(title_id) + "/PARAM.SFO");
+	const std::string sfo_path = rpcs3::utils::get_hdd0_dir() + "game/" + std::string(title_id) + "/PARAM.SFO";
+	const fs::file installed_sfo_file(sfo_path);
 	if (!installed_sfo_file)
 	{
 		if (!target_app_ver.empty())
 		{
 			// We are unable to compare anything with the target app version
-			pkg_log.error("A target app version is required (%s), but no PARAM.SFO was found for %s", target_app_ver, title_id);
+			pkg_log.error("A target app version is required (%s), but no PARAM.SFO was found for %s. (path='%s', error=%s)", target_app_ver, title_id, sfo_path, fs::g_tls_error);
 			return package_error::app_version;
 		}
 
@@ -624,7 +628,7 @@ package_error package_reader::check_target_app_version() const
 		return package_error::no_error;
 	}
 
-	const auto installed_psf = psf::load_object(installed_sfo_file);
+	const auto installed_psf = psf::load_object(installed_sfo_file, sfo_path);
 
 	const auto installed_title_id = psf::get_string(installed_psf, "TITLE_ID", "");
 	const auto installed_app_ver  = psf::get_string(installed_psf, "APP_VER", "");
@@ -686,16 +690,16 @@ package_error package_reader::check_target_app_version() const
 	return package_error::app_version;
 }
 
-fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, int mode, u8 *custom_klic, bool verbose = false);
-
-bool package_reader::extract_data(atomic_t<double>& sync)
+bool package_reader::set_install_path()
 {
 	if (!m_is_valid)
 	{
 		return false;
 	}
 
-	// Get full path and create the directory
+	m_install_path.clear();
+
+	// Get full path
 	std::string dir = rpcs3::utils::get_hdd0_dir();
 
 	// Based on https://www.psdevwiki.com/ps3/PKG_files#ContentType
@@ -730,13 +734,29 @@ bool package_reader::extract_data(atomic_t<double>& sync)
 		dir += m_install_dir + '/';
 
 	// If false, an existing directory is being overwritten: cannot cancel the operation
-	const bool was_null = !fs::is_dir(dir);
+	m_was_null = !fs::is_dir(dir);
 
-	if (!fs::create_path(dir))
+	m_install_path = dir;
+	return true;
+}
+
+bool package_reader::fill_data(std::map<std::string, install_entry*>& all_install_entries)
+{
+	if (!m_is_valid)
 	{
-		pkg_log.error("Could not create the installation directory %s", dir);
 		return false;
 	}
+
+	if (!fs::create_path(m_install_path))
+	{
+		pkg_log.error("Could not create the installation directory %s (error=%s)", m_install_path, fs::g_tls_error);
+		return false;
+	}
+
+	m_install_entries.clear();
+	m_bootable_file_path.clear();
+	m_entry_indexer = 0;
+	m_written_bytes = 0;
 
 	if (!decrypt_data())
 	{
@@ -747,26 +767,146 @@ bool package_reader::extract_data(atomic_t<double>& sync)
 
 	std::vector<PKGEntry> entries(m_header.file_count);
 
-	std::memcpy(entries.data(), m_buf.get(), entries.size() * sizeof(PKGEntry));
+	std::memcpy(entries.data(), m_bufs.back().get(), entries.size() * sizeof(PKGEntry));
 
+	// Create directories first
 	for (const auto& entry : entries)
 	{
-		if (entry.name_size > 256)
+		if (entry.name_size > PKG_MAX_FILENAME_SIZE)
 		{
 			num_failures++;
 			pkg_log.error("PKG name size is too big (0x%x)", entry.name_size);
+			break;
+		}
+
+		const bool is_psp = (entry.type & PKG_FILE_ENTRY_PSP) != 0u;
+		decrypt(entry.name_offset, entry.name_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data());
+
+		const std::string name{reinterpret_cast<char*>(m_bufs.back().get()), entry.name_size};
+		std::string path = m_install_path + vfs::escape(name);
+
+		if (entry.pad || (entry.type & ~PKG_FILE_ENTRY_KNOWN_BITS))
+		{
+			pkg_log.todo("Entry with unknown type or padding: type=0x%08x, pad=0x%x, name='%s'", entry.type, entry.pad, name);
+		}
+		else
+		{
+			pkg_log.notice("Entry: type=0x%08x, name='%s'", entry.type, name);
+		}
+
+		const u8 entry_type = entry.type & 0xff;
+
+		switch (entry_type)
+		{
+		case PKG_FILE_ENTRY_FOLDER:
+		case 0x12:
+		{
+			if (fs::is_dir(path))
+			{
+				pkg_log.warning("Reused existing directory %s", path);
+			}
+			else if (fs::create_path(path))
+			{
+				pkg_log.notice("Created directory %s", path);
+			}
+			else
+			{
+				num_failures++;
+				pkg_log.error("Failed to create directory %s", path);
+				break;
+			}
+
+			break;
+		}
+		default:
+		{
+			// TODO: check for valid utf8 characters
+			const std::string true_path = std::filesystem::weakly_canonical(path).string();
+			if (true_path.empty())
+			{
+				num_failures++;
+				pkg_log.error("Failed to get weakly_canonical path for '%s'", path);
+				break;
+			}
+
+			auto map_ptr = &*all_install_entries.try_emplace(true_path).first;
+
+			m_install_entries.push_back({
+				.weak_reference = map_ptr,
+				.name = name,
+				.file_offset = entry.file_offset,
+				.file_size = entry.file_size,
+				.type = entry.type,
+				.pad = entry.pad
+			});
+
+			if (map_ptr->second && !(entry.type & PKG_FILE_ENTRY_OVERWRITE))
+			{
+				// Cannot override
+				continue;
+			}
+
+			// Link
+			map_ptr->second = &m_install_entries.back();
+			continue;
+		}
+		}
+	}
+
+	if (num_failures != 0)
+	{
+		pkg_log.error("Package installation failed: %s", m_install_path);
+		return false;
+	}
+
+	return true;
+}
+
+fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, int mode, u8 *custom_klic, bool verbose = false);
+
+void package_reader::extract_worker(thread_key thread_data_key)
+{
+	while (m_num_failures == 0 && !m_aborted)
+	{
+		// Make sure m_entry_indexer does not exceed m_install_entries
+		const usz index = m_entry_indexer.fetch_op([this](usz& v)
+		{
+			if (v < m_install_entries.size())
+			{
+				v++;
+				return true;
+			}
+
+			return false;
+		}).first;
+
+		if (index >= m_install_entries.size())
+		{
+			break;
+		}
+
+		const install_entry& entry = ::at32(m_install_entries, index);
+
+		if (!entry.is_dominating())
+		{
+			// Overwritten by another entry
+			m_written_bytes += entry.file_size;
 			continue;
 		}
 
 		const bool is_psp = (entry.type & PKG_FILE_ENTRY_PSP) != 0u;
 
-		decrypt(entry.name_offset, entry.name_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data());
+		const std::string& path = entry.weak_reference->first;
+		const std::string& name = entry.name;
 
-		const std::string name{reinterpret_cast<char*>(m_buf.get()), entry.name_size};
-		const std::string path = dir + vfs::escape(name);
-
-		const bool log_error = entry.pad || (entry.type & ~PKG_FILE_ENTRY_KNOWN_BITS);
-		(log_error ? pkg_log.error : pkg_log.notice)("Entry 0x%08x: %s (pad=0x%x)", entry.type, name, entry.pad);
+		if (entry.pad || (entry.type & ~PKG_FILE_ENTRY_KNOWN_BITS))
+		{
+			pkg_log.todo("Entry with unknown type or padding: type=0x%08x, pad=0x%x, name='%s'", entry.type, entry.pad, name);
+		}
+		else
+		{
+			pkg_log.notice("Entry: type=0x%08x, name='%s'", entry.type, name);
+		}
 
 		switch (const u8 entry_type = entry.type & 0xff)
 		{
@@ -798,43 +938,33 @@ bool package_reader::extract_data(atomic_t<double>& sync)
 
 			if (entry_type == PKG_FILE_ENTRY_NPDRMEDAT)
 			{
-				pkg_log.todo("NPDRM EDAT!");
+				pkg_log.warning("NPDRM EDAT!");
 			}
 
-			if (fs::file out = is_buffered ? fs::make_stream<std::vector<u8>>() : fs::file{ path, fs::rewrite })
+			if (fs::file out = is_buffered ? fs::make_stream<std::vector<u8>>() : fs::file{ path, did_overwrite ? fs::rewrite : fs::write_new })
 			{
 				bool extract_success = true;
 				for (u64 pos = 0; pos < entry.file_size; pos += BUF_SIZE)
 				{
 					const u64 block_size = std::min<u64>(BUF_SIZE, entry.file_size - pos);
 
-					if (decrypt(entry.file_offset + pos, block_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data()) != block_size)
+					const std::span<const char> data_span = decrypt(entry.file_offset + pos, block_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data(), thread_data_key);
+
+					if (data_span.size() != block_size)
 					{
 						extract_success = false;
-						pkg_log.error("Failed to extract file %s", path);
+						pkg_log.error("Failed to extract file %s (data_span.size=%d, block_size=%d)", path, data_span.size(), block_size);
 						break;
 					}
 
-					if (out.write(m_buf.get(), block_size) != block_size)
+					if (out.write(data_span.data(), block_size) != block_size)
 					{
 						extract_success = false;
-						pkg_log.error("Failed to write file %s", path);
+						pkg_log.error("Failed to write file %s (error=%s)", path, fs::g_tls_error);
 						break;
 					}
 
-					if (sync.fetch_add((block_size + 0.0) / m_header.data_size) < 0.)
-					{
-						if (was_null)
-						{
-							pkg_log.error("Package installation cancelled: %s", dir);
-							out.close();
-							fs::remove_all(dir, true);
-							return false;
-						}
-
-						// Cannot cancel the installation
-						sync += 1.;
-					}
+					m_written_bytes += block_size;
 				}
 
 				if (is_buffered)
@@ -842,8 +972,8 @@ bool package_reader::extract_data(atomic_t<double>& sync)
 					out = DecryptEDAT(out, name, 1, reinterpret_cast<u8*>(&m_header.klicensee), true);
 					if (!out || !fs::write_file(path, fs::rewrite, static_cast<fs::container_stream<std::vector<u8>>*>(out.release().get())->obj))
 					{
-						num_failures++;
-						pkg_log.error("Failed to create file %s", path);
+						m_num_failures++;
+						pkg_log.error("Failed to create file %s (error=%s)", path, fs::g_tls_error);
 						break;
 					}
 				}
@@ -857,93 +987,204 @@ bool package_reader::extract_data(atomic_t<double>& sync)
 					else
 					{
 						pkg_log.notice("Created file %s", path);
+
+						if (name == "USRDIR/EBOOT.BIN" && entry.file_size > 4)
+						{
+							// Expose the creation of a bootable file
+							m_bootable_file_path = path;
+						}
 					}
 				}
 				else
 				{
-					num_failures++;
+					m_num_failures++;
 				}
 			}
 			else
 			{
-				num_failures++;
-				pkg_log.error("Failed to create file %s", path);
+				m_num_failures++;
+				pkg_log.error("Failed to create file %s (is_buffered=%d, did_overwrite=%d, error=%s)", path, is_buffered, did_overwrite, fs::g_tls_error);
 			}
 
 			break;
 		}
-
-		case PKG_FILE_ENTRY_FOLDER:
-		case 0x12:
+		default:
 		{
-			if (fs::create_dir(path))
+			m_num_failures++;
+			pkg_log.error("Unknown PKG entry type (0x%x) %s", entry.type, name);
+			break;
+		}
+		}
+	}
+}
+
+package_error package_reader::extract_data(std::deque<package_reader>& readers, std::deque<std::string>& bootable_paths)
+{
+	package_error error = package_error::no_error;
+	usz num_failures = 0;
+
+	// Set paths first in order to know if the install dir was empty before starting any installations.
+	// This will also allow us to remove all the new packages in one path at once if any of them fail.
+	for (package_reader& reader : readers)
+	{
+		reader.m_result = result::not_started;
+
+		if (!reader.set_install_path())
+		{
+			error = package_error::other;
+			reader.m_result = result::error; // We don't know if it's dirty yet.
+			return error;
+		}
+	}
+
+	for (package_reader& reader : readers)
+	{
+		// Use a seperate map for each reader. We need to check if the target app version exists for each package in sequence.
+		std::map<std::string, install_entry*> all_install_entries;
+
+		if (error != package_error::no_error || num_failures > 0)
+		{
+			ensure(reader.m_result == result::error || reader.m_result == result::error_dirty);
+			return error;
+		}
+
+		// Check if this package is allowed to be installed on top of the existing data
+		error = reader.check_target_app_version();
+
+		if (error != package_error::no_error)
+		{
+			reader.m_result = result::error; // We don't know if it's dirty yet.
+			return error;
+		}
+
+		reader.m_result = result::started;
+
+		// Parse the files to be installed and create all paths.
+		if (!reader.fill_data(all_install_entries))
+		{
+			error = package_error::other;
+			// Do not return yet. We may need to clean up down below.
+		}
+
+		reader.m_num_failures = error == package_error::no_error ? 0 : 1;
+
+		if (reader.m_num_failures == 0)
+		{
+			reader.m_bufs.resize(std::min<usz>(utils::get_thread_count(), reader.m_install_entries.size()));
+
+			atomic_t<usz> thread_indexer = 0;
+
+			named_thread_group workers("PKG Installer "sv, std::max<u32>(::narrow<u32>(reader.m_bufs.size()), 1) - 1, [&]()
 			{
-				pkg_log.notice("Created directory %s", path);
+				reader.extract_worker(thread_key{thread_indexer++});
+			});
+
+			reader.extract_worker(thread_key{thread_indexer++});
+			workers.join();
+
+			reader.m_bufs.clear();
+			reader.m_bufs.shrink_to_fit();
+		}
+
+		num_failures += reader.m_num_failures;
+
+		// We don't count this package as aborted if all entries were processed.
+		if (reader.m_num_failures || (reader.m_aborted && reader.m_entry_indexer < reader.m_install_entries.size()))
+		{
+			// Clear boot path. We don't want to propagate potentially broken paths to the caller.
+			reader.m_bootable_file_path.clear();
+
+			bool cleaned = reader.m_was_null;
+
+			if (reader.m_was_null && fs::is_dir(reader.m_install_path))
+			{
+				pkg_log.notice("Removing partial installation ('%s')", reader.m_install_path);
+
+				if (!fs::remove_all(reader.m_install_path, true))
+				{
+					pkg_log.notice("Failed to remove partial installation ('%s') (error=%s)", reader.m_install_path, fs::g_tls_error);
+					cleaned = false;
+				}
 			}
-			else if (fs::is_dir(path))
+
+			if (reader.m_num_failures)
 			{
-				pkg_log.warning("Reused existing directory %s", path);
+				pkg_log.error("Package failed to install ('%s')", reader.m_install_path);
+				reader.m_result = cleaned ? result::error : result::error_dirty;
 			}
 			else
 			{
-				num_failures++;
-				pkg_log.error("Failed to create directory %s", path);
+				pkg_log.warning("Package installation aborted ('%s')", reader.m_install_path);
+				reader.m_result = cleaned ? result::aborted : result::aborted_dirty;
 			}
 
 			break;
 		}
 
-		default:
+		reader.m_result = result::success;
+
+		if (reader.get_progress(1) != 1)
 		{
-			num_failures++;
-			pkg_log.error("Unknown PKG entry type (0x%x) %s", entry.type, name);
+			pkg_log.warning("Missing %d bytes from PKG total files size.", reader.m_header.data_size - reader.m_written_bytes);
+			reader.m_written_bytes = reader.m_header.data_size; // Mark as completed anyway
 		}
-		}
+
+		// May be empty
+		bootable_paths.emplace_back(std::move(reader.m_bootable_file_path));
 	}
 
-	if (num_failures == 0)
+	if (error == package_error::no_error && num_failures > 0)
 	{
-		pkg_log.success("Package successfully installed to %s", dir);
-	}
-	else
-	{
-		fs::remove_all(dir, true);
-		pkg_log.error("Package installation failed: %s", dir);
+		error = package_error::other;
 	}
 
-	return num_failures == 0;
+	return error;
 }
 
 void package_reader::archive_seek(const s64 new_offset, const fs::seek_mode damode)
 {
 	if (m_file) m_file.seek(new_offset, damode);
-};
+}
 
 u64 package_reader::archive_read(void* data_ptr, const u64 num_bytes)
 {
 	return m_file ? m_file.read(data_ptr, num_bytes) : 0;
-};
+}
 
-u64 package_reader::decrypt(u64 offset, u64 size, const uchar* key)
+std::span<const char> package_reader::archive_read_block(u64 offset, void* data_ptr, u64 num_bytes)
+{
+	const usz read_n = m_file.read_at(offset, data_ptr, num_bytes);
+
+	return {static_cast<const char*>(data_ptr), read_n};
+}
+
+std::span<const char> package_reader::decrypt(u64 offset, u64 size, const uchar* key, thread_key thread_data_key)
 {
 	if (!m_is_valid)
 	{
-		return 0;
+		return {};
 	}
 
-	if (!m_buf)
+	if (m_bufs.empty())
+	{
+		// Assume in single-threaded mode still
+		m_bufs.resize(1);
+	}
+
+	auto& local_buf = ::at32(m_bufs, thread_data_key.unique_num);
+
+	if (!local_buf)
 	{
 		// Allocate buffer with BUF_SIZE size or more if required
-		m_buf.reset(new u128[std::max<u64>(BUF_SIZE, sizeof(PKGEntry) * m_header.file_count) / sizeof(u128)]);
+		local_buf.reset(new u128[std::max<u64>(BUF_SIZE, sizeof(PKGEntry) * m_header.file_count) / sizeof(u128)]);
 	}
 
-	archive_seek(m_header.data_offset + offset);
-
 	// Read the data and set available size
-	const u64 read = archive_read(m_buf.get(), size);
+	const auto data_span = archive_read_block(m_header.data_offset + offset, local_buf.get(), size);
+	ensure(data_span.data() == static_cast<void*>(local_buf.get()));
 
 	// Get block count
-	const u64 blocks = (read + 15) / 16;
+	const u64 blocks = (data_span.size() + 15) / 16;
 
 	if (m_header.pkg_type == PKG_RELEASE_TYPE_DEBUG)
 	{
@@ -969,7 +1210,7 @@ u64 package_reader::decrypt(u64 offset, u64 size, const uchar* key)
 
 			sha1(reinterpret_cast<const u8*>(input), sizeof(input), hash.data);
 
-			m_buf[i] ^= hash._v128;
+			local_buf[i] ^= hash._v128;
 		}
 	}
 	else if (m_header.pkg_type == PKG_RELEASE_TYPE_RELEASE)
@@ -989,7 +1230,7 @@ u64 package_reader::decrypt(u64 offset, u64 size, const uchar* key)
 
 			aes_crypt_ecb(&ctx, AES_ENCRYPT, reinterpret_cast<const u8*>(&input), reinterpret_cast<u8*>(&key));
 
-			m_buf[i] ^= key;
+			local_buf[i] ^= key;
 		}
 	}
 	else
@@ -998,5 +1239,17 @@ u64 package_reader::decrypt(u64 offset, u64 size, const uchar* key)
 	}
 
 	// Return the amount of data written in buf
-	return read;
-};
+	return data_span;
+}
+
+int package_reader::get_progress(int maximum) const
+{
+	const usz wr = m_written_bytes;
+
+	return wr >= m_header.data_size ? maximum : ::narrow<int>(wr * maximum / m_header.data_size);
+}
+
+void package_reader::abort_extract()
+{
+	m_aborted = true;
+}

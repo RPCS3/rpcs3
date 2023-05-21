@@ -1,5 +1,8 @@
 #pragma once
 
+#include "Emu/Audio/AudioBackend.h"
+#include "Emu/Memory/vm_ptr.h"
+
 // Error codes
 enum CellAudioOutError : u32
 {
@@ -12,7 +15,6 @@ enum CellAudioOutError : u32
 	CELL_AUDIO_OUT_ERROR_UNSUPPORTED_SOUND_MODE = 0x8002b246,
 	CELL_AUDIO_OUT_ERROR_CONDITION_BUSY         = 0x8002b247,
 };
-
 
 enum CellAudioOut
 {
@@ -67,8 +69,10 @@ enum CellAudioOutCodingType
 	CELL_AUDIO_OUT_CODING_TYPE_AAC                = 5,
 	CELL_AUDIO_OUT_CODING_TYPE_DTS                = 6,
 	CELL_AUDIO_OUT_CODING_TYPE_ATRAC              = 7,
-	// ...
+	CELL_AUDIO_OUT_CODING_TYPE_DOLBY_TRUE_HD      = 8, // Speculative name
 	CELL_AUDIO_OUT_CODING_TYPE_DOLBY_DIGITAL_PLUS = 9,
+	CELL_AUDIO_OUT_CODING_TYPE_DTS_HD_HIGHRES     = 10, // Speculative name
+	CELL_AUDIO_OUT_CODING_TYPE_DTS_HD_MASTER      = 11, // Speculative name
 	CELL_AUDIO_OUT_CODING_TYPE_BITSTREAM          = 0xff,
 };
 
@@ -131,6 +135,8 @@ struct CellAudioOutSoundMode
 	u8 fs;
 	u8 reserved;
 	be_t<u32> layout;
+
+	ENABLE_BITWISE_SERIALIZATION;
 };
 
 struct CellAudioOutDeviceInfo
@@ -175,15 +181,46 @@ struct CellAudioOutDeviceInfo2
 
 struct CellAudioOutOption
 {
-	//(Omitted)
+	be_t<u32> reserved;
 };
 
 struct CellAudioOutRegistrationOption
 {
-	//(Omitted)
+	be_t<u32> reserved;
 };
 
 struct CellAudioOutDeviceConfiguration
 {
-	//(Omitted)
+	u8 volume;
+	u8 reserved[31];
+};
+
+typedef s32(CellAudioOutCallback)(u32 slot, u32 audioOut, u32 deviceIndex, u32 event, vm::ptr<CellAudioOutDeviceInfo> info, vm::ptr<void> userData);
+
+
+// FXO Object
+
+struct audio_out_configuration
+{
+	shared_mutex mtx;
+
+	struct audio_out
+	{
+		u32 state = CELL_AUDIO_OUT_OUTPUT_STATE_ENABLED;
+		u32 channels = CELL_AUDIO_OUT_CHNUM_2;
+		u32 encoder = CELL_AUDIO_OUT_CODING_TYPE_LPCM;
+		u32 downmixer = CELL_AUDIO_OUT_DOWNMIXER_NONE;
+		u32 copy_control = CELL_AUDIO_OUT_COPY_CONTROL_COPY_FREE;
+		std::vector<CellAudioOutSoundMode> sound_modes;
+		CellAudioOutSoundMode sound_mode{};
+
+		std::pair<AudioChannelCnt, AudioChannelCnt> get_channel_count_and_downmixer() const;
+	};
+
+	std::array<audio_out, 2> out;
+
+	SAVESTATE_INIT_POS(8.9); // Is a dependency of cellAudio
+	audio_out_configuration();
+	audio_out_configuration(utils::serial& ar);
+	void save(utils::serial& ar);
 };

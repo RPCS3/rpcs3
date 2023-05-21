@@ -257,6 +257,18 @@ enum CellSysCacheError : u32
 	CELL_SYSCACHE_ERROR_NOTMOUNTED    = 0x8002bc04, // We don't really need to simulate the mounting, so this is probably useless
 };
 
+enum CellBgmplaybackError : u32
+{
+	CELL_SYSUTIL_BGMPLAYBACK_ERROR_PARAM               = 0x8002b101,
+	CELL_SYSUTIL_BGMPLAYBACK_ERROR_BUSY                = 0x8002b102,
+	CELL_SYSUTIL_BGMPLAYBACK_ERROR_GENERIC             = 0x8002b1FF,
+
+	CELL_SYSUTIL_BGMPLAYBACK_EX_ERROR_PARAM            = 0x8002d301,
+	CELL_SYSUTIL_BGMPLAYBACK_EX_ERROR_ALREADY_SETPARAM = 0x8002d302,
+	CELL_SYSUTIL_BGMPLAYBACK_EX_ERROR_DISABLE_SETPARAM = 0x8002d303,
+	CELL_SYSUTIL_BGMPLAYBACK_EX_ERROR_GENERIC          = 0x8002d3FF,
+};
+
 enum CellSysutilBgmPlaybackStatusState
 {
 	CELL_SYSUTIL_BGMPLAYBACK_STATUS_PLAY = 0,
@@ -269,12 +281,17 @@ enum CellSysutilBgmPlaybackStatusEnabled
 	CELL_SYSUTIL_BGMPLAYBACK_STATUS_DISABLE = 1
 };
 
+enum
+{
+	CELL_SYSUTIL_BGMPLAYBACK_FADE_INVALID = -1
+};
+
 struct CellSysutilBgmPlaybackStatus
 {
 	u8 playerState;
 	u8 enableState;
-	char contentId[16];
-	u8 currentFadeRatio;
+	char contentId[16]; // CellSearchContentId
+	u8 currentFadeRatio; // current volume ratio (0=0%, 255=100%)
 	char reserved[13];
 };
 
@@ -300,6 +317,14 @@ struct CellSysCacheParam
 	vm::bptr<void> reserved;
 };
 
+template <u32 BaseEvent>
+struct SysutilEventStatus
+{
+	atomic_t<bool> active = false;
+};
+
+using SysutilMenuOpenStatus = SysutilEventStatus<CELL_SYSUTIL_SYSTEM_MENU_OPEN>;
+
 extern void sysutil_register_cb(std::function<s32(ppu_thread&)>&&);
-extern u32 sysutil_send_system_cmd(u64 status, u64 param);
+extern s32 sysutil_send_system_cmd(u64 status, u64 param);
 s32 sysutil_check_name_string(const char* src, s32 minlen, s32 maxlen);

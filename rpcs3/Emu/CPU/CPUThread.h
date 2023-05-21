@@ -19,9 +19,14 @@ enum class cpu_flag : u32
 	pause, // Thread suspended by suspend_all technique
 	suspend, // Thread suspended
 	ret, // Callback return requested
+	again, // Thread must complete the syscall after deserialization
 	signal, // Thread received a signal (HLE)
 	memory, // Thread must unlock memory mutex
 	pending, // Thread has postponed work
+	pending_recheck, // Thread needs to recheck if there is pending work before ::pending removal
+	notify, // Flag meant solely to allow atomic notification on state without changing other flags
+	yield, // Thread is being requested to yield its execution time if it's running
+	preempt, // Thread is being requested to preempt the execution of all CPU threads
 
 	dbg_global_pause, // Emulation paused
 	dbg_pause, // Thread paused
@@ -33,7 +38,7 @@ enum class cpu_flag : u32
 // Test stopped state
 constexpr bool is_stopped(bs_t<cpu_flag> state)
 {
-	return !!(state & (cpu_flag::stop + cpu_flag::exit));
+	return !!(state & (cpu_flag::stop + cpu_flag::exit + cpu_flag::again));
 }
 
 // Test paused state
@@ -138,6 +143,7 @@ public:
 
 	u32 get_pc() const;
 	u32* get_pc2(); // Last PC before stepping for the debugger (may be null)
+	cpu_thread* get_next_cpu(); // Access next_cpu member if the is one
 
 	void notify();
 	cpu_thread& operator=(thread_state);
@@ -150,10 +156,10 @@ public:
 	std::string get_name() const;
 
 	// Get CPU state dump (everything)
-	virtual std::string dump_all() const;
+	virtual void dump_all(std::string&) const;
 
 	// Get CPU register dump
-	virtual std::string dump_regs() const;
+	virtual void dump_regs(std::string&) const;
 
 	// Get CPU call stack dump
 	virtual std::string dump_callstack() const;
@@ -171,7 +177,7 @@ public:
 	virtual void cpu_sleep() {}
 
 	// Callback for cpu_flag::pending
-	virtual void cpu_work() {}
+	virtual void cpu_work() { state -= cpu_flag::pending + cpu_flag::pending_recheck; }
 
 	// Callback for cpu_flag::ret
 	virtual void cpu_return() {}

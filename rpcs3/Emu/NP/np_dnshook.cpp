@@ -71,14 +71,14 @@ namespace np
 	bool dnshook::is_dns_queue(u32 sock)
 	{
 		std::lock_guard lock(mutex);
-		return !m_dns_spylist.at(sock).empty();
+		return !::at32(m_dns_spylist, sock).empty();
 	}
 
 	std::vector<u8> dnshook::get_dns_packet(u32 sock)
 	{
 		std::lock_guard lock(mutex);
-		auto ret_vec = std::move(m_dns_spylist.at(sock).front());
-		m_dns_spylist.at(sock).pop();
+		auto ret_vec = std::move(::at32(m_dns_spylist, sock).front());
+		::at32(m_dns_spylist, sock).pop();
 
 		return ret_vec;
 	}
@@ -102,22 +102,8 @@ namespace np
 	s32 dnshook::analyze_dns_packet(s32 s, const u8* buf, u32 len)
 	{
 		std::lock_guard lock(mutex);
-		if (dnshook_log.enabled == logs::level::trace)
-		{
-			std::string datrace;
-			const char hex[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
-
-			for (u32 index = 0; index < len; index++)
-			{
-				if ((index % 16) == 0)
-					datrace += '\n';
-
-				datrace += hex[(buf[index] >> 4) & 15];
-				datrace += hex[(buf[index]) & 15];
-				datrace += ' ';
-			}
-			dnshook_log.trace("DNS REQUEST: %s", datrace);
-		}
+		
+		dnshook_log.trace("DNS REQUEST:\n%s", fmt::buf_to_hexstring(buf, len));
 
 		struct dns_header
 		{

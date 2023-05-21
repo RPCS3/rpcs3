@@ -1,4 +1,5 @@
 #include "localized.h"
+#include "Loader/PSF.h"
 
 QString Localized::GetVerboseTimeByMs(quint64 elapsed_ms, bool show_days) const
 {
@@ -44,4 +45,64 @@ QString Localized::GetVerboseTimeByMs(quint64 elapsed_ms, bool show_days) const
 	}
 
 	return str_seconds;
+}
+
+std::string Localized::GetStringFromU32(const u32& key, const std::map<u32, QString>& map, bool combined)
+{
+	QStringList string;
+
+	if (combined)
+	{
+		for (const auto& item : map)
+		{
+			if (key & item.first)
+			{
+				string << item.second;
+			}
+		}
+	}
+	else
+	{
+		if (map.find(key) != map.end())
+		{
+			string << ::at32(map, key);
+		}
+	}
+
+	if (string.isEmpty())
+	{
+		string << tr("Unknown");
+	}
+
+	return string.join(", ").toStdString();
+}
+
+Localized::resolution::resolution()
+	: mode({
+		{ psf::resolution_flag::_480p,      tr("480p") },
+		{ psf::resolution_flag::_576p,      tr("576p") },
+		{ psf::resolution_flag::_720p,      tr("720p") },
+		{ psf::resolution_flag::_1080p,     tr("1080p") },
+		{ psf::resolution_flag::_480p_16_9, tr("480p 16:9") },
+		{ psf::resolution_flag::_576p_16_9, tr("576p 16:9") },
+	})
+{
+}
+
+Localized::sound::sound()
+	: format({
+		{ psf::sound_format_flag::lpcm_2,   tr("LPCM 2.0") },
+		{ psf::sound_format_flag::lpcm_5_1, tr("LPCM 5.1") },
+		{ psf::sound_format_flag::lpcm_7_1, tr("LPCM 7.1") },
+		{ psf::sound_format_flag::ac3,      tr("Dolby Digital 5.1") },
+		{ psf::sound_format_flag::dts,      tr("DTS 5.1") },
+	})
+{
+}
+
+Localized::title_t::title_t()
+	: titles({
+		{ "vsh/module/vsh.self", tr("The PS3 Interface (XMB, or VSH)") },
+	})
+{
 }

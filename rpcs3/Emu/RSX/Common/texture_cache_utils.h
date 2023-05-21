@@ -280,8 +280,6 @@ namespace rsx
 		constexpr const_iterator begin() const noexcept { return sections.begin(); }
 		inline iterator end() noexcept { return sections.end(); }
 		inline const_iterator end() const noexcept { return sections.end(); }
-		inline iterator at(size_type pos) { return sections.data(pos); }
-		inline const_iterator at(size_type pos) const { return sections.data(pos); }
 		inline bool empty() const { return sections.empty(); }
 		inline size_type size() const { return sections.size(); }
 		inline u32 get_exists_count() const { return exists_count; }
@@ -1326,6 +1324,26 @@ namespace rsx
 			return (get_protection() == utils::protection::no);
 		}
 
+		bool is_synchronized() const
+		{
+			return synchronized;
+		}
+
+		bool is_flushed() const
+		{
+			return flushed;
+		}
+
+		bool should_flush() const
+		{
+			if (context == rsx::texture_upload_context::framebuffer_storage)
+			{
+				const auto surface = derived()->get_render_target();
+				return surface->has_flushable_data();
+			}
+
+			return true;
+		}
 
 	private:
 		/**
@@ -1357,18 +1375,18 @@ namespace rsx
 			if (context == rsx::texture_upload_context::framebuffer_storage && !Emu.IsStopped())
 			{
 				// Lock, unlock
+				auto surface = derived()->get_render_target();
+
 				if (prot == utils::protection::no && old_prot != utils::protection::no)
 				{
 					// Locked memory. We have to take ownership of the object in the surface cache as well
-					auto surface = derived()->get_render_target();
-					surface->add_ref();
+					surface->on_lock();
 				}
 				else if (old_prot == utils::protection::no && prot != utils::protection::no)
 				{
 					// Release the surface, the cache can remove it if needed
 					ensure(prot == utils::protection::rw);
-					auto surface = derived()->get_render_target();
-					surface->release();
+					surface->on_unlock();
 				}
 			}
 		}
@@ -1627,12 +1645,18 @@ namespace rsx
 			ensure(exists());
 			AUDIT(is_locked());
 
-			// If we are fully inside the flush exclusions regions, we just mark ourselves as flushed and return
-			if (get_confirmed_range().inside(flush_exclusions))
+			auto cleanup_flush = [&]()
 			{
 				flushed = true;
 				flush_exclusions.clear();
 				on_flush();
+			};
+
+			// If we are fully inside the flush exclusions regions, we just mark ourselves as flushed and return
+			// We apply the same skip if there is nothing new in the surface data
+			if (!should_flush() || get_confirmed_range().inside(flush_exclusions))
+			{
+				cleanup_flush();
 				return;
 			}
 
@@ -1644,10 +1668,8 @@ namespace rsx
 
 			// Finish up
 			// Its highly likely that this surface will be reused, so we just leave resources in place
-			flushed = true;
 			derived()->finish_flush();
-			flush_exclusions.clear();
-			on_flush();
+			cleanup_flush();
 		}
 
 		void add_flush_exclusion(const address_range& rng)

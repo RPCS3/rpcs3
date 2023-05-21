@@ -6,9 +6,11 @@ class lv2_socket_p2p : public lv2_socket
 {
 public:
 	lv2_socket_p2p(lv2_socket_family family, lv2_socket_type type, lv2_ip_protocol protocol);
+	lv2_socket_p2p(utils::serial& ar, lv2_socket_type type);
+	void save(utils::serial& ar);
 
-	std::tuple<bool, s32, sys_net_sockaddr> accept(bool is_lock = true) override;
-	s32 bind(const sys_net_sockaddr& addr, s32 ps3_id) override;
+	std::tuple<bool, s32, std::shared_ptr<lv2_socket>, sys_net_sockaddr> accept(bool is_lock = true) override;
+	s32 bind(const sys_net_sockaddr& addr) override;
 
 	std::optional<s32> connect(const sys_net_sockaddr& addr) override;
 	s32 connect_followup() override;
@@ -23,6 +25,7 @@ public:
 
 	std::optional<std::tuple<s32, std::vector<u8>, sys_net_sockaddr>> recvfrom(s32 flags, u32 len, bool is_lock = true) override;
 	std::optional<s32> sendto(s32 flags, const std::vector<u8>& buf, std::optional<sys_net_sockaddr> opt_sn_addr, bool is_lock = true) override;
+	std::optional<s32> sendmsg(s32 flags, const sys_net_msghdr& msg, bool is_lock = true) override;
 
 	void close() override;
 	s32 shutdown(s32 how) override;
@@ -38,4 +41,6 @@ protected:
 	u32 bound_addr = 0;
 	// Queue containing received packets from network_thread for SYS_NET_SOCK_DGRAM_P2P sockets
 	std::queue<std::pair<sys_net_sockaddr_in_p2p, std::vector<u8>>> data{};
+	// List of sock options
+	std::map<u64, sockopt_cache> sockopts;
 };

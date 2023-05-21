@@ -5,6 +5,7 @@
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/timers.hpp"
+#include "Emu/system_config.h"
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -82,7 +83,7 @@ error_code sys_ss_access_control_engine(u64 pkg_id, u64 a2, u64 a3)
 	sys_ss.todo("sys_ss_access_control_engine(pkg_id=0x%llx, a2=0x%llx, a3=0x%llx)", pkg_id, a2, a3);
 
 	const u64 authid = g_ps3_process_info.self_info.valid ?
-		g_ps3_process_info.self_info.app_info.authid : 0;
+		g_ps3_process_info.self_info.prog_id_hdr.program_authority_id : 0;
 
 	switch (pkg_id)
 	{
@@ -123,29 +124,26 @@ error_code sys_ss_access_control_engine(u64 pkg_id, u64 a2, u64 a3)
 	return CELL_OK;
 }
 
-s32 sys_ss_get_console_id(vm::ptr<u8> buf)
+error_code sys_ss_get_console_id(vm::ptr<u8> buf)
 {
-	sys_ss.todo("sys_ss_get_console_id(buf=*0x%x)", buf);
+	sys_ss.notice("sys_ss_get_console_id(buf=*0x%x)", buf);
 
-	// TODO: Return some actual IDPS?
-	*buf = 0;
-
-	return CELL_OK;
+	return sys_ss_appliance_info_manager(0x19003, buf);
 }
 
-s32 sys_ss_get_open_psid(vm::ptr<CellSsOpenPSID> psid)
+error_code sys_ss_get_open_psid(vm::ptr<CellSsOpenPSID> psid)
 {
-	sys_ss.warning("sys_ss_get_open_psid(psid=*0x%x)", psid);
+	sys_ss.notice("sys_ss_get_open_psid(psid=*0x%x)", psid);
 
-	psid->high = 0;
-	psid->low = 0;
+	psid->high = g_cfg.sys.console_psid_high;
+	psid->low = g_cfg.sys.console_psid_low;
 
 	return CELL_OK;
 }
 
 error_code sys_ss_appliance_info_manager(u32 code, vm::ptr<u8> buffer)
 {
-	sys_ss.warning("sys_ss_appliance_info_manager(code=0x%x, buffer=*0x%x)", code, buffer);
+	sys_ss.notice("sys_ss_appliance_info_manager(code=0x%x, buffer=*0x%x)", code, buffer);
 
 	if (!buffer)
 	{
@@ -157,12 +155,19 @@ error_code sys_ss_appliance_info_manager(u32 code, vm::ptr<u8> buffer)
 	case 0x19002:
 	{
 		// AIM_get_device_type
+		constexpr u8 product_code[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x89 };
+		std::memcpy(buffer.get_ptr(), product_code, 16);
+		if (g_cfg.core.debug_console_mode)
+			buffer[15] = 0xA0;
+		break;
 	}
 	case 0x19003:
 	{
 		// AIM_get_device_id
 		constexpr u8 idps[] = { 0x00, 0x00, 0x00, 0x01, 0x00, 0x89, 0x00, 0x0B, 0x14, 0x00, 0xEF, 0xDD, 0xCA, 0x25, 0x52, 0x66 };
 		std::memcpy(buffer.get_ptr(), idps, 16);
+		if (g_cfg.core.debug_console_mode)
+			buffer[5] = 0xA0;
 		break;
 	}
 	case 0x19004:
@@ -175,6 +180,9 @@ error_code sys_ss_appliance_info_manager(u32 code, vm::ptr<u8> buffer)
 	case 0x19005:
 	{
 		// AIM_get_open_ps_id
+		be_t<u64> psid[2] = { +g_cfg.sys.console_psid_high, +g_cfg.sys.console_psid_low };
+		std::memcpy(buffer.get_ptr(), psid, 16);
+		break;
 	}
 	case 0x19006:
 	{

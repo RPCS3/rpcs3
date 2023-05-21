@@ -270,11 +270,6 @@ std::string FragmentProgramDecompiler::AddTex()
 	return m_parr.AddParam(PF_PARAM_UNIFORM, sampler, std::string("tex") + std::to_string(dst.tex_num));
 }
 
-std::string FragmentProgramDecompiler::AddType3()
-{
-	return m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), "src3", getFloatTypeName(4) + "(1.)");
-}
-
 std::string FragmentProgramDecompiler::AddX2d()
 {
 	return m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), "x2d", getFloatTypeName(4) + "(0.)");
@@ -562,6 +557,12 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 		const std::string reg_var = (register_id < std::size(reg_table))? reg_table[register_id] : "unk";
 		bool insert = true;
 
+		if (reg_var == "unk")
+		{
+			m_is_valid_ucode = false;
+			insert = false;
+		}
+
 		if (src2.use_index_reg && m_loop_count)
 		{
 			// Dynamically load the input
@@ -704,7 +705,10 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 		rsx_log.error("Src type 3 used, opcode=0x%X, dst=0x%X s0=0x%X s1=0x%X s2=0x%X",
 				dst.opcode, dst.HEX, src0.HEX, src1.HEX, src2.HEX);
 
-		ret += AddType3();
+		// This is not some special type, it is a bug indicating memory corruption
+		// Shaders that are even slightly off do not execute on realhw to any meaningful degree
+		m_is_valid_ucode = false;
+		ret += "src3";
 		precision_modifier = RSX_FP_PRECISION_REAL;
 		break;
 
@@ -801,6 +805,22 @@ std::string FragmentProgramDecompiler::BuildCode()
 	}
 
 	std::stringstream OS;
+
+	if (!m_is_valid_ucode)
+	{
+		// If the code is broken, do not compile. Simply NOP main and write empty outputs
+		insertHeader(OS);
+		OS << "\n";
+		OS << "void main()\n";
+		OS << "{\n";
+		OS << "#if 0\n";
+		OS << main << "\n";
+		OS << "#endif\n";
+		OS << "	discard;\n";
+		OS << "}\n";
+		return OS.str();
+	}
+
 	insertHeader(OS);
 	OS << "\n";
 	insertConstants(OS);
@@ -1206,6 +1226,7 @@ std::string FragmentProgramDecompiler::Decompile()
 	m_location = 0;
 	m_loop_count = 0;
 	m_code_level = 1;
+	m_is_valid_ucode = true;
 
 	enum
 	{

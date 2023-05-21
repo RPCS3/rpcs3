@@ -1,8 +1,9 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/IdManager.h"
+#include "Emu/VFS.h"
+#include "Utilities/StrUtil.h"
 #include "cellSysutil.h"
-
-
 
 LOG_CHANNEL(cellPhotoExport);
 
@@ -44,6 +45,19 @@ void fmt_class_string<CellPhotoExportError>::format(std::string& out, u64 arg)
 	});
 }
 
+enum
+{
+	CELL_PHOTO_EXPORT_UTIL_VERSION_CURRENT = 0
+};
+
+enum
+{
+	CELL_PHOTO_EXPORT_UTIL_HDD_PATH_MAX           = 1055,
+	CELL_PHOTO_EXPORT_UTIL_PHOTO_TITLE_MAX_LENGTH = 64,
+	CELL_PHOTO_EXPORT_UTIL_GAME_TITLE_MAX_LENGTH  = 64,
+	CELL_PHOTO_EXPORT_UTIL_GAME_COMMENT_MAX_SIZE  = 1024,
+};
+
 struct CellPhotoExportSetParam
 {
 	vm::bptr<char> photo_title;
@@ -54,27 +68,207 @@ struct CellPhotoExportSetParam
 
 using CellPhotoExportUtilFinishCallback = void(s32 result, vm::ptr<void> userdata);
 
-error_code cellPhotoInitialize()
+struct photo_export
 {
-	UNIMPLEMENTED_FUNC(cellPhotoExport);
+	atomic_t<s32> progress = 0; // 0x0-0xFFFF for 0-100%
+};
+
+
+bool check_photo_path(const std::string& file_path)
+{
+	if (file_path.size() >= CELL_PHOTO_EXPORT_UTIL_HDD_PATH_MAX)
+	{
+		return false;
+	}
+
+	for (char c : file_path)
+	{
+		if (!((c >= 'a' && c <= 'z') ||
+			  (c >= 'A' && c <= 'Z') ||
+			  (c >= '0' && c <= '9') ||
+			   c == '-' || c == '_' ||
+			   c == '/' || c == '.'))
+		{
+			return false;
+		}
+	}
+
+	if (!file_path.starts_with("/dev_hdd0"sv) &&
+		!file_path.starts_with("/dev_bdvd"sv) &&
+		!file_path.starts_with("/dev_hdd1"sv))
+	{
+		return false;
+	}
+
+	if (file_path.find(".."sv) != umax)
+	{
+		return false;
+	}
+
+	return true;
+}
+
+std::string get_available_photo_path(const std::string& filename)
+{
+	const std::string photo_dir = "/dev_hdd0/photo/";
+	std::string dst_path = vfs::get(photo_dir + filename);
+
+	// Do not overwrite existing files. Add a suffix instead.
+	for (u32 i = 0; fs::exists(dst_path); i++)
+	{
+		const std::string suffix = fmt::format("_%d", i);
+		std::string new_filename = filename;
+
+		if (const usz pos = new_filename.find_last_of('.'); pos != std::string::npos)
+		{
+			new_filename.insert(pos, suffix);
+		}
+		else
+		{
+			new_filename.append(suffix);
+		}
+
+		dst_path = vfs::get(photo_dir + new_filename);
+	}
+
+	return dst_path;
+}
+
+
+error_code cellPhotoInitialize(s32 version, u32 container, vm::ptr<CellPhotoExportUtilFinishCallback> funcFinish, vm::ptr<void> userdata)
+{
+	cellPhotoExport.notice("cellPhotoInitialize(version=%d, container=%d, funcFinish=*0x%x, userdata=*0x%x)", version, container, funcFinish, userdata);
+
+	if (version != CELL_PHOTO_EXPORT_UTIL_VERSION_CURRENT)
+	{
+		return CELL_PHOTO_EXPORT_UTIL_ERROR_PARAM;
+	}
+
+	if (container != 0xfffffffe)
+	{
+		// TODO
+	}
+
+	if (!funcFinish)
+	{
+		return CELL_PHOTO_EXPORT_UTIL_ERROR_PARAM;
+	}
+
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		funcFinish(ppu, CELL_OK, userdata);
+		return CELL_OK;
+	});
+
 	return CELL_OK;
 }
 
-error_code cellPhotoFinalize()
+error_code cellPhotoFinalize(vm::ptr<CellPhotoExportUtilFinishCallback> funcFinish, vm::ptr<void> userdata)
 {
-	UNIMPLEMENTED_FUNC(cellPhotoExport);
+	cellPhotoExport.notice("cellPhotoFinalize(funcFinish=*0x%x, userdata=*0x%x)", funcFinish, userdata);
+
+	if (!funcFinish)
+	{
+		return CELL_PHOTO_EXPORT_UTIL_ERROR_PARAM;
+	}
+
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		funcFinish(ppu, CELL_OK, userdata);
+		return CELL_OK;
+	});
+
 	return CELL_OK;
 }
 
-error_code cellPhotoRegistFromFile()
+error_code cellPhotoRegistFromFile(vm::cptr<char> path, vm::cptr<char> photo_title, vm::cptr<char> game_title, vm::cptr<char> game_comment, vm::ptr<CellPhotoExportUtilFinishCallback> funcFinish, vm::ptr<void> userdata)
 {
-	UNIMPLEMENTED_FUNC(cellPhotoExport);
+	cellPhotoExport.todo("cellPhotoRegistFromFile(path=%s, photo_title=%s, game_title=%s, game_comment=%s, funcFinish=*0x%x, userdata=*0x%x)", path, photo_title, game_title, game_comment, funcFinish, userdata);
+
+	if (!path || !funcFinish)
+	{
+		return CELL_PHOTO_EXPORT_UTIL_ERROR_PARAM;
+	}
+
+	const std::string file_path = path.get_ptr();
+
+	if (!check_photo_path(file_path))
+	{
+		return { CELL_PHOTO_EXPORT_UTIL_ERROR_PARAM, file_path };
+	}
+
+	std::string filename = photo_title.get_ptr();
+
+	if (filename.empty())
+	{
+		return { CELL_PHOTO_EXPORT_UTIL_ERROR_PARAM, "title empty" };
+	}
+
+	if (const std::string extension = get_file_extension(file_path); !extension.empty())
+	{
+		fmt::append(filename, ".%s", extension);
+	}
+
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		auto& pexp = g_fxo->get<photo_export>();
+		pexp.progress = 0; // 0%
+
+		const std::string src_path = vfs::get(file_path);
+		const std::string dst_path = get_available_photo_path(filename);
+
+		cellPhotoExport.notice("Copying file from '%s' to '%s'", file_path, dst_path);
+
+		// TODO: We ignore metadata for now
+
+		if (!fs::create_path(fs::get_parent_dir(dst_path)) || !fs::copy_file(src_path, dst_path, false))
+		{
+			// TODO: find out which error is used
+			cellPhotoExport.error("Failed to copy file from '%s' to '%s' (%s)", src_path, dst_path, fs::g_tls_error);
+			funcFinish(ppu, CELL_PHOTO_EXPORT_UTIL_ERROR_MOVE, userdata);
+			return CELL_OK;
+		}
+
+		if (file_path.starts_with("/dev_hdd0"sv))
+		{
+			cellPhotoExport.notice("Removing file '%s'", src_path);
+
+			if (!fs::remove_file(src_path))
+			{
+				// TODO: find out if an error is used here
+				cellPhotoExport.error("Failed to remove file '%s' (%s)", src_path, fs::g_tls_error);
+			}
+		}
+
+		// TODO: track progress during file copy
+
+		pexp.progress = 0xFFFF; // 100%
+
+		funcFinish(ppu, CELL_OK, userdata);
+		return CELL_OK;
+	});
+
 	return CELL_OK;
 }
 
 error_code cellPhotoExportInitialize(u32 version, u32 container, vm::ptr<CellPhotoExportUtilFinishCallback> funcFinish, vm::ptr<void> userdata)
 {
-	cellPhotoExport.todo("cellPhotoExportInitialize(version=0x%x, container=0x%x, funcFinish=*0x%x, userdata=*0x%x)", version, container, funcFinish, userdata);
+	cellPhotoExport.notice("cellPhotoExportInitialize(version=0x%x, container=0x%x, funcFinish=*0x%x, userdata=*0x%x)", version, container, funcFinish, userdata);
+
+	if (version != CELL_PHOTO_EXPORT_UTIL_VERSION_CURRENT)
+	{
+		return CELL_PHOTO_EXPORT_UTIL_ERROR_PARAM;
+	}
+
+	if (container != 0xfffffffe)
+	{
+		// TODO
+	}
+
+	if (!funcFinish)
+	{
+		return CELL_PHOTO_EXPORT_UTIL_ERROR_PARAM;
+	}
 
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
@@ -87,7 +281,17 @@ error_code cellPhotoExportInitialize(u32 version, u32 container, vm::ptr<CellPho
 
 error_code cellPhotoExportInitialize2(u32 version, vm::ptr<CellPhotoExportUtilFinishCallback> funcFinish, vm::ptr<void> userdata)
 {
-	cellPhotoExport.todo("cellPhotoExportInitialize2(version=0x%x, funcFinish=*0x%x, userdata=*0x%x)", version, funcFinish, userdata);
+	cellPhotoExport.notice("cellPhotoExportInitialize2(version=0x%x, funcFinish=*0x%x, userdata=*0x%x)", version, funcFinish, userdata);
+
+	if (version != CELL_PHOTO_EXPORT_UTIL_VERSION_CURRENT)
+	{
+		return CELL_PHOTO_EXPORT_UTIL_ERROR_PARAM;
+	}
+
+	if (!funcFinish)
+	{
+		return CELL_PHOTO_EXPORT_UTIL_ERROR_PARAM;
+	}
 
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
@@ -100,7 +304,12 @@ error_code cellPhotoExportInitialize2(u32 version, vm::ptr<CellPhotoExportUtilFi
 
 error_code cellPhotoExportFinalize(vm::ptr<CellPhotoExportUtilFinishCallback> funcFinish, vm::ptr<void> userdata)
 {
-	cellPhotoExport.todo("cellPhotoExportFinalize(funcFinish=*0x%x, userdata=*0x%x)", funcFinish, userdata);
+	cellPhotoExport.notice("cellPhotoExportFinalize(funcFinish=*0x%x, userdata=*0x%x)", funcFinish, userdata);
+
+	if (!funcFinish)
+	{
+		return CELL_PHOTO_EXPORT_UTIL_ERROR_PARAM;
+	}
 
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
@@ -115,8 +324,69 @@ error_code cellPhotoExportFromFile(vm::cptr<char> srcHddDir, vm::cptr<char> srcH
 {
 	cellPhotoExport.todo("cellPhotoExportFromFile(srcHddDir=%s, srcHddFile=%s, param=*0x%x, funcFinish=*0x%x, userdata=*0x%x)", srcHddDir, srcHddFile, param, funcFinish, userdata);
 
+	if (!param || !funcFinish)
+	{
+		return CELL_PHOTO_EXPORT_UTIL_ERROR_PARAM;
+	}
+
+	// TODO: check param members ?
+
+	cellPhotoExport.notice("cellPhotoExportFromFile: param: photo_title=%s, game_title=%s, game_comment=%s", param->photo_title, param->game_title, param->game_comment);
+
+	const std::string file_path = fmt::format("%s/%s", srcHddDir.get_ptr(), srcHddFile.get_ptr());
+
+	if (!check_photo_path(file_path))
+	{
+		return { CELL_PHOTO_EXPORT_UTIL_ERROR_PARAM, file_path };
+	}
+
+	std::string filename = param->photo_title.get_ptr();
+
+	if (filename.empty())
+	{
+		return { CELL_PHOTO_EXPORT_UTIL_ERROR_PARAM, "title empty" };
+	}
+
+	if (const std::string extension = get_file_extension(file_path); !extension.empty())
+	{
+		fmt::append(filename, ".%s", extension);
+	}
+
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
+		auto& pexp = g_fxo->get<photo_export>();
+		pexp.progress = 0; // 0%
+
+		const std::string src_path = vfs::get(file_path);
+		const std::string dst_path = get_available_photo_path(filename);
+
+		cellPhotoExport.notice("Copying file from '%s' to '%s'", file_path, dst_path);
+
+		// TODO: We ignore metadata for now
+
+		if (!fs::create_path(fs::get_parent_dir(dst_path)) || !fs::copy_file(src_path, dst_path, false))
+		{
+			// TODO: find out which error is used
+			cellPhotoExport.error("Failed to copy file from '%s' to '%s' (%s)", src_path, dst_path, fs::g_tls_error);
+			funcFinish(ppu, CELL_PHOTO_EXPORT_UTIL_ERROR_MOVE, userdata);
+			return CELL_OK;
+		}
+
+		if (file_path.starts_with("/dev_hdd0"sv))
+		{
+			cellPhotoExport.notice("Removing file '%s'", src_path);
+
+			if (!fs::remove_file(src_path))
+			{
+				// TODO: find out if an error is used here
+				cellPhotoExport.error("Failed to remove file '%s' (%s)", src_path, fs::g_tls_error);
+			}
+		}
+
+		// TODO: track progress during file copy
+
+		pexp.progress = 0xFFFF; // 100%
+
 		funcFinish(ppu, CELL_OK, userdata);
 		return CELL_OK;
 	});
@@ -128,8 +398,58 @@ error_code cellPhotoExportFromFileWithCopy(vm::cptr<char> srcHddDir, vm::cptr<ch
 {
 	cellPhotoExport.todo("cellPhotoExportFromFileWithCopy(srcHddDir=%s, srcHddFile=%s, param=*0x%x, funcFinish=*0x%x, userdata=*0x%x)", srcHddDir, srcHddFile, param, funcFinish, userdata);
 
+	if (!param || !funcFinish)
+	{
+		return CELL_PHOTO_EXPORT_UTIL_ERROR_PARAM;
+	}
+
+	// TODO: check param members ?
+
+	cellPhotoExport.notice("cellPhotoExportFromFileWithCopy: param: photo_title=%s, game_title=%s, game_comment=%s", param->photo_title, param->game_title, param->game_comment);
+
+	const std::string file_path = fmt::format("%s/%s", srcHddDir.get_ptr(), srcHddFile.get_ptr());
+
+	if (!check_photo_path(file_path))
+	{
+		return { CELL_PHOTO_EXPORT_UTIL_ERROR_PARAM, file_path };
+	}
+
+	std::string filename = param->photo_title.get_ptr();
+
+	if (filename.empty())
+	{
+		return { CELL_PHOTO_EXPORT_UTIL_ERROR_PARAM, "title empty" };
+	}
+
+	if (const std::string extension = get_file_extension(file_path); !extension.empty())
+	{
+		fmt::append(filename, ".%s", extension);
+	}
+
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
+		auto& pexp = g_fxo->get<photo_export>();
+		pexp.progress = 0; // 0%
+
+		const std::string src_path = vfs::get(file_path);
+		const std::string dst_path = get_available_photo_path(filename);
+
+		cellPhotoExport.notice("Copying file from '%s' to '%s'", file_path, dst_path);
+
+		// TODO: We ignore metadata for now
+
+		if (!fs::create_path(fs::get_parent_dir(dst_path)) || !fs::copy_file(src_path, dst_path, false))
+		{
+			// TODO: find out which error is used
+			cellPhotoExport.error("Failed to copy file from '%s' to '%s' (%s)", src_path, dst_path, fs::g_tls_error);
+			funcFinish(ppu, CELL_PHOTO_EXPORT_UTIL_ERROR_MOVE, userdata);
+			return CELL_OK;
+		}
+
+		// TODO: track progress during file copy
+
+		pexp.progress = 0xFFFF; // 100%
+
 		funcFinish(ppu, CELL_OK, userdata);
 		return CELL_OK;
 	});
@@ -139,11 +459,20 @@ error_code cellPhotoExportFromFileWithCopy(vm::cptr<char> srcHddDir, vm::cptr<ch
 
 error_code cellPhotoExportProgress(vm::ptr<CellPhotoExportUtilFinishCallback> funcFinish, vm::ptr<void> userdata)
 {
-	cellPhotoExport.todo("cellPhotoExportProgress(funcFinish=*0x%x, userdata=*0x%x)", funcFinish, userdata);
+	cellPhotoExport.notice("cellPhotoExportProgress(funcFinish=*0x%x, userdata=*0x%x)", funcFinish, userdata);
+
+	if (!funcFinish)
+	{
+		return CELL_PHOTO_EXPORT_UTIL_ERROR_PARAM;
+	}
 
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
-		funcFinish(ppu, 0xFFFF, userdata); // 0-0xFFFF where 0xFFFF = 100%
+		// Set the status as 0x0-0xFFFF (0-100%) depending on the copy status.
+		// Only the copy or move of the movie and metadata files is considered for the progress.
+		const auto& pexp = g_fxo->get<photo_export>();
+
+		funcFinish(ppu, pexp.progress, userdata);
 		return CELL_OK;
 	});
 

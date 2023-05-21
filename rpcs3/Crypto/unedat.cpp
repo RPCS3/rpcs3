@@ -13,9 +13,6 @@
 
 LOG_CHANNEL(edat_log, "EDAT");
 
-// Static variables are being modified concurrently in ec.cpp, for now use a mutex
-static shared_mutex ec_mtx;
-
 void generate_key(int crypto_mode, int version, unsigned char *key_final, unsigned char *iv_final, unsigned char *key, unsigned char *iv)
 {
 	int mode = crypto_mode & 0xF0000000;
@@ -481,8 +478,6 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 		unsigned char signature_r[0x15] = { 0 };
 		unsigned char signature_s[0x15] = { 0 };
 		unsigned char zero_buf[0x15] = { 0 };
-
-		std::lock_guard lock(ec_mtx);
 
 		// Setup ECDSA curve and public key.
 		ecdsa_set_curve(VSH_CURVE_P, VSH_CURVE_A, VSH_CURVE_B, VSH_CURVE_N, VSH_CURVE_GX, VSH_CURVE_GY);

@@ -11,6 +11,36 @@ lv2_socket_p2p::lv2_socket_p2p(lv2_socket_family family, lv2_socket_type type, l
 {
 }
 
+lv2_socket_p2p::lv2_socket_p2p(utils::serial& ar, lv2_socket_type type)
+	: lv2_socket(ar, type)
+{
+	ar(port, vport, bound_addr);
+
+	std::deque<std::pair<sys_net_sockaddr_in_p2p, std::vector<u8>>> data_dequeue{ar};
+
+	for (; !data_dequeue.empty(); data_dequeue.pop_front())
+	{
+		data.push(data_dequeue.front());
+	}
+
+	ar(data_dequeue);
+}
+
+void lv2_socket_p2p::save(utils::serial& ar)
+{
+	static_cast<lv2_socket*>(this)->save(ar, true);
+	ar(port, vport, bound_addr);
+
+	std::deque<std::pair<sys_net_sockaddr_in_p2p, std::vector<u8>>> data_dequeue;
+
+	for (; !data.empty(); data.pop())
+	{
+		data_dequeue.push_back(data.front());
+	}
+
+	ar(data_dequeue);
+}
+
 void lv2_socket_p2p::handle_new_data(sys_net_sockaddr_in_p2p p2p_addr, std::vector<u8> p2p_data)
 {
 	std::lock_guard lock(mutex);
@@ -39,7 +69,7 @@ void lv2_socket_p2p::handle_new_data(sys_net_sockaddr_in_p2p p2p_addr, std::vect
 	}
 }
 
-std::tuple<bool, s32, sys_net_sockaddr> lv2_socket_p2p::accept([[maybe_unused]] bool is_lock)
+std::tuple<bool, s32, std::shared_ptr<lv2_socket>, sys_net_sockaddr> lv2_socket_p2p::accept([[maybe_unused]] bool is_lock)
 {
 	sys_net.fatal("[P2P] accept() called on a P2P socket");
 	return {};
@@ -69,7 +99,7 @@ s32 lv2_socket_p2p::listen([[maybe_unused]] s32 backlog)
 	return {};
 }
 
-s32 lv2_socket_p2p::bind(const sys_net_sockaddr& addr, s32 ps3_id)
+s32 lv2_socket_p2p::bind(const sys_net_sockaddr& addr)
 {
 	const auto* psa_in_p2p = reinterpret_cast<const sys_net_sockaddr_in_p2p*>(&addr);
 	u16 p2p_port           = psa_in_p2p->sin_port;
@@ -96,7 +126,7 @@ s32 lv2_socket_p2p::bind(const sys_net_sockaddr& addr, s32 ps3_id)
 			nc.list_p2p_ports.emplace(std::piecewise_construct, std::forward_as_tuple(p2p_port), std::forward_as_tuple(p2p_port));
 		}
 
-		auto& pport = nc.list_p2p_ports.at(p2p_port);
+		auto& pport = ::at32(nc.list_p2p_ports, p2p_port);
 		real_socket = pport.p2p_socket;
 		{
 			std::lock_guard lock(pport.bound_p2p_vports_mutex);
@@ -110,23 +140,31 @@ s32 lv2_socket_p2p::bind(const sys_net_sockaddr& addr, s32 ps3_id)
 					p2p_vport++;
 				}
 			}
-			else
+			else if (pport.bound_p2p_vports.contains(p2p_vport))
 			{
-				if (pport.bound_p2p_vports.contains(p2p_vport))
+				// Check that all other sockets are SO_REUSEADDR or SO_REUSEPORT
+				auto& bound_sockets = ::at32(pport.bound_p2p_vports, p2p_vport);
+				if (!sys_net_helpers::all_reusable(bound_sockets))
 				{
 					return -SYS_NET_EADDRINUSE;
 				}
-			}
 
-			pport.bound_p2p_vports.insert(std::make_pair(p2p_vport, ps3_id));
+				bound_sockets.insert(lv2_id);
+			}
+			else
+			{
+				std::set<s32> bound_ports{lv2_id};
+				pport.bound_p2p_vports.insert(std::make_pair(p2p_vport, std::move(bound_ports)));
+			}
 		}
 	}
 
 	{
 		std::lock_guard lock(mutex);
-		port   = p2p_port;
-		vport  = p2p_vport;
-		socket = real_socket;
+		port       = p2p_port;
+		vport      = p2p_vport;
+		socket     = real_socket;
+		bound_addr = psa_in_p2p->sin_addr;
 	}
 
 	return CELL_OK;
@@ -154,15 +192,26 @@ std::pair<s32, sys_net_sockaddr> lv2_socket_p2p::getsockname()
 	return {CELL_OK, sn_addr};
 }
 
-std::tuple<s32, lv2_socket::sockopt_data, u32> lv2_socket_p2p::getsockopt([[maybe_unused]] s32 level, [[maybe_unused]] s32 optname, [[maybe_unused]] u32 len)
+std::tuple<s32, lv2_socket::sockopt_data, u32> lv2_socket_p2p::getsockopt(s32 level, s32 optname, u32 len)
 {
-	// TODO
-	return {};
+	std::lock_guard lock(mutex);
+
+	const u64 key = (static_cast<u64>(level) << 32) | static_cast<u64>(optname);
+
+	if (!sockopts.contains(key))
+	{
+		sys_net.error("Unhandled getsockopt(level=%d, optname=%d, len=%d)", level, optname, len);
+		return {};
+	}
+
+	const auto& cache = ::at32(sockopts, key);
+	return {CELL_OK, cache.data, cache.len};
 }
 
 s32 lv2_socket_p2p::setsockopt(s32 level, s32 optname, const std::vector<u8>& optval)
 {
-	// TODO
+	std::lock_guard lock(mutex);
+
 	int native_int = *reinterpret_cast<const be_t<s32>*>(optval.data());
 
 	if (level == SYS_NET_SOL_SOCKET && optname == SYS_NET_SO_NBIO)
@@ -170,10 +219,17 @@ s32 lv2_socket_p2p::setsockopt(s32 level, s32 optname, const std::vector<u8>& op
 		so_nbio = native_int;
 	}
 
-	return {};
+	const u64 key = (static_cast<u64>(level) << 32) | static_cast<u64>(optname);
+	sockopt_cache cache{};
+	memcpy(&cache.data._int, optval.data(), optval.size());
+	cache.len = optval.size();
+
+	sockopts[key] = std::move(cache);
+
+	return CELL_OK;
 }
 
-std::optional<std::tuple<s32, std::vector<u8>, sys_net_sockaddr>> lv2_socket_p2p::recvfrom([[maybe_unused]] s32 flags, u32 len, bool is_lock)
+std::optional<std::tuple<s32, std::vector<u8>, sys_net_sockaddr>> lv2_socket_p2p::recvfrom(s32 flags, u32 len, bool is_lock)
 {
 	std::unique_lock<shared_mutex> lock(mutex, std::defer_lock);
 
@@ -186,7 +242,10 @@ std::optional<std::tuple<s32, std::vector<u8>, sys_net_sockaddr>> lv2_socket_p2p
 
 	if (data.empty())
 	{
-		return {{-SYS_NET_EWOULDBLOCK, {}, {}}};
+		if (so_nbio || (flags & SYS_NET_MSG_DONTWAIT))
+			return {{-SYS_NET_EWOULDBLOCK, {}, {}}};
+
+		return std::nullopt;
 	}
 
 	std::vector<u8> res_buf(len);
@@ -214,7 +273,7 @@ std::optional<s32> lv2_socket_p2p::sendto(s32 flags, const std::vector<u8>& buf,
 
 	ensure(opt_sn_addr);
 	ensure(socket);                              // ensures it has been bound
-	ensure(buf.size() <= (65535 - sizeof(u16))); // catch games using full payload for future fragmentation implementation if necessary
+	ensure(buf.size() <= (65535 - VPORT_P2P_HEADER_SIZE)); // catch games using full payload for future fragmentation implementation if necessary
 	const u16 p2p_port  = reinterpret_cast<const sys_net_sockaddr_in*>(&*opt_sn_addr)->sin_port;
 	const u16 p2p_vport = reinterpret_cast<const sys_net_sockaddr_in_p2p*>(&*opt_sn_addr)->sin_vport;
 
@@ -224,9 +283,12 @@ std::optional<s32> lv2_socket_p2p::sendto(s32 flags, const std::vector<u8>& buf,
 	inet_ntop(AF_INET, &native_addr.sin_addr, ip_str, sizeof(ip_str));
 	sys_net.trace("[P2P] Sending a packet to %s:%d:%d", ip_str, p2p_port, p2p_vport);
 
-	std::vector<u8> p2p_data(buf.size() + sizeof(u16));
-	reinterpret_cast<le_t<u16>&>(p2p_data[0]) = p2p_vport;
-	memcpy(p2p_data.data() + sizeof(u16), buf.data(), buf.size());
+	std::vector<u8> p2p_data(buf.size() + VPORT_P2P_HEADER_SIZE);
+	const le_t<u16> p2p_vport_le = p2p_vport;
+	const le_t<u16> p2p_flags_le = P2P_FLAG_P2P;
+	memcpy(p2p_data.data(), &p2p_vport_le, sizeof(u16));
+	memcpy(p2p_data.data() + sizeof(u16), &p2p_flags_le, sizeof(u16));
+	memcpy(p2p_data.data() + VPORT_P2P_HEADER_SIZE, buf.data(), buf.size());
 
 	int native_flags = 0;
 	if (flags & SYS_NET_MSG_WAITALL)
@@ -238,7 +300,7 @@ std::optional<s32> lv2_socket_p2p::sendto(s32 flags, const std::vector<u8>& buf,
 
 	if (native_result >= 0)
 	{
-		return {std::max<s32>(native_result - sizeof(u16), 0l)};
+		return {std::max<s32>(native_result - VPORT_P2P_HEADER_SIZE, 0l)};
 	}
 
 	s32 result = get_last_error(!so_nbio && (flags & SYS_NET_MSG_DONTWAIT) == 0);
@@ -252,6 +314,12 @@ std::optional<s32> lv2_socket_p2p::sendto(s32 flags, const std::vector<u8>& buf,
 	return std::nullopt;
 }
 
+std::optional<s32> lv2_socket_p2p::sendmsg([[maybe_unused]] s32 flags, [[maybe_unused]] const sys_net_msghdr& msg, [[maybe_unused]] bool is_lock)
+{
+	sys_net.todo("lv2_socket_p2p::sendmsg");
+	return {};
+}
+
 void lv2_socket_p2p::close()
 {
 	if (!port || !vport)
@@ -263,10 +331,21 @@ void lv2_socket_p2p::close()
 	{
 		std::lock_guard lock(nc.list_p2p_ports_mutex);
 		ensure(nc.list_p2p_ports.contains(port));
-		auto& p2p_port = nc.list_p2p_ports.at(port);
+		auto& p2p_port = ::at32(nc.list_p2p_ports, port);
 		{
 			std::lock_guard lock(p2p_port.bound_p2p_vports_mutex);
-			p2p_port.bound_p2p_vports.erase(vport);
+			if (!p2p_port.bound_p2p_vports.contains(vport))
+			{
+				return;
+			}
+
+			auto& bound_sockets = ::at32(p2p_port.bound_p2p_vports, vport);
+			bound_sockets.erase(lv2_id);
+
+			if (bound_sockets.empty())
+			{
+				p2p_port.bound_p2p_vports.erase(vport);
+			}
 		}
 	}
 }

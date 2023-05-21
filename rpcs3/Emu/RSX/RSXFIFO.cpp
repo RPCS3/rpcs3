@@ -4,9 +4,17 @@
 #include "RSXThread.h"
 #include "Capture/rsx_capture.h"
 #include "Common/time.hpp"
+#include "Core/RSXReservationLock.hpp"
+#include "Emu/Memory/vm_reservation.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
+#include "util/asm.hpp"
 
 #include <bitset>
+
+using spu_rdata_t = std::byte[128];
+
+extern void mov_rdata(spu_rdata_t& _dst, const spu_rdata_t& _src);
+extern bool cmp_rdata(const spu_rdata_t& _lhs, const spu_rdata_t& _rhs);
 
 namespace rsx
 {
@@ -14,6 +22,7 @@ namespace rsx
 	{
 		FIFO_control::FIFO_control(::rsx::thread* pctrl)
 		{
+			m_thread = pctrl;
 			m_ctrl = pctrl->ctrl;
 			m_iotable = &pctrl->iomap_table;
 		}
@@ -21,6 +30,16 @@ namespace rsx
 		void FIFO_control::sync_get() const
 		{
 			m_ctrl->get.release(m_internal_get);
+		}
+
+		void FIFO_control::restore_state(u32 cmd, u32 count)
+		{
+			m_cmd = cmd;
+			m_command_inc = ((m_cmd & RSX_METHOD_NON_INCREMENT_CMD_MASK) == RSX_METHOD_NON_INCREMENT_CMD) ? 0 : 4;
+			m_remaining_commands = count;
+			m_internal_get = m_ctrl->get - 4;
+			m_args_ptr = m_iotable->get_addr(m_internal_get);
+			m_command_reg = (m_cmd & 0xffff) + m_command_inc * (((m_cmd >> 18) - count) & 0x7ff) - m_command_inc;
 		}
 
 		void FIFO_control::inc_get(bool wait)
@@ -32,10 +51,11 @@ namespace rsx
 				// NOTE: Only supposed to be invoked to wait for a single arg on command[0] (4 bytes)
 				// Wait for put to allow us to procceed execution
 				sync_get();
+				invalidate_cache();
 
 				while (read_put() == m_internal_get && !Emu.IsStopped())
 				{
-					std::this_thread::yield();
+					m_thread->cpu_wait({});
 				}
 			}
 		}
@@ -58,16 +78,135 @@ namespace rsx
 			}
 		}
 
-		void FIFO_control::set_get(u32 get, bool check_spin)
+		std::pair<bool, u32> FIFO_control::fetch_u32(u32 addr)
 		{
-			if (check_spin && m_ctrl->get == get)
+			if (addr - m_cache_addr >= m_cache_size)
 			{
-				if (const u32 addr = m_iotable->get_addr(m_memwatch_addr); addr + 1)
+				const u32 put = read_put();
+
+				if (put == addr)
 				{
-					m_memwatch_addr = get;
-					m_memwatch_cmp = vm::read32(addr);
+					return {false, FIFO_EMPTY};
 				}
 
+				m_cache_addr = addr & -128;
+
+				const u32 addr1 = m_iotable->get_addr(m_cache_addr);
+
+				if (addr1 == umax)
+				{
+					m_cache_size = 0;
+					return {false, FIFO_ERROR};
+				}
+
+				m_cache_size = std::min<u32>((put | 0x7f) - m_cache_addr, u32{sizeof(m_cache)} - 1) + 1;
+
+				if (0x100000 - (m_cache_addr & 0xfffff) < m_cache_size)
+				{
+					// Check if memory layout changes in the next 1MB page boundary
+					if ((addr1 >> 20) + 1 != (m_iotable->get_addr(m_cache_addr + 0x100000) >> 20))
+					{
+						// Trim cache as needed if memory layout changes
+						m_cache_size = 0x100000 - (m_cache_addr & 0xfffff);
+					}
+				}
+
+				// Make mask of cache lines to fetch
+				u8 to_fetch = static_cast<u8>((1u << (m_cache_size / 128)) - 1);
+
+				if (addr < put && put < m_cache_addr + m_cache_size)
+				{
+					// Adjust to knownly-prepared FIFO buffer bounds
+					m_cache_size = put - m_cache_addr;
+				}
+
+				// Atomic FIFO debug options
+				const bool force_cache_fill = g_cfg.core.rsx_fifo_accuracy == rsx_fifo_mode::atomic_ordered;
+				const bool strict_fetch_ordering = g_cfg.core.rsx_fifo_accuracy >= rsx_fifo_mode::atomic_ordered;
+
+				rsx::reservation_lock<true, 1> rsx_lock(addr1, m_cache_size, true);
+				const auto src = vm::_ptr<spu_rdata_t>(addr1);
+
+				u64 start_time = 0;
+				u32 bytes_read = 0;
+
+				// Find the next set bit after every iteration
+				for (int i = 0;; i = (std::countr_zero<u32>(utils::rol8(to_fetch, 0 - i - 1)) + i + 1) % 8)
+				{
+					// If a reservation is being updated, try to load another
+					const auto& res = vm::reservation_acquire(addr1 + i * 128);
+					const u64 time0 = res;
+
+					if (!(time0 & 127))
+					{
+						mov_rdata(m_cache[i], src[i]);
+
+						if (time0 == res && cmp_rdata(m_cache[i], src[i]))
+						{
+							// The fetch of the cache line content has been successful, unset its bit
+							to_fetch &= ~(1u << i);
+
+							if (!to_fetch)
+							{
+								break;
+							}
+
+							bytes_read += 128;
+							continue;
+						}
+					}
+
+					if (!start_time)
+					{
+						if (bytes_read >= 256 && !force_cache_fill)
+						{
+							// Cut our losses if we have something to work with.
+							// This is the first time falling out of the reservation loop above, so we have clean data with no holes.
+							m_cache_size = bytes_read;
+							break;
+						}
+
+						start_time = rsx::uclock();
+					}
+
+					auto now = rsx::uclock();
+					if (now - start_time >= 50u)
+					{
+						if (m_thread->is_stopped())
+						{
+							return {};
+						}
+
+						m_thread->cpu_wait({});
+
+						const auto then = std::exchange(now, rsx::uclock());
+						start_time = now;
+						m_thread->performance_counters.idle_time += now - then;
+					}
+					else
+					{
+						busy_wait(200);
+					}
+
+					if (strict_fetch_ordering)
+					{
+						i = (i - 1) % 8;
+					}
+				}
+			}
+
+			const auto ret = utils::bless<const be_t<u32>>(&m_cache)[(addr - m_cache_addr) >> 2];
+			return {true, ret};
+		}
+
+		void FIFO_control::set_get(u32 get, u32 spin_cmd)
+		{
+			invalidate_cache();
+
+			if (spin_cmd && m_ctrl->get == get)
+			{
+				m_memwatch_addr = get;
+				m_memwatch_cmp = spin_cmd;
 				return;
 			}
 
@@ -76,21 +215,64 @@ namespace rsx
 			m_remaining_commands = 0;
 		}
 
+		std::span<const u32> FIFO_control::get_current_arg_ptr() const
+		{
+			if (g_cfg.core.rsx_fifo_accuracy)
+			{
+				// Return a pointer to the cache storage with confined access
+				return {reinterpret_cast<const u32*>(&m_cache) + (m_internal_get - m_cache_addr) / 4, (m_cache_size - (m_internal_get - m_cache_addr)) / 4};
+			}
+			else
+			{
+				// Return a raw pointer with no limited access
+				return {static_cast<const u32*>(vm::base(m_iotable->get_addr(m_internal_get))), 0x10000};
+			}
+		}
+
 		bool FIFO_control::read_unsafe(register_pair& data)
 		{
 			// Fast read with no processing, only safe inside a PACKET_BEGIN+count block
-			if (m_remaining_commands &&
-				m_internal_get != read_put<false>())
+			if (m_remaining_commands)
 			{
-				m_command_reg += m_command_inc;
-				m_args_ptr += 4;
-				m_remaining_commands--;
+				bool ok{};
+				u32 arg = 0;
+
+				if (g_cfg.core.rsx_fifo_accuracy) [[ unlikely ]]
+				{
+					std::tie(ok, arg) = fetch_u32(m_internal_get + 4);
+
+					if (!ok)
+					{
+						if (arg == FIFO_ERROR)
+						{
+							m_thread->recover_fifo();
+						}
+
+						return false;
+					}
+				}
+				else
+				{
+					if (m_internal_get + 4 == read_put<false>())
+					{
+						return false;
+					}
+
+					m_args_ptr += 4;
+					arg = vm::read32(m_args_ptr);
+				}
+
 				m_internal_get += 4;
 
-				data.set(m_command_reg, vm::read32(m_args_ptr));
+				m_command_reg += m_command_inc;
+
+				--m_remaining_commands;
+
+				data.set(m_command_reg, arg);
 				return true;
 			}
 
+			m_internal_get += 4;
 			return false;
 		}
 
@@ -101,10 +283,9 @@ namespace rsx
 			if (m_remaining_commands > count)
 			{
 				m_command_reg += m_command_inc * count;
-				m_args_ptr += 4 * count;
 				m_remaining_commands -= count;
 				m_internal_get += 4 * count;
-
+				m_args_ptr += 4 * count;
 				return true;
 			}
 
@@ -120,19 +301,10 @@ namespace rsx
 
 		void FIFO_control::read(register_pair& data)
 		{
-			const u32 put = read_put();
-			m_internal_get = m_ctrl->get;
-
-			if (put == m_internal_get)
-			{
-				// Nothing to do
-				data.reg = FIFO_EMPTY;
-				return;
-			}
-
-			if (m_remaining_commands && read_unsafe(data))
+			if (m_remaining_commands)
 			{
 				// Previous block aborted to wait for PUT pointer
+				read_unsafe(data);
 				return;
 			}
 
@@ -155,15 +327,38 @@ namespace rsx
 				m_memwatch_cmp = 0;
 			}
 
-			if (const u32 addr = m_iotable->get_addr(m_internal_get); addr + 1)
+			if (!g_cfg.core.rsx_fifo_accuracy) [[ likely ]]
 			{
-				m_cmd = vm::read32(addr);
+				const u32 put = read_put();
+
+				if (put == m_internal_get)
+				{
+					// Nothing to do
+					data.reg = FIFO_EMPTY;
+					return;
+				}
+
+				if (const u32 addr = m_iotable->get_addr(m_internal_get); addr + 1)
+				{
+					m_cmd = vm::read32(addr);
+				}
+				else
+				{
+					data.reg = FIFO_ERROR;
+					return;
+				}
 			}
 			else
 			{
-				// TODO: Optional recovery
-				data.reg = FIFO_ERROR;
-				return;
+				if (auto [ok, arg] = fetch_u32(m_internal_get); ok)
+				{
+					m_cmd = arg;
+				}
+				else
+				{
+					data.reg = arg;
+					return;
+				}
 			}
 
 			if (m_cmd & RSX_METHOD_NON_METHOD_CMD_MASK) [[unlikely]]
@@ -188,17 +383,8 @@ namespace rsx
 
 			if (!count)
 			{
-				m_ctrl->get.release(m_internal_get + 4);
+				m_ctrl->get.release(m_internal_get += 4);
 				data.reg = FIFO_NOP;
-				return;
-			}
-
-			// Validate the args ptr if the command attempts to read from it
-			m_args_ptr = m_iotable->get_addr(m_internal_get + 4);
-			if (m_args_ptr == umax) [[unlikely]]
-			{
-				// Optional recovery
-				data.reg = FIFO_ERROR;
 				return;
 			}
 
@@ -210,8 +396,43 @@ namespace rsx
 				m_remaining_commands = count - 1;
 			}
 
+			if (g_cfg.core.rsx_fifo_accuracy)
+			{
+				m_internal_get += 4;
+
+				auto [ok, arg] = fetch_u32(m_internal_get);
+
+				if (!ok)
+				{
+					// Optional recovery
+					if (arg == FIFO_ERROR)
+					{
+						data.reg = FIFO_ERROR;
+					}
+					else
+					{
+						data.reg = FIFO_EMPTY;
+						m_command_reg = m_cmd & 0xfffc;
+						m_remaining_commands++;
+					}
+
+					return;
+				}
+
+				data.set(m_cmd & 0xfffc, arg);
+				return;
+			}
+
 			inc_get(true); // Wait for data block to become available
-			m_internal_get += 4;
+
+			// Validate the args ptr if the command attempts to read from it
+			m_args_ptr = m_iotable->get_addr(m_internal_get);
+			if (m_args_ptr == umax) [[unlikely]]
+			{
+				// Optional recovery
+				data.reg = FIFO_ERROR;
+				return;
+			}
 
 			data.set(m_cmd & 0xfffc, vm::read32(m_args_ptr));
 		}
@@ -220,7 +441,7 @@ namespace rsx
 		{
 			enabled = _enabled;
 			num_collapsed = 0;
-			begin_end_ctr = 0;
+			in_begin_end = false;
 		}
 
 		void flattening_helper::force_disable()
@@ -286,7 +507,7 @@ namespace rsx
 				{
 					// If its set to unoptimizable, we already tried and it did not work
 					// If it resets to load low (usually after some kind of loading screen) we can try again
-					ensure(begin_end_ctr == 0); // "Incorrect initial state"
+					ensure(in_begin_end == false); // "Incorrect initial state"
 					ensure(num_collapsed == 0);
 					enabled = true;
 				}
@@ -300,7 +521,7 @@ namespace rsx
 			{
 			case NV4097_SET_BEGIN_END:
 			{
-				begin_end_ctr ^= 1;
+				in_begin_end = !!command.value;
 
 				if (command.value)
 				{
@@ -330,7 +551,7 @@ namespace rsx
 				else
 				{
 					rsx_log.error("Fifo flattener misalignment, disable FIFO reordering and report to developers");
-					begin_end_ctr = 0;
+					in_begin_end = false;
 					flush_cmd = 0u;
 				}
 
@@ -354,7 +575,7 @@ namespace rsx
 					else
 					{
 						// Flush
-						flush_cmd = (begin_end_ctr) ? deferred_primitive : 0u;
+						flush_cmd = (in_begin_end) ? deferred_primitive : 0u;
 					}
 				}
 				else
@@ -373,7 +594,7 @@ namespace rsx
 				draw_count = 0;
 				deferred_primitive = flush_cmd;
 
-				return (begin_end_ctr == 1)? EMIT_BARRIER : EMIT_END;
+				return in_begin_end ? EMIT_BARRIER : EMIT_END;
 			}
 
 			return NOTHING;
@@ -393,20 +614,20 @@ namespace rsx
 			{
 			case FIFO::FIFO_NOP:
 			{
-				if (performance_counters.state == FIFO_state::running)
+				if (performance_counters.state == FIFO::state::running)
 				{
 					performance_counters.FIFO_idle_timestamp = rsx::uclock();
-					performance_counters.state = FIFO_state::nop;
+					performance_counters.state = FIFO::state::nop;
 				}
 
 				return;
 			}
 			case FIFO::FIFO_EMPTY:
 			{
-				if (performance_counters.state == FIFO_state::running)
+				if (performance_counters.state == FIFO::state::running)
 				{
 					performance_counters.FIFO_idle_timestamp = rsx::uclock();
-					performance_counters.state = FIFO_state::empty;
+					performance_counters.state = FIFO::state::empty;
 				}
 				else
 				{
@@ -438,13 +659,13 @@ namespace rsx
 				if (offs == fifo_ctrl->get_pos())
 				{
 					//Jump to self. Often preceded by NOP
-					if (performance_counters.state == FIFO_state::running)
+					if (performance_counters.state == FIFO::state::running)
 					{
 						performance_counters.FIFO_idle_timestamp = rsx::uclock();
 						sync_point_request.release(true);
 					}
 
-					performance_counters.state = FIFO_state::spinning;
+					performance_counters.state = FIFO::state::spinning;
 				}
 				else
 				{
@@ -452,7 +673,7 @@ namespace rsx
 				}
 
 				//rsx_log.warning("rsx jump(0x%x) #addr=0x%x, cmd=0x%x, get=0x%x, put=0x%x", offs, m_ioAddress + get, cmd, get, put);
-				fifo_ctrl->set_get(offs);
+				fifo_ctrl->set_get(offs, cmd);
 				return;
 			}
 			if ((cmd & RSX_METHOD_CALL_CMD_MASK) == RSX_METHOD_CALL_CMD)
@@ -486,18 +707,18 @@ namespace rsx
 			}
 
 			// If we reached here, this is likely an error
-			fmt::throw_exception("Unexpected command 0x%x", cmd);
+			fmt::throw_exception("Unexpected command 0x%x (last cmd: 0x%x)", cmd, fifo_ctrl->last_cmd());
 		}
 
 		if (const auto state = performance_counters.state;
-			state != FIFO_state::running)
+			state != FIFO::state::running)
 		{
-			performance_counters.state = FIFO_state::running;
+			performance_counters.state = FIFO::state::running;
 
 			// Hack: Delay FIFO wake-up according to setting
 			// NOTE: The typical spin setup is a NOP followed by a jump-to-self
 			// NOTE: There is a small delay when the jump address is dynamically edited by cell
-			if (state != FIFO_state::nop)
+			if (state != FIFO::state::nop)
 			{
 				fifo_wake_delay();
 			}
@@ -552,9 +773,9 @@ namespace rsx
 
 								commands.back().rsx_command.first = (fifo_ctrl->last_cmd() & RSX_METHOD_NON_INCREMENT_CMD_MASK) | (reg << 2) | (remaining << 18);
 
-								for (u32 i = 1; i < remaining && fifo_ctrl->get_pos() + (i - 1) * 4 != (ctrl->put & ~3); i++)
+								for (u32 i = 1; i < remaining && fifo_ctrl->get_pos() + i * 4 != (ctrl->put & ~3); i++)
 								{
-									replay_cmd.rsx_command = std::make_pair(0, vm::read32(fifo_ctrl->get_current_arg_ptr() + (i * 4)));
+									replay_cmd.rsx_command = std::make_pair(0, vm::read32(iomap_table.get_addr(fifo_ctrl->get_pos()) + (i * 4)));
 
 									commands.push_back(replay_cmd);
 								}
@@ -612,6 +833,17 @@ namespace rsx
 			if (auto method = methods[reg])
 			{
 				method(this, reg, value);
+
+				if (state & cpu_flag::again)
+				{
+					method_registers.decode(reg, method_registers.register_previous_value);
+					break;
+				}
+			}
+			else if (method_registers.register_previous_value != value)
+			{
+				// Something changed, set signal flags if any specified
+				m_graphics_state |= state_signals[reg];
 			}
 		}
 		while (fifo_ctrl->read_unsafe(command));

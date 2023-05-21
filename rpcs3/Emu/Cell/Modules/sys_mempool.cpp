@@ -18,6 +18,7 @@ struct memory_pool_t
 	static const u32 id_base = 1;
 	static const u32 id_step = 1;
 	static const u32 id_count = 1023;
+	SAVESTATE_INIT_POS(21);
 
 	u32 mutexid;
 	u32 condid;

@@ -8,8 +8,10 @@
 
 #include "Emu/System.h"
 #include "Emu/system_config.h"
+#include "Emu/vfs_config.h"
 #include "Emu/system_utils.hpp"
 #include "Emu/Cell/Modules/cellSysutil.h"
+#include "Emu/Io/Keyboard.h"
 
 #include "util/yaml.hpp"
 #include "Utilities/File.h"
@@ -80,7 +82,7 @@ bool emu_settings::Init()
 	// Make Vulkan default setting if it is supported
 	if (m_render_creator->Vulkan.supported && !m_render_creator->Vulkan.adapters.empty())
 	{
-		const std::string adapter = sstr(m_render_creator->Vulkan.adapters.at(0));
+		const std::string adapter = sstr(::at32(m_render_creator->Vulkan.adapters, 0));
 		cfg_log.notice("Setting the default renderer to Vulkan. Default GPU: '%s'", adapter);
 		Emu.SetDefaultRenderer(video_renderer::vulkan);
 		Emu.SetDefaultGraphicsAdapter(adapter);
@@ -135,10 +137,9 @@ void emu_settings::LoadSettings(const std::string& title_id)
 		// Otherwise we'll always trigger the "obsolete settings dialog" when editing custom configs.
 		ValidateSettings(true);
 
-		const std::string config_path = rpcs3::utils::get_custom_config_path(m_title_id);
 		std::string custom_config_path;
 
-		if (fs::is_file(config_path))
+		if (std::string config_path = rpcs3::utils::get_custom_config_path(m_title_id); fs::is_file(config_path))
 		{
 			custom_config_path = config_path;
 		}
@@ -267,40 +268,11 @@ void emu_settings::RestoreDefaults()
 void emu_settings::SaveSettings()
 {
 	YAML::Emitter out;
-	std::string config_name;
-
-	if (m_title_id.empty())
-	{
-		config_name = fs::get_config_dir() + "/config.yml";
-	}
-	else
-	{
-		config_name = rpcs3::utils::get_custom_config_path(m_title_id);
-	}
-
 	emit_data(out, m_current_settings);
-
-	// Save config atomically
-	fs::pending_file temp(config_name);
-	temp.file.write(out.c_str(), out.size());
-	temp.commit();
-
-	// Check if the running config/title is the same as the edited config/title.
-	if (config_name == g_cfg.name || m_title_id == Emu.GetTitleID())
-	{
-		// Update current config
-		if (!g_cfg.from_string({out.c_str(), out.size()}, !Emu.IsStopped()))
-		{
-			cfg_log.fatal("Failed to update configuration");
-		}
-		else if (!Emu.IsStopped()) // Don't spam the log while emulation is stopped. The config will be logged on boot anyway.
-		{
-			cfg_log.notice("Updated configuration:\n%s\n", g_cfg.to_string());
-		}
-	}
+	Emulator::SaveSettings(out.c_str(), m_title_id);
 }
 
-void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, bool is_ranged, bool use_max, int max, bool sorted)
+void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, bool is_ranged, bool use_max, int max, bool sorted, bool strict)
 {
 	if (!combobox)
 	{
@@ -330,7 +302,7 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, 
 
 		for (int i = 0; i < settings.count(); i++)
 		{
-			const QString localized_setting = GetLocalizedSetting(settings[i], type, combobox->count());
+			const QString localized_setting = GetLocalizedSetting(settings[i], type, combobox->count(), strict);
 			combobox->addItem(localized_setting, QVariant({settings[i], i}));
 		}
 
@@ -703,20 +675,26 @@ void emu_settings::EnhanceDoubleSpinBox(QDoubleSpinBox* spinbox, emu_settings_ty
 	}
 
 	const QStringList range = GetSettingOptions(type);
-	bool ok_def, ok_sel, ok_min, ok_max;
+	const std::string def_s = GetSettingDefault(type);
+	const std::string val_s = GetSetting(type);
+	const std::string min_s = sstr(range.first());
+	const std::string max_s = sstr(range.last());
 
-	const double def = qstr(GetSettingDefault(type)).toDouble(&ok_def);
-	const double min = range.first().toDouble(&ok_min);
-	const double max = range.last().toDouble(&ok_max);
+	// cfg::_float range is in s32
+	constexpr s32 min_value = ::std::numeric_limits<s32>::min();
+	constexpr s32 max_value = ::std::numeric_limits<s32>::max();
+
+	f64 val, def, min, max;
+	const bool ok_sel = try_to_float(&val, val_s, min_value, max_value);
+	const bool ok_def = try_to_float(&def, def_s, min_value, max_value);
+	const bool ok_min = try_to_float(&min, min_s, min_value, max_value);
+	const bool ok_max = try_to_float(&max, max_s, min_value, max_value);
 
 	if (!ok_def || !ok_min || !ok_max)
 	{
-		cfg_log.fatal("EnhanceDoubleSpinBox '%s' was used with an invalid type", cfg_adapter::get_setting_name(type));
+		cfg_log.fatal("EnhanceDoubleSpinBox '%s' was used with an invalid type. (val='%s', def='%s', min_s='%s', max_s='%s')", cfg_adapter::get_setting_name(type), val_s, def_s, min_s, max_s);
 		return;
 	}
-
-	const std::string selected = GetSetting(type);
-	double val = qstr(selected).toDouble(&ok_sel);
 
 	if (!ok_sel || val < min || val > max)
 	{
@@ -788,7 +766,7 @@ void emu_settings::EnhanceRadioButton(QButtonGroup* button_group, emu_settings_t
 	for (int i = 0; i < options.count(); i++)
 	{
 		const QString& option = options[i];
-		const QString localized_setting = GetLocalizedSetting(option, type, i);
+		const QString localized_setting = GetLocalizedSetting(option, type, i, true);
 
 		QAbstractButton* button = button_group->button(i);
 		button->setText(localized_setting);
@@ -901,7 +879,7 @@ void emu_settings::OpenCorrectionDialog(QWidget* parent)
 	}
 }
 
-QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_type type, int index) const
+QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_type type, int index, bool strict) const
 {
 	switch (type)
 	{
@@ -950,12 +928,12 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		switch (static_cast<frame_limit_type>(index))
 		{
 		case frame_limit_type::none: return tr("Off", "Frame limit");
-		case frame_limit_type::_59_94: return tr("59.94", "Frame limit");
 		case frame_limit_type::_50: return tr("50", "Frame limit");
 		case frame_limit_type::_60: return tr("60", "Frame limit");
 		case frame_limit_type::_30: return tr("30", "Frame limit");
 		case frame_limit_type::_auto: return tr("Auto", "Frame limit");
 		case frame_limit_type::_ps3: return tr("PS3 Native", "Frame limit");
+		case frame_limit_type::infinite: return tr("Infinite", "Frame limit");
 		}
 		break;
 	case emu_settings_type::MSAA:
@@ -963,6 +941,23 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		{
 		case msaa_level::none: return tr("Disabled", "MSAA");
 		case msaa_level::_auto: return tr("Auto", "MSAA");
+		}
+		break;
+	case emu_settings_type::ShaderPrecisionQuality:
+		switch (static_cast<gpu_preset_level>(index))
+		{
+		case gpu_preset_level::_auto: return tr("Auto", "Shader Precision");
+		case gpu_preset_level::ultra: return tr("Ultra", "Shader Precision");
+		case gpu_preset_level::high: return tr("High", "Shader Precision");
+		case gpu_preset_level::low: return tr("Low", "Shader Precision");
+		}
+		break;
+	case emu_settings_type::OutputScalingMode:
+		switch (static_cast<output_scaling_mode>(index))
+		{
+		case output_scaling_mode::nearest: return tr("Nearest", "Output Scaling Mode");
+		case output_scaling_mode::bilinear: return tr("Bilinear", "Output Scaling Mode");
+		case output_scaling_mode::fsr: return tr("FidelityFX Super Resolution", "Output Scaling Mode");
 		}
 		break;
 	case emu_settings_type::AudioRenderer:
@@ -1048,6 +1043,9 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case move_handler::null: return tr("Null", "Move handler");
 		case move_handler::fake: return tr("Fake", "Move handler");
 		case move_handler::mouse: return tr("Mouse", "Move handler");
+#ifdef HAVE_LIBEVDEV
+		case move_handler::gun: return tr("Gun", "Gun handler");
+#endif
 		}
 		break;
 	case emu_settings_type::Buzz:
@@ -1097,6 +1095,15 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case sleep_timers_accuracy_level::_all_timers: return tr("All Timers", "Sleep timers accuracy");
 		}
 		break;
+	case emu_settings_type::FIFOAccuracy:
+		switch (static_cast<rsx_fifo_mode>(index))
+		{
+		case rsx_fifo_mode::fast: return tr("Fast", "RSX FIFO Accuracy");
+		case rsx_fifo_mode::atomic: return tr("Atomic", "RSX FIFO Accuracy");
+		case rsx_fifo_mode::atomic_ordered: return tr("Ordered & Atomic", "RSX FIFO Accuracy");
+		case rsx_fifo_mode::as_ps3: return tr("PS3", "RSX FIFO Accuracy");
+		}
+		break;
 	case emu_settings_type::PerfOverlayDetailLevel:
 		switch (static_cast<detail_level>(index))
 		{
@@ -1140,13 +1147,42 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case enter_button_assign::cross: return tr("Enter with cross", "Enter button assignment");
 		}
 		break;
-	case emu_settings_type::AudioChannels:
-		switch (static_cast<audio_downmix>(index))
+	case emu_settings_type::AudioFormat:
+		switch (static_cast<audio_format>(index))
 		{
-		case audio_downmix::no_downmix: return tr("Surround 7.1", "Audio downmix");
-		case audio_downmix::downmix_to_stereo: return tr("Downmix to Stereo", "Audio downmix");
-		case audio_downmix::downmix_to_5_1: return tr("Downmix to 5.1", "Audio downmix");
-		case audio_downmix::use_application_settings: return tr("Use application settings", "Audio downmix");
+		case audio_format::stereo: return tr("Stereo", "Audio format");
+		case audio_format::surround_5_1: return tr("Surround 5.1", "Audio format");
+		case audio_format::surround_7_1: return tr("Surround 7.1", "Audio format");
+		case audio_format::manual: return tr("Manual", "Audio format");
+		case audio_format::automatic: return tr("Automatic", "Audio format");
+		}
+		break;
+	case emu_settings_type::AudioFormats:
+		switch (static_cast<audio_format_flag>(index))
+		{
+		case audio_format_flag::lpcm_2_48khz: return tr("Linear PCM 2 Ch. 48 kHz", "Audio format flag");
+		case audio_format_flag::lpcm_5_1_48khz: return tr("Linear PCM 5.1 Ch. 48 kHz", "Audio format flag");
+		case audio_format_flag::lpcm_7_1_48khz: return tr("Linear PCM 7.1 Ch. 48 kHz", "Audio format flag");
+		case audio_format_flag::ac3: return tr("Dolby Digital 5.1 Ch.", "Audio format flag");
+		case audio_format_flag::dts: return tr("DTS 5.1 Ch.", "Audio format flag");
+		}
+		break;
+	case emu_settings_type::AudioProvider:
+		switch (static_cast<audio_provider>(index))
+		{
+		case audio_provider::none: return tr("None", "Audio Provider");
+		case audio_provider::cell_audio: return tr("CellAudio", "Audio Provider");
+		case audio_provider::rsxaudio: return tr("RSXAudio", "Audio Provider");
+		}
+		break;
+	case emu_settings_type::AudioAvport:
+		switch (static_cast<audio_avport>(index))
+		{
+		case audio_avport::hdmi_0: return tr("HDMI 0", "Audio Avport");
+		case audio_avport::hdmi_1: return tr("HDMI 1", "Audio Avport");
+		case audio_avport::avmulti: return tr("AV multiout", "Audio Avport");
+		case audio_avport::spdif_0: return tr("SPDIF 0", "Audio Avport");
+		case audio_avport::spdif_1: return tr("SPDIF 1", "Audio Avport");
 		}
 		break;
 	case emu_settings_type::LicenseArea:
@@ -1164,12 +1200,107 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 	case emu_settings_type::VulkanAsyncSchedulerDriver:
 		switch (static_cast<vk_gpu_scheduler_mode>(index))
 		{
-		case vk_gpu_scheduler_mode::safe: return tr("Safe");
-		case vk_gpu_scheduler_mode::fast: return tr("Fast");
+		case vk_gpu_scheduler_mode::safe: return tr("Safe", "Asynchronous Queue Scheduler");
+		case vk_gpu_scheduler_mode::fast: return tr("Fast", "Asynchronous Queue Scheduler");
+		}
+		break;
+	case emu_settings_type::Language:
+		switch (static_cast<CellSysutilLang>(index))
+		{
+		case CELL_SYSUTIL_LANG_JAPANESE: return tr("Japanese", "System Language");
+		case CELL_SYSUTIL_LANG_ENGLISH_US: return tr("English (US)", "System Language");
+		case CELL_SYSUTIL_LANG_FRENCH: return tr("French", "System Language");
+		case CELL_SYSUTIL_LANG_SPANISH: return tr("Spanish", "System Language");
+		case CELL_SYSUTIL_LANG_GERMAN: return tr("German", "System Language");
+		case CELL_SYSUTIL_LANG_ITALIAN: return tr("Italian", "System Language");
+		case CELL_SYSUTIL_LANG_DUTCH: return tr("Dutch", "System Language");
+		case CELL_SYSUTIL_LANG_PORTUGUESE_PT: return tr("Portuguese (Portugal)", "System Language");
+		case CELL_SYSUTIL_LANG_RUSSIAN: return tr("Russian", "System Language");
+		case CELL_SYSUTIL_LANG_KOREAN: return tr("Korean", "System Language");
+		case CELL_SYSUTIL_LANG_CHINESE_T: return tr("Chinese (Traditional)", "System Language");
+		case CELL_SYSUTIL_LANG_CHINESE_S: return tr("Chinese (Simplified)", "System Language");
+		case CELL_SYSUTIL_LANG_FINNISH: return tr("Finnish", "System Language");
+		case CELL_SYSUTIL_LANG_SWEDISH: return tr("Swedish", "System Language");
+		case CELL_SYSUTIL_LANG_DANISH: return tr("Danish", "System Language");
+		case CELL_SYSUTIL_LANG_NORWEGIAN: return tr("Norwegian", "System Language");
+		case CELL_SYSUTIL_LANG_POLISH: return tr("Polish", "System Language");
+		case CELL_SYSUTIL_LANG_ENGLISH_GB: return tr("English (UK)", "System Language");
+		case CELL_SYSUTIL_LANG_PORTUGUESE_BR: return tr("Portuguese (Brazil)", "System Language");
+		case CELL_SYSUTIL_LANG_TURKISH: return tr("Turkish", "System Language");
+		default:
+			break;
+		}
+	case emu_settings_type::KeyboardType:
+		switch (static_cast<CellKbMappingType>(index))
+		{
+		case CELL_KB_MAPPING_101: return tr("English keyboard (US standard)", "Keyboard Type");
+		case CELL_KB_MAPPING_106: return tr("Japanese keyboard", "Keyboard Type");
+		case CELL_KB_MAPPING_106_KANA: return tr("Japanese keyboard (Kana state)", "Keyboard Type");
+		case CELL_KB_MAPPING_GERMAN_GERMANY: return tr("German keyboard", "Keyboard Type");
+		case CELL_KB_MAPPING_SPANISH_SPAIN: return tr("Spanish keyboard", "Keyboard Type");
+		case CELL_KB_MAPPING_FRENCH_FRANCE: return tr("French keyboard", "Keyboard Type");
+		case CELL_KB_MAPPING_ITALIAN_ITALY: return tr("Italian keyboard", "Keyboard Type");
+		case CELL_KB_MAPPING_DUTCH_NETHERLANDS: return tr("Dutch keyboard", "Keyboard Type");
+		case CELL_KB_MAPPING_PORTUGUESE_PORTUGAL: return tr("Portuguese keyboard (Portugal)", "Keyboard Type");
+		case CELL_KB_MAPPING_RUSSIAN_RUSSIA: return tr("Russian keyboard", "Keyboard Type");
+		case CELL_KB_MAPPING_ENGLISH_UK: return tr("English keyboard (UK standard)", "Keyboard Type");
+		case CELL_KB_MAPPING_KOREAN_KOREA: return tr("Korean keyboard", "Keyboard Type");
+		case CELL_KB_MAPPING_NORWEGIAN_NORWAY: return tr("Norwegian keyboard", "Keyboard Type");
+		case CELL_KB_MAPPING_FINNISH_FINLAND: return tr("Finnish keyboard", "Keyboard Type");
+		case CELL_KB_MAPPING_DANISH_DENMARK: return tr("Danish keyboard", "Keyboard Type");
+		case CELL_KB_MAPPING_SWEDISH_SWEDEN: return tr("Swedish keyboard", "Keyboard Type");
+		case CELL_KB_MAPPING_CHINESE_TRADITIONAL: return tr("Chinese keyboard (Traditional)", "Keyboard Type");
+		case CELL_KB_MAPPING_CHINESE_SIMPLIFIED: return tr("Chinese keyboard (Simplified)", "Keyboard Type");
+		case CELL_KB_MAPPING_SWISS_FRENCH_SWITZERLAND: return tr("French keyboard (Switzerland)", "Keyboard Type");
+		case CELL_KB_MAPPING_SWISS_GERMAN_SWITZERLAND: return tr("German keyboard (Switzerland)", "Keyboard Type");
+		case CELL_KB_MAPPING_CANADIAN_FRENCH_CANADA: return tr("French keyboard (Canada)", "Keyboard Type");
+		case CELL_KB_MAPPING_BELGIAN_BELGIUM: return tr("French keyboard (Belgium)", "Keyboard Type");
+		case CELL_KB_MAPPING_POLISH_POLAND: return tr("Polish keyboard", "Keyboard Type");
+		case CELL_KB_MAPPING_PORTUGUESE_BRAZIL: return tr("Portuguese keyboard (Brazil)", "Keyboard Type");
+		case CELL_KB_MAPPING_TURKISH_TURKEY: return tr("Turkish keyboard", "Keyboard Type");
+		}
+		break;
+	case emu_settings_type::ExclusiveFullscreenMode:
+		switch (static_cast<vk_exclusive_fs_mode>(index))
+		{
+		case vk_exclusive_fs_mode::unspecified: return tr("Automatic (Default)", "Exclusive Fullscreen Mode");
+		case vk_exclusive_fs_mode::disable: return tr("Prefer borderless fullscreen", "Exclusive Fullscreen Mode");
+		case vk_exclusive_fs_mode::enable: return tr("Prefer exclusive fullscreen", "Exclusive Fullscreen Mode");
+		}
+		break;
+	case emu_settings_type::StereoRenderMode:
+		switch (static_cast<stereo_render_mode_options>(index))
+		{
+		case stereo_render_mode_options::disabled: return tr("Disabled", "3D Display Mode");
+		case stereo_render_mode_options::anaglyph: return tr("Anaglyph", "3D Display Mode");
+		case stereo_render_mode_options::side_by_side: return tr("Side-by-side", "3D Display Mode");
+		case stereo_render_mode_options::over_under: return tr("Over-under", "3D Display Mode");
+		}
+		break;
+	case emu_settings_type::MidiDevices:
+		switch (static_cast<midi_device_type>(index))
+		{
+		case midi_device_type::guitar: return tr("Guitar (17 frets)", "Midi Device Type");
+		case midi_device_type::guitar_22fret: return tr("Guitar (22 frets)", "Midi Device Type");
+		case midi_device_type::keyboard: return tr("Keyboard", "Midi Device Type");
 		}
 		break;
 	default:
 		break;
+	}
+
+	if (strict)
+	{
+		std::string type_string;
+		if (settings_location.contains(type))
+		{
+			for (const char* loc : settings_location.value(type))
+			{
+				if (!type_string.empty()) type_string += ": ";
+				type_string += loc;
+			}
+		}
+		fmt::throw_exception("Missing translation for emu setting (original=%s, type='%s'=%d, index=%d)", original.toStdString(), type_string.empty() ? "?" : type_string, static_cast<int>(type), index);
 	}
 
 	return original;

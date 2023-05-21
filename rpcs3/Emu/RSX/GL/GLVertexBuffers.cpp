@@ -127,7 +127,7 @@ namespace
 		vertex_input_state operator()(const rsx::draw_inlined_array& /*command*/)
 		{
 			const auto stream_length = rsx::method_registers.current_draw_clause.inline_vertex_array.size();
-			const u32 vertex_count = u32(stream_length * sizeof(u32)) / m_vertex_layout.interleaved_blocks[0].attribute_stride;
+			const u32 vertex_count = u32(stream_length * sizeof(u32)) / m_vertex_layout.interleaved_blocks[0]->attribute_stride;
 
 			if (!gl::is_primitive_native(rsx::method_registers.current_draw_clause.primitive))
 			{
@@ -192,8 +192,8 @@ gl::vertex_upload_info GLGSRender::set_vertex_buffer()
 		if (m_vertex_layout.interleaved_blocks.size() == 1 &&
 			rsx::method_registers.current_draw_clause.command != rsx::draw_command::inlined_array)
 		{
-			const auto data_offset = (vertex_base * m_vertex_layout.interleaved_blocks[0].attribute_stride);
-			storage_address = m_vertex_layout.interleaved_blocks[0].real_offset_address + data_offset;
+			const auto data_offset = (vertex_base * m_vertex_layout.interleaved_blocks[0]->attribute_stride);
+			storage_address = m_vertex_layout.interleaved_blocks[0]->real_offset_address + data_offset;
 
 			if (auto cached = m_vertex_cache->find_vertex_range(storage_address, GL_R8UI, required.first))
 			{

@@ -1,11 +1,8 @@
 #pragma once
 
-#include <QProgressDialog>
+#include "progress_indicator.h"
 
-#ifdef _WIN32
-#include <QWinTaskbarProgress>
-#include <QWinTaskbarButton>
-#endif
+#include <QProgressDialog>
 
 class progress_dialog : public QProgressDialog
 {
@@ -17,10 +14,5 @@ public:
 	void SignalFailure() const;
 
 private:
-#ifdef _WIN32
-	std::unique_ptr<QWinTaskbarButton> m_tb_button = nullptr;
-	QWinTaskbarProgress* m_tb_progress = nullptr;
-#elif HAVE_QTDBUS
-	void UpdateProgress(int progress, bool progress_visible);
-#endif
+	std::unique_ptr<progress_indicator> m_progress_indicator;
 };

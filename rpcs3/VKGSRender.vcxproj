@@ -13,6 +13,7 @@
   <ItemGroup>
     <ClInclude Include="Emu\RSX\VK\upscalers\bilinear_pass.hpp" />
     <ClInclude Include="Emu\RSX\VK\upscalers\fsr_pass.h" />
+    <ClInclude Include="Emu\RSX\VK\upscalers\nearest_pass.hpp" />
     <ClInclude Include="Emu\RSX\VK\upscalers\upscaling.h" />
     <ClInclude Include="Emu\RSX\VK\VKAsyncScheduler.h" />
     <ClInclude Include="Emu\RSX\VK\VKCommandStream.h" />

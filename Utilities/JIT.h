@@ -42,6 +42,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <util/v128.hpp>
 
 #if defined(ARCH_X64)
 using native_asm = asmjit::x86::Assembler;
@@ -211,40 +212,182 @@ namespace asmjit
 	}
 
 #if defined(ARCH_X64)
-	template <uint Size>
-	struct native_vec;
-
-	template <>
-	struct native_vec<16> { using type = x86::Xmm; };
-
-	template <>
-	struct native_vec<32> { using type = x86::Ymm; };
-
-	template <>
-	struct native_vec<64> { using type = x86::Zmm; };
-
-	template <uint Size>
-	using native_vec_t = typename native_vec<Size>::type;
-
-	// if (count > step) { for (; ctr < (count - step); ctr += step) {...} count -= ctr; }
-	inline void build_incomplete_loop(native_asm& c, auto ctr, auto count, u32 step, auto&& build)
+	struct simd_builder : native_asm
 	{
-		asmjit::Label body = c.newLabel();
-		asmjit::Label exit = c.newLabel();
+		std::unordered_map<v128, Label> consts;
 
-		ensure((step & (step - 1)) == 0);
-		c.cmp(count, step);
-		c.jbe(exit);
-		c.sub(count, step);
-		c.align(asmjit::AlignMode::kCode, 16);
-		c.bind(body);
-		build();
-		c.add(ctr, step);
-		c.sub(count, step);
-		c.ja(body);
-		c.add(count, step);
-		c.bind(exit);
-	}
+		Operand v0, v1, v2, v3, v4, v5;
+
+		uint vsize = 16;
+		uint vmask = 0;
+
+		simd_builder(CodeHolder* ch) noexcept;
+		~simd_builder();
+
+		void operator()() noexcept;
+
+		void _init(uint new_vsize = 0);
+		void vec_cleanup_ret();
+		void vec_set_all_zeros(const Operand& v);
+		void vec_set_all_ones(const Operand& v);
+		void vec_set_const(const Operand& v, const v128& value);
+		void vec_clobbering_test(u32 esize, const Operand& v, const Operand& rhs);
+		void vec_broadcast_gpr(u32 esize, const Operand& v, const x86::Gp& r);
+
+		// return x86::ptr(base, ctr, X, 0) where X is set for esize accordingly
+		x86::Mem ptr_scale_for_vec(u32 esize, const x86::Gp& base, const x86::Gp& index);
+
+		void vec_load_unaligned(u32 esize, const Operand& v, const x86::Mem& src);
+		void vec_store_unaligned(u32 esize, const Operand& v, const x86::Mem& dst);
+		void vec_partial_move(u32 esize, const Operand& dst, const Operand& src);
+
+		void _vec_binary_op(x86::Inst::Id sse_op, x86::Inst::Id vex_op, x86::Inst::Id evex_op, const Operand& dst, const Operand& lhs, const Operand& rhs);
+
+		void vec_shuffle_xi8(const Operand& dst, const Operand& lhs, const Operand& rhs)
+		{
+			using enum x86::Inst::Id;
+			_vec_binary_op(kIdPshufb, kIdVpshufb, kIdVpshufb, dst, lhs, rhs);
+		}
+
+		void vec_xor(u32, const Operand& dst, const Operand& lhs, const Operand& rhs)
+		{
+			using enum x86::Inst::Id;
+			_vec_binary_op(kIdPxor, kIdVpxor, kIdVpxord, dst, lhs, rhs);
+		}
+
+		void vec_or(u32, const Operand& dst, const Operand& lhs, const Operand& rhs)
+		{
+			using enum x86::Inst::Id;
+			_vec_binary_op(kIdPor, kIdVpor, kIdVpord, dst, lhs, rhs);
+		}
+
+		void vec_andn(u32, const Operand& dst, const Operand& lhs, const Operand& rhs)
+		{
+			using enum x86::Inst::Id;
+			_vec_binary_op(kIdPandn, kIdVpandn, kIdVpandnd, dst, lhs, rhs);
+		}
+
+		void vec_umin(u32 esize, const Operand& dst, const Operand& lhs, const Operand& rhs);
+		void vec_umax(u32 esize, const Operand& dst, const Operand& lhs, const Operand& rhs);
+		void vec_cmp_eq(u32 esize, const Operand& dst, const Operand& lhs, const Operand& rhs);
+
+		void vec_extract_high(u32 esize, const Operand& dst, const Operand& src);
+		void vec_extract_gpr(u32 esize, const x86::Gp& dst, const Operand& src);
+
+		simd_builder& keep_if_not_masked()
+		{
+			if (vmask && vmask < 8)
+			{
+				this->k(x86::KReg(vmask));
+			}
+
+			return *this;
+		}
+
+		simd_builder& zero_if_not_masked()
+		{
+			if (vmask && vmask < 8)
+			{
+				this->k(x86::KReg(vmask));
+				this->z();
+			}
+
+			return *this;
+		}
+
+		void build_loop(u32 esize, const x86::Gp& reg_ctr, const x86::Gp& reg_cnt, auto&& build, auto&& reduce)
+		{
+			ensure((esize & (esize - 1)) == 0);
+			ensure(esize <= vsize);
+
+			Label body = this->newLabel();
+			Label next = this->newLabel();
+			Label exit = this->newLabel();
+
+			const u32 step = vsize / esize;
+
+			this->xor_(reg_ctr.r32(), reg_ctr.r32()); // Reset counter reg
+			this->cmp(reg_cnt, step);
+			this->jb(next); // If count < step, skip main loop body
+			this->align(AlignMode::kCode, 16);
+			this->bind(body);
+			this->sub(reg_cnt, step);
+			build();
+			this->add(reg_ctr, step);
+			this->cmp(reg_cnt, step);
+			this->jae(body);
+			this->bind(next);
+
+			if (vmask)
+			{
+				// Build single last iteration (masked)
+				this->test(reg_cnt, reg_cnt);
+				this->jz(exit);
+
+				if (esize == 1 && vsize == 64)
+				{
+					this->bzhi(reg_cnt.r64(), x86::Mem(consts[~u128()], 0), reg_cnt.r64());
+					this->kmovq(x86::k7, reg_cnt.r64());
+				}
+				else
+				{
+					this->bzhi(reg_cnt.r32(), x86::Mem(consts[~u128()], 0), reg_cnt.r32());
+					this->kmovd(x86::k7, reg_cnt.r32());
+				}
+
+				vmask = 7;
+				build();
+
+				// Rollout reduction step
+				this->bind(exit);
+				while (true)
+				{
+					vsize /= 2;
+					if (vsize < esize)
+						break;
+					this->_init(vsize);
+					reduce();
+				}
+			}
+			else
+			{
+				// Build unrolled loop tail (reduced vector width)
+				while (true)
+				{
+					vsize /= 2;
+					if (vsize < esize)
+						break;
+
+					// Shall not clobber flags
+					this->_init(vsize);
+					reduce();
+
+					if (vsize == esize)
+					{
+						// Last "iteration"
+						this->test(reg_cnt, reg_cnt);
+						this->jz(exit);
+						build();
+					}
+					else
+					{
+						const u32 step = vsize / esize;
+						Label next = this->newLabel();
+						this->cmp(reg_cnt, step);
+						this->jb(next);
+						build();
+						this->add(reg_ctr, step);
+						this->sub(reg_cnt, step);
+						this->bind(next);
+					}
+				}
+
+				this->bind(exit);
+			}
+
+			this->_init(0);
+		}
+	};
 
 	// for (; count > 0; ctr++, count--)
 	inline void build_loop(native_asm& c, auto ctr, auto count, auto&& build)
@@ -262,16 +405,40 @@ namespace asmjit
 		c.ja(body);
 		c.bind(exit);
 	}
+
+	inline void maybe_flush_lbr(native_asm& c, uint count = 2)
+	{
+		// Workaround for bad LBR callstacks which happen in some situations (mainly TSX) - execute additional RETs
+		Label next = c.newLabel();
+		c.lea(x86::rcx, x86::qword_ptr(next));
+
+		for (u32 i = 0; i < count; i++)
+		{
+			c.push(x86::rcx);
+			c.sub(x86::rcx, 16);
+		}
+
+		for (u32 i = 0; i < count; i++)
+		{
+			c.ret();
+			c.align(asmjit::AlignMode::kCode, 16);
+		}
+
+		c.bind(next);
+	}
 #endif
 }
 
 // Build runtime function with asmjit::X86Assembler
 template <typename FT, typename Asm = native_asm, typename F>
-inline FT build_function_asm(std::string_view name, F&& builder)
+inline FT build_function_asm(std::string_view name, F&& builder, ::jit_runtime* custom_runtime = nullptr)
 {
+#ifdef __APPLE__
+	pthread_jit_write_protect_np(false);
+#endif
 	using namespace asmjit;
 
-	auto& rt = get_global_runtime();
+	auto& rt = custom_runtime ? *custom_runtime : get_global_runtime();
 
 	CodeHolder code;
 	code.init(rt.environment());
@@ -307,6 +474,12 @@ inline FT build_function_asm(std::string_view name, F&& builder)
 	else
 	{
 		builder(compiler, args);
+	}
+
+	if constexpr (std::is_invocable_r_v<void, Asm>)
+	{
+		// Finalization
+		compiler();
 	}
 
 	const auto result = rt._add(&code);
@@ -359,6 +532,9 @@ public:
 	// Add object (path to obj file)
 	void add(const std::string& path);
 
+	// Update global mapping for a single value
+	void update_global_mapping(const std::string& name, u64 addr);
+
 	// Check object file
 	static bool check(const std::string& path);
 
@@ -370,6 +546,12 @@ public:
 
 	// Get CPU info
 	static std::string cpu(const std::string& _cpu);
+
+	// Get system triple (PPU)
+	static std::string triple1();
+
+	// Get system triple (SPU)
+	static std::string triple2();
 };
 
 #endif

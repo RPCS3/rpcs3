@@ -3,6 +3,7 @@
 #include "util/types.hpp"
 #include "Emu/Memory/vm.h"
 #include "Emu/Cell/Modules/cellSaveData.h"
+#include "Emu/RSX/Overlays/overlays.h"
 
 #include <QTableWidget>
 #include <QDialog>
@@ -20,12 +21,6 @@ class save_data_list_dialog : public QDialog
 {
 	Q_OBJECT
 
-	enum selection_code
-	{
-		new_save = -1,
-		canceled = -2
-	};
-
 public:
 	explicit save_data_list_dialog(const std::vector<SaveDataEntry>& entries, s32 focusedEntry, u32 op, vm::ptr<CellSaveDataListSet>, QWidget* parent = nullptr);
 
@@ -37,7 +32,7 @@ private:
 	void UpdateSelectionLabel();
 	void UpdateList();
 
-	s32 m_entry = selection_code::new_save;
+	s32 m_entry = rsx::overlays::user_interface::selection_code::new_save;
 	QLabel* m_entry_label = nullptr;
 
 	QTableWidget* m_list = nullptr;

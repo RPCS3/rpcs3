@@ -18,6 +18,13 @@ namespace patch_key
 	static const std::string patch = "Patch";
 	static const std::string patch_version = "Patch Version";
 	static const std::string version = "Version";
+	static const std::string enabled = "Enabled";
+	static const std::string config_values = "Configurable Values";
+	static const std::string value = "Value";
+	static const std::string type = "Type";
+	static const std::string min = "Min";
+	static const std::string max = "Max";
+	static const std::string allowed_values = "Allowed Values";
 }
 
 inline static const std::string patch_engine_version = "1.2";
@@ -45,6 +52,21 @@ enum class patch_type
 	bef32,
 	bef64,
 	utf8, // Text of string (not null-terminated automatically)
+	move_file, // Move file
+	hide_file, // Hide file
+};
+
+static constexpr bool patch_type_uses_hex_offset(patch_type type)
+{
+	return type >= patch_type::alloc && type <= patch_type::utf8;
+}
+
+enum class patch_configurable_type
+{
+	double_range,
+	double_enum,
+	long_range,
+	long_enum
 };
 
 class patch_engine
@@ -54,6 +76,7 @@ public:
 	{
 		patch_type type = patch_type::load;
 		u32 offset = 0;
+		std::string original_offset{}; // Used for specifying paths
 		std::string original_value{}; // Used for import consistency (avoid rounding etc.)
 		union
 		{
@@ -63,7 +86,40 @@ public:
 		mutable u32 alloc_addr = 0; // Used to save optional allocation address (if occured)
 	};
 
-	using patch_app_versions = std::unordered_map<std::string /*app_version*/, bool /*enabled*/>;
+	struct patch_allowed_value
+	{
+		std::string label;
+		f64 value{};
+
+		bool operator==(const patch_allowed_value& other) const
+		{
+			return value == other.value && label == other.label;
+		}
+	};
+
+	struct patch_config_value
+	{
+		f64 value{};
+		f64 min{};
+		f64 max{};
+		patch_configurable_type type{};
+		std::vector<patch_allowed_value> allowed_values;
+
+		bool operator==(const patch_config_value& other) const
+		{
+			return value == other.value && min == other.min && max == other.max && type == other.type && allowed_values == other.allowed_values;
+		}
+
+		void set_and_check_value(f64 new_value, const std::string& name);
+	};
+
+	struct patch_config_values
+	{
+		bool enabled{};
+		std::map<std::string, patch_config_value> config_values;
+	};
+
+	using patch_app_versions = std::unordered_map<std::string /*app_version*/, patch_config_values>;
 	using patch_serials = std::unordered_map<std::string /*serial*/, patch_app_versions>;
 	using patch_titles = std::unordered_map<std::string /*serial*/, patch_serials>;
 
@@ -78,10 +134,12 @@ public:
 		std::string author{};
 		std::string notes{};
 		std::string source_path{};
+		std::map<std::string, patch_config_value> default_config_values;
 
 		// Redundant information for accessibility (see patch_container)
 		std::string hash{};
 		std::string version{};
+		std::map<std::string, patch_config_value> actual_config_values;
 	};
 
 	struct patch_container

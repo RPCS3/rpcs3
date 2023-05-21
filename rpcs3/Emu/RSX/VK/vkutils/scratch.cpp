@@ -1,3 +1,4 @@
+#include "barriers.h"
 #include "buffer_object.h"
 #include "image.h"
 #include "sampler.h"
@@ -97,7 +98,7 @@ namespace vk
 		auto& tex = g_null_image_views[type];
 		tex = std::make_unique<viewable_image>(*g_render_device, g_render_device->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 			image_type, VK_FORMAT_B8G8R8A8_UNORM, size, size, 1, 1, num_layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-			VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, flags | VK_IMAGE_CREATE_ALLOW_NULL, VMM_ALLOCATION_POOL_SCRATCH);
+			VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, flags | VK_IMAGE_CREATE_ALLOW_NULL_RPCS3, VMM_ALLOCATION_POOL_SCRATCH);
 
 		if (!tex->value)
 		{
@@ -110,7 +111,7 @@ namespace vk
 		tex->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
 		VkClearColorValue clear_color = {};
-		VkImageSubresourceRange range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+		VkImageSubresourceRange range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, tex->mipmaps(), 0, tex->layers() };
 		vkCmdClearColorImage(cmd, tex->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &range);
 
 		// Prep for shader access
@@ -124,8 +125,8 @@ namespace vk
 	{
 		auto create_texture = [&]()
 		{
-			u32 new_width = utils::align(requested_width, 1024u);
-			u32 new_height = utils::align(requested_height, 1024u);
+			u32 new_width = utils::align(requested_width, 256u);
+			u32 new_height = utils::align(requested_height, 256u);
 
 			return new vk::image(*g_render_device, g_render_device->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_IMAGE_TYPE_2D, format, new_width, new_height, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
@@ -146,14 +147,16 @@ namespace vk
 			}
 
 			ptr.reset(create_texture());
+			ptr->set_debug_name(fmt::format("Scratch: Format=0x%x", static_cast<u32>(format)));
 		}
 
 		return ptr.get();
 	}
 
-	vk::buffer* get_scratch_buffer(u32 queue_family, u64 min_required_size)
+	std::pair<vk::buffer*, bool> get_scratch_buffer(u32 queue_family, u64 min_required_size)
 	{
 		auto& scratch_buffer = g_scratch_buffers_pool[queue_family].get_buf();
+		bool is_new = false;
 
 		if (scratch_buffer && scratch_buffer->size() < min_required_size)
 		{
@@ -169,14 +172,29 @@ namespace vk
 			scratch_buffer = std::make_unique<vk::buffer>(*g_render_device, alloc_size,
 				g_render_device->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 0, VMM_ALLOCATION_POOL_SCRATCH);
+
+			is_new = true;
 		}
 
-		return scratch_buffer.get();
+		return { scratch_buffer.get(), is_new };
 	}
 
-	vk::buffer* get_scratch_buffer(const vk::command_buffer& cmd, u64 min_required_size)
+	vk::buffer* get_scratch_buffer(const vk::command_buffer& cmd, u64 min_required_size, bool zero_memory)
 	{
-		return get_scratch_buffer(cmd.get_queue_family(), min_required_size);
+		const auto [buf, init_mem] = get_scratch_buffer(cmd.get_queue_family(), min_required_size);
+
+		if (init_mem || zero_memory)
+		{
+			// Zero-initialize the allocated VRAM
+			const u64 zero_length = init_mem ? buf->size() : utils::align(min_required_size, 4);
+			vkCmdFillBuffer(cmd, buf->value, 0, zero_length, 0);
+
+			insert_buffer_memory_barrier(cmd, buf->value, 0, zero_length,
+				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT,
+				VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_TRANSFER_WRITE_BIT);
+		}
+
+		return buf;
 	}
 
 	void clear_scratch_resources()

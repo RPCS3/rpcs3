@@ -63,6 +63,7 @@ private:
 	const VKFragmentProgram *m_fragment_prog = nullptr;
 	const VKVertexProgram *m_vertex_prog = nullptr;
 	vk::glsl::program *m_program = nullptr;
+	vk::glsl::program *m_prev_program = nullptr;
 	vk::pipeline_props m_pipeline_properties;
 
 	vk::texture_cache m_texture_cache;
@@ -73,7 +74,7 @@ private:
 
 	std::unique_ptr<vk::text_writer> m_text_writer;
 	std::unique_ptr<vk::upscaler> m_upscaler;
-	bool m_use_fsr_upscaling{false};
+	output_scaling_mode m_output_scaling{output_scaling_mode::bilinear};
 
 	std::unique_ptr<vk::buffer> m_cond_render_buffer;
 	u64 m_cond_render_sync_tag = 0;
@@ -115,7 +116,6 @@ private:
 	vk::command_pool m_command_buffer_pool;
 	vk::command_buffer_chain<VK_MAX_ASYNC_CB_COUNT> m_primary_cb_list;
 	vk::command_buffer_chunk* m_current_command_buffer = nullptr;
-	VkSemaphore m_dangling_semaphore_signal = VK_NULL_HANDLE;
 
 	volatile vk::host_data_t* m_host_data_ptr = nullptr;
 	std::unique_ptr<vk::buffer> m_host_object_data;
@@ -197,8 +197,10 @@ private:
 
 public:
 	u64 get_cycles() final;
-	VKGSRender();
 	~VKGSRender() override;
+
+	VKGSRender(utils::serial* ar) noexcept;
+	VKGSRender() noexcept : VKGSRender(nullptr) {}
 
 private:
 	void prepare_rtts(rsx::framebuffer_creation_context context);
@@ -246,7 +248,7 @@ public:
 	void set_scissor(bool clip_viewport);
 	void bind_viewport();
 
-	void sync_hint(rsx::FIFO_hint hint, rsx::reports::sync_hint_payload_t payload) override;
+	void sync_hint(rsx::FIFO::interrupt_hint hint, rsx::reports::sync_hint_payload_t payload) override;
 	bool release_GCM_label(u32 address, u32 data) override;
 
 	void begin_occlusion_query(rsx::reports::occlusion_query_info* query) override;
@@ -280,7 +282,7 @@ protected:
 
 	void renderctl(u32 request_code, void* args) override;
 
-	void do_local_task(rsx::FIFO_state state) override;
+	void do_local_task(rsx::FIFO::state state) override;
 	bool scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate) override;
 	void notify_tile_unbound(u32 tile) override;
 

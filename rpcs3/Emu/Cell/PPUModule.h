@@ -80,9 +80,9 @@ public:
 	std::unordered_map<u32, ppu_static_function, value_hash<u32>> functions{};
 	std::unordered_map<u32, ppu_static_variable, value_hash<u32>> variables{};
 
-public:
 	ppu_static_module(const char* name);
 
+public:
 	ppu_static_module(const char* name, void(*init)())
 		: ppu_static_module(name)
 	{
@@ -163,10 +163,7 @@ public:
 	}
 
 	// We need this to deal with the enumeration over all ppu_static_modules that happens in ppu_initialize_modules
-	static const std::unordered_map<std::string, ppu_static_module*>& get()
-	{
-		return s_module_map;
-	}
+	static std::unordered_map<std::string, ppu_static_module*>& get();
 
 	static const ppu_static_module cellAdec;
 	static const ppu_static_module cellAtrac;
@@ -278,9 +275,7 @@ public:
 	static const ppu_static_module sys_libc;
 	static const ppu_static_module sys_lv2dbg;
 	static const ppu_static_module static_hle;
-
-private:
-	inline static std::unordered_map<std::string, ppu_static_module*> s_module_map;
+	static const ppu_static_module hle_patches;
 };
 
 template <auto* Func>
@@ -294,7 +289,7 @@ inline RT ppu_execute(ppu_thread& ppu, Args... args)
 	return func(ppu, args...);
 }
 
-#define BIND_FUNC_WITH_BLR(func) BIND_FUNC(func, ppu.cia = static_cast<u32>(ppu.lr) & ~3)
+#define BIND_FUNC_WITH_BLR(func) BIND_FUNC(func, if (cpu_flag::again - ppu.state) ppu.cia = static_cast<u32>(ppu.lr) & ~3)
 
 #define REG_FNID(_module, nid, func) ppu_module_manager::register_static_function<&func>(#_module, ppu_select_name(#func, nid), BIND_FUNC_WITH_BLR(func), ppu_generate_id(nid))
 

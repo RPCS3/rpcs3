@@ -151,6 +151,19 @@
     <property name="title">
      <string>File</string>
     </property>
+    <widget class="QMenu" name="bootElfMenu">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="title">
+      <string>Boot (S)Elf</string>
+     </property>
+     <property name="toolTipsVisible">
+      <bool>true</bool>
+     </property>
+     <addaction name="bootElfAct"/>
+     <addaction name="bootTestAct"/>
+    </widget>
     <widget class="QMenu" name="bootRecentMenu">
      <property name="enabled">
       <bool>true</bool>
@@ -186,9 +199,10 @@
      <addaction name="createFirmwareCacheAct"/>
      <addaction name="removeFirmwareCacheAct"/>
     </widget>
-    <addaction name="bootElfAct"/>
     <addaction name="bootGameAct"/>
     <addaction name="bootVSHAct"/>
+    <addaction name="bootElfMenu"/>
+    <addaction name="bootSavestateAct"/>
     <addaction name="bootRecentMenu"/>
     <addaction name="separator"/>
     <addaction name="addGamesAct"/>
@@ -209,8 +223,8 @@
     <addaction name="sysStopAct"/>
     <addaction name="sysRebootAct"/>
     <addaction name="separator"/>
-    <addaction name="sysSendOpenMenuAct"/>
-    <addaction name="sysSendExitAct"/>
+    <addaction name="insertDiscAct"/>
+    <addaction name="ejectDiscAct"/>
    </widget>
    <widget class="QMenu" name="menuConfiguration">
     <property name="title">
@@ -229,6 +243,10 @@
     <addaction name="confGuiAct"/>
     <addaction name="separator"/>
     <addaction name="confRPCNAct"/>
+    <addaction name="confIPCAct"/>
+    <addaction name="separator"/>
+    <addaction name="confShortcutsAct"/>
+    <addaction name="separator"/>
     <addaction name="confAutopauseManagerAct"/>
    </widget>
    <widget class="QMenu" name="menuManage">
@@ -242,6 +260,7 @@
     <addaction name="actionManage_RAP_Licenses"/>
     <addaction name="actionManage_Trophy_Data"/>
     <addaction name="actionManage_Skylanders_Portal"/>
+    <addaction name="actionManage_Infinity_Base"/>
     <addaction name="actionManage_Cheats"/>
     <addaction name="actionManage_Game_Patches"/>
     <addaction name="actionManage_Screenshots"/>
@@ -251,11 +270,12 @@
      <string>Utilities</string>
     </property>
     <addaction name="actionLog_Viewer"/>
+    <addaction name="toolsCheckConfigAct"/>
     <addaction name="toolsCgDisasmAct"/>
     <addaction name="toolskernel_explorerAct"/>
     <addaction name="toolsmemory_viewerAct"/>
     <addaction name="toolsRsxDebuggerAct"/>
-    <addaction name="toolsStringSearchAct"/>
+    <addaction name="toolsSystemCommandsAct"/>
     <addaction name="patchCreatorAct"/>
     <addaction name="separator"/>
     <addaction name="toolsDecryptSprxLibsAct"/>
@@ -267,6 +287,7 @@
     <addaction name="actionopen_rsx_capture"/>
     <addaction name="separator"/>
     <addaction name="actionCreate_RSX_Capture"/>
+    <addaction name="actionCreate_Savestate"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -400,9 +421,19 @@
     <string>Boot SELF/ELF</string>
    </property>
   </action>
+  <action name="bootTestAct">
+   <property name="text">
+    <string>Boot Test</string>
+   </property>
+  </action>
   <action name="bootGameAct">
    <property name="text">
     <string>Boot Game</string>
+   </property>
+  </action>
+  <action name="bootSavestateAct">
+   <property name="text">
+    <string>Boot Savestate</string>
    </property>
   </action>
   <action name="bootInstallPkgAct">
@@ -457,14 +488,6 @@
    </property>
    <property name="text">
     <string>Send Open System Menu CMD</string>
-   </property>
-  </action>
-  <action name="sysSendExitAct">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="text">
-    <string>Send Exit CMD</string>
    </property>
   </action>
   <action name="confCPUAct">
@@ -621,14 +644,6 @@
    </property>
    <property name="text">
     <string>RSX Debugger</string>
-   </property>
-  </action>
-  <action name="toolsStringSearchAct">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="text">
-    <string>Memory Searcher</string>
    </property>
   </action>
   <action name="toolsDecryptSprxLibsAct">
@@ -1090,6 +1105,11 @@
     <string>Skylanders Portal</string>
    </property>
   </action>
+  <action name="actionManage_Infinity_Base">
+   <property name="text">
+    <string>Infinity Base</string>
+   </property>
+  </action>
   <action name="actionManage_Cheats">
    <property name="text">
     <string>Cheats</string>
@@ -1126,6 +1146,14 @@
     <string>Create RSX Capture</string>
    </property>
   </action>
+  <action name="actionCreate_Savestate">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Create Savestate</string>
+   </property>
+  </action>
   <action name="actionManage_Game_Patches">
    <property name="text">
     <string>Game Patches</string>
@@ -1137,6 +1165,14 @@
    </property>
    <property name="toolTip">
     <string>Configure RPCN</string>
+   </property>
+  </action>
+  <action name="confIPCAct">
+   <property name="text">
+    <string>IPC</string>
+   </property>
+   <property name="toolTip">
+    <string>Configure IPC</string>
    </property>
   </action>
   <action name="actionLog_Viewer">
@@ -1181,10 +1217,43 @@
     <string>Cameras</string>
    </property>
   </action>
+  <action name="ejectDiscAct">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Eject Disc</string>
+   </property>
+  </action>
+  <action name="insertDiscAct">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Insert Disc</string>
+   </property>
+  </action>
+  <action name="toolsCheckConfigAct">
+   <property name="text">
+    <string>Check Config</string>
+   </property>
+  </action>
+  <action name="confShortcutsAct">
+   <property name="text">
+    <string>Shortcuts</string>
+   </property>
+  </action>
+  <action name="toolsSystemCommandsAct">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>System Commands</string>
+   </property>
+  </action>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <resources>
-  <include location="../resources.qrc"/>
   <include location="../resources.qrc"/>
  </resources>
  <connections/>

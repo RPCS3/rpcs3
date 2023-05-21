@@ -30,7 +30,8 @@ namespace utils
 
 		if (lo())
 		{
-			version += "." + std::to_string(lo());
+			version += '.';
+			version += std::to_string(lo());
 		}
 
 		if (type() != version_type::release)
@@ -40,7 +41,8 @@ namespace utils
 				version += "-" + postfix();
 			}
 
-			version += " " + utils::to_string(type());
+			version += ' ';
+			version += utils::to_string(type());
 
 			if (type_index() > 1)
 			{

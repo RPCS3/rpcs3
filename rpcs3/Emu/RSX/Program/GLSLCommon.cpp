@@ -1,10 +1,25 @@
 #include "stdafx.h"
-#include "Utilities/StrFmt.h"
 
 #include "GLSLCommon.h"
+#include "RSXFragmentProgram.h"
+
+#include "Emu/system_config.h"
+#include "Emu/RSX/gcm_enums.h"
+#include "Utilities/StrFmt.h"
 
 namespace program_common
 {
+	template <typename T>
+	void define_glsl_constants(std::ostream& OS, std::initializer_list<std::pair<const char*, T>> enums)
+	{
+		for (const auto& e : enums)
+		{
+			OS << "#define " << e.first << " " << static_cast<int>(e.second) << "\n";
+		}
+
+		OS << "\n";
+	}
+
 	void insert_compare_op(std::ostream& OS)
 	{
 		OS <<
@@ -45,14 +60,19 @@ namespace program_common
 		"}\n\n";
 	}
 
-	void insert_fog_declaration(std::ostream& OS, const std::string& wide_vector_type, const std::string& input_coord, bool declare)
+	void insert_fog_declaration(std::ostream& OS, std::string_view wide_vector_type, std::string_view input_coord)
 	{
-		std::string template_body;
+		define_glsl_constants<rsx::fog_mode>(OS,
+		{
+			{ "FOG_LINEAR", rsx::fog_mode::linear },
+			{ "FOG_EXP", rsx::fog_mode::exponential },
+			{ "FOG_EXP2", rsx::fog_mode::exponential2 },
+			{ "FOG_LINEAR_ABS", rsx::fog_mode::linear_abs },
+			{ "FOG_EXP_ABS", rsx::fog_mode::exponential_abs },
+			{ "FOG_EXP2_ABS", rsx::fog_mode::exponential2_abs }
+		});
 
-		if (!declare)
-			template_body += "$T fetch_fog_value(const in uint mode)\n";
-		else
-			template_body += "$T fetch_fog_value(const in uint mode, const in $T $I)\n";
+		std::string template_body = "$T fetch_fog_value(const in uint mode)\n";
 
 		template_body +=
 		"{\n"
@@ -61,27 +81,27 @@ namespace program_common
 		"	{\n"
 		"	default:\n"
 		"		return result;\n"
-		"	case 0:\n"
+		"	case FOG_LINEAR:\n"
 		"		//linear\n"
 		"		result.y = fog_param1 * $I.x + (fog_param0 - 1.);\n"
 		"		break;\n"
-		"	case 1:\n"
+		"	case FOG_EXP:\n"
 		"		//exponential\n"
 		"		result.y = exp(11.084 * (fog_param1 * $I.x + fog_param0 - 1.5));\n"
 		"		break;\n"
-		"	case 2:\n"
+		"	case FOG_EXP2:\n"
 		"		//exponential2\n"
 		"		result.y = exp(-pow(4.709 * (fog_param1 * $I.x + fog_param0 - 1.5), 2.));\n"
 		"		break;\n"
-		"	case 3:\n"
+		"	case FOG_EXP_ABS:\n"
 		"		//exponential_abs\n"
 		"		result.y = exp(11.084 * (fog_param1 * abs($I.x) + fog_param0 - 1.5));\n"
 		"		break;\n"
-		"	case 4:\n"
+		"	case FOG_EXP2_ABS:\n"
 		"		//exponential2_abs\n"
 		"		result.y = exp(-pow(4.709 * (fog_param1 * abs($I.x) + fog_param0 - 1.5), 2.));\n"
 		"		break;\n"
-		" case 5:\n"
+		" case FOG_LINEAR_ABS:\n"
 		"		//linear_abs\n"
 		"		result.y = fog_param1 * abs($I.x) + (fog_param0 - 1.);\n"
 		"		break;\n"
@@ -92,8 +112,10 @@ namespace program_common
 		"}\n\n";
 
 		std::pair<std::string_view, std::string> replacements[] =
-			{std::make_pair("$T", wide_vector_type),
-			 std::make_pair("$I", input_coord)};
+		{
+			std::make_pair("$T", std::string(wide_vector_type)),
+			std::make_pair("$I", std::string(input_coord))
+		};
 
 		OS << fmt::replace_all(template_body, replacements);
 	}
@@ -181,15 +203,17 @@ namespace glsl
 	{
 		std::string vertex_id_name = (rules != glsl_rules_spirv) ? "gl_VertexID" : "gl_VertexIndex";
 
-		//Actually decode a vertex attribute from a raw byte stream
-		OS <<
-		"#define VTX_FMT_SNORM16 0\n"
-		"#define VTX_FMT_FLOAT32 1\n"
-		"#define VTX_FMT_FLOAT16 2\n"
-		"#define VTX_FMT_UNORM8  3\n"
-		"#define VTX_FMT_SINT16  4\n"
-		"#define VTX_FMT_COMP32  5\n"
-		"#define VTX_FMT_UINT8   6\n\n";
+		// Actually decode a vertex attribute from a raw byte stream
+		program_common::define_glsl_constants<int>(OS,
+		{
+			{ "VTX_FMT_SNORM16", RSX_VERTEX_BASE_TYPE_SNORM16 },
+			{ "VTX_FMT_FLOAT32", RSX_VERTEX_BASE_TYPE_FLOAT },
+			{ "VTX_FMT_FLOAT16", RSX_VERTEX_BASE_TYPE_HALF_FLOAT },
+			{ "VTX_FMT_UNORM8", RSX_VERTEX_BASE_TYPE_UNORM8 },
+			{ "VTX_FMT_SINT16", RSX_VERTEX_BASE_TYPE_SINT16 },
+			{ "VTX_FMT_COMP32", RSX_VERTEX_BASE_TYPE_CMP32 },
+			{ "VTX_FMT_UINT8", RSX_VERTEX_BASE_TYPE_UINT8 }
+		});
 
 		// For intel GPUs which cannot access vectors in indexed mode (driver bug? or glsl version too low?)
 		// Note: Tested on Mesa iris with HD 530 and compilant path works fine, may be a bug on Windows proprietary drivers
@@ -266,8 +290,8 @@ namespace glsl
 
 		"vec4 fetch_attribute(const in attribute_desc desc, const in int vertex_id, usamplerBuffer input_stream)\n"
 		"{\n"
-		"	const int elem_size_table[] = { 2, 4, 2, 1, 2, 4, 1 };\n"
-		"	const float scaling_table[] = { 32768., 1., 1., 255., 1., 32767., 1. };\n"
+		"	const int elem_size_table[] = { 0, 2, 4, 2, 1, 2, 4, 1 };\n"
+		"	const float scaling_table[] = { 1., 32767.5, 1., 1., 255., 1., 32767., 1. };\n"
 		"	const int elem_size = elem_size_table[desc.type];\n"
 		"	const vec4 scale = scaling_table[desc.type].xxxx;\n\n"
 
@@ -298,6 +322,7 @@ namespace glsl
 		"	if (desc.type == VTX_FMT_SNORM16 || desc.type == VTX_FMT_SINT16)\n"
 		"	{\n"
 		"		ret = sext(ivec4(result));\n"
+		"		ret = fma(vec4(0.5), vec4(desc.type == VTX_FMT_SNORM16), ret);\n"
 		"	}\n"
 		"	else if (desc.type == VTX_FMT_FLOAT32)\n"
 		"	{\n"
@@ -403,7 +428,7 @@ namespace glsl
 	void insert_rop_init(std::ostream& OS)
 	{
 		OS <<
-		"	if (_test_bit(rop_control, 9))\n"
+		"	if (_test_bit(rop_control, POLYGON_STIPPLE_ENABLE_BIT))\n"
 		"	{\n"
 		"		// Convert x,y to linear address\n"
 		"		const uvec2 stipple_coord = uvec2(gl_FragCoord.xy) % uvec2(32, 32);\n"
@@ -426,81 +451,69 @@ namespace glsl
 		const std::string reg2 = props.fp32_outputs ? "r3" : "h6";
 		const std::string reg3 = props.fp32_outputs ? "r4" : "h8";
 
-		//TODO: Implement all ROP options like CSAA and ALPHA_TO_ONE here
 		if (props.disable_early_discard)
 		{
 			OS <<
 			"	if (_fragment_discard)\n"
 			"	{\n"
 			"		discard;\n"
-			"	}\n"
-			"	else if (_get_bits(rop_control, 0, 8) != 0)\n";
-		}
-		else
-		{
-			OS << "	if (_get_bits(rop_control, 0, 8) != 0)\n";
+			"	}\n\n";
 		}
 
-		OS <<
-		"	{\n"
-		"		const bool alpha_test = _test_bit(rop_control, 0);\n"
-		"		const uint alpha_func = _get_bits(rop_control, 16, 3);\n";
-
-		if (!props.fp32_outputs)
-		{
-			OS << "		const bool srgb_convert = _test_bit(rop_control, 1);\n\n";
-		}
-
-		if (props.emulate_coverage_tests)
-		{
-			OS << "		const bool a2c_enabled = _test_bit(rop_control, 4);\n";
-		}
-
-		OS <<
-		"		if (alpha_test && !comparison_passes(" << reg0 << ".a, alpha_ref, alpha_func))\n"
-		"		{\n"
-		"			discard;\n"
-		"		}\n";
-
-		if (props.emulate_coverage_tests)
-		{
-			OS <<
-			"		else if (a2c_enabled && !coverage_test_passes(" << reg0 << ", rop_control >> 5))\n"
-			"		{\n"
-			"			discard;\n"
-			"		}\n";
-		}
-
+		// Pre-output stages
 		if (!props.fp32_outputs)
 		{
 			// Tested using NPUB90375; some shaders (32-bit output only?) do not obey srgb flags
-			if (props.supports_native_fp16)
-			{
-				OS <<
-				"		else if (srgb_convert)\n"
-				"		{\n"
-				"			" << reg0 << " = round_to_8bit(f16vec4(linear_to_srgb(" << reg0 << ").rgb, " << reg0 << ".a));\n"
-				"			" << reg1 << " = round_to_8bit(f16vec4(linear_to_srgb(" << reg1 << ").rgb, " << reg1 << ".a));\n"
-				"			" << reg2 << " = round_to_8bit(f16vec4(linear_to_srgb(" << reg2 << ").rgb, " << reg2 << ".a));\n"
-				"			" << reg3 << " = round_to_8bit(f16vec4(linear_to_srgb(" << reg3 << ").rgb, " << reg3 << ".a));\n"
-				"		}\n";
-			}
-			else
-			{
-				OS <<
-				"		else if (srgb_convert)\n"
-				"		{\n"
-				"			" << reg0 << " = round_to_8bit(vec4(linear_to_srgb(" << reg0 << ").rgb, " << reg0 << ".a));\n"
-				"			" << reg1 << " = round_to_8bit(vec4(linear_to_srgb(" << reg1 << ").rgb, " << reg1 << ".a));\n"
-				"			" << reg2 << " = round_to_8bit(vec4(linear_to_srgb(" << reg2 << ").rgb, " << reg2 << ".a));\n"
-				"			" << reg3 << " = round_to_8bit(vec4(linear_to_srgb(" << reg3 << ").rgb, " << reg3 << ".a));\n"
-				"		}\n";
-			}
+			const auto vtype = (props.fp32_outputs || !props.supports_native_fp16) ? "vec4" : "f16vec4";
+			OS <<
+			"	if (_test_bit(rop_control, SRGB_FRAMEBUFFER_BIT))\n"
+			"	{\n"
+			"		" << reg0 << " = " << vtype << "(linear_to_srgb(" << reg0 << ").rgb, " << reg0 << ".a);\n"
+			"		" << reg1 << " = " << vtype << "(linear_to_srgb(" << reg1 << ").rgb, " << reg1 << ".a);\n"
+			"		" << reg2 << " = " << vtype << "(linear_to_srgb(" << reg2 << ").rgb, " << reg2 << ".a);\n"
+			"		" << reg3 << " = " << vtype << "(linear_to_srgb(" << reg3 << ").rgb, " << reg3 << ".a);\n"
+			"	}\n\n";
 		}
 
-		OS <<
-		"	}\n\n"
+		// Output conversion
+		if (props.ROP_output_rounding)
+		{
+			OS <<
+			"	if (_test_bit(rop_control, INT_FRAMEBUFFER_BIT))\n"
+			"	{\n"
+			"		" << reg0 << " = round_to_8bit(" << reg0 << ");\n"
+			"		" << reg1 << " = round_to_8bit(" << reg1 << ");\n"
+			"		" << reg2 << " = round_to_8bit(" << reg2 << ");\n"
+			"		" << reg3 << " = round_to_8bit(" << reg3 << ");\n"
+			"	}\n\n";
+		}
 
+		// Post-output stages
+		// TODO: Implement all ROP options like CSAA and ALPHA_TO_ONE here
+		OS <<
+		// Alpha Testing
+		"	if (_test_bit(rop_control, ALPHA_TEST_ENABLE_BIT))\n"
+		"	{\n"
+		"		const uint alpha_func = _get_bits(rop_control, ALPHA_TEST_FUNC_OFFSET, ALPHA_TEST_FUNC_LENGTH);\n"
+		"		if (!comparison_passes(" << reg0 << ".a, alpha_ref, alpha_func)) discard;\n"
+		"	}\n\n";
+
+		// ALPHA_TO_COVERAGE
+		if (props.emulate_coverage_tests)
+		{
+			OS <<
+			"	if (_test_bit(rop_control, ALPHA_TO_COVERAGE_ENABLE_BIT))\n"
+			"	{\n"
+			"		if (!_test_bit(rop_control, MSAA_WRITE_ENABLE_BIT) ||\n"
+			"			!coverage_test_passes(" << reg0 << "))\n"
+			"		{\n"
+			"			discard;\n"
+			"		}\n"
+			"	}\n\n";
+		}
+
+		// Commit
+		OS <<
 		"	ocol0 = " << reg0 << ";\n"
 		"	ocol1 = " << reg1 << ";\n"
 		"	ocol2 = " << reg2 << ";\n"
@@ -527,8 +540,28 @@ namespace glsl
 
 		if (props.domain == glsl::program_domain::glsl_fragment_program)
 		{
-			OS << "// Workaround for broken early discard in some drivers\n";
+			OS << "// ROP control\n";
+			OS << "#define ALPHA_TEST_ENABLE_BIT        " << rsx::ROP_control_bits::ALPHA_TEST_ENABLE_BIT << "\n";
+			OS << "#define SRGB_FRAMEBUFFER_BIT         " << rsx::ROP_control_bits::SRGB_FRAMEBUFFER_BIT << "\n";
+			OS << "#define ALPHA_TO_COVERAGE_ENABLE_BIT " << rsx::ROP_control_bits::ALPHA_TO_COVERAGE_ENABLE_BIT << "\n";
+			OS << "#define MSAA_WRITE_ENABLE_BIT        " << rsx::ROP_control_bits::MSAA_WRITE_ENABLE_BIT << "\n";
+			OS << "#define INT_FRAMEBUFFER_BIT          " << rsx::ROP_control_bits::INT_FRAMEBUFFER_BIT << "\n";
+			OS << "#define POLYGON_STIPPLE_ENABLE_BIT   " << rsx::ROP_control_bits::POLYGON_STIPPLE_ENABLE_BIT << "\n";
+			OS << "#define ALPHA_TEST_FUNC_OFFSET       " << rsx::ROP_control_bits::ALPHA_FUNC_OFFSET << "\n";
+			OS << "#define ALPHA_TEST_FUNC_LENGTH       " << rsx::ROP_control_bits::ALPHA_FUNC_NUM_BITS << "\n";
+			OS << "#define MSAA_SAMPLE_CTRL_OFFSET      " << rsx::ROP_control_bits::MSAA_SAMPLE_CTRL_OFFSET << "\n";
+			OS << "#define MSAA_SAMPLE_CTRL_LENGTH      " << rsx::ROP_control_bits::MSAA_SAMPLE_CTRL_NUM_BITS << "\n";
+			OS << "#define ROP_CMD_MASK                 " << rsx::ROP_control_bits::ROP_CMD_MASK << "\n\n";
 
+			// 8-bit rounding/quantization
+			{
+				const auto _16bit_outputs = (!props.fp32_outputs && props.supports_native_fp16);
+				const auto _255 = _16bit_outputs ? "f16vec4(255.)" : "vec4(255.)";
+				const auto _1_over_2 = _16bit_outputs ? "f16vec4(0.5)" : "vec4(0.5)";
+				OS << "#define round_to_8bit(v4) (floor(fma(v4, " << _255 << ", " << _1_over_2 << ")) / " << _255 << ")\n\n";
+			}
+
+			OS << "// Workaround for broken early discard in some drivers\n";
 			if (props.disable_early_discard)
 			{
 				OS << "bool _fragment_discard = false;\n";
@@ -539,44 +572,28 @@ namespace glsl
 				OS << "#define _kill() discard\n\n";
 			}
 
-			if (!props.fp32_outputs)
-			{
-				OS << "// Workaround broken output rounding behavior\n";
-				if (props.srgb_output_rounding)
-				{
-					const auto _255 = (props.supports_native_fp16) ? "f16vec4(255.)" : "vec4(255.)";
-					const auto _1_over_2 = (props.supports_native_fp16) ? "f16vec4(0.5)" : "vec4(0.5)";
-					OS << "#define round_to_8bit(v4) (floor(fma(v4, " << _255 << ", " << _1_over_2 << ")) / " << _255 << ")\n\n";
-				}
-				else
-				{
-					OS << "#define round_to_8bit(v4) (v4)\n\n";
-				}
-			}
-
 			if (props.require_texture_ops)
 			{
-				OS <<
 				// Declare special texture control flags
-				"#define GAMMA_R_MASK  (1 << " << rsx::texture_control_bits::GAMMA_R << ")\n"
-				"#define GAMMA_G_MASK  (1 << " << rsx::texture_control_bits::GAMMA_G << ")\n"
-				"#define GAMMA_B_MASK  (1 << " << rsx::texture_control_bits::GAMMA_B << ")\n"
-				"#define GAMMA_A_MASK  (1 << " << rsx::texture_control_bits::GAMMA_A << ")\n"
-				"#define EXPAND_R_MASK (1 << " << rsx::texture_control_bits::EXPAND_R << ")\n"
-				"#define EXPAND_G_MASK (1 << " << rsx::texture_control_bits::EXPAND_G << ")\n"
-				"#define EXPAND_B_MASK (1 << " << rsx::texture_control_bits::EXPAND_B << ")\n"
-				"#define EXPAND_A_MASK (1 << " << rsx::texture_control_bits::EXPAND_A << ")\n\n"
+				OS << "#define GAMMA_R_MASK  (1 << " << rsx::texture_control_bits::GAMMA_R << ")\n";
+				OS << "#define GAMMA_G_MASK  (1 << " << rsx::texture_control_bits::GAMMA_G << ")\n";
+				OS << "#define GAMMA_B_MASK  (1 << " << rsx::texture_control_bits::GAMMA_B << ")\n";
+				OS << "#define GAMMA_A_MASK  (1 << " << rsx::texture_control_bits::GAMMA_A << ")\n";
+				OS << "#define EXPAND_R_MASK (1 << " << rsx::texture_control_bits::EXPAND_R << ")\n";
+				OS << "#define EXPAND_G_MASK (1 << " << rsx::texture_control_bits::EXPAND_G << ")\n";
+				OS << "#define EXPAND_B_MASK (1 << " << rsx::texture_control_bits::EXPAND_B << ")\n";
+				OS << "#define EXPAND_A_MASK (1 << " << rsx::texture_control_bits::EXPAND_A << ")\n\n";
 
-				"#define ALPHAKILL    " << rsx::texture_control_bits::ALPHAKILL << "\n"
-				"#define RENORMALIZE  " << rsx::texture_control_bits::RENORMALIZE << "\n"
-				"#define DEPTH_FLOAT   " << rsx::texture_control_bits::DEPTH_FLOAT << "\n"
-				"#define DEPTH_COMPARE " << rsx::texture_control_bits::DEPTH_COMPARE_OP << "\n"
-				"#define FILTERED_MAG_BIT  " << rsx::texture_control_bits::FILTERED_MAG << "\n"
-				"#define FILTERED_MIN_BIT  " << rsx::texture_control_bits::FILTERED_MIN << "\n"
-				"#define INT_COORDS_BIT " << rsx::texture_control_bits::UNNORMALIZED_COORDS << "\n"
-				"#define GAMMA_CTRL_MASK  (GAMMA_R_MASK|GAMMA_G_MASK|GAMMA_B_MASK|GAMMA_A_MASK)\n"
-				"#define SIGN_EXPAND_MASK (EXPAND_R_MASK|EXPAND_G_MASK|EXPAND_B_MASK|EXPAND_A_MASK)\n"
-				"#define FILTERED_MASK    (FILTERED_MAG_BIT|FILTERED_MIN_BIT)\n\n";
+				OS << "#define ALPHAKILL     " << rsx::texture_control_bits::ALPHAKILL << "\n";
+				OS << "#define RENORMALIZE   " << rsx::texture_control_bits::RENORMALIZE << "\n";
+				OS << "#define DEPTH_FLOAT   " << rsx::texture_control_bits::DEPTH_FLOAT << "\n";
+				OS << "#define DEPTH_COMPARE " << rsx::texture_control_bits::DEPTH_COMPARE_OP << "\n";
+				OS << "#define FILTERED_MAG_BIT  " << rsx::texture_control_bits::FILTERED_MAG << "\n";
+				OS << "#define FILTERED_MIN_BIT  " << rsx::texture_control_bits::FILTERED_MIN << "\n";
+				OS << "#define INT_COORDS_BIT    " << rsx::texture_control_bits::UNNORMALIZED_COORDS << "\n";
+				OS << "#define GAMMA_CTRL_MASK  (GAMMA_R_MASK|GAMMA_G_MASK|GAMMA_B_MASK|GAMMA_A_MASK)\n";
+				OS << "#define SIGN_EXPAND_MASK (EXPAND_R_MASK|EXPAND_G_MASK|EXPAND_B_MASK|EXPAND_A_MASK)\n";
+				OS << "#define FILTERED_MASK    (FILTERED_MAG_BIT|FILTERED_MIN_BIT)\n\n";
 			}
 		}
 
@@ -597,56 +614,65 @@ namespace glsl
 			"}\n\n";
 		}
 
-		if (props.domain == glsl::program_domain::glsl_vertex_program && props.emulate_zclip_transform)
+		if (props.domain == glsl::program_domain::glsl_vertex_program)
 		{
-			if (props.emulate_depth_clip_only)
+			if (props.require_explicit_invariance)
 			{
-				// Technically the depth value here is the 'final' depth that should be stored in the Z buffer.
-				// Forward mapping eqn is d' = d * (f - n) + n, where d' is the stored Z value (this) and d is the normalized API value.
-				OS <<
-				"vec4 apply_zclip_xform(const in vec4 pos, const in float near_plane, const in float far_plane)\n"
-				"{\n"
-				"	if (pos.w != 0.0)\n"
-				"	{\n"
-				"		const float real_n = min(far_plane, near_plane);\n"
-				"		const float real_f = max(far_plane, near_plane);\n"
-				"		const double depth_range = double(real_f - real_n);\n"
-				"		const double inv_range = (depth_range > 0.000001) ? (1.0 / (depth_range * pos.w)) : 0.0;\n"
-				"		const double actual_d = (double(pos.z) - double(real_n * pos.w)) * inv_range;\n"
-				"		const double nearest_d = floor(actual_d + 0.5);\n"
-				"		const double epsilon = (inv_range * pos.w) / 16777215.;\n"     // Epsilon value is the minimum discernable change in Z that should affect the stored Z
-				"		const double d = _select(actual_d, nearest_d, abs(actual_d - nearest_d) < epsilon);\n"
-				"		return vec4(pos.xy, float(d * pos.w), pos.w);\n"
-				"	}\n"
-				"	else\n"
-				"	{\n"
-				"		return pos;\n" // Only values where Z=0 can ever pass this clip
-				"	}\n"
-				"}\n\n";
+				// PS3 has shader invariance, but we don't really care about most attributes outside ATTR0
+				OS << "invariant gl_Position;\n\n";
 			}
-			else
+
+			if (props.emulate_zclip_transform)
 			{
-				OS <<
-				"vec4 apply_zclip_xform(const in vec4 pos, const in float near_plane, const in float far_plane)\n"
-				"{\n"
-				"	float d = float(pos.z / pos.w);\n"
-				"	if (d < 0.f && d >= near_plane)\n"
-				"	{\n"
-				"		// Clamp\n"
-				"		d = 0.f;\n"
-				"	}\n"
-				"	else if (d > 1.f && d <= far_plane)\n"
-				"	{\n"
-				"		// Compress Z and store towards highest end of the range\n"
-				"		d = min(1., 0.99 + (0.01 * (pos.z - near_plane) / (far_plane - near_plane)));\n"
-				"	}\n"
-				"	else\n" // This catch-call also handles w=0 since d=inf
-				"	{\n"
-				"		return pos;\n"
-				"	}\n"
-				"\n"
-				"	return vec4(pos.x, pos.y, d * pos.w, pos.w);\n"
-				"}\n\n";
+				if (props.emulate_depth_clip_only)
+				{
+					// Technically the depth value here is the 'final' depth that should be stored in the Z buffer.
+					// Forward mapping eqn is d' = d * (f - n) + n, where d' is the stored Z value (this) and d is the normalized API value.
+					OS <<
+					"vec4 apply_zclip_xform(const in vec4 pos, const in float near_plane, const in float far_plane)\n"
+					"{\n"
+					"	if (pos.w != 0.0)\n"
+					"	{\n"
+					"		const float real_n = min(far_plane, near_plane);\n"
+					"		const float real_f = max(far_plane, near_plane);\n"
+					"		const double depth_range = double(real_f - real_n);\n"
+					"		const double inv_range = (depth_range > 0.000001) ? (1.0 / (depth_range * pos.w)) : 0.0;\n"
+					"		const double actual_d = (double(pos.z) - double(real_n * pos.w)) * inv_range;\n"
+					"		const double nearest_d = floor(actual_d + 0.5);\n"
+					"		const double epsilon = (inv_range * pos.w) / 16777215.;\n"     // Epsilon value is the minimum discernable change in Z that should affect the stored Z
+					"		const double d = _select(actual_d, nearest_d, abs(actual_d - nearest_d) < epsilon);\n"
+					"		return vec4(pos.xy, float(d * pos.w), pos.w);\n"
+					"	}\n"
+					"	else\n"
+					"	{\n"
+					"		return pos;\n" // Only values where Z=0 can ever pass this clip
+					"	}\n"
+					"}\n\n";
+				}
+				else
+				{
+					OS <<
+					"vec4 apply_zclip_xform(const in vec4 pos, const in float near_plane, const in float far_plane)\n"
+					"{\n"
+					"	float d = float(pos.z / pos.w);\n"
+					"	if (d < 0.f && d >= near_plane)\n"
+					"	{\n"
+					"		// Clamp\n"
+					"		d = 0.f;\n"
+					"	}\n"
+					"	else if (d > 1.f && d <= far_plane)\n"
+					"	{\n"
+					"		// Compress Z and store towards highest end of the range\n"
+					"		d = min(1., 0.99 + (0.01 * (pos.z - near_plane) / (far_plane - near_plane)));\n"
+					"	}\n"
+					"	else\n" // This catch-call also handles w=0 since d=inf
+					"	{\n"
+					"		return pos;\n"
+					"	}\n"
+					"\n"
+					"	return vec4(pos.x, pos.y, d * pos.w, pos.w);\n"
+					"}\n\n";
+				}
 			}
 
 			return;
@@ -658,10 +684,8 @@ namespace glsl
 		{
 			// Purely stochastic
 			OS <<
-			"bool coverage_test_passes(const in vec4 _sample, const in uint control)\n"
+			"bool coverage_test_passes(const in vec4 _sample)\n"
 			"{\n"
-			"	if (!_test_bit(control, 0)) return false;\n"
-			"\n"
 			"	float random  = _rand(gl_FragCoord);\n"
 			"	return (_sample.a > random);\n"
 			"}\n\n";
@@ -783,7 +807,7 @@ namespace glsl
 			"\n"
 			"	uvec4 mask;\n"
 			"	vec4 convert;\n"
-			"	uint op_mask = control_bits & SIGN_EXPAND_MASK;\n"
+			"	uint op_mask = control_bits & uint(SIGN_EXPAND_MASK);\n"
 			"\n"
 			"	if (op_mask != 0)\n"
 			"	{\n"
@@ -793,7 +817,7 @@ namespace glsl
 			"		rgba = _select(rgba, convert, notEqual(mask, uvec4(0)));\n"
 			"	}\n"
 			"\n"
-			"	op_mask = control_bits & GAMMA_CTRL_MASK;\n"
+			"	op_mask = control_bits & uint(GAMMA_CTRL_MASK);\n"
 			"	if (op_mask != 0u)\n"
 			"	{\n"
 			"		// Gamma correction\n"
@@ -1009,11 +1033,6 @@ namespace glsl
 		}
 	}
 
-	void insert_fog_declaration(std::ostream& OS)
-	{
-		program_common::insert_fog_declaration(OS, "vec4", "fog_c");
-	}
-
 	std::string getFunctionImpl(FUNCTION f)
 	{
 		switch (f)
@@ -1138,7 +1157,112 @@ namespace glsl
 		"	vec4 scale_bias;\n"
 		"	uint remap;\n"
 		"	uint flags;\n"
-		"};\n"
-		"\n";
+		"};\n\n";
+	}
+
+	void insert_fragment_shader_inputs_block(
+		std::stringstream& OS,
+		const std::string_view ext_flavour,
+		const RSXFragmentProgram& prog,
+		const std::vector<ParamType>& params,
+		const two_sided_lighting_config& _2sided_lighting,
+		std::function<int(std::string_view)> varying_location)
+	{
+		struct _varying_register_config
+		{
+			int location;
+			std::string name;
+			std::string type;
+		};
+
+		std::vector<_varying_register_config> varying_list;
+
+		for (const ParamType& PT : params)
+		{
+			for (const ParamItem& PI : PT.items)
+			{
+				// ssa is defined in the program body and is not a varying type
+				if (PI.name == "ssa") continue;
+
+				const auto reg_location = varying_location(PI.name);
+				std::string var_name = PI.name;
+
+				if (var_name == "fogc")
+				{
+					var_name = "fog_c";
+				}
+				else if (prog.two_sided_lighting)
+				{
+					if (var_name == "diff_color")
+					{
+						var_name = "diff_color0";
+					}
+					else if (var_name == "spec_color")
+					{
+						var_name = "spec_color0";
+					}
+				}
+
+				varying_list.push_back({ reg_location, var_name, PT.type });
+			}
+		}
+
+		if (prog.two_sided_lighting)
+		{
+			if (_2sided_lighting.two_sided_color)
+			{
+				varying_list.push_back({ varying_location("diff_color1"), "diff_color1", "vec4" });
+			}
+
+			if (_2sided_lighting.two_sided_specular)
+			{
+				varying_list.push_back({ varying_location("spec_color1"), "spec_color1", "vec4" });
+			}
+		}
+
+		if (varying_list.empty())
+		{
+			return;
+		}
+
+		// Make the output a little nicer
+		std::sort(varying_list.begin(), varying_list.end(), FN(x.location < y.location));
+
+		if (!(prog.ctrl & RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION))
+		{
+			for (const auto& reg : varying_list)
+			{
+				OS << "layout(location=" << reg.location << ") in " << reg.type << " " << reg.name << ";\n";
+			}
+
+			OS << "\n";
+			return;
+		}
+
+		for (const auto& reg : varying_list)
+		{
+			OS << "layout(location=" << reg.location << ") pervertex" << ext_flavour << " in " << reg.type << " " << reg.name << "_raw[3];\n";
+		}
+
+		// Interpolate the input attributes manually.
+		// Matches AMD behavior where gl_BaryCoordSmoothAMD only provides x and y with z being autogenerated.
+		std::string interpolate_function_block =
+			"\n"
+			"vec4 _interpolate_varying3(const in vec4[3] v)\n"
+			"{\n"
+			// In the corner case where v[0] == v[1] == v[2], this algorithm generates a perfect result vs alternatives that use weighted multiply + add.
+			// Due to the finite precision of floating point arithmetic, adding together the result of different multiplies yeields a slightly inaccurate result which breaks things.
+			"	const vec4 p10 = v[1] - v[0];\n"
+			"	const vec4 p20 = v[2] - v[0];\n"
+			"	return v[0] + p10 * $gl_BaryCoord.y + p20 * $gl_BaryCoord.z;\n"
+			"}\n\n";
+		OS << fmt::replace_all(interpolate_function_block, {{ "$gl_BaryCoord", "gl_BaryCoord"s + std::string(ext_flavour) }});
+
+		for (const auto& reg : varying_list)
+		{
+			OS << "vec4 " << reg.name << " = _interpolate_varying3(" << reg.name << "_raw);\n";
+		}
+
+		OS << "\n";
 	}
 }

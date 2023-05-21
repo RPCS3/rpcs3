@@ -6,11 +6,13 @@
 #include <QInputDialog>
 #include <QGroupBox>
 #include <QMenu>
+#include <QDialogButtonBox>
 #include <thread>
 
 #include "qt_utils.h"
 
 #include "rpcn_settings_dialog.h"
+#include "Emu/System.h"
 #include "Emu/NP/rpcn_config.h"
 
 #include <wolfssl/ssl.h>
@@ -18,33 +20,50 @@
 
 LOG_CHANNEL(rpcn_settings_log, "rpcn settings dlg");
 
-const QString rpcn_state_to_qstr(rpcn::rpcn_state state)
+bool validate_rpcn_username(std::string_view username)
 {
-	switch (state)
-	{
-	case rpcn::rpcn_state::failure_no_failure: return QObject::tr("No Error");
-	case rpcn::rpcn_state::failure_input: return QObject::tr("Invalid Input");
-	case rpcn::rpcn_state::failure_wolfssl: return QObject::tr("WolfSSL Error");
-	case rpcn::rpcn_state::failure_resolve: return QObject::tr("Resolve Error");
-	case rpcn::rpcn_state::failure_connect: return QObject::tr("Connect Error");
-	case rpcn::rpcn_state::failure_id: return QObject::tr("Identification Error");
-	case rpcn::rpcn_state::failure_id_already_logged_in: return QObject::tr("Identification Error: User Already Logged In");
-	case rpcn::rpcn_state::failure_id_username: return QObject::tr("Identification Error: Invalid Username");
-	case rpcn::rpcn_state::failure_id_password: return QObject::tr("Identification Error: Invalid Password");
-	case rpcn::rpcn_state::failure_id_token: return QObject::tr("Identification Error: Invalid Token");
-	case rpcn::rpcn_state::failure_protocol: return QObject::tr("Protocol Version Error");
-	case rpcn::rpcn_state::failure_other: return QObject::tr("Unknown Error");
-	default: return QObject::tr("Unhandled rpcn state!");
-	}
-}
-
-bool validate_rpcn_username(const std::string& input)
-{
-	if (input.length() < 3 || input.length() > 16)
+	if (username.length() < 3 || username.length() > 16)
 		return false;
 
-	return std::all_of(input.cbegin(), input.cend(), [](const char c)
-		{ return std::isalnum(c) || c == '-' || c == '_'; });
+	return std::all_of(username.cbegin(), username.cend(), [](const char c)
+		{
+			return std::isalnum(static_cast<unsigned char>(c)) || c == '-' || c == '_';
+		});
+}
+
+bool validate_email(std::string_view email)
+{
+	const QRegularExpressionValidator simple_email_validator(QRegularExpression("^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\\.[a-zA-Z0-9-]+)*$"));
+	QString qstr_email = QString::fromStdString(std::string(email));
+	int pos            = 0;
+
+	if (qstr_email.isEmpty() || qstr_email.contains(' ') || qstr_email.contains('\t') || simple_email_validator.validate(qstr_email, pos) != QValidator::Acceptable)
+		return false;
+
+	return true;
+}
+
+bool validate_token(std::string_view token)
+{
+	return token.size() == 16 && std::all_of(token.cbegin(), token.cend(), [](const char c) { return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z'); });
+}
+
+std::string derive_password(std::string_view user_password)
+{
+	std::string_view salt_str = "No matter where you go, everybody's connected.";
+
+	u8 derived_password_digest[SHA3_256_DIGEST_LENGTH];
+	ensure(!wc_PBKDF2(derived_password_digest, reinterpret_cast<const u8*>(user_password.data()), ::narrow<s32>(user_password.size()), reinterpret_cast<const u8*>(salt_str.data()), ::narrow<s32>(salt_str.size()), 200'000, SHA3_256_DIGEST_LENGTH, WC_SHA3_256));
+
+	std::string derived_password("0000000000000000000000000000000000000000000000000000000000000000");
+	for (u32 i = 0; i < SHA3_256_DIGEST_LENGTH; i++)
+	{
+		constexpr auto pal            = "0123456789ABCDEF";
+		derived_password[i * 2]       = pal[derived_password_digest[i] >> 4];
+		derived_password[(i * 2) + 1] = pal[derived_password_digest[i] & 15];
+	}
+
+	return derived_password;
 }
 
 rpcn_settings_dialog::rpcn_settings_dialog(QWidget* parent)
@@ -71,6 +90,11 @@ rpcn_settings_dialog::rpcn_settings_dialog(QWidget* parent)
 
 	connect(btn_account, &QPushButton::clicked, this, [this]()
 		{
+			if (!Emu.IsStopped())
+			{
+				QMessageBox::critical(this, tr("Error: Emulation Running"), tr("You need to stop the emulator before editing RPCN account information!"), QMessageBox::Ok);
+				return;
+			}
 			rpcn_account_dialog dlg(this);
 			dlg.exec();
 		});
@@ -86,8 +110,509 @@ rpcn_settings_dialog::rpcn_settings_dialog(QWidget* parent)
 rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 	: QDialog(parent)
 {
-	setWindowTitle(tr("RPCN: Configuration"));
+	setWindowTitle(tr("RPCN: Account"));
 	setObjectName("rpcn_account_dialog");
+
+	QVBoxLayout* vbox_global = new QVBoxLayout();
+
+	QGroupBox* grp_server    = new QGroupBox(tr("Server:"));
+	QVBoxLayout* vbox_server = new QVBoxLayout();
+
+	QHBoxLayout* hbox_lbl_combo = new QHBoxLayout();
+	QLabel* lbl_server          = new QLabel(tr("Server:"));
+	cbx_servers                 = new QComboBox();
+
+	refresh_combobox();
+
+	hbox_lbl_combo->addWidget(lbl_server);
+	hbox_lbl_combo->addWidget(cbx_servers);
+
+	QHBoxLayout* hbox_buttons   = new QHBoxLayout();
+	QPushButton* btn_add_server = new QPushButton(tr("Add"));
+	QPushButton* btn_del_server = new QPushButton(tr("Del"));
+	hbox_buttons->addStretch();
+	hbox_buttons->addWidget(btn_add_server);
+	hbox_buttons->addWidget(btn_del_server);
+
+	vbox_server->addLayout(hbox_lbl_combo);
+	vbox_server->addLayout(hbox_buttons);
+
+	grp_server->setLayout(vbox_server);
+	vbox_global->addWidget(grp_server);
+
+	QGroupBox* grp_buttons    = new QGroupBox();
+	QVBoxLayout* vbox_buttons = new QVBoxLayout();
+	QPushButton* btn_create   = new QPushButton(tr("Create Account"));
+	QPushButton* btn_edit     = new QPushButton(tr("Edit Account"));
+	QPushButton* btn_test     = new QPushButton(tr("Test Account"));
+
+	vbox_buttons->addSpacing(10);
+	vbox_buttons->addWidget(btn_create);
+	vbox_buttons->addSpacing(10);
+	vbox_buttons->addWidget(btn_edit);
+	vbox_buttons->addSpacing(10);
+	vbox_buttons->addWidget(btn_test);
+	vbox_buttons->addSpacing(10);
+	grp_buttons->setLayout(vbox_buttons);
+
+	vbox_global->addWidget(grp_buttons);
+
+	setLayout(vbox_global);
+
+	connect(cbx_servers, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
+		{
+			if (index < 0)
+				return;
+
+			QVariant host = cbx_servers->itemData(index);
+
+			if (!host.isValid() || !host.canConvert<QString>())
+				return;
+
+			g_cfg_rpcn.set_host(host.toString().toStdString());
+			g_cfg_rpcn.save();
+		});
+
+	connect(btn_add_server, &QAbstractButton::clicked, this, [this]()
+		{
+			rpcn_add_server_dialog dlg(this);
+			dlg.exec();
+			const auto new_server = dlg.get_new_server();
+			if (new_server)
+			{
+				if (!g_cfg_rpcn.add_host(new_server->first, new_server->second))
+				{
+					QMessageBox::critical(this, tr("Existing Server"), tr("You already have a server with this description & hostname in the list."), QMessageBox::Ok);
+					return;
+				}
+
+				g_cfg_rpcn.save();
+				refresh_combobox();
+			}
+		});
+
+	connect(btn_del_server, &QAbstractButton::clicked, this, [this]()
+		{
+			const int index = cbx_servers->currentIndex();
+
+			if (index < 0)
+				return;
+
+			const auto desc = cbx_servers->itemText(index).toStdString();
+			const auto host = cbx_servers->itemData(index).toString().toStdString();
+
+			ensure(g_cfg_rpcn.del_host(desc, host));
+			g_cfg_rpcn.save();
+			refresh_combobox();
+		});
+
+	connect(btn_create, &QAbstractButton::clicked, this, [this]()
+		{
+			rpcn_ask_username_dialog dlg_username(this, tr("Please enter your username.\n\n"
+			                                               "Note that these restrictions apply:\n"
+			                                               "- Username must be between 3 and 16 characters\n"
+			                                               "- Username can only contain a-z A-Z 0-9 '-' '_'\n"
+			                                               "- Username is case sensitive\n"));
+			dlg_username.exec();
+			auto username = dlg_username.get_username();
+
+			if (!username)
+				return;
+
+			rpcn_ask_password_dialog dlg_password(this, tr("Please choose your password:\n\n"));
+			dlg_password.exec();
+			auto password = dlg_password.get_password();
+
+			if (!password)
+				return;
+
+			rpcn_ask_email_dialog dlg_email(this, tr("An email address is required, please note:\n"
+			                                         "- A valid email is needed to receive the token that validates your account.\n"
+			                                         "- Your email won't be used for anything beyond sending you this token or the password reset token.\n\n"));
+			dlg_email.exec();
+			auto email = dlg_email.get_email();
+
+			if (!email)
+				return;
+
+			if (QMessageBox::question(this, tr("RPCN: Account Creation"), tr("You are about to create an account with:\n-Username:%0\n-Email:%1\n\nIs this correct?").arg(QString::fromStdString(*username)).arg(QString::fromStdString(*email))) != QMessageBox::Yes)
+				return;
+
+			{
+				const auto rpcn       = rpcn::rpcn_client::get_instance();
+				const auto avatar_url = "https://rpcs3.net/cdn/netplay/DefaultAvatar.png";
+
+				if (auto result = rpcn->wait_for_connection(); result != rpcn::rpcn_state::failure_no_failure)
+				{
+					const QString error_message = tr("Failed to connect to RPCN server:\n%0").arg(QString::fromStdString(rpcn::rpcn_state_to_string(result)));
+					QMessageBox::critical(this, tr("Error Connecting"), error_message, QMessageBox::Ok);
+					return;
+				}
+
+				if (auto error = rpcn->create_user(*username, *password, *username, avatar_url, *email); error != rpcn::ErrorType::NoError)
+				{
+					QString error_message;
+					switch (error)
+					{
+					case rpcn::ErrorType::CreationExistingUsername: error_message = tr("An account with that username already exists!"); break;
+					case rpcn::ErrorType::CreationBannedEmailProvider: error_message = tr("This email provider is banned!"); break;
+					case rpcn::ErrorType::CreationExistingEmail: error_message = tr("An account with that email already exists!"); break;
+					case rpcn::ErrorType::CreationError: error_message = tr("Unknown creation error"); break;
+					default: error_message = tr("Unknown error"); break;
+					}
+					QMessageBox::critical(this, tr("Error Creating Account"), tr("Failed to create the account:\n%0").arg(error_message), QMessageBox::Ok);
+					return;
+				}
+			}
+
+			g_cfg_rpcn.set_npid(*username);
+			g_cfg_rpcn.set_password(*password);
+			g_cfg_rpcn.save();
+
+			rpcn_ask_token_dialog token_dlg(this, tr("Your account has been created successfully!\n"
+			                                         "Your account authentification was saved.\n"
+			                                         "Now all you need is to enter the token that was sent to your email.\n"
+			                                         "You can skip this step by leaving it empty and entering it later in the Edit Account section too.\n"));
+			token_dlg.exec();
+			auto token = token_dlg.get_token();
+
+			if (!token)
+				return;
+
+			g_cfg_rpcn.set_token(*token);
+			g_cfg_rpcn.save();
+		});
+
+	connect(btn_edit, &QAbstractButton::clicked, this, [this]()
+		{
+			rpcn_account_edit_dialog dlg_edit(this);
+			dlg_edit.exec();
+		});
+
+	connect(btn_test, &QAbstractButton::clicked, this, [this]()
+		{
+			auto rpcn = rpcn::rpcn_client::get_instance();
+
+			if (auto res = rpcn->wait_for_connection(); res != rpcn::rpcn_state::failure_no_failure)
+			{
+				const QString error_msg = tr("Failed to connect to RPCN:\n%0").arg(QString::fromStdString(rpcn::rpcn_state_to_string(res)));
+				QMessageBox::warning(this, tr("Error connecting to RPCN!"), error_msg, QMessageBox::Ok);
+				return;
+			}
+			if (auto res = rpcn->wait_for_authentified(); res != rpcn::rpcn_state::failure_no_failure)
+			{
+				const QString error_msg = tr("Failed to authentify to RPCN:\n%0").arg(QString::fromStdString(rpcn::rpcn_state_to_string(res)));
+				QMessageBox::warning(this, tr("Error authentifying to RPCN!"), error_msg, QMessageBox::Ok);
+				return;
+			}
+
+			QMessageBox::information(this, tr("RPCN Account Valid!"), tr("Your account is valid!"), QMessageBox::Ok);
+		});
+}
+
+void rpcn_account_dialog::refresh_combobox()
+{
+	g_cfg_rpcn.load();
+	const auto vec_hosts = g_cfg_rpcn.get_hosts();
+	auto cur_host        = g_cfg_rpcn.get_host();
+	int i = 0, index = 0;
+
+	cbx_servers->clear();
+
+	for (const auto& [desc, host] : vec_hosts)
+	{
+		cbx_servers->addItem(QString::fromStdString(desc), QString::fromStdString(host));
+		if (cur_host == host)
+			index = i;
+
+		i++;
+	}
+
+	cbx_servers->setCurrentIndex(index);
+}
+
+rpcn_add_server_dialog::rpcn_add_server_dialog(QWidget* parent)
+	: QDialog(parent)
+{
+	setWindowTitle(tr("RPCN: Add Server"));
+	setObjectName("rpcn_add_server_dialog");
+	setMinimumSize(QSize(400, 200));
+
+	QVBoxLayout* vbox_global = new QVBoxLayout();
+
+	QLabel* lbl_description    = new QLabel(tr("Description:"));
+	QLineEdit* edt_description = new QLineEdit();
+	QLabel* lbl_host           = new QLabel(tr("Host:"));
+	QLineEdit* edt_host        = new QLineEdit();
+	QDialogButtonBox* btn_box  = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+
+	vbox_global->addWidget(lbl_description);
+	vbox_global->addWidget(edt_description);
+	vbox_global->addWidget(lbl_host);
+	vbox_global->addWidget(edt_host);
+	vbox_global->addWidget(btn_box);
+
+	setLayout(vbox_global);
+
+	connect(btn_box, &QDialogButtonBox::accepted, this, [this, edt_description, edt_host]()
+		{
+			auto description = edt_description->text();
+			auto host        = edt_host->text();
+
+			if (description.isEmpty())
+			{
+				QMessageBox::critical(this, tr("Missing Description"), tr("You must enter a description!"), QMessageBox::Ok);
+				return;
+			}
+			if (host.isEmpty())
+			{
+				QMessageBox::critical(this, tr("Missing Hostname"), tr("You must enter a hostname for the server!"), QMessageBox::Ok);
+				return;
+			}
+
+			m_new_server = std::make_pair(description.toStdString(), host.toStdString());
+			QDialog::accept();
+		});
+	connect(btn_box, &QDialogButtonBox::rejected, this, &QDialog::reject);
+}
+
+const std::optional<std::pair<std::string, std::string>>& rpcn_add_server_dialog::get_new_server() const
+{
+	return m_new_server;
+}
+
+rpcn_ask_username_dialog::rpcn_ask_username_dialog(QWidget* parent, const QString& description)
+	: QDialog(parent)
+{
+	setWindowTitle(tr("RPCN: Username"));
+	setObjectName("rpcn_ask_username_dialog");
+
+	QVBoxLayout* vbox_global = new QVBoxLayout();
+
+	QLabel* lbl_username = new QLabel(description);
+
+	QGroupBox* grp_username        = new QGroupBox(tr("Username:"));
+	QHBoxLayout* hbox_grp_username = new QHBoxLayout();
+	QLineEdit* edt_username        = new QLineEdit(QString::fromStdString(g_cfg_rpcn.get_npid()));
+	edt_username->setMaxLength(16);
+	edt_username->setValidator(new QRegularExpressionValidator(QRegularExpression("^[a-zA-Z0-9_\\-]*$"), this));
+	hbox_grp_username->addWidget(edt_username);
+	grp_username->setLayout(hbox_grp_username);
+
+	QDialogButtonBox* btn_box = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+
+	vbox_global->addWidget(lbl_username);
+	vbox_global->addWidget(grp_username);
+	vbox_global->addWidget(btn_box);
+
+	setLayout(vbox_global);
+
+	connect(btn_box, &QDialogButtonBox::accepted, this, [this, edt_username]()
+		{
+			const auto username = edt_username->text().toStdString();
+
+			if (username.empty())
+			{
+				QMessageBox::critical(this, tr("Missing Username"), tr("You must enter a username!"), QMessageBox::Ok);
+				return;
+			}
+			if (!validate_rpcn_username(username))
+			{
+				QMessageBox::critical(this, tr("Invalid Username"), tr("Please enter a valid username!"), QMessageBox::Ok);
+			}
+
+			m_username = username;
+			QDialog::accept();
+		});
+	connect(btn_box, &QDialogButtonBox::rejected, this, &QDialog::reject);
+}
+
+const std::optional<std::string>& rpcn_ask_username_dialog::get_username() const
+{
+	return m_username;
+}
+
+rpcn_ask_password_dialog::rpcn_ask_password_dialog(QWidget* parent, const QString& description)
+	: QDialog(parent)
+{
+	setWindowTitle(tr("RPCN: Password"));
+	setObjectName("rpcn_ask_password_dialog");
+
+	QVBoxLayout* vbox_global = new QVBoxLayout();
+
+	QLabel* lbl_description = new QLabel(description);
+
+	QGroupBox* gbox_password = new QGroupBox();
+	QVBoxLayout* vbox_gbox   = new QVBoxLayout();
+
+	QLabel* lbl_pass1       = new QLabel(tr("Enter your password:"));
+	QLineEdit* m_edit_pass1 = new QLineEdit();
+	m_edit_pass1->setEchoMode(QLineEdit::Password);
+	QLabel* lbl_pass2       = new QLabel(tr("Enter your password a second time:"));
+	QLineEdit* m_edit_pass2 = new QLineEdit();
+	m_edit_pass2->setEchoMode(QLineEdit::Password);
+
+	vbox_gbox->addWidget(lbl_pass1);
+	vbox_gbox->addWidget(m_edit_pass1);
+	vbox_gbox->addWidget(lbl_pass2);
+	vbox_gbox->addWidget(m_edit_pass2);
+	gbox_password->setLayout(vbox_gbox);
+
+	QDialogButtonBox* btn_box = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+
+	vbox_global->addWidget(lbl_description);
+	vbox_global->addWidget(gbox_password);
+	vbox_global->addWidget(btn_box);
+
+	setLayout(vbox_global);
+
+	connect(btn_box, &QDialogButtonBox::accepted, this, [this, m_edit_pass1, m_edit_pass2]()
+		{
+			if (m_edit_pass1->text() != m_edit_pass2->text())
+			{
+				QMessageBox::critical(this, tr("Wrong Input"), tr("The two passwords you entered don't match!"), QMessageBox::Ok);
+				return;
+			}
+
+			if (m_edit_pass1->text().isEmpty())
+			{
+				QMessageBox::critical(this, tr("Missing Password"), tr("You need to enter a password!"), QMessageBox::Ok);
+				return;
+			}
+
+			m_password = derive_password(m_edit_pass1->text().toStdString());
+			QDialog::accept();
+		});
+	connect(btn_box, &QDialogButtonBox::rejected, this, &QDialog::reject);
+}
+
+const std::optional<std::string>& rpcn_ask_password_dialog::get_password() const
+{
+	return m_password;
+}
+
+rpcn_ask_email_dialog::rpcn_ask_email_dialog(QWidget* parent, const QString& description)
+	: QDialog(parent)
+{
+	setWindowTitle(tr("RPCN: Email"));
+	setObjectName("rpcn_ask_email_dialog");
+
+	QVBoxLayout* vbox_global = new QVBoxLayout();
+
+	QLabel* lbl_emailinfo = new QLabel(description);
+
+	QGroupBox* gbox_password = new QGroupBox();
+	QVBoxLayout* vbox_gbox   = new QVBoxLayout();
+
+	QLabel* lbl_pass1       = new QLabel(tr("Enter your email:"));
+	QLineEdit* m_edit_pass1 = new QLineEdit();
+	QLabel* lbl_pass2       = new QLabel(tr("Enter your email a second time:"));
+	QLineEdit* m_edit_pass2 = new QLineEdit();
+
+	vbox_gbox->addWidget(lbl_pass1);
+	vbox_gbox->addWidget(m_edit_pass1);
+	vbox_gbox->addWidget(lbl_pass2);
+	vbox_gbox->addWidget(m_edit_pass2);
+	gbox_password->setLayout(vbox_gbox);
+
+	QDialogButtonBox* btn_box = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+
+	vbox_global->addWidget(lbl_emailinfo);
+	vbox_global->addWidget(gbox_password);
+	vbox_global->addWidget(btn_box);
+
+	setLayout(vbox_global);
+
+	connect(btn_box, &QDialogButtonBox::accepted, this, [this, m_edit_pass1, m_edit_pass2]()
+		{
+			if (m_edit_pass1->text() != m_edit_pass2->text())
+			{
+				QMessageBox::critical(this, tr("Wrong Input"), tr("The two emails you entered don't match!"), QMessageBox::Ok);
+				return;
+			}
+
+			if (m_edit_pass1->text().isEmpty())
+			{
+				QMessageBox::critical(this, tr("Missing Email"), tr("You need to enter an email!"), QMessageBox::Ok);
+				return;
+			}
+
+			auto email = m_edit_pass1->text().toStdString();
+			if (!validate_email(email))
+			{
+				QMessageBox::critical(this, tr("Invalid Email"), tr("You need to enter a valid email!"), QMessageBox::Ok);
+				return;
+			}
+
+			m_email = email;
+			QDialog::accept();
+		});
+	connect(btn_box, &QDialogButtonBox::rejected, this, &QDialog::reject);
+}
+
+const std::optional<std::string>& rpcn_ask_email_dialog::get_email() const
+{
+	return m_email;
+}
+
+rpcn_ask_token_dialog::rpcn_ask_token_dialog(QWidget* parent, const QString& description)
+	: QDialog(parent)
+{
+	setWindowTitle(tr("RPCN: Username"));
+	setObjectName("rpcn_ask_token_dialog");
+
+	QVBoxLayout* vbox_global = new QVBoxLayout();
+
+	QLabel* lbl_token = new QLabel(description);
+
+	QGroupBox* grp_token        = new QGroupBox(tr("Token:"));
+	QHBoxLayout* hbox_grp_token = new QHBoxLayout();
+	QLineEdit* edt_token        = new QLineEdit();
+	edt_token->setMaxLength(16);
+	hbox_grp_token->addWidget(edt_token);
+	grp_token->setLayout(hbox_grp_token);
+
+	QDialogButtonBox* btn_box = new QDialogButtonBox(QDialogButtonBox::Ok);
+
+	vbox_global->addWidget(lbl_token);
+	vbox_global->addWidget(grp_token);
+	vbox_global->addWidget(btn_box);
+
+	setLayout(vbox_global);
+
+	connect(btn_box, &QDialogButtonBox::accepted, this, [this, edt_token]()
+		{
+			const auto token = edt_token->text().toStdString();
+
+			if (!token.empty())
+			{
+				if (!validate_token(token))
+				{
+					QMessageBox::critical(this, tr("Invalid Token"), tr("The token appears to be invalid:\n"
+					                                                    "-Token should be 16 characters long\n"
+					                                                    "-Token should only contain 0-9 and A-F"),
+						QMessageBox::Ok);
+					return;
+				}
+
+				m_token = token;
+			}
+
+			QDialog::accept();
+			return;
+		});
+}
+
+const std::optional<std::string>& rpcn_ask_token_dialog::get_token() const
+{
+	return m_token;
+}
+
+rpcn_account_edit_dialog::rpcn_account_edit_dialog(QWidget* parent)
+	: QDialog(parent)
+{
+	setWindowTitle(tr("RPCN: Edit Account"));
+	setObjectName("rpcn_account_edit_dialog");
 	setMinimumSize(QSize(400, 200));
 
 	QVBoxLayout* vbox_global           = new QVBoxLayout();
@@ -96,37 +621,30 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 	QVBoxLayout* vbox_edits            = new QVBoxLayout();
 	QHBoxLayout* hbox_buttons          = new QHBoxLayout();
 
-	QLabel* label_host = new QLabel(tr("Host:"));
-	m_edit_host        = new QLineEdit();
-	QLabel* label_npid = new QLabel(tr("NPID (username):"));
-	m_edit_npid        = new QLineEdit();
-	m_edit_npid->setMaxLength(16);
-	m_edit_npid->setValidator(new QRegularExpressionValidator(QRegularExpression("^[a-zA-Z0-9_\\-]*$"), this));
-	QLabel* label_pass        = new QLabel(tr("Password:"));
+	QLabel* lbl_username = new QLabel(tr("Username:"));
+	m_edit_username      = new QLineEdit();
+	m_edit_username->setMaxLength(16);
+	m_edit_username->setValidator(new QRegularExpressionValidator(QRegularExpression("^[a-zA-Z0-9_\\-]*$"), this));
+	QLabel* lbl_pass          = new QLabel(tr("Password:"));
 	QPushButton* btn_chg_pass = new QPushButton(tr("Set Password"));
-	QLabel* label_token       = new QLabel(tr("Token:"));
+	QLabel* lbl_token         = new QLabel(tr("Token:"));
 	m_edit_token              = new QLineEdit();
 	m_edit_token->setMaxLength(16);
 
-	QPushButton* btn_create      = new QPushButton(tr("Create Account"), this);
-	QPushButton* btn_resendtoken = new QPushButton(tr("Resend Token"), this);
-	QPushButton* btn_changepass  = new QPushButton(tr("Change Password"), this);
-	btn_changepass->setEnabled(false);
-	QPushButton* btn_save = new QPushButton(tr("Save"), this);
+	QPushButton* btn_resendtoken     = new QPushButton(tr("Resend Token"), this);
+	QPushButton* btn_change_password = new QPushButton(tr("Change Password"), this);
+	QPushButton* btn_save            = new QPushButton(tr("Save"), this);
 
-	vbox_labels->addWidget(label_host);
-	vbox_labels->addWidget(label_npid);
-	vbox_labels->addWidget(label_pass);
-	vbox_labels->addWidget(label_token);
+	vbox_labels->addWidget(lbl_username);
+	vbox_labels->addWidget(lbl_pass);
+	vbox_labels->addWidget(lbl_token);
 
-	vbox_edits->addWidget(m_edit_host);
-	vbox_edits->addWidget(m_edit_npid);
+	vbox_edits->addWidget(m_edit_username);
 	vbox_edits->addWidget(btn_chg_pass);
 	vbox_edits->addWidget(m_edit_token);
 
-	hbox_buttons->addWidget(btn_create);
 	hbox_buttons->addWidget(btn_resendtoken);
-	hbox_buttons->addWidget(btn_changepass);
+	hbox_buttons->addWidget(btn_change_password);
 	hbox_buttons->addStretch();
 	hbox_buttons->addWidget(btn_save);
 
@@ -140,29 +658,14 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 
 	connect(btn_chg_pass, &QAbstractButton::clicked, this, [this]()
 		{
-			rpcn_ask_password_dialog ask_pass;
+			rpcn_ask_password_dialog ask_pass(this, tr("Please enter your password:"));
 			ask_pass.exec();
 
-			auto password = ask_pass.get_password();
+			auto& password = ask_pass.get_password();
 			if (!password)
 				return;
 
-			const std::string pass_str = password.value();
-			const std::string salt_str = "No matter where you go, everybody's connected.";
-
-			u8 salted_pass[SHA_DIGEST_SIZE];
-
-			wolfSSL_PKCS5_PBKDF2_HMAC_SHA1(pass_str.c_str(), pass_str.size(), reinterpret_cast<const u8*>(salt_str.c_str()), salt_str.size(), 1000, SHA_DIGEST_SIZE, salted_pass);
-
-			std::string hash("0000000000000000000000000000000000000000");
-			for (u32 i = 0; i < 20; i++)
-			{
-				constexpr auto pal = "0123456789abcdef";
-				hash[i * 2]        = pal[salted_pass[i] >> 4];
-				hash[1 + i * 2]    = pal[salted_pass[i] & 15];
-			}
-
-			g_cfg_rpcn.set_password(hash);
+			g_cfg_rpcn.set_password(*password);
 			g_cfg_rpcn.save();
 
 			QMessageBox::information(this, tr("RPCN Password Saved"), tr("Your password was saved successfully!"), QMessageBox::Ok);
@@ -173,48 +676,39 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 			if (save_config())
 				close();
 		});
-	connect(btn_create, &QAbstractButton::clicked, this, &rpcn_account_dialog::create_account);
-	connect(btn_resendtoken, &QAbstractButton::clicked, this, &rpcn_account_dialog::resend_token);
+	connect(btn_resendtoken, &QAbstractButton::clicked, this, &rpcn_account_edit_dialog::resend_token);
+	connect(btn_change_password, &QAbstractButton::clicked, this, &rpcn_account_edit_dialog::change_password);
 
 	g_cfg_rpcn.load();
 
-	m_edit_host->setText(QString::fromStdString(g_cfg_rpcn.get_host()));
-	m_edit_npid->setText(QString::fromStdString(g_cfg_rpcn.get_npid()));
+	m_edit_username->setText(QString::fromStdString(g_cfg_rpcn.get_npid()));
 	m_edit_token->setText(QString::fromStdString(g_cfg_rpcn.get_token()));
 }
 
-bool rpcn_account_dialog::save_config()
+bool rpcn_account_edit_dialog::save_config()
 {
-	const auto host  = m_edit_host->text().toStdString();
-	const auto npid  = m_edit_npid->text().toStdString();
-	const auto token = m_edit_token->text().toStdString();
+	const auto username = m_edit_username->text().toStdString();
+	const auto token    = m_edit_token->text().toStdString();
 
-	if (host.empty())
+	if (username.empty() || g_cfg_rpcn.get_password().empty())
 	{
-		QMessageBox::critical(this, tr("Missing host"), tr("You need to enter a host for rpcn!"), QMessageBox::Ok);
+		QMessageBox::critical(this, tr("Missing Input"), tr("You need to enter a username and a password!"), QMessageBox::Ok);
 		return false;
 	}
 
-	if (npid.empty() || g_cfg_rpcn.get_password().empty())
+	if (!validate_rpcn_username(username))
 	{
-		QMessageBox::critical(this, tr("Wrong input"), tr("You need to enter a username and a password!"), QMessageBox::Ok);
+		QMessageBox::critical(this, tr("Invalid Username"), tr("Username must be between 3 and 16 characters and can only contain '-', '_' or alphanumeric characters."), QMessageBox::Ok);
 		return false;
 	}
 
-	if (!validate_rpcn_username(npid))
+	if (!token.empty() && !validate_token(token))
 	{
-		QMessageBox::critical(this, tr("Invalid character"), tr("NPID must be between 3 and 16 characters and can only contain '-', '_' or alphanumeric characters."), QMessageBox::Ok);
+		QMessageBox::critical(this, tr("Invalid Token"), tr("The token you have received should be 16 characters long and contain only 0-9 A-F."), QMessageBox::Ok);
 		return false;
 	}
 
-	if (!token.empty() && token.size() != 16)
-	{
-		QMessageBox::critical(this, tr("Invalid token"), tr("The token you have received should be 16 characters long."), QMessageBox::Ok);
-		return false;
-	}
-
-	g_cfg_rpcn.set_host(host);
-	g_cfg_rpcn.set_npid(npid);
+	g_cfg_rpcn.set_npid(username);
 	g_cfg_rpcn.set_token(token);
 
 	g_cfg_rpcn.save();
@@ -222,66 +716,7 @@ bool rpcn_account_dialog::save_config()
 	return true;
 }
 
-void rpcn_account_dialog::create_account()
-{
-	// Validate and save
-	if (!save_config())
-		return;
-
-	QString email;
-	const QRegularExpressionValidator simple_email_validator(QRegularExpression("^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\\.[a-zA-Z0-9-]+)*$"));
-
-	while (true)
-	{
-		bool clicked_ok = false;
-		email           = QInputDialog::getText(this, tr("Email address"), tr("An email address is required, please note:\n*A valid email is needed to validate your account.\n*Your email won't be used for anything beyond sending you the token.\n*Upon successful creation a token will be sent to your email which you'll need to login.\n\n"), QLineEdit::Normal, "", &clicked_ok);
-		if (!clicked_ok)
-			return;
-
-		int pos = 0;
-		if (email.isEmpty() || simple_email_validator.validate(email, pos) != QValidator::Acceptable)
-		{
-			QMessageBox::critical(this, tr("Wrong input"), tr("You need to enter a valid email!"), QMessageBox::Ok);
-		}
-		else
-		{
-			break;
-		}
-	}
-
-	const auto rpcn = rpcn::rpcn_client::get_instance();
-
-	const auto npid        = g_cfg_rpcn.get_npid();
-	const auto online_name = npid;
-	const auto avatar_url  = "https://rpcs3.net/cdn/netplay/DefaultAvatar.png";
-	const auto password    = g_cfg_rpcn.get_password();
-
-	if (auto result = rpcn->wait_for_connection(); result != rpcn::rpcn_state::failure_no_failure)
-	{
-		const QString error_message = tr("Failed to connect to RPCN server:\n%0").arg(rpcn_state_to_qstr(result));
-		QMessageBox::critical(this, tr("Error Connecting"), error_message, QMessageBox::Ok);
-		return;
-	}
-
-	if (auto error = rpcn->create_user(npid, password, online_name, avatar_url, email.toStdString()); error != rpcn::ErrorType::NoError)
-	{
-		QString error_message;
-		switch (error)
-		{
-		case rpcn::ErrorType::CreationExistingUsername: error_message = tr("An account with that username already exists!"); break;
-		case rpcn::ErrorType::CreationBannedEmailProvider: error_message = tr("This email provider is banned!"); break;
-		case rpcn::ErrorType::CreationExistingEmail: error_message = tr("An account with that email already exists!"); break;
-		case rpcn::ErrorType::CreationError: error_message = tr("Unknown creation error"); break;
-		default: error_message = tr("Unknown error"); break;
-		}
-		QMessageBox::critical(this, tr("Error Creating Account"), tr("Failed to create the account:\n%0").arg(error_message), QMessageBox::Ok);
-		return;
-	}
-
-	QMessageBox::information(this, tr("Account created!"), tr("Your account has been created successfully!\nCheck your email for your token!"), QMessageBox::Ok);
-}
-
-void rpcn_account_dialog::resend_token()
+void rpcn_account_edit_dialog::resend_token()
 {
 	if (!save_config())
 		return;
@@ -293,7 +728,7 @@ void rpcn_account_dialog::resend_token()
 
 	if (auto result = rpcn->wait_for_connection(); result != rpcn::rpcn_state::failure_no_failure)
 	{
-		const QString error_message = tr("Failed to connect to RPCN server:\n%0").arg(rpcn_state_to_qstr(result));
+		const QString error_message = tr("Failed to connect to RPCN server:\n%0").arg(QString::fromStdString(rpcn::rpcn_state_to_string(result)));
 		QMessageBox::critical(this, tr("Error Connecting"), error_message, QMessageBox::Ok);
 		return;
 	}
@@ -304,11 +739,10 @@ void rpcn_account_dialog::resend_token()
 		switch (error)
 		{
 		case rpcn::ErrorType::Invalid: error_message = tr("The server has no email verification and doesn't need a token!"); break;
-		case rpcn::ErrorType::LoginAlreadyLoggedIn: error_message = tr("You can't ask for your token while authentified!"); break;
 		case rpcn::ErrorType::DbFail: error_message = tr("A database related error happened on the server!"); break;
 		case rpcn::ErrorType::TooSoon: error_message = tr("You can only ask for a token mail once every 24 hours!"); break;
 		case rpcn::ErrorType::EmailFail: error_message = tr("The mail couldn't be sent successfully!"); break;
-		case rpcn::ErrorType::LoginError: error_message = tr("The login/password pair is invalid!"); break;
+		case rpcn::ErrorType::LoginError: error_message = tr("The username/password pair is invalid!"); break;
 		default: error_message = tr("Unknown error"); break;
 		}
 		QMessageBox::critical(this, tr("Error Sending Token"), tr("Failed to send the token:\n%0").arg(error_message), QMessageBox::Ok);
@@ -318,64 +752,102 @@ void rpcn_account_dialog::resend_token()
 	QMessageBox::information(this, tr("Token Sent!"), tr("Your token was successfully resent to the email associated with your account!"), QMessageBox::Ok);
 }
 
-rpcn_ask_password_dialog::rpcn_ask_password_dialog(QWidget* parent)
-	: QDialog(parent)
+void rpcn_account_edit_dialog::change_password()
 {
-	QVBoxLayout* vbox_global  = new QVBoxLayout();
-	QHBoxLayout* hbox_buttons = new QHBoxLayout();
+	rpcn_ask_username_dialog dlg_username(this, tr("Please confirm your username:"));
+	dlg_username.exec();
+	auto username = dlg_username.get_username();
 
-	QGroupBox* gbox_password = new QGroupBox();
-	QVBoxLayout* vbox_gbox = new QVBoxLayout();
+	if (!username)
+		return;
 
-	QLabel* label_pass1 = new QLabel(tr("Enter your password:"));
-	m_edit_pass1        = new QLineEdit();
-	m_edit_pass1->setEchoMode(QLineEdit::Password);
-	QLabel* label_pass2 = new QLabel(tr("Enter your password a second time:"));
-	m_edit_pass2        = new QLineEdit();
-	m_edit_pass2->setEchoMode(QLineEdit::Password);
+	switch (QMessageBox::question(this, tr("RPCN: Change Password"), tr("Do you already have a reset password token?\n"
+																		"Note that the reset password token is different from the email verification token.")))
+	{
+	case QMessageBox::No:
+	{
+		rpcn_ask_email_dialog dlg_email(this, tr("Please enter the email you used to create the account:"));
+		dlg_email.exec();
+		const auto email = dlg_email.get_email();
 
-	vbox_gbox->addWidget(label_pass1);
-	vbox_gbox->addWidget(m_edit_pass1);
-	vbox_gbox->addWidget(label_pass2);
-	vbox_gbox->addWidget(m_edit_pass2);
-	gbox_password->setLayout(vbox_gbox);
+		if (!email)
+			return;
 
-	QPushButton* btn_ok     = new QPushButton(tr("Ok"));
-	QPushButton* btn_cancel = new QPushButton(tr("Cancel"));
-
-	hbox_buttons->addStretch();
-	hbox_buttons->addWidget(btn_ok);
-	hbox_buttons->addWidget(btn_cancel);
-
-	vbox_global->addWidget(gbox_password);
-	vbox_global->addLayout(hbox_buttons);
-
-	setLayout(vbox_global);
-
-	connect(btn_ok, &QAbstractButton::clicked, this, [this]()
 		{
-			if (m_edit_pass1->text() != m_edit_pass2->text())
+			const auto rpcn = rpcn::rpcn_client::get_instance();
+			if (auto result = rpcn->wait_for_connection(); result != rpcn::rpcn_state::failure_no_failure)
 			{
-				QMessageBox::critical(this, tr("Wrong input"), tr("The two passwords you entered don't match!"), QMessageBox::Ok);
+				const QString error_message = tr("Failed to connect to RPCN server:\n%0").arg(QString::fromStdString(rpcn::rpcn_state_to_string(result)));
+				QMessageBox::critical(this, tr("Error Connecting"), error_message, QMessageBox::Ok);
 				return;
 			}
 
-			if (m_edit_pass1->text().isEmpty())
+			if (auto error = rpcn->send_reset_token(*username, *email); error != rpcn::ErrorType::NoError)
 			{
-				QMessageBox::critical(this, tr("Wrong input"), tr("You need to enter a password!"), QMessageBox::Ok);
+				QString error_message;
+				switch (error)
+				{
+				case rpcn::ErrorType::Invalid: error_message = tr("The server has no email verification and doesn't support password changes!"); break;
+				case rpcn::ErrorType::DbFail: error_message = tr("A database related error happened on the server!"); break;
+				case rpcn::ErrorType::TooSoon: error_message = tr("You can only ask for a reset password token once every 24 hours!"); break;
+				case rpcn::ErrorType::EmailFail: error_message = tr("The mail couldn't be sent successfully!"); break;
+				case rpcn::ErrorType::LoginError: error_message = tr("The username/email pair is invalid!"); break;
+				default: error_message = tr("Unknown error"); break;
+				}
+				QMessageBox::critical(this, tr("Error Sending Password Reset Token"), tr("Failed to send the password reset token:\n%0").arg(error_message), QMessageBox::Ok);
 				return;
 			}
 
-			m_password = m_edit_pass1->text().toStdString();
-			close();
-		});
-	connect(btn_cancel, &QAbstractButton::clicked, this, [this]()
-		{ this->close(); });
-}
+			QMessageBox::information(this, tr("Password Reset Token Sent!"), tr("The reset password token has successfully been sent!"), QMessageBox::Ok);
+		}
+	}
+	case QMessageBox::Yes:
+	{
+		rpcn_ask_token_dialog dlg_token(this, tr("Please enter the password reset token you received:"));
+		dlg_token.exec();
+		const auto token = dlg_token.get_token();
 
-std::optional<std::string> rpcn_ask_password_dialog::get_password()
-{
-	return m_password;
+		if (!token)
+			return;
+
+		rpcn_ask_password_dialog dlg_password(this, tr("Please enter your new password:"));
+		dlg_password.exec();
+		const auto password = dlg_password.get_password();
+
+		if (!password)
+			return;
+
+		{
+			const auto rpcn = rpcn::rpcn_client::get_instance();
+			if (auto result = rpcn->wait_for_connection(); result != rpcn::rpcn_state::failure_no_failure)
+			{
+				const QString error_message = tr("Failed to connect to RPCN server:\n%0").arg(QString::fromStdString(rpcn::rpcn_state_to_string(result)));
+				QMessageBox::critical(this, tr("Error Connecting"), error_message, QMessageBox::Ok);
+				return;
+			}
+
+			if (auto error = rpcn->reset_password(*username, *token, *password); error != rpcn::ErrorType::NoError)
+			{
+				QString error_message;
+				switch (error)
+				{
+				case rpcn::ErrorType::Invalid: error_message = tr("The server has no email verification and doesn't support password changes!"); break;
+				case rpcn::ErrorType::DbFail: error_message = tr("A database related error happened on the server!"); break;
+				case rpcn::ErrorType::TooSoon: error_message = tr("You can only ask for a reset password token once every 24 hours!"); break;
+				case rpcn::ErrorType::EmailFail: error_message = tr("The mail couldn't be sent successfully!"); break;
+				case rpcn::ErrorType::LoginError: error_message = tr("The username/token pair is invalid!"); break;
+				default: error_message = tr("Unknown error"); break;
+				}
+				QMessageBox::critical(this, tr("Error Sending Password Reset Token"), tr("Failed to change the password:\n%0").arg(error_message), QMessageBox::Ok);
+				return;
+			}
+
+			QMessageBox::information(this, tr("Password Successfully Changed!"), tr("Your password has been successfully changed!"), QMessageBox::Ok);
+		}
+	}
+	default:
+		return;
+	}
 }
 
 void friend_callback(void* param, rpcn::NotificationType ntype, const std::string& username, bool status)
@@ -436,13 +908,13 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 
 	if (auto res = m_rpcn->wait_for_connection(); res != rpcn::rpcn_state::failure_no_failure)
 	{
-		const QString error_msg = tr("Failed to connect to RPCN:\n%0").arg(rpcn_state_to_qstr(res));
+		const QString error_msg = tr("Failed to connect to RPCN:\n%0").arg(QString::fromStdString(rpcn::rpcn_state_to_string(res)));
 		QMessageBox::warning(parent, tr("Error connecting to RPCN!"), error_msg, QMessageBox::Ok);
 		return;
 	}
 	if (auto res = m_rpcn->wait_for_authentified(); res != rpcn::rpcn_state::failure_no_failure)
 	{
-		const QString error_msg = tr("Failed to authentify to RPCN:\n%0").arg(rpcn_state_to_qstr(res));
+		const QString error_msg = tr("Failed to authentify to RPCN:\n%0").arg(QString::fromStdString(rpcn::rpcn_state_to_string(res)));
 		QMessageBox::warning(parent, tr("Error authentifying to RPCN!"), error_msg, QMessageBox::Ok);
 		return;
 	}
@@ -656,7 +1128,7 @@ void rpcn_friends_dialog::callback_handler(rpcn::NotificationType ntype, std::st
 	}
 	default:
 	{
-		rpcn_settings_log.fatal("An unhandled notification type was received by the rpcn friends dialog callback!");
+		rpcn_settings_log.fatal("An unhandled notification type was received by the RPCN friends dialog callback!");
 		break;
 	}
 	}

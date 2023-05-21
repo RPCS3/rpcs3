@@ -5,7 +5,9 @@
 #ifdef _WIN32
 #include "Utilities/File.h"
 #include "util/dyn_lib.hpp"
+#include "Utilities/lockless.h"
 #include <Windows.h>
+#include <span>
 #else
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -80,14 +82,124 @@ namespace utils
 
 #if defined(MFD_HUGETLB) && defined(MFD_HUGE_2MB)
 	constexpr int c_mfd_huge_2mb = MFD_HUGETLB | MFD_HUGE_2MB;
-#else
+#elif defined(__linux__) || defined(__FreeBSD__)
 	constexpr int c_mfd_huge_2mb = 0;
 #endif
 
 #ifdef _WIN32
 	DYNAMIC_IMPORT("KernelBase.dll", VirtualAlloc2, PVOID(HANDLE Process, PVOID Base, SIZE_T Size, ULONG AllocType, ULONG Prot, MEM_EXTENDED_PARAMETER*, ULONG));
 	DYNAMIC_IMPORT("KernelBase.dll", MapViewOfFile3, PVOID(HANDLE Handle, HANDLE Process, PVOID Base, ULONG64 Off, SIZE_T ViewSize, ULONG AllocType, ULONG Prot, MEM_EXTENDED_PARAMETER*, ULONG));
+	DYNAMIC_IMPORT("KernelBase.dll", UnmapViewOfFile2, BOOL(HANDLE Process, PVOID BaseAddress, ULONG UnmapFlags));
+
+	const bool has_win10_memory_mapping_api()
+	{
+		return VirtualAlloc2 && MapViewOfFile3 && UnmapViewOfFile2;
+	}
+
+	struct map_info_t
+	{
+		u64 addr = 0;
+		u64 size = 0;
+		atomic_t<u8> state{};
+	};
+
+	lf_array<map_info_t, 32> s_is_mapping{};
+
+	bool is_memory_mappping_memory(u64 addr)
+	{
+		if (!addr)
+		{
+			return false;
+		}
+
+		const u64 map_size = s_is_mapping.size();
+
+		for (u64 i = map_size - 1; i != umax; i--)
+		{
+			const auto& info = s_is_mapping[i];
+
+			if (info.state == 1)
+			{
+				if (addr >= info.addr && addr < info.addr + info.size)
+				{
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	u64 unmap_mappping_memory(u64 addr, u64 size)
+	{
+		if (!addr || !size)
+		{
+			return false;
+		}
+
+		const u64 map_size = s_is_mapping.size();
+
+		for (u64 i = map_size; i != umax; i--)
+		{
+			auto& info = s_is_mapping[i];
+
+			if (info.state == 1)
+			{
+				if (addr == info.addr && size == info.size)
+				{
+					if (info.state.compare_and_swap_test(1, 0))
+					{
+						return info.size;
+					}
+				}
+			}
+		}
+
+		return false;
+	}
+
+	bool map_mappping_memory(u64 addr, u64 size)
+	{
+		if (!addr || !size)
+		{
+			return false;
+		}
+
+		for (u64 i = 0;; i++)
+		{
+			auto& info = s_is_mapping[i];
+
+			if (!info.addr && info.state.compare_and_swap_test(0, 2))
+			{
+				info.addr = addr;
+				info.size = size;
+				info.state = 1;
+				return true;
+			}
+		}
+	}
+
+	bool is_memory_mappping_memory(const void* addr)
+	{
+		return is_memory_mappping_memory(reinterpret_cast<u64>(addr));
+	}
 #endif
+
+	long get_page_size()
+	{
+		static const long r = []() -> long
+		{
+#ifdef _WIN32
+			SYSTEM_INFO info;
+			::GetSystemInfo(&info);
+			return info.dwPageSize;
+#else
+			return ::sysconf(_SC_PAGESIZE);
+#endif
+		}();
+
+		return ensure(r, FN(((x & (x - 1)) == 0 && x > 0 && x <= 0x10000)));
+	}
 
 	// Convert memory protection (internal)
 	static auto operator +(protection prot)
@@ -117,9 +229,20 @@ namespace utils
 		return _prot;
 	}
 
-	void* memory_reserve(usz size, void* use_addr)
+	void* memory_reserve(usz size, void* use_addr, [[maybe_unused]] bool is_memory_mapping)
 	{
 #ifdef _WIN32
+		if (is_memory_mapping && has_win10_memory_mapping_api())
+		{
+			if (auto ptr = VirtualAlloc2(nullptr, use_addr, size, MEM_RESERVE | MEM_RESERVE_PLACEHOLDER, PAGE_NOACCESS, nullptr, 0))
+			{
+				map_mappping_memory(reinterpret_cast<u64>(ptr), size);
+				return ptr;
+			}
+
+			return nullptr;
+		}
+
 		return ::VirtualAlloc(use_addr, size, MEM_RESERVE, PAGE_NOACCESS);
 #else
 		if (use_addr && reinterpret_cast<uptr>(use_addr) % 0x10000)
@@ -135,7 +258,15 @@ namespace utils
 			size += 0x10000;
 		}
 
+#ifdef __APPLE__
+#ifdef ARCH_ARM64
+		auto ptr = ::mmap(use_addr, size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE | MAP_JIT | c_map_noreserve, -1, 0);
+#else
+		auto ptr = ::mmap(use_addr, size, PROT_NONE, MAP_ANON | MAP_PRIVATE | MAP_JIT | c_map_noreserve, -1, 0);
+#endif
+#else
 		auto ptr = ::mmap(use_addr, size, PROT_NONE, MAP_ANON | MAP_PRIVATE | c_map_noreserve, -1, 0);
+#endif
 
 		if (ptr == reinterpret_cast<void*>(uptr{umax}))
 		{
@@ -189,15 +320,15 @@ namespace utils
 		ensure(::VirtualAlloc(pointer, size, MEM_COMMIT, +prot));
 #else
 		const u64 ptr64 = reinterpret_cast<u64>(pointer);
-		ensure(::mprotect(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), +prot) != -1);
+		ensure(::mprotect(reinterpret_cast<void*>(ptr64 & -c_page_size), size + (ptr64 & (c_page_size - 1)), +prot) != -1);
 
 		if constexpr (c_madv_dump != 0)
 		{
-			ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), c_madv_dump) != -1);
+			ensure(::madvise(reinterpret_cast<void*>(ptr64 & -c_page_size), size + (ptr64 & (c_page_size - 1)), c_madv_dump) != -1);
 		}
 		else
 		{
-			ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_WILLNEED) != -1);
+			ensure(::madvise(reinterpret_cast<void*>(ptr64 & -c_page_size), size + (ptr64 & (c_page_size - 1)), MADV_WILLNEED) != -1);
 		}
 #endif
 	}
@@ -208,15 +339,24 @@ namespace utils
 		ensure(::VirtualFree(pointer, size, MEM_DECOMMIT));
 #else
 		const u64 ptr64 = reinterpret_cast<u64>(pointer);
+#if defined(__APPLE__) && defined(ARCH_ARM64)
+		// Hack: on macOS, Apple explicitly fails mmap if you combine MAP_FIXED and MAP_JIT.
+		// So we unmap the space and just hope it maps to the same address we got before instead.
+		// The Xcode manpage says the pointer is a hint and the OS will try to map at the hint location
+		// so this isn't completely undefined behavior.
+		ensure(::munmap(pointer, size) != -1);
+		ensure(::mmap(pointer, size, PROT_NONE,  MAP_ANON | MAP_PRIVATE | MAP_JIT, -1, 0) == pointer);
+#else
 		ensure(::mmap(pointer, size, PROT_NONE, MAP_FIXED | MAP_ANON | MAP_PRIVATE | c_map_noreserve, -1, 0) != reinterpret_cast<void*>(uptr{umax}));
+#endif
 
 		if constexpr (c_madv_no_dump != 0)
 		{
-			ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), c_madv_no_dump) != -1);
+			ensure(::madvise(reinterpret_cast<void*>(ptr64 & -c_page_size), size + (ptr64 & (c_page_size - 1)), c_madv_no_dump) != -1);
 		}
 		else
 		{
-			ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), c_madv_free) != -1);
+			ensure(::madvise(reinterpret_cast<void*>(ptr64 & -c_page_size), size + (ptr64 & (c_page_size - 1)), c_madv_free) != -1);
 		}
 #endif
 	}
@@ -228,23 +368,28 @@ namespace utils
 		memory_commit(pointer, size, prot);
 #else
 		const u64 ptr64 = reinterpret_cast<u64>(pointer);
+#if defined(__APPLE__) && defined(ARCH_ARM64)
+		ensure(::munmap(pointer, size) != -1);
+		ensure(::mmap(pointer, size, +prot,  MAP_ANON | MAP_PRIVATE | MAP_JIT, -1, 0) == pointer);
+#else
 		ensure(::mmap(pointer, size, +prot, MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0) != reinterpret_cast<void*>(uptr{umax}));
+#endif
 
 		if constexpr (c_madv_hugepage != 0)
 		{
 			if (size % 0x200000 == 0)
 			{
-				::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), c_madv_hugepage);
+				::madvise(reinterpret_cast<void*>(ptr64 & -c_page_size), size + (ptr64 & (c_page_size - 1)), c_madv_hugepage);
 			}
 		}
 
 		if constexpr (c_madv_dump != 0)
 		{
-			ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), c_madv_dump) != -1);
+			ensure(::madvise(reinterpret_cast<void*>(ptr64 & -c_page_size), size + (ptr64 & (c_page_size - 1)), c_madv_dump) != -1);
 		}
 		else
 		{
-			ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_WILLNEED) != -1);
+			ensure(::madvise(reinterpret_cast<void*>(ptr64 & -c_page_size), size + (ptr64 & (c_page_size - 1)), MADV_WILLNEED) != -1);
 		}
 #endif
 	}
@@ -252,6 +397,7 @@ namespace utils
 	void memory_release(void* pointer, usz size)
 	{
 #ifdef _WIN32
+		unmap_mappping_memory(reinterpret_cast<u64>(pointer), size);
 		ensure(::VirtualFree(pointer, 0, MEM_RELEASE));
 #else
 		ensure(::munmap(pointer, size) != -1);
@@ -275,7 +421,7 @@ namespace utils
 
 			if (!::VirtualProtect(reinterpret_cast<LPVOID>(addr), block_size, +prot, &old))
 			{
-				fmt::throw_exception("VirtualProtect failed (%p, 0x%x, addr=0x%x, error=%#x)", pointer, size, addr, GetLastError());
+				fmt::throw_exception("VirtualProtect failed (%p, 0x%x, addr=0x%x, error=%s)", pointer, size, addr, fmt::win_error{GetLastError(), nullptr});
 			}
 
 			// Next region
@@ -283,7 +429,7 @@ namespace utils
 		}
 #else
 		const u64 ptr64 = reinterpret_cast<u64>(pointer);
-		ensure(::mprotect(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), +prot) != -1);
+		ensure(::mprotect(reinterpret_cast<void*>(ptr64 & -c_page_size), size + (ptr64 & (c_page_size - 1)), +prot) != -1);
 #endif
 	}
 
@@ -313,7 +459,7 @@ namespace utils
 #endif
 	}
 
-	shm::shm(u32 size, u32 flags)
+	shm::shm(u64 size, u32 flags)
 		: m_flags(flags)
 		, m_size(utils::align(size, 0x10000))
 	{
@@ -362,10 +508,7 @@ namespace utils
 #ifdef _WIN32
 		fs::file f;
 
-		// Get system version
-		[[maybe_unused]] static const DWORD version_major = *reinterpret_cast<const DWORD*>(__readgsqword(0x60) + 0x118);
-
-		auto set_sparse = [](HANDLE h, usz m_size) -> bool
+		std::function<bool(const std::string&, HANDLE, usz)> set_sparse = [&](const std::string& storagex, HANDLE h, usz m_size) -> bool
 		{
 			FILE_SET_SPARSE_BUFFER arg{.SetSparse = true};
 			FILE_BASIC_INFO info0{};
@@ -378,16 +521,14 @@ namespace utils
 				ensure(SetFileInformationByHandle(h, FileBasicInfo, &info0, sizeof(info0)));
 			}
 
-			if ((info0.FileAttributes & FILE_ATTRIBUTE_SPARSE_FILE) == 0 && version_major <= 7)
-			{
-				MessageBoxW(0, L"RPCS3 needs to be restarted to create sparse file rpcs3_vm.", L"RPCS3", MB_ICONEXCLAMATION);
-			}
-
 			if (DWORD bytesReturned{}; (info0.FileAttributes & FILE_ATTRIBUTE_SPARSE_FILE) || DeviceIoControl(h, FSCTL_SET_SPARSE, &arg, sizeof(arg), nullptr, 0, &bytesReturned, nullptr))
 			{
-				if ((info0.FileAttributes & FILE_ATTRIBUTE_SPARSE_FILE) == 0 && version_major <= 7)
+				if ((info0.FileAttributes & FILE_ATTRIBUTE_SPARSE_FILE) == 0 && !storagex.empty())
 				{
-					std::abort();
+					// Retry once (bug workaround)
+					f.close();
+					f.open(storagex, fs::read + fs::write + fs::create);
+					return set_sparse("", f.get_handle(), m_size);
 				}
 
 				FILE_STANDARD_INFO info;
@@ -421,30 +562,38 @@ namespace utils
 			return false;
 		};
 
-		const std::string storage2 = fs::get_temp_dir() + "rpcs3_vm_sparse.tmp";
-		const std::string storage3 = fs::get_cache_dir() + "rpcs3_vm_sparse.tmp";
+		std::string storage1 = fs::get_cache_dir();
+		std::string storage2 = fs::get_temp_dir();
 
-		if (!storage.empty())
+		if (storage.empty())
 		{
-			// Explicitly specified storage
-			ensure(f.open(storage, fs::read + fs::write + fs::create));
-		}
-		else if (!f.open(storage2, fs::read + fs::write + fs::create) || !set_sparse(f.get_handle(), m_size))
-		{
-			// Fallback storage
-			ensure(f.open(storage3, fs::read + fs::write + fs::create));
+			storage1 += "rpcs3_vm_sparse.tmp";
+			storage2 += "rpcs3_vm_sparse.tmp";
 		}
 		else
 		{
-			goto check;
+			storage1 += storage;
+			storage2 += storage;
 		}
 
-		if (!set_sparse(f.get_handle(), m_size))
+		if (!f.open(storage1, fs::read + fs::write + fs::create) || !set_sparse(storage1, f.get_handle(), m_size))
 		{
-			MessageBoxW(0, L"Failed to initialize sparse file.\nCan't find a filesystem with sparse file support (NTFS).", L"RPCS3", MB_ICONERROR);
+			// Fallback storage
+			ensure(f.open(storage2, fs::read + fs::write + fs::create));
+
+			if (!set_sparse(storage2, f.get_handle(), m_size))
+			{
+				MessageBoxW(0, L"Failed to initialize sparse file.\nCan't find a filesystem with sparse file support (NTFS).", L"RPCS3", MB_ICONERROR);
+			}
+
+			m_storage = std::move(storage2);
+		}
+		else
+		{
+			m_storage = std::move(storage1);
 		}
 
-	check:
+		// It seems impossible to automatically delete file on exit when file mapping is used
 		if (f.size() != m_size)
 		{
 			// Resize the file gradually (bug workaround)
@@ -463,8 +612,7 @@ namespace utils
 		if (const char c = fs::file("/proc/sys/vm/overcommit_memory").read<char>(); c == '0' || c == '1')
 		{
 			// Simply use memfd for overcommit memory
-			m_file = ::memfd_create_("", 0);
-			ensure(m_file >= 0);
+			m_file = ensure(::memfd_create_("", 0), FN(x >= 0));
 			ensure(::ftruncate(m_file, m_size) >= 0);
 			return;
 		}
@@ -474,12 +622,12 @@ namespace utils
 		}
 #else
 		int vm_overcommit = 0;
-		auto vm_sz = sizeof(int);
 
 #if defined(__NetBSD__) || defined(__APPLE__)
 		// Always ON
 		vm_overcommit = 0;
 #elif defined(__FreeBSD__)
+		auto vm_sz = sizeof(int);
 		int mib[2]{CTL_VM, VM_OVERCOMMIT};
 		if (::sysctl(mib, 2, &vm_overcommit, &vm_sz, NULL, 0) != 0)
 			vm_overcommit = -1;
@@ -490,8 +638,7 @@ namespace utils
 		if ((vm_overcommit & 3) == 0)
 		{
 #if defined(__FreeBSD__)
-			m_file = ::memfd_create_("", 0);
-			ensure(m_file >= 0);
+			m_file = ensure(::memfd_create_("", 0), FN(x >= 0));
 #else
 			const std::string name = "/rpcs3-mem2-" + std::to_string(reinterpret_cast<u64>(this));
 
@@ -515,10 +662,13 @@ namespace utils
 		if (!storage.empty())
 		{
 			m_file = ::open(storage.c_str(), O_RDWR | O_CREAT, S_IWUSR | S_IRUSR);
+			::unlink(storage.c_str());
 		}
 		else
 		{
-			m_file = ::open((fs::get_cache_dir() + "rpcs3_vm_sparse.tmp").c_str(), O_RDWR | O_CREAT, S_IWUSR | S_IRUSR);
+			std::string storage = fs::get_cache_dir() + "rpcs3_vm_sparse.tmp";
+			m_file = ::open(storage.c_str(), O_RDWR | O_CREAT, S_IWUSR | S_IRUSR);
+			::unlink(storage.c_str());
 		}
 
 		ensure(m_file >= 0);
@@ -563,6 +713,9 @@ namespace utils
 #else
 		::close(m_file);
 #endif
+
+		if (!m_storage.empty())
+			fs::remove_file(m_storage);
 	}
 
 	u8* shm::map(void* ptr, protection prot, bool cow) const
@@ -653,32 +806,82 @@ namespace utils
 #endif
 	}
 
-	u8* shm::map_critical(void* ptr, protection prot, bool cow)
+	std::pair<u8*, std::string> shm::map_critical(void* ptr, protection prot, bool cow)
 	{
 		const auto target = reinterpret_cast<u8*>(reinterpret_cast<u64>(ptr) & -0x10000);
 
 #ifdef _WIN32
-		::MEMORY_BASIC_INFORMATION mem;
-		if (!::VirtualQuery(target, &mem, sizeof(mem)) || mem.State != MEM_RESERVE || !::VirtualFree(mem.AllocationBase, 0, MEM_RELEASE))
+		::MEMORY_BASIC_INFORMATION mem{};
+		if (!::VirtualQuery(target, &mem, sizeof(mem)) || mem.State != MEM_RESERVE)
 		{
-			return nullptr;
+			return {nullptr, fmt::format("VirtualQuery() Unexpceted memory info: state=0x%x, %s", mem.State, std::as_bytes(std::span(&mem, 1)))};
 		}
 
 		const auto base = (u8*)mem.AllocationBase;
 		const auto size = mem.RegionSize + (target - base);
 
+		if (is_memory_mappping_memory(ptr))
+		{
+			if (base < target && !::VirtualFree(base, target - base, MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER))
+			{
+				return {nullptr, "Failed to split allocation base"};
+			}
+
+			if (target + m_size < base + size && !::VirtualFree(target, m_size, MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER))
+			{
+				return {nullptr, "Failed to split allocation end"};
+			}
+
+			DWORD access = 0;
+
+			switch (prot)
+			{
+			case protection::rw:
+			case protection::ro:
+			case protection::no:
+				access = cow ? PAGE_WRITECOPY : PAGE_READWRITE;
+				break;
+			case protection::wx:
+			case protection::rx:
+				access = cow ? PAGE_EXECUTE_WRITECOPY : PAGE_EXECUTE_READWRITE;
+				break;
+			}
+
+			if (MapViewOfFile3(m_handle, GetCurrentProcess(), target, 0, m_size, MEM_REPLACE_PLACEHOLDER, access, nullptr, 0))
+			{
+				if (prot != protection::rw && prot != protection::wx)
+				{
+					DWORD old;
+					if (!::VirtualProtect(target, m_size, +prot, &old))
+					{
+						UnmapViewOfFile2(GetCurrentProcess(), target, MEM_PRESERVE_PLACEHOLDER);
+						return {nullptr, "Failed to protect"};
+					}
+				}
+
+				return {target, {}};
+			}
+
+			return {nullptr, "Failed to map3"};
+		}
+
+		if (!::VirtualFree(mem.AllocationBase, 0, MEM_RELEASE))
+		{
+			return {nullptr, "VirtualFree() failed on allocation base"};
+		}
+
 		if (base < target && !::VirtualAlloc(base, target - base, MEM_RESERVE, PAGE_NOACCESS))
 		{
-			return nullptr;
+			return {nullptr, "VirtualAlloc() failed to reserve allocation base"};
 		}
 
 		if (target + m_size < base + size && !::VirtualAlloc(target + m_size, base + size - target - m_size, MEM_RESERVE, PAGE_NOACCESS))
 		{
-			return nullptr;
+			return {nullptr, "VirtualAlloc() failed to reserve allocation end"};
 		}
 #endif
 
-		return this->map(target, prot, cow);
+		return {this->map(target, prot, cow), "Failed to map"};
 	}
 
 	u8* shm::map_self(protection prot)
@@ -718,6 +921,25 @@ namespace utils
 		const auto target = reinterpret_cast<u8*>(reinterpret_cast<u64>(ptr) & -0x10000);
 
 #ifdef _WIN32
+		if (is_memory_mappping_memory(ptr))
+		{
+			ensure(UnmapViewOfFile2(GetCurrentProcess(), target, MEM_PRESERVE_PLACEHOLDER));
+
+			::MEMORY_BASIC_INFORMATION mem{}, mem2{};
+			ensure(::VirtualQuery(target - 1, &mem, sizeof(mem)) && ::VirtualQuery(target + m_size, &mem2, sizeof(mem2)));
+
+			const auto size1 = mem.State == MEM_RESERVE ? target - (u8*)mem.AllocationBase : 0;
+			const auto size2 =  mem2.State == MEM_RESERVE ? mem2.RegionSize : 0;
+
+			if (!size1 && !size2)
+			{
+				return;
+			}
+
+			ensure(::VirtualFree(size1 ? mem.AllocationBase : target, m_size + size1 + size2, MEM_RELEASE | MEM_COALESCE_PLACEHOLDERS));
+			return;
+		}
+
 		this->unmap(target);
 
 		::MEMORY_BASIC_INFORMATION mem, mem2;

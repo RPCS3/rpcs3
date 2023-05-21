@@ -39,61 +39,134 @@ void fmt_class_string<CellGifDecError>::format(std::string& out, u64 arg)
 	});
 }
 
-// cellGifDec aliases (only for cellGifDec.cpp)
-using PPMainHandle = vm::pptr<GifDecoder>;
-using PMainHandle = vm::ptr<GifDecoder>;
-using PThreadInParam = vm::cptr<CellGifDecThreadInParam>;
-using PThreadOutParam = vm::ptr<CellGifDecThreadOutParam>;
-using PExtThreadInParam = vm::cptr<CellGifDecExtThreadInParam>;
-using PExtThreadOutParam = vm::ptr<CellGifDecExtThreadOutParam>;
-using PPSubHandle = vm::pptr<GifStream>;
-using PSubHandle = vm::ptr<GifStream>;
-using PSrc = vm::cptr<CellGifDecSrc>;
-using POpenInfo = vm::ptr<CellGifDecOpnInfo>;
-using PInfo = vm::ptr<CellGifDecInfo>;
-using PInParam = vm::cptr<CellGifDecInParam>;
-using POutParam = vm::ptr<CellGifDecOutParam>;
-using PDataCtrlParam = vm::cptr<CellGifDecDataCtrlParam>;
-using PDataOutInfo = vm::ptr<CellGifDecDataOutInfo>;
-
-error_code cellGifDecCreate(PPMainHandle mainHandle, PThreadInParam threadInParam, PThreadOutParam threadOutParam)
+error_code cellGifDecCreate(vm::ptr<GifDecoder> mainHandle, vm::cptr<CellGifDecThreadInParam> threadInParam, vm::ptr<CellGifDecThreadOutParam> threadOutParam)
 {
-	UNIMPLEMENTED_FUNC(cellGifDec);
+	cellGifDec.todo("cellGifDecCreate(mainHandle=*0x%x, threadInParam=*0x%x, threadOutParam=*0x%x)", mainHandle, threadInParam, threadOutParam);
+
+	if (!mainHandle)
+	{
+		return CELL_GIFDEC_ERROR_ARG;
+	}
+
+	*mainHandle = {};
+
+	if (!threadOutParam || !threadInParam || !threadInParam->cbCtrlMallocFunc || !threadInParam->cbCtrlFreeFunc ||
+		(threadInParam->spuThreadEnable != CELL_GIFDEC_SPU_THREAD_DISABLE &&
+			(threadInParam->spuThreadEnable != CELL_GIFDEC_SPU_THREAD_ENABLE ||
+				threadInParam->ppuThreadPriority > 3071 ||
+				threadInParam->spuThreadPriority > 255)))
+	{
+		return CELL_GIFDEC_ERROR_ARG;
+	}
+
+	threadOutParam->gifCodecVersion = 0x240000;
+
 	return CELL_OK;
 }
 
-error_code cellGifDecExtCreate(PPMainHandle mainHandle, PThreadInParam threadInParam, PThreadOutParam threadOutParam, PExtThreadInParam extThreadInParam, PExtThreadOutParam extThreadOutParam)
+error_code cellGifDecExtCreate(vm::ptr<GifDecoder> mainHandle, vm::cptr<CellGifDecThreadInParam> threadInParam, vm::ptr<CellGifDecThreadOutParam> threadOutParam, vm::cptr<CellGifDecExtThreadInParam> extThreadInParam, vm::ptr<CellGifDecExtThreadOutParam> extThreadOutParam)
 {
-	UNIMPLEMENTED_FUNC(cellGifDec);
+	cellGifDec.todo("cellGifDecExtCreate(mainHandle=*0x%x, threadInParam=*0x%x, threadOutParam=*0x%x, extThreadInParam=*0x%x, extThreadOutParam=*0x%x)", mainHandle, threadInParam, threadOutParam, extThreadInParam, extThreadOutParam);
+
+	if (!mainHandle)
+	{
+		return CELL_GIFDEC_ERROR_ARG;
+	}
+
+	*mainHandle = {};
+
+	if (!threadOutParam || !extThreadOutParam || !extThreadInParam || !threadInParam || !threadInParam->cbCtrlMallocFunc || !threadInParam->cbCtrlFreeFunc ||
+		(threadInParam->spuThreadEnable != CELL_GIFDEC_SPU_THREAD_DISABLE && threadInParam->spuThreadEnable != CELL_GIFDEC_SPU_THREAD_ENABLE))
+	{
+		return CELL_GIFDEC_ERROR_ARG;
+	}
+
+	if (threadInParam->spuThreadEnable == CELL_GIFDEC_SPU_THREAD_ENABLE && !extThreadInParam->spurs)
+	{
+		return CELL_GIFDEC_ERROR_ARG;
+	}
+
+	if (extThreadInParam->maxContention == 0u || extThreadInParam->maxContention >= 8u)
+	{
+		return CELL_GIFDEC_ERROR_ARG;
+	}
+
+	for (u32 i = 0; i < 8; i++)
+	{
+		if (extThreadInParam->priority[i] > 15)
+		{
+			return CELL_GIFDEC_ERROR_ARG;
+		}
+	}
+
+	threadOutParam->gifCodecVersion = 0x240000;
+
 	return CELL_OK;
 }
 
-error_code cellGifDecOpen(PMainHandle mainHandle, PPSubHandle subHandle, PSrc src, POpenInfo openInfo)
+error_code cellGifDecOpen(vm::ptr<GifDecoder> mainHandle, vm::pptr<GifStream> subHandle, vm::cptr<CellGifDecSrc> src, vm::ptr<CellGifDecOpnInfo> openInfo)
 {
 	cellGifDec.warning("cellGifDecOpen(mainHandle=*0x%x, subHandle=**0x%x, src=*0x%x, openInfo=*0x%x)", mainHandle, subHandle, src, openInfo);
 
-	GifStream current_subHandle;
+	if (!mainHandle || !subHandle)
+	{
+		return CELL_GIFDEC_ERROR_ARG;
+	}
+
+	if (false) // TODO
+	{
+		return CELL_GIFDEC_ERROR_SEQ;
+	}
+
+	if (!openInfo || !src)
+	{
+		return CELL_GIFDEC_ERROR_ARG;
+	}
+
+	GifStream current_subHandle{};
 	current_subHandle.fd = 0;
 	current_subHandle.src = *src;
 
 	switch (src->srcSelect)
 	{
 	case CELL_GIFDEC_BUFFER:
+	{
+		if (!src->streamPtr || !src->streamSize)
+		{
+			return CELL_GIFDEC_ERROR_ARG;
+		}
+
 		current_subHandle.fileSize = src->streamSize;
 		break;
-
+	}
 	case CELL_GIFDEC_FILE:
 	{
+		if (!src->fileName)
+		{
+			return CELL_GIFDEC_ERROR_OPEN_FILE;
+		}
+
 		// Get file descriptor and size
-		const auto real_path = vfs::get(src->fileName.get_ptr());
+		const std::string real_path = vfs::get(src->fileName.get_ptr());
 		fs::file file_s(real_path);
-		if (!file_s) return CELL_GIFDEC_ERROR_OPEN_FILE;
+		if (!file_s)
+		{
+			return CELL_GIFDEC_ERROR_OPEN_FILE;
+		}
+
+		if (src->fileOffset < 0)
+		{
+			return CELL_GIFDEC_ERROR_ARG;
+		}
 
 		current_subHandle.fileSize = file_s.size();
 		current_subHandle.fd = idm::make<lv2_fs_object, lv2_file>(src->fileName.get_ptr(), std::move(file_s), 0, 0, real_path);
 		break;
 	}
-	default: break; // TODO
+	default:
+	{
+		return CELL_GIFDEC_ERROR_ARG;
+	}
 	}
 
 	subHandle->set(vm::alloc(sizeof(GifStream), vm::main));
@@ -103,15 +176,102 @@ error_code cellGifDecOpen(PMainHandle mainHandle, PPSubHandle subHandle, PSrc sr
 	return CELL_OK;
 }
 
-error_code cellGifDecExtOpen()
+error_code cellGifDecExtOpen(vm::ptr<GifDecoder> mainHandle, vm::pptr<GifStream> subHandle, vm::cptr<CellGifDecSrc> src, vm::ptr<CellGifDecOpnInfo> openInfo, vm::cptr<CellGifDecCbCtrlStrm> cbCtrlStrm)
 {
-	cellGifDec.todo("cellGifDecExtOpen()");
+	cellGifDec.todo("cellGifDecExtOpen(mainHandle=*0x%x, subHandle=*0x%x, src=*0x%x, openInfo=*0x%x, cbCtrlStrm=*0x%x)", mainHandle, subHandle, src, openInfo, cbCtrlStrm);
+
+	if (!mainHandle || !subHandle)
+	{
+		return CELL_GIFDEC_ERROR_ARG;
+	}
+
+	if (false) // TODO
+	{
+		return CELL_GIFDEC_ERROR_SEQ;
+	}
+
+	if (!openInfo || !src)
+	{
+		return CELL_GIFDEC_ERROR_ARG;
+	}
+
+	GifStream current_subHandle{};
+	current_subHandle.fd = 0;
+	current_subHandle.src = *src;
+
+	switch (src->srcSelect)
+	{
+	case CELL_GIFDEC_BUFFER:
+	{
+		if (!src->streamPtr || !src->streamSize)
+		{
+			return CELL_GIFDEC_ERROR_ARG;
+		}
+
+		current_subHandle.fileSize = src->streamSize;
+		break;
+	}
+	case CELL_GIFDEC_FILE:
+	{
+		if (!src->fileName)
+		{
+			return CELL_GIFDEC_ERROR_OPEN_FILE;
+		}
+
+		// Get file descriptor and size
+		const std::string real_path = vfs::get(src->fileName.get_ptr());
+		fs::file file_s(real_path);
+		if (!file_s)
+		{
+			return CELL_GIFDEC_ERROR_OPEN_FILE;
+		}
+
+		if (src->fileOffset < 0)
+		{
+			return CELL_GIFDEC_ERROR_ARG;
+		}
+
+		current_subHandle.fileSize = file_s.size();
+		current_subHandle.fd = idm::make<lv2_fs_object, lv2_file>(src->fileName.get_ptr(), std::move(file_s), 0, 0, real_path);
+		break;
+	}
+	default:
+	{
+		return CELL_GIFDEC_ERROR_ARG;
+	}
+	}
+
 	return CELL_OK;
 }
 
-error_code cellGifDecReadHeader(PMainHandle mainHandle, PSubHandle subHandle, PInfo info)
+error_code cellGifDecReadHeader(vm::ptr<GifDecoder> mainHandle, vm::ptr<GifStream> subHandle, vm::ptr<CellGifDecInfo> info)
 {
 	cellGifDec.warning("cellGifDecReadHeader(mainHandle=*0x%x, subHandle=*0x%x, info=*0x%x)", mainHandle, subHandle, info);
+
+	if (!mainHandle)
+	{
+		return CELL_GIFDEC_ERROR_ARG;
+	}
+
+	if (false) // TODO: check main handle
+	{
+		return CELL_GIFDEC_ERROR_SEQ;
+	}
+
+	if (!subHandle)
+	{
+		return CELL_GIFDEC_ERROR_ARG;
+	}
+
+	if (false) // TODO: check sub handle
+	{
+		return CELL_GIFDEC_ERROR_SEQ;
+	}
+
+	if (!info)
+	{
+		return CELL_GIFDEC_ERROR_ARG;
+	}
 
 	const u32& fd = subHandle->fd;
 	CellGifDecInfo& current_info = subHandle->info;
@@ -122,9 +282,10 @@ error_code cellGifDecReadHeader(PMainHandle mainHandle, PSubHandle subHandle, PI
 	switch (subHandle->src.srcSelect)
 	{
 	case CELL_GIFDEC_BUFFER:
+	{
 		std::memcpy(buffer, subHandle->src.streamPtr.get_ptr(), sizeof(buffer));
 		break;
-
+	}
 	case CELL_GIFDEC_FILE:
 	{
 		auto file = idm::get<lv2_fs_object, lv2_file>(fd);
@@ -135,8 +296,8 @@ error_code cellGifDecReadHeader(PMainHandle mainHandle, PSubHandle subHandle, PI
 	default: break; // TODO
 	}
 
-	if (*utils::bless<be_t<u32>>(buffer + 0) != 0x47494638u ||
-		(*utils::bless<le_t<u16>>(buffer + 4) != 0x6139u && *utils::bless<le_t<u16>>(buffer + 4) != 0x6137u)) // Error: The first 6 bytes are not a valid GIF signature
+	if (read_from_ptr<be_t<u32>>(buffer + 0) != 0x47494638u ||
+		(read_from_ptr<le_t<u16>>(buffer + 4) != 0x6139u && read_from_ptr<le_t<u16>>(buffer + 4) != 0x6137u)) // Error: The first 6 bytes are not a valid GIF signature
 	{
 		return CELL_GIFDEC_ERROR_STREAM_FORMAT; // Surprisingly there is no error code related with headerss
 	}
@@ -156,20 +317,71 @@ error_code cellGifDecReadHeader(PMainHandle mainHandle, PSubHandle subHandle, PI
 	return CELL_OK;
 }
 
-error_code cellGifDecExtReadHeader()
+error_code cellGifDecExtReadHeader(vm::ptr<GifDecoder> mainHandle, vm::cptr<GifStream> subHandle, vm::ptr<CellGifDecInfo> info, vm::ptr<CellGifDecExtInfo> extInfo)
 {
-	cellGifDec.todo("cellGifDecExtReadHeader()");
+	cellGifDec.todo("cellGifDecExtReadHeader(mainHandle=*0x%x, subHandle=*0x%x, info=*0x%x, extInfo=*0x%x)", mainHandle, subHandle, info, extInfo);
+
+	if (!mainHandle)
+	{
+		return CELL_GIFDEC_ERROR_ARG;
+	}
+
+	if (false) // TODO: check main handle
+	{
+		return CELL_GIFDEC_ERROR_SEQ;
+	}
+
+	if (!subHandle)
+	{
+		return CELL_GIFDEC_ERROR_ARG;
+	}
+
+	if (false) // TODO: check sub handle
+	{
+		return CELL_GIFDEC_ERROR_SEQ;
+	}
+
+	if (!info || !extInfo)
+	{
+		return CELL_GIFDEC_ERROR_ARG;
+	}
+
 	return CELL_OK;
 }
 
-error_code cellGifDecSetParameter(PMainHandle mainHandle, PSubHandle subHandle, PInParam inParam, POutParam outParam)
+error_code cellGifDecSetParameter(vm::ptr<GifDecoder> mainHandle, vm::ptr<GifStream> subHandle, vm::cptr<CellGifDecInParam> inParam, vm::ptr<CellGifDecOutParam> outParam)
 {
 	cellGifDec.warning("cellGifDecSetParameter(mainHandle=*0x%x, subHandle=*0x%x, inParam=*0x%x, outParam=*0x%x)", mainHandle, subHandle, inParam, outParam);
+
+	if (!mainHandle)
+	{
+		return CELL_GIFDEC_ERROR_ARG;
+	}
+
+	if (false) // TODO: check main handle
+	{
+		return CELL_GIFDEC_ERROR_SEQ;
+	}
+
+	if (!subHandle)
+	{
+		return CELL_GIFDEC_ERROR_ARG;
+	}
+
+	if (false) // TODO: check sub handle
+	{
+		return CELL_GIFDEC_ERROR_SEQ;
+	}
+
+	if (!inParam || !outParam)
+	{
+		return CELL_GIFDEC_ERROR_ARG;
+	}
 
 	CellGifDecInfo& current_info = subHandle->info;
 	CellGifDecOutParam& current_outParam = subHandle->outParam;
 
-	current_outParam.outputWidthByte  = (current_info.SWidth * current_info.SColorResolution * 3)/8;
+	current_outParam.outputWidthByte  = (current_info.SWidth * current_info.SColorResolution * 3) / 8;
 	current_outParam.outputWidth      = current_info.SWidth;
 	current_outParam.outputHeight     = current_info.SHeight;
 	current_outParam.outputColorSpace = inParam->colorSpace;
@@ -179,23 +391,97 @@ error_code cellGifDecSetParameter(PMainHandle mainHandle, PSubHandle subHandle, 
 	case CELL_GIFDEC_ARGB: current_outParam.outputComponents = 4; break;
 	default: return CELL_GIFDEC_ERROR_ARG; // Not supported color space
 	}
-	current_outParam.outputBitDepth	= 0;   // Unimplemented
-	current_outParam.useMemorySpace	= 0;   // Unimplemented
+	current_outParam.outputBitDepth = 0;   // Unimplemented
+	current_outParam.useMemorySpace = 0;   // Unimplemented
 
 	*outParam = current_outParam;
 
 	return CELL_OK;
 }
 
-error_code cellGifDecExtSetParameter()
+error_code cellGifDecExtSetParameter(vm::ptr<GifDecoder> mainHandle, vm::ptr<GifStream> subHandle, vm::cptr<CellGifDecInParam> inParam, vm::ptr<CellGifDecOutParam> outParam, vm::cptr<CellGifDecExtInParam> extInParam, vm::ptr<CellGifDecExtOutParam> extOutParam)
 {
-	cellGifDec.todo("cellGifDecExtSetParameter()");
+	cellGifDec.todo("cellGifDecExtSetParameter(mainHandle=*0x%x, subHandle=*0x%x, inParam=*0x%x, outParam=*0x%x, extInParam=*0x%x, extOutParam=*0x%x)", mainHandle, subHandle, inParam, outParam, extInParam, extOutParam);
+
+	if (!mainHandle)
+	{
+		return CELL_GIFDEC_ERROR_ARG;
+	}
+
+	if (false) // TODO: check main handle
+	{
+		return CELL_GIFDEC_ERROR_SEQ;
+	}
+
+	if (!subHandle)
+	{
+		return CELL_GIFDEC_ERROR_ARG;
+	}
+
+	if (false) // TODO: check sub handle
+	{
+		return CELL_GIFDEC_ERROR_SEQ;
+	}
+
+	if (!inParam || !outParam)
+	{
+		return CELL_GIFDEC_ERROR_ARG;
+	}
+
+	CellGifDecInfo& current_info = subHandle->info;
+	CellGifDecOutParam& current_outParam = subHandle->outParam;
+
+	current_outParam.outputWidthByte  = (current_info.SWidth * current_info.SColorResolution * 3) / 8;
+	current_outParam.outputWidth      = current_info.SWidth;
+	current_outParam.outputHeight     = current_info.SHeight;
+	current_outParam.outputColorSpace = inParam->colorSpace;
+	switch (current_outParam.outputColorSpace)
+	{
+	case CELL_GIFDEC_RGBA:
+	case CELL_GIFDEC_ARGB: current_outParam.outputComponents = 4; break;
+	default: return CELL_GIFDEC_ERROR_ARG; // Not supported color space
+	}
+	current_outParam.outputBitDepth = 0;   // Unimplemented
+	current_outParam.useMemorySpace = 0;   // Unimplemented
+
+	*outParam = current_outParam;
+
+	if (!extInParam || extInParam->bufferMode != CELL_GIFDEC_LINE_MODE || !extOutParam)
+	{
+		return CELL_GIFDEC_ERROR_ARG;
+	}
+
 	return CELL_OK;
 }
 
-error_code cellGifDecDecodeData(PMainHandle mainHandle, PSubHandle subHandle, vm::ptr<u8> data, PDataCtrlParam dataCtrlParam, PDataOutInfo dataOutInfo)
+error_code cellGifDecDecodeData(vm::ptr<GifDecoder> mainHandle, vm::cptr<GifStream> subHandle, vm::ptr<u8> data, vm::cptr<CellGifDecDataCtrlParam> dataCtrlParam, vm::ptr<CellGifDecDataOutInfo> dataOutInfo)
 {
 	cellGifDec.warning("cellGifDecDecodeData(mainHandle=*0x%x, subHandle=*0x%x, data=*0x%x, dataCtrlParam=*0x%x, dataOutInfo=*0x%x)", mainHandle, subHandle, data, dataCtrlParam, dataOutInfo);
+
+	if (!mainHandle)
+	{
+		return CELL_GIFDEC_ERROR_ARG;
+	}
+
+	if (false) // TODO: check main handle
+	{
+		return CELL_GIFDEC_ERROR_SEQ;
+	}
+
+	if (!subHandle)
+	{
+		return CELL_GIFDEC_ERROR_ARG;
+	}
+
+	if (false) // TODO: check sub handle
+	{
+		return CELL_GIFDEC_ERROR_SEQ;
+	}
+
+	if (!dataOutInfo || !dataCtrlParam)
+	{
+		return CELL_GIFDEC_ERROR_ARG;
+	}
 
 	dataOutInfo->status = CELL_GIFDEC_DEC_STATUS_STOP;
 
@@ -306,15 +592,56 @@ error_code cellGifDecDecodeData(PMainHandle mainHandle, PSubHandle subHandle, vm
 	return CELL_OK;
 }
 
-error_code cellGifDecExtDecodeData()
+error_code cellGifDecExtDecodeData(vm::ptr<GifDecoder> mainHandle, vm::cptr<GifStream> subHandle, vm::ptr<u8> data, vm::cptr<CellGifDecDataCtrlParam> dataCtrlParam, vm::ptr<CellGifDecDataOutInfo> dataOutInfo, vm::cptr<CellGifDecCbCtrlDisp> cbCtrlDisp, vm::ptr<CellGifDecDispParam> dispParam)
 {
-	cellGifDec.todo("cellGifDecExtDecodeData()");
+	cellGifDec.todo("cellGifDecExtDecodeData(mainHandle=*0x%x, subHandle=*0x%x, data=*0x%x, dataCtrlParam=*0x%x, dataOutInfo=*0x%x, cbCtrlDisp=*0x%x, dispParam=*0x%x)", mainHandle, subHandle, data, dataCtrlParam, dataOutInfo, cbCtrlDisp, dispParam);
+
+	if (!mainHandle)
+	{
+		return CELL_GIFDEC_ERROR_ARG;
+	}
+
+	if (false) // TODO: check main handle
+	{
+		return CELL_GIFDEC_ERROR_SEQ;
+	}
+
+	if (!subHandle)
+	{
+		return CELL_GIFDEC_ERROR_ARG;
+	}
+
+	if (false) // TODO: check sub handle
+	{
+		return CELL_GIFDEC_ERROR_SEQ;
+	}
+
+	if (!dataOutInfo || !dataCtrlParam)
+	{
+		return CELL_GIFDEC_ERROR_ARG;
+	}
+
 	return CELL_OK;
 }
 
-error_code cellGifDecClose(PMainHandle mainHandle, PSubHandle subHandle)
+error_code cellGifDecClose(vm::ptr<GifDecoder> mainHandle, vm::cptr<GifStream> subHandle)
 {
 	cellGifDec.warning("cellGifDecClose(mainHandle=*0x%x, subHandle=*0x%x)", mainHandle, subHandle);
+
+	if (!mainHandle)
+	{
+		return CELL_GIFDEC_ERROR_ARG;
+	}
+
+	if (false) // TODO: check main handle
+	{
+		return CELL_GIFDEC_ERROR_SEQ;
+	}
+
+	if (!subHandle)
+	{
+		return CELL_GIFDEC_ERROR_ARG;
+	}
 
 	idm::remove<lv2_fs_object, lv2_file>(subHandle->fd);
 
@@ -323,9 +650,20 @@ error_code cellGifDecClose(PMainHandle mainHandle, PSubHandle subHandle)
 	return CELL_OK;
 }
 
-error_code cellGifDecDestroy(PMainHandle mainHandle)
+error_code cellGifDecDestroy(vm::ptr<GifDecoder> mainHandle)
 {
-	UNIMPLEMENTED_FUNC(cellGifDec);
+	cellGifDec.todo("cellGifDecDestroy(mainHandle=*0x%x)", mainHandle);
+
+	if (!mainHandle)
+	{
+		return CELL_GIFDEC_ERROR_ARG;
+	}
+
+	if (false) // TODO: check main handle
+	{
+		return CELL_GIFDEC_ERROR_SEQ;
+	}
+
 	return CELL_OK;
 }
 

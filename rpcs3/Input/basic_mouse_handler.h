@@ -9,10 +9,10 @@
 
 class basic_mouse_handler final : public MouseHandlerBase, public QObject
 {
+	using MouseHandlerBase::MouseHandlerBase;
+
 public:
 	void Init(const u32 max_connect) override;
-
-	basic_mouse_handler();
 
 	void SetTargetWindow(QWindow* target);
 	void MouseButtonDown(QMouseEvent* event);

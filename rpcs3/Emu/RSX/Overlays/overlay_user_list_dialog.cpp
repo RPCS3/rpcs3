@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "overlay_manager.h"
 #include "overlay_user_list_dialog.h"
 #include "Emu/vfs_config.h"
 #include "Emu/system_utils.hpp"
@@ -69,10 +70,10 @@ namespace rsx
 		user_list_dialog::user_list_dialog()
 		{
 			m_dim_background = std::make_unique<overlay_element>();
-			m_dim_background->set_size(1280, 720);
+			m_dim_background->set_size(virtual_width, virtual_height);
 			m_dim_background->back_color.a = 0.5f;
 
-			m_list = std::make_unique<list_view>(1240, 540);
+			m_list = std::make_unique<list_view>(virtual_width - 2 * 20, 540);
 			m_list->set_pos(20, 85);
 
 			m_description = std::make_unique<label>();
@@ -80,7 +81,7 @@ namespace rsx
 			m_description->set_pos(20, 37);
 			m_description->set_text("Select user"); // Fallback. I don't think this will ever be used, so I won't localize it.
 			m_description->auto_resize();
-			m_description->back_color.a	= 0.f;
+			m_description->back_color.a = 0.f;
 
 			fade_animation.duration = 0.15f;
 
@@ -95,7 +96,7 @@ namespace rsx
 			}
 		}
 
-		void user_list_dialog::on_button_pressed(pad_button button_press)
+		void user_list_dialog::on_button_pressed(pad_button button_press, bool is_auto_repeat)
 		{
 			if (fade_animation.active) return;
 
@@ -152,7 +153,8 @@ namespace rsx
 					close(true, true);
 				};
 			}
-			else
+			// Play a sound unless this is a fast auto repeat which would induce a nasty noise
+			else if (!is_auto_repeat || m_auto_repeat_ms_interval >= m_auto_repeat_ms_interval_default)
 			{
 				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_cursor.wav");
 			}
@@ -174,11 +176,6 @@ namespace rsx
 
 			return result;
 		}
-
-		struct user_list_dialog_thread
-		{
-			static constexpr auto thread_name = "UserList Thread"sv;
-		};
 
 		error_code user_list_dialog::show(const std::string& title, u32 focused, const std::vector<u32>& user_ids, bool enable_overlay, std::function<void(s32 status)> on_close)
 		{
@@ -243,33 +240,15 @@ namespace rsx
 			this->on_close = std::move(on_close);
 			visible = true;
 
-			auto& list_thread = g_fxo->get<named_thread<user_list_dialog_thread>>();
-
 			const auto notify = std::make_shared<atomic_t<bool>>(false);
+			auto& overlayman = g_fxo->get<display_manager>();
 
-			list_thread([&, notify]()
-			{
-				const u64 tbit = alloc_thread_bit();
-				g_thread_bit = tbit;
+			overlayman.attach_thread_input(
+				uid, "User list dialog",
+				[notify]() { *notify = true; notify->notify_one(); }
+			);
 
-				*notify = true;
-				notify->notify_one();
-
-				auto ref = g_fxo->get<display_manager>().get(uid);
-
-				if (const auto error = run_input_loop())
-				{
-					if (error != selection_code::canceled)
-					{
-						rsx_log.error("User list dialog input loop exited with error code=%d", error);
-					}
-				}
-
-				thread_bits &= ~tbit;
-				thread_bits.notify_all();
-			});
-
-			while (list_thread < thread_state::errored && !*notify)
+			while (!Emu.IsStopped() && !*notify)
 			{
 				notify->wait(false, atomic_wait_timeout{1'000'000});
 			}

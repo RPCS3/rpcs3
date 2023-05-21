@@ -8,10 +8,10 @@
 #include "persistent_settings.h"
 #include "gs_frame.h"
 #include "gl_gs_frame.h"
-#include "display_sleep_control.h"
 #include "localized_emu.h"
 #include "qt_camera_handler.h"
 #include "qt_music_handler.h"
+#include "rpcs3_version.h"
 
 #ifdef WITH_DISCORD_RPC
 #include "_discord_utils.h"
@@ -19,11 +19,6 @@
 
 #include "Emu/Io/Null/null_camera_handler.h"
 #include "Emu/Io/Null/null_music_handler.h"
-#include "Emu/Cell/Modules/cellAudio.h"
-#include "Emu/Cell/lv2/sys_rsxaudio.h"
-#include "Emu/Cell/lv2/sys_process.h"
-#include "Emu/RSX/Overlays/overlay_perf_metrics.h"
-#include "Emu/system_utils.hpp"
 #include "Emu/vfs_config.h"
 #include "trophy_notification_helper.h"
 #include "save_data_dialog.h"
@@ -35,11 +30,13 @@
 
 #include <QScreen>
 #include <QFontDatabase>
+#include <QLayout>
 #include <QLibraryInfo>
 #include <QDirIterator>
 #include <QFileInfo>
 #include <QSound>
 #include <QMessageBox>
+#include <QTextDocument>
 
 #include <clocale>
 
@@ -69,6 +66,36 @@ bool gui_application::Init()
 	setWindowIcon(QIcon(":/rpcs3.ico"));
 #endif
 
+	if (!rpcs3::is_release_build() && !rpcs3::is_local_build())
+	{
+		const std::string_view branch_name = rpcs3::get_full_branch();
+		gui_log.warning("Experimental Build Warning! Build origin: %s", branch_name);
+
+		QMessageBox msg;
+		msg.setWindowTitle(tr("Experimental Build Warning"));
+		msg.setIcon(QMessageBox::Critical);
+		msg.setTextFormat(Qt::RichText);
+		msg.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+		msg.setDefaultButton(QMessageBox::No);
+		msg.setText(QString(tr(
+			R"(
+				<p style="white-space: nowrap;">
+					Please understand that this build is not an official RPCS3 release.<br>
+					This build contains changes that may break games, or even <b>damage</b> your data.<br>
+					We recommend to download and use the official build from the <a href='https://rpcs3.net/download'>RPCS3 website</a>.<br><br>
+					Build origin: %1<br>
+					Do you wish to use this build anyway?
+				</p>
+			)"
+		)).arg(Qt::convertFromPlainText(branch_name.data())));
+		msg.layout()->setSizeConstraint(QLayout::SetFixedSize);
+
+		if (msg.exec() == QMessageBox::No)
+		{
+			return false;
+		}
+	}
+
 	m_emu_settings.reset(new emu_settings());
 	m_gui_settings.reset(new gui_settings());
 	m_persistent_settings.reset(new persistent_settings());
@@ -97,7 +124,7 @@ bool gui_application::Init()
 		const auto language = m_gui_settings->GetValue(gui::loc_language).toString();
 		const auto index    = codes.indexOf(language);
 
-		LoadLanguage(index < 0 ? QLocale(QLocale::English).bcp47Name() : codes.at(index));
+		LoadLanguage(index < 0 ? QLocale(QLocale::English).bcp47Name() : ::at32(codes, index));
 	}
 
 	// Create callbacks from the emulator, which reference the handlers.
@@ -212,15 +239,22 @@ QStringList gui_application::GetAvailableLanguageCodes()
 	if (QFileInfo(language_path).isDir())
 	{
 		const QDir dir(language_path);
-		const QStringList filenames = dir.entryList(QStringList("*.qm"));
+		const QStringList filenames = dir.entryList(QStringList("rpcs3_*.qm"));
 
-		for (const auto& filename : filenames)
+		for (const QString& filename : filenames)
 		{
 			QString language_code = filename;                        // "rpcs3_en.qm"
 			language_code.truncate(language_code.lastIndexOf('.'));  // "rpcs3_en"
 			language_code.remove(0, language_code.indexOf('_') + 1); // "en"
 
-			language_codes << language_code;
+			if (language_codes.contains(language_code))
+			{
+				gui_log.error("Found duplicate language '%s' (%s)", language_code.toStdString(), filename.toStdString());
+			}
+			else
+			{
+				language_codes << language_code;
+			}
 		}
 	}
 
@@ -239,13 +273,15 @@ void gui_application::InitializeConnects()
 	{
 		connect(m_main_window, &main_window::RequestLanguageChange, this, &gui_application::LoadLanguage);
 		connect(m_main_window, &main_window::RequestGlobalStylesheetChange, this, &gui_application::OnChangeStyleSheetRequest);
-		connect(m_main_window, &main_window::NotifyEmuSettingsChange, this, &gui_application::OnEmuSettingsChange);
+		connect(m_main_window, &main_window::NotifyEmuSettingsChange, this, [this](){ OnEmuSettingsChange(); });
 
 		connect(this, &gui_application::OnEmulatorRun, m_main_window, &main_window::OnEmuRun);
 		connect(this, &gui_application::OnEmulatorStop, m_main_window, &main_window::OnEmuStop);
 		connect(this, &gui_application::OnEmulatorPause, m_main_window, &main_window::OnEmuPause);
 		connect(this, &gui_application::OnEmulatorResume, m_main_window, &main_window::OnEmuResume);
 		connect(this, &gui_application::OnEmulatorReady, m_main_window, &main_window::OnEmuReady);
+		connect(this, &gui_application::OnEnableDiscEject, m_main_window, &main_window::OnEnableDiscEject);
+		connect(this, &gui_application::OnEnableDiscInsert, m_main_window, &main_window::OnEnableDiscInsert);
 	}
 
 #ifdef WITH_DISCORD_RPC
@@ -275,18 +311,65 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 {
 	extern const std::unordered_map<video_resolution, std::pair<int, int>, value_hash<video_resolution>> g_video_out_resolution_map;
 
-	auto [w, h] = g_video_out_resolution_map.at(g_cfg.video.resolution);
+	auto [w, h] = ::at32(g_video_out_resolution_map, g_cfg.video.resolution);
 
 	if (m_gui_settings->GetValue(gui::gs_resize).toBool())
 	{
-		w = m_gui_settings->GetValue(gui::gs_width).toInt();
-		h = m_gui_settings->GetValue(gui::gs_height).toInt();
+		if (m_gui_settings->GetValue(gui::gs_resize_manual).toBool())
+		{
+			w = m_gui_settings->GetValue(gui::gs_width).toInt();
+			h = m_gui_settings->GetValue(gui::gs_height).toInt();
+		}
+		else
+		{
+			const qreal device_pixel_ratio = devicePixelRatio();
+			w /= device_pixel_ratio;
+			h /= device_pixel_ratio;
+		}
 	}
 
-	const auto screen = m_main_window ? m_main_window->screen() : primaryScreen();
-	const auto base_geometry  = m_main_window ? m_main_window->frameGeometry() : primaryScreen()->geometry();
-	const auto frame_geometry = gui::utils::create_centered_window_geometry(screen, base_geometry, w, h);
-	const auto app_icon = m_main_window ? m_main_window->GetAppIcon() : gui::utils::get_app_icon_from_path(Emu.GetBoot(), Emu.GetTitleID());
+	QScreen* screen = nullptr;
+	QRect base_geometry{};
+
+	// Use screen index set by CLI argument
+	int screen_index = m_game_screen_index;
+
+	// In no-gui mode: use last used screen if no CLI index was set
+	if (screen_index < 0 && !m_main_window)
+	{
+		screen_index = m_gui_settings->GetValue(gui::gs_screen).toInt();
+	}
+
+	// Try to find the specified screen
+	if (screen_index >= 0)
+	{
+		const QList<QScreen*> available_screens = screens();
+
+		if (screen_index < available_screens.count())
+		{
+			screen = ::at32(available_screens, screen_index);
+
+			if (screen)
+			{
+				base_geometry = screen->geometry();
+			}
+		}
+
+		if (!screen)
+		{
+			gui_log.error("The selected game screen with index %d is not available (available screens: %d)", screen_index, available_screens.count());
+		}
+	}
+
+	// Fallback to the screen of the main window. Use the primary screen as last resort.
+	if (!screen)
+	{
+		screen = m_main_window ? m_main_window->screen() : primaryScreen();
+		base_geometry = m_main_window ? m_main_window->frameGeometry() : primaryScreen()->geometry();
+	}
+
+	const QRect frame_geometry = gui::utils::create_centered_window_geometry(screen, base_geometry, w, h);
+	const QIcon app_icon = m_main_window ? m_main_window->GetAppIcon() : gui::utils::get_app_icon_from_path(Emu.GetBoot(), Emu.GetTitleID());
 
 	gs_frame* frame = nullptr;
 
@@ -294,13 +377,13 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 	{
 	case video_renderer::opengl:
 	{
-		frame = new gl_gs_frame(screen, frame_geometry, app_icon, m_gui_settings);
+		frame = new gl_gs_frame(screen, frame_geometry, app_icon, m_gui_settings, m_start_games_fullscreen);
 		break;
 	}
 	case video_renderer::null:
 	case video_renderer::vulkan:
 	{
-		frame = new gs_frame(screen, frame_geometry, app_icon, m_gui_settings);
+		frame = new gs_frame(screen, frame_geometry, app_icon, m_gui_settings, m_start_games_fullscreen);
 		break;
 	}
 	}
@@ -336,31 +419,31 @@ void gui_application::InitializeCallbacks()
 
 		return false;
 	};
-	callbacks.call_from_main_thread = [this](std::function<void()> func)
+	callbacks.call_from_main_thread = [this](std::function<void()> func, atomic_t<bool>* wake_up)
 	{
-		RequestCallFromMainThread(std::move(func));
+		RequestCallFromMainThread(std::move(func), wake_up);
 	};
 
-	callbacks.init_gs_render = []()
+	callbacks.init_gs_render = [](utils::serial* ar)
 	{
 		switch (g_cfg.video.renderer.get())
 		{
 		case video_renderer::null:
 		{
-			g_fxo->init<rsx::thread, named_thread<NullGSRender>>();
+			g_fxo->init<rsx::thread, named_thread<NullGSRender>>(ar);
 			break;
 		}
 		case video_renderer::opengl:
 		{
 #if not defined(__APPLE__)
-			g_fxo->init<rsx::thread, named_thread<GLGSRender>>();
+			g_fxo->init<rsx::thread, named_thread<GLGSRender>>(ar);
 #endif
 			break;
 		}
 		case video_renderer::vulkan:
 		{
 #if defined(HAVE_VULKAN)
-			g_fxo->init<rsx::thread, named_thread<VKGSRender>>();
+			g_fxo->init<rsx::thread, named_thread<VKGSRender>>(ar);
 #endif
 			break;
 		}
@@ -413,6 +496,21 @@ void gui_application::InitializeCallbacks()
 	callbacks.on_resume = [this]() { OnEmulatorResume(true); };
 	callbacks.on_stop   = [this]() { OnEmulatorStop(); };
 	callbacks.on_ready  = [this]() { OnEmulatorReady(); };
+
+	callbacks.enable_disc_eject  = [this](bool enabled)
+	{
+		Emu.CallFromMainThread([this, enabled]()
+		{
+			OnEnableDiscEject(enabled);
+		});
+	};
+	callbacks.enable_disc_insert = [this](bool enabled)
+	{
+		Emu.CallFromMainThread([this, enabled]()
+		{
+			OnEnableDiscInsert(enabled);
+		});
+	};
 
 	callbacks.on_missing_fw = [this]()
 	{
@@ -615,44 +713,16 @@ void gui_application::OnChangeStyleSheetRequest()
 	}
 }
 
-void gui_application::OnEmuSettingsChange()
-{
-	if (Emu.IsRunning())
-	{
-		if (g_cfg.misc.prevent_display_sleep)
-		{
-			enable_display_sleep();
-		}
-		else
-		{
-			disable_display_sleep();
-		}
-	}
-
-	rpcs3::utils::configure_logs();
-
-	if (!Emu.IsStopped())
-	{
-		// Force audio provider
-		if (g_ps3_process_info.get_cellos_appname() == "vsh.self"sv)
-		{
-			g_cfg.audio.provider.set(audio_provider::rsxaudio);
-		}
-		else
-		{
-			g_cfg.audio.provider.set(audio_provider::cell_audio);
-		}
-	}
-
-	audio::configure_audio();
-	audio::configure_rsxaudio();
-	rsx::overlays::reset_performance_overlay();
-}
-
 /**
  * Using connects avoids timers being unable to be used in a non-qt thread. So, even if this looks stupid to just call func, it's succinct.
  */
-void gui_application::CallFromMainThread(const std::function<void()>& func)
+void gui_application::CallFromMainThread(const std::function<void()>& func, atomic_t<bool>* wake_up)
 {
 	func();
+
+	if (wake_up)
+	{
+		*wake_up = true;
+		wake_up->notify_one();
+	}
 }

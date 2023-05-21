@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "Config.h"
 #include "util/types.hpp"
-
 #include "util/yaml.hpp"
 
 #include <charconv>
@@ -24,9 +23,9 @@ namespace cfg
 	{
 		for (const auto& node : owner->m_nodes)
 		{
-			if (node->get_name() == name)
+			if (node->get_name() == m_name)
 			{
-				cfg_log.fatal("Node already exists: %s", name);
+				cfg_log.fatal("Node already exists: %s", m_name);
 			}
 		}
 
@@ -60,9 +59,15 @@ std::vector<std::string> cfg::make_int_range(s64 min, s64 max)
 
 bool try_to_int64(s64* out, std::string_view value, s64 min, s64 max)
 {
+	if (value.empty())
+	{
+		if (out) cfg_log.error("cfg::try_to_int64(): called with an empty string");
+		return false;
+	}
+
 	s64 result;
-	const char* start = &value.front();
-	const char* end = &value.back() + 1;
+	const char* start = value.data();
+	const char* end = start + value.size();
 	int base = 10;
 	int sign = +1;
 
@@ -72,7 +77,7 @@ bool try_to_int64(s64* out, std::string_view value, s64 min, s64 max)
 		start += 1;
 	}
 
-	if (start[0] == '0' && (start[1] == 'x' || start[1] == 'X'))
+	if (start[0] == '0' && value.size() >= 2 && (start[1] == 'x' || start[1] == 'X'))
 	{
 		// Limited hex support
 		base = 16;
@@ -91,7 +96,7 @@ bool try_to_int64(s64* out, std::string_view value, s64 min, s64 max)
 
 	if (result < min || result > max)
 	{
-		if (out) cfg_log.error("cfg::try_to_int64('%s'): out of bounds (%d..%d)", value, min, max);
+		if (out) cfg_log.error("cfg::try_to_int64('%s'): out of bounds (val=%d, min=%d, max=%d)", value, result, min, max);
 		return false;
 	}
 
@@ -106,12 +111,18 @@ std::vector<std::string> cfg::make_uint_range(u64 min, u64 max)
 
 bool try_to_uint64(u64* out, std::string_view value, u64 min, u64 max)
 {
+	if (value.empty())
+	{
+		if (out) cfg_log.error("cfg::try_to_uint64(): called with an empty string");
+		return false;
+	}
+
 	u64 result;
-	const char* start = &value.front();
-	const char* end = &value.back() + 1;
+	const char* start = value.data();
+	const char* end = start + value.size();
 	int base = 10;
 
-	if (start[0] == '0' && (start[1] == 'x' || start[1] == 'X'))
+	if (start[0] == '0' && value.size() >= 2 && (start[1] == 'x' || start[1] == 'X'))
 	{
 		// Limited hex support
 		base = 16;
@@ -128,12 +139,69 @@ bool try_to_uint64(u64* out, std::string_view value, u64 min, u64 max)
 
 	if (result < min || result > max)
 	{
-		if (out) cfg_log.error("cfg::try_to_uint64('%s'): out of bounds (%u..%u)", value, min, max);
+		if (out) cfg_log.error("cfg::try_to_uint64('%s'): out of bounds (val=%u, min=%u, max=%u)", value, result, min, max);
 		return false;
 	}
 
 	if (out) *out = result;
 	return true;
+}
+
+std::vector<std::string> cfg::make_float_range(f64 min, f64 max)
+{
+	return {std::to_string(min), std::to_string(max)};
+}
+
+bool try_to_float(f64* out, std::string_view value, f64 min, f64 max)
+{
+	if (value.empty())
+	{
+		if (out) cfg_log.error("cfg::try_to_float(): called with an empty string");
+		return false;
+	}
+
+	// std::from_chars float is yet to be implemented on Xcode it seems
+	// And strtod doesn't support ranged view so we need to ensure it meets a null terminator
+	const std::string str = std::string{value};
+
+	char* end_check{};
+	const double result = std::strtod(str.data(), &end_check);
+
+	if (end_check != str.data() + str.size())
+	{
+		if (out) cfg_log.error("cfg::try_to_float('%s'): invalid float", value);
+		return false;
+	}
+
+	if (result < min || result > max)
+	{
+		if (out) cfg_log.error("cfg::try_to_float('%s'): out of bounds (val=%f, min=%f, max=%f)", value, result, min, max);
+		return false;
+	}
+
+	if (out) *out = result;
+	return true;
+}
+
+bool try_to_string(std::string* out, const f64& value)
+{
+#ifdef __APPLE__
+	if (out) *out = std::to_string(value);
+	return true;
+#else
+	std::array<char, 32> str{};
+
+	if (auto [ptr, ec] = std::to_chars(str.data(), str.data() + str.size(), value, std::chars_format::fixed); ec == std::errc())
+	{
+		if (out) *out = std::string(str.data(), ptr);
+		return true;
+	}
+	else
+	{
+		if (out) cfg_log.error("cfg::try_to_string(): could not convert value '%f' to string. error='%s'", value, std::make_error_code(ec).message());
+		return false;
+	}
+#endif
 }
 
 bool cfg::try_to_enum_value(u64* out, decltype(&fmt_class_string<int>::format) func, std::string_view value)
@@ -162,8 +230,8 @@ bool cfg::try_to_enum_value(u64* out, decltype(&fmt_class_string<int>::format) f
 	}
 
 	u64 result;
-	const char* start = &value.front();
-	const char* end = &value.back() + 1;
+	const char* start = value.data();
+	const char* end = start + value.size();
 	int base = 10;
 
 	if (start[0] == '0' && (start[1] == 'x' || start[1] == 'X'))
@@ -183,7 +251,7 @@ bool cfg::try_to_enum_value(u64* out, decltype(&fmt_class_string<int>::format) f
 
 	if (result > max)
 	{
-		if (out) cfg_log.error("cfg::try_to_enum_value('%s'): out of bounds(0..%u)", value, max);
+		if (out) cfg_log.error("cfg::try_to_enum_value('%s'): out of bounds(val=%u, min=0, max=%u)", value, result, max);
 		return false;
 	}
 
@@ -509,6 +577,18 @@ void cfg::log_entry::set_map(map_of_type<logs::level>&& map)
 void cfg::log_entry::from_default()
 {
 	set_map({});
+}
+
+std::pair<u16, u16> cfg::device_info::get_usb_ids() const
+{
+	auto string_to_hex = [](const std::string& str) -> u16
+	{
+		u16 value = 0x0000;
+		if (!str.empty() && std::from_chars(str.data(), str.data() + str.size(), value, 16).ec != std::errc{})
+			cfg_log.error("Failed to parse hex from string \"%s\"", str);
+		return value;
+	};
+	return {string_to_hex(vid), string_to_hex(pid)};
 }
 
 void cfg::device_entry::set_map(map_of_type<device_info>&& map)

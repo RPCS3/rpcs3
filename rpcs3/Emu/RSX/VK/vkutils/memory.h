@@ -55,7 +55,7 @@ namespace vk
 	public:
 		using mem_handle_t = void*;
 
-		mem_allocator_base(VkDevice dev, VkPhysicalDevice /*pdev*/) : m_device(dev), m_allocation_flags(0) {}
+		mem_allocator_base(const vk::render_device& dev, VkPhysicalDevice /*pdev*/);
 		virtual ~mem_allocator_base() = default;
 
 		virtual void destroy() = 0;
@@ -83,7 +83,7 @@ namespace vk
 	class mem_allocator_vma : public mem_allocator_base
 	{
 	public:
-		mem_allocator_vma(VkDevice dev, VkPhysicalDevice pdev);
+		mem_allocator_vma(const vk::render_device& dev, VkPhysicalDevice pdev);
 		~mem_allocator_vma() override = default;
 
 		void destroy() override;
@@ -112,7 +112,7 @@ namespace vk
 	class mem_allocator_vk : public mem_allocator_base
 	{
 	public:
-		mem_allocator_vk(VkDevice dev, VkPhysicalDevice pdev) : mem_allocator_base(dev, pdev) {}
+		mem_allocator_vk(const vk::render_device& dev, VkPhysicalDevice pdev) : mem_allocator_base(dev, pdev) {}
 		~mem_allocator_vk() override = default;
 
 		void destroy() override {}

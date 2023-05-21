@@ -78,32 +78,34 @@ enum CellPngEncLocation
 
 //typedef void *CellPngEncHandle;
 
-struct CellPngEncExParam
+struct CellPngEncExParam // Size 8
 {
 	be_t<s32> index;
 	vm::bptr<s32> value;
 };
 
-struct CellPngEncConfig
+struct CellPngEncConfig // Size 28
 {
 	be_t<u32> maxWidth;
 	be_t<u32> maxHeight;
 	be_t<u32> maxBitDepth;
 	b8 enableSpu;
+	u8 padding[3];
 	be_t<u32> addMemSize;
 	vm::bptr<CellPngEncExParam> exParamList;
 	be_t<u32> exParamNum;
 };
 
-struct CellPngEncAttr
+struct CellPngEncAttr // Size 16
 {
 	be_t<u32> memSize; // usz
 	u8 cmdQueueDepth;
+	u8 padding[3];
 	be_t<u32> versionUpper;
 	be_t<u32> versionLower;
 };
 
-struct CellPngEncResource
+struct CellPngEncResource // Size 16
 {
 	vm::bptr<void> memAddr;
 	be_t<u32> memSize; // usz
@@ -111,7 +113,7 @@ struct CellPngEncResource
 	be_t<s32> spuThreadPriority;
 };
 
-struct CellPngEncResourceEx
+struct CellPngEncResourceEx // Size 24
 {
 	vm::bptr<void> memAddr;
 	be_t<u32> memSize; // usz
@@ -120,7 +122,7 @@ struct CellPngEncResourceEx
 	u8 priority[8];
 };
 
-struct CellPngEncPicture
+struct CellPngEncPicture // Size 40
 {
 	be_t<u32> width;
 	be_t<u32> height;
@@ -128,19 +130,21 @@ struct CellPngEncPicture
 	be_t<u32> colorSpace; // CellPngEncColorSpace
 	be_t<u32> bitDepth;
 	b8 packedPixel;
+	u8 padding[3]; // TODO: is this correct?
 	vm::bptr<void> pictureAddr;
 	be_t<u64> userData;
 };
 
-struct CellPngEncAncillaryChunk
+struct CellPngEncAncillaryChunk // Size 8
 {
 	be_t<u32> chunkType; // CellPngEncChunkType
 	vm::bptr<void> chunkData;
 };
 
-struct CellPngEncEncodeParam
+struct CellPngEncEncodeParam // Size 24
 {
 	b8 enableSpu;
+	u8 padding[3];
 	be_t<u32> encodeColorSpace; // CellPngEncColorSpace
 	be_t<u32> compressionLevel; // CellPngEncCompressionLevel
 	be_t<u32> filterType;
@@ -148,7 +152,7 @@ struct CellPngEncEncodeParam
 	be_t<u32> ancillaryChunkNum;
 };
 
-struct CellPngEncOutputParam
+struct CellPngEncOutputParam // Size 16
 {
 	be_t<u32> location; // CellPngEncLocation
 	vm::bcptr<char> streamFileName;
@@ -156,7 +160,7 @@ struct CellPngEncOutputParam
 	be_t<u32> limitSize; // usz
 };
 
-struct CellPngEncStreamInfo
+struct CellPngEncStreamInfo // Size 40
 {
 	be_t<s32> state;
 	be_t<u32> location; // CellPngEncLocation
@@ -166,4 +170,5 @@ struct CellPngEncStreamInfo
 	be_t<u32> streamSize; // usz
 	be_t<u32> processedLine;
 	be_t<u64> userData;
+	// TODO: where are the missing 4 bytes?
 };

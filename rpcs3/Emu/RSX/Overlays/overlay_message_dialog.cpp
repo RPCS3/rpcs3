@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "overlay_manager.h"
 #include "overlay_message_dialog.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
@@ -16,7 +17,7 @@ namespace rsx
 		message_dialog::message_dialog(bool allow_custom_background)
 			: custom_background_allowed(allow_custom_background)
 		{
-			background.set_size(1280, 720);
+			background.set_size(virtual_width, virtual_height);
 			background.back_color.a = 0.85f;
 
 			text_display.set_size(1100, 40);
@@ -30,10 +31,11 @@ namespace rsx
 			bottom_bar.set_size(1200, 2);
 			bottom_bar.set_pos(40, 400);
 
-			progress_1.set_size(800, 4);
-			progress_2.set_size(800, 4);
-			progress_1.back_color = color4f(0.25f, 0.f, 0.f, 0.85f);
-			progress_2.back_color = color4f(0.25f, 0.f, 0.f, 0.85f);
+			for (progress_bar& bar : progress_bars)
+			{
+				bar.set_size(800, 4);
+				bar.back_color = color4f(0.25f, 0.f, 0.f, 0.85f);
+			}
 
 			btn_ok.set_text(localized_string_id::RSX_OVERLAYS_MSG_DIALOG_YES);
 			btn_ok.set_size(140, 30);
@@ -70,6 +72,23 @@ namespace rsx
 				return {};
 			}
 
+			if (const auto [dirty, text] = text_guard.get_text(); dirty)
+			{
+				u16 text_w, text_h;
+				text_display.set_pos(90, 364);
+				text_display.set_text(text);
+				text_display.measure_text(text_w, text_h);
+				text_display.translate(0, -(text_h - 16));
+			}
+
+			for (u32 i = 0; i < progress_bars.size(); i++)
+			{
+				if (const auto [dirty, text] = ::at32(bar_text_guard, i).get_text(); dirty)
+				{
+					::at32(progress_bars, i).set_text(text);
+				}
+			}
+
 			compiled_resource result;
 
 			update_custom_background();
@@ -84,12 +103,12 @@ namespace rsx
 
 			if (num_progress_bars > 0)
 			{
-				result.add(progress_1.get_compiled());
+				result.add(::at32(progress_bars, 0).get_compiled());
 			}
 
 			if (num_progress_bars > 1)
 			{
-				result.add(progress_2.get_compiled());
+				result.add(::at32(progress_bars, 1).get_compiled());
 			}
 
 			if (interactive)
@@ -109,7 +128,7 @@ namespace rsx
 			return result;
 		}
 
-		void message_dialog::on_button_pressed(pad_button button_press)
+		void message_dialog::on_button_pressed(pad_button button_press, bool /*is_auto_repeat*/)
 		{
 			if (fade_animation.active) return;
 
@@ -177,11 +196,6 @@ namespace rsx
 			user_interface::close(use_callback, stop_pad_interception);
 		}
 
-		struct msg_dialog_thread
-		{
-			static constexpr auto thread_name = "MsgDialog Thread"sv;
-		};
-
 		void message_dialog::update()
 		{
 			if (fade_animation.active)
@@ -196,11 +210,11 @@ namespace rsx
 			if (num_progress_bars)
 			{
 				u16 offset = 58;
-				progress_1.set_pos(240, 412);
+				::at32(progress_bars, 0).set_pos(240, 412);
 
 				if (num_progress_bars > 1)
 				{
-					progress_2.set_pos(240, 462);
+					::at32(progress_bars, 1).set_pos(240, 462);
 					offset = 98;
 				}
 
@@ -268,7 +282,7 @@ namespace rsx
 				}
 				else
 				{
-					while (!exit)
+					while (!m_stop_input_loop)
 					{
 						refresh();
 
@@ -279,54 +293,46 @@ namespace rsx
 			}
 			else
 			{
-				if (!exit)
+				if (!m_stop_input_loop)
 				{
-					auto& dlg_thread = g_fxo->get<named_thread<msg_dialog_thread>>();
-
 					const auto notify = std::make_shared<atomic_t<bool>>(false);
+					auto& overlayman = g_fxo->get<display_manager>();
 
-					dlg_thread([&, notify]()
+					if (interactive)
 					{
-						const u64 tbit = alloc_thread_bit();
-						g_thread_bit = tbit;
-
-						*notify = true;
-						notify->notify_one();
-
-						if (interactive)
-						{
-							auto ref = g_fxo->get<display_manager>().get(uid);
-
-							if (const auto error = run_input_loop())
+						overlayman.attach_thread_input(
+							uid, "Message dialog",
+							[notify]() { *notify = true; notify->notify_one(); }
+						);
+					}
+					else
+					{
+						overlayman.attach_thread_input(
+							uid, "Message dialog",
+							[notify]() { *notify = true; notify->notify_one(); },
+							nullptr,
+							[&]()
 							{
-								if (error != selection_code::canceled)
+								while (!m_stop_input_loop && thread_ctrl::state() != thread_state::aborting)
 								{
-									rsx_log.error("Message dialog input loop exited with error code=%d", error);
+									refresh();
+
+									// Only update the screen at about 60fps since updating it everytime slows down the process
+									std::this_thread::sleep_for(16ms);
+
+									if (!g_fxo->is_init<display_manager>())
+									{
+										rsx_log.fatal("display_manager was improperly destroyed");
+										break;
+									}
 								}
+
+								return 0;
 							}
-						}
-						else
-						{
-							while (!exit && thread_ctrl::state() != thread_state::aborting)
-							{
-								refresh();
+						);
+					}
 
-								// Only update the screen at about 60fps since updating it everytime slows down the process
-								std::this_thread::sleep_for(16ms);
-
-								if (!g_fxo->is_init<display_manager>())
-								{
-									rsx_log.fatal("display_manager was improperly destroyed");
-									break;
-								}
-							}
-						}
-
-						thread_bits &= ~tbit;
-						thread_bits.notify_all();
-					});
-
-					while (dlg_thread < thread_state::errored && !*notify)
+					while (!Emu.IsStopped() && !*notify)
 					{
 						notify->wait(false, atomic_wait_timeout{1'000'000});
 					}
@@ -338,11 +344,7 @@ namespace rsx
 
 		void message_dialog::set_text(const std::string& text)
 		{
-			u16 text_w, text_h;
-			text_display.set_pos(90, 364);
-			text_display.set_text(text);
-			text_display.measure_text(text_w, text_h);
-			text_display.translate(0, -(text_h - 16));
+			text_guard.set_text(text);
 		}
 
 		void message_dialog::update_custom_background()
@@ -367,7 +369,7 @@ namespace rsx
 					background_poster.fore_color = color4f(color, color, color, 1.);
 					background.back_color.a      = 0.f;
 
-					background_poster.set_size(1280, 720);
+					background_poster.set_size(virtual_width, virtual_height);
 					background_poster.set_raw_image(background_image.get());
 					background_poster.set_blur_strength(static_cast<u8>(background_blur_strength));
 
@@ -414,10 +416,7 @@ namespace rsx
 			if (index >= num_progress_bars)
 				return CELL_MSGDIALOG_ERROR_PARAM;
 
-			if (index == 0)
-				progress_1.set_text(msg);
-			else
-				progress_2.set_text(msg);
+			::at32(bar_text_guard, index).set_text(msg);
 
 			return CELL_OK;
 		}
@@ -427,10 +426,7 @@ namespace rsx
 			if (index >= num_progress_bars)
 				return CELL_MSGDIALOG_ERROR_PARAM;
 
-			if (index == 0)
-				progress_1.inc(value);
-			else
-				progress_2.inc(value);
+			::at32(progress_bars, index).inc(value);
 
 			if (index == static_cast<u32>(taskbar_index) || taskbar_index == -1)
 				Emu.GetCallbacks().handle_taskbar_progress(1, static_cast<s32>(value));
@@ -443,10 +439,7 @@ namespace rsx
 			if (index >= num_progress_bars)
 				return CELL_MSGDIALOG_ERROR_PARAM;
 
-			if (index == 0)
-				progress_1.set_value(value);
-			else
-				progress_2.set_value(value);
+			::at32(progress_bars, index).set_value(value);
 
 			if (index == static_cast<u32>(taskbar_index) || taskbar_index == -1)
 				Emu.GetCallbacks().handle_taskbar_progress(3, static_cast<s32>(value));
@@ -459,10 +452,7 @@ namespace rsx
 			if (index >= num_progress_bars)
 				return CELL_MSGDIALOG_ERROR_PARAM;
 
-			if (index == 0)
-				progress_1.set_value(0.f);
-			else
-				progress_2.set_value(0.f);
+			::at32(progress_bars, index).set_value(0.f);
 
 			Emu.GetCallbacks().handle_taskbar_progress(0, 0);
 
@@ -474,10 +464,7 @@ namespace rsx
 			if (index >= num_progress_bars)
 				return CELL_MSGDIALOG_ERROR_PARAM;
 
-			if (index == 0)
-				progress_1.set_limit(static_cast<f32>(limit));
-			else
-				progress_2.set_limit(static_cast<f32>(limit));
+			::at32(progress_bars, index).set_limit(static_cast<f32>(limit));
 
 			if (index == static_cast<u32>(taskbar_index))
 			{

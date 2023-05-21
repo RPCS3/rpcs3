@@ -3,44 +3,27 @@
 cd build || exit 1
 
 if [ "$DEPLOY_APPIMAGE" = "true" ]; then
-    DESTDIR=appdir ninja install
-    QT_APPIMAGE="linuxdeployqt.AppImage"
+    DESTDIR=AppDir ninja install
 
-    curl -sL "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage" > "$QT_APPIMAGE"
-    chmod a+x "$QT_APPIMAGE"
-    "./$QT_APPIMAGE" --appimage-extract
-    ./squashfs-root/AppRun ./appdir/usr/share/applications/*.desktop -bundle-non-qt-libs
-    ls ./appdir/usr/lib/
-    rm -r ./appdir/usr/share/doc
-    cp "$(readlink -f /lib/x86_64-linux-gnu/libnsl.so.1)" ./appdir/usr/lib/libnsl.so.1
-    export PATH=/rpcs3/build/squashfs-root/usr/bin/:${PATH}
+    curl -sL -o /usr/bin/linuxdeploy https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+    chmod +x /usr/bin/linuxdeploy
+    curl -sL -o /usr/bin/linuxdeploy-plugin-qt https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
+    chmod +x /usr/bin/linuxdeploy-plugin-qt
+    curl -sL -o linuxdeploy-plugin-checkrt.sh https://github.com/linuxdeploy/linuxdeploy-plugin-checkrt/releases/download/continuous/linuxdeploy-plugin-checkrt-x86_64.sh
+    chmod +x ./linuxdeploy-plugin-checkrt.sh
 
-    # Embed newer libstdc++ for distros that don't come with it (ubuntu 16.04)
-    mkdir -p appdir/usr/optional/ ; mkdir -p appdir/usr/optional/libstdc++/
-    cp /usr/lib/x86_64-linux-gnu/libstdc++.so.6 ./appdir/usr/optional/libstdc++/
-    
+    EXTRA_QT_PLUGINS="svg;" APPIMAGE_EXTRACT_AND_RUN=1 linuxdeploy --appdir AppDir --plugin qt
+
     # Remove libwayland-client because it has platform-dependent exports and breaks other OSes
-    rm -f ./appdir/usr/lib/libwayland-client.so*
-    
-    # Install latest appimage runner
-    rm ./appdir/AppRun
-    curl -sL https://github.com/RPCS3/AppImageKit-checkrt/releases/download/continuous2/AppRun-patched-x86_64 -o ./appdir/AppRun
-    chmod a+x ./appdir/AppRun
-    curl -sL https://github.com/RPCS3/AppImageKit-checkrt/releases/download/continuous2/exec-x86_64.so -o ./appdir/usr/optional/exec.so
+    rm -f ./AppDir/usr/lib/libwayland-client.so*
 
-    # Compile checker binary for AppImageKit-checkrt
+    # Remove git directory containing local commit history file
+    rm -rf ./AppDir/usr/share/rpcs3/git
 
-    # This may need updating if you update the compiler or rpcs3 uses newer c++ features
-    # See https://github.com/gcc-mirror/gcc/blob/master/libstdc%2B%2B-v3/config/abi/pre/gnu.ver
-    # for which definitions correlate to which CXXABI version.
-    # Currently we target a minimum of GLIBCXX_3.4.29 and CXXABI_1.3.11
-    printf "#include <sstream>\n#include <exception>\n#include <memory_resource>\nint main(){auto x = std::stringbuf();x.get_allocator();std::make_exception_ptr(0);std::pmr::get_default_resource();}" \
-     | $CXX -x c++ -std=c++2a -o ./appdir/usr/optional/checker -
+    ./linuxdeploy-plugin-checkrt.sh --appdir AppDir
 
-    # Package it up and send it off
-    ./squashfs-root/usr/bin/appimagetool "$APPDIR"
-    
-    ls
+    linuxdeploy --appimage-extract
+    ./squashfs-root/plugins/linuxdeploy-plugin-appimage/usr/bin/appimagetool AppDir -g
 
     COMM_TAG=$(awk '/version{.*}/ { printf("%d.%d.%d", $5, $6, $7) }' ../rpcs3/rpcs3_version.cpp)
     COMM_COUNT="$(git rev-list --count HEAD)"
@@ -57,9 +40,4 @@ if [ "$DEPLOY_APPIMAGE" = "true" ]; then
     FILESIZE=$(stat -c %s ./rpcs3*.AppImage)
     SHA256SUM=$(sha256sum ./rpcs3*.AppImage | awk '{ print $1 }')
     echo "${SHA256SUM};${FILESIZE}B" > "$RELEASE_MESSAGE"
-    
-fi
-
-if [ "$DEPLOY_PPA" = "true" ]; then
-    export DEBFULLNAME="RPCS3 Build Bot"
 fi

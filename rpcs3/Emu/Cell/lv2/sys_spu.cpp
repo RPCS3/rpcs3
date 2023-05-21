@@ -2,6 +2,7 @@
 #include "sys_spu.h"
 
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/VFS.h"
 #include "Emu/IdManager.h"
 #include "Crypto/unself.h"
@@ -14,6 +15,7 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/RawSPUThread.h"
 #include "Emu/Cell/timers.hpp"
+#include "Emu/Memory/vm_reservation.h"
 #include "sys_interrupt.h"
 #include "sys_process.h"
 #include "sys_memory.h"
@@ -62,7 +64,7 @@ void fmt_class_string<spu_stop_syscall>::format(std::string& out, u64 arg)
 		case SYS_SPU_THREAD_STOP_TRY_RECEIVE_EVENT: return "sys_spu_thread_tryreceive_event";
 		case SYS_SPU_THREAD_STOP_SWITCH_SYSTEM_MODULE: return "sys_spu_thread_switch_system_module";
 		}
-		
+
 		return unknown;
 	});
 }
@@ -128,7 +130,7 @@ void sys_spu_image::free() const
 	}
 }
 
-void sys_spu_image::deploy(u8* loc, std::span<const sys_spu_segment> segs)
+void sys_spu_image::deploy(u8* loc, std::span<const sys_spu_segment> segs, bool is_verbose)
 {
 	// Segment info dump
 	std::string dump;
@@ -191,7 +193,137 @@ void sys_spu_image::deploy(u8* loc, std::span<const sys_spu_segment> segs)
 		applied += g_fxo->get<patch_engine>().apply(Emu.GetTitleID() + '-' + hash, loc);
 	}
 
-	spu_log.notice("Loaded SPU image: %s (<- %u)%s", hash, applied.size(), dump);
+	(is_verbose ? spu_log.notice : sys_spu.trace)("Loaded SPU image: %s (<- %u)%s", hash, applied.size(), dump);
+}
+
+lv2_spu_group::lv2_spu_group(utils::serial& ar) noexcept
+	: name(ar.operator std::string())
+	, id(idm::last_id())
+	, max_num(ar)
+	, mem_size(ar)
+	, type(ar) // SPU Thread Group Type
+	, ct(lv2_memory_container::search(ar))
+	, has_scheduler_context(ar.operator u8())
+	, max_run(ar)
+	, init(ar)
+	, prio(ar)
+	, run_state(ar.operator spu_group_status())
+	, exit_status(ar)
+{
+	for (auto& thread : threads)
+	{
+		if (ar.operator u8())
+		{
+			ar(id_manager::g_id);
+			thread = std::make_shared<named_thread<spu_thread>>(ar, this);
+			idm::import_existing<named_thread<spu_thread>>(thread, idm::last_id());
+			running += !thread->stop_flag_removal_protection;
+		}
+	}
+
+	ar(threads_map);
+	ar(imgs);
+	ar(args);
+
+	for (auto ep : {&ep_run, &ep_exception, &ep_sysmodule})
+	{
+		*ep = idm::get_unlocked<lv2_obj, lv2_event_queue>(ar.operator u32());
+	}
+
+	waiter_spu_index = -1;
+
+	switch (run_state)
+	{
+	// Commented stuff are handled by different means currently
+	//case SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED:
+	//case SPU_THREAD_GROUP_STATUS_INITIALIZED:
+	//case SPU_THREAD_GROUP_STATUS_READY:
+	case SPU_THREAD_GROUP_STATUS_WAITING:
+	{
+		run_state = SPU_THREAD_GROUP_STATUS_RUNNING;
+		ar(waiter_spu_index);
+		[[fallthrough]];
+	}
+	case SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED:
+	{
+		if (run_state == SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED)
+		{
+			run_state = SPU_THREAD_GROUP_STATUS_SUSPENDED;
+		}
+
+		[[fallthrough]];
+	}
+	case SPU_THREAD_GROUP_STATUS_SUSPENDED:
+	{
+		// Suspend all SPU threads except a thread that waits on sys_spu_thread_receive_event
+		for (const auto& thread : threads)
+		{
+			if (thread)
+			{
+				if (thread->index == waiter_spu_index)
+				{
+					lv2_obj::set_future_sleep(thread.get());
+					continue;
+				}
+
+				thread->state += cpu_flag::suspend;
+			}
+		}
+
+		break;
+	}
+	//case SPU_THREAD_GROUP_STATUS_RUNNING:
+	//case SPU_THREAD_GROUP_STATUS_STOPPED:
+	//case SPU_THREAD_GROUP_STATUS_UNKNOWN:
+	default:
+	{
+		break;
+	}
+	}
+}
+
+void lv2_spu_group::save(utils::serial& ar)
+{
+	USING_SERIALIZATION_VERSION(spu);
+
+	ar(name, max_num, mem_size, type, ct->id, has_scheduler_context, max_run, init, prio, run_state, exit_status);
+
+	for (const auto& thread : threads)
+	{
+		ar(u8{thread.operator bool()});
+
+		if (thread)
+		{
+			ar(thread->id);
+			thread->save(ar);
+		}
+	}
+
+	ar(threads_map);
+	ar(imgs);
+	ar(args);
+
+	for (auto ep : {&ep_run, &ep_exception, &ep_sysmodule})
+	{
+		ar(lv2_obj::check(*ep) ? (*ep)->id : 0);
+	}
+
+	if (run_state == SPU_THREAD_GROUP_STATUS_WAITING)
+	{
+		ar(waiter_spu_index);
+	}
+}
+
+lv2_spu_image::lv2_spu_image(utils::serial& ar)
+	: e_entry(ar)
+	, segs(ar.operator decltype(segs)())
+	, nsegs(ar)
+{
+}
+
+void lv2_spu_image::save(utils::serial& ar)
+{
+	ar(e_entry, segs, nsegs);
 }
 
 // Get spu thread ptr, returns group ptr as well for refcounting
@@ -217,9 +349,6 @@ std::pair<named_thread<spu_thread>*, std::shared_ptr<lv2_spu_group>> lv2_spu_gro
 	return res;
 }
 
-namespace
-{
-
 struct limits_data
 {
 	u32 physical = 0;
@@ -234,6 +363,23 @@ struct spu_limits_t
 	u32 max_raw = 0;
 	u32 max_spu = 6;
 	shared_mutex mutex;
+
+	spu_limits_t() = default;
+
+	spu_limits_t(utils::serial& ar) noexcept
+	{
+		if (GET_SERIALIZATION_VERSION(spu) >= 2)
+		{
+			ar(max_raw, max_spu);
+		}
+	}
+
+	void save(utils::serial& ar)
+	{
+		ar(max_raw, max_spu);
+	}
+
+	SAVESTATE_INIT_POS(47);
 
 	bool check(const limits_data& init) const
 	{
@@ -265,8 +411,6 @@ struct spu_limits_t
 		return true;
 	}
 };
-
-} // annonymous namespace
 
 error_code sys_spu_initialize(ppu_thread& ppu, u32 max_usable_spu, u32 max_raw_spu)
 {
@@ -314,6 +458,7 @@ error_code _sys_spu_image_get_information(ppu_thread& ppu, vm::ptr<sys_spu_image
 		return CELL_ESRCH;
 	}
 
+	ppu.check_state();
 	*entry_point = image->e_entry;
 	*nsegs       = image->nsegs;
 	return CELL_OK;
@@ -397,6 +542,7 @@ error_code _sys_spu_image_get_segments(ppu_thread& ppu, vm::ptr<sys_spu_image> i
 	}
 
 	// TODO: apply SPU patches
+	ppu.check_state();
 	std::memcpy(segments.get_ptr(), handle->segs.get_ptr(), sizeof(sys_spu_segment) * std::min<s32>(nseg, handle->nsegs));
 	return CELL_OK;
 }
@@ -531,7 +677,7 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 		return CELL_EINVAL;
 	}
 
-	std::lock_guard lock(group->mutex);
+	std::unique_lock lock(group->mutex);
 
 	if (auto state = +group->run_state; state != SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED)
 	{
@@ -565,7 +711,10 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 		return spu;
 	}));
 
-	*thread = tid;
+	// alloc_hidden indicates falloc to allocate page with no access rights in base memory
+	auto& spu = group->threads[inited];
+	ensure(vm::get(vm::spu)->falloc(spu->vm_offset(), SPU_LS_SIZE, &spu->shm, static_cast<u64>(vm::page_size_64k) | static_cast<u64>(vm::alloc_hidden)));
+	spu->map_ls(*spu->shm, spu->ls);
 
 	group->args[inited] = {arg->arg1, arg->arg2, arg->arg3, arg->arg4};
 	group->imgs[inited].first = image.entry_point;
@@ -592,7 +741,11 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 		}
 	}
 
+	lock.unlock();
 	sys_spu.warning(u8"sys_spu_thread_initialize(): Thread “%s” created (id=0x%x)", thread_name, tid);
+
+	ppu.check_state();
+	*thread = tid;
 	return CELL_OK;
 }
 
@@ -633,6 +786,7 @@ error_code sys_spu_thread_get_exit_status(ppu_thread& ppu, u32 id, vm::ptr<s32> 
 
 	if (thread->exit_status.try_read(data))
 	{
+		ppu.check_state();
 		*status = static_cast<s32>(data);
 		return CELL_OK;
 	}
@@ -776,11 +930,11 @@ error_code sys_spu_thread_group_create(ppu_thread& ppu, vm::ptr<u32> id, u32 num
 
 	auto& limits = g_fxo->get<spu_limits_t>();
 
-	std::lock_guard lock(limits.mutex);
+	std::unique_lock lock(limits.mutex);
 
 	if (!limits.check(use_scheduler ? limits_data{.controllable = num} : limits_data{.physical = num}))
 	{
-		ct->used -= mem_size;
+		ct->free(mem_size);
 		return CELL_EBUSY;
 	}
 
@@ -788,12 +942,15 @@ error_code sys_spu_thread_group_create(ppu_thread& ppu, vm::ptr<u32> id, u32 num
 
 	if (!group)
 	{
-		ct->used -= mem_size;
+		ct->free(mem_size);
 		return CELL_EAGAIN;
 	}
 
-	*id = idm::last_id();
+	lock.unlock();
 	sys_spu.warning(u8"sys_spu_thread_group_create(): Thread group “%s” created (id=0x%x)", group->name, idm::last_id());
+
+	ppu.check_state();
+	*id = idm::last_id();
 	return CELL_OK;
 }
 
@@ -823,7 +980,7 @@ error_code sys_spu_thread_group_destroy(ppu_thread& ppu, u32 id)
 			return CELL_EBUSY;
 		}
 
-		group.ct->used -= group.mem_size;
+		group.ct->free(group.mem_size);
 		return {};
 	});
 
@@ -867,6 +1024,20 @@ error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 		return CELL_ESRCH;
 	}
 
+	struct notify_on_exit
+	{
+		usz index = umax;
+		std::array<spu_thread*, 8> threads; // Raw pointer suffices, as long as group is referenced its SPUs exist
+
+		~notify_on_exit() noexcept
+		{
+			for (; index != umax; index--)
+			{
+				threads[index]->state.notify_one(cpu_flag::stop);
+			}
+		}
+	} notify_threads;
+
 	std::lock_guard lock(group->mutex);
 
 	// SPU_THREAD_GROUP_STATUS_READY state is not used
@@ -891,7 +1062,7 @@ error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 			auto& args = group->args[thread->lv2_id >> 24];
 			auto& img = group->imgs[thread->lv2_id >> 24];
 
-			sys_spu_image::deploy(thread->ls, std::span(img.second.data(), img.second.size()));
+			sys_spu_image::deploy(thread->ls, std::span(img.second.data(), img.second.size()), group->stop_count < 5);
 
 			thread->cpu_init();
 			thread->gpr[3] = v128::from64(0, args[0]);
@@ -919,7 +1090,7 @@ error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 		if (thread && ran_threads--)
 		{
 			thread->state -= cpu_flag::stop;
-			thread->state.notify_one(cpu_flag::stop);
+			notify_threads.threads[++notify_threads.index] = thread.get();
 		}
 	}
 
@@ -1027,6 +1198,20 @@ error_code sys_spu_thread_group_resume(ppu_thread& ppu, u32 id)
 		return CELL_EINVAL;
 	}
 
+	struct notify_on_exit
+	{
+		usz index = umax;
+		std::array<spu_thread*, 8> threads; // Raw pointer suffices, as long as group is referenced its SPUs exist
+
+		~notify_on_exit() noexcept
+		{
+			for (; index != umax; index--)
+			{
+				threads[index]->state.notify_one(cpu_flag::suspend);
+			}
+		}
+	} notify_threads;
+
 	std::lock_guard lock(group->mutex);
 
 	CellError error;
@@ -1076,7 +1261,7 @@ error_code sys_spu_thread_group_resume(ppu_thread& ppu, u32 id)
 		if (thread)
 		{
 			thread->state -= cpu_flag::suspend;
-			thread->state.notify_one(cpu_flag::suspend);
+			notify_threads.threads[++notify_threads.index] = thread.get();
 		}
 	}
 
@@ -1138,6 +1323,7 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 		lv2_obj::sleep(ppu);
 		busy_wait(3000);
 		ppu.check_state();
+		ppu.state += cpu_flag::wait;
 	};
 
 	if (auto state = +group->run_state;
@@ -1189,12 +1375,30 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 		}
 	}
 
+	u32 prev_resv = 0;
+
 	for (auto& thread : group->threads)
 	{
 		while (thread && group->running && thread->state & cpu_flag::wait)
 		{
 			thread_ctrl::notify(*thread);
+
+			if (u32 resv = atomic_storage<u32>::load(thread->raddr))
+			{
+				if (prev_resv && prev_resv != resv)
+				{
+					// Batch reservation notifications if possible
+					vm::reservation_notifier(prev_resv).notify_all();
+				}
+
+				prev_resv = resv;
+			}
 		}
+	}
+
+	if (prev_resv)
+	{
+		vm::reservation_notifier(prev_resv).notify_all();
 	}
 
 	group->exit_status = value;
@@ -1228,6 +1432,8 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 
 	do
 	{
+		lv2_obj::prepare_for_sleep(ppu);
+
 		std::unique_lock lock(group->mutex);
 
 		const auto state = +group->run_state;
@@ -1262,22 +1468,38 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 			group->waiter = &ppu;
 		}
 
-		lv2_obj::sleep(ppu);
-		lock.unlock();
-
-		while (true)
 		{
-			const auto state = ppu.state.fetch_sub(cpu_flag::signal);
+			lv2_obj::notify_all_t notify;
+			lv2_obj::sleep(ppu);
+			lock.unlock();
+		}
 
-			if (is_stopped(state) || state & cpu_flag::signal)
+		while (auto state = +ppu.state)
+		{
+			if (state & cpu_flag::signal && ppu.state.test_and_reset(cpu_flag::signal))
 			{
 				break;
 			}
 
-			thread_ctrl::wait_on(ppu.state, state);
+			if (is_stopped(state))
+			{
+				std::lock_guard lock(group->mutex);
+
+				if (group->waiter != &ppu)
+				{
+					break;
+				}
+
+				ppu.state += cpu_flag::again;
+				break;
+			}
+
+			ppu.state.wait(state);
 		}
 	}
 	while (false);
+
+	ppu.check_state();
 
 	if (!cause)
 	{
@@ -1336,6 +1558,8 @@ error_code sys_spu_thread_group_get_priority(ppu_thread& ppu, u32 id, vm::ptr<s3
 	{
 		return CELL_ESRCH;
 	}
+
+	ppu.check_state();
 
 	if (!group->has_scheduler_context)
 	{
@@ -1397,6 +1621,7 @@ error_code sys_spu_thread_group_syscall_253(ppu_thread& ppu, u32 id, vm::ptr<sys
 
 	// TODO
 
+	ppu.check_state();
 	info->deadlineMissCounter = 0;
 	info->deadlineMeetCounter = 0;
 	info->timestamp = get_timebased_time();
@@ -1464,7 +1689,7 @@ error_code sys_spu_thread_read_ls(ppu_thread& ppu, u32 id, u32 lsa, vm::ptr<u64>
 		return CELL_ESRCH;
 	}
 
-	std::lock_guard lock(group->mutex);
+	std::unique_lock lock(group->mutex);
 
 	if (auto state = +group->run_state;
 		state < SPU_THREAD_GROUP_STATUS_WAITING || state > SPU_THREAD_GROUP_STATUS_RUNNING)
@@ -1477,15 +1702,21 @@ error_code sys_spu_thread_read_ls(ppu_thread& ppu, u32 id, u32 lsa, vm::ptr<u64>
 		return CELL_ESTAT;
 	}
 
+	u64 _value{};
+
 	switch (type)
 	{
-	case 1: *value = thread->_ref<u8>(lsa); break;
-	case 2: *value = thread->_ref<u16>(lsa); break;
-	case 4: *value = thread->_ref<u32>(lsa); break;
-	case 8: *value = thread->_ref<u64>(lsa); break;
+	case 1: _value = thread->_ref<u8>(lsa); break;
+	case 2: _value = thread->_ref<u16>(lsa); break;
+	case 4: _value = thread->_ref<u32>(lsa); break;
+	case 8: _value = thread->_ref<u64>(lsa); break;
 	default: fmt::throw_exception("Unreachable");
 	}
 
+	lock.unlock();
+	ppu.check_state();
+
+	*value = _value;
 	return CELL_OK;
 }
 
@@ -1504,7 +1735,7 @@ error_code sys_spu_thread_write_spu_mb(ppu_thread& ppu, u32 id, u32 value)
 
 	std::lock_guard lock(group->mutex);
 
-	thread->ch_in_mbox.push(*thread, value);
+	thread->ch_in_mbox.push(value);
 
 	return CELL_OK;
 }
@@ -1545,6 +1776,7 @@ error_code sys_spu_thread_get_spu_cfg(ppu_thread& ppu, u32 id, vm::ptr<u64> valu
 		return CELL_ESRCH;
 	}
 
+	ppu.check_state();
 	*value = thread->snr_config;
 
 	return CELL_OK;
@@ -1830,7 +2062,7 @@ error_code sys_spu_thread_group_connect_event_all_threads(ppu_thread& ppu, u32 i
 		return CELL_EINVAL;
 	}
 
-	std::lock_guard lock(group->mutex);
+	std::unique_lock lock(group->mutex);
 
 	if (auto state = +group->run_state;
 		state < SPU_THREAD_GROUP_STATUS_INITIALIZED || state == SPU_THREAD_GROUP_STATUS_DESTROYED)
@@ -1884,6 +2116,9 @@ error_code sys_spu_thread_group_connect_event_all_threads(ppu_thread& ppu, u32 i
 			t->spup[port] = queue;
 		}
 	}
+
+	lock.unlock();
+	ppu.check_state();
 
 	*spup = port;
 
@@ -1943,6 +2178,7 @@ error_code sys_spu_thread_group_log(ppu_thread& ppu, s32 command, vm::ptr<s32> s
 			return CELL_EFAULT;
 		}
 
+		ppu.check_state();
 		*stat = state.state;
 		break;
 	}
@@ -2019,10 +2255,13 @@ error_code sys_raw_spu_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<void> at
 			index = 0;
 	}
 
-	const u32 tid = idm::make<named_thread<spu_thread>>(nullptr, index, "", index);
+	const auto spu = idm::make_ptr<named_thread<spu_thread>>(nullptr, index, "", index);
+	ensure(vm::get(vm::spu)->falloc(spu->vm_offset(), SPU_LS_SIZE, &spu->shm, vm::page_size_64k));
+	spu->map_ls(*spu->shm, spu->ls);
 
-	spu_thread::g_raw_spu_id[index] = (ensure(tid));
+	spu_thread::g_raw_spu_id[index] = idm::last_id();
 
+	ppu.check_state();
 	*id = index;
 
 	return CELL_OK;
@@ -2109,7 +2348,6 @@ error_code raw_spu_destroy(ppu_thread& ppu, u32 id)
 		}
 
 		// Stop thread
-		thread.state += cpu_flag::exit;
 		thread = thread_state::aborting;
 		return true;
 	});
@@ -2229,6 +2467,7 @@ error_code raw_spu_create_interrupt_tag(u32 id, u32 class_id, u32 /*hwthread*/, 
 
 	if (tag)
 	{
+		cpu_thread::get_current()->check_state();
 		*intrtag = tag;
 		return CELL_OK;
 	}
@@ -2346,6 +2585,7 @@ error_code raw_spu_get_int_control(u32 id, u32 class_id, vm::ptr<u64> value, ato
 		return CELL_ESRCH;
 	}
 
+	cpu_thread::get_current()->check_state();
 	*value = thread->int_ctrl[class_id].*control;
 
 	return CELL_OK;
@@ -2397,6 +2637,7 @@ error_code raw_spu_read_puint_mb(u32 id, vm::ptr<u32> value)
 		return CELL_ESRCH;
 	}
 
+	cpu_thread::get_current()->check_state();
 	*value = thread->ch_out_intr_mbox.pop();
 
 	return CELL_OK;
@@ -2468,6 +2709,7 @@ error_code raw_spu_get_spu_cfg(u32 id, vm::ptr<u32> value)
 		return CELL_ESRCH;
 	}
 
+	cpu_thread::get_current()->check_state();
 	*value = static_cast<u32>(thread->snr_config);
 
 	return CELL_OK;

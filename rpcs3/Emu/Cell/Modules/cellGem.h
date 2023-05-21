@@ -171,6 +171,8 @@ struct CellGemAttribute
 	be_t<u32> memory_ptr;
 	be_t<u32> spurs_addr;
 	u8 spu_priorities[8];
+
+	ENABLE_BITWISE_SERIALIZATION;
 };
 
 struct CellGemCameraState
@@ -180,6 +182,8 @@ struct CellGemCameraState
 	be_t<f32> gain;
 	be_t<f32> pitch_angle;
 	be_t<f32> pitch_angle_estimate;
+
+	ENABLE_BITWISE_SERIALIZATION;
 };
 
 struct CellGemExtPortData
@@ -196,8 +200,8 @@ struct CellGemExtPortData
 
 struct CellGemImageState
 {
-	be_t<u64> frame_timestamp; // time the frame was captured by libCamera (usecs)
-	be_t<u64> timestamp;       // time processing of the frame was finished (usecs)
+	be_t<u64> frame_timestamp; // time the frame was captured by libCamera. system_time_t (usecs)
+	be_t<u64> timestamp;       // time processing of the frame was finished. system_time_t (usecs)
 	be_t<f32> u;               // horizontal screen position in pixels
 	be_t<f32> v;               // vertical screen position in pixels
 	be_t<f32> r;               // size of sphere on screen in pixels
@@ -222,7 +226,7 @@ struct CellGemInertialState
 	be_t<f32> gyro_bias[4];          // gyro bias (radians/s)
 	CellGemPadData pad;
 	CellGemExtPortData ext;
-	be_t<u64> timestamp;
+	be_t<u64> timestamp; // system_time_t (microseconds)
 	be_t<s32> counter;
 	be_t<f32> temperature;
 };
@@ -252,7 +256,7 @@ struct CellGemState
 	be_t<f32> handle_accel[4]; // acceleration of controller handle (mm/s²)
 	CellGemPadData pad;
 	CellGemExtPortData ext;
-	be_t<u64> timestamp;
+	be_t<u64> timestamp; // system_time_t (microseconds)
 	be_t<f32> temperature;
 	be_t<f32> camera_pitch_angle;
 	be_t<u32> tracking_flags;
@@ -270,4 +274,6 @@ struct CellGemVideoConvertAttribute
 	vm::bptr<u8> buffer_memory;
 	vm::bptr<u8> video_data_out;
 	u8 alpha;
+
+	ENABLE_BITWISE_SERIALIZATION;
 };

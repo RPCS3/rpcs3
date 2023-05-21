@@ -8,6 +8,8 @@
 #include "sys_sync.h"
 #include "sys_process.h"
 
+#include <span>
+
 #include "util/vm.hpp"
 
 LOG_CHANNEL(sys_mmapper);
@@ -42,6 +44,32 @@ lv2_memory::lv2_memory(u32 size, u32 align, u64 flags, u64 key, bool pshared, lv
 #endif
 }
 
+lv2_memory::lv2_memory(utils::serial& ar)
+	: size(ar)
+	, align(ar)
+	, flags(ar)
+	, key(ar)
+	, pshared(ar)
+	, ct(lv2_memory_container::search(ar.operator u32()))
+	, shm([&](u32 addr)
+	{
+		if (addr)
+		{
+			return ensure(vm::get(vm::any, addr)->peek(addr).second);
+		}
+
+		const auto _shm = std::make_shared<utils::shm>(size, 1);
+		ar(std::span(_shm->map_self(), size));
+		return _shm;
+	}(ar.operator u32()))
+	, counter(ar)
+{
+#ifndef _WIN32
+	// Optimization that's useless on Windows :puke:
+	utils::memory_lock(shm->map_self(), size);
+#endif
+}
+
 CellError lv2_memory::on_id_create()
 {
 	if (!exists && !ct->take(size))
@@ -51,6 +79,40 @@ CellError lv2_memory::on_id_create()
 
 	exists++;
 	return {};
+}
+
+std::shared_ptr<void> lv2_memory::load(utils::serial& ar)
+{
+	auto mem = std::make_shared<lv2_memory>(ar);
+	mem->exists++; // Disable on_id_create()
+	std::shared_ptr<void> ptr = lv2_obj::load(mem->key, mem, +mem->pshared);
+	mem->exists--;
+	return ptr;
+}
+
+void lv2_memory::save(utils::serial& ar)
+{
+	USING_SERIALIZATION_VERSION(lv2_memory);
+
+	ar(size, align, flags, key, pshared, ct->id);
+	ar(counter ? vm::get_shm_addr(shm) : 0);
+
+	if (!counter)
+	{
+		ar(std::span(shm->map_self(), size));
+	}
+
+	ar(counter);
+}
+
+page_fault_notification_entries::page_fault_notification_entries(utils::serial& ar)
+{
+	ar(entries);
+}
+
+void page_fault_notification_entries::save(utils::serial& ar)
+{
+	ar(entries);
 }
 
 template <bool exclusive = false>
@@ -112,6 +174,7 @@ error_code sys_mmapper_allocate_address(ppu_thread& ppu, u64 size, u64 flags, u6
 	{
 		if (const auto area = vm::find_map(static_cast<u32>(size), static_cast<u32>(alignment), flags & SYS_MEMORY_PAGE_SIZE_MASK))
 		{
+			ppu.check_state();
 			*alloc_addr = area->addr;
 			return CELL_OK;
 		}
@@ -184,6 +247,7 @@ error_code sys_mmapper_allocate_shared_memory(ppu_thread& ppu, u64 ipc_key, u64 
 		return error;
 	}
 
+	ppu.check_state();
 	*mem_id = idm::last_id();
 	return CELL_OK;
 }
@@ -239,6 +303,7 @@ error_code sys_mmapper_allocate_shared_memory_from_container(ppu_thread& ppu, u6
 		return error;
 	}
 
+	ppu.check_state();
 	*mem_id = idm::last_id();
 	return CELL_OK;
 }
@@ -337,6 +402,7 @@ error_code sys_mmapper_allocate_shared_memory_ext(ppu_thread& ppu, u64 ipc_key, 
 		return error;
 	}
 
+	ppu.check_state();
 	*mem_id = idm::last_id();
 	return CELL_OK;
 }
@@ -434,6 +500,7 @@ error_code sys_mmapper_allocate_shared_memory_from_container_ext(ppu_thread& ppu
 		return error;
 	}
 
+	ppu.check_state();
 	*mem_id = idm::last_id();
 	return CELL_OK;
 }
@@ -529,7 +596,7 @@ error_code sys_mmapper_free_shared_memory(ppu_thread& ppu, u32 mem_id)
 		if (!mem.exists)
 		{
 			// Return "physical memory" to the memory container
-			mem.ct->used -= mem.size;
+			mem.ct->free(mem.size);
 		}
 
 		return {};
@@ -656,6 +723,8 @@ error_code sys_mmapper_search_and_map(ppu_thread& ppu, u32 start_addr, u32 mem_i
 	}
 
 	vm::lock_sudo(addr, mem->size);
+
+	ppu.check_state();
 	*alloc_addr = addr;
 	return CELL_OK;
 }
@@ -701,6 +770,7 @@ error_code sys_mmapper_unmap_shared_memory(ppu_thread& ppu, u32 addr, vm::ptr<u3
 	}
 
 	// Write out the ID
+	ppu.check_state();
 	*mem_id = mem.ret;
 
 	// Acknowledge

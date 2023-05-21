@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Utilities/Thread.h"
+#include "Emu/Cell/timers.hpp"
 
 #include "3rdparty/OpenAL/include/alext.h"
 
@@ -266,9 +267,11 @@ protected:
 class microphone_device
 {
 public:
-	microphone_device(microphone_handler type);
+	microphone_device(microphone_handler type = microphone_handler::null);
 
 	void add_device(const std::string& name);
+
+	void set_registered(bool registered) { mic_registered = registered; };
 
 	error_code open_microphone(const u8 type, const u32 dsp_r, const u32 raw_r, const u8 channels = 2);
 	error_code close_microphone();
@@ -276,10 +279,13 @@ public:
 	error_code start_microphone();
 	error_code stop_microphone();
 
+	std::string get_device_name() const { return device_name.empty() ? "" : device_name.front(); }
+
 	void update_audio();
 	bool has_data() const;
 
-	bool is_opened() const { return mic_opened;	}
+	bool is_registered() const { return mic_registered; }
+	bool is_opened() const { return mic_opened; }
 	bool is_started() const { return mic_started; }
 	u8 get_signal_types() const { return signal_types; }
 	u8 get_bit_resolution() const {	return bit_resolution; }
@@ -304,7 +310,7 @@ public:
 	u32 attr_gain       = 3;
 	u32 attr_volume     = 145;
 	u32 attr_agc        = 0;
-	u32 attr_chanvol[2] = {145, 145};
+	std::array<u32, 2> attr_chanvol = {145, 145};
 	u32 attr_led        = 0;
 	u32 attr_dsptype    = 0;
 
@@ -316,10 +322,10 @@ private:
 	void get_raw(const u32 num_samples);
 	void get_dsp(const u32 num_samples);
 
-private:
-	microphone_handler device_type;
+	microphone_handler device_type = microphone_handler::null;
 	std::vector<std::string> device_name;
 
+	bool mic_registered = false;
 	bool mic_opened  = false;
 	bool mic_started = false;
 
@@ -350,19 +356,25 @@ class mic_context
 public:
 	void operator()();
 	void load_config_and_init();
+	void wake_up();
+
+	// Returns index of registered device
+	u32 register_device(const std::string& name);
+	void unregister_device(u32 dev_num);
+	bool check_device(u32 dev_num);
 
 	u64 event_queue_key = 0;
+	u64 event_queue_source = 0;
 
-	std::unordered_map<s32, microphone_device> mic_list;
+	std::array<microphone_device, CELL_MAX_MICS> mic_list{};
 
 	shared_mutex mutex;
-	atomic_t<u32> init = 0;
+	atomic_t<u8> init = 0;
 
 	static constexpr auto thread_name = "Microphone Thread"sv;
 
 protected:
-	const u64 start_time = get_guest_system_time();
-	u64 m_counter        = 0;
+	atomic_t<u64> wakey = 0;
 
 	//	u32 signalStateLocalTalk = 9; // value is in range 0-10. 10 indicates talking, 0 indicating none.
 	//	u32 signalStateFarTalk = 0; // value is in range 0-10. 10 indicates talking from far away, 0 indicating none.

@@ -52,12 +52,13 @@
     <ClCompile Include="asmjit\src\asmjit\arm\a64builder.cpp" />
     <ClCompile Include="asmjit\src\asmjit\arm\a64compiler.cpp" />
     <ClCompile Include="asmjit\src\asmjit\arm\a64emithelper.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\arm\a64formatter.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\arm\a64func.cpp" />
     <ClCompile Include="asmjit\src\asmjit\arm\a64instapi.cpp" />
     <ClCompile Include="asmjit\src\asmjit\arm\a64instdb.cpp" />
     <ClCompile Include="asmjit\src\asmjit\arm\a64operand.cpp" />
     <ClCompile Include="asmjit\src\asmjit\arm\a64rapass.cpp" />
     <ClCompile Include="asmjit\src\asmjit\arm\armformatter.cpp" />
-    <ClCompile Include="asmjit\src\asmjit\arm\armfunc.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="asmjit\src\asmjit\core\api-build_p.h" />
@@ -124,11 +125,14 @@
     <ClInclude Include="asmjit\src\asmjit\x86\x86opcode_p.h" />
     <ClInclude Include="asmjit\src\asmjit\x86\x86operand.h" />
     <ClInclude Include="asmjit\src\asmjit\x86\x86rapass_p.h" />
+    <ClInclude Include="asmjit\src\asmjit\arm\a64archtraits_p.h" />
     <ClInclude Include="asmjit\src\asmjit\arm\a64assembler.h" />
     <ClInclude Include="asmjit\src\asmjit\arm\a64builder.h" />
     <ClInclude Include="asmjit\src\asmjit\arm\a64compiler.h" />
     <ClInclude Include="asmjit\src\asmjit\arm\a64emithelper_p.h" />
     <ClInclude Include="asmjit\src\asmjit\arm\a64emitter.h" />
+    <ClInclude Include="asmjit\src\asmjit\arm\a64formatter_p.h" />
+    <ClInclude Include="asmjit\src\asmjit\arm\a64func_p.h" />
     <ClInclude Include="asmjit\src\asmjit\arm\a64globals.h" />
     <ClInclude Include="asmjit\src\asmjit\arm\a64instapi_p.h" />
     <ClInclude Include="asmjit\src\asmjit\arm\a64instdb.h" />
@@ -136,9 +140,7 @@
     <ClInclude Include="asmjit\src\asmjit\arm\a64operand.h" />
     <ClInclude Include="asmjit\src\asmjit\arm\a64rapass_p.h" />
     <ClInclude Include="asmjit\src\asmjit\arm\a64utils.h" />
-    <ClInclude Include="asmjit\src\asmjit\arm\armarchtraits_p.h" />
     <ClInclude Include="asmjit\src\asmjit\arm\armformatter_p.h" />
-    <ClInclude Include="asmjit\src\asmjit\arm\armfunc_p.h" />
     <ClInclude Include="asmjit\src\asmjit\arm\armglobals.h" />
     <ClInclude Include="asmjit\src\asmjit\arm\armoperand.h" />
   </ItemGroup>

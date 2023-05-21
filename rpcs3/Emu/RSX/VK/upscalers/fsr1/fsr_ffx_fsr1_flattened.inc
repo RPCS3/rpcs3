@@ -362,7 +362,7 @@ AF1 rcpL=APrxMedRcpF1(AF1_(4.0)*lobe+AF1_(1.0));
 pixR=(lobe*bR+lobe*dR+lobe*hR+lobe*fR+eR)*rcpL;
 pixG=(lobe*bG+lobe*dG+lobe*hG+lobe*fG+eG)*rcpL;
 pixB=(lobe*bB+lobe*dB+lobe*hB+lobe*fB+eB)*rcpL;
-return;} 
+return;}
 #endif
 #if defined(A_GPU)&&defined(A_HALF)&&defined(FSR_RCAS_H)
 AH4 FsrRcasLoadH(ASW2 p);

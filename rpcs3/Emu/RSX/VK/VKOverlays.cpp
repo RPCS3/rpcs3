@@ -11,6 +11,7 @@
 #include "vkutils/scratch.h"
 
 #include "../Overlays/overlays.h"
+#include "../Program/RSXOverlay.h"
 
 #include "util/fnv_hash.hpp"
 
@@ -325,6 +326,9 @@ namespace vk
 
 	void overlay_pass::run(vk::command_buffer& cmd, const areau& viewport, vk::framebuffer* fbo, const std::vector<vk::image_view*>& src, VkRenderPass render_pass)
 	{
+		// This call clobbers dynamic state
+		cmd.flags |= vk::command_buffer::cb_reload_dynamic_state;
+
 		load_program(cmd, render_pass, src);
 		set_up_viewport(cmd, viewport.x1, viewport.y1, viewport.width(), viewport.height());
 
@@ -350,137 +354,25 @@ namespace vk
 	ui_overlay_renderer::ui_overlay_renderer()
 	{
 		vs_src =
-			"#version 450\n"
-			"#extension GL_ARB_separate_shader_objects : enable\n"
-			"layout(location=0) in vec4 in_pos;\n"
-			"layout(std140, set=0, binding=0) uniform static_data{ vec4 regs[8]; };\n"
-			"layout(location=0) out vec2 tc0;\n"
-			"layout(location=1) out vec4 color;\n"
-			"layout(location=2) out vec4 parameters;\n"
-			"layout(location=3) out vec4 clip_rect;\n"
-			"layout(location=4) out vec4 parameters2;\n"
-			"\n"
-			"vec2 snap_to_grid(const in vec2 normalized)\n"
-			"{\n"
-			"	return (floor(normalized * regs[5].xy) + 0.5) / regs[5].xy;\n"
-			"}\n"
-			"\n"
-			"vec4 clip_to_ndc(const in vec4 coord)\n"
-			"{\n"
-			"	return (coord * regs[0].zwzw) / regs[0].xyxy;\n"
-			"}\n"
-			"\n"
-			"vec4 ndc_to_window(const in vec4 coord)\n"
-			"{\n"
-			"	return fma(coord, regs[5].xyxy, regs[5].zwzw);\n"
-			"}\n"
-			"\n"
-			"void main()\n"
-			"{\n"
-			"	tc0.xy = in_pos.zw;\n"
-			"	color = regs[1];\n"
-			"	parameters = regs[2];\n"
-			"	parameters2 = regs[4];\n"
-			"	clip_rect = ndc_to_window(clip_to_ndc(regs[3]));\n"
-			"	vec4 pos = vec4(clip_to_ndc(in_pos).xy, 0.5, 1.);\n"
-			"	pos.xy = snap_to_grid(pos.xy);\n"
-			"	gl_Position = (pos + pos) - 1.;\n"
-			"}\n";
+		#include "../Program/GLSLSnippets/OverlayRenderVS.glsl"
+		;
 
 		fs_src =
-			"#version 420\n"
-			"#extension GL_ARB_separate_shader_objects : enable\n"
-			"layout(set=0, binding=1) uniform sampler2D fs0;\n"
-			"layout(set=0, binding=2) uniform sampler2DArray fs1;\n"
-			"layout(location=0) in vec2 tc0;\n"
-			"layout(location=1) in vec4 color;\n"
-			"layout(location=2) in vec4 parameters;\n"
-			"layout(location=3) in vec4 clip_rect;\n"
-			"layout(location=4) in vec4 parameters2;\n"
-			"layout(location=0) out vec4 ocol;\n"
-			"\n"
-			"vec4 blur_sample(sampler2D tex, vec2 coord, vec2 tex_offset)\n"
-			"{\n"
-			"	vec2 coords[9];\n"
-			"	coords[0] = coord - tex_offset\n;"
-			"	coords[1] = coord + vec2(0., -tex_offset.y);\n"
-			"	coords[2] = coord + vec2(tex_offset.x, -tex_offset.y);\n"
-			"	coords[3] = coord + vec2(-tex_offset.x, 0.);\n"
-			"	coords[4] = coord;\n"
-			"	coords[5] = coord + vec2(tex_offset.x, 0.);\n"
-			"	coords[6] = coord + vec2(-tex_offset.x, tex_offset.y);\n"
-			"	coords[7] = coord + vec2(0., tex_offset.y);\n"
-			"	coords[8] = coord + tex_offset;\n"
-			"\n"
-			"	float weights[9] =\n"
-			"	{\n"
-			"		1., 2., 1.,\n"
-			"		2., 4., 2.,\n"
-			"		1., 2., 1.\n"
-			"	};\n"
-			"\n"
-			"	vec4 blurred = vec4(0.);\n"
-			"	for (int n = 0; n < 9; ++n)\n"
-			"	{\n"
-			"		blurred += texture(tex, coords[n]) * weights[n];\n"
-			"	}\n"
-			"\n"
-			"	return blurred / 16.f;\n"
-			"}\n"
-			"\n"
-			"vec4 sample_image(sampler2D tex, vec2 coord, float blur_strength)\n"
-			"{\n"
-			"	vec4 original = texture(tex, coord);\n"
-			"	if (blur_strength == 0) return original;\n"
-			"	\n"
-			"	vec2 constraints = 1.f / vec2(640, 360);\n"
-			"	vec2 res_offset = 1.f / textureSize(fs0, 0);\n"
-			"	vec2 tex_offset = max(res_offset, constraints);\n"
-			"\n"
-			"	// Sample triangle pattern and average\n"
-			"	// TODO: Nicer looking gaussian blur with less sampling\n"
-			"	vec4 blur0 = blur_sample(tex, coord + vec2(-res_offset.x, 0.), tex_offset);\n"
-			"	vec4 blur1 = blur_sample(tex, coord + vec2(res_offset.x, 0.), tex_offset);\n"
-			"	vec4 blur2 = blur_sample(tex, coord + vec2(0., res_offset.y), tex_offset);\n"
-			"\n"
-			"	vec4 blurred = blur0 + blur1 + blur2;\n"
-			"	blurred /= 3.;\n"
-			"	return mix(original, blurred, blur_strength);\n"
-			"}\n"
-			"\n"
-			"void main()\n"
-			"{\n"
-			"	if (parameters.w != 0)\n"
-			"	{"
-			"		if (gl_FragCoord.x < clip_rect.x || gl_FragCoord.x > clip_rect.z ||\n"
-			"			gl_FragCoord.y < clip_rect.y || gl_FragCoord.y > clip_rect.w)\n"
-			"		{\n"
-			"			discard;\n"
-			"			return;\n"
-			"		}\n"
-			"	}\n"
-			"\n"
-			"	vec4 diff_color = color;\n"
-			"	if (parameters.y != 0)\n"
-			"		diff_color.a *= (sin(parameters.x) + 1.f) * 0.5f;\n"
-			"\n"
-			"	if (parameters.z < 1.)\n"
-			"	{\n"
-			"		ocol = diff_color;\n"
-			"	}\n"
-			"	else if (parameters.z > 2.)\n"
-			"	{\n"
-			"		ocol = texture(fs1, vec3(tc0.x, fract(tc0.y), trunc(tc0.y))).rrrr * diff_color;\n"
-			"	}\n"
-			"	else if (parameters.z > 1.)\n"
-			"	{\n"
-			"		ocol = texture(fs0, tc0).rrrr * diff_color;\n"
-			"	}\n"
-			"	else\n"
-			"	{\n"
-			"		ocol = sample_image(fs0, tc0, parameters2.x).bgra * diff_color;\n"
-			"	}\n"
-			"}\n";
+		#include "../Program/GLSLSnippets/OverlayRenderFS.glsl"
+		;
+
+		vs_src = fmt::replace_all(vs_src,
+		{
+			{ "%preprocessor", "// %preprocessor" },
+			{ "%push_block", "push_constant" }
+		});
+
+		fs_src = fmt::replace_all(fs_src,
+		{
+			{ "%preprocessor", "// %preprocessor" },
+			{ "%push_block_offset", "layout(offset=68)" },
+			{ "%push_block", "push_constant" }
+		});
 
 		// 2 input textures
 		m_num_usable_samplers = 2;
@@ -495,7 +387,7 @@ namespace vk
 	}
 
 	vk::image_view* ui_overlay_renderer::upload_simple_texture(vk::render_device& dev, vk::command_buffer& cmd,
-		vk::data_heap& upload_heap, u64 key, u32 w, u32 h, u32 layers, bool font, bool temp, void* pixel_src, u32 owner_uid)
+		vk::data_heap& upload_heap, u64 key, u32 w, u32 h, u32 layers, bool font, bool temp, const void* pixel_src, u32 owner_uid)
 	{
 		const VkFormat format = (font) ? VK_FORMAT_R8_UNORM : VK_FORMAT_B8G8R8A8_UNORM;
 		const u32 pitch = (font) ? w : w * 4;
@@ -625,8 +517,7 @@ namespace vk
 		}
 
 		// Create font resource
-		std::vector<u8> bytes;
-		font->get_glyph_data(bytes);
+		const std::vector<u8> bytes = font->get_glyph_data();
 
 		return upload_simple_texture(cmd.get_command_pool().get_owner(), cmd, upload_heap, key, image_size.width, image_size.height, image_size.depth,
 				true, false, bytes.data(), -1);
@@ -643,45 +534,71 @@ namespace vk
 				false, true, desc->data, owner_uid);
 	}
 
-	void ui_overlay_renderer::update_uniforms(vk::command_buffer& /*cmd*/, vk::glsl::program* /*program*/)
+	std::vector<VkPushConstantRange> ui_overlay_renderer::get_push_constants()
 	{
-		m_ubo_offset = static_cast<u32>(m_ubo.alloc<256>(128));
-		auto dst = static_cast<f32*>(m_ubo.map(m_ubo_offset, 128));
+		return
+		{
+			{
+				.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+				.offset = 0,
+				.size = 68
+			},
+			{
+				.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+				.offset = 68,
+				.size = 12
+			}
+		};
+	}
 
-		// regs[0] = scaling parameters
-		dst[0] = m_scale_offset.r;
-		dst[1] = m_scale_offset.g;
-		dst[2] = m_scale_offset.b;
-		dst[3] = m_scale_offset.a;
+	void ui_overlay_renderer::update_uniforms(vk::command_buffer& cmd, vk::glsl::program* /*program*/)
+	{
+		// Byte Layout
+		// 00: vec4 ui_scale;
+		// 16: vec4 albedo;
+		// 32: vec4 viewport;
+		// 48: vec4 clip_bounds;
+		// 64: uint vertex_config;
+		// 68: uint fragment_config;
+		// 72: float timestamp;
+		// 76: float blur_intensity;
 
-		// regs[1] = color
-		dst[4] = m_color.r;
-		dst[5] = m_color.g;
-		dst[6] = m_color.b;
-		dst[7] = m_color.a;
+		f32 push_buf[32];
+		// 1. Vertex config (00 - 63)
+		std::memcpy(push_buf, m_scale_offset.rgba, 16);
+		std::memcpy(push_buf + 4, m_color.rgba, 16);
 
-		// regs[2] = fs config parameters
-		dst[8] = m_time;
-		dst[9] = m_pulse_glow? 1.f : 0.f;
-		dst[10] = m_skip_texture_read? 0.f : static_cast<f32>(m_texture_type);
-		dst[11] = m_clip_enabled ? 1.f : 0.f;
+		push_buf[8] = m_viewport.width;
+		push_buf[9] = m_viewport.height;
+		push_buf[10] = m_viewport.x;
+		push_buf[11] = m_viewport.y;
 
-		// regs[3] = clip rect
-		dst[12] = m_clip_region.x1;
-		dst[13] = m_clip_region.y1;
-		dst[14] = m_clip_region.x2;
-		dst[15] = m_clip_region.y2;
+		push_buf[12] = m_clip_region.x1;
+		push_buf[13] = m_clip_region.y1;
+		push_buf[14] = m_clip_region.x2;
+		push_buf[15] = m_clip_region.y2;
 
-		// regs[4] = fs config parameters 2
-		dst[16] = m_blur_strength;
+		rsx::overlays::vertex_options vert_opts;
+		const auto vert_config = vert_opts
+			.disable_vertex_snap(m_disable_vertex_snap)
+			.get();
+		push_buf[16] = std::bit_cast<f32>(vert_config);
 
-		// regs[5] = viewport
-		dst[20] = m_viewport.width;
-		dst[21] = m_viewport.height;
-		dst[22] = m_viewport.x;
-		dst[23] = m_viewport.y;
+		vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, 68, push_buf);
 
-		m_ubo.unmap();
+		// 2. Fragment stuff
+		rsx::overlays::fragment_options frag_opts;
+		const auto frag_config = frag_opts
+			.texture_mode(m_texture_type)
+			.clip_fragments(m_clip_enabled)
+			.pulse_glow(m_pulse_glow)
+			.get();
+
+		push_buf[0] = std::bit_cast<f32>(frag_config);
+		push_buf[1] = m_time;
+		push_buf[2] = m_blur_strength;
+
+		vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 68, 12, push_buf);
 	}
 
 	void ui_overlay_renderer::set_primitive_type(rsx::overlays::primitive_type type)
@@ -699,6 +616,9 @@ namespace vk
 				break;
 			case rsx::overlays::primitive_type::line_strip:
 				renderpass_config.set_primitive_type(VK_PRIMITIVE_TOPOLOGY_LINE_STRIP);
+				break;
+			case rsx::overlays::primitive_type::triangle_fan:
+				renderpass_config.set_primitive_type(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN);
 				break;
 			default:
 				fmt::throw_exception("Unexpected primitive type %d", static_cast<s32>(type));
@@ -737,6 +657,12 @@ namespace vk
 			vk::null_image_view(cmd, VK_IMAGE_VIEW_TYPE_2D_ARRAY)
 		};
 
+		if (ui.status_flags & rsx::overlays::status_bits::invalidate_image_cache)
+		{
+			remove_temp_resources(ui.uid);
+			ui.status_flags.clear(rsx::overlays::status_bits::invalidate_image_cache);
+		}
+
 		for (auto& command : ui.get_compiled().draw_commands)
 		{
 			num_drawable_elements = static_cast<u32>(command.verts.size());
@@ -745,13 +671,13 @@ namespace vk
 			set_primitive_type(command.config.primitives);
 
 			m_time = command.config.get_sinus_value();
-			m_skip_texture_read = false;
+			m_texture_type = rsx::overlays::texture_sampling_mode::texture2D;
 			m_color = command.config.color;
 			m_pulse_glow = command.config.pulse_glow;
 			m_blur_strength = static_cast<f32>(command.config.blur_strength) * 0.01f;
 			m_clip_enabled = command.config.clip_region;
 			m_clip_region = command.config.clip_rect;
-			m_texture_type = 1;
+			m_disable_vertex_snap = command.config.disable_vertex_snap;
 
 			vk::image_view* src = nullptr;
 			switch (command.config.texture_ref)
@@ -760,11 +686,13 @@ namespace vk
 			case rsx::overlays::image_resource_id::backbuffer:
 				// TODO
 			case rsx::overlays::image_resource_id::none:
-				m_skip_texture_read = true;
+				m_texture_type = rsx::overlays::texture_sampling_mode::none;
 				break;
 			case rsx::overlays::image_resource_id::font_file:
 				src = find_font(command.config.font_ref, cmd, upload_heap);
-				m_texture_type = src->image()->layers() == 1 ? 2 : 3;
+				m_texture_type = src->image()->layers() == 1
+					? rsx::overlays::texture_sampling_mode::font2D
+					: rsx::overlays::texture_sampling_mode::font3D;
 				break;
 			case rsx::overlays::image_resource_id::raw_image:
 				src = find_temp_image(static_cast<rsx::overlays::image_info*>(command.config.external_data_ref), cmd, upload_heap, ui.uid);
@@ -964,23 +892,64 @@ namespace vk
 			"layout(location=0) in vec2 tc0;\n"
 			"layout(location=0) out vec4 ocol;\n"
 			"\n"
+			"#define STEREO_MODE_DISABLED 0\n"
+			"#define STEREO_MODE_ANAGLYPH 1\n"
+			"#define STEREO_MODE_SIDE_BY_SIDE 2\n"
+			"#define STEREO_MODE_OVER_UNDER 3\n"
+			"\n"
+			"vec2 sbs_single_matrix = vec2(2.0,0.4898f);\n"
+			"vec2 sbs_multi_matrix =  vec2(2.0,1.0);\n"
+			"vec2 ou_single_matrix =  vec2(1.0,0.9796f);\n"
+			"vec2 ou_multi_matrix =   vec2(1.0,2.0);\n"
+			"\n"
 			"layout(push_constant) uniform static_data\n"
 			"{\n"
 			"	float gamma;\n"
 			"	int limit_range;\n"
-			"	int stereo;\n"
+			"	int stereo_display_mode;\n"
 			"	int stereo_image_count;\n"
 			"};\n"
 			"\n"
 			"vec4 read_source()\n"
 			"{\n"
-			"	if (stereo == 0) return texture(fs0, tc0);\n"
+			"	if (stereo_display_mode == STEREO_MODE_DISABLED) return texture(fs0, tc0);\n"
 			"\n"
 			"	vec4 left, right;\n"
-			"	if (stereo_image_count == 2)\n"
+			"	if (stereo_image_count == 1)\n"
 			"	{\n"
-			"		left = texture(fs0, tc0);\n"
-			"		right = texture(fs1, tc0);\n"
+			"		switch (stereo_display_mode)\n"
+			"		{\n"
+			"			case STEREO_MODE_ANAGLYPH:\n"
+			"				left = texture(fs0, tc0 * vec2(1.f, 0.4898f));\n"
+			"				right = texture(fs0, (tc0 * vec2(1.f, 0.4898f)) + vec2(0.f, 0.510204f));\n"
+			"				return vec4(left.r, right.g, right.b, 1.f);\n"
+			"			case STEREO_MODE_SIDE_BY_SIDE:\n"
+			"				if (tc0.x < 0.5) return texture(fs0, tc0* sbs_single_matrix);\n"
+			"				else             return texture(fs0, (tc0* sbs_single_matrix) + vec2(-1.f, 0.510204f));\n"
+			"			case STEREO_MODE_OVER_UNDER:\n"
+			"				if (tc0.y < 0.5) return texture(fs0, tc0* ou_single_matrix);\n"
+			"				else             return texture(fs0, (tc0* ou_single_matrix) + vec2(0.f, 0.020408f) );\n"
+			"			default:\n" // undefined behavior
+			"				return texture(fs0,tc0);\n"
+			"		}\n"
+			"	}\n"
+			"	else if (stereo_image_count == 2)\n"
+			"	{\n"
+			"		switch (stereo_display_mode)\n"
+			"		{\n"
+			"			case STEREO_MODE_ANAGLYPH:\n"
+			"				left = texture(fs0, tc0);\n"
+			"				right = texture(fs1, tc0);\n"
+			"				return vec4(left.r, right.g, right.b, 1.f);\n"
+			"			case STEREO_MODE_SIDE_BY_SIDE:\n"
+			"				if (tc0.x < 0.5) return texture(fs0,(tc0 * sbs_multi_matrix));\n"
+			"				else             return texture(fs1,(tc0 * sbs_multi_matrix) + vec2(-1.f,0.f));\n"
+			"			case STEREO_MODE_OVER_UNDER:\n"
+			"				if (tc0.y < 0.5) return texture(fs0,(tc0 * ou_multi_matrix));\n"
+			"				else             return texture(fs1,(tc0 * ou_multi_matrix) + vec2(0.f,-1.f));\n"
+			"			default:\n" // undefined behavior
+			"				return texture(fs0,tc0);\n"
+			"		}\n"
 			"	}\n"
 			"	else\n"
 			"	{\n"
@@ -988,9 +957,8 @@ namespace vk
 			"		vec2 coord_right = coord_left + vec2(0.f, 0.510204f);\n"
 			"		left = texture(fs0, coord_left);\n"
 			"		right = texture(fs0, coord_right);\n"
+			"		return vec4(left.r, right.g, right.b, 1.);\n"
 			"	}\n"
-			"\n"
-			"	return vec4(left.r, right.g, right.b, 1.);\n"
 			"}\n"
 			"\n"
 			"void main()\n"
@@ -1026,11 +994,11 @@ namespace vk
 	}
 
 	void video_out_calibration_pass::run(vk::command_buffer& cmd, const areau& viewport, vk::framebuffer* target,
-		const rsx::simple_array<vk::viewable_image*>& src, f32 gamma, bool limited_rgb, bool _3d, VkRenderPass render_pass)
+		const rsx::simple_array<vk::viewable_image*>& src, f32 gamma, bool limited_rgb, stereo_render_mode_options stereo_mode, VkRenderPass render_pass)
 	{
 		config.gamma = gamma;
 		config.limit_range = limited_rgb? 1 : 0;
-		config.stereo = _3d? 1 : 0;
+		config.stereo_display_mode = static_cast<u8>(stereo_mode);
 		config.stereo_image_count = std::min(::size32(src), 2u);
 
 		std::vector<vk::image_view*> views;

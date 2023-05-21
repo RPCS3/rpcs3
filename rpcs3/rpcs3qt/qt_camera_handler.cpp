@@ -18,28 +18,21 @@ qt_camera_handler::qt_camera_handler() : camera_handler_base()
 		camera_log.success("Found camera: name=%s, description=%s", cameraInfo.deviceName().toStdString(), cameraInfo.description().toStdString());
 	}
 
-	g_cfg_camera.load();
+	if (!g_cfg_camera.load())
+	{
+		camera_log.notice("Could not load camera config. Using defaults.");
+	}
 }
 
 qt_camera_handler::~qt_camera_handler()
 {
-	atomic_t<bool> wake_up = false;
-
-	Emu.CallFromMainThread([&]()
+	Emu.BlockingCallFromMainThread([&]()
 	{
 		close_camera();
 		m_surface.reset();
 		m_camera.reset();
 		m_error_handler.reset();
-
-		wake_up = true;
-		wake_up.notify_one();
 	});
-
-	while (!wake_up)
-	{
-		thread_ctrl::wait_on(wake_up, false);
-	}
 }
 
 void qt_camera_handler::set_camera(const QCameraInfo& camera_info)
@@ -100,7 +93,7 @@ void qt_camera_handler::open_camera()
 	if (const std::string camera_id = g_cfg.io.camera_id.to_string();
 		m_camera_id != camera_id)
 	{
-		camera_log.notice("Switching camera from %s to %s", camera_id, m_camera_id);
+		camera_log.notice("Switching camera from %s to %s", m_camera_id, camera_id);
 		camera_log.notice("Unloading old camera...");
 		if (m_camera) m_camera->unload();
 		m_camera_id = camera_id;

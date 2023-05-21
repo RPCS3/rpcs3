@@ -1,7 +1,24 @@
 #include "GLOverlays.h"
 
+#include "Emu/system_config.h"
+#include "../rsx_utils.h"
+#include "../Program/RSXOverlay.h"
+
 namespace gl
 {
+	// Lame
+	std::unordered_map<u32, std::unique_ptr<gl::overlay_pass>> g_overlay_passes;
+
+	void destroy_overlay_passes()
+	{
+		for (auto& [key, prog] : g_overlay_passes)
+		{
+			prog->destroy();
+		}
+
+		g_overlay_passes.clear();
+	}
+
 	void overlay_pass::create()
 	{
 		if (!compiled)
@@ -20,7 +37,7 @@ namespace gl
 			fbo.create();
 
 			m_sampler.create();
-			m_sampler.apply_defaults(input_filter);
+			m_sampler.apply_defaults(static_cast<GLenum>(m_input_filter));
 
 			m_vertex_data_buffer.create();
 
@@ -69,7 +86,7 @@ namespace gl
 		glBindVertexArray(old_vao);
 	}
 
-	void overlay_pass::run(const areau& region, GLuint target_texture, bool depth_target, bool use_blending)
+	void overlay_pass::run(gl::command_context& cmd, const areau& region, GLuint target_texture, GLuint image_aspect_bits, bool enable_blending)
 	{
 		if (!compiled)
 		{
@@ -77,129 +94,97 @@ namespace gl
 			return;
 		}
 
-		GLint program;
-		GLint old_fbo;
-		GLint depth_func;
 		GLint viewport[4];
-		GLboolean color_writes[4];
-		GLboolean depth_write;
-
-		GLint blend_src_rgb;
-		GLint blend_src_a;
-		GLint blend_dst_rgb;
-		GLint blend_dst_a;
-		GLint blend_eq_a;
-		GLint blend_eq_rgb;
+		std::unique_ptr<fbo::save_binding_state> save_fbo;
 
 		if (target_texture)
 		{
-			glGetIntegerv(GL_FRAMEBUFFER_BINDING, &old_fbo);
-			glBindFramebuffer(GL_FRAMEBUFFER, fbo.id());
+			save_fbo = std::make_unique<fbo::save_binding_state>(fbo);
 
-			if (depth_target)
+			switch (image_aspect_bits)
 			{
-				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, target_texture, 0);
-				glDrawBuffer(GL_NONE);
+			case gl::image_aspect::color:
+				fbo.color[0] = target_texture;
+				fbo.draw_buffer(fbo.color[0]);
+				break;
+			case gl::image_aspect::depth:
+				fbo.draw_buffer(fbo.no_color);
+				fbo.depth = target_texture;
+				break;
+			case gl::image_aspect::depth | gl::image_aspect::stencil:
+				fbo.draw_buffer(fbo.no_color);
+				fbo.depth_stencil = target_texture;
+				break;
+			default:
+				fmt::throw_exception("Unsupported image aspect combination 0x%x", image_aspect_bits);
 			}
-			else
-			{
-				GLenum buffer = GL_COLOR_ATTACHMENT0;
-				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, target_texture, 0);
-				glDrawBuffers(1, &buffer);
-			}
+
+			enable_depth_writes = (image_aspect_bits & m_write_aspect_mask) & gl::image_aspect::depth;
+			enable_stencil_writes = (image_aspect_bits & m_write_aspect_mask) & gl::image_aspect::stencil;
 		}
 
-		if (!target_texture || glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE)
+		if (!target_texture || fbo.check())
 		{
-			// Push rasterizer state
+			// Save state (TODO)
 			glGetIntegerv(GL_VIEWPORT, viewport);
-			glGetBooleanv(GL_COLOR_WRITEMASK, color_writes);
-			glGetBooleanv(GL_DEPTH_WRITEMASK, &depth_write);
-			glGetIntegerv(GL_CURRENT_PROGRAM, &program);
-			glGetIntegerv(GL_DEPTH_FUNC, &depth_func);
-
-			GLboolean scissor_enabled = glIsEnabled(GL_SCISSOR_TEST);
-			GLboolean depth_test_enabled = glIsEnabled(GL_DEPTH_TEST);
-			GLboolean cull_face_enabled = glIsEnabled(GL_CULL_FACE);
-			GLboolean blend_enabled = glIsEnabledi(GL_BLEND, 0);
-			GLboolean stencil_test_enabled = glIsEnabled(GL_STENCIL_TEST);
-
-			if (use_blending)
-			{
-				glGetIntegerv(GL_BLEND_SRC_RGB, &blend_src_rgb);
-				glGetIntegerv(GL_BLEND_SRC_ALPHA, &blend_src_a);
-				glGetIntegerv(GL_BLEND_DST_RGB, &blend_dst_rgb);
-				glGetIntegerv(GL_BLEND_DST_ALPHA, &blend_dst_a);
-				glGetIntegerv(GL_BLEND_EQUATION_RGB, &blend_eq_rgb);
-				glGetIntegerv(GL_BLEND_EQUATION_ALPHA, &blend_eq_a);
-			}
 
 			// Set initial state
 			glViewport(region.x1, region.y1, region.width(), region.height());
-			glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-			glDepthMask(depth_target ? GL_TRUE : GL_FALSE);
+			cmd->color_maski(0, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+			cmd->depth_mask(image_aspect_bits == gl::image_aspect::color ? GL_FALSE : GL_TRUE);
 
-			// Disabling depth test will also disable depth writes which is not desired
-			glDepthFunc(GL_ALWAYS);
-			glEnable(GL_DEPTH_TEST);
+			cmd->disable(GL_CULL_FACE);
+			cmd->disable(GL_SCISSOR_TEST);
+			cmd->clip_planes(GL_NONE);
 
-			if (scissor_enabled) glDisable(GL_SCISSOR_TEST);
-			if (cull_face_enabled) glDisable(GL_CULL_FACE);
-			if (stencil_test_enabled) glDisable(GL_STENCIL_TEST);
-
-			if (use_blending)
+			if (enable_depth_writes)
 			{
-				if (!blend_enabled)
-					glEnablei(GL_BLEND, 0);
+				// Disabling depth test will also disable depth writes which is not desired
+				cmd->depth_func(GL_ALWAYS);
+				cmd->enable(GL_DEPTH_TEST);
+			}
+			else
+			{
+				cmd->disable(GL_DEPTH_TEST);
+			}
 
+			if (enable_stencil_writes)
+			{
+				// Disabling stencil test also disables stencil writes.
+				cmd->enable(GL_STENCIL_TEST);
+				cmd->stencil_mask(0xFF);
+				cmd->stencil_func(GL_ALWAYS, 0xFF, 0xFF);
+				cmd->stencil_op(GL_KEEP, GL_KEEP, GL_REPLACE);
+			}
+			else
+			{
+				cmd->disable(GL_STENCIL_TEST);
+			}
+
+			if (enable_blending)
+			{
+				cmd->enablei(GL_BLEND, 0);
 				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 				glBlendEquation(GL_FUNC_ADD);
 			}
-			else if (blend_enabled)
+			else
 			{
-				glDisablei(GL_BLEND, 0);
+				cmd->disablei(GL_BLEND, 0);
 			}
 
 			// Render
-			program_handle.use();
+			cmd->use_program(program_handle.id());
 			on_load();
 			bind_resources();
 			emit_geometry();
 
-			// Clean up
+			glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+
 			if (target_texture)
 			{
-				if (depth_target)
-					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, 0, 0);
-				else
-					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, 0, 0);
-
-				glBindFramebuffer(GL_FRAMEBUFFER, old_fbo);
-			}
-
-			glUseProgram(program);
-
-			glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
-			glColorMask(color_writes[0], color_writes[1], color_writes[2], color_writes[3]);
-			glDepthMask(depth_write);
-			glDepthFunc(depth_func);
-
-			if (!depth_test_enabled) glDisable(GL_DEPTH_TEST);
-			if (scissor_enabled) glEnable(GL_SCISSOR_TEST);
-			if (cull_face_enabled) glEnable(GL_CULL_FACE);
-			if (stencil_test_enabled) glEnable(GL_STENCIL_TEST);
-
-			if (use_blending)
-			{
-				if (!blend_enabled)
-					glDisablei(GL_BLEND, 0);
-
-				glBlendFuncSeparate(blend_src_rgb, blend_dst_rgb, blend_src_a, blend_dst_a);
-				glBlendEquationSeparate(blend_eq_rgb, blend_eq_a);
-			}
-			else if (blend_enabled)
-			{
-				 glEnablei(GL_BLEND, 0);
+				fbo.color[0] = GL_NONE;
+				fbo.depth = GL_NONE;
+				fbo.depth_stencil = GL_NONE;
 			}
 		}
 		else
@@ -211,135 +196,22 @@ namespace gl
 	ui_overlay_renderer::ui_overlay_renderer()
 	{
 		vs_src =
-			"#version 420\n\n"
-			"layout(location=0) in vec4 in_pos;\n"
-			"layout(location=0) out vec2 tc0;\n"
-			"layout(location=1) flat out vec4 clip_rect;\n"
-			"uniform vec4 ui_scale;\n"
-			"uniform vec4 viewport;\n"
-			"uniform vec4 clip_bounds;\n"
-			"\n"
-			"vec2 snap_to_grid(vec2 normalized)\n"
-			"{\n"
-			"	return (floor(normalized * viewport.xy) + 0.5) / viewport.xy;\n"
-			"}\n"
-			"\n"
-			"vec4 clip_to_ndc(const in vec4 coord)\n"
-			"{\n"
-			"	vec4 ret = (coord * ui_scale.zwzw) / ui_scale.xyxy;\n"
-			"	ret.yw = 1. - ret.yw;\n"
-			"	return ret;\n"
-			"}\n"
-			"\n"
-			"vec4 ndc_to_window(const in vec4 coord)\n"
-			"{\n"
-			"	return fma(coord, viewport.xyxy, viewport.zwzw);\n"
-			"}\n"
-			"\n"
-			"void main()\n"
-			"{\n"
-			"	tc0.xy = in_pos.zw;\n"
-			"	clip_rect = ndc_to_window(clip_to_ndc(clip_bounds)).xwzy; // Swap y1 and y2 due to flipped origin!\n"
-			"	vec4 pos = vec4(clip_to_ndc(in_pos).xy, 0.5, 1.);\n"
-			"	pos.xy = snap_to_grid(pos.xy);\n"
-			"	gl_Position = (pos + pos) - 1.;\n"
-			"}\n";
+		#include "../Program/GLSLSnippets/OverlayRenderVS.glsl"
+		;
 
 		fs_src =
-			"#version 420\n\n"
-			"layout(binding=31) uniform sampler2D fs0;\n"
-			"layout(binding=30) uniform sampler2DArray fs1;\n"
-			"layout(location=0) in vec2 tc0;\n"
-			"layout(location=1) flat in vec4 clip_rect;\n"
-			"layout(location=0) out vec4 ocol;\n"
-			"uniform vec4 color;\n"
-			"uniform float time;\n"
-			"uniform int sampler_mode;\n"
-			"uniform int pulse_glow;\n"
-			"uniform int clip_region;\n"
-			"uniform int blur_strength;\n"
-			"\n"
-			"vec4 blur_sample(sampler2D tex, vec2 coord, vec2 tex_offset)\n"
-			"{\n"
-			"	vec2 coords[9];\n"
-			"	coords[0] = coord - tex_offset\n;"
-			"	coords[1] = coord + vec2(0., -tex_offset.y);\n"
-			"	coords[2] = coord + vec2(tex_offset.x, -tex_offset.y);\n"
-			"	coords[3] = coord + vec2(-tex_offset.x, 0.);\n"
-			"	coords[4] = coord;\n"
-			"	coords[5] = coord + vec2(tex_offset.x, 0.);\n"
-			"	coords[6] = coord + vec2(-tex_offset.x, tex_offset.y);\n"
-			"	coords[7] = coord + vec2(0., tex_offset.y);\n"
-			"	coords[8] = coord + tex_offset;\n"
-			"\n"
-			"	float weights[9] =\n"
-			"	{\n"
-			"		1., 2., 1.,\n"
-			"		2., 4., 2.,\n"
-			"		1., 2., 1.\n"
-			"	};\n"
-			"\n"
-			"	vec4 blurred = vec4(0.);\n"
-			"	for (int n = 0; n < 9; ++n)\n"
-			"	{\n"
-			"		blurred += texture(tex, coords[n]) * weights[n];\n"
-			"	}\n"
-			"\n"
-			"	return blurred / 16.f;\n"
-			"}\n"
-			"\n"
-			"vec4 sample_image(sampler2D tex, vec2 coord)\n"
-			"{\n"
-			"	vec4 original = texture(tex, coord);\n"
-			"	if (blur_strength == 0) return original;\n"
-			"	\n"
-			"	vec2 constraints = 1.f / vec2(640, 360);\n"
-			"	vec2 res_offset = 1.f / textureSize(fs0, 0);\n"
-			"	vec2 tex_offset = max(res_offset, constraints);\n"
-			"\n"
-			"	// Sample triangle pattern and average\n"
-			"	// TODO: Nicer looking gaussian blur with less sampling\n"
-			"	vec4 blur0 = blur_sample(tex, coord + vec2(-res_offset.x, 0.), tex_offset);\n"
-			"	vec4 blur1 = blur_sample(tex, coord + vec2(res_offset.x, 0.), tex_offset);\n"
-			"	vec4 blur2 = blur_sample(tex, coord + vec2(0., res_offset.y), tex_offset);\n"
-			"\n"
-			"	vec4 blurred = blur0 + blur1 + blur2;\n"
-			"	blurred /= 3.;\n"
-			"	return mix(original, blurred, float(blur_strength) / 100.);\n"
-			"}\n"
-			"\n"
-			"void main()\n"
-			"{\n"
-			"	if (clip_region != 0)\n"
-			"	{"
-			"		if (gl_FragCoord.x < clip_rect.x || gl_FragCoord.x > clip_rect.z ||\n"
-			"			gl_FragCoord.y < clip_rect.y || gl_FragCoord.y > clip_rect.w)\n"
-			"		{\n"
-			"			discard;\n"
-			"			return;\n"
-			"		}\n"
-			"	}\n"
-			"\n"
-			"	vec4 diff_color = color;\n"
-			"	if (pulse_glow != 0)\n"
-			"		diff_color.a *= (sin(time) + 1.f) * 0.5f;\n"
-			"\n"
-			"	switch (sampler_mode)\n"
-			"	{\n"
-			"	case 1:\n"
-			"		ocol = sample_image(fs0, tc0) * diff_color;\n"
-			"		break;\n"
-			"	case 2:\n"
-			"		ocol = texture(fs1, vec3(tc0.x, fract(tc0.y), trunc(tc0.y))) * diff_color;\n"
-			"		break;\n"
-			"	default:\n"
-			"		ocol = diff_color;\n"
-			"		break;\n"
-			"	}\n"
-			"}\n";
+		#include "../Program/GLSLSnippets/OverlayRenderFS.glsl"
+		;
+
+		vs_src = fmt::replace_all(vs_src,
+		{
+			{ "#version 450", "#version 420" },
+			{ "%preprocessor", "// %preprocessor" }
+		});
+		fs_src = fmt::replace_all(fs_src, "%preprocessor", "// %preprocessor");
 
 		// Smooth filtering required for inputs
-		input_filter = GL_LINEAR;
+		m_input_filter = gl::filter::linear;
 	}
 
 	gl::texture_view* ui_overlay_renderer::load_simple_image(rsx::overlays::image_info* desc, bool temp_resource, u32 owner_uid)
@@ -384,8 +256,10 @@ namespace gl
 	void ui_overlay_renderer::destroy()
 	{
 		temp_image_cache.clear();
+		temp_view_cache.clear();
 		resources.clear();
 		font_cache.clear();
+		view_cache.clear();
 		overlay_pass::destroy();
 	}
 
@@ -425,8 +299,7 @@ namespace gl
 		}
 
 		// Create font file
-		std::vector<u8> glyph_data;
-		font->get_glyph_data(glyph_data);
+		const std::vector<u8> glyph_data = font->get_glyph_data();
 
 		auto tex = std::make_unique<gl::texture>(GL_TEXTURE_2D_ARRAY, font_size.width, font_size.height, font_size.depth, 1, GL_R8);
 		tex->copy_from(glyph_data.data(), gl::texture::format::r, gl::texture::type::ubyte, {});
@@ -449,10 +322,8 @@ namespace gl
 		{
 			return cached->second.get();
 		}
-		else
-		{
-			return load_simple_image(desc, true, owner_uid);
-		}
+
+		return load_simple_image(desc, true, owner_uid);
 	}
 
 	void ui_overlay_renderer::set_primitive_type(rsx::overlays::primitive_type type)
@@ -470,6 +341,9 @@ namespace gl
 				break;
 			case rsx::overlays::primitive_type::line_strip:
 				primitives = GL_LINE_STRIP;
+				break;
+			case rsx::overlays::primitive_type::triangle_fan:
+				primitives = GL_TRIANGLE_FAN;
 				break;
 			default:
 				fmt::throw_exception("Unexpected primitive type %d", static_cast<s32>(type));
@@ -508,7 +382,7 @@ namespace gl
 		}
 	}
 
-	void ui_overlay_renderer::run(const areau& viewport, GLuint target, rsx::overlays::overlay& ui)
+	void ui_overlay_renderer::run(gl::command_context& cmd_, const areau& viewport, GLuint target, rsx::overlays::overlay& ui)
 	{
 		program_handle.uniforms["viewport"] = color4f(static_cast<f32>(viewport.width()), static_cast<f32>(viewport.height()), static_cast<f32>(viewport.x1), static_cast<f32>(viewport.y1));
 		program_handle.uniforms["ui_scale"] = color4f(static_cast<f32>(ui.virtual_width), static_cast<f32>(ui.virtual_height), 1.f, 1.f);
@@ -516,12 +390,18 @@ namespace gl
 		saved_sampler_state save_30(30, m_sampler);
 		saved_sampler_state save_31(31, m_sampler);
 
+		if (ui.status_flags & rsx::overlays::status_bits::invalidate_image_cache)
+		{
+			remove_temp_resources(ui.uid);
+			ui.status_flags.clear(rsx::overlays::status_bits::invalidate_image_cache);
+		}
+
 		for (auto& cmd : ui.get_compiled().draw_commands)
 		{
 			set_primitive_type(cmd.config.primitives);
 			upload_vertex_data(cmd.verts.data(), ::size32(cmd.verts));
 			num_drawable_elements = ::size32(cmd.verts);
-			GLint texture_read = GL_TRUE;
+			auto texture_mode = rsx::overlays::texture_sampling_mode::texture2D;
 
 			switch (cmd.config.texture_ref)
 			{
@@ -530,38 +410,45 @@ namespace gl
 				// TODO
 			case rsx::overlays::image_resource_id::none:
 			{
-				texture_read = GL_FALSE;
-				glBindTexture(GL_TEXTURE_2D, GL_NONE);
+				texture_mode = rsx::overlays::texture_sampling_mode::none;
+				cmd_->bind_texture(31, GL_TEXTURE_2D, GL_NONE);
 				break;
 			}
 			case rsx::overlays::image_resource_id::raw_image:
 			{
-				glBindTexture(GL_TEXTURE_2D, find_temp_image(static_cast<rsx::overlays::image_info*>(cmd.config.external_data_ref), ui.uid)->id());
+				cmd_->bind_texture(31, GL_TEXTURE_2D, find_temp_image(static_cast<rsx::overlays::image_info*>(cmd.config.external_data_ref), ui.uid)->id());
 				break;
 			}
 			case rsx::overlays::image_resource_id::font_file:
 			{
-				texture_read = (GL_TRUE + 1);
-				glActiveTexture(GL_TEXTURE0 + 30);
-				glBindTexture(GL_TEXTURE_2D_ARRAY, find_font(cmd.config.font_ref)->id());
-				glActiveTexture(GL_TEXTURE0 + 31);
+				texture_mode = rsx::overlays::texture_sampling_mode::font3D;
+				cmd_->bind_texture(30, GL_TEXTURE_2D_ARRAY, find_font(cmd.config.font_ref)->id());
 				break;
 			}
 			default:
 			{
-				glBindTexture(GL_TEXTURE_2D, view_cache[cmd.config.texture_ref - 1]->id());
+				cmd_->bind_texture(31, GL_TEXTURE_2D, view_cache[cmd.config.texture_ref - 1]->id());
 				break;
 			}
 			}
 
-			program_handle.uniforms["time"] = cmd.config.get_sinus_value();
-			program_handle.uniforms["color"] = cmd.config.color;
-			program_handle.uniforms["sampler_mode"] = texture_read;
-			program_handle.uniforms["pulse_glow"] = static_cast<s32>(cmd.config.pulse_glow);
-			program_handle.uniforms["blur_strength"] = static_cast<s32>(cmd.config.blur_strength);
-			program_handle.uniforms["clip_region"] = static_cast<s32>(cmd.config.clip_region);
+			rsx::overlays::vertex_options vert_opts;
+			program_handle.uniforms["vertex_config"] = vert_opts
+				.disable_vertex_snap(cmd.config.disable_vertex_snap)
+				.get();
+
+			rsx::overlays::fragment_options draw_opts;
+			program_handle.uniforms["fragment_config"] = draw_opts
+				.texture_mode(texture_mode)
+				.clip_fragments(cmd.config.clip_region)
+				.pulse_glow(cmd.config.pulse_glow)
+				.get();
+
+			program_handle.uniforms["timestamp"] = cmd.config.get_sinus_value();
+			program_handle.uniforms["albedo"] = cmd.config.color;
 			program_handle.uniforms["clip_bounds"] = cmd.config.clip_rect;
-			overlay_pass::run(viewport, target, false, true);
+			program_handle.uniforms["blur_intensity"] = static_cast<f32>(cmd.config.blur_strength);
+			overlay_pass::run(cmd_, viewport, target, gl::image_aspect::color, true);
 		}
 
 		ui.update();
@@ -570,17 +457,8 @@ namespace gl
 	video_out_calibration_pass::video_out_calibration_pass()
 	{
 		vs_src =
-			"#version 420\n\n"
-			"layout(location=0) out vec2 tc0;\n"
-			"\n"
-			"void main()\n"
-			"{\n"
-			"	vec2 positions[] = {vec2(-1., -1.), vec2(1., -1.), vec2(-1., 1.), vec2(1., 1.)};\n"
-			"	vec2 coords[] = {vec2(0., 1.), vec2(1., 1.), vec2(0., 0.), vec2(1., 0.)};\n"
-			"	tc0 = coords[gl_VertexID % 4];\n"
-			"	vec2 pos = positions[gl_VertexID % 4];\n"
-			"	gl_Position = vec4(pos, 0., 1.);\n"
-			"}\n";
+		#include "../Program/GLSLSnippets/GenericVSPassthrough.glsl"
+		;
 
 		fs_src =
 			"#version 420\n\n"
@@ -589,30 +467,69 @@ namespace gl
 			"layout(location=0) in vec2 tc0;\n"
 			"layout(location=0) out vec4 ocol;\n"
 			"\n"
+			"#define STEREO_MODE_DISABLED 0\n"
+			"#define STEREO_MODE_ANAGLYPH 1\n"
+			"#define STEREO_MODE_SIDE_BY_SIDE 2\n"
+			"#define STEREO_MODE_OVER_UNDER 3\n"
+			"\n"
+			"vec2 sbs_single_matrix = vec2(2.0,0.4898f);\n"
+			"vec2 sbs_multi_matrix =  vec2(2.0,1.0);\n"
+			"vec2 ou_single_matrix =  vec2(1.0,0.9796f);\n"
+			"vec2 ou_multi_matrix =   vec2(1.0,2.0);\n"
+			"\n"
 			"uniform float gamma;\n"
 			"uniform int limit_range;\n"
-			"uniform int stereo;\n"
+			"uniform int stereo_display_mode;\n"
 			"uniform int stereo_image_count;\n"
 			"\n"
 			"vec4 read_source()\n"
 			"{\n"
-			"	if (stereo == 0) return texture(fs0, tc0);\n"
+			"	if (stereo_display_mode == STEREO_MODE_DISABLED) return texture(fs0, tc0);\n"
 			"\n"
 			"	vec4 left, right;\n"
-			"	if (stereo_image_count == 2)\n"
+			"	if (stereo_image_count == 1)\n"
 			"	{\n"
-			"		left = texture(fs0, tc0);\n"
-			"		right = texture(fs1, tc0);\n"
+			"		switch (stereo_display_mode)\n"
+			"		{\n"
+			"			case STEREO_MODE_ANAGLYPH:\n"
+			"				left = texture(fs0, tc0 * vec2(1.f, 0.4898f));\n"
+			"				right = texture(fs0, (tc0 * vec2(1.f, 0.4898f)) + vec2(0.f, 0.510204f));\n"
+			"				return vec4(left.r, right.g, right.b, 1.f);\n"
+			"			case STEREO_MODE_SIDE_BY_SIDE:\n"
+			"				if (tc0.x < 0.5) return texture(fs0, tc0* sbs_single_matrix);\n"
+			"				else             return texture(fs0, (tc0* sbs_single_matrix) + vec2(-1.f, 0.510204f));\n"
+			"			case STEREO_MODE_OVER_UNDER:\n"
+			"				if (tc0.y < 0.5) return texture(fs0, tc0* ou_single_matrix);\n"
+			"				else             return texture(fs0, (tc0* ou_single_matrix) + vec2(0.f, 0.020408f) );\n"
+			"			default:\n" // undefined behavior
+			"				return texture(fs0,tc0);\n"
+			"		}\n"
 			"	}\n"
-			"	else\n"
+			"	else if (stereo_image_count == 2)\n"
+			"	{\n"
+			"		switch (stereo_display_mode)\n"
+			"		{\n"
+			"			case STEREO_MODE_ANAGLYPH:\n"
+			"				left = texture(fs0, tc0);\n"
+			"				right = texture(fs1, tc0);\n"
+			"				return vec4(left.r, right.g, right.b, 1.f);\n"
+			"			case STEREO_MODE_SIDE_BY_SIDE:\n"
+			"				if (tc0.x < 0.5) return texture(fs0,(tc0 * sbs_multi_matrix));\n"
+			"				else             return texture(fs1,(tc0 * sbs_multi_matrix) + vec2(-1.f,0.f));\n"
+			"			case STEREO_MODE_OVER_UNDER:\n"
+			"				if (tc0.y < 0.5) return texture(fs0,(tc0 * ou_multi_matrix));\n"
+			"				else             return texture(fs1,(tc0 * ou_multi_matrix) + vec2(0.f,-1.f));\n"
+			"			default:\n" // undefined behavior
+			"				return texture(fs0,tc0);\n"
+			"		}\n"
+			"	}\n"
 			"	{\n"
 			"		vec2 coord_left = tc0 * vec2(1.f, 0.4898f);\n"
 			"		vec2 coord_right = coord_left + vec2(0.f, 0.510204f);\n"
 			"		left = texture(fs0, coord_left);\n"
 			"		right = texture(fs0, coord_right);\n"
+			"		return vec4(left.r, right.g, right.b, 1.);\n"
 			"	}\n"
-			"\n"
-			"	return vec4(left.r, right.g, right.b, 1.);\n"
 			"}\n"
 			"\n"
 			"void main()\n"
@@ -625,22 +542,86 @@ namespace gl
 			"		ocol = color;\n"
 			"}\n";
 
-		input_filter = GL_LINEAR;
+		m_input_filter = gl::filter::linear;
 	}
 
-	void video_out_calibration_pass::run(const areau& viewport, const rsx::simple_array<GLuint>& source, f32 gamma, bool limited_rgb, bool _3d)
+	void video_out_calibration_pass::run(gl::command_context& cmd, const areau& viewport, const rsx::simple_array<GLuint>& source, f32 gamma, bool limited_rgb, stereo_render_mode_options stereo_mode, gl::filter input_filter)
 	{
+		if (m_input_filter != input_filter)
+		{
+			m_input_filter = input_filter;
+			m_sampler.set_parameteri(GL_TEXTURE_MIN_FILTER, static_cast<GLenum>(m_input_filter));
+			m_sampler.set_parameteri(GL_TEXTURE_MAG_FILTER, static_cast<GLenum>(m_input_filter));
+		}
 		program_handle.uniforms["gamma"] = gamma;
 		program_handle.uniforms["limit_range"] = limited_rgb + 0;
-		program_handle.uniforms["stereo"] = _3d + 0;
+		program_handle.uniforms["stereo_display_mode"] = static_cast<u8>(stereo_mode);
 		program_handle.uniforms["stereo_image_count"] = (source[1] == GL_NONE? 1 : 2);
 
 		saved_sampler_state saved(31, m_sampler);
-		glBindTexture(GL_TEXTURE_2D, source[0]);
+		cmd->bind_texture(31, GL_TEXTURE_2D, source[0]);
 
 		saved_sampler_state saved2(30, m_sampler);
-		glBindTexture(GL_TEXTURE_2D, source[1]);
+		cmd->bind_texture(30, GL_TEXTURE_2D, source[1]);
 
-		overlay_pass::run(viewport, GL_NONE, false, false);
+		overlay_pass::run(cmd, viewport, GL_NONE, gl::image_aspect::color, false);
+	}
+
+	rp_ssbo_to_generic_texture::rp_ssbo_to_generic_texture()
+	{
+		vs_src =
+		#include "../Program/GLSLSnippets/GenericVSPassthrough.glsl"
+		;
+
+		fs_src =
+		#include "../Program/GLSLSnippets/CopyBufferToGenericImage.glsl"
+		;
+
+		const auto& caps = gl::get_driver_caps();
+		const bool stencil_export_supported = caps.ARB_shader_stencil_export_supported;
+		const bool legacy_format_support = caps.subvendor_ATI;
+
+		std::pair<std::string_view, std::string> repl_list[] =
+		{
+			{ "%set, ", "" },
+			{ "%loc", std::to_string(GL_COMPUTE_BUFFER_SLOT(0)) },
+			{ "%push_block", fmt::format("binding=%d, std140", GL_COMPUTE_BUFFER_SLOT(1)) },
+			{ "%stencil_export_supported", stencil_export_supported ? "1" : "0" },
+			{ "%legacy_format_support", legacy_format_support ? "1" : "0" }
+		};
+
+		fs_src = fmt::replace_all(fs_src, repl_list);
+
+		if (stencil_export_supported)
+		{
+			m_write_aspect_mask |= gl::image_aspect::stencil;
+		}
+	}
+
+	void rp_ssbo_to_generic_texture::run(gl::command_context& cmd,
+		const buffer* src, const texture_view* dst,
+		const u32 src_offset, const coordu& dst_region,
+		const pixel_buffer_layout& layout)
+	{
+		const u32 bpp = dst->image()->pitch() / dst->image()->width();
+		const u32 row_length = utils::align(dst_region.width * bpp, std::max<int>(layout.alignment, 1)) / bpp;
+
+		program_handle.uniforms["src_pitch"] = row_length;
+		program_handle.uniforms["swap_bytes"] = layout.swap_bytes;
+		program_handle.uniforms["format"] = static_cast<GLenum>(dst->image()->get_internal_format());
+		src->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(0), src_offset, row_length * bpp * dst_region.height);
+
+		cmd->stencil_mask(0xFF);
+
+		overlay_pass::run(cmd, dst_region, dst->id(), dst->aspect());
+	}
+
+	void rp_ssbo_to_generic_texture::run(gl::command_context& cmd,
+		const buffer* src, texture* dst,
+		const u32 src_offset, const coordu& dst_region,
+		const pixel_buffer_layout& layout)
+	{
+		gl::nil_texture_view view(dst);
+		run(cmd, src, &view, src_offset, dst_region, layout);
 	}
 }

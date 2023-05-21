@@ -1,4 +1,4 @@
-/* 
+/*
 Envy theme for RPCS3 by drysalter (https://github.com/drysalter)
 03/04/2019
 */
@@ -19,7 +19,7 @@ Candy Red: #ff007a
 Yellow: #f2d571
 Fuchsia: #ff00ff
 Orange: #ff6000
-Cyan: #3498d8 
+Cyan: #3498d8
 
 */
 
@@ -209,7 +209,7 @@ QRadioButton::indicator:unchecked {
 }
 
 QRadioButton::indicator:disabled {
-	background-color: #4d5058; 
+	background-color: #4d5058;
 }
 
 /* Combo Boxes */
@@ -272,7 +272,7 @@ QSlider::handle:horizontal {
 	border: 1px solid #5c5c5c;
 	border-radius: 0.1em;
 	width: 18px;
-	margin: -2px 2; 
+	margin: -2px 2;
 }
 
 QSlider::handle:horizontal:hover {
@@ -335,7 +335,7 @@ QPushButton:disabled {
 }
 
 QPushButton::pressed {
-	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #2d3038, stop: 1 #2d3038); 
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #2d3038, stop: 1 #2d3038);
 }
 
 /* Spinboxes */
@@ -454,7 +454,7 @@ QListWidget::item:selected {
 }
 
 QListWidget::item:hover {
-	background-color:  #30333a;
+	background-color: #30333a;
 	color: #8cf944;
 	border-radius: 0.25em;
 }
@@ -479,7 +479,7 @@ QListWidget::indicator:disabled {
 }
 
 /* Pad Settings: Controller Image */
-QLabel#l_controller { 
+QLabel#l_controller {
 	color: #8cf944;
 }
 
@@ -505,7 +505,7 @@ QLabel#color_button {
 }
 
 /* Search bar on main toolbar */
-QLineEdit#mw_searchbar { 
+QLineEdit#mw_searchbar {
 	color: #ecf0f1;
 	background-color: #2d3038;
 	border: 1px solid #f8f8f8;
@@ -513,14 +513,14 @@ QLineEdit#mw_searchbar {
 	padding-left: 5px;
 }
 
-QLineEdit#mw_searchbar:hover { 
+QLineEdit#mw_searchbar:hover {
 	color: #ecf0f1;
 	background-color: #2d3038;
 	border: 1px solid #8cf944;
 	margin: 15px;
 }
 
-QLineEdit#mw_searchbar:focus { 
+QLineEdit#mw_searchbar:focus {
 	border: 1px solid #8cf944;
 }
 
@@ -565,8 +565,8 @@ QTableView {
 }
 
 QTableView::item:hover {
-    color: #8cf944;
-}      
+	color: #8cf944;
+}
 
 /* Game Icon Background */
 QLabel#gamelist_icon_background_color {
@@ -641,24 +641,42 @@ QLabel#debugger_frame_pc {
 /* Tree view changes*/
 QTreeView::branch:has-children:!has-siblings:closed,
 QTreeView::branch:closed:has-children:has-siblings {
-    border-image: none;
-    image: url("GuiConfigs/list_arrow_white.png");
+	border-image: none;
+	image: url("GuiConfigs/list_arrow_white.png");
 }
 
 QTreeView::branch:open:has-children:!has-siblings,
-QTreeView::branch:open:has-children:has-siblings  {
-    border-image: none;
-    image: url("GuiConfigs/list_arrow_down_white.png");
+QTreeView::branch:open:has-children:has-siblings {
+	border-image: none;
+	image: url("GuiConfigs/list_arrow_down_white.png");
 }
 
 QTreeView::branch:has-children:!has-siblings:closed:hover,
 QTreeView::branch:closed:has-children:has-siblings:hover {
-    border-image: none;
-    image: url("GuiConfigs/list_arrow_green.png");
+	border-image: none;
+	image: url("GuiConfigs/list_arrow_green.png");
 }
 
 QTreeView::branch:open:has-children:!has-siblings:hover,
-QTreeView::branch:open:has-children:has-siblings:hover  {
-    border-image: none;
-    image: url("GuiConfigs/list_arrow_down_green.png");
+QTreeView::branch:open:has-children:has-siblings:hover {
+	border-image: none;
+	image: url("GuiConfigs/list_arrow_down_green.png");
+}
+
+/* Game Grid */
+#game_list_grid_item[selected="true"] {
+	background: #2d3038;
+}
+#game_list_grid_item:focus {
+	background: #2d3038;
+}
+
+/* Game Grid hover and focus: we need to handle properties differently when using descendants */
+#game_list_grid_item[selected="true"] #game_list_grid_item_title_label {
+	background-color: #2d3038;
+	color: #8cf944;
+}
+#game_list_grid_item[focus="true"] #game_list_grid_item_title_label {
+	background-color: #2d3038;
+	color: #8cf944;
 }

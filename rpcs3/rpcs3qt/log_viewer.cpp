@@ -3,9 +3,11 @@
 #include "log_viewer.h"
 #include "gui_settings.h"
 #include "syntax_highlighter.h"
-#include "find_dialog.h"
+#include "config_checker.h"
 
+#include <QActionGroup>
 #include <QApplication>
+#include <QClipboard>
 #include <QMenu>
 #include <QFile>
 #include <QFileDialog>
@@ -22,13 +24,6 @@
 
 LOG_CHANNEL(gui_log, "GUI");
 
-[[maybe_unused]] constexpr auto qstr = QString::fromStdString;
-
-inline std::string sstr(const QString& _in)
-{
-	return _in.toStdString();
-}
-
 log_viewer::log_viewer(std::shared_ptr<gui_settings> gui_settings)
     : m_gui_settings(std::move(gui_settings))
 {
@@ -41,6 +36,9 @@ log_viewer::log_viewer(std::shared_ptr<gui_settings> gui_settings)
 	resize(QSize(620, 395));
 
 	m_path_last = m_gui_settings->GetValue(gui::fd_log_viewer).toString();
+	m_show_timestamps = m_gui_settings->GetValue(gui::lv_show_timestamps).toBool();
+	m_show_threads = m_gui_settings->GetValue(gui::lv_show_threads).toBool();
+	m_log_levels = std::bitset<32>(m_gui_settings->GetValue(gui::lv_log_levels).toUInt());
 
 	m_log_text = new QPlainTextEdit(this);
 	m_log_text->setReadOnly(true);
@@ -64,8 +62,11 @@ void log_viewer::show_context_menu(const QPoint& pos)
 {
 	QMenu menu;
 	QAction* clear  = new QAction(tr("&Clear"));
+	QAction* copy   = new QAction(tr("&Copy"));
 	QAction* open   = new QAction(tr("&Open log file"));
+	QAction* save   = new QAction(tr("&Save filtered log"));
 	QAction* filter = new QAction(tr("&Filter log"));
+	QAction* config = new QAction(tr("&Check config"));
 
 	QAction* timestamps = new QAction(tr("&Show Timestamps"));
 	timestamps->setCheckable(true);
@@ -98,6 +99,7 @@ void log_viewer::show_context_menu(const QPoint& pos)
 		connect(act, &QAction::triggered, this, [this, logLevel](bool checked)
 		{
 			m_log_levels.set(static_cast<u32>(logLevel), checked);
+			m_gui_settings->SetValue(gui::lv_log_levels, ::narrow<u32>(m_log_levels.to_ulong()));
 			filter_log();
 		});
 	};
@@ -110,7 +112,13 @@ void log_viewer::show_context_menu(const QPoint& pos)
 	init_action(notice_act, logs::level::notice);
 	init_action(trace_act, logs::level::trace);
 
+	menu.addAction(copy);
+	menu.addSeparator();
 	menu.addAction(open);
+	menu.addSeparator();
+	menu.addAction(save);
+	menu.addSeparator();
+	menu.addAction(config);
 	menu.addSeparator();
 	menu.addAction(filter);
 	menu.addSeparator();
@@ -124,6 +132,11 @@ void log_viewer::show_context_menu(const QPoint& pos)
 	menu.addSeparator();
 	menu.addAction(clear);
 
+	connect(copy, &QAction::triggered, this, [this]()
+	{
+		m_log_text->copy();
+	});
+
 	connect(clear, &QAction::triggered, this, [this]()
 	{
 		m_log_text->clear();
@@ -132,11 +145,35 @@ void log_viewer::show_context_menu(const QPoint& pos)
 
 	connect(open, &QAction::triggered, this, [this]()
 	{
-		const QString file_path = QFileDialog::getOpenFileName(this, tr("Select log file"), m_path_last, tr("Log files (*.log);;"));
+		const QString file_path = QFileDialog::getOpenFileName(this, tr("Select log file"), m_path_last, tr("Log files (*.log);;All files (*.*)"));
 		if (file_path.isEmpty())
 			return;
 		m_path_last = file_path;
 		show_log();
+	});
+
+	connect(save, &QAction::triggered, this, [this]()
+	{
+		const QString file_path = QFileDialog::getSaveFileName(this, tr("Save to file"), m_path_last, tr("Log files (*.log);;All files (*.*)"));
+		if (file_path.isEmpty())
+			return;
+
+		if (QFile log_file(file_path); log_file.open(QIODevice::WriteOnly | QIODevice::Truncate))
+		{
+			log_file.write(m_log_text->toPlainText().toUtf8());
+			log_file.close();
+			gui_log.success("Exported filtered log to file '%s'", file_path.toStdString());
+		}
+		else
+		{
+			gui_log.error("Failed to export filtered log to file '%s'", file_path.toStdString());
+		}
+	});
+
+	connect(config, &QAction::triggered, this, [this]()
+	{
+		config_checker* dlg = new config_checker(this, m_full_log, true);
+		dlg->exec();
 	});
 
 	connect(filter, &QAction::triggered, this, [this]()
@@ -148,12 +185,14 @@ void log_viewer::show_context_menu(const QPoint& pos)
 	connect(threads, &QAction::toggled, this, [this](bool checked)
 	{
 		m_show_threads = checked;
+		m_gui_settings->SetValue(gui::lv_show_threads, m_show_threads);
 		filter_log();
 	});
 
 	connect(timestamps, &QAction::toggled, this, [this](bool checked)
 	{
 		m_show_timestamps = checked;
+		m_gui_settings->SetValue(gui::lv_show_timestamps, m_show_timestamps);
 		filter_log();
 	});
 
@@ -197,18 +236,24 @@ void log_viewer::show_log()
 		m_gui_settings->SetValue(gui::fd_log_viewer, m_path_last);
 
 		QTextStream stream(&file);
-		m_log_text->setPlainText(stream.readAll());
+		m_full_log = stream.readAll();
+		m_full_log.replace('\0', '0');
 		file.close();
 	}
 	else
 	{
-		gui_log.error("log_viewer: Failed to open %s", sstr(m_path_last));
+		gui_log.error("log_viewer: Failed to open %s", m_path_last.toStdString());
 		m_log_text->setPlainText(tr("Failed to open '%0'").arg(m_path_last));
 	}
+
+	filter_log();
 }
 
 void log_viewer::set_text_and_keep_position(const QString& text)
 {
+	m_log_text->setPlainText(tr("Pasting..."));
+	QApplication::processEvents();
+
 	const int pos = m_log_text->verticalScrollBar()->value();
 	m_log_text->setPlainText(text);
 	m_log_text->verticalScrollBar()->setValue(pos);
@@ -218,13 +263,11 @@ void log_viewer::filter_log()
 {
 	if (m_full_log.isEmpty())
 	{
-		m_full_log = m_log_text->toPlainText();
-
-		if (m_full_log.isEmpty())
-		{
-			return;
-		}
+		set_text_and_keep_position(m_full_log);
+		return;
 	}
+
+	m_log_text->setPlainText(tr("Filtering..."));
 
 	std::vector<QString> excluded_log_levels;
 	if (!m_log_levels.test(static_cast<u32>(logs::level::fatal)))   excluded_log_levels.push_back("·F ");
@@ -328,11 +371,9 @@ void log_viewer::filter_log()
 			set_text_and_keep_position(result);
 			return;
 		}
-		else
-		{
-			QMessageBox::information(this, tr("Ooops!"), tr("Cannot find any game boot!"));
-			// Pass through to regular log filter
-		}
+
+		QMessageBox::information(this, tr("Ooops!"), tr("Cannot find any game boot!"));
+		// Pass through to regular log filter
 	}
 
 	if (!stream.seek(0))

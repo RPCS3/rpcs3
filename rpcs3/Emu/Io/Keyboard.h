@@ -206,3 +206,5 @@ enum CellKbMappingType : s32
 	CELL_KB_MAPPING_PORTUGUESE_BRAZIL        = 23,
 	CELL_KB_MAPPING_TURKISH_TURKEY           = 24
 };
+
+u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode);

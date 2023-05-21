@@ -1,6 +1,7 @@
 #pragma once
 
 #include "util/types.hpp"
+#include "util/endian.hpp"
 #include "Emu/Io/pad_config_types.h"
 
 #include <vector>
@@ -27,7 +28,7 @@ enum PortSettings
 	CELL_PAD_SETTING_SENSOR_OFF = 0x00000000,
 };
 
-enum Digital1Flags
+enum Digital1Flags : u32
 {
 	CELL_PAD_CTRL_SELECT = 0x00000001,
 	CELL_PAD_CTRL_L3     = 0x00000002,
@@ -37,9 +38,10 @@ enum Digital1Flags
 	CELL_PAD_CTRL_RIGHT  = 0x00000020,
 	CELL_PAD_CTRL_DOWN   = 0x00000040,
 	CELL_PAD_CTRL_LEFT   = 0x00000080,
+	CELL_PAD_CTRL_PS     = 0x00000100,
 };
 
-enum Digital2Flags
+enum Digital2Flags : u32
 {
 	CELL_PAD_CTRL_L2       = 0x00000001,
 	CELL_PAD_CTRL_R2       = 0x00000002,
@@ -49,7 +51,11 @@ enum Digital2Flags
 	CELL_PAD_CTRL_CIRCLE   = 0x00000020,
 	CELL_PAD_CTRL_CROSS    = 0x00000040,
 	CELL_PAD_CTRL_SQUARE   = 0x00000080,
-	CELL_PAD_CTRL_PS       = 0x00000100, // Speculative
+};
+
+enum
+{
+	CELL_PAD_CTRL_LDD_PS = 0x00000001
 };
 
 enum DeviceCapability
@@ -165,6 +171,16 @@ enum
 	CELL_MAX_PADS = 127,
 };
 
+struct CellPadData
+{
+	be_t<s32> len;
+	be_t<u16> button[CELL_PAD_MAX_CODES];
+};
+
+static constexpr u16 DEFAULT_MOTION_X = 512;
+static constexpr u16 DEFAULT_MOTION_Y = 399;
+static constexpr u16 DEFAULT_MOTION_Z = 512;
+static constexpr u16 DEFAULT_MOTION_G = 512;
 
 constexpr u32 special_button_offset = 666; // Must not conflict with other CELL offsets like ButtonDataOffset
 
@@ -175,9 +191,9 @@ enum special_button_value
 
 struct Button
 {
-	u32 m_offset;
-	u32 m_keyCode;
-	u32 m_outKeyCode;
+	u32 m_offset = 0;
+	u32 m_keyCode = 0;
+	u32 m_outKeyCode = 0;
 	u16 m_value    = 0;
 	bool m_pressed = false;
 
@@ -214,37 +230,43 @@ struct Button
 
 struct AnalogStick
 {
-	u32 m_offset;
-	u32 m_keyCodeMin;
-	u32 m_keyCodeMax;
+	u32 m_offset = 0;
+	u32 m_keyCodeMin = 0;
+	u32 m_keyCodeMax = 0;
 	u16 m_value = 128;
 
 	AnalogStick(u32 offset, u32 keyCodeMin, u32 keyCodeMax)
 		: m_offset(offset)
 		, m_keyCodeMin(keyCodeMin)
 		, m_keyCodeMax(keyCodeMax)
-	{
-	}
+	{}
 };
 
 struct AnalogSensor
 {
-	u32 m_offset;
-	u16 m_value;
+	u32 m_offset = 0;
+	u32 m_keyCode = 0;
+	b8 m_mirrored = false;
+	s16 m_shift = 0;
+	u16 m_value = 0;
 
-	AnalogSensor(u32 offset, u16 value)
+	AnalogSensor() {}
+	AnalogSensor(u32 offset, u32 key_code, b8 mirrored, s16 shift, u16 value)
 		: m_offset(offset)
+		, m_keyCode(key_code)
+		, m_mirrored(mirrored)
+		, m_shift(shift)
 		, m_value(value)
 	{}
 };
 
 struct VibrateMotor
 {
-	bool m_isLargeMotor;
-	u16 m_value;
+	bool m_is_large_motor = false;
+	u8 m_value = 0;
 
-	VibrateMotor(bool largeMotor, u16 value)
-		: m_isLargeMotor(largeMotor)
+	VibrateMotor(bool is_large_motor, u8 value)
+		: m_is_large_motor(is_large_motor)
 		, m_value(value)
 	{}
 };
@@ -303,13 +325,13 @@ struct Pad
 
 	// Except for these...0-1023
 	// ~399 on sensor y is a level non moving controller
-	u16 m_sensor_x{512};
-	u16 m_sensor_y{399};
-	u16 m_sensor_z{512};
-	u16 m_sensor_g{512};
+	u16 m_sensor_x{DEFAULT_MOTION_X};
+	u16 m_sensor_y{DEFAULT_MOTION_Y};
+	u16 m_sensor_z{DEFAULT_MOTION_Z};
+	u16 m_sensor_g{DEFAULT_MOTION_G};
 
 	bool ldd{false};
-	u8 ldd_data[132] = {};
+	CellPadData ldd_data{};
 
 	explicit Pad(pad_handler handler, u32 port_status, u32 device_capability, u32 device_type)
 		: m_pad_handler(handler)

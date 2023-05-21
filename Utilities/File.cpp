@@ -384,7 +384,7 @@ shared_ptr<fs::device_base> fs::set_virtual_device(const std::string& name, shar
 	return get_device_manager().set_device(name, std::move(device));
 }
 
-std::string fs::get_parent_dir(const std::string& path, u32 levels)
+std::string fs::get_parent_dir(std::string_view path, u32 levels)
 {
 	std::string_view result = path;
 
@@ -437,6 +437,9 @@ std::string fs::get_parent_dir(const std::string& path, u32 levels)
 
 bool fs::stat(const std::string& path, stat_t& info)
 {
+	// Ensure consistent information on failure
+	info = {};
+
 	if (auto device = get_virtual_device(path))
 	{
 		return device->stat(path, info);
@@ -1103,10 +1106,12 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 	class windows_file final : public file_base
 	{
 		const HANDLE m_handle;
+		atomic_t<u64> m_pos;
 
 	public:
 		windows_file(HANDLE handle)
 			: m_handle(handle)
+			, m_pos(0)
 		{
 		}
 
@@ -1162,7 +1167,39 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 				const DWORD size = static_cast<DWORD>(std::min<u64>(count, DWORD{umax} & -4096));
 
 				DWORD nread = 0;
-				ensure(ReadFile(m_handle, data, size, &nread, nullptr)); // "file::read"
+				OVERLAPPED ovl{};
+				const u64 pos = m_pos;
+				ovl.Offset = DWORD(pos);
+				ovl.OffsetHigh = DWORD(pos >> 32);
+				ensure(ReadFile(m_handle, data, size, &nread, &ovl) || GetLastError() == ERROR_HANDLE_EOF); // "file::read"
+				nread_sum += nread;
+				m_pos += nread;
+
+				if (nread < size)
+				{
+					break;
+				}
+
+				count -= size;
+				data += size;
+			}
+
+			return nread_sum;
+		}
+
+		u64 read_at(u64 offset, void* buffer, u64 count) override
+		{
+			u64 nread_sum = 0;
+
+			for (char* data = static_cast<char*>(buffer); count;)
+			{
+				const DWORD size = static_cast<DWORD>(std::min<u64>(count, DWORD{umax} & -4096));
+
+				DWORD nread = 0;
+				OVERLAPPED ovl{};
+				ovl.Offset = DWORD(offset);
+				ovl.OffsetHigh = DWORD(offset >> 32);
+				ensure(ReadFile(m_handle, data, size, &nread, &ovl) || GetLastError() == ERROR_HANDLE_EOF); // "file::read"
 				nread_sum += nread;
 
 				if (nread < size)
@@ -1172,6 +1209,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 
 				count -= size;
 				data += size;
+				offset += size;
 			}
 
 			return nread_sum;
@@ -1186,8 +1224,13 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 				const DWORD size = static_cast<DWORD>(std::min<u64>(count, DWORD{umax} & -4096));
 
 				DWORD nwritten = 0;
-				ensure(WriteFile(m_handle, data, size, &nwritten, nullptr)); // "file::write"
+				OVERLAPPED ovl{};
+				const u64 pos = m_pos;
+				ovl.Offset = DWORD(pos);
+				ovl.OffsetHigh = DWORD(pos >> 32);
+				ensure(WriteFile(m_handle, data, size, &nwritten, &ovl)); // "file::write"
 				nwritten_sum += nwritten;
+				m_pos += nwritten;
 
 				if (nwritten < size)
 				{
@@ -1208,20 +1251,19 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 				fmt::throw_exception("Invalid whence (0x%x)", whence);
 			}
 
-			LARGE_INTEGER pos;
-			pos.QuadPart = offset;
+			const s64 new_pos =
+				whence == fs::seek_set ? offset :
+				whence == fs::seek_cur ? offset + m_pos :
+				whence == fs::seek_end ? offset + size() : -1;
 
-			const DWORD mode =
-				whence == seek_set ? FILE_BEGIN :
-				whence == seek_cur ? FILE_CURRENT : FILE_END;
-
-			if (!SetFilePointerEx(m_handle, pos, &pos, mode))
+			if (new_pos < 0)
 			{
-				g_tls_error = to_error(GetLastError());
+				fs::g_tls_error = fs::error::inval;
 				return -1;
 			}
 
-			return pos.QuadPart;
+			m_pos = new_pos;
+			return m_pos;
 		}
 
 		u64 size() override
@@ -1340,16 +1382,55 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 
 		u64 read(void* buffer, u64 count) override
 		{
-			const auto result = ::read(m_fd, buffer, count);
-			ensure(result != -1); // "file::read"
+			u64 result = 0;
+
+			// Loop because (huge?) read can be processed partially
+			while (auto r = ::read(m_fd, buffer, count))
+			{
+				ensure(r > 0); // "file::read"
+				count -= r;
+				result += r;
+				buffer = static_cast<u8*>(buffer) + r;
+				if (!count)
+					break;
+			}
+
+			return result;
+		}
+
+		u64 read_at(u64 offset, void* buffer, u64 count) override
+		{
+			u64 result = 0;
+
+			// For safety; see read()
+			while (auto r = ::pread(m_fd, buffer, count, offset))
+			{
+				ensure(r > 0); // "file::read_at"
+				count -= r;
+				offset += r;
+				result += r;
+				buffer = static_cast<u8*>(buffer) + r;
+				if (!count)
+					break;
+			}
 
 			return result;
 		}
 
 		u64 write(const void* buffer, u64 count) override
 		{
-			const auto result = ::write(m_fd, buffer, count);
-			ensure(result != -1); // "file::write"
+			u64 result = 0;
+
+			// For safety; see read()
+			while (auto r = ::write(m_fd, buffer, count))
+			{
+				ensure(r > 0); // "file::write"
+				count -= r;
+				result += r;
+				buffer = static_cast<const u8*>(buffer) + r;
+				if (!count)
+					break;
+			}
 
 			return result;
 		}
@@ -1456,6 +1537,21 @@ fs::file::file(const void* ptr, usz size)
 				{
 					std::memcpy(buffer, m_ptr + m_pos, result);
 					m_pos += result;
+					return result;
+				}
+			}
+
+			return 0;
+		}
+
+		u64 read_at(u64 offset, void* buffer, u64 count) override
+		{
+			if (offset < m_size)
+			{
+				// Get readable size
+				if (const u64 result = std::min<u64>(count, m_size - offset))
+				{
+					std::memcpy(buffer, m_ptr + offset, result);
 					return result;
 				}
 			}
@@ -1687,7 +1783,7 @@ const std::string& fs::get_config_dir()
 		if (GetEnvironmentVariable(L"RPCS3_CONFIG_DIR", buf, size) - 1 >= size - 1 &&
 			GetModuleFileName(nullptr, buf, size) - 1 >= size - 1)
 		{
-			MessageBoxA(nullptr, fmt::format("GetModuleFileName() failed: error %u.", GetLastError()).c_str(), "fs::get_config_dir()", MB_ICONERROR);
+			MessageBoxA(nullptr, fmt::format("GetModuleFileName() failed: error: %s", fmt::win_error{GetLastError(), nullptr}).c_str(), "fs::get_config_dir()", MB_ICONERROR);
 			return dir; // empty
 		}
 
@@ -1772,7 +1868,7 @@ const std::string& fs::get_temp_dir()
 		wchar_t buf[MAX_PATH + 2]{};
 		if (GetTempPathW(MAX_PATH + 1, buf) - 1 > MAX_PATH)
 		{
-			MessageBoxA(nullptr, fmt::format("GetTempPath() failed: error %u.", GetLastError()).c_str(), "fs::get_temp_dir()", MB_ICONERROR);
+			MessageBoxA(nullptr, fmt::format("GetTempPath() failed: error: %s", fmt::win_error{GetLastError(), nullptr}).c_str(), "fs::get_temp_dir()", MB_ICONERROR);
 			return dir; // empty
 		}
 
@@ -1828,7 +1924,7 @@ bool fs::remove_all(const std::string& path, bool remove_root, bool is_no_dir_ok
 	return true;
 }
 
-u64 fs::get_dir_size(const std::string& path, u64 rounding_alignment)
+u64 fs::get_dir_size(const std::string& path, u64 rounding_alignment, atomic_t<bool>* cancel_flag)
 {
 	u64 result = 0;
 
@@ -1841,6 +1937,11 @@ u64 fs::get_dir_size(const std::string& path, u64 rounding_alignment)
 
 	for (const auto& entry : root_dir)
 	{
+		if (cancel_flag && *cancel_flag)
+		{
+			return umax;
+		}
+
 		if (entry.name == "." || entry.name == "..")
 		{
 			continue;
@@ -1948,6 +2049,40 @@ fs::file fs::make_gather(std::vector<fs::file> files)
 			return 0;
 		}
 
+		u64 read_at(u64 start, void* buffer, u64 size) override
+		{
+			if (start < end)
+			{
+				u64 pos = start;
+
+				// Get readable size
+				if (const u64 max = std::min<u64>(size, end - pos))
+				{
+					u8* buf_out = static_cast<u8*>(buffer);
+					u64 buf_max = max;
+
+					for (auto it = ends.upper_bound(pos); it != ends.end(); ++it)
+					{
+						const u64 count = std::min<u64>(it->first - pos, buf_max);
+						const u64 read  = files[it->second].read_at(files[it->second].size() + pos - it->first, buf_out, count);
+
+						buf_out += count;
+						buf_max -= count;
+						pos     += read;
+
+						if (read < count || buf_max == 0)
+						{
+							break;
+						}
+					}
+
+					return pos - start;
+				}
+			}
+
+			return 0;
+		}
+
 		u64 write(const void*, u64) override
 		{
 			return 0;
@@ -1981,11 +2116,11 @@ fs::file fs::make_gather(std::vector<fs::file> files)
 	return result;
 }
 
-fs::pending_file::pending_file(const std::string& path)
+fs::pending_file::pending_file(std::string_view path)
 {
 	do
 	{
-		m_path = fmt::format(u8"%s/＄%s.%s.tmp", get_parent_dir(path), std::string_view(path).substr(path.find_last_of(fs::delim) + 1), fmt::base57(utils::get_unique_tsc()));
+		m_path = fmt::format(u8"%s/＄%s.%s.tmp", get_parent_dir(path), path.substr(path.find_last_of(fs::delim) + 1), fmt::base57(utils::get_unique_tsc()));
 
 		if (file.open(m_path, fs::create + fs::write + fs::read + fs::excl))
 		{

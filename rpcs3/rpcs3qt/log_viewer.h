@@ -1,5 +1,7 @@
 #pragma once
 
+#include "find_dialog.h"
+
 #include <QPlainTextEdit>
 #include <QDropEvent>
 
@@ -8,7 +10,6 @@
 
 class LogHighlighter;
 class gui_settings;
-class find_dialog;
 
 class log_viewer : public QWidget
 {

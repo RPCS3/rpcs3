@@ -2,10 +2,10 @@
 
 #include "sys_sync.h"
 #include "sys_event.h"
-#include "Utilities/Timer.h"
 #include "Utilities/simple_ringbuf.h"
 #include "Utilities/transactional_storage.h"
 #include "Utilities/cond.h"
+#include "Emu/system_config_types.h"
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Audio/AudioDumper.h"
@@ -162,7 +162,9 @@ struct lv2_rsxaudio final : lv2_obj
 	vm::addr_t shmem{};
 
 	std::array<std::weak_ptr<lv2_event_queue>, SYS_RSXAUDIO_PORT_CNT> event_queue{};
-	std::array<u32, SYS_RSXAUDIO_PORT_CNT> event_port{};
+
+	// lv2 uses port memory addresses for their names
+	static constexpr std::array<u64, SYS_RSXAUDIO_PORT_CNT> event_port_name{ 0x8000000000400100, 0x8000000000400200, 0x8000000000400300 };
 
 	lv2_rsxaudio()
 	{
@@ -316,14 +318,14 @@ struct rsxaudio_hw_param_t
 
 		static constexpr u8 MAP_SILENT_CH = umax;
 
-		bool        		init = false;
-		hdmi_ch_cfg_t 		ch_cfg{};
-		std::array<u8, 5> 	info_frame{}; // TODO: check chstat and info_frame for info on audio layout, add default values
-		std::array<u8, 5> 	chstat{};
+		bool                init = false;
+		hdmi_ch_cfg_t       ch_cfg{};
+		std::array<u8, 5>   info_frame{}; // TODO: check chstat and info_frame for info on audio layout, add default values
+		std::array<u8, 5>   chstat{};
 
-		bool        		muted = true;
-		bool        		force_mute = true;
-		bool        		use_spdif_1 = false; // TODO: unused for now
+		bool                muted = true;
+		bool                force_mute = true;
+		bool                use_spdif_1 = false; // TODO: unused for now
 	};
 
 	u32 serial_freq_base = SYS_RSXAUDIO_FREQ_BASE_384K;
@@ -436,17 +438,13 @@ public:
 		auto operator<=>(const port_config&) const = default;
 	};
 
-	union avport_bit
+	struct avport_bit
 	{
-		struct
-		{
-			bool hdmi_0  : 1;
-			bool hdmi_1  : 1;
-			bool avmulti : 1;
-			bool spdif_0 : 1;
-			bool spdif_1 : 1;
-		};
-		u8 raw : 5 = 0;
+		bool hdmi_0  : 1;
+		bool hdmi_1  : 1;
+		bool avmulti : 1;
+		bool spdif_0 : 1;
+		bool spdif_1 : 1;
 	};
 
 	rsxaudio_backend_thread();
@@ -467,13 +465,14 @@ private:
 
 	struct emu_audio_cfg
 	{
+		std::string audio_device{};
 		s64 desired_buffer_duration = 0;
 		f64 time_stretching_threshold = 0;
 		bool buffering_enabled = false;
 		bool convert_to_s16 = false;
 		bool enable_time_stretching = false;
 		bool dump_to_file = false;
-		AudioChannelCnt downmix = AudioChannelCnt::STEREO;
+		AudioChannelCnt channels = AudioChannelCnt::STEREO;
 		audio_renderer renderer = audio_renderer::null;
 		audio_provider provider = audio_provider::none;
 		RsxaudioAvportIdx avport = RsxaudioAvportIdx::HDMI_0;
@@ -547,6 +546,7 @@ private:
 	backend_config backend_current_cfg{ {}, new_emu_cfg.avport };
 	atomic_t<callback_config> callback_cfg{};
 	bool backend_error_occured = false;
+	bool backend_device_changed = false;
 
 	AudioDumper dumper{};
 	audio_resampler resampler{};
@@ -557,7 +557,7 @@ private:
 	void backend_stop();
 	bool backend_playing();
 	u32 write_data_callback(u32 bytes, void* buf);
-	void error_callback();
+	void state_changed_callback(AudioStateEvent event);
 
 	// Time management
 	u64 get_time_until_service();

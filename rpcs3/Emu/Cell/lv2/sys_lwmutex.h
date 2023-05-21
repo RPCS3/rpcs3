@@ -60,9 +60,16 @@ struct lv2_lwmutex final : lv2_obj
 	const be_t<u64> name;
 
 	shared_mutex mutex;
-	atomic_t<s32> signaled{0};
-	std::deque<cpu_thread*> sq;
 	atomic_t<s32> lwcond_waiters{0};
+
+	struct alignas(16) control_data_t
+	{
+		s32 signaled{0};
+		u32 reserved{};
+		ppu_thread* sq{};
+	};
+
+	atomic_t<control_data_t> lv2_control{};
 
 	lv2_lwmutex(u32 protocol, vm::ptr<sys_lwmutex_t> control, u64 name) noexcept
 		: protocol{static_cast<u8>(protocol)}
@@ -71,9 +78,31 @@ struct lv2_lwmutex final : lv2_obj
 	{
 	}
 
-	// Add a waiter
-	void add_waiter(cpu_thread* cpu)
+	lv2_lwmutex(utils::serial& ar);
+	void save(utils::serial& ar);
+
+	ppu_thread* load_sq() const
 	{
+		return atomic_storage<ppu_thread*>::load(lv2_control.raw().sq);
+	}
+
+	template <typename T>
+	s32 try_own(T* cpu, bool wait_only = false)
+	{
+		const s32 signal = lv2_control.fetch_op([&](control_data_t& data)
+		{
+			if (!data.signaled)
+			{
+				cpu->next_cpu = data.sq;
+				data.sq = cpu;
+			}
+			else
+			{
+				ensure(!wait_only);
+				data.signaled = 0;
+			}
+		}).signaled;
+
 		const bool notify = lwcond_waiters.fetch_op([](s32& val)
 		{
 			if (val + 0u <= 1u << 31)
@@ -88,13 +117,72 @@ struct lv2_lwmutex final : lv2_obj
 			return true;
 		}).second;
 
-		sq.emplace_back(cpu);
-
 		if (notify)
 		{
 			// Notify lwmutex destroyer (may cause EBUSY to be returned for it)
 			lwcond_waiters.notify_all();
 		}
+
+		if (signal)
+		{
+			cpu->next_cpu = nullptr;
+		}
+
+		return signal;
+	}
+
+	bool try_unlock(bool unlock2)
+	{
+		if (!load_sq())
+		{
+			control_data_t old{};
+			old.signaled = atomic_storage<s32>::load(lv2_control.raw().signaled);
+			control_data_t store = old;
+			store.signaled |= (unlock2 ? s32{smin} : 1);
+
+			if (lv2_control.compare_exchange(old, store))
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	template <typename T>
+	T* reown(bool unlock2 = false)
+	{
+		T* res{};
+		T* restore_next{};
+
+		lv2_control.fetch_op([&](control_data_t& data)
+		{
+			if (res)
+			{
+				res->next_cpu = restore_next;
+				res = nullptr;
+			}
+
+			if (auto sq = static_cast<T*>(data.sq))
+			{
+				restore_next = sq->next_cpu;
+				res = schedule<T>(data.sq, protocol);
+
+				if (sq == data.sq)
+				{
+					return false;
+				}
+
+				return true;
+			}
+			else
+			{
+				data.signaled |= (unlock2 ? s32{smin} : 1);
+				return true;
+			}
+		});
+
+		return res;
 	}
 };
 

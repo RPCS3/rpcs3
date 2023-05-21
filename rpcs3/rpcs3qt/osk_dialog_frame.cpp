@@ -22,7 +22,7 @@ osk_dialog_frame::~osk_dialog_frame()
 	}
 }
 
-void osk_dialog_frame::Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 prohibit_flags, u32 panel_flag, u32 /*first_view_panel*/, color /*base_color*/, bool /*dimmer_enabled*/, bool /*intercept_input*/)
+void osk_dialog_frame::Create(const osk_params& params)
 {
 	state = OskDialogState::Open;
 
@@ -38,14 +38,14 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 	m_dialog->setModal(true);
 
 	// Title
-	m_dialog->setWindowTitle(qstr(title));
+	m_dialog->setWindowTitle(qstr(params.title));
 
 	// Message
-	QLabel* message_label = new QLabel(QString::fromStdU16String(message));
+	QLabel* message_label = new QLabel(QString::fromStdU16String(params.message));
 
 	// Text Input Counter
-	const QString input_text = QString::fromStdU16String(std::u16string(init_text));
-	QLabel* input_count_label = new QLabel(QString("%1/%2").arg(input_text.length()).arg(charlimit));
+	const QString input_text = QString::fromStdU16String(std::u16string(params.init_text));
+	QLabel* input_count_label = new QLabel(QString("%1/%2").arg(input_text.length()).arg(params.charlimit));
 
 	// Button Layout
 	QDialogButtonBox* button_box = new QDialogButtonBox(QDialogButtonBox::Ok);
@@ -55,25 +55,25 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 	inputLayout->setAlignment(Qt::AlignHCenter);
 
 	// Text Input
-	if (prohibit_flags & CELL_OSKDIALOG_NO_RETURN)
+	if (params.prohibit_flags & CELL_OSKDIALOG_NO_RETURN)
 	{
 		QLineEdit* input = new QLineEdit(m_dialog);
 		input->setFixedWidth(lineEditWidth());
-		input->setMaxLength(charlimit);
+		input->setMaxLength(params.charlimit);
 		input->setText(input_text);
 		input->setFocus();
 
-		if (panel_flag & CELL_OSKDIALOG_PANELMODE_PASSWORD)
+		if (params.panel_flag & CELL_OSKDIALOG_PANELMODE_PASSWORD)
 		{
 			input->setEchoMode(QLineEdit::Password); // Let's assume that games only use the password mode with single-line edit fields
 		}
 
-		if (prohibit_flags & CELL_OSKDIALOG_NO_SPACE)
+		if (params.prohibit_flags & CELL_OSKDIALOG_NO_SPACE)
 		{
 			input->setValidator(new QRegularExpressionValidator(QRegularExpression("^\\S*$"), this));
 		}
 
-		connect(input, &QLineEdit::textChanged, input_count_label, [input_count_label, charlimit, this](const QString& text)
+		connect(input, &QLineEdit::textChanged, input_count_label, [input_count_label, charlimit = params.charlimit, this](const QString& text)
 		{
 			input_count_label->setText(QString("%1/%2").arg(text.length()).arg(charlimit));
 			SetOskText(text);
@@ -106,7 +106,7 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 			const int cursor_pos_old = cursor_pos_new + m_text_old.length() - text.length();
 
 			// Reset to old state if character limit was reached
-			if (m_text_old.length() >= static_cast<int>(charlimit) && text.length() > static_cast<int>(charlimit))
+			if (m_text_old.length() >= static_cast<int>(params.charlimit) && text.length() > static_cast<int>(params.charlimit))
 			{
 				input->blockSignals(true);
 				input->setPlainText(m_text_old);
@@ -119,7 +119,7 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 			int cursor_pos = cursor.position();
 
 			// Clear text of spaces if necessary
-			if (prohibit_flags & CELL_OSKDIALOG_NO_SPACE)
+			if (params.prohibit_flags & CELL_OSKDIALOG_NO_SPACE)
 			{
 				int trim_len = text.length();
 				text.remove(QRegularExpression("\\s+"));
@@ -128,7 +128,7 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 			}
 
 			// Crop if more than one character was pasted and the character limit was exceeded
-			text.chop(text.length() - charlimit);
+			text.chop(text.length() - params.charlimit);
 
 			// Set new text and block signals to prevent infinite loop
 			input->blockSignals(true);
@@ -139,7 +139,7 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 
 			m_text_old = text;
 
-			input_count_label->setText(QString("%1/%2").arg(text.length()).arg(charlimit));
+			input_count_label->setText(QString("%1/%2").arg(text.length()).arg(params.charlimit));
 			SetOskText(text);
 			// if (on_osk_key_input_entered) on_osk_key_input_entered({}); // Not applicable
 		});
@@ -182,7 +182,7 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 
 void osk_dialog_frame::SetOskText(const QString& text)
 {
-	std::memcpy(osk_text, utils::bless<char16_t>(text.constData()), (text.size() + 1u) * sizeof(char16_t));
+	std::memcpy(osk_text.data(), utils::bless<char16_t>(text.constData()), std::min(osk_text.size(), text.size() + usz{1}) * sizeof(char16_t));
 }
 
 void osk_dialog_frame::Close(s32 status)
@@ -201,5 +201,30 @@ void osk_dialog_frame::Close(s32 status)
 			m_dialog->done(status);
 			break;
 		}
+	}
+}
+
+void osk_dialog_frame::Clear(bool clear_all_data)
+{
+	if (m_dialog && clear_all_data)
+	{
+		SetOskText("");
+	}
+}
+
+void osk_dialog_frame::SetText(const std::u16string& text)
+{
+	if (m_dialog)
+	{
+		SetOskText(QString::fromStdU16String(text));
+	}
+}
+
+void osk_dialog_frame::Insert(const std::u16string& text)
+{
+	if (m_dialog)
+	{
+		// TODO: Correct position (will probably never get implemented because this dialog is just a fallback)
+		SetOskText(QString::fromStdU16String(text));
 	}
 }

@@ -7,12 +7,12 @@
 #include <memory>
 #include "Utilities/mutex.h"
 #include "Emu/Audio/AudioBackend.h"
-#include "Emu/Audio/audio_device_listener.h"
 
 #include <xaudio2redist.h>
 #include <wrl/client.h>
+#include <MMDeviceAPI.h>
 
-class XAudio2Backend final : public AudioBackend, public IXAudio2VoiceCallback, public IXAudio2EngineCallback
+class XAudio2Backend final : public AudioBackend, public IXAudio2VoiceCallback, public IXAudio2EngineCallback, public IMMNotificationClient
 {
 public:
 	XAudio2Backend();
@@ -25,11 +25,11 @@ public:
 
 	bool Initialized() override;
 	bool Operational() override;
+	bool DefaultDeviceChanged() override;
 
-	bool Open(AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt) override;
+	bool Open(std::string_view dev_id, AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt) override;
 	void Close() override;
 
-	void SetWriteCallback(std::function<u32(u32, void *)> cb) override;
 	f64 GetCallbackFrameLen() override;
 
 	void Play() override;
@@ -43,14 +43,16 @@ private:
 	IXAudio2SourceVoice* m_source_voice{};
 	bool m_com_init_success = false;
 
-	shared_mutex m_cb_mutex{};
-	std::function<u32(u32, void *)> m_write_callback{};
+	Microsoft::WRL::ComPtr<IMMDeviceEnumerator> m_device_enumerator{};
+
+	// Protected by state callback mutex
+	std::string m_current_device{};
+	bool m_default_dev_changed = false;
+
 	std::vector<u8> m_data_buf{};
 	std::array<u8, sizeof(float) * static_cast<u32>(AudioChannelCnt::SURROUND_7_1)> m_last_sample{};
 
-	bool m_reset_req = false;
-
-	audio_device_listener m_dev_listener{};
+	atomic_t<bool> m_reset_req = false;
 
 	// XAudio voice callbacks
 	void OnVoiceProcessingPassStart(UINT32 BytesRequired) override;
@@ -65,6 +67,16 @@ private:
 	void OnProcessingPassStart() override {};
 	void OnProcessingPassEnd() override {};
 	void OnCriticalError(HRESULT Error) override;
+
+	// IMMNotificationClient callbacks
+	IFACEMETHODIMP_(ULONG) AddRef() override { return 1; };
+	IFACEMETHODIMP_(ULONG) Release() override { return 1; };
+	IFACEMETHODIMP QueryInterface(REFIID /*iid*/, void** /*object*/) override { return E_NOINTERFACE; };
+	IFACEMETHODIMP OnPropertyValueChanged(LPCWSTR /*device_id*/, const PROPERTYKEY /*key*/) override { return S_OK; };
+	IFACEMETHODIMP OnDeviceAdded(LPCWSTR /*device_id*/) override { return S_OK; };
+	IFACEMETHODIMP OnDeviceRemoved(LPCWSTR /*device_id*/) override { return S_OK; };
+	IFACEMETHODIMP OnDeviceStateChanged(LPCWSTR /*device_id*/, DWORD /*new_state*/) override { return S_OK; };
+	IFACEMETHODIMP OnDefaultDeviceChanged(EDataFlow flow, ERole role, LPCWSTR new_default_device_id) override;
 
 	void CloseUnlocked();
 };

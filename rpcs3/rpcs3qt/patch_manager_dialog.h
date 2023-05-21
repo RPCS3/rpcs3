@@ -30,6 +30,8 @@ class patch_manager_dialog : public QDialog
 		QString notes;
 		QString description;
 		QString patch_version;
+		QString config_value_key;
+		QMap<QString, QVariant> config_values;
 	};
 
 	const QString tr_all_titles   = tr("All titles - Warning: These patches apply to all games!");
@@ -46,6 +48,7 @@ private Q_SLOTS:
 	void filter_patches(const QString& term);
 	void handle_item_selected(QTreeWidgetItem *current, QTreeWidgetItem *previous);
 	void handle_item_changed(QTreeWidgetItem *item, int column);
+	void handle_config_value_changed(double value);
 	void handle_custom_context_menu_requested(const QPoint& pos);
 	void handle_show_owned_games_only(int state);
 
@@ -73,7 +76,7 @@ private:
 	bool m_download_automatic = false;
 	bool m_download_auto_accept = false;
 
-	Ui::patch_manager_dialog *ui;
+	std::unique_ptr<Ui::patch_manager_dialog> ui;
 
 protected:
 	void dropEvent(QDropEvent* event) override;

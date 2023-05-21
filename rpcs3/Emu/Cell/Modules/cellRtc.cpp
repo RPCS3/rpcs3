@@ -7,9 +7,6 @@
 #include "Emu/Cell/lv2/sys_memory.h"
 #include "Emu/Cell/lv2/sys_ss.h"
 
-//#include <iomanip>
-//#include <sstream>
-
 LOG_CHANNEL(cellRtc);
 
 // clang-format off
@@ -43,16 +40,16 @@ void fmt_class_string<CellRtcError>::format(std::string& out, u64 arg)
 
 // Grabbed from JPCSP
 // This is the # of microseconds between January 1, 0001 and January 1, 1970.
-const u64 RTC_MAGIC_OFFSET = 62135596800000000ULL;
+constexpr u64 RTC_MAGIC_OFFSET = 62135596800000000ULL;
 // This is the # of microseconds between January 1, 0001 and January 1, 1601 (for Win32 FILETIME.)
-const u64 RTC_FILETIME_OFFSET = 50491123200000000ULL;
+constexpr u64 RTC_FILETIME_OFFSET = 50491123200000000ULL;
 
-const u64 EPOCH_AS_FILETIME = 116444736000000000ULL;
+constexpr u64 EPOCH_AS_FILETIME = 116444736000000000ULL;
 
 // Also stores leap year
-const u8 DAYS_IN_MONTH[24] = {0x1F, 0x1C, 0x1F, 0x1E, 0x1F, 0x1E, 0x1F, 0x1F, 0x1E, 0x1F, 0x1E, 0x1F, 0x1F, 0x1D, 0x1F, 0x1E, 0x1F, 0x1E, 0x1F, 0x1F, 0x1E, 0x1F, 0x1E, 0x1F};
-const char WEEKDAY_NAMES[7][4]  = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};                                    // 4 as terminator
-const char MONTH_NAMES[12][4]   = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"}; // 4 as terminator
+constexpr u8 DAYS_IN_MONTH[24] = {0x1F, 0x1C, 0x1F, 0x1E, 0x1F, 0x1E, 0x1F, 0x1F, 0x1E, 0x1F, 0x1E, 0x1F, 0x1F, 0x1D, 0x1F, 0x1E, 0x1F, 0x1E, 0x1F, 0x1F, 0x1E, 0x1F, 0x1E, 0x1F};
+constexpr char WEEKDAY_NAMES[7][4]  = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};                                    // 4 as terminator
+constexpr char MONTH_NAMES[12][4]   = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"}; // 4 as terminator
 
 s64 convertToUNIXTime(u16 seconds, u16 minutes, u16 hours, u16 days, s32 years)
 {
@@ -122,7 +119,7 @@ error_code cellRtcGetCurrentTick(vm::ptr<CellRtcTick> pTick)
 
 error_code cellRtcGetCurrentClock(vm::ptr<CellRtcDateTime> pClock, s32 iTimeZone)
 {
-	cellRtc.todo("cellRtcGetCurrentClock(pClock=*0x%x, time_zone=%d)", pClock, iTimeZone);
+	cellRtc.todo("cellRtcGetCurrentClock(pClock=*0x%x, iTimeZone=%d)", pClock, iTimeZone);
 
 	if (!vm::check_addr(pClock.addr()))
 	{
@@ -262,8 +259,8 @@ error_code cellRtcFormatRfc2822(vm::ptr<char> pszDateTime, vm::cptr<CellRtcTick>
 	pszDateTime[0xb] = ' ';
 
 	// year
-	char yearDigits[5];
-	sprintf(yearDigits, "%04hi", u16{date_time->year});
+	std::array<char, 5> yearDigits{};
+	snprintf(yearDigits.data(), yearDigits.size(), "%04hi", u16{date_time->year});
 	pszDateTime[0xc]  = yearDigits[0];
 	pszDateTime[0xd]  = yearDigits[1];
 	pszDateTime[0xe]  = yearDigits[2];
@@ -271,22 +268,22 @@ error_code cellRtcFormatRfc2822(vm::ptr<char> pszDateTime, vm::cptr<CellRtcTick>
 	pszDateTime[0x10] = ' ';
 
 	// Hours
-	char hourDigits[3];
-	sprintf(hourDigits, "%02hi", u16{date_time->hour});
+	std::array<char, 3> hourDigits{};
+	snprintf(hourDigits.data(), hourDigits.size(), "%02hi", u16{date_time->hour});
 	pszDateTime[0x11] = hourDigits[0];
 	pszDateTime[0x12] = hourDigits[1];
 	pszDateTime[0x13] = ':';
 
 	// Minutes
-	char minDigits[3];
-	sprintf(minDigits, "%02hi", u16{date_time->minute});
+	std::array<char, 3> minDigits{};
+	snprintf(minDigits.data(), minDigits.size(), "%02hi", u16{date_time->minute});
 	pszDateTime[0x14] = minDigits[0];
 	pszDateTime[0x15] = minDigits[1];
 	pszDateTime[0x16] = ':';
 
 	// Seconds
-	char secDigits[3];
-	sprintf(secDigits, "%02hi", u16{date_time->second});
+	std::array<char, 3> secDigits{};
+	snprintf(secDigits.data(), secDigits.size(), "%02hi", u16{date_time->second});
 	pszDateTime[0x17] = secDigits[0];
 	pszDateTime[0x18] = secDigits[1];
 	pszDateTime[0x19] = ' ';
@@ -382,8 +379,8 @@ error_code cellRtcFormatRfc3339(vm::ptr<char> pszDateTime, vm::cptr<CellRtcTick>
 	s32 tzone = iTimeZone;
 
 	// Year - XXXX-04-13T10:56:31.35+66:40
-	char yearDigits[5];
-	sprintf(yearDigits, "%04hi", u16{date_time->year});
+	std::array<char, 5> yearDigits{};
+	snprintf(yearDigits.data(), yearDigits.size(), "%04hi", u16{date_time->year});
 	pszDateTime[0x0] = yearDigits[0];
 	pszDateTime[0x1] = yearDigits[1];
 	pszDateTime[0x2] = yearDigits[2];
@@ -391,43 +388,43 @@ error_code cellRtcFormatRfc3339(vm::ptr<char> pszDateTime, vm::cptr<CellRtcTick>
 	pszDateTime[0x4] = '-';
 
 	// Month - 2020-XX-13T10:56:31.35+66:40
-	char monthDigits[3];
-	sprintf(monthDigits, "%02hi", u16{date_time->month});
+	std::array<char, 3> monthDigits{};
+	snprintf(monthDigits.data(), monthDigits.size(), "%02hi", u16{date_time->month});
 	pszDateTime[0x5] = monthDigits[0];
 	pszDateTime[0x6] = monthDigits[1];
 	pszDateTime[0x7] = '-';
 
 	// Day - 2020-04-XXT10:56:31.35+66:40
-	char dayDigits[3];
-	sprintf(dayDigits, "%02hi", u16{date_time->day});
+	std::array<char, 3> dayDigits{};
+	snprintf(dayDigits.data(), dayDigits.size(), "%02hi", u16{date_time->day});
 	pszDateTime[0x8] = dayDigits[0];
 	pszDateTime[0x9] = dayDigits[1];
 	pszDateTime[0xa] = 'T';
 
 	// Hours - 2020-04-13TXX:56:31.35+66:40
-	char hourDigits[3];
-	sprintf(hourDigits, "%02hi", u16{date_time->hour});
+	std::array<char, 3> hourDigits{};
+	snprintf(hourDigits.data(), hourDigits.size(), "%02hi", u16{date_time->hour});
 	pszDateTime[0xb] = hourDigits[0];
 	pszDateTime[0xc] = hourDigits[1];
 	pszDateTime[0xd] = ':';
 
 	// Minutes - 2020-04-13T10:XX:31.35+66:40
-	char minDigits[3];
-	sprintf(minDigits, "%02hi", u16{date_time->minute});
+	std::array<char, 3> minDigits{};
+	snprintf(minDigits.data(), minDigits.size(), "%02hi", u16{date_time->minute});
 	pszDateTime[0xe]  = minDigits[0];
 	pszDateTime[0xf]  = minDigits[1];
 	pszDateTime[0x10] = ':';
 
 	// Seconds - 2020-04-13T10:56:XX.35+66:40
-	char secDigits[3];
-	sprintf(secDigits, "%02hi", u16{date_time->second});
+	std::array<char, 3> secDigits{};
+	snprintf(secDigits.data(), secDigits.size(), "%02hi", u16{date_time->second});
 	pszDateTime[0x11] = secDigits[0];
 	pszDateTime[0x12] = secDigits[1];
 	pszDateTime[0x13] = '.';
 
 	// Microseconds - 2020-04-13T10:56:31.XX+66:40
-	char microDigits[3];
-	sprintf(microDigits, "%02u", u32{date_time->microsecond});
+	std::array<char, 3> microDigits{};
+	snprintf(microDigits.data(), microDigits.size(), "%02u", u32{date_time->microsecond});
 	pszDateTime[0x14] = microDigits[0];
 	pszDateTime[0x15] = microDigits[1];
 
@@ -849,7 +846,7 @@ error_code cellRtcSetTick(vm::ptr<CellRtcDateTime> pTime, vm::cptr<CellRtcTick> 
 	pTime->second      = seconds;
 	pTime->minute      = minutes;
 	pTime->hour        = hours;
-	pTime->day         = days_tmp + 1;
+	pTime->day         = ::narrow<u16>(days_tmp + 1);
 	pTime->month       = months;
 	pTime->year        = years;
 
@@ -1009,10 +1006,10 @@ error_code cellRtcTickAddMonths(vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTic
 	// Not pretty, but works
 
 	s64 total_months     = (date_time->year * 12ULL) + date_time->month + iAdd + -1;
-	s32 total_months_s32 = total_months;
+	s32 total_months_s32 = ::narrow<s32>(total_months);
 	u32 unk_1            = total_months_s32 >> 0x1f;
 	u64 unk_2            = ((total_months_s32 / 6 + unk_1) >> 1) - unk_1;
-	u32 unk_3            = unk_2;
+	u32 unk_3            = ::narrow<u32>(unk_2);
 	unk_1                = unk_3 & 0xffff;
 	u64 unk_4            = (total_months - ((u64{unk_3} << 4) - (unk_3 << 2))) + 1;
 	if (((unk_2 & 0xffff) == 0) || ((unk_3 = unk_4 & 0xffff, (unk_4 & 0xffff) == 0 || (0xc < unk_3))))
@@ -1039,8 +1036,8 @@ error_code cellRtcTickAddMonths(vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTic
 		date_time->day = month_days;
 	}
 
-	date_time->month = unk_4;
-	date_time->year  = unk_2;
+	date_time->month = ::narrow<u16>(unk_4);
+	date_time->year  = ::narrow<u16>(unk_2);
 	cellRtcGetTick(date_time, pTick0);
 
 	return CELL_OK;
@@ -1089,7 +1086,7 @@ error_code cellRtcTickAddYears(vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTick
 		date_time->day = month_days;
 	}
 
-	date_time->year = total_years;
+	date_time->year = ::narrow<u16>(total_years);
 	cellRtcGetTick(date_time, pTick0);
 
 	return CELL_OK;
@@ -1130,6 +1127,13 @@ error_code cellRtcConvertLocalTimeToUtc(vm::cptr<CellRtcTick> pLocalTime, vm::pt
 error_code cellRtcGetCurrentSecureTick(vm::ptr<CellRtcTick> tick)
 {
 	cellRtc.todo("cellRtcGetCurrentSecureTick(*0x%x)", tick);
+
+	if (!vm::check_addr(tick.addr()))
+	{
+		return CELL_RTC_ERROR_INVALID_POINTER;
+	}
+
+	// TODO
 
 	return CELL_OK;
 }
@@ -1347,7 +1351,7 @@ error_code cellRtcSetCurrentTick(vm::cptr<CellRtcTick> pTick)
 
 	// TODO syscall not implemented
 	/*
-	u32 tmp2 = sys_time_get_system_time(tmp / cellRtcGetTickResolution(), (tmp % cellRtcGetTickResolution()) * 1000);
+	u64 tmp2 = sys_time_get_system_time(tmp / cellRtcGetTickResolution(), (tmp % cellRtcGetTickResolution()) * 1000);
 
 	return (tmp2 & (tmp2 | tmp2 - 1) >> 0x1f);
 	*/
@@ -1445,7 +1449,7 @@ error_code cellRtcIsLeapYear(s32 year)
 {
 	cellRtc.todo("cellRtcIsLeapYear(year=%d)", year);
 
-	if (year < 0)
+	if (year < 1)
 	{
 		return CELL_RTC_ERROR_INVALID_ARG;
 	}
@@ -1457,7 +1461,7 @@ error_code cellRtcGetDaysInMonth(s32 year, s32 month)
 {
 	cellRtc.todo("cellRtcGetDaysInMonth(year=%d, month=%d)", year, month);
 
-	if ((year < 0) || (month <= 0) || (month > 12))
+	if ((year <= 0) || (month <= 0) || (month > 12))
 	{
 		return CELL_RTC_ERROR_INVALID_ARG;
 	}
@@ -1474,10 +1478,10 @@ error_code cellRtcGetDayOfWeek(s32 year, s32 month, s32 day)
 {
 	cellRtc.trace("cellRtcGetDayOfWeek(year=%d, month=%d, day=%d)", year, month, day);
 
-	if (month - 1 < 2)
+	if (month == 1 || month == 2)
 	{
-		year -= 1;
-		month += 0xc;
+		year--;
+		month += 12;
 	}
 
 	return not_an_error(((month * 0xd + 8) / 5 + ((year + (year >> 2) + (year < 0 && (year & 3U) != 0)) - year / 100) + year / 400 + day) % 7);

@@ -1087,3 +1087,128 @@ enum CellHttpErrorNet
 	CELL_HTTP_ERROR_NET_SSL_RECV_ENOSTR          = 0x80710d5b,
 	CELL_HTTP_ERROR_NET_SSL_RECV_ETIME           = 0x80710d5c,
 };
+
+enum
+{
+	CELL_HTTP_TRANSACTION_STATE_GETTING_CONNECTION     = 1,
+	CELL_HTTP_TRANSACTION_STATE_PREPARING_REQUEST      = 2,
+	CELL_HTTP_TRANSACTION_STATE_SENDING_REQUEST        = 3,
+	CELL_HTTP_TRANSACTION_STATE_SENDING_BODY           = 4,
+	CELL_HTTP_TRANSACTION_STATE_WAITING_FOR_REPLY      = 5,
+	CELL_HTTP_TRANSACTION_STATE_READING_REPLY          = 6,
+	CELL_HTTP_TRANSACTION_STATE_SETTING_REDIRECTION    = 7,
+	CELL_HTTP_TRANSACTION_STATE_SETTING_AUTHENTICATION = 8,
+};
+
+enum
+{
+	CELL_HTTP_STATUS_CODE_Continue                        = 100,
+	CELL_HTTP_STATUS_CODE_Switching_Protocols             = 101,
+	CELL_HTTP_STATUS_CODE_Processing                      = 102,
+
+	// Success codes
+	CELL_HTTP_STATUS_CODE_OK                              = 200,
+	CELL_HTTP_STATUS_CODE_Created                         = 201,
+	CELL_HTTP_STATUS_CODE_Accepted                        = 202,
+	CELL_HTTP_STATUS_CODE_NonAuthoritive_Information      = 203,
+	CELL_HTTP_STATUS_CODE_No_Content                      = 204,
+	CELL_HTTP_STATUS_CODE_Reset_Content                   = 205,
+	CELL_HTTP_STATUS_CODE_Partial_Content                 = 206,
+	CELL_HTTP_STATUS_CODE_MultiStatus                     = 207,
+	/* Redirection 3xx */
+	CELL_HTTP_STATUS_CODE_Multiple_Choices                = 300,
+	CELL_HTTP_STATUS_CODE_Moved_Permanently               = 301,
+	CELL_HTTP_STATUS_CODE_Moved_Temporarily               = 302,
+	CELL_HTTP_STATUS_CODE_Found                           = CELL_HTTP_STATUS_CODE_Moved_Temporarily,
+	CELL_HTTP_STATUS_CODE_See_Other                       = 303,
+	CELL_HTTP_STATUS_CODE_Not_Modified                    = 304,
+	CELL_HTTP_STATUS_CODE_Use_Proxy                       = 305,
+	//CELL_HTTP_STATUS_CODE_UNUSED                          = 306,
+	CELL_HTTP_STATUS_CODE_Temporary_Redirect              = 307,
+
+	// Client errors
+	CELL_HTTP_STATUS_CODE_Bad_Request                     = 400,
+	CELL_HTTP_STATUS_CODE_Unauthorized                    = 401,
+	CELL_HTTP_STATUS_CODE_Payment_Required                = 402,
+	CELL_HTTP_STATUS_CODE_Forbidden                       = 403,
+	CELL_HTTP_STATUS_CODE_Not_Found                       = 404,
+	CELL_HTTP_STATUS_CODE_Method_Not_Allowed              = 405,
+	CELL_HTTP_STATUS_CODE_Not_Acceptable                  = 406,
+	CELL_HTTP_STATUS_CODE_Proxy_Authentication_Required   = 407,
+	CELL_HTTP_STATUS_CODE_Request_Timeout                 = 408,
+	CELL_HTTP_STATUS_CODE_Conflict                        = 409,
+	CELL_HTTP_STATUS_CODE_Gone                            = 410,
+	CELL_HTTP_STATUS_CODE_Length_Required                 = 411,
+	CELL_HTTP_STATUS_CODE_Precondition_Failed             = 412,
+	CELL_HTTP_STATUS_CODE_Request_Entity_Too_Large        = 413,
+	CELL_HTTP_STATUS_CODE_RequestURI_Too_Long             = 414,
+	CELL_HTTP_STATUS_CODE_Unsupported_Media_Type          = 415,
+	CELL_HTTP_STATUS_CODE_Requested_Range_Not_Satisfiable = 416,
+	CELL_HTTP_STATUS_CODE_Expectation_Failed              = 417,
+	CELL_HTTP_STATUS_CODE_Unprocessable_Entity            = 422,
+	CELL_HTTP_STATUS_CODE_Locked                          = 423,
+	CELL_HTTP_STATUS_CODE_Failed_Dependency               = 424,
+	CELL_HTTP_STATUS_CODE_Upgrade_Required                = 426,
+
+	// Server error
+	CELL_HTTP_STATUS_CODE_Internal_Server_Error           = 500,
+	CELL_HTTP_STATUS_CODE_Not_Implemented                 = 501,
+	CELL_HTTP_STATUS_CODE_Bad_Gateway                     = 502,
+	CELL_HTTP_STATUS_CODE_Service_Unavailable             = 503,
+	CELL_HTTP_STATUS_CODE_Gateway_Timeout                 = 504,
+	CELL_HTTP_STATUS_CODE_HTTP_Version_Not_Supported      = 505,
+	CELL_HTTP_STATUS_CODE_Insufficient_Storage            = 507,
+};
+
+enum
+{
+	CELL_HTTPS_VERIFY_ERROR_NONE           = 0x00000000U,
+	CELL_HTTPS_VERIFY_ERROR_NO_CERT        = 0x00000001U,
+	CELL_HTTPS_VERIFY_ERROR_BAD_SSL        = 0x00000002U,
+	CELL_HTTPS_VERIFY_ERROR_BAD_CLIENT     = 0x00000004U,
+	CELL_HTTPS_VERIFY_ERROR_UNKNOWN_CA     = 0x00000008U,
+	CELL_HTTPS_VERIFY_ERROR_BAD_CHAIN      = 0x00000010U,
+	CELL_HTTPS_VERIFY_ERROR_NO_MEMORY      = 0x00000020U,
+	CELL_HTTPS_VERIFY_ERROR_NOT_VERIFIABLE = 0x00000040U,
+	CELL_HTTPS_VERIFY_ERROR_INVALID_CERT   = 0x00000080U,
+	CELL_HTTPS_VERIFY_ERROR_BAD_CONSTRAINT = 0x00000100U,
+	CELL_HTTPS_VERIFY_ERROR_VERIFY_FAILED  = 0x00000200U,
+	CELL_HTTPS_VERIFY_ERROR_COMMON_NAME    = 0x00000400U,
+	CELL_HTTPS_VERIFY_ERROR_EXPIRED        = 0x00000800U,
+	CELL_HTTPS_VERIFY_ERROR_NOT_YET_VALID  = 0x00001000U,
+};
+
+static constexpr const char* CELL_HTTP_METHOD_OPTIONS = "OPTIONS";
+static constexpr const char* CELL_HTTP_METHOD_GET     = "GET";
+static constexpr const char* CELL_HTTP_METHOD_HEAD    = "HEAD";
+static constexpr const char* CELL_HTTP_METHOD_POST    = "POST";
+static constexpr const char* CELL_HTTP_METHOD_PUT     = "PUT";
+static constexpr const char* CELL_HTTP_METHOD_DELETE  = "DELETE";
+static constexpr const char* CELL_HTTP_METHOD_TRACE   = "TRACE";
+
+typedef u32 CellHttpClientId; //typedef struct CellHttpClient* CellHttpClientId;
+typedef u32 CellHttpTransId; //typedef struct CellHttpTransaction* CellHttpTransId;
+typedef const void* CellHttpSslId;
+
+using CellHttpAuthenticationCallback   = s32(CellHttpTransId transId, vm::cptr<char> realm, vm::cptr<CellHttpUri> uri, vm::ptr<char> username, vm::ptr<char> password, vm::ptr<bool> save, vm::ptr<void> userArg);
+using CellHttpTransactionStateCallback = s32(CellHttpTransId transId, s32 state, vm::ptr<void> userArg);
+using CellHttpRedirectCallback         = s32(CellHttpTransId transId, vm::cptr<CellHttpStatusLine> response, vm::cptr<CellHttpUri> from, vm::cptr<CellHttpUri> to, vm::ptr<void> userArg);
+using CellHttpsSslCallback             = s32(u32 verifyErr, vm::cpptr<void> sslCerts, s32 certNum, vm::cptr<char> hostname, vm::cptr<void> id, vm::ptr<void> userArg);
+using CellHttpCookieSendCallback       = s32(CellHttpTransId transId, vm::cptr<CellHttpUri> uri, vm::cptr<char> cookieValue, vm::ptr<void> userArg);
+using CellHttpCookieRecvCallback       = s32(CellHttpTransId transId, vm::cptr<CellHttpUri> uri, vm::cptr<char> cookieValue, vm::ptr<void> userArg);
+
+struct CellHttpsData
+{
+	vm::bptr<char> ptr;
+	be_t<u32> size;
+};
+
+struct http_manager
+{
+	shared_mutex mtx;
+	bool initialized = false;
+	bool cookie_initialized = false;
+	bool cache_initialized = false;
+	bool ext_cache_initialized = false;
+	bool https_initialized = false;
+};

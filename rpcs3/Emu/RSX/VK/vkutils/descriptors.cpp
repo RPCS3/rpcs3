@@ -275,8 +275,7 @@ namespace vk
 	{
 		m_push_type_mask |= (1ull << type);
 		m_buffer_view_pool.push_back(buffer_view);
-		m_pending_writes.push_back(
-		{
+		m_pending_writes.emplace_back(
 			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,    // sType
 			nullptr,                                   // pNext
 			m_handle,                                  // dstSet
@@ -287,15 +286,14 @@ namespace vk
 			nullptr,                                   // pImageInfo
 			nullptr,                                   // pBufferInfo
 			&m_buffer_view_pool.back()                 // pTexelBufferView
-		});
+		);
 	}
 
 	void descriptor_set::push(const VkDescriptorBufferInfo& buffer_info, VkDescriptorType type, u32 binding)
 	{
 		m_push_type_mask |= (1ull << type);
 		m_buffer_info_pool.push_back(buffer_info);
-		m_pending_writes.push_back(
-		{
+		m_pending_writes.emplace_back(
 			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,    // sType
 			nullptr,                                   // pNext
 			m_handle,                                  // dstSet
@@ -306,15 +304,14 @@ namespace vk
 			nullptr,                                   // pImageInfo
 			&m_buffer_info_pool.back(),                // pBufferInfo
 			nullptr                                    // pTexelBufferView
-		});
+		);
 	}
 
 	void descriptor_set::push(const VkDescriptorImageInfo& image_info, VkDescriptorType type, u32 binding)
 	{
 		m_push_type_mask |= (1ull << type);
 		m_image_info_pool.push_back(image_info);
-		m_pending_writes.push_back(
-		{
+		m_pending_writes.emplace_back(
 			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,    // sType
 			nullptr,                                   // pNext
 			m_handle,                                  // dstSet
@@ -325,7 +322,7 @@ namespace vk
 			&m_image_info_pool.back(),                 // pImageInfo
 			nullptr,                                   // pBufferInfo
 			nullptr                                    // pTexelBufferView
-		});
+		);
 	}
 
 	void descriptor_set::push(const VkDescriptorImageInfo* image_info, u32 count, VkDescriptorType type, u32 binding)
@@ -363,7 +360,7 @@ namespace vk
 		}
 	}
 
-	void descriptor_set::bind(VkCommandBuffer cmd, VkPipelineBindPoint bind_point, VkPipelineLayout layout)
+	void descriptor_set::bind(const vk::command_buffer& cmd, VkPipelineBindPoint bind_point, VkPipelineLayout layout)
 	{
 		if ((m_push_type_mask & ~m_update_after_bind_mask) || (m_pending_writes.size() >= max_cache_size))
 		{
@@ -371,11 +368,6 @@ namespace vk
 		}
 
 		vkCmdBindDescriptorSets(cmd, bind_point, layout, 0, 1, &m_handle, 0, nullptr);
-	}
-
-	void descriptor_set::bind(const command_buffer& cmd, VkPipelineBindPoint bind_point, VkPipelineLayout layout)
-	{
-		bind(static_cast<VkCommandBuffer>(cmd), bind_point, layout);
 	}
 
 	void descriptor_set::flush()

@@ -76,9 +76,9 @@ namespace vk
 			ia.topology = type;
 		}
 
-		void enable_primitive_restart(bool enable = true)
+		void enable_primitive_restart(VkBool32 enable = VK_TRUE)
 		{
-			ia.primitiveRestartEnable = enable? VK_TRUE : VK_FALSE;
+			ia.primitiveRestartEnable = enable;
 		}
 
 		void set_color_mask(int index, bool r, bool g, bool b, bool a)

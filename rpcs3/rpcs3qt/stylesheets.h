@@ -29,6 +29,20 @@ namespace gui
 			// game list icon color
 			"QLabel#gamelist_icon_background_color { color: rgba(240, 240, 240, 255); }"
 
+			// game grid
+			"#game_list_grid #flow_widget_content { background: #fff; }"
+			"#game_list_grid_item { background: #fff; }"
+			"#game_list_grid_item[selected=\"true\"] { background: #148aff; }"
+			"#game_list_grid_item:focus { background: #148aff; }"
+			"#game_list_grid_item:hover { background: #94c9ff; }"
+			"#game_list_grid_item:hover:focus { background: #007fff; }"
+			"#game_list_grid_item #game_list_grid_item_title_label { color: rgba(51, 51, 51, 255); font-weight: 600; font-size: 8pt; font-family: Lucida Grande; border: 0em solid white; }"
+
+			// game grid hover and focus: we need to handle properties differently when using descendants
+			"#game_list_grid_item[selected=\"true\"] #game_list_grid_item_title_label { color: #fff; }"
+			"#game_list_grid_item[hover=\"true\"] #game_list_grid_item_title_label { color: #fff; }"
+			"#game_list_grid_item[focus=\"true\"] #game_list_grid_item_title_label { color: #fff; }"
+
 			// save manager icon color
 			"QLabel#save_manager_icon_background_color { color: rgba(240, 240, 240, 255); }"
 
@@ -37,11 +51,8 @@ namespace gui
 
 			// tables
 			"QTableWidget { alternate-background-color: #f2f2f2; background-color: #fff; border: none; }"
-			"QTableWidget#game_grid { alternate-background-color: #f2f2f2; background-color: #fff; font-weight: 600; font-size: 8pt; font-family: Lucida Grande; color: rgba(51, 51, 51, 255); border: 0em solid white; }"
 			"QTableView::item { border-left: 0.063em solid white; border-right: 0.063em solid white; padding-left:0.313em; }"
 			"QTableView::item:selected { background-color: #148aff; color: #fff; }"
-			"QTableView#game_grid::item:hover:!selected { background-color: #94c9ff; color: #fff; }"
-			"QTableView#game_grid::item:hover:selected { background-color: #007fff; color: #fff; }"
 
 			// table headers
 			"QHeaderView::section { padding-left: .5em; padding-right: .5em; padding-top: .4em; padding-bottom: -.1em; border: 0.063em solid #ffffff; }"

@@ -29,7 +29,7 @@ layout(set=0,binding=1,rgba8) uniform writeonly image2D OutputTexture;
 		#define FSR_EASU_H 1
 		AH4 FsrEasuRH(AF2 p) { AH4 res = AH4(textureGather(InputTexture, p, 0)); return res; }
 		AH4 FsrEasuGH(AF2 p) { AH4 res = AH4(textureGather(InputTexture, p, 1)); return res; }
-		AH4 FsrEasuBH(AF2 p) { AH4 res = AH4(textureGather(InputTexture, p, 2)); return res; }	
+		AH4 FsrEasuBH(AF2 p) { AH4 res = AH4(textureGather(InputTexture, p, 2)); return res; }
 	#endif
 	#if SAMPLE_RCAS
 		#define FSR_RCAS_H

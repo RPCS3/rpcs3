@@ -265,10 +265,7 @@ namespace rsx
 					sort_list.push_back({ local[index]->last_write_tag, 1, index });
 				}
 
-				std::sort(sort_list.begin(), sort_list.end(), [](const auto& a, const auto& b)
-				{
-					return (a.tag < b.tag);
-				});
+				std::sort(sort_list.begin(), sort_list.end(), FN(x.tag < y.tag));
 			}
 
 			auto add_rtt_resource = [&](auto& section, u16 slice)
@@ -326,49 +323,55 @@ namespace rsx
 					slice,
 					src_width, src_height,
 					dst_width, dst_height
-					});
+				});
 			};
 
 			auto add_local_resource = [&](auto& section, u32 address, u16 slice, bool scaling = true)
 			{
-				// Intersect this resource with the original one
-				const auto section_bpp = get_format_block_size_in_bytes(section->get_gcm_format());
-				const auto normalized_width = (section->get_width() * section_bpp) / attr.bpp;
+				// Intersect this resource with the original one.
+				// Note that intersection takes place in a normalized coordinate space (bpp = 1)
+				const u32 section_bpp = get_format_block_size_in_bytes(section->get_gcm_format());
+				const u32 normalized_section_width = (section->get_width() * section_bpp);
+				const u32 normalized_attr_width = (attr.width * attr.bpp);
 
-				const auto clipped = rsx::intersect_region(
-					section->get_section_base(), normalized_width, section->get_height(), section_bpp, /* parent region (extractee) */
-					address, attr.width, attr.slice_h, attr.bpp, /* child region (extracted) */
+				auto [src_offset, dst_offset, dimensions] = rsx::intersect_region(
+					section->get_section_base(), normalized_section_width, section->get_height(), /* parent region (extractee) */
+					address, normalized_attr_width, attr.slice_h, /* child region (extracted) */
 					attr.pitch);
 
-				// Rect intersection test
-				// TODO: Make the intersection code cleaner with proper 2D regions
-				if (std::get<0>(clipped).x >= section->get_width())
+				if (!dimensions.width || !dimensions.height)
 				{
-					// Overlap lies outside the image area!
+					// Out of bounds, invalid intersection
 					return;
 				}
 
-				const u32 slice_begin = slice * attr.slice_h;
-				const u32 slice_end = slice_begin + attr.height;
+				// The intersection takes place in a normalized coordinate space. Now we convert back to domain-specific
+				src_offset.x /= section_bpp;
+				dst_offset.x /= attr.bpp;
+				const size2u dst_size = { dimensions.width / attr.bpp, dimensions.height };
+				const size2u src_size = { dimensions.width / section_bpp, dimensions.height };
 
-				const auto dst_y = std::get<1>(clipped).y;
-				const auto dst_h = std::get<2>(clipped).height;
+				const u32 dst_slice_begin = slice * attr.slice_h;      // Output slice low watermark
+				const u32 dst_slice_end = dst_slice_begin + attr.height;   // Output slice high watermark
 
-				const auto section_end = dst_y + dst_h;
-				if (dst_y >= slice_end || section_end <= slice_begin)
+				const auto dst_y = dst_offset.y;
+				const auto dst_h = dst_size.height;
+
+				const auto write_section_end = dst_y + dst_h;
+				if (dst_y >= dst_slice_end || write_section_end <= dst_slice_begin)
 				{
 					// Belongs to a different slice
 					return;
 				}
 
-				const u16 dst_w = static_cast<u16>(std::get<2>(clipped).width);
-				const u16 src_w = static_cast<u16>(dst_w * attr.bpp) / section_bpp;
-				const u16 height = std::min(slice_end, section_end) - dst_y;
+				const u16 dst_w = static_cast<u16>(dst_size.width);
+				const u16 src_w = static_cast<u16>(src_size.width);
+				const u16 height = std::min(dst_slice_end, write_section_end) - dst_y;
 
 				if (scaling)
 				{
 					// Since output is upscaled, also upscale on dst
-					const auto [_dst_x, _dst_y] = rsx::apply_resolution_scale<false>(static_cast<u16>(std::get<1>(clipped).x), static_cast<u16>(dst_y - slice_begin), attr.width, attr.height);
+					const auto [_dst_x, _dst_y] = rsx::apply_resolution_scale<false>(static_cast<u16>(dst_offset.x), static_cast<u16>(dst_y - dst_slice_begin), attr.width, attr.height);
 					const auto [_dst_w, _dst_h] = rsx::apply_resolution_scale<true>(dst_w, height, attr.width, attr.height);
 
 					out.push_back
@@ -376,16 +379,16 @@ namespace rsx
 						section->get_raw_texture(),
 						surface_transform::identity,
 						0,
-						static_cast<u16>(std::get<0>(clipped).x),   // src.x
-						static_cast<u16>(std::get<0>(clipped).y),   // src.y
-						_dst_x,                                     // dst.x
-						_dst_y,                                     // dst.y
+						static_cast<u16>(src_offset.x),   // src.x
+						static_cast<u16>(src_offset.y),   // src.y
+						_dst_x,                           // dst.x
+						_dst_y,                           // dst.y
 						slice,
 						src_w,
 						height,
 						_dst_w,
-						_dst_h,
-						});
+						_dst_h
+					});
 				}
 				else
 				{
@@ -394,16 +397,16 @@ namespace rsx
 						section->get_raw_texture(),
 						surface_transform::identity,
 						0,
-						static_cast<u16>(std::get<0>(clipped).x),   // src.x
-						static_cast<u16>(std::get<0>(clipped).y),   // src.y
-						static_cast<u16>(std::get<1>(clipped).x),   // dst.x
-						static_cast<u16>(dst_y - slice_begin),      // dst.y
+						static_cast<u16>(src_offset.x),         // src.x
+						static_cast<u16>(src_offset.y),         // src.y
+						static_cast<u16>(dst_offset.x),         // dst.x
+						static_cast<u16>(dst_y - dst_slice_begin),  // dst.y
 						0,
 						src_w,
 						height,
 						dst_w,
-						height,
-						});
+						height
+					});
 				}
 			};
 

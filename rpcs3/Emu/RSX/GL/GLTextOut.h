@@ -2,6 +2,7 @@
 
 #include "util/types.hpp"
 #include "GLHelpers.h"
+#include "glutils/vao.hpp"
 #include "../Common/TextGlyphs.h"
 #include <string>
 #include <vector>
@@ -19,7 +20,6 @@ namespace gl
 
 		gl::vao m_vao;
 		gl::buffer m_text_buffer;
-		gl::buffer m_scale_offsets_buffer;
 		std::unordered_map<u8, std::pair<u32, u32>> m_offsets;
 
 		bool initialized = false;
@@ -69,11 +69,11 @@ namespace gl
 			m_program.link();
 		}
 
-		void load_program(float scale_x, float scale_y, float *offsets, usz nb_offsets, color4f color)
+		void load_program(gl::command_context& cmd, float scale_x, float scale_y, float *offsets, usz nb_offsets, color4f color)
 		{
 			float scale[] = { scale_x, scale_y };
 
-			m_program.use();
+			cmd->use_program(m_program.id());
 
 			m_program.uniforms["draw_color"] = color;
 			glProgramUniform2fv(m_program.id(), m_program.uniforms["offsets"].location(), static_cast<GLsizei>(nb_offsets), offsets);
@@ -87,18 +87,13 @@ namespace gl
 
 		void init()
 		{
-			m_text_buffer.create();
-			m_scale_offsets_buffer.create();
-
 			GlyphManager glyph_source;
 			auto points = glyph_source.generate_point_map();
 
 			const usz buffer_size = points.size() * sizeof(GlyphManager::glyph_point);
 
-			m_text_buffer.data(buffer_size, points.data());
+			m_text_buffer.create(gl::buffer::target::array, buffer_size, points.data(), gl::buffer::memory_type::host_visible);
 			m_offsets = glyph_source.get_glyph_offsets();
-
-			m_scale_offsets_buffer.data(512 * 4 * sizeof(float));
 
 			//Init VAO
 			int old_vao;
@@ -128,7 +123,7 @@ namespace gl
 			return enabled;
 		}
 
-		void print_text(int x, int y, int target_w, int target_h, const std::string &text, color4f color = { 0.3f, 1.f, 0.3f, 1.f })
+		void print_text(gl::command_context& cmd, int x, int y, int target_w, int target_h, const std::string &text, color4f color = { 0.3f, 1.f, 0.3f, 1.f })
 		{
 			if (!enabled) return;
 
@@ -186,7 +181,8 @@ namespace gl
 			int old_vao;
 			glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &old_vao);
 
-			load_program(scale_x, scale_y, shader_offsets.data(), counts.size(), color);
+			load_program(cmd, scale_x, scale_y, shader_offsets.data(), counts.size(), color);
+			cmd->clip_planes(GL_NONE);
 
 			m_vao.bind();
 
@@ -198,7 +194,6 @@ namespace gl
 		{
 			if (initialized)
 			{
-				m_scale_offsets_buffer.remove();
 				m_text_buffer.remove();
 				m_vao.remove();
 

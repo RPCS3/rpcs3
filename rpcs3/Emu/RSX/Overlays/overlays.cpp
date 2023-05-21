@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "overlays.h"
+#include "overlay_manager.h"
 #include "overlay_message_dialog.h"
 #include "Input/pad_thread.h"
 #include "Emu/Io/interception.h"
@@ -8,6 +9,8 @@
 #include "Emu/RSX/Common/time.hpp"
 
 LOG_CHANNEL(overlays);
+
+extern bool is_input_allowed();
 
 namespace rsx
 {
@@ -43,15 +46,16 @@ namespace rsx
 		// Singleton instance declaration
 		fontmgr* fontmgr::m_instance = nullptr;
 
-		s32 user_interface::run_input_loop()
+		s32 user_interface::run_input_loop(std::function<bool()> check_state)
 		{
+			user_interface::thread_bits_allocator thread_bits_alloc(this);
+
 			m_interactive = true;
 
-			const u64 ms_interval = 200;
 			std::array<steady_clock::time_point, CELL_PAD_MAX_PORT_NUM> timestamp;
 			timestamp.fill(steady_clock::now());
 
-			const u64 ms_threshold = 500;
+			constexpr u64 ms_threshold = 500;
 			std::array<steady_clock::time_point, CELL_PAD_MAX_PORT_NUM> initial_timestamp;
 			initial_timestamp.fill(steady_clock::now());
 
@@ -90,17 +94,17 @@ namespace rsx
 						timestamp[pad_index] = steady_clock::now();
 						initial_timestamp[pad_index] = timestamp[pad_index];
 						last_auto_repeat_button[pad_index] = is_auto_repeat_button ? button_id : pad_button::pad_button_max_enum;
-						on_button_pressed(static_cast<pad_button>(button_id));
+						on_button_pressed(static_cast<pad_button>(button_id), false);
 					}
 					else if (is_auto_repeat_button)
 					{
 						if (last_auto_repeat_button[pad_index] == button_id
 						    && m_input_timer.GetMsSince(initial_timestamp[pad_index]) > ms_threshold
-						    && m_input_timer.GetMsSince(timestamp[pad_index]) > ms_interval)
+						    && m_input_timer.GetMsSince(timestamp[pad_index]) > m_auto_repeat_ms_interval)
 						{
 							// The auto-repeat button was pressed for at least the given threshold in ms and will trigger at an interval.
 							timestamp[pad_index] = steady_clock::now();
-							on_button_pressed(static_cast<pad_button>(button_id));
+							on_button_pressed(static_cast<pad_button>(button_id), true);
 						}
 						else if (last_auto_repeat_button[pad_index] == pad_button::pad_button_max_enum)
 						{
@@ -118,15 +122,32 @@ namespace rsx
 				last_button_state[pad_index][button_id] = pressed;
 			};
 
-			while (!exit)
+			while (!m_stop_input_loop)
 			{
-				std::this_thread::sleep_for(1ms);
+				if (check_state && !check_state())
+				{
+					// Interrupted externally.
+					break;
+				}
 
 				if (Emu.IsStopped())
+				{
 					return selection_code::canceled;
+				}
 
-				if (Emu.IsPaused())
+				if (Emu.IsPaused() && !m_allow_input_on_pause)
+				{
+					thread_ctrl::wait_for(10000);
 					continue;
+				}
+
+				thread_ctrl::wait_for(1000);
+
+				if (!is_input_allowed())
+				{
+					refresh();
+					continue;
+				}
 
 				// Get keyboard input if supported by the overlay and activated by the game.
 				// Ignored if a keyboard pad handler is active in order to prevent double input.
@@ -138,17 +159,24 @@ namespace rsx
 					if (!handler.GetKeyboards().empty() && handler.GetInfo().status[0] == CELL_KB_STATUS_CONNECTED)
 					{
 						KbData& current_data = handler.GetData(0);
+						KbExtraData& extra_data = handler.GetExtraData(0);
 
-						if (current_data.len > 0)
+						if (current_data.len > 0 || !extra_data.pressed_keys.empty())
 						{
 							for (s32 i = 0; i < current_data.len; i++)
 							{
 								const KbButton& key = current_data.buttons[i];
-								on_key_pressed(current_data.led, current_data.mkey, key.m_keyCode, key.m_outKeyCode, key.m_pressed);
+								on_key_pressed(current_data.led, current_data.mkey, key.m_keyCode, key.m_outKeyCode, key.m_pressed, {});
+							}
+
+							for (const std::u32string& key : extra_data.pressed_keys)
+							{
+								on_key_pressed(0, 0, 0, 0, true, key);
 							}
 
 							// Flush buffer unconditionally. Otherwise we get a flood of key events.
 							current_data.len = 0;
+							extra_data.pressed_keys.clear();
 
 							// Ignore gamepad input if a key was recognized
 							refresh();
@@ -163,7 +191,7 @@ namespace rsx
 						// Enable key repeat
 						std::vector<Keyboard>& keyboards = handler.GetKeyboards();
 						ensure(!keyboards.empty());
-						keyboards.at(0).m_key_repeat = true;
+						::at32(keyboards, 0).m_key_repeat = true;
 					}
 				}
 
@@ -174,6 +202,7 @@ namespace rsx
 
 				if (!rinfo.now_connect || !input::g_pads_intercepted)
 				{
+					m_keyboard_pad_handler_active = false;
 					refresh();
 					continue;
 				}
@@ -183,7 +212,7 @@ namespace rsx
 				int pad_index = -1;
 				for (const auto& pad : handler->GetPads())
 				{
-					if (exit)
+					if (m_stop_input_loop)
 						break;
 
 					if (++pad_index >= CELL_PAD_MAX_PORT_NUM)
@@ -281,7 +310,7 @@ namespace rsx
 
 						handle_button_press(button_id, button.m_pressed, pad_index);
 
-						if (exit)
+						if (m_stop_input_loop)
 							break;
 					}
 
@@ -321,7 +350,7 @@ namespace rsx
 						// Handle currently pressed stick direction
 						handle_button_press(button_id, pressed, pad_index);
 
-						if (exit)
+						if (m_stop_input_loop)
 							break;
 					}
 				}
@@ -338,16 +367,16 @@ namespace rsx
 				input::SetIntercepted(false);
 			}
 
-			m_interactive = false;
-
-			return 0;
+			return !m_stop_input_loop
+				? selection_code::interrupted
+				: selection_code::ok;
 		}
 
 		void user_interface::close(bool use_callback, bool stop_pad_interception)
 		{
 			// Force unload
 			m_stop_pad_interception.release(stop_pad_interception);
-			exit.release(true);
+			m_stop_input_loop.release(true);
 
 			while (u64 b = thread_bits)
 			{
@@ -369,7 +398,6 @@ namespace rsx
 
 			if (on_close && use_callback)
 			{
-				g_last_user_response = return_code;
 				on_close(return_code);
 			}
 
@@ -382,6 +410,11 @@ namespace rsx
 
 		void overlay::refresh() const
 		{
+			if (!visible)
+			{
+				return;
+			}
+
 			if (auto rsxthr = rsx::get_current_renderer(); rsxthr &&
 				(min_refresh_duration_us + rsxthr->last_host_flip_timestamp) < rsx::uclock())
 			{

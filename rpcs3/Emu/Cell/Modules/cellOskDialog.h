@@ -2,6 +2,8 @@
 
 #include "util/types.hpp"
 #include "util/atomic.hpp"
+#include "util/init_mutex.hpp"
+#include "Utilities/mutex.h"
 #include "Emu/Memory/vm_ptr.h"
 #include <string>
 #include <functional>
@@ -86,6 +88,7 @@ enum CellOskDialogFinishReason
 enum CellOskDialogFinishReasonFake // Helper. Must be negative values.
 {
 	FAKE_CELL_OSKDIALOG_CLOSE_ABORT = -1,
+	FAKE_CELL_OSKDIALOG_CLOSE_TERMINATE = -2,
 };
 
 enum CellOskDialogType
@@ -242,6 +245,20 @@ using cellOskDialogConfirmWordFilterCallback = int(vm::ptr<u16> pConfirmString, 
 using cellOskDialogHardwareKeyboardEventHookCallback = class b8(vm::ptr<CellOskDialogKeyMessage> keyMessage, vm::ptr<u32> action, vm::ptr<void> pActionInfo);
 using cellOskDialogForceFinishCallback = class b8();
 
+struct osk_window_layout
+{
+	u32 layout_mode = CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_LEFT | CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_TOP;
+	u32 x_align = CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_LEFT;
+	u32 y_align = CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_TOP;
+	f32 x_offset = 0.0f;
+	f32 y_offset = 0.0f;
+
+	std::string to_string() const
+	{
+		return fmt::format("{ layout_mode=0x%x, x_align=0x%x, y_align=0x%x, x_offset=%.2f, y_offset=%.2f }", layout_mode, x_align, y_align, x_offset, y_offset);
+	}
+};
+
 enum class OskDialogState
 {
 	Unloaded,
@@ -261,23 +278,103 @@ public:
 		f32 a = 1.0f;
 	};
 
-	virtual void Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 prohibit_flags, u32 panel_flag, u32 first_view_panel, color base_color, bool dimmer_enabled, bool intercept_input) = 0;
+	struct osk_params
+	{
+		std::string title;
+		std::u16string message;
+		char16_t* init_text = nullptr;
+		u32 charlimit = 0;
+		u32 prohibit_flags = 0;
+		u32 panel_flag = 0;
+		u32 support_language = 0;
+		u32 first_view_panel = 0;
+		osk_window_layout layout{};
+		osk_window_layout input_layout{}; // Only used with separate windows
+		osk_window_layout panel_layout{}; // Only used with separate windows
+		u32 input_field_window_width = 0; // Only used with separate windows
+		f32 input_field_background_transparency = 1.0f; // Only used with separate windows
+		f32 initial_scale = 1.0f;
+		color base_color{};
+		bool dimmer_enabled = false;
+		bool use_separate_windows = false;
+		bool intercept_input = false;
+	};
+
+	virtual void Create(const osk_params& params) = 0;
+	virtual void Clear(bool clear_all_data) = 0;
+	virtual void Insert(const std::u16string& text) = 0;
+	virtual void SetText(const std::u16string& text) = 0;
 
 	// Closes the dialog.
 	// Set status to CELL_OSKDIALOG_CLOSE_CONFIRM or CELL_OSKDIALOG_CLOSE_CANCEL for user input.
 	// Set status to -1 if closed by the game or system.
+	// Set status to -2 if terminated by the system.
 	virtual void Close(s32 status) = 0;
-	virtual ~OskDialogBase();
+	virtual ~OskDialogBase() {};
 
 	std::function<void(s32 status)> on_osk_close;
 	std::function<void(CellOskDialogKeyMessage key_message)> on_osk_key_input_entered;
 
 	atomic_t<OskDialogState> state{ OskDialogState::Unloaded };
-	atomic_t<bool> pad_input_enabled{ true };      // Determines if the OSK consumes the device's events.
-	atomic_t<bool> mouse_input_enabled{ true };    // Determines if the OSK consumes the device's events.
-	atomic_t<bool> keyboard_input_enabled{ true }; // Determines if the OSK consumes the device's events.
-	atomic_t<bool> ignore_input_events{ false };   // Determines if the OSK ignores all consumed events.
+	atomic_t<CellOskDialogContinuousMode> continuous_mode{ CELL_OSKDIALOG_CONTINUOUS_MODE_NONE };
+	atomic_t<CellOskDialogInputDevice> input_device{ CELL_OSKDIALOG_INPUT_DEVICE_PAD }; // The current input device.
+	atomic_t<bool> pad_input_enabled{ true };      // Determines if the OSK consumes the device's input.
+	atomic_t<bool> mouse_input_enabled{ true };    // Determines if the OSK consumes the device's input.
+	atomic_t<bool> keyboard_input_enabled{ true }; // Determines if the OSK consumes the device's input.
+	atomic_t<bool> ignore_device_events{ false };  // Determines if the OSK ignores device events.
 
 	atomic_t<CellOskDialogInputFieldResult> osk_input_result{ CellOskDialogInputFieldResult::CELL_OSKDIALOG_INPUT_FIELD_RESULT_OK };
-	char16_t osk_text[CELL_OSKDIALOG_STRING_SIZE]{};
+	std::array<char16_t, CELL_OSKDIALOG_STRING_SIZE> osk_text{};
+};
+
+struct osk_info
+{
+	std::shared_ptr<OskDialogBase> dlg;
+
+	std::array<char16_t, CELL_OSKDIALOG_STRING_SIZE> valid_text{}; // The string that's going to be served to the game.
+	shared_mutex text_mtx;
+
+	atomic_t<bool> use_separate_windows = false;
+
+	atomic_t<bool> lock_ext_input_device = false;
+	atomic_t<u32> device_mask = 0; // OSK ignores input from the specified devices. 0 means all devices can influence the OSK
+	atomic_t<u32> input_field_window_width = 0;
+	atomic_t<f32> input_field_background_transparency = 1.0f;
+	osk_window_layout input_field_layout_info{};
+	osk_window_layout input_panel_layout_info{};
+	atomic_t<u32> key_layout_options = CELL_OSKDIALOG_10KEY_PANEL;
+	atomic_t<CellOskDialogInitialKeyLayout> initial_key_layout = CELL_OSKDIALOG_INITIAL_PANEL_LAYOUT_SYSTEM; // TODO: use
+	atomic_t<CellOskDialogInputDevice> initial_input_device = CELL_OSKDIALOG_INPUT_DEVICE_PAD; // OSK at first only receives input from the initial device
+
+	atomic_t<bool> clipboard_enabled = false; // For copy and paste
+	atomic_t<bool> half_byte_kana_enabled = false;
+	atomic_t<u32> supported_languages = 0; // Used to enable non-default languages in the OSK
+
+	atomic_t<bool> dimmer_enabled = true;
+	atomic_t<OskDialogBase::color> base_color = OskDialogBase::color{ 0.2f, 0.2f, 0.2f, 1.0f };
+
+	atomic_t<bool> pointer_enabled = false;
+	atomic_t<f32> pointer_x = 0.0f;
+	atomic_t<f32> pointer_y = 0.0f;
+	atomic_t<f32> initial_scale = 1.0f;
+
+	osk_window_layout layout = {};
+
+	atomic_t<CellOskDialogContinuousMode> osk_continuous_mode = CELL_OSKDIALOG_CONTINUOUS_MODE_NONE;
+	atomic_t<u32> last_dialog_state = CELL_SYSUTIL_OSKDIALOG_UNLOADED; // Used for continuous seperate window dialog
+
+	atomic_t<vm::ptr<cellOskDialogConfirmWordFilterCallback>> osk_confirm_callback{};
+	atomic_t<vm::ptr<cellOskDialogForceFinishCallback>> osk_force_finish_callback{};
+	atomic_t<vm::ptr<cellOskDialogHardwareKeyboardEventHookCallback>> osk_hardware_keyboard_event_hook_callback{};
+	atomic_t<u16> hook_event_mode{0};
+
+	stx::init_mutex init;
+
+	void reset();
+
+	// Align horizontally
+	static u32 get_aligned_x(u32 layout_mode);
+
+	// Align vertically
+	static u32 get_aligned_y(u32 layout_mode);
 };

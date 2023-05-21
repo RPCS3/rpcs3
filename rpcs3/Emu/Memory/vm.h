@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <map>
 #include "util/types.hpp"
 #include "util/atomic.hpp"
 #include "util/auto_typemap.hpp"
@@ -11,6 +12,7 @@
 namespace utils
 {
 	class shm;
+	class address_range;
 }
 
 namespace vm
@@ -82,7 +84,7 @@ namespace vm
 	u32 alloc(u32 size, memory_location_t location, u32 align = 0x10000);
 
 	// Map memory at specified address (in optionally specified memory location)
-	u32 falloc(u32 addr, u32 size, memory_location_t location = any, const std::shared_ptr<utils::shm>* src = nullptr);
+	bool falloc(u32 addr, u32 size, memory_location_t location = any, const std::shared_ptr<utils::shm>* src = nullptr);
 
 	// Unmap memory at specified address (in optionally specified memory location), return size
 	u32 dealloc(u32 addr, memory_location_t location = any, const std::shared_ptr<utils::shm>* src = nullptr);
@@ -129,6 +131,7 @@ namespace vm
 
 		// Unmap block
 		bool unmap();
+		friend bool _unmap_block(const std::shared_ptr<block_t>&);
 
 	public:
 		block_t(u32 addr, u32 size, u64 flags);
@@ -147,7 +150,7 @@ namespace vm
 		u32 alloc(u32 size, const std::shared_ptr<utils::shm>* = nullptr, u32 align = 0x10000, u64 flags = 0);
 
 		// Try to map memory at fixed location
-		u32 falloc(u32 addr, u32 size, const std::shared_ptr<utils::shm>* = nullptr, u64 flags = 0);
+		bool falloc(u32 addr, u32 size, const std::shared_ptr<utils::shm>* = nullptr, u64 flags = 0);
 
 		// Unmap memory at specified location previously returned by alloc(), return size
 		u32 dealloc(u32 addr, const std::shared_ptr<utils::shm>* = nullptr) const;
@@ -167,8 +170,15 @@ namespace vm
 			return m_id;
 		}
 
-		friend std::pair<std::shared_ptr<block_t>, bool> unmap(u32, bool, const std::shared_ptr<block_t>*);
-		friend void close();
+		// Serialization helper for shared memory
+		void get_shared_memory(std::vector<std::pair<utils::shm*, u32>>& shared);
+
+		// Returns sample address for shared memory, 0 on failure
+		u32 get_shm_addr(const std::shared_ptr<utils::shm>& shared);
+
+		// Serialization
+		void save(utils::serial& ar, std::map<utils::shm*, usz>& shared);
+		block_t(utils::serial& ar, std::vector<std::shared_ptr<utils::shm>>& shared);
 	};
 
 	// Create new memory block with specified parameters and return it
@@ -335,6 +345,12 @@ namespace vm
 	}
 
 	void close();
+
+	void load(utils::serial& ar);
+	void save(utils::serial& ar);
+
+	// Returns sample address for shared memory, 0 on failure (wraps block_t::get_shm_addr)
+	u32 get_shm_addr(const std::shared_ptr<utils::shm>& shared);
 
 	template <typename T, typename AT>
 	class _ptr_base;

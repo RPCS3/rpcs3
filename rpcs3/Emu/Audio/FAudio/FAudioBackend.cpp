@@ -6,6 +6,8 @@
 #include "FAudioBackend.h"
 #include "Emu/system_config.h"
 #include "Emu/System.h"
+#include "Emu/Audio/audio_device_enumerator.h"
+#include "Utilities/StrUtil.h"
 
 LOG_CHANNEL(FAudio_, "FAudio");
 
@@ -117,11 +119,10 @@ bool FAudioBackend::Initialized()
 
 bool FAudioBackend::Operational()
 {
-	std::lock_guard lock(m_error_cb_mutex);
-	return m_source_voice != nullptr && !m_reset_req;
+	return m_source_voice != nullptr && !m_reset_req.observe();
 }
 
-bool FAudioBackend::Open(AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt)
+bool FAudioBackend::Open(std::string_view dev_id, AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt)
 {
 	if (!Initialized())
 	{
@@ -132,9 +133,37 @@ bool FAudioBackend::Open(AudioFreq freq, AudioSampleSize sample_size, AudioChann
 	std::lock_guard lock(m_cb_mutex);
 	CloseUnlocked();
 
+	const bool use_default_dev = dev_id.empty() || dev_id == audio_device_enumerator::DEFAULT_DEV_ID;
+	u64 devid{};
+	if (!use_default_dev)
+	{
+		if (!try_to_uint64(&devid, dev_id, 0, UINT32_MAX))
+		{
+			FAudio_.error("Invalid device id - %s", dev_id);
+			return false;
+		}
+	}
+
+	if (u32 res = FAudio_CreateMasteringVoice(m_instance, &m_master_voice, FAUDIO_DEFAULT_CHANNELS, FAUDIO_DEFAULT_SAMPLERATE, 0, static_cast<u32>(devid), nullptr))
+	{
+		FAudio_.error("FAudio_CreateMasteringVoice() failed(0x%08x)", res);
+		m_master_voice = nullptr;
+		return false;
+	}
+
+	FAudioVoiceDetails vd{};
+	FAudioVoice_GetVoiceDetails(m_master_voice, &vd);
+
+	if (vd.InputChannels == 0)
+	{
+		FAudio_.error("Channel count of 0 is invalid");
+		CloseUnlocked();
+		return false;
+	}
+
 	m_sampling_rate = freq;
 	m_sample_size = sample_size;
-	m_channels = ch_cnt;
+	m_channels = static_cast<AudioChannelCnt>(std::min(static_cast<u32>(convert_channel_count(vd.InputChannels)), static_cast<u32>(ch_cnt)));;
 
 	FAudioWaveFormatEx waveformatex;
 	waveformatex.wFormatTag = get_convert_to_s16() ? FAUDIO_FORMAT_PCM : FAUDIO_FORMAT_IEEE_FLOAT;
@@ -153,41 +182,28 @@ bool FAudioBackend::Open(AudioFreq freq, AudioSampleSize sample_size, AudioChann
 	OnLoopEnd = nullptr;
 	OnVoiceError = nullptr;
 
-	if (u32 res = FAudio_CreateMasteringVoice(m_instance, &m_master_voice, FAUDIO_DEFAULT_CHANNELS, FAUDIO_DEFAULT_SAMPLERATE, 0, 0, nullptr))
-	{
-		FAudio_.error("FAudio_CreateMasteringVoice() failed(0x%08x)", res);
-		m_master_voice = nullptr;
-	}
-	else if (u32 res = FAudio_CreateSourceVoice(m_instance, &m_source_voice, &waveformatex, 0, FAUDIO_DEFAULT_FREQ_RATIO, this, nullptr, nullptr))
+	if (u32 res = FAudio_CreateSourceVoice(m_instance, &m_source_voice, &waveformatex, 0, FAUDIO_DEFAULT_FREQ_RATIO, this, nullptr, nullptr))
 	{
 		FAudio_.error("FAudio_CreateSourceVoice() failed(0x%08x)", res);
 		CloseUnlocked();
+		return false;
 	}
-	else if (u32 res = FAudioSourceVoice_Start(m_source_voice, 0, FAUDIO_COMMIT_NOW))
+
+	if (u32 res = FAudioSourceVoice_Start(m_source_voice, 0, FAUDIO_COMMIT_NOW))
 	{
 		FAudio_.error("FAudioSourceVoice_Start() failed(0x%08x)", res);
 		CloseUnlocked();
+		return false;
 	}
-	else if (u32 res = FAudioVoice_SetVolume(m_source_voice, 1.0f, FAUDIO_COMMIT_NOW))
+
+	if (u32 res = FAudioVoice_SetVolume(m_source_voice, 1.0f, FAUDIO_COMMIT_NOW))
 	{
 		FAudio_.error("FAudioVoice_SetVolume() failed(0x%08x)", res);
 	}
 
-	if (m_source_voice == nullptr)
-	{
-		FAudio_.error("Failed to open audio backend. Make sure that no other application is running that might block audio access (e.g. Netflix).");
-		return false;
-	}
-
-	m_data_buf.resize(get_sampling_rate() * get_sample_size() * get_channels() * INTERNAL_BUF_SIZE_MS * static_cast<u32>(FAUDIO_DEFAULT_FREQ_RATIO) / 1000);
+	m_data_buf.resize(get_sampling_rate() * get_sample_size() * get_channels() * INTERNAL_BUF_SIZE_MS / 1000);
 
 	return true;
-}
-
-void FAudioBackend::SetWriteCallback(std::function<u32(u32, void *)> cb)
-{
-	std::lock_guard lock(m_cb_mutex);
-	m_write_callback = cb;
 }
 
 f64 FAudioBackend::GetCallbackFrameLen()
@@ -218,7 +234,7 @@ void FAudioBackend::OnVoiceProcessingPassStart_func(FAudioVoiceCallback *cb_obj,
 	FAudioBackend *faudio = static_cast<FAudioBackend *>(cb_obj);
 
 	std::unique_lock lock(faudio->m_cb_mutex, std::defer_lock);
-	if (BytesRequired && lock.try_lock() && faudio->m_write_callback && faudio->m_playing)
+	if (BytesRequired && !faudio->m_reset_req.observe() && lock.try_lock_for(std::chrono::microseconds{50}) && faudio->m_write_callback && faudio->m_playing)
 	{
 		ensure(BytesRequired <= faudio->m_data_buf.size(), "FAudio internal buffer is too small. Report to developers!");
 
@@ -250,11 +266,10 @@ void FAudioBackend::OnCriticalError_func(FAudioEngineCallback *cb_obj, u32 Error
 
 	FAudioBackend *faudio = static_cast<FAudioBackend *>(cb_obj);
 
-	std::lock_guard lock(faudio->m_error_cb_mutex);
-	faudio->m_reset_req = true;
+	std::lock_guard lock(faudio->m_state_cb_mutex);
 
-	if (faudio->m_error_callback)
+	if (!faudio->m_reset_req.test_and_set() && faudio->m_state_callback)
 	{
-		faudio->m_error_callback();
+		faudio->m_state_callback(AudioStateEvent::UNSPECIFIED_ERROR);
 	}
 }

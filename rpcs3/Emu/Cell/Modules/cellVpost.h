@@ -340,6 +340,7 @@ public:
 	static const u32 id_base = 1;
 	static const u32 id_step = 1;
 	static const u32 id_count = 1023;
+	SAVESTATE_INIT_POS(23);
 
 	const bool to_rgba;
 

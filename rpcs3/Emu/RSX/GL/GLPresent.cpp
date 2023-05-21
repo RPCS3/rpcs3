@@ -1,8 +1,13 @@
 #include "stdafx.h"
 #include "GLGSRender.h"
 #include "Emu/Cell/Modules/cellVideoOut.h"
+#include "Emu/RSX/Overlays/overlay_manager.h"
+#include "util/video_provider.h"
 
 LOG_CHANNEL(screenshot_log, "SCREENSHOT");
+
+extern atomic_t<bool> g_user_asked_for_screenshot;
+extern atomic_t<recording_mode> g_recording_mode;
 
 namespace gl
 {
@@ -123,6 +128,8 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		return;
 	}
 
+	gl::command_context cmd{ gl_state };
+
 	u32 buffer_width = display_buffers[info.buffer].width;
 	u32 buffer_height = display_buffers[info.buffer].height;
 	u32 buffer_pitch = display_buffers[info.buffer].pitch;
@@ -142,7 +149,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		if (!buffer_pitch)
 			buffer_pitch = buffer_width * avconfig.get_bpp();
 
-		const u32 video_frame_height = (!avconfig._3d ? avconfig.resolution_y : (avconfig.resolution_y - 30) / 2);
+		const u32 video_frame_height = (avconfig.stereo_mode == stereo_render_mode_options::disabled? avconfig.resolution_y : ((avconfig.resolution_y - 30) / 2));
 		buffer_width = std::min(buffer_width, avconfig.resolution_x);
 		buffer_height = std::min(buffer_height, video_frame_height);
 	}
@@ -154,7 +161,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 	}
 
 	// Disable scissor test (affects blit, clear, etc)
-	gl_state.enable(GL_FALSE, GL_SCISSOR_TEST);
+	gl_state.disable(GL_SCISSOR_TEST);
 
 	// Enable drawing to window backbuffer
 	gl::screen.bind();
@@ -174,7 +181,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		const auto image_to_flip_ = get_present_source(&present_info, avconfig);
 		image_to_flip = image_to_flip_->id();
 
-		if (avconfig._3d) [[unlikely]]
+		if (avconfig.stereo_mode != stereo_render_mode_options::disabled) [[unlikely]]
 		{
 			const auto [unused, min_expected_height] = rsx::apply_resolution_scale<true>(RSX_SURFACE_DIMENSION_IGNORED, buffer_height + 30);
 			if (image_to_flip_->height() < min_expected_height)
@@ -197,6 +204,11 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 
 		buffer_width = present_info.width;
 		buffer_height = present_info.height;
+	}
+
+	if (info.emu_flip)
+	{
+		evaluate_cpu_usage_reduction_limits();
 	}
 
 	// Get window state
@@ -225,10 +237,8 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 
 	if (image_to_flip)
 	{
-		if (m_frame->screenshot_toggle)
+		if (g_user_asked_for_screenshot || (g_recording_mode != recording_mode::stopped && m_frame->can_consume_frame()))
 		{
-			m_frame->screenshot_toggle = false;
-
 			std::vector<u8> sshot_frame(buffer_height * buffer_width * 4);
 
 			gl::pixel_pack_settings pack_settings{};
@@ -239,17 +249,27 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			else
 				glGetTextureImageEXT(image_to_flip, GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, sshot_frame.data());
 
-			if (GLenum err; (err = glGetError()) != GL_NO_ERROR)
+			if (GLenum err = glGetError(); err != GL_NO_ERROR)
+			{
 				screenshot_log.error("Failed to capture image: 0x%x", err);
-			else
+			}
+			else if (g_user_asked_for_screenshot.exchange(false))
+			{
 				m_frame->take_screenshot(std::move(sshot_frame), buffer_width, buffer_height, false);
+			}
+			else
+			{
+				m_frame->present_frame(sshot_frame, buffer_width, buffer_height, false);
+			}
 		}
 
 		const areai screen_area = coordi({}, { static_cast<int>(buffer_width), static_cast<int>(buffer_height) });
 
 		const bool use_full_rgb_range_output = g_cfg.video.full_rgb_range_output.get();
+		// TODO: Implement FSR for OpenGL and remove this fallback to bilinear
+		const gl::filter filter = g_cfg.video.output_scaling == output_scaling_mode::nearest ? gl::filter::nearest : gl::filter::linear;
 
-		if (use_full_rgb_range_output && rsx::fcmp(avconfig.gamma, 1.f) && !avconfig._3d)
+		if (use_full_rgb_range_output && rsx::fcmp(avconfig.gamma, 1.f) && avconfig.stereo_mode == stereo_render_mode_options::disabled)
 		{
 			// Blit source image to the screen
 			m_flip_fbo.recreate();
@@ -257,7 +277,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			m_flip_fbo.color = image_to_flip;
 			m_flip_fbo.read_buffer(m_flip_fbo.color);
 			m_flip_fbo.draw_buffer(m_flip_fbo.color);
-			m_flip_fbo.blit(gl::screen, screen_area, aspect_ratio.flipped_vertical(), gl::buffers::color, gl::filter::linear);
+			m_flip_fbo.blit(gl::screen, screen_area, aspect_ratio.flipped_vertical(), gl::buffers::color, filter);
 		}
 		else
 		{
@@ -266,7 +286,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			const rsx::simple_array<GLuint> images{ image_to_flip, image_to_flip2 };
 
 			gl::screen.bind();
-			m_video_output_pass.run(areau(aspect_ratio), images, gamma, limited_range, avconfig._3d);
+			m_video_output_pass.run(cmd, areau(aspect_ratio), images, gamma, limited_range, avconfig.stereo_mode, filter);
 		}
 	}
 
@@ -298,7 +318,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 
 			for (const auto& view : m_overlay_manager->get_views())
 			{
-				m_ui_renderer.run(areau(aspect_ratio), 0, *view.get());
+				m_ui_renderer.run(cmd, areau(aspect_ratio), 0, *view.get());
 			}
 		}
 	}
@@ -319,12 +339,19 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 
 		m_text_printer.set_scale(m_frame->client_device_pixel_ratio());
 
-		m_text_printer.print_text(4,  0, width, height, fmt::format("RSX Load:                %3d%%", get_load()));
-		m_text_printer.print_text(4, 18, width, height, fmt::format("draw calls: %16d", info.stats.draw_calls));
-		m_text_printer.print_text(4, 36, width, height, fmt::format("draw call setup: %11dus", info.stats.setup_time));
-		m_text_printer.print_text(4, 54, width, height, fmt::format("vertex upload time: %8dus", info.stats.vertex_upload_time));
-		m_text_printer.print_text(4, 72, width, height, fmt::format("textures upload time: %6dus", info.stats.textures_upload_time));
-		m_text_printer.print_text(4, 90, width, height, fmt::format("draw call execution: %7dus", info.stats.draw_exec_time));
+		int y_loc = 0;
+		const auto println = [&](const std::string& text)
+		{
+			m_text_printer.print_text(cmd, 4, 0, width, height, text);
+			y_loc += 16;
+		};
+
+		println(fmt::format("RSX Load:                %3d%%", get_load()));
+		println(fmt::format("draw calls: %16d", info.stats.draw_calls));
+		println(fmt::format("draw call setup: %11dus", info.stats.setup_time));
+		println(fmt::format("vertex upload time: %8dus", info.stats.vertex_upload_time));
+		println(fmt::format("textures upload time: %6dus", info.stats.textures_upload_time));
+		println(fmt::format("draw call execution: %7dus", info.stats.draw_exec_time));
 
 		const auto num_dirty_textures = m_gl_texture_cache.get_unreleased_textures_count();
 		const auto texture_memory_size = m_gl_texture_cache.get_texture_memory_in_use() / (1024 * 1024);
@@ -337,10 +364,10 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		const auto num_texture_upload = m_gl_texture_cache.get_texture_upload_calls_this_frame();
 		const auto num_texture_upload_miss = m_gl_texture_cache.get_texture_upload_misses_this_frame();
 		const auto texture_upload_miss_ratio = m_gl_texture_cache.get_texture_upload_miss_percentage();
-		m_text_printer.print_text(4, 126, width, height, fmt::format("Unreleased textures: %7d", num_dirty_textures));
-		m_text_printer.print_text(4, 144, width, height, fmt::format("Texture memory: %12dM", texture_memory_size));
-		m_text_printer.print_text(4, 162, width, height, fmt::format("Flush requests: %12d  = %2d (%3d%%) hard faults, %2d unavoidable, %2d misprediction(s), %2d speculation(s)", num_flushes, num_misses, cache_miss_ratio, num_unavoidable, num_mispredict, num_speculate));
-		m_text_printer.print_text(4, 180, width, height, fmt::format("Texture uploads: %15u (%u from CPU - %02u%%)", num_texture_upload, num_texture_upload_miss, texture_upload_miss_ratio));
+		println(fmt::format("Unreleased textures: %7d", num_dirty_textures));
+		println(fmt::format("Texture memory: %12dM", texture_memory_size));
+		println(fmt::format("Flush requests: %12d  = %2d (%3d%%) hard faults, %2d unavoidable, %2d misprediction(s), %2d speculation(s)", num_flushes, num_misses, cache_miss_ratio, num_unavoidable, num_mispredict, num_speculate));
+		println(fmt::format("Texture uploads: %15u (%u from CPU - %02u%%)", num_texture_upload, num_texture_upload_miss, texture_upload_miss_ratio));
 	}
 
 	if (gl::debug::g_vis_texture)
@@ -374,7 +401,6 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 	m_gl_texture_cache.on_frame_end();
 	m_vertex_cache->purge();
 
-	gl::command_context cmd{ gl_state };
 	auto removed_textures = m_rtts.free_invalidated(cmd);
 	m_framebuffer_cache.remove_if([&](auto& fbo)
 	{
@@ -384,11 +410,11 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		return false;
 	});
 
-	if (m_draw_fbo && !m_rtts_dirty)
+	if (m_draw_fbo && !m_graphics_state.test(rsx::rtt_config_dirty))
 	{
 		// Always restore the active framebuffer
 		m_draw_fbo->bind();
 		set_viewport();
-		set_scissor(!!(m_graphics_state & rsx::pipeline_state::scissor_setup_clipped));
+		set_scissor(m_graphics_state & rsx::pipeline_state::scissor_setup_clipped);
 	}
 }

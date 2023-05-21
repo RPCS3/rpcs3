@@ -4,6 +4,7 @@
 #include "util/yaml.hpp"
 
 #include "microphone_creator.h"
+#include "midi_creator.h"
 #include "render_creator.h"
 #include "emu_settings_type.h"
 
@@ -36,7 +37,7 @@ public:
 	bool Init();
 
 	/** Connects a combo box with the target settings type*/
-	void EnhanceComboBox(QComboBox* combobox, emu_settings_type type, bool is_ranged = false, bool use_max = false, int max = 0, bool sorted = false);
+	void EnhanceComboBox(QComboBox* combobox, emu_settings_type type, bool is_ranged = false, bool use_max = false, int max = 0, bool sorted = false, bool strict = true);
 
 	/** Connects a check box with the target settings type*/
 	void EnhanceCheckBox(QCheckBox* checkbox, emu_settings_type type);
@@ -80,6 +81,9 @@ public:
 	/** Gets a list of all the microphones available.*/
 	microphone_creator m_microphone_creator;
 
+	/** Gets a list of all the midi devices available.*/
+	midi_creator m_midi_creator;
+
 	/** Loads the settings from path.*/
 	void LoadSettings(const std::string& title_id = "");
 
@@ -87,7 +91,7 @@ public:
 	void OpenCorrectionDialog(QWidget* parent = Q_NULLPTR);
 
 	/** Get a localized and therefore freely adjustable version of the string used in config.yml.*/
-	QString GetLocalizedSetting(const QString& original, emu_settings_type type, int index) const;
+	QString GetLocalizedSetting(const QString& original, emu_settings_type type, int index, bool strict) const;
 
 	/** Validates the settings and logs unused entries or cleans up the yaml*/
 	bool ValidateSettings(bool cleanup);

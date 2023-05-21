@@ -2591,7 +2591,7 @@ inline v128 gv_extend_lo_s8(const v128& vec)
 #if defined(__SSE4_1__)
 	return _mm_cvtepi8_epi16(vec);
 #elif defined(ARCH_X64)
-	return _mm_srai_epi16(_mm_unpacklo_epi8(_mm_undefined_si128(), vec), 8);
+	return _mm_srai_epi16(_mm_unpacklo_epi8(vec, vec), 8);
 #elif defined(ARCH_ARM64)
 	return int16x8_t(vmovl_s8(vget_low_s8(vec)));
 #endif
@@ -2613,7 +2613,7 @@ inline v128 gv_extend_hi_s8(const v128& vec)
 #if defined(__SSE4_1__)
 	return _mm_cvtepi8_epi16(_mm_loadu_si64(vec._bytes + 8));
 #elif defined(ARCH_X64)
-	return _mm_srai_epi16(_mm_unpackhi_epi8(_mm_undefined_si128(), vec), 8);
+	return _mm_srai_epi16(_mm_unpackhi_epi8(vec, vec), 8);
 #elif defined(ARCH_ARM64)
 	return int16x8_t(vmovl_s8(vget_high_s8(vec)));
 #endif
@@ -2642,7 +2642,7 @@ inline v128 gv_extend_lo_s16(const v128& vec)
 #if defined(__SSE4_1__)
 	return _mm_cvtepi16_epi32(vec);
 #elif defined(ARCH_X64)
-	return _mm_srai_epi32(_mm_unpacklo_epi16(_mm_undefined_si128(), vec), 16);
+	return _mm_srai_epi32(_mm_unpacklo_epi16(vec, vec), 16);
 #elif defined(ARCH_ARM64)
 	return int32x4_t(vmovl_s16(vget_low_s16(vec)));
 #endif
@@ -2664,7 +2664,7 @@ inline v128 gv_extend_hi_s16(const v128& vec)
 #if defined(__SSE4_1__)
 	return _mm_cvtepi16_epi32(_mm_loadu_si64(vec._bytes + 8));
 #elif defined(ARCH_X64)
-	return _mm_srai_epi32(_mm_unpackhi_epi16(_mm_undefined_si128(), vec), 16);
+	return _mm_srai_epi32(_mm_unpackhi_epi16(vec, vec), 16);
 #elif defined(ARCH_ARM64)
 	return int32x4_t(vmovl_s16(vget_high_s16(vec)));
 #endif

@@ -101,6 +101,9 @@
     <Filter Include="Io\DS3">
       <UniqueIdentifier>{66e6027b-d3dd-4894-814c-cc4444a4c7df}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Gui\infinity">
+      <UniqueIdentifier>{f5fcca0d-918b-46ba-bb91-2f2f9d9ddbba}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Gui\skylanders">
       <UniqueIdentifier>{c25f8f80-cc74-4760-8488-a291b3026b1d}</UniqueIdentifier>
     </Filter>
@@ -138,6 +141,24 @@
     </Filter>
     <Filter Include="Io\music">
       <UniqueIdentifier>{44c3b8d8-cc4d-4d5f-8681-21241ab220d0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Gui\ipc">
+      <UniqueIdentifier>{91389c5b-9ebd-43fe-a288-1bbad775e528}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Io\SDL">
+      <UniqueIdentifier>{00fa44cd-ccae-48d9-8541-5f3b2b26a845}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Gui\shortcuts">
+      <UniqueIdentifier>{1b83df2f-bb74-4bc9-87f1-ab2f3889bcc9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Gui\progress">
+      <UniqueIdentifier>{d60be100-0d7e-4076-a24a-d413d0e91532}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Gui\flow_layout">
+      <UniqueIdentifier>{9191ae51-8b80-4606-b5bc-966a9588f538}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="StyleSheets">
+      <UniqueIdentifier>{b927140a-5214-4628-a648-8380ae793179}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -202,12 +223,6 @@
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_main_window.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug\moc_memory_string_searcher.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release\moc_memory_string_searcher.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_pad_settings_dialog.cpp">
@@ -372,9 +387,6 @@
     <ClCompile Include="rpcs3qt\game_list_grid.cpp">
       <Filter>Gui\game list</Filter>
     </ClCompile>
-    <ClCompile Include="rpcs3qt\game_list_grid_delegate.cpp">
-      <Filter>Gui\game list</Filter>
-    </ClCompile>
     <ClCompile Include="rpcs3qt\memory_string_searcher.cpp">
       <Filter>Gui\dev tools</Filter>
     </ClCompile>
@@ -537,6 +549,9 @@
     <ClCompile Include="headless_application.cpp">
       <Filter>rpcs3</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\infinity_dialog.cpp">
+      <Filter>Gui\infinity</Filter>
+    </ClCompile>
     <ClCompile Include="rpcs3qt\skylander_dialog.cpp">
       <Filter>Gui\skylanders</Filter>
     </ClCompile>
@@ -637,6 +652,12 @@
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_screenshot_preview.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_infinity_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_infinity_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_skylander_dialog.cpp">
@@ -849,6 +870,162 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_vfs_dialog_path_widget.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\ipc_settings_dialog.cpp">
+      <Filter>Gui\ipc</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_ipc_settings_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_ipc_settings_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\uuid.cpp">
+      <Filter>Gui\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\pad_motion_settings_dialog.cpp">
+      <Filter>Gui\settings</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_pad_motion_settings_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_pad_motion_settings_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="Input\evdev_gun_handler.cpp">
+      <Filter>Io\evdev</Filter>
+    </ClCompile>
+    <ClCompile Include="Input\sdl_pad_handler.cpp">
+      <Filter>Io\SDL</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\config_checker.cpp">
+      <Filter>Gui\log</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_config_checker.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_config_checker.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\shortcut_handler.cpp">
+      <Filter>Gui\shortcuts</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_shortcut_handler.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_shortcut_handler.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\shortcut_settings.cpp">
+      <Filter>Gui\shortcuts</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_shortcut_settings.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_shortcut_settings.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\shortcut_dialog.cpp">
+      <Filter>Gui\shortcuts</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_shortcut_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_shortcut_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\progress_indicator.cpp">
+      <Filter>Gui\progress</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\system_cmd_dialog.cpp">
+      <Filter>Gui\dev tools</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_system_cmd_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_system_cmd_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\table_item_delegate.cpp">
+      <Filter>Gui\custom items</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\movie_item.cpp">
+      <Filter>Gui\custom items</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_game_list.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_game_list.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\game_list_delegate.cpp">
+      <Filter>Gui\game list</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\flow_layout.cpp">
+      <Filter>Gui\flow_layout</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\flow_widget.cpp">
+      <Filter>Gui\flow_layout</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\game_list_table.cpp">
+      <Filter>Gui\game list</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_game_list_table.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_game_list_table.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\game_list_base.cpp">
+      <Filter>Gui\game list</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\movie_item_base.cpp">
+      <Filter>Gui\custom items</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\game_list_grid_item.cpp">
+      <Filter>Gui\game list</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_game_list_grid_item.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_game_list_grid_item.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\flow_widget_item.cpp">
+      <Filter>Gui\flow_layout</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_screenshot_item.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_screenshot_item.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\screenshot_item.cpp">
+      <Filter>Gui\screenshot manager</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_flow_widget_item.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_flow_widget_item.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_flow_widget.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_flow_widget.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\elf_memory_dumping_dialog.cpp">
+      <Filter>Gui\dev tools</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_elf_memory_dumping_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_elf_memory_dumping_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\midi_creator.cpp">
+      <Filter>Gui\settings</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -886,12 +1063,6 @@
     </ClInclude>
     <ClInclude Include="rpcs3qt\gl_gs_frame.h">
       <Filter>Gui\game window</Filter>
-    </ClInclude>
-    <ClInclude Include="rpcs3qt\game_list.h">
-      <Filter>Gui\game list</Filter>
-    </ClInclude>
-    <ClInclude Include="rpcs3qt\game_list_grid_delegate.h">
-      <Filter>Gui\game list</Filter>
     </ClInclude>
     <ClInclude Include="Input\evdev_joystick_handler.h">
       <Filter>Io\evdev</Filter>
@@ -998,6 +1169,42 @@
     <ClInclude Include="rpcs3qt\qt_music_handler.h">
       <Filter>Io\music</Filter>
     </ClInclude>
+    <ClInclude Include="rpcs3qt\uuid.h">
+      <Filter>Gui\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="QTGeneratedFiles\ui_pad_motion_settings_dialog.h">
+      <Filter>Generated Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\pad_device_info.h">
+      <Filter>Gui\settings</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\evdev_gun_handler.h">
+      <Filter>Io\evdev</Filter>
+    </ClInclude>
+    <ClInclude Include="module_verifier.hpp">
+      <Filter>rpcs3</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\sdl_pad_handler.h">
+      <Filter>Io\SDL</Filter>
+    </ClInclude>
+    <ClInclude Include="QTGeneratedFiles\ui_shortcut_dialog.h">
+      <Filter>Generated Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\progress_indicator.h">
+      <Filter>Gui\progress</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\game_list_delegate.h">
+      <Filter>Gui\game list</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\flow_layout.h">
+      <Filter>Gui\flow_layout</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\movie_item_base.h">
+      <Filter>Gui\custom items</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\midi_creator.h">
+      <Filter>Gui\settings</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="debug\moc_predefs.h.cbt">
@@ -1084,9 +1291,6 @@
     <CustomBuild Include="rpcs3qt\game_list_grid.h">
       <Filter>Gui\game list</Filter>
     </CustomBuild>
-    <CustomBuild Include="rpcs3qt\memory_string_searcher.h">
-      <Filter>Gui\dev tools</Filter>
-    </CustomBuild>
     <CustomBuild Include="rpcs3qt\settings_dialog.h">
       <Filter>Gui\settings</Filter>
     </CustomBuild>
@@ -1171,6 +1375,9 @@
     <CustomBuild Include="rpcs3qt\screenshot_preview.h">
       <Filter>Gui\screenshot manager</Filter>
     </CustomBuild>
+    <CustomBuild Include="rpcs3qt\infinity_dialog.h">
+      <Filter>Gui\infinity</Filter>
+    </CustomBuild>
     <CustomBuild Include="rpcs3qt\skylander_dialog.h">
       <Filter>Gui\skylanders</Filter>
     </CustomBuild>
@@ -1246,6 +1453,57 @@
     <CustomBuild Include="rpcs3qt\vfs_dialog_path_widget.h">
       <Filter>Gui\vfs</Filter>
     </CustomBuild>
+    <CustomBuild Include="rpcs3qt\ipc_settings_dialog.h">
+      <Filter>Gui\ipc</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\pad_motion_settings_dialog.h">
+      <Filter>Gui\settings</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\pad_motion_settings_dialog.ui">
+      <Filter>Form Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\config_checker.h">
+      <Filter>Gui\log</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\shortcut_handler.h">
+      <Filter>Gui\shortcuts</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\shortcut_settings.h">
+      <Filter>Gui\shortcuts</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\shortcut_dialog.h">
+      <Filter>Gui\shortcuts</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\shortcut_dialog.ui">
+      <Filter>Form Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\system_cmd_dialog.h">
+      <Filter>Gui\dev tools</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\game_list.h">
+      <Filter>Gui\game list</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\flow_widget.h">
+      <Filter>Gui\flow_layout</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\game_list_table.h">
+      <Filter>Gui\game list</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\game_list_base.h">
+      <Filter>Gui\game list</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\game_list_grid_item.h">
+      <Filter>Gui\game list</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\screenshot_item.h">
+      <Filter>Gui\screenshot manager</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\flow_widget_item.h">
+      <Filter>Gui\flow_layout</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\elf_memory_dumping_dialog.h">
+      <Filter>Gui\dev tools</Filter>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <Image Include="rpcs3.ico" />
@@ -1254,11 +1512,32 @@
     <ResourceCompile Include="rpcs3.rc" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="QTGeneratedFiles\Debug\pkg_install_dialog.moc">
-      <Filter>Generated Files\Debug</Filter>
+    <None Include="..\bin\GuiConfigs\Classic (Bright).qss">
+      <Filter>StyleSheets</Filter>
     </None>
-    <None Include="QTGeneratedFiles\Release\pkg_install_dialog.moc">
-      <Filter>Generated Files\Release</Filter>
+    <None Include="..\bin\GuiConfigs\Darker Style by TheMitoSan.qss">
+      <Filter>StyleSheets</Filter>
+    </None>
+    <None Include="..\bin\GuiConfigs\YoRHa by Ani.qss">
+      <Filter>StyleSheets</Filter>
+    </None>
+    <None Include="..\bin\GuiConfigs\Skyline.qss">
+      <Filter>StyleSheets</Filter>
+    </None>
+    <None Include="..\bin\GuiConfigs\ModernBlue Theme by TheMitoSan.qss">
+      <Filter>StyleSheets</Filter>
+    </None>
+    <None Include="..\bin\GuiConfigs\Nekotekina by GooseWing.qss">
+      <Filter>StyleSheets</Filter>
+    </None>
+    <None Include="..\bin\GuiConfigs\Skyline (Nightfall).qss">
+      <Filter>StyleSheets</Filter>
+    </None>
+    <None Include="..\bin\GuiConfigs\Kuroi (Dark) by Ani.qss">
+      <Filter>StyleSheets</Filter>
+    </None>
+    <None Include="..\bin\GuiConfigs\Envy.qss">
+      <Filter>StyleSheets</Filter>
     </None>
   </ItemGroup>
 </Project>

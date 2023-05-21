@@ -148,7 +148,7 @@ int check_filename(std::string_view file_path, bool disallow_system_files, bool 
 		return 70;
 	}
 
-	char name[CELL_SAVEDATA_FILENAME_SIZE - 3];
+	char name[CELL_SAVEDATA_FILENAME_SIZE + 3];
 
 	if (dotpos)
 	{
@@ -228,7 +228,7 @@ static std::vector<SaveDataEntry> get_save_entries(const std::string& base_dir, 
 		}
 
 		// PSF parameters
-		const psf::registry psf = psf::load_object(fs::file(base_dir + entry.name + "/PARAM.SFO"));
+		const psf::registry psf = psf::load_object(base_dir + entry.name + "/PARAM.SFO");
 
 		if (psf.empty())
 		{
@@ -319,7 +319,8 @@ static error_code select_and_delete(ppu_thread& ppu)
 		lv2_obj::sleep(ppu);
 
 		// Get user confirmation by opening a blocking dialog
-		error_code res = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO, vm::make_str(msg));
+		s32 return_code = CELL_MSGDIALOG_BUTTON_NONE;
+		error_code res = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO, vm::make_str(msg), vm::null, vm::null, vm::null, &return_code);
 
 		// Reschedule after a blocking dialog returns
 		if (ppu.check_state())
@@ -332,7 +333,7 @@ static error_code select_and_delete(ppu_thread& ppu)
 			return CELL_SAVEDATA_ERROR_INTERNAL;
 		}
 
-		if (g_last_user_response.load() == CELL_MSGDIALOG_BUTTON_YES)
+		if (return_code == CELL_MSGDIALOG_BUTTON_YES)
 		{
 			// Remove directory
 			const std::string path = base_dir + save_entries[selected].escaped;
@@ -755,7 +756,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 						listGet->dirListNum++; // number of directories in list
 
 						// PSF parameters
-						const psf::registry psf = psf::load_object(fs::file(base_dir + entry.name + "/PARAM.SFO"));
+						const psf::registry psf = psf::load_object(base_dir + entry.name + "/PARAM.SFO");
 
 						if (psf.empty())
 						{
@@ -1157,7 +1158,8 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			lv2_obj::sleep(ppu);
 
 			// Get user confirmation by opening a blocking dialog
-			error_code res = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO, vm::make_str(message));
+			s32 return_code = CELL_MSGDIALOG_BUTTON_NONE;
+			error_code res = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO, vm::make_str(message), vm::null, vm::null, vm::null, &return_code);
 
 			// Reschedule after a blocking dialog returns
 			if (ppu.check_state())
@@ -1170,7 +1172,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				return CELL_SAVEDATA_ERROR_INTERNAL;
 			}
 
-			if (g_last_user_response != CELL_MSGDIALOG_BUTTON_YES)
+			if (return_code != CELL_MSGDIALOG_BUTTON_YES)
 			{
 				if (selected >= 0)
 				{
@@ -1287,7 +1289,8 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				lv2_obj::sleep(ppu);
 
 				// Get user confirmation by opening a blocking dialog
-				error_code res = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO, vm::make_str(message));
+				s32 return_code = CELL_MSGDIALOG_BUTTON_NONE;
+				error_code res = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO, vm::make_str(message), vm::null, vm::null, vm::null, &return_code);
 
 				// Reschedule after a blocking dialog returns
 				if (ppu.check_state())
@@ -1300,7 +1303,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 					return CELL_SAVEDATA_ERROR_INTERNAL;
 				}
 
-				if (g_last_user_response != CELL_MSGDIALOG_BUTTON_YES)
+				if (return_code != CELL_MSGDIALOG_BUTTON_YES)
 				{
 					return CELL_CANCEL;
 				}
@@ -1372,7 +1375,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 	const std::string old_path = base_dir + ".backup_" + save_entry.escaped + "/";
 	const std::string new_path = base_dir + ".working_" + save_entry.escaped + "/";
 
-	psf::registry psf = psf::load_object(fs::file(dir_path + "PARAM.SFO"));
+	psf::registry psf = psf::load_object(dir_path + "PARAM.SFO");
 	bool has_modified = false;
 	bool recreated = false;
 
@@ -1675,8 +1678,12 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 	error_code savedata_result = CELL_OK;
 
+	u64 delay_save_until = 0;
+
 	while (funcFile)
 	{
+		lv2_sleep(ppu, 2000);
+
 		std::memset(fileSet.get_ptr(), 0, fileSet.size());
 		std::memset(fileGet->reserved, 0, sizeof(fileGet->reserved));
 		std::memset(result.get_ptr(), 0, ::offset32(&CellSaveDataCBResult::userdata));
@@ -1688,6 +1695,10 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			if (res == CELL_SAVEDATA_CBRESULT_OK_LAST || res == CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM)
 			{
 				// TODO: display user prompt
+
+				// Some games (Jak II [NPUA80707]) rely on this delay
+				lv2_obj::sleep(ppu);
+				delay_save_until = get_guest_system_time() + (has_modified ? 500'000 : 100'000);
 				break;
 			}
 
@@ -1830,7 +1841,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 			if (file == all_files.cend() || file->second.size() <= fileSet->fileOffset)
 			{
-				cellSaveData.error("Failed to open file %s%s", dir_path, file_path);
+				cellSaveData.error("Failed to open file %s%s (size=%d, fileOffset=%d)", dir_path, file_path, file == all_files.cend() ? -1 : file->second.size(), fileSet->fileOffset);
 				savedata_result = CELL_SAVEDATA_ERROR_FAILURE;
 				break;
 			}
@@ -2017,6 +2028,11 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		return display_callback_result_error_message(ppu, *result, errDialog);
 	}
 
+	if (u64 current_time = get_guest_system_time(); current_time < delay_save_until)
+	{
+		lv2_sleep(ppu, delay_save_until - current_time);
+	}
+
 	return savedata_result;
 }
 
@@ -2070,7 +2086,7 @@ static NEVER_INLINE error_code savedata_get_list_item(vm::cptr<char> dirName, vm
 		return CELL_SAVEDATA_ERROR_NODATA;
 	}
 
-	const psf::registry psf = psf::load_object(fs::file(sfo));
+	const psf::registry psf = psf::load_object(sfo);
 
 	if (sysFileParam)
 	{

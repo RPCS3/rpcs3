@@ -23,8 +23,8 @@ windows_task:
     QT_VER_MSVC: 'msvc2019'
     QT_DATE: '202011130602'
     QTDIR: C:\Qt\${QT_VER}\${QT_VER_MSVC}_64
-    VULKAN_VER: '1.3.204.0'
-    VULKAN_SDK_SHA: '41f4996335cc5a545d7b2f6e5ff29cf3867789aae4be053a7069aa93408861fa'
+    VULKAN_VER: '1.3.224.1'
+    VULKAN_SDK_SHA: '2029e652e39ee6a6036cff3765da31e1e6c595fd2413d3cd111dfab7855621ea'
     VULKAN_SDK: C:\VulkanSDK\${VULKAN_VER}
     CACHE_DIR: "./cache"
     UPLOAD_COMMIT_HASH: 7d09e3be30805911226241afbb14f8cdc2eb054e
@@ -61,7 +61,7 @@ windows_task:
 
 linux_task:
   container:
-    image: rpcs3/rpcs3-ci-bionic:1.3
+    image: rpcs3/rpcs3-ci-bionic:1.8
     cpu: 4
     memory: 16G
   env:
@@ -108,7 +108,7 @@ freebsd_task:
   matrix:
     - name: Cirrus FreeBSD
       freebsd_instance:
-        image_family: freebsd-13-0
+        image_family: freebsd-13-1
         cpu: 8
         memory: 8G
   env:
@@ -120,15 +120,17 @@ freebsd_task:
   script: "./.ci/build-freebsd.sh"
 
 macos_task:
-  timeout_in: 120m
+  timeout_in: 12000m
   ccache_cache:
     folder: /tmp/ccache_dir
   matrix:
     - name: Cirrus macOS
-      osx_instance:
-        image: monterey-xcode-13.3
+      macos_instance:
+        image: ghcr.io/cirruslabs/macos-monterey-xcode:14
       mac_script:
         - mkdir artifacts
+        - chmod +x ".ci/build-mac.sh"
+        - chmod +x ".ci/deploy-mac.sh"
         - ".ci/build-mac.sh"
   env:
     BUILD_ARTIFACTSTAGINGDIRECTORY: ${CIRRUS_WORKING_DIR}/artifacts
@@ -141,7 +143,7 @@ macos_task:
     RELEASE_MESSAGE: "../GitHubReleaseMessage.txt"
   artifacts:
     name: Artifact
-    path: "artifacts/rpcs3-*_macos.*"
+    path: "artifacts/*"
   push_script: |
     if [ "$CIRRUS_REPO_OWNER" = "RPCS3" ] && [ -z "$CIRRUS_PR" ] && [ "$CIRRUS_BRANCH" = "master" ]; then
       source './.ci/export-cirrus-vars.sh'

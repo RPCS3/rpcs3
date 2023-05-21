@@ -3,6 +3,7 @@
 #include "Emu/Io/pad_types.h"
 
 #include <array>
+#include "util/types.hpp"
 
 enum CellPadError : u32
 {
@@ -125,12 +126,6 @@ enum
 	CELL_PADFILTER_IIR_CUTOFF_2ND_LPF_BT_010 = 2, // 10% Nyquist frequency
 };
 
-struct CellPadData
-{
-	be_t<s32> len;
-	be_t<u16> button[CELL_PAD_MAX_CODES];
-};
-
 struct CellPadInfo
 {
 	be_t<u32> max_connect;
@@ -197,6 +192,12 @@ struct pad_info
 {
 	atomic_t<u32> max_connect = 0;
 	std::array<u32, CELL_PAD_MAX_PORT_NUM> port_setting{ 0 };
+
+	SAVESTATE_INIT_POS(11);
+
+	pad_info() = default;
+	pad_info(utils::serial& ar);
+	void save(utils::serial& ar);
 };
 
 error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data);

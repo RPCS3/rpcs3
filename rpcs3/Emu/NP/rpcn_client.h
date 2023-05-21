@@ -5,6 +5,7 @@
 #include <thread>
 #include <semaphore>
 #include "Utilities/mutex.h"
+#include "Emu/localized_string.h"
 
 #include "util/asm.hpp"
 
@@ -84,6 +85,33 @@ public:
 
 		return ret;
 	}
+	template <typename T>
+	const T* get_flatbuffer()
+	{
+		auto rawdata_vec = get_rawdata();
+
+		if (error)
+			return nullptr;
+
+		if (vec.empty())
+		{
+			error = true;
+			return nullptr;
+		}
+
+		const T* ret = flatbuffers::GetRoot<T>(rawdata_vec.data());
+		flatbuffers::Verifier verifier(rawdata_vec.data(), rawdata_vec.size());
+
+		if (!ret->Verify(verifier))
+		{
+			error = true;
+			return nullptr;
+		}
+
+		aligned_bufs.push_back(std::move(rawdata_vec));
+
+		return ret;
+	}
 
 	// Setters
 
@@ -105,6 +133,7 @@ public:
 
 protected:
 	std::vector<u8>& vec;
+	std::vector<std::vector<u8>> aligned_bufs;
 	usz i      = 0;
 	bool error = false;
 };
@@ -117,6 +146,8 @@ namespace rpcn
 		Terminate,
 		Create,
 		SendToken,
+		SendResetToken,
+		ResetPassword,
 		AddFriend,
 		RemoveFriend,
 		AddBlock,
@@ -137,6 +168,13 @@ namespace rpcn
 		RequestSignalingInfos,
 		RequestTicket,
 		SendMessage,
+		GetBoardInfos,
+		RecordScore,
+		RecordScoreData,
+		GetScoreData,
+		GetScoreRange,
+		GetScoreFriends,
+		GetScoreNpid,
 	};
 
 	enum NotificationType : u16
@@ -193,16 +231,21 @@ namespace rpcn
 		LoginInvalidPassword,        // Invalid password
 		LoginInvalidToken,           // Invalid token
 		CreationError,               // An error happened related to account creation
-		CreationExistingUsername,    // Specific
+		CreationExistingUsername,    // Specific to Account Creation: username exists already
 		CreationBannedEmailProvider, // Specific to Account Creation: the email provider is banned
 		CreationExistingEmail,       // Specific to Account Creation: that email is already registered to an account
-		AlreadyJoined,               // User tried to join a room he's already part of
+		RoomMissing,                 // User tried to join a non existing room
+		RoomAlreadyJoined,           // User tried to join a room he's already part of
+		RoomFull,                    // User tried to join a full room
 		Unauthorized,                // User attempted an unauthorized operation
 		DbFail,                      // Generic failure on db side
 		EmailFail,                   // Generic failure related to email
 		NotFound,                    // Object of the query was not found(room, user, etc)
 		Blocked,                     // The operation can't complete because you've been blocked
 		AlreadyFriend,               // Can't add friend because already friend
+		ScoreNotBest,                // A better score is already registered for that user/character_id
+		ScoreInvalid,                // Score for player was found but wasn't what was expected
+		ScoreHasData,                // Score already has data
 		Unsupported,
 		__error_last
 	};
@@ -217,6 +260,10 @@ namespace rpcn
 		std::set<std::string> requests_received;
 		std::set<std::string> blocked;
 	};
+
+	localized_string_id rpcn_state_to_localized_string_id(rpcn::rpcn_state state);
+	std::string rpcn_state_to_string(rpcn::rpcn_state state);
+	bool is_error(ErrorType err);
 
 	class rpcn_client
 	{
@@ -263,7 +310,7 @@ namespace rpcn
 		bool handle_input();
 		bool handle_output();
 
-		void add_packet(const std::vector<u8> packet);
+		void add_packet(std::vector<u8> packet);
 
 	private:
 		enum class recvn_result
@@ -286,17 +333,19 @@ namespace rpcn
 
 	public:
 		~rpcn_client();
-		rpcn_client(rpcn_client& other) = delete;
+		rpcn_client(rpcn_client& other)    = delete;
 		void operator=(const rpcn_client&) = delete;
-		static std::shared_ptr<rpcn_client> get_instance();
+		static std::shared_ptr<rpcn_client> get_instance(bool check_config = false);
 		rpcn_state wait_for_connection();
 		rpcn_state wait_for_authentified();
 
 		void get_friends_and_register_cb(friend_data& friend_infos, friend_cb_func cb_func, void* cb_param);
 		void remove_friend_cb(friend_cb_func, void* cb_param);
 
-		ErrorType create_user(const std::string& npid, const std::string& password, const std::string& online_name, const std::string& avatar_url, const std::string& email);
+		ErrorType create_user(std::string_view npid, std::string_view password, std::string_view online_name, std::string_view avatar_url, std::string_view email);
 		ErrorType resend_token(const std::string& npid, const std::string& password);
+		ErrorType send_reset_token(std::string_view npid, std::string_view email);
+		ErrorType reset_password(std::string_view npid, std::string_view token, std::string_view password);
 		bool add_friend(const std::string& friend_username);
 		bool remove_friend(const std::string& friend_username);
 
@@ -311,7 +360,7 @@ namespace rpcn
 		std::optional<std::shared_ptr<std::pair<std::string, message_data>>> get_message(u64 id);
 		std::vector<std::pair<u64, std::shared_ptr<std::pair<std::string, message_data>>>> get_messages_and_register_cb(SceNpBasicMessageMainType type, bool include_bootable, message_cb_func cb_func, void* cb_param);
 		void remove_message_cb(message_cb_func cb_func, void* cb_param);
-		void discard_active_message(u64 id);
+		void mark_message_used(u64 id);
 
 		bool is_connected() const
 		{
@@ -346,6 +395,13 @@ namespace rpcn
 		bool req_sign_infos(u32 req_id, const std::string& npid);
 		bool req_ticket(u32 req_id, const std::string& service_id, const std::vector<u8>& cookie);
 		bool sendmessage(const message_data& msg_data, const std::set<std::string>& npids);
+		bool get_board_infos(u32 req_id, const SceNpCommunicationId& communication_id, SceNpScoreBoardId board_id);
+		bool record_score(u32 req_id, const SceNpCommunicationId& communication_id, SceNpScoreBoardId board_id, SceNpScorePcId char_id, SceNpScoreValue score, const std::optional<std::string> comment, const std::optional<std::vector<u8>> score_data);
+		bool get_score_range(u32 req_id, const SceNpCommunicationId& communication_id, SceNpScoreBoardId board_id, u32 start_rank, u32 num_rank, bool with_comment, bool with_gameinfo);
+		bool get_score_npid(u32 req_id, const SceNpCommunicationId& communication_id, SceNpScoreBoardId board_id, const std::vector<std::pair<SceNpId, s32>>& npids, bool with_comment, bool with_gameinfo);
+		bool get_score_friend(u32 req_id, const SceNpCommunicationId& communication_id, SceNpScoreBoardId board_id, bool include_self, bool with_comment, bool with_gameinfo, u32 max_entries);
+		bool record_score_data(u32 req_id, const SceNpCommunicationId& communication_id,  SceNpScorePcId pc_id, SceNpScoreBoardId board_id, s64 score, const std::vector<u8>& score_data);
+		bool get_score_data(u32 req_id, const SceNpCommunicationId& communication_id, SceNpScorePcId pc_id, SceNpScoreBoardId board_id, const SceNpId& npid);
 
 		const std::string& get_online_name() const
 		{
@@ -364,6 +420,15 @@ namespace rpcn
 		{
 			return port_sig.load();
 		}
+		u32 get_addr_local() const
+		{
+			return local_addr_sig.load();
+		}
+
+		void update_local_addr(u32 addr)
+		{
+			local_addr_sig = std::bit_cast<u32, be_t<u32>>(addr);
+		}
 
 	private:
 		bool get_reply(u64 expected_id, std::vector<u8>& data);
@@ -372,7 +437,6 @@ namespace rpcn
 		bool forge_send(u16 command, u64 packet_id, const std::vector<u8>& data);
 		bool forge_send_reply(u16 command, u64 packet_id, const std::vector<u8>& data, std::vector<u8>& reply_data);
 
-		bool is_error(ErrorType err) const;
 		bool error_and_disconnect(const std::string& error_mgs);
 
 		std::string get_wolfssl_error(WOLFSSL* wssl, int error) const;
@@ -428,6 +492,10 @@ namespace rpcn
 
 		atomic_t<u32> addr_sig{};
 		atomic_t<u16> port_sig{};
+		atomic_t<u32> local_addr_sig{};
+
+		static constexpr int RPCN_TIMEOUT_INTERVAL = 50; // 50ms
+		static constexpr int RPCN_TIMEOUT = 10'000;      // 10s
 	};
 
 } // namespace rpcn

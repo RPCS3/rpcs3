@@ -3,6 +3,8 @@
 #include "util/types.hpp"
 #include "util/shared_ptr.hpp"
 
+#include <string_view>
+
 #ifndef _MSC_VER
 #define ATTR_PURE __attribute__((pure))
 #else
@@ -24,6 +26,7 @@ namespace stx
 		u32 size = 1;
 		u32 align = 1;
 		u32 begin = 0;
+		double order{};
 
 		// Next typeinfo in linked list
 		type_info* next = nullptr;
@@ -31,7 +34,7 @@ namespace stx
 		// Auxiliary pointer to base type
 		const type_info* base = nullptr;
 
-		type_info(Info info, u32 size, u32 align, const type_info* base = nullptr) noexcept;
+		type_info(Info info, u32 size, u32 align, double order, const type_info* base = nullptr) noexcept;
 
 		friend type_counter<Info>;
 
@@ -54,6 +57,11 @@ namespace stx
 		ATTR_PURE u32 end() const
 		{
 			return begin + size;
+		}
+
+		ATTR_PURE double init_pos() const
+		{
+			return order;
 		}
 	};
 
@@ -177,14 +185,25 @@ namespace stx
 		return typelist_v;
 	}
 
+	template <typename T> requires requires () { T::savestate_init_pos + 0.; }
+	constexpr double get_savestate_init_pos()
+	{
+		return T::savestate_init_pos;
+	}
+	template <typename T> requires (!(requires () { T::savestate_init_pos + 0.; }))
+	constexpr double get_savestate_init_pos()
+	{
+		return {};
+	}
+
 	template <typename Info> template <typename T>
-	const type_info<Info> type_counter<Info>::type{Info::template make_typeinfo<T>(), sizeof(T), alignof(T)};
+	const type_info<Info> type_counter<Info>::type{Info::template make_typeinfo<T>(), sizeof(T), alignof(T), get_savestate_init_pos<T>()};
 
 	template <typename Info> template <typename T, typename As>
-	const type_info<Info> type_counter<Info>::dyn_type{Info::template make_typeinfo<As>(), sizeof(As), alignof(As), &type_counter<Info>::template type<T>};
+	const type_info<Info> type_counter<Info>::dyn_type{Info::template make_typeinfo<As>(), sizeof(As), alignof(As), get_savestate_init_pos<T>(), &type_counter<Info>::template type<T>};
 
 	template <typename Info>
-	type_info<Info>::type_info(Info info, u32 _size, u32 _align, const type_info<Info>* cbase) noexcept
+	type_info<Info>::type_info(Info info, u32 _size, u32 _align, double order, const type_info<Info>* cbase) noexcept
 		: Info(info)
 	{
 		auto& tl = typelist<Info>();
@@ -193,6 +212,7 @@ namespace stx
 		this->size = _size > this->size ? _size : this->size;
 		this->align = _align > this->align ? _align : this->align;
 		this->base = cbase;
+		this->order = order;
 
 		// Update global max alignment
 		tl.first.align = _align > tl.first.align ? _align : tl.first.align;

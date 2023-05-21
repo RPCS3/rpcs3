@@ -93,6 +93,16 @@ public:
 		restart();
 	}
 
+	FORCE_INLINE SAFE_BUFFERS() perf_meter(int) noexcept
+	{
+		std::fill(std::begin(m_timestamps), std::end(m_timestamps), 0);
+	}
+
+	FORCE_INLINE SAFE_BUFFERS(operator bool) () const noexcept
+	{
+		return m_timestamps[0] != 0;
+	}
+
 	// Copy first timestamp
 	template <auto SN, auto... S>
 	FORCE_INLINE SAFE_BUFFERS() perf_meter(const perf_meter<SN, S...>& r) noexcept

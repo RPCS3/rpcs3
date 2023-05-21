@@ -67,6 +67,12 @@ enum : u8
 	CELL_FS_TYPE_SYMLINK   = 3,
 };
 
+enum : u32
+{
+	CELL_FS_IO_BUFFER_PAGE_SIZE_64KB = 0x0002,
+	CELL_FS_IO_BUFFER_PAGE_SIZE_1MB  = 0x0004,
+};
+
 struct CellFsDirent
 {
 	u8 d_type;
@@ -142,43 +148,122 @@ enum class lv2_file_type
 struct lv2_fs_mount_point
 {
 	const std::string_view root;
+	const std::string_view file_system;
+	const std::string_view device;
 	const u32 sector_size = 512;
+	const u64 sector_count = 256;
 	const u32 block_size = 4096;
 	const bs_t<lv2_mp_flag> flags{};
+	lv2_fs_mount_point* const next = nullptr;
 
 	mutable std::recursive_mutex mutex;
 };
 
 extern lv2_fs_mount_point g_mp_sys_dev_hdd0;
-extern lv2_fs_mount_point g_mp_sys_dev_hdd1;
+extern lv2_fs_mount_point g_mp_sys_no_device;
+
+struct lv2_fs_mount_info
+{
+	lv2_fs_mount_point* const mp;
+	const std::string device;
+	const std::string file_system;
+	const bool read_only;
+
+	lv2_fs_mount_info(lv2_fs_mount_point* mp = nullptr, std::string_view device = {}, std::string_view file_system = {}, bool read_only = false)
+		: mp(mp ? mp : &g_mp_sys_no_device)
+		, device(device.empty() ? this->mp->device : device)
+		, file_system(file_system.empty() ? this->mp->file_system : file_system)
+		, read_only((this->mp->flags & lv2_mp_flag::read_only) || read_only)
+	{
+	}
+
+	constexpr bool operator==(const lv2_fs_mount_info& rhs) const noexcept
+	{
+		return this == &rhs;
+	}
+	constexpr bool operator==(lv2_fs_mount_point* const& rhs) const noexcept
+	{
+		return mp == rhs;
+	}
+	constexpr const lv2_fs_mount_point* operator->() const noexcept
+	{
+		return mp;
+	}
+};
+
+struct CellFsMountInfo; // Forward Declaration
+
+struct lv2_fs_mount_info_map
+{
+public:
+	SAVESTATE_INIT_POS(49);
+
+	lv2_fs_mount_info_map();
+	lv2_fs_mount_info_map(const lv2_fs_mount_info_map&) = delete;
+	lv2_fs_mount_info_map& operator=(const lv2_fs_mount_info_map&) = delete;
+	~lv2_fs_mount_info_map();
+
+	// Forwarding arguments to map.try_emplace(): refer to the constructor of lv2_fs_mount_info
+	template <typename... Args>
+	bool add(Args&&... args);
+	bool remove(std::string_view path);
+	const lv2_fs_mount_info& lookup(std::string_view path) const;
+	u64 get_all(CellFsMountInfo* info = nullptr, u64 len = 0) const;
+
+private:
+	struct string_hash
+	{
+		using hash_type = std::hash<std::string_view>;
+		using is_transparent = void;
+
+		std::size_t operator()(const char* str) const
+		{
+			return hash_type{}(str);
+		}
+		std::size_t operator()(std::string_view str) const
+		{
+			return hash_type{}(str);
+		}
+		std::size_t operator()(std::string const& str) const
+		{
+			return hash_type{}(str);
+		}
+	};
+
+	std::unordered_map<std::string, lv2_fs_mount_info, string_hash, std::equal_to<>> map;
+	lv2_fs_mount_info mount_info_no_device;
+};
 
 struct lv2_fs_object
 {
-	using id_type = lv2_fs_object;
-
-	static const u32 id_base = 3;
-	static const u32 id_step = 1;
-	static const u32 id_count = 255 - id_base;
-
-	// Mount Point
-	const std::add_pointer_t<lv2_fs_mount_point> mp;
+	static constexpr u32 id_base = 3;
+	static constexpr u32 id_step = 1;
+	static constexpr u32 id_count = 255 - id_base;
+	static constexpr bool id_lowest = true;
+	SAVESTATE_INIT_POS(40);
 
 	// File Name (max 1055)
 	const std::array<char, 0x420> name;
 
+	// Mount Point
+	lv2_fs_mount_point* const mp = get_mp(name.data());
+
 protected:
-	lv2_fs_object(lv2_fs_mount_point* mp, std::string_view filename)
-		: mp(mp)
-		, name(get_name(filename))
+	lv2_fs_object(std::string_view filename)
+		: name(get_name(filename))
 	{
 	}
+
+	lv2_fs_object(utils::serial& ar, bool dummy);
 
 public:
 	lv2_fs_object(const lv2_fs_object&) = delete;
 
 	lv2_fs_object& operator=(const lv2_fs_object&) = delete;
 
-	static lv2_fs_mount_point* get_mp(std::string_view filename);
+	static std::string_view get_device_root(std::string_view filename);
+	static lv2_fs_mount_point* get_mp(std::string_view filename, std::string* vfs_path = nullptr);
+	static bool vfs_unmount(std::string_view vpath);
 
 	static std::array<char, 0x420> get_name(std::string_view filename)
 	{
@@ -193,15 +278,22 @@ public:
 		name[filename.size()] = 0;
 		return name;
 	}
+
+	void save(utils::serial&) {}
 };
 
 struct lv2_file final : lv2_fs_object
 {
+	static constexpr u32 id_type = 1;
+
 	fs::file file;
 	const s32 mode;
 	const s32 flags;
 	std::string real_path;
 	const lv2_file_type type;
+
+	// IO Container
+	u32 ct_id{}, ct_used{};
 
 	// Stream lock
 	atomic_t<u32> lock{0};
@@ -215,7 +307,7 @@ struct lv2_file final : lv2_fs_object
 	} restore_data{};
 
 	lv2_file(std::string_view filename, fs::file&& file, s32 mode, s32 flags, const std::string& real_path, lv2_file_type type = {})
-		: lv2_fs_object(lv2_fs_object::get_mp(filename), filename)
+		: lv2_fs_object(filename)
 		, file(std::move(file))
 		, mode(mode)
 		, flags(flags)
@@ -225,7 +317,7 @@ struct lv2_file final : lv2_fs_object
 	}
 
 	lv2_file(const lv2_file& host, fs::file&& file, s32 mode, s32 flags, const std::string& real_path, lv2_file_type type = {})
-		: lv2_fs_object(host.mp, host.name.data())
+		: lv2_fs_object(host.name.data())
 		, file(std::move(file))
 		, mode(mode)
 		, flags(flags)
@@ -233,6 +325,9 @@ struct lv2_file final : lv2_fs_object
 		, type(type)
 	{
 	}
+
+	lv2_file(utils::serial& ar);
+	void save(utils::serial& ar);
 
 	struct open_raw_result_t
 	{
@@ -278,16 +373,21 @@ struct lv2_file final : lv2_fs_object
 
 struct lv2_dir final : lv2_fs_object
 {
+	static constexpr u32 id_type = 2;
+
 	const std::vector<fs::dir_entry> entries;
 
 	// Current reading position
 	atomic_t<u64> pos{0};
 
 	lv2_dir(std::string_view filename, std::vector<fs::dir_entry>&& entries)
-		: lv2_fs_object(lv2_fs_object::get_mp(filename), filename)
+		: lv2_fs_object(filename)
 		, entries(std::move(entries))
 	{
 	}
+
+	lv2_dir(utils::serial& ar);
+	void save(utils::serial& ar);
 
 	// Read next
 	const fs::dir_entry* dir_read()
@@ -435,18 +535,36 @@ struct lv2_file_c0000006 : lv2_file_op
 
 CHECK_SIZE(lv2_file_c0000006, 0x20);
 
-struct lv2_file_c000007 : lv2_file_op
+// sys_fs_fcntl: cellFsArcadeHddSerialNumber
+struct lv2_file_c0000007 : lv2_file_op
 {
 	be_t<u32> out_code;
-	vm::bcptr<char> name;
-	be_t<u32> name_size; // 0x14
-	vm::bptr<char> unk1;
-	be_t<u32> unk1_size; //0x41
-	vm::bptr<char> unk2;
-	be_t<u32> unk2_size; //0x21
+	vm::bcptr<char> device;
+	be_t<u32> device_size;  // 0x14
+	vm::bptr<char> model;
+	be_t<u32> model_size; // 0x29
+	vm::bptr<char> serial;
+	be_t<u32> serial_size; // 0x15
 };
 
-CHECK_SIZE(lv2_file_c000007, 0x1c);
+CHECK_SIZE(lv2_file_c0000007, 0x1c);
+
+struct lv2_file_c0000008 : lv2_file_op
+{
+	u8 _x0[4];
+	be_t<u32> op; // 0xC0000008
+	u8 _x8[8];
+	be_t<u64> container_id;
+	be_t<u32> size;
+	be_t<u32> page_type;  // 0x4000 for cellFsSetDefaultContainer
+	                      // 0x4000 | page_type given by user, valid values seem to be:
+	                      // CELL_FS_IO_BUFFER_PAGE_SIZE_64KB 0x0002
+	                      // CELL_FS_IO_BUFFER_PAGE_SIZE_1MB  0x0004
+	be_t<u32> out_code;
+	u8 _x24[4];
+};
+
+CHECK_SIZE(lv2_file_c0000008, 0x28);
 
 struct lv2_file_c0000015 : lv2_file_op
 {
@@ -463,9 +581,22 @@ struct lv2_file_c0000015 : lv2_file_op
 
 CHECK_SIZE(lv2_file_c0000015, 0x20);
 
+struct lv2_file_c000001a : lv2_file_op
+{
+	be_t<u32> disc_retry_type; // CELL_FS_DISC_READ_RETRY_NONE results in a 0 here
+	                           // CELL_FS_DISC_READ_RETRY_DEFAULT results in a 0x63 here
+	be_t<u32> _x4;             // 0
+	be_t<u32> _x8;             // 0x000186A0
+	be_t<u32> _xC;             // 0
+	be_t<u32> _x10;            // 0
+	be_t<u32> _x14;            // 0
+};
+
+CHECK_SIZE(lv2_file_c000001a, 0x18);
+
 struct lv2_file_c000001c : lv2_file_op
 {
-	be_t<u32> size; // 0x20
+	be_t<u32> size; // 0x60
 	be_t<u32> _x4;  // 0x10
 	be_t<u32> _x8;  // 0x18 - offset of out_code
 	be_t<u32> name_size;
@@ -474,7 +605,7 @@ struct lv2_file_c000001c : lv2_file_op
 	be_t<u16> vendorID;
 	be_t<u16> productID;
 	be_t<u32> out_code; // set to 0
-	u8 serial[64];
+	be_t<u16> serial[32];
 };
 
 CHECK_SIZE(lv2_file_c000001c, 0x60);
@@ -506,6 +637,18 @@ struct CellFsMountInfo
 };
 
 CHECK_SIZE(CellFsMountInfo, 0x94);
+
+// Default IO container
+struct default_sys_fs_container
+{
+	default_sys_fs_container(const default_sys_fs_container&) = delete;
+	default_sys_fs_container& operator=(const default_sys_fs_container&) = delete;
+
+	shared_mutex mutex;
+	u32 id   = 0;
+	u32 cap  = 0;
+	u32 used = 0;
+};
 
 // Syscalls
 
@@ -549,6 +692,8 @@ error_code sys_fs_lsn_write(ppu_thread& ppu, u32 fd, vm::cptr<void>, u64);
 error_code sys_fs_mapped_allocate(ppu_thread& ppu, u32 fd, u64, vm::pptr<void> out_ptr);
 error_code sys_fs_mapped_free(ppu_thread& ppu, u32 fd, vm::ptr<void> ptr);
 error_code sys_fs_truncate2(ppu_thread& ppu, u32 fd, u64 size);
+error_code sys_fs_newfs(ppu_thread& ppu, vm::cptr<char> dev_name, vm::cptr<char> file_system, s32 unk1, vm::cptr<char> str1);
 error_code sys_fs_mount(ppu_thread& ppu, vm::cptr<char> dev_name, vm::cptr<char> file_system, vm::cptr<char> path, s32 unk1, s32 prot, s32 unk3, vm::cptr<char> str1, u32 str_len);
+error_code sys_fs_unmount(ppu_thread& ppu, vm::cptr<char> path, s32 unk1, s32 unk2);
 error_code sys_fs_get_mount_info_size(ppu_thread& ppu, vm::ptr<u64> len);
-error_code sys_fs_get_mount_info(ppu_thread& ppu, vm::ptr<CellFsMountInfo> info, u32 len, vm::ptr<u64> out_len);
+error_code sys_fs_get_mount_info(ppu_thread& ppu, vm::ptr<CellFsMountInfo> info, u64 len, vm::ptr<u64> out_len);

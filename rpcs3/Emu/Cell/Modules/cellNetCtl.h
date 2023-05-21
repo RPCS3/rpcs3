@@ -1,7 +1,5 @@
 #pragma once
 
-#include "cellGame.h"
-
 #include "Emu/Memory/vm_ptr.h"
 
 // Error Codes
@@ -335,20 +333,3 @@ enum
 	CELL_GAMEUPDATE_RESULT_STATUS_ABORTED              = 6,
 	CELL_GAMEUPDATE_RESULT_STATUS_SYSTEM_UPDATE_NEEDED = 7
 };
-
-struct CellGameUpdateResult
-{
-	be_t<s32> status; // CellGameUpdateResultStatus
-	be_t<s32> error_code;
-	char app_ver[CELL_GAME_SYSP_APP_VER_SIZE];
-	char padding[2];
-};
-
-struct CellGameUpdateParam
-{
-	be_t<u32> size;
-	be_t<u32> cid;
-};
-
-using CellGameUpdateCallback = void(s32 status, s32 error_code, vm::ptr<void> userdata);
-using CellGameUpdateCallbackEx = void(vm::ptr<CellGameUpdateResult> result, vm::ptr<void> userdata);

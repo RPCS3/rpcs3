@@ -7,8 +7,11 @@
 
 #include <utility>
 #include <type_traits>
+#include <algorithm>
 
 enum class thread_state : u32;
+
+extern thread_local std::string_view g_tls_serialize_name;
 
 namespace stx
 {
@@ -58,14 +61,32 @@ namespace stx
 		// Save default constructor and destructor and optional joining operation
 		struct typeinfo
 		{
-			bool(*create)(uchar* ptr, manual_typemap&) noexcept = nullptr;
+			bool(*create)(uchar* ptr, manual_typemap&, utils::serial*, std::string_view) noexcept = nullptr;
 			void(*stop)(void* ptr, thread_state) noexcept = nullptr;
+			void(*save)(void* ptr, utils::serial&) noexcept = nullptr;
 			void(*destroy)(void* ptr) noexcept = nullptr;
-			std::string_view name{};
+			std::string_view name;
 
 			template <typename T>
-			static bool call_ctor(uchar* ptr, manual_typemap& _this) noexcept
+			static bool call_ctor(uchar* ptr, manual_typemap& _this, utils::serial* ar, std::string_view name) noexcept
 			{
+				if (ar)
+				{
+					if constexpr (std::is_constructible_v<T, manual_typemap&, exact_t<utils::serial&>>)
+					{
+						g_tls_serialize_name = name;
+						new (ptr) T(_this, exact_t<utils::serial&>(*ar));
+						return true;
+					}
+
+					if constexpr (std::is_constructible_v<T, exact_t<utils::serial&>>)
+					{
+						g_tls_serialize_name = name;
+						new (ptr) T(exact_t<utils::serial&>(*ar));
+						return true;
+					}
+				}
+
 				// Allow passing reference to "this"
 				if constexpr (std::is_constructible_v<T, manual_typemap&>)
 				{
@@ -96,6 +117,19 @@ namespace stx
 				*std::launder(static_cast<T*>(ptr)) = state;
 			}
 
+#ifdef _MSC_VER
+			template <typename T>
+			static void call_save(void*, utils::serial&) noexcept
+			{
+			}
+#endif
+
+			template <typename T> requires requires (T& a) { a.save(std::declval<stx::exact_t<utils::serial&>>()); }
+			static void call_save(void* ptr, utils::serial& ar) noexcept
+			{
+				std::launder(static_cast<T*>(ptr))->save(stx::exact_t<utils::serial&>(ar));
+			}
+
 			template <typename T>
 			static typeinfo make_typeinfo()
 			{
@@ -110,6 +144,13 @@ namespace stx
 					r.stop = &call_stop<T>;
 				}
 
+				// TODO: Unconnement and remove call_save overload when MSVC implements it
+#ifndef _MSC_VER
+				if constexpr (!!(requires (T& a) { a.save(std::declval<stx::exact_t<utils::serial&>>()); }))
+#endif
+				{
+					r.save = &call_save<T>;
+				}
 #ifdef _MSC_VER
 				constexpr std::string_view name = parse_type(__FUNCSIG__);
 #else
@@ -127,14 +168,14 @@ namespace stx
 			mutable uchar m_data[Size ? Size : 1];
 		};
 
+		// Indicates whether object is created at given index
+		std::array<bool, (Size ? Size / Align : 65536)> m_init{};
+
 		// Creation order for each object (used to reverse destruction order)
 		void** m_order = nullptr;
 
 		// Helper for destroying in reverse order
 		const typeinfo** m_info = nullptr;
-
-		// Indicates whether object is created at given index
-		bool* m_init = nullptr;
 
 	public:
 		manual_typemap() noexcept = default;
@@ -145,19 +186,19 @@ namespace stx
 
 		~manual_typemap()
 		{
-			ensure(!m_init);
+			ensure(!m_info);
 		}
 
 		void reset()
 		{
-			if (m_init)
+			if (is_init())
 			{
 				clear();
 			}
 
 			m_order = new void*[stx::typelist<typeinfo>().count() + 1];
 			m_info = new const typeinfo*[stx::typelist<typeinfo>().count() + 1];
-			m_init = new bool[stx::typelist<typeinfo>().count()]{};
+			ensure(m_init.size() > stx::typelist<typeinfo>().count());
 
 			if constexpr (Size == 0)
 			{
@@ -181,15 +222,31 @@ namespace stx
 			*m_info++ = nullptr;
 		}
 
-		void init(bool reset = true)
+		void init(bool reset = true, utils::serial* ar = nullptr)
 		{
 			if (reset)
 			{
 				this->reset();
 			}
 
+			// Use unique_ptr to reduce header dependencies in this commonly used header
+			const auto order = std::make_unique<std::pair<double, const type_info<typeinfo>*>[]>(stx::typelist<typeinfo>().count());
+
+			usz pos = 0;
 			for (const auto& type : stx::typelist<typeinfo>())
 			{
+				order[pos++] = {type.init_pos(), std::addressof(type)};
+			}
+
+			std::stable_sort(order.get(), order.get() + stx::typelist<typeinfo>().count(), [](auto a, auto b)
+			{
+				return a.first < b.first;
+			});
+
+			for (pos = 0; pos < stx::typelist<typeinfo>().count(); pos++)
+			{
+				const auto& type = *order[pos].second;
+
 				const u32 id = type.index();
 				uchar* data = (Size ? +m_data : m_list) + type.pos();
 
@@ -199,18 +256,20 @@ namespace stx
 					continue;
 				}
 
-				if (type.create(data, *this))
+				if (type.create(data, *this, ar, type.name))
 				{
 					*m_order++ = data;
 					*m_info++ = &type;
 					m_init[id] = true;
 				}
 			}
+
+			g_tls_serialize_name = {};
 		}
 
 		void clear()
 		{
-			if (!m_init)
+			if (!is_init())
 			{
 				return;
 			}
@@ -236,7 +295,6 @@ namespace stx
 			// Pointers should be restored to their positions
 			m_info--;
 			m_order--;
-			delete[] m_init;
 			delete[] m_info;
 			delete[] m_order;
 
@@ -252,13 +310,39 @@ namespace stx
 				}
 			}
 
-			m_init = nullptr;
+			m_init.fill(false);
 			m_info = nullptr;
 			m_order = nullptr;
 
 			if constexpr (Size == 0)
 			{
 				m_list = nullptr;
+			}
+		}
+
+		void save(utils::serial& ar)
+		{
+			if (!is_init())
+			{
+				return;
+			}
+
+			// Get actual number of created objects
+			u32 _max = 0;
+
+			for (const auto& type : stx::typelist<typeinfo>())
+			{
+				if (m_init[type.index()])
+				{
+					// Skip object if not created
+					_max++;
+				}
+			}
+
+			// Save data in forward order
+			for (u32 i = _max; i; i--)
+			{
+				if (auto save = (*std::prev(m_info, i))->save) save(*std::prev(m_order, i), ar);
 			}
 		}
 
@@ -294,6 +378,8 @@ namespace stx
 
 			As* obj = nullptr;
 
+			g_tls_serialize_name = get_name<T, As>();
+
 			if constexpr (Size != 0)
 			{
 				obj = new (m_data + stx::typeoffset<typeinfo, std::decay_t<T>>()) std::decay_t<As>(std::forward<Args>(args)...);
@@ -302,6 +388,8 @@ namespace stx
 			{
 				obj = new (m_list + stx::typeoffset<typeinfo, std::decay_t<T>>()) std::decay_t<As>(std::forward<Args>(args)...);
 			}
+
+			g_tls_serialize_name = {};
 
 			*m_order++ = obj;
 			*m_info++ = &stx::typedata<typeinfo, std::decay_t<T>, std::decay_t<As>>();
@@ -323,6 +411,11 @@ namespace stx
 			return m_init[stx::typeindex<typeinfo, std::decay_t<T>>()];
 		}
 
+		bool is_init() const noexcept
+		{
+			return m_info != nullptr;
+		}
+
 		// Obtain object pointer (may be uninitialized memory)
 		template <typename T>
 		T& get() const noexcept
@@ -335,6 +428,12 @@ namespace stx
 			{
 				return *std::launder(reinterpret_cast<T*>(m_list + stx::typeoffset<typeinfo, std::decay_t<T>>()));
 			}
+		}
+
+		template <typename T, typename As = T>
+		static std::string_view get_name() noexcept
+		{
+			return stx::typedata<typeinfo, std::decay_t<T>, std::decay_t<As>>().name;
 		}
 
 		// Obtain object pointer if initialized

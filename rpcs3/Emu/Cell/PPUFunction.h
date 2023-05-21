@@ -115,6 +115,7 @@ namespace ppu_func_detail
 
 		static FORCE_INLINE void put_result(ppu_thread& ppu, const T& result)
 		{
+			if (ppu.state & cpu_flag::again) return;
 			ppu.gpr[3] = ppu_gpr_cast(result);
 		}
 	};
@@ -126,6 +127,7 @@ namespace ppu_func_detail
 
 		static FORCE_INLINE void put_result(ppu_thread& ppu, const T& result)
 		{
+			if (ppu.state & cpu_flag::again) return;
 			ppu.fpr[1] = static_cast<T>(result);
 		}
 	};
@@ -137,6 +139,7 @@ namespace ppu_func_detail
 
 		static FORCE_INLINE void put_result(ppu_thread& ppu, const T& result)
 		{
+			if (ppu.state & cpu_flag::again) return;
 			ppu.vr[2] = result;
 		}
 	};
@@ -287,18 +290,21 @@ public:
 		return access(llvm);
 	}
 
-	u32 func_addr(u32 index) const
+	u32 func_addr(u32 index, bool is_code_addr = false) const
 	{
 		if (index >= access().size() || !addr)
 		{
 			return 0;
 		}
 
-		return addr + index * 8;
+		return addr + index * 8 + (is_code_addr ? 4 : 0);
 	}
 
 	// Allocation address
 	u32 addr = 0;
+
+	void save(utils::serial& ar);
+	ppu_function_manager(utils::serial& ar);
 };
 
 template<typename T, T Func>

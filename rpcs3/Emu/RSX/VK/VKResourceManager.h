@@ -57,6 +57,7 @@ namespace vk
 		u64 eid;
 		const vk::render_device* m_device;
 		std::vector<disposable_t> m_disposables;
+		std::vector<std::unique_ptr<gpu_debug_marker>> m_debug_markers;
 
 		eid_scope_t(u64 _eid):
 			eid(_eid), m_device(g_render_device)
@@ -72,11 +73,13 @@ namespace vk
 			std::swap(eid, other.eid);
 			std::swap(m_device, other.m_device);
 			std::swap(m_disposables, other.m_disposables);
+			std::swap(m_debug_markers, other.m_debug_markers);
 		}
 
 		void discard()
 		{
 			m_disposables.clear();
+			m_debug_markers.clear();
 		}
 	};
 
@@ -187,6 +190,13 @@ namespace vk
 			get_current_eid_scope().m_disposables.emplace_back(std::move(disposable));
 		}
 
+		inline void dispose(std::unique_ptr<vk::gpu_debug_marker>& object)
+		{
+			// Special case as we may need to read these out.
+			// FIXME: We can manage these markers better and remove this exception.
+			get_current_eid_scope().m_debug_markers.emplace_back(std::move(object));
+		}
+
 		template<typename T>
 		inline void dispose(std::unique_ptr<T>& object)
 		{
@@ -221,6 +231,19 @@ namespace vk
 		}
 
 		void trim();
+
+		std::vector<const gpu_debug_marker*> gather_debug_markers() const
+		{
+			std::vector<const gpu_debug_marker*> result;
+			for (const auto& scope : m_eid_map)
+			{
+				for (const auto& item : scope.m_debug_markers)
+				{
+					result.push_back(item.get());
+				}
+			}
+			return result;
+		}
 	};
 
 	struct vmm_allocation_t

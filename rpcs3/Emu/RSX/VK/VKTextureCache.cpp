@@ -7,7 +7,7 @@
 
 namespace vk
 {
-	u64 hash_image_properties(VkFormat format, u16 w, u16 h, u16 d, u16 mipmaps, VkImageType type, VkImageCreateFlags create_flags)
+	u64 hash_image_properties(VkFormat format, u16 w, u16 h, u16 d, u16 mipmaps, VkImageType type, VkImageCreateFlags create_flags, VkSharingMode sharing_mode)
 	{
 		/**
 		* Key layout:
@@ -17,7 +17,8 @@ namespace vk
 		* 40-48: Depth   (Max 255)
 		* 48-54: Mipmaps (Max 63)   <- We have some room here, it is not possible to have more than 12 mip levels on PS3 and 16 on PC is pushing it.
 		* 54-56: Type    (Max 3)
-		* 56-64: Flags   (Max 255)  <- We have some room here, we only care about a small subset of create flags.
+		* 56-57: Sharing (Max 1)    <- Boolean. Exclusive = 0, shared = 1
+		* 57-64: Flags   (Max 127)  <- We have some room here, we only care about a small subset of create flags.
 		*/
 		ensure(static_cast<u32>(format) < 0xFF);
 		return (static_cast<u64>(format) & 0xFF) |
@@ -26,7 +27,8 @@ namespace vk
 			(static_cast<u64>(d) << 40) |
 			(static_cast<u64>(mipmaps) << 48) |
 			(static_cast<u64>(type) << 54) |
-			(static_cast<u64>(create_flags) << 56);
+			(static_cast<u64>(sharing_mode) << 56) |
+			(static_cast<u64>(create_flags) << 57);
 	}
 
 	texture_cache::cached_image_reference_t::cached_image_reference_t(texture_cache* parent, std::unique_ptr<vk::viewable_image>& previous)
@@ -44,7 +46,7 @@ namespace vk
 		data->current_queue_family = VK_QUEUE_FAMILY_IGNORED;
 
 		// Move this object to the cached image pool
-		const auto key = hash_image_properties(data->format(), data->width(), data->height(), data->depth(), data->mipmaps(), data->info.imageType, data->info.flags);
+		const auto key = hash_image_properties(data->format(), data->width(), data->height(), data->depth(), data->mipmaps(), data->info.imageType, data->info.flags, data->info.sharingMode);
 		std::lock_guard lock(parent->m_cached_pool_lock);
 
 		if (!parent->m_cache_is_exiting)
@@ -506,13 +508,13 @@ namespace vk
 		return result;
 	}
 
-	std::unique_ptr<vk::viewable_image> texture_cache::find_cached_image(VkFormat format, u16 w, u16 h, u16 d, u16 mipmaps, VkImageType type, VkImageCreateFlags create_flags, VkImageUsageFlags usage)
+	std::unique_ptr<vk::viewable_image> texture_cache::find_cached_image(VkFormat format, u16 w, u16 h, u16 d, u16 mipmaps, VkImageType type, VkImageCreateFlags create_flags, VkImageUsageFlags usage, VkSharingMode sharing)
 	{
 		reader_lock lock(m_cached_pool_lock);
 
 		if (!m_cached_images.empty())
 		{
-			const u64 desired_key = hash_image_properties(format, w, h, d, mipmaps, type, create_flags);
+			const u64 desired_key = hash_image_properties(format, w, h, d, mipmaps, type, create_flags, sharing);
 			lock.upgrade();
 
 			for (auto it = m_cached_images.begin(); it != m_cached_images.end(); ++it)
@@ -538,7 +540,7 @@ namespace vk
 		const VkFormat dst_format = vk::get_compatible_sampler_format(m_formats_support, gcm_format);
 		const u16 layers = (view_type == VK_IMAGE_VIEW_TYPE_CUBE) ? 6 : 1;
 
-		auto image = find_cached_image(dst_format, w, h, d, mips, image_type, image_flags, usage_flags);
+		auto image = find_cached_image(dst_format, w, h, d, mips, image_type, image_flags, usage_flags, VK_SHARING_MODE_EXCLUSIVE);
 
 		if (!image)
 		{
@@ -546,7 +548,7 @@ namespace vk
 				image_type,
 				dst_format,
 				w, h, d, mips, layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, image_flags | VK_IMAGE_CREATE_ALLOW_NULL,
+				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, image_flags | VK_IMAGE_CREATE_ALLOW_NULL_RPCS3,
 				VMM_ALLOCATION_POOL_TEXTURE_CACHE, rsx::classify_format(gcm_format));
 
 			if (!image->value)
@@ -572,6 +574,7 @@ namespace vk
 			view_swizzle = source->native_component_map;
 		}
 
+		image->set_debug_name("Temp view");
 		image->set_native_component_layout(view_swizzle);
 		auto view = image->get_view(rsx::get_remap_encoding(remap_vector), remap_vector);
 
@@ -823,7 +826,18 @@ namespace vk
 		if (region.exists())
 		{
 			image = dynamic_cast<vk::viewable_image*>(region.get_raw_texture());
-			if ((flags & texture_create_flags::do_not_reuse) || !image || region.get_image_type() != type || image->depth() != depth) // TODO
+			bool reusable = true;
+
+			if (flags & texture_create_flags::do_not_reuse)
+			{
+				reusable = false;
+			}
+			else if (flags & texture_create_flags::shareable)
+			{
+				reusable = (image && image->sharing_mode() == VK_SHARING_MODE_CONCURRENT);
+			}
+
+			if (!reusable || !image || region.get_image_type() != type || image->depth() != depth) // TODO
 			{
 				// Incompatible view/type
 				region.destroy();
@@ -860,14 +874,20 @@ namespace vk
 		{
 			const bool is_cubemap = type == rsx::texture_dimension_extended::texture_dimension_cubemap;
 			const VkFormat vk_format = get_compatible_sampler_format(m_formats_support, gcm_format);
-			const VkImageCreateFlags create_flags = is_cubemap ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0;
+			VkImageCreateFlags create_flags = is_cubemap ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0;
+			VkSharingMode sharing_mode = (flags & texture_create_flags::shareable) ? VK_SHARING_MODE_CONCURRENT : VK_SHARING_MODE_EXCLUSIVE;
 
-			if (auto found = find_cached_image(vk_format, width, height, depth, mipmaps, image_type, create_flags, usage_flags))
+			if (auto found = find_cached_image(vk_format, width, height, depth, mipmaps, image_type, create_flags, usage_flags, sharing_mode))
 			{
 				image = found.release();
 			}
 			else
 			{
+				if (sharing_mode == VK_SHARING_MODE_CONCURRENT)
+				{
+					create_flags |= VK_IMAGE_CREATE_SHAREABLE_RPCS3;
+				}
+
 				image = new vk::viewable_image(*m_device,
 					m_memory_types.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 					image_type, vk_format,
@@ -946,7 +966,18 @@ namespace vk
 			}
 		}
 
-		const rsx::flags32_t create_flags = g_fxo->get<AsyncTaskScheduler>().is_host_mode() ? texture_create_flags::do_not_reuse : 0;
+		const bool upload_async = rsx::get_current_renderer()->get_backend_config().supports_asynchronous_compute;
+		rsx::flags32_t create_flags = 0;
+
+		if (upload_async && g_fxo->get<AsyncTaskScheduler>().is_host_mode())
+		{
+			create_flags |= texture_create_flags::do_not_reuse;
+			if (m_device->get_graphics_queue() != m_device->get_transfer_queue())
+			{
+				create_flags |= texture_create_flags::shareable;
+			}
+		}
+
 		auto section = create_new_texture(cmd, rsx_range, width, height, depth, mipmaps, pitch, gcm_format, context, type, swizzled,
 			rsx::component_order::default_, create_flags);
 
@@ -963,8 +994,7 @@ namespace vk
 		}
 
 		rsx::flags32_t upload_command_flags = initialize_image_layout | upload_contents_inline;
-		if (context == rsx::texture_upload_context::shader_read &&
-			rsx::get_current_renderer()->get_backend_config().supports_asynchronous_compute)
+		if (context == rsx::texture_upload_context::shader_read && upload_async)
 		{
 			upload_command_flags |= upload_contents_async;
 		}
@@ -1102,41 +1132,36 @@ namespace vk
 		{
 			// Flush any pending async jobs in case of blockers
 			// TODO: Context-level manager should handle this logic
-			auto& async_scheduler = g_fxo->get<AsyncTaskScheduler>();
+			auto async_scheduler = g_fxo->try_get<AsyncTaskScheduler>();
 			vk::semaphore* async_sema = nullptr;
 
-			if (async_scheduler.is_recording())
+			if (async_scheduler && async_scheduler->is_recording())
 			{
-				if (async_scheduler.is_host_mode())
+				if (async_scheduler->is_host_mode())
 				{
-					async_sema = async_scheduler.get_sema();
+					async_sema = async_scheduler->get_sema();
 				}
 				else
 				{
 					vk::queue_submit_t submit_info{};
-					async_scheduler.flush(submit_info, VK_TRUE);
+					async_scheduler->flush(submit_info, VK_TRUE);
 				}
 			}
 
-			// Primary access command queue, must restart it after
 			// Primary access command queue, must restart it after
 			vk::fence submit_fence(*m_device);
 			vk::queue_submit_t submit_info{ m_submit_queue, &submit_fence };
 
 			if (async_sema)
 			{
-				submit_info.queue_signal(*async_sema);
+				vk::queue_submit_t submit_info2{};
+				submit_info2.queue_signal(*async_sema);
+				async_scheduler->flush(submit_info2, VK_TRUE);
+
+				submit_info.wait_on(*async_sema, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 			}
 
 			cmd.submit(submit_info, VK_TRUE);
-
-			if (async_sema)
-			{
-				vk::queue_submit_t submit_info2{};
-				submit_info2.wait_on(*async_sema, VK_PIPELINE_STAGE_TRANSFER_BIT);
-				async_scheduler.flush(submit_info2, VK_FALSE);
-			}
-
 			vk::wait_for_fence(&submit_fence, GENERAL_WAIT_TIMEOUT);
 
 			CHECK_RESULT(vkResetCommandBuffer(cmd, 0));
@@ -1234,11 +1259,21 @@ namespace vk
 		}
 
 		// Nuke temporary resources. They will still be visible to the GPU.
+		auto gc = vk::get_resource_manager();
 		any_released |= !m_cached_images.empty();
+		for (auto& img : m_cached_images)
+		{
+			gc->dispose(img.data);
+		}
 		m_cached_images.clear();
 		m_cached_memory_size = 0;
 
 		any_released |= !m_temporary_subresource_cache.empty();
+		for (auto& e : m_temporary_subresource_cache)
+		{
+			ensure(e.second.second);
+			release_temporary_subresource(e.second.second);
+		}
 		m_temporary_subresource_cache.clear();
 
 		return any_released;
@@ -1371,13 +1406,17 @@ namespace vk
 		const auto total_device_memory = m_device->get_memory_mapping().device_local_total_bytes / 0x100000;
 		u64 quota = 0;
 
-		if (total_device_memory >= 1024)
+		if (total_device_memory >= 2048)
 		{
 			quota = std::min<u64>(3072, (total_device_memory * 40) / 100);
 		}
+		else if (total_device_memory >= 1024)
+		{
+			quota = std::max<u64>(204, (total_device_memory * 30) / 100);
+		}
 		else if (total_device_memory >= 768)
 		{
-			quota = 256;
+			quota = 192;
 		}
 		else
 		{

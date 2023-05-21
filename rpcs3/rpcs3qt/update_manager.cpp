@@ -3,10 +3,12 @@
 #include "localized.h"
 #include "rpcs3_version.h"
 #include "downloader.h"
+#include "gui_settings.h"
 #include "Utilities/StrUtil.h"
 #include "Utilities/File.h"
 #include "Emu/System.h"
 #include "Emu/system_utils.hpp"
+#include "Crypto/utils.h"
 #include "util/logs.hpp"
 
 #include <QApplication>
@@ -37,6 +39,11 @@
 #endif
 
 LOG_CHANNEL(update_log, "UPDATER");
+
+update_manager::update_manager(QObject* parent, std::shared_ptr<gui_settings> gui_settings)
+	: QObject(parent), m_gui_settings(std::move(gui_settings))
+{
+}
 
 void update_manager::check_for_updates(bool automatic, bool check_only, bool auto_accept, QWidget* parent)
 {
@@ -221,12 +228,6 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 
 	update_log.notice("Update found: %s", m_request_url);
 
-	if (check_only)
-	{
-		m_downloader->close_progress_dialog();
-		return true;
-	}
-
 	if (!auto_accept)
 	{
 		const auto& changelog = json_data["changelog"];
@@ -275,6 +276,12 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 		{
 			update_log.notice("JSON does not contain a changelog section.");
 		}
+	}
+
+	if (check_only)
+	{
+		m_downloader->close_progress_dialog();
+		return true;
 	}
 
 	update(auto_accept);
@@ -362,6 +369,8 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 	m_downloader->update_progress_dialog(tr("Updating RPCS3"));
 
 #ifdef __APPLE__
+	Q_UNUSED(data);
+	Q_UNUSED(auto_accept);
 	update_log.error("Unsupported operating system.");
 	return false;
 #else
@@ -372,7 +381,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 		return false;
 	}
 
-	if (const std::string res_hash_string = downloader::get_hash(data.data(), data.size(), false);
+	if (const std::string res_hash_string = sha256_get_hash(data.data(), data.size(), false);
 		m_expected_hash != res_hash_string)
 	{
 		update_log.error("Hash mismatch: %s expected: %s", res_hash_string, m_expected_hash);
@@ -382,19 +391,14 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 #ifdef _WIN32
 
 	// Get executable path
-	const std::string orig_path = rpcs3::utils::get_exe_dir() + "rpcs3.exe";
+	const std::string exe_dir = rpcs3::utils::get_exe_dir();
+	const std::string orig_path = exe_dir + "rpcs3.exe";
+	const std::wstring wchar_orig_path = utf8_to_wchar(orig_path);
 
-	std::wstring wchar_orig_path;
-	const auto tmp_size = MultiByteToWideChar(CP_UTF8, 0, orig_path.c_str(), -1, nullptr, 0);
-	wchar_orig_path.resize(tmp_size);
-	MultiByteToWideChar(CP_UTF8, 0, orig_path.c_str(), -1, wchar_orig_path.data(), tmp_size);
+	wchar_t wide_temp_path[MAX_PATH + 1]{};
+	GetTempPathW(sizeof(wide_temp_path), wide_temp_path);
 
-	char temp_path[PATH_MAX];
-
-	GetTempPathA(sizeof(temp_path) - 1, temp_path);
-	temp_path[PATH_MAX - 1] = 0;
-
-	std::string tmpfile_path = temp_path;
+	std::string tmpfile_path = wchar_to_utf8(wide_temp_path);
 	tmpfile_path += "\\rpcs3_update.7z";
 
 	fs::file tmpfile(tmpfile_path, fs::read + fs::write + fs::create + fs::trunc);
@@ -415,7 +419,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 	ISzAlloc allocImp;
 	ISzAlloc allocTempImp;
 
-	CFileInStream archiveStream;
+	CFileInStream archiveStream{};
 	CLookToRead2 lookStream;
 	CSzArEx db;
 	SRes res;
@@ -488,7 +492,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 	usz outBufferSize = 0;
 
 	// Creates temp folder for moving active files
-	const std::string tmp_folder = rpcs3::utils::get_emu_dir() + "rpcs3_old/";
+	const std::string tmp_folder = exe_dir + "rpcs3_old/";
 	fs::create_dir(tmp_folder);
 
 	for (UInt32 i = 0; i < db.NumFiles; i++)
@@ -521,7 +525,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 			temp_u8[index] = static_cast<u8>(temp_u16[index]);
 		}
 		temp_u8[len] = 0;
-		const std::string name = rpcs3::utils::get_emu_dir() + std::string(reinterpret_cast<char*>(temp_u8));
+		const std::string name = exe_dir + std::string(reinterpret_cast<char*>(temp_u8));
 
 		if (!isDir)
 		{
@@ -530,7 +534,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 				break;
 		}
 
-		if (const usz pos = name.find_last_of('/'); pos != umax)
+		if (const usz pos = name.find_last_of(fs::delim); pos != umax)
 		{
 			update_log.trace("Creating path: %s", name.substr(0, pos));
 			fs::create_path(name.substr(0, pos));
@@ -547,7 +551,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 		if (!outfile)
 		{
 			// File failed to open, probably because in use, rename existing file and try again
-			const auto pos = name.find_last_of('/');
+			const auto pos = name.find_last_of(fs::delim);
 			std::string filename;
 			if (pos == umax)
 				filename = name;
@@ -608,7 +612,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 		update_log.error("Failed to create new AppImage file: %s (%s)", replace_path, fs::g_tls_error);
 		return false;
 	}
-	if (new_appimage.write(data.data(), data.size()) != data.size() + 0u)
+	if (new_appimage.write(data.data(), data.size()) != data.size() + 0ull)
 	{
 		update_log.error("Failed to write new AppImage file: %s", replace_path);
 		return false;
@@ -641,16 +645,19 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 
 	if (!auto_accept)
 	{
-		QMessageBox::information(m_parent, tr("Auto-updater"), tr("Update successful!\nRPCS3 will now restart."));
+		m_gui_settings->ShowInfoBox(tr("Auto-updater"), tr("Update successful!<br>RPCS3 will now restart.<br>"), gui::ib_restart_hint, m_parent);
+		m_gui_settings->sync(); // Make sure to sync before terminating RPCS3
 	}
 
 	Emu.GracefulShutdown(false);
 	Emu.CleanUp();
 
 #ifdef _WIN32
-	const int ret = _wexecl(wchar_orig_path.data(), L"--updating", nullptr);
+	const int ret = _wexecl(wchar_orig_path.data(), wchar_orig_path.data(), L"--updating", nullptr);
 #else
-	const int ret = execl(replace_path.c_str(), "--updating", nullptr);
+	// execv is used for compatibility with checkrt
+	const char * const params[3] = { replace_path.c_str(), "--updating", nullptr };
+	const int ret = execv(replace_path.c_str(), const_cast<char * const *>(&params[0]));
 #endif
 	if (ret == -1)
 	{

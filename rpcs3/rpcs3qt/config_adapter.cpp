@@ -57,12 +57,12 @@ namespace cfg_adapter
 		}
 		return values;
 	}
-	
+
 	static bool get_is_dynamic(const cfg_location& location)
 	{
 		return cfg_adapter::get_cfg(g_cfg, location.cbegin(), location.cend()).get_is_dynamic();
 	}
-	
+
 	bool get_is_dynamic(emu_settings_type type)
 	{
 		const cfg_location loc = settings_location[type];

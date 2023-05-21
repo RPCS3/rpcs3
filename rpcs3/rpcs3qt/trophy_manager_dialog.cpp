@@ -1,10 +1,11 @@
 #include "stdafx.h"
 #include "trophy_manager_dialog.h"
 #include "custom_table_widget_item.h"
-#include "table_item_delegate.h"
+#include "game_list_delegate.h"
 #include "qt_utils.h"
 #include "game_list.h"
 #include "gui_settings.h"
+#include "progress_dialog.h"
 
 #include "util/logs.hpp"
 #include "Utilities/StrUtil.h"
@@ -14,6 +15,8 @@
 #include "Emu/system_utils.hpp"
 #include "Emu/Cell/Modules/sceNpTrophy.h"
 
+#include <QApplication>
+#include <QClipboard>
 #include <QtConcurrent>
 #include <QFutureWatcher>
 #include <QHeaderView>
@@ -27,7 +30,6 @@
 #include <QUrl>
 #include <QScrollBar>
 #include <QWheelEvent>
-#include <QProgressDialog>
 #include <QGuiApplication>
 #include <QScreen>
 
@@ -38,6 +40,13 @@ namespace
 	constexpr auto qstr = QString::fromStdString;
 	inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
 }
+
+enum GameUserRole
+{
+	GameIndex = Qt::UserRole,
+	GamePixmapLoaded,
+	GamePixmap
+};
 
 trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_settings)
 	: QWidget()
@@ -81,18 +90,28 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	m_game_table->verticalScrollBar()->installEventFilter(this);
 	m_game_table->verticalScrollBar()->setSingleStep(20);
 	m_game_table->horizontalScrollBar()->setSingleStep(20);
-	m_game_table->setItemDelegate(new table_item_delegate(this, true));
+	m_game_table->setItemDelegate(new game_list_delegate(m_game_table));
 	m_game_table->setSelectionBehavior(QAbstractItemView::SelectRows);
 	m_game_table->setSelectionMode(QAbstractItemView::SingleSelection);
 	m_game_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
-	m_game_table->setColumnCount(GameColumns::GameColumnsCount);
-	m_game_table->setHorizontalHeaderLabels(QStringList{ tr("Icon"), tr("Game"), tr("Progress") });
+	m_game_table->setColumnCount(static_cast<int>(gui::trophy_game_list_columns::count));
 	m_game_table->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
 	m_game_table->horizontalHeader()->setStretchLastSection(true);
 	m_game_table->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
+	m_game_table->setContextMenuPolicy(Qt::CustomContextMenu);
 	m_game_table->verticalHeader()->setVisible(false);
 	m_game_table->setAlternatingRowColors(true);
 	m_game_table->installEventFilter(this);
+
+	auto add_game_column = [this](gui::trophy_game_list_columns col, const QString& header_text, const QString& action_text)
+	{
+		m_game_table->setHorizontalHeaderItem(static_cast<int>(col), new QTableWidgetItem(header_text));
+		m_game_column_acts.append(new QAction(action_text, this));
+	};
+
+	add_game_column(gui::trophy_game_list_columns::icon,     tr("Icon"),     tr("Show Icons"));
+	add_game_column(gui::trophy_game_list_columns::name,     tr("Game"),     tr("Show Games"));
+	add_game_column(gui::trophy_game_list_columns::progress, tr("Progress"), tr("Show Progress"));
 
 	// Trophy Table
 	m_trophy_table = new game_list();
@@ -103,19 +122,32 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	m_trophy_table->verticalScrollBar()->installEventFilter(this);
 	m_trophy_table->verticalScrollBar()->setSingleStep(20);
 	m_trophy_table->horizontalScrollBar()->setSingleStep(20);
-	m_trophy_table->setItemDelegate(new table_item_delegate(this, true));
+	m_trophy_table->setItemDelegate(new game_list_delegate(m_trophy_table));
 	m_trophy_table->setSelectionBehavior(QAbstractItemView::SelectRows);
 	m_trophy_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
-	m_trophy_table->setColumnCount(TrophyColumns::Count);
-	m_trophy_table->setHorizontalHeaderLabels(QStringList{ tr("Icon"), tr("Name"), tr("Description"), tr("Type"), tr("Status"), tr("ID"), tr("Platinum Relevant") });
+	m_trophy_table->setColumnCount(static_cast<int>(gui::trophy_list_columns::count));
 	m_trophy_table->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
 	m_trophy_table->horizontalHeader()->setStretchLastSection(true);
-	m_trophy_table->horizontalHeader()->setSectionResizeMode(TrophyColumns::Icon, QHeaderView::Fixed);
+	m_trophy_table->horizontalHeader()->setSectionResizeMode(static_cast<int>(gui::trophy_list_columns::icon), QHeaderView::Fixed);
 	m_trophy_table->verticalHeader()->setVisible(false);
 	m_trophy_table->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
 	m_trophy_table->setContextMenuPolicy(Qt::CustomContextMenu);
 	m_trophy_table->setAlternatingRowColors(true);
 	m_trophy_table->installEventFilter(this);
+
+	auto add_trophy_column = [this](gui::trophy_list_columns col, const QString& header_text, const QString& action_text)
+	{
+		m_trophy_table->setHorizontalHeaderItem(static_cast<int>(col), new QTableWidgetItem(header_text));
+		m_trophy_column_acts.append(new QAction(action_text, this));
+	};
+
+	add_trophy_column(gui::trophy_list_columns::icon,          tr("Icon"),              tr("Show Icons"));
+	add_trophy_column(gui::trophy_list_columns::name,          tr("Name"),              tr("Show Names"));
+	add_trophy_column(gui::trophy_list_columns::description,   tr("Description"),       tr("Show Descriptions"));
+	add_trophy_column(gui::trophy_list_columns::type,          tr("Type"),              tr("Show Types"));
+	add_trophy_column(gui::trophy_list_columns::is_unlocked,   tr("Status"),            tr("Show Status"));
+	add_trophy_column(gui::trophy_list_columns::id,            tr("ID"),                tr("Show IDs"));
+	add_trophy_column(gui::trophy_list_columns::platinum_link, tr("Platinum Relevant"), tr("Show Platinum Relevant"));
 
 	m_splitter = new QSplitter();
 	m_splitter->addWidget(m_game_table);
@@ -316,7 +348,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 		m_gui_settings->SetValue(gui::tr_show_platinum, checked);
 	});
 
-	connect(m_trophy_table, &QTableWidget::customContextMenuRequested, this, &trophy_manager_dialog::ShowContextMenu);
+	connect(m_trophy_table, &QTableWidget::customContextMenuRequested, this, &trophy_manager_dialog::ShowTrophyTableContextMenu);
 
 	connect(m_game_combo, &QComboBox::currentTextChanged, this, [this]
 	{
@@ -324,13 +356,15 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 		ApplyFilter();
 	});
 
+	connect(m_game_table, &QTableWidget::customContextMenuRequested, this, &trophy_manager_dialog::ShowGameTableContextMenu);
+
 	connect(m_game_table, &QTableWidget::itemSelectionChanged, this, [this]
 	{
 		if (m_game_table->selectedItems().isEmpty())
 		{
 			return;
 		}
-		QTableWidgetItem* item = m_game_table->item(m_game_table->selectedItems().first()->row(), GameColumns::GameName);
+		QTableWidgetItem* item = m_game_table->item(m_game_table->selectedItems().first()->row(), static_cast<int>(gui::trophy_game_list_columns::name));
 		if (!item)
 		{
 			return;
@@ -338,23 +372,29 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 		m_game_combo->setCurrentText(item->text());
 	});
 
-	connect(&m_trophy_repaint_watcher, &QFutureWatcher<QPixmap>::finished, this, &trophy_manager_dialog::ReadjustTrophyTable);
-	connect(&m_trophy_repaint_watcher, &QFutureWatcher<QPixmap>::resultReadyAt, this, [this](int index)
+	connect(this, &trophy_manager_dialog::TrophyIconReady, this, [this](int index, const QPixmap& pixmap)
 	{
-		if (QTableWidgetItem* icon_item = m_trophy_table->item(index, TrophyColumns::Icon))
+		if (QTableWidgetItem* icon_item = m_trophy_table->item(index, static_cast<int>(gui::trophy_list_columns::icon)))
 		{
-			icon_item->setData(Qt::DecorationRole, m_trophy_repaint_watcher.resultAt(index));
+			icon_item->setData(Qt::DecorationRole, pixmap);
 		}
 	});
 
-	connect(&m_game_repaint_watcher, &QFutureWatcher<QPixmap>::finished, this, &trophy_manager_dialog::ReadjustGameTable);
-	connect(&m_game_repaint_watcher, &QFutureWatcher<QPixmap>::resultReadyAt, this, [this](int index)
+	connect(this, &trophy_manager_dialog::GameIconReady, this, [this](int index, const QPixmap& pixmap)
 	{
-		if (QTableWidgetItem* icon_item = m_game_table->item(index, GameColumns::GameIcon))
+		if (QTableWidgetItem* icon_item = m_game_table->item(index, static_cast<int>(gui::trophy_game_list_columns::icon)))
 		{
-			icon_item->setData(Qt::DecorationRole, m_game_repaint_watcher.resultAt(index));
+			icon_item->setData(Qt::DecorationRole, pixmap);
 		}
 	});
+
+	m_trophy_table->create_header_actions(m_trophy_column_acts,
+		[this](int col) { return m_gui_settings->GetTrophylistColVisibility(static_cast<gui::trophy_list_columns>(col)); },
+		[this](int col, bool visible) { m_gui_settings->SetTrophylistColVisibility(static_cast<gui::trophy_list_columns>(col), visible); });
+	
+	m_game_table->create_header_actions(m_game_column_acts,
+		[this](int col) { return m_gui_settings->GetTrophyGamelistColVisibility(static_cast<gui::trophy_game_list_columns>(col)); },
+		[this](int col, bool visible) { m_gui_settings->SetTrophyGamelistColVisibility(static_cast<gui::trophy_game_list_columns>(col), visible); });
 
 	RepaintUI(true);
 
@@ -363,6 +403,8 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 
 trophy_manager_dialog::~trophy_manager_dialog()
 {
+	WaitAndAbortGameRepaintThreads();
+	WaitAndAbortTrophyRepaintThreads();
 }
 
 bool trophy_manager_dialog::LoadTrophyFolderToDB(const std::string& trop_name)
@@ -503,85 +545,92 @@ void trophy_manager_dialog::HandleRepaintUiRequest()
 	resize(window_size);
 }
 
-QPixmap trophy_manager_dialog::GetResizedGameIcon(int index) const
-{
-	QTableWidgetItem* item = m_game_table->item(index, GameColumns::GameIcon);
-	if (!item)
-	{
-		QPixmap placeholder(m_game_icon_size);
-		placeholder.fill(Qt::transparent);
-		return placeholder;
-	}
-
-	QPixmap icon;
-
-	if (!item->data(GameUserRole::GamePixmapLoaded).toBool())
-	{
-		// Load game icon
-		const int trophy_index = item->data(GameUserRole::GameIndex).toInt();
-		const std::string icon_path = m_trophies_db[trophy_index]->path + "ICON0.PNG";
-		if (!icon.load(qstr(icon_path)))
-		{
-			gui_log.warning("Could not load trophy game icon from path %s", icon_path);
-		}
-		item->setData(GameUserRole::GamePixmapLoaded, true);
-		item->setData(GameUserRole::GamePixmap, icon);
-	}
-	else
-	{
-		icon = item->data(GameUserRole::GamePixmap).value<QPixmap>();
-	}
-
-	const qreal dpr = devicePixelRatioF();
-
-	QPixmap new_icon(icon.size() * dpr);
-	new_icon.setDevicePixelRatio(dpr);
-	new_icon.fill(m_game_icon_color);
-
-	if (!icon.isNull())
-	{
-		QPainter painter(&new_icon);
-		painter.setRenderHint(QPainter::SmoothPixmapTransform);
-		painter.drawPixmap(QPoint(0, 0), icon);
-		painter.end();
-	}
-
-	return new_icon.scaled(m_game_icon_size * dpr, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation);
-}
-
 void trophy_manager_dialog::ResizeGameIcons()
 {
 	if (m_game_combo->count() <= 0)
 		return;
 
-	if (m_game_repaint_watcher.isRunning())
-	{
-		m_game_repaint_watcher.cancel();
-		m_game_repaint_watcher.waitForFinished();
-	}
+	WaitAndAbortGameRepaintThreads();
 
 	QPixmap placeholder(m_game_icon_size);
 	placeholder.fill(Qt::transparent);
 
+	qRegisterMetaType<QVector<int>>("QVector<int>");
 	QList<int> indices;
 	for (int i = 0; i < m_game_table->rowCount(); ++i)
 	{
 		indices.append(i);
 
-		if (QTableWidgetItem* icon_item = m_game_table->item(i, GameColumns::GameIcon))
+		if (QTableWidgetItem* icon_item = m_game_table->item(i, static_cast<int>(gui::trophy_game_list_columns::icon)))
 		{
 			icon_item->setData(Qt::DecorationRole, placeholder);
 		}
 	}
 
-	const std::function<QPixmap(const int&)> get_scaled = [this](const int& i)
-	{
-		return GetResizedGameIcon(i);
-	};
-
 	ReadjustGameTable();
 
-	m_game_repaint_watcher.setFuture(QtConcurrent::mapped(indices, get_scaled));
+	for (int i = 0; i < m_game_table->rowCount(); ++i)
+	{
+		if (movie_item* item = static_cast<movie_item*>(m_game_table->item(i, static_cast<int>(gui::trophy_game_list_columns::icon))))
+		{
+			const qreal dpr = devicePixelRatioF();
+			const int trophy_index = item->data(GameUserRole::GameIndex).toInt();
+			const std::string icon_path = m_trophies_db[trophy_index]->path + "ICON0.PNG";
+
+			item->set_icon_load_func([this, icon_path, trophy_index, cancel = item->icon_loading_aborted(), dpr](int index)
+			{
+				if (cancel && cancel->load())
+				{
+					return;
+				}
+
+				QPixmap icon;
+
+				if (movie_item* item = static_cast<movie_item*>(m_game_table->item(index, static_cast<int>(gui::trophy_game_list_columns::icon))))
+				{
+					if (!item->data(GameUserRole::GamePixmapLoaded).toBool())
+					{
+						// Load game icon
+						const std::string icon_path = m_trophies_db[trophy_index]->path + "ICON0.PNG";
+						if (!icon.load(qstr(icon_path)))
+						{
+							gui_log.warning("Could not load trophy game icon from path %s", icon_path);
+						}
+						item->setData(GameUserRole::GamePixmapLoaded, true);
+						item->setData(GameUserRole::GamePixmap, icon);
+					}
+					else
+					{
+						icon = item->data(GameUserRole::GamePixmap).value<QPixmap>();
+					}
+				}
+
+				if (cancel && cancel->load())
+				{
+					return;
+				}
+
+				QPixmap new_icon(icon.size() * dpr);
+				new_icon.setDevicePixelRatio(dpr);
+				new_icon.fill(m_game_icon_color);
+
+				if (!icon.isNull())
+				{
+					QPainter painter(&new_icon);
+					painter.setRenderHint(QPainter::SmoothPixmapTransform);
+					painter.drawPixmap(QPoint(0, 0), icon);
+					painter.end();
+				}
+
+				new_icon = new_icon.scaled(m_game_icon_size * dpr, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation);
+
+				if (!cancel || !cancel->load())
+				{
+					Q_EMIT GameIconReady(index, new_icon);
+				}
+			});
+		}
+	}
 }
 
 void trophy_manager_dialog::ResizeTrophyIcons()
@@ -589,11 +638,7 @@ void trophy_manager_dialog::ResizeTrophyIcons()
 	if (m_game_combo->count() <= 0)
 		return;
 
-	if (m_trophy_repaint_watcher.isRunning())
-	{
-		m_trophy_repaint_watcher.cancel();
-		m_trophy_repaint_watcher.waitForFinished();
-	}
+	WaitAndAbortTrophyRepaintThreads();
 
 	const int db_pos = m_game_combo->currentData().toInt();
 	const qreal dpr = devicePixelRatioF();
@@ -602,15 +647,9 @@ void trophy_manager_dialog::ResizeTrophyIcons()
 	QPixmap placeholder(m_icon_height, m_icon_height);
 	placeholder.fill(Qt::transparent);
 
-	QList<int> trophy_ids;
 	for (int i = 0; i < m_trophy_table->rowCount(); ++i)
 	{
-		if (QTableWidgetItem* item = m_trophy_table->item(i, TrophyColumns::Id))
-		{
-			trophy_ids.append(item->text().toInt());
-		}
-
-		if (QTableWidgetItem* icon_item = m_trophy_table->item(i, TrophyColumns::Icon))
+		if (QTableWidgetItem* icon_item = m_trophy_table->item(i, static_cast<int>(gui::trophy_list_columns::icon)))
 		{
 			icon_item->setData(Qt::DecorationRole, placeholder);
 		}
@@ -618,43 +657,80 @@ void trophy_manager_dialog::ResizeTrophyIcons()
 
 	ReadjustTrophyTable();
 
-	const std::function<QPixmap(const int&)> get_scaled = [this, data = m_trophies_db.at(db_pos).get(), dpr, new_height](const int& trophy_id) -> QPixmap
+	for (int i = 0; i < m_trophy_table->rowCount(); ++i)
 	{
-		QPixmap icon;
-
-		if (data)
+		if (QTableWidgetItem* id_item = m_trophy_table->item(i, static_cast<int>(gui::trophy_list_columns::id)))
 		{
-			std::scoped_lock lock(m_trophies_db_mtx);
-			if (data->trophy_images.contains(trophy_id))
+			if (movie_item* item = static_cast<movie_item*>(m_trophy_table->item(i, static_cast<int>(gui::trophy_list_columns::icon))))
 			{
-				icon = data->trophy_images[trophy_id];
-			}
-			else if (const QString& path = data->trophy_image_paths[trophy_id]; !icon.load(path))
-			{
-				gui_log.error("Failed to load trophy icon for trophy %d (icon='%s')", trophy_id, sstr(path));
-			}
-			else
-			{
-				data->trophy_images[trophy_id] = icon;
+				item->set_icon_load_func([this, data = ::at32(m_trophies_db, db_pos).get(), trophy_id = id_item->text().toInt(), cancel = item->icon_loading_aborted(), dpr, new_height](int index)
+				{
+					if (cancel && cancel->load())
+					{
+						return;
+					}
+
+					QPixmap icon;
+
+					if (data)
+					{
+						bool found_icon{};
+						QString path;
+						{
+							std::scoped_lock lock(m_trophies_db_mtx);
+							found_icon = data->trophy_images.contains(trophy_id);
+
+							if (found_icon)
+							{
+								icon = data->trophy_images[trophy_id];
+							}
+							else
+							{
+								path = data->trophy_image_paths[trophy_id];
+							}
+						}
+
+						if (!found_icon)
+						{
+							if (icon.load(path))
+							{
+								std::scoped_lock lock(m_trophies_db_mtx);
+								data->trophy_images[trophy_id] = icon;
+							}
+							else
+							{
+								gui_log.error("Failed to load trophy icon for trophy %d (icon='%s')", trophy_id, sstr(path));
+							}
+						}
+					}
+
+					if (cancel && cancel->load())
+					{
+						return;
+					}
+
+					QPixmap new_icon(icon.size() * dpr);
+					new_icon.setDevicePixelRatio(dpr);
+					new_icon.fill(m_game_icon_color);
+
+					if (!icon.isNull())
+					{
+						QPainter painter(&new_icon);
+						painter.setRenderHint(QPainter::SmoothPixmapTransform);
+						painter.drawPixmap(QPoint(0, 0), icon);
+						painter.end();
+					}
+
+					new_icon = new_icon.scaledToHeight(new_height, Qt::SmoothTransformation);
+
+					if (!cancel || !cancel->load())
+					{
+						Q_EMIT TrophyIconReady(index, new_icon);
+					}
+				});
 			}
 		}
-
-		QPixmap new_icon(icon.size() * dpr);
-		new_icon.setDevicePixelRatio(dpr);
-		new_icon.fill(m_game_icon_color);
-
-		if (!icon.isNull())
-		{
-			QPainter painter(&new_icon);
-			painter.setRenderHint(QPainter::SmoothPixmapTransform);
-			painter.drawPixmap(QPoint(0, 0), icon);
-			painter.end();
-		}
-
-		return new_icon.scaledToHeight(new_height, Qt::SmoothTransformation);
-	};
-
-	m_trophy_repaint_watcher.setFuture(QtConcurrent::mapped(trophy_ids, get_scaled));
+	}
 }
 
 void trophy_manager_dialog::ApplyFilter()
@@ -672,9 +748,9 @@ void trophy_manager_dialog::ApplyFilter()
 
 	for (int i = 0; i < m_trophy_table->rowCount(); ++i)
 	{
-		QTableWidgetItem* item = m_trophy_table->item(i, TrophyColumns::Id);
-		QTableWidgetItem* type_item = m_trophy_table->item(i, TrophyColumns::Type);
-		QTableWidgetItem* icon_item = m_trophy_table->item(i, TrophyColumns::Icon);
+		QTableWidgetItem* item = m_trophy_table->item(i, static_cast<int>(gui::trophy_list_columns::id));
+		QTableWidgetItem* type_item = m_trophy_table->item(i, static_cast<int>(gui::trophy_list_columns::type));
+		QTableWidgetItem* icon_item = m_trophy_table->item(i, static_cast<int>(gui::trophy_list_columns::icon));
 
 		if (!item || !type_item || !icon_item)
 		{
@@ -712,40 +788,116 @@ void trophy_manager_dialog::ApplyFilter()
 	ReadjustTrophyTable();
 }
 
-void trophy_manager_dialog::ShowContextMenu(const QPoint& pos)
+void trophy_manager_dialog::ShowTrophyTableContextMenu(const QPoint& pos)
 {
-	QTableWidgetItem* item = m_trophy_table->item(m_trophy_table->currentRow(), TrophyColumns::Icon);
-	if (!item)
+	const int row = m_trophy_table->currentRow();
+
+	if (!m_trophy_table->item(row, static_cast<int>(gui::trophy_list_columns::icon)))
 	{
 		return;
 	}
 
 	QMenu* menu = new QMenu();
-	QAction* show_trophy_dir = new QAction(tr("Open Trophy Directory"), menu);
+	QAction* show_trophy_dir = new QAction(tr("&Open Trophy Directory"), menu);
 
 	const int db_ind = m_game_combo->currentData().toInt();
 
 	connect(show_trophy_dir, &QAction::triggered, this, [this, db_ind]()
 	{
 		const QString path = qstr(m_trophies_db[db_ind]->path);
-		QDesktopServices::openUrl(QUrl::fromLocalFile(path));
+		gui::utils::open_dir(path);
 	});
 
 	menu->addAction(show_trophy_dir);
+
+	const QTableWidgetItem* name_item = m_trophy_table->item(row, static_cast<int>(gui::trophy_list_columns::name));
+	const QTableWidgetItem* desc_item = m_trophy_table->item(row, static_cast<int>(gui::trophy_list_columns::description));
+
+	const QString name = name_item ? name_item->text() : "";
+	const QString desc = desc_item ? desc_item->text() : "";
+
+	if (!name.isEmpty() || !desc.isEmpty())
+	{
+		QMenu* copy_menu = new QMenu(tr("&Copy Info"), menu);
+
+		if (!name.isEmpty() && !desc.isEmpty())
+		{
+			QAction* copy_both = new QAction(tr("&Copy Name + Description"), copy_menu);
+			connect(copy_both, &QAction::triggered, this, [this, name, desc]()
+			{
+				QApplication::clipboard()->setText(name % QStringLiteral("\n\n") % desc);
+			});
+			copy_menu->addAction(copy_both);
+		}
+
+		if (!name.isEmpty())
+		{
+			QAction* copy_name = new QAction(tr("&Copy Name"), copy_menu);
+			connect(copy_name, &QAction::triggered, this, [this, name]()
+			{
+				QApplication::clipboard()->setText(name);
+			});
+			copy_menu->addAction(copy_name);
+		}
+
+		if (!desc.isEmpty())
+		{
+			QAction* copy_desc = new QAction(tr("&Copy Description"), copy_menu);
+			connect(copy_desc, &QAction::triggered, this, [this, desc]()
+			{
+				QApplication::clipboard()->setText(desc);
+			});
+			copy_menu->addAction(copy_desc);
+		}
+
+		menu->addMenu(copy_menu);
+	}
+
 	menu->exec(m_trophy_table->viewport()->mapToGlobal(pos));
+}
+
+void trophy_manager_dialog::ShowGameTableContextMenu(const QPoint& pos)
+{
+	const int row = m_game_table->currentRow();
+
+	if (!m_game_table->item(row, static_cast<int>(gui::trophy_game_list_columns::icon)))
+	{
+		return;
+	}
+
+	QMenu* menu = new QMenu();
+	QAction* show_trophy_dir = new QAction(tr("&Open Trophy Directory"), menu);
+
+	const int db_ind = m_game_combo->currentData().toInt();
+
+	connect(show_trophy_dir, &QAction::triggered, this, [this, db_ind]()
+	{
+		const QString path = qstr(m_trophies_db[db_ind]->path);
+		gui::utils::open_dir(path);
+	});
+
+	menu->addAction(show_trophy_dir);
+
+	const QTableWidgetItem* name_item = m_game_table->item(row, static_cast<int>(gui::trophy_game_list_columns::name));
+	const QString name = name_item ? name_item->text() : "";
+
+	if (!name.isEmpty())
+	{
+		QAction* copy_name = new QAction(tr("&Copy Name"), menu);
+		connect(copy_name, &QAction::triggered, this, [this, name]()
+		{
+			QApplication::clipboard()->setText(name);
+		});
+		menu->addAction(copy_name);
+	}
+
+	menu->exec(m_game_table->viewport()->mapToGlobal(pos));
 }
 
 void trophy_manager_dialog::StartTrophyLoadThreads()
 {
-	if (m_game_repaint_watcher.isRunning())
-	{
-		m_game_repaint_watcher.waitForFinished();
-	}
-
-	if (m_trophy_repaint_watcher.isRunning())
-	{
-		m_trophy_repaint_watcher.waitForFinished();
-	}
+	WaitAndAbortGameRepaintThreads();
+	WaitAndAbortTrophyRepaintThreads();
 
 	m_trophies_db.clear();
 
@@ -768,14 +920,14 @@ void trophy_manager_dialog::StartTrophyLoadThreads()
 		return;
 	}
 
+	qRegisterMetaType<QVector<int>>("QVector<int>");
 	QList<int> indices;
 	for (int i = 0; i < count; ++i)
 		indices.append(i);
 
 	QFutureWatcher<void> futureWatcher;
 
-	QProgressDialog progressDialog(tr("Loading trophy data, please wait..."), tr("Cancel"), 0, 1, this, Qt::Dialog | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
-	progressDialog.setWindowTitle(tr("Loading trophies"));
+	progress_dialog progressDialog(tr("Loading trophies"), tr("Loading trophy data, please wait..."), tr("Cancel"), 0, 1, false, this, Qt::Dialog | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
 
 	connect(&futureWatcher, &QFutureWatcher<void>::progressRangeChanged, &progressDialog, &QProgressDialog::setRange);
 	connect(&futureWatcher, &QFutureWatcher<void>::progressValueChanged, &progressDialog, &QProgressDialog::setValue);
@@ -806,19 +958,15 @@ void trophy_manager_dialog::StartTrophyLoadThreads()
 
 void trophy_manager_dialog::PopulateGameTable()
 {
-	if (m_game_repaint_watcher.isRunning())
-	{
-		m_game_repaint_watcher.cancel();
-		m_game_repaint_watcher.waitForFinished();
-	}
+	WaitAndAbortGameRepaintThreads();
 
 	m_game_table->setSortingEnabled(false); // Disable sorting before using setItem calls
-
 	m_game_table->clearContents();
 	m_game_table->setRowCount(static_cast<int>(m_trophies_db.size()));
 
 	m_game_combo->clear();
 
+	qRegisterMetaType<QVector<int>>("QVector<int>");
 	QList<int> indices;
 	for (usz i = 0; i < m_trophies_db.size(); ++i)
 		indices.append(static_cast<int>(i));
@@ -840,9 +988,9 @@ void trophy_manager_dialog::PopulateGameTable()
 		icon_item->setData(GameUserRole::GamePixmapLoaded, false);
 		icon_item->setData(GameUserRole::GamePixmap, QPixmap());
 
-		m_game_table->setItem(i, GameColumns::GameIcon, icon_item);
-		m_game_table->setItem(i, GameColumns::GameName, new custom_table_widget_item(name));
-		m_game_table->setItem(i, GameColumns::GameProgress, new custom_table_widget_item(progress, Qt::UserRole, percentage));
+		m_game_table->setItem(i, static_cast<int>(gui::trophy_game_list_columns::icon), icon_item);
+		m_game_table->setItem(i, static_cast<int>(gui::trophy_game_list_columns::name), new custom_table_widget_item(name));
+		m_game_table->setItem(i, static_cast<int>(gui::trophy_game_list_columns::progress), new custom_table_widget_item(progress, Qt::UserRole, percentage));
 
 		m_game_combo->addItem(name, i);
 	}
@@ -940,13 +1088,13 @@ void trophy_manager_dialog::PopulateTrophyTable()
 		custom_table_widget_item* type_item = new custom_table_widget_item(trophy_type);
 		type_item->setData(Qt::UserRole, static_cast<uint>(details.trophyGrade), true);
 
-		m_trophy_table->setItem(i, TrophyColumns::Icon, icon_item);
-		m_trophy_table->setItem(i, TrophyColumns::Name, new custom_table_widget_item(qstr(details.name)));
-		m_trophy_table->setItem(i, TrophyColumns::Description, new custom_table_widget_item(qstr(details.description)));
-		m_trophy_table->setItem(i, TrophyColumns::Type, type_item);
-		m_trophy_table->setItem(i, TrophyColumns::IsUnlocked, new custom_table_widget_item(unlockstate));
-		m_trophy_table->setItem(i, TrophyColumns::Id, new custom_table_widget_item(QString::number(trophy_id), Qt::UserRole, trophy_id));
-		m_trophy_table->setItem(i, TrophyColumns::PlatinumLink, new custom_table_widget_item(platinum_relevant, Qt::UserRole, platinum_link_id));
+		m_trophy_table->setItem(i, static_cast<int>(gui::trophy_list_columns::icon), icon_item);
+		m_trophy_table->setItem(i, static_cast<int>(gui::trophy_list_columns::name), new custom_table_widget_item(qstr(details.name)));
+		m_trophy_table->setItem(i, static_cast<int>(gui::trophy_list_columns::description), new custom_table_widget_item(qstr(details.description)));
+		m_trophy_table->setItem(i, static_cast<int>(gui::trophy_list_columns::type), type_item);
+		m_trophy_table->setItem(i, static_cast<int>(gui::trophy_list_columns::is_unlocked), new custom_table_widget_item(unlockstate));
+		m_trophy_table->setItem(i, static_cast<int>(gui::trophy_list_columns::id), new custom_table_widget_item(QString::number(trophy_id), Qt::UserRole, trophy_id));
+		m_trophy_table->setItem(i, static_cast<int>(gui::trophy_list_columns::platinum_link), new custom_table_widget_item(platinum_relevant, Qt::UserRole, platinum_link_id));
 
 		++i;
 	}
@@ -964,11 +1112,11 @@ void trophy_manager_dialog::ReadjustGameTable() const
 	m_game_table->resizeRowsToContents();
 
 	// Resize and fixate icon column
-	m_game_table->resizeColumnToContents(GameColumns::GameIcon);
-	m_game_table->horizontalHeader()->setSectionResizeMode(GameColumns::GameIcon, QHeaderView::Fixed);
+	m_game_table->resizeColumnToContents(static_cast<int>(gui::trophy_game_list_columns::icon));
+	m_game_table->horizontalHeader()->setSectionResizeMode(static_cast<int>(gui::trophy_game_list_columns::icon), QHeaderView::Fixed);
 
 	// Shorten the last section to remove horizontal scrollbar if possible
-	m_game_table->resizeColumnToContents(GameColumns::GameColumnsCount - 1);
+	m_game_table->resizeColumnToContents(static_cast<int>(gui::trophy_game_list_columns::count) - 1);
 }
 
 void trophy_manager_dialog::ReadjustTrophyTable() const
@@ -979,10 +1127,10 @@ void trophy_manager_dialog::ReadjustTrophyTable() const
 	m_trophy_table->resizeRowsToContents();
 
 	// Resize and fixate icon column
-	m_trophy_table->resizeColumnToContents(TrophyColumns::Icon);
+	m_trophy_table->resizeColumnToContents(static_cast<int>(gui::trophy_list_columns::icon));
 
 	// Shorten the last section to remove horizontal scrollbar if possible
-	m_trophy_table->resizeColumnToContents(TrophyColumns::Count - 1);
+	m_trophy_table->resizeColumnToContents(static_cast<int>(gui::trophy_list_columns::count) - 1);
 }
 
 bool trophy_manager_dialog::eventFilter(QObject *object, QEvent *event)
@@ -1054,4 +1202,26 @@ void trophy_manager_dialog::closeEvent(QCloseEvent *event)
 	m_gui_settings->SetValue(gui::tr_trophy_state, m_trophy_table->horizontalHeader()->saveState());
 
 	QWidget::closeEvent(event);
+}
+
+void trophy_manager_dialog::WaitAndAbortGameRepaintThreads()
+{
+	for (int i = 0; i < m_game_table->rowCount(); i++)
+	{
+		if (movie_item* item = static_cast<movie_item*>(m_game_table->item(i, static_cast<int>(gui::trophy_game_list_columns::icon))))
+		{
+			item->wait_for_icon_loading(true);
+		}
+	}
+}
+
+void trophy_manager_dialog::WaitAndAbortTrophyRepaintThreads()
+{
+	for (int i = 0; i < m_trophy_table->rowCount(); i++)
+	{
+		if (movie_item* item = static_cast<movie_item*>(m_trophy_table->item(i, static_cast<int>(gui::trophy_list_columns::icon))))
+		{
+			item->wait_for_icon_loading(true);
+		}
+	}
 }

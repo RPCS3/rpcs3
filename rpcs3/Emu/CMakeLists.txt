@@ -1,7 +1,9 @@
 add_library(rpcs3_emu
     cache_utils.cpp
+    games_config.cpp
     IdManager.cpp
     localized_string.cpp
+    savestate_utils.cpp
     System.cpp
     system_config.cpp
     system_config_types.cpp
@@ -13,6 +15,8 @@ add_library(rpcs3_emu
     title.cpp
     perf_meter.cpp
     perf_monitor.cpp
+    IPC_config.cpp
+    IPC_socket.cpp
 )
 
 # prevent WolfSSL from warning about not having harden options
@@ -34,11 +38,11 @@ target_include_directories(rpcs3_emu
     PUBLIC
         ${RPCS3_SRC_DIR})
 
-
 # Utilities
 target_sources(rpcs3_emu PRIVATE
     ../util/atomic.cpp
     ../util/media_utils.cpp
+    ../util/video_provider.cpp
     ../util/logs.cpp
     ../util/yaml.cpp
     ../util/vm_native.cpp
@@ -56,6 +60,7 @@ target_sources(rpcs3_emu PRIVATE
     ../../Utilities/rXml.cpp
     ../../Utilities/sema.cpp
     ../../Utilities/simple_ringbuf.cpp
+    ../../Utilities/stack_trace.cpp
     ../../Utilities/StrFmt.cpp
     ../../Utilities/Thread.cpp
     ../../Utilities/version.cpp
@@ -103,6 +108,7 @@ target_sources(rpcs3_emu PRIVATE
 
 # Loader
 target_sources(rpcs3_emu PRIVATE
+    ../Loader/disc.cpp
     ../Loader/ELF.cpp
     ../Loader/mself.cpp
     ../Loader/PSF.cpp
@@ -112,20 +118,22 @@ target_sources(rpcs3_emu PRIVATE
     ../Loader/TRP.cpp
 )
 
-
 # Audio
 target_sources(rpcs3_emu PRIVATE
-    Audio/audio_device_listener.cpp
     Audio/audio_resampler.cpp
     Audio/AudioDumper.cpp
     Audio/AudioBackend.cpp
     Audio/Cubeb/CubebBackend.cpp
+    Audio/Cubeb/cubeb_enumerator.cpp
 )
 
 if(USE_FAUDIO)
     find_package(SDL2)
     if(SDL2_FOUND AND NOT SDL2_VERSION VERSION_LESS 2.0.9)
-        target_sources(rpcs3_emu PRIVATE Audio/FAudio/FAudioBackend.cpp)
+        target_sources(rpcs3_emu PRIVATE
+            Audio/FAudio/FAudioBackend.cpp
+            Audio/FAudio/faudio_enumerator.cpp
+        )
         target_link_libraries(rpcs3_emu PUBLIC 3rdparty::faudio)
     endif()
 endif()
@@ -136,6 +144,7 @@ if(WIN32)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /DELAYLOAD:xaudio2_9redist.dll")
     target_sources(rpcs3_emu PRIVATE
         Audio/XAudio2/XAudio2Backend.cpp
+        Audio/XAudio2/xaudio2_enumerator.cpp
     )
 endif()
 
@@ -150,6 +159,10 @@ target_link_libraries(rpcs3_emu
 target_link_libraries(rpcs3_emu
     PUBLIC
         3rdparty::soundtouch)
+
+target_link_libraries(rpcs3_emu
+    PUBLIC
+        3rdparty::miniupnpc)
 
 # Cell
 target_sources(rpcs3_emu PRIVATE
@@ -179,6 +192,7 @@ target_sources(rpcs3_emu PRIVATE
     Cell/lv2/sys_event.cpp
     Cell/lv2/sys_event_flag.cpp
     Cell/lv2/sys_fs.cpp
+    Cell/lv2/sys_game.cpp
     Cell/lv2/sys_gamepad.cpp
     Cell/lv2/sys_gpio.cpp
     Cell/lv2/sys_hid.cpp
@@ -256,6 +270,7 @@ target_sources(rpcs3_emu PRIVATE
     Cell/Modules/cellMsgDialog.cpp
     Cell/Modules/cellMusic.cpp
     Cell/Modules/cellMusicDecode.cpp
+    Cell/Modules/cellMusicSelectionContext.cpp
     Cell/Modules/cellMusicExport.cpp
     Cell/Modules/cellNetAoi.cpp
     Cell/Modules/cellNetCtl.cpp
@@ -312,6 +327,7 @@ target_sources(rpcs3_emu PRIVATE
     Cell/Modules/cellVoice.cpp
     Cell/Modules/cellVpost.cpp
     Cell/Modules/cellWebBrowser.cpp
+    Cell/Modules/HLE_PATCHES.cpp
     Cell/Modules/libad_async.cpp
     Cell/Modules/libad_core.cpp
     Cell/Modules/libmedi.cpp
@@ -329,7 +345,7 @@ target_sources(rpcs3_emu PRIVATE
     Cell/Modules/sceNpUtil.cpp
     Cell/Modules/StaticHLE.cpp
     Cell/Modules/sys_crashdump.cpp
-    Cell/Modules/sys_game.cpp
+    Cell/Modules/sys_game_.cpp
     Cell/Modules/sys_heap.cpp
     Cell/Modules/sys_io_.cpp
     Cell/Modules/sys_libc_.cpp
@@ -371,17 +387,27 @@ target_link_libraries(rpcs3_emu
 # Io
 target_sources(rpcs3_emu PRIVATE
     Io/camera_config.cpp
+    Io/recording_config.cpp
     Io/interception.cpp
     Io/KeyboardHandler.cpp
     Io/pad_config.cpp
     Io/pad_config_types.cpp
     Io/PadHandler.cpp
     Io/usb_device.cpp
+    Io/usb_vfs.cpp
+    Io/Infinity.cpp
     Io/Skylander.cpp
     Io/GHLtar.cpp
+    Io/midi_config_types.cpp
+    Io/RB3MidiKeyboard.cpp
+    Io/RB3MidiGuitar.cpp
     Io/Buzz.cpp
     Io/Turntable.cpp
     Io/usio.cpp
+)
+
+target_link_libraries(rpcs3_emu PRIVATE
+    3rdparty::rtmidi
 )
 
 # Np
@@ -398,13 +424,14 @@ target_sources(rpcs3_emu PRIVATE
     NP/np_structs_extra.cpp
     NP/rpcn_client.cpp
     NP/rpcn_config.cpp
+    NP/upnp_config.cpp
+    NP/upnp_handler.cpp
 )
 
 # Memory
 target_sources(rpcs3_emu PRIVATE
     Memory/vm.cpp
 )
-
 
 # RSX
 target_sources(rpcs3_emu PRIVATE
@@ -425,22 +452,32 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Common/TextureUtils.cpp
     RSX/Common/texture_cache.cpp
     RSX/Null/NullGSRender.cpp
+    RSX/Overlays/HomeMenu/overlay_home_menu.cpp
+    RSX/Overlays/HomeMenu/overlay_home_menu_components.cpp
+    RSX/Overlays/HomeMenu/overlay_home_menu_main_menu.cpp
+    RSX/Overlays/HomeMenu/overlay_home_menu_message_box.cpp
+    RSX/Overlays/HomeMenu/overlay_home_menu_page.cpp
+    RSX/Overlays/HomeMenu/overlay_home_menu_settings.cpp
+    RSX/Overlays/overlay_animated_icon.cpp
     RSX/Overlays/overlay_animation.cpp
     RSX/Overlays/overlay_controls.cpp
+    RSX/Overlays/overlay_cursor.cpp
     RSX/Overlays/overlay_edit_text.cpp
     RSX/Overlays/overlay_fonts.cpp
     RSX/Overlays/overlay_list_view.cpp
+    RSX/Overlays/overlay_manager.cpp
     RSX/Overlays/overlay_media_list_dialog.cpp
+    RSX/Overlays/overlay_message.cpp
     RSX/Overlays/overlay_message_dialog.cpp
     RSX/Overlays/overlay_osk.cpp
     RSX/Overlays/overlay_osk_panel.cpp
     RSX/Overlays/overlay_perf_metrics.cpp
     RSX/Overlays/overlay_progress_bar.cpp
     RSX/Overlays/overlay_save_dialog.cpp
+    RSX/Overlays/overlay_compile_notification.cpp
     RSX/Overlays/overlay_user_list_dialog.cpp
     RSX/Overlays/overlay_utils.cpp
     RSX/Overlays/overlays.cpp
-    RSX/Overlays/overlay_shader_compile_notification.cpp
     RSX/Overlays/overlay_trophy_notification.cpp
     RSX/Overlays/Shaders/shader_loading_dialog.cpp
     RSX/Overlays/Shaders/shader_loading_dialog_native.cpp
@@ -453,6 +490,15 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Program/VertexProgramDecompiler.cpp
     RSX/Capture/rsx_capture.cpp
     RSX/Capture/rsx_replay.cpp
+    RSX/GL/glutils/blitter.cpp
+    RSX/GL/glutils/buffer_object.cpp
+    RSX/GL/glutils/capabilities.cpp
+    RSX/GL/glutils/common.cpp
+    RSX/GL/glutils/fbo.cpp
+    RSX/GL/glutils/image.cpp
+    RSX/GL/glutils/program.cpp
+    RSX/GL/glutils/ring_buffer.cpp
+    RSX/GL/glutils/sampler.cpp
     RSX/GL/GLCommonDecompiler.cpp
     RSX/GL/GLCompute.cpp
     RSX/GL/GLDraw.cpp
@@ -519,7 +565,7 @@ endif()
 
 target_link_libraries(rpcs3_emu
     PUBLIC
-        3rdparty::ffmpeg
+        3rdparty::ffmpeg 3rdparty::sdl2
         3rdparty::opengl 3rdparty::stblib
         3rdparty::vulkan 3rdparty::glew
         3rdparty::libusb 3rdparty::wolfssl
@@ -530,7 +576,7 @@ target_link_libraries(rpcs3_emu
 if(APPLE)
     check_function_exists(clock_gettime HAVE_CLOCK_GETTIME)
     if (${HAVE_CLOCK_GETTIME})
-	    target_compile_definitions(rpcs3_emu PUBLIC -DHAVE_CLOCK_GETTIME)
+        target_compile_definitions(rpcs3_emu PUBLIC -DHAVE_CLOCK_GETTIME)
     endif()
 endif()
 

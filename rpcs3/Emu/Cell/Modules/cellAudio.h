@@ -189,19 +189,29 @@ struct audio_port
 	f32 last_tag_value[PORT_BUFFER_TAG_COUNT] = { 0 };
 
 	void tag(s32 offset = 0);
+
+	audio_port() = default;
+
+	// Handle copy ctor of atomic var
+	audio_port(const audio_port& r)
+	{
+		std::memcpy(this, &r, sizeof(r));
+	}
+
+	ENABLE_BITWISE_SERIALIZATION;
 };
 
 struct cell_audio_config
 {
 	struct raw_config
 	{
+		std::string audio_device{};
 		bool buffering_enabled = false;
 		s64 desired_buffer_duration = 0;
 		bool enable_time_stretching = false;
 		s64 time_stretching_threshold = 0;
 		bool convert_to_s16 = false;
 		bool dump_to_file = false;
-		audio_downmix downmix = audio_downmix::downmix_to_stereo;
 		audio_renderer renderer = audio_renderer::null;
 		audio_provider provider = audio_provider::none;
 	};
@@ -211,6 +221,8 @@ struct cell_audio_config
 
 	std::shared_ptr<AudioBackend> backend = nullptr;
 
+	AudioChannelCnt audio_downmix = AudioChannelCnt::SURROUND_7_1;
+	AudioChannelCnt backend_ch_cnt = AudioChannelCnt::SURROUND_7_1;
 	u32 audio_channels = 0;
 	u32 audio_sampling_rate = 0;
 	u32 audio_block_period = 0;
@@ -280,6 +292,7 @@ private:
 	audio_resampler resampler{};
 
 	atomic_t<bool> backend_active = false;
+	atomic_t<bool> backend_device_changed = false;
 	bool playing = false;
 
 	u64 update_timestamp = 0;
@@ -298,6 +311,7 @@ private:
 
 	void commit_data(f32* buf, u32 sample_cnt);
 	u32 backend_write_callback(u32 size, void *buf);
+	void backend_state_callback(AudioStateEvent event);
 
 public:
 	audio_ringbuffer(cell_audio_config &cfg);
@@ -333,6 +347,11 @@ public:
 		return backend->Operational();
 	}
 
+	bool device_changed()
+	{
+		return backend_device_changed.test_and_reset() && backend->DefaultDeviceChanged();
+	}
+
 	std::string_view get_backend_name() const
 	{
 		return backend->GetName();
@@ -348,8 +367,8 @@ private:
 	void reset_ports(s32 offset = 0);
 	void advance(u64 timestamp);
 	std::tuple<u32, u32, u32, u32> count_port_buffer_tags();
-	template <audio_downmix downmix>
-	void mix(float *out_buffer, s32 offset = 0);
+	template <AudioChannelCnt channels, AudioChannelCnt downmix>
+	void mix(float* out_buffer, s32 offset = 0);
 	void finish_port_volume_stepping();
 
 	constexpr static u64 get_thread_wait_delay(u64 time_left)
@@ -366,16 +385,19 @@ public:
 	atomic_t<audio_backend_update> m_update_configuration = audio_backend_update::NONE;
 
 	shared_mutex mutex{};
-	atomic_t<u32> init = 0;
+	atomic_t<u8> init = 0;
 
 	u32 key_count = 0;
 	u8 event_period = 0;
+	std::array<u64, MAX_AUDIO_EVENT_QUEUES> event_sources{};
+	std::array<u64, MAX_AUDIO_EVENT_QUEUES> event_data3{};
 
 	struct key_info
 	{
 		u8 start_period = 0; // Starting event_period
 		u32 flags = 0; // iFlags
 		u64 source = 0; // Event source
+		u64 ack_timestamp = 0; // timestamp of last call of cellAudioSendAck
 		std::shared_ptr<lv2_event_queue> port{}; // Underlying event port
 	};
 
@@ -390,9 +412,13 @@ public:
 	bool m_backend_failed = false;
 	bool m_audio_should_restart = false;
 
-	cell_audio_thread();
-
 	void operator()();
+
+	SAVESTATE_INIT_POS(9);
+
+	cell_audio_thread();
+	cell_audio_thread(utils::serial& ar);
+	void save(utils::serial& ar);
 
 	audio_port* open_port();
 
@@ -404,5 +430,5 @@ using cell_audio = named_thread<cell_audio_thread>;
 namespace audio
 {
 	cell_audio_config::raw_config get_raw_config();
-	void configure_audio();
+	extern void configure_audio(bool force_reset = false);
 }

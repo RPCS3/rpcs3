@@ -35,6 +35,12 @@ namespace rsx
 		vertex_arrays_changed = (1 << 2),
 	};
 
+	enum class primitive_class
+	{
+		polygon,
+		non_polygon
+	};
+
 	struct barrier_t
 	{
 		u32 draw_id;
@@ -55,6 +61,8 @@ namespace rsx
 
 			return timestamp < other.timestamp;
 		}
+
+		ENABLE_BITWISE_SERIALIZATION;
 	};
 
 	struct draw_range_t
@@ -62,6 +70,8 @@ namespace rsx
 		u32 command_data_offset = 0;
 		u32 first = 0;
 		u32 count = 0;
+
+		ENABLE_BITWISE_SERIALIZATION;
 	};
 
 	class draw_clause
@@ -114,6 +124,8 @@ namespace rsx
 		bool primitive_barrier_enable{};   // Set once to signal that a primitive restart barrier can be inserted
 
 		simple_array<u32> inline_vertex_array{};
+
+		void operator()(utils::serial& ar);
 
 		void insert_command_barrier(command_barrier_type type, u32 arg, u32 register_index = 0);
 
@@ -253,6 +265,14 @@ namespace rsx
 
 			return count;
 		}
+
+		primitive_class classify_mode() const
+		{
+			return primitive >= rsx::primitive_type::triangles
+				? primitive_class::polygon
+				: primitive_class::non_polygon;
+		}
+
 
 		void reset(rsx::primitive_type type);
 
@@ -431,6 +451,12 @@ namespace rsx
 		decoded_type<opcode> decode() const
 		{
 			u32 register_value = registers[opcode];
+			return decoded_type<opcode>(register_value);
+		}
+
+		template<u32 opcode>
+		decoded_type<opcode> decode(u32 register_value) const
+		{
 			return decoded_type<opcode>(register_value);
 		}
 
@@ -1236,7 +1262,7 @@ namespace rsx
 
 		surface_depth_format2 surface_depth_fmt() const
 		{
-			const auto base_fmt = decode<NV4097_SET_SURFACE_FORMAT>().depth_fmt();
+			const auto base_fmt = *decode<NV4097_SET_SURFACE_FORMAT>().depth_fmt();
 			if (!depth_buffer_float_enabled()) [[likely]]
 			{
 				return static_cast<surface_depth_format2>(base_fmt);
@@ -1400,7 +1426,7 @@ namespace rsx
 			return decode<NV3089_IMAGE_IN_FORMAT>().transfer_interpolator();
 		}
 
-		blit_engine::transfer_source_format blit_engine_src_color_format() const
+		expected<blit_engine::transfer_source_format> blit_engine_src_color_format() const
 		{
 			return decode<NV3089_SET_COLOR_FORMAT>().transfer_source_fmt();
 		}
@@ -1442,7 +1468,7 @@ namespace rsx
 			return decode<NV3062_SET_OFFSET_DESTIN>().output_offset();
 		}
 
-		blit_engine::transfer_destination_format blit_engine_nv3062_color_format() const
+		expected<blit_engine::transfer_destination_format> blit_engine_nv3062_color_format() const
 		{
 			return decode<NV3062_SET_COLOR_FORMAT>().transfer_dest_fmt();
 		}
@@ -1467,7 +1493,7 @@ namespace rsx
 			return decode<NV309E_SET_OFFSET>().offset();
 		}
 
-		blit_engine::transfer_destination_format blit_engine_output_format_nv309E() const
+		expected<blit_engine::transfer_destination_format> blit_engine_output_format_nv309E() const
 		{
 			return decode<NV309E_SET_FORMAT>().format();
 		}
@@ -1657,4 +1683,5 @@ namespace rsx
 
 	extern rsx_state method_registers;
 	extern std::array<rsx_method_t, 0x10000 / 4> methods;
+	extern std::array<u32, 0x10000 / 4> state_signals;
 }

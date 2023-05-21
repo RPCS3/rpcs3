@@ -1,5 +1,6 @@
 #pragma once
 
+#include "config_mode.h"
 #include "system_config_types.h"
 #include "Utilities/Config.h"
 
@@ -31,7 +32,8 @@ struct cfg_root : cfg::node
 		cfg::_enum<thread_scheduler_mode> thread_scheduler{this, "Thread Scheduler Mode", thread_scheduler_mode::os};
 		cfg::_bool set_daz_and_ftz{ this, "Set DAZ and FTZ", false };
 		cfg::_enum<spu_decoder_type> spu_decoder{ this, "SPU Decoder", spu_decoder_type::llvm };
-		cfg::_bool spu_getllar_polling_detection{ this, "SPU GETLLAR polling detection", false, true };
+		cfg::uint<0, 100> spu_reservation_busy_waiting_percentage{ this, "SPU Reservation Busy Waiting Percentage", 0, true };
+		cfg::uint<0, 100> spu_getllar_busy_waiting_percentage{ this, "SPU GETLLAR Busy Waiting Percentage", 100, true };
 		cfg::_bool spu_debug{ this, "SPU Debug" };
 		cfg::_bool mfc_debug{ this, "MFC Debug" };
 		cfg::_int<0, 6> preferred_spu_threads{ this, "Preferred SPU Threads", 0, true }; // Number of hardware threads dedicated to heavy simultaneous spu tasks
@@ -41,8 +43,22 @@ struct cfg_root : cfg::node
 		cfg::_enum<spu_block_size_type> spu_block_size{ this, "SPU Block Size", spu_block_size_type::safe };
 		cfg::_bool spu_accurate_getllar{ this, "Accurate GETLLAR", false, true };
 		cfg::_bool spu_accurate_dma{ this, "Accurate SPU DMA", false };
+		cfg::_bool spu_accurate_reservations{ this, "Accurate SPU Reservations", true };
 		cfg::_bool accurate_cache_line_stores{ this, "Accurate Cache Line Stores", false };
 		cfg::_bool rsx_accurate_res_access{this, "Accurate RSX reservation access", false, true};
+
+		struct fifo_setting : public cfg::_enum<rsx_fifo_mode>
+		{
+			using _enum = cfg::_enum<rsx_fifo_mode>;
+			using _enum::_enum;
+
+			explicit operator bool() const
+			{
+				return get() != rsx_fifo_mode::fast;
+			}
+		};
+
+		fifo_setting rsx_fifo_accuracy{this, "RSX FIFO Accuracy", rsx_fifo_mode::fast };
 		cfg::_bool spu_verification{ this, "SPU Verification", true }; // Should be enabled
 		cfg::_bool spu_cache{ this, "SPU Cache", true };
 		cfg::_bool spu_prof{ this, "SPU Profiler", false };
@@ -52,7 +68,7 @@ struct cfg_root : cfg::node
 		cfg::_enum<tsx_usage> enable_TSX{ this, "Enable TSX", enable_tsx_by_default() ? tsx_usage::enabled : tsx_usage::disabled }; // Enable TSX. Forcing this on Haswell/Broadwell CPUs should be used carefully
 		cfg::_bool spu_accurate_xfloat{ this, "Accurate xfloat", false };
 		cfg::_bool spu_approx_xfloat{ this, "Approximate xfloat", true };
-		cfg::_bool spu_relaxed_xfloat{ this, "Relaxed xfloat", true }; // Approximate accuracy for only the "FCGT" and "FNMS" instructions
+		cfg::_bool spu_relaxed_xfloat{ this, "Relaxed xfloat", true }; // Approximate accuracy for only the "FCGT", "FNMS", "FREST" AND "FRSQEST" instructions
 		cfg::_int<-1, 14> ppu_128_reservations_loop_max_length{ this, "Accurate PPU 128-byte Reservation Op Max Length", 0, true }; // -1: Always accurate, 0: Never accurate, 1-14: max accurate loop length
 		cfg::_int<-64, 64> stub_ppu_traps{ this, "Stub PPU Traps", 0, true }; // Hack, skip PPU traps for rare cases where the trap is continueable (specify relative instructions to skip)
 		cfg::_bool full_width_avx512{ this, "Full Width AVX-512", false };
@@ -74,6 +90,10 @@ struct cfg_root : cfg::node
 		cfg::uint64 tx_limit2_ns{this, "TSX Transaction Second Limit", 2000}; // In nanoseconds
 
 		cfg::_int<10, 3000> clocks_scale{ this, "Clocks scale", 100 }; // Changing this from 100 (percentage) may affect game speed in unexpected ways
+		cfg::uint<0, 3000> spu_wakeup_delay{ this, "SPU Wake-Up Delay", 0, true };
+		cfg::uint<0, (1 << 6) - 1> spu_wakeup_delay_mask{ this, "SPU Wake-Up Delay Thread Mask", (1 << 6) - 1, true };
+		cfg::uint<0, 400> max_cpu_preempt_count_per_frame{ this, "Max CPU Preempt Count", 0, true };
+		cfg::_bool allow_rsx_cpu_preempt{ this, "Allow RSX CPU Preemptions", true, true };
 #if defined (__linux__) || defined (__APPLE__)
 		cfg::_enum<sleep_timers_accuracy_level> sleep_timers_accuracy{ this, "Sleep Timers Accuracy", sleep_timers_accuracy_level::_as_host, true };
 #else
@@ -111,8 +131,10 @@ struct cfg_root : cfg::node
 		cfg::_enum<video_resolution> resolution{ this, "Resolution", video_resolution::_720 };
 		cfg::_enum<video_aspect> aspect_ratio{ this, "Aspect ratio", video_aspect::_16_9 };
 		cfg::_enum<frame_limit_type> frame_limit{ this, "Frame limit", frame_limit_type::_auto, true };
+		cfg::_float<0, 1000> second_frame_limit{ this, "Second Frame Limit", 0, true }; // 0 disables its effect
 		cfg::_enum<msaa_level> antialiasing_level{ this, "MSAA", msaa_level::_auto };
 		cfg::_enum<shader_mode> shadermode{ this, "Shader Mode", shader_mode::async_recompiler };
+		cfg::_enum<gpu_preset_level> shader_precision{ this, "Shader Precision", gpu_preset_level::high };
 
 		cfg::_bool write_color_buffers{ this, "Write Color Buffers" };
 		cfg::_bool write_depth_buffer{ this, "Write Depth Buffer" };
@@ -128,6 +150,7 @@ struct cfg_root : cfg::node
 		cfg::_bool force_high_precision_z_buffer{ this, "Force High Precision Z buffer" };
 		cfg::_bool strict_rendering_mode{ this, "Strict Rendering Mode" };
 		cfg::_bool disable_zcull_queries{ this, "Disable ZCull Occlusion Queries", false, true };
+		cfg::_bool disable_video_output{ this, "Disable Video Output", false, true };
 		cfg::_bool disable_vertex_cache{ this, "Disable Vertex Cache", false };
 		cfg::_bool disable_FIFO_reordering{ this, "Disable FIFO Reordering", false };
 		cfg::_bool frame_skip_enabled{ this, "Enable Frame Skip", false, true };
@@ -136,31 +159,26 @@ struct cfg_root : cfg::node
 		cfg::_bool disable_vulkan_mem_allocator{ this, "Disable Vulkan Memory Allocator", false };
 		cfg::_bool full_rgb_range_output{ this, "Use full RGB output range", true, true }; // Video out dynamic range
 		cfg::_bool strict_texture_flushing{ this, "Strict Texture Flushing", false };
-#ifdef __APPLE__
-		cfg::_bool disable_native_float16{ this, "Disable native float16 support", true };
-#else
-		cfg::_bool disable_native_float16{ this, "Disable native float16 support", false };
-#endif
 		cfg::_bool multithreaded_rsx{ this, "Multithreaded RSX", false };
 		cfg::_bool relaxed_zcull_sync{ this, "Relaxed ZCULL Sync", false };
-		cfg::_bool enable_3d{ this, "Enable 3D", false };
+		cfg::_enum<stereo_render_mode_options> stereo_render_mode{ this, "3D Display Mode", stereo_render_mode_options::disabled };
 		cfg::_bool debug_program_analyser{ this, "Debug Program Analyser", false };
 		cfg::_bool precise_zpass_count{ this, "Accurate ZCULL stats", true };
 		cfg::_int<1, 8> consecutive_frames_to_draw{ this, "Consecutive Frames To Draw", 1, true};
 		cfg::_int<1, 8> consecutive_frames_to_skip{ this, "Consecutive Frames To Skip", 1, true};
 		cfg::_int<50, 800> resolution_scale_percent{ this, "Resolution Scale", 100 };
 		cfg::uint<0, 16> anisotropic_level_override{ this, "Anisotropic Filter Override", 0, true };
-		cfg::_int<-16, 16> texture_lod_bias{ this, "Texture LOD Bias Addend", 0, true };
+		cfg::_float<-32, 32> texture_lod_bias{ this, "Texture LOD Bias Addend", 0, true };
 		cfg::_int<1, 1024> min_scalable_dimension{ this, "Minimum Scalable Dimension", 16 };
 		cfg::_int<0, 16> shader_compiler_threads_count{ this, "Shader Compiler Threads", 0 };
 		cfg::_int<0, 30000000> driver_recovery_timeout{ this, "Driver Recovery Timeout", 1000000, true };
-		cfg::_int<0, 16667> driver_wakeup_delay{ this, "Driver Wake-Up Delay", 1, true };
+		cfg::uint<0, 16667> driver_wakeup_delay{ this, "Driver Wake-Up Delay", 1, true };
 		cfg::_int<1, 1800> vblank_rate{ this, "Vblank Rate", 60, true }; // Changing this from 60 may affect game speed in unexpected ways
 		cfg::_bool vblank_ntsc{ this, "Vblank NTSC Fixup", false, true };
 		cfg::_bool decr_memory_layout{ this, "DECR memory layout", false}; // Force enable increased allowed main memory range as DECR console
 		cfg::_bool host_label_synchronization{ this, "Allow Host GPU Labels", false };
 		cfg::_bool disable_msl_fast_math{ this, "Disable MSL Fast Math", false };
-		cfg::_bool mvk_software_vksemaphore{ this, "Software VkSemaphore", false };
+		cfg::_enum<output_scaling_mode> output_scaling{ this, "Output Scaling Mode", output_scaling_mode::bilinear };
 
 		struct node_vk : cfg::node
 		{
@@ -169,11 +187,11 @@ struct cfg_root : cfg::node
 			cfg::string adapter{ this, "Adapter" };
 			cfg::_bool force_fifo{ this, "Force FIFO present mode" };
 			cfg::_bool force_primitive_restart{ this, "Force primitive restart flag" };
-			cfg::_bool force_disable_exclusive_fullscreen_mode{ this, "Force Disable Exclusive Fullscreen Mode", false };
+			cfg::_enum<vk_exclusive_fs_mode> exclusive_fullscreen_mode{ this, "Exclusive Fullscreen Mode", vk_exclusive_fs_mode::unspecified};
 			cfg::_bool asynchronous_texture_streaming{ this, "Asynchronous Texture Streaming 2", false };
-			cfg::_bool fsr_upscaling{ this, "Enable FidelityFX Super Resolution Upscaling", false, true };
 			cfg::uint<0, 100> rcas_sharpening_intensity{ this, "FidelityFX CAS Sharpening Intensity", 50, true };
 			cfg::_enum<vk_gpu_scheduler_mode> asynchronous_scheduler{ this, "Asynchronous Queue Scheduler", vk_gpu_scheduler_mode::safe };
+			cfg::uint<256, 65536> vram_allocation_limit{ this, "VRAM allocation limit (MB)", 65536, false };
 
 		} vk{ this };
 
@@ -205,15 +223,6 @@ struct cfg_root : cfg::node
 
 		} perf_overlay{ this };
 
-		struct node_shader_compilation_hint : cfg::node
-		{
-			node_shader_compilation_hint(cfg::node* _this) : cfg::node(_this, "Shader Compilation Hint") {}
-
-			cfg::_int<0, 1280> pos_x{ this, "Position X (px)", 20, true }; // horizontal position starting from the upper border in px
-			cfg::_int<0, 720> pos_y{ this, "Position Y (px)", 690, true }; // vertical position starting from the left border in px
-
-		} shader_compilation_hint{ this };
-
 		struct node_shader_preloading_dialog : cfg::node
 		{
 			node_shader_preloading_dialog(cfg::node* _this) : cfg::node(_this, "Shader Loading Dialog") {}
@@ -235,11 +244,14 @@ struct cfg_root : cfg::node
 		cfg::_enum<audio_avport> rsxaudio_port{ this, "RSXAudio Avport", audio_avport::hdmi_0, true };
 		cfg::_bool dump_to_file{ this, "Dump to file", false, true };
 		cfg::_bool convert_to_s16{ this, "Convert to 16 bit", false, true };
-		cfg::_enum<audio_downmix> audio_channel_downmix{ this, "Audio Channels", audio_downmix::downmix_to_stereo, true };
+		cfg::_enum<audio_format> format{ this, "Audio Format", audio_format::stereo, false };
+		cfg::uint<0, 0xFF> formats{ this, "Audio Formats", static_cast<u32>(audio_format_flag::lpcm_2_48khz), false };
+		cfg::string audio_device{ this, "Audio Device", "@@@default@@@", true };
 		cfg::_int<0, 200> volume{ this, "Master Volume", 100, true };
 		cfg::_bool enable_buffering{ this, "Enable Buffering", true, true };
 		cfg::_int <4, 250> desired_buffer_duration{ this, "Desired Audio Buffer Duration", 100, true };
 		cfg::_bool enable_time_stretching{ this, "Enable Time Stretching", false, true };
+		cfg::_bool disable_sampling_skip{ this, "Disable Sampling Skip", false, true };
 		cfg::_int<0, 100> time_stretching_threshold{ this, "Time Stretching Threshold", 75, true };
 		cfg::_enum<microphone_handler> microphone_type{ this, "Microphone Type", microphone_handler::null };
 		cfg::string microphone_devices{ this, "Microphone Devices", "@@@@@@@@@@@@" };
@@ -256,12 +268,16 @@ struct cfg_root : cfg::node
 		cfg::_enum<fake_camera_type> camera_type{ this, "Camera type", fake_camera_type::unknown };
 		cfg::_enum<camera_flip> camera_flip_option{ this, "Camera flip", camera_flip::none, true };
 		cfg::string camera_id{ this, "Camera ID", "Default", true };
-		cfg::_enum<move_handler> move{ this, "Move", move_handler::null };
+		cfg::_enum<move_handler> move{ this, "Move", move_handler::null, true };
 		cfg::_enum<buzz_handler> buzz{ this, "Buzz emulated controller", buzz_handler::null };
 		cfg::_enum<turntable_handler> turntable{this, "Turntable emulated controller", turntable_handler::null};
 		cfg::_enum<ghltar_handler> ghltar{this, "GHLtar emulated controller", ghltar_handler::null};
 		cfg::_enum<pad_handler_mode> pad_mode{this, "Pad handler mode", pad_handler_mode::single_threaded, true};
+		cfg::_bool keep_pads_connected{this, "Keep pads connected", false, true};
 		cfg::uint<0, 100'000> pad_sleep{this, "Pad handler sleep (microseconds)", 1'000, true};
+		cfg::_bool background_input_enabled{this, "Background input enabled", true, true};
+		cfg::_bool show_move_cursor{this, "Show move cursor", false, true};
+		cfg::string midi_devices{ this, "Emulated Midi devices", "ßßß@@@ßßß@@@ßßß@@@" };
 	} io{ this };
 
 	struct node_sys : cfg::node
@@ -273,7 +289,10 @@ struct cfg_root : cfg::node
 		cfg::_enum<CellKbMappingType> keyboard_type{ this, "Keyboard Type", CellKbMappingType{0} }; // CELL_KB_MAPPING_101 = US
 		cfg::_enum<enter_button_assign> enter_button_assignment{ this, "Enter button assignment", enter_button_assign::cross };
 		cfg::_int<-60*60*24*365*100LL, 60*60*24*365*100LL> console_time_offset{ this, "Console time offset (s)", 0 }; // console time offset, limited to +/-100years
-
+		cfg::uint<0, umax> console_psid_high{this, "PSID high"};
+		cfg::uint<0, umax> console_psid_low{this, "PSID low"};
+		cfg::string hdd_model{this, "HDD Model Name", ""};
+		cfg::string hdd_serial{this, "HDD Serial Number", ""};
 	} sys{ this };
 
 	struct node_net : cfg::node
@@ -282,11 +301,23 @@ struct cfg_root : cfg::node
 
 		cfg::_enum<np_internet_status> net_active{this, "Internet enabled", np_internet_status::disabled};
 		cfg::string ip_address{this, "IP address", "0.0.0.0"};
+		cfg::string bind_address{this, "Bind address", "0.0.0.0"};
 		cfg::string dns{this, "DNS address", "8.8.8.8"};
 		cfg::string swap_list{this, "IP swap list", ""};
+		cfg::_bool upnp_enabled{this, "UPNP Enabled", false};
 
 		cfg::_enum<np_psn_status> psn_status{this, "PSN status", np_psn_status::disabled};
 	} net{this};
+
+	struct node_savestate : cfg::node
+	{
+		node_savestate(cfg::node* _this) : cfg::node(_this, "Savestate") {}
+
+		cfg::_bool start_paused{ this, "Start Paused", false }; // Pause on first frame
+		cfg::_bool suspend_emu{ this, "Suspend Emulation Savestate Mode", false }; // Close emulation when saving, delete save after loading
+		cfg::_bool state_inspection_mode{ this, "Inspection Mode Savestates" }; // Save memory stored in executable files, thus allowing to view state without any files (for debugging)
+		cfg::_bool save_disc_game_data{ this, "Save Disc Game Data", false };
+	} savestate{this};
 
 	struct node_misc : cfg::node
 	{
@@ -302,6 +333,7 @@ struct cfg_root : cfg::node
 		cfg::string gdb_server{ this, "GDB Server", "127.0.0.1:2345" };
 		cfg::_bool silence_all_logs{ this, "Silence All Logs", false, true };
 		cfg::string title_format{ this, "Window Title Format", "FPS: %F | %R | %V | %T [%t]", true };
+		cfg::_bool pause_during_home_menu{this, "Pause Emulation During Home Menu", false, false };
 
 	} misc{ this };
 
@@ -311,3 +343,4 @@ struct cfg_root : cfg::node
 };
 
 extern cfg_root g_cfg;
+extern cfg_root g_backup_cfg;

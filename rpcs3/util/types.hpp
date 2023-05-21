@@ -16,6 +16,13 @@
 #define ARCH_X64 1
 #elif defined(__aarch64__) || defined(__arm64__) || defined(_M_ARM64)
 #define ARCH_ARM64 1
+// v8.4a+ gives us atomic 16 byte ld/st
+// See Arm C Language Extensions Documentation
+// Currently there is no feature macro for LSE2 specifically so we define it ourself
+// Unfortunately the __ARM_ARCH integer macro isn't universally defined so we use this hack instead
+#if defined(__ARM_ARCH_8_4__) || defined(__ARM_ARCH_8_5__) || defined(__ARM_ARCH_8_6__) || defined(__ARM_ARCH_9__)
+#define ARM_FEATURE_LSE2 1
+#endif
 #endif
 
 using std::chrono::steady_clock;
@@ -55,6 +62,48 @@ using namespace std::literals;
 #define AUDIT(...) (static_cast<void>(0))
 #endif
 
+namespace utils
+{
+	template <typename F>
+	struct fn_helper
+	{
+		F f;
+
+		fn_helper(F&& f)
+			: f(std::forward<F>(f))
+		{
+		}
+
+		template <typename... Args>
+		auto operator()(Args&&... args) const
+		{
+			if constexpr (sizeof...(Args) == 0)
+				return f(0, 0, 0, 0);
+			else if constexpr (sizeof...(Args) == 1)
+				return f(std::forward<Args>(args)..., 0, 0, 0);
+			else if constexpr (sizeof...(Args) == 2)
+				return f(std::forward<Args>(args)..., 0, 0);
+			else if constexpr (sizeof...(Args) == 3)
+				return f(std::forward<Args>(args)..., 0);
+			else if constexpr (sizeof...(Args) == 4)
+				return f(std::forward<Args>(args)...);
+			else
+				static_assert(sizeof...(Args) <= 4);
+		}
+	};
+
+	template <typename F>
+	fn_helper(F&& f) -> fn_helper<F>;
+}
+
+// Shorter lambda.
+#define FN(...) \
+	::utils::fn_helper([&]( \
+		[[maybe_unused]] auto&& x, \
+		[[maybe_unused]] auto&& y, \
+		[[maybe_unused]] auto&& z, \
+		[[maybe_unused]] auto&& w){ return (__VA_ARGS__); })
+
 #if __cpp_lib_bit_cast < 201806L
 namespace std
 {
@@ -66,8 +115,9 @@ namespace std
 }
 #endif
 
-#if defined(__INTELLISENSE__)
+#if defined(__INTELLISENSE__) || (defined (__clang__) && (__clang_major__ <= 16))
 #define consteval constexpr
+#define constinit
 #endif
 
 using schar  = signed char;
@@ -884,6 +934,21 @@ constexpr decltype(auto) ensure(T&& arg, const_str msg = const_str(),
 	fmt::raw_verify_error({line, col, file, func}, msg);
 }
 
+template <typename T, typename F> requires (std::is_invocable_v<F, T&&>)
+constexpr decltype(auto) ensure(T&& arg, F&& pred, const_str msg = const_str(),
+	u32 line = __builtin_LINE(),
+	u32 col = __builtin_COLUMN(),
+	const char* file = __builtin_FILE(),
+	const char* func = __builtin_FUNCTION()) noexcept
+{
+	if (std::forward<F>(pred)(std::forward<T>(arg))) [[likely]]
+	{
+		return std::forward<T>(arg);
+	}
+
+	fmt::raw_verify_error({line, col, file, func}, msg);
+}
+
 // narrow() function details
 template <typename From, typename To = void, typename = void>
 struct narrow_impl
@@ -973,22 +1038,45 @@ template <typename To = void, typename From, typename = decltype(static_cast<To>
 }
 
 // Returns u32 size() for container
-template <typename CT, typename = decltype(static_cast<u32>(std::declval<CT>().size()))>
+template <typename CT> requires requires (const CT& x) { std::size(x); }
 [[nodiscard]] constexpr u32 size32(const CT& container,
 	u32 line = __builtin_LINE(),
 	u32 col = __builtin_COLUMN(),
 	const char* file = __builtin_FILE(),
 	const char* func = __builtin_FUNCTION())
 {
-	return narrow<u32>(container.size(), line, col, file, func);
+	return narrow<u32>(std::size(container), line, col, file, func);
 }
 
-// Returns u32 size for an array
-template <typename T, usz Size>
-[[nodiscard]] constexpr u32 size32(const T (&)[Size])
+template <typename CT, typename T> requires requires (CT&& x) { std::size(x); std::data(x); } || requires (CT&& x) { std::size(x); x.front(); }
+[[nodiscard]] constexpr auto& at32(CT&& container, T&& index,
+	u32 line = __builtin_LINE(),
+	u32 col = __builtin_COLUMN(),
+	const char* file = __builtin_FILE(),
+	const char* func = __builtin_FUNCTION())
 {
-	static_assert(Size < u32{umax}, "Array is too big for 32-bit");
-	return static_cast<u32>(Size);
+	// Make sure the index is within u32 range (TODO: downcast index properly with common_type)
+	const u32 idx = ::narrow<u32>(+index, line, 10001, file, func);
+	const u32 csz = ::size32(container, line, 10002, file, func);
+	if (csz <= idx) [[unlikely]]
+		fmt::raw_verify_error({line, col, file, func}, u8"Out of range");
+	auto it = std::begin(std::forward<CT>(container));
+	std::advance(it, idx);
+	return *it;
+}
+
+template <typename CT, typename T> requires requires (CT&& x, T&& y) { x.count(y); x.find(y); }
+[[nodiscard]] constexpr auto& at32(CT&& container, T&& index,
+	u32 line = __builtin_LINE(),
+	u32 col = __builtin_COLUMN(),
+	const char* file = __builtin_FILE(),
+	const char* func = __builtin_FUNCTION())
+{
+	// Associative container
+	const auto found = container.find(std::forward<T>(index));
+	if (found == container.end()) [[unlikely]]
+		fmt::raw_verify_error({line, col, file, func}, u8"Out of range");
+	return found->second;
 }
 
 // Simplified hash algorithm. May be used in std::unordered_(map|set).
@@ -1039,7 +1127,7 @@ concept PtrCastable = requires(const volatile X* x, const volatile Y* y)
 };
 
 template <typename X, typename Y> requires PtrCastable<X, Y>
-constexpr bool is_same_ptr()
+consteval bool is_same_ptr()
 {
 	if constexpr (std::is_void_v<X> || std::is_void_v<Y> || std::is_same_v<std::remove_cv_t<X>, std::remove_cv_t<Y>>)
 	{
@@ -1051,33 +1139,24 @@ constexpr bool is_same_ptr()
 	}
 	else
 	{
-		if (std::is_constant_evaluated())
+		bool result = false;
+
+		if constexpr (sizeof(X) < sizeof(Y))
 		{
-			bool result = false;
-
-			if constexpr (sizeof(X) < sizeof(Y))
-			{
-				std::allocator<Y> a{};
-				Y* ptr = a.allocate(1);
-				result = static_cast<X*>(ptr) == static_cast<void*>(ptr);
-				a.deallocate(ptr, 1);
-			}
-			else
-			{
-				std::allocator<X> a{};
-				X* ptr = a.allocate(1);
-				result = static_cast<Y*>(ptr) == static_cast<void*>(ptr);
-				a.deallocate(ptr, 1);
-			}
-
-			return result;
+			std::allocator<Y> a{};
+			Y* ptr = a.allocate(1);
+			result = static_cast<X*>(ptr) == static_cast<void*>(ptr);
+			a.deallocate(ptr, 1);
 		}
 		else
 		{
-			std::aligned_union_t<0, X, Y> s;
-			Y* ptr = reinterpret_cast<Y*>(&s);
-			return static_cast<X*>(ptr) == static_cast<void*>(ptr);
+			std::allocator<X> a{};
+			X* ptr = a.allocate(1);
+			result = static_cast<Y*>(ptr) == static_cast<void*>(ptr);
+			a.deallocate(ptr, 1);
 		}
+
+		return result;
 	}
 }
 
@@ -1090,6 +1169,162 @@ constexpr bool is_same_ptr(const volatile Y* ptr)
 template <typename X, typename Y>
 concept PtrSame = (is_same_ptr<X, Y>());
 
+namespace stx
+{
+	template <typename T>
+	struct exact_t
+	{
+		T obj;
+
+		exact_t(T&& _obj) : obj(std::forward<T>(_obj)) {}
+
+		// TODO: More conversions
+		template <typename U> requires (std::is_same_v<U&, T>)
+		operator U&() const { return obj; };
+	};
+}
+
+// Read object of type T from raw pointer, array, string, vector, or any contiguous container
+template <typename T, typename U>
+constexpr T read_from_ptr(U&& array, usz pos = 0)
+{
+	// TODO: ensure array element types are trivial
+	static_assert(sizeof(T) % sizeof(array[0]) == 0);
+	std::decay_t<decltype(array[0])> buf[sizeof(T) / sizeof(array[0])];
+	if (!std::is_constant_evaluated())
+		std::memcpy(+buf, &array[pos], sizeof(buf));
+	else
+		for (usz i = 0; i < pos; buf[i] = array[pos + i], i++);
+	return std::bit_cast<T>(buf);
+}
+
+template <typename T, typename U>
+constexpr void write_to_ptr(U&& array, usz pos, const T& value)
+{
+	static_assert(sizeof(T) % sizeof(array[0]) == 0);
+	if (!std::is_constant_evaluated())
+		std::memcpy(&array[pos], &value, sizeof(value));
+	else
+		ensure(!"Unimplemented");
+}
+
+template <typename T, typename U>
+constexpr void write_to_ptr(U&& array, const T& value)
+{
+	static_assert(sizeof(T) % sizeof(array[0]) == 0);
+	if (!std::is_constant_evaluated())
+		std::memcpy(&array[0], &value, sizeof(value));
+	else
+		ensure(!"Unimplemented");
+}
+
+constexpr struct aref_tag_t{} aref_tag{};
+
+template <typename T, typename U>
+class aref final
+{
+	U* m_ptr;
+
+	static_assert(sizeof(std::decay_t<T>) % sizeof(U) == 0);
+
+public:
+	aref() = delete;
+
+	constexpr aref(const aref&) = default;
+
+	explicit constexpr aref(aref_tag_t, U* ptr)
+		: m_ptr(ptr)
+	{
+	}
+
+	constexpr T value() const
+	{
+		return read_from_ptr<T>(m_ptr);
+	}
+
+	constexpr operator T() const
+	{
+		return read_from_ptr<T>(m_ptr);
+	}
+
+	aref& operator=(const aref&) = delete;
+
+	constexpr aref& operator=(const T& value) const
+	{
+		write_to_ptr<T>(m_ptr, value);
+		return *this;
+	}
+
+	template <typename MT, typename T2> requires (std::is_convertible_v<const volatile T*, const volatile T2*>) && PtrSame<T, T2>
+	aref<MT, U> ref(MT T2::*const mptr) const
+	{
+		return aref<MT, U>(aref_tag, m_ptr + offset32(mptr) / sizeof(U));
+	}
+
+	template <typename MT, typename T2, typename ET = std::remove_extent_t<MT>> requires (std::is_convertible_v<const volatile T*, const volatile T2*>) && PtrSame<T, T2>
+	aref<ET, U> ref(MT T2::*const mptr, usz index) const
+	{
+		return aref<ET, U>(aref_tag, m_ptr + offset32(mptr) / sizeof(U) + sizeof(ET) / sizeof(U) * index);
+	}
+};
+
+template <typename T, typename U>
+class aref<T[], U>
+{
+	U* m_ptr;
+
+	static_assert(sizeof(std::decay_t<T>) % sizeof(U) == 0);
+
+public:
+	aref() = delete;
+
+	constexpr aref(const aref&) = default;
+
+	explicit constexpr aref(aref_tag_t, U* ptr)
+		: m_ptr(ptr)
+	{
+	}
+
+	aref& operator=(const aref&) = delete;
+
+	constexpr aref<T, U> operator[](usz index) const
+	{
+		return aref<T, U>(aref_tag, m_ptr + index * (sizeof(T) / sizeof(U)));
+	}
+};
+
+template <typename T, typename U, std::size_t N>
+class aref<T[N], U>
+{
+	U* m_ptr;
+
+	static_assert(sizeof(std::decay_t<T>) % sizeof(U) == 0);
+
+public:
+	aref() = delete;
+
+	constexpr aref(const aref&) = default;
+
+	explicit constexpr aref(aref_tag_t, U* ptr)
+		: m_ptr(ptr)
+	{
+	}
+
+	aref& operator=(const aref&) = delete;
+
+	constexpr aref<T, U> operator[](usz index) const
+	{
+		return aref<T, U>(aref_tag, m_ptr + index * (sizeof(T) / sizeof(U)));
+	}
+};
+
+// Reference object of type T, see read_from_ptr
+template <typename T, typename U>
+constexpr auto ref_ptr(U&& array, usz pos = 0) -> aref<T, std::decay_t<decltype(array[0])>>
+{
+	return aref<T, std::decay_t<decltype(array[0])>>(aref_tag, &array[pos]);
+}
+
 namespace utils
 {
 	struct serial;
@@ -1097,3 +1332,25 @@ namespace utils
 
 template <typename T>
 extern bool serialize(utils::serial& ar, T& obj);
+
+#define USING_SERIALIZATION_VERSION(name) []()\
+{\
+	extern void using_##name##_serialization();\
+	using_##name##_serialization();\
+}()
+
+#define GET_OR_USE_SERIALIZATION_VERSION(cond, name) [&]()\
+{\
+	extern void using_##name##_serialization();\
+	extern s32 get_##name##_serialization_version();\
+	return (static_cast<bool>(cond) ? (using_##name##_serialization(), 0) : get_##name##_serialization_version());\
+}()
+
+#define GET_SERIALIZATION_VERSION(name) []()\
+{\
+	extern s32 get_##name##_serialization_version();\
+	return get_##name##_serialization_version();\
+}()
+
+#define ENABLE_BITWISE_SERIALIZATION using enable_bitcopy = std::true_type;
+#define SAVESTATE_INIT_POS(x) static constexpr double savestate_init_pos = (x)

@@ -48,8 +48,20 @@ public:
 		sys_net_linger linger;
 	};
 
+	struct sockopt_cache
+	{
+		sockopt_data data{};
+		s32 len = 0;
+	};
+
 public:
+	SAVESTATE_INIT_POS(7); // Dependency on RPCN
+
 	lv2_socket(lv2_socket_family family, lv2_socket_type type, lv2_ip_protocol protocol);
+	lv2_socket(utils::serial&) {}
+	lv2_socket(utils::serial&, lv2_socket_type type);
+	static std::shared_ptr<lv2_socket> load(utils::serial& ar);
+	void save(utils::serial&, bool save_only_this_class = false);
 	virtual ~lv2_socket() = default;
 
 	std::unique_lock<shared_mutex> lock();
@@ -57,8 +69,8 @@ public:
 	void set_lv2_id(u32 id);
 	bs_t<poll_t> get_events() const;
 	void set_poll_event(bs_t<poll_t> event);
-	void poll_queue(u32 ppu_id, bs_t<poll_t> event, std::function<bool(bs_t<poll_t>)> poll_cb);
-	void clear_queue(u32 ppu_id);
+	void poll_queue(std::shared_ptr<ppu_thread> ppu, bs_t<poll_t> event, std::function<bool(bs_t<poll_t>)> poll_cb);
+	s32 clear_queue(ppu_thread*);
 	void handle_events(const pollfd& native_fd, bool unset_connecting = false);
 
 	lv2_socket_family get_family() const;
@@ -72,8 +84,8 @@ public:
 #endif
 
 public:
-	virtual std::tuple<bool, s32, sys_net_sockaddr> accept(bool is_lock = true) = 0;
-	virtual s32 bind(const sys_net_sockaddr& addr, s32 ps3_id)                  = 0;
+	virtual std::tuple<bool, s32, std::shared_ptr<lv2_socket>, sys_net_sockaddr> accept(bool is_lock = true) = 0;
+	virtual s32 bind(const sys_net_sockaddr& addr) = 0;
 
 	virtual std::optional<s32> connect(const sys_net_sockaddr& addr) = 0;
 	virtual s32 connect_followup()                                   = 0;
@@ -88,12 +100,15 @@ public:
 
 	virtual std::optional<std::tuple<s32, std::vector<u8>, sys_net_sockaddr>> recvfrom(s32 flags, u32 len, bool is_lock = true)                = 0;
 	virtual std::optional<s32> sendto(s32 flags, const std::vector<u8>& buf, std::optional<sys_net_sockaddr> opt_sn_addr, bool is_lock = true) = 0;
+	virtual std::optional<s32> sendmsg(s32 flags, const sys_net_msghdr& msg, bool is_lock = true)                                              = 0;
 
 	virtual void close()          = 0;
 	virtual s32 shutdown(s32 how) = 0;
 
 	virtual s32 poll(sys_net_pollfd& sn_pfd, pollfd& native_pfd)                           = 0;
 	virtual std::tuple<bool, bool, bool> select(bs_t<poll_t> selected, pollfd& native_pfd) = 0;
+
+	error_code abort_socket(s32 flags);
 
 public:
 	// IDM data
@@ -102,8 +117,10 @@ public:
 	static const u32 id_count = 1000;
 
 protected:
+	lv2_socket(utils::serial&, bool);
+
 	shared_mutex mutex;
-	u32 lv2_id = 0;
+	s32 lv2_id = 0;
 
 	socket_type socket = 0;
 
@@ -113,8 +130,9 @@ protected:
 
 	// Events selected for polling
 	atomic_bs_t<poll_t> events{};
+
 	// Event processing workload (pair of thread id and the processing function)
-	std::vector<std::pair<u32, std::function<bool(bs_t<poll_t>)>>> queue;
+	std::vector<std::pair<std::shared_ptr<ppu_thread>, std::function<bool(bs_t<poll_t>)>>> queue;
 
 	// Socket options value keepers
 	// Non-blocking IO option
@@ -130,4 +148,10 @@ protected:
 	// Tracks connect for WSAPoll workaround
 	bool connecting = false;
 #endif
+
+	sys_net_sockaddr last_bound_addr{};
+
+public:
+	u64 so_rcvtimeo = 0;
+	u64 so_sendtimeo = 0;
 };

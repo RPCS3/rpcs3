@@ -79,7 +79,7 @@ union alignas(16) v128
 		return std::bit_cast<T>(*this);
 	}
 
-	using enable_bitcopy = std::true_type;
+	ENABLE_BITWISE_SERIALIZATION;
 
 	static v128 from64(u64 _0, u64 _1 = 0)
 	{

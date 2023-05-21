@@ -173,6 +173,27 @@ namespace rsx
 			refresh();
 		}
 
+		void edit_text::del()
+		{
+			if (caret_position >= text.length())
+			{
+				return;
+			}
+
+			if (caret_position == 0)
+			{
+				value = value.length() > 1 ? value.substr(1) : U"";
+			}
+			else
+			{
+				value = value.substr(0, caret_position) + value.substr(caret_position + 1);
+			}
+
+			m_reset_caret_pulse = true;
+			set_unicode_text(value);
+			refresh();
+		}
+
 		compiled_resource& edit_text::get_compiled()
 		{
 			if (!is_compiled)

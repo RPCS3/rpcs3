@@ -2,14 +2,16 @@
 #include "sys_timer.h"
 
 #include "Emu/IdManager.h"
-
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/timers.hpp"
+#include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "sys_event.h"
 #include "sys_process.h"
 
 #include <thread>
+#include <deque>
 
 LOG_CHANNEL(sys_timer);
 
@@ -18,10 +20,31 @@ struct lv2_timer_thread
 	shared_mutex mutex;
 	std::deque<std::shared_ptr<lv2_timer>> timers;
 
+	lv2_timer_thread();
 	void operator()();
+
+	SAVESTATE_INIT_POS(46); // Dependency ion LV2 objects (lv2_timer)
 
 	static constexpr auto thread_name = "Timer Thread"sv;
 };
+
+lv2_timer::lv2_timer(utils::serial& ar)
+	: lv2_obj{1}
+	, state(ar)
+	, port(lv2_event_queue::load_ptr(ar, port))
+	, source(ar)
+	, data1(ar)
+	, data2(ar)
+	, expire(ar)
+	, period(ar)
+{
+}
+
+void lv2_timer::save(utils::serial& ar)
+{
+	USING_SERIALIZATION_VERSION(lv2_sync);
+	ar(state), lv2_event_queue::save_ptr(ar, port.get()), ar(source, data1, data2, expire, period);
+}
 
 u64 lv2_timer::check()
 {
@@ -34,8 +57,11 @@ u64 lv2_timer::check()
 			const u64 _now = get_guest_system_time();
 			u64 next = expire;
 
+			// If aborting, perform the last accurate check for event
 			if (_now >= next)
 			{
+				lv2_obj::notify_all_t notify;
+
 				std::lock_guard lock(mutex);
 
 				if (next = expire; _now < next)
@@ -71,9 +97,17 @@ u64 lv2_timer::check()
 	return umax;
 }
 
+lv2_timer_thread::lv2_timer_thread()
+{
+	idm::select<lv2_obj, lv2_timer>([&](u32 id, lv2_timer&)
+	{
+		timers.emplace_back(idm::get_unlocked<lv2_obj, lv2_timer>(id));
+	});
+}
+
 void lv2_timer_thread::operator()()
 {
-	u64 sleep_time = umax;
+	u64 sleep_time = 0;
 
 	while (thread_ctrl::state() != thread_state::aborting)
 	{
@@ -86,6 +120,12 @@ void lv2_timer_thread::operator()()
 		thread_ctrl::wait_for(sleep_time);
 
 		sleep_time = umax;
+
+		if (Emu.IsPaused())
+		{
+			sleep_time = 10000;
+			continue;
+		}
 
 		reader_lock lock(mutex);
 
@@ -115,9 +155,15 @@ error_code sys_timer_create(ppu_thread& ppu, vm::ptr<u32> timer_id)
 		auto& thread = g_fxo->get<named_thread<lv2_timer_thread>>();
 		{
 			std::lock_guard lock(thread.mutex);
-			thread.timers.emplace_back(std::move(ptr));
+
+			// Theoretically could have been destroyed by sys_timer_destroy by now
+			if (auto it = std::find(thread.timers.begin(), thread.timers.end(), ptr); it == thread.timers.end())
+			{
+				thread.timers.emplace_back(std::move(ptr));
+			}
 		}
 
+		ppu.check_state();
 		*timer_id = idm::last_id();
 		return CELL_OK;
 	}
@@ -154,7 +200,12 @@ error_code sys_timer_destroy(ppu_thread& ppu, u32 timer_id)
 
 	auto& thread = g_fxo->get<named_thread<lv2_timer_thread>>();
 	std::lock_guard lock(thread.mutex);
-	lv2_obj::unqueue(thread.timers, std::move(timer.ptr));
+
+	if (auto it = std::find(thread.timers.begin(), thread.timers.end(), timer.ptr); it != thread.timers.end())
+	{
+		thread.timers.erase(it);
+	}
+
 	return CELL_OK;
 }
 
@@ -176,6 +227,7 @@ error_code sys_timer_get_information(ppu_thread& ppu, u32 timer_id, vm::ptr<sys_
 		return CELL_ESRCH;
 	}
 
+	ppu.check_state();
 	std::memcpy(info.get_ptr(), &_info, info.size());
 	return CELL_OK;
 }
@@ -184,7 +236,7 @@ error_code _sys_timer_start(ppu_thread& ppu, u32 timer_id, u64 base_time, u64 pe
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_timer.trace("_sys_timer_start(timer_id=0x%x, base_time=0x%llx, period=0x%llx)", timer_id, base_time, period);
+	(period ? sys_timer.warning : sys_timer.trace)("_sys_timer_start(timer_id=0x%x, base_time=0x%llx, period=0x%llx)", timer_id, base_time, period);
 
 	const u64 start_time = get_guest_system_time();
 
@@ -344,7 +396,7 @@ error_code sys_timer_sleep(ppu_thread& ppu, u32 sleep_time)
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_timer.trace("sys_timer_sleep(sleep_time=%d) -> sys_timer_usleep()", sleep_time);
+	sys_timer.trace("sys_timer_sleep(sleep_time=%d)", sleep_time);
 
 	return sys_timer_usleep(ppu, sleep_time * u64{1000000});
 }
@@ -357,9 +409,12 @@ error_code sys_timer_usleep(ppu_thread& ppu, u64 sleep_time)
 
 	if (sleep_time)
 	{
-		lv2_obj::sleep(ppu, sleep_time);
+		lv2_obj::sleep(ppu, g_cfg.core.sleep_timers_accuracy < sleep_timers_accuracy_level::_usleep ? sleep_time : 0);
 
-		lv2_obj::wait_timeout<true>(sleep_time);
+		if (!lv2_obj::wait_timeout(sleep_time, &ppu, true, true))
+		{
+			ppu.state += cpu_flag::again;
+		}
 	}
 	else
 	{

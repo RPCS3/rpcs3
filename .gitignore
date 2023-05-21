@@ -36,7 +36,6 @@
 /ipch
 /rpcs3/Debug
 /rpcs3/Release
-/llvm_build
 
 !/bin
 /bin/*
@@ -44,6 +43,9 @@
 # Audio DLLs
 !/bin/soft_oal.dll
 !/bin/xaudio2_9redist.dll
+
+# Test Programs
+!/bin/test/
 
 # Themes
 !/bin/GuiConfigs/
@@ -101,6 +103,7 @@ rpcs3/rpcs3_autogen/*
 
 # QtCreator
 CMakeLists.txt.user
+*.autosave
 
 # CLion
 /.idea/*
@@ -118,6 +121,15 @@ yaml-cpp.pc
 # libusb
 /3rdparty/libusb_cmake/config.h
 /3rdparty/libusb_cmake/libusb-1.0.pc
+
+# miniupnp
+/3rdparty/miniupnp/x64/*
+
+# llvm
+/3rdparty/llvm/llvm_build
+
+# legacy llvm
+/llvm_build
 
 # ssl certificate
 cacert.pem

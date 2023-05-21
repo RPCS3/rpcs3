@@ -17,6 +17,9 @@ void fmt_class_string<pad_handler>::format(std::string& out, u64 arg)
 		case pad_handler::xinput: return "XInput";
 		case pad_handler::mm: return "MMJoystick";
 #endif
+#ifdef HAVE_SDL2
+		case pad_handler::sdl: return "SDL";
+#endif
 #ifdef HAVE_LIBEVDEV
 		case pad_handler::evdev: return "Evdev";
 #endif

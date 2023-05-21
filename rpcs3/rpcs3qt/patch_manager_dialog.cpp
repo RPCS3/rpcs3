@@ -10,6 +10,7 @@
 #include <QTimer>
 #include <QJsonObject>
 #include <QJsonDocument>
+#include <QDoubleSpinBox>
 
 #include "ui_patch_manager_dialog.h"
 #include "patch_manager_dialog.h"
@@ -19,6 +20,7 @@
 #include "qt_utils.h"
 #include "Utilities/File.h"
 #include "util/logs.hpp"
+#include "Crypto/utils.h"
 
 LOG_CHANNEL(patch_log, "PAT");
 
@@ -42,7 +44,9 @@ enum patch_role : int
 	description_role,
 	patch_group_role,
 	persistance_role,
-	node_level_role
+	node_level_role,
+	config_values_role,
+	config_key_role,
 };
 
 enum node_level : int
@@ -51,6 +55,8 @@ enum node_level : int
 	serial_level,
 	patch_level
 };
+
+Q_DECLARE_METATYPE(patch_engine::patch_config_value);
 
 patch_manager_dialog::patch_manager_dialog(std::shared_ptr<gui_settings> gui_settings, std::unordered_map<std::string, std::set<std::string>> games, const std::string& title_id, const std::string& version, QWidget* parent)
 	: QDialog(parent)
@@ -63,9 +69,6 @@ patch_manager_dialog::patch_manager_dialog(std::shared_ptr<gui_settings> gui_set
 	ui->setupUi(this);
 	setModal(true);
 
-	// Load config for special settings
-	patch_engine::load_config();
-
 	// Load gui settings
 	m_show_owned_games_only = m_gui_settings->GetValue(gui::pm_show_owned).toBool();
 
@@ -77,12 +80,38 @@ patch_manager_dialog::patch_manager_dialog(std::shared_ptr<gui_settings> gui_set
 
 	m_downloader = new downloader(this);
 
+	ui->configurable_selector->setEnabled(false);
+	ui->configurable_combo_box->setEnabled(false);
+	ui->configurable_combo_box->setVisible(false);
+	ui->configurable_spin_box->setEnabled(false);
+	ui->configurable_spin_box->setVisible(false);
+	ui->configurable_double_spin_box->setEnabled(false);
+	ui->configurable_double_spin_box->setVisible(false);
+
 	// Create connects
 	connect(ui->patch_filter, &QLineEdit::textChanged, this, &patch_manager_dialog::filter_patches);
 	connect(ui->patch_tree, &QTreeWidget::currentItemChanged, this, &patch_manager_dialog::handle_item_selected);
 	connect(ui->patch_tree, &QTreeWidget::itemChanged, this, &patch_manager_dialog::handle_item_changed);
 	connect(ui->patch_tree, &QTreeWidget::customContextMenuRequested, this, &patch_manager_dialog::handle_custom_context_menu_requested);
 	connect(ui->cb_owned_games_only, &QCheckBox::stateChanged, this, &patch_manager_dialog::handle_show_owned_games_only);
+	connect(ui->configurable_selector, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
+	{
+		if (index >= 0)
+		{
+			QList<QTreeWidgetItem*> list = ui->patch_tree->selectedItems();
+			QTreeWidgetItem* item = list.size() == 1 ? list.first() : nullptr;
+			handle_item_selected(item, item);
+		}
+	});
+	connect(ui->configurable_combo_box, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
+	{
+		if (index >= 0)
+		{
+			handle_config_value_changed(ui->configurable_combo_box->itemData(index).toDouble());
+		}
+	});
+	connect(ui->configurable_spin_box, QOverload<int>::of(&QSpinBox::valueChanged), this, &patch_manager_dialog::handle_config_value_changed);
+	connect(ui->configurable_double_spin_box, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &patch_manager_dialog::handle_config_value_changed);
 	connect(ui->buttonBox, &QDialogButtonBox::rejected, this, &QWidget::close);
 	connect(ui->buttonBox, &QDialogButtonBox::clicked, [this](QAbstractButton* button)
 	{
@@ -127,8 +156,6 @@ patch_manager_dialog::~patch_manager_dialog()
 	// Save gui settings
 	m_gui_settings->SetValue(gui::pm_geometry, saveGeometry());
 	m_gui_settings->SetValue(gui::pm_splitter_state, ui->splitter->saveState());
-
-	delete ui;
 }
 
 int patch_manager_dialog::exec()
@@ -260,7 +287,7 @@ void patch_manager_dialog::populate_tree()
 					const QString q_serial = QString::fromStdString(serial);
 					const QString visible_serial = serial == patch_key::all ? tr_all_serials : q_serial;
 
-					for (const auto& [app_version, enabled] : app_versions)
+					for (const auto& [app_version, config_values] : app_versions)
 					{
 						const QString q_app_version = QString::fromStdString(app_version);
 						const QString q_version_suffix = app_version == patch_key::all ? (QStringLiteral(" - ") + tr_all_versions) : (QStringLiteral(" v.") + q_app_version);
@@ -289,7 +316,9 @@ void patch_manager_dialog::populate_tree()
 						const QString q_description = QString::fromStdString(description);
 						QString visible_description = q_description;
 
-						const auto match_criteria = QList<QPair<int, QVariant>>() << QPair(description_role, q_description) << QPair(persistance_role, true);
+						const QList<QPair<int, QVariant>> match_criteria = QList<QPair<int, QVariant>>()
+							<< QPair<int, QVariant>(description_role, q_description)
+							<< QPair<int, QVariant>(persistance_role, true);
 
 						// Add counter to leafs if the name already exists due to different hashes of the same game (PPU, SPU, PRX, OVL)
 						if (const auto matches = gui::utils::find_children_by_data(serial_level_item, match_criteria, false); matches.count() > 0)
@@ -304,9 +333,23 @@ void patch_manager_dialog::populate_tree()
 							visible_description += QString::number(counter) + ')';
 						}
 
+						QMap<QString, QVariant> q_config_values;
+
+						for (const auto& [key, default_config_value] : patch.default_config_values)
+						{
+							patch_engine::patch_config_value config_value = default_config_value;
+
+							if (config_values.config_values.contains(key))
+							{
+								config_value.set_and_check_value(config_values.config_values.at(key).value, key);
+							}
+
+							q_config_values[QString::fromStdString(key)] = QVariant::fromValue(config_value);
+						}
+
 						QTreeWidgetItem* patch_level_item = new QTreeWidgetItem();
 						patch_level_item->setText(0, visible_description);
-						patch_level_item->setCheckState(0, enabled ? Qt::CheckState::Checked : Qt::CheckState::Unchecked);
+						patch_level_item->setCheckState(0, config_values.enabled ? Qt::CheckState::Checked : Qt::CheckState::Unchecked);
 						patch_level_item->setData(0, hash_role, q_hash);
 						patch_level_item->setData(0, title_role, q_title);
 						patch_level_item->setData(0, serial_role, q_serial);
@@ -315,6 +358,8 @@ void patch_manager_dialog::populate_tree()
 						patch_level_item->setData(0, patch_group_role, q_patch_group);
 						patch_level_item->setData(0, node_level_role, node_level::patch_level);
 						patch_level_item->setData(0, persistance_role, true);
+						patch_level_item->setData(0, config_values_role, q_config_values);
+						patch_level_item->setData(0, config_key_role, QString()); // Start with empty key. We will use this to keep track of the current config value during editing.
 
 						serial_level_item->addChild(patch_level_item);
 					}
@@ -323,7 +368,8 @@ void patch_manager_dialog::populate_tree()
 		}
 	}
 
-	const auto match_criteria = QList<QPair<int, QVariant>>() << QPair(persistance_role, true);
+	const QList<QPair<int, QVariant>> match_criteria = QList<QPair<int, QVariant>>()
+		<< QPair<int, QVariant>(persistance_role, true);
 
 	for (int i = ui->patch_tree->topLevelItemCount() - 1; i >= 0; i--)
 	{
@@ -393,7 +439,7 @@ void patch_manager_dialog::filter_patches(const QString& term)
 				const std::string app_version = item->data(0, app_version_role).toString().toStdString();
 
 				if (serial != patch_key::all &&
-					(m_owned_games.find(serial) == m_owned_games.end() || (app_version != patch_key::all && !m_owned_games.at(serial).contains(app_version))))
+					(!m_owned_games.contains(serial) || (app_version != patch_key::all && !::at32(m_owned_games, serial).contains(app_version))))
 				{
 					item->setHidden(true);
 					return 0;
@@ -492,15 +538,96 @@ void patch_manager_dialog::update_patch_info(const patch_manager_dialog::gui_pat
 	ui->label_serial->setText(info.serial);
 	ui->label_title->setText(info.title);
 	ui->label_app_version->setText(info.app_version);
+
+	const QString key = ui->configurable_selector->currentIndex() < 0 ? "" : ui->configurable_selector->currentData().toString();
+
+	if (info.config_values.empty() || key.isEmpty())
+	{
+		ui->configurable_combo_box->setEnabled(false);
+		ui->configurable_combo_box->setVisible(false);
+		ui->configurable_spin_box->setEnabled(false);
+		ui->configurable_spin_box->setVisible(false);
+		ui->configurable_double_spin_box->setEnabled(false);
+		ui->configurable_double_spin_box->setVisible(false);
+		ui->configurable_selector->blockSignals(true);
+		ui->configurable_selector->clear();
+		ui->configurable_selector->blockSignals(false);
+		ui->configurable_selector->setEnabled(false);
+		return;
+	}
+
+	if (key == info.config_value_key)
+	{
+		// Don't update widget if the config key did not change
+		return;
+	}
+
+	// Disable all config widgets first
+	ui->configurable_combo_box->setEnabled(false);
+	ui->configurable_combo_box->setVisible(false);
+	ui->configurable_spin_box->setEnabled(false);
+	ui->configurable_spin_box->setVisible(false);
+	ui->configurable_double_spin_box->setEnabled(false);
+	ui->configurable_double_spin_box->setVisible(false);
+
+	// Fetch the config values of this item
+	const QVariant& variant = info.config_values.value(key);
+	ensure(variant.canConvert<patch_engine::patch_config_value>());
+
+	const patch_engine::patch_config_value config_value = variant.value<patch_engine::patch_config_value>();
+
+	// Setup the proper config widget
+	switch (config_value.type)
+	{
+	case patch_configurable_type::double_range:
+		ui->configurable_double_spin_box->blockSignals(true);
+		ui->configurable_double_spin_box->setRange(config_value.min, config_value.max);
+		ui->configurable_double_spin_box->setValue(config_value.value);
+		ui->configurable_double_spin_box->setEnabled(true);
+		ui->configurable_double_spin_box->setVisible(true);
+		ui->configurable_double_spin_box->blockSignals(false);
+		break;
+	case patch_configurable_type::long_range:
+		ui->configurable_spin_box->blockSignals(true);
+		ui->configurable_spin_box->setRange(config_value.min, config_value.max);
+		ui->configurable_spin_box->setValue(config_value.value);
+		ui->configurable_spin_box->setEnabled(true);
+		ui->configurable_spin_box->setVisible(true);
+		ui->configurable_spin_box->blockSignals(false);
+		break;
+	case patch_configurable_type::double_enum:
+	case patch_configurable_type::long_enum:
+		ui->configurable_combo_box->blockSignals(true);
+		ui->configurable_combo_box->clear();
+		for (const patch_engine::patch_allowed_value& allowed_value : config_value.allowed_values)
+		{
+			ui->configurable_combo_box->addItem(QString::fromStdString(allowed_value.label), allowed_value.value);
+
+			if (allowed_value.value == config_value.value)
+			{
+				ui->configurable_combo_box->setCurrentIndex(ui->configurable_combo_box->findData(allowed_value.value));
+			}
+		}
+		ui->configurable_combo_box->setEnabled(true);
+		ui->configurable_combo_box->setVisible(true);
+		ui->configurable_combo_box->blockSignals(false);
+		break;
+	}
 }
 
-void patch_manager_dialog::handle_item_selected(QTreeWidgetItem *current, QTreeWidgetItem * /*previous*/)
+void patch_manager_dialog::handle_item_selected(QTreeWidgetItem *current, QTreeWidgetItem *previous)
 {
 	if (!current)
 	{
 		// Clear patch info if no item is selected
 		update_patch_info({});
 		return;
+	}
+
+	// Clear key of previous patch level item
+	if (previous && current != previous && static_cast<node_level>(previous->data(0, node_level_role).toInt()) == node_level::patch_level)
+	{
+		previous->setData(0, config_key_role, QString());
 	}
 
 	const node_level level = static_cast<node_level>(current->data(0, node_level_role).toInt());
@@ -517,17 +644,39 @@ void patch_manager_dialog::handle_item_selected(QTreeWidgetItem *current, QTreeW
 		const std::string description = current->data(0, description_role).toString().toStdString();
 
 		// Find the patch for this item and get its metadata
-		if (m_map.find(hash) != m_map.end())
+		if (m_map.contains(hash))
 		{
-			const auto& container = m_map.at(hash);
+			const auto& container = ::at32(m_map, hash);
 
-			if (container.patch_info_map.find(description) != container.patch_info_map.end())
+			if (container.patch_info_map.contains(description))
 			{
-				const auto& found_info = container.patch_info_map.at(description);
+				const auto& found_info = ::at32(container.patch_info_map, description);
 				info.author = QString::fromStdString(found_info.author);
 				info.notes = QString::fromStdString(found_info.notes);
 				info.description = QString::fromStdString(found_info.description);
 				info.patch_version = QString::fromStdString(found_info.patch_version);
+				info.config_values = current->data(0, config_values_role).toMap();
+				info.config_value_key = current->data(0, config_key_role).toString();
+
+				if (current != previous)
+				{
+					// Update the config value combo box with the new config keys
+					ui->configurable_selector->blockSignals(true);
+					ui->configurable_selector->clear();
+					for (const auto& key : info.config_values.keys())
+					{
+						const QVariant& variant = info.config_values.value(key);
+						ensure(variant.canConvert<patch_engine::patch_config_value>());
+						const patch_engine::patch_config_value config_value = variant.value<patch_engine::patch_config_value>();
+						ui->configurable_selector->addItem(key, key);
+					}
+					if (ui->configurable_selector->count() > 0)
+					{
+						ui->configurable_selector->setCurrentIndex(0);
+					}
+					ui->configurable_selector->blockSignals(false);
+					ui->configurable_selector->setEnabled(ui->configurable_selector->count() > 0);
+				}
 			}
 		}
 		[[fallthrough]];
@@ -591,15 +740,80 @@ void patch_manager_dialog::handle_item_changed(QTreeWidgetItem *item, int /*colu
 	}
 
 	// Enable/disable the patch for this item and show its metadata
-	if (m_map.find(hash) != m_map.end())
+	if (m_map.contains(hash))
 	{
-		auto& container = m_map[hash];
+		auto& info = m_map[hash].patch_info_map;
 
-		if (container.patch_info_map.find(description) != container.patch_info_map.end())
+		if (info.contains(description))
 		{
-			m_map[hash].patch_info_map[description].titles[title][serial][app_version] = enabled;
-			handle_item_selected(item, nullptr);
-			return;
+			info[description].titles[title][serial][app_version].enabled = enabled;
+			handle_item_selected(item, item);
+		}
+	}
+}
+
+void patch_manager_dialog::handle_config_value_changed(double value)
+{
+	QList<QTreeWidgetItem*> list = ui->patch_tree->selectedItems();
+	QTreeWidgetItem* item = list.size() == 1 ? list.first() : nullptr;
+
+	if (!item)
+	{
+		return;
+	}
+
+	const node_level level = static_cast<node_level>(item->data(0, node_level_role).toInt());
+
+	if (level != node_level::patch_level)
+	{
+		return;
+	}
+
+	// Fetch the config values of this item
+	const QString key = ui->configurable_selector->currentText();
+	const QVariant data = item->data(0, config_values_role);
+	QVariantMap q_config_values = data.canConvert<QVariantMap>() ? data.toMap() : QVariantMap{};
+
+	if (q_config_values.isEmpty() || !q_config_values.contains(key))
+	{
+		return;
+	}
+
+	// Fetch the config value for the current key
+	QVariant& variant = q_config_values[key];
+	ensure(variant.canConvert<patch_engine::patch_config_value>());
+
+	patch_engine::patch_config_value config_value = variant.value<patch_engine::patch_config_value>();
+	config_value.value = value;
+	variant = QVariant::fromValue(config_value);
+
+	// Set the key first. setData will trigger the itemChanged signal and we don't want to re-create the config widgets each time we set the config values.
+	item->setData(0, config_key_role, key);
+	item->setData(0, config_values_role, q_config_values);
+
+	// Update the configurable value of the patch for this item
+	const std::string hash = item->data(0, hash_role).toString().toStdString();
+	const std::string title = item->data(0, title_role).toString().toStdString();
+	const std::string serial = item->data(0, serial_role).toString().toStdString();
+	const std::string app_version = item->data(0, app_version_role).toString().toStdString();
+	const std::string description = item->data(0, description_role).toString().toStdString();
+
+	if (m_map.contains(hash))
+	{
+		auto& info = m_map[hash].patch_info_map;
+
+		if (info.contains(description))
+		{
+			auto& patch = info[description];
+			auto& config_values = patch.titles[title][serial][app_version].config_values;
+
+			for (const QString& q_key : q_config_values.keys())
+			{
+				if (const std::string s_key = q_key.toStdString(); key == q_key && patch.default_config_values.contains(s_key))
+				{
+					config_values[s_key].value = value;
+				}
+			}
 		}
 	}
 }
@@ -623,13 +837,13 @@ void patch_manager_dialog::handle_custom_context_menu_requested(const QPoint &po
 		const std::string hash = item->data(0, hash_role).toString().toStdString();
 		const std::string description = item->data(0, description_role).toString().toStdString();
 
-		if (m_map.find(hash) != m_map.end())
+		if (m_map.contains(hash))
 		{
-			const auto& container = m_map.at(hash);
+			const auto& container = ::at32(m_map, hash);
 
-			if (container.patch_info_map.find(description) != container.patch_info_map.end())
+			if (container.patch_info_map.contains(description))
 			{
-				const auto& info = container.patch_info_map.at(description);
+				const auto& info = ::at32(container.patch_info_map, description);
 
 				QAction* open_filepath = new QAction(tr("Show Patch File"));
 				menu->addAction(open_filepath);
@@ -906,7 +1120,7 @@ void patch_manager_dialog::download_update(bool automatic, bool auto_accept)
 	{
 		if (const fs::file patch_file{path})
 		{
-			const std::string hash = downloader::get_hash(patch_file.to_string().c_str(), patch_file.size(), true);
+			const std::string hash = sha256_get_hash(patch_file.to_string().c_str(), patch_file.size(), true);
 			url += "&sha256=" + hash;
 		}
 		else
@@ -1008,7 +1222,7 @@ bool patch_manager_dialog::handle_json(const QByteArray& data)
 
 	const std::string content = patch.toString().toStdString();
 
-	if (hash_obj.toString().toStdString() != downloader::get_hash(content.c_str(), content.size(), true))
+	if (hash_obj.toString().toStdString() != sha256_get_hash(content.c_str(), content.size(), true))
 	{
 		patch_log.error("JSON content does not match the provided checksum");
 		return false;
@@ -1035,7 +1249,7 @@ bool patch_manager_dialog::handle_json(const QByteArray& data)
 
 		if (!patch_file.file || (patch_file.file.write(content), !patch_file.commit()))
 		{
-			patch_log.error("Could not save new patches to %s (%s)", path, fs::g_tls_error);
+			patch_log.error("Could not save new patches to %s (error=%s)", path, fs::g_tls_error);
 			return false;
 		}
 

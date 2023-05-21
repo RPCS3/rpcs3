@@ -1,6 +1,6 @@
 /*
 Nekotekina Theme for RPCS3 by GooseWing
-v1.0
+v1.1
 
 Based on YoRHa Theme for RPCS3
 by Ani @ https://github.com/AniLeo
@@ -60,21 +60,21 @@ QWidget {
 }
 
 
-/* LLE: Style QListWidget checkboxes (QListWidget) */
-#lleList::indicator {
+/* HLE/LLE: Style QListWidget checkboxes (QListWidget) */
+QListWidget::indicator, QTreeWidget::indicator {
 	border: 0.05em solid #4d4940;
 }
-#lleList::indicator::unchecked {
-	background-color: #b3ac98;
+QListWidget::indicator::unchecked, QTreeWidget::indicator::unchecked {
+	background-color: #705722; /* Dark */
 }
-#lleList::indicator::checked {
-	background-color: #4d4940;
+QListWidget::indicator::checked, QTreeWidget::indicator::checked {
+	background-color: #ffd785; /* Light */
 }
-#lleList::indicator::disabled {
-	background-color: #828790;
+QListWidget::indicator::disabled, QTreeWidget::indicator::disabled {
+	background-color: #828790; /* Gray */
 }
-#lleList::item::selected {
-	color: #4d4940;
+QListWidget::item::selected, QTreeWidget::item::selected {
+	background-color: #5c471c;
 }
 
 
@@ -85,10 +85,9 @@ QToolTip {
 	border: 0.10em solid #705722;
 }
 
-
-/* CG Disasm and Trophy Manager: background-image doesn't work, use static color */
-QWidget#cg_disasm, QWidget#trophy_manager {
-	background: #6e695c;
+/* CG Disasm and Trophy Manager */
+QWidget#trophy_manager, QWidget#cg_disasm, QWidget#log_viewer {
+	border-image: url("GuiConfigs/kot-bg.jpg");
 }
 
 
@@ -111,32 +110,20 @@ QHeaderView::section {
 }
 
 
-/* All other Tabs */
+
+/* All Tabs */
+QTabWidget::tab-bar {
+	alignment: center; /* Centel all tabs */
+}
+/* Move tabs on log viewer back to the left side */
+QTabWidget#tab_widget_log::tab-bar {
+	alignment: left;
+}
 QTabBar {
+	border-bottom: 0.05em solid #ffd785;
 	text-transform: uppercase;
 }
-
 QTabBar::tab {
-	background: transparent;
-	padding-left: 0.50em;
-	padding-right: 0.50em;
-	padding-top: 0.25em;
-	padding-bottom: 0.25em;
-	margin-right: 0.25em;
-}
-QTabBar::tab::selected {
-	background: #705722;
-	color: #ffd785;
-	border-bottom-style: solid;
-}
-
-
-/* Settings Dialog: Tabs */
-QTabBar#tab_bar_settings {
-	border-bottom: 0.05em solid #705722;
-	text-transform: uppercase;
-}
-QTabBar::tab#tab_bar_settings {
 	background: transparent;
 	width: 5.20em;
 	padding-left: 0.50em;
@@ -147,19 +134,25 @@ QTabBar::tab#tab_bar_settings {
 	font-size: 10.5pt;
 	font-weight: 550;
 }
-QTabBar::tab:last#tab_bar_settings {
+QTabBar::tab:last {
 	margin-right: 0em;
 }
-QTabBar::tab:!selected:hover#tab_bar_settings {
-	background: transparent;
-	color: #705722;
-}
-QTabBar::tab::selected#tab_bar_settings {
+QTabBar::tab::selected {
 	background: #bfa163;
 	color: #705722;
-	border-bottom-style: solid;
 	margin-top: 0.15em;
+	border-top-left-radius: 0.3em;
+	border-top-right-radius: 0.3em;
 }
+/* Fix the tabs in VFS being cropped */
+#vfs_dialog QTabBar::tab {
+	width: 5.50em;
+}
+/* The first tab is wider than others */
+#vfs_dialog QTabBar::tab:first {
+	width: 7.45em;
+}
+
 
 
 /* Checkboxes */
@@ -254,6 +247,9 @@ QSpinBox, QDoubleSpinBox {
 	border-radius: 0.10em;
 	color: #ffd785;
 }
+QSpinBox::disabled, QDoubleSpinBox::disabled {
+	background-color: #828790;
+}
 
 
 /* Styles Sliders */
@@ -274,8 +270,16 @@ QSlider#sizeSlider::groove:horizontal {
 }
 
 /* Log and Debugger borders */
-QTextEdit {
-	border: 0.05em solid #4d4940;
+QTextEdit, QPlainTextEdit {
+	background: rgba(52, 49, 40, 0.9);
+	color: #ffd785;
+	font-family: none;
+	font-size: 8.50pt;
+}
+
+#debugger QListWidget, #debugger QTextEdit {
+	border: 0.05em solid #ffd785;
+	background: rgba(52, 49, 40, 0.9);
 }
 
 
@@ -295,6 +299,19 @@ QDockWidget::title {
 }
 QDockWidget::close-button, QDockWidget::float-button {
 	background-color: #bfa163;
+}
+
+
+/* Calendar fixes */
+QDateTimeEdit, QDateTimeEdit::drop-down {
+	background: transparent;
+	border: 0.05em solid #ffd785;
+	border-radius: 0.10em;
+	color: #ffd785;
+}
+QCalendarWidget QWidget{
+	background-color: #bfa163;
+	color: #4d4940;
 }
 
 
@@ -350,21 +367,6 @@ QLabel#l_controller {
 }
 
 
-/* Game Grid Font */
-QTableWidget#game_grid {
-	font-weight: 600;
-	color: #4d4940;
-	text-transform: uppercase;
-	selection-color: #aea993;
-}
-QTableWidget#game_grid::item:selected:active {
-	selection-background-color: #4d4940;
-}
-QTableWidget#game_grid::item:selected:!active {
-	selection-background-color: #615c51;
-}
-
-
 /* Debug UI Settings buttons */
 QLabel#color_button {
 	background: transparent;
@@ -374,7 +376,7 @@ QLabel#color_button {
 /* Search bar on main Toolbar */
 QLineEdit#mw_searchbar {
 	margin-left: 0.7em;
-	color: #4d4940;
+	color: #ffd785;
 	font-size: 10.25pt;
 }
 
@@ -397,7 +399,7 @@ QLabel#gamelist_icon_background_color {
 
 /* Set Windows Taskbar Thumbnail colors */
 QLabel#thumbnail_icon_color {
-	color: #4d4940;
+	color: #ffd785;
 }
 
 
@@ -437,13 +439,22 @@ QLabel#log_stack {
 
 /* Memory Viewer */
 QLabel#memory_viewer_address_panel {
-	color: #0000ff; /* Font Color: Blue */
+	color: #ffd785; /* Font Color: Light */
+	border: 0.05em solid #ffd785;
+	background: rgba(52, 49, 40, 0.9);
+	font-family: none;
 }
 QLabel#memory_viewer_hex_panel {
-	color: #4d4940; /* Font Color: Grey */
+	color: #bfa163; /* Font Color: Grey */
+	border: 0.05em solid #ffd785;
+	background: rgba(52, 49, 40, 0.9);
+	font-family: none;
 }
 QLabel#memory_viewer_ascii_panel {
-	color: #4d4940; /* Font Color: Grey */
+	color: #bfa163; /* Font Color: Grey */
+	border: 0.05em solid #ffd785;
+	background: rgba(52, 49, 40, 0.9);
+	font-family: none;
 }
 
 
@@ -462,4 +473,34 @@ QLabel#debugger_frame_pc {
 QWidget#trophy_notification_frame {
 	background-color: #b3ac98;
 	color: #4d4940;
+}
+
+/* Game Grid */
+#game_list_grid_item[selected="true"] {
+	background: #615c51;
+}
+#game_list_grid_item:hover {
+	background: #615c51;
+}
+#game_list_grid_item:focus {
+	background: #4d4940;
+}
+
+/* Game Grid Font */
+#game_list_grid_item #game_list_grid_item_title_label {
+	font-weight: 600;
+	text-transform: uppercase;
+	color: #ffd785;
+}
+
+/* Game Grid hover and focus: we need to handle properties differently when using descendants */
+#game_list_grid_item[selected="true"] #game_list_grid_item_title_label {
+	background-color: #615c51;
+}
+#game_list_grid_item[hover="true"] #game_list_grid_item_title_label {
+	background-color: #615c51;
+}
+#game_list_grid_item[focus="true"] #game_list_grid_item_title_label {
+	background-color: #4d4940;
+	color: #ffd785;
 }

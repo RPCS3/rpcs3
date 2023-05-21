@@ -20,6 +20,7 @@ enum class ppu_cmd : u32
 	hle_call, // Execute function by index (arg)
 	ptr_call, // Execute function by pointer
 	opd_call, // Execute function by provided rtoc and address (unlike lle_call, does not read memory)
+	cia_call, // Execute from current CIA, mo GPR modification applied
 	initialize, // ppu_initialize()
 	sleep,
 	reset_stack, // resets stack address
@@ -130,20 +131,25 @@ public:
 	static const u32 id_count = 100;
 	static constexpr std::pair<u32, u32> id_invl_range = {12, 12};
 
-	virtual std::string dump_regs() const override;
+	virtual void dump_regs(std::string&) const override;
 	virtual std::string dump_callstack() const override;
 	virtual std::vector<std::pair<u32, u32>> dump_callstack_list() const override;
 	virtual std::string dump_misc() const override;
-	virtual std::string dump_all() const override;
+	virtual void dump_all(std::string&) const override;
 	virtual void cpu_task() override final;
 	virtual void cpu_sleep() override;
 	virtual void cpu_on_stop() override;
 	virtual ~ppu_thread() override;
 
-	ppu_thread(const ppu_thread_params&, std::string_view name, u32 prio, int detached = 0);
+	SAVESTATE_INIT_POS(3);
 
+	ppu_thread(const ppu_thread_params&, std::string_view name, u32 prio, int detached = 0);
+	ppu_thread(utils::serial& ar);
 	ppu_thread(const ppu_thread&) = delete;
 	ppu_thread& operator=(const ppu_thread&) = delete;
+	bool savable() const;
+	void serialize_common(utils::serial& ar);
+	void save(utils::serial& ar);
 
 	using cpu_thread::operator=;
 
@@ -180,8 +186,8 @@ public:
 		{
 			for (u8& b : bits)
 			{
-				b = value & 0x1;
-				value >>= 1;
+				b = !!(value & (1u << 31));
+				value <<= 1;
 			}
 		}
 	};
@@ -215,6 +221,8 @@ public:
 	// Fixed-Point Exception Register (abstract representation)
 	struct
 	{
+		ENABLE_BITWISE_SERIALIZATION;
+
 		bool so{}; // Summary Overflow
 		bool ov{}; // Overflow
 		bool ca{}; // Carry
@@ -262,9 +270,13 @@ public:
 
 	alignas(64) const ppu_func_opd_t entry_func;
 	u64 start_time{0}; // Sleep start timepoint
+	u64 end_time{umax}; // Sleep end timepoint
+	s32 cancel_sleep{0}; // Flag to cancel the next lv2_obj::sleep call (when equals 2)
 	u64 syscall_args[8]{0}; // Last syscall arguments stored
 	const char* current_function{}; // Current function name for diagnosis, optimized for speed.
 	const char* last_function{}; // Sticky copy of current_function, is not cleared on function return
+
+	const bool is_interrupt_thread; // True for interrupts-handler threads
 
 	// Thread name
 	atomic_ptr<std::string> ppu_tname;
@@ -307,9 +319,19 @@ public:
 		operator std::string() const;
 	} thread_name{ this };
 
+	// For savestates
+	bool stop_flag_removal_protection = false; // If set, Emulator::Run won't remove stop flag
+	bool loaded_from_savestate = false; // Indicates the thread had just started straight from savestate load
+	std::shared_ptr<utils::serial> optional_savestate_state;
+	bool interrupt_thread_executing = false;
+
+	ppu_thread* next_cpu{}; // LV2 sleep queues' node link
+	ppu_thread* next_ppu{}; // LV2 PPU running queue's node link
+	bool ack_suspend = false;
+
 	be_t<u64>* get_stack_arg(s32 i, u64 align = alignof(u64));
 	void exec_task();
-	void fast_call(u32 addr, u32 rtoc);
+	void fast_call(u32 addr, u64 rtoc);
 
 	static std::pair<vm::addr_t, u32> stack_push(u32 size, u32 align_v);
 	static void stack_pop_verbose(u32 addr, u32 size) noexcept;

@@ -8,44 +8,38 @@
 
 namespace vk
 {
-	VkPrimitiveTopology get_appropriate_topology(rsx::primitive_type mode, bool &requires_modification)
+	std::pair<VkPrimitiveTopology, bool> get_appropriate_topology(rsx::primitive_type mode)
 	{
-		requires_modification = false;
-
 		switch (mode)
 		{
 		case rsx::primitive_type::lines:
-			return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+			return { VK_PRIMITIVE_TOPOLOGY_LINE_LIST, false };
 		case rsx::primitive_type::line_loop:
-			requires_modification = true;
-			return VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+			return { VK_PRIMITIVE_TOPOLOGY_LINE_STRIP, true };
 		case rsx::primitive_type::line_strip:
-			return VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+			return { VK_PRIMITIVE_TOPOLOGY_LINE_STRIP, false };
 		case rsx::primitive_type::points:
-			return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+			return { VK_PRIMITIVE_TOPOLOGY_POINT_LIST, false };
 		case rsx::primitive_type::triangles:
-			return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+			return { VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, false };
 		case rsx::primitive_type::triangle_strip:
 		case rsx::primitive_type::quad_strip:
-			return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+			return { VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, false };
 		case rsx::primitive_type::triangle_fan:
 #ifndef __APPLE__
-			return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN;
+			return { VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN, false };
 #endif
 		case rsx::primitive_type::quads:
 		case rsx::primitive_type::polygon:
-			requires_modification = true;
-			return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+			return { VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, true };
 		default:
 			fmt::throw_exception("Unsupported primitive topology 0x%x", static_cast<u8>(mode));
 		}
 	}
 
-	bool is_primitive_native(rsx::primitive_type& mode)
+	bool is_primitive_native(rsx::primitive_type mode)
 	{
-		bool result;
-		get_appropriate_topology(mode, result);
-		return !result;
+		return !get_appropriate_topology(mode).second;
 	}
 
 	VkIndexType get_index_type(rsx::index_array_type type)
@@ -101,10 +95,7 @@ namespace
 
 		vertex_input_state operator()(const rsx::draw_array_command& /*command*/)
 		{
-			bool primitives_emulated = false;
-			VkPrimitiveTopology prims = vk::get_appropriate_topology(
-				rsx::method_registers.current_draw_clause.primitive, primitives_emulated);
-
+			const auto [prims, primitives_emulated] = vk::get_appropriate_topology(rsx::method_registers.current_draw_clause.primitive);
 			const u32 vertex_count = rsx::method_registers.current_draw_clause.get_elements_count();
 			const u32 min_index = rsx::method_registers.current_draw_clause.min_index();
 			const u32 max_index = (min_index + vertex_count) - 1;
@@ -126,9 +117,8 @@ namespace
 
 		vertex_input_state operator()(const rsx::draw_indexed_array_command& command)
 		{
-			bool primitives_emulated = false;
 			auto primitive = rsx::method_registers.current_draw_clause.primitive;
-			const VkPrimitiveTopology prims = vk::get_appropriate_topology(primitive, primitives_emulated);
+			const auto [prims, primitives_emulated] = vk::get_appropriate_topology(primitive);
 			const bool emulate_restart = rsx::method_registers.restart_index_enabled() && vk::emulate_primitive_restart(primitive);
 
 			rsx::index_array_type index_type = rsx::method_registers.current_draw_clause.is_immediate_draw ?
@@ -201,12 +191,11 @@ namespace
 
 		vertex_input_state operator()(const rsx::draw_inlined_array& /*command*/)
 		{
-			bool primitives_emulated = false;
 			auto &draw_clause = rsx::method_registers.current_draw_clause;
-			VkPrimitiveTopology prims = vk::get_appropriate_topology(draw_clause.primitive, primitives_emulated);
+			const auto [prims, primitives_emulated] = vk::get_appropriate_topology(draw_clause.primitive);
 
 			const auto stream_length = rsx::method_registers.current_draw_clause.inline_vertex_array.size();
-			const u32 vertex_count = u32(stream_length * sizeof(u32)) / m_vertex_layout.interleaved_blocks[0].attribute_stride;
+			const u32 vertex_count = u32(stream_length * sizeof(u32)) / m_vertex_layout.interleaved_blocks[0]->attribute_stride;
 
 			if (!primitives_emulated)
 			{
@@ -257,8 +246,8 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 		if (m_vertex_layout.interleaved_blocks.size() == 1 &&
 			rsx::method_registers.current_draw_clause.command != rsx::draw_command::inlined_array)
 		{
-			const auto data_offset = (vertex_base * m_vertex_layout.interleaved_blocks[0].attribute_stride);
-			storage_address = m_vertex_layout.interleaved_blocks[0].real_offset_address + data_offset;
+			const auto data_offset = (vertex_base * m_vertex_layout.interleaved_blocks[0]->attribute_stride);
+			storage_address = m_vertex_layout.interleaved_blocks[0]->real_offset_address + data_offset;
 
 			if (auto cached = m_vertex_cache->find_vertex_range(storage_address, VK_FORMAT_R8_UINT, required.first))
 			{

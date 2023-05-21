@@ -23,7 +23,7 @@ constexpr auto qstr = QString::fromStdString;
 debugger_list::debugger_list(QWidget* parent, std::shared_ptr<gui_settings> gui_settings, breakpoint_handler* handler)
 	: QListWidget(parent)
 	, m_gui_settings(std::move(gui_settings))
-	, m_breakpoint_handler(handler)
+	, m_ppu_breakpoint_handler(handler)
 {
 	setWindowTitle(tr("ASM"));
 
@@ -34,6 +34,26 @@ debugger_list::debugger_list(QWidget* parent, std::shared_ptr<gui_settings> gui_
 
 	setSizeAdjustPolicy(QListWidget::AdjustToContents);
 	setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+
+	connect(this, &QListWidget::currentRowChanged, this, [this](int row)
+	{
+		if (row < 0)
+		{
+			m_selected_instruction = -1;
+			m_showing_selected_instruction = false;
+			return;
+		}
+
+		u32 pc = m_start_addr;
+
+		for (; m_cpu && m_cpu->id_type() == 0x55 && row; row--)
+		{
+			// If scrolling forwards (downwards), we can skip entire commands
+			pc += std::max<u32>(m_disasm->disasm(pc), 4);
+		}
+
+		m_selected_instruction = pc + row * 4;
+	});
 }
 
 void debugger_list::UpdateCPUData(cpu_thread* cpu, CPUDisAsm* disasm)
@@ -42,48 +62,77 @@ void debugger_list::UpdateCPUData(cpu_thread* cpu, CPUDisAsm* disasm)
 	{
 		m_cpu = cpu;
 		m_selected_instruction = -1;
+		m_showing_selected_instruction = false;
 	}
 
 	m_disasm = disasm;
 }
 
-u32 debugger_list::GetCenteredAddress(u32 address) const
+u32 debugger_list::GetStartAddress(u32 address)
 {
-	return address - ((m_item_count / 2) * 4);
+	const u32 steps = m_item_count / 3;
+
+	u32 result = address;
+
+	if (m_cpu && m_cpu->id_type() == 0x55)
+	{
+		if (auto [count, res] = static_cast<rsx::thread*>(m_cpu)->try_get_pc_of_x_cmds_backwards(steps, address); count == steps)
+		{
+			result = res;
+		}
+	}
+	else
+	{
+		result = address - (steps * 4);
+	}
+
+	if (address > m_pc || m_start_addr > address)
+	{
+		m_pc = address;
+		m_start_addr = result;
+	}
+
+	return m_start_addr;
 }
 
-void debugger_list::ShowAddress(u32 addr, bool select_addr, bool force)
+void debugger_list::ShowAddress(u32 addr, bool select_addr, bool direct)
 {
-	auto IsBreakpoint = [this](u32 pc)
+	const decltype(spu_thread::local_breakpoints)* spu_bps_list{};
+
+	if (m_cpu && m_cpu->id_type() == 2)
 	{
-		return m_cpu && m_cpu->id_type() == 1 && m_breakpoint_handler->HasBreakpoint(pc);
+		spu_bps_list = &static_cast<spu_thread*>(m_cpu)->local_breakpoints;
+	}
+
+	auto IsBreakpoint = [&](u32 pc)
+	{
+		switch (m_cpu ? m_cpu->id_type() : 0)
+		{
+		case 1: return m_ppu_breakpoint_handler->HasBreakpoint(pc);
+		case 2: return (*spu_bps_list)[pc / 4].load();
+		default: return false;
+		}
 	};
 
-	bool center_pc = m_gui_settings->GetValue(gui::d_centerPC).toBool();
-
-	// How many spaces addr can move down without us needing to move the entire view
-	const u32 addr_margin = (m_item_count / (center_pc ? 2 : 1) - 4); // 4 is just a buffer of 4 spaces at the bottom
-
-	if (select_addr || force)
+	if (select_addr || direct)
 	{
-		// The user wants to survey a specific memory location, do not interfere from this point forth 
+		// The user wants to survey a specific memory location, do not interfere from this point forth
 		m_follow_thread = false;
 	}
 
-	if (force || ((m_follow_thread || select_addr) && addr - m_pc > addr_margin * 4)) // 4 is the number of bytes in each instruction
+	m_dirty_flag = false;
+
+	u32 pc = m_start_addr;
+
+	if (!direct && (m_follow_thread || select_addr))
 	{
-		if (center_pc)
-		{
-			m_pc = GetCenteredAddress(addr);
-		}
-		else
-		{
-			m_pc = addr;
-		}
+		pc = GetStartAddress(addr);
 	}
 
 	const auto& default_foreground = palette().color(foregroundRole());
 	const auto& default_background = palette().color(backgroundRole());
+
+	m_showing_selected_instruction = false;
 
 	if (select_addr)
 	{
@@ -112,14 +161,15 @@ void debugger_list::ShowAddress(u32 addr, bool select_addr, bool force)
 	{
 		const bool is_spu = m_cpu->id_type() == 2;
 		const u32 address_limits = (is_spu ? 0x3fffc : ~3);
-		m_pc &= address_limits;
-		u32 pc = m_pc;
+		const u32 current_pc = m_cpu->get_pc();
+		m_start_addr &= address_limits;
+		pc = m_start_addr;
 
 		for (uint i = 0, count = 4; i < m_item_count; ++i, pc = (pc + count) & address_limits)
 		{
 			QListWidgetItem* list_item = item(i);
 
-			if (m_cpu->is_paused() && pc == m_cpu->get_pc())
+			if (pc == current_pc)
 			{
 				list_item->setForeground(m_text_color_pc);
 				list_item->setBackground(m_color_pc);
@@ -131,6 +181,8 @@ void debugger_list::ShowAddress(u32 addr, bool select_addr, bool force)
 				{
 					list_item->setSelected(true);
 				}
+
+				m_showing_selected_instruction = true;
 			}
 			else if (IsBreakpoint(pc))
 			{
@@ -192,31 +244,35 @@ void debugger_list::EnableThreadFollowing(bool enable)
 
 void debugger_list::scroll(s32 steps)
 {
-	while (m_cpu && m_cpu->id_type() == 0x55 && steps > 0)
+	for (; m_cpu && m_cpu->id_type() == 0x55 && steps > 0; steps--)
 	{
 		// If scrolling forwards (downwards), we can skip entire commands
-		// Backwards is impossible though
-		m_pc += std::max<u32>(m_disasm->disasm(m_pc), 4);
-		steps--;
+		m_start_addr += std::max<u32>(m_disasm->disasm(m_start_addr), 4);
 	}
 
 	if (m_cpu && m_cpu->id_type() == 0x55 && steps < 0)
 	{
-		// If scrolling backwards (upwards), try to obtain the start of commands tail 
-		if (auto [count, res] = static_cast<rsx::thread*>(m_cpu)->try_get_pc_of_x_cmds_backwards(-steps, m_pc); count == 0u - steps)
+		// If scrolling backwards (upwards), try to obtain the start of commands tail
+		if (auto [count, res] = static_cast<rsx::thread*>(m_cpu)->try_get_pc_of_x_cmds_backwards(-steps, m_start_addr); count == 0u - steps)
 		{
 			steps = 0;
-			m_pc = res;
+			m_start_addr = res;
 		}
 	}
 
 	EnableThreadFollowing(false);
-	ShowAddress(m_pc + (steps * 4), false, true);
+	m_start_addr += steps * 4;
+	ShowAddress(0, false, true);
 }
 
 void debugger_list::keyPressEvent(QKeyEvent* event)
 {
 	if (!isActiveWindow())
+	{
+		return;
+	}
+
+	if (event->modifiers())
 	{
 		return;
 	}
@@ -235,7 +291,7 @@ void debugger_list::keyPressEvent(QKeyEvent* event)
 		}
 		if (m_cpu && m_cpu->id_type() == 0x55)
 		{
-			create_rsx_command_detail(m_pc, currentRow());
+			create_rsx_command_detail(m_showing_selected_instruction ? m_selected_instruction : m_pc);
 			return;
 		}
 		return;
@@ -257,19 +313,8 @@ void debugger_list::hideEvent(QHideEvent* event)
 	QListWidget::hideEvent(event);
 }
 
-void debugger_list::create_rsx_command_detail(u32 pc, int row)
+void debugger_list::create_rsx_command_detail(u32 pc)
 {
-	if (row < 0)
-	{
-		return;
-	}
-
-	for (; row > 0; row--)
-	{
-		// Skip methods
-		pc += std::max<u32>(m_disasm->disasm(pc), 4);
-	}
-
 	RSXDisAsm rsx_dis = *static_cast<RSXDisAsm*>(m_disasm);
 	rsx_dis.change_mode(cpu_disasm_mode::list);
 
@@ -309,10 +354,19 @@ void debugger_list::mouseDoubleClickEvent(QMouseEvent* event)
 {
 	if (event->button() == Qt::LeftButton)
 	{
-		const int i = currentRow();
+		int i = currentRow();
 		if (i < 0) return;
 
-		const u32 pc = m_pc + i * 4;
+		u32 pc = m_start_addr;
+
+		for (; m_cpu && m_cpu->id_type() == 0x55 && i; i--)
+		{
+			// If scrolling forwards (downwards), we can skip entire commands
+			pc += std::max<u32>(m_disasm->disasm(pc), 4);
+		}
+
+		pc += i * 4;
+		m_selected_instruction = pc;
 
 		// Let debugger_frame know about breakpoint.
 		// Other option is to add to breakpoint manager directly and have a signal there instead.
@@ -341,7 +395,7 @@ void debugger_list::resizeEvent(QResizeEvent* event)
 
 	const u32 old_size = m_item_count;
 
-	// It is fine if the QWidgetList is a tad bit larger than the frame 
+	// It is fine if the QWidgetList is a tad bit larger than the frame
 	m_item_count = utils::aligned_div<u32>(rect().height() - frameWidth() * 2, visualItemRect(item(0)).height());
 
 	if (old_size <= m_item_count)
@@ -349,6 +403,7 @@ void debugger_list::resizeEvent(QResizeEvent* event)
 		for (u32 i = old_size; i < m_item_count; ++i)
 		{
 			insertItem(i, new QListWidgetItem(""));
+			m_dirty_flag = true;
 		}
 	}
 	else

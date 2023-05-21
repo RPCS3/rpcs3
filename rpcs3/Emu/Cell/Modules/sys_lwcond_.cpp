@@ -1,6 +1,6 @@
 #include "stdafx.h"
+#include "Emu/system_config.h"
 #include "Emu/Cell/PPUModule.h"
-
 #include "Emu/Cell/lv2/sys_lwmutex.h"
 #include "Emu/Cell/lv2/sys_lwcond.h"
 #include "Emu/Cell/lv2/sys_cond.h"
@@ -69,10 +69,7 @@ error_code sys_lwcond_signal(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 		// call the syscall
 		if (error_code res = _sys_lwcond_signal(ppu, lwcond->lwcond_queue, lwmutex->sleep_queue, u32{umax}, 1))
 		{
-			if (ppu.test_stopped())
-			{
-				return 0;
-			}
+			static_cast<void>(ppu.test_stopped());
 
 			lwmutex->all_info--;
 
@@ -108,10 +105,7 @@ error_code sys_lwcond_signal(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 	// call the syscall
 	if (error_code res = _sys_lwcond_signal(ppu, lwcond->lwcond_queue, lwmutex->sleep_queue, u32{umax}, 3))
 	{
-		if (ppu.test_stopped())
-		{
-			return 0;
-		}
+		static_cast<void>(ppu.test_stopped());
 
 		lwmutex->lock_var.atomic_op([&](sys_lwmutex_t::sync_var_t& var)
 		{
@@ -158,10 +152,7 @@ error_code sys_lwcond_signal_all(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 			return res;
 		}
 
-		if (ppu.test_stopped())
-		{
-			return 0;
-		}
+		static_cast<void>(ppu.test_stopped());
 
 		lwmutex->all_info += +res;
 		return CELL_OK;
@@ -183,10 +174,7 @@ error_code sys_lwcond_signal_all(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 	// if locking succeeded, call the syscall
 	error_code res = _sys_lwcond_signal_all(ppu, lwcond->lwcond_queue, lwmutex->sleep_queue, 1);
 
-	if (ppu.test_stopped())
-	{
-		return 0;
-	}
+	static_cast<void>(ppu.test_stopped());
 
 	if (res > 0)
 	{
@@ -225,10 +213,7 @@ error_code sys_lwcond_signal_to(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, u
 		// call the syscall
 		if (error_code res = _sys_lwcond_signal(ppu, lwcond->lwcond_queue, lwmutex->sleep_queue, ppu_thread_id, 1))
 		{
-			if (ppu.test_stopped())
-			{
-				return 0;
-			}
+			static_cast<void>(ppu.test_stopped());
 
 			lwmutex->all_info--;
 
@@ -261,10 +246,7 @@ error_code sys_lwcond_signal_to(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, u
 	// call the syscall
 	if (error_code res = _sys_lwcond_signal(ppu, lwcond->lwcond_queue, lwmutex->sleep_queue, ppu_thread_id, 3))
 	{
-		if (ppu.test_stopped())
-		{
-			return 0;
-		}
+		static_cast<void>(ppu.test_stopped());
 
 		lwmutex->lock_var.atomic_op([&](sys_lwmutex_t::sync_var_t& var)
 		{
@@ -290,6 +272,9 @@ error_code sys_lwcond_wait(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, u64 ti
 		return sys_cond_wait(ppu, lwcond->lwcond_queue, timeout);
 	}
 
+	auto& sstate = *ppu.optional_savestate_state;
+	const auto lwcond_ec = sstate.try_read<error_code>().second;
+
 	const be_t<u32> tid(ppu.id);
 
 	const vm::ptr<sys_lwmutex_t> lwmutex = lwcond->lwmutex;
@@ -301,18 +286,22 @@ error_code sys_lwcond_wait(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, u64 ti
 	}
 
 	// save old recursive value
-	const be_t<u32> recursive_value = lwmutex->recursive_count;
+	const be_t<u32> recursive_value = !lwcond_ec ? lwmutex->recursive_count : sstate.operator be_t<u32>();
 
 	// set special value
 	lwmutex->vars.owner = lwmutex_reserved;
 	lwmutex->recursive_count = 0;
 
 	// call the syscall
-	const error_code res = _sys_lwcond_queue_wait(ppu, lwcond->lwcond_queue, lwmutex->sleep_queue, timeout);
+	const error_code res = !lwcond_ec ? _sys_lwcond_queue_wait(ppu, lwcond->lwcond_queue, lwmutex->sleep_queue, timeout) : lwcond_ec;
 
-	if (ppu.test_stopped())
+	static_cast<void>(ppu.test_stopped());
+
+	if (ppu.state & cpu_flag::again)
 	{
-		return 0;
+		sstate.pos = 0;
+		sstate(error_code{}, recursive_value); // Not aborted on mutex sleep
+		return {};
 	}
 
 	if (res == CELL_OK || res + 0u == CELL_ESRCH)
@@ -339,6 +328,13 @@ error_code sys_lwcond_wait(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, u64 ti
 		if (error_code res2 = sys_lwmutex_lock(ppu, lwmutex, 0))
 		{
 			return res2;
+		}
+
+		if (ppu.state & cpu_flag::again)
+		{
+			sstate.pos = 0;
+			sstate(res, recursive_value);
+			return {};
 		}
 
 		// if successfully locked, restore recursive value

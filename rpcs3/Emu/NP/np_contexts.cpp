@@ -3,6 +3,8 @@
 
 #include "Emu/IdManager.h"
 
+LOG_CHANNEL(sceNp2);
+
 score_ctx::score_ctx(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpCommunicationPassphrase> passphrase)
 {
 	ensure(!communicationId->data[9] && strlen(communicationId->data) == 9);
@@ -11,24 +13,80 @@ score_ctx::score_ctx(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<Sc
 }
 s32 create_score_context(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpCommunicationPassphrase> passphrase)
 {
-	return static_cast<s32>(idm::make<score_ctx>(communicationId, passphrase));
+	s32 score_id = idm::make<score_ctx>(communicationId, passphrase);
+
+	if (score_id == id_manager::id_traits<score_ctx>::invalid)
+	{
+		return SCE_NP_COMMUNITY_ERROR_TOO_MANY_OBJECTS;
+	}
+
+	return static_cast<s32>(score_id);
 }
 bool destroy_score_context(s32 ctx_id)
 {
 	return idm::remove<score_ctx>(static_cast<u32>(ctx_id));
 }
 
-score_transaction_ctx::score_transaction_ctx(s32 score_context_id)
+score_transaction_ctx::score_transaction_ctx(const std::shared_ptr<score_ctx>& score)
 {
-	this->score_context_id = score_context_id;
+	pcId            = score->pcId;
+	communicationId = score->communicationId;
+	passphrase      = score->passphrase;
+	timeout         = score->timeout;
 }
-s32 create_score_transaction_context(s32 score_context_id)
+score_transaction_ctx::~score_transaction_ctx()
 {
-	return static_cast<s32>(idm::make<score_transaction_ctx>(score_context_id));
+	if (thread.joinable())
+		thread.join();
+}
+
+s32 create_score_transaction_context(const std::shared_ptr<score_ctx>& score)
+{
+	s32 trans_id = idm::make<score_transaction_ctx>(score);
+
+	if (trans_id == id_manager::id_traits<score_transaction_ctx>::invalid)
+	{
+		return SCE_NP_COMMUNITY_ERROR_TOO_MANY_OBJECTS;
+	}
+
+	return static_cast<s32>(trans_id);
 }
 bool destroy_score_transaction_context(s32 ctx_id)
 {
 	return idm::remove<score_transaction_ctx>(static_cast<u32>(ctx_id));
+}
+std::optional<s32> score_transaction_ctx::get_score_transaction_status()
+{
+	std::lock_guard lock(mutex);
+
+	return result;
+}
+void score_transaction_ctx::abort_score_transaction()
+{
+	std::lock_guard lock(mutex);
+
+	result = SCE_NP_COMMUNITY_ERROR_ABORTED;
+	wake_cond.notify_one();
+}
+error_code score_transaction_ctx::wait_for_completion()
+{
+	std::unique_lock lock(mutex);
+
+	if (result)
+	{
+		return *result;
+	}
+
+	completion_cond.wait(lock);
+
+	return *result;
+}
+
+bool score_transaction_ctx::set_result_and_wake(error_code err)
+{
+	result = err;
+	wake_cond.notify_one();
+	return true;
 }
 
 match2_ctx::match2_ctx(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpCommunicationPassphrase> passphrase)
@@ -39,6 +97,7 @@ match2_ctx::match2_ctx(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<
 }
 u16 create_match2_context(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpCommunicationPassphrase> passphrase)
 {
+	sceNp2.notice("Creating match2 context with communicationId: <%s>", static_cast<const char *>(communicationId->data));
 	return static_cast<u16>(idm::make<match2_ctx>(communicationId, passphrase));
 }
 bool destroy_match2_context(u16 ctx_id)

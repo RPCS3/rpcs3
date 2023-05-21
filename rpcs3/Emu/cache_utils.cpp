@@ -12,14 +12,14 @@ namespace rpcs3::cache
 {
 	std::string get_ppu_cache()
 	{
-		auto& _main = g_fxo->get<ppu_module>();
-	
-		if (!g_fxo->is_init<ppu_module>() || _main.cache.empty())
+		auto& _main = g_fxo->get<main_ppu_module>();
+
+		if (!g_fxo->is_init<main_ppu_module>() || _main.cache.empty())
 		{
 			ppu_log.error("PPU Cache location not initialized.");
 			return {};
 		}
-	
+
 		return _main.cache;
 	}
 
@@ -75,10 +75,7 @@ namespace rpcs3::cache
 		cache_dir.close();
 
 		// sort oldest first
-		std::sort(file_list.begin(), file_list.end(), [](auto left, auto right)
-		{
-			return left.mtime < right.mtime;
-		});
+		std::sort(file_list.begin(), file_list.end(), FN(x.mtime < y.mtime));
 
 		// keep removing until cache is empty or enough bytes have been cleared
 		// cache is cleared down to 80% of limit to increase interval between clears

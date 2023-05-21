@@ -26,11 +26,17 @@ struct loaded_npdrm_keys
 	}
 
 	// TODO: Check if correct for ELF files usage
-	u128 last_key() const
+	u128 last_key(usz backwards = 0) const
 	{
+		backwards++;
 		const usz pos = dec_keys_pos;
-		return pos ? dec_keys[(pos - 1) % std::size(dec_keys)].load() : u128{};
+		return pos >= backwards ? dec_keys[(pos - backwards) % std::size(dec_keys)].load() : u128{};
 	}
+
+	SAVESTATE_INIT_POS(2);
+	loaded_npdrm_keys() = default;
+	loaded_npdrm_keys(utils::serial& ar);
+	void save(utils::serial& ar);
 };
 
 struct NPD_HEADER
@@ -107,6 +113,11 @@ public:
 		const u64 bytesRead = ReadData(pos, static_cast<u8*>(buffer), size);
 		pos += bytesRead;
 		return bytesRead;
+	}
+
+	u64 read_at(u64 offset, void* buffer, u64 size) override
+	{
+		return ReadData(offset, static_cast<u8*>(buffer), size);
 	}
 
 	u64 write(const void*, u64) override

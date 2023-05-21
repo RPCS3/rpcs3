@@ -80,7 +80,7 @@ std::pair<PPUDisAsm::const_op, u64> PPUDisAsm::try_get_const_op_gpr_value(u32 re
 
 	if (pc == umax)
 	{
-		// Default arg: choose pc of previous instruction 
+		// Default arg: choose pc of previous instruction
 
 		if (dump_pc == 0)
 		{
@@ -108,7 +108,7 @@ std::pair<PPUDisAsm::const_op, u64> PPUDisAsm::try_get_const_op_gpr_value(u32 re
 
 		auto is_branch = [](enum ppu_itype::type itype)
 		{
-			return itype == ppu_itype::BC || itype == ppu_itype::B || itype == ppu_itype::BCLR || itype == ppu_itype::BCCTR; 
+			return itype == ppu_itype::BC || itype == ppu_itype::B || itype == ppu_itype::BCLR || itype == ppu_itype::BCCTR;
 		};
 
 		if (is_branch(type) || type == ppu_itype::UNK)

@@ -2,7 +2,10 @@
 #include "system_progress.hpp"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
 #include "Emu/RSX/RSXThread.h"
+#include "Emu/RSX/Overlays/overlay_manager.h"
 #include "Emu/RSX/Overlays/overlay_message_dialog.h"
+#include "Emu/RSX/Overlays/overlay_message.h"
+#include "Emu/RSX/Overlays/overlay_compile_notification.h"
 #include "Emu/System.h"
 
 LOG_CHANNEL(sys_log, "SYS");
@@ -61,11 +64,14 @@ void progress_dialog_server::operator()()
 		bool skip_this_one = false; // Workaround: do not open a progress dialog if there is already a cell message dialog open.
 		std::shared_ptr<MsgDialogBase> dlg;
 
-		if (const auto renderer = rsx::get_current_renderer();
-		    renderer && renderer->is_inited)
+		if (const auto renderer = rsx::get_current_renderer())
 		{
+			// Some backends like OpenGL actually initialize a lot of driver objects in the "on_init" method.
+			// Wait for init to complete within reasonable time. Abort just in case we have hardware/driver issues.
+			renderer->is_initialized.wait(false, atomic_wait_timeout(5 * 1000000000ull));
+
 			auto manager  = g_fxo->try_get<rsx::overlays::display_manager>();
-			skip_this_one = g_fxo->get<progress_dialog_workaround>().skip_the_progress_dialog || (manager && manager->get<rsx::overlays::message_dialog>());
+			skip_this_one = !renderer->is_initialized || g_fxo->get<progress_dialog_workaround>().skip_the_progress_dialog || (manager && manager->get<rsx::overlays::message_dialog>());
 
 			if (manager && !skip_this_one)
 			{
@@ -137,7 +143,8 @@ void progress_dialog_server::operator()()
 
 				if (skip_this_one)
 				{
-					// Do nothing
+					// Show a message instead
+					rsx::overlays::show_ppu_compile_notification();
 					thread_ctrl::wait_for(10000);
 					continue;
 				}
@@ -171,6 +178,12 @@ void progress_dialog_server::operator()()
 						dlg->ProgressBarSetValue(0, static_cast<u32>(std::floor(value)));
 					});
 				}
+			}
+
+			if (skip_this_one)
+			{
+				// Make sure to update any pending messages. PPU compilation may freeze the image.
+				rsx::overlays::refresh_message_queue();
 			}
 
 			thread_ctrl::wait_for(10000);

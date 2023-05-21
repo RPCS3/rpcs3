@@ -68,19 +68,10 @@ struct spu_itype
 		STQA,
 		STQR, // memory_tag last
 
-		CBD, // constant_tag first
-		CBX,
-		CHD,
-		CHX,
-		CWD,
-		CWX,
-		CDD,
-		CDX,
-		ILH,
+		ILH, // constant_tag_first
 		ILHU,
 		IL,
 		ILA,
-		IOHL,
 		FSMBI, // constant_tag last
 
 		AH, // integer_tag first
@@ -107,6 +98,14 @@ struct spu_itype
 		MPYHHA,
 		MPYHHU,
 		MPYHHAU,
+		CBD,
+		CHD,
+		CWD,
+		CDD,
+		CBX,
+		CHX,
+		CWX,
+		CDX,
 		CLZ,
 		CNTB,
 		FSMB,
@@ -130,6 +129,7 @@ struct spu_itype
 		ORC,
 		ORBI,
 		ORHI,
+		IOHL,
 		ORI,
 		ORX,
 		XOR,
@@ -262,6 +262,36 @@ struct spu_itype
 	friend constexpr bool operator &(type value, xfloat_tag)
 	{
 		return value >= FMA && value <= FRDS;
+	}
+
+	// Test for memory instruction
+	friend constexpr bool operator &(type value, memory_tag)
+	{
+		return value >= LQD && value <= STQR;
+	}
+
+	// Test for compare instruction
+	friend constexpr bool operator &(type value, compare_tag)
+	{
+		return value >= CEQB && value <= CLGTI;
+	}
+
+	// Test for integer instruction
+	friend constexpr bool operator &(type value, integer_tag)
+	{
+		return value >= AH && value <= SHUFB;
+	}
+
+	// Test for shift or rotate instruction
+	friend constexpr bool operator &(type value, shiftrot_tag)
+	{
+		return value >= SHLH && value <= ROTMAI;
+	}
+
+	// Test for constant loading instruction
+	friend constexpr bool operator &(type value, constant_tag)
+	{
+		return value >= ILH && value <= FSMBI;
 	}
 };
 

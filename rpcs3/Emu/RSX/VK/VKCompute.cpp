@@ -3,7 +3,7 @@
 #include "VKRenderPass.h"
 #include "vkutils/buffer_object.h"
 
-#define VK_MAX_COMPUTE_TASKS 4096   // Max number of jobs per frame
+#define VK_MAX_COMPUTE_TASKS 8192   // Max number of jobs per frame
 
 namespace vk
 {
@@ -128,7 +128,7 @@ namespace vk
 		m_used_descriptors = 0;
 	}
 
-	void compute_task::load_program(VkCommandBuffer cmd)
+	void compute_task::load_program(const vk::command_buffer& cmd)
 	{
 		if (!m_program)
 		{
@@ -170,7 +170,7 @@ namespace vk
 		m_descriptor_set.bind(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, m_pipeline_layout);
 	}
 
-	void compute_task::run(VkCommandBuffer cmd, u32 invocations_x, u32 invocations_y, u32 invocations_z)
+	void compute_task::run(const vk::command_buffer& cmd, u32 invocations_x, u32 invocations_y, u32 invocations_z)
 	{
 		// CmdDispatch is outside renderpass scope only
 		if (vk::is_renderpass_open(cmd))
@@ -182,7 +182,7 @@ namespace vk
 		vkCmdDispatch(cmd, invocations_x, invocations_y, invocations_z);
 	}
 
-	void compute_task::run(VkCommandBuffer cmd, u32 num_invocations)
+	void compute_task::run(const vk::command_buffer& cmd, u32 num_invocations)
 	{
 		u32 invocations_x, invocations_y;
 		if (num_invocations > max_invocations_x)
@@ -224,40 +224,14 @@ namespace vk
 		kernel_size = _kernel_size? _kernel_size : optimal_kernel_size;
 
 		m_src =
-			"#version 430\n"
-			"layout(local_size_x=%ws, local_size_y=1, local_size_z=1) in;\n"
-			"layout(std430, set=0, binding=0) buffer ssbo{ uint data[]; };\n"
-			"%ub"
-			"\n"
-			"#define KERNEL_SIZE %ks\n"
-			"\n"
-			"// Generic swap routines\n"
-			"#define bswap_u16(bits)     (bits & 0xFF) << 8 | (bits & 0xFF00) >> 8 | (bits & 0xFF0000) << 8 | (bits & 0xFF000000) >> 8\n"
-			"#define bswap_u32(bits)     (bits & 0xFF) << 24 | (bits & 0xFF00) << 8 | (bits & 0xFF0000) >> 8 | (bits & 0xFF000000) >> 24\n"
-			"#define bswap_u16_u32(bits) (bits & 0xFFFF) << 16 | (bits & 0xFFFF0000) >> 16\n"
-			"\n"
-			"// Depth format conversions\n"
-			"#define d24_to_f32(bits)             floatBitsToUint(float(bits) / 16777215.f)\n"
-			"#define f32_to_d24(bits)             uint(uintBitsToFloat(bits) * 16777215.f)\n"
-			"#define d24f_to_f32(bits)            (bits << 7)\n"
-			"#define f32_to_d24f(bits)            (bits >> 7)\n"
-			"#define d24x8_to_f32(bits)           d24_to_f32(bits >> 8)\n"
-			"#define d24x8_to_d24x8_swapped(bits) (bits & 0xFF00) | (bits & 0xFF0000) >> 16 | (bits & 0xFF) << 16\n"
-			"#define f32_to_d24x8_swapped(bits)   d24x8_to_d24x8_swapped(f32_to_d24(bits))\n"
-			"\n"
-			"%md"
-			"void main()\n"
-			"{\n"
-			"	uint invocations_x = (gl_NumWorkGroups.x * gl_WorkGroupSize.x);"
-			"	uint invocation_id = (gl_GlobalInvocationID.y * invocations_x) + gl_GlobalInvocationID.x;\n"
-			"	uint index = invocation_id * KERNEL_SIZE;\n"
-			"	uint value;\n"
-			"%vars"
-			"\n";
+		#include "../Program/GLSLSnippets/ShuffleBytes.glsl"
+		;
 
 		const auto parameters_size = utils::align(push_constants_size, 16) / 16;
 		const std::pair<std::string_view, std::string> syntax_replace[] =
 		{
+			{ "%loc", "0" },
+			{ "%set", "set = 0"},
 			{ "%ws", std::to_string(optimal_group_size) },
 			{ "%ks", std::to_string(kernel_size) },
 			{ "%vars", variables },
@@ -308,13 +282,13 @@ namespace vk
 		m_program->bind_buffer({ m_data->value, m_data_offset, m_data_length }, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
 	}
 
-	void cs_shuffle_base::set_parameters(VkCommandBuffer cmd, const u32* params, u8 count)
+	void cs_shuffle_base::set_parameters(const vk::command_buffer& cmd, const u32* params, u8 count)
 	{
 		ensure(use_push_constants);
 		vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, count * 4, params);
 	}
 
-	void cs_shuffle_base::run(VkCommandBuffer cmd, const vk::buffer* data, u32 data_length, u32 data_offset)
+	void cs_shuffle_base::run(const vk::command_buffer& cmd, const vk::buffer* data, u32 data_length, u32 data_offset)
 	{
 		m_data = data;
 		m_data_offset = data_offset;
@@ -354,7 +328,7 @@ namespace vk
 		m_program->bind_buffer({ m_data->value, m_data_offset, m_ssbo_length }, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
 	}
 
-	void cs_interleave_task::run(VkCommandBuffer cmd, const vk::buffer* data, u32 data_offset, u32 data_length, u32 zeta_offset, u32 stencil_offset)
+	void cs_interleave_task::run(const vk::command_buffer& cmd, const vk::buffer* data, u32 data_offset, u32 data_length, u32 zeta_offset, u32 stencil_offset)
 	{
 		u32 parameters[4] = { data_length, zeta_offset - data_offset, stencil_offset - data_offset, 0 };
 		set_parameters(cmd, parameters, 4);
@@ -415,7 +389,7 @@ namespace vk
 		m_program->bind_buffer({ dst->value, 0, 4 }, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
 	}
 
-	void cs_aggregator::run(VkCommandBuffer cmd, const vk::buffer* dst, const vk::buffer* src, u32 num_words)
+	void cs_aggregator::run(const vk::command_buffer& cmd, const vk::buffer* dst, const vk::buffer* src, u32 num_words)
 	{
 		this->dst = dst;
 		this->src = src;

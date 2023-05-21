@@ -34,7 +34,9 @@ namespace vk
 			features2.pNext = nullptr;
 
 			VkPhysicalDeviceFloat16Int8FeaturesKHR shader_support_info{};
-			VkPhysicalDeviceDescriptorIndexingFeatures  descriptor_indexing_info{};
+			VkPhysicalDeviceDescriptorIndexingFeatures descriptor_indexing_info{};
+			VkPhysicalDeviceAttachmentFeedbackLoopLayoutFeaturesEXT fbo_loops_info{};
+			VkPhysicalDeviceFragmentShaderBarycentricFeaturesKHR shader_barycentric_info{};
 
 			if (device_extensions.is_supported(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME))
 			{
@@ -57,6 +59,20 @@ namespace vk
 				descriptor_indexing_support    = true;
 			}
 
+			if (device_extensions.is_supported(VK_EXT_ATTACHMENT_FEEDBACK_LOOP_LAYOUT_EXTENSION_NAME))
+			{
+				fbo_loops_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ATTACHMENT_FEEDBACK_LOOP_LAYOUT_FEATURES_EXT;
+				fbo_loops_info.pNext = features2.pNext;
+				features2.pNext      = &fbo_loops_info;
+			}
+
+			if (device_extensions.is_supported(VK_KHR_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME))
+			{
+				shader_barycentric_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADER_BARYCENTRIC_FEATURES_KHR;
+				shader_barycentric_info.pNext = features2.pNext;
+				features2.pNext               = &shader_barycentric_info;
+			}
+
 			auto _vkGetPhysicalDeviceFeatures2KHR = reinterpret_cast<PFN_vkGetPhysicalDeviceFeatures2KHR>(vkGetInstanceProcAddr(parent, "vkGetPhysicalDeviceFeatures2KHR"));
 			ensure(_vkGetPhysicalDeviceFeatures2KHR); // "vkGetInstanceProcAddress failed to find entry point!"
 			_vkGetPhysicalDeviceFeatures2KHR(dev, &features2);
@@ -64,6 +80,8 @@ namespace vk
 			shader_types_support.allow_float64 = !!features2.features.shaderFloat64;
 			shader_types_support.allow_float16 = !!shader_support_info.shaderFloat16;
 			shader_types_support.allow_int8    = !!shader_support_info.shaderInt8;
+			framebuffer_loops_support          = !!fbo_loops_info.attachmentFeedbackLoopLayout;
+			barycoords_support                 = !!shader_barycentric_info.fragmentShaderBarycentric;
 			features                           = features2.features;
 
 			if (descriptor_indexing_support)
@@ -142,8 +160,7 @@ namespace vk
 			CHECK_RESULT_EX(_vkGetMoltenVKConfigurationMVK(VK_NULL_HANDLE, &mvk_config, &mvk_config_size), std::string("Could not get MoltenVK configuration."));
 
 			mvk_config.resumeLostDevice = true;
-			mvk_config.semaphoreUseMTLEvent = mvk_config.semaphoreUseMTLFence = !(g_cfg.video.mvk_software_vksemaphore.get());
-			mvk_config.fastMathEnabled = !(g_cfg.video.disable_msl_fast_math.get());
+			mvk_config.fastMathEnabled = g_cfg.video.disable_msl_fast_math.get() ? MVK_CONFIG_FAST_MATH_NEVER : MVK_CONFIG_FAST_MATH_ON_DEMAND;
 
 			CHECK_RESULT_EX(_vkSetMoltenVKConfigurationMVK(VK_NULL_HANDLE, &mvk_config, &mvk_config_size), std::string("Could not set MoltenVK configuration."));
 		}
@@ -442,6 +459,16 @@ namespace vk
 			requested_extensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
 		}
 
+		if (pgpu->framebuffer_loops_support)
+		{
+			requested_extensions.push_back(VK_EXT_ATTACHMENT_FEEDBACK_LOOP_LAYOUT_EXTENSION_NAME);
+		}
+
+		if (pgpu->barycoords_support)
+		{
+			requested_extensions.push_back(VK_KHR_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME);
+		}
+
 		enabled_features.robustBufferAccess = VK_TRUE;
 		enabled_features.fullDrawIndexUint32 = VK_TRUE;
 		enabled_features.independentBlend = VK_TRUE;
@@ -554,6 +581,14 @@ namespace vk
 		}
 #endif
 
+		if (pgpu->get_driver_vendor() == driver_vendor::ANV &&
+			pgpu->descriptor_update_after_bind_mask & (1 << VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER))
+		{
+			// Just disable robust access for now. I'll revisit after ARC launches.
+			rsx_log.error("Robust buffer access is broken when enabled with EXT_descriptor_indexing on ANV");
+			enabled_features.robustBufferAccess = VK_FALSE;
+		}
+
 		VkDeviceCreateInfo device = {};
 		device.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 		device.pNext = nullptr;
@@ -599,6 +634,15 @@ namespace vk
 			device.pNext = &indexing_features;
 		}
 
+		VkPhysicalDeviceAttachmentFeedbackLoopLayoutFeaturesEXT fbo_loop_features{};
+		if (pgpu->framebuffer_loops_support)
+		{
+			fbo_loop_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ATTACHMENT_FEEDBACK_LOOP_LAYOUT_FEATURES_EXT;
+			fbo_loop_features.attachmentFeedbackLoopLayout = VK_TRUE;
+			fbo_loop_features.pNext = const_cast<void*>(device.pNext);
+			device.pNext = &fbo_loop_features;
+		}
+
 		CHECK_RESULT_EX(vkCreateDevice(*pgpu, &device, nullptr, &dev), message_on_error);
 
 		// Initialize queues
@@ -634,9 +678,17 @@ namespace vk
 		}
 
 		if (g_cfg.video.disable_vulkan_mem_allocator)
-			m_allocator = std::make_unique<vk::mem_allocator_vk>(dev, pdev);
+		{
+			m_allocator = std::make_unique<vk::mem_allocator_vk>(*this, pdev);
+		}
 		else
-			m_allocator = std::make_unique<vk::mem_allocator_vma>(dev, pdev);
+		{
+			m_allocator = std::make_unique<vk::mem_allocator_vma>(*this, pdev);
+		}
+
+		// Useful for debugging different VRAM configurations
+		const u64 vram_allocation_limit = g_cfg.video.vk.vram_allocation_limit * 0x100000ull;
+		memory_map.device_local_total_bytes = std::min(memory_map.device_local_total_bytes, vram_allocation_limit);
 	}
 
 	void render_device::destroy()
@@ -659,36 +711,6 @@ namespace vk
 			memory_map = {};
 			m_formats_support = {};
 		}
-	}
-
-	VkQueue render_device::get_present_queue() const
-	{
-		return m_present_queue;
-	}
-
-	VkQueue render_device::get_graphics_queue() const
-	{
-		return m_graphics_queue;
-	}
-
-	VkQueue render_device::get_transfer_queue() const
-	{
-		return m_transfer_queue;
-	}
-
-	u32 render_device::get_graphics_queue_family() const
-	{
-		return m_graphics_queue_family;
-	}
-
-	u32 render_device::get_present_queue_family() const
-	{
-		return m_graphics_queue_family;
-	}
-
-	u32 render_device::get_transfer_queue_family() const
-	{
-		return m_transfer_queue_family;
 	}
 
 	const VkFormatProperties render_device::get_format_properties(VkFormat format) const
@@ -727,106 +749,6 @@ namespace vk
 		}
 
 		return false;
-	}
-
-	const physical_device& render_device::gpu() const
-	{
-		return *pgpu;
-	}
-
-	const memory_type_mapping& render_device::get_memory_mapping() const
-	{
-		return memory_map;
-	}
-
-	const gpu_formats_support& render_device::get_formats_support() const
-	{
-		return m_formats_support;
-	}
-
-	const pipeline_binding_table& render_device::get_pipeline_binding_table() const
-	{
-		return m_pipeline_binding_table;
-	}
-
-	const gpu_shader_types_support& render_device::get_shader_types_support() const
-	{
-		return pgpu->shader_types_support;
-	}
-
-	bool render_device::get_shader_stencil_export_support() const
-	{
-		return pgpu->stencil_export_support;
-	}
-
-	bool render_device::get_depth_bounds_support() const
-	{
-		return pgpu->features.depthBounds != VK_FALSE;
-	}
-
-	bool render_device::get_alpha_to_one_support() const
-	{
-		return pgpu->features.alphaToOne != VK_FALSE;
-	}
-
-	bool render_device::get_anisotropic_filtering_support() const
-	{
-		return pgpu->features.samplerAnisotropy != VK_FALSE;
-	}
-
-	bool render_device::get_wide_lines_support() const
-	{
-		return pgpu->features.wideLines != VK_FALSE;
-	}
-
-	bool render_device::get_conditional_render_support() const
-	{
-		return pgpu->conditional_render_support;
-	}
-
-	bool render_device::get_unrestricted_depth_range_support() const
-	{
-		return pgpu->unrestricted_depth_range_support;
-	}
-
-	bool render_device::get_external_memory_host_support() const
-	{
-		return pgpu->external_memory_host_support;
-	}
-
-	bool render_device::get_surface_capabilities_2_support() const
-	{
-		return pgpu->surface_capabilities_2_support;
-	}
-
-	bool render_device::get_debug_utils_support() const
-	{
-		return g_cfg.video.renderdoc_compatiblity && pgpu->debug_utils_support;
-	}
-
-	bool render_device::get_descriptor_indexing_support() const
-	{
-		return pgpu->descriptor_indexing_support;
-	}
-
-	u64 render_device::get_descriptor_update_after_bind_support() const
-	{
-		return pgpu->descriptor_update_after_bind_mask;
-	}
-
-	u32 render_device::get_descriptor_max_draw_calls() const
-	{
-		return pgpu->descriptor_max_draw_calls;
-	}
-
-	mem_allocator_base* render_device::get_allocator() const
-	{
-		return m_allocator.get();
-	}
-
-	render_device::operator VkDevice() const
-	{
-		return dev;
 	}
 
 	void render_device::rebalance_memory_type_usage()
@@ -951,10 +873,7 @@ namespace vk
 		// Sort upload heap entries based on size.
 		if (host_coherent_types.size() > 1)
 		{
-			std::sort(host_coherent_types.begin(), host_coherent_types.end(), [](const auto& a, const auto& b)
-			{
-				return a.size > b.size;
-			});
+			std::sort(host_coherent_types.begin(), host_coherent_types.end(), FN(x.size > y.size));
 		}
 
 		for (auto& type : host_coherent_types)

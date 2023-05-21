@@ -5,6 +5,7 @@
 #include "utils.h"
 #include "aes.h"
 #include "sha1.h"
+#include "sha256.h"
 #include "key_vault.h"
 #include <cstring>
 #include <stdio.h>
@@ -136,6 +137,27 @@ char* extract_file_name(const char* file_path, char real_file_name[CRYPTO_MAX_PA
 	std::span r(real_file_name, CRYPTO_MAX_PATH);
 	strcpy_trunc(r, v);
 	return real_file_name;
+}
+
+std::string sha256_get_hash(const char* data, usz size, bool lower_case)
+{
+	u8 res_hash[32];
+	mbedtls_sha256_context ctx;
+	mbedtls_sha256_init(&ctx);
+	mbedtls_sha256_starts_ret(&ctx, 0);
+	mbedtls_sha256_update_ret(&ctx, reinterpret_cast<const unsigned char*>(data), size);
+	mbedtls_sha256_finish_ret(&ctx, res_hash);
+
+	std::string res_hash_string("0000000000000000000000000000000000000000000000000000000000000000");
+
+	for (usz index = 0; index < 32; index++)
+	{
+		const auto pal                   = lower_case ? "0123456789abcdef" : "0123456789ABCDEF";
+		res_hash_string[index * 2]       = pal[res_hash[index] >> 4];
+		res_hash_string[(index * 2) + 1] = pal[res_hash[index] & 15];
+	}
+
+	return res_hash_string;
 }
 
 void mbedtls_zeroize(void *v, size_t n)

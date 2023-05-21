@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "PadHandler.h"
 #include "Emu/system_utils.hpp"
+#include "Emu/system_config.h"
 #include "Input/pad_thread.h"
 #include "Input/product_info.h"
 
@@ -112,19 +113,19 @@ s32 PadHandlerBase::MultipliedInput(s32 raw_value, s32 multiplier)
 }
 
 // Get new scaled value between 0 and 255 based on its minimum and maximum
-float PadHandlerBase::ScaledInput(s32 raw_value, int minimum, int maximum)
+f32 PadHandlerBase::ScaledInput(s32 raw_value, int minimum, int maximum, f32 range)
 {
 	// value based on max range converted to [0, 1]
-	const float val = static_cast<float>(std::clamp(raw_value, minimum, maximum) - minimum) / (abs(maximum) + abs(minimum));
-	return 255.0f * val;
+	const f32 val = static_cast<f32>(std::clamp(raw_value, minimum, maximum) - minimum) / (abs(maximum) + abs(minimum));
+	return range * val;
 }
 
 // Get new scaled value between -255 and 255 based on its minimum and maximum
-float PadHandlerBase::ScaledInput2(s32 raw_value, int minimum, int maximum)
+f32 PadHandlerBase::ScaledInput2(s32 raw_value, int minimum, int maximum, f32 range)
 {
 	// value based on max range converted to [0, 1]
-	const float val = static_cast<float>(std::clamp(raw_value, minimum, maximum) - minimum) / (abs(maximum) + abs(minimum));
-	return (510.0f * val) - 255.0f;
+	const f32 val = static_cast<f32>(std::clamp(raw_value, minimum, maximum) - minimum) / (abs(maximum) + abs(minimum));
+	return (2.0f * range * val) - range;
 }
 
 // Get normalized trigger value based on the range defined by a threshold
@@ -140,7 +141,7 @@ u16 PadHandlerBase::NormalizeTriggerInput(u16 value, int threshold) const
 	}
 	else
 	{
-		const s32 val = static_cast<s32>(static_cast<float>(trigger_max) * (value - threshold) / (trigger_max - threshold));
+		const s32 val = static_cast<s32>(static_cast<f32>(trigger_max) * (value - threshold) / (trigger_max - threshold));
 		return static_cast<u16>(ScaledInput(val, trigger_min, trigger_max));
 	}
 }
@@ -154,7 +155,7 @@ u16 PadHandlerBase::NormalizeDirectedInput(s32 raw_value, s32 threshold, s32 max
 		return static_cast<u16>(0);
 	}
 
-	const float val = static_cast<float>(std::clamp(raw_value, 0, maximum)) / maximum; // value based on max range converted to [0, 1]
+	const f32 val = static_cast<f32>(std::clamp(raw_value, 0, maximum)) / maximum; // value based on max range converted to [0, 1]
 
 	if (threshold <= 0)
 	{
@@ -162,7 +163,7 @@ u16 PadHandlerBase::NormalizeDirectedInput(s32 raw_value, s32 threshold, s32 max
 	}
 	else
 	{
-		const float thresh = static_cast<float>(threshold) / maximum; // threshold converted to [0, 1]
+		const f32 thresh = static_cast<f32>(threshold) / maximum; // threshold converted to [0, 1]
 		return static_cast<u16>(255.0f * std::min(1.0f, (val - thresh) / (1.0f - thresh)));
 	}
 }
@@ -186,14 +187,14 @@ u16 PadHandlerBase::NormalizeStickInput(u16 raw_value, int threshold, int multip
 // return is new x and y values in 0-255 range
 std::tuple<u16, u16> PadHandlerBase::NormalizeStickDeadzone(s32 inX, s32 inY, u32 deadzone) const
 {
-	const float dz_range = deadzone / static_cast<float>(std::abs(thumb_max)); // NOTE: thumb_max should be positive anyway
+	const f32 dz_range = deadzone / static_cast<f32>(std::abs(thumb_max)); // NOTE: thumb_max should be positive anyway
 
-	float X = inX / 255.0f;
-	float Y = inY / 255.0f;
+	f32 X = inX / 255.0f;
+	f32 Y = inY / 255.0f;
 
 	if (dz_range > 0.f)
 	{
-		const float mag = std::min(sqrtf(X * X + Y * Y), 1.f);
+		const f32 mag = std::min(sqrtf(X * X + Y * Y), 1.f);
 
 		if (mag <= 0)
 		{
@@ -202,15 +203,15 @@ std::tuple<u16, u16> PadHandlerBase::NormalizeStickDeadzone(s32 inX, s32 inY, u3
 
 		if (mag > dz_range)
 		{
-			const float pos = std::lerp(0.13f, 1.f, (mag - dz_range) / (1 - dz_range));
-			const float scale = pos / mag;
+			const f32 pos = std::lerp(0.13f, 1.f, (mag - dz_range) / (1 - dz_range));
+			const f32 scale = pos / mag;
 			X = X * scale;
 			Y = Y * scale;
 		}
 		else
 		{
-			const float pos = std::lerp(0.f, 0.13f, mag / dz_range);
-			const float scale = pos / mag;
+			const f32 pos = std::lerp(0.f, 0.13f, mag / dz_range);
+			const f32 scale = pos / mag;
 			X = X * scale;
 			Y = Y * scale;
 		}
@@ -231,9 +232,9 @@ u16 PadHandlerBase::Clamp0To1023(f32 input)
 }
 
 // input has to be [-1,1]. result will be [0,255]
-u16 PadHandlerBase::ConvertAxis(float value)
+u16 PadHandlerBase::ConvertAxis(f32 value)
 {
-	return static_cast<u16>((value + 1.0)*(255.0 / 2.0));
+	return static_cast<u16>((value + 1.0) * (255.0 / 2.0));
 }
 
 // The DS3, (and i think xbox controllers) give a 'square-ish' type response, so that the corners will give (almost)max x/y instead of the ~30x30 from a perfect circle
@@ -255,8 +256,8 @@ std::tuple<u16, u16> PadHandlerBase::ConvertToSquirclePoint(u16 inX, u16 inY, in
 	const f32 newLen = (1 + std::pow(std::sin(2 * angle), 2.f) / (squircle_factor / 1000.f)) * r;
 
 	// we now have len and angle, convert to cartesian
-	const int newX = Clamp0To255(((newLen * std::cos(angle)) + 1) * 127.5f);
-	const int newY = Clamp0To255(((newLen * std::sin(angle)) + 1) * 127.5f);
+	const int newX = Clamp0To255(std::round(((newLen * std::cos(angle)) + 1) * 127.5f));
+	const int newY = Clamp0To255(std::round(((newLen * std::sin(angle)) + 1) * 127.5f));
 	return std::tuple<u16, u16>(newX, newY);
 }
 
@@ -280,6 +281,11 @@ bool PadHandlerBase::has_rumble() const
 	return b_has_rumble;
 }
 
+bool PadHandlerBase::has_motion() const
+{
+	return b_has_motion;
+}
+
 bool PadHandlerBase::has_deadzones() const
 {
 	return b_has_deadzones;
@@ -293,6 +299,11 @@ bool PadHandlerBase::has_led() const
 bool PadHandlerBase::has_rgb() const
 {
 	return b_has_rgb;
+}
+
+bool PadHandlerBase::has_player_led() const
+{
+	return b_has_player_led;
 }
 
 bool PadHandlerBase::has_battery() const
@@ -313,7 +324,27 @@ void PadHandlerBase::init_configs()
 	}
 }
 
-void PadHandlerBase::get_next_button_press(const std::string& pad_id, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist, const std::vector<std::string>& /*buttons*/)
+cfg_pad* PadHandlerBase::get_config(const std::string& pad_id)
+{
+	int index = 0;
+
+	for (uint i = 0; i < MAX_GAMEPADS; i++)
+	{
+		if (g_cfg_input.player[i]->handler == m_type)
+		{
+			if (g_cfg_input.player[i]->device.to_string() == pad_id)
+			{
+				m_pad_configs[index].from_string(g_cfg_input.player[i]->config.to_string());
+				return &m_pad_configs[index];
+			}
+			index++;
+		}
+	}
+
+	return nullptr;
+}
+
+PadHandlerBase::connection PadHandlerBase::get_next_button_press(const std::string& pad_id, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist, const std::vector<std::string>& /*buttons*/)
 {
 	if (get_blacklist)
 		blacklist.clear();
@@ -325,28 +356,35 @@ void PadHandlerBase::get_next_button_press(const std::string& pad_id, const pad_
 	{
 		if (fail_callback)
 			fail_callback(pad_id);
-		return;
+		return status;
 	}
-	else if (status == connection::no_data)
-		return;
+
+	if (status == connection::no_data)
+	{
+		return status;
+	}
 
 	// Get the current button values
 	auto data = get_button_values(device);
 
 	// Check for each button in our list if its corresponding (maybe remapped) button or axis was pressed.
 	// Return the new value if the button was pressed (aka. its value was bigger than 0 or the defined threshold)
-	// Use a pair to get all the legally pressed buttons and use the one with highest value (prioritize first)
-	std::pair<u16, std::string> pressed_button = { 0, "" };
-	for (const auto& button : button_list)
+	// Get all the legally pressed buttons and use the one with highest value (prioritize first)
+	struct
 	{
-		const u32 keycode = button.first;
-		const u16 value = data[keycode];
+		u16 value = 0;
+		std::string name;
+	} pressed_button{};
+
+	for (const auto& [keycode, name] : button_list)
+	{
+		const u16& value = data[keycode];
 
 		if (!get_blacklist && std::find(blacklist.begin(), blacklist.end(), keycode) != blacklist.end())
 			continue;
 
-		const bool is_trigger = get_is_left_trigger(keycode) || get_is_right_trigger(keycode);
-		const bool is_stick   = !is_trigger && (get_is_left_stick(keycode) || get_is_right_stick(keycode));
+		const bool is_trigger = get_is_left_trigger(device, keycode) || get_is_right_trigger(device, keycode);
+		const bool is_stick   = !is_trigger && (get_is_left_stick(device, keycode) || get_is_right_stick(device, keycode));
 		const bool is_button = !is_trigger && !is_stick;
 
 		if ((is_trigger && (value > m_trigger_threshold)) || (is_stick && (value > m_thumb_threshold)) || (is_button && (value > 0)))
@@ -354,10 +392,12 @@ void PadHandlerBase::get_next_button_press(const std::string& pad_id, const pad_
 			if (get_blacklist)
 			{
 				blacklist.emplace_back(keycode);
-				input_log.error("%s Calibration: Added key [ %d = %s ] to blacklist. Value = %d", m_type, keycode, button.second, value);
+				input_log.error("%s Calibration: Added key [ %d = %s ] to blacklist. Value = %d", m_type, keycode, name, value);
 			}
-			else if (value > pressed_button.first)
-				pressed_button = { value, button.second };
+			else if (value > pressed_button.value)
+			{
+				pressed_button = { .value = value, .name = name };
+			}
 		}
 	}
 
@@ -365,21 +405,58 @@ void PadHandlerBase::get_next_button_press(const std::string& pad_id, const pad_
 	{
 		if (blacklist.empty())
 			input_log.success("%s Calibration: Blacklist is clear. No input spam detected", m_type);
-		return;
+		return status;
 	}
-
-	const auto preview_values = get_preview_values(data);
-	const auto battery_level = get_battery_level(pad_id);
 
 	if (callback)
 	{
-		if (pressed_button.first > 0)
-			return callback(pressed_button.first, pressed_button.second, pad_id, battery_level, preview_values);
+		const pad_preview_values preview_values = get_preview_values(data);
+		const u32 battery_level = get_battery_level(pad_id);
+
+		if (pressed_button.value > 0)
+			callback(pressed_button.value, pressed_button.name, pad_id, battery_level, preview_values);
 		else
-			return callback(0, "", pad_id, battery_level, preview_values);
+			callback(0, "", pad_id, battery_level, preview_values);
 	}
 
-	return;
+	return status;
+}
+
+void PadHandlerBase::get_motion_sensors(const std::string& pad_id, const motion_callback& callback, const motion_fail_callback& fail_callback, motion_preview_values preview_values, const std::array<AnalogSensor, 4>& /*sensors*/)
+{
+	if (!b_has_motion)
+	{
+		return;
+	}
+
+	// Reset sensors
+	auto device = get_device(pad_id);
+
+	const auto status = update_connection(device);
+	if (status == connection::disconnected)
+	{
+		if (fail_callback)
+			fail_callback(pad_id, std::move(preview_values));
+		return;
+	}
+
+	if (status == connection::no_data || !callback)
+	{
+		return;
+	}
+
+	// Get the current motion values
+	std::shared_ptr<Pad> pad = std::make_shared<Pad>(m_type, 0, 0, 0);
+	pad->m_sensors.resize(preview_values.size(), AnalogSensor(0, 0, 0, 0, 0));
+	pad_ensemble binding{pad, device, nullptr};
+	get_extended_info(binding);
+
+	for (usz i = 0; i < preview_values.size(); i++)
+	{
+		preview_values[i] = pad->m_sensors[i].m_value;
+	}
+
+	callback(pad_id, std::move(preview_values));
 }
 
 void PadHandlerBase::convert_stick_values(u16& x_out, u16& y_out, const s32& x_in, const s32& y_in, const s32& deadzone, const s32& padsquircling) const
@@ -402,22 +479,22 @@ void PadHandlerBase::TranslateButtonPress(const std::shared_ptr<PadDevice>& devi
 		return;
 	}
 
-	if (get_is_left_trigger(keyCode))
+	if (get_is_left_trigger(device, keyCode))
 	{
 		pressed = val > (ignore_trigger_threshold ? 0 : device->config->ltriggerthreshold);
 		val = pressed ? NormalizeTriggerInput(val, device->config->ltriggerthreshold) : 0;
 	}
-	else if (get_is_right_trigger(keyCode))
+	else if (get_is_right_trigger(device, keyCode))
 	{
 		pressed = val > (ignore_trigger_threshold ? 0 : device->config->rtriggerthreshold);
 		val = pressed ? NormalizeTriggerInput(val, device->config->rtriggerthreshold) : 0;
 	}
-	else if (get_is_left_stick(keyCode))
+	else if (get_is_left_stick(device, keyCode))
 	{
 		pressed = val > (ignore_stick_threshold ? 0 : device->config->lstickdeadzone);
 		val = pressed ? NormalizeStickInput(val, device->config->lstickdeadzone, device->config->lstickmultiplier, ignore_stick_threshold) : 0;
 	}
-	else if (get_is_right_stick(keyCode))
+	else if (get_is_right_stick(device, keyCode))
 	{
 		pressed = val > (ignore_stick_threshold ? 0 : device->config->rstickdeadzone);
 		val = pressed ? NormalizeStickInput(val, device->config->rstickdeadzone, device->config->rstickmultiplier, ignore_stick_threshold) : 0;
@@ -429,27 +506,33 @@ void PadHandlerBase::TranslateButtonPress(const std::shared_ptr<PadDevice>& devi
 	}
 }
 
-bool PadHandlerBase::bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device, u8 player_id)
+bool PadHandlerBase::bindPadToDevice(std::shared_ptr<Pad> pad, u8 player_id)
 {
-	if (!pad)
+	if (!pad || player_id >= g_cfg_input.player.size())
 	{
 		return false;
 	}
 
-	std::shared_ptr<PadDevice> pad_device = get_device(device);
+	const cfg_player* player_config = g_cfg_input.player[player_id];
+	if (!player_config)
+	{
+		return false;
+	}
+
+	std::shared_ptr<PadDevice> pad_device = get_device(player_config->device);
 	if (!pad_device)
 	{
-		input_log.error("PadHandlerBase::bindPadToDevice: no PadDevice found for device '%s'", device);
+		input_log.error("PadHandlerBase::bindPadToDevice: no PadDevice found for device '%s'", player_config->device.to_string());
 		return false;
 	}
 
-	m_pad_configs[player_id].from_string(g_cfg_input.player[player_id]->config.to_string());
+	m_pad_configs[player_id].from_string(player_config->config.to_string());
 	pad_device->config = &m_pad_configs[player_id];
 	pad_device->player_id = player_id;
 	cfg_pad* config = pad_device->config;
 	if (config == nullptr)
 	{
-		input_log.error("PadHandlerBase::bindPadToDevice: no profile found for device %d '%s'", bindings.size(), device);
+		input_log.error("PadHandlerBase::bindPadToDevice: no profile found for device %d '%s'", m_bindings.size(), player_config->device.to_string());
 		return false;
 	}
 
@@ -496,31 +579,42 @@ bool PadHandlerBase::bindPadToDevice(std::shared_ptr<Pad> pad, const std::string
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, mapping[button::r3], CELL_PAD_CTRL_R3);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, mapping[button::start], CELL_PAD_CTRL_START);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, mapping[button::select], CELL_PAD_CTRL_SELECT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, mapping[button::ps], CELL_PAD_CTRL_PS);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, mapping[button::ps], CELL_PAD_CTRL_PS);
 
 	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X, mapping[button::ls_left], mapping[button::ls_right]);
 	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y, mapping[button::ls_down], mapping[button::ls_up]);
 	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, mapping[button::rs_left], mapping[button::rs_right]);
 	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, mapping[button::rs_down], mapping[button::rs_up]);
 
-	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_X, 512);
-	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_Y, 399);
-	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_Z, 512);
-	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_G, 512);
+	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_X, 0, 0, 0, DEFAULT_MOTION_X);
+	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_Y, 0, 0, 0, DEFAULT_MOTION_Y);
+	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_Z, 0, 0, 0, DEFAULT_MOTION_Z);
+	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_G, 0, 0, 0, DEFAULT_MOTION_G);
 
 	pad->m_vibrateMotors.emplace_back(true, 0);
 	pad->m_vibrateMotors.emplace_back(false, 0);
 
-	bindings.emplace_back(pad_device, pad);
+	m_bindings.emplace_back(pad, pad_device, nullptr);
 
 	return true;
 }
 
-std::array<u32, PadHandlerBase::button::button_count> PadHandlerBase::get_mapped_key_codes(const std::shared_ptr<PadDevice>& /*device*/, const cfg_pad* cfg)
+std::array<u32, PadHandlerBase::button::button_count> PadHandlerBase::get_mapped_key_codes(const std::shared_ptr<PadDevice>& device, const cfg_pad* cfg)
 {
 	std::array<u32, button::button_count> mapping{};
-	if (!cfg)
+	if (!device || !cfg)
 		return mapping;
+
+	device->trigger_code_left  = FindKeyCode(button_list, cfg->l2);
+	device->trigger_code_right = FindKeyCode(button_list, cfg->r2);
+	device->axis_code_left[0]  = FindKeyCode(button_list, cfg->ls_left);
+	device->axis_code_left[1]  = FindKeyCode(button_list, cfg->ls_right);
+	device->axis_code_left[2]  = FindKeyCode(button_list, cfg->ls_down);
+	device->axis_code_left[3]  = FindKeyCode(button_list, cfg->ls_up);
+	device->axis_code_right[0] = FindKeyCode(button_list, cfg->rs_left);
+	device->axis_code_right[1] = FindKeyCode(button_list, cfg->rs_right);
+	device->axis_code_right[2] = FindKeyCode(button_list, cfg->rs_down);
+	device->axis_code_right[3] = FindKeyCode(button_list, cfg->rs_up);
 
 	mapping[button::up]       = FindKeyCode(button_list, cfg->up);
 	mapping[button::down]     = FindKeyCode(button_list, cfg->down);
@@ -533,19 +627,19 @@ std::array<u32, PadHandlerBase::button::button_count> PadHandlerBase::get_mapped
 	mapping[button::start]    = FindKeyCode(button_list, cfg->start);
 	mapping[button::select]   = FindKeyCode(button_list, cfg->select);
 	mapping[button::l1]       = FindKeyCode(button_list, cfg->l1);
-	mapping[button::l2]       = FindKeyCode(button_list, cfg->l2);
+	mapping[button::l2]       = ::narrow<u32>(device->trigger_code_left);
 	mapping[button::l3]       = FindKeyCode(button_list, cfg->l3);
 	mapping[button::r1]       = FindKeyCode(button_list, cfg->r1);
-	mapping[button::r2]       = FindKeyCode(button_list, cfg->r2);
+	mapping[button::r2]       = ::narrow<u32>(device->trigger_code_right);
 	mapping[button::r3]       = FindKeyCode(button_list, cfg->r3);
-	mapping[button::ls_left]  = FindKeyCode(button_list, cfg->ls_left);
-	mapping[button::ls_right] = FindKeyCode(button_list, cfg->ls_right);
-	mapping[button::ls_down]  = FindKeyCode(button_list, cfg->ls_down);
-	mapping[button::ls_up]    = FindKeyCode(button_list, cfg->ls_up);
-	mapping[button::rs_left]  = FindKeyCode(button_list, cfg->rs_left);
-	mapping[button::rs_right] = FindKeyCode(button_list, cfg->rs_right);
-	mapping[button::rs_down]  = FindKeyCode(button_list, cfg->rs_down);
-	mapping[button::rs_up]    = FindKeyCode(button_list, cfg->rs_up);
+	mapping[button::ls_left]  = ::narrow<u32>(device->axis_code_left[0]);
+	mapping[button::ls_right] = ::narrow<u32>(device->axis_code_left[1]);
+	mapping[button::ls_down]  = ::narrow<u32>(device->axis_code_left[2]);
+	mapping[button::ls_up]    = ::narrow<u32>(device->axis_code_left[3]);
+	mapping[button::rs_left]  = ::narrow<u32>(device->axis_code_right[0]);
+	mapping[button::rs_right] = ::narrow<u32>(device->axis_code_right[1]);
+	mapping[button::rs_down]  = ::narrow<u32>(device->axis_code_right[2]);
+	mapping[button::rs_up]    = ::narrow<u32>(device->axis_code_right[3]);
 	mapping[button::ps]       = FindKeyCode(button_list, cfg->ps);
 
 	mapping[button::pressure_intensity_button] = FindKeyCode(button_list, cfg->pressure_intensity_button);
@@ -553,8 +647,11 @@ std::array<u32, PadHandlerBase::button::button_count> PadHandlerBase::get_mapped
 	return mapping;
 }
 
-void PadHandlerBase::get_mapping(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad)
+void PadHandlerBase::get_mapping(const pad_ensemble& binding)
 {
+	const auto& device = binding.device;
+	const auto& pad = binding.pad;
+
 	if (!device || !pad)
 		return;
 
@@ -634,12 +731,12 @@ void PadHandlerBase::get_mapping(const std::shared_ptr<PadDevice>& device, const
 	}
 }
 
-void PadHandlerBase::ThreadProc()
+void PadHandlerBase::process()
 {
-	for (usz i = 0; i < bindings.size(); ++i)
+	for (usz i = 0; i < m_bindings.size(); ++i)
 	{
-		auto device = bindings[i].first;
-		auto pad    = bindings[i].second;
+		auto& device = m_bindings[i].device;
+		auto& pad    = m_bindings[i].pad;
 
 		if (!device || !pad)
 			continue;
@@ -661,12 +758,28 @@ void PadHandlerBase::ThreadProc()
 			}
 
 			if (status == connection::no_data)
+			{
+				// TODO: don't skip entirely if buddy device has data
 				continue;
+			}
 
 			break;
 		}
 		case connection::disconnected:
 		{
+			if (g_cfg.io.keep_pads_connected)
+			{
+				if (!last_connection_status[i])
+				{
+					input_log.success("%s device %d connected by force", m_type, i);
+					pad->m_port_status |= CELL_PAD_STATUS_CONNECTED;
+					pad->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
+					last_connection_status[i] = true;
+					connected_devices++;
+				}
+				continue;
+			}
+
 			if (last_connection_status[i])
 			{
 				input_log.error("%s device %d disconnected", m_type, i);
@@ -677,12 +790,10 @@ void PadHandlerBase::ThreadProc()
 			}
 			continue;
 		}
-		default:
-			break;
 		}
 
-		get_mapping(device, pad);
-		get_extended_info(device, pad);
-		apply_pad_data(device, pad);
+		get_mapping(m_bindings[i]);
+		get_extended_info(m_bindings[i]);
+		apply_pad_data(m_bindings[i]);
 	}
 }

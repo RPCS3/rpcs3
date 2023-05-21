@@ -20,6 +20,9 @@ namespace cfg
 	// Format min and max unsigned values
 	std::vector<std::string> make_uint_range(u64 min, u64 max);
 
+	// Format min and max float values
+	std::vector<std::string> make_float_range(f64 min, f64 max);
+
 	// Internal hack
 	bool try_to_enum_value(u64* out, decltype(&fmt_class_string<int>::format) func, std::string_view);
 
@@ -77,7 +80,13 @@ namespace cfg
 		// Convert to string (optional)
 		virtual std::string to_string() const
 		{
-			return{};
+			return {};
+		}
+
+		// Convert default to string (optional)
+		virtual std::string def_to_string() const
+		{
+			return {};
 		}
 
 		// Try to convert from string (optional)
@@ -86,7 +95,7 @@ namespace cfg
 		// Get string list (optional)
 		virtual std::vector<std::string> to_list() const
 		{
-			return{};
+			return {};
 		}
 
 		// Set multiple values. Implementation-specific, optional.
@@ -160,11 +169,24 @@ namespace cfg
 			return m_value ? "true" : "false";
 		}
 
+		std::string def_to_string() const override
+		{
+			return def ? "true" : "false";
+		}
+
 		bool from_string(std::string_view value, bool /*dynamic*/ = false) override
 		{
-			if (value == "false")
+			if (value.size() != 4 && value.size() != 5)
+			{
+				return false;
+			}
+
+			char copy[5];
+			std::transform(value.begin(), value.end(), std::begin(copy), ::tolower);
+
+			if (value.size() == 5 && std::string_view{copy, 5} == "false")
 				m_value = false;
-			else if (value == "true")
+			else if (value.size() == 4 && std::string_view{copy, 4} == "true")
 				m_value = true;
 			else
 				return false;
@@ -180,7 +202,7 @@ namespace cfg
 
 	// Value node with fixed set of possible values, each maps to an enum value of type T.
 	template <typename T>
-	class _enum final : public _base
+	class _enum : public _base
 	{
 		atomic_t<T> m_value;
 
@@ -221,6 +243,13 @@ namespace cfg
 			return result; // TODO: ???
 		}
 
+		std::string def_to_string() const override
+		{
+			std::string result;
+			fmt_class_string<T>::format(result, fmt_unveil<T>::get(def));
+			return result; // TODO: ???
+		}
+
 		bool from_string(std::string_view value, bool /*dynamic*/ = false) override
 		{
 			u64 result;
@@ -256,8 +285,8 @@ namespace cfg
 		int_type def;
 
 		// Expose range
-		static const s64 max = Max;
-		static const s64 min = Min;
+		static constexpr s64 max = Max;
+		static constexpr s64 min = Min;
 
 		_int(node* owner, const std::string& name, int_type def = std::min<int_type>(Max, std::max<int_type>(Min, 0)), bool dynamic = false)
 			: _base(type::_int, owner, name, dynamic)
@@ -286,6 +315,11 @@ namespace cfg
 			return std::to_string(m_value);
 		}
 
+		std::string def_to_string() const override
+		{
+			return std::to_string(def);
+		}
+
 		bool from_string(std::string_view value, bool /*dynamic*/ = false) override
 		{
 			s64 result;
@@ -300,12 +334,97 @@ namespace cfg
 
 		void set(const s64& value)
 		{
+			ensure(value >= Min && value <= Max);
 			m_value = static_cast<int_type>(value);
 		}
 
 		std::vector<std::string> to_list() const override
 		{
 			return make_int_range(Min, Max);
+		}
+	};
+
+	// Float entry with custom Min/Max range.
+	template <s32 Min, s32 Max>
+	class _float final : public _base
+	{
+		static_assert(Min < Max, "Invalid cfg::_float range");
+
+		using float_type = f64;
+		atomic_t<float_type> m_value;
+
+	public:
+		float_type def;
+
+		// Expose range
+		static constexpr float_type max = Max;
+		static constexpr float_type min = Min;
+
+		_float(node* owner, const std::string& name, float_type def = std::min<float_type>(Max, std::max<float_type>(Min, 0)), bool dynamic = false)
+			: _base(type::_int, owner, name, dynamic)
+			, m_value(def)
+			, def(def)
+		{
+		}
+
+		operator float_type() const
+		{
+			return m_value;
+		}
+
+		float_type get() const
+		{
+			return m_value;
+		}
+
+		void from_default() override
+		{
+			m_value = def;
+		}
+
+		std::string to_string() const override
+		{
+			std::string result;
+			if (try_to_string(&result, m_value))
+			{
+				return result;
+			}
+
+			return "0.0";
+		}
+
+		std::string def_to_string() const override
+		{
+			std::string result;
+			if (try_to_string(&result, def))
+			{
+				return result;
+			}
+
+			return "0.0";
+		}
+
+		bool from_string(std::string_view value, bool /*dynamic*/ = false) override
+		{
+			f64 result;
+			if (try_to_float(&result, value, Min, Max))
+			{
+				m_value = static_cast<float_type>(result);
+				return true;
+			}
+
+			return false;
+		}
+
+		void set(const f64& value)
+		{
+			ensure(value >= Min && value <= Max);
+			m_value = static_cast<float_type>(value);
+		}
+
+		std::vector<std::string> to_list() const override
+		{
+			return make_float_range(Min, Max);
 		}
 	};
 
@@ -330,8 +449,8 @@ namespace cfg
 		int_type def;
 
 		// Expose range
-		static const u64 max = Max;
-		static const u64 min = Min;
+		static constexpr u64 max = Max;
+		static constexpr u64 min = Min;
 
 		uint(node* owner, const std::string& name, int_type def = std::max<int_type>(Min, 0), bool dynamic = false)
 			: _base(type::uint, owner, name, dynamic)
@@ -360,6 +479,11 @@ namespace cfg
 			return std::to_string(m_value);
 		}
 
+		std::string def_to_string() const override
+		{
+			return std::to_string(def);
+		}
+
 		bool from_string(std::string_view value, bool /*dynamic*/ = false) override
 		{
 			u64 result;
@@ -374,6 +498,7 @@ namespace cfg
 
 		void set(const u64& value)
 		{
+			ensure(value >= Min && value <= Max);
 			m_value = static_cast<int_type>(value);
 		}
 
@@ -431,6 +556,11 @@ namespace cfg
 			return *m_value.load().get();
 		}
 
+		std::string def_to_string() const override
+		{
+			return def;
+		}
+
 		bool from_string(std::string_view value, bool /*dynamic*/ = false) override
 		{
 			m_value = std::string(value);
@@ -464,7 +594,7 @@ namespace cfg
 
 		std::vector<std::string> to_list() const override
 		{
-			return{ m_set.begin(), m_set.end() };
+			return { m_set.begin(), m_set.end() };
 		}
 
 		bool from_list(std::vector<std::string>&& list) override
@@ -529,6 +659,7 @@ namespace cfg
 		std::string serial;
 		std::string vid;
 		std::string pid;
+		std::pair<u16, u16> get_usb_ids() const;
 	};
 
 	class device_entry final : public _base

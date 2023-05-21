@@ -3,6 +3,7 @@
 #include "qt_utils.h"
 #include "Emu/system_utils.hpp"
 #include "Emu/VFS.h"
+#include "Emu/vfs_config.h"
 #include "Utilities/StrUtil.h"
 
 #ifdef _WIN32
@@ -66,7 +67,7 @@ namespace gui::utils
 	    [[maybe_unused]] const std::string& description,
 	    [[maybe_unused]] const std::string& src_icon_path,
 	    [[maybe_unused]] const std::string& target_icon_dir,
-	    bool is_desktop_shortcut)
+	    shortcut_location location)
 	{
 		if (name.empty())
 		{
@@ -84,14 +85,21 @@ namespace gui::utils
 
 		std::string link_path;
 
-		if (is_desktop_shortcut)
+		if (location == shortcut_location::desktop)
 		{
 			link_path = QStandardPaths::writableLocation(QStandardPaths::StandardLocation::DesktopLocation).toStdString();
 		}
-		else
+		else if (location == shortcut_location::applications)
 		{
 			link_path = QStandardPaths::writableLocation(QStandardPaths::StandardLocation::ApplicationsLocation).toStdString();
 		}
+#ifdef _WIN32
+		else if (location == shortcut_location::rpcs3_shortcuts)
+		{
+			link_path = g_cfg_vfs.get(g_cfg_vfs.games_dir, rpcs3::utils::get_emu_dir()) + "/shortcuts/";
+			fs::create_dir(link_path);
+		}
+#endif
 
 		if (!fs::is_dir(link_path))
 		{
@@ -99,7 +107,7 @@ namespace gui::utils
 			return false;
 		}
 
-		if (!is_desktop_shortcut)
+		if (location == shortcut_location::applications)
 		{
 			link_path += "/RPCS3";
 
@@ -197,7 +205,7 @@ namespace gui::utils
 		res = pPersistFile->Save(w_link_file.c_str(), TRUE);
 		if (FAILED(res))
 		{
-			if (is_desktop_shortcut)
+			if (location == shortcut_location::desktop)
 			{
 				return cleanup(false, fmt::format("Saving file to desktop failed (%s)", str_error(res)));
 			}
@@ -348,7 +356,7 @@ namespace gui::utils
 		}
 		shortcut_file.close();
 
-		if (is_desktop_shortcut)
+		if (location == shortcut_location::desktop)
 		{
 			if (chmod(link_path.c_str(), S_IRWXU) != 0) // enables user to execute file
 			{

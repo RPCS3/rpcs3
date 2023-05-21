@@ -18,10 +18,12 @@
 #include "Emu/Cell/lv2/sys_net.h"
 
 int get_native_error();
-sys_net_error get_last_error(bool is_blocking, int native_error = 0);
+sys_net_error convert_error(bool is_blocking, int native_error, bool is_connecting = false);
+sys_net_error get_last_error(bool is_blocking, bool is_connecting = false);
 sys_net_sockaddr native_addr_to_sys_net_addr(const ::sockaddr_storage& native_addr);
 ::sockaddr_in sys_net_addr_to_native_addr(const sys_net_sockaddr& sn_addr);
-void network_clear_queue(ppu_thread& ppu);
+bool is_ip_public_address(const ::sockaddr_in& addr);
+s32 network_clear_queue(ppu_thread& ppu);
 
 #ifdef _WIN32
 void windows_poll(pollfd* fds, unsigned long nfds, int timeout, bool* connecting);

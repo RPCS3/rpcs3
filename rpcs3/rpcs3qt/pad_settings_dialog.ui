@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>500</width>
-    <height>380</height>
+    <width>1322</width>
+    <height>884</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -37,8 +37,8 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>858</width>
-        <height>715</height>
+        <width>1304</width>
+        <height>837</height>
        </rect>
       </property>
       <widget class="QWidget" name="tab">
@@ -59,7 +59,7 @@
          <number>5</number>
         </property>
         <item>
-         <layout class="QHBoxLayout" name="topLayout">
+         <layout class="QHBoxLayout" name="topLayout" stretch="1,1,0,1">
           <item>
            <widget class="QGroupBox" name="gb_handlers">
             <property name="title">
@@ -114,6 +114,34 @@
              </property>
              <item>
               <widget class="QComboBox" name="chooseDevice"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="gb_motion_controls">
+            <property name="title">
+             <string>Motion Controls</string>
+            </property>
+            <layout class="QHBoxLayout" name="gb_buddy_device_layout">
+             <property name="leftMargin">
+              <number>5</number>
+             </property>
+             <property name="topMargin">
+              <number>5</number>
+             </property>
+             <property name="rightMargin">
+              <number>5</number>
+             </property>
+             <property name="bottomMargin">
+              <number>5</number>
+             </property>
+             <item>
+              <widget class="QPushButton" name="b_motion_controls">
+               <property name="text">
+                <string>Configure</string>
+               </property>
+              </widget>
              </item>
             </layout>
            </widget>

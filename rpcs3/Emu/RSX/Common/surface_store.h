@@ -3,6 +3,7 @@
 #include "surface_utils.h"
 #include "simple_array.hpp"
 #include "ranged_map.hpp"
+#include "surface_cache_dma.hpp"
 #include "../gcm_enums.h"
 #include "../rsx_utils.h"
 #include <list>
@@ -20,7 +21,7 @@ namespace rsx
 		usz get_packed_pitch(surface_color_format format, u32 width);
 	}
 
-	template<typename Traits>
+	template <typename Traits>
 	struct surface_store
 	{
 		static constexpr u32 get_aa_factor_u(surface_antialiasing aa_mode)
@@ -45,7 +46,8 @@ namespace rsx
 		using surface_type = typename Traits::surface_type;
 		using command_list_type = typename Traits::command_list_type;
 		using surface_overlap_info = surface_overlap_info_t<surface_type>;
-		using surface_ranged_map = typename rsx::ranged_map<surface_storage_type, 0x400000>;
+		using surface_ranged_map = ranged_map<surface_storage_type, 0x400000>;
+		using surface_cache_dma_map = surface_cache_dma<Traits, 0x400000>;
 
 	protected:
 		surface_ranged_map m_render_targets_storage = {};
@@ -53,6 +55,8 @@ namespace rsx
 
 		rsx::address_range m_render_targets_memory_range;
 		rsx::address_range m_depth_stencil_memory_range;
+
+		surface_cache_dma_map m_dma_block;
 
 		bool m_invalidate_on_write = false;
 
@@ -64,7 +68,7 @@ namespace rsx
 		std::pair<u32, surface_type> m_bound_depth_stencil = {};
 
 		// List of sections derived from a section that has been split and invalidated
-		std::vector<surface_type> orphaned_surfaces;
+		std::vector<std::pair<u32, surface_type>> orphaned_surfaces;
 
 		// List of sections that have been wholly inherited and invalidated
 		std::vector<surface_type> superseded_surfaces;
@@ -152,7 +156,7 @@ namespace rsx
 				}
 
 				ensure(region.target == Traits::get(sink));
-				orphaned_surfaces.push_back(region.target);
+				orphaned_surfaces.push_back({ address, region.target });
 				data.emplace(region.target->get_memory_range(), std::move(sink));
 			};
 
@@ -370,7 +374,7 @@ namespace rsx
 				{
 					// This has been 'swallowed' by the new surface and can be safely freed
 					auto &storage = surface->is_depth_surface() ? m_depth_stencil_storage : m_render_targets_storage;
-					auto &object = storage.at(e.first);
+					auto &object = ::at32(storage, e.first);
 
 					ensure(object);
 
@@ -403,6 +407,9 @@ namespace rsx
 			bool do_intersection_test = true;
 			bool store = true;
 
+			// Workaround. Preserve new surface tag value because pitch convert is unimplemented
+			u64 new_content_tag = 0;
+
 			address_range *storage_bounds;
 			surface_ranged_map *primary_storage, *secondary_storage;
 			if constexpr (depth)
@@ -425,13 +432,29 @@ namespace rsx
 				surface_storage_type &surface = It->second;
 				const bool pitch_compatible = Traits::surface_is_pitch_compatible(surface, pitch);
 
+				if (!pitch_compatible)
+				{
+					// This object should be pitch-converted and re-intersected with
+					if (old_surface_storage = Traits::convert_pitch(command_list, surface, pitch); old_surface_storage)
+					{
+						old_surface = Traits::get(old_surface_storage);
+					}
+					else
+					{
+						// Preserve content age. This is hacky, but matches previous behavior
+						// TODO: Remove when pitch convert is implemented
+						new_content_tag = Traits::get(surface)->last_use_tag;
+					}
+				}
+
 				if (Traits::surface_matches_properties(surface, format, width, height, antialias))
 				{
-					if (pitch_compatible)
-						Traits::notify_surface_persist(surface);
-					else
+					if (!pitch_compatible)
+					{
 						Traits::invalidate_surface_contents(command_list, Traits::get(surface), address, pitch);
+					}
 
+					Traits::notify_surface_persist(surface);
 					Traits::prepare_surface_for_drawing(command_list, Traits::get(surface));
 					new_surface = Traits::get(surface);
 					store = false;
@@ -448,6 +471,12 @@ namespace rsx
 					// This will be unconditionally moved to invalidated list shortly
 					free_rsx_memory(Traits::get(surface));
 					Traits::notify_surface_invalidated(surface);
+
+					if (old_surface_storage)
+					{
+						// Pitch-converted data. Send to invalidated pool immediately.
+						invalidated_resources.push_back(std::move(old_surface_storage));
+					}
 
 					old_surface_storage = std::move(surface);
 					primary_storage->erase(It);
@@ -550,6 +579,11 @@ namespace rsx
 
 			if (do_intersection_test)
 			{
+				if (new_content_tag)
+				{
+					new_surface->last_use_tag = new_content_tag;
+				}
+
 				intersect_surface_region<depth>(command_list, address, new_surface, old_surface);
 			}
 
@@ -671,8 +705,7 @@ namespace rsx
 			std::vector<u8> marker(range.length() + sizeof(overrun_cookie_value), 0);
 
 			// Tag end
-			u32* overrun_test_ptr = utils::bless<u32>(marker.data() + range.length());
-			*overrun_test_ptr = overrun_cookie_value;
+			write_to_ptr(marker, range.length(), overrun_cookie_value);
 
 			u32 removed_count = 0;
 
@@ -683,9 +716,10 @@ namespace rsx
 
 				while (length >= 8)
 				{
-					auto& value = *utils::bless<u64>(dst_ptr);
-					mask |= (~value);                          // If the value is not all 1s, set valid to true
-					value = umax;
+					const u64 value = read_from_ptr<u64>(dst_ptr);
+					const u64 block_mask = ~value;              // If the value is not all 1s, set valid to true
+					mask |= block_mask;
+					write_to_ptr<u64>(dst_ptr, umax);
 
 					dst_ptr += 8;
 					length -= 8;
@@ -693,9 +727,10 @@ namespace rsx
 
 				if (length >= 4)
 				{
-					auto& value = *utils::bless<u32>(dst_ptr);
-					mask |= (~value);
-					value = umax;
+					const u32 value = read_from_ptr<u32>(dst_ptr);
+					const u32 block_mask = ~value;
+					mask |= block_mask;
+					write_to_ptr<u32>(dst_ptr, umax);
 
 					dst_ptr += 4;
 					length -= 4;
@@ -703,9 +738,10 @@ namespace rsx
 
 				if (length >= 2)
 				{
-					auto& value = *utils::bless<u16>(dst_ptr);
-					mask |= (~value);
-					value = umax;
+					const u16 value = read_from_ptr<u16>(dst_ptr);
+					const u16 block_mask = ~value;
+					mask |= block_mask;
+					write_to_ptr<u16>(dst_ptr, umax);
 
 					dst_ptr += 2;
 					length -= 2;
@@ -713,9 +749,10 @@ namespace rsx
 
 				if (length)
 				{
-					auto& value = *dst_ptr;
-					mask |= (~value);
-					value = umax;
+					const u8 value = *dst_ptr;
+					const u8 block_mask = ~value;
+					mask |= block_mask;
+					*dst_ptr = umax;
 				}
 
 				return !!mask;
@@ -786,7 +823,7 @@ namespace rsx
 			rsx_log.notice("rsx::surface_cache::check_for_duplicates_fallback analysed %u overlapping sections and removed %u", ::size32(sections), removed_count);
 
 			// Verify no OOB
-			ensure(*overrun_test_ptr == overrun_cookie_value);
+			ensure(read_from_ptr<u32>(marker, range.length()) == overrun_cookie_value);
 		}
 
 	protected:
@@ -824,6 +861,94 @@ namespace rsx
 				width, height, pitch,
 				get_format_block_size_in_bytes(depth_format),
 				std::forward<Args>(extra_params)...);
+		}
+
+		std::tuple<std::vector<surface_type>, std::vector<surface_type>>
+		find_overlapping_set(const utils::address_range& range) const
+		{
+			std::vector<surface_type> color_result, depth_result;
+			utils::address_range result_range;
+
+			if (m_render_targets_memory_range.valid() &&
+				range.overlaps(m_render_targets_memory_range))
+			{
+				for (auto it = m_render_targets_storage.begin_range(range); it != m_render_targets_storage.end(); ++it)
+				{
+					auto surface = Traits::get(it->second);
+					const auto surface_range = surface->get_memory_range();
+					if (!range.overlaps(surface_range))
+						continue;
+
+					color_result.push_back(surface);
+				}
+			}
+
+			if (m_depth_stencil_memory_range.valid() &&
+				range.overlaps(m_depth_stencil_memory_range))
+			{
+				for (auto it = m_depth_stencil_storage.begin_range(range); it != m_depth_stencil_storage.end(); ++it)
+				{
+					auto surface = Traits::get(it->second);
+					const auto surface_range = surface->get_memory_range();
+					if (!range.overlaps(surface_range))
+						continue;
+
+					depth_result.push_back(surface);
+				}
+			}
+
+			return { color_result, depth_result, result_range };
+		}
+
+		void write_to_dma_buffers(
+			command_list_type command_list,
+			const utils::address_range& range)
+		{
+			auto block_range = m_dma_block.to_block_range(range);
+			auto [color_data, depth_stencil_data] = find_overlapping_set(block_range);
+			auto [bo, offset, bo_timestamp] = m_dma_block
+				.with_range(command_list, block_range)
+				.get(block_range.start);
+
+			u64 src_offset, dst_offset, write_length;
+			auto block_length = block_range.length();
+
+			auto all_data = std::move(color_data);
+			all_data.insert(all_data.end(), depth_stencil_data.begin(), depth_stencil_data.end());
+
+			if (all_data.size() > 1)
+			{
+				std::sort(all_data.begin(), all_data.end(), [](const auto& a, const auto& b)
+				{
+					return a->last_use_tag < b->last_use_tag;
+				});
+			}
+
+			for (const auto& surface : all_data)
+			{
+				if (surface->last_use_tag <= bo_timestamp)
+				{
+					continue;
+				}
+
+				const auto this_range = surface->get_memory_range();
+				const auto max_length = this_range.length();
+				if (this_range.start < block_range.start)
+				{
+					src_offset = block_range.start - this_range.start;
+					dst_offset = 0;
+				}
+				else
+				{
+					src_offset = 0;
+					dst_offset = this_range.start - block_range.start;
+				}
+
+				write_length = std::min(max_length, block_length - dst_offset);
+				Traits::write_render_target_to_memory(command_list, bo, surface, dst_offset, src_offset, write_length);
+			}
+
+			m_dma_block.touch(block_range);
 		}
 
 	public:

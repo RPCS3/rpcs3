@@ -32,7 +32,9 @@ vfs_dialog::vfs_dialog(std::shared_ptr<gui_settings> _gui_settings, QWidget* par
 	vfs_dialog_tab* dev_flash_tab = new vfs_dialog_tab("dev_flash", gui::fs_dev_flash_list, &g_cfg_vfs.dev_flash, m_gui_settings, this);
 	vfs_dialog_tab* dev_flash2_tab = new vfs_dialog_tab("dev_flash2", gui::fs_dev_flash2_list, &g_cfg_vfs.dev_flash2, m_gui_settings, this);
 	vfs_dialog_tab* dev_flash3_tab = new vfs_dialog_tab("dev_flash3", gui::fs_dev_flash3_list, &g_cfg_vfs.dev_flash3, m_gui_settings, this);
+	vfs_dialog_tab* dev_bdvd_tab = new vfs_dialog_tab("dev_bdvd", gui::fs_dev_bdvd_list, &g_cfg_vfs.dev_bdvd, m_gui_settings, this);
 	vfs_dialog_usb_tab* dev_usb_tab = new vfs_dialog_usb_tab(&g_cfg_vfs.dev_usb, m_gui_settings, this);
+	vfs_dialog_tab* games_tab = new vfs_dialog_tab("games", gui::fs_games_list, &g_cfg_vfs.games_dir, m_gui_settings, this);
 
 	tabs->addTab(emulator_tab, "$(EmulatorDir)");
 	tabs->addTab(dev_hdd0_tab, "dev_hdd0");
@@ -40,7 +42,9 @@ vfs_dialog::vfs_dialog(std::shared_ptr<gui_settings> _gui_settings, QWidget* par
 	tabs->addTab(dev_flash_tab, "dev_flash");
 	tabs->addTab(dev_flash2_tab, "dev_flash2");
 	tabs->addTab(dev_flash3_tab, "dev_flash3");
+	tabs->addTab(dev_bdvd_tab, "dev_bdvd");
 	tabs->addTab(dev_usb_tab, "dev_usb");
+	tabs->addTab(games_tab, "games");
 
 	// Create buttons
 	QDialogButtonBox* buttons = new QDialogButtonBox(QDialogButtonBox::Close | QDialogButtonBox::Save | QDialogButtonBox::RestoreDefaults);
@@ -56,13 +60,13 @@ vfs_dialog::vfs_dialog(std::shared_ptr<gui_settings> _gui_settings, QWidget* par
 
 			for (int i = 0; i < tabs->count(); ++i)
 			{
-				if (i < tabs->count() - 1)
+				if (tabs->tabText(i) == "dev_usb")
 				{
-					static_cast<vfs_dialog_tab*>(tabs->widget(i))->reset();
+					static_cast<vfs_dialog_usb_tab*>(tabs->widget(i))->reset();
 				}
 				else
 				{
-					static_cast<vfs_dialog_usb_tab*>(tabs->widget(i))->reset();
+					static_cast<vfs_dialog_tab*>(tabs->widget(i))->reset();
 				}
 			}
 		}
@@ -70,13 +74,13 @@ vfs_dialog::vfs_dialog(std::shared_ptr<gui_settings> _gui_settings, QWidget* par
 		{
 			for (int i = 0; i < tabs->count(); ++i)
 			{
-				if (i < tabs->count() - 1)
+				if (tabs->tabText(i) == "dev_usb")
 				{
-					static_cast<vfs_dialog_tab*>(tabs->widget(i))->set_settings();
+					static_cast<vfs_dialog_usb_tab*>(tabs->widget(i))->set_settings();
 				}
 				else
 				{
-					static_cast<vfs_dialog_usb_tab*>(tabs->widget(i))->set_settings();
+					static_cast<vfs_dialog_tab*>(tabs->widget(i))->set_settings();
 				}
 			}
 

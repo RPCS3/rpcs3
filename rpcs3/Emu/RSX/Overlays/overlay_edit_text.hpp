@@ -33,6 +33,7 @@ namespace rsx
 			void move_caret(direction dir);
 			void insert_text(const std::u32string& str);
 			void erase();
+			void del();
 
 			compiled_resource& get_compiled() override;
 		};

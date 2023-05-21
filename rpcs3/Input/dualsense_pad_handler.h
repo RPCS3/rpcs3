@@ -21,6 +21,7 @@ public:
 	bool init_lightbar{true};
 	bool update_lightbar{true};
 	bool update_player_leds{true};
+	bool release_leds{false};
 
 	// Controls for lightbar pulse. This seems somewhat hacky for now, as I haven't found out a nicer way.
 	bool lightbar_on{false};
@@ -69,7 +70,7 @@ public:
 	dualsense_pad_handler();
 	~dualsense_pad_handler();
 
-	void SetPadData(const std::string& padId, u8 player_id, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool battery_led, u32 battery_led_brightness) override;
+	void SetPadData(const std::string& padId, u8 player_id, u8 large_motor, u8 small_motor, s32 r, s32 g, s32 b, bool player_led, bool battery_led, u32 battery_led_brightness) override;
 	u32 get_battery_level(const std::string& padId) override;
 	void init_config(cfg_pad* cfg) override;
 
@@ -80,13 +81,13 @@ private:
 	void check_add_device(hid_device* hidDevice, std::string_view path, std::wstring_view wide_serial) override;
 	int send_output_report(DualSenseDevice* device) override;
 
-	bool get_is_left_trigger(u64 keyCode) override;
-	bool get_is_right_trigger(u64 keyCode) override;
-	bool get_is_left_stick(u64 keyCode) override;
-	bool get_is_right_stick(u64 keyCode) override;
+	bool get_is_left_trigger(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
+	bool get_is_right_trigger(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
+	bool get_is_left_stick(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
+	bool get_is_right_stick(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
 	PadHandlerBase::connection update_connection(const std::shared_ptr<PadDevice>& device) override;
 	std::unordered_map<u64, u16> get_button_values(const std::shared_ptr<PadDevice>& device) override;
 	pad_preview_values get_preview_values(const std::unordered_map<u64, u16>& data) override;
-	void get_extended_info(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad) override;
-	void apply_pad_data(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad) override;
+	void get_extended_info(const pad_ensemble& binding) override;
+	void apply_pad_data(const pad_ensemble& binding) override;
 };

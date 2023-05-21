@@ -5,18 +5,25 @@
 
 #include <queue>
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/IdManager.h"
+#include "Emu/vfs_config.h"
 
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/ErrorCodes.h"
 
 #include "Emu/Io/usb_device.h"
+#include "Emu/Io/usb_vfs.h"
 #include "Emu/Io/Skylander.h"
+#include "Emu/Io/Infinity.h"
 #include "Emu/Io/GHLtar.h"
 #include "Emu/Io/Buzz.h"
 #include "Emu/Io/Turntable.h"
+#include "Emu/Io/RB3MidiKeyboard.h"
+#include "Emu/Io/RB3MidiGuitar.h"
 #include "Emu/Io/usio.h"
+#include "Emu/Io/midi_config_types.h"
 
 #include <libusb.h>
 
@@ -26,28 +33,16 @@ template <>
 void fmt_class_string<libusb_transfer>::format(std::string& out, u64 arg)
 {
 	const auto& transfer = get_object(arg);
-
-	std::string datrace;
-	const char hex[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
-
 	const int data_start = transfer.type == LIBUSB_TRANSFER_TYPE_CONTROL ? LIBUSB_CONTROL_SETUP_SIZE : 0;
-
-	for (int index = data_start; index < data_start + transfer.actual_length; index++)
-	{
-		datrace += hex[transfer.buffer[index] >> 4];
-		datrace += hex[(transfer.buffer[index]) & 15];
-		datrace += ' ';
-	}
-
-	fmt::append(out, "TR[r:%d][sz:%d] => %s", +transfer.status, transfer.actual_length, datrace);
+	fmt::append(out, "TR[r:%d][sz:%d] => %s", +transfer.status, transfer.actual_length, fmt::buf_to_hexstring(&transfer.buffer[data_start], transfer.actual_length));
 }
 
 struct UsbLdd
 {
 	std::string name;
-	u16 id_vendor;
-	u16 id_product_min;
-	u16 id_product_max;
+	u16 id_vendor{};
+	u16 id_product_min{};
+	u16 id_product_max{};
 };
 
 struct UsbPipe
@@ -62,6 +57,18 @@ class usb_handler_thread
 public:
 	usb_handler_thread();
 	~usb_handler_thread();
+
+	SAVESTATE_INIT_POS(14);
+
+	usb_handler_thread(utils::serial& ar) : usb_handler_thread()
+	{
+		is_init = !!ar.operator u8();
+	}
+
+	void save(utils::serial& ar)
+	{
+		ar(u8{is_init.load()});
+	}
 
 	// Thread loop
 	void operator()();
@@ -97,7 +104,7 @@ public:
 
 	// sys_usbd_receive_event PPU Threads
 	shared_mutex mutex_sq;
-	std::deque<ppu_thread*> sq;
+	ppu_thread* sq{};
 
 	static constexpr auto thread_name = "Usb Manager Thread"sv;
 
@@ -163,7 +170,7 @@ usb_handler_thread::usb_handler_thread()
 
 	if (ndev < 0)
 	{
-		sys_usbd.error("Failed to get device list: %s", libusb_error_name(ndev));
+		sys_usbd.error("Failed to get device list: %s", libusb_error_name(static_cast<s32>(ndev)));
 		return;
 	}
 
@@ -176,7 +183,9 @@ usb_handler_thread::usb_handler_thread()
 	};
 
 	bool found_skylander = false;
+	bool found_infinity  = false;
 	bool found_usio      = false;
+	bool found_h050      = false;
 
 	for (ssize_t index = 0; index < ndev; index++)
 	{
@@ -206,8 +215,12 @@ usb_handler_thread::usb_handler_thread()
 			found_skylander = true;
 		}
 
+		if (check_device(0x0E6F, 0x0129, 0x0129, "Disney Infinity Base"))
+		{
+			found_infinity = true;
+		}
+
 		check_device(0x0E6F, 0x0241, 0x0241, "Lego Dimensions Portal");
-		check_device(0x0E6F, 0x0129, 0x0129, "Disney Infinity Portal");
 		check_device(0x0E6F, 0x200A, 0x200A, "Kamen Rider Summonride Portal");
 
 		// Cameras
@@ -264,9 +277,28 @@ usb_handler_thread::usb_handler_thread()
 		{
 			found_usio = true;
 		}
+
+		// Densha de GO! controller
+		check_device(0x0AE4, 0x0004, 0x0004, "Densha de GO! Type 2 Controller");
+
+		// H050 USJ
+		if (check_device(0x0B9A, 0x0900, 0x0900, "H050 USJ(C) PCB rev00"))
+		{
+			found_h050 = true;
+		}
+
+		// EA Active 2 dongle for connecting wristbands & legband
+		check_device(0x21A4, 0xAC27, 0xAC27, "EA Active 2 Dongle");
 	}
 
 	libusb_free_device_list(list, 1);
+
+	for (int i = 0; i < 8; i++) // Add VFS USB mass storage devices (/dev_usbXXX) to the USB device list
+	{
+		const auto usb_info = g_cfg_vfs.get_device(g_cfg_vfs.dev_usb, fmt::format("/dev_usb%03d", i));
+		if (fs::is_dir(usb_info.path))
+			usb_devices.push_back(std::make_shared<usb_device_vfs>(usb_info, get_new_location()));
+	}
 
 	if (!found_skylander)
 	{
@@ -274,10 +306,38 @@ usb_handler_thread::usb_handler_thread()
 		usb_devices.push_back(std::make_shared<usb_device_skylander>(get_new_location()));
 	}
 
-	if (!found_usio)
+	if (!found_infinity)
+	{
+		sys_usbd.notice("Adding emulated infinity base");
+		usb_devices.push_back(std::make_shared<usb_device_infinity>(get_new_location()));
+	}
+
+	if (!found_usio && !found_h050) // Only one of these two IO boards should be present at the same time; otherwise, an exception will be thrown by the game.
 	{
 		sys_usbd.notice("Adding emulated v406 usio");
 		usb_devices.push_back(std::make_shared<usb_device_usio>(get_new_location()));
+	}
+
+	const std::vector<std::string> devices_list = fmt::split(g_cfg.io.midi_devices.to_string(), { "@@@" });
+	for (usz index = 0; index < std::min(max_midi_devices, devices_list.size()); index++)
+	{
+		const midi_device device = midi_device::from_string(::at32(devices_list, index));
+		if (device.name.empty()) continue;
+
+		sys_usbd.notice("Adding Emulated Midi Pro Adapter (type=%s, name=%s)", device.type, device.name);
+
+		switch (device.type)
+		{
+		case midi_device_type::guitar:
+			usb_devices.push_back(std::make_shared<usb_device_rb3_midi_guitar>(get_new_location(), device.name, false));
+			break;
+		case midi_device_type::guitar_22fret:
+			usb_devices.push_back(std::make_shared<usb_device_rb3_midi_guitar>(get_new_location(), device.name, true));
+			break;
+		case midi_device_type::keyboard:
+			usb_devices.push_back(std::make_shared<usb_device_rb3_midi_keyboard>(get_new_location(), device.name));
+			break;
+		}
 	}
 
 	if (g_cfg.io.ghltar == ghltar_handler::one_controller || g_cfg.io.ghltar == ghltar_handler::two_controllers)
@@ -323,19 +383,19 @@ usb_handler_thread::~usb_handler_thread()
 	open_pipes.clear();
 	usb_devices.clear();
 
-	if (ctx)
-		libusb_exit(ctx);
-
 	for (u32 index = 0; index < MAX_SYS_USBD_TRANSFERS; index++)
 	{
 		if (transfers[index].transfer)
 			libusb_free_transfer(transfers[index].transfer);
 	}
+
+	if (ctx)
+		libusb_exit(ctx);
 }
 
 void usb_handler_thread::operator()()
 {
-	timeval lusb_tv{0, 200};
+	timeval lusb_tv{0, 0};
 
 	while (ctx && thread_ctrl::state() != thread_state::aborting)
 	{
@@ -373,7 +433,10 @@ void usb_handler_thread::operator()()
 		}
 
 		// If there is no handled devices usb thread is not actively needed
-		thread_ctrl::wait_for(handled_devices.empty() ? 500'000 : 200);
+		if (handled_devices.empty())
+			thread_ctrl::wait_for(500'000);
+		else
+			thread_ctrl::wait_for(1'000);
 	}
 }
 
@@ -469,7 +532,7 @@ bool usb_handler_thread::is_pipe(u32 pipe_id) const
 
 const UsbPipe& usb_handler_thread::get_pipe(u32 pipe_id) const
 {
-	return open_pipes.at(pipe_id);
+	return ::at32(open_pipes, pipe_id);
 }
 
 void usb_handler_thread::check_devices_vs_ldds()
@@ -607,11 +670,14 @@ error_code sys_usbd_initialize(ppu_thread& ppu, vm::ptr<u32> handle)
 
 	auto& usbh = g_fxo->get<named_thread<usb_handler_thread>>();
 
-	std::lock_guard lock(usbh.mutex);
+	{
+		std::lock_guard lock(usbh.mutex);
 
-	// Must not occur (lv2 allows multiple handles, cellUsbd does not)
-	ensure(!usbh.is_init.exchange(true));
+		// Must not occur (lv2 allows multiple handles, cellUsbd does not)
+		ensure(!usbh.is_init.exchange(true));
+	}
 
+	ppu.check_state();
 	*handle = 0x115B;
 
 	// TODO
@@ -630,7 +696,7 @@ error_code sys_usbd_finalize(ppu_thread& ppu, u32 handle)
 	usbh.is_init = false;
 
 	// Forcefully awake all waiters
-	for (auto& cpu : ::as_rvalue(std::move(usbh.sq)))
+	while (auto cpu = lv2_obj::schedule<ppu_thread>(usbh.sq, SYS_SYNC_FIFO))
 	{
 		// Special ternimation signal value
 		cpu->gpr[4] = 4;
@@ -740,9 +806,10 @@ error_code sys_usbd_register_ldd(ppu_thread& ppu, u32 handle, vm::ptr<char> s_pr
 	}
 	else if (s_product.get_ptr() == "PS3A-USJ"sv)
 	{
-		// Arcade v406 USIO board
+		// Arcade IO boards
 		sys_usbd.warning("sys_usbd_register_ldd(handle=0x%x, s_product=%s, slen_product=0x%x) -> Redirecting to sys_usbd_register_extra_ldd", handle, s_product, slen_product);
 		sys_usbd_register_extra_ldd(ppu, handle, s_product, slen_product, 0x0B9A, 0x0910, 0x0910); // usio
+		sys_usbd_register_extra_ldd(ppu, handle, s_product, slen_product, 0x0B9A, 0x0900, 0x0900); // H050 USJ
 	}
 	else
 	{
@@ -845,26 +912,38 @@ error_code sys_usbd_receive_event(ppu_thread& ppu, u32 handle, vm::ptr<u64> arg1
 		}
 
 		lv2_obj::sleep(ppu);
-		usbh.sq.emplace_back(&ppu);
+		lv2_obj::emplace(usbh.sq, &ppu);
 	}
 
-	while (auto state = ppu.state.fetch_sub(cpu_flag::signal))
+	while (auto state = +ppu.state)
 	{
-		if (is_stopped(state))
-		{
-			sys_usbd.trace("sys_usbd_receive_event: aborting");
-			return {};
-		}
-
-		if (state & cpu_flag::signal)
+		if (state & cpu_flag::signal && ppu.state.test_and_reset(cpu_flag::signal))
 		{
 			sys_usbd.trace("Received event(queued): arg1=0x%x arg2=0x%x arg3=0x%x", ppu.gpr[4], ppu.gpr[5], ppu.gpr[6]);
 			break;
 		}
 
-		thread_ctrl::wait_on(ppu.state, state);
+		if (is_stopped(state))
+		{
+			std::lock_guard lock(usbh.mutex);
+
+			for (auto cpu = +usbh.sq; cpu; cpu = cpu->next_cpu)
+			{
+				if (cpu == &ppu)
+				{
+					ppu.state += cpu_flag::again;
+					sys_usbd.trace("sys_usbd_receive_event: aborting");
+					return {};
+				}
+			}
+
+			break;
+		}
+
+		ppu.state.wait(state);
 	}
 
+	ppu.check_state();
 	*arg1 = ppu.gpr[4];
 	*arg2 = ppu.gpr[5];
 	*arg3 = ppu.gpr[6];
@@ -897,23 +976,12 @@ error_code sys_usbd_transfer_data(ppu_thread& ppu, u32 handle, u32 id_pipe, vm::
 
 	sys_usbd.trace("sys_usbd_transfer_data(handle=0x%x, id_pipe=0x%x, buf=*0x%x, buf_length=0x%x, request=*0x%x, type=0x%x)", handle, id_pipe, buf, buf_size, request, type_transfer);
 
-	if (sys_usbd.enabled == logs::level::trace && request)
+	if (sys_usbd.trace && request)
 	{
 		sys_usbd.trace("RequestType:0x%x, Request:0x%x, wValue:0x%x, wIndex:0x%x, wLength:0x%x", request->bmRequestType, request->bRequest, request->wValue, request->wIndex, request->wLength);
+
 		if ((request->bmRequestType & 0x80) == 0 && buf && buf_size != 0)
-		{
-			std::string datrace;
-			const char hex[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
-
-			for (u32 index = 0; index < buf_size; index++)
-			{
-				datrace += hex[(buf[index] >> 4) & 15];
-				datrace += hex[(buf[index]) & 15];
-				datrace += ' ';
-			}
-
-			sys_usbd.trace("Control sent: %s", datrace);
-		}
+			sys_usbd.trace("Control sent:\n%s", fmt::buf_to_hexstring(buf.get_ptr(), buf_size));
 	}
 
 	auto& usbh = g_fxo->get<named_thread<usb_handler_thread>>();
@@ -938,10 +1006,32 @@ error_code sys_usbd_transfer_data(ppu_thread& ppu, u32 handle, u32 id_pipe, vm::
 		}
 
 		// Claiming interface
-		if (request->bmRequestType == 0 && request->bRequest == 0x09)
+		switch (request->bmRequestType)
 		{
-			pipe.device->set_configuration(static_cast<u8>(+request->wValue));
-			pipe.device->set_interface(0);
+		case 0U /*silences warning*/ | LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_STANDARD | LIBUSB_RECIPIENT_DEVICE:
+		{
+			switch (request->bRequest)
+			{
+			case LIBUSB_REQUEST_SET_CONFIGURATION:
+			{
+				pipe.device->set_configuration(static_cast<u8>(+request->wValue));
+				pipe.device->set_interface(0);
+				break;
+			}
+			default: break;
+			}
+			break;
+		}
+		case 0U /*silences warning*/ | LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_STANDARD | LIBUSB_RECIPIENT_DEVICE:
+		{
+			if (!buf)
+			{
+				sys_usbd.error("Invalid buffer for control_transfer");
+				return CELL_EFAULT;
+			}
+			break;
+		}
+		default: break;
 		}
 
 		pipe.device->control_transfer(request->bmRequestType, request->bRequest, request->wValue, request->wIndex, request->wLength, buf_size, buf.get_ptr(), &transfer);
@@ -950,19 +1040,8 @@ error_code sys_usbd_transfer_data(ppu_thread& ppu, u32 handle, u32 id_pipe, vm::
 	{
 		// If output endpoint
 		if (!(pipe.endpoint & 0x80))
-		{
-			std::string datrace;
-			const char hex[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
+			sys_usbd.trace("Write Int(s: %d):\n%s", buf_size, fmt::buf_to_hexstring(buf.get_ptr(), buf_size));
 
-			for (u32 index = 0; index < buf_size; index++)
-			{
-				datrace += hex[buf[index] >> 4];
-				datrace += hex[buf[index] & 15];
-				datrace += ' ';
-			}
-
-			sys_usbd.trace("Write Int(s: %d) :%s", buf_size, datrace);
-		}
 		pipe.device->interrupt_transfer(buf_size, buf.get_ptr(), pipe.endpoint, &transfer);
 	}
 

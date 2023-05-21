@@ -12,6 +12,25 @@ namespace fs
 
 namespace psf
 {
+	enum sound_format_flag : s32
+	{
+		lpcm_2   = 1 << 0, // Linear PCM 2 Ch.
+		lpcm_5_1 = 1 << 2, // Linear PCM 5.1 Ch.
+		lpcm_7_1 = 1 << 4, // Linear PCM 7.1 Ch.
+		ac3      = 1 << 8, // Dolby Digital 5.1 Ch.
+		dts      = 1 << 9, // DTS 5.1 Ch.
+	};
+
+	enum resolution_flag : s32
+	{
+		_480p      = 1 << 0,
+		_576p      = 1 << 1,
+		_720p      = 1 << 2,
+		_1080p     = 1 << 3,
+		_480p_16_9 = 1 << 4,
+		_576p_16_9 = 1 << 5,
+	};
+
 	enum class format : u16
 	{
 		array   = 0x0004, // claimed to be a non-NTS string (char array)
@@ -36,10 +55,10 @@ namespace psf
 
 	public:
 		// Construct string entry, assign the value
-		entry(format type, u32 max_size, std::string_view value);
+		entry(format type, u32 max_size, std::string_view value, bool allow_truncate = false) noexcept;
 
 		// Construct integer entry, assign the value
-		entry(u32 value);
+		entry(u32 value) noexcept;
 
 		~entry() = default;
 
@@ -50,8 +69,9 @@ namespace psf
 		entry& operator =(u32 value);
 
 		format type() const { return m_type; }
-		u32 max() const { return m_max_size; }
+		u32 max(bool with_nts) const { return m_max_size - (!with_nts && m_type == format::string ? 1 : 0); }
 		u32 size() const;
+		bool is_valid() const;
 	};
 
 	// Define PSF registry as a sorted map of entries:
@@ -69,9 +89,10 @@ namespace psf
 	};
 
 	// Load PSF registry from SFO binary format
-	load_result_t load(const fs::file&);
+	load_result_t load(const fs::file&, std::string_view filename);
 	load_result_t load(const std::string& filename);
-	inline registry load_object(const fs::file& f) { return load(f).sfo; }
+	inline registry load_object(const fs::file& f, std::string_view filename) { return load(f, filename).sfo; }
+	inline registry load_object(const std::string& filename) { return load(filename).sfo; }
 
 	// Convert PSF registry to SFO binary format
 	std::vector<u8> save_object(const registry&, std::vector<u8>&& init = std::vector<u8>{});
@@ -81,6 +102,12 @@ namespace psf
 
 	// Get integer value or default value
 	u32 get_integer(const registry& psf, std::string_view key, u32 def = 0);
+
+	bool check_registry(const registry& psf, std::function<bool(bool ok, const std::string& key, const entry& value)> validate = {},
+			u32 line = __builtin_LINE(),
+			u32 col = __builtin_COLUMN(),
+			const char* file = __builtin_FILE(),
+			const char* func = __builtin_FUNCTION());
 
 	// Assign new entry
 	inline void assign(registry& psf, std::string_view key, entry&& _entry)
@@ -98,9 +125,18 @@ namespace psf
 	}
 
 	// Make string entry
-	inline entry string(u32 max_size, std::string_view value)
+	inline entry string(u32 max_size, std::string_view value, bool allow_truncate = false)
 	{
-		return {format::string, max_size, value};
+		return {format::string, max_size, value, allow_truncate};
+	}
+
+	// Make string entry (from char[N])
+	template <usz CharN>
+	inline entry string(u32 max_size, char (&value_array)[CharN], bool allow_truncate = false)
+	{
+		std::string_view value{value_array, CharN};
+		value = value.substr(0, std::min<usz>(value.find_first_of('\0'), value.size()));
+		return string(max_size, value, allow_truncate);
 	}
 
 	// Make array entry

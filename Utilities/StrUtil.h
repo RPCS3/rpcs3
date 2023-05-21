@@ -10,12 +10,14 @@
 
 std::wstring utf8_to_wchar(std::string_view src);
 std::string wchar_to_utf8(std::wstring_view src);
+std::string utf16_to_utf8(std::u16string_view src);
+std::u16string utf8_to_utf16(std::string_view src);
 
 // Copy null-terminated string from a std::string or a char array to a char array with truncation
 template <typename D, typename T>
-inline void strcpy_trunc(D& dst, const T& src)
+inline void strcpy_trunc(D&& dst, const T& src)
 {
-	const usz count = std::size(src) >= std::size(dst) ? std::size(dst) - 1 : std::size(src);
+	const usz count = std::size(src) >= std::size(dst) ? std::max<usz>(std::size(dst), 1) - 1 : std::size(src);
 	std::memcpy(std::data(dst), std::data(src), count);
 	std::memset(std::data(dst) + count, 0, std::size(dst) - count);
 }
@@ -25,6 +27,15 @@ bool try_to_int64(s64* out, std::string_view value, s64 min, s64 max);
 
 // Convert string to unsigned integer
 bool try_to_uint64(u64* out, std::string_view value, u64 min, u64 max);
+
+// Convert string to float
+bool try_to_float(f64* out, std::string_view value, f64 min, f64 max);
+
+// Convert float to string locale independent
+bool try_to_string(std::string* out, const f64& value);
+
+// Get the file extension of a file path ("png", "jpg", etc.)
+std::string get_file_extension(const std::string& file_path);
 
 namespace fmt
 {
@@ -162,8 +173,17 @@ namespace fmt
 		return result;
 	}
 
-	std::string to_upper(const std::string& string);
-	std::string to_lower(const std::string& string);
+	std::string to_upper(std::string_view string);
+	std::string to_lower(std::string_view string);
 
 	bool match(const std::string& source, const std::string& mask);
+
+	struct buf_to_hexstring
+	{
+		buf_to_hexstring(const u8* buf, usz len)
+			: buf(buf), len(len) {}
+
+		const u8* buf;
+		usz len;
+	};
 }

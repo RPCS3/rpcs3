@@ -4,7 +4,7 @@ R"--RPCS3--(
 #ifndef A_SKIP_EXT
 #ifdef A_HALF
 #extension GL_EXT_shader_16bit_storage:require
-#extension GL_EXT_shader_explicit_arithmetic_types:require 
+#extension GL_EXT_shader_explicit_arithmetic_types:require
 #endif
 #ifdef A_LONG
 #extension GL_ARB_gpu_shader_int64:require
@@ -390,7 +390,7 @@ AW4 AWaveXorW4(AW4 v,AU1 x){return AW4_AU2(subgroupShuffleXor(AU2_AW4(v),x));}
 AU1 AU1_AH1_AF1_x(AF1 a){return f32tof16(a);}
 #define AU1_AH1_AF1(a) AU1_AH1_AF1_x(AF1(a))
 AU1 AU1_AH2_AF2_x(AF2 a){return f32tof16(a.x)|(f32tof16(a.y)<<16);}
-#define AU1_AH2_AF2(a) AU1_AH2_AF2_x(AF2(a)) 
+#define AU1_AH2_AF2(a) AU1_AH2_AF2_x(AF2(a))
 #define AU1_AB4Unorm_AF4(x) D3DCOLORtoUBYTE4(AF4(x))
 AF2 AF2_AH2_AU1_x(AU1 x){return AF2(f16tof32(x&0xFFFF),f16tof32(x>>16));}
 #define AF2_AH2_AU1(x) AF2_AH2_AU1_x(AU1(x))
@@ -906,7 +906,7 @@ AF2 APSinCosF1(AF1 x){AF1 y=AFractF1(x*AF1_(0.5)+AF1_(0.75));y=y*AF1_(2.0)-AF1_(
 #ifdef A_HALF
 AH1 APSinH1(AH1 x){return x*abs(x)-x;}
 AH2 APSinH2(AH2 x){return x*abs(x)-x;} // AND,FMA
-AH1 APCosH1(AH1 x){x=AFractH1(x*AH1_(0.5)+AH1_(0.75));x=x*AH1_(2.0)-AH1_(1.0);return APSinH1(x);} 
+AH1 APCosH1(AH1 x){x=AFractH1(x*AH1_(0.5)+AH1_(0.75));x=x*AH1_(2.0)-AH1_(1.0);return APSinH1(x);}
 AH2 APCosH2(AH2 x){x=AFractH2(x*AH2_(0.5)+AH2_(0.75));x=x*AH2_(2.0)-AH2_(1.0);return APSinH2(x);} // 3x FMA, 2xFRACT, AND
 AH2 APSinCosH1(AH1 x){AH1 y=AFractH1(x*AH1_(0.5)+AH1_(0.75));y=y*AH1_(2.0)-AH1_(1.0);return APSinH2(AH2(x,y));}
 #endif
@@ -1033,9 +1033,9 @@ AF2 ATo709F2(AF2 c){AF3 j=AF3(0.018*4.5,4.5,0.45);AF2 k=AF2(1.099,-0.099);
 return clamp(j.xx ,c*j.yy ,pow(c,j.zz )*k.xx +k.yy );}
 AF3 ATo709F3(AF3 c){AF3 j=AF3(0.018*4.5,4.5,0.45);AF2 k=AF2(1.099,-0.099);
 return clamp(j.xxx,c*j.yyy,pow(c,j.zzz)*k.xxx+k.yyy);}
-AF1 AToGammaF1(AF1 c,AF1 rcpX){return pow(c,AF1_(rcpX));} 
-AF2 AToGammaF2(AF2 c,AF1 rcpX){return pow(c,AF2_(rcpX));} 
-AF3 AToGammaF3(AF3 c,AF1 rcpX){return pow(c,AF3_(rcpX));} 
+AF1 AToGammaF1(AF1 c,AF1 rcpX){return pow(c,AF1_(rcpX));}
+AF2 AToGammaF2(AF2 c,AF1 rcpX){return pow(c,AF2_(rcpX));}
+AF3 AToGammaF3(AF3 c,AF1 rcpX){return pow(c,AF3_(rcpX));}
 AF1 AToPqF1(AF1 x){AF1 p=pow(x,AF1_(0.159302));
 return pow((AF1_(0.835938)+AF1_(18.8516)*p)/(AF1_(1.0)+AF1_(18.6875)*p),AF1_(78.8438));}
 AF2 AToPqF1(AF2 x){AF2 p=pow(x,AF2_(0.159302));
@@ -1062,9 +1062,9 @@ AF2 AFrom709F2(AF2 c){AF3 j=AF3(0.081/4.5,1.0/4.5,1.0/0.45);AF2 k=AF2(1.0/1.099,
 return AZolSelF2(AZolSignedF2(c-j.xx ),c*j.yy ,pow(c*k.xx +k.yy ,j.zz ));}
 AF3 AFrom709F3(AF3 c){AF3 j=AF3(0.081/4.5,1.0/4.5,1.0/0.45);AF2 k=AF2(1.0/1.099,0.099/1.099);
 return AZolSelF3(AZolSignedF3(c-j.xxx),c*j.yyy,pow(c*k.xxx+k.yyy,j.zzz));}
-AF1 AFromGammaF1(AF1 c,AF1 x){return pow(c,AF1_(x));} 
-AF2 AFromGammaF2(AF2 c,AF1 x){return pow(c,AF2_(x));} 
-AF3 AFromGammaF3(AF3 c,AF1 x){return pow(c,AF3_(x));} 
+AF1 AFromGammaF1(AF1 c,AF1 x){return pow(c,AF1_(x));}
+AF2 AFromGammaF2(AF2 c,AF1 x){return pow(c,AF2_(x));}
+AF3 AFromGammaF3(AF3 c,AF1 x){return pow(c,AF3_(x));}
 AF1 AFromPqF1(AF1 x){AF1 p=pow(x,AF1_(0.0126833));
 return pow(ASatF1(p-AF1_(0.835938))/(AF1_(18.8516)-AF1_(18.6875)*p),AF1_(6.27739));}
 AF2 AFromPqF1(AF2 x){AF2 p=pow(x,AF2_(0.0126833));

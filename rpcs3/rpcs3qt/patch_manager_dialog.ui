@@ -83,8 +83,8 @@
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>106</width>
-         <height>580</height>
+         <width>247</width>
+         <height>637</height>
         </rect>
        </property>
        <layout class="QVBoxLayout" name="scrollAreaWidgetContentsLayout">
@@ -105,7 +105,7 @@
           <property name="title">
            <string>Patch Information</string>
           </property>
-          <layout class="QVBoxLayout" name="patch_info_gb_layout" stretch="0,0,0,0,0,0,0,1,0">
+          <layout class="QVBoxLayout" name="patch_info_gb_layout" stretch="0,0,0,0,0,0,0,1,0,0">
            <item>
             <widget class="QGroupBox" name="gb_title">
              <property name="title">
@@ -252,6 +252,45 @@
                 </property>
                 <property name="wordWrap">
                  <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <widget class="QGroupBox" name="gb_values">
+             <property name="title">
+              <string>Configurable Values</string>
+             </property>
+             <layout class="QHBoxLayout" name="horizontalLayout">
+              <item>
+               <widget class="QComboBox" name="configurable_selector">
+                <property name="placeholderText">
+                 <string>N/A</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QComboBox" name="configurable_combo_box">
+                <property name="placeholderText">
+                 <string>N/A</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QSpinBox" name="configurable_spin_box"/>
+              </item>
+              <item>
+               <widget class="QDoubleSpinBox" name="configurable_double_spin_box">
+                <property name="decimals">
+                 <number>10</number>
+                </property>
+                <property name="minimum">
+                 <double>-1000000.000000000000000</double>
+                </property>
+                <property name="maximum">
+                 <double>1000000.000000000000000</double>
                 </property>
                </widget>
               </item>

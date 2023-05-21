@@ -326,10 +326,10 @@ error_code _cellSslConvertSslVersion()
 	return CELL_OK;
 }
 
-error_code _cellSslIsInitd()
+b8 _cellSslIsInitd()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
-	return CELL_OK;
+	return false;
 }
 
 error_code _cellSslPemReadPrivateKey()

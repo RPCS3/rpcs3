@@ -81,11 +81,17 @@ namespace logs
 		// Process log message
 		virtual void log(u64 stamp, const message& msg, const std::string& prefix, const std::string& text) = 0;
 
+		// Flush contents (file writer)
+		virtual void sync();
+
 		// Add new listener
 		static void add(listener*);
 
 		// Special purpose
 		void broadcast(const stored_message&) const;
+
+		// Flush log to disk
+		static void sync_all();
 	};
 
 	struct alignas(16) channel : private message
@@ -182,13 +188,7 @@ namespace logs
 	void set_init(std::initializer_list<stored_message>);
 }
 
-#if __cpp_constinit >= 201907
-#define LOG_CONSTINIT constinit
-#else
-#define LOG_CONSTINIT
-#endif
-
-#define LOG_CHANNEL(ch, ...) LOG_CONSTINIT inline ::logs::channel ch(::logs::make_channel_name(#ch, ##__VA_ARGS__)); \
+#define LOG_CHANNEL(ch, ...) inline constinit ::logs::channel ch(::logs::make_channel_name(#ch, ##__VA_ARGS__)); \
 	namespace logs { inline ::logs::registerer reg_##ch{ch}; }
 
 LOG_CHANNEL(rsx_log, "RSX");

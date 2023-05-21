@@ -1,9 +1,15 @@
 #pragma once
 
+#include "Emu/system_config_types.h"
 #include "util/types.hpp"
 #include "../Common/simple_array.hpp"
 #include "../Overlays/overlays.h"
 #include "GLTexture.h"
+
+#include "glutils/fbo.h"
+#include "glutils/program.h"
+#include "glutils/vao.hpp"
+
 #include <string>
 #include <unordered_map>
 
@@ -28,29 +34,11 @@ namespace gl
 
 		u32 num_drawable_elements = 4;
 		GLenum primitives = GL_TRIANGLE_STRIP;
-		GLenum input_filter = GL_NEAREST;
+		gl::filter m_input_filter = gl::filter::nearest;
 
-		struct saved_sampler_state
-		{
-			GLuint saved = GL_NONE;
-			GLuint unit = 0;
-
-			saved_sampler_state(GLuint _unit, const gl::sampler_state& sampler)
-			{
-				glActiveTexture(GL_TEXTURE0 + _unit);
-				glGetIntegerv(GL_SAMPLER_BINDING, reinterpret_cast<GLint*>(&saved));
-
-				unit = _unit;
-				sampler.bind(_unit);
-			}
-
-			saved_sampler_state(const saved_sampler_state&) = delete;
-
-			~saved_sampler_state()
-			{
-				glBindSampler(unit, saved);
-			}
-		};
+		u32 m_write_aspect_mask = gl::image_aspect::color | gl::image_aspect::depth;
+		bool enable_depth_writes = false;
+		bool enable_stencil_writes = false;
 
 		void create();
 		void destroy();
@@ -69,7 +57,7 @@ namespace gl
 
 		virtual void emit_geometry();
 
-		void run(const areau& region, GLuint target_texture, bool depth_target, bool use_blending = false);
+		void run(gl::command_context& cmd, const areau& region, GLuint target_texture, GLuint image_aspect_bits, bool enable_blending = false);
 	};
 
 	struct ui_overlay_renderer : public overlay_pass
@@ -99,13 +87,40 @@ namespace gl
 
 		void emit_geometry() override;
 
-		void run(const areau& viewport, GLuint target, rsx::overlays::overlay& ui);
+		void run(gl::command_context& cmd, const areau& viewport, GLuint target, rsx::overlays::overlay& ui);
 	};
 
 	struct video_out_calibration_pass : public overlay_pass
 	{
 		video_out_calibration_pass();
 
-		void run(const areau& viewport, const rsx::simple_array<GLuint>& source, f32 gamma, bool limited_rgb, bool _3d);
+		void run(gl::command_context& cmd, const areau& viewport, const rsx::simple_array<GLuint>& source, f32 gamma, bool limited_rgb, stereo_render_mode_options stereo_mode, gl::filter input_filter);
 	};
+
+	struct rp_ssbo_to_generic_texture : public overlay_pass
+	{
+		rp_ssbo_to_generic_texture();
+		void run(gl::command_context& cmd, const buffer* src, texture* dst, const u32 src_offset, const coordu& dst_region, const pixel_buffer_layout& layout);
+		void run(gl::command_context& cmd, const buffer* src, const texture_view* dst, const u32 src_offset, const coordu& dst_region, const pixel_buffer_layout& layout);
+	};
+
+	// TODO: Replace with a proper manager
+	extern std::unordered_map<u32, std::unique_ptr<gl::overlay_pass>> g_overlay_passes;
+
+	template<class T>
+	T* get_overlay_pass()
+	{
+		u32 index = id_manager::typeinfo::get_index<T>();
+		auto &e = g_overlay_passes[index];
+
+		if (!e)
+		{
+			e = std::make_unique<T>();
+			e->create();
+		}
+
+		return static_cast<T*>(e.get());
+	}
+
+	void destroy_overlay_passes();
 }

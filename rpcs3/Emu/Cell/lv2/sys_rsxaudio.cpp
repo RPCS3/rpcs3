@@ -2,6 +2,7 @@
 #include "Emu/Memory/vm.h"
 #include "Emu/IdManager.h"
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 
 #include "sys_process.h"
 #include "sys_rsxaudio.h"
@@ -187,10 +188,6 @@ error_code sys_rsxaudio_finalize(u32 handle)
 
 	rsxaudio_obj->init = false;
 	vm::dealloc(rsxaudio_obj->shmem, vm::main);
-	for (const auto port : rsxaudio_obj->event_port)
-	{
-		idm::remove<lv2_obj, lv2_event_port>(port);
-	}
 
 	idm::remove<lv2_obj, lv2_rsxaudio>(handle);
 	rsxaudio_thread.rsxaudio_ctx_allocated = false;
@@ -284,32 +281,6 @@ error_code sys_rsxaudio_create_connection(u32 handle)
 				{
 					rsxaudio_obj->event_queue[2] = queue3;
 
-					if (auto port1 = idm::make<lv2_obj, lv2_event_port>(SYS_EVENT_PORT_LOCAL, 0))
-					{
-						idm::remove<lv2_obj, lv2_event_port>(rsxaudio_obj->event_port[0]);
-						rsxaudio_obj->event_port[0] = port1;
-
-						if (auto port2 = idm::make<lv2_obj, lv2_event_port>(SYS_EVENT_PORT_LOCAL, 0))
-						{
-							idm::remove<lv2_obj, lv2_event_port>(rsxaudio_obj->event_port[1]);
-							rsxaudio_obj->event_port[1] = port2;
-
-							if (auto port3 = idm::make<lv2_obj, lv2_event_port>(SYS_EVENT_PORT_LOCAL, 0))
-							{
-								idm::remove<lv2_obj, lv2_event_port>(rsxaudio_obj->event_port[2]);
-								rsxaudio_obj->event_port[2] = port3;
-
-								return CELL_OK;
-							}
-
-							idm::remove<lv2_obj, lv2_event_port>(port2);
-							rsxaudio_obj->event_port[1] = 0;
-						}
-
-						idm::remove<lv2_obj, lv2_event_port>(port1);
-						rsxaudio_obj->event_port[0] = 0;
-					}
-
 					return CELL_OK;
 				}
 			}
@@ -365,8 +336,6 @@ error_code sys_rsxaudio_close_connection(u32 handle)
 
 	for (u32 q_idx = 0; q_idx < SYS_RSXAUDIO_PORT_CNT; q_idx++)
 	{
-		idm::remove<lv2_obj, lv2_event_port>(rsxaudio_obj->event_port[q_idx]);
-		rsxaudio_obj->event_port[q_idx] = 0;
 		rsxaudio_obj->event_queue[q_idx].reset();
 	}
 
@@ -445,9 +414,9 @@ error_code sys_rsxaudio_start_process(u32 handle)
 
 	for (u32 q_idx = 0; q_idx < SYS_RSXAUDIO_PORT_CNT; q_idx++)
 	{
-		if (auto queue = rsxaudio_obj->event_queue[q_idx].lock(); rsxaudio_obj->event_port[q_idx] && sh_page->ctrl.ringbuf[q_idx].active)
+		if (auto queue = rsxaudio_obj->event_queue[q_idx].lock(); queue && sh_page->ctrl.ringbuf[q_idx].active)
 		{
-			queue->send(s64{process_getpid()} << 32 | u64{rsxaudio_obj->event_port[q_idx]}, q_idx, 0, 0);
+			queue->send(rsxaudio_obj->event_port_name[q_idx], q_idx, 0, 0);
 		}
 	}
 
@@ -854,9 +823,9 @@ void rsxaudio_data_thread::extract_audio_data()
 				// Too late to recover
 				reset_periods = true;
 
-				if (auto queue = rsxaudio_obj->event_queue[dst_raw].lock(); rsxaudio_obj->event_port[dst_raw])
+				if (auto queue = rsxaudio_obj->event_queue[dst_raw].lock())
 				{
-					queue->send(s64{process_getpid()} << 32 | u64{rsxaudio_obj->event_port[dst_raw]}, dst_raw, blk_idx, timestamp);
+					queue->send(rsxaudio_obj->event_port_name[dst_raw], dst_raw, blk_idx, timestamp);
 				}
 			}
 		}
@@ -1300,9 +1269,9 @@ bool rsxaudio_data_thread::enqueue_data(RsxaudioPort dst, bool silence, const vo
 
 namespace audio
 {
-	void configure_rsxaudio()
+	extern void configure_rsxaudio()
 	{
-		if (g_cfg.audio.provider == audio_provider::rsxaudio)
+		if (g_cfg.audio.provider == audio_provider::rsxaudio && g_fxo->is_init<rsx_audio_backend>())
 		{
 			g_fxo->get<rsx_audio_backend>().update_emu_cfg();
 		}
@@ -1326,7 +1295,7 @@ rsxaudio_backend_thread::~rsxaudio_backend_thread()
 	{
 		backend->Close();
 		backend->SetWriteCallback(nullptr);
-		backend->SetErrorCallback(nullptr);
+		backend->SetStateCallback(nullptr);
 		backend = nullptr;
 	}
 }
@@ -1354,30 +1323,19 @@ void rsxaudio_backend_thread::update_emu_cfg()
 
 rsxaudio_backend_thread::emu_audio_cfg rsxaudio_backend_thread::get_emu_cfg()
 {
-	const AudioChannelCnt out_ch_cnt = [&]()
-	{
-		switch (g_cfg.audio.audio_channel_downmix)
-		{
-		case audio_downmix::use_application_settings:
-		case audio_downmix::downmix_to_stereo: return AudioChannelCnt::STEREO;
-		case audio_downmix::downmix_to_5_1: return AudioChannelCnt::SURROUND_5_1;
-		case audio_downmix::no_downmix: return AudioChannelCnt::SURROUND_7_1;
-		default:
-		{
-			fmt::throw_exception("Unsupported downmix level: %u", static_cast<u64>(g_cfg.audio.audio_channel_downmix.get()));
-		}
-		}
-	}();
+	// Get max supported channel count
+	AudioChannelCnt out_ch_cnt = AudioBackend::get_max_channel_count(0); // CELL_AUDIO_OUT_PRIMARY
 
 	emu_audio_cfg cfg =
 	{
+		.audio_device = g_cfg.audio.audio_device,
 		.desired_buffer_duration = g_cfg.audio.desired_buffer_duration,
 		.time_stretching_threshold = g_cfg.audio.time_stretching_threshold / 100.0,
 		.buffering_enabled = static_cast<bool>(g_cfg.audio.enable_buffering),
 		.convert_to_s16 = static_cast<bool>(g_cfg.audio.convert_to_s16),
 		.enable_time_stretching = static_cast<bool>(g_cfg.audio.enable_time_stretching),
 		.dump_to_file = static_cast<bool>(g_cfg.audio.dump_to_file),
-		.downmix = out_ch_cnt,
+		.channels = out_ch_cnt,
 		.renderer = g_cfg.audio.renderer,
 		.provider = g_cfg.audio.provider,
 		.avport = convert_avport(g_cfg.audio.rsxaudio_port)
@@ -1404,13 +1362,14 @@ void rsxaudio_backend_thread::operator()()
 	{
 		bool should_update_backend = false;
 		bool reset_backend = false;
+		bool checkDefaultDevice = false;
 		bool should_service_stream = false;
 
 		{
 			std::unique_lock lock(state_update_m);
 			for (;;)
 			{
-				// Unsafe to access backend under lock (error_callback uses state_update_m -> possible deadlock)
+				// Unsafe to access backend under lock (state_changed_callback uses state_update_m -> possible deadlock)
 
 				if (thread_ctrl::state() == thread_state::aborting)
 				{
@@ -1419,16 +1378,24 @@ void rsxaudio_backend_thread::operator()()
 					return;
 				}
 
+				if (backend_device_changed)
+				{
+					should_update_backend = true;
+					checkDefaultDevice = true;
+					backend_device_changed = false;
+				}
+
 				// Emulated state changed
 				if (ra_state_changed)
 				{
 					const callback_config cb_cfg = callback_cfg.observe();
-					should_update_backend |= cb_cfg.cfg_changed;
 					ra_state_changed = false;
 					ra_state = new_ra_state;
 
 					if (cb_cfg.cfg_changed)
 					{
+						should_update_backend = true;
+						checkDefaultDevice = false;
 						callback_cfg.atomic_op([&](callback_config& val)
 						{
 							val.cfg_changed = false; // Acknowledge cfg update
@@ -1443,6 +1410,7 @@ void rsxaudio_backend_thread::operator()()
 					emu_cfg_changed = false;
 					emu_cfg = new_emu_cfg;
 					should_update_backend = true;
+					checkDefaultDevice = false;
 				}
 
 				// Handle backend error notification
@@ -1450,6 +1418,7 @@ void rsxaudio_backend_thread::operator()()
 				{
 					reset_backend = true;
 					should_update_backend = true;
+					checkDefaultDevice = false;
 					backend_error_occured = false;
 				}
 
@@ -1485,7 +1454,7 @@ void rsxaudio_backend_thread::operator()()
 			}
 		}
 
-		if (should_update_backend)
+		if (should_update_backend && (!checkDefaultDevice || backend->DefaultDeviceChanged()))
 		{
 			backend_init(ra_state, emu_cfg, reset_backend);
 
@@ -1713,15 +1682,26 @@ void rsxaudio_backend_thread::backend_init(const rsxaudio_state& ra_state, const
 		backend = nullptr;
 		backend = Emu.GetCallbacks().get_audio();
 		backend->SetWriteCallback(std::bind(&rsxaudio_backend_thread::write_data_callback, this, std::placeholders::_1, std::placeholders::_2));
-		backend->SetErrorCallback(std::bind(&rsxaudio_backend_thread::error_callback, this));
+		backend->SetStateCallback(std::bind(&rsxaudio_backend_thread::state_changed_callback, this, std::placeholders::_1));
 	}
 
 	const port_config& port_cfg = ra_state.port[static_cast<u8>(emu_cfg.avport)];
 	const AudioSampleSize sample_size = emu_cfg.convert_to_s16 ? AudioSampleSize::S16 : AudioSampleSize::FLOAT;
-	const AudioChannelCnt ch_cnt = static_cast<AudioChannelCnt>(std::min<u32>(static_cast<u32>(port_cfg.ch_cnt), static_cast<u32>(emu_cfg.downmix)));
+	const AudioChannelCnt ch_cnt = static_cast<AudioChannelCnt>(std::min<u32>(static_cast<u32>(port_cfg.ch_cnt), static_cast<u32>(emu_cfg.channels)));
+
+	f64 cb_frame_len = 0.0;
+	u32 backend_ch_cnt = 2;
+	if (backend->Open(emu_cfg.audio_device, port_cfg.freq, sample_size, ch_cnt))
+	{
+		cb_frame_len = backend->GetCallbackFrameLen();
+		backend_ch_cnt = backend->get_channels();
+	}
+	else
+	{
+		sys_rsxaudio.error("Failed to open audio backend. Make sure that no other application is running that might block audio access (e.g. Netflix).");
+	}
 
 	static constexpr f64 _10ms = 512.0 / 48000.0;
-	const f64 cb_frame_len  = backend->Open(port_cfg.freq, sample_size, ch_cnt) ? backend->GetCallbackFrameLen() : 0.0;
 	const f64 buffering_len = emu_cfg.buffering_enabled ? (emu_cfg.desired_buffer_duration / 1000.0) : 0.0;
 	const u64 bytes_per_sec = static_cast<u32>(AudioSampleSize::FLOAT) * static_cast<u32>(port_cfg.ch_cnt) * static_cast<u32>(port_cfg.freq);
 
@@ -1755,7 +1735,7 @@ void rsxaudio_backend_thread::backend_init(const rsxaudio_state& ra_state, const
 		{
 			val.freq = static_cast<u32>(port_cfg.freq);
 			val.input_ch_cnt = static_cast<u32>(port_cfg.ch_cnt);
-			val.output_ch_cnt = static_cast<u32>(ch_cnt);
+			val.output_ch_cnt = backend_ch_cnt;
 			val.convert_to_s16 = emu_cfg.convert_to_s16;
 			val.avport_idx = emu_cfg.avport;
 			val.ready = true;
@@ -1907,11 +1887,27 @@ u32 rsxaudio_backend_thread::write_data_callback(u32 bytes, void* buf)
 	return bytes;
 }
 
-void rsxaudio_backend_thread::error_callback()
+void rsxaudio_backend_thread::state_changed_callback(AudioStateEvent event)
 {
 	{
 		std::lock_guard lock(state_update_m);
-		backend_error_occured = true;
+		switch (event)
+		{
+		case AudioStateEvent::UNSPECIFIED_ERROR:
+		{
+			backend_error_occured = true;
+			break;
+		}
+		case AudioStateEvent::DEFAULT_DEVICE_MAYBE_CHANGED:
+		{
+			backend_device_changed = true;
+			break;
+		}
+		default:
+		{
+			fmt::throw_exception("Unknown audio state event");
+		}
+		}
 	}
 	state_update_c.notify_all();
 }
@@ -2120,7 +2116,12 @@ rsxaudio_periodic_tmr::wait_result rsxaudio_periodic_tmr::wait(const std::functi
 		}
 #elif defined(__linux__)
 		epoll_event event[obj_wait_cnt]{};
-		const auto wait_status = epoll_wait(epoll_fd, event, obj_wait_cnt, -1);
+		int wait_status = 0;
+		do
+		{
+			wait_status = epoll_wait(epoll_fd, event, obj_wait_cnt, -1);
+		}
+		while (wait_status == -1 && errno == EINTR);
 
 		if (wait_status < 0 || wait_status > obj_wait_cnt)
 		{
@@ -2143,7 +2144,12 @@ rsxaudio_periodic_tmr::wait_result rsxaudio_periodic_tmr::wait(const std::functi
 		}
 #elif defined(BSD) || defined(__APPLE__)
 		struct kevent event[obj_wait_cnt]{};
-		const auto wait_status = kevent(kq, nullptr, 0, event, obj_wait_cnt, nullptr);
+		int wait_status = 0;
+		do
+		{
+			wait_status = kevent(kq, nullptr, 0, event, obj_wait_cnt, nullptr);
+		}
+		while (wait_status == -1 && errno == EINTR);
 
 		if (wait_status < 0 || wait_status > obj_wait_cnt)
 		{

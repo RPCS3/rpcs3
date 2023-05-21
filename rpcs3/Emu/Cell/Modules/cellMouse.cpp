@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Emu/IdManager.h"
+#include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include "Emu/Io/MouseHandler.h"
@@ -8,6 +9,8 @@
 
 extern void libio_sys_config_init();
 extern void libio_sys_config_end();
+
+extern bool is_input_allowed();
 
 LOG_CHANNEL(sys_io);
 
@@ -32,9 +35,35 @@ void fmt_class_string<CellMouseError>::format(std::string& out, u64 arg)
 	});
 }
 
+MouseHandlerBase::MouseHandlerBase(utils::serial* ar)
+{
+	if (!ar)
+	{
+		return;
+	}
+
+	(*ar)(m_info.max_connect);
+
+	if (m_info.max_connect)
+	{
+		Emu.DeferDeserialization([this]()
+		{
+			Init(m_info.max_connect);
+			auto lk = init.init();
+		});
+	}
+}
+
+void MouseHandlerBase::save(utils::serial& ar)
+{
+	const auto inited = init.access();
+
+	ar(inited ? m_info.max_connect : 0);
+}
+
 error_code cellMouseInit(u32 max_connect)
 {
-	sys_io.warning("cellMouseInit(max_connect=%d)", max_connect);
+	sys_io.notice("cellMouseInit(max_connect=%d)", max_connect);
 
 	auto& handler = g_fxo->get<MouseHandlerBase>();
 
@@ -75,7 +104,7 @@ error_code cellMouseClearBuf(u32 port_no)
 
 	if (port_no >= handler.GetMice().size() || current_info.status[port_no] != CELL_MOUSE_STATUS_CONNECTED)
 	{
-		return CELL_MOUSE_ERROR_NO_DEVICE;
+		return not_an_error(CELL_MOUSE_ERROR_NO_DEVICE);
 	}
 
 	handler.GetDataList(port_no).clear();
@@ -200,7 +229,7 @@ error_code cellMouseGetData(u32 port_no, vm::ptr<CellMouseData> data)
 
 	if (port_no >= handler.GetMice().size() || current_info.status[port_no] != CELL_MOUSE_STATUS_CONNECTED)
 	{
-		return CELL_MOUSE_ERROR_NO_DEVICE;
+		return not_an_error(CELL_MOUSE_ERROR_NO_DEVICE);
 	}
 
 	std::memset(data.get_ptr(), 0, data.size());
@@ -209,7 +238,7 @@ error_code cellMouseGetData(u32 port_no, vm::ptr<CellMouseData> data)
 
 	MouseDataList& data_list = handler.GetDataList(port_no);
 
-	if (data_list.empty() || current_info.is_null_handler || (current_info.info & CELL_MOUSE_INFO_INTERCEPTED))
+	if (data_list.empty() || current_info.is_null_handler || (current_info.info & CELL_MOUSE_INFO_INTERCEPTED) || !is_input_allowed())
 	{
 		data_list.clear();
 		return CELL_OK;
@@ -230,7 +259,7 @@ error_code cellMouseGetData(u32 port_no, vm::ptr<CellMouseData> data)
 
 error_code cellMouseGetDataList(u32 port_no, vm::ptr<CellMouseDataList> data)
 {
-	sys_io.warning("cellMouseGetDataList(port_no=%d, data=0x%x)", port_no, data);
+	sys_io.notice("cellMouseGetDataList(port_no=%d, data=0x%x)", port_no, data);
 
 	auto& handler = g_fxo->get<MouseHandlerBase>();
 
@@ -250,16 +279,16 @@ error_code cellMouseGetDataList(u32 port_no, vm::ptr<CellMouseDataList> data)
 
 	if (port_no >= handler.GetMice().size() || current_info.status[port_no] != CELL_MOUSE_STATUS_CONNECTED)
 	{
-		return CELL_MOUSE_ERROR_NO_DEVICE;
+		return not_an_error(CELL_MOUSE_ERROR_NO_DEVICE);
 	}
 
 	std::memset(data.get_ptr(), 0, data.size());
 
 	// TODO: check if (current_info.mode[port_no] != CELL_MOUSE_INFO_TABLET_MOUSE_MODE) has any impact
 
-	auto& list = handler.GetDataList(port_no);
+	MouseDataList& list = handler.GetDataList(port_no);
 
-	if (list.empty() || current_info.is_null_handler || (current_info.info & CELL_MOUSE_INFO_INTERCEPTED))
+	if (list.empty() || current_info.is_null_handler || (current_info.info & CELL_MOUSE_INFO_INTERCEPTED) || !is_input_allowed())
 	{
 		list.clear();
 		return CELL_OK;
@@ -339,7 +368,7 @@ error_code cellMouseGetTabletDataList(u32 port_no, vm::ptr<CellMouseTabletDataLi
 
 	if (port_no >= handler.GetMice().size() || current_info.status[port_no] != CELL_MOUSE_STATUS_CONNECTED)
 	{
-		return CELL_MOUSE_ERROR_NO_DEVICE;
+		return not_an_error(CELL_MOUSE_ERROR_NO_DEVICE);
 	}
 
 	std::memset(data.get_ptr(), 0, data.size());
@@ -347,9 +376,9 @@ error_code cellMouseGetTabletDataList(u32 port_no, vm::ptr<CellMouseTabletDataLi
 	// TODO: decr tests show that CELL_MOUSE_ERROR_DATA_READ_FAILED is returned when a mouse is connected
 	// TODO: check if (current_info.mode[port_no] != CELL_MOUSE_INFO_TABLET_TABLET_MODE) has any impact
 
-	auto& list = handler.GetTabletDataList(port_no);
+	MouseTabletDataList& list = handler.GetTabletDataList(port_no);
 
-	if (list.empty() || current_info.is_null_handler || (current_info.info & CELL_MOUSE_INFO_INTERCEPTED))
+	if (list.empty() || current_info.is_null_handler || (current_info.info & CELL_MOUSE_INFO_INTERCEPTED) || !is_input_allowed())
 	{
 		list.clear();
 		return CELL_OK;
@@ -377,7 +406,7 @@ error_code cellMouseGetTabletDataList(u32 port_no, vm::ptr<CellMouseTabletDataLi
 
 error_code cellMouseGetRawData(u32 port_no, vm::ptr<CellMouseRawData> data)
 {
-	sys_io.warning("cellMouseGetRawData(port_no=%d, data=*0x%x)", port_no, data);
+	sys_io.notice("cellMouseGetRawData(port_no=%d, data=*0x%x)", port_no, data);
 
 	auto& handler = g_fxo->get<MouseHandlerBase>();
 
@@ -395,7 +424,7 @@ error_code cellMouseGetRawData(u32 port_no, vm::ptr<CellMouseRawData> data)
 
 	if (port_no >= handler.GetMice().size() || current_info.status[port_no] != CELL_MOUSE_STATUS_CONNECTED)
 	{
-		return CELL_MOUSE_ERROR_NO_DEVICE;
+		return not_an_error(CELL_MOUSE_ERROR_NO_DEVICE);
 	}
 
 	std::memset(data.get_ptr(), 0, data.size());
@@ -405,7 +434,7 @@ error_code cellMouseGetRawData(u32 port_no, vm::ptr<CellMouseRawData> data)
 
 	MouseRawData& current_data = handler.GetRawData(port_no);
 
-	if (current_info.is_null_handler || (current_info.info & CELL_MOUSE_INFO_INTERCEPTED))
+	if (current_info.is_null_handler || (current_info.info & CELL_MOUSE_INFO_INTERCEPTED) || !is_input_allowed())
 	{
 		current_data = {};
 		return CELL_OK;

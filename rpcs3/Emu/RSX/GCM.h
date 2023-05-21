@@ -39,7 +39,6 @@ struct gcmInfo
 	u32 config_addr;
 	u32 context_addr;
 	u32 control_addr;
-	u32 label_addr;
 	u32 command_size = 0x400;
 	u32 segment_size = 0x100;
 };
@@ -99,6 +98,8 @@ struct CellGcmTileInfo
 
 struct GcmZcullInfo
 {
+	ENABLE_BITWISE_SERIALIZATION;
+
 	u32 offset;
 	u32 width;
 	u32 height;
@@ -129,6 +130,8 @@ struct GcmZcullInfo
 
 struct GcmTileInfo
 {
+	ENABLE_BITWISE_SERIALIZATION;
+
 	u32 location;
 	u32 offset;
 	u32 size;

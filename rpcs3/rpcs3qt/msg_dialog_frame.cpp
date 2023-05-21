@@ -5,13 +5,6 @@
 #include <QPushButton>
 #include <QFormLayout>
 
-#ifdef _WIN32
-#include <QWinTHumbnailToolbutton>
-#elif HAVE_QTDBUS
-#include <QtDBus/QDBusMessage>
-#include <QtDBus/QDBusConnection>
-#endif
-
 constexpr auto qstr = QString::fromStdString;
 
 void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
@@ -23,7 +16,7 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 	Close(true);
 
 	m_dialog = new custom_dialog(type.disable_cancel);
-	m_dialog->setWindowTitle(title.empty() ? (type.se_normal ? "Normal dialog" : "Error dialog") : qstr(title));
+	m_dialog->setWindowTitle(title.empty() ? (type.se_normal ? tr("Normal dialog") : tr("Error dialog")) : qstr(title));
 	m_dialog->setWindowOpacity(type.bg_invisible ? 1. : 0.75);
 
 	m_text = new QLabel(qstr(msg));
@@ -60,15 +53,7 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 	{
 		l_AddGauge(m_gauge1, m_text1);
 
-#ifdef _WIN32
-		m_tb_button = new QWinTaskbarButton();
-		m_tb_progress = m_tb_button->progress();
-		m_tb_progress->setRange(0, 100);
-		m_tb_progress->setVisible(true);
-#elif HAVE_QTDBUS
-		UpdateProgress(0, true);
-		m_progress_value = 0;
-#endif
+		m_progress_indicator = std::make_unique<progress_indicator>(0, 100);
 	}
 
 	if (type.progress_bar_count >= 2)
@@ -80,8 +65,8 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 	{
 		m_dialog->setModal(true);
 
-		QPushButton* m_button_yes = new QPushButton("&Yes", m_dialog);
-		QPushButton* m_button_no = new QPushButton("&No", m_dialog);
+		QPushButton* m_button_yes = new QPushButton(tr("&Yes"), m_dialog);
+		QPushButton* m_button_no = new QPushButton(tr("&No"), m_dialog);
 
 		QHBoxLayout* hBoxButtons = new QHBoxLayout;
 		hBoxButtons->setAlignment(Qt::AlignCenter);
@@ -100,14 +85,12 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 
 		connect(m_button_yes, &QAbstractButton::clicked, [this]()
 		{
-			g_last_user_response = CELL_MSGDIALOG_BUTTON_YES;
 			if (on_close) on_close(CELL_MSGDIALOG_BUTTON_YES);
 			m_dialog->accept();
 		});
 
 		connect(m_button_no, &QAbstractButton::clicked, [this]()
 		{
-			g_last_user_response = CELL_MSGDIALOG_BUTTON_NO;
 			if (on_close) on_close(CELL_MSGDIALOG_BUTTON_NO);
 			m_dialog->accept();
 		});
@@ -117,7 +100,7 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 	{
 		m_dialog->setModal(true);
 
-		QPushButton* m_button_ok = new QPushButton("&OK", m_dialog);
+		QPushButton* m_button_ok = new QPushButton(tr("&OK"), m_dialog);
 		m_button_ok->setFixedWidth(50);
 
 		QHBoxLayout* hBoxButtons = new QHBoxLayout;
@@ -132,7 +115,6 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 
 		connect(m_button_ok, &QAbstractButton::clicked, [this]()
 		{
-			g_last_user_response = CELL_MSGDIALOG_BUTTON_OK;
 			if (on_close) on_close(CELL_MSGDIALOG_BUTTON_OK);
 			m_dialog->accept();
 		});
@@ -144,7 +126,6 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 	{
 		if (!type.disable_cancel)
 		{
-			g_last_user_response = CELL_MSGDIALOG_BUTTON_ESCAPE;
 			if (on_close) on_close(CELL_MSGDIALOG_BUTTON_ESCAPE);
 		}
 	});
@@ -153,10 +134,8 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 	m_dialog->layout()->setSizeConstraint(QLayout::SetFixedSize);
 	m_dialog->show();
 
-#ifdef _WIN32
 	// if we do this before, the QWinTaskbarProgress won't show
-	if (m_tb_button) m_tb_button->setWindow(m_dialog->windowHandle());
-#endif
+	if (m_progress_indicator) m_progress_indicator->show(m_dialog->windowHandle());
 }
 
 void msg_dialog_frame::Close(bool success)
@@ -170,20 +149,6 @@ void msg_dialog_frame::Close(bool success)
 
 msg_dialog_frame::~msg_dialog_frame()
 {
-#ifdef _WIN32
-	// QWinTaskbarProgress::hide() will crash if the application is already about to close, even if the object is not null.
-	if (m_tb_progress && !QCoreApplication::closingDown())
-	{
-		m_tb_progress->hide();
-	}
-	if (m_tb_button)
-	{
-		m_tb_button->deleteLater();
-	}
-#elif HAVE_QTDBUS
-	UpdateProgress(0, false);
-#endif
-
 	if (m_dialog)
 	{
 		m_dialog->deleteLater();
@@ -243,14 +208,10 @@ void msg_dialog_frame::ProgressBarReset(u32 index)
 
 	if (index == taskbar_index + 0u)
 	{
-#ifdef _WIN32
-		if (m_tb_progress)
+		if (m_progress_indicator)
 		{
-			m_tb_progress->reset();
+			m_progress_indicator->reset();
 		}
-#elif HAVE_QTDBUS
-		UpdateProgress(0, false);
-#endif
 	}
 }
 
@@ -278,15 +239,10 @@ void msg_dialog_frame::ProgressBarInc(u32 index, u32 delta)
 
 	if (index == taskbar_index + 0u || taskbar_index == -1)
 	{
-#ifdef _WIN32
-		if (m_tb_progress)
+		if (m_progress_indicator)
 		{
-			m_tb_progress->setValue(std::min(m_tb_progress->value() + static_cast<int>(delta), m_tb_progress->maximum()));
+			m_progress_indicator->set_value(m_progress_indicator->value() + static_cast<int>(delta));
 		}
-#elif HAVE_QTDBUS
-		m_progress_value = std::min(m_progress_value + static_cast<int>(delta), m_gauge_max);
-		UpdateProgress(m_progress_value, true);
-#endif
 	}
 }
 
@@ -314,15 +270,10 @@ void msg_dialog_frame::ProgressBarSetValue(u32 index, u32 value)
 
 	if (index == taskbar_index + 0u || taskbar_index == -1)
 	{
-#ifdef _WIN32
-		if (m_tb_progress)
+		if (m_progress_indicator)
 		{
-			m_tb_progress->setValue(std::min(static_cast<int>(value), m_tb_progress->maximum()));
+			m_progress_indicator->set_value(static_cast<int>(value));
 		}
-#elif HAVE_QTDBUS
-		m_progress_value = std::min(static_cast<int>(value), m_gauge_max);
-		UpdateProgress(m_progress_value, true);
-#endif
 	}
 }
 
@@ -361,26 +312,8 @@ void msg_dialog_frame::ProgressBarSetLimit(u32 index, u32 limit)
 		set_taskbar_limit = true;
 	}
 
-#ifdef _WIN32
-	if (set_taskbar_limit && m_tb_progress)
+	if (set_taskbar_limit && m_progress_indicator)
 	{
-		m_tb_progress->setMaximum(m_gauge_max);
+		m_progress_indicator->set_range(0, m_gauge_max);
 	}
-#endif
 }
-
-#ifdef HAVE_QTDBUS
-void msg_dialog_frame::UpdateProgress(int progress, bool progress_visible)
-{
-	QDBusMessage message = QDBusMessage::createSignal(
-		QStringLiteral("/"),
-		QStringLiteral("com.canonical.Unity.LauncherEntry"),
-		QStringLiteral("Update"));
-	QVariantMap properties;
-	// Progress takes a value from 0.0 to 0.1
-	properties.insert(QStringLiteral("progress"), 1. * progress / m_gauge_max);
-	properties.insert(QStringLiteral("progress-visible"), progress_visible);
-	message << QStringLiteral("application://rpcs3.desktop") << properties;
-	QDBusConnection::sessionBus().send(message);
-}
-#endif

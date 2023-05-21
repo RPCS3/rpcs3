@@ -22,7 +22,7 @@ void fmt_class_string<DualSenseDevice::DualSenseDataMode>::format(std::string& o
 namespace
 {
 	constexpr u32 DUALSENSE_ACC_RES_PER_G = 8192;
-	constexpr u32 DUALSENSE_GYRO_RES_PER_DEG_S = 1024;
+	constexpr u32 DUALSENSE_GYRO_RES_PER_DEG_S = 86; // technically this could be 1024, but keeping it at 86 keeps us within 16 bits of precision
 	constexpr u32 DUALSENSE_CALIBRATION_REPORT_SIZE = 41;
 	constexpr u32 DUALSENSE_VERSION_REPORT_SIZE = 64;
 	constexpr u32 DUALSENSE_BLUETOOTH_REPORT_SIZE = 78;
@@ -42,21 +42,27 @@ namespace
 		VALID_FLAG_1_RELEASE_LEDS                    = 0x08,
 		VALID_FLAG_1_PLAYER_INDICATOR_CONTROL_ENABLE = 0x10,
 		VALID_FLAG_2_LIGHTBAR_SETUP_CONTROL_ENABLE   = 0x02,
+		VALID_FLAG_2_IMPROVED_RUMBLE_EMULATION       = 0x04,
 		POWER_SAVE_CONTROL_MIC_MUTE                  = 0x10,
 		LIGHTBAR_SETUP_LIGHT_ON                      = 0x01,
 		LIGHTBAR_SETUP_LIGHT_OUT                     = 0x02,
 	};
-	
+
 	struct output_report_common
 	{
 		u8 valid_flag_0;
 		u8 valid_flag_1;
 		u8 motor_right;
 		u8 motor_left;
-		u8 reserved[4];
+		u8 headphone_volume;
+		u8 speaker_volume;
+		u8 microphone_volume;
+		u8 audio_enable_bits;
 		u8 mute_button_led;
 		u8 power_save_control;
-		u8 reserved_2[28];
+		u8 right_trigger_effect[11];
+		u8 left_trigger_effect[11];
+		u8 reserved[6];
 		u8 valid_flag_2;
 		u8 reserved_3[2];
 		u8 lightbar_setup;
@@ -131,15 +137,15 @@ dualsense_pad_handler::dualsense_pad_handler()
 	thumb_max = 255;
 	trigger_min = 0;
 	trigger_max = 255;
-	vibration_min = 0;
-	vibration_max = 255;
 
 	// Set capabilities
 	b_has_config = true;
 	b_has_rumble = true;
+	b_has_motion = true;
 	b_has_deadzones = true;
 	b_has_led = true;
 	b_has_rgb = true;
+	b_has_player_led = true;
 	b_has_battery = true;
 
 	m_name_string = "DualSense Pad #";
@@ -176,16 +182,16 @@ void dualsense_pad_handler::check_add_device(hid_device* hidDevice, std::string_
 
 	std::string serial;
 
-	std::array<u8, 65> buf{};
+	std::array<u8, 64> buf{};
 	buf[0] = 0x09;
 
 	// This will give us the bluetooth mac address of the device, regardless if we are on wired or bluetooth.
 	// So we can't use this to determine if it is a bluetooth device or not.
 	// Will also enable enhanced feature reports for bluetooth.
-	int res = hid_get_feature_report(hidDevice, buf.data(), 64);
-	if (res < 0)
+	int res = hid_get_feature_report(hidDevice, buf.data(), buf.size());
+	if (res < 0 || buf[0] != 0x09)
 	{
-		dualsense_log.error("check_add_device: hid_get_feature_report 0x09 failed! result=%d, error=%s", res, hid_error(hidDevice));
+		dualsense_log.error("check_add_device: hid_get_feature_report 0x09 failed! result=%d, buf[0]=0x%x, error=%s", res, buf[0], hid_error(hidDevice));
 		return;
 	}
 
@@ -216,19 +222,22 @@ void dualsense_pad_handler::check_add_device(hid_device* hidDevice, std::string_
 	}
 
 	u32 hw_version{};
-	u32 fw_version{};
+	u16 fw_version{};
+	u32 fw_version2{};
 
+	buf = {};
 	buf[0] = 0x20;
 
 	res = hid_get_feature_report(hidDevice, buf.data(), DUALSENSE_VERSION_REPORT_SIZE);
-	if (res == 65)
+	if (res != DUALSENSE_VERSION_REPORT_SIZE || buf[0] != 0x20) // Old versions return 65, newer versions return 64
 	{
-		hw_version = read_u32(&buf[24]);
-		fw_version = read_u32(&buf[28]);
+		dualsense_log.error("check_add_device: hid_get_feature_report 0x20 failed! Could not retrieve firmware version! result=%d, buf[0]=0x%x, error=%s", res, buf[0], hid_error(hidDevice));
 	}
 	else
 	{
-		dualsense_log.error("check_add_device: hid_get_feature_report 0x20 failed! Could not retrieve firmware version! result=%d, error=%s", res, hid_error(hidDevice));
+		hw_version = read_u32(&buf[24]);
+		fw_version2 = read_u32(&buf[28]);
+		fw_version = static_cast<u16>(buf[44]) | (static_cast<u16>(buf[45]) << 8);
 	}
 
 	if (hid_set_nonblocking(hidDevice, 1) == -1)
@@ -248,7 +257,7 @@ void dualsense_pad_handler::check_add_device(hid_device* hidDevice, std::string_
 	// Get bluetooth information
 	get_data(device);
 
-	dualsense_log.notice("Added device: bluetooth=%d, data_mode=%s, serial='%s', hw_version: 0x%x, fw_version: 0x%x, path='%s'", device->bt_controller, device->data_mode, serial, hw_version, fw_version, device->path);
+	dualsense_log.notice("Added device: bluetooth=%d, data_mode=%s, serial='%s', hw_version: 0x%x, fw_version: 0x%x (0x%x), path='%s'", device->bt_controller, device->data_mode, serial, hw_version, fw_version, fw_version2, device->path);
 }
 
 void dualsense_pad_handler::init_config(cfg_pad* cfg)
@@ -256,33 +265,33 @@ void dualsense_pad_handler::init_config(cfg_pad* cfg)
 	if (!cfg) return;
 
 	// Set default button mapping
-	cfg->ls_left.def  = button_list.at(DualSenseKeyCodes::LSXNeg);
-	cfg->ls_down.def  = button_list.at(DualSenseKeyCodes::LSYNeg);
-	cfg->ls_right.def = button_list.at(DualSenseKeyCodes::LSXPos);
-	cfg->ls_up.def    = button_list.at(DualSenseKeyCodes::LSYPos);
-	cfg->rs_left.def  = button_list.at(DualSenseKeyCodes::RSXNeg);
-	cfg->rs_down.def  = button_list.at(DualSenseKeyCodes::RSYNeg);
-	cfg->rs_right.def = button_list.at(DualSenseKeyCodes::RSXPos);
-	cfg->rs_up.def    = button_list.at(DualSenseKeyCodes::RSYPos);
-	cfg->start.def    = button_list.at(DualSenseKeyCodes::Options);
-	cfg->select.def   = button_list.at(DualSenseKeyCodes::Share);
-	cfg->ps.def       = button_list.at(DualSenseKeyCodes::PSButton);
-	cfg->square.def   = button_list.at(DualSenseKeyCodes::Square);
-	cfg->cross.def    = button_list.at(DualSenseKeyCodes::Cross);
-	cfg->circle.def   = button_list.at(DualSenseKeyCodes::Circle);
-	cfg->triangle.def = button_list.at(DualSenseKeyCodes::Triangle);
-	cfg->left.def     = button_list.at(DualSenseKeyCodes::Left);
-	cfg->down.def     = button_list.at(DualSenseKeyCodes::Down);
-	cfg->right.def    = button_list.at(DualSenseKeyCodes::Right);
-	cfg->up.def       = button_list.at(DualSenseKeyCodes::Up);
-	cfg->r1.def       = button_list.at(DualSenseKeyCodes::R1);
-	cfg->r2.def       = button_list.at(DualSenseKeyCodes::R2);
-	cfg->r3.def       = button_list.at(DualSenseKeyCodes::R3);
-	cfg->l1.def       = button_list.at(DualSenseKeyCodes::L1);
-	cfg->l2.def       = button_list.at(DualSenseKeyCodes::L2);
-	cfg->l3.def       = button_list.at(DualSenseKeyCodes::L3);
+	cfg->ls_left.def  = ::at32(button_list, DualSenseKeyCodes::LSXNeg);
+	cfg->ls_down.def  = ::at32(button_list, DualSenseKeyCodes::LSYNeg);
+	cfg->ls_right.def = ::at32(button_list, DualSenseKeyCodes::LSXPos);
+	cfg->ls_up.def    = ::at32(button_list, DualSenseKeyCodes::LSYPos);
+	cfg->rs_left.def  = ::at32(button_list, DualSenseKeyCodes::RSXNeg);
+	cfg->rs_down.def  = ::at32(button_list, DualSenseKeyCodes::RSYNeg);
+	cfg->rs_right.def = ::at32(button_list, DualSenseKeyCodes::RSXPos);
+	cfg->rs_up.def    = ::at32(button_list, DualSenseKeyCodes::RSYPos);
+	cfg->start.def    = ::at32(button_list, DualSenseKeyCodes::Options);
+	cfg->select.def   = ::at32(button_list, DualSenseKeyCodes::Share);
+	cfg->ps.def       = ::at32(button_list, DualSenseKeyCodes::PSButton);
+	cfg->square.def   = ::at32(button_list, DualSenseKeyCodes::Square);
+	cfg->cross.def    = ::at32(button_list, DualSenseKeyCodes::Cross);
+	cfg->circle.def   = ::at32(button_list, DualSenseKeyCodes::Circle);
+	cfg->triangle.def = ::at32(button_list, DualSenseKeyCodes::Triangle);
+	cfg->left.def     = ::at32(button_list, DualSenseKeyCodes::Left);
+	cfg->down.def     = ::at32(button_list, DualSenseKeyCodes::Down);
+	cfg->right.def    = ::at32(button_list, DualSenseKeyCodes::Right);
+	cfg->up.def       = ::at32(button_list, DualSenseKeyCodes::Up);
+	cfg->r1.def       = ::at32(button_list, DualSenseKeyCodes::R1);
+	cfg->r2.def       = ::at32(button_list, DualSenseKeyCodes::R2);
+	cfg->r3.def       = ::at32(button_list, DualSenseKeyCodes::R3);
+	cfg->l1.def       = ::at32(button_list, DualSenseKeyCodes::L1);
+	cfg->l2.def       = ::at32(button_list, DualSenseKeyCodes::L2);
+	cfg->l3.def       = ::at32(button_list, DualSenseKeyCodes::L3);
 
-	cfg->pressure_intensity_button.def = button_list.at(DualSenseKeyCodes::None);
+	cfg->pressure_intensity_button.def = ::at32(button_list, DualSenseKeyCodes::None);
 
 	// Set default misc variables
 	cfg->lstickdeadzone.def    = 40; // between 0 and 255
@@ -417,16 +426,18 @@ bool dualsense_pad_handler::get_calibration_data(DualSenseDevice* dualsense_devi
 		return false;
 	}
 
-	std::array<u8, 64> buf;
+	std::array<u8, 64> buf{};
+
 	if (dualsense_device->bt_controller)
 	{
 		for (int tries = 0; tries < 3; ++tries)
 		{
+			buf = {};
 			buf[0] = 0x05;
 
-			if (int res = hid_get_feature_report(dualsense_device->hidDevice, buf.data(), DUALSENSE_CALIBRATION_REPORT_SIZE); res <= 0)
+			if (int res = hid_get_feature_report(dualsense_device->hidDevice, buf.data(), DUALSENSE_CALIBRATION_REPORT_SIZE); res != DUALSENSE_CALIBRATION_REPORT_SIZE || buf[0] != 0x05)
 			{
-				dualsense_log.error("get_calibration_data: hid_get_feature_report 0x05 for bluetooth controller failed! result=%d, error=%s", res, hid_error(dualsense_device->hidDevice));
+				dualsense_log.error("get_calibration_data: hid_get_feature_report 0x05 for bluetooth controller failed! result=%d, buf[0]=0x%x, error=%s", res, buf[0], hid_error(dualsense_device->hidDevice));
 				return false;
 			}
 
@@ -451,9 +462,9 @@ bool dualsense_pad_handler::get_calibration_data(DualSenseDevice* dualsense_devi
 	{
 		buf[0] = 0x05;
 
-		if (int res = hid_get_feature_report(dualsense_device->hidDevice, buf.data(), DUALSENSE_CALIBRATION_REPORT_SIZE); res <= 0)
+		if (int res = hid_get_feature_report(dualsense_device->hidDevice, buf.data(), DUALSENSE_CALIBRATION_REPORT_SIZE); res != DUALSENSE_CALIBRATION_REPORT_SIZE || buf[0] != 0x05)
 		{
-			dualsense_log.error("get_calibration_data: hid_get_feature_report 0x05 for wired controller failed! result=%d, error=%s", res, hid_error(dualsense_device->hidDevice));
+			dualsense_log.error("get_calibration_data: hid_get_feature_report 0x05 for wired controller failed! result=%d, buf[0]=0x%x, error=%s", res, buf[0], hid_error(dualsense_device->hidDevice));
 			return false;
 		}
 	}
@@ -545,17 +556,17 @@ bool dualsense_pad_handler::get_calibration_data(DualSenseDevice* dualsense_devi
 	return true;
 }
 
-bool dualsense_pad_handler::get_is_left_trigger(u64 keyCode)
+bool dualsense_pad_handler::get_is_left_trigger(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
 {
 	return keyCode == DualSenseKeyCodes::L2;
 }
 
-bool dualsense_pad_handler::get_is_right_trigger(u64 keyCode)
+bool dualsense_pad_handler::get_is_right_trigger(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
 {
 	return keyCode == DualSenseKeyCodes::R2;
 }
 
-bool dualsense_pad_handler::get_is_left_stick(u64 keyCode)
+bool dualsense_pad_handler::get_is_left_stick(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
 {
 	switch (keyCode)
 	{
@@ -569,7 +580,7 @@ bool dualsense_pad_handler::get_is_left_stick(u64 keyCode)
 	}
 }
 
-bool dualsense_pad_handler::get_is_right_stick(u64 keyCode)
+bool dualsense_pad_handler::get_is_right_stick(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
 {
 	switch (keyCode)
 	{
@@ -622,8 +633,11 @@ PadHandlerBase::connection dualsense_pad_handler::update_connection(const std::s
 	return connection::connected;
 }
 
-void dualsense_pad_handler::get_extended_info(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad)
+void dualsense_pad_handler::get_extended_info(const pad_ensemble& binding)
 {
+	const auto& device = binding.device;
+	const auto& pad = binding.pad;
+
 	DualSenseDevice* dualsense_device = static_cast<DualSenseDevice*>(device.get());
 	if (!dualsense_device || !pad)
 		return;
@@ -635,10 +649,10 @@ void dualsense_pad_handler::get_extended_info(const std::shared_ptr<PadDevice>& 
 
 	// these values come already calibrated, all we need to do is convert to ds3 range
 
-	// gyroX is yaw, which is all that we need
-	f32 gyroX = static_cast<s16>((buf[16] << 8) | buf[15]) / static_cast<f32>(DUALSENSE_GYRO_RES_PER_DEG_S) * -1;
-	//const int gyroY = ((u16)(buf[18] << 8) | buf[17]) / 256;
-	//const int gyroZ = ((u16)(buf[20] << 8) | buf[19]) / 256;
+	// gyroY is yaw, which is all that we need
+	//f32 gyroX = static_cast<s16>((buf[16] << 8) | buf[15]) / static_cast<f32>(DUALSENSE_GYRO_RES_PER_DEG_S) * -1.f;
+	f32 gyroY = static_cast<s16>((buf[18] << 8) | buf[17]) / static_cast<f32>(DUALSENSE_GYRO_RES_PER_DEG_S) * -1.f;
+	//f32 gyroZ = static_cast<s16>((buf[20] << 8) | buf[19]) / static_cast<f32>(DUALSENSE_GYRO_RES_PER_DEG_S) * -1.f;
 
 	// accel
 	f32 accelX = static_cast<s16>((buf[22] << 8) | buf[21]) / static_cast<f32>(DUALSENSE_ACC_RES_PER_G) * -1;
@@ -650,13 +664,13 @@ void dualsense_pad_handler::get_extended_info(const std::shared_ptr<PadDevice>& 
 	accelY = accelY * 113 + 512;
 	accelZ = accelZ * 113 + 512;
 
-	// convert to ds3
-	gyroX  = gyroX * (123.f / 90.f) + 512;
+	// Convert to ds3. The ds3 resolution is 123/90°/sec.
+	gyroY = gyroY * (123.f / 90.f) + 512;
 
 	pad->m_sensors[0].m_value = Clamp0To1023(accelX);
 	pad->m_sensors[1].m_value = Clamp0To1023(accelY);
 	pad->m_sensors[2].m_value = Clamp0To1023(accelZ);
-	pad->m_sensors[3].m_value = Clamp0To1023(gyroX);
+	pad->m_sensors[3].m_value = Clamp0To1023(gyroY);
 }
 
 std::unordered_map<u64, u16> dualsense_pad_handler::get_button_values(const std::shared_ptr<PadDevice>& device)
@@ -882,12 +896,12 @@ std::unordered_map<u64, u16> dualsense_pad_handler::get_button_values(const std:
 pad_preview_values dualsense_pad_handler::get_preview_values(const std::unordered_map<u64, u16>& data)
 {
 	return {
-		data.at(L2),
-		data.at(R2),
-		data.at(LSXPos) - data.at(LSXNeg),
-		data.at(LSYPos) - data.at(LSYNeg),
-		data.at(RSXPos) - data.at(RSXNeg),
-		data.at(RSYPos) - data.at(RSYNeg)
+		::at32(data, L2),
+		::at32(data, R2),
+		::at32(data, LSXPos) - ::at32(data, LSXNeg),
+		::at32(data, LSYPos) - ::at32(data, LSYNeg),
+		::at32(data, RSXPos) - ::at32(data, RSXNeg),
+		::at32(data, RSYPos) - ::at32(data, RSYNeg)
 	};
 }
 
@@ -900,6 +914,7 @@ dualsense_pad_handler::~dualsense_pad_handler()
 			// Disable vibration
 			controller.second->small_motor = 0;
 			controller.second->large_motor = 0;
+			controller.second->release_leds = true;
 			send_output_report(controller.second.get());
 		}
 	}
@@ -910,7 +925,7 @@ int dualsense_pad_handler::send_output_report(DualSenseDevice* device)
 	if (!device || !device->hidDevice)
 		return -2;
 
-	const auto config = device->config;
+	const cfg_pad* config = device->config;
 	if (config == nullptr)
 		return -2; // hid_write and hid_write_control return -1 on error
 
@@ -926,10 +941,18 @@ int dualsense_pad_handler::send_output_report(DualSenseDevice* device)
 		common.valid_flag_2 |= VALID_FLAG_2_LIGHTBAR_SETUP_CONTROL_ENABLE;
 		common.lightbar_setup = LIGHTBAR_SETUP_LIGHT_OUT; // Fade light out.
 	}
+	else if (device->release_leds)
+	{
+		common.valid_flag_1 |= VALID_FLAG_1_RELEASE_LEDS;
+		device->release_leds = false;
+	}
 	else
 	{
 		common.valid_flag_0 |= VALID_FLAG_0_COMPATIBLE_VIBRATION;
 		common.valid_flag_0 |= VALID_FLAG_0_HAPTICS_SELECT;
+		common.valid_flag_1 |= VALID_FLAG_1_POWER_SAVE_CONTROL_ENABLE;
+		common.valid_flag_2 |= VALID_FLAG_2_IMPROVED_RUMBLE_EMULATION;
+
 		common.motor_left  = device->large_motor;
 		common.motor_right = device->small_motor;
 
@@ -963,17 +986,24 @@ int dualsense_pad_handler::send_output_report(DualSenseDevice* device)
 			// Use OR with 0x1, 0x2, 0x4, 0x8 and 0x10 to enable the LEDs (from leftmost to rightmost).
 			common.valid_flag_1 |= VALID_FLAG_1_PLAYER_INDICATOR_CONTROL_ENABLE;
 
-			switch (device->player_id)
+			if (config->player_led_enabled)
 			{
-			case 0: common.player_leds = 0b00100; break;
-			case 1: common.player_leds = 0b01010; break;
-			case 2: common.player_leds = 0b10101; break;
-			case 3: common.player_leds = 0b11011; break;
-			case 4: common.player_leds = 0b11111; break;
-			case 5: common.player_leds = 0b10111; break;
-			case 6: common.player_leds = 0b11101; break;
-			default:
-				fmt::throw_exception("Dualsense is using forbidden player id %d", device->player_id);
+				switch (device->player_id)
+				{
+				case 0: common.player_leds = 0b00100; break;
+				case 1: common.player_leds = 0b01010; break;
+				case 2: common.player_leds = 0b10101; break;
+				case 3: common.player_leds = 0b11011; break;
+				case 4: common.player_leds = 0b11111; break;
+				case 5: common.player_leds = 0b10111; break;
+				case 6: common.player_leds = 0b11101; break;
+				default:
+					fmt::throw_exception("Dualsense is using forbidden player id %d", device->player_id);
+				}
+			}
+			else
+			{
+				common.player_leds = 0;
 			}
 		}
 	}
@@ -1010,8 +1040,11 @@ int dualsense_pad_handler::send_output_report(DualSenseDevice* device)
 	}
 }
 
-void dualsense_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad)
+void dualsense_pad_handler::apply_pad_data(const pad_ensemble& binding)
 {
+	const auto& device = binding.device;
+	const auto& pad = binding.pad;
+
 	DualSenseDevice* dualsense_dev = static_cast<DualSenseDevice*>(device.get());
 	if (!dualsense_dev || !dualsense_dev->hidDevice || !dualsense_dev->config || !pad)
 		return;
@@ -1022,13 +1055,13 @@ void dualsense_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& dev
 	const int idx_l = config->switch_vibration_motors ? 1 : 0;
 	const int idx_s  = config->switch_vibration_motors ? 0 : 1;
 
-	const int speed_large = config->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value : vibration_min;
-	const int speed_small = config->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value : vibration_min;
+	const u8 speed_large = config->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value : 0;
+	const u8 speed_small = config->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value : 0;
 
 	const bool wireless    = dualsense_dev->cable_state == 0;
 	const bool low_battery = dualsense_dev->battery_level <= 1;
 	const bool is_blinking = dualsense_dev->led_delay_on > 0 || dualsense_dev->led_delay_off > 0;
-	
+
 	// Blink LED when battery is low
 	if (config->led_low_battery_blink)
 	{
@@ -1080,7 +1113,13 @@ void dualsense_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& dev
 		}
 	}
 
-	dualsense_dev->new_output_data |= dualsense_dev->update_lightbar || dualsense_dev->large_motor != speed_large || dualsense_dev->small_motor != speed_small;
+	if (dualsense_dev->enable_player_leds != config->player_led_enabled.get())
+	{
+		dualsense_dev->enable_player_leds = config->player_led_enabled.get();
+		dualsense_dev->update_player_leds = true;
+	}
+
+	dualsense_dev->new_output_data |= dualsense_dev->release_leds || dualsense_dev->update_player_leds || dualsense_dev->update_lightbar || dualsense_dev->large_motor != speed_large || dualsense_dev->small_motor != speed_small;
 
 	dualsense_dev->large_motor = speed_large;
 	dualsense_dev->small_motor = speed_small;
@@ -1094,34 +1133,22 @@ void dualsense_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& dev
 	}
 }
 
-void dualsense_pad_handler::SetPadData(const std::string& padId, u8 player_id, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool battery_led, u32 battery_led_brightness)
+void dualsense_pad_handler::SetPadData(const std::string& padId, u8 player_id, u8 large_motor, u8 small_motor, s32 r, s32 g, s32 b, bool player_led, bool battery_led, u32 battery_led_brightness)
 {
 	std::shared_ptr<DualSenseDevice> device = get_hid_device(padId);
 	if (device == nullptr || device->hidDevice == nullptr)
 		return;
 
 	// Set the device's motor speeds to our requested values 0-255
-	device->large_motor = largeMotor;
-	device->small_motor = smallMotor;
+	device->large_motor = large_motor;
+	device->small_motor = small_motor;
 	device->player_id = player_id;
-
-	int index = 0;
-	for (uint i = 0; i < MAX_GAMEPADS; i++)
-	{
-		if (g_cfg_input.player[i]->handler == m_type)
-		{
-			if (g_cfg_input.player[i]->device.to_string() == padId)
-			{
-				m_pad_configs[index].from_string(g_cfg_input.player[i]->config.to_string());
-				device->config = &m_pad_configs[index];
-				break;
-			}
-			index++;
-		}
-	}
+	device->config = get_config(padId);
 
 	ensure(device->config);
 	device->update_lightbar = true;
+	device->update_player_leds = true;
+	device->config->player_led_enabled.set(player_led);
 
 	// Set new LED color (see ds4_pad_handler)
 	if (battery_led)

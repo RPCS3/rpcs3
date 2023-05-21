@@ -20,11 +20,12 @@ class GSRender : public rsx::thread
 {
 protected:
 	GSFrameBase* m_frame;
-	draw_context_t m_context;
+	draw_context_t m_context = nullptr;
 
 public:
-	GSRender();
 	~GSRender() override;
+
+	GSRender(utils::serial* ar) noexcept;
 
 	void on_init_thread() override;
 	void on_exit() override;

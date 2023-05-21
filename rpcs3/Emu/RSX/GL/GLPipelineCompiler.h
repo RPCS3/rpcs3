@@ -1,5 +1,6 @@
 #pragma once
 #include "GLHelpers.h"
+#include "glutils/program.h"
 #include "Emu/RSX/display.h"
 #include "Utilities/lockless.h"
 

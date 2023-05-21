@@ -32,7 +32,7 @@ struct RsxDriverInfo
 		be_t<u32> lastQueuedBufferId; // 0x14 todo: this is definately not this variable but its 'unused' so im using it for queueId to pass to flip handler
 		be_t<u32> unk3;            // 0x18
 		be_t<u32> lastVTimeLow;    // 0x1C last time for first vhandler freq (low 32-bits)
-		be_t<u64> lastSecondVTime; // 0x20 last time for second vhandler freq
+		atomic_be_t<u64> lastSecondVTime; // 0x20 last time for second vhandler freq
 		be_t<u64> unk4;            // 0x28
 		atomic_be_t<u64> vBlankCount; // 0x30
 		be_t<u32> unk;             // 0x38 possible u32, 'flip field', top/bottom for interlaced
@@ -120,6 +120,8 @@ struct RsxDisplayInfo
 	be_t<u32> width{0};
 	be_t<u32> height{0};
 
+	ENABLE_BITWISE_SERIALIZATION;
+
 	bool valid() const
 	{
 		return height != 0u && width != 0u;
@@ -132,7 +134,7 @@ error_code sys_rsx_device_close(cpu_thread& cpu);
 error_code sys_rsx_memory_allocate(cpu_thread& cpu, vm::ptr<u32> mem_handle, vm::ptr<u64> mem_addr, u32 size, u64 flags, u64 a5, u64 a6, u64 a7);
 error_code sys_rsx_memory_free(cpu_thread& cpu, u32 mem_handle);
 error_code sys_rsx_context_allocate(cpu_thread& cpu, vm::ptr<u32> context_id, vm::ptr<u64> lpar_dma_control, vm::ptr<u64> lpar_driver_info, vm::ptr<u64> lpar_reports, u64 mem_ctx, u64 system_mode);
-error_code sys_rsx_context_free(cpu_thread& cpu, u32 context_id);
+error_code sys_rsx_context_free(ppu_thread& ppu, u32 context_id);
 error_code sys_rsx_context_iomap(cpu_thread& cpu, u32 context_id, u32 io, u32 ea, u32 size, u64 flags);
 error_code sys_rsx_context_iounmap(cpu_thread& cpu, u32 context_id, u32 io, u32 size);
 error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64 a4, u64 a5, u64 a6);

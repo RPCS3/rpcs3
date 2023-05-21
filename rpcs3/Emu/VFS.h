@@ -5,14 +5,21 @@
 #include <string_view>
 
 struct lv2_fs_mount_point;
+struct vfs_directory;
 
 namespace vfs
 {
 	// Mount VFS device
-	bool mount(std::string_view vpath, std::string_view path);
+	bool mount(std::string_view vpath, std::string_view path, bool is_dir = true);
+
+	// Unmount VFS device
+	bool unmount(std::string_view vpath);
 
 	// Convert VFS path to fs path, optionally listing directories mounted in it
 	std::string get(std::string_view vpath, std::vector<std::string>* out_dir = nullptr, std::string* out_path = nullptr);
+
+	// Convert fs path to VFS path
+	std::string retrieve(std::string_view path, const vfs_directory* node = nullptr, std::vector<std::string_view>* mount_path = nullptr);
 
 	// Escape VFS name by replacing non-portable characters with surrogates
 	std::string escape(std::string_view name, bool escape_slash = false);

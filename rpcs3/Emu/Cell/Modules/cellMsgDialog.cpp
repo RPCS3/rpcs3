@@ -5,6 +5,8 @@
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/timers.hpp"
 #include "Emu/Io/interception.h"
+
+#include "Emu/RSX/Overlays/overlay_manager.h"
 #include "Emu/RSX/Overlays/overlay_message_dialog.h"
 
 #include "cellSysutil.h"
@@ -135,18 +137,20 @@ struct msg_dlg_thread_info
 
 using msg_dlg_thread = named_thread<msg_dlg_thread_info>;
 
-// variable used to immediately get the response from auxiliary message dialogs (callbacks would be async)
-atomic_t<s32> g_last_user_response = CELL_MSGDIALOG_BUTTON_NONE;
-
 // forward declaration for open_msg_dialog
 error_code cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialogCallback> callback, vm::ptr<void> userData, vm::ptr<void> extParam);
 
 // wrapper to call for other hle dialogs
-error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialogCallback> callback, vm::ptr<void> userData, vm::ptr<void> extParam)
+error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialogCallback> callback, vm::ptr<void> userData, vm::ptr<void> extParam, s32* return_code)
 {
-	cellSysutil.warning("open_msg_dialog(is_blocking=%d, type=0x%x, msgString=%s, callback=*0x%x, userData=*0x%x, extParam=*0x%x)", is_blocking, type, msgString, callback, userData, extParam);
+	cellSysutil.notice("open_msg_dialog(is_blocking=%d, type=0x%x, msgString=%s, callback=*0x%x, userData=*0x%x, extParam=*0x%x, return_code=*0x%x)", is_blocking, type, msgString, callback, userData, extParam, return_code);
 
 	const MsgDialogType _type{ type };
+
+	if (return_code)
+	{
+		*return_code = CELL_MSGDIALOG_BUTTON_NONE;
+	}
 
 	if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
 	{
@@ -155,10 +159,22 @@ error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString,
 			return CELL_SYSUTIL_ERROR_BUSY;
 		}
 
-		g_last_user_response = CELL_MSGDIALOG_BUTTON_NONE;
-
-		const auto res = manager->create<rsx::overlays::message_dialog>()->show(is_blocking, msgString.get_ptr(), _type, [callback, userData](s32 status)
+		if (s32 ret = sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_BEGIN, 0); ret < 0)
 		{
+			return CellSysutilError{ret + 0u};
+		}
+
+		const auto notify = std::make_shared<atomic_t<bool>>(false);
+
+		const auto res = manager->create<rsx::overlays::message_dialog>()->show(is_blocking, msgString.get_ptr(), _type, [callback, userData, &return_code, is_blocking, notify](s32 status)
+		{
+			if (is_blocking && return_code)
+			{
+				*return_code = status;
+			}
+
+			sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_END, 0);
+
 			if (callback)
 			{
 				sysutil_register_cb([=](ppu_thread& ppu) -> s32
@@ -167,7 +183,19 @@ error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString,
 					return CELL_OK;
 				});
 			}
+
+			if (is_blocking && notify)
+			{
+				*notify = true;
+				notify->notify_one();
+			}
 		});
+
+		// Wait for on_close
+		while (is_blocking && !Emu.IsStopped() && !*notify)
+		{
+			notify->wait(false, atomic_wait_timeout{1'000'000});
+		}
 
 		return res;
 	}
@@ -179,14 +207,26 @@ error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString,
 		return CELL_SYSUTIL_ERROR_BUSY;
 	}
 
+	if (s32 ret = sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_BEGIN, 0); ret < 0)
+	{
+		return CellSysutilError{ret + 0u};
+	}
+
 	dlg->type = _type;
 
-	dlg->on_close = [callback, userData, wptr = std::weak_ptr<MsgDialogBase>(dlg)](s32 status)
+	dlg->on_close = [callback, userData, &return_code, wptr = std::weak_ptr<MsgDialogBase>(dlg)](s32 status)
 	{
+		if (return_code)
+		{
+			*return_code = status;
+		}
+
 		const auto dlg = wptr.lock();
 
 		if (dlg && dlg->state.compare_and_swap_test(MsgDialogState::Open, MsgDialogState::Close))
 		{
+			sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_END, 0);
+
 			if (callback)
 			{
 				sysutil_register_cb([=](ppu_thread& ppu) -> s32
@@ -208,11 +248,13 @@ error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString,
 	auto& ppu = *get_current_cpu_thread();
 	lv2_obj::sleep(ppu);
 
+	// PS3 memory must not be accessed by Main thread
+	std::string msg_string = msgString.get_ptr();
+
 	// Run asynchronously in GUI thread
-	Emu.CallFromMainThread([&]()
+	Emu.CallFromMainThread([&, msg_string = std::move(msg_string)]()
 	{
-		g_last_user_response = CELL_MSGDIALOG_BUTTON_NONE;
-		dlg->Create(msgString.get_ptr());
+		dlg->Create(msg_string);
 		lv2_obj::awake(&ppu);
 	});
 
@@ -228,7 +270,7 @@ error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString,
 			break;
 		}
 
-		thread_ctrl::wait_on(ppu.state, state);
+		ppu.state.wait(state);
 	}
 
 	if (is_blocking)
@@ -246,6 +288,31 @@ error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString,
 	return CELL_OK;
 }
 
+void close_msg_dialog()
+{
+	cellSysutil.notice("close_msg_dialog()");
+
+	if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
+	{
+		if (auto dlg = manager->get<rsx::overlays::message_dialog>())
+		{
+			g_fxo->get<msg_dlg_thread>().wait_until = 0;
+			dlg->close(false, true); // this doesn't call on_close
+			sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_END, 0);
+			return;
+		}
+	}
+
+	if (const auto dlg = g_fxo->get<msg_info>().get())
+	{
+		dlg->state = MsgDialogState::Close;
+		g_fxo->get<msg_dlg_thread>().wait_until = 0;
+		g_fxo->get<msg_info>().remove(); // this shouldn't call on_close
+		input::SetIntercepted(false);    // so we need to reenable the pads here
+		sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_END, 0);
+	}
+}
+
 void exit_game(s32/* buttonType*/, vm::ptr<void>/* userData*/)
 {
 	sysutil_send_system_cmd(CELL_SYSUTIL_REQUEST_EXITGAME, 0);
@@ -253,7 +320,7 @@ void exit_game(s32/* buttonType*/, vm::ptr<void>/* userData*/)
 
 error_code open_exit_dialog(const std::string& message, bool is_exit_requested)
 {
-	cellSysutil.warning("open_exit_dialog(message=%s, is_exit_requested=%d)", message, is_exit_requested);
+	cellSysutil.notice("open_exit_dialog(message=%s, is_exit_requested=%d)", message, is_exit_requested);
 
 	vm::bptr<CellMsgDialogCallback> callback = vm::null;
 
@@ -325,18 +392,13 @@ error_code cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMs
 	default: return CELL_MSGDIALOG_ERROR_PARAM;
 	}
 
-	if (_type.se_mute_on)
-	{
-		// TODO
-	}
-
 	if (_type.se_normal)
 	{
-		cellSysutil.warning("%s", msgString);
+		cellSysutil.warning("Opening message dialog with message: %s", msgString);
 	}
 	else
 	{
-		cellSysutil.error("%s", msgString);
+		cellSysutil.error("Opening error message dialog with message: %s", msgString);
 	}
 
 	return open_msg_dialog(false, type, msgString, callback, userData, extParam);
@@ -467,7 +529,8 @@ error_code cellMsgDialogAbort()
 		if (auto dlg = manager->get<rsx::overlays::message_dialog>())
 		{
 			g_fxo->get<msg_dlg_thread>().wait_until = 0;
-			dlg->close(false, true);
+			dlg->close(false, true); // this doesn't call on_close
+			sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_END, 0);
 			return CELL_OK;
 		}
 	}
@@ -487,6 +550,7 @@ error_code cellMsgDialogAbort()
 	g_fxo->get<msg_dlg_thread>().wait_until = 0;
 	g_fxo->get<msg_info>().remove(); // this shouldn't call on_close
 	input::SetIntercepted(false);     // so we need to reenable the pads here
+	sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_END, 0);
 
 	return CELL_OK;
 }

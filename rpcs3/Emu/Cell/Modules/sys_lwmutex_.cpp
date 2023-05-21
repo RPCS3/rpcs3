@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include "Emu/Cell/lv2/sys_lwmutex.h"
@@ -99,6 +100,15 @@ error_code sys_lwmutex_lock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, u64
 		return sys_mutex_lock(ppu, lwmutex->sleep_queue, timeout);
 	}
 
+	auto& sstate = *ppu.optional_savestate_state;
+	const bool aborted = sstate.try_read<bool>().second;
+
+	if (aborted)
+	{
+		// Restore timeout (SYS_SYNC_RETRY mode)
+		sstate(timeout);
+	}
+
 	const be_t<u32> tid(ppu.id);
 
 	// try to lock lightweight mutex
@@ -154,7 +164,10 @@ error_code sys_lwmutex_lock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, u64
 	}
 
 	// atomically increment waiter value using 64 bit op
-	lwmutex->all_info++;
+	if (!aborted)
+	{
+		lwmutex->all_info++;
+	}
 
 	if (lwmutex->vars.owner.compare_and_swap_test(lwmutex_free, tid))
 	{
@@ -167,9 +180,13 @@ error_code sys_lwmutex_lock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, u64
 	// lock using the syscall
 	const error_code res = _sys_lwmutex_lock(ppu, lwmutex->sleep_queue, timeout);
 
-	if (ppu.test_stopped())
+	static_cast<void>(ppu.test_stopped());
+
+	if (ppu.state & cpu_flag::again)
 	{
-		return 0;
+		sstate.pos = 0;
+		sstate(true, timeout); // Aborted
+		return {};
 	}
 
 	lwmutex->all_info--;
@@ -216,9 +233,13 @@ error_code sys_lwmutex_lock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, u64
 
 			const error_code res_ = _sys_lwmutex_lock(ppu, lwmutex->sleep_queue, timeout);
 
-			if (ppu.test_stopped())
+			static_cast<void>(ppu.test_stopped());
+
+			if (ppu.state & cpu_flag::again)
 			{
-				return 0;
+				sstate.pos = 0;
+				sstate(true, timeout); // Aborted
+				return {};
 			}
 
 			if (res_ == CELL_OK)

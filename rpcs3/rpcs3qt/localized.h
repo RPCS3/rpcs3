@@ -17,12 +17,14 @@ public:
 	Localized() {}
 
 	QString GetVerboseTimeByMs(quint64 elapsed_ms, bool show_days = false) const;
+	static std::string GetStringFromU32(const u32& key, const std::map<u32, QString>& map, bool combined = false);
 
 	const struct category // (see PARAM.SFO in psdevwiki.com) TODO: Disc Categories
 	{
 		// PS3 bootable
 		const QString app_music = tr("Music App");
 		const QString app_photo = tr("Photo App");
+		const QString app_store = tr("Store App");
 		const QString app_tv    = tr("TV App");
 		const QString app_video = tr("Video App");
 		const QString bc_video  = tr("Broadcast Video");
@@ -32,6 +34,7 @@ public:
 		const QString network   = tr("Network");
 		const QString store_fe  = tr("Store");
 		const QString web_tv    = tr("Web TV");
+		const QString os_app    = tr("Operating System");
 
 		// PS2 bootable
 		const QString ps2_game = tr("PS2 Classics");
@@ -62,6 +65,7 @@ public:
 		{
 			{ cat::cat_app_music, app_music }, // media
 			{ cat::cat_app_photo, app_photo }, // media
+			{ cat::cat_app_store, app_store }, // media
 			{ cat::cat_app_tv   , app_tv    }, // media
 			{ cat::cat_app_video, app_video }, // media
 			{ cat::cat_bc_video , bc_video  }, // media
@@ -77,6 +81,7 @@ public:
 			{ cat::cat_psp_game , psp_game  }, // psp_games
 			{ cat::cat_psp_mini , psp_mini  }, // psp_games
 			{ cat::cat_psp_rema , psp_rema  }, // psp_games
+			{ cat::cat_ps3_os   , os_app    }, // other
 		};
 
 		const localized_cat cat_data =
@@ -111,27 +116,19 @@ public:
 	const struct resolution
 	{
 		// there might be different values for other categories
-		const std::map<u32, QString> mode
-		{
-			{ 1 << 0, tr("480p") },
-			{ 1 << 1, tr("576p") },
-			{ 1 << 2, tr("720p") },
-			{ 1 << 3, tr("1080p") },
-			{ 1 << 4, tr("480p 16:9") },
-			{ 1 << 5, tr("576p 16:9") },
-		};
+		resolution();
+		const std::map<u32, QString> mode;
 	} resolution;
 
 	const struct sound
 	{
-		const std::map<u32, QString> format
-		{
-			{ 1 << 0, tr("LPCM 2.0") },
-			//{ 1 << 1, tr("LPCM ???") },
-			{ 1 << 2, tr("LPCM 5.1") },
-			{ 1 << 4, tr("LPCM 7.1") },
-			{ 1 << 8, tr("Dolby Digital 5.1") },
-			{ 1 << 9, tr("DTS 5.1") },
-		};
+		sound();
+		const std::map<u32, QString> format;
 	} sound;
+
+	const struct title_t
+	{
+		title_t();
+		const std::map<std::string, QString> titles;
+	} title;
 };

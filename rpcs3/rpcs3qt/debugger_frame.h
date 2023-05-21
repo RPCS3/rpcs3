@@ -57,17 +57,21 @@ class debugger_frame : public custom_dock_widget
 	system_state m_emu_state{};
 	u32 m_last_pc = -1;
 	std::vector<char> m_last_query_state;
+	std::string m_last_reg_state;
 	u32 m_last_step_over_breakpoint = -1;
+	u64 m_ui_update_ctr = 0;
+	u64 m_ui_fast_update_permission_deadline = 0;
 
 	std::shared_ptr<CPUDisAsm> m_disasm; // Only shared to allow base/derived functionality
 	std::shared_ptr<cpu_thread> m_cpu;
 	rsx::thread* m_rsx = nullptr;
 
 	breakpoint_list* m_breakpoint_list;
-	breakpoint_handler* m_breakpoint_handler;
+	breakpoint_handler* m_ppu_breakpoint_handler;
 	call_stack_list* m_call_stack_list;
 	instruction_editor_dialog* m_inst_editor = nullptr;
 	register_editor_dialog* m_reg_editor = nullptr;
+	QDialog* m_goto_dialog = nullptr;
 
 	std::shared_ptr<gui_settings> m_gui_settings;
 
@@ -88,6 +92,7 @@ public:
 	void WritePanels();
 	void EnableButtons(bool enable);
 	void ShowGotoAddressDialog();
+	void PerformGoToRequest(const QString& text_argument);
 	u64 EvaluateExpression(const QString& expression);
 	void ClearBreakpoints() const; // Fallthrough method into breakpoint_list.
 	void ClearCallStack();
@@ -112,6 +117,7 @@ private Q_SLOTS:
 	void OnSelectUnit();
 	void ShowPC(bool user_requested = false);
 	void EnableUpdateTimer(bool enable) const;
+	void RunBtnPress();
 };
 
 Q_DECLARE_METATYPE(u32)

@@ -7,10 +7,11 @@ LOG_CHANNEL(camera_log, "Camera");
 cfg_camera g_cfg_camera;
 
 cfg_camera::cfg_camera()
+	: cfg::node()
 #ifdef _WIN32
-	: path(fs::get_config_dir() + "config/camera.yml")
+	, path(fs::get_config_dir() + "config/camera.yml")
 #else
-	: path(fs::get_config_dir() + "camera.yml")
+	, path(fs::get_config_dir() + "camera.yml")
 #endif
 {
 }
@@ -37,7 +38,7 @@ void cfg_camera::save() const
 
 	if (!cfg_file.file || (cfg_file.file.write(to_string()), !cfg_file.commit()))
 	{
-		camera_log.error("Failed to save camera config to '%s'", path);
+		camera_log.error("Failed to save camera config to '%s' (error=%s)", path, fs::g_tls_error);
 	}
 }
 
@@ -83,7 +84,7 @@ void cfg_camera::camera_setting::from_string(const std::string& text)
 		camera_log.error("String '%s' cannot be interpreted as camera_setting.", text);
 		return;
 	}
-	
+
 	const auto to_integer = [](const std::string& str, int& out) -> bool
 	{
 		auto [ptr, ec] = std::from_chars(str.c_str(), str.c_str() + str.size(), out);
@@ -107,13 +108,13 @@ void cfg_camera::camera_setting::from_string(const std::string& text)
 		return true;
 	};
 
-	if (!to_integer(list.at(0), width) ||
-		!to_integer(list.at(1), height) ||
-		!to_double(list.at(2), min_fps) ||
-		!to_double(list.at(3), max_fps) ||
-		!to_integer(list.at(4), format) ||
-		!to_integer(list.at(5), pixel_aspect_width) ||
-		!to_integer(list.at(6), pixel_aspect_height))
+	if (!to_integer(::at32(list, 0), width) ||
+		!to_integer(::at32(list, 1), height) ||
+		!to_double(::at32(list, 2), min_fps) ||
+		!to_double(::at32(list, 3), max_fps) ||
+		!to_integer(::at32(list, 4), format) ||
+		!to_integer(::at32(list, 5), pixel_aspect_width) ||
+		!to_integer(::at32(list, 6), pixel_aspect_height))
 	{
 		width = 0;
 		height = 0;

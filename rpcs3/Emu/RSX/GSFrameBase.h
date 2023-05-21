@@ -29,6 +29,7 @@ public:
 
 	virtual display_handle_t handle() const = 0;
 
-	atomic_t<bool> screenshot_toggle = false;
+	virtual bool can_consume_frame() const = 0;
+	virtual void present_frame(std::vector<u8>& data, const u32 width, const u32 height, bool is_bgra) const = 0;
 	virtual void take_screenshot(const std::vector<u8> sshot_data, const u32 sshot_width, const u32 sshot_height, bool is_bgra) = 0;
 };

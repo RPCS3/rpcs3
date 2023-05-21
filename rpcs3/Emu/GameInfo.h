@@ -6,14 +6,14 @@
 struct GameInfo
 {
 	std::string path;
-
 	std::string icon_path;
-	std::string name;
-	std::string serial;
-	std::string app_ver;
-	std::string version;
-	std::string category;
-	std::string fw;
+
+	std::string name = "Unknown";
+	std::string serial = "Unknown";
+	std::string app_ver = "Unknown";
+	std::string version = "Unknown";
+	std::string category = "Unknown";
+	std::string fw = "Unknown";
 
 	u32 attr = 0;
 	u32 bootable = 0;
@@ -21,26 +21,5 @@ struct GameInfo
 	u32 sound_format = 0;
 	u32 resolution = 0;
 
-	GameInfo()
-	{
-		Reset();
-	}
-
-	void Reset()
-	{
-		path.clear();
-
-		name = "Unknown";
-		serial = "Unknown";
-		app_ver = "Unknown";
-		version = "Unknown";
-		category = "Unknown";
-		fw = "Unknown";
-
-		attr = 0;
-		bootable = 0;
-		parental_lvl = 0;
-		sound_format = 0;
-		resolution = 0;
-	}
+	u64 size_on_disk = umax;
 };

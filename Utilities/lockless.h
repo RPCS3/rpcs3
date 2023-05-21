@@ -3,7 +3,7 @@
 #include "util/types.hpp"
 #include "util/atomic.hpp"
 
-//! Simple sizeless array base for concurrent access. Cannot shrink, only growths automatically.
+//! Simple unshrinkable array base for concurrent access. Only growths automatically.
 //! There is no way to know the current size. The smaller index is, the faster it's accessed.
 //!
 //! T is the type of elements. Currently, default constructor of T shall be constexpr.
@@ -46,6 +46,18 @@ public:
 
 		// Access recursively
 		return (*m_next)[index - N];
+	}
+
+	u64 size() const
+	{
+		u64 size_n = 0;
+
+		for (auto ptr = this; ptr; ptr = ptr->m_next)
+		{
+			size_n += N;
+		}
+
+		return size_n;
 	}
 };
 
@@ -344,6 +356,14 @@ public:
 	{
 		lf_queue_slice<T> result;
 		result.m_head = reverse();
+		return result;
+	}
+
+	// Withdraw the list in reverse order (LIFO/FILO)
+	lf_queue_slice<T> pop_all_reversed()
+	{
+		lf_queue_slice<T> result;
+		result.m_head = m_head.exchange(nullptr);
 		return result;
 	}
 

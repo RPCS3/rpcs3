@@ -129,6 +129,13 @@ public:
 	virtual void Init(const u32 max_connect) = 0;
 	virtual ~MouseHandlerBase() = default;
 
+	SAVESTATE_INIT_POS(18);
+
+	MouseHandlerBase(const MouseHandlerBase&) = delete;
+	MouseHandlerBase(utils::serial* ar);
+	MouseHandlerBase(utils::serial& ar) : MouseHandlerBase(&ar) {}
+	void save(utils::serial& ar);
+
 	void Button(u8 button, bool pressed)
 	{
 		std::lock_guard lock(mutex);

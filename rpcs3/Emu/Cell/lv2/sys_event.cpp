@@ -3,11 +3,14 @@
 
 #include "Emu/IdManager.h"
 #include "Emu/IPC.h"
+#include "Emu/System.h"
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUThread.h"
 #include "sys_process.h"
+
+#include "util/asm.hpp"
 
 LOG_CHANNEL(sys_event);
 
@@ -19,6 +22,78 @@ lv2_event_queue::lv2_event_queue(u32 protocol, s32 type, s32 size, u64 name, u64
 	, name(name)
 	, key(ipc_key)
 {
+}
+
+lv2_event_queue::lv2_event_queue(utils::serial& ar) noexcept
+	: id(idm::last_id())
+	, protocol(ar)
+	, type(ar)
+	, size(ar)
+	, name(ar)
+	, key(ar)
+{
+	ar(events);
+}
+
+std::shared_ptr<void> lv2_event_queue::load(utils::serial& ar)
+{
+	auto queue = std::make_shared<lv2_event_queue>(ar);
+	return lv2_obj::load(queue->key, queue);
+}
+
+void lv2_event_queue::save(utils::serial& ar)
+{
+	ar(protocol, type, size, name, key, events);
+}
+
+void lv2_event_queue::save_ptr(utils::serial& ar, lv2_event_queue* q)
+{
+	if (!lv2_obj::check(q))
+	{
+		ar(u32{0});
+		return;
+	}
+
+	ar(q->id);
+}
+
+std::shared_ptr<lv2_event_queue> lv2_event_queue::load_ptr(utils::serial& ar, std::shared_ptr<lv2_event_queue>& queue)
+{
+	const u32 id = ar.operator u32();
+
+	if (!id)
+	{
+		return nullptr;
+	}
+
+	if (auto q = idm::get_unlocked<lv2_obj, lv2_event_queue>(id))
+	{
+		// Already initialized
+		return q;
+	}
+
+	Emu.DeferDeserialization([id, &queue]()
+	{
+		// Defer resolving
+		queue = ensure(idm::get_unlocked<lv2_obj, lv2_event_queue>(id));
+	});
+
+	// Null until resolved
+	return nullptr;
+}
+
+lv2_event_port::lv2_event_port(utils::serial& ar)
+	: type(ar)
+	, name(ar)
+	, queue(lv2_event_queue::load_ptr(ar, queue))
+{
+}
+
+void lv2_event_port::save(utils::serial& ar)
+{
+	ar(type, name);
+
+	lv2_event_queue::save_ptr(ar, queue.get());
 }
 
 std::shared_ptr<lv2_event_queue> lv2_event_queue::find(u64 ipc_key)
@@ -43,7 +118,7 @@ CellError lv2_event_queue::send(lv2_event event)
 		return CELL_ENOTCONN;
 	}
 
-	if (sq.empty())
+	if (!pq && !sq)
 	{
 		if (events.size() < this->size + 0u)
 		{
@@ -58,7 +133,21 @@ CellError lv2_event_queue::send(lv2_event event)
 	if (type == SYS_PPU_QUEUE)
 	{
 		// Store event in registers
-		auto& ppu = static_cast<ppu_thread&>(*schedule<ppu_thread>(sq, protocol));
+		auto& ppu = static_cast<ppu_thread&>(*schedule<ppu_thread>(pq, protocol));
+
+		if (ppu.state & cpu_flag::again)
+		{
+			if (auto cpu = get_current_cpu_thread())
+			{
+				cpu->state += cpu_flag::again;
+				cpu->state += cpu_flag::exit;
+			}
+
+			sys_event.warning("Ignored event!");
+
+			// Fake error for abort
+			return CELL_EAGAIN;
+		}
 
 		std::tie(ppu.gpr[4], ppu.gpr[5], ppu.gpr[6], ppu.gpr[7]) = event;
 
@@ -68,6 +157,19 @@ CellError lv2_event_queue::send(lv2_event event)
 	{
 		// Store event in In_MBox
 		auto& spu = static_cast<spu_thread&>(*schedule<spu_thread>(sq, protocol));
+
+		if (spu.state & cpu_flag::again)
+		{
+			if (auto cpu = get_current_cpu_thread())
+			{
+				cpu->state += cpu_flag::exit + cpu_flag::again;
+			}
+
+			sys_event.warning("Ignored event!");
+
+			// Fake error for abort
+			return CELL_EAGAIN;
+		}
 
 		const u32 data1 = static_cast<u32>(std::get<1>(event));
 		const u32 data2 = static_cast<u32>(std::get<2>(event));
@@ -118,6 +220,7 @@ error_code sys_event_queue_create(cpu_thread& cpu, vm::ptr<u32> equeue_id, vm::p
 		return error;
 	}
 
+	cpu.check_state();
 	*equeue_id = idm::last_id();
 	return CELL_OK;
 }
@@ -135,19 +238,19 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 
 	std::vector<lv2_event> events;
 
+	std::unique_lock<shared_mutex> qlock;
+
+	cpu_thread* head{};
+
 	const auto queue = idm::withdraw<lv2_obj, lv2_event_queue>(equeue_id, [&](lv2_event_queue& queue) -> CellError
 	{
-		std::lock_guard lock(queue.mutex);
+		qlock = std::unique_lock{queue.mutex};
 
-		if (!mode && !queue.sq.empty())
+		head = queue.type == SYS_PPU_QUEUE ? static_cast<cpu_thread*>(+queue.pq) : +queue.sq;
+
+		if (!mode && head)
 		{
 			return CELL_EBUSY;
-		}
-
-		if (queue.sq.empty())
-		{
-			// Optimization
-			mode = 0;
 		}
 
 		if (!queue.events.empty())
@@ -157,12 +260,34 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 		}
 
 		lv2_obj::on_id_destroy(queue, queue.key);
+
+		if (!head)
+		{
+			qlock.unlock();
+		}
+		else
+		{
+			for (auto cpu = head; cpu; cpu = cpu->get_next_cpu())
+			{
+				if (cpu->state & cpu_flag::again)
+				{
+					ppu.state += cpu_flag::again;
+					return CELL_EAGAIN;
+				}
+			}
+		}
+
 		return {};
 	});
 
 	if (!queue)
 	{
 		return CELL_ESRCH;
+	}
+
+	if (ppu.state & cpu_flag::again)
+	{
+		return {};
 	}
 
 	if (queue.ret)
@@ -172,19 +297,20 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 
 	std::string lost_data;
 
-	if (mode == SYS_EVENT_QUEUE_DESTROY_FORCE)
+	if (qlock.owns_lock())
 	{
-		std::deque<cpu_thread*> sq;
-
-		std::lock_guard lock(queue->mutex);
-
-		sq = std::move(queue->sq);
-
 		if (sys_event.warning)
 		{
-			fmt::append(lost_data, "Forcefully awaken waiters (%u):\n", sq.size());
+			u32 size = 0;
 
-			for (auto cpu : sq)
+			for (auto cpu = head; cpu; cpu = cpu->get_next_cpu())
+			{
+				size++;
+			}
+
+			fmt::append(lost_data, "Forcefully awaken waiters (%u):\n", size);
+
+			for (auto cpu = head; cpu; cpu = cpu->get_next_cpu())
 			{
 				lost_data += cpu->get_name();
 				lost_data += '\n';
@@ -193,22 +319,27 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 
 		if (queue->type == SYS_PPU_QUEUE)
 		{
-			for (auto cpu : sq)
+			for (auto cpu = +queue->pq; cpu; cpu = cpu->next_cpu)
 			{
-				static_cast<ppu_thread&>(*cpu).gpr[3] = CELL_ECANCELED;
+				cpu->gpr[3] = CELL_ECANCELED;
 				queue->append(cpu);
 			}
 
+			atomic_storage<ppu_thread*>::release(queue->pq, nullptr);
 			lv2_obj::awake_all();
 		}
 		else
 		{
-			for (auto cpu : sq)
+			for (auto cpu = +queue->sq; cpu; cpu = cpu->next_cpu)
 			{
-				static_cast<spu_thread&>(*cpu).ch_in_mbox.set_values(1, CELL_ECANCELED);
-				resume_spu_thread_group_from_waiting(static_cast<spu_thread&>(*cpu));
+				cpu->ch_in_mbox.set_values(1, CELL_ECANCELED);
+				resume_spu_thread_group_from_waiting(*cpu);
 			}
+
+			atomic_storage<spu_thread*>::release(queue->sq, nullptr);
 		}
+
+		qlock.unlock();
 	}
 
 	if (sys_event.warning)
@@ -251,7 +382,9 @@ error_code sys_event_queue_tryreceive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sy
 		return CELL_EINVAL;
 	}
 
-	std::lock_guard lock(queue->mutex);
+	std::array<sys_event_t, 127> events;
+
+	std::unique_lock lock(queue->mutex);
 
 	if (!queue->exists)
 	{
@@ -260,15 +393,19 @@ error_code sys_event_queue_tryreceive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sy
 
 	s32 count = 0;
 
-	while (queue->sq.empty() && count < size && !queue->events.empty())
+	while (count < size && !queue->events.empty())
 	{
-		auto& dest = event_array[count++];
+		auto& dest = events[count++];
 		const auto event = queue->events.front();
 		queue->events.pop_front();
 
 		std::tie(dest.source, dest.data1, dest.data2, dest.data3) = event;
 	}
 
+	lock.unlock();
+	ppu.check_state();
+
+	std::copy_n(events.begin(), count, event_array.get_ptr());
 	*number = count;
 
 	return CELL_OK;
@@ -282,18 +419,20 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 
 	ppu.gpr[3] = CELL_OK;
 
-	const auto queue = idm::get<lv2_obj, lv2_event_queue>(equeue_id, [&](lv2_event_queue& queue) -> CellError
+	const auto queue = idm::get<lv2_obj, lv2_event_queue>(equeue_id, [&, notify = lv2_obj::notify_all_t()](lv2_event_queue& queue) -> CellError
 	{
 		if (queue.type != SYS_PPU_QUEUE)
 		{
 			return CELL_EINVAL;
 		}
 
+		lv2_obj::prepare_for_sleep(ppu);
+
 		std::lock_guard lock(queue.mutex);
 
 		// "/dev_flash/vsh/module/msmw2.sprx" seems to rely on some cryptic shared memory behaviour that we don't emulate correctly
 		// This is a hack to avoid waiting for 1m40s every time we boot vsh
-		if (queue.key == 0x8005911000000012 && g_ps3_process_info.get_cellos_appname() == "vsh.self"sv)
+		if (queue.key == 0x8005911000000012 && Emu.IsVsh())
 		{
 			sys_event.todo("sys_event_queue_receive(equeue_id=0x%x, *0x%x, timeout=0x%llx) Bypassing timeout for msmw2.sprx", equeue_id, dummy_event, timeout);
 			timeout = 1;
@@ -301,8 +440,8 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 
 		if (queue.events.empty())
 		{
-			queue.sq.emplace_back(&ppu);
 			queue.sleep(ppu, timeout);
+			lv2_obj::emplace(queue.pq, &ppu);
 			return CELL_EBUSY;
 		}
 
@@ -329,11 +468,37 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 	}
 
 	// If cancelled, gpr[3] will be non-zero. Other registers must contain event data.
-	while (auto state = ppu.state.fetch_sub(cpu_flag::signal))
+	while (auto state = +ppu.state)
 	{
-		if (is_stopped(state) || state & cpu_flag::signal)
+		if (state & cpu_flag::signal && ppu.state.test_and_reset(cpu_flag::signal))
 		{
 			break;
+		}
+
+		if (is_stopped(state))
+		{
+			std::lock_guard lock_rsx(queue->mutex);
+
+			for (auto cpu = +queue->pq; cpu; cpu = cpu->next_cpu)
+			{
+				if (cpu == &ppu)
+				{
+					ppu.state += cpu_flag::again;
+					return {};
+				}
+			}
+
+			break;
+		}
+
+		for (usz i = 0; cpu_flag::signal - ppu.state && i < 50; i++)
+		{
+			busy_wait(500);
+		}
+
+		if (ppu.state & cpu_flag::signal)
+ 		{
+			continue;
 		}
 
 		if (timeout)
@@ -343,12 +508,12 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 				// Wait for rescheduling
 				if (ppu.check_state())
 				{
-					return {};
+					continue;
 				}
 
 				std::lock_guard lock(queue->mutex);
 
-				if (!queue->unqueue(queue->sq, &ppu))
+				if (!queue->unqueue(queue->pq, &ppu))
 				{
 					break;
 				}
@@ -359,7 +524,7 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 		}
 		else
 		{
-			thread_ctrl::wait_on(ppu.state, state);
+			ppu.state.wait(state);
 		}
 	}
 
@@ -401,6 +566,7 @@ error_code sys_event_port_create(cpu_thread& cpu, vm::ptr<u32> eport_id, s32 por
 
 	if (const u32 id = idm::make<lv2_obj, lv2_event_port>(port_type, name))
 	{
+		cpu.check_state();
 		*eport_id = id;
 		return CELL_OK;
 	}
@@ -540,7 +706,7 @@ error_code sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
 
 	sys_event.trace("sys_event_port_send(eport_id=0x%x, data1=0x%llx, data2=0x%llx, data3=0x%llx)", eport_id, data1, data2, data3);
 
-	const auto port = idm::get<lv2_obj, lv2_event_port>(eport_id, [&](lv2_event_port& port) -> CellError
+	const auto port = idm::check<lv2_obj, lv2_event_port>(eport_id, [&, notify = lv2_obj::notify_all_t()](lv2_event_port& port) -> CellError
 	{
 		if (lv2_obj::check(port.queue))
 		{
@@ -559,6 +725,12 @@ error_code sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
 
 	if (port.ret)
 	{
+		if (port.ret == CELL_EAGAIN)
+		{
+			// Not really an error code exposed to games (thread has raised cpu_flag::again)
+			return not_an_error(CELL_EAGAIN);
+		}
+
 		if (port.ret == CELL_EBUSY)
 		{
 			return not_an_error(CELL_EBUSY);

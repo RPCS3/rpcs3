@@ -1,10 +1,13 @@
 #include "stdafx.h"
+#include "overlays.h"
+#include "overlay_manager.h"
 #include "overlay_media_list_dialog.h"
+
+#include "Emu/Cell/Modules/cellMusic.h"
+#include "Emu/System.h"
+#include "Emu/VFS.h"
 #include "Utilities/StrUtil.h"
 #include "Utilities/Thread.h"
-#include "overlays.h"
-#include "Emu/VFS.h"
-#include "Emu/Cell/Modules/cellMusic.h"
 
 namespace rsx
 {
@@ -34,6 +37,27 @@ namespace rsx
 			{
 				if (fs::exists(entry.info.path))
 				{
+					// Fit the new image into the available space
+					if (entry.info.width > 0 && entry.info.height > 0)
+					{
+						const u16 target_width = image->w - (image->padding_left + image->padding_right);
+						const u16 target_height = image->h - (image->padding_top + image->padding_bottom);
+						const f32 target_ratio = target_width / static_cast<f32>(target_height);
+						const f32 image_ratio = entry.info.width / static_cast<f32>(entry.info.height);
+						const f32 convert_ratio = image_ratio / target_ratio;
+
+						if (convert_ratio > 1.0f)
+						{
+							const u16 new_padding = static_cast<u16>(target_height - target_height / convert_ratio) / 2;
+							image->set_padding(image->padding_left, image->padding_right, new_padding + image->padding_top, new_padding + image->padding_bottom);
+						}
+						else if (convert_ratio < 1.0f)
+						{
+							const u16 new_padding = static_cast<u16>(target_width - target_width * convert_ratio) / 2;
+							image->set_padding(image->padding_left + new_padding, image->padding_right + new_padding, image->padding_top, image->padding_bottom);
+						}
+					}
+
 					icon_data = std::make_unique<image_info>(entry.info.path.c_str());
 					static_cast<image_view*>(image.get())->set_raw_image(icon_data.get());
 				}
@@ -107,33 +131,36 @@ namespace rsx
 		media_list_dialog::media_list_dialog()
 		{
 			m_dim_background = std::make_unique<overlay_element>();
-			m_dim_background->set_size(1280, 720);
+			m_dim_background->set_size(virtual_width, virtual_height);
 			m_dim_background->back_color.a = 0.5f;
-
-			m_list = std::make_unique<list_view>(1240, 540);
-			m_list->set_pos(20, 85);
 
 			m_description = std::make_unique<label>();
 			m_description->set_font("Arial", 20);
 			m_description->set_pos(20, 37);
 			m_description->set_text("Select media"); // Fallback. I don't think this will ever be used, so I won't localize it.
 			m_description->auto_resize();
-			m_description->back_color.a	= 0.f;
-
-			return_code = selection_code::canceled;
+			m_description->back_color.a = 0.f;
 		}
 
-		void media_list_dialog::on_button_pressed(pad_button button_press)
+		void media_list_dialog::on_button_pressed(pad_button button_press, bool is_auto_repeat)
 		{
+			bool play_cursor_sound = true;
+
 			switch (button_press)
 			{
 			case pad_button::cross:
 				if (m_no_media_text)
 					break;
 				return_code = m_list->get_selected_index();
-				[[fallthrough]];
+				m_stop_input_loop = true;
+				play_cursor_sound = false;
+				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_decide.wav");
+				break;
 			case pad_button::circle:
-				close(false, true);
+				return_code = selection_code::canceled;
+				m_stop_input_loop = true;
+				play_cursor_sound = false;
+				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_cancel.wav");
 				break;
 			case pad_button::dpad_up:
 				m_list->select_previous();
@@ -150,6 +177,12 @@ namespace rsx
 			default:
 				rsx_log.trace("[ui] Button %d pressed", static_cast<u8>(button_press));
 				break;
+			}
+
+			// Play a sound unless this is a fast auto repeat which would induce a nasty noise
+			if (play_cursor_sound && (!is_auto_repeat || m_auto_repeat_ms_interval >= m_auto_repeat_ms_interval_default))
+			{
+				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_cursor.wav");
 			}
 		}
 
@@ -171,11 +204,12 @@ namespace rsx
 			return result;
 		}
 
-		s32 media_list_dialog::show(const media_entry& dir_entry, const std::string& title, u32 /*focused*/, bool enable_overlay)
+		s32 media_list_dialog::show(media_entry* root, media_entry& result, const std::string& title, u32 focused, bool enable_overlay)
 		{
-			rsx_log.warning("Media dialog: showing entry '%s' ('%s')", dir_entry.name, dir_entry.path);
+			auto ref = g_fxo->get<display_manager>().get(uid);
 
-			visible = false;
+			m_media = root;
+			result = {};
 
 			if (enable_overlay)
 			{
@@ -186,7 +220,74 @@ namespace rsx
 				m_dim_background->back_color.a = 0.5f;
 			}
 
-			for (const media_entry& child : dir_entry.children)
+			while (thread_ctrl::state() != thread_state::aborting && return_code >= 0 && m_media && m_media->type == media_list_dialog::media_type::directory)
+			{
+				reload(title, focused);
+				m_stop_input_loop = false;
+
+				if (const auto error = run_input_loop())
+				{
+					if (error != selection_code::canceled)
+					{
+						rsx_log.error("Media list dialog input loop exited with error code=%d", error);
+					}
+					return error;
+				}
+
+				if (return_code >= 0)
+				{
+					focused = 0;
+					ensure(static_cast<size_t>(return_code) < m_media->children.size());
+					m_media = &m_media->children[return_code];
+					rsx_log.notice("Media dialog: selected entry: %d ('%s')", return_code, m_media->path);
+					continue;
+				}
+
+				if (return_code == user_interface::selection_code::canceled)
+				{
+					if (m_media == root)
+					{
+						rsx_log.notice("Media list dialog canceled");
+						break;
+					}
+
+					focused = m_media->index;
+					m_media = m_media->parent;
+					return_code = 0;
+					rsx_log.notice("Media list dialog moving to parent directory (focused=%d)", focused);
+					continue;
+				}
+
+				rsx_log.error("Left media list dialog with error: %d", return_code);
+				break;
+			}
+
+			close(false, true);
+
+			if (return_code >= 0 && m_media && m_media->type != media_list_dialog::media_type::directory)
+			{
+				result = *m_media;
+				rsx_log.error("Left media list dialog: return_code=%d, type=%d, path=%d", return_code, static_cast<s32>(result.type), result.info.path);
+			}
+
+			return return_code;
+		}
+
+		void media_list_dialog::reload(const std::string& title, u32 focused)
+		{
+			ensure(m_media);
+
+			rsx_log.notice("Media dialog: showing entry '%s' ('%s')", m_media->name, m_media->path);
+
+			if (m_list)
+			{
+				status_flags |= status_bits::invalidate_image_cache;
+			}
+
+			m_list = std::make_unique<list_view>(virtual_width - 2 * 20, 540);
+			m_list->set_pos(20, 85);
+
+			for (const media_entry& child : m_media->children)
 			{
 				std::unique_ptr<overlay_element> entry = std::make_unique<media_list_entry>(child);
 				m_list->add_entry(entry);
@@ -206,36 +307,13 @@ namespace rsx
 			else
 			{
 				// Only select an entry if there are entries available
-				m_list->select_entry(0);
+				m_list->select_entry(focused);
 			}
 
 			m_description->set_text(title);
 			m_description->auto_resize();
 
 			visible = true;
-
-			auto ref = g_fxo->get<display_manager>().get(uid);
-
-			if (const auto error = run_input_loop())
-			{
-				if (error != selection_code::canceled)
-				{
-					rsx_log.error("Media list dialog input loop exited with error code=%d", error);
-				}
-				return error;
-			}
-
-			if (return_code < 0)
-			{
-				rsx_log.warning("Media dialog canceled");
-			}
-			else
-			{
-				ensure(static_cast<size_t>(return_code) < dir_entry.children.size());
-				rsx_log.success("Media dialog: selected entry: %d ('%s')", return_code, dir_entry.children[return_code].path);
-			}
-
-			return return_code;
 		}
 
 		struct media_list_dialog_thread
@@ -254,18 +332,19 @@ namespace rsx
 			{
 				for (auto&& dir_entry : fs::dir{media_path})
 				{
-					dir_entry.name = vfs::unescape(dir_entry.name);
-
 					if (dir_entry.name == "." || dir_entry.name == "..")
 					{
 						continue;
 					}
 
-					media_list_dialog::media_entry new_entry;
-					parse_media_recursive(depth, media_path + "/" + dir_entry.name, dir_entry.name, type, new_entry);
+					const std::string unescaped_name = vfs::unescape(dir_entry.name);
+
+					media_list_dialog::media_entry new_entry{};
+					parse_media_recursive(depth, media_path + "/" + dir_entry.name, unescaped_name, type, new_entry);
 					if (new_entry.type != media_list_dialog::media_type::invalid)
 					{
 						new_entry.parent = &current_entry;
+						new_entry.index = ::narrow<u32>(current_entry.children.size());
 						current_entry.children.emplace_back(std::move(new_entry));
 					}
 				}
@@ -279,21 +358,15 @@ namespace rsx
 				{
 					rsx_log.notice("parse_media_recursive: Found %d matches in directory '%s'", current_entry.children.size(), media_path);
 					current_entry.type = media_list_dialog::media_type::directory;
-				}
-			}
-			else if (type == media_list_dialog::media_type::photo)
-			{
-				// Let's restrict this to png and jpg for now
-				if (name.ends_with(".png") || name.ends_with(".jpg"))
-				{
-					current_entry.type = type;
-					rsx_log.notice("parse_media_recursive: Found photo '%s'", media_path);
+					current_entry.info.path = media_path;
 				}
 			}
 			else
 			{
-				// Try to peek into the audio or video file
-				const s32 av_media_type = type == media_list_dialog::media_type::video ? 0 /*AVMEDIA_TYPE_VIDEO*/ : 1 /*AVMEDIA_TYPE_AUDIO*/;
+				// Try to peek into the file
+				const s32 av_media_type = type == media_list_dialog::media_type::photo ? -1
+				                        : type == media_list_dialog::media_type::video ? 0 /*AVMEDIA_TYPE_VIDEO*/
+				                        : 1 /*AVMEDIA_TYPE_AUDIO*/;
 				auto [success, info] = utils::get_media_info(media_path, av_media_type);
 				if (success)
 				{
@@ -308,7 +381,7 @@ namespace rsx
 				current_entry.path = media_path;
 				current_entry.name = name;
 			}
-		};
+		}
 
 		error_code show_media_list_dialog(media_list_dialog::media_type type, const std::string& path, const std::string& title, std::function<void(s32 status, utils::media_info info)> on_finished)
 		{
@@ -321,7 +394,7 @@ namespace rsx
 
 			g_fxo->get<named_thread<media_list_dialog_thread>>()([=]()
 			{
-				media_list_dialog::media_entry root_media_entry;
+				media_list_dialog::media_entry root_media_entry{};
 				root_media_entry.type = media_list_dialog::media_type::directory;
 
 				if (fs::is_dir(path))
@@ -333,33 +406,23 @@ namespace rsx
 					rsx_log.error("Media list: Failed to open path: '%s'", path);
 				}
 
-				media_list_dialog::media_entry* media = &root_media_entry;
+				media_list_dialog::media_entry media{};
 				s32 result = 0;
+				u32 focused = 0;
 
-				while (thread_ctrl::state() != thread_state::aborting && result >= 0 && media && media->type == media_list_dialog::media_type::directory)
+				if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
 				{
-					if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
-					{
-						rsx_log.notice("Creating media list dialog with entry: '%s' (name='%s', path='%s')", title,  media->name, media->path);
-						result = manager->create<rsx::overlays::media_list_dialog>()->show(*media, title, 0, true);
-						if (result >= 0)
-						{
-							ensure(static_cast<size_t>(result) < media->children.size());
-							media = &media->children[result];
-						}
-						rsx_log.notice("Left media list dialog with entry: '%s' ('%s')", media->name, media->path);
-					}
-					else
-					{
-						media = nullptr;
-						result = user_interface::selection_code::canceled;
-						rsx_log.error("Media selection is only possible when the native user interface is enabled in the settings. The action will be canceled.");
-					}
+					result = manager->create<rsx::overlays::media_list_dialog>()->show(&root_media_entry, media, title, focused, true);
+				}
+				else
+				{
+					result = user_interface::selection_code::canceled;
+					rsx_log.error("Media selection is only possible when the native user interface is enabled in the settings. The action will be canceled.");
 				}
 
-				if (result >= 0 && media && media->type == type)
+				if (result >= 0 && media.type == type)
 				{
-					on_finished(CELL_OK, media->info);
+					on_finished(CELL_OK, media.info);
 				}
 				else
 				{

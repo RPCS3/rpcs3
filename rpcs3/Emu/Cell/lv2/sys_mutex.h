@@ -4,6 +4,8 @@
 
 #include "Emu/Memory/vm_ptr.h"
 
+#include "Emu/Cell/PPUThread.h"
+
 struct sys_mutex_attribute_t
 {
 	be_t<u32> protocol; // SYS_SYNC_FIFO, SYS_SYNC_PRIORITY or SYS_SYNC_PRIORITY_INHERIT
@@ -21,6 +23,8 @@ struct sys_mutex_attribute_t
 	};
 };
 
+class ppu_thread;
+
 struct lv2_mutex final : lv2_obj
 {
 	static const u32 id_base = 0x85000000;
@@ -33,9 +37,16 @@ struct lv2_mutex final : lv2_obj
 
 	u32 cond_count = 0; // Condition Variables
 	shared_mutex mutex;
-	atomic_t<u32> owner{0};
 	atomic_t<u32> lock_count{0}; // Recursive Locks
-	std::deque<cpu_thread*> sq;
+
+	struct alignas(16) control_data_t
+	{
+		u32 owner{};
+		u32 reserved{};
+		ppu_thread* sq{};
+	};
+
+	atomic_t<control_data_t> control{};
 
 	lv2_mutex(u32 protocol, u32 recursive,u32 adaptive, u64 key, u64 name) noexcept
 		: protocol{static_cast<u8>(protocol)}
@@ -46,11 +57,28 @@ struct lv2_mutex final : lv2_obj
 	{
 	}
 
-	CellError try_lock(u32 id)
-	{
-		const u32 value = owner;
+	lv2_mutex(utils::serial& ar);
+	static std::shared_ptr<void> load(utils::serial& ar);
+	void save(utils::serial& ar);
 
-		if (value >> 1 == id)
+	template <typename T>
+	CellError try_lock(T& cpu)
+	{
+		auto it = control.load();
+
+		if (!it.owner)
+		{
+			auto store = it;
+			store.owner = cpu.id;
+			if (!control.compare_and_swap_test(it, store))
+			{
+				return CELL_EBUSY;
+			}
+
+			return {};
+		}
+
+		if (it.owner == cpu.id)
 		{
 			// Recursive locking
 			if (recursive == SYS_SYNC_RECURSIVE)
@@ -67,43 +95,40 @@ struct lv2_mutex final : lv2_obj
 			return CELL_EDEADLK;
 		}
 
-		if (value == 0)
-		{
-			if (owner.compare_and_swap_test(0, id << 1))
-			{
-				return {};
-			}
-		}
-
 		return CELL_EBUSY;
 	}
 
-	bool try_own(cpu_thread& cpu, u32 id)
+	template <typename T>
+	bool try_own(T& cpu)
 	{
-		if (owner.fetch_op([&](u32& val)
+		if (control.atomic_op([&](control_data_t& data)
 		{
-			if (val == 0)
+			if (data.owner)
 			{
-				val = id << 1;
+				cpu.next_cpu = data.sq;
+				data.sq = &cpu;
+				return false;
 			}
 			else
 			{
-				val |= 1;
+				data.owner = cpu.id;
+				return true;
 			}
 		}))
 		{
-			sq.emplace_back(&cpu);
-			return false;
+			cpu.next_cpu = nullptr;
+			return true;
 		}
 
-		return true;
+		return false;
 	}
 
-	CellError try_unlock(u32 id)
+	template <typename T>
+	CellError try_unlock(T& cpu)
 	{
-		const u32 value = owner;
+		auto it = control.load();
 
-		if (value >> 1 != id)
+		if (it.owner != cpu.id)
 		{
 			return CELL_EPERM;
 		}
@@ -114,9 +139,12 @@ struct lv2_mutex final : lv2_obj
 			return {};
 		}
 
-		if (value == id << 1)
+		if (!it.sq)
 		{
-			if (owner.compare_and_swap_test(value, 0))
+			auto store = it;
+			store.owner = 0;
+
+			if (control.compare_and_swap_test(it, store))
 			{
 				return {};
 			}
@@ -128,20 +156,42 @@ struct lv2_mutex final : lv2_obj
 	template <typename T>
 	T* reown()
 	{
-		if (auto cpu = schedule<T>(sq, protocol))
+		T* res{};
+		T* restore_next{};
+
+		control.fetch_op([&](control_data_t& data)
 		{
-			owner = cpu->id << 1 | !sq.empty();
-			return static_cast<T*>(cpu);
-		}
-		else
-		{
-			owner = 0;
-			return nullptr;
-		}
+			if (res)
+			{
+				res->next_cpu = restore_next;
+				res = nullptr;
+			}
+
+			if (auto sq = static_cast<T*>(data.sq))
+			{
+				restore_next = sq->next_cpu;
+				res = schedule<T>(data.sq, protocol);
+
+				if (sq == data.sq)
+				{
+					atomic_storage<u32>::release(control.raw().owner, res->id);
+					return false;
+				}
+
+				data.owner = res->id;
+				return true;
+			}
+			else
+			{
+				data.owner = 0;
+				return true;
+			}
+		});
+
+		return res;
 	}
 };
 
-class ppu_thread;
 
 // Syscalls
 

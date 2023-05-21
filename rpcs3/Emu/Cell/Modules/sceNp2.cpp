@@ -6,6 +6,7 @@
 #include "sceNp2.h"
 #include "Emu/NP/np_handler.h"
 #include "Emu/NP/np_contexts.h"
+#include "Emu/NP/np_helpers.h"
 #include "cellSysutil.h"
 
 LOG_CHANNEL(sceNp2);
@@ -237,7 +238,7 @@ error_code sceNpMatching2Init(u32 stackSize, s32 priority)
 
 error_code sceNpMatching2Init2(u64 stackSize, s32 priority, vm::ptr<SceNpMatching2UtilityInitParam> param)
 {
-	sceNp2.todo("sceNpMatching2Init2(stackSize=0x%x, priority=%d, param=*0x%x)", stackSize, priority, param);
+	sceNp2.warning("sceNpMatching2Init2(stackSize=0x%x, priority=%d, param=*0x%x)", stackSize, priority, param);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -319,7 +320,7 @@ error_code sceNpMatching2Term2()
 
 error_code sceNpMatching2DestroyContext(SceNpMatching2ContextId ctxId)
 {
-	sceNp2.todo("sceNpMatching2DestroyContext(ctxId=%d)", ctxId);
+	sceNp2.warning("sceNpMatching2DestroyContext(ctxId=%d)", ctxId);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -444,20 +445,47 @@ error_code sceNpMatching2SignalingGetConnectionStatus(
 		return SCE_NP_MATCHING2_ERROR_INVALID_ARGUMENT;
 	}
 
+	auto [res, npid] = nph.local_get_npid(roomId, memberId);
+
+	if (res)
+	{
+		*connStatus = SCE_NP_SIGNALING_CONN_STATUS_INACTIVE;
+		return res;
+	}
+
+	if (np::is_same_npid(nph.get_npid(), *npid))
+	{
+		*connStatus = SCE_NP_SIGNALING_CONN_STATUS_INACTIVE;
+		return SCE_NP_SIGNALING_ERROR_OWN_NP_ID;
+	}
+
 	auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
 
-	const auto si = sigh.get_sig2_infos(roomId, memberId);
+	auto conn_id = sigh.get_conn_id_from_npid(*npid);
+	if (!conn_id)
+	{
+		*connStatus = SCE_NP_SIGNALING_CONN_STATUS_INACTIVE;
+		return SCE_NP_SIGNALING_ERROR_CONN_NOT_FOUND;
+	}
 
-	*connStatus = si.connStatus;
+	const auto si = sigh.get_sig_infos(*conn_id);
+
+	if (!si)
+	{
+		*connStatus = SCE_NP_SIGNALING_CONN_STATUS_INACTIVE;
+		return SCE_NP_SIGNALING_ERROR_CONN_NOT_FOUND;
+	}
+
+	*connStatus = si->conn_status;
 
 	if (peerAddr)
 	{
-		(*peerAddr).np_s_addr = si.addr; // infos.addr is already BE
+		(*peerAddr).np_s_addr = si->addr; // infos.addr is already BE
 	}
 
 	if (peerPort)
 	{
-		*peerPort = si.port;
+		*peerPort = si->port;
 	}
 
 	return CELL_OK;
@@ -611,49 +639,68 @@ error_code sceNpMatching2SignalingGetConnectionInfo(
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
 
+	if (!connInfo)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_ARGUMENT;
+	}
+
+	auto [res, npid] = nph.local_get_npid(roomId, memberId);
+
+	if (res)
+		return res;
+
+	if (np::is_same_npid(nph.get_npid(), *npid))
+		return SCE_NP_SIGNALING_ERROR_OWN_NP_ID;
+
+	auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
+
+	auto conn_id = sigh.get_conn_id_from_npid(*npid);
+	if (!conn_id)
+		return SCE_NP_SIGNALING_ERROR_CONN_NOT_FOUND;
+
+	const auto si = sigh.get_sig_infos(*conn_id);
+
+	if (!si)
+		return SCE_NP_SIGNALING_ERROR_CONN_NOT_FOUND;
+
 	switch (code)
 	{
 		case SCE_NP_SIGNALING_CONN_INFO_RTT:
 		{
-			connInfo->rtt = 20000; // HACK
+			connInfo->rtt = si->rtt;
+			sceNp2.warning("Returning a RTT of %d microseconds", connInfo->rtt);
 			break;
 		}
 		case SCE_NP_SIGNALING_CONN_INFO_BANDWIDTH:
 		{
-			connInfo->bandwidth = 10'000'000; // 10 MBPS HACK
+			connInfo->bandwidth = 100'000'000; // 100 MBPS HACK
 			break;
 		}
 		case SCE_NP_SIGNALING_CONN_INFO_PEER_NPID:
 		{
-			// TODO: need an update to whole signaling as matching2 signaling ignores npids atm
-			sceNp2.fatal("sceNpMatching2SignalingGetConnectionInfo Unimplemented SCE_NP_SIGNALING_CONN_INFO_PEER_NPID");
+			connInfo->npId = si->npid;
 			break;
 		}
 		case SCE_NP_SIGNALING_CONN_INFO_PEER_ADDRESS:
 		{
-			auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
-			const auto si = sigh.get_sig2_infos(roomId, memberId);
-			connInfo->address.port = std::bit_cast<u16, be_t<u16>>(si.port);
-			connInfo->address.addr.np_s_addr = si.addr;
+			connInfo->address.port = std::bit_cast<u16, be_t<u16>>(si->port);
+			connInfo->address.addr.np_s_addr = si->addr;
 			break;
 		}
 		case SCE_NP_SIGNALING_CONN_INFO_MAPPED_ADDRESS:
 		{
-			auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
-			const auto si = sigh.get_sig2_infos(roomId, memberId);
-			connInfo->address.port = std::bit_cast<u16, be_t<u16>>(si.mapped_port);
-			connInfo->address.addr.np_s_addr = si.mapped_addr;
+			connInfo->address.port = std::bit_cast<u16, be_t<u16>>(si->mapped_port);
+			connInfo->address.addr.np_s_addr = si->mapped_addr;
 			break;
 		}
 		case SCE_NP_SIGNALING_CONN_INFO_PACKET_LOSS:
 		{
-			connInfo->packet_loss = 1; // HACK
+			connInfo->packet_loss = 0; // HACK
 			break;
 		}
 		default:
 		{
-			sceNp2.fatal("sceNpMatching2SignalingGetConnectionInfo Unimplemented code: %d", code);
-			return CELL_OK;
+			return SCE_NP_MATCHING2_ERROR_INVALID_ARGUMENT;
 		}
 	}
 
@@ -706,7 +753,7 @@ error_code sceNpMatching2GetRoomMemberDataExternalList(SceNpMatching2ContextId c
 
 error_code sceNpMatching2AbortRequest(SceNpMatching2ContextId ctxId, SceNpMatching2RequestId reqId)
 {
-	sceNp2.todo("sceNpMatching2AbortRequest(ctxId=%d, reqId=%d)", ctxId, reqId);
+	sceNp2.warning("sceNpMatching2AbortRequest(ctxId=%d, reqId=%d)", ctxId, reqId);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -714,6 +761,19 @@ error_code sceNpMatching2AbortRequest(SceNpMatching2ContextId ctxId, SceNpMatchi
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
+
+	if (!ctxId)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_CONTEXT_ID;
+	}
+
+	if (!check_match2_context(ctxId))
+	{
+		return SCE_NP_MATCHING2_ERROR_CONTEXT_NOT_FOUND;
+	}
+
+	if (!nph.abort_request(reqId))
+		return SCE_NP_MATCHING2_ERROR_REQUEST_NOT_FOUND;
 
 	return CELL_OK;
 }
@@ -1349,7 +1409,7 @@ error_code sceNpMatching2SetDefaultRequestOptParam(SceNpMatching2ContextId ctxId
 
 error_code sceNpMatching2RegisterRoomEventCallback(SceNpMatching2ContextId ctxId, vm::ptr<SceNpMatching2RoomEventCallback> cbFunc, vm::ptr<void> cbFuncArg)
 {
-	sceNp2.todo("sceNpMatching2RegisterRoomEventCallback(ctxId=%d, cbFunc=*0x%x, cbFuncArg=*0x%x)", ctxId, cbFunc, cbFuncArg);
+	sceNp2.warning("sceNpMatching2RegisterRoomEventCallback(ctxId=%d, cbFunc=*0x%x, cbFuncArg=*0x%x)", ctxId, cbFunc, cbFuncArg);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -1546,7 +1606,7 @@ error_code sceNpMatching2SetLobbyMemberDataInternal(
 
 error_code sceNpMatching2RegisterRoomMessageCallback(SceNpMatching2ContextId ctxId, vm::ptr<SceNpMatching2RoomMessageCallback> cbFunc, vm::ptr<void> cbFuncArg)
 {
-	sceNp2.todo("sceNpMatching2RegisterRoomMessageCallback(ctxId=%d, cbFunc=*0x%x, cbFuncArg=*0x%x)", ctxId, cbFunc, cbFuncArg);
+	sceNp2.warning("sceNpMatching2RegisterRoomMessageCallback(ctxId=%d, cbFunc=*0x%x, cbFuncArg=*0x%x)", ctxId, cbFunc, cbFuncArg);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -1578,7 +1638,7 @@ error_code sceNpMatching2SignalingCancelPeerNetInfo(SceNpMatching2ContextId ctxI
 
 error_code sceNpMatching2SignalingGetLocalNetInfo(vm::ptr<SceNpMatching2SignalingNetInfo> netinfo)
 {
-	sceNp2.todo("sceNpMatching2SignalingGetLocalNetInfo(netinfo=*0x%x)", netinfo);
+	sceNp2.warning("sceNpMatching2SignalingGetLocalNetInfo(netinfo=*0x%x)", netinfo);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -1587,11 +1647,16 @@ error_code sceNpMatching2SignalingGetLocalNetInfo(vm::ptr<SceNpMatching2Signalin
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!netinfo)
+	if (!netinfo || netinfo->size != sizeof(SceNpMatching2SignalingNetInfo))
 	{
-		// TODO: check netinfo->size
 		return SCE_NP_MATCHING2_ERROR_INVALID_ARGUMENT;
 	}
+
+	netinfo->localAddr  = nph.get_local_ip_addr();
+	netinfo->mappedAddr = nph.get_public_ip_addr();
+
+	// Pure speculation below
+	netinfo->natStatus = SCE_NP_SIGNALING_NETINFO_NAT_STATUS_TYPE2;
 
 	return CELL_OK;
 }
@@ -1626,9 +1691,8 @@ error_code sceNpMatching2SignalingGetPeerNetInfoResult(SceNpMatching2ContextId c
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!netinfo)
+	if (!netinfo || netinfo->size != sizeof(SceNpMatching2SignalingNetInfo))
 	{
-		// TODO: check netinfo->size
 		return SCE_NP_MATCHING2_ERROR_INVALID_ARGUMENT;
 	}
 

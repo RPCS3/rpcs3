@@ -9,7 +9,7 @@
 #include <vector>
 #include <unordered_map>
 
-#define DESCRIPTOR_MAX_DRAW_CALLS 16384
+#define DESCRIPTOR_MAX_DRAW_CALLS 32768
 
 namespace vk
 {
@@ -62,6 +62,8 @@ namespace vk
 		bool debug_utils_support : 1 = false;
 		bool sampler_mirror_clamped_support : 1 = false;
 		bool descriptor_indexing_support : 1 = false;
+		bool framebuffer_loops_support : 1 = false;
+		bool barycoords_support : 1 = false;
 
 		u32 descriptor_max_draw_calls = DESCRIPTOR_MAX_DRAW_CALLS;
 		u64 descriptor_update_after_bind_mask = 0;
@@ -132,37 +134,39 @@ namespace vk
 		bool get_compatible_memory_type(u32 typeBits, u32 desired_mask, u32* type_index) const;
 		void rebalance_memory_type_usage();
 
-		const physical_device& gpu() const;
-		const memory_type_mapping& get_memory_mapping() const;
-		const gpu_formats_support& get_formats_support() const;
-		const pipeline_binding_table& get_pipeline_binding_table() const;
-		const gpu_shader_types_support& get_shader_types_support() const;
+		const physical_device& gpu() const { return *pgpu; }
+		const memory_type_mapping& get_memory_mapping() const { return memory_map; }
+		const gpu_formats_support& get_formats_support() const { return m_formats_support; }
+		const pipeline_binding_table& get_pipeline_binding_table() const { return m_pipeline_binding_table; }
+		const gpu_shader_types_support& get_shader_types_support() const { return pgpu->shader_types_support; }
 
-		bool get_shader_stencil_export_support() const;
-		bool get_depth_bounds_support() const;
-		bool get_alpha_to_one_support() const;
-		bool get_anisotropic_filtering_support() const;
-		bool get_wide_lines_support() const;
-		bool get_conditional_render_support() const;
-		bool get_unrestricted_depth_range_support() const;
-		bool get_external_memory_host_support() const;
-		bool get_surface_capabilities_2_support() const;
-		bool get_debug_utils_support() const;
-		bool get_descriptor_indexing_support() const;
+		bool get_shader_stencil_export_support() const { return pgpu->stencil_export_support; }
+		bool get_depth_bounds_support() const { return pgpu->features.depthBounds != VK_FALSE; }
+		bool get_alpha_to_one_support() const { return pgpu->features.alphaToOne != VK_FALSE; }
+		bool get_anisotropic_filtering_support() const { return pgpu->features.samplerAnisotropy != VK_FALSE; }
+		bool get_wide_lines_support() const { return pgpu->features.wideLines != VK_FALSE; }
+		bool get_conditional_render_support() const { return pgpu->conditional_render_support; }
+		bool get_unrestricted_depth_range_support() const { return pgpu->unrestricted_depth_range_support; }
+		bool get_external_memory_host_support() const { return pgpu->external_memory_host_support; }
+		bool get_surface_capabilities_2_support() const { return pgpu->surface_capabilities_2_support; }
+		bool get_debug_utils_support() const { return g_cfg.video.renderdoc_compatiblity && pgpu->debug_utils_support; }
+		bool get_descriptor_indexing_support() const { return pgpu->descriptor_indexing_support; }
+		bool get_framebuffer_loops_support() const { return pgpu->framebuffer_loops_support; }
+		bool get_barycoords_support() const { return pgpu->barycoords_support; }
 
-		u64 get_descriptor_update_after_bind_support() const;
-		u32 get_descriptor_max_draw_calls() const;
+		u64 get_descriptor_update_after_bind_support() const { return pgpu->descriptor_update_after_bind_mask; }
+		u32 get_descriptor_max_draw_calls() const { return pgpu->descriptor_max_draw_calls; }
 
-		VkQueue get_present_queue() const;
-		VkQueue get_graphics_queue() const;
-		VkQueue get_transfer_queue() const;
-		u32 get_graphics_queue_family() const;
-		u32 get_present_queue_family() const;
-		u32 get_transfer_queue_family() const;
+		VkQueue get_present_queue() const { return m_present_queue; }
+		VkQueue get_graphics_queue() const { return m_graphics_queue; }
+		VkQueue get_transfer_queue() const { return m_transfer_queue; }
+		u32 get_graphics_queue_family() const { return m_graphics_queue_family; }
+		u32 get_present_queue_family() const { return m_graphics_queue_family; }
+		u32 get_transfer_queue_family() const { return m_transfer_queue_family; }
 
-		mem_allocator_base* get_allocator() const;
+		mem_allocator_base* get_allocator() const { return m_allocator.get(); }
 
-		operator VkDevice() const;
+		operator VkDevice() const { return dev; }
 	};
 
 	memory_type_mapping get_memory_mapping(const physical_device& dev);

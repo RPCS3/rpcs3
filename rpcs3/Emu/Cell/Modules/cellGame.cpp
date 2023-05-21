@@ -17,10 +17,16 @@
 #include "Utilities/StrUtil.h"
 #include "util/init_mutex.hpp"
 #include "util/asm.hpp"
+#include "Crypto/utils.h"
 
 #include <span>
 
 LOG_CHANNEL(cellGame);
+
+vm::gvar<CellHddGameStatGet> g_stat_get;
+vm::gvar<CellHddGameStatSet> g_stat_set;
+vm::gvar<CellHddGameSystemFileParam> g_file_param;
+vm::gvar<CellHddGameCBResult> g_cb_result;
 
 template<>
 void fmt_class_string<CellGameError>::format(std::string& out, u64 arg)
@@ -193,6 +199,157 @@ void fmt_class_string<content_permission::check_mode>::format(std::string& out, 
 	});
 }
 
+template<>
+void fmt_class_string<disc_change_manager::eject_state>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+			STR_CASE(disc_change_manager::eject_state::inserted);
+			STR_CASE(disc_change_manager::eject_state::ejected);
+			STR_CASE(disc_change_manager::eject_state::busy);
+		}
+
+		return unknown;
+	});
+}
+
+
+disc_change_manager::disc_change_manager()
+{
+	Emu.GetCallbacks().enable_disc_eject(false);
+	Emu.GetCallbacks().enable_disc_insert(false);
+}
+
+disc_change_manager::~disc_change_manager()
+{
+	Emu.GetCallbacks().enable_disc_eject(false);
+	Emu.GetCallbacks().enable_disc_insert(false);
+}
+
+error_code disc_change_manager::register_callbacks(vm::ptr<CellGameDiscEjectCallback> func_eject, vm::ptr<CellGameDiscInsertCallback> func_insert)
+{
+	std::lock_guard lock(mtx);
+
+	eject_callback = func_eject;
+	insert_callback = func_insert;
+
+	Emu.GetCallbacks().enable_disc_eject(!!func_eject);
+	Emu.GetCallbacks().enable_disc_insert(false);
+
+	return CELL_OK;
+}
+
+error_code disc_change_manager::unregister_callbacks()
+{
+	const auto unregister = [this]() -> void
+	{
+		eject_callback = vm::null;
+		insert_callback = vm::null;
+
+		Emu.GetCallbacks().enable_disc_eject(false);
+		Emu.GetCallbacks().enable_disc_insert(false);
+	};
+
+	if (is_inserting)
+	{
+		// NOTE: The insert_callback is known to call cellGameUnregisterDiscChangeCallback.
+		// So we keep it out of the mutex lock until it proves to be an issue.
+		unregister();
+	}
+	else
+	{
+		std::lock_guard lock(mtx);
+		unregister();
+	}
+
+	return CELL_OK;
+}
+
+void disc_change_manager::eject_disc()
+{
+	cellGame.notice("Ejecting disc...");
+
+	std::lock_guard lock(mtx);
+
+	if (state != eject_state::inserted)
+	{
+		cellGame.fatal("Can not eject disc in the current state. (state=%s)", state.load());
+		return;
+	}
+
+	state = eject_state::busy;
+	Emu.GetCallbacks().enable_disc_eject(false);
+
+	ensure(eject_callback);
+
+	sysutil_register_cb([](ppu_thread& cb_ppu) -> s32
+	{
+		auto& dcm = g_fxo->get<disc_change_manager>();
+		std::lock_guard lock(dcm.mtx);
+
+		cellGame.notice("Executing eject_callback...");
+		dcm.eject_callback(cb_ppu);
+
+		ensure(vfs::unmount("/dev_bdvd"));
+		ensure(vfs::unmount("/dev_ps2disc"));
+		dcm.state = eject_state::ejected;
+
+		Emu.GetCallbacks().enable_disc_insert(true);
+
+		return CELL_OK;
+	});
+}
+
+void disc_change_manager::insert_disc(u32 disc_type, std::string title_id)
+{
+	cellGame.notice("Inserting disc...");
+
+	std::lock_guard lock(mtx);
+
+	if (state != eject_state::ejected)
+	{
+		cellGame.fatal("Can not insert disc in the current state. (state=%s)", state.load());
+		return;
+	}
+
+	state = eject_state::busy;
+	Emu.GetCallbacks().enable_disc_insert(false);
+
+	ensure(insert_callback);
+
+	is_inserting = true;
+
+	sysutil_register_cb([disc_type, title_id = std::move(title_id)](ppu_thread& cb_ppu) -> s32
+	{
+		auto& dcm = g_fxo->get<disc_change_manager>();
+		std::lock_guard lock(dcm.mtx);
+
+		if (disc_type == CELL_GAME_DISCTYPE_PS3)
+		{
+			vm::var<char[]> _title_id = vm::make_str(title_id);
+			cellGame.notice("Executing insert_callback for title '%s' with disc_type %d...", _title_id.get_ptr(), disc_type);
+			dcm.insert_callback(cb_ppu, disc_type, _title_id);
+		}
+		else
+		{
+			cellGame.notice("Executing insert_callback with disc_type %d...", disc_type);
+			dcm.insert_callback(cb_ppu, disc_type, vm::null);
+		}
+
+		dcm.state = eject_state::inserted;
+
+		// Re-enable disc ejection only if the callback is still registered
+		Emu.GetCallbacks().enable_disc_eject(!!dcm.eject_callback);
+
+		dcm.is_inserting = false;
+
+		return CELL_OK;
+	});
+}
+
+
 error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName, u32 errDialog, vm::ptr<CellHddGameStatCallback> funcStat, u32 container)
 {
 	cellGame.warning("cellHddGameCheck(version=%d, dirName=%s, errDialog=%d, funcStat=*0x%x, container=%d)", version, dirName, errDialog, funcStat, container);
@@ -224,9 +381,15 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 
 	const std::string usrdir = dir + "/USRDIR";
 
-	vm::var<CellHddGameCBResult> result;
-	vm::var<CellHddGameStatGet> get;
-	vm::var<CellHddGameStatSet> set;
+	auto& get = g_stat_get;
+	auto& set = g_stat_set;
+	auto& result = g_cb_result;
+
+	std::memset(get.get_ptr(), 0, sizeof(*get));
+	std::memset(set.get_ptr(), 0, sizeof(*set));
+	std::memset(result.get_ptr(), 0, sizeof(*result));
+
+	const std::string local_dir = vfs::get(dir);
 
 	// 40 GB - 1 kilobyte. The reasoning is that many games take this number and multiply it by 1024, to get the amount of bytes. With 40GB exactly,
 	// this will result in an overflow, and the size would be 0, preventing the game from running. By reducing 1 kilobyte, we make sure that even
@@ -234,17 +397,15 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 	get->hddFreeSizeKB = 40 * 1024 * 1024 - 1;
 	get->isNewData = CELL_HDDGAME_ISNEWDATA_EXIST;
 	get->sysSizeKB = 0; // TODO
-	get->atime = 0; // TODO
-	get->ctime = 0; // TODO
-	get->mtime = 0; // TODO
+	get->st_atime_ = 0; // TODO
+	get->st_ctime_ = 0; // TODO
+	get->st_mtime_ = 0; // TODO
 	get->sizeKB = CELL_HDDGAME_SIZEKB_NOTCALC;
 	strcpy_trunc(get->contentInfoPath, dir);
-	strcpy_trunc(get->hddGamePath, usrdir);
+	strcpy_trunc(get->gameDataPath, usrdir);
 
-	vm::var<CellHddGameSystemFileParam> setParam;
-	set->setParam = setParam;
-
-	const std::string& local_dir = vfs::get(dir);
+	std::memset(g_file_param.get_ptr(), 0, sizeof(*g_file_param));
+	set->setParam = g_file_param;
 
 	if (!fs::is_dir(local_dir))
 	{
@@ -254,16 +415,16 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 	else
 	{
 		// TODO: Is cellHddGameCheck really responsible for writing the information in get->getParam ? (If not, delete this else)
-		const auto& psf = psf::load_object(fs::file(local_dir +"/PARAM.SFO"));
+		const psf::registry psf = psf::load_object(local_dir + "/PARAM.SFO");
 
 		// Some following fields may be zero in old FW 1.00 version PARAM.SFO
-		if (psf.contains("PARENTAL_LEVEL")) get->getParam.parentalLevel = psf.at("PARENTAL_LEVEL").as_integer();
-		if (psf.contains("ATTRIBUTE")) get->getParam.attribute = psf.at("ATTRIBUTE").as_integer();
-		if (psf.contains("RESOLUTION")) get->getParam.resolution = psf.at("RESOLUTION").as_integer();
-		if (psf.contains("SOUND_FORMAT")) get->getParam.soundFormat = psf.at("SOUND_FORMAT").as_integer();
-		if (psf.contains("TITLE")) strcpy_trunc(get->getParam.title, psf.at("TITLE").as_string());
-		if (psf.contains("APP_VER")) strcpy_trunc(get->getParam.dataVersion, psf.at("APP_VER").as_string());
-		if (psf.contains("TITLE_ID")) strcpy_trunc(get->getParam.titleId, psf.at("TITLE_ID").as_string());
+		if (psf.contains("PARENTAL_LEVEL")) get->getParam.parentalLevel = ::at32(psf, "PARENTAL_LEVEL").as_integer();
+		if (psf.contains("ATTRIBUTE")) get->getParam.attribute = ::at32(psf, "ATTRIBUTE").as_integer();
+		if (psf.contains("RESOLUTION")) get->getParam.resolution = ::at32(psf, "RESOLUTION").as_integer();
+		if (psf.contains("SOUND_FORMAT")) get->getParam.soundFormat = ::at32(psf, "SOUND_FORMAT").as_integer();
+		if (psf.contains("TITLE")) strcpy_trunc(get->getParam.title, ::at32(psf, "TITLE").as_string());
+		if (psf.contains("APP_VER")) strcpy_trunc(get->getParam.dataVersion, ::at32(psf, "APP_VER").as_string());
+		if (psf.contains("TITLE_ID")) strcpy_trunc(get->getParam.titleId, ::at32(psf, "TITLE_ID").as_string());
 
 		for (u32 i = 0; i < CELL_HDDGAME_SYSP_LANGUAGE_NUM; i++)
 		{
@@ -305,7 +466,7 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 		// 		psf::assign(sfo, "CATEGORY", psf::string(3, "HG"));
 		// 	}
 
-		// 	psf::assign(sfo, "TITLE_ID", psf::string(CELL_GAME_SYSP_TITLEID_SIZE, setParam->titleId));
+		// 	psf::assign(sfo, "TITLE_ID", psf::string(TITLEID_SFO_ENTRY_SIZE, setParam->titleId));
 		// 	psf::assign(sfo, "TITLE", psf::string(CELL_GAME_SYSP_TITLE_SIZE, setParam->title));
 		// 	psf::assign(sfo, "VERSION", psf::string(CELL_GAME_SYSP_VERSION_SIZE, setParam->dataVersion));
 		// 	psf::assign(sfo, "PARENTAL_LEVEL", +setParam->parentalLevel);
@@ -509,7 +670,7 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 		*attributes = 0; // TODO
 		// TODO: dirName might be a read only string when BootCheck is called on a disc game. (e.g. Ben 10 Ultimate Alien: Cosmic Destruction)
 
-		sfo = psf::load_object(fs::file(vfs::get("/dev_bdvd/PS3_GAME/PARAM.SFO")));
+		sfo = psf::load_object(vfs::get("/dev_bdvd/PS3_GAME/PARAM.SFO"));
 	}
 	else if (cat == "GD")
 	{
@@ -518,7 +679,7 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 		*type = CELL_GAME_GAMETYPE_DISC;
 		*attributes = CELL_GAME_ATTRIBUTE_PATCH; // TODO
 
-		sfo = psf::load_object(fs::file(vfs::get(Emu.GetDir() + "PARAM.SFO")));
+		sfo = psf::load_object(vfs::get(Emu.GetDir() + "PARAM.SFO"));
 	}
 	else
 	{
@@ -527,7 +688,7 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 		*type = CELL_GAME_GAMETYPE_HDD;
 		*attributes = 0; // TODO
 
-		sfo = psf::load_object(fs::file(vfs::get(Emu.GetDir() + "PARAM.SFO")));
+		sfo = psf::load_object(vfs::get(Emu.GetDir() + "PARAM.SFO"));
 		dir = Emu.GetTitleID();
 	}
 
@@ -562,7 +723,7 @@ error_code cellGamePatchCheck(vm::ptr<CellGameContentSize> size, vm::ptr<void> r
 		return CELL_GAME_ERROR_NOTPATCH;
 	}
 
-	psf::registry sfo = psf::load_object(fs::file(vfs::get(Emu.GetDir() + "PARAM.SFO")));
+	psf::registry sfo = psf::load_object(vfs::get(Emu.GetDir() + "PARAM.SFO"));
 
 	auto& perm = g_fxo->get<content_permission>();
 
@@ -758,9 +919,13 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 
 	const std::string usrdir = dir + "/USRDIR";
 
-	vm::var<CellGameDataCBResult> cbResult;
-	vm::var<CellGameDataStatGet> cbGet;
-	vm::var<CellGameDataStatSet> cbSet;
+	auto& cbResult = g_cb_result;
+	auto& cbGet = g_stat_get;
+	auto& cbSet = g_stat_set;
+
+	std::memset(cbGet.get_ptr(), 0, sizeof(*cbGet));
+	std::memset(cbSet.get_ptr(), 0, sizeof(*cbSet));
+	std::memset(cbResult.get_ptr(), 0, sizeof(*cbResult));
 
 	cbGet->isNewData = new_data;
 
@@ -825,7 +990,7 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 				psf::assign(sfo, "CATEGORY", psf::string(3, "GD"));
 			}
 
-			psf::assign(sfo, "TITLE_ID", psf::string(CELL_GAME_SYSP_TITLEID_SIZE, setParam->titleId));
+			psf::assign(sfo, "TITLE_ID", psf::string(TITLEID_SFO_ENTRY_SIZE, setParam->titleId, true));
 			psf::assign(sfo, "TITLE", psf::string(CELL_GAME_SYSP_TITLE_SIZE, setParam->title));
 			psf::assign(sfo, "VERSION", psf::string(CELL_GAME_SYSP_VERSION_SIZE, setParam->dataVersion));
 			psf::assign(sfo, "PARENTAL_LEVEL", +setParam->parentalLevel);
@@ -838,6 +1003,14 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 				}
 
 				psf::assign(sfo, fmt::format("TITLE_%02d", i), psf::string(CELL_GAME_SYSP_TITLE_SIZE, setParam->titleLang[i]));
+			}
+
+			if (!psf::check_registry(sfo))
+			{
+				// This results in CELL_OK, broken SFO and CELL_GAMEDATA_ERROR_BROKEN on the next load
+				// Avoid creation for now
+				cellGame.error("Broken SFO paramters: %s", sfo);
+				return CELL_OK;
 			}
 
 			fs::pending_file temp(vfs::get(dir + "/PARAM.SFO"));
@@ -960,7 +1133,7 @@ error_code cellGameCreateGameData(vm::ptr<CellGameSetInitParams> init, vm::ptr<c
 	perm.sfo =
 	{
 		{ "CATEGORY", psf::string(3, "GD") },
-		{ "TITLE_ID", psf::string(CELL_GAME_SYSP_TITLEID_SIZE, init->titleId) },
+		{ "TITLE_ID", psf::string(TITLEID_SFO_ENTRY_SIZE, init->titleId) },
 		{ "TITLE", psf::string(CELL_GAME_SYSP_TITLE_SIZE, init->title) },
 		{ "VERSION", psf::string(CELL_GAME_SYSP_VERSION_SIZE, init->version) },
 	};
@@ -1366,7 +1539,8 @@ error_code cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, vm::cptr<char
 			return CELL_GAME_ERROR_PARAM;
 		}
 
-		error_msg += "\n" + get_localized_string(localized_string_id::CELL_GAME_ERROR_DIR_NAME, fmt::format("%s", dirName).c_str());
+		error_msg += '\n';
+		error_msg += get_localized_string(localized_string_id::CELL_GAME_ERROR_DIR_NAME, fmt::format("%s", dirName).c_str());
 	}
 
 	return open_exit_dialog(error_msg, type > CELL_GAME_ERRDIALOG_NOSPACE);
@@ -1381,16 +1555,142 @@ error_code cellGameThemeInstall(vm::cptr<char> usrdirPath, vm::cptr<char> fileNa
 		return CELL_GAME_ERROR_PARAM;
 	}
 
+	const std::string src_path = vfs::get(fmt::format("%s/%s", usrdirPath, fileName));
+
+	// Use hash to get a hopefully unique filename
+	std::string hash;
+
+	if (fs::file theme = fs::file(src_path))
+	{
+		u32 magic{};
+
+		if (src_path.ends_with(".p3t") || !theme.read(magic) || magic != "P3TF"_u32)
+		{
+			return CELL_GAME_ERROR_INVALID_THEME_FILE;
+		}
+
+		hash = sha256_get_hash(theme.to_string().c_str(), theme.size(), true);
+	}
+	else
+	{
+		return CELL_GAME_ERROR_NOTFOUND;
+	}
+
+	const std::string dst_path = vfs::get(fmt::format("/dev_hdd0/theme/%s_%s.p3t", Emu.GetTitleID(), hash)); // TODO: this is renamed with some other scheme
+
+	if (fs::is_file(dst_path))
+	{
+		cellGame.notice("cellGameThemeInstall: theme already installed: '%s'", dst_path);
+	}
+	else
+	{
+		cellGame.notice("cellGameThemeInstall: copying theme from '%s' to '%s'", src_path, dst_path);
+
+		if (!fs::copy_file(src_path, dst_path, false)) // TODO: new file is write protected
+		{
+			cellGame.error("cellGameThemeInstall: failed to copy theme from '%s' to '%s' (error=%s)", src_path, dst_path, fs::g_tls_error);
+			return CELL_GAME_ERROR_ACCESS_ERROR;
+		}
+	}
+
+	if (false && !fs::remove_file(src_path)) // TODO: disabled for now
+	{
+		cellGame.error("cellGameThemeInstall: failed to remove source theme from '%s' (error=%s)", src_path, fs::g_tls_error);
+	}
+
+	if (option == CELL_GAME_THEME_OPTION_APPLY)
+	{
+		// TODO: apply new theme
+	}
+
 	return CELL_OK;
 }
 
-error_code cellGameThemeInstallFromBuffer(u32 fileSize, u32 bufSize, vm::ptr<void> buf, vm::ptr<CellGameThemeInstallCallback> func, u32 option)
+error_code cellGameThemeInstallFromBuffer(ppu_thread& ppu, u32 fileSize, u32 bufSize, vm::ptr<void> buf, vm::ptr<CellGameThemeInstallCallback> func, u32 option)
 {
 	cellGame.todo("cellGameThemeInstallFromBuffer(fileSize=%d, bufSize=%d, buf=*0x%x, func=*0x%x, option=0x%x)", fileSize, bufSize, buf, func, option);
 
-	if (!buf || !fileSize || (fileSize > bufSize && !func) || bufSize <= 4095 || option > CELL_GAME_THEME_OPTION_APPLY)
+	if (!buf || !fileSize || (fileSize > bufSize && !func) || bufSize < CELL_GAME_THEMEINSTALL_BUFSIZE_MIN || option > CELL_GAME_THEME_OPTION_APPLY)
 	{
 		return CELL_GAME_ERROR_PARAM;
+	}
+
+	const std::string hash = sha256_get_hash(reinterpret_cast<char*>(buf.get_ptr()), fileSize, true);
+	const std::string dst_path = vfs::get(fmt::format("/dev_hdd0/theme/%s_%s.p3t", Emu.GetTitleID(), hash)); // TODO: this is renamed with some scheme
+
+	if (fs::file theme = fs::file(dst_path, fs::write_new + fs::isfile)) // TODO: new file is write protected
+	{
+		const u32 magic = *reinterpret_cast<u32*>(buf.get_ptr());
+
+		if (magic != "P3TF"_u32)
+		{
+			return CELL_GAME_ERROR_INVALID_THEME_FILE;
+		}
+
+		if (func && bufSize < fileSize)
+		{
+			cellGame.notice("cellGameThemeInstallFromBuffer: writing theme with func callback to '%s'", dst_path);
+
+			for (u32 file_offset = 0; file_offset < fileSize;)
+			{
+				const u32 read_size = std::min(bufSize, fileSize - file_offset);
+				cellGame.notice("cellGameThemeInstallFromBuffer: writing %d bytes at pos %d", read_size, file_offset);
+
+				if (theme.write(reinterpret_cast<u8*>(buf.get_ptr()) + file_offset, read_size) != read_size)
+				{
+					cellGame.error("cellGameThemeInstallFromBuffer: failed to write to destination file '%s' (error=%s)", dst_path, fs::g_tls_error);
+
+					if (fs::g_tls_error == fs::error::nospace)
+					{
+						return CELL_GAME_ERROR_NOSPACE;
+					}
+
+					return CELL_GAME_ERROR_ACCESS_ERROR;
+				}
+
+				file_offset += read_size;
+
+				// Report status with callback
+				cellGame.notice("cellGameThemeInstallFromBuffer: func(fileOffset=%d, readSize=%d, buf=0x%x)", file_offset, read_size, buf);
+				const s32 result = func(ppu, file_offset, read_size, buf);
+
+				if (result == CELL_GAME_RET_CANCEL) // same as CELL_GAME_CBRESULT_CANCEL
+				{
+					cellGame.notice("cellGameThemeInstallFromBuffer: theme installation was cancelled");
+					return not_an_error(CELL_GAME_RET_CANCEL);
+				}
+			}
+		}
+		else
+		{
+			cellGame.notice("cellGameThemeInstallFromBuffer: writing theme to '%s'", dst_path);
+
+			if (theme.write(buf.get_ptr(), fileSize) != fileSize)
+			{
+				cellGame.error("cellGameThemeInstallFromBuffer: failed to write to destination file '%s' (error=%s)", dst_path, fs::g_tls_error);
+
+				if (fs::g_tls_error == fs::error::nospace)
+				{
+					return CELL_GAME_ERROR_NOSPACE;
+				}
+
+				return CELL_GAME_ERROR_ACCESS_ERROR;
+			}
+		}
+	}
+	else if (fs::g_tls_error == fs::error::exist) // Do not overwrite files, but continue.
+	{
+		cellGame.notice("cellGameThemeInstallFromBuffer: theme already installed: '%s'", dst_path);
+	}
+	else
+	{
+		cellGame.error("cellGameThemeInstallFromBuffer: failed to open destination file '%s' (error=%s)", dst_path, fs::g_tls_error);
+		return CELL_GAME_ERROR_ACCESS_ERROR;
+	}
+
+	if (option == CELL_GAME_THEME_OPTION_APPLY)
+	{
+		// TODO: apply new theme
 	}
 
 	return CELL_OK;
@@ -1406,7 +1706,7 @@ error_code cellDiscGameGetBootDiscInfo(vm::ptr<CellDiscGameSystemFileParam> getP
 	}
 
 	// Always sets 0 at first dword
-	*utils::bless<nse_t<u32, 1>>(getParam->titleId + 0) = 0;
+	write_to_ptr<u32>(getParam->titleId, 0);
 
 	// This is also called by non-disc games, see NPUB90029
 	static const std::string dir = "/dev_bdvd/PS3_GAME"s;
@@ -1416,40 +1716,40 @@ error_code cellDiscGameGetBootDiscInfo(vm::ptr<CellDiscGameSystemFileParam> getP
 		return CELL_DISCGAME_ERROR_NOT_DISCBOOT;
 	}
 
-	const psf::registry psf = psf::load_object(fs::file(vfs::get(dir + "/PARAM.SFO")));
+	const psf::registry psf = psf::load_object(vfs::get(dir + "/PARAM.SFO"));
 
-	if (psf.contains("PARENTAL_LEVEL")) getParam->parentalLevel = psf.at("PARENTAL_LEVEL").as_integer();
-	if (psf.contains("TITLE_ID")) strcpy_trunc(getParam->titleId, psf.at("TITLE_ID").as_string());
+	if (psf.contains("PARENTAL_LEVEL")) getParam->parentalLevel = ::at32(psf, "PARENTAL_LEVEL").as_integer();
+	if (psf.contains("TITLE_ID")) strcpy_trunc(getParam->titleId, ::at32(psf, "TITLE_ID").as_string());
 
 	return CELL_OK;
 }
 
 error_code cellDiscGameRegisterDiscChangeCallback(vm::ptr<CellDiscGameDiscEjectCallback> funcEject, vm::ptr<CellDiscGameDiscInsertCallback> funcInsert)
 {
-	cellGame.todo("cellDiscGameRegisterDiscChangeCallback(funcEject=*0x%x, funcInsert=*0x%x)", funcEject, funcInsert);
+	cellGame.warning("cellDiscGameRegisterDiscChangeCallback(funcEject=*0x%x, funcInsert=*0x%x)", funcEject, funcInsert);
 
-	return CELL_OK;
+	return g_fxo->get<disc_change_manager>().register_callbacks(funcEject, funcInsert);
 }
 
 error_code cellDiscGameUnregisterDiscChangeCallback()
 {
-	cellGame.todo("cellDiscGameUnregisterDiscChangeCallback()");
+	cellGame.warning("cellDiscGameUnregisterDiscChangeCallback()");
 
-	return CELL_OK;
+	return g_fxo->get<disc_change_manager>().unregister_callbacks();
 }
 
 error_code cellGameRegisterDiscChangeCallback(vm::ptr<CellGameDiscEjectCallback> funcEject, vm::ptr<CellGameDiscInsertCallback> funcInsert)
 {
-	cellGame.todo("cellGameRegisterDiscChangeCallback(funcEject=*0x%x, funcInsert=*0x%x)", funcEject, funcInsert);
+	cellGame.warning("cellGameRegisterDiscChangeCallback(funcEject=*0x%x, funcInsert=*0x%x)", funcEject, funcInsert);
 
-	return CELL_OK;
+	return g_fxo->get<disc_change_manager>().register_callbacks(funcEject, funcInsert);
 }
 
 error_code cellGameUnregisterDiscChangeCallback()
 {
-	cellGame.todo("cellGameUnregisterDiscChangeCallback()");
+	cellGame.warning("cellGameUnregisterDiscChangeCallback()");
 
-	return CELL_OK;
+	return g_fxo->get<disc_change_manager>().unregister_callbacks();
 }
 
 void cellSysutil_GameData_init()
@@ -1495,4 +1795,9 @@ DECLARE(ppu_module_manager::cellGame)("cellGame", []()
 
 	REG_FUNC(cellGame, cellGameThemeInstall);
 	REG_FUNC(cellGame, cellGameThemeInstallFromBuffer);
+
+	REG_VAR(cellGame, g_stat_get).flag(MFF_HIDDEN);
+	REG_VAR(cellGame, g_stat_set).flag(MFF_HIDDEN);
+	REG_VAR(cellGame, g_file_param).flag(MFF_HIDDEN);
+	REG_VAR(cellGame, g_cb_result).flag(MFF_HIDDEN);
 });

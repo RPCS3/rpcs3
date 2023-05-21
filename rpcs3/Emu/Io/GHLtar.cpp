@@ -32,12 +32,12 @@ void usb_device_ghltar::control_transfer(u8 bmRequestType, u8 bRequest, u16 wVal
 		case 0x21:
 			switch (bRequest)
 			{
-				case 0x09:
-					// Do nothing here - not sure what it should do.
-					break;
-				default:
-					ghltar_log.error("Unhandled Query Type: 0x%02X", buf[0]);
-					break;
+			case 0x09:
+				// Do nothing here - not sure what it should do.
+				break;
+			default:
+				ghltar_log.error("Unhandled Query: buf_size=0x%02X, Type=0x%02X, bRequest=0x%02X, bmRequestType=0x%02X", buf_size, (buf_size > 0) ? buf[0] : -1, bRequest, bmRequestType);
+				break;
 			}
 			break;
 		default:
@@ -46,14 +46,18 @@ void usb_device_ghltar::control_transfer(u8 bmRequestType, u8 bRequest, u16 wVal
 	}
 }
 
+extern bool is_input_allowed();
+
 void usb_device_ghltar::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint*/, UsbTransfer* transfer)
 {
+	ensure(buf_size >= 27);
+
 	transfer->fake            = true;
 	transfer->expected_count  = buf_size;
 	transfer->expected_result = HC_CC_NOERR;
 	// Interrupt transfers are slow(6ms, TODO accurate measurement)
-	// But make the emulated guitar go as fast as possible for better input behavior
-	transfer->expected_time = get_timestamp();
+	// But make the emulated guitar reply in 1ms for better input behavior
+	transfer->expected_time = get_timestamp() + 1'000;
 
 	memset(buf, 0, buf_size);
 
@@ -98,101 +102,80 @@ void usb_device_ghltar::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint
 	// buf[7] through buf[18] are always 0x00
 	// buf[21]/[23]/[25] are also always 0x00
 
+	if (!is_input_allowed())
+	{
+		return;
+	}
+
 	std::lock_guard lock(pad::g_pad_mutex);
 	const auto handler = pad::get_current_handler();
-	const auto& pad    = handler->GetPads()[m_controller_index];
+	const auto& pad    = ::at32(handler->GetPads(), m_controller_index);
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
-		return;
-
-	for (Button& button : pad->m_buttons)
 	{
+		return;
+	}
+
+	for (const Button& button : pad->m_buttons)
+	{
+		if (!button.m_pressed)
+		{
+			continue;
+		}
+
 		if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL2)
 		{
-			if (button.m_pressed)
-				pad->m_digital_2 |= button.m_outKeyCode;
-			else
-				pad->m_digital_2 &= ~button.m_outKeyCode;
-
 			switch (button.m_outKeyCode)
 			{
-				case CELL_PAD_CTRL_SQUARE:
-					pad->m_press_square = button.m_value;
-					if (button.m_pressed)
-						buf[0] += 0x01; // W1
-					break;
-				case CELL_PAD_CTRL_CROSS:
-					pad->m_press_cross = button.m_value;
-					if (button.m_pressed)
-						buf[0] += 0x02; // B1
-					break;
-				case CELL_PAD_CTRL_CIRCLE:
-					pad->m_press_circle = button.m_value;
-					if (button.m_pressed)
-						buf[0] += 0x04; // B2
-					break;
-				case CELL_PAD_CTRL_TRIANGLE:
-					pad->m_press_triangle = button.m_value;
-					if (button.m_pressed)
-						buf[0] += 0x08; // B3
-					break;
-				case CELL_PAD_CTRL_R1:
-					pad->m_press_R1 = button.m_value;
-					if (button.m_pressed)
-						buf[0] += 0x20; // W3
-					break;
-				case CELL_PAD_CTRL_L1:
-					pad->m_press_L1 = button.m_value;
-					if (button.m_pressed)
-						buf[0] += 0x10; // W2
-					break;
-				default:
-					break;
+			case CELL_PAD_CTRL_SQUARE:
+				buf[0] += 0x01; // W1
+				break;
+			case CELL_PAD_CTRL_CROSS:
+				buf[0] += 0x02; // B1
+				break;
+			case CELL_PAD_CTRL_CIRCLE:
+				buf[0] += 0x04; // B2
+				break;
+			case CELL_PAD_CTRL_TRIANGLE:
+				buf[0] += 0x08; // B3
+				break;
+			case CELL_PAD_CTRL_R1:
+				buf[0] += 0x20; // W3
+				break;
+			case CELL_PAD_CTRL_L1:
+				buf[0] += 0x10; // W2
+				break;
+			default:
+				break;
 			}
 		}
 		else if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL1)
 		{
-			if (button.m_pressed)
-				pad->m_digital_1 |= button.m_outKeyCode;
-			else
-				pad->m_digital_1 &= ~button.m_outKeyCode;
-
 			switch (button.m_outKeyCode)
 			{
-				case CELL_PAD_CTRL_DOWN:
-					pad->m_press_down = button.m_value;
-					if (button.m_pressed)
-						buf[4] = 0xFF; // Strum Down
-					break;
-				case CELL_PAD_CTRL_UP:
-					pad->m_press_up = button.m_value;
-					if (button.m_pressed)
-						buf[4] = 0x00; // Strum Up
-					break;
-				case CELL_PAD_CTRL_LEFT:
-					pad->m_press_down = button.m_value;
-					if (button.m_pressed)
-						buf[2] = 0x02; // Left D-Pad (Unused)
-					break;
-				case CELL_PAD_CTRL_RIGHT:
-					pad->m_press_up = button.m_value;
-					if (button.m_pressed)
-						buf[2] = 0x06; // Right D-Pad (Unused)
-					break;
-				case CELL_PAD_CTRL_START:
-					if (button.m_pressed)
-						buf[1] += 0x02; // Pause
-					break;
-				case CELL_PAD_CTRL_SELECT:
-					if (button.m_pressed)
-						buf[1] += 0x01; // Hero Power
-					break;
-				case CELL_PAD_CTRL_L3:
-					if (button.m_pressed)
-						buf[1] += 0x04; // GHTV Button
-					break;
-				default:
-					break;
+			case CELL_PAD_CTRL_DOWN:
+				buf[4] = 0xFF; // Strum Down
+				break;
+			case CELL_PAD_CTRL_UP:
+				buf[4] = 0x00; // Strum Up
+				break;
+			case CELL_PAD_CTRL_LEFT:
+				buf[2] = 0x02; // Left D-Pad (Unused)
+				break;
+			case CELL_PAD_CTRL_RIGHT:
+				buf[2] = 0x06; // Right D-Pad (Unused)
+				break;
+			case CELL_PAD_CTRL_START:
+				buf[1] += 0x02; // Pause
+				break;
+			case CELL_PAD_CTRL_SELECT:
+				buf[1] += 0x01; // Hero Power
+				break;
+			case CELL_PAD_CTRL_L3:
+				buf[1] += 0x04; // GHTV Button
+				break;
+			default:
+				break;
 			}
 		}
 	}
@@ -200,20 +183,18 @@ void usb_device_ghltar::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint
 	{
 		switch (stick.m_offset)
 		{
-			case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y:
-				buf[6]                = ~(stick.m_value) + 0x01; // Whammy
-				pad->m_analog_right_x = stick.m_value;
-				break;
-			case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X:
-				buf[19] = static_cast<u8>(stick.m_value); // Tilt
-				if (buf[19] >= 0xF0)
-					buf[5] = 0xFF;
-				if (buf[19] <= 0x10)
-					buf[5] = 0x00;
-				pad->m_analog_right_y = stick.m_value;
-				break;
-			default:
-				break;
+		case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y:
+			buf[6] = ~(stick.m_value) + 0x01; // Whammy
+			break;
+		case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X:
+			buf[19] = static_cast<u8>(stick.m_value); // Tilt
+			if (buf[19] >= 0xF0)
+				buf[5] = 0xFF;
+			if (buf[19] <= 0x10)
+				buf[5] = 0x00;
+			break;
+		default:
+			break;
 		}
 	}
 }

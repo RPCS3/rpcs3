@@ -208,6 +208,7 @@ void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 	properties2.emulate_zclip_transform = true;
 	properties2.emulate_depth_clip_only = vk::g_render_device->get_shader_types_support().allow_float64;
 	properties2.low_precision_tests = vk::get_driver_vendor() == vk::driver_vendor::NVIDIA;
+	properties2.require_explicit_invariance = (vk::get_driver_vendor() == vk::driver_vendor::NVIDIA && g_cfg.video.shader_precision != gpu_preset_level::low);
 
 	glsl::insert_glsl_legacy_function(OS, properties2);
 	glsl::insert_vertex_input_fetch(OS, glsl::glsl_rules_spirv);

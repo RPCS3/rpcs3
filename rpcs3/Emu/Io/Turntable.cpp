@@ -32,12 +32,12 @@ void usb_device_turntable::control_transfer(u8 bmRequestType, u8 bRequest, u16 w
 		case 0x21:
 			switch (bRequest)
 			{
-				case 0x09:
-					// Do nothing here - not sure what it should do.
-					break;
-				default:
-					turntable_log.error("Unhandled Query Type: 0x%02X", buf[0]);
-					break;
+			case 0x09:
+				// Do nothing here - not sure what it should do.
+				break;
+			default:
+				turntable_log.error("Unhandled Query: buf_size=0x%02X, Type=0x%02X, bRequest=0x%02X, bmRequestType=0x%02X", buf_size, (buf_size > 0) ? buf[0] : -1, bRequest, bmRequestType);
+				break;
 			}
 			break;
 		default:
@@ -48,12 +48,14 @@ void usb_device_turntable::control_transfer(u8 bmRequestType, u8 bRequest, u16 w
 
 void usb_device_turntable::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint*/, UsbTransfer* transfer)
 {
+	ensure(buf_size >= 27);
+
 	transfer->fake            = true;
 	transfer->expected_count  = buf_size;
 	transfer->expected_result = HC_CC_NOERR;
 	// Turntable runs at 100hz --> 10ms
-	// But make the emulated table go as fast as possible for better input behavior
-	transfer->expected_time = get_timestamp();
+	// But make the emulated table go at 1ms for better input behavior
+	transfer->expected_time = get_timestamp() + 1'000;
 
 	memset(buf, 0, buf_size);
 
@@ -248,16 +250,17 @@ void usb_device_turntable::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpo
 		switch (stick.m_offset)
 		{
 			case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y:
-				buf[6] = ~(stick.m_value) + 0x01; // Right Turntable
-				// Some pad handlers like MMJoystick are centered at 0x81 instead of 0x80
-				// which leaves the turntable stuck at 0x7F instead of 0x80, causing auto-scrolling menus
-				// so force 0x7F to 0x80.
-				if (buf[6] == 0x7F)
-					buf[6] = 0x80;
+				buf[6] = 255 - stick.m_value; // Right Turntable
+				// DJ Hero requires turntables to be centered at 128.
+				// If this axis ends up centered at 127, force it to 128.
+				if (buf[6] == 127)
+				{
+					buf[6] = 128;
+				}
 				break;
 			case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y:
-				buf[21] = (stick.m_value & 0x3F) << 2; // Crossfader, lower 6 bits
-				buf[22] = (stick.m_value & 0xC0) >> 6; // Crossfader, upper 2 bits
+				buf[21] = ((255 - stick.m_value) & 0x3F) << 2; // Crossfader, lower 6 bits
+				buf[22] = ((255 - stick.m_value) & 0xC0) >> 6; // Crossfader, upper 2 bits
 				break;
 			case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X:
 				buf[19] = (stick.m_value & 0x3F) << 2; // Effects Dial, lower 6 bits

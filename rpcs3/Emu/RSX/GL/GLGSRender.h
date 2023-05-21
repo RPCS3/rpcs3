@@ -12,6 +12,8 @@
 #include <optional>
 #include <unordered_map>
 
+#include "glutils/ring_buffer.h"
+
 #ifdef _WIN32
 #pragma comment(lib, "opengl32.lib")
 #endif
@@ -68,8 +70,6 @@ namespace gl
 
 class GLGSRender : public GSRender, public ::rsx::reports::ZCULL_control
 {
-private:
-
 	gl::sampler_state m_fs_sampler_states[rsx::limits::fragment_textures_count];         // Fragment textures
 	gl::sampler_state m_fs_sampler_mirror_states[rsx::limits::fragment_textures_count];  // Alternate views of fragment textures with different format (e.g Depth vs Stencil for D24S8)
 	gl::sampler_state m_vs_sampler_states[rsx::limits::vertex_textures_count];           // Vertex textures
@@ -78,7 +78,7 @@ private:
 	const GLFragmentProgram *m_fragment_prog = nullptr;
 	const GLVertexProgram *m_vertex_prog = nullptr;
 
-	u32 m_interpreter_state = 0;
+	rsx::flags32_t m_interpreter_state = 0;
 	gl::shader_interpreter m_shader_interpreter;
 
 	gl_render_targets m_rtts;
@@ -144,7 +144,9 @@ private:
 
 public:
 	u64 get_cycles() final;
-	GLGSRender();
+
+	GLGSRender(utils::serial* ar) noexcept;
+	GLGSRender() noexcept : GLGSRender(nullptr) {}
 
 private:
 
@@ -191,7 +193,7 @@ protected:
 	void on_exit() override;
 	void flip(const rsx::display_flip_info_t& info) override;
 
-	void do_local_task(rsx::FIFO_state state) override;
+	void do_local_task(rsx::FIFO::state state) override;
 
 	bool on_access_violation(u32 address, bool is_writing) override;
 	void on_invalidate_memory_range(const utils::address_range &range, rsx::invalidation_cause cause) override;

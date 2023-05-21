@@ -290,7 +290,7 @@ namespace vk
 		MEMORY_BASIC_INFORMATION mem_info;
 		if (!::VirtualQuery(vm::get_super_ptr<const void>(base_address), &mem_info, sizeof(mem_info)))
 		{
-			rsx_log.error("VirtualQuery failed! LastError=0x%x", GetLastError());
+			rsx_log.error("VirtualQuery failed! LastError=%s", fmt::win_error{GetLastError(), nullptr});
 			return false;
 		}
 

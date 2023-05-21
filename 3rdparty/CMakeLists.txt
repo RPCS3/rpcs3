@@ -18,6 +18,11 @@ add_library(3rdparty_flatbuffers INTERFACE)
 if (USE_SYSTEM_FLATBUFFERS)
 	pkg_check_modules(FLATBUFFERS REQUIRED IMPORTED_TARGET flatbuffers>=2.0.0)
 	target_link_libraries(3rdparty_flatbuffers INTERFACE PkgConfig::FLATBUFFERS)
+	set(FBS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../rpcs3/Emu/NP/generated/")
+	execute_process(COMMAND flatc --cpp -o "${FBS_DIR}" "${FBS_DIR}/np2_structs.fbs" RESULT_VARIABLE FBS_CMD_ERROR)
+	if(FBS_CMD_ERROR AND NOT FBS_CMD_ERROR EQUAL 0)
+		message(FATAL_ERROR "flatc failed to regenerate flatbuffers headers.")
+	endif()
 else()
 	target_include_directories(3rdparty_flatbuffers INTERFACE flatbuffers/include)
 endif()
@@ -73,7 +78,7 @@ add_subdirectory(hidapi)
 
 # Vulkan
 add_subdirectory(glslang EXCLUDE_FROM_ALL)
-add_subdirectory(SPIRV EXCLUDE_FROM_ALL)
+#add_subdirectory(SPIRV EXCLUDE_FROM_ALL)
 
 
 # yaml-cpp
@@ -137,7 +142,7 @@ add_subdirectory(SoundTouch EXCLUDE_FROM_ALL)
 # libevdev
 set(LIBEVDEV_TARGET 3rdparty_dummy_lib)
 if(USE_LIBEVDEV)
-	pkg_check_modules(LIBEVDEV libevdev)
+	pkg_check_modules(LIBEVDEV libevdev libudev)
 	if(LIBEVDEV_FOUND)
 		add_library(3rdparty_libevdev INTERFACE)
 		target_compile_definitions(3rdparty_libevdev INTERFACE -DHAVE_LIBEVDEV)
@@ -160,10 +165,10 @@ if(USE_VULKAN)
 			message("-- RPCS3: MoltenVK submodule")
 
 			execute_process(COMMAND "${CMAKE_COMMAND}" -G "${CMAKE_GENERATOR}" .
-    				WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/MoltenVK"
+				WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/MoltenVK"
 			)
 			execute_process(COMMAND "${CMAKE_COMMAND}" --build .
-   	 			WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/MoltenVK"
+				WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/MoltenVK"
 			)
 
 			add_library(moltenvk_lib SHARED IMPORTED)
@@ -184,7 +189,7 @@ if(USE_VULKAN)
 	if(VULKAN_FOUND)
 		add_library(3rdparty_vulkan INTERFACE)
 		target_compile_definitions(3rdparty_vulkan INTERFACE -DHAVE_VULKAN)
-		target_link_libraries(3rdparty_vulkan INTERFACE SPIRV SPIRV-Tools-opt Vulkan::Vulkan)
+		target_link_libraries(3rdparty_vulkan INTERFACE SPIRV Vulkan::Vulkan)
 
 		if(UNIX AND NOT APPLE)
 			find_package(Wayland)
@@ -217,21 +222,28 @@ set(FAUDIO_TARGET 3rdparty_dummy_lib)
 if(USE_FAUDIO)
 	# FAudio depends on SDL2
 	find_package(SDL2)
-	if (NOT SDL2_FOUND OR SDL2_VERSION VERSION_LESS 2.0.12)
-		message(WARNING
-			"-- RPCS3: FAudio requires SDL 2.0.9 or newer. Please note, this warning"
-			"can also be displayed with SDL2 versions between 2.0.9-2.0.12, as the"
-			"CMake config files are not correctly installed. Since a valid SDL2"
-			">=2.0.9 version cannot be found, building with FAudio will be skipped.")
-		set(USE_FAUDIO False)
-	else()
-		if (USE_SYSTEM_FAUDIO)
+	if (USE_SYSTEM_FAUDIO)
+		if (NOT SDL2_FOUND OR SDL2_VERSION VERSION_LESS 2.0.12)
+			message(WARNING
+				"-- RPCS3: System FAudio requires SDL 2.0.9 or newer. Please note, this warning"
+				"can also be displayed with SDL2 versions between 2.0.9-2.0.12, as the"
+				"CMake config files are not correctly installed. Since a valid SDL2"
+				">=2.0.9 version cannot be found, building with FAudio will be skipped.")
+			set(USE_FAUDIO OFF CACHE BOOL "Disabled using system FAudio with SDL < 2.0.12" FORCE)
+		else()
 			message(STATUS "RPCS3: Using system FAudio")
 			find_package(FAudio REQUIRED CONFIGS FAudioConfig.cmake FAudio-config.cmake)
 			add_library(3rdparty_FAudio INTERFACE)
 			target_link_libraries(3rdparty_FAudio INTERFACE FAudio)
 			target_compile_definitions(3rdparty_FAudio INTERFACE -DHAVE_FAUDIO)
 			set(FAUDIO_TARGET 3rdparty_FAudio)
+		endif()
+	else()
+		if (NOT SDL2_FOUND OR SDL2_VERSION VERSION_LESS 2.24.0)
+			message(WARNING
+				"-- RPCS3: 3rdparty FAudio requires SDL 2.24.0 or newer. Since a valid SDL2"
+				">=2.24.0 version cannot be found, building with FAudio will be skipped.")
+			set(USE_FAUDIO OFF CACHE BOOL "Disabled FAudio with SDL < 2.24.0" FORCE)
 		else()
 			message(STATUS "RPCS3: Using builtin FAudio")
 			set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared library")
@@ -324,6 +336,36 @@ add_subdirectory(wolfssl EXCLUDE_FROM_ALL)
 # CURL
 add_subdirectory(curl EXCLUDE_FROM_ALL)
 
+# SDL2
+set(SDL2_TARGET 3rdparty_dummy_lib)
+if(USE_SDL)
+	if(USE_SYSTEM_SDL)
+		find_package(SDL2)
+		if(SDL2_FOUND AND NOT SDL2_VERSION VERSION_LESS 2.24.0)
+			message(STATUS "Using system SDL2")
+			add_library(3rdparty_sdl2 INTERFACE)
+			target_compile_definitions(3rdparty_sdl2 INTERFACE -DHAVE_SDL2=1)
+			target_include_directories(3rdparty_sdl2 INTERFACE ${SDL2_INCLUDE_DIRS})
+			target_link_libraries(3rdparty_sdl2 INTERFACE ${SDL2_LIBRARIES})
+			set(SDL2_TARGET 3rdparty_sdl2)
+		else()
+			message(FATAL_ERROR "SDL2 is not available on this system")
+		endif()
+	else()
+		message(STATUS "Using static SDL2 from 3rdparty")
+		add_library(3rdparty_sdl2 INTERFACE)
+		target_compile_definitions(3rdparty_sdl2 INTERFACE -DHAVE_SDL2=1)
+		add_subdirectory(libsdl-org EXCLUDE_FROM_ALL)
+		set(SDL2_TARGET 3rdparty_sdl2)
+	endif()
+endif()
+
+# MINIUPNP
+add_subdirectory(miniupnp EXCLUDE_FROM_ALL)
+
+# RTMIDI
+add_subdirectory(rtmidi EXCLUDE_FROM_ALL)
+
 # add nice ALIAS targets for ease of use
 if(USE_SYSTEM_LIBUSB)
 	add_library(3rdparty::libusb ALIAS usb-1.0-shared)
@@ -350,3 +392,6 @@ add_library(3rdparty::glew ALIAS 3rdparty_glew)
 add_library(3rdparty::wolfssl ALIAS wolfssl)
 add_library(3rdparty::libcurl ALIAS libcurl)
 add_library(3rdparty::soundtouch ALIAS soundtouch)
+add_library(3rdparty::sdl2 ALIAS ${SDL2_TARGET})
+add_library(3rdparty::miniupnpc ALIAS libminiupnpc-static)
+add_library(3rdparty::rtmidi ALIAS rtmidi)

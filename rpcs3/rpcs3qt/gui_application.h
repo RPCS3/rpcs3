@@ -1,6 +1,7 @@
 #pragma once
 
 #include "util/types.hpp"
+#include "util/atomic.hpp"
 
 #include <QApplication>
 #include <QElapsedTimer>
@@ -43,6 +44,16 @@ public:
 		m_with_cli_boot = with_cli_boot;
 	}
 
+	void SetStartGamesFullscreen(bool start_games_fullscreen = false)
+	{
+		m_start_games_fullscreen = start_games_fullscreen;
+	}
+
+	void SetGameScreenIndex(int screen_index = -1)
+	{
+		m_game_screen_index = screen_index;
+	}
+
 	/** Call this method before calling app.exec */
 	bool Init() override;
 
@@ -81,10 +92,11 @@ private:
 	bool m_show_gui = true;
 	bool m_use_cli_style = false;
 	bool m_with_cli_boot = false;
+	bool m_start_games_fullscreen = false;
+	int m_game_screen_index = -1;
 
 private Q_SLOTS:
 	void OnChangeStyleSheetRequest();
-	static void OnEmuSettingsChange();
 
 Q_SIGNALS:
 	void OnEmulatorRun(bool start_playtime);
@@ -92,9 +104,11 @@ Q_SIGNALS:
 	void OnEmulatorResume(bool start_playtime);
 	void OnEmulatorStop();
 	void OnEmulatorReady();
+	void OnEnableDiscEject(bool enabled);
+	void OnEnableDiscInsert(bool enabled);
 
-	void RequestCallFromMainThread(const std::function<void()>& func);
+	void RequestCallFromMainThread(std::function<void()> func, atomic_t<bool>* wake_up);
 
 private Q_SLOTS:
-	static void CallFromMainThread(const std::function<void()>& func);
+	static void CallFromMainThread(const std::function<void()>& func, atomic_t<bool>* wake_up);
 };

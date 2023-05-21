@@ -61,8 +61,9 @@ void fmt_class_string<QMediaPlayer::State>::format(std::string& out, u64 arg)
 	});
 }
 
-qt_music_error_handler::qt_music_error_handler(std::shared_ptr<QMediaPlayer> media_player)
+qt_music_error_handler::qt_music_error_handler(std::shared_ptr<QMediaPlayer> media_player, std::function<void(QMediaPlayer::MediaStatus)> status_callback)
 	: m_media_player(std::move(media_player))
+	, m_status_callback(std::move(status_callback))
 {
 	if (m_media_player)
 	{
@@ -79,6 +80,11 @@ qt_music_error_handler::~qt_music_error_handler()
 void qt_music_error_handler::handle_media_status(QMediaPlayer::MediaStatus status)
 {
 	music_log.notice("New media status: %s (status=%d)", status, static_cast<int>(status));
+
+	if (m_status_callback)
+	{
+		m_status_callback(status);
+	}
 }
 
 void qt_music_error_handler::handle_music_state(QMediaPlayer::State state)

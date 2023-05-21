@@ -29,13 +29,13 @@ struct CellRtcTick
 
 struct CellRtcDateTime
 {
-	be_t<u16> year;
-	be_t<u16> month;
-	be_t<u16> day;
-	be_t<u16> hour;
-	be_t<u16> minute;
-	be_t<u16> second;
-	be_t<u32> microsecond;
+	be_t<u16> year;        // 1 to 9999
+	be_t<u16> month;       // 1 to 12
+	be_t<u16> day;         // 1 to 31
+	be_t<u16> hour;        // 0 to 23
+	be_t<u16> minute;      // 0 to 59
+	be_t<u16> second;      // 0 to 59
+	be_t<u32> microsecond; // 0 to 999999
 };
 
 error_code cellRtcTickAddYears(vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTick> pTick1, s32 iAdd);

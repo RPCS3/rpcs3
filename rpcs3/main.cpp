@@ -3,8 +3,7 @@
 
 #include <iostream>
 #include <chrono>
-#include <sstream>
-#include <iomanip>
+#include <clocale>
 
 #include <QApplication>
 #include <QCommandLineParser>
@@ -24,13 +23,16 @@
 #include "rpcs3qt/fatal_error_dialog.h"
 #include "rpcs3qt/curl_handle.h"
 #include "rpcs3qt/main_window.h"
+#include "rpcs3qt/uuid.h"
 
 #include "headless_application.h"
 #include "Utilities/sema.h"
+#include "Utilities/date_time.h"
 #include "Crypto/decrypt_binaries.h"
 #ifdef _WIN32
-#include <windows.h>
+#include "module_verifier.hpp"
 #include "util/dyn_lib.hpp"
+
 
 // TODO(cjj19970505@live.cn)
 // When compiling with WIN32_LEAN_AND_MEAN definition
@@ -63,6 +65,7 @@ DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResoluti
 #include "Utilities/Thread.h"
 #include "Utilities/File.h"
 #include "Utilities/StrUtil.h"
+#include "util/media_utils.h"
 #include "rpcs3_version.h"
 #include "Emu/System.h"
 #include "Emu/system_utils.hpp"
@@ -70,6 +73,13 @@ DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResoluti
 #include <charconv>
 
 #include "util/sysinfo.hpp"
+
+// Let's initialize the locale first
+static const bool s_init_locale = []()
+{
+	std::setlocale(LC_ALL, "C");
+	return true;
+}();
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
@@ -79,7 +89,10 @@ static atomic_t<bool> s_headless = false;
 static atomic_t<bool> s_no_gui = false;
 static atomic_t<char*> s_argv0;
 
+std::string g_pad_profile_override;
+
 extern thread_local std::string(*g_tls_log_prefix)();
+extern thread_local std::string_view g_tls_serialize_name;
 
 #ifndef _WIN32
 extern char **environ;
@@ -88,18 +101,33 @@ extern char **environ;
 LOG_CHANNEL(sys_log, "SYS");
 LOG_CHANNEL(q_debug, "QDEBUG");
 
-[[noreturn]] extern void report_fatal_error(std::string_view _text)
+[[noreturn]] extern void report_fatal_error(std::string_view _text, bool is_html = false, bool include_help_text = true)
 {
+#ifdef __linux__
+	extern void jit_announce(uptr, usz, std::string_view);
+#endif
+
 	std::string buf;
 
 	// Check if thread id is in string
-	if (_text.find("\nThread id = "sv) == umax)
+	if (_text.find("\nThread id = "sv) == umax && !thread_ctrl::is_main())
 	{
 		// Copy only when needed
 		buf = std::string(_text);
 
-		// Always print thread id
-		fmt::append(buf, "\n\nThread id = %s.", std::this_thread::get_id());
+		// Append thread id if it isn't already, except on main thread
+		fmt::append(buf, "\n\nThread id = %u.", thread_ctrl::get_tid());
+	}
+
+	if (!g_tls_serialize_name.empty())
+	{
+		// Copy only when needed
+		if (!buf.empty())
+		{
+			buf = std::string(_text);
+		}
+
+		fmt::append(buf, "\nSerialized Object: %s", g_tls_serialize_name);
 	}
 
 	std::string_view text = buf.empty() ? _text : buf;
@@ -111,6 +139,9 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 			[[maybe_unused]] const auto con_out = freopen("conout$", "w", stderr);
 #endif
 		std::cerr << fmt::format("RPCS3: %s\n", text);
+#ifdef __linux__
+		jit_announce(0, 0, "");
+#endif
 		std::abort();
 	}
 
@@ -130,9 +161,9 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 		std::cerr << fmt::format("RPCS3: %s\n", text);
 	}
 
-	static auto show_report = [](std::string_view text)
+	static auto show_report = [is_html, include_help_text](std::string_view text)
 	{
-		fatal_error_dialog dlg(text);
+		fatal_error_dialog dlg(text, is_html, include_help_text);
 		dlg.exec();
 	};
 
@@ -194,6 +225,9 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 #endif
 	}
 
+#ifdef __linux__
+	jit_announce(0, 0, "");
+#endif
 	std::abort();
 }
 
@@ -250,21 +284,27 @@ constexpr auto arg_commit_db    = "get-commit-db";
 
 // Arguments that can be used with a gui application
 constexpr auto arg_no_gui       = "no-gui";
+constexpr auto arg_fullscreen   = "fullscreen"; // only useful with no-gui
+constexpr auto arg_gs_screen    = "game-screen";
 constexpr auto arg_high_dpi     = "hidpi";
 constexpr auto arg_rounding     = "dpi-rounding";
 constexpr auto arg_styles       = "styles";
 constexpr auto arg_style        = "style";
 constexpr auto arg_stylesheet   = "stylesheet";
 constexpr auto arg_config       = "config";
+constexpr auto arg_pad_profile  = "pad-profile"; // only useful with no-gui
 constexpr auto arg_q_debug      = "qDebug";
 constexpr auto arg_error        = "error";
 constexpr auto arg_updating     = "updating";
 constexpr auto arg_user_id      = "user-id";
 constexpr auto arg_installfw    = "installfw";
 constexpr auto arg_installpkg   = "installpkg";
+constexpr auto arg_savestate    = "savestate";
+constexpr auto arg_rsx_capture  = "rsx-capture";
 constexpr auto arg_timer        = "high-res-timer";
 constexpr auto arg_verbose_curl = "verbose-curl";
 constexpr auto arg_any_location = "allow-any-location";
+constexpr auto arg_codecs       = "codecs";
 
 int find_arg(std::string arg, int& argc, char* argv[])
 {
@@ -379,14 +419,17 @@ void log_q_debug(QtMsgType type, const QMessageLogContext& context, const QStrin
 template <>
 void fmt_class_string<std::chrono::sys_time<typename std::chrono::system_clock::duration>>::format(std::string& out, u64 arg)
 {
-	std::ostringstream ss;
 	const std::time_t dateTime = std::chrono::system_clock::to_time_t(get_object(arg));
- 	const std::tm tm = *std::localtime(&dateTime);
-	ss << std::put_time(&tm, "%Y-%m-%eT%H:%M:%S");
- 	out += ss.str();
+ 	out += date_time::fmt_time("%Y-%m-%eT%H:%M:%S", dateTime);
 }
 
-
+void run_platform_sanity_checks()
+{
+#ifdef _WIN32
+	// Check if we loaded modules correctly
+	WIN32_module_verifier::run();
+#endif
+}
 
 int main(int argc, char** argv)
 {
@@ -416,6 +459,9 @@ int main(int argc, char** argv)
 		report_fatal_error(error);
 	}
 
+	// Before we proceed, run some sanity checks
+	run_platform_sanity_checks();
+
 	const std::string lock_name = fs::get_cache_dir() + "RPCS3.buf";
 
 	static fs::file instance_lock;
@@ -435,7 +481,7 @@ int main(int argc, char** argv)
 		{
 			if (fs::exists(lock_name))
 			{
-				report_fatal_error("Another instance of RPCS3 is running. Close it or kill its process, if necessary.");
+				report_fatal_error("Another instance of RPCS3 is running.\nClose it or kill its process, if necessary.");
 			}
 
 			report_fatal_error("Cannot create RPCS3.log (access denied)."
@@ -456,8 +502,11 @@ int main(int argc, char** argv)
 		report_fatal_error("Not enough memory for RPCS3 process.");
 	}
 
-	WSADATA wsa_data;
-	WSAStartup(MAKEWORD(2, 2), &wsa_data);
+	WSADATA wsa_data{};
+	if (const int res = WSAStartup(MAKEWORD(2, 2), &wsa_data); res != 0)
+	{
+		report_fatal_error(fmt::format("WSAStartup failed (error=%s)", fmt::win_error{static_cast<unsigned long>(res), nullptr}));
+	}
 #endif
 
 	ensure(thread_ctrl::is_main(), "Not main thread");
@@ -474,7 +523,7 @@ int main(int argc, char** argv)
 		fs::device_stat stats{};
 		if (!fs::statfs(fs::get_cache_dir(), stats) || stats.avail_free < 128 * 1024 * 1024)
 		{
-			report_fatal_error(fmt::format("Not enough free space (%f KB)", stats.avail_free / 1000000.));
+			std::fprintf(stderr, "Not enough free space for logs (%f KB)", stats.avail_free / 1000000.);
 		}
 
 		// Limit log size to ~25% of free space
@@ -516,7 +565,7 @@ int main(int argc, char** argv)
 	std::string argument_str;
 	for (int i = 0; i < argc; i++)
 	{
-		argument_str += "'" + std::string(argv[i]) + "'";
+		argument_str += '\'' + std::string(argv[i]) + '\'';
 		if (i != argc - 1) argument_str += " ";
 	}
 	sys_log.notice("argc: %d, argv: %s", argc, argument_str);
@@ -586,6 +635,9 @@ int main(int argc, char** argv)
 	const QCommandLineOption version_option = parser.addVersionOption();
 	parser.addOption(QCommandLineOption(arg_headless, "Run RPCS3 in headless mode."));
 	parser.addOption(QCommandLineOption(arg_no_gui, "Run RPCS3 without its GUI."));
+	parser.addOption(QCommandLineOption(arg_fullscreen, "Run games in fullscreen mode. Only used when no-gui is set."));
+	const QCommandLineOption screen_option(arg_gs_screen, "Forces the emulator to use the specified screen for the game window.", "index", "");
+	parser.addOption(screen_option);
 	parser.addOption(QCommandLineOption(arg_high_dpi, "Enables Qt High Dpi Scaling.", "enabled", "1"));
 	parser.addOption(QCommandLineOption(arg_rounding, "Sets the Qt::HighDpiScaleFactorRoundingPolicy for values like 150% zoom.", "rounding", "4"));
 	parser.addOption(QCommandLineOption(arg_styles, "Lists the available styles."));
@@ -593,6 +645,8 @@ int main(int argc, char** argv)
 	parser.addOption(QCommandLineOption(arg_stylesheet, "Loads a custom stylesheet.", "path", ""));
 	const QCommandLineOption config_option(arg_config, "Forces the emulator to use this configuration file for CLI-booted game.", "path", "");
 	parser.addOption(config_option);
+	const QCommandLineOption pad_profile_option(arg_pad_profile, "Forces the emulator to use this pad profile file for CLI-booted game.", "name", "");
+	parser.addOption(pad_profile_option);
 	const QCommandLineOption installfw_option(arg_installfw, "Forces the emulator to install this firmware file.", "path", "");
 	parser.addOption(installfw_option);
 	const QCommandLineOption installpkg_option(arg_installpkg, "Forces the emulator to install this pkg file.", "path", "");
@@ -601,6 +655,10 @@ int main(int argc, char** argv)
 	parser.addOption(decrypt_option);
 	const QCommandLineOption user_id_option(arg_user_id, "Start RPCS3 as this user.", "user id", "");
 	parser.addOption(user_id_option);
+	const QCommandLineOption savestate_option(arg_savestate, "Path for directly loading a savestate.", "path", "");
+	parser.addOption(savestate_option);
+	const QCommandLineOption rsx_capture_option(arg_rsx_capture, "Path for directly loading an rsx capture.", "path", "");
+	parser.addOption(rsx_capture_option);
 	parser.addOption(QCommandLineOption(arg_q_debug, "Log qDebug to RPCS3.log."));
 	parser.addOption(QCommandLineOption(arg_error, "For internal usage."));
 	parser.addOption(QCommandLineOption(arg_updating, "For internal usage."));
@@ -608,11 +666,35 @@ int main(int argc, char** argv)
 	parser.addOption(QCommandLineOption(arg_timer, "Enable high resolution timer for better performance (windows)", "enabled", "1"));
 	parser.addOption(QCommandLineOption(arg_verbose_curl, "Enable verbose curl logging."));
 	parser.addOption(QCommandLineOption(arg_any_location, "Allow RPCS3 to be run from any location. Dangerous"));
+	const QCommandLineOption codec_option(arg_codecs, "List ffmpeg codecs");
+	parser.addOption(codec_option);
 	parser.process(app->arguments());
 
 	// Don't start up the full rpcs3 gui if we just want the version or help.
 	if (parser.isSet(version_option) || parser.isSet(help_option))
 		return 0;
+
+	if (parser.isSet(codec_option))
+	{
+#ifdef _WIN32
+		if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole())
+		{
+			[[maybe_unused]] const auto con_out = freopen("CONOUT$", "w", stdout);
+			[[maybe_unused]] const auto con_err = freopen("CONOUT$", "w", stderr);
+		}
+#endif
+		for (const utils::ffmpeg_codec& codec : utils::list_ffmpeg_decoders())
+		{
+			fprintf(stdout, "Found ffmpeg decoder: %s (%d, %s)\n", codec.name.c_str(), codec.codec_id, codec.long_name.c_str());
+			sys_log.success("Found ffmpeg decoder: %s (%d, %s)", codec.name, codec.codec_id, codec.long_name);
+		}
+		for (const utils::ffmpeg_codec& codec : utils::list_ffmpeg_encoders())
+		{
+			fprintf(stdout, "Found ffmpeg encoder: %s (%d, %s)\n", codec.name.c_str(), codec.codec_id, codec.long_name.c_str());
+			sys_log.success("Found ffmpeg encoder: %s (%d, %s)", codec.name, codec.codec_id, codec.long_name);
+		}
+		return 0;
+	}
 
 	// Set curl to verbose if needed
 	rpcs3::curl::g_curl_verbose = parser.isSet(arg_verbose_curl);
@@ -869,6 +951,9 @@ int main(int argc, char** argv)
 		return 0;
 	}
 
+	// Log unique ID
+	gui::utils::log_uuid();
+
 	std::string active_user;
 
 	if (parser.isSet(arg_user_id))
@@ -883,7 +968,7 @@ int main(int argc, char** argv)
 
 	s_no_gui = parser.isSet(arg_no_gui);
 
-	if (auto gui_app = qobject_cast<gui_application*>(app.data()))
+	if (gui_application* gui_app = qobject_cast<gui_application*>(app.data()))
 	{
 		gui_app->setAttribute(Qt::AA_UseHighDpiPixmaps);
 		gui_app->setAttribute(Qt::AA_DisableWindowContextHelpButton);
@@ -894,13 +979,35 @@ int main(int argc, char** argv)
 		gui_app->SetWithCliBoot(parser.isSet(arg_installfw) || parser.isSet(arg_installpkg) || !parser.positionalArguments().isEmpty());
 		gui_app->SetActiveUser(active_user);
 
+		if (parser.isSet(arg_fullscreen))
+		{
+			if (!s_no_gui)
+			{
+				report_fatal_error(fmt::format("The option '%s' can only be used in combination with '%s'.", arg_fullscreen, arg_no_gui));
+			}
+
+			gui_app->SetStartGamesFullscreen(true);
+		}
+
+		if (parser.isSet(arg_gs_screen))
+		{
+			const int game_screen_index = parser.value(arg_gs_screen).toInt();
+
+			if (game_screen_index < 0)
+			{
+				report_fatal_error(fmt::format("The option '%s' can only be used with numbers >= 0 (you used %d)", arg_gs_screen, game_screen_index));
+			}
+
+			gui_app->SetGameScreenIndex(game_screen_index);
+		}
+
 		if (!gui_app->Init())
 		{
 			Emu.Quit(true);
 			return 0;
 		}
 	}
-	else if (auto headless_app = qobject_cast<headless_application*>(app.data()))
+	else if (headless_application* headless_app = qobject_cast<headless_application*>(app.data()))
 	{
 		s_headless = true;
 
@@ -1064,9 +1171,70 @@ int main(int argc, char** argv)
 		sys_log.notice("Option passed via command line: %s %s", opt.toStdString(), parser.value(opt).toStdString());
 	}
 
-	if (const QStringList args = parser.positionalArguments(); !args.isEmpty() && !is_updating && !parser.isSet(arg_installfw) && !parser.isSet(arg_installpkg))
+	if (parser.isSet(arg_savestate))
 	{
-		sys_log.notice("Booting application from command line: %s", args.at(0).toStdString());
+		const std::string savestate_path = parser.value(savestate_option).toStdString();
+		sys_log.notice("Booting savestate from command line: %s", savestate_path);
+
+		if (!fs::is_file(savestate_path))
+		{
+			report_fatal_error(fmt::format("No savestate file found: %s", savestate_path));
+		}
+
+		Emu.CallFromMainThread([path = savestate_path]()
+		{
+			Emu.SetForceBoot(true);
+
+			if (const game_boot_result error = Emu.BootGame(path); error != game_boot_result::no_errors)
+			{
+				sys_log.error("Booting savestate '%s' failed: reason: %s", path, error);
+
+				if (s_headless || s_no_gui)
+				{
+					report_fatal_error(fmt::format("Booting savestate '%s' failed!\n\nReason: %s", path, error));
+				}
+			}
+		});
+	}
+	else if (parser.isSet(arg_rsx_capture))
+	{
+		const std::string rsx_capture_path = parser.value(rsx_capture_option).toStdString();
+		sys_log.notice("Booting rsx capture from command line: %s", rsx_capture_path);
+
+		if (!fs::is_file(rsx_capture_path))
+		{
+			report_fatal_error(fmt::format("No rsx capture file found: %s", rsx_capture_path));
+		}
+
+		Emu.CallFromMainThread([path = rsx_capture_path]()
+		{
+			if (!Emu.BootRsxCapture(path))
+			{
+				sys_log.error("Booting rsx capture '%s' failed", path);
+
+				if (s_headless || s_no_gui)
+				{
+					report_fatal_error(fmt::format("Booting rsx capture '%s' failed!", path));
+				}
+			}
+		});
+	}
+	else if (const QStringList args = parser.positionalArguments(); !args.isEmpty() && !is_updating && !parser.isSet(arg_installfw) && !parser.isSet(arg_installpkg))
+	{
+		std::string spath = sstr(::at32(args, 0));
+
+		if (spath.starts_with(Emulator::vfs_boot_prefix))
+		{
+			sys_log.notice("Booting application from command line using VFS path: %s", spath.substr(Emulator::vfs_boot_prefix.size()));
+		}
+		else if (spath.starts_with(Emulator::game_id_boot_prefix))
+		{
+			sys_log.notice("Booting application from command line using GAMEID: %s", spath.substr(Emulator::game_id_boot_prefix.size()));
+		}
+		else
+		{
+			sys_log.notice("Booting application from command line: %s", spath);
+		}
 
 		// Propagate command line arguments
 		std::vector<std::string> rpcs3_argv;
@@ -1095,15 +1263,30 @@ int main(int argc, char** argv)
 			}
 		}
 
+		if (parser.isSet(arg_pad_profile))
+		{
+			if (!s_no_gui)
+			{
+				report_fatal_error(fmt::format("The option '%s' can only be used in combination with '%s'.", arg_pad_profile, arg_no_gui));
+			}
+
+			g_pad_profile_override = parser.value(pad_profile_option).toStdString();
+
+			if (g_pad_profile_override.empty())
+			{
+				report_fatal_error(fmt::format("Pad profile name is empty"));
+			}
+		}
+
 		// Postpone startup to main event loop
-		Emu.CallFromMainThread([path = sstr(QFileInfo(args.at(0)).absoluteFilePath()), rpcs3_argv = std::move(rpcs3_argv), config_path = std::move(config_path)]() mutable
+		Emu.CallFromMainThread([path = spath.starts_with("%RPCS3_") ? spath : sstr(QFileInfo(::at32(args, 0)).absoluteFilePath()), rpcs3_argv = std::move(rpcs3_argv), config_path = std::move(config_path)]() mutable
 		{
 			Emu.argv = std::move(rpcs3_argv);
 			Emu.SetForceBoot(true);
 
 			const cfg_mode config_mode = config_path.empty() ? cfg_mode::custom : cfg_mode::config_override;
 
-			if (const game_boot_result error = Emu.BootGame(path, "", false, false, config_mode, config_path); error != game_boot_result::no_errors)
+			if (const game_boot_result error = Emu.BootGame(path, "", false, config_mode, config_path); error != game_boot_result::no_errors)
 			{
 				sys_log.error("Booting '%s' with cli argument failed: reason: %s", path, error);
 

@@ -298,13 +298,32 @@ error_code cellGcmBindZcull(u8 index, u32 offset, u32 width, u32 height, u32 cul
 	cellGcmSys.warning("cellGcmBindZcull(index=%d, offset=0x%x, width=%d, height=%d, cullStart=0x%x, zFormat=0x%x, aaFormat=0x%x, zCullDir=0x%x, zCullFormat=0x%x, sFunc=0x%x, sRef=0x%x, sMask=0x%x)",
 		index, offset, width, height, cullStart, zFormat, aaFormat, zCullDir, zCullFormat, sFunc, sRef, sMask);
 
-	if (index >= rsx::limits::zculls_count)
+	auto& gcm_cfg = g_fxo->get<gcm_config>();
+
+	GcmZcullInfo zcull{};
+	zcull.offset = offset;
+	zcull.width = width;
+	zcull.height = height;
+	zcull.cullStart = cullStart;
+	zcull.zFormat = zFormat;
+	zcull.aaFormat = aaFormat;
+	zcull.zcullDir = zCullDir;
+	zcull.zcullFormat = zCullFormat;
+	zcull.sFunc = sFunc;
+	zcull.sRef = sRef;
+	zcull.sMask = sMask;
+	zcull.bound = true;
+
+	const auto gcm_zcull = zcull.pack();
+
+	std::lock_guard lock(gcm_cfg.gcmio_mutex);
+
+	if (auto err = sys_rsx_context_attribute(0x5555'5555, 0x301, index, u64{gcm_zcull.region} << 32 | gcm_zcull.size, u64{gcm_zcull.start} << 32 | gcm_zcull.offset, u64{gcm_zcull.status0} << 32 | gcm_zcull.status1))
 	{
-		return CELL_GCM_ERROR_INVALID_VALUE;
+		return err;
 	}
 
-	rsx::get_current_renderer()->zculls[index].bound = true;
-
+	vm::_ptr<CellGcmZcullInfo>(gcm_cfg.zculls_addr)[index] = gcm_zcull;
 	return CELL_OK;
 }
 
@@ -391,6 +410,12 @@ error_code _cellGcmInitBody(ppu_thread& ppu, vm::pptr<CellGcmContextData> contex
 		render->main_mem_size = 0x10000000;
 	}
 
+	render->isHLE = true;
+	render->local_mem_size = gcm_cfg.local_size;
+
+	ensure(sys_rsx_device_map(ppu, vm::var<u64>{}, vm::null, 0x8) == CELL_OK);
+	ensure(sys_rsx_context_allocate(ppu, vm::var<u32>{}, vm::var<u64>{}, vm::var<u64>{}, vm::var<u64>{}, 0, gcm_cfg.system_mode) == CELL_OK);
+
 	if (gcmMapEaIoAddress(ppu, ioAddress, 0, ioSize, false) != CELL_OK)
 	{
 		return CELL_GCM_ERROR_FAILURE;
@@ -403,18 +428,14 @@ error_code _cellGcmInitBody(ppu_thread& ppu, vm::pptr<CellGcmContextData> contex
 	gcm_cfg.current_config.memoryFrequency = 650000000;
 	gcm_cfg.current_config.coreFrequency = 500000000;
 
-	// Create contexts
-	const auto area = vm::reserve_map(vm::rsx_context, 0, 0x10000000, 0x403);
-	const u32 rsx_ctxaddr = area ? area->alloc(0x400000) : 0;
+	const u32 rsx_ctxaddr = render->device_addr;
 	ensure(rsx_ctxaddr);
 
 	g_defaultCommandBufferBegin = ioAddress;
 	g_defaultCommandBufferFragmentCount = cmdSize / (32 * 1024);
 
 	gcm_cfg.gcm_info.context_addr = rsx_ctxaddr;
-	gcm_cfg.gcm_info.control_addr = rsx_ctxaddr + 0x100000;
-	gcm_cfg.gcm_info.label_addr = rsx_ctxaddr + 0x300000;
-
+	gcm_cfg.gcm_info.control_addr = render->dma_address;
 	gcm_cfg.current_context.begin.set(g_defaultCommandBufferBegin + 4096); // 4 kb reserved at the beginning
 	gcm_cfg.current_context.end.set(g_defaultCommandBufferBegin + 32 * 1024 - 4); // 4b at the end for jump
 	gcm_cfg.current_context.current = gcm_cfg.current_context.begin;
@@ -430,21 +451,13 @@ error_code _cellGcmInitBody(ppu_thread& ppu, vm::pptr<CellGcmContextData> contex
 
 	// 0x40 is to offset CellGcmControl from RsxDmaControl
 	gcm_cfg.gcm_info.control_addr += 0x40;
-	auto& ctrl = vm::_ref<CellGcmControl>(gcm_cfg.gcm_info.control_addr);
-	ctrl.put = 0;
-	ctrl.get = 0;
-	ctrl.ref = 0; // Set later to -1 at RSX initialization
 
 	vm::var<u64> _tid;
 	vm::var<char[]> _name = vm::make_str("_gcm_intr_thread");
 	ppu_execute<&sys_ppu_thread_create>(ppu, +_tid, 0x10000, 0, 1, 0x4000, SYS_PPU_THREAD_CREATE_INTERRUPT, +_name);
 	render->intr_thread = idm::get<named_thread<ppu_thread>>(static_cast<u32>(*_tid));
 	render->intr_thread->state -= cpu_flag::stop;
-	render->isHLE = true;
-	render->label_addr = gcm_cfg.gcm_info.label_addr;
-	render->device_addr = gcm_cfg.gcm_info.context_addr;
-	render->local_mem_size = gcm_cfg.local_size;
-	render->init(gcm_cfg.gcm_info.control_addr - 0x40);
+	thread_ctrl::notify(*render->intr_thread);
 
 	return CELL_OK;
 }
@@ -516,7 +529,10 @@ void cellGcmSetFlipHandler(vm::ptr<void(u32)> handler)
 {
 	cellGcmSys.warning("cellGcmSetFlipHandler(handler=*0x%x)", handler);
 
-	rsx::get_current_renderer()->flip_handler = handler;
+	if (const auto rsx = rsx::get_current_renderer(); rsx->is_initialized)
+	{
+		rsx->flip_handler = handler;
+	}
 }
 
 error_code cellGcmSetFlipHandler2()
@@ -665,51 +681,69 @@ void cellGcmSetUserHandler(vm::ptr<void(u32)> handler)
 {
 	cellGcmSys.warning("cellGcmSetUserHandler(handler=*0x%x)", handler);
 
-	rsx::get_current_renderer()->user_handler = handler;
+	if (const auto rsx = rsx::get_current_renderer(); rsx->is_initialized)
+	{
+		rsx->user_handler = handler;
+	}
 }
 
-void cellGcmSetUserCommand(vm::ptr<CellGcmContextData> ctxt, u32 cause)
+void cellGcmSetUserCommand(ppu_thread& ppu, vm::ptr<CellGcmContextData> ctxt, u32 cause)
 {
-	cellGcmSys.todo("cellGcmSetUserCommand(ctxt=*0x%x, cause=0x%x)", ctxt, cause);
+	cellGcmSys.trace("cellGcmSetUserCommand(ctxt=*0x%x, cause=0x%x)", ctxt, cause);
+
+	if (ctxt->current + 2 >= ctxt->end)
+	{
+		if (s32 res = ctxt->callback(ppu, ctxt, 8 /* ??? */))
+		{
+			cellGcmSys.error("cellGcmSetUserCommand(): callback failed (0x%08x)", res);
+			return;
+		}
+	}
+
+	rsx::make_command(ctxt->current, GCM_SET_USER_COMMAND, { cause });
 }
 
 void cellGcmSetVBlankHandler(vm::ptr<void(u32)> handler)
 {
 	cellGcmSys.warning("cellGcmSetVBlankHandler(handler=*0x%x)", handler);
 
-	rsx::get_current_renderer()->vblank_handler = handler;
+	if (const auto rsx = rsx::get_current_renderer(); rsx->is_initialized)
+	{
+		rsx->vblank_handler = handler;
+	}
 }
 
-void cellGcmSetWaitFlip(vm::ptr<CellGcmContextData> ctxt)
+void cellGcmSetWaitFlip(ppu_thread& ppu, vm::ptr<CellGcmContextData> ctxt)
 {
-	cellGcmSys.warning("cellGcmSetWaitFlip(ctxt=*0x%x)", ctxt);
+	cellGcmSys.trace("cellGcmSetWaitFlip(ctxt=*0x%x)", ctxt);
 
-	// TODO: emit RSX command for "wait flip" operation
+	if (ctxt->current + 2 >= ctxt->end)
+	{
+		if (s32 res = ctxt->callback(ppu, ctxt, 8 /* ??? */))
+		{
+			cellGcmSys.error("cellGcmSetWaitFlip(): callback failed (0x%08x)", res);
+			return;
+		}
+	}
+
+	rsx::make_command(ctxt->current, NV406E_SEMAPHORE_OFFSET, { 0x10u, 0 });
 }
 
-error_code cellGcmSetWaitFlipUnsafe()
+void cellGcmSetWaitFlipUnsafe(vm::ptr<CellGcmContextData> ctxt)
 {
-	cellGcmSys.todo("cellGcmSetWaitFlipUnsafe()");
+	cellGcmSys.trace("cellGcmSetWaitFlipUnsafe(ctxt=*0x%x)", ctxt);
 
-	return CELL_OK;
+	rsx::make_command(ctxt->current, NV406E_SEMAPHORE_OFFSET, { 0x10u, 0 });
 }
 
 void cellGcmSetZcull(u8 index, u32 offset, u32 width, u32 height, u32 cullStart, u32 zFormat, u32 aaFormat, u32 zCullDir, u32 zCullFormat, u32 sFunc, u32 sRef, u32 sMask)
 {
-	cellGcmSys.todo("cellGcmSetZcull(index=%d, offset=0x%x, width=%d, height=%d, cullStart=0x%x, zFormat=0x%x, aaFormat=0x%x, zCullDir=0x%x, zCullFormat=0x%x, sFunc=0x%x, sRef=0x%x, sMask=0x%x)",
+	cellGcmSys.warning("cellGcmSetZcull(index=%d, offset=0x%x, width=%d, height=%d, cullStart=0x%x, zFormat=0x%x, aaFormat=0x%x, zCullDir=0x%x, zCullFormat=0x%x, sFunc=0x%x, sRef=0x%x, sMask=0x%x)",
 		index, offset, width, height, cullStart, zFormat, aaFormat, zCullDir, zCullFormat, sFunc, sRef, sMask);
 
 	auto& gcm_cfg = g_fxo->get<gcm_config>();
 
-	if (index >= rsx::limits::zculls_count)
-	{
-		cellGcmSys.error("cellGcmSetZcull: CELL_GCM_ERROR_INVALID_VALUE");
-		return;
-	}
-
-	const auto render = rsx::get_current_renderer();
-
-	auto& zcull = render->zculls[index];
+	GcmZcullInfo zcull{};
 	zcull.offset = offset;
 	zcull.width = width;
 	zcull.height = height;
@@ -721,9 +755,18 @@ void cellGcmSetZcull(u8 index, u32 offset, u32 width, u32 height, u32 cullStart,
 	zcull.sFunc = sFunc;
 	zcull.sRef = sRef;
 	zcull.sMask = sMask;
-	zcull.bound = (zCullFormat > 0);
+	zcull.bound = true;
 
-	vm::_ptr<CellGcmZcullInfo>(gcm_cfg.zculls_addr)[index] = zcull.pack();
+	const auto gcm_zcull = zcull.pack();
+
+	// The second difference between BindZcull and this function (second is no return value) is that this function is not thread-safe
+	// But take care anyway
+	std::lock_guard lock(gcm_cfg.gcmio_mutex);
+
+	if (!sys_rsx_context_attribute(0x5555'5555, 0x301, index, u64{gcm_zcull.region} << 32 | gcm_zcull.size, u64{gcm_zcull.start} << 32 | gcm_zcull.offset, u64{gcm_zcull.status0} << 32 | gcm_zcull.status1))
+	{
+		vm::_ptr<CellGcmZcullInfo>(gcm_cfg.zculls_addr)[index] = gcm_zcull;
+	}
 }
 
 error_code cellGcmUnbindTile(u8 index)
@@ -878,7 +921,12 @@ void cellGcmSetGraphicsHandler(vm::ptr<void(u32)> handler)
 
 void cellGcmSetQueueHandler(vm::ptr<void(u32)> handler)
 {
-	cellGcmSys.todo("cellGcmSetQueueHandler(handler=*0x%x)", handler);
+	cellGcmSys.warning("cellGcmSetQueueHandler(handler=*0x%x)", handler);
+
+	if (const auto rsx = rsx::get_current_renderer(); rsx->is_initialized)
+	{
+		rsx->queue_handler = handler;
+	}
 }
 
 error_code cellGcmSetSecondVHandler(vm::ptr<void(u32)> handler)
@@ -1008,7 +1056,7 @@ error_code cellGcmMapEaIoAddressWithFlags(ppu_thread& ppu, u32 ea, u32 io, u32 s
 {
 	cellGcmSys.warning("cellGcmMapEaIoAddressWithFlags(ea=0x%x, io=0x%x, size=0x%x, flags=0x%x)", ea, io, size, flags);
 
-	ensure(flags == 2 /*CELL_GCM_IOMAP_FLAG_STRICT_ORDERING*/);
+	ensure(flags == CELL_GCM_IOMAP_FLAG_STRICT_ORDERING);
 
 	auto& gcm_cfg = g_fxo->get<gcm_config>();
 	std::lock_guard lock(gcm_cfg.gcmio_mutex);
@@ -1264,18 +1312,15 @@ error_code _cellGcmSetFlipCommand2()
 
 void _cellGcmSetFlipCommandWithWaitLabel(ppu_thread& ppu, vm::ptr<CellGcmContextData> ctx, u32 id, u32 label_index, u32 label_value)
 {
-	cellGcmSys.todo("cellGcmSetFlipCommandWithWaitLabel(ctx=*0x%x, id=0x%x, label_index=0x%x, label_value=0x%x)", ctx, id, label_index, label_value);
+	cellGcmSys.warning("cellGcmSetFlipCommandWithWaitLabel(ctx=*0x%x, id=0x%x, label_index=0x%x, label_value=0x%x)", ctx, id, label_index, label_value);
 
-	auto& gcm_cfg = g_fxo->get<gcm_config>();
+	rsx::make_command(ctx->current, NV406E_SEMAPHORE_OFFSET, { label_index * 0x10, label_value });
 
 	if (auto error = gcmSetPrepareFlip<true>(ppu, ctx, id); error < 0)
 	{
 		// TODO: On actual fw this function doesn't have error checks at all
 		cellGcmSys.error("cellGcmSetFlipCommandWithWaitLabel(): gcmSetPrepareFlip failed with %s", CellGcmError{error + 0u});
 	}
-
-	// TODO: Fix this (must enqueue WaitLabel command instead)
-	vm::write32(gcm_cfg.gcm_info.label_addr + 0x10 * label_index, label_value);
 }
 
 error_code cellGcmSetTile(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u8 comp, u16 base, u8 bank)

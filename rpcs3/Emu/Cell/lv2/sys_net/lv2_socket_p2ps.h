@@ -51,14 +51,16 @@ enum p2ps_tcp_flags : u8
 };
 
 void initialize_tcp_timeout_monitor();
-u16 u2s_tcp_checksum(const u16* buffer, usz size);
+u16 u2s_tcp_checksum(const le_t<u16>* buffer, usz size);
 std::vector<u8> generate_u2s_packet(const p2ps_encapsulated_tcp& header, const u8* data, const u32 datasize);
 
 class lv2_socket_p2ps final : public lv2_socket_p2p
 {
 public:
 	lv2_socket_p2ps(lv2_socket_family family, lv2_socket_type type, lv2_ip_protocol protocol);
-	lv2_socket_p2ps(socket_type socket, u16 port, u16 vport, u32 op_addr, u16 op_port, u16 op_vport, u64 cur_seq, u64 data_beg_seq);
+	lv2_socket_p2ps(socket_type socket, u16 port, u16 vport, u32 op_addr, u16 op_port, u16 op_vport, u64 cur_seq, u64 data_beg_seq, s32 so_nbio);
+	lv2_socket_p2ps(utils::serial& ar, lv2_socket_type type);
+	void save(utils::serial& ar);
 
 	p2ps_stream_status get_status() const;
 	void set_status(p2ps_stream_status new_status);
@@ -66,17 +68,19 @@ public:
 	bool handle_listening(p2ps_encapsulated_tcp* tcp_header, u8* data, ::sockaddr_storage* op_addr);
 	void send_u2s_packet(std::vector<u8> data, const ::sockaddr_in* dst, u32 seq, bool require_ack);
 
-	std::tuple<bool, s32, sys_net_sockaddr> accept(bool is_lock = true) override;
-	s32 bind(const sys_net_sockaddr& addr, s32 ps3_id) override;
+	std::tuple<bool, s32, std::shared_ptr<lv2_socket>, sys_net_sockaddr> accept(bool is_lock = true) override;
+	s32 bind(const sys_net_sockaddr& addr) override;
 
 	std::optional<s32> connect(const sys_net_sockaddr& addr) override;
 
+	std::pair<s32, sys_net_sockaddr> getpeername() override;
 	std::pair<s32, sys_net_sockaddr> getsockname() override;
 
 	s32 listen(s32 backlog) override;
 
 	std::optional<std::tuple<s32, std::vector<u8>, sys_net_sockaddr>> recvfrom(s32 flags, u32 len, bool is_lock = true) override;
 	std::optional<s32> sendto(s32 flags, const std::vector<u8>& buf, std::optional<sys_net_sockaddr> opt_sn_addr, bool is_lock = true) override;
+	std::optional<s32> sendmsg(s32 flags, const sys_net_msghdr& msg, bool is_lock = true) override;
 
 	void close() override;
 	s32 shutdown(s32 how) override;
@@ -90,7 +94,7 @@ protected:
 	p2ps_stream_status status = p2ps_stream_status::stream_closed;
 
 	usz max_backlog = 0; // set on listen
-	std::queue<s32> backlog;
+	std::deque<s32> backlog;
 
 	u16 op_port = 0, op_vport = 0;
 	u32 op_addr = 0;

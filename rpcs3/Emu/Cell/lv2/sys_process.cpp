@@ -44,7 +44,7 @@ bool ps3_process_info_t::has_debug_perm() const
 	return (ctrl_flags1 & (0xa << 28)) != 0;
 }
 
-// If a SELF file is of CellOS return its filename, otheriwse return an empty string 
+// If a SELF file is of CellOS return its filename, otheriwse return an empty string
 std::string_view ps3_process_info_t::get_cellos_appname() const
 {
 	if (!has_root_perm() || !Emu.GetTitleID().empty())
@@ -360,7 +360,7 @@ void _sys_process_exit(ppu_thread& ppu, s32 status, u32 arg2, u32 arg3)
 			break;
 		}
 
-		thread_ctrl::wait_on(ppu.state, state);
+		ppu.state.wait(state);
 	}
 }
 
@@ -402,7 +402,17 @@ void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> ar
 
 	// TODO: set prio, flags
 
-	Emu.CallFromMainThread([argv = std::move(argv), envp = std::move(envp), data = std::move(data)]() mutable
+	lv2_exitspawn(ppu, argv, envp, data);
+}
+
+void lv2_exitspawn(ppu_thread& ppu, std::vector<std::string>& argv, std::vector<std::string>& envp, std::vector<u8>& data)
+{
+	ppu.state += cpu_flag::wait;
+
+	// sys_sm_shutdown
+	const bool is_real_reboot = (ppu.gpr[11] == 379);
+
+	Emu.CallFromMainThread([is_real_reboot, argv = std::move(argv), envp = std::move(envp), data = std::move(data)]() mutable
 	{
 		sys_process.success("Process finished -> %s", argv[0]);
 
@@ -421,8 +431,14 @@ void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> ar
 
 		using namespace id_manager;
 
-		auto func = [old_size = g_fxo->get<lv2_memory_container>().size, vec = (reader_lock{g_mutex}, g_fxo->get<id_map<lv2_memory_container>>().vec)](u32 sdk_suggested_mem) mutable
+		auto func = [is_real_reboot, old_size = g_fxo->get<lv2_memory_container>().size, vec = (reader_lock{g_mutex}, g_fxo->get<id_map<lv2_memory_container>>().vec)](u32 sdk_suggested_mem) mutable
 		{
+			if (is_real_reboot)
+			{
+				// Do not save containers on actual reboot
+				vec.clear();
+			}
+
 			// Save LV2 memory containers
 			g_fxo->init<id_map<lv2_memory_container>>()->vec = std::move(vec);
 
@@ -456,12 +472,11 @@ void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> ar
 
 		Emu.SetForceBoot(true);
 
-		auto res = Emu.BootGame(path, "", true, false, cfg_mode::continuous, old_config);
+		auto res = Emu.BootGame(path, "", true, cfg_mode::continuous, old_config);
 
 		if (res != game_boot_result::no_errors)
 		{
 			sys_process.fatal("Failed to boot from exitspawn! (path=\"%s\", error=%s)", path, res);
-			Emu.Kill();
 		}
 	});
 
@@ -473,7 +488,7 @@ void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> ar
 			break;
 		}
 
-		thread_ctrl::wait_on(ppu.state, state);
+		ppu.state.wait(state);
 	}
 }
 

@@ -4,6 +4,7 @@
 #include "rsx_utils.h"
 #include "rsx_decode.h"
 #include "Common/time.hpp"
+#include "Core/RSXReservationLock.hpp"
 #include "Emu/Cell/PPUCallback.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
 #include "Emu/RSX/Common/BufferUtils.h"
@@ -13,6 +14,7 @@ namespace rsx
 	rsx_state method_registers;
 
 	std::array<rsx_method_t, 0x10000 / 4> methods{};
+	std::array<u32, 0x10000 / 4> state_signals{};
 
 	void invalid_method(thread* rsx, u32 reg, u32 arg)
 	{
@@ -21,7 +23,11 @@ namespace rsx
 		const u32 cmd = rsx->get_fifo_cmd();
 		rsx_log.error("Invalid RSX method 0x%x (arg=0x%x, start=0x%x, count=0x%x, non-inc=%s)", reg << 2, arg,
 		cmd & 0xfffc, (cmd >> 18) & 0x7ff, !!(cmd & RSX_METHOD_NON_INCREMENT_CMD));
-		rsx->recover_fifo();
+
+		if (g_cfg.core.rsx_fifo_accuracy != rsx_fifo_mode::as_ps3)
+		{
+			rsx->recover_fifo();
+		}
 	}
 
 	static void trace_method(thread* /*rsx*/, u32 reg, u32 arg)
@@ -30,14 +36,20 @@ namespace rsx
 		rsx_log.trace("RSX method 0x%x (arg=0x%x)", reg << 2, arg);
 	}
 
-	template<bool FlushDMA, bool FlushPipe>
+	template <bool FlushDMA, bool FlushPipe>
 	void write_gcm_label(thread* rsx, u32 address, u32 data)
 	{
-		const bool is_flip_sema = (address == (rsx->label_addr + 0x10) || address == (rsx->label_addr + 0x30));
+		const bool is_flip_sema = (address == (rsx->label_addr + 0x10) || address == (rsx->device_addr + 0x30));
 		if (!is_flip_sema)
 		{
 			// First, queue the GPU work. If it flushes the queue for us, the following routines will be faster.
 			const bool handled = rsx->get_backend_config().supports_host_gpu_labels && rsx->release_GCM_label(address, data);
+
+			if (vm::_ref<RsxSemaphore>(address).val == data)
+			{
+				// It's a no-op to write the same value (although there is a delay in real-hw so it's more accurate to allow GPU label in this case)
+				return;
+			}
 
 			if constexpr (FlushDMA)
 			{
@@ -104,48 +116,36 @@ namespace rsx
 				rsx->flush_fifo();
 			}
 
-			if (addr == rsx->device_addr + 0x30)
-			{
-				if (g_cfg.video.frame_limit == frame_limit_type::_ps3 && rsx->requested_vsync)
-				{
-					// Enables PS3-compliant vblank behavior
-					rsx->flip_sema_wait_val = arg;
-					rsx->wait_for_flip_sema = (sema != arg);
-				}
-
-				return;
-			}
-
 			u64 start = rsx::uclock();
+			u64 last_check_val = start;
+
 			while (sema != arg)
 			{
 				if (rsx->test_stopped())
 				{
+					rsx->state += cpu_flag::again;
 					return;
 				}
 
 				if (const auto tdr = static_cast<u64>(g_cfg.video.driver_recovery_timeout))
 				{
-					if (rsx->is_paused())
+					const u64 current = rsx::uclock();
+
+					if (current - last_check_val > 20'000)
 					{
-						const u64 start0 = rsx::uclock();
-
-						while (rsx->is_paused())
-						{
-							rsx->check_state();
-						}
-
-						// Reset
-						start += rsx::uclock() - start0;
+						// Suspicious amnount of time has passed
+						// External pause such as debuggers' pause or operating system sleep may have taken place
+						// Ignore it
+						start += current - last_check_val;
 					}
-					else
+
+					last_check_val = current;
+
+					if ((current - start) > tdr)
 					{
-						if ((rsx::uclock() - start) > tdr)
-						{
-							// If longer than driver timeout force exit
-							rsx_log.error("nv406e::semaphore_acquire has timed out. semaphore_address=0x%X", addr);
-							break;
-						}
+						// If longer than driver timeout force exit
+						rsx_log.error("nv406e::semaphore_acquire has timed out. semaphore_address=0x%X", addr);
+						break;
 					}
 				}
 
@@ -181,7 +181,15 @@ namespace rsx
 			// TODO: Check if possible to write on reservations
 			if (rsx->label_addr >> 28 != addr >> 28)
 			{
-				rsx_log.fatal("NV406E semaphore unexpected address. Please report to the developers. (offset=0x%x, addr=0x%x)", offset, addr);
+				rsx_log.error("NV406E semaphore unexpected address. Please report to the developers. (offset=0x%x, addr=0x%x)", offset, addr);
+				rsx->recover_fifo();
+				return;
+			}
+
+			if (addr == rsx->device_addr + 0x30 && !arg)
+			{
+				// HW flip synchronization related, 1 is not written without display queue command (TODO: make it behave as real hw)
+				arg = 1;
 			}
 
 			write_gcm_label<false, true>(rsx, addr, arg);
@@ -208,16 +216,30 @@ namespace rsx
 			}
 		}
 
-		void set_cull_face(thread* /*rsx*/, u32 reg, u32 arg)
+		void set_face_property(thread* rsx, u32 reg, u32 arg)
 		{
-			switch (arg)
+			if (reg == method_registers.register_previous_value)
 			{
-			case CELL_GCM_FRONT_AND_BACK:
-			case CELL_GCM_FRONT:
-			case CELL_GCM_BACK:
 				return;
+			}
+
+			bool valid;
+			switch (reg)
+			{
+			case NV4097_SET_CULL_FACE:
+				valid = !!to_cull_face(arg); break;
+			case NV4097_SET_FRONT_FACE:
+				valid = !!to_front_face(arg); break;
 			default:
-				// Ignore value if unknown
+				valid = false; break;
+			}
+
+			if (valid) [[ likely ]]
+			{
+				rsx->m_graphics_state |= rsx::pipeline_config_dirty;
+			}
+			else
+			{
 				method_registers.registers[reg] = method_registers.register_previous_value;
 			}
 		}
@@ -260,13 +282,20 @@ namespace rsx
 				return;
 			}
 
+			const u32 addr = get_address(offset, method_registers.semaphore_context_dma_4097());
+
+			if (rsx->label_addr >> 28 != addr >> 28)
+			{
+				rsx_log.error("NV4097 semaphore unexpected address. Please report to the developers. (offset=0x%x, addr=0x%x)", offset, addr);
+			}
+
 			if (g_cfg.video.strict_rendering_mode) [[ unlikely ]]
 			{
-				write_gcm_label<true, true>(rsx, get_address(offset, method_registers.semaphore_context_dma_4097()), arg);
+				write_gcm_label<true, true>(rsx, addr, arg);
 			}
 			else
 			{
-				write_gcm_label<true, false>(rsx, get_address(offset, method_registers.semaphore_context_dma_4097()), arg);
+				write_gcm_label<true, false>(rsx, addr, arg);
 			}
 		}
 
@@ -283,8 +312,15 @@ namespace rsx
 				return;
 			}
 
+			const u32 addr = get_address(offset, method_registers.semaphore_context_dma_4097());
+
+			if (rsx->label_addr >> 28 != addr >> 28)
+			{
+				rsx_log.error("NV4097 semaphore unexpected address. Please report to the developers. (offset=0x%x, addr=0x%x)", offset, addr);
+			}
+
 			const u32 val = (arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff);
-			write_gcm_label<true, true>(rsx, get_address(offset, method_registers.semaphore_context_dma_4097()), val);
+			write_gcm_label<true, true>(rsx, addr, val);
 		}
 
 		/**
@@ -456,9 +492,16 @@ namespace rsx
 				const u32 reg = index / 4;
 				const u8 subreg = index % 4;
 
-				// Get real args count
-				const u32 count = std::min<u32>({rsx->fifo_ctrl->get_remaining_args_count() + 1,
-					static_cast<u32>(((rsx->ctrl->put & ~3ull) - (rsx->fifo_ctrl->get_pos() - 4)) / 4), 32 - index});
+				// FIFO args count including this one
+				const u32 fifo_args_cnt = rsx->fifo_ctrl->get_remaining_args_count() + 1;
+
+				// The range of methods this function resposible to
+				const u32 method_range = 32 - index;
+
+				// Get limit imposed by FIFO PUT (if put is behind get it will result in a number ignored by min)
+				const u32 fifo_read_limit = static_cast<u32>(((rsx->ctrl->put & ~3ull) - (rsx->fifo_ctrl->get_pos())) / 4);
+
+				const u32 count = std::min<u32>({fifo_args_cnt, fifo_read_limit, method_range});
 
 				const u32 load = rsx::method_registers.transform_constant_load();
 
@@ -476,21 +519,28 @@ namespace rsx
 
 				const auto values = &rsx::method_registers.transform_constants[load + reg][subreg];
 
+				const auto fifo_span = rsx->fifo_ctrl->get_current_arg_ptr();
+
+				if (fifo_span.size() < rcount)
+				{
+					rcount = ::size32(fifo_span);
+				}
+
 				if (rsx->m_graphics_state & rsx::pipeline_state::transform_constants_dirty)
 				{
 					// Minor optimization: don't compare values if we already know we need invalidation
-					copy_data_swap_u32(values, static_cast<u32*>(vm::base(rsx->fifo_ctrl->get_current_arg_ptr())), rcount);
+					copy_data_swap_u32(values, fifo_span.data(), rcount);
 				}
 				else
 				{
-					if (copy_data_swap_u32_cmp(values, static_cast<u32*>(vm::base(rsx->fifo_ctrl->get_current_arg_ptr())), rcount))
+					if (copy_data_swap_u32_cmp(values, fifo_span.data(), rcount))
 					{
 						// Transform constants invalidation is expensive (~8k bytes per update)
 						rsx->m_graphics_state |= rsx::pipeline_state::transform_constants_dirty;
 					}
 				}
 
-				rsx->fifo_ctrl->skip_methods(count - 1);
+				rsx->fifo_ctrl->skip_methods(rcount - 1);
 			}
 		};
 
@@ -500,9 +550,16 @@ namespace rsx
 			{
 				const u32 index = reg - NV4097_SET_TRANSFORM_PROGRAM;
 
-				// Get real args count
-				const u32 count = std::min<u32>({rsx->fifo_ctrl->get_remaining_args_count() + 1,
-					static_cast<u32>(((rsx->ctrl->put & ~3ull) - (rsx->fifo_ctrl->get_pos() - 4)) / 4), 32 - index});
+				// FIFO args count including this one
+				const u32 fifo_args_cnt = rsx->fifo_ctrl->get_remaining_args_count() + 1;
+
+				// The range of methods this function resposible to
+				const u32 method_range = 32 - index;
+
+				// Get limit imposed by FIFO PUT (if put is behind get it will result in a number ignored by min)
+				const u32 fifo_read_limit = static_cast<u32>(((rsx->ctrl->put & ~3ull) - (rsx->fifo_ctrl->get_pos())) / 4);
+
+				const u32 count = std::min<u32>({fifo_args_cnt, fifo_read_limit, method_range});
 
 				const u32 load_pos = rsx::method_registers.transform_program_load();
 
@@ -515,11 +572,18 @@ namespace rsx
 					rcount -= max - (max_vertex_program_instructions * 4);
 				}
 
-				copy_data_swap_u32(&rsx::method_registers.transform_program[load_pos * 4 + index % 4], static_cast<u32*>(vm::base(rsx->fifo_ctrl->get_current_arg_ptr())), rcount);
+				const auto fifo_span = rsx->fifo_ctrl->get_current_arg_ptr();
+
+				if (fifo_span.size() < rcount)
+				{
+					rcount = ::size32(fifo_span);
+				}
+
+				copy_data_swap_u32(&rsx::method_registers.transform_program[load_pos * 4 + index % 4], fifo_span.data(), rcount);
 
 				rsx->m_graphics_state |= rsx::pipeline_state::vertex_program_ucode_dirty;
 				rsx::method_registers.transform_program_load_set(load_pos + ((rcount + index % 4) / 4));
-				rsx->fifo_ctrl->skip_methods(count - 1);
+				rsx->fifo_ctrl->skip_methods(rcount - 1);
 			}
 		};
 
@@ -544,9 +608,8 @@ namespace rsx
 			// Ignore upper bits
 			if (const u8 prim = static_cast<u8>(arg))
 			{
-				rsx::method_registers.current_draw_clause.reset(to_primitive_type(prim));
-
-				if (rsx::method_registers.current_draw_clause.primitive == rsx::primitive_type::invalid)
+				const auto primitive_type = to_primitive_type(prim);
+				if (!primitive_type)
 				{
 					rsxthr->in_begin_end = true;
 
@@ -554,17 +617,18 @@ namespace rsx
 					return;
 				}
 
+				rsx::method_registers.current_draw_clause.reset(primitive_type);
 				rsxthr->begin();
 				return;
 			}
 
-			//Check if we have immediate mode vertex data in a driver-local buffer
+			// Check if we have immediate mode vertex data in a driver-local buffer
 			if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::none)
 			{
 				const u32 push_buffer_vertices_count = rsxthr->get_push_buffer_vertex_count();
 				const u32 push_buffer_index_count = rsxthr->get_push_buffer_index_count();
 
-				//Need to set this flag since it overrides some register contents
+				// Need to set this flag since it overrides some register contents
 				rsx::method_registers.current_draw_clause.is_immediate_draw = true;
 
 				if (push_buffer_index_count)
@@ -579,25 +643,33 @@ namespace rsx
 				}
 			}
 			else
+			{
 				rsx::method_registers.current_draw_clause.is_immediate_draw = false;
+			}
 
 			if (!rsx::method_registers.current_draw_clause.empty())
 			{
-				if (rsx::method_registers.current_draw_clause.primitive == rsx::primitive_type::invalid)
-				{
-					// Recover from invalid primitive only if draw clause is not empty
-					rsxthr->recover_fifo();
+				rsx::method_registers.current_draw_clause.compile();
 
-					rsx_log.error("NV4097_SET_BEGIN_END aborted due to invalid primitive!");
+				if (g_cfg.video.disable_video_output)
+				{
+					rsxthr->execute_nop_draw();
+					rsxthr->rsx::thread::end();
 					return;
 				}
 
-				rsx::method_registers.current_draw_clause.compile();
 				rsxthr->end();
 			}
 			else
 			{
 				rsxthr->in_begin_end = false;
+			}
+
+			if (rsxthr->pause_on_draw && rsxthr->pause_on_draw.exchange(false))
+			{
+				rsxthr->state -= cpu_flag::dbg_step;
+				rsxthr->state += cpu_flag::dbg_pause;
+				rsxthr->check_state();
 			}
 		}
 
@@ -694,21 +766,18 @@ namespace rsx
 			rsx->enable_conditional_rendering(address_ptr);
 		}
 
-		void set_zcull_render_enable(thread* rsx, u32, u32 arg)
+		void set_zcull_render_enable(thread* rsx, u32, u32)
 		{
-			rsx->zcull_rendering_enabled = !!arg;
 			rsx->notify_zcull_info_changed();
 		}
 
-		void set_zcull_stats_enable(thread* rsx, u32, u32 arg)
+		void set_zcull_stats_enable(thread* rsx, u32, u32)
 		{
-			rsx->zcull_stats_enabled = !!arg;
 			rsx->notify_zcull_info_changed();
 		}
 
-		void set_zcull_pixel_count_enable(thread* rsx, u32, u32 arg)
+		void set_zcull_pixel_count_enable(thread* rsx, u32, u32)
 		{
-			rsx->zcull_pixel_cnt_enabled = !!arg;
 			rsx->notify_zcull_info_changed();
 		}
 
@@ -724,26 +793,46 @@ namespace rsx
 
 		void set_surface_dirty_bit(thread* rsx, u32 reg, u32 arg)
 		{
-			if (reg == NV4097_SET_SURFACE_CLIP_VERTICAL ||
-				reg == NV4097_SET_SURFACE_CLIP_HORIZONTAL)
+			if (arg == method_registers.register_previous_value)
 			{
-				if (arg != method_registers.register_previous_value)
-				{
-					rsx->m_graphics_state |= rsx::pipeline_state::vertex_state_dirty;
-				}
+				return;
 			}
 
-			rsx->m_rtts_dirty = true;
-			rsx->m_framebuffer_state_contested = false;
+			switch (reg)
+			{
+			case NV4097_SET_SURFACE_COLOR_TARGET:
+				rsx->m_graphics_state |= rsx::pipeline_state::pipeline_config_dirty;
+				break;
+			case NV4097_SET_SURFACE_CLIP_VERTICAL:
+			case NV4097_SET_SURFACE_CLIP_HORIZONTAL:
+				rsx->m_graphics_state |= rsx::pipeline_state::vertex_state_dirty;
+				break;
+			default:
+				break;
+			}
+
+			rsx->m_graphics_state.set(rtt_config_dirty);
+			rsx->m_graphics_state.clear(rtt_config_contested);
 		}
 
 		void set_surface_format(thread* rsx, u32 reg, u32 arg)
 		{
-			// Special consideration - antialiasing control can affect ROP state
-			const auto aa_mask = (0xF << 12);
-			if ((arg & aa_mask) != (method_registers.register_previous_value & aa_mask))
+			// The high bits of this register are just log2(dimension), ignore them
+			if ((arg & 0xFFFF) == (method_registers.register_previous_value & 0xFFFF))
 			{
-				// Antialias control has changed, update ROP parameters
+				return;
+			}
+
+			// The important parameters have changed (format, type, antialias)
+			rsx->m_graphics_state |= rsx::pipeline_state::pipeline_config_dirty;
+
+			// Check if we need to also update fragment state
+			const auto current = method_registers.decode<NV4097_SET_SURFACE_FORMAT>(arg);
+			const auto previous = method_registers.decode<NV4097_SET_SURFACE_FORMAT>(method_registers.register_previous_value);
+
+			if (*current.antialias() != *previous.antialias() ||                         // Antialias control has changed, update ROP parameters
+				current.is_integer_color_format() != previous.is_integer_color_format()) // The type of color format also requires ROP control update
+			{
 				rsx->m_graphics_state |= rsx::pipeline_state::fragment_state_dirty;
 			}
 
@@ -755,40 +844,25 @@ namespace rsx
 			if (arg != method_registers.register_previous_value)
 			{
 				rsx->on_framebuffer_options_changed(reg);
+				rsx->m_graphics_state |= rsx::pipeline_config_dirty;
 			}
 		}
 
 		void set_stencil_op(thread* rsx, u32 reg, u32 arg)
 		{
-			if (arg != method_registers.register_previous_value)
+			if (arg == method_registers.register_previous_value)
 			{
-				switch (arg)
-				{
-				case CELL_GCM_INVERT:
-				case CELL_GCM_KEEP:
-				case CELL_GCM_REPLACE:
-				case CELL_GCM_INCR:
-				case CELL_GCM_DECR:
-				case CELL_GCM_INCR_WRAP:
-				case CELL_GCM_DECR_WRAP:
-				case CELL_GCM_ZERO:
-					set_surface_options_dirty_bit(rsx, reg, arg);
-					break;
-
-				default:
-					// Ignored on RSX
-					method_registers.decode(reg, method_registers.register_previous_value);
-					break;
-				}
+				return;
 			}
-		}
 
-		template <u32 RsxFlags>
-		void notify_state_changed(thread* rsx, u32, u32 arg)
-		{
-			if (arg != method_registers.register_previous_value)
+			const auto typed = to_stencil_op(arg);
+			if (typed) [[ likely ]]
 			{
-				rsx->m_graphics_state |= RsxFlags;
+				set_surface_options_dirty_bit(rsx, reg, arg);
+			}
+			else
+			{
+				method_registers.decode(reg, method_registers.register_previous_value);
 			}
 		}
 
@@ -851,60 +925,39 @@ namespace rsx
 			}
 		}
 
-		void set_blend_equation(thread* /*rsx*/, u32 reg, u32 arg)
+		void set_blend_equation(thread* rsx, u32 reg, u32 arg)
 		{
-			for (u32 i = 0; i < 32u; i += 16)
+			if (reg == method_registers.register_previous_value)
 			{
-				switch ((arg >> i) & 0xffff)
-				{
-				case CELL_GCM_FUNC_ADD:
-				case CELL_GCM_MIN:
-				case CELL_GCM_MAX:
-				case CELL_GCM_FUNC_SUBTRACT:
-				case CELL_GCM_FUNC_REVERSE_SUBTRACT:
-				case CELL_GCM_FUNC_REVERSE_SUBTRACT_SIGNED:
-				case CELL_GCM_FUNC_ADD_SIGNED:
-				case CELL_GCM_FUNC_REVERSE_ADD_SIGNED:
-					break;
+				return;
+			}
 
-				default:
-				{
-					// Ignore invalid values as a whole
-					method_registers.decode(reg, method_registers.register_previous_value);
-					return;
-				}
-				}
+			if (to_blend_equation(arg & 0xFFFF) &&
+				to_blend_equation((arg >> 16) & 0xFFFF)) [[ likely ]]
+			{
+				rsx->m_graphics_state |= rsx::pipeline_config_dirty;
+			}
+			else
+			{
+				method_registers.decode(reg, method_registers.register_previous_value);
 			}
 		}
 
-		void set_blend_factor(thread* /*rsx*/, u32 reg, u32 arg)
+		void set_blend_factor(thread* rsx, u32 reg, u32 arg)
 		{
-			for (u32 i = 0; i < 32u; i += 16)
+			if (reg == method_registers.register_previous_value)
 			{
-				switch ((arg >> i) & 0xffff)
-				{
-				case CELL_GCM_ZERO:
-				case CELL_GCM_ONE:
-				case CELL_GCM_SRC_COLOR:
-				case CELL_GCM_ONE_MINUS_SRC_COLOR:
-				case CELL_GCM_SRC_ALPHA:
-				case CELL_GCM_ONE_MINUS_SRC_ALPHA:
-				case CELL_GCM_DST_ALPHA:
-				case CELL_GCM_ONE_MINUS_DST_ALPHA:
-				case CELL_GCM_DST_COLOR:
-				case CELL_GCM_ONE_MINUS_DST_COLOR:
-				case CELL_GCM_SRC_ALPHA_SATURATE:
-				case CELL_GCM_CONSTANT_COLOR:
-				case CELL_GCM_ONE_MINUS_CONSTANT_COLOR:
-				case CELL_GCM_CONSTANT_ALPHA:
-				case CELL_GCM_ONE_MINUS_CONSTANT_ALPHA:
-					break;
+				return;
+			}
 
-				default:
-					// Ignore invalid values as a whole
-					method_registers.decode(reg, method_registers.register_previous_value);
-					return;
-				}
+			if (to_blend_factor(arg & 0xFFFF) &&
+				to_blend_factor((arg >> 16) & 0xFFFF)) [[ likely ]]
+			{
+				rsx->m_graphics_state |= rsx::pipeline_config_dirty;
+			}
+			else
+			{
+				method_registers.decode(reg, method_registers.register_previous_value);
 			}
 		}
 
@@ -953,11 +1006,18 @@ namespace rsx
 				}
 
 				// Get position of the current command arg
-				const u32 src_offset = rsx->fifo_ctrl->get_pos() - 4;
+				[[maybe_unused]] const u32 src_offset = rsx->fifo_ctrl->get_pos();
 
-				// Get real args count (starting from NV3089_COLOR)
-				const u32 count = std::min<u32>({rsx->fifo_ctrl->get_remaining_args_count() + 1,
-					static_cast<u32>(((rsx->ctrl->put & ~3ull) - src_offset) / 4), 0x700 - index, out_x_max - index});
+				// FIFO args count including this one
+				const u32 fifo_args_cnt = rsx->fifo_ctrl->get_remaining_args_count() + 1;
+
+				// The range of methods this function resposible to
+				const u32 method_range = std::min<u32>(0x700 - index, out_x_max - index);
+
+				// Get limit imposed by FIFO PUT (if put is behind get it will result in a number ignored by min)
+				const u32 fifo_read_limit = static_cast<u32>(((rsx->ctrl->put & ~3ull) - (rsx->fifo_ctrl->get_pos())) / 4);
+
+				u32 count = std::min<u32>({fifo_args_cnt, fifo_read_limit, method_range});
 
 				const u32 dst_dma = method_registers.blit_engine_output_location_nv3062();
 				const u32 dst_offset = method_registers.blit_engine_output_offset_nv3062();
@@ -966,10 +1026,17 @@ namespace rsx
 				const u32 x = method_registers.nv308a_x() + index;
 				const u32 y = method_registers.nv308a_y();
 
+				const auto fifo_span = rsx->fifo_ctrl->get_current_arg_ptr();
+
+				if (fifo_span.size() < count)
+				{
+					count = ::size32(fifo_span);
+				}
+
 				// Skip "handled methods"
 				rsx->fifo_ctrl->skip_methods(count - 1);
 
-				switch (method_registers.blit_engine_nv3062_color_format())
+				switch (*method_registers.blit_engine_nv3062_color_format())
 				{
 				case blit_engine::transfer_destination_format::a8r8g8b8:
 				case blit_engine::transfer_destination_format::y32:
@@ -986,12 +1053,10 @@ namespace rsx
 						return;
 					}
 
-					const auto src_address = get_address(src_offset, CELL_GCM_LOCATION_MAIN);
-
 					const auto dst = vm::_ptr<u8>(dst_address);
-					const auto src = vm::_ptr<const u8>(src_address);
+					const auto src = reinterpret_cast<const u8*>(fifo_span.data());
 
-					auto res = rsx::reservation_lock<true>(dst_address, data_length, src_address, data_length);
+					rsx::reservation_lock<true> rsx_lock(dst_address, data_length);
 
 					if (rsx->fifo_ctrl->last_cmd() & RSX_METHOD_NON_INCREMENT_CMD_MASK) [[unlikely]]
 					{
@@ -1022,9 +1087,8 @@ namespace rsx
 					const auto data_length = count * 2;
 
 					const auto dst_address = get_address(dst_offset + (x * 2) + (y * out_pitch), dst_dma, data_length);
-					const auto src_address = get_address(src_offset, CELL_GCM_LOCATION_MAIN);
 					const auto dst = vm::_ptr<u16>(dst_address);
-					const auto src = vm::_ptr<const u32>(src_address);
+					const auto src = utils::bless<const be_t<u32>>(fifo_span.data());
 
 					if (!dst_address)
 					{
@@ -1032,7 +1096,7 @@ namespace rsx
 						return;
 					}
 
-					auto res = rsx::reservation_lock<true>(dst_address, data_length, src_address, data_length);
+					rsx::reservation_lock<true> rsx_lock(dst_address, data_length);
 
 					auto convert = [](u32 input) -> u16
 					{
@@ -1088,7 +1152,7 @@ namespace rsx
 
 			const blit_engine::transfer_origin in_origin = method_registers.blit_engine_input_origin();
 			const blit_engine::transfer_interpolator in_inter = method_registers.blit_engine_input_inter();
-			rsx::blit_engine::transfer_source_format src_color_format = method_registers.blit_engine_src_color_format();
+			auto src_color_format = method_registers.blit_engine_src_color_format();
 
 			const f32 scale_x = method_registers.blit_engine_ds_dx();
 			const f32 scale_y = method_registers.blit_engine_dt_dy();
@@ -1136,7 +1200,7 @@ namespace rsx
 				return;
 			}
 
-			if (src_color_format == rsx::blit_engine::transfer_source_format::invalid)
+			if (!src_color_format)
 			{
 				rsx_log.error("NV3089_IMAGE_IN_SIZE: unknown src color format (0x%x)", method_registers.registers[NV3089_SET_COLOR_FORMAT]);
 				rsx->recover_fifo();
@@ -1159,16 +1223,19 @@ namespace rsx
 			{
 				dst_dma = method_registers.blit_engine_output_location_nv3062();
 				dst_offset = method_registers.blit_engine_output_offset_nv3062();
-				dst_color_format = method_registers.blit_engine_nv3062_color_format();
 				out_pitch = method_registers.blit_engine_output_pitch_nv3062();
 				out_alignment = method_registers.blit_engine_output_alignment_nv3062();
 				is_block_transfer = fcmp(scale_x, 1.f) && fcmp(scale_y, 1.f);
 
-				if (dst_color_format == rsx::blit_engine::transfer_destination_format::invalid)
+				if (auto dst_fmt = method_registers.blit_engine_nv3062_color_format(); !dst_fmt)
 				{
 					rsx_log.error("NV3089_IMAGE_IN_SIZE: unknown NV3062 dst color format (0x%x)", method_registers.registers[NV3062_SET_COLOR_FORMAT]);
 					rsx->recover_fifo();
 					return;
+				}
+				else
+				{
+					dst_color_format = dst_fmt;
 				}
 
 				break;
@@ -1177,13 +1244,16 @@ namespace rsx
 			{
 				dst_dma = method_registers.blit_engine_nv309E_location();
 				dst_offset = method_registers.blit_engine_nv309E_offset();
-				dst_color_format = method_registers.blit_engine_output_format_nv309E();
 
-				if (dst_color_format == rsx::blit_engine::transfer_destination_format::invalid)
+				if (auto dst_fmt = method_registers.blit_engine_output_format_nv309E(); !dst_fmt)
 				{
 					rsx_log.error("NV3089_IMAGE_IN_SIZE: unknown NV309E dst color format (0x%x)", method_registers.registers[NV309E_SET_FORMAT]);
 					rsx->recover_fifo();
 					return;
+				}
+				else
+				{
+					dst_color_format = dst_fmt;
 				}
 
 				break;
@@ -1199,6 +1269,11 @@ namespace rsx
 			if (out_pitch == 0)
 			{
 				out_pitch = out_bpp * out_w;
+			}
+
+			if (in_pitch == 0)
+			{
+				in_pitch = in_bpp * in_w;
 			}
 
 			if (in_bpp != out_bpp)
@@ -1312,7 +1387,7 @@ namespace rsx
 				else
 				{
 					// TODO: Support more formats
-					fmt::throw_exception("NV3089_IMAGE_IN_SIZE: unknown src_color_format (%d)", static_cast<u8>(src_color_format));
+					fmt::throw_exception("NV3089_IMAGE_IN_SIZE: unknown src_color_format (%d)", static_cast<u8>(*src_color_format));
 				}
 			}
 
@@ -1603,12 +1678,6 @@ namespace rsx
 			const u8 in_format = method_registers.nv0039_input_format();
 			const u32 notify = arg;
 
-			// The existing GCM commands use only the value 0x1 for inFormat and outFormat
-			if (in_format != 0x01 || out_format != 0x01)
-			{
-				rsx_log.error("NV0039_BUFFER_NOTIFY: Unsupported format: inFormat=%d, outFormat=%d", in_format, out_format);
-			}
-
 			if (!line_count || !line_length)
 			{
 				rsx_log.warning("NV0039_BUFFER_NOTIFY NOPed out: pitch(in=0x%x, out=0x%x), line(len=0x%x, cnt=0x%x), fmt(in=0x%x, out=0x%x), notify=0x%x",
@@ -1657,7 +1726,28 @@ namespace rsx
 				 (dst_offset >= src_offset && dst_offset < src_max);
 			}();
 
-			if (is_overlapping)
+			if (in_format > 1 || out_format > 1) [[ unlikely ]]
+			{
+				// The formats are just input channel strides. You can use this to do cool tricks like gathering channels
+				// Very rare, only seen in use by Destiny
+				// TODO: Hw accel
+				for (u32 row = 0; row < line_count; ++row)
+				{
+					auto dst_ptr = dst;
+					auto src_ptr = src;
+					while (src_ptr < src + line_length)
+					{
+						*dst_ptr = *src_ptr;
+
+						src_ptr += in_format;
+						dst_ptr += out_format;
+					}
+
+					dst += out_pitch;
+					src += in_pitch;
+				}
+			}
+			else if (is_overlapping) [[ unlikely ]]
 			{
 				if (is_block_transfer)
 				{
@@ -1709,8 +1799,29 @@ namespace rsx
 	void flip_command(thread* rsx, u32, u32 arg)
 	{
 		ensure(rsx->isHLE);
+
+		if (rsx->vblank_at_flip != umax)
+		{
+			rsx->flip_notification_count++;
+		}
+
+		if (auto ptr = rsx->queue_handler)
+		{
+			rsx->intr_thread->cmd_list
+			({
+				{ ppu_cmd::set_args, 1 }, u64{1},
+				{ ppu_cmd::lle_call, ptr },
+				{ ppu_cmd::sleep, 0 }
+			});
+
+			rsx->intr_thread->cmd_notify++;
+			rsx->intr_thread->cmd_notify.notify_one();
+		}
+
 		rsx->reset();
+		rsx->on_frame_end(arg);
 		rsx->request_emu_flip(arg);
+		vm::_ref<atomic_t<u128>>(rsx->label_addr + 0x10).store(u128{});
 	}
 
 	void user_command(thread* rsx, u32, u32 arg)
@@ -1721,12 +1832,12 @@ namespace rsx
 			return;
 		}
 
-		if (rsx->user_handler)
+		if (auto ptr = rsx->user_handler)
 		{
 			rsx->intr_thread->cmd_list
 			({
 				{ ppu_cmd::set_args, 1 }, u64{arg},
-				{ ppu_cmd::lle_call, rsx->user_handler },
+				{ ppu_cmd::lle_call, ptr },
 				{ ppu_cmd::sleep, 0 }
 			});
 
@@ -1740,7 +1851,7 @@ namespace rsx
 		template<u32 index>
 		struct driver_flip
 		{
-			static void impl(thread* rsx, u32 /*reg*/, u32 arg)
+			static void impl(thread*, u32 /*reg*/, u32 arg)
 			{
 				sys_rsx_context_attribute(0x55555555, 0x102, index, arg, 0, 0);
 			}
@@ -1751,6 +1862,11 @@ namespace rsx
 		{
 			static void impl(thread* rsx, u32 /*reg*/, u32 arg)
 			{
+				if (rsx->vblank_at_flip != umax)
+				{
+					rsx->flip_notification_count++;
+				}
+
 				sys_rsx_context_attribute(0x55555555, 0x103, index, arg, 0, 0);
 			}
 		};
@@ -1775,6 +1891,7 @@ namespace rsx
 	{
 		// Reset all regsiters
 		registers.fill(0);
+		state_signals.fill(0);
 		transform_program.fill(0);
 		transform_constants = {};
 		current_draw_clause = {};
@@ -2330,6 +2447,104 @@ namespace rsx
 			registers[NV406E_SET_REFERENCE] = umax;
 			if (auto rsx = Emu.IsStopped() ? nullptr : get_current_renderer(); rsx && rsx->ctrl) rsx->ctrl->ref = u32{umax};
 		}
+
+		{
+			// Signal definitions
+			state_signals[NV4097_SET_SHADER_CONTROL] = rsx::fragment_program_state_dirty;
+			state_signals[NV4097_SET_TEX_COORD_CONTROL + 0] = rsx::fragment_program_state_dirty;
+			state_signals[NV4097_SET_TEX_COORD_CONTROL + 1] = rsx::fragment_program_state_dirty;
+			state_signals[NV4097_SET_TEX_COORD_CONTROL + 2] = rsx::fragment_program_state_dirty;
+			state_signals[NV4097_SET_TEX_COORD_CONTROL + 3] = rsx::fragment_program_state_dirty;
+			state_signals[NV4097_SET_TEX_COORD_CONTROL + 4] = rsx::fragment_program_state_dirty;
+			state_signals[NV4097_SET_TEX_COORD_CONTROL + 5] = rsx::fragment_program_state_dirty;
+			state_signals[NV4097_SET_TEX_COORD_CONTROL + 6] = rsx::fragment_program_state_dirty;
+			state_signals[NV4097_SET_TEX_COORD_CONTROL + 7] = rsx::fragment_program_state_dirty;
+			state_signals[NV4097_SET_TEX_COORD_CONTROL + 8] = rsx::fragment_program_state_dirty;
+			state_signals[NV4097_SET_TEX_COORD_CONTROL + 9] = rsx::fragment_program_state_dirty;
+			state_signals[NV4097_SET_TWO_SIDE_LIGHT_EN] = rsx::fragment_program_state_dirty;
+			state_signals[NV4097_SET_POINT_SPRITE_CONTROL] = rsx::fragment_program_state_dirty;
+			state_signals[NV4097_SET_USER_CLIP_PLANE_CONTROL] = rsx::vertex_state_dirty;
+			state_signals[NV4097_SET_TRANSFORM_BRANCH_BITS] = rsx::vertex_state_dirty;
+			state_signals[NV4097_SET_CLIP_MIN] = rsx::invalidate_zclip_bits;
+			state_signals[NV4097_SET_CLIP_MAX] = rsx::invalidate_zclip_bits;
+			state_signals[NV4097_SET_POINT_SIZE] = rsx::vertex_state_dirty;
+			state_signals[NV4097_SET_ALPHA_FUNC] = rsx::fragment_state_dirty;
+			state_signals[NV4097_SET_ALPHA_REF] = rsx::fragment_state_dirty;
+			state_signals[NV4097_SET_ALPHA_TEST_ENABLE] = rsx::fragment_state_dirty;
+			state_signals[NV4097_SET_ANTI_ALIASING_CONTROL] = rsx::fragment_state_dirty | rsx::pipeline_config_dirty;
+			state_signals[NV4097_SET_SHADER_PACKER] = rsx::fragment_state_dirty;
+			state_signals[NV4097_SET_SHADER_WINDOW] = rsx::fragment_state_dirty;
+			state_signals[NV4097_SET_FOG_MODE] = rsx::fragment_state_dirty;
+			state_signals[NV4097_SET_SCISSOR_HORIZONTAL] = rsx::scissor_config_state_dirty;
+			state_signals[NV4097_SET_SCISSOR_VERTICAL] = rsx::scissor_config_state_dirty;
+			state_signals[NV4097_SET_VIEWPORT_HORIZONTAL] = rsx::scissor_config_state_dirty;
+			state_signals[NV4097_SET_VIEWPORT_VERTICAL] = rsx::scissor_config_state_dirty;
+			state_signals[NV4097_SET_FOG_PARAMS + 0] = rsx::fragment_state_dirty;
+			state_signals[NV4097_SET_FOG_PARAMS + 1] = rsx::fragment_state_dirty;
+			state_signals[NV4097_SET_VIEWPORT_SCALE + 0] = rsx::vertex_state_dirty;
+			state_signals[NV4097_SET_VIEWPORT_SCALE + 1] = rsx::vertex_state_dirty;
+			state_signals[NV4097_SET_VIEWPORT_SCALE + 2] = rsx::vertex_state_dirty;
+			state_signals[NV4097_SET_VIEWPORT_OFFSET + 0] = rsx::vertex_state_dirty;
+			state_signals[NV4097_SET_VIEWPORT_OFFSET + 1] = rsx::vertex_state_dirty;
+			state_signals[NV4097_SET_VIEWPORT_OFFSET + 2] = rsx::vertex_state_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE] = rsx::fragment_state_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 0] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 1] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 2] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 3] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 4] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 5] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 6] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 7] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 8] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 9] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 10] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 11] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 12] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 13] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 14] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 15] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 16] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 17] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 18] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 19] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 20] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 21] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 22] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 23] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 24] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 25] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 26] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 27] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 28] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 29] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 30] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 31] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLY_OFFSET_FILL_ENABLE] = rsx::polygon_offset_state_dirty;
+			state_signals[NV4097_SET_POLYGON_OFFSET_SCALE_FACTOR] = rsx::polygon_offset_state_dirty;
+			state_signals[NV4097_SET_POLYGON_OFFSET_BIAS] = rsx::polygon_offset_state_dirty;
+			state_signals[NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE] = rsx::depth_bounds_state_dirty;
+			state_signals[NV4097_SET_DEPTH_BOUNDS_MIN] = rsx::depth_bounds_state_dirty;
+			state_signals[NV4097_SET_DEPTH_BOUNDS_MAX] = rsx::depth_bounds_state_dirty;
+			state_signals[NV4097_SET_CULL_FACE_ENABLE] = rsx::pipeline_config_dirty;
+			state_signals[NV4097_SET_ZMIN_MAX_CONTROL] = rsx::pipeline_config_dirty;
+			state_signals[NV4097_SET_LOGIC_OP_ENABLE] = rsx::pipeline_config_dirty;
+			state_signals[NV4097_SET_LOGIC_OP] = rsx::pipeline_config_dirty;
+			state_signals[NV4097_SET_BLEND_ENABLE] = rsx::pipeline_config_dirty;
+			state_signals[NV4097_SET_BLEND_ENABLE_MRT] = rsx::pipeline_config_dirty;
+			state_signals[NV4097_SET_STENCIL_FUNC] = rsx::pipeline_config_dirty;
+			state_signals[NV4097_SET_BACK_STENCIL_FUNC] = rsx::pipeline_config_dirty;
+			state_signals[NV4097_SET_RESTART_INDEX_ENABLE] = rsx::pipeline_config_dirty;
+		}
+
+		// Sanity checks
+		for (size_t id = 0; id < methods.size(); ++id)
+		{
+			if (methods[id] && state_signals[id])
+			{
+				rsx_log.error("FIXME: Method register 0x%x is registered as a method and signal. The signal will be ignored.");
+			}
+		}
 	}
 
 	void rsx_state::reset()
@@ -2749,6 +2964,11 @@ namespace rsx
 		return registers[reg] == value;
 	}
 
+	void draw_clause::operator()(utils::serial& ar)
+	{
+		ar(draw_command_ranges, draw_command_barriers, current_range_index, primitive, command, is_immediate_draw, is_disjoint_primitive, primitive_barrier_enable, inline_vertex_array);
+	}
+
 	void draw_clause::insert_command_barrier(command_barrier_type type, u32 arg, u32 index)
 	{
 		ensure(!draw_command_ranges.empty());
@@ -2886,7 +3106,7 @@ namespace rsx
 
 		auto bind = [](u32 id, rsx_method_t func)
 		{
-			methods.at(id) = func;
+			::at32(methods, id) = func;
 		};
 
 		auto bind_array = [](u32 id, u32 step, u32 count, rsx_method_t func)
@@ -3259,7 +3479,8 @@ namespace rsx
 		bind(NV406E_SEMAPHORE_RELEASE, nv406e::semaphore_release);
 
 		// NV4097
-		bind(NV4097_SET_CULL_FACE, nv4097::set_cull_face);
+		bind(NV4097_SET_CULL_FACE, nv4097::set_face_property);
+		bind(NV4097_SET_FRONT_FACE, nv4097::set_face_property);
 		bind(NV4097_TEXTURE_READ_SEMAPHORE_RELEASE, nv4097::texture_read_semaphore_release);
 		bind(NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE, nv4097::back_end_write_semaphore_release);
 		bind(NV4097_SET_BEGIN_END, nv4097::set_begin_end);
@@ -3287,6 +3508,7 @@ namespace rsx
 		bind(NV4097_SET_SURFACE_COLOR_BOFFSET, nv4097::set_surface_dirty_bit);
 		bind(NV4097_SET_SURFACE_COLOR_COFFSET, nv4097::set_surface_dirty_bit);
 		bind(NV4097_SET_SURFACE_COLOR_DOFFSET, nv4097::set_surface_dirty_bit);
+		bind(NV4097_SET_SURFACE_COLOR_TARGET, nv4097::set_surface_dirty_bit);
 		bind(NV4097_SET_SURFACE_ZETA_OFFSET, nv4097::set_surface_dirty_bit);
 		bind(NV4097_SET_CONTEXT_DMA_COLOR_A, nv4097::set_surface_dirty_bit);
 		bind(NV4097_SET_CONTEXT_DMA_COLOR_B, nv4097::set_surface_dirty_bit);
@@ -3326,7 +3548,6 @@ namespace rsx
 		bind(NV4097_CLEAR_ZCULL_SURFACE, nv4097::clear_zcull);
 		bind(NV4097_SET_DEPTH_TEST_ENABLE, nv4097::set_surface_options_dirty_bit);
 		bind(NV4097_SET_DEPTH_FUNC, nv4097::set_surface_options_dirty_bit);
-		bind(NV4097_SET_STENCIL_TEST_ENABLE, nv4097::set_surface_options_dirty_bit);
 		bind(NV4097_SET_DEPTH_MASK, nv4097::set_surface_options_dirty_bit);
 		bind(NV4097_SET_COLOR_MASK, nv4097::set_surface_options_dirty_bit);
 		bind(NV4097_SET_COLOR_MASK_MRT, nv4097::set_surface_options_dirty_bit);
@@ -3343,40 +3564,16 @@ namespace rsx
 		bind(NV4097_WAIT_FOR_IDLE, nv4097::sync);
 		bind(NV4097_INVALIDATE_L2, nv4097::set_shader_program_dirty);
 		bind(NV4097_SET_SHADER_PROGRAM, nv4097::set_shader_program_dirty);
-		bind(NV4097_SET_SHADER_CONTROL, nv4097::notify_state_changed<fragment_program_state_dirty>);
-		bind_array(NV4097_SET_TEX_COORD_CONTROL, 1, 10, nv4097::notify_state_changed<fragment_program_state_dirty>);
-		bind(NV4097_SET_TWO_SIDE_LIGHT_EN, nv4097::notify_state_changed<fragment_program_state_dirty>);
-		bind(NV4097_SET_POINT_SPRITE_CONTROL, nv4097::notify_state_changed<fragment_program_state_dirty>);
+
 		bind(NV4097_SET_TRANSFORM_PROGRAM_START, nv4097::set_transform_program_start);
 		bind(NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK, nv4097::set_vertex_attribute_output_mask);
 		bind(NV4097_SET_VERTEX_DATA_BASE_OFFSET, nv4097::set_vertex_base_offset);
 		bind(NV4097_SET_VERTEX_DATA_BASE_INDEX, nv4097::set_index_base_offset);
 		bind_range<NV4097_SET_VERTEX_DATA_ARRAY_OFFSET, 1, 16, nv4097::set_vertex_array_offset>();
-		bind(NV4097_SET_USER_CLIP_PLANE_CONTROL, nv4097::notify_state_changed<vertex_state_dirty>);
-		bind(NV4097_SET_TRANSFORM_BRANCH_BITS, nv4097::notify_state_changed<vertex_state_dirty>);
-		bind(NV4097_SET_CLIP_MIN, nv4097::notify_state_changed<invalidate_zclip_bits>);
-		bind(NV4097_SET_CLIP_MAX, nv4097::notify_state_changed<invalidate_zclip_bits>);
-		bind(NV4097_SET_POINT_SIZE, nv4097::notify_state_changed<vertex_state_dirty>);
-		bind(NV4097_SET_ALPHA_FUNC, nv4097::notify_state_changed<fragment_state_dirty>);
-		bind(NV4097_SET_ALPHA_REF, nv4097::notify_state_changed<fragment_state_dirty>);
-		bind(NV4097_SET_ALPHA_TEST_ENABLE, nv4097::notify_state_changed<fragment_state_dirty>);
-		bind(NV4097_SET_ANTI_ALIASING_CONTROL, nv4097::notify_state_changed<fragment_state_dirty>);
-		bind(NV4097_SET_SHADER_PACKER, nv4097::notify_state_changed<fragment_state_dirty>);
-		bind(NV4097_SET_SHADER_WINDOW, nv4097::notify_state_changed<fragment_state_dirty>);
-		bind(NV4097_SET_FOG_MODE, nv4097::notify_state_changed<fragment_state_dirty>);
-		bind(NV4097_SET_SCISSOR_HORIZONTAL, nv4097::notify_state_changed<scissor_config_state_dirty>);
-		bind(NV4097_SET_SCISSOR_VERTICAL, nv4097::notify_state_changed<scissor_config_state_dirty>);
-		bind(NV4097_SET_VIEWPORT_HORIZONTAL, nv4097::notify_state_changed<scissor_config_state_dirty>);
-		bind(NV4097_SET_VIEWPORT_VERTICAL, nv4097::notify_state_changed<scissor_config_state_dirty>);
-		bind_array(NV4097_SET_FOG_PARAMS, 1, 2, nv4097::notify_state_changed<fragment_state_dirty>);
-		bind_array(NV4097_SET_VIEWPORT_SCALE, 1, 3, nv4097::notify_state_changed<vertex_state_dirty>);
-		bind_array(NV4097_SET_VIEWPORT_OFFSET, 1, 3, nv4097::notify_state_changed<vertex_state_dirty>);
 		bind(NV4097_SET_INDEX_ARRAY_DMA, nv4097::check_index_array_dma);
 		bind(NV4097_SET_BLEND_EQUATION, nv4097::set_blend_equation);
 		bind(NV4097_SET_BLEND_FUNC_SFACTOR, nv4097::set_blend_factor);
 		bind(NV4097_SET_BLEND_FUNC_DFACTOR, nv4097::set_blend_factor);
-		bind(NV4097_SET_POLYGON_STIPPLE, nv4097::notify_state_changed<fragment_state_dirty>);
-		bind_array(NV4097_SET_POLYGON_STIPPLE_PATTERN, 1, 32, nv4097::notify_state_changed<polygon_stipple_pattern_dirty>);
 
 		//NV308A (0xa400..0xbffc!)
 		bind_array(NV308A_COLOR, 1, 256 * 7, nv308a::color::impl);

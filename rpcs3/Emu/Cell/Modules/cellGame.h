@@ -216,6 +216,11 @@ enum // old consts
 	CELL_DISCGAME_SYSP_TITLEID_SIZE=10,
 };
 
+enum
+{
+	TITLEID_SFO_ENTRY_SIZE = 16, // This is the true length on PS3 (TODO: Fix in more places)
+};
+
 struct CellGameDataSystemFileParam
 {
 	char title[CELL_GAMEDATA_SYSP_TITLE_SIZE];
@@ -226,7 +231,9 @@ struct CellGameDataSystemFileParam
 	char reserved1[2];
 	be_t<u32> parentalLevel;
 	be_t<u32> attribute;
-	char reserved2[256];
+	be_t<u32> resolution; // cellHddGameCheck member: GD doesn't have this value
+	be_t<u32> soundFormat; // cellHddGameCheck member: GD doesn't have this value
+	char reserved2[248];
 };
 
 struct CellDiscGameSystemFileParam
@@ -307,54 +314,39 @@ enum
 	CELL_HDDGAME_SIZEKB_NOTCALC        = -1,
 };
 
-struct CellHddGameSystemFileParam
-{
-	char title[CELL_HDDGAME_SYSP_TITLE_SIZE];
-	char titleLang[CELL_HDDGAME_SYSP_LANGUAGE_NUM][CELL_HDDGAME_SYSP_TITLE_SIZE];
-	char titleId[CELL_HDDGAME_SYSP_TITLEID_SIZE];
-	char reserved0[2];
-	char dataVersion[CELL_HDDGAME_SYSP_VERSION_SIZE];
-	char reserved1[2];
-	be_t<u32> attribute;
-	be_t<u32> parentalLevel;
-	be_t<u32> resolution;
-	be_t<u32> soundFormat;
-	char reserved2[256];
-};
-
-struct CellHddGameCBResult
-{
-	be_t<s32> result;
-	be_t<s32> errNeedSizeKB;
-	vm::bptr<char> invalidMsg;
-	vm::bptr<void> reserved;
-};
-
-struct CellHddGameStatGet
-{
-	be_t<s32> hddFreeSizeKB;
-	be_t<u32> isNewData;
-	char contentInfoPath[CELL_HDDGAME_PATH_MAX];
-	char hddGamePath[CELL_HDDGAME_PATH_MAX];
-	char reserved0[2];
-	be_t<s64> atime;
-	be_t<s64> mtime;
-	be_t<s64> ctime;
-	CellHddGameSystemFileParam getParam;
-	be_t<s32> sizeKB;
-	be_t<s32> sysSizeKB;
-	char reserved1[68];
-};
-
-struct CellHddGameStatSet
-{
-	vm::bptr<CellHddGameSystemFileParam> setParam;
-	vm::bptr<void> reserved;
-};
+using CellHddGameStatGet = CellGameDataStatGet;
+using CellHddGameStatSet = CellGameDataStatSet;
+using CellHddGameSystemFileParam = CellGameDataSystemFileParam;
+using CellHddGameCBResult = CellGameDataCBResult;
 
 typedef void(CellHddGameStatCallback)(vm::ptr<CellHddGameCBResult> cbResult, vm::ptr<CellHddGameStatGet> get, vm::ptr<CellHddGameStatSet> set);
-typedef void(CellGameThemeInstallCallback)(u32 fileOffset, u32 readSize, vm::ptr<void> buf);
+typedef s32(CellGameThemeInstallCallback)(u32 fileOffset, u32 readSize, vm::ptr<void> buf);
 typedef void(CellGameDiscEjectCallback)();
 typedef void(CellGameDiscInsertCallback)(u32 discType, vm::ptr<char> titleId);
-typedef void(CellDiscGameDiscEjectCallback)();
-typedef void(CellDiscGameDiscInsertCallback)(u32 discType, vm::ptr<char> titleId);
+using CellDiscGameDiscEjectCallback = CellGameDiscEjectCallback;
+using CellDiscGameDiscInsertCallback = CellGameDiscInsertCallback;
+
+struct disc_change_manager
+{
+	disc_change_manager();
+	virtual ~disc_change_manager();
+
+	std::mutex mtx;
+	atomic_t<bool> is_inserting = false;
+	vm::ptr<CellGameDiscEjectCallback> eject_callback = vm::null;
+	vm::ptr<CellGameDiscInsertCallback> insert_callback = vm::null;
+
+	enum class eject_state
+	{
+		inserted,
+		ejected,
+		busy
+	};
+	atomic_t<eject_state> state = eject_state::inserted;
+
+	error_code register_callbacks(vm::ptr<CellGameDiscEjectCallback> func_eject, vm::ptr<CellGameDiscInsertCallback> func_insert);
+	error_code unregister_callbacks();
+
+	void eject_disc();
+	void insert_disc(u32 disc_type, std::string title_id);
+};

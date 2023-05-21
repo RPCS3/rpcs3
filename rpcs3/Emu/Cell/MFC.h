@@ -88,6 +88,8 @@ enum : u32
 
 struct alignas(16) spu_mfc_cmd
 {
+	ENABLE_BITWISE_SERIALIZATION;
+
 	MFC cmd;
 	u8 tag;
 	u16 size;

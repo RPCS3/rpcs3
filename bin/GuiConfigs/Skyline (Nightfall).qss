@@ -105,7 +105,7 @@ QToolButton:hover {
 }
 
 /* Search bar in Main Toolbar */
-QLineEdit#mw_searchbar { 
+QLineEdit#mw_searchbar {
 	color: #455971;
 	background-color: #FFFFFF;
 	border: 1px solid #999999;
@@ -113,15 +113,15 @@ QLineEdit#mw_searchbar {
 	padding-left: 5px;
 }
 
-QLineEdit#mw_searchbar:hover { 
-	margin-left: 0.7em; 
+QLineEdit#mw_searchbar:hover {
+	margin-left: 0.7em;
 	color: #0074e7;
 	background-color: #FFFFFF;
 	border: 1px solid #0071ec;
 	margin: 15px;
 }
 
-QLineEdit#mw_searchbar:focus { 
+QLineEdit#mw_searchbar:focus {
 	border: 1px solid #0074e7;
 }
 
@@ -148,7 +148,7 @@ QSlider::handle:horizontal {
 	border: 1px solid #5c5c5c;
 	border-radius: 0.1em;
 	width: 18px;
-	margin: -2px 2; 
+	margin: -2px 2;
 }
 
 QSlider::handle:horizontal:hover {
@@ -220,6 +220,17 @@ QScrollBar::up-arrow, QScrollBar::down-arrow, QScrollBar::up-button:vertical, QS
 	border: none;
 }
 
+#game_list_grid QScrollBar {
+	width: 10px;
+	height: 3px;
+}
+#game_list_grid QScrollBar::handle {
+	background: #1c273d;
+}
+#game_list_grid QScrollBar::handle:hover, QScrollBar::handle:pressed {
+	background: #0074e7;
+}
+
 /* Radio Buttons */
 QRadioButton::indicator {
 	border: 0.0625em solid #455971;
@@ -242,7 +253,7 @@ QRadioButton::indicator:unchecked {
 }
 
 QRadioButton::indicator:disabled {
-	background-color: #455971; 
+	background-color: #455971;
 }
 
 /* Checkboxes */
@@ -533,7 +544,7 @@ QProgressBar::chunk {
 }
 
 /* Pad Settings: Controller Image */
-QLabel#l_controller { 
+QLabel#l_controller {
 	color: #0074e7;
 }
 
@@ -554,7 +565,7 @@ QHeaderView::section {
 	background-color: #111525;
 	color: #FFFFFF;
 	padding-top: 3px;
-	padding-left: 3px;	
+	padding-left: 3px;
 	height: 20px;
 	border: none;
 }
@@ -663,24 +674,49 @@ QLabel#debugger_frame_pc {
 /* Tree view changes*/
 QTreeView::branch:has-children:!has-siblings:closed,
 QTreeView::branch:closed:has-children:has-siblings {
-    border-image: none;
-    image: url("GuiConfigs/list_arrow_white.png");
+	border-image: none;
+	image: url("GuiConfigs/list_arrow_white.png");
 }
 
 QTreeView::branch:open:has-children:!has-siblings,
-QTreeView::branch:open:has-children:has-siblings  {
-    border-image: none;
-    image: url("GuiConfigs/list_arrow_down_white.png");
+QTreeView::branch:open:has-children:has-siblings {
+	border-image: none;
+	image: url("GuiConfigs/list_arrow_down_white.png");
 }
 
 QTreeView::branch:has-children:!has-siblings:closed:hover,
 QTreeView::branch:closed:has-children:has-siblings:hover {
-    border-image: none;
-    image: url("GuiConfigs/list_arrow_blue.png");
+	border-image: none;
+	image: url("GuiConfigs/list_arrow_blue.png");
 }
 
 QTreeView::branch:open:has-children:!has-siblings:hover,
-QTreeView::branch:open:has-children:has-siblings:hover  {
-    border-image: none;
-    image: url("GuiConfigs/list_arrow_down_blue.png");
+QTreeView::branch:open:has-children:has-siblings:hover {
+	border-image: none;
+	image: url("GuiConfigs/list_arrow_down_blue.png");
+}
+
+/* Game Grid */
+#game_list_grid_item[selected="true"] {
+	background: #0f1d36;
+}
+#game_list_grid_item:focus {
+	background: #0f1d36;
+}
+
+#game_list_grid_item #game_list_grid_item_title_label {
+	color: #FFFFFF;
+}
+
+/* Game Grid hover and focus: we need to handle properties differently when using descendants */
+#game_list_grid_item[selected="true"] #game_list_grid_item_title_label {
+	background-color: #0f1d36;
+	color: #2397ff;
+}
+#game_list_grid_item[hover="true"] #game_list_grid_item_title_label {
+	color: #2397ff;
+}
+#game_list_grid_item[focus="true"] #game_list_grid_item_title_label {
+	background-color: #0f1d36;
+	color: #2397ff;
 }

@@ -20,11 +20,11 @@ public:
 
 	bool Initialized() override;
 	bool Operational() override;
+	bool DefaultDeviceChanged() override;
 
-	bool Open(AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt) override;
+	bool Open(std::string_view dev_id, AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt) override;
 	void Close() override;
 
-	void SetWriteCallback(std::function<u32(u32, void *)> cb) override;
 	f64 GetCallbackFrameLen() override;
 
 	void Play() override;
@@ -39,16 +39,28 @@ private:
 	bool m_com_init_success = false;
 #endif
 
-	shared_mutex m_cb_mutex{};
-	std::function<u32(u32, void *)> m_write_callback{};
 	std::array<u8, sizeof(float) * static_cast<u32>(AudioChannelCnt::SURROUND_7_1)> m_last_sample{};
 	atomic_t<u8> full_sample_size = 0;
 
-	bool m_reset_req = false;
+	atomic_t<bool> m_reset_req = false;
+
+	// Protected by callback mutex
+	std::string m_default_device{};
+
+	bool m_dev_collection_cb_enabled = false;
 
 	// Cubeb callbacks
 	static long data_cb(cubeb_stream* stream, void* user_ptr, void const* input_buffer, void* output_buffer, long nframes);
 	static void state_cb(cubeb_stream* stream, void* user_ptr, cubeb_state state);
+	static void device_collection_changed_cb(cubeb* context, void* user_ptr);
 
-	void CloseUnlocked();
+	struct device_handle
+	{
+		cubeb_devid handle{};
+		std::string id;
+		u32 ch_cnt{};
+	};
+
+	device_handle GetDevice(std::string_view dev_id = "");
+	device_handle GetDefaultDeviceAlt(AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt);
 };

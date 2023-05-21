@@ -18,14 +18,53 @@ public:
 	virtual ~PadDevice() = default;
 	cfg_pad* config{ nullptr };
 	u8 player_id{0};
+	u8 large_motor{0};
+	u8 small_motor{0};
+	u64 trigger_code_left = 0;
+	u64 trigger_code_right = 0;
+	std::array<u64, 4> axis_code_left{};
+	std::array<u64, 4> axis_code_right{};
+};
+
+struct pad_ensemble
+{
+	std::shared_ptr<Pad> pad;
+	std::shared_ptr<PadDevice> device;
+	std::shared_ptr<PadDevice> buddy_device;
+
+	explicit pad_ensemble(std::shared_ptr<Pad> _pad, std::shared_ptr<PadDevice> _device, std::shared_ptr<PadDevice> _buddy_device)
+		: pad(_pad), device(_device), buddy_device(_buddy_device)
+	{}
+};
+
+struct pad_list_entry
+{
+	std::string name;
+	bool is_buddy_only = false;
+
+	explicit pad_list_entry(std::string _name, bool _is_buddy_only)
+		: name(_name), is_buddy_only(_is_buddy_only)
+	{}
 };
 
 using pad_preview_values = std::array<int, 6>;
 using pad_callback = std::function<void(u16 /*button_value*/, std::string /*button_name*/, std::string /*pad_name*/, u32 /*battery_level*/, pad_preview_values /*preview_values*/)>;
 using pad_fail_callback = std::function<void(std::string /*pad_name*/)>;
 
+using motion_preview_values = std::array<u16, 4>;
+using motion_callback = std::function<void(std::string /*pad_name*/, motion_preview_values /*preview_values*/)>;
+using motion_fail_callback = std::function<void(std::string /*pad_name*/, motion_preview_values /*preview_values*/)>;
+
 class PadHandlerBase
 {
+public:
+	enum class connection
+	{
+		no_data,
+		connected,
+		disconnected
+	};
+
 protected:
 	enum button
 	{
@@ -61,14 +100,7 @@ protected:
 		button_count
 	};
 
-	enum connection
-	{
-		no_data,
-		connected,
-		disconnected
-	};
-
-	static const u32 MAX_GAMEPADS = 7;
+	static constexpr u32 MAX_GAMEPADS = 7;
 
 	std::array<bool, MAX_GAMEPADS> last_connection_status{{ false, false, false, false, false, false, false }};
 
@@ -79,13 +111,15 @@ protected:
 
 	bool b_has_led = false;
 	bool b_has_rgb = false;
+	bool b_has_player_led = false;
 	bool b_has_battery = false;
 	bool b_has_deadzones = false;
 	bool b_has_rumble = false;
+	bool b_has_motion = false;
 	bool b_has_config = false;
 	bool b_has_pressure_intensity_button = true;
 	std::array<cfg_pad, MAX_GAMEPADS> m_pad_configs;
-	std::vector<std::pair<std::shared_ptr<PadDevice>, std::shared_ptr<Pad>>> bindings;
+	std::vector<pad_ensemble> m_bindings;
 	std::unordered_map<u32, std::string> button_list;
 	std::vector<u32> blacklist;
 
@@ -105,10 +139,10 @@ protected:
 	static s32 MultipliedInput(s32 raw_value, s32 multiplier);
 
 	// Get new scaled value between 0 and 255 based on its minimum and maximum
-	static float ScaledInput(s32 raw_value, int minimum, int maximum);
+	static f32 ScaledInput(s32 raw_value, int minimum, int maximum, f32 range = 255.0f);
 
 	// Get new scaled value between -255 and 255 based on its minimum and maximum
-	static float ScaledInput2(s32 raw_value, int minimum, int maximum);
+	static f32 ScaledInput2(s32 raw_value, int minimum, int maximum, f32 range = 255.0f);
 
 	// Get normalized trigger value based on the range defined by a threshold
 	u16 NormalizeTriggerInput(u16 value, int threshold) const;
@@ -128,7 +162,7 @@ protected:
 	static u16 Clamp0To1023(f32 input);
 
 	// input has to be [-1,1]. result will be [0,255]
-	static u16 ConvertAxis(float value);
+	static u16 ConvertAxis(f32 value);
 
 	// The DS3, (and i think xbox controllers) give a 'square-ish' type response, so that the corners will give (almost)max x/y instead of the ~30x30 from a perfect circle
 	// using a simple scale/sensitivity increase would *work* although it eats a chunk of our usable range in exchange
@@ -141,19 +175,20 @@ public:
 	s32 thumb_max = 255; // NOTE: Better keep this positive
 	s32 trigger_min = 0;
 	s32 trigger_max = 255;
-	s32 vibration_min = 0;
-	s32 vibration_max = 255;
 	u32 connected_devices = 0;
 
 	pad_handler m_type;
+	bool m_is_init = false;
 
 	std::string name_string() const;
 	usz max_devices() const;
 	bool has_config() const;
 	bool has_rumble() const;
+	bool has_motion() const;
 	bool has_deadzones() const;
 	bool has_led() const;
 	bool has_rgb() const;
+	bool has_player_led() const;
 	bool has_battery() const;
 	bool has_pressure_intensity_button() const;
 
@@ -164,32 +199,35 @@ public:
 	PadHandlerBase(pad_handler type = pad_handler::null);
 	virtual ~PadHandlerBase() = default;
 	// Sets window to config the controller(optional)
-	virtual void SetPadData(const std::string& /*padId*/, u8 /*player_id*/, u32 /*largeMotor*/, u32 /*smallMotor*/, s32 /*r*/, s32 /*g*/, s32 /*b*/, bool /*battery_led*/, u32 /*battery_led_brightness*/) {}
+	virtual void SetPadData(const std::string& /*padId*/, u8 /*player_id*/, u8 /*large_motor*/, u8 /*small_motor*/, s32 /*r*/, s32 /*g*/, s32 /*b*/, bool /*player_led*/, bool /*battery_led*/, u32 /*battery_led_brightness*/) {}
 	virtual u32 get_battery_level(const std::string& /*padId*/) { return 0; }
 	// Return list of devices for that handler
-	virtual std::vector<std::string> ListDevices() = 0;
+	virtual std::vector<pad_list_entry> list_devices() = 0;
 	// Callback called during pad_thread::ThreadFunc
-	virtual void ThreadProc();
+	virtual void process();
 	// Binds a Pad to a device
-	virtual bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device, u8 player_id);
-	virtual void init_config(cfg_pad* /*cfg*/) = 0;
-	virtual void get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist, const std::vector<std::string>& buttons = {});
+	virtual bool bindPadToDevice(std::shared_ptr<Pad> pad, u8 player_id);
+	virtual void init_config(cfg_pad* cfg) = 0;
+	virtual connection get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist, const std::vector<std::string>& buttons = {});
+	virtual void get_motion_sensors(const std::string& pad_id, const motion_callback& callback, const motion_fail_callback& fail_callback, motion_preview_values preview_values, const std::array<AnalogSensor, 4>& sensors);
+	virtual std::unordered_map<u32, std::string> get_motion_axis_list() const { return {}; }
 
 private:
 	virtual std::shared_ptr<PadDevice> get_device(const std::string& /*device*/) { return nullptr; }
-	virtual bool get_is_left_trigger(u64 /*keyCode*/) { return false; }
-	virtual bool get_is_right_trigger(u64 /*keyCode*/) { return false; }
-	virtual bool get_is_left_stick(u64 /*keyCode*/) { return false; }
-	virtual bool get_is_right_stick(u64 /*keyCode*/) { return false; }
+	virtual bool get_is_left_trigger(const std::shared_ptr<PadDevice>& /*device*/, u64 /*keyCode*/) { return false; }
+	virtual bool get_is_right_trigger(const std::shared_ptr<PadDevice>& /*device*/, u64 /*keyCode*/) { return false; }
+	virtual bool get_is_left_stick(const std::shared_ptr<PadDevice>& /*device*/, u64 /*keyCode*/) { return false; }
+	virtual bool get_is_right_stick(const std::shared_ptr<PadDevice>& /*device*/, u64 /*keyCode*/) { return false; }
 	virtual PadHandlerBase::connection update_connection(const std::shared_ptr<PadDevice>& /*device*/) { return connection::disconnected; }
-	virtual void get_extended_info(const std::shared_ptr<PadDevice>& /*device*/, const std::shared_ptr<Pad>& /*pad*/) {}
-	virtual void apply_pad_data(const std::shared_ptr<PadDevice>& /*device*/, const std::shared_ptr<Pad>& /*pad*/) {}
+	virtual void get_extended_info(const pad_ensemble& /*binding*/) {}
+	virtual void apply_pad_data(const pad_ensemble& /*binding*/) {}
 	virtual std::unordered_map<u64, u16> get_button_values(const std::shared_ptr<PadDevice>& /*device*/) { return {}; }
 	virtual pad_preview_values get_preview_values(const std::unordered_map<u64, u16>& /*data*/) { return {}; }
 
 protected:
 	virtual std::array<u32, PadHandlerBase::button::button_count> get_mapped_key_codes(const std::shared_ptr<PadDevice>& device, const cfg_pad* cfg);
-	virtual void get_mapping(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad);
+	virtual void get_mapping(const pad_ensemble& binding);
 	void TranslateButtonPress(const std::shared_ptr<PadDevice>& device, u64 keyCode, bool& pressed, u16& val, bool ignore_stick_threshold = false, bool ignore_trigger_threshold = false);
 	void init_configs();
+	cfg_pad* get_config(const std::string& pad_id);
 };

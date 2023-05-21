@@ -49,7 +49,7 @@ namespace vk
 			m_descriptor_pool.create(dev, descriptor_pools, 1, 120, 2);
 
 			// Scale and offset data plus output color
-			std::vector<VkDescriptorSetLayoutBinding> bindings = 
+			std::vector<VkDescriptorSetLayoutBinding> bindings =
 			{
 				{
 					.binding = 0,

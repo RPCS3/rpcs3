@@ -44,6 +44,12 @@ void VKFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 		required_extensions.emplace_back("GL_ARB_shader_texture_image_samples");
 	}
 
+	if (m_prog.ctrl & RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION)
+	{
+		version = std::max(version, 450);
+		required_extensions.emplace_back("GL_EXT_fragment_shader_barycentric");
+	}
+
 	OS << "#version " << version << "\n";
 	for (const auto ext : required_extensions)
 	{
@@ -57,48 +63,17 @@ void VKFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 
 void VKFragmentDecompilerThread::insertInputs(std::stringstream & OS)
 {
-	for (const ParamType& PT : m_parr.params[PF_PARAM_IN])
-	{
-		for (const ParamItem& PI : PT.items)
+	glsl::insert_fragment_shader_inputs_block(
+		OS,
+		glsl::extension_flavour::EXT,
+		m_prog,
+		m_parr.params[PF_PARAM_IN],
 		{
-			//ssa is defined in the program body and is not a varying type
-			if (PI.name == "ssa") continue;
-
-			const auto reg_location = vk::get_varying_register_location(PI.name);
-			std::string var_name = PI.name;
-
-			if (var_name == "fogc")
-			{
-				var_name = "fog_c";
-			}
-			else if (m_prog.two_sided_lighting)
-			{
-				if (var_name == "diff_color")
-				{
-					var_name = "diff_color0";
-				}
-				else if (var_name == "spec_color")
-				{
-					var_name = "spec_color0";
-				}
-			}
-
-			OS << "layout(location=" << reg_location << ") in " << PT.type << " " << var_name << ";\n";
-		}
-	}
-
-	if (m_prog.two_sided_lighting)
-	{
-		if (properties.in_register_mask & in_diff_color)
-		{
-			OS << "layout(location=" << vk::get_varying_register_location("diff_color1") << ") in vec4 diff_color1;\n";
-		}
-
-		if (properties.in_register_mask & in_spec_color)
-		{
-			OS << "layout(location=" << vk::get_varying_register_location("spec_color1") << ") in vec4 spec_color1;\n";
-		}
-	}
+			.two_sided_color = !!(properties.in_register_mask & in_diff_color),
+			.two_sided_specular = !!(properties.in_register_mask & in_spec_color)
+		},
+		vk::get_varying_register_location
+	);
 }
 
 void VKFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
@@ -270,10 +245,10 @@ void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	m_shader_props.require_linear_to_srgb = properties.has_pkg;
 	m_shader_props.emulate_coverage_tests = g_cfg.video.antialiasing_level == msaa_level::none;
 	m_shader_props.emulate_shadow_compare = device_props.emulate_depth_compare;
-	m_shader_props.low_precision_tests = device_props.has_low_precision_rounding;
+	m_shader_props.low_precision_tests = device_props.has_low_precision_rounding && !(m_prog.ctrl & RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION);
 	m_shader_props.disable_early_discard = vk::get_driver_vendor() != vk::driver_vendor::NVIDIA;
 	m_shader_props.supports_native_fp16 = device_props.has_native_half_support;
-	m_shader_props.srgb_output_rounding = vk::get_driver_vendor() == vk::driver_vendor::NVIDIA;
+	m_shader_props.ROP_output_rounding = vk::get_driver_vendor() == vk::driver_vendor::NVIDIA;
 
 	glsl::insert_glsl_legacy_function(OS, m_shader_props);
 }
@@ -281,7 +256,7 @@ void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 void VKFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 {
 	if (properties.in_register_mask & in_fogc)
-		glsl::insert_fog_declaration(OS);
+		program_common::insert_fog_declaration(OS);
 
 	std::set<std::string> output_registers;
 	if (m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS)
@@ -419,7 +394,7 @@ void VKFragmentProgram::Decompile(const RSXFragmentProgram& prog)
 	VKFragmentDecompilerThread decompiler(source, parr, prog, size, *this);
 
 	const auto pdev = vk::get_current_renderer();
-	if (!g_cfg.video.disable_native_float16)
+	if (g_cfg.video.shader_precision == gpu_preset_level::low)
 	{
 		decompiler.device_props.has_native_half_support = pdev->get_shader_types_support().allow_float16;
 	}

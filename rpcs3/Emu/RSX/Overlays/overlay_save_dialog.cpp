@@ -82,9 +82,9 @@ namespace rsx
 		save_dialog::save_dialog()
 		{
 			m_dim_background = std::make_unique<overlay_element>();
-			m_dim_background->set_size(1280, 720);
+			m_dim_background->set_size(virtual_width, virtual_height);
 
-			m_list        = std::make_unique<list_view>(1240, 540);
+			m_list        = std::make_unique<list_view>(virtual_width - 2 * 20, 540);
 			m_description = std::make_unique<label>();
 			m_time_thingy = std::make_unique<label>();
 
@@ -121,7 +121,7 @@ namespace rsx
 			}
 		}
 
-		void save_dialog::on_button_pressed(pad_button button_press)
+		void save_dialog::on_button_pressed(pad_button button_press, bool is_auto_repeat)
 		{
 			if (fade_animation.active) return;
 
@@ -170,7 +170,8 @@ namespace rsx
 					close(true, true);
 				};
 			}
-			else
+			// Play a sound unless this is a fast auto repeat which would induce a nasty noise
+			else if (!is_auto_repeat || m_auto_repeat_ms_interval >= m_auto_repeat_ms_interval_default)
 			{
 				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_cursor.wav");
 			}

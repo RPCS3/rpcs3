@@ -5,6 +5,7 @@
 #include "Utilities/Timer.h"
 #include "Utilities/date_time.h"
 #include "Utilities/File.h"
+#include "util/video_provider.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/system_progress.hpp"
@@ -12,6 +13,8 @@
 #include "Emu/Cell/Modules/cellScreenshot.h"
 #include "Emu/Cell/Modules/cellVideoOut.h"
 #include "Emu/RSX/rsx_utils.h"
+#include "Emu/RSX/Overlays/overlay_message.h"
+#include "Emu/Io/recording_config.h"
 
 #include <QApplication>
 #include <QDateTime>
@@ -19,7 +22,6 @@
 #include <QMessageBox>
 #include <QPainter>
 #include <QScreen>
-#include <QSound>
 
 #include <string>
 #include <thread>
@@ -40,26 +42,30 @@
 #endif
 #endif
 
-#ifdef _WIN32
-#include <QWinTHumbnailToolbutton>
-#elif HAVE_QTDBUS
-#include <QtDBus/QDBusMessage>
-#include <QtDBus/QDBusConnection>
-#endif
-
 LOG_CHANNEL(screenshot_log, "SCREENSHOT");
 LOG_CHANNEL(mark_log, "MARK");
 LOG_CHANNEL(gui_log, "GUI");
 
+extern atomic_t<bool> g_user_asked_for_recording;
+extern atomic_t<bool> g_user_asked_for_screenshot;
 extern atomic_t<bool> g_user_asked_for_frame_capture;
 extern atomic_t<bool> g_disable_frame_limit;
+extern atomic_t<recording_mode> g_recording_mode;
+
+atomic_t<bool> g_game_window_focused = false;
+
+bool is_input_allowed()
+{
+	return g_game_window_focused || g_cfg.io.background_input_enabled;
+}
 
 constexpr auto qstr = QString::fromStdString;
 
-gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon, std::shared_ptr<gui_settings> gui_settings)
+gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon, std::shared_ptr<gui_settings> gui_settings, bool force_fullscreen)
 	: QWindow()
 	, m_initial_geometry(geometry)
 	, m_gui_settings(std::move(gui_settings))
+	, m_start_games_fullscreen(force_fullscreen)
 {
 	m_disable_mouse = m_gui_settings->GetValue(gui::gs_disableMouse).toBool();
 	m_disable_kb_hotkeys = m_gui_settings->GetValue(gui::gs_disableKbHotkeys).toBool();
@@ -69,6 +75,14 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 	m_hide_mouse_idletime = m_gui_settings->GetValue(gui::gs_hideMouseIdleTime).toUInt();
 
 	m_window_title = Emu.GetFormattedTitle(0);
+
+	if (!g_cfg_recording.load())
+	{
+		gui_log.notice("Could not load recording config. Using defaults.");
+	}
+
+	g_fxo->need<utils::video_provider>();
+	m_video_encoder = std::make_shared<utils::video_encoder>();
 
 	if (!appIcon.isNull())
 	{
@@ -105,6 +119,10 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 	setVisibility(startup_visibility);
 	create();
 
+	// TODO: enable in Qt6
+	//m_shortcut_handler = new shortcut_handler(gui::shortcuts::shortcut_handler_id::game_window, this, m_gui_settings);
+	//connect(m_shortcut_handler, &shortcut_handler::shortcut_activated, this, &gs_frame::handle_shortcut);
+
 	// Change cursor when in fullscreen.
 	connect(this, &QWindow::visibilityChanged, this, [this](QWindow::Visibility visibility)
 	{
@@ -114,40 +132,36 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 	// Change cursor when this window gets or loses focus.
 	connect(this, &QWindow::activeChanged, this, [this]()
 	{
+		g_game_window_focused = isActive();
 		handle_cursor(visibility(), false, true);
 	});
 
 	// Configure the mouse hide on idle timer
-	connect(&m_mousehide_timer, &QTimer::timeout, this, &gs_frame::MouseHideTimeout);
+	connect(&m_mousehide_timer, &QTimer::timeout, this, &gs_frame::mouse_hide_timeout);
 	m_mousehide_timer.setSingleShot(true);
 
-#ifdef _WIN32
-	m_tb_button = new QWinTaskbarButton();
-	m_tb_progress = m_tb_button->progress();
-	m_tb_progress->setRange(0, m_gauge_max);
-	m_tb_progress->setVisible(false);
-
-#elif HAVE_QTDBUS
-	UpdateProgress(0, false);
-	m_progress_value = 0;
-#endif
+	m_progress_indicator = std::make_unique<progress_indicator>(0, 100);
 }
 
 gs_frame::~gs_frame()
 {
-#ifdef _WIN32
-	// QWinTaskbarProgress::hide() will crash if the application is already about to close, even if the object is not null.
-	if (m_tb_progress && !QCoreApplication::closingDown())
+	g_user_asked_for_screenshot = false;
+
+	// Save active screen to gui settings
+	const QScreen* current_screen = screen();
+	const QList<QScreen*> screens = QGuiApplication::screens();
+	int screen_index = 0;
+
+	for (int i = 0; i < screens.count(); i++)
 	{
-		m_tb_progress->hide();
+		if (current_screen == ::at32(screens, i))
+		{
+			screen_index = i;
+			break;
+		}
 	}
-	if (m_tb_button)
-	{
-		m_tb_button->deleteLater();
-	}
-#elif HAVE_QTDBUS
-	UpdateProgress(0, false);
-#endif
+
+	m_gui_settings->SetValue(gui::gs_screen, screen_index);
 }
 
 void gs_frame::paintEvent(QPaintEvent *event)
@@ -198,6 +212,7 @@ void gs_frame::showEvent(QShowEvent *event)
 	QWindow::showEvent(event);
 }
 
+// TODO: remove when shortcuts are properly hooked up (also check keyboard_pad_handler::processKeyEvent)
 void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 {
 	if (keyEvent->isAutoRepeat())
@@ -211,41 +226,120 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 	switch (keyEvent->key())
 	{
 	case Qt::Key_L:
+	{
 		if (keyEvent->modifiers() == Qt::AltModifier)
 		{
-			static int count = 0;
-			mark_log.success("Made forced mark %d in log", ++count);
-			return;
+			handle_shortcut(gui::shortcuts::shortcut::gw_log_mark, {});
+			break;
 		}
 		else if (keyEvent->modifiers() == Qt::ControlModifier)
 		{
-			toggle_mouselock();
-			return;
+			handle_shortcut(gui::shortcuts::shortcut::gw_mouse_lock, {});
+			break;
 		}
 		break;
+	}
 	case Qt::Key_Return:
+	{
 		if (keyEvent->modifiers() == Qt::AltModifier)
-		{
-			toggle_fullscreen();
-			return;
-		}
+			handle_shortcut(gui::shortcuts::shortcut::gw_toggle_fullscreen, {});
 		break;
+	}
 	case Qt::Key_Escape:
-		if (visibility() == FullScreen)
+	{
+		handle_shortcut(gui::shortcuts::shortcut::gw_exit_fullscreen, {});
+		break;
+	}
+	case Qt::Key_P:
+	{
+		if (keyEvent->modifiers() == Qt::ControlModifier)
+			handle_shortcut(gui::shortcuts::shortcut::gw_pause_play, {});
+		break;
+	}
+	case Qt::Key_S:
+	{
+		if (keyEvent->modifiers() == Qt::ControlModifier)
+			handle_shortcut(gui::shortcuts::shortcut::gw_savestate, {});
+		break;
+	}
+	case Qt::Key_R:
+	{
+		if (keyEvent->modifiers() == Qt::ControlModifier)
+			handle_shortcut(gui::shortcuts::shortcut::gw_restart, {});
+		break;
+	}
+	case Qt::Key_C:
+	{
+		if (keyEvent->modifiers() == Qt::AltModifier)
+			handle_shortcut(gui::shortcuts::shortcut::gw_rsx_capture, {});
+		break;
+	}
+	case Qt::Key_F10:
+	{
+		if (keyEvent->modifiers() == Qt::ControlModifier)
+			handle_shortcut(gui::shortcuts::shortcut::gw_frame_limit, {});
+		break;
+	}
+	case Qt::Key_F11:
+	{
+		handle_shortcut(gui::shortcuts::shortcut::gw_toggle_recording, {});
+		break;
+	}
+	case Qt::Key_F12:
+	{
+		handle_shortcut(gui::shortcuts::shortcut::gw_screenshot, {});
+		break;
+	}
+	default:
+	{
+		break;
+	}
+	}
+}
+
+void gs_frame::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKeySequence& key_sequence)
+{
+	gui_log.notice("Game window registered shortcut: %s (%s)", shortcut_key, key_sequence.toString().toStdString());
+
+	switch (shortcut_key)
+	{
+	case gui::shortcuts::shortcut::gw_toggle_fullscreen:
+	{
+		toggle_fullscreen();
+		break;
+	}
+	case gui::shortcuts::shortcut::gw_exit_fullscreen:
+	{
+		if (visibility() == FullScreen && !m_disable_kb_hotkeys)
 		{
 			toggle_fullscreen();
-			return;
 		}
 		break;
-	case Qt::Key_P:
-		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kb_hotkeys && Emu.IsRunning())
-		{
-			Emu.Pause();
-			return;
-		}
+	}
+	case gui::shortcuts::shortcut::gw_log_mark:
+	{
+		static int count = 0;
+		mark_log.success("Made forced mark %d in log", ++count);
 		break;
-	case Qt::Key_R:
-		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kb_hotkeys)
+	}
+	case gui::shortcuts::shortcut::gw_mouse_lock:
+	{
+		toggle_mouselock();
+		break;
+	}
+	case gui::shortcuts::shortcut::gw_screenshot:
+	{
+		g_user_asked_for_screenshot = true;
+		break;
+	}
+	case gui::shortcuts::shortcut::gw_toggle_recording:
+	{
+		toggle_recording();
+		break;
+	}
+	case gui::shortcuts::shortcut::gw_pause_play:
+	{
+		if (!m_disable_kb_hotkeys)
 		{
 			switch (Emu.GetStatus())
 			{
@@ -259,30 +353,57 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 				Emu.Resume();
 				return;
 			}
-			default: break;
+			default:
+			{
+				Emu.Pause();
+				return;
+			}
 			}
 		}
 		break;
-	case Qt::Key_C:
-		if (keyEvent->modifiers() == Qt::AltModifier && !m_disable_kb_hotkeys)
+	}
+	case gui::shortcuts::shortcut::gw_restart:
+	{
+		if (!m_disable_kb_hotkeys)
+		{
+			if (Emu.IsStopped())
+			{
+				Emu.Restart();
+				return;
+			}
+
+			extern bool boot_last_savestate(bool testing);
+			boot_last_savestate(false);
+		}
+		break;
+	}
+	case gui::shortcuts::shortcut::gw_savestate:
+	{
+		if (!m_disable_kb_hotkeys)
+		{
+			Emu.Kill(false, true);
+			return;
+		}
+		break;
+	}
+	case gui::shortcuts::shortcut::gw_rsx_capture:
+	{
+		if (!m_disable_kb_hotkeys)
 		{
 			g_user_asked_for_frame_capture = true;
-			return;
 		}
 		break;
-	case Qt::Key_F10:
-		if (keyEvent->modifiers() == Qt::ControlModifier)
-		{
-			g_disable_frame_limit = !g_disable_frame_limit;
-			gui_log.warning("%s boost mode", g_disable_frame_limit.load() ? "Enabled" : "Disabled");
-			return;
-		}
+	}
+	case gui::shortcuts::shortcut::gw_frame_limit:
+	{
+		g_disable_frame_limit = !g_disable_frame_limit;
+		gui_log.warning("%s boost mode", g_disable_frame_limit.load() ? "Enabled" : "Disabled");
 		break;
-	case Qt::Key_F12:
-		screenshot_toggle = true;
-		break;
+	}
 	default:
+	{
 		break;
+	}
 	}
 }
 
@@ -307,6 +428,105 @@ void gs_frame::toggle_fullscreen()
 			setVisibility(FullScreen);
 		}
 	});
+}
+
+void gs_frame::toggle_recording()
+{
+	utils::video_provider& video_provider = g_fxo->get<utils::video_provider>();
+
+	if (g_recording_mode == recording_mode::cell)
+	{
+		gui_log.warning("A video recorder is already in use by cell. Regular recording can not proceed.");
+		m_video_encoder->stop();
+		return;
+	}
+
+	if (g_recording_mode.exchange(recording_mode::stopped) == recording_mode::rpcs3)
+	{
+		m_video_encoder->stop();
+
+		if (!video_provider.set_image_sink(nullptr, recording_mode::rpcs3))
+		{
+			gui_log.warning("The video provider could not release the image sink. A sink with higher priority must have been set.");
+		}
+
+		// Play a sound
+		if (const std::string sound_path = fs::get_config_dir() + "sounds/snd_recording.wav"; fs::is_file(sound_path))
+		{
+			Emu.GetCallbacks().play_sound(sound_path);
+		}
+		else
+		{
+			QApplication::beep();
+		}
+
+		ensure(m_video_encoder->path().starts_with(fs::get_config_dir()));
+		const std::string shortpath = m_video_encoder->path().substr(fs::get_config_dir().size() - 1); // -1 for /
+		rsx::overlays::queue_message(tr("Recording saved: %0").arg(QString::fromStdString(shortpath)).toStdString());
+	}
+	else
+	{
+		m_video_encoder->stop();
+
+		const std::string& id = Emu.GetTitleID();
+		std::string video_path = fs::get_config_dir() + "recordings/";
+		if (!id.empty())
+		{
+			video_path += id + "/";
+		}
+
+		if (!fs::create_path(video_path) && fs::g_tls_error != fs::error::exist)
+		{
+			screenshot_log.error("Failed to create recordings path \"%s\" : %s", video_path, fs::g_tls_error);
+			return;
+		}
+
+		if (!id.empty())
+		{
+			video_path += id + "_";
+		}
+
+		video_path += "recording_" + date_time::current_time_narrow<'_'>() + ".mp4";
+
+		utils::video_encoder::frame_format output_format{};
+		output_format.av_pixel_format = static_cast<AVPixelFormat>(g_cfg_recording.pixel_format.get());
+		output_format.width = g_cfg_recording.width;
+		output_format.height = g_cfg_recording.height;
+		output_format.pitch = g_cfg_recording.width * 4;
+
+		m_video_encoder->set_path(video_path);
+		m_video_encoder->set_framerate(g_cfg_recording.framerate);
+		m_video_encoder->set_video_bitrate(g_cfg_recording.video_bps);
+		m_video_encoder->set_video_codec(g_cfg_recording.video_codec);
+		m_video_encoder->set_max_b_frames(g_cfg_recording.max_b_frames);
+		m_video_encoder->set_gop_size(g_cfg_recording.gop_size);
+		m_video_encoder->set_output_format(output_format);
+		m_video_encoder->set_sample_rate(0);   // TODO
+		m_video_encoder->set_audio_bitrate(0); // TODO
+		m_video_encoder->set_audio_codec(0);   // TODO
+		m_video_encoder->encode();
+
+		if (m_video_encoder->has_error)
+		{
+			rsx::overlays::queue_message(tr("Recording not possible").toStdString());
+			m_video_encoder->stop();
+			return;
+		}
+
+		if (!video_provider.set_image_sink(m_video_encoder, recording_mode::rpcs3))
+		{
+			gui_log.warning("The video provider could not set the image sink. A sink with higher priority must have been set.");
+			rsx::overlays::queue_message(tr("Recording not possible").toStdString());
+			m_video_encoder->stop();
+			return;
+		}
+
+		video_provider.set_pause_time(0);
+
+		g_recording_mode = recording_mode::rpcs3;
+
+		rsx::overlays::queue_message(tr("Recording started").toStdString());
+	}
 }
 
 void gs_frame::toggle_mouselock()
@@ -407,20 +627,14 @@ void gs_frame::show()
 	Emu.CallFromMainThread([this]()
 	{
 		QWindow::show();
-		if (g_cfg.misc.start_fullscreen)
+		if (g_cfg.misc.start_fullscreen || m_start_games_fullscreen)
 		{
 			setVisibility(FullScreen);
 		}
 	});
 
-#ifdef _WIN32
 	// if we do this before show, the QWinTaskbarProgress won't show
-	if (m_tb_button)
-	{
-		m_tb_button->setWindow(this);
-		m_tb_progress->show();
-	}
-#endif
+	m_progress_indicator->show(this);
 }
 
 display_handle_t gs_frame::handle() const
@@ -529,6 +743,26 @@ void gs_frame::flip(draw_context_t, bool /*skip_frame*/)
 		m_frames = 0;
 		fps_t.Start();
 	}
+
+	if (g_user_asked_for_recording.exchange(false))
+	{
+		Emu.CallFromMainThread([this]()
+		{
+			toggle_recording();
+		});
+	}
+}
+
+bool gs_frame::can_consume_frame() const
+{
+	utils::video_provider& video_provider = g_fxo->get<utils::video_provider>();
+	return video_provider.can_consume_frame();
+}
+
+void gs_frame::present_frame(std::vector<u8>& data, const u32 width, const u32 height, bool is_bgra) const
+{
+	utils::video_provider& video_provider = g_fxo->get<utils::video_provider>();
+	video_provider.present_frame(data, width, height, is_bgra);
 }
 
 void gs_frame::take_screenshot(std::vector<u8> data, const u32 sshot_width, const u32 sshot_height, bool is_bgra)
@@ -543,7 +777,7 @@ void gs_frame::take_screenshot(std::vector<u8> data, const u32 sshot_width, cons
 			if (!id.empty())
 			{
 				screen_path += id + "/";
-			};
+			}
 
 			if (!fs::create_path(screen_path) && fs::g_tls_error != fs::error::exist)
 			{
@@ -555,7 +789,7 @@ void gs_frame::take_screenshot(std::vector<u8> data, const u32 sshot_width, cons
 			if (!id.empty())
 			{
 				filename += id + "_";
-			};
+			}
 
 			filename += "screenshot_" + date_time::current_time_narrow<'_'>() + ".png";
 
@@ -762,13 +996,17 @@ void gs_frame::take_screenshot(std::vector<u8> data, const u32 sshot_width, cons
 			{
 				if (const std::string sound_path = fs::get_config_dir() + "sounds/snd_screenshot.wav"; fs::is_file(sound_path))
 				{
-					QSound::play(qstr(sound_path));
+					Emu.GetCallbacks().play_sound(sound_path);
 				}
 				else
 				{
 					QApplication::beep();
 				}
 			});
+
+			ensure(filename.starts_with(fs::get_config_dir()));
+			const std::string shortpath = filename.substr(fs::get_config_dir().size() - 1); // -1 for /
+			rsx::overlays::queue_message(tr("Screenshot saved: %0").arg(QString::fromStdString(shortpath)).toStdString());
 
 			return;
 		},
@@ -779,6 +1017,9 @@ void gs_frame::take_screenshot(std::vector<u8> data, const u32 sshot_width, cons
 void gs_frame::mouseDoubleClickEvent(QMouseEvent* ev)
 {
 	if (m_disable_mouse || g_cfg.io.move == move_handler::mouse) return;
+#ifdef HAVE_LIBEVDEV
+	if (g_cfg.io.move == move_handler::gun) return;
+#endif
 
 	if (ev->button() == Qt::LeftButton)
 	{
@@ -809,7 +1050,7 @@ void gs_frame::handle_cursor(QWindow::Visibility visibility, bool from_event, bo
 	update_cursor();
 }
 
-void gs_frame::MouseHideTimeout()
+void gs_frame::mouse_hide_timeout()
 {
 	// Our idle timeout occured, so we update the cursor
 	if (m_hide_mouse_after_idletime && m_show_mouse)
@@ -869,14 +1110,7 @@ bool gs_frame::event(QEvent* ev)
 
 void gs_frame::progress_reset(bool reset_limit)
 {
-#ifdef _WIN32
-	if (m_tb_progress)
-	{
-		m_tb_progress->reset();
-	}
-#elif HAVE_QTDBUS
-	UpdateProgress(0, false);
-#endif
+	m_progress_indicator->reset();
 
 	if (reset_limit)
 	{
@@ -886,60 +1120,18 @@ void gs_frame::progress_reset(bool reset_limit)
 
 void gs_frame::progress_set_value(int value)
 {
-#ifdef _WIN32
-	if (m_tb_progress)
-	{
-		m_tb_progress->setValue(std::clamp(value, m_tb_progress->minimum(), m_tb_progress->maximum()));
-	}
-#elif HAVE_QTDBUS
-	m_progress_value = std::clamp(value, 0, m_gauge_max);
-	UpdateProgress(m_progress_value, true);
-#endif
+	m_progress_indicator->set_value(value);
 }
 
 void gs_frame::progress_increment(int delta)
 {
-	if (delta == 0)
+	if (delta != 0)
 	{
-		return;
+		m_progress_indicator->set_value(m_progress_indicator->value() + delta);
 	}
-
-#ifdef _WIN32
-	if (m_tb_progress)
-	{
-		progress_set_value(m_tb_progress->value() + delta);
-	}
-#elif HAVE_QTDBUS
-	progress_set_value(m_progress_value + delta);
-#endif
 }
 
 void gs_frame::progress_set_limit(int limit)
 {
-#ifdef _WIN32
-	if (m_tb_progress)
-	{
-		m_tb_progress->setMaximum(limit);
-	}
-#elif HAVE_QTDBUS
-	m_gauge_max = limit;
-#endif
+	m_progress_indicator->set_range(0, limit);
 }
-
-#ifdef HAVE_QTDBUS
-void gs_frame::UpdateProgress(int progress, bool progress_visible)
-{
-	QDBusMessage message = QDBusMessage::createSignal
-	(
-		QStringLiteral("/"),
-		QStringLiteral("com.canonical.Unity.LauncherEntry"),
-		QStringLiteral("Update")
-	);
-	QVariantMap properties;
-	// Progress takes a value from 0.0 to 0.1
-	properties.insert(QStringLiteral("progress"), 1. * progress / m_gauge_max);
-	properties.insert(QStringLiteral("progress-visible"), progress_visible);
-	message << QStringLiteral("application://rpcs3.desktop") << properties;
-	QDBusConnection::sessionBus().send(message);
-}
-#endif

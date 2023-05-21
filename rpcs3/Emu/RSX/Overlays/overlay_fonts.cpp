@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "overlay_controls.h"
+#include "Emu/System.h"
 #include "Emu/vfs_config.h"
 
 #ifndef _WIN32
@@ -107,19 +108,8 @@ namespace rsx
 			glyph_load_setup result;
 			result.font_names.push_back(font_name);
 
-#ifdef _WIN32
-			result.lookup_font_dirs.emplace_back("C:/Windows/Fonts/");
-#else
-			char* home = getenv("HOME");
-			if (home == nullptr)
-				home = getpwuid(getuid())->pw_dir;
-
-			result.lookup_font_dirs.emplace_back(home);
-			if (home[result.lookup_font_dirs[0].length() - 1] == '/')
-				result.lookup_font_dirs[0] += ".fonts/";
-			else
-				result.lookup_font_dirs[0] += "/.fonts/";
-#endif
+			const std::vector<std::string> font_dirs = Emu.GetCallbacks().get_font_dirs();
+			result.lookup_font_dirs.insert(result.lookup_font_dirs.end(), font_dirs.begin(), font_dirs.end());
 			// Search dev_flash for the font too
 			result.lookup_font_dirs.push_back(g_cfg_vfs.get_dev_flash() + "data/font/");
 			result.lookup_font_dirs.push_back(g_cfg_vfs.get_dev_flash() + "data/font/SONY-CC/");
@@ -283,162 +273,153 @@ namespace rsx
 			}
 		}
 
-		void font::render_text_ex(std::vector<vertex>& result, f32& x_advance, f32& y_advance, const char32_t* text, usz char_limit, u16 max_width, bool wrap)
+		std::vector<vertex> font::render_text_ex(f32& x_advance, f32& y_advance, const char32_t* text, usz char_limit, u16 max_width, bool wrap)
 		{
 			x_advance = 0.f;
 			y_advance = 0.f;
-			result.clear();
+			std::vector<vertex> result;
 
 			if (!initialized)
 			{
-				return;
+				return result;
 			}
 
-			usz i                = 0u;
-			bool skip_whitespace = false;
-
-			while (true)
+			// Render as many characters as possible as glyphs.
+			for (usz i = 0u, begin_of_word = 0u; i < char_limit; i++)
 			{
-				if (auto c = text[i++]; c && (i <= char_limit))
+				switch (const auto& c = text[i])
 				{
-					switch (c)
+				case '\0':
+				{
+					// We're done.
+					return result;
+				}
+				case '\n':
+				{
+					// Reset x to 0 and increase y to advance to the new line.
+					x_advance = 0.f;
+					y_advance += size_px + 2.f;
+					begin_of_word = result.size();
+					continue;
+				}
+				case '\r':
+				{
+					// Reset x to 0.
+					x_advance = 0.f;
+					begin_of_word = result.size();
+					continue;
+				}
+				default:
+				{
+					const bool is_whitespace = c == ' ';
+					stbtt_aligned_quad quad{};
+
+					if (is_whitespace)
 					{
-					case '\n':
-					{
-						y_advance += size_px + 2.f;
-						x_advance = 0.f;
-						continue;
-					}
-					case '\r':
-					{
-						x_advance = 0.f;
-						continue;
-					}
-					default:
-					{
-						stbtt_aligned_quad quad;
-						if (skip_whitespace && text[i - 1] == ' ')
+						// Skip whitespace if we are at the start of a line.
+						if (x_advance <= 0.f)
 						{
-							quad = {};
+							// Set the glyph to the current position.
+							// This is necessary for downstream linewidth calculations.
+							quad.x0 = quad.x1 = x_advance;
+							quad.y0 = quad.y1 = y_advance;
 						}
 						else
 						{
-							quad            = get_char(c, x_advance, y_advance);
-							skip_whitespace = false;
-						}
+							const f32 x_advance_old = x_advance;
+							const f32 y_advance_old = y_advance;
 
-						if (x_advance > max_width)
-						{
-							bool wrapped              = false;
-							bool non_whitespace_break = false;
+							// Get the glyph size.
+							quad = get_char(c, x_advance, y_advance);
 
-							if (wrap)
+							// Reset the result if the glyph would protrude out of the given space anyway.
+							if (x_advance > max_width)
 							{
-								// scan previous chars
-								for (usz j = i - 1, nb_chars = 0; j > 0; j--, nb_chars++)
-								{
-									if (text[j] == '\n')
-										break;
-
-									if (text[j] == ' ')
-									{
-										non_whitespace_break = true;
-										continue;
-									}
-
-									if (non_whitespace_break)
-									{
-										if (nb_chars > 1)
-										{
-											nb_chars--;
-
-											auto first_affected = result.size() - (nb_chars * 4);
-											f32 base_x          = result[first_affected].values[0];
-
-											for (usz n = first_affected; n < result.size(); ++n)
-											{
-												auto char_index = n / 4;
-												if (text[char_index] == ' ')
-												{
-													// Skip character
-													result[n++].vec2(0.f, 0.f);
-													result[n++].vec2(0.f, 0.f);
-													result[n++].vec2(0.f, 0.f);
-													result[n].vec2(0.f, 0.f);
-													continue;
-												}
-
-												result[n].values[0] -= base_x;
-												result[n].values[1] += size_px + 2.f;
-											}
-
-											x_advance = result.back().values[0];
-										}
-										else
-										{
-											x_advance = 0.f;
-										}
-
-										wrapped = true;
-										y_advance += size_px + 2.f;
-
-										if (text[i - 1] == ' ')
-										{
-											quad            = {};
-											skip_whitespace = true;
-										}
-										else
-										{
-											quad = get_char(c, x_advance, y_advance);
-										}
-
-										break;
-									}
-								}
+								// Set the glyph to the previous position.
+								// This is necessary for downstream linewidth calculations.
+								quad.x0 = quad.x1 = x_advance_old;
+								quad.y0 = quad.y1 = y_advance_old;
 							}
+						}
+					}
+					else
+					{
+						// No whitespace. Get the glyph size.
+						quad = get_char(c, x_advance, y_advance);
+					}
 
-							if (!wrapped)
+					// Add the glyph's vertices.
+					result.emplace_back(quad.x0, quad.y0, quad.s0, quad.t0);
+					result.emplace_back(quad.x1, quad.y0, quad.s1, quad.t0);
+					result.emplace_back(quad.x0, quad.y1, quad.s0, quad.t1);
+					result.emplace_back(quad.x1, quad.y1, quad.s1, quad.t1);
+
+					// The next word will begin after any whitespaces.
+					if (is_whitespace)
+					{
+						begin_of_word = result.size();
+					}
+
+					// Check if we reached the end of the available space.
+					if (x_advance > max_width)
+					{
+						// Try to wrap the protruding text
+						if (wrap)
+						{
+							// Increase y to advance to the next line.
+							y_advance += size_px + 2.f;
+
+							// We can just reset x and move on to the next character if this is a whitespace.
+							if (is_whitespace)
 							{
-								// TODO: Ellipsize
+								x_advance = 0.f;
 								break;
 							}
-						}
 
-						result.emplace_back(quad.x0, quad.y0, quad.s0, quad.t0);
-						result.emplace_back(quad.x1, quad.y0, quad.s1, quad.t0);
-						result.emplace_back(quad.x0, quad.y1, quad.s0, quad.t1);
-						result.emplace_back(quad.x1, quad.y1, quad.s1, quad.t1);
-						break;
+							// Get the leftmost offset of the current word.
+							const f32 base_x = result[begin_of_word].x();
+
+							// Move all characters of the current word one line down and to the left.
+							for (usz n = begin_of_word; n < result.size(); ++n)
+							{
+								result[n].x() -= base_x;
+								result[n].y() += size_px + 2.f;
+							}
+
+							// Set x offset to the rightmost position of the current word
+							x_advance = result.back().x();
+						}
+						else
+						{
+							// TODO: Ellipsize
+						}
 					}
-					} // switch
-				}
-				else
-				{
+
 					break;
 				}
+				} // switch
 			}
+			return result;
 		}
 
 		std::vector<vertex> font::render_text(const char32_t* text, u16 max_width, bool wrap)
 		{
-			std::vector<vertex> result;
 			f32 unused_x, unused_y;
 
-			render_text_ex(result, unused_x, unused_y, text, -1, max_width, wrap);
-			return result;
+			return render_text_ex(unused_x, unused_y, text, -1, max_width, wrap);
 		}
 
 		std::pair<f32, f32> font::get_char_offset(const char32_t* text, usz max_length, u16 max_width, bool wrap)
 		{
-			std::vector<vertex> unused;
 			f32 loc_x, loc_y;
 
-			render_text_ex(unused, loc_x, loc_y, text, max_length, max_width, wrap);
+			render_text_ex(loc_x, loc_y, text, max_length, max_width, wrap);
 			return {loc_x, loc_y};
 		}
 
-		void font::get_glyph_data(std::vector<u8>& bytes) const
+		std::vector<u8> font::get_glyph_data() const
 		{
+			std::vector<u8> bytes;
 			const u32 page_size = codepage::bitmap_width * codepage::bitmap_height;
 			const auto size = page_size * m_glyph_map.size();
 
@@ -450,6 +431,7 @@ namespace rsx
 				std::memcpy(data, e.second->glyph_data.data(), page_size);
 				data += page_size;
 			}
+			return bytes;
 		}
 	} // namespace overlays
 } // namespace rsx

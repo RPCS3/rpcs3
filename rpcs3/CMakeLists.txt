@@ -66,10 +66,12 @@ set(RPCS3_SRC
     Input/ds4_pad_handler.cpp
     Input/dualsense_pad_handler.cpp
     Input/evdev_joystick_handler.cpp
+    Input/evdev_gun_handler.cpp
     Input/hid_pad_handler.cpp
     Input/keyboard_pad_handler.cpp
     Input/mm_joystick_handler.cpp
     Input/pad_thread.cpp
+    Input/sdl_pad_handler.cpp
     Input/xinput_pad_handler.cpp
 )
 
@@ -138,6 +140,11 @@ find_program(MACDEPLOYQT_EXECUTABLE macdeployqt HINTS "${_qt_bin_dir}")
 
 # Copy icons to executable directory
 if(APPLE)
+    if (CMAKE_BUILD_TYPE MATCHES "Debug" OR CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
+        set(QT_DEPLOY_FLAGS "-no-strip")
+    else()
+        set(QT_DEPLOY_FLAGS "")
+    endif()
     add_custom_command(TARGET rpcs3 POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy
             ${RPCS3_SRC_DIR}/rpcs3.icns $<TARGET_FILE_DIR:rpcs3>/../Resources/rpcs3.icns
@@ -147,7 +154,7 @@ if(APPLE)
             ${CMAKE_SOURCE_DIR}/bin/GuiConfigs $<TARGET_FILE_DIR:rpcs3>/../Resources/GuiConfigs
             COMMAND ${CMAKE_COMMAND} -E copy_directory
             ${CMAKE_SOURCE_DIR}/bin/git $<TARGET_FILE_DIR:rpcs3>/../Resources/git
-            COMMAND "${MACDEPLOYQT_EXECUTABLE}" "${PROJECT_BINARY_DIR}/bin/rpcs3.app")
+            COMMAND "${MACDEPLOYQT_EXECUTABLE}" "${PROJECT_BINARY_DIR}/bin/rpcs3.app" "${QT_DEPLOY_FLAGS}")
 elseif(UNIX)
     add_custom_command(TARGET rpcs3 POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_directory
@@ -180,13 +187,13 @@ elseif(WIN32)
 
     # If Qt5 is installed from vcpkg
     list(APPEND _QT5_TOOLS_PATHS "${Qt5_DIR}/../../../tools/qt5$<$<CONFIG:Debug>:/debug>/bin/")
-    
+
     add_custom_command(TARGET rpcs3 POST_BUILD
         COMMAND set PATH=${_QT5_TOOLS_PATHS}$<SEMICOLON>%PATH%
         COMMAND "${CMAKE_COMMAND}" -E copy_directory "${CMAKE_SOURCE_DIR}/bin" "$<TARGET_FILE_DIR:rpcs3>"
         # If Qt5 is installed from vcpkg, add binary path to PATH
         # otherwise windeployqt tool won't be able to locate necessary dlls
-        COMMAND set PATH=${Qt5_DIR}/../../../$<$<CONFIG:Debug>:debug/>bin/$<SEMICOLON>%PATH% 
+        COMMAND set PATH=${Qt5_DIR}/../../../$<$<CONFIG:Debug>:debug/>bin/$<SEMICOLON>%PATH%
         COMMAND "${_WINDEPLOYQT}" --no-angle --no-compiler-runtime --no-opengl-sw --no-patchqt --no-translations --no-quick --plugindir "$<TARGET_FILE_DIR:rpcs3>/qt/plugins" $<$<CONFIG:Debug>:--debug> $<$<CONFIG:Release>:--release> "$<TARGET_FILE:rpcs3>")
 endif()
 
@@ -209,5 +216,7 @@ if(UNIX AND NOT APPLE)
     install(DIRECTORY ../bin/GuiConfigs
         DESTINATION ${CMAKE_INSTALL_DATADIR}/rpcs3)
     install(DIRECTORY ../bin/git
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/rpcs3)
+    install(DIRECTORY ../bin/test
         DESTINATION ${CMAKE_INSTALL_DATADIR}/rpcs3)
 endif()

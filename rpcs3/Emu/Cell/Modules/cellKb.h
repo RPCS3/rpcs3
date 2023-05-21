@@ -56,5 +56,3 @@ struct CellKbConfig
 	be_t<u32> read_mode;
 	be_t<u32> code_type;
 };
-
-u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode);

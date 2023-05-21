@@ -123,7 +123,7 @@ bool game_compatibility::ReadJSON(const QJsonObject& json_data, bool after_downl
 		QJsonObject json_result = json_results[key].toObject();
 
 		// Retrieve compatibility information from json
-		compat::status status = Status_Data.at(json_result.value("status").toString("NoResult"));
+		compat::status status = ::at32(Status_Data, json_result.value("status").toString("NoResult"));
 
 		// Add date if possible
 		status.date = json_result.value("date").toString();
@@ -236,19 +236,20 @@ compat::status game_compatibility::GetCompatibility(const std::string& title_id)
 {
 	if (m_compat_database.empty())
 	{
-		return Status_Data.at("NoData");
-	}
-	else if (m_compat_database.count(title_id) > 0)
-	{
-		return m_compat_database[title_id];
+		return ::at32(Status_Data, "NoData");
 	}
 
-	return Status_Data.at("NoResult");
+	if (const auto it = m_compat_database.find(title_id); it != m_compat_database.cend())
+	{
+		return it->second;
+	}
+
+	return ::at32(Status_Data, "NoResult");
 }
 
 compat::status game_compatibility::GetStatusData(const QString& status) const
 {
-	return Status_Data.at(status);
+	return ::at32(Status_Data, status);
 }
 
 compat::package_info game_compatibility::GetPkgInfo(const QString& pkg_path, game_compatibility* compat)

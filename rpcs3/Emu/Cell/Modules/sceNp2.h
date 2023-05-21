@@ -1555,9 +1555,9 @@ struct SceNpMatching2CbQueueInfo
 	u8 reserved[12];
 };
 
-union SceNpMatching2SignalingNetInfo // TODO check values
+struct SceNpMatching2SignalingNetInfo
 {
-	be_t<u64> size;
+	be_t<u32> size;
 	be_t<u32> localAddr;
 	be_t<u32> mappedAddr;
 	be_t<u32> natStatus;

@@ -150,8 +150,8 @@ error_code cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellJpgDe
 	default: break; // TODO
 	}
 
-	if (*utils::bless<le_t<u32>>(buffer.get() + 0) != 0xE0FFD8FF || // Error: Not a valid SOI header
-		*utils::bless<u32>(buffer.get() + 6) != "JFIF"_u32)   // Error: Not a valid JFIF string
+	if (read_from_ptr<le_t<u32>>(buffer.get() + 0) != 0xE0FFD8FF || // Error: Not a valid SOI header
+		read_from_ptr<u32>(buffer.get() + 6) != "JFIF"_u32)   // Error: Not a valid JFIF string
 	{
 		return CELL_JPGDEC_ERROR_HEADER;
 	}

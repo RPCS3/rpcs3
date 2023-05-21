@@ -315,7 +315,7 @@ error_code cellSysutilAvc2EstimateMemoryContainerSize(vm::cptr<CellSysutilAvc2In
 				val += static_cast<s32>(static_cast<f64>(window_count) * 1258291.2) + 0x1ed846;
 			}
 
-			estimated_size = (estimated_size + ((static_cast<int>(val) >> 7) + static_cast<u32>(static_cast<int>(val) < 0 && (val & 0x7f) != 0)) * 0x80 + 0x80080 & 0xfff00000) + 0x100000;
+			estimated_size = ((estimated_size + ((static_cast<int>(val) >> 7) + static_cast<u32>(static_cast<int>(val) < 0 && (val & 0x7f) != 0)) * 0x80 + 0x80080) & 0xfff00000) + 0x100000;
 
 			*size = estimated_size;
 		}
@@ -354,9 +354,6 @@ error_code cellSysutilAvc2SetPlayerVoiceMuting(SceNpMatching2RoomMemberId member
 error_code cellSysutilAvc2SetStreamingTarget(vm::cptr<CellSysutilAvc2StreamingTarget> target)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2SetStreamingTarget(target=*0x%x)", target);
-
-	// target should never be null
-	ensure(!!target);
 
 	return CELL_OK;
 }

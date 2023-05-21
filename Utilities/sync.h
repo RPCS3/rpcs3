@@ -99,13 +99,13 @@ inline int futex(volatile void* uaddr, int futex_op, uint val, const timespec* t
 
 				if (!timeout)
 				{
-					rec.cv.wait(lock, [&] { return !rec.mask; });
+					rec.cv.wait(lock, FN(!rec.mask));
 				}
 				else if (futex_op == FUTEX_WAIT)
 				{
 					const auto nsec = std::chrono::nanoseconds(timeout->tv_nsec + timeout->tv_sec * 1000000000ull);
 
-					if (!rec.cv.wait_for(lock, nsec, [&] { return !rec.mask; }))
+					if (!rec.cv.wait_for(lock, nsec, FN(!rec.mask)))
 					{
 						res = -1;
 						errno = ETIMEDOUT;

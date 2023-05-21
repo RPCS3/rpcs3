@@ -1,7 +1,7 @@
 #pragma once
 
+#include "Emu/system_utils.hpp"
 #include "Emu/Io/usb_device.h"
-#include <queue>
 
 class usb_device_usio : public usb_device_emulated
 {
@@ -14,10 +14,18 @@ public:
 	void interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, UsbTransfer* transfer) override;
 
 private:
+	void load_backup();
+	void save_backup();
 	void translate_input();
-	void usio_write(u8 channel, u16 reg, const std::vector<u8>& data);
+	void usio_write(u8 channel, u16 reg, std::vector<u8>& data);
 	void usio_read(u8 channel, u16 reg, u16 size);
 
 private:
-	std::queue<std::vector<u8>> q_replies;
+	bool test_on = false;
+	bool test_key_pressed = false;
+	bool coin_key_pressed = false;
+	bool is_used = false;
+	le_t<u16> coin_counter = 0;
+	const std::string usio_backup_path = rpcs3::utils::get_hdd1_dir() + "/caches/usiobackup.bin";
+	std::vector<u8> response;
 };

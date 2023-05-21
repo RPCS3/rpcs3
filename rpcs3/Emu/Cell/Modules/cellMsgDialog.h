@@ -89,9 +89,8 @@ enum class MsgDialogState
 	Close,
 };
 
-extern atomic_t<s32> g_last_user_response;
-
-error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialogCallback> callback = vm::null, vm::ptr<void> userData = vm::null, vm::ptr<void> extParam = vm::null);
+void close_msg_dialog();
+error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialogCallback> callback = vm::null, vm::ptr<void> userData = vm::null, vm::ptr<void> extParam = vm::null, s32* return_code = nullptr);
 error_code open_exit_dialog(const std::string& message, bool is_exit_requested);
 
 class MsgDialogBase

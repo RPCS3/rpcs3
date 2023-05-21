@@ -50,12 +50,12 @@ namespace vk
 			if (vram_texture && !managed_texture && get_protection() == utils::protection::no)
 			{
 				// In-place image swap, still locked. Likely a color buffer that got rebound as depth buffer or vice-versa.
-				vk::as_rtt(vram_texture)->release();
+				vk::as_rtt(vram_texture)->on_swap_out();
 
 				if (!managed)
 				{
 					// Incoming is also an external resource, reference it immediately
-					vk::as_rtt(image)->add_ref();
+					vk::as_rtt(image)->on_swap_in(is_locked());
 				}
 			}
 
@@ -163,7 +163,7 @@ namespace vk
 			return managed_texture;
 		}
 
-		vk::render_target* get_render_target()
+		vk::render_target* get_render_target() const
 		{
 			return vk::as_rtt(vram_texture);
 		}
@@ -345,11 +345,6 @@ namespace vk
 			}
 		}
 
-		bool is_synchronized() const
-		{
-			return synchronized;
-		}
-
 		bool has_compatible_format(vk::image* tex) const
 		{
 			return vram_texture->info.format == tex->info.format;
@@ -390,7 +385,8 @@ namespace vk
 		enum texture_create_flags : u32
 		{
 			initialize_image_contents = 1,
-			do_not_reuse = 2
+			do_not_reuse = 2,
+			shareable = 4
 		};
 
 		void on_section_destroyed(cached_texture_section& tex) override;
@@ -421,7 +417,7 @@ namespace vk
 
 		vk::image* get_template_from_collection_impl(const std::vector<copy_region_descriptor>& sections_to_transfer) const;
 
-		std::unique_ptr<vk::viewable_image> find_cached_image(VkFormat format, u16 w, u16 h, u16 d, u16 mipmaps, VkImageType type, VkImageCreateFlags create_flags, VkImageUsageFlags usage);
+		std::unique_ptr<vk::viewable_image> find_cached_image(VkFormat format, u16 w, u16 h, u16 d, u16 mipmaps, VkImageType type, VkImageCreateFlags create_flags, VkImageUsageFlags usage, VkSharingMode sharing);
 
 	protected:
 		vk::image_view* create_temporary_subresource_view_impl(vk::command_buffer& cmd, vk::image* source, VkImageType image_type, VkImageViewType view_type,

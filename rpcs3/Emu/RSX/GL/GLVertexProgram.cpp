@@ -2,6 +2,7 @@
 #include "GLVertexProgram.h"
 
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 
 #include "GLCommonDecompiler.h"
 #include "../Program/GLSLCommon.h"
@@ -31,7 +32,7 @@ std::string GLVertexDecompilerThread::compareFunction(COMPARE f, const std::stri
 void GLVertexDecompilerThread::insertHeader(std::stringstream &OS)
 {
 	OS << "#version 430\n";
-	OS << "layout(std140, binding = 0) uniform VertexContextBuffer\n";
+	OS << "layout(std140, binding = " << GL_VERTEX_PARAMS_BIND_SLOT << ") uniform VertexContextBuffer\n";
 	OS << "{\n";
 	OS << "	mat4 scale_offset_mat;\n";
 	OS << "	ivec4 user_clip_enabled[2];\n";
@@ -42,7 +43,7 @@ void GLVertexDecompilerThread::insertHeader(std::stringstream &OS)
 	OS << "	float z_far;\n";
 	OS << "};\n\n";
 
-	OS << "layout(std140, binding = 1) uniform VertexLayoutBuffer\n";
+	OS << "layout(std140, binding = " << GL_VERTEX_LAYOUT_BIND_SLOT << ") uniform VertexLayoutBuffer\n";
 	OS << "{\n";
 	OS << "	uint  vertex_base_index;\n";
 	OS << "	uint  vertex_index_offset;\n";
@@ -58,15 +59,13 @@ void GLVertexDecompilerThread::insertInputs(std::stringstream& OS, const std::ve
 
 void GLVertexDecompilerThread::insertConstants(std::stringstream& OS, const std::vector<ParamType>& constants)
 {
-
-
 	for (const ParamType &PT: constants)
 	{
 		for (const ParamItem &PI : PT.items)
 		{
 			if (PI.name.starts_with("vc["))
 			{
-				OS << "layout(std140, binding = 2) uniform VertexConstantsBuffer\n";
+				OS << "layout(std140, binding = " << GL_VERTEX_CONSTANT_BUFFERS_BIND_SLOT << ") uniform VertexConstantsBuffer\n";
 				OS << "{\n";
 				OS << "	vec4 " << PI.name << ";\n";
 				OS << "};\n\n";
@@ -90,13 +89,13 @@ static const vertex_reg_info reg_table[] =
 	//Fog output shares a data source register with clip planes 0-2 so only declare when specified
 	{ "fog_c", true, "dst_reg5", ".xxxx", true, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_FOG },
 	//Warning: Always define all 3 clip plane groups together to avoid flickering with openGL
-	{ "gl_ClipDistance[0]", false, "dst_reg5", ".y * user_clip_factor[0].x", false, "user_clip_enabled[0].x > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC0 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC1 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC2 },
-	{ "gl_ClipDistance[1]", false, "dst_reg5", ".z * user_clip_factor[0].y", false, "user_clip_enabled[0].y > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC0 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC1 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC2 },
-	{ "gl_ClipDistance[2]", false, "dst_reg5", ".w * user_clip_factor[0].z", false, "user_clip_enabled[0].z > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC0 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC1 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC2 },
-	{ "gl_PointSize", false, "dst_reg6", ".x", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_POINTSIZE },
-	{ "gl_ClipDistance[3]", false, "dst_reg6", ".y * user_clip_factor[0].w", false, "user_clip_enabled[0].w > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC3 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC4 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC5 },
-	{ "gl_ClipDistance[4]", false, "dst_reg6", ".z * user_clip_factor[1].x", false, "user_clip_enabled[1].x > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC3 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC4 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC5 },
-	{ "gl_ClipDistance[5]", false, "dst_reg6", ".w * user_clip_factor[1].y", false, "user_clip_enabled[1].y > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC3 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC4 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC5 },
+	{ "gl_ClipDistance[0]", false, "dst_reg5", ".y * user_clip_factor[0].x", false, "user_clip_enabled[0].x > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC0 },
+	{ "gl_ClipDistance[1]", false, "dst_reg5", ".z * user_clip_factor[0].y", false, "user_clip_enabled[0].y > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC1 },
+	{ "gl_ClipDistance[2]", false, "dst_reg5", ".w * user_clip_factor[0].z", false, "user_clip_enabled[0].z > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC2 },
+	{ "gl_PointSize", false, "dst_reg6", ".x", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_POINTSIZE },
+	{ "gl_ClipDistance[3]", false, "dst_reg6", ".y * user_clip_factor[0].w", false, "user_clip_enabled[0].w > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC3 },
+	{ "gl_ClipDistance[4]", false, "dst_reg6", ".z * user_clip_factor[1].x", false, "user_clip_enabled[1].x > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC4 },
+	{ "gl_ClipDistance[5]", false, "dst_reg6", ".w * user_clip_factor[1].y", false, "user_clip_enabled[1].y > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC5 },
 	{ "tc0", true, "dst_reg7", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX0 },
 	{ "tc1", true, "dst_reg8", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX1 },
 	{ "tc2", true, "dst_reg9", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX2 },
@@ -131,6 +130,7 @@ void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 	properties2.emulate_zclip_transform = true;
 	properties2.emulate_depth_clip_only = dev_caps.NV_depth_buffer_float_supported;
 	properties2.low_precision_tests = dev_caps.vendor_NVIDIA;
+	properties2.require_explicit_invariance = dev_caps.vendor_MESA || (dev_caps.vendor_NVIDIA && g_cfg.video.shader_precision != gpu_preset_level::low);
 
 	insert_glsl_legacy_function(OS, properties2);
 	glsl::insert_vertex_input_fetch(OS, glsl::glsl_rules_opengl4, dev_caps.vendor_INTEL == false);

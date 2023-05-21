@@ -249,20 +249,6 @@ QWidget#trophy_notification_frame {
 	color: #e6e6e6;
 }
 
-/* Game Grid Font */
-QTableWidget#game_grid {
-	font-weight: 600;
-	font-size: 8pt;
-	font-family: Lucida Grande;
-	selection-color: #e6e6e6;
-}
-QTableWidget#game_grid::item:selected:active {
-	selection-background-color: #4c4b4b;
-}
-QTableWidget#game_grid::item:selected:!active {
-	selection-background-color: #3d3d3d;
-}
-
 /* Set Toolbar Slider Size */
 QSlider#sizeSlider::groove:horizontal {
 	border: 0em solid transparent;
@@ -347,24 +333,54 @@ QLabel#tty_text {
 /* Tree view changes*/
 QTreeView::branch:has-children:!has-siblings:closed,
 QTreeView::branch:closed:has-children:has-siblings {
-    border-image: none;
-    image: url("GuiConfigs/list_arrow_white.png");
+	border-image: none;
+	image: url("GuiConfigs/list_arrow_white.png");
 }
 
 QTreeView::branch:open:has-children:!has-siblings,
-QTreeView::branch:open:has-children:has-siblings  {
-    border-image: none;
-    image: url("GuiConfigs/list_arrow_down_white.png");
+QTreeView::branch:open:has-children:has-siblings {
+	border-image: none;
+	image: url("GuiConfigs/list_arrow_down_white.png");
 }
 
 QTreeView::branch:has-children:!has-siblings:closed:hover,
 QTreeView::branch:closed:has-children:has-siblings:hover {
-    border-image: none;
-    image: url("GuiConfigs/list_arrow_blue.png");
+	border-image: none;
+	image: url("GuiConfigs/list_arrow_blue.png");
 }
 
 QTreeView::branch:open:has-children:!has-siblings:hover,
-QTreeView::branch:open:has-children:has-siblings:hover  {
-    border-image: none;
-    image: url("GuiConfigs/list_arrow_down_blue.png");
+QTreeView::branch:open:has-children:has-siblings:hover {
+	border-image: none;
+	image: url("GuiConfigs/list_arrow_down_blue.png");
+}
+
+/* Game Grid */
+#game_list_grid_item[selected="true"] {
+	background: #3d3d3d;
+}
+#game_list_grid_item:hover {
+	background: #3d3d3d;
+}
+#game_list_grid_item:focus {
+	background: #4c4b4b;
+}
+
+/* Game Grid Font */
+#game_list_grid_item #game_list_grid_item_title_label {
+	font-weight: 600;
+	font-size: 8pt;
+	font-family: Lucida Grande;
+}
+
+/* Game Grid hover and focus: we need to handle properties differently when using descendants */
+#game_list_grid_item[selected="true"] #game_list_grid_item_title_label {
+	background-color: #3d3d3d;
+}
+#game_list_grid_item[hover="true"] #game_list_grid_item_title_label {
+	background-color: #3d3d3d;
+}
+#game_list_grid_item[focus="true"] #game_list_grid_item_title_label {
+	color: #e6e6e6;
+	background-color: #4c4b4b;
 }

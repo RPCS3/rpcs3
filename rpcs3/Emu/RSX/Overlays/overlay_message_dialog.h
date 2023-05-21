@@ -16,7 +16,7 @@ namespace rsx
 
 			overlay_element bottom_bar, background;
 			image_view background_poster;
-			progress_bar progress_1, progress_2;
+			std::array<progress_bar, 2> progress_bars{};
 			u8 num_progress_bars = 0;
 			s32 taskbar_index = 0;
 			s32 taskbar_limit = 0;
@@ -32,13 +32,42 @@ namespace rsx
 
 			animation_color_interpolate fade_animation;
 
+			struct text_guard_t
+			{
+				std::mutex mutex;
+				std::string text;
+				bool dirty{false};
+
+				void set_text(std::string t)
+				{
+					std::lock_guard lock(mutex);
+					text = std::move(t);
+					dirty = true;
+				}
+
+				std::pair<bool, std::string> get_text()
+				{
+					if (dirty)
+					{
+						std::lock_guard lock(mutex);
+						dirty = false;
+						return { true, std::move(text) };
+					}
+
+					return { false, {} };
+				}
+			};
+
+			text_guard_t text_guard{};
+			std::array<text_guard_t, 2> bar_text_guard{};
+
 		public:
 			message_dialog(bool allow_custom_background = false);
 
 			compiled_resource get_compiled() override;
 
 			void update() override;
-			void on_button_pressed(pad_button button_press) override;
+			void on_button_pressed(pad_button button_press, bool is_auto_repeat) override;
 			void close(bool use_callback, bool stop_pad_interception) override;
 
 			error_code show(bool is_blocking, const std::string& text, const MsgDialogType& type, std::function<void(s32 status)> on_close);

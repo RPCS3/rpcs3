@@ -64,7 +64,7 @@ u32 RSXDisAsm::disasm(u32 pc)
 		}
 		else
 		{
-			Write("?? ??", -1);
+			Write(fmt::format("?? ?? (0x%x)", m_op), -1);
 		}
 
 		return 4;
@@ -73,7 +73,7 @@ u32 RSXDisAsm::disasm(u32 pc)
 	{
 		u32 i = 1;
 
-		for (pc += 4; m_mode != cpu_disasm_mode::list && pc && i < 4096; i++, pc += 4)
+		for (pc += 4; m_mode != cpu_disasm_mode::list && pc % (4096 * 4); i++, pc += 4)
 		{
 			if (!try_read_op(pc))
 			{
@@ -103,7 +103,7 @@ u32 RSXDisAsm::disasm(u32 pc)
 		{
 			// Hack: 0 method with large count is unlikely to be a command
 			// But is very common in floating point args, messing up debugger's code-flow
-			Write("?? ??", -1);
+			Write(fmt::format("?? ?? (0x%x)", m_op), -1);
 			return 4;
 		}
 
@@ -114,7 +114,7 @@ u32 RSXDisAsm::disasm(u32 pc)
 			if (!try_read_op(pc))
 			{
 				last_opcode.clear();
-				Write("?? ??", -1);
+				Write(fmt::format("?? ?? (0x%08x:unmapped)", m_op), -1);
 				return 4;
 			}
 
@@ -123,7 +123,7 @@ u32 RSXDisAsm::disasm(u32 pc)
 			if (rsx::methods[id] == &rsx::invalid_method)
 			{
 				last_opcode.clear();
-				Write("?? ??", -1);
+				Write(fmt::format("?? ?? (0x%08x:method)", m_op), -1);
 				return 4;
 			}
 
@@ -161,8 +161,16 @@ void RSXDisAsm::Write(std::string_view str, s32 count, bool is_non_inc, u32 id)
 	{
 	case cpu_disasm_mode::interpreter:
 	{
-		last_opcode = count >= 0 ? fmt::format("[%08x] (%s%u)", dump_pc, is_non_inc ? "+" : "", count) : 
-			fmt::format("[%08x] (x)", dump_pc);
+		last_opcode.clear();
+
+		if (count >= 0)
+		{
+			fmt::append(last_opcode, "[%08x] (%s%u)", dump_pc, is_non_inc ? "+" : "", count);
+		}
+		else
+		{
+			fmt::append(last_opcode, "[%08x] (x)", dump_pc);
+		}
 
 		auto& res = last_opcode;
 

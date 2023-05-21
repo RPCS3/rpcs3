@@ -5,6 +5,8 @@
 #include <algorithm>
 #include "util/logs.hpp"
 #include "Emu/System.h"
+#include "Emu/Audio/audio_device_enumerator.h"
+#include "Utilities/StrUtil.h"
 
 #include "XAudio2Backend.h"
 #include <Windows.h>
@@ -14,41 +16,84 @@
 
 LOG_CHANNEL(XAudio);
 
+template <>
+void fmt_class_string<ERole>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto value)
+	{
+		switch (value)
+		{
+		case eConsole: return "eConsole";
+		case eMultimedia: return "eMultimedia";
+		case eCommunications: return "eCommunications";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<EDataFlow>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto value)
+	{
+		switch (value)
+		{
+		case eRender: return "eRender";
+		case eCapture: return "eCapture";
+		case eAll: return "eAll";
+		}
+
+		return unknown;
+	});
+}
+
 XAudio2Backend::XAudio2Backend()
 	: AudioBackend()
 {
-	Microsoft::WRL::ComPtr<IXAudio2> instance;
+	Microsoft::WRL::ComPtr<IXAudio2> instance{};
+	Microsoft::WRL::ComPtr<IMMDeviceEnumerator> enumerator{};
 
 	// In order to prevent errors on CreateMasteringVoice, apparently we need CoInitializeEx according to:
 	// https://docs.microsoft.com/en-us/windows/win32/api/xaudio2fx/nf-xaudio2fx-xaudio2createvolumemeter
-	HRESULT hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
-	if (SUCCEEDED(hr))
+	if (HRESULT hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED); SUCCEEDED(hr))
 	{
 		m_com_init_success = true;
 	}
 
-	hr = XAudio2Create(instance.GetAddressOf(), 0, XAUDIO2_USE_DEFAULT_PROCESSOR);
-	if (FAILED(hr))
+	if (HRESULT hr = XAudio2Create(instance.GetAddressOf(), 0, XAUDIO2_USE_DEFAULT_PROCESSOR); FAILED(hr))
 	{
 		XAudio.error("XAudio2Create() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
 		return;
 	}
 
-
-	hr = instance->RegisterForCallbacks(this);
-	if (FAILED(hr))
+	if (HRESULT hr = instance->RegisterForCallbacks(this); FAILED(hr))
 	{
 		// Some error recovery functionality will be lost, but otherwise backend is operational
 		XAudio.error("RegisterForCallbacks() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
 	}
 
+	// Try to register a listener for device changes
+	if (HRESULT hr = CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(enumerator.GetAddressOf())); FAILED(hr))
+	{
+		XAudio.error("CoCreateInstance() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
+		return;
+	}
+
 	// All succeeded, "commit"
 	m_xaudio2_instance = std::move(instance);
+	m_device_enumerator = std::move(enumerator);
 }
 
 XAudio2Backend::~XAudio2Backend()
 {
 	Close();
+
+	if (m_device_enumerator != nullptr)
+	{
+		m_device_enumerator->UnregisterEndpointNotificationCallback(this);
+		m_device_enumerator = nullptr;
+	}
 
 	if (m_xaudio2_instance != nullptr)
 	{
@@ -69,14 +114,13 @@ bool XAudio2Backend::Initialized()
 
 bool XAudio2Backend::Operational()
 {
-	std::lock_guard lock(m_error_cb_mutex);
+	return m_source_voice != nullptr && !m_reset_req.observe();
+}
 
-	if (m_dev_listener.output_device_changed())
-	{
-		m_reset_req = true;
-	}
-
-	return m_source_voice != nullptr && !m_reset_req;
+bool XAudio2Backend::DefaultDeviceChanged()
+{
+	std::lock_guard lock{m_state_cb_mutex};
+	return !m_reset_req.observe() && m_default_dev_changed;
 }
 
 void XAudio2Backend::Play()
@@ -112,8 +156,14 @@ void XAudio2Backend::CloseUnlocked()
 		m_master_voice = nullptr;
 	}
 
+	m_device_enumerator->UnregisterEndpointNotificationCallback(this);
+
 	m_playing = false;
 	m_last_sample.fill(0);
+
+	std::lock_guard lock(m_state_cb_mutex);
+	m_default_dev_changed = false;
+	m_current_device.clear();
 }
 
 void XAudio2Backend::Close()
@@ -144,7 +194,7 @@ void XAudio2Backend::Pause()
 	}
 }
 
-bool XAudio2Backend::Open(AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt)
+bool XAudio2Backend::Open(std::string_view dev_id, AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt)
 {
 	if (!Initialized())
 	{
@@ -155,9 +205,54 @@ bool XAudio2Backend::Open(AudioFreq freq, AudioSampleSize sample_size, AudioChan
 	std::lock_guard lock(m_cb_mutex);
 	CloseUnlocked();
 
+	const bool use_default_device = dev_id.empty() || dev_id == audio_device_enumerator::DEFAULT_DEV_ID;
+	std::string selected_dev_id{};
+
+	if (use_default_device)
+	{
+		Microsoft::WRL::ComPtr<IMMDevice> default_dev{};
+		if (HRESULT hr = m_device_enumerator->GetDefaultAudioEndpoint(eRender, eConsole, default_dev.GetAddressOf()); FAILED(hr))
+		{
+			XAudio.error("GetDefaultAudioEndpoint() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
+			return false;
+		}
+
+		LPWSTR default_id{};
+		if (HRESULT hr = default_dev->GetId(&default_id); FAILED(hr))
+		{
+			XAudio.error("GetId() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
+			return false;
+		}
+
+		selected_dev_id = wchar_to_utf8(std::wstring_view{default_id});
+		CoTaskMemFree(default_id);
+		if (selected_dev_id.empty())
+		{
+			XAudio.error("Default device id is empty");
+			return false;
+		}
+	}
+
+	if (HRESULT hr = m_xaudio2_instance->CreateMasteringVoice(&m_master_voice, 0, 0, 0, utf8_to_wchar(use_default_device ? selected_dev_id : dev_id).c_str()); FAILED(hr))
+	{
+		XAudio.error("CreateMasteringVoice() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
+		m_master_voice = nullptr;
+		return false;
+	}
+
+	XAUDIO2_VOICE_DETAILS vd{};
+	m_master_voice->GetVoiceDetails(&vd);
+
+	if (vd.InputChannels == 0)
+	{
+		XAudio.error("Channel count 0 is invalid");
+		CloseUnlocked();
+		return false;
+	}
+
 	m_sampling_rate = freq;
 	m_sample_size = sample_size;
-	m_channels = ch_cnt;
+	m_channels = static_cast<AudioChannelCnt>(std::min(static_cast<u32>(convert_channel_count(vd.InputChannels)), static_cast<u32>(ch_cnt)));
 
 	WAVEFORMATEX waveformatex{};
 	waveformatex.wFormatTag = get_convert_to_s16() ? WAVE_FORMAT_PCM : WAVE_FORMAT_IEEE_FLOAT;
@@ -168,65 +263,63 @@ bool XAudio2Backend::Open(AudioFreq freq, AudioSampleSize sample_size, AudioChan
 	waveformatex.wBitsPerSample = get_sample_size() * 8;
 	waveformatex.cbSize = 0;
 
-	if (HRESULT hr = m_xaudio2_instance->CreateMasteringVoice(&m_master_voice); FAILED(hr))
-	{
-		XAudio.error("CreateMasteringVoice() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
-		m_master_voice = nullptr;
-	}
-	else if (HRESULT hr = m_xaudio2_instance->CreateSourceVoice(&m_source_voice, &waveformatex, 0, XAUDIO2_DEFAULT_FREQ_RATIO, this); FAILED(hr))
+	if (HRESULT hr = m_xaudio2_instance->CreateSourceVoice(&m_source_voice, &waveformatex, 0, XAUDIO2_DEFAULT_FREQ_RATIO, this); FAILED(hr))
 	{
 		XAudio.error("CreateSourceVoice() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
 		CloseUnlocked();
+		return false;
 	}
-	else if (HRESULT hr = m_source_voice->Start(); FAILED(hr))
+
+	if (HRESULT hr = m_source_voice->Start(); FAILED(hr))
 	{
 		XAudio.error("Start() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
 		CloseUnlocked();
+		return false;
 	}
-	else if (HRESULT hr = m_source_voice->SetVolume(1.0f); FAILED(hr))
+
+	if (HRESULT hr = m_device_enumerator->RegisterEndpointNotificationCallback(this); FAILED(hr))
+	{
+		XAudio.error("RegisterEndpointNotificationCallback() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
+		CloseUnlocked();
+		return false;
+	}
+
+	if (HRESULT hr = m_source_voice->SetVolume(1.0f); FAILED(hr))
 	{
 		XAudio.error("SetVolume() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
 	}
 
-	if (m_source_voice == nullptr)
+	m_data_buf.resize(get_sampling_rate() * get_sample_size() * get_channels() * INTERNAL_BUF_SIZE_MS / 1000);
+
+	if (use_default_device)
 	{
-		XAudio.error("Failed to open audio backend. Make sure that no other application is running that might block audio access (e.g. Netflix).");
-		return false;
+		m_current_device = selected_dev_id;
 	}
 
-	m_data_buf.resize(get_sampling_rate() * get_sample_size() * get_channels() * INTERNAL_BUF_SIZE_MS * static_cast<u32>(XAUDIO2_DEFAULT_FREQ_RATIO) / 1000);
-
 	return true;
-}
-
-void XAudio2Backend::SetWriteCallback(std::function<u32(u32, void *)> cb)
-{
-	std::lock_guard lock(m_cb_mutex);
-	m_write_callback = cb;
 }
 
 f64 XAudio2Backend::GetCallbackFrameLen()
 {
 	constexpr f64 _10ms = 0.01;
 
-	if (m_source_voice == nullptr)
+	if (m_xaudio2_instance == nullptr)
 	{
 		XAudio.error("GetCallbackFrameLen() called uninitialized");
 		return _10ms;
 	}
 
-	void *ext;
+	Microsoft::WRL::ComPtr<IXAudio2Extension> xaudio_ext{};
 	f64 min_latency{};
 
-	const HRESULT hr = m_xaudio2_instance->QueryInterface(IID_IXAudio2Extension, &ext);
-	if (FAILED(hr))
+	if (HRESULT hr = m_xaudio2_instance->QueryInterface(IID_IXAudio2Extension, std::bit_cast<void**>(xaudio_ext.GetAddressOf())); FAILED(hr))
 	{
 		XAudio.error("QueryInterface() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
 	}
 	else
 	{
 		u32 samples_per_q = 0, freq = 0;
-		static_cast<IXAudio2Extension *>(ext)->GetProcessingQuantum(&samples_per_q, &freq);
+		xaudio_ext->GetProcessingQuantum(&samples_per_q, &freq);
 
 		if (freq)
 		{
@@ -240,7 +333,7 @@ f64 XAudio2Backend::GetCallbackFrameLen()
 void XAudio2Backend::OnVoiceProcessingPassStart(UINT32 BytesRequired)
 {
 	std::unique_lock lock(m_cb_mutex, std::defer_lock);
-	if (BytesRequired && lock.try_lock() && m_write_callback && m_playing)
+	if (BytesRequired && !m_reset_req.observe() && lock.try_lock_for(std::chrono::microseconds{50}) && m_write_callback && m_playing)
 	{
 		ensure(BytesRequired <= m_data_buf.size(), "XAudio internal buffer is too small. Report to developers!");
 
@@ -270,11 +363,53 @@ void XAudio2Backend::OnCriticalError(HRESULT Error)
 {
 	XAudio.error("OnCriticalError() called: %s (0x%08x)", std::system_category().message(Error), static_cast<u32>(Error));
 
-	std::lock_guard lock(m_error_cb_mutex);
-	m_reset_req = true;
+	std::lock_guard lock(m_state_cb_mutex);
 
-	if (m_error_callback)
+	if (!m_reset_req.test_and_set() && m_state_callback)
 	{
-		m_error_callback();
+		m_state_callback(AudioStateEvent::UNSPECIFIED_ERROR);
 	}
+}
+
+HRESULT XAudio2Backend::OnDefaultDeviceChanged(EDataFlow flow, ERole role, LPCWSTR new_default_device_id)
+{
+	XAudio.notice("OnDefaultDeviceChanged(flow=%s, role=%s, new_default_device_id=0x%x)", flow, role, new_default_device_id);
+
+	if (!new_default_device_id)
+	{
+		XAudio.notice("OnDefaultDeviceChanged(): new_default_device_id empty");
+		return S_OK;
+	}
+
+	// Listen only for one device role, otherwise we're going to receive more than one notification for flow type
+	if (role != eConsole)
+	{
+		XAudio.notice("OnDefaultDeviceChanged(): we don't care about this device");
+		return S_OK;
+	}
+
+	std::lock_guard lock(m_state_cb_mutex);
+
+	// Non default device is used
+	if (m_current_device.empty())
+	{
+		return S_OK;
+	}
+
+	const std::string new_device_id = wchar_to_utf8(std::wstring_view{new_default_device_id});
+
+	if (flow == eRender || flow == eAll)
+	{
+		if (!m_reset_req.observe() && new_device_id != m_current_device)
+		{
+			m_default_dev_changed = true;
+
+			if (m_state_callback)
+			{
+				m_state_callback(AudioStateEvent::DEFAULT_DEVICE_MAYBE_CHANGED);
+			}
+		}
+	}
+
+	return S_OK;
 }

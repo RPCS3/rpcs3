@@ -5,6 +5,8 @@
 
 namespace rsx
 {
+	constexpr u32 min_lockable_data_size = 4096; // Increasing this value has worse results even on systems with pages > 4k
+
 	void buffered_section::init_lockable_range(const address_range& range)
 	{
 		locked_range = range.to_page_range();
@@ -27,7 +29,7 @@ namespace rsx
 
 		init_lockable_range(cpu_range);
 
-		if (memory_range.length() < 4096)
+		if (memory_range.length() < min_lockable_data_size)
 		{
 			protection_strat = section_protection_strategy::hash;
 			mem_hash = 0;

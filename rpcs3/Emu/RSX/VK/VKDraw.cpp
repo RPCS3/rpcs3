@@ -5,6 +5,7 @@
 #include "VKAsyncScheduler.h"
 #include "VKGSRender.h"
 #include "vkutils/buffer_object.h"
+#include "vkutils/chip_class.h"
 
 namespace vk
 {
@@ -40,6 +41,64 @@ namespace vk
 			fmt::throw_exception("Unknown compare op: 0x%x", static_cast<u32>(op));
 		}
 	}
+
+	void validate_image_layout_for_read_access(
+		vk::command_buffer& cmd,
+		vk::image_view* view,
+		VkPipelineStageFlags dst_stage,
+		const rsx::sampled_image_descriptor_base* sampler_state)
+	{
+		switch (auto raw = view->image(); +raw->current_layout)
+		{
+		default:
+			//case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+			break;
+		case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+			//ensure(sampler_state->upload_context == rsx::texture_upload_context::blit_engine_dst);
+			raw->change_layout(cmd, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			break;
+		case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+			ensure(sampler_state->upload_context == rsx::texture_upload_context::blit_engine_src);
+			raw->change_layout(cmd, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			break;
+		case VK_IMAGE_LAYOUT_GENERAL:
+		case VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT:
+			ensure(sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage);
+			if (!sampler_state->is_cyclic_reference)
+			{
+				// This was used in a cyclic ref before, but is missing a barrier
+				// No need for a full stall, use a custom barrier instead
+				VkPipelineStageFlags src_stage;
+				VkAccessFlags src_access;
+				if (raw->aspect() == VK_IMAGE_ASPECT_COLOR_BIT)
+				{
+					src_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+					src_access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+				}
+				else
+				{
+					src_stage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+					src_access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+				}
+
+				vk::insert_image_memory_barrier(
+					cmd,
+					raw->value,
+					raw->current_layout, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+					src_stage, dst_stage,
+					src_access, VK_ACCESS_SHADER_READ_BIT,
+					{ raw->aspect(), 0, 1, 0, 1 });
+
+				raw->current_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			}
+			break;
+		case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+		case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+			ensure(sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage);
+			raw->change_layout(cmd, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			break;
+		}
+	}
 }
 
 void VKGSRender::begin_render_pass()
@@ -70,26 +129,18 @@ void VKGSRender::update_draw_state()
 {
 	m_profiler.start();
 
-	const float actual_line_width =
-	    m_device->get_wide_lines_support() ? rsx::method_registers.line_width() * rsx::get_resolution_scale() : 1.f;
-	vkCmdSetLineWidth(*m_current_command_buffer, actual_line_width);
-
-	if (rsx::method_registers.poly_offset_fill_enabled())
+	// Update conditional dynamic state
+	if (rsx::method_registers.current_draw_clause.primitive >= rsx::primitive_type::points &&   // AMD/AMDVLK driver does not like it if you render points without setting line width for some reason
+		rsx::method_registers.current_draw_clause.primitive <= rsx::primitive_type::line_strip)
 	{
-		//offset_bias is the constant factor, multiplied by the implementation factor R
-		//offst_scale is the slope factor, multiplied by the triangle slope factor M
-		vkCmdSetDepthBias(*m_current_command_buffer, rsx::method_registers.poly_offset_bias(), 0.f, rsx::method_registers.poly_offset_scale());
-	}
-	else
-	{
-		//Zero bias value - disables depth bias
-		vkCmdSetDepthBias(*m_current_command_buffer, 0.f, 0.f, 0.f);
+		const float actual_line_width =
+			m_device->get_wide_lines_support() ? rsx::method_registers.line_width() * rsx::get_resolution_scale() : 1.f;
+		vkCmdSetLineWidth(*m_current_command_buffer, actual_line_width);
 	}
 
-	//Update dynamic state
 	if (rsx::method_registers.blend_enabled())
 	{
-		//Update blend constants
+		// Update blend constants
 		auto blend_colors = rsx::get_constant_blend_colors();
 		vkCmdSetBlendConstants(*m_current_command_buffer, blend_colors.data());
 	}
@@ -109,6 +160,41 @@ void VKGSRender::update_draw_state()
 			vkCmdSetStencilCompareMask(*m_current_command_buffer, VK_STENCIL_FACE_BACK_BIT, rsx::method_registers.back_stencil_func_mask());
 			vkCmdSetStencilReference(*m_current_command_buffer, VK_STENCIL_FACE_BACK_BIT, rsx::method_registers.back_stencil_func_ref());
 		}
+	}
+
+	// The remaining dynamic state should only be set once and we have signals to enable/disable mid-renderpass
+	if (!(m_current_command_buffer->flags & vk::command_buffer::cb_reload_dynamic_state))
+	{
+		// Dynamic state already set
+		m_frame_stats.setup_time += m_profiler.duration();
+		return;
+	}
+
+	if (rsx::method_registers.poly_offset_fill_enabled())
+	{
+		// offset_bias is the constant factor, multiplied by the implementation factor R
+		// offst_scale is the slope factor, multiplied by the triangle slope factor M
+		// R is implementation dependent and has to be derived empirically for supported implementations.
+		// Lucky for us, only NVIDIA currently supports fixed-point 24-bit depth buffers.
+
+		const auto polygon_offset_scale = rsx::method_registers.poly_offset_scale();
+		auto polygon_offset_bias = rsx::method_registers.poly_offset_bias();
+
+		if (m_draw_fbo->depth_format() == VK_FORMAT_D24_UNORM_S8_UINT && is_NVIDIA(vk::get_chip_family()))
+		{
+			// Empirically derived to be 0.5 * (2^24 - 1) for fixed type on Pascal. The same seems to apply for other NVIDIA GPUs.
+			// RSX seems to be using 2^24 - 1 instead making the biases twice as large when using fixed type Z-buffer on NVIDIA.
+			// Note, that the formula for floating point is complicated, but actually works out for us.
+			// Since the exponent range for a polygon is around 0, and we have 23 (+1) mantissa bits, R just works out to the same range by chance \o/.
+			polygon_offset_bias *= 0.5f;
+		}
+
+		vkCmdSetDepthBias(*m_current_command_buffer, polygon_offset_bias, 0.f, polygon_offset_scale);
+	}
+	else
+	{
+		// Zero bias value - disables depth bias
+		vkCmdSetDepthBias(*m_current_command_buffer, 0.f, 0.f, 0.f);
 	}
 
 	if (m_device->get_depth_bounds_support())
@@ -138,8 +224,8 @@ void VKGSRender::update_draw_state()
 
 	bind_viewport();
 
-	//TODO: Set up other render-state parameters into the program pipeline
-
+	m_current_command_buffer->flags &= ~vk::command_buffer::cb_reload_dynamic_state;
+	m_graphics_state.clear(rsx::pipeline_state::polygon_offset_state_dirty | rsx::pipeline_state::depth_bounds_state_dirty);
 	m_frame_stats.setup_time += m_profiler.duration();
 }
 
@@ -386,20 +472,13 @@ void VKGSRender::load_texture_env()
 		// We have to do this here, because we have to assume the CB will be dumped
 		auto& async_task_scheduler = g_fxo->get<vk::AsyncTaskScheduler>();
 
-		if (async_task_scheduler.is_recording())
+		if (async_task_scheduler.is_recording() &&
+			!async_task_scheduler.is_host_mode())
 		{
-			if (async_task_scheduler.is_host_mode())
+			// Sync any async scheduler tasks
+			if (auto ev = async_task_scheduler.get_primary_sync_label())
 			{
-				flush_command_queue();
-				ensure(!async_task_scheduler.is_recording());
-			}
-			else
-			{
-				// Sync any async scheduler tasks
-				if (auto ev = async_task_scheduler.get_primary_sync_label())
-				{
-					ev->gpu_wait(*m_current_command_buffer);
-				}
+				ev->gpu_wait(*m_current_command_buffer);
 			}
 		}
 	}
@@ -430,55 +509,7 @@ bool VKGSRender::bind_texture_env()
 			}
 			else
 			{
-				switch (auto raw = view->image(); raw->current_layout)
-				{
-				default:
-				//case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-					break;
-				case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-					//ensure(sampler_state->upload_context == rsx::texture_upload_context::blit_engine_dst);
-					raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-					break;
-				case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
-					ensure(sampler_state->upload_context == rsx::texture_upload_context::blit_engine_src);
-					raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-					break;
-				case VK_IMAGE_LAYOUT_GENERAL:
-					ensure(sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage);
-					if (!sampler_state->is_cyclic_reference)
-					{
-						// This was used in a cyclic ref before, but is missing a barrier
-						// No need for a full stall, use a custom barrier instead
-						VkPipelineStageFlags src_stage;
-						VkAccessFlags src_access;
-						if (raw->aspect() == VK_IMAGE_ASPECT_COLOR_BIT)
-						{
-							src_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-							src_access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-						}
-						else
-						{
-							src_stage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-							src_access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-						}
-
-						vk::insert_image_memory_barrier(
-							*m_current_command_buffer,
-							raw->value,
-							VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-							src_stage, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-							src_access, VK_ACCESS_SHADER_READ_BIT,
-							{ raw->aspect(), 0, 1, 0, 1 });
-
-						raw->current_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-					}
-					break;
-				case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-				case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-					ensure(sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage);
-					raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-					break;
-				}
+				validate_image_layout_for_read_access(*m_current_command_buffer, view, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, sampler_state);
 			}
 		}
 
@@ -572,54 +603,7 @@ bool VKGSRender::bind_texture_env()
 			continue;
 		}
 
-		switch (auto raw = image_ptr->image(); raw->current_layout)
-		{
-		default:
-		//case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-			break;
-		case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-			//ensure(sampler_state->upload_context == rsx::texture_upload_context::blit_engine_dst);
-			raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-			break;
-		case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
-			ensure(sampler_state->upload_context == rsx::texture_upload_context::blit_engine_src);
-			raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-			break;
-		case VK_IMAGE_LAYOUT_GENERAL:
-			ensure(sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage);
-			if (!sampler_state->is_cyclic_reference)
-			{
-				// Custom barrier, see similar block in FS stage
-				VkPipelineStageFlags src_stage;
-				VkAccessFlags src_access;
-				if (raw->aspect() == VK_IMAGE_ASPECT_COLOR_BIT)
-				{
-					src_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-					src_access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-				}
-				else
-				{
-					src_stage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-					src_access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-				}
-
-				vk::insert_image_memory_barrier(
-					*m_current_command_buffer,
-					raw->value,
-					VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-					src_stage, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
-					src_access, VK_ACCESS_SHADER_READ_BIT,
-					{ raw->aspect(), 0, 1, 0, 1 });
-
-				raw->current_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			}
-			break;
-		case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-		case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-			ensure(sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage);
-			raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-			break;
-		}
+		validate_image_layout_for_read_access(*m_current_command_buffer, image_ptr, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, sampler_state);
 
 		m_program->bind_uniform({ vs_sampler_handles[i]->value, image_ptr->value, image_ptr->image()->current_layout },
 			i,
@@ -687,56 +671,7 @@ bool VKGSRender::bind_interpreter_texture_env()
 			}
 			else
 			{
-				switch (auto raw = view->image(); raw->current_layout)
-				{
-				default:
-					//case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-					break;
-				case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-					//ensure(sampler_state->upload_context == rsx::texture_upload_context::blit_engine_dst);
-					raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-					break;
-				case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
-					ensure(sampler_state->upload_context == rsx::texture_upload_context::blit_engine_src);
-					raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-					break;
-				case VK_IMAGE_LAYOUT_GENERAL:
-					ensure(sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage);
-					if (!sampler_state->is_cyclic_reference)
-					{
-						// This was used in a cyclic ref before, but is missing a barrier
-						// No need for a full stall, use a custom barrier instead
-						VkPipelineStageFlags src_stage;
-						VkAccessFlags src_access;
-						if (raw->aspect() == VK_IMAGE_ASPECT_COLOR_BIT)
-						{
-							src_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-							src_access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-						}
-						else
-						{
-							src_stage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-							src_access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-						}
-
-						vk::insert_image_memory_barrier(
-							*m_current_command_buffer,
-							raw->value,
-							VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-							src_stage, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-							src_access, VK_ACCESS_SHADER_READ_BIT,
-							{ raw->aspect(), 0, 1, 0, 1 });
-
-						raw->current_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-					}
-					break;
-				case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-				case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-					ensure(sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage);
-					ensure(!sampler_state->is_cyclic_reference);
-					raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-					break;
-				}
+				validate_image_layout_for_read_access(*m_current_command_buffer, view, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, sampler_state);
 			}
 		}
 
@@ -770,7 +705,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 		for (auto& info : m_vertex_layout.interleaved_blocks)
 		{
 			const auto vertex_base_offset = rsx::method_registers.vertex_data_base_offset();
-			info.real_offset_address = rsx::get_address(rsx::get_vertex_offset_from_base(vertex_base_offset, info.base_offset), info.memory_location);
+			info->real_offset_address = rsx::get_address(rsx::get_vertex_offset_from_base(vertex_base_offset, info->base_offset), info->memory_location);
 		}
 	}
 
@@ -896,7 +831,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 	}
 
 	bool reload_state = (!m_current_draw.subdraw_id++);
-	vk::renderpass_op(*m_current_command_buffer, [&](VkCommandBuffer cmd, VkRenderPass pass, VkFramebuffer fbo)
+	vk::renderpass_op(*m_current_command_buffer, [&](const vk::command_buffer& cmd, VkRenderPass pass, VkFramebuffer fbo)
 	{
 		if (get_render_pass() == pass && m_draw_fbo->value == fbo)
 		{
@@ -909,6 +844,9 @@ void VKGSRender::emit_geometry(u32 sub_index)
 			// Subpass mismatch, end it before proceeding
 			vk::end_renderpass(cmd);
 		}
+
+		// Starting a new renderpass should clobber dynamic state
+		m_current_command_buffer->flags |= vk::command_buffer::cb_reload_dynamic_state;
 
 		reload_state = true;
 	});
@@ -989,15 +927,26 @@ void VKGSRender::begin()
 
 	rsx::thread::begin();
 
-	if (skip_current_frame || swapchain_unavailable || cond_render_ctrl.disable_rendering())
+	if (skip_current_frame ||
+		swapchain_unavailable ||
+		cond_render_ctrl.disable_rendering())
+	{
 		return;
+	}
 
 	init_buffers(rsx::framebuffer_creation_context::context_draw);
+
+	if (m_graphics_state & rsx::pipeline_state::invalidate_pipeline_bits)
+	{
+		// Shaders need to be reloaded.
+		m_prev_program = m_program;
+		m_program = nullptr;
+	}
 }
 
 void VKGSRender::end()
 {
-	if (skip_current_frame || !framebuffer_status_valid || swapchain_unavailable || cond_render_ctrl.disable_rendering())
+	if (skip_current_frame || !m_graphics_state.test(rsx::rtt_config_valid) || swapchain_unavailable || cond_render_ctrl.disable_rendering())
 	{
 		execute_nop_draw();
 		rsx::thread::end();
@@ -1056,40 +1005,6 @@ void VKGSRender::end()
 	load_program_env();
 	m_frame_stats.setup_time += m_profiler.duration();
 
-	for (int binding_attempts = 0; binding_attempts < 3; binding_attempts++)
-	{
-		bool out_of_memory;
-		if (!m_shader_interpreter.is_interpreter(m_program)) [[likely]]
-		{
-			out_of_memory = bind_texture_env();
-		}
-		else
-		{
-			out_of_memory = bind_interpreter_texture_env();
-		}
-
-		// TODO: Replace OOM tracking with ref-counting to simplify the logic
-		if (!out_of_memory)
-		{
-			break;
-		}
-
-		if (!on_vram_exhausted(rsx::problem_severity::fatal))
-		{
-			// It is not possible to free memory. Just use placeholder textures. Can cause graphics glitches but shouldn't crash otherwise
-			break;
-		}
-
-		if (m_samplers_dirty)
-		{
-			// Reload texture env if referenced objects were invalidated during OOO handling.
-			load_texture_env();
-		}
-	}
-
-	m_texture_cache.release_uncached_temporary_subresources();
-	m_frame_stats.textures_upload_time += m_profiler.duration();
-
 	// Apply write memory barriers
 	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil)) ds->write_barrier(*m_current_command_buffer);
 
@@ -1101,11 +1016,47 @@ void VKGSRender::end()
 		}
 	}
 
+	m_frame_stats.setup_time += m_profiler.duration();
+
+	// Now bind the shader resources. It is important that this takes place after the barriers so that we don't end up with stale descriptors
+	for (int retry = 0; retry < 3; ++retry)
+	{
+		if (m_samplers_dirty) [[ unlikely ]]
+		{
+			// Reload texture env if referenced objects were invalidated during OOM handling.
+			load_texture_env();
+		}
+
+		const bool out_of_memory = m_shader_interpreter.is_interpreter(m_program)
+			? bind_interpreter_texture_env()
+			: bind_texture_env();
+
+		if (!out_of_memory)
+		{
+			break;
+		}
+
+		// Handle OOM
+		if (!on_vram_exhausted(rsx::problem_severity::fatal))
+		{
+			// It is not possible to free memory. Just use placeholder textures. Can cause graphics glitches but shouldn't crash otherwise
+			break;
+		}
+	}
+
+	m_texture_cache.release_uncached_temporary_subresources();
+	m_frame_stats.textures_upload_time += m_profiler.duration();
+
 	// Final heap check...
 	check_heap_status(VK_HEAP_CHECK_VERTEX_STORAGE | VK_HEAP_CHECK_VERTEX_LAYOUT_STORAGE);
 
 	u32 sub_index = 0;               // RSX subdraw ID
 	m_current_draw.subdraw_id = 0;   // Host subdraw ID. Invalid RSX subdraws do not increment this value
+
+	if (m_graphics_state & rsx::pipeline_state::invalidate_vk_dynamic_state)
+	{
+		m_current_command_buffer->flags |= vk::command_buffer::cb_reload_dynamic_state;
+	}
 
 	rsx::method_registers.current_draw_clause.begin();
 	do

@@ -125,7 +125,7 @@ namespace rsx
 	};
 
 	template <typename image_storage_type>
-	struct render_target_descriptor
+	struct render_target_descriptor : public rsx::ref_counted
 	{
 		u64 last_use_tag = 0;         // tag indicating when this block was last confirmed to have been written to
 		u32 base_addr = 0;
@@ -165,6 +165,13 @@ namespace rsx
 		}
 		format_info;
 
+		struct
+		{
+			u64 timestamp = 0;
+			bool locked = false;
+		}
+		texture_cache_metadata;
+
 		render_target_descriptor() {}
 
 		virtual ~render_target_descriptor()
@@ -178,22 +185,26 @@ namespace rsx
 
 		virtual image_storage_type get_surface(rsx::surface_access access_type) = 0;
 		virtual bool is_depth_surface() const = 0;
-		virtual void release_ref(image_storage_type) const = 0;
 
-		template<rsx::surface_metrics Metrics = rsx::surface_metrics::pixels>
-		u32 get_surface_width() const
+		void reset()
+		{
+			texture_cache_metadata = {};
+		}
+
+		template<rsx::surface_metrics Metrics = rsx::surface_metrics::pixels, typename T = u32>
+		T get_surface_width() const
 		{
 			if constexpr (Metrics == rsx::surface_metrics::samples)
 			{
-				return surface_width * samples_x;
+				return static_cast<T>(surface_width * samples_x);
 			}
 			else if constexpr (Metrics == rsx::surface_metrics::pixels)
 			{
-				return surface_width;
+				return static_cast<T>(surface_width);
 			}
 			else if constexpr (Metrics == rsx::surface_metrics::bytes)
 			{
-				return native_pitch;
+				return static_cast<T>(native_pitch);
 			}
 			else
 			{
@@ -201,20 +212,20 @@ namespace rsx
 			}
 		}
 
-		template<rsx::surface_metrics Metrics = rsx::surface_metrics::pixels>
-		u32 get_surface_height() const
+		template<rsx::surface_metrics Metrics = rsx::surface_metrics::pixels, typename T = u32>
+		T get_surface_height() const
 		{
 			if constexpr (Metrics == rsx::surface_metrics::samples)
 			{
-				return surface_height * samples_y;
+				return static_cast<T>(surface_height * samples_y);
 			}
 			else if constexpr (Metrics == rsx::surface_metrics::pixels)
 			{
-				return surface_height;
+				return static_cast<T>(surface_height);
 			}
 			else if constexpr (Metrics == rsx::surface_metrics::bytes)
 			{
-				return surface_height * samples_y;
+				return static_cast<T>(surface_height * samples_y);
 			}
 			else
 			{
@@ -381,6 +392,9 @@ namespace rsx
 			ensure(native_pitch);
 			ensure(rsx_pitch);
 
+			// Clear metadata
+			reset();
+
 			base_addr = address;
 
 			const u32 size_x = (native_pitch > 8)? (native_pitch - 8) : 0u;
@@ -413,7 +427,7 @@ namespace rsx
 		{
 			for (auto &e : memory_tag_samples)
 			{
-				e.second = *reinterpret_cast<u64*>(vm::g_sudo_addr + e.first);
+				e.second = *reinterpret_cast<nse_t<u64, 1>*>(vm::g_sudo_addr + e.first);
 			}
 		}
 
@@ -426,7 +440,7 @@ namespace rsx
 		{
 			for (auto &e : memory_tag_samples)
 			{
-				if (e.second != *reinterpret_cast<u64*>(vm::g_sudo_addr + e.first))
+				if (e.second != *reinterpret_cast<nse_t<u64, 1>*>(vm::g_sudo_addr + e.first))
 					return false;
 			}
 
@@ -438,7 +452,7 @@ namespace rsx
 		{
 			for (auto &e : old_contents)
 			{
-				release_ref(e.source);
+				ensure(dynamic_cast<rsx::ref_counted*>(e.source))->release();
 			}
 
 			old_contents.clear();
@@ -546,23 +560,18 @@ namespace rsx
 			const auto parent_w = surface->template get_surface_width<rsx::surface_metrics::bytes>();
 			const auto parent_h = surface->template get_surface_height<rsx::surface_metrics::bytes>();
 
-			const auto rect = rsx::intersect_region(surface->base_addr, parent_w, parent_h, 1, base_addr, child_w, child_h, 1, get_rsx_pitch());
-			const auto src_offset = std::get<0>(rect);
-			const auto dst_offset = std::get<1>(rect);
-			const auto size = std::get<2>(rect);
+			const auto [src_offset, dst_offset, size] = rsx::intersect_region(surface->base_addr, parent_w, parent_h, base_addr, child_w, child_h, get_rsx_pitch());
 
-			if (src_offset.x >= parent_w || src_offset.y >= parent_h)
+			if (!size.width || !size.height)
 			{
 				return surface_inheritance_result::none;
 			}
 
-			if (dst_offset.x >= child_w || dst_offset.y >= child_h)
-			{
-				return surface_inheritance_result::none;
-			}
+			ensure(src_offset.x < parent_w && src_offset.y < parent_h);
+			ensure(dst_offset.x < child_w && dst_offset.y < child_h);
 
 			// TODO: Eventually need to stack all the overlapping regions, but for now just do the latest rect in the space
-			deferred_clipped_region<T*> region;
+			deferred_clipped_region<T*> region{};
 			region.src_x = src_offset.x;
 			region.src_y = src_offset.y;
 			region.dst_x = dst_offset.x;
@@ -700,6 +709,69 @@ namespace rsx
 
 			ensure(access_type.is_read() || access_type.is_transfer());
 			transform_samples_to_pixels(region);
+		}
+
+		void on_lock()
+		{
+			add_ref();
+			texture_cache_metadata.locked = true;
+			texture_cache_metadata.timestamp = rsx::get_shared_tag();
+		}
+
+		void on_unlock()
+		{
+			texture_cache_metadata.locked = false;
+			texture_cache_metadata.timestamp = rsx::get_shared_tag();
+			release();
+		}
+
+		void on_swap_out()
+		{
+			if (is_locked())
+			{
+				on_unlock();
+			}
+			else
+			{
+				release();
+			}
+		}
+
+		void on_swap_in(bool lock)
+		{
+			if (!is_locked() && lock)
+			{
+				on_lock();
+			}
+			else
+			{
+				add_ref();
+			}
+		}
+
+		void on_clone_from(const render_target_descriptor* ref)
+		{
+			if (ref->is_locked() && !is_locked())
+			{
+				// Propagate locked state only.
+				texture_cache_metadata = ref->texture_cache_metadata;
+			}
+
+			rsx_pitch = ref->get_rsx_pitch();
+			last_use_tag = ref->last_use_tag;
+			raster_type = ref->raster_type;     // Can't actually cut up swizzled data
+		}
+
+		bool is_locked() const
+		{
+			return texture_cache_metadata.locked;
+		}
+
+		bool has_flushable_data() const
+		{
+			ensure(is_locked());
+			ensure(texture_cache_metadata.timestamp);
+			return (texture_cache_metadata.timestamp < last_use_tag);
 		}
 	};
 }

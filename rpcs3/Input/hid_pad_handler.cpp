@@ -7,6 +7,10 @@
 #include "Emu/System.h"
 #include "pad_thread.h"
 
+#if defined(__APPLE__)
+#include "3rdparty/hidapi/hidapi/mac/hidapi_darwin.h"
+#endif
+
 #include <algorithm>
 #include <memory>
 
@@ -63,6 +67,10 @@ bool hid_pad_handler<Device>::Init()
 	if (res != 0)
 		fmt::throw_exception("%s hidapi-init error.threadproc", m_type);
 
+#if defined(__APPLE__)
+	hid_darwin_set_open_exclusive(0);
+#endif
+
 	for (usz i = 1; i <= MAX_GAMEPADS; i++) // Controllers 1-n in GUI
 	{
 		m_controllers.emplace(m_name_string + std::to_string(i), std::make_shared<Device>());
@@ -90,24 +98,24 @@ bool hid_pad_handler<Device>::Init()
 }
 
 template <class Device>
-void hid_pad_handler<Device>::ThreadProc()
+void hid_pad_handler<Device>::process()
 {
 	update_devices();
 
-	PadHandlerBase::ThreadProc();
+	PadHandlerBase::process();
 }
 
 template <class Device>
-std::vector<std::string> hid_pad_handler<Device>::ListDevices()
+std::vector<pad_list_entry> hid_pad_handler<Device>::list_devices()
 {
-	std::vector<std::string> pads_list;
+	std::vector<pad_list_entry> pads_list;
 
 	if (!Init())
 		return pads_list;
 
 	for (const auto& controller : m_controllers) // Controllers 1-n in GUI
 	{
-		pads_list.emplace_back(controller.first);
+		pads_list.emplace_back(controller.first, false);
 	}
 
 	return pads_list;
@@ -118,7 +126,7 @@ void hid_pad_handler<Device>::enumerate_devices()
 {
 	Timer timer;
 	std::set<std::string> device_paths;
-	std::map<std::string, std::wstring_view> serials;
+	std::map<std::string, std::wstring> serials;
 
 	for (const auto& [vid, pid] : m_ids)
 	{
@@ -126,9 +134,13 @@ void hid_pad_handler<Device>::enumerate_devices()
 		hid_device_info* head     = dev_info;
 		while (dev_info)
 		{
-			ensure(dev_info->path != nullptr);
+			if (!dev_info->path)
+			{
+				hid_log.error("Skipping enumeration of device with empty path.");
+				continue;
+			}
 			device_paths.insert(dev_info->path);
-			serials[dev_info->path] = dev_info->serial_number ? std::wstring_view(dev_info->serial_number) : std::wstring_view{};
+			serials[dev_info->path] = dev_info->serial_number ? std::wstring(dev_info->serial_number) : std::wstring();
 			dev_info                = dev_info->next;
 		}
 		hid_free_enumeration(head);
@@ -137,7 +149,7 @@ void hid_pad_handler<Device>::enumerate_devices()
 
 	std::lock_guard lock(m_enumeration_mutex);
 	m_new_enumerated_devices = device_paths;
-	m_enumerated_serials = serials;
+	m_enumerated_serials = std::move(serials);
 }
 
 template <class Device>
@@ -180,6 +192,15 @@ void hid_pad_handler<Device>::update_devices()
 		hid_device* dev = hid_open_path(path.c_str());
 		if (dev)
 		{
+			if (const hid_device_info* info = hid_get_device_info(dev))
+			{
+				hid_log.notice("%s adding device: vid=0x%x, pid=0x%x, path='%s'", m_type, info->vendor_id, info->product_id, path);
+			}
+			else
+			{
+				hid_log.warning("%s adding device: vid=N/A, pid=N/A, path='%s'", m_type, path);
+			}
+
 			check_add_device(dev, path, m_enumerated_serials[path]);
 		}
 		else
@@ -217,12 +238,9 @@ std::shared_ptr<Device> hid_pad_handler<Device>::get_hid_device(const std::strin
 		return nullptr;
 
 	// Controllers 1-n in GUI
-	for (auto& cur_control : m_controllers)
+	if (auto it = m_controllers.find(padId); it != m_controllers.end())
 	{
-		if (padId == cur_control.first)
-		{
-			return cur_control.second;
-		}
+		return it->second;
 	}
 
 	return nullptr;
@@ -235,9 +253,9 @@ std::shared_ptr<PadDevice> hid_pad_handler<Device>::get_device(const std::string
 }
 
 template <class Device>
-u32 hid_pad_handler<Device>::get_battery_color(u8 battery_level, int brightness)
+u32 hid_pad_handler<Device>::get_battery_color(u8 battery_level, u32 brightness)
 {
-	static const std::array<u32, 12> battery_level_clr = {0xff00, 0xff33, 0xff66, 0xff99, 0xffcc, 0xffff, 0xccff, 0x99ff, 0x66ff, 0x33ff, 0x00ff, 0x00ff};
+	static constexpr std::array<u32, 12> battery_level_clr = {0xff00, 0xff33, 0xff66, 0xff99, 0xffcc, 0xffff, 0xccff, 0x99ff, 0x66ff, 0x33ff, 0x00ff, 0x00ff};
 
 	const u32 combined_color = battery_level_clr[battery_level < battery_level_clr.size() ? battery_level : 0];
 

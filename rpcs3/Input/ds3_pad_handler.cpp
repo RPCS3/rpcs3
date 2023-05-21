@@ -39,7 +39,7 @@ struct ds3_output_report
 	ds3_led led_5;         // reserved for another LED
 };
 
-constexpr u8 battery_capacity[] = {0, 1, 25, 50, 75, 100};
+constexpr std::array<u8, 6> battery_capacity = {0, 1, 25, 50, 75, 100};
 
 constexpr id_pair SONY_DS3_ID_0 = {0x054C, 0x0268};
 
@@ -81,10 +81,12 @@ ds3_pad_handler::ds3_pad_handler()
 	// set capabilities
 	b_has_config = true;
 	b_has_rumble = true;
+	b_has_motion = true;
 	b_has_deadzones = true;
 	b_has_battery = true;
 	b_has_led = true;
 	b_has_rgb = false;
+	b_has_player_led = true;
 	b_has_pressure_intensity_button = false; // The DS3 obviously already has this feature natively.
 
 	m_name_string = "DS3 Pad #";
@@ -118,33 +120,20 @@ u32 ds3_pad_handler::get_battery_level(const std::string& padId)
 	return std::clamp<u32>(device->battery_level, 0, 100);
 }
 
-void ds3_pad_handler::SetPadData(const std::string& padId, u8 player_id, u32 largeMotor, u32 smallMotor, s32/* r*/, s32/* g*/, s32 /* b*/, bool /*battery_led*/, u32 /*battery_led_brightness*/)
+void ds3_pad_handler::SetPadData(const std::string& padId, u8 player_id, u8 large_motor, u8 small_motor, s32/* r*/, s32/* g*/, s32 /* b*/, bool player_led, bool /*battery_led*/, u32 /*battery_led_brightness*/)
 {
 	std::shared_ptr<ds3_device> device = get_hid_device(padId);
 	if (device == nullptr || device->hidDevice == nullptr)
 		return;
 
 	// Set the device's motor speeds to our requested values 0-255
-	device->large_motor = largeMotor;
-	device->small_motor = smallMotor;
+	device->large_motor = large_motor;
+	device->small_motor = small_motor;
 	device->player_id = player_id;
-
-	int index = 0;
-	for (uint i = 0; i < MAX_GAMEPADS; i++)
-	{
-		if (g_cfg_input.player[i]->handler == m_type)
-		{
-			if (g_cfg_input.player[i]->device.to_string() == padId)
-			{
-				m_pad_configs[index].from_string(g_cfg_input.player[i]->config.to_string());
-				device->config = &m_pad_configs[index];
-				break;
-			}
-			index++;
-		}
-	}
+	device->config = get_config(padId);
 
 	ensure(device->config);
+	device->config->player_led_enabled.set(player_led);
 
 	// Start/Stop the engines :)
 	send_output_report(device.get());
@@ -170,7 +159,7 @@ int ds3_pad_handler::send_output_report(ds3_device* ds3dev)
 		else
 			output_report.led_enabled = 0b00000010;
 	}
-	else
+	else if (ds3dev->config->player_led_enabled)
 	{
 		switch (ds3dev->player_id)
 		{
@@ -184,6 +173,10 @@ int ds3_pad_handler::send_output_report(ds3_device* ds3dev)
 		default:
 			fmt::throw_exception("DS3 is using forbidden player id %d", ds3dev->player_id);
 		}
+	}
+	else
+	{
+		output_report.led_enabled = 0;
 	}
 
 	if (ds3dev->config->led_low_battery_blink && ds3dev->battery_level < 25)
@@ -201,33 +194,33 @@ void ds3_pad_handler::init_config(cfg_pad* cfg)
 	if (!cfg) return;
 
 	// Set default button mapping
-	cfg->ls_left.def = button_list.at(DS3KeyCodes::LSXNeg);
-	cfg->ls_down.def = button_list.at(DS3KeyCodes::LSYNeg);
-	cfg->ls_right.def = button_list.at(DS3KeyCodes::LSXPos);
-	cfg->ls_up.def = button_list.at(DS3KeyCodes::LSYPos);
-	cfg->rs_left.def = button_list.at(DS3KeyCodes::RSXNeg);
-	cfg->rs_down.def = button_list.at(DS3KeyCodes::RSYNeg);
-	cfg->rs_right.def = button_list.at(DS3KeyCodes::RSXPos);
-	cfg->rs_up.def = button_list.at(DS3KeyCodes::RSYPos);
-	cfg->start.def = button_list.at(DS3KeyCodes::Start);
-	cfg->select.def = button_list.at(DS3KeyCodes::Select);
-	cfg->ps.def = button_list.at(DS3KeyCodes::PSButton);
-	cfg->square.def = button_list.at(DS3KeyCodes::Square);
-	cfg->cross.def = button_list.at(DS3KeyCodes::Cross);
-	cfg->circle.def = button_list.at(DS3KeyCodes::Circle);
-	cfg->triangle.def = button_list.at(DS3KeyCodes::Triangle);
-	cfg->left.def = button_list.at(DS3KeyCodes::Left);
-	cfg->down.def = button_list.at(DS3KeyCodes::Down);
-	cfg->right.def = button_list.at(DS3KeyCodes::Right);
-	cfg->up.def = button_list.at(DS3KeyCodes::Up);
-	cfg->r1.def = button_list.at(DS3KeyCodes::R1);
-	cfg->r2.def = button_list.at(DS3KeyCodes::R2);
-	cfg->r3.def = button_list.at(DS3KeyCodes::R3);
-	cfg->l1.def = button_list.at(DS3KeyCodes::L1);
-	cfg->l2.def = button_list.at(DS3KeyCodes::L2);
-	cfg->l3.def = button_list.at(DS3KeyCodes::L3);
+	cfg->ls_left.def = ::at32(button_list, DS3KeyCodes::LSXNeg);
+	cfg->ls_down.def = ::at32(button_list, DS3KeyCodes::LSYNeg);
+	cfg->ls_right.def = ::at32(button_list, DS3KeyCodes::LSXPos);
+	cfg->ls_up.def = ::at32(button_list, DS3KeyCodes::LSYPos);
+	cfg->rs_left.def = ::at32(button_list, DS3KeyCodes::RSXNeg);
+	cfg->rs_down.def = ::at32(button_list, DS3KeyCodes::RSYNeg);
+	cfg->rs_right.def = ::at32(button_list, DS3KeyCodes::RSXPos);
+	cfg->rs_up.def = ::at32(button_list, DS3KeyCodes::RSYPos);
+	cfg->start.def = ::at32(button_list, DS3KeyCodes::Start);
+	cfg->select.def = ::at32(button_list, DS3KeyCodes::Select);
+	cfg->ps.def = ::at32(button_list, DS3KeyCodes::PSButton);
+	cfg->square.def = ::at32(button_list, DS3KeyCodes::Square);
+	cfg->cross.def = ::at32(button_list, DS3KeyCodes::Cross);
+	cfg->circle.def = ::at32(button_list, DS3KeyCodes::Circle);
+	cfg->triangle.def = ::at32(button_list, DS3KeyCodes::Triangle);
+	cfg->left.def = ::at32(button_list, DS3KeyCodes::Left);
+	cfg->down.def = ::at32(button_list, DS3KeyCodes::Down);
+	cfg->right.def = ::at32(button_list, DS3KeyCodes::Right);
+	cfg->up.def = ::at32(button_list, DS3KeyCodes::Up);
+	cfg->r1.def = ::at32(button_list, DS3KeyCodes::R1);
+	cfg->r2.def = ::at32(button_list, DS3KeyCodes::R2);
+	cfg->r3.def = ::at32(button_list, DS3KeyCodes::R3);
+	cfg->l1.def = ::at32(button_list, DS3KeyCodes::L1);
+	cfg->l2.def = ::at32(button_list, DS3KeyCodes::L2);
+	cfg->l3.def = ::at32(button_list, DS3KeyCodes::L3);
 
-	cfg->pressure_intensity_button.def = button_list.at(DS3KeyCodes::None);
+	cfg->pressure_intensity_button.def = ::at32(button_list, DS3KeyCodes::None);
 
 	// Set default misc variables
 	cfg->lstickdeadzone.def    = 40; // between 0 and 255
@@ -275,22 +268,24 @@ void ds3_pad_handler::check_add_device(hid_device* hidDevice, std::string_view p
 	// Uses libusb for windows as hidapi will never work with UsbHid driver for the ds3 and it won't work with WinUsb either(windows hid api needs the UsbHid in the driver stack as far as I can tell)
 	// For other os use hidapi and hope for the best!
 #ifdef _WIN32
-	u8 buf[0xFF];
+	std::array<u8, 0xFF> buf{};
 	buf[0] = 0xF2;
 
-	int res = hid_get_feature_report(hidDevice, buf, 0xFF);
-	if (res < 0)
+	int res = hid_get_feature_report(hidDevice, buf.data(), buf.size());
+	if (res <= 0 || buf[0] != 0xF2)
 	{
-		ds3_log.warning("check_add_device: hid_get_feature_report 0xF2 failed! Trying again with 0x0. (result=%d, error=%s)", res, hid_error(hidDevice));
-		buf[0] = 0;
-		res    = hid_get_feature_report(hidDevice, buf, 0xFF);
+		ds3_log.warning("check_add_device: hid_get_feature_report 0xF2 failed! Trying again with 0x0. (result=%d, buf[0]=0x%x, error=%s)", res, buf[0], hid_error(hidDevice));
+		buf    = {};
+		buf[0] = 0x0;
+		res    = hid_get_feature_report(hidDevice, buf.data(), buf.size());
+		if (res <= 0 || buf[0] != 0x0)
+		{
+			ds3_log.error("check_add_device: hid_get_feature_report 0x0 failed! result=%d, buf[0]=0x%x, error=%s", res, buf[0], hid_error(hidDevice));
+			hid_close(hidDevice);
+			return;
+		}
 	}
-	if (res < 0)
-	{
-		ds3_log.error("check_add_device: hid_get_feature_report 0x0 failed! result=%d, error=%s", res, hid_error(hidDevice));
-		hid_close(hidDevice);
-		return;
-	}
+
 	device->report_id = buf[0];
 #elif defined (__APPLE__)
 	int res = hid_init_sixaxis_usb(hidDevice);
@@ -331,9 +326,19 @@ ds3_pad_handler::DataStatus ds3_pad_handler::get_data(ds3_device* ds3dev)
 
 #ifdef _WIN32
 	ds3dev->padData[0] = ds3dev->report_id;
-	const int result = hid_get_feature_report(ds3dev->hidDevice, ds3dev->padData.data(), 64);
+	const int result = hid_get_feature_report(ds3dev->hidDevice, ds3dev->padData.data(), ds3dev->padData.size());
+	if (result < 0)
+	{
+		ds3_log.error("get_data: hid_get_feature_report 0x%02x failed! result=%d, buf[0]=0x%x, error=%s", ds3dev->report_id, result, ds3dev->padData[0], hid_error(ds3dev->hidDevice));
+		return DataStatus::ReadError;
+	}
 #else
-	const int result = hid_read(ds3dev->hidDevice, ds3dev->padData.data(), 64);
+	const int result = hid_read(ds3dev->hidDevice, ds3dev->padData.data(), ds3dev->padData.size());
+	if (result < 0)
+	{
+		ds3_log.error("get_data: hid_read failed! result=%d, error=%s", result, hid_error(ds3dev->hidDevice));
+		return DataStatus::ReadError;
+	}
 #endif
 
 	if (result > 0)
@@ -354,25 +359,17 @@ ds3_pad_handler::DataStatus ds3_pad_handler::get_data(ds3_device* ds3dev)
 			}
 			else
 			{
-				ds3dev->battery_level = battery_capacity[std::min<u8>(battery_status, 5)];
+				ds3dev->battery_level = ::at32(battery_capacity, std::min<usz>(battery_status, battery_capacity.size() - 1));
 				ds3dev->cable_state   = 0;
 			}
 
 			return DataStatus::NewData;
 		}
-		else
-		{
-			ds3_log.warning("Unknown packet received:0x%02x", ds3dev->padData[0]);
-			return DataStatus::NoNewData;
-		}
-	}
-	else
-	{
-		if (result == 0)
-			return DataStatus::NoNewData;
+
+		ds3_log.warning("get_data: Unknown packet received: 0x%02x", ds3dev->padData[0]);
 	}
 
-	return DataStatus::ReadError;
+	return DataStatus::NoNewData;
 }
 
 std::unordered_map<u64, u16> ds3_pad_handler::get_button_values(const std::shared_ptr<PadDevice>& device)
@@ -432,17 +429,20 @@ std::unordered_map<u64, u16> ds3_pad_handler::get_button_values(const std::share
 pad_preview_values ds3_pad_handler::get_preview_values(const std::unordered_map<u64, u16>& data)
 {
 	return {
-		data.at(L2),
-		data.at(R2),
-		data.at(LSXPos) - data.at(LSXNeg),
-		data.at(LSYPos) - data.at(LSYNeg),
-		data.at(RSXPos) - data.at(RSXNeg),
-		data.at(RSYPos) - data.at(RSYNeg)
+		::at32(data, L2),
+		::at32(data, R2),
+		::at32(data, LSXPos) - ::at32(data, LSXNeg),
+		::at32(data, LSYPos) - ::at32(data, LSYNeg),
+		::at32(data, RSXPos) - ::at32(data, RSXNeg),
+		::at32(data, RSYPos) - ::at32(data, RSYNeg)
 	};
 }
 
-void ds3_pad_handler::get_extended_info(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad)
+void ds3_pad_handler::get_extended_info(const pad_ensemble& binding)
 {
+	const auto& device = binding.device;
+	const auto& pad = binding.pad;
+
 	ds3_device* ds3dev = static_cast<ds3_device*>(device.get());
 	if (!ds3dev || !pad)
 		return;
@@ -454,14 +454,14 @@ void ds3_pad_handler::get_extended_info(const std::shared_ptr<PadDevice>& device
 
 #ifdef _WIN32
 	// Official Sony Windows DS3 driver seems to do the same modification of this value as the ps3
-	pad->m_sensors[0].m_value = *utils::bless<le_t<u16, 1>>(&ds3dev->padData[41 + DS3_HID_OFFSET]);
+	pad->m_sensors[0].m_value = read_from_ptr<le_t<u16>>(ds3dev->padData, 41 + DS3_HID_OFFSET);
 #else
 	// When getting raw values from the device this adjustement is needed
-	pad->m_sensors[0].m_value = 512 - (*utils::bless<le_t<u16, 1>>(&ds3dev->padData[41]) - 512);
+	pad->m_sensors[0].m_value = 512 - (read_from_ptr<le_t<u16>>(ds3dev->padData, 41 + DS3_HID_OFFSET) - 512);
 #endif
-	pad->m_sensors[1].m_value = *utils::bless<le_t<u16, 1>>(&ds3dev->padData[45 + DS3_HID_OFFSET]);
-	pad->m_sensors[2].m_value = *utils::bless<le_t<u16, 1>>(&ds3dev->padData[43 + DS3_HID_OFFSET]);
-	pad->m_sensors[3].m_value = *utils::bless<le_t<u16, 1>>(&ds3dev->padData[47 + DS3_HID_OFFSET]);
+	pad->m_sensors[1].m_value = read_from_ptr<le_t<u16>>(ds3dev->padData, 45 + DS3_HID_OFFSET);
+	pad->m_sensors[2].m_value = read_from_ptr<le_t<u16>>(ds3dev->padData, 43 + DS3_HID_OFFSET);
+	pad->m_sensors[3].m_value = read_from_ptr<le_t<u16>>(ds3dev->padData, 47 + DS3_HID_OFFSET);
 
 	// Those are formulas used to adjust sensor values in sys_hid code but I couldn't find all the vars.
 	//auto polish_value = [](s32 value, s32 dword_0x0, s32 dword_0x4, s32 dword_0x8, s32 dword_0xC, s32 dword_0x18, s32 dword_0x1C) -> u16
@@ -484,17 +484,17 @@ void ds3_pad_handler::get_extended_info(const std::shared_ptr<PadDevice>& device
 	//pad->m_sensors[3].m_value = polish_value(pad->m_sensors[3].m_value, 1, 1, 512, 512, 0, 1023);
 }
 
-bool ds3_pad_handler::get_is_left_trigger(u64 keyCode)
+bool ds3_pad_handler::get_is_left_trigger(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
 {
 	return keyCode == DS3KeyCodes::L2;
 }
 
-bool ds3_pad_handler::get_is_right_trigger(u64 keyCode)
+bool ds3_pad_handler::get_is_right_trigger(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
 {
 	return keyCode == DS3KeyCodes::R2;
 }
 
-bool ds3_pad_handler::get_is_left_stick(u64 keyCode)
+bool ds3_pad_handler::get_is_left_stick(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
 {
 	switch (keyCode)
 	{
@@ -508,7 +508,7 @@ bool ds3_pad_handler::get_is_left_stick(u64 keyCode)
 	}
 }
 
-bool ds3_pad_handler::get_is_right_stick(u64 keyCode)
+bool ds3_pad_handler::get_is_right_stick(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
 {
 	switch (keyCode)
 	{
@@ -557,8 +557,11 @@ PadHandlerBase::connection ds3_pad_handler::update_connection(const std::shared_
 	return connection::connected;
 }
 
-void ds3_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad)
+void ds3_pad_handler::apply_pad_data(const pad_ensemble& binding)
 {
+	const auto& device = binding.device;
+	const auto& pad = binding.pad;
+
 	ds3_device* dev = static_cast<ds3_device*>(device.get());
 	if (!dev || !dev->hidDevice || !dev->config || !pad)
 		return;
@@ -568,8 +571,8 @@ void ds3_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device, c
 	const int idx_l = config->switch_vibration_motors ? 1 : 0;
 	const int idx_s = config->switch_vibration_motors ? 0 : 1;
 
-	const int speed_large = config->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value : vibration_min;
-	const int speed_small = config->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value : vibration_min;
+	const u8 speed_large = config->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value : 0;
+	const u8 speed_small = config->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value : 0;
 
 	const bool wireless    = dev->cable_state == 0;
 	const bool low_battery = dev->battery_level < 25;
@@ -602,6 +605,13 @@ void ds3_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device, c
 			dev->new_output_data = true;
 			dev->last_battery_level = dev->battery_level;
 		}
+	}
+
+	// Use LEDs to indicate battery level
+	if (dev->enable_player_leds != config->player_led_enabled.get())
+	{
+		dev->new_output_data = true;
+		dev->enable_player_leds = config->player_led_enabled.get();
 	}
 
 	dev->new_output_data |= dev->large_motor != speed_large || dev->small_motor != speed_small;

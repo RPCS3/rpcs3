@@ -11,7 +11,7 @@ Other instructions may be found [here](https://wiki.rpcs3.net/index.php?title=Bu
 * [Python 3.6+](https://www.python.org/downloads/) (add to PATH)
 * [Qt 5.15.2](https://www.qt.io/download-qt-installer)
 * [Visual Studio 2019](https://visualstudio.microsoft.com/thank-you-downloading-visual-studio/?sku=Community)
-* [Vulkan SDK 1.2.198+](https://vulkan.lunarg.com/sdk/home) (See "Install the SDK" [here](https://vulkan.lunarg.com/doc/sdk/latest/windows/getting_started.html))
+* [Vulkan SDK 1.3.224+](https://vulkan.lunarg.com/sdk/home) (See "Install the SDK" [here](https://vulkan.lunarg.com/doc/sdk/latest/windows/getting_started.html))
 
 **Either add the** `QTDIR` **environment variable, e.g.** `<QtInstallFolder>\5.15.2\msvc2019_64\` **, or use the [Visual Studio Qt Plugin](https://marketplace.visualstudio.com/items?itemName=TheQtCompany.QtVisualStudioTools2019)**
 
@@ -22,14 +22,14 @@ These are the essentials tools to build RPCS3 on Linux. Some of them can be inst
 * Clang 12+ or GCC 11+
 * [CMake 3.16.9+](https://www.cmake.org/download/)
 * [Qt 5.15.2](https://www.qt.io/download-qt-installer)
-* [Vulkan SDK 1.2.198+](https://vulkan.lunarg.com/sdk/home) (See "Install the SDK" [here](https://vulkan.lunarg.com/doc/sdk/latest/linux/getting_started.html))
-* [SDL2](https://www.libsdl.org/download-2.0.php) (for the FAudio backend)
+* [Vulkan SDK 1.3.224+](https://vulkan.lunarg.com/sdk/home) (See "Install the SDK" [here](https://vulkan.lunarg.com/doc/sdk/latest/linux/getting_started.html))
+* [SDL2](https://github.com/libsdl-org/SDL/releases) (for the FAudio backend)
 
 **If you have an NVIDIA GPU, you may need to install the libglvnd package.**
 
 #### Arch Linux
 
-    sudo pacman -S glew openal cmake vulkan-validation-layers qt5-base qt5-declarative qt5-multimedia sdl2 sndio jack2
+    sudo pacman -S glew openal cmake vulkan-validation-layers qt5-base qt5-declarative qt5-multimedia sdl2 sndio jack2 base-devel
 
 #### Debian & Ubuntu
 
@@ -102,15 +102,16 @@ git submodule update --init
 
 #### Configuring the Qt plugin (if used)
 
-1) Go to the Qt5 menu and edit Qt5 options.
-2) Add the path to your Qt installation with compiler e.g. `<QtInstallFolder>\5.15.2\msvc2019_64`.
-3) While selecting the rpcs3qt project, go to Qt5->Project Setting and select the version you added.
+1) Go to `Extensions->Qt VS Tools->Qt Versions`.
+2) Add the path to your Qt installation with compiler e.g. `<QtInstallFolder>\5.15.2\msvc2019_64`, version will fill in automatically.
+3) Go to `Extensions->Qt VS Tools->Options->Legacy Project Format`.
+4) Set `Build: Run pre-build setup` to `true`.
 
 #### Building the projects
 
 Open `rpcs3.sln`. The recommended build configuration is `Release`. (On older revisions: `Release - LLVM`)
 
-You may want to download the precompiled [LLVM libs](https://github.com/RPCS3/llvm-mirror/releases/download/custom-build-win/llvmlibs_mt.7z) and extract them to the root rpcs3 folder (which contains `rpcs3.sln`), as well as download and extract the [additional libs](https://github.com/RPCS3/glslang/releases/download/custom-build-win/glslanglibs_mt.7z) to `lib\%CONFIGURATION%-x64\` to speed up compilation time (unoptimised/debug libs are currently not available precompiled).
+You may want to download the precompiled [LLVM libs](https://github.com/RPCS3/llvm-mirror/releases/download/custom-build-win-16.0.1/llvmlibs_mt.7z) and extract them to `3rdparty\llvm\`, as well as download and extract the [additional libs](https://github.com/RPCS3/glslang/releases/download/custom-build-win/glslanglibs_mt.7z) to `lib\%CONFIGURATION%-x64\` to speed up compilation time (unoptimised/debug libs are currently not available precompiled).
 
 If you're not using the precompiled libs, build the following projects in *__BUILD_BEFORE* folder by right-clicking on a project > *Build*.:
 * glslang

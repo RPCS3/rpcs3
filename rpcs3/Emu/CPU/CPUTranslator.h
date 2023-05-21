@@ -13,14 +13,20 @@
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #pragma GCC diagnostic ignored "-Weffc++"
 #pragma GCC diagnostic ignored "-Wmissing-noreturn"
+#pragma GCC diagnostic ignored "-Wredundant-decls"
 #endif
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Support/KnownBits.h"
+#include "llvm/Support/ModRef.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/IntrinsicsX86.h"
+#include "llvm/IR/IntrinsicsAArch64.h"
+
 #ifdef _MSC_VER
 #pragma warning(pop)
 #else
@@ -28,6 +34,7 @@
 #endif
 
 #include "util/types.hpp"
+#include "util/sysinfo.hpp"
 #include "Utilities/StrFmt.h"
 #include "Utilities/BitField.h"
 #include "Utilities/JIT.h"
@@ -55,6 +62,62 @@ concept DSLValue = requires (T& v)
 {
 	{ v.eval(std::declval<llvm::IRBuilder<>*>()) } -> LLVMValue;
 };
+
+template <usz N>
+struct get_int_bits
+{
+};
+
+template <>
+struct get_int_bits<1>
+{
+	using utype = bool;
+};
+
+template <>
+struct get_int_bits<2>
+{
+	using utype = i2;
+};
+
+template <>
+struct get_int_bits<4>
+{
+	using utype = i4;
+};
+
+template <>
+struct get_int_bits<8>
+{
+	using utype = u8;
+};
+
+template <>
+struct get_int_bits<16>
+{
+	using utype = u16;
+};
+
+template <>
+struct get_int_bits<32>
+{
+	using utype = u32;
+};
+
+template <>
+struct get_int_bits<64>
+{
+	using utype = u64;
+};
+
+template <>
+struct get_int_bits<128>
+{
+	using utype = u128;
+};
+
+template <usz Bits>
+using get_int_vt = typename get_int_bits<Bits>::utype;
 
 template <typename T = void>
 struct llvm_value_t
@@ -2973,6 +3036,7 @@ public:
 		m_engine->updateGlobalMapping({lame.data(), lame.size()}, reinterpret_cast<uptr>(_func));
 
 		const auto inst = m_ir->CreateCall(func, {args...});
+		inst->setTailCallKind(llvm::CallInst::TCK_NoTail);
 #ifdef _WIN32
 		inst->setCallingConv(llvm::CallingConv::Win64);
 #endif
@@ -2988,7 +3052,7 @@ public:
 	}
 
 	template <typename RT, DSLValue... Args>
-	auto call(llvm::Function* func, Args&&... args)
+	auto callf(llvm::Function* func, Args&&... args)
 	{
 		llvm_value_t<RT> r;
 		r.value = m_ir->CreateCall(func, {std::forward<Args>(args).eval(m_ir)...});
@@ -3288,7 +3352,7 @@ public:
 
 	// Infinite-precision shift left
 	template <typename T, typename U, typename CT = llvm_common_t<T, U>>
-	static auto inf_shl(T&& a, U&& b)
+	auto inf_shl(T&& a, U&& b)
 	{
 		static constexpr u32 esz = llvm_value_t<CT>::esize;
 
@@ -3314,7 +3378,7 @@ public:
 
 	// Infinite-precision logical shift right (unsigned)
 	template <typename T, typename U, typename CT = llvm_common_t<T, U>>
-	static auto inf_lshr(T&& a, U&& b)
+	auto inf_lshr(T&& a, U&& b)
 	{
 		static constexpr u32 esz = llvm_value_t<CT>::esize;
 
@@ -3340,7 +3404,7 @@ public:
 
 	// Infinite-precision arithmetic shift right (signed)
 	template <typename T, typename U, typename CT = llvm_common_t<T, U>>
-	static auto inf_ashr(T&& a, U&& b)
+	auto inf_ashr(T&& a, U&& b)
 	{
 		static constexpr u32 esz = llvm_value_t<CT>::esize;
 
@@ -3425,7 +3489,7 @@ public:
 
 			if (cv || llvm::isa<llvm::ConstantAggregateZero>(c))
 			{
-				result.value = llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const u8*>(&mask), 16));
+				result.value = llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(reinterpret_cast<const u8*>(&mask), 16));
 				result.value = m_ir->CreateZExt(result.value, get_type<u32[16]>());
 				result.value = m_ir->CreateShuffleVector(data0, zeros, result.value);
 				return result;
@@ -3439,6 +3503,11 @@ public:
 	template <typename T1, typename T2, typename T3>
 	value_t<u8[16]> vperm2b(T1 a, T2 b, T3 c)
 	{
+		if (!utils::has_fast_vperm2b())
+		{
+			return vperm2b256to128(a, b, c);
+		}
+
 		value_t<u8[16]> result;
 
 		const auto data0 = a.eval(m_ir);
@@ -3463,7 +3532,7 @@ public:
 
 			if (cv || llvm::isa<llvm::ConstantAggregateZero>(c))
 			{
-				result.value = llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const u8*>(&mask), 16));
+				result.value = llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(reinterpret_cast<const u8*>(&mask), 16));
 				result.value = m_ir->CreateZExt(result.value, get_type<u32[16]>());
 				result.value = m_ir->CreateShuffleVector(data0, data1, result.value);
 				return result;
@@ -3503,7 +3572,7 @@ public:
 
 			if (cv || llvm::isa<llvm::ConstantAggregateZero>(c))
 			{
-				result.value = llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const u8*>(&mask), 16));
+				result.value = llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(reinterpret_cast<const u8*>(&mask), 16));
 				result.value = m_ir->CreateZExt(result.value, get_type<u32[16]>());
 				result.value = m_ir->CreateShuffleVector(data0, data1, result.value);
 				return result;
@@ -3521,7 +3590,7 @@ public:
 		u8 mask16[16] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
 
 		// insert the second source operand into the same vector as the first source operand and expand to 256 bit width
-		shuffle.value = llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const u8*>(&mask32), 32));
+		shuffle.value = llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(reinterpret_cast<const u8*>(&mask32), 32));
 		shuffle.value = m_ir->CreateZExt(shuffle.value, get_type<u32[32]>());
 		intermediate.value = m_ir->CreateShuffleVector(data0, data1, shuffle.value);
 
@@ -3532,22 +3601,23 @@ public:
 		intermediate.value = m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::x86_avx512_permvar_qi_256), {intermediate.value, shuffleindex.value});
 
 		// convert the 256 bit vector back to 128 bits
-		result.value = llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const u8*>(&mask16), 16));
+		result.value = llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(reinterpret_cast<const u8*>(&mask16), 16));
 		result.value = m_ir->CreateZExt(result.value, get_type<u32[16]>());
 		result.value = m_ir->CreateShuffleVector(intermediate.value, zeroes32, result.value);
 		return result;
 	}
 
+	template <typename T>
 	llvm::Value* load_const(llvm::GlobalVariable* g, llvm::Value* i)
 	{
-		return m_ir->CreateLoad(m_ir->CreateGEP(g, {m_ir->getInt64(0), m_ir->CreateZExtOrTrunc(i, get_type<u64>())}));
+		return m_ir->CreateLoad(get_type<T>(), m_ir->CreateGEP(g->getValueType(), g, {m_ir->getInt64(0), m_ir->CreateZExtOrTrunc(i, get_type<u64>())}));
 	}
 
 	template <typename T, typename I>
 	value_t<T> load_const(llvm::GlobalVariable* g, I i)
 	{
 		value_t<T> result;
-		result.value = load_const(g, i.eval(m_ir));
+		result.value = load_const<T>(g, i.eval(m_ir));
 		return result;
 	}
 
@@ -3556,6 +3626,18 @@ public:
 
 	template <typename T = v128>
 	llvm::Constant* make_const_vector(T, llvm::Type*, u32 = __builtin_LINE());
+
+	template <typename T>
+	llvm::KnownBits get_known_bits(T a)
+	{
+		return llvm::computeKnownBits(a.eval(m_ir), m_module->getDataLayout());
+	}
+
+	template <typename T>
+	llvm::KnownBits kbc(T value)
+	{
+		return llvm::KnownBits::makeConstant(llvm::APInt(sizeof(T) * 8, u64(value)));
+	}
 
 private:
 	// Custom intrinsic table
@@ -3626,7 +3708,7 @@ public:
 				if (cv || llvm::isa<llvm::ConstantAggregateZero>(c))
 				{
 					llvm::Value* r = nullptr;
-					r = llvm::ConstantDataVector::get(ir->getContext(), llvm::makeArrayRef(reinterpret_cast<const u8*>(&mask), 16));
+					r = llvm::ConstantDataVector::get(ir->getContext(), llvm::ArrayRef(reinterpret_cast<const u8*>(&mask), 16));
 					r = ir->CreateZExt(r, llvm_value_t<u32[16]>::get_type(ir->getContext()));
 					r = ir->CreateShuffleVector(args[0], zeros, r);
 					return r;
@@ -3637,34 +3719,63 @@ public:
 		});
 	}
 
+	// (m << 3) >= 0 ? a : b
+	template <typename T, typename U, typename V>
+	static auto select_by_bit4(T&& m, U&& a, V&& b)
+	{
+		return llvm_calli<u8[16], T, U, V>{"any_select_by_bit4", {std::forward<T>(m), std::forward<U>(a), std::forward<V>(b)}};
+	}
+
 	template <typename T, typename = std::enable_if_t<std::is_same_v<llvm_common_t<T>, f32[4]>>>
 	static auto fre(T&& a)
 	{
+#if defined(ARCH_X64)
 		return llvm_calli<f32[4], T>{"llvm.x86.sse.rcp.ps", {std::forward<T>(a)}};
+#elif defined(ARCH_ARM64)
+		return llvm_calli<f32[4], T>{"llvm.aarch64.neon.frecpe.v4f32", {std::forward<T>(a)}};
+#endif
 	}
 
 	template <typename T, typename = std::enable_if_t<std::is_same_v<llvm_common_t<T>, f32[4]>>>
 	static auto frsqe(T&& a)
 	{
+#if defined(ARCH_X64)
 		return llvm_calli<f32[4], T>{"llvm.x86.sse.rsqrt.ps", {std::forward<T>(a)}};
+#elif defined(ARCH_ARM64)
+		return llvm_calli<f32[4], T>{"llvm.aarch64.neon.frsqrte.v4f32", {std::forward<T>(a)}};
+#endif
 	}
 
 	template <typename T, typename U, typename = std::enable_if_t<std::is_same_v<llvm_common_t<T, U>, f32[4]>>>
 	static auto fmax(T&& a, U&& b)
 	{
+#if defined(ARCH_X64)
 		return llvm_calli<f32[4], T, U>{"llvm.x86.sse.max.ps", {std::forward<T>(a), std::forward<U>(b)}};
+#elif defined(ARCH_ARM64)
+		return llvm_calli<f32[4], T, U>{"llvm.aarch64.neon.fmax.v4f32", {std::forward<T>(a), std::forward<U>(b)}};
+#endif
 	}
 
 	template <typename T, typename U, typename = std::enable_if_t<std::is_same_v<llvm_common_t<T, U>, f32[4]>>>
 	static auto fmin(T&& a, U&& b)
 	{
+#if defined(ARCH_X64)
 		return llvm_calli<f32[4], T, U>{"llvm.x86.sse.min.ps", {std::forward<T>(a), std::forward<U>(b)}};
+#elif defined(ARCH_ARM64)
+		return llvm_calli<f32[4], T, U>{"llvm.aarch64.neon.fmin.v4f32", {std::forward<T>(a), std::forward<U>(b)}};
+#endif
 	}
 
 	template <typename T, typename U, typename = std::enable_if_t<std::is_same_v<llvm_common_t<T, U>, u8[16]>>>
 	static auto vdbpsadbw(T&& a, U&& b, u8 c)
 	{
 		return llvm_calli<u16[8], T, U, llvm_const_int<u32>>{"llvm.x86.avx512.dbpsadbw.128", {std::forward<T>(a), std::forward<U>(b), llvm_const_int<u32>{c}}};
+	}
+
+	template <typename T, typename U, typename = std::enable_if_t<std::is_same_v<llvm_common_t<T, U>, f32[4]>>>
+	static auto vrangeps(T&& a, U&& b, u8 c, u8 d)
+	{
+		return llvm_calli<f32[4], T, U, llvm_const_int<u32>, T, llvm_const_int<u8>>{"llvm.x86.avx512.mask.range.ps.128", {std::forward<T>(a), std::forward<U>(b), llvm_const_int<u32>{c}, std::forward<T>(a), llvm_const_int<u8>{d}}};
 	}
 };
 

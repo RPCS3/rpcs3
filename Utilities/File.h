@@ -71,6 +71,10 @@ namespace fs
 		s64 atime;
 		s64 mtime;
 		s64 ctime;
+
+		using enable_bitcopy = std::true_type;
+
+		constexpr bool operator==(const stat_t&) const = default;
 	};
 
 	// Helper, layout is equal to iovec struct
@@ -89,6 +93,7 @@ namespace fs
 		virtual void sync();
 		virtual bool trunc(u64 length) = 0;
 		virtual u64 read(void* buffer, u64 size) = 0;
+		virtual u64 read_at(u64 offset, void* buffer, u64 size) = 0;
 		virtual u64 write(const void* buffer, u64 size) = 0;
 		virtual u64 seek(s64 offset, seek_mode whence) = 0;
 		virtual u64 size() = 0;
@@ -105,6 +110,8 @@ namespace fs
 			: stat_t{}
 		{
 		}
+
+		using enable_bitcopy = std::false_type;
 	};
 
 	// Directory handle base
@@ -159,7 +166,7 @@ namespace fs
 	shared_ptr<device_base> set_virtual_device(const std::string& name, shared_ptr<device_base> device);
 
 	// Try to get parent directory (returns empty string on failure)
-	std::string get_parent_dir(const std::string& path, u32 levels = 1);
+	std::string get_parent_dir(std::string_view path, u32 levels = 1);
 
 	// Get file information
 	bool stat(const std::string& path, stat_t& info);
@@ -293,6 +300,17 @@ namespace fs
 		{
 			if (!m_file) xnull({line, col, file, func});
 			return m_file->read(buffer, count);
+		}
+
+		// Read the data from the file at specified offset in thread-safe manner
+		u64 read_at(u64 offset, void* buffer, u64 count,
+			u32 line = __builtin_LINE(),
+			u32 col = __builtin_COLUMN(),
+			const char* file = __builtin_FILE(),
+			const char* func = __builtin_FUNCTION()) const
+		{
+			if (!m_file) xnull({line, col, file, func});
+			return m_file->read_at(offset, buffer, count);
 		}
 
 		// Write the data to the file and return the amount of data actually written
@@ -637,7 +655,7 @@ namespace fs
 		// This is meant to modify files atomically, overwriting is likely
 		bool commit(bool overwrite = true);
 
-		pending_file(const std::string& path);
+		pending_file(std::string_view path);
 		pending_file(const pending_file&) = delete;
 		pending_file& operator=(const pending_file&) = delete;
 		~pending_file();
@@ -651,7 +669,7 @@ namespace fs
 	bool remove_all(const std::string& path, bool remove_root = true, bool is_no_dir_ok = false);
 
 	// Get size of all files recursively
-	u64 get_dir_size(const std::string& path, u64 rounding_alignment = 1);
+	u64 get_dir_size(const std::string& path, u64 rounding_alignment = 1, atomic_t<bool>* cancel_flag = nullptr);
 
 	enum class error : uint
 	{
@@ -681,9 +699,10 @@ namespace fs
 		T obj;
 		u64 pos;
 
-		container_stream(T&& obj)
+		container_stream(T&& obj, const stat_t& init_stat = {})
 			: obj(std::forward<T>(obj))
 			, pos(0)
+			, m_stat(init_stat)
 		{
 		}
 
@@ -694,6 +713,7 @@ namespace fs
 		bool trunc(u64 length) override
 		{
 			obj.resize(length);
+			update_time(true);
 			return true;
 		}
 
@@ -708,6 +728,25 @@ namespace fs
 				{
 					std::copy(obj.cbegin() + pos, obj.cbegin() + pos + max, static_cast<value_type*>(buffer));
 					pos = pos + max;
+					update_time();
+					return max;
+				}
+			}
+
+			return 0;
+		}
+
+		u64 read_at(u64 offset, void* buffer, u64 size) override
+		{
+			const u64 end = obj.size();
+
+			if (offset < end)
+			{
+				// Get readable size
+				if (const u64 max = std::min<u64>(size, end - offset))
+				{
+					std::copy(obj.cbegin() + offset, obj.cbegin() + offset + max, static_cast<value_type*>(buffer));
+					update_time();
 					return max;
 				}
 			}
@@ -743,6 +782,7 @@ namespace fs
 			obj.insert(obj.end(), src + overlap, src + size);
 			pos += size;
 
+			if (size) update_time(true);
 			return size;
 		}
 
@@ -767,13 +807,34 @@ namespace fs
 		{
 			return obj.size();
 		}
+
+		stat_t stat() override
+		{
+			return m_stat;
+		}
+
+	private:
+		stat_t m_stat{};
+
+		void update_time(bool write = false)
+		{
+			// TODO: Accurate timestamps
+			m_stat.atime++;
+
+			if (write)
+			{
+				m_stat.mtime++;
+				m_stat.mtime = std::max(m_stat.atime, m_stat.mtime);
+				m_stat.ctime = m_stat.mtime;
+			}
+		}
 	};
 
 	template <typename T>
-	file make_stream(T&& container = T{})
+	file make_stream(T&& container = T{}, const stat_t& stat = stat_t{})
 	{
 		file result;
-		result.reset(std::make_unique<container_stream<T>>(std::forward<T>(container)));
+		result.reset(std::make_unique<container_stream<T>>(std::forward<T>(container), stat));
 		return result;
 	}
 

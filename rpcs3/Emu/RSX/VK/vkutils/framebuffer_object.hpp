@@ -63,6 +63,18 @@ namespace vk
 			return attachments[0]->image()->samples();
 		}
 
+		VkFormat format()
+		{
+			ensure(!attachments.empty());
+			return attachments[0]->image()->format();
+		}
+
+		VkFormat depth_format()
+		{
+			ensure(!attachments.empty());
+			return attachments.back()->image()->format();
+		}
+
 		bool matches(std::vector<vk::image*> fbo_images, u32 width, u32 height)
 		{
 			if (m_width != width || m_height != height)

@@ -227,6 +227,19 @@ bool utils::has_fma4()
 #endif
 }
 
+// The Zen4 based CPUs support VPERMI2B/VPERMT2B in a single uop.
+// Current Intel cpus (as of 2022) need 3 uops to execute these instructions.
+// Check for SSE4A (which intel doesn't doesn't support) as well as VBMI.
+bool utils::has_fast_vperm2b()
+{
+#if defined(ARCH_X64)
+	static const bool g_value = has_avx512() && (get_cpuid(7, 0)[2] & 0x2) == 0x2 && get_cpuid(0, 0)[0] >= 0x7 && (get_cpuid(0x80000001, 0)[2] & 0x20) == 0x20;
+	return g_value;
+#else
+	return false;
+#endif
+}
+
 bool utils::has_erms()
 {
 #if defined(ARCH_X64)
@@ -401,14 +414,35 @@ std::string utils::get_firmware_version()
 
 		version = version.substr(start, end - start);
 
-		// Trim version
-		const usz trim_start = version.find_first_not_of('0');
-		const usz trim_end = version.find_last_not_of('0');
+		// Trim version (e.g. '04.8900' becomes '4.89')
+		usz trim_start = version.find_first_not_of('0');
 
 		if (trim_start == umax)
 		{
 			return {};
 		}
+
+		// Keep at least one preceding 0 (e.g. '00.3100' becomes '0.31' instead of '.31')
+		if (version[trim_start] == '.')
+		{
+			if (trim_start == 0)
+			{
+				// Version starts with '.' for some reason
+				return {};
+			}
+
+			trim_start--;
+		}
+
+		const usz dot_pos = version.find_first_of('.', trim_start);
+
+		if (dot_pos == umax)
+		{
+			return {};
+		}
+
+		// Try to keep the second 0 in the minor version (e.g. '04.9000' becomes '4.90' instead of '4.9')
+		const usz trim_end = std::max(version.find_last_not_of('0', dot_pos + 1), std::min(dot_pos + 2, version.size()));
 
 		return std::string(version.substr(trim_start, trim_end));
 	}
@@ -652,12 +686,8 @@ u32 utils::get_cpu_model()
 
 namespace utils
 {
-	extern const u64 main_tid = []() -> u64
+	u64 _get_main_tid()
 	{
-#ifdef _WIN32
-		return GetCurrentThreadId();
-#else
-		return reinterpret_cast<u64>(pthread_self());
-#endif
-	}();
+		return thread_ctrl::get_tid();
+	}
 }

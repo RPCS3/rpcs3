@@ -7,12 +7,11 @@
 
 LOG_CHANNEL(buzz_log);
 
-usb_device_buzz::usb_device_buzz(int first_controller, int last_controller, const std::array<u8, 7>& location)
+usb_device_buzz::usb_device_buzz(u32 first_controller, u32 last_controller, const std::array<u8, 7>& location)
 	: usb_device_emulated(location)
+	, m_first_controller(first_controller)
+	, m_last_controller(last_controller)
 {
-	this->first_controller = first_controller;
-	this->last_controller  = last_controller;
-
 	device        = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE, UsbDeviceDescriptor{0x0200, 0x00, 0x00, 0x00, 0x08, 0x054c, 0x0002, 0x05a1, 0x03, 0x01, 0x00, 0x01});
 	auto& config0 = device.add_node(UsbDescriptorNode(USB_DESCRIPTOR_CONFIG, UsbDeviceConfiguration{0x0022, 0x01, 0x01, 0x00, 0x80, 0x32}));
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_INTERFACE, UsbDeviceInterface{0x00, 0x00, 0x01, 0x03, 0x00, 0x00, 0x00}));
@@ -31,20 +30,24 @@ void usb_device_buzz::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue
 	// Control transfers are nearly instant
 	switch (bmRequestType)
 	{
-		case 0x01:
-		case 0x21:
-		case 0x80:
-			buzz_log.error("Unhandled Query Len: 0x%02X", buf_size);
-			buzz_log.error("Unhandled Query Type: 0x%02X", (buf_size > 0) ? buf[0] : -1);
-			break;
-		default:
-			usb_device_emulated::control_transfer(bmRequestType, bRequest, wValue, wIndex, wLength, buf_size, buf, transfer);
-			break;
+	case 0x01:
+	case 0x21:
+	case 0x80:
+		buzz_log.error("Unhandled Query: buf_size=0x%02X, Type=0x%02X, bmRequestType=0x%02X", buf_size, (buf_size > 0) ? buf[0] : -1, bmRequestType);
+		break;
+	default:
+		usb_device_emulated::control_transfer(bmRequestType, bRequest, wValue, wIndex, wLength, buf_size, buf, transfer);
+		break;
 	}
 }
 
+extern bool is_input_allowed();
+
 void usb_device_buzz::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint*/, UsbTransfer* transfer)
 {
+	const u8 max_index = 2 + (4 + 5 * m_last_controller) / 8;
+	ensure(buf_size > max_index);
+
 	transfer->fake            = true;
 	transfer->expected_count  = 5;
 	transfer->expected_result = HC_CC_NOERR;
@@ -60,45 +63,53 @@ void usb_device_buzz::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint*/
 	buf[3] = 0x00;
 	buf[4] = 0xf0;
 
+	if (!is_input_allowed())
+	{
+		return;
+	}
+
 	std::lock_guard lock(pad::g_pad_mutex);
 	const auto handler = pad::get_current_handler();
 	const auto& pads   = handler->GetPads();
+	ensure(pads.size() > m_last_controller);
 
-	for (int index = 0; index <= (last_controller - first_controller); index++)
+	for (u32 i = m_first_controller, index = 0; i <= m_last_controller; i++, index++)
 	{
-		const auto& pad = pads[first_controller + index];
+		const auto& pad = pads[i];
 
 		if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
-			continue;
-
-		for (Button& button : pad->m_buttons)
 		{
+			continue;
+		}
+
+		for (const Button& button : pad->m_buttons)
+		{
+			if (!button.m_pressed)
+			{
+				continue;
+			}
+
 			if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL2)
 			{
 				switch (button.m_outKeyCode)
 				{
-					case CELL_PAD_CTRL_R1:
-						if (button.m_pressed)
-							buf[2 + (0 + 5 * index) / 8] |= 1 << ((0 + 5 * index) % 8); // Red
-						break;
-					case CELL_PAD_CTRL_TRIANGLE:
-						if (button.m_pressed)
-							buf[2 + (4 + 5 * index) / 8] |= 1 << ((4 + 5 * index) % 8); // Blue
-						break;
-					case CELL_PAD_CTRL_SQUARE:
-						if (button.m_pressed)
-							buf[2 + (3 + 5 * index) / 8] |= 1 << ((3 + 5 * index) % 8); // Orange
-						break;
-					case CELL_PAD_CTRL_CIRCLE:
-						if (button.m_pressed)
-							buf[2 + (2 + 5 * index) / 8] |= 1 << ((2 + 5 * index) % 8); // Green
-						break;
-					case CELL_PAD_CTRL_CROSS:
-						if (button.m_pressed)
-							buf[2 + (1 + 5 * index) / 8] |= 1 << ((1 + 5 * index) % 8); // Yellow
-						break;
-					default:
-						break;
+				case CELL_PAD_CTRL_R1:
+					buf[2 + (0 + 5 * index) / 8] |= 1 << ((0 + 5 * index) % 8); // Red
+					break;
+				case CELL_PAD_CTRL_TRIANGLE:
+					buf[2 + (4 + 5 * index) / 8] |= 1 << ((4 + 5 * index) % 8); // Blue
+					break;
+				case CELL_PAD_CTRL_SQUARE:
+					buf[2 + (3 + 5 * index) / 8] |= 1 << ((3 + 5 * index) % 8); // Orange
+					break;
+				case CELL_PAD_CTRL_CIRCLE:
+					buf[2 + (2 + 5 * index) / 8] |= 1 << ((2 + 5 * index) % 8); // Green
+					break;
+				case CELL_PAD_CTRL_CROSS:
+					buf[2 + (1 + 5 * index) / 8] |= 1 << ((1 + 5 * index) % 8); // Yellow
+					break;
+				default:
+					break;
 				}
 			}
 		}

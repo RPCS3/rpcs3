@@ -1,17 +1,16 @@
 #pragma once
 
+#include "shortcut_handler.h"
+#include "progress_indicator.h"
 #include "util/types.hpp"
 #include "util/atomic.hpp"
+#include "util/media_utils.h"
+#include "util/video_provider.h"
 #include "Emu/RSX/GSFrameBase.h"
 
 #include <QWindow>
 #include <QPaintEvent>
 #include <QTimer>
-
-#ifdef _WIN32
-#include <QWinTaskbarProgress>
-#include <QWinTaskbarButton>
-#endif
 
 #include <memory>
 #include <vector>
@@ -24,14 +23,7 @@ class gs_frame : public QWindow, public GSFrameBase
 
 private:
 	// taskbar progress
-	int m_gauge_max = 100;
-#ifdef _WIN32
-	QWinTaskbarButton* m_tb_button = nullptr;
-	QWinTaskbarProgress* m_tb_progress = nullptr;
-#elif HAVE_QTDBUS
-	int m_progress_value = 0;
-	void UpdateProgress(int progress, bool progress_visible);
-#endif
+	std::unique_ptr<progress_indicator> m_progress_indicator;
 
 	QRect m_initial_geometry;
 
@@ -51,9 +43,12 @@ private:
 	bool m_hide_mouse_after_idletime = false;
 	u32 m_hide_mouse_idletime = 2000; // ms
 	bool m_flip_showed_frame = false;
+	bool m_start_games_fullscreen = false;
+
+	std::shared_ptr<utils::video_encoder> m_video_encoder{};
 
 public:
-	explicit gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon, std::shared_ptr<gui_settings> gui_settings);
+	explicit gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon, std::shared_ptr<gui_settings> gui_settings, bool force_fullscreen);
 	~gs_frame();
 
 	draw_context_t make_context() override;
@@ -73,6 +68,8 @@ public:
 	*/
 	bool get_mouse_lock_state();
 
+	bool can_consume_frame() const override;
+	void present_frame(std::vector<u8>& data, const u32 width, const u32 height, bool is_bgra) const override;
 	void take_screenshot(std::vector<u8> data, const u32 sshot_width, const u32 sshot_height, bool is_bgra) override;
 
 protected:
@@ -99,10 +96,12 @@ protected:
 
 private:
 	void hide_on_close();
+	void toggle_recording();
 	void toggle_mouselock();
 	void update_cursor();
 	void handle_cursor(QWindow::Visibility visibility, bool from_event, bool start_idle_timer);
 
 private Q_SLOTS:
-	void MouseHideTimeout();
+	void mouse_hide_timeout();
+	void handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKeySequence& key_sequence);
 };

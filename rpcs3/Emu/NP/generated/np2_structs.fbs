@@ -270,3 +270,81 @@ table SendMessageRequest {
     message:[uint8] (nested_flatbuffer: "MessageDetails");
     npids:[string];
 }
+
+table BoardInfo {
+    rankLimit:uint32;
+    updateMode:uint32;
+    sortMode:uint32;
+    uploadNumLimit:uint32;
+    uploadSizeLimit:uint32;
+}
+
+table RecordScoreRequest {
+	boardId:uint32;
+	pcId:int32;
+	score:int64;
+	comment:string;
+	data:[uint8];
+}
+
+table GetScoreRangeRequest {
+	boardId:uint32;
+	startRank:uint32;
+	numRanks:uint32;
+	withComment:bool;
+	withGameInfo:bool;
+}
+
+table ScoreNpIdPcId {
+	npid:string;
+	pcId:int32;
+}
+
+table GetScoreNpIdRequest {
+	boardId:uint32;
+	npids:[ScoreNpIdPcId];
+	withComment:bool;
+	withGameInfo:bool;
+}
+
+table GetScoreFriendsRequest {
+	boardId:uint32;
+	include_self:bool;
+	max:uint32;
+	withComment:bool;
+	withGameInfo:bool;
+}
+
+table ScoreRankData {
+	npId:string;
+	onlineName:string;
+	pcId:int32;
+	rank:uint32;
+	score:int64;
+	hasGameData:bool;
+    recordDate:uint64;
+}
+
+table ScoreInfo {
+	data: [uint8];
+}
+
+table GetScoreResponse {
+	rankArray:[ScoreRankData];
+	commentArray:[string];
+	infoArray:[ScoreInfo];
+	lastSortDate:uint64;
+	totalRecord:uint32;
+}
+
+table RecordScoreGameDataRequest {
+	boardId:uint32;
+	pcId:int32;
+	score:int64;
+}
+
+table GetScoreGameDataRequest {
+	boardId:uint32;
+	npId:string;
+	pcId:int32;
+}

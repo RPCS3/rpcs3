@@ -35,7 +35,7 @@ error_code sys_hid_manager_open(u64 device_type, u64 port_no, vm::ptr<u32> handl
 	if (device_type == 1)
 	{
 		cellPadInit(7);
-		cellPadSetPortSetting(port_no /* 0 */, CELL_PAD_SETTING_LDD | CELL_PAD_SETTING_PRESS_ON);
+		cellPadSetPortSetting(port_no /* 0 */, CELL_PAD_SETTING_LDD | CELL_PAD_SETTING_PRESS_ON | CELL_PAD_SETTING_SENSOR_ON);
 	}
 
 	return CELL_OK;
@@ -110,8 +110,6 @@ error_code sys_hid_manager_513(u64 a1, u64 a2, vm::ptr<void> buf, u64 buf_size)
 
 error_code sys_hid_manager_514(u32 pkg_id, vm::ptr<void> buf, u64 buf_size)
 {
-	sys_hid.todo("sys_hid_manager_514(pkg_id=0x%x, buf=*0x%x, buf_size=0x%llx)", pkg_id, buf, buf_size);
-
 	if (pkg_id == 0xE)
 	{
 		sys_hid.trace("sys_hid_manager_514(pkg_id=0x%x, buf=*0x%x, buf_size=0x%llx)", pkg_id, buf, buf_size);
@@ -161,10 +159,11 @@ error_code sys_hid_manager_read(u32 handle, u32 pkg_id, vm::ptr<void> buf, u64 b
 		return CELL_EFAULT;
 	}
 
+	(pkg_id == 2 || pkg_id == 0x81 ? sys_hid.trace : sys_hid.todo)
+		("sys_hid_manager_read(handle=0x%x, pkg_id=0x%x, buf=*0x%x, buf_size=0x%llx)", handle, pkg_id, buf, buf_size);
+
 	if (pkg_id == 2)
 	{
-		sys_hid.trace("sys_hid_manager_read(handle=0x%x, pkg_id=0x%x, buf=*0x%x, buf_size=0x%llx)", handle, pkg_id, buf, buf_size);
-
 		// cellPadGetData
 		// it returns just button array from 'CellPadData'
 		//auto data = vm::static_ptr_cast<u16[64]>(buf);
@@ -179,8 +178,6 @@ error_code sys_hid_manager_read(u32 handle, u32 pkg_id, vm::ptr<void> buf, u64 b
 	}
 	else if (pkg_id == 0x81)
 	{
-		sys_hid.trace("sys_hid_manager_read(handle=0x%x, pkg_id=0x%x, buf=*0x%x, buf_size=0x%llx)", handle, pkg_id, buf, buf_size);
-
 		// cellPadGetDataExtra?
 		vm::var<CellPadData> tmpData;
 		if ((cellPadGetData(0, +tmpData) == CELL_OK) && tmpData->len > 0)
@@ -190,8 +187,6 @@ error_code sys_hid_manager_read(u32 handle, u32 pkg_id, vm::ptr<void> buf, u64 b
 			return not_an_error(cpySize / 2);
 		}
 	}
-
-	sys_hid.todo("sys_hid_manager_read(handle=0x%x, pkg_id=0x%x, buf=*0x%x, buf_size=0x%llx)", handle, pkg_id, buf, buf_size);
 
 	return CELL_OK;
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <util/types.hpp>
+#include <functional>
 
 namespace rsx
 {
@@ -25,7 +26,13 @@ namespace rsx
 	public:
 		simple_array() = default;
 
-		simple_array(u32 initial_size, const Ty val = {})
+		simple_array(u32 initial_size)
+		{
+			reserve(initial_size);
+			_size = initial_size;
+		}
+
+		simple_array(u32 initial_size, const Ty val)
 		{
 			reserve(initial_size);
 			_size = initial_size;
@@ -103,10 +110,12 @@ namespace rsx
 			_capacity = size;
 		}
 
-		void resize(u32 size)
+		template <typename T> requires UnsignedInt<T>
+		void resize(T size)
 		{
-			reserve(size);
-			_size = size;
+			const auto new_size = static_cast<u32>(size);
+			reserve(new_size);
+			_size = new_size;
 		}
 
 		void push_back(const Ty& val)
@@ -127,6 +136,17 @@ namespace rsx
 			}
 
 			_data[_size++] = val;
+		}
+
+		template <typename... Args>
+		void emplace_back(Args&&... args)
+		{
+			if (_size >= _capacity)
+			{
+				reserve(_capacity + 16);
+			}
+
+			std::construct_at(&_data[_size++], std::forward<Args&&>(args)...);
 		}
 
 		Ty pop_back()
@@ -273,6 +293,46 @@ namespace rsx
 		const_iterator end() const
 		{
 			return _data ? _data + _size : nullptr;
+		}
+
+		bool any(std::predicate<const Ty&> auto predicate) const
+		{
+			for (auto it = begin(); it != end(); ++it)
+			{
+				if (std::invoke(predicate, *it))
+				{
+					return true;
+				}
+			}
+			return false;
+		}
+
+		void filter(std::predicate<const Ty&> auto predicate)
+		{
+			if (!_size)
+			{
+				return;
+			}
+
+			for (auto ptr = _data, last = _data + _size - 1; ptr < last; ptr++)
+			{
+				if (!predicate(*ptr))
+				{
+					// Move item to the end of the list and shrink by 1
+					std::memcpy(ptr, last, sizeof(Ty));
+					last = _data + (--_size);
+				}
+			}
+		}
+
+		void sort(std::predicate<const Ty&, const Ty&> auto predicate)
+		{
+			if (_size < 2)
+			{
+				return;
+			}
+
+			std::sort(begin(), end(), predicate);
 		}
 	};
 }

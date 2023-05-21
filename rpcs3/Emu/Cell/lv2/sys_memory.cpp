@@ -12,18 +12,77 @@
 
 LOG_CHANNEL(sys_memory);
 
+//
+static shared_mutex s_memstats_mtx;
+
 lv2_memory_container::lv2_memory_container(u32 size, bool from_idm) noexcept
 	: size(size)
 	, id{from_idm ? idm::last_id() : SYS_MEMORY_CONTAINER_ID_INVALID}
 {
 }
 
-//
-static shared_mutex s_memstats_mtx;
+lv2_memory_container::lv2_memory_container(utils::serial& ar, bool from_idm) noexcept
+	: size(ar)
+	, id{from_idm ? idm::last_id() : SYS_MEMORY_CONTAINER_ID_INVALID}
+	, used(ar)
+{
+}
+
+std::shared_ptr<void> lv2_memory_container::load(utils::serial& ar)
+{
+	// Use idm::last_id() only for the instances at IDM
+	return std::make_shared<lv2_memory_container>(stx::exact_t<utils::serial&>(ar), true);
+}
+
+void lv2_memory_container::save(utils::serial& ar)
+{
+	ar(size, used);
+}
+
+lv2_memory_container* lv2_memory_container::search(u32 id)
+{
+	if (id != SYS_MEMORY_CONTAINER_ID_INVALID)
+	{
+		return idm::check<lv2_memory_container>(id);
+	}
+
+	return &g_fxo->get<lv2_memory_container>();
+}
 
 struct sys_memory_address_table
 {
 	atomic_t<lv2_memory_container*> addrs[65536]{};
+
+	sys_memory_address_table() = default;
+
+	SAVESTATE_INIT_POS(id_manager::id_map<lv2_memory_container>::savestate_init_pos + 0.1);
+
+	sys_memory_address_table(utils::serial& ar)
+	{
+		// First: address, second: conatiner ID (SYS_MEMORY_CONTAINER_ID_INVALID for global FXO memory container)
+		std::unordered_map<u16, u32> mm;
+		ar(mm);
+
+		for (const auto& [addr, id] : mm)
+		{
+			addrs[addr] = ensure(lv2_memory_container::search(id));
+		}
+	}
+
+	void save(utils::serial& ar)
+	{
+		std::unordered_map<u16, u32> mm;
+
+		for (auto& ctr : addrs)
+		{
+			if (const auto ptr = +ctr)
+			{
+				mm[static_cast<u16>(&ctr - addrs)] = ptr->id;
+			}
+		}
+
+		ar(mm);
+	}
 };
 
 // Todo: fix order of error checks
@@ -73,6 +132,7 @@ error_code sys_memory_allocate(cpu_thread& cpu, u32 size, u64 flags, vm::ptr<u32
 			if (alloc_addr)
 			{
 				vm::lock_sudo(addr, size);
+				cpu.check_state();
 				*alloc_addr = addr;
 				return CELL_OK;
 			}
@@ -83,7 +143,7 @@ error_code sys_memory_allocate(cpu_thread& cpu, u32 size, u64 flags, vm::ptr<u32
 		}
 	}
 
-	dct.used -= size;
+	dct.free(size);
 	return CELL_ENOMEM;
 }
 
@@ -144,6 +204,7 @@ error_code sys_memory_allocate_from_container(cpu_thread& cpu, u32 size, u32 cid
 			if (alloc_addr)
 			{
 				vm::lock_sudo(addr, size);
+				cpu.check_state();
 				*alloc_addr = addr;
 				return CELL_OK;
 			}
@@ -154,7 +215,7 @@ error_code sys_memory_allocate_from_container(cpu_thread& cpu, u32 size, u32 cid
 		}
 	}
 
-	ct->used -= size;
+	ct->free(size);
 	return CELL_ENOMEM;
 }
 
@@ -172,7 +233,7 @@ error_code sys_memory_free(cpu_thread& cpu, u32 addr)
 	}
 
 	const auto size = (ensure(vm::dealloc(addr)));
-	reader_lock{id_manager::g_mutex}, ct->used -= size;
+	reader_lock{id_manager::g_mutex}, ct->free(size);
 	return CELL_OK;
 }
 
@@ -223,17 +284,22 @@ error_code sys_memory_get_user_memory_size(cpu_thread& cpu, vm::ptr<sys_memory_i
 	// Get "default" memory container
 	auto& dct = g_fxo->get<lv2_memory_container>();
 
-	::reader_lock lock(s_memstats_mtx);
-
-	mem_info->total_user_memory = dct.size;
-	mem_info->available_user_memory = dct.size - dct.used;
-
-	// Scan other memory containers
-	idm::select<lv2_memory_container>([&](u32, lv2_memory_container& ct)
+	sys_memory_info_t out{};
 	{
-		mem_info->total_user_memory -= ct.size;
-	});
+		::reader_lock lock(s_memstats_mtx);
 
+		out.total_user_memory = dct.size;
+		out.available_user_memory = dct.size - dct.used;
+
+		// Scan other memory containers
+		idm::select<lv2_memory_container>([&](u32, lv2_memory_container& ct)
+		{
+			out.total_user_memory -= ct.size;
+		});
+	}
+
+	cpu.check_state();
+	*mem_info = out;
 	return CELL_OK;
 }
 
@@ -273,11 +339,12 @@ error_code sys_memory_container_create(cpu_thread& cpu, vm::ptr<u32> cid, u32 si
 	// Create the memory container
 	if (const u32 id = idm::make<lv2_memory_container>(size, true))
 	{
+		cpu.check_state();
 		*cid = id;
 		return CELL_OK;
 	}
 
-	dct.used -= size;
+	dct.free(size);
 	return CELL_EAGAIN;
 }
 
@@ -311,7 +378,7 @@ error_code sys_memory_container_destroy(cpu_thread& cpu, u32 cid)
 	}
 
 	// Return "physical memory" to the default container
-	g_fxo->get<lv2_memory_container>().used -= ct->size;
+	g_fxo->get<lv2_memory_container>().free(ct->size);
 
 	return CELL_OK;
 }
@@ -329,8 +396,23 @@ error_code sys_memory_container_get_size(cpu_thread& cpu, vm::ptr<sys_memory_inf
 		return CELL_ESRCH;
 	}
 
+	cpu.check_state();
 	mem_info->total_user_memory = ct->size; // Total container memory
 	mem_info->available_user_memory = ct->size - ct->used; // Available container memory
 
 	return CELL_OK;
+}
+
+error_code sys_memory_container_destroy_parent_with_childs(cpu_thread& cpu, u32 cid, u32 must_0, vm::ptr<u32> mc_child)
+{
+	sys_memory.warning("sys_memory_container_destroy_parent_with_childs(cid=0x%x, must_0=%d, mc_child=*0x%x)", cid, must_0, mc_child);
+
+	if (must_0)
+	{
+		return CELL_EINVAL;
+	}
+
+	// Multi-process is not supported yet so child containers mean nothing at the moment
+	// Simply destroy parent
+	return sys_memory_container_destroy(cpu, cid);
 }

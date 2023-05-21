@@ -52,7 +52,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Emu\RSX\GL\GLCompute.h" />
-    <ClInclude Include="Emu\RSX\GL\GLExecutionState.h" />
     <ClInclude Include="Emu\RSX\GL\GLOverlays.h" />
     <ClInclude Include="Emu\RSX\GL\GLPipelineCompiler.h" />
     <ClInclude Include="Emu\RSX\GL\GLTextOut.h" />
@@ -61,6 +60,19 @@
     <ClInclude Include="Emu\RSX\GL\GLGSRender.h" />
     <ClInclude Include="Emu\RSX\GL\GLProcTable.h" />
     <ClInclude Include="Emu\RSX\GL\GLProgramBuffer.h" />
+    <ClInclude Include="Emu\RSX\GL\glutils\blitter.h" />
+    <ClInclude Include="Emu\RSX\GL\glutils\buffer_object.h" />
+    <ClInclude Include="Emu\RSX\GL\glutils\capabilities.h" />
+    <ClInclude Include="Emu\RSX\GL\glutils\common.h" />
+    <ClInclude Include="Emu\RSX\GL\glutils\fbo.h" />
+    <ClInclude Include="Emu\RSX\GL\glutils\pixel_settings.hpp" />
+    <ClInclude Include="Emu\RSX\GL\glutils\program.h" />
+    <ClInclude Include="Emu\RSX\GL\glutils\ring_buffer.h" />
+    <ClInclude Include="Emu\RSX\GL\glutils\sampler.h" />
+    <ClInclude Include="Emu\RSX\GL\glutils\state_tracker.hpp" />
+    <ClInclude Include="Emu\RSX\GL\glutils\image.h" />
+    <ClInclude Include="Emu\RSX\GL\glutils\sync.hpp" />
+    <ClInclude Include="Emu\RSX\GL\glutils\vao.hpp" />
     <ClInclude Include="Emu\RSX\GL\GLVertexProgram.h" />
     <ClInclude Include="Emu\RSX\GL\GLHelpers.h" />
     <ClInclude Include="Emu\RSX\GL\GLRenderTargets.h" />
@@ -77,6 +89,15 @@
     <ClCompile Include="Emu\RSX\GL\GLGSRender.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLOverlays.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLPipelineCompiler.cpp" />
+    <ClCompile Include="Emu\RSX\GL\glutils\blitter.cpp" />
+    <ClCompile Include="Emu\RSX\GL\glutils\buffer_object.cpp" />
+    <ClCompile Include="Emu\RSX\GL\glutils\capabilities.cpp" />
+    <ClCompile Include="Emu\RSX\GL\glutils\common.cpp" />
+    <ClCompile Include="Emu\RSX\GL\glutils\fbo.cpp" />
+    <ClCompile Include="Emu\RSX\GL\glutils\program.cpp" />
+    <ClCompile Include="Emu\RSX\GL\glutils\ring_buffer.cpp" />
+    <ClCompile Include="Emu\RSX\GL\glutils\image.cpp" />
+    <ClCompile Include="Emu\RSX\GL\glutils\sampler.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLVertexProgram.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLHelpers.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLPresent.cpp" />

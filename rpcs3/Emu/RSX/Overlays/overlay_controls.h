@@ -27,7 +27,8 @@ namespace rsx
 			quad_list = 0,
 			triangle_strip = 1,
 			line_list = 2,
-			line_strip = 3
+			line_strip = 3,
+			triangle_fan = 4
 		};
 
 		struct image_info
@@ -40,6 +41,8 @@ namespace rsx
 			image_info(const char* filename);
 			image_info(const std::vector<u8>& bytes);
 			~image_info();
+
+			void load_data(const std::vector<u8>& bytes);
 		};
 
 		struct resource_config
@@ -63,7 +66,6 @@ namespace rsx
 			};
 
 			// Define resources
-			std::vector<std::string> texture_resource_files;
 			std::vector<std::unique_ptr<image_info>> texture_raw_data;
 
 			resource_config();
@@ -80,6 +82,7 @@ namespace rsx
 
 				color4f color = { 1.f, 1.f, 1.f, 1.f };
 				bool pulse_glow = false;
+				bool disable_vertex_snap = false;
 				f32 pulse_sinus_offset = 0.0f; // The current pulse offset
 				f32 pulse_speed_modifier = 0.005f;
 
@@ -87,8 +90,8 @@ namespace rsx
 				bool clip_region = false;
 
 				u8 texture_ref = image_resource_id::none;
-				font *font_ref = nullptr;
-				void *external_data_ref = nullptr;
+				font* font_ref = nullptr;
+				void* external_data_ref = nullptr;
 
 				u8 blur_strength = 0;
 
@@ -189,7 +192,7 @@ namespace rsx
 			virtual void align_text(text_align align);
 			virtual void set_wrap_text(bool state);
 			virtual font* get_font() const;
-			virtual std::vector<vertex> render_text(const char32_t *string, f32 x, f32 y);
+			virtual std::vector<vertex> render_text(const char32_t* string, f32 x, f32 y);
 			virtual compiled_resource& get_compiled();
 			void measure_text(u16& width, u16& height, bool ignore_word_wrap = false) const;
 		};
@@ -239,11 +242,20 @@ namespace rsx
 			}
 		};
 
+		struct rounded_rect : public overlay_element
+		{
+			u8 radius = 5;
+			u8 num_control_points = 8; // Smoothness control
+
+			using overlay_element::overlay_element;
+			compiled_resource& get_compiled() override;
+		};
+
 		struct image_view : public overlay_element
 		{
 		private:
 			u8 image_resource_ref = image_resource_id::none;
-			void *external_ref = nullptr;
+			void* external_ref = nullptr;
 
 			// Strength of blur effect
 			u8 blur_strength = 0;
@@ -261,7 +273,7 @@ namespace rsx
 
 		struct image_button : public image_view
 		{
-			const u16 text_horizontal_offset = 25;
+			u16 text_horizontal_offset = 25;
 			u16 m_text_offset_x = 0;
 			s16 m_text_offset_y = 0;
 

@@ -756,7 +756,8 @@ bool gdb_thread::cmd_vcont(gdb_cmd& cmd)
 		// we have to remove dbg_pause from thread that paused execution, otherwise
 		// it will be paused forever (Emu.Resume only removes dbg_global_pause)
 		ppu = std::static_pointer_cast<named_thread<ppu_thread>>(selected_thread.lock());
-		ppu->state -= cpu_flag::dbg_pause;
+		if (ppu)
+			ppu->state -= cpu_flag::dbg_pause;
 		return send_reason();
 	}
 	return send_cmd_ack("");

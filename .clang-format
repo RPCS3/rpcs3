@@ -21,7 +21,7 @@ Cpp11BracedListStyle: true
 IndentCaseLabels: false
 SortIncludes: false
 ReflowComments: true
-AlignConsecutiveAssignments: true
+AlignConsecutiveAssignments: false
 AlignTrailingComments: true
 AlignAfterOpenBracket: DontAlign
 ConstructorInitializerAllOnOneLineOrOnePerLine: false

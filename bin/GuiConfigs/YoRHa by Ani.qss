@@ -3,6 +3,7 @@ YoRHa Theme for RPCS3
 by Ani @ https://github.com/AniLeo
 r1 (2018.02.27)
 r2 (2021.08.28)
+r3 (2022.08.20)
 */
 
 /*
@@ -26,7 +27,7 @@ aea993
 
 /* Every widget */
 QWidget {
-	font-family: SCE-PS3 Rodin LATIN;
+	font-family: "SCE-PS3 Rodin LATIN";
 	font-size: 9.00pt;
 
 	color: #292929;
@@ -98,6 +99,9 @@ QToolTip {
 }
 
 /* Table headers */
+QHeaderView {
+	color: #b3ac98;
+}
 QHeaderView::section {
 	text-transform: uppercase;
 	background: #4d4940;
@@ -109,22 +113,32 @@ QHeaderView::section {
 	border: none;
 }
 
-/* All other Tabs */
+/* All Tabs */
 QTabBar {
+	border-bottom: 0.05em solid #4d4940;
 	text-transform: uppercase;
 }
 QTabBar::tab {
 	background: transparent;
+	width: 4.80em;
 	padding-left: 0.50em;
 	padding-right: 0.50em;
-	padding-top: 0.25em;
-	padding-bottom: 0.25em;
+	padding-top: 0.65em;
+	padding-bottom: 0.65em;
 	margin-right: 0.25em;
+	font-size: 10.5pt;
+	font-weight: 550;
+}
+QTabBar::tab:last {
+	margin-right: 0em;
+}
+QTabBar::tab:!selected:hover {
+	background: transparent;
+	color: #4d4940;
 }
 QTabBar::tab::selected {
 	background: #4d4940;
 	color: #aea993;
-	border-bottom-style: solid;
 }
 
 /* Checkboxes */
@@ -153,21 +167,28 @@ QCheckBox::indicator::disabled, QRadioButton::indicator::disabled {
 	background-color: #828790; /* Gray */
 }
 
-/* Combo Boxes */
-QComboBox {
+/* Combo Boxes, Datetime dropdown */
+QComboBox, QDateTimeEdit, QLineEdit {
 	background: transparent;
 	color: #4d4940;
 	border: 0.05em solid #1e1e1e;
 	border-radius: 0.15em;
-	padding-bottom: 0.2em;
-	padding-left: 0.4em;
+	padding-top: 0.1em;
+	padding-bottom: 0.1em;
 }
 QComboBox QAbstractItemView {
 	background: #b3ac98;
 }
-QComboBox::disabled {
+QComboBox::disabled, QDateTimeEdit::disabled, QLineEdit::disabled {
 	background: #828790;
 	color: #4d4940;
+}
+/* Text boxes need less left padding than combo boxes */
+QComboBox {
+	padding-left: 0.4em;
+}
+QLineEdit {
+	padding-left: 0.2em;
 }
 
 /* Group Boxes (Settings Dialog) */
@@ -175,7 +196,6 @@ QGroupBox {
 	margin-top: 1em;
 	border: 0.05em solid #4d4940;
 	text-transform: uppercase;
-	font-size: 9.00pt;
 }
 QGroupBox::title {
 	subcontrol-origin: margin;
@@ -236,6 +256,10 @@ QDockWidget::close-button, QDockWidget::float-button {
 QTabWidget::pane {
 	border: 0em solid #4d4940;
 }
+/* Center tabs */
+QTabWidget::tab-bar {
+	alignment: center;
+}
 
 /* Top menu bar */
 QMenuBar {
@@ -284,6 +308,12 @@ QToolButton::hover {
 	background-color: #b3ac98;
 }
 
+/* Calendar widget */
+QCalendarWidget QWidget{
+	background: #b3ac98;
+	color: #4d4940;
+}
+
 
 /*** RPCS3 Specifics ***/
 
@@ -303,53 +333,29 @@ QWidget#trophy_manager, QWidget#cg_disasm, QWidget#log_viewer, QMainWindow#main_
 	border: 0.05em solid #4d4940;
 	color: #292929;
 	font-family: none;
-	font-size: 9.50pt;
+	font-size: 9.5pt;
 }
 
-/* Pad Settings, Emulator Settings Dialogs: Tabs */
-#pad_settings_dialog QTabWidget::tab-bar {
-	alignment: center;
+/* Align the log widget tabs to the left */
+QTabWidget#tab_widget_log::tab-bar {
+	alignment: left;
 }
-QTabBar#tab_bar_settings, #pad_settings_dialog QTabBar {
-	border-bottom: 0.05em solid #4d4940;
-	text-transform: uppercase;
+
+/* Restore log section QTabBar to small sizes */
+QTabBar#tab_bar_log {
+	border-bottom: 0;
 }
-QTabBar::tab#tab_bar_settings, #pad_settings_dialog QTabBar::tab {
-	background: transparent;
-	width: 5.20em;
-	padding-left: 0.50em;
-	padding-right: 0.50em;
-	padding-top: 0.65em;
-	padding-bottom: 0.65em;
-	margin-right: 0.25em;
-	font-size: 10.5pt;
-	font-weight: 550;
-}
-QTabBar::tab:last#tab_bar_settings, #pad_settings_dialog QTabBar::tab:last {
-	margin-right: 0em;
-}
-QTabBar::tab:!selected:hover#tab_bar_settings, #pad_settings_dialog QTabBar::tab:!selected:hover {
-	background: transparent;
-	color: #4d4940;
-}
-QTabBar::tab::selected#tab_bar_settings, #pad_settings_dialog QTabBar::tab::selected {
-	background: #4d4940;
-	color: #aea993;
-	border-bottom-style: solid;
-	margin-top: 0.15em;
+QTabBar#tab_bar_log::tab {
+	width: 2.00em;
+	padding: 0.25em;
+	font-size: 9.0pt;
+	font-weight: 400;
+	margin-right: 0;
 }
 
 /* Pad Settings: Controller Image */
 QLabel#l_controller {
 	color: #4d4940;
-}
-
-/* Game Grid Font */
-QTableWidget#game_grid {
-	font-weight: 600;
-	color: #4d4940;
-	text-transform: uppercase;
-	selection-color: #aea993;
 }
 
 /* Debug UI Settings buttons */
@@ -362,6 +368,7 @@ QLineEdit#mw_searchbar {
 	margin-left: 0.7em;
 	color: #4d4940;
 	font-size: 10.25pt;
+	border: 0em;
 }
 
 /* Set Theme UI colors */
@@ -439,4 +446,35 @@ QWidget#trophy_notification_frame {
 */
 QSlider#sizeSlider::groove:horizontal {
 	height: 1.5em;
+}
+
+/*
+	On Patch Creator, it's the patch validation label
+	since we can't avoid repainting color, let's bold it instead
+*/
+QLabel#validLabel {
+	font-weight: 600;
+}
+
+/* Game Grid */
+#game_list_grid_item[selected="true"] {
+	background: #4d4940;
+}
+#game_list_grid_item:focus {
+	background: #4d4940;
+}
+
+/* Game Grid Font */
+#game_list_grid_item #game_list_grid_item_title_label {
+	font-weight: 600;
+	color: #4d4940;
+	text-transform: uppercase;
+}
+
+/* Game Grid hover and focus: we need to handle properties differently when using descendants */
+#game_list_grid_item[selected="true"] #game_list_grid_item_title_label {
+	color: #aea993;
+}
+#game_list_grid_item[focus="true"] #game_list_grid_item_title_label {
+	color: #aea993;
 }

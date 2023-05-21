@@ -55,6 +55,32 @@ std::string CgBinaryDisasm::GetDSTDisasm(bool is_sca)
 	std::string ret;
 	std::string mask = GetMaskDisasm(is_sca);
 
+	static constexpr std::array<std::string_view, 22> output_names =
+	{
+		"out_diffuse_color",
+		"out_specular_color",
+		"out_back_diffuse_color",
+		"out_back_specular_color",
+		"out_fog",
+		"out_point_size",
+		"out_clip_distance[0]",
+		"out_clip_distance[1]",
+		"out_clip_distance[2]",
+		"out_clip_distance[3]",
+		"out_clip_distance[4]",
+		"out_clip_distance[5]",
+		"out_tc8",
+		"out_tc9",
+		"out_tc0",
+		"out_tc1",
+		"out_tc2",
+		"out_tc3",
+		"out_tc4",
+		"out_tc5",
+		"out_tc6",
+		"out_tc7"
+	};
+
 	switch ((is_sca && d3.sca_dst_tmp != 0x3f) ? 0x1f : d3.dst)
 	{
 	case 0x1f:
@@ -62,13 +88,19 @@ std::string CgBinaryDisasm::GetDSTDisasm(bool is_sca)
 		break;
 
 	default:
-		if (d3.dst > 15)
+		if (d3.dst < output_names.size())
+		{
+			fmt::append(ret, "%s%s", output_names[d3.dst], mask);
+		}
+		else
+		{
 			rsx_log.error("dst index out of range: %u", d3.dst);
+			fmt::append(ret, "(bad out index) o[%d]", d3.dst);
+		}
 
-		ret += fmt::format("o[%d]", d3.dst) + mask;
 		// Vertex Program supports double destinations, notably in MOV
 		if (d0.dst_tmp != 0x3f)
-			ret += fmt::format(" R%d", d0.dst_tmp) + mask;
+			fmt::append(ret, " R%d%s", d0.dst_tmp, mask);
 		break;
 	}
 
@@ -79,20 +111,31 @@ std::string CgBinaryDisasm::GetSRCDisasm(const u32 n)
 {
 	std::string ret;
 
+	static constexpr std::array<std::string_view, 16> reg_table =
+	{
+		"in_pos", "in_weight", "in_normal",
+		"in_diff_color", "in_spec_color",
+		"in_fog",
+		"in_point_size", "in_7",
+		"in_tc0", "in_tc1", "in_tc2", "in_tc3",
+		"in_tc4", "in_tc5", "in_tc6", "in_tc7"
+	};
+
 	switch (src[n].reg_type)
 	{
 	case 1: //temp
-		ret += "R" + std::to_string(src[n].tmp_src);
+		ret += 'R';
+		ret += std::to_string(src[n].tmp_src);
 		break;
 	case 2: //input
-		if (d1.input_src < 16)
+		if (d1.input_src < reg_table.size())
 		{
-			ret += fmt::format("v[%d]", d1.input_src);
+			fmt::append(ret, "%s", reg_table[d1.input_src]);
 		}
 		else
 		{
 			rsx_log.error("Bad input src num: %d", u32{ d1.input_src });
-			ret += fmt::format("v[%d] # bad src", d1.input_src);
+			fmt::append(ret, "v[%d] # bad src", d1.input_src);
 		}
 		break;
 	case 3: //const

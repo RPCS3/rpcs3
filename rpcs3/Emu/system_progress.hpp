@@ -18,7 +18,7 @@ class scoped_progress_dialog final
 	const char* const m_prev;
 
 public:
-	scoped_progress_dialog(const char* text)
+	scoped_progress_dialog(const char* text) noexcept
 		: m_prev(g_progr.exchange(text ? text : ""))
 	{
 	}
@@ -27,7 +27,7 @@ public:
 
 	scoped_progress_dialog& operator=(const scoped_progress_dialog&) = delete;
 
-	~scoped_progress_dialog()
+	~scoped_progress_dialog() noexcept
 	{
 		g_progr.release(m_prev);
 	}

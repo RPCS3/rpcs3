@@ -32,7 +32,21 @@ cpu_translator::cpu_translator(llvm::Module* _module, bool is_be)
 
 		if (m_use_ssse3)
 		{
+#if defined(ARCH_X64)
 			return m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::x86_ssse3_pshuf_b_128), {data0, index});
+#elif defined(ARCH_ARM64)
+			// Modified from sse2neon
+			// movi    v2.16b, #143
+			// and     v1.16b, v1.16b, v2.16b
+			// tbl     v0.16b, { v0.16b }, v1.16b
+			auto mask = llvm::ConstantInt::get(get_type<u8[16]>(), 0x8F);
+			auto and_mask = llvm::ConstantInt::get(get_type<bool[16]>(), true);
+			auto vec_len = llvm::ConstantInt::get(get_type<u32>(), 16);
+			auto index_masked = m_ir->CreateCall(get_intrinsic<u8[16]>(llvm::Intrinsic::vp_and), {index, mask, and_mask, vec_len});
+			return m_ir->CreateCall(get_intrinsic<u8[16]>(llvm::Intrinsic::aarch64_neon_tbl1), {data0, index_masked});
+#else
+#error "Unimplemented"
+#endif
 		}
 		else
 		{
@@ -60,6 +74,14 @@ cpu_translator::cpu_translator(llvm::Module* _module, bool is_be)
 
 			return result;
 		}
+	});
+
+	register_intrinsic("any_select_by_bit4", [&](llvm::CallInst* ci) -> llvm::Value*
+	{
+		const auto s = bitcast<s8[16]>(m_ir->CreateShl(bitcast<u64[2]>(ci->getOperand(0)), 3));;
+		const auto a = bitcast<u8[16]>(ci->getOperand(1));
+		const auto b = bitcast<u8[16]>(ci->getOperand(2));
+		return m_ir->CreateSelect(m_ir->CreateICmpSLT(s, llvm::ConstantAggregateZero::get(get_type<s8[16]>())), b, a);
 	});
 }
 
@@ -98,10 +120,14 @@ void cpu_translator::initialize(llvm::LLVMContext& context, llvm::ExecutionEngin
 		cpu == "broadwell" ||
 		cpu == "skylake" ||
 		cpu == "alderlake" ||
+		cpu == "raptorlake" ||
+		cpu == "meteorlake" ||
 		cpu == "bdver2" ||
 		cpu == "bdver3" ||
 		cpu == "bdver4" ||
-		cpu.startswith("znver"))
+		cpu == "znver1" ||
+		cpu == "znver2" ||
+		cpu == "znver3")
 	{
 		m_use_fma = true;
 		m_use_avx = true;
@@ -121,7 +147,9 @@ void cpu_translator::initialize(llvm::LLVMContext& context, llvm::ExecutionEngin
 	// Test VNNI feature (TODO)
 	if (cpu == "cascadelake" ||
 		cpu == "cooperlake" ||
-		cpu == "alderlake")
+		cpu == "alderlake" ||
+		cpu == "raptorlake" ||
+		cpu == "meteorlake")
 	{
 		m_use_vnni = true;
 	}
@@ -132,13 +160,22 @@ void cpu_translator::initialize(llvm::LLVMContext& context, llvm::ExecutionEngin
 		cpu == "icelake-server" ||
 		cpu == "tigerlake" ||
 		cpu == "rocketlake" ||
-		cpu == "sapphirerapids")
+		cpu == "sapphirerapids" ||
+		(cpu.startswith("znver") && cpu != "znver1" && cpu != "znver2" && cpu != "znver3"))
 	{
 		m_use_avx = true;
 		m_use_fma = true;
 		m_use_avx512 = true;
 		m_use_avx512_icl = true;
 		m_use_vnni = true;
+	}
+
+	// Aarch64 CPUs
+	if (cpu == "cyclone" || cpu.contains("cortex"))
+	{
+		m_use_fma = true;
+		// AVX does not use intrinsics so far
+		m_use_avx = true;
 	}
 }
 
@@ -203,7 +240,7 @@ std::pair<bool, v128> cpu_translator::get_const_vector<v128>(llvm::Value* c, u32
 	{
 		if (llvm::isa<llvm::ConstantAggregateZero>(c))
 		{
-			return {};
+			return {true, result};
 		}
 
 		std::string result;
@@ -277,7 +314,7 @@ llvm::Constant* cpu_translator::make_const_vector<v128>(v128 v, llvm::Type* t, u
 {
 	if (const auto ct = llvm::dyn_cast<llvm::IntegerType>(t); ct && ct->getBitWidth() == 128)
 	{
-		return llvm::ConstantInt::get(t, llvm::APInt(128, llvm::makeArrayRef(reinterpret_cast<const u64*>(v._bytes), 2)));
+		return llvm::ConstantInt::get(t, llvm::APInt(128, llvm::ArrayRef(reinterpret_cast<const u64*>(v._bytes), 2)));
 	}
 
 	ensure(t->isVectorTy());
@@ -287,27 +324,27 @@ llvm::Constant* cpu_translator::make_const_vector<v128>(v128 v, llvm::Type* t, u
 
 	if (sct->isIntegerTy(8))
 	{
-		return llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const u8*>(v._bytes), 16));
+		return llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(reinterpret_cast<const u8*>(v._bytes), 16));
 	}
 	if (sct->isIntegerTy(16))
 	{
-		return llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const u16*>(v._bytes), 8));
+		return llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(reinterpret_cast<const u16*>(v._bytes), 8));
 	}
 	if (sct->isIntegerTy(32))
 	{
-		return llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const u32*>(v._bytes), 4));
+		return llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(reinterpret_cast<const u32*>(v._bytes), 4));
 	}
 	if (sct->isIntegerTy(64))
 	{
-		return llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const u64*>(v._bytes), 2));
+		return llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(reinterpret_cast<const u64*>(v._bytes), 2));
 	}
 	if (sct->isFloatTy())
 	{
-		return llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const f32*>(v._bytes), 4));
+		return llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(reinterpret_cast<const f32*>(v._bytes), 4));
 	}
 	if (sct->isDoubleTy())
 	{
-		return llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const f64*>(v._bytes), 2));
+		return llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(reinterpret_cast<const f64*>(v._bytes), 2));
 	}
 
 	fmt::throw_exception("[line %u] No supported constant type", _line);

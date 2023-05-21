@@ -4,10 +4,9 @@
 
 #include <mutex>
 #include <vector>
+#include <set>
 
 #include "util/init_mutex.hpp"
-
-extern u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode); // (TODO: Can it be problematic to place SysCalls in middle of nowhere?)
 
 enum QtKeys
 {
@@ -36,7 +35,7 @@ struct KbButton
 	u32 m_keyCode = 0;
 	u32 m_outKeyCode = 0;
 	bool m_pressed = false;
-	
+
 	KbButton() = default;
 	KbButton(u32 keyCode, u32 outKeyCode, bool pressed = false)
 		: m_keyCode(keyCode)
@@ -54,6 +53,11 @@ struct KbData
 	std::array<KbButton, CELL_KB_MAX_KEYCODES> buttons{};
 };
 
+struct KbExtraData
+{
+	std::set<std::u32string> pressed_keys{};
+};
+
 struct KbConfig
 {
 	u32 arrange = CELL_KB_MAPPING_101;
@@ -65,6 +69,7 @@ struct Keyboard
 {
 	bool m_key_repeat = false;
 	KbData m_data{};
+	KbExtraData m_extra_data{};
 	KbConfig m_config{};
 	std::vector<KbButton> m_buttons;
 };
@@ -77,8 +82,13 @@ public:
 	virtual void Init(const u32 max_connect) = 0;
 
 	virtual ~KeyboardHandlerBase() = default;
+	KeyboardHandlerBase(utils::serial* ar);
+	KeyboardHandlerBase(utils::serial& ar) : KeyboardHandlerBase(&ar) {}
+	void save(utils::serial& ar);
 
-	void Key(u32 code, bool pressed);
+	SAVESTATE_INIT_POS(19);
+
+	void Key(u32 code, bool pressed, const std::u32string& key);
 	void SetIntercepted(bool intercepted);
 
 	static bool IsMetaKey(u32 code);
@@ -87,6 +97,7 @@ public:
 	std::vector<Keyboard>& GetKeyboards() { return m_keyboards; }
 	std::vector<KbButton>& GetButtons(const u32 keyboard) { return m_keyboards[keyboard].m_buttons; }
 	KbData& GetData(const u32 keyboard) { return m_keyboards[keyboard].m_data; }
+	KbExtraData& GetExtraData(const u32 keyboard) { return m_keyboards[keyboard].m_extra_data; }
 	KbConfig& GetConfig(const u32 keyboard) { return m_keyboards[keyboard].m_config; }
 
 	stx::init_mutex init;

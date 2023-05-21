@@ -40,6 +40,8 @@ inline u64 swap64(u64 i)
 
 char* extract_file_name(const char* file_path, char real_file_name[CRYPTO_MAX_PATH]);
 
+std::string sha256_get_hash(const char* data, usz size, bool lower_case);
+
 // Hex string conversion auxiliary functions.
 u64 hex_to_u64(const char* hex_str);
 void hex_to_bytes(unsigned char *data, const char *hex_str, unsigned int str_length);

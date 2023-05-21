@@ -90,6 +90,23 @@ void fmt_class_string<CellNetCtlState>::format(std::string& out, u64 arg)
 	});
 }
 
+struct CellGameUpdateResult
+{
+	be_t<s32> status; // CellGameUpdateResultStatus
+	be_t<s32> error_code;
+	char app_ver[CELL_GAME_SYSP_APP_VER_SIZE];
+	char padding[2];
+};
+
+struct CellGameUpdateParam
+{
+	be_t<u32> size;
+	be_t<u32> cid;
+};
+
+using CellGameUpdateCallback = void(s32 status, s32 error_code, vm::ptr<void> userdata);
+using CellGameUpdateCallbackEx = void(vm::ptr<CellGameUpdateResult> result, vm::ptr<void> userdata);
+
 error_code cellNetCtlInit()
 {
 	cellNetCtl.warning("cellNetCtlInit()");
@@ -204,16 +221,15 @@ error_code cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 	switch (code)
 	{
 	case CELL_NET_CTL_INFO_DEVICE: info->device = CELL_NET_CTL_DEVICE_WIRED; break;
-	// case CELL_NET_CTL_INFO_ETHER_ADDR: std::memset(info->ether_addr.data, 0xFF, sizeof(info->ether_addr.data)); break;
 	case CELL_NET_CTL_INFO_MTU: info->mtu = 1500; break;
 	case CELL_NET_CTL_INFO_LINK: info->link = CELL_NET_CTL_LINK_CONNECTED; break;
-	case CELL_NET_CTL_INFO_LINK_TYPE: info->link_type = CELL_NET_CTL_LINK_TYPE_10BASE_FULL; break;
+	case CELL_NET_CTL_INFO_LINK_TYPE: info->link_type = CELL_NET_CTL_LINK_TYPE_100BASE_FULL; break;
 	case CELL_NET_CTL_INFO_IP_CONFIG: info->ip_config = CELL_NET_CTL_IP_STATIC; break;
 	case CELL_NET_CTL_INFO_DEFAULT_ROUTE: strcpy_trunc(info->default_route, "192.168.1.1"); break;
 	case CELL_NET_CTL_INFO_PRIMARY_DNS: strcpy_trunc(info->primary_dns, np::ip_to_string(nph.get_dns_ip())); break;
 	case CELL_NET_CTL_INFO_SECONDARY_DNS: strcpy_trunc(info->secondary_dns, np::ip_to_string(nph.get_dns_ip())); break;
-	case CELL_NET_CTL_INFO_IP_ADDRESS: strcpy_trunc(info->ip_address, np::ip_to_string(nph.get_local_ip_addr())); break;
-	case CELL_NET_CTL_INFO_NETMASK: strcpy_trunc(info->netmask, "255.255.255.255"); break;
+	case CELL_NET_CTL_INFO_IP_ADDRESS: strcpy_trunc(info->ip_address, np::ip_to_string(nph.get_local_ip_addr())); break; // verified on HW
+	case CELL_NET_CTL_INFO_NETMASK: strcpy_trunc(info->netmask, "255.255.255.0"); break;
 	case CELL_NET_CTL_INFO_HTTP_PROXY_CONFIG: info->http_proxy_config = 0; break;
 	case CELL_NET_CTL_INFO_DHCP_HOSTNAME: strcpy_trunc(info->dhcp_hostname, nph.get_hostname()); break;
 	default: cellNetCtl.error("Unsupported request: %s", InfoCodeToName(code)); break;
@@ -237,7 +253,7 @@ struct netstart_hack
 
 error_code cellNetCtlNetStartDialogLoadAsync(vm::cptr<CellNetCtlNetStartDialogParam> param)
 {
-	cellNetCtl.error("cellNetCtlNetStartDialogLoadAsync(param=*0x%x)", param);
+	cellNetCtl.warning("cellNetCtlNetStartDialogLoadAsync(param=*0x%x)", param);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -331,7 +347,7 @@ error_code cellNetCtlGetNatInfo(vm::ptr<CellNetCtlNatInfo> natInfo)
 
 	natInfo->nat_type = CELL_NET_CTL_NATINFO_NAT_TYPE_2;
 	natInfo->stun_status = CELL_NET_CTL_NATINFO_STUN_OK;
-	natInfo->upnp_status = CELL_NET_CTL_NATINFO_UPNP_NO;
+	natInfo->upnp_status = nph.get_upnp_status();
 
 	return CELL_OK;
 }

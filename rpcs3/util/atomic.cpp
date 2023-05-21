@@ -49,6 +49,9 @@ static bool s_null_wait_cb(const void*, u64, u64){ return true; };
 // Callback for wait() function, returns false if wait should return
 static thread_local bool(*s_tls_wait_cb)(const void* data, u64 attempts, u64 stamp0) = s_null_wait_cb;
 
+// Callback for wait() function for a second custon condition, commonly passed with timeout
+static thread_local bool(*s_tls_one_time_wait_cb)(u64 attempts) = nullptr;
+
 // Callback for notification functions for optimizations
 static thread_local void(*s_tls_notify_cb)(const void* data, u64 progress) = nullptr;
 
@@ -571,11 +574,8 @@ static u32 cond_alloc(uptr iptr, u128 mask, u32 tls_slot = -1)
 			return pos / 7;
 		});
 
-		const u64 bits = s_cond_bits[level3].fetch_op([](u64& bits)
-		{
-			// Set lowest clear bit
-			bits |= bits + 1;
-		});
+		// Set lowest clear bit
+		const u64 bits = s_cond_bits[level3].fetch_op(FN(x |= x + 1, void()));
 
 		// Find lowest clear bit (before it was set in fetch_op)
 		const u32 id = level3 * 64 + std::countr_one(bits);
@@ -647,20 +647,9 @@ static void cond_free(u32 cond_id, u32 tls_slot = -1)
 	// Release the semaphore tree in the reverse order
 	s_cond_bits[cond_id / 64] &= ~(1ull << (cond_id % 64));
 
-	s_cond_sem3[level2].atomic_op([&](u128& val)
-	{
-		val -= u128{1} << (level3 * 7);
-	});
-
-	s_cond_sem2[level1].atomic_op([&](u128& val)
-	{
-		val -= u128{1} << (level2 * 11);
-	});
-
-	s_cond_sem1.atomic_op([&](u128& val)
-	{
-		val -= u128{1} << (level1 * 14);
-	});
+	s_cond_sem3[level2].atomic_op(FN(x -= u128{1} << (level3 * 7)));
+	s_cond_sem2[level1].atomic_op(FN(x -= u128{1} << (level2 * 11)));
+	s_cond_sem1.atomic_op(FN(x -= u128{1} << (level1 * 14)));
 }
 
 static cond_handle* cond_id_lock(u32 cond_id, u128 mask, uptr iptr = 0)
@@ -1118,6 +1107,14 @@ SAFE_BUFFERS(void) atomic_wait_engine::wait(const void* data, u32 size, u128 old
 
 	while (ptr_cmp(data, size, old_value, mask, ext))
 	{
+		if (s_tls_one_time_wait_cb)
+		{
+			if (!s_tls_one_time_wait_cb(attempts))
+			{
+				break;
+			}
+		}
+
 #ifdef USE_FUTEX
 		struct timespec ts;
 		ts.tv_sec  = timeout / 1'000'000'000;
@@ -1197,15 +1194,20 @@ SAFE_BUFFERS(void) atomic_wait_engine::wait(const void* data, u32 size, u128 old
 			}
 		}
 #endif
-
-		if (timeout + 1)
+		if (!s_tls_wait_cb(data, ++attempts, stamp0))
 		{
-			// TODO: reduce timeout instead
 			break;
 		}
 
-		if (!s_tls_wait_cb(data, ++attempts, stamp0))
+		if (timeout + 1)
 		{
+			if (s_tls_one_time_wait_cb)
+			{
+				// The condition of the callback overrides timeout escape because it makes little sense to do so when a custom condition is passed
+				continue;
+			}
+
+			// TODO: reduce timeout instead
 			break;
 		}
 	}
@@ -1257,6 +1259,7 @@ SAFE_BUFFERS(void) atomic_wait_engine::wait(const void* data, u32 size, u128 old
 	root_info::slot_free(iptr, slot, 0);
 
 	s_tls_wait_cb(data, -1, stamp0);
+	s_tls_one_time_wait_cb = nullptr;
 }
 
 template <bool NoAlert = false>
@@ -1321,6 +1324,11 @@ void atomic_wait_engine::set_wait_callback(bool(*cb)(const void*, u64, u64))
 	{
 		s_tls_wait_cb = s_null_wait_cb;
 	}
+}
+
+void atomic_wait_engine::set_one_time_use_wait_callback(bool(*cb)(u64 progress))
+{
+	s_tls_one_time_wait_cb = cb;
 }
 
 void atomic_wait_engine::set_notify_callback(void(*cb)(const void*, u64))

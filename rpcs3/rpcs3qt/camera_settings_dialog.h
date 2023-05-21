@@ -24,6 +24,6 @@ private:
 	void load_config();
 	void save_config();
 
-	Ui::camera_settings_dialog* ui;
+	std::unique_ptr<Ui::camera_settings_dialog> ui;
 	std::shared_ptr<QCamera> m_camera;
 };

@@ -32,7 +32,7 @@ pup_object::pup_object(fs::file&& file) : m_file(std::move(file))
 		return;
 	}
 
-	// Check if file size is the expected size, use substraction to avoid overflows
+	// Check if file size is the expected size, use subtraction to avoid overflows
 	if (file_size < m_header.header_length || file_size - m_header.header_length < m_header.data_length)
 	{
 		m_formatted_error = fmt::format("Firmware size mismatch, expected: 0x%x + 0x%x, actual: 0x%x", m_header.header_length, m_header.data_length, file_size);
@@ -89,7 +89,7 @@ pup_error pup_object::validate_hashes()
 
 	for (const PUPFileEntry& file : m_file_tbl)
 	{
-		// Sanity check for offset and length, use substraction to avoid overflows
+		// Sanity check for offset and length, use subtraction to avoid overflows
 		if (size < file.data_offset || size - file.data_offset < file.data_length)
 		{
 			m_formatted_error = fmt::format("File database entry is invalid. (offset=0x%x, length=0x%x, PUP.size=0x%x)", file.data_offset, file.data_length, size);

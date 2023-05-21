@@ -4,7 +4,10 @@
 
 #include "Emu/Memory/vm_ptr.h"
 
+#include <deque>
+
 class cpu_thread;
+class spu_thrread;
 
 // Event Queue Type
 enum : u32
@@ -89,11 +92,18 @@ struct lv2_event_queue final : public lv2_obj
 
 	shared_mutex mutex;
 	std::deque<lv2_event> events;
-	std::deque<cpu_thread*> sq;
+	spu_thread* sq{};
+	ppu_thread* pq{};
 
 	lv2_event_queue(u32 protocol, s32 type, s32 size, u64 name, u64 ipc_key) noexcept;
 
-	CellError send(lv2_event);
+	lv2_event_queue(utils::serial& ar) noexcept;
+	static std::shared_ptr<void> load(utils::serial& ar);
+	void save(utils::serial& ar);
+	static void save_ptr(utils::serial&, lv2_event_queue*);
+	static std::shared_ptr<lv2_event_queue> load_ptr(utils::serial& ar, std::shared_ptr<lv2_event_queue>& queue);
+
+	CellError send(lv2_event event);
 
 	CellError send(u64 source, u64 d1, u64 d2, u64 d3)
 	{
@@ -102,10 +112,6 @@ struct lv2_event_queue final : public lv2_obj
 
 	// Get event queue by its global key
 	static std::shared_ptr<lv2_event_queue> find(u64 ipc_key);
-
-	// Check queue ptr validity (use 'exists' member)
-	static bool check(const std::weak_ptr<lv2_event_queue>&);
-	static bool check(const std::shared_ptr<lv2_event_queue>&);
 };
 
 struct lv2_event_port final : lv2_obj
@@ -122,6 +128,9 @@ struct lv2_event_port final : lv2_obj
 		, name(name)
 	{
 	}
+
+	lv2_event_port(utils::serial& ar);
+	void save(utils::serial& ar);
 };
 
 class ppu_thread;

@@ -10,24 +10,39 @@
 #elif HAVE_LIBEVDEV
 #include "evdev_joystick_handler.h"
 #endif
+#ifdef HAVE_SDL2
+#include "sdl_pad_handler.h"
+#endif
 #include "keyboard_pad_handler.h"
 #include "Emu/Io/Null/NullPadHandler.h"
 #include "Emu/Io/PadHandler.h"
 #include "Emu/Io/pad_config.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
+#include "Emu/RSX/Overlays/HomeMenu/overlay_home_menu.h"
+#include "Emu/RSX/Overlays/overlay_message.h"
 #include "Utilities/Thread.h"
 #include "util/atomic.hpp"
 
 LOG_CHANNEL(input_log, "Input");
+LOG_CHANNEL(sys_log, "SYS");
+
+extern bool is_input_allowed();
+extern std::string g_pad_profile_override;
 
 namespace pad
 {
 	atomic_t<pad_thread*> g_current = nullptr;
 	shared_mutex g_pad_mutex;
 	std::string g_title_id;
+	atomic_t<bool> g_started{false};
 	atomic_t<bool> g_reset{false};
 	atomic_t<bool> g_enabled{true};
+}
+
+namespace rsx
+{
+	void set_native_ui_flip();
 }
 
 struct pad_setting
@@ -35,13 +50,14 @@ struct pad_setting
 	u32 port_status = 0;
 	u32 device_capability = 0;
 	u32 device_type = 0;
-	s32 ldd_handle = -1;
+	bool is_ldd_pad = false;
 };
 
-pad_thread::pad_thread(void *_curthread, void *_curwindow, std::string_view title_id) : curthread(_curthread), curwindow(_curwindow)
+pad_thread::pad_thread(void* curthread, void* curwindow, std::string_view title_id) : m_curthread(curthread), m_curwindow(curwindow)
 {
 	pad::g_title_id = title_id;
 	pad::g_current = this;
+	pad::g_started = false;
 }
 
 pad_thread::~pad_thread()
@@ -64,7 +80,7 @@ void pad_thread::Init()
 				m_pads[i]->m_port_status,
 				m_pads[i]->m_device_capability,
 				m_pads[i]->m_device_type,
-				m_pads[i]->ldd ? static_cast<s32>(i) : -1
+				m_pads[i]->ldd
 			};
 		}
 		else
@@ -74,7 +90,7 @@ void pad_thread::Init()
 				CELL_PAD_STATUS_DISCONNECTED,
 				CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_ACTUATOR,
 				CELL_PAD_DEV_TYPE_STANDARD,
-				-1
+				false
 			};
 		}
 	}
@@ -87,11 +103,19 @@ void pad_thread::Init()
 
 	g_cfg_profile.load();
 
-	std::string active_profile = g_cfg_profile.active_profiles.get_value(pad::g_title_id);
+	std::string active_profile = g_pad_profile_override;
+
 	if (active_profile.empty())
 	{
-		active_profile = g_cfg_profile.active_profiles.get_value(g_cfg_profile.global_key);
+		active_profile = g_cfg_profile.active_profiles.get_value(pad::g_title_id);
+
+		if (active_profile.empty())
+		{
+			active_profile = g_cfg_profile.active_profiles.get_value(g_cfg_profile.global_key);
+		}
 	}
+
+	input_log.notice("Using pad profile: '%s'", active_profile);
 
 	// Load in order to get the pad handlers
 	if (!g_cfg_input.load(pad::g_title_id, active_profile))
@@ -112,6 +136,8 @@ void pad_thread::Init()
 		input_log.notice("Reloaded empty pad config");
 	}
 
+	input_log.trace("Using pad config:\n%s", g_cfg_input.to_string());
+
 	std::shared_ptr<keyboard_pad_handler> keyptr;
 
 	// Always have a Null Pad Handler
@@ -120,10 +146,10 @@ void pad_thread::Init()
 
 	for (u32 i = 0; i < CELL_PAD_MAX_PORT_NUM; i++) // max 7 pads
 	{
+		cfg_player* cfg = g_cfg_input.player[i];
 		std::shared_ptr<PadHandlerBase> cur_pad_handler;
 
-		const bool is_ldd_pad = pad_settings[i].ldd_handle == static_cast<s32>(i);
-		const auto handler_type = is_ldd_pad ? pad_handler::null : g_cfg_input.player[i]->handler.get();
+		const pad_handler handler_type = pad_settings[i].is_ldd_pad ? pad_handler::null : cfg->handler.get();
 
 		if (handlers.contains(handler_type))
 		{
@@ -135,8 +161,8 @@ void pad_thread::Init()
 			{
 			case pad_handler::keyboard:
 				keyptr = std::make_shared<keyboard_pad_handler>();
-				keyptr->moveToThread(static_cast<QThread*>(curthread));
-				keyptr->SetTargetWindow(static_cast<QWindow*>(curwindow));
+				keyptr->moveToThread(static_cast<QThread*>(m_curthread));
+				keyptr->SetTargetWindow(static_cast<QWindow*>(m_curwindow));
 				cur_pad_handler = keyptr;
 				break;
 			case pad_handler::ds3:
@@ -156,6 +182,11 @@ void pad_thread::Init()
 				cur_pad_handler = std::make_shared<mm_joystick_handler>();
 				break;
 #endif
+#ifdef HAVE_SDL2
+			case pad_handler::sdl:
+				cur_pad_handler = std::make_shared<sdl_pad_handler>();
+				break;
+#endif
 #ifdef HAVE_LIBEVDEV
 			case pad_handler::evdev:
 				cur_pad_handler = std::make_shared<evdev_joystick_handler>();
@@ -170,30 +201,34 @@ void pad_thread::Init()
 
 		m_pads[i] = std::make_shared<Pad>(handler_type, CELL_PAD_STATUS_DISCONNECTED, pad_settings[i].device_capability, pad_settings[i].device_type);
 
-		if (is_ldd_pad)
+		if (pad_settings[i].is_ldd_pad)
 		{
-			InitLddPad(pad_settings[i].ldd_handle);
+			InitLddPad(i, &pad_settings[i].port_status);
 		}
-		else if (!cur_pad_handler->bindPadToDevice(m_pads[i], g_cfg_input.player[i]->device.to_string(), i))
+		else
 		{
-			// Failed to bind the device to cur_pad_handler so binds to NullPadHandler
-			input_log.error("Failed to bind device %s to handler %s", g_cfg_input.player[i]->device.to_string(), handler_type);
-			nullpad->bindPadToDevice(m_pads[i], g_cfg_input.player[i]->device.to_string(), i);
-		}
+			if (!cur_pad_handler->bindPadToDevice(m_pads[i], i))
+			{
+				// Failed to bind the device to cur_pad_handler so binds to NullPadHandler
+				input_log.error("Failed to bind device '%s' to handler %s. Falling back to NullPadHandler.", cfg->device.to_string(), handler_type);
+				nullpad->bindPadToDevice(m_pads[i], i);
+			}
 
-		input_log.notice("Pad %d: %s", i, g_cfg_input.player[i]->device.to_string());
+			input_log.notice("Pad %d: device='%s', handler=%s, VID=0x%x, PID=0x%x, class_type=0x%x, class_profile=0x%x",
+				i, cfg->device.to_string(), m_pads[i]->m_pad_handler, m_pads[i]->m_vendor_id, m_pads[i]->m_product_id, m_pads[i]->m_class_type, m_pads[i]->m_class_profile);
+		}
 	}
 }
 
-void pad_thread::SetRumble(const u32 pad, u8 largeMotor, bool smallMotor)
+void pad_thread::SetRumble(const u32 pad, u8 large_motor, bool small_motor)
 {
 	if (pad >= m_pads.size())
 		return;
 
 	if (m_pads[pad]->m_vibrateMotors.size() >= 2)
 	{
-		m_pads[pad]->m_vibrateMotors[0].m_value = largeMotor;
-		m_pads[pad]->m_vibrateMotors[1].m_value = smallMotor ? 255 : 0;
+		m_pads[pad]->m_vibrateMotors[0].m_value = large_motor;
+		m_pads[pad]->m_vibrateMotors[1].m_value = small_motor ? 255 : 0;
 	}
 }
 
@@ -212,13 +247,22 @@ void pad_thread::SetIntercepted(bool intercepted)
 
 void pad_thread::operator()()
 {
-	pad::g_reset = true;
+	Init();
+
+	const bool is_vsh = Emu.IsVsh();
+
+	pad::g_reset = false;
+	pad::g_started = true;
+
+	bool mode_changed = true;
 
 	atomic_t<pad_handler_mode> pad_mode{g_cfg.io.pad_mode.get()};
 	std::vector<std::unique_ptr<named_thread<std::function<void()>>>> threads;
 
 	const auto stop_threads = [&threads]()
 	{
+		input_log.notice("Stopping pad threads...");
+
 		for (auto& thread : threads)
 		{
 			if (thread)
@@ -229,6 +273,8 @@ void pad_thread::operator()()
 			}
 		}
 		threads.clear();
+
+		input_log.notice("Pad threads stopped");
 	};
 
 	const auto start_threads = [this, &threads, &pad_mode]()
@@ -238,46 +284,62 @@ void pad_thread::operator()()
 			return;
 		}
 
+		input_log.notice("Starting pad threads...");
+
 		for (const auto& handler : handlers)
 		{
 			if (handler.first == pad_handler::null)
 			{
 				continue;
 			}
-			
+
 			threads.push_back(std::make_unique<named_thread<std::function<void()>>>(fmt::format("%s Thread", handler.second->m_type), [&handler = handler.second, &pad_mode]()
 			{
 				while (thread_ctrl::state() != thread_state::aborting)
 				{
-					if (!pad::g_enabled || Emu.IsPaused())
+					if (!pad::g_enabled || !is_input_allowed())
 					{
-						thread_ctrl::wait_for(10'000);
+						thread_ctrl::wait_for(30'000);
 						continue;
 					}
 
-					handler->ThreadProc();
+					handler->process();
 
-					thread_ctrl::wait_for(g_cfg.io.pad_sleep);
+					u64 pad_sleep = g_cfg.io.pad_sleep;
+
+					if (Emu.IsPaused())
+					{
+						pad_sleep = std::max<u64>(pad_sleep, 30'000);
+					}
+
+					thread_ctrl::wait_for(pad_sleep);
 				}
 			}));
 		}
+
+		input_log.notice("Pad threads started");
 	};
 
 	while (thread_ctrl::state() != thread_state::aborting)
 	{
-		if (!pad::g_enabled || Emu.IsPaused())
+		if (!pad::g_enabled || !is_input_allowed())
 		{
-			thread_ctrl::wait_for(10000);
+			m_resume_emulation_flag = false;
+			m_mask_start_press_to_resume = 0;
+			thread_ctrl::wait_for(30'000);
 			continue;
 		}
 
 		// Update variables
 		const bool needs_reset = pad::g_reset && pad::g_reset.exchange(false);
-		const bool mode_changed = pad_mode != pad_mode.exchange(g_cfg.io.pad_mode.get());
+		const pad_handler_mode new_pad_mode = g_cfg.io.pad_mode.get();
+		mode_changed |= new_pad_mode != pad_mode.exchange(new_pad_mode);
 
 		// Reset pad handlers if necessary
 		if (needs_reset || mode_changed)
 		{
+			mode_changed = false;
+
 			stop_threads();
 
 			if (needs_reset)
@@ -298,7 +360,7 @@ void pad_thread::operator()()
 		{
 			for (auto& handler : handlers)
 			{
-				handler.second->ThreadProc();
+				handler.second->process();
 				connected_devices += handler.second->connected_devices;
 			}
 		}
@@ -326,7 +388,7 @@ void pad_thread::operator()()
 				if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 					continue;
 
-				for (auto& button : pad->m_buttons)
+				for (const auto& button : pad->m_buttons)
 				{
 					if (button.m_pressed && (
 						button.m_outKeyCode == CELL_PAD_CTRL_CROSS ||
@@ -348,27 +410,155 @@ void pad_thread::operator()()
 			}
 		}
 
-		thread_ctrl::wait_for(g_cfg.io.pad_sleep);
+		// Handle home menu if requested
+		if (!is_vsh && !m_home_menu_open && Emu.IsRunning())
+		{
+			bool ps_button_pressed = false;
+
+			for (usz i = 0; i < m_pads.size() && !ps_button_pressed; i++)
+			{
+				const auto& pad = m_pads[i];
+
+				if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+					continue;
+
+				// TODO: this keeps opening the home menu. Find out how to do it properly.
+				// Check if an LDD pad pressed the PS button (bit 0 of the first button)
+				if (false && pad->ldd && !!(pad->ldd_data.button[0] & CELL_PAD_CTRL_LDD_PS))
+				{
+					ps_button_pressed = true;
+					break;
+				}
+
+				for (const auto& button : pad->m_buttons)
+				{
+					if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL1 && button.m_outKeyCode == CELL_PAD_CTRL_PS && button.m_pressed)
+					{
+						ps_button_pressed = true;
+						break;
+					}
+				}
+			}
+
+			// Make sure we call this function only once per button press
+			if (ps_button_pressed && !m_ps_button_pressed)
+			{
+				open_home_menu();
+			}
+
+			m_ps_button_pressed = ps_button_pressed;
+		}
+
+		// Handle paused emulation (if triggered by home menu).
+		if (m_home_menu_open && g_cfg.misc.pause_during_home_menu)
+		{
+			// Reset resume control if the home menu is open
+			m_resume_emulation_flag = false;
+			m_mask_start_press_to_resume = 0;
+			m_track_start_press_begin_timestamp = 0;
+
+			// Update UI
+			rsx::set_native_ui_flip();
+			thread_ctrl::wait_for(33'000);
+			continue;
+		}
+
+		if (m_resume_emulation_flag)
+		{
+			m_resume_emulation_flag = false;
+
+			Emu.BlockingCallFromMainThread([]()
+			{
+				Emu.Resume();
+			});
+		}
+
+		u64 pad_sleep = g_cfg.io.pad_sleep;
+
+		if (Emu.GetStatus(false) == system_state::paused)
+		{
+			pad_sleep = std::max<u64>(pad_sleep, 30'000);
+
+			u64 timestamp = get_system_time();
+			u32 pressed_mask = 0;
+
+			for (usz i = 0; i < m_pads.size(); i++)
+			{
+				const auto& pad = m_pads[i];
+
+				if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+					continue;
+
+				for (const auto& button : pad->m_buttons)
+				{
+					if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL1 && button.m_outKeyCode == CELL_PAD_CTRL_START && button.m_pressed)
+					{
+						pressed_mask |= 1u << i;
+						break;
+					}
+				}
+			}
+
+			m_mask_start_press_to_resume &= pressed_mask;
+
+			if (!pressed_mask || timestamp - m_track_start_press_begin_timestamp >= 700'000)
+			{
+				m_track_start_press_begin_timestamp = timestamp;
+
+				if (std::exchange(m_mask_start_press_to_resume, u32{umax}))
+				{
+					m_mask_start_press_to_resume = 0;
+					m_track_start_press_begin_timestamp = 0;
+
+					sys_log.success("Resuming emulation using the START button in a few seconds...");
+
+					auto msg_ref = std::make_shared<atomic_t<u32>>(1);
+					rsx::overlays::queue_message(localized_string_id::EMULATION_RESUMING, 2'000'000, msg_ref);
+
+					m_resume_emulation_flag = true;
+
+					for (u32 i = 0; i < 40; i++)
+					{
+						if (Emu.GetStatus(false) != system_state::paused)
+						{
+							// Abort if emulation has been resumed by other means
+							m_resume_emulation_flag = false;
+							msg_ref->release(0);
+							break;
+						}
+
+						thread_ctrl::wait_for(50'000);
+						rsx::set_native_ui_flip();
+					}
+				}
+			}
+		}
+		else
+		{
+			// Reset resume control if caught a state of unpaused emulation
+			m_mask_start_press_to_resume = 0;
+			m_track_start_press_begin_timestamp = 0;
+		}
+
+		thread_ctrl::wait_for(pad_sleep);
 	}
 
 	stop_threads();
 }
 
-void pad_thread::InitLddPad(u32 handle)
+void pad_thread::InitLddPad(u32 handle, const u32* port_status)
 {
 	if (handle >= m_pads.size())
 	{
 		return;
 	}
 
-	input_log.notice("Pad %d: LDD", handle);
-
-	static const auto product = input::get_product_info(input::product_type::playstation_3_controller);
+	static const input::product_info product = input::get_product_info(input::product_type::playstation_3_controller);
 
 	m_pads[handle]->ldd = true;
 	m_pads[handle]->Init
 	(
-		CELL_PAD_STATUS_CONNECTED | CELL_PAD_STATUS_ASSIGN_CHANGES | CELL_PAD_STATUS_CUSTOM_CONTROLLER,
+		port_status ? *port_status : CELL_PAD_STATUS_CONNECTED | CELL_PAD_STATUS_ASSIGN_CHANGES | CELL_PAD_STATUS_CUSTOM_CONTROLLER,
 		CELL_PAD_CAPABILITY_PS3_CONFORMITY,
 		CELL_PAD_DEV_TYPE_LDD,
 		0, // CELL_PAD_PCLASS_TYPE_STANDARD
@@ -377,6 +567,9 @@ void pad_thread::InitLddPad(u32 handle)
 		product.product_id,
 		50
 	);
+
+	input_log.notice("Pad %d: LDD, VID=0x%x, PID=0x%x, class_type=0x%x, class_profile=0x%x",
+		handle, m_pads[handle]->m_vendor_id, m_pads[handle]->m_product_id, m_pads[handle]->m_class_type, m_pads[handle]->m_class_profile);
 
 	num_ldd_pad++;
 }
@@ -388,7 +581,7 @@ s32 pad_thread::AddLddPad()
 	{
 		if (g_cfg_input.player[i]->handler == pad_handler::null && !m_pads[i]->ldd)
 		{
-			InitLddPad(i);
+			InitLddPad(i, nullptr);
 			return i;
 		}
 	}
@@ -425,6 +618,10 @@ std::shared_ptr<PadHandlerBase> pad_thread::GetHandler(pad_handler type)
 	case pad_handler::mm:
 		return std::make_unique<mm_joystick_handler>();
 #endif
+#ifdef HAVE_SDL2
+	case pad_handler::sdl:
+		return std::make_unique<sdl_pad_handler>();
+#endif
 #ifdef HAVE_LIBEVDEV
 	case pad_handler::evdev:
 		return std::make_unique<evdev_joystick_handler>();
@@ -441,35 +638,47 @@ void pad_thread::InitPadConfig(cfg_pad& cfg, pad_handler type, std::shared_ptr<P
 		handler = GetHandler(type);
 	}
 
-	switch (handler->m_type)
+	ensure(!!handler);
+	handler->init_config(&cfg);
+}
+
+extern bool send_open_home_menu_cmds();
+extern void send_close_home_menu_cmds();
+extern bool close_osk_from_ps_button();
+
+void pad_thread::open_home_menu()
+{
+	// Check if the OSK is open and can be closed
+	if (!close_osk_from_ps_button())
 	{
-	case pad_handler::null:
-		static_cast<NullPadHandler*>(handler.get())->init_config(&cfg);
-		break;
-	case pad_handler::keyboard:
-		static_cast<keyboard_pad_handler*>(handler.get())->init_config(&cfg);
-		break;
-	case pad_handler::ds3:
-		static_cast<ds3_pad_handler*>(handler.get())->init_config(&cfg);
-		break;
-	case pad_handler::ds4:
-		static_cast<ds4_pad_handler*>(handler.get())->init_config(&cfg);
-		break;
-	case pad_handler::dualsense:
-		static_cast<dualsense_pad_handler*>(handler.get())->init_config(&cfg);
-		break;
-#ifdef _WIN32
-	case pad_handler::xinput:
-		static_cast<xinput_pad_handler*>(handler.get())->init_config(&cfg);
-		break;
-	case pad_handler::mm:
-		static_cast<mm_joystick_handler*>(handler.get())->init_config(&cfg);
-		break;
-#endif
-#ifdef HAVE_LIBEVDEV
-	case pad_handler::evdev:
-		static_cast<evdev_joystick_handler*>(handler.get())->init_config(&cfg);
-		break;
-#endif
+		rsx::overlays::queue_message(get_localized_string(localized_string_id::CELL_OSK_DIALOG_BUSY));
+		return;
+	}
+
+	if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
+	{
+		if (m_home_menu_open.exchange(true))
+		{
+			return;
+		}
+
+		if (!send_open_home_menu_cmds())
+		{
+			m_home_menu_open = false;
+			return;
+		}
+
+		input_log.notice("opening home menu...");
+
+		const error_code result = manager->create<rsx::overlays::home_menu_dialog>()->show([this](s32 status)
+		{
+			input_log.notice("closing home menu with status %d", status);
+
+			m_home_menu_open = false;
+
+			send_close_home_menu_cmds();
+		});
+
+		(result ? input_log.error : input_log.notice)("opened home menu with result %d", s32{result});
 	}
 }

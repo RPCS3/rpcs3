@@ -7,6 +7,7 @@
 #include <libevdev/libevdev.h>
 #include <memory>
 #include <unordered_map>
+#include <array>
 #include <vector>
 #include <thread>
 #include <ctime>
@@ -130,7 +131,7 @@ class evdev_joystick_handler final : public PadHandlerBase
 		{ 0x11d               , "0x11d"       },
 		{ 0x11e               , "0x11e"       },
 		{ 0x11f               , "0x11f"       },
-		{ BTN_JOYSTICK        , "Joystick"    },
+		//{ BTN_JOYSTICK        , "Joystick"    }, same as BTN_TRIGGER
 		{ BTN_TRIGGER         , "Trigger"     },
 		{ BTN_THUMB           , "Thumb"       },
 		{ BTN_THUMB2          , "Thumb 2"     },
@@ -327,11 +328,28 @@ class evdev_joystick_handler final : public PadHandlerBase
 		{ ABS_MT_TOOL_Y      , "MT Tool Y-"   },
 	};
 
+	// Unique motion axis names for the config files and our pad settings dialog
+	const std::unordered_map<u32, std::string> motion_axis_list =
+	{
+		{ ABS_X  , "X"  },
+		{ ABS_Y  , "Y"  },
+		{ ABS_Z  , "Z"  },
+		{ ABS_RX , "RX" },
+		{ ABS_RY , "RY" },
+		{ ABS_RZ , "RZ" },
+	};
+
 	struct EvdevButton
 	{
-		u32 code;
-		int dir;
-		int type;
+		u32 code = 0;
+		int dir = 0;
+		int type = 0;
+	};
+
+	struct evdev_sensor : public EvdevButton
+	{
+		bool mirrored = false;
+		s32 shift = 0;
 	};
 
 	struct EvdevDevice : public PadDevice
@@ -339,19 +357,19 @@ class evdev_joystick_handler final : public PadHandlerBase
 		libevdev* device{ nullptr };
 		std::string path;
 		std::unordered_map<int, bool> axis_orientations; // value is true if key was found in rev_axis_list
-		s32 stick_val[4] = { 0, 0, 0, 0 };
-		u16 val_min[4] = { 0, 0, 0, 0 };
-		u16 val_max[4] = { 0, 0, 0, 0 };
-		EvdevButton trigger_left  = { 0, 0, 0 };
-		EvdevButton trigger_right = { 0, 0, 0 };
-		std::vector<EvdevButton> axis_left  = { { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 } };
-		std::vector<EvdevButton> axis_right = { { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 } };
+		std::array<s32, 4> stick_val{};
+		std::array<u16, 4> val_min{};
+		std::array<u16, 4> val_max{};
+		EvdevButton trigger_left{};
+		EvdevButton trigger_right{};
+		std::array<EvdevButton, 4> axis_left{};
+		std::array<EvdevButton, 4> axis_right{};
+		std::array<evdev_sensor, 4> axis_motion{};
 		int cur_dir = 0;
 		int cur_type = 0;
 		int effect_id = -1;
 		bool has_rumble = false;
-		u16 force_large = 0;
-		u16 force_small = 0;
+		bool has_motion = false;
 		clock_t last_vibration = 0;
 	};
 
@@ -361,21 +379,23 @@ public:
 
 	void init_config(cfg_pad* cfg) override;
 	bool Init() override;
-	std::vector<std::string> ListDevices() override;
-	bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device, u8 player_id) override;
-	void Close();
-	void get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist = false, const std::vector<std::string>& buttons = {}) override;
-	void SetPadData(const std::string& padId, u8 player_id, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool battery_led, u32 battery_led_brightness) override;
+	std::vector<pad_list_entry> list_devices() override;
+	bool bindPadToDevice(std::shared_ptr<Pad> pad, u8 player_id) override;
+	connection get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist = false, const std::vector<std::string>& buttons = {}) override;
+	void get_motion_sensors(const std::string& padId, const motion_callback& callback, const motion_fail_callback& fail_callback, motion_preview_values preview_values, const std::array<AnalogSensor, 4>& sensors) override;
+	std::unordered_map<u32, std::string> get_motion_axis_list() const override;
+	void SetPadData(const std::string& padId, u8 player_id, u8 large_motor, u8 small_motor, s32 r, s32 g, s32 b, bool player_led, bool battery_led, u32 battery_led_brightness) override;
 
 private:
+	void close_devices();
 	std::shared_ptr<EvdevDevice> get_evdev_device(const std::string& device);
 	std::string get_device_name(const libevdev* dev);
 	bool update_device(const std::shared_ptr<PadDevice>& device);
-	void update_devs();
-	int add_device(const std::string& device, const std::shared_ptr<Pad>& pad, bool in_settings = false);
+	std::shared_ptr<evdev_joystick_handler::EvdevDevice> add_device(const std::string& device, bool in_settings = false);
+	std::shared_ptr<evdev_joystick_handler::EvdevDevice> add_motion_device(const std::string& device, bool in_settings);
 	u32 GetButtonInfo(const input_event& evt, const std::shared_ptr<EvdevDevice>& device, int& button_code);
 	std::unordered_map<u64, std::pair<u16, bool>> GetButtonValues(const std::shared_ptr<EvdevDevice>& device);
-	void SetRumble(EvdevDevice* device, u16 large, u16 small);
+	void SetRumble(EvdevDevice* device, u8 large, u8 small);
 
 	// Search axis_orientations map for the direction by index, returns -1 if not found, 0 for positive and 1 for negative
 	int FindAxisDirection(const std::unordered_map<int, bool>& map, int index);
@@ -383,25 +403,28 @@ private:
 	positive_axis m_pos_axis_config;
 	std::vector<u32> m_positive_axis;
 	std::vector<std::string> m_blacklist;
-	std::unordered_map<std::string, int> m_settings_added;
+	std::unordered_map<std::string, std::shared_ptr<evdev_joystick_handler::EvdevDevice>> m_settings_added;
+	std::unordered_map<std::string, std::shared_ptr<evdev_joystick_handler::EvdevDevice>> m_motion_settings_added;
 	std::shared_ptr<EvdevDevice> m_dev;
 	bool m_is_button_or_trigger;
 	bool m_is_negative;
-	bool m_is_init = false;
 
 	bool check_button(const EvdevButton& b, const u32 code);
-	bool check_buttons(const std::vector<EvdevButton>& b, const u32 code);
+	bool check_buttons(const std::array<EvdevButton, 4>& b, const u32 code);
 
 	void handle_input_event(const input_event& evt, const std::shared_ptr<Pad>& pad);
 
+	u16 get_sensor_value(const libevdev* dev, const AnalogSensor& sensor, const input_event& evt) const;
+
 protected:
 	PadHandlerBase::connection update_connection(const std::shared_ptr<PadDevice>& device) override;
-	void get_mapping(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad) override;
-	void apply_pad_data(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad) override;
-	bool get_is_left_trigger(u64 keyCode) override;
-	bool get_is_right_trigger(u64 keyCode) override;
-	bool get_is_left_stick(u64 keyCode) override;
-	bool get_is_right_stick(u64 keyCode) override;
+	void get_mapping(const pad_ensemble& binding) override;
+	void get_extended_info(const pad_ensemble& binding) override;
+	void apply_pad_data(const pad_ensemble& binding) override;
+	bool get_is_left_trigger(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
+	bool get_is_right_trigger(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
+	bool get_is_left_stick(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
+	bool get_is_right_stick(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
 };
 
 #endif

@@ -101,14 +101,10 @@ class mm_joystick_handler final : public PadHandlerBase
 	struct MMJOYDevice : public PadDevice
 	{
 		u32 device_id{ 0 };
-		std::string device_name{ "" };
+		std::string device_name;
 		JOYINFOEX device_info{};
 		JOYCAPS device_caps{};
 		MMRESULT device_status = JOYERR_UNPLUGGED;
-		u64 trigger_left = 0;
-		u64 trigger_right = 0;
-		std::vector<u64> axis_left  = { 0,0,0,0 };
-		std::vector<u64> axis_right = { 0,0,0,0 };
 	};
 
 public:
@@ -116,8 +112,8 @@ public:
 
 	bool Init() override;
 
-	std::vector<std::string> ListDevices() override;
-	void get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist = false, const std::vector<std::string>& buttons = {}) override;
+	std::vector<pad_list_entry> list_devices() override;
+	connection get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist = false, const std::vector<std::string>& buttons = {}) override;
 	void init_config(cfg_pad* cfg) override;
 
 private:
@@ -125,20 +121,19 @@ private:
 	int GetIDByName(const std::string& name);
 	bool GetMMJOYDevice(int index, MMJOYDevice* dev) const;
 
-	bool is_init = false;
+	bool m_is_init = false;
 
 	std::vector<u64> m_blacklist;
-	std::shared_ptr<MMJOYDevice> m_dev;
 	std::unordered_map<int, MMJOYDevice> m_devices;
 
 	u64 find_key(const std::string& name) const;
 
 	std::array<u32, PadHandlerBase::button::button_count> get_mapped_key_codes(const std::shared_ptr<PadDevice>& device, const cfg_pad* cfg) override;
 	std::shared_ptr<PadDevice> get_device(const std::string& device) override;
-	bool get_is_left_trigger(u64 keyCode) override;
-	bool get_is_right_trigger(u64 keyCode) override;
-	bool get_is_left_stick(u64 keyCode) override;
-	bool get_is_right_stick(u64 keyCode) override;
+	bool get_is_left_trigger(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
+	bool get_is_right_trigger(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
+	bool get_is_left_stick(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
+	bool get_is_right_stick(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
 	PadHandlerBase::connection update_connection(const std::shared_ptr<PadDevice>& device) override;
 	std::unordered_map<u64, u16> get_button_values(const std::shared_ptr<PadDevice>& device) override;
 };

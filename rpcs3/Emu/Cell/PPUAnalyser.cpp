@@ -38,8 +38,6 @@ void fmt_class_string<bs_t<ppu_attr>>::format(std::string& out, u64 arg)
 	format_bitset(out, arg, "[", ",", "]", &fmt_class_string<ppu_attr>::format);
 }
 
-u32 ppu_get_far_jump(u32 pc);
-
 void ppu_module::validate(u32 reloc)
 {
 	// Load custom PRX configuration if available
@@ -532,7 +530,7 @@ namespace ppu_patterns
 	};
 }
 
-void ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::basic_string<u32>& applied)
+bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::basic_string<u32>& applied, std::function<bool()> check_aborted)
 {
 	// Assume first segment is executable
 	const u32 start = segs[0].addr;
@@ -843,6 +841,11 @@ void ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 	// Main loop (func_queue may grow)
 	for (usz i = 0; i < func_queue.size(); i++)
 	{
+		if (check_aborted && check_aborted())
+		{
+			return false;
+		}
+
 		ppu_function& func = func_queue[i];
 
 		// Fixup TOCs
@@ -1202,12 +1205,6 @@ void ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 				const ppu_opcode_t op{*_ptr++};
 				const ppu_itype::type type = s_ppu_itype.decode(op.opcode);
 
-				if (ppu_get_far_jump(iaddr))
-				{
-					block.second = _ptr.addr() - block.first - 4;
-					break;
-				}
-
 				if (type == ppu_itype::UNK)
 				{
 					// Invalid blocks will remain empty
@@ -1397,11 +1394,6 @@ void ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 				const ppu_opcode_t op{*_ptr++};
 				const ppu_itype::type type = s_ppu_itype.decode(op.opcode);
 
-				if (ppu_get_far_jump(iaddr))
-				{
-					break;
-				}
-
 				if (type == ppu_itype::B || type == ppu_itype::BC)
 				{
 					const u32 target = (op.aa ? 0 : iaddr) + (type == ppu_itype::B ? +op.bt24 : +op.bt14);
@@ -1476,11 +1468,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 			const ppu_opcode_t op{*_ptr++};
 			const ppu_itype::type type = s_ppu_itype.decode(op.opcode);
 
-			if (ppu_get_far_jump(addr))
-			{
-				_ptr.set(next);
-			}
-			else if (type == ppu_itype::UNK)
+			if (type == ppu_itype::UNK)
 			{
 				break;
 			}
@@ -1692,11 +1680,6 @@ void ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 
 			for (; i_pos < lim; i_pos += 4)
 			{
-				if (ppu_get_far_jump(i_pos))
-				{
-					continue;
-				}
-
 				const u32 opc = vm::_ref<u32>(i_pos);
 
 				switch (auto type = s_ppu_itype.decode(opc))
@@ -1865,6 +1848,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 	}
 
 	ppu_log.notice("Block analysis: %zu blocks (%zu enqueued)", funcs.size(), block_queue.size());
+	return true;
 }
 
 // Temporarily

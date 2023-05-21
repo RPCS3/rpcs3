@@ -36,5 +36,4 @@ welcome_dialog::welcome_dialog(std::shared_ptr<gui_settings> gui_settings, QWidg
 
 welcome_dialog::~welcome_dialog()
 {
-	delete ui;
 }

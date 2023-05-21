@@ -188,6 +188,23 @@ void fmt_class_string<tsx_usage>::format(std::string& out, u64 arg)
 }
 
 template <>
+void fmt_class_string<rsx_fifo_mode>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](rsx_fifo_mode value)
+	{
+		switch (value)
+		{
+		case rsx_fifo_mode::fast: return "Fast";
+		case rsx_fifo_mode::atomic: return "Atomic";
+		case rsx_fifo_mode::atomic_ordered: return "Ordered & Atomic";
+		case rsx_fifo_mode::as_ps3: return "PS3";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
 void fmt_class_string<sleep_timers_accuracy_level>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](sleep_timers_accuracy_level value)
@@ -290,12 +307,12 @@ void fmt_class_string<frame_limit_type>::format(std::string& out, u64 arg)
 		switch (value)
 		{
 		case frame_limit_type::none: return "Off";
-		case frame_limit_type::_59_94: return "59.94";
 		case frame_limit_type::_50: return "50";
 		case frame_limit_type::_60: return "60";
 		case frame_limit_type::_30: return "30";
 		case frame_limit_type::_auto: return "Auto";
 		case frame_limit_type::_ps3: return "PS3 Native";
+		case frame_limit_type::infinite: return "Infinite";
 		}
 
 		return unknown;
@@ -395,6 +412,9 @@ void fmt_class_string<move_handler>::format(std::string& out, u64 arg)
 		case move_handler::null: return "Null";
 		case move_handler::fake: return "Fake";
 		case move_handler::mouse: return "Mouse";
+#ifdef HAVE_LIBEVDEV
+		case move_handler::gun: return "Gun";
+#endif
 		}
 
 		return unknown;
@@ -532,16 +552,17 @@ void fmt_class_string<audio_avport>::format(std::string& out, u64 arg)
 }
 
 template <>
-void fmt_class_string<audio_downmix>::format(std::string& out, u64 arg)
+void fmt_class_string<audio_format>::format(std::string& out, u64 arg)
 {
-	format_enum(out, arg, [](audio_downmix value)
+	format_enum(out, arg, [](audio_format value)
 	{
 		switch (value)
 		{
-		case audio_downmix::no_downmix: return "No downmix";
-		case audio_downmix::downmix_to_stereo: return "Downmix to Stereo";
-		case audio_downmix::downmix_to_5_1: return "Downmix to 5.1";
-		case audio_downmix::use_application_settings: return "Use application settings";
+		case audio_format::stereo: return "Stereo";
+		case audio_format::surround_5_1: return "Surround 5.1";
+		case audio_format::surround_7_1: return "Surround 7.1";
+		case audio_format::automatic: return "Automatic";
+		case audio_format::manual: return "Manual";
 		}
 
 		return unknown;
@@ -573,6 +594,72 @@ void fmt_class_string<thread_scheduler_mode>::format(std::string& out, u64 arg)
 		case thread_scheduler_mode::old: return "RPCS3 Scheduler";
 		case thread_scheduler_mode::alt: return "RPCS3 Alternative Scheduler";
 		case thread_scheduler_mode::os: return "Operating System";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<gpu_preset_level>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](gpu_preset_level value)
+	{
+		switch (value)
+		{
+		case gpu_preset_level::_auto: return "Auto";
+		case gpu_preset_level::ultra: return "Ultra";
+		case gpu_preset_level::high: return "High";
+		case gpu_preset_level::low: return "Low";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<vk_exclusive_fs_mode>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](vk_exclusive_fs_mode value)
+		{
+			switch (value)
+			{
+			case vk_exclusive_fs_mode::unspecified: return "Automatic";
+			case vk_exclusive_fs_mode::disable: return "Disable";
+			case vk_exclusive_fs_mode::enable: return "Enable";
+			}
+
+			return unknown;
+		});
+}
+
+template <>
+void fmt_class_string<stereo_render_mode_options>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](stereo_render_mode_options value)
+		{
+			switch (value)
+			{
+			case stereo_render_mode_options::disabled: return "Disabled";
+			case stereo_render_mode_options::anaglyph: return "Anaglyph";
+			case stereo_render_mode_options::side_by_side: return "Side-by-Side";
+			case stereo_render_mode_options::over_under: return "Over-Under";
+			}
+
+			return unknown;
+		});
+}
+
+template <>
+void fmt_class_string<output_scaling_mode>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](output_scaling_mode value)
+	{
+		switch (value)
+		{
+		case output_scaling_mode::nearest: return "Nearest";
+		case output_scaling_mode::bilinear: return "Bilinear";
+		case output_scaling_mode::fsr: return "FidelityFX Super Resolution";
 		}
 
 		return unknown;

@@ -15,7 +15,7 @@ enum : u32
 
 struct sys_timer_information_t
 {
-	be_t<s64> next_expire;
+	be_t<u64> next_expire; // system_time_t
 	be_t<u64> period;
 	be_t<u32> timer_state;
 	be_t<u32> pad;
@@ -60,6 +60,9 @@ struct lv2_timer : lv2_obj
 			info.period      = 0;
 		}
 	}
+
+	lv2_timer(utils::serial& ar);
+	void save(utils::serial& ar);
 };
 
 class ppu_thread;

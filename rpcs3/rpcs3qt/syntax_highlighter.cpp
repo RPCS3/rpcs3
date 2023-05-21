@@ -15,7 +15,7 @@ void Highlighter::addRule(const QString &pattern, const QBrush &brush)
 
 void Highlighter::highlightBlock(const QString &text)
 {
-	for (const HighlightingRule &rule : highlightingRules)
+	for (const HighlightingRule& rule : highlightingRules)
 	{
 		QRegularExpressionMatchIterator matchIterator = rule.pattern.globalMatch(text);
 		while (matchIterator.hasNext())
@@ -168,7 +168,7 @@ GlslHighlighter::GlslHighlighter(QTextDocument *parent) : Highlighter(parent)
 		<< "r16_snorm"      << "r32ui"
 		<< "r8_snorm"       << "r16ui";
 
-	for (const QString &pattern : keywordPatterns)
+	for (const QString& pattern : keywordPatterns)
 		addRule("\\b" + pattern + "\\b",   Qt::darkBlue);    // normal words like: soka, nani, or gomen
 
 	addRule("\\bGL_(?:[A-Z]|_)+\\b",       Qt::darkMagenta); // constants like: GL_OMAE_WA_MOU_SHINDEIRU

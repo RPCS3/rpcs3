@@ -38,6 +38,20 @@ void fmt_class_string<CellHttpUtilError>::format(std::string& out, u64 arg)
 error_code cellHttpUtilParseUri(vm::ptr<CellHttpUri> uri, vm::cptr<char> str, vm::ptr<void> pool, u32 size, vm::ptr<u32> required)
 {
 	cellHttpUtil.trace("cellHttpUtilParseUri(uri=*0x%x, str=%s, pool=*0x%x, size=%d, required=*0x%x)", uri, str, pool, size, required);
+
+	if (!str)
+	{
+		return CELL_HTTP_UTIL_ERROR_NO_STRING;
+	}
+
+	if (!pool || !uri)
+	{
+		if (!required)
+		{
+			return CELL_HTTP_UTIL_ERROR_NO_BUFFER;
+		}
+	}
+
 	LUrlParser::clParseURL URL = LUrlParser::clParseURL::ParseURL(str.get_ptr());
 	if ( URL.IsValid() )
 	{
@@ -127,55 +141,144 @@ error_code cellHttpUtilParseUri(vm::ptr<CellHttpUri> uri, vm::cptr<char> str, vm
 error_code cellHttpUtilParseUriPath(vm::ptr<CellHttpUriPath> path, vm::cptr<char> str, vm::ptr<void> pool, u32 size, vm::ptr<u32> required)
 {
 	cellHttpUtil.todo("cellHttpUtilParseUriPath(path=*0x%x, str=%s, pool=*0x%x, size=%d, required=*0x%x)", path, str, pool, size, required);
+
+	if (!str)
+	{
+		return CELL_HTTP_UTIL_ERROR_NO_STRING;
+	}
+
+	if (!pool || !path)
+	{
+		if (!required)
+		{
+			return CELL_HTTP_UTIL_ERROR_NO_BUFFER;
+		}
+	}
+
 	return CELL_OK;
 }
 
 error_code cellHttpUtilParseProxy(vm::ptr<CellHttpUri> uri, vm::cptr<char> str, vm::ptr<void> pool, u32 size, vm::ptr<u32> required)
 {
 	cellHttpUtil.todo("cellHttpUtilParseProxy(uri=*0x%x, str=%s, pool=*0x%x, size=%d, required=*0x%x)", uri, str, pool, size, required);
+
+	if (!str)
+	{
+		return CELL_HTTP_UTIL_ERROR_NO_STRING;
+	}
+
+	if (!pool || !uri)
+	{
+		if (!required)
+		{
+			return CELL_HTTP_UTIL_ERROR_NO_BUFFER;
+		}
+	}
+
 	return CELL_OK;
 }
 
 error_code cellHttpUtilParseStatusLine(vm::ptr<CellHttpStatusLine> resp, vm::cptr<char> str, u32 len, vm::ptr<void> pool, u32 size, vm::ptr<u32> required, vm::ptr<u32> parsedLength)
 {
 	cellHttpUtil.todo("cellHttpUtilParseStatusLine(resp=*0x%x, str=%s, len=%d, pool=*0x%x, size=%d, required=*0x%x, parsedLength=*0x%x)", resp, str, len, pool, size, required, parsedLength);
+
+	if (!str)
+	{
+		return CELL_HTTP_UTIL_ERROR_NO_STRING;
+	}
+
+	if (!pool || !resp)
+	{
+		if (!required)
+		{
+			return CELL_HTTP_UTIL_ERROR_NO_BUFFER;
+		}
+	}
+
 	return CELL_OK;
 }
 
 error_code cellHttpUtilParseHeader(vm::ptr<CellHttpHeader> header, vm::cptr<char> str, u32 len, vm::ptr<void> pool, u32 size, vm::ptr<u32> required, vm::ptr<u32> parsedLength)
 {
 	cellHttpUtil.todo("cellHttpUtilParseHeader(header=*0x%x, str=%s, len=%d, pool=*0x%x, size=%d, required=*0x%x, parsedLength=*0x%x)", header, str, len, pool, size, required, parsedLength);
+
+	if (!str)
+	{
+		return CELL_HTTP_UTIL_ERROR_NO_STRING;
+	}
+
+	if (!pool || !header)
+	{
+		if (!required)
+		{
+			return CELL_HTTP_UTIL_ERROR_NO_BUFFER;
+		}
+	}
+
 	return CELL_OK;
 }
 
 error_code cellHttpUtilBuildRequestLine(vm::cptr<CellHttpRequestLine> req, vm::ptr<char> buf, u32 len, vm::ptr<u32> required)
 {
-	cellHttpUtil.todo("cellHttpUtilBuildRequestLine(req=*0x%x, buf=*0x%x, len=%d, required=*0x%x)", req, buf, len, required);
+	cellHttpUtil.notice("cellHttpUtilBuildRequestLine(req=*0x%x, buf=*0x%x, len=%d, required=*0x%x)", req, buf, len, required);
 
-	if (!req->method || !req->path || !req->protocol) {
+	if (!req || !req->method || !req->path || !req->protocol)
+	{
 		return CELL_HTTP_UTIL_ERROR_INVALID_REQUEST;
 	}
 
-	// TODO
+	std::string path = fmt::format("%s", req->path);
+	if (path.empty())
+	{
+		path += '/';
+	}
 
-	const std::string& result = fmt::format("%s %s %s/%d.%d\r\n", req->method, req->path, req->protocol, req->majorVersion, req->minorVersion);
-	std::memcpy(buf.get_ptr(), result.c_str(), result.size() + 1);
+	// TODO: are the numbers properly formatted ?
+	const std::string result = fmt::format("%s %s %s/%d.%d\r\n", req->method, path, req->protocol, req->majorVersion, req->minorVersion);
+
+	if (buf)
+	{
+		if (len < result.size())
+		{
+			return CELL_HTTP_UTIL_ERROR_INSUFFICIENT;
+		}
+
+		std::memcpy(buf.get_ptr(), result.c_str(), result.size());
+	}
+
+	if (required)
+	{
+		*required = ::narrow<u32>(result.size());
+	}
 
 	return CELL_OK;
 }
 
 error_code cellHttpUtilBuildHeader(vm::cptr<CellHttpHeader> header, vm::ptr<char> buf, u32 len, vm::ptr<u32> required)
 {
-	cellHttpUtil.todo("cellHttpUtilBuildHeader(header=*0x%x, buf=*0x%x, len=%d, required=*0x%x)", header, buf, len, required);
+	cellHttpUtil.notice("cellHttpUtilBuildHeader(header=*0x%x, buf=*0x%x, len=%d, required=*0x%x)", header, buf, len, required);
 
-	if (!header->name || !header->value) {
+	if (!header || !header->name)
+	{
 		return CELL_HTTP_UTIL_ERROR_INVALID_HEADER;
 	}
 
-	// TODO
+	const std::string result = fmt::format("%s: %s\r\n", header->name, header->value);
 
-	const std::string& result = fmt::format("%s: %s\r\n", header->name, header->value);
-	std::memcpy(buf.get_ptr(), result.c_str(), result.size() + 1);
+	if (buf)
+	{
+		if (len < result.size())
+		{
+			return CELL_HTTP_UTIL_ERROR_INSUFFICIENT;
+		}
+
+		std::memcpy(buf.get_ptr(), result.c_str(), result.size());
+	}
+
+	if (required)
+	{
+		*required = ::narrow<u32>(result.size());
+	}
 
 	return CELL_OK;
 }
@@ -184,10 +287,71 @@ error_code cellHttpUtilBuildUri(vm::cptr<CellHttpUri> uri, vm::ptr<char> buf, u3
 {
 	cellHttpUtil.todo("cellHttpUtilBuildUri(uri=*0x%x, buf=*0x%x, len=%d, required=*0x%x, flags=%d)", uri, buf, len, required, flags);
 
-	// TODO
+	if (!uri || !uri->hostname)
+	{
+		return CELL_HTTP_UTIL_ERROR_INVALID_URI;
+	}
 
-	const std::string& result = fmt::format("%s://%s:%s@%s:%d/%s", uri->scheme, uri->username, uri->password, uri->hostname, uri->port, uri->path);
-	std::memcpy(buf.get_ptr(), result.c_str(), result.size() + 1);
+	std::string result;
+
+	if (!(flags & CELL_HTTP_UTIL_URI_FLAG_NO_SCHEME))
+	{
+		if (uri->scheme && uri->scheme[0])
+		{
+			result = fmt::format("%s", uri->scheme);
+		}
+		else if (uri->port == 443u)
+		{
+			result = "https"; // TODO: confirm
+		}
+		else
+		{
+			result = "http"; // TODO: confirm
+		}
+
+		fmt::append(result, "://");
+	}
+
+	if (!(flags & CELL_HTTP_UTIL_URI_FLAG_NO_CREDENTIALS) && uri->username && uri->username[0])
+	{
+		fmt::append(result, "%s", uri->username);
+
+		if (!(flags & CELL_HTTP_UTIL_URI_FLAG_NO_PASSWORD) && uri->password && uri->password[0])
+		{
+			fmt::append(result, ":%s", uri->password);
+		}
+
+		fmt::append(result, "@");
+	}
+
+	fmt::append(result, "%s", uri->hostname);
+
+	if (true) // TODO: there seems to be a case where the port isn't added
+	{
+		fmt::append(result, ":%d", uri->port);
+	}
+
+	if (!(flags & CELL_HTTP_UTIL_URI_FLAG_NO_PATH) && uri->path && uri->path[0])
+	{
+		fmt::append(result, "%s", uri->path);
+	}
+
+	const u32 size_needed = ::narrow<u32>(result.size() + 1); // Including '\0'
+
+	if (buf)
+	{
+		if (len < size_needed)
+		{
+			return CELL_HTTP_UTIL_ERROR_INSUFFICIENT;
+		}
+
+		std::memcpy(buf.get_ptr(), result.c_str(), size_needed);
+	}
+
+	if (required)
+	{
+		*required = size_needed;
+	}
 
 	return CELL_OK;
 }
@@ -195,72 +359,469 @@ error_code cellHttpUtilBuildUri(vm::cptr<CellHttpUri> uri, vm::ptr<char> buf, u3
 error_code cellHttpUtilCopyUri(vm::ptr<CellHttpUri> dest, vm::cptr<CellHttpUri> src, vm::ptr<void> pool, u32 poolSize, vm::ptr<u32> required)
 {
 	cellHttpUtil.todo("cellHttpUtilCopyUri(dest=*0x%x, src=*0x%x, pool=*0x%x, poolSize=%d, required=*0x%x)", dest, src, pool, poolSize, required);
+
+	if (!src)
+	{
+		return CELL_HTTP_UTIL_ERROR_NO_BUFFER;
+	}
+
+	if (!pool || !dest)
+	{
+		if (!required)
+		{
+			return CELL_HTTP_UTIL_ERROR_NO_BUFFER;
+		}
+	}
+
 	return CELL_OK;
 }
 
 error_code cellHttpUtilMergeUriPath(vm::ptr<CellHttpUri> uri, vm::cptr<CellHttpUri> src, vm::cptr<char> path, vm::ptr<void> pool, u32 poolSize, vm::ptr<u32> required)
 {
 	cellHttpUtil.todo("cellHttpUtilMergeUriPath(uri=*0x%x, src=*0x%x, path=%s, pool=*0x%x, poolSize=%d, required=*0x%x)", uri, src, path, pool, poolSize, required);
+
+	if (!path)
+	{
+		return CELL_HTTP_UTIL_ERROR_NO_STRING;
+	}
+
+	if (!src)
+	{
+		return CELL_HTTP_UTIL_ERROR_NO_BUFFER;
+	}
+
+	if (!pool || !uri)
+	{
+		if (!required)
+		{
+			return CELL_HTTP_UTIL_ERROR_NO_BUFFER;
+		}
+	}
+
 	return CELL_OK;
 }
 
 error_code cellHttpUtilSweepPath(vm::ptr<char> dst, vm::cptr<char> src, u32 srcSize)
 {
 	cellHttpUtil.todo("cellHttpUtilSweepPath(dst=*0x%x, src=%s, srcSize=%d)", dst, src, srcSize);
+
+	if (!dst || !src)
+	{
+		return CELL_HTTP_UTIL_ERROR_NO_BUFFER;
+	}
+
+	if (!srcSize)
+	{
+		return CELL_OK;
+	}
+
+	u32 pos = 0;
+
+	if (src[pos] != '/')
+	{
+		std::memcpy(dst.get_ptr(), src.get_ptr(), srcSize - 1);
+		dst[srcSize - 1] = '\0';
+		return CELL_OK;
+	}
+
+	// TODO
+
 	return CELL_OK;
 }
 
 error_code cellHttpUtilCopyStatusLine(vm::ptr<CellHttpStatusLine> dest, vm::cptr<CellHttpStatusLine> src, vm::ptr<void> pool, u32 poolSize, vm::ptr<u32> required)
 {
 	cellHttpUtil.todo("cellHttpUtilCopyStatusLine(dest=*0x%x, src=*0x%x, pool=*0x%x, poolSize=%d, required=*0x%x)", dest, src, pool, poolSize, required);
+
+	if (!src)
+	{
+		return CELL_HTTP_UTIL_ERROR_NO_BUFFER;
+	}
+
+	if (!pool || !dest)
+	{
+		if (!required)
+		{
+			return CELL_HTTP_UTIL_ERROR_NO_BUFFER;
+		}
+	}
+
 	return CELL_OK;
 }
 
 error_code cellHttpUtilCopyHeader(vm::ptr<CellHttpHeader> dest, vm::cptr<CellHttpHeader> src, vm::ptr<void> pool, u32 poolSize, vm::ptr<u32> required)
 {
 	cellHttpUtil.todo("cellHttpUtilCopyHeader(dest=*0x%x, src=*0x%x, pool=*0x%x, poolSize=%d, required=*0x%x)", dest, src, pool, poolSize, required);
+
+	if (!src)
+	{
+		return CELL_HTTP_UTIL_ERROR_NO_BUFFER;
+	}
+
+	if (!pool || !dest)
+	{
+		if (!required)
+		{
+			return CELL_HTTP_UTIL_ERROR_NO_BUFFER;
+		}
+	}
+
 	return CELL_OK;
 }
 
 error_code cellHttpUtilAppendHeaderValue(vm::ptr<CellHttpHeader> dest, vm::cptr<CellHttpHeader> src, vm::cptr<char> value, vm::ptr<void> pool, u32 poolSize, vm::ptr<u32> required)
 {
 	cellHttpUtil.todo("cellHttpUtilAppendHeaderValue(dest=*0x%x, src=*0x%x, value=%s, pool=*0x%x, poolSize=%d, required=*0x%x)", dest, src, value, pool, poolSize, required);
+
+	if (!src)
+	{
+		return CELL_HTTP_UTIL_ERROR_NO_BUFFER;
+	}
+
+	if (!pool || !dest)
+	{
+		if (!required)
+		{
+			return CELL_HTTP_UTIL_ERROR_NO_BUFFER;
+		}
+	}
+
 	return CELL_OK;
 }
 
 error_code cellHttpUtilEscapeUri(vm::ptr<char> out, u32 outSize, vm::cptr<u8> in, u32 inSize, vm::ptr<u32> required)
 {
 	cellHttpUtil.todo("cellHttpUtilEscapeUri(out=*0x%x, outSize=%d, in=*0x%x, inSize=%d, required=*0x%x)", out, outSize, in, inSize, required);
+
+	if (!in || !inSize)
+	{
+		return CELL_HTTP_UTIL_ERROR_NO_STRING;
+	}
+
+	if (!out && !required)
+	{
+		return CELL_HTTP_UTIL_ERROR_NO_BUFFER;
+	}
+
+	u32 size_needed = 0;
+	u32 out_pos = 0;
+	s32 rindex = 0;
+
+	if (const u32 end = in.addr() + inSize; end && end >= in.addr())
+	{
+		rindex = inSize;
+	}
+
+	for (u32 pos = 0; rindex >= 0; rindex--, pos++)
+	{
+		char c1 = in[pos];
+
+		if (false) // DAT[c1] == '\x03') // TODO
+		{
+			size_needed += 3;
+
+			if (out)
+			{
+				if (outSize < size_needed)
+				{
+					return CELL_HTTP_UTIL_ERROR_NO_MEMORY;
+				}
+
+				const char* chars = "0123456789ABCDEF";
+				out[out_pos++] = '%'; // 0x25
+				out[out_pos++] = chars[c1 >> 4];
+				out[out_pos++] = chars[c1 & 0xf];
+			}
+		}
+		else
+		{
+			size_needed++;
+
+			if (out)
+			{
+				if (outSize < size_needed)
+				{
+					return CELL_HTTP_UTIL_ERROR_NO_MEMORY;
+				}
+
+				out[out_pos++] = c1;
+			}
+		}
+	}
+
+	size_needed++;
+
+	if (out)
+	{
+		if (outSize < size_needed)
+		{
+			return CELL_HTTP_UTIL_ERROR_NO_MEMORY;
+		}
+
+		out[out_pos] = '\0';
+	}
+
+	if (required)
+	{
+		*required = size_needed;
+	}
+
 	return CELL_OK;
 }
 
 error_code cellHttpUtilUnescapeUri(vm::ptr<u8> out, u32 size, vm::cptr<char> in, vm::ptr<u32> required)
 {
 	cellHttpUtil.todo("cellHttpUtilUnescapeUri(out=*0x%x, size=%d, in=*0x%x, required=*0x%x)", out, size, in, required);
+
+	if (!in)
+	{
+		return CELL_HTTP_UTIL_ERROR_NO_STRING;
+	}
+
+	if (!out && !required)
+	{
+		return CELL_HTTP_UTIL_ERROR_NO_BUFFER;
+	}
+
+	if (required)
+	{
+		*required = 0; // TODO
+	}
+
 	return CELL_OK;
 }
 
 error_code cellHttpUtilFormUrlEncode(vm::ptr<char> out, u32 outSize, vm::cptr<u8> in, u32 inSize, vm::ptr<u32> required)
 {
 	cellHttpUtil.todo("cellHttpUtilFormUrlEncode(out=*0x%x, outSize=%d, in=*0x%x, inSize=%d, required=*0x%x)", out, outSize, in, inSize, required);
+
+	if (!in || !inSize)
+	{
+		return CELL_HTTP_UTIL_ERROR_NO_STRING;
+	}
+
+	if (!out && !required)
+	{
+		return CELL_HTTP_UTIL_ERROR_NO_BUFFER;
+	}
+
+	u32 size_needed = 0;
+	u32 out_pos = 0;
+	s32 rindex = 0;
+
+	if (const u32 end = in.addr() + inSize; end && end >= in.addr())
+	{
+		rindex = inSize;
+	}
+
+	for (u32 pos = 0; rindex >= 0; rindex--, pos++)
+	{
+		char c1 = in[pos];
+
+		if (c1 == ' ')
+		{
+			size_needed++;
+
+			if (out)
+			{
+				if (outSize < size_needed)
+				{
+					return CELL_HTTP_UTIL_ERROR_NO_MEMORY;
+				}
+
+				out[out_pos++] = '+';
+			}
+		}
+		else if (false) // DAT[c1] == '\x03') // TODO
+		{
+			size_needed += 3;
+
+			if (out)
+			{
+				if (outSize < size_needed)
+				{
+					return CELL_HTTP_UTIL_ERROR_NO_MEMORY;
+				}
+
+				const char* chars = "0123456789ABCDEF";
+				out[out_pos++] = '%'; // 0x25
+				out[out_pos++] = chars[c1 >> 4];
+				out[out_pos++] = chars[c1 & 0xf];
+			}
+		}
+		else
+		{
+			size_needed++;
+
+			if (out)
+			{
+				if (outSize < size_needed)
+				{
+					return CELL_HTTP_UTIL_ERROR_NO_MEMORY;
+				}
+
+				out[out_pos++] = c1;
+			}
+		}
+	}
+
+	size_needed++;
+
+	if (out)
+	{
+		if (outSize < size_needed)
+		{
+			return CELL_HTTP_UTIL_ERROR_NO_MEMORY;
+		}
+
+		out[out_pos++] = '\0';
+	}
+
+	if (required)
+	{
+		*required = size_needed;
+	}
+
 	return CELL_OK;
 }
 
 error_code cellHttpUtilFormUrlDecode(vm::ptr<u8> out, u32 size, vm::cptr<char> in, vm::ptr<u32> required)
 {
 	cellHttpUtil.todo("cellHttpUtilFormUrlDecode(out=*0x%x, size=%d, in=%s, required=*0x%x)", out, size, in, required);
+
+	if (!in)
+	{
+		return CELL_HTTP_UTIL_ERROR_NO_STRING;
+	}
+
+	if (!out && !required)
+	{
+		return CELL_HTTP_UTIL_ERROR_NO_BUFFER;
+	}
+
+	u32 size_needed = 0;
+	u32 out_pos = 0;
+
+	for (s32 index = 0, pos = 0;; index++)
+	{
+		size_needed = index + 1;
+		char c1 = in[pos++];
+
+		if (!c1)
+		{
+			break;
+		}
+
+		if (out && (size < size_needed))
+		{
+			return CELL_HTTP_UTIL_ERROR_NO_MEMORY;
+		}
+
+		if (c1 == '%')
+		{
+			const char c2 = in[pos++];
+			const char c3 = in[pos++];
+
+			if (!c2 || !c3)
+			{
+				return CELL_HTTP_UTIL_ERROR_INVALID_URI;
+			}
+
+			const auto check_char = [](b8 c)
+			{
+				u32 utmp = static_cast<u32>(c);
+				s32 stmp = utmp - 48;
+				if (static_cast<u8>(c - 48) > 9)
+				{
+					stmp = utmp - 55;
+					if (static_cast<u8>(c + 191) > 5)
+					{
+						stmp = -1;
+						if (static_cast<u8>(c + 159) < 6)
+						{
+							stmp = utmp - 87;
+						}
+					}
+				}
+				return stmp;
+			};
+
+			const s32 tmp1 = check_char(c2);
+			const s32 tmp2 = check_char(c3);
+
+			if (tmp1 < 0 || tmp2 < 0)
+			{
+				return CELL_HTTP_UTIL_ERROR_INVALID_URI;
+			}
+
+			if (out)
+			{
+				out[out_pos++] = static_cast<char>((tmp1 & 0xffffffff) << 4) + static_cast<char>(tmp2);
+			}
+		}
+		else
+		{
+			if (out)
+			{
+				out[out_pos++] = (c1 == '+' ? ' ' : c1);
+			}
+		}
+	}
+
+	if (out)
+	{
+		if (size < size_needed)
+		{
+			return CELL_HTTP_UTIL_ERROR_NO_MEMORY;
+		}
+
+		out[out_pos] = '\0';
+	}
+
+	if (required)
+	{
+		*required = size_needed;
+	}
+
 	return CELL_OK;
 }
 
 error_code cellHttpUtilBase64Encoder(vm::ptr<char> out, vm::cptr<void> input, u32 len)
 {
 	cellHttpUtil.todo("cellHttpUtilBase64Encoder(out=*0x%x, input=*0x%x, len=%d)", out, input, len);
+
+	if (!input || !len)
+	{
+		return CELL_HTTP_UTIL_ERROR_NO_STRING;
+	}
+
+	if (!out)
+	{
+		return CELL_HTTP_UTIL_ERROR_NO_BUFFER;
+	}
+
 	return CELL_OK;
 }
 
 error_code cellHttpUtilBase64Decoder(vm::ptr<char> output, vm::cptr<void> in, u32 len)
 {
 	cellHttpUtil.todo("cellHttpUtilBase64Decoder(output=*0x%x, in=*0x%x, len=%d)", output, in, len);
+
+	if (!in)
+	{
+		return CELL_HTTP_UTIL_ERROR_NO_STRING;
+	}
+
+	if ((len & 3) != 0)
+	{
+		return CELL_HTTP_UTIL_ERROR_INVALID_LENGTH;
+	}
+
+	if (!output)
+	{
+		return CELL_HTTP_UTIL_ERROR_NO_BUFFER;
+	}
+
 	return CELL_OK;
 }
 

@@ -13,6 +13,32 @@ lv2_socket_native::lv2_socket_native(lv2_socket_family family, lv2_socket_type t
 {
 }
 
+lv2_socket_native::lv2_socket_native(utils::serial& ar, lv2_socket_type type)
+	: lv2_socket(ar, type)
+{
+#ifdef _WIN32
+	ar(so_reuseaddr, so_reuseport);
+#else
+	std::array<char, 8> dummy{};
+	ar(dummy);
+
+	if (dummy != std::array<char, 8>{})
+	{
+		sys_net.error("[Native] Savestate tried to load Win32 specific data, compatibility may be affected");
+	}
+#endif
+}
+
+void lv2_socket_native::save(utils::serial& ar)
+{
+	static_cast<lv2_socket*>(this)->save(ar, true);
+#ifdef _WIN32
+	ar(so_reuseaddr, so_reuseport);
+#else
+	ar(std::array<char, 8>{});
+#endif
+}
+
 lv2_socket_native::~lv2_socket_native()
 {
 	std::lock_guard lock(mutex);
@@ -23,6 +49,13 @@ lv2_socket_native::~lv2_socket_native()
 #else
 		::close(socket);
 #endif
+	}
+
+	if (bound_port)
+	{
+		auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+		nph.upnp_remove_port_mapping(bound_port, type == SYS_NET_SOCK_STREAM ? "TCP" : "UDP");
+		bound_port = 0;
 	}
 }
 
@@ -62,7 +95,7 @@ void lv2_socket_native::set_socket(socket_type socket, lv2_socket_family family,
 	set_non_blocking();
 }
 
-std::tuple<bool, s32, sys_net_sockaddr> lv2_socket_native::accept(bool is_lock)
+std::tuple<bool, s32, std::shared_ptr<lv2_socket>, sys_net_sockaddr> lv2_socket_native::accept(bool is_lock)
 {
 	std::unique_lock<shared_mutex> lock(mutex, std::defer_lock);
 
@@ -80,42 +113,74 @@ std::tuple<bool, s32, sys_net_sockaddr> lv2_socket_native::accept(bool is_lock)
 	{
 		auto newsock = std::make_shared<lv2_socket_native>(family, type, protocol);
 		newsock->set_socket(native_socket, family, type, protocol);
-		s32 id_ps3 = idm::import_existing<lv2_socket>(newsock);
 
-		if (id_ps3 == id_manager::id_traits<lv2_socket>::invalid)
-		{
-			return {true, -SYS_NET_EMFILE, {}};
-		}
+		// Sockets inherit non blocking behaviour from their parent
+		newsock->so_nbio = so_nbio;
 
 		sys_net_sockaddr ps3_addr = native_addr_to_sys_net_addr(native_addr);
 
-		return {true, id_ps3, ps3_addr};
+		return {true, 0, std::move(newsock), ps3_addr};
 	}
 
 	if (auto result = get_last_error(!so_nbio); result)
 	{
-		return {true, -result, {}};
+		return {true, -result, {}, {}};
 	}
 
-	return {false, {}, {}};
+	return {false, {}, {}, {}};
 }
 
-s32 lv2_socket_native::bind(const sys_net_sockaddr& addr, [[maybe_unused]] s32 ps3_id)
+s32 lv2_socket_native::bind(const sys_net_sockaddr& addr)
 {
 	std::lock_guard lock(mutex);
 
 	const auto* psa_in = reinterpret_cast<const sys_net_sockaddr_in*>(&addr);
 
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+	u32 saddr = nph.get_bind_ip();
+	if (saddr == 0)
+	{
+		// If zero use the supplied address
+		saddr = std::bit_cast<u32>(psa_in->sin_addr);
+	}
+
 	::sockaddr_in native_addr{};
 	native_addr.sin_family      = AF_INET;
 	native_addr.sin_port        = std::bit_cast<u16>(psa_in->sin_port);
-	native_addr.sin_addr.s_addr = std::bit_cast<u32>(psa_in->sin_addr);
+	native_addr.sin_addr.s_addr = saddr;
 	::socklen_t native_addr_len = sizeof(native_addr);
+
+	// Note that this is a hack(TODO)
+	// ATM we don't support binding 3658 udp because we use it for the p2ps main socket
+	// Only Fat Princess is known to do this to my knowledge
+	if (psa_in->sin_port == 3658 && type == SYS_NET_SOCK_DGRAM)
+	{
+		native_addr.sin_port = std::bit_cast<u16, be_t<u16>>(3659);
+	}
 
 	sys_net.warning("[Native] Trying to bind %s:%d", native_addr.sin_addr, std::bit_cast<be_t<u16>, u16>(native_addr.sin_port));
 
 	if (::bind(socket, reinterpret_cast<struct sockaddr*>(&native_addr), native_addr_len) == 0)
 	{
+		// Only UPNP port forward binds to 0.0.0.0
+		if (saddr == 0)
+		{
+			if (native_addr.sin_port == 0)
+			{
+				sockaddr_in client_addr;
+				socklen_t client_addr_size = sizeof(client_addr);
+				ensure(::getsockname(socket, reinterpret_cast<struct sockaddr*>(&client_addr), &client_addr_size) == 0);
+				bound_port = std::bit_cast<u16, be_t<u16>>(client_addr.sin_port);
+			}
+			else
+			{
+				bound_port = std::bit_cast<u16, be_t<u16>>(native_addr.sin_port);
+			}
+
+			nph.upnp_add_port_mapping(bound_port, type == SYS_NET_SOCK_STREAM ? "TCP" : "UDP");
+		}
+
+		last_bound_addr = addr;
 		return CELL_OK;
 	}
 	return -get_last_error(false);
@@ -131,6 +196,12 @@ std::optional<s32> lv2_socket_native::connect(const sys_net_sockaddr& addr)
 	::socklen_t native_addr_len = sizeof(native_addr);
 
 	sys_net.notice("[Native] Attempting to connect on %s:%d", native_addr.sin_addr, std::bit_cast<be_t<u16>, u16>(native_addr.sin_port));
+
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+	if (!nph.get_net_status() && is_ip_public_address(native_addr))
+	{
+		return -SYS_NET_EADDRNOTAVAIL;
+	}
 
 	if (psa_in->sin_port == 53)
 	{
@@ -155,7 +226,7 @@ std::optional<s32> lv2_socket_native::connect(const sys_net_sockaddr& addr)
 #ifdef _WIN32
 			connecting = true;
 #endif
-			this->poll_queue(u32{0}, lv2_socket::poll_t::write, [this](bs_t<lv2_socket::poll_t> events) -> bool
+			this->poll_queue(nullptr, lv2_socket::poll_t::write, [this](bs_t<lv2_socket::poll_t> events) -> bool
 				{
 					if (events & lv2_socket::poll_t::write)
 					{
@@ -168,7 +239,7 @@ std::optional<s32> lv2_socket_native::connect(const sys_net_sockaddr& addr)
 						else
 						{
 							// TODO: check error formats (both native and translated)
-							so_error = native_error ? get_last_error(false, native_error) : 0;
+							so_error = native_error ? convert_error(false, native_error) : 0;
 						}
 
 						return true;
@@ -199,7 +270,7 @@ s32 lv2_socket_native::connect_followup()
 	}
 
 	// TODO: check error formats (both native and translated)
-	return native_error ? -get_last_error(false, native_error) : 0;
+	return native_error ? -convert_error(false, native_error) : 0;
 }
 
 std::pair<s32, sys_net_sockaddr> lv2_socket_native::getpeername()
@@ -602,13 +673,18 @@ s32 lv2_socket_native::setsockopt(s32 level, s32 optname, const std::vector<u8>&
 			native_opt = optname == SYS_NET_SO_SNDTIMEO ? SO_SNDTIMEO : SO_RCVTIMEO;
 			native_val = &native_timeo;
 			native_len = sizeof(native_timeo);
+
+			const int tv_sec = ::narrow<int>(reinterpret_cast<const sys_net_timeval*>(optval.data())->tv_sec);
+			const int tv_usec = ::narrow<int>(reinterpret_cast<const sys_net_timeval*>(optval.data())->tv_usec);
 #ifdef _WIN32
-			native_timeo = ::narrow<int>(reinterpret_cast<const sys_net_timeval*>(optval.data())->tv_sec) * 1000;
-			native_timeo += ::narrow<int>(reinterpret_cast<const sys_net_timeval*>(optval.data())->tv_usec) / 1000;
+			native_timeo = tv_sec * 1000;
+			native_timeo += tv_usec / 1000;
 #else
-			native_timeo.tv_sec = ::narrow<int>(reinterpret_cast<const sys_net_timeval*>(optval.data())->tv_sec);
-			native_timeo.tv_usec = ::narrow<int>(reinterpret_cast<const sys_net_timeval*>(optval.data())->tv_usec);
+			native_timeo.tv_sec = tv_sec;
+			native_timeo.tv_usec = tv_usec;
 #endif
+			// TODO: Overflow detection?
+			(optname == SYS_NET_SO_SNDTIMEO ? so_sendtimeo : so_rcvtimeo) = tv_usec + tv_sec * 1000000;
 			break;
 		}
 		case SYS_NET_SO_LINGER:
@@ -830,9 +906,11 @@ std::optional<std::tuple<s32, std::vector<u8>, sys_net_sockaddr>> lv2_socket_nat
 			return {{0, {}, sn_addr}};
 		}
 	}
+	const auto result = get_last_error(!so_nbio && (flags & SYS_NET_MSG_DONTWAIT) == 0, connecting);
+#else
+	const auto result = get_last_error(!so_nbio && (flags & SYS_NET_MSG_DONTWAIT) == 0);
 #endif
 
-	const auto result = get_last_error(!so_nbio && (flags & SYS_NET_MSG_DONTWAIT) == 0);
 	if (result)
 	{
 		return {{-result, {}, {}}};
@@ -858,6 +936,12 @@ std::optional<s32> lv2_socket_native::sendto(s32 flags, const std::vector<u8>& b
 	{
 		native_addr = sys_net_addr_to_native_addr(*opt_sn_addr);
 		sys_net.trace("[Native] Attempting to send to %s:%d", (*native_addr).sin_addr, std::bit_cast<be_t<u16>, u16>((*native_addr).sin_port));
+
+		auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+		if (!nph.get_net_status() && is_ip_public_address(*native_addr))
+		{
+			return -SYS_NET_EADDRNOTAVAIL;
+		}
 	}
 
 	sys_net_error result{};
@@ -877,13 +961,6 @@ std::optional<s32> lv2_socket_native::sendto(s32 flags, const std::vector<u8>& b
 	{
 		const s32 ret_analyzer = dnshook.analyze_dns_packet(lv2_id, reinterpret_cast<const u8*>(buf.data()), buf.size());
 
-		// If we're offline return ENETDOWN for dns requests
-		auto& nph = g_fxo->get<named_thread<np::np_handler>>();
-		if (!nph.get_net_status())
-		{
-			return -SYS_NET_ENETDOWN;
-		}
-
 		// Check if the packet is intercepted
 		if (ret_analyzer >= 0)
 		{
@@ -898,7 +975,11 @@ std::optional<s32> lv2_socket_native::sendto(s32 flags, const std::vector<u8>& b
 		return {native_result};
 	}
 
-	result = get_last_error(!so_nbio && (flags & SYS_NET_MSG_DONTWAIT) == 0);
+#ifdef _WIN32
+	get_last_error(!so_nbio && (flags & SYS_NET_MSG_DONTWAIT) == 0, connecting);
+#else
+	get_last_error(!so_nbio && (flags & SYS_NET_MSG_DONTWAIT) == 0);
+#endif
 
 	if (result)
 	{
@@ -906,6 +987,50 @@ std::optional<s32> lv2_socket_native::sendto(s32 flags, const std::vector<u8>& b
 	}
 
 	// Note that this can only happen if the send buffer is full
+	return std::nullopt;
+}
+
+std::optional<s32> lv2_socket_native::sendmsg(s32 flags, const sys_net_msghdr& msg, bool is_lock)
+{
+	std::unique_lock<shared_mutex> lock(mutex, std::defer_lock);
+
+	if (is_lock)
+	{
+		lock.lock();
+	}
+
+	int native_flags                       = 0;
+	int native_result                      = -1;
+
+	sys_net_error result{};
+
+	if (flags & SYS_NET_MSG_WAITALL)
+	{
+		native_flags |= MSG_WAITALL;
+	}
+
+
+	for (int i = 0; i < msg.msg_iovlen; i++)
+	{
+		auto iov_base = msg.msg_iov[i].iov_base;
+		const u32 len = msg.msg_iov[i].iov_len;
+		const std::vector<u8> buf_copy(vm::_ptr<const char>(iov_base.addr()), vm::_ptr<const char>(iov_base.addr()) + len);
+
+		native_result = ::send(socket, reinterpret_cast<const char*>(buf_copy.data()), buf_copy.size(), native_flags);
+
+		if (native_result >= 0)
+		{
+			return {native_result};
+		}
+	}
+
+	result = get_last_error(!so_nbio && (flags & SYS_NET_MSG_DONTWAIT) == 0);
+
+	if (result)
+	{
+		return {-result};
+	}
+
 	return std::nullopt;
 }
 
@@ -924,6 +1049,13 @@ void lv2_socket_native::close()
 
 	auto& dnshook = g_fxo->get<np::dnshook>();
 	dnshook.remove_dns_spy(lv2_id);
+
+	if (bound_port)
+	{
+		auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+		nph.upnp_remove_port_mapping(bound_port, type == SYS_NET_SOCK_STREAM ? "TCP" : "UDP");
+		bound_port = 0;
+	}
 }
 
 s32 lv2_socket_native::shutdown(s32 how)

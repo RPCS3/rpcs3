@@ -3,6 +3,7 @@
 
 #include "Emu/CPU/CPUDisAsm.h"
 #include "Emu/Cell/PPUThread.h"
+#include "Emu/Cell/SPUThread.h"
 
 #include <QMenu>
 #include <QMessageBox>
@@ -11,7 +12,7 @@ constexpr auto qstr = QString::fromStdString;
 
 extern bool is_using_interpreter(u32 id_type);
 
-breakpoint_list::breakpoint_list(QWidget* parent, breakpoint_handler* handler) : QListWidget(parent), m_breakpoint_handler(handler)
+breakpoint_list::breakpoint_list(QWidget* parent, breakpoint_handler* handler) : QListWidget(parent), m_ppu_breakpoint_handler(handler)
 {
 	setEditTriggers(QAbstractItemView::NoEditTriggers);
 	setContextMenuPolicy(Qt::CustomContextMenu);
@@ -25,6 +26,9 @@ breakpoint_list::breakpoint_list(QWidget* parent, breakpoint_handler* handler) :
 	m_delete_action->setShortcutContext(Qt::WidgetShortcut);
 	connect(m_delete_action, &QAction::triggered, this, &breakpoint_list::OnBreakpointListDelete);
 	addAction(m_delete_action);
+
+	// Hide until used in order to allow as much space for registers panel as possible
+	hide();
 }
 
 /**
@@ -42,14 +46,16 @@ void breakpoint_list::ClearBreakpoints()
 	{
 		auto* currentItem = takeItem(0);
 		const u32 loc = currentItem->data(Qt::UserRole).value<u32>();
-		m_breakpoint_handler->RemoveBreakpoint(loc);
+		m_ppu_breakpoint_handler->RemoveBreakpoint(loc);
 		delete currentItem;
 	}
+
+	hide();
 }
 
 void breakpoint_list::RemoveBreakpoint(u32 addr)
 {
-	m_breakpoint_handler->RemoveBreakpoint(addr);
+	m_ppu_breakpoint_handler->RemoveBreakpoint(addr);
 
 	for (int i = 0; i < count(); i++)
 	{
@@ -62,12 +68,15 @@ void breakpoint_list::RemoveBreakpoint(u32 addr)
 		}
 	}
 
-	Q_EMIT RequestShowAddress(addr);
+	if (!count())
+	{
+		hide();
+	}
 }
 
 bool breakpoint_list::AddBreakpoint(u32 pc)
 {
-	if (!m_breakpoint_handler->AddBreakpoint(pc))
+	if (!m_ppu_breakpoint_handler->AddBreakpoint(pc))
 	{
 		return false;
 	}
@@ -83,7 +92,7 @@ bool breakpoint_list::AddBreakpoint(u32 pc)
 	breakpoint_item->setData(Qt::UserRole, pc);
 	addItem(breakpoint_item);
 
-	Q_EMIT RequestShowAddress(pc);
+	show();
 
 	return true;
 }
@@ -98,10 +107,55 @@ void breakpoint_list::HandleBreakpointRequest(u32 loc)
 		return;
 	}
 
-	if (m_cpu->id_type() != 1)
+	if (!is_using_interpreter(m_cpu->id_type()))
 	{
-		// TODO: SPU breakpoints
-		QMessageBox::warning(this, tr("Unimplemented Breakpoints For Thread Type!"), tr("Cannot set breakpoints on non-PPU thread currently, sorry."));
+		QMessageBox::warning(this, tr("Interpreters-Only Feature!"), tr("Cannot set breakpoints on non-interpreter decoders."));
+		return;
+	}
+
+	switch (m_cpu->id_type())
+	{
+	case 2:
+	{
+		if (loc >= SPU_LS_SIZE || loc % 4)
+		{
+			QMessageBox::warning(this, tr("Invalid Memory For Breakpoints!"), tr("Cannot set breakpoints on non-SPU executable memory!"));
+			return;
+		}
+
+		const auto spu = static_cast<spu_thread*>(m_cpu);
+		auto& list = spu->local_breakpoints;
+
+		if (list[loc / 4].test_and_invert())
+		{
+			if (std::none_of(list.begin(), list.end(), [](auto& val){ return val.load(); }))
+			{
+				spu->has_active_local_bps = false;
+			}
+		}
+		else
+		{
+			if (!spu->has_active_local_bps.exchange(true))
+			{
+				spu->state.atomic_op([](bs_t<cpu_flag>& flags)
+				{
+					if (flags & cpu_flag::pending)
+					{
+						flags += cpu_flag::pending_recheck;
+					}
+					else
+					{
+						flags += cpu_flag::pending;
+					}
+				});
+			}
+		}
+
+		return;
+	}
+	case 1: break;
+	default:
+		QMessageBox::warning(this, tr("Unimplemented Breakpoints For Thread Type!"), tr("Cannot set breakpoints on a thread not an PPU/SPU currently, sorry."));
 		return;
 	}
 
@@ -111,13 +165,7 @@ void breakpoint_list::HandleBreakpointRequest(u32 loc)
 		return;
 	}
 
-	if (!is_using_interpreter(m_cpu->id_type()))
-	{
-		QMessageBox::warning(this, tr("Interpreters-Only Feature!"), tr("Cannot set breakpoints on non-interpreter decoders."));
-		return;
-	}
-
-	if (m_breakpoint_handler->HasBreakpoint(loc))
+	if (m_ppu_breakpoint_handler->HasBreakpoint(loc))
 	{
 		RemoveBreakpoint(loc);
 	}
@@ -168,7 +216,7 @@ void breakpoint_list::OnBreakpointListDelete()
 {
 	for (int i = selectedItems().count() - 1; i >= 0; i--)
 	{
-		RemoveBreakpoint(selectedItems().at(i)->data(Qt::UserRole).value<u32>());
+		RemoveBreakpoint(::at32(selectedItems(), i)->data(Qt::UserRole).value<u32>());
 	}
 
 	if (m_context_menu)

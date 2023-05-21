@@ -2,6 +2,7 @@
 #include "cellCamera.h"
 
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_event.h"
 #include "Emu/IdManager.h"
@@ -131,6 +132,25 @@ static const char* get_camera_attr_name(s32 value)
 	return nullptr;
 }
 
+camera_context::camera_context(utils::serial& ar)
+{
+	save(ar);
+}
+
+void camera_context::save(utils::serial& ar)
+{
+	ar(init);
+
+	if (!init)
+	{
+		return;
+	}
+
+	GET_OR_USE_SERIALIZATION_VERSION(ar.is_writing(), cellCamera);
+
+	ar(notify_data_map, start_timestamp_us, read_mode, is_streaming, is_attached, is_open, info, attr, frame_num);
+}
+
 static bool check_dev_num(s32 dev_num)
 {
 	return dev_num == 0;
@@ -156,7 +176,7 @@ static error_code check_camera_info(const VariantOfCellCameraInfo& info)
 		return CELL_CAMERA_ERROR_BAD_FRAMERATE;
 	}
 
-	auto check_fps = [fps = info.framerate](const std::vector<s32>& range)
+	auto check_fps = [fps = info.framerate](std::initializer_list<s32> range)
 	{
 		return std::find(range.begin(), range.end(), fps) != range.end();
 	};
@@ -1249,7 +1269,7 @@ error_code cellCameraStart(s32 dev_num)
 
 	// TODO: Yet another CELL_CAMERA_ERROR_TIMEOUT
 
-	g_camera.start_timestamp = get_guest_system_time();
+	g_camera.start_timestamp_us = get_guest_system_time();
 	g_camera.is_streaming = true;
 
 	return CELL_OK;
@@ -1353,7 +1373,7 @@ error_code cellCameraReadEx(s32 dev_num, vm::ptr<CellCameraReadEx> read)
 				return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
 			}
 
-			g_camera.bytes_read = bytes_read;
+			g_camera.bytes_read = ::narrow<u32>(bytes_read);
 
 			cellCamera.trace("cellCameraRead: frame_number=%d, width=%d, height=%d. bytes_read=%d (passed to game: frame=%d, bytesread=%d)",
 				frame_number, width, height, bytes_read, read ? read->frame.get() : 0, read ? read->bytesread.get() : 0);
@@ -1366,18 +1386,18 @@ error_code cellCameraReadEx(s32 dev_num, vm::ptr<CellCameraReadEx> read)
 
 	if (has_new_frame)
 	{
-		g_camera.frame_timestamp = (get_guest_system_time() - g_camera.start_timestamp);
+		g_camera.frame_timestamp_us = get_guest_system_time() - g_camera.start_timestamp_us;
 	}
 
 	if (read) // NULL returns CELL_OK
 	{
-		read->timestamp = g_camera.frame_timestamp;
+		read->timestamp = g_camera.frame_timestamp_us;
 		read->frame = g_camera.frame_num;
 		read->bytesread = g_camera.bytes_read;
 
 		auto& shared_data = g_fxo->get<gem_camera_shared>();
 
-		shared_data.frame_timestamp.store(read->timestamp);
+		shared_data.frame_timestamp_us.store(read->timestamp);
 	}
 
 	return CELL_OK;
@@ -1627,19 +1647,11 @@ void camera_context::operator()()
 			else
 			{
 				std::lock_guard lock(mutex);
-				atomic_t<bool> wake_up = false;
 
-				Emu.CallFromMainThread([&]()
+				Emu.BlockingCallFromMainThread([&]()
 				{
 					send_frame_update_event = handler ? on_handler_state(handler->get_state()) : true;
-					wake_up = true;
-					wake_up.notify_one();
 				});
-
-				while (!wake_up && !Emu.IsStopped())
-				{
-					thread_ctrl::wait_on(wake_up, false);
-				}
 			}
 		}
 
@@ -1661,7 +1673,7 @@ void camera_context::operator()()
 						const u64 camera_id = 0;
 
 						data2 = image_data_size << 32 | buffer_number << 16 | camera_id;
-						data3 = get_guest_system_time() - start_timestamp; // timestamp
+						data3 = get_guest_system_time() - start_timestamp_us; // timestamp
 					}
 					else // CELL_CAMERA_READ_FUNCCALL, also default
 					{
@@ -1704,9 +1716,8 @@ void camera_context::operator()()
 bool camera_context::open_camera()
 {
 	bool result = true;
-	atomic_t<bool> wake_up = false;
 
-	Emu.CallFromMainThread([&wake_up, &result, this]()
+	Emu.BlockingCallFromMainThread([&result, this]()
 	{
 		handler.reset();
 		handler = Emu.GetCallbacks().get_camera_handler();
@@ -1715,14 +1726,7 @@ bool camera_context::open_camera()
 			handler->open_camera();
 			result = on_handler_state(handler->get_state());
 		}
-		wake_up = true;
-		wake_up.notify_one();
 	});
-
-	while (!wake_up && !Emu.IsStopped())
-	{
-		thread_ctrl::wait_on(wake_up, false);
-	}
 
 	return result;
 }
@@ -1738,20 +1742,11 @@ bool camera_context::start_camera()
 		handler->set_resolution(info.width, info.height);
 		handler->set_format(info.format, info.bytesize);
 
-		atomic_t<bool> wake_up = false;
-
-		Emu.CallFromMainThread([&wake_up, &result, this]()
+		Emu.BlockingCallFromMainThread([&result, this]()
 		{
 			handler->start_camera();
 			result = on_handler_state(handler->get_state());
-			wake_up = true;
-			wake_up.notify_one();
 		});
-
-		while (!wake_up && !Emu.IsStopped())
-		{
-			thread_ctrl::wait_on(wake_up, false);
-		}
 	}
 
 	return result;
@@ -1763,19 +1758,10 @@ bool camera_context::get_camera_frame(u8* dst, u32& width, u32& height, u64& fra
 
 	if (handler)
 	{
-		atomic_t<bool> wake_up = false;
-
-		Emu.CallFromMainThread([&]()
+		Emu.BlockingCallFromMainThread([&]()
 		{
 			result = on_handler_state(handler->get_image(dst, info.bytesize, width, height, frame_number, bytes_read));
-			wake_up = true;
-			wake_up.notify_one();
 		});
-
-		while (!wake_up && !Emu.IsStopped())
-		{
-			thread_ctrl::wait_on(wake_up, false);
-		}
 	}
 
 	return result;
@@ -1785,19 +1771,10 @@ void camera_context::stop_camera()
 {
 	if (handler)
 	{
-		atomic_t<bool> wake_up = false;
-
-		Emu.CallFromMainThread([&wake_up, this]()
+		Emu.BlockingCallFromMainThread([this]()
 		{
 			handler->stop_camera();
-			wake_up = true;
-			wake_up.notify_one();
 		});
-
-		while (!wake_up && !Emu.IsStopped())
-		{
-			thread_ctrl::wait_on(wake_up, false);
-		}
 	}
 }
 
@@ -1805,19 +1782,10 @@ void camera_context::close_camera()
 {
 	if (handler)
 	{
-		atomic_t<bool> wake_up = false;
-
-		Emu.CallFromMainThread([&wake_up, this]()
+		Emu.BlockingCallFromMainThread([this]()
 		{
 			handler->close_camera();
-			wake_up = true;
-			wake_up.notify_one();
 		});
-
-		while (!wake_up && !Emu.IsStopped())
-		{
-			thread_ctrl::wait_on(wake_up, false);
-		}
 	}
 }
 
@@ -1834,7 +1802,7 @@ void camera_context::reset_state()
 	pbuf_locked[0] = false;
 	pbuf_locked[1] = false;
 	has_new_frame = false;
-	frame_timestamp = 0;
+	frame_timestamp_us = 0;
 	bytes_read = 0;
 
 	if (info.buffer)

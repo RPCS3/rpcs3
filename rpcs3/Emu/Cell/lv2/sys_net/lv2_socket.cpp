@@ -63,21 +63,24 @@ void lv2_socket::set_poll_event(bs_t<lv2_socket::poll_t> event)
 	events += event;
 }
 
-void lv2_socket::poll_queue(u32 ppu_id, bs_t<lv2_socket::poll_t> event, std::function<bool(bs_t<lv2_socket::poll_t>)> poll_cb)
+void lv2_socket::poll_queue(std::shared_ptr<ppu_thread> ppu, bs_t<lv2_socket::poll_t> event, std::function<bool(bs_t<lv2_socket::poll_t>)> poll_cb)
 {
 	set_poll_event(event);
-	queue.emplace_back(ppu_id, poll_cb);
+	queue.emplace_back(std::move(ppu), poll_cb);
 }
 
-void lv2_socket::clear_queue(u32 ppu_id)
+s32 lv2_socket::clear_queue(ppu_thread* ppu)
 {
 	std::lock_guard lock(mutex);
 
+	s32 cleared = 0;
+
 	for (auto it = queue.begin(); it != queue.end();)
 	{
-		if (it->first == ppu_id)
+		if (it->first.get() == ppu)
 		{
 			it = queue.erase(it);
+			cleared++;
 			continue;
 		}
 
@@ -88,6 +91,8 @@ void lv2_socket::clear_queue(u32 ppu_id)
 	{
 		events.store({});
 	}
+
+	return cleared;
 }
 
 void lv2_socket::handle_events(const pollfd& native_pfd, [[maybe_unused]] bool unset_connecting)
@@ -101,7 +106,7 @@ void lv2_socket::handle_events(const pollfd& native_pfd, [[maybe_unused]] bool u
 	if (native_pfd.revents & POLLERR && events.test_and_reset(lv2_socket::poll_t::error))
 		events_happening += lv2_socket::poll_t::error;
 
-	if (events_happening)
+	if (events_happening || (!queue.empty() && (so_rcvtimeo || so_sendtimeo)))
 	{
 		std::lock_guard lock(mutex);
 #ifdef _WIN32
@@ -109,7 +114,7 @@ void lv2_socket::handle_events(const pollfd& native_pfd, [[maybe_unused]] bool u
 			set_connecting(false);
 #endif
 
-		for (auto it = queue.begin(); events_happening && it != queue.end();)
+		for (auto it = queue.begin(); it != queue.end();)
 		{
 			if (it->second(events_happening))
 			{

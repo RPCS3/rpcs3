@@ -1,8 +1,9 @@
 #pragma once
 
-#include "util/types.hpp"
-
 #include "GLRenderTargets.h"
+#include "glutils/blitter.h"
+#include "glutils/sync.hpp"
+
 #include "../Common/texture_cache.h"
 
 #include <memory>
@@ -12,10 +13,6 @@ class GLGSRender;
 
 namespace gl
 {
-	class blitter;
-
-	extern blitter* g_hw_blitter;
-
 	class cached_texture_section;
 	class texture_cache;
 
@@ -73,12 +70,12 @@ namespace gl
 			if (vram_texture && !managed_texture && get_protection() == utils::protection::no)
 			{
 				// In-place image swap, still locked. Likely a color buffer that got rebound as depth buffer or vice-versa.
-				gl::as_rtt(vram_texture)->release();
+				gl::as_rtt(vram_texture)->on_swap_out();
 
 				if (!managed)
 				{
 					// Incoming is also an external resource, reference it immediately
-					gl::as_rtt(image)->add_ref();
+					gl::as_rtt(image)->on_swap_in(is_locked());
 				}
 			}
 
@@ -148,7 +145,7 @@ namespace gl
 			}
 		}
 
-		void dma_transfer(gl::command_context& /*cmd*/, gl::texture* src, const areai& /*src_area*/, const utils::address_range& /*valid_range*/, u32 pitch)
+		void dma_transfer(gl::command_context& cmd, gl::texture* src, const areai& /*src_area*/, const utils::address_range& /*valid_range*/, u32 pitch)
 		{
 			init_buffer(src);
 			glGetError();
@@ -193,7 +190,7 @@ namespace gl
 							mem_info.image_size_in_bytes *= 2;
 						}
 
-						void* out_offset = copy_image_to_buffer(pack_info, src, &scratch_mem, 0, { {}, src->size3D() }, &mem_info);
+						void* out_offset = copy_image_to_buffer(cmd, pack_info, src, &scratch_mem, 0, 0, { {}, src->size3D() }, &mem_info);
 
 						glBindBuffer(GL_SHADER_STORAGE_BUFFER, GL_NONE);
 						glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
@@ -328,9 +325,7 @@ namespace gl
 			m_fence.wait_for_signal();
 
 			ensure(offset + GLsizeiptr{size} <= pbo.size());
-			pbo.bind(buffer::target::pixel_pack);
-
-			return glMapBufferRange(GL_PIXEL_PACK_BUFFER, offset, size, GL_MAP_READ_BIT);
+			return pbo.map(offset, size, gl::buffer::access::read);
 		}
 
 		void finish_flush();
@@ -388,26 +383,6 @@ namespace gl
 			return format;
 		}
 
-		bool is_flushed() const
-		{
-			return flushed;
-		}
-
-		bool is_synchronized() const
-		{
-			return synchronized;
-		}
-
-		void set_flushed(bool state)
-		{
-			flushed = state;
-		}
-
-		bool is_empty() const
-		{
-			return vram_texture == nullptr;
-		}
-
 		gl::texture_view* get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap)
 		{
 			return vram_texture->get_view(remap_encoding, remap);
@@ -418,14 +393,14 @@ namespace gl
 			return managed_texture.get();
 		}
 
-		gl::render_target* get_render_target()
+		gl::render_target* get_render_target() const
 		{
 			return gl::as_rtt(vram_texture);
 		}
 
 		gl::texture_view* get_raw_view()
 		{
-			return vram_texture->get_view(0xAAE4, rsx::default_remap_vector);
+			return vram_texture->get_view(GL_REMAP_IDENTITY, rsx::default_remap_vector);
 		}
 
 		bool is_depth_texture() const
@@ -446,36 +421,19 @@ namespace gl
 		using baseclass = rsx::texture_cache<gl::texture_cache, gl::texture_cache_traits>;
 		friend baseclass;
 
-	private:
-		struct discardable_storage
+		struct temporary_image_t : public gl::viewable_image, public rsx::ref_counted
 		{
-			std::unique_ptr<gl::texture> image;
-			std::unique_ptr<gl::texture_view> view;
+			u64 properties_encoding = 0;
 
-			discardable_storage() = default;
-
-			discardable_storage(std::unique_ptr<gl::texture>& tex)
-			{
-				image = std::move(tex);
-			}
-
-			discardable_storage(std::unique_ptr<gl::texture_view>& _view)
-			{
-				view = std::move(_view);
-			}
-
-			discardable_storage(std::unique_ptr<gl::texture>& tex, std::unique_ptr<gl::texture_view>& _view)
-			{
-				image = std::move(tex);
-				view = std::move(_view);
-			}
+			using gl::viewable_image::viewable_image;
 		};
 
-	private:
-
 		blitter m_hw_blitter;
-		std::vector<discardable_storage> m_temporary_surfaces;
+		std::vector<std::unique_ptr<temporary_image_t>> m_temporary_surfaces;
 
+		const u32 max_cached_image_pool_size = 256;
+
+	private:
 		void clear()
 		{
 			baseclass::clear();
@@ -564,13 +522,13 @@ namespace gl
 
 	protected:
 
-		gl::texture_view* create_temporary_subresource_view(gl::command_context &cmd, gl::texture** src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h,
+		gl::texture_view* create_temporary_subresource_view(gl::command_context& cmd, gl::texture** src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h,
 				const rsx::texture_channel_remap_t& remap_vector) override
 		{
 			return create_temporary_subresource_impl(cmd, *src, GL_NONE, GL_TEXTURE_2D, gcm_format, x, y, w, h, 1, 1, remap_vector, true);
 		}
 
-		gl::texture_view* create_temporary_subresource_view(gl::command_context &cmd, gl::texture* src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h,
+		gl::texture_view* create_temporary_subresource_view(gl::command_context& cmd, gl::texture* src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h,
 				const rsx::texture_channel_remap_t& remap_vector) override
 		{
 			return create_temporary_subresource_impl(cmd, src, static_cast<GLenum>(src->get_internal_format()),
@@ -580,7 +538,7 @@ namespace gl
 		gl::texture_view* generate_cubemap_from_images(gl::command_context& cmd, u32 gcm_format, u16 size, const std::vector<copy_region_descriptor>& sources, const rsx::texture_channel_remap_t& remap_vector) override
 		{
 			auto _template = get_template_from_collection_impl(sources);
-			auto result = create_temporary_subresource_impl(cmd, _template, GL_NONE, GL_TEXTURE_3D, gcm_format, 0, 0, size, size, 1, 1, remap_vector, false);
+			auto result = create_temporary_subresource_impl(cmd, _template, GL_NONE, GL_TEXTURE_CUBE_MAP, gcm_format, 0, 0, size, size, 1, 1, remap_vector, false);
 
 			copy_transfer_regions_impl(cmd, result->image(), sources);
 			return result;
@@ -620,10 +578,9 @@ namespace gl
 		{
 			for (auto& e : m_temporary_surfaces)
 			{
-				if (e.image.get() == view->image())
+				if (e.get() == view->image())
 				{
-					e.view.reset();
-					e.image.reset();
+					e->release();
 					return;
 				}
 			}
@@ -643,7 +600,7 @@ namespace gl
 			copy_transfer_regions_impl(cmd, dst->image(), region);
 		}
 
-		cached_texture_section* create_new_texture(gl::command_context &cmd, const utils::address_range &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u32 pitch,
+		cached_texture_section* create_new_texture(gl::command_context& cmd, const utils::address_range &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u32 pitch,
 			u32 gcm_format, rsx::texture_upload_context context, rsx::texture_dimension_extended type, bool swizzled, rsx::component_order swizzle_flags, rsx::flags32_t /*flags*/) override
 		{
 			const rsx::image_section_attributes_t search_desc = { .gcm_format = gcm_format, .width = width, .height = height, .depth = depth, .mipmaps = mipmaps };
@@ -718,7 +675,7 @@ namespace gl
 				{
 				case CELL_GCM_TEXTURE_A8R8G8B8:
 				{
-					cached.set_format(gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8, false);
+					cached.set_format(gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8_rev, true);
 					break;
 				}
 				case CELL_GCM_TEXTURE_R5G6B5:
@@ -764,13 +721,13 @@ namespace gl
 			return &cached;
 		}
 
-		cached_texture_section* upload_image_from_cpu(gl::command_context &cmd, const utils::address_range& rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u32 pitch, u32 gcm_format,
+		cached_texture_section* upload_image_from_cpu(gl::command_context& cmd, const utils::address_range& rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u32 pitch, u32 gcm_format,
 			rsx::texture_upload_context context, const std::vector<rsx::subresource_layout>& subresource_layout, rsx::texture_dimension_extended type, bool input_swizzled) override
 		{
 			auto section = create_new_texture(cmd, rsx_range, width, height, depth, mipmaps, pitch, gcm_format, context, type, input_swizzled,
 				rsx::component_order::default_, 0);
 
-			gl::upload_texture(section->get_raw_texture(), gcm_format, input_swizzled, subresource_layout);
+			gl::upload_texture(cmd, section->get_raw_texture(), gcm_format, input_swizzled, subresource_layout);
 
 			section->last_write_tag = rsx::get_shared_tag();
 			return section;
@@ -819,7 +776,7 @@ namespace gl
 				return (ifmt == gl::texture::internal_format::rgb565);
 			case CELL_GCM_TEXTURE_A8R8G8B8:
 			case CELL_GCM_TEXTURE_D8R8G8B8:
-				return (ifmt == gl::texture::internal_format::rgba8 ||
+				return (ifmt == gl::texture::internal_format::bgra8 ||
 						ifmt == gl::texture::internal_format::depth24_stencil8 ||
 						ifmt == gl::texture::internal_format::depth32f_stencil8);
 			case CELL_GCM_TEXTURE_B8:
@@ -894,12 +851,15 @@ namespace gl
 				purge_unreleased_sections();
 			}
 
-			clear_temporary_subresources();
+			if (m_temporary_surfaces.size() > max_cached_image_pool_size)
+			{
+				m_temporary_surfaces.resize(max_cached_image_pool_size / 2);
+			}
 
 			baseclass::on_frame_end();
 		}
 
-		bool blit(gl::command_context &cmd, rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool linear_interpolate, gl_render_targets& m_rtts)
+		bool blit(gl::command_context& cmd, rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool linear_interpolate, gl_render_targets& m_rtts)
 		{
 			auto result = upload_scaled_image(src, dst, linear_interpolate, cmd, m_rtts, m_hw_blitter);
 

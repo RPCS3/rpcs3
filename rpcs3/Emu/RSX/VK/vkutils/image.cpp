@@ -4,6 +4,7 @@
 #include "image.h"
 #include "image_helpers.h"
 
+#include "../VKResourceManager.h"
 #include <memory>
 
 namespace vk
@@ -70,6 +71,18 @@ namespace vk
 		info.initialLayout = initial_layout;
 		info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
+		std::array<u32, 2> concurrency_queue_families = {
+			dev.get_graphics_queue_family(),
+			dev.get_transfer_queue_family()
+		};
+
+		if (image_flags & VK_IMAGE_CREATE_SHAREABLE_RPCS3)
+		{
+			info.sharingMode = VK_SHARING_MODE_CONCURRENT;
+			info.queueFamilyIndexCount = ::size32(concurrency_queue_families);
+			info.pQueueFamilyIndices = concurrency_queue_families.data();
+		}
+
 		create_impl(dev, access_flags, memory_type, allocation_pool);
 		m_storage_aspect = get_aspect_flags(format);
 
@@ -100,8 +113,8 @@ namespace vk
 		ensure(!value && !memory);
 		validate(dev, info);
 
-		const bool nullable = !!(info.flags & VK_IMAGE_CREATE_ALLOW_NULL);
-		info.flags &= ~VK_IMAGE_CREATE_ALLOW_NULL;
+		const bool nullable = !!(info.flags & VK_IMAGE_CREATE_ALLOW_NULL_RPCS3);
+		info.flags &= ~VK_IMAGE_CREATE_SPECIAL_FLAGS_RPCS3;
 
 		CHECK_RESULT(vkCreateImage(m_device, &info, nullptr, &value));
 
@@ -169,6 +182,11 @@ namespace vk
 		return info.imageType;
 	}
 
+	VkSharingMode image::sharing_mode() const
+	{
+		return info.sharingMode;
+	}
+
 	VkImageAspectFlags image::aspect() const
 	{
 		return m_storage_aspect;
@@ -209,8 +227,14 @@ namespace vk
 	{
 		ensure(m_layout_stack.empty());
 		ensure(current_queue_family != cmd.get_queue_family());
-		VkImageSubresourceRange range = { aspect(), 0, mipmaps(), 0, layers() };
-		change_image_layout(cmd, value, current_layout, new_layout, range, current_queue_family, cmd.get_queue_family(), 0u, ~0u);
+
+		if (info.sharingMode == VK_SHARING_MODE_EXCLUSIVE || current_layout != new_layout)
+		{
+			VkImageSubresourceRange range = { aspect(), 0, mipmaps(), 0, layers() };
+			const u32 src_queue_family = info.sharingMode == VK_SHARING_MODE_EXCLUSIVE ? current_queue_family : VK_QUEUE_FAMILY_IGNORED;
+			const u32 dst_queue_family = info.sharingMode == VK_SHARING_MODE_EXCLUSIVE ? cmd.get_queue_family() : VK_QUEUE_FAMILY_IGNORED;
+			change_image_layout(cmd, value, current_layout, new_layout, range, src_queue_family, dst_queue_family, 0u, ~0u);
+		}
 
 		current_layout = new_layout;
 		current_queue_family = cmd.get_queue_family();
@@ -220,8 +244,17 @@ namespace vk
 	{
 		ensure(current_queue_family == src_queue_cmd.get_queue_family());
 		ensure(m_layout_stack.empty());
-		VkImageSubresourceRange range = { aspect(), 0, mipmaps(), 0, layers() };
-		change_image_layout(src_queue_cmd, value, current_layout, new_layout, range, current_queue_family, dst_queue_family, ~0u, 0u);
+
+		if (info.sharingMode == VK_SHARING_MODE_EXCLUSIVE || current_layout != new_layout)
+		{
+			VkImageSubresourceRange range = { aspect(), 0, mipmaps(), 0, layers() };
+			const u32 src_queue_family = info.sharingMode == VK_SHARING_MODE_EXCLUSIVE ? current_queue_family : VK_QUEUE_FAMILY_IGNORED;
+			const u32 dst_queue_family2 = info.sharingMode == VK_SHARING_MODE_EXCLUSIVE ? dst_queue_family : VK_QUEUE_FAMILY_IGNORED;
+			change_image_layout(src_queue_cmd, value, current_layout, new_layout, range, src_queue_family, dst_queue_family2, ~0u, 0u);
+		}
+
+		current_layout = new_layout;
+		current_queue_family = dst_queue_family;
 	}
 
 	void image::change_layout(const command_buffer& cmd, VkImageLayout new_layout)
@@ -391,11 +424,11 @@ namespace vk
 			}
 		}
 
-		const auto storage_key = remap_encoding | (mask << 16);
+		const u64 storage_key = remap_encoding | (static_cast<u64>(mask) << 32);
 		auto found = views.find(storage_key);
-		if (found != views.end() &&
-			found->second->info.subresourceRange.aspectMask & mask)
+		if (found != views.end())
 		{
+			ensure(found->second->info.subresourceRange.aspectMask & mask);
 			return found->second.get();
 		}
 
@@ -434,6 +467,13 @@ namespace vk
 			new_layout.a != native_component_map.a)
 		{
 			native_component_map = new_layout;
+
+			// Safely discard existing views
+			auto gc = vk::get_resource_manager();
+			for (auto& p : views)
+			{
+				gc->dispose(p.second);
+			}
 			views.clear();
 		}
 	}

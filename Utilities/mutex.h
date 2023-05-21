@@ -171,6 +171,11 @@ public:
 	{
 		return m_value.load() < c_one - 1;
 	}
+
+	bool has_waiters() const
+	{
+		return m_value.load() > c_one;
+	}
 };
 
 // Simplified shared (reader) lock implementation.

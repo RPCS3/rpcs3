@@ -12,7 +12,11 @@
 #include <QFontDatabase>
 #include <QPixmap>
 #include <QPushButton>
+#include <QFileDialog>
 #include <QKeyEvent>
+#include <QTimer>
+#include <QMenu>
+#include <QBuffer>
 
 #include <span>
 
@@ -23,6 +27,8 @@ enum GCMEnumTypes
 };
 
 constexpr auto qstr = QString::fromStdString;
+
+LOG_CHANNEL(rsx_debugger, "RSX Debugger");
 
 namespace utils
 {
@@ -39,6 +45,7 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 {
 	setWindowTitle(tr("RSX Debugger"));
 	setObjectName("rsx_debugger");
+	setAttribute(Qt::WA_DeleteOnClose);
 	setWindowFlags(Qt::Window);
 
 	// Fonts and Colors
@@ -106,10 +113,10 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	m_list_captured_draw_calls = add_rsx_tab(tr("Captured Draw Calls"), 1);
 
 	m_list_captured_frame->setHorizontalHeaderLabels(QStringList() << tr("Column"));
-	m_list_captured_frame->setColumnWidth(0, 720);
+	m_list_captured_frame->setColumnWidth(0, 540);
 
 	m_list_captured_draw_calls->setHorizontalHeaderLabels(QStringList() << tr("Draw calls"));
-	m_list_captured_draw_calls->setColumnWidth(0, 720);
+	m_list_captured_draw_calls->setColumnWidth(0, 540);
 
 	// Tools: Tools = Controls + Notebook Tabs
 	QVBoxLayout* vbox_tools = new QVBoxLayout();
@@ -139,6 +146,45 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	m_buffer_stencil = new Buffer(false, 4, tr("Stencil Buffer"), this);
 	m_buffer_tex     = new Buffer(true, 4, tr("Texture"), this);
 
+	for (Buffer* buf :
+	{
+		m_buffer_colorA, m_buffer_colorB, m_buffer_colorC, m_buffer_colorD
+		, m_buffer_depth, m_buffer_stencil, m_buffer_tex
+	})
+	{
+		buf->setContextMenuPolicy(Qt::CustomContextMenu);
+
+		connect(buf, &QWidget::customContextMenuRequested, buf, &Buffer::ShowContextMenu);
+	}
+
+	QGroupBox* tex_idx_group = new QGroupBox(tr("Texture Index or Address / Format Override"));
+	QVBoxLayout* vlayout_tex_idx = new QVBoxLayout(this);
+	QHBoxLayout* hbox_idx_line = new QHBoxLayout(this);
+	QLineEdit* tex_idx_line = new QLineEdit(this);
+	tex_idx_line->setPlaceholderText("00000000");
+	tex_idx_line->setFont(mono);
+	tex_idx_line->setMaxLength(18);
+	tex_idx_line->setFixedWidth(75);
+	tex_idx_line->setFocus();
+	tex_idx_line->setValidator(new QRegularExpressionValidator(QRegularExpression("^(0[xX])?0*[a-fA-F0-9]{0,8}$")));
+
+	QLineEdit* tex_fmt_override_line = new QLineEdit(this);
+	tex_fmt_override_line->setPlaceholderText("00");
+	tex_fmt_override_line->setFont(mono);
+	tex_fmt_override_line->setMaxLength(18);
+	tex_fmt_override_line->setFixedWidth(75);
+	tex_fmt_override_line->setFocus();
+	tex_fmt_override_line->setValidator(new QRegularExpressionValidator(QRegularExpression("^(0[xX])?0*[a-fA-F0-9]{0,2}$")));
+
+	hbox_idx_line->addWidget(tex_idx_line);
+	hbox_idx_line->addWidget(tex_fmt_override_line);
+	vlayout_tex_idx->addLayout(hbox_idx_line);
+
+	m_enabled_textures_label = new QLabel(enabled_textures_text, this);
+
+	vlayout_tex_idx->addWidget(m_enabled_textures_label);
+	tex_idx_group->setLayout(vlayout_tex_idx);
+
 	// Merge and display everything
 	QVBoxLayout* vbox_buffers1 = new QVBoxLayout();
 	vbox_buffers1->addWidget(m_buffer_colorA);
@@ -151,6 +197,7 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	vbox_buffers2->addWidget(m_buffer_colorB);
 	vbox_buffers2->addWidget(m_buffer_colorD);
 	vbox_buffers2->addWidget(m_buffer_stencil);
+	vbox_buffers2->addWidget(tex_idx_group);
 	vbox_buffers2->addStretch();
 
 	QHBoxLayout* buffer_layout = new QHBoxLayout();
@@ -174,6 +221,26 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 
 	connect(m_list_captured_draw_calls, &QTableWidget::itemClicked, this, &rsx_debugger::OnClickDrawCalls);
 
+	connect(tex_idx_line, &QLineEdit::textChanged, [this](const QString& text)
+	{
+		bool ok = false;
+		const u32 addr = (text.startsWith("0x", Qt::CaseInsensitive) ? text.right(text.size() - 2) : text).toULong(&ok, 16);
+		if (ok)
+		{
+			m_cur_texture = addr;
+		}
+	});
+
+	connect(tex_fmt_override_line, &QLineEdit::textChanged, [this](const QString& text)
+	{
+		bool ok = false;
+		const u32 fmt = (text.startsWith("0x", Qt::CaseInsensitive) ? text.right(text.size() - 2) : text).toULong(&ok, 16);
+		if (ok)
+		{
+			m_texture_format_override = fmt;
+		}
+	});
+
 	// Restore header states
 	QVariantMap states = m_gui_settings->GetValue(gui::rsx_states).toMap();
 	for (int i = 0; i < m_tw_rsx->count(); i++)
@@ -183,8 +250,12 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	for (u32 i = 0; i < frame_debug.command_queue.size(); i++)
 		m_list_captured_frame->insertRow(i);
 
-	if (!restoreGeometry(m_gui_settings->GetValue(gui::rsx_geometry).toByteArray()))
-		UpdateInformation();
+	restoreGeometry(m_gui_settings->GetValue(gui::rsx_geometry).toByteArray());
+
+	// Check for updates every ~100 ms
+	QTimer *timer = new QTimer(this);
+	connect(timer, &QTimer::timeout, this, &rsx_debugger::UpdateInformation);
+	timer->start(100);
 }
 
 void rsx_debugger::closeEvent(QCloseEvent* event)
@@ -252,12 +323,15 @@ Buffer::Buffer(bool isTex, u32 id, const QString& name, QWidget* parent)
 }
 
 // Draws a formatted and buffered <image> inside the Buffer Widget
-void Buffer::showImage(const QImage& image)
+void Buffer::showImage(QImage&& image)
 {
 	if (image.isNull())
+	{
+		m_canvas->clear();
 		return;
+	}
 
-	m_image = image;
+	m_image = std::move(image);
 	const QImage scaled = m_image.scaled(m_image_size, Qt::KeepAspectRatio, Qt::SmoothTransformation);
 	m_canvas->setPixmap(QPixmap::fromImage(scaled));
 
@@ -268,10 +342,10 @@ void Buffer::showImage(const QImage& image)
 	setLayout(new_layout);
 }
 
-void Buffer::ShowWindowed() const
+void Buffer::ShowWindowed()
 {
 	//const auto render = rsx::get_current_renderer();
-	if (!g_fxo->is_init<rsx::thread>())
+	if (m_image.isNull())
 		return;
 
 	// TODO: Is there any better way to choose the color buffers
@@ -284,7 +358,7 @@ void Buffer::ShowWindowed() const
 	//	return;
 	//}
 
-	gui::utils::show_windowed_image(m_image, title());
+	gui::utils::show_windowed_image(m_image.copy(), QString("%1 #%2").arg(title()).arg(m_window_counter++));
 
 	//if (m_isTex)
 	//{
@@ -296,6 +370,38 @@ void Buffer::ShowWindowed() const
 	//			render->textures[m_cur_texture].width(),
 	//			render->textures[m_cur_texture].height(), false);
 	//}
+}
+
+void Buffer::ShowContextMenu(const QPoint& pos)
+{
+	if (m_image.isNull())
+		return;
+
+	QMenu context_menu(this);
+
+	QAction action(tr("Save Image At"), this);
+	connect(&action, &QAction::triggered, this, [&]()
+	{
+		if (m_image.isNull())
+			return;
+
+		const QString path = QFileDialog::getSaveFileName(this, tr("Save Image"), "", "Image (*.png)");
+
+		if (path.isEmpty())
+			return;
+
+		if (m_image.save(path, "PNG", 100))
+		{
+			rsx_debugger.success("Saved image to '%s'", path.toStdString());
+		}
+		else
+		{
+			rsx_debugger.error("Failure to save image to '%s'", path.toStdString());
+		}
+	});
+
+	context_menu.addAction(&action);
+	context_menu.exec(mapToGlobal(pos));
 }
 
 namespace
@@ -370,19 +476,15 @@ namespace
 	}
 
 	/**
-	 * Return a new buffer that can be passed to QImage.
+	 * Fill a buffer that can be passed to QImage.
 	 */
-	u8* convert_to_QImage_buffer(rsx::surface_color_format format, std::span<const std::byte> orig_buffer, usz width, usz height) noexcept
+	void convert_to_QImage_buffer(rsx::surface_color_format format, std::span<const std::byte> orig_buffer, std::vector<u8>& buffer, usz width, usz height) noexcept
 	{
-		if (width == 0 || height == 0)
-		{
-			return nullptr;
-		}
+		buffer.resize(width * height * 4);
 
-		u8* buffer = static_cast<u8*>(std::malloc(width * height * 4));
-		if (!buffer)
+		if (buffer.empty())
 		{
-			return nullptr;
+			return;
 		}
 
 		for (u32 i = 0; i < width * height; i++)
@@ -394,7 +496,6 @@ namespace
 			buffer[2 + i * 4] = colors[2];
 			buffer[3 + i * 4] = 255;
 		}
-		return buffer;
 	}
 }
 
@@ -419,8 +520,9 @@ void rsx_debugger::OnClickDrawCalls()
 	{
 		if (width && height && !draw_call.color_buffer[i].empty())
 		{
-			unsigned char* buffer = convert_to_QImage_buffer(draw_call.state.surface_color(), draw_call.color_buffer[i], width, height);
-			buffers[i]->showImage(QImage(buffer, static_cast<int>(width), static_cast<int>(height), QImage::Format_RGB32, [](void* buffer){ std::free(buffer); }, buffer));
+			std::vector<u8>& buffer = buffers[i]->cache;
+			convert_to_QImage_buffer(draw_call.state.surface_color(), draw_call.color_buffer[i], buffer, width, height);
+			buffers[i]->showImage(QImage(buffer.data(), static_cast<int>(width), static_cast<int>(height), QImage::Format_RGB32));
 		}
 	}
 
@@ -429,7 +531,8 @@ void rsx_debugger::OnClickDrawCalls()
 		if (width && height && !draw_call.depth_stencil[0].empty())
 		{
 			const std::span<const std::byte> orig_buffer = draw_call.depth_stencil[0];
-			u8* buffer = static_cast<u8*>(std::malloc(4ULL * width * height));
+			m_buffer_depth->cache.resize(4ULL * width * height);
+			const auto buffer = m_buffer_depth->cache.data();
 
 			if (draw_call.state.surface_depth_fmt() == rsx::surface_depth_format::z24s8)
 			{
@@ -461,7 +564,7 @@ void rsx_debugger::OnClickDrawCalls()
 					}
 				}
 			}
-			m_buffer_depth->showImage(QImage(buffer, static_cast<int>(width), static_cast<int>(height), QImage::Format_RGB32, [](void* buffer){ std::free(buffer); }, buffer));
+			m_buffer_depth->showImage(QImage(buffer, static_cast<int>(width), static_cast<int>(height), QImage::Format_RGB32));
 		}
 	}
 
@@ -470,7 +573,8 @@ void rsx_debugger::OnClickDrawCalls()
 		if (width && height && !draw_call.depth_stencil[1].empty())
 		{
 			const std::span<const std::byte> orig_buffer = draw_call.depth_stencil[1];
-			u8* buffer = static_cast<u8*>(std::malloc(4ULL * width * height));
+			std::vector<u8>& buffer = m_buffer_stencil->cache;
+			buffer.resize(4ULL * width * height);
 
 			for (u32 row = 0; row < height; row++)
 			{
@@ -483,7 +587,7 @@ void rsx_debugger::OnClickDrawCalls()
 					buffer[4 * col + 3 + width * row * 4] = 255;
 				}
 			}
-			m_buffer_stencil->showImage(QImage(buffer, static_cast<int>(width), static_cast<int>(height), QImage::Format_RGB32));
+			m_buffer_stencil->showImage(QImage(buffer.data(), static_cast<int>(width), static_cast<int>(height), QImage::Format_RGB32));
 		}
 	}
 
@@ -497,7 +601,7 @@ void rsx_debugger::OnClickDrawCalls()
 	//m_list_index_buffer->insertColumn(0, "Index", 0, 700);
 	if (frame_debug.draw_calls[draw_id].state.index_type() == rsx::index_array_type::u16)
 	{
-		u16 *index_buffer = reinterpret_cast<u16*>(frame_debug.draw_calls[draw_id].index.data());
+		auto index_buffer = ref_ptr<u16[]>(frame_debug.draw_calls[draw_id].index);
 		for (u32 i = 0; i < frame_debug.draw_calls[draw_id].vertex_count; ++i)
 		{
 			m_list_index_buffer->insertItem(i, qstr(std::to_string(index_buffer[i])));
@@ -505,7 +609,7 @@ void rsx_debugger::OnClickDrawCalls()
 	}
 	if (frame_debug.draw_calls[draw_id].state.index_type() == rsx::index_array_type::u32)
 	{
-		u32 *index_buffer = reinterpret_cast<u32*>(frame_debug.draw_calls[draw_id].index.data());
+		auto index_buffer = ref_ptr<u32[]>(frame_debug.draw_calls[draw_id].index);
 		for (u32 i = 0; i < frame_debug.draw_calls[draw_id].vertex_count; ++i)
 		{
 			m_list_index_buffer->insertItem(i, qstr(std::to_string(index_buffer[i])));
@@ -538,84 +642,560 @@ void rsx_debugger::GetMemory() const
 		file.write(dump);
 	}
 
-	for (u32 i = 0;i < frame_debug.draw_calls.size(); i++)
+	for (u32 i = 0; i < frame_debug.draw_calls.size(); i++)
 		m_list_captured_draw_calls->setItem(i, 0, new QTableWidgetItem(qstr(frame_debug.draw_calls[i].name)));
 }
 
 void rsx_debugger::GetBuffers() const
 {
 	const auto render = rsx::get_current_renderer();
-	if (!render)
+	if (!render || !render->is_initialized || !render->local_mem_size || !render->is_paused())
 	{
 		return;
 	}
 
-	// Draw Buffers
-	// TODO: Currently it only supports color buffers
-	for (u32 bufferId=0; bufferId < render->display_buffers_count; bufferId++)
+	const auto addrs = render->get_color_surface_addresses();
+
+	// Color buffers
+	for (u32 buffer_it = 0; buffer_it < addrs.size(); buffer_it++)
 	{
-		const auto buffers = render->display_buffers;
-		const u32 rsx_buffer_addr = rsx::constants::local_mem_base + buffers[bufferId].offset;
+		const u32 rsx_buffer_addr = addrs[buffer_it];
+		const u32 width = rsx::method_registers.surface_clip_width();
+		const u32 pitch = rsx::method_registers.surface_pitch(buffer_it);
+		const u32 height = rsx::method_registers.surface_clip_height();
 
-		const u32 width  = buffers[bufferId].width;
-		const u32 height = buffers[bufferId].height;
+		Buffer* panel{};
+		switch (buffer_it)
+		{
+		case 0:  panel = m_buffer_colorA; break;
+		case 1:  panel = m_buffer_colorB; break;
+		case 2:  panel = m_buffer_colorC; break;
+		default: panel = m_buffer_colorD; break;
+		}
 
-		if (!vm::check_addr(rsx_buffer_addr, vm::page_readable, width * height * 4))
+		if (!height || !pitch)
+		{
+			panel->showImage(QImage());
 			continue;
+		}
+
+		u32 bpp = 4;
+		QImage::Format format = QImage::Format_RGB32;
+		const auto fmt = rsx::method_registers.surface_color();
+		bool bswap = true;
+		u32 dst_bpp = 0;
+
+		switch (fmt)
+		{
+		//case rsx::surface_color_format::x1r5g5b5_z1r5g5b5:
+		//case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
+		case rsx::surface_color_format::r5g6b5:
+		{
+			format = QImage::Format_RGB16;
+			bpp = 2;
+			break;
+		}
+		//case rsx::surface_color_format::x8r8g8b8_z8r8g8b8:
+		//case rsx::surface_color_format::x8r8g8b8_o8r8g8b8:
+		case rsx::surface_color_format::a8r8g8b8:
+		{
+			// For now ignore alpha channel because it has a tendency of being 0
+			//format = QImage::Format_ARGB32;
+			break;
+		}
+		case rsx::surface_color_format::b8:
+		{
+			format = QImage::Format_Grayscale8;
+			bpp = 1;
+			break;
+		}
+		case rsx::surface_color_format::g8b8:
+		{
+			bpp = 2;
+			dst_bpp = 4;
+			format = QImage::Format_RGBA8888;
+			bswap = false;
+			break;
+		}
+		//case rsx::surface_color_format::w16z16y16x16,
+		//case rsx::surface_color_format::w32z32y32x32,
+		//case rsx::surface_color_format::x32,
+		//case rsx::surface_color_format::x8b8g8r8_z8b8g8r8,
+		//case rsx::surface_color_format::x8b8g8r8_o8b8g8r8,
+		case rsx::surface_color_format::a8b8g8r8:
+		{
+			format = QImage::Format_RGBA8888;
+			break;
+		}
+		default:
+		{
+			break;
+		}
+		}
+
+		// PS3 buffer size (for memory validation)
+		const u32 src_mem_size = pitch * (height - 1) + width * bpp;
+
+		if ((height > 1 && pitch < width * bpp) || !src_mem_size || !vm::check_addr(rsx_buffer_addr, vm::page_readable, src_mem_size))
+		{
+			panel->showImage(QImage());
+			continue;
+		}
+
+		// Touch RSX memory to potentially flush GPU memory (must occur in named_thread)
+		[[maybe_unused]] auto buffer_touch_1 = named_thread("RSX Buffer Touch"sv, [&]()
+		{
+			for (u32 page_start = rsx_buffer_addr & -4096; page_start < rsx_buffer_addr + src_mem_size; page_start += 4096)
+			{
+				static_cast<void>(vm::_ref<atomic_t<u8>>(page_start).load());
+			}
+		});
+
+		bswap ^= std::endian::native == std::endian::big;
+
+		if (!dst_bpp)
+		{
+			dst_bpp = bpp;
+		}
 
 		const auto rsx_buffer = vm::get_super_ptr<const u8>(rsx_buffer_addr);
+		panel->cache.resize(std::max<usz>(panel->cache.size(), width * height * 16));
+		const auto buffer = panel->cache.data();
 
-		u8* buffer = static_cast<u8*>(std::malloc(4ULL * width * height));
-
-		// ABGR to ARGB and flip vertically
-		for (u32 y = 0; y < height; y++)
+		if (dst_bpp == bpp && pitch == width * bpp)
 		{
-			for (u32 i = 0, j = 0; j < width * 4; i += 4, j += 4)
+			std::memcpy(buffer, rsx_buffer, src_mem_size);
+		}
+		else
+		{
+			for (u32 y = 0; y < height; y++)
 			{
-				buffer[i + 0 + y * width * 4] = rsx_buffer[j + 1 + (height - y - 1) * width * 4]; // B
-				buffer[i + 1 + y * width * 4] = rsx_buffer[j + 2 + (height - y - 1) * width * 4]; // G
-				buffer[i + 2 + y * width * 4] = rsx_buffer[j + 3 + (height - y - 1) * width * 4]; // R
-				buffer[i + 3 + y * width * 4] = rsx_buffer[j + 0 + (height - y - 1) * width * 4]; // A
+				const usz line_start = y * pitch;
+				std::memcpy(buffer + y * width * dst_bpp, rsx_buffer + line_start, width * bpp);
 			}
 		}
 
-		// TODO: Is there any better way to clasify the color buffers? How can we include the depth and stencil buffers?
-		Buffer* pnl;
-		switch(bufferId)
+		switch (fmt)
 		{
-		case 0:  pnl = m_buffer_colorA; break;
-		case 1:  pnl = m_buffer_colorB; break;
-		case 2:  pnl = m_buffer_colorC; break;
-		default: pnl = m_buffer_colorD; break;
+		case rsx::surface_color_format::g8b8:
+		{
+			for (u32 y = 0; y < height; y++)
+			{
+				for (u32 x = 0; x < std::max(pitch, 1u) - 1; x += 2)
+				{
+					const usz line_start = y * pitch;
+
+					std::memcpy(buffer + line_start * 2 + x * 2 + 1, buffer + line_start * 2 + x, 2);
+					buffer[line_start * 2 + x * 2 + 0] = 0;
+					buffer[line_start * 2 + x * 2 + 3] = 0xff;
+				}
+			}
+
+			break;
 		}
-		pnl->showImage(QImage(buffer, width, height, QImage::Format_RGB32, [](void* buffer){ std::free(buffer); }, buffer));
+		case rsx::surface_color_format::a8b8g8r8:
+		{
+			format = QImage::Format_RGBA8888;
+			bswap = true;
+			break;
+		}
+		case rsx::surface_color_format::a8r8g8b8:
+		{
+			break;
+		}
+		default:
+		{
+			break;
+		}
+		}
+
+		if (bswap && bpp != 1)
+		{
+			if (bpp == 2)
+			{
+				for (u32 i = 0; i < panel->cache.size(); i += 2)
+				{
+					u16 res{};
+					std::memcpy(&res, buffer + i, 2);
+					res = stx::se_storage<u16>::swap(res);
+					std::memcpy(buffer + i, &res, 2);
+				}
+			}
+			else if (ensure(bpp == 4))
+			{
+				for (u32 i = 0; i < panel->cache.size(); i += 4)
+				{
+					u32 res{};
+					std::memcpy(&res, buffer + i, 4);
+					res = stx::se_storage<u32>::swap(res);
+					std::memcpy(buffer + i, &res, 4);
+				}
+			}
+		}
+
+		panel->showImage(QImage(panel->cache.data(), width, height, format));
 	}
 
-	// Draw Texture
-	//if (!render->textures[m_cur_texture].enabled())
-	//	return;
+	// One iteration for depth, second for stencil
+	for (u32 buffer_it = 0; buffer_it < 2; buffer_it++)
+	{
+		const u32 rsx_buffer_addr = render->get_zeta_surface_address();
 
-	//u32 offset = render->textures[m_cur_texture].offset();
+		const u32 width  = rsx::method_registers.surface_clip_width();
+		const u32 height = rsx::method_registers.surface_clip_height();
+		const u32 pitch = rsx::method_registers.surface_z_pitch();
 
-	//if(!offset)
-	//	return;
+		u32 bpp = 4;
+		QImage::Format format = QImage::Format_Grayscale16;
+		const auto fmt = rsx::method_registers.surface_depth_fmt();
+		bool has_stencil = false;
+		bool is_stencil = buffer_it == 1;
+		bool is_float = false;
 
-	//u8 location = render->textures[m_cur_texture].location();
+		switch (fmt)
+		{
+		case rsx::surface_depth_format2::z16_float:
+		{
+			is_float = true;
+			[[fallthrough]];
+		}
+		case rsx::surface_depth_format2::z16_uint:
+		{
+			if (is_stencil)
+			{
+				continue;
+			}
 
-	//if(location > 1)
-	//	return;
+			bpp = 2;
+			break;
+		}
+		case rsx::surface_depth_format2::z24s8_float:
+		{
+			is_float = true;
+			[[fallthrough]];
+		}
+		case rsx::surface_depth_format2::z24s8_uint:
+		{
+			format = QImage::Format_RGB16;
+			has_stencil = true;
+			break;
+		}
+		default:
+		{
+			fmt::throw_exception("Unreachable!");
+			break;
+		}
+		}
 
-	//u32 TexBuffer_addr = rsx::get_address(offset, location);
+		// PS3 buffer size (for memory validation)
+		const u32 src_mem_size = pitch * (height - 1) + width * bpp;
 
-	//if(!vm::check_addr(TexBuffer_addr))
-	//	return;
+		Buffer* panel{};
+		switch (buffer_it)
+		{
+		case 0:  panel = m_buffer_depth; break;
+		default: panel = m_buffer_stencil; break;
+		}
 
-	//unsigned char* TexBuffer = vm::get_super_ptr<u8>(TexBuffer_addr);
+		if ((height > 1 && pitch < width * bpp) || !height || !src_mem_size || !vm::check_addr(rsx_buffer_addr, vm::page_readable, src_mem_size))
+		{
+			panel->showImage(QImage());
+			continue;
+		}
 
-	//const u32 width  = render->textures[m_cur_texture].width();
-	//const u32 height = render->textures[m_cur_texture].height();
-	//unsigned char* buffer = (unsigned char*)malloc(width * height * 3);
-	//std::memcpy(buffer, vm::base(TexBuffer_addr), width * height * 3);
+		// Touch RSX memory to potentially flush GPU memory (must occur in named_thread)
+		[[maybe_unused]] auto buffer_touch_2 = named_thread("RSX Buffer Touch"sv, [&]()
+		{
+			for (u32 page_start = rsx_buffer_addr & -4096; page_start < rsx_buffer_addr + src_mem_size; page_start += 4096)
+			{
+				static_cast<void>(vm::_ref<atomic_t<u8>>(page_start).load());
+			}
+		});
 
-	//m_buffer_tex->showImage(QImage(buffer, m_text_width, m_text_height, QImage::Format_RGB32));
+		const auto rsx_buffer = vm::get_super_ptr<const u8>(rsx_buffer_addr);
+		panel->cache.resize(std::max<usz>(panel->cache.size(), width * height * 4));
+		const auto buffer = panel->cache.data();
+
+		if (is_stencil)
+		{
+			format = QImage::Format_Grayscale8;
+
+			for (u32 y = 0; y < height; y++)
+			{
+				for (u32 x = 0; x < width; x++)
+				{
+					const usz line_start = y * pitch;
+					std::memcpy(buffer + y * width + x, rsx_buffer + line_start + x * 4 + 3, 1);
+				}
+			}
+		}
+		else if (has_stencil)
+		{
+			format = QImage::Format_Grayscale16;
+
+			if (false && is_float)
+			{
+				// TODO
+			}
+			else
+			{
+				for (u32 y = 0; y < height; y++)
+				{
+					for (u32 x = 0; x < width; x++)
+					{
+						const usz line_start = y * pitch;
+
+						be_t<u32> data{};
+						std::memcpy(&data, rsx_buffer + line_start + x * 4, 4);
+						const u16 res = static_cast<u16>(u64{data / 256} * 0xFFFF / 0xFFFFFF);
+						std::memcpy(buffer + y * width * 2 + x * 2, &res, 2);
+					}
+				}
+			}
+		}
+		else
+		{
+			format = QImage::Format_Grayscale16;
+
+			for (u32 y = 0; y < height; y++)
+			{
+				for (u32 x = 0; x < width; x++)
+				{
+					be_t<u16> data{};
+					std::memcpy(&data, rsx_buffer + pitch * y + x * 2, 2);
+					const u16 res = is_float ? static_cast<u16>(f16_to_f32(static_cast<f16>(+data))) : +data;
+					std::memcpy(buffer + y * width * 2 + x * 2, &res, 2);
+				}
+			}
+		}
+
+		panel->showImage(QImage(panel->cache.data(), width, height, format));
+	}
+
+	auto& textures = rsx::method_registers.fragment_textures;
+
+	u32 texture_addr = m_cur_texture;
+	u32 tex_fmt_raw = 0;
+	u32 tex_fmt = 0;
+
+	u32 width = 1280;
+	u32 height = 720;
+	u32 pitch = 0;
+
+	if (texture_addr < 16)
+	{
+		if (textures[texture_addr].enabled())
+		{
+			width = textures[texture_addr].width();
+			height = textures[texture_addr].height();
+			pitch = textures[texture_addr].pitch();
+			tex_fmt_raw = textures[texture_addr].format();
+			tex_fmt = tex_fmt_raw & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN); // TOOD: Support these flags
+			texture_addr = rsx::get_address(textures[texture_addr].offset(), textures[texture_addr].location(), 1);
+		}
+	}
+
+	QString text;
+
+	for (u32 i = 0; i < textures.size(); i++)
+	{
+		// Technically it can also check if used by shader but idk
+		if (textures[i].enabled() && textures[i].width())
+		{
+			if (!text.isEmpty())
+			{
+				text += QStringLiteral(", ");
+			}
+
+			text += QStringLiteral("%0").arg(i);
+		}
+	}
+
+	m_enabled_textures_label->setText(enabled_textures_text + text);
+
+	if (m_texture_format_override)
+	{
+		tex_fmt = m_texture_format_override;
+	}
+
+	u32 bytes_per_block = 4;
+	u32 pixels_per_block = 1;
+	bool bswap = true;
+
+	// Naturally only a handful of common formats are implemented at the moment
+
+	switch (tex_fmt)
+	{
+	case CELL_GCM_TEXTURE_B8:
+	{
+		bytes_per_block = 1;
+		break;
+	}
+	case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
+	{
+		bytes_per_block = 8;
+		pixels_per_block = 16;
+		break;
+	}
+	default:
+	{
+		break;
+	}
+	}
+
+	const u32 line_bytes_count = width * bytes_per_block / pixels_per_block;
+
+	if (!pitch)
+	{
+		pitch = line_bytes_count;
+	}
+
+	// PS3 buffer size (for memory validation)
+	const u32 src_mem_size = pitch * (height - 1) + line_bytes_count;
+
+	if (!src_mem_size || !height || !vm::check_addr(texture_addr, vm::page_readable, src_mem_size))
+	{
+		m_buffer_tex->showImage(QImage());
+		return;
+	}
+
+	[[maybe_unused]] auto buffer_touch_3 = named_thread("RSX Buffer Touch"sv, [&]()
+	{
+		// Must touch every page
+		for (u32 i = texture_addr & -4096; i < texture_addr + src_mem_size; i += 4096)
+		{
+			static_cast<void>(vm::_ref<atomic_t<u8>>(i).load());
+		}
+	});
+
+	const auto rsx_buffer = vm::get_super_ptr<const u8>(texture_addr);
+	m_buffer_tex->cache.resize(std::max<usz>(m_buffer_tex->cache.size(), width * height * 16 + pitch));
+
+	const auto buffer = m_buffer_tex->cache.data();
+	if (pixels_per_block != 1 || pitch == line_bytes_count)
+	{
+		std::memcpy(buffer, rsx_buffer, src_mem_size);
+	}
+	else
+	{
+		for (u32 y = 0; y < height; y++)
+		{
+			std::memcpy(buffer + y * line_bytes_count, rsx_buffer + y * pitch, line_bytes_count);
+		}
+	}
+
+	switch (tex_fmt)
+	{
+	case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
+	{
+		bswap = false;
+
+		// Compressed texture to RGB
+		for (usz i = 0; i < width * height / 16; i++)
+		{
+			le_t<u16> color0{}, color1{};
+			std::memcpy(&color0, rsx_buffer + i * 8, 2);
+			std::memcpy(&color1, rsx_buffer + i * 8 + 2, 2);
+
+			be_t<u32> control{};
+			std::memcpy(&control, rsx_buffer + i * 8 + 4, 4);
+
+			for (u32 sub = 0; sub < 16; sub++)
+			{
+				const u32 code = (+control >> (sub * 2)) & 3;
+
+				auto convert_to_rgb888 = [](u32 input) -> std::tuple<u32, u32, u32>
+				{
+					u32 r = ((input >> 11) % 32) * 255 / 32;
+					u32 g = ((input >> 5) % 64) * 255 / 64;
+					u32 b = (input % 32) * 255 / 32;
+					return std::make_tuple(r, g, b);
+				};
+
+				const auto [r0, g0, b0] = convert_to_rgb888(color0);
+				const auto [r1, g1, b1] = convert_to_rgb888(color1);
+
+				auto compute_color = [&](u32 a0, u32 a1, u8 shift) -> u32
+				{
+					u32 a0_portion = 1;
+					u32 a1_portion = 1;
+
+					switch (code)
+					{
+					case 0:
+					{
+						return a0; // Color0 only
+					}
+					case 1:
+					{
+						return a1; // Color1 only
+					}
+					case 2:
+					case 3:
+					{
+						if (a0 > a1)
+						{
+							if (code == 3)
+							{
+								a1_portion = 2;
+							}
+							else
+							{
+								a0_portion = 2;
+							}
+						}
+						else if (code == 3)
+						{
+							return 0;
+						} // otherwise is the default values
+
+						break;
+					}
+					default:
+					{
+						fmt::throw_exception("Unreachable!");
+						break;
+					}
+					}
+
+					return ((a1 * a1_portion + a0 * a0_portion) / (a0_portion + a1_portion)) << shift;
+				};
+
+				const le_t<u32> dest_color = compute_color(r0, r1, 0) + compute_color(g0, g1, 8) + compute_color(b0, b1, 16) + (255 << 24);
+				std::memcpy(buffer + ((i % (width / 4) * 4 + sub % 4) + ((i / (width / 4) * 4 + sub / 4) * width)) * sizeof(u32), &dest_color, 4);
+			}
+		}
+		break;
+	}
+	default:
+	{
+		break;
+	}
+	}
+
+	if (bswap && bytes_per_block != 1 && pixels_per_block == 1)
+	{
+		if (bytes_per_block == 2)
+		{
+			for (u32 i = 0; i < m_buffer_tex->cache.size(); i += 2)
+			{
+				u16 res{};
+				std::memcpy(&res, buffer + i, 2);
+				res = stx::se_storage<u16>::swap(res);
+				std::memcpy(buffer + i, &res, 2);
+			}
+		}
+		else if (ensure(bytes_per_block == 4))
+		{
+			for (u32 i = 0; i < m_buffer_tex->cache.size(); i += 4)
+			{
+				u32 res{};
+				std::memcpy(&res, buffer + i, 4);
+				res = stx::se_storage<u32>::swap(res);
+				std::memcpy(buffer + i, &res, 4);
+			}
+		}
+	}
+
+	m_buffer_tex->showImage(QImage(m_buffer_tex->cache.data(), width, height, QImage::Format_RGB32));
 }

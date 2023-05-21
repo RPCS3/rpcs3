@@ -2,7 +2,7 @@
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/IdManager.h"
 #include "Emu/VFS.h"
-
+#include "Utilities/StrUtil.h"
 #include "cellSysutil.h"
 
 LOG_CHANNEL(cellVideoExport);
@@ -77,7 +77,7 @@ struct video_export
 };
 
 
-bool check_file_path(const std::string& file_path)
+bool check_movie_path(const std::string& file_path)
 {
 	if (file_path.size() >= CELL_VIDEO_EXPORT_UTIL_HDD_PATH_MAX)
 	{
@@ -111,6 +111,32 @@ bool check_file_path(const std::string& file_path)
 	return true;
 }
 
+std::string get_available_movie_path(const std::string& filename)
+{
+	const std::string movie_dir = "/dev_hdd0/movie/";
+	std::string dst_path = vfs::get(movie_dir + filename);
+
+	// Do not overwrite existing files. Add a suffix instead.
+	for (u32 i = 0; fs::exists(dst_path); i++)
+	{
+		const std::string suffix = fmt::format("_%d", i);
+		std::string new_filename = filename;
+
+		if (const usz pos = new_filename.find_last_of('.'); pos != std::string::npos)
+		{
+			new_filename.insert(pos, suffix);
+		}
+		else
+		{
+			new_filename.append(suffix);
+		}
+
+		dst_path = vfs::get(movie_dir + new_filename);
+	}
+
+	return dst_path;
+}
+
 
 error_code cellVideoExportInitialize2(u32 version, vm::ptr<CellVideoExportUtilFinishCallback> funcFinish, vm::ptr<void> userdata)
 {
@@ -138,7 +164,7 @@ error_code cellVideoExportInitialize2(u32 version, vm::ptr<CellVideoExportUtilFi
 error_code cellVideoExportInitialize(u32 version, u32 container, vm::ptr<CellVideoExportUtilFinishCallback> funcFinish, vm::ptr<void> userdata)
 {
 	cellVideoExport.notice("cellVideoExportInitialize(version=0x%x, container=0x%x, funcFinish=*0x%x, userdata=*0x%x)", version, container, funcFinish, userdata);
-	
+
 	if (version != CELL_VIDEO_EXPORT_UTIL_VERSION_CURRENT)
 	{
 		return CELL_VIDEO_EXPORT_UTIL_ERROR_PARAM;
@@ -178,7 +204,11 @@ error_code cellVideoExportProgress(vm::ptr<CellVideoExportUtilFinishCallback> fu
 
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
-		funcFinish(ppu, 0xFFFF, userdata); // 0-0xFFFF where 0xFFFF = 100%
+		// Set the status as 0x0-0xFFFF (0-100%) depending on the copy status.
+		// Only the copy or move of the movie and metadata files is considered for the progress.
+		const auto& vexp = g_fxo->get<video_export>();
+
+		funcFinish(ppu, vexp.progress, userdata);
 		return CELL_OK;
 	});
 
@@ -189,21 +219,32 @@ error_code cellVideoExportFromFileWithCopy(vm::cptr<char> srcHddDir, vm::cptr<ch
 {
 	cellVideoExport.todo("cellVideoExportFromFileWithCopy(srcHddDir=%s, srcHddFile=%s, param=*0x%x, funcFinish=*0x%x, userdata=*0x%x)", srcHddDir, srcHddFile, param, funcFinish, userdata);
 
-	if (!param || !srcHddDir || !srcHddDir[0] || !srcHddFile || !srcHddFile[0])
+	if (!param || !funcFinish || !srcHddDir || !srcHddDir[0] || !srcHddFile || !srcHddFile[0])
 	{
 		return CELL_VIDEO_EXPORT_UTIL_ERROR_PARAM;
 	}
-	
-	const std::string file_path = fmt::format("%s/%s", srcHddDir, srcHddFile);
 
-	if (!check_file_path(file_path))
+	// TODO: check param members ?
+
+	cellVideoExport.notice("cellVideoExportFromFileWithCopy: param: title=%s, game_title=%s, game_comment=%s, editable=%d", param->title, param->game_title, param->game_comment, param->editable);
+
+	const std::string file_path = fmt::format("%s/%s", srcHddDir.get_ptr(), srcHddFile.get_ptr());
+
+	if (!check_movie_path(file_path))
 	{
 		return { CELL_VIDEO_EXPORT_UTIL_ERROR_PARAM, file_path };
 	}
 
-	if (!funcFinish)
+	std::string filename = param->title.get_ptr();
+
+	if (filename.empty())
 	{
-		return CELL_VIDEO_EXPORT_UTIL_ERROR_PARAM;
+		return { CELL_VIDEO_EXPORT_UTIL_ERROR_PARAM, "title empty" };
+	}
+
+	if (const std::string extension = get_file_extension(file_path); !extension.empty())
+	{
+		fmt::append(filename, ".%s", extension);
 	}
 
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
@@ -211,13 +252,12 @@ error_code cellVideoExportFromFileWithCopy(vm::cptr<char> srcHddDir, vm::cptr<ch
 		auto& vexp = g_fxo->get<video_export>();
 		vexp.progress = 0; // 0%
 
-		const std::string filename = file_path.substr(file_path.find_last_of('/') + 1);
 		const std::string src_path = vfs::get(file_path);
-		const std::string dst_path = vfs::get("/dev_hdd0/video/" + filename);
+		const std::string dst_path = get_available_movie_path(filename);
 
 		cellVideoExport.notice("Copying file from '%s' to '%s'", file_path, dst_path);
 
-		if (!fs::copy_file(src_path, dst_path, true))
+		if (!fs::create_path(fs::get_parent_dir(dst_path)) || !fs::copy_file(src_path, dst_path, false))
 		{
 			// TODO: find out which error is used
 			cellVideoExport.error("Failed to copy file from '%s' to '%s' (%s)", src_path, dst_path, fs::g_tls_error);
@@ -242,22 +282,33 @@ error_code cellVideoExportFromFileWithCopy(vm::cptr<char> srcHddDir, vm::cptr<ch
 error_code cellVideoExportFromFile(vm::cptr<char> srcHddDir, vm::cptr<char> srcHddFile, vm::ptr<CellVideoExportSetParam> param, vm::ptr<CellVideoExportUtilFinishCallback> funcFinish, vm::ptr<void> userdata)
 {
 	cellVideoExport.todo("cellVideoExportFromFile(srcHddDir=%s, srcHddFile=%s, param=*0x%x, funcFinish=*0x%x, userdata=*0x%x)", srcHddDir, srcHddFile, param, funcFinish, userdata);
-	
-	if (!param || !srcHddDir || !srcHddDir[0] || !srcHddFile || !srcHddFile[0])
+
+	if (!param || !funcFinish || !srcHddDir || !srcHddDir[0] || !srcHddFile || !srcHddFile[0])
 	{
 		return CELL_VIDEO_EXPORT_UTIL_ERROR_PARAM;
 	}
-	
-	const std::string file_path = fmt::format("%s/%s", srcHddDir, srcHddFile);
 
-	if (!check_file_path(file_path))
+	// TODO: check param members ?
+
+	cellVideoExport.notice("cellVideoExportFromFile: param: title=%s, game_title=%s, game_comment=%s, editable=%d", param->title, param->game_title, param->game_comment, param->editable);
+
+	const std::string file_path = fmt::format("%s/%s", srcHddDir.get_ptr(), srcHddFile.get_ptr());
+
+	if (!check_movie_path(file_path))
 	{
 		return { CELL_VIDEO_EXPORT_UTIL_ERROR_PARAM, file_path };
 	}
 
-	if (!funcFinish)
+	std::string filename = param->title.get_ptr();
+
+	if (filename.empty())
 	{
-		return CELL_VIDEO_EXPORT_UTIL_ERROR_PARAM;
+		return { CELL_VIDEO_EXPORT_UTIL_ERROR_PARAM, "title empty" };
+	}
+
+	if (const std::string extension = get_file_extension(file_path); !extension.empty())
+	{
+		fmt::append(filename, ".%s", extension);
 	}
 
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
@@ -265,13 +316,12 @@ error_code cellVideoExportFromFile(vm::cptr<char> srcHddDir, vm::cptr<char> srcH
 		auto& vexp = g_fxo->get<video_export>();
 		vexp.progress = 0; // 0%
 
-		const std::string filename = file_path.substr(file_path.find_last_of('/') + 1);
 		const std::string src_path = vfs::get(file_path);
-		const std::string dst_path = vfs::get("/dev_hdd0/movie/" + filename);
+		const std::string dst_path = get_available_movie_path(filename);
 
 		cellVideoExport.notice("Copying file from '%s' to '%s'", file_path, dst_path);
 
-		if (!fs::create_path(fs::get_parent_dir(dst_path)) || !fs::copy_file(src_path, dst_path, true))
+		if (!fs::create_path(fs::get_parent_dir(dst_path)) || !fs::copy_file(src_path, dst_path, false))
 		{
 			// TODO: find out which error is used
 			cellVideoExport.error("Failed to copy file from '%s' to '%s' (%s)", src_path, dst_path, fs::g_tls_error);
@@ -315,11 +365,7 @@ error_code cellVideoExportFinalize(vm::ptr<CellVideoExportUtilFinishCallback> fu
 
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
-		// Set the status as 0x0-0xFFFF (0-100%) depending on the copy status.
-		// Only the copy or move of the movie and metadata files is considered for the progress.
-		const auto& vexp = g_fxo->get<video_export>();
-
-		funcFinish(ppu, vexp.progress, userdata);
+		funcFinish(ppu, CELL_OK, userdata);
 		return CELL_OK;
 	});
 

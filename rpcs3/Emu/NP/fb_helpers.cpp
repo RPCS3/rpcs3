@@ -154,7 +154,7 @@ namespace np
 				SceNpMatching2RoomDataExternal* cur_room;
 
 				cur_room = (i > 0) ? edata.allocate<SceNpMatching2RoomDataExternal>(sizeof(SceNpMatching2RoomDataExternal), prev_room->next) :
-                                     edata.allocate<SceNpMatching2RoomDataExternal>(sizeof(SceNpMatching2RoomDataExternal), search_resp->roomDataExternal);
+				                     edata.allocate<SceNpMatching2RoomDataExternal>(sizeof(SceNpMatching2RoomDataExternal), search_resp->roomDataExternal);
 
 				RoomDataExternal_to_SceNpMatching2RoomDataExternal(edata, fb_room, cur_room);
 				prev_room = cur_room;
@@ -173,7 +173,7 @@ namespace np
 			SceNpMatching2RoomDataExternal* cur_room;
 
 			cur_room = (i > 0) ? edata.allocate<SceNpMatching2RoomDataExternal>(sizeof(SceNpMatching2RoomDataExternal), prev_room->next) :
-                                 edata.allocate<SceNpMatching2RoomDataExternal>(sizeof(SceNpMatching2RoomDataExternal), get_resp->roomDataExternal);
+			                     edata.allocate<SceNpMatching2RoomDataExternal>(sizeof(SceNpMatching2RoomDataExternal), get_resp->roomDataExternal);
 
 			RoomDataExternal_to_SceNpMatching2RoomDataExternal(edata, fb_room, cur_room);
 			prev_room = cur_room;
@@ -370,10 +370,10 @@ namespace np
 		{
 			rpcn_log.todo("RoomDataInternalUpdateInfo::newRoomGroup");
 			// TODO
-			//sce_update_info->newRoomGroupNum = update_info->newRoomGroup()->size();
-			//vm::ptr<SceNpMatching2RoomGroup> group_info(allocate(sizeof(SceNpMatching2RoomGroup) * sce_update_info->newRoomGroupNum));
-			//RoomGroups_to_SceNpMatching2RoomGroup(update_info->newRoomGroup(), group_info);
-			//sce_update_info->newRoomGroup = group_info;
+			// sce_update_info->newRoomGroupNum = update_info->newRoomGroup()->size();
+			// vm::ptr<SceNpMatching2RoomGroup> group_info(allocate(sizeof(SceNpMatching2RoomGroup) * sce_update_info->newRoomGroupNum));
+			// RoomGroups_to_SceNpMatching2RoomGroup(update_info->newRoomGroup(), group_info);
+			// sce_update_info->newRoomGroup = group_info;
 		}
 
 		if (update_info->newRoomBinAttrInternal() && update_info->newRoomBinAttrInternal()->size() != 0)
@@ -497,5 +497,4 @@ namespace np
 			}
 		}
 	}
-
 } // namespace np

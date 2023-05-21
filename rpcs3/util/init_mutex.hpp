@@ -8,7 +8,7 @@ namespace stx
 	class init_mutex
 	{
 		// Set after initialization and removed before finalization
-		static const u32 c_init_bit = 0x8000'0000;
+		static constexpr u32 c_init_bit = 0x8000'0000;
 
 		// Contains "reader" count and init bit
 		atomic_t<u32> m_state = 0;

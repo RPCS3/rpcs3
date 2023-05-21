@@ -18,9 +18,12 @@ namespace vk
 {
 	enum : u32// special remap_encoding enums
 	{
-		VK_REMAP_IDENTITY = 0xCAFEBABE,             // Special view encoding to return an identity image view
-		VK_REMAP_VIEW_MULTISAMPLED = 0xDEADBEEF,    // Special encoding for multisampled images; returns a multisampled image view
-		VK_IMAGE_CREATE_ALLOW_NULL = 0x80000000,    // Special flag that allows null images to be created if there is no memory
+		VK_REMAP_IDENTITY = 0xCAFEBABE,                   // Special view encoding to return an identity image view
+		VK_REMAP_VIEW_MULTISAMPLED = 0xDEADBEEF,          // Special encoding for multisampled images; returns a multisampled image view
+		VK_IMAGE_CREATE_ALLOW_NULL_RPCS3 = 0x80000000,    // Special flag that allows null images to be created if there is no memory
+		VK_IMAGE_CREATE_SHAREABLE_RPCS3  = 0x40000000,    // Special flag to create a shareable image
+
+		VK_IMAGE_CREATE_SPECIAL_FLAGS_RPCS3 = (VK_IMAGE_CREATE_ALLOW_NULL_RPCS3 | VK_IMAGE_CREATE_SHAREABLE_RPCS3)
 	};
 
 	class image
@@ -73,6 +76,7 @@ namespace vk
 		u8 samples() const;
 		VkFormat format() const;
 		VkImageType type() const;
+		VkSharingMode sharing_mode() const;
 		VkImageAspectFlags aspect() const;
 		rsx::format_class format_class() const;
 
@@ -124,7 +128,7 @@ namespace vk
 	class viewable_image : public image
 	{
 	protected:
-		std::unordered_map<u32, std::unique_ptr<vk::image_view>> views;
+		std::unordered_map<u64, std::unique_ptr<vk::image_view>> views;
 		viewable_image* clone();
 
 	public:

@@ -4,6 +4,7 @@
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/IdManager.h"
 #include "Emu/RSX/rsx_utils.h"
+#include "Emu/RSX/RSXThread.h"
 
 #include "cellVideoOut.h"
 
@@ -122,10 +123,10 @@ error_code cellVideoOutGetState(u32 videoOut, u32 deviceIndex, vm::ptr<CellVideo
 		const auto& conf = g_fxo->get<rsx::avconf>();
 		state->state = CELL_VIDEO_OUT_OUTPUT_STATE_ENABLED;
 		state->colorSpace = CELL_VIDEO_OUT_COLOR_SPACE_RGB;
-		state->displayMode.resolutionId = conf.state ? conf.resolution_id : g_video_out_resolution_id.at(g_cfg.video.resolution);
+		state->displayMode.resolutionId = conf.state ? conf.resolution_id : ::at32(g_video_out_resolution_id, g_cfg.video.resolution);
 		state->displayMode.scanMode = CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE;
 		state->displayMode.conversion = CELL_VIDEO_OUT_DISPLAY_CONVERSION_NONE;
-		state->displayMode.aspect = conf.state ? conf.aspect : g_video_out_aspect_id.at(g_cfg.video.aspect_ratio);
+		state->displayMode.aspect = conf.state ? conf.aspect : ::at32(g_video_out_aspect_id, g_cfg.video.aspect_ratio);
 		state->displayMode.refreshRates = CELL_VIDEO_OUT_REFRESH_RATE_59_94HZ;
 
 		return CELL_OK;
@@ -180,7 +181,7 @@ error_code cellVideoOutConfigure(u32 videoOut, vm::ptr<CellVideoOutConfiguration
 
 	CellVideoOutResolution res;
 	if (_IntGetResolutionInfo(config->resolutionId, &res) != CELL_OK ||
-		(config->resolutionId >= CELL_VIDEO_OUT_RESOLUTION_720_3D_FRAME_PACKING && !g_cfg.video.enable_3d))
+		(config->resolutionId >= CELL_VIDEO_OUT_RESOLUTION_720_3D_FRAME_PACKING && g_cfg.video.stereo_render_mode == stereo_render_mode_options::disabled))
 	{
 		// Resolution not supported
 		cellSysutil.error("Unusual resolution requested: 0x%x", config->resolutionId);
@@ -189,7 +190,7 @@ error_code cellVideoOutConfigure(u32 videoOut, vm::ptr<CellVideoOutConfiguration
 
 	auto& conf = g_fxo->get<rsx::avconf>();
 	conf.resolution_id = config->resolutionId;
-	conf._3d = config->resolutionId >= CELL_VIDEO_OUT_RESOLUTION_720_3D_FRAME_PACKING;
+	conf.stereo_mode = (config->resolutionId >= CELL_VIDEO_OUT_RESOLUTION_720_3D_FRAME_PACKING) ? g_cfg.video.stereo_render_mode.get() : stereo_render_mode_options::disabled;
 	conf.aspect = config->aspect;
 	conf.format = config->format;
 	conf.scanline_pitch = config->pitch;
@@ -206,11 +207,13 @@ error_code cellVideoOutConfigure(u32 videoOut, vm::ptr<CellVideoOutConfiguration
 		}
 
 		// Resolve 'auto' or unknown options to actual aspect ratio
-		conf.aspect = g_video_out_aspect_id.at(g_cfg.video.aspect_ratio);
+		conf.aspect = ::at32(g_video_out_aspect_id, g_cfg.video.aspect_ratio);
 	}
 
 	cellSysutil.notice("Selected video configuration: resolutionId=0x%x, aspect=0x%x=>0x%x, format=0x%x", config->resolutionId, config->aspect, conf.aspect, config->format);
 
+	// This function resets VSYNC to be enabled
+	rsx::get_current_renderer()->requested_vsync = true;
 	return CELL_OK;
 }
 
@@ -239,9 +242,9 @@ error_code cellVideoOutGetConfiguration(u32 videoOut, vm::ptr<CellVideoOutConfig
 		}
 		else
 		{
-			config->resolutionId = g_video_out_resolution_id.at(g_cfg.video.resolution);
+			config->resolutionId = ::at32(g_video_out_resolution_id, g_cfg.video.resolution);
 			config->format = CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8;
-			config->aspect = g_video_out_aspect_id.at(g_cfg.video.aspect_ratio);
+			config->aspect = ::at32(g_video_out_aspect_id, g_cfg.video.aspect_ratio);
 
 			CellVideoOutResolution res;
 			ensure(_IntGetResolutionInfo(config->resolutionId, &res) == CELL_OK); // "Invalid video configuration"
@@ -292,13 +295,13 @@ error_code cellVideoOutGetDeviceInfo(u32 videoOut, u32 deviceIndex, vm::ptr<Cell
 	info->colorInfo.whiteX = 0xFFFF;
 	info->colorInfo.whiteY = 0xFFFF;
 	info->colorInfo.gamma = 100;
-	info->availableModes[0].aspect = g_video_out_aspect_id.at(g_cfg.video.aspect_ratio);
+	info->availableModes[0].aspect = ::at32(g_video_out_aspect_id, g_cfg.video.aspect_ratio);
 	info->availableModes[0].conversion = CELL_VIDEO_OUT_DISPLAY_CONVERSION_NONE;
 	info->availableModes[0].refreshRates =  CELL_VIDEO_OUT_REFRESH_RATE_60HZ | CELL_VIDEO_OUT_REFRESH_RATE_59_94HZ;
-	info->availableModes[0].resolutionId = g_video_out_resolution_id.at(g_cfg.video.resolution);
+	info->availableModes[0].resolutionId = ::at32(g_video_out_resolution_id, g_cfg.video.resolution);
 	info->availableModes[0].scanMode = CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE;
 
-	if (g_cfg.video.enable_3d && g_cfg.video.resolution == video_resolution::_720)
+	if (g_cfg.video.stereo_render_mode != stereo_render_mode_options::disabled && g_cfg.video.resolution == video_resolution::_720)
 	{
 		// Register 3D-capable display mode
 		info->availableModes[1] = info->availableModes[0];
@@ -332,18 +335,18 @@ error_code cellVideoOutGetResolutionAvailability(u32 videoOut, u32 resolutionId,
 	case CELL_VIDEO_OUT_PRIMARY:
 	{
 		// NOTE: Result is boolean
-		if (aspect != CELL_VIDEO_OUT_ASPECT_AUTO && aspect != static_cast<u32>(g_video_out_aspect_id.at(g_cfg.video.aspect_ratio)))
+		if (aspect != CELL_VIDEO_OUT_ASPECT_AUTO && aspect != static_cast<u32>(::at32(g_video_out_aspect_id, g_cfg.video.aspect_ratio)))
 		{
 			return not_an_error(0);
 		}
 
-		if (resolutionId == static_cast<u32>(g_video_out_resolution_id.at(g_cfg.video.resolution)))
+		if (resolutionId == static_cast<u32>(::at32(g_video_out_resolution_id, g_cfg.video.resolution)))
 		{
 			// Perfect match
 			return not_an_error(1);
 		}
 
-		if (g_cfg.video.enable_3d && g_cfg.video.resolution == video_resolution::_720)
+		if ((g_cfg.video.stereo_render_mode != stereo_render_mode_options::disabled) && g_cfg.video.resolution == video_resolution::_720)
 		{
 			switch (resolutionId)
 			{
@@ -374,25 +377,33 @@ error_code cellVideoOutGetResolutionAvailability(u32 videoOut, u32 resolutionId,
 
 error_code cellVideoOutGetConvertCursorColorInfo(vm::ptr<u8> rgbOutputRange)
 {
-	cellSysutil.todo("cellVideoOutGetConvertCursorColorInfo()");
+	cellSysutil.todo("cellVideoOutGetConvertCursorColorInfo(rgbOutputRange=*0x%x)", rgbOutputRange);
+
+	if (!rgbOutputRange)
+	{
+		return CELL_VIDEO_OUT_ERROR_ILLEGAL_PARAMETER; // TODO: Speculative
+	}
+
+	*rgbOutputRange = CELL_VIDEO_OUT_RGB_OUTPUT_RANGE_FULL; // Or CELL_VIDEO_OUT_RGB_OUTPUT_RANGE_LIMITED
+
 	return CELL_OK;
 }
 
 error_code cellVideoOutDebugSetMonitorType(u32 videoOut, u32 monitorType)
 {
-	cellSysutil.todo("cellVideoOutDebugSetMonitorType()");
+	cellSysutil.todo("cellVideoOutDebugSetMonitorType(videoOut=%d, monitorType=%d)", videoOut, monitorType);
 	return CELL_OK;
 }
 
 error_code cellVideoOutRegisterCallback(u32 slot, vm::ptr<CellVideoOutCallback> function, vm::ptr<void> userData)
 {
-	cellSysutil.todo("cellVideoOutRegisterCallback()");
+	cellSysutil.todo("cellVideoOutRegisterCallback(slot=%d, function=*0x%x, userData=*0x%x)", slot, function, userData);
 	return CELL_OK;
 }
 
 error_code cellVideoOutUnregisterCallback(u32 slot)
 {
-	cellSysutil.todo("cellVideoOutUnregisterCallback()");
+	cellSysutil.todo("cellVideoOutUnregisterCallback(slot=%d)", slot);
 	return CELL_OK;
 }
 

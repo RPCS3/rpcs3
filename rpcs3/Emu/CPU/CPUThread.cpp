@@ -5,6 +5,7 @@
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/Memory/vm_locking.h"
+#include "Emu/Memory/vm_reservation.h"
 #include "Emu/IdManager.h"
 #include "Emu/GDB.h"
 #include "Emu/Cell/PPUThread.h"
@@ -49,9 +50,14 @@ void fmt_class_string<cpu_flag>::format(std::string& out, u64 arg)
 		case cpu_flag::pause: return "p";
 		case cpu_flag::suspend: return "s";
 		case cpu_flag::ret: return "ret";
+		case cpu_flag::again: return "a";
 		case cpu_flag::signal: return "sig";
 		case cpu_flag::memory: return "mem";
 		case cpu_flag::pending: return "pend";
+		case cpu_flag::pending_recheck: return "pend-re";
+		case cpu_flag::notify: return "ntf";
+		case cpu_flag::yield: return "y";
+		case cpu_flag::preempt: return "PREEMPT";
 		case cpu_flag::dbg_global_pause: return "G-PAUSE";
 		case cpu_flag::dbg_pause: return "PAUSE";
 		case cpu_flag::dbg_step: return "STEP";
@@ -82,15 +88,18 @@ struct cpu_prof
 		// Total number of samples
 		u64 samples = 0, idle = 0;
 
-		// Avoid printing replicas
-		bool printed = false;
+		// Avoid printing replicas or when not much changed
+		u64 new_samples = 0;
+
+		static constexpr u64 min_print_samples = 500;
+		static constexpr u64 min_print_all_samples = min_print_samples * 20;
 
 		void reset()
 		{
 			freq.clear();
 			samples = 0;
 			idle = 0;
-			printed = false;
+			new_samples = 0;
 		}
 
 		static std::string format(const std::multimap<u64, u64, std::greater<u64>>& chart, u64 samples, u64 idle, bool extended_print = false)
@@ -126,8 +135,13 @@ struct cpu_prof
 		// Print info
 		void print(const std::shared_ptr<cpu_thread>& ptr)
 		{
-			if (printed || samples == idle)
+			if (new_samples < min_print_samples || samples == idle)
 			{
+				if (cpu_flag::exit - ptr->state)
+				{
+					profiler.notice("Thread \"%s\" [0x%08x]: %u samples, %u new (%.4f%% idle): Not enough new samples have been collected since the last print.", ptr->get_name(), ptr->id, samples, new_samples, 100. * idle / samples);
+				}
+
 				return;
 			}
 
@@ -141,13 +155,22 @@ struct cpu_prof
 
 			// Print results
 			const std::string results = format(chart, samples, idle);
-			profiler.notice("Thread \"%s\" [0x%08x]: %u samples (%.4f%% idle):%s", ptr->get_name(), ptr->id, samples, 100. * idle / samples, results);
+			profiler.notice("Thread \"%s\" [0x%08x]: %u samples, %u new (%.4f%% idle):%s", ptr->get_name(), ptr->id, samples, new_samples, 100. * idle / samples, results);
 
-			printed = true;
+			new_samples = 0;
 		}
 
-		static void print_all(const std::unordered_map<std::shared_ptr<cpu_thread>, sample_info>& threads)
+		static void print_all(std::unordered_map<std::shared_ptr<cpu_thread>, sample_info>& threads)
 		{
+			u64 new_samples = 0;
+
+			// Print all results and cleanup
+			for (auto& [ptr, info] : threads)
+			{
+				new_samples += info.new_samples;
+				info.print(ptr);
+			}
+
 			std::multimap<u64, u64, std::greater<u64>> chart;
 
 			std::unordered_map<u64, u64, value_hash<u64>> freq;
@@ -156,7 +179,7 @@ struct cpu_prof
 
 			for (auto& [_, info] : threads)
 			{
-				// This function collects thread information regardless of 'printed' member state
+				// This function collects thread information regardless of 'new_samples' member state
 				for (auto& [name, count] : info.freq)
 				{
 					freq[name] += count;
@@ -166,18 +189,24 @@ struct cpu_prof
 				idle += info.idle;
 			}
 
+			if (samples == idle)
+			{
+				return;
+			}
+
+			if (new_samples < min_print_all_samples && thread_ctrl::state() != thread_state::aborting)
+			{
+				profiler.notice("All Threads: %u samples, %u new (%.4f%% idle): Not enough new samples have been collected since the last print.", samples, new_samples, 100. * idle / samples);
+				return;
+			}
+
 			for (auto& [name, count] : freq)
 			{
 				chart.emplace(count, name);
 			}
 
-			if (samples == idle)
-			{
-				return;
-			}
-	
 			const std::string results = format(chart, samples, idle, true);
-			profiler.notice("All Threads: %u samples (%.4f%% idle):%s", samples, 100. * idle / samples, results);
+			profiler.notice("All Threads: %u samples, %u new (%.4f%% idle):%s", samples, new_samples, 100. * idle / samples, results);
 		}
 	};
 
@@ -238,7 +267,7 @@ struct cpu_prof
 			// Sample active threads
 			for (auto& [ptr, info] : threads)
 			{
-				if (cpu_flag::exit - ptr->state)
+				if (auto state = +ptr->state; cpu_flag::exit - state)
 				{
 					// Get short function hash
 					const u64 name = atomic_storage<u64>::load(ptr->block_hash);
@@ -246,9 +275,10 @@ struct cpu_prof
 					// Append occurrence
 					info.samples++;
 
-					if (auto state = +ptr->state; !::is_paused(state) && !::is_stopped(state) && cpu_flag::wait - state)
+					if (cpu_flag::wait - state)
 					{
 						info.freq[name]++;
+						info.new_samples++;
 
 						// Append verification time to fixed common name 0000000...chunk-0x3fffc
 						if (name >> 16 && (name & 0xffff) == 0)
@@ -256,6 +286,12 @@ struct cpu_prof
 					}
 					else
 					{
+						if (state & (cpu_flag::dbg_pause + cpu_flag::dbg_global_pause))
+						{
+							// Idle state caused by emulation pause is not accounted for
+							continue;
+						}
+
 						info.idle++;
 					}
 				}
@@ -269,11 +305,13 @@ struct cpu_prof
 			{
 				profiler.success("Flushing profiling results...");
 
-				// Print all results and cleanup
-				for (auto& [ptr, info] : threads)
-				{
-					info.print(ptr);
-				}
+				sample_info::print_all(threads);
+			}
+
+			if (Emu.IsPaused())
+			{
+				thread_ctrl::wait_for(5000);
+				continue;
 			}
 
 			// Wait, roughly for 20µs
@@ -281,11 +319,6 @@ struct cpu_prof
 		}
 
 		// Print all remaining results
-		for (auto& [ptr, info] : threads)
-		{
-			info.print(ptr);
-		}
-
 		sample_info::print_all(threads);
 	}
 
@@ -572,6 +605,7 @@ void cpu_thread::operator()()
 		if (!(state0 & cpu_flag::stop))
 		{
 			cpu_task();
+			state += cpu_flag::wait;
 
 			if (state & cpu_flag::ret && state.test_and_reset(cpu_flag::ret))
 			{
@@ -581,7 +615,7 @@ void cpu_thread::operator()()
 			continue;
 		}
 
-		thread_ctrl::wait_on(state, state0);
+		state.wait(state0);
 
 		if (state & cpu_flag::ret && state.test_and_reset(cpu_flag::ret))
 		{
@@ -624,24 +658,31 @@ cpu_thread::cpu_thread(u32 id)
 	}
 
 	g_threads_created++;
+
+	if (u32* pc2 = get_pc2())
+	{
+		*pc2 = umax;
+	}
 }
 
 void cpu_thread::cpu_wait(bs_t<cpu_flag> old)
 {
-	thread_ctrl::wait_on(state, old);
+	state.wait(old);
 }
+
+static atomic_t<u32> s_dummy_atomic = 0;
 
 bool cpu_thread::check_state() noexcept
 {
 	bool cpu_sleep_called = false;
 	bool cpu_can_stop = true;
-	bool escape, retval;
+	bool escape{}, retval{};
 
 	while (true)
 	{
 		// Process all flags in a single atomic op
 		bs_t<cpu_flag> state1;
-		const auto state0 = state.fetch_op([&](bs_t<cpu_flag>& flags)
+		auto state0 = state.fetch_op([&](bs_t<cpu_flag>& flags)
 		{
 			bool store = false;
 
@@ -681,7 +722,6 @@ bool cpu_thread::check_state() noexcept
 			{
 				// Sticky flag, indicates check_state() is not allowed to return true
 				flags -= cpu_flag::temp;
-				flags -= cpu_flag::wait;
 				cpu_can_stop = false;
 				store = true;
 			}
@@ -690,6 +730,12 @@ bool cpu_thread::check_state() noexcept
 			{
 				flags -= cpu_flag::signal;
 				cpu_sleep_called = false;
+				store = true;
+			}
+
+			if (flags & cpu_flag::notify)
+			{
+				flags -= cpu_flag::notify;
 				store = true;
 			}
 
@@ -714,14 +760,20 @@ bool cpu_thread::check_state() noexcept
 			}
 
 			// Atomically clean wait flag and escape
-			if (!(flags & (cpu_flag::exit + cpu_flag::ret + cpu_flag::stop)))
+			if (!is_stopped(flags) && flags.none_of(cpu_flag::ret))
 			{
 				// Check pause flags which hold thread inside check_state (ignore suspend/debug flags on cpu_flag::temp)
-				if (flags & (cpu_flag::pause + cpu_flag::memory) || (cpu_can_stop && flags & (cpu_flag::dbg_global_pause + cpu_flag::dbg_pause + cpu_flag::suspend)))
+				if (flags & (cpu_flag::pause + cpu_flag::memory) || (cpu_can_stop && flags & (cpu_flag::dbg_global_pause + cpu_flag::dbg_pause + cpu_flag::suspend + cpu_flag::yield + cpu_flag::preempt)))
 				{
 					if (!(flags & cpu_flag::wait))
 					{
 						flags += cpu_flag::wait;
+						store = true;
+					}
+
+					if (flags & (cpu_flag::yield + cpu_flag::preempt) && cpu_can_stop)
+					{
+						flags -= (cpu_flag::yield + cpu_flag::preempt);
 						store = true;
 					}
 
@@ -740,9 +792,9 @@ bool cpu_thread::check_state() noexcept
 			}
 			else
 			{
-				if (cpu_can_stop && !(flags & cpu_flag::wait))
+				if (flags & cpu_flag::wait)
 				{
-					flags += cpu_flag::wait;
+					flags -= cpu_flag::wait;
 					store = true;
 				}
 
@@ -754,6 +806,34 @@ bool cpu_thread::check_state() noexcept
 			return store;
 		}).first;
 
+		if (state0 & cpu_flag::preempt && cpu_can_stop)
+		{
+			if (cpu_flag::wait - state0)
+			{
+				if (!escape || !retval)
+				{
+					// Yield itself
+					state0 += cpu_flag::yield;
+					escape = false;
+				}
+			}
+
+			if (const u128 bits = s_cpu_bits)
+			{
+				reader_lock lock(s_cpu_lock);
+
+				cpu_counter::for_all_cpu(bits & s_cpu_bits, [](cpu_thread* cpu)
+				{
+					if (cpu->state.none_of(cpu_flag::wait + cpu_flag::yield))
+					{
+						cpu->state += cpu_flag::yield;
+					}
+
+					return true;
+				});
+			}
+		}
+
 		if (escape)
 		{
 			if (s_tls_thread_slot == umax && !retval)
@@ -762,10 +842,18 @@ bool cpu_thread::check_state() noexcept
 				cpu_counter::add(this);
 			}
 
-			if ((state0 & (cpu_flag::pending + cpu_flag::temp)) == cpu_flag::pending)
+			if (cpu_can_stop && state0 & cpu_flag::pending)
 			{
 				// Execute pending work
 				cpu_work();
+
+				if ((state1 ^ state) - cpu_flag::pending)
+				{
+					// Work could have changed flags
+					// Reset internal flags as if check_state() has just been called
+					cpu_sleep_called = false;
+					continue;
+				}
 			}
 
 			if (retval)
@@ -834,6 +922,32 @@ bool cpu_thread::check_state() noexcept
 						break;
 					}
 				}
+
+				continue;
+			}
+
+			if (state0 & cpu_flag::yield && cpu_flag::wait - state0 && cpu_can_stop)
+			{
+				if (auto spu = try_get<spu_thread>())
+				{
+					if (spu->raddr && spu->rtime == vm::reservation_acquire(spu->raddr) && spu->getllar_spin_count < 10)
+					{
+						// Reservation operation is a critical section (but this may result in false positives)
+						continue;
+					}
+				}
+				else if (auto ppu = try_get<ppu_thread>())
+				{
+					if (ppu->raddr && ppu->rtime == vm::reservation_acquire(ppu->raddr))
+					{
+						// Same
+						continue;
+					}
+				}
+
+				// Short sleep when yield flag is present alone (makes no sense when other methods which can stop thread execution have been done)
+				// Pass a mask of a single bit which is often unused to avoid notifications
+				s_dummy_atomic.wait(0, 1u << 30, atomic_wait_timeout{80'000});
 			}
 		}
 	}
@@ -860,8 +974,27 @@ void cpu_thread::notify()
 
 cpu_thread& cpu_thread::operator=(thread_state)
 {
-	state += cpu_flag::exit;
-	state.notify_one(cpu_flag::exit);
+	if (state & cpu_flag::exit)
+	{
+		// Must be notified elsewhere or self-raised
+		return *this;
+	}
+
+	const auto old = state.fetch_add(cpu_flag::exit);
+
+	if (old & cpu_flag::wait && old.none_of(cpu_flag::again + cpu_flag::exit))
+	{
+		state.notify_one(cpu_flag::exit);
+
+		if (auto thread = try_get<spu_thread>())
+		{
+			if (u32 resv = atomic_storage<u32>::load(thread->raddr))
+			{
+				vm::reservation_notifier(resv).notify_one();
+			}
+		}
+	}
+
 	return *this;
 }
 
@@ -931,15 +1064,31 @@ u32* cpu_thread::get_pc2()
 	return nullptr;
 }
 
+cpu_thread* cpu_thread::get_next_cpu()
+{
+	switch (id_type())
+	{
+	case 1:
+	{
+		return static_cast<ppu_thread*>(this)->next_cpu;
+	}
+	case 2:
+	{
+		return static_cast<spu_thread*>(this)->next_cpu;
+	}
+	default: break;
+	}
+
+	return nullptr;
+}
+
 std::shared_ptr<CPUDisAsm> make_disasm(const cpu_thread* cpu);
 
-std::string cpu_thread::dump_all() const
+void cpu_thread::dump_all(std::string& ret) const
 {
-	std::string ret = cpu_thread::dump_misc();
-	ret += '\n';
 	ret += dump_misc();
 	ret += '\n';
-	ret += dump_regs();
+	dump_regs(ret);
 	ret += '\n';
 	ret += dump_callstack();
 	ret += '\n';
@@ -960,13 +1109,10 @@ std::string cpu_thread::dump_all() const
 			ret += '\n';
 		}
 	}
-
-	return ret;
 }
 
-std::string cpu_thread::dump_regs() const
+void cpu_thread::dump_regs(std::string&) const
 {
-	return {};
 }
 
 std::string cpu_thread::dump_callstack() const
@@ -990,7 +1136,7 @@ std::vector<std::pair<u32, u32>> cpu_thread::dump_callstack_list() const
 
 std::string cpu_thread::dump_misc() const
 {
-	return fmt::format("Type: %s\n" "State: %s\n", id_type() == 1 ? "PPU" : id_type() == 2 ? "SPU" : "CPU", state.load());
+	return fmt::format("Type: %s; State: %s\n", id_type() == 1 ? "PPU" : id_type() == 2 ? "SPU" : "RSX", state.load());
 }
 
 bool cpu_thread::suspend_work::push(cpu_thread* _this) noexcept
@@ -1185,4 +1331,79 @@ u32 CPUDisAsm::DisAsmBranchTarget(s32 /*imm*/)
 {
 	// Unused
 	return 0;
+}
+
+extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool revert_lock)
+{
+	const u64 start = get_system_time();
+
+	// Attempt to lock for half a second, if somehow takes longer abort it
+	do
+	{
+		if (revert_lock)
+		{
+			// Revert the operation of this function
+			break;
+		}
+
+		if (cpu_thread::suspend_all(nullptr, {}, []()
+		{
+			return idm::select<named_thread<spu_thread>>([](u32, spu_thread& spu)
+			{
+				if (!spu.unsavable)
+				{
+					if (Emu.IsPaused())
+					{
+						// If emulation is paused, we can only hope it's already in a state compatible with savestates
+						return !!(spu.state & (cpu_flag::dbg_global_pause + cpu_flag::dbg_pause));
+					}
+					else
+					{
+						ensure(!spu.state.test_and_set(cpu_flag::dbg_global_pause));
+					}
+
+					return false;
+				}
+
+				return true;
+			}).ret;
+		}))
+		{
+			if (Emu.IsPaused())
+			{
+				return false;
+			}
+
+			// It's faster to lock once
+			reader_lock lock(id_manager::g_mutex);
+
+			idm::select<named_thread<spu_thread>>([](u32, spu_thread& spu)
+			{
+				spu.state -= cpu_flag::dbg_global_pause;
+			}, idm::unlocked);
+
+			// For faster signalling, first remove state flags then batch notifications
+			idm::select<named_thread<spu_thread>>([](u32, spu_thread& spu)
+			{
+				if (spu.state & cpu_flag::wait)
+				{
+					spu.state.notify_one();
+				}
+			}, idm::unlocked);
+
+			continue;
+		}
+
+		return true;
+	} while (std::this_thread::yield(), get_system_time() - start <= 500'000);
+
+	idm::select<named_thread<spu_thread>>([&](u32, named_thread<spu_thread>& spu)
+	{
+		if (spu.state.test_and_reset(cpu_flag::dbg_global_pause))
+		{
+			spu.state.notify_one();
+		}
+	});
+
+	return false;
 }

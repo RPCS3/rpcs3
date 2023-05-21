@@ -6,6 +6,9 @@
 
 #include <vector>
 
+template <typename T>
+class named_thread;
+
 namespace rsx
 {
 	class dma_manager
@@ -50,6 +53,9 @@ namespace rsx
 
 		atomic_t<bool> m_mem_fault_flag = false;
 
+		struct offload_thread;
+		std::shared_ptr<named_thread<offload_thread>> m_thread;
+
 		// TODO: Improved benchmarks here; value determined by profiling on a Ryzen CPU, rounded to the nearest 512 bytes
 		const u32 max_immediate_transfer_size = 3584;
 
@@ -64,21 +70,19 @@ namespace rsx
 		void copy(void *dst, void *src, u32 length) const;
 
 		// Vertex utilities
-		static void emulate_as_indexed(void *dst, rsx::primitive_type primitive, u32 count);
+		void emulate_as_indexed(void *dst, rsx::primitive_type primitive, u32 count);
 
 		// Renderer callback
-		static void backend_ctrl(u32 request_code, void* args);
+		void backend_ctrl(u32 request_code, void* args);
 
 		// Synchronization
-		static bool is_current_thread();
+		bool is_current_thread() const;
 		bool sync() const;
 		void join();
 		void set_mem_fault_flag();
 		void clear_mem_fault_flag();
 
 		// Fault recovery
-		static utils::address_range get_fault_range(bool writing);
-
-		struct offload_thread;
+		utils::address_range get_fault_range(bool writing) const;
 	};
 }

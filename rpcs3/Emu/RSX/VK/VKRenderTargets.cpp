@@ -1,8 +1,18 @@
 #include "VKRenderTargets.h"
 #include "VKResourceManager.h"
+#include "Emu/RSX/rsx_methods.h"
 
 namespace vk
 {
+	namespace surface_cache_utils
+	{
+		void dispose(vk::buffer* buf)
+		{
+			auto obj = vk::disposable_t::make(buf);
+			vk::get_resource_manager()->dispose(obj);
+		}
+	}
+
 	void surface_cache::destroy()
 	{
 		invalidate_all();
@@ -20,7 +30,7 @@ namespace vk
 		}
 		else if (total_device_memory >= 1024)
 		{
-			quota = 768;
+			quota = std::max<u64>(512, (total_device_memory * 30) / 100);
 		}
 		else if (total_device_memory >= 768)
 		{
@@ -37,12 +47,6 @@ namespace vk
 
 	bool surface_cache::can_collapse_surface(const std::unique_ptr<vk::render_target>& surface, rsx::problem_severity severity)
 	{
-		if (surface->samples() == 1)
-		{
-			// No internal allocations needed for non-MSAA images
-			return true;
-		}
-
 		if (severity < rsx::problem_severity::fatal &&
 			vk::vmm_determine_memory_load_severity() < rsx::problem_severity::fatal)
 		{
@@ -51,27 +55,21 @@ namespace vk
 		}
 
 		// Check if we need to do any allocations. Do not collapse in such a situation otherwise
-		if (!surface->resolve_surface)
+		if (surface->samples() > 1 && !surface->resolve_surface)
 		{
 			return false;
 		}
-		else
+
+		// Resolve target does exist. Scan through the entire collapse chain
+		for (auto& region : surface->old_contents)
 		{
-			// Resolve target does exist. Scan through the entire collapse chain
-			for (auto& region : surface->old_contents)
+			// FIXME: This is just lazy
+			auto proxy = std::unique_ptr<vk::render_target>(vk::as_rtt(region.source));
+			const bool collapsible = can_collapse_surface(proxy, severity);
+			proxy.release();
+
+			if (!collapsible)
 			{
-				if (region.source->samples() == 1)
-				{
-					// Not MSAA
-					continue;
-				}
-
-				if (vk::as_rtt(region.source)->resolve_surface)
-				{
-					// Has a resolve target.
-					continue;
-				}
-
 				return false;
 			}
 		}
@@ -125,9 +123,9 @@ namespace vk
 			// 1. Spill an strip any 'invalidated resources'. At this point it doesn't matter and we donate to the resolve cache which is a plus.
 			for (auto& surface : invalidated_resources)
 			{
-				if (!surface->value)
+				if (!surface->value && !surface->resolve_surface)
 				{
-					ensure(!surface->resolve_surface);
+					// Unspilled resources can have no value but have a resolve surface used for read
 					continue;
 				}
 
@@ -221,6 +219,7 @@ namespace vk
 			case rsx::problem_severity::severe:
 			case rsx::problem_severity::fatal:
 				// We're almost dead anyway. Remove forcefully.
+				vk::get_resource_manager()->dispose(rtt);
 				return true;
 			default:
 				fmt::throw_exception("Unreachable");
@@ -269,10 +268,7 @@ namespace vk
 		process_list_function(m_render_targets_storage, m_render_targets_memory_range);
 		process_list_function(m_depth_stencil_storage, m_depth_stencil_memory_range);
 
-		std::sort(sorted_list.begin(), sorted_list.end(), [](const auto& a, const auto& b)
-		{
-			return a->last_rw_access_tag < b->last_rw_access_tag;
-		});
+		std::sort(sorted_list.begin(), sorted_list.end(), FN(x->last_rw_access_tag < y->last_rw_access_tag));
 
 		// Remove upto target_memory bytes from VRAM
 		u64 bytes_spilled = 0;
@@ -529,8 +525,6 @@ namespace vk
 
 	bool render_target::spill(vk::command_buffer& cmd, std::vector<std::unique_ptr<vk::viewable_image>>& resolve_cache)
 	{
-		ensure(value);
-
 		u64 element_size;
 		switch (const auto fmt = format())
 		{
@@ -549,6 +543,7 @@ namespace vk
 		vk::viewable_image* src = nullptr;
 		if (samples() == 1) [[likely]]
 		{
+			ensure(value);
 			src = this;
 		}
 		else if (resolve_surface)
@@ -709,7 +704,11 @@ namespace vk
 			else
 			{
 				content = vk::get_typeless_helper(format(), format_class(), subres.width_in_block, subres.height_in_block);
-				content->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+				if (content->current_layout == VK_IMAGE_LAYOUT_UNDEFINED)
+				{
+					content->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+				}
+				content->push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 			}
 
 			// Load Cell data into temp buffer
@@ -719,12 +718,15 @@ namespace vk
 			if (content != final_dst)
 			{
 				// Avoid layout push/pop on scratch memory by setting explicit layout here
-				content->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+				content->pop_layout(cmd);
+				content->push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
 				vk::copy_scaled_image(cmd, content, final_dst,
 					{ 0, 0, subres.width_in_block, subres.height_in_block },
 					{ 0, 0, static_cast<s32>(final_dst->width()), static_cast<s32>(final_dst->height()) },
 					1, true, aspect() == VK_IMAGE_ASPECT_COLOR_BIT ? VK_FILTER_LINEAR : VK_FILTER_NEAREST);
+
+				content->pop_layout(cmd);
 			}
 
 			final_dst->pop_layout(cmd);
@@ -782,11 +784,6 @@ namespace vk
 		return !!(aspect() & VK_IMAGE_ASPECT_DEPTH_BIT);
 	}
 
-	void render_target::release_ref(vk::viewable_image* t) const
-	{
-		static_cast<vk::render_target*>(t)->release();
-	}
-
 	bool render_target::matches_dimensions(u16 _width, u16 _height) const
 	{
 		// Use forward scaling to account for rounding and clamping errors
@@ -796,16 +793,67 @@ namespace vk
 
 	void render_target::texture_barrier(vk::command_buffer& cmd)
 	{
-		if (!write_barrier_sync_tag) write_barrier_sync_tag++; // Activate barrier sync
-		cyclic_reference_sync_tag = write_barrier_sync_tag;    // Match tags
+		const auto is_framebuffer_read_only = is_depth_surface() && !rsx::method_registers.depth_write_enabled();
+		const auto supports_fbo_loops = cmd.get_command_pool().get_owner().get_framebuffer_loops_support();
+		const auto optimal_layout = supports_fbo_loops ? VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT
+			: VK_IMAGE_LAYOUT_GENERAL;
 
-		vk::insert_texture_barrier(cmd, this, VK_IMAGE_LAYOUT_GENERAL);
+		if (m_cyclic_ref_tracker.can_skip() && current_layout == optimal_layout && is_framebuffer_read_only)
+		{
+			// If we have back-to-back depth-read barriers, skip subsequent ones
+			// If an actual write is happening, this flag will be automatically reset
+			return;
+		}
+
+		vk::insert_texture_barrier(cmd, this, optimal_layout);
+		m_cyclic_ref_tracker.on_insert_texture_barrier();
+
+		if (is_framebuffer_read_only)
+		{
+			m_cyclic_ref_tracker.allow_skip();
+		}
+	}
+
+	void render_target::post_texture_barrier(vk::command_buffer& cmd)
+	{
+		// This is a fall-out barrier after a cyclic ref when the same surface is still bound.
+		// In this case, we're just checking that the previous read completes before the next write.
+		const bool is_framebuffer_read_only = is_depth_surface() && !rsx::method_registers.depth_write_enabled();
+		if (m_cyclic_ref_tracker.can_skip() && is_framebuffer_read_only)
+		{
+			// Barrier ellided if triggered by a chain of cyclic references with no actual writes
+			m_cyclic_ref_tracker.reset();
+			return;
+		}
+
+		VkPipelineStageFlags src_stage, dst_stage;
+		VkAccessFlags src_access, dst_access;
+
+		if (!is_depth_surface()) [[likely]]
+		{
+			src_stage = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+			dst_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+			src_access = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+			dst_access = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		}
+		else
+		{
+			src_stage = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+			dst_stage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+			src_access = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+			dst_access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+		}
+
+		vk::insert_image_memory_barrier(cmd, value, current_layout, current_layout,
+			src_stage, dst_stage, src_access, dst_access, { aspect(), 0, 1, 0, 1 });
+
+		m_cyclic_ref_tracker.reset();
 	}
 
 	void render_target::reset_surface_counters()
 	{
 		frame_tag = 0;
-		write_barrier_sync_tag = 0;
+		m_cyclic_ref_tracker.reset();
 	}
 
 	image_view* render_target::get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap, VkImageAspectFlags mask)
@@ -854,46 +902,23 @@ namespace vk
 			unspill(cmd);
 		}
 
-		if (access == rsx::surface_access::shader_write && write_barrier_sync_tag != 0)
+		if (access == rsx::surface_access::shader_write && m_cyclic_ref_tracker.is_enabled())
 		{
-			if (current_layout == VK_IMAGE_LAYOUT_GENERAL)
+			if (current_layout == VK_IMAGE_LAYOUT_GENERAL || current_layout == VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT)
 			{
-				if (write_barrier_sync_tag != cyclic_reference_sync_tag)
+				// Flag draw barrier observed
+				m_cyclic_ref_tracker.on_insert_draw_barrier();
+
+				// Check if we've had more draws than barriers so far (fall-out condition)
+				if (m_cyclic_ref_tracker.requires_post_loop_barrier())
 				{
-					// This barrier catches a very specific case where 2 draw calls are executed with general layout (cyclic ref) but no texture barrier in between.
-					// This happens when a cyclic ref is broken. In this case previous draw must finish drawing before the new one renders to avoid current draw breaking previous one.
-					VkPipelineStageFlags src_stage, dst_stage;
-					VkAccessFlags src_access, dst_access;
-
-					if (!is_depth_surface()) [[likely]]
-					{
-						src_stage = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-						dst_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-						src_access = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-						dst_access = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-					}
-					else
-					{
-						src_stage = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-						dst_stage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-						src_access = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-						dst_access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-					}
-
-					vk::insert_image_memory_barrier(cmd, value, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL,
-						src_stage, dst_stage, src_access, dst_access, { aspect(), 0, 1, 0, 1 });
-
-					write_barrier_sync_tag = 0; // Disable for next draw
-				}
-				else
-				{
-					// Synced externally for this draw
-					write_barrier_sync_tag++;
+					post_texture_barrier(cmd);
 				}
 			}
 			else
 			{
-				write_barrier_sync_tag = 0; // Disable
+				// Layouts changed elsewhere. Reset.
+				m_cyclic_ref_tracker.reset();
 			}
 		}
 

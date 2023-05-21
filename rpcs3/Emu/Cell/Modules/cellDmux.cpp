@@ -165,6 +165,7 @@ public:
 	static const u32 id_base = 1;
 	static const u32 id_step = 1;
 	static const u32 id_count = 1023;
+	SAVESTATE_INIT_POS(34);
 
 	ElementaryStream(Demuxer* dmux, u32 addr, u32 size, u32 fidMajor, u32 fidMinor, u32 sup1, u32 sup2, vm::ptr<CellDmuxCbEsMsg> cbFunc, u32 cbArg, u32 spec);
 

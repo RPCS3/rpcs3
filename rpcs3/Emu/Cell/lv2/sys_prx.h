@@ -63,17 +63,17 @@ struct sys_prx_segment_info_t
 
 struct sys_prx_module_info_t
 {
-	be_t<u64> size;
-	char name[30];
-	char version[2];
-	be_t<u32> modattribute;
-	be_t<u32> start_entry;
-	be_t<u32> stop_entry;
-	be_t<u32> all_segments_num;
-	vm::bptr<char> filename;
-	be_t<u32> filename_size;
-	vm::bptr<sys_prx_segment_info_t> segments;
-	be_t<u32> segments_num;
+	be_t<u64> size; // 0
+	char name[30]; // 8
+	char version[2]; // 0x26
+	be_t<u32> modattribute; // 0x28
+	be_t<u32> start_entry; // 0x2c
+	be_t<u32> stop_entry; // 0x30
+	be_t<u32> all_segments_num; // 0x34
+	vm::bptr<char> filename; // 0x38
+	be_t<u32> filename_size; // 0x3c
+	vm::bptr<sys_prx_segment_info_t> segments; // 0x40
+	be_t<u32> segments_num; // 0x44
 };
 
 struct sys_prx_module_info_option_t
@@ -169,6 +169,7 @@ enum : u32
 	PRX_STATE_STARTED,
 	PRX_STATE_STOPPING, // In-between state between started and stopped (internal)
 	PRX_STATE_STOPPED, // Last state, the module cannot be restarted
+	PRX_STATE_DESTROYED, // Last state, the module cannot be restarted
 };
 
 struct lv2_prx final : lv2_obj, ppu_module
@@ -176,6 +177,7 @@ struct lv2_prx final : lv2_obj, ppu_module
 	static const u32 id_base = 0x23000000;
 
 	atomic_t<u32> state = PRX_STATE_INITIALIZED;
+	shared_mutex mutex;
 
 	std::unordered_map<u32, u32> specials;
 	std::unordered_map<u32, void*> imports;
@@ -186,9 +188,24 @@ struct lv2_prx final : lv2_obj, ppu_module
 	vm::ptr<s32(u64 callback, u64 argc, vm::ptr<void, u64> argv)> epilogue = vm::null;
 	vm::ptr<s32()> exit = vm::null;
 
-	char module_info_name[28];
-	u8 module_info_version[2];
-	be_t<u16> module_info_attributes;
+	char module_info_name[28]{};
+	u8 module_info_version[2]{};
+	be_t<u16> module_info_attributes{};
+
+	u32 exports_start = umax;
+	u32 exports_end = 0;
+
+	std::basic_string<bool> m_loaded_flags;
+	std::basic_string<bool> m_external_loaded_flags;
+
+	void load_exports(); // (Re)load exports
+	void restore_exports(); // For savestates
+	void unload_exports();
+
+	lv2_prx() noexcept = default;
+	lv2_prx(utils::serial&) {}
+	static std::shared_ptr<void> load(utils::serial&);
+	void save(utils::serial& ar);
 };
 
 enum : u64

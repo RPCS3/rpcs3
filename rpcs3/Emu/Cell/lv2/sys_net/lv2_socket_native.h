@@ -31,11 +31,13 @@ class lv2_socket_native final : public lv2_socket
 {
 public:
 	lv2_socket_native(lv2_socket_family family, lv2_socket_type type, lv2_ip_protocol protocol);
+	lv2_socket_native(utils::serial& ar, lv2_socket_type type);
+	void save(utils::serial& ar);
 	~lv2_socket_native();
 	s32 create_socket();
 
-	std::tuple<bool, s32, sys_net_sockaddr> accept(bool is_lock = true) override;
-	s32 bind(const sys_net_sockaddr& addr, s32 ps3_id) override;
+	std::tuple<bool, s32, std::shared_ptr<lv2_socket>, sys_net_sockaddr> accept(bool is_lock = true) override;
+	s32 bind(const sys_net_sockaddr& addr) override;
 
 	std::optional<s32> connect(const sys_net_sockaddr& addr) override;
 	s32 connect_followup() override;
@@ -46,6 +48,7 @@ public:
 	s32 setsockopt(s32 level, s32 optname, const std::vector<u8>& optval) override;
 	std::optional<std::tuple<s32, std::vector<u8>, sys_net_sockaddr>> recvfrom(s32 flags, u32 len, bool is_lock = true) override;
 	std::optional<s32> sendto(s32 flags, const std::vector<u8>& buf, std::optional<sys_net_sockaddr> opt_sn_addr, bool is_lock = true) override;
+	std::optional<s32> sendmsg(s32 flags, const sys_net_msghdr& msg, bool is_lock = true) override;
 
 	s32 poll(sys_net_pollfd& sn_pfd, pollfd& native_pfd) override;
 	std::tuple<bool, bool, bool> select(bs_t<poll_t> selected, pollfd& native_pfd) override;
@@ -65,4 +68,5 @@ private:
 	s32 so_reuseaddr = 0;
 	s32 so_reuseport = 0;
 #endif
+	u16 bound_port = 0;
 };

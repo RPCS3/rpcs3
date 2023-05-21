@@ -14,6 +14,7 @@ namespace vk
 		AMD_vega,
 		AMD_navi1x,
 		AMD_navi2x,
+		AMD_navi3x,
 		NV_generic,
 		NV_kepler,
 		NV_maxwell,
@@ -21,6 +22,7 @@ namespace vk
 		NV_volta,
 		NV_turing,
 		NV_ampere,
+		NV_lovelace,
 		MVK_apple
 	};
 
@@ -50,4 +52,6 @@ namespace vk
 
 	chip_class get_chip_family();
 	chip_class get_chip_family(u32 vendor_id, u32 device_id);
+
+	static inline bool is_NVIDIA(chip_class chip) { return chip >= chip_class::NV_generic && chip <= chip_class::NV_ampere; }
 }

@@ -19,7 +19,7 @@
 #define VK_FRAGMENT_CONSTANTS_BUFFER_SIZE_M 16
 #define VK_INDEX_RING_BUFFER_SIZE_M 16
 
-#define VK_MAX_ASYNC_CB_COUNT 256
+#define VK_MAX_ASYNC_CB_COUNT 512
 #define VK_MAX_ASYNC_FRAMES 2
 
 #define FRAME_PRESENT_TIMEOUT 10000000ull // 10 seconds
@@ -364,7 +364,7 @@ namespace vk
 
 		inline command_buffer_chunk* get()
 		{
-			return &m_cb_list[m_current_index];
+			return &m_cb_list[m_current_index % Count];
 		}
 	};
 }

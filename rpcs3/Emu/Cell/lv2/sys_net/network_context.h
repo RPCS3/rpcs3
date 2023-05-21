@@ -17,10 +17,7 @@ struct network_thread
 
 	static constexpr auto thread_name = "Network Thread";
 
-	network_thread() noexcept;
-
-	~network_thread();
-
+	void bind_sce_np_port();
 	void operator()();
 };
 

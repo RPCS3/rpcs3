@@ -105,7 +105,7 @@ QToolButton:hover {
 }
 
 /* Search bar in Main Toolbar */
-QLineEdit#mw_searchbar {  
+QLineEdit#mw_searchbar {
 	color: #455971;
 	background-color: #FFFFFF;
 	border: 1px solid #999999;
@@ -113,15 +113,15 @@ QLineEdit#mw_searchbar {
 	padding-left: 5px;
 }
 
-QLineEdit#mw_searchbar:hover { 
-	margin-left: 0.7em; 
+QLineEdit#mw_searchbar:hover {
+	margin-left: 0.7em;
 	color: #455971;
 	background-color: #FFFFFF;
 	border: 1px solid #0071ec;
 	margin: 15px;
 }
 
-QLineEdit#mw_searchbar:focus { 
+QLineEdit#mw_searchbar:focus {
 	border: 1px solid #0071ec;
 }
 
@@ -148,7 +148,7 @@ QSlider::handle:horizontal {
 	border: 1px solid #5c5c5c;
 	border-radius: 0.1em;
 	width: 18px;
-	margin: -2px 2; 
+	margin: -2px 2;
 }
 
 QSlider::handle:horizontal:disabled {
@@ -254,7 +254,7 @@ QRadioButton::indicator:unchecked {
 }
 
 QRadioButton::indicator:disabled {
-	background-color: #455971; 
+	background-color: #455971;
 }
 
 /* Checkboxes */
@@ -552,7 +552,7 @@ QProgressBar::chunk {
 }
 
 /* Pad Settings: Controller Image */
-QLabel#l_controller { 
+QLabel#l_controller {
 	color: #4343c1;
 }
 
@@ -573,7 +573,7 @@ QHeaderView::section {
 	background-color: #FFFFFF;
 	color: #455971;
 	padding-top: 3px;
-	padding-left: 3px;	
+	padding-left: 3px;
 	height: 20px;
 	border: none;
 }
@@ -677,4 +677,25 @@ QLabel#debugger_frame_breakpoint {
 QLabel#debugger_frame_pc {
 	color: #000; /* Font Color: Black */
 	background-color: #00ff00; /* Green */
+}
+
+/* Game Grid */
+#game_list_grid_item[selected="true"] {
+	background: #4343c1;
+}
+#game_list_grid_item:focus {
+	background: #4343c1;
+}
+
+/* Game Grid hover and focus: we need to handle properties differently when using descendants */
+#game_list_grid_item[selected="true"] #game_list_grid_item_title_label {
+	background-color: #4343c1;
+	color: #FFF;
+}
+#game_list_grid_item[hover="true"] #game_list_grid_item_title_label {
+	color: #4343c1;
+}
+#game_list_grid_item[focus="true"] #game_list_grid_item_title_label {
+	background-color: #4343c1;
+	color: #FFF;
 }

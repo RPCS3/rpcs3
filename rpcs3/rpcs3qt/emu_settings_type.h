@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QMap>
+#include <vector>
 
 // Node location
 using cfg_location = std::vector<const char*>;
@@ -24,6 +25,7 @@ enum class emu_settings_type
 	AccurateSpuDMA,
 	AccurateClineStores,
 	AccurateRSXAccess,
+	FIFOAccuracy,
 	AccurateXFloat,
 	ApproximateXFloat,
 	AccuratePPU128Loop,
@@ -34,6 +36,8 @@ enum class emu_settings_type
 	SPUCache,
 	DebugConsoleMode,
 	SilenceAllLogs,
+	SuspendEmulationSavestateMode,
+	StartSavestatePaused,
 	MaxSPURSThreads,
 	SleepTimersAccuracy,
 	ClocksScale,
@@ -46,6 +50,7 @@ enum class emu_settings_type
 	FixupPPUVNAN,
 	AccuratePPUVNAN,
 	AccuratePPUFPCC,
+	MaxPreemptCount,
 
 	// Graphics
 	Renderer,
@@ -69,16 +74,17 @@ enum class emu_settings_type
 	StrictRenderingMode,
 	DisableVertexCache,
 	DisableOcclusionQueries,
+	DisableVideoOutput,
 	DisableFIFOReordering,
 	StrictTextureFlushing,
-	DisableNativefloat16,
-	Enable3D,
+	ShaderPrecisionQuality,
+	StereoRenderMode,
 	AnisotropicFilterOverride,
+	TextureLodBias,
 	ResolutionScale,
 	MinimumScalableDimension,
-	FsrUpscalingEnable,
 	FsrSharpeningStrength,
-	ForceDisableExclusiveFullscreenMode,
+	ExclusiveFullscreenMode,
 	ForceCPUBlitEmulation,
 	DisableOnDiskShaderCache,
 	DisableVulkanMemAllocator,
@@ -86,6 +92,7 @@ enum class emu_settings_type
 	ShaderCompilerNumThreads,
 	MultithreadedRSX,
 	VBlankRate,
+	VBlankNTSCFixup,
 	RelaxedZCULL,
 	PreciseZCULL,
 	DriverWakeUpDelay,
@@ -93,7 +100,7 @@ enum class emu_settings_type
 	VulkanAsyncSchedulerDriver,
 	AllowHostGPULabels,
 	DisableMSLFastMath,
-	SoftwareVkSemaphore,
+	OutputScalingMode,
 
 	// Performance Overlay
 	PerfOverlayEnabled,
@@ -120,9 +127,11 @@ enum class emu_settings_type
 	AudioRenderer,
 	DumpToFile,
 	ConvertTo16Bit,
-	AudioChannels,
+	AudioFormat,
+	AudioFormats,
 	AudioProvider,
 	AudioAvport,
+	AudioDevice,
 	MasterVolume,
 	EnableBuffering,
 	AudioBufferDuration,
@@ -133,7 +142,10 @@ enum class emu_settings_type
 	MusicHandler,
 
 	// Input / Output
+	BackgroundInput,
+	ShowMoveCursor,
 	PadHandlerMode,
+	PadConnection,
 	KeyboardHandler,
 	MouseHandler,
 	Camera,
@@ -144,6 +156,7 @@ enum class emu_settings_type
 	Buzz,
 	Turntable,
 	GHLtar,
+	MidiDevices,
 
 	// Misc
 	ExitRPCS3OnFinish,
@@ -154,12 +167,15 @@ enum class emu_settings_type
 	UseNativeInterface,
 	ShowShaderCompilationHint,
 	WindowTitleFormat,
+	PauseDuringHomeMenu,
 
 	// Network
 	InternetStatus,
 	DNSAddress,
 	IpSwapList,
 	PSNStatus,
+	BindAddress,
+	EnableUpnp,
 
 	// System
 	LicenseArea,
@@ -192,6 +208,7 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::AccurateSpuDMA,           { "Core", "Accurate SPU DMA"}},
 	{ emu_settings_type::AccurateClineStores,      { "Core", "Accurate Cache Line Stores"}},
 	{ emu_settings_type::AccurateRSXAccess,        { "Core", "Accurate RSX reservation access"}},
+	{ emu_settings_type::FIFOAccuracy,             { "Core", "RSX FIFO Accuracy"}},
 	{ emu_settings_type::AccurateXFloat,           { "Core", "Accurate xfloat"}},
 	{ emu_settings_type::ApproximateXFloat,        { "Core", "Approximate xfloat"}},
 	{ emu_settings_type::MFCCommandsShuffling,     { "Core", "MFC Commands Shuffling Limit"}},
@@ -213,6 +230,7 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::FixupPPUVNAN,             { "Core", "PPU Fixup Vector NaN Values"}},
 	{ emu_settings_type::AccuratePPUVNAN,          { "Core", "PPU Accurate Vector NaN Values"}},
 	{ emu_settings_type::AccuratePPUFPCC,          { "Core", "PPU Set FPCC Bits"}},
+	{ emu_settings_type::MaxPreemptCount,          { "Core", "Max CPU Preempt Count"}},
 
 	// Graphics Tab
 	{ emu_settings_type::Renderer,                   { "Video", "Renderer"}},
@@ -235,34 +253,36 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::StrictRenderingMode,        { "Video", "Strict Rendering Mode"}},
 	{ emu_settings_type::DisableVertexCache,         { "Video", "Disable Vertex Cache"}},
 	{ emu_settings_type::DisableOcclusionQueries,    { "Video", "Disable ZCull Occlusion Queries"}},
+	{ emu_settings_type::DisableVideoOutput,         { "Video", "Disable Video Output"}},
 	{ emu_settings_type::DisableFIFOReordering,      { "Video", "Disable FIFO Reordering"}},
-	{ emu_settings_type::DisableNativefloat16,       { "Video", "Disable native float16 support"}},
-	{ emu_settings_type::Enable3D,                   { "Video", "Enable 3D"}},
+	{ emu_settings_type::StereoRenderMode,           { "Video", "3D Display Mode"}},
 	{ emu_settings_type::StrictTextureFlushing,      { "Video", "Strict Texture Flushing"}},
 	{ emu_settings_type::ForceCPUBlitEmulation,      { "Video", "Force CPU Blit"}},
 	{ emu_settings_type::DisableOnDiskShaderCache,   { "Video", "Disable On-Disk Shader Cache"}},
 	{ emu_settings_type::DisableVulkanMemAllocator,  { "Video", "Disable Vulkan Memory Allocator"}},
 	{ emu_settings_type::ShaderMode,                 { "Video", "Shader Mode"}},
 	{ emu_settings_type::ShaderCompilerNumThreads,   { "Video", "Shader Compiler Threads"}},
+	{ emu_settings_type::ShaderPrecisionQuality,     { "Video", "Shader Precision"}},
 	{ emu_settings_type::MultithreadedRSX,           { "Video", "Multithreaded RSX"}},
 	{ emu_settings_type::RelaxedZCULL,               { "Video", "Relaxed ZCULL Sync"}},
 	{ emu_settings_type::PreciseZCULL,               { "Video", "Accurate ZCULL stats"}},
 	{ emu_settings_type::AnisotropicFilterOverride,  { "Video", "Anisotropic Filter Override"}},
+	{ emu_settings_type::TextureLodBias,             { "Video", "Texture LOD Bias Addend"}},
 	{ emu_settings_type::ResolutionScale,            { "Video", "Resolution Scale"}},
 	{ emu_settings_type::MinimumScalableDimension,   { "Video", "Minimum Scalable Dimension"}},
 	{ emu_settings_type::VulkanAdapter,              { "Video", "Vulkan", "Adapter"}},
 	{ emu_settings_type::VBlankRate,                 { "Video", "Vblank Rate"}},
+	{ emu_settings_type::VBlankNTSCFixup,            { "Video", "Vblank NTSC Fixup"}},
 	{ emu_settings_type::DriverWakeUpDelay,          { "Video", "Driver Wake-Up Delay"}},
 	{ emu_settings_type::AllowHostGPULabels,         { "Video", "Allow Host GPU Labels"}},
 	{ emu_settings_type::DisableMSLFastMath,         { "Video", "Disable MSL Fast Math"}},
-	{ emu_settings_type::SoftwareVkSemaphore,        { "Video", "Software VkSemaphore"}},
+	{ emu_settings_type::OutputScalingMode,          { "Video", "Output Scaling Mode"}},
 
 	// Vulkan
 	{ emu_settings_type::VulkanAsyncTextureUploads,           { "Video", "Vulkan", "Asynchronous Texture Streaming 2"}},
 	{ emu_settings_type::VulkanAsyncSchedulerDriver,          { "Video", "Vulkan", "Asynchronous Queue Scheduler"}},
-	{ emu_settings_type::FsrUpscalingEnable,                  { "Video", "Vulkan", "Enable FidelityFX Super Resolution Upscaling"}},
 	{ emu_settings_type::FsrSharpeningStrength,               { "Video", "Vulkan", "FidelityFX CAS Sharpening Intensity"}},
-	{ emu_settings_type::ForceDisableExclusiveFullscreenMode, { "Video", "Vulkan", "Force Disable Exclusive Fullscreen Mode"}},
+	{ emu_settings_type::ExclusiveFullscreenMode,             { "Video", "Vulkan", "Exclusive Fullscreen Mode"}},
 
 	// Performance Overlay
 	{ emu_settings_type::PerfOverlayEnabled,               { "Video", "Performance Overlay", "Enabled" } },
@@ -289,9 +309,11 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::AudioRenderer,           { "Audio", "Renderer"}},
 	{ emu_settings_type::DumpToFile,              { "Audio", "Dump to file"}},
 	{ emu_settings_type::ConvertTo16Bit,          { "Audio", "Convert to 16 bit"}},
-	{ emu_settings_type::AudioChannels,           { "Audio", "Audio Channels"}},
+	{ emu_settings_type::AudioFormat,             { "Audio", "Audio Format"}},
+	{ emu_settings_type::AudioFormats,            { "Audio", "Audio Formats"}},
 	{ emu_settings_type::AudioProvider,           { "Audio", "Audio Provider"}},
 	{ emu_settings_type::AudioAvport,             { "Audio", "RSXAudio Avport"}},
+	{ emu_settings_type::AudioDevice,             { "Audio", "Audio Device"}},
 	{ emu_settings_type::MasterVolume,            { "Audio", "Master Volume"}},
 	{ emu_settings_type::EnableBuffering,         { "Audio", "Enable Buffering"}},
 	{ emu_settings_type::AudioBufferDuration,     { "Audio", "Desired Audio Buffer Duration"}},
@@ -302,7 +324,10 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::MusicHandler,            { "Audio", "Music Handler"}},
 
 	// Input / Output
+	{ emu_settings_type::BackgroundInput, { "Input/Output", "Background input enabled"}},
+	{ emu_settings_type::ShowMoveCursor,  { "Input/Output", "Show move cursor"}},
 	{ emu_settings_type::PadHandlerMode,  { "Input/Output", "Pad handler mode"}},
+	{ emu_settings_type::PadConnection,   { "Input/Output", "Keep pads connected" }},
 	{ emu_settings_type::KeyboardHandler, { "Input/Output", "Keyboard"}},
 	{ emu_settings_type::MouseHandler,    { "Input/Output", "Mouse"}},
 	{ emu_settings_type::Camera,          { "Input/Output", "Camera"}},
@@ -313,6 +338,7 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::Buzz,            { "Input/Output", "Buzz emulated controller" }},
 	{ emu_settings_type::Turntable,       { "Input/Output", "Turntable emulated controller" }},
 	{ emu_settings_type::GHLtar,          { "Input/Output", "GHLtar emulated controller" }},
+	{ emu_settings_type::MidiDevices,     { "Input/Output", "Emulated Midi devices" }},
 
 	// Misc
 	{ emu_settings_type::ExitRPCS3OnFinish,         { "Miscellaneous", "Exit RPCS3 when process finishes" }},
@@ -324,12 +350,15 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::ShowShaderCompilationHint, { "Miscellaneous", "Show shader compilation hint"}},
 	{ emu_settings_type::SilenceAllLogs,            { "Miscellaneous", "Silence All Logs" }},
 	{ emu_settings_type::WindowTitleFormat,         { "Miscellaneous", "Window Title Format" }},
+	{ emu_settings_type::PauseDuringHomeMenu,       { "Miscellaneous", "Pause Emulation During Home Menu" }},
 
 	// Networking
 	{ emu_settings_type::InternetStatus, { "Net", "Internet enabled"}},
 	{ emu_settings_type::DNSAddress,     { "Net", "DNS address"}},
 	{ emu_settings_type::IpSwapList,     { "Net", "IP swap list"}},
 	{ emu_settings_type::PSNStatus,      { "Net", "PSN status"}},
+	{ emu_settings_type::BindAddress,    { "Net", "Bind address"}},
+	{ emu_settings_type::EnableUpnp,     { "Net", "UPNP Enabled"}},
 
 	// System
 	{ emu_settings_type::LicenseArea,           { "System", "License Area"}},
@@ -340,4 +369,8 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::LimitCacheSize,        { "VFS", "Limit disk cache size"}},
 	{ emu_settings_type::MaximumCacheSize,      { "VFS", "Disk cache maximum size (MB)"}},
 	{ emu_settings_type::ConsoleTimeOffset,     { "System", "Console time offset (s)"}},
+
+	// Savestates
+	{ emu_settings_type::SuspendEmulationSavestateMode,       { "Savestate", "Suspend Emulation Savestate Mode" }},
+	{ emu_settings_type::StartSavestatePaused,                { "Savestate", "Start Paused" }},
 };

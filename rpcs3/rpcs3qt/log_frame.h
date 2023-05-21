@@ -30,6 +30,7 @@ public Q_SLOTS:
 
 Q_SIGNALS:
 	void LogFrameClosed();
+	void PerformGoToOnDebugger(const QString& text_argument, bool test_only = false, std::shared_ptr<bool> signal_accepted = nullptr);
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
 	void closeEvent(QCloseEvent* event) override;
@@ -46,15 +47,22 @@ private:
 
 	std::unique_ptr<find_dialog> m_find_dialog;
 
+	QTimer* m_timer = nullptr;
+
 	QList<QColor> m_color;
 	QColor m_color_stack;
 	QPlainTextEdit* m_log = nullptr;
-	QString m_old_log_text;
+	std::string m_old_log_text;
 	QString m_old_tty_text;
-	ullong m_log_counter{};
-	ullong m_tty_counter{};
+	QString m_log_text;
+	std::string m_tty_buf;
+	usz m_tty_limited_read = 0;
+	usz m_log_counter{};
+	usz m_tty_counter{};
 	bool m_stack_log{};
 	bool m_stack_tty{};
+	bool m_ansi_tty{};
+	logs::level m_old_log_level{};
 
 	fs::file m_tty_file;
 	QWidget* m_tty_container = nullptr;
@@ -64,6 +72,7 @@ private:
 
 	QAction* m_clear_act = nullptr;
 	QAction* m_clear_tty_act = nullptr;
+	QAction* m_perform_goto_on_debugger = nullptr;
 
 	QActionGroup* m_log_level_acts = nullptr;
 	QAction* m_nothing_act = nullptr;
@@ -77,6 +86,7 @@ private:
 
 	QAction* m_stack_act_log = nullptr;
 	QAction* m_stack_act_tty = nullptr;
+	QAction* m_ansi_act_tty = nullptr;
 	QAction* m_stack_act_err = nullptr;
 
 	QAction* m_show_prefix_act = nullptr;

@@ -1,5 +1,5 @@
-/* 
-TheMitoSan Dark-Theme for RPCS3 
+/*
+TheMitoSan Dark-Theme for RPCS3
 Based on Kuroi (Dark) by Ani
 by themitosan @ twitter.com/themitosan
 Ani @ https://github.com/AniLeo
@@ -135,7 +135,7 @@ QPushButton::disabled {
 }
 
 QPushButton::pressed {
-	background-color: #333; 
+	background-color: #333;
 }
 
 /* Log and Debugger borders */
@@ -193,19 +193,8 @@ QListWidget::item:hover {
 }
 
 /* Pad Settings: Controller Image */
-QLabel#l_controller { 
+QLabel#l_controller {
 	color: #FFF;
-}
-
-/* Game Grid Font */
-QTableWidget#game_grid {
-	font-weight: 600;
-	font-size: 8pt;
-	font-family: Lucida Grande;
-	color: #FFF;
-}
-QTableWidget#game_grid::item:selected:!active {
-	selection-background-color: #313f4e;
 }
 
 /* Slider on toolbar */
@@ -230,8 +219,8 @@ QLabel#color_button {
 }
 
 /* Search bar on main toolbar */
-QLineEdit#mw_searchbar { 
-	margin-left: 0.7em; 
+QLineEdit#mw_searchbar {
+	margin-left: 0.7em;
 	color: #ecf0f1;
 }
 
@@ -344,24 +333,54 @@ QLabel#debugger_frame_pc {
 /* Tree view changes*/
 QTreeView::branch:has-children:!has-siblings:closed,
 QTreeView::branch:closed:has-children:has-siblings {
-    border-image: none;
-    image: url("GuiConfigs/list_arrow_white.png");
+	border-image: none;
+	image: url("GuiConfigs/list_arrow_white.png");
 }
 
 QTreeView::branch:open:has-children:!has-siblings,
-QTreeView::branch:open:has-children:has-siblings  {
-    border-image: none;
-    image: url("GuiConfigs/list_arrow_down_white.png");
+QTreeView::branch:open:has-children:has-siblings {
+	border-image: none;
+	image: url("GuiConfigs/list_arrow_down_white.png");
 }
 
 QTreeView::branch:has-children:!has-siblings:closed:hover,
 QTreeView::branch:closed:has-children:has-siblings:hover {
-    border-image: none;
-    image: url("GuiConfigs/list_arrow_blue.png");
+	border-image: none;
+	image: url("GuiConfigs/list_arrow_blue.png");
 }
 
 QTreeView::branch:open:has-children:!has-siblings:hover,
-QTreeView::branch:open:has-children:has-siblings:hover  {
-    border-image: none;
-    image: url("GuiConfigs/list_arrow_down_blue.png");
+QTreeView::branch:open:has-children:has-siblings:hover {
+	border-image: none;
+	image: url("GuiConfigs/list_arrow_down_blue.png");
+}
+
+/* Game Grid */
+#game_list_grid_item[selected="true"] {
+	background: #313f4e;
+}
+#game_list_grid_item:hover {
+	background: #313f4e;
+}
+#game_list_grid_item:focus {
+	background: #0078D7;
+}
+
+/* Game Grid Font */
+#game_list_grid_item #game_list_grid_item_title_label {
+	font-weight: 600;
+	font-size: 8pt;
+	font-family: Lucida Grande;
+	color: #FFF;
+}
+
+/* Game Grid hover and focus: we need to handle properties differently when using descendants */
+#game_list_grid_item[selected="true"] #game_list_grid_item_title_label {
+	background-color: #313f4e;
+}
+#game_list_grid_item[hover="true"] #game_list_grid_item_title_label {
+	background-color: #313f4e;
+}
+#game_list_grid_item[focus="true"] #game_list_grid_item_title_label {
+	background-color: #0078D7;
 }

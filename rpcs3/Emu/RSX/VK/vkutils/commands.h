@@ -81,12 +81,13 @@ namespace vk
 
 		enum command_buffer_data_flag : u32
 		{
-			cb_has_occlusion_task = 1,
-			cb_has_blit_transfer = 2,
-			cb_has_dma_transfer = 4,
-			cb_has_open_query = 8,
-			cb_load_occluson_task = 16,
-			cb_has_conditional_render = 32
+			cb_has_occlusion_task = 0x01,
+			cb_has_blit_transfer  = 0x02,
+			cb_has_dma_transfer   = 0x04,
+			cb_has_open_query     = 0x08,
+			cb_load_occluson_task = 0x10,
+			cb_has_conditional_render = 0x20,
+			cb_reload_dynamic_state   = 0x40
 		};
 		u32 flags = 0;
 

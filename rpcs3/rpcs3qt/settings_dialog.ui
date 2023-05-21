@@ -43,8 +43,8 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>838</width>
-        <height>641</height>
+        <width>821</width>
+        <height>716</height>
        </rect>
       </property>
       <property name="sizePolicy">
@@ -54,7 +54,7 @@
        </sizepolicy>
       </property>
       <property name="currentIndex">
-       <number>2</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="coreTab">
        <attribute name="title">
@@ -186,9 +186,58 @@
                <item>
                 <widget class="QCheckBox" name="fullWidthAVX512">
                  <property name="text">
-                  <string>Full Width AVX-512</string>
+                  <string>Increase AVX-512 instruction width</string>
                  </property>
                 </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="gb_max_preempt_count">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="title">
+               <string>Max Power Saving CPU-preemptions</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_max_preempt_layout">
+               <item>
+                <widget class="QSlider" name="maxPreemptCount">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="maxPreemptLayout" stretch="0,0">
+                 <item>
+                  <widget class="QLabel" name="preemptText">
+                   <property name="text">
+                    <string>0</string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignCenter</set>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="preemptReset">
+                   <property name="text">
+                    <string>Reset</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
                </item>
               </layout>
              </widget>
@@ -470,7 +519,7 @@
             </item>
             <item>
              <widget class="QWidget" name="widget_gpu_3" native="true">
-              <layout class="QHBoxLayout" name="widget_gpu_3_layout" stretch="1">
+              <layout class="QHBoxLayout" name="widget_gpu_3_layout" stretch="1,1">
                <property name="leftMargin">
                 <number>0</number>
                </property>
@@ -494,6 +543,30 @@
                   </item>
                  </layout>
                 </widget>
+               </item>
+               <item>
+                <widget class="QGroupBox" name="gbShaderPrecision">
+                 <property name="title">
+                  <string>Shader Quality</string>
+                 </property>
+                 <layout class="QVBoxLayout" name="gbShaderPrecision_layout">
+                  <item>
+                   <widget class="QComboBox" name="shaderPrecision"/>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="gb_stereo">
+              <property name="title">
+               <string>3D</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_stereo_layout">
+               <item>
+                <widget class="QComboBox" name="stereoRenderMode"/>
                </item>
               </layout>
              </widget>
@@ -677,17 +750,13 @@
              </layout>
             </item>
             <item>
-             <widget class="QGroupBox" name="gb_Upscaling">
+             <widget class="QGroupBox" name="gb_outputScaling">
               <property name="title">
-               <string>Upscaling</string>
+               <string>Output Scaling</string>
               </property>
               <layout class="QVBoxLayout" name="gb_Upscaling_layout">
                <item>
-                <widget class="QCheckBox" name="fsrUpscalingEnable">
-                 <property name="text">
-                  <string>Enable FSR Upscaling</string>
-                 </property>
-                </widget>
+                <widget class="QComboBox" name="outputScalingMode"/>
                </item>
                <item>
                 <widget class="Line" name="line">
@@ -871,12 +940,6 @@
             </item>
             <item>
              <widget class="QGroupBox" name="gb_additional_settings">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
               <property name="title">
                <string>Additional Settings</string>
               </property>
@@ -909,13 +972,6 @@
                 <widget class="QCheckBox" name="stretchToDisplayArea">
                  <property name="text">
                   <string>Stretch To Display Area</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="Enable3D">
-                 <property name="text">
-                  <string>Enable 3D</string>
                  </property>
                 </widget>
                </item>
@@ -1031,13 +1087,26 @@
              </widget>
             </item>
             <item>
-             <widget class="QGroupBox" name="gb_audio_downmix">
+             <widget class="QGroupBox" name="gb_audio_format">
               <property name="title">
-               <string>Audio Channels</string>
+               <string>Audio Format</string>
               </property>
-              <layout class="QVBoxLayout" name="gb_audio_channels_layout">
+              <layout class="QVBoxLayout" name="gb_audio_format_layout">
                <item>
-                <widget class="QComboBox" name="combo_audio_downmix"/>
+                <widget class="QComboBox" name="combo_audio_format"/>
+               </item>
+               <item>
+                <widget class="QListWidget" name="list_audio_formats">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="selectionMode">
+                  <enum>QAbstractItemView::ExtendedSelection</enum>
+                 </property>
+                </widget>
                </item>
               </layout>
              </widget>
@@ -1082,18 +1151,6 @@
              </widget>
             </item>
             <item>
-             <widget class="QGroupBox" name="gb_music_handler">
-              <property name="title">
-               <string>Music Handler</string>
-              </property>
-              <layout class="QVBoxLayout" name="gb_music_handler_layout">
-               <item>
-                <widget class="QComboBox" name="musicHandlerBox"/>
-               </item>
-              </layout>
-             </widget>
-            </item>
-            <item>
              <spacer name="verticalSpacerAudioLeft">
               <property name="orientation">
                <enum>Qt::Vertical</enum>
@@ -1114,6 +1171,18 @@
           <item>
            <layout class="QVBoxLayout" name="audioTabLayoutTopMiddle">
             <item>
+             <widget class="QGroupBox" name="gb_audio_device">
+              <property name="title">
+               <string>Audio Device</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_audio_device_layout">
+               <item>
+                <widget class="QComboBox" name="audioDeviceBox"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
              <widget class="QGroupBox" name="gb_audio_provider">
               <property name="title">
                <string>Audio Provider</string>
@@ -1133,6 +1202,18 @@
               <layout class="QVBoxLayout" name="gb_audio_avport_layout">
                <item>
                 <widget class="QComboBox" name="audioAvportBox"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="gb_music_handler">
+              <property name="title">
+               <string>Music Handler</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_music_handler_layout">
+               <item>
+                <widget class="QComboBox" name="musicHandlerBox"/>
                </item>
               </layout>
              </widget>
@@ -1526,7 +1607,31 @@
        </attribute>
        <layout class="QVBoxLayout" name="inputTab_layout">
         <item>
-         <layout class="QGridLayout" name="ioGridLayout">
+         <layout class="QGridLayout" name="ioGridLayout" columnstretch="1,1,1">
+          <item row="2" column="2">
+           <widget class="QGroupBox" name="gb_ghltar_emulated">
+            <property name="title">
+             <string>Guitar Hero Live emulated guitar</string>
+            </property>
+            <layout class="QVBoxLayout" name="gb_ghltar_emulated_layout">
+             <item>
+              <widget class="QComboBox" name="ghltarBox"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QGroupBox" name="gb_move_handler">
+            <property name="title">
+             <string>Move Handler</string>
+            </property>
+            <layout class="QVBoxLayout" name="gb_move_handler_layout">
+             <item>
+              <widget class="QComboBox" name="moveBox"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
           <item row="1" column="2">
            <widget class="QGroupBox" name="gb_turntable_emulated">
             <property name="title">
@@ -1551,26 +1656,14 @@
             </layout>
            </widget>
           </item>
-          <item row="0" column="1">
-           <widget class="QGroupBox" name="gb_camera_type">
+          <item row="0" column="2">
+           <widget class="QGroupBox" name="gb_buzz_emulated">
             <property name="title">
-             <string>Camera Input</string>
+             <string>Buzz! emulated controller</string>
             </property>
-            <layout class="QVBoxLayout" name="gb_camera_type_layout">
+            <layout class="QVBoxLayout" name="gb_buzz_emulated_layout">
              <item>
-              <widget class="QComboBox" name="cameraTypeBox"/>
-             </item>
-            </layout>
-           </widget>
-          </item>
-          <item row="2" column="0">
-           <widget class="QGroupBox" name="gb_move_handler">
-            <property name="title">
-             <string>Move Handler</string>
-            </property>
-            <layout class="QVBoxLayout" name="gb_move_handler_layout">
-             <item>
-              <widget class="QComboBox" name="moveBox"/>
+              <widget class="QComboBox" name="buzzBox"/>
              </item>
             </layout>
            </widget>
@@ -1587,14 +1680,26 @@
             </layout>
            </widget>
           </item>
-          <item row="0" column="2">
-           <widget class="QGroupBox" name="gb_buzz_emulated">
+          <item row="3" column="0">
+           <widget class="QGroupBox" name="gb_pad_mode">
             <property name="title">
-             <string>Buzz! emulated controller</string>
+             <string>Pad Handler Mode</string>
             </property>
-            <layout class="QVBoxLayout" name="gb_buzz_emulated_layout">
+            <layout class="QVBoxLayout" name="gb_pad_mode_layout">
              <item>
-              <widget class="QComboBox" name="buzzBox"/>
+              <widget class="QComboBox" name="padModeBox"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QGroupBox" name="gb_camera_type">
+            <property name="title">
+             <string>Camera Input</string>
+            </property>
+            <layout class="QVBoxLayout" name="gb_camera_type_layout">
+             <item>
+              <widget class="QComboBox" name="cameraTypeBox"/>
              </item>
             </layout>
            </widget>
@@ -1611,30 +1716,6 @@
             </layout>
            </widget>
           </item>
-          <item row="1" column="1">
-           <widget class="QGroupBox" name="gb_camera_setting">
-            <property name="title">
-             <string>Camera Handler</string>
-            </property>
-            <layout class="QVBoxLayout" name="gb_camera_setting_layout">
-             <item>
-              <widget class="QComboBox" name="cameraBox"/>
-             </item>
-            </layout>
-           </widget>
-          </item>
-          <item row="2" column="2">
-           <widget class="QGroupBox" name="gb_ghltar_emulated">
-            <property name="title">
-             <string>Guitar Hero Live emulated guitar</string>
-            </property>
-            <layout class="QVBoxLayout" name="gb_ghltar_emulated_layout">
-             <item>
-              <widget class="QComboBox" name="ghltarBox"/>
-             </item>
-            </layout>
-           </widget>
-          </item>
           <item row="2" column="1">
            <widget class="QGroupBox" name="gb_camera_id">
             <property name="title">
@@ -1647,14 +1728,117 @@
             </layout>
            </widget>
           </item>
-          <item row="3" column="0">
-           <widget class="QGroupBox" name="gb_pad_mode">
+          <item row="1" column="1">
+           <widget class="QGroupBox" name="gb_camera_setting">
             <property name="title">
-             <string>Pad Handler Mode</string>
+             <string>Camera Handler</string>
             </property>
-            <layout class="QVBoxLayout" name="gb_pad_mode_layout">
+            <layout class="QVBoxLayout" name="gb_camera_setting_layout">
              <item>
-              <widget class="QComboBox" name="padModeBox"/>
+              <widget class="QComboBox" name="cameraBox"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item row="3" column="2">
+           <widget class="QGroupBox" name="gb_midi_1">
+            <property name="title">
+             <string>Emulated Midi device 1</string>
+            </property>
+            <layout class="QVBoxLayout" name="midLayout1">
+             <item>
+              <layout class="QHBoxLayout" name="midiHLayout1" stretch="1,2">
+               <item>
+                <widget class="QComboBox" name="midiTypeBox1"/>
+               </item>
+               <item>
+                <widget class="QComboBox" name="midiDeviceBox1"/>
+               </item>
+              </layout>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item row="6" column="2">
+           <widget class="QGroupBox" name="gb_midi_3">
+            <property name="title">
+             <string>Emulated Midi device 3</string>
+            </property>
+            <layout class="QVBoxLayout" name="midLayout3">
+             <item>
+              <layout class="QHBoxLayout" name="midiHLayout3" stretch="1,2">
+               <item>
+                <widget class="QComboBox" name="midiTypeBox3"/>
+               </item>
+               <item>
+                <widget class="QComboBox" name="midiDeviceBox3"/>
+               </item>
+              </layout>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item row="5" column="2">
+           <widget class="QGroupBox" name="gb_midi_2">
+            <property name="title">
+             <string>Emulated Midi device 2</string>
+            </property>
+            <layout class="QVBoxLayout" name="midLayout2">
+             <item>
+              <layout class="QHBoxLayout" name="midiHLayout2" stretch="1,2">
+               <item>
+                <widget class="QComboBox" name="midiTypeBox2"/>
+               </item>
+               <item>
+                <widget class="QComboBox" name="midiDeviceBox2"/>
+               </item>
+              </layout>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item row="5" column="0" rowspan="2">
+           <widget class="QGroupBox" name="gb_additional_io_settings">
+            <property name="title">
+             <string>Additional Settings</string>
+            </property>
+            <layout class="QVBoxLayout" name="layout_gb_additional_io_settings">
+             <item>
+              <widget class="QCheckBox" name="backgroundInputBox">
+               <property name="text">
+                <string>Enable Background Input</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="padConnectionBox">
+               <property name="text">
+                <string>Keep Pads Connected</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="showMoveCursorBox">
+               <property name="text">
+                <string>Show PS Move Cursor</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <spacer name="verticalSpacerIoAdditionalSettings">
+               <property name="orientation">
+                <enum>Qt::Vertical</enum>
+               </property>
+               <property name="sizeType">
+                <enum>QSizePolicy::MinimumExpanding</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>0</width>
+                 <height>0</height>
+                </size>
+               </property>
+              </spacer>
              </item>
             </layout>
            </widget>
@@ -1972,7 +2156,7 @@
             <property name="title">
              <string>Network Configuration</string>
             </property>
-            <layout class="QVBoxLayout" name="gb_network_status_layout" stretch="0,0,0,0">
+            <layout class="QVBoxLayout" name="gb_network_status_layout" stretch="0,0,0,0,0,0">
              <item>
               <widget class="QGroupBox" name="gb_netStatusBox">
                <property name="title">
@@ -2021,6 +2205,32 @@
                  </widget>
                 </item>
                </layout>
+              </widget>
+             </item>
+             <item>
+              <widget class="QGroupBox" name="gb_edit_bind">
+               <property name="title">
+                <string>Bind address</string>
+               </property>
+               <layout class="QVBoxLayout" name="gb_edit_bind_layout">
+                <item>
+                 <widget class="QLineEdit" name="edit_bind">
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                    <horstretch>0</horstretch>
+                    <verstretch>0</verstretch>
+                   </sizepolicy>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="enable_upnp">
+               <property name="text">
+                <string>Enable UPNP</string>
+               </property>
               </widget>
              </item>
              <item>
@@ -2226,6 +2436,20 @@
                 </widget>
                </item>
                <item>
+                <widget class="QCheckBox" name="suspendSavestates">
+                 <property name="text">
+                  <string>Suspend-Emulation Savestates Mode</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="pausedSavestates">
+                 <property name="text">
+                  <string>Start Savestates Paused</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QCheckBox" name="silenceAllLogs">
                  <property name="text">
                   <string>Silence All Logs</string>
@@ -2272,6 +2496,49 @@
              </widget>
             </item>
             <item>
+             <widget class="QGroupBox" name="gb_clockScale">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="title">
+               <string>Clocks Scale</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_clockScale_layout">
+               <item>
+                <widget class="QSlider" name="clockScale">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="clockScaleLayout" stretch="1,0">
+                 <item>
+                  <widget class="QLabel" name="clockScaleText">
+                   <property name="text">
+                    <string>100%</string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignCenter</set>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="clockScaleReset">
+                   <property name="text">
+                    <string>Reset</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
              <spacer name="advancedTabSpacerLeft">
               <property name="orientation">
                <enum>Qt::Vertical</enum>
@@ -2308,9 +2575,6 @@
                  <property name="selectionMode">
                   <enum>QAbstractItemView::ExtendedSelection</enum>
                  </property>
-                 <property name="viewMode">
-                  <enum>QListView::ListMode</enum>
-                 </property>
                 </widget>
                </item>
                <item>
@@ -2323,9 +2587,6 @@
                  </property>
                  <property name="selectionMode">
                   <enum>QAbstractItemView::ExtendedSelection</enum>
-                 </property>
-                 <property name="viewMode">
-                  <enum>QListView::ListMode</enum>
                  </property>
                 </widget>
                </item>
@@ -2390,23 +2651,9 @@
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="forceDisableExclusiveFullscreenMode">
-                 <property name="text">
-                  <string>Force Disable Exclusive Fullscreen Mode</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
                 <widget class="QCheckBox" name="disableOnDiskShaderCache">
                  <property name="text">
                   <string>Disable On-Disk Shader Cache</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="disableNativefp16">
-                 <property name="text">
-                  <string>Disable native float16 support</string>
                  </property>
                 </widget>
                </item>
@@ -2421,13 +2668,6 @@
                 <widget class="QCheckBox" name="disableMslFastMath">
                  <property name="text">
                   <string>Disable MSL Fast Math</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="softwareVkSemaphore">
-                 <property name="text">
-                  <string>Software VkSemaphore</string>
                  </property>
                 </widget>
                </item>
@@ -2448,6 +2688,42 @@
               <layout class="QVBoxLayout" name="gb_vksched_layout">
                <item>
                 <widget class="QComboBox" name="vulkansched"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="gb_rsx_fifo_accuracy">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="title">
+               <string>RSX FIFO Accuracy</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_rsx_fifo_accuracy_layout">
+               <item>
+                <widget class="QComboBox" name="FIFOAccuracy"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="gb_exclusiveFullscreen">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="title">
+               <string>Exclusive Fullscreen Mode</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_exclusiveFullscreen_layout">
+               <item>
+                <widget class="QComboBox" name="exclusiveFullscreenMode"/>
                </item>
               </layout>
              </widget>
@@ -2535,48 +2811,12 @@
                  </item>
                 </layout>
                </item>
-              </layout>
-             </widget>
-            </item>
-            <item>
-             <widget class="QGroupBox" name="gb_clockScale">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="title">
-               <string>Clocks Scale</string>
-              </property>
-              <layout class="QVBoxLayout" name="gb_clockScale_layout">
                <item>
-                <widget class="QSlider" name="clockScale">
-                 <property name="orientation">
-                  <enum>Qt::Horizontal</enum>
+                <widget class="QCheckBox" name="vblankNTSCFixup">
+                 <property name="text">
+                  <string>VBlank NTSC Fixup</string>
                  </property>
                 </widget>
-               </item>
-               <item>
-                <layout class="QHBoxLayout" name="clockScaleLayout" stretch="1,0">
-                 <item>
-                  <widget class="QLabel" name="clockScaleText">
-                   <property name="text">
-                    <string>100%</string>
-                   </property>
-                   <property name="alignment">
-                    <set>Qt::AlignCenter</set>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QPushButton" name="clockScaleReset">
-                   <property name="text">
-                    <string>Reset</string>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
                </item>
               </layout>
              </widget>
@@ -2705,6 +2945,13 @@
                 <widget class="QCheckBox" name="showShaderCompilationHint">
                  <property name="text">
                   <string>Show shader compilation hint</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="pauseDuringHomeMenu">
+                 <property name="text">
+                  <string>Pause emulation during home menu</string>
                  </property>
                 </widget>
                </item>
@@ -2849,6 +3096,13 @@
                    <widget class="QCheckBox" name="gs_resizeOnBoot">
                     <property name="text">
                      <string>Resize game window on boot</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QCheckBox" name="gs_resizeOnBootManual">
+                    <property name="text">
+                     <string>Resize manually</string>
                     </property>
                    </widget>
                   </item>
@@ -3643,6 +3897,13 @@
                 </widget>
                </item>
                <item>
+                <widget class="QCheckBox" name="cb_show_restart_hint">
+                 <property name="text">
+                  <string>Show Restart Dialog</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <spacer name="guiTabSpacerRight">
                  <property name="orientation">
                   <enum>Qt::Vertical</enum>
@@ -3703,6 +3964,32 @@
                  </property>
                  <property name="maxLength">
                   <number>128</number>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="gb_uuid">
+              <property name="title">
+               <string>Installation ID</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_uuid_layout">
+               <item>
+                <widget class="QLabel" name="label_uuid">
+                 <property name="text">
+                  <string>UUID-placeholder</string>
+                 </property>
+                 <property name="alignment">
+                  <set>Qt::AlignCenter</set>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="pb_uuid">
+                 <property name="text">
+                  <string>Create new ID</string>
                  </property>
                 </widget>
                </item>
@@ -3820,6 +4107,13 @@
               <widget class="QCheckBox" name="disableHwOcclusionQueries">
                <property name="text">
                 <string>Disable ZCull Occlusion Queries</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="disableVideoOutput">
+               <property name="text">
+                <string>Disable Video Output</string>
                </property>
               </widget>
              </item>
@@ -4000,6 +4294,29 @@
                <layout class="QVBoxLayout" name="vbl_num_ppu_threads">
                 <item>
                  <widget class="QComboBox" name="combo_num_ppu_threads"/>
+                </item>
+               </layout>
+              </widget>
+             </item>
+             <item>
+              <widget class="QGroupBox" name="gb_Level_of_Detail">
+               <property name="title">
+                <string>LOD Bias Offset</string>
+               </property>
+               <layout class="QVBoxLayout" name="gb_Level_of_Detail_Layout">
+                <item>
+                 <layout class="QHBoxLayout" name="TextureLODBiasLayout">
+                  <item>
+                   <widget class="QDoubleSpinBox" name="TextureLODBias"/>
+                  </item>
+                  <item>
+                   <widget class="QPushButton" name="TextureLODBiasReset">
+                    <property name="text">
+                     <string>Reset</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
                 </item>
                </layout>
               </widget>

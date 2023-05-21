@@ -3,6 +3,8 @@
 #include "GLHelpers.h"
 #include "../rsx_utils.h"
 
+#include "glutils/fbo.h"
+
 struct color_swizzle
 {
 	gl::texture::channel a = gl::texture::channel::a;
@@ -45,7 +47,7 @@ namespace rsx
 
 namespace gl
 {
-	class render_target : public viewable_image, public rsx::ref_counted, public rsx::render_target_descriptor<texture*>
+	class render_target : public viewable_image, public rsx::render_target_descriptor<texture*>
 	{
 		void clear_memory(gl::command_context& cmd);
 		void load_memory(gl::command_context& cmd);
@@ -77,11 +79,6 @@ namespace gl
 		bool is_depth_surface() const override
 		{
 			return !!(aspect() & gl::image_aspect::depth);
-		}
-
-		void release_ref(texture* t) const override
-		{
-			static_cast<gl::render_target*>(t)->release();
 		}
 
 		viewable_image* get_surface(rsx::surface_access /*access_type*/) override
@@ -116,12 +113,19 @@ namespace gl
 	{
 		return ensure(dynamic_cast<gl::render_target*>(t));
 	}
+
+	static inline const gl::render_target* as_rtt(const gl::texture* t)
+	{
+		return ensure(dynamic_cast<const gl::render_target*>(t));
+	}
 }
 
 struct gl_render_target_traits
 {
 	using surface_storage_type = std::unique_ptr<gl::render_target>;
 	using surface_type = gl::render_target*;
+	using buffer_object_storage_type = std::unique_ptr<gl::buffer>;
+	using buffer_object_type = gl::buffer*;
 	using command_list_type = gl::command_context&;
 	using download_buffer_object = std::vector<u8>;
 	using barrier_descriptor_t = rsx::deferred_clipped_region<gl::render_target*>;
@@ -211,7 +215,7 @@ struct gl_render_target_traits
 			sink->queue_tag(address);
 		}
 
-		prev.target = sink.get();
+		sink->on_clone_from(ref);
 
 		if (!sink->old_contents.empty())
 		{
@@ -226,10 +230,19 @@ struct gl_render_target_traits
 			}
 		}
 
-		sink->set_rsx_pitch(ref->get_rsx_pitch());
+		prev.target = sink.get();
 		sink->set_old_contents_region(prev, false);
-		sink->last_use_tag = ref->last_use_tag;
-		sink->raster_type = ref->raster_type;     // Can't actually cut up swizzled data
+	}
+
+	static
+	std::unique_ptr<gl::render_target> convert_pitch(
+		gl::command_context& /*cmd*/,
+		std::unique_ptr<gl::render_target>& src,
+		usz /*out_pitch*/)
+	{
+		// TODO
+		src->state_flags = rsx::surface_state_flags::erase_bkgnd;
+		return {};
 	}
 
 	static
@@ -237,8 +250,8 @@ struct gl_render_target_traits
 	{
 		return (surface->get_internal_format() == ref->get_internal_format() &&
 				surface->get_spp() == sample_count &&
-				surface->get_surface_width<rsx::surface_metrics::pixels>() >= width &&
-				surface->get_surface_height<rsx::surface_metrics::pixels>() >= height);
+				surface->get_surface_width<rsx::surface_metrics::pixels>() == width &&
+				surface->get_surface_height<rsx::surface_metrics::pixels>() == height);
 	}
 
 	static
@@ -332,7 +345,38 @@ struct gl_render_target_traits
 	}
 
 	static
-	gl::render_target* get(const std::unique_ptr<gl::render_target> &in)
+	void spill_buffer(std::unique_ptr<gl::buffer>& /*bo*/)
+	{
+		// TODO
+	}
+
+	static
+	void unspill_buffer(std::unique_ptr<gl::buffer>& /*bo*/)
+	{
+		// TODO
+	}
+
+	static
+	void write_render_target_to_memory(
+		gl::command_context&,
+		gl::buffer*,
+		gl::render_target*,
+		u64, u64, u64)
+	{
+		// TODO
+	}
+
+	template <int BlockSize>
+	static
+	gl::buffer* merge_bo_list(gl::command_context&, const std::vector<gl::buffer*>& /*list*/)
+	{
+		// TODO
+		return nullptr;
+	}
+
+	template <typename T>
+	static
+	T* get(const std::unique_ptr<T> &in)
 	{
 		return in.get();
 	}

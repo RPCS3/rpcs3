@@ -223,6 +223,7 @@ struct RSXVertexProgram
 {
 	std::vector<u32> data;
 	rsx::vertex_program_texture_state texture_state;
+	u32 ctrl;
 	u32 output_mask;
 	u32 base_address;
 	u32 entry;

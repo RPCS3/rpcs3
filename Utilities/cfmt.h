@@ -367,9 +367,11 @@ usz cfmt_append(Dst& out, const Char* fmt, Src&& src)
 			break;
 		}
 
-		if (!ctx.type)
+		const usz src_type = src.type(ctx.args);
+
+		if (!ctx.type || src_type > 8)
 		{
-			ctx.type = static_cast<u8>(src.type(ctx.args));
+			ctx.type = static_cast<u8>(src_type);
 
 			if (!ctx.type)
 			{
@@ -379,7 +381,13 @@ usz cfmt_append(Dst& out, const Char* fmt, Src&& src)
 
 		// Sign-extended argument expected
 		const u64 val = src.template get<u64>(ctx.args);
-		const bool negative = ctx.type && static_cast<s64>(val) < 0;
+		bool negative = ctx.type && ctx.type <= 8 && static_cast<s64>(val) < 0;
+
+		if (ctx.type == 16)
+		{
+			u128 val2 = *reinterpret_cast<const u128*>(val);
+			negative = !!(val2 & (u128{1} << 127));
+		}
 
 		const usz start = out.size();
 
@@ -398,15 +406,14 @@ usz cfmt_append(Dst& out, const Char* fmt, Src&& src)
 				out.push_back(' ');
 			}
 
-			if (ctx.type == 16)
+			if (ctx.type >= 16)
 			{
-				// TODO: support negative values (s128)
-				u128 val2 = *reinterpret_cast<u128*>(val);
-				write_decimal(val2, ctx.prec);
+				u128 val2 = *reinterpret_cast<const u128*>(val);
+				write_decimal(negative ? u128{} - val2 : val2, ctx.prec);
 			}
 			else
 			{
-				write_decimal(negative ? 0 - val : val, ctx.prec);
+				write_decimal(negative ? u64{} - val : val, ctx.prec);
 			}
 		}
 
@@ -438,9 +445,11 @@ usz cfmt_append(Dst& out, const Char* fmt, Src&& src)
 			break;
 		}
 
-		if (!ctx.type)
+		const usz src_type = src.type(ctx.args);
+
+		if (!ctx.type || src_type > 8)
 		{
-			ctx.type = static_cast<u8>(src.type(ctx.args));
+			ctx.type = static_cast<u8>(src_type);
 
 			if (!ctx.type)
 			{
@@ -471,9 +480,9 @@ usz cfmt_append(Dst& out, const Char* fmt, Src&& src)
 
 		if ((ctx.alter && val) || !ctx.dot || ctx.prec)
 		{
-			if (ctx.type == 16)
+			if (ctx.type >= 16)
 			{
-				u128 val2 = *reinterpret_cast<u128*>(val);
+				u128 val2 = *reinterpret_cast<const u128*>(val);
 				write_octal(val2, ctx.prec);
 			}
 			else
@@ -504,9 +513,11 @@ usz cfmt_append(Dst& out, const Char* fmt, Src&& src)
 			break;
 		}
 
-		if (!ctx.type)
+		const usz src_type = src.type(ctx.args);
+
+		if (!ctx.type || src_type > 8)
 		{
-			ctx.type = static_cast<u8>(src.type(ctx.args));
+			ctx.type = static_cast<u8>(src_type);
 
 			if (!ctx.type)
 			{
@@ -537,9 +548,9 @@ usz cfmt_append(Dst& out, const Char* fmt, Src&& src)
 
 		if ((ctx.alter && val) || !ctx.dot || ctx.prec)
 		{
-			if (ctx.type == 16)
+			if (ctx.type >= 16)
 			{
-				u128 val2 = *reinterpret_cast<u128*>(val);
+				u128 val2 = *reinterpret_cast<const u128*>(val);
 				write_hex(val2, ch == 'X', ctx.prec);
 			}
 			else
@@ -576,9 +587,11 @@ usz cfmt_append(Dst& out, const Char* fmt, Src&& src)
 			break;
 		}
 
-		if (!ctx.type)
+		const usz src_type = src.type(ctx.args);
+
+		if (!ctx.type || src_type > 8)
 		{
-			ctx.type = static_cast<u8>(src.type(ctx.args));
+			ctx.type = static_cast<u8>(src_type);
 
 			if (!ctx.type)
 			{
@@ -599,9 +612,9 @@ usz cfmt_append(Dst& out, const Char* fmt, Src&& src)
 
 		if (!ctx.dot || ctx.prec)
 		{
-			if (ctx.type == 16)
+			if (ctx.type >= 16)
 			{
-				u128 val2 = *reinterpret_cast<u128*>(val);
+				u128 val2 = *reinterpret_cast<const u128*>(val);
 				write_decimal(val2, ctx.prec);
 			}
 			else

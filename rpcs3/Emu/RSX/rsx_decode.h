@@ -1874,10 +1874,9 @@ struct registers_decoder<NV406E_SEMAPHORE_RELEASE>
 
 	static std::string dump(const decoded_type& decoded)
 	{
-		return fmt::format("NV409E semaphore: release: 0x%x", decoded.value);
+		return fmt::format("NV406E semaphore: release: 0x%x", decoded.value);
 	}
 };
-
 
 template <>
 struct registers_decoder<NV406E_SEMAPHORE_ACQUIRE>
@@ -1891,7 +1890,7 @@ struct registers_decoder<NV406E_SEMAPHORE_ACQUIRE>
 
 	static std::string dump(const decoded_type& decoded)
 	{
-		return fmt::format("NV409E semaphore: acquire: 0x%x", decoded.value);
+		return fmt::format("NV406E semaphore: acquire: 0x%x", decoded.value);
 	}
 };
 
@@ -2223,7 +2222,7 @@ struct registers_decoder<NV4097_SET_DEPTH_FUNC>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		rsx::comparison_function depth_func() const
+		auto depth_func() const
 		{
 			return to_comparison_function(value);
 		}
@@ -2246,7 +2245,7 @@ struct registers_decoder<NV4097_SET_STENCIL_FUNC>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		rsx::comparison_function stencil_func() const
+		auto stencil_func() const
 		{
 			return to_comparison_function(value);
 		}
@@ -2269,7 +2268,7 @@ struct registers_decoder<NV4097_SET_BACK_STENCIL_FUNC>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		rsx::comparison_function back_stencil_func() const
+		auto back_stencil_func() const
 		{
 			return to_comparison_function(value);
 		}
@@ -2292,7 +2291,7 @@ struct registers_decoder<NV4097_SET_ALPHA_FUNC>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		rsx::comparison_function alpha_func() const
+		auto alpha_func() const
 		{
 			return to_comparison_function(value);
 		}
@@ -2315,7 +2314,7 @@ struct registers_decoder<NV4097_SET_STENCIL_OP_FAIL>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		rsx::stencil_op fail() const
+		auto fail() const
 		{
 			return to_stencil_op(value);
 		}
@@ -2338,7 +2337,7 @@ struct registers_decoder<NV4097_SET_STENCIL_OP_ZFAIL>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		rsx::stencil_op zfail() const
+		auto zfail() const
 		{
 			return to_stencil_op(value);
 		}
@@ -2361,7 +2360,7 @@ struct registers_decoder<NV4097_SET_STENCIL_OP_ZPASS>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		rsx::stencil_op zpass() const
+		auto zpass() const
 		{
 			return to_stencil_op(value);
 		}
@@ -2384,7 +2383,7 @@ struct registers_decoder<NV4097_SET_BACK_STENCIL_OP_FAIL>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		rsx::stencil_op back_fail() const
+		auto back_fail() const
 		{
 			return to_stencil_op(value);
 		}
@@ -2407,7 +2406,7 @@ struct registers_decoder<NV4097_SET_BACK_STENCIL_OP_ZFAIL>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		rsx::stencil_op back_zfail() const
+		auto back_zfail() const
 		{
 			return to_stencil_op(value);
 		}
@@ -2430,7 +2429,7 @@ struct registers_decoder<NV4097_SET_BACK_STENCIL_OP_ZPASS>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		rsx::stencil_op back_zpass() const
+		auto back_zpass() const
 		{
 			return to_stencil_op(value);
 		}
@@ -2651,7 +2650,7 @@ struct registers_decoder<NV4097_SET_LOGIC_OP>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		logic_op logic_operation() const
+		auto logic_operation() const
 		{
 			return to_logic_op(value);
 		}
@@ -2674,7 +2673,7 @@ struct registers_decoder<NV4097_SET_FRONT_FACE>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		front_face front_face_mode() const
+		auto front_face_mode() const
 		{
 			return to_front_face(value);
 		}
@@ -2721,7 +2720,7 @@ struct registers_decoder<NV4097_SET_SURFACE_COLOR_TARGET>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		surface_target target() const
+		auto target() const
 		{
 			return to_surface_target(value);
 		}
@@ -2744,7 +2743,7 @@ struct registers_decoder<NV4097_SET_FOG_MODE>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		fog_mode fog_equation() const
+		auto fog_equation() const
 		{
 			return to_fog_mode(value);
 		}
@@ -2767,7 +2766,7 @@ struct registers_decoder<NV4097_SET_BEGIN_END>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		primitive_type primitive() const
+		auto primitive() const
 		{
 			return to_primitive_type(value);
 		}
@@ -2790,7 +2789,7 @@ struct registers_decoder<NV3089_SET_OPERATION>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		blit_engine::transfer_operation transfer_op() const
+		auto transfer_op() const
 		{
 			return blit_engine::to_transfer_operation(value);
 		}
@@ -2813,7 +2812,7 @@ struct registers_decoder<NV3089_SET_COLOR_FORMAT>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		blit_engine::transfer_source_format transfer_source_fmt() const
+		auto transfer_source_fmt() const
 		{
 			return blit_engine::to_transfer_source_format(value);
 		}
@@ -2836,7 +2835,7 @@ struct registers_decoder<NV3089_SET_CONTEXT_SURFACE>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		blit_engine::context_surface ctx_surface() const
+		auto ctx_surface() const
 		{
 			return blit_engine::to_context_surface(value);
 		}
@@ -2859,7 +2858,7 @@ struct registers_decoder<NV3062_SET_COLOR_FORMAT>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		blit_engine::transfer_destination_format transfer_dest_fmt() const
+		auto transfer_dest_fmt() const
 		{
 			return blit_engine::to_transfer_destination_format(value);
 		}
@@ -2891,12 +2890,12 @@ struct registers_decoder<NV4097_SET_BLEND_EQUATION>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		blend_equation blend_rgb() const
+		auto blend_rgb() const
 		{
 			return to_blend_equation(blend_rgb_raw());
 		}
 
-		blend_equation blend_a() const
+		auto blend_a() const
 		{
 			return to_blend_equation(blend_a_raw());
 		}
@@ -2928,12 +2927,12 @@ struct registers_decoder<NV4097_SET_BLEND_FUNC_SFACTOR>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		blend_factor src_blend_rgb() const
+		auto src_blend_rgb() const
 		{
 			return to_blend_factor(src_blend_rgb_raw());
 		}
 
-		blend_factor src_blend_a() const
+		auto src_blend_a() const
 		{
 			return to_blend_factor(src_blend_a_raw());
 		}
@@ -2965,12 +2964,12 @@ struct registers_decoder<NV4097_SET_BLEND_FUNC_DFACTOR>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		blend_factor dst_blend_rgb() const
+		auto dst_blend_rgb() const
 		{
 			return to_blend_factor(dst_blend_rgb_raw());
 		}
 
-		blend_factor dst_blend_a() const
+		auto dst_blend_a() const
 		{
 			return to_blend_factor(dst_blend_a_raw());
 		}
@@ -3096,12 +3095,12 @@ struct registers_decoder<NV4097_SET_SHADER_WINDOW>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		window_origin window_shader_origin() const
+		auto window_shader_origin() const
 		{
 			return to_window_origin(window_shader_origin_raw());
 		}
 
-		window_pixel_center window_shader_pixel_center() const
+		auto window_shader_pixel_center() const
 		{
 			return to_window_pixel_center(window_shader_pixel_center_raw());
 		}
@@ -3173,32 +3172,32 @@ struct registers_decoder<NV4097_SET_USER_CLIP_PLANE_CONTROL>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		user_clip_plane_op clip_plane0() const
+		auto clip_plane0() const
 		{
 			return to_user_clip_plane_op(clip_plane0_raw());
 		}
 
-		user_clip_plane_op clip_plane1() const
+		auto clip_plane1() const
 		{
 			return to_user_clip_plane_op(clip_plane1_raw());
 		}
 
-		user_clip_plane_op clip_plane2() const
+		auto clip_plane2() const
 		{
 			return to_user_clip_plane_op(clip_plane2_raw());
 		}
 
-		user_clip_plane_op clip_plane3() const
+		auto clip_plane3() const
 		{
 			return to_user_clip_plane_op(clip_plane3_raw());
 		}
 
-		user_clip_plane_op clip_plane4() const
+		auto clip_plane4() const
 		{
 			return to_user_clip_plane_op(clip_plane4_raw());
 		}
 
-		user_clip_plane_op clip_plane5() const
+		auto clip_plane5() const
 		{
 			return to_user_clip_plane_op(clip_plane5_raw());
 		}
@@ -3307,22 +3306,22 @@ struct registers_decoder<NV4097_SET_SURFACE_FORMAT>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		surface_color_format color_fmt() const
+		auto color_fmt() const
 		{
 			return to_surface_color_format(color_fmt_raw());
 		}
 
-		surface_depth_format depth_fmt() const
+		auto depth_fmt() const
 		{
 			return to_surface_depth_format(depth_fmt_raw());
 		}
 
-		surface_raster_type type() const
+		auto type() const
 		{
-			return static_cast<surface_raster_type>(type_raw());
+			return to_surface_raster_type(type_raw());
 		}
 
-		surface_antialiasing antialias() const
+		auto antialias() const
 		{
 			return to_surface_antialiasing(antialias_raw());
 		}
@@ -3335,6 +3334,11 @@ struct registers_decoder<NV4097_SET_SURFACE_FORMAT>
 		u8 log2height() const
 		{
 			return bf_decoder<24, 8>(value);
+		}
+
+		bool is_integer_color_format() const
+		{
+			return color_fmt() < surface_color_format::w16z16y16x16;
 		}
 	};
 
@@ -3653,7 +3657,7 @@ struct registers_decoder<NV4097_SET_CONTEXT_DMA_REPORT>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		blit_engine::context_dma context_dma_report() const
+		auto context_dma_report() const
 		{
 			return blit_engine::to_context_dma(value);
 		}
@@ -3707,12 +3711,12 @@ struct registers_decoder<NV3089_IMAGE_IN_FORMAT>
 			return bf_decoder<0, 16>(value);
 		}
 
-		blit_engine::transfer_origin transfer_origin() const
+		auto transfer_origin() const
 		{
 			return blit_engine::to_transfer_origin(transfer_origin_raw());
 		}
 
-		blit_engine::transfer_interpolator transfer_interpolator() const
+		auto transfer_interpolator() const
 		{
 			return blit_engine::to_transfer_interpolator(transfer_interpolator_raw());
 		}
@@ -3737,10 +3741,9 @@ struct registers_decoder<NV309E_SET_FORMAT>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		blit_engine::transfer_destination_format format() const
+		auto format() const
 		{
-			// Why truncate??
-			return blit_engine::to_transfer_destination_format(static_cast<u8>(transfer_destination_fmt()));
+			return blit_engine::to_transfer_destination_format(transfer_destination_fmt());
 		}
 
 		u8 sw_height_log2() const
@@ -4008,7 +4011,7 @@ struct registers_decoder<NV4097_SET_SHADE_MODE>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		shading_mode shading() const
+		auto shading() const
 		{
 			return to_shading_mode(value);
 		}
@@ -4031,7 +4034,7 @@ struct registers_decoder<NV4097_SET_FRONT_POLYGON_MODE>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		polygon_mode front_polygon_mode() const
+		auto front_polygon_mode() const
 		{
 			return to_polygon_mode(value);
 		}
@@ -4054,7 +4057,7 @@ struct registers_decoder<NV4097_SET_BACK_POLYGON_MODE>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		polygon_mode back_polygon_mode() const
+		auto back_polygon_mode() const
 		{
 			return to_polygon_mode(value);
 		}
@@ -4626,7 +4629,7 @@ struct texture_format_helper
 		{
 			return bf_decoder<2, 1, bool>(value);
 		}
-	
+
 		u8 border_type() const
 		{
 			return bf_decoder<3, 1>(value);

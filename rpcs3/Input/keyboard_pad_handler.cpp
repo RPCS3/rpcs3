@@ -40,10 +40,10 @@ void keyboard_pad_handler::init_config(cfg_pad* cfg)
 	cfg->ls_down.def  = GetKeyName(Qt::Key_S);
 	cfg->ls_right.def = GetKeyName(Qt::Key_D);
 	cfg->ls_up.def    = GetKeyName(Qt::Key_W);
-	cfg->rs_left.def  = GetKeyName(Qt::Key_Home);
-	cfg->rs_down.def  = GetKeyName(Qt::Key_PageDown);
-	cfg->rs_right.def = GetKeyName(Qt::Key_End);
-	cfg->rs_up.def    = GetKeyName(Qt::Key_PageUp);
+	cfg->rs_left.def  = GetKeyName(Qt::Key_Delete);
+	cfg->rs_down.def  = GetKeyName(Qt::Key_End);
+	cfg->rs_right.def = GetKeyName(Qt::Key_PageDown);
+	cfg->rs_up.def    = GetKeyName(Qt::Key_Home);
 	cfg->start.def    = GetKeyName(Qt::Key_Return);
 	cfg->select.def   = GetKeyName(Qt::Key_Space);
 	cfg->ps.def       = GetKeyName(Qt::Key_Backspace);
@@ -285,6 +285,7 @@ void keyboard_pad_handler::processKeyEvent(QKeyEvent* event, bool pressed)
 	switch (event->key())
 	{
 	case Qt::Key_Escape:
+	case Qt::Key_F11:
 	case Qt::Key_F12:
 		break;
 	case Qt::Key_L:
@@ -571,10 +572,10 @@ void keyboard_pad_handler::mouseWheelEvent(QWheelEvent* event)
 	}
 }
 
-std::vector<std::string> keyboard_pad_handler::ListDevices()
+std::vector<pad_list_entry> keyboard_pad_handler::list_devices()
 {
-	std::vector<std::string> list_devices;
-	list_devices.emplace_back(pad::keyboard_device_name);
+	std::vector<pad_list_entry> list_devices;
+	list_devices.emplace_back(std::string(pad::keyboard_device_name), false);
 	return list_devices;
 }
 
@@ -784,12 +785,16 @@ std::string keyboard_pad_handler::native_scan_code_to_string(int native_scan_cod
 	}
 }
 
-bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device, u8 player_id)
+bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, u8 player_id)
 {
-	if (!pad || device != pad::keyboard_device_name)
+	if (!pad || player_id >= g_cfg_input.player.size())
 		return false;
 
-	m_pad_configs[player_id].from_string(g_cfg_input.player[player_id]->config.to_string());
+	const cfg_player* player_config = g_cfg_input.player[player_id];
+	if (!player_config || player_config->device.to_string() != pad::keyboard_device_name)
+		return false;
+
+	m_pad_configs[player_id].from_string(player_config->config.to_string());
 	cfg_pad* cfg = &m_pad_configs[player_id];
 	if (cfg == nullptr)
 		return false;
@@ -856,7 +861,7 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(cfg->r3),       CELL_PAD_CTRL_R3);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(cfg->l3),       CELL_PAD_CTRL_L3);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(cfg->select),   CELL_PAD_CTRL_SELECT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(cfg->ps),       CELL_PAD_CTRL_PS);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(cfg->ps),       CELL_PAD_CTRL_PS);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(cfg->square),   CELL_PAD_CTRL_SQUARE);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(cfg->cross),    CELL_PAD_CTRL_CROSS);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(cfg->circle),   CELL_PAD_CTRL_CIRCLE);
@@ -871,21 +876,21 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::
 	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, find_key(cfg->rs_left), find_key(cfg->rs_right));
 	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, find_key(cfg->rs_up),   find_key(cfg->rs_down));
 
-	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_X, 512);
-	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_Y, 399);
-	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_Z, 512);
-	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_G, 512);
+	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_X, 0, 0, 0, DEFAULT_MOTION_X);
+	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_Y, 0, 0, 0, DEFAULT_MOTION_Y);
+	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_Z, 0, 0, 0, DEFAULT_MOTION_Z);
+	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_G, 0, 0, 0, DEFAULT_MOTION_G);
 
 	pad->m_vibrateMotors.emplace_back(true, 0);
 	pad->m_vibrateMotors.emplace_back(false, 0);
 
-	m_bindings.push_back(pad);
+	m_bindings.emplace_back(pad, nullptr, nullptr);
 	m_pads_internal.push_back(*pad);
 
 	return true;
 }
 
-void keyboard_pad_handler::ThreadProc()
+void keyboard_pad_handler::process()
 {
 	static const double stick_interval = 10.0;
 	static const double button_interval = 10.0;
@@ -955,8 +960,9 @@ void keyboard_pad_handler::ThreadProc()
 
 		if (last_connection_status[i] == false)
 		{
-			m_bindings[i]->m_port_status |= CELL_PAD_STATUS_CONNECTED;
-			m_bindings[i]->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
+			ensure(m_bindings[i].pad);
+			m_bindings[i].pad->m_port_status |= CELL_PAD_STATUS_CONNECTED;
+			m_bindings[i].pad->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
 			last_connection_status[i] = true;
 			connected_devices++;
 		}
@@ -1046,7 +1052,8 @@ void keyboard_pad_handler::ThreadProc()
 
 	for (uint i = 0; i < m_bindings.size(); i++)
 	{
-		auto& pad = m_bindings[i];
+		auto& pad = m_bindings[i].pad;
+		ensure(pad);
 		pad->m_buttons = m_pads_internal[i].m_buttons;
 		pad->m_sticks = m_pads_internal[i].m_sticks;
 	}

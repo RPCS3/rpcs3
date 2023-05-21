@@ -166,7 +166,7 @@ std::string cheat_engine::export_cheats_to_str() const
 
 	for (const auto& game : cheats)
 	{
-		for (const auto& offset : cheats.at(game.first))
+		for (const auto& offset : ::at32(cheats, game.first))
 		{
 			cheats_str += offset.second.to_str();
 			cheats_str += "^^^";
@@ -178,7 +178,7 @@ std::string cheat_engine::export_cheats_to_str() const
 
 bool cheat_engine::exist(const std::string& game, const u32 offset) const
 {
-	return cheats.contains(game) && cheats.at(game).contains(offset);
+	return cheats.contains(game) && ::at32(cheats, game).contains(offset);
 }
 
 void cheat_engine::add(const std::string& game, const std::string& description, const cheat_type type, const u32 offset, const std::string& red_script)
@@ -441,7 +441,7 @@ bool cheat_engine::is_addr_safe(const u32 offset)
 	if (Emu.IsStopped())
 		return false;
 
-	const auto ppum = g_fxo->try_get<ppu_module>();
+	const auto ppum = g_fxo->try_get<main_ppu_module>();
 
 	if (!ppum)
 	{

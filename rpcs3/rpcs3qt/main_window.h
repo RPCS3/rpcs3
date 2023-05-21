@@ -12,7 +12,8 @@
 
 #include "update_manager.h"
 #include "settings.h"
-#include "Emu/System.h"
+#include "shortcut_handler.h"
+#include "Emu/config_mode.h"
 
 #include <memory>
 
@@ -23,6 +24,7 @@ class gui_settings;
 class emu_settings;
 class persistent_settings;
 class kernel_explorer;
+class system_cmd_dialog;
 
 struct gui_game_info;
 
@@ -42,9 +44,8 @@ class main_window : public QMainWindow
 {
 	Q_OBJECT
 
-	Ui::main_window *ui;
+	std::unique_ptr<Ui::main_window> ui;
 
-	bool m_sys_menu_opened = false;
 	bool m_is_list_mode = true;
 	bool m_save_slider_pos = false;
 	int m_other_slider_pos = 0;
@@ -52,7 +53,6 @@ class main_window : public QMainWindow
 	QIcon m_app_icon;
 	QIcon m_icon_play;
 	QIcon m_icon_pause;
-	QIcon m_icon_stop;
 	QIcon m_icon_restart;
 	QIcon m_icon_fullscreen_on;
 	QIcon m_icon_fullscreen_off;
@@ -101,22 +101,25 @@ public Q_SLOTS:
 	void OnEmuResume() const;
 	void OnEmuPause() const;
 	void OnEmuReady() const;
+	void OnEnableDiscEject(bool enabled) const;
+	void OnEnableDiscInsert(bool enabled) const;
 
 	void RepaintGui();
 	void RetranslateUI(const QStringList& language_codes, const QString& language);
 
 private Q_SLOTS:
 	void OnPlayOrPause();
-	void Boot(const std::string& path, const std::string& title_id = "", bool direct = false, bool add_only = false, cfg_mode config_mode = cfg_mode::custom, const std::string& config_path = "");
+	void Boot(const std::string& path, const std::string& title_id = "", bool direct = false, bool refresh_list = false, cfg_mode config_mode = cfg_mode::custom, const std::string& config_path = "");
 	void BootElf();
+	void BootTest();
 	void BootGame();
 	void BootVSH();
+	void BootSavestate();
 	void BootRsxCapture(std::string path = "");
 	void DecryptSPRXLibraries();
 	static void show_boot_error(game_boot_result status);
 
 	void SaveWindowState() const;
-	void ConfigureGuiFromSettings();
 	void SetIconSizeActions(int idx) const;
 	void ResizeIcons(int index);
 
@@ -124,9 +127,10 @@ private Q_SLOTS:
 	void RemoveFirmwareCache();
 	void CreateFirmwareCache();
 
+	void handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKeySequence& key_sequence);
+
 protected:
 	void closeEvent(QCloseEvent *event) override;
-	void keyPressEvent(QKeyEvent *keyEvent) override;
 	void mouseDoubleClickEvent(QMouseEvent *event) override;
 	void dropEvent(QDropEvent* event) override;
 	void dragEnterEvent(QDragEnterEvent* event) override;
@@ -134,6 +138,7 @@ protected:
 	void dragLeaveEvent(QDragLeaveEvent* event) override;
 
 private:
+	void ConfigureGuiFromSettings();
 	void RepaintToolBarIcons();
 	void RepaintThumbnailIcons();
 	void CreateActions();
@@ -160,6 +165,7 @@ private:
 	void AddRecentAction(const q_string_pair& entry);
 
 	void UpdateLanguageActions(const QStringList& language_codes, const QString& language);
+	void UpdateFilterActions();
 
 	static QString GetCurrentTitle();
 
@@ -178,10 +184,13 @@ private:
 	debugger_frame* m_debugger_frame = nullptr;
 	game_list_frame* m_game_list_frame = nullptr;
 	kernel_explorer* m_kernel_explorer = nullptr;
+	system_cmd_dialog* m_system_cmd_dialog = nullptr;
 	std::shared_ptr<gui_settings> m_gui_settings;
 	std::shared_ptr<emu_settings> m_emu_settings;
 	std::shared_ptr<persistent_settings> m_persistent_settings;
 
 	update_manager m_updater;
 	QAction* m_download_menu_action = nullptr;
+
+	shortcut_handler* m_shortcut_handler = nullptr;
 };

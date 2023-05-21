@@ -79,6 +79,7 @@
       <SDLCheck>false</SDLCheck>
       <PreprocessorDefinitions>OUTSIDE_SPEEX;RANDOM_PREFIX=speex;FLOATING_POINT;_USE_SSE;_USE_SSE2;EXPORT=;USE_WASAPI;USE_WINMM;CUBEB_WASAPI_USE_IAUDIOSTREAMVOLUME;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>./cubeb/subprojects/;./extra/;./cubeb/src/;./cubeb/include/;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MaxSpeed</Optimization>
     </ClCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

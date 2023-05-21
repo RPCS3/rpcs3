@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "overlay_manager.h"
 #include "overlay_perf_metrics.h"
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/Cell/SPUThread.h"
@@ -746,52 +747,47 @@ namespace rsx
 				return;
 			}
 
+			m_min = max_v<f32>;
 			m_max = 0.0f;
 			m_avg = 0.0f;
 			m_1p = 0.0f;
 
-			if (m_show_min_max || m_show_1p_avg)
+			std::vector<f32> valid_datapoints;
+
+			// Make sure min/max reflects the data being displayed, not the entire datapoints vector
+			for (usz i = m_datapoints.size() - m_datapoint_count; i < m_datapoints.size(); i++)
 			{
-				m_min = max_v<f32>;
+				const f32& dp = m_datapoints[i];
 
-				std::vector<f32> valid_datapoints;
+				if (dp < 0) continue; // Skip initial negative values. They don't count.
 
-				// Make sure min/max reflects the data being displayed, not the entire datapoints vector
-				for (usz i = m_datapoints.size() - m_datapoint_count; i < m_datapoints.size(); i++)
+				m_min = std::min(m_min, dp);
+				m_max = std::max(m_max, dp);
+				m_avg += dp;
+
+				if (m_show_1p_avg)
 				{
-					const f32& dp = m_datapoints[i];
-
-					if (dp < 0) continue; // Skip initial negative values. They don't count.
-
-					m_min = std::min(m_min, dp);
-					m_max = std::max(m_max, dp);
-					m_avg += dp;
-
 					valid_datapoints.push_back(dp);
 				}
-
-				// Sanitize min value
-				m_min = std::min(m_min, m_max);
-
-				if (m_show_1p_avg && !valid_datapoints.empty())
-				{
-					// Sort datapoints (we are only interested in the lowest/highest 1%)
-					const usz i_1p = valid_datapoints.size() / 100;
-					const usz n_1p = i_1p + 1;
-
-					if (m_1p_sort_high)
-						std::nth_element(valid_datapoints.begin(), valid_datapoints.begin() + i_1p, valid_datapoints.end(), std::greater<f32>());
-					else
-						std::nth_element(valid_datapoints.begin(), valid_datapoints.begin() + i_1p, valid_datapoints.end());
-
-					// Calculate statistics
-					m_avg /= valid_datapoints.size();
-					m_1p = std::accumulate(valid_datapoints.begin(), valid_datapoints.begin() + n_1p, 0.0f) / static_cast<float>(n_1p);
-				}
 			}
-			else
+
+			// Sanitize min value
+			m_min = std::min(m_min, m_max);
+
+			if (m_show_1p_avg && !valid_datapoints.empty())
 			{
-				m_min = 0.0f;
+				// Sort datapoints (we are only interested in the lowest/highest 1%)
+				const usz i_1p = valid_datapoints.size() / 100;
+				const usz n_1p = i_1p + 1;
+
+				if (m_1p_sort_high)
+					std::nth_element(valid_datapoints.begin(), valid_datapoints.begin() + i_1p, valid_datapoints.end(), std::greater<f32>());
+				else
+					std::nth_element(valid_datapoints.begin(), valid_datapoints.begin() + i_1p, valid_datapoints.end());
+
+				// Calculate statistics
+				m_avg /= valid_datapoints.size();
+				m_1p = std::accumulate(valid_datapoints.begin(), valid_datapoints.begin() + n_1p, 0.0f) / static_cast<float>(n_1p);
 			}
 		}
 
@@ -879,7 +875,7 @@ namespace rsx
 			return compiled_resources;
 		}
 
-		void reset_performance_overlay()
+		extern void reset_performance_overlay()
 		{
 			if (!g_cfg.misc.use_native_interface)
 				return;

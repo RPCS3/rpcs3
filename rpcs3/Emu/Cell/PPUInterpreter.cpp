@@ -23,6 +23,7 @@
 #if !defined(_MSC_VER)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
+#pragma GCC diagnostic ignored "-Wuninitialized"
 #endif
 
 extern bool is_debugger_present();
@@ -42,6 +43,8 @@ enum class ppu_exec_bit : u64
 	set_fpcc,
 	use_dfma,
 	set_cr_stats,
+	set_call_history,
+	use_feed_data,
 
 	__bitset_enum_max
 };
@@ -418,14 +421,19 @@ void ppu_set_fpcc(ppu_thread& ppu, f64 a, f64 b, u64 cr_field = 1)
 }
 
 // Validate read data in case does not match reservation
-template <typename T>
+template <typename T, ppu_exec_bit... Flags>
 auto ppu_feed_data(ppu_thread& ppu, u64 addr)
 {
 	static_assert(sizeof(T) <= 128, "Incompatible type-size, break down into smaller loads");
 
 	auto value = vm::_ref<T>(vm::cast(addr));
 
-	//if (!ppu.use_full_rdata)
+	if constexpr (!((Flags == use_feed_data) || ...))
+	{
+		return value;
+	}
+
+	if (!ppu.use_full_rdata)
 	{
 		return value;
 	}
@@ -471,9 +479,13 @@ auto ppu_feed_data(ppu_thread& ppu, u64 addr)
 }
 
 // Push called address to custom call history for debugging
-inline u32 ppu_record_call(ppu_thread& ppu, u32 new_cia, ppu_opcode_t op, bool indirect = false)
+template <ppu_exec_bit... Flags>
+u32 ppu_record_call(ppu_thread& ppu, u32 new_cia, ppu_opcode_t op, bool indirect = false)
 {
-	return new_cia;
+	if constexpr (!((Flags == set_call_history) || ...))
+	{
+		return new_cia;
+	}
 
 	if (auto& history = ppu.call_history; !history.data.empty())
 	{
@@ -501,6 +513,8 @@ inline u32 ppu_record_call(ppu_thread& ppu, u32 new_cia, ppu_opcode_t op, bool i
 		history.last_r1 = ppu.gpr[1];
 		history.last_r2 = ppu.gpr[2];
 	}
+
+	return new_cia;
 }
 
 template<typename T>
@@ -3149,7 +3163,7 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto BC()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<set_call_history>();
 
 	if constexpr (Build == 0) return +[](ppu_thread& ppu, ppu_opcode_t op, be_t<u32>* this_op, ppu_intrp_func* next_fn)
 	{
@@ -3172,7 +3186,7 @@ auto BC()
 		ppu.cia = vm::get_addr(this_op);
 		// Provide additional information by using the origin of the call
 		// Because this is a fixed target branch there's no abiguity about it
-		ppu_record_call(ppu, ppu.cia, op);
+		ppu_record_call<Flags...>(ppu, ppu.cia, op);
 
 		ppu.cia = (op.aa ? 0 : ppu.cia) + op.bt14;
 	}
@@ -3216,7 +3230,7 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto B()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<set_call_history>();
 
 	if constexpr (Build == 0) return +[](ppu_thread& ppu, ppu_opcode_t op, be_t<u32>* this_op, ppu_intrp_func*)
 	{
@@ -3224,7 +3238,7 @@ auto B()
 	const u32 link = (ppu.cia = vm::get_addr(this_op)) + 4;
 	// Provide additional information by using the origin of the call
 	// Because this is a fixed target branch there's no abiguity about it
-	ppu_record_call(ppu, ppu.cia, op);
+	ppu_record_call<Flags...>(ppu, ppu.cia, op);
 
 	ppu.cia = (op.aa ? 0 : ppu.cia) + op.bt24;
 	if (op.lk) ppu.lr = link;
@@ -3249,7 +3263,7 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto BCLR()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<set_call_history>();
 
 	if constexpr (Build == 0) return +[](ppu_thread& ppu, ppu_opcode_t op, be_t<u32>* this_op, ppu_intrp_func* next_fn)
 	{
@@ -3271,7 +3285,7 @@ auto BCLR()
 
 	if (ctr_ok && cond_ok)
 	{
-		ppu_record_call(ppu, target, op, true);
+		ppu_record_call<Flags...>(ppu, target, op, true);
 		ppu.cia = target;
 	}
 	else if (!ppu.state) [[likely]]
@@ -3399,7 +3413,7 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto BCCTR()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<set_call_history>();
 
 	if constexpr (Build == 0) return +[](ppu_thread& ppu, ppu_opcode_t op, be_t<u32>* this_op, ppu_intrp_func* next_fn)
 	{
@@ -3410,7 +3424,7 @@ auto BCCTR()
 	if (op.bo & 0x10 || ppu.cr[op.bi] == ((op.bo & 0x8) != 0))
 	{
 		const u32 target = static_cast<u32>(ppu.ctr) & ~3;
-		ppu_record_call(ppu, target, op, true);
+		ppu_record_call<Flags...>(ppu, target, op, true);
 		ppu.cia = target;
 	}
 	else if (!ppu.state) [[likely]]
@@ -3713,11 +3727,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LVEBX()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const u64 addr = (op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb]) & ~0xfull;
-	ppu.vr[op.vd] = ppu_feed_data<v128>(ppu, addr);
+	ppu.vr[op.vd] = ppu_feed_data<v128, Flags...>(ppu, addr);
 	};
 	RETURN_(ppu, op);
 }
@@ -3857,11 +3871,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LDX()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	ppu.gpr[op.rd] = ppu_feed_data<u64>(ppu, addr);
+	ppu.gpr[op.rd] = ppu_feed_data<u64, Flags...>(ppu, addr);
 	};
 	RETURN_(ppu, op);
 }
@@ -3870,11 +3884,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LWZX()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	ppu.gpr[op.rd] = ppu_feed_data<u32>(ppu, addr);
+	ppu.gpr[op.rd] = ppu_feed_data<u32, Flags...>(ppu, addr);
 	};
 	RETURN_(ppu, op);
 }
@@ -3994,11 +4008,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LVEHX()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const u64 addr = (op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb]) & ~0xfull;
-	ppu.vr[op.vd] = ppu_feed_data<v128>(ppu, addr);
+	ppu.vr[op.vd] = ppu_feed_data<v128, Flags...>(ppu, addr);
 	};
 	RETURN_(ppu, op);
 }
@@ -4025,11 +4039,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LDUX()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const u64 addr = ppu.gpr[op.ra] + ppu.gpr[op.rb];
-	ppu.gpr[op.rd] = ppu_feed_data<u64>(ppu, addr);
+	ppu.gpr[op.rd] = ppu_feed_data<u64, Flags...>(ppu, addr);
 	ppu.gpr[op.ra] = addr;
 	};
 	RETURN_(ppu, op);
@@ -4050,11 +4064,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LWZUX()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const u64 addr = ppu.gpr[op.ra] + ppu.gpr[op.rb];
-	ppu.gpr[op.rd] = ppu_feed_data<u32>(ppu, addr);
+	ppu.gpr[op.rd] = ppu_feed_data<u32, Flags...>(ppu, addr);
 	ppu.gpr[op.ra] = addr;
 	};
 	RETURN_(ppu, op);
@@ -4117,11 +4131,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LVEWX()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const u64 addr = (op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb]) & ~0xfull;
-	ppu.vr[op.vd] = ppu_feed_data<v128>(ppu, addr);
+	ppu.vr[op.vd] = ppu_feed_data<v128, Flags...>(ppu, addr);
 	};
 	RETURN_(ppu, op);
 }
@@ -4184,11 +4198,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LBZX()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	ppu.gpr[op.rd] = ppu_feed_data<u8>(ppu, addr);
+	ppu.gpr[op.rd] = ppu_feed_data<u8, Flags...>(ppu, addr);
 	};
 	RETURN_(ppu, op);
 }
@@ -4197,11 +4211,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LVX()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const u64 addr = (op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb]) & ~0xfull;
-	ppu.vr[op.vd] = ppu_feed_data<v128>(ppu, addr);
+	ppu.vr[op.vd] = ppu_feed_data<v128, Flags...>(ppu, addr);
 	};
 	RETURN_(ppu, op);
 }
@@ -4227,11 +4241,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LBZUX()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const u64 addr = ppu.gpr[op.ra] + ppu.gpr[op.rb];
-	ppu.gpr[op.rd] = ppu_feed_data<u8>(ppu, addr);
+	ppu.gpr[op.rd] = ppu_feed_data<u8, Flags...>(ppu, addr);
 	ppu.gpr[op.ra] = addr;
 	};
 	RETURN_(ppu, op);
@@ -4664,11 +4678,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LHZX()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	ppu.gpr[op.rd] = ppu_feed_data<u16>(ppu, addr);
+	ppu.gpr[op.rd] = ppu_feed_data<u16, Flags...>(ppu, addr);
 	};
 	RETURN_(ppu, op);
 }
@@ -4703,11 +4717,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LHZUX()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	ppu.gpr[op.rd] = ppu_feed_data<u16>(ppu, addr);
+	ppu.gpr[op.rd] = ppu_feed_data<u16, Flags...>(ppu, addr);
 	ppu.gpr[op.ra] = addr;
 	};
 	RETURN_(ppu, op);
@@ -4756,11 +4770,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LWAX()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	ppu.gpr[op.rd] = ppu_feed_data<s32>(ppu, addr);
+	ppu.gpr[op.rd] = ppu_feed_data<s32, Flags...>(ppu, addr);
 	};
 	RETURN_(ppu, op);
 }
@@ -4780,11 +4794,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LHAX()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	ppu.gpr[op.rd] = ppu_feed_data<s16>(ppu, addr);
+	ppu.gpr[op.rd] = ppu_feed_data<s16, Flags...>(ppu, addr);
 	};
 	RETURN_(ppu, op);
 }
@@ -4793,11 +4807,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LVXL()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const u64 addr = (op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb]) & ~0xfull;
-	ppu.vr[op.vd] = ppu_feed_data<v128>(ppu, addr);
+	ppu.vr[op.vd] = ppu_feed_data<v128, Flags...>(ppu, addr);
 	};
 	RETURN_(ppu, op);
 }
@@ -4826,11 +4840,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LWAUX()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	ppu.gpr[op.rd] = ppu_feed_data<s32>(ppu, addr);
+	ppu.gpr[op.rd] = ppu_feed_data<s32, Flags...>(ppu, addr);
 	ppu.gpr[op.ra] = addr;
 	};
 	RETURN_(ppu, op);
@@ -4851,11 +4865,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LHAUX()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	ppu.gpr[op.rd] = ppu_feed_data<s16>(ppu, addr);
+	ppu.gpr[op.rd] = ppu_feed_data<s16, Flags...>(ppu, addr);
 	ppu.gpr[op.ra] = addr;
 	};
 	RETURN_(ppu, op);
@@ -5074,12 +5088,12 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LVLX()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op)
 	{
 		const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-		const u128 data = ppu_feed_data<u128>(ppu, addr & -16);
+		const u128 data = ppu_feed_data<u128, Flags...>(ppu, addr & -16);
 		ppu.vr[op.vd] = data << ((addr & 15) * 8);
 	};
 
@@ -5090,11 +5104,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LDBRX()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	ppu.gpr[op.rd] = ppu_feed_data<le_t<u64>>(ppu, addr);
+	ppu.gpr[op.rd] = ppu_feed_data<le_t<u64>, Flags...>(ppu, addr);
 	};
 	RETURN_(ppu, op);
 }
@@ -5103,21 +5117,21 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LSWX()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
 	u32 count = ppu.xer.cnt & 0x7f;
 	for (; count >= 4; count -= 4, addr += 4, op.rd = (op.rd + 1) & 31)
 	{
-		ppu.gpr[op.rd] = ppu_feed_data<u32>(ppu, addr);
+		ppu.gpr[op.rd] = ppu_feed_data<u32, Flags...>(ppu, addr);
 	}
 	if (count)
 	{
 		u32 value = 0;
 		for (u32 byte = 0; byte < count; byte++)
 		{
-			u32 byte_value = ppu_feed_data<u8>(ppu, addr + byte);
+			u32 byte_value = ppu_feed_data<u8, Flags...>(ppu, addr + byte);
 			value |= byte_value << ((3 ^ byte) * 8);
 		}
 		ppu.gpr[op.rd] = value;
@@ -5130,11 +5144,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LWBRX()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	ppu.gpr[op.rd] = ppu_feed_data<le_t<u32>>(ppu, addr);
+	ppu.gpr[op.rd] = ppu_feed_data<le_t<u32>, Flags...>(ppu, addr);
 	};
 	RETURN_(ppu, op);
 }
@@ -5143,11 +5157,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LFSX()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	ppu.fpr[op.frd] = ppu_feed_data<f32>(ppu, addr);
+	ppu.fpr[op.frd] = ppu_feed_data<f32, Flags...>(ppu, addr);
 	};
 	RETURN_(ppu, op);
 }
@@ -5185,12 +5199,12 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LVRX()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op)
 	{
 		const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-		const u128 data = ppu_feed_data<u128>(ppu, addr & -16);
+		const u128 data = ppu_feed_data<u128, Flags...>(ppu, addr & -16);
 		ppu.vr[op.vd] = data >> ((~addr & 15) * 8) >> 8;
 	};
 
@@ -5201,7 +5215,7 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LSWI()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	u64 addr = op.ra ? ppu.gpr[op.ra] : 0;
@@ -5212,7 +5226,7 @@ auto LSWI()
 	{
 		if (N > 3)
 		{
-			ppu.gpr[reg] = ppu_feed_data<u32>(ppu, addr);
+			ppu.gpr[reg] = ppu_feed_data<u32, Flags...>(ppu, addr);
 			addr += 4;
 			N -= 4;
 		}
@@ -5223,7 +5237,7 @@ auto LSWI()
 			while (N > 0)
 			{
 				N = N - 1;
-				buf |= ppu_feed_data<u8>(ppu, addr) << (i * 8);
+				buf |= ppu_feed_data<u8, Flags...>(ppu, addr) << (i * 8);
 				addr++;
 				i--;
 			}
@@ -5239,11 +5253,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LFSUX()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const u64 addr = ppu.gpr[op.ra] + ppu.gpr[op.rb];
-	ppu.fpr[op.frd] = ppu_feed_data<f32>(ppu, addr);
+	ppu.fpr[op.frd] = ppu_feed_data<f32, Flags...>(ppu, addr);
 	ppu.gpr[op.ra] = addr;
 	};
 	RETURN_(ppu, op);
@@ -5265,11 +5279,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LFDX()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	ppu.fpr[op.frd] = ppu_feed_data<f64>(ppu, addr);
+	ppu.fpr[op.frd] = ppu_feed_data<f64, Flags...>(ppu, addr);
 	};
 	RETURN_(ppu, op);
 }
@@ -5278,11 +5292,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LFDUX()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const u64 addr = ppu.gpr[op.ra] + ppu.gpr[op.rb];
-	ppu.fpr[op.frd] = ppu_feed_data<f64>(ppu, addr);
+	ppu.fpr[op.frd] = ppu_feed_data<f64, Flags...>(ppu, addr);
 	ppu.gpr[op.ra] = addr;
 	};
 	RETURN_(ppu, op);
@@ -5298,7 +5312,7 @@ auto STVLX()
 	{
 		const u64 addr = op.ra ? a + b : b;
 		const u32 tail = u32(addr & 15);
-		u8* ptr = vm::_ptr<u8>(addr & -16);
+		u8* ptr = vm::_ptr<u8>(addr);
 		for (u32 j = 0; j < 16 - tail; j++)
 			ptr[j] = s.u8r[j];
 	};
@@ -5476,11 +5490,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LHBRX()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	ppu.gpr[op.rd] = ppu_feed_data<le_t<u16>>(ppu, addr);
+	ppu.gpr[op.rd] = ppu_feed_data<le_t<u16>, Flags...>(ppu, addr);
 	};
 	RETURN_(ppu, op);
 }
@@ -5718,11 +5732,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LWZ()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const u64 addr = op.ra || 1 ? ppu.gpr[op.ra] + op.simm16 : op.simm16;
-	ppu.gpr[op.rd] = ppu_feed_data<u32>(ppu, addr);
+	ppu.gpr[op.rd] = ppu_feed_data<u32, Flags...>(ppu, addr);
 	};
 	RETURN_(ppu, op);
 }
@@ -5731,11 +5745,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LWZU()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const u64 addr = ppu.gpr[op.ra] + op.simm16;
-	ppu.gpr[op.rd] = ppu_feed_data<u32>(ppu, addr);
+	ppu.gpr[op.rd] = ppu_feed_data<u32, Flags...>(ppu, addr);
 	ppu.gpr[op.ra] = addr;
 	};
 	RETURN_(ppu, op);
@@ -5745,11 +5759,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LBZ()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const u64 addr = op.ra || 1 ? ppu.gpr[op.ra] + op.simm16 : op.simm16;
-	ppu.gpr[op.rd] = ppu_feed_data<u8>(ppu, addr);
+	ppu.gpr[op.rd] = ppu_feed_data<u8, Flags...>(ppu, addr);
 	};
 	RETURN_(ppu, op);
 }
@@ -5758,11 +5772,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LBZU()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const u64 addr = ppu.gpr[op.ra] + op.simm16;
-	ppu.gpr[op.rd] = ppu_feed_data<u8>(ppu, addr);
+	ppu.gpr[op.rd] = ppu_feed_data<u8, Flags...>(ppu, addr);
 	ppu.gpr[op.ra] = addr;
 	};
 	RETURN_(ppu, op);
@@ -5834,11 +5848,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LHZ()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const u64 addr = op.ra || 1 ? ppu.gpr[op.ra] + op.simm16 : op.simm16;
-	ppu.gpr[op.rd] = ppu_feed_data<u16>(ppu, addr);
+	ppu.gpr[op.rd] = ppu_feed_data<u16, Flags...>(ppu, addr);
 	};
 	RETURN_(ppu, op);
 }
@@ -5847,11 +5861,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LHZU()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const u64 addr = ppu.gpr[op.ra] + op.simm16;
-	ppu.gpr[op.rd] = ppu_feed_data<u16>(ppu, addr);
+	ppu.gpr[op.rd] = ppu_feed_data<u16, Flags...>(ppu, addr);
 	ppu.gpr[op.ra] = addr;
 	};
 	RETURN_(ppu, op);
@@ -5861,11 +5875,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LHA()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const u64 addr = op.ra || 1 ? ppu.gpr[op.ra] + op.simm16 : op.simm16;
-	ppu.gpr[op.rd] = ppu_feed_data<s16>(ppu, addr);
+	ppu.gpr[op.rd] = ppu_feed_data<s16, Flags...>(ppu, addr);
 	};
 	RETURN_(ppu, op);
 }
@@ -5874,11 +5888,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LHAU()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const u64 addr = ppu.gpr[op.ra] + op.simm16;
-	ppu.gpr[op.rd] = ppu_feed_data<s16>(ppu, addr);
+	ppu.gpr[op.rd] = ppu_feed_data<s16, Flags...>(ppu, addr);
 	ppu.gpr[op.ra] = addr;
 	};
 	RETURN_(ppu, op);
@@ -5915,13 +5929,13 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LMW()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	u64 addr = op.ra ? ppu.gpr[op.ra] + op.simm16 : op.simm16;
 	for (u32 i = op.rd; i<32; ++i, addr += 4)
 	{
-		ppu.gpr[i] = ppu_feed_data<u32>(ppu, addr);
+		ppu.gpr[i] = ppu_feed_data<u32, Flags...>(ppu, addr);
 	}
 	};
 	RETURN_(ppu, op);
@@ -5947,11 +5961,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LFS()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const u64 addr = op.ra || 1 ? ppu.gpr[op.ra] + op.simm16 : op.simm16;
-	ppu.fpr[op.frd] = ppu_feed_data<f32>(ppu, addr);
+	ppu.fpr[op.frd] = ppu_feed_data<f32, Flags...>(ppu, addr);
 	};
 	RETURN_(ppu, op);
 }
@@ -5960,11 +5974,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LFSU()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const u64 addr = ppu.gpr[op.ra] + op.simm16;
-	ppu.fpr[op.frd] = ppu_feed_data<f32>(ppu, addr);
+	ppu.fpr[op.frd] = ppu_feed_data<f32, Flags...>(ppu, addr);
 	ppu.gpr[op.ra] = addr;
 	};
 	RETURN_(ppu, op);
@@ -5974,11 +5988,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LFD()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const u64 addr = op.ra || 1 ? ppu.gpr[op.ra] + op.simm16 : op.simm16;
-	ppu.fpr[op.frd] = ppu_feed_data<f64>(ppu, addr);
+	ppu.fpr[op.frd] = ppu_feed_data<f64, Flags...>(ppu, addr);
 	};
 	RETURN_(ppu, op);
 }
@@ -5987,11 +6001,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LFDU()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const u64 addr = ppu.gpr[op.ra] + op.simm16;
-	ppu.fpr[op.frd] = ppu_feed_data<f64>(ppu, addr);
+	ppu.fpr[op.frd] = ppu_feed_data<f64, Flags...>(ppu, addr);
 	ppu.gpr[op.ra] = addr;
 	};
 	RETURN_(ppu, op);
@@ -6055,11 +6069,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LD()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const u64 addr = (op.simm16 & ~3) + (op.ra ? ppu.gpr[op.ra] : 0);
-	ppu.gpr[op.rd] = ppu_feed_data<u64>(ppu, addr);
+	ppu.gpr[op.rd] = ppu_feed_data<u64, Flags...>(ppu, addr);
 	};
 	RETURN_(ppu, op);
 }
@@ -6068,11 +6082,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LDU()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const u64 addr = ppu.gpr[op.ra] + (op.simm16 & ~3);
-	ppu.gpr[op.rd] = ppu_feed_data<u64>(ppu, addr);
+	ppu.gpr[op.rd] = ppu_feed_data<u64, Flags...>(ppu, addr);
 	ppu.gpr[op.ra] = addr;
 	};
 	RETURN_(ppu, op);
@@ -6082,11 +6096,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto LWA()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<use_feed_data>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const u64 addr = (op.simm16 & ~3) + (op.ra ? ppu.gpr[op.ra] : 0);
-	ppu.gpr[op.rd] = ppu_feed_data<s32>(ppu, addr);
+	ppu.gpr[op.rd] = ppu_feed_data<s32, Flags...>(ppu, addr);
 	};
 	RETURN_(ppu, op);
 }
@@ -7315,6 +7329,10 @@ ppu_interpreter_rt_base::ppu_interpreter_rt_base() noexcept
 		selected += use_dfma;
 	if (g_cfg.core.ppu_debug)
 		selected += set_cr_stats; // TODO
+	if (g_cfg.core.ppu_call_history)
+		selected += set_call_history;
+	if (g_cfg.core.ppu_128_reservations_loop_max_length != 0)
+		selected += use_feed_data;
 
 	if (selected & use_nj)
 		ppu_log.success("Enabled: Accurate Non-Java Mode");

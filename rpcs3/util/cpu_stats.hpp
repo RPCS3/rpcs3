@@ -1,12 +1,11 @@
 #pragma once
 
 #include "util/types.hpp"
+#include <vector>
 
 #ifdef _WIN32
 #include <pdh.h>
 #include <pdhmsg.h>
-#elif __linux__
-#include <vector>
 #endif
 
 namespace utils
@@ -29,6 +28,7 @@ namespace utils
 
 	public:
 		cpu_stats();
+		~cpu_stats();
 
 		double get_usage();
 

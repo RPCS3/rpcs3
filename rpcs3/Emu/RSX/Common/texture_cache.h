@@ -183,7 +183,7 @@ namespace rsx
 				scale_y = scale.height;
 				scale_z = scale.depth;
 				image_type = type;
-				samples = msaa_samples;	
+				samples = msaa_samples;
 			}
 
 			sampled_image_descriptor(image_resource_type external_handle, deferred_request_command reason,
@@ -495,10 +495,7 @@ namespace rsx
 			{
 				// Sort with oldest data first
 				// Ensures that new data tramples older data
-				std::sort(data.sections_to_flush.begin(), data.sections_to_flush.end(), [](const auto& a, const auto& b)
-				{
-					return (a->last_write_tag < b->last_write_tag);
-				});
+				std::sort(data.sections_to_flush.begin(), data.sections_to_flush.end(), FN(x->last_write_tag < y->last_write_tag));
 			}
 
 			rsx::simple_array<section_storage_type*> sections_to_transfer;
@@ -586,6 +583,7 @@ namespace rsx
 			}
 
 			data.flushed = true;
+			update_cache_tag();
 		}
 
 
@@ -611,13 +609,13 @@ namespace rsx
 		{
 			auto protect_ranges = [this](address_range_vector& _set, utils::protection _prot)
 			{
-				u32 count = 0;
+				//u32 count = 0;
 				for (auto &range : _set)
 				{
 					if (range.valid())
 					{
 						rsx::memory_protect(range, _prot);
-						count++;
+						//count++;
 					}
 				}
 				//rsx_log.error("Set protection of %d blocks to 0x%x", count, static_cast<u32>(prot));
@@ -1822,7 +1820,7 @@ namespace rsx
 							rsx_log.warning("A texture was found in cache for address 0x%x, but swizzle flag does not match", attr.address);
 							cached_texture->unprotect();
 							cached_texture->set_dirty(true);
-							return {};
+							break;
 						}
 
 						return{ cached_texture->get_view(encoded_remap, remap), cached_texture->get_context(), cached_texture->get_format_class(), scale, cached_texture->get_image_type() };
@@ -1836,7 +1834,7 @@ namespace rsx
 					(
 						std::remove_if(overlapping_locals.begin(), overlapping_locals.end(), [](const auto& e)
 						{
-							return (e->get_context() != rsx::texture_upload_context::blit_engine_dst);
+							return e->is_dirty() || (e->get_context() != rsx::texture_upload_context::blit_engine_dst);
 						}),
 						overlapping_locals.end()
 					);
@@ -3033,7 +3031,7 @@ namespace rsx
 					{
 						cached_dest = create_new_texture(cmd, rsx_range, dst_dimensions.width, dst_dimensions.height, 1, 1, dst.pitch,
 							preferred_dst_format, rsx::texture_upload_context::blit_engine_dst, rsx::texture_dimension_extended::texture_dimension_2d,
-							false, channel_order, 0);
+							dst.swizzled, channel_order, 0);
 					}
 					else
 					{
@@ -3054,7 +3052,7 @@ namespace rsx
 
 						cached_dest = upload_image_from_cpu(cmd, rsx_range, dst_dimensions.width, dst_dimensions.height, 1, 1, dst.pitch,
 							preferred_dst_format, rsx::texture_upload_context::blit_engine_dst, subresource_layout,
-							rsx::texture_dimension_extended::texture_dimension_2d, false);
+							rsx::texture_dimension_extended::texture_dimension_2d, dst.swizzled);
 
 						set_component_order(*cached_dest, preferred_dst_format, channel_order);
 					}
@@ -3086,7 +3084,7 @@ namespace rsx
 				update_cache_tag();
 
 				// Set swizzle flag
-				cached_dest->set_swizzled(raster_type == rsx::surface_raster_type::swizzle);
+				cached_dest->set_swizzled(raster_type == rsx::surface_raster_type::swizzle || dst.swizzled);
 			}
 			else
 			{
@@ -3238,6 +3236,24 @@ namespace rsx
 		predictor_type& get_predictor()
 		{
 			return m_predictor;
+		}
+
+		bool is_protected(u32 section_base_address, const address_range& test_range, rsx::texture_upload_context context)
+		{
+			reader_lock lock(m_cache_mutex);
+
+			const auto& block = m_storage.block_for(section_base_address);
+			for (const auto& tex : block)
+			{
+				if (tex.get_section_base() == section_base_address)
+				{
+					return tex.get_context() == context &&
+						tex.is_locked() &&
+						test_range.inside(tex.get_section_range());
+				}
+			}
+
+			return false;
 		}
 
 

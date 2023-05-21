@@ -43,7 +43,7 @@ vfs_dialog_path_widget::vfs_dialog_path_widget(const QString& name, const QStrin
 
 	QHBoxLayout* selected_config_layout = new QHBoxLayout;
 	m_selected_config_label = new QLabel(current_path.isEmpty() ? EmptyPath : current_path);
-	selected_config_layout->addWidget(new QLabel(tr("%0 directory:").arg(name)));
+	selected_config_layout->addWidget(new QLabel(tr("Used %0 directory:").arg(name)));
 	selected_config_layout->addWidget(m_selected_config_label);
 	selected_config_layout->addStretch();
 	selected_config_layout->addWidget(add_directory_button);
@@ -87,7 +87,7 @@ void vfs_dialog_path_widget::remove_directory() const
 	const int row = m_dir_list->currentRow();
 	if (row > 0)
 	{
-		QListWidgetItem* item = m_dir_list->item(row);
+		QListWidgetItem* item = m_dir_list->takeItem(row);
 		delete item;
 	}
 }

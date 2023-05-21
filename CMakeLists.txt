@@ -14,13 +14,16 @@ endif()
 
 option(USE_NATIVE_INSTRUCTIONS "USE_NATIVE_INSTRUCTIONS makes rpcs3 compile with -march=native, which is useful for local builds, but not good for packages." ON)
 option(WITH_LLVM "Enable usage of LLVM library" ON)
-option(BUILD_LLVM_SUBMODULE "Build LLVM from git submodule" ON)
+option(BUILD_LLVM "Build LLVM from git submodule" OFF)
+option(STATIC_LINK_LLVM "Link against LLVM statically. This will get set to ON if you build LLVM from the submodule." OFF)
 option(USE_FAUDIO "FAudio audio backend" ON)
 option(USE_LIBEVDEV "libevdev-based joystick support" ON)
 option(USE_DISCORD_RPC "Discord rich presence integration" OFF)
 option(USE_SYSTEM_ZLIB "Prefer system ZLIB instead of the builtin one" ON)
 option(USE_VULKAN "Vulkan render backend" ON)
 option(USE_PRECOMPILED_HEADERS "Use precompiled headers" OFF)
+option(USE_SDL "Enables SDL input handler" OFF)
+option(USE_SYSTEM_SDL "Prefer system SDL instead of the builtin one" OFF)
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/buildfiles/cmake")
 
@@ -104,9 +107,9 @@ if(WIN32)
     add_definitions(-D_WIN32_WINNT=0x0602)
 endif()
 
-if(APPLE)
-    include_directories(/opt/local/include)
-    link_directories(/opt/local/lib)
+if(APPLE AND CMAKE_OSX_ARCHITECTURES STREQUAL "arm64")
+    include_directories(/opt/homebrew/include)
+    link_directories(/opt/homebrew/lib)
 endif()
 
 # Warnings are silenced for 3rdparty code
@@ -122,6 +125,20 @@ add_subdirectory(3rdparty)
 
 unset(CMAKE_CXX_FLAGS)
 unset(CMAKE_C_FLAGS)
+
+if (DISABLE_LTO)
+    if (CMAKE_C_FLAGS)
+        string(REGEX REPLACE "-flto[^ ]*" "" CMAKE_C_FLAGS ${CMAKE_C_FLAGS})
+    endif()
+    if (CMAKE_CXX_FLAGS)
+        string(REGEX REPLACE "-flto[^ ]*" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+    endif()
+endif()
+
+string(FIND "${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS}" "-flto" FOUND_LTO)
+if (NOT FOUND_LTO EQUAL -1)
+    message(FATAL_ERROR "Rpcs3 doesn't support building with LTO, use -DDISABLE_LTO=TRUE to force-disable it")
+endif()
 
 if(NOT WIN32)
     add_compile_options(-pthread)

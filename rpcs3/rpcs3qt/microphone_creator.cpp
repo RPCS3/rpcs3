@@ -10,7 +10,6 @@ constexpr auto qstr = QString::fromStdString;
 microphone_creator::microphone_creator()
 {
 	setObjectName("microphone_creator");
-	refresh_list();
 }
 
 // We need to recreate the localized string because the microphone creator is currently only created once.
@@ -69,13 +68,10 @@ std::string microphone_creator::set_device(u32 num, const QString& text)
 
 void microphone_creator::parse_devices(const std::string& list)
 {
-	for (u32 index = 0; index < 4; index++)
-	{
-		m_sel_list[index] = "";
-	}
+	m_sel_list = {};
 
 	const auto devices_list = fmt::split(list, { "@@@" });
-	for (u32 index = 0; index < std::min<u32>(4, ::size32(devices_list)); index++)
+	for (u32 index = 0; index < std::min<u32>(m_sel_list.size(), ::size32(devices_list)); index++)
 	{
 		m_sel_list[index] = devices_list[index];
 	}

@@ -97,7 +97,7 @@ namespace rsx
 
 	rsx::comparison_function fragment_texture::zfunc() const
 	{
-		return static_cast<rsx::comparison_function>((registers[NV4097_SET_TEXTURE_ADDRESS + (m_index * 8)] >> 28) & 0xf);
+		return rsx::to_comparison_function((registers[NV4097_SET_TEXTURE_ADDRESS + (m_index * 8)] >> 28) & 0xf);
 	}
 
 	u8 fragment_texture::unsigned_remap() const
@@ -151,7 +151,7 @@ namespace rsx
 		case 16: return rsx::texture_max_anisotropy::x16;
 		default: break;
 		}
-	
+
 		return rsx::to_texture_max_anisotropy((registers[NV4097_SET_TEXTURE_CONTROL0 + (m_index * 8)] >> 4) & 0x7);
 	}
 
@@ -227,41 +227,11 @@ namespace rsx
 			remap_ctl |= lo_word;
 			break;
 		}
-		case CELL_GCM_TEXTURE_B8:
-		{
-			// Low bit in remap control seems to affect whether the A component is forced to 1
-			// Only seen in BLUS31604
-			if (remap_override)
-			{
-				// Set remap lookup for A component to FORCE_ONE
-				remap_ctl = (remap_ctl & ~(3 << 8)) | (1 << 8);
-			}
-			break;
-		}
 		default:
 			break;
 		}
 
-		//Remapping tables; format is A-R-G-B
-		//Remap input table. Contains channel index to read color from
-		const std::array<u8, 4> remap_inputs =
-		{
-			static_cast<u8>(remap_ctl & 0x3),
-			static_cast<u8>((remap_ctl >> 2) & 0x3),
-			static_cast<u8>((remap_ctl >> 4) & 0x3),
-			static_cast<u8>((remap_ctl >> 6) & 0x3),
-		};
-
-		//Remap control table. Controls whether the remap value is used, or force either 0 or 1
-		const std::array<u8, 4> remap_lookup =
-		{
-			static_cast<u8>((remap_ctl >> 8) & 0x3),
-			static_cast<u8>((remap_ctl >> 10) & 0x3),
-			static_cast<u8>((remap_ctl >> 12) & 0x3),
-			static_cast<u8>((remap_ctl >> 14) & 0x3),
-		};
-
-		return std::make_pair(remap_inputs, remap_lookup);
+		return decode_remap_encoding(remap_ctl);
 	}
 
 	f32 fragment_texture::bias() const

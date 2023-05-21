@@ -128,6 +128,8 @@ namespace rsx
 
 		gcm_framebuffer_info() = default;
 
+		ENABLE_BITWISE_SERIALIZATION;
+
 		void calculate_memory_range(u32 aa_factor_u, u32 aa_factor_v)
 		{
 			// Account for the last line of the block not reaching the end
@@ -151,7 +153,7 @@ namespace rsx
 
 	struct avconf
 	{
-		bool _3d  = false;         // Stereo 3D off
+		stereo_render_mode_options stereo_mode = stereo_render_mode_options::disabled;        // Stereo 3D display mode
 		u8 format = 0;             // XRGB
 		u8 aspect = 0;             // AUTO
 		u8 resolution_id = 2;      // 720p
@@ -161,8 +163,13 @@ namespace rsx
 		u32 resolution_y = 720;    // Y RES
 		atomic_t<u32> state = 0;   // 1 after cellVideoOutConfigure was called
 
+		ENABLE_BITWISE_SERIALIZATION;
+		SAVESTATE_INIT_POS(12);
+
 		avconf() noexcept;
 		~avconf() = default;
+		avconf(utils::serial& ar);
+		void save(utils::serial& ar);
 
 		u32 get_compatible_gcm_format() const;
 		u8 get_bpp() const;
@@ -209,6 +216,30 @@ namespace rsx
 		{ CELL_GCM_TEXTURE_REMAP_FROM_A, CELL_GCM_TEXTURE_REMAP_FROM_R, CELL_GCM_TEXTURE_REMAP_FROM_G, CELL_GCM_TEXTURE_REMAP_FROM_B },
 		{ CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP }
 	};
+
+	static inline std::pair<std::array<u8, 4>, std::array<u8, 4>> decode_remap_encoding(u32 remap_ctl)
+	{
+		// Remapping tables; format is A-R-G-B
+		// Remap input table. Contains channel index to read color from
+		const std::array<u8, 4> remap_inputs =
+		{
+			static_cast<u8>(remap_ctl & 0x3),
+			static_cast<u8>((remap_ctl >> 2) & 0x3),
+			static_cast<u8>((remap_ctl >> 4) & 0x3),
+			static_cast<u8>((remap_ctl >> 6) & 0x3),
+		};
+
+		// Remap control table. Controls whether the remap value is used, or force either 0 or 1
+		const std::array<u8, 4> remap_lookup =
+		{
+			static_cast<u8>((remap_ctl >> 8) & 0x3),
+			static_cast<u8>((remap_ctl >> 10) & 0x3),
+			static_cast<u8>((remap_ctl >> 12) & 0x3),
+			static_cast<u8>((remap_ctl >> 14) & 0x3),
+		};
+
+		return std::make_pair(remap_inputs, remap_lookup);
+	}
 
 	template <typename T>
 	void pad_texture(void* input_pixels, void* output_pixels, u16 input_width, u16 input_height, u16 output_width, u16 /*output_height*/)
@@ -528,8 +559,8 @@ namespace rsx
 	 * Extracts from 'parent' a region that fits in 'child'
 	 */
 	static inline std::tuple<position2u, position2u, size2u> intersect_region(
-		u32 parent_address, u16 parent_w, u16 parent_h, u16 parent_bpp,
-		u32 child_address, u16 child_w, u16 child_h, u32 child_bpp,
+		u32 parent_address, u16 parent_w, u16 parent_h,
+		u32 child_address, u16 child_w, u16 child_h,
 		u32 pitch)
 	{
 		if (child_address < parent_address)
@@ -538,9 +569,9 @@ namespace rsx
 			const auto src_x = 0u;
 			const auto src_y = 0u;
 			const auto dst_y = (offset / pitch);
-			const auto dst_x = (offset % pitch) / child_bpp;
-			const auto w = std::min<u32>(parent_w, child_w - dst_x);
-			const auto h = std::min<u32>(parent_h, child_h - dst_y);
+			const auto dst_x = (offset % pitch);
+			const auto w = std::min<u32>(parent_w, std::max<u32>(child_w, dst_x) - dst_x); // Clamp negatives to 0!
+			const auto h = std::min<u32>(parent_h, std::max<u32>(child_h, dst_y) - dst_y);
 
 			return std::make_tuple<position2u, position2u, size2u>({ src_x, src_y }, { dst_x, dst_y }, { w, h });
 		}
@@ -548,11 +579,11 @@ namespace rsx
 		{
 			const auto offset = child_address - parent_address;
 			const auto src_y = (offset / pitch);
-			const auto src_x = (offset % pitch) / parent_bpp;
+			const auto src_x = (offset % pitch);
 			const auto dst_x = 0u;
 			const auto dst_y = 0u;
-			const auto w = std::min<u32>(child_w, parent_w - src_x);
-			const auto h = std::min<u32>(child_h, parent_h - src_y);
+			const auto w = std::min<u32>(child_w, std::max<u32>(parent_w, src_x) - src_x);
+			const auto h = std::min<u32>(child_h, std::max<u32>(parent_h, src_y) - src_y);
 
 			return std::make_tuple<position2u, position2u, size2u>({ src_x, src_y }, { dst_x, dst_y }, { w, h });
 		}
@@ -765,6 +796,38 @@ namespace rsx
 	static inline void get_abgr8_clear_color(u8& red, u8& /*green*/, u8& blue, u8& /*alpha*/)
 	{
 		std::swap(red, blue);
+	}
+
+	template <typename T, typename U>
+		requires std::is_integral_v<T> && std::is_integral_v<U>
+	u8 renormalize_color8(T input, U base)
+	{
+		// Base will be some POT-1 value
+		const int value = static_cast<u8>(input & base);
+		return static_cast<u8>((value * 255) / base);
+	}
+
+	static inline void get_rgb565_clear_color(u8& red, u8& green, u8& blue, u8& /*alpha*/)
+	{
+		// RSX clear color is just a memcpy, so in this case the input is ARGB8 so only BG have the 16-bit input
+		const u16 raw_value = static_cast<u16>(green) << 8 | blue;
+		blue = renormalize_color8(raw_value, 0x1f);
+		green = renormalize_color8(raw_value >> 5, 0x3f);
+		red = renormalize_color8(raw_value >> 11, 0x1f);
+	}
+
+	static inline void get_a1rgb555_clear_color(u8& red, u8& green, u8& blue, u8& alpha, u8 alpha_override)
+	{
+		// RSX clear color is just a memcpy, so in this case the input is ARGB8 so only BG have the 16-bit input
+		const u16 raw_value = static_cast<u16>(green) << 8 | blue;
+		blue = renormalize_color8(raw_value, 0x1f);
+		green = renormalize_color8(raw_value >> 5, 0x1f);
+		red = renormalize_color8(raw_value >> 10, 0x1f);
+
+		// Alpha can technically be encoded into the clear but the format normally just injects constants.
+		// Will require hardware tests when possible to determine which approach makes more sense.
+		// alpha = static_cast<u8>((raw_value & (1 << 15)) ? 255 : 0);
+		alpha = alpha_override;
 	}
 
 	static inline u32 get_b8_clearmask(u32 mask)

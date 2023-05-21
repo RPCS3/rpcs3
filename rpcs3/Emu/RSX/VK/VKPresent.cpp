@@ -1,12 +1,18 @@
 #include "stdafx.h"
 #include "VKGSRender.h"
 #include "vkutils/buffer_object.h"
+#include "Emu/RSX/Overlays/overlay_manager.h"
 #include "Emu/RSX/Overlays/overlays.h"
 #include "Emu/Cell/Modules/cellVideoOut.h"
 
 #include "upscalers/bilinear_pass.hpp"
 #include "upscalers/fsr_pass.h"
+#include "upscalers/nearest_pass.hpp"
 #include "util/asm.hpp"
+#include "util/video_provider.h"
+
+extern atomic_t<bool> g_user_asked_for_screenshot;
+extern atomic_t<recording_mode> g_recording_mode;
 
 void VKGSRender::reinitialize_swapchain()
 {
@@ -454,7 +460,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		if (!buffer_pitch)
 			buffer_pitch = buffer_width * avconfig.get_bpp();
 
-		const u32 video_frame_height = (!avconfig._3d? avconfig.resolution_y : (avconfig.resolution_y - 30) / 2);
+		const u32 video_frame_height = (avconfig.stereo_mode == stereo_render_mode_options::disabled? avconfig.resolution_y : ((avconfig.resolution_y - 30) / 2));
 		buffer_width = std::min(buffer_width, avconfig.resolution_x);
 		buffer_height = std::min(buffer_height, video_frame_height);
 	}
@@ -478,7 +484,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 		image_to_flip = get_present_source(&present_info, avconfig);
 
-		if (avconfig._3d) [[unlikely]]
+		if (avconfig.stereo_mode != stereo_render_mode_options::disabled) [[unlikely]]
 		{
 			const auto [unused, min_expected_height] = rsx::apply_resolution_scale<true>(RSX_SURFACE_DIMENSION_IGNORED, buffer_height + 30);
 			if (image_to_flip->height() < min_expected_height)
@@ -501,6 +507,11 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 		buffer_width = present_info.width;
 		buffer_height = present_info.height;
+	}
+
+	if (info.emu_flip)
+	{
+		evaluate_cpu_usage_reduction_limits();
 	}
 
 	// Prepare surface for new frame. Set no timeout here so that we wait for the next image if need be
@@ -582,13 +593,17 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		target_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 	}
 
-	const bool use_fsr_upscaling = g_cfg.video.vk.fsr_upscaling.get();
+	const output_scaling_mode output_scaling = g_cfg.video.output_scaling.get();
 
-	if (!m_upscaler || m_use_fsr_upscaling != use_fsr_upscaling)
+	if (!m_upscaler || m_output_scaling != output_scaling)
 	{
-		m_use_fsr_upscaling = use_fsr_upscaling;
+		m_output_scaling = output_scaling;
 
-		if (m_use_fsr_upscaling)
+		if (m_output_scaling == output_scaling_mode::nearest)
+		{
+			m_upscaler = std::make_unique<vk::nearest_upscale_pass>();
+		}
+		else if (m_output_scaling == output_scaling_mode::fsr)
 		{
 			m_upscaler = std::make_unique<vk::fsr_upscale_pass>();
 		}
@@ -602,12 +617,12 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	{
 		const bool use_full_rgb_range_output = g_cfg.video.full_rgb_range_output.get();
 
-		if (!use_full_rgb_range_output || !rsx::fcmp(avconfig.gamma, 1.f) || avconfig._3d) [[unlikely]]
+		if (!use_full_rgb_range_output || !rsx::fcmp(avconfig.gamma, 1.f) || avconfig.stereo_mode != stereo_render_mode_options::disabled) [[unlikely]]
 		{
 			if (image_to_flip) calibration_src.push_back(image_to_flip);
 			if (image_to_flip2) calibration_src.push_back(image_to_flip2);
 
-			if (m_use_fsr_upscaling && !avconfig._3d) // 3D will be implemented later
+			if (m_output_scaling == output_scaling_mode::fsr && avconfig.stereo_mode == stereo_render_mode_options::disabled) // 3D will be implemented later
 			{
 				// Run upscaling pass before the rest of the output effects pipeline
 				// This can be done with all upscalers but we already get bilinear upscaling for free if we just out the filters directly
@@ -638,7 +653,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 			vk::get_overlay_pass<vk::video_out_calibration_pass>()->run(
 				*m_current_command_buffer, areau(aspect_ratio), direct_fbo, calibration_src,
-				avconfig.gamma, !use_full_rgb_range_output, avconfig._3d, single_target_pass);
+				avconfig.gamma, !use_full_rgb_range_output, avconfig.stereo_mode, single_target_pass);
 
 			direct_fbo->release();
 		}
@@ -662,10 +677,8 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			m_upscaler->scale_output(*m_current_command_buffer, image_to_flip, target_image, target_layout, rgn, UPSCALE_AND_COMMIT | UPSCALE_DEFAULT_VIEW);
 		}
 
-		if (m_frame->screenshot_toggle)
+		if (g_user_asked_for_screenshot || (g_recording_mode != recording_mode::stopped && m_frame->can_consume_frame()))
 		{
-			m_frame->screenshot_toggle = false;
-
 			const usz sshot_size = buffer_height * buffer_width * 4;
 
 			vk::buffer sshot_vkbuf(*m_device, utils::align(sshot_size, 0x100000), m_device->get_memory_mapping().host_visible_coherent,
@@ -697,7 +710,15 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			sshot_vkbuf.unmap();
 
 			const bool is_bgra = image_to_flip->format() == VK_FORMAT_B8G8R8A8_UNORM;
-			m_frame->take_screenshot(std::move(sshot_frame), buffer_width, buffer_height, is_bgra);
+
+			if (g_user_asked_for_screenshot.exchange(false))
+			{
+				m_frame->take_screenshot(std::move(sshot_frame), buffer_width, buffer_height, is_bgra);
+			}
+			else
+			{
+				m_frame->present_frame(sshot_frame, buffer_width, buffer_height, is_bgra);
+			}
 		}
 	}
 
@@ -757,14 +778,21 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 			m_text_writer->set_scale(m_frame->client_device_pixel_ratio());
 
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 4,  0, direct_fbo->width(), direct_fbo->height(), fmt::format("RSX Load:                 %3d%%", get_load()));
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 4, 18, direct_fbo->width(), direct_fbo->height(), fmt::format("draw calls: %17d", info.stats.draw_calls));
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 4, 36, direct_fbo->width(), direct_fbo->height(), fmt::format("submits: %20d", info.stats.submit_count));
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 4, 54, direct_fbo->width(), direct_fbo->height(), fmt::format("draw call setup: %12dus", info.stats.setup_time));
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 4, 72, direct_fbo->width(), direct_fbo->height(), fmt::format("vertex upload time: %9dus", info.stats.vertex_upload_time));
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 4, 90, direct_fbo->width(), direct_fbo->height(), fmt::format("texture upload time: %8dus", info.stats.textures_upload_time));
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 4, 108, direct_fbo->width(), direct_fbo->height(), fmt::format("draw call execution: %8dus", info.stats.draw_exec_time));
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 4, 126, direct_fbo->width(), direct_fbo->height(), fmt::format("submit and flip: %12dus", info.stats.flip_time));
+			int y_loc = 0;
+			const auto println = [&](const std::string& text)
+			{
+				m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 4, y_loc, direct_fbo->width(), direct_fbo->height(), text);
+				y_loc += 16;
+			};
+
+			println(fmt::format("RSX Load:                 %3d%%", get_load()));
+			println(fmt::format("draw calls: %17d", info.stats.draw_calls));
+			println(fmt::format("submits: %20d", info.stats.submit_count));
+			println(fmt::format("draw call setup: %12dus", info.stats.setup_time));
+			println(fmt::format("vertex upload time: %9dus", info.stats.vertex_upload_time));
+			println(fmt::format("texture upload time: %8dus", info.stats.textures_upload_time));
+			println(fmt::format("draw call execution: %8dus", info.stats.draw_exec_time));
+			println(fmt::format("submit and flip: %12dus", info.stats.flip_time));
 
 			const auto num_dirty_textures = m_texture_cache.get_unreleased_textures_count();
 			const auto texture_memory_size = m_texture_cache.get_texture_memory_in_use() / (1024 * 1024);
@@ -778,11 +806,11 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			const auto num_texture_upload = m_texture_cache.get_texture_upload_calls_this_frame();
 			const auto num_texture_upload_miss = m_texture_cache.get_texture_upload_misses_this_frame();
 			const auto texture_upload_miss_ratio = m_texture_cache.get_texture_upload_miss_percentage();
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 4, 144, direct_fbo->width(), direct_fbo->height(), fmt::format("Unreleased textures: %8d", num_dirty_textures));
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 4, 162, direct_fbo->width(), direct_fbo->height(), fmt::format("Texture cache memory: %7dM", texture_memory_size));
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 4, 180, direct_fbo->width(), direct_fbo->height(), fmt::format("Temporary texture memory: %3dM", tmp_texture_memory_size));
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 4, 198, direct_fbo->width(), direct_fbo->height(), fmt::format("Flush requests: %13d  = %2d (%3d%%) hard faults, %2d unavoidable, %2d misprediction(s), %2d speculation(s)", num_flushes, num_misses, cache_miss_ratio, num_unavoidable, num_mispredict, num_speculate));
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 4, 216, direct_fbo->width(), direct_fbo->height(), fmt::format("Texture uploads: %14u (%u from CPU - %02u%%)", num_texture_upload, num_texture_upload_miss, texture_upload_miss_ratio));
+			println(fmt::format("Unreleased textures: %8d", num_dirty_textures));
+			println(fmt::format("Texture cache memory: %7dM", texture_memory_size));
+			println(fmt::format("Temporary texture memory: %3dM", tmp_texture_memory_size));
+			println(fmt::format("Flush requests: %13d  = %2d (%3d%%) hard faults, %2d unavoidable, %2d misprediction(s), %2d speculation(s)", num_flushes, num_misses, cache_miss_ratio, num_unavoidable, num_mispredict, num_speculate));
+			println(fmt::format("Texture uploads: %14u (%u from CPU - %02u%%)", num_texture_upload, num_texture_upload_miss, texture_upload_miss_ratio));
 		}
 
 		direct_fbo->release();

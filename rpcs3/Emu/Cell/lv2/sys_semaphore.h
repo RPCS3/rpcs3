@@ -30,7 +30,7 @@ struct lv2_sema final : lv2_obj
 
 	shared_mutex mutex;
 	atomic_t<s32> val;
-	std::deque<cpu_thread*> sq;
+	ppu_thread* sq{};
 
 	lv2_sema(u32 protocol, u64 key, u64 name, s32 max, s32 value) noexcept
 		: protocol{static_cast<u8>(protocol)}
@@ -40,6 +40,10 @@ struct lv2_sema final : lv2_obj
 		, val(value)
 	{
 	}
+
+	lv2_sema(utils::serial& ar);
+	static std::shared_ptr<void> load(utils::serial& ar);
+	void save(utils::serial& ar);
 };
 
 // Aux

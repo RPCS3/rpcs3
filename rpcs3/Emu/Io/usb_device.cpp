@@ -1,8 +1,8 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-
 #include "Emu/Cell/lv2/sys_usbd.h"
 #include "Emu/Io/usb_device.h"
+#include "Utilities/StrUtil.h"
 #include <libusb.h>
 
 LOG_CHANNEL(sys_usbd);
@@ -25,6 +25,12 @@ void usb_device::get_location(u8* location) const
 
 void usb_device::read_descriptors()
 {
+}
+
+u32 usb_device::get_configuration(u8* buf)
+{
+	*buf = current_config;
+	return sizeof(u8);
 }
 
 bool usb_device::set_configuration(u8 cfg_num)
@@ -123,6 +129,11 @@ void usb_device_passthrough::read_descriptors()
 	}
 }
 
+u32 usb_device_passthrough::get_configuration(u8* buf)
+{
+	return (libusb_get_configuration(lusb_handle, reinterpret_cast<int*>(buf)) == LIBUSB_SUCCESS) ? sizeof(u8) : 0;
+};
+
 bool usb_device_passthrough::set_configuration(u8 cfg_num)
 {
 	usb_device::set_configuration(cfg_num);
@@ -187,32 +198,83 @@ bool usb_device_emulated::open_device()
 	return true;
 }
 
-s32 usb_device_emulated::get_descriptor(u8 type, u8 index, u8* ptr, u32 /*max_size*/)
+u32 usb_device_emulated::get_descriptor(u8 type, u8 index, u8* buf, u32 buf_size)
 {
-	if (type == USB_DESCRIPTOR_STRING)
+	u32 expected_count = 2;
+
+	if (buf_size < expected_count)
 	{
-		if (index < strings.size())
-		{
-			u8 string_len = ::narrow<u8>(strings[index].size());
-			ptr[0]        = (string_len * 2) + 2;
-			ptr[1]        = USB_DESCRIPTOR_STRING;
-			for (u32 i = 0; i < string_len; i++)
-			{
-				ptr[2 + (i * 2)] = strings[index].data()[i];
-				ptr[3 + (i * 2)] = 0;
-			}
-			return ptr[0];
-		}
-	}
-	else
-	{
-		sys_usbd.error("[Emulated]: Trying to get a descriptor other than string descriptor");
+		sys_usbd.error("Illegal buf_size: get_descriptor(type=0x%02x, index=0x%02x, buf=*0x%x, buf_size=0x%x)", type, index, buf, buf_size);
+		return 0;
 	}
 
-	return -1;
+	buf[0] = expected_count;
+	buf[1] = type;
+
+	switch (type)
+	{
+	case USB_DESCRIPTOR_DEVICE:
+	{
+		buf[0] = device.bLength;
+		expected_count = std::min(device.bLength, ::narrow<u8>(buf_size));
+		memcpy(buf + 2, device.data, expected_count - 2);
+		break;
+	}
+	case USB_DESCRIPTOR_CONFIG:
+	{
+		if (index < device.subnodes.size())
+		{
+			buf[0] = device.subnodes[index].bLength;
+			expected_count = std::min(device.subnodes[index].bLength, ::narrow<u8>(buf_size));
+			memcpy(buf + 2, device.subnodes[index].data, expected_count - 2);
+		}
+		break;
+	}
+	case USB_DESCRIPTOR_STRING:
+	{
+		if (index < strings.size() + 1)
+		{
+			if (index == 0)
+			{
+				constexpr u8 len = sizeof(u16) + 2;
+				buf[0] = len;
+				expected_count = std::min(len, ::narrow<u8>(buf_size));
+				constexpr le_t<u16> langid = 0x0409; // English (United States)
+				memcpy(buf + 2, &langid, expected_count - 2);
+			}
+			else
+			{
+				const std::u16string u16str = utf8_to_utf16(strings[index - 1]);
+				const u8 len = static_cast<u8>(std::min(u16str.size() * sizeof(u16) + 2, static_cast<usz>(0xFF)));
+				buf[0] = len;
+				expected_count = std::min(len, ::narrow<u8>(std::min<u32>(255, buf_size)));
+				memcpy(buf + 2, u16str.data(), expected_count - 2);
+			}
+		}
+		break;
+	}
+	default: sys_usbd.error("Unhandled DescriptorType: get_descriptor(type=0x%02x, index=0x%02x, buf=*0x%x, buf_size=0x%x)", type, index, buf, buf_size); break;
+	}
+
+	return expected_count;
 }
 
-void usb_device_emulated::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 /*wIndex*/, u16 /*wLength*/, u32 buf_size, u8* /*buf*/, UsbTransfer* transfer)
+u32 usb_device_emulated::get_status(bool self_powered, bool remote_wakeup, u8* buf, u32 buf_size)
+{
+	constexpr u32 expected_count = sizeof(u16);
+
+	if (buf_size < expected_count)
+	{
+		sys_usbd.error("Illegal buf_size: get_status(self_powered=0x%02x, remote_wakeup=0x%02x, buf=*0x%x, buf_size=0x%x)", self_powered, remote_wakeup, buf, buf_size);
+		return 0;
+	}
+
+	const u16 device_status = static_cast<int>(self_powered) | static_cast<int>(remote_wakeup) << 1;
+	memcpy(buf, &device_status, expected_count);
+	return expected_count;
+}
+
+void usb_device_emulated::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 /*wIndex*/, u16 /*wLength*/, u32 buf_size, u8* buf, UsbTransfer* transfer)
 {
 	transfer->fake            = true;
 	transfer->expected_count  = buf_size;
@@ -221,14 +283,23 @@ void usb_device_emulated::control_transfer(u8 bmRequestType, u8 bRequest, u16 wV
 
 	switch (bmRequestType)
 	{
-	case 0:
+	case 0U /*silences warning*/ | LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_STANDARD | LIBUSB_RECIPIENT_DEVICE:
 		switch (bRequest)
 		{
-		case 0x09: usb_device::set_configuration(::narrow<u8>(wValue)); break;
-		default: sys_usbd.fatal("Unhandled control transfer(0): 0x%x", bRequest); break;
+		case LIBUSB_REQUEST_SET_CONFIGURATION: usb_device::set_configuration(::narrow<u8>(wValue)); break;
+		default: sys_usbd.error("Unhandled control transfer(0x%02x): 0x%02x", bmRequestType, bRequest); break;
 		}
 		break;
-	default: sys_usbd.fatal("Unhandled control transfer: 0x%x", bmRequestType); break;
+	case 0U /*silences warning*/ | LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_STANDARD | LIBUSB_RECIPIENT_DEVICE:
+		switch (bRequest)
+		{
+		case LIBUSB_REQUEST_GET_STATUS: transfer->expected_count = get_status(false, false, buf, buf_size); break;
+		case LIBUSB_REQUEST_GET_DESCRIPTOR: transfer->expected_count = get_descriptor(wValue >> 8, wValue & 0xFF, buf, buf_size); break;
+		case LIBUSB_REQUEST_GET_CONFIGURATION: transfer->expected_count = get_configuration(buf); break;
+		default: sys_usbd.error("Unhandled control transfer(0x%02x): 0x%02x", bmRequestType, bRequest); break;
+		}
+		break;
+	default: sys_usbd.error("Unhandled control transfer: 0x%02x", bmRequestType); break;
 	}
 }
 
@@ -245,7 +316,7 @@ void usb_device_emulated::isochronous_transfer(UsbTransfer* transfer)
 {
 }
 
-void usb_device_emulated::add_string(char* str)
+void usb_device_emulated::add_string(std::string str)
 {
-	strings.emplace_back(str);
+	strings.emplace_back(std::move(str));
 }

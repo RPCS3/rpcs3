@@ -2,14 +2,24 @@
 #include "Emu/System.h"
 #include "np_structs_extra.h"
 
+LOG_CHANNEL(sceNp);
 LOG_CHANNEL(sceNp2);
 
 // Helper functions for printing
 
 namespace extra_nps
 {
+	void print_userinfo2(const SceNpUserInfo2* user)
+	{
+		sceNp2.warning("SceNpUserInfo2:");
+		sceNp2.warning("npid: %s", static_cast<const char*>(user->npId.handle.data));
+		sceNp2.warning("onlineName: *0x%x(%s)", user->onlineName, user->onlineName ? static_cast<const char*>(user->onlineName->data) : "");
+		sceNp2.warning("avatarUrl: *0x%x(%s)", user->avatarUrl, user->avatarUrl ? static_cast<const char*>(user->avatarUrl->data) : "");
+	}
+
 	void print_sigoptparam(const SceNpMatching2SignalingOptParam* opt)
 	{
+		sceNp2.warning("SceNpMatching2SignalingOptParam:");
 		sceNp2.warning("type: %d", opt->type);
 		sceNp2.warning("flag: %d", opt->flag);
 		sceNp2.warning("hubMemberId: %d", opt->hubMemberId);
@@ -47,6 +57,13 @@ namespace extra_nps
 			dadata = fmt::format("%s %02X", dadata, opt->data[i]);
 		}
 		sceNp2.warning("Data: %s", dadata);
+	}
+
+	void print_range(const SceNpMatching2Range* range)
+	{
+		sceNp2.warning("startIndex: %d", range->startIndex);
+		sceNp2.warning("total: %d", range->total);
+		sceNp2.warning("size: %d", range->size);
 	}
 
 	void print_range_filter(const SceNpMatching2RangeFilter* filt)
@@ -133,6 +150,20 @@ namespace extra_nps
 		sceNp2.warning("attrIdNum: %d", req->attrIdNum);
 	}
 
+	void print_search_room_resp(const SceNpMatching2SearchRoomResponse* resp)
+	{
+		sceNp2.warning("SceNpMatching2SearchRoomResponse:");
+		print_range(&resp->range);
+
+		const SceNpMatching2RoomDataExternal *room_ptr = resp->roomDataExternal.get_ptr();
+		for (u32 i = 0; i < resp->range.total; i++)
+		{
+			sceNp2.warning("SceNpMatching2SearchRoomResponse[%d]:", i);
+			print_room_data_external(room_ptr);
+			room_ptr = room_ptr->next.get_ptr();
+		}
+	}
+
 	void print_room_member_data_internal(const SceNpMatching2RoomMemberDataInternal* member)
 	{
 		sceNp2.warning("SceNpMatching2RoomMemberDataInternal:");
@@ -182,6 +213,41 @@ namespace extra_nps
 			print_bin_attr_internal(&room->roomBinAttrInternal[i]);
 	}
 
+	void print_room_data_external(const SceNpMatching2RoomDataExternal* room)
+	{
+		sceNp2.warning("SceNpMatching2RoomDataExternal:");
+		sceNp2.warning("next: *0x%x", room->next);
+		sceNp2.warning("serverId: %d", room->serverId);
+		sceNp2.warning("worldId: %d", room->worldId);
+		sceNp2.warning("publicSlotNum: %d", room->publicSlotNum);
+		sceNp2.warning("privateSlotNum: %d", room->privateSlotNum);
+		sceNp2.warning("lobbyId: %d", room->lobbyId);
+		sceNp2.warning("roomId: %d", room->roomId);
+		sceNp2.warning("openPublicSlotNum: %d", room->openPublicSlotNum);
+		sceNp2.warning("maxSlot: %d", room->maxSlot);
+		sceNp2.warning("openPrivateSlotNum: %d", room->openPrivateSlotNum);
+		sceNp2.warning("curMemberNum: %d", room->curMemberNum);
+		sceNp2.warning("SceNpMatching2RoomPasswordSlotMask: 0x%x", room->passwordSlotMask);
+		sceNp2.warning("owner: *0x%x", room->owner);
+
+		if (room->owner)
+			print_userinfo2(room->owner.get_ptr());
+
+		sceNp2.warning("roomGroup: *0x%x", room->roomGroup);
+		// TODO: print roomGroup
+		sceNp2.warning("roomGroupNum: %d", room->roomGroupNum);
+		sceNp2.warning("flagAttr: 0x%x", room->flagAttr);
+		sceNp2.warning("roomSearchableIntAttrExternal: *0x%x", room->roomSearchableIntAttrExternal);
+		sceNp2.warning("roomSearchableIntAttrExternalNum: %d", room->roomSearchableIntAttrExternalNum);
+		// TODO: print roomSearchableIntAttrExternal
+		sceNp2.warning("roomSearchableBinAttrExternal: *0x%x", room->roomSearchableBinAttrExternal);
+		sceNp2.warning("roomSearchableBinAttrExternalNum: %d", room->roomSearchableBinAttrExternalNum);
+		// TODO: print roomSearchableBinAttrExternal
+		sceNp2.warning("roomBinAttrExternal: *0x%x", room->roomBinAttrExternal);
+		sceNp2.warning("roomBinAttrExternalNum: %d", room->roomBinAttrExternalNum);
+		// TODO: print roomBinAttrExternal
+	}
+
 	void print_create_room_resp(const SceNpMatching2CreateJoinRoomResponse* resp)
 	{
 		sceNp2.warning("SceNpMatching2CreateJoinRoomResponse:");
@@ -229,6 +295,51 @@ namespace extra_nps
 		sceNp2.warning("roomMemberBinAttrInternalNum: %d", req->roomMemberBinAttrInternalNum);
 		for (u32 i = 0; i < req->roomMemberBinAttrInternalNum; i++)
 			print_bin_attr(&req->roomMemberBinAttrInternal[i]);
+	}
+
+	void print_get_roomdata_external_list_req(const SceNpMatching2GetRoomDataExternalListRequest* req)
+	{
+		sceNp2.warning("SceNpMatching2GetRoomDataExternalListRequest:");
+		sceNp2.warning("roomId: *0x%x", req->roomId);
+		sceNp2.warning("roomIdNum: %d", req->roomIdNum);
+		for (u32 i = 0; i < req->roomIdNum; i++)
+		{
+			sceNp2.warning("RoomId[%d] = %d", i, req->roomId[i]);
+		}
+		sceNp2.warning("attrId: *0x%x", req->attrId);
+		sceNp2.warning("attrIdNum: %d", req->attrIdNum);
+		for (u32 i = 0; i < req->attrIdNum; i++)
+		{
+			sceNp2.warning("attrId[%d] = %d", i, req->attrId[i]);
+		}
+	}
+
+	void print_get_roomdata_external_list_resp(const SceNpMatching2GetRoomDataExternalListResponse* resp)
+	{
+		sceNp2.warning("SceNpMatching2GetRoomDataExternalListResponse:");
+		sceNp2.warning("roomDataExternal: *0x%x", resp->roomDataExternal);
+		sceNp2.warning("roomDataExternalNum: %d", resp->roomDataExternalNum);
+
+		const SceNpMatching2RoomDataExternal* cur_room = resp->roomDataExternal.get_ptr();
+
+		for (u32 i = 0; i < resp->roomDataExternalNum; i++)
+		{
+			sceNp2.warning("SceNpMatching2GetRoomDataExternalListResponse[%d]:", i);
+			print_room_data_external(cur_room);
+			cur_room = cur_room->next.get_ptr();
+		}
+	}
+
+	void print_SceNpBasicExtendedAttachmentData(const SceNpBasicExtendedAttachmentData* data)
+	{
+		sceNp.warning("SceNpBasicExtendedAttachmentData:");
+
+		sceNp.warning("flags: 0x%x", data->flags);
+		sceNp.warning("msgId: %d", data->msgId);
+		sceNp.warning("SceNpBasicAttachmentData.id: %d", data->data.id);
+		sceNp.warning("SceNpBasicAttachmentData.size: %d", data->data.size);
+		sceNp.warning("userAction: %d", data->userAction);
+		sceNp.warning("markedAsUsed: %d", data->markedAsUsed);
 	}
 
 } // namespace extra_nps

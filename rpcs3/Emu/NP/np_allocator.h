@@ -15,8 +15,11 @@ namespace np
 	{
 	public:
 		memory_allocator() = default;
+		memory_allocator(utils::serial& ar) noexcept { save(ar); }
 		memory_allocator(const memory_allocator&) = delete;
 		memory_allocator& operator=(const memory_allocator&) = delete;
+
+		void save(utils::serial& ar);
 
 		void setup(vm::ptr<void> ptr_pool, u32 size)
 		{
@@ -95,7 +98,7 @@ namespace np
 			const u32 offset = addr - m_pool.addr();
 			ensure(m_allocs.contains(offset), "memory_allocator::free: m_allocs doesn't contain the allocation!");
 
-			m_avail += m_allocs.at(offset);
+			m_avail += ::at32(m_allocs, offset);
 			m_allocs.erase(offset);
 		}
 
@@ -109,7 +112,7 @@ namespace np
 			ensure(m_allocs.contains(offset), "memory_allocator::reduce_allocation: m_allocs doesn't contain the allocation!");
 			ensure(m_allocs[offset] >= new_size, "memory_allocator::reduce_allocation: New size is bigger than current allocation!");
 
-			m_avail += (m_allocs.at(offset) - new_size);
+			m_avail += (::at32(m_allocs, offset) - new_size);
 			m_allocs[offset] = new_size;
 		}
 

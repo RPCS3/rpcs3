@@ -4,7 +4,9 @@
 #include "Emu/IdManager.h"
 #include "Emu/VFS.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/Cell/Modules/cellGame.h"
 
+#include "Emu/Cell/lv2/sys_game.h"
 #include "Emu/Cell/lv2/sys_process.h"
 #include "cellSysutil.h"
 
@@ -36,17 +38,64 @@ void fmt_class_string<CellSysutilError>::format(std::string& out, u64 arg)
 	});
 }
 
+template<>
+void fmt_class_string<CellBgmplaybackError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+			STR_CASE(CELL_SYSUTIL_BGMPLAYBACK_ERROR_PARAM);
+			STR_CASE(CELL_SYSUTIL_BGMPLAYBACK_ERROR_BUSY);
+			STR_CASE(CELL_SYSUTIL_BGMPLAYBACK_ERROR_GENERIC);
+			STR_CASE(CELL_SYSUTIL_BGMPLAYBACK_EX_ERROR_PARAM);
+			STR_CASE(CELL_SYSUTIL_BGMPLAYBACK_EX_ERROR_ALREADY_SETPARAM);
+			STR_CASE(CELL_SYSUTIL_BGMPLAYBACK_EX_ERROR_DISABLE_SETPARAM);
+			STR_CASE(CELL_SYSUTIL_BGMPLAYBACK_EX_ERROR_GENERIC);
+		}
+
+		return unknown;
+	});
+}
+
 struct sysutil_cb_manager
 {
+	struct alignas(8) registered_dispatcher
+	{
+		u32 event_code = 0;
+		u32 func_addr = 0;
+	};
+	std::array<atomic_t<registered_dispatcher>, 32> dispatchers{};
+
 	struct alignas(8) registered_cb
 	{
-		vm::ptr<CellSysutilCallback> first;
-		vm::ptr<void> second;
+		ENABLE_BITWISE_SERIALIZATION;
+
+		vm::ptr<CellSysutilCallback> callback;
+		vm::ptr<void> user_data;
 	};
 
 	atomic_t<registered_cb> callbacks[4]{};
 
 	lf_queue<std::function<s32(ppu_thread&)>> registered;
+
+	atomic_t<bool> draw_cb_started{};
+	atomic_t<u64> read_counter{0};
+
+	SAVESTATE_INIT_POS(13);
+
+	sysutil_cb_manager() = default;
+
+	sysutil_cb_manager(utils::serial& ar)
+	{
+		ar(callbacks);
+	}
+
+	void save(utils::serial& ar)
+	{
+		ensure(!registered);
+		ar(callbacks);
+	}
 };
 
 extern void sysutil_register_cb(std::function<s32(ppu_thread&)>&& cb)
@@ -56,20 +105,41 @@ extern void sysutil_register_cb(std::function<s32(ppu_thread&)>&& cb)
 	cbm.registered.push(std::move(cb));
 }
 
-extern u32 sysutil_send_system_cmd(u64 status, u64 param)
+extern s32 sysutil_send_system_cmd(u64 status, u64 param)
 {
-	u32 count = 0;
+	s32 count = 0;
 
 	if (auto cbm = g_fxo->try_get<sysutil_cb_manager>())
 	{
+		if (status == CELL_SYSUTIL_DRAWING_BEGIN)
+		{
+			if (cbm->draw_cb_started.exchange(true))
+			{
+				cellSysutil.error("Tried to enqueue a second or more DRAWING_BEGIN callback!");
+				return CELL_SYSUTIL_ERROR_BUSY;
+			}
+		}
+		else if (status == CELL_SYSUTIL_DRAWING_END)
+		{
+			if (!cbm->draw_cb_started.exchange(false))
+			{
+				cellSysutil.error("Tried to enqueue a DRAWING_END callback without a BEGIN callback!");
+				return -1;
+			}
+		}
+		else if (status == CELL_SYSUTIL_REQUEST_EXITGAME)
+		{
+			abort_lv2_watchdog();
+		}
+
 		for (sysutil_cb_manager::registered_cb cb : cbm->callbacks)
 		{
-			if (cb.first)
+			if (cb.callback)
 			{
 				cbm->registered.push([=](ppu_thread& ppu) -> s32
 				{
 					// TODO: check it and find the source of the return value (void isn't equal to CELL_OK)
-					cb.first(ppu, status, param, cb.second);
+					cb.callback(ppu, status, param, cb.user_data);
 					return CELL_OK;
 				});
 
@@ -79,6 +149,54 @@ extern u32 sysutil_send_system_cmd(u64 status, u64 param)
 	}
 
 	return count;
+}
+
+extern u64 get_sysutil_cb_manager_read_count()
+{
+	if (auto cbm = g_fxo->try_get<sysutil_cb_manager>())
+	{
+		return cbm->read_counter;
+	}
+
+	return 0;
+}
+
+extern bool send_open_home_menu_cmds()
+{
+	auto status = g_fxo->try_get<SysutilMenuOpenStatus>();
+
+	if (!status || status->active)
+	{
+		return false;
+	}
+
+	// TODO: handle CELL_SYSUTIL_BGMPLAYBACK_STATUS_DISABLE
+	if (sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_BEGIN, 0) < 0 ||
+		sysutil_send_system_cmd(CELL_SYSUTIL_SYSTEM_MENU_OPEN, 0) < 0 ||
+		sysutil_send_system_cmd(CELL_SYSUTIL_BGMPLAYBACK_PLAY, 0) < 0)
+	{
+		return false;
+	}
+
+	status->active = true;
+	return true;
+}
+
+extern void send_close_home_menu_cmds()
+{
+	auto status = g_fxo->try_get<SysutilMenuOpenStatus>();
+
+	if (!status || !status->active)
+	{
+		return;
+	}
+
+	// TODO: handle CELL_SYSUTIL_BGMPLAYBACK_STATUS_DISABLE
+	sysutil_send_system_cmd(CELL_SYSUTIL_BGMPLAYBACK_STOP, 0);
+	sysutil_send_system_cmd(CELL_SYSUTIL_SYSTEM_MENU_CLOSE, 0);
+	sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_END, 0);
+
+	status->active = false;
 }
 
 template <>
@@ -409,8 +527,12 @@ error_code cellSysutilCheckCallback(ppu_thread& ppu)
 
 	auto& cbm = g_fxo->get<sysutil_cb_manager>();
 
+	bool read = false;
+
 	for (auto&& func : cbm.registered.pop_all())
 	{
+		read = true;
+
 		if (s32 res = func(ppu))
 		{
 			// Currently impossible
@@ -423,10 +545,15 @@ error_code cellSysutilCheckCallback(ppu_thread& ppu)
 		}
 	}
 
+	if (read)
+	{
+		cbm.read_counter++;
+	}
+
 	return CELL_OK;
 }
 
-error_code cellSysutilRegisterCallback(s32 slot, vm::ptr<CellSysutilCallback> func, vm::ptr<void> userdata)
+error_code cellSysutilRegisterCallback(u32 slot, vm::ptr<CellSysutilCallback> func, vm::ptr<void> userdata)
 {
 	cellSysutil.warning("cellSysutilRegisterCallback(slot=%d, func=*0x%x, userdata=*0x%x)", slot, func, userdata);
 
@@ -458,14 +585,26 @@ error_code cellSysutilUnregisterCallback(u32 slot)
 	return CELL_OK;
 }
 
-bool g_bgm_playback_enabled = true;
+struct bgm_manager
+{
+	shared_mutex mtx;
+	CellSysutilBgmPlaybackExtraParam param{};
+	CellSysutilBgmPlaybackStatus status{};
+
+	bgm_manager()
+	{
+		status.enableState = CELL_SYSUTIL_BGMPLAYBACK_STATUS_DISABLE;
+		status.playerState = CELL_SYSUTIL_BGMPLAYBACK_STATUS_STOP;
+	}
+};
 
 error_code cellSysutilEnableBgmPlayback()
 {
 	cellSysutil.warning("cellSysutilEnableBgmPlayback()");
 
-	// TODO
-	g_bgm_playback_enabled = true;
+	auto& bgm = g_fxo->get<bgm_manager>();
+	std::lock_guard lock(bgm.mtx);
+	bgm.status.enableState = CELL_SYSUTIL_BGMPLAYBACK_STATUS_ENABLE;
 
 	return CELL_OK;
 }
@@ -474,8 +613,22 @@ error_code cellSysutilEnableBgmPlaybackEx(vm::ptr<CellSysutilBgmPlaybackExtraPar
 {
 	cellSysutil.warning("cellSysutilEnableBgmPlaybackEx(param=*0x%x)", param);
 
-	// TODO
-	g_bgm_playback_enabled = true;
+	if (!param ||
+		param->systemBgmFadeInTime < CELL_SYSUTIL_BGMPLAYBACK_FADE_INVALID || param->systemBgmFadeInTime > 60000 ||
+		param->systemBgmFadeOutTime < CELL_SYSUTIL_BGMPLAYBACK_FADE_INVALID || param->systemBgmFadeOutTime > 60000 ||
+		param->gameBgmFadeInTime < CELL_SYSUTIL_BGMPLAYBACK_FADE_INVALID || param->gameBgmFadeInTime > 60000 ||
+		param->gameBgmFadeOutTime < CELL_SYSUTIL_BGMPLAYBACK_FADE_INVALID || param->gameBgmFadeOutTime > 60000)
+	{
+		return CELL_SYSUTIL_BGMPLAYBACK_EX_ERROR_PARAM;
+	}
+
+	auto& bgm = g_fxo->get<bgm_manager>();
+	std::lock_guard lock(bgm.mtx);
+	bgm.param.systemBgmFadeInTime = param->systemBgmFadeInTime;
+	bgm.param.systemBgmFadeOutTime = param->systemBgmFadeOutTime;
+	bgm.param.gameBgmFadeInTime = param->gameBgmFadeInTime;
+	bgm.param.gameBgmFadeOutTime = param->gameBgmFadeOutTime;
+	bgm.status.enableState = CELL_SYSUTIL_BGMPLAYBACK_STATUS_ENABLE;
 
 	return CELL_OK;
 }
@@ -484,8 +637,11 @@ error_code cellSysutilDisableBgmPlayback()
 {
 	cellSysutil.warning("cellSysutilDisableBgmPlayback()");
 
-	// TODO
-	g_bgm_playback_enabled = false;
+	auto& bgm = g_fxo->get<bgm_manager>();
+	std::lock_guard lock(bgm.mtx);
+	bgm.status.enableState = CELL_SYSUTIL_BGMPLAYBACK_STATUS_DISABLE;
+
+	// TODO: fade from system bgm to game bgm if necessary
 
 	return CELL_OK;
 }
@@ -494,8 +650,24 @@ error_code cellSysutilDisableBgmPlaybackEx(vm::ptr<CellSysutilBgmPlaybackExtraPa
 {
 	cellSysutil.warning("cellSysutilDisableBgmPlaybackEx(param=*0x%x)", param);
 
-	// TODO
-	g_bgm_playback_enabled = false;
+	if (!param ||
+		param->systemBgmFadeInTime < CELL_SYSUTIL_BGMPLAYBACK_FADE_INVALID || param->systemBgmFadeInTime > 60000 ||
+		param->systemBgmFadeOutTime < CELL_SYSUTIL_BGMPLAYBACK_FADE_INVALID || param->systemBgmFadeOutTime > 60000 ||
+		param->gameBgmFadeInTime < CELL_SYSUTIL_BGMPLAYBACK_FADE_INVALID || param->gameBgmFadeInTime > 60000 ||
+		param->gameBgmFadeOutTime < CELL_SYSUTIL_BGMPLAYBACK_FADE_INVALID || param->gameBgmFadeOutTime > 60000)
+	{
+		return CELL_SYSUTIL_BGMPLAYBACK_EX_ERROR_PARAM;
+	}
+
+	auto& bgm = g_fxo->get<bgm_manager>();
+	std::lock_guard lock(bgm.mtx);
+	bgm.param.systemBgmFadeInTime = param->systemBgmFadeInTime;
+	bgm.param.systemBgmFadeOutTime = param->systemBgmFadeOutTime;
+	bgm.param.gameBgmFadeInTime = param->gameBgmFadeInTime;
+	bgm.param.gameBgmFadeOutTime = param->gameBgmFadeOutTime;
+	bgm.status.enableState = CELL_SYSUTIL_BGMPLAYBACK_STATUS_DISABLE;
+
+	// TODO: fade from system bgm to game bgm if necessary
 
 	return CELL_OK;
 }
@@ -504,12 +676,14 @@ error_code cellSysutilGetBgmPlaybackStatus(vm::ptr<CellSysutilBgmPlaybackStatus>
 {
 	cellSysutil.trace("cellSysutilGetBgmPlaybackStatus(status=*0x%x)", status);
 
-	// TODO
-	status->playerState = CELL_SYSUTIL_BGMPLAYBACK_STATUS_STOP;
-	status->enableState = g_bgm_playback_enabled ? CELL_SYSUTIL_BGMPLAYBACK_STATUS_ENABLE : CELL_SYSUTIL_BGMPLAYBACK_STATUS_DISABLE;
-	status->currentFadeRatio = 0; // current volume ratio (0%)
-	memset(status->contentId, 0, sizeof(status->contentId));
-	memset(status->reserved, 0, sizeof(status->reserved));
+	if (!status)
+	{
+		return CELL_SYSUTIL_BGMPLAYBACK_ERROR_PARAM;
+	}
+
+	auto& bgm = g_fxo->get<bgm_manager>();
+	std::lock_guard lock(bgm.mtx);
+	*status = bgm.status;
 
 	return CELL_OK;
 }
@@ -518,29 +692,94 @@ error_code cellSysutilGetBgmPlaybackStatus2(vm::ptr<CellSysutilBgmPlaybackStatus
 {
 	cellSysutil.trace("cellSysutilGetBgmPlaybackStatus2(status2=*0x%x)", status2);
 
-	// TODO
-	status2->playerState = CELL_SYSUTIL_BGMPLAYBACK_STATUS_STOP;
+	if (!status2)
+	{
+		return CELL_SYSUTIL_BGMPLAYBACK_EX_ERROR_PARAM;
+	}
+
+	auto& bgm = g_fxo->get<bgm_manager>();
+	std::lock_guard lock(bgm.mtx);
+	status2->playerState = bgm.status.playerState;
 	memset(status2->reserved, 0, sizeof(status2->reserved));
 
 	return CELL_OK;
 }
 
-error_code cellSysutilSetBgmPlaybackExtraParam()
+error_code cellSysutilSetBgmPlaybackExtraParam(vm::ptr<CellSysutilBgmPlaybackExtraParam> param)
 {
-	cellSysutil.todo("cellSysutilSetBgmPlaybackExtraParam()");
+	cellSysutil.warning("cellSysutilSetBgmPlaybackExtraParam(param=*0x%x)", param);
+
+	if (!param ||
+		param->systemBgmFadeInTime < CELL_SYSUTIL_BGMPLAYBACK_FADE_INVALID || param->systemBgmFadeInTime > 60000 ||
+		param->systemBgmFadeOutTime < CELL_SYSUTIL_BGMPLAYBACK_FADE_INVALID || param->systemBgmFadeOutTime > 60000 ||
+		param->gameBgmFadeInTime < CELL_SYSUTIL_BGMPLAYBACK_FADE_INVALID || param->gameBgmFadeInTime > 60000 ||
+		param->gameBgmFadeOutTime < CELL_SYSUTIL_BGMPLAYBACK_FADE_INVALID || param->gameBgmFadeOutTime > 60000)
+	{
+		return CELL_SYSUTIL_BGMPLAYBACK_EX_ERROR_PARAM;
+	}
+
+	auto& bgm = g_fxo->get<bgm_manager>();
+	std::lock_guard lock(bgm.mtx);
+	bgm.param.systemBgmFadeInTime = param->systemBgmFadeInTime;
+	bgm.param.systemBgmFadeOutTime = param->systemBgmFadeOutTime;
+	bgm.param.gameBgmFadeInTime = param->gameBgmFadeInTime;
+	bgm.param.gameBgmFadeOutTime = param->gameBgmFadeOutTime;
+
+	// TODO: apparently you are only able to set this only once and while bgm is enabled
+
 	return CELL_OK;
 }
 
-error_code cellSysutilRegisterCallbackDispatcher()
+error_code cellSysutilRegisterCallbackDispatcher(u32 event_code, u32 func_addr)
 {
-	cellSysutil.todo("cellSysutilRegisterCallbackDispatcher()");
-	return CELL_OK;
+	cellSysutil.warning("cellSysutilRegisterCallbackDispatcher(event_code=0x%x, func_addr=0x%x)", event_code, func_addr);
+
+	auto& cbm = g_fxo->get<sysutil_cb_manager>();
+
+	for (u32 i = 0; i < cbm.dispatchers.size(); i++)
+	{
+		if (cbm.dispatchers[i].atomic_op([&](sysutil_cb_manager::registered_dispatcher& dispatcher)
+		{
+			if (dispatcher.event_code == 0)
+			{
+				dispatcher.event_code = event_code;
+				dispatcher.func_addr = func_addr;
+				return true;
+			}
+			return false;
+		}))
+		{
+			return CELL_OK;
+		}
+	}
+
+	return 0x8002b004;
 }
 
-error_code cellSysutilUnregisterCallbackDispatcher()
+error_code cellSysutilUnregisterCallbackDispatcher(u32 event_code)
 {
-	cellSysutil.todo("cellSysutilUnregisterCallbackDispatcher()");
-	return CELL_OK;
+	cellSysutil.warning("cellSysutilUnregisterCallbackDispatcher(event_code=0x%x)", event_code);
+
+	auto& cbm = g_fxo->get<sysutil_cb_manager>();
+
+	for (u32 i = 0; i < cbm.dispatchers.size(); i++)
+	{
+		if (cbm.dispatchers[i].atomic_op([&](sysutil_cb_manager::registered_dispatcher& dispatcher)
+		{
+			if (dispatcher.event_code == event_code)
+			{
+				dispatcher.event_code = 0;
+				dispatcher.func_addr = 0;
+				return true;
+			}
+			return false;
+		}))
+		{
+			return CELL_OK;
+		}
+	}
+
+	return 0x8002b005;
 }
 
 error_code cellSysutilPacketRead()
@@ -573,28 +812,34 @@ error_code cellSysutilGameDataAssignVmc()
 	return CELL_OK;
 }
 
-error_code cellSysutilGameDataExit()
+error_code cellSysutilGameDataExit(u32 unk)
 {
-	cellSysutil.todo("cellSysutilGameDataExit()");
+	cellSysutil.todo("cellSysutilGameDataExit(unk=%d)", unk);
+
+	if (unk > 4)
+	{
+		return CELL_GAMEDATA_ERROR_PARAM;
+	}
+
 	return CELL_OK;
 }
 
 error_code cellSysutilGameExit_I()
 {
-	cellSysutil.todo("cellSysutilGameExit_I()");
-	return CELL_OK;
+	cellSysutil.warning("cellSysutilGameExit_I()");
+	return cellSysutilGameDataExit(0);
 }
 
 error_code cellSysutilGamePowerOff_I()
 {
-	cellSysutil.todo("cellSysutilGamePowerOff_I()");
-	return CELL_OK;
+	cellSysutil.warning("cellSysutilGamePowerOff_I()");
+	return cellSysutilGameDataExit(1);
 }
 
 error_code cellSysutilGameReboot_I()
 {
-	cellSysutil.todo("cellSysutilGameReboot_I()");
-	return CELL_OK;
+	cellSysutil.warning("cellSysutilGameReboot_I()");
+	return cellSysutilGameDataExit(4);
 }
 
 error_code cellSysutilSharedMemoryAlloc()

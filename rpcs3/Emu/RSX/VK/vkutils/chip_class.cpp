@@ -28,6 +28,9 @@ namespace vk
 		table.add(0x7420, 0x743F, chip_class::AMD_navi2x);  // Navi 24 (Beige Goby)
 		table.add(0x163F,         chip_class::AMD_navi2x);  // Navi 2X (Van Gogh)
 		table.add(0x164D, 0x1681, chip_class::AMD_navi2x);  // Navi 2X (Yellow Carp)
+		table.add(0x7440, 0x745F, chip_class::AMD_navi3x);  // Navi 31 (Only 744c, NAVI31XTX is confirmed)
+		table.add(0x7460, 0x747F, chip_class::AMD_navi3x);  // Navi 32 (Unverified)
+		table.add(0x7480, 0x749F, chip_class::AMD_navi3x);  // Navi 33 (Unverified)
 
 		return table;
 	}();
@@ -39,22 +42,23 @@ namespace vk
 
 		// NV cards. See https://envytools.readthedocs.io/en/latest/hw/pciid.html
 		// NOTE: Since NV device IDs are linearly incremented per generation, there is no need to carefully check all the ranges
-		table.add(0x1180, 0x11FA, chip_class::NV_kepler);  // GK104, 106
-		table.add(0x0FC0, 0x0FFF, chip_class::NV_kepler);  // GK107
-		table.add(0x1003, 0x102F, chip_class::NV_kepler);  // GK110, GK210
-		table.add(0x1280, 0x12BA, chip_class::NV_kepler);  // GK208
-		table.add(0x1381, 0x13B0, chip_class::NV_maxwell); // GM107
-		table.add(0x1340, 0x134D, chip_class::NV_maxwell); // GM108
-		table.add(0x13C0, 0x13D9, chip_class::NV_maxwell); // GM204
-		table.add(0x1401, 0x1427, chip_class::NV_maxwell); // GM206
-		table.add(0x15F7, 0x15F9, chip_class::NV_pascal);  // GP100 (Tesla P100)
+		table.add(0x1180, 0x11FA, chip_class::NV_kepler);   // GK104, 106
+		table.add(0x0FC0, 0x0FFF, chip_class::NV_kepler);   // GK107
+		table.add(0x1003, 0x102F, chip_class::NV_kepler);   // GK110, GK210
+		table.add(0x1280, 0x12BA, chip_class::NV_kepler);   // GK208
+		table.add(0x1381, 0x13B0, chip_class::NV_maxwell);  // GM107
+		table.add(0x1340, 0x134D, chip_class::NV_maxwell);  // GM108
+		table.add(0x13C0, 0x13D9, chip_class::NV_maxwell);  // GM204
+		table.add(0x1401, 0x1427, chip_class::NV_maxwell);  // GM206
+		table.add(0x15F7, 0x15F9, chip_class::NV_pascal);   // GP100 (Tesla P100)
 		table.add(0x1B00, 0x1D80, chip_class::NV_pascal);
 		table.add(0x1D81, 0x1DBA, chip_class::NV_volta);
-		table.add(0x1E02, 0x1F54, chip_class::NV_turing);  // TU102, TU104, TU106, TU106M, TU106GL (RTX 20 series)
-		table.add(0x1F82, 0x1FB9, chip_class::NV_turing);  // TU117, TU117M, TU117GL
-		table.add(0x2182, 0x21D1, chip_class::NV_turing);  // TU116, TU116M, TU116GL
-		table.add(0x20B0, 0x20BE, chip_class::NV_ampere);  // GA100
-		table.add(0x2204, 0x25AF, chip_class::NV_ampere);  // GA10x (RTX 30 series)
+		table.add(0x1E02, 0x1F54, chip_class::NV_turing);   // TU102, TU104, TU106, TU106M, TU106GL (RTX 20 series)
+		table.add(0x1F82, 0x1FB9, chip_class::NV_turing);   // TU117, TU117M, TU117GL
+		table.add(0x2182, 0x21D1, chip_class::NV_turing);   // TU116, TU116M, TU116GL
+		table.add(0x20B0, 0x20BE, chip_class::NV_ampere);   // GA100
+		table.add(0x2204, 0x25AF, chip_class::NV_ampere);   // GA10x (RTX 30 series)
+		table.add(0x2684, 0x27FF, chip_class::NV_lovelace); // AD102, AD103 (RTX40 series)
 
 		return table;
 	}();
@@ -76,6 +80,11 @@ namespace vk
 		if (vendor_id == 0x1002)
 		{
 			return s_AMD_family_tree.find(device_id);
+		}
+
+		if (vendor_id == 0x106B)
+		{
+			return chip_class::MVK_apple;
 		}
 
 		return chip_class::unknown;

@@ -70,3 +70,5 @@ struct CellHttpHeader
 	vm::bcptr<char> name;
 	vm::bcptr<char> value;
 };
+
+error_code cellHttpUtilCopyUri(vm::ptr<CellHttpUri> dest, vm::cptr<CellHttpUri> src, vm::ptr<void> pool, u32 poolSize, vm::ptr<u32> required);

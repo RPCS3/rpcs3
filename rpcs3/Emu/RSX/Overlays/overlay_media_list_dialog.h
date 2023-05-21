@@ -27,6 +27,7 @@ namespace rsx
 				std::string name;
 				std::string path;
 				utils::media_info info;
+				u32 index = 0;
 
 				media_entry* parent = nullptr;
 				std::vector<media_entry> children;
@@ -34,13 +35,15 @@ namespace rsx
 
 			media_list_dialog();
 
-			void on_button_pressed(pad_button button_press) override;
+			void on_button_pressed(pad_button button_press, bool is_auto_repeat) override;
 
 			compiled_resource get_compiled() override;
 
-			s32 show(const media_entry& dir_entry, const std::string& title, u32 focused, bool enable_overlay);
+			s32 show(media_entry* root, media_entry& result, const std::string& title, u32 focused, bool enable_overlay);
 
 		private:
+			void reload(const std::string& title, u32 focused);
+
 			struct media_list_entry : horizontal_layout
 			{
 			public:
@@ -49,6 +52,8 @@ namespace rsx
 			private:
 				std::unique_ptr<image_info> icon_data;
 			};
+
+			media_entry* m_media = nullptr;
 
 			std::unique_ptr<overlay_element> m_dim_background;
 			std::unique_ptr<list_view> m_list;

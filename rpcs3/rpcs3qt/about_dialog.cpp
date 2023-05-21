@@ -25,5 +25,4 @@ about_dialog::about_dialog(QWidget* parent) : QDialog(parent), ui(new Ui::about_
 
 about_dialog::~about_dialog()
 {
-	delete ui;
 }
