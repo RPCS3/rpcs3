@@ -3,6 +3,7 @@
 #include "stdafx.h"
 #include "Turntable.h"
 #include "Emu/Cell/lv2/sys_usbd.h"
+#include "Emu/Io/turntable_config.h"
 #include "Input/pad_thread.h"
 
 LOG_CHANNEL(turntable_log, "TURN");
@@ -16,11 +17,6 @@ usb_device_turntable::usb_device_turntable(u32 controller_index, const std::arra
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_HID, UsbDeviceHID{0x0110, 0x00, 0x01, 0x22, 0x0089}));
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_ENDPOINT, UsbDeviceEndpoint{0x81, 0x03, 0x0040, 0x0a}));
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_ENDPOINT, UsbDeviceEndpoint{0x02, 0x03, 0x0040, 0x0a}));
-
-	if (!m_cfg.load())
-	{
-		turntable_log.notice("Could not load turntable config. Using defaults.");
-	}
 }
 
 usb_device_turntable::~usb_device_turntable()
@@ -128,7 +124,7 @@ void usb_device_turntable::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpo
 	const auto handler = pad::get_current_handler();
 	const auto& pads   = handler->GetPads();
 	const auto& pad    = ::at32(pads, m_controller_index);
-	const auto& cfg    = ::at32(m_cfg.players, m_controller_index);
+	const auto& cfg    = ::at32(g_cfg_turntable.players, m_controller_index);
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return;

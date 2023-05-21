@@ -46,3 +46,5 @@ struct cfg_usios final : public emulated_pads_config<cfg_usio>
 {
 	cfg_usios() : emulated_pads_config<cfg_usio>("usio") {};
 };
+
+extern cfg_usios g_cfg_usio;

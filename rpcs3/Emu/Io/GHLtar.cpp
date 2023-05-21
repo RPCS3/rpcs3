@@ -3,6 +3,7 @@
 #include "stdafx.h"
 #include "GHLtar.h"
 #include "Emu/Cell/lv2/sys_usbd.h"
+#include "Emu/Io/ghltar_config.h"
 #include "Input/pad_thread.h"
 
 LOG_CHANNEL(ghltar_log, "GHLTAR");
@@ -16,11 +17,6 @@ usb_device_ghltar::usb_device_ghltar(u32 controller_index, const std::array<u8, 
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_HID, UsbDeviceHID{0x0111, 0x00, 0x01, 0x22, 0x001d}));
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_ENDPOINT, UsbDeviceEndpoint{0x81, 0x03, 0x0020, 0x01}));
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_ENDPOINT, UsbDeviceEndpoint{0x01, 0x03, 0x0020, 0x01}));
-
-	if (!m_cfg.load())
-	{
-		ghltar_log.notice("Could not load ghltar config. Using defaults.");
-	}
 }
 
 usb_device_ghltar::~usb_device_ghltar()
@@ -115,7 +111,7 @@ void usb_device_ghltar::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint
 	std::lock_guard lock(pad::g_pad_mutex);
 	const auto handler = pad::get_current_handler();
 	const auto& pad    = ::at32(handler->GetPads(), m_controller_index);
-	const auto& cfg    = ::at32(m_cfg.players, m_controller_index);
+	const auto& cfg    = ::at32(g_cfg_ghltar.players, m_controller_index);
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 	{

@@ -3,6 +3,7 @@
 #include "stdafx.h"
 #include "Buzz.h"
 #include "Emu/Cell/lv2/sys_usbd.h"
+#include "Emu/Io/buzz_config.h"
 #include "Input/pad_thread.h"
 
 LOG_CHANNEL(buzz_log, "BUZZ");
@@ -17,11 +18,6 @@ usb_device_buzz::usb_device_buzz(u32 first_controller, u32 last_controller, cons
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_INTERFACE, UsbDeviceInterface{0x00, 0x00, 0x01, 0x03, 0x00, 0x00, 0x00}));
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_HID, UsbDeviceHID{0x0111, 0x33, 0x01, 0x22, 0x004e}));
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_ENDPOINT, UsbDeviceEndpoint{0x81, 0x03, 0x0008, 0x0A}));
-
-	if (!m_cfg.load())
-	{
-		buzz_log.notice("Could not load buzz config. Using defaults.");
-	}
 }
 
 usb_device_buzz::~usb_device_buzz()
@@ -77,12 +73,12 @@ void usb_device_buzz::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint*/
 	const auto handler = pad::get_current_handler();
 	const auto& pads   = handler->GetPads();
 	ensure(pads.size() > m_last_controller);
-	ensure(m_cfg.players.size() > m_last_controller);
+	ensure(g_cfg_buzz.players.size() > m_last_controller);
 
 	for (u32 i = m_first_controller, index = 0; i <= m_last_controller; i++, index++)
 	{
 		const auto& pad = pads[i];
-		const cfg_buzzer* cfg = m_cfg.players[i];
+		const cfg_buzzer* cfg = g_cfg_buzz.players[i];
 
 		if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		{

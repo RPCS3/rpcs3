@@ -44,3 +44,5 @@ struct cfg_turntables final : public emulated_pads_config<cfg_turntable>
 {
 	cfg_turntables() : emulated_pads_config<cfg_turntable>("turntable") {};
 };
+
+extern cfg_turntables g_cfg_turntable;

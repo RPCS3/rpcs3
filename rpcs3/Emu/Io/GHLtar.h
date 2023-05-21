@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Emu/Io/usb_device.h"
-#include "Emu/Io/ghltar_config.h"
 
 class usb_device_ghltar : public usb_device_emulated
 {
@@ -14,5 +13,4 @@ public:
 
 private:
 	u32 m_controller_index;
-	cfg_ghltars m_cfg;
 };
