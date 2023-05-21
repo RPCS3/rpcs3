@@ -18,7 +18,9 @@ enum class turntable_btn
 	square,
 	circle,
 	cross,
-	triangle
+	triangle,
+
+	count
 };
 
 struct cfg_turntable final : public emulated_pad_config<turntable_btn>

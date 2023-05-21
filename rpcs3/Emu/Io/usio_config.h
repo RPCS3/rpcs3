@@ -19,7 +19,9 @@ enum class usio_btn
 	small_hit_side_left,
 	small_hit_side_right,
 	small_hit_center_left,
-	small_hit_center_right
+	small_hit_center_right,
+
+	count
 };
 
 struct cfg_usio final : public emulated_pad_config<usio_btn>

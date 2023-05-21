@@ -10,7 +10,9 @@ enum class buzz_btn
 	yellow,
 	green,
 	orange,
-	blue
+	blue,
+
+	count
 };
 
 struct cfg_buzzer final : public emulated_pad_config<buzz_btn>

@@ -687,6 +687,8 @@ static void ds3_input_to_pad(const u32 port_no, be_t<u16>& digital_buttons, be_t
 				digital_buttons |= CELL_GEM_CTRL_T;
 				analog_t = std::max<u16>(analog_t, button.m_value);
 				break;
+			case gem_btn::count:
+				break;
 			}
 		}
 	}

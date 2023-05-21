@@ -111,6 +111,8 @@ void usb_device_buzz::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint*/
 				case buzz_btn::blue:
 					buf[2 + (4 + 5 * index) / 8] |= 1 << ((4 + 5 * index) % 8); // Blue
 					break;
+				case buzz_btn::count:
+					break;
 				}
 			}
 		}
