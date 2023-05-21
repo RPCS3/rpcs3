@@ -44,3 +44,5 @@ struct cfg_ghltars final : public emulated_pads_config<cfg_ghltar>
 {
 	cfg_ghltars() : emulated_pads_config<cfg_ghltar>("ghltar") {};
 };
+
+extern cfg_ghltars g_cfg_ghltar;

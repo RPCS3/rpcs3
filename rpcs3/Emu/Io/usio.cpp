@@ -4,6 +4,7 @@
 #include "stdafx.h"
 #include "usio.h"
 #include "Input/pad_thread.h"
+#include "Emu/Io/usio_config.h"
 #include "Emu/IdManager.h"
 
 LOG_CHANNEL(usio_log, "USIO");
@@ -81,11 +82,6 @@ usb_device_usio::usb_device_usio(const std::array<u8, 7>& location)
 	g_fxo->get<usio_memory>().last_game_status.clear();
 	g_fxo->get<usio_memory>().last_game_status.resize(0x28);
 	load_backup();
-
-	if (!m_cfg.load())
-	{
-		usio_log.notice("Could not load usio config. Using defaults.");
-	}
 }
 
 usb_device_usio::~usb_device_usio()
@@ -172,7 +168,7 @@ void usb_device_usio::translate_input()
 			return;
 		}
 
-		const auto& cfg = ::at32(m_cfg.players, pad_number);
+		const auto& cfg = ::at32(g_cfg_usio.players, pad_number);
 		const std::size_t offset = (player * 8ULL);
 
 		for (const Button& button : pad->m_buttons)

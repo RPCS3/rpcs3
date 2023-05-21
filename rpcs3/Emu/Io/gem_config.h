@@ -34,3 +34,5 @@ struct cfg_gems final : public emulated_pads_config<cfg_gem>
 {
 	cfg_gems() : emulated_pads_config<cfg_gem>("gem") {};
 };
+
+extern cfg_gems g_cfg_gem;

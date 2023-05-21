@@ -28,3 +28,5 @@ struct cfg_buzz final : public emulated_pads_config<cfg_buzzer>
 {
 	cfg_buzz() : emulated_pads_config<cfg_buzzer>("buzz") {};
 };
+
+extern cfg_buzz g_cfg_buzz;

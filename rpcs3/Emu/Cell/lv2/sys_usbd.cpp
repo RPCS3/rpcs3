@@ -18,16 +18,25 @@
 #include "Emu/Io/Skylander.h"
 #include "Emu/Io/Infinity.h"
 #include "Emu/Io/GHLtar.h"
+#include "Emu/Io/ghltar_config.h"
 #include "Emu/Io/Buzz.h"
+#include "Emu/Io/buzz_config.h"
 #include "Emu/Io/Turntable.h"
+#include "Emu/Io/turntable_config.h"
 #include "Emu/Io/RB3MidiKeyboard.h"
 #include "Emu/Io/RB3MidiGuitar.h"
 #include "Emu/Io/usio.h"
+#include "Emu/Io/usio_config.h"
 #include "Emu/Io/midi_config_types.h"
 
 #include <libusb.h>
 
 LOG_CHANNEL(sys_usbd);
+
+cfg_buzz g_cfg_buzz;
+cfg_ghltars g_cfg_ghltar;
+cfg_turntables g_cfg_turntable;
+cfg_usios g_cfg_usio;
 
 template <>
 void fmt_class_string<libusb_transfer>::format(std::string& out, u64 arg)
@@ -314,6 +323,11 @@ usb_handler_thread::usb_handler_thread()
 
 	if (!found_usio && !found_h050) // Only one of these two IO boards should be present at the same time; otherwise, an exception will be thrown by the game.
 	{
+		if (!g_cfg_usio.load())
+		{
+			sys_usbd.notice("Could not load usio config. Using defaults.");
+		}
+
 		sys_usbd.notice("Adding emulated v406 usio");
 		usb_devices.push_back(std::make_shared<usb_device_usio>(get_new_location()));
 	}
@@ -342,6 +356,11 @@ usb_handler_thread::usb_handler_thread()
 
 	if (g_cfg.io.ghltar == ghltar_handler::one_controller || g_cfg.io.ghltar == ghltar_handler::two_controllers)
 	{
+		if (!g_cfg_ghltar.load())
+		{
+			sys_usbd.notice("Could not load ghltar config. Using defaults.");
+		}
+
 		sys_usbd.notice("Adding emulated GHLtar (1 player)");
 		usb_devices.push_back(std::make_shared<usb_device_ghltar>(0, get_new_location()));
 	}
@@ -353,6 +372,11 @@ usb_handler_thread::usb_handler_thread()
 
 	if (g_cfg.io.turntable == turntable_handler::one_controller || g_cfg.io.turntable == turntable_handler::two_controllers)
 	{
+		if (!g_cfg_turntable.load())
+		{
+			sys_usbd.notice("Could not load turntable config. Using defaults.");
+		}
+
 		sys_usbd.notice("Adding emulated turntable (1 player)");
 		usb_devices.push_back(std::make_shared<usb_device_turntable>(0, get_new_location()));
 	}
@@ -364,6 +388,11 @@ usb_handler_thread::usb_handler_thread()
 
 	if (g_cfg.io.buzz == buzz_handler::one_controller || g_cfg.io.buzz == buzz_handler::two_controllers)
 	{
+		if (!g_cfg_buzz.load())
+		{
+			sys_usbd.notice("Could not load buzz config. Using defaults.");
+		}
+
 		sys_usbd.notice("Adding emulated Buzz! buzzer (1-4 players)");
 		usb_devices.push_back(std::make_shared<usb_device_buzz>(0, 3, get_new_location()));
 	}

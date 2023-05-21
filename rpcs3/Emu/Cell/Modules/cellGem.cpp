@@ -134,6 +134,8 @@ using gun_thread = named_thread<gun_handler>;
 
 #endif
 
+cfg_gems g_cfg_gem;
+
 struct gem_config_data
 {
 public:
@@ -141,7 +143,6 @@ public:
 
 	static constexpr auto thread_name = "Gem Thread"sv;
 
-	cfg_gems gem_cfg;
 	atomic_t<u8> state = 0;
 
 	struct gem_color
@@ -290,7 +291,7 @@ public:
 
 	gem_config_data()
 	{
-		if (!gem_cfg.load())
+		if (!g_cfg_gem.load())
 		{
 			cellGem.notice("Could not load gem config. Using defaults.");
 		}
@@ -327,7 +328,7 @@ public:
 	{
 		save(ar);
 
-		if (!ar.is_writing() && !gem_cfg.load())
+		if (!ar.is_writing() && !g_cfg_gem.load())
 		{
 			cellGem.notice("Could not load gem config. Using defaults.");
 		}
@@ -648,8 +649,7 @@ static void ds3_input_to_pad(const u32 port_no, be_t<u16>& digital_buttons, be_t
 		return;
 	}
 
-	const auto& gem = g_fxo->get<gem_config>();
-	const auto& cfg = ::at32(gem.gem_cfg.players, port_no);
+	const auto& cfg = ::at32(g_cfg_gem.players, port_no);
 
 	for (const Button& button : pad->m_buttons)
 	{
