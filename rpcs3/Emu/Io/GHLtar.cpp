@@ -125,9 +125,9 @@ void usb_device_ghltar::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint
 			continue;
 		}
 
-		if (const auto btn = cfg->find_button(button.m_offset, button.m_outKeyCode))
+		if (const auto btn = cfg->find_button(button.m_offset, button.m_outKeyCode); btn.has_value() && btn.value())
 		{
-			switch (btn.value())
+			switch (btn.value()->btn_id())
 			{
 			case ghltar_btn::w1:
 				buf[0] += 0x01; // W1

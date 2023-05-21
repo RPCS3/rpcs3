@@ -658,9 +658,9 @@ static void ds3_input_to_pad(const u32 port_no, be_t<u16>& digital_buttons, be_t
 			continue;
 		}
 
-		if (const auto btn = cfg->find_button(button.m_offset, button.m_outKeyCode))
+		if (const auto btn = cfg->find_button(button.m_offset, button.m_outKeyCode); btn.has_value() && btn.value())
 		{
-			switch (btn.value())
+			switch (btn.value()->btn_id())
 			{
 			case gem_btn::start:
 				digital_buttons |= CELL_GEM_CTRL_START;

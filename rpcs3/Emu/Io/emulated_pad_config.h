@@ -32,13 +32,13 @@ struct emulated_pad_config : cfg::node
 {
 	using cfg::node::node;
 
-	std::map<u32, std::map<u32, T>> buttons;
+	std::map<u32, std::map<u32, const cfg_pad_btn<T>*>> button_map;
 
-	std::optional<T> find_button(u32 offset, u32 keycode) const
+	std::optional<const cfg_pad_btn<T>*> find_button(u32 offset, u32 keycode) const
 	{
-		if (const auto it = buttons.find(offset); it != buttons.cend())
+		if (const auto it = button_map.find(offset); it != button_map.cend())
 		{
-			if (const auto it2 = it->second.find(keycode); it2 != it->second.cend())
+			if (const auto it2 = it->second.find(keycode); it2 != it->second.cend() && it2->second)
 			{
 				return it2->second;
 			}
@@ -47,19 +47,19 @@ struct emulated_pad_config : cfg::node
 		return std::nullopt;
 	}
 
-	void set_button(const cfg_pad_btn<T>& pbtn, T bbtn)
+	void init_button(cfg_pad_btn<T>* pbtn)
 	{
-		const u32 offset = pad_button_offset(pbtn);
-		const u32 keycode = pad_button_keycode(pbtn);
-		buttons[(offset >> 8) & 0xFF][keycode & 0xFF] = bbtn;
+		if (!pbtn) return;
+		const u32 offset = pad_button_offset(pbtn->get());
+		const u32 keycode = pad_button_keycode(pbtn->get());
+		button_map[(offset >> 8) & 0xFF][keycode & 0xFF] = std::as_const(pbtn);
 	}
 
-	void set_buttons()
+	void init_buttons()
 	{
 		for (const auto& n : get_nodes())
 		{
-			const auto& node = static_cast<cfg_pad_btn<T>*>(n);
-			set_button(*node, node->btn_id());
+			init_button(static_cast<cfg_pad_btn<T>*>(n));
 		}
 	}
 };
@@ -108,7 +108,7 @@ struct emulated_pads_config : cfg::node
 	
 		for (T* player : players)
 		{
-			player->set_buttons();
+			player->init_buttons();
 		}
 	
 		return result;
