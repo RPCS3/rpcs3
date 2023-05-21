@@ -8,6 +8,25 @@
 
 LOG_CHANNEL(buzz_log, "BUZZ");
 
+template <>
+void fmt_class_string<buzz_btn>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](buzz_btn value)
+	{
+		switch (value)
+		{
+		case buzz_btn::red: return "Red";
+		case buzz_btn::yellow: return "Yellow";
+		case buzz_btn::green: return "Green";
+		case buzz_btn::orange: return "Orange";
+		case buzz_btn::blue: return "Blue";
+		case buzz_btn::count: return "Count";
+		}
+
+		return unknown;
+	});
+}
+
 usb_device_buzz::usb_device_buzz(u32 first_controller, u32 last_controller, const std::array<u8, 7>& location)
 	: usb_device_emulated(location)
 	, m_first_controller(first_controller)

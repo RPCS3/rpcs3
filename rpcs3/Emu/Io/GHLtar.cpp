@@ -8,6 +8,33 @@
 
 LOG_CHANNEL(ghltar_log, "GHLTAR");
 
+template <>
+void fmt_class_string<ghltar_btn>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](ghltar_btn value)
+	{
+		switch (value)
+		{
+		case ghltar_btn::w1: return "W1";
+		case ghltar_btn::w2: return "W2";
+		case ghltar_btn::w3: return "W3";
+		case ghltar_btn::b1: return "B1";
+		case ghltar_btn::b2: return "B2";
+		case ghltar_btn::b3: return "B3";
+		case ghltar_btn::start: return "Start";
+		case ghltar_btn::hero_power: return "Hero Power";
+		case ghltar_btn::ghtv: return "GHTV";
+		case ghltar_btn::strum_down: return "Strum Down";
+		case ghltar_btn::strum_up: return "Strum Up";
+		case ghltar_btn::dpad_left: return "D-Pad Left";
+		case ghltar_btn::dpad_right: return "D-Pad Right";
+		case ghltar_btn::count: return "Count";
+		}
+
+		return unknown;
+	});
+}
+
 usb_device_ghltar::usb_device_ghltar(u32 controller_index, const std::array<u8, 7>& location)
 	: usb_device_emulated(location), m_controller_index(controller_index)
 {

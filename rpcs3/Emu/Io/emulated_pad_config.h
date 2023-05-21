@@ -6,6 +6,7 @@
 #include <array>
 #include <map>
 #include <optional>
+#include <vector>
 
 LOG_CHANNEL(cfg_log, "CFG");
 
@@ -32,6 +33,7 @@ struct emulated_pad_config : cfg::node
 {
 	using cfg::node::node;
 
+	std::vector<cfg_pad_btn<T>*> buttons;
 	std::map<u32, std::map<u32, const cfg_pad_btn<T>*>> button_map;
 
 	std::optional<const cfg_pad_btn<T>*> find_button(u32 offset, u32 keycode) const
@@ -47,12 +49,44 @@ struct emulated_pad_config : cfg::node
 		return std::nullopt;
 	}
 
+	cfg_pad_btn<T>* get_button(T id)
+	{
+		for (cfg_pad_btn<T>* item : buttons)
+		{
+			if (item && item->btn_id() == id)
+			{
+				return item;
+			}
+		}
+
+		return nullptr;
+	}
+
+	pad_button get_pad_button(T id)
+	{
+		if (cfg_pad_btn<T>* item = get_button(id))
+		{
+			return item->get();
+		}
+
+		return pad_button::pad_button_max_enum;
+	}
+
+	void set_button(T id, pad_button btn_id)
+	{
+		if (cfg_pad_btn<T>* item = get_button(id))
+		{
+			item->set(btn_id);
+		}
+	}
+
 	void init_button(cfg_pad_btn<T>* pbtn)
 	{
 		if (!pbtn) return;
 		const u32 offset = pad_button_offset(pbtn->get());
 		const u32 keycode = pad_button_keycode(pbtn->get());
 		button_map[(offset >> 8) & 0xFF][keycode & 0xFF] = std::as_const(pbtn);
+		buttons.push_back(pbtn);
 	}
 
 	void init_buttons()
