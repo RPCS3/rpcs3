@@ -19,6 +19,9 @@ enum class turntable_btn
 	circle,
 	cross,
 	triangle,
+	right_turntable,
+	crossfader,
+	effects_dial,
 
 	count
 };
@@ -40,6 +43,9 @@ struct cfg_turntable final : public emulated_pad_config<turntable_btn>
 	cfg_pad_btn<turntable_btn> circle{ this, "Circle", turntable_btn::circle, pad_button::L1 };
 	cfg_pad_btn<turntable_btn> cross{ this, "Cross", turntable_btn::cross, pad_button::R1 };
 	cfg_pad_btn<turntable_btn> triangle{ this, "Triangle", turntable_btn::triangle, pad_button::triangle };
+	cfg_pad_btn<turntable_btn> right_turntable{ this, "Right Turntable", turntable_btn::right_turntable, pad_button::ls_y };
+	cfg_pad_btn<turntable_btn> crossfader{ this, "Crossfader", turntable_btn::crossfader, pad_button::rs_y };
+	cfg_pad_btn<turntable_btn> effects_dial{ this, "Effects Dial", turntable_btn::effects_dial, pad_button::rs_x };
 };
 
 struct cfg_turntables final : public emulated_pads_config<cfg_turntable>

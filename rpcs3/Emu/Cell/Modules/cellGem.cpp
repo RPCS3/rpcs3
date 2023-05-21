@@ -38,6 +38,8 @@ void fmt_class_string<gem_btn>::format(std::string& out, u64 arg)
 		case gem_btn::move: return "Move";
 		case gem_btn::t: return "T";
 		case gem_btn::count: return "Count";
+		case gem_btn::x_axis: return "X-Axis";
+		case gem_btn::y_axis: return "Y-Axis";
 		}
 
 		return unknown;
@@ -709,6 +711,8 @@ static void ds3_input_to_pad(const u32 port_no, be_t<u16>& digital_buttons, be_t
 				digital_buttons |= CELL_GEM_CTRL_T;
 				analog_t = std::max<u16>(analog_t, button.m_value);
 				break;
+			case gem_btn::x_axis:
+			case gem_btn::y_axis:
 			case gem_btn::count:
 				break;
 			}
@@ -719,24 +723,46 @@ static void ds3_input_to_pad(const u32 port_no, be_t<u16>& digital_buttons, be_t
 constexpr u16 ds3_max_x = 255;
 constexpr u16 ds3_max_y = 255;
 
-static inline void ds3_get_stick_values(const std::shared_ptr<Pad>& pad, s32& x_pos, s32& y_pos)
+static inline void ds3_get_stick_values(u32 port_no, const std::shared_ptr<Pad>& pad, s32& x_pos, s32& y_pos)
 {
 	x_pos = 0;
 	y_pos = 0;
 
+	const auto& cfg = ::at32(g_cfg_gem.players, port_no);
+
+	std::function<void(u32 offset, u32 keycode, u16 value, bool check_axis)> handle_input;
+	handle_input = [&](u32 offset, u32 keycode, u16 value, bool check_axis)
+	{
+		if (const auto btn = cfg->find_button(offset, keycode); btn.has_value() && btn.value())
+		{
+			switch (btn.value()->btn_id())
+			{
+			case gem_btn::x_axis:
+				x_pos = value;
+				break;
+			case gem_btn::y_axis:
+				y_pos = value;
+				break;
+			default:
+				break;
+			}
+		}
+		else if (check_axis)
+		{
+			switch (offset)
+			{
+			case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X:  handle_input(offset, static_cast<u32>(axis_direction::both), value, false); break;
+			case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y:  handle_input(offset, static_cast<u32>(axis_direction::both), value, false); break;
+			case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X: handle_input(offset, static_cast<u32>(axis_direction::both), value, false); break;
+			case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y: handle_input(offset, static_cast<u32>(axis_direction::both), value, false); break;
+			default: break;
+			}
+		}
+	};
+
 	for (const AnalogStick& stick : pad->m_sticks)
 	{
-		switch (stick.m_offset)
-		{
-		case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X:
-			x_pos = stick.m_value;
-			break;
-		case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y:
-			y_pos = stick.m_value;
-			break;
-		default:
-			break;
-		}
+		handle_input(stick.m_offset, get_axis_keycode(stick.m_offset, stick.m_value), stick.m_value, true);
 	}
 }
 
@@ -759,7 +785,7 @@ static void ds3_pos_to_gem_state(const u32 port_no, const gem_config::gem_contro
 	}
 
 	s32 ds3_pos_x, ds3_pos_y;
-	ds3_get_stick_values(pad, ds3_pos_x, ds3_pos_y);
+	ds3_get_stick_values(port_no, pad, ds3_pos_x, ds3_pos_y);
 
 	if constexpr (std::is_same<T, vm::ptr<CellGemState>>::value)
 	{

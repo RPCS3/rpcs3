@@ -28,6 +28,9 @@ void fmt_class_string<turntable_btn>::format(std::string& out, u64 arg)
 		case turntable_btn::circle: return "Circle";
 		case turntable_btn::cross: return "Cross";
 		case turntable_btn::triangle: return "Triangle";
+		case turntable_btn::right_turntable: return "Right Turntable";
+		case turntable_btn::crossfader: return "Crossfader";
+		case turntable_btn::effects_dial: return "Effects Dial";
 		case turntable_btn::count: return "Count";
 		}
 
@@ -156,12 +159,10 @@ void usb_device_turntable::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpo
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return;
 
-	for (const Button& button : pad->m_buttons)
+	std::function<void(u32 offset, u32 keycode, u16 value, bool check_axis)> handle_input;
+	handle_input = [&](u32 offset, u32 keycode, u16 value, bool check_axis)
 	{
-		if (!button.m_pressed)
-			continue;
-
-		if (const auto btn = cfg->find_button(button.m_offset, button.m_outKeyCode); btn.has_value() && btn.value())
+		if (const auto btn = cfg->find_button(offset, keycode); btn.has_value() && btn.value())
 		{
 			switch (btn.value()->btn_id())
 			{
@@ -262,18 +263,8 @@ void usb_device_turntable::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpo
 			case turntable_btn::select:
 				buf[1] |= 0x01; // Select
 				break;
-			case turntable_btn::count:
-				break;
-			}
-		}
-	}
-
-	for (const AnalogStick& stick : pad->m_sticks)
-	{
-		switch (stick.m_offset)
-		{
-			case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y:
-				buf[6] = 255 - stick.m_value; // Right Turntable
+			case turntable_btn::right_turntable:
+				buf[6] = 255 - value; // Right Turntable
 				// DJ Hero requires turntables to be centered at 128.
 				// If this axis ends up centered at 127, force it to 128.
 				if (buf[6] == 127)
@@ -281,16 +272,41 @@ void usb_device_turntable::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpo
 					buf[6] = 128;
 				}
 				break;
-			case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y:
-				buf[21] = ((255 - stick.m_value) & 0x3F) << 2; // Crossfader, lower 6 bits
-				buf[22] = ((255 - stick.m_value) & 0xC0) >> 6; // Crossfader, upper 2 bits
+			case turntable_btn::crossfader:
+				buf[21] = ((255 - value) & 0x3F) << 2; // Crossfader, lower 6 bits
+				buf[22] = ((255 - value) & 0xC0) >> 6; // Crossfader, upper 2 bits
 				break;
-			case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X:
-				buf[19] = (stick.m_value & 0x3F) << 2; // Effects Dial, lower 6 bits
-				buf[20] = (stick.m_value & 0xC0) >> 6; // Effects Dial, upper 2 bits
+			case turntable_btn::effects_dial:
+				buf[19] = (value & 0x3F) << 2; // Effects Dial, lower 6 bits
+				buf[20] = (value & 0xC0) >> 6; // Effects Dial, upper 2 bits
 				break;
-			default:
+			case turntable_btn::count:
 				break;
+			}
 		}
+		else if (check_axis)
+		{
+			switch (offset)
+			{
+			case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X:  handle_input(offset, static_cast<u32>(axis_direction::both), value, false); break;
+			case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y:  handle_input(offset, static_cast<u32>(axis_direction::both), value, false); break;
+			case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X: handle_input(offset, static_cast<u32>(axis_direction::both), value, false); break;
+			case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y: handle_input(offset, static_cast<u32>(axis_direction::both), value, false); break;
+			default: break;
+			}
+		}
+	};
+
+	for (const Button& button : pad->m_buttons)
+	{
+		if (button.m_pressed)
+		{
+			handle_input(button.m_offset, button.m_outKeyCode, button.m_value, true);
+		}
+	}
+
+	for (const AnalogStick& stick : pad->m_sticks)
+	{
+		handle_input(stick.m_offset, get_axis_keycode(stick.m_offset, stick.m_value), stick.m_value, true);
 	}
 }

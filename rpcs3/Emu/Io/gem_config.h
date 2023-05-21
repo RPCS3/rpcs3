@@ -14,6 +14,8 @@ enum class gem_btn
 	square,
 	move,
 	t,
+	x_axis,
+	y_axis,
 
 	count
 };
@@ -30,6 +32,8 @@ struct cfg_gem final : public emulated_pad_config<gem_btn>
 	cfg_pad_btn<gem_btn> square{ this, "Square", gem_btn::square, pad_button::square };
 	cfg_pad_btn<gem_btn> move{ this, "Move", gem_btn::move, pad_button::R1 };
 	cfg_pad_btn<gem_btn> t{ this, "T", gem_btn::t, pad_button::R2 };
+	cfg_pad_btn<gem_btn> x_axis{ this, "X-Axis", gem_btn::x_axis, pad_button::ls_x };
+	cfg_pad_btn<gem_btn> y_axis{ this, "Y-Axis", gem_btn::y_axis, pad_button::ls_y };
 };
 
 struct cfg_gems final : public emulated_pads_config<cfg_gem>

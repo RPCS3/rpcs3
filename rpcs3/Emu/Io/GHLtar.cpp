@@ -28,6 +28,8 @@ void fmt_class_string<ghltar_btn>::format(std::string& out, u64 arg)
 		case ghltar_btn::strum_up: return "Strum Up";
 		case ghltar_btn::dpad_left: return "D-Pad Left";
 		case ghltar_btn::dpad_right: return "D-Pad Right";
+		case ghltar_btn::whammy: return "Whammy";
+		case ghltar_btn::tilt: return "Tilt";
 		case ghltar_btn::count: return "Count";
 		}
 
@@ -145,14 +147,10 @@ void usb_device_ghltar::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint
 		return;
 	}
 
-	for (const Button& button : pad->m_buttons)
+	std::function<void(u32 offset, u32 keycode, u16 value, bool check_axis)> handle_input;
+	handle_input = [&](u32 offset, u32 keycode, u16 value, bool check_axis)
 	{
-		if (!button.m_pressed)
-		{
-			continue;
-		}
-
-		if (const auto btn = cfg->find_button(button.m_offset, button.m_outKeyCode); btn.has_value() && btn.value())
+		if (const auto btn = cfg->find_button(offset, keycode); btn.has_value() && btn.value())
 		{
 			switch (btn.value()->btn_id())
 			{
@@ -195,28 +193,43 @@ void usb_device_ghltar::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint
 			case ghltar_btn::ghtv:
 				buf[1] += 0x04; // GHTV Button
 				break;
+			case ghltar_btn::whammy:
+				buf[6] = ~(value) + 0x01; // Whammy
+				break;
+			case ghltar_btn::tilt:
+				buf[19] = static_cast<u8>(value); // Tilt
+				if (buf[19] >= 0xF0)
+					buf[5] = 0xFF;
+				else if (buf[19] <= 0x10)
+					buf[5] = 0x00;
+				break;
 			case ghltar_btn::count:
 				break;
 			}
+		}
+		else if (check_axis)
+		{
+			switch (offset)
+			{
+			case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X:  handle_input(offset, static_cast<u32>(axis_direction::both), value, false); break;
+			case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y:  handle_input(offset, static_cast<u32>(axis_direction::both), value, false); break;
+			case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X: handle_input(offset, static_cast<u32>(axis_direction::both), value, false); break;
+			case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y: handle_input(offset, static_cast<u32>(axis_direction::both), value, false); break;
+			default: break;
+			}
+		}
+	};
+
+	for (const Button& button : pad->m_buttons)
+	{
+		if (button.m_pressed)
+		{
+			handle_input(button.m_offset, button.m_outKeyCode, button.m_value, true);
 		}
 	}
 
 	for (const AnalogStick& stick : pad->m_sticks)
 	{
-		switch (stick.m_offset)
-		{
-		case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y:
-			buf[6] = ~(stick.m_value) + 0x01; // Whammy
-			break;
-		case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X:
-			buf[19] = static_cast<u8>(stick.m_value); // Tilt
-			if (buf[19] >= 0xF0)
-				buf[5] = 0xFF;
-			if (buf[19] <= 0x10)
-				buf[5] = 0x00;
-			break;
-		default:
-			break;
-		}
+		handle_input(stick.m_offset, get_axis_keycode(stick.m_offset, stick.m_value), stick.m_value, true);
 	}
 }
