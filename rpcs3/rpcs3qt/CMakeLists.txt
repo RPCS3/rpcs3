@@ -21,6 +21,7 @@ set(SRC_FILES
     _discord_utils.cpp
     emu_settings.cpp
     elf_memory_dumping_dialog.cpp
+    emulated_pad_settings_dialog.cpp
     fatal_error_dialog.cpp
     find_dialog.cpp
     flow_layout.cpp
@@ -44,7 +45,7 @@ set(SRC_FILES
     ipc_settings_dialog.cpp
     kernel_explorer.cpp
     localized.cpp
-    localized_emu.h
+    localized_emu.cpp
     log_frame.cpp
     log_viewer.cpp
     main_window.cpp

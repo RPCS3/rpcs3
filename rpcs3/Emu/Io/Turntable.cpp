@@ -8,6 +8,33 @@
 
 LOG_CHANNEL(turntable_log, "TURN");
 
+template <>
+void fmt_class_string<turntable_btn>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](turntable_btn value)
+	{
+		switch (value)
+		{
+		case turntable_btn::blue: return "Blue";
+		case turntable_btn::green: return "Green";
+		case turntable_btn::red: return "Red";
+		case turntable_btn::dpad_up: return "D-Pad Up";
+		case turntable_btn::dpad_down: return "D-Pad Down";
+		case turntable_btn::dpad_left: return "D-Pad Left";
+		case turntable_btn::dpad_right: return "D-Pad Right";
+		case turntable_btn::start: return "Start";
+		case turntable_btn::select: return "Select";
+		case turntable_btn::square: return "Square";
+		case turntable_btn::circle: return "Circle";
+		case turntable_btn::cross: return "Cross";
+		case turntable_btn::triangle: return "Triangle";
+		case turntable_btn::count: return "Count";
+		}
+
+		return unknown;
+	});
+}
+
 usb_device_turntable::usb_device_turntable(u32 controller_index, const std::array<u8, 7>& location)
 	: usb_device_emulated(location), m_controller_index(controller_index)
 {

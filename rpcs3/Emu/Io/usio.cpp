@@ -9,6 +9,34 @@
 
 LOG_CHANNEL(usio_log, "USIO");
 
+template <>
+void fmt_class_string<usio_btn>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](usio_btn value)
+	{
+		switch (value)
+		{
+		case usio_btn::test: return "Test";
+		case usio_btn::coin: return "Coin";
+		case usio_btn::enter: return "Enter";
+		case usio_btn::up: return "Up";
+		case usio_btn::down: return "Down";
+		case usio_btn::service: return "Service";
+		case usio_btn::strong_hit_side_left: return "Strong Hit Side Left";
+		case usio_btn::strong_hit_side_right: return "Strong Hit Side Right";
+		case usio_btn::strong_hit_center_left: return "Strong Hit Center Left";
+		case usio_btn::strong_hit_center_right: return "Strong Hit Center Right";
+		case usio_btn::small_hit_side_left: return "Small Hit Side Left";
+		case usio_btn::small_hit_side_right: return "Small Hit Side Right";
+		case usio_btn::small_hit_center_left: return "Small Hit Center Left";
+		case usio_btn::small_hit_center_right: return "Small Hit Center Right";
+		case usio_btn::count: return "Count";
+		}
+
+		return unknown;
+	});
+}
+
 struct usio_memory
 {
 	std::vector<u8> backup_memory;

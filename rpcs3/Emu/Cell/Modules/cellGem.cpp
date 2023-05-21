@@ -23,6 +23,28 @@
 LOG_CHANNEL(cellGem);
 
 template <>
+void fmt_class_string<gem_btn>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](gem_btn value)
+	{
+		switch (value)
+		{
+		case gem_btn::start: return "Start";
+		case gem_btn::select: return "Select";
+		case gem_btn::triangle: return "Triangle";
+		case gem_btn::circle: return "Circle";
+		case gem_btn::cross: return "Cross";
+		case gem_btn::square: return "Square";
+		case gem_btn::move: return "Move";
+		case gem_btn::t: return "T";
+		case gem_btn::count: return "Count";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
 void fmt_class_string<CellGemError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)

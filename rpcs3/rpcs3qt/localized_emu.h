@@ -4,6 +4,7 @@
 #include <QObject>
 
 #include "Emu/localized_string_id.h"
+#include "Emu/Io/pad_types.h"
 
 /**
  * Localized emucore string collection class
@@ -15,6 +16,8 @@ class localized_emu : public QObject
 
 public:
 	localized_emu() = default;
+
+	static QString translated_pad_button(pad_button btn);
 
 	template <typename... Args>
 	static std::string get_string(localized_string_id id, Args&&... args)
