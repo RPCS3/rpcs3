@@ -26,10 +26,14 @@ QString localized_emu::translated_pad_button(pad_button btn)
 	case pad_button::ls_down: return tr("Left Stick Down");
 	case pad_button::ls_left: return tr("Left Stick Left");
 	case pad_button::ls_right: return tr("Left Stick Right");
+	case pad_button::ls_x: return tr("Left Stick X-Axis");
+	case pad_button::ls_y: return tr("Left Stick Y-Axis");
 	case pad_button::rs_up: return tr("Right Stick Up");
 	case pad_button::rs_down: return tr("Right Stick Down");
 	case pad_button::rs_left: return tr("Right Stick Left");
 	case pad_button::rs_right: return tr("Right Stick Right");
+	case pad_button::rs_x: return tr("Right Stick X-Axis");
+	case pad_button::rs_y: return tr("Right Stick Y-Axis");
 	case pad_button::pad_button_max_enum: return "";
 	}
 	return "";

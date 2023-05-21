@@ -19,6 +19,8 @@ enum class ghltar_btn
 	strum_up,
 	dpad_left,
 	dpad_right,
+	whammy,
+	tilt,
 
 	count
 };
@@ -40,6 +42,8 @@ struct cfg_ghltar final : public emulated_pad_config<ghltar_btn>
 	cfg_pad_btn<ghltar_btn> strum_up{ this, "Strum Up", ghltar_btn::strum_up, pad_button::dpad_up };
 	cfg_pad_btn<ghltar_btn> dpad_left{ this, "D-Pad Left", ghltar_btn::dpad_left, pad_button::dpad_left };
 	cfg_pad_btn<ghltar_btn> dpad_right{ this, "D-Pad Right", ghltar_btn::dpad_right, pad_button::dpad_right };
+	cfg_pad_btn<ghltar_btn> whammy{ this, "Whammy", ghltar_btn::whammy, pad_button::rs_y };
+	cfg_pad_btn<ghltar_btn> tilt{ this, "tilt", ghltar_btn::whammy, pad_button::rs_x };
 };
 
 struct cfg_ghltars final : public emulated_pads_config<cfg_ghltar>
