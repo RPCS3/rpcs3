@@ -3293,8 +3293,8 @@ void PPUTranslator::LFSUX(ppu_opcode_t op)
 void PPUTranslator::SYNC(ppu_opcode_t op)
 {
 	// sync: Full seq cst barrier
-	// lwsync: Acq/Release barrier
-	m_ir->CreateFence(op.l10 ? AtomicOrdering::AcquireRelease : AtomicOrdering::SequentiallyConsistent);
+	// lwsync: Acq/Release barrier (but not really it seems from observing libsre.sprx)
+	m_ir->CreateFence(op.l10 && false ? AtomicOrdering::AcquireRelease : AtomicOrdering::SequentiallyConsistent);
 }
 
 void PPUTranslator::LFDX(ppu_opcode_t op)
