@@ -97,24 +97,16 @@ void usb_device_buzz::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint*/
 	for (u32 i = m_first_controller, index = 0; i <= m_last_controller; i++, index++)
 	{
 		const auto& pad = pads[i];
-		const cfg_buzzer* cfg = g_cfg_buzz.players[i];
 
 		if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		{
 			continue;
 		}
 
-		for (const Button& button : pad->m_buttons)
-		{
-			if (!button.m_pressed)
-				continue;
-
-			for (const auto& btn : cfg->find_button(button.m_offset, button.m_outKeyCode))
+		const auto& cfg = g_cfg_buzz.players[i];
+		cfg->handle_input(pad, true, [&buf, &index](buzz_btn btn, u16 value, bool pressed)
 			{
-				if (!btn)
-					continue;
-
-				switch (btn->btn_id())
+				switch (btn)
 				{
 				case buzz_btn::red:
 					buf[2 + (0 + 5 * index) / 8] |= 1 << ((0 + 5 * index) % 8); // Red
@@ -134,7 +126,6 @@ void usb_device_buzz::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint*/
 				case buzz_btn::count:
 					break;
 				}
-			}
-		}
+			});
 	}
 }
