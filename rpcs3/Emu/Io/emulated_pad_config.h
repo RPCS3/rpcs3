@@ -73,6 +73,16 @@ struct emulated_pad_config : cfg::node
 		return pad_button::pad_button_max_enum;
 	}
 
+	pad_button default_pad_button(T id)
+	{
+		if (cfg_pad_btn<T>* item = get_button(id))
+		{
+			return item->get_default();
+		}
+
+		return pad_button::pad_button_max_enum;
+	}
+
 	void set_button(T id, pad_button btn_id)
 	{
 		if (cfg_pad_btn<T>* item = get_button(id))

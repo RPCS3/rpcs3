@@ -9,11 +9,16 @@
 #include "util/asm.hpp"
 
 #include <QDialogButtonBox>
-#include <QComboBox>
 #include <QGroupBox>
 #include <QMessageBox>
 #include <QPushButton>
 #include <QVBoxLayout>
+
+enum button_role
+{
+	button = Qt::UserRole,
+	emulated_button
+};
 
 emulated_pad_settings_dialog::emulated_pad_settings_dialog(pad_type type, QWidget* parent)
 	: QDialog(parent), m_type(type)
@@ -114,7 +119,10 @@ void emulated_pad_settings_dialog::add_tabs(QTabWidget* tabs)
 			for (int p = 0; p < static_cast<int>(pad_button::pad_button_max_enum); p++)
 			{
 				const QString translated = localized_emu::translated_pad_button(static_cast<pad_button>(p));
-				combo->addItem(translated, p);
+				combo->addItem(translated);
+				const int index = combo->findText(translated);
+				combo->setItemData(index, p, button_role::button);
+				combo->setItemData(index, i, button_role::emulated_button);
 			}
 
 			pad_button saved_btn_id = pad_button::pad_button_max_enum;
@@ -144,11 +152,11 @@ void emulated_pad_settings_dialog::add_tabs(QTabWidget* tabs)
 				if (index < 0 || !combo)
 					return;
 
-				const QVariant data = combo->itemData(index);
+				const QVariant data = combo->itemData(index, button_role::button);
 				if (!data.isValid() || !data.canConvert<int>())
 					return;
 
-				const pad_button btn_id = static_cast<pad_button>(combo->itemData(index).toInt());
+				const pad_button btn_id = static_cast<pad_button>(data.toInt());
 
 				switch (m_type)
 				{
@@ -176,6 +184,7 @@ void emulated_pad_settings_dialog::add_tabs(QTabWidget* tabs)
 				col++;
 			}
 
+			::at32(m_combos, player).push_back(combo);
 			h_layout->addWidget(combo);
 			gb->setLayout(h_layout);
 			grid_layout->addWidget(gb, row, col);
@@ -264,5 +273,40 @@ void emulated_pad_settings_dialog::reset_config()
 	case emulated_pad_settings_dialog::pad_type::ds3gem:
 		g_cfg_gem.from_default();
 		break;
+	}
+
+	for (usz player = 0; player < m_combos.size(); player++)
+	{
+		for (QComboBox* combo : m_combos.at(player))
+		{
+			if (!combo)
+				continue;
+
+			const QVariant data = combo->itemData(0, button_role::emulated_button);
+			if (!data.isValid() || !data.canConvert<int>())
+				continue;
+
+			pad_button def_btn_id = pad_button::pad_button_max_enum;
+			switch (m_type)
+			{
+			case pad_type::buzz:
+				def_btn_id = ::at32(g_cfg_buzz.players, player)->default_pad_button(static_cast<buzz_btn>(data.toInt()));
+				break;
+			case pad_type::turntable:
+				def_btn_id = ::at32(g_cfg_turntable.players, player)->default_pad_button(static_cast<turntable_btn>(data.toInt()));
+				break;
+			case pad_type::ghltar:
+				def_btn_id = ::at32(g_cfg_ghltar.players, player)->default_pad_button(static_cast<ghltar_btn>(data.toInt()));
+				break;
+			case pad_type::usio:
+				def_btn_id = ::at32(g_cfg_usio.players, player)->default_pad_button(static_cast<usio_btn>(data.toInt()));
+				break;
+			case pad_type::ds3gem:
+				def_btn_id = ::at32(g_cfg_gem.players, player)->default_pad_button(static_cast<gem_btn>(data.toInt()));
+				break;
+			}
+
+			combo->setCurrentIndex(combo->findData(static_cast<int>(def_btn_id)));
+		}
 	}
 }
