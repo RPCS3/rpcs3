@@ -136,6 +136,7 @@ namespace vk
 
 			if (const auto found = m_sampler_pool.find(key))
 			{
+				found->add_ref();
 				return found;
 			}
 
@@ -145,9 +146,8 @@ namespace vk
 				min_filter, mag_filter, mipmap_mode, border_color,
 				depth_compare, depth_compare_mode);
 
-			result->add_ref();
-			auto ret = result.get();
-			m_sampler_pool.emplace(key, result);
+			auto ret = m_sampler_pool.emplace(key, result);
+			ret->add_ref();
 			return ret;
 		}
 

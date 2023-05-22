@@ -154,7 +154,7 @@ namespace vk
 		m_custom_color_sampler_pool.clear();
 	}
 
-	vk::sampler* sampler_pool_t::find(const sampler_pool_key_t& key) const
+	cached_sampler_object_t* sampler_pool_t::find(const sampler_pool_key_t& key) const
 	{
 		if (!key.border_color_key) [[ likely ]]
 		{
@@ -174,17 +174,18 @@ namespace vk
 		return nullptr;
 	}
 
-	void sampler_pool_t::emplace(const sampler_pool_key_t& key, std::unique_ptr<cached_sampler_object_t>& object)
+	cached_sampler_object_t* sampler_pool_t::emplace(const sampler_pool_key_t& key, std::unique_ptr<cached_sampler_object_t>& object)
 	{
 		object->key = key;
 
 		if (!key.border_color_key) [[ likely ]]
 		{
-			m_generic_sampler_pool.emplace(key.base_key, std::move(object));
-			return;
+			const auto [iterator, _unused] = m_generic_sampler_pool.emplace(key.base_key, std::move(object));
+			return iterator->second.get();
 		}
 
-		m_custom_color_sampler_pool.emplace (key.base_key, std::move(object));
+		const auto [iterator, _unused] = m_custom_color_sampler_pool.emplace(key.base_key, std::move(object));
+		return iterator->second.get();
 	}
 
 	std::vector<std::unique_ptr<cached_sampler_object_t>> sampler_pool_t::collect(std::function<bool(const cached_sampler_object_t&)> predicate)
