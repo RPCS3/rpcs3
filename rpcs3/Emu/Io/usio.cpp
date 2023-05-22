@@ -183,7 +183,7 @@ void usb_device_usio::translate_input()
 	constexpr le_t<u16> c_big_hit = 0x1800;
 	le_t<u16> test_keys = 0x0000;
 
-	auto translate_from_pad = [&](u8 pad_number, u8 player)
+	auto translate_from_pad = [&](usz pad_number, usz player)
 	{
 		if (!is_input_allowed())
 		{
@@ -277,8 +277,10 @@ void usb_device_usio::translate_input()
 			});
 	};
 
-	translate_from_pad(0, 0);
-	translate_from_pad(1, 1);
+	for (usz i = 0; i < g_cfg_usio.players.size(); i++)
+	{
+		translate_from_pad(i, i);
+	}
 
 	test_keys |= test_on ? 0x80 : 0x00;
 	std::memcpy(input_buf.data(), &test_keys, sizeof(u16));

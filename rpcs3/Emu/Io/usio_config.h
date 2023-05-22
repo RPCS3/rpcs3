@@ -44,9 +44,9 @@ struct cfg_usio final : public emulated_pad_config<usio_btn>
 	cfg_pad_btn<usio_btn> small_hit_center_right{ this, "Small Hit Center Right", usio_btn::small_hit_center_right, pad_button::R1 };
 };
 
-struct cfg_usios final : public emulated_pads_config<cfg_usio>
+struct cfg_usios final : public emulated_pads_config<cfg_usio, 2>
 {
-	cfg_usios() : emulated_pads_config<cfg_usio>("usio") {};
+	cfg_usios() : emulated_pads_config<cfg_usio, 2>("usio") {};
 };
 
 extern cfg_usios g_cfg_usio;

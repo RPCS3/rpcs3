@@ -26,9 +26,9 @@ struct cfg_buzzer final : public emulated_pad_config<buzz_btn>
 	cfg_pad_btn<buzz_btn> blue{ this, "Blue", buzz_btn::blue, pad_button::triangle };
 };
 
-struct cfg_buzz final : public emulated_pads_config<cfg_buzzer>
+struct cfg_buzz final : public emulated_pads_config<cfg_buzzer, 7>
 {
-	cfg_buzz() : emulated_pads_config<cfg_buzzer>("buzz") {};
+	cfg_buzz() : emulated_pads_config<cfg_buzzer, 7>("buzz") {};
 };
 
 extern cfg_buzz g_cfg_buzz;

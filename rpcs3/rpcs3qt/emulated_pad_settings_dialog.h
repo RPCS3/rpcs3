@@ -34,5 +34,5 @@ private:
 
 	pad_type m_type;
 
-	std::array<std::vector<QComboBox*>, 7> m_combos{};
+	std::vector<std::vector<QComboBox*>> m_combos;
 };
