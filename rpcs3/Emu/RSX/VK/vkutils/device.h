@@ -167,6 +167,7 @@ namespace vk
 		bool get_descriptor_indexing_support() const { return pgpu->descriptor_indexing_support; }
 		bool get_framebuffer_loops_support() const { return pgpu->optional_features_support.framebuffer_loops; }
 		bool get_barycoords_support() const { return pgpu->optional_features_support.barycentric_coords; }
+		bool get_custom_border_color_support() const { pgpu->optional_features_support.custom_border_color; }
 
 		u64 get_descriptor_update_after_bind_support() const { return pgpu->descriptor_indexing_support.update_after_bind_mask; }
 		u32 get_descriptor_max_draw_calls() const { return pgpu->descriptor_max_draw_calls; }
