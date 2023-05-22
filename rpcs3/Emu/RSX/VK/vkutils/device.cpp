@@ -77,16 +77,16 @@ namespace vk
 			ensure(_vkGetPhysicalDeviceFeatures2KHR); // "vkGetInstanceProcAddress failed to find entry point!"
 			_vkGetPhysicalDeviceFeatures2KHR(dev, &features2);
 
-			shader_types_support.allow_float64 = !!features2.features.shaderFloat64;
-			shader_types_support.allow_float16 = !!shader_support_info.shaderFloat16;
-			shader_types_support.allow_int8    = !!shader_support_info.shaderInt8;
-			framebuffer_loops_support          = !!fbo_loops_info.attachmentFeedbackLoopLayout;
-			barycoords_support                 = !!shader_barycentric_info.fragmentShaderBarycentric;
-			features                           = features2.features;
+			shader_types_support.allow_float64   = !!features2.features.shaderFloat64;
+			shader_types_support.allow_float16   = !!shader_support_info.shaderFloat16;
+			shader_types_support.allow_int8      = !!shader_support_info.shaderInt8;
+			optional_features_support.framebuffer_loops  = !!fbo_loops_info.attachmentFeedbackLoopLayout;
+			optional_features_support.barycentric_coords = !!shader_barycentric_info.fragmentShaderBarycentric;
+			features                                     = features2.features;
 
 			if (descriptor_indexing_support)
 			{
-#define SET_DESCRIPTOR_BITFLAG(field, bit) if (descriptor_indexing_info.field) descriptor_update_after_bind_mask |= (1ull << bit)
+#define SET_DESCRIPTOR_BITFLAG(field, bit) if (descriptor_indexing_info.field) descriptor_indexing_support.update_after_bind_mask |= (1ull << bit)
 				SET_DESCRIPTOR_BITFLAG(descriptorBindingUniformBufferUpdateAfterBind, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
 				SET_DESCRIPTOR_BITFLAG(descriptorBindingSampledImageUpdateAfterBind, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 				SET_DESCRIPTOR_BITFLAG(descriptorBindingSampledImageUpdateAfterBind, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE);
@@ -98,13 +98,13 @@ namespace vk
 			}
 		}
 
-		stencil_export_support           = device_extensions.is_supported(VK_EXT_SHADER_STENCIL_EXPORT_EXTENSION_NAME);
-		conditional_render_support       = device_extensions.is_supported(VK_EXT_CONDITIONAL_RENDERING_EXTENSION_NAME);
-		external_memory_host_support     = device_extensions.is_supported(VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME);
-		sampler_mirror_clamped_support   = device_extensions.is_supported(VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME);
-		unrestricted_depth_range_support = device_extensions.is_supported(VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME);
-		debug_utils_support              = instance_extensions.is_supported(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-		surface_capabilities_2_support   = instance_extensions.is_supported(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+		optional_features_support.shader_stencil_export    = device_extensions.is_supported(VK_EXT_SHADER_STENCIL_EXPORT_EXTENSION_NAME);
+		optional_features_support.conditional_rendering    = device_extensions.is_supported(VK_EXT_CONDITIONAL_RENDERING_EXTENSION_NAME);
+		optional_features_support.external_memory_host     = device_extensions.is_supported(VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME);
+		optional_features_support.sampler_mirror_clamped   = device_extensions.is_supported(VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME);
+		optional_features_support.unrestricted_depth_range = device_extensions.is_supported(VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME);
+		optional_features_support.debug_utils              = instance_extensions.is_supported(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+		optional_features_support.surface_capabilities_2   = instance_extensions.is_supported(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 	}
 
 	void physical_device::get_physical_device_properties(bool allow_extensions)
@@ -175,7 +175,7 @@ namespace vk
 				if (descriptor_indexing_props.maxUpdateAfterBindDescriptorsInAllPools < 800'000)
 				{
 					rsx_log.error("Physical device does not support enough descriptors for deferred updates to work effectively. Deferred updates are disabled.");
-					descriptor_update_after_bind_mask = 0;
+					descriptor_indexing_support.update_after_bind_mask = 0;
 				}
 				else if (descriptor_indexing_props.maxUpdateAfterBindDescriptorsInAllPools < 2'000'000)
 				{
@@ -427,28 +427,28 @@ namespace vk
 			requested_extensions.push_back(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME);
 		}
 
-		if (pgpu->conditional_render_support)
+		if (pgpu->optional_features_support.conditional_rendering)
 		{
 			requested_extensions.push_back(VK_EXT_CONDITIONAL_RENDERING_EXTENSION_NAME);
 		}
 
-		if (pgpu->unrestricted_depth_range_support)
+		if (pgpu->optional_features_support.unrestricted_depth_range)
 		{
 			requested_extensions.push_back(VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME);
 		}
 
-		if (pgpu->external_memory_host_support)
+		if (pgpu->optional_features_support.external_memory_host)
 		{
 			requested_extensions.push_back(VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME);
 			requested_extensions.push_back(VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME);
 		}
 
-		if (pgpu->stencil_export_support)
+		if (pgpu->optional_features_support.shader_stencil_export)
 		{
 			requested_extensions.push_back(VK_EXT_SHADER_STENCIL_EXPORT_EXTENSION_NAME);
 		}
 
-		if (pgpu->sampler_mirror_clamped_support)
+		if (pgpu->optional_features_support.sampler_mirror_clamped)
 		{
 			requested_extensions.push_back(VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME);
 		}
@@ -459,12 +459,12 @@ namespace vk
 			requested_extensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
 		}
 
-		if (pgpu->framebuffer_loops_support)
+		if (pgpu->optional_features_support.framebuffer_loops)
 		{
 			requested_extensions.push_back(VK_EXT_ATTACHMENT_FEEDBACK_LOOP_LAYOUT_EXTENSION_NAME);
 		}
 
-		if (pgpu->barycoords_support)
+		if (pgpu->optional_features_support.barycentric_coords)
 		{
 			requested_extensions.push_back(VK_KHR_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME);
 		}
@@ -582,7 +582,7 @@ namespace vk
 #endif
 
 		if (pgpu->get_driver_vendor() == driver_vendor::ANV &&
-			pgpu->descriptor_update_after_bind_mask & (1 << VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER))
+			pgpu->descriptor_indexing_support.update_after_bind_mask & (1 << VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER))
 		{
 			// Just disable robust access for now. I'll revisit after ARC launches.
 			rsx_log.error("Robust buffer access is broken when enabled with EXT_descriptor_indexing on ANV");
@@ -619,7 +619,7 @@ namespace vk
 		VkPhysicalDeviceDescriptorIndexingFeatures indexing_features{};
 		if (pgpu->descriptor_indexing_support)
 		{
-#define SET_DESCRIPTOR_BITFLAG(field, bit) if (pgpu->descriptor_update_after_bind_mask & (1ull << bit)) indexing_features.field = VK_TRUE
+#define SET_DESCRIPTOR_BITFLAG(field, bit) if (pgpu->descriptor_indexing_support.update_after_bind_mask & (1ull << bit)) indexing_features.field = VK_TRUE
 			SET_DESCRIPTOR_BITFLAG(descriptorBindingUniformBufferUpdateAfterBind, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
 			SET_DESCRIPTOR_BITFLAG(descriptorBindingSampledImageUpdateAfterBind, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 			SET_DESCRIPTOR_BITFLAG(descriptorBindingSampledImageUpdateAfterBind, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE);
@@ -635,7 +635,7 @@ namespace vk
 		}
 
 		VkPhysicalDeviceAttachmentFeedbackLoopLayoutFeaturesEXT fbo_loop_features{};
-		if (pgpu->framebuffer_loops_support)
+		if (pgpu->optional_features_support.framebuffer_loops)
 		{
 			fbo_loop_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ATTACHMENT_FEEDBACK_LOOP_LAYOUT_FEATURES_EXT;
 			fbo_loop_features.attachmentFeedbackLoopLayout = VK_TRUE;
@@ -655,13 +655,13 @@ namespace vk
 		}
 
 		// Import optional function endpoints
-		if (pgpu->conditional_render_support)
+		if (pgpu->optional_features_support.conditional_rendering)
 		{
 			_vkCmdBeginConditionalRenderingEXT = reinterpret_cast<PFN_vkCmdBeginConditionalRenderingEXT>(vkGetDeviceProcAddr(dev, "vkCmdBeginConditionalRenderingEXT"));
 			_vkCmdEndConditionalRenderingEXT = reinterpret_cast<PFN_vkCmdEndConditionalRenderingEXT>(vkGetDeviceProcAddr(dev, "vkCmdEndConditionalRenderingEXT"));
 		}
 
-		if (pgpu->debug_utils_support)
+		if (pgpu->optional_features_support.debug_utils)
 		{
 			_vkSetDebugUtilsObjectNameEXT = reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(vkGetDeviceProcAddr(dev, "vkSetDebugUtilsObjectNameEXT"));
 			_vkQueueInsertDebugUtilsLabelEXT = reinterpret_cast<PFN_vkQueueInsertDebugUtilsLabelEXT>(vkGetDeviceProcAddr(dev, "vkQueueInsertDebugUtilsLabelEXT"));
@@ -672,7 +672,7 @@ namespace vk
 		m_formats_support = vk::get_optimal_tiling_supported_formats(pdev);
 		m_pipeline_binding_table = vk::get_pipeline_binding_table(pdev);
 
-		if (pgpu->external_memory_host_support)
+		if (pgpu->optional_features_support.external_memory_host)
 		{
 			memory_map._vkGetMemoryHostPointerPropertiesEXT = reinterpret_cast<PFN_vkGetMemoryHostPointerPropertiesEXT>(vkGetDeviceProcAddr(dev, "vkGetMemoryHostPointerPropertiesEXT"));
 		}
