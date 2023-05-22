@@ -125,9 +125,9 @@ u32 get_axis_keycode(u32 offset, u16 value)
 	switch (offset)
 	{
 	case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X:  return static_cast<u32>(value > 127 ? axis_direction::positive : axis_direction::negative);
-	case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y:  return static_cast<u32>(value > 127 ? axis_direction::positive : axis_direction::negative);
+	case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y:  return static_cast<u32>(value < 128 ? axis_direction::positive : axis_direction::negative);
 	case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X: return static_cast<u32>(value > 127 ? axis_direction::positive : axis_direction::negative);
-	case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y: return static_cast<u32>(value > 127 ? axis_direction::positive : axis_direction::negative);
+	case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y: return static_cast<u32>(value < 128 ? axis_direction::positive : axis_direction::negative);
 	default: return static_cast<u32>(axis_direction::both);
 	}
 }
