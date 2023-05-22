@@ -35,6 +35,7 @@ static thread_local u32 s_tls_thread_slot = -1;
 static thread_local u64 s_tls_sctr = -1;
 
 extern thread_local void(*g_tls_log_control)(const char* fmt, u64 progress);
+extern thread_local std::string(*g_tls_log_prefix)();
 
 template <>
 void fmt_class_string<cpu_flag>::format(std::string& out, u64 arg)
@@ -478,6 +479,8 @@ namespace cpu_counter
 
 void cpu_thread::operator()()
 {
+	const auto old_prefix = g_tls_log_prefix;
+
 	g_tls_this_thread = this;
 
 	if (g_cfg.core.thread_scheduler != thread_scheduler_mode::os)
@@ -545,6 +548,7 @@ void cpu_thread::operator()()
 	{
 		cpu_thread* _this = nullptr;
 		std::string name;
+		std::string(*log_prefix)() = nullptr;
 
 		void cleanup()
 		{
@@ -571,6 +575,8 @@ void cpu_thread::operator()()
 
 			s_cpu_counter--;
 
+			g_tls_log_prefix = log_prefix;
+
 			g_tls_this_thread = nullptr;
 
 			g_threads_deleted++;
@@ -590,6 +596,7 @@ void cpu_thread::operator()()
 
 	cleanup._this = this;
 	cleanup.name = thread_ctrl::get_name();
+	cleanup.log_prefix = old_prefix;
 
 	// Check thread status
 	while (!(state & cpu_flag::exit) && thread_ctrl::state() != thread_state::aborting)

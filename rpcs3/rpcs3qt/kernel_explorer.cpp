@@ -602,7 +602,7 @@ void kernel_explorer::update()
 	std::optional<std::scoped_lock<shared_mutex, shared_mutex>> lock_idm_lv2(std::in_place, id_manager::g_mutex, lv2_obj::g_mutex);
 
 	// Postponed as much as possible for time accuracy
-	u64 current_time_storage = get_guest_system_time();
+	u64 current_time_storage = 0;
 
 	auto get_current_time = [&current_time_storage]()
 	{
