@@ -163,11 +163,11 @@ namespace vk
 		}
 
 		const auto block = m_custom_color_sampler_pool.equal_range(key.base_key);
-		for (auto It = block.first; It != block.second; ++It)
+		for (auto it = block.first; it != block.second; ++it)
 		{
-			if (It->second->key.border_color_key == key.border_color_key)
+			if (it->second->key.border_color_key == key.border_color_key)
 			{
-				return It->second.get();
+				return it->second.get();
 			}
 		}
 
@@ -194,16 +194,16 @@ namespace vk
 
 		const auto collect_fn = [&](auto& container)
 		{
-			for (auto It = container.begin(); It != container.end();)
+			for (auto it = container.begin(); it != container.end();)
 			{
-				if (!predicate(*It->second))
+				if (!predicate(*it->second))
 				{
-					It++;
+					it++;
 					continue;
 				}
 
-				result.emplace_back(std::move(It->second));
-				It = container.erase(It);
+				result.emplace_back(std::move(it->second));
+				it = container.erase(it);
 			}
 		};
 
