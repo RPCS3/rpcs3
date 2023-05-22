@@ -48,9 +48,9 @@ struct cfg_turntable final : public emulated_pad_config<turntable_btn>
 	cfg_pad_btn<turntable_btn> effects_dial{ this, "Effects Dial", turntable_btn::effects_dial, pad_button::rs_x };
 };
 
-struct cfg_turntables final : public emulated_pads_config<cfg_turntable>
+struct cfg_turntables final : public emulated_pads_config<cfg_turntable, 2>
 {
-	cfg_turntables() : emulated_pads_config<cfg_turntable>("turntable") {};
+	cfg_turntables() : emulated_pads_config<cfg_turntable, 2>("turntable") {};
 };
 
 extern cfg_turntables g_cfg_turntable;

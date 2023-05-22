@@ -46,9 +46,9 @@ struct cfg_ghltar final : public emulated_pad_config<ghltar_btn>
 	cfg_pad_btn<ghltar_btn> tilt{ this, "tilt", ghltar_btn::whammy, pad_button::rs_x };
 };
 
-struct cfg_ghltars final : public emulated_pads_config<cfg_ghltar>
+struct cfg_ghltars final : public emulated_pads_config<cfg_ghltar, 2>
 {
-	cfg_ghltars() : emulated_pads_config<cfg_ghltar>("ghltar") {};
+	cfg_ghltars() : emulated_pads_config<cfg_ghltar, 2>("ghltar") {};
 };
 
 extern cfg_ghltars g_cfg_ghltar;

@@ -103,7 +103,29 @@ void emulated_pad_settings_dialog::add_tabs(QTabWidget* tabs)
 		rows = utils::aligned_div(static_cast<u32>(T::count), ++cols);
 	}
 
-	for (int player = 0; player < 7; player++)
+	usz players = 0;
+	switch (m_type)
+	{
+	case pad_type::buzz:
+		players = g_cfg_buzz.players.size();
+		break;
+	case pad_type::turntable:
+		players = g_cfg_turntable.players.size();
+		break;
+	case pad_type::ghltar:
+		players = g_cfg_ghltar.players.size();
+		break;
+	case pad_type::usio:
+		players = g_cfg_usio.players.size();
+		break;
+	case pad_type::ds3gem:
+		players = g_cfg_gem.players.size();
+		break;
+	}
+
+	m_combos.resize(players);
+
+	for (usz player = 0; player < players; player++)
 	{
 		QWidget* widget = new QWidget(this);
 		QGridLayout* grid_layout = new QGridLayout(this);

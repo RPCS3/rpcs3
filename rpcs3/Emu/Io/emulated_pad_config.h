@@ -159,22 +159,19 @@ struct emulated_pad_config : cfg::node
 	}
 };
 
-template <typename T>
+template <typename T, u32 Count>
 struct emulated_pads_config : cfg::node
 {
-	emulated_pads_config(std::string id) : cfg_id(std::move(id)) {}
+	emulated_pads_config(std::string id) : cfg_id(std::move(id))
+	{
+		for (u32 i = 0; i < Count; i++)
+		{
+			players.at(i) = std::make_shared<T>(this, fmt::format("Player %d", i + 1));
+		}
+	}
 
 	std::string cfg_id;
-
-	T player1{ this, "Player 1" };
-	T player2{ this, "Player 2" };
-	T player3{ this, "Player 3" };
-	T player4{ this, "Player 4" };
-	T player5{ this, "Player 5" };
-	T player6{ this, "Player 6" };
-	T player7{ this, "Player 7" };
-
-	std::array<T*, 7> players{ &player1, &player2, &player3, &player4, &player5, &player6, &player7 }; // Thanks gcc!
+	std::array<std::shared_ptr<T>, Count> players;
 
 	bool load()
 	{
@@ -184,7 +181,7 @@ struct emulated_pads_config : cfg::node
 	
 		from_default();
 	
-		for (T* player : players)
+		for (std::shared_ptr<T>& player : players)
 		{
 			player->buttons.clear();
 		}
@@ -201,7 +198,7 @@ struct emulated_pads_config : cfg::node
 			save();
 		}
 	
-		for (T* player : players)
+		for (std::shared_ptr<T>& player : players)
 		{
 			player->init_buttons();
 		}
