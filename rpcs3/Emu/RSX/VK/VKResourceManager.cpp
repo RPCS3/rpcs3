@@ -54,19 +54,16 @@ namespace vk
 			ensure(max_allowed_samplers);
 			rsx_log.warning("Trimming allocated samplers. Allocated = %u, Max = %u", allocated_sampler_count, limits.maxSamplerAllocationCount);
 
-#if 0
-			for (auto It = m_sampler_pool.begin(); It != m_sampler_pool.end();)
+			auto filter_expr = [](const cached_sampler_object_t& sampler)
 			{
-				if (!It->second->has_refs())
-				{
-					dispose(It->second);
-					It = m_sampler_pool.erase(It);
-					continue;
-				}
+				// Pick only where we have no ref
+				return !sampler.has_refs();
+			};
 
-				++It;
+			for (auto& object : m_sampler_pool.collect(filter_expr))
+			{
+				dispose(object);
 			}
-#endif
 		}
 	}
 
