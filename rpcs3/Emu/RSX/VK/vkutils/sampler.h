@@ -80,9 +80,9 @@ namespace vk
 
 		void clear();
 
-		vk::sampler* find(const sampler_pool_key_t& key) const;
+		cached_sampler_object_t* find(const sampler_pool_key_t& key) const;
 
-		void emplace(const sampler_pool_key_t& key, std::unique_ptr<cached_sampler_object_t>& object);
+		cached_sampler_object_t* emplace(const sampler_pool_key_t& key, std::unique_ptr<cached_sampler_object_t>& object);
 
 		std::vector<std::unique_ptr<cached_sampler_object_t>> collect(std::function<bool(const cached_sampler_object_t&)> predicate);
 	};
