@@ -37,6 +37,7 @@ namespace vk
 			VkPhysicalDeviceDescriptorIndexingFeatures descriptor_indexing_info{};
 			VkPhysicalDeviceAttachmentFeedbackLoopLayoutFeaturesEXT fbo_loops_info{};
 			VkPhysicalDeviceFragmentShaderBarycentricFeaturesKHR shader_barycentric_info{};
+			VkPhysicalDeviceCustomBorderColorFeaturesEXT custom_border_color_info{};
 
 			if (device_extensions.is_supported(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME))
 			{
@@ -73,6 +74,13 @@ namespace vk
 				features2.pNext               = &shader_barycentric_info;
 			}
 
+			if (device_extensions.is_supported(VK_EXT_CUSTOM_BORDER_COLOR_EXTENSION_NAME))
+			{
+				custom_border_color_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_CUSTOM_BORDER_COLOR_FEATURES_EXT;
+				custom_border_color_info.pNext = features2.pNext;
+				features2.pNext                = &custom_border_color_info;
+			}
+
 			auto _vkGetPhysicalDeviceFeatures2KHR = reinterpret_cast<PFN_vkGetPhysicalDeviceFeatures2KHR>(vkGetInstanceProcAddr(parent, "vkGetPhysicalDeviceFeatures2KHR"));
 			ensure(_vkGetPhysicalDeviceFeatures2KHR); // "vkGetInstanceProcAddress failed to find entry point!"
 			_vkGetPhysicalDeviceFeatures2KHR(dev, &features2);
@@ -80,8 +88,9 @@ namespace vk
 			shader_types_support.allow_float64   = !!features2.features.shaderFloat64;
 			shader_types_support.allow_float16   = !!shader_support_info.shaderFloat16;
 			shader_types_support.allow_int8      = !!shader_support_info.shaderInt8;
-			optional_features_support.framebuffer_loops  = !!fbo_loops_info.attachmentFeedbackLoopLayout;
-			optional_features_support.barycentric_coords = !!shader_barycentric_info.fragmentShaderBarycentric;
+			optional_features_support.framebuffer_loops   = !!fbo_loops_info.attachmentFeedbackLoopLayout;
+			optional_features_support.barycentric_coords  = !!shader_barycentric_info.fragmentShaderBarycentric;
+			optional_features_support.custom_border_color = !!custom_border_color_info.customBorderColors && !!custom_border_color_info.customBorderColorWithoutFormat;
 			features                                     = features2.features;
 
 			if (descriptor_indexing_support)
@@ -100,7 +109,6 @@ namespace vk
 
 		optional_features_support.shader_stencil_export    = device_extensions.is_supported(VK_EXT_SHADER_STENCIL_EXPORT_EXTENSION_NAME);
 		optional_features_support.conditional_rendering    = device_extensions.is_supported(VK_EXT_CONDITIONAL_RENDERING_EXTENSION_NAME);
-		optional_features_support.custom_border_color      = device_extensions.is_supported(VK_EXT_CUSTOM_BORDER_COLOR_EXTENSION_NAME);
 		optional_features_support.external_memory_host     = device_extensions.is_supported(VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME);
 		optional_features_support.sampler_mirror_clamped   = device_extensions.is_supported(VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME);
 		optional_features_support.unrestricted_depth_range = device_extensions.is_supported(VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME);
@@ -648,6 +656,16 @@ namespace vk
 			fbo_loop_features.attachmentFeedbackLoopLayout = VK_TRUE;
 			fbo_loop_features.pNext = const_cast<void*>(device.pNext);
 			device.pNext = &fbo_loop_features;
+		}
+
+		VkPhysicalDeviceCustomBorderColorFeaturesEXT custom_border_color_features{};
+		if (pgpu->optional_features_support.custom_border_color)
+		{
+			custom_border_color_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_CUSTOM_BORDER_COLOR_FEATURES_EXT;
+			custom_border_color_features.customBorderColors = VK_TRUE;
+			custom_border_color_features.customBorderColorWithoutFormat = VK_TRUE;
+			custom_border_color_features.pNext = const_cast<void*>(device.pNext);
+			device.pNext = &custom_border_color_features;
 		}
 
 		CHECK_RESULT_EX(vkCreateDevice(*pgpu, &device, nullptr, &dev), message_on_error);
