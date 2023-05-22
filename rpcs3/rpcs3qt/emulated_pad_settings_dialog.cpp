@@ -26,6 +26,7 @@ emulated_pad_settings_dialog::emulated_pad_settings_dialog(pad_type type, QWidge
 	setObjectName("emulated_pad_settings_dialog");
 	setAttribute(Qt::WA_DeleteOnClose);
 	setAttribute(Qt::WA_StyledBackground);
+	setModal(true);
 
 	QVBoxLayout* v_layout = new QVBoxLayout(this);
 
