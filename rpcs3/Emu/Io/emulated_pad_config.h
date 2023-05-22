@@ -96,7 +96,7 @@ struct emulated_pad_config : cfg::node
 		if (!pbtn) return;
 		const u32 offset = pad_button_offset(pbtn->get());
 		const u32 keycode = pad_button_keycode(pbtn->get());
-		button_map[(offset >> 8) & 0xFF][keycode & 0xFF].insert(std::as_const(pbtn));
+		button_map[offset][keycode].insert(std::as_const(pbtn));
 		buttons.push_back(pbtn);
 	}
 
