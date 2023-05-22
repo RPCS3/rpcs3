@@ -232,7 +232,7 @@
     </property>
     <widget class="QMenu" name="menuEmulatedPads">
      <property name="title">
-      <string>Emulated Pads</string>
+      <string>USB Devices</string>
      </property>
      <addaction name="confBuzzAct"/>
      <addaction name="confGHLtarAct"/>
