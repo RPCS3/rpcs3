@@ -2,8 +2,11 @@
 
 #include "Emu/Io/pad_types.h"
 
+#include <QComboBox>
 #include <QDialog>
 #include <QTabWidget>
+
+#include <vector>
 
 class emulated_pad_settings_dialog : public QDialog
 {
@@ -30,4 +33,6 @@ private:
 	void reset_config();
 
 	pad_type m_type;
+
+	std::array<std::vector<QComboBox*>, 7> m_combos{};
 };
