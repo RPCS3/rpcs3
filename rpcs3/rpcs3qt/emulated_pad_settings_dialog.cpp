@@ -74,7 +74,7 @@ emulated_pad_settings_dialog::emulated_pad_settings_dialog(pad_type type, QWidge
 		add_tabs<usio_btn>(tabs);
 		break;
 	case emulated_pad_settings_dialog::pad_type::ds3gem:
-		setWindowTitle(tr("Configure Emulated PS Move (DS3)"));
+		setWindowTitle(tr("Configure Emulated PS Move (Fake)"));
 		add_tabs<gem_btn>(tabs);
 		break;
 	}
