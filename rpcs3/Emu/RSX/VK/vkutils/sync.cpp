@@ -286,7 +286,7 @@ namespace vk
 		vk::gpu_debug_marker::insert(
 			*m_device,
 			*m_cb,
-			fmt::format("0x%x: Enter %s", m_tag, m_message)
+			fmt::format("0x%llx: Enter %s", m_tag, m_message)
 		);
 	}
 
