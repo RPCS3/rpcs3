@@ -140,42 +140,19 @@ void usb_device_ghltar::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint
 	std::lock_guard lock(pad::g_pad_mutex);
 	const auto handler = pad::get_current_handler();
 	const auto& pad    = ::at32(handler->GetPads(), m_controller_index);
-	const auto& cfg    = ::at32(g_cfg_ghltar.players, m_controller_index);
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 	{
 		return;
 	}
 
-	std::function<void(u32 offset, u32 keycode, u16 value, bool check_axis)> handle_input;
-	handle_input = [&](u32 offset, u32 keycode, u16 value, bool check_axis)
-	{
-		const auto& btns = cfg->find_button(offset, keycode);
-		if (btns.empty())
+	const auto& cfg = ::at32(g_cfg_ghltar.players, m_controller_index);
+	cfg->handle_input(pad, true, [&buf](ghltar_btn btn, u16 value, bool pressed)
 		{
-			if (check_axis)
-			{
-				switch (offset)
-				{
-				case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X:
-				case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y:
-				case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X:
-				case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y:
-					handle_input(offset, static_cast<u32>(axis_direction::both), value, false);
-					break;
-				default:
-					break;
-				}
-			}
-			return;
-		}
+			if (!pressed)
+				return;
 
-		for (const auto& btn : btns)
-		{
-			if (!btn)
-				continue;
-
-			switch (btn->btn_id())
+			switch (btn)
 			{
 			case ghltar_btn::w1:
 				buf[0] += 0x01; // W1
@@ -229,19 +206,5 @@ void usb_device_ghltar::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint
 			case ghltar_btn::count:
 				break;
 			}
-		}
-	};
-
-	for (const Button& button : pad->m_buttons)
-	{
-		if (button.m_pressed)
-		{
-			handle_input(button.m_offset, button.m_outKeyCode, button.m_value, true);
-		}
-	}
-
-	for (const AnalogStick& stick : pad->m_sticks)
-	{
-		handle_input(stick.m_offset, get_axis_keycode(stick.m_offset, stick.m_value), stick.m_value, true);
-	}
+		});
 }

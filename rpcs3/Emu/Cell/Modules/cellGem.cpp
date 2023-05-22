@@ -674,18 +674,12 @@ static void ds3_input_to_pad(const u32 port_no, be_t<u16>& digital_buttons, be_t
 	}
 
 	const auto& cfg = ::at32(g_cfg_gem.players, port_no);
-
-	for (const Button& button : pad->m_buttons)
-	{
-		if (!button.m_pressed)
-			continue;
-
-		for (const auto& btn : cfg->find_button(button.m_offset, button.m_outKeyCode))
+	cfg->handle_input(pad, true, [&](gem_btn btn, u16 value, bool pressed)
 		{
-			if (!btn)
-				continue;
+			if (!pressed)
+				return;
 
-			switch (btn->btn_id())
+			switch (btn)
 			{
 			case gem_btn::start:
 				digital_buttons |= CELL_GEM_CTRL_START;
@@ -710,15 +704,14 @@ static void ds3_input_to_pad(const u32 port_no, be_t<u16>& digital_buttons, be_t
 				break;
 			case gem_btn::t:
 				digital_buttons |= CELL_GEM_CTRL_T;
-				analog_t = std::max<u16>(analog_t, button.m_value);
+				analog_t = std::max<u16>(analog_t, value);
 				break;
 			case gem_btn::x_axis:
 			case gem_btn::y_axis:
 			case gem_btn::count:
 				break;
 			}
-		}
-	}
+		});
 }
 
 constexpr u16 ds3_max_x = 255;
@@ -730,36 +723,12 @@ static inline void ds3_get_stick_values(u32 port_no, const std::shared_ptr<Pad>&
 	y_pos = 0;
 
 	const auto& cfg = ::at32(g_cfg_gem.players, port_no);
-
-	std::function<void(u32 offset, u32 keycode, u16 value, bool check_axis)> handle_input;
-	handle_input = [&](u32 offset, u32 keycode, u16 value, bool check_axis)
-	{
-		const auto& btns = cfg->find_button(offset, keycode);
-		if (btns.empty())
+	cfg->handle_input(pad, true, [&](gem_btn btn, u16 value, bool pressed)
 		{
-			if (check_axis)
-			{
-				switch (offset)
-				{
-				case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X:
-				case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y:
-				case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X:
-				case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y:
-					handle_input(offset, static_cast<u32>(axis_direction::both), value, false);
-					break;
-				default:
-					break;
-				}
-			}
-			return;
-		}
+			if (!pressed)
+				return;
 
-		for (const auto& btn : btns)
-		{
-			if (!btn)
-				continue;
-
-			switch (btn->btn_id())
+			switch (btn)
 			{
 			case gem_btn::x_axis:
 				x_pos = value;
@@ -770,13 +739,7 @@ static inline void ds3_get_stick_values(u32 port_no, const std::shared_ptr<Pad>&
 			default:
 				break;
 			}
-		}
-	};
-
-	for (const AnalogStick& stick : pad->m_sticks)
-	{
-		handle_input(stick.m_offset, get_axis_keycode(stick.m_offset, stick.m_value), stick.m_value, true);
-	}
+		});
 }
 
 template <typename T>

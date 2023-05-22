@@ -196,91 +196,85 @@ void usb_device_usio::translate_input()
 			return;
 		}
 
-		const auto& cfg = ::at32(g_cfg_usio.players, pad_number);
 		const std::size_t offset = (player * 8ULL);
 
-		for (const Button& button : pad->m_buttons)
-		{
-			for (const auto& btn : cfg->find_button(button.m_offset, button.m_outKeyCode))
+		const auto& cfg = ::at32(g_cfg_usio.players, pad_number);
+		cfg->handle_input(pad, false, [&](usio_btn btn, u16 value, bool pressed)
 			{
-				if (!btn)
-					continue;
-
-				switch (btn->btn_id())
+				switch (btn)
 				{
 				case usio_btn::test:
 					if (player != 0) break;
-					if (button.m_pressed && !test_key_pressed) // Solve the need to hold the Test key
+					if (pressed && !test_key_pressed) // Solve the need to hold the Test key
 						test_on = !test_on;
-					test_key_pressed = button.m_pressed;
+					test_key_pressed = pressed;
 					break;
 				case usio_btn::coin:
 					if (player != 0) break;
-					if (button.m_pressed && !coin_key_pressed) // Ensure only one coin is inserted each time the Coin key is pressed
+					if (pressed && !coin_key_pressed) // Ensure only one coin is inserted each time the Coin key is pressed
 						coin_counter++;
-					coin_key_pressed = button.m_pressed;
+					coin_key_pressed = pressed;
 					break;
 				case usio_btn::enter:
-					if (player == 0 && button.m_pressed)
+					if (player == 0 && pressed)
 						test_keys |= 0x200; // Enter
 					break;
 				case usio_btn::up:
-					if (player == 0 && button.m_pressed)
+					if (player == 0 && pressed)
 						test_keys |= 0x2000; // Up
 					break;
 				case usio_btn::down:
-					if (player == 0 && button.m_pressed)
+					if (player == 0 && pressed)
 						test_keys |= 0x1000; // Down
 					break;
 				case usio_btn::service:
-					if (player == 0 && button.m_pressed)
+					if (player == 0 && pressed)
 						test_keys |= 0x4000; // Service
 					break;
 				case usio_btn::strong_hit_side_left:
 					// Strong hit side left
-					if (button.m_pressed)
+					if (pressed)
 						std::memcpy(input_buf.data() + 32 + offset, &c_big_hit, sizeof(u16));
 					break;
 				case usio_btn::strong_hit_center_right:
 					// Strong hit center right
-					if (button.m_pressed)
+					if (pressed)
 						std::memcpy(input_buf.data() + 36 + offset, &c_big_hit, sizeof(u16));
 					break;
 				case usio_btn::strong_hit_side_right:
 					// Strong hit side right
-					if (button.m_pressed)
+					if (pressed)
 						std::memcpy(input_buf.data() + 38 + offset, &c_big_hit, sizeof(u16));
 					break;
 				case usio_btn::strong_hit_center_left:
 					// Strong hit center left
-					if (button.m_pressed)
+					if (pressed)
 						std::memcpy(input_buf.data() + 34 + offset, &c_big_hit, sizeof(u16));
 					break;
 				case usio_btn::small_hit_center_left:
 					// Small hit center left
-					if (button.m_pressed)
+					if (pressed)
 						std::memcpy(input_buf.data() + 34 + offset, &c_small_hit, sizeof(u16));
 					break;
 				case usio_btn::small_hit_center_right:
 					// Small hit center right
-					if (button.m_pressed)
+					if (pressed)
 						std::memcpy(input_buf.data() + 36 + offset, &c_small_hit, sizeof(u16));
 					break;
 				case usio_btn::small_hit_side_left:
 					// Small hit side left
-					if (button.m_pressed)
+					if (pressed)
 						std::memcpy(input_buf.data() + 32 + offset, &c_small_hit, sizeof(u16));
 					break;
 				case usio_btn::small_hit_side_right:
 					// Small hit side right
-					if (button.m_pressed)
+					if (pressed)
 						std::memcpy(input_buf.data() + 38 + offset, &c_small_hit, sizeof(u16));
 					break;
 				case usio_btn::count:
 					break;
 				}
-			}
-		}
+			});
 	};
 
 	translate_from_pad(0, 0);
