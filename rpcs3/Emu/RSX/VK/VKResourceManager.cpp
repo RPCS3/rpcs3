@@ -54,6 +54,7 @@ namespace vk
 			ensure(max_allowed_samplers);
 			rsx_log.warning("Trimming allocated samplers. Allocated = %u, Max = %u", allocated_sampler_count, limits.maxSamplerAllocationCount);
 
+#if 0
 			for (auto It = m_sampler_pool.begin(); It != m_sampler_pool.end();)
 			{
 				if (!It->second->has_refs())
@@ -65,6 +66,7 @@ namespace vk
 
 				++It;
 			}
+#endif
 		}
 	}
 

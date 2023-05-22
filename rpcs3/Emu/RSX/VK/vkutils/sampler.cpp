@@ -21,6 +21,7 @@ namespace vk
 	}
 
 	border_color_t::border_color_t(u32 encoded_color)
+		: storage_key(0)
 	{
 		value = vk::get_border_color(encoded_color);
 
@@ -34,7 +35,10 @@ namespace vk
 		if (!g_render_device->get_custom_border_color_support())
 		{
 			value = get_closest_border_color_enum(color_value);
+			return;
 		}
+
+		storage_key = encoded_color;
 	}
 
 	sampler::sampler(const vk::render_device& dev, VkSamplerAddressMode clamp_u, VkSamplerAddressMode clamp_v, VkSamplerAddressMode clamp_w,
@@ -97,5 +101,89 @@ namespace vk
 			return false;
 
 		return true;
+	}
+
+	sampler_pool_key_t sampler_pool_t::compute_storage_key(
+		VkSamplerAddressMode clamp_u, VkSamplerAddressMode clamp_v, VkSamplerAddressMode clamp_w,
+		VkBool32 unnormalized_coordinates, float mipLodBias, float max_anisotropy, float min_lod, float max_lod,
+		VkFilter min_filter, VkFilter mag_filter, VkSamplerMipmapMode mipmap_mode, const vk::border_color_t& border_color,
+		VkBool32 depth_compare, VkCompareOp depth_compare_mode)
+	{
+		sampler_pool_key_t key{};
+
+		bool use_border_encoding = false;
+		if (border_color.value > VK_BORDER_COLOR_INT_OPAQUE_WHITE)
+		{
+			// If there is no clamp to border in use, we can ignore the border color entirely
+			if (clamp_u == VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER ||
+				clamp_v == VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER ||
+				clamp_w == VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER)
+			{
+				use_border_encoding = true;
+			}
+		}
+
+		key.base_key = u16(clamp_u) | u64(clamp_v) << 3 | u64(clamp_w) << 6;
+		key.base_key |= u64(unnormalized_coordinates) << 9;            // 1 bit
+		key.base_key |= u64(min_filter) << 10 | u64(mag_filter) << 11; // 1 bit each
+		key.base_key |= u64(mipmap_mode) << 12;   // 1 bit
+
+		if (!use_border_encoding)
+		{
+			// Bits 13-16 are reserved for border color encoding
+			key.base_key |= u64(border_color.value) << 13;
+		}
+		else
+		{
+			key.border_color_key = border_color.storage_key;
+		}
+
+		key.base_key |= u64(depth_compare) << 16; // 1 bit
+		key.base_key |= u64(depth_compare_mode) << 17;  // 3 bits
+		key.base_key |= u64(rsx::encode_fx12(min_lod)) << 20; // 12 bits
+		key.base_key |= u64(rsx::encode_fx12(max_lod)) << 32; // 12 bits
+		key.base_key |= u64(rsx::encode_fx12<true>(mipLodBias)) << 44; // 13 bits (fx12 + sign)
+		key.base_key |= u64(max_anisotropy) << 57;                     // 4 bits
+
+		return key;
+	}
+
+	void sampler_pool_t::clear()
+	{
+		m_generic_sampler_pool.clear();
+		m_custom_color_sampler_pool.clear();
+	}
+
+	vk::sampler* sampler_pool_t::find(const sampler_pool_key_t& key) const
+	{
+		if (!key.border_color_key) [[ likely ]]
+		{
+			const auto found = m_generic_sampler_pool.find(key.base_key);
+			return found == m_generic_sampler_pool.end() ? nullptr : found->second.get();
+		}
+
+		const auto block = m_custom_color_sampler_pool.equal_range(key.base_key);
+		for (auto It = block.first; It != block.second; ++It)
+		{
+			if (It->second->key.border_color_key == key.border_color_key)
+			{
+				return It->second.get();
+			}
+		}
+
+		return nullptr;
+	}
+
+	void sampler_pool_t::emplace(const sampler_pool_key_t& key, std::unique_ptr<cached_sampler_object_t>& object)
+	{
+		object->key = key;
+
+		if (!key.border_color_key) [[ likely ]]
+		{
+			m_generic_sampler_pool.emplace(key.base_key, std::move(object));
+			return;
+		}
+
+		m_custom_color_sampler_pool.emplace (key.base_key, std::move(object));
 	}
 }
