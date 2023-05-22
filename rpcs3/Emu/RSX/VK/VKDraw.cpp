@@ -296,7 +296,7 @@ void VKGSRender::load_texture_env()
 				const auto wrap_s = vk::vk_wrap_mode(tex.wrap_s());
 				const auto wrap_t = vk::vk_wrap_mode(tex.wrap_t());
 				const auto wrap_r = vk::vk_wrap_mode(tex.wrap_r());
-				const auto border_color = vk::get_border_color(tex.border_color());
+				const auto border_color = vk::border_color_t(tex.border_color());
 
 				// Check if non-point filtering can even be used on this format
 				bool can_sample_linear;
@@ -427,7 +427,7 @@ void VKGSRender::load_texture_env()
 				const VkBool32 unnormalized_coords = !!(tex.format() & CELL_GCM_TEXTURE_UN);
 				const auto min_lod = tex.min_lod();
 				const auto max_lod = tex.max_lod();
-				const auto border_color = vk::get_border_color(tex.border_color());
+				const auto border_color = vk::border_color_t(tex.border_color());
 
 				if (vs_sampler_handles[i])
 				{
