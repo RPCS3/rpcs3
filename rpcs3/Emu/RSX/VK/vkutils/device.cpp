@@ -100,9 +100,11 @@ namespace vk
 
 		optional_features_support.shader_stencil_export    = device_extensions.is_supported(VK_EXT_SHADER_STENCIL_EXPORT_EXTENSION_NAME);
 		optional_features_support.conditional_rendering    = device_extensions.is_supported(VK_EXT_CONDITIONAL_RENDERING_EXTENSION_NAME);
+		optional_features_support.custom_border_color      = device_extensions.is_supported(VK_EXT_CUSTOM_BORDER_COLOR_EXTENSION_NAME);
 		optional_features_support.external_memory_host     = device_extensions.is_supported(VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME);
 		optional_features_support.sampler_mirror_clamped   = device_extensions.is_supported(VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME);
 		optional_features_support.unrestricted_depth_range = device_extensions.is_supported(VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME);
+
 		optional_features_support.debug_utils              = instance_extensions.is_supported(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 		optional_features_support.surface_capabilities_2   = instance_extensions.is_supported(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 	}
@@ -467,6 +469,11 @@ namespace vk
 		if (pgpu->optional_features_support.barycentric_coords)
 		{
 			requested_extensions.push_back(VK_KHR_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME);
+		}
+
+		if (pgpu->optional_features_support.custom_border_color)
+		{
+			requested_extensions.push_back(VK_EXT_CUSTOM_BORDER_COLOR_EXTENSION_NAME);
 		}
 
 		enabled_features.robustBufferAccess = VK_TRUE;
