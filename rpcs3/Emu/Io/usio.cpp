@@ -201,9 +201,12 @@ void usb_device_usio::translate_input()
 
 		for (const Button& button : pad->m_buttons)
 		{
-			if (const auto btn = cfg->find_button(button.m_offset, button.m_outKeyCode); btn.has_value() && btn.value())
+			for (const auto& btn : cfg->find_button(button.m_offset, button.m_outKeyCode))
 			{
-				switch (btn.value()->btn_id())
+				if (!btn)
+					continue;
+
+				switch (btn->btn_id())
 				{
 				case usio_btn::test:
 					if (player != 0) break;

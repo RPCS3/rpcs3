@@ -678,13 +678,14 @@ static void ds3_input_to_pad(const u32 port_no, be_t<u16>& digital_buttons, be_t
 	for (const Button& button : pad->m_buttons)
 	{
 		if (!button.m_pressed)
-		{
 			continue;
-		}
 
-		if (const auto btn = cfg->find_button(button.m_offset, button.m_outKeyCode); btn.has_value() && btn.value())
+		for (const auto& btn : cfg->find_button(button.m_offset, button.m_outKeyCode))
 		{
-			switch (btn.value()->btn_id())
+			if (!btn)
+				continue;
+
+			switch (btn->btn_id())
 			{
 			case gem_btn::start:
 				digital_buttons |= CELL_GEM_CTRL_START;
@@ -733,9 +734,32 @@ static inline void ds3_get_stick_values(u32 port_no, const std::shared_ptr<Pad>&
 	std::function<void(u32 offset, u32 keycode, u16 value, bool check_axis)> handle_input;
 	handle_input = [&](u32 offset, u32 keycode, u16 value, bool check_axis)
 	{
-		if (const auto btn = cfg->find_button(offset, keycode); btn.has_value() && btn.value())
+		const auto& btns = cfg->find_button(offset, keycode);
+		if (btns.empty())
 		{
-			switch (btn.value()->btn_id())
+			if (check_axis)
+			{
+				switch (offset)
+				{
+				case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X:
+				case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y:
+				case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X:
+				case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y:
+					handle_input(offset, static_cast<u32>(axis_direction::both), value, false);
+					break;
+				default:
+					break;
+				}
+			}
+			return;
+		}
+
+		for (const auto& btn : btns)
+		{
+			if (!btn)
+				continue;
+
+			switch (btn->btn_id())
 			{
 			case gem_btn::x_axis:
 				x_pos = value;
@@ -745,17 +769,6 @@ static inline void ds3_get_stick_values(u32 port_no, const std::shared_ptr<Pad>&
 				break;
 			default:
 				break;
-			}
-		}
-		else if (check_axis)
-		{
-			switch (offset)
-			{
-			case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X:  handle_input(offset, static_cast<u32>(axis_direction::both), value, false); break;
-			case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y:  handle_input(offset, static_cast<u32>(axis_direction::both), value, false); break;
-			case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X: handle_input(offset, static_cast<u32>(axis_direction::both), value, false); break;
-			case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y: handle_input(offset, static_cast<u32>(axis_direction::both), value, false); break;
-			default: break;
 			}
 		}
 	};
