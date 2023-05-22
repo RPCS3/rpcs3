@@ -186,4 +186,29 @@ namespace vk
 
 		m_custom_color_sampler_pool.emplace (key.base_key, std::move(object));
 	}
+
+	std::vector<std::unique_ptr<cached_sampler_object_t>> sampler_pool_t::collect(std::function<bool(const cached_sampler_object_t&)> predicate)
+	{
+		std::vector<std::unique_ptr<cached_sampler_object_t>> result;
+
+		const auto collect_fn = [&](auto& container)
+		{
+			for (auto It = container.begin(); It != container.end();)
+			{
+				if (!predicate(*It->second))
+				{
+					It++;
+					continue;
+				}
+
+				result.emplace_back(std::move(It->second));
+				It = container.erase(It);
+			}
+		};
+
+		collect_fn(m_generic_sampler_pool);
+		collect_fn(m_custom_color_sampler_pool);
+
+		return result;
+	}
 }
