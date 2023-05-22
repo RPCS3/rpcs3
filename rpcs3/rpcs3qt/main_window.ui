@@ -1284,7 +1284,7 @@
   </action>
   <action name="confPSMoveDS3Act">
    <property name="text">
-    <string>PS Move (DS3)</string>
+    <string>PS Move (Fake)</string>
    </property>
   </action>
  </widget>
