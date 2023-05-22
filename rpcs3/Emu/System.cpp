@@ -2937,9 +2937,16 @@ s32 error_code::error_report(s32 result, const logs::message* channel, const cha
 
 	if (auto ppu = get_current_cpu_thread<ppu_thread>())
 	{
-		if (ppu->current_function)
+		if (auto current = ppu->current_function)
 		{
-			func = ppu->current_function;
+			func = current;
+		}
+	}
+	else if (auto spu = get_current_cpu_thread<spu_thread>())
+	{
+		if (auto current = spu->current_func; current && spu->start_time)
+		{
+			func = current;
 		}
 	}
 

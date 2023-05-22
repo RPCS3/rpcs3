@@ -901,9 +901,9 @@ class spu_function_logger
 	spu_thread& spu;
 
 public:
-	spu_function_logger(spu_thread& spu, const char* func);
+	spu_function_logger(spu_thread& spu, const char* func) noexcept;
 
-	~spu_function_logger()
+	~spu_function_logger() noexcept
 	{
 		if (!spu.is_stopped())
 		{
