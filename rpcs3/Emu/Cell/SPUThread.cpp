@@ -1394,7 +1394,7 @@ void spu_thread::cpu_on_stop()
 	{
 		if (start_time)
 		{
-			ppu_log.warning("'%s' aborted (%fs)", current_func, (get_guest_system_time() - start_time) / 1000000.);
+			ppu_log.warning("'%s' aborted (%fs)", current_func, (get_system_time() - start_time) / 1000000.);
 		}
 		else
 		{
@@ -1549,6 +1549,8 @@ void spu_thread::cpu_task()
 #ifdef __APPLE__
 	pthread_jit_write_protect_np(true);
 #endif
+	start_time = 0;
+
 	// Get next PC and SPU Interrupt status
 	pc = status_npc.load().npc;
 
@@ -5033,6 +5035,8 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 
 				spu_log.trace("sys_spu_thread_send_event(spup=%d, data0=0x%x, data1=0x%x)", spup, value & 0x00ffffff, data);
 
+				spu_function_logger logger(*this, "sys_spu_thread_send_event");
+
 				std::shared_ptr<lv2_event_queue> queue;
 				{
 					std::lock_guard lock(group->mutex);
@@ -5083,6 +5087,8 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 
 				spu_log.trace("sys_spu_thread_throw_event(spup=%d, data0=0x%x, data1=0x%x)", spup, value & 0x00ffffff, data);
 
+				spu_function_logger logger(*this, "sys_spu_thread_throw_event");
+
 				std::shared_ptr<lv2_event_queue> queue;
 				{
 					std::lock_guard lock{group->mutex};
@@ -5116,6 +5122,8 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 				}
 
 				spu_log.trace("sys_event_flag_set_bit(id=%d, value=0x%x (flag=%d))", data, value, flag);
+
+				spu_function_logger logger(*this, "sys_event_flag_set_bit");
 
 				{
 					std::lock_guard lock(group->mutex);
@@ -5159,6 +5167,8 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 				}
 
 				spu_log.trace("sys_event_flag_set_bit_impatient(id=%d, value=0x%x (flag=%d))", data, value, flag);
+
+				spu_function_logger logger(*this, "sys_event_flag_set_bit_impatient");
 
 				// Use the syscall to set flag
 				if (sys_event_flag_set(*this, data, 1ull << flag) + 0u == CELL_EAGAIN)
@@ -5761,6 +5771,8 @@ bool spu_thread::stop_and_signal(u32 code)
 
 		spu_log.trace("sys_spu_thread_group_exit(status=0x%x)", value);
 
+		spu_function_logger logger(*this, "sys_spu_thread_group_exit");
+
 		while (true)
 		{
 			// Check group status (by actually checking thread status), wait if necessary
@@ -5869,6 +5881,8 @@ bool spu_thread::stop_and_signal(u32 code)
 		{
 			fmt::throw_exception("sys_spu_thread_exit(): Out_MBox is empty");
 		}
+
+		spu_function_logger logger(*this, "sys_spu_thread_exit");
 
 		spu_log.trace("sys_spu_thread_exit(status=0x%x)", value);
 		last_exit_status.release(value);
@@ -6115,7 +6129,7 @@ void spu_thread::wakeup_delay(u32 div) const
 		thread_ctrl::wait_for_accurate(utils::aligned_div(+g_cfg.core.spu_wakeup_delay, div));
 }
 
-spu_function_logger::spu_function_logger(spu_thread& spu, const char* func)
+spu_function_logger::spu_function_logger(spu_thread& spu, const char* func) noexcept
 	: spu(spu)
 {
 	spu.current_func = func;
