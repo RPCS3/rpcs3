@@ -64,8 +64,12 @@
     <ClCompile Include="curl\lib\asyn-ares.c" />
     <ClCompile Include="curl\lib\asyn-thread.c" />
     <ClCompile Include="curl\lib\base64.c" />
+    <ClCompile Include="curl\lib\bufq.c" />
     <ClCompile Include="curl\lib\bufref.c" />
     <ClCompile Include="curl\lib\c-hyper.c" />
+    <ClCompile Include="curl\lib\cf-h1-proxy.c" />
+    <ClCompile Include="curl\lib\cf-h2-proxy.c" />
+    <ClCompile Include="curl\lib\cf-haproxy.c" />
     <ClCompile Include="curl\lib\cf-https-connect.c" />
     <ClCompile Include="curl\lib\cf-socket.c" />
     <ClCompile Include="curl\lib\cfilters.c" />
@@ -94,6 +98,7 @@
     <ClCompile Include="curl\lib\dict.c" />
     <ClCompile Include="curl\lib\doh.c" />
     <ClCompile Include="curl\lib\dynbuf.c" />
+    <ClCompile Include="curl\lib\dynhds.c" />
     <ClCompile Include="curl\lib\easy.c" />
     <ClCompile Include="curl\lib\easygetopt.c" />
     <ClCompile Include="curl\lib\easyoptions.c" />
@@ -107,7 +112,6 @@
     <ClCompile Include="curl\lib\getenv.c" />
     <ClCompile Include="curl\lib\getinfo.c" />
     <ClCompile Include="curl\lib\gopher.c" />
-    <ClCompile Include="curl\lib\h2h3.c" />
     <ClCompile Include="curl\lib\hash.c" />
     <ClCompile Include="curl\lib\headers.c" />
     <ClCompile Include="curl\lib\hmac.c" />
@@ -118,6 +122,7 @@
     <ClCompile Include="curl\lib\hostsyn.c" />
     <ClCompile Include="curl\lib\hsts.c" />
     <ClCompile Include="curl\lib\http.c" />
+    <ClCompile Include="curl\lib\http1.c" />
     <ClCompile Include="curl\lib\http2.c" />
     <ClCompile Include="curl\lib\http_aws_sigv4.c" />
     <ClCompile Include="curl\lib\http_chunks.c" />
@@ -234,8 +239,12 @@
     <ClInclude Include="curl\lib\amigaos.h" />
     <ClInclude Include="curl\lib\arpa_telnet.h" />
     <ClInclude Include="curl\lib\asyn.h" />
+    <ClInclude Include="curl\lib\bufq.h" />
     <ClInclude Include="curl\lib\bufref.h" />
     <ClInclude Include="curl\lib\c-hyper.h" />
+    <ClInclude Include="curl\lib\cf-h1-proxy.h" />
+    <ClInclude Include="curl\lib\cf-h2-proxy.h" />
+    <ClInclude Include="curl\lib\cf-haproxy.h" />
     <ClInclude Include="curl\lib\cf-https-connect.h" />
     <ClInclude Include="curl\lib\cf-socket.h" />
     <ClInclude Include="curl\lib\cfilters.h" />
@@ -286,6 +295,7 @@
     <ClInclude Include="curl\lib\doh.h" />
     <ClInclude Include="curl\lib\dotdot.h" />
     <ClInclude Include="curl\lib\dynbuf.h" />
+    <ClInclude Include="curl\lib\dynhds.h" />
     <ClInclude Include="curl\lib\easyif.h" />
     <ClInclude Include="curl\lib\easyoptions.h" />
     <ClInclude Include="curl\lib\easy_lock.h" />
@@ -299,12 +309,12 @@
     <ClInclude Include="curl\lib\functypes.h" />
     <ClInclude Include="curl\lib\getinfo.h" />
     <ClInclude Include="curl\lib\gopher.h" />
-    <ClInclude Include="curl\lib\h2h3.h" />
     <ClInclude Include="curl\lib\hash.h" />
     <ClInclude Include="curl\lib\headers.h" />
     <ClInclude Include="curl\lib\hostip.h" />
     <ClInclude Include="curl\lib\hsts.h" />
     <ClInclude Include="curl\lib\http.h" />
+    <ClInclude Include="curl\lib\http1.h" />
     <ClInclude Include="curl\lib\http2.h" />
     <ClInclude Include="curl\lib\http_aws_sigv4.h" />
     <ClInclude Include="curl\lib\http_chunks.h" />
