@@ -537,7 +537,6 @@ namespace pine
 			// localhost only
 			if (!inet_pton(server.sin_family, "127.0.0.1", &server.sin_addr.s_addr))
 			{
-				server.sin_addr.s_addr = INADDR_NONE;
 				Impl::error("IPC: Failed to convert localhost");
 			}
 			server.sin_port = htons(Impl::get_port());
