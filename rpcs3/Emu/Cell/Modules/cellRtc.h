@@ -50,3 +50,6 @@ u32 cellRtcGetTickResolution();
 error_code cellRtcCheckValid(vm::cptr<CellRtcDateTime> pTime);
 error_code cellRtcGetDayOfWeek(s32 year, s32 month, s32 day);
 error_code cellRtcGetTick(vm::cptr<CellRtcDateTime> pTime, vm::ptr<CellRtcTick> pTick);
+error_code cellRtcGetCurrentTick(vm::ptr<CellRtcTick> pTick);
+
+CellRtcDateTime tick_to_date_time(u64 tick);
