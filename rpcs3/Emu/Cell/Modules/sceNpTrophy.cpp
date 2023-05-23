@@ -991,7 +991,13 @@ error_code sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::pt
 		return SCE_NP_TROPHY_ERROR_ALREADY_UNLOCKED;
 	}
 
-	ctxt->tropusr->UnlockTrophy(trophyId, 0, 0); // TODO: add timestamps
+	vm::var<CellRtcTick> tick;
+	if (error_code error = cellRtcGetCurrentTick(tick))
+	{
+		sceNpTrophy.error("sceNpTrophyUnlockTrophy: Failed to get timestamp: 0x%x", +error);
+	}
+
+	ctxt->tropusr->UnlockTrophy(trophyId, tick->tick, tick->tick);
 
 	// TODO: Make sure that unlocking platinum trophies is properly implemented and improve upon it
 	const std::string& config_path = vfs::get("/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/" + ctxt->trp_name + "/TROPCONF.SFM");
@@ -1001,7 +1007,7 @@ error_code sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::pt
 	{
 		sceNpTrophy.warning("sceNpTrophyUnlockTrophy: All requirements for unlocking the platinum trophy (ID = %d) were met.)", unlocked_platinum_id);
 
-		if (ctxt->tropusr->UnlockTrophy(unlocked_platinum_id, 0, 0)) // TODO: add timestamps
+		if (ctxt->tropusr->UnlockTrophy(unlocked_platinum_id, tick->tick, tick->tick))
 		{
 			sceNpTrophy.success("You unlocked a platinum trophy! Hooray!!!");
 		}

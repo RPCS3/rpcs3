@@ -72,6 +72,8 @@ namespace gui
 			return "trophy_column_id";
 		case trophy_list_columns::platinum_link:
 			return "trophy_column_platinum_link";
+		case trophy_list_columns::time_unlocked:
+			return "trophy_column_time_unlocked";
 		case trophy_list_columns::count:
 			return "";
 		}

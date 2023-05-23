@@ -6,6 +6,7 @@
 #include "game_list.h"
 #include "gui_settings.h"
 #include "progress_dialog.h"
+#include "persistent_settings.h"
 
 #include "util/logs.hpp"
 #include "Utilities/StrUtil.h"
@@ -14,6 +15,7 @@
 #include "Emu/System.h"
 #include "Emu/system_utils.hpp"
 #include "Emu/Cell/Modules/sceNpTrophy.h"
+#include "Emu/Cell/Modules/cellRtc.h"
 
 #include <QApplication>
 #include <QClipboard>
@@ -148,6 +150,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	add_trophy_column(gui::trophy_list_columns::is_unlocked,   tr("Status"),            tr("Show Status"));
 	add_trophy_column(gui::trophy_list_columns::id,            tr("ID"),                tr("Show IDs"));
 	add_trophy_column(gui::trophy_list_columns::platinum_link, tr("Platinum Relevant"), tr("Show Platinum Relevant"));
+	add_trophy_column(gui::trophy_list_columns::time_unlocked, tr("Time Unlocked"),     tr("Show Time Unlocked"));
 
 	m_splitter = new QSplitter();
 	m_splitter->addWidget(m_game_table);
@@ -1028,6 +1031,8 @@ void trophy_manager_dialog::PopulateTrophyTable()
 	QPixmap placeholder(m_icon_height, m_icon_height);
 	placeholder.fill(Qt::transparent);
 
+	const QLocale locale{};
+
 	int i = 0;
 	for (std::shared_ptr<rXmlNode> n = trophy_base->GetChildren(); n; n = n->GetNext())
 	{
@@ -1079,6 +1084,10 @@ void trophy_manager_dialog::PopulateTrophyTable()
 			}
 		}
 
+		// Get timestamp
+		const u64 tick = data->trop_usr->GetTrophyTimestamp(trophy_id);
+		const QString datetime = tick ? locale.toString(TickToDateTime(tick), gui::persistent::last_played_date_with_time_of_day_format) : tr("Unknown");
+
 		const QString unlockstate = data->trop_usr->GetTrophyUnlockState(trophy_id) ? tr("Earned") : tr("Not Earned");
 
 		custom_table_widget_item* icon_item = new custom_table_widget_item();
@@ -1095,6 +1104,7 @@ void trophy_manager_dialog::PopulateTrophyTable()
 		m_trophy_table->setItem(i, static_cast<int>(gui::trophy_list_columns::is_unlocked), new custom_table_widget_item(unlockstate));
 		m_trophy_table->setItem(i, static_cast<int>(gui::trophy_list_columns::id), new custom_table_widget_item(QString::number(trophy_id), Qt::UserRole, trophy_id));
 		m_trophy_table->setItem(i, static_cast<int>(gui::trophy_list_columns::platinum_link), new custom_table_widget_item(platinum_relevant, Qt::UserRole, platinum_link_id));
+		m_trophy_table->setItem(i, static_cast<int>(gui::trophy_list_columns::time_unlocked), new custom_table_widget_item(datetime, Qt::UserRole, QVariant::fromValue<qulonglong>(tick)));
 
 		++i;
 	}
@@ -1224,4 +1234,14 @@ void trophy_manager_dialog::WaitAndAbortTrophyRepaintThreads()
 			item->wait_for_icon_loading(true);
 		}
 	}
+}
+
+QDateTime trophy_manager_dialog::TickToDateTime(u64 tick)
+{
+	const CellRtcDateTime rtc_date = tick_to_date_time(tick);
+	const QDateTime datetime(
+		QDate(rtc_date.year, rtc_date.month, rtc_date.day),
+		QTime(rtc_date.hour, rtc_date.minute, rtc_date.second, rtc_date.microsecond / 1000),
+		Qt::TimeSpec::UTC);
+	return datetime.toLocalTime();
 }

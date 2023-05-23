@@ -914,4 +914,26 @@ namespace rsx
 
 		return base * scale;
 	}
+
+	template<bool _signed = false>
+	u16 encode_fx12(f32 value)
+	{
+		u16 raw = u16(std::abs(value) * 256.);
+
+		if constexpr (!_signed)
+		{
+			return raw;
+		}
+		else
+		{
+			if (value >= 0.f) [[likely]]
+			{
+				return raw;
+			}
+			else
+			{
+				return u16(0 - raw) & 0x1fff;
+			}
+		}
+	}
 }

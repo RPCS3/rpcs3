@@ -135,7 +135,7 @@ namespace vk
 		const vk::render_device* m_device;
 		const vk::command_buffer* m_cb;
 		std::string m_message;
-		u32 m_tag;
+		u64 m_tag;
 
 	public:
 		debug_marker_scope(const vk::command_buffer& cmd, const std::string& text);
