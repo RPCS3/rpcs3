@@ -639,6 +639,7 @@ namespace rsx
 		graph::graph()
 		{
 			m_label.set_font("e046323ms.ttf", 8);
+			m_label.alignment = text_align::center;
 			m_label.fore_color = { 1.f, 1.f, 1.f, 1.f };
 			m_label.back_color = { 0.f, 0.f, 0.f, .7f };
 
@@ -653,11 +654,8 @@ namespace rsx
 
 		void graph::set_size(u16 _w, u16 _h)
 		{
+			m_label.set_size(_w, m_label.h);
 			overlay_element::set_size(_w, _h);
-
-			// Place label horizontally in the middle of the graph rect
-			const u16 label_x = std::max(x, u16(x + (w / 2) - (m_label.w / 2)));
-			m_label.set_pos(label_x, m_label.y);
 		}
 
 		void graph::set_title(const char* title)
