@@ -64,24 +64,77 @@ error_code _sys_lwcond_destroy(ppu_thread& ppu, u32 lwcond_id)
 
 	sys_lwcond.warning("_sys_lwcond_destroy(lwcond_id=0x%x)", lwcond_id);
 
-	const auto cond = idm::withdraw<lv2_obj, lv2_lwcond>(lwcond_id, [&](lv2_lwcond& cond) -> CellError
+	std::shared_ptr<lv2_lwcond> _cond;
+
+	while (true)
 	{
-		if (atomic_storage<ppu_thread*>::load(cond.sq))
+		s32 old_val = 0;
+
+		auto [ptr, ret] = idm::withdraw<lv2_obj, lv2_lwcond>(lwcond_id, [&](lv2_lwcond& cond) -> CellError
 		{
-			return CELL_EBUSY;
+			// Ignore check on first iteration
+			if (_cond && std::addressof(cond) != _cond.get())
+			{
+				// Other thread has destroyed the lwcond earlier
+				return CELL_ESRCH;
+			}
+
+			std::lock_guard lock(cond.mutex);
+
+			if (atomic_storage<ppu_thread*>::load(cond.sq))
+			{
+				return CELL_EBUSY;
+			}
+
+			old_val = cond.lwmutex_waiters.or_fetch(smin);
+
+			if (old_val != smin)
+			{
+				// De-schedule if waiters were found
+				lv2_obj::sleep(ppu);
+
+				// Repeat loop: there are lwmutex waiters inside _sys_lwcond_queue_wait
+				return CELL_EAGAIN;
+			}
+
+			return {};
+		});
+
+		if (!ptr)
+		{
+			return CELL_ESRCH;
 		}
 
-		return {};
-	});
+		if (ret)
+		{
+			if (ret != CELL_EAGAIN)
+			{
+				return ret;
+			}
+		}
+		else
+		{
+			break;
+		}
 
-	if (!cond)
-	{
-		return CELL_ESRCH;
-	}
+		_cond = std::move(ptr);
 
-	if (cond.ret)
-	{
-		return cond.ret;
+		// Wait for all lwcond waiters to quit
+		while (old_val + 0u > 1u << 31)
+		{
+			thread_ctrl::wait_on(_cond->lwmutex_waiters, old_val);
+
+			if (ppu.is_stopped())
+			{
+				ppu.state += cpu_flag::again;
+				return {};
+			}
+
+			old_val = _cond->lwmutex_waiters;
+		}
+
+		// Wake up from sleep
+		ppu.check_state();
 	}
 
 	return CELL_OK;
@@ -341,6 +394,8 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 		std::lock_guard lock(cond.mutex);
 
+		cond.lwmutex_waiters++;
+
 		const bool mutex_sleep = sstate.try_read<bool>().second;
 		sstate.clear();
 
@@ -508,6 +563,12 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 	{
 		// Notify the thread destroying lwmutex on last waiter
 		mutex->lwcond_waiters.notify_all();
+	}
+
+	if (--cond->lwmutex_waiters == smin)
+	{
+		// Notify the thread destroying lwcond on last waiter
+		cond->lwmutex_waiters.notify_all();
 	}
 
 	// Return cause
