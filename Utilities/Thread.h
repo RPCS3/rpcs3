@@ -260,11 +260,11 @@ public:
 	// Read current state, possibly executing some tasks
 	static thread_state state();
 
-	// Wait once with timeout. Infinite value is -1.
-	static void wait_for(u64 usec, bool alert = true);
+	// Wait once with timeout. Infinite value is -1. (returns false if known to be notified)
+	static bool wait_for(u64 usec, bool alert = true);
 
 	// Waiting with accurate timeout
-	static void wait_for_accurate(u64 usec);
+	static void wait_for_accurate(u64 usec, bool alert = false);
 
 	// Wait.
 	static inline void wait()

@@ -123,7 +123,7 @@ void lv2_timer_thread::operator()()
 			sleep_time = std::min(sleep_time, u64{umax} / 100) * 100 / g_cfg.core.clocks_scale;
 		}
 
-		thread_ctrl::wait_for(sleep_time);
+		thread_ctrl::wait_for_accurate(sleep_time);
 
 		if (thread_ctrl::state() == thread_state::aborting)
 		{

@@ -2396,7 +2396,7 @@ thread_state thread_ctrl::state()
 	return static_cast<thread_state>(_this->m_sync & 3);
 }
 
-void thread_ctrl::wait_for(u64 usec, [[maybe_unused]] bool alert /* true */)
+bool thread_ctrl::wait_for(u64 usec, bool alert)
 {
 	auto _this = g_tls_this_thread;
 
@@ -2440,23 +2440,33 @@ void thread_ctrl::wait_for(u64 usec, [[maybe_unused]] bool alert /* true */)
 		timerfd_settime(fd_timer, 0, &timeout, NULL);
 		if (read(fd_timer, &missed, sizeof(missed)) != sizeof(missed))
 			sig_log.error("timerfd: read() failed");
-		return;
+		return true;
 	}
 #endif
 
-	if (_this->m_sync.bit_test_reset(2) || _this->m_taskq)
+	if ((alert && (_this->m_sync.bit_test_reset(2) || _this->m_taskq)) || _this->m_sync & 1)
 	{
-		return;
+		// Notified or aborted
+		return false;
+	}
+
+	const atomic_wait_timeout timeout{usec <= 0xffff'ffff'ffff'ffff / 1000 ? usec * 1000 : 0xffff'ffff'ffff'ffff};
+
+	if (!alert)
+	{
+		_this->m_sync.wait(0, 1, timeout);
+		return true;
 	}
 
 	// Wait for signal and thread state abort
 	atomic_wait::list<2> list{};
 	list.set<0>(_this->m_sync, 0, 4 + 1);
 	list.set<1>(_this->m_taskq, nullptr);
-	list.wait(atomic_wait_timeout{usec <= 0xffff'ffff'ffff'ffff / 1000 ? usec * 1000 : 0xffff'ffff'ffff'ffff});
+	list.wait(timeout);
+	return true; // Unknown if notified for now
 }
 
-void thread_ctrl::wait_for_accurate(u64 usec)
+void thread_ctrl::wait_for_accurate(u64 usec, bool alert)
 {
 	if (!usec)
 	{
@@ -2481,11 +2491,15 @@ void thread_ctrl::wait_for_accurate(u64 usec)
 		{
 #ifdef __linux__
 			// Do not wait for the last quantum to avoid loss of accuracy
-			wait_for(usec - ((usec % host_min_quantum) + host_min_quantum), false);
+			if (!wait_for(usec - ((usec % host_min_quantum) + host_min_quantum), alert))
 #else
 			// Wait on multiple of min quantum for large durations to avoid overloading low thread cpus
-			wait_for(usec - (usec % host_min_quantum), false);
+			if (!wait_for(usec - (usec % host_min_quantum), alert))
 #endif
+			{
+				// Notified
+				return;
+			}
 		}
 		// TODO: Determine best value for yield delay
 		else if (usec >= host_min_quantum / 2)
@@ -2504,7 +2518,7 @@ void thread_ctrl::wait_for_accurate(u64 usec)
 			break;
 		}
 
-		usec = (until - current).count();
+		usec = std::chrono::duration_cast<std::chrono::microseconds>(until - current).count();
 	}
 }
 
