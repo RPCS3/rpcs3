@@ -338,29 +338,60 @@ error_code sys_ppu_thread_get_priority(ppu_thread& ppu, u32 thread_id, vm::ptr<s
 	ppu.state += cpu_flag::wait;
 
 	sys_ppu_thread.trace("sys_ppu_thread_get_priority(thread_id=0x%x, priop=*0x%x)", thread_id, priop);
+	u32 prio{};
 
 	if (thread_id == ppu.id)
 	{
 		// Fast path for self
+		for (; !ppu.is_stopped(); std::this_thread::yield())
+		{
+			if (reader_lock lock(lv2_obj::g_mutex); cpu_flag::suspend - ppu.state)
+			{
+				prio = ppu.prio.load().prio;
+				break;
+			}
+
+			ppu.check_state();
+			ppu.state += cpu_flag::wait;
+		}
+
 		ppu.check_state();
-		*priop = ppu.prio.load().prio;
+		*priop = prio;
 		return CELL_OK;
 	}
 
-	u32 prio{};
-
-	const auto thread = idm::check<named_thread<ppu_thread>>(thread_id, [&](ppu_thread& thread)
+	for (; !ppu.is_stopped(); std::this_thread::yield())
 	{
-		prio = thread.prio.load().prio;
-	});
+		bool check_state = false;
+		const auto thread = idm::check<named_thread<ppu_thread>>(thread_id, [&](ppu_thread& thread)
+		{
+			if (reader_lock lock(lv2_obj::g_mutex); cpu_flag::suspend - ppu.state)
+			{
+				prio = thread.prio.load().prio;
+			}
+			else
+			{
+				check_state = true;
+			}
+		});
 
-	if (!thread)
-	{
-		return CELL_ESRCH;
+		if (check_state)
+		{
+			ppu.check_state();
+			ppu.state += cpu_flag::wait;
+			continue;
+		}
+
+		if (!thread)
+		{
+			return CELL_ESRCH;
+		}
+
+		ppu.check_state();
+		*priop = prio;
+		break;
 	}
 
-	ppu.check_state();
-	*priop = prio;
 	return CELL_OK;
 }
 

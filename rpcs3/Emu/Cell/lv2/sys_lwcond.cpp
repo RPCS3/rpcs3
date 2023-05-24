@@ -155,64 +155,80 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u6
 		fmt::throw_exception("Unknown mode (%d)", mode);
 	}
 
-	const auto cond = idm::check<lv2_obj, lv2_lwcond>(lwcond_id, [&, notify = lv2_obj::notify_all_t()](lv2_lwcond& cond) -> int
+	while (true)
 	{
-		ppu_thread* cpu = nullptr;
-
-		if (ppu_thread_id != u32{umax})
+		if (ppu.test_stopped())
 		{
-			cpu = idm::check_unlocked<named_thread<ppu_thread>>(static_cast<u32>(ppu_thread_id));
-
-			if (!cpu)
-			{
-				return -1;
-			}
+			ppu.state += cpu_flag::again;
+			return {};
 		}
 
-		lv2_lwmutex* mutex = nullptr;
+		bool finished = true;
 
-		if (mode != 2)
+		ppu.state += cpu_flag::wait;
+
+		const auto cond = idm::check<lv2_obj, lv2_lwcond>(lwcond_id, [&, notify = lv2_obj::notify_all_t()](lv2_lwcond& cond) -> int
 		{
-			mutex = idm::check_unlocked<lv2_obj, lv2_lwmutex>(lwmutex_id);
+			ppu_thread* cpu = nullptr;
 
-			if (!mutex)
+			if (ppu_thread_id != u32{umax})
 			{
-				return -1;
-			}
-		}
+				cpu = idm::check_unlocked<named_thread<ppu_thread>>(static_cast<u32>(ppu_thread_id));
 
-		if (atomic_storage<ppu_thread*>::load(cond.sq))
-		{
-			std::lock_guard lock(cond.mutex);
-
-			if (cpu)
-			{
-				if (static_cast<ppu_thread*>(cpu)->state & cpu_flag::again)
+				if (!cpu)
 				{
-					ppu.state += cpu_flag::again;
-					return 0;
+					return -1;
 				}
 			}
 
-			auto result = cpu ? cond.unqueue(cond.sq, cpu) :
-				cond.schedule<ppu_thread>(cond.sq, cond.protocol);
+			lv2_lwmutex* mutex = nullptr;
 
-			if (result)
+			if (mode != 2)
 			{
-				if (static_cast<ppu_thread*>(result)->state & cpu_flag::again)
+				mutex = idm::check_unlocked<lv2_obj, lv2_lwmutex>(lwmutex_id);
+
+				if (!mutex)
 				{
-					ppu.state += cpu_flag::again;
+					return -1;
+				}
+			}
+
+			if (atomic_storage<ppu_thread*>::load(cond.sq))
+			{
+				std::lock_guard lock(cond.mutex);
+
+				if (ppu.state & cpu_flag::suspend)
+				{
+					// Test if another signal caused the current thread to be suspended, in which case it needs to wait until the thread wakes up (otherwise the signal may cause unexpected results)
+					finished = false;
 					return 0;
 				}
 
-				if (mode == 2)
+				if (cpu)
 				{
-					static_cast<ppu_thread*>(result)->gpr[3] = CELL_EBUSY;
+					if (static_cast<ppu_thread*>(cpu)->state & cpu_flag::again)
+					{
+						ppu.state += cpu_flag::again;
+						return 0;
+					}
 				}
 
-				if (mode != 2)
+				auto result = cpu ? cond.unqueue(cond.sq, cpu) :
+					cond.schedule<ppu_thread>(cond.sq, cond.protocol);
+
+				if (result)
 				{
-					if (mode == 3 && mutex->load_sq()) [[unlikely]]
+					if (static_cast<ppu_thread*>(result)->state & cpu_flag::again)
+					{
+						ppu.state += cpu_flag::again;
+						return 0;
+					}
+
+					if (mode == 2)
+					{
+						static_cast<ppu_thread*>(result)->gpr[3] = CELL_EBUSY;
+					}
+					else if (mode == 3 && mutex->load_sq()) [[unlikely]]
 					{
 						std::lock_guard lock(mutex->mutex);
 
@@ -237,43 +253,58 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u6
 						mutex->try_own(result, true);
 						result = nullptr;
 					}
-				}
 
-				if (result)
+					if (result)
+					{
+						cond.awake(result);
+					}
+
+					return 1;
+				}
+			}
+			else
+			{
+				cond.mutex.lock_unlock();
+
+				if (ppu.state & cpu_flag::suspend)
 				{
-					cond.awake(result);
+					finished = false;
+					return 0;
 				}
-
-				return 1;
 			}
-		}
 
-		return 0;
-	});
+			return 0;
+		});
 
-	if (!cond || cond.ret == -1)
-	{
-		return CELL_ESRCH;
-	}
-
-	if (!cond.ret)
-	{
-		if (ppu_thread_id == u32{umax})
+		if (!finished)
 		{
-			if (mode == 3)
-			{
-				return not_an_error(CELL_ENOENT);
-			}
-			else if (mode == 2)
-			{
-				return CELL_OK;
-			}
+			continue;
 		}
 
-		return not_an_error(CELL_EPERM);
-	}
+		if (!cond || cond.ret == -1)
+		{
+			return CELL_ESRCH;
+		}
 
-	return CELL_OK;
+		if (!cond.ret)
+		{
+			if (ppu_thread_id == u32{umax})
+			{
+				if (mode == 3)
+				{
+					return not_an_error(CELL_ENOENT);
+				}
+				else if (mode == 2)
+				{
+					return CELL_OK;
+				}
+			}
+
+			return not_an_error(CELL_EPERM);
+		}
+
+		return CELL_OK;
+	}
 }
 
 error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u32 mode)
@@ -290,80 +321,115 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 		fmt::throw_exception("Unknown mode (%d)", mode);
 	}
 
-	const auto cond = idm::check<lv2_obj, lv2_lwcond>(lwcond_id, [&, notify = lv2_obj::notify_all_t()](lv2_lwcond& cond) -> s32
+	while (true)
 	{
-		lv2_lwmutex* mutex{};
-
-		if (mode != 2)
+		if (ppu.test_stopped())
 		{
-			mutex = idm::check_unlocked<lv2_obj, lv2_lwmutex>(lwmutex_id);
-
-			if (!mutex)
-			{
-				return -1;
-			}
+			ppu.state += cpu_flag::again;
+			return {};
 		}
 
-		if (atomic_storage<ppu_thread*>::load(cond.sq))
+		bool finished = true;
+
+		ppu.state += cpu_flag::wait;
+
+		const auto cond = idm::check<lv2_obj, lv2_lwcond>(lwcond_id, [&, notify = lv2_obj::notify_all_t()](lv2_lwcond& cond) -> int
 		{
-			std::lock_guard lock(cond.mutex);
+			lv2_lwmutex* mutex{};
 
-			u32 result = 0;
-
-			for (auto cpu = +cond.sq; cpu; cpu = cpu->next_cpu)
+			if (mode != 2)
 			{
-				if (cpu->state & cpu_flag::again)
+				mutex = idm::check_unlocked<lv2_obj, lv2_lwmutex>(lwmutex_id);
+
+				if (!mutex)
 				{
-					ppu.state += cpu_flag::again;
+					return -1;
+				}
+			}
+
+			if (atomic_storage<ppu_thread*>::load(cond.sq))
+			{
+				std::lock_guard lock(cond.mutex);
+
+				if (ppu.state & cpu_flag::suspend)
+				{
+					// Test if another signal caused the current thread to be suspended, in which case it needs to wait until the thread wakes up (otherwise the signal may cause unexpected results)
+					finished = false;
+					return 0;
+				}
+
+				u32 result = 0;
+
+				for (auto cpu = +cond.sq; cpu; cpu = cpu->next_cpu)
+				{
+					if (cpu->state & cpu_flag::again)
+					{
+						ppu.state += cpu_flag::again;
+						return 0;
+					}
+				}
+
+				auto sq = cond.sq;
+				atomic_storage<ppu_thread*>::release(cond.sq, nullptr);
+
+				while (const auto cpu = cond.schedule<ppu_thread>(sq, cond.protocol))
+				{
+					if (mode == 2)
+					{
+						static_cast<ppu_thread*>(cpu)->gpr[3] = CELL_EBUSY;
+					}
+
+					if (mode == 1)
+					{
+						mutex->try_own(cpu, true);
+					}
+					else
+					{
+						lv2_obj::append(cpu);
+					}
+
+					result++;
+				}
+
+				if (result && mode == 2)
+				{
+					lv2_obj::awake_all();
+				}
+
+				return result;
+			}
+			else
+			{
+				cond.mutex.lock_unlock();
+
+				if (ppu.state & cpu_flag::suspend)
+				{
+					finished = false;
 					return 0;
 				}
 			}
 
-			auto sq = cond.sq;
-			atomic_storage<ppu_thread*>::release(cond.sq, nullptr);
+			return 0;
+		});
 
-			while (const auto cpu = cond.schedule<ppu_thread>(sq, cond.protocol))
-			{
-				if (mode == 2)
-				{
-					static_cast<ppu_thread*>(cpu)->gpr[3] = CELL_EBUSY;
-				}
-
-				if (mode == 1)
-				{
-					mutex->try_own(cpu, true);
-				}
-				else
-				{
-					lv2_obj::append(cpu);
-				}
-
-				result++;
-			}
-
-			if (result && mode == 2)
-			{
-				lv2_obj::awake_all();
-			}
-
-			return result;
+		if (!finished)
+		{
+			continue;
 		}
 
-		return 0;
-	});
+		if (!cond || cond.ret == -1)
+		{
+			return CELL_ESRCH;
+		}
 
-	if (!cond || cond.ret == -1)
-	{
-		return CELL_ESRCH;
+		if (mode == 1)
+		{
+			// Mode 1: return the amount of threads (TODO)
+			return not_an_error(cond.ret);
+		}
+
+		return CELL_OK;
 	}
-
-	if (mode == 1)
-	{
-		// Mode 1: return the amount of threads (TODO)
-		return not_an_error(cond.ret);
-	}
-
-	return CELL_OK;
 }
 
 error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u64 timeout)
