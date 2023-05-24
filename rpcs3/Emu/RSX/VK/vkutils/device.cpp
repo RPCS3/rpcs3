@@ -4,7 +4,7 @@
 #include "Emu/system_config.h"
 
 #ifdef __APPLE__
-#include <MoltenVK/vk_mvk_moltenvk.h>
+#include <MoltenVK/mvk_config.h>
 #endif
 
 namespace vk
