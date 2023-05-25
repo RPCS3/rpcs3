@@ -927,7 +927,7 @@ int dualsense_pad_handler::send_output_report(DualSenseDevice* device)
 
 	const cfg_pad* config = device->config;
 	if (config == nullptr)
-		return -2; // hid_write and hid_write_control return -1 on error
+		return -2; // hid_write returns -1 on error
 
 	output_report_common common{};
 
