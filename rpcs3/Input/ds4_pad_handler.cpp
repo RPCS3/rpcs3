@@ -585,7 +585,10 @@ void ds4_pad_handler::check_add_device(hid_device* hidDevice, std::string_view p
 	device->has_calib_data = true;
 	device->path           = path;
 
-	send_output_report(device);
+	if (send_output_report(device) == -1)
+	{
+		ds4_log.error("check_add_device: send_output_report failed! Reason: %s", hid_error(hidDevice));
+	}
 
 	ds4_log.notice("Added device: bluetooth=%d, serial='%s', hw_version: 0x%x, fw_version: 0x%x, path='%s'", device->bt_controller, serial, hw_version, fw_version, device->path);
 }
