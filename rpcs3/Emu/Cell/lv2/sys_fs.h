@@ -173,7 +173,7 @@ struct lv2_fs_mount_info
 		: mp(mp ? mp : &g_mp_sys_no_device)
 		, device(device.empty() ? this->mp->device : device)
 		, file_system(file_system.empty() ? this->mp->file_system : file_system)
-		, read_only((this->mp->flags & lv2_mp_flag::read_only) || read_only)
+		, read_only((this->mp->flags & lv2_mp_flag::read_only) || read_only) // respect the original flags of the mount point as well
 	{
 	}
 
@@ -181,15 +181,17 @@ struct lv2_fs_mount_info
 	{
 		return this == &rhs;
 	}
-	constexpr bool operator==(lv2_fs_mount_point* const& rhs) const noexcept
+	constexpr bool operator==(const lv2_fs_mount_point* const& rhs) const noexcept
 	{
 		return mp == rhs;
 	}
-	constexpr const lv2_fs_mount_point* operator->() const noexcept
+	constexpr lv2_fs_mount_point* operator->() const noexcept
 	{
 		return mp;
 	}
 };
+
+extern lv2_fs_mount_info g_mi_sys_not_found;
 
 struct CellFsMountInfo; // Forward Declaration
 
@@ -205,10 +207,15 @@ public:
 
 	// Forwarding arguments to map.try_emplace(): refer to the constructor of lv2_fs_mount_info
 	template <typename... Args>
-	bool add(Args&&... args);
+	bool add(Args&&... args)
+	{
+		return map.try_emplace(std::forward<Args>(args)...).second;
+	}
 	bool remove(std::string_view path);
-	const lv2_fs_mount_info& lookup(std::string_view path) const;
+	const lv2_fs_mount_info& lookup(std::string_view path, bool no_cell_fs_path = false) const;
 	u64 get_all(CellFsMountInfo* info = nullptr, u64 len = 0) const;
+
+	static bool vfs_unmount(std::string_view vpath);
 
 private:
 	struct string_hash
@@ -231,7 +238,6 @@ private:
 	};
 
 	std::unordered_map<std::string, lv2_fs_mount_info, string_hash, std::equal_to<>> map;
-	lv2_fs_mount_info mount_info_no_device;
 };
 
 struct lv2_fs_object
@@ -245,15 +251,11 @@ struct lv2_fs_object
 	// File Name (max 1055)
 	const std::array<char, 0x420> name;
 
-	// Mount Point
-	lv2_fs_mount_point* const mp = get_mp(name.data());
+	// Mount Info
+	const lv2_fs_mount_info& mp;
 
 protected:
-	lv2_fs_object(std::string_view filename)
-		: name(get_name(filename))
-	{
-	}
-
+	lv2_fs_object(std::string_view filename);
 	lv2_fs_object(utils::serial& ar, bool dummy);
 
 public:
@@ -261,9 +263,12 @@ public:
 
 	lv2_fs_object& operator=(const lv2_fs_object&) = delete;
 
-	static std::string_view get_device_root(std::string_view filename);
+	static std::string get_device_root(std::string_view filename);
+
+	// Filename can be either a path starting with '/' or a CELL_FS device name
+	// This should be used only when handling devices that are not mounted
+	// Otherwise, use g_fxo->get<lv2_fs_mount_info_map>().lookup() to look up mounted devices accurately
 	static lv2_fs_mount_point* get_mp(std::string_view filename, std::string* vfs_path = nullptr);
-	static bool vfs_unmount(std::string_view vpath);
 
 	static std::array<char, 0x420> get_name(std::string_view filename)
 	{
@@ -345,7 +350,7 @@ struct lv2_file final : lv2_fs_object
 	};
 
 	// Open a file with wrapped logic of sys_fs_open
-	static open_raw_result_t open_raw(const std::string& path, s32 flags, s32 mode, lv2_file_type type = lv2_file_type::regular, const lv2_fs_mount_point* mp = nullptr);
+	static open_raw_result_t open_raw(const std::string& path, s32 flags, s32 mode, lv2_file_type type = lv2_file_type::regular, const lv2_fs_mount_info& mp = g_mi_sys_not_found);
 	static open_result_t open(std::string_view vpath, s32 flags, s32 mode, const void* arg = {}, u64 size = 0);
 
 	// File reading with intermediate buffer

@@ -956,7 +956,7 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 
 			file.restore_data.seek_pos = file.file.pos();
 
-			if (!(file.mp->flags & (lv2_mp_flag::read_only + lv2_mp_flag::cache)) && file.flags & CELL_FS_O_ACCMODE)
+			if (!(file.mp.read_only && file.mp->flags & lv2_mp_flag::cache) && file.flags & CELL_FS_O_ACCMODE)
 			{
 				file.file.sync(); // For cellGameContentPermit atomicity
 			}

@@ -139,17 +139,18 @@ error_code cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
 	{
 	});
 
+	std::lock_guard lock0(g_mp_sys_dev_hdd1.mutex);
+
 	// Check if can reuse existing cache (won't if cache id is an empty string)
 	if (param->cacheId[0] && cache_id == cache.cache_id)
 	{
 		// Isn't mounted yet on first call to cellSysCacheMount
-		vfs::mount("/dev_hdd1", new_path);
+		if (vfs::mount("/dev_hdd1", new_path))
+			g_fxo->get<lv2_fs_mount_info_map>().add("/dev_hdd1", &g_mp_sys_dev_hdd1);
 
 		cellSysutil.success("Mounted existing cache at %s", new_path);
 		return not_an_error(CELL_SYSCACHE_RET_OK_RELAYED);
 	}
-
-	std::lock_guard lock0(g_mp_sys_dev_hdd1.mutex);
 
 	// Clear existing cache
 	if (!cache.cache_id.empty())
@@ -160,7 +161,8 @@ error_code cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
 	// Set new cache id
 	cache.cache_id = std::move(cache_id);
 	fs::create_dir(new_path);
-	vfs::mount("/dev_hdd1", new_path);
+	if (vfs::mount("/dev_hdd1", new_path))
+		g_fxo->get<lv2_fs_mount_info_map>().add("/dev_hdd1", &g_mp_sys_dev_hdd1);
 
 	return not_an_error(CELL_SYSCACHE_RET_OK_CLEARED);
 }
