@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Utilities/Config.h"
+#include "Utilities/mutex.h"
 #include "pad_types.h"
 
 #include <array>
@@ -31,10 +32,106 @@ private:
 template <typename T>
 struct emulated_pad_config : cfg::node
 {
+public:
 	using cfg::node::node;
 
+	pad_button get_pad_button(T id)
+	{
+		std::lock_guard lock(m_mutex);
+
+		if (cfg_pad_btn<T>* item = get_button(id))
+		{
+			return item->get();
+		}
+
+		return pad_button::pad_button_max_enum;
+	}
+
+	pad_button default_pad_button(T id)
+	{
+		std::lock_guard lock(m_mutex);
+
+		if (cfg_pad_btn<T>* item = get_button(id))
+		{
+			return item->get_default();
+		}
+
+		return pad_button::pad_button_max_enum;
+	}
+
+	void set_button(T id, pad_button btn_id)
+	{
+		std::lock_guard lock(m_mutex);
+
+		if (cfg_pad_btn<T>* item = get_button(id))
+		{
+			item->set(btn_id);
+		}
+	}
+
+	void init_buttons()
+	{
+		std::lock_guard lock(m_mutex);
+
+		for (const auto& n : get_nodes())
+		{
+			init_button(static_cast<cfg_pad_btn<T>*>(n));
+		}
+	}
+
+	void clear_buttons()
+	{
+		std::lock_guard lock(m_mutex);
+
+		buttons.clear();
+		button_map.clear();
+	}
+
+	void handle_input(std::shared_ptr<Pad> pad, bool press_only, const std::function<void(T, u16, bool)>& func) const
+	{
+		if (!pad)
+			return;
+
+		for (const Button& button : pad->m_buttons)
+		{
+			if (button.m_pressed || !press_only)
+			{
+				handle_input(func, button.m_offset, button.m_outKeyCode, button.m_value, button.m_pressed, true);
+			}
+		}
+
+		for (const AnalogStick& stick : pad->m_sticks)
+		{
+			handle_input(func, stick.m_offset, get_axis_keycode(stick.m_offset, stick.m_value), stick.m_value, true, true);
+		}
+	}
+
+protected:
+	mutable shared_mutex m_mutex;
 	std::vector<cfg_pad_btn<T>*> buttons;
 	std::map<u32, std::map<u32, std::set<const cfg_pad_btn<T>*>>> button_map;
+
+	cfg_pad_btn<T>* get_button(T id)
+	{
+		for (cfg_pad_btn<T>* item : buttons)
+		{
+			if (item && item->btn_id() == id)
+			{
+				return item;
+			}
+		}
+
+		return nullptr;
+	}
+
+	void init_button(cfg_pad_btn<T>* pbtn)
+	{
+		if (!pbtn) return;
+		const u32 offset = pad_button_offset(pbtn->get());
+		const u32 keycode = pad_button_keycode(pbtn->get());
+		button_map[offset][keycode].insert(std::as_const(pbtn));
+		buttons.push_back(pbtn);
+	}
 
 	const std::set<const cfg_pad_btn<T>*>& find_button(u32 offset, u32 keycode) const
 	{
@@ -50,69 +147,15 @@ struct emulated_pad_config : cfg::node
 		return empty_set;
 	}
 
-	cfg_pad_btn<T>* get_button(T id)
-	{
-		for (cfg_pad_btn<T>* item : buttons)
-		{
-			if (item && item->btn_id() == id)
-			{
-				return item;
-			}
-		}
-
-		return nullptr;
-	}
-
-	pad_button get_pad_button(T id)
-	{
-		if (cfg_pad_btn<T>* item = get_button(id))
-		{
-			return item->get();
-		}
-
-		return pad_button::pad_button_max_enum;
-	}
-
-	pad_button default_pad_button(T id)
-	{
-		if (cfg_pad_btn<T>* item = get_button(id))
-		{
-			return item->get_default();
-		}
-
-		return pad_button::pad_button_max_enum;
-	}
-
-	void set_button(T id, pad_button btn_id)
-	{
-		if (cfg_pad_btn<T>* item = get_button(id))
-		{
-			item->set(btn_id);
-		}
-	}
-
-	void init_button(cfg_pad_btn<T>* pbtn)
-	{
-		if (!pbtn) return;
-		const u32 offset = pad_button_offset(pbtn->get());
-		const u32 keycode = pad_button_keycode(pbtn->get());
-		button_map[offset][keycode].insert(std::as_const(pbtn));
-		buttons.push_back(pbtn);
-	}
-
-	void init_buttons()
-	{
-		for (const auto& n : get_nodes())
-		{
-			init_button(static_cast<cfg_pad_btn<T>*>(n));
-		}
-	}
-
 	void handle_input(const std::function<void(T, u16, bool)>& func, u32 offset, u32 keycode, u16 value, bool pressed, bool check_axis) const
 	{
+		m_mutex.lock();
+
 		const auto& btns = find_button(offset, keycode);
 		if (btns.empty())
 		{
+			m_mutex.unlock();
+
 			if (check_axis)
 			{
 				switch (offset)
@@ -137,25 +180,8 @@ struct emulated_pad_config : cfg::node
 				func(btn->btn_id(), value, pressed);
 			}
 		}
-	}
 
-	void handle_input(std::shared_ptr<Pad> pad, bool press_only, const std::function<void(T, u16, bool)>& func) const
-	{
-		if (!pad)
-			return;
-
-		for (const Button& button : pad->m_buttons)
-		{
-			if (button.m_pressed || !press_only)
-			{
-				handle_input(func, button.m_offset, button.m_outKeyCode, button.m_value, button.m_pressed, true);
-			}
-		}
-
-		for (const AnalogStick& stick : pad->m_sticks)
-		{
-			handle_input(func, stick.m_offset, get_axis_keycode(stick.m_offset, stick.m_value), stick.m_value, true, true);
-		}
+		m_mutex.unlock();
 	}
 };
 
@@ -170,57 +196,71 @@ struct emulated_pads_config : cfg::node
 		}
 	}
 
+	shared_mutex m_mutex;
 	std::string cfg_id;
 	std::array<std::shared_ptr<T>, Count> players;
 
 	bool load()
 	{
+		m_mutex.lock();
+
 		bool result = false;
 		const std::string cfg_name = fmt::format("%sconfig/%s.yml", fs::get_config_dir(), cfg_id);
 		cfg_log.notice("Loading %s config: %s", cfg_id, cfg_name);
-	
+
 		from_default();
-	
+
 		for (std::shared_ptr<T>& player : players)
 		{
-			player->buttons.clear();
+			player->clear_buttons();
 		}
-	
+
 		if (fs::file cfg_file{ cfg_name, fs::read })
 		{
 			if (std::string content = cfg_file.to_string(); !content.empty())
 			{
 				result = from_string(content);
 			}
+
+			for (std::shared_ptr<T>& player : players)
+			{
+				player->init_buttons();
+			}
+
+			m_mutex.unlock();
 		}
 		else
 		{
+			m_mutex.unlock();
 			save();
 		}
-	
-		for (std::shared_ptr<T>& player : players)
-		{
-			player->init_buttons();
-		}
-	
+
 		return result;
 	}
 
-	void save() const
+	void save()
 	{
+		std::lock_guard lock(m_mutex);
+
 		const std::string cfg_name = fmt::format("%sconfig/%s.yml", fs::get_config_dir(), cfg_id);
 		cfg_log.notice("Saving %s config to '%s'", cfg_id, cfg_name);
-	
+
 		if (!fs::create_path(fs::get_parent_dir(cfg_name)))
 		{
 			cfg_log.fatal("Failed to create path: %s (%s)", cfg_name, fs::g_tls_error);
 		}
-	
+
 		fs::pending_file cfg_file(cfg_name);
-	
+
 		if (!cfg_file.file || (cfg_file.file.write(to_string()), !cfg_file.commit()))
 		{
 			cfg_log.error("Failed to save %s config to '%s' (error=%s)", cfg_id, cfg_name, fs::g_tls_error);
+		}
+
+		for (std::shared_ptr<T>& player : players)
+		{
+			player->clear_buttons();
+			player->init_buttons();
 		}
 	}
 };

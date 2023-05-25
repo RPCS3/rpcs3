@@ -1841,7 +1841,6 @@ void main_window::OnEmuStop()
 	}
 	ui->actionManage_Users->setEnabled(true);
 	ui->confCamerasAct->setEnabled(true);
-	ui->menuEmulatedPads->setEnabled(true);
 
 	// Refresh game list in order to update time played
 	if (m_game_list_frame && m_is_list_mode)
@@ -1882,7 +1881,6 @@ void main_window::OnEmuReady() const
 
 	ui->actionManage_Users->setEnabled(false);
 	ui->confCamerasAct->setEnabled(false);
-	ui->menuEmulatedPads->setEnabled(false);
 }
 
 void main_window::EnableMenus(bool enabled) const
