@@ -157,7 +157,11 @@ namespace rsx
 				{
 					if (const std::function<page_navigation(pad_button)>& func = ::at32(m_callbacks, index))
 					{
-						Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_decide.wav");
+						// Play a sound unless this is a fast auto repeat which would induce a nasty noise
+						if (!is_auto_repeat || auto_repeat_interval_ms >= user_interface::m_auto_repeat_ms_interval_default)
+						{
+							Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_decide.wav");
+						}
 						return func(button_press);
 					}
 				}

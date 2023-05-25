@@ -15,6 +15,11 @@
 #include <Psapi.h>
 #include <process.h>
 #include <sysinfoapi.h>
+
+#include "util/dyn_lib.hpp"
+
+DYNAMIC_IMPORT_RENAME("Kernel32.dll", SetThreadDescriptionImport, "SetThreadDescription", HRESULT(HANDLE hThread, PCWSTR lpThreadDescription));
+
 #else
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
@@ -2074,6 +2079,13 @@ void thread_base::initialize(void (*error_cb)())
 
 void thread_base::set_name(std::string name)
 {
+#ifdef _WIN32
+	if (SetThreadDescriptionImport)
+	{
+		SetThreadDescriptionImport(GetCurrentThread(), utf8_to_wchar(name).c_str());
+	}
+#endif
+
 #ifdef _MSC_VER
 	struct THREADNAME_INFO
 	{
