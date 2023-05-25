@@ -3,6 +3,7 @@
 #include "StrFmt.h"
 #include "Crypto/sha1.h"
 
+#include <filesystem>
 #include <unordered_map>
 #include <algorithm>
 #include <cstring>
@@ -384,55 +385,26 @@ shared_ptr<fs::device_base> fs::set_virtual_device(const std::string& name, shar
 	return get_device_manager().set_device(name, std::move(device));
 }
 
-std::string fs::get_parent_dir(std::string_view path, u32 levels)
+std::string fs::get_parent_dir(std::string_view path, u32 parent_level)
 {
-	std::string_view result = path;
+	std::string normalized_path = std::filesystem::path(path).lexically_normal().string();
 
-	// Number of path components to remove
-	usz to_remove = levels;
+#ifdef _WIN32
+	std::replace(normalized_path.begin(), normalized_path.end(), '\\', '/');
+#endif
 
-	while (to_remove--)
+	if (normalized_path.back() == '/')
+		normalized_path.pop_back();
+
+	while (parent_level--)
 	{
-		// Trim contiguous delimiters at the end
-		if (usz sz = result.find_last_not_of(delim) + 1)
-		{
-			result = result.substr(0, sz);
-		}
+		if (const auto pos = normalized_path.find_last_of('/'); pos != umax)
+			normalized_path = normalized_path.substr(0, pos);
 		else
-		{
-			return "/";
-		}
-
-		const auto elem = result.substr(result.find_last_of(delim) + 1);
-
-		if (elem.empty() || elem.size() == result.size())
-		{
 			break;
-		}
-
-		if (elem == ".")
-		{
-			to_remove += 1;
-		}
-
-		if (elem == "..")
-		{
-			to_remove += 2;
-		}
-
-		result.remove_suffix(elem.size());
 	}
 
-	if (usz sz = result.find_last_not_of(delim) + 1)
-	{
-		result = result.substr(0, sz);
-	}
-	else
-	{
-		return "/";
-	}
-
-	return std::string{result};
+	return normalized_path.empty() ? "/" : normalized_path;
 }
 
 bool fs::stat(const std::string& path, stat_t& info)

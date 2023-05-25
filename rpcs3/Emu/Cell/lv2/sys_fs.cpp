@@ -24,13 +24,14 @@ lv2_fs_mount_point g_mp_sys_dev_dvd{"/dev_ps2disc", "CELL_FS_ISO9660", "CELL_FS_
 lv2_fs_mount_point g_mp_sys_dev_bdvd{"/dev_bdvd", "CELL_FS_ISO9660", "CELL_FS_IOS:PATA0_BDVD_DRIVE", 2048, 0x4D955, 65536, lv2_mp_flag::read_only + lv2_mp_flag::no_uid_gid, &g_mp_sys_dev_dvd};
 lv2_fs_mount_point g_mp_sys_dev_hdd1{"/dev_hdd1", "CELL_FS_FAT", "CELL_FS_UTILITY:HDD1", 512, 0x3FFFF8, 32768, lv2_mp_flag::no_uid_gid + lv2_mp_flag::cache, &g_mp_sys_dev_bdvd};
 lv2_fs_mount_point g_mp_sys_dev_hdd0{"/dev_hdd0", "CELL_FS_UFS", "CELL_FS_UTILITY:HDD0", 512, 0x24FAEA98, 4096, {}, &g_mp_sys_dev_hdd1};
-lv2_fs_mount_point g_mp_sys_dev_flash3{"/dev_flash3", "CELL_FS_FAT", "CELL_FS_IOS:BUILTIN_FLSH3", 512, 0x400, 8192, lv2_mp_flag::read_only + lv2_mp_flag::no_uid_gid, &g_mp_sys_dev_hdd0}; // TODO confirm
+lv2_fs_mount_point g_mp_sys_dev_flash3{"/dev_flash3", "CELL_FS_FAT", "CELL_FS_IOS:BUILTIN_FLSH3", 512, 0x400, 8192, lv2_mp_flag::no_uid_gid, &g_mp_sys_dev_hdd0}; // TODO confirm
 lv2_fs_mount_point g_mp_sys_dev_flash2{"/dev_flash2", "CELL_FS_FAT", "CELL_FS_IOS:BUILTIN_FLSH2", 512, 0x8000, 8192, lv2_mp_flag::no_uid_gid, &g_mp_sys_dev_flash3}; // TODO confirm
-lv2_fs_mount_point g_mp_sys_dev_flash{"/dev_flash", "CELL_FS_FAT", "CELL_FS_IOS:BUILTIN_FLSH1", 512, 0x63E00, 8192, lv2_mp_flag::read_only + lv2_mp_flag::no_uid_gid, &g_mp_sys_dev_flash2};
+lv2_fs_mount_point g_mp_sys_dev_flash{"/dev_flash", "CELL_FS_FAT", "CELL_FS_IOS:BUILTIN_FLSH1", 512, 0x63E00, 8192, lv2_mp_flag::no_uid_gid, &g_mp_sys_dev_flash2};
 lv2_fs_mount_point g_mp_sys_host_root{"/host_root", "CELL_FS_DUMMYFS", "CELL_FS_DUMMY:/", 512, 0x100, 512, lv2_mp_flag::strict_get_block_size + lv2_mp_flag::no_uid_gid, &g_mp_sys_dev_flash};
 lv2_fs_mount_point g_mp_sys_app_home{"/app_home", "CELL_FS_DUMMYFS", "CELL_FS_DUMMY:", 512, 0x100, 512, lv2_mp_flag::strict_get_block_size + lv2_mp_flag::no_uid_gid, &g_mp_sys_host_root};
 lv2_fs_mount_point g_mp_sys_dev_root{"/", "CELL_FS_ADMINFS", "CELL_FS_ADMINFS:", 512, 0x100, 512, lv2_mp_flag::read_only + lv2_mp_flag::strict_get_block_size + lv2_mp_flag::no_uid_gid, &g_mp_sys_app_home};
 lv2_fs_mount_point g_mp_sys_no_device{};
+lv2_fs_mount_info  g_mi_sys_not_found{}; // wrapper for &g_mp_sys_no_device
 
 template<>
 void fmt_class_string<lv2_file_type>::format(std::string& out, u64 arg)
@@ -131,13 +132,13 @@ lv2_fs_mount_info_map::lv2_fs_mount_info_map()
 			{
 				if (!vfs::get(fmt::format("%s%03d", mp->root, i)).empty())
 				{
-					add(fmt::format("%s%03d", mp->root, i), mp, fmt::format("%s%03d", mp->device, i));
+					add(fmt::format("%s%03d", mp->root, i), mp, fmt::format("%s%03d", mp->device, i), mp->file_system, false);
 				}
 			}
 		}
 		else if (mp == &g_mp_sys_dev_root || !vfs::get(mp->root).empty())
 		{
-			add(std::string(mp->root), mp);
+			add(std::string(mp->root), mp, mp->device, mp->file_system, mp == &g_mp_sys_dev_flash); // /dev_flash is mounted in read only mode initially
 		}
 	}
 }
@@ -145,14 +146,7 @@ lv2_fs_mount_info_map::lv2_fs_mount_info_map()
 lv2_fs_mount_info_map::~lv2_fs_mount_info_map()
 {
 	for (const auto& [path, info] : map)
-		lv2_fs_object::vfs_unmount(path);
-	map.clear();
-}
-
-template <typename... Args>
-bool lv2_fs_mount_info_map::add(Args&&... args)
-{
-	return map.try_emplace(std::forward<Args>(args)...).second;
+		vfs_unmount(path);
 }
 
 bool lv2_fs_mount_info_map::remove(std::string_view path)
@@ -165,11 +159,29 @@ bool lv2_fs_mount_info_map::remove(std::string_view path)
 	return false;
 }
 
-const lv2_fs_mount_info& lv2_fs_mount_info_map::lookup(std::string_view path) const
+const lv2_fs_mount_info& lv2_fs_mount_info_map::lookup(std::string_view path, bool no_cell_fs_path) const
 {
-	if (const auto iterator = map.find(path); iterator != map.end())
-		return iterator->second;
-	return mount_info_no_device;
+	if (path.starts_with("/"sv))
+	{
+		constexpr std::string_view cell_fs_path = "CELL_FS_PATH:"sv;
+		std::string path_dir;
+		u32 parent_level = 0;
+
+		do
+		{
+			path_dir = fs::get_parent_dir(path, parent_level++);
+			if (const auto iterator = map.find(path_dir); iterator != map.end())
+			{
+				if (iterator->second == &g_mp_sys_dev_root && parent_level > 1)
+					break;
+				if (no_cell_fs_path && iterator->second.device.starts_with(cell_fs_path))
+					return lookup(iterator->second.device.substr(cell_fs_path.size()), no_cell_fs_path); // Recursively look up the parent mount info
+				return iterator->second;
+			}
+		} while (path_dir.length() > 1); // Exit the loop when path_dir == "/" or empty
+	}
+
+	return g_mi_sys_not_found;
 }
 
 u64 lv2_fs_mount_info_map::get_all(CellFsMountInfo* info, u64 len) const
@@ -209,60 +221,51 @@ u64 lv2_fs_mount_info_map::get_all(CellFsMountInfo* info, u64 len) const
 	return count;
 }
 
-std::string_view lv2_fs_object::get_device_root(std::string_view filename)
+bool lv2_fs_mount_info_map::vfs_unmount(std::string_view vpath)
 {
-	std::string_view mp_name, vpath = filename;
+	const std::string local_path = vfs::get(vpath);
 
-	for (usz depth = 0;;)
+	if (local_path.empty())
+		return false;
+
+	if (fs::is_file(local_path))
 	{
-		// Skip one or more '/'
-		const auto pos = vpath.find_first_not_of('/');
-
-		if (pos == 0)
+		if (fs::remove_file(local_path))
 		{
-			// No need to process it, return it as-is
-			return vpath;
+			sys_fs.notice("Removed simplefs file \"%s\"", local_path);
 		}
-
-		if (pos == umax)
+		else
 		{
-			break;
-		}
-
-		// Get fragment name
-		const auto name = vpath.substr(pos, vpath.find_first_of('/', pos) - pos);
-		vpath.remove_prefix(name.size() + pos);
-
-		// Process special directories
-		if (name == "."sv)
-		{
-			// Keep current
-			continue;
-		}
-
-		if (name == ".."sv)
-		{
-			// Root parent is root
-			if (depth == 0)
-			{
-				continue;
-			}
-
-			depth--;
-			continue;
-		}
-
-		if (depth++ == 0)
-		{
-			// Save mountpoint name
-			mp_name = name;
+			sys_fs.error("Failed to remove simplefs file \"%s\"", local_path);
 		}
 	}
 
-	return mp_name;
+	const auto result = vfs::unmount(vpath);
+
+	if (result)
+		g_fxo->get<lv2_fs_mount_info_map>().remove(vpath);
+
+	return result;
 }
 
-// Filename can be either a path starting with '/' or a CELL_FS device name
+std::string lv2_fs_object::get_device_root(std::string_view filename)
+{
+	if (filename.starts_with("/"sv))
+	{
+		std::string path_dir;
+		u32 parent_level = 0;
+
+		do
+		{
+			path_dir = fs::get_parent_dir(filename, parent_level++);
+			if (path_dir.find_last_of("/") == 0)
+				return path_dir;
+		} while (path_dir.length() > 1); // Exit the loop when path_dir == "/" or empty
+	}
+
+	return std::string(filename);
+}
+
 lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename, std::string* vfs_path)
 {
 	constexpr std::string_view cell_fs_path = "CELL_FS_PATH:"sv;
@@ -272,7 +275,7 @@ lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename, std::string
 		filename.remove_prefix(cell_fs_path.size());
 
 	const bool is_path = filename.starts_with('/');
-	std::string mp_name = std::string(get_device_root(filename));
+	std::string mp_name = get_device_root(filename);
 
 	const auto check_mp = [&]()
 	{
@@ -343,30 +346,15 @@ lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename, std::string
 	return result;
 }
 
-bool lv2_fs_object::vfs_unmount(std::string_view vpath)
+lv2_fs_object::lv2_fs_object(std::string_view filename)
+	: name(get_name(filename))
+	, mp(g_fxo->get<lv2_fs_mount_info_map>().lookup(name.data()))
 {
-	const std::string local_path = vfs::get(vpath);
-
-	if (local_path.empty())
-		return false;
-
-	if (fs::is_file(local_path))
-	{
-		if (fs::remove_file(local_path))
-		{
-			sys_fs.notice("Removed simplefs file \"%s\"", local_path);
-		}
-		else
-		{
-			sys_fs.error("Failed to remove simplefs file \"%s\"", local_path);
-		}
-	}
-
-	return vfs::unmount(vpath);
 }
 
 lv2_fs_object::lv2_fs_object(utils::serial& ar, bool)
 	: name(ar)
+	, mp(g_fxo->get<lv2_fs_mount_info_map>().lookup(name.data()))
 {
 }
 
@@ -470,7 +458,7 @@ void lv2_file::save(utils::serial& ar)
 	USING_SERIALIZATION_VERSION(lv2_fs);
 	ar(name, mode, flags, type, lock, ensure(vfs::retrieve(real_path), FN(!x.empty())));
 
-	if (!(mp->flags & lv2_mp_flag::read_only) && flags & CELL_FS_O_ACCMODE)
+	if (!mp.read_only && flags & CELL_FS_O_ACCMODE)
 	{
 		// Ensure accurate timestamps and content on disk
 		file.sync();
@@ -480,7 +468,7 @@ void lv2_file::save(utils::serial& ar)
 	// descriptors shall keep the data in memory in this case
 	const bool in_mem = [&]()
 	{
-		if (mp->flags & lv2_mp_flag::read_only)
+		if (mp.read_only)
 		{
 			return false;
 		}
@@ -719,7 +707,7 @@ error_code sys_fs_test(ppu_thread&, u32 arg1, u32 arg2, vm::ptr<u32> arg3, u32 a
 	return CELL_OK;
 }
 
-lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s32 flags, s32 /*mode*/, lv2_file_type type, const lv2_fs_mount_point* mp)
+lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s32 flags, s32 /*mode*/, lv2_file_type type, const lv2_fs_mount_info& mp)
 {
 	// TODO: other checks for path
 
@@ -738,7 +726,7 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 	default: break;
 	}
 
-	if (mp->flags & lv2_mp_flag::read_only)
+	if (mp.read_only)
 	{
 		if ((flags & CELL_FS_O_ACCMODE) != CELL_FS_O_RDONLY && fs::is_file(local_path))
 		{
@@ -776,7 +764,7 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 		sys_fs.warning("lv2_file::open() called with CELL_FS_O_UNK flag enabled. FLAGS: %#o", flags);
 	}
 
-	if (mp->flags & lv2_mp_flag::read_only)
+	if (mp.read_only)
 	{
 		// Deactivate mutating flags on read-only FS
 		open_mode = fs::read;
@@ -828,7 +816,7 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 
 	if (!file)
 	{
-		if (mp->flags & lv2_mp_flag::read_only)
+		if (mp.read_only)
 		{
 			// Failed to create file on read-only FS (file doesn't exist)
 			if (flags & CELL_FS_O_ACCMODE && flags & CELL_FS_O_CREAT)
@@ -937,7 +925,7 @@ lv2_file::open_result_t lv2_file::open(std::string_view vpath, s32 flags, s32 mo
 	std::string path;
 	std::string local_path = vfs::get(vpath, nullptr, &path);
 
-	const auto mp = lv2_fs_object::get_mp(vpath);
+	const auto& mp = g_fxo->get<lv2_fs_mount_info_map>().lookup(vpath);
 
 	if (mp == &g_mp_sys_dev_root)
 	{
@@ -991,7 +979,7 @@ error_code sys_fs_open(ppu_thread& ppu, vm::cptr<char> path, s32 flags, vm::ptr<
 			return not_an_error(CELL_EEXIST);
 		}
 
-		return {lv2_fs_object::get_mp(vpath) == &g_mp_sys_dev_hdd1 ? sys_fs.warning : sys_fs.error, error, path};
+		return {g_fxo->get<lv2_fs_mount_info_map>().lookup(vpath) == &g_mp_sys_dev_hdd1 ? sys_fs.warning : sys_fs.error, error, path};
 	}
 
 	if (const u32 id = idm::import<lv2_fs_object, lv2_file>([&ppath = ppath, &file = file, mode, flags, &real = real, &type = type]() -> std::shared_ptr<lv2_file>
@@ -1131,7 +1119,7 @@ error_code sys_fs_write(ppu_thread& ppu, u32 fd, vm::cptr<void> buf, u64 nbytes,
 		sys_fs.error("%s type: Writing %u bytes to FD=%d (path=%s)", file->type, nbytes, file->name.data());
 	}
 
-	if (file->mp->flags & lv2_mp_flag::read_only)
+	if (file->mp.read_only)
 	{
 		nwrite.try_write(0);
 		return CELL_EROFS;
@@ -1197,7 +1185,7 @@ error_code sys_fs_close(ppu_thread& ppu, u32 fd)
 			return {CELL_EBADF, fd};
 		}
 
-		if (!(file->mp->flags & (lv2_mp_flag::read_only + lv2_mp_flag::cache)) && file->flags & CELL_FS_O_ACCMODE)
+		if (!(file->mp.read_only && file->mp->flags & lv2_mp_flag::cache) && file->flags & CELL_FS_O_ACCMODE)
 		{
 			// Special: Ensure temporary directory for gamedata writes will remain on disk before final gamedata commitment
 			file->file.sync(); // For cellGameContentPermit atomicity
@@ -1266,7 +1254,7 @@ error_code sys_fs_opendir(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u32> fd)
 
 	processed_path += "/";
 
-	const auto mp = lv2_fs_object::get_mp(vpath);
+	const auto& mp = g_fxo->get<lv2_fs_mount_info_map>().lookup(vpath);
 
 	if (local_path.empty() && ext.empty())
 	{
@@ -1454,7 +1442,7 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 
 	const std::string local_path = vfs::get(vpath);
 
-	const auto mp = lv2_fs_object::get_mp(vpath);
+	const auto& mp = g_fxo->get<lv2_fs_mount_info_map>().lookup(vpath);
 
 	if (mp == &g_mp_sys_dev_root)
 	{
@@ -1522,7 +1510,7 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 
 	s32 mode = info.is_directory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
 
-	if (mp->flags & lv2_mp_flag::read_only)
+	if (mp.read_only)
 	{
 		// Remove write permissions
 		mode &= ~0222;
@@ -1572,7 +1560,7 @@ error_code sys_fs_fstat(ppu_thread& ppu, u32 fd, vm::ptr<CellFsStat> sb)
 
 	s32 mode = info.is_directory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
 
-	if (file->mp->flags & lv2_mp_flag::read_only)
+	if (file->mp.read_only)
 	{
 		// Remove write permissions
 		mode &= ~0222;
@@ -1612,7 +1600,7 @@ error_code sys_fs_mkdir(ppu_thread& ppu, vm::cptr<char> path, s32 mode)
 
 	const std::string local_path = vfs::get(vpath);
 
-	const auto mp = lv2_fs_object::get_mp(vpath);
+	const auto& mp = g_fxo->get<lv2_fs_mount_info_map>().lookup(vpath);
 
 	if (mp == &g_mp_sys_dev_root)
 	{
@@ -1624,7 +1612,7 @@ error_code sys_fs_mkdir(ppu_thread& ppu, vm::cptr<char> path, s32 mode)
 		return {CELL_ENOTMOUNTED, path};
 	}
 
-	if (mp->flags & lv2_mp_flag::read_only)
+	if (mp.read_only)
 	{
 		return {CELL_EROFS, path};
 	}
@@ -1677,8 +1665,8 @@ error_code sys_fs_rename(ppu_thread& ppu, vm::cptr<char> from, vm::cptr<char> to
 	const std::string local_from = vfs::get(vfrom);
 	const std::string local_to = vfs::get(vto);
 
-	const auto mp = lv2_fs_object::get_mp(vfrom);
-	const auto mp_to = lv2_fs_object::get_mp(vto);
+	const auto& mp = g_fxo->get<lv2_fs_mount_info_map>().lookup(vfrom);
+	const auto& mp_to = g_fxo->get<lv2_fs_mount_info_map>().lookup(vto);
 
 	if (mp == &g_mp_sys_dev_root || mp_to == &g_mp_sys_dev_root)
 	{
@@ -1695,7 +1683,7 @@ error_code sys_fs_rename(ppu_thread& ppu, vm::cptr<char> from, vm::cptr<char> to
 		return CELL_EXDEV;
 	}
 
-	if (mp->flags & lv2_mp_flag::read_only)
+	if (mp.read_only)
 	{
 		return CELL_EROFS;
 	}
@@ -1703,7 +1691,7 @@ error_code sys_fs_rename(ppu_thread& ppu, vm::cptr<char> from, vm::cptr<char> to
 	// Done in vfs::host::rename
 	//std::lock_guard lock(mp->mutex);
 
-	if (!vfs::host::rename(local_from, local_to, mp, false))
+	if (!vfs::host::rename(local_from, local_to, mp.mp, false))
 	{
 		switch (auto error = fs::g_tls_error)
 		{
@@ -1735,7 +1723,7 @@ error_code sys_fs_rmdir(ppu_thread& ppu, vm::cptr<char> path)
 
 	const std::string local_path = vfs::get(vpath);
 
-	const auto mp = lv2_fs_object::get_mp(vpath);
+	const auto& mp = g_fxo->get<lv2_fs_mount_info_map>().lookup(vpath);
 
 	if (mp == &g_mp_sys_dev_root)
 	{
@@ -1747,7 +1735,7 @@ error_code sys_fs_rmdir(ppu_thread& ppu, vm::cptr<char> path)
 		return {CELL_ENOTMOUNTED, path};
 	}
 
-	if (mp->flags & lv2_mp_flag::read_only)
+	if (mp.read_only)
 	{
 		return {CELL_EROFS, path};
 	}
@@ -1786,7 +1774,7 @@ error_code sys_fs_unlink(ppu_thread& ppu, vm::cptr<char> path)
 
 	const std::string local_path = vfs::get(vpath);
 
-	const auto mp = lv2_fs_object::get_mp(vpath);
+	const auto& mp = g_fxo->get<lv2_fs_mount_info_map>().lookup(vpath);
 
 	if (mp == &g_mp_sys_dev_root)
 	{
@@ -1803,7 +1791,7 @@ error_code sys_fs_unlink(ppu_thread& ppu, vm::cptr<char> path)
 		return {CELL_EISDIR, path};
 	}
 
-	if (mp->flags & lv2_mp_flag::read_only)
+	if (mp.read_only)
 	{
 		return {CELL_EROFS, path};
 	}
@@ -1905,7 +1893,7 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 			return CELL_EBADF;
 		}
 
-		if (op == 0x8000000b && file->mp->flags & lv2_mp_flag::read_only)
+		if (op == 0x8000000b && file->mp.read_only)
 		{
 			return CELL_EROFS;
 		}
@@ -2006,7 +1994,7 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 
 		const auto arg = vm::static_ptr_cast<lv2_file_c0000002>(_arg);
 
-		const auto mp = lv2_fs_object::get_mp("/dev_hdd0");
+		const auto& mp = g_fxo->get<lv2_fs_mount_info_map>().lookup("/dev_hdd0");
 
 		arg->out_block_size = mp->block_size;
 		arg->out_block_count = (40ull * 1024 * 1024 * 1024 - 1) / mp->block_size; // Read explanation in cellHddGameCheck
@@ -2192,17 +2180,15 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 			return {CELL_ENOTMOUNTED, vpath};
 		}
 
-		const auto& mi = g_fxo->get<lv2_fs_mount_info_map>().lookup(vpath);
-		const auto num_pos = mi.device.find_first_of("0123456789");
+		const auto& mp = g_fxo->get<lv2_fs_mount_info_map>().lookup(vpath, true);
 
-		if (mi != &g_mp_sys_dev_usb || num_pos == umax)
+		if (mp != &g_mp_sys_dev_usb)
 		{
 			arg->out_code = CELL_ENOTSUP;
 			return {CELL_ENOTSUP, vpath};
 		}
 
-		const std::string device_path = fmt::format("%s%s", mi->root, mi.device.substr(num_pos));
-		const cfg::device_info device = g_cfg_vfs.get_device(g_cfg_vfs.dev_usb, device_path);
+		const cfg::device_info device = g_cfg_vfs.get_device(g_cfg_vfs.dev_usb, fmt::format("%s%s", mp->root, mp.device.substr(mp->device.size())));
 		std::tie(arg->vendorID, arg->productID) = device.get_usb_ids();
 
 		if (with_serial)
@@ -2214,7 +2200,7 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 
 		arg->out_code = CELL_OK;
 
-		sys_fs.trace("sys_fs_fcntl(0x%08x): found device \"%s\" (vid=0x%x, pid=0x%x, serial=\"%s\")", op, device_path, arg->vendorID, arg->productID, device.serial);
+		sys_fs.trace("sys_fs_fcntl(0x%08x): found device \"%s\" (vid=0x%04x, pid=0x%04x, serial=\"%s\")", op, mp.device, arg->vendorID, arg->productID, device.serial);
 		return CELL_OK;
 	}
 
@@ -2352,7 +2338,7 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 
 				s32 mode = info->is_directory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
 
-				if (directory->mp->flags & lv2_mp_flag::read_only)
+				if (directory->mp.read_only)
 				{
 					// Remove write permissions
 					mode &= ~0222;
@@ -2638,7 +2624,7 @@ error_code sys_fs_get_block_size(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u
 		return {CELL_ENOTMOUNTED, path};
 	}
 
-	const auto mp = lv2_fs_object::get_mp(vpath);
+	const auto& mp = g_fxo->get<lv2_fs_mount_info_map>().lookup(vpath);
 
 	// It appears that /dev_hdd0 mount point is special in this function
 	if (mp != &g_mp_sys_dev_hdd0 && (mp->flags & lv2_mp_flag::strict_get_block_size ? !fs::is_file(local_path) : !fs::exists(local_path)))
@@ -2679,7 +2665,7 @@ error_code sys_fs_truncate(ppu_thread& ppu, vm::cptr<char> path, u64 size)
 
 	const std::string local_path = vfs::get(vpath);
 
-	const auto mp = lv2_fs_object::get_mp(vpath);
+	const auto& mp = g_fxo->get<lv2_fs_mount_info_map>().lookup(vpath);
 
 	if (mp == &g_mp_sys_dev_root)
 	{
@@ -2691,7 +2677,7 @@ error_code sys_fs_truncate(ppu_thread& ppu, vm::cptr<char> path, u64 size)
 		return {CELL_ENOTMOUNTED, path};
 	}
 
-	if (mp->flags & lv2_mp_flag::read_only)
+	if (mp.read_only)
 	{
 		return {CELL_EROFS, path};
 	}
@@ -2729,7 +2715,7 @@ error_code sys_fs_ftruncate(ppu_thread& ppu, u32 fd, u64 size)
 		return CELL_EBADF;
 	}
 
-	if (file->mp->flags & lv2_mp_flag::read_only)
+	if (file->mp.read_only)
 	{
 		return CELL_EROFS;
 	}
@@ -2825,7 +2811,7 @@ error_code sys_fs_disk_free(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u64> t
 		return {CELL_EINVAL, path};
 	}
 
-	const auto mp = lv2_fs_object::get_mp(vpath);
+	const auto& mp = g_fxo->get<lv2_fs_mount_info_map>().lookup(vpath);
 
 	if (mp->flags & lv2_mp_flag::strict_get_block_size)
 	{
@@ -2833,7 +2819,7 @@ error_code sys_fs_disk_free(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u64> t
 		return {CELL_ENOTSUP, path};
 	}
 
-	if (mp->flags & lv2_mp_flag::read_only)
+	if (mp.read_only)
 	{
 		// TODO: check /dev_bdvd
 		ppu.check_state();
@@ -2882,7 +2868,7 @@ error_code sys_fs_utime(ppu_thread& ppu, vm::cptr<char> path, vm::cptr<CellFsUti
 
 	const std::string local_path = vfs::get(vpath);
 
-	const auto mp = lv2_fs_object::get_mp(vpath);
+	const auto& mp = g_fxo->get<lv2_fs_mount_info_map>().lookup(vpath);
 
 	if (mp == &g_mp_sys_dev_root)
 	{
@@ -2894,7 +2880,7 @@ error_code sys_fs_utime(ppu_thread& ppu, vm::cptr<char> path, vm::cptr<CellFsUti
 		return {CELL_ENOTMOUNTED, path};
 	}
 
-	if (mp->flags & lv2_mp_flag::read_only)
+	if (mp.read_only)
 	{
 		return {CELL_EROFS, path};
 	}
@@ -3070,14 +3056,18 @@ error_code sys_fs_newfs(ppu_thread& ppu, vm::cptr<char> dev_name, vm::cptr<char>
 
 	std::string vfs_path;
 	const auto mp = lv2_fs_object::get_mp(device_name, &vfs_path);
+	std::unique_lock lock(mp->mutex, std::defer_lock);
 
 	if (!g_ps3_process_info.has_root_perm() && mp != &g_mp_sys_dev_usb)
-		return CELL_EPERM;
+		return {CELL_EPERM, device_name};
 
 	if (mp == &g_mp_sys_no_device)
 		return {CELL_ENXIO, device_name};
 
-	if (mp == &g_mp_sys_dev_root || vfs_path.empty())
+	if (mp == &g_mp_sys_dev_root || !lock.try_lock())
+		return {CELL_EBUSY, device_name};
+
+	if (vfs_path.empty())
 		return {CELL_ENOTSUP, device_name};
 
 	if (mp->flags & lv2_mp_flag::read_only)
@@ -3103,7 +3093,7 @@ error_code sys_fs_mount(ppu_thread& ppu, vm::cptr<char> dev_name, vm::cptr<char>
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_fs.trace("sys_fs_mount(dev_name=%s, file_system=%s, path=%s, unk1=0x%x, prot=0x%x, unk3=0x%x, str1=%s, str_len=%d)", dev_name, file_system, path, unk1, prot, unk3, str1, str_len);
+	sys_fs.trace("sys_fs_mount(dev_name=%s, file_system=%s, path=%s, unk1=0x%x, prot=%d, unk3=0x%x, str1=%s, str_len=%d)", dev_name, file_system, path, unk1, prot, unk3, str1, str_len);
 
 	const auto [dev_error, device_name] = translate_to_sv(dev_name, false);
 
@@ -3119,34 +3109,35 @@ error_code sys_fs_mount(ppu_thread& ppu, vm::cptr<char> dev_name, vm::cptr<char>
 		return {fs_error, filesystem};
 	}
 
-	const auto [path_error, vpath] = translate_to_sv(path);
+	const auto [path_error, path_sv] = translate_to_sv(path);
 
 	if (path_error)
 	{
-		return {path_error, vpath};
+		return {path_error, path_sv};
 	}
 
-	if (!vpath.starts_with('/'))
-		return {CELL_EINVAL, vpath};
+	const std::string vpath = fs::get_parent_dir(path_sv, 0); // Just normalize the path
 
 	std::string vfs_path;
-	const auto mp_src = lv2_fs_object::get_mp(device_name, &vfs_path);
-	const auto mp_dst = lv2_fs_object::get_mp(vpath);
-	const bool is_simplefs = filesystem == "CELL_FS_SIMPLEFS"sv;
+	const auto mp = lv2_fs_object::get_mp(device_name, &vfs_path);
+	std::unique_lock lock(mp->mutex, std::defer_lock);
 
-	if (!g_ps3_process_info.has_root_perm() && (mp_src != &g_mp_sys_dev_usb || mp_dst != &g_mp_sys_dev_usb))
-		return CELL_EPERM;
+	if (!g_ps3_process_info.has_root_perm() && mp != &g_mp_sys_dev_usb)
+		return {CELL_EPERM, device_name};
 
-	if (mp_src == &g_mp_sys_no_device)
+	if (mp == &g_mp_sys_no_device)
 		return {CELL_ENXIO, device_name};
 
-	if (mp_src == &g_mp_sys_dev_root || vfs_path.empty())
+	if (mp == &g_mp_sys_dev_root || !lock.try_lock())
+		return {CELL_EBUSY, device_name};
+
+	if (vfs_path.empty())
 		return {CELL_ENOTSUP, device_name};
 
-	if (mp_dst == &g_mp_sys_dev_root || !vfs::get(vpath).empty())
+	if (vpath.find_first_not_of('/') == umax || !vfs::get(vpath).empty())
 		return {CELL_EEXIST, vpath};
 
-	if (mp_src == &g_mp_sys_dev_hdd1)
+	if (mp == &g_mp_sys_dev_hdd1)
 	{
 		const std::string_view appname = g_ps3_process_info.get_cellos_appname();
 		vfs_path = fmt::format("%s/caches/%s", vfs_path, appname.substr(0, appname.find_last_of('.')));
@@ -3161,12 +3152,14 @@ error_code sys_fs_mount(ppu_thread& ppu, vm::cptr<char> dev_name, vm::cptr<char>
 		return {CELL_EIO, vfs_path};
 	}
 
+	const bool is_simplefs = filesystem == "CELL_FS_SIMPLEFS"sv;
+
 	if (is_simplefs)
 	{
 		vfs_path += "simplefs.tmp";
 		if (fs::file simplefs_file; simplefs_file.open(vfs_path, fs::create + fs::read + fs::write + fs::trunc + fs::lock))
 		{
-			const u64 file_size = mp_src->sector_size; // One sector's size is enough for VSH's simplefs check
+			const u64 file_size = mp->sector_size; // One sector's size is enough for VSH's simplefs check
 			simplefs_file.trunc(file_size);
 			sys_fs.notice("Created a simplefs file at \"%s\"", vfs_path);
 		}
@@ -3194,7 +3187,7 @@ error_code sys_fs_mount(ppu_thread& ppu, vm::cptr<char> dev_name, vm::cptr<char>
 		return CELL_EIO;
 	}
 
-	g_fxo->get<lv2_fs_mount_info_map>().add(std::string(vpath), mp_src, device_name, filesystem, prot);
+	g_fxo->get<lv2_fs_mount_info_map>().add(vpath, mp, device_name, filesystem, prot);
 
 	return CELL_OK;
 }
@@ -3212,21 +3205,20 @@ error_code sys_fs_unmount(ppu_thread& ppu, vm::cptr<char> path, s32 unk1, s32 un
 		return {path_error, vpath};
 	}
 
-	if (!vpath.starts_with('/'))
-		return {CELL_EINVAL, vpath};
-
-	const auto mp = lv2_fs_object::get_mp(vpath);
+	const auto& mp = g_fxo->get<lv2_fs_mount_info_map>().lookup(vpath);
+	std::unique_lock lock(mp->mutex, std::defer_lock);
 
 	if (!g_ps3_process_info.has_root_perm() && mp != &g_mp_sys_dev_usb)
-		return CELL_EPERM;
+		return {CELL_EPERM, vpath};
 
-	if (mp == &g_mp_sys_dev_root)
-		return {CELL_ENOTSUP, vpath};
-
-	if (!lv2_fs_object::vfs_unmount(vpath))
+	if (mp == &g_mp_sys_no_device)
 		return {CELL_ENOTMOUNTED, vpath};
 
-	g_fxo->get<lv2_fs_mount_info_map>().remove(vpath);
+	if (mp == &g_mp_sys_dev_root || !lock.try_lock())
+		return {CELL_EBUSY, vpath};
+
+	if (!lv2_fs_mount_info_map::vfs_unmount(vpath))
+		return {CELL_EIO, vpath};
 
 	return CELL_OK;
 }
