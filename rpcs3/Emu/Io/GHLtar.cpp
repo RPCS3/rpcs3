@@ -3,11 +3,41 @@
 #include "stdafx.h"
 #include "GHLtar.h"
 #include "Emu/Cell/lv2/sys_usbd.h"
+#include "Emu/Io/ghltar_config.h"
 #include "Input/pad_thread.h"
 
-LOG_CHANNEL(ghltar_log);
+LOG_CHANNEL(ghltar_log, "GHLTAR");
 
-usb_device_ghltar::usb_device_ghltar(int controller_index, const std::array<u8, 7>& location)
+template <>
+void fmt_class_string<ghltar_btn>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](ghltar_btn value)
+	{
+		switch (value)
+		{
+		case ghltar_btn::w1: return "W1";
+		case ghltar_btn::w2: return "W2";
+		case ghltar_btn::w3: return "W3";
+		case ghltar_btn::b1: return "B1";
+		case ghltar_btn::b2: return "B2";
+		case ghltar_btn::b3: return "B3";
+		case ghltar_btn::start: return "Start";
+		case ghltar_btn::hero_power: return "Hero Power";
+		case ghltar_btn::ghtv: return "GHTV";
+		case ghltar_btn::strum_down: return "Strum Down";
+		case ghltar_btn::strum_up: return "Strum Up";
+		case ghltar_btn::dpad_left: return "D-Pad Left";
+		case ghltar_btn::dpad_right: return "D-Pad Right";
+		case ghltar_btn::whammy: return "Whammy";
+		case ghltar_btn::tilt: return "Tilt";
+		case ghltar_btn::count: return "Count";
+		}
+
+		return unknown;
+	});
+}
+
+usb_device_ghltar::usb_device_ghltar(u32 controller_index, const std::array<u8, 7>& location)
 	: usb_device_emulated(location), m_controller_index(controller_index)
 {
 	device        = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE, UsbDeviceDescriptor{0x0200, 0x00, 0x00, 0x00, 0x20, 0x12BA, 0x074B, 0x0100, 0x01, 0x02, 0x00, 0x01});
@@ -116,85 +146,65 @@ void usb_device_ghltar::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint
 		return;
 	}
 
-	for (const Button& button : pad->m_buttons)
-	{
-		if (!button.m_pressed)
+	const auto& cfg = ::at32(g_cfg_ghltar.players, m_controller_index);
+	cfg->handle_input(pad, true, [&buf](ghltar_btn btn, u16 value, bool pressed)
 		{
-			continue;
-		}
+			if (!pressed)
+				return;
 
-		if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL2)
-		{
-			switch (button.m_outKeyCode)
+			switch (btn)
 			{
-			case CELL_PAD_CTRL_SQUARE:
+			case ghltar_btn::w1:
 				buf[0] += 0x01; // W1
 				break;
-			case CELL_PAD_CTRL_CROSS:
+			case ghltar_btn::b1:
 				buf[0] += 0x02; // B1
 				break;
-			case CELL_PAD_CTRL_CIRCLE:
+			case ghltar_btn::b2:
 				buf[0] += 0x04; // B2
 				break;
-			case CELL_PAD_CTRL_TRIANGLE:
+			case ghltar_btn::b3:
 				buf[0] += 0x08; // B3
 				break;
-			case CELL_PAD_CTRL_R1:
+			case ghltar_btn::w3:
 				buf[0] += 0x20; // W3
 				break;
-			case CELL_PAD_CTRL_L1:
+			case ghltar_btn::w2:
 				buf[0] += 0x10; // W2
 				break;
-			default:
-				break;
-			}
-		}
-		else if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL1)
-		{
-			switch (button.m_outKeyCode)
-			{
-			case CELL_PAD_CTRL_DOWN:
+			case ghltar_btn::strum_down:
 				buf[4] = 0xFF; // Strum Down
 				break;
-			case CELL_PAD_CTRL_UP:
+			case ghltar_btn::strum_up:
 				buf[4] = 0x00; // Strum Up
 				break;
-			case CELL_PAD_CTRL_LEFT:
+			case ghltar_btn::dpad_left:
 				buf[2] = 0x02; // Left D-Pad (Unused)
 				break;
-			case CELL_PAD_CTRL_RIGHT:
+			case ghltar_btn::dpad_right:
 				buf[2] = 0x06; // Right D-Pad (Unused)
 				break;
-			case CELL_PAD_CTRL_START:
+			case ghltar_btn::start:
 				buf[1] += 0x02; // Pause
 				break;
-			case CELL_PAD_CTRL_SELECT:
+			case ghltar_btn::hero_power:
 				buf[1] += 0x01; // Hero Power
 				break;
-			case CELL_PAD_CTRL_L3:
+			case ghltar_btn::ghtv:
 				buf[1] += 0x04; // GHTV Button
 				break;
-			default:
+			case ghltar_btn::whammy:
+				buf[6] = ~(value) + 0x01; // Whammy
+				break;
+			case ghltar_btn::tilt:
+				buf[19] = static_cast<u8>(value); // Tilt
+				if (buf[19] >= 0xF0)
+					buf[5] = 0xFF;
+				else if (buf[19] <= 0x10)
+					buf[5] = 0x00;
+				break;
+			case ghltar_btn::count:
 				break;
 			}
-		}
-	}
-	for (const AnalogStick& stick : pad->m_sticks)
-	{
-		switch (stick.m_offset)
-		{
-		case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y:
-			buf[6] = ~(stick.m_value) + 0x01; // Whammy
-			break;
-		case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X:
-			buf[19] = static_cast<u8>(stick.m_value); // Tilt
-			if (buf[19] >= 0xF0)
-				buf[5] = 0xFF;
-			if (buf[19] <= 0x10)
-				buf[5] = 0x00;
-			break;
-		default:
-			break;
-		}
-	}
+		});
 }

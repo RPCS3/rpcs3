@@ -265,8 +265,6 @@ void ds3_pad_handler::check_add_device(hid_device* hidDevice, std::string_view p
 
 	std::string serial;
 
-	// Uses libusb for windows as hidapi will never work with UsbHid driver for the ds3 and it won't work with WinUsb either(windows hid api needs the UsbHid in the driver stack as far as I can tell)
-	// For other os use hidapi and hope for the best!
 #ifdef _WIN32
 	std::array<u8, 0xFF> buf{};
 	buf[0] = 0xF2;
@@ -310,7 +308,10 @@ void ds3_pad_handler::check_add_device(hid_device* hidDevice, std::string_view p
 	device->path      = path;
 	device->hidDevice = hidDevice;
 
-	send_output_report(device);
+	if (send_output_report(device) == -1)
+	{
+		ds3_log.error("check_add_device: send_output_report failed! Reason: %s", hid_error(hidDevice));
+	}
 
 #ifdef _WIN32
 	ds3_log.notice("Added device: report_id=%d, serial='%s', path='%s'", device->report_id, serial, device->path);

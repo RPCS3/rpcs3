@@ -5,7 +5,6 @@
 
 class usb_device_usio : public usb_device_emulated
 {
-
 public:
 	usb_device_usio(const std::array<u8, 7>& location);
 	~usb_device_usio();

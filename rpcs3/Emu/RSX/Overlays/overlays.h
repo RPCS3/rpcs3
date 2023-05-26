@@ -3,6 +3,7 @@
 #include "overlay_controls.h"
 
 #include "Emu/IdManager.h"
+#include "Emu/Io/pad_types.h"
 
 #include "Utilities/mutex.h"
 #include "Utilities/Timer.h"
@@ -18,38 +19,6 @@ namespace rsx
 {
 	namespace overlays
 	{
-		enum pad_button : u8
-		{
-			dpad_up = 0,
-			dpad_down,
-			dpad_left,
-			dpad_right,
-			select,
-			start,
-			ps,
-			triangle,
-			circle,
-			square,
-			cross,
-			L1,
-			R1,
-			L2,
-			R2,
-			L3,
-			R3,
-
-			ls_up,
-			ls_down,
-			ls_left,
-			ls_right,
-			rs_up,
-			rs_down,
-			rs_left,
-			rs_right,
-
-			pad_button_max_enum
-		};
-
 		// Bitfield of UI signals to overlay manager
 		enum status_bits : u32
 		{
@@ -96,7 +65,7 @@ namespace rsx
 		protected:
 			Timer m_input_timer;
 			u64 m_auto_repeat_ms_interval = m_auto_repeat_ms_interval_default;
-			std::set<u8> m_auto_repeat_buttons = {
+			std::set<pad_button> m_auto_repeat_buttons = {
 				pad_button::dpad_up,
 				pad_button::dpad_down,
 				pad_button::dpad_left,

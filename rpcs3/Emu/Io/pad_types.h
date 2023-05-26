@@ -6,6 +6,54 @@
 
 #include <vector>
 
+enum class pad_button : u8
+{
+	dpad_up = 0,
+	dpad_down,
+	dpad_left,
+	dpad_right,
+	select,
+	start,
+	ps,
+	triangle,
+	circle,
+	square,
+	cross,
+	L1,
+	R1,
+	L2,
+	R2,
+	L3,
+	R3,
+
+	ls_up,
+	ls_down,
+	ls_left,
+	ls_right,
+	ls_x,
+	ls_y,
+	rs_up,
+	rs_down,
+	rs_left,
+	rs_right,
+	rs_x,
+	rs_y,
+
+	pad_button_max_enum
+};
+
+u32 pad_button_offset(pad_button button);
+u32 pad_button_keycode(pad_button button);
+
+enum class axis_direction : u8
+{
+	both = 0,
+	negative,
+	positive
+};
+
+u32 get_axis_keycode(u32 offset, u16 value);
+
 enum SystemInfo
 {
 	CELL_PAD_INFO_INTERCEPTED = 0x00000001

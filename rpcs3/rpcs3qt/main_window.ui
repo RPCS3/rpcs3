@@ -230,10 +230,21 @@
     <property name="title">
      <string>Configuration</string>
     </property>
+    <widget class="QMenu" name="menuEmulatedPads">
+     <property name="title">
+      <string>USB Devices</string>
+     </property>
+     <addaction name="confBuzzAct"/>
+     <addaction name="confGHLtarAct"/>
+     <addaction name="confTurntableAct"/>
+     <addaction name="confUSIOAct"/>
+     <addaction name="confPSMoveDS3Act"/>
+    </widget>
     <addaction name="confCPUAct"/>
     <addaction name="confGPUAct"/>
     <addaction name="separator"/>
     <addaction name="confPadsAct"/>
+    <addaction name="menuEmulatedPads"/>
     <addaction name="confCamerasAct"/>
     <addaction name="confAudioAct"/>
     <addaction name="confIOAct"/>
@@ -1249,6 +1260,31 @@
    </property>
    <property name="text">
     <string>System Commands</string>
+   </property>
+  </action>
+  <action name="confBuzzAct">
+   <property name="text">
+    <string>Buzz</string>
+   </property>
+  </action>
+  <action name="confGHLtarAct">
+   <property name="text">
+    <string>GHLtar</string>
+   </property>
+  </action>
+  <action name="confTurntableAct">
+   <property name="text">
+    <string>Turntable</string>
+   </property>
+  </action>
+  <action name="confUSIOAct">
+   <property name="text">
+    <string>USIO</string>
+   </property>
+  </action>
+  <action name="confPSMoveDS3Act">
+   <property name="text">
+    <string>PS Move (Fake)</string>
    </property>
   </action>
  </widget>

@@ -34,6 +34,7 @@
 #include "config_checker.h"
 #include "shortcut_dialog.h"
 #include "system_cmd_dialog.h"
+#include "emulated_pad_settings_dialog.h"
 
 #include <thread>
 #include <charconv>
@@ -2363,6 +2364,36 @@ void main_window::CreateConnects()
 	};
 
 	connect(ui->confPadsAct, &QAction::triggered, this, open_pad_settings);
+
+	connect(ui->confBuzzAct, &QAction::triggered, this, [this]
+	{
+		emulated_pad_settings_dialog* dlg = new emulated_pad_settings_dialog(emulated_pad_settings_dialog::pad_type::buzz, this);
+		dlg->show();
+	});
+
+	connect(ui->confGHLtarAct, &QAction::triggered, this, [this]
+	{
+		emulated_pad_settings_dialog* dlg = new emulated_pad_settings_dialog(emulated_pad_settings_dialog::pad_type::ghltar, this);
+		dlg->show();
+	});
+
+	connect(ui->confTurntableAct, &QAction::triggered, this, [this]
+	{
+		emulated_pad_settings_dialog* dlg = new emulated_pad_settings_dialog(emulated_pad_settings_dialog::pad_type::turntable, this);
+		dlg->show();
+	});
+
+	connect(ui->confUSIOAct, &QAction::triggered, this, [this]
+	{
+		emulated_pad_settings_dialog* dlg = new emulated_pad_settings_dialog(emulated_pad_settings_dialog::pad_type::usio, this);
+		dlg->show();
+	});
+
+	connect(ui->confPSMoveDS3Act, &QAction::triggered, this, [this]
+	{
+		emulated_pad_settings_dialog* dlg = new emulated_pad_settings_dialog(emulated_pad_settings_dialog::pad_type::ds3gem, this);
+		dlg->show();
+	});
 
 	connect(ui->confCamerasAct, &QAction::triggered, this, [this]()
 	{

@@ -70,6 +70,7 @@
     <ClCompile Include="Emu\games_config.cpp" />
     <ClCompile Include="Emu\Io\camera_config.cpp" />
     <ClCompile Include="Emu\Io\midi_config_types.cpp" />
+    <ClCompile Include="Emu\Io\pad_types.cpp" />
     <ClCompile Include="Emu\Io\RB3MidiGuitar.cpp" />
     <ClCompile Include="Emu\Io\RB3MidiKeyboard.cpp" />
     <ClCompile Include="Emu\Io\recording_config.cpp" />
@@ -504,8 +505,12 @@
     <ClInclude Include="Emu\config_mode.h" />
     <ClInclude Include="Emu\CPU\sse2neon.h" />
     <ClInclude Include="Emu\games_config.h" />
+    <ClInclude Include="Emu\Io\buzz_config.h" />
     <ClInclude Include="Emu\Io\camera_config.h" />
     <ClInclude Include="Emu\Io\camera_handler_base.h" />
+    <ClInclude Include="Emu\Io\emulated_pad_config.h" />
+    <ClInclude Include="Emu\Io\gem_config.h" />
+    <ClInclude Include="Emu\Io\ghltar_config.h" />
     <ClInclude Include="Emu\Io\midi_config_types.h" />
     <ClInclude Include="Emu\Io\music_handler_base.h" />
     <ClInclude Include="Emu\Io\Null\null_camera_handler.h" />
@@ -516,12 +521,14 @@
     <ClInclude Include="Emu\Io\Turntable.h" />
     <ClInclude Include="Emu\Io\GHLtar.h" />
     <ClInclude Include="Emu\Io\Buzz.h" />
+    <ClInclude Include="Emu\Io\turntable_config.h" />
     <ClInclude Include="Emu\Io\usio.h" />
     <ClInclude Include="Emu\Io\interception.h" />
     <ClInclude Include="Emu\Io\pad_types.h" />
     <ClInclude Include="Emu\Io\Keyboard.h" />
     <ClInclude Include="Emu\Io\pad_config.h" />
     <ClInclude Include="Emu\Io\pad_config_types.h" />
+    <ClInclude Include="Emu\Io\usio_config.h" />
     <ClInclude Include="Emu\IPC_config.h" />
     <ClInclude Include="Emu\IPC_socket.h" />
     <ClInclude Include="Emu\localized_string.h" />

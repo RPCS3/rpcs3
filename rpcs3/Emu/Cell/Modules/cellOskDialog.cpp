@@ -506,7 +506,7 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 			// Prepare callback variables
 			vm::var<CellOskDialogKeyMessage> keyMessage(key_message);
 			vm::var<u32> action(CELL_OSKDIALOG_CHANGE_NO_EVENT);
-			vm::var<u16[], vm::page_allocator<>> pActionInfo(string_to_send.size(), string_to_send.data());
+			vm::var<u16[], vm::page_allocator<>> pActionInfo(::narrow<u32>(string_to_send.size()), string_to_send.data());
 
 			// Create helpers for logging
 			std::u16string utf16_string(reinterpret_cast<const char16_t*>(string_to_send.data()), string_to_send.size());

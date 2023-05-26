@@ -1647,11 +1647,7 @@ void camera_context::operator()()
 			else
 			{
 				std::lock_guard lock(mutex);
-
-				Emu.BlockingCallFromMainThread([&]()
-				{
-					send_frame_update_event = handler ? on_handler_state(handler->get_state()) : true;
-				});
+				send_frame_update_event = !handler || on_handler_state(handler->get_state());
 			}
 		}
 
@@ -1715,26 +1711,21 @@ void camera_context::operator()()
 
 bool camera_context::open_camera()
 {
-	bool result = true;
-
-	Emu.BlockingCallFromMainThread([&result, this]()
+	Emu.BlockingCallFromMainThread([this]()
 	{
 		handler.reset();
 		handler = Emu.GetCallbacks().get_camera_handler();
 		if (handler)
 		{
 			handler->open_camera();
-			result = on_handler_state(handler->get_state());
 		}
 	});
 
-	return result;
+	return !handler || on_handler_state(handler->get_state());
 }
 
 bool camera_context::start_camera()
 {
-	bool result = true;
-
 	if (handler)
 	{
 		handler->set_mirrored(!!attr[CELL_CAMERA_MIRRORFLAG].v1);
@@ -1742,29 +1733,25 @@ bool camera_context::start_camera()
 		handler->set_resolution(info.width, info.height);
 		handler->set_format(info.format, info.bytesize);
 
-		Emu.BlockingCallFromMainThread([&result, this]()
+		Emu.BlockingCallFromMainThread([this]()
 		{
 			handler->start_camera();
-			result = on_handler_state(handler->get_state());
 		});
+
+		return on_handler_state(handler->get_state());
 	}
 
-	return result;
+	return true;
 }
 
 bool camera_context::get_camera_frame(u8* dst, u32& width, u32& height, u64& frame_number, u64& bytes_read)
 {
-	bool result = true;
-
 	if (handler)
 	{
-		Emu.BlockingCallFromMainThread([&]()
-		{
-			result = on_handler_state(handler->get_image(dst, info.bytesize, width, height, frame_number, bytes_read));
-		});
+		return on_handler_state(handler->get_image(dst, info.bytesize, width, height, frame_number, bytes_read));
 	}
 
-	return result;
+	return true;
 }
 
 void camera_context::stop_camera()
@@ -1916,13 +1903,19 @@ bool camera_context::on_handler_state(camera_handler_base::camera_handler_state 
 			if (is_streaming)
 			{
 				cellCamera.warning("Camera closed or disconnected (state=%d). Trying to start camera...", static_cast<int>(state));
-				handler->open_camera();
-				handler->start_camera();
+				Emu.BlockingCallFromMainThread([&]()
+				{
+					handler->open_camera();
+					handler->start_camera();
+				});
 			}
 			else if (is_open)
 			{
 				cellCamera.warning("Camera closed or disconnected (state=%d). Trying to open camera...", static_cast<int>(state));
-				handler->open_camera();
+				Emu.BlockingCallFromMainThread([&]()
+				{
+					handler->open_camera();
+				});
 			}
 		}
 		return false;
@@ -1932,7 +1925,10 @@ bool camera_context::on_handler_state(camera_handler_base::camera_handler_state 
 		if (handler && is_streaming)
 		{
 			cellCamera.warning("Camera handler not running (state=%d). Trying to start camera...", static_cast<int>(state));
-			handler->start_camera();
+			Emu.BlockingCallFromMainThread([&]()
+			{
+				handler->start_camera();
+			});
 		}
 		break;
 	}

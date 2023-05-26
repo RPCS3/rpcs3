@@ -6,6 +6,7 @@
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/timers.hpp"
 #include "Emu/Io/MouseHandler.h"
+#include "Emu/Io/gem_config.h"
 #include "Emu/system_config.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -20,6 +21,30 @@
 #include <type_traits>
 
 LOG_CHANNEL(cellGem);
+
+template <>
+void fmt_class_string<gem_btn>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](gem_btn value)
+	{
+		switch (value)
+		{
+		case gem_btn::start: return "Start";
+		case gem_btn::select: return "Select";
+		case gem_btn::triangle: return "Triangle";
+		case gem_btn::circle: return "Circle";
+		case gem_btn::cross: return "Cross";
+		case gem_btn::square: return "Square";
+		case gem_btn::move: return "Move";
+		case gem_btn::t: return "T";
+		case gem_btn::count: return "Count";
+		case gem_btn::x_axis: return "X-Axis";
+		case gem_btn::y_axis: return "Y-Axis";
+		}
+
+		return unknown;
+	});
+}
 
 template <>
 void fmt_class_string<CellGemError>::format(std::string& out, u64 arg)
@@ -132,6 +157,8 @@ public:
 using gun_thread = named_thread<gun_handler>;
 
 #endif
+
+cfg_gems g_cfg_gem;
 
 struct gem_config_data
 {
@@ -286,7 +313,13 @@ public:
 		}
 	}
 
-	gem_config_data() = default;
+	gem_config_data()
+	{
+		if (!g_cfg_gem.load())
+		{
+			cellGem.notice("Could not load gem config. Using defaults.");
+		}
+	};
 
 	SAVESTATE_INIT_POS(15);
 
@@ -318,6 +351,11 @@ public:
 	gem_config_data(utils::serial& ar)
 	{
 		save(ar);
+
+		if (!ar.is_writing() && !g_cfg_gem.load())
+		{
+			cellGem.notice("Could not load gem config. Using defaults.");
+		}
 	}
 };
 
@@ -635,80 +673,73 @@ static void ds3_input_to_pad(const u32 port_no, be_t<u16>& digital_buttons, be_t
 		return;
 	}
 
-	for (const Button& button : pad->m_buttons)
-	{
-		if (!button.m_pressed)
+	const auto& cfg = ::at32(g_cfg_gem.players, port_no);
+	cfg->handle_input(pad, true, [&](gem_btn btn, u16 value, bool pressed)
 		{
-			continue;
-		}
+			if (!pressed)
+				return;
 
-		// here we check btns, and set pad accordingly
-		if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL1)
-		{
-			switch (button.m_outKeyCode)
+			switch (btn)
 			{
-			case CELL_PAD_CTRL_START:
+			case gem_btn::start:
 				digital_buttons |= CELL_GEM_CTRL_START;
 				break;
-			case CELL_PAD_CTRL_SELECT:
+			case gem_btn::select:
 				digital_buttons |= CELL_GEM_CTRL_SELECT;
 				break;
-			default:
-				break;
-			}
-		}
-		else if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL2)
-		{
-			switch (button.m_outKeyCode)
-			{
-			case CELL_PAD_CTRL_SQUARE:
+			case gem_btn::square:
 				digital_buttons |= CELL_GEM_CTRL_SQUARE;
 				break;
-			case CELL_PAD_CTRL_CROSS:
+			case gem_btn::cross:
 				digital_buttons |= CELL_GEM_CTRL_CROSS;
 				break;
-			case CELL_PAD_CTRL_CIRCLE:
+			case gem_btn::circle:
 				digital_buttons |= CELL_GEM_CTRL_CIRCLE;
 				break;
-			case CELL_PAD_CTRL_TRIANGLE:
+			case gem_btn::triangle:
 				digital_buttons |= CELL_GEM_CTRL_TRIANGLE;
 				break;
-			case CELL_PAD_CTRL_R1:
+			case gem_btn::move:
 				digital_buttons |= CELL_GEM_CTRL_MOVE;
 				break;
-			case CELL_PAD_CTRL_R2:
+			case gem_btn::t:
 				digital_buttons |= CELL_GEM_CTRL_T;
-				analog_t = std::max<u16>(analog_t, button.m_value);
+				analog_t = std::max<u16>(analog_t, value);
 				break;
-			default:
+			case gem_btn::x_axis:
+			case gem_btn::y_axis:
+			case gem_btn::count:
 				break;
 			}
-		}
-	}
+		});
 }
 
 constexpr u16 ds3_max_x = 255;
 constexpr u16 ds3_max_y = 255;
 
-static inline void ds3_get_stick_values(const std::shared_ptr<Pad>& pad, s32& x_pos, s32& y_pos)
+static inline void ds3_get_stick_values(u32 port_no, const std::shared_ptr<Pad>& pad, s32& x_pos, s32& y_pos)
 {
 	x_pos = 0;
 	y_pos = 0;
 
-	for (const AnalogStick& stick : pad->m_sticks)
-	{
-		switch (stick.m_offset)
+	const auto& cfg = ::at32(g_cfg_gem.players, port_no);
+	cfg->handle_input(pad, true, [&](gem_btn btn, u16 value, bool pressed)
 		{
-		case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X:
-			x_pos = stick.m_value;
-			break;
-		case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y:
-			y_pos = stick.m_value;
-			break;
-		default:
-			break;
-		}
-	}
+			if (!pressed)
+				return;
+
+			switch (btn)
+			{
+			case gem_btn::x_axis:
+				x_pos = value;
+				break;
+			case gem_btn::y_axis:
+				y_pos = value;
+				break;
+			default:
+				break;
+			}
+		});
 }
 
 template <typename T>
@@ -730,7 +761,7 @@ static void ds3_pos_to_gem_state(const u32 port_no, const gem_config::gem_contro
 	}
 
 	s32 ds3_pos_x, ds3_pos_y;
-	ds3_get_stick_values(pad, ds3_pos_x, ds3_pos_y);
+	ds3_get_stick_values(port_no, pad, ds3_pos_x, ds3_pos_y);
 
 	if constexpr (std::is_same<T, vm::ptr<CellGemState>>::value)
 	{

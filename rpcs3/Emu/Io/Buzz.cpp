@@ -3,9 +3,29 @@
 #include "stdafx.h"
 #include "Buzz.h"
 #include "Emu/Cell/lv2/sys_usbd.h"
+#include "Emu/Io/buzz_config.h"
 #include "Input/pad_thread.h"
 
-LOG_CHANNEL(buzz_log);
+LOG_CHANNEL(buzz_log, "BUZZ");
+
+template <>
+void fmt_class_string<buzz_btn>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](buzz_btn value)
+	{
+		switch (value)
+		{
+		case buzz_btn::red: return "Red";
+		case buzz_btn::yellow: return "Yellow";
+		case buzz_btn::green: return "Green";
+		case buzz_btn::orange: return "Orange";
+		case buzz_btn::blue: return "Blue";
+		case buzz_btn::count: return "Count";
+		}
+
+		return unknown;
+	});
+}
 
 usb_device_buzz::usb_device_buzz(u32 first_controller, u32 last_controller, const std::array<u8, 7>& location)
 	: usb_device_emulated(location)
@@ -72,6 +92,7 @@ void usb_device_buzz::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint*/
 	const auto handler = pad::get_current_handler();
 	const auto& pads   = handler->GetPads();
 	ensure(pads.size() > m_last_controller);
+	ensure(g_cfg_buzz.players.size() > m_last_controller);
 
 	for (u32 i = m_first_controller, index = 0; i <= m_last_controller; i++, index++)
 	{
@@ -82,36 +103,29 @@ void usb_device_buzz::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint*/
 			continue;
 		}
 
-		for (const Button& button : pad->m_buttons)
-		{
-			if (!button.m_pressed)
+		const auto& cfg = g_cfg_buzz.players[i];
+		cfg->handle_input(pad, true, [&buf, &index](buzz_btn btn, u16 value, bool pressed)
 			{
-				continue;
-			}
-
-			if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL2)
-			{
-				switch (button.m_outKeyCode)
+				switch (btn)
 				{
-				case CELL_PAD_CTRL_R1:
+				case buzz_btn::red:
 					buf[2 + (0 + 5 * index) / 8] |= 1 << ((0 + 5 * index) % 8); // Red
 					break;
-				case CELL_PAD_CTRL_TRIANGLE:
-					buf[2 + (4 + 5 * index) / 8] |= 1 << ((4 + 5 * index) % 8); // Blue
-					break;
-				case CELL_PAD_CTRL_SQUARE:
-					buf[2 + (3 + 5 * index) / 8] |= 1 << ((3 + 5 * index) % 8); // Orange
-					break;
-				case CELL_PAD_CTRL_CIRCLE:
-					buf[2 + (2 + 5 * index) / 8] |= 1 << ((2 + 5 * index) % 8); // Green
-					break;
-				case CELL_PAD_CTRL_CROSS:
+				case buzz_btn::yellow:
 					buf[2 + (1 + 5 * index) / 8] |= 1 << ((1 + 5 * index) % 8); // Yellow
 					break;
-				default:
+				case buzz_btn::green:
+					buf[2 + (2 + 5 * index) / 8] |= 1 << ((2 + 5 * index) % 8); // Green
+					break;
+				case buzz_btn::orange:
+					buf[2 + (3 + 5 * index) / 8] |= 1 << ((3 + 5 * index) % 8); // Orange
+					break;
+				case buzz_btn::blue:
+					buf[2 + (4 + 5 * index) / 8] |= 1 << ((4 + 5 * index) % 8); // Blue
+					break;
+				case buzz_btn::count:
 					break;
 				}
-			}
-		}
+			});
 	}
 }

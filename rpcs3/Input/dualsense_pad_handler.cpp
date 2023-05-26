@@ -252,7 +252,10 @@ void dualsense_pad_handler::check_add_device(hid_device* hidDevice, std::string_
 	device->path           = path;
 
 	// Activate
-	send_output_report(device);
+	if (send_output_report(device) == -1)
+	{
+		dualsense_log.error("check_add_device: send_output_report failed! Reason: %s", hid_error(hidDevice));
+	}
 
 	// Get bluetooth information
 	get_data(device);
@@ -927,7 +930,7 @@ int dualsense_pad_handler::send_output_report(DualSenseDevice* device)
 
 	const cfg_pad* config = device->config;
 	if (config == nullptr)
-		return -2; // hid_write and hid_write_control return -1 on error
+		return -2; // hid_write returns -1 on error
 
 	output_report_common common{};
 
