@@ -262,6 +262,7 @@ namespace rsx
 				break;
 			}
 
+			m_interactive = false; // KLUDGE: Set interactive to false in order to stop pad interaction properly in close.
 			close(false, true);
 
 			if (return_code >= 0 && m_media && m_media->type != media_list_dialog::media_type::directory)
