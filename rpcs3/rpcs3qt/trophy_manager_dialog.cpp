@@ -461,7 +461,11 @@ bool trophy_manager_dialog::LoadTrophyFolderToDB(const std::string& trop_name)
 	}
 
 	std::shared_ptr<rXmlNode> trophy_base = game_trophy_data->trop_config.GetRoot();
-	ensure(trophy_base);
+	if (!trophy_base)
+	{
+		gui_log.error("Failed to read trophy xml (root is null): %s", tropconf_path);
+		return false;
+	}
 
 	for (std::shared_ptr<rXmlNode> n = trophy_base->GetChildren(); n; n = n->GetNext())
 	{
@@ -914,7 +918,7 @@ void trophy_manager_dialog::StartTrophyLoadThreads()
 	}
 
 	const QDir trophy_dir(trophy_path);
-	const auto folder_list = trophy_dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+	const QStringList folder_list = trophy_dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
 	const int count = folder_list.count();
 
 	if (count <= 0)
@@ -941,22 +945,28 @@ void trophy_manager_dialog::StartTrophyLoadThreads()
 		close(); // It's pointless to show an empty window
 	});
 
-	futureWatcher.setFuture(QtConcurrent::map(indices, [this, folder_list](const int& i)
+	atomic_t<usz> error_count{};
+	futureWatcher.setFuture(QtConcurrent::map(indices, [this, &error_count, &folder_list](const int& i)
 	{
 		const std::string dir_name = sstr(folder_list.value(i));
 		gui_log.trace("Loading trophy dir: %s", dir_name);
 
 		if (!LoadTrophyFolderToDB(dir_name))
 		{
-			// TODO: Add error checks & throws to LoadTrophyFolderToDB so that they can be caught here.
-			// Also add a way of showing the number of corrupted/invalid folders in UI somewhere.
+			// TODO: add a way of showing the number of corrupted/invalid folders in UI somewhere.
 			gui_log.error("Error occurred while parsing folder %s for trophies.", dir_name);
+			error_count++;
 		}
 	}));
 
 	progressDialog.exec();
 
 	futureWatcher.waitForFinished();
+
+	if (error_count != 0)
+	{
+		gui_log.error("Failed to load %d of %d trophy folders!", error_count.load(), count);
+	}
 }
 
 void trophy_manager_dialog::PopulateGameTable()
@@ -1028,16 +1038,19 @@ void trophy_manager_dialog::PopulateTrophyTable()
 	m_trophy_table->setRowCount(all_trophies);
 	m_trophy_table->setSortingEnabled(false); // Disable sorting before using setItem calls
 
-	std::shared_ptr<rXmlNode> trophy_base = data->trop_config.GetRoot();
-	ensure(trophy_base);
-
 	QPixmap placeholder(m_icon_height, m_icon_height);
 	placeholder.fill(Qt::transparent);
 
 	const QLocale locale{};
 
+	std::shared_ptr<rXmlNode> trophy_base = data->trop_config.GetRoot();
+	if (!trophy_base)
+	{
+		gui_log.error("Populating Trophy Manager UI failed (root is null): %s %s", data->game_name, data->path);
+	}
+
 	int i = 0;
-	for (std::shared_ptr<rXmlNode> n = trophy_base->GetChildren(); n; n = n->GetNext())
+	for (std::shared_ptr<rXmlNode> n = trophy_base ? trophy_base->GetChildren() : nullptr; n; n = n->GetNext())
 	{
 		// Only show trophies.
 		if (n->GetName() != "trophy")
@@ -1077,13 +1090,11 @@ void trophy_manager_dialog::PopulateTrophyTable()
 		{
 			if (n2->GetName() == "name")
 			{
-				std::string name = n2->GetNodeContent();
-				strcpy_trunc(details.name, name);
+				strcpy_trunc(details.name, n2->GetNodeContent());
 			}
 			if (n2->GetName() == "detail")
 			{
-				std::string detail = n2->GetNodeContent();
-				strcpy_trunc(details.description, detail);
+				strcpy_trunc(details.description, n2->GetNodeContent());
 			}
 		}
 
