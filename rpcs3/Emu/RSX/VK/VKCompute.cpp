@@ -119,15 +119,6 @@ namespace vk
 		}
 	}
 
-	void compute_task::free_resources()
-	{
-		if (m_used_descriptors == 0)
-			return;
-
-		m_descriptor_pool.reset(0);
-		m_used_descriptors = 0;
-	}
-
 	void compute_task::load_program(const vk::command_buffer& cmd)
 	{
 		if (!m_program)
@@ -155,14 +146,7 @@ namespace vk
 
 		ensure(m_used_descriptors < VK_MAX_COMPUTE_TASKS);
 
-		VkDescriptorSetAllocateInfo alloc_info = {};
-		alloc_info.descriptorPool = m_descriptor_pool;
-		alloc_info.descriptorSetCount = 1;
-		alloc_info.pSetLayouts = &m_descriptor_layout;
-		alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-
-		CHECK_RESULT(vkAllocateDescriptorSets(*g_render_device, &alloc_info, m_descriptor_set.ptr()));
-		m_used_descriptors++;
+		m_descriptor_set = m_descriptor_pool.allocate(m_descriptor_layout, VK_TRUE, m_used_descriptors++);
 
 		bind_resources();
 

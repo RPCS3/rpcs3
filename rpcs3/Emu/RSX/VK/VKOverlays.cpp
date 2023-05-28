@@ -288,12 +288,6 @@ namespace vk
 
 	void overlay_pass::free_resources()
 	{
-		if (m_used_descriptors == 0)
-			return;
-
-		m_descriptor_pool.reset(0);
-		m_used_descriptors = 0;
-
 		m_vao.reset_allocation_stats();
 		m_ubo.reset_allocation_stats();
 	}

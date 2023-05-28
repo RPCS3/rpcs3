@@ -1322,13 +1322,10 @@ void VKGSRender::check_descriptors()
 {
 	// Ease resource pressure if the number of draw calls becomes too high or we are running low on memory resources
 	const auto required_descriptors = rsx::method_registers.current_draw_clause.pass_count();
-	if (!m_current_frame->descriptor_pool.can_allocate(required_descriptors, m_current_frame->used_descriptors))
+	if (!m_current_frame->descriptor_pool.can_allocate(required_descriptors, 0))
 	{
 		// Should hard sync before resetting descriptors for spec compliance
 		flush_command_queue(true);
-
-		m_current_frame->descriptor_pool.reset(0);
-		m_current_frame->used_descriptors = 0;
 	}
 }
 
@@ -1336,7 +1333,7 @@ VkDescriptorSet VKGSRender::allocate_descriptor_set()
 {
 	if (!m_shader_interpreter.is_interpreter(m_program)) [[likely]]
 	{
-		return m_current_frame->descriptor_pool.allocate(descriptor_layouts, VK_TRUE, m_current_frame->used_descriptors++);
+		return m_current_frame->descriptor_pool.allocate(descriptor_layouts, VK_TRUE, 0);
 	}
 	else
 	{

@@ -518,23 +518,7 @@ namespace vk
 
 	VkDescriptorSet shader_interpreter::allocate_descriptor_set()
 	{
-		if (!m_descriptor_pool.can_allocate(1u, m_used_descriptors))
-		{
-			m_descriptor_pool.reset(0);
-			m_used_descriptors = 0;
-		}
-
-		VkDescriptorSetAllocateInfo alloc_info = {};
-		alloc_info.descriptorPool = m_descriptor_pool;
-		alloc_info.descriptorSetCount = 1;
-		alloc_info.pSetLayouts = &m_shared_descriptor_layout;
-		alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-
-		VkDescriptorSet new_descriptor_set;
-		CHECK_RESULT(vkAllocateDescriptorSets(m_device, &alloc_info, &new_descriptor_set));
-
-		m_used_descriptors++;
-		return new_descriptor_set;
+		return m_descriptor_pool.allocate(m_shared_descriptor_layout, VK_TRUE, 0);
 	}
 
 	glsl::program* shader_interpreter::get(const vk::pipeline_props& properties, const program_hash_util::fragment_program_utils::fragment_program_metadata& metadata)
