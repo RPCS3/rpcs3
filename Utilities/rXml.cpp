@@ -5,54 +5,81 @@ rXmlNode::rXmlNode()
 {
 }
 
-rXmlNode::rXmlNode(const pugi::xml_node &node)
+rXmlNode::rXmlNode(const pugi::xml_node& node)
 {
 	handle = node;
 }
 
 std::shared_ptr<rXmlNode> rXmlNode::GetChildren()
 {
-	// it.begin() returns node_iterator*, *it.begin() return node*.
-	pugi::xml_object_range<pugi::xml_node_iterator> it = handle.children();
-	pugi::xml_node begin = *it.begin();
+	if (handle)
+	{
+		if (const pugi::xml_node child = handle.first_child())
+		{
+			return std::make_shared<rXmlNode>(child);
+		}
+	}
 
-	if (begin)
-	{
-		return std::make_shared<rXmlNode>(begin);
-	}
-	else
-	{
-		return nullptr;
-	}
+	return nullptr;
 }
 
 std::shared_ptr<rXmlNode> rXmlNode::GetNext()
 {
-	pugi::xml_node result = handle.next_sibling();
-	if (result)
+	if (handle)
 	{
-		return std::make_shared<rXmlNode>(result);
+		if (const pugi::xml_node result = handle.next_sibling())
+		{
+			return std::make_shared<rXmlNode>(result);
+		}
 	}
-	else
-	{
-		return nullptr;
-	}
+
+	return nullptr;
 }
 
 std::string rXmlNode::GetName()
 {
-	return handle.name();
+	if (handle)
+	{
+		if (const pugi::char_t* name = handle.name())
+		{
+			return name;
+		}
+	}
+
+	return {};
 }
 
-std::string rXmlNode::GetAttribute(const std::string &name)
+std::string rXmlNode::GetAttribute(const std::string& name)
 {
-	auto pred = [&name](pugi::xml_attribute attr) { return (name == attr.name()); };
-	return handle.find_attribute(pred).value();
+	if (handle)
+	{
+		const auto pred = [&name](const pugi::xml_attribute& attr) { return (name == attr.name()); };
+		if (const pugi::xml_attribute attr = handle.find_attribute(pred))
+		{
+			if (const pugi::char_t* value = attr.value())
+			{
+				return value;
+			}
+		}
+	}
+
+	return {};
 }
 
 std::string rXmlNode::GetNodeContent()
 {
-	return handle.text().get();
+	if (handle)
+	{
+		if (const pugi::xml_text text = handle.text())
+		{
+			if (const pugi::char_t* value = text.get())
+			{
+				return value;
+			}
+		}
+	}
+
+	return {};
 }
 
 rXmlDocument::rXmlDocument()
@@ -61,10 +88,20 @@ rXmlDocument::rXmlDocument()
 
 pugi::xml_parse_result rXmlDocument::Read(const std::string& data)
 {
-	return handle.load_buffer(data.data(), data.size());
+	if (handle)
+	{
+		return handle.load_buffer(data.data(), data.size());
+	}
+
+	return {};
 }
 
 std::shared_ptr<rXmlNode> rXmlDocument::GetRoot()
 {
-	return std::make_shared<rXmlNode>(handle.root());
+	if (const pugi::xml_node root = handle.root())
+	{
+		return std::make_shared<rXmlNode>(root);
+	}
+
+	return nullptr;
 }

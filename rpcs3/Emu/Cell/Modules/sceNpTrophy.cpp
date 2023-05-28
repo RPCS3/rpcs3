@@ -873,21 +873,27 @@ error_code sceNpTrophyGetGameInfo(u32 context, u32 handle, vm::ptr<SceNpTrophyGa
 		return { SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST, config_path };
 	}
 
+	if (details)
+		*details = {};
+	if (data)
+		*data = {};
+
 	trophy_xml_document doc{};
 	pugi::xml_parse_result res = doc.Read(config.to_string());
 	if (!res)
 	{
 		sceNpTrophy.error("sceNpTrophyGetGameInfo: Failed to read TROPCONF.SFM: %s", config_path);
 		// TODO: return some error
+		return CELL_OK;
 	}
 
-	auto trophy_base = doc.GetRoot();
-	ensure(trophy_base);
-
-	if (details)
-		*details = {};
-	if (data)
-		*data = {};
+	std::shared_ptr<rXmlNode> trophy_base = doc.GetRoot();
+	if (!trophy_base)
+	{
+		sceNpTrophy.error("sceNpTrophyGetGameInfo: Failed to read TROPCONF.SFM (root is null): %s", config_path);
+		// TODO: return some error
+		return CELL_OK;
+	}
 
 	for (std::shared_ptr<rXmlNode> n = trophy_base->GetChildren(); n; n = n->GetNext())
 	{
@@ -1156,10 +1162,14 @@ static error_code NpTrophyGetTrophyInfo(const trophy_context_t* ctxt, s32 trophy
 	}
 
 	auto trophy_base = doc.GetRoot();
-	ensure(trophy_base);
+	if (!trophy_base)
+	{
+		sceNpTrophy.error("sceNpTrophyGetGameInfo: Failed to read TROPCONF.SFM (root is null): %s", config_path);
+		// TODO: return some error
+	}
 
 	bool found = false;
-	for (std::shared_ptr<rXmlNode> n = trophy_base->GetChildren(); n; n = n->GetNext())
+	for (std::shared_ptr<rXmlNode> n = trophy_base ? trophy_base->GetChildren() : nullptr; n; n = n->GetNext())
 	{
 		if (n->GetName() == "trophy" && (trophyId == atoi(n->GetAttribute("id").c_str())))
 		{
@@ -1401,14 +1411,18 @@ error_code sceNpTrophyGetTrophyIcon(u32 context, u32 handle, s32 trophyId, vm::p
 			pugi::xml_parse_result res = doc.Read(config.to_string());
 			if (!res)
 			{
-				sceNpTrophy.error("sceNpTrophyGetGameInfo: Failed to read TROPCONF.SFM: %s", config_path);
+				sceNpTrophy.error("sceNpTrophyGetTrophyIcon: Failed to read TROPCONF.SFM: %s", config_path);
 				// TODO: return some error
 			}
 
 			auto trophy_base = doc.GetRoot();
-			ensure(trophy_base);
+			if (!trophy_base)
+			{
+				sceNpTrophy.error("sceNpTrophyGetTrophyIcon: Failed to read TROPCONF.SFM (root is null): %s", config_path);
+				// TODO: return some error
+			}
 
-			for (std::shared_ptr<rXmlNode> n = trophy_base->GetChildren(); n; n = n->GetNext())
+			for (std::shared_ptr<rXmlNode> n = trophy_base ? trophy_base->GetChildren() : nullptr; n; n = n->GetNext())
 			{
 				if (n->GetName() == "trophy" && trophyId == atoi(n->GetAttribute("id").c_str()) && n->GetAttribute("hidden")[0] == 'y')
 				{
