@@ -269,11 +269,13 @@ void debugger_list::keyPressEvent(QKeyEvent* event)
 {
 	if (!isActiveWindow())
 	{
+		QListWidget::keyPressEvent(event);
 		return;
 	}
 
 	if (event->modifiers())
 	{
+		QListWidget::keyPressEvent(event);
 		return;
 	}
 
@@ -287,17 +289,22 @@ void debugger_list::keyPressEvent(QKeyEvent* event)
 	{
 		if (event->isAutoRepeat())
 		{
+			QListWidget::keyPressEvent(event);
 			return;
 		}
+
 		if (m_cpu && m_cpu->id_type() == 0x55)
 		{
 			create_rsx_command_detail(m_showing_selected_instruction ? m_selected_instruction : m_pc);
 			return;
 		}
-		return;
+
+		break;
 	}
 	default: break;
 	}
+
+	QListWidget::keyPressEvent(event);
 }
 
 
