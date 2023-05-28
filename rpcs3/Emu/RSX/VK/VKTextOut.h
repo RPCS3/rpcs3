@@ -205,14 +205,7 @@ namespace vk
 		{
 			ensure(m_used_descriptors < 120);
 
-			VkDescriptorSetAllocateInfo alloc_info = {};
-			alloc_info.descriptorPool = m_descriptor_pool;
-			alloc_info.descriptorSetCount = 1;
-			alloc_info.pSetLayouts = &m_descriptor_layout;
-			alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-
-			CHECK_RESULT(vkAllocateDescriptorSets(device, &alloc_info, m_descriptor_set.ptr()));
-			m_used_descriptors++;
+			m_descriptor_set = m_descriptor_pool.allocate(m_descriptor_layout, VK_TRUE, m_used_descriptors++);
 
 			float scale[] = { scale_x, scale_y };
 			float colors[] = { color[0], color[1], color[2], color[3] };
@@ -358,15 +351,6 @@ namespace vk
 			{
 				vkCmdDraw(cmd, counts[i], 1, offsets[i], i);
 			}
-		}
-
-		void reset_descriptors()
-		{
-			if (m_used_descriptors == 0)
-				return;
-
-			m_descriptor_pool.reset(0);
-			m_used_descriptors = 0;
 		}
 
 		void set_scale(double scale)

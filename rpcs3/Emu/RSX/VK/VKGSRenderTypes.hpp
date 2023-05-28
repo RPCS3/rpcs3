@@ -177,7 +177,6 @@ namespace vk
 
 		vk::descriptor_set descriptor_set;
 		vk::descriptor_pool descriptor_pool;
-		u32 used_descriptors = 0;
 
 		rsx::flags32_t flags = 0;
 
