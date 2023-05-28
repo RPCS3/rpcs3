@@ -968,6 +968,7 @@ void trophy_manager_dialog::PopulateGameTable()
 	m_game_table->setRowCount(static_cast<int>(m_trophies_db.size()));
 
 	m_game_combo->clear();
+	m_game_combo->blockSignals(true);
 
 	qRegisterMetaType<QVector<int>>("QVector<int>");
 	QList<int> indices;
@@ -999,6 +1000,8 @@ void trophy_manager_dialog::PopulateGameTable()
 	}
 
 	m_game_combo->model()->sort(0, Qt::AscendingOrder);
+	m_game_combo->blockSignals(false);
+	m_game_combo->setCurrentIndex(0);
 
 	m_game_table->setSortingEnabled(true); // Enable sorting only after using setItem calls
 
