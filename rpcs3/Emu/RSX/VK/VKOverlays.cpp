@@ -15,8 +15,6 @@
 
 #include "util/fnv_hash.hpp"
 
-#define VK_OVERLAY_MAX_DRAW_CALLS 1024
-
 namespace vk
 {
 	overlay_pass::overlay_pass()
@@ -49,26 +47,26 @@ namespace vk
 
 	void overlay_pass::init_descriptors()
 	{
-		std::vector<VkDescriptorPoolSize> descriptor_pool_sizes =
+		rsx::simple_array<VkDescriptorPoolSize> descriptor_pool_sizes =
 		{
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_OVERLAY_MAX_DRAW_CALLS }
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 }
 		};
 
 		if (m_num_usable_samplers)
 		{
-			descriptor_pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_OVERLAY_MAX_DRAW_CALLS * m_num_usable_samplers });
+			descriptor_pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, m_num_usable_samplers });
 		}
 
 		if (m_num_input_attachments)
 		{
-			descriptor_pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, VK_OVERLAY_MAX_DRAW_CALLS * m_num_input_attachments });
+			descriptor_pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, m_num_input_attachments });
 		}
 
 		// Reserve descriptor pools
-		m_descriptor_pool.create(*m_device, descriptor_pool_sizes.data(), ::size32(descriptor_pool_sizes), VK_OVERLAY_MAX_DRAW_CALLS, 2);
+		m_descriptor_pool.create(*m_device, descriptor_pool_sizes);
 
 		const auto num_bindings = 1 + m_num_usable_samplers + m_num_input_attachments;
-		std::vector<VkDescriptorSetLayoutBinding> bindings(num_bindings);
+		rsx::simple_array<VkDescriptorSetLayoutBinding> bindings(num_bindings);
 
 		bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		bindings[0].descriptorCount = 1;
@@ -222,16 +220,7 @@ namespace vk
 		else
 			program = build_pipeline(key, pass);
 
-		ensure(m_used_descriptors < VK_OVERLAY_MAX_DRAW_CALLS);
-
-		VkDescriptorSetAllocateInfo alloc_info = {};
-		alloc_info.descriptorPool = m_descriptor_pool;
-		alloc_info.descriptorSetCount = 1;
-		alloc_info.pSetLayouts = &m_descriptor_layout;
-		alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-
-		CHECK_RESULT(vkAllocateDescriptorSets(*m_device, &alloc_info, m_descriptor_set.ptr()));
-		m_used_descriptors++;
+		m_descriptor_set = m_descriptor_pool.allocate(m_descriptor_layout);
 
 		if (!m_sampler && !src.empty())
 		{
@@ -288,6 +277,7 @@ namespace vk
 
 	void overlay_pass::free_resources()
 	{
+		// FIXME: Allocation sizes are known, we don't need to use a data_heap structure
 		m_vao.reset_allocation_stats();
 		m_ubo.reset_allocation_stats();
 	}

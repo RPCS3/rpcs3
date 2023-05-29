@@ -993,7 +993,6 @@ void VKGSRender::end()
 	}
 
 	// Allocate descriptor set
-	check_descriptors();
 	m_current_frame->descriptor_set = allocate_descriptor_set();
 
 	// Load program execution environment

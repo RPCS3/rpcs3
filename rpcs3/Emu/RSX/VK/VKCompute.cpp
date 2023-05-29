@@ -16,13 +16,13 @@ namespace vk
 
 	void compute_task::init_descriptors()
 	{
-		std::vector<VkDescriptorPoolSize> descriptor_pool_sizes;
-		std::vector<VkDescriptorSetLayoutBinding> bindings;
+		rsx::simple_array<VkDescriptorPoolSize> descriptor_pool_sizes;
+		rsx::simple_array<VkDescriptorSetLayoutBinding> bindings;
 
 		const auto layout = get_descriptor_layout();
 		for (const auto &e : layout)
 		{
-			descriptor_pool_sizes.push_back({e.first, u32(VK_MAX_COMPUTE_TASKS * e.second)});
+			descriptor_pool_sizes.push_back({e.first, e.second});
 
 			for (unsigned n = 0; n < e.second; ++n)
 			{
@@ -38,7 +38,7 @@ namespace vk
 		}
 
 		// Reserve descriptor pools
-		m_descriptor_pool.create(*g_render_device, descriptor_pool_sizes.data(), ::size32(descriptor_pool_sizes), VK_MAX_COMPUTE_TASKS, 3);
+		m_descriptor_pool.create(*g_render_device, descriptor_pool_sizes);
 		m_descriptor_layout = vk::descriptors::create_layout(bindings);
 
 		VkPipelineLayoutCreateInfo layout_info = {};
@@ -146,7 +146,7 @@ namespace vk
 
 		ensure(m_used_descriptors < VK_MAX_COMPUTE_TASKS);
 
-		m_descriptor_set = m_descriptor_pool.allocate(m_descriptor_layout, VK_TRUE, m_used_descriptors++);
+		m_descriptor_set = m_descriptor_pool.allocate(m_descriptor_layout, VK_TRUE);
 
 		bind_resources();
 

@@ -233,7 +233,7 @@ namespace vk
 	std::pair<VkDescriptorSetLayout, VkPipelineLayout> shader_interpreter::create_layout(VkDevice dev)
 	{
 		const auto& binding_table = vk::get_current_renderer()->get_pipeline_binding_table();
-		std::vector<VkDescriptorSetLayoutBinding> bindings(binding_table.total_descriptor_bindings);
+		rsx::simple_array<VkDescriptorSetLayoutBinding> bindings(binding_table.total_descriptor_bindings);
 
 		u32 idx = 0;
 
@@ -378,13 +378,15 @@ namespace vk
 	{
 		const auto max_draw_calls = dev.get_descriptor_max_draw_calls();
 
-		std::vector<VkDescriptorPoolSize> sizes;
-		sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER , 6 * max_draw_calls });
-		sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER , 3 * max_draw_calls });
-		sizes.push_back({ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER , 68 * max_draw_calls });
-		sizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3 * max_draw_calls });
+		rsx::simple_array<VkDescriptorPoolSize> sizes =
+		{
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER , 6 },
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER , 3 },
+			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER , 68 },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3 }
+		};
 
-		m_descriptor_pool.create(dev, sizes.data(), ::size32(sizes), max_draw_calls, 2);
+		m_descriptor_pool.create(dev, sizes, max_draw_calls);
 	}
 
 	void shader_interpreter::init(const vk::render_device& dev)
@@ -518,7 +520,7 @@ namespace vk
 
 	VkDescriptorSet shader_interpreter::allocate_descriptor_set()
 	{
-		return m_descriptor_pool.allocate(m_shared_descriptor_layout, VK_TRUE, 0);
+		return m_descriptor_pool.allocate(m_shared_descriptor_layout);
 	}
 
 	glsl::program* shader_interpreter::get(const vk::pipeline_props& properties, const program_hash_util::fragment_program_utils::fragment_program_metadata& metadata)

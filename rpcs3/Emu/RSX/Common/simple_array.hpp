@@ -5,10 +5,7 @@
 
 namespace rsx
 {
-	template <typename Ty>
-	concept is_simple_pod_v = (std::is_trivially_constructible_v<Ty>) && (std::is_trivially_destructible_v <Ty>);
-
-	template <typename Ty> requires is_simple_pod_v<Ty>
+	template <typename Ty> requires std::is_trivially_destructible_v<Ty>
 	struct simple_array
 	{
 	public:

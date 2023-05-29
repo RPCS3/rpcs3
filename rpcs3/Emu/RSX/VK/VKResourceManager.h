@@ -1,5 +1,6 @@
 #pragma once
 #include "vkutils/image.h"
+#include "vkutils/garbage_collector.h"
 #include "vkutils/query_pool.hpp"
 #include "vkutils/sampler.h"
 
@@ -15,42 +16,6 @@ namespace vk
 	u64 current_event_id();
 	u64 last_completed_event_id();
 	void on_event_completed(u64 event_id, bool flush = false);
-
-	class disposable_t
-	{
-		void* ptr;
-		std::function<void(void*)> deleter;
-
-		disposable_t(void* ptr_, std::function<void(void*)> deleter_) :
-			ptr(ptr_), deleter(deleter_) {}
-	public:
-
-		disposable_t() = delete;
-		disposable_t(const disposable_t&) = delete;
-
-		disposable_t(disposable_t&& other):
-			ptr(std::exchange(other.ptr, nullptr)),
-			deleter(other.deleter)
-		{}
-
-		~disposable_t()
-		{
-			if (ptr)
-			{
-				deleter(ptr);
-				ptr = nullptr;
-			}
-		}
-
-		template <typename T>
-		static disposable_t make(T* raw)
-		{
-			return disposable_t(raw, [](void *raw)
-			{
-				delete static_cast<T*>(raw);
-			});
-		}
-	};
 
 	struct eid_scope_t
 	{
@@ -83,7 +48,7 @@ namespace vk
 		}
 	};
 
-	class resource_manager
+	class resource_manager : public garbage_collector
 	{
 	private:
 		sampler_pool_t m_sampler_pool;
@@ -151,7 +116,7 @@ namespace vk
 			return ret;
 		}
 
-		inline void dispose(vk::disposable_t& disposable)
+		void dispose(vk::disposable_t& disposable) override
 		{
 			get_current_eid_scope().m_disposables.emplace_back(std::move(disposable));
 		}

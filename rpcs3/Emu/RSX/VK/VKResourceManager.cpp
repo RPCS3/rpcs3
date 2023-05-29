@@ -41,6 +41,11 @@ namespace vk
 		return &g_resource_manager;
 	}
 
+	garbage_collector* get_gc()
+	{
+		return &g_resource_manager;
+	}
+
 	void resource_manager::trim()
 	{
 		// For any managed resources, try to keep the number of unused/idle resources as low as possible.
