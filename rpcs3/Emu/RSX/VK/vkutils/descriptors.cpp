@@ -110,18 +110,18 @@ namespace vk
 	{
 		ensure(max_sets > 16);
 
-		auto scaled_pool_sizes = pool_sizes;
-		for (auto& size : scaled_pool_sizes)
+		m_create_info_pool_sizes = pool_sizes;
+		for (auto& size : m_create_info_pool_sizes)
 		{
-			ensure(size.descriptorCount < 32); // Sanity check. Remove before commit.
+			ensure(size.descriptorCount < 128); // Sanity check. Remove before commit.
 			size.descriptorCount *= max_sets;
 		}
 
-		info.flags = dev.get_descriptor_update_after_bind_support() ? VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT : 0;
-		info.maxSets = max_sets;
-		info.poolSizeCount = scaled_pool_sizes.size();
-		info.pPoolSizes = scaled_pool_sizes.data();
-		info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		m_create_info.flags = dev.get_descriptor_update_after_bind_support() ? VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT : 0;
+		m_create_info.maxSets = max_sets;
+		m_create_info.poolSizeCount = m_create_info_pool_sizes.size();
+		m_create_info.pPoolSizes = m_create_info_pool_sizes.data();
+		m_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 
 		m_owner = &dev;
 		next_subpool();
@@ -181,7 +181,7 @@ namespace vk
 
 		if (use_cache)
 		{
-			const auto alloc_size = std::min<u32>(info.maxSets - m_current_subpool_offset, max_cache_size);
+			const auto alloc_size = std::min<u32>(m_create_info.maxSets - m_current_subpool_offset, max_cache_size);
 			m_allocation_request_cache.resize(alloc_size);
 			for (auto& layout_ : m_allocation_request_cache)
 			{
@@ -195,10 +195,12 @@ namespace vk
 			m_descriptor_set_cache.resize(alloc_size);
 			CHECK_RESULT(vkAllocateDescriptorSets(*m_owner, &alloc_info, m_descriptor_set_cache.data()));
 
+			m_current_subpool_offset += alloc_size;
 			new_descriptor_set = m_descriptor_set_cache.pop_back();
 		}
 		else
 		{
+			m_current_subpool_offset++;
 			CHECK_RESULT(vkAllocateDescriptorSets(*m_owner, &alloc_info, &new_descriptor_set));
 		}
 
@@ -236,7 +238,7 @@ namespace vk
 		if (m_current_subpool_index == umax)
 		{
 			VkDescriptorPool subpool = VK_NULL_HANDLE;
-			CHECK_RESULT(vkCreateDescriptorPool(*m_owner, &info, nullptr, &subpool));
+			CHECK_RESULT(vkCreateDescriptorPool(*m_owner, &m_create_info, nullptr, &subpool));
 
 			m_device_subpools.push_back(
 			{
@@ -248,6 +250,7 @@ namespace vk
 		}
 
 		m_device_subpools[m_current_subpool_index].busy = VK_TRUE;
+		m_current_pool_handle = m_device_subpools[m_current_subpool_index].handle;
 	}
 
 	descriptor_set::descriptor_set(VkDescriptorSet set)

@@ -37,10 +37,10 @@ namespace vk
 
 		operator VkDescriptorPool() { return m_current_pool_handle; }
 		FORCE_INLINE bool valid() const { return (!m_device_subpools.empty()); }
-		FORCE_INLINE u32 max_sets() const { return info.maxSets; }
+		FORCE_INLINE u32 max_sets() const { return m_create_info.maxSets; }
 
 	private:
-		FORCE_INLINE bool can_allocate(u32 required_count, u32 already_used_count = 0) const { return (required_count + already_used_count) <= info.maxSets; };
+		FORCE_INLINE bool can_allocate(u32 required_count, u32 already_used_count = 0) const { return (required_count + already_used_count) <= m_create_info.maxSets; };
 		void reset(u32 subpool_id, VkDescriptorPoolResetFlags flags);
 		void next_subpool();
 
@@ -51,7 +51,8 @@ namespace vk
 		};
 
 		const vk::render_device* m_owner = nullptr;
-		VkDescriptorPoolCreateInfo info = {};
+		VkDescriptorPoolCreateInfo m_create_info = {};
+		rsx::simple_array<VkDescriptorPoolSize> m_create_info_pool_sizes;
 
 		rsx::simple_array<logical_subpool_t> m_device_subpools;
 		VkDescriptorPool m_current_pool_handle = VK_NULL_HANDLE;
