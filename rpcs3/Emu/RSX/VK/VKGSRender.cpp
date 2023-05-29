@@ -936,8 +936,6 @@ VKGSRender::~VKGSRender()
 		ctx.buffer_views_to_clean.clear();
 	}
 
-	m_descriptor_pool.destroy();
-
 	// Textures
 	m_rtts.destroy();
 	m_texture_cache.destroy();
@@ -964,6 +962,9 @@ VKGSRender::~VKGSRender()
 
 	// Global resources
 	vk::destroy_global_resources();
+
+	// Destroy at the end in case of lingering callbacks
+	m_descriptor_pool.destroy();
 
 	// Device handles/contexts
 	m_swapchain->destroy();
