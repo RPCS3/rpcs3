@@ -3,6 +3,9 @@
 
 #include "libsynth2.h"
 
+#ifdef s_addr
+#undef s_addr
+#endif
 
 
 LOG_CHANNEL(libsynth2);
