@@ -120,8 +120,9 @@ private:
 	volatile vk::host_data_t* m_host_data_ptr = nullptr;
 	std::unique_ptr<vk::buffer> m_host_object_data;
 
-	VkDescriptorSetLayout descriptor_layouts;
-	VkPipelineLayout pipeline_layout;
+	vk::descriptor_pool m_descriptor_pool;
+	VkDescriptorSetLayout m_descriptor_layouts;
+	VkPipelineLayout m_pipeline_layout;
 
 	vk::framebuffer_holder* m_draw_fbo = nullptr;
 
@@ -229,7 +230,6 @@ private:
 	void check_heap_status(u32 flags = VK_HEAP_CHECK_ALL);
 	void check_present_status();
 
-	void check_descriptors();
 	VkDescriptorSet allocate_descriptor_set();
 
 	vk::vertex_upload_info upload_vertex_data();

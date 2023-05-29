@@ -395,9 +395,9 @@ namespace
 	std::tuple<VkPipelineLayout, VkDescriptorSetLayout> get_shared_pipeline_layout(VkDevice dev)
 	{
 		const auto& binding_table = vk::get_current_renderer()->get_pipeline_binding_table();
-		std::vector<VkDescriptorSetLayoutBinding> bindings(binding_table.total_descriptor_bindings);
+		rsx::simple_array<VkDescriptorSetLayoutBinding> bindings(binding_table.total_descriptor_bindings);
 
-		usz idx = 0;
+		u32 idx = 0;
 
 		// Vertex stream, one stream for cacheable data, one stream for transient data
 		for (int i = 0; i < 3; i++)
@@ -595,7 +595,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	m_secondary_cb_list.create(m_secondary_command_buffer_pool, vk::command_buffer::access_type_hint::all);
 
 	//Precalculated stuff
-	std::tie(pipeline_layout, descriptor_layouts) = get_shared_pipeline_layout(*m_device);
+	std::tie(m_pipeline_layout, m_descriptor_layouts) = get_shared_pipeline_layout(*m_device);
 
 	//Occlusion
 	m_occlusion_query_manager = std::make_unique<vk::query_pool_manager>(*m_device, VK_QUERY_TYPE_OCCLUSION, OCCLUSION_MAX_POOL_SIZE);
@@ -614,13 +614,16 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	const auto& binding_table = m_device->get_pipeline_binding_table();
 	const u32 num_fs_samplers = binding_table.vertex_textures_first_bind_slot - binding_table.textures_first_bind_slot;
 
-	std::vector<VkDescriptorPoolSize> sizes;
-	sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER , 6 * max_draw_calls });
-	sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER , 3 * max_draw_calls });
-	sizes.push_back({ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER , (num_fs_samplers + 4) * max_draw_calls });
+	rsx::simple_array<VkDescriptorPoolSize> descriptor_type_sizes =
+	{
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER , 6 },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER , 3 },
+		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER , (num_fs_samplers + 4) },
 
-	// Conditional rendering predicate slot; refactor to allow skipping this when not needed
-	sizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1 * max_draw_calls });
+		// Conditional rendering predicate slot; refactor to allow skipping this when not needed
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1 }
+	};
+	m_descriptor_pool.create(*m_device, descriptor_type_sizes, max_draw_calls);
 
 	VkSemaphoreCreateInfo semaphore_info = {};
 	semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -665,7 +668,6 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	{
 		vkCreateSemaphore((*m_device), &semaphore_info, nullptr, &ctx.present_wait_semaphore);
 		vkCreateSemaphore((*m_device), &semaphore_info, nullptr, &ctx.acquire_signal_semaphore);
-		ctx.descriptor_pool.create(*m_device, sizes.data(), static_cast<u32>(sizes.size()), max_draw_calls, 1);
 	}
 
 	const auto& memory_map = m_device->get_memory_mapping();
@@ -920,10 +922,11 @@ VKGSRender::~VKGSRender()
 	{
 		vkDestroySemaphore((*m_device), ctx.present_wait_semaphore, nullptr);
 		vkDestroySemaphore((*m_device), ctx.acquire_signal_semaphore, nullptr);
-		ctx.descriptor_pool.destroy();
 
 		ctx.buffer_views_to_clean.clear();
 	}
+
+	m_descriptor_pool.destroy();
 
 	// Textures
 	m_rtts.destroy();
@@ -935,8 +938,8 @@ VKGSRender::~VKGSRender()
 	m_text_writer.reset();
 
 	//Pipeline descriptors
-	vkDestroyPipelineLayout(*m_device, pipeline_layout, nullptr);
-	vkDestroyDescriptorSetLayout(*m_device, descriptor_layouts, nullptr);
+	vkDestroyPipelineLayout(*m_device, m_pipeline_layout, nullptr);
+	vkDestroyDescriptorSetLayout(*m_device, m_descriptor_layouts, nullptr);
 
 	// Queries
 	m_occlusion_query_manager.reset();
@@ -1318,22 +1321,11 @@ void VKGSRender::check_present_status()
 	}
 }
 
-void VKGSRender::check_descriptors()
-{
-	// Ease resource pressure if the number of draw calls becomes too high or we are running low on memory resources
-	const auto required_descriptors = rsx::method_registers.current_draw_clause.pass_count();
-	if (!m_current_frame->descriptor_pool.can_allocate(required_descriptors, 0))
-	{
-		// Should hard sync before resetting descriptors for spec compliance
-		flush_command_queue(true);
-	}
-}
-
 VkDescriptorSet VKGSRender::allocate_descriptor_set()
 {
 	if (!m_shader_interpreter.is_interpreter(m_program)) [[likely]]
 	{
-		return m_current_frame->descriptor_pool.allocate(descriptor_layouts, VK_TRUE, 0);
+		return m_descriptor_pool.allocate(m_descriptor_layouts, VK_TRUE);
 	}
 	else
 	{
@@ -1414,7 +1406,7 @@ void VKGSRender::on_init_thread()
 	if (!m_overlay_manager)
 	{
 		m_frame->hide();
-		m_shaders_cache->load(nullptr, pipeline_layout);
+		m_shaders_cache->load(nullptr, m_pipeline_layout);
 		m_frame->show();
 	}
 	else
@@ -1422,7 +1414,7 @@ void VKGSRender::on_init_thread()
 		rsx::shader_loading_dialog_native dlg(this);
 
 		// TODO: Handle window resize messages during loading on GPUs without OUT_OF_DATE_KHR support
-		m_shaders_cache->load(&dlg, pipeline_layout);
+		m_shaders_cache->load(&dlg, m_pipeline_layout);
 	}
 }
 
@@ -2009,7 +2001,7 @@ bool VKGSRender::load_program()
 
 		// Load current program from cache
 		std::tie(m_program, m_vertex_prog, m_fragment_prog) = m_prog_buffer->get_graphics_pipeline(vertex_program, fragment_program, m_pipeline_properties,
-			shadermode != shader_mode::recompiler, true, pipeline_layout);
+			shadermode != shader_mode::recompiler, true, m_pipeline_layout);
 
 		vk::leave_uninterruptible();
 
@@ -2268,7 +2260,7 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 		data_size = 20;
 	}
 
-	vkCmdPushConstants(*m_current_command_buffer, pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, data_size, draw_info);
+	vkCmdPushConstants(*m_current_command_buffer, m_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, data_size, draw_info);
 
 	const usz data_offset = (id * 128) + m_vertex_layout_stream_info.offset;
 	auto dst = m_vertex_layout_ring_info.map(data_offset, 128);

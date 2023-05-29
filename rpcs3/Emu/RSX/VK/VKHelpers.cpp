@@ -35,14 +35,6 @@ namespace vk
 	u64 g_num_processed_frames = 0;
 	u64 g_num_total_frames = 0;
 
-	void reset_compute_tasks()
-	{
-		for (const auto &p : g_compute_tasks)
-		{
-			p.second->free_resources();
-		}
-	}
-
 	void reset_overlay_passes()
 	{
 		for (const auto& p : g_overlay_passes)
@@ -53,7 +45,7 @@ namespace vk
 
 	void reset_global_resources()
 	{
-		vk::reset_compute_tasks();
+		// FIXME: These two shouldn't exist
 		vk::reset_resolve_resources();
 		vk::reset_overlay_passes();
 
