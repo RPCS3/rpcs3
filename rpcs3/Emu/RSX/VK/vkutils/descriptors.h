@@ -20,7 +20,10 @@ namespace vk
 
 		~gc_wrapper_t()
 		{
-			m_callback();
+			if (m_callback)
+			{
+				m_callback();
+			}
 		}
 	};
 
@@ -36,7 +39,7 @@ namespace vk
 		VkDescriptorSet allocate(VkDescriptorSetLayout layout, VkBool32 use_cache = VK_TRUE);
 
 		operator VkDescriptorPool() { return m_current_pool_handle; }
-		FORCE_INLINE bool valid() const { return (!m_device_subpools.empty()); }
+		FORCE_INLINE bool valid() const { return !m_device_subpools.empty(); }
 		FORCE_INLINE u32 max_sets() const { return m_create_info.maxSets; }
 
 	private:
