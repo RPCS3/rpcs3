@@ -406,6 +406,7 @@ namespace
 			bindings[idx].descriptorCount = 1;
 			bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 			bindings[idx].binding = binding_table.vertex_buffers_first_bind_slot + i;
+			bindings[idx].pImmutableSamplers = nullptr;
 			idx++;
 		}
 
@@ -413,6 +414,7 @@ namespace
 		bindings[idx].descriptorCount = 1;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 		bindings[idx].binding = binding_table.fragment_constant_buffers_bind_slot;
+		bindings[idx].pImmutableSamplers = nullptr;
 
 		idx++;
 
@@ -420,6 +422,7 @@ namespace
 		bindings[idx].descriptorCount = 1;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 		bindings[idx].binding = binding_table.fragment_state_bind_slot;
+		bindings[idx].pImmutableSamplers = nullptr;
 
 		idx++;
 
@@ -427,6 +430,7 @@ namespace
 		bindings[idx].descriptorCount = 1;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 		bindings[idx].binding = binding_table.fragment_texture_params_bind_slot;
+		bindings[idx].pImmutableSamplers = nullptr;
 
 		idx++;
 
@@ -434,6 +438,7 @@ namespace
 		bindings[idx].descriptorCount = 1;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 		bindings[idx].binding = binding_table.vertex_constant_buffers_bind_slot;
+		bindings[idx].pImmutableSamplers = nullptr;
 
 		idx++;
 
@@ -441,6 +446,7 @@ namespace
 		bindings[idx].descriptorCount = 1;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS;
 		bindings[idx].binding = binding_table.vertex_params_bind_slot;
+		bindings[idx].pImmutableSamplers = nullptr;
 
 		idx++;
 
@@ -448,6 +454,7 @@ namespace
 		bindings[idx].descriptorCount = 1;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 		bindings[idx].binding = binding_table.conditional_render_predicate_slot;
+		bindings[idx].pImmutableSamplers = nullptr;
 
 		idx++;
 
@@ -455,6 +462,7 @@ namespace
 		bindings[idx].descriptorCount = 1;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 		bindings[idx].binding = binding_table.rasterizer_env_bind_slot;
+		bindings[idx].pImmutableSamplers = nullptr;
 
 		idx++;
 
@@ -466,6 +474,7 @@ namespace
 			bindings[idx].descriptorCount = 1;
 			bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 			bindings[idx].binding = binding;
+			bindings[idx].pImmutableSamplers = nullptr;
 			idx++;
 		}
 
@@ -475,6 +484,7 @@ namespace
 			bindings[idx].descriptorCount = 1;
 			bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 			bindings[idx].binding = binding_table.vertex_textures_first_bind_slot + i;
+			bindings[idx].pImmutableSamplers = nullptr;
 			idx++;
 		}
 

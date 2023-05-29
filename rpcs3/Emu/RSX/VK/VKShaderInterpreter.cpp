@@ -244,6 +244,7 @@ namespace vk
 			bindings[idx].descriptorCount = 1;
 			bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 			bindings[idx].binding = binding_table.vertex_buffers_first_bind_slot + i;
+			bindings[idx].pImmutableSamplers = nullptr;
 			idx++;
 		}
 
@@ -251,6 +252,7 @@ namespace vk
 		bindings[idx].descriptorCount = 1;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 		bindings[idx].binding = binding_table.fragment_constant_buffers_bind_slot;
+		bindings[idx].pImmutableSamplers = nullptr;
 
 		idx++;
 
@@ -258,6 +260,7 @@ namespace vk
 		bindings[idx].descriptorCount = 1;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 		bindings[idx].binding = binding_table.fragment_state_bind_slot;
+		bindings[idx].pImmutableSamplers = nullptr;
 
 		idx++;
 
@@ -265,6 +268,7 @@ namespace vk
 		bindings[idx].descriptorCount = 1;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 		bindings[idx].binding = binding_table.fragment_texture_params_bind_slot;
+		bindings[idx].pImmutableSamplers = nullptr;
 
 		idx++;
 
@@ -272,6 +276,7 @@ namespace vk
 		bindings[idx].descriptorCount = 1;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 		bindings[idx].binding = binding_table.vertex_constant_buffers_bind_slot;
+		bindings[idx].pImmutableSamplers = nullptr;
 
 		idx++;
 
@@ -279,6 +284,7 @@ namespace vk
 		bindings[idx].descriptorCount = 1;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS;
 		bindings[idx].binding = binding_table.vertex_params_bind_slot;
+		bindings[idx].pImmutableSamplers = nullptr;
 
 		idx++;
 
@@ -286,6 +292,7 @@ namespace vk
 		bindings[idx].descriptorCount = 1;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 		bindings[idx].binding = binding_table.conditional_render_predicate_slot;
+		bindings[idx].pImmutableSamplers = nullptr;
 
 		idx++;
 
@@ -293,6 +300,7 @@ namespace vk
 		bindings[idx].descriptorCount = 1;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 		bindings[idx].binding = binding_table.rasterizer_env_bind_slot;
+		bindings[idx].pImmutableSamplers = nullptr;
 
 		idx++;
 
@@ -300,6 +308,7 @@ namespace vk
 		bindings[idx].descriptorCount = 16;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 		bindings[idx].binding = binding_table.textures_first_bind_slot;
+		bindings[idx].pImmutableSamplers = nullptr;
 
 		m_fragment_textures_start = bindings[idx].binding;
 		idx++;
@@ -308,6 +317,7 @@ namespace vk
 		bindings[idx].descriptorCount = 16;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 		bindings[idx].binding = binding_table.textures_first_bind_slot + 1;
+		bindings[idx].pImmutableSamplers = nullptr;
 
 		idx++;
 
@@ -315,6 +325,7 @@ namespace vk
 		bindings[idx].descriptorCount = 16;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 		bindings[idx].binding = binding_table.textures_first_bind_slot + 2;
+		bindings[idx].pImmutableSamplers = nullptr;
 
 		idx++;
 
@@ -322,6 +333,7 @@ namespace vk
 		bindings[idx].descriptorCount = 16;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 		bindings[idx].binding = binding_table.textures_first_bind_slot + 3;
+		bindings[idx].pImmutableSamplers = nullptr;
 
 		idx++;
 
@@ -329,6 +341,7 @@ namespace vk
 		bindings[idx].descriptorCount = 4;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 		bindings[idx].binding = binding_table.textures_first_bind_slot + 4;
+		bindings[idx].pImmutableSamplers = nullptr;
 
 		idx++;
 
@@ -336,6 +349,7 @@ namespace vk
 		bindings[idx].descriptorCount = 1;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 		bindings[idx].binding = binding_table.textures_first_bind_slot + 5;
+		bindings[idx].pImmutableSamplers = nullptr;
 
 		m_vertex_instruction_start = bindings[idx].binding;
 		idx++;
@@ -344,6 +358,7 @@ namespace vk
 		bindings[idx].descriptorCount = 1;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 		bindings[idx].binding = binding_table.textures_first_bind_slot + 6;
+		bindings[idx].pImmutableSamplers = nullptr;
 
 		m_fragment_instruction_start = bindings[idx].binding;
 		idx++;
