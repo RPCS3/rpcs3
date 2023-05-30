@@ -1,5 +1,6 @@
 #include "Emu/IdManager.h"
 #include "descriptors.h"
+#include "garbage_collector.h"
 
 namespace vk
 {
@@ -63,7 +64,7 @@ namespace vk
 			g_fxo->get<dispatch_manager>().flush_all();
 		}
 
-		VkDescriptorSetLayout create_layout(const std::vector<VkDescriptorSetLayoutBinding>& bindings)
+		VkDescriptorSetLayout create_layout(const rsx::simple_array<VkDescriptorSetLayoutBinding>& bindings)
 		{
 			VkDescriptorSetLayoutCreateInfo infos = {};
 			infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -105,65 +106,56 @@ namespace vk
 		}
 	}
 
-	void descriptor_pool::create(const vk::render_device& dev, VkDescriptorPoolSize* sizes, u32 size_descriptors_count, u32 max_sets, u8 subpool_count)
+	void descriptor_pool::create(const vk::render_device& dev, const rsx::simple_array<VkDescriptorPoolSize>& pool_sizes, u32 max_sets)
 	{
-		ensure(subpool_count);
+		ensure(max_sets > 16);
 
-		info.flags = dev.get_descriptor_update_after_bind_support() ? VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT : 0;
-		info.maxSets = max_sets;
-		info.poolSizeCount = size_descriptors_count;
-		info.pPoolSizes = sizes;
-		info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-
-		m_owner = &dev;
-		m_device_pools.resize(subpool_count);
-
-		for (auto& pool : m_device_pools)
+		m_create_info_pool_sizes = pool_sizes;
+		for (auto& size : m_create_info_pool_sizes)
 		{
-			CHECK_RESULT(vkCreateDescriptorPool(dev, &info, nullptr, &pool));
+			ensure(size.descriptorCount < 128); // Sanity check. Remove before commit.
+			size.descriptorCount *= max_sets;
 		}
 
-		m_current_pool_handle = m_device_pools[0];
+		m_create_info.flags = dev.get_descriptor_update_after_bind_support() ? VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT : 0;
+		m_create_info.maxSets = max_sets;
+		m_create_info.poolSizeCount = m_create_info_pool_sizes.size();
+		m_create_info.pPoolSizes = m_create_info_pool_sizes.data();
+		m_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+
+		m_owner = &dev;
+		next_subpool();
 	}
 
 	void descriptor_pool::destroy()
 	{
-		if (m_device_pools.empty()) return;
+		if (m_device_subpools.empty()) return;
 
-		for (auto& pool : m_device_pools)
+		for (auto& pool : m_device_subpools)
 		{
-			vkDestroyDescriptorPool((*m_owner), pool, nullptr);
-			pool = VK_NULL_HANDLE;
+			vkDestroyDescriptorPool((*m_owner), pool.handle, nullptr);
+			pool.handle = VK_NULL_HANDLE;
 		}
 
 		m_owner = nullptr;
 	}
 
-	void descriptor_pool::reset(VkDescriptorPoolResetFlags flags)
+	void descriptor_pool::reset(u32 subpool_id, VkDescriptorPoolResetFlags flags)
 	{
-		m_descriptor_set_cache.clear();
-		m_current_pool_index = (m_current_pool_index + 1) % u32(m_device_pools.size());
-		m_current_pool_handle = m_device_pools[m_current_pool_index];
-		CHECK_RESULT(vkResetDescriptorPool(*m_owner, m_current_pool_handle, flags));
+		std::lock_guard lock(m_subpool_lock);
+
+		CHECK_RESULT(vkResetDescriptorPool(*m_owner, m_device_subpools[subpool_id].handle, flags));
+		m_device_subpools[subpool_id].busy = VK_FALSE;
 	}
 
-	VkDescriptorSet descriptor_pool::allocate(VkDescriptorSetLayout layout, VkBool32 use_cache, u32 used_count)
+	VkDescriptorSet descriptor_pool::allocate(VkDescriptorSetLayout layout, VkBool32 use_cache)
 	{
 		if (use_cache)
 		{
 			if (m_descriptor_set_cache.empty())
 			{
 				// For optimal cache utilization, each pool should only allocate one layout
-				if (m_cached_layout != layout)
-				{
-					m_cached_layout = layout;
-					m_allocation_request_cache.resize(max_cache_size);
-
-					for (auto& layout_ : m_allocation_request_cache)
-					{
-						layout_ = m_cached_layout;
-					}
-				}
+				m_cached_layout = layout;
 			}
 			else if (m_cached_layout != layout)
 			{
@@ -175,6 +167,11 @@ namespace vk
 			}
 		}
 
+		if (!can_allocate(use_cache ? 4 : 1, m_current_subpool_offset))
+		{
+			next_subpool();
+		}
+
 		VkDescriptorSet new_descriptor_set;
 		VkDescriptorSetAllocateInfo alloc_info = {};
 		alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -184,8 +181,12 @@ namespace vk
 
 		if (use_cache)
 		{
-			ensure(used_count < info.maxSets);
-			const auto alloc_size = std::min<u32>(info.maxSets - used_count, max_cache_size);
+			const auto alloc_size = std::min<u32>(m_create_info.maxSets - m_current_subpool_offset, max_cache_size);
+			m_allocation_request_cache.resize(alloc_size);
+			for (auto& layout_ : m_allocation_request_cache)
+			{
+				layout_ = m_cached_layout;
+			}
 
 			ensure(m_descriptor_set_cache.empty());
 			alloc_info.descriptorSetCount = alloc_size;
@@ -194,14 +195,62 @@ namespace vk
 			m_descriptor_set_cache.resize(alloc_size);
 			CHECK_RESULT(vkAllocateDescriptorSets(*m_owner, &alloc_info, m_descriptor_set_cache.data()));
 
+			m_current_subpool_offset += alloc_size;
 			new_descriptor_set = m_descriptor_set_cache.pop_back();
 		}
 		else
 		{
+			m_current_subpool_offset++;
 			CHECK_RESULT(vkAllocateDescriptorSets(*m_owner, &alloc_info, &new_descriptor_set));
 		}
 
 		return new_descriptor_set;
+	}
+
+	void descriptor_pool::next_subpool()
+	{
+		if (m_current_subpool_index != umax)
+		{
+			// Enqueue release using gc
+			auto release_func = [subpool_index=m_current_subpool_index, this]()
+			{
+				this->reset(subpool_index, 0);
+			};
+
+			auto cleanup_obj = std::make_unique<gc_wrapper_t>(release_func);
+			vk::get_gc()->dispose(cleanup_obj);
+		}
+
+		std::lock_guard lock(m_subpool_lock);
+
+		m_current_subpool_offset = 0;
+		m_current_subpool_index = umax;
+
+		for (u32 index = 0; index < m_device_subpools.size(); ++index)
+		{
+			if (!m_device_subpools[index].busy)
+			{
+				m_current_subpool_index = index;
+				break;
+			}
+		}
+
+		if (m_current_subpool_index == umax)
+		{
+			VkDescriptorPool subpool = VK_NULL_HANDLE;
+			CHECK_RESULT(vkCreateDescriptorPool(*m_owner, &m_create_info, nullptr, &subpool));
+
+			m_device_subpools.push_back(
+			{
+				.handle = subpool,
+				.busy = VK_FALSE
+			});
+
+			m_current_subpool_index = m_device_subpools.size() - 1;
+		}
+
+		m_device_subpools[m_current_subpool_index].busy = VK_TRUE;
+		m_current_pool_handle = m_device_subpools[m_current_subpool_index].handle;
 	}
 
 	descriptor_set::descriptor_set(VkDescriptorSet set)

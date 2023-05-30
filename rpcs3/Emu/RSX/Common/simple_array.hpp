@@ -5,7 +5,7 @@
 
 namespace rsx
 {
-	template <typename Ty>
+	template <typename Ty> requires std::is_trivially_destructible_v<Ty>
 	struct simple_array
 	{
 	public:

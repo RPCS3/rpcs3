@@ -966,11 +966,6 @@ void VKGSRender::end()
 			m_aux_frame_context.grab_resources(*m_current_frame);
 			m_current_frame = &m_aux_frame_context;
 		}
-		else if (m_current_frame->used_descriptors)
-		{
-			m_current_frame->descriptor_pool.reset(0);
-			m_current_frame->used_descriptors = 0;
-		}
 
 		ensure(!m_current_frame->swap_command_buffer);
 
@@ -998,7 +993,6 @@ void VKGSRender::end()
 	}
 
 	// Allocate descriptor set
-	check_descriptors();
 	m_current_frame->descriptor_set = allocate_descriptor_set();
 
 	// Load program execution environment

@@ -171,6 +171,9 @@
     <ClInclude Include="Emu\RSX\VK\upscalers\nearest_pass.hpp">
       <Filter>upscalers</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\garbage_collector.h">
+      <Filter>vkutils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="vkutils">

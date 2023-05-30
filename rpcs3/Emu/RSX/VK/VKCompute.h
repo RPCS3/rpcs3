@@ -44,8 +44,6 @@ namespace vk
 		void create();
 		void destroy();
 
-		void free_resources();
-
 		virtual void bind_resources() {}
 		virtual void declare_inputs() {}
 

@@ -246,9 +246,6 @@ namespace vk
 
 	void reset_resolve_resources()
 	{
-		for (auto &e : g_resolve_helpers) e.second->free_resources();
-		for (auto &e : g_unresolve_helpers) e.second->free_resources();
-
 		if (g_depth_resolver) g_depth_resolver->free_resources();
 		if (g_depth_unresolver) g_depth_unresolver->free_resources();
 		if (g_stencil_resolver) g_stencil_resolver->free_resources();

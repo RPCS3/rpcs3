@@ -10,30 +10,59 @@
 
 namespace vk
 {
+	struct gc_wrapper_t
+	{
+		std::function<void()> m_callback;
+
+		gc_wrapper_t(std::function<void()> callback)
+			: m_callback(callback)
+		{}
+
+		~gc_wrapper_t()
+		{
+			if (m_callback)
+			{
+				m_callback();
+			}
+		}
+	};
+
 	class descriptor_pool
 	{
 	public:
 		descriptor_pool() = default;
 		~descriptor_pool() = default;
 
-		void create(const vk::render_device& dev, VkDescriptorPoolSize* sizes, u32 size_descriptors_count, u32 max_sets, u8 subpool_count);
+		void create(const vk::render_device& dev, const rsx::simple_array<VkDescriptorPoolSize>& pool_sizes, u32 max_sets = 1024);
 		void destroy();
-		void reset(VkDescriptorPoolResetFlags flags);
 
-		VkDescriptorSet allocate(VkDescriptorSetLayout layout, VkBool32 use_cache, u32 used_count);
+		VkDescriptorSet allocate(VkDescriptorSetLayout layout, VkBool32 use_cache = VK_TRUE);
 
 		operator VkDescriptorPool() { return m_current_pool_handle; }
-		FORCE_INLINE bool valid() const { return (!m_device_pools.empty()); }
-		FORCE_INLINE u32 max_sets() const { return info.maxSets; }
-		FORCE_INLINE bool can_allocate(u32 required_count, u32 used_count) const { return (used_count + required_count) <= info.maxSets; };
+		FORCE_INLINE bool valid() const { return !m_device_subpools.empty(); }
+		FORCE_INLINE u32 max_sets() const { return m_create_info.maxSets; }
 
 	private:
-		const vk::render_device* m_owner = nullptr;
-		VkDescriptorPoolCreateInfo info = {};
+		FORCE_INLINE bool can_allocate(u32 required_count, u32 already_used_count = 0) const { return (required_count + already_used_count) <= m_create_info.maxSets; };
+		void reset(u32 subpool_id, VkDescriptorPoolResetFlags flags);
+		void next_subpool();
 
-		rsx::simple_array<VkDescriptorPool> m_device_pools;
+		struct logical_subpool_t
+		{
+			VkDescriptorPool handle;
+			VkBool32 busy;
+		};
+
+		const vk::render_device* m_owner = nullptr;
+		VkDescriptorPoolCreateInfo m_create_info = {};
+		rsx::simple_array<VkDescriptorPoolSize> m_create_info_pool_sizes;
+
+		rsx::simple_array<logical_subpool_t> m_device_subpools;
 		VkDescriptorPool m_current_pool_handle = VK_NULL_HANDLE;
-		u32 m_current_pool_index = 0;
+		u32 m_current_subpool_index = umax;
+		u32 m_current_subpool_offset = 0;
+
+		shared_mutex m_subpool_lock;
 
 		static constexpr size_t max_cache_size = 64;
 		VkDescriptorSetLayout m_cached_layout = VK_NULL_HANDLE;
@@ -122,6 +151,6 @@ namespace vk
 		void init();
 		void flush();
 
-		VkDescriptorSetLayout create_layout(const std::vector<VkDescriptorSetLayoutBinding>& bindings);
+		VkDescriptorSetLayout create_layout(const rsx::simple_array<VkDescriptorSetLayoutBinding>& bindings);
 	}
 }

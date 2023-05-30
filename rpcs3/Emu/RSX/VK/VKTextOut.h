@@ -40,16 +40,16 @@ namespace vk
 
 		void init_descriptor_set(vk::render_device &dev)
 		{
-			VkDescriptorPoolSize descriptor_pools[1] =
+			rsx::simple_array<VkDescriptorPoolSize> descriptor_pools =
 			{
-				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 120 },
+				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
 			};
 
 			// Reserve descriptor pools
-			m_descriptor_pool.create(dev, descriptor_pools, 1, 120, 2);
+			m_descriptor_pool.create(dev, descriptor_pools);
 
 			// Scale and offset data plus output color
-			std::vector<VkDescriptorSetLayoutBinding> bindings =
+			rsx::simple_array<VkDescriptorSetLayoutBinding> bindings =
 			{
 				{
 					.binding = 0,
@@ -205,14 +205,7 @@ namespace vk
 		{
 			ensure(m_used_descriptors < 120);
 
-			VkDescriptorSetAllocateInfo alloc_info = {};
-			alloc_info.descriptorPool = m_descriptor_pool;
-			alloc_info.descriptorSetCount = 1;
-			alloc_info.pSetLayouts = &m_descriptor_layout;
-			alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-
-			CHECK_RESULT(vkAllocateDescriptorSets(device, &alloc_info, m_descriptor_set.ptr()));
-			m_used_descriptors++;
+			m_descriptor_set = m_descriptor_pool.allocate(m_descriptor_layout);
 
 			float scale[] = { scale_x, scale_y };
 			float colors[] = { color[0], color[1], color[2], color[3] };
@@ -358,15 +351,6 @@ namespace vk
 			{
 				vkCmdDraw(cmd, counts[i], 1, offsets[i], i);
 			}
-		}
-
-		void reset_descriptors()
-		{
-			if (m_used_descriptors == 0)
-				return;
-
-			m_descriptor_pool.reset(0);
-			m_used_descriptors = 0;
 		}
 
 		void set_scale(double scale)

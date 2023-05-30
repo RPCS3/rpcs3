@@ -199,11 +199,6 @@ void VKGSRender::frame_context_cleanup(vk::frame_context_t *ctx)
 	// Resource cleanup.
 	// TODO: This is some outdated crap.
 	{
-		if (m_text_writer)
-		{
-			m_text_writer->reset_descriptors();
-		}
-
 		if (m_overlay_manager && m_overlay_manager->has_dirty())
 		{
 			auto ui_renderer = vk::get_overlay_pass<vk::ui_overlay_renderer>();
