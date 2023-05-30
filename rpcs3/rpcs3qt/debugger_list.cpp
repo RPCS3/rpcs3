@@ -267,6 +267,17 @@ void debugger_list::scroll(s32 steps)
 
 void debugger_list::keyPressEvent(QKeyEvent* event)
 {
+	// Always accept event (so it would not bubble upwards, debugger_frame already sees it)
+	struct accept_event_t
+	{
+		QKeyEvent* event;
+
+		~accept_event_t() noexcept
+		{
+			event->accept();
+		}
+	} accept_event{event};
+
 	if (!isActiveWindow())
 	{
 		QListWidget::keyPressEvent(event);
