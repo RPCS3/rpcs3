@@ -101,6 +101,7 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidg
 	m_choice_units->completer()->setCompletionMode(QCompleter::PopupCompletion);
 	m_choice_units->completer()->setMaxVisibleItems(30);
 	m_choice_units->completer()->setFilterMode(Qt::MatchContains);
+	m_choice_units->installEventFilter(this);
 
 	m_go_to_addr = new QPushButton(tr("Go To Address"), this);
 	m_go_to_pc = new QPushButton(tr("Go To PC"), this);
@@ -211,7 +212,19 @@ bool debugger_frame::eventFilter(QObject* object, QEvent* event)
 	if (object == m_debugger_list && event->type() == QEvent::KeyPress)
 	{
 		keyPressEvent(static_cast<QKeyEvent*>(event));
+		event->accept(); // Restore accepted state
+		return false;
 	}
+
+	if (object == m_choice_units && event->type() == QEvent::FocusOut)
+	{
+		if (int index = m_choice_units->currentIndex(); index >= 0)
+		{
+			// Restore item text automatically on focus-out after search
+			m_choice_units->setCurrentText(m_choice_units->itemText(index));
+		}
+	}
+
 	return false;
 }
 
@@ -263,13 +276,14 @@ void debugger_frame::open_breakpoints_settings()
 	hbox_layout->addWidget(button_ok);
 	dlg->setLayout(hbox_layout);
 	dlg->setAttribute(Qt::WA_DeleteOnClose);
-	dlg->exec();
+	dlg->open();
 }
 
 void debugger_frame::keyPressEvent(QKeyEvent* event)
 {
 	if (!isActiveWindow())
 	{
+		event->ignore();
 		return;
 	}
 
@@ -282,6 +296,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 	{
 		if (event->isAutoRepeat())
 		{
+			event->ignore();
 			return;
 		}
 
@@ -292,6 +307,8 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 		QLabel* l = new QLabel(tr(
 			"Keys Ctrl+G: Go to typed address."
 			"\nKeys Ctrl+B: Open breakpoints settings."
+			"\nKeys Ctrl+C: Copy instruction contents."
+			"\nKeys Ctrl+F: Find thread."
 			"\nKeys Alt+S: Capture SPU images of selected SPU or generalized form when used from PPU."
 			"\nKeys Alt+R: Load last saved SPU state capture."
 			"\nKey D: SPU MFC commands logger, MFC debug setting must be enabled."
@@ -318,7 +335,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 		dlg->setLayout(layout);
 		dlg->setFixedSize(dlg->sizeHint());
 		dlg->move(QCursor::pos());
-		dlg->exec();
+		dlg->open();
 		return;
 	}
 	default: break;
@@ -333,6 +350,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 		{
 			if (event->isAutoRepeat())
 			{
+				event->ignore();
 				break;
 			}
 
@@ -348,12 +366,19 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 
 			return;
 		}
+		case Qt::Key_F:
+		{
+			m_choice_units->clearEditText();
+			m_choice_units->setFocus();
+			return;
+		}
 		default: break;
 		}
 	}
 
 	if (!cpu)
 	{
+		event->ignore();
 		return;
 	}
 
@@ -367,6 +392,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 	{
 		if (event->isAutoRepeat())
 		{
+			event->ignore();
 			return;
 		}
 
@@ -393,7 +419,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 		{
 			if (event->isAutoRepeat())
 			{
-				return;
+				break;
 			}
 
 			auto get_max_allowed = [&](QString title, QString description, u32 limit) -> u32
@@ -552,7 +578,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 		{
 			if (event->isAutoRepeat())
 			{
-				return;
+				break;
 			}
 
 			if (cpu->id_type() == 1 || cpu->id_type() == 2)
@@ -564,15 +590,20 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 					m_inst_editor->show();
 				}
 			}
+
 			return;
 		}
 		case Qt::Key_F:
 		{
 			if (event->isAutoRepeat())
-				return;
+			{
+				break;
+			}
 
 			if (cpu->id_type() != 2)
-				return;
+			{
+				break;
+			}
 
 			static_cast<spu_thread*>(cpu)->debugger_float_mode ^= 1; // Switch mode
 			return;
@@ -580,7 +611,9 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 		case Qt::Key_R:
 		{
 			if (event->isAutoRepeat())
-				return;
+			{
+				break;
+			}
 
 			if (cpu->id_type() == 1 || cpu->id_type() == 2)
 			{
@@ -597,12 +630,15 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 					m_reg_editor->show();
 				}
 			}
+
 			return;
 		}
 		case Qt::Key_S:
 		{
 			if (event->isAutoRepeat())
-				return;
+			{
+				break;
+			}
 
 			if (modifiers & Qt::AltModifier)
 			{
@@ -624,8 +660,10 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 				}
 
 				static_cast<spu_thread*>(cpu)->capture_state();
+				return;
 			}
-			return;
+
+			break;
 		}
 		case Qt::Key_N:
 		{
@@ -663,7 +701,9 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 		case Qt::Key_M:
 		{
 			if (event->isAutoRepeat())
-				return;
+			{
+				break;
+			}
 
 			if (m_disasm && cpu->id_type() == 2)
 			{
@@ -688,6 +728,8 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 		default: break;
 		}
 	}
+
+	event->ignore();
 }
 
 cpu_thread* debugger_frame::get_cpu()
