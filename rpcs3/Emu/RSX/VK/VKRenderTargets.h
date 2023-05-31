@@ -642,7 +642,7 @@ namespace vk
 		bool is_overallocated();
 		bool can_collapse_surface(const std::unique_ptr<vk::render_target>& surface, rsx::problem_severity severity) override;
 		bool handle_memory_pressure(vk::command_buffer& cmd, rsx::problem_severity severity) override;
-		void free_invalidated(vk::command_buffer& cmd, rsx::problem_severity memory_pressure);
+		void trim(vk::command_buffer& cmd, rsx::problem_severity memory_pressure);
 	};
 }
 //h

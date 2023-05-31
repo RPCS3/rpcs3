@@ -401,7 +401,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 	m_gl_texture_cache.on_frame_end();
 	m_vertex_cache->purge();
 
-	auto removed_textures = m_rtts.free_invalidated(cmd);
+	auto removed_textures = m_rtts.trim(cmd);
 	m_framebuffer_cache.remove_if([&](auto& fbo)
 	{
 		if (fbo.unused_check_count() >= 2) return true; // Remove if stale
