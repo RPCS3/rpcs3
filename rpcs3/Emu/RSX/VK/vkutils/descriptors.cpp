@@ -217,7 +217,7 @@ namespace vk
 				this->reset(subpool_index, 0);
 			};
 
-			auto cleanup_obj = std::make_unique<gc_wrapper_t>(release_func);
+			auto cleanup_obj = std::make_unique<gc_callback_t>(release_func);
 			vk::get_gc()->dispose(cleanup_obj);
 		}
 

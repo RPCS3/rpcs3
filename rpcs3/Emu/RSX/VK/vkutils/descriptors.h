@@ -10,15 +10,15 @@
 
 namespace vk
 {
-	struct gc_wrapper_t
+	struct gc_callback_t
 	{
 		std::function<void()> m_callback;
 
-		gc_wrapper_t(std::function<void()> callback)
+		gc_callback_t(std::function<void()> callback)
 			: m_callback(callback)
 		{}
 
-		~gc_wrapper_t()
+		~gc_callback_t()
 		{
 			if (m_callback)
 			{
