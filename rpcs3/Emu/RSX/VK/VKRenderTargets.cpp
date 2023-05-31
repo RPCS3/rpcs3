@@ -168,20 +168,15 @@ namespace vk
 		return any_released;
 	}
 
-	void surface_cache::free_invalidated(vk::command_buffer& cmd, rsx::problem_severity memory_pressure)
+	void surface_cache::trim(vk::command_buffer& cmd, rsx::problem_severity memory_pressure)
 	{
-		// Do not allow more than 300M of RSX memory to be used by RTTs.
-		// The actual boundary is 256M but we need to give some overallocation for performance reasons.
-		if (check_memory_usage(300 * 0x100000))
+		run_cleanup_internal(cmd, rsx::problem_severity::moderate, 300, [](vk::command_buffer& cmd)
 		{
 			if (!cmd.is_recording())
 			{
 				cmd.begin();
 			}
-
-			const auto severity = std::max(memory_pressure, rsx::problem_severity::moderate);
-			handle_memory_pressure(cmd, severity);
-		}
+		});
 
 		const u64 last_finished_frame = vk::get_last_completed_frame_id();
 		invalidated_resources.remove_if([&](std::unique_ptr<vk::render_target>& rtt)
@@ -195,13 +190,10 @@ namespace vk
 				return false;
 			}
 
-			if (memory_pressure >= rsx::problem_severity::severe)
+			if (rtt->resolve_surface && memory_pressure >= rsx::problem_severity::moderate)
 			{
-				if (rtt->resolve_surface)
-				{
-					// We do not need to keep resolve targets around if things are bad.
-					vk::get_resource_manager()->dispose(rtt->resolve_surface);
-				}
+				// We do not need to keep resolve targets around.
+				vk::get_resource_manager()->dispose(rtt->resolve_surface);
 			}
 
 			if (rtt->frame_tag >= last_finished_frame)

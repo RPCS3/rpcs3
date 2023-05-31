@@ -1151,7 +1151,7 @@ bool VKGSRender::on_vram_exhausted(rsx::problem_severity severity)
 	if (m_rtts.handle_memory_pressure(*m_current_command_buffer, severity))
 	{
 		surface_cache_relieved = true;
-		m_rtts.free_invalidated(*m_current_command_buffer, severity);
+		m_rtts.trim(*m_current_command_buffer, severity);
 	}
 
 	const bool any_cache_relieved = (texture_cache_relieved || surface_cache_relieved);
