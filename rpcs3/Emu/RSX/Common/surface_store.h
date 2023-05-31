@@ -1448,6 +1448,9 @@ namespace rsx
 			{
 				pre_task_callback(cmd);
 
+				rsx_log.warning("[PERFORMANCE WARNING] Invalidated resource pool has exceeded the desired limit. A trim will now be attempted. Current=%u, Limit=%u",
+					invalidated_resources.size(), max_invalidated_resources_count);
+
 				// Check invalidated resources as they can have long dependency chains
 				trim_invalidated_resources(cmd, memory_pressure);
 
