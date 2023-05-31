@@ -76,6 +76,11 @@ namespace vk
 
 		void destroy()
 		{
+			flush();
+		}
+
+		void flush()
+		{
 			m_eid_map.clear();
 			m_sampler_pool.clear();
 		}
