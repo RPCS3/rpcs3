@@ -74,6 +74,15 @@ namespace gui
 		// Returns the width of the text
 		int get_label_width(const QString& text, const QFont* font = nullptr);
 
+		// Returns the color for richtext <a> links.
+		QColor get_link_color(const QString& name = "richtext_link_color");
+
+		// Returns the color string for richtext <a> links.
+		QString get_link_color_string(const QString& name = "richtext_link_color");
+
+		// Returns the style for richtext <a> links. e.g. style="color: #123456;"
+		QString get_link_style(const QString& name = "richtext_link_color");
+
 		template <typename T>
 		void set_font_size(T& qobj, int size)
 		{

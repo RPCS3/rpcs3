@@ -384,3 +384,6 @@ QTreeView::branch:open:has-children:has-siblings:hover {
 	color: #e6e6e6;
 	background-color: #4c4b4b;
 }
+
+/* Richtext link color */
+QLabel#richtext_link_color { color: #87cefa; }

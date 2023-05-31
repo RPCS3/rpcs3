@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "qt_utils.h"
+#include "gui_settings.h"
 #include <QApplication>
 #include <QBitmap>
 #include <QDesktopServices>
@@ -196,6 +197,26 @@ namespace gui
 			QLabel l(text);
 			if (font) l.setFont(*font);
 			return l.sizeHint().width();
+		}
+
+		QColor get_link_color(const QString& name)
+		{
+			return gui::utils::get_label_color(name);
+		}
+
+		QString get_link_color_string(const QString& name)
+		{
+			return get_link_color(name).name();
+		}
+
+		QString get_link_style(const QString& name)
+		{
+			if (!gui::stylesheet.contains(name))
+			{
+				return {};
+			}
+
+			return QString("style=\"color: %0;\"").arg(get_link_color_string(name));
 		}
 
 		QPixmap get_centered_pixmap(QPixmap pixmap, const QSize& icon_size, int offset_x, int offset_y, qreal device_pixel_ratio, Qt::TransformationMode mode)

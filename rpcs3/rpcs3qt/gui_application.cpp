@@ -77,17 +77,17 @@ bool gui_application::Init()
 		msg.setTextFormat(Qt::RichText);
 		msg.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
 		msg.setDefaultButton(QMessageBox::No);
-		msg.setText(QString(tr(
+		msg.setText(tr(
 			R"(
 				<p style="white-space: nowrap;">
 					Please understand that this build is not an official RPCS3 release.<br>
 					This build contains changes that may break games, or even <b>damage</b> your data.<br>
-					We recommend to download and use the official build from the <a href='https://rpcs3.net/download'>RPCS3 website</a>.<br><br>
+					We recommend to download and use the official build from the <a %0 href='https://rpcs3.net/download'>RPCS3 website</a>.<br><br>
 					Build origin: %1<br>
 					Do you wish to use this build anyway?
 				</p>
 			)"
-		)).arg(Qt::convertFromPlainText(branch_name.data())));
+		).arg(gui::utils::get_link_style()).arg(Qt::convertFromPlainText(branch_name.data())));
 		msg.layout()->setSizeConstraint(QLayout::SetFixedSize);
 
 		if (msg.exec() == QMessageBox::No)
