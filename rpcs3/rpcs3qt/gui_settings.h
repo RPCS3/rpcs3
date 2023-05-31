@@ -10,7 +10,7 @@
 
 namespace gui
 {
-	static QString stylesheet;
+	extern QString stylesheet;
 
 	enum custom_roles
 	{

@@ -274,7 +274,7 @@ bool main_window::OnMissingFw()
 {
 	const QString title = tr("Missing Firmware Detected!");
 	const QString message = tr("Commercial games require the firmware (PS3UPDAT.PUP file) to be installed."
-				"\n<br>For information about how to obtain the required firmware read the <a href=\"https://rpcs3.net/quickstart\">quickstart guide</a>.");
+				"\n<br>For information about how to obtain the required firmware read the <a %0 href=\"https://rpcs3.net/quickstart\">quickstart guide</a>.").arg(gui::utils::get_link_style());
 
 	QMessageBox mb(QMessageBox::Question, title, message, QMessageBox::Ok | QMessageBox::Cancel, this, Qt::Dialog | Qt::MSWindowsFixedSizeDialogHint | Qt::WindowStaysOnTopHint);
 	mb.setTextFormat(Qt::RichText);
@@ -445,7 +445,7 @@ void main_window::show_boot_error(game_boot_result status)
 		message = tr("Unknown error.");
 		break;
 	}
-	const QString link = tr("<br /><br />For information on setting up the emulator and dumping your PS3 games, read the <a href=\"https://rpcs3.net/quickstart\">quickstart guide</a>.");
+	const QString link = tr("<br /><br />For information on setting up the emulator and dumping your PS3 games, read the <a %0 href=\"https://rpcs3.net/quickstart\">quickstart guide</a>.").arg(gui::utils::get_link_style());
 
 	QMessageBox msg;
 	msg.setWindowTitle(tr("Boot Failed"));
