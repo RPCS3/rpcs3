@@ -876,6 +876,9 @@ VKGSRender::~VKGSRender()
 		g_fxo->get<vk::AsyncTaskScheduler>().destroy();
 	}
 
+	// GC cleanup
+	vk::get_resource_manager()->flush();
+
 	// Host data
 	if (m_host_object_data)
 	{
@@ -945,7 +948,9 @@ VKGSRender::~VKGSRender()
 	// Overlay text handler
 	m_text_writer.reset();
 
-	//Pipeline descriptors
+	// Pipeline descriptors
+	m_descriptor_pool.destroy();
+
 	vkDestroyPipelineLayout(*m_device, m_pipeline_layout, nullptr);
 	vkDestroyDescriptorSetLayout(*m_device, m_descriptor_layouts, nullptr);
 
@@ -962,9 +967,6 @@ VKGSRender::~VKGSRender()
 
 	// Global resources
 	vk::destroy_global_resources();
-
-	// Destroy at the end in case of lingering callbacks
-	m_descriptor_pool.destroy();
 
 	// Device handles/contexts
 	m_swapchain->destroy();
