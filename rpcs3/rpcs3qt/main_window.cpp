@@ -710,10 +710,12 @@ bool main_window::InstallFileInExData(const std::string& extension, const QStrin
 	return to.commit();
 }
 
-void main_window::InstallPackages(QStringList file_paths)
+bool main_window::InstallPackages(QStringList file_paths, bool from_boot)
 {
 	if (file_paths.isEmpty())
 	{
+		ensure(!from_boot);
+
 		// If this function was called without a path, ask the user for files to install.
 		const QString path_last_pkg = m_gui_settings->GetValue(gui::fd_install_pkg).toString();
 		const QStringList paths = QFileDialog::getOpenFileNames(this, tr("Select packages and/or rap files to install"),
@@ -721,7 +723,7 @@ void main_window::InstallPackages(QStringList file_paths)
 
 		if (paths.isEmpty())
 		{
-			return;
+			return true;
 		}
 
 		file_paths.append(paths);
@@ -739,7 +741,7 @@ void main_window::InstallPackages(QStringList file_paths)
 		if (!info.is_valid)
 		{
 			QMessageBox::warning(this, tr("Invalid package!"), tr("The selected package is invalid!\n\nPath:\n%0").arg(file_path));
-			return;
+			return false;
 		}
 
 		if (info.type != compat::package_type::other)
@@ -780,19 +782,8 @@ void main_window::InstallPackages(QStringList file_paths)
 			QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
 		{
 			gui_log.notice("PKG: Cancelled installation from drop.\n%s", sstr(info_string));
-			return;
+			return true;
 		}
-	}
-
-	if (!m_gui_settings->GetBootConfirmation(this))
-	{
-		// Last chance to cancel the operation
-		return;
-	}
-
-	if (!Emu.IsStopped())
-	{
-		Emu.GracefulShutdown(false);
 	}
 
 	// Install rap files if available
@@ -818,8 +809,22 @@ void main_window::InstallPackages(QStringList file_paths)
 		}
 	};
 
-	install_filetype("rap");
-	install_filetype("edat");
+	if (!from_boot)
+	{
+		if (!m_gui_settings->GetBootConfirmation(this))
+		{
+			// Last chance to cancel the operation
+			return true;
+		}
+
+		if (!Emu.IsStopped())
+		{
+			Emu.GracefulShutdown(false);
+		}
+
+		install_filetype("rap");
+		install_filetype("edat");
+	}
 
 	if (installed_rap_and_edat_count > 0)
 	{
@@ -830,21 +835,30 @@ void main_window::InstallPackages(QStringList file_paths)
 	// Find remaining package files
 	file_paths = file_paths.filter(QRegularExpression(".*\\.pkg", QRegularExpression::PatternOption::CaseInsensitiveOption));
 
-	if (!file_paths.isEmpty())
+	if (file_paths.isEmpty())
 	{
-		// Handle further installations with a timeout. Otherwise the source explorer instance is not usable during the following file processing.
-		QTimer::singleShot(0, [this, paths = std::move(file_paths)]()
-		{
-			HandlePackageInstallation(paths);
-		});
+		return true;
 	}
+
+	if (from_boot)
+	{
+		return HandlePackageInstallation(file_paths, true);
+	}
+
+	// Handle further installations with a timeout. Otherwise the source explorer instance is not usable during the following file processing.
+	QTimer::singleShot(0, [this, paths = std::move(file_paths)]()
+	{
+		HandlePackageInstallation(paths, false);
+	});
+
+	return true;
 }
 
-void main_window::HandlePackageInstallation(QStringList file_paths)
+bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_boot)
 {
 	if (file_paths.empty())
 	{
-		return;
+		return false;
 	}
 
 	std::vector<compat::package_info> packages;
@@ -868,15 +882,18 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 
 	if (packages.empty())
 	{
-		return;
+		return true;
 	}
 
-	if (!m_gui_settings->GetBootConfirmation(this))
+	if (!from_boot)
 	{
-		return;
-	}
+		if (!m_gui_settings->GetBootConfirmation(this))
+		{
+			return true;
+		}
 
-	Emu.GracefulShutdown(false);
+		Emu.GracefulShutdown(false);
+	}
 
 	std::vector<std::string> path_vec;
 	for (const compat::package_info& pkg : packages)
@@ -973,7 +990,9 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 		}
 	}
 
-	if (worker())
+	const bool success = worker();
+
+	if (success)
 	{
 		pdlg.SetValue(pdlg.maximum());
 		std::this_thread::sleep_for(100ms);
@@ -1032,7 +1051,7 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 			if (bootable_paths_installed.empty())
 			{
 				m_gui_settings->ShowInfoBox(tr("Success!"), tr("Successfully installed software from package(s)!"), gui::ib_pkg_success, this);
-				return;
+				return true;
 			}
 
 			auto dlg = new QDialog(this);
@@ -1144,6 +1163,8 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 			}
 		}
 	}
+
+	return success;
 }
 
 void main_window::ExtractMSELF()

@@ -86,7 +86,7 @@ public:
 	bool Init(bool with_cli_boot);
 	QIcon GetAppIcon() const;
 	bool OnMissingFw();
-	void InstallPackages(QStringList file_paths = QStringList());
+	bool InstallPackages(QStringList file_paths = {}, bool from_boot = false);
 	void InstallPup(QString file_path = "");
 
 Q_SIGNALS:
@@ -149,7 +149,7 @@ private:
 
 	static bool InstallFileInExData(const std::string& extension, const QString& path, const std::string& filename);
 
-	void HandlePackageInstallation(QStringList file_paths);
+	bool HandlePackageInstallation(QStringList file_paths, bool from_boot);
 
 	void HandlePupInstallation(const QString& file_path, const QString& dir_path = "");
 	void ExtractPup();
