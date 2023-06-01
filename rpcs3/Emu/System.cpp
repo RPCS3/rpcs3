@@ -1622,7 +1622,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		{
 			std::string ins_dir = vfs::get("/dev_bdvd/PS3_GAME/INSDIR/");
 			std::string pkg_dir = vfs::get("/dev_bdvd/PS3_GAME/PKGDIR/");
-			std::string extra_dir = vfs::get("/dev_bdvd/PS3_GAME/PS3_EXTRA/");
+			std::string extra_dir = vfs::get("/dev_bdvd/PS3_EXTRA/");
 			fs::file lock_file;
 
 			for (const auto path_ptr : {&ins_dir, &pkg_dir, &extra_dir})
