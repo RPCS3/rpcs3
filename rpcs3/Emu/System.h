@@ -95,6 +95,7 @@ struct EmuCallbacks
 	std::function<bool(const std::string&, s32, s32, s32&, s32&, u8*, bool)> get_scaled_image; // (filename, target_width, target_height, width, height, dst, force_fit)
 	std::string(*resolve_path)(std::string_view) = [](std::string_view arg){ return std::string{arg}; }; // Resolve path using Qt
 	std::function<std::vector<std::string>()> get_font_dirs;
+	std::function<bool(const std::vector<std::string>&)> on_install_pkgs;
 };
 
 namespace utils

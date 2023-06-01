@@ -1622,7 +1622,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		{
 			std::string ins_dir = vfs::get("/dev_bdvd/PS3_GAME/INSDIR/");
 			std::string pkg_dir = vfs::get("/dev_bdvd/PS3_GAME/PKGDIR/");
-			std::string extra_dir = vfs::get("/dev_bdvd/PS3_GAME/PS3_EXTRA/");
+			std::string extra_dir = vfs::get("/dev_bdvd/PS3_EXTRA/");
 			fs::file lock_file;
 
 			for (const auto path_ptr : {&ins_dir, &pkg_dir, &extra_dir})
@@ -1645,17 +1645,19 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				}
 			}
 
+			std::vector<std::string> pkgs;
+
 			if (!lock_file && !ins_dir.empty())
 			{
 				sys_log.notice("Found INSDIR: %s", ins_dir);
 
 				for (auto&& entry : fs::dir{ins_dir})
 				{
-					const std::string pkg = ins_dir + entry.name;
-					if (!entry.is_directory && entry.name.ends_with(".PKG") && !rpcs3::utils::install_pkg(pkg))
+					const std::string pkg_file = ins_dir + entry.name;
+
+					if (!entry.is_directory && entry.name.ends_with(".PKG"))
 					{
-						sys_log.error("Failed to install %s", pkg);
-						return game_boot_result::install_failed;
+						pkgs.push_back(pkg_file);
 					}
 				}
 			}
@@ -1670,10 +1672,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 					{
 						const std::string pkg_file = pkg_dir + entry.name + "/INSTALL.PKG";
 
-						if (fs::is_file(pkg_file) && !rpcs3::utils::install_pkg(pkg_file))
+						if (fs::is_file(pkg_file))
 						{
-							sys_log.error("Failed to install %s", pkg_file);
-							return game_boot_result::install_failed;
+							pkgs.push_back(pkg_file);
 						}
 					}
 				}
@@ -1689,12 +1690,28 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 					{
 						const std::string pkg_file = extra_dir + entry.name + "/DATA000.PKG";
 
-						if (fs::is_file(pkg_file) && !rpcs3::utils::install_pkg(pkg_file))
+						if (fs::is_file(pkg_file))
 						{
-							sys_log.error("Failed to install %s", pkg_file);
-							return game_boot_result::install_failed;
+							pkgs.push_back(pkg_file);
 						}
 					}
+				}
+			}
+
+			if (!pkgs.empty())
+			{
+				bool install_success = true;
+				BlockingCallFromMainThread([this, &pkgs, &install_success]()
+				{
+					if (!GetCallbacks().on_install_pkgs(pkgs))
+					{
+						install_success = false;
+					}
+				});
+				if (!install_success)
+				{
+					sys_log.error("Failed to install packages");
+					return game_boot_result::install_failed;
 				}
 			}
 

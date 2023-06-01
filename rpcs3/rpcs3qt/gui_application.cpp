@@ -554,6 +554,21 @@ void gui_application::InitializeCallbacks()
 		});
 	};
 
+	if (m_show_gui) // If this is false, we already have a fallback in the main_application.
+	{
+		callbacks.on_install_pkgs = [this](const std::vector<std::string>& pkgs)
+		{
+			ensure(m_main_window);
+			ensure(!pkgs.empty());
+			QStringList pkg_list;
+			for (const std::string& pkg : pkgs)
+			{
+				pkg_list << QString::fromStdString(pkg);
+			}
+			return m_main_window->InstallPackages(pkg_list, true);
+		};
+	}
+
 	Emu.SetCallbacks(std::move(callbacks));
 }
 
