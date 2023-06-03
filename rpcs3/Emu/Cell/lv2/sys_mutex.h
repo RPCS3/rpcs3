@@ -171,7 +171,7 @@ struct lv2_mutex final : lv2_obj
 			{
 				res = schedule<T>(data.sq, protocol, false);
 
-				if (sq == data.sq)
+				if (sq == res)
 				{
 					atomic_storage<u32>::release(control.raw().owner, res->id);
 					return false;
