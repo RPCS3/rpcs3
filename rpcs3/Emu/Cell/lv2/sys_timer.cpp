@@ -95,7 +95,7 @@ u64 lv2_timer::check_unlocked(u64 _now) noexcept
 		// Set next expiration time and check again
 		const u64 expire0 = utils::add_saturate<u64>(next, period);
 		expire.release(expire0);
-		return expire0 - _now;
+		return utils::sub_saturate<u64>(expire0, _now);
 	}
 
 	// Stop after oneshot
