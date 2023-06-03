@@ -167,7 +167,7 @@ struct lv2_lwmutex final : lv2_obj
 			{
 				res = schedule<T>(data.sq, protocol, false);
 
-				if (sq == data.sq)
+				if (sq == res)
 				{
 					return false;
 				}
