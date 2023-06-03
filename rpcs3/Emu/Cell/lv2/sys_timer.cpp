@@ -144,13 +144,16 @@ void lv2_timer_thread::operator()()
 
 		for (const auto& timer : timers)
 		{
-			if (lv2_obj::check(timer))
+			while (lv2_obj::check(timer))
 			{
-				const u64 advised_sleep_time = timer->check(_now);
-
-				if (sleep_time > advised_sleep_time)
+				if (const u64 advised_sleep_time = timer->check(_now))
 				{
-					sleep_time = advised_sleep_time;
+					if (sleep_time > advised_sleep_time)
+					{
+						sleep_time = advised_sleep_time;
+					}
+
+					break;
 				}
 			}
 		}
