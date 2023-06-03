@@ -247,7 +247,7 @@ u32 usb_device_emulated::get_descriptor(u8 type, u8 index, u8* buf, u32 buf_size
 				const std::u16string u16str = utf8_to_utf16(strings[index - 1]);
 				const u8 len = static_cast<u8>(std::min(u16str.size() * sizeof(u16) + 2, static_cast<usz>(0xFF)));
 				buf[0] = len;
-				expected_count = std::min(len, ::narrow<u8>(buf_size));
+				expected_count = std::min(len, ::narrow<u8>(std::min<u32>(255, buf_size)));
 				memcpy(buf + 2, u16str.data(), expected_count - 2);
 			}
 		}
@@ -283,14 +283,14 @@ void usb_device_emulated::control_transfer(u8 bmRequestType, u8 bRequest, u16 wV
 
 	switch (bmRequestType)
 	{
-	case LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_STANDARD | LIBUSB_RECIPIENT_DEVICE:
+	case 0U /*silences warning*/ | LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_STANDARD | LIBUSB_RECIPIENT_DEVICE:
 		switch (bRequest)
 		{
 		case LIBUSB_REQUEST_SET_CONFIGURATION: usb_device::set_configuration(::narrow<u8>(wValue)); break;
 		default: sys_usbd.error("Unhandled control transfer(0x%02x): 0x%02x", bmRequestType, bRequest); break;
 		}
 		break;
-	case LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_STANDARD | LIBUSB_RECIPIENT_DEVICE:
+	case 0U /*silences warning*/ | LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_STANDARD | LIBUSB_RECIPIENT_DEVICE:
 		switch (bRequest)
 		{
 		case LIBUSB_REQUEST_GET_STATUS: transfer->expected_count = get_status(false, false, buf, buf_size); break;
@@ -316,7 +316,7 @@ void usb_device_emulated::isochronous_transfer(UsbTransfer* transfer)
 {
 }
 
-void usb_device_emulated::add_string(char* str)
+void usb_device_emulated::add_string(std::string str)
 {
-	strings.emplace_back(str);
+	strings.emplace_back(std::move(str));
 }

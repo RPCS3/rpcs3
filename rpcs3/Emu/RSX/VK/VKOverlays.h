@@ -48,7 +48,6 @@ namespace vk
 		descriptor_set m_descriptor_set;
 		VkDescriptorSetLayout m_descriptor_layout = nullptr;
 		VkPipelineLayout m_pipeline_layout = nullptr;
-		u32 m_used_descriptors = 0;
 
 		VkFilter m_sampler_filter = VK_FILTER_LINEAR;
 		u32 m_num_usable_samplers = 1;
@@ -77,7 +76,7 @@ namespace vk
 		u32 m_vao_offset = 0;
 
 		overlay_pass();
-		~overlay_pass();
+		virtual ~overlay_pass();
 
 		u64 get_pipeline_key(VkRenderPass pass);
 
@@ -152,7 +151,7 @@ namespace vk
 		ui_overlay_renderer();
 
 		vk::image_view* upload_simple_texture(vk::render_device& dev, vk::command_buffer& cmd,
-			vk::data_heap& upload_heap, u64 key, u32 w, u32 h, u32 layers, bool font, bool temp, void* pixel_src, u32 owner_uid);
+			vk::data_heap& upload_heap, u64 key, u32 w, u32 h, u32 layers, bool font, bool temp, const void* pixel_src, u32 owner_uid);
 
 		void init(vk::command_buffer& cmd, vk::data_heap& upload_heap);
 

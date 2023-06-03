@@ -4,6 +4,7 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/lv2/sys_mmapper.h"
 #include "Emu/Cell/lv2/sys_event.h"
+#include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/RSX/RSXThread.h"
 #include "Thread.h"
 #include "Utilities/JIT.h"
@@ -15,6 +16,11 @@
 #include <Psapi.h>
 #include <process.h>
 #include <sysinfoapi.h>
+
+#include "util/dyn_lib.hpp"
+
+DYNAMIC_IMPORT_RENAME("Kernel32.dll", SetThreadDescriptionImport, "SetThreadDescription", HRESULT(HANDLE hThread, PCWSTR lpThreadDescription));
+
 #else
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
@@ -277,7 +283,10 @@ enum x64_op_t : u32
 	X64OP_ADC, // lock adc [mem], ...
 	X64OP_SUB, // lock sub [mem], ...
 	X64OP_SBB, // lock sbb [mem], ...
+	X64OP_BEXTR,
 };
+
+static thread_local x64_reg_t s_tls_reg3{};
 
 void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, usz& out_size, usz& out_length)
 {
@@ -739,9 +748,11 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, usz
 		const u8 vopm = op1 == 0xc5 ? 1 : op2 & 0x1f;
 		const u8 vop1 = op1 == 0xc5 ? op3 : code[2];
 		const u8 vlen = (opx & 0x4) ? 32 : 16;
-		//const u8 vreg = (~opx >> 3) & 0xf;
+		const u8 vreg = (~opx >> 3) & 0xf;
 		out_length += op1 == 0xc5 ? 2 : 3;
 		code += op1 == 0xc5 ? 2 : 3;
+
+		s_tls_reg3 = x64_reg_t{vreg};
 
 		if (vopm == 0x1) switch (vop1) // Implied leading byte 0x0F
 		{
@@ -765,6 +776,22 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, usz
 				out_op = X64OP_STORE;
 				out_reg = get_modRM_reg_xmm(code, rex);
 				out_size = vlen;
+				out_length += get_modRM_size(code);
+				return;
+			}
+			break;
+		}
+		}
+
+		if (vopm == 0x2) switch (vop1) // Implied leading bytes 0x0F 0x38
+		{
+		case 0xf7:
+		{
+			if (!repe && !repne && vlen == 16) // BEXTR r32,mem,r32
+			{
+				out_op = X64OP_BEXTR;
+				out_reg = get_modRM_reg_xmm(code, rex);
+				out_size = opx & 0x80 ? 8 : 4;
 				out_length += get_modRM_size(code);
 				return;
 			}
@@ -1367,6 +1394,37 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 
 			break;
 		}
+		case X64OP_BEXTR:
+		{
+			u32 value;
+			if (is_writing || !thread->read_reg(addr, value))
+			{
+				return false;
+			}
+
+			value = stx::se_storage<u32>::swap(value);
+
+			u64 ctrl;
+			if (!get_x64_reg_value(context, s_tls_reg3, d_size, i_size, ctrl))
+			{
+				return false;
+			}
+
+			u8 start = ctrl & 0xff;
+			u8 _len = (ctrl & 0xff00) >> 8;
+			if (_len > 32)
+				_len = 32;
+			if (start > 32)
+				start = 32;
+			value = (u64{value} >> start) & ~(u64{umax} << _len);
+
+			if (!put_x64_reg_value(context, reg, d_size, value) || !set_x64_cmp_flags(context, d_size, value, 0))
+			{
+				return false;
+			}
+
+			break;
+		}
 		case X64OP_STORE:
 		case X64OP_STORE_BE:
 		{
@@ -1457,7 +1515,7 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 			}
 		}
 
-		if (pf_port_id)
+		if (auto pf_port = idm::get<lv2_obj, lv2_event_port>(pf_port_id); pf_port && pf_port->queue)
 		{
 			// We notify the game that a page fault occurred so it can rectify it.
 			// Note, for data3, were the memory readable AND we got a page fault, it must be due to a write violation since reads are allowed.
@@ -1495,20 +1553,33 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 				}
 			}
 
-			// Deschedule
-			if (cpu->id_type() == 1)
-			{
-				lv2_obj::sleep(*cpu);
-			}
 
 			// Now, place the page fault event onto table so that other functions [sys_mmapper_free_address and pagefault recovery funcs etc]
 			// know that this thread is page faulted and where.
 
 			auto& pf_events = g_fxo->get<page_fault_event_entries>();
+
+			// De-schedule
+			if (cpu->id_type() == 1)
 			{
-				std::lock_guard pf_lock(pf_events.pf_mutex);
-				pf_events.events.emplace(cpu, addr);
+				cpu->state -= cpu_flag::signal; // Cannot use check_state here and signal must be removed if exists
+				lv2_obj::sleep(*cpu);
 			}
+
+			auto send_event = [&]() -> error_code
+			{
+				lv2_obj::notify_all_t notify_later{};
+
+				std::lock_guard pf_lock(pf_events.pf_mutex);
+
+				if (auto error = pf_port->queue->send(pf_port->name ? pf_port->name : ((u64{process_getpid() + 0u} << 32) | u64{pf_port_id}), data1, data2, data3))
+				{
+					return error;
+				}
+
+				pf_events.events.emplace(cpu, addr);
+				return {};
+			};
 
 			sig_log.warning("Page_fault %s location 0x%x because of %s memory", is_writing ? "writing" : "reading",
 				addr, data3 == SYS_MEMORY_PAGE_FAULT_CAUSE_READ_ONLY ? "writing read-only" : "using unmapped");
@@ -1521,13 +1592,12 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 				}
 			}
 
-			error_code sending_error = sys_event_port_send(pf_port_id, data1, data2, data3);
+			error_code sending_error = not_an_error(CELL_EBUSY);
 
 			// If we fail due to being busy, wait a bit and try again.
-			while (static_cast<u32>(sending_error) == CELL_EBUSY)
+			for (; static_cast<u32>(sending_error) == CELL_EBUSY; thread_ctrl::wait_for(1000))
 			{
-				thread_ctrl::wait_for(1000);
-				sending_error = sys_event_port_send(pf_port_id, data1, data2, data3);
+				sending_error = send_event();
 
 				if (cpu->is_stopped())
 				{
@@ -1761,7 +1831,11 @@ static LONG exception_filter(PEXCEPTION_POINTERS pExp) noexcept
 
 const bool s_exception_handler_set = []() -> bool
 {
+#ifdef USE_ASAN
+	if (!AddVectoredExceptionHandler(FALSE, (PVECTORED_EXCEPTION_HANDLER)exception_handler))
+#else
 	if (!AddVectoredExceptionHandler(1, (PVECTORED_EXCEPTION_HANDLER)exception_handler))
+#endif
 	{
 		report_fatal_error("AddVectoredExceptionHandler() failed.");
 	}
@@ -2018,6 +2092,13 @@ void thread_base::initialize(void (*error_cb)())
 
 void thread_base::set_name(std::string name)
 {
+#ifdef _WIN32
+	if (SetThreadDescriptionImport)
+	{
+		SetThreadDescriptionImport(GetCurrentThread(), utf8_to_wchar(name).c_str());
+	}
+#endif
+
 #ifdef _MSC_VER
 	struct THREADNAME_INFO
 	{
@@ -2579,26 +2660,24 @@ void thread_base::exec()
 	while (shared_ptr<thread_future> head = m_taskq.exchange(null_ptr))
 	{
 		// TODO: check if adapting reverse algorithm is feasible here
-		shared_ptr<thread_future>* prev{};
+		thread_future* prev_head{head.get()};
 
-		for (auto ptr = head.get(); ptr; ptr = ptr->next.get())
+		for (thread_future* prev{};;)
 		{
-			utils::prefetch_exec(ptr->exec.load());
+			utils::prefetch_exec(prev_head->exec.load());
 
-			ptr->prev = prev;
-
-			if (ptr->next)
+			if (auto next = prev_head->next.get())
 			{
-				prev = &ptr->next;
+				prev = std::exchange(prev_head, next);
+				prev_head->prev = prev;
+			}
+			else
+			{
+				break;
 			}
 		}
 
-		if (!prev)
-		{
-			prev = &head;
-		}
-
-		for (auto ptr = prev->get(); ptr; ptr = ptr->prev->get())
+		for (auto ptr = prev_head; ptr; ptr = ptr->prev)
 		{
 			if (auto task = ptr->exec.load()) [[likely]]
 			{
@@ -2621,11 +2700,6 @@ void thread_base::exec()
 			{
 				// Partial cleanup
 				ptr->next.reset();
-			}
-
-			if (!ptr->prev)
-			{
-				break;
 			}
 		}
 

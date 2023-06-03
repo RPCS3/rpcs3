@@ -3,11 +3,42 @@
 #include "stdafx.h"
 #include "Turntable.h"
 #include "Emu/Cell/lv2/sys_usbd.h"
+#include "Emu/Io/turntable_config.h"
 #include "Input/pad_thread.h"
 
-LOG_CHANNEL(turntable_log);
+LOG_CHANNEL(turntable_log, "TURN");
 
-usb_device_turntable::usb_device_turntable(int controller_index, const std::array<u8, 7>& location)
+template <>
+void fmt_class_string<turntable_btn>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](turntable_btn value)
+	{
+		switch (value)
+		{
+		case turntable_btn::blue: return "Blue";
+		case turntable_btn::green: return "Green";
+		case turntable_btn::red: return "Red";
+		case turntable_btn::dpad_up: return "D-Pad Up";
+		case turntable_btn::dpad_down: return "D-Pad Down";
+		case turntable_btn::dpad_left: return "D-Pad Left";
+		case turntable_btn::dpad_right: return "D-Pad Right";
+		case turntable_btn::start: return "Start";
+		case turntable_btn::select: return "Select";
+		case turntable_btn::square: return "Square";
+		case turntable_btn::circle: return "Circle";
+		case turntable_btn::cross: return "Cross";
+		case turntable_btn::triangle: return "Triangle";
+		case turntable_btn::right_turntable: return "Right Turntable";
+		case turntable_btn::crossfader: return "Crossfader";
+		case turntable_btn::effects_dial: return "Effects Dial";
+		case turntable_btn::count: return "Count";
+		}
+
+		return unknown;
+	});
+}
+
+usb_device_turntable::usb_device_turntable(u32 controller_index, const std::array<u8, 7>& location)
 	: usb_device_emulated(location), m_controller_index(controller_index)
 {
 	device        = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE, UsbDeviceDescriptor{0x0100, 0x00, 0x00, 0x00, 0x40, 0x12BA, 0x0140, 0x0005, 0x01, 0x02, 0x00, 0x01});
@@ -32,12 +63,12 @@ void usb_device_turntable::control_transfer(u8 bmRequestType, u8 bRequest, u16 w
 		case 0x21:
 			switch (bRequest)
 			{
-				case 0x09:
-					// Do nothing here - not sure what it should do.
-					break;
-				default:
-					turntable_log.error("Unhandled Query Type: 0x%02X", buf[0]);
-					break;
+			case 0x09:
+				// Do nothing here - not sure what it should do.
+				break;
+			default:
+				turntable_log.error("Unhandled Query: buf_size=0x%02X, Type=0x%02X, bRequest=0x%02X, bmRequestType=0x%02X", buf_size, (buf_size > 0) ? buf[0] : -1, bRequest, bmRequestType);
+				break;
 			}
 			break;
 		default:
@@ -48,6 +79,8 @@ void usb_device_turntable::control_transfer(u8 bmRequestType, u8 bRequest, u16 w
 
 void usb_device_turntable::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint*/, UsbTransfer* transfer)
 {
+	ensure(buf_size >= 27);
+
 	transfer->fake            = true;
 	transfer->expected_count  = buf_size;
 	transfer->expected_result = HC_CC_NOERR;
@@ -119,136 +152,119 @@ void usb_device_turntable::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpo
 
 	std::lock_guard lock(pad::g_pad_mutex);
 	const auto handler = pad::get_current_handler();
-	const auto& pad    = handler->GetPads()[m_controller_index];
+	const auto& pads   = handler->GetPads();
+	const auto& pad    = ::at32(pads, m_controller_index);
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return;
 
-	for (const Button& button : pad->m_buttons)
-	{
-		if (button.m_pressed)
+	const auto& cfg = ::at32(g_cfg_turntable.players, m_controller_index);
+	cfg->handle_input(pad, true, [&buf](turntable_btn btn, u16 value, bool pressed)
 		{
-			if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL2)
+			if (!pressed)
+				return;
+
+			switch (btn)
 			{
-				switch (button.m_outKeyCode)
+			case turntable_btn::blue:
+				buf[0] |= 0x01;   // Square Button
+				buf[7] = ~buf[7]; // Square Button
+				buf[23] |= 0x04;  // Right Platter Blue
+				break;
+			case turntable_btn::green:
+				buf[0] |= 0x02;   // Cross Button
+				buf[9] = ~buf[9]; // Cross Button
+				buf[23] |= 0x01;  // Right Platter Green
+				break;
+			case turntable_btn::red:
+				buf[0] |= 0x04;     // Circle Button
+				buf[12] = ~buf[12]; // Circle Button
+				buf[23] |= 0x02;    // Right Platter Red
+				break;
+			case turntable_btn::triangle:
+				buf[0] |= 0x08;     // Triangle Button / Euphoria
+				buf[11] = ~buf[11]; // Triangle Button / Euphoria
+				break;
+			case turntable_btn::cross:
+				buf[0] |= 0x02;   // Cross Button Only
+				buf[9] = ~buf[9]; // Cross Button Only
+				break;
+			case turntable_btn::circle:
+				buf[0] |= 0x04;     // Circle Button Only
+				buf[12] = ~buf[12]; // Circle Button Only
+				break;
+			case turntable_btn::square:
+				buf[0] |= 0x01;   // Square Button Only
+				buf[7] = ~buf[7]; // Square Button Only
+				break;
+			case turntable_btn::dpad_down:
+				if (buf[2] == 0x02) // Right D-Pad
 				{
-					case CELL_PAD_CTRL_SQUARE:
-						buf[0] |= 0x01;   // Square Button
-						buf[7] = ~buf[7]; // Square Button
-						buf[23] |= 0x04;  // Right Platter Blue
-						break;
-					case CELL_PAD_CTRL_CROSS:
-						buf[0] |= 0x02;   // Cross Button
-						buf[9] = ~buf[9]; // Cross Button
-						buf[23] |= 0x01;  // Right Platter Green
-						break;
-					case CELL_PAD_CTRL_CIRCLE:
-						buf[0] |= 0x04;     // Circle Button
-						buf[12] = ~buf[12]; // Circle Button
-						buf[23] |= 0x02;    // Right Platter Red
-						break;
-					case CELL_PAD_CTRL_TRIANGLE:
-						buf[0] |= 0x08;     // Triangle Button / Euphoria
-						buf[11] = ~buf[11]; // Triangle Button / Euphoria
-						break;
-					case CELL_PAD_CTRL_R1:
-						buf[0] |= 0x02;   // Cross Button Only
-						buf[9] = ~buf[9]; // Cross Button Only
-						break;
-					case CELL_PAD_CTRL_L1:
-						buf[0] |= 0x04;     // Circle Button Only
-						buf[12] = ~buf[12]; // Circle Button Only
-						break;
-					case CELL_PAD_CTRL_R2:
-						buf[0] |= 0x01;   // Square Button Only
-						buf[7] = ~buf[7]; // Square Button Only
-						break;
-					default:
-						break;
+					buf[2] = 0x03; // Right-Down D-Pad
 				}
-			}
-			else if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL1)
-			{
-				switch (button.m_outKeyCode)
+				else if (buf[2] == 0x06) // Left D-Pad
 				{
-					case CELL_PAD_CTRL_DOWN:
-						if (buf[2] == 0x02) // Right D-Pad
-						{
-							buf[2] = 0x03; // Right-Down D-Pad
-						}
-						else if (buf[2] == 0x06) // Left D-Pad
-						{
-							buf[2] = 0x05; // Left-Down D-Pad
-						}
-						else
-						{
-							buf[2] = 0x04; // Down D-Pad
-						}
-						buf[10] = ~buf[10]; // Down D-Pad;
-						break;
-					case CELL_PAD_CTRL_UP:
-						if (buf[2] == 0x02) // Right D-Pad
-						{
-							buf[2] = 0x01; // Right-Up D-Pad
-						}
-						else if (buf[2] == 0x06) // Left D-Pad
-						{
-							buf[2] = 0x07; // Left-Up D-Pad
-						}
-						else
-						{
-							buf[2] = 0x00; // Up D-Pad
-						}
-						buf[9] = ~buf[9]; // Up D-Pad;
-						break;
-					case CELL_PAD_CTRL_LEFT:
-						if (buf[2] == 0x00) // Up D-Pad
-						{
-							buf[2] = 0x07; // Left-Up D-Pad
-						}
-						else if (buf[2] == 0x04) // Down D-Pad
-						{
-							buf[2] = 0x05; // Left-Down D-Pad
-						}
-						else
-						{
-							buf[2] = 0x06; // Left D-Pad
-						}
-						buf[8] = ~buf[8]; // Left D-Pad;
-						break;
-					case CELL_PAD_CTRL_RIGHT:
-						if (buf[2] == 0x00) // Up D-Pad
-						{
-							buf[2] = 0x01; // Right-Up D-Pad
-						}
-						else if (buf[2] == 0x04) // Down D-Pad
-						{
-							buf[2] = 0x03; // Right-Down D-Pad
-						}
-						else
-						{
-							buf[2] = 0x02; // Right D-Pad
-						}
-						buf[7] = ~buf[7]; // Right D-Pad
-						break;
-					case CELL_PAD_CTRL_START:
-						buf[1] |= 0x02; // Start
-						break;
-					case CELL_PAD_CTRL_SELECT:
-						buf[1] |= 0x01; // Select
-						break;
-					default:
-						break;
+					buf[2] = 0x05; // Left-Down D-Pad
 				}
-			}
-		}
-	}
-	for (const AnalogStick& stick : pad->m_sticks)
-	{
-		switch (stick.m_offset)
-		{
-			case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y:
-				buf[6] = 255 - stick.m_value; // Right Turntable
+				else
+				{
+					buf[2] = 0x04; // Down D-Pad
+				}
+				buf[10] = ~buf[10]; // Down D-Pad;
+				break;
+			case turntable_btn::dpad_up:
+				if (buf[2] == 0x02) // Right D-Pad
+				{
+					buf[2] = 0x01; // Right-Up D-Pad
+				}
+				else if (buf[2] == 0x06) // Left D-Pad
+				{
+					buf[2] = 0x07; // Left-Up D-Pad
+				}
+				else
+				{
+					buf[2] = 0x00; // Up D-Pad
+				}
+				buf[9] = ~buf[9]; // Up D-Pad;
+				break;
+			case turntable_btn::dpad_left:
+				if (buf[2] == 0x00) // Up D-Pad
+				{
+					buf[2] = 0x07; // Left-Up D-Pad
+				}
+				else if (buf[2] == 0x04) // Down D-Pad
+				{
+					buf[2] = 0x05; // Left-Down D-Pad
+				}
+				else
+				{
+					buf[2] = 0x06; // Left D-Pad
+				}
+				buf[8] = ~buf[8]; // Left D-Pad;
+				break;
+			case turntable_btn::dpad_right:
+				if (buf[2] == 0x00) // Up D-Pad
+				{
+					buf[2] = 0x01; // Right-Up D-Pad
+				}
+				else if (buf[2] == 0x04) // Down D-Pad
+				{
+					buf[2] = 0x03; // Right-Down D-Pad
+				}
+				else
+				{
+					buf[2] = 0x02; // Right D-Pad
+				}
+				buf[7] = ~buf[7]; // Right D-Pad
+				break;
+			case turntable_btn::start:
+				buf[1] |= 0x02; // Start
+				break;
+			case turntable_btn::select:
+				buf[1] |= 0x01; // Select
+				break;
+			case turntable_btn::right_turntable:
+				buf[6] = 255 - value; // Right Turntable
 				// DJ Hero requires turntables to be centered at 128.
 				// If this axis ends up centered at 127, force it to 128.
 				if (buf[6] == 127)
@@ -256,16 +272,16 @@ void usb_device_turntable::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpo
 					buf[6] = 128;
 				}
 				break;
-			case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y:
-				buf[21] = ((255 - stick.m_value) & 0x3F) << 2; // Crossfader, lower 6 bits
-				buf[22] = ((255 - stick.m_value) & 0xC0) >> 6; // Crossfader, upper 2 bits
+			case turntable_btn::crossfader:
+				buf[21] = ((255 - value) & 0x3F) << 2; // Crossfader, lower 6 bits
+				buf[22] = ((255 - value) & 0xC0) >> 6; // Crossfader, upper 2 bits
 				break;
-			case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X:
-				buf[19] = (stick.m_value & 0x3F) << 2; // Effects Dial, lower 6 bits
-				buf[20] = (stick.m_value & 0xC0) >> 6; // Effects Dial, upper 2 bits
+			case turntable_btn::effects_dial:
+				buf[19] = (value & 0x3F) << 2; // Effects Dial, lower 6 bits
+				buf[20] = (value & 0xC0) >> 6; // Effects Dial, upper 2 bits
 				break;
-			default:
+			case turntable_btn::count:
 				break;
-		}
-	}
+			}
+		});
 }

@@ -45,6 +45,7 @@
     <ClInclude Include="Emu\RSX\VK\vkutils\descriptors.h" />
     <ClInclude Include="Emu\RSX\VK\vkutils\barriers.h" />
     <ClInclude Include="Emu\RSX\VK\vkutils\framebuffer_object.hpp" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\garbage_collector.h" />
     <ClInclude Include="Emu\RSX\VK\vkutils\image.h" />
     <ClInclude Include="Emu\RSX\VK\vkutils\image_helpers.h" />
     <ClInclude Include="Emu\RSX\VK\vkutils\scratch.h" />

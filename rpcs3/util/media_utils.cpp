@@ -65,6 +65,35 @@ namespace utils
 		return av_error;
 	}
 
+	std::vector<ffmpeg_codec> list_ffmpeg_codecs(bool list_decoders)
+	{
+		std::vector<ffmpeg_codec> codecs;
+		void* opaque = nullptr;
+		for (const AVCodec* codec = av_codec_iterate(&opaque); !!codec; codec = av_codec_iterate(&opaque))
+		{
+			if (list_decoders ? av_codec_is_decoder(codec) : av_codec_is_encoder(codec))
+			{
+				codecs.emplace_back(ffmpeg_codec{
+					.codec_id = static_cast<int>(codec->id),
+					.name = codec->name ? codec->name : "unknown",
+					.long_name = codec->long_name ? codec->long_name : "unknown"
+				});
+			}
+		}
+		std::sort(codecs.begin(), codecs.end(), [](const ffmpeg_codec& l, const ffmpeg_codec& r){ return l.name < r.name; });
+		return codecs;
+	}
+
+	std::vector<ffmpeg_codec> list_ffmpeg_decoders()
+	{
+		return list_ffmpeg_codecs(true);
+	}
+
+	std::vector<ffmpeg_codec> list_ffmpeg_encoders()
+	{
+		return list_ffmpeg_codecs(false);
+	}
+
 	std::pair<bool, media_info> get_media_info(const std::string& path, s32 av_media_type)
 	{
 		media_info info{};
@@ -721,10 +750,10 @@ namespace utils
 				void* opaque = nullptr;
 				for (const AVCodec* codec = av_codec_iterate(&opaque); !!codec; codec = av_codec_iterate(&opaque))
 				{
-					if (const AVCodec* encoder = avcodec_find_encoder(codec->id); !!encoder)
+					if (av_codec_is_encoder(codec))
 					{
-						media_log.notice("video_encoder: Found video_codec %d = %s", static_cast<int>(used_codec), encoder->name);
-						av_output_format = find_format(encoder);
+						media_log.notice("video_encoder: Found video_codec %d = %s", static_cast<int>(codec->id), codec->name);
+						av_output_format = find_format(codec);
 
 						if (av_output_format)
 						{

@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/VFS.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
@@ -872,21 +873,27 @@ error_code sceNpTrophyGetGameInfo(u32 context, u32 handle, vm::ptr<SceNpTrophyGa
 		return { SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST, config_path };
 	}
 
+	if (details)
+		*details = {};
+	if (data)
+		*data = {};
+
 	trophy_xml_document doc{};
 	pugi::xml_parse_result res = doc.Read(config.to_string());
 	if (!res)
 	{
 		sceNpTrophy.error("sceNpTrophyGetGameInfo: Failed to read TROPCONF.SFM: %s", config_path);
 		// TODO: return some error
+		return CELL_OK;
 	}
 
-	auto trophy_base = doc.GetRoot();
-	ensure(trophy_base);
-
-	if (details)
-		*details = {};
-	if (data)
-		*data = {};
+	std::shared_ptr<rXmlNode> trophy_base = doc.GetRoot();
+	if (!trophy_base)
+	{
+		sceNpTrophy.error("sceNpTrophyGetGameInfo: Failed to read TROPCONF.SFM (root is null): %s", config_path);
+		// TODO: return some error
+		return CELL_OK;
+	}
 
 	for (std::shared_ptr<rXmlNode> n = trophy_base->GetChildren(); n; n = n->GetNext())
 	{
@@ -990,7 +997,13 @@ error_code sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::pt
 		return SCE_NP_TROPHY_ERROR_ALREADY_UNLOCKED;
 	}
 
-	ctxt->tropusr->UnlockTrophy(trophyId, 0, 0); // TODO: add timestamps
+	vm::var<CellRtcTick> tick;
+	if (error_code error = cellRtcGetCurrentTick(tick))
+	{
+		sceNpTrophy.error("sceNpTrophyUnlockTrophy: Failed to get timestamp: 0x%x", +error);
+	}
+
+	ctxt->tropusr->UnlockTrophy(trophyId, tick->tick, tick->tick);
 
 	// TODO: Make sure that unlocking platinum trophies is properly implemented and improve upon it
 	const std::string& config_path = vfs::get("/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/" + ctxt->trp_name + "/TROPCONF.SFM");
@@ -1000,7 +1013,7 @@ error_code sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::pt
 	{
 		sceNpTrophy.warning("sceNpTrophyUnlockTrophy: All requirements for unlocking the platinum trophy (ID = %d) were met.)", unlocked_platinum_id);
 
-		if (ctxt->tropusr->UnlockTrophy(unlocked_platinum_id, 0, 0)) // TODO: add timestamps
+		if (ctxt->tropusr->UnlockTrophy(unlocked_platinum_id, tick->tick, tick->tick))
 		{
 			sceNpTrophy.success("You unlocked a platinum trophy! Hooray!!!");
 		}
@@ -1149,10 +1162,14 @@ static error_code NpTrophyGetTrophyInfo(const trophy_context_t* ctxt, s32 trophy
 	}
 
 	auto trophy_base = doc.GetRoot();
-	ensure(trophy_base);
+	if (!trophy_base)
+	{
+		sceNpTrophy.error("sceNpTrophyGetGameInfo: Failed to read TROPCONF.SFM (root is null): %s", config_path);
+		// TODO: return some error
+	}
 
 	bool found = false;
-	for (std::shared_ptr<rXmlNode> n = trophy_base->GetChildren(); n; n = n->GetNext())
+	for (std::shared_ptr<rXmlNode> n = trophy_base ? trophy_base->GetChildren() : nullptr; n; n = n->GetNext())
 	{
 		if (n->GetName() == "trophy" && (trophyId == atoi(n->GetAttribute("id").c_str())))
 		{
@@ -1394,14 +1411,18 @@ error_code sceNpTrophyGetTrophyIcon(u32 context, u32 handle, s32 trophyId, vm::p
 			pugi::xml_parse_result res = doc.Read(config.to_string());
 			if (!res)
 			{
-				sceNpTrophy.error("sceNpTrophyGetGameInfo: Failed to read TROPCONF.SFM: %s", config_path);
+				sceNpTrophy.error("sceNpTrophyGetTrophyIcon: Failed to read TROPCONF.SFM: %s", config_path);
 				// TODO: return some error
 			}
 
 			auto trophy_base = doc.GetRoot();
-			ensure(trophy_base);
+			if (!trophy_base)
+			{
+				sceNpTrophy.error("sceNpTrophyGetTrophyIcon: Failed to read TROPCONF.SFM (root is null): %s", config_path);
+				// TODO: return some error
+			}
 
-			for (std::shared_ptr<rXmlNode> n = trophy_base->GetChildren(); n; n = n->GetNext())
+			for (std::shared_ptr<rXmlNode> n = trophy_base ? trophy_base->GetChildren() : nullptr; n; n = n->GetNext())
 			{
 				if (n->GetName() == "trophy" && trophyId == atoi(n->GetAttribute("id").c_str()) && n->GetAttribute("hidden")[0] == 'y')
 				{

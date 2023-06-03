@@ -78,17 +78,7 @@ namespace vk
 		}
 		default:
 		{
-			const auto color4 = rsx::decode_border_color(color);
-			if ((color4.r + color4.g + color4.b) > 1.35f)
-			{
-				//If color elements are brighter than roughly 0.5 average, use white border
-				return VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-			}
-
-			if (color4.a > 0.5f)
-				return VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
-
-			return VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
+			return VK_BORDER_COLOR_FLOAT_CUSTOM_EXT;
 		}
 		}
 	}

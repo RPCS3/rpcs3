@@ -284,7 +284,7 @@ struct lv2_spu_group
 	shared_mutex mutex;
 
 	atomic_t<u32> init; // Initialization Counter
-	atomic_t<s32> prio; // SPU Thread Group Priority
+	atomic_t<typename spu_thread::spu_prio_t> prio{}; // SPU Thread Group Priority
 	atomic_t<spu_group_status> run_state; // SPU Thread Group State
 	atomic_t<s32> exit_status; // SPU Thread Group Exit Status
 	atomic_t<u32> join_state; // flags used to detect exit cause and signal
@@ -303,7 +303,7 @@ struct lv2_spu_group
 	std::shared_ptr<lv2_event_queue> ep_exception; // TODO: SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION
 	std::shared_ptr<lv2_event_queue> ep_sysmodule; // TODO: SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE
 
-	lv2_spu_group(std::string name, u32 num, s32 prio, s32 type, lv2_memory_container* ct, bool uses_scheduler, u32 mem_size) noexcept
+	lv2_spu_group(std::string name, u32 num, s32 _prio, s32 type, lv2_memory_container* ct, bool uses_scheduler, u32 mem_size) noexcept
 		: name(std::move(name))
 		, id(idm::last_id())
 		, max_num(num)
@@ -313,13 +313,13 @@ struct lv2_spu_group
 		, has_scheduler_context(uses_scheduler)
 		, max_run(num)
 		, init(0)
-		, prio(prio)
 		, run_state(SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED)
 		, exit_status(0)
 		, join_state(0)
 		// TODO: args()
 	{
 		threads_map.fill(-1);
+		prio.raw().prio = _prio;
 	}
 
 	SAVESTATE_INIT_POS(8); // Dependency on SPUs

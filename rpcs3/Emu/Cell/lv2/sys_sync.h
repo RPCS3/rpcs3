@@ -8,7 +8,6 @@
 #include "Emu/Cell/timers.hpp"
 #include "Emu/IdManager.h"
 #include "Emu/IPC.h"
-#include "Emu/system_config.h"
 
 #include <thread>
 
@@ -107,7 +106,7 @@ public:
 	}
 
 	// Find and remove the object from the linked list
-	template <typename T>
+	template <bool ModifyNode = true, typename T>
 	static T* unqueue(T*& first, T* object, T* T::* mem_ptr = &T::next_cpu)
 	{
 		auto it = +first;
@@ -115,7 +114,12 @@ public:
 		if (it == object)
 		{
 			atomic_storage<T*>::release(first, it->*mem_ptr);
-			atomic_storage<T*>::release(it->*mem_ptr, nullptr);
+
+			if constexpr (ModifyNode)
+			{
+				atomic_storage<T*>::release(it->*mem_ptr, nullptr);
+			}
+
 			return it;
 		}
 
@@ -126,7 +130,12 @@ public:
 			if (next == object)
 			{
 				atomic_storage<T*>::release(it->*mem_ptr, next->*mem_ptr);
-				atomic_storage<T*>::release(next->*mem_ptr, nullptr);
+
+				if constexpr (ModifyNode)
+				{
+					atomic_storage<T*>::release(next->*mem_ptr, nullptr);
+				}
+
 				return next;
 			}
 
@@ -138,7 +147,7 @@ public:
 
 	// Remove an object from the linked set according to the protocol
 	template <typename E, typename T>
-	static E* schedule(T& first, u32 protocol)
+	static E* schedule(T& first, u32 protocol, bool modify_node = true)
 	{
 		auto it = static_cast<E*>(first);
 
@@ -162,7 +171,7 @@ public:
 					continue;
 				}
 
-				if (it && cpu_flag::again - it->state)
+				if (cpu_flag::again - it->state)
 				{
 					atomic_storage<T>::release(*parent_found, nullptr);
 				}
@@ -171,7 +180,7 @@ public:
 			}
 		}
 
-		s32 prio = it->prio;
+		auto prio = it->prio.load();
 		auto found = it;
 
 		while (true)
@@ -184,10 +193,10 @@ public:
 				break;
 			}
 
-			const s32 _prio = static_cast<E*>(next)->prio;
+			const auto _prio = static_cast<E*>(next)->prio.load();
 
-			// This condition tests for equality as well so the eraliest element to be pushed is popped
-			if (_prio <= prio)
+			// This condition tests for equality as well so the earliest element to be pushed is popped
+			if (_prio.prio < prio.prio || (_prio.prio == prio.prio && _prio.order < prio.order))
 			{
 				found = next;
 				parent_found = &node;
@@ -200,7 +209,11 @@ public:
 		if (cpu_flag::again - found->state)
 		{
 			atomic_storage<T>::release(*parent_found, found->next_cpu);
-			atomic_storage<T>::release(found->next_cpu, nullptr);
+
+			if (modify_node)
+			{
+				atomic_storage<T>::release(found->next_cpu, nullptr);
+			}
 		}
 
 		return found;
@@ -211,6 +224,11 @@ public:
 	{
 		atomic_storage<T>::release(object->next_cpu, first);
 		atomic_storage<T>::release(first, object);
+
+		object->prio.atomic_op([order = ++g_priority_order_tag](std::common_type_t<decltype(std::declval<T>()->prio.load())>& prio)
+		{
+			prio.order = order;
+		});
 	}
 
 private:
@@ -462,6 +480,9 @@ public:
 
 	// Scheduler mutex
 	static shared_mutex g_mutex;
+
+	// Proirity tags
+	static atomic_t<u64> g_priority_order_tag;
 
 private:
 	// Pending list of threads to run

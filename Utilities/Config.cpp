@@ -23,9 +23,9 @@ namespace cfg
 	{
 		for (const auto& node : owner->m_nodes)
 		{
-			if (node->get_name() == name)
+			if (node->get_name() == m_name)
 			{
-				cfg_log.fatal("Node already exists: %s", name);
+				cfg_log.fatal("Node already exists: %s", m_name);
 			}
 		}
 
@@ -61,7 +61,7 @@ bool try_to_int64(s64* out, std::string_view value, s64 min, s64 max)
 {
 	if (value.empty())
 	{
-		if (out) cfg_log.error("cfg::try_to_uint64(): called with an empty string");
+		if (out) cfg_log.error("cfg::try_to_int64(): called with an empty string");
 		return false;
 	}
 

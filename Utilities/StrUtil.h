@@ -15,7 +15,7 @@ std::u16string utf8_to_utf16(std::string_view src);
 
 // Copy null-terminated string from a std::string or a char array to a char array with truncation
 template <typename D, typename T>
-inline void strcpy_trunc(D& dst, const T& src)
+inline void strcpy_trunc(D&& dst, const T& src)
 {
 	const usz count = std::size(src) >= std::size(dst) ? std::max<usz>(std::size(dst), 1) - 1 : std::size(src);
 	std::memcpy(std::data(dst), std::data(src), count);
@@ -173,8 +173,8 @@ namespace fmt
 		return result;
 	}
 
-	std::string to_upper(const std::string& string);
-	std::string to_lower(const std::string& string);
+	std::string to_upper(std::string_view string);
+	std::string to_lower(std::string_view string);
 
 	bool match(const std::string& source, const std::string& mask);
 

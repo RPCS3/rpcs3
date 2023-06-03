@@ -159,11 +159,11 @@ u8 sky_portal::load_skylander(u8* buf, fs::file in_file)
 {
 	std::lock_guard lock(sky_mutex);
 
-	u32 sky_serial = read_from_ptr<le_t<u32>>(buf);
+	const u32 sky_serial = read_from_ptr<le_t<u32>>(buf);
 	u8 found_slot  = 0xFF;
 
 	// mimics spot retaining on the portal
-	for (auto i = 0; i < 8; i++)
+	for (u8 i = 0; i < 8; i++)
 	{
 		if ((skylanders[i].status & 1) == 0)
 		{
@@ -182,7 +182,7 @@ u8 sky_portal::load_skylander(u8* buf, fs::file in_file)
 
 	ensure(found_slot != 0xFF);
 
-	auto& thesky = skylanders[found_slot];
+	skylander& thesky = skylanders[found_slot];
 	memcpy(thesky.data.data(), buf, thesky.data.size());
 	thesky.sky_file = std::move(in_file);
 	thesky.status   = 3;
@@ -321,7 +321,9 @@ void usb_device_skylander::control_transfer(u8 bmRequestType, u8 bRequest, u16 w
 				q_queries.push(q_result);
 				break;
 			}
-			default: skylander_log.error("Unhandled Query Type: 0x%02X", buf[0]); break;
+			default:
+				skylander_log.error("Unhandled Query: buf_size=0x%02X, Type=0x%02X, bRequest=0x%02X, bmRequestType=0x%02X", buf_size, (buf_size > 0) ? buf[0] : -1, bRequest, bmRequestType);
+				break;
 			}
 			break;
 		}

@@ -846,15 +846,19 @@ error_code mmapper_thread_recover_page_fault(cpu_thread* cpu)
 		}
 
 		pf_events.events.erase(pf_event_ind);
+
+		if (cpu->id_type() == 1u)
+		{
+			lv2_obj::awake(cpu);
+		}
+		else
+		{
+			cpu->state += cpu_flag::signal;
+		}
 	}
 
-	if (cpu->id_type() == 1u)
+	if (cpu->state & cpu_flag::signal)
 	{
-		lv2_obj::awake(cpu);
-	}
-	else
-	{
-		cpu->state += cpu_flag::signal;
 		cpu->state.notify_one(cpu_flag::signal);
 	}
 

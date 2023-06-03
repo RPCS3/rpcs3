@@ -3,6 +3,7 @@
 #include "Emu/Cell/lv2/sys_rsxaudio.h"
 #include "Emu/IdManager.h"
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Loader/PSF.h"
 
 #include "cellAudioOut.h"

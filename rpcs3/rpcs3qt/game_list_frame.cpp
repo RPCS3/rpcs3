@@ -2,7 +2,6 @@
 #include "qt_utils.h"
 #include "settings_dialog.h"
 #include "pad_settings_dialog.h"
-#include "game_list_delegate.h"
 #include "custom_table_widget_item.h"
 #include "input_dialog.h"
 #include "localized.h"
@@ -10,8 +9,10 @@
 #include "persistent_settings.h"
 #include "emu_settings.h"
 #include "gui_settings.h"
-#include "game_list.h"
+#include "game_list_delegate.h"
+#include "game_list_table.h"
 #include "game_list_grid.h"
+#include "game_list_grid_item.h"
 #include "patch_manager_dialog.h"
 
 #include "Emu/Memory/vm.h"
@@ -73,70 +74,83 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	m_gui_settings->SetValue(gui::gl_marginFactor, m_margin_factor);
 	m_gui_settings->SetValue(gui::gl_textFactor, m_text_factor);
 
+	// Only show the progress dialog after some time has passed
+	m_progress_dialog_timer = new QTimer(this);
+	m_progress_dialog_timer->setSingleShot(true);
+	m_progress_dialog_timer->setInterval(200);
+	connect(m_progress_dialog_timer, &QTimer::timeout, this, [this]()
+	{
+		if (m_progress_dialog)
+		{
+			m_progress_dialog->show();
+		}
+	});
+
 	m_game_dock = new QMainWindow(this);
 	m_game_dock->setWindowFlags(Qt::Widget);
 	setWidget(m_game_dock);
 
-	m_game_grid = new game_list_grid(QSize(), m_icon_color, m_margin_factor, m_text_factor, false);
+	m_game_grid = new game_list_grid();
+	m_game_grid->installEventFilter(this);
+	m_game_grid->scroll_area()->verticalScrollBar()->installEventFilter(this);
 
-	m_game_list = new game_list();
-	m_game_list->setShowGrid(false);
-	m_game_list->setItemDelegate(new game_list_delegate(m_game_list));
-	m_game_list->setEditTriggers(QAbstractItemView::NoEditTriggers);
-	m_game_list->setSelectionBehavior(QAbstractItemView::SelectRows);
-	m_game_list->setSelectionMode(QAbstractItemView::SingleSelection);
-	m_game_list->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
-	m_game_list->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
-	m_game_list->verticalScrollBar()->installEventFilter(this);
-	m_game_list->verticalScrollBar()->setSingleStep(20);
-	m_game_list->horizontalScrollBar()->setSingleStep(20);
-	m_game_list->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
-	m_game_list->verticalHeader()->setVisible(false);
-	m_game_list->horizontalHeader()->setContextMenuPolicy(Qt::CustomContextMenu);
-	m_game_list->horizontalHeader()->setHighlightSections(false);
-	m_game_list->horizontalHeader()->setSortIndicatorShown(true);
-	m_game_list->horizontalHeader()->setStretchLastSection(true);
-	m_game_list->horizontalHeader()->setDefaultSectionSize(150);
-	m_game_list->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
-	m_game_list->setContextMenuPolicy(Qt::CustomContextMenu);
-	m_game_list->setAlternatingRowColors(true);
+	m_game_list = new game_list_table(this, m_persistent_settings);
 	m_game_list->installEventFilter(this);
-	m_game_list->setColumnCount(gui::column_count);
-	m_game_list->setMouseTracking(true);
+	m_game_list->verticalScrollBar()->installEventFilter(this);
 
 	m_game_compat = new game_compatibility(m_gui_settings, this);
 
 	m_central_widget = new QStackedWidget(this);
 	m_central_widget->addWidget(m_game_list);
 	m_central_widget->addWidget(m_game_grid);
-	m_central_widget->setCurrentWidget(m_is_list_layout ? m_game_list : m_game_grid);
+
+	if (m_is_list_layout)
+	{
+		m_central_widget->setCurrentWidget(m_game_list);
+	}
+	else
+	{
+		m_central_widget->setCurrentWidget(m_game_grid);
+	}
 
 	m_game_dock->setCentralWidget(m_central_widget);
 
 	// Actions regarding showing/hiding columns
 	auto add_column = [this](gui::game_list_columns col, const QString& header_text, const QString& action_text)
 	{
-		m_game_list->setHorizontalHeaderItem(col, new QTableWidgetItem(header_text));
+		m_game_list->setHorizontalHeaderItem(static_cast<int>(col), new QTableWidgetItem(header_text));
 		m_columnActs.append(new QAction(action_text, this));
 	};
 
-	add_column(gui::column_icon,       tr("Icon"),                  tr("Show Icons"));
-	add_column(gui::column_name,       tr("Name"),                  tr("Show Names"));
-	add_column(gui::column_serial,     tr("Serial"),                tr("Show Serials"));
-	add_column(gui::column_firmware,   tr("Firmware"),              tr("Show Firmwares"));
-	add_column(gui::column_version,    tr("Version"),               tr("Show Versions"));
-	add_column(gui::column_category,   tr("Category"),              tr("Show Categories"));
-	add_column(gui::column_path,       tr("Path"),                  tr("Show Paths"));
-	add_column(gui::column_move,       tr("PlayStation Move"),      tr("Show PlayStation Move"));
-	add_column(gui::column_resolution, tr("Supported Resolutions"), tr("Show Supported Resolutions"));
-	add_column(gui::column_sound,      tr("Sound Formats"),         tr("Show Sound Formats"));
-	add_column(gui::column_parental,   tr("Parental Level"),        tr("Show Parental Levels"));
-	add_column(gui::column_last_play,  tr("Last Played"),           tr("Show Last Played"));
-	add_column(gui::column_playtime,   tr("Time Played"),           tr("Show Time Played"));
-	add_column(gui::column_compat,     tr("Compatibility"),         tr("Show Compatibility"));
-	add_column(gui::column_dir_size,   tr("Space On Disk"),         tr("Show Space On Disk"));
+	add_column(gui::game_list_columns::icon,       tr("Icon"),                  tr("Show Icons"));
+	add_column(gui::game_list_columns::name,       tr("Name"),                  tr("Show Names"));
+	add_column(gui::game_list_columns::serial,     tr("Serial"),                tr("Show Serials"));
+	add_column(gui::game_list_columns::firmware,   tr("Firmware"),              tr("Show Firmwares"));
+	add_column(gui::game_list_columns::version,    tr("Version"),               tr("Show Versions"));
+	add_column(gui::game_list_columns::category,   tr("Category"),              tr("Show Categories"));
+	add_column(gui::game_list_columns::path,       tr("Path"),                  tr("Show Paths"));
+	add_column(gui::game_list_columns::move,       tr("PlayStation Move"),      tr("Show PlayStation Move"));
+	add_column(gui::game_list_columns::resolution, tr("Supported Resolutions"), tr("Show Supported Resolutions"));
+	add_column(gui::game_list_columns::sound,      tr("Sound Formats"),         tr("Show Sound Formats"));
+	add_column(gui::game_list_columns::parental,   tr("Parental Level"),        tr("Show Parental Levels"));
+	add_column(gui::game_list_columns::last_play,  tr("Last Played"),           tr("Show Last Played"));
+	add_column(gui::game_list_columns::playtime,   tr("Time Played"),           tr("Show Time Played"));
+	add_column(gui::game_list_columns::compat,     tr("Compatibility"),         tr("Show Compatibility"));
+	add_column(gui::game_list_columns::dir_size,   tr("Space On Disk"),         tr("Show Space On Disk"));
 
 	// Events
+	connect(&m_parsing_watcher, &QFutureWatcher<void>::finished, this, &game_list_frame::OnParsingFinished);
+	connect(&m_parsing_watcher, &QFutureWatcher<void>::canceled, this, [this]()
+	{
+		WaitAndAbortSizeCalcThreads();
+		WaitAndAbortRepaintThreads();
+
+		m_path_entries.clear();
+		m_path_list.clear();
+		m_game_data.clear();
+		m_serials.clear();
+		m_games.pop_all();
+	});
 	connect(&m_refresh_watcher, &QFutureWatcher<void>::finished, this, &game_list_frame::OnRefreshFinished);
 	connect(&m_refresh_watcher, &QFutureWatcher<void>::canceled, this, [this]()
 	{
@@ -149,37 +163,16 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 		m_serials.clear();
 		m_games.pop_all();
 	});
-	connect(this, &game_list_frame::IconReady, this, [this](movie_item* item)
-	{
-		if (!item) return;
-		item->call_icon_func();
-	});
-	connect(this, &game_list_frame::SizeOnDiskReady, this, [this](const game_info& game)
-	{
-		if (!m_is_list_layout || !game || !game->item) return;
-		if (QTableWidgetItem* size_item = m_game_list->item(game->item->row(), gui::column_dir_size))
-		{
-			const u64& game_size = game->info.size_on_disk;
-			size_item->setText(game_size != umax ? gui::utils::format_byte_size(game_size) : tr("Unknown"));
-			size_item->setData(Qt::UserRole, QVariant::fromValue<qulonglong>(game_size));
-		}
-	});
 
 	connect(m_game_list, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
 	connect(m_game_list, &QTableWidget::itemSelectionChanged, this, &game_list_frame::ItemSelectionChangedSlot);
-	connect(m_game_list, &QTableWidget::itemDoubleClicked, this, &game_list_frame::doubleClickedSlot);
+	connect(m_game_list, &QTableWidget::itemDoubleClicked, this, QOverload<QTableWidgetItem*>::of(&game_list_frame::doubleClickedSlot));
 
 	connect(m_game_list->horizontalHeader(), &QHeaderView::sectionClicked, this, &game_list_frame::OnColClicked);
-	connect(m_game_list->horizontalHeader(), &QHeaderView::customContextMenuRequested, this, [this](const QPoint& pos)
-	{
-		QMenu* configure = new QMenu(this);
-		configure->addActions(m_columnActs);
-		configure->exec(m_game_list->horizontalHeader()->viewport()->mapToGlobal(pos));
-	});
 
-	connect(m_game_grid, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
-	connect(m_game_grid, &QTableWidget::itemSelectionChanged, this, &game_list_frame::ItemSelectionChangedSlot);
-	connect(m_game_grid, &QTableWidget::itemDoubleClicked, this, &game_list_frame::doubleClickedSlot);
+	connect(m_game_grid, &QWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
+	connect(m_game_grid, &game_list_grid::ItemSelectionChanged, this, &game_list_frame::NotifyGameSelection);
+	connect(m_game_grid, &game_list_grid::ItemDoubleClicked, this, QOverload<const game_info&>::of(&game_list_frame::doubleClickedSlot));
 
 	connect(m_game_compat, &game_compatibility::DownloadStarted, this, [this]()
 	{
@@ -198,37 +191,11 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	});
 
 	connect(m_game_list, &game_list::FocusToSearchBar, this, &game_list_frame::FocusToSearchBar);
-	connect(m_game_grid, &game_list::FocusToSearchBar, this, &game_list_frame::FocusToSearchBar);
+	connect(m_game_grid, &game_list_grid::FocusToSearchBar, this, &game_list_frame::FocusToSearchBar);
 
-	for (int col = 0; col < m_columnActs.count(); ++col)
-	{
-		m_columnActs[col]->setCheckable(true);
-
-		connect(m_columnActs[col], &QAction::triggered, this, [this, col](bool checked)
-		{
-			if (!checked) // be sure to have at least one column left so you can call the context menu at all time
-			{
-				int c = 0;
-				for (int i = 0; i < m_columnActs.count(); ++i)
-				{
-					if (m_gui_settings->GetGamelistColVisibility(i) && ++c > 1)
-						break;
-				}
-				if (c < 2)
-				{
-					m_columnActs[col]->setChecked(true); // re-enable the checkbox if we don't change the actual state
-					return;
-				}
-			}
-			m_game_list->setColumnHidden(col, !checked); // Negate because it's a set col hidden and we have menu say show.
-			m_gui_settings->SetGamelistColVisibility(col, checked);
-
-			if (checked) // handle hidden columns that have zero width after showing them (stuck between others)
-			{
-				FixNarrowColumns();
-			}
-		});
-	}
+	m_game_list->create_header_actions(m_columnActs,
+		[this](int col) { return m_gui_settings->GetGamelistColVisibility(static_cast<gui::game_list_columns>(col)); },
+		[this](int col, bool visible) { m_gui_settings->SetGamelistColVisibility(static_cast<gui::game_list_columns>(col), visible); });
 }
 
 void game_list_frame::LoadSettings()
@@ -241,82 +208,27 @@ void game_list_frame::LoadSettings()
 	m_show_custom_icons = m_gui_settings->GetValue(gui::gl_custom_icon).toBool();
 	m_play_hover_movies = m_gui_settings->GetValue(gui::gl_hover_gifs).toBool();
 
-	Refresh(true);
-
-	const QByteArray state = m_gui_settings->GetValue(gui::gl_state).toByteArray();
-	if (!m_game_list->horizontalHeader()->restoreState(state) && m_game_list->rowCount())
-	{
-		// If no settings exist, resize to contents.
-		ResizeColumnsToContents();
-	}
-
 	for (int col = 0; col < m_columnActs.count(); ++col)
 	{
-		const bool vis = m_gui_settings->GetGamelistColVisibility(col);
+		const bool vis = m_gui_settings->GetGamelistColVisibility(static_cast<gui::game_list_columns>(col));
 		m_columnActs[col]->setChecked(vis);
 		m_game_list->setColumnHidden(col, !vis);
 	}
-
-	SortGameList();
-	FixNarrowColumns();
-
-	m_game_list->horizontalHeader()->restoreState(m_game_list->horizontalHeader()->saveState());
 }
 
 game_list_frame::~game_list_frame()
 {
 	WaitAndAbortSizeCalcThreads();
 	WaitAndAbortRepaintThreads();
+	gui::utils::stop_future_watcher(m_parsing_watcher, true);
 	gui::utils::stop_future_watcher(m_refresh_watcher, true);
 
 	SaveSettings();
 }
 
-void game_list_frame::FixNarrowColumns() const
-{
-	qApp->processEvents();
-
-	// handle columns (other than the icon column) that have zero width after showing them (stuck between others)
-	for (int col = 1; col < m_columnActs.count(); ++col)
-	{
-		if (m_game_list->isColumnHidden(col))
-		{
-			continue;
-		}
-
-		if (m_game_list->columnWidth(col) <= m_game_list->horizontalHeader()->minimumSectionSize())
-		{
-			m_game_list->setColumnWidth(col, m_game_list->horizontalHeader()->minimumSectionSize());
-		}
-	}
-}
-
-void game_list_frame::ResizeColumnsToContents(int spacing) const
-{
-	if (!m_game_list)
-	{
-		return;
-	}
-
-	m_game_list->verticalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
-	m_game_list->horizontalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
-
-	// Make non-icon columns slighty bigger for better visuals
-	for (int i = 1; i < m_game_list->columnCount(); i++)
-	{
-		if (m_game_list->isColumnHidden(i))
-		{
-			continue;
-		}
-
-		const int size = m_game_list->horizontalHeader()->sectionSize(i) + spacing;
-		m_game_list->horizontalHeader()->resizeSection(i, size);
-	}
-}
-
 void game_list_frame::OnColClicked(int col)
 {
-	if (col == 0) return; // Don't "sort" icons.
+	if (col == static_cast<int>(gui::game_list_columns::icon)) return; // Don't "sort" icons.
 
 	if (col == m_sort_column)
 	{
@@ -331,11 +243,11 @@ void game_list_frame::OnColClicked(int col)
 	m_gui_settings->SetValue(gui::gl_sortAsc, m_col_sort_order == Qt::AscendingOrder);
 	m_gui_settings->SetValue(gui::gl_sortCol, col);
 
-	SortGameList();
+	m_game_list->sort(m_game_data.count(), m_sort_column, m_col_sort_order);
 }
 
 // Get visibility of entries
-bool game_list_frame::IsEntryVisible(const game_info& game, bool search_fallback)
+bool game_list_frame::IsEntryVisible(const game_info& game, bool search_fallback) const
 {
 	const auto matches_category = [&]()
 	{
@@ -352,78 +264,6 @@ bool game_list_frame::IsEntryVisible(const game_info& game, bool search_fallback
 	return is_visible && matches_category() && SearchMatchesApp(qstr(game->info.name), serial, search_fallback);
 }
 
-void game_list_frame::SortGameList() const
-{
-	// Back-up old header sizes to handle unwanted column resize in case of zero search results
-	QList<int> column_widths;
-	const int old_row_count = m_game_list->rowCount();
-	const int old_game_count = m_game_data.count();
-
-	for (int i = 0; i < m_game_list->columnCount(); i++)
-	{
-		column_widths.append(m_game_list->columnWidth(i));
-	}
-
-	// Sorting resizes hidden columns, so unhide them as a workaround
-	QList<int> columns_to_hide;
-
-	for (int i = 0; i < m_game_list->columnCount(); i++)
-	{
-		if (m_game_list->isColumnHidden(i))
-		{
-			m_game_list->setColumnHidden(i, false);
-			columns_to_hide << i;
-		}
-	}
-
-	// Sort the list by column and sort order
-	m_game_list->sortByColumn(m_sort_column, m_col_sort_order);
-
-	// Hide columns again
-	for (auto i : columns_to_hide)
-	{
-		m_game_list->setColumnHidden(i, true);
-	}
-
-	// Don't resize the columns if no game is shown to preserve the header settings
-	if (!m_game_list->rowCount())
-	{
-		for (int i = 0; i < m_game_list->columnCount(); i++)
-		{
-			m_game_list->setColumnWidth(i, column_widths[i]);
-		}
-
-		m_game_list->horizontalHeader()->setSectionResizeMode(gui::column_icon, QHeaderView::Fixed);
-		return;
-	}
-
-	// Fixate vertical header and row height
-	m_game_list->verticalHeader()->setMinimumSectionSize(m_icon_size.height());
-	m_game_list->verticalHeader()->setMaximumSectionSize(m_icon_size.height());
-	m_game_list->resizeRowsToContents();
-
-	// Resize columns if the game list was empty before
-	if (!old_row_count && !old_game_count)
-	{
-		ResizeColumnsToContents();
-	}
-	else
-	{
-		m_game_list->resizeColumnToContents(gui::column_icon);
-	}
-
-	// Fixate icon column
-	m_game_list->horizontalHeader()->setSectionResizeMode(gui::column_icon, QHeaderView::Fixed);
-
-	// Shorten the last section to remove horizontal scrollbar if possible
-	m_game_list->resizeColumnToContents(gui::column_count - 1);
-}
-
-QString game_list_frame::GetLastPlayedBySerial(const QString& serial) const
-{
-	return m_persistent_settings->GetLastPlayed(serial);
-}
-
 std::string game_list_frame::GetCacheDirBySerial(const std::string& serial)
 {
 	return rpcs3::utils::get_cache_dir() + serial;
@@ -434,6 +274,18 @@ std::string game_list_frame::GetDataDirBySerial(const std::string& serial)
 	return fs::get_config_dir() + "data/" + serial;
 }
 
+void game_list_frame::push_path(const std::string& path, std::vector<std::string>& legit_paths)
+{
+	{
+		std::lock_guard lock(m_path_mutex);
+		if (!m_path_list.insert(path).second)
+		{
+			return;
+		}
+	}
+	legit_paths.push_back(path);
+}
+
 void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 {
 	if (from_drive)
@@ -441,12 +293,23 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 		WaitAndAbortSizeCalcThreads();
 	}
 	WaitAndAbortRepaintThreads();
+	gui::utils::stop_future_watcher(m_parsing_watcher, from_drive);
 	gui::utils::stop_future_watcher(m_refresh_watcher, from_drive);
+
+	if (m_progress_dialog_timer)
+	{
+		m_progress_dialog_timer->stop();
+	}
+
+	if (m_progress_dialog)
+	{
+		m_progress_dialog->accept();
+		m_progress_dialog->deleteLater();
+		m_progress_dialog = nullptr;
+	}
 
 	if (from_drive)
 	{
-		const Localized localized;
-
 		m_path_entries.clear();
 		m_path_list.clear();
 		m_serials.clear();
@@ -454,299 +317,84 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 		m_notes.clear();
 		m_games.pop_all();
 
-		if (Emu.IsStopped())
+		m_progress_dialog = new progress_dialog(tr("Loading games"), tr("Loading games, please wait..."), tr("Cancel"), 0, 0, true, this, Qt::Dialog | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
+		connect(&m_refresh_watcher, &QFutureWatcher<void>::progressRangeChanged, m_progress_dialog, &QProgressDialog::setRange);
+		connect(&m_refresh_watcher, &QFutureWatcher<void>::progressValueChanged, m_progress_dialog, &QProgressDialog::setValue);
+		connect(m_progress_dialog, &QProgressDialog::canceled, this, [this]()
 		{
-			Emu.AddGamesFromDir(g_cfg_vfs.get(g_cfg_vfs.games_dir, rpcs3::utils::get_emu_dir()));
+			gui::utils::stop_future_watcher(m_parsing_watcher, true);
+			gui::utils::stop_future_watcher(m_refresh_watcher, true);
+
+			m_path_entries.clear();
+			m_path_list.clear();
+			m_serials.clear();
+			m_game_data.clear();
+			m_notes.clear();
+			m_games.pop_all();
+
+			if (m_progress_dialog_timer)
+			{
+				m_progress_dialog_timer->stop();
+			}
+
+			m_progress_dialog->deleteLater();
+			m_progress_dialog = nullptr;
+		});
+
+		if (m_progress_dialog_timer)
+		{
+			m_progress_dialog_timer->start();
 		}
 
-		const std::string _hdd =  rpcs3::utils::get_hdd0_dir();
+		Emu.AddGamesFromDir(g_cfg_vfs.get(g_cfg_vfs.games_dir, rpcs3::utils::get_emu_dir()));
 
-		const auto push_path = [this](const std::string& path, std::vector<std::string>& legit_paths)
+		const std::string _hdd = rpcs3::utils::get_hdd0_dir();
+
+		m_parsing_watcher.setFuture(QtConcurrent::map(m_parsing_threads, [this, _hdd](int index)
 		{
+			if (index > 0)
 			{
+				game_list_log.error("Unexpected thread index: %d", index);
+				return;
+			}
+
+			const auto add_dir = [this](const std::string& path, bool is_disc)
+			{
+				for (const auto& entry : fs::dir(path))
+				{
+					if (!entry.is_directory || entry.name == "." || entry.name == "..")
+					{
+						continue;
+					}
+
+					QApplication::processEvents();
+					std::lock_guard lock(m_path_mutex);
+					m_path_entries.emplace_back(path_entry{path + entry.name, is_disc, false});
+				}
+			};
+
+			add_dir(_hdd + "game/", false);
+			add_dir(_hdd + "disc/", true); // Deprecated
+
+			for (const auto& [serial, path] : Emu.GetGamesConfig().get_games())
+			{
+				std::string game_dir = path;
+				game_dir.resize(game_dir.find_last_not_of('/') + 1);
+
+				if (game_dir.empty())
+				{
+					continue;
+				}
+
+				// Don't use the C00 subdirectory in our game list
+				if (game_dir.ends_with("/C00") || game_dir.ends_with("\\C00"))
+				{
+					game_dir = game_dir.substr(0, game_dir.size() - 4);
+				}
+
+				QApplication::processEvents();
 				std::lock_guard lock(m_path_mutex);
-				if (!m_path_list.insert(path).second)
-				{
-					return;
-				}
-			}
-			legit_paths.push_back(path);
-		};
-
-		const auto add_disc_dir = [push_path](const std::string& path, std::vector<std::string>& legit_paths)
-		{
-			for (const auto& entry : fs::dir(path))
-			{
-				if (!entry.is_directory || entry.name == "." || entry.name == "..")
-				{
-					continue;
-				}
-
-				if (entry.name == "PS3_GAME" || std::regex_match(entry.name, std::regex("^PS3_GM[[:digit:]]{2}$")))
-				{
-					push_path(path + "/" + entry.name, legit_paths);
-				}
-			}
-		};
-
-		const auto add_dir = [&](const std::string& path, bool is_disc)
-		{
-			for (const auto& entry : fs::dir(path))
-			{
-				if (!entry.is_directory || entry.name == "." || entry.name == "..")
-				{
-					continue;
-				}
-
-				m_path_entries.emplace_back(path_entry{path + entry.name, is_disc, false});
-			}
-		};
-
-		add_dir(_hdd + "game/", false);
-		add_dir(_hdd + "disc/", true); // Deprecated
-
-		for (const auto& [serial, path] : Emu.GetGamesConfig().get_games())
-		{
-			std::string game_dir = path;
-
-			game_dir.resize(game_dir.find_last_not_of('/') + 1);
-
-			if (game_dir.empty())
-			{
-				continue;
-			}
-
-			// Don't use the C00 subdirectory in our game list
-			if (game_dir.ends_with("/C00") || game_dir.ends_with("\\C00"))
-			{
-				game_dir = game_dir.substr(0, game_dir.size() - 4);
-			}
-
-			m_path_entries.emplace_back(path_entry{game_dir, false, true});
-		}
-
-		const auto dev_flash = g_cfg_vfs.get_dev_flash();
-
-		m_path_entries.emplace_back(path_entry{dev_flash + "vsh/module/vsh.self", false, false});
-
-		// Remove duplicates
-		sort(m_path_entries.begin(), m_path_entries.end(), [](const path_entry& l, const path_entry& r){return l.path < r.path;});
-		m_path_entries.erase(unique(m_path_entries.begin(), m_path_entries.end(), [](const path_entry& l, const path_entry& r){return l.path == r.path;}), m_path_entries.end());
-
-		const std::string game_icon_path = m_play_hover_movies ? fs::get_config_dir() + "/Icons/game_icons/" : "";
-
-		const auto add_game = [this, dev_flash, cat_unknown_localized = sstr(localized.category.unknown), cat_unknown = sstr(cat::cat_unknown), game_icon_path](const std::string& dir_or_elf)
-		{
-			GameInfo game{};
-			game.path = dir_or_elf;
-
-			const Localized thread_localized;
-
-			const std::string sfo_dir = rpcs3::utils::get_sfo_dir_from_game_path(dir_or_elf);
-			const psf::registry psf = psf::load_object(sfo_dir + "/PARAM.SFO");
-			const std::string_view title_id = psf::get_string(psf, "TITLE_ID", "");
-
-			if (title_id.empty())
-			{
-				if (!fs::is_file(dir_or_elf))
-				{
-					// Do not care about invalid entries
-					return;
-				}
-
-				game.serial = dir_or_elf.substr(dir_or_elf.find_last_of(fs::delim) + 1);
-				game.category = cat::cat_ps3_os.toStdString(); // Key for operating system executables
-				game.version = utils::get_firmware_version();
-				game.fw = game.version;
-				game.bootable = 1;
-				game.icon_path = dev_flash + "vsh/resource/explore/icon/icon_home.png";
-
-				if (dir_or_elf.starts_with(dev_flash))
-				{
-					std::string path_vfs = dir_or_elf.substr(dev_flash.size());
-
-					if (const usz pos = path_vfs.find_first_not_of(fs::delim); pos != umax && pos != 0)
-					{
-						path_vfs = path_vfs.substr(pos);
-					}
-
-					if (const auto it = thread_localized.title.titles.find(path_vfs); it != thread_localized.title.titles.cend())
-					{
-						game.name = it->second.toStdString();
-					}
-				}
-
-				if (game.name == "Unknown")
-				{
-					game.name = game.serial;
-				}
-			}
-			else
-			{
-				game.serial       = std::string(title_id);
-				game.name         = std::string(psf::get_string(psf, "TITLE", cat_unknown_localized));
-				game.app_ver      = std::string(psf::get_string(psf, "APP_VER", cat_unknown_localized));
-				game.version      = std::string(psf::get_string(psf, "VERSION", cat_unknown_localized));
-				game.category     = std::string(psf::get_string(psf, "CATEGORY", cat_unknown));
-				game.fw           = std::string(psf::get_string(psf, "PS3_SYSTEM_VER", cat_unknown_localized));
-				game.parental_lvl = psf::get_integer(psf, "PARENTAL_LEVEL", 0);
-				game.resolution   = psf::get_integer(psf, "RESOLUTION", 0);
-				game.sound_format = psf::get_integer(psf, "SOUND_FORMAT", 0);
-				game.bootable     = psf::get_integer(psf, "BOOTABLE", 0);
-				game.attr         = psf::get_integer(psf, "ATTRIBUTE", 0);
-				game.icon_path    = sfo_dir + "/ICON0.PNG";
-
-				if (game.category == "DG")
-				{
-					std::string latest_icon = rpcs3::utils::get_hdd0_dir() + "game/" + game.serial + "/ICON0.PNG";
-					if (fs::is_file(latest_icon))
-					{
-						game.icon_path = std::move(latest_icon);
-					}
-				}
-			}
-
-			if (m_show_custom_icons)
-			{
-				if (std::string icon_path = fs::get_config_dir() + "/Icons/game_icons/" + game.serial + "/ICON0.PNG"; fs::is_file(icon_path))
-				{
-					game.icon_path = std::move(icon_path);
-				}
-			}
-
-			const QString serial = qstr(game.serial);
-
-			m_games_mutex.lock();
-
-			// Read persistent_settings values
-			const QString note  = m_persistent_settings->GetValue(gui::persistent::notes, serial, "").toString();
-			const QString title = m_persistent_settings->GetValue(gui::persistent::titles, serial, "").toString().simplified();
-			QString last_played = m_persistent_settings->GetValue(gui::persistent::last_played, serial, "").toString();
-			quint64 playtime    = m_persistent_settings->GetValue(gui::persistent::playtime, serial, 0).toULongLong();
-
-			// Set persistent_settings values if values exist
-			if (!last_played.isEmpty())
-			{
-				m_persistent_settings->SetLastPlayed(serial, last_played);
-			}
-			if (playtime > 0)
-			{
-				m_persistent_settings->SetPlaytime(serial, playtime);
-			}
-
-			m_serials.insert(serial);
-
-			if (!note.isEmpty())
-			{
-				m_notes.insert(serial, note);
-			}
-
-			if (!title.isEmpty())
-			{
-				m_titles.insert(serial, title);
-			}
-
-			m_games_mutex.unlock();
-
-			QString qt_cat = qstr(game.category);
-
-			if (const auto boot_cat = thread_localized.category.cat_boot.find(qt_cat); boot_cat != thread_localized.category.cat_boot.cend())
-			{
-				qt_cat = boot_cat->second;
-			}
-			else if (const auto data_cat = thread_localized.category.cat_data.find(qt_cat); data_cat != thread_localized.category.cat_data.cend())
-			{
-				qt_cat = data_cat->second;
-			}
-			else if (game.category == cat_unknown)
-			{
-				qt_cat = thread_localized.category.unknown;
-			}
-			else
-			{
-				qt_cat = thread_localized.category.other;
-			}
-
-			gui_game_info info{};
-			info.info = game;
-			info.localized_category = std::move(qt_cat);
-			info.compat = m_game_compat->GetCompatibility(game.serial);
-			info.hasCustomConfig = fs::is_file(rpcs3::utils::get_custom_config_path(game.serial));
-			info.hasCustomPadConfig = fs::is_file(rpcs3::utils::get_custom_input_config_path(game.serial));
-			info.has_hover_gif = fs::is_file(game_icon_path + game.serial + "/hover.gif");
-
-			m_games.push(std::make_shared<gui_game_info>(std::move(info)));
-		};
-
-		m_refresh_watcher.setFuture(QtConcurrent::map(m_path_entries, [this, _hdd, add_disc_dir, push_path, add_game](const path_entry& entry)
-		{
-			std::vector<std::string> legit_paths;
-
-			if (entry.is_from_yml)
-			{
-				if (fs::is_file(entry.path + "/PARAM.SFO"))
-				{
-					push_path(entry.path, legit_paths);
-				}
-				else if (fs::is_file(entry.path + "/PS3_DISC.SFB"))
-				{
-					// Check if a path loaded from games.yml is already registered in add_dir(_hdd + "disc/");
-					if (entry.path.starts_with(_hdd))
-					{
-						std::string_view frag = std::string_view(entry.path).substr(_hdd.size());
-
-						if (frag.starts_with("disc/"))
-						{
-							// Our path starts from _hdd + 'disc/'
-							frag.remove_prefix(5);
-
-							// Check if the remaining part is the only path component
-							if (frag.find_first_of('/') + 1 == 0)
-							{
-								game_list_log.trace("Removed duplicate: %s", entry.path);
-
-								if (static std::unordered_set<std::string> warn_once_list; warn_once_list.emplace(entry.path).second)
-								{
-									game_list_log.todo("Game at '%s' is using deprecated directory '/dev_hdd0/disc/'.\nConsider moving into '%s'.", entry.path, g_cfg_vfs.get(g_cfg_vfs.games_dir, rpcs3::utils::get_emu_dir()));
-								}
-
-								return;
-							}
-						}
-					}
-
-					add_disc_dir(entry.path, legit_paths);
-				}
-				else
-				{
-					game_list_log.trace("Invalid game path registered: %s", entry.path);
-					return;
-				}
-			}
-			else if (fs::is_file(entry.path + "/PS3_DISC.SFB"))
-			{
-				if (!entry.is_disc)
-				{
-					game_list_log.error("Invalid game path found in %s", entry.path);
-					return;
-				}
-
-				add_disc_dir(entry.path, legit_paths);
-			}
-			else
-			{
-				if (entry.is_disc)
-				{
-					game_list_log.error("Invalid disc path found in %s", entry.path);
-					return;
-				}
-
-				push_path(entry.path, legit_paths);
-			}
-
-			for (const std::string& path : legit_paths)
-			{
-				add_game(path);
+				m_path_entries.emplace_back(path_entry{game_dir, false, true});
 			}
 		}));
 
@@ -755,11 +403,43 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 
 	// Fill Game List / Game Grid
 
+	const std::string selected_item = CurrentSelectionPath();
+
+	// Release old data
+	for (const auto& game : m_game_data)
+	{
+		game->item = nullptr;
+	}
+
+	// Get list of matching apps
+	std::vector<game_info> matching_apps;
+
+	for (const auto& app : m_game_data)
+	{
+		if (IsEntryVisible(app))
+		{
+			matching_apps.push_back(app);
+		}
+	}
+
+	// Fallback is not needed when at least one entry is visible
+	if (matching_apps.empty())
+	{
+		for (const auto& app : m_game_data)
+		{
+			if (IsEntryVisible(app, true))
+			{
+				matching_apps.push_back(app);
+			}
+		}
+	}
+
 	if (m_is_list_layout)
 	{
+		m_game_grid->clear_list();
 		const int scroll_position = m_game_list->verticalScrollBar()->value();
-		PopulateGameList();
-		SortGameList();
+		m_game_list->populate(matching_apps, m_notes, m_titles, selected_item, m_play_hover_movies);
+		m_game_list->sort(m_game_data.count(), m_sort_column, m_col_sort_order);
 		RepaintIcons();
 
 		if (scroll_after)
@@ -773,8 +453,256 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 	}
 	else
 	{
+		m_game_list->clear_list();
+		m_game_grid->populate(matching_apps, m_notes, m_titles, selected_item, m_play_hover_movies);
 		RepaintIcons();
 	}
+}
+
+void game_list_frame::OnParsingFinished()
+{
+	const Localized localized;
+	const std::string dev_flash = g_cfg_vfs.get_dev_flash();
+	const std::string _hdd = rpcs3::utils::get_hdd0_dir();
+
+	m_path_entries.emplace_back(path_entry{dev_flash + "vsh/module/vsh.self", false, false});
+
+	// Remove duplicates
+	sort(m_path_entries.begin(), m_path_entries.end(), [](const path_entry& l, const path_entry& r){return l.path < r.path;});
+	m_path_entries.erase(unique(m_path_entries.begin(), m_path_entries.end(), [](const path_entry& l, const path_entry& r){return l.path == r.path;}), m_path_entries.end());
+
+	const std::string game_icon_path = m_play_hover_movies ? fs::get_config_dir() + "/Icons/game_icons/" : "";
+
+	const auto add_game = [this, dev_flash, cat_unknown_localized = sstr(localized.category.unknown), cat_unknown = sstr(cat::cat_unknown), game_icon_path](const std::string& dir_or_elf)
+	{
+		GameInfo game{};
+		game.path = dir_or_elf;
+
+		const Localized thread_localized;
+
+		const std::string sfo_dir = rpcs3::utils::get_sfo_dir_from_game_path(dir_or_elf);
+		const psf::registry psf = psf::load_object(sfo_dir + "/PARAM.SFO");
+		const std::string_view title_id = psf::get_string(psf, "TITLE_ID", "");
+
+		if (title_id.empty())
+		{
+			if (!fs::is_file(dir_or_elf))
+			{
+				// Do not care about invalid entries
+				return;
+			}
+
+			game.serial = dir_or_elf.substr(dir_or_elf.find_last_of(fs::delim) + 1);
+			game.category = cat::cat_ps3_os.toStdString(); // Key for operating system executables
+			game.version = utils::get_firmware_version();
+			game.fw = game.version;
+			game.bootable = 1;
+			game.icon_path = dev_flash + "vsh/resource/explore/icon/icon_home.png";
+
+			if (dir_or_elf.starts_with(dev_flash))
+			{
+				std::string path_vfs = dir_or_elf.substr(dev_flash.size());
+
+				if (const usz pos = path_vfs.find_first_not_of(fs::delim); pos != umax && pos != 0)
+				{
+					path_vfs = path_vfs.substr(pos);
+				}
+
+				if (const auto it = thread_localized.title.titles.find(path_vfs); it != thread_localized.title.titles.cend())
+				{
+					game.name = it->second.toStdString();
+				}
+			}
+
+			if (game.name == "Unknown")
+			{
+				game.name = game.serial;
+			}
+		}
+		else
+		{
+			game.serial       = std::string(title_id);
+			game.name         = std::string(psf::get_string(psf, "TITLE", cat_unknown_localized));
+			game.app_ver      = std::string(psf::get_string(psf, "APP_VER", cat_unknown_localized));
+			game.version      = std::string(psf::get_string(psf, "VERSION", cat_unknown_localized));
+			game.category     = std::string(psf::get_string(psf, "CATEGORY", cat_unknown));
+			game.fw           = std::string(psf::get_string(psf, "PS3_SYSTEM_VER", cat_unknown_localized));
+			game.parental_lvl = psf::get_integer(psf, "PARENTAL_LEVEL", 0);
+			game.resolution   = psf::get_integer(psf, "RESOLUTION", 0);
+			game.sound_format = psf::get_integer(psf, "SOUND_FORMAT", 0);
+			game.bootable     = psf::get_integer(psf, "BOOTABLE", 0);
+			game.attr         = psf::get_integer(psf, "ATTRIBUTE", 0);
+			game.icon_path    = sfo_dir + "/ICON0.PNG";
+
+			if (game.category == "DG")
+			{
+				std::string latest_icon = rpcs3::utils::get_hdd0_dir() + "game/" + game.serial + "/ICON0.PNG";
+				if (fs::is_file(latest_icon))
+				{
+					game.icon_path = std::move(latest_icon);
+				}
+			}
+		}
+
+		if (m_show_custom_icons)
+		{
+			if (std::string icon_path = fs::get_config_dir() + "/Icons/game_icons/" + game.serial + "/ICON0.PNG"; fs::is_file(icon_path))
+			{
+				game.icon_path = std::move(icon_path);
+			}
+		}
+
+		const QString serial = qstr(game.serial);
+
+		m_games_mutex.lock();
+
+		// Read persistent_settings values
+		const QString note  = m_persistent_settings->GetValue(gui::persistent::notes, serial, "").toString();
+		const QString title = m_persistent_settings->GetValue(gui::persistent::titles, serial, "").toString().simplified();
+		QString last_played = m_persistent_settings->GetValue(gui::persistent::last_played, serial, "").toString();
+		quint64 playtime    = m_persistent_settings->GetValue(gui::persistent::playtime, serial, 0).toULongLong();
+
+		// Set persistent_settings values if values exist
+		if (!last_played.isEmpty())
+		{
+			m_persistent_settings->SetLastPlayed(serial, last_played);
+		}
+		if (playtime > 0)
+		{
+			m_persistent_settings->SetPlaytime(serial, playtime);
+		}
+
+		m_serials.insert(serial);
+
+		if (!note.isEmpty())
+		{
+			m_notes.insert(serial, note);
+		}
+
+		if (!title.isEmpty())
+		{
+			m_titles.insert(serial, title);
+		}
+
+		m_games_mutex.unlock();
+
+		QString qt_cat = qstr(game.category);
+
+		if (const auto boot_cat = thread_localized.category.cat_boot.find(qt_cat); boot_cat != thread_localized.category.cat_boot.cend())
+		{
+			qt_cat = boot_cat->second;
+		}
+		else if (const auto data_cat = thread_localized.category.cat_data.find(qt_cat); data_cat != thread_localized.category.cat_data.cend())
+		{
+			qt_cat = data_cat->second;
+		}
+		else if (game.category == cat_unknown)
+		{
+			qt_cat = thread_localized.category.unknown;
+		}
+		else
+		{
+			qt_cat = thread_localized.category.other;
+		}
+
+		gui_game_info info{};
+		info.info = std::move(game);
+		info.localized_category = std::move(qt_cat);
+		info.compat = m_game_compat->GetCompatibility(info.info.serial);
+		info.hasCustomConfig = fs::is_file(rpcs3::utils::get_custom_config_path(info.info.serial));
+		info.hasCustomPadConfig = fs::is_file(rpcs3::utils::get_custom_input_config_path(info.info.serial));
+		info.has_hover_gif = fs::is_file(game_icon_path + info.info.serial + "/hover.gif");
+
+		m_games.push(std::make_shared<gui_game_info>(std::move(info)));
+	};
+
+	const auto add_disc_dir = [this](const std::string& path, std::vector<std::string>& legit_paths)
+	{
+		for (const auto& entry : fs::dir(path))
+		{
+			if (!entry.is_directory || entry.name == "." || entry.name == "..")
+			{
+				continue;
+			}
+
+			if (entry.name == "PS3_GAME" || std::regex_match(entry.name, std::regex("^PS3_GM[[:digit:]]{2}$")))
+			{
+				push_path(path + "/" + entry.name, legit_paths);
+			}
+		}
+	};
+
+	m_refresh_watcher.setFuture(QtConcurrent::map(m_path_entries, [this, _hdd, add_disc_dir, add_game](const path_entry& entry)
+	{
+		std::vector<std::string> legit_paths;
+
+		if (entry.is_from_yml)
+		{
+			if (fs::is_file(entry.path + "/PARAM.SFO"))
+			{
+				push_path(entry.path, legit_paths);
+			}
+			else if (fs::is_file(entry.path + "/PS3_DISC.SFB"))
+			{
+				// Check if a path loaded from games.yml is already registered in add_dir(_hdd + "disc/");
+				if (entry.path.starts_with(_hdd))
+				{
+					std::string_view frag = std::string_view(entry.path).substr(_hdd.size());
+
+					if (frag.starts_with("disc/"))
+					{
+						// Our path starts from _hdd + 'disc/'
+						frag.remove_prefix(5);
+
+						// Check if the remaining part is the only path component
+						if (frag.find_first_of('/') + 1 == 0)
+						{
+							game_list_log.trace("Removed duplicate: %s", entry.path);
+
+							if (static std::unordered_set<std::string> warn_once_list; warn_once_list.emplace(entry.path).second)
+							{
+								game_list_log.todo("Game at '%s' is using deprecated directory '/dev_hdd0/disc/'.\nConsider moving into '%s'.", entry.path, g_cfg_vfs.get(g_cfg_vfs.games_dir, rpcs3::utils::get_emu_dir()));
+							}
+
+							return;
+						}
+					}
+				}
+
+				add_disc_dir(entry.path, legit_paths);
+			}
+			else
+			{
+				game_list_log.trace("Invalid game path registered: %s", entry.path);
+				return;
+			}
+		}
+		else if (fs::is_file(entry.path + "/PS3_DISC.SFB"))
+		{
+			if (!entry.is_disc)
+			{
+				game_list_log.error("Invalid game path found in %s", entry.path);
+				return;
+			}
+
+			add_disc_dir(entry.path, legit_paths);
+		}
+		else
+		{
+			if (entry.is_disc)
+			{
+				game_list_log.error("Invalid disc path found in %s", entry.path);
+				return;
+			}
+
+			push_path(entry.path, legit_paths);
+		}
+
+		for (const std::string& path : legit_paths)
+		{
+			add_game(path);
+		}
+	}));
 }
 
 void game_list_frame::OnRefreshFinished()
@@ -851,6 +779,23 @@ void game_list_frame::OnRefreshFinished()
 	m_path_entries.clear();
 
 	Refresh();
+
+	if (!std::exchange(m_initial_refresh_done, true))
+	{
+		m_game_list->restore_layout(m_gui_settings->GetValue(gui::gl_state).toByteArray());
+	}
+
+	if (m_progress_dialog_timer)
+	{
+		m_progress_dialog_timer->stop();
+	}
+
+	if (m_progress_dialog)
+	{
+		m_progress_dialog->accept();
+		m_progress_dialog->deleteLater();
+		m_progress_dialog = nullptr;
+	}
 }
 
 void game_list_frame::OnCompatFinished()
@@ -885,7 +830,7 @@ void game_list_frame::SaveSettings()
 {
 	for (int col = 0; col < m_columnActs.count(); ++col)
 	{
-		m_gui_settings->SetGamelistColVisibility(col, m_columnActs[col]->isChecked());
+		m_gui_settings->SetGamelistColVisibility(static_cast<gui::game_list_columns>(col), m_columnActs[col]->isChecked());
 	}
 	m_gui_settings->SetValue(gui::gl_sortCol, m_sort_column);
 	m_gui_settings->SetValue(gui::gl_sortAsc, m_col_sort_order == Qt::AscendingOrder);
@@ -899,8 +844,11 @@ void game_list_frame::doubleClickedSlot(QTableWidgetItem *item)
 		return;
 	}
 
-	const game_info game = GetGameInfoByMode(item);
+	doubleClickedSlot(GetGameInfoByMode(item));
+}
 
+void game_list_frame::doubleClickedSlot(const game_info& game)
+{
 	if (!game)
 	{
 		return;
@@ -916,14 +864,10 @@ void game_list_frame::ItemSelectionChangedSlot()
 
 	if (m_is_list_layout)
 	{
-		if (const auto item = m_game_list->item(m_game_list->currentRow(), gui::column_icon); item && item->isSelected())
+		if (const auto item = m_game_list->item(m_game_list->currentRow(), static_cast<int>(gui::game_list_columns::icon)); item && item->isSelected())
 		{
 			game = GetGameInfoByMode(item);
 		}
-	}
-	else if (const auto item = m_game_grid->currentItem(); item && item->isSelected())
-	{
-		game = GetGameInfoByMode(item);
 	}
 
 	Q_EMIT NotifyGameSelection(game);
@@ -1037,21 +981,20 @@ void game_list_frame::CreateShortcuts(const game_info& gameinfo, const std::set<
 void game_list_frame::ShowContextMenu(const QPoint &pos)
 {
 	QPoint global_pos;
-	QTableWidgetItem* item;
+	game_info gameinfo;
 
 	if (m_is_list_layout)
 	{
-		item = m_game_list->item(m_game_list->indexAt(pos).row(), gui::column_icon);
+		QTableWidgetItem* item = m_game_list->item(m_game_list->indexAt(pos).row(), static_cast<int>(gui::game_list_columns::icon));
 		global_pos = m_game_list->viewport()->mapToGlobal(pos);
+		gameinfo = GetGameInfoFromItem(item);
 	}
-	else
+	else if (game_list_grid_item* item = static_cast<game_list_grid_item*>(m_game_grid->selected_item()))
 	{
-		const QModelIndex mi = m_game_grid->indexAt(pos);
-		item = m_game_grid->item(mi.row(), mi.column());
-		global_pos = m_game_grid->viewport()->mapToGlobal(pos);
+		gameinfo = item->game();
+		global_pos = m_game_grid->mapToGlobal(pos);
 	}
 
-	game_info gameinfo = GetGameInfoFromItem(item);
 	if (!gameinfo)
 	{
 		return;
@@ -1513,10 +1456,10 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		{
 			if (game)
 			{
-				games[game->info.serial].insert(game_list_frame::GetGameVersion(game));
+				games[game->info.serial].insert(game_list::GetGameVersion(game));
 			}
 		}
-		patch_manager_dialog patch_manager(m_gui_settings, games, gameinfo->info.serial, GetGameVersion(gameinfo), this);
+		patch_manager_dialog patch_manager(m_gui_settings, games, gameinfo->info.serial, game_list::GetGameVersion(gameinfo), this);
 		patch_manager.exec();
 	});
 	connect(open_game_folder, &QAction::triggered, this, [current_game]()
@@ -2171,130 +2114,6 @@ void game_list_frame::BatchRemoveShaderCaches()
 	QApplication::beep();
 }
 
-QPixmap game_list_frame::PaintedPixmap(const QPixmap& icon, bool paint_config_icon, bool paint_pad_config_icon, const QColor& compatibility_color) const
-{
-	const qreal device_pixel_ratio = devicePixelRatioF();
-	QSize canvas_size(320, 176);
-	QSize icon_size(icon.size());
-	QPoint target_pos;
-
-	if (!icon.isNull())
-	{
-		// Let's upscale the original icon to at least fit into the outer rect of the size of PS3's ICON0.PNG
-		if (icon_size.width() < 320 || icon_size.height() < 176)
-		{
-			icon_size.scale(320, 176, Qt::KeepAspectRatio);
-		}
-
-		canvas_size = icon_size;
-
-		// Calculate the centered size and position of the icon on our canvas.
-		if (icon_size.width() != 320 || icon_size.height() != 176)
-		{
-			ensure(icon_size.height() > 0);
-			constexpr double target_ratio = 320.0 / 176.0; // aspect ratio 20:11
-
-			if ((icon_size.width() / static_cast<double>(icon_size.height())) > target_ratio)
-			{
-				canvas_size.setHeight(std::ceil(icon_size.width() / target_ratio));
-			}
-			else
-			{
-				canvas_size.setWidth(std::ceil(icon_size.height() * target_ratio));
-			}
-
-			target_pos.setX(std::max<int>(0, (canvas_size.width() - icon_size.width()) / 2.0));
-			target_pos.setY(std::max<int>(0, (canvas_size.height() - icon_size.height()) / 2.0));
-		}
-	}
-
-	// Create a canvas large enough to fit our entire scaled icon
-	QPixmap canvas(canvas_size * device_pixel_ratio);
-	canvas.setDevicePixelRatio(device_pixel_ratio);
-	canvas.fill(m_icon_color);
-
-	// Create a painter for our canvas
-	QPainter painter(&canvas);
-	painter.setRenderHint(QPainter::SmoothPixmapTransform);
-
-	// Draw the icon onto our canvas
-	if (!icon.isNull())
-	{
-		painter.drawPixmap(target_pos.x(), target_pos.y(), icon_size.width(), icon_size.height(), icon);
-	}
-
-	// Draw config icons if necessary
-	if (!m_is_list_layout && (paint_config_icon || paint_pad_config_icon))
-	{
-		const int width = canvas_size.width() * 0.2;
-		const QPoint origin = QPoint(canvas_size.width() - width, 0);
-		QString icon_path;
-
-		if (paint_config_icon && paint_pad_config_icon)
-		{
-			icon_path = ":/Icons/combo_config_bordered.png";
-		}
-		else if (paint_config_icon)
-		{
-			icon_path = ":/Icons/custom_config.png";
-		}
-		else if (paint_pad_config_icon)
-		{
-			icon_path = ":/Icons/controllers.png";
-		}
-
-		QPixmap custom_config_icon(icon_path);
-		custom_config_icon.setDevicePixelRatio(device_pixel_ratio);
-		painter.drawPixmap(origin, custom_config_icon.scaled(QSize(width, width) * device_pixel_ratio, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
-	}
-
-	// Draw game compatibility icons if necessary
-	if (compatibility_color.isValid())
-	{
-		const int size = canvas_size.height() * 0.2;
-		const int spacing = canvas_size.height() * 0.05;
-		QColor copyColor = QColor(compatibility_color);
-		copyColor.setAlpha(215); // ~85% opacity
-		painter.setRenderHint(QPainter::Antialiasing);
-		painter.setBrush(QBrush(copyColor));
-		painter.setPen(QPen(Qt::black, std::max(canvas_size.width() / 320, canvas_size.height() / 176)));
-		painter.drawEllipse(spacing, spacing, size, size);
-	}
-
-	// Finish the painting
-	painter.end();
-
-	// Scale and return our final image
-	return canvas.scaled(m_icon_size * device_pixel_ratio, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation);
-}
-
-void game_list_frame::SetCustomConfigIcon(QTableWidgetItem* title_item, const game_info& game)
-{
-	if (!title_item || !game)
-		return;
-
-	static QIcon icon_combo_config_bordered(":/Icons/combo_config_bordered.png");
-	static QIcon icon_custom_config(":/Icons/custom_config.png");
-	static QIcon icon_controllers(":/Icons/controllers.png");
-
-	if (game->hasCustomConfig && game->hasCustomPadConfig)
-	{
-		title_item->setIcon(icon_combo_config_bordered);
-	}
-	else if (game->hasCustomConfig)
-	{
-		title_item->setIcon(icon_custom_config);
-	}
-	else if (game->hasCustomPadConfig)
-	{
-		title_item->setIcon(icon_controllers);
-	}
-	else if (!title_item->icon().isNull())
-	{
-		title_item->setIcon({});
-	}
-}
-
 void game_list_frame::ShowCustomConfigIcon(const game_info& game)
 {
 	if (!game)
@@ -2315,15 +2134,7 @@ void game_list_frame::ShowCustomConfigIcon(const game_info& game)
 		}
 	}
 
-	const QString q_serial = qstr(game->info.serial);
-
-	for (int row = 0; row < m_game_list->rowCount(); ++row)
-	{
-		if (const auto item = m_game_list->item(row, gui::column_serial); item && item->text() == q_serial)
-		{
-			SetCustomConfigIcon(m_game_list->item(row, gui::column_name), game);
-		}
-	}
+	m_game_list->set_custom_config_icon(game);
 
 	RepaintIcons();
 }
@@ -2338,6 +2149,8 @@ void game_list_frame::ResizeIcons(const int& slider_pos)
 
 void game_list_frame::RepaintIcons(const bool& from_settings)
 {
+	gui::utils::stop_future_watcher(m_parsing_watcher, false);
+	gui::utils::stop_future_watcher(m_refresh_watcher, false);
 	WaitAndAbortRepaintThreads();
 
 	if (from_settings)
@@ -2354,52 +2167,12 @@ void game_list_frame::RepaintIcons(const bool& from_settings)
 
 	if (m_is_list_layout)
 	{
-		QPixmap placeholder(m_icon_size);
-		placeholder.fill(Qt::transparent);
-
-		for (game_info& game : m_game_data)
-		{
-			game->pxmap = placeholder;
-
-			if (movie_item* item = game->item)
-			{
-				item->set_icon_load_func([this, game, cancel = item->icon_loading_aborted()](int)
-				{
-					IconLoadFunction(game, cancel);
-				});
-				item->call_icon_func();
-			}
-		}
-
-		// Fixate vertical header and row height
-		m_game_list->verticalHeader()->setMinimumSectionSize(m_icon_size.height());
-		m_game_list->verticalHeader()->setMaximumSectionSize(m_icon_size.height());
-
-		// Resize the icon column
-		m_game_list->resizeColumnToContents(gui::column_icon);
-
-		// Shorten the last section to remove horizontal scrollbar if possible
-		m_game_list->resizeColumnToContents(gui::column_count - 1);
+		m_game_list->repaint_icons(m_game_data, m_icon_color, m_icon_size, devicePixelRatioF());
 	}
 	else
 	{
-		// The game grid needs to be recreated from scratch
-		int games_per_row = 0;
-
-		if (m_icon_size.width() > 0 && m_icon_size.height() > 0)
-		{
-			games_per_row = width() / (m_icon_size.width() + m_icon_size.width() * m_game_grid->getMarginFactor() * 2);
-		}
-
-		const int scroll_position = m_game_grid->verticalScrollBar()->value();
-		PopulateGameGrid(games_per_row, m_icon_size, m_icon_color);
-		connect(m_game_grid, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
-		connect(m_game_grid, &QTableWidget::itemSelectionChanged, this, &game_list_frame::ItemSelectionChangedSlot);
-		connect(m_game_grid, &QTableWidget::itemDoubleClicked, this, &game_list_frame::doubleClickedSlot);
-		connect(m_game_grid, &game_list::FocusToSearchBar, this, &game_list_frame::FocusToSearchBar);
-		m_central_widget->addWidget(m_game_grid);
-		m_central_widget->setCurrentWidget(m_game_grid);
-		m_game_grid->verticalScrollBar()->setValue(scroll_position);
+		m_game_grid->set_draw_compat_status_to_grid(m_draw_compat_status_to_grid);
+		m_game_grid->repaint_icons(m_game_data, m_icon_color, m_icon_size, devicePixelRatioF());
 	}
 }
 
@@ -2415,9 +2188,16 @@ void game_list_frame::SetListMode(const bool& is_list)
 
 	m_gui_settings->SetValue(gui::gl_listMode, is_list);
 
-	Refresh(true);
+	Refresh();
 
-	m_central_widget->setCurrentWidget(m_is_list_layout ? m_game_list : m_game_grid);
+	if (m_is_list_layout)
+	{
+		m_central_widget->setCurrentWidget(m_game_list);
+	}
+	else
+	{
+		m_central_widget->setCurrentWidget(m_game_grid);
+	}
 }
 
 void game_list_frame::SetSearchText(const QString& text)
@@ -2430,21 +2210,17 @@ void game_list_frame::FocusAndSelectFirstEntryIfNoneIs()
 {
 	if (m_is_list_layout)
 	{
-		if (!m_game_list)
+		if (m_game_list)
 		{
-			return;
+			m_game_list->FocusAndSelectFirstEntryIfNoneIs();
 		}
-
-		m_game_list->FocusAndSelectFirstEntryIfNoneIs();
 	}
 	else
 	{
-		if (!m_game_grid)
+		if (m_game_grid)
 		{
-			return;
+			m_game_grid->FocusAndSelectFirstEntryIfNoneIs();
 		}
-
-		m_game_grid->FocusAndSelectFirstEntryIfNoneIs();
 	}
 }
 
@@ -2454,21 +2230,12 @@ void game_list_frame::closeEvent(QCloseEvent *event)
 	Q_EMIT GameListFrameClosed();
 }
 
-void game_list_frame::resizeEvent(QResizeEvent *event)
-{
-	if (!m_is_list_layout)
-	{
-		Refresh(false, m_game_grid->selectedItems().count());
-	}
-	QDockWidget::resizeEvent(event);
-}
-
 bool game_list_frame::eventFilter(QObject *object, QEvent *event)
 {
 	// Zoom gamelist/gamegrid
-	if (event->type() == QEvent::Wheel && (object == m_game_list->verticalScrollBar() || object == m_game_grid->verticalScrollBar()))
+	if (event->type() == QEvent::Wheel && (object == m_game_list->verticalScrollBar() || object == m_game_grid->scroll_area()->verticalScrollBar()))
 	{
-		QWheelEvent *wheel_event = static_cast<QWheelEvent *>(event);
+		QWheelEvent* wheel_event = static_cast<QWheelEvent*>(event);
 
 		if (wheel_event->modifiers() & Qt::ControlModifier)
 		{
@@ -2480,7 +2247,7 @@ bool game_list_frame::eventFilter(QObject *object, QEvent *event)
 	}
 	else if (event->type() == QEvent::KeyPress && (object == m_game_list || object == m_game_grid))
 	{
-		QKeyEvent *key_event = static_cast<QKeyEvent *>(event);
+		QKeyEvent* key_event = static_cast<QKeyEvent*>(event);
 
 		if (key_event->modifiers() & Qt::ControlModifier)
 		{
@@ -2499,17 +2266,21 @@ bool game_list_frame::eventFilter(QObject *object, QEvent *event)
 		{
 			if (key_event->key() == Qt::Key_Enter || key_event->key() == Qt::Key_Return)
 			{
-				QTableWidgetItem* item;
+				game_info gameinfo{};
 
 				if (object == m_game_list)
-					item = m_game_list->item(m_game_list->currentRow(), gui::column_icon);
-				else
-					item = m_game_grid->currentItem();
+				{
+					QTableWidgetItem* item = m_game_list->item(m_game_list->currentRow(), static_cast<int>(gui::game_list_columns::icon));
 
-				if (!item || !item->isSelected())
-					return false;
+					if (!item || !item->isSelected())
+						return false;
 
-				const game_info gameinfo = GetGameInfoFromItem(item);
+					gameinfo = GetGameInfoFromItem(item);
+				}
+				else if (game_list_grid_item* item = static_cast<game_list_grid_item*>(m_game_grid->selected_item()))
+				{
+					gameinfo = item->game();
+				}
 
 				if (!gameinfo)
 					return false;
@@ -2523,318 +2294,6 @@ bool game_list_frame::eventFilter(QObject *object, QEvent *event)
 	}
 
 	return QDockWidget::eventFilter(object, event);
-}
-
-/**
- Cleans and readds entries to table widget in UI.
-*/
-void game_list_frame::PopulateGameList()
-{
-	int selected_row = -1;
-
-	const std::string selected_item = CurrentSelectionPath();
-
-	// Release old data
-	m_game_grid->clear_list();
-	m_game_list->clear_list();
-
-	m_game_list->setRowCount(m_game_data.size());
-
-	// Default locale. Uses current Qt application language.
-	const QLocale locale{};
-	const Localized localized;
-
-	const QString game_icon_path = m_play_hover_movies ? qstr(fs::get_config_dir() + "/Icons/game_icons/") : "";
-
-	int row = 0;
-	int index = -1;
-
-	// Fallback is not needed when at least one entry is visible
-	const bool use_search_fallback = std::none_of(m_game_data.begin(), m_game_data.end(), [this](auto& game){ return IsEntryVisible(game); });
-
-	for (const auto& game : m_game_data)
-	{
-		index++;
-
-		if (!IsEntryVisible(game, use_search_fallback))
-		{
-			game->item = nullptr;
-			continue;
-		}
-
-		const QString serial = qstr(game->info.serial);
-		const QString title = m_titles.value(serial, qstr(game->info.name));
-		const QString notes = m_notes.value(serial);
-
-		// Icon
-		custom_table_widget_item* icon_item = new custom_table_widget_item;
-		game->item = icon_item;
-
-		icon_item->set_icon_func([this, icon_item, game](int)
-		{
-			if (!icon_item || !game)
-			{
-				return;
-			}
-
-			if (std::shared_ptr<QMovie> movie = icon_item->movie(); movie && icon_item->get_active())
-			{
-				icon_item->setData(Qt::DecorationRole, movie->currentPixmap().scaled(m_icon_size, Qt::KeepAspectRatio));
-			}
-			else
-			{
-				std::lock_guard lock(icon_item->pixmap_mutex);
-
-				icon_item->setData(Qt::DecorationRole, game->pxmap);
-
-				if (!game->has_hover_gif)
-				{
-					game->pxmap = {};
-				}
-
-				if (movie)
-				{
-					movie->stop();
-				}
-			}
-		});
-
-		icon_item->set_size_calc_func([this, game, cancel = icon_item->size_on_disk_loading_aborted(), dev_flash = g_cfg_vfs.get_dev_flash()]()
-		{
-			if (game && game->info.size_on_disk == umax && (!cancel || !cancel->load()))
-			{
-				if (game->info.path.starts_with(dev_flash))
-				{
-					// Do not report size of apps inside /dev_flash (it does not make sense to do so)
-					game->info.size_on_disk = 0;
-				}
-				else
-				{
-					game->info.size_on_disk = fs::get_dir_size(game->info.path, 1, cancel.get());
-				}
-
-				if (!cancel || !cancel->load())
-				{
-					Q_EMIT SizeOnDiskReady(game);
-					return;
-				}
-			}
-		});
-
-		if (m_play_hover_movies && game->has_hover_gif)
-		{
-			icon_item->init_movie(game_icon_path % serial % "/hover.gif");
-		}
-
-		icon_item->setData(Qt::UserRole, index, true);
-		icon_item->setData(gui::custom_roles::game_role, QVariant::fromValue(game));
-
-		// Title
-		custom_table_widget_item* title_item = new custom_table_widget_item(title);
-		SetCustomConfigIcon(title_item, game);
-
-		// Serial
-		custom_table_widget_item* serial_item = new custom_table_widget_item(game->info.serial);
-
-		if (!notes.isEmpty())
-		{
-			const QString tool_tip = tr("%0 [%1]\n\nNotes:\n%2").arg(title).arg(serial).arg(notes);
-			title_item->setToolTip(tool_tip);
-			serial_item->setToolTip(tool_tip);
-		}
-
-		// Move Support (http://www.psdevwiki.com/ps3/PARAM.SFO#ATTRIBUTE)
-		const bool supports_move = game->info.attr & 0x800000;
-
-		// Compatibility
-		custom_table_widget_item* compat_item = new custom_table_widget_item;
-		compat_item->setText(game->compat.text % (game->compat.date.isEmpty() ? QStringLiteral("") : " (" % game->compat.date % ")"));
-		compat_item->setData(Qt::UserRole, game->compat.index, true);
-		compat_item->setToolTip(game->compat.tooltip);
-		if (!game->compat.color.isEmpty())
-		{
-			compat_item->setData(Qt::DecorationRole, gui::utils::circle_pixmap(game->compat.color, devicePixelRatioF() * 2));
-		}
-
-		// Version
-		QString app_version = qstr(GetGameVersion(game));
-
-		if (game->info.bootable && !game->compat.latest_version.isEmpty())
-		{
-			f64 top_ver = 0.0, app_ver = 0.0;
-			const bool unknown = app_version == localized.category.unknown;
-			const bool ok_app = !unknown && try_to_float(&app_ver, sstr(app_version), ::std::numeric_limits<s32>::min(), ::std::numeric_limits<s32>::max());
-			const bool ok_top = !unknown && try_to_float(&top_ver, sstr(game->compat.latest_version), ::std::numeric_limits<s32>::min(), ::std::numeric_limits<s32>::max());
-
-			// If the app is bootable and the compat database contains info about the latest patch version:
-			// add a hint for available software updates if the app version is unknown or lower than the latest version.
-			if (unknown || (ok_top && ok_app && top_ver > app_ver))
-			{
-				app_version = tr("%0 (Update available: %1)").arg(app_version, game->compat.latest_version);
-			}
-		}
-
-		// Playtimes
-		const quint64 elapsed_ms = m_persistent_settings->GetPlaytime(serial);
-
-		// Last played (support outdated values)
-		QDateTime last_played;
-		const QString last_played_str = GetLastPlayedBySerial(serial);
-
-		if (!last_played_str.isEmpty())
-		{
-			last_played = QDateTime::fromString(last_played_str, gui::persistent::last_played_date_format);
-
-			if (!last_played.isValid())
-			{
-				last_played = QDateTime::fromString(last_played_str, gui::persistent::last_played_date_format_old);
-			}
-		}
-
-		const u64 game_size = game->info.size_on_disk;
-
-		m_game_list->setItem(row, gui::column_icon,       icon_item);
-		m_game_list->setItem(row, gui::column_name,       title_item);
-		m_game_list->setItem(row, gui::column_serial,     serial_item);
-		m_game_list->setItem(row, gui::column_firmware,   new custom_table_widget_item(game->info.fw));
-		m_game_list->setItem(row, gui::column_version,    new custom_table_widget_item(app_version));
-		m_game_list->setItem(row, gui::column_category,   new custom_table_widget_item(game->localized_category));
-		m_game_list->setItem(row, gui::column_path,       new custom_table_widget_item(game->info.path));
-		m_game_list->setItem(row, gui::column_move,       new custom_table_widget_item(sstr(supports_move ? tr("Supported") : tr("Not Supported")), Qt::UserRole, !supports_move));
-		m_game_list->setItem(row, gui::column_resolution, new custom_table_widget_item(GetStringFromU32(game->info.resolution, localized.resolution.mode, true)));
-		m_game_list->setItem(row, gui::column_sound,      new custom_table_widget_item(GetStringFromU32(game->info.sound_format, localized.sound.format, true)));
-		m_game_list->setItem(row, gui::column_parental,   new custom_table_widget_item(GetStringFromU32(game->info.parental_lvl, localized.parental.level), Qt::UserRole, game->info.parental_lvl));
-		m_game_list->setItem(row, gui::column_last_play,  new custom_table_widget_item(locale.toString(last_played, last_played >= QDateTime::currentDateTime().addDays(-7) ? gui::persistent::last_played_date_with_time_of_day_format : gui::persistent::last_played_date_format_new), Qt::UserRole, last_played));
-		m_game_list->setItem(row, gui::column_playtime,   new custom_table_widget_item(elapsed_ms == 0 ? tr("Never played") : localized.GetVerboseTimeByMs(elapsed_ms), Qt::UserRole, elapsed_ms));
-		m_game_list->setItem(row, gui::column_compat,     compat_item);
-		m_game_list->setItem(row, gui::column_dir_size,   new custom_table_widget_item(game_size != umax ? gui::utils::format_byte_size(game_size) : tr("Unknown"), Qt::UserRole, QVariant::fromValue<qulonglong>(game_size)));
-
-		if (selected_item == game->info.path + game->info.icon_path)
-		{
-			selected_row = row;
-		}
-
-		row++;
-	}
-
-	m_game_list->setRowCount(row);
-	m_game_list->selectRow(selected_row);
-}
-
-void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, const QColor& image_color)
-{
-	int r = 0;
-	int c = 0;
-
-	const std::string selected_item = CurrentSelectionPath();
-
-	// Release old data
-	m_game_list->clear_list();
-	m_game_grid->deleteLater();
-
-	const bool show_text = m_icon_size_index > gui::gl_max_slider_pos * 2 / 5;
-
-	if (m_icon_size_index < gui::gl_max_slider_pos * 2 / 3)
-	{
-		m_game_grid = new game_list_grid(image_size, image_color, m_margin_factor, m_text_factor * 2, show_text);
-	}
-	else
-	{
-		m_game_grid = new game_list_grid(image_size, image_color, m_margin_factor, m_text_factor, show_text);
-	}
-
-	// Get list of matching apps
-	QList<game_info> matching_apps;
-
-	for (const auto& app : m_game_data)
-	{
-		app->item = nullptr;
-
-		if (IsEntryVisible(app))
-		{
-			matching_apps.push_back(app);
-		}
-	}
-
-	// Fallback is not needed when at least one entry is visible
-	if (matching_apps.isEmpty())
-	{
-		for (const auto& app : m_game_data)
-		{
-			if (IsEntryVisible(app, true))
-			{
-				matching_apps.push_back(app);
-			}
-		}
-	}
-
-	const int entries = matching_apps.count();
-
-	// Edge cases!
-	if (entries == 0)
-	{ // For whatever reason, 0%x is division by zero. Absolute nonsense by definition of modulus. But, I'll acquiesce.
-		return;
-	}
-
-	maxCols = std::clamp(maxCols, 1, entries);
-
-	const int needs_extra_row = (entries % maxCols) != 0;
-	const int max_rows = needs_extra_row + entries / maxCols;
-	m_game_grid->setRowCount(max_rows);
-	m_game_grid->setColumnCount(maxCols);
-
-	const QString game_icon_path = m_play_hover_movies ? qstr(fs::get_config_dir() + "/Icons/game_icons/") : "";
-
-	for (const game_info& app : matching_apps)
-	{
-		const QString serial = qstr(app->info.serial);
-		const QString title = m_titles.value(serial, qstr(app->info.name));
-		const QString notes = m_notes.value(serial);
-
-		movie_item* item = m_game_grid->addItem(app, title, (m_play_hover_movies && app->has_hover_gif) ? (game_icon_path % serial % "/hover.gif") : QStringLiteral(""), r, c);
-		ensure(item);
-		app->item = item;
-		item->setData(gui::game_role, QVariant::fromValue(app));
-		item->set_icon_load_func([this, app, cancel = item->icon_loading_aborted()](int)
-		{
-			IconLoadFunction(app, cancel);
-		});
-
-		if (!notes.isEmpty())
-		{
-			item->setToolTip(tr("%0 [%1]\n\nNotes:\n%2").arg(title).arg(serial).arg(notes));
-		}
-		else
-		{
-			item->setToolTip(tr("%0 [%1]").arg(title).arg(serial));
-		}
-
-		if (selected_item == app->info.path + app->info.icon_path)
-		{
-			m_game_grid->setCurrentItem(item);
-		}
-
-		if (++c >= maxCols)
-		{
-			c = 0;
-			r++;
-		}
-	}
-
-	if (c != 0)
-	{ // if left over games exist -- if empty entries exist
-		for (int col = c; col < maxCols; ++col)
-		{
-			movie_item* empty_item = new movie_item();
-			empty_item->setFlags(Qt::NoItemFlags);
-			m_game_grid->setItem(r, col, empty_item);
-		}
-	}
-
-	m_game_grid->resizeColumnsToContents();
-	m_game_grid->resizeRowsToContents();
-	m_game_grid->installEventFilter(this);
-	m_game_grid->verticalScrollBar()->installEventFilter(this);
 }
 
 /**
@@ -2885,67 +2344,37 @@ std::string game_list_frame::CurrentSelectionPath()
 {
 	std::string selection;
 
-	QTableWidgetItem* item = nullptr;
+	game_info game{};
 
 	if (m_old_layout_is_list)
 	{
 		if (!m_game_list->selectedItems().isEmpty())
 		{
-			item = m_game_list->item(m_game_list->currentRow(), 0);
+			if (QTableWidgetItem* item = m_game_list->item(m_game_list->currentRow(), 0))
+			{
+				if (const QVariant var = item->data(gui::game_role); var.canConvert<game_info>())
+				{
+					game = var.value<game_info>();
+				}
+			}
 		}
 	}
 	else if (m_game_grid)
 	{
-		if (!m_game_grid->selectedItems().isEmpty())
+		if (game_list_grid_item* item = static_cast<game_list_grid_item*>(m_game_grid->selected_item()))
 		{
-			item = m_game_grid->currentItem();
+			game = item->game();
 		}
 	}
 
-	if (item)
+	if (game)
 	{
-		if (const QVariant var = item->data(gui::game_role); var.canConvert<game_info>())
-		{
-			if (const game_info game = var.value<game_info>())
-			{
-				selection = game->info.path + game->info.icon_path;
-			}
-		}
+		selection = game->info.path + game->info.icon_path;
 	}
 
 	m_old_layout_is_list = m_is_list_layout;
 
 	return selection;
-}
-
-std::string game_list_frame::GetStringFromU32(const u32& key, const std::map<u32, QString>& map, bool combined)
-{
-	QStringList string;
-
-	if (combined)
-	{
-		for (const auto& item : map)
-		{
-			if (key & item.first)
-			{
-				string << item.second;
-			}
-		}
-	}
-	else
-	{
-		if (map.find(key) != map.end())
-		{
-			string << ::at32(map, key);
-		}
-	}
-
-	if (string.isEmpty())
-	{
-		string << tr("Unknown");
-	}
-
-	return sstr(string.join(", "));
 }
 
 game_info game_list_frame::GetGameInfoByMode(const QTableWidgetItem* item) const
@@ -2957,7 +2386,7 @@ game_info game_list_frame::GetGameInfoByMode(const QTableWidgetItem* item) const
 
 	if (m_is_list_layout)
 	{
-		return GetGameInfoFromItem(m_game_list->item(item->row(), gui::column_icon));
+		return GetGameInfoFromItem(m_game_list->item(item->row(), static_cast<int>(gui::game_list_columns::icon)));
 	}
 
 	return GetGameInfoFromItem(item);
@@ -2977,15 +2406,6 @@ game_info game_list_frame::GetGameInfoFromItem(const QTableWidgetItem* item)
 	}
 
 	return var.value<game_info>();
-}
-
-QColor game_list_frame::getGridCompatibilityColor(const QString& string) const
-{
-	if (m_draw_compat_status_to_grid && !m_is_list_layout)
-	{
-		return QColor(string);
-	}
-	return QColor();
 }
 
 void game_list_frame::SetShowCompatibilityInGrid(bool show)
@@ -3018,61 +2438,6 @@ void game_list_frame::SetPlayHoverGifs(bool play)
 const QList<game_info>& game_list_frame::GetGameInfo() const
 {
 	return m_game_data;
-}
-
-std::string game_list_frame::GetGameVersion(const game_info& game)
-{
-	if (game->info.app_ver == sstr(Localized().category.unknown))
-	{
-		// Fall back to Disc/Pkg Revision
-		return game->info.version;
-	}
-
-	return game->info.app_ver;
-}
-
-void game_list_frame::IconLoadFunction(game_info game, std::shared_ptr<atomic_t<bool>> cancel)
-{
-	if (cancel && cancel->load())
-	{
-		return;
-	}
-
-	static std::unordered_set<std::string> warn_once_list;
-	static shared_mutex s_mtx;
-
-	if (game->icon.isNull() && (game->info.icon_path.empty() || !game->icon.load(qstr(game->info.icon_path))))
-	{
-		if (game_list_log.warning)
-		{
-			bool logged = false;
-			{
-				std::lock_guard lock(s_mtx);
-				logged = !warn_once_list.emplace(game->info.icon_path).second;
-			}
-
-			if (!logged)
-			{
-				game_list_log.warning("Could not load image from path %s", sstr(QDir(qstr(game->info.icon_path)).absolutePath()));
-			}
-		}
-	}
-
-	if (!game->item || (cancel && cancel->load()))
-	{
-		return;
-	}
-
-	const QColor color = getGridCompatibilityColor(game->compat.color);
-	{
-		std::lock_guard lock(game->item->pixmap_mutex);
-		game->pxmap = PaintedPixmap(game->icon, game->hasCustomConfig, game->hasCustomPadConfig, color);
-	}
-
-	if (!cancel || !cancel->load())
-	{
-		Q_EMIT IconReady(game->item);
-	}
 }
 
 void game_list_frame::WaitAndAbortRepaintThreads()

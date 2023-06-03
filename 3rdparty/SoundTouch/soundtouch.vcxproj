@@ -70,6 +70,7 @@
       <PreprocessorDefinitions>SOUNDTOUCH_ALLOW_SSE;ST_NO_EXCEPTION_HANDLING;USE_MULTICH_ALWAYS;SOUNDTOUCH_FLOAT_SAMPLES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>./soundtouch/source/SoundTouch;./soundtouch/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ProgramDatabase</DebugInformationFormat>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MaxSpeed</Optimization>
     </ClCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

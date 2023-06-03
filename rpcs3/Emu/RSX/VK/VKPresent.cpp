@@ -125,7 +125,7 @@ void VKGSRender::advance_queued_frames()
 	vk::vmm_check_memory_usage();
 
 	// m_rtts storage is double buffered and should be safe to tag on frame boundary
-	m_rtts.free_invalidated(*m_current_command_buffer, vk::vmm_determine_memory_load_severity());
+	m_rtts.trim(*m_current_command_buffer, vk::vmm_determine_memory_load_severity());
 
 	// Texture cache is also double buffered to prevent use-after-free
 	m_texture_cache.on_frame_end();
@@ -199,11 +199,6 @@ void VKGSRender::frame_context_cleanup(vk::frame_context_t *ctx)
 	// Resource cleanup.
 	// TODO: This is some outdated crap.
 	{
-		if (m_text_writer)
-		{
-			m_text_writer->reset_descriptors();
-		}
-
 		if (m_overlay_manager && m_overlay_manager->has_dirty())
 		{
 			auto ui_renderer = vk::get_overlay_pass<vk::ui_overlay_renderer>();

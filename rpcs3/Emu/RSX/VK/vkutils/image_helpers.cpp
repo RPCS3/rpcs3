@@ -55,7 +55,7 @@ namespace vk
 		return{ final_mapping[1], final_mapping[2], final_mapping[3], final_mapping[0] };
 	}
 
-	void change_image_layout(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, const VkImageSubresourceRange& range,
+	void change_image_layout(const vk::command_buffer& cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, const VkImageSubresourceRange& range,
 		u32 src_queue_family, u32 dst_queue_family, u32 src_access_mask_bits, u32 dst_access_mask_bits)
 	{
 		if (vk::is_renderpass_open(cmd))
@@ -207,7 +207,7 @@ namespace vk
 		vkCmdPipelineBarrier(cmd, src_stage, dst_stage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 	}
 
-	void change_image_layout(VkCommandBuffer cmd, vk::image* image, VkImageLayout new_layout, const VkImageSubresourceRange& range)
+	void change_image_layout(const vk::command_buffer& cmd, vk::image* image, VkImageLayout new_layout, const VkImageSubresourceRange& range)
 	{
 		if (image->current_layout == new_layout) return;
 
@@ -215,7 +215,7 @@ namespace vk
 		image->current_layout = new_layout;
 	}
 
-	void change_image_layout(VkCommandBuffer cmd, vk::image* image, VkImageLayout new_layout)
+	void change_image_layout(const vk::command_buffer& cmd, vk::image* image, VkImageLayout new_layout)
 	{
 		if (image->current_layout == new_layout) return;
 

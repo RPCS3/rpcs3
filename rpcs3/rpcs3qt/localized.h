@@ -17,6 +17,7 @@ public:
 	Localized() {}
 
 	QString GetVerboseTimeByMs(quint64 elapsed_ms, bool show_days = false) const;
+	static std::string GetStringFromU32(const u32& key, const std::map<u32, QString>& map, bool combined = false);
 
 	const struct category // (see PARAM.SFO in psdevwiki.com) TODO: Disc Categories
 	{

@@ -176,8 +176,6 @@ namespace vk
 		VkSemaphore present_wait_semaphore = VK_NULL_HANDLE;
 
 		vk::descriptor_set descriptor_set;
-		vk::descriptor_pool descriptor_pool;
-		u32 used_descriptors = 0;
 
 		rsx::flags32_t flags = 0;
 
@@ -186,7 +184,7 @@ namespace vk
 		u32 present_image = -1;
 		command_buffer_chunk* swap_command_buffer = nullptr;
 
-		//Heap pointers
+		// Heap pointers
 		s64 attrib_heap_ptr = 0;
 		s64 vtx_env_heap_ptr = 0;
 		s64 frag_env_heap_ptr = 0;
@@ -200,14 +198,12 @@ namespace vk
 
 		u64 last_frame_sync_time = 0;
 
-		//Copy shareable information
+		// Copy shareable information
 		void grab_resources(frame_context_t& other)
 		{
 			present_wait_semaphore = other.present_wait_semaphore;
 			acquire_signal_semaphore = other.acquire_signal_semaphore;
 			descriptor_set.swap(other.descriptor_set);
-			descriptor_pool = other.descriptor_pool;
-			used_descriptors = other.used_descriptors;
 			flags = other.flags;
 
 			attrib_heap_ptr = other.attrib_heap_ptr;
@@ -222,7 +218,7 @@ namespace vk
 			rasterizer_env_heap_ptr = other.rasterizer_env_heap_ptr;
 		}
 
-		//Exchange storage (non-copyable)
+		// Exchange storage (non-copyable)
 		void swap_storage(frame_context_t& other)
 		{
 			std::swap(buffer_views_to_clean, other.buffer_views_to_clean);

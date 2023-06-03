@@ -110,3 +110,4 @@ namespace utils
 }
 
 #define DYNAMIC_IMPORT(lib, name, ...) inline constinit utils::dynamic_import<__VA_ARGS__> name(lib, #name);
+#define DYNAMIC_IMPORT_RENAME(lib, declare_name, lib_func_name, ...) inline constinit utils::dynamic_import<__VA_ARGS__> declare_name(lib, lib_func_name);

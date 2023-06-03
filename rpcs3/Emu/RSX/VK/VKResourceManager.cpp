@@ -41,6 +41,11 @@ namespace vk
 		return &g_resource_manager;
 	}
 
+	garbage_collector* get_gc()
+	{
+		return &g_resource_manager;
+	}
+
 	void resource_manager::trim()
 	{
 		// For any managed resources, try to keep the number of unused/idle resources as low as possible.
@@ -54,16 +59,15 @@ namespace vk
 			ensure(max_allowed_samplers);
 			rsx_log.warning("Trimming allocated samplers. Allocated = %u, Max = %u", allocated_sampler_count, limits.maxSamplerAllocationCount);
 
-			for (auto It = m_sampler_pool.begin(); It != m_sampler_pool.end();)
+			auto filter_expr = [](const cached_sampler_object_t& sampler)
 			{
-				if (!It->second->has_refs())
-				{
-					dispose(It->second);
-					It = m_sampler_pool.erase(It);
-					continue;
-				}
+				// Pick only where we have no ref
+				return !sampler.has_refs();
+			};
 
-				++It;
+			for (auto& object : m_sampler_pool.collect(filter_expr))
+			{
+				dispose(object);
 			}
 		}
 	}
@@ -96,6 +100,14 @@ namespace vk
 
 		g_resource_manager.eid_completed(event_id);
 		g_last_completed_event = std::max(event_id, g_last_completed_event.load());
+	}
+
+	void print_debug_markers()
+	{
+		for (const auto marker : g_resource_manager.gather_debug_markers())
+		{
+			marker->dump();
+		}
 	}
 
 	static constexpr f32 size_in_GiB(u64 size)

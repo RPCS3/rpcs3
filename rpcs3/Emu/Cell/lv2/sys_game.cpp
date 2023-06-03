@@ -1,16 +1,37 @@
 #include "stdafx.h"
 #include "util/sysinfo.hpp"
 #include "util/v128.hpp"
+#include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/System.h"
 #include "Emu/system_utils.hpp"
 #include "Emu/IdManager.h"
+#include "Utilities/StrUtil.h"
 #include "Utilities/Thread.h"
 
 #include "sys_game.h"
 
 LOG_CHANNEL(sys_game);
+
+struct system_sw_version
+{
+	system_sw_version()
+	{
+		f64 version_f = 0;
+		if (!try_to_float(&version_f, utils::get_firmware_version(), 0, 99.9999))
+			sys_game.error("Error parsing firmware version");
+		version = version_f * 10000;
+	}
+
+	system_sw_version(const system_sw_version&) = delete;
+
+	system_sw_version& operator=(const system_sw_version&) = delete;
+
+	~system_sw_version() = default;
+
+	u64 version;
+};
 
 struct board_storage
 {
@@ -46,7 +67,7 @@ public:
 
 	board_storage(const board_storage&) = delete;
 
-	board_storage& operator =(const board_storage&) = delete;
+	board_storage& operator=(const board_storage&) = delete;
 
 	~board_storage()
 	{
@@ -209,9 +230,23 @@ error_code _sys_game_watchdog_clear()
 	return CELL_OK;
 }
 
+error_code _sys_game_set_system_sw_version(u64 version)
+{
+	sys_game.trace("sys_game_set_system_sw_version(version=%d)", version);
+
+	if (!g_ps3_process_info.has_root_perm())
+		return CELL_EPERM;
+
+	g_fxo->get<system_sw_version>().version = version;
+
+	return CELL_OK;
+}
+
 u64 _sys_game_get_system_sw_version()
 {
-	return stof(utils::get_firmware_version()) * 10000;
+	sys_game.trace("sys_game_get_system_sw_version()");
+
+	return g_fxo->get<system_sw_version>().version;
 }
 
 error_code _sys_game_board_storage_read(vm::ptr<u8> buffer, vm::ptr<u8> status)

@@ -267,8 +267,26 @@ void debugger_list::scroll(s32 steps)
 
 void debugger_list::keyPressEvent(QKeyEvent* event)
 {
+	// Always accept event (so it would not bubble upwards, debugger_frame already sees it)
+	struct accept_event_t
+	{
+		QKeyEvent* event;
+
+		~accept_event_t() noexcept
+		{
+			event->accept();
+		}
+	} accept_event{event};
+
 	if (!isActiveWindow())
 	{
+		QListWidget::keyPressEvent(event);
+		return;
+	}
+
+	if (event->modifiers())
+	{
+		QListWidget::keyPressEvent(event);
 		return;
 	}
 
@@ -282,17 +300,22 @@ void debugger_list::keyPressEvent(QKeyEvent* event)
 	{
 		if (event->isAutoRepeat())
 		{
+			QListWidget::keyPressEvent(event);
 			return;
 		}
+
 		if (m_cpu && m_cpu->id_type() == 0x55)
 		{
 			create_rsx_command_detail(m_showing_selected_instruction ? m_selected_instruction : m_pc);
 			return;
 		}
-		return;
+
+		break;
 	}
 	default: break;
 	}
+
+	QListWidget::keyPressEvent(event);
 }
 
 

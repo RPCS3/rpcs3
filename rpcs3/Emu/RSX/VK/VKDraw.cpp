@@ -296,7 +296,7 @@ void VKGSRender::load_texture_env()
 				const auto wrap_s = vk::vk_wrap_mode(tex.wrap_s());
 				const auto wrap_t = vk::vk_wrap_mode(tex.wrap_t());
 				const auto wrap_r = vk::vk_wrap_mode(tex.wrap_r());
-				const auto border_color = vk::get_border_color(tex.border_color());
+				const auto border_color = vk::border_color_t(tex.border_color());
 
 				// Check if non-point filtering can even be used on this format
 				bool can_sample_linear;
@@ -427,7 +427,7 @@ void VKGSRender::load_texture_env()
 				const VkBool32 unnormalized_coords = !!(tex.format() & CELL_GCM_TEXTURE_UN);
 				const auto min_lod = tex.min_lod();
 				const auto max_lod = tex.max_lod();
-				const auto border_color = vk::get_border_color(tex.border_color());
+				const auto border_color = vk::border_color_t(tex.border_color());
 
 				if (vs_sampler_handles[i])
 				{
@@ -831,7 +831,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 	}
 
 	bool reload_state = (!m_current_draw.subdraw_id++);
-	vk::renderpass_op(*m_current_command_buffer, [&](VkCommandBuffer cmd, VkRenderPass pass, VkFramebuffer fbo)
+	vk::renderpass_op(*m_current_command_buffer, [&](const vk::command_buffer& cmd, VkRenderPass pass, VkFramebuffer fbo)
 	{
 		if (get_render_pass() == pass && m_draw_fbo->value == fbo)
 		{
@@ -966,11 +966,6 @@ void VKGSRender::end()
 			m_aux_frame_context.grab_resources(*m_current_frame);
 			m_current_frame = &m_aux_frame_context;
 		}
-		else if (m_current_frame->used_descriptors)
-		{
-			m_current_frame->descriptor_pool.reset(0);
-			m_current_frame->used_descriptors = 0;
-		}
 
 		ensure(!m_current_frame->swap_command_buffer);
 
@@ -998,46 +993,11 @@ void VKGSRender::end()
 	}
 
 	// Allocate descriptor set
-	check_descriptors();
 	m_current_frame->descriptor_set = allocate_descriptor_set();
 
 	// Load program execution environment
 	load_program_env();
 	m_frame_stats.setup_time += m_profiler.duration();
-
-	for (int binding_attempts = 0; binding_attempts < 3; binding_attempts++)
-	{
-		bool out_of_memory;
-		if (!m_shader_interpreter.is_interpreter(m_program)) [[likely]]
-		{
-			out_of_memory = bind_texture_env();
-		}
-		else
-		{
-			out_of_memory = bind_interpreter_texture_env();
-		}
-
-		// TODO: Replace OOM tracking with ref-counting to simplify the logic
-		if (!out_of_memory)
-		{
-			break;
-		}
-
-		if (!on_vram_exhausted(rsx::problem_severity::fatal))
-		{
-			// It is not possible to free memory. Just use placeholder textures. Can cause graphics glitches but shouldn't crash otherwise
-			break;
-		}
-
-		if (m_samplers_dirty)
-		{
-			// Reload texture env if referenced objects were invalidated during OOO handling.
-			load_texture_env();
-		}
-	}
-
-	m_texture_cache.release_uncached_temporary_subresources();
-	m_frame_stats.textures_upload_time += m_profiler.duration();
 
 	// Apply write memory barriers
 	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil)) ds->write_barrier(*m_current_command_buffer);
@@ -1049,6 +1009,37 @@ void VKGSRender::end()
 			surface->write_barrier(*m_current_command_buffer);
 		}
 	}
+
+	m_frame_stats.setup_time += m_profiler.duration();
+
+	// Now bind the shader resources. It is important that this takes place after the barriers so that we don't end up with stale descriptors
+	for (int retry = 0; retry < 3; ++retry)
+	{
+		if (m_samplers_dirty) [[ unlikely ]]
+		{
+			// Reload texture env if referenced objects were invalidated during OOM handling.
+			load_texture_env();
+		}
+
+		const bool out_of_memory = m_shader_interpreter.is_interpreter(m_program)
+			? bind_interpreter_texture_env()
+			: bind_texture_env();
+
+		if (!out_of_memory)
+		{
+			break;
+		}
+
+		// Handle OOM
+		if (!on_vram_exhausted(rsx::problem_severity::fatal))
+		{
+			// It is not possible to free memory. Just use placeholder textures. Can cause graphics glitches but shouldn't crash otherwise
+			break;
+		}
+	}
+
+	m_texture_cache.release_uncached_temporary_subresources();
+	m_frame_stats.textures_upload_time += m_profiler.duration();
 
 	// Final heap check...
 	check_heap_status(VK_HEAP_CHECK_VERTEX_STORAGE | VK_HEAP_CHECK_VERTEX_LAYOUT_STORAGE);

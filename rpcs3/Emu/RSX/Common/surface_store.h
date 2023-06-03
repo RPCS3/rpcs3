@@ -74,6 +74,7 @@ namespace rsx
 		std::vector<surface_type> superseded_surfaces;
 
 		std::list<surface_storage_type> invalidated_resources;
+		const u64 max_invalidated_resources_count = 256ull;
 		u64 cache_tag = 1ull; // Use 1 as the start since 0 is default tag on new surfaces
 		u64 write_tag = 1ull;
 
@@ -1361,7 +1362,25 @@ namespace rsx
 			return true;
 		}
 
-		virtual bool handle_memory_pressure(command_list_type cmd, problem_severity severity)
+		void trim_invalidated_resources(command_list_type cmd, problem_severity severity)
+		{
+			// It is possible to have stale invalidated resources holding references to other invalidated resources.
+			// This can bloat the VRAM usage significantly especially if the references are never collapsed.
+			for (auto& surface : invalidated_resources)
+			{
+				if (!surface->has_refs() || surface->old_contents.empty())
+				{
+					continue;
+				}
+
+				if (can_collapse_surface(surface, severity))
+				{
+					surface->memory_barrier(cmd, rsx::surface_access::transfer_read);
+				}
+			}
+		}
+
+		void collapse_dirty_surfaces(command_list_type cmd, problem_severity severity)
 		{
 			auto process_list_function = [&](surface_ranged_map& data, const utils::address_range& range)
 			{
@@ -1390,14 +1409,57 @@ namespace rsx
 				}
 			};
 
+			process_list_function(m_render_targets_storage, m_render_targets_memory_range);
+			process_list_function(m_depth_stencil_storage, m_depth_stencil_memory_range);
+		}
+
+		virtual bool handle_memory_pressure(command_list_type cmd, problem_severity severity)
+		{
 			ensure(severity >= rsx::problem_severity::moderate);
 			const auto old_usage = m_active_memory_used;
 
 			// Try and find old surfaces to remove
-			process_list_function(m_render_targets_storage, m_render_targets_memory_range);
-			process_list_function(m_depth_stencil_storage, m_depth_stencil_memory_range);
+			collapse_dirty_surfaces(cmd, severity);
+
+			// Check invalidated resources as they can have long dependency chains
+			if (invalidated_resources.size() > max_invalidated_resources_count ||
+				severity >= rsx::problem_severity::severe)
+			{
+				trim_invalidated_resources(cmd, severity);
+			}
 
 			return (m_active_memory_used < old_usage);
+		}
+
+		void run_cleanup_internal(
+			command_list_type cmd,
+			rsx::problem_severity memory_pressure,
+			u32 max_surface_store_memory_mb,
+			std::function<void(command_list_type)> pre_task_callback)
+		{
+			if (check_memory_usage(max_surface_store_memory_mb * 0x100000))
+			{
+				pre_task_callback(cmd);
+
+				const auto severity = std::max(memory_pressure, rsx::problem_severity::moderate);
+				handle_memory_pressure(cmd, severity);
+			}
+			else if (invalidated_resources.size() > max_invalidated_resources_count)
+			{
+				pre_task_callback(cmd);
+
+				rsx_log.warning("[PERFORMANCE WARNING] Invalidated resource pool has exceeded the desired limit. A trim will now be attempted. Current=%u, Limit=%u",
+					invalidated_resources.size(), max_invalidated_resources_count);
+
+				// Check invalidated resources as they can have long dependency chains
+				trim_invalidated_resources(cmd, memory_pressure);
+
+				if ((invalidated_resources.size() + 16u) > max_invalidated_resources_count)
+				{
+					// We didn't release enough resources, scan the active RTTs as well
+					collapse_dirty_surfaces(cmd, memory_pressure);
+				}
+			}
 		}
 	};
 }

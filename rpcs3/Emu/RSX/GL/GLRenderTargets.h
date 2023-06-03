@@ -250,8 +250,8 @@ struct gl_render_target_traits
 	{
 		return (surface->get_internal_format() == ref->get_internal_format() &&
 				surface->get_spp() == sample_count &&
-				surface->get_surface_width<rsx::surface_metrics::pixels>() >= width &&
-				surface->get_surface_height<rsx::surface_metrics::pixels>() >= height);
+				surface->get_surface_width<rsx::surface_metrics::pixels>() == width &&
+				surface->get_surface_height<rsx::surface_metrics::pixels>() == height);
 	}
 
 	static
@@ -390,13 +390,9 @@ struct gl_render_targets : public rsx::surface_store<gl_render_target_traits>
 		invalidated_resources.clear();
 	}
 
-	std::vector<GLuint> free_invalidated(gl::command_context& cmd)
+	std::vector<GLuint> trim(gl::command_context& cmd)
 	{
-		// Do not allow more than 256M of RSX memory to be used by RTTs
-		if (check_memory_usage(256 * 0x100000))
-		{
-			handle_memory_pressure(cmd, rsx::problem_severity::moderate);
-		}
+		run_cleanup_internal(cmd, rsx::problem_severity::moderate, 256, [](gl::command_context&) {});
 
 		std::vector<GLuint> removed;
 		invalidated_resources.remove_if([&](auto &rtt)

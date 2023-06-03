@@ -46,7 +46,7 @@ namespace vk
 		}
 	}
 
-	void copy_image_to_buffer(VkCommandBuffer cmd, const vk::image* src, const vk::buffer* dst, const VkBufferImageCopy& region, bool swap_bytes)
+	void copy_image_to_buffer(const vk::command_buffer& cmd, const vk::image* src, const vk::buffer* dst, const VkBufferImageCopy& region, bool swap_bytes)
 	{
 		// Always validate
 		ensure(src->current_layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL || src->current_layout == VK_IMAGE_LAYOUT_GENERAL);
@@ -55,6 +55,9 @@ namespace vk
 		{
 			vk::end_renderpass(cmd);
 		}
+
+		ensure((region.imageExtent.width + region.imageOffset.x) <= src->width());
+		ensure((region.imageExtent.height + region.imageOffset.y) <= src->height());
 
 		switch (src->format())
 		{
@@ -183,7 +186,7 @@ namespace vk
 		}
 	}
 
-	void copy_buffer_to_image(VkCommandBuffer cmd, const vk::buffer* src, const vk::image* dst, const VkBufferImageCopy& region)
+	void copy_buffer_to_image(const vk::command_buffer& cmd, const vk::buffer* src, const vk::image* dst, const VkBufferImageCopy& region)
 	{
 		// Always validate
 		ensure(dst->current_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL || dst->current_layout == VK_IMAGE_LAYOUT_GENERAL);
@@ -738,7 +741,7 @@ namespace vk
 		}
 	}
 
-	static void gpu_deswizzle_sections_impl(VkCommandBuffer cmd, vk::buffer* scratch_buf, u32 dst_offset, int word_size, int word_count, bool swap_bytes, std::vector<VkBufferImageCopy>& sections)
+	static void gpu_deswizzle_sections_impl(const vk::command_buffer& cmd, vk::buffer* scratch_buf, u32 dst_offset, int word_size, int word_count, bool swap_bytes, std::vector<VkBufferImageCopy>& sections)
 	{
 		// NOTE: This has to be done individually for every LOD
 		vk::cs_deswizzle_base* job = nullptr;

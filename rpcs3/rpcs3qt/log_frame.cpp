@@ -241,6 +241,13 @@ void log_frame::CreateAndConnectActions()
 		m_tty->clear();
 	});
 
+	m_perform_goto_on_debugger = new QAction(tr("Go-To On The Debugger"), this);
+	connect(m_perform_goto_on_debugger, &QAction::triggered, [this]()
+	{
+		QPlainTextEdit* pte = (m_tabWidget->currentIndex() == 1 ? m_tty : m_log);
+		Q_EMIT PerformGoToOnDebugger(pte->textCursor().selectedText());
+	});
+
 	m_stack_act_tty = new QAction(tr("Stack Mode (TTY)"), this);
 	m_stack_act_tty->setCheckable(true);
 	connect(m_stack_act_tty, &QAction::toggled, [this](bool checked)
@@ -336,6 +343,13 @@ void log_frame::CreateAndConnectActions()
 	{
 		QMenu* menu = m_log->createStandardContextMenu();
 		menu->addAction(m_clear_act);
+		menu->addAction(m_perform_goto_on_debugger);
+
+		std::shared_ptr<bool> goto_signal_accepted = std::make_shared<bool>(false);
+		Q_EMIT PerformGoToOnDebugger("", true, goto_signal_accepted);
+		m_perform_goto_on_debugger->setEnabled(m_log->textCursor().hasSelection() && *goto_signal_accepted);
+		m_perform_goto_on_debugger->setToolTip(tr("Jump to the selected hexadecimal address from the log text on the debugger."));
+
 		menu->addSeparator();
 		menu->addActions(m_log_level_acts->actions());
 		menu->addSeparator();
@@ -349,6 +363,13 @@ void log_frame::CreateAndConnectActions()
 	{
 		QMenu* menu = m_tty->createStandardContextMenu();
 		menu->addAction(m_clear_tty_act);
+		menu->addAction(m_perform_goto_on_debugger);
+
+		std::shared_ptr<bool> goto_signal_accepted = std::make_shared<bool>(false);
+		Q_EMIT PerformGoToOnDebugger("", true, goto_signal_accepted);
+		m_perform_goto_on_debugger->setEnabled(m_tty->textCursor().hasSelection() && *goto_signal_accepted);
+		m_perform_goto_on_debugger->setToolTip(tr("Jump to the selected hexadecimal address from the TTY text on the debugger."));
+
 		menu->addSeparator();
 		menu->addAction(m_tty_act);
 		menu->addAction(m_stack_act_tty);
@@ -412,6 +433,7 @@ void log_frame::LoadSettings()
 	m_stack_log = m_gui_settings->GetValue(gui::l_stack).toBool();
 	m_stack_tty = m_gui_settings->GetValue(gui::l_stack_tty).toBool();
 	m_ansi_tty = m_gui_settings->GetValue(gui::l_ansi_code).toBool();
+	g_log_all_errors = !m_gui_settings->GetValue(gui::l_stack_err).toBool();
 	m_stack_act_log->setChecked(m_stack_log);
 	m_stack_act_tty->setChecked(m_stack_tty);
 	m_ansi_act_tty->setChecked(m_ansi_tty);

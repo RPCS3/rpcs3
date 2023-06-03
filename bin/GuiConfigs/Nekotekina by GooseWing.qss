@@ -367,21 +367,6 @@ QLabel#l_controller {
 }
 
 
-/* Game Grid Font */
-QTableWidget#game_grid {
-	font-weight: 600;
-	color: #ffd785;
-	text-transform: uppercase;
-	selection-color: #ffd785;
-}
-QTableWidget#game_grid::item:selected:active {
-	selection-background-color: #4d4940;
-}
-QTableWidget#game_grid::item:selected:!active {
-	selection-background-color: #615c51;
-}
-
-
 /* Debug UI Settings buttons */
 QLabel#color_button {
 	background: transparent;
@@ -488,4 +473,34 @@ QLabel#debugger_frame_pc {
 QWidget#trophy_notification_frame {
 	background-color: #b3ac98;
 	color: #4d4940;
+}
+
+/* Game Grid */
+#game_list_grid_item[selected="true"] {
+	background: #615c51;
+}
+#game_list_grid_item:hover {
+	background: #615c51;
+}
+#game_list_grid_item:focus {
+	background: #4d4940;
+}
+
+/* Game Grid Font */
+#game_list_grid_item #game_list_grid_item_title_label {
+	font-weight: 600;
+	text-transform: uppercase;
+	color: #ffd785;
+}
+
+/* Game Grid hover and focus: we need to handle properties differently when using descendants */
+#game_list_grid_item[selected="true"] #game_list_grid_item_title_label {
+	background-color: #615c51;
+}
+#game_list_grid_item[hover="true"] #game_list_grid_item_title_label {
+	background-color: #615c51;
+}
+#game_list_grid_item[focus="true"] #game_list_grid_item_title_label {
+	background-color: #4d4940;
+	color: #ffd785;
 }

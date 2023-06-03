@@ -80,6 +80,8 @@ private:
 	void closeEvent(QCloseEvent *event) override;
 	bool eventFilter(QObject *object, QEvent *event) override;
 
+	static QDateTime TickToDateTime(u64 tick);
+
 	std::shared_ptr<gui_settings> m_gui_settings;
 
 	std::vector<std::unique_ptr<GameTrophiesData>> m_trophies_db; //! Holds all the trophy information.
@@ -89,6 +91,9 @@ private:
 	QSplitter* m_splitter; //! Contains the game and trophy tables
 	game_list* m_trophy_table; //! UI element to display trophy stuff.
 	game_list* m_game_table; //! UI element to display games.
+
+	QList<QAction*> m_trophy_column_acts;
+	QList<QAction*> m_game_column_acts;
 
 	bool m_show_hidden_trophies = false;
 	bool m_show_unlocked_trophies = true;

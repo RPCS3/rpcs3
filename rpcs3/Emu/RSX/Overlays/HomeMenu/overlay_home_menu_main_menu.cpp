@@ -2,6 +2,7 @@
 #include "overlay_home_menu_main_menu.h"
 #include "overlay_home_menu_components.h"
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 
 extern atomic_t<bool> g_user_asked_for_recording;
 extern atomic_t<bool> g_user_asked_for_screenshot;

@@ -358,14 +358,6 @@ QLabel#l_controller {
 	color: #4d4940;
 }
 
-/* Game Grid Font */
-QTableWidget#game_grid {
-	font-weight: 600;
-	color: #4d4940;
-	text-transform: uppercase;
-	selection-color: #aea993;
-}
-
 /* Debug UI Settings buttons */
 QLabel#color_button {
 	background: transparent;
@@ -462,4 +454,27 @@ QSlider#sizeSlider::groove:horizontal {
 */
 QLabel#validLabel {
 	font-weight: 600;
+}
+
+/* Game Grid */
+#game_list_grid_item[selected="true"] {
+	background: #4d4940;
+}
+#game_list_grid_item:focus {
+	background: #4d4940;
+}
+
+/* Game Grid Font */
+#game_list_grid_item #game_list_grid_item_title_label {
+	font-weight: 600;
+	color: #4d4940;
+	text-transform: uppercase;
+}
+
+/* Game Grid hover and focus: we need to handle properties differently when using descendants */
+#game_list_grid_item[selected="true"] #game_list_grid_item_title_label {
+	color: #aea993;
+}
+#game_list_grid_item[focus="true"] #game_list_grid_item_title_label {
+	color: #aea993;
 }

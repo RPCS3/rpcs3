@@ -3,16 +3,35 @@
 #include "stdafx.h"
 #include "Buzz.h"
 #include "Emu/Cell/lv2/sys_usbd.h"
+#include "Emu/Io/buzz_config.h"
 #include "Input/pad_thread.h"
 
-LOG_CHANNEL(buzz_log);
+LOG_CHANNEL(buzz_log, "BUZZ");
 
-usb_device_buzz::usb_device_buzz(int first_controller, int last_controller, const std::array<u8, 7>& location)
-	: usb_device_emulated(location)
+template <>
+void fmt_class_string<buzz_btn>::format(std::string& out, u64 arg)
 {
-	this->first_controller = first_controller;
-	this->last_controller  = last_controller;
+	format_enum(out, arg, [](buzz_btn value)
+	{
+		switch (value)
+		{
+		case buzz_btn::red: return "Red";
+		case buzz_btn::yellow: return "Yellow";
+		case buzz_btn::green: return "Green";
+		case buzz_btn::orange: return "Orange";
+		case buzz_btn::blue: return "Blue";
+		case buzz_btn::count: return "Count";
+		}
 
+		return unknown;
+	});
+}
+
+usb_device_buzz::usb_device_buzz(u32 first_controller, u32 last_controller, const std::array<u8, 7>& location)
+	: usb_device_emulated(location)
+	, m_first_controller(first_controller)
+	, m_last_controller(last_controller)
+{
 	device        = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE, UsbDeviceDescriptor{0x0200, 0x00, 0x00, 0x00, 0x08, 0x054c, 0x0002, 0x05a1, 0x03, 0x01, 0x00, 0x01});
 	auto& config0 = device.add_node(UsbDescriptorNode(USB_DESCRIPTOR_CONFIG, UsbDeviceConfiguration{0x0022, 0x01, 0x01, 0x00, 0x80, 0x32}));
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_INTERFACE, UsbDeviceInterface{0x00, 0x00, 0x01, 0x03, 0x00, 0x00, 0x00}));
@@ -34,8 +53,7 @@ void usb_device_buzz::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue
 	case 0x01:
 	case 0x21:
 	case 0x80:
-		buzz_log.error("Unhandled Query Len: 0x%02X", buf_size);
-		buzz_log.error("Unhandled Query Type: 0x%02X", (buf_size > 0) ? buf[0] : -1);
+		buzz_log.error("Unhandled Query: buf_size=0x%02X, Type=0x%02X, bmRequestType=0x%02X", buf_size, (buf_size > 0) ? buf[0] : -1, bmRequestType);
 		break;
 	default:
 		usb_device_emulated::control_transfer(bmRequestType, bRequest, wValue, wIndex, wLength, buf_size, buf, transfer);
@@ -47,6 +65,9 @@ extern bool is_input_allowed();
 
 void usb_device_buzz::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint*/, UsbTransfer* transfer)
 {
+	const u8 max_index = 2 + (4 + 5 * m_last_controller) / 8;
+	ensure(buf_size > max_index);
+
 	transfer->fake            = true;
 	transfer->expected_count  = 5;
 	transfer->expected_result = HC_CC_NOERR;
@@ -70,46 +91,41 @@ void usb_device_buzz::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint*/
 	std::lock_guard lock(pad::g_pad_mutex);
 	const auto handler = pad::get_current_handler();
 	const auto& pads   = handler->GetPads();
+	ensure(pads.size() > m_last_controller);
+	ensure(g_cfg_buzz.players.size() > m_last_controller);
 
-	for (int index = 0; index <= (last_controller - first_controller); index++)
+	for (u32 i = m_first_controller, index = 0; i <= m_last_controller; i++, index++)
 	{
-		const auto& pad = pads[first_controller + index];
+		const auto& pad = pads[i];
 
 		if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		{
 			continue;
 		}
 
-		for (Button& button : pad->m_buttons)
-		{
-			if (!button.m_pressed)
+		const auto& cfg = g_cfg_buzz.players[i];
+		cfg->handle_input(pad, true, [&buf, &index](buzz_btn btn, u16 value, bool pressed)
 			{
-				continue;
-			}
-
-			if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL2)
-			{
-				switch (button.m_outKeyCode)
+				switch (btn)
 				{
-				case CELL_PAD_CTRL_R1:
+				case buzz_btn::red:
 					buf[2 + (0 + 5 * index) / 8] |= 1 << ((0 + 5 * index) % 8); // Red
 					break;
-				case CELL_PAD_CTRL_TRIANGLE:
-					buf[2 + (4 + 5 * index) / 8] |= 1 << ((4 + 5 * index) % 8); // Blue
-					break;
-				case CELL_PAD_CTRL_SQUARE:
-					buf[2 + (3 + 5 * index) / 8] |= 1 << ((3 + 5 * index) % 8); // Orange
-					break;
-				case CELL_PAD_CTRL_CIRCLE:
-					buf[2 + (2 + 5 * index) / 8] |= 1 << ((2 + 5 * index) % 8); // Green
-					break;
-				case CELL_PAD_CTRL_CROSS:
+				case buzz_btn::yellow:
 					buf[2 + (1 + 5 * index) / 8] |= 1 << ((1 + 5 * index) % 8); // Yellow
 					break;
-				default:
+				case buzz_btn::green:
+					buf[2 + (2 + 5 * index) / 8] |= 1 << ((2 + 5 * index) % 8); // Green
+					break;
+				case buzz_btn::orange:
+					buf[2 + (3 + 5 * index) / 8] |= 1 << ((3 + 5 * index) % 8); // Orange
+					break;
+				case buzz_btn::blue:
+					buf[2 + (4 + 5 * index) / 8] |= 1 << ((4 + 5 * index) % 8); // Blue
+					break;
+				case buzz_btn::count:
 					break;
 				}
-			}
-		}
+			});
 	}
 }

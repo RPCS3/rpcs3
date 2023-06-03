@@ -230,10 +230,21 @@
     <property name="title">
      <string>Configuration</string>
     </property>
+    <widget class="QMenu" name="menuEmulatedPads">
+     <property name="title">
+      <string>USB Devices</string>
+     </property>
+     <addaction name="confBuzzAct"/>
+     <addaction name="confGHLtarAct"/>
+     <addaction name="confTurntableAct"/>
+     <addaction name="confUSIOAct"/>
+     <addaction name="confPSMoveDS3Act"/>
+    </widget>
     <addaction name="confCPUAct"/>
     <addaction name="confGPUAct"/>
     <addaction name="separator"/>
     <addaction name="confPadsAct"/>
+    <addaction name="menuEmulatedPads"/>
     <addaction name="confCamerasAct"/>
     <addaction name="confAudioAct"/>
     <addaction name="confIOAct"/>
@@ -260,6 +271,7 @@
     <addaction name="actionManage_RAP_Licenses"/>
     <addaction name="actionManage_Trophy_Data"/>
     <addaction name="actionManage_Skylanders_Portal"/>
+    <addaction name="actionManage_Infinity_Base"/>
     <addaction name="actionManage_Cheats"/>
     <addaction name="actionManage_Game_Patches"/>
     <addaction name="actionManage_Screenshots"/>
@@ -274,7 +286,6 @@
     <addaction name="toolskernel_explorerAct"/>
     <addaction name="toolsmemory_viewerAct"/>
     <addaction name="toolsRsxDebuggerAct"/>
-    <addaction name="toolsStringSearchAct"/>
     <addaction name="toolsSystemCommandsAct"/>
     <addaction name="patchCreatorAct"/>
     <addaction name="separator"/>
@@ -644,14 +655,6 @@
    </property>
    <property name="text">
     <string>RSX Debugger</string>
-   </property>
-  </action>
-  <action name="toolsStringSearchAct">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="text">
-    <string>Memory Searcher</string>
    </property>
   </action>
   <action name="toolsDecryptSprxLibsAct">
@@ -1113,6 +1116,11 @@
     <string>Skylanders Portal</string>
    </property>
   </action>
+  <action name="actionManage_Infinity_Base">
+   <property name="text">
+    <string>Infinity Base</string>
+   </property>
+  </action>
   <action name="actionManage_Cheats">
    <property name="text">
     <string>Cheats</string>
@@ -1252,6 +1260,31 @@
    </property>
    <property name="text">
     <string>System Commands</string>
+   </property>
+  </action>
+  <action name="confBuzzAct">
+   <property name="text">
+    <string>Buzz</string>
+   </property>
+  </action>
+  <action name="confGHLtarAct">
+   <property name="text">
+    <string>GHLtar</string>
+   </property>
+  </action>
+  <action name="confTurntableAct">
+   <property name="text">
+    <string>Turntable</string>
+   </property>
+  </action>
+  <action name="confUSIOAct">
+   <property name="text">
+    <string>USIO</string>
+   </property>
+  </action>
+  <action name="confPSMoveDS3Act">
+   <property name="text">
+    <string>PS Move (Fake)</string>
    </property>
   </action>
  </widget>

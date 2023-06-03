@@ -58,7 +58,7 @@ using motion_fail_callback = std::function<void(std::string /*pad_name*/, motion
 class PadHandlerBase
 {
 public:
-	enum connection
+	enum class connection
 	{
 		no_data,
 		connected,

@@ -11,7 +11,93 @@
 
 LOG_CHANNEL(cfg_log, "CFG");
 
-inline std::string sstr(const QString& _in) { return _in.toStdString(); }
+namespace gui
+{
+	QString get_game_list_column_name(game_list_columns col)
+	{
+		switch (col)
+		{
+		case game_list_columns::icon:
+			return "column_icon";
+		case game_list_columns::name:
+			return "column_name";
+		case game_list_columns::serial:
+			return "column_serial";
+		case game_list_columns::firmware:
+			return "column_firmware";
+		case game_list_columns::version:
+			return "column_version";
+		case game_list_columns::category:
+			return "column_category";
+		case game_list_columns::path:
+			return "column_path";
+		case game_list_columns::move:
+			return "column_move";
+		case game_list_columns::resolution:
+			return "column_resolution";
+		case game_list_columns::sound:
+			return "column_sound";
+		case game_list_columns::parental:
+			return "column_parental";
+		case game_list_columns::last_play:
+			return "column_last_play";
+		case game_list_columns::playtime:
+			return "column_playtime";
+		case game_list_columns::compat:
+			return "column_compat";
+		case game_list_columns::dir_size:
+			return "column_dir_size";
+		case game_list_columns::count:
+			return "";
+		}
+	
+		fmt::throw_exception("get_game_list_column_name: Invalid column");
+	}
+
+	QString get_trophy_list_column_name(trophy_list_columns col)
+	{
+		switch (col)
+		{
+		case trophy_list_columns::icon:
+			return "trophy_column_icon";
+		case trophy_list_columns::name:
+			return "trophy_column_name";
+		case trophy_list_columns::description:
+			return "trophy_column_description";
+		case trophy_list_columns::type:
+			return "trophy_column_type";
+		case trophy_list_columns::is_unlocked:
+			return "trophy_column_is_unlocked";
+		case trophy_list_columns::id:
+			return "trophy_column_id";
+		case trophy_list_columns::platinum_link:
+			return "trophy_column_platinum_link";
+		case trophy_list_columns::time_unlocked:
+			return "trophy_column_time_unlocked";
+		case trophy_list_columns::count:
+			return "";
+		}
+	
+		fmt::throw_exception("get_trophy_list_column_name: Invalid column");
+	}
+
+	QString get_trophy_game_list_column_name(trophy_game_list_columns col)
+	{
+		switch (col)
+		{
+		case trophy_game_list_columns::icon:
+			return "trophy_game_column_icon";
+		case trophy_game_list_columns::name:
+			return "trophy_game_column_name";
+		case trophy_game_list_columns::progress:
+			return "trophy_game_column_progress";
+		case trophy_game_list_columns::count:
+			return "";
+		}
+	
+		fmt::throw_exception("get_trophy_game_list_column_name: Invalid column");
+	}
+}
 
 gui_settings::gui_settings(QObject* parent) : settings(parent)
 {
@@ -55,7 +141,7 @@ void gui_settings::ShowBox(QMessageBox::Icon icon, const QString& title, const Q
 
 	if (has_gui_setting && !GetValue(entry).toBool())
 	{
-		cfg_log.notice("%s Dialog for Entry %s was ignored", dialog_type, sstr(entry.name));
+		cfg_log.notice("%s Dialog for Entry %s was ignored", dialog_type, entry.name.toStdString());
 		return;
 	}
 
@@ -81,7 +167,7 @@ void gui_settings::ShowBox(QMessageBox::Icon icon, const QString& title, const Q
 		if (checkBox && checkBox->isChecked())
 		{
 			SetValue(entry, false);
-			cfg_log.notice("%s Dialog for Entry %s is now disabled", dialog_type, sstr(entry.name));
+			cfg_log.notice("%s Dialog for Entry %s is now disabled", dialog_type, entry.name.toStdString());
 		}
 	});
 
@@ -130,9 +216,19 @@ bool gui_settings::GetBootConfirmation(QWidget* parent, const gui_save& gui_save
 	return true;
 }
 
-void gui_settings::SetGamelistColVisibility(int col, bool val) const
+void gui_settings::SetTrophyGamelistColVisibility(gui::trophy_game_list_columns col, bool val) const
 {
-	SetValue(GetGuiSaveForColumn(col), val);
+	SetValue(GetGuiSaveForTrophyGameColumn(col), val);
+}
+
+void gui_settings::SetTrophylistColVisibility(gui::trophy_list_columns col, bool val) const
+{
+	SetValue(GetGuiSaveForTrophyColumn(col), val);
+}
+
+void gui_settings::SetGamelistColVisibility(gui::game_list_columns col, bool val) const
+{
+	SetValue(GetGuiSaveForGameColumn(col), val);
 }
 
 void gui_settings::SetCustomColor(int col, const QColor& val) const
@@ -145,9 +241,19 @@ logs::level gui_settings::GetLogLevel() const
 	return logs::level(GetValue(gui::l_level).toUInt());
 }
 
-bool gui_settings::GetGamelistColVisibility(int col) const
+bool gui_settings::GetTrophyGamelistColVisibility(gui::trophy_game_list_columns col) const
 {
-	return GetValue(GetGuiSaveForColumn(col)).toBool();
+	return GetValue(GetGuiSaveForTrophyGameColumn(col)).toBool();
+}
+
+bool gui_settings::GetTrophylistColVisibility(gui::trophy_list_columns col) const
+{
+	return GetValue(GetGuiSaveForTrophyColumn(col)).toBool();
+}
+
+bool gui_settings::GetGamelistColVisibility(gui::game_list_columns col) const
+{
+	return GetValue(GetGuiSaveForGameColumn(col)).toBool();
 }
 
 QColor gui_settings::GetCustomColor(int col) const
@@ -183,11 +289,21 @@ QSize gui_settings::SizeFromSlider(int pos)
 	return gui::gl_icon_size_min + (gui::gl_icon_size_max - gui::gl_icon_size_min) * (1.f * pos / gui::gl_max_slider_pos);
 }
 
-gui_save gui_settings::GetGuiSaveForColumn(int col)
+gui_save gui_settings::GetGuiSaveForTrophyGameColumn(gui::trophy_game_list_columns col)
+{
+	return gui_save{ gui::trophy, "visibility_" + gui::get_trophy_game_list_column_name(col), true };
+}
+
+gui_save gui_settings::GetGuiSaveForTrophyColumn(gui::trophy_list_columns col)
+{
+	return gui_save{ gui::trophy, "visibility_" + gui::get_trophy_list_column_name(col), true };
+}
+
+gui_save gui_settings::GetGuiSaveForGameColumn(gui::game_list_columns col)
 {
 	// hide sound format, parental level, firmware version and path by default
-	const bool show = col != gui::column_sound && col != gui::column_parental && col != gui::column_firmware && col != gui::column_path;
-	return gui_save{ gui::game_list, "visibility_" + gui::get_game_list_column_name(static_cast<gui::game_list_columns>(col)), show };
+	const bool show = col != gui::game_list_columns::sound && col != gui::game_list_columns::parental && col != gui::game_list_columns::firmware && col != gui::game_list_columns::path;
+	return gui_save{ gui::game_list, "visibility_" + gui::get_game_list_column_name(col), show };
 }
 
 gui_save gui_settings::GetGuiSaveForCategory(int cat, bool is_list_mode)

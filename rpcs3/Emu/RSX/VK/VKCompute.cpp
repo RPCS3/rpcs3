@@ -16,13 +16,13 @@ namespace vk
 
 	void compute_task::init_descriptors()
 	{
-		std::vector<VkDescriptorPoolSize> descriptor_pool_sizes;
-		std::vector<VkDescriptorSetLayoutBinding> bindings;
+		rsx::simple_array<VkDescriptorPoolSize> descriptor_pool_sizes;
+		rsx::simple_array<VkDescriptorSetLayoutBinding> bindings;
 
 		const auto layout = get_descriptor_layout();
 		for (const auto &e : layout)
 		{
-			descriptor_pool_sizes.push_back({e.first, u32(VK_MAX_COMPUTE_TASKS * e.second)});
+			descriptor_pool_sizes.push_back({e.first, e.second});
 
 			for (unsigned n = 0; n < e.second; ++n)
 			{
@@ -38,7 +38,7 @@ namespace vk
 		}
 
 		// Reserve descriptor pools
-		m_descriptor_pool.create(*g_render_device, descriptor_pool_sizes.data(), ::size32(descriptor_pool_sizes), VK_MAX_COMPUTE_TASKS, 3);
+		m_descriptor_pool.create(*g_render_device, descriptor_pool_sizes);
 		m_descriptor_layout = vk::descriptors::create_layout(bindings);
 
 		VkPipelineLayoutCreateInfo layout_info = {};
@@ -119,16 +119,7 @@ namespace vk
 		}
 	}
 
-	void compute_task::free_resources()
-	{
-		if (m_used_descriptors == 0)
-			return;
-
-		m_descriptor_pool.reset(0);
-		m_used_descriptors = 0;
-	}
-
-	void compute_task::load_program(VkCommandBuffer cmd)
+	void compute_task::load_program(const vk::command_buffer& cmd)
 	{
 		if (!m_program)
 		{
@@ -155,14 +146,7 @@ namespace vk
 
 		ensure(m_used_descriptors < VK_MAX_COMPUTE_TASKS);
 
-		VkDescriptorSetAllocateInfo alloc_info = {};
-		alloc_info.descriptorPool = m_descriptor_pool;
-		alloc_info.descriptorSetCount = 1;
-		alloc_info.pSetLayouts = &m_descriptor_layout;
-		alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-
-		CHECK_RESULT(vkAllocateDescriptorSets(*g_render_device, &alloc_info, m_descriptor_set.ptr()));
-		m_used_descriptors++;
+		m_descriptor_set = m_descriptor_pool.allocate(m_descriptor_layout, VK_TRUE);
 
 		bind_resources();
 
@@ -170,7 +154,7 @@ namespace vk
 		m_descriptor_set.bind(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, m_pipeline_layout);
 	}
 
-	void compute_task::run(VkCommandBuffer cmd, u32 invocations_x, u32 invocations_y, u32 invocations_z)
+	void compute_task::run(const vk::command_buffer& cmd, u32 invocations_x, u32 invocations_y, u32 invocations_z)
 	{
 		// CmdDispatch is outside renderpass scope only
 		if (vk::is_renderpass_open(cmd))
@@ -182,7 +166,7 @@ namespace vk
 		vkCmdDispatch(cmd, invocations_x, invocations_y, invocations_z);
 	}
 
-	void compute_task::run(VkCommandBuffer cmd, u32 num_invocations)
+	void compute_task::run(const vk::command_buffer& cmd, u32 num_invocations)
 	{
 		u32 invocations_x, invocations_y;
 		if (num_invocations > max_invocations_x)
@@ -282,13 +266,13 @@ namespace vk
 		m_program->bind_buffer({ m_data->value, m_data_offset, m_data_length }, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
 	}
 
-	void cs_shuffle_base::set_parameters(VkCommandBuffer cmd, const u32* params, u8 count)
+	void cs_shuffle_base::set_parameters(const vk::command_buffer& cmd, const u32* params, u8 count)
 	{
 		ensure(use_push_constants);
 		vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, count * 4, params);
 	}
 
-	void cs_shuffle_base::run(VkCommandBuffer cmd, const vk::buffer* data, u32 data_length, u32 data_offset)
+	void cs_shuffle_base::run(const vk::command_buffer& cmd, const vk::buffer* data, u32 data_length, u32 data_offset)
 	{
 		m_data = data;
 		m_data_offset = data_offset;
@@ -328,7 +312,7 @@ namespace vk
 		m_program->bind_buffer({ m_data->value, m_data_offset, m_ssbo_length }, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
 	}
 
-	void cs_interleave_task::run(VkCommandBuffer cmd, const vk::buffer* data, u32 data_offset, u32 data_length, u32 zeta_offset, u32 stencil_offset)
+	void cs_interleave_task::run(const vk::command_buffer& cmd, const vk::buffer* data, u32 data_offset, u32 data_length, u32 zeta_offset, u32 stencil_offset)
 	{
 		u32 parameters[4] = { data_length, zeta_offset - data_offset, stencil_offset - data_offset, 0 };
 		set_parameters(cmd, parameters, 4);
@@ -389,7 +373,7 @@ namespace vk
 		m_program->bind_buffer({ dst->value, 0, 4 }, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
 	}
 
-	void cs_aggregator::run(VkCommandBuffer cmd, const vk::buffer* dst, const vk::buffer* src, u32 num_words)
+	void cs_aggregator::run(const vk::command_buffer& cmd, const vk::buffer* dst, const vk::buffer* src, u32 num_words)
 	{
 		this->dst = dst;
 		this->src = src;

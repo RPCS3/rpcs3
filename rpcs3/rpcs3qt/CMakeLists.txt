@@ -20,31 +20,41 @@ set(SRC_FILES
     downloader.cpp
     _discord_utils.cpp
     emu_settings.cpp
+    elf_memory_dumping_dialog.cpp
+    emulated_pad_settings_dialog.cpp
     fatal_error_dialog.cpp
     find_dialog.cpp
+    flow_layout.cpp
+    flow_widget.cpp
+    flow_widget_item.cpp
     game_compatibility.cpp
     game_list.cpp
+    game_list_base.cpp
     game_list_delegate.cpp
     game_list_frame.cpp
     game_list_grid.cpp
-    game_list_grid_delegate.cpp
+    game_list_grid_item.cpp
+    game_list_table.cpp
     gui_application.cpp
     gl_gs_frame.cpp
     gs_frame.cpp
     gui_settings.cpp
+    infinity_dialog.cpp
     input_dialog.cpp
     instruction_editor_dialog.cpp
     ipc_settings_dialog.cpp
     kernel_explorer.cpp
     localized.cpp
-    localized_emu.h
+    localized_emu.cpp
     log_frame.cpp
     log_viewer.cpp
     main_window.cpp
     memory_string_searcher.cpp
     memory_viewer_panel.cpp
     microphone_creator.cpp
+    midi_creator.cpp
     movie_item.cpp
+    movie_item_base.cpp
     msg_dialog_frame.cpp
     osk_dialog_frame.cpp
     pad_led_settings_dialog.cpp
@@ -71,6 +81,7 @@ set(SRC_FILES
     save_data_info_dialog.cpp
     save_data_list_dialog.cpp
     save_manager_dialog.cpp
+    screenshot_item.cpp
     screenshot_manager_dialog.cpp
     screenshot_preview.cpp
     sendmessage_dialog_frame.cpp
@@ -147,4 +158,5 @@ target_link_libraries(rpcs3_ui
         3rdparty::libpng
         3rdparty::7z
         3rdparty::wolfssl
-        3rdparty::libcurl)
+        3rdparty::libcurl
+        3rdparty::rtmidi)

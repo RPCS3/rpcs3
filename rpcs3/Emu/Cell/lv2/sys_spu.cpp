@@ -2,6 +2,7 @@
 #include "sys_spu.h"
 
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/VFS.h"
 #include "Emu/IdManager.h"
 #include "Crypto/unself.h"
@@ -205,7 +206,21 @@ lv2_spu_group::lv2_spu_group(utils::serial& ar) noexcept
 	, has_scheduler_context(ar.operator u8())
 	, max_run(ar)
 	, init(ar)
-	, prio(ar)
+	, prio([&ar]()
+	{
+		std::common_type_t<decltype(lv2_spu_group::prio)> prio{};
+
+		if (GET_SERIALIZATION_VERSION(spu) < 3)
+		{
+			prio.prio = ar.operator s32();
+		}
+		else
+		{
+			ar(prio.all);
+		}
+
+		return prio;
+	}())
 	, run_state(ar.operator spu_group_status())
 	, exit_status(ar)
 {
@@ -285,7 +300,7 @@ void lv2_spu_group::save(utils::serial& ar)
 {
 	USING_SERIALIZATION_VERSION(spu);
 
-	ar(name, max_num, mem_size, type, ct->id, has_scheduler_context, max_run, init, prio, run_state, exit_status);
+	ar(name, max_num, mem_size, type, ct->id, has_scheduler_context, max_run, init, prio.load().all, run_state, exit_status);
 
 	for (const auto& thread : threads)
 	{
@@ -1484,7 +1499,7 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 			{
 				std::lock_guard lock(group->mutex);
 
-				if (!group->waiter)
+				if (group->waiter != &ppu)
 				{
 					break;
 				}
@@ -1540,7 +1555,10 @@ error_code sys_spu_thread_group_set_priority(ppu_thread& ppu, u32 id, s32 priori
 		return CELL_EINVAL;
 	}
 
-	group->prio = priority;
+	group->prio.atomic_op([&](std::common_type_t<decltype(lv2_spu_group::prio)>& prio)
+	{
+		prio.prio = priority;
+	});
 
 	return CELL_OK;
 }
@@ -1566,7 +1584,7 @@ error_code sys_spu_thread_group_get_priority(ppu_thread& ppu, u32 id, vm::ptr<s3
 	}
 	else
 	{
-		*priority = group->prio;
+		*priority = group->prio.load().prio;
 	}
 
 	return CELL_OK;

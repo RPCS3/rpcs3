@@ -233,7 +233,7 @@ namespace vk
 	std::pair<VkDescriptorSetLayout, VkPipelineLayout> shader_interpreter::create_layout(VkDevice dev)
 	{
 		const auto& binding_table = vk::get_current_renderer()->get_pipeline_binding_table();
-		std::vector<VkDescriptorSetLayoutBinding> bindings(binding_table.total_descriptor_bindings);
+		rsx::simple_array<VkDescriptorSetLayoutBinding> bindings(binding_table.total_descriptor_bindings);
 
 		u32 idx = 0;
 
@@ -244,6 +244,7 @@ namespace vk
 			bindings[idx].descriptorCount = 1;
 			bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 			bindings[idx].binding = binding_table.vertex_buffers_first_bind_slot + i;
+			bindings[idx].pImmutableSamplers = nullptr;
 			idx++;
 		}
 
@@ -251,6 +252,7 @@ namespace vk
 		bindings[idx].descriptorCount = 1;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 		bindings[idx].binding = binding_table.fragment_constant_buffers_bind_slot;
+		bindings[idx].pImmutableSamplers = nullptr;
 
 		idx++;
 
@@ -258,6 +260,7 @@ namespace vk
 		bindings[idx].descriptorCount = 1;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 		bindings[idx].binding = binding_table.fragment_state_bind_slot;
+		bindings[idx].pImmutableSamplers = nullptr;
 
 		idx++;
 
@@ -265,6 +268,7 @@ namespace vk
 		bindings[idx].descriptorCount = 1;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 		bindings[idx].binding = binding_table.fragment_texture_params_bind_slot;
+		bindings[idx].pImmutableSamplers = nullptr;
 
 		idx++;
 
@@ -272,6 +276,7 @@ namespace vk
 		bindings[idx].descriptorCount = 1;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 		bindings[idx].binding = binding_table.vertex_constant_buffers_bind_slot;
+		bindings[idx].pImmutableSamplers = nullptr;
 
 		idx++;
 
@@ -279,6 +284,7 @@ namespace vk
 		bindings[idx].descriptorCount = 1;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS;
 		bindings[idx].binding = binding_table.vertex_params_bind_slot;
+		bindings[idx].pImmutableSamplers = nullptr;
 
 		idx++;
 
@@ -286,6 +292,7 @@ namespace vk
 		bindings[idx].descriptorCount = 1;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 		bindings[idx].binding = binding_table.conditional_render_predicate_slot;
+		bindings[idx].pImmutableSamplers = nullptr;
 
 		idx++;
 
@@ -293,6 +300,7 @@ namespace vk
 		bindings[idx].descriptorCount = 1;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 		bindings[idx].binding = binding_table.rasterizer_env_bind_slot;
+		bindings[idx].pImmutableSamplers = nullptr;
 
 		idx++;
 
@@ -300,6 +308,7 @@ namespace vk
 		bindings[idx].descriptorCount = 16;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 		bindings[idx].binding = binding_table.textures_first_bind_slot;
+		bindings[idx].pImmutableSamplers = nullptr;
 
 		m_fragment_textures_start = bindings[idx].binding;
 		idx++;
@@ -308,6 +317,7 @@ namespace vk
 		bindings[idx].descriptorCount = 16;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 		bindings[idx].binding = binding_table.textures_first_bind_slot + 1;
+		bindings[idx].pImmutableSamplers = nullptr;
 
 		idx++;
 
@@ -315,6 +325,7 @@ namespace vk
 		bindings[idx].descriptorCount = 16;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 		bindings[idx].binding = binding_table.textures_first_bind_slot + 2;
+		bindings[idx].pImmutableSamplers = nullptr;
 
 		idx++;
 
@@ -322,6 +333,7 @@ namespace vk
 		bindings[idx].descriptorCount = 16;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 		bindings[idx].binding = binding_table.textures_first_bind_slot + 3;
+		bindings[idx].pImmutableSamplers = nullptr;
 
 		idx++;
 
@@ -329,6 +341,7 @@ namespace vk
 		bindings[idx].descriptorCount = 4;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 		bindings[idx].binding = binding_table.textures_first_bind_slot + 4;
+		bindings[idx].pImmutableSamplers = nullptr;
 
 		idx++;
 
@@ -336,6 +349,7 @@ namespace vk
 		bindings[idx].descriptorCount = 1;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 		bindings[idx].binding = binding_table.textures_first_bind_slot + 5;
+		bindings[idx].pImmutableSamplers = nullptr;
 
 		m_vertex_instruction_start = bindings[idx].binding;
 		idx++;
@@ -344,6 +358,7 @@ namespace vk
 		bindings[idx].descriptorCount = 1;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 		bindings[idx].binding = binding_table.textures_first_bind_slot + 6;
+		bindings[idx].pImmutableSamplers = nullptr;
 
 		m_fragment_instruction_start = bindings[idx].binding;
 		idx++;
@@ -378,13 +393,15 @@ namespace vk
 	{
 		const auto max_draw_calls = dev.get_descriptor_max_draw_calls();
 
-		std::vector<VkDescriptorPoolSize> sizes;
-		sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER , 6 * max_draw_calls });
-		sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER , 3 * max_draw_calls });
-		sizes.push_back({ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER , 68 * max_draw_calls });
-		sizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3 * max_draw_calls });
+		rsx::simple_array<VkDescriptorPoolSize> sizes =
+		{
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER , 6 },
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER , 3 },
+			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER , 68 },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3 }
+		};
 
-		m_descriptor_pool.create(dev, sizes.data(), ::size32(sizes), max_draw_calls, 2);
+		m_descriptor_pool.create(dev, sizes, max_draw_calls);
 	}
 
 	void shader_interpreter::init(const vk::render_device& dev)
@@ -518,23 +535,7 @@ namespace vk
 
 	VkDescriptorSet shader_interpreter::allocate_descriptor_set()
 	{
-		if (!m_descriptor_pool.can_allocate(1u, m_used_descriptors))
-		{
-			m_descriptor_pool.reset(0);
-			m_used_descriptors = 0;
-		}
-
-		VkDescriptorSetAllocateInfo alloc_info = {};
-		alloc_info.descriptorPool = m_descriptor_pool;
-		alloc_info.descriptorSetCount = 1;
-		alloc_info.pSetLayouts = &m_shared_descriptor_layout;
-		alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-
-		VkDescriptorSet new_descriptor_set;
-		CHECK_RESULT(vkAllocateDescriptorSets(m_device, &alloc_info, &new_descriptor_set));
-
-		m_used_descriptors++;
-		return new_descriptor_set;
+		return m_descriptor_pool.allocate(m_shared_descriptor_layout);
 	}
 
 	glsl::program* shader_interpreter::get(const vk::pipeline_props& properties, const program_hash_util::fragment_program_utils::fragment_program_metadata& metadata)

@@ -6,7 +6,7 @@
 #include "shortcut_utils.h"
 #include "Utilities/lockless.h"
 #include "Utilities/mutex.h"
-#include "Emu/System.h"
+#include "Emu/config_mode.h"
 
 #include <QMainWindow>
 #include <QToolBar>
@@ -14,13 +14,17 @@
 #include <QSet>
 #include <QTableWidgetItem>
 #include <QFutureWatcher>
+#include <QTimer>
 
 #include <memory>
+#include <set>
 
+class game_list_table;
 class game_list_grid;
 class gui_settings;
 class emu_settings;
 class persistent_settings;
+class progress_dialog;
 
 class game_list_frame : public custom_dock_widget
 {
@@ -29,12 +33,6 @@ class game_list_frame : public custom_dock_widget
 public:
 	explicit game_list_frame(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, std::shared_ptr<persistent_settings> persistent_settings, QWidget* parent = nullptr);
 	~game_list_frame();
-
-	/** Fix columns with width smaller than the minimal section size */
-	void FixNarrowColumns() const;
-
-	/** Resizes the columns to their contents and adds a small spacing */
-	void ResizeColumnsToContents(int spacing = 20) const;
 
 	/** Refresh the gamelist with/without loading game data from files. Public so that main frame can refresh after vfs or install */
 	void Refresh(const bool from_drive = false, const bool scroll_after = true);
@@ -60,10 +58,9 @@ public:
 
 	const QList<game_info>& GetGameInfo() const;
 
-	// Returns the visible version string in the game list
-	static std::string GetGameVersion(const game_info& game);
-
 	void CreateShortcuts(const game_info& gameinfo, const std::set<gui::utils::shortcut_location>& locations);
+
+	bool IsEntryVisible(const game_info& game, bool search_fallback = false) const;
 
 public Q_SLOTS:
 	void BatchCreatePPUCaches();
@@ -80,11 +77,13 @@ public Q_SLOTS:
 	void FocusAndSelectFirstEntryIfNoneIs();
 
 private Q_SLOTS:
+	void OnParsingFinished();
 	void OnRefreshFinished();
 	void OnCompatFinished();
 	void OnColClicked(int col);
 	void ShowContextMenu(const QPoint &pos);
 	void doubleClickedSlot(QTableWidgetItem *item);
+	void doubleClickedSlot(const game_info& game);
 	void ItemSelectionChangedSlot();
 Q_SIGNALS:
 	void GameListFrameClosed();
@@ -92,26 +91,15 @@ Q_SIGNALS:
 	void RequestBoot(const game_info& game, cfg_mode config_mode = cfg_mode::custom, const std::string& config_path = "", const std::string& savestate = "");
 	void RequestIconSizeChange(const int& val);
 	void NotifyEmuSettingsChange();
-	void IconReady(movie_item* item);
-	void SizeOnDiskReady(const game_info& game);
 	void FocusToSearchBar();
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
 	void closeEvent(QCloseEvent* event) override;
-	void resizeEvent(QResizeEvent *event) override;
 	bool eventFilter(QObject *object, QEvent *event) override;
 private:
-	QPixmap PaintedPixmap(const QPixmap& icon, bool paint_config_icon = false, bool paint_pad_config_icon = false, const QColor& color = QColor()) const;
-	QColor getGridCompatibilityColor(const QString& string) const;
-	void IconLoadFunction(game_info game, std::shared_ptr<atomic_t<bool>> cancel);
+	void push_path(const std::string& path, std::vector<std::string>& legit_paths);
 
-	/** Sets the custom config icon. Only call this for list title items. */
-	void SetCustomConfigIcon(QTableWidgetItem* title_item, const game_info& game);
 	void ShowCustomConfigIcon(const game_info& game);
-	void PopulateGameList();
-	void PopulateGameGrid(int maxCols, const QSize& image_size, const QColor& image_color);
-	bool IsEntryVisible(const game_info& game, bool search_fallback = false);
-	void SortGameList() const;
 	bool SearchMatchesApp(const QString& name, const QString& serial, bool fallback = false) const;
 
 	bool RemoveCustomConfiguration(const std::string& title_id, const game_info& game = nullptr, bool is_interactive = false);
@@ -122,11 +110,9 @@ private:
 	static bool CreatePPUCache(const std::string& path, const std::string& serial = {});
 	static bool CreatePPUCache(const game_info& game);
 
-	QString GetLastPlayedBySerial(const QString& serial) const;
 	static std::string GetCacheDirBySerial(const std::string& serial);
 	static std::string GetDataDirBySerial(const std::string& serial);
 	std::string CurrentSelectionPath();
-	static std::string GetStringFromU32(const u32& key, const std::map<u32, QString>& map, bool combined = false);
 
 	game_info GetGameInfoByMode(const QTableWidgetItem* item) const;
 	static game_info GetGameInfoFromItem(const QTableWidgetItem* item);
@@ -142,11 +128,14 @@ private:
 	game_list_grid* m_game_grid = nullptr;
 
 	// Game List
-	game_list* m_game_list = nullptr;
+	game_list_table* m_game_list = nullptr;
 	game_compatibility* m_game_compat = nullptr;
+	progress_dialog* m_progress_dialog = nullptr;
+	QTimer* m_progress_dialog_timer = nullptr;
 	QList<QAction*> m_columnActs;
-	Qt::SortOrder m_col_sort_order;
-	int m_sort_column;
+	Qt::SortOrder m_col_sort_order{};
+	int m_sort_column{};
+	bool m_initial_refresh_done = false;
 	QMap<QString, QString> m_notes;
 	QMap<QString, QString> m_titles;
 
@@ -175,6 +164,8 @@ private:
 	QSet<QString> m_serials;
 	QMutex m_games_mutex;
 	lf_queue<game_info> m_games;
+	const std::array<int, 1> m_parsing_threads{0};
+	QFutureWatcher<void> m_parsing_watcher;
 	QFutureWatcher<void> m_refresh_watcher;
 	QSet<QString> m_hidden_list;
 	bool m_show_hidden{false};

@@ -226,6 +226,11 @@ namespace cfg
 			return m_value;
 		}
 
+		T get_default() const
+		{
+			return def;
+		}
+
 		void set(T value)
 		{
 			m_value = value;

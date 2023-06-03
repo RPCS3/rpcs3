@@ -1105,7 +1105,7 @@ void spu_thread::dump_regs(std::string& ret) const
 			fmt::append(ret, "%08x %08x %08x %08x", r.u32r[0], r.u32r[1], r.u32r[2], r.u32r[3]);
 		}
 
-		if (i3 >= 0x80 && is_exec_code(i3))
+		if (i3 >= 0x80 && is_exec_code(i3, ls))
 		{
 			dis_asm.disasm(i3);
 			fmt::append(ret, " -> %s", dis_asm.last_opcode);
@@ -1179,8 +1179,10 @@ std::vector<std::pair<u32, u32>> spu_thread::dump_callstack_list() const
 
 	bool first = true;
 
+	const v128 gpr0 = gpr[0];
+
 	// Declare first 128-bytes as invalid for stack (common values such as 0 do not make sense here)
-	for (u32 sp = gpr[1]._u32[3]; (sp & 0xF) == 0u && sp >= 0x80u && sp <= 0x3FFE0u; sp = _ref<u32>(sp), first = false)
+	for (u32 sp = gpr[1]._u32[3]; (sp & 0xF) == 0u && sp >= 0x80u && sp <= 0x3FFE0u; first = false)
 	{
 		v128 lr = _ref<v128>(sp + 16);
 
@@ -1195,7 +1197,7 @@ std::vector<std::pair<u32, u32>> spu_thread::dump_callstack_list() const
 				return true;
 			}
 
-			return !addr || !is_exec_code(addr);
+			return !addr || !is_exec_code(addr, ls);
 		};
 
 		if (is_invalid(lr))
@@ -1204,7 +1206,7 @@ std::vector<std::pair<u32, u32>> spu_thread::dump_callstack_list() const
 			{
 				// Function hasn't saved LR, could be because it's a leaf function
 				// Use LR directly instead
-				lr = gpr[0];
+				lr = gpr0;
 
 				if (is_invalid(lr))
 				{
@@ -1217,9 +1219,107 @@ std::vector<std::pair<u32, u32>> spu_thread::dump_callstack_list() const
 				break;
 			}
 		}
+		else if (first && lr._u32[3] != gpr0._u32[3] && !is_invalid(gpr0))
+		{
+			// Detect functions with no stack or before LR has been stored
+			std::vector<bool> passed(SPU_LS_SIZE / 4);
+			std::vector<u32> start_points{pc};
+
+			bool is_ok = false;
+			bool all_failed = false;
+
+			for (usz start = 0; !all_failed && start < start_points.size(); start++)
+			{
+				for (u32 i = start_points[start]; i < SPU_LS_SIZE;)
+				{
+					if (passed[i / 4])
+					{
+						// Already passed
+						break;
+					}
+
+					passed[i / 4] = true;
+
+					const spu_opcode_t op{_ref<u32>(i)};
+					const auto type = s_spu_itype.decode(op.opcode);
+
+					if (start == 0 && type == spu_itype::STQD && op.ra == 1u && op.rt == 0u)
+					{
+						// Saving LR to stack: this is indeed a new function
+						is_ok = true;
+						break;
+					}
+
+					if (type == spu_itype::LQD && op.rt == 0u)
+					{
+						// Loading LR from stack: this is not a leaf function
+						all_failed = true;
+						break;
+					}
+
+					if (type == spu_itype::UNK)
+					{
+						// Ignore for now
+						break;
+					}
+
+					if ((type == spu_itype::BRSL || type == spu_itype::BRASL || type == spu_itype::BISL) && op.rt == 0u)
+					{
+						// Gave up on link before saving
+						all_failed = true;
+						break;
+					}
+
+					if (type & spu_itype::branch && type >= spu_itype::BI && op.ra == 0u)
+					{
+						// Returned
+						is_ok = true;
+						break;
+					}
+
+					const auto results = op_branch_targets(i, op);
+
+					bool proceeded = false;
+					for (usz res_i = 0; res_i < results.size(); res_i++)
+					{
+						const u32 route_pc = results[res_i];
+						if (route_pc < SPU_LS_SIZE && !passed[route_pc / 4])
+						{
+							if (proceeded)
+							{
+								// Remember next route start point
+								start_points.emplace_back(route_pc);
+							}
+							else
+							{
+								// Next PC
+								i = route_pc;
+								proceeded = true;
+							}
+						}
+					}
+				}
+			}
+
+			if (is_ok && !all_failed)
+			{
+				// Same stack as far as we know (for now)
+				call_stack_list.emplace_back(gpr0._u32[3], sp);
+			}
+		}
 
 		// TODO: function addresses too
 		call_stack_list.emplace_back(lr._u32[3], sp);
+
+		const u32 temp_sp = _ref<u32>(sp);
+
+		if (temp_sp <= sp)
+		{
+			// Ensure ascending stack frame pointers
+			break;
+		}
+
+		sp = temp_sp;
 	}
 
 	return call_stack_list;
@@ -1294,7 +1394,7 @@ void spu_thread::cpu_on_stop()
 	{
 		if (start_time)
 		{
-			ppu_log.warning("'%s' aborted (%fs)", current_func, (get_guest_system_time() - start_time) / 1000000.);
+			ppu_log.warning("'%s' aborted (%fs)", current_func, (get_system_time() - start_time) / 1000000.);
 		}
 		else
 		{
@@ -1449,6 +1549,8 @@ void spu_thread::cpu_task()
 #ifdef __APPLE__
 	pthread_jit_write_protect_np(true);
 #endif
+	start_time = 0;
+
 	// Get next PC and SPU Interrupt status
 	pc = status_npc.load().npc;
 
@@ -3812,7 +3914,7 @@ bool spu_thread::check_mfc_interrupts(u32 next_pc)
 	return false;
 }
 
-bool spu_thread::is_exec_code(u32 addr) const
+bool spu_thread::is_exec_code(u32 addr, const u8* ls_ptr)
 {
 	if (addr & ~0x3FFFC)
 	{
@@ -3822,7 +3924,7 @@ bool spu_thread::is_exec_code(u32 addr) const
 	for (u32 i = 0; i < 30; i++)
 	{
 		const u32 addr0 = addr + (i * 4);
-		const u32 op = _ref<u32>(addr0);
+		const u32 op = read_from_ptr<be_t<u32>>(ls_ptr + addr0);
 		const auto type = s_spu_itype.decode(op);
 
 		if (type == spu_itype::UNK || !op)
@@ -4933,6 +5035,8 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 
 				spu_log.trace("sys_spu_thread_send_event(spup=%d, data0=0x%x, data1=0x%x)", spup, value & 0x00ffffff, data);
 
+				spu_function_logger logger(*this, "sys_spu_thread_send_event");
+
 				std::shared_ptr<lv2_event_queue> queue;
 				{
 					std::lock_guard lock(group->mutex);
@@ -4983,7 +5087,13 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 
 				spu_log.trace("sys_spu_thread_throw_event(spup=%d, data0=0x%x, data1=0x%x)", spup, value & 0x00ffffff, data);
 
-				const auto queue = (std::lock_guard{group->mutex}, this->spup[spup]);
+				spu_function_logger logger(*this, "sys_spu_thread_throw_event");
+
+				std::shared_ptr<lv2_event_queue> queue;
+				{
+					std::lock_guard lock{group->mutex};
+					queue = this->spup[spup];
+				}
 
 				// TODO: check passing spup value
 				if (auto res = queue ? queue->send(SYS_SPU_THREAD_EVENT_USER_KEY, lv2_id, (u64{spup} << 32) | (value & 0x00ffffff), data) : CELL_ENOTCONN)
@@ -5012,6 +5122,8 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 				}
 
 				spu_log.trace("sys_event_flag_set_bit(id=%d, value=0x%x (flag=%d))", data, value, flag);
+
+				spu_function_logger logger(*this, "sys_event_flag_set_bit");
 
 				{
 					std::lock_guard lock(group->mutex);
@@ -5055,6 +5167,8 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 				}
 
 				spu_log.trace("sys_event_flag_set_bit_impatient(id=%d, value=0x%x (flag=%d))", data, value, flag);
+
+				spu_function_logger logger(*this, "sys_event_flag_set_bit_impatient");
 
 				// Use the syscall to set flag
 				if (sys_event_flag_set(*this, data, 1ull << flag) + 0u == CELL_EAGAIN)
@@ -5221,7 +5335,7 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 
 	case SPU_WrEventMask:
 	{
-		get_events(value);
+		get_events(value | static_cast<u32>(ch_events.load().mask));
 
 		if (ch_events.atomic_op([&](ch_events_t& events)
 		{
@@ -5233,7 +5347,7 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 				return true;
 			}
 
-			return false;
+			return !!events.count;
 		}))
 		{
 			// Check interrupts in case count is 1
@@ -5249,7 +5363,7 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 	case SPU_WrEventAck:
 	{
 		// "Collect" events before final acknowledgment
-		get_events(value);
+		get_events(value | static_cast<u32>(ch_events.load().mask));
 
 		bool freeze_dec = false;
 
@@ -5265,7 +5379,7 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 				return true;
 			}
 
-			return false;
+			return !!events.count;
 		});
 
 		if (!is_dec_frozen && freeze_dec)
@@ -5657,6 +5771,8 @@ bool spu_thread::stop_and_signal(u32 code)
 
 		spu_log.trace("sys_spu_thread_group_exit(status=0x%x)", value);
 
+		spu_function_logger logger(*this, "sys_spu_thread_group_exit");
+
 		while (true)
 		{
 			// Check group status (by actually checking thread status), wait if necessary
@@ -5766,6 +5882,8 @@ bool spu_thread::stop_and_signal(u32 code)
 			fmt::throw_exception("sys_spu_thread_exit(): Out_MBox is empty");
 		}
 
+		spu_function_logger logger(*this, "sys_spu_thread_exit");
+
 		spu_log.trace("sys_spu_thread_exit(status=0x%x)", value);
 		last_exit_status.release(value);
 		set_status_npc();
@@ -5825,20 +5943,82 @@ void spu_thread::fast_call(u32 ls_addr)
 	gpr[1]._u32[3] = old_stack;
 }
 
+spu_exec_object spu_thread::capture_memory_as_elf(std::span<spu_memory_segment_dump_data> segs, u32 pc_hint)
+{
+	spu_exec_object spu_exec;
+	spu_exec.set_error(elf_error::ok);
+
+	std::vector<u8> all_data(SPU_LS_SIZE);
+
+	for (auto& seg : segs)
+	{
+		std::vector<uchar> data(seg.segment_size);
+
+		if (auto [vm_addr, ok] = vm::try_get_addr(seg.src_addr); ok)
+		{
+			if (!vm::try_access(vm_addr, data.data(), data.size(), false))
+			{
+				spu_log.error("capture_memory_as_elf(): Failed to read {0x%x..0x%x}, aborting capture.", +vm_addr, vm_addr + seg.segment_size - 1);
+				spu_exec.set_error(elf_error::stream_data);
+				return spu_exec;
+			}
+		}
+		else
+		{
+			std::memcpy(data.data(), seg.src_addr, data.size());
+		}
+
+		std::memcpy(all_data.data() + seg.ls_addr, data.data(), data.size());
+
+		auto& prog = spu_exec.progs.emplace_back(SYS_SPU_SEGMENT_TYPE_COPY, seg.flags & 0x7, seg.ls_addr, seg.segment_size, 8, std::move(data));
+
+		prog.p_paddr = prog.p_vaddr;
+
+		spu_log.success("Segment: p_type=0x%x, p_vaddr=0x%x, p_filesz=0x%x, p_memsz=0x%x", prog.p_type, prog.p_vaddr, prog.p_filesz, prog.p_memsz);
+	}
+
+
+	u32 pc0 = pc_hint;
+
+	if (pc_hint != umax)
+	{
+		for (pc0 = pc_hint; pc0; pc0 -= 4)
+		{
+			const u32 op = read_from_ptr<be_t<u32>>(all_data.data(), pc0 - 4);
+
+			// Try to find function entry (if they are placed sequentially search for BI $LR of previous function)
+			if (!op || op == 0x35000000u || s_spu_itype.decode(op) == spu_itype::UNK)
+			{
+				if (is_exec_code(pc0, all_data.data()))
+					break;
+			}
+		}
+	}
+	else
+	{
+		for (pc0 = 0; pc0 < SPU_LS_SIZE; pc0 += 4)
+		{
+			// Try to find a function entry (very basic)
+			if (is_exec_code(pc0, all_data.data()))
+				break;
+		}
+	}
+
+	spu_exec.header.e_entry = pc0;
+
+	return spu_exec;
+}
+
 bool spu_thread::capture_state()
 {
 	ensure(state & cpu_flag::wait);
-
-	spu_exec_object spu_exec;
 
 	// Save data as an executable segment, even the SPU stack
 	// In the past, an optimization was made here to save only non-zero chunks of data
 	// But Ghidra didn't like accessing memory out of chunks (pretty common)
 	// So it has been reverted
-	auto& prog = spu_exec.progs.emplace_back(SYS_SPU_SEGMENT_TYPE_COPY, 0x7, 0, SPU_LS_SIZE, 8, std::vector<uchar>(ls, ls + SPU_LS_SIZE));
-
-	prog.p_paddr = prog.p_vaddr;
-	spu_log.success("Segment: p_type=0x%x, p_vaddr=0x%x, p_filesz=0x%x, p_memsz=0x%x", prog.p_type, prog.p_vaddr, prog.p_filesz, prog.p_memsz);
+	spu_memory_segment_dump_data single_seg{.ls_addr = 0, .src_addr = ls, .segment_size = SPU_LS_SIZE};
+	spu_exec_object spu_exec = capture_memory_as_elf({&single_seg, 1}, pc);
 
 	std::string name;
 
@@ -5856,22 +6036,6 @@ bool spu_thread::capture_state()
 	{
 		fmt::append(name, "RawSPU.%u", lv2_id);
 	}
-
-	u32 pc0 = pc;
-
-	for (; pc0; pc0 -= 4)
-	{
-		be_t<u32> op;
-		std::memcpy(&op, prog.bin.data() + pc0 - 4, 4);
-
-		// Try to find function entry (if they are placed sequentially search for BI $LR of previous function)
-		if (!op || op == 0x35000000u || s_spu_itype.decode(op) == spu_itype::UNK)
-		{
-			break;
-		}
-	}
-
-	spu_exec.header.e_entry = pc0;
 
 	name = vfs::escape(name, true);
 	std::replace(name.begin(), name.end(), ' ', '_');
@@ -5927,7 +6091,7 @@ bool spu_thread::capture_state()
 	}
 
 	rewind = std::make_shared<utils::serial>();
-	(*rewind)(std::span(prog.bin.data(), prog.bin.size())); // span serialization doesn't remember size which is what we need
+	(*rewind)(std::span(spu_exec.progs[0].bin.data(), spu_exec.progs[0].bin.size())); // span serialization doesn't remember size which is what we need
 	serialize_common(*rewind);
 
 	// TODO: Save and restore decrementer state properly
@@ -5965,7 +6129,7 @@ void spu_thread::wakeup_delay(u32 div) const
 		thread_ctrl::wait_for_accurate(utils::aligned_div(+g_cfg.core.spu_wakeup_delay, div));
 }
 
-spu_function_logger::spu_function_logger(spu_thread& spu, const char* func)
+spu_function_logger::spu_function_logger(spu_thread& spu, const char* func) noexcept
 	: spu(spu)
 {
 	spu.current_func = func;
@@ -5993,11 +6157,13 @@ spu_thread::thread_name_t::operator std::string() const
 	return full_name;
 }
 
-spu_thread::priority_t::operator s32() const
+spu_thread::spu_prio_t spu_thread::priority_t::load() const
 {
 	if (_this->get_type() != spu_type::threaded || !_this->group->has_scheduler_context)
 	{
-		return s32{smax};
+		spu_thread::spu_prio_t prio{};
+		prio.prio = smax;
+		return prio;
 	}
 
 	return _this->group->prio;

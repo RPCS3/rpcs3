@@ -345,6 +345,8 @@ if(USE_SDL)
 			message(STATUS "Using system SDL2")
 			add_library(3rdparty_sdl2 INTERFACE)
 			target_compile_definitions(3rdparty_sdl2 INTERFACE -DHAVE_SDL2=1)
+			target_include_directories(3rdparty_sdl2 INTERFACE ${SDL2_INCLUDE_DIRS})
+			target_link_libraries(3rdparty_sdl2 INTERFACE ${SDL2_LIBRARIES})
 			set(SDL2_TARGET 3rdparty_sdl2)
 		else()
 			message(FATAL_ERROR "SDL2 is not available on this system")
@@ -360,6 +362,9 @@ endif()
 
 # MINIUPNP
 add_subdirectory(miniupnp EXCLUDE_FROM_ALL)
+
+# RTMIDI
+add_subdirectory(rtmidi EXCLUDE_FROM_ALL)
 
 # add nice ALIAS targets for ease of use
 if(USE_SYSTEM_LIBUSB)
@@ -389,3 +394,4 @@ add_library(3rdparty::libcurl ALIAS libcurl)
 add_library(3rdparty::soundtouch ALIAS soundtouch)
 add_library(3rdparty::sdl2 ALIAS ${SDL2_TARGET})
 add_library(3rdparty::miniupnpc ALIAS libminiupnpc-static)
+add_library(3rdparty::rtmidi ALIAS rtmidi)

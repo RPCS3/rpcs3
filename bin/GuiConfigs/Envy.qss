@@ -454,7 +454,7 @@ QListWidget::item:selected {
 }
 
 QListWidget::item:hover {
-	background-color:  #30333a;
+	background-color: #30333a;
 	color: #8cf944;
 	border-radius: 0.25em;
 }
@@ -565,7 +565,7 @@ QTableView {
 }
 
 QTableView::item:hover {
-    color: #8cf944;
+	color: #8cf944;
 }
 
 /* Game Icon Background */
@@ -641,24 +641,42 @@ QLabel#debugger_frame_pc {
 /* Tree view changes*/
 QTreeView::branch:has-children:!has-siblings:closed,
 QTreeView::branch:closed:has-children:has-siblings {
-    border-image: none;
-    image: url("GuiConfigs/list_arrow_white.png");
+	border-image: none;
+	image: url("GuiConfigs/list_arrow_white.png");
 }
 
 QTreeView::branch:open:has-children:!has-siblings,
-QTreeView::branch:open:has-children:has-siblings  {
-    border-image: none;
-    image: url("GuiConfigs/list_arrow_down_white.png");
+QTreeView::branch:open:has-children:has-siblings {
+	border-image: none;
+	image: url("GuiConfigs/list_arrow_down_white.png");
 }
 
 QTreeView::branch:has-children:!has-siblings:closed:hover,
 QTreeView::branch:closed:has-children:has-siblings:hover {
-    border-image: none;
-    image: url("GuiConfigs/list_arrow_green.png");
+	border-image: none;
+	image: url("GuiConfigs/list_arrow_green.png");
 }
 
 QTreeView::branch:open:has-children:!has-siblings:hover,
-QTreeView::branch:open:has-children:has-siblings:hover  {
-    border-image: none;
-    image: url("GuiConfigs/list_arrow_down_green.png");
+QTreeView::branch:open:has-children:has-siblings:hover {
+	border-image: none;
+	image: url("GuiConfigs/list_arrow_down_green.png");
+}
+
+/* Game Grid */
+#game_list_grid_item[selected="true"] {
+	background: #2d3038;
+}
+#game_list_grid_item:focus {
+	background: #2d3038;
+}
+
+/* Game Grid hover and focus: we need to handle properties differently when using descendants */
+#game_list_grid_item[selected="true"] #game_list_grid_item_title_label {
+	background-color: #2d3038;
+	color: #8cf944;
+}
+#game_list_grid_item[focus="true"] #game_list_grid_item_title_label {
+	background-color: #2d3038;
+	color: #8cf944;
 }

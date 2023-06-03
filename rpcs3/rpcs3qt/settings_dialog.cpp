@@ -980,7 +980,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	const auto change_microphone_device = [mic_none, propagate_used_devices, this](u32 index, const QString& text)
 	{
 		m_emu_settings->SetSetting(emu_settings_type::MicrophoneDevices, m_emu_settings->m_microphone_creator.set_device(index, text));
-		if (const u32 next_index = index + 1; next_index < 4 && text == mic_none)
+		if (const u32 next_index = index + 1; next_index < m_mics_combo.size() && text == mic_none)
 			m_mics_combo[next_index]->setCurrentText(mic_none);
 		propagate_used_devices();
 	};
@@ -1133,7 +1133,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	const std::array<std::string, 4> mic_sel_list = m_emu_settings->m_microphone_creator.get_selection_list();
 
-	for (s32 index = 3; index >= 0; index--)
+	for (s32 index = static_cast<int>(mic_sel_list.size()) - 1; index >= 0; index--)
 	{
 		const QString qmic = qstr(mic_sel_list[index]);
 
@@ -1254,8 +1254,107 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->backgroundInputBox, emu_settings_type::BackgroundInput);
 	SubscribeTooltip(ui->backgroundInputBox, tooltips.settings.background_input);
 
+	m_emu_settings->EnhanceCheckBox(ui->padConnectionBox, emu_settings_type::PadConnection);
+	SubscribeTooltip(ui->padConnectionBox, tooltips.settings.pad_connection);
+
 	m_emu_settings->EnhanceCheckBox(ui->showMoveCursorBox, emu_settings_type::ShowMoveCursor);
 	SubscribeTooltip(ui->showMoveCursorBox, tooltips.settings.show_move_cursor);
+
+	// Midi
+	const QString midi_none = m_emu_settings->m_midi_creator.get_none();
+	const midi_device def_midi_device{ .type = midi_device_type::keyboard, .name = midi_none.toStdString() };
+	const std::vector<std::string> midi_device_types = cfg::try_to_enum_list(&fmt_class_string<midi_device_type>::format);
+
+	m_midi_type_combo[0] = ui->midiTypeBox1;
+	m_midi_type_combo[1] = ui->midiTypeBox2;
+	m_midi_type_combo[2] = ui->midiTypeBox3;
+	m_midi_device_combo[0] = ui->midiDeviceBox1;
+	m_midi_device_combo[1] = ui->midiDeviceBox2;
+	m_midi_device_combo[2] = ui->midiDeviceBox3;
+
+	SubscribeTooltip(ui->gb_midi_1, tooltips.settings.midi_devices);
+	SubscribeTooltip(ui->gb_midi_2, tooltips.settings.midi_devices);
+	SubscribeTooltip(ui->gb_midi_3, tooltips.settings.midi_devices);
+
+	const auto propagate_midi_devices = [midi_none, this]()
+	{
+		for (u32 index = 0; index < m_midi_device_combo.size(); index++)
+		{
+			const QString cur_item = m_midi_device_combo[index]->currentText();
+			QStringList cur_list = m_emu_settings->m_midi_creator.get_midi_list();
+			for (u32 subindex = 0; subindex < m_midi_device_combo.size(); subindex++)
+			{
+				if (subindex != index && m_midi_device_combo[subindex]->currentText() != midi_none)
+					cur_list.removeOne(m_midi_device_combo[subindex]->currentText());
+			}
+			m_midi_device_combo[index]->blockSignals(true);
+			m_midi_device_combo[index]->clear();
+			m_midi_device_combo[index]->addItems(cur_list);
+			m_midi_device_combo[index]->setCurrentText(cur_item);
+			m_midi_device_combo[index]->blockSignals(false);
+		}
+	};
+
+	const auto change_midi_device = [propagate_midi_devices, this](u32 index, const midi_device& device)
+	{
+		m_emu_settings->SetSetting(emu_settings_type::MidiDevices, m_emu_settings->m_midi_creator.set_device(index, device));
+		propagate_midi_devices();
+	};
+
+	for (u32 i = 0; i < m_midi_type_combo.size(); i++)
+	{
+		m_midi_type_combo[i]->blockSignals(true);
+		for (const std::string& type_str : midi_device_types)
+		{
+			midi_device_type type{};
+			if (u64 result; cfg::try_to_enum_value(&result, &fmt_class_string<midi_device_type>::format, type_str))
+			{
+				type = static_cast<midi_device_type>(static_cast<std::underlying_type_t<midi_device_type>>(result));
+			}
+			const QString type_name = m_emu_settings->GetLocalizedSetting(QString::fromStdString(fmt::format("%s", type)), emu_settings_type::MidiDevices, static_cast<int>(type), false);
+			m_midi_type_combo[i]->addItem(type_name, static_cast<int>(type));
+		}
+		m_midi_type_combo[i]->blockSignals(false);
+
+		connect(m_midi_type_combo[i], &QComboBox::currentTextChanged, this, [this, change_midi_device, i](const QString& /*text*/)
+		{
+			const midi_device device{ .type = static_cast<midi_device_type>(m_midi_type_combo[i]->currentData().toInt()), .name = m_midi_device_combo[i]->currentText().toStdString() };
+			change_midi_device(i, device);
+		});
+		connect(m_midi_device_combo[i], &QComboBox::currentTextChanged, this, [this, change_midi_device, i](const QString& text)
+		{
+			const midi_device device{ .type = static_cast<midi_device_type>(m_midi_type_combo[i]->currentData().toInt()), .name = text.toStdString() };
+			change_midi_device(i, device);
+		});
+		connect(this, &settings_dialog::signal_restore_dependant_defaults, this, [change_midi_device, i, def_midi_device]() { change_midi_device(i, def_midi_device); });
+	}
+
+	m_emu_settings->m_midi_creator.refresh_list();
+	propagate_midi_devices(); // Fills comboboxes list
+
+	m_emu_settings->m_midi_creator.parse_devices(m_emu_settings->GetSetting(emu_settings_type::MidiDevices));
+
+	const std::array<midi_device, max_midi_devices> midi_sel_list = m_emu_settings->m_midi_creator.get_selection_list();
+
+	for (s32 index = static_cast<int>(midi_sel_list.size()) - 1; index >= 0; index--)
+	{
+		const midi_device& device = midi_sel_list[index];
+		const QString qmidi = QString::fromStdString(device.name);
+
+		m_midi_type_combo[index]->setCurrentIndex(m_midi_type_combo[index]->findData(static_cast<int>(device.type)));
+
+		if (qmidi.isEmpty() || m_midi_device_combo[index]->findText(qmidi) == -1)
+		{
+			m_midi_device_combo[index]->setCurrentText(midi_none);
+			change_midi_device(index, def_midi_device); // Ensures the value is set in config
+		}
+		else
+		{
+			m_midi_device_combo[index]->setCurrentText(qmidi);
+		}
+	}
+
+	propagate_midi_devices(); // Enables/Disables comboboxes and checks values from config for sanity
 
 	//     _____           _                   _______    _
 	//    / ____|         | |                 |__   __|  | |

@@ -42,7 +42,6 @@ namespace vk
 		std::unordered_map<pipeline_key, std::unique_ptr<glsl::program>, key_hasher> m_program_cache;
 		std::unordered_map<u64, std::unique_ptr<glsl::shader>> m_fs_cache;
 		vk::descriptor_pool m_descriptor_pool;
-		u32 m_used_descriptors = 0;
 
 		u32 m_vertex_instruction_start = 0;
 		u32 m_fragment_instruction_start = 0;

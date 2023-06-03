@@ -65,6 +65,7 @@ DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResoluti
 #include "Utilities/Thread.h"
 #include "Utilities/File.h"
 #include "Utilities/StrUtil.h"
+#include "util/media_utils.h"
 #include "rpcs3_version.h"
 #include "Emu/System.h"
 #include "Emu/system_utils.hpp"
@@ -303,6 +304,7 @@ constexpr auto arg_rsx_capture  = "rsx-capture";
 constexpr auto arg_timer        = "high-res-timer";
 constexpr auto arg_verbose_curl = "verbose-curl";
 constexpr auto arg_any_location = "allow-any-location";
+constexpr auto arg_codecs       = "codecs";
 
 int find_arg(std::string arg, int& argc, char* argv[])
 {
@@ -664,11 +666,35 @@ int main(int argc, char** argv)
 	parser.addOption(QCommandLineOption(arg_timer, "Enable high resolution timer for better performance (windows)", "enabled", "1"));
 	parser.addOption(QCommandLineOption(arg_verbose_curl, "Enable verbose curl logging."));
 	parser.addOption(QCommandLineOption(arg_any_location, "Allow RPCS3 to be run from any location. Dangerous"));
+	const QCommandLineOption codec_option(arg_codecs, "List ffmpeg codecs");
+	parser.addOption(codec_option);
 	parser.process(app->arguments());
 
 	// Don't start up the full rpcs3 gui if we just want the version or help.
 	if (parser.isSet(version_option) || parser.isSet(help_option))
 		return 0;
+
+	if (parser.isSet(codec_option))
+	{
+#ifdef _WIN32
+		if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole())
+		{
+			[[maybe_unused]] const auto con_out = freopen("CONOUT$", "w", stdout);
+			[[maybe_unused]] const auto con_err = freopen("CONOUT$", "w", stderr);
+		}
+#endif
+		for (const utils::ffmpeg_codec& codec : utils::list_ffmpeg_decoders())
+		{
+			fprintf(stdout, "Found ffmpeg decoder: %s (%d, %s)\n", codec.name.c_str(), codec.codec_id, codec.long_name.c_str());
+			sys_log.success("Found ffmpeg decoder: %s (%d, %s)", codec.name, codec.codec_id, codec.long_name);
+		}
+		for (const utils::ffmpeg_codec& codec : utils::list_ffmpeg_encoders())
+		{
+			fprintf(stdout, "Found ffmpeg encoder: %s (%d, %s)\n", codec.name.c_str(), codec.codec_id, codec.long_name.c_str());
+			sys_log.success("Found ffmpeg encoder: %s (%d, %s)", codec.name, codec.codec_id, codec.long_name);
+		}
+		return 0;
+	}
 
 	// Set curl to verbose if needed
 	rpcs3::curl::g_curl_verbose = parser.isSet(arg_verbose_curl);
@@ -1260,7 +1286,7 @@ int main(int argc, char** argv)
 
 			const cfg_mode config_mode = config_path.empty() ? cfg_mode::custom : cfg_mode::config_override;
 
-			if (const game_boot_result error = Emu.BootGame(path, "", false, false, config_mode, config_path); error != game_boot_result::no_errors)
+			if (const game_boot_result error = Emu.BootGame(path, "", false, config_mode, config_path); error != game_boot_result::no_errors)
 			{
 				sys_log.error("Booting '%s' with cli argument failed: reason: %s", path, error);
 

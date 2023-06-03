@@ -365,21 +365,21 @@ void kernel_explorer::update()
 		{
 			auto& mutex = static_cast<lv2_mutex&>(obj);
 			const auto control = mutex.control.load();
-			show_waiters(add_solid_node(node, qstr(fmt::format(u8"Mutex 0x%08x: “%s”, %s,%s Owner: %#x, Locks: %u, Key: %#llx, Conds: %u", id, lv2_obj::name64(mutex.name), mutex.protocol,
+			show_waiters(add_solid_node(node, qstr(fmt::format(u8"Mutex 0x%08x: “%s”", id, lv2_obj::name64(mutex.name))), qstr(fmt::format(u8"Mutex 0x%08x: “%s”, %s,%s Owner: %#x, Locks: %u, Key: %#llx, Conds: %u", id, lv2_obj::name64(mutex.name), mutex.protocol,
 				mutex.recursive == SYS_SYNC_RECURSIVE ? " Recursive," : "", control.owner, +mutex.lock_count, mutex.key, mutex.cond_count))), control.sq);
 			break;
 		}
 		case SYS_COND_OBJECT:
 		{
 			auto& cond = static_cast<lv2_cond&>(obj);
-			show_waiters(add_solid_node(node, qstr(fmt::format(u8"Cond 0x%08x: “%s”, %s, Mutex: 0x%08x, Key: %#llx", id, lv2_obj::name64(cond.name), cond.mutex->protocol, cond.mtx_id, cond.key))), cond.sq);
+			show_waiters(add_solid_node(node, qstr(fmt::format(u8"Cond 0x%08x: “%s”", id, lv2_obj::name64(cond.name))), qstr(fmt::format(u8"Cond 0x%08x: “%s”, %s, Mutex: 0x%08x, Key: %#llx", id, lv2_obj::name64(cond.name), cond.mutex->protocol, cond.mtx_id, cond.key))), cond.sq);
 			break;
 		}
 		case SYS_RWLOCK_OBJECT:
 		{
 			auto& rw = static_cast<lv2_rwlock&>(obj);
 			const s64 val = rw.owner;
-			auto tree = add_solid_node(node, qstr(fmt::format(u8"RW Lock 0x%08x: “%s”, %s, Owner: %#x(%d), Key: %#llx", id, lv2_obj::name64(rw.name), rw.protocol,
+			auto tree = add_solid_node(node, qstr(fmt::format(u8"RW Lock 0x%08x: “%s”", id, lv2_obj::name64(rw.name))), qstr(fmt::format(u8"RW Lock 0x%08x: “%s”, %s, Owner: %#x(%d), Key: %#llx", id, lv2_obj::name64(rw.name), rw.protocol,
 				std::max<s64>(0, val >> 1), -std::min<s64>(0, val >> 1), rw.key)));
 
 			if (auto rq = +rw.rq)
@@ -417,7 +417,7 @@ void kernel_explorer::update()
 		case SYS_EVENT_QUEUE_OBJECT:
 		{
 			auto& eq = static_cast<lv2_event_queue&>(obj);
-			show_waiters(add_solid_node(node, qstr(fmt::format(u8"Event Queue 0x%08x: “%s”, %s, %s, Key: %#llx, Events: %zu/%d", id, lv2_obj::name64(eq.name), eq.protocol,
+			show_waiters(add_solid_node(node, qstr(fmt::format(u8"Event Queue 0x%08x: “%s”", id, lv2_obj::name64(eq.name))), qstr(fmt::format(u8"Event Queue 0x%08x: “%s”, %s, %s, Key: %#llx, Events: %zu/%d", id, lv2_obj::name64(eq.name), eq.protocol,
 				eq.type == SYS_SPU_QUEUE ? "SPU" : "PPU", eq.key, eq.events.size(), eq.size))), eq.type == SYS_SPU_QUEUE ? static_cast<cpu_thread*>(+eq.sq) : +eq.pq);
 			break;
 		}
@@ -515,11 +515,11 @@ void kernel_explorer::update()
 			}
 			else
 			{
-				show_waiters(add_solid_node(node, qstr(fmt::format(u8"LWMutex 0x%08x: “%s”, %s, Signal: %#x (unmapped/invalid control data at *0x%x)", id, lv2_obj::name64(lwm.name), lwm.protocol, +lv2_control.signaled, lwm.control))), lv2_control.sq);
+				show_waiters(add_solid_node(node, qstr(fmt::format(u8"LWMutex 0x%08x: “%s”", id, lv2_obj::name64(lwm.name))), qstr(fmt::format(u8"LWMutex 0x%08x: “%s”, %s, Signal: %#x (unmapped/invalid control data at *0x%x)", id, lv2_obj::name64(lwm.name), lwm.protocol, +lv2_control.signaled, lwm.control))), lv2_control.sq);
 				break;
 			}
 
-			show_waiters(add_solid_node(node, qstr(fmt::format(u8"LWMutex 0x%08x: “%s”, %s,%s Owner: %s, Locks: %u, Signal: %#x, Control: *0x%x", id, lv2_obj::name64(lwm.name), lwm.protocol,
+			show_waiters(add_solid_node(node, qstr(fmt::format(u8"LWMutex 0x%08x: “%s”", id, lv2_obj::name64(lwm.name))), qstr(fmt::format(u8"LWMutex 0x%08x: “%s”, %s,%s Owner: %s, Locks: %u, Signal: %#x, Control: *0x%x", id, lv2_obj::name64(lwm.name), lwm.protocol,
 					(lwm_data.attribute & SYS_SYNC_RECURSIVE) ? " Recursive," : "", owner_str, lwm_data.recursive_count, +lv2_control.signaled, lwm.control))), lv2_control.sq);
 			break;
 		}
@@ -527,31 +527,50 @@ void kernel_explorer::update()
 		{
 			auto& timer = static_cast<lv2_timer&>(obj);
 
-			sys_timer_information_t info;
-			timer.get_information(info);
+			u32 timer_state{SYS_TIMER_STATE_STOP};
+			std::shared_ptr<lv2_event_queue> port;
+			u64 source = 0;
+			u64 data1 = 0;
+			u64 data2 = 0;
 
-			add_leaf(node, qstr(fmt::format("Timer 0x%08x: State: %s, Period: 0x%llx, Next Expire: 0x%llx", id, info.timer_state ? "Running" : "Stopped"
-				, info.period, info.next_expire)));
+			u64 expire = 0; // Next expiration time
+			u64 period = 0; // Period (oneshot if 0)
+
+			if (reader_lock r_lock(timer.mutex); true)
+			{
+				timer_state = timer.state;
+
+				port = timer.port;
+				source = timer.source;
+				data1 = timer.data1;
+				data2 = timer.data2;
+
+				expire = timer.expire; // Next expiration time
+				period = timer.period; // Period (oneshot if 0)
+			}
+
+			add_leaf(node, qstr(fmt::format("Timer 0x%08x: State: %s, Period: 0x%llx, Next Expire: 0x%llx, Queue ID: 0x%08x, Source: 0x%08x, Data1: 0x%08x, Data2: 0x%08x", id, timer_state ? "Running" : "Stopped"
+				, period, expire, port ? port->id : 0, source, data1, data2)));
 			break;
 		}
 		case SYS_SEMAPHORE_OBJECT:
 		{
 			auto& sema = static_cast<lv2_sema&>(obj);
 			const auto val = +sema.val;
-			show_waiters(add_solid_node(node, qstr(fmt::format(u8"Sema 0x%08x: “%s”, %s, Count: %d/%d, Key: %#llx", id, lv2_obj::name64(sema.name), sema.protocol,
+			show_waiters(add_solid_node(node, qstr(fmt::format(u8"Sema 0x%08x: “%s”", id, lv2_obj::name64(sema.name))), qstr(fmt::format(u8"Sema 0x%08x: “%s”, %s, Count: %d/%d, Key: %#llx", id, lv2_obj::name64(sema.name), sema.protocol,
 				std::max<s32>(val, 0), sema.max, sema.key, -std::min<s32>(val, 0)))), sema.sq);
 			break;
 		}
 		case SYS_LWCOND_OBJECT:
 		{
 			auto& lwc = static_cast<lv2_lwcond&>(obj);
-			show_waiters(add_solid_node(node, qstr(fmt::format(u8"LWCond 0x%08x: “%s”, %s, OG LWMutex: 0x%08x, Control: *0x%x", id, lv2_obj::name64(lwc.name), lwc.protocol, lwc.lwid, lwc.control))), lwc.sq);
+			show_waiters(add_solid_node(node, qstr(fmt::format(u8"LWCond 0x%08x: “%s”", id, lv2_obj::name64(lwc.name))), qstr(fmt::format(u8"LWCond 0x%08x: “%s”, %s, OG LWMutex: 0x%08x, Control: *0x%x", id, lv2_obj::name64(lwc.name), lwc.protocol, lwc.lwid, lwc.control))), lwc.sq);
 			break;
 		}
 		case SYS_EVENT_FLAG_OBJECT:
 		{
 			auto& ef = static_cast<lv2_event_flag&>(obj);
-			show_waiters(add_solid_node(node, qstr(fmt::format(u8"Event Flag 0x%08x: “%s”, %s, Type: 0x%x, Key: %#llx, Pattern: 0x%llx", id, lv2_obj::name64(ef.name), ef.protocol,
+			show_waiters(add_solid_node(node, qstr(fmt::format(u8"Event Flag 0x%08x: “%s”", id, lv2_obj::name64(ef.name))), qstr(fmt::format(u8"Event Flag 0x%08x: “%s”, %s, Type: 0x%x, Key: %#llx, Pattern: 0x%llx", id, lv2_obj::name64(ef.name), ef.protocol,
 				ef.type, ef.key, ef.pattern.load()))), ef.sq);
 			break;
 		}
@@ -602,7 +621,19 @@ void kernel_explorer::update()
 	std::optional<std::scoped_lock<shared_mutex, shared_mutex>> lock_idm_lv2(std::in_place, id_manager::g_mutex, lv2_obj::g_mutex);
 
 	// Postponed as much as possible for time accuracy
-	const u64 current_time = get_guest_system_time();
+	u64 current_time_storage = 0;
+
+	auto get_current_time = [&current_time_storage]()
+	{
+		if (!current_time_storage)
+		{
+			// Evaluate on the first use for better consistency (this function can be quite slow)
+			// Yet once it is evaluated, keep it on the same value for consistency.
+			current_time_storage = get_guest_system_time();
+		}
+
+		return current_time_storage;
+	};
 
 	auto get_wait_time_str = [&](u64 start_time) -> std::string
 	{
@@ -611,7 +642,12 @@ void kernel_explorer::update()
 			return {};
 		}
 
-		const f64 wait_time = (current_time - start_time) / 1000000.;
+		if (start_time > get_current_time() && start_time - get_current_time() > 1'000'000)
+		{
+			return " (time underflow)";
+		}
+
+		const f64 wait_time = (get_current_time() >= start_time ? get_current_time() - start_time : 0) / 1000000.;
 		return fmt::format(" (%.1fs)", wait_time);
 	};
 
@@ -620,7 +656,7 @@ void kernel_explorer::update()
 		const auto func = ppu.last_function;
 		const ppu_thread_status status = lv2_obj::ppu_state(&ppu, false, false);
 
-		add_leaf(find_node(root, additional_nodes::ppu_threads), qstr(fmt::format(u8"PPU 0x%07x: “%s”, PRIO: %d, Joiner: %s, Status: %s, State: %s, %s func: “%s”%s", id, *ppu.ppu_tname.load(), +ppu.prio, ppu.joiner.load(), status, ppu.state.load()
+		add_leaf(find_node(root, additional_nodes::ppu_threads), qstr(fmt::format(u8"PPU 0x%07x: “%s”, PRIO: %d, Joiner: %s, Status: %s, State: %s, %s func: “%s”%s", id, *ppu.ppu_tname.load(), ppu.prio.load().prio, ppu.joiner.load(), status, ppu.state.load()
 			, ppu.ack_suspend ? "After" : (ppu.current_function ? "In" : "Last"), func ? func : "", get_wait_time_str(ppu.start_time))));
 	}, idm::unlocked);
 
@@ -628,7 +664,10 @@ void kernel_explorer::update()
 
 	idm::select<named_thread<spu_thread>>([&](u32 /*id*/, spu_thread& spu)
 	{
-		QTreeWidgetItem* spu_thread_tree = add_solid_node(find_node(root, additional_nodes::spu_threads), qstr(fmt::format(u8"SPU 0x%07x: “%s”, State: %s, Type: %s%s", spu.lv2_id, *spu.spu_tname.load(), spu.state.load(), spu.get_type(), get_wait_time_str(spu.start_time))));
+		const auto func = spu.current_func;
+		const u64 start_time = spu.start_time;
+
+		QTreeWidgetItem* spu_thread_tree = add_solid_node(find_node(root, additional_nodes::spu_threads), qstr(fmt::format(u8"SPU 0x%07x: “%s”", spu.lv2_id, *spu.spu_tname.load())), qstr(fmt::format(u8"SPU 0x%07x: “%s”, State: %s, Type: %s, Func: \"%s\"%s", spu.lv2_id, *spu.spu_tname.load(), spu.state.load(), spu.get_type(), start_time && func ? func : "", start_time ? get_wait_time_str(get_guest_system_time(start_time)) : "")));
 
 		if (spu.get_type() == spu_type::threaded)
 		{
@@ -684,7 +723,7 @@ void kernel_explorer::update()
 
 	idm::select<lv2_spu_group>([&](u32 id, lv2_spu_group& tg)
 	{
-		QTreeWidgetItem* spu_tree = add_solid_node(find_node(root, additional_nodes::spu_thread_groups), qstr(fmt::format(u8"SPU Group 0x%07x: “%s”, Status = %s, Priority = %d, Type = 0x%x", id, tg.name, tg.run_state.load(), +tg.prio, tg.type)));
+		QTreeWidgetItem* spu_tree = add_solid_node(find_node(root, additional_nodes::spu_thread_groups), qstr(fmt::format(u8"SPU Group 0x%07x: “%s”, Type = 0x%x", id, tg.name, tg.type)), qstr(fmt::format(u8"SPU Group 0x%07x: “%s”, Status = %s, Priority = %d, Type = 0x%x", id, tg.name, tg.run_state.load(), tg.prio.load().prio, tg.type)));
 
 		if (tg.name.ends_with("CellSpursKernelGroup"sv))
 		{

@@ -393,13 +393,22 @@ target_sources(rpcs3_emu PRIVATE
     Io/pad_config.cpp
     Io/pad_config_types.cpp
     Io/PadHandler.cpp
+    Io/pad_types.cpp
     Io/usb_device.cpp
     Io/usb_vfs.cpp
+    Io/Infinity.cpp
     Io/Skylander.cpp
     Io/GHLtar.cpp
+    Io/midi_config_types.cpp
+    Io/RB3MidiKeyboard.cpp
+    Io/RB3MidiGuitar.cpp
     Io/Buzz.cpp
     Io/Turntable.cpp
     Io/usio.cpp
+)
+
+target_link_libraries(rpcs3_emu PRIVATE
+    3rdparty::rtmidi
 )
 
 # Np

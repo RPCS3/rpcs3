@@ -59,10 +59,10 @@ namespace rsx
 			std::array<steady_clock::time_point, CELL_PAD_MAX_PORT_NUM> initial_timestamp;
 			initial_timestamp.fill(steady_clock::now());
 
-			std::array<u8, CELL_PAD_MAX_PORT_NUM> last_auto_repeat_button;
+			std::array<pad_button, CELL_PAD_MAX_PORT_NUM> last_auto_repeat_button;
 			last_auto_repeat_button.fill(pad_button::pad_button_max_enum);
 
-			std::array<std::array<bool, pad_button::pad_button_max_enum>, CELL_PAD_MAX_PORT_NUM> last_button_state;
+			std::array<std::array<bool, static_cast<u32>(pad_button::pad_button_max_enum)>, CELL_PAD_MAX_PORT_NUM> last_button_state;
 			for (auto& state : last_button_state)
 			{
 				// Initialize last button states as pressed to avoid unwanted button presses when entering the dialog.
@@ -77,24 +77,26 @@ namespace rsx
 				input::SetIntercepted(true);
 			}
 
-			const auto handle_button_press = [&](u8 button_id, bool pressed, int pad_index)
+			const auto handle_button_press = [&](pad_button button_id, bool pressed, int pad_index)
 			{
 				if (button_id >= pad_button::pad_button_max_enum)
 				{
 					return;
 				}
 
+				bool& last_state = last_button_state[pad_index][static_cast<u32>(button_id)];
+
 				if (pressed)
 				{
 					const bool is_auto_repeat_button = m_auto_repeat_buttons.contains(button_id);
 
-					if (!last_button_state[pad_index][button_id])
+					if (!last_state)
 					{
 						// The button was not pressed before, so this is a new button press. Reset auto-repeat.
 						timestamp[pad_index] = steady_clock::now();
 						initial_timestamp[pad_index] = timestamp[pad_index];
 						last_auto_repeat_button[pad_index] = is_auto_repeat_button ? button_id : pad_button::pad_button_max_enum;
-						on_button_pressed(static_cast<pad_button>(button_id));
+						on_button_pressed(static_cast<pad_button>(button_id), false);
 					}
 					else if (is_auto_repeat_button)
 					{
@@ -104,7 +106,7 @@ namespace rsx
 						{
 							// The auto-repeat button was pressed for at least the given threshold in ms and will trigger at an interval.
 							timestamp[pad_index] = steady_clock::now();
-							on_button_pressed(static_cast<pad_button>(button_id));
+							on_button_pressed(static_cast<pad_button>(button_id), true);
 						}
 						else if (last_auto_repeat_button[pad_index] == pad_button::pad_button_max_enum)
 						{
@@ -113,13 +115,13 @@ namespace rsx
 						}
 					}
 				}
-				else if (last_button_state[pad_index][button_id] && last_auto_repeat_button[pad_index] == button_id)
+				else if (last_state && last_auto_repeat_button[pad_index] == button_id)
 				{
 					// We stopped pressing an auto-repeat button, so re-enable auto-repeat for other buttons.
 					last_auto_repeat_button[pad_index] = pad_button::pad_button_max_enum;
 				}
 
-				last_button_state[pad_index][button_id] = pressed;
+				last_state = pressed;
 			};
 
 			while (!m_stop_input_loop)
@@ -239,7 +241,7 @@ namespace rsx
 
 					for (const Button& button : pad->m_buttons)
 					{
-						u8 button_id = pad_button::pad_button_max_enum;
+						pad_button button_id = pad_button::pad_button_max_enum;
 						if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL1)
 						{
 							switch (button.m_outKeyCode)
@@ -316,8 +318,8 @@ namespace rsx
 
 					for (const AnalogStick& stick : pad->m_sticks)
 					{
-						u8 button_id = pad_button::pad_button_max_enum;
-						u8 release_id = pad_button::pad_button_max_enum;
+						pad_button button_id = pad_button::pad_button_max_enum;
+						pad_button release_id = pad_button::pad_button_max_enum;
 
 						// Let's say sticks are only pressed if they are almost completely tilted. Otherwise navigation feels really wacky.
 						const bool pressed = stick.m_value < 30 || stick.m_value > 225;

@@ -82,7 +82,7 @@ namespace utils
 
 #if defined(MFD_HUGETLB) && defined(MFD_HUGE_2MB)
 	constexpr int c_mfd_huge_2mb = MFD_HUGETLB | MFD_HUGE_2MB;
-#else
+#elif defined(__linux__) || defined(__FreeBSD__)
 	constexpr int c_mfd_huge_2mb = 0;
 #endif
 
@@ -622,12 +622,12 @@ namespace utils
 		}
 #else
 		int vm_overcommit = 0;
-		auto vm_sz = sizeof(int);
 
 #if defined(__NetBSD__) || defined(__APPLE__)
 		// Always ON
 		vm_overcommit = 0;
 #elif defined(__FreeBSD__)
+		auto vm_sz = sizeof(int);
 		int mib[2]{CTL_VM, VM_OVERCOMMIT};
 		if (::sysctl(mib, 2, &vm_overcommit, &vm_sz, NULL, 0) != 0)
 			vm_overcommit = -1;

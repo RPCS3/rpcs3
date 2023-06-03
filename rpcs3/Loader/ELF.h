@@ -354,6 +354,11 @@ public:
 
 	std::vector<u8> save(std::vector<u8>&& init = std::vector<u8>{}) const
 	{
+		if (get_error() != elf_error::ok)
+		{
+			return std::move(init);
+		}
+
 		fs::file stream = fs::make_stream<std::vector<u8>>(std::move(init));
 
 		const bool fixup_shdrs = shdrs.empty() || shdrs[0].sh_type != sec_type::sht_null;
@@ -437,15 +442,10 @@ public:
 	elf_object& set_error(elf_error error)
 	{
 		// Setting an error causes the state to clear if there was no error before
-		// Trying to set elf_error::ok is ignored
-		if (error != elf_error::ok)
-		{
-			if (m_error == elf_error::ok)
-				clear();
+		if (m_error == elf_error::ok && error != elf_error::ok)
+			clear();
 
-			m_error = error;
-		}
-
+		m_error = error;
 		return *this;
 	}
 

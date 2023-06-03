@@ -210,6 +210,7 @@ public:
 		// input
 
 		const QString pad_mode          = tr("Single-threaded: All pad handlers run on the same thread sequentially.\nMulti-threaded: Each pad handler has its own thread.\nOnly use multi-threaded if you can spare the extra threads.");
+		const QString pad_connection    = tr("Shows all configured pads as always connected ingame even if they are physically disconnected.");
 		const QString keyboard_handler  = tr("Some games support native keyboard input.\nBasic will work in these cases.");
 		const QString mouse_handler     = tr("Some games support native mouse input.\nBasic will work in these cases.");
 		const QString music_handler     = tr("Currently only used for cellMusic emulation.\nSelect Qt to use the default output device of your operating system.\nThis may not be able to play all audio formats.");
@@ -223,6 +224,7 @@ public:
 		const QString ghltar            = tr("Guitar Hero Live (GHL) Guitar controller support.\nSelect 1 or 2 controllers if the game requires GHL Guitar controllers and you don't have real guitar controllers.\nSelect Null if the game has support for DualShock or if you have real guitar controllers.\nA real guitar controller can be used at the same time as an emulated guitar controller.");
 		const QString background_input  = tr("Allows pad and keyboard input while the game window is unfocused.");
 		const QString show_move_cursor  = tr("Shows the raw position of the PS Move input.\nThis can be very helpful during calibration screens.");
+		const QString midi_devices      = tr("Select up to 3 emulated midi devices and their type.");
 
 		// network
 

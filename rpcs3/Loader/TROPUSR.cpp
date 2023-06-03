@@ -12,7 +12,10 @@ enum : u32
 std::shared_ptr<rXmlNode> trophy_xml_document::GetRoot()
 {
 	auto trophy_base = rXmlDocument::GetRoot();
-	ensure(trophy_base);
+	if (!trophy_base)
+	{
+		return nullptr;
+	}
 
 	if (auto trophy_conf = trophy_base->GetChildren();
 		trophy_conf && trophy_conf->GetName() == "trophyconf")
@@ -178,7 +181,11 @@ bool TROPUSRLoader::Generate(const std::string& filepath, const std::string& con
 	m_table6.clear();
 
 	auto trophy_base = doc.GetRoot();
-	ensure(trophy_base);
+	if (!trophy_base)
+	{
+		trp_log.error("TROPUSRLoader::Generate: Failed to read file (root is null): %s", filepath);
+		return false;
+	}
 
 	for (std::shared_ptr<rXmlNode> n = trophy_base->GetChildren(); n; n = n->GetNext())
 	{
@@ -276,7 +283,11 @@ u32 TROPUSRLoader::GetUnlockedPlatinumID(u32 trophy_id, const std::string& confi
 	}
 
 	auto trophy_base = doc.GetRoot();
-	ensure(trophy_base);
+	if (!trophy_base)
+	{
+		trp_log.error("TROPUSRLoader::GetUnlockedPlatinumID: Failed to read file (root is null): %s", config_path);
+		return false;
+	}
 
 	const usz trophy_count = m_table4.size();
 

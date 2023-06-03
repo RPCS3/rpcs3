@@ -3,6 +3,7 @@
 #include "util/types.hpp"
 #include "util/atomic.hpp"
 #include "Utilities/bit_set.h"
+#include "config_mode.h"
 #include "games_config.h"
 #include <functional>
 #include <memory>
@@ -57,16 +58,6 @@ constexpr bool is_error(game_boot_result res)
 	return res != game_boot_result::no_errors;
 }
 
-enum class cfg_mode
-{
-	custom,           // Prefer regular custom config. Fall back to global config.
-	custom_selection, // Use user-selected custom config. Fall back to global config.
-	global,           // Use global config.
-	config_override,  // Use config override. This does not use the global VFS settings! Fall back to global config.
-	continuous,       // Use same config as on last boot. Fall back to global config.
-	default_config    // Use the default values of the config entries.
-};
-
 struct EmuCallbacks
 {
 	std::function<void(std::function<void()>, atomic_t<bool>*)> call_from_main_thread;
@@ -103,6 +94,8 @@ struct EmuCallbacks
 	std::function<bool(const std::string&, std::string&, s32&, s32&, s32&)> get_image_info; // (filename, sub_type, width, height, CellSearchOrientation)
 	std::function<bool(const std::string&, s32, s32, s32&, s32&, u8*, bool)> get_scaled_image; // (filename, target_width, target_height, width, height, dst, force_fit)
 	std::string(*resolve_path)(std::string_view) = [](std::string_view arg){ return std::string{arg}; }; // Resolve path using Qt
+	std::function<std::vector<std::string>()> get_font_dirs;
+	std::function<bool(const std::vector<std::string>&)> on_install_pkgs;
 };
 
 namespace utils
@@ -219,7 +212,7 @@ public:
 		m_state = system_state::running;
 	}
 
-	void Init(bool add_only = false);
+	void Init();
 
 	std::vector<std::string> argv;
 	std::vector<std::string> envp;
@@ -316,12 +309,12 @@ public:
 		return m_config_path;
 	}
 
-	game_boot_result BootGame(const std::string& path, const std::string& title_id = "", bool direct = false, bool add_only = false, cfg_mode config_mode = cfg_mode::custom, const std::string& config_path = "");
+	game_boot_result BootGame(const std::string& path, const std::string& title_id = "", bool direct = false, cfg_mode config_mode = cfg_mode::custom, const std::string& config_path = "");
 	bool BootRsxCapture(const std::string& path);
 
 	void SetForceBoot(bool force_boot);
 
-	game_boot_result Load(const std::string& title_id = "", bool add_only = false, bool is_disc_patch = false);
+	game_boot_result Load(const std::string& title_id = "", bool is_disc_patch = false, usz recursion_count = 0);
 	void Run(bool start_playtime);
 	void RunPPU();
 	void FixGuestTime();
@@ -354,9 +347,12 @@ public:
 
 	std::set<std::string> GetGameDirs() const;
 	void AddGamesFromDir(const std::string& path);
+	game_boot_result AddGame(const std::string& path);
+	game_boot_result AddGameToYml(const std::string& path);
 
 	// Check if path is inside the specified directory
 	bool IsPathInsideDir(std::string_view path, std::string_view dir) const;
+	game_boot_result VerifyPathCasing(std::string_view path, std::string_view dir, bool from_dir) const;
 
 	void EjectDisc();
 	game_boot_result InsertDisc(const std::string& path);
@@ -366,6 +362,7 @@ public:
 	friend void init_fxo_for_exec(utils::serial*, bool);
 
 	static bool IsVsh();
+	static bool IsValidSfb(const std::string& path);
 
 	static void SaveSettings(const std::string& settings, const std::string& title_id);
 };

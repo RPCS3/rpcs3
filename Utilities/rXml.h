@@ -19,11 +19,11 @@
 struct rXmlNode
 {
 	rXmlNode();
-	rXmlNode(const pugi::xml_node &);
+	rXmlNode(const pugi::xml_node& node);
 	std::shared_ptr<rXmlNode> GetChildren();
 	std::shared_ptr<rXmlNode> GetNext();
 	std::string GetName();
-	std::string GetAttribute(const std::string &name);
+	std::string GetAttribute(const std::string& name);
 	std::string GetNodeContent();
 
 	pugi::xml_node handle{};

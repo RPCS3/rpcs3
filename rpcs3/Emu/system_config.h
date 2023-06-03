@@ -1,5 +1,6 @@
 #pragma once
 
+#include "config_mode.h"
 #include "system_config_types.h"
 #include "Utilities/Config.h"
 
@@ -67,7 +68,7 @@ struct cfg_root : cfg::node
 		cfg::_enum<tsx_usage> enable_TSX{ this, "Enable TSX", enable_tsx_by_default() ? tsx_usage::enabled : tsx_usage::disabled }; // Enable TSX. Forcing this on Haswell/Broadwell CPUs should be used carefully
 		cfg::_bool spu_accurate_xfloat{ this, "Accurate xfloat", false };
 		cfg::_bool spu_approx_xfloat{ this, "Approximate xfloat", true };
-		cfg::_bool spu_relaxed_xfloat{ this, "Relaxed xfloat", true }; // Approximate accuracy for only the "FCGT" and "FNMS" instructions
+		cfg::_bool spu_relaxed_xfloat{ this, "Relaxed xfloat", true }; // Approximate accuracy for only the "FCGT", "FNMS", "FREST" AND "FRSQEST" instructions
 		cfg::_int<-1, 14> ppu_128_reservations_loop_max_length{ this, "Accurate PPU 128-byte Reservation Op Max Length", 0, true }; // -1: Always accurate, 0: Never accurate, 1-14: max accurate loop length
 		cfg::_int<-64, 64> stub_ppu_traps{ this, "Stub PPU Traps", 0, true }; // Hack, skip PPU traps for rare cases where the trap is continueable (specify relative instructions to skip)
 		cfg::_bool full_width_avx512{ this, "Full Width AVX-512", false };
@@ -190,6 +191,7 @@ struct cfg_root : cfg::node
 			cfg::_bool asynchronous_texture_streaming{ this, "Asynchronous Texture Streaming 2", false };
 			cfg::uint<0, 100> rcas_sharpening_intensity{ this, "FidelityFX CAS Sharpening Intensity", 50, true };
 			cfg::_enum<vk_gpu_scheduler_mode> asynchronous_scheduler{ this, "Asynchronous Queue Scheduler", vk_gpu_scheduler_mode::safe };
+			cfg::uint<256, 65536> vram_allocation_limit{ this, "VRAM allocation limit (MB)", 65536, false };
 
 		} vk{ this };
 
@@ -271,9 +273,11 @@ struct cfg_root : cfg::node
 		cfg::_enum<turntable_handler> turntable{this, "Turntable emulated controller", turntable_handler::null};
 		cfg::_enum<ghltar_handler> ghltar{this, "GHLtar emulated controller", ghltar_handler::null};
 		cfg::_enum<pad_handler_mode> pad_mode{this, "Pad handler mode", pad_handler_mode::single_threaded, true};
+		cfg::_bool keep_pads_connected{this, "Keep pads connected", false, true};
 		cfg::uint<0, 100'000> pad_sleep{this, "Pad handler sleep (microseconds)", 1'000, true};
 		cfg::_bool background_input_enabled{this, "Background input enabled", true, true};
 		cfg::_bool show_move_cursor{this, "Show move cursor", false, true};
+		cfg::string midi_devices{ this, "Emulated Midi devices", "ßßß@@@ßßß@@@ßßß@@@" };
 	} io{ this };
 
 	struct node_sys : cfg::node
@@ -287,6 +291,8 @@ struct cfg_root : cfg::node
 		cfg::_int<-60*60*24*365*100LL, 60*60*24*365*100LL> console_time_offset{ this, "Console time offset (s)", 0 }; // console time offset, limited to +/-100years
 		cfg::uint<0, umax> console_psid_high{this, "PSID high"};
 		cfg::uint<0, umax> console_psid_low{this, "PSID low"};
+		cfg::string hdd_model{this, "HDD Model Name", ""};
+		cfg::string hdd_serial{this, "HDD Serial Number", ""};
 	} sys{ this };
 
 	struct node_net : cfg::node

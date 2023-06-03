@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "overlay_home_menu_settings.h"
 #include "overlay_home_menu_components.h"
+#include "Emu/system_config.h"
 
 // TODO: Localization of the setting names
 // TODO: Localization of the dropdown values
@@ -74,6 +75,7 @@ namespace rsx
 			: home_menu_settings_page(x, y, width, height, use_separators, parent, get_localized_string(localized_string_id::HOME_MENU_SETTINGS_INPUT))
 		{
 			add_checkbox(&g_cfg.io.background_input_enabled, "Background Input Enabled");
+			add_checkbox(&g_cfg.io.keep_pads_connected, "Keep Pads Connected");
 			add_checkbox(&g_cfg.io.show_move_cursor, "Show PS Move Cursor");
 
 			if (g_cfg.io.camera == camera_handler::qt)

@@ -34,7 +34,7 @@ namespace rsx
 			save_dialog();
 
 			void update() override;
-			void on_button_pressed(pad_button button_press) override;
+			void on_button_pressed(pad_button button_press, bool is_auto_repeat) override;
 
 			compiled_resource get_compiled() override;
 

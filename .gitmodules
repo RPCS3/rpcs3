@@ -84,3 +84,6 @@
 	path = 3rdparty/miniupnp/miniupnp
 	url = ../../miniupnp/miniupnp.git
 	ignore = dirty
+[submodule "3rdparty/rtmidi/rtmidi"]
+	path = 3rdparty/rtmidi/rtmidi
+	url = ../../thestk/rtmidi
