@@ -3,6 +3,7 @@
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "Utilities/File.h"
+#include "Utilities/StrUtil.h"
 
 #include <string>
 #include <mutex>
@@ -218,26 +219,7 @@ public:
 	static bool vfs_unmount(std::string_view vpath);
 
 private:
-	struct string_hash
-	{
-		using hash_type = std::hash<std::string_view>;
-		using is_transparent = void;
-
-		std::size_t operator()(const char* str) const
-		{
-			return hash_type{}(str);
-		}
-		std::size_t operator()(std::string_view str) const
-		{
-			return hash_type{}(str);
-		}
-		std::size_t operator()(std::string const& str) const
-		{
-			return hash_type{}(str);
-		}
-	};
-
-	std::unordered_map<std::string, lv2_fs_mount_info, string_hash, std::equal_to<>> map;
+	std::unordered_map<std::string, lv2_fs_mount_info, fmt::string_hash, std::equal_to<>> map;
 };
 
 struct lv2_fs_object
