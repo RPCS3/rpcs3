@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "sys_prx.h"
 
+#include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/VFS.h"
 #include "Emu/IdManager.h"
@@ -842,7 +843,7 @@ error_code _sys_prx_register_module(ppu_thread& ppu, vm::cptr<char> name, vm::pt
 
 	if (info.type & 0x1)
 	{
-		if (g_ps3_process_info.get_cellos_appname() == "vsh.self"sv)
+		if (Emu.IsVsh())
 		{
 			ppu_manual_load_imports_exports(info.lib_stub_ea.addr(), info.lib_stub_size, info.lib_entries_ea.addr(), info.lib_entries_size, *std::make_unique<std::basic_string<bool>>());
 		}
