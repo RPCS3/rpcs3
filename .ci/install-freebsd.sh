@@ -3,7 +3,7 @@
 # shellcheck shell=sh disable=SC2096
 
 # RPCS3 often needs recent Qt5 and Vulkan-Headers
-sed -i '' 's/quarterly/latest/' /etc/pkg/FreeBSD.conf
+#sed -i '' 's/quarterly/latest/' /etc/pkg/FreeBSD.conf
 
 export ASSUME_ALWAYS_YES=true
 pkg info # debug
