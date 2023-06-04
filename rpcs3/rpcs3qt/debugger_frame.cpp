@@ -767,25 +767,56 @@ cpu_thread* debugger_frame::get_cpu()
 	return m_rsx;
 }
 
-std::function<cpu_thread*()> debugger_frame::make_check_cpu(cpu_thread* cpu)
+std::function<cpu_thread*()> debugger_frame::make_check_cpu(cpu_thread* cpu, bool unlocked)
 {
 	const u32 id = cpu ? cpu->id : umax;
 	const u32 type = id >> 24;
 
-	std::shared_ptr<cpu_thread> shared = type == 1 ? static_cast<std::shared_ptr<cpu_thread>>(idm::get<named_thread<ppu_thread>>(id)) :
-		type == 2 ? idm::get<named_thread<spu_thread>>(id) : nullptr;
+	std::shared_ptr<cpu_thread> shared;
+
+	if (g_fxo->is_init<id_manager::id_map<named_thread<ppu_thread>>>() && g_fxo->is_init<id_manager::id_map<named_thread<spu_thread>>>())
+	{
+		if (unlocked)
+		{
+			if (type == 1)
+			{
+				shared = idm::get_unlocked<named_thread<ppu_thread>>(id);
+			}
+			else if (type == 2)
+			{
+				shared = idm::get_unlocked<named_thread<spu_thread>>(id);
+			}
+		}
+		else
+		{
+			if (type == 1)
+			{
+				shared = idm::get<named_thread<ppu_thread>>(id);
+			}
+			else if (type == 2)
+			{
+				shared = idm::get<named_thread<spu_thread>>(id);
+			}
+		}
+	}
 
 	if (shared.get() != cpu)
 	{
 		shared.reset();
 	}
 
-	return [&rsx = m_rsx, cpu, type, shared = std::move(shared)]() -> cpu_thread*
+	return [cpu, type, shared = std::move(shared), emu_course = Emu.ProcureCurrentEmulationCourseInformation()]() -> cpu_thread*
 	{
+		if (emu_course != Emu.ProcureCurrentEmulationCourseInformation())
+		{
+			// Invalidate all data after Emu.Kill()
+			return nullptr;
+		}
+
 		if (type == 1 || type == 2)
 		{
 			// SPU and PPU
-			if (!shared || (shared->state & cpu_flag::exit && shared->state & cpu_flag::wait))
+			if (!shared || shared->state.all_of(cpu_flag::exit + cpu_flag::wait))
 			{
 				return nullptr;
 			}
@@ -794,7 +825,7 @@ std::function<cpu_thread*()> debugger_frame::make_check_cpu(cpu_thread* cpu)
 		}
 
 		// RSX
-		if (rsx == cpu)
+		if (g_fxo->try_get<rsx::thread>() == cpu)
 		{
 			return cpu;
 		}
@@ -874,7 +905,7 @@ void debugger_frame::UpdateUI()
 	m_ui_update_ctr++;
 }
 
-using data_type = std::pair<cpu_thread*, u32>;
+using data_type = std::function<cpu_thread*()>;
 
 Q_DECLARE_METATYPE(data_type);
 
@@ -896,21 +927,18 @@ void debugger_frame::UpdateUnitList()
 		return;
 	}
 
-	//const int old_size = m_choice_units->count();
 	QVariant old_cpu = m_choice_units->currentData();
 
 	bool reselected = false;
 
 	const auto on_select = [&](u32 id, cpu_thread& cpu)
 	{
-		if (emu_state == system_state::stopped) return;
-
-		const QVariant var_cpu = QVariant::fromValue<data_type>(std::make_pair(&cpu, id));
+		const QVariant var_cpu = QVariant::fromValue<data_type>(make_check_cpu(std::addressof(cpu), true));
 
 		// Space at the end is to pad a gap on the right
 		m_choice_units->addItem(qstr((id >> 24 == 0x55 ? "RSX[0x55555555]" : cpu.get_name()) + ' '), var_cpu);
 
-		if (!reselected && old_cpu == var_cpu)
+		if (!reselected && old_cpu.canConvert<data_type>() && old_cpu.value<data_type>()() == std::addressof(cpu))
 		{
 			m_choice_units->setCurrentIndex(m_choice_units->count() - 1);
 			reselected = true;
@@ -923,8 +951,11 @@ void debugger_frame::UpdateUnitList()
 		m_choice_units->clear();
 		m_choice_units->addItem(NoThreadString);
 
-		idm::select<named_thread<ppu_thread>>(on_select);
-		idm::select<named_thread<spu_thread>>(on_select);
+		if (emu_state != system_state::stopped)
+		{
+			idm::select<named_thread<ppu_thread>>(on_select);
+			idm::select<named_thread<spu_thread>>(on_select);
+		}
 
 		if (const auto render = g_fxo->try_get<rsx::thread>(); emu_state != system_state::stopped && render && render->ctrl)
 		{
@@ -953,7 +984,9 @@ void debugger_frame::UpdateUnitList()
 
 void debugger_frame::OnSelectUnit()
 {
-	auto [selected, cpu_id] = m_choice_units->currentData().value<data_type>();
+	const QVariant data = m_choice_units->currentData();
+
+	cpu_thread* selected = data.canConvert<data_type>() ? data.value<data_type>()() : nullptr;
 
 	if (m_emu_state != system_state::stopped)
 	{
@@ -984,6 +1017,8 @@ void debugger_frame::OnSelectUnit()
 
 	if (selected)
 	{
+		const u32 cpu_id = selected->id;
+
 		switch (cpu_id >> 24)
 		{
 		case 1:
