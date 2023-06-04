@@ -48,7 +48,6 @@ void fmt_class_string<libusb_transfer>::format(std::string& out, u64 arg)
 
 struct UsbLdd
 {
-	std::string name;
 	u16 id_vendor{};
 	u16 id_product_min{};
 	u16 id_product_max{};
@@ -86,8 +85,8 @@ public:
 	void transfer_complete(libusb_transfer* transfer);
 
 	// LDDs handling functions
-	u32 add_ldd(vm::ptr<char> s_product, u16 slen_product, u16 id_vendor, u16 id_product_min, u16 id_product_max);
-	void check_devices_vs_ldds();
+	bool add_ldd(std::string_view product, u16 id_vendor, u16 id_product_min, u16 id_product_max);
+	bool remove_ldd(std::string_view product);
 
 	// Pipe functions
 	u32 open_pipe(u32 device_handle, u8 endpoint);
@@ -131,7 +130,7 @@ private:
 	u32 pipe_counter         = 0x10; // Start at 0x10 only for tracing purposes
 
 	// List of device drivers
-	std::vector<UsbLdd> ldds;
+	std::unordered_map<std::string, UsbLdd, fmt::string_hash, std::equal_to<>> ldds;
 
 	// List of pipes
 	std::map<u32, UsbPipe> open_pipes;
@@ -523,17 +522,64 @@ void usb_handler_thread::transfer_complete(struct libusb_transfer* transfer)
 	sys_usbd.trace("Transfer complete(0x%x): %s", usbd_transfer->transfer_id, *transfer);
 }
 
-u32 usb_handler_thread::add_ldd(vm::ptr<char> s_product, u16 slen_product, u16 id_vendor, u16 id_product_min, u16 id_product_max)
+bool usb_handler_thread::add_ldd(std::string_view product, u16 id_vendor, u16 id_product_min, u16 id_product_max)
 {
-	UsbLdd new_ldd;
-	new_ldd.name.resize(slen_product);
-	memcpy(new_ldd.name.data(), s_product.get_ptr(), slen_product);
-	new_ldd.id_vendor      = id_vendor;
-	new_ldd.id_product_min = id_product_min;
-	new_ldd.id_product_max = id_product_max;
-	ldds.push_back(new_ldd);
+	if (ldds.try_emplace(std::string(product), id_vendor, id_product_min, id_product_max).second)
+	{
+		for (const auto& dev : usb_devices)
+		{
+			if (dev->assigned_number)
+				continue;
 
-	return ::size32(ldds); // TODO: to check
+			if (dev->device._device.idVendor == id_vendor && dev->device._device.idProduct >= id_product_min && dev->device._device.idProduct <= id_product_max)
+			{
+				if (!dev->open_device())
+				{
+					sys_usbd.error("Failed to open device for LDD(VID:0x%04x PID:0x%04x)", dev->device._device.idVendor, dev->device._device.idProduct);
+					continue;
+				}
+
+				dev->read_descriptors();
+				dev->assigned_number = dev_counter++; // assign current dev_counter, and atomically increment
+
+				sys_usbd.notice("Ldd device matchup for <%s>, assigned as handled_device=0x%x", product, dev->assigned_number);
+
+				handled_devices.emplace(dev->assigned_number, std::pair(UsbInternalDevice{0x00, narrow<u8>(dev->assigned_number), 0x02, 0x40}, dev));
+				send_message(SYS_USBD_ATTACH, dev->assigned_number);
+			}
+		}
+
+		return true;
+	}
+
+	return false;
+}
+
+bool usb_handler_thread::remove_ldd(std::string_view product)
+{
+	if (const auto iterator = ldds.find(product); iterator != ldds.end())
+	{
+		for (const auto& dev : usb_devices)
+		{
+			if (!dev->assigned_number)
+				continue;
+
+			if (dev->device._device.idVendor == iterator->second.id_vendor && dev->device._device.idProduct >= iterator->second.id_product_min && dev->device._device.idProduct <= iterator->second.id_product_max)
+			{
+				if (handled_devices.erase(dev->assigned_number))
+				{
+					sys_usbd.notice("Ldd device matchup for <%s>, removed 0x%x from handled_devices", iterator->first, dev->assigned_number);
+					send_message(SYS_USBD_DETACH, dev->assigned_number);
+					dev->assigned_number = 0;
+				}
+			}
+		}
+
+		ldds.erase(iterator);
+		return true;
+	}
+
+	return false;
 }
 
 u32 usb_handler_thread::open_pipe(u32 device_handle, u8 endpoint)
@@ -555,35 +601,6 @@ bool usb_handler_thread::is_pipe(u32 pipe_id) const
 const UsbPipe& usb_handler_thread::get_pipe(u32 pipe_id) const
 {
 	return ::at32(open_pipes, pipe_id);
-}
-
-void usb_handler_thread::check_devices_vs_ldds()
-{
-	for (const auto& dev : usb_devices)
-	{
-		if (dev->assigned_number)
-			continue;
-
-		for (const auto& ldd : ldds)
-		{
-			if (dev->device._device.idVendor == ldd.id_vendor && dev->device._device.idProduct >= ldd.id_product_min && dev->device._device.idProduct <= ldd.id_product_max)
-			{
-				if (!dev->open_device())
-				{
-					sys_usbd.error("Failed to open device for LDD(VID:0x%04x PID:0x%04x)", dev->device._device.idVendor, dev->device._device.idProduct);
-					continue;
-				}
-
-				dev->read_descriptors();
-				dev->assigned_number = dev_counter++; // assign current dev_counter, and atomically increment
-
-				sys_usbd.success("Ldd device matchup for <%s>, assigned as handled_device=0x%x", ldd.name, dev->assigned_number);
-
-				handled_devices.emplace(dev->assigned_number, std::pair(UsbInternalDevice{0x00, narrow<u8>(dev->assigned_number), 0x02, 0x40}, dev));
-				send_message(SYS_USBD_ATTACH, dev->assigned_number);
-			}
-		}
-	}
 }
 
 bool usb_handler_thread::get_event(vm::ptr<u64>& arg1, vm::ptr<u64>& arg2, vm::ptr<u64>& arg3)
@@ -754,12 +771,11 @@ error_code sys_usbd_get_device_list(ppu_thread& ppu, u32 handle, vm::ptr<UsbInte
 	return not_an_error(i_tocopy);
 }
 
-error_code sys_usbd_register_extra_ldd(ppu_thread& ppu, u32 handle, vm::ptr<char> s_product, u16 slen_product, u16 id_vendor, u16 id_product_min, u16 id_product_max)
+error_code sys_usbd_register_extra_ldd(ppu_thread& ppu, u32 handle, vm::cptr<char> s_product, u16 slen_product, u16 id_vendor, u16 id_product_min, u16 id_product_max)
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_usbd.warning("sys_usbd_register_extra_ldd(handle=0x%x, s_product=%s, slen_product=%d, id_vendor=0x%04x, id_product_min=0x%04x, id_product_max=0x%04x)", handle, s_product, slen_product, id_vendor,
-		id_product_min, id_product_max);
+	sys_usbd.trace("sys_usbd_register_extra_ldd(handle=0x%x, s_product=%s, slen_product=%d, id_vendor=0x%04x, id_product_min=0x%04x, id_product_max=0x%04x)", handle, s_product, slen_product, id_vendor, id_product_min, id_product_max);
 
 	auto& usbh = g_fxo->get<named_thread<usb_handler_thread>>();
 
@@ -767,10 +783,32 @@ error_code sys_usbd_register_extra_ldd(ppu_thread& ppu, u32 handle, vm::ptr<char
 	if (!usbh.is_init)
 		return CELL_EINVAL;
 
-	s32 res = usbh.add_ldd(s_product, slen_product, id_vendor, id_product_min, id_product_max);
-	usbh.check_devices_vs_ldds();
+	std::string_view product{s_product.get_ptr(), slen_product};
 
-	return not_an_error(res); // To check
+	if (usbh.add_ldd(product, id_vendor, id_product_min, id_product_max))
+		return CELL_OK;
+
+	return CELL_EEXIST;
+}
+
+error_code sys_usbd_unregister_extra_ldd(ppu_thread& ppu, u32 handle, vm::cptr<char> s_product, u16 slen_product)
+{
+	ppu.state += cpu_flag::wait;
+
+	sys_usbd.trace("sys_usbd_unregister_extra_ldd(handle=0x%x, s_product=%s, slen_product=%d)", handle, s_product, slen_product);
+
+	auto& usbh = g_fxo->get<named_thread<usb_handler_thread>>();
+
+	std::lock_guard lock(usbh.mutex);
+	if (!usbh.is_init)
+		return CELL_EINVAL;
+
+	std::string_view product{s_product.get_ptr(), slen_product};
+
+	if (usbh.remove_ldd(product))
+		return CELL_OK;
+
+	return CELL_ESRCH;
 }
 
 error_code sys_usbd_get_descriptor_size(ppu_thread& ppu, u32 handle, u32 device_handle)
@@ -812,37 +850,39 @@ error_code sys_usbd_get_descriptor(ppu_thread& ppu, u32 handle, u32 device_handl
 	return CELL_OK;
 }
 
-// This function is used for psp(cellUsbPspcm), dongles in ps3 arcade cabinets(PS3A-USJ), ps2 cam(eyetoy), generic usb camera?(sample_usb2cam)
-error_code sys_usbd_register_ldd(ppu_thread& ppu, u32 handle, vm::ptr<char> s_product, u16 slen_product)
+// This function is used for psp(cellUsbPspcm), ps3 arcade usj io(PS3A-USJ), ps2 cam(eyetoy), generic usb camera?(sample_usb2cam)
+error_code sys_usbd_register_ldd(ppu_thread& ppu, u32 handle, vm::cptr<char> s_product, u16 slen_product)
 {
 	ppu.state += cpu_flag::wait;
 
+	std::string_view product{s_product.get_ptr(), slen_product};
+
 	// slightly hacky way of getting Namco GCon3 gun to work.
 	// The register_ldd appears to be a more promiscuous mode function, where all device 'inserts' would be presented to the cellUsbd for Probing.
-	// Unsure how many more devices might need similar treatment (i.e. just a compare and force VID/PID add), or if it's worth adding a full promiscuous
-	// capability
-	if (s_product.get_ptr() == "guncon3"sv)
+	// Unsure how many more devices might need similar treatment (i.e. just a compare and force VID/PID add), or if it's worth adding a full promiscuous capability
+	static const std::unordered_map<std::string, UsbLdd, fmt::string_hash, std::equal_to<>> predefined_ldds
 	{
-		sys_usbd.warning("sys_usbd_register_ldd(handle=0x%x, s_product=%s, slen_product=0x%x) -> Redirecting to sys_usbd_register_extra_ldd", handle, s_product, slen_product);
-		sys_usbd_register_extra_ldd(ppu, handle, s_product, slen_product, 0x0B9A, 0x0800, 0x0800);
-	}
-	else if (s_product.get_ptr() == "PS3A-USJ"sv)
+		{"guncon3", {0x0B9A, 0x0800, 0x0800}},
+		{"PS3A-USJ", {0x0B9A, 0x0900, 0x0910}}
+	};
+
+	if (const auto iterator = predefined_ldds.find(product); iterator != predefined_ldds.end())
 	{
-		// Arcade IO boards
-		sys_usbd.warning("sys_usbd_register_ldd(handle=0x%x, s_product=%s, slen_product=0x%x) -> Redirecting to sys_usbd_register_extra_ldd", handle, s_product, slen_product);
-		sys_usbd_register_extra_ldd(ppu, handle, s_product, slen_product, 0x0B9A, 0x0900, 0x0910);
+		sys_usbd.trace("sys_usbd_register_ldd(handle=0x%x, s_product=%s, slen_product=%d) -> Redirecting to sys_usbd_register_extra_ldd()", handle, s_product, slen_product);
+		return sys_usbd_register_extra_ldd(ppu, handle, s_product, slen_product, iterator->second.id_vendor, iterator->second.id_product_min, iterator->second.id_product_max);
 	}
-	else
-	{
-		sys_usbd.todo("sys_usbd_register_ldd(handle=0x%x, s_product=%s, slen_product=0x%x)", handle, s_product, slen_product);
-	}
+
+	sys_usbd.todo("sys_usbd_register_ldd(handle=0x%x, s_product=%s, slen_product=%d)", handle, s_product, slen_product);
 	return CELL_OK;
 }
 
-error_code sys_usbd_unregister_ldd(ppu_thread&)
+error_code sys_usbd_unregister_ldd(ppu_thread& ppu, u32 handle, vm::cptr<char> s_product, u16 slen_product)
 {
-	sys_usbd.todo("sys_usbd_unregister_ldd()");
-	return CELL_OK;
+	ppu.state += cpu_flag::wait;
+
+	sys_usbd.trace("sys_usbd_unregister_ldd(handle=0x%x, s_product=%s, slen_product=%d) -> Redirecting to sys_usbd_unregister_extra_ldd()", handle, s_product, slen_product);
+
+	return sys_usbd_unregister_extra_ldd(ppu, handle, s_product, slen_product);
 }
 
 // TODO: determine what the unknown params are
@@ -999,7 +1039,7 @@ error_code sys_usbd_transfer_data(ppu_thread& ppu, u32 handle, u32 id_pipe, vm::
 
 	if (sys_usbd.trace && request)
 	{
-		sys_usbd.trace("RequestType:0x%x, Request:0x%x, wValue:0x%x, wIndex:0x%x, wLength:0x%x", request->bmRequestType, request->bRequest, request->wValue, request->wIndex, request->wLength);
+		sys_usbd.trace("RequestType:0x%02x, Request:0x%02x, wValue:0x%04x, wIndex:0x%04x, wLength:0x%04x", request->bmRequestType, request->bRequest, request->wValue, request->wIndex, request->wLength);
 
 		if ((request->bmRequestType & 0x80) == 0 && buf && buf_size != 0)
 			sys_usbd.trace("Control sent:\n%s", fmt::buf_to_hexstring(buf.get_ptr(), buf_size));

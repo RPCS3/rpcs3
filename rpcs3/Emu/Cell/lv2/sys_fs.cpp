@@ -13,7 +13,6 @@
 #include "Emu/IdManager.h"
 #include "Emu/system_utils.hpp"
 #include "Emu/Cell/lv2/sys_process.h"
-#include "Utilities/StrUtil.h"
 
 #include <span>
 
