@@ -76,7 +76,7 @@ class debugger_frame : public custom_dock_widget
 	std::shared_ptr<gui_settings> m_gui_settings;
 
 	cpu_thread* get_cpu();
-	std::function<cpu_thread*()> make_check_cpu(cpu_thread* cpu);
+	std::function<cpu_thread*()> make_check_cpu(cpu_thread* cpu, bool unlocked = false);
 	void open_breakpoints_settings();
 
 public:
