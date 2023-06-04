@@ -1334,6 +1334,11 @@ void debugger_frame::DoStep(bool step_over)
 
 void debugger_frame::EnableUpdateTimer(bool enable) const
 {
+	if (m_update->isActive() == enable)
+	{
+		return;
+	}
+
 	enable ? m_update->start(10) : m_update->stop();
 }
 
