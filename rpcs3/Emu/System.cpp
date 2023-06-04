@@ -3460,7 +3460,7 @@ utils::serial* Emulator::DeserialManager() const
 
 bool Emulator::IsVsh()
 {
-	return g_ps3_process_info.get_cellos_appname() == "vsh.self"sv;
+	return g_ps3_process_info.self_info.prog_id_hdr.program_authority_id >> 52 == 0x107; // Not only VSH but also all LV2 SELFs need the special treatment
 }
 
 bool Emulator::IsValidSfb(const std::string& path)

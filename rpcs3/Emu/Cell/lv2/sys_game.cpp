@@ -30,7 +30,7 @@ struct system_sw_version
 
 	~system_sw_version() = default;
 
-	u64 version;
+	atomic_t<u64> version;
 };
 
 struct board_storage
