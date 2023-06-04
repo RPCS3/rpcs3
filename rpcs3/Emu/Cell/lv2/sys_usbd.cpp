@@ -193,8 +193,7 @@ usb_handler_thread::usb_handler_thread()
 
 	bool found_skylander = false;
 	bool found_infinity  = false;
-	bool found_usio      = false;
-	bool found_h050      = false;
+	bool found_usj       = false;
 
 	for (ssize_t index = 0; index < ndev; index++)
 	{
@@ -281,20 +280,14 @@ usb_handler_thread::usb_handler_thread()
 		// DVB-T
 		check_device(0x1415, 0x0003, 0x0003, " PlayTV SCEH-0036");
 
-		// V406 USIO
-		if (check_device(0x0B9A, 0x0910, 0x0910, "USIO PCB rev00"))
+		// 0x0900: "H050 USJ(C) PCB rev00", 0x0910: "USIO PCB rev00"
+		if (check_device(0x0B9A, 0x0900, 0x0910, "PS3A-USJ"))
 		{
-			found_usio = true;
+			found_usj = true;
 		}
 
 		// Densha de GO! controller
 		check_device(0x0AE4, 0x0004, 0x0004, "Densha de GO! Type 2 Controller");
-
-		// H050 USJ
-		if (check_device(0x0B9A, 0x0900, 0x0900, "H050 USJ(C) PCB rev00"))
-		{
-			found_h050 = true;
-		}
 
 		// EA Active 2 dongle for connecting wristbands & legband
 		check_device(0x21A4, 0xAC27, 0xAC27, "EA Active 2 Dongle");
@@ -321,14 +314,14 @@ usb_handler_thread::usb_handler_thread()
 		usb_devices.push_back(std::make_shared<usb_device_infinity>(get_new_location()));
 	}
 
-	if (!found_usio && !found_h050) // Only one of these two IO boards should be present at the same time; otherwise, an exception will be thrown by the game.
+	if (!found_usj)
 	{
 		if (!g_cfg_usio.load())
 		{
 			sys_usbd.notice("Could not load usio config. Using defaults.");
 		}
 
-		sys_usbd.notice("Adding emulated v406 usio");
+		sys_usbd.notice("Adding emulated USIO");
 		usb_devices.push_back(std::make_shared<usb_device_usio>(get_new_location()));
 	}
 
@@ -577,7 +570,7 @@ void usb_handler_thread::check_devices_vs_ldds()
 			{
 				if (!dev->open_device())
 				{
-					sys_usbd.error("Failed to open device for LDD(VID:0x%x PID:0x%x)", dev->device._device.idVendor, dev->device._device.idProduct);
+					sys_usbd.error("Failed to open device for LDD(VID:0x%04x PID:0x%04x)", dev->device._device.idVendor, dev->device._device.idProduct);
 					continue;
 				}
 
@@ -765,7 +758,7 @@ error_code sys_usbd_register_extra_ldd(ppu_thread& ppu, u32 handle, vm::ptr<char
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_usbd.warning("sys_usbd_register_extra_ldd(handle=0x%x, s_product=%s, slen_product=0x%x, id_vendor=0x%x, id_product_min=0x%x, id_product_max=0x%x)", handle, s_product, slen_product, id_vendor,
+	sys_usbd.warning("sys_usbd_register_extra_ldd(handle=0x%x, s_product=%s, slen_product=%d, id_vendor=0x%04x, id_product_min=0x%04x, id_product_max=0x%04x)", handle, s_product, slen_product, id_vendor,
 		id_product_min, id_product_max);
 
 	auto& usbh = g_fxo->get<named_thread<usb_handler_thread>>();
@@ -837,8 +830,7 @@ error_code sys_usbd_register_ldd(ppu_thread& ppu, u32 handle, vm::ptr<char> s_pr
 	{
 		// Arcade IO boards
 		sys_usbd.warning("sys_usbd_register_ldd(handle=0x%x, s_product=%s, slen_product=0x%x) -> Redirecting to sys_usbd_register_extra_ldd", handle, s_product, slen_product);
-		sys_usbd_register_extra_ldd(ppu, handle, s_product, slen_product, 0x0B9A, 0x0910, 0x0910); // usio
-		sys_usbd_register_extra_ldd(ppu, handle, s_product, slen_product, 0x0B9A, 0x0900, 0x0900); // H050 USJ
+		sys_usbd_register_extra_ldd(ppu, handle, s_product, slen_product, 0x0B9A, 0x0900, 0x0910);
 	}
 	else
 	{
