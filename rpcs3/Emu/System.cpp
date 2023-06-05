@@ -2036,7 +2036,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 		if (ppu_exec == elf_error::ok && !fs::is_file(g_cfg_vfs.get_dev_flash() + "sys/external/liblv2.sprx"))
 		{
-			const auto libs = g_cfg.core.libraries_control.get_set();
+			const auto& libs = g_cfg.core.libraries_control.get_set();
 
 			extern const std::map<std::string_view, int> g_prx_list;
 
