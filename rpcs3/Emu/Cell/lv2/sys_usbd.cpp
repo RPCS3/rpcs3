@@ -524,7 +524,7 @@ void usb_handler_thread::transfer_complete(struct libusb_transfer* transfer)
 
 bool usb_handler_thread::add_ldd(std::string_view product, u16 id_vendor, u16 id_product_min, u16 id_product_max)
 {
-	if (ldds.try_emplace(std::string(product), id_vendor, id_product_min, id_product_max).second)
+	if (ldds.try_emplace(std::string(product), UsbLdd{id_vendor, id_product_min, id_product_max}).second)
 	{
 		for (const auto& dev : usb_devices)
 		{
