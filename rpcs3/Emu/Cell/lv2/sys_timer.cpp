@@ -114,6 +114,7 @@ lv2_timer_thread::lv2_timer_thread()
 void lv2_timer_thread::operator()()
 {
 	u64 sleep_time = 0;
+	u64 old_now = umax;
 
 	while (true)
 	{
@@ -123,7 +124,7 @@ void lv2_timer_thread::operator()()
 			sleep_time = std::min(sleep_time, u64{umax} / 100) * 100 / g_cfg.core.clocks_scale;
 		}
 
-		thread_ctrl::wait_for_accurate(sleep_time);
+		thread_ctrl::wait_for_accurate(utils::sub_saturate<u64>(sleep_time, get_guest_system_time() - old_now));
 
 		if (thread_ctrl::state() == thread_state::aborting)
 		{
@@ -138,7 +139,7 @@ void lv2_timer_thread::operator()()
 			continue;
 		}
 
-		const u64 _now = get_guest_system_time();
+		old_now = get_guest_system_time();
 
 		reader_lock lock(mutex);
 
@@ -146,7 +147,7 @@ void lv2_timer_thread::operator()()
 		{
 			while (lv2_obj::check(timer))
 			{
-				if (const u64 advised_sleep_time = timer->check(_now))
+				if (const u64 advised_sleep_time = timer->check(old_now))
 				{
 					if (sleep_time > advised_sleep_time)
 					{
