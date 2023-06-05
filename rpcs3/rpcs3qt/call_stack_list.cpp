@@ -42,6 +42,9 @@ void call_stack_list::HandleUpdate(const std::vector<std::pair<u32, u32>>& call_
 
 void call_stack_list::OnCallStackListDoubleClicked()
 {
-	const u32 address = currentItem()->data(Qt::UserRole).value<u32>();
-	Q_EMIT RequestShowAddress(address);
+	if (QListWidgetItem* call_stack_item = currentItem())
+	{
+		const u32 address = call_stack_item->data(Qt::UserRole).value<u32>();
+		Q_EMIT RequestShowAddress(address);
+	}
 }
