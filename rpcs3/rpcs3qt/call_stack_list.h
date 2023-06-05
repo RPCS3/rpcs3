@@ -21,4 +21,6 @@ public Q_SLOTS:
 	void HandleUpdate(const std::vector<std::pair<u32, u32>>& call_stack);
 private Q_SLOTS:
 	void OnCallStackListDoubleClicked();
+private:
+	void keyPressEvent(QKeyEvent* event) override;
 };
