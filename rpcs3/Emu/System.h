@@ -122,6 +122,7 @@ class Emulator final
 	std::string m_config_path;
 	std::string m_path;
 	std::string m_path_old;
+	std::string m_path_original;
 	std::string m_title_id;
 	std::string m_title;
 	std::string m_app_version;
@@ -233,6 +234,11 @@ public:
 	const std::string& GetBoot() const
 	{
 		return m_path;
+	}
+
+	const std::string& GetLastBoot() const
+	{
+		return m_path_original;
 	}
 
 	const std::string& GetTitleID() const

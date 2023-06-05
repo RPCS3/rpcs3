@@ -731,17 +731,22 @@ game_boot_result Emulator::GetElfPathFromDir(std::string& elf_path, const std::s
 
 game_boot_result Emulator::BootGame(const std::string& path, const std::string& title_id, bool direct, cfg_mode config_mode, const std::string& config_path)
 {
-	auto save_args = std::make_tuple(m_path, argv, envp, data, disc, klic, hdd1, m_config_mode, m_config_path);
+	auto save_args = std::make_tuple(m_path, m_path_original, argv, envp, data, disc, klic, hdd1, m_config_mode, m_config_path);
 
 	auto restore_on_no_boot = [&](game_boot_result result)
 	{
 		if (IsStopped() || result != game_boot_result::no_errors)
 		{
-			std::tie(m_path, argv, envp, data, disc, klic, hdd1, m_config_mode, m_config_path) = std::move(save_args);
+			std::tie(m_path, m_path_original, argv, envp, data, disc, klic, hdd1, m_config_mode, m_config_path) = std::move(save_args);
 		}
 
 		return result;
 	};
+
+	if (m_path_original.empty() || config_mode != cfg_mode::continuous)
+	{
+		m_path_original = m_path;
+	}
 
 	m_path_old = m_path;
 
