@@ -1827,11 +1827,11 @@ void main_window::OnEmuPause() const
 void main_window::OnEmuStop()
 {
 	const QString title = GetCurrentTitle();
-	const QString play_tooltip = Emu.IsReady() ? tr("Play %0").arg(title) : tr("Resume %0").arg(title);
+	const QString play_tooltip = tr("Play %0").arg(title);
 
 	m_debugger_frame->UpdateUI();
 
-	ui->sysPauseAct->setText(Emu.IsReady() ? tr("&Play") : tr("&Resume"));
+	ui->sysPauseAct->setText(tr("&Play"));
 	ui->sysPauseAct->setIcon(m_icon_play);
 #ifdef _WIN32
 	m_thumb_playPause->setToolTip(play_tooltip);
@@ -1885,14 +1885,14 @@ void main_window::OnEmuStop()
 void main_window::OnEmuReady() const
 {
 	const QString title = GetCurrentTitle();
-	const QString play_tooltip = Emu.IsReady() ? tr("Play %0").arg(title) : tr("Resume %0").arg(title);
+	const QString play_tooltip = tr("Play %0").arg(title);
 
 	m_debugger_frame->EnableButtons(true);
 #ifdef _WIN32
 	m_thumb_playPause->setToolTip(play_tooltip);
 	m_thumb_playPause->setIcon(m_icon_thumb_play);
 #endif
-	ui->sysPauseAct->setText(Emu.IsReady() ? tr("&Play") : tr("&Resume"));
+	ui->sysPauseAct->setText(tr("&Play"));
 	ui->sysPauseAct->setIcon(m_icon_play);
 	ui->toolbar_start->setIcon(m_icon_play);
 	ui->toolbar_start->setText(tr("Play"));
