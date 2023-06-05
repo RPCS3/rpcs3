@@ -613,9 +613,10 @@ void cell_audio_thread::advance(u64 timestamp)
 
 	lock.unlock();
 
+	lv2_obj::notify_all_t notify;
+
 	for (u32 i = 0; i < queue_count; i++)
 	{
-		lv2_obj::notify_all_t notify;
 		queues[i]->send(event_sources[i], CELL_AUDIO_EVENT_MIX, 0, event_data3[i]);
 	}
 }
