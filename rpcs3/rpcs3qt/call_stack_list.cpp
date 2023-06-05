@@ -13,7 +13,7 @@ call_stack_list::call_stack_list(QWidget* parent) : QListWidget(parent)
 	setSelectionMode(QAbstractItemView::ExtendedSelection);
 
 	// connects
-	connect(this, &QListWidget::itemDoubleClicked, this, &call_stack_list::OnCallStackListDoubleClicked);
+	connect(this, &QListWidget::itemDoubleClicked, this, &call_stack_list::ShowItemAddress);
 
 	// Hide until used in order to allow as much space for registers panel as possible
 	hide();
@@ -23,6 +23,11 @@ void call_stack_list::keyPressEvent(QKeyEvent* event)
 {
 	QListWidget::keyPressEvent(event);
 	event->ignore(); // Propagate the event to debugger_frame
+
+	if (!event->modifiers() && event->key() == Qt::Key_Return)
+	{
+		ShowItemAddress();
+	}
 }
 
 void call_stack_list::HandleUpdate(const std::vector<std::pair<u32, u32>>& call_stack)
@@ -40,7 +45,7 @@ void call_stack_list::HandleUpdate(const std::vector<std::pair<u32, u32>>& call_
 	setVisible(!call_stack.empty());
 }
 
-void call_stack_list::OnCallStackListDoubleClicked()
+void call_stack_list::ShowItemAddress()
 {
 	if (QListWidgetItem* call_stack_item = currentItem())
 	{
