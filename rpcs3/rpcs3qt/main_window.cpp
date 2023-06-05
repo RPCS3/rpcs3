@@ -259,7 +259,7 @@ QString main_window::GetCurrentTitle()
 	QString title = qstr(Emu.GetTitleAndTitleID());
 	if (title.isEmpty())
 	{
-		title = qstr(Emu.GetBoot());
+		title = qstr(Emu.GetLastBoot());
 	}
 	return title;
 }
@@ -383,7 +383,7 @@ void main_window::OnPlayOrPause()
 			gui_log.notice("Booting from OnPlayOrPause...");
 			Boot(m_selected_game->info.path, m_selected_game->info.serial);
 		}
-		else if (const auto path = Emu.GetBoot(); !path.empty())
+		else if (const std::string path = Emu.GetLastBoot(); !path.empty())
 		{
 			if (const auto error = Emu.Load(); error != game_boot_result::no_errors)
 			{
@@ -1971,7 +1971,7 @@ void main_window::BootRecentAction(const QAction* act)
 		if (contains_path)
 		{
 			// clear menu of actions
-			for (auto action : m_recent_game_acts)
+			for (QAction* action : m_recent_game_acts)
 			{
 				ui->bootRecentMenu->removeAction(action);
 			}
@@ -2062,7 +2062,7 @@ void main_window::AddRecentAction(const q_string_pair& entry)
 	}
 
 	// clear menu of actions
-	for (auto action : m_recent_game_acts)
+	for (QAction* action : m_recent_game_acts)
 	{
 		ui->bootRecentMenu->removeAction(action);
 	}
@@ -2915,7 +2915,7 @@ void main_window::CreateDockWindows()
 
 					ui->toolbar_start->setIcon(m_icon_play);
 				}
-				else if (const auto& path = Emu.GetBoot(); !path.empty()) // Restartable games
+				else if (const std::string& path = Emu.GetLastBoot(); !path.empty()) // Restartable games
 				{
 					tooltip = tr("Restart %0").arg(GetCurrentTitle());
 
@@ -2979,7 +2979,7 @@ void main_window::ConfigureGuiFromSettings()
 	m_rg_entries = m_gui_settings->Var2List(m_gui_settings->GetValue(gui::rg_entries));
 
 	// clear recent games menu of actions
-	for (auto act : m_recent_game_acts)
+	for (QAction* act : m_recent_game_acts)
 	{
 		ui->bootRecentMenu->removeAction(act);
 	}
