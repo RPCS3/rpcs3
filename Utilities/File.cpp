@@ -393,7 +393,7 @@ std::string fs::get_parent_dir(std::string_view path, u32 parent_level)
 	std::replace(normalized_path.begin(), normalized_path.end(), '\\', '/');
 #endif
 
-	if (normalized_path.back() == '/')
+	if (normalized_path.ends_with('/'))
 		normalized_path.pop_back();
 
 	while (parent_level--)
