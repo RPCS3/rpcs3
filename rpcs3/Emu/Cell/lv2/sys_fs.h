@@ -216,7 +216,7 @@ public:
 	const lv2_fs_mount_info& lookup(std::string_view path, bool no_cell_fs_path = false) const;
 	u64 get_all(CellFsMountInfo* info = nullptr, u64 len = 0) const;
 
-	static bool vfs_unmount(std::string_view vpath);
+	static bool vfs_unmount(std::string_view vpath, bool remove_from_map = true);
 
 private:
 	std::unordered_map<std::string, lv2_fs_mount_info, fmt::string_hash, std::equal_to<>> map;
