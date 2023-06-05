@@ -145,7 +145,7 @@ lv2_fs_mount_info_map::lv2_fs_mount_info_map()
 lv2_fs_mount_info_map::~lv2_fs_mount_info_map()
 {
 	for (const auto& [path, info] : map)
-		vfs_unmount(path);
+		vfs_unmount(path, false); // Do not remove the value from the map we are iterating over.
 }
 
 bool lv2_fs_mount_info_map::remove(std::string_view path)
@@ -220,7 +220,7 @@ u64 lv2_fs_mount_info_map::get_all(CellFsMountInfo* info, u64 len) const
 	return count;
 }
 
-bool lv2_fs_mount_info_map::vfs_unmount(std::string_view vpath)
+bool lv2_fs_mount_info_map::vfs_unmount(std::string_view vpath, bool remove_from_map)
 {
 	const std::string local_path = vfs::get(vpath);
 
@@ -239,9 +239,9 @@ bool lv2_fs_mount_info_map::vfs_unmount(std::string_view vpath)
 		}
 	}
 
-	const auto result = vfs::unmount(vpath);
+	const bool result = vfs::unmount(vpath);
 
-	if (result)
+	if (result && remove_from_map)
 		g_fxo->get<lv2_fs_mount_info_map>().remove(vpath);
 
 	return result;
