@@ -340,7 +340,7 @@ void main_window::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const Q
 			Emu.Pause();
 		break;
 	}
-	case gui::shortcuts::shortcut::mw_restart:
+	case gui::shortcuts::shortcut::mw_start:
 	{
 		if (status == system_state::paused)
 			Emu.Resume();
@@ -348,7 +348,7 @@ void main_window::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const Q
 			Emu.Run(true);
 		break;
 	}
-	case gui::shortcuts::shortcut::mw_start:
+	case gui::shortcuts::shortcut::mw_restart:
 	{
 		if (!Emu.GetBoot().empty())
 			Emu.Restart();
