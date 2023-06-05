@@ -2,6 +2,8 @@
 
 #include "Utilities/StrFmt.h"
 
+#include <QKeyEvent>
+
 constexpr auto qstr = QString::fromStdString;
 
 call_stack_list::call_stack_list(QWidget* parent) : QListWidget(parent)
@@ -15,6 +17,12 @@ call_stack_list::call_stack_list(QWidget* parent) : QListWidget(parent)
 
 	// Hide until used in order to allow as much space for registers panel as possible
 	hide();
+}
+
+void call_stack_list::keyPressEvent(QKeyEvent* event)
+{
+	QListWidget::keyPressEvent(event);
+	event->ignore(); // Propagate the event to debugger_frame
 }
 
 void call_stack_list::HandleUpdate(const std::vector<std::pair<u32, u32>>& call_stack)
