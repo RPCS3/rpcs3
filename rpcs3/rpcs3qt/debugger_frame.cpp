@@ -984,12 +984,15 @@ void debugger_frame::UpdateUnitList()
 
 void debugger_frame::OnSelectUnit()
 {
-	const QVariant data = m_choice_units->currentData();
-
-	cpu_thread* selected = data.canConvert<data_type>() ? data.value<data_type>()() : nullptr;
+	cpu_thread* selected = nullptr;
 
 	if (m_emu_state != system_state::stopped)
 	{
+		if (const QVariant data = m_choice_units->currentData(); data.canConvert<data_type>())
+		{
+			selected = data.value<data_type>()();
+		}
+
 		if (selected && m_cpu.get() == selected)
 		{
 			// They match, nothing to do.
@@ -1005,10 +1008,6 @@ void debugger_frame::OnSelectUnit()
 		{
 			return;
 		}
-	}
-	else
-	{
-		selected = nullptr;
 	}
 
 	m_disasm.reset();
