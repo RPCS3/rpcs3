@@ -1011,11 +1011,15 @@ void evdev_joystick_handler::handle_input_event(const input_event& evt, const st
 	if (button_code == NO_BUTTON || value < 0)
 		return;
 
+	const auto cfg = m_dev->config;
+	if (!cfg)
+		return;
+
 	auto axis_orientations = m_dev->axis_orientations;
 
 	// Find out if special buttons are pressed (introduced by RPCS3).
 	// These buttons will have a delay of one cycle, but whatever.
-	const bool adjust_pressure = pad->m_pressure_intensity_button_index >= 0 && pad->m_buttons[pad->m_pressure_intensity_button_index].m_pressed;
+	const bool adjust_pressure = pad->get_pressure_intensity_enabled(cfg->pressure_intensity_toggle_mode.get());
 
 	// Translate any corresponding keycodes to our normal DS3 buttons and triggers
 	for (int i = 0; i < static_cast<int>(pad->m_buttons.size()); i++)
@@ -1127,10 +1131,6 @@ void evdev_joystick_handler::handle_input_event(const input_event& evt, const st
 		// cancel out opposing values and get the resulting difference. if there was no change, use the old value.
 		m_dev->stick_val[idx] = m_dev->val_max[idx] - m_dev->val_min[idx];
 	}
-
-	const auto cfg = m_dev->config;
-	if (!cfg)
-		return;
 
 	u16 lx, ly, rx, ry;
 
