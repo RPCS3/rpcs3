@@ -2204,7 +2204,7 @@ void Emulator::FinalizeRunRequest()
 
 	if (m_savestate_extension_flags1 & SaveStateExtentionFlags1::ShouldCloseMenu)
 	{
-		std::thread([this, info = ProcureCurrentEmulationCourseInformation()]()
+		std::thread([this, info = GetEmulationIdentifier()]()
 		{
 			std::this_thread::sleep_for(2s);
 
@@ -2451,7 +2451,7 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 		return;
 	}
 
-	auto perform_kill = [read_counter, allow_autoexit, this, info = ProcureCurrentEmulationCourseInformation()]()
+	auto perform_kill = [read_counter, allow_autoexit, this, info = GetEmulationIdentifier()]()
 	{
 		bool read_sysutil_signal = false;
 

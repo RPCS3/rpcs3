@@ -189,7 +189,8 @@ public:
 
 	enum class stop_counter_t : u64{};
 
-	stop_counter_t ProcureCurrentEmulationCourseInformation() const
+	// Returns a different value each time we start a new emulation.
+	stop_counter_t GetEmulationIdentifier() const
 	{
 		return stop_counter_t{+m_stop_ctr};
 	}

@@ -805,9 +805,9 @@ std::function<cpu_thread*()> debugger_frame::make_check_cpu(cpu_thread* cpu, boo
 		shared.reset();
 	}
 
-	return [cpu, type, shared = std::move(shared), emu_course = Emu.ProcureCurrentEmulationCourseInformation()]() -> cpu_thread*
+	return [cpu, type, shared = std::move(shared), emulation_id = Emu.GetEmulationIdentifier()]() -> cpu_thread*
 	{
-		if (emu_course != Emu.ProcureCurrentEmulationCourseInformation())
+		if (emulation_id != Emu.GetEmulationIdentifier())
 		{
 			// Invalidate all data after Emu.Kill()
 			return nullptr;
