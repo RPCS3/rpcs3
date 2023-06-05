@@ -1644,7 +1644,7 @@ void lv2_obj::cleanup()
 
 void lv2_obj::schedule_all(u64 current_time)
 {
-	usz notify_later_idx = 0;
+	usz notify_later_idx = std::basic_string_view<const void*>{g_to_notify, 4}.find_first_of(std::add_pointer_t<const void>{});
 
 	if (!g_pending && g_scheduler_ready)
 	{
@@ -1663,7 +1663,7 @@ void lv2_obj::schedule_all(u64 current_time)
 					continue;
 				}
 
-				if (notify_later_idx == std::size(g_to_notify))
+				if (notify_later_idx >= std::size(g_to_notify))
 				{
 					// Out of notification slots, notify locally (resizable container is not worth it)
 					target->state.notify_one(cpu_flag::signal + cpu_flag::suspend);
@@ -1697,7 +1697,7 @@ void lv2_obj::schedule_all(u64 current_time)
 				ensure(!target->state.test_and_set(cpu_flag::notify));
 
 				// Otherwise notify it to wake itself
-				if (notify_later_idx == std::size(g_to_notify))
+				if (notify_later_idx >= std::size(g_to_notify))
 				{
 					// Out of notification slots, notify locally (resizable container is not worth it)
 					target->state.notify_one(cpu_flag::notify);
