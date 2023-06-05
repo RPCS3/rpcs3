@@ -58,6 +58,7 @@ struct cfg_pad final : cfg::node
 
 	cfg::string pressure_intensity_button{ this, "Pressure Intensity Button", "" };
 	cfg::uint<0, 100> pressure_intensity{ this, "Pressure Intensity Percent", 50 };
+	cfg::_bool pressure_intensity_toggle_mode{ this, "Pressure Intensity Toggle Mode", false };
 
 	cfg::uint<0, 200> lstickmultiplier{ this, "Left Stick Multiplier", 100 };
 	cfg::uint<0, 200> rstickmultiplier{ this, "Right Stick Multiplier", 100 };

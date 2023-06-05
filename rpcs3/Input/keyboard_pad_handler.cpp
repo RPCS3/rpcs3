@@ -81,8 +81,6 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 	{
 		// Find out if special buttons are pressed (introduced by RPCS3).
 		// Activate the buttons here if possible since keys don't auto-repeat. This ensures that they are already pressed in the following loop.
-		bool adjust_pressure = false;
-
 		if (pad.m_pressure_intensity_button_index >= 0)
 		{
 			Button& pressure_intensity_button = pad.m_buttons[pad.m_pressure_intensity_button_index];
@@ -92,9 +90,9 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 				pressure_intensity_button.m_pressed = pressed;
 				pressure_intensity_button.m_value = value;
 			}
-
-			adjust_pressure = pressure_intensity_button.m_pressed;
 		}
+
+		const bool adjust_pressure = pad.get_pressure_intensity_enabled(m_pressure_intensity_toggle_mode);
 
 		// Handle buttons
 		for (Button& button : pad.m_buttons)
@@ -795,7 +793,7 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, u8 player_i
 		return false;
 
 	m_pad_configs[player_id].from_string(player_config->config.to_string());
-	cfg_pad* cfg = &m_pad_configs[player_id];
+	const cfg_pad* cfg = &m_pad_configs[player_id];
 	if (cfg == nullptr)
 		return false;
 
@@ -812,6 +810,7 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, u8 player_i
 	m_trigger_lerp_factor = cfg->trigger_lerp_factor / 100.0f;
 	m_l_stick_multiplier = cfg->lstickmultiplier;
 	m_r_stick_multiplier = cfg->rstickmultiplier;
+	m_pressure_intensity_toggle_mode = cfg->pressure_intensity_toggle_mode.get();
 
 	const auto find_key = [this](const cfg::string& name)
 	{

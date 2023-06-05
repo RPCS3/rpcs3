@@ -1076,9 +1076,9 @@ void pad_settings_dialog::UpdateLabels(bool is_reset)
 			}
 		}
 
-		ui->chb_vibration_large->setChecked(static_cast<bool>(cfg.enable_vibration_motor_large));
-		ui->chb_vibration_small->setChecked(static_cast<bool>(cfg.enable_vibration_motor_small));
-		ui->chb_vibration_switch->setChecked(static_cast<bool>(cfg.switch_vibration_motors));
+		ui->chb_vibration_large->setChecked(cfg.enable_vibration_motor_large.get());
+		ui->chb_vibration_small->setChecked(cfg.enable_vibration_motor_small.get());
+		ui->chb_vibration_switch->setChecked(cfg.switch_vibration_motors.get());
 
 		// Update Trigger Thresholds
 		ui->preview_trigger_left->setRange(0, m_handler->trigger_max);
@@ -1159,6 +1159,9 @@ void pad_settings_dialog::UpdateLabels(bool is_reset)
 		range = cfg.pressure_intensity.to_list();
 		ui->sb_pressure_intensity->setRange(std::stoi(range.front()), std::stoi(range.back()));
 		ui->sb_pressure_intensity->setValue(cfg.pressure_intensity);
+
+		// Update pressure sensitivity toggle mode
+		ui->cb_pressure_intensity_toggle_mode->setChecked(cfg.pressure_intensity_toggle_mode.get());
 
 		// Apply stored/default LED settings to the device
 		m_enable_led = m_handler->has_led();
@@ -1778,6 +1781,7 @@ void pad_settings_dialog::ApplyCurrentPlayerConfig(int new_player_id)
 	if (m_handler->has_pressure_intensity_button())
 	{
 		cfg.pressure_intensity.set(ui->sb_pressure_intensity->value());
+		cfg.pressure_intensity_toggle_mode.set(ui->cb_pressure_intensity_toggle_mode->isChecked());
 	}
 
 	if (m_handler->m_type == pad_handler::keyboard)
