@@ -1016,7 +1016,7 @@ void kernel_explorer::log(u32 level, QTreeWidgetItem* item)
 
 	for (u32 j = 0; j < level; j++)
 	{
-		m_log_buf += QChar::Nbsp;
+		m_log_buf += QChar::Space;
 	}
 
 	m_log_buf.append(item->text(0));
