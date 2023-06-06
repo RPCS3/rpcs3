@@ -1123,7 +1123,7 @@ public:
 
 		if (!m_stats.empty())
 		{
-			ppu_log.notice("PPU Syscall Usage Stats: %s", m_stats);
+			ppu_log.notice("PPU Syscall Usage Stats:%s", m_stats);
 		}
 	}
 
