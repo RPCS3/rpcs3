@@ -40,7 +40,7 @@ struct lv2_update_manager
 	std::unordered_map<u32, u8> eeprom_map // offset, value
 	{
 		// system language
-	    // *i think* this gives english
+		// *i think* this gives english
 		{0x48C18, 0x00},
 		{0x48C19, 0x00},
 		{0x48C1A, 0x00},
