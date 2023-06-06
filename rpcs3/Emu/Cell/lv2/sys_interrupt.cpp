@@ -214,6 +214,9 @@ error_code _sys_interrupt_thread_disestablish(ppu_thread& ppu, u32 ih, vm::ptr<u
 		if (const auto thread = idm::withdraw<named_thread<ppu_thread>>(ih))
 		{
 			*r13 = thread->gpr[13];
+
+			// It is detached from IDM now so join must be done explicitly now
+			*thread = thread_state::finished;
 			return CELL_OK;
 		}
 
