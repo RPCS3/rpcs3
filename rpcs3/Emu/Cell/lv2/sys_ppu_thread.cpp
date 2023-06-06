@@ -34,6 +34,19 @@ struct ppu_thread_cleaner
 	ppu_thread_cleaner(const ppu_thread_cleaner&) = delete;
 
 	ppu_thread_cleaner& operator=(const ppu_thread_cleaner&) = delete;
+
+	ppu_thread_cleaner& operator=(thread_state state) noexcept
+	{
+		reader_lock lock(id_manager::g_mutex);
+
+		if (old)
+		{
+			// It is detached from IDM now so join must be done explicitly now
+			*static_cast<named_thread<ppu_thread>*>(old.get()) = state;
+		}
+
+		return *this;
+	}
 };
 
 void ppu_thread_exit(ppu_thread& ppu, ppu_opcode_t, be_t<u32>*, struct ppu_intrp_func*)
@@ -74,10 +87,10 @@ void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 	sys_ppu_thread.trace("_sys_ppu_thread_exit(errorcode=0x%llx)", errorcode);
 
 	ppu_join_status old_status;
-	{
-		// Avoid cases where cleaning causes the destructor to be called inside IDM lock scope (for performance)
-		std::shared_ptr<void> old_ppu;
 
+	// Avoid cases where cleaning causes the destructor to be called inside IDM lock scope (for performance)
+	std::shared_ptr<void> old_ppu;
+	{
 		lv2_obj::notify_all_t notify;
 		lv2_obj::prepare_for_sleep(ppu);
 
@@ -130,6 +143,12 @@ void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 	}
 
 	ppu_thread_exit(ppu, {}, nullptr, nullptr);
+
+	if (old_ppu)
+	{
+		// It is detached from IDM now so join must be done explicitly now
+		*static_cast<named_thread<ppu_thread>*>(old_ppu.get()) = thread_state::finished;
+	}
 }
 
 s32 sys_ppu_thread_yield(ppu_thread& ppu)
@@ -239,7 +258,7 @@ error_code sys_ppu_thread_detach(ppu_thread& ppu, u32 thread_id)
 
 	CellError result = CELL_ESRCH;
 
-	idm::withdraw<named_thread<ppu_thread>>(thread_id, [&](ppu_thread& thread)
+	auto [ptr, _] = idm::withdraw<named_thread<ppu_thread>>(thread_id, [&](ppu_thread& thread)
 	{
 		result = thread.joiner.atomic_op([](ppu_join_status& value) -> CellError
 		{
@@ -279,6 +298,12 @@ error_code sys_ppu_thread_detach(ppu_thread& ppu, u32 thread_id)
 
 	if (result)
 	{
+		if (result == CELL_EAGAIN)
+		{
+			// Join thread (it is detached from IDM now so it must be done explicitly now)
+			*ptr = thread_state::finished;
+		}
+
 		return result;
 	}
 
