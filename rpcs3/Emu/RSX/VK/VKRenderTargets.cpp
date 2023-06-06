@@ -190,16 +190,22 @@ namespace vk
 				return false;
 			}
 
-			if (rtt->resolve_surface && memory_pressure >= rsx::problem_severity::moderate)
-			{
-				// We do not need to keep resolve targets around.
-				vk::get_resource_manager()->dispose(rtt->resolve_surface);
-			}
-
 			if (rtt->frame_tag >= last_finished_frame)
 			{
 				// RTT itself still in use by the frame.
 				return false;
+			}
+
+			if (!rtt->old_contents.empty())
+			{
+				rtt->clear_rw_barrier();
+			}
+
+			if (rtt->resolve_surface && memory_pressure >= rsx::problem_severity::moderate)
+			{
+				// We do not need to keep resolve targets around.
+				// TODO: We should surrender this to an image cache immediately for reuse.
+				vk::get_resource_manager()->dispose(rtt->resolve_surface);
 			}
 
 			switch (memory_pressure)
@@ -207,11 +213,10 @@ namespace vk
 			case rsx::problem_severity::low:
 				return (rtt->unused_check_count() >= 2);
 			case rsx::problem_severity::moderate:
-			case rsx::problem_severity::severe:
 				return (rtt->unused_check_count() >= 1);
+			case rsx::problem_severity::severe:
 			case rsx::problem_severity::fatal:
 				// We're almost dead anyway. Remove forcefully.
-				rtt->clear_rw_barrier();
 				vk::get_resource_manager()->dispose(rtt);
 				return true;
 			default:
