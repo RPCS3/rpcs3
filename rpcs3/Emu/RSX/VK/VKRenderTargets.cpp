@@ -207,10 +207,11 @@ namespace vk
 			case rsx::problem_severity::low:
 				return (rtt->unused_check_count() >= 2);
 			case rsx::problem_severity::moderate:
-				return (rtt->unused_check_count() >= 1);
 			case rsx::problem_severity::severe:
+				return (rtt->unused_check_count() >= 1);
 			case rsx::problem_severity::fatal:
 				// We're almost dead anyway. Remove forcefully.
+				rtt->clear_rw_barrier();
 				vk::get_resource_manager()->dispose(rtt);
 				return true;
 			default:
