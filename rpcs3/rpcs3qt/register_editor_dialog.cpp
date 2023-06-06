@@ -12,6 +12,7 @@
 #include <QHBoxLayout>
 #include <QPushButton>
 #include <QMessageBox>
+#include <QCompleter>
 #include <charconv>
 
 #include "util/v128.hpp"
@@ -81,6 +82,14 @@ register_editor_dialog::register_editor_dialog(QWidget *parent, CPUDisAsm* _disa
 	button_cancel->setFixedWidth(80);
 
 	m_register_combo = new QComboBox(this);
+	m_register_combo->setMaxVisibleItems(20);
+	m_register_combo->setEditable(true);
+	m_register_combo->setInsertPolicy(QComboBox::NoInsert);
+	m_register_combo->lineEdit()->setPlaceholderText(tr("Search a register"));
+	m_register_combo->completer()->setCompletionMode(QCompleter::PopupCompletion);
+	m_register_combo->completer()->setMaxVisibleItems(20);
+	m_register_combo->completer()->setFilterMode(Qt::MatchContains);
+
 	m_value_line = new QLineEdit(this);
 	m_value_line->setFixedWidth(200);
 
