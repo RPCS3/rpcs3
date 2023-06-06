@@ -1812,6 +1812,67 @@ bool game_list_frame::RemoveSPUCache(const std::string& base_dir, bool is_intera
 	return success;
 }
 
+void game_list_frame::BatchActionBySerials(progress_dialog* pdlg, const std::set<std::string>& serials, QString progressLabel, std::function<bool(const std::string&)> action, std::function<void(u32, u32)> cancel_log, bool refresh_on_finnish)
+{
+	pdlg->setAutoClose(false);
+	pdlg->setAutoReset(false);
+	pdlg->setLabelText(progressLabel.arg(0).arg(serials.size()));
+	pdlg->show();
+
+	QTimer* timer = new QTimer(this);
+
+	auto iterate_over_serial = std::make_shared<std:function<bool()>>();
+
+	*iterate_over_serial = [=, this, performed = 0, index = 0]() mutable
+	{
+		if (index == serials.size())
+		{
+			return false;
+		}
+
+		const auto& serial *std::advance(serials.begin(), index++);
+
+		if (pdlg->wasCanceled())
+		{
+			cancel_log(performed, serials.size());
+			index = serials.size();
+		}
+		else if (action(serial))
+		{
+			pdlg->SetValue(++removed);
+		}
+
+		if (index == serials.size())
+		{
+			pdlg->setLabelText(progressLabel.arg(performed).arg(serials.size()));
+			pdlg->setCancelButtonText(tr("OK"));
+			QApplication::beep();
+
+			if (refresh_on_finnish && performed)
+			{
+				Refresh(true);
+			}
+
+			pdlg->deleteLater();
+			return false;
+		}
+
+		return true;
+	};
+
+	connect(timer, &QTimer::timeout, this, [timer, iterate_over_serial]()
+	{
+		if (!iterate_over_serial())
+		{
+			timer->stop();
+			timer->deleteLater();
+		}
+	});
+
+	// Invoked on the next event loop processing iteration
+	timer->start(0);
+}
+
 void game_list_frame::BatchCreatePPUCaches()
 {
 	const std::string vsh_path = g_cfg_vfs.get_dev_flash() + "vsh/module/";
@@ -1908,6 +1969,7 @@ void game_list_frame::BatchRemovePPUCaches()
 	{
 		serials.emplace(game->info.serial);
 	}
+
 	const u32 total = ::size32(serials);
 
 	if (total == 0)
@@ -1916,30 +1978,17 @@ void game_list_frame::BatchRemovePPUCaches()
 		return;
 	}
 
-	progress_dialog* pdlg = new progress_dialog(tr("PPU Cache Batch Removal"), tr("Removing all PPU caches"), tr("Cancel"), 0, total, true, this);
-	pdlg->setAutoClose(false);
-	pdlg->setAutoReset(false);
-	pdlg->show();
+	progress_dialog* pdlg = new progress_dialog(tr("PPU Cache Batch Removal"), tr("Removing all PPU caches"), tr("Cancel"), 0, total, false, this);
 
-	u32 removed = 0;
-	for (const auto& serial : serials)
-	{
-		if (pdlg->wasCanceled())
+	BatchActionBySerials(pdlg, serials, tr("%0/%1 caches cleared"),
+		[](const std::string& serial)
+		{
+			return RemovePPUCache(GetCacheDirBySerial(serial));
+		},
+		[](u32, u32)
 		{
 			game_list_log.notice("PPU Cache Batch Removal was canceled");
-			break;
-		}
-		QApplication::processEvents();
-
-		if (RemovePPUCache(GetCacheDirBySerial(serial)))
-		{
-			pdlg->SetValue(++removed);
-		}
-	}
-
-	pdlg->setLabelText(tr("%0/%1 caches cleared").arg(removed).arg(total));
-	pdlg->setCancelButtonText(tr("OK"));
-	QApplication::beep();
+		}, false);
 }
 
 void game_list_frame::BatchRemoveSPUCaches()
@@ -1949,6 +1998,7 @@ void game_list_frame::BatchRemoveSPUCaches()
 	{
 		serials.emplace(game->info.serial);
 	}
+
 	const u32 total = ::size32(serials);
 
 	if (total == 0)
@@ -1957,30 +2007,17 @@ void game_list_frame::BatchRemoveSPUCaches()
 		return;
 	}
 
-	progress_dialog* pdlg = new progress_dialog(tr("SPU Cache Batch Removal"), tr("Removing all SPU caches"), tr("Cancel"), 0, total, true, this);
-	pdlg->setAutoClose(false);
-	pdlg->setAutoReset(false);
-	pdlg->show();
+	progress_dialog* pdlg = new progress_dialog(tr("SPU Cache Batch Removal"), tr("Removing all SPU caches"), tr("Cancel"), 0, total, false, this);
 
-	u32 removed = 0;
-	for (const auto& serial : serials)
-	{
-		if (pdlg->wasCanceled())
+	BatchActionBySerials(pdlg, serials, tr("%0/%1 caches cleared"),
+		[](const std::string& serial)
+		{
+			return RemoveSPUCache(GetCacheDirBySerial(serial));
+		},
+		[](u32 removed, u32 total)
 		{
 			game_list_log.notice("SPU Cache Batch Removal was canceled. %d/%d folders cleared", removed, total);
-			break;
-		}
-		QApplication::processEvents();
-
-		if (RemoveSPUCache(GetCacheDirBySerial(serial)))
-		{
-			pdlg->SetValue(++removed);
-		}
-	}
-
-	pdlg->setLabelText(tr("%0/%1 caches cleared").arg(removed).arg(total));
-	pdlg->setCancelButtonText(tr("OK"));
-	QApplication::beep();
+		}, false);
 }
 
 void game_list_frame::BatchRemoveCustomConfigurations()
@@ -1993,6 +2030,7 @@ void game_list_frame::BatchRemoveCustomConfigurations()
 			serials.emplace(game->info.serial);
 		}
 	}
+
 	const u32 total = ::size32(serials);
 
 	if (total == 0)
@@ -2001,31 +2039,17 @@ void game_list_frame::BatchRemoveCustomConfigurations()
 		return;
 	}
 
-	progress_dialog* pdlg = new progress_dialog(tr("Custom Configuration Batch Removal"), tr("Removing all custom configurations"), tr("Cancel"), 0, total, true, this);
-	pdlg->setAutoClose(false);
-	pdlg->setAutoReset(false);
-	pdlg->show();
+	progress_dialog* pdlg = new progress_dialog(tr("Custom Configuration Batch Removal"), tr("Removing all custom configurations"), tr("Cancel"), 0, total, false, this);
 
-	u32 removed = 0;
-	for (const auto& serial : serials)
-	{
-		if (pdlg->wasCanceled())
+	BatchActionBySerials(pdlg, serials, tr("%0/%1 custom configurations cleared"),
+		[](const std::string& serial)
+		{
+			return RemoveCustomConfiguration(serial);
+		},
+		[](u32 removed, u32 total)
 		{
 			game_list_log.notice("Custom Configuration Batch Removal was canceled. %d/%d custom configurations cleared", removed, total);
-			break;
-		}
-		QApplication::processEvents();
-
-		if (RemoveCustomConfiguration(serial))
-		{
-			pdlg->SetValue(++removed);
-		}
-	}
-
-	pdlg->setLabelText(tr("%0/%1 custom configurations cleared").arg(removed).arg(total));
-	pdlg->setCancelButtonText(tr("OK"));
-	QApplication::beep();
-	Refresh(true);
+		}, true);
 }
 
 void game_list_frame::BatchRemoveCustomPadConfigurations()
@@ -2046,31 +2070,17 @@ void game_list_frame::BatchRemoveCustomPadConfigurations()
 		return;
 	}
 
-	progress_dialog* pdlg = new progress_dialog(tr("Custom Pad Configuration Batch Removal"), tr("Removing all custom pad configurations"), tr("Cancel"), 0, total, true, this);
-	pdlg->setAutoClose(false);
-	pdlg->setAutoReset(false);
-	pdlg->show();
+	progress_dialog* pdlg = new progress_dialog(tr("Custom Pad Configuration Batch Removal"), tr("Removing all custom pad configurations"), tr("Cancel"), 0, total, false, this);
 
-	u32 removed = 0;
-	for (const auto& serial : serials)
-	{
-		if (pdlg->wasCanceled())
+	BatchActionBySerials(pdlg, serials, tr("%0/%1 custom pad configurations cleared"),
+		[](const std::string& serial)
+		{
+			return RemoveCustomPadConfiguration(serial);
+		},
+		[](u32 removed, u32 total)
 		{
 			game_list_log.notice("Custom Pad Configuration Batch Removal was canceled. %d/%d custom pad configurations cleared", removed, total);
-			break;
-		}
-		QApplication::processEvents();
-
-		if (RemoveCustomPadConfiguration(serial))
-		{
-			pdlg->SetValue(++removed);
-		}
-	}
-
-	pdlg->setLabelText(tr("%0/%1 custom pad configurations cleared").arg(removed).arg(total));
-	pdlg->setCancelButtonText(tr("OK"));
-	QApplication::beep();
-	Refresh(true);
+		}, true);
 }
 
 void game_list_frame::BatchRemoveShaderCaches()
@@ -2088,30 +2098,17 @@ void game_list_frame::BatchRemoveShaderCaches()
 		return;
 	}
 
-	progress_dialog* pdlg = new progress_dialog(tr("Shader Cache Batch Removal"), tr("Removing all shader caches"), tr("Cancel"), 0, total, true, this);
-	pdlg->setAutoClose(false);
-	pdlg->setAutoReset(false);
-	pdlg->show();
+	progress_dialog* pdlg = new progress_dialog(tr("Shader Cache Batch Removal"), tr("Removing all shader caches"), tr("Cancel"), 0, total, false, this);
 
-	u32 removed = 0;
-	for (const auto& serial : serials)
-	{
-		if (pdlg->wasCanceled())
+	BatchActionBySerials(pdlg, serials, tr("%0/%1 shader caches cleared"),
+		[](const std::string& serial)
 		{
-			game_list_log.notice("Shader Cache Batch Removal was canceled");
-			break;
-		}
-		QApplication::processEvents();
-
-		if (RemoveShadersCache(GetCacheDirBySerial(serial)))
+			return RemoveShadersCache(GetCacheDirBySerial(serial));
+		},
+		[](u32 removed, u32 total)
 		{
-			pdlg->SetValue(++removed);
-		}
-	}
-
-	pdlg->setLabelText(tr("%0/%1 shader caches cleared").arg(removed).arg(total));
-	pdlg->setCancelButtonText(tr("OK"));
-	QApplication::beep();
+			game_list_log.notice("Shader Cache Batch Removal was canceled. %d/%d cleared", removed, total);
+		}, false);
 }
 
 void game_list_frame::ShowCustomConfigIcon(const game_info& game)

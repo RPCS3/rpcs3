@@ -110,6 +110,7 @@ private:
 	static bool CreatePPUCache(const std::string& path, const std::string& serial = {});
 	static bool CreatePPUCache(const game_info& game);
 
+	void BatchActionBySerials(progress_dialog* pdlg, const std::set<std::string>& serials, QString progressLabel, std::function<bool(const std::string&)> action, std::function<void(u32, u32)> cancel_log, bool refresh_on_finnish);
 	static std::string GetCacheDirBySerial(const std::string& serial);
 	static std::string GetDataDirBySerial(const std::string& serial);
 	std::string CurrentSelectionPath();
