@@ -589,7 +589,7 @@ std::vector<std::string> fmt::split(std::string_view source, std::initializer_li
 	return result;
 }
 
-std::string fmt::trim(const std::string& source, const std::string& values)
+std::string fmt::trim(const std::string& source, std::string_view values)
 {
 	usz begin = source.find_first_not_of(values);
 
@@ -597,6 +597,12 @@ std::string fmt::trim(const std::string& source, const std::string& values)
 		return {};
 
 	return source.substr(begin, source.find_last_not_of(values) + 1);
+}
+
+void fmt::trim_back(std::string& source, std::string_view values)
+{
+	const usz index = source.find_last_not_of(values);
+	source.resize(index + 1);
 }
 
 std::string fmt::to_upper(std::string_view string)

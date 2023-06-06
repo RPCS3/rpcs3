@@ -1153,7 +1153,8 @@ void ppu_thread::dump_regs(std::string& ret) const
 			}
 		}
 
-		fmt::append(ret, "\n");
+		fmt::trim_back(ret);
+		ret += '\n';
 	}
 
 	for (uint i = 0; i < 32; ++i)
