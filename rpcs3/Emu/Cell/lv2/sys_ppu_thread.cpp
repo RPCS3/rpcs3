@@ -201,10 +201,6 @@ error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr
 			lv2_obj::prepare_for_sleep(ppu);
 			lv2_obj::sleep(ppu);
 		}
-		else if (result == CELL_EAGAIN)
-		{
-			thread.joiner.notify_one();
-		}
 
 		notify.cleanup();
 		return result;
@@ -218,6 +214,12 @@ error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr
 	if (thread.ret && thread.ret != CELL_EAGAIN)
 	{
 		return thread.ret;
+	}
+
+	if (thread.ret == CELL_EAGAIN)
+	{
+		// Notify thread if waiting for a joiner
+		thread->joiner.notify_one();
 	}
 
 	// Wait for cleanup
@@ -287,11 +289,6 @@ error_code sys_ppu_thread_detach(ppu_thread& ppu, u32 thread_id)
 			return {};
 		});
 
-		if (result == CELL_EAGAIN)
-		{
-			thread.joiner.notify_one();
-		}
-
 		// Remove ID on EAGAIN
 		return result != CELL_EAGAIN;
 	});
@@ -300,7 +297,7 @@ error_code sys_ppu_thread_detach(ppu_thread& ppu, u32 thread_id)
 	{
 		if (result == CELL_EAGAIN)
 		{
-			// Join thread (it is detached from IDM now so it must be done explicitly now)
+			// Join and notify thread (it is detached from IDM now so it must be done explicitly now)
 			*ptr = thread_state::finished;
 		}
 
