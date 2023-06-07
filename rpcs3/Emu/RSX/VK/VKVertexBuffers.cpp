@@ -243,6 +243,8 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 		bool to_store = false;
 		u32  storage_address = -1;
 
+		m_frame_stats.vertex_cache_request_count++;
+
 		if (m_vertex_layout.interleaved_blocks.size() == 1 &&
 			rsx::method_registers.current_draw_clause.command != rsx::draw_command::inlined_array)
 		{
@@ -264,6 +266,8 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 
 		if (!in_cache)
 		{
+			m_frame_stats.vertex_cache_miss_count++;
+
 			persistent_offset = static_cast<u32>(m_attrib_ring_info.alloc<256>(required.first));
 			persistent_range_base = static_cast<u32>(persistent_offset);
 

@@ -801,11 +801,18 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			const auto num_texture_upload = m_texture_cache.get_texture_upload_calls_this_frame();
 			const auto num_texture_upload_miss = m_texture_cache.get_texture_upload_misses_this_frame();
 			const auto texture_upload_miss_ratio = m_texture_cache.get_texture_upload_miss_percentage();
+
 			println(fmt::format("Unreleased textures: %8d", num_dirty_textures));
 			println(fmt::format("Texture cache memory: %7dM", texture_memory_size));
 			println(fmt::format("Temporary texture memory: %3dM", tmp_texture_memory_size));
 			println(fmt::format("Flush requests: %13d  = %2d (%3d%%) hard faults, %2d unavoidable, %2d misprediction(s), %2d speculation(s)", num_flushes, num_misses, cache_miss_ratio, num_unavoidable, num_mispredict, num_speculate));
 			println(fmt::format("Texture uploads: %14u (%u from CPU - %02u%%)", num_texture_upload, num_texture_upload_miss, texture_upload_miss_ratio));
+
+			const auto vertex_cache_hit_count = (info.stats.vertex_cache_request_count - info.stats.vertex_cache_miss_count);
+			const auto vertex_cache_hit_ratio = info.stats.vertex_cache_request_count
+				? (vertex_cache_hit_count * 100) / info.stats.vertex_cache_request_count
+				: 0;
+			println(fmt::format("Vertex cache hits: %12u/%u (%u%%)", vertex_cache_hit_count, info.stats.vertex_cache_request_count, vertex_cache_hit_ratio));
 		}
 
 		direct_fbo->release();
