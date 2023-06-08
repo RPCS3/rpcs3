@@ -131,3 +131,30 @@ u32 get_axis_keycode(u32 offset, u16 value)
 	default: return static_cast<u32>(axis_direction::both);
 	}
 }
+
+bool Pad::get_pressure_intensity_enabled(bool is_toggle_mode)
+{
+	if (m_pressure_intensity_button_index < 0)
+	{
+		return false;
+	}
+
+	const Button& pressure_intensity_button = m_buttons[m_pressure_intensity_button_index];
+
+	if (is_toggle_mode)
+	{
+		const bool pressed = pressure_intensity_button.m_pressed;
+
+		if (std::exchange(m_pressure_intensity_button_pressed, pressed) != pressed)
+		{
+			if (pressed)
+			{
+				m_pressure_intensity_toggled = !m_pressure_intensity_toggled;
+			}
+		}
+
+		return m_pressure_intensity_toggled;
+	}
+
+	return pressure_intensity_button.m_pressed;
+}
