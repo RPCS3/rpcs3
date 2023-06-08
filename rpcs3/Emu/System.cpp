@@ -1823,33 +1823,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		// Check SELF header
 		if (elf_file.size() >= 4 && elf_file.read<u32>() == "SCE\0"_u32)
 		{
-			const std::string decrypted_path = "boot.elf";
-
-			fs::stat_t encrypted_stat = elf_file.stat();
-			fs::stat_t decrypted_stat;
-
-			// Check modification time and try to load decrypted ELF
-			if (false && fs::stat(decrypted_path, decrypted_stat) && decrypted_stat.mtime == encrypted_stat.mtime)
-			{
-				elf_file.open(decrypted_path);
-			}
 			// Decrypt SELF
-			else if ((elf_file = decrypt_self(std::move(elf_file), klic.empty() ? nullptr : reinterpret_cast<u8*>(&klic[0]), &g_ps3_process_info.self_info)))
-			{
-				if (true)
-				{
-				}
-				else if (fs::file elf_out{decrypted_path, fs::rewrite})
-				{
-					elf_out.write(elf_file.to_vector<u8>());
-					elf_out.close();
-					fs::utime(decrypted_path, encrypted_stat.atime, encrypted_stat.mtime);
-				}
-				else
-				{
-					sys_log.error("Failed to create boot.elf");
-				}
-			}
+			elf_file = decrypt_self(std::move(elf_file), klic.empty() ? nullptr : reinterpret_cast<u8*>(&klic[0]), &g_ps3_process_info.self_info);
 		}
 		else
 		{
