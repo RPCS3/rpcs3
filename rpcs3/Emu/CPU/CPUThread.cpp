@@ -1312,7 +1312,10 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this) noexcept
 
 void cpu_thread::cleanup() noexcept
 {
-	ensure(!s_cpu_counter);
+	if (u64 count = s_cpu_counter)
+	{
+		fmt::throw_exception("cpu_thread::cleanup(): %u threads are still active! (created=%u, destroyed=%u)", count, +g_threads_created, +g_threads_deleted);
+	}
 
 	sys_log.notice("All CPU threads have been stopped. [+: %u]", +g_threads_created);
 

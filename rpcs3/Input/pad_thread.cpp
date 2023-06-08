@@ -103,19 +103,14 @@ void pad_thread::Init()
 
 	g_cfg_profile.load();
 
-	std::string active_profile = g_pad_profile_override;
+	std::string active_profile = g_cfg_profile.active_profiles.get_value(pad::g_title_id);
 
 	if (active_profile.empty())
 	{
-		active_profile = g_cfg_profile.active_profiles.get_value(pad::g_title_id);
-
-		if (active_profile.empty())
-		{
-			active_profile = g_cfg_profile.active_profiles.get_value(g_cfg_profile.global_key);
-		}
+		active_profile = g_cfg_profile.active_profiles.get_value(g_cfg_profile.global_key);
 	}
 
-	input_log.notice("Using pad profile: '%s'", active_profile);
+	input_log.notice("Using pad profile: '%s' (override='%s')", active_profile, g_pad_profile_override);
 
 	// Load in order to get the pad handlers
 	if (!g_cfg_input.load(pad::g_title_id, active_profile))

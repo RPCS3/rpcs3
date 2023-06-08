@@ -4,20 +4,28 @@
 
 LOG_CHANNEL(input_log, "Input");
 
+extern std::string g_pad_profile_override;
+
 bool cfg_input::load(const std::string& title_id, const std::string& profile, bool strict)
 {
 	input_log.notice("Loading pad config (title_id='%s', profile='%s', strict=%d)", title_id, profile, strict);
 
 	std::string cfg_name;
 
-	// Check custom config first
-	if (!title_id.empty())
+	// Check profile override first
+	if (!strict && !g_pad_profile_override.empty())
+	{
+		cfg_name = rpcs3::utils::get_input_config_dir() + g_pad_profile_override + ".yml";
+	}
+
+	// Check custom config next
+	if (!title_id.empty() && !fs::is_file(cfg_name))
 	{
 		cfg_name = rpcs3::utils::get_custom_input_config_path(title_id);
 	}
 
 	// Check active global profile next
-	if ((title_id.empty() || !strict) && !fs::is_file(cfg_name))
+	if ((title_id.empty() || !strict) && !profile.empty() && !fs::is_file(cfg_name))
 	{
 		cfg_name = rpcs3::utils::get_input_config_dir() + profile + ".yml";
 	}

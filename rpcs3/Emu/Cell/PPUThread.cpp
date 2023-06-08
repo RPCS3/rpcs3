@@ -1153,7 +1153,8 @@ void ppu_thread::dump_regs(std::string& ret) const
 			}
 		}
 
-		fmt::append(ret, "\n");
+		fmt::trim_back(ret);
+		ret += '\n';
 	}
 
 	for (uint i = 0; i < 32; ++i)
@@ -2054,12 +2055,7 @@ void ppu_thread::fast_call(u32 addr, u64 rtoc)
 
 	auto at_ret = [&]()
 	{
-		if (std::uncaught_exceptions())
-		{
-			cpu_on_stop();
-			current_function = old_func;
-		}
-		else if (old_cia)
+		if (old_cia)
 		{
 			if (state & cpu_flag::again)
 			{
@@ -2069,6 +2065,18 @@ void ppu_thread::fast_call(u32 addr, u64 rtoc)
 			cia = old_cia;
 			gpr[2] = old_rtoc;
 			lr = old_lr;
+		}
+		else if (state & cpu_flag::ret && cia == g_fxo->get<ppu_function_manager>().func_addr(1, true) + 4)
+		{
+			std::string ret;
+			dump_all(ret);
+
+			ppu_log.error("Returning from the thread entry function! (func=0x%x)", entry_func.addr);
+			ppu_log.notice("Thread context: %s", ret);
+
+			lv2_obj::sleep(*this);
+
+			state += cpu_flag::again; // For savestates
 		}
 
 		current_function = old_func;

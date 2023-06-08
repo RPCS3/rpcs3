@@ -1767,11 +1767,8 @@ void spu_thread::cleanup()
 	// Free range lock (and signals cleanup was called to the destructor)
 	vm::free_range_lock(range_lock);
 
-	// Signal the debugger about the termination
-	if (!state.test_and_set(cpu_flag::exit))
-	{
-		state.notify_one();
-	}
+	// Terminate and join thread
+	static_cast<named_thread<spu_thread>&>(*this) = thread_state::finished;
 }
 
 spu_thread::~spu_thread()

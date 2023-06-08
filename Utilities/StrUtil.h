@@ -124,7 +124,8 @@ namespace fmt
 	}
 
 	std::vector<std::string> split(std::string_view source, std::initializer_list<std::string_view> separators, bool is_skip_empty = true);
-	std::string trim(const std::string& source, const std::string& values = " \t");
+	std::string trim(const std::string& source, std::string_view values = " \t");
+	void trim_back(std::string& source, std::string_view values = " \t");
 
 	template <typename T>
 	std::string merge(const T& source, const std::string& separator)
