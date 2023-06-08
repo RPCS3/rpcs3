@@ -871,7 +871,7 @@ bool SELFDecrypter::LoadHeaders(bool isElf32, SelfAdditionalInfo* out_info)
 
 	if (out_info)
 	{
-		out_info->valid = false;
+		*out_info = {};
 	}
 
 	// Check SCE magic.
@@ -1411,7 +1411,7 @@ fs::file decrypt_self(fs::file elf_or_self, u8* klic_key, SelfAdditionalInfo* ou
 {
 	if (out_info)
 	{
-		out_info->valid = false;
+		*out_info = {};
 	}
 
 	if (!elf_or_self)
