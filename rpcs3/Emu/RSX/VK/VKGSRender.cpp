@@ -696,7 +696,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 		}
 	);
 
-	if (g_cfg.video.disable_vertex_cache || g_cfg.video.multithreaded_rsx)
+	if (g_cfg.video.disable_vertex_cache)
 		m_vertex_cache = std::make_unique<vk::null_vertex_cache>();
 	else
 		m_vertex_cache = std::make_unique<vk::weak_vertex_cache>();
