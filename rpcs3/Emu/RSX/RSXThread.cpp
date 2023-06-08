@@ -1218,10 +1218,10 @@ namespace rsx
 
 	std::span<const std::byte> thread::get_raw_index_array(const draw_clause& draw_indexed_clause) const
 	{
-		if (!element_push_buffer.empty())
+		if (!element_push_buffer.empty()) [[ unlikely ]]
 		{
-			//Indices provided via immediate mode
-			return{reinterpret_cast<const std::byte*>(element_push_buffer.data()), ::narrow<u32>(element_push_buffer.size() * sizeof(u32))};
+			// Indices provided via immediate mode
+			return {reinterpret_cast<const std::byte*>(element_push_buffer.data()), ::narrow<u32>(element_push_buffer.size() * sizeof(u32))};
 		}
 
 		const rsx::index_array_type type = rsx::method_registers.index_type();
@@ -1230,30 +1230,27 @@ namespace rsx
 		// Force aligned indices as realhw
 		const u32 address = (0 - type_size) & get_address(rsx::method_registers.index_array_address(), rsx::method_registers.index_array_location());
 
-		//const bool is_primitive_restart_enabled = rsx::method_registers.restart_index_enabled();
-		//const u32 primitive_restart_index = rsx::method_registers.restart_index();
-
 		const u32 first = draw_indexed_clause.min_index();
 		const u32 count = draw_indexed_clause.get_elements_count();
 
 		const auto ptr = vm::_ptr<const std::byte>(address);
-		return{ ptr + first * type_size, count * type_size };
+		return { ptr + first * type_size, count * type_size };
 	}
 
 	std::variant<draw_array_command, draw_indexed_array_command, draw_inlined_array>
 	thread::get_draw_command(const rsx::rsx_state& state) const
 	{
-		if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::array)
-		{
-			return draw_array_command{};
-		}
-
-		if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed)
+		if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed) [[ likely ]]
 		{
 			return draw_indexed_array_command
 			{
 				get_raw_index_array(state.current_draw_clause)
 			};
+		}
+
+		if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::array)
+		{
+			return draw_array_command{};
 		}
 
 		if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::inlined_array)
