@@ -1143,6 +1143,17 @@ void spu_thread::dump_regs(std::string& ret) const
 	fmt::append(ret, "SNR1: %s\n", ch_snr1);
 	fmt::append(ret, "SNR2: %s\n", ch_snr2);
 
+	if (get_type() != spu_type::threaded)
+	{
+		for (usz i = 0; i < int_ctrl.size(); i++)
+		{
+			fmt::append(ret, "Int Ctrl[%u]: stat=0x%x, mask=0x%x\n", i, +int_ctrl[i].stat, +int_ctrl[i].mask);
+		}
+
+		fmt::append(ret, "MFC Prxy Cmd: [%s written: %x]\n", mfc_prxy_cmd, mfc_prxy_write_state.all);
+		fmt::append(ret, "MFC Prxy Mask: 0x%x\n", +mfc_prxy_mask);
+	}
+
 	const u32 addr = raddr;
 
 	fmt::append(ret, "Reservation Addr: %s\n", addr ? fmt::format("0x%x", addr) : "N/A");
