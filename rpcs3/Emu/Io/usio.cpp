@@ -199,7 +199,7 @@ void usb_device_usio::translate_input()
 		const std::size_t offset = (player * 8ULL);
 
 		const auto& cfg = ::at32(g_cfg_usio.players, pad_number);
-		cfg->handle_input(pad, false, [&](usio_btn btn, u16 value, bool pressed)
+		cfg->handle_input(pad, false, [&](usio_btn btn, u16 /*value*/, bool pressed)
 			{
 				switch (btn)
 				{

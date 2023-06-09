@@ -3,6 +3,7 @@
 #include "Utilities/lockless.h"
 #include "Utilities/Thread.h"
 #include "Common/bitfield.hpp"
+#include "Common/unordered_map.hpp"
 #include "Emu/System.h"
 #include "Emu/cache_utils.hpp"
 #include "Program/ProgramStateCache.h"
@@ -10,7 +11,6 @@
 #include "Overlays/Shaders/shader_loading_dialog.h"
 
 #include <chrono>
-#include <unordered_map>
 
 #include "util/sysinfo.hpp"
 #include "util/fnv_hash.hpp"
@@ -447,61 +447,62 @@ namespace rsx
 	namespace vertex_cache
 	{
 		// A null vertex cache
-		template <typename storage_type, typename upload_format>
+		template <typename storage_type>
 		class default_vertex_cache
 		{
 		public:
 			virtual ~default_vertex_cache() = default;
-			virtual storage_type* find_vertex_range(uptr /*local_addr*/, upload_format, u32 /*data_length*/) { return nullptr; }
-			virtual void store_range(uptr /*local_addr*/, upload_format, u32 /*data_length*/, u32 /*offset_in_heap*/) {}
+			virtual const storage_type* find_vertex_range(u32 /*local_addr*/, u32 /*data_length*/) { return nullptr; }
+			virtual void store_range(u32 /*local_addr*/, u32 /*data_length*/, u32 /*offset_in_heap*/) {}
 			virtual void purge() {}
 		};
 
-		// A weak vertex cache with no data checks or memory range locks
-		// Of limited use since contents are only guaranteed to be valid once per frame
-		// TODO: Strict vertex cache with range locks
-		template <typename upload_format>
 		struct uploaded_range
 		{
 			uptr local_address;
-			upload_format buffer_format;
 			u32 offset_in_heap;
 			u32 data_length;
 		};
 
-		template <typename upload_format>
-		class weak_vertex_cache : public default_vertex_cache<uploaded_range<upload_format>, upload_format>
+		// A weak vertex cache with no data checks or memory range locks
+		// Of limited use since contents are only guaranteed to be valid once per frame
+		// Supports upto 1GiB block lengths if typed and full 4GiB otherwise.
+		// Using a 1:1 hash-value with robin-hood is 2x faster than what we had before with std-map-of-arrays.
+		class weak_vertex_cache : public default_vertex_cache<uploaded_range>
 		{
-			using storage_type = uploaded_range<upload_format>;
+			using storage_type = uploaded_range;
 
 		private:
-			std::unordered_map<uptr, std::vector<storage_type>> vertex_ranges;
+			rsx::unordered_map<uptr, storage_type> vertex_ranges;
+
+			FORCE_INLINE u64 hash(u32 local_addr, u32 data_length) const
+			{
+				return u64(local_addr) | (u64(data_length) << 32);
+			}
 
 		public:
 
-			storage_type* find_vertex_range(uptr local_addr, upload_format fmt, u32 data_length) override
+			const storage_type* find_vertex_range(u32 local_addr, u32 data_length) override
 			{
-				//const auto data_end = local_addr + data_length;
-
-				for (auto &v : vertex_ranges[local_addr])
+				const auto key = hash(local_addr, data_length);
+				const auto found = vertex_ranges.find(key);
+				if (found == vertex_ranges.end())
 				{
-					// NOTE: This has to match exactly. Using sized shortcuts such as >= comparison causes artifacting in some applications (UC1)
-					if (v.buffer_format == fmt && v.data_length == data_length)
-						return &v;
+					return nullptr;
 				}
 
-				return nullptr;
+				return std::addressof(found->second);
 			}
 
-			void store_range(uptr local_addr, upload_format fmt, u32 data_length, u32 offset_in_heap) override
+			void store_range(u32 local_addr, u32 data_length, u32 offset_in_heap) override
 			{
 				storage_type v = {};
-				v.buffer_format = fmt;
 				v.data_length = data_length;
 				v.local_address = local_addr;
 				v.offset_in_heap = offset_in_heap;
 
-				vertex_ranges[local_addr].push_back(v);
+				const auto key = hash(local_addr, data_length);
+				vertex_ranges[key] = v;
 			}
 
 			void purge() override

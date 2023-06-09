@@ -334,7 +334,10 @@ struct Pad
 	u16 m_product_id{0};
 
 	s32 m_pressure_intensity_button_index{-1}; // Special button index. -1 if not set.
+	bool m_pressure_intensity_button_pressed{}; // Last sensitivity button press state, used for toggle.
+	bool m_pressure_intensity_toggled{}; // Whether the sensitivity is toggled on or off.
 	u8 m_pressure_intensity{127}; // 0-255
+	bool get_pressure_intensity_enabled(bool is_toggle_mode);
 
 	// Cable State:   0 - 1  plugged in ?
 	u8 m_cable_state{0};

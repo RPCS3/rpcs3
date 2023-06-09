@@ -22,6 +22,7 @@ enum class ppu_cmd : u32
 	ptr_call, // Execute function by pointer
 	opd_call, // Execute function by provided rtoc and address (unlike lle_call, does not read memory)
 	cia_call, // Execute from current CIA, mo GPR modification applied
+	entry_call, // Load addr and rtoc from entry_func
 	initialize, // ppu_initialize()
 	sleep,
 	reset_stack, // resets stack address
@@ -339,7 +340,7 @@ public:
 
 	be_t<u64>* get_stack_arg(s32 i, u64 align = alignof(u64));
 	void exec_task();
-	void fast_call(u32 addr, u64 rtoc);
+	void fast_call(u32 addr, u64 rtoc, bool is_thread_entry = false);
 
 	static std::pair<vm::addr_t, u32> stack_push(u32 size, u32 align_v);
 	static void stack_pop_verbose(u32 addr, u32 size) noexcept;

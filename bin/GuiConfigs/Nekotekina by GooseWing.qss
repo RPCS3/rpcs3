@@ -504,3 +504,6 @@ QWidget#trophy_notification_frame {
 	background-color: #4d4940;
 	color: #ffd785;
 }
+
+/* Richtext link color */
+QLabel#richtext_link_color { color: #87cefa; }

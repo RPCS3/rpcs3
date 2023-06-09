@@ -731,17 +731,22 @@ game_boot_result Emulator::GetElfPathFromDir(std::string& elf_path, const std::s
 
 game_boot_result Emulator::BootGame(const std::string& path, const std::string& title_id, bool direct, cfg_mode config_mode, const std::string& config_path)
 {
-	auto save_args = std::make_tuple(m_path, argv, envp, data, disc, klic, hdd1, m_config_mode, m_config_mode);
+	auto save_args = std::make_tuple(m_path, m_path_original, argv, envp, data, disc, klic, hdd1, m_config_mode, m_config_path);
 
 	auto restore_on_no_boot = [&](game_boot_result result)
 	{
 		if (IsStopped() || result != game_boot_result::no_errors)
 		{
-			std::tie(m_path, argv, envp, data, disc, klic, hdd1, m_config_mode, m_config_mode) = std::move(save_args);
+			std::tie(m_path, m_path_original, argv, envp, data, disc, klic, hdd1, m_config_mode, m_config_path) = std::move(save_args);
 		}
 
 		return result;
 	};
+
+	if (m_path_original.empty() || config_mode != cfg_mode::continuous)
+	{
+		m_path_original = m_path;
+	}
 
 	m_path_old = m_path;
 
@@ -2036,7 +2041,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 		if (ppu_exec == elf_error::ok && !fs::is_file(g_cfg_vfs.get_dev_flash() + "sys/external/liblv2.sprx"))
 		{
-			const auto libs = g_cfg.core.libraries_control.get_set();
+			const auto& libs = g_cfg.core.libraries_control.get_set();
 
 			extern const std::map<std::string_view, int> g_prx_list;
 
@@ -2204,7 +2209,7 @@ void Emulator::FinalizeRunRequest()
 
 	if (m_savestate_extension_flags1 & SaveStateExtentionFlags1::ShouldCloseMenu)
 	{
-		std::thread([this, info = ProcureCurrentEmulationCourseInformation()]()
+		std::thread([this, info = GetEmulationIdentifier()]()
 		{
 			std::this_thread::sleep_for(2s);
 
@@ -2451,7 +2456,7 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 		return;
 	}
 
-	auto perform_kill = [read_counter, allow_autoexit, this, info = ProcureCurrentEmulationCourseInformation()]()
+	auto perform_kill = [read_counter, allow_autoexit, this, info = GetEmulationIdentifier()]()
 	{
 		bool read_sysutil_signal = false;
 
@@ -3460,7 +3465,7 @@ utils::serial* Emulator::DeserialManager() const
 
 bool Emulator::IsVsh()
 {
-	return g_ps3_process_info.self_info.prog_id_hdr.program_authority_id >> 52 == 0x107; // Not only VSH but also most CoreOS LV2 SELFs need the special treatment
+	return g_ps3_process_info.self_info.valid && (g_ps3_process_info.self_info.prog_id_hdr.program_authority_id >> 52 == 0x107); // Not only VSH but also most CoreOS LV2 SELFs need the special treatment
 }
 
 bool Emulator::IsValidSfb(const std::string& path)

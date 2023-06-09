@@ -20,8 +20,8 @@
 
 namespace gl
 {
-	using vertex_cache = rsx::vertex_cache::default_vertex_cache<rsx::vertex_cache::uploaded_range<GLenum>, GLenum>;
-	using weak_vertex_cache = rsx::vertex_cache::weak_vertex_cache<GLenum>;
+	using vertex_cache = rsx::vertex_cache::default_vertex_cache<rsx::vertex_cache::uploaded_range>;
+	using weak_vertex_cache = rsx::vertex_cache::weak_vertex_cache;
 	using null_vertex_cache = vertex_cache;
 
 	using shader_cache = rsx::shaders_cache<void*, GLProgramBuffer>;

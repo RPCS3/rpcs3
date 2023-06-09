@@ -655,13 +655,13 @@ void PadHandlerBase::get_mapping(const pad_ensemble& binding)
 	if (!device || !pad)
 		return;
 
-	auto cfg = device->config;
+	const auto cfg = device->config;
 
 	auto button_values = get_button_values(device);
 
 	// Find out if special buttons are pressed (introduced by RPCS3).
 	// These buttons will have a delay of one cycle, but whatever.
-	const bool adjust_pressure = pad->m_pressure_intensity_button_index >= 0 && pad->m_buttons[pad->m_pressure_intensity_button_index].m_pressed;
+	const bool adjust_pressure = pad->get_pressure_intensity_enabled(cfg->pressure_intensity_toggle_mode.get());
 
 	// Translate any corresponding keycodes to our normal DS3 buttons and triggers
 	for (auto& btn : pad->m_buttons)

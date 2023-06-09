@@ -16,6 +16,9 @@ namespace rsx
 		s64 textures_upload_time;
 		s64 draw_exec_time;
 		s64 flip_time;
+
+		u32 vertex_cache_request_count;
+		u32 vertex_cache_miss_count;
 	};
 
 	struct frame_time_t

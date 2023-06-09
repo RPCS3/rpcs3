@@ -106,7 +106,7 @@ namespace psf
 		, m_value_string(value)
 	{
 		ensure(type == format::string || type == format::array);
-		ensure(max_size > (type == format::string ? 1 : 0));
+		ensure(max_size > (type == format::string ? 1u : 0u));
 
 		if (allow_truncate && value.size() > max(false))
 		{
@@ -180,52 +180,55 @@ namespace psf
 
 	load_result_t load(const fs::file& stream, std::string_view filename)
 	{
-#define PSF_CHECK(cond, err) if (!static_cast<bool>(cond)) { if (error::err != error::stream) psf_log.error("Error loading PSF '%s': %s%s", filename, error::err, \
-			src_loc{__builtin_LINE(), __builtin_COLUMN(), __builtin_FILE(), __builtin_FUNCTION()}); \
-			result.clear(); \
-			errc = error::err; \
-			return pair; }
+		load_result_t result{};
 
-		load_result_t pair{};
-		auto& [result, errc] = pair;
+#define PSF_CHECK(cond, err) \
+		if (!static_cast<bool>(cond)) \
+		{ \
+			if (err != error::stream) \
+				psf_log.error("Error loading PSF '%s': %s%s", filename, err, src_loc{__builtin_LINE(), __builtin_COLUMN(), __builtin_FILE(), __builtin_FUNCTION()}); \
+			result.sfo.clear(); \
+			result.errc = err; \
+			return result; \
+		}
 
-		PSF_CHECK(stream, stream);
+		PSF_CHECK(stream, error::stream);
 
 		stream.seek(0);
 
 		// Get header
 		header_t header;
-		PSF_CHECK(stream.read(header), not_psf);
+		PSF_CHECK(stream.read(header), error::not_psf);
 
 		// Check magic and version
-		PSF_CHECK(header.magic == "\0PSF"_u32, not_psf);
-		PSF_CHECK(header.version == 0x101u, not_psf);
-		PSF_CHECK(header.off_key_table >= sizeof(header_t), corrupt);
-		PSF_CHECK(header.off_key_table <= header.off_data_table, corrupt);
-		PSF_CHECK(header.off_data_table <= stream.size(), corrupt);
+		PSF_CHECK(header.magic == "\0PSF"_u32, error::not_psf);
+		PSF_CHECK(header.version == 0x101u, error::not_psf);
+		PSF_CHECK(header.off_key_table >= sizeof(header_t), error::corrupt);
+		PSF_CHECK(header.off_key_table <= header.off_data_table, error::corrupt);
+		PSF_CHECK(header.off_data_table <= stream.size(), error::corrupt);
 
 		// Get indices
 		std::vector<def_table_t> indices;
-		PSF_CHECK(stream.read(indices, header.entries_num), corrupt);
+		PSF_CHECK(stream.read(indices, header.entries_num), error::corrupt);
 
 		// Get keys
 		std::string keys;
-		PSF_CHECK(stream.seek(header.off_key_table) == header.off_key_table, corrupt);
-		PSF_CHECK(stream.read(keys, header.off_data_table - header.off_key_table), corrupt);
+		PSF_CHECK(stream.seek(header.off_key_table) == header.off_key_table, error::corrupt);
+		PSF_CHECK(stream.read(keys, header.off_data_table - header.off_key_table), error::corrupt);
 
 		// Load entries
 		for (u32 i = 0; i < header.entries_num; ++i)
 		{
-			PSF_CHECK(indices[i].key_off < header.off_data_table - header.off_key_table, corrupt);
+			PSF_CHECK(indices[i].key_off < header.off_data_table - header.off_key_table, error::corrupt);
 
 			// Get key name (null-terminated string)
 			std::string key(keys.data() + indices[i].key_off);
 
 			// Check entry
-			PSF_CHECK(result.count(key) == 0, corrupt);
-			PSF_CHECK(indices[i].param_len <= indices[i].param_max, corrupt);
-			PSF_CHECK(indices[i].data_off < stream.size() - header.off_data_table, corrupt);
-			PSF_CHECK(indices[i].param_max < stream.size() - indices[i].data_off, corrupt);
+			PSF_CHECK(!result.sfo.contains(key), error::corrupt);
+			PSF_CHECK(indices[i].param_len <= indices[i].param_max, error::corrupt);
+			PSF_CHECK(indices[i].data_off < stream.size() - header.off_data_table, error::corrupt);
+			PSF_CHECK(indices[i].param_max < stream.size() - indices[i].data_off, error::corrupt);
 
 			// Seek data pointer
 			stream.seek(header.off_data_table + indices[i].data_off);
@@ -234,9 +237,9 @@ namespace psf
 			{
 				// Integer data
 				le_t<u32> value;
-				PSF_CHECK(stream.read(value), corrupt);
+				PSF_CHECK(stream.read(value), error::corrupt);
 
-				result.emplace(std::piecewise_construct,
+				result.sfo.emplace(std::piecewise_construct,
 					std::forward_as_tuple(std::move(key)),
 					std::forward_as_tuple(value));
 			}
@@ -244,7 +247,7 @@ namespace psf
 			{
 				// String/array data
 				std::string value;
-				PSF_CHECK(stream.read(value, indices[i].param_len), corrupt);
+				PSF_CHECK(stream.read(value, indices[i].param_len), error::corrupt);
 
 				if (indices[i].param_fmt == format::string)
 				{
@@ -252,7 +255,7 @@ namespace psf
 					value.resize(std::strlen(value.c_str()));
 				}
 
-				result.emplace(std::piecewise_construct,
+				result.sfo.emplace(std::piecewise_construct,
 					std::forward_as_tuple(std::move(key)),
 					std::forward_as_tuple(indices[i].param_fmt, indices[i].param_max, std::move(value)));
 			}
@@ -263,17 +266,17 @@ namespace psf
 			}
 		}
 
-		const auto cat = get_string(pair.sfo, "CATEGORY", "");
+		const auto cat = get_string(result.sfo, "CATEGORY", "");
 		constexpr std::string_view valid_cats[]{"GD", "DG", "HG", "AM", "AP", "AS", "AT", "AV", "BV", "WT", "HM", "CB", "SF", "2P", "2G", "1P", "PP", "MN", "PE", "2D", "SD", "MS"};
 
 		if (std::find(std::begin(valid_cats), std::end(valid_cats), cat) == std::end(valid_cats))
 		{
 			psf_log.error("Unknown category ('%s')", cat);
-			PSF_CHECK(false, corrupt);
+			PSF_CHECK(false, error::corrupt);
 		}
 
 #undef PSF_CHECK
-		return pair;
+		return result;
 	}
 
 	load_result_t load(const std::string& filename)

@@ -259,7 +259,7 @@ QString main_window::GetCurrentTitle()
 	QString title = qstr(Emu.GetTitleAndTitleID());
 	if (title.isEmpty())
 	{
-		title = qstr(Emu.GetBoot());
+		title = qstr(Emu.GetLastBoot());
 	}
 	return title;
 }
@@ -274,7 +274,7 @@ bool main_window::OnMissingFw()
 {
 	const QString title = tr("Missing Firmware Detected!");
 	const QString message = tr("Commercial games require the firmware (PS3UPDAT.PUP file) to be installed."
-				"\n<br>For information about how to obtain the required firmware read the <a href=\"https://rpcs3.net/quickstart\">quickstart guide</a>.");
+				"\n<br>For information about how to obtain the required firmware read the <a %0 href=\"https://rpcs3.net/quickstart\">quickstart guide</a>.").arg(gui::utils::get_link_style());
 
 	QMessageBox mb(QMessageBox::Question, title, message, QMessageBox::Ok | QMessageBox::Cancel, this, Qt::Dialog | Qt::MSWindowsFixedSizeDialogHint | Qt::WindowStaysOnTopHint);
 	mb.setTextFormat(Qt::RichText);
@@ -340,7 +340,7 @@ void main_window::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const Q
 			Emu.Pause();
 		break;
 	}
-	case gui::shortcuts::shortcut::mw_restart:
+	case gui::shortcuts::shortcut::mw_start:
 	{
 		if (status == system_state::paused)
 			Emu.Resume();
@@ -348,7 +348,7 @@ void main_window::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const Q
 			Emu.Run(true);
 		break;
 	}
-	case gui::shortcuts::shortcut::mw_start:
+	case gui::shortcuts::shortcut::mw_restart:
 	{
 		if (!Emu.GetBoot().empty())
 			Emu.Restart();
@@ -383,7 +383,7 @@ void main_window::OnPlayOrPause()
 			gui_log.notice("Booting from OnPlayOrPause...");
 			Boot(m_selected_game->info.path, m_selected_game->info.serial);
 		}
-		else if (const auto path = Emu.GetBoot(); !path.empty())
+		else if (const std::string path = Emu.GetLastBoot(); !path.empty())
 		{
 			if (const auto error = Emu.Load(); error != game_boot_result::no_errors)
 			{
@@ -445,7 +445,7 @@ void main_window::show_boot_error(game_boot_result status)
 		message = tr("Unknown error.");
 		break;
 	}
-	const QString link = tr("<br /><br />For information on setting up the emulator and dumping your PS3 games, read the <a href=\"https://rpcs3.net/quickstart\">quickstart guide</a>.");
+	const QString link = tr("<br /><br />For information on setting up the emulator and dumping your PS3 games, read the <a %0 href=\"https://rpcs3.net/quickstart\">quickstart guide</a>.").arg(gui::utils::get_link_style());
 
 	QMessageBox msg;
 	msg.setWindowTitle(tr("Boot Failed"));
@@ -1827,11 +1827,11 @@ void main_window::OnEmuPause() const
 void main_window::OnEmuStop()
 {
 	const QString title = GetCurrentTitle();
-	const QString play_tooltip = Emu.IsReady() ? tr("Play %0").arg(title) : tr("Resume %0").arg(title);
+	const QString play_tooltip = tr("Play %0").arg(title);
 
 	m_debugger_frame->UpdateUI();
 
-	ui->sysPauseAct->setText(Emu.IsReady() ? tr("&Play") : tr("&Resume"));
+	ui->sysPauseAct->setText(tr("&Play"));
 	ui->sysPauseAct->setIcon(m_icon_play);
 #ifdef _WIN32
 	m_thumb_playPause->setToolTip(play_tooltip);
@@ -1885,14 +1885,14 @@ void main_window::OnEmuStop()
 void main_window::OnEmuReady() const
 {
 	const QString title = GetCurrentTitle();
-	const QString play_tooltip = Emu.IsReady() ? tr("Play %0").arg(title) : tr("Resume %0").arg(title);
+	const QString play_tooltip = tr("Play %0").arg(title);
 
 	m_debugger_frame->EnableButtons(true);
 #ifdef _WIN32
 	m_thumb_playPause->setToolTip(play_tooltip);
 	m_thumb_playPause->setIcon(m_icon_thumb_play);
 #endif
-	ui->sysPauseAct->setText(Emu.IsReady() ? tr("&Play") : tr("&Resume"));
+	ui->sysPauseAct->setText(tr("&Play"));
 	ui->sysPauseAct->setIcon(m_icon_play);
 	ui->toolbar_start->setIcon(m_icon_play);
 	ui->toolbar_start->setText(tr("Play"));
@@ -1971,7 +1971,7 @@ void main_window::BootRecentAction(const QAction* act)
 		if (contains_path)
 		{
 			// clear menu of actions
-			for (auto action : m_recent_game_acts)
+			for (QAction* action : m_recent_game_acts)
 			{
 				ui->bootRecentMenu->removeAction(action);
 			}
@@ -2062,7 +2062,7 @@ void main_window::AddRecentAction(const q_string_pair& entry)
 	}
 
 	// clear menu of actions
-	for (auto action : m_recent_game_acts)
+	for (QAction* action : m_recent_game_acts)
 	{
 		ui->bootRecentMenu->removeAction(action);
 	}
@@ -2915,7 +2915,7 @@ void main_window::CreateDockWindows()
 
 					ui->toolbar_start->setIcon(m_icon_play);
 				}
-				else if (const auto& path = Emu.GetBoot(); !path.empty()) // Restartable games
+				else if (const std::string& path = Emu.GetLastBoot(); !path.empty()) // Restartable games
 				{
 					tooltip = tr("Restart %0").arg(GetCurrentTitle());
 
@@ -2979,7 +2979,7 @@ void main_window::ConfigureGuiFromSettings()
 	m_rg_entries = m_gui_settings->Var2List(m_gui_settings->GetValue(gui::rg_entries));
 
 	// clear recent games menu of actions
-	for (auto act : m_recent_game_acts)
+	for (QAction* act : m_recent_game_acts)
 	{
 		ui->bootRecentMenu->removeAction(act);
 	}

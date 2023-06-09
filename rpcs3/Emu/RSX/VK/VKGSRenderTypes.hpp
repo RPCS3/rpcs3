@@ -31,8 +31,8 @@ namespace vk
 	struct program_cache;
 	struct pipeline_props;
 
-	using vertex_cache = rsx::vertex_cache::default_vertex_cache<rsx::vertex_cache::uploaded_range<VkFormat>, VkFormat>;
-	using weak_vertex_cache = rsx::vertex_cache::weak_vertex_cache<VkFormat>;
+	using vertex_cache = rsx::vertex_cache::default_vertex_cache<rsx::vertex_cache::uploaded_range>;
+	using weak_vertex_cache = rsx::vertex_cache::weak_vertex_cache;
 	using null_vertex_cache = vertex_cache;
 
 	using shader_cache = rsx::shaders_cache<vk::pipeline_props, vk::program_cache>;

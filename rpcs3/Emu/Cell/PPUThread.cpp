@@ -1480,6 +1480,14 @@ void ppu_thread::cpu_task()
 			cmd_pop(), fast_call(opd[0], opd[1]);
 			break;
 		}
+		case ppu_cmd::entry_call:
+		{
+#ifdef __APPLE__
+			pthread_jit_write_protect_np(true);
+#endif
+			cmd_pop(), fast_call(entry_func.addr, entry_func.rtoc, true);
+			break;
+		}
 		case ppu_cmd::hle_call:
 		{
 			cmd_pop(), ::at32(ppu_function_manager::get(), arg)(*this, {arg}, vm::_ptr<u32>(cia - 4), &ppu_ret);
@@ -1503,7 +1511,7 @@ void ppu_thread::cpu_task()
 		case ppu_cmd::cia_call:
 		{
 			loaded_from_savestate = true;
-			cmd_pop(), fast_call(std::exchange(cia, 0), gpr[2]);
+			cmd_pop(), fast_call(std::exchange(cia, 0), gpr[2], true);
 			break;
 		}
 		case ppu_cmd::initialize:
@@ -2000,7 +2008,7 @@ be_t<u64>* ppu_thread::get_stack_arg(s32 i, u64 align)
 	return vm::_ptr<u64>(vm::cast((gpr[1] + 0x30 + 0x8 * (i - 1)) & (0 - align)));
 }
 
-void ppu_thread::fast_call(u32 addr, u64 rtoc)
+void ppu_thread::fast_call(u32 addr, u64 rtoc, bool is_thread_entry)
 {
 	const auto old_cia = cia;
 	const auto old_rtoc = gpr[2];
@@ -2055,12 +2063,7 @@ void ppu_thread::fast_call(u32 addr, u64 rtoc)
 
 	auto at_ret = [&]()
 	{
-		if (std::uncaught_exceptions())
-		{
-			cpu_on_stop();
-			current_function = old_func;
-		}
-		else if (old_cia)
+		if (old_cia)
 		{
 			if (state & cpu_flag::again)
 			{
@@ -2070,6 +2073,20 @@ void ppu_thread::fast_call(u32 addr, u64 rtoc)
 			cia = old_cia;
 			gpr[2] = old_rtoc;
 			lr = old_lr;
+		}
+		else if (state & cpu_flag::ret && cia == g_fxo->get<ppu_function_manager>().func_addr(1, true) + 4 && is_thread_entry)
+		{
+			std::string ret;
+			dump_all(ret);
+
+			ppu_log.error("Returning from the thread entry function! (func=0x%x)", entry_func.addr);
+			ppu_log.notice("Thread context: %s", ret);
+
+			lv2_obj::sleep(*this);
+
+			// For savestates
+			state += cpu_flag::again;
+			std::memcpy(syscall_args, &gpr[3], sizeof(syscall_args));
 		}
 
 		current_function = old_func;
