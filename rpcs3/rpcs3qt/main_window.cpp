@@ -1584,40 +1584,64 @@ void main_window::DecryptSPRXLibraries()
 		vec_modules.push_back(mod.toStdString());
 	}
 
-	const auto input_cb = [this](std::string old_path, std::string path, bool tried) -> std::string
-	{
-		const QString hint = tr("Hint: KLIC (KLicense key) is a 16-byte long string. (32 hexadecimal characters)"
-			"\nAnd is logged with some sceNpDrm* functions when the game/application which owns \"%0\" is running.").arg(qstr(path));
+	auto iterate = std::make_shared<std::function<void(usz, usz)>>();
+	const auto decrypter = std::make_shared<decrypt_binaries_t>(std::move(vec_modules));
 
-		if (tried)
+	*iterate = [this, iterate, decrypter](usz mod_index, usz repeat_count)
+	{
+		const std::string& path = (*decrypter)[mod_index];
+		const std::string filename = path.substr(path.find_last_of(fs::delim) + 1);
+
+		const QString hint = tr("Hint: KLIC (KLicense key) is a 16-byte long string. (32 hexadecimal characters, can be prefixed with \"KLIC=0x\" from the log message)"
+			"\nAnd is logged with some sceNpDrm* functions when the game/application which owns \"%0\" is running.").arg(qstr(filename));
+
+		if (repeat_count >= 2)
 		{
-			gui_log.error("Failed to decrypt %s with specfied KLIC, retrying.\n%s", old_path, sstr(hint));
+			gui_log.error("Failed to decrypt %s with specified KLIC, retrying.\n%s", path, sstr(hint));
 		}
 
-		input_dialog dlg(32, "", tr("Enter KLIC of %0").arg(qstr(path)),
-			tried ? tr("Decryption failed with provided KLIC.\n%0").arg(hint) : tr("Hexadecimal only."), "00000000000000000000000000000000", this);
+		input_dialog* dlg = new input_dialog(39, "", tr("Enter KLIC of %0").arg(qstr(filename)),
+			repeat_count >= 2 ? tr("Decryption failed with provided KLIC.\n%0").arg(hint) : tr("Hexadecimal value."), "KLIC=0x00000000000000000000000000000000", this);
 
 		QFont mono = QFontDatabase::systemFont(QFontDatabase::FixedFont);
 		mono.setPointSize(8);
-		dlg.set_input_font(mono, true, '0');
-		dlg.set_clear_button_enabled(false);
-		dlg.set_button_enabled(QDialogButtonBox::StandardButton::Ok, false);
-		dlg.set_validator(new QRegularExpressionValidator(QRegularExpression("^[a-fA-F0-9]*$"))); // HEX only
+		dlg->set_input_font(mono, true, '0');
+		dlg->set_clear_button_enabled(false);
+		dlg->set_button_enabled(QDialogButtonBox::StandardButton::Ok, false);
+		dlg->set_validator(new QRegularExpressionValidator(QRegularExpression("^((((((K?L)?I)?C)?=)?0)?x)?[a-fA-F0-9]{0,32}$"))); // HEX only (with additional KLIC=0x prefix for convenience)
+		dlg->setAttribute(Qt::WA_DeleteOnClose);
 
-		connect(&dlg, &input_dialog::text_changed, &dlg, [&dlg](const QString& text)
+		connect(dlg, &input_dialog::text_changed, dlg, [dlg](const QString& text)
 		{
-			dlg.set_button_enabled(QDialogButtonBox::StandardButton::Ok, text.size() == 32);
+			dlg->set_button_enabled(QDialogButtonBox::StandardButton::Ok, text.size() - (text.indexOf('x') + 1) == 32);
 		});
 
-		if (dlg.exec() == QDialog::Accepted)
+		connect(dlg, &QDialog::accepted, this, [this, iterate, dlg, mod_index, decrypter, repeat_count]()
 		{
-			return sstr(dlg.get_input_text());
-		}
+			std::string text = sstr(dlg->get_input_text());
 
-		return {};
+			if (usz new_index = decrypter->decrypt(std::move(text)); !decrypter->done())
+			{
+				QTimer::singleShot(0, [iterate, mod_index, repeat_count, new_index]()
+				{
+					// Increase repeat count if "stuck" on the same file
+					(*iterate)(new_index, new_index == mod_index ? repeat_count + 1 : 0);
+				});
+			}
+		});
+
+		connect(dlg, &QDialog::rejected, this, []()
+		{
+			gui_log.notice("User has cancelled entering KLIC.");
+		});
+
+		dlg->show();
 	};
 
-	decrypt_sprx_libraries(vec_modules, input_cb);
+	if (usz new_index = decrypter->decrypt(); !decrypter->done())
+	{
+		(*iterate)(new_index, new_index == 0 ? 1 : 0);
+	}
 }
 
 /** Needed so that when a backup occurs of window state in gui_settings, the state is current.

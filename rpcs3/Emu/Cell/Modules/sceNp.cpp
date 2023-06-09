@@ -468,7 +468,7 @@ error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_pat
 	if (k_licensee_addr)
 	{
 		std::memcpy(&k_licensee, k_licensee_addr.get_ptr(), sizeof(k_licensee));
-		sceNp.notice("npDrmIsAvailable(): KLicense key %s", std::bit_cast<be_t<u128>>(k_licensee));
+		sceNp.notice("npDrmIsAvailable(): KLicense key or KLIC=%s", std::bit_cast<be_t<u128>>(k_licensee));
 	}
 
 	if (Emu.GetFakeCat() == "PE")
