@@ -13,6 +13,8 @@ LOG_CHANNEL(cfg_log, "CFG");
 
 namespace gui
 {
+	QString stylesheet;
+
 	QString get_game_list_column_name(game_list_columns col)
 	{
 		switch (col)

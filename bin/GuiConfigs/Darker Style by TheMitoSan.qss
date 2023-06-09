@@ -384,3 +384,6 @@ QTreeView::branch:open:has-children:has-siblings:hover {
 #game_list_grid_item[focus="true"] #game_list_grid_item_title_label {
 	background-color: #0078D7;
 }
+
+/* Richtext link color */
+QLabel#richtext_link_color { color: #87cefa; }
