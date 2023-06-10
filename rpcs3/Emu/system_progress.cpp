@@ -61,7 +61,7 @@ void progress_dialog_server::operator()()
 		g_system_progress_canceled = false;
 
 		// Initialize message dialog
-		bool skip_this_one = false; // Workaround: do not open a progress dialog if there is already a cell message dialog open.
+		bool show_overlay_message = false; // Only show an overlay message after initial loading is done.
 		std::shared_ptr<MsgDialogBase> dlg;
 
 		if (const auto renderer = rsx::get_current_renderer())
@@ -71,9 +71,9 @@ void progress_dialog_server::operator()()
 			renderer->is_initialized.wait(false, atomic_wait_timeout(5 * 1000000000ull));
 
 			auto manager  = g_fxo->try_get<rsx::overlays::display_manager>();
-			skip_this_one = !renderer->is_initialized || g_fxo->get<progress_dialog_workaround>().skip_the_progress_dialog || (manager && manager->get<rsx::overlays::message_dialog>());
+			show_overlay_message = show_overlay_message_only;
 
-			if (manager && !skip_this_one)
+			if (manager && !show_overlay_message)
 			{
 				MsgDialogType type{};
 				type.se_mute_on         = true;
@@ -88,7 +88,7 @@ void progress_dialog_server::operator()()
 			}
 		}
 
-		if (!skip_this_one && !native_dlg && (dlg = Emu.GetCallbacks().get_msg_dialog()))
+		if (!show_overlay_message && !native_dlg && (dlg = Emu.GetCallbacks().get_msg_dialog()))
 		{
 			dlg->type.se_normal          = true;
 			dlg->type.bg_invisible       = true;
@@ -141,7 +141,7 @@ void progress_dialog_server::operator()()
 					break;
 				}
 
-				if (skip_this_one)
+				if (show_overlay_message)
 				{
 					// Show a message instead
 					rsx::overlays::show_ppu_compile_notification();
@@ -180,7 +180,7 @@ void progress_dialog_server::operator()()
 				}
 			}
 
-			if (skip_this_one)
+			if (show_overlay_message)
 			{
 				// Make sure to update any pending messages. PPU compilation may freeze the image.
 				rsx::overlays::refresh_message_queue();
@@ -194,7 +194,7 @@ void progress_dialog_server::operator()()
 			break;
 		}
 
-		if (skip_this_one)
+		if (show_overlay_message)
 		{
 			// Do nothing
 		}
