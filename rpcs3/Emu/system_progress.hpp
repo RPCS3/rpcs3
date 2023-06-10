@@ -39,4 +39,7 @@ struct progress_dialog_server
 	~progress_dialog_server();
 
 	static constexpr auto thread_name = "Progress Dialog Server"sv;
+	
+	// We don't want to show the native dialog during gameplay.
+	atomic_t<bool> show_overlay_message_only = false;
 };

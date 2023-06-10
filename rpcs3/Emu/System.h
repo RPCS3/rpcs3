@@ -15,14 +15,6 @@
 
 void init_fxo_for_exec(utils::serial*, bool);
 
-struct progress_dialog_workaround
-{
-	// WORKAROUND:
-	// We don't want to show the native dialog during gameplay.
-	// This can currently interfere with cell dialogs.
-	atomic_t<bool> skip_the_progress_dialog = false;
-};
-
 enum class localized_string_id;
 enum class video_renderer;
 
