@@ -88,10 +88,15 @@ sys_net_error convert_error(bool is_blocking, int native_error, [[maybe_unused]]
 	}
 
 #ifdef _WIN32
-	// Windows will return SYS_NET_ENOTCONN when recvfrom/sendto is called on a socket that is connecting but not yet connected
-	if (is_connecting && result == SYS_NET_ENOTCONN)
+	if (is_connecting)
 	{
-		return SYS_NET_EAGAIN;
+		// Windows will return SYS_NET_ENOTCONN when recvfrom/sendto is called on a socket that is connecting but not yet connected
+		if (result == SYS_NET_ENOTCONN)
+			return SYS_NET_EAGAIN;
+
+		// See https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-connect
+		if (result == SYS_NET_EINVAL || result == SYS_NET_EWOULDBLOCK)
+			return SYS_NET_EALREADY;
 	}
 #endif
 
