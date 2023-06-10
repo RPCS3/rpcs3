@@ -201,8 +201,8 @@ void network_thread::operator()()
 			fds[i].revents = 0;
 #ifdef _WIN32
 			const auto cur_connecting = socklist[i]->is_connecting();
-			was_connecting[i]         = connecting;
-			connecting[i]             = connecting;
+			was_connecting[i] = cur_connecting;
+			connecting[i] = cur_connecting;
 #endif
 		}
 	}
