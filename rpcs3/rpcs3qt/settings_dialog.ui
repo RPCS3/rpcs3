@@ -2373,13 +2373,6 @@
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="accuratePPUNJ">
-                 <property name="text">
-                  <string>Accurate PPU Non-Java Mode</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
                 <widget class="QCheckBox" name="fixupPPUVNAN">
                  <property name="text">
                   <string>PPU Vector NaN Fixup</string>
@@ -4209,6 +4202,13 @@
               <widget class="QCheckBox" name="accuratePPUSAT">
                <property name="text">
                 <string>Accurate PPU Saturation Bit</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="accuratePPUNJ">
+               <property name="text">
+                <string>Accurate PPU Non-Java Mode</string>
                </property>
               </widget>
              </item>
