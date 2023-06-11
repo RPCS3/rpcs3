@@ -237,7 +237,7 @@ void log_frame::CreateAndConnectActions()
 	connect(m_clear_act, &QAction::triggered, [this]()
 	{
 		m_old_log_text.clear();
-		m_log->clear();	
+		m_log->clear();
 		s_gui_listener.clear();
 	});
 
