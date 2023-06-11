@@ -79,13 +79,6 @@
                 </widget>
                </item>
                <item>
-                <widget class="QRadioButton" name="ppu_dynamic">
-                 <property name="text">
-                  <string notr="true">Interpreter (dynamic)</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
                 <widget class="QRadioButton" name="ppu_llvm">
                  <property name="text">
                   <string notr="true">LLVM Recompiler (fastest)</string>
