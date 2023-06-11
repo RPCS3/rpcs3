@@ -383,12 +383,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	// PPU tool tips
 	SubscribeTooltip(ui->ppu__static, tooltips.settings.ppu__static);
-	SubscribeTooltip(ui->ppu_dynamic, tooltips.settings.ppu_dynamic);
 	SubscribeTooltip(ui->ppu_llvm,    tooltips.settings.ppu_llvm);
 
 	QButtonGroup *ppu_bg = new QButtonGroup(this);
 	ppu_bg->addButton(ui->ppu__static, static_cast<int>(ppu_decoder_type::_static));
-	ppu_bg->addButton(ui->ppu_dynamic, static_cast<int>(ppu_decoder_type::dynamic));
 	ppu_bg->addButton(ui->ppu_llvm,    static_cast<int>(ppu_decoder_type::llvm));
 
 	connect(ppu_bg, &QButtonGroup::idToggled, [this](int id, bool checked)
@@ -402,7 +400,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			ui->accuratePPUNJ->setEnabled(true);
 			ui->accuratePPUVNAN->setEnabled(true);
 			break;
-		case static_cast<int>(ppu_decoder_type::dynamic):
 		case static_cast<int>(ppu_decoder_type::llvm):
 			ui->accuratePPUFPCC->setEnabled(false);
 			ui->accuratePPUNJ->setEnabled(false);
@@ -453,7 +450,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	ui->spu_llvm->setEnabled(false);
 	ui->spu_dynamic->setEnabled(false);
 #endif
-	ui->ppu_dynamic->setEnabled(false);
 
 	//     _____ _____  _    _   _______    _
 	//    / ____|  __ \| |  | | |__   __|  | |
