@@ -1353,4 +1353,4 @@ extern bool serialize(utils::serial& ar, T& obj);
 }()
 
 #define ENABLE_BITWISE_SERIALIZATION using enable_bitcopy = std::true_type;
-#define SAVESTATE_INIT_POS(x) static constexpr double savestate_init_pos = (x)
+#define SAVESTATE_INIT_POS(...) static constexpr double savestate_init_pos = (__VA_ARGS__)

@@ -248,16 +248,17 @@ namespace id_manager
 		std::vector<std::pair<id_key, std::shared_ptr<void>>> vec{}, private_copy{};
 		shared_mutex mutex{}; // TODO: Use this instead of global mutex
 
-		id_map()
+		id_map() noexcept
 		{
 			// Preallocate memory
 			vec.reserve(T::id_count);
 		}
 
 		// Order it directly before the source type's position
-		static constexpr double savestate_init_pos = std::bit_cast<double>(std::bit_cast<u64>(T::savestate_init_pos) - 1);
+		static constexpr double savestate_init_pos_original = T::savestate_init_pos;
+		static constexpr double savestate_init_pos = std::bit_cast<double>(std::bit_cast<u64>(savestate_init_pos_original) - 1);
 
-		id_map(utils::serial& ar)
+		id_map(utils::serial& ar) noexcept requires (savestate_init_pos_original != 0 && std::is_constructible_v<T, stx::exact_t<utils::serial&>>)
 		{
 			vec.resize(T::id_count);
 
@@ -297,7 +298,7 @@ namespace id_manager
 			}
 		}
 
-		void save(utils::serial& ar)
+		void save(utils::serial& ar) requires (savestate_init_pos_original != 0 && std::is_constructible_v<T, stx::exact_t<utils::serial&>>)
 		{
 			u32 obj_count = 0;
 			usz obj_count_offs = ar.data.size();
@@ -334,8 +335,7 @@ namespace id_manager
 			std::memcpy(ar.data.data() + obj_count_offs, &obj_count, sizeof(obj_count));
 		}
 
-		template <bool dummy = false> requires (std::is_assignable_v<T&, thread_state>)
-		id_map& operator=(thread_state state)
+		id_map& operator=(thread_state state) noexcept requires (std::is_assignable_v<T&, thread_state>)
 		{
 			if (private_copy.empty())
 			{

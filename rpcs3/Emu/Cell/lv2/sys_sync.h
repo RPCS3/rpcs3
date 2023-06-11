@@ -84,6 +84,11 @@ private:
 public:
 	SAVESTATE_INIT_POS(4); // Dependency on PPUs
 
+	lv2_obj() noexcept = default;
+	lv2_obj(u32 i) noexcept : exists{ i } {}
+	lv2_obj(utils::serial&) noexcept {}
+	void save(utils::serial&) {}
+
 	// Existence validation (workaround for shared-ptr ref-counting)
 	atomic_t<u32> exists = 0;
 
