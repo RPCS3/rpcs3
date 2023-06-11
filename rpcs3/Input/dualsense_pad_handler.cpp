@@ -7,7 +7,7 @@ LOG_CHANNEL(dualsense_log, "DualSense");
 template <>
 void fmt_class_string<DualSenseDevice::DualSenseDataMode>::format(std::string& out, u64 arg)
 {
-	format_enum(out, arg, [](auto mode)
+	format_enum(out, arg, [](DualSenseDevice::DualSenseDataMode mode)
 	{
 		switch (mode)
 		{
@@ -30,7 +30,8 @@ namespace
 	constexpr u32 DUALSENSE_COMMON_REPORT_SIZE = 47;
 	constexpr u32 DUALSENSE_INPUT_REPORT_GYRO_X_OFFSET = 15;
 
-	constexpr id_pair SONY_DUALSENSE_ID_0 = {0x054C, 0x0CE6};
+	constexpr id_pair SONY_DUALSENSE_ID_0 = {0x054C, 0x0CE6}; // DualSense
+	constexpr id_pair SONY_DUALSENSE_ID_1 = {0x054C, 0x0DF2}; // DualSense Edge
 
 	enum
 	{
@@ -96,7 +97,7 @@ namespace
 }
 
 dualsense_pad_handler::dualsense_pad_handler()
-    : hid_pad_handler<DualSenseDevice>(pad_handler::dualsense, {SONY_DUALSENSE_ID_0})
+    : hid_pad_handler<DualSenseDevice>(pad_handler::dualsense, {SONY_DUALSENSE_ID_0, SONY_DUALSENSE_ID_1})
 {
 	// Unique names for the config files and our pad settings dialog
 	button_list =
@@ -417,7 +418,7 @@ dualsense_pad_handler::DataStatus dualsense_pad_handler::get_data(DualSenseDevic
 		}
 	}
 
-	memcpy(device->padData.data(), &buf[offset], 64);
+	memcpy(device->padData.data(), &buf[offset], device->padData.size());
 	return DataStatus::NewData;
 }
 
@@ -547,7 +548,7 @@ bool dualsense_pad_handler::get_calibration_data(DualSenseDevice* dualsense_devi
 
 	// Make sure data 'looks' valid, dongle will report invalid calibration data with no controller connected
 
-	for (const auto& data : dualsense_device->calib_data)
+	for (const CalibData& data : dualsense_device->calib_data)
 	{
 		if (data.sens_denom == 0)
 		{
@@ -648,7 +649,7 @@ void dualsense_pad_handler::get_extended_info(const pad_ensemble& binding)
 	pad->m_battery_level = dualsense_device->battery_level;
 	pad->m_cable_state   = dualsense_device->cable_state;
 
-	auto& buf = dualsense_device->padData;
+	const std::array<u8, 64>& buf = dualsense_device->padData;
 
 	// these values come already calibrated, all we need to do is convert to ds3 range
 
@@ -683,7 +684,7 @@ std::unordered_map<u64, u16> dualsense_pad_handler::get_button_values(const std:
 	if (!dualsense_dev)
 		return keyBuffer;
 
-	auto buf = dualsense_dev->padData;
+	const std::array<u8, 64>& buf = dualsense_dev->padData;
 
 	if (dualsense_dev->data_mode == DualSenseDevice::DualSenseDataMode::Simple)
 	{
