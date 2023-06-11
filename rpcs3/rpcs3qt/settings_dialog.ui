@@ -969,13 +969,6 @@
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="disableVertexCache">
-                 <property name="text">
-                  <string>Disable Vertex Cache</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
                 <widget class="QCheckBox" name="multithreadedRSX">
                  <property name="text">
                   <string>Multithreaded RSX</string>
@@ -2647,6 +2640,13 @@
                 <widget class="QCheckBox" name="disableOnDiskShaderCache">
                  <property name="text">
                   <string>Disable On-Disk Shader Cache</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="disableVertexCache">
+                 <property name="text">
+                  <string>Disable Vertex Cache</string>
                  </property>
                 </widget>
                </item>
