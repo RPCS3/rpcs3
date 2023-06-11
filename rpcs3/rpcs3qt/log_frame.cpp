@@ -100,6 +100,12 @@ struct gui_listener : logs::listener
 		pending = queue.pop_all();
 		return pending.get();
 	}
+
+	void clear()
+	{
+		pending = lf_queue_slice<packet_t>();
+		queue.pop_all();
+	}
 };
 
 // GUI Listener instance
@@ -231,7 +237,8 @@ void log_frame::CreateAndConnectActions()
 	connect(m_clear_act, &QAction::triggered, [this]()
 	{
 		m_old_log_text.clear();
-		m_log->clear();
+		m_log->clear();	
+		s_gui_listener.clear();
 	});
 
 	m_clear_tty_act = new QAction(tr("Clear"), this);
