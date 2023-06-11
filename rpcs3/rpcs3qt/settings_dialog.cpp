@@ -1465,9 +1465,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->fixupPPUVNAN, emu_settings_type::FixupPPUVNAN);
 	SubscribeTooltip(ui->fixupPPUVNAN, tooltips.settings.fixup_ppuvnan);
 
-	m_emu_settings->EnhanceCheckBox(ui->accuratePPUVNAN, emu_settings_type::AccuratePPUVNAN);
-	SubscribeTooltip(ui->accuratePPUVNAN, tooltips.settings.accurate_ppuvnan);
-
 	m_emu_settings->EnhanceCheckBox(ui->accuratePPUFPCC, emu_settings_type::AccuratePPUFPCC);
 	SubscribeTooltip(ui->accuratePPUFPCC, tooltips.settings.accurate_ppufpcc);
 
@@ -2331,6 +2328,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceCheckBox(ui->accuratePPUNJ, emu_settings_type::AccuratePPUNJ);
 	SubscribeTooltip(ui->accuratePPUNJ, tooltips.settings.accurate_ppunj);
+
+	m_emu_settings->EnhanceCheckBox(ui->accuratePPUVNAN, emu_settings_type::AccuratePPUVNAN);
+	SubscribeTooltip(ui->accuratePPUVNAN, tooltips.settings.accurate_ppuvnan);
 
 	m_emu_settings->EnhanceCheckBox(ui->accurateSpuDMA, emu_settings_type::AccurateSpuDMA);
 	SubscribeTooltip(ui->accurateSpuDMA, tooltips.settings.accurate_spu_dma);

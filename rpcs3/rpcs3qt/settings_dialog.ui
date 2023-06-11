@@ -2380,13 +2380,6 @@
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="accuratePPUVNAN">
-                 <property name="text">
-                  <string>Accurate PPU Vector NaN Handling</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
                 <widget class="QCheckBox" name="accuratePPUFPCC">
                  <property name="text">
                   <string>Accurate PPU Float Condition Control</string>
@@ -4209,6 +4202,13 @@
               <widget class="QCheckBox" name="accuratePPUNJ">
                <property name="text">
                 <string>Accurate PPU Non-Java Mode</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="accuratePPUVNAN">
+               <property name="text">
+                <string>Accurate PPU Vector NaN Handling</string>
                </property>
               </widget>
              </item>
