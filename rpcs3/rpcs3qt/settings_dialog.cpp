@@ -639,9 +639,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->stretchToDisplayArea, emu_settings_type::StretchToDisplayArea);
 	SubscribeTooltip(ui->stretchToDisplayArea, tooltips.settings.stretch_to_display_area);
 
-	m_emu_settings->EnhanceCheckBox(ui->disableVertexCache, emu_settings_type::DisableVertexCache);
-	SubscribeTooltip(ui->disableVertexCache, tooltips.settings.disable_vertex_cache);
-
 	m_emu_settings->EnhanceCheckBox(ui->multithreadedRSX, emu_settings_type::MultithreadedRSX);
 	SubscribeTooltip(ui->multithreadedRSX, tooltips.settings.multithreaded_rsx);
 
@@ -2312,6 +2309,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceCheckBox(ui->allowHostGPULabels, emu_settings_type::AllowHostGPULabels);
 	SubscribeTooltip(ui->allowHostGPULabels, tooltips.settings.allow_host_labels);
+
+	m_emu_settings->EnhanceCheckBox(ui->disableVertexCache, emu_settings_type::DisableVertexCache);
+	SubscribeTooltip(ui->disableVertexCache, tooltips.settings.disable_vertex_cache);
 
 	// Checkboxes: core debug options
 	m_emu_settings->EnhanceCheckBox(ui->ppuDebug, emu_settings_type::PPUDebug);
