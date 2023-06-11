@@ -2429,13 +2429,6 @@
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="pausedSavestates">
-                 <property name="text">
-                  <string>Start Savestates Paused</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
                 <widget class="QCheckBox" name="silenceAllLogs">
                  <property name="text">
                   <string>Silence All Logs</string>
@@ -2945,6 +2938,13 @@
                 <widget class="QCheckBox" name="pauseDuringHomeMenu">
                  <property name="text">
                   <string>Pause emulation during home menu</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="pausedSavestates">
+                 <property name="text">
+                  <string>Start Savestates Paused</string>
                  </property>
                 </widget>
                </item>
