@@ -264,10 +264,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->spuLoopDetection, emu_settings_type::SPULoopDetection);
 	SubscribeTooltip(ui->spuLoopDetection, tooltips.settings.spu_loop_detection);
 
-	m_emu_settings->EnhanceCheckBox(ui->fullWidthAVX512, emu_settings_type::FullWidthAVX512);
-	SubscribeTooltip(ui->fullWidthAVX512, tooltips.settings.full_width_avx512);
-	ui->fullWidthAVX512->setEnabled(utils::has_avx512());
-
 	// Comboboxes
 	SubscribeTooltip(ui->gb_xfloat_accuracy, tooltips.settings.xfloat);
 	ui->xfloatAccuracy->addItem(tr("Accurate XFloat"));
