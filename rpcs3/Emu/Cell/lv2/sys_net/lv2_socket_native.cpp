@@ -220,10 +220,12 @@ std::optional<s32> lv2_socket_native::connect(const sys_net_sockaddr& addr)
 		return CELL_OK;
 	}
 
-#ifdef _WIN32
-	sys_net_error result = get_last_error(!so_nbio, was_connecting);
-#else
 	sys_net_error result = get_last_error(!so_nbio);
+
+#ifdef _WIN32
+	// See https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-connect
+	if (was_connecting && (result == SYS_NET_EINVAL || result == SYS_NET_EWOULDBLOCK))
+		return -SYS_NET_EALREADY;
 #endif
 
 	if (result)
