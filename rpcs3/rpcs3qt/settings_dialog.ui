@@ -183,13 +183,6 @@
                  </property>
                 </widget>
                </item>
-               <item>
-                <widget class="QCheckBox" name="fullWidthAVX512">
-                 <property name="text">
-                  <string>Increase AVX-512 instruction width</string>
-                 </property>
-                </widget>
-               </item>
               </layout>
              </widget>
             </item>
