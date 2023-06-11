@@ -2359,6 +2359,13 @@
                 </widget>
                </item>
                <item>
+                <widget class="QCheckBox" name="accurateGETLLAR">
+                 <property name="text">
+                  <string>Accurate GETLLAR</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QCheckBox" name="accurateRSXAccess">
                  <property name="text">
                   <string>Accurate RSX reservation access</string>
@@ -4174,13 +4181,6 @@
               <widget class="QCheckBox" name="setDAZandFTZ">
                <property name="text">
                 <string>Set DAZ and FTZ</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QCheckBox" name="accurateGETLLAR">
-               <property name="text">
-                <string>Accurate GETLLAR</string>
                </property>
               </widget>
              </item>

@@ -1459,11 +1459,20 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	SubscribeTooltip(ui->accurateDFMA, tooltips.settings.accurate_dfma);
 	ui->accurateDFMA->setDisabled(utils::has_fma3() || utils::has_fma4());
 
+	m_emu_settings->EnhanceCheckBox(ui->accurateRSXAccess, emu_settings_type::AccurateRSXAccess);
+	SubscribeTooltip(ui->accurateRSXAccess, tooltips.settings.accurate_rsx_access);
+
+	m_emu_settings->EnhanceCheckBox(ui->accurateGETLLAR, emu_settings_type::AccurateGETLLAR);
+	SubscribeTooltip(ui->accurateGETLLAR, tooltips.settings.accurate_getllar);
+
 	m_emu_settings->EnhanceCheckBox(ui->ppuNJFixup, emu_settings_type::PPUNJFixup);
 	SubscribeTooltip(ui->ppuNJFixup, tooltips.settings.fixup_ppunj);
 
 	m_emu_settings->EnhanceCheckBox(ui->fixupPPUVNAN, emu_settings_type::FixupPPUVNAN);
 	SubscribeTooltip(ui->fixupPPUVNAN, tooltips.settings.fixup_ppuvnan);
+
+	m_emu_settings->EnhanceCheckBox(ui->ppuPrecompilation, emu_settings_type::PPULLVMPrecompilation);
+	SubscribeTooltip(ui->ppuPrecompilation, tooltips.settings.ppu_precompilation);
 
 	m_emu_settings->EnhanceCheckBox(ui->suspendSavestates, emu_settings_type::SuspendEmulationSavestateMode);
 	SubscribeTooltip(ui->suspendSavestates, tooltips.settings.suspend_savestates);
@@ -2317,9 +2326,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->setDAZandFTZ, emu_settings_type::SetDAZandFTZ);
 	SubscribeTooltip(ui->setDAZandFTZ, tooltips.settings.set_daz_and_ftz);
 
-	m_emu_settings->EnhanceCheckBox(ui->accurateGETLLAR, emu_settings_type::AccurateGETLLAR);
-	SubscribeTooltip(ui->accurateGETLLAR, tooltips.settings.accurate_getllar);
-
 	m_emu_settings->EnhanceCheckBox(ui->accuratePPUSAT, emu_settings_type::AccuratePPUSAT);
 	SubscribeTooltip(ui->accuratePPUSAT, tooltips.settings.accurate_ppusat);
 
@@ -2337,12 +2343,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceCheckBox(ui->accurateClineStores, emu_settings_type::AccurateClineStores);
 	SubscribeTooltip(ui->accurateClineStores, tooltips.settings.accurate_cache_line_stores);
-
-	m_emu_settings->EnhanceCheckBox(ui->accurateRSXAccess, emu_settings_type::AccurateRSXAccess);
-	SubscribeTooltip(ui->accurateRSXAccess, tooltips.settings.accurate_rsx_access);
-
-	m_emu_settings->EnhanceCheckBox(ui->ppuPrecompilation, emu_settings_type::PPULLVMPrecompilation);
-	SubscribeTooltip(ui->ppuPrecompilation, tooltips.settings.ppu_precompilation);
 
 	m_emu_settings->EnhanceCheckBox(ui->hookStFunc, emu_settings_type::HookStaticFuncs);
 	SubscribeTooltip(ui->hookStFunc, tooltips.settings.hook_static_functions);
