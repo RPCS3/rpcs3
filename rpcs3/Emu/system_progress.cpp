@@ -144,7 +144,10 @@ void progress_dialog_server::operator()()
 				if (show_overlay_message)
 				{
 					// Show a message instead
-					rsx::overlays::show_ppu_compile_notification();
+					if (g_cfg.misc.show_ppu_compilation_hint)
+					{
+						rsx::overlays::show_ppu_compile_notification();
+					}
 					thread_ctrl::wait_for(10000);
 					continue;
 				}

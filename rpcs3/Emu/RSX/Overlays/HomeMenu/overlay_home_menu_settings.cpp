@@ -94,6 +94,7 @@ namespace rsx
 		{
 			add_checkbox(&g_cfg.misc.show_trophy_popups, "Show Trophy Popups");
 			add_checkbox(&g_cfg.misc.show_shader_compilation_hint, "Show Shader Compilation Hint");
+			add_checkbox(&g_cfg.misc.show_ppu_compilation_hint, "Show PPU Compilation Hint");
 
 			apply_layout();
 		}

@@ -2935,6 +2935,13 @@
                 </widget>
                </item>
                <item>
+                <widget class="QCheckBox" name="showPPUCompilationHint">
+                 <property name="text">
+                  <string>Show PPU compilation hint</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QCheckBox" name="pauseDuringHomeMenu">
                  <property name="text">
                   <string>Pause emulation during home menu</string>
