@@ -355,12 +355,67 @@ void sdl_pad_handler::enumerate_devices()
 
 		if (SDLDevice::sdl_info info = get_sdl_info(i); info.game_controller)
 		{
-			std::string name = info.name;
 			std::shared_ptr<SDLDevice> dev = std::make_shared<SDLDevice>();
 			dev->sdl = std::move(info);
-			m_controllers[std::move(name)] = std::move(dev);
+
+			// Count existing real devices with the same name
+			u32 device_count = 1; // This device also counts
+			for (const auto& controller : m_controllers)
+			{
+				if (controller.second && !controller.second->sdl.is_virtual_device && controller.second->sdl.name == dev->sdl.name)
+				{
+					device_count++;
+				}
+			}
+
+			// Add real device
+			const std::string device_name = fmt::format("%s %d", dev->sdl.name, device_count);
+			m_controllers[device_name] = std::move(dev);
 		}
 	}
+}
+
+std::shared_ptr<SDLDevice> sdl_pad_handler::get_device_by_game_controller(SDL_GameController* game_controller) const
+{
+	if (!game_controller)
+		return nullptr;
+
+	const char* name = SDL_GameControllerName(game_controller);
+	const char* path = SDL_GameControllerPath(game_controller);
+	const char* serial = SDL_GameControllerGetSerial(game_controller);
+
+	// Try to find a real device
+	for (const auto& controller : m_controllers)
+	{
+		if (!controller.second || controller.second->sdl.is_virtual_device)
+			continue;
+
+		const auto is_same = [](const char* c, std::string_view s) -> bool
+		{
+			return c ? c == s : s.empty();
+		};
+
+		if (is_same(name, controller.second->sdl.name) &&
+			is_same(path, controller.second->sdl.path) &&
+			is_same(serial, controller.second->sdl.serial))
+		{
+			return controller.second;
+		}
+	}
+
+	// Try to find a virtual device if we can't find a real device
+	for (const auto& controller : m_controllers)
+	{
+		if (!controller.second || !controller.second->sdl.is_virtual_device)
+			continue;
+
+		if (name && controller.second->sdl.name.starts_with(name))
+		{
+			return controller.second;
+		}
+	}
+
+	return nullptr;
 }
 
 std::shared_ptr<PadDevice> sdl_pad_handler::get_device(const std::string& device)
@@ -376,6 +431,7 @@ std::shared_ptr<PadDevice> sdl_pad_handler::get_device(const std::string& device
 	// Add a virtual controller until it is actually attached
 	std::shared_ptr<SDLDevice> dev = std::make_unique<SDLDevice>();
 	dev->sdl.name = device;
+	dev->sdl.is_virtual_device = true;
 	m_controllers.emplace(device, dev);
 	sdl_log.warning("Adding empty device: %s", device);
 
@@ -418,16 +474,30 @@ PadHandlerBase::connection sdl_pad_handler::update_connection(const std::shared_
 				continue;
 			}
 
-			if (const char* name = SDL_GameControllerNameForIndex(i))
+			// Get game controller
+			SDL_GameController* game_controller = SDL_GameControllerOpen(i);
+			if (!game_controller)
 			{
-				if (dev->sdl.name == name)
+				continue;
+			}
+
+			// Find out if we already know this controller
+			std::shared_ptr<SDLDevice> sdl_device = get_device_by_game_controller(game_controller);
+			if (!sdl_device)
+			{
+				// Close the game controller if we don't know it.
+				SDL_GameControllerClose(game_controller);
+				continue;
+			}
+
+			// Re-attach the controller if the device matches the current one
+			if (sdl_device.get() == dev)
+			{
+				if (SDLDevice::sdl_info info = get_sdl_info(i); info.game_controller)
 				{
-					if (SDLDevice::sdl_info info = get_sdl_info(i); info.game_controller)
-					{
-						dev->sdl = std::move(info);
-					}
-					break;
+					dev->sdl = std::move(info);
 				}
+				break;
 			}
 		}
 	}
