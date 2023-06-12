@@ -228,23 +228,28 @@ namespace vk
 		m_current_subpool_offset = 0;
 		m_current_subpool_index = umax;
 
-		for (u32 index = 0; index < m_device_subpools.size(); ++index)
+		// Only attempt recovery once. Can be bumped up if we have a more complex setup in future.
+		int retries = 1;
+
+		while (m_current_subpool_index == umax)
 		{
-			if (!m_device_subpools[index].busy)
+			for (u32 index = 0; index < m_device_subpools.size(); ++index)
 			{
-				m_current_subpool_index = index;
+				if (!m_device_subpools[index].busy)
+				{
+					m_current_subpool_index = index;
+					break;
+				}
+			}
+
+			if (m_current_subpool_index != umax)
+			{
+				// We found something, exit early
 				break;
 			}
-		}
 
-		if (m_current_subpool_index == umax)
-		{
 			VkDescriptorPool subpool = VK_NULL_HANDLE;
-
-			// Only attempt recovery once. Can be bumped up if we have a more complex setup in future.
-			int retries = 1;
-
-			while (VkResult result = vkCreateDescriptorPool(*m_owner, &m_create_info, nullptr, &subpool))
+			if (VkResult result = vkCreateDescriptorPool(*m_owner, &m_create_info, nullptr, &subpool))
 			{
 				if (retries-- && (result == VK_ERROR_FRAGMENTATION_EXT))
 				{
@@ -254,8 +259,10 @@ namespace vk
 				}
 
 				vk::die_with_error(result);
+				break;
 			}
 
+			// New subpool created successfully
 			std::lock_guard lock(m_subpool_lock);
 
 			m_device_subpools.push_back(
