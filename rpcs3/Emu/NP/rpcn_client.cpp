@@ -770,6 +770,16 @@ namespace rpcn
 			addr_rpcn_udp.sin_port = std::bit_cast<u16, be_t<u16>>(3657); // htons
 
 			sockfd = socket(AF_INET, SOCK_STREAM, 0);
+#ifdef _WIN32
+			if (sockfd == INVALID_SOCKET)
+#else
+			if (sockfd == -1)
+#endif
+			{
+				rpcn_log.error("connect: Failed to connect to RPCN server!");
+				state = rpcn_state::failure_connect;
+				return false;
+			}
 
 			if (::connect(sockfd, reinterpret_cast<struct sockaddr*>(&addr_rpcn), sizeof(addr_rpcn)) != 0)
 			{
