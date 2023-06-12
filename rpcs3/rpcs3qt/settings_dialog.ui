@@ -2865,9 +2865,16 @@
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="startGameFullscreen">
+                <widget class="QCheckBox" name="pausedSavestates">
                  <property name="text">
-                  <string>Start games in Fullscreen mode</string>
+                  <string>Pause emulation after loading savestates</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="pauseDuringHomeMenu">
+                 <property name="text">
+                  <string>Pause emulation during home menu</string>
                  </property>
                 </widget>
                </item>
@@ -2886,9 +2893,9 @@
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="useNativeInterface">
+                <widget class="QCheckBox" name="showPPUCompilationHint">
                  <property name="text">
-                  <string>Use native user interface</string>
+                  <string>Show PPU compilation hint</string>
                  </property>
                 </widget>
                </item>
@@ -2900,23 +2907,16 @@
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="showPPUCompilationHint">
+                <widget class="QCheckBox" name="startGameFullscreen">
                  <property name="text">
-                  <string>Show PPU compilation hint</string>
+                  <string>Start games in fullscreen mode</string>
                  </property>
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="pauseDuringHomeMenu">
+                <widget class="QCheckBox" name="useNativeInterface">
                  <property name="text">
-                  <string>Pause emulation during home menu</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="pausedSavestates">
-                 <property name="text">
-                  <string>Pause emulation after loading savestates</string>
+                  <string>Use native user interface</string>
                  </property>
                 </widget>
                </item>
