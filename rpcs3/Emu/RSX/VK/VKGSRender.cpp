@@ -1202,6 +1202,12 @@ bool VKGSRender::on_vram_exhausted(rsx::problem_severity severity)
 	return any_cache_relieved;
 }
 
+void VKGSRender::on_descriptor_pool_fragmentation()
+{
+	// Just flush everything. Unless the hardware is very deficient, this should happen very rarely.
+	flush_command_queue(true, true);
+}
+
 void VKGSRender::notify_tile_unbound(u32 tile)
 {
 	//TODO: Handle texture writeback
