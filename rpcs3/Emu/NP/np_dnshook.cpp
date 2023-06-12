@@ -102,7 +102,7 @@ namespace np
 	s32 dnshook::analyze_dns_packet(s32 s, const u8* buf, u32 len)
 	{
 		std::lock_guard lock(mutex);
-		
+
 		dnshook_log.trace("DNS REQUEST:\n%s", fmt::buf_to_hexstring(buf, len));
 
 		struct dns_header

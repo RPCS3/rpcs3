@@ -518,7 +518,8 @@ namespace np
 		}
 
 		local_ip_addr = client_addr.sin_addr.s_addr;
-		nph_log.trace("discover_ip_address: IP was determined to be %s", ip_to_string(local_ip_addr));
+		if (nph_log.trace)
+			nph_log.trace("discover_ip_address: IP was determined to be %s", ip_to_string(local_ip_addr));
 		close_socket();
 		return true;
 	}
