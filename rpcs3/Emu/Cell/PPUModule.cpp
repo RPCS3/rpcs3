@@ -335,9 +335,12 @@ static void ppu_initialize_modules(ppu_linkage_info* link, utils::serial* ar = n
 	u32 alloc_addr = 0;
 
 	// "Use" all the modules for correct linkage
-	for (auto& _module : registered)
+	if (ppu_loader.trace)
 	{
-		ppu_loader.trace("Registered static module: %s", _module->name);
+		for (auto& _module : registered)
+		{
+			ppu_loader.trace("Registered static module: %s", _module->name);
+		}
 	}
 
 	struct hle_vars_save

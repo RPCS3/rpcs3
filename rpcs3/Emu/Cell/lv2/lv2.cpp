@@ -84,6 +84,12 @@ void fmt_class_string<lv2_protocol>::format(std::string& out, u64 arg)
 	});
 }
 
+template <>
+void fmt_class_string<lv2_obj::name_64>::format(std::string& out, u64 arg)
+{
+	out += lv2_obj::name64(get_object(arg).data);
+}
+
 static void null_func_(ppu_thread& ppu, ppu_opcode_t, be_t<u32>* this_op, ppu_intrp_func*)
 {
 	ppu_log.todo("Unimplemented syscall %s -> CELL_OK (r3=0x%llx, r4=0x%llx, r5=0x%llx, r6=0x%llx, r7=0x%llx, r8=0x%llx, r9=0x%llx, r10=0x%llx)", ppu_syscall_code(ppu.gpr[11]),
@@ -1229,6 +1235,18 @@ atomic_t<u32> g_lv2_preempts_taken = 0;
 namespace cpu_counter
 {
 	void remove(cpu_thread*) noexcept;
+}
+
+std::string lv2_obj::name64(u64 name_u64)
+{
+	const auto ptr = reinterpret_cast<const char*>(&name_u64);
+
+	// NTS string, ignore invalid/newline characters
+	// Example: "lv2\n\0tx" will be printed as "lv2"
+	std::string str{ptr, std::find(ptr, ptr + 7, '\0')};
+	str.erase(std::remove_if(str.begin(), str.end(), [](uchar c){ return !std::isprint(c); }), str.end());
+
+	return str;
 }
 
 bool lv2_obj::sleep(cpu_thread& cpu, const u64 timeout)
