@@ -129,7 +129,11 @@ dualsense_pad_handler::dualsense_pad_handler()
 		{ DualSenseKeyCodes::RSXNeg,   "RS X-" },
 		{ DualSenseKeyCodes::RSXPos,   "RS X+" },
 		{ DualSenseKeyCodes::RSYPos,   "RS Y+" },
-		{ DualSenseKeyCodes::RSYNeg,   "RS Y-" }
+		{ DualSenseKeyCodes::RSYNeg,   "RS Y-" },
+		{ DualSenseKeyCodes::EdgeFnL,  "FN L" },
+		{ DualSenseKeyCodes::EdgeFnR,  "FN R" },
+		{ DualSenseKeyCodes::EdgeLB,   "LB" },
+		{ DualSenseKeyCodes::EdgeRB,   "RB" },
 	};
 
 	init_configs();
@@ -251,6 +255,20 @@ void dualsense_pad_handler::check_add_device(hid_device* hidDevice, std::string_
 
 	device->has_calib_data = true;
 	device->path           = path;
+
+	// Get feature set
+	if (const hid_device_info* info = hid_get_device_info(device->hidDevice))
+	{
+		if (info->product_id == SONY_DUALSENSE_ID_1.m_pid)
+		{
+			device->feature_set = DualSenseDevice::DualSenseFeatureSet::Edge;
+			dualsense_log.notice("check_add_device: device is DualSense Edge: vid=0x%x, pid=0x%x, path='%s'", info->vendor_id, info->product_id, path);
+		}
+	}
+	else
+	{
+		dualsense_log.warning("check_add_device: hid_get_device_info failed for determining feature set! Reason: %s", hid_error(hidDevice));
+	}
 
 	// Activate
 	if (send_output_report(device) == -1)
@@ -788,6 +806,14 @@ std::unordered_map<u64, u16> dualsense_pad_handler::get_button_values(const std:
 	keyBuffer[DualSenseKeyCodes::PSButton] = ((data & 0x01) != 0) ? 255 : 0;
 	keyBuffer[DualSenseKeyCodes::TouchPad] = ((data & 0x02) != 0) ? 255 : 0;
 	keyBuffer[DualSenseKeyCodes::Mic]      = ((data & 0x04) != 0) ? 255 : 0;
+
+	if (dualsense_dev->feature_set == DualSenseDevice::DualSenseFeatureSet::Edge)
+	{
+		keyBuffer[DualSenseKeyCodes::EdgeFnL] = ((data & 0x10) != 0) ? 255 : 0;
+		keyBuffer[DualSenseKeyCodes::EdgeFnR] = ((data & 0x20) != 0) ? 255 : 0;
+		keyBuffer[DualSenseKeyCodes::EdgeLB] = ((data & 0x40) != 0) ? 255 : 0;
+		keyBuffer[DualSenseKeyCodes::EdgeRB] = ((data & 0x80) != 0) ? 255 : 0;
+	}
 
 	return keyBuffer;
 }
