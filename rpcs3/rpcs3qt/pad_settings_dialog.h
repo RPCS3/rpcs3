@@ -80,8 +80,10 @@ class pad_settings_dialog : public QDialog
 	struct pad_button
 	{
 		cfg::string* cfg_text = nullptr;
-		std::string key;
+		std::string keys;
 		QString text;
+
+		void insert_key(const std::string& key);
 	};
 
 	const QString Disconnected_suffix = tr(" (disconnected)");
@@ -152,7 +154,7 @@ private:
 	// Remap Timer
 	const int MAX_SECONDS = 5;
 	int m_seconds = MAX_SECONDS;
-	QTimer m_timer;
+	QTimer m_remap_timer;
 
 	// Mouse Move
 	QPoint m_last_pos;

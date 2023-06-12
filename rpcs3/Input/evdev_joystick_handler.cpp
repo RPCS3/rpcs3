@@ -113,10 +113,10 @@ bool evdev_joystick_handler::Init()
 
 	for (const auto& node : m_pos_axis_config.get_nodes())
 	{
-		if (*static_cast<cfg::_bool*>(node))
+		if (node && *static_cast<cfg::_bool*>(node))
 		{
-			const auto name = node->get_name();
-			const int code  = libevdev_event_code_from_name(EV_ABS, name.c_str());
+			const std::string& name = node->get_name();
+			const int code = libevdev_event_code_from_name(EV_ABS, name.c_str());
 			if (code < 0)
 				evdev_log.error("Failed to read axis name from %s. [code = %d] [name = %s]", m_pos_axis_config.cfg_name, code, name);
 			else
@@ -130,12 +130,14 @@ bool evdev_joystick_handler::Init()
 
 std::string evdev_joystick_handler::get_device_name(const libevdev* dev)
 {
-	std::string name  = libevdev_get_name(dev);
-	const auto unique = libevdev_get_uniq(dev);
+	std::string name;
+
+	if (const char* raw_name = libevdev_get_name(dev))
+		name = raw_name;
 
 	if (name.empty())
 	{
-		if (unique)
+		if (const char* unique = libevdev_get_uniq(dev))
 			name = unique;
 
 		if (name.empty())
@@ -151,8 +153,8 @@ bool evdev_joystick_handler::update_device(const std::shared_ptr<PadDevice>& dev
 	if (!evdev_device)
 		return false;
 
-	const auto& path = evdev_device->path;
-	libevdev*& dev   = evdev_device->device;
+	const std::string& path = evdev_device->path;
+	libevdev*& dev = evdev_device->device;
 
 	const bool was_connected = dev != nullptr;
 
@@ -206,18 +208,18 @@ void evdev_joystick_handler::close_devices()
 		}
 	};
 
-	for (auto& binding : m_bindings)
+	for (pad_ensemble& binding : m_bindings)
 	{
 		free_device(static_cast<EvdevDevice*>(binding.device.get()));
 		free_device(static_cast<EvdevDevice*>(binding.buddy_device.get()));
 	}
 
-	for (auto [name, device] : m_settings_added)
+	for (auto& [name, device] : m_settings_added)
 	{
 		free_device(static_cast<EvdevDevice*>(device.get()));
 	}
 
-	for (auto [name, device] : m_motion_settings_added)
+	for (auto& [name, device] : m_motion_settings_added)
 	{
 		free_device(static_cast<EvdevDevice*>(device.get()));
 	}
@@ -229,14 +231,14 @@ std::unordered_map<u64, std::pair<u16, bool>> evdev_joystick_handler::GetButtonV
 	if (!device)
 		return button_values;
 
-	auto& dev = device->device;
+	libevdev* dev = device->device;
 
 	if (!Init())
 		return button_values;
 
 	for (const auto& entry : button_list)
 	{
-		const auto code = entry.first;
+		const u32 code = entry.first;
 
 		if (code == NO_BUTTON)
 			continue;
@@ -251,8 +253,8 @@ std::unordered_map<u64, std::pair<u16, bool>> evdev_joystick_handler::GetButtonV
 
 	for (const auto& entry : axis_list)
 	{
-		const auto code = entry.first;
-		int val         = 0;
+		const u32 code = entry.first;
+		int val = 0;
 
 		if (libevdev_fetch_event_value(dev, EV_ABS, code, &val) == 0)
 			continue;
@@ -298,7 +300,7 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 		m_blacklist.clear();
 
 	// Get our evdev device
-	auto device = get_evdev_device(padId);
+	std::shared_ptr<EvdevDevice> device = get_evdev_device(padId);
 	if (!device || !device->device)
 	{
 		if (fail_callback)
@@ -328,16 +330,36 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 
 	auto data = GetButtonValues(device);
 
-	auto find_value = [=, this](const std::string& name)
+	const auto find_value = [&, this](const std::string& str)
 	{
-		int key = FindKeyCodeByString(rev_axis_list, name, false);
-		const bool dir = key >= 0;
-		if (key < 0)
-			key = FindKeyCodeByString(axis_list, name, false);
-		if (key < 0)
-			key = FindKeyCodeByString(button_list, name);
-		auto it = data.find(static_cast<u64>(key));
-		return it != data.end() && dir == it->second.second ? it->second.first : 0;
+		const std::vector<std::string> names = cfg_pad::get_buttons(str);
+
+		u16 value{};
+
+		const auto set_value = [&value, &data](u32 code, bool dir)
+		{
+			if (const auto it = data.find(static_cast<u64>(code)); it != data.cend() && dir == it->second.second)
+			{
+				value = std::max(value, it->second.first);
+			}
+		};
+
+		for (const u32 code : FindKeyCodes<u32, u32>(rev_axis_list, names))
+		{
+			set_value(code, true);
+		}
+
+		for (const u32 code : FindKeyCodes<u32, u32>(axis_list, names))
+		{
+			set_value(code, false);
+		}
+
+		for (const u32 code : FindKeyCodes<u32, u32>(button_list, names))
+		{
+			set_value(code, false);
+		}
+
+		return value;
 	};
 
 	pad_preview_values preview_values{};
@@ -469,7 +491,7 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 void evdev_joystick_handler::get_motion_sensors(const std::string& padId, const motion_callback& callback, const motion_fail_callback& fail_callback, motion_preview_values preview_values, const std::array<AnalogSensor, 4>& sensors)
 {
 	// Add device if not yet present
-	auto device = add_motion_device(padId, true);
+	std::shared_ptr<EvdevDevice> device = add_motion_device(padId, true);
 	if (!device || !update_device(device) || !device->device)
 	{
 		if (fail_callback)
@@ -477,7 +499,7 @@ void evdev_joystick_handler::get_motion_sensors(const std::string& padId, const 
 		return;
 	}
 
-	auto& dev = device->device;
+	libevdev* dev = device->device;
 
 	// Try to fetch all new events from the joystick.
 	bool is_dirty = false;
@@ -605,7 +627,7 @@ void evdev_joystick_handler::SetRumble(EvdevDevice* device, u8 large, u8 small)
 void evdev_joystick_handler::SetPadData(const std::string& padId, u8 /*player_id*/, u8 large_motor, u8 small_motor, s32 /* r*/, s32 /* g*/, s32 /* b*/, bool /*player_led*/, bool /*battery_led*/, u32 /*battery_led_brightness*/)
 {
 	// Get our evdev device
-	auto dev = get_evdev_device(padId);
+	std::shared_ptr<EvdevDevice> dev = get_evdev_device(padId);
 	if (!dev)
 	{
 		evdev_log.error("evdev TestVibration: Device [%s] not found! [large_motor = %d] [small_motor = %d]", padId, large_motor, small_motor);
@@ -637,7 +659,7 @@ u32 evdev_joystick_handler::GetButtonInfo(const input_event& evt, const std::sha
 		if (button_list.find(code) == button_list.end())
 		{
 			evdev_log.error("Evdev button %s (%d) is unknown. Please add it to the button list.", libevdev_event_code_get_name(EV_KEY, code), code);
-			return -1;
+			return umax;
 		}
 
 		value = val > 0 ? 255 : 0;
@@ -647,9 +669,10 @@ u32 evdev_joystick_handler::GetButtonInfo(const input_event& evt, const std::sha
 	{
 		if (!device || !device->device)
 		{
-			return -1;
+			return umax;
 		}
-		auto& dev     = device->device;
+
+		libevdev* dev = device->device;
 		const int min = libevdev_get_abs_minimum(dev, code);
 		const int max = libevdev_get_abs_maximum(dev, code);
 
@@ -667,7 +690,8 @@ u32 evdev_joystick_handler::GetButtonInfo(const input_event& evt, const std::sha
 		value              = static_cast<u16>(std::abs(fvalue));
 		return code;
 	}
-	default: return -1;
+	default:
+		return umax;
 	}
 }
 
@@ -778,7 +802,7 @@ std::shared_ptr<evdev_joystick_handler::EvdevDevice> evdev_joystick_handler::add
 					{
 						if (const input_absinfo *info = libevdev_get_abs_info(dev, code))
 						{
-							const auto code_name = libevdev_event_code_get_name(EV_ABS, code);
+							const char* code_name = libevdev_event_code_get_name(EV_ABS, code);
 							evdev_log.notice("Axis info for %s: %s (%s) => minimum=%d, maximum=%d, fuzz=%d, flat=%d, resolution=%d",
 								name, code_name, axis_name, info->minimum, info->maximum, info->fuzz, info->flat, info->resolution);
 						}
@@ -853,7 +877,7 @@ std::shared_ptr<evdev_joystick_handler::EvdevDevice> evdev_joystick_handler::add
 					if (const input_absinfo *info = libevdev_get_abs_info(dev, code))
 					{
 						const bool is_accel = code == ABS_X || code == ABS_Y || code == ABS_Z;
-						const auto code_name = libevdev_event_code_get_name(EV_ABS, code);
+						const char* code_name = libevdev_event_code_get_name(EV_ABS, code);
 						evdev_log.notice("Axis info for %s: %s (%s, %s) => minimum=%d, maximum=%d, fuzz=%d, flat=%d, resolution=%d",
 							name, code_name, axis_name, is_accel ? "accelerometer" : "gyro", info->minimum, info->maximum, info->fuzz, info->flat, info->resolution);
 					}
@@ -898,7 +922,7 @@ void evdev_joystick_handler::get_mapping(const pad_ensemble& binding)
 	if (!m_dev || !pad)
 		return;
 
-	auto& dev = m_dev->device;
+	libevdev* dev = m_dev->device;
 	if (!dev)
 		return;
 
@@ -940,7 +964,7 @@ void evdev_joystick_handler::get_extended_info(const pad_ensemble& binding)
 	if (!pad || !device || !update_device(device))
 		return;
 
-	auto& dev = device->device;
+	libevdev* dev = device->device;
 	if (!dev)
 		return;
 
@@ -1011,39 +1035,51 @@ void evdev_joystick_handler::handle_input_event(const input_event& evt, const st
 	if (button_code == NO_BUTTON || value < 0)
 		return;
 
-	const auto cfg = m_dev->config;
+	const cfg_pad* cfg = m_dev->config;
 	if (!cfg)
 		return;
-
-	auto axis_orientations = m_dev->axis_orientations;
 
 	// Find out if special buttons are pressed (introduced by RPCS3).
 	// These buttons will have a delay of one cycle, but whatever.
 	const bool adjust_pressure = pad->get_pressure_intensity_enabled(cfg->pressure_intensity_toggle_mode.get());
 
+	// We can only have one match for this physical event in our button sets.
+	const auto find_evdev_button = [this, &button_code, &evt](const std::set<u32>& indices) -> const EvdevButton*
+	{
+		for (u32 index : indices)
+		{
+			const EvdevButton& evdev_button = ::at32(m_dev->all_buttons, index);
+			if (evdev_button.code == button_code && evdev_button.type == evt.type)
+			{
+				return &evdev_button;
+			}
+		}
+		return nullptr;
+	};
+
 	// Translate any corresponding keycodes to our normal DS3 buttons and triggers
 	for (int i = 0; i < static_cast<int>(pad->m_buttons.size()); i++)
 	{
-		auto& button = pad->m_buttons[i];
+		Button& button = pad->m_buttons[i];
 
-		if (button.m_keyCode != button_code)
+		const EvdevButton* evdev_button = find_evdev_button(button.m_key_codes);
+		if (!evdev_button)
 			continue;
 
 		// Be careful to handle mapped axis specially
 		if (evt.type == EV_ABS)
 		{
-			// get axis direction and skip on error or set to 0 if the stick/hat is actually pointing to the other direction.
-			// maybe mimic on error, needs investigation. FindAxisDirection should ideally never return -1 anyway
-			const int direction = FindAxisDirection(axis_orientations, i);
-			m_dev->cur_dir      = direction;
+			// get axis direction for TranslateButtonPress and skip on error.
+			m_dev->cur_dir = evdev_button->dir;
 
-			if (direction < 0)
+			if (evdev_button->dir < 0)
 			{
-				evdev_log.error("FindAxisDirection = %d, Button Nr.%d, value = %d", direction, i, value);
+				evdev_log.error("Invalid axis direction = %d, Button Nr.%d, value = %d", evdev_button->dir, i, value);
 				continue;
 			}
 
-			if (direction != (m_is_negative ? 1 : 0))
+			//  Set to 0 if the stick / hat is actually pointing to the other direction.
+			if (evdev_button->dir != (m_is_negative ? 1 : 0))
 			{
 				button.m_value   = 0;
 				button.m_pressed = 0;
@@ -1051,19 +1087,19 @@ void evdev_joystick_handler::handle_input_event(const input_event& evt, const st
 			}
 		}
 
-		// Using a temporary buffer because the values can change during translation
-		Button tmp = button;
-		tmp.m_value = static_cast<u16>(value);
+		bool pressed{};
+		u16 val = static_cast<u16>(value);
 
-		TranslateButtonPress(m_dev, button_code, tmp.m_pressed, tmp.m_value);
+		TranslateButtonPress(m_dev, button_code, pressed, val);
 
 		// Modify pressure if necessary if the button was pressed
-		if (adjust_pressure && tmp.m_pressed)
+		if (adjust_pressure && pressed)
 		{
-			tmp.m_value = pad->m_pressure_intensity;
+			val = pad->m_pressure_intensity;
 		}
 
-		button = tmp;
+		button.m_value = val;
+		button.m_pressed = pressed;
 	}
 
 	// Translate any corresponding keycodes to our two sticks. (ignoring thresholds for now)
@@ -1072,19 +1108,20 @@ void evdev_joystick_handler::handle_input_event(const input_event& evt, const st
 		bool pressed_min = false;
 		bool pressed_max = false;
 
-		// m_keyCodeMin is the mapped key for left or down
-		if (pad->m_sticks[idx].m_keyCodeMin == button_code)
+		// m_key_codes_min are the mapped keys for left or down
+		if (const EvdevButton* evdev_button = find_evdev_button(pad->m_sticks[idx].m_key_codes_min))
 		{
 			bool is_direction_min = false;
 
 			if (!m_is_button_or_trigger && evt.type == EV_ABS)
 			{
-				const int index         = pad->m_buttons.size() + (idx * 2) + 1;
-				const int min_direction = FindAxisDirection(axis_orientations, index);
-				m_dev->cur_dir          = min_direction;
+				const int min_direction = evdev_button->dir;
+
+				// We need to set the current direction for TranslateButtonPress
+				m_dev->cur_dir = min_direction;
 
 				if (min_direction < 0)
-					evdev_log.error("keyCodeMin FindAxisDirection = %d, Axis Nr.%d, Button Nr.%d, value = %d", min_direction, idx, index, value);
+					evdev_log.error("min_direction = %d, Axis Nr.%d, value = %d", min_direction, idx, value);
 				else
 					is_direction_min = m_is_negative == (min_direction == 1);
 			}
@@ -1100,19 +1137,20 @@ void evdev_joystick_handler::handle_input_event(const input_event& evt, const st
 			}
 		}
 
-		// m_keyCodeMax is the mapped key for right or up
-		if (pad->m_sticks[idx].m_keyCodeMax == button_code)
+		// m_key_codes_max are the mapped keys for right or up
+		if (const EvdevButton* evdev_button = find_evdev_button(pad->m_sticks[idx].m_key_codes_max))
 		{
 			bool is_direction_max = false;
 
 			if (!m_is_button_or_trigger && evt.type == EV_ABS)
 			{
-				const int index         = pad->m_buttons.size() + (idx * 2);
-				const int max_direction = FindAxisDirection(axis_orientations, index);
-				m_dev->cur_dir          = max_direction;
+				const int max_direction = evdev_button->dir;
+
+				// We need to set the current direction for TranslateButtonPress
+				m_dev->cur_dir = max_direction;
 
 				if (max_direction < 0)
-					evdev_log.error("keyCodeMax FindAxisDirection = %d, Axis Nr.%d, Button Nr.%d, value = %d", max_direction, idx, index, value);
+					evdev_log.error("max_direction = %d, Axis Nr.%d, value = %d", max_direction, idx, value);
 				else
 					is_direction_max = m_is_negative == (max_direction == 1);
 			}
@@ -1153,7 +1191,7 @@ void evdev_joystick_handler::apply_pad_data(const pad_ensemble& binding)
 	if (!evdev_device)
 		return;
 
-	auto cfg = device->config;
+	cfg_pad* cfg = device->config;
 	if (!cfg)
 		return;
 
@@ -1163,16 +1201,6 @@ void evdev_joystick_handler::apply_pad_data(const pad_ensemble& binding)
 	const u8 force_large = cfg->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value * 257 : 0;
 	const u8 force_small = cfg->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value * 257 : 0;
 	SetRumble(evdev_device, force_large, force_small);
-}
-
-// Search axis_orientations map for the direction by index, returns -1 if not found, 0 for positive and 1 for negative
-int evdev_joystick_handler::FindAxisDirection(const std::unordered_map<int, bool>& map, int index)
-{
-	if (const auto it = map.find(index); it != map.end())
-	{
-		return it->second;
-	}
-	return -1;
 }
 
 bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, u8 player_id)
@@ -1195,38 +1223,46 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, u8 player
 	if (!cfg)
 		return false;
 
-	std::unordered_map<int, bool> axis_orientations;
-	int i = 0; // increment to know the axis location
-
-	auto evdevbutton = [&](const cfg::string& name)
+	// We need to register EvdevButtons due to their axis directions.
+	const auto register_evdevbutton = [this](u32 code, bool is_axis, bool is_reverse) -> u32
 	{
-		EvdevButton button{ 0, -1, EV_ABS };
+		const u32 index = ::narrow<u32>(m_dev->all_buttons.size());
 
-		int key  = FindKeyCode(axis_list, name, false);
-		if (key >= 0)
-			axis_orientations.emplace(i, false);
-
-		if (key < 0)
+		if (is_axis)
 		{
-			key = FindKeyCode(rev_axis_list, name, false);
-			if (key >= 0)
-				axis_orientations.emplace(i, true);
-		}
-
-		if (key < 0)
-		{
-			key         = FindKeyCode(button_list, name);
-			button.type = EV_KEY;
+			m_dev->all_buttons.push_back(EvdevButton{ code, is_reverse ? 1 : 0, EV_ABS });
 		}
 		else
 		{
-			button.dir = axis_orientations[i];
+			m_dev->all_buttons.push_back(EvdevButton{ code, -1, EV_KEY });
 		}
 
-		button.code = static_cast<u32>(key);
+		return index;
+	};
 
-		i++;
-		return button;
+	const auto find_buttons = [&](const cfg::string& name) -> std::set<u32>
+	{
+		const std::vector<std::string> names = cfg_pad::get_buttons(name);
+
+		// In evdev we store indices to an EvdevButton vector in our pad objects instead of the usual key codes.
+		std::set<u32> indices;
+
+		for (const u32 code : FindKeyCodes<u32, u32>(axis_list, names))
+		{
+			indices.insert(register_evdevbutton(code, true, false));
+		}
+
+		for (const u32 code : FindKeyCodes<u32, u32>(rev_axis_list, names))
+		{
+			indices.insert(register_evdevbutton(code, true, true));
+		}
+
+		for (const u32 code : FindKeyCodes<u32, u32>(button_list, names))
+		{
+			indices.insert(register_evdevbutton(code, false, false));
+		}
+
+		return indices;
 	};
 
 	const auto find_motion_button = [&](const cfg_sensor& sensor) -> evdev_sensor
@@ -1235,14 +1271,15 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, u8 player
 		e_sensor.type = EV_ABS;
 		e_sensor.mirrored = sensor.mirrored.get();
 		e_sensor.shift = sensor.shift.get();
-		const int key = FindKeyCode(motion_axis_list, sensor.axis, false);
-		if (key >= 0) e_sensor.code = static_cast<u32>(key);
+
+		const std::set<u32> keys = FindKeyCodes<u32, u32>(motion_axis_list, sensor.axis);
+		if (!keys.empty()) e_sensor.code = *keys.begin(); // We should only have one key for each of our sensors
 		return e_sensor;
 	};
 
 	u32 pclass_profile = 0x0;
 
-	for (const auto product : input::get_products_by_class(cfg->device_class_type))
+	for (const input::product_info& product : input::get_products_by_class(cfg->device_class_type))
 	{
 		if (product.vendor_id == cfg->vendor_id && product.product_id == cfg->product_id)
 		{
@@ -1262,45 +1299,45 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, u8 player
 		cfg->pressure_intensity
 	);
 
-	pad->m_buttons.emplace_back(special_button_offset, evdevbutton(cfg->pressure_intensity_button).code, special_button_value::pressure_intensity);
+	pad->m_buttons.emplace_back(special_button_offset, find_buttons(cfg->pressure_intensity_button), special_button_value::pressure_intensity);
 	pad->m_pressure_intensity_button_index = static_cast<s32>(pad->m_buttons.size()) - 1;
 
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, evdevbutton(cfg->triangle).code, CELL_PAD_CTRL_TRIANGLE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, evdevbutton(cfg->circle).code,   CELL_PAD_CTRL_CIRCLE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, evdevbutton(cfg->cross).code,    CELL_PAD_CTRL_CROSS);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, evdevbutton(cfg->square).code,   CELL_PAD_CTRL_SQUARE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2,find_buttons(cfg->triangle), CELL_PAD_CTRL_TRIANGLE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2,find_buttons(cfg->circle),   CELL_PAD_CTRL_CIRCLE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2,find_buttons(cfg->cross),    CELL_PAD_CTRL_CROSS);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2,find_buttons(cfg->square),   CELL_PAD_CTRL_SQUARE);
 
-	m_dev->trigger_left = evdevbutton(cfg->l2);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_dev->trigger_left.code,              CELL_PAD_CTRL_L2);
+	m_dev->trigger_left = find_buttons(cfg->l2);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_dev->trigger_left,         CELL_PAD_CTRL_L2);
 
-	m_dev->trigger_right = evdevbutton(cfg->r2);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_dev->trigger_right.code,             CELL_PAD_CTRL_R2);
+	m_dev->trigger_right = find_buttons(cfg->r2);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_dev->trigger_right,        CELL_PAD_CTRL_R2);
 
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, evdevbutton(cfg->l1).code,       CELL_PAD_CTRL_L1);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, evdevbutton(cfg->r1).code,       CELL_PAD_CTRL_R1);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(cfg->start).code,    CELL_PAD_CTRL_START);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(cfg->select).code,   CELL_PAD_CTRL_SELECT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(cfg->l3).code,       CELL_PAD_CTRL_L3);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(cfg->r3).code,       CELL_PAD_CTRL_R3);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(cfg->ps).code,       CELL_PAD_CTRL_PS);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(cfg->up).code,       CELL_PAD_CTRL_UP);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(cfg->down).code,     CELL_PAD_CTRL_DOWN);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(cfg->left).code,     CELL_PAD_CTRL_LEFT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(cfg->right).code,    CELL_PAD_CTRL_RIGHT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_buttons(cfg->l1),       CELL_PAD_CTRL_L1);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_buttons(cfg->r1),       CELL_PAD_CTRL_R1);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_buttons(cfg->start),    CELL_PAD_CTRL_START);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_buttons(cfg->select),   CELL_PAD_CTRL_SELECT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_buttons(cfg->l3),       CELL_PAD_CTRL_L3);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_buttons(cfg->r3),       CELL_PAD_CTRL_R3);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_buttons(cfg->ps),       CELL_PAD_CTRL_PS);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_buttons(cfg->up),       CELL_PAD_CTRL_UP);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_buttons(cfg->down),     CELL_PAD_CTRL_DOWN);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_buttons(cfg->left),     CELL_PAD_CTRL_LEFT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_buttons(cfg->right),    CELL_PAD_CTRL_RIGHT);
 
-	m_dev->axis_left[0]  = evdevbutton(cfg->ls_right);
-	m_dev->axis_left[1]  = evdevbutton(cfg->ls_left);
-	m_dev->axis_left[2]  = evdevbutton(cfg->ls_up);
-	m_dev->axis_left[3]  = evdevbutton(cfg->ls_down);
-	m_dev->axis_right[0] = evdevbutton(cfg->rs_right);
-	m_dev->axis_right[1] = evdevbutton(cfg->rs_left);
-	m_dev->axis_right[2] = evdevbutton(cfg->rs_up);
-	m_dev->axis_right[3] = evdevbutton(cfg->rs_down);
+	m_dev->axis_left[0]  = find_buttons(cfg->ls_right);
+	m_dev->axis_left[1]  = find_buttons(cfg->ls_left);
+	m_dev->axis_left[2]  = find_buttons(cfg->ls_up);
+	m_dev->axis_left[3]  = find_buttons(cfg->ls_down);
+	m_dev->axis_right[0] = find_buttons(cfg->rs_right);
+	m_dev->axis_right[1] = find_buttons(cfg->rs_left);
+	m_dev->axis_right[2] = find_buttons(cfg->rs_up);
+	m_dev->axis_right[3] = find_buttons(cfg->rs_down);
 
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X,  m_dev->axis_left[1].code,  m_dev->axis_left[0].code);
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y,  m_dev->axis_left[3].code,  m_dev->axis_left[2].code);
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, m_dev->axis_right[1].code, m_dev->axis_right[0].code);
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, m_dev->axis_right[3].code, m_dev->axis_right[2].code);
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X,  m_dev->axis_left[1],  m_dev->axis_left[0]);
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y,  m_dev->axis_left[3],  m_dev->axis_left[2]);
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, m_dev->axis_right[1], m_dev->axis_right[0]);
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, m_dev->axis_right[3], m_dev->axis_right[2]);
 
 	m_dev->axis_motion[0] = find_motion_button(cfg->motion_sensor_x);
 	m_dev->axis_motion[1] = find_motion_button(cfg->motion_sensor_y);
@@ -1315,11 +1352,9 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, u8 player
 	pad->m_vibrateMotors.emplace_back(true, 0);
 	pad->m_vibrateMotors.emplace_back(false, 0);
 
-	m_dev->axis_orientations = axis_orientations;
-
-	if (auto evdev_device = add_device(player_config->device, false))
+	if (std::shared_ptr<EvdevDevice> evdev_device = add_device(player_config->device, false))
 	{
-		if (auto motion_device = add_motion_device(player_config->buddy_device, false))
+		if (std::shared_ptr<EvdevDevice> motion_device = add_motion_device(player_config->buddy_device, false))
 		{
 			m_bindings.emplace_back(pad, evdev_device, motion_device);
 		}
@@ -1334,7 +1369,7 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, u8 player
 		evdev_log.warning("evdev add_device in bindPadToDevice failed for device %s", player_config->device.to_string());
 	}
 
-	for (auto& binding : m_bindings)
+	for (pad_ensemble& binding : m_bindings)
 	{
 		update_device(binding.device);
 		update_device(binding.buddy_device);
@@ -1343,34 +1378,46 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, u8 player
 	return true;
 }
 
-bool evdev_joystick_handler::check_button(const EvdevButton& b, const u32 code)
+bool evdev_joystick_handler::check_button_set(const std::set<u32>& indices, const u32 code)
 {
-	return m_dev && b.code == code && b.type == m_dev->cur_type && b.dir == m_dev->cur_dir;
+	if (!m_dev)
+		return false;
+
+	for (u32 index : indices)
+	{
+		const EvdevButton& button = ::at32(m_dev->all_buttons, index);
+		if (button.code == code && button.type == m_dev->cur_type && button.dir == m_dev->cur_dir)
+		{
+			return true;
+		}
+	}
+
+	return false;
 }
 
-bool evdev_joystick_handler::check_buttons(const std::array<EvdevButton, 4>& b, const u32 code)
+bool evdev_joystick_handler::check_button_sets(const std::array<std::set<u32>, 4>& sets, const u32 code)
 {
-	return std::any_of(b.begin(), b.end(), [this, code](const EvdevButton& b) { return check_button(b, code); });
+	return std::any_of(sets.begin(), sets.end(), [this, code](const std::set<u32>& indices) { return check_button_set(indices, code); });
 };
 
 bool evdev_joystick_handler::get_is_left_trigger(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
 {
-	return check_button(m_dev->trigger_left, static_cast<u32>(keyCode));
+	return check_button_set(m_dev->trigger_left, static_cast<u32>(keyCode));
 }
 
 bool evdev_joystick_handler::get_is_right_trigger(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
 {
-	return check_button(m_dev->trigger_right, static_cast<u32>(keyCode));
+	return check_button_set(m_dev->trigger_right, static_cast<u32>(keyCode));
 }
 
 bool evdev_joystick_handler::get_is_left_stick(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
 {
-	return check_buttons(m_dev->axis_left, static_cast<u32>(keyCode));
+	return check_button_sets(m_dev->axis_left, static_cast<u32>(keyCode));
 }
 
 bool evdev_joystick_handler::get_is_right_stick(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
 {
-	return check_buttons(m_dev->axis_right, static_cast<u32>(keyCode));
+	return check_button_sets(m_dev->axis_right, static_cast<u32>(keyCode));
 }
 
 #endif

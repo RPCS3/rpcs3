@@ -4,6 +4,7 @@
 #include "util/endian.hpp"
 #include "Emu/Io/pad_config_types.h"
 
+#include <set>
 #include <vector>
 
 enum class pad_button : u8
@@ -240,18 +241,19 @@ enum special_button_value
 struct Button
 {
 	u32 m_offset = 0;
-	u32 m_keyCode = 0;
+	std::set<u32> m_key_codes{};
 	u32 m_outKeyCode = 0;
 	u16 m_value    = 0;
 	bool m_pressed = false;
 
-	u16 m_actual_value = 0;     // only used in keyboard_pad_handler
-	bool m_analog      = false; // only used in keyboard_pad_handler
-	bool m_trigger     = false; // only used in keyboard_pad_handler
+	u16 m_actual_value = 0;         // only used in keyboard_pad_handler
+	bool m_analog      = false;     // only used in keyboard_pad_handler
+	bool m_trigger     = false;     // only used in keyboard_pad_handler
+	std::set<u32> m_pressed_keys{}; // only used in keyboard_pad_handler
 
-	Button(u32 offset, u32 keyCode, u32 outKeyCode)
+	Button(u32 offset, std::set<u32> key_codes, u32 outKeyCode)
 		: m_offset(offset)
-		, m_keyCode(keyCode)
+		, m_key_codes(std::move(key_codes))
 		, m_outKeyCode(outKeyCode)
 	{
 		if (offset == CELL_PAD_BTN_OFFSET_DIGITAL1)
@@ -279,14 +281,14 @@ struct Button
 struct AnalogStick
 {
 	u32 m_offset = 0;
-	u32 m_keyCodeMin = 0;
-	u32 m_keyCodeMax = 0;
+	std::set<u32> m_key_codes_min{};
+	std::set<u32> m_key_codes_max{};
 	u16 m_value = 128;
 
-	AnalogStick(u32 offset, u32 keyCodeMin, u32 keyCodeMax)
+	AnalogStick(u32 offset, std::set<u32> key_codes_min, std::set<u32> key_codes_max)
 		: m_offset(offset)
-		, m_keyCodeMin(keyCodeMin)
-		, m_keyCodeMax(keyCodeMax)
+		, m_key_codes_min(std::move(key_codes_min))
+		, m_key_codes_max(std::move(key_codes_max))
 	{}
 };
 
