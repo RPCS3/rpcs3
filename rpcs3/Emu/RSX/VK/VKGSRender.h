@@ -263,6 +263,9 @@ public:
 	// External callback to handle out of video memory problems
 	bool on_vram_exhausted(rsx::problem_severity severity);
 
+	// Handle pool creation failure due to fragmentation
+	void on_descriptor_pool_fragmentation();
+
 	// Conditional rendering
 	void begin_conditional_rendering(const std::vector<rsx::reports::occlusion_query_info*>& sources) override;
 	void end_conditional_rendering() override;

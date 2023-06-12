@@ -4,6 +4,9 @@
 
 namespace vk
 {
+	// Error handler callback
+	extern void on_descriptor_pool_fragmentation();
+
 	namespace descriptors
 	{
 		class dispatch_manager
@@ -111,6 +114,7 @@ namespace vk
 		ensure(max_sets > 16);
 
 		m_create_info_pool_sizes = pool_sizes;
+
 		for (auto& size : m_create_info_pool_sizes)
 		{
 			ensure(size.descriptorCount < 128); // Sanity check. Remove before commit.
@@ -221,8 +225,6 @@ namespace vk
 			vk::get_gc()->dispose(cleanup_obj);
 		}
 
-		std::lock_guard lock(m_subpool_lock);
-
 		m_current_subpool_offset = 0;
 		m_current_subpool_index = umax;
 
@@ -238,7 +240,23 @@ namespace vk
 		if (m_current_subpool_index == umax)
 		{
 			VkDescriptorPool subpool = VK_NULL_HANDLE;
-			CHECK_RESULT(vkCreateDescriptorPool(*m_owner, &m_create_info, nullptr, &subpool));
+
+			// Only attempt recovery once. Can be bumped up if we have a more complex setup in future.
+			int retries = 1;
+
+			while (VkResult result = vkCreateDescriptorPool(*m_owner, &m_create_info, nullptr, &subpool))
+			{
+				if (retries-- && (result == VK_ERROR_FRAGMENTATION_EXT))
+				{
+					rsx_log.warning("Descriptor pool creation failed with fragmentation error. Will attempt to recover.");
+					vk::on_descriptor_pool_fragmentation();
+					continue;
+				}
+
+				vk::die_with_error(result);
+			}
+
+			std::lock_guard lock(m_subpool_lock);
 
 			m_device_subpools.push_back(
 			{
