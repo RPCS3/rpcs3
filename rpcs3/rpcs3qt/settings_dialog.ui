@@ -4031,16 +4031,6 @@
             </property>
             <layout class="QVBoxLayout" name="gb_debug_gpu_layout">
              <item alignment="Qt::AlignTop">
-              <widget class="QCheckBox" name="renderdocCompatibility">
-               <property name="enabled">
-                <bool>true</bool>
-               </property>
-               <property name="text">
-                <string>Renderdoc Compatibility Mode</string>
-               </property>
-              </widget>
-             </item>
-             <item alignment="Qt::AlignTop">
               <widget class="QCheckBox" name="debugOutput">
                <property name="text">
                 <string>Debug Output</string>
@@ -4055,23 +4045,9 @@
               </widget>
              </item>
              <item>
-              <widget class="QCheckBox" name="logProg">
+              <widget class="QCheckBox" name="disableFIFOReordering">
                <property name="text">
-                <string>Log Shader Programs</string>
-               </property>
-              </widget>
-             </item>
-             <item alignment="Qt::AlignTop">
-              <widget class="QCheckBox" name="forceHighpZ">
-               <property name="text">
-                <string>Use High Precision Z-buffer</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QCheckBox" name="disableHwOcclusionQueries">
-               <property name="text">
-                <string>Disable ZCull Occlusion Queries</string>
+                <string>Disable FIFO Reordering</string>
                </property>
               </widget>
              </item>
@@ -4083,13 +4059,6 @@
               </widget>
              </item>
              <item>
-              <widget class="QCheckBox" name="forceCpuBlitEmulation">
-               <property name="text">
-                <string>Force CPU blit emulation</string>
-               </property>
-              </widget>
-             </item>
-             <item>
               <widget class="QCheckBox" name="disableVulkanMemAllocator">
                <property name="text">
                 <string>Disable Vulkan Memory Allocator</string>
@@ -4097,9 +4066,40 @@
               </widget>
              </item>
              <item>
-              <widget class="QCheckBox" name="disableFIFOReordering">
+              <widget class="QCheckBox" name="disableHwOcclusionQueries">
                <property name="text">
-                <string>Disable FIFO Reordering</string>
+                <string>Disable ZCull Occlusion Queries</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="forceCpuBlitEmulation">
+               <property name="text">
+                <string>Force CPU Blit Emulation</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="gpuTextureScaling">
+               <property name="text">
+                <string>Force GPU Texture Scaling</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="logProg">
+               <property name="text">
+                <string>Log Shader Programs</string>
+               </property>
+              </widget>
+             </item>
+             <item alignment="Qt::AlignTop">
+              <widget class="QCheckBox" name="renderdocCompatibility">
+               <property name="enabled">
+                <bool>true</bool>
+               </property>
+               <property name="text">
+                <string>Renderdoc Compatibility Mode</string>
                </property>
               </widget>
              </item>
@@ -4110,10 +4110,10 @@
                </property>
               </widget>
              </item>
-             <item>
-              <widget class="QCheckBox" name="gpuTextureScaling">
+             <item alignment="Qt::AlignTop">
+              <widget class="QCheckBox" name="forceHighpZ">
                <property name="text">
-                <string>Force GPU Texture Scaling</string>
+                <string>Use High Precision Z-Buffer</string>
                </property>
               </widget>
              </item>
@@ -4146,6 +4146,20 @@
               <widget class="QCheckBox" name="alwaysStart">
                <property name="text">
                 <string>Automatically start games after boot</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="perfReport">
+               <property name="text">
+                <string>Enable performance report</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="hookStFunc">
+               <property name="text">
+                <string>Hook static functions</string>
                </property>
               </widget>
              </item>
@@ -4216,20 +4230,6 @@
               <widget class="QCheckBox" name="accurateClineStores">
                <property name="text">
                 <string>Accurate Cache Line Stores</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QCheckBox" name="hookStFunc">
-               <property name="text">
-                <string>Hook static functions</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QCheckBox" name="perfReport">
-               <property name="text">
-                <string>Enable Performance Report</string>
                </property>
               </widget>
              </item>
