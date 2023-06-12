@@ -312,7 +312,7 @@ void main_window::ResizeIcons(int index)
 
 void main_window::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKeySequence& key_sequence)
 {
-	gui_log.notice("Main window registered shortcut: %s (%s)", shortcut_key, key_sequence.toString().toStdString());
+	gui_log.notice("Main window registered shortcut: %s (%s)", shortcut_key, key_sequence.toString());
 
 	const system_state status = Emu.GetStatus();
 
@@ -781,7 +781,7 @@ bool main_window::InstallPackages(QStringList file_paths, bool from_boot)
 		if (QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Do you want to install this package?\n\n%0").arg(info_string),
 			QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
 		{
-			gui_log.notice("PKG: Cancelled installation from drop.\n%s", sstr(info_string));
+			gui_log.notice("PKG: Cancelled installation from drop.\n%s", info_string);
 			return true;
 		}
 	}
@@ -1006,25 +1006,25 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 			{
 			case package_reader::result::success:
 			{
-				gui_log.success("Successfully installed %s (title_id=%s, title=%s, version=%s).", sstr(package.path), sstr(package.title_id), sstr(package.title), sstr(package.version));
+				gui_log.success("Successfully installed %s (title_id=%s, title=%s, version=%s).", package.path, package.title_id, package.title, package.version);
 				break;
 			}
 			case package_reader::result::not_started:
 			case package_reader::result::started:
 			case package_reader::result::aborted:
 			{
-				gui_log.notice("Aborted installation of %s (title_id=%s, title=%s, version=%s).", sstr(package.path), sstr(package.title_id), sstr(package.title), sstr(package.version));
+				gui_log.notice("Aborted installation of %s (title_id=%s, title=%s, version=%s).", package.path, package.title_id, package.title, package.version);
 				break;
 			}
 			case package_reader::result::error:
 			{
-				gui_log.error("Failed to install %s (title_id=%s, title=%s, version=%s).", sstr(package.path), sstr(package.title_id), sstr(package.title), sstr(package.version));
+				gui_log.error("Failed to install %s (title_id=%s, title=%s, version=%s).", package.path, package.title_id, package.title, package.version);
 				break;
 			}
 			case package_reader::result::aborted_dirty:
 			case package_reader::result::error_dirty:
 			{
-				gui_log.error("Partially installed %s (title_id=%s, title=%s, version=%s).", sstr(package.path), sstr(package.title_id), sstr(package.title), sstr(package.version));
+				gui_log.error("Partially installed %s (title_id=%s, title=%s, version=%s).", package.path, package.title_id, package.title, package.version);
 				break;
 			}
 			}
@@ -1151,12 +1151,12 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 
 			if (error == package_error::app_version)
 			{
-				gui_log.error("Cannot install %s.", sstr(package->path));
+				gui_log.error("Cannot install %s.", package->path);
 				QMessageBox::warning(this, tr("Warning!"), tr("The following package cannot be installed on top of the current data:\n%1!").arg(package->path));
 			}
 			else
 			{
-				gui_log.error("Failed to install %s.", sstr(package->path));
+				gui_log.error("Failed to install %s.", package->path);
 				QMessageBox::critical(this, tr("Failure!"), tr("Failed to install software from package:\n%1!"
 					"\nThis is very likely caused by external interference from a faulty anti-virus software."
 					"\nPlease add RPCS3 to your anti-virus\' whitelist or use better anti-virus software.").arg(package->path));
@@ -1198,7 +1198,7 @@ void main_window::InstallPup(QString file_path)
 		if (QMessageBox::question(this, tr("RPCS3 Firmware Installer"), tr("Install firmware: %1?").arg(file_path),
 			QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
 		{
-			gui_log.notice("Firmware: Cancelled installation from drop. File: %s", sstr(file_path));
+			gui_log.notice("Firmware: Cancelled installation from drop. File: %s", file_path);
 			return;
 		}
 	}
@@ -1391,7 +1391,7 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 
 		if (!vfs::mount("/pup_extract", sstr(dir_path) + '/'))
 		{
-			gui_log.error("Error while extracting firmware: Failed to mount '%s'", sstr(dir_path));
+			gui_log.error("Error while extracting firmware: Failed to mount '%s'", dir_path);
 			critical(tr("Firmware extraction failed: VFS mounting failed."));
 			return;
 		}
@@ -1402,7 +1402,7 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 			critical(tr("Firmware installation failed: Firmware contents could not be extracted."));
 		}
 
-		gui_log.success("Extracted PUP file to %s", sstr(dir_path));
+		gui_log.success("Extracted PUP file to %s", dir_path);
 		return;
 	}
 
@@ -1597,7 +1597,7 @@ void main_window::DecryptSPRXLibraries()
 
 		if (repeat_count >= 2)
 		{
-			gui_log.error("Failed to decrypt %s with specified KLIC, retrying.\n%s", path, sstr(hint));
+			gui_log.error("Failed to decrypt %s with specified KLIC, retrying.\n%s", path, hint);
 		}
 
 		input_dialog* dlg = new input_dialog(39, "", tr("Enter KLIC of %0").arg(qstr(filename)),
@@ -3126,11 +3126,11 @@ void main_window::RemoveFirmwareCache()
 		if (QDir(path).removeRecursively())
 		{
 			++caches_removed;
-			gui_log.notice("Removed firmware cache: %s", sstr(path));
+			gui_log.notice("Removed firmware cache: %s", path);
 		}
 		else
 		{
-			gui_log.warning("Could not remove firmware cache: %s", sstr(path));
+			gui_log.warning("Could not remove firmware cache: %s", path);
 		}
 
 		++caches_total;
@@ -3389,12 +3389,12 @@ void main_window::dropEvent(QDropEvent* event)
 
 		if (const auto error = Emu.BootGame(sstr(drop_paths.first()), "", true); error != game_boot_result::no_errors)
 		{
-			gui_log.error("Boot failed: reason: %s, path: %s", error, sstr(drop_paths.first()));
+			gui_log.error("Boot failed: reason: %s, path: %s", error, drop_paths.first());
 			show_boot_error(error);
 		}
 		else
 		{
-			gui_log.success("Elf Boot from drag and drop done: %s", sstr(drop_paths.first()));
+			gui_log.success("Elf Boot from drag and drop done: %s", drop_paths.first());
 			m_game_list_frame->Refresh(true);
 		}
 		break;

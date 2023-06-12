@@ -162,11 +162,11 @@ void log_viewer::show_context_menu(const QPoint& pos)
 		{
 			log_file.write(m_log_text->toPlainText().toUtf8());
 			log_file.close();
-			gui_log.success("Exported filtered log to file '%s'", file_path.toStdString());
+			gui_log.success("Exported filtered log to file '%s'", file_path);
 		}
 		else
 		{
-			gui_log.error("Failed to export filtered log to file '%s'", file_path.toStdString());
+			gui_log.error("Failed to export filtered log to file '%s'", file_path);
 		}
 	});
 
@@ -242,7 +242,7 @@ void log_viewer::show_log()
 	}
 	else
 	{
-		gui_log.error("log_viewer: Failed to open %s", m_path_last.toStdString());
+		gui_log.error("log_viewer: Failed to open %s", m_path_last);
 		m_log_text->setPlainText(tr("Failed to open '%0'").arg(m_path_last));
 	}
 

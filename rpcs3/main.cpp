@@ -81,8 +81,6 @@ static const bool s_init_locale = []()
 	return true;
 }();
 
-inline std::string sstr(const QString& _in) { return _in.toStdString(); }
-
 static semaphore<> s_qt_init;
 
 static atomic_t<bool> s_headless = false;
@@ -402,17 +400,23 @@ QCoreApplication* create_application(int& argc, char* argv[])
 	return new gui_application(argc, argv);
 }
 
+template <>
+void fmt_class_string<QString>::format(std::string& out, u64 arg)
+{
+ 	out += get_object(arg).toStdString();
+}
+
 void log_q_debug(QtMsgType type, const QMessageLogContext& context, const QString& msg)
 {
 	Q_UNUSED(context)
 
 	switch (type)
 	{
-	case QtDebugMsg: q_debug.trace("%s", msg.toStdString()); break;
-	case QtInfoMsg: q_debug.notice("%s", msg.toStdString()); break;
-	case QtWarningMsg: q_debug.warning("%s", msg.toStdString()); break;
-	case QtCriticalMsg: q_debug.error("%s", msg.toStdString()); break;
-	case QtFatalMsg: q_debug.fatal("%s", msg.toStdString()); break;
+	case QtDebugMsg: q_debug.trace("%s", msg); break;
+	case QtInfoMsg: q_debug.notice("%s", msg); break;
+	case QtWarningMsg: q_debug.warning("%s", msg); break;
+	case QtCriticalMsg: q_debug.error("%s", msg); break;
+	case QtFatalMsg: q_debug.fatal("%s", msg); break;
 	}
 }
 
@@ -1184,7 +1188,7 @@ int main(int argc, char** argv)
 
 	for (const auto& opt : parser.optionNames())
 	{
-		sys_log.notice("Option passed via command line: %s %s", opt.toStdString(), parser.value(opt).toStdString());
+		sys_log.notice("Option passed via command line: %s %s", opt, parser.value(opt));
 	}
 
 	if (parser.isSet(arg_savestate))
@@ -1237,7 +1241,7 @@ int main(int argc, char** argv)
 	}
 	else if (const QStringList args = parser.positionalArguments(); !args.isEmpty() && !is_updating && !parser.isSet(arg_installfw) && !parser.isSet(arg_installpkg))
 	{
-		std::string spath = sstr(::at32(args, 0));
+		const std::string spath = ::at32(args, 0).toStdString();
 
 		if (spath.starts_with(Emulator::vfs_boot_prefix))
 		{
@@ -1295,7 +1299,7 @@ int main(int argc, char** argv)
 		}
 
 		// Postpone startup to main event loop
-		Emu.CallFromMainThread([path = spath.starts_with("%RPCS3_") ? spath : sstr(QFileInfo(::at32(args, 0)).absoluteFilePath()), rpcs3_argv = std::move(rpcs3_argv), config_path = std::move(config_path)]() mutable
+		Emu.CallFromMainThread([path = spath.starts_with("%RPCS3_") ? spath : QFileInfo(::at32(args, 0)).absoluteFilePath().toStdString(), rpcs3_argv = std::move(rpcs3_argv), config_path = std::move(config_path)]() mutable
 		{
 			Emu.argv = std::move(rpcs3_argv);
 			Emu.SetForceBoot(true);

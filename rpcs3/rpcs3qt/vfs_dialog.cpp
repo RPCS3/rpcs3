@@ -12,8 +12,6 @@
 #include "Emu/System.h"
 #include "Emu/vfs_config.h"
 
-inline std::string sstr(const QString& _in) { return _in.toStdString(); }
-
 vfs_dialog::vfs_dialog(std::shared_ptr<gui_settings> _gui_settings, QWidget* parent)
 	: QDialog(parent), m_gui_settings(std::move(_gui_settings))
 {

@@ -822,11 +822,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 				idx = 0;
 				if (renderer.old_adapter.isEmpty())
 				{
-					rsx_log.warning("%s adapter config empty: setting to default!", sstr(renderer.name));
+					rsx_log.warning("%s adapter config empty: setting to default!", renderer.name);
 				}
 				else
 				{
-					rsx_log.warning("Last used %s adapter not found: setting to default!", sstr(renderer.name));
+					rsx_log.warning("Last used %s adapter not found: setting to default!", renderer.name);
 				}
 			}
 			ui->graphicsAdapterBox->setCurrentIndex(idx);
@@ -2428,7 +2428,7 @@ void settings_dialog::AddStylesheets()
 	}
 	else
 	{
-		cfg_log.warning("Trying to set an invalid stylesheets index: %d (%s)", index, sstr(m_current_stylesheet));
+		cfg_log.warning("Trying to set an invalid stylesheets index: %d (%s)", index, m_current_stylesheet);
 	}
 }
 

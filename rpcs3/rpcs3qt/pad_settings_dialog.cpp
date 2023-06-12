@@ -36,7 +36,7 @@ inline bool CreateConfigFile(const QString& dir, const QString& name)
 {
 	if (!QDir().mkpath(dir))
 	{
-		cfg_log.fatal("Failed to create dir %s", sstr(dir));
+		cfg_log.fatal("Failed to create dir %s", dir);
 		return false;
 	}
 
@@ -45,7 +45,7 @@ inline bool CreateConfigFile(const QString& dir, const QString& name)
 
 	if (!new_file.open(QIODevice::WriteOnly))
 	{
-		cfg_log.fatal("Failed to create file %s", sstr(filename));
+		cfg_log.fatal("Failed to create file %s", filename);
 		return false;
 	}
 
@@ -612,7 +612,7 @@ pad_device_info pad_settings_dialog::get_pad_info(QComboBox* combo, int index)
 
 	if (!user_data.canConvert<pad_device_info>())
 	{
-		cfg_log.fatal("get_pad_info: Cannot convert itemData for index %d and itemText %s", index, sstr(combo->itemText(index)));
+		cfg_log.fatal("get_pad_info: Cannot convert itemData for index %d and itemText %s", index, combo->itemText(index));
 		return {};
 	}
 
@@ -1570,7 +1570,7 @@ void pad_settings_dialog::ChangeDevice(int index)
 
 	if (!user_data.canConvert<pad_device_info>())
 	{
-		cfg_log.fatal("ChangeDevice: Cannot convert itemData for index %d and itemText %s", index, sstr(ui->chooseDevice->itemText(index)));
+		cfg_log.fatal("ChangeDevice: Cannot convert itemData for index %d and itemText %s", index, ui->chooseDevice->itemText(index));
 		return;
 	}
 

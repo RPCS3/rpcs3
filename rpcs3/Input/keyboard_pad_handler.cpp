@@ -736,7 +736,7 @@ u32 keyboard_pad_handler::GetKeyCode(const QString& keyName)
 	if (seq.count() == 1)
 		key_code = seq[0];
 	else
-		input_log.notice("GetKeyCode(%s): seq.count() = %d", sstr(keyName), seq.count());
+		input_log.notice("GetKeyCode(%s): seq.count() = %d", keyName, seq.count());
 
 	return key_code;
 }

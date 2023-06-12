@@ -60,7 +60,7 @@ void game_list_base::IconLoadFunction(game_info game, qreal device_pixel_ratio, 
 
 			if (!logged)
 			{
-				game_list_log.warning("Could not load image from path %s", QDir(QString::fromStdString(game->info.icon_path)).absolutePath().toStdString());
+				game_list_log.warning("Could not load image from path %s", QDir(QString::fromStdString(game->info.icon_path)).absolutePath());
 			}
 		}
 	}

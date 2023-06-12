@@ -545,7 +545,7 @@ figure_creator_dialog::figure_creator_dialog(QWidget* parent, u8 slot)
 
 bool figure_creator_dialog::create_blank_figure(u32 character, u8 series)
 {
-	infinity_log.trace("File path: %s Character: %d Series: %d", m_file_path.toStdString(), character, series);
+	infinity_log.trace("File path: %s Character: %d Series: %d", m_file_path, character, series);
 	fs::file inf_file(m_file_path.toStdString(), fs::read + fs::write + fs::create);
 	if (!inf_file)
 	{
