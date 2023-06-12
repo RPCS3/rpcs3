@@ -877,7 +877,7 @@ void game_list_frame::CreateShortcuts(const game_info& gameinfo, const std::set<
 {
 	if (locations.empty())
 	{
-		game_list_log.error("Failed to create shortcuts for %s. No locations selected.", sstr(qstr(gameinfo->info.name).simplified()));
+		game_list_log.error("Failed to create shortcuts for %s. No locations selected.", qstr(gameinfo->info.name).simplified());
 		return;
 	}
 
@@ -927,7 +927,7 @@ void game_list_frame::CreateShortcuts(const game_info& gameinfo, const std::set<
 
 	if (!fs::create_path(target_icon_dir))
 	{
-		game_list_log.error("Failed to create shortcut path %s (%s)", sstr(qstr(gameinfo->info.name).simplified()), target_icon_dir, fs::g_tls_error);
+		game_list_log.error("Failed to create shortcut path %s (%s)", qstr(gameinfo->info.name).simplified(), target_icon_dir, fs::g_tls_error);
 		return;
 	}
 
@@ -954,11 +954,11 @@ void game_list_frame::CreateShortcuts(const game_info& gameinfo, const std::set<
 
 		if (!gameid_token_value.empty() && gui::utils::create_shortcut(gameinfo->info.name, target_cli_args, gameinfo->info.name, gameinfo->info.icon_path, target_icon_dir, location))
 		{
-			game_list_log.success("Created %s shortcut for %s", destination, sstr(qstr(gameinfo->info.name).simplified()));
+			game_list_log.success("Created %s shortcut for %s", destination, qstr(gameinfo->info.name).simplified());
 		}
 		else
 		{
-			game_list_log.error("Failed to create %s shortcut for %s", destination, sstr(qstr(gameinfo->info.name).simplified()));
+			game_list_log.error("Failed to create %s shortcut for %s", destination, qstr(gameinfo->info.name).simplified());
 			success = false;
 		}
 	}
@@ -1281,12 +1281,12 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 				{
 					if (QFile file(game_icon_path); file.exists() && !file.remove())
 					{
-						game_list_log.error("Could not remove old file: '%s'", sstr(game_icon_path), sstr(file.errorString()));
+						game_list_log.error("Could not remove old file: '%s'", game_icon_path, file.errorString());
 						QMessageBox::warning(this, tr("Warning!"), tr("Failed to remove the old file!"));
 						return;
 					}
 
-					game_list_log.success("Removed file: '%s'", sstr(game_icon_path));
+					game_list_log.success("Removed file: '%s'", game_icon_path);
 					if (action == icon_action::remove)
 					{
 						refresh = true;
@@ -1297,12 +1297,12 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 				{
 					if (!QFile::copy(icon_path, game_icon_path))
 					{
-						game_list_log.error("Could not import file '%s' to '%s'.", sstr(icon_path), sstr(game_icon_path));
+						game_list_log.error("Could not import file '%s' to '%s'.", icon_path, game_icon_path);
 						QMessageBox::warning(this, tr("Warning!"), tr("Failed to import the new file!"));
 					}
 					else
 					{
-						game_list_log.success("Imported file '%s' to '%s'", sstr(icon_path), sstr(game_icon_path));
+						game_list_log.success("Imported file '%s' to '%s'", icon_path, game_icon_path);
 						refresh = true;
 					}
 				}
@@ -1437,12 +1437,12 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 					RemoveCustomPadConfiguration(current_game.serial);
 				}
 				m_game_data.erase(std::remove(m_game_data.begin(), m_game_data.end(), gameinfo), m_game_data.end());
-				game_list_log.success("Removed %s %s in %s", sstr(gameinfo->localized_category), current_game.name, current_game.path);
+				game_list_log.success("Removed %s %s in %s", gameinfo->localized_category, current_game.name, current_game.path);
 				Refresh(true);
 			}
 			else
 			{
-				game_list_log.error("Failed to remove %s %s in %s (%s)", sstr(gameinfo->localized_category), current_game.name, current_game.path, fs::g_tls_error);
+				game_list_log.error("Failed to remove %s %s in %s (%s)", gameinfo->localized_category, current_game.name, current_game.path, fs::g_tls_error);
 				QMessageBox::critical(this, tr("Failure!"), remove_caches
 					? tr("Failed to remove %0 from drive!\nPath: %1\nCaches and custom configs have been left intact.").arg(name).arg(qstr(current_game.path))
 					: tr("Failed to remove %0 from drive!\nPath: %1").arg(name).arg(qstr(current_game.path)));
@@ -1682,11 +1682,11 @@ bool game_list_frame::RemoveShadersCache(const std::string& base_dir, bool is_in
 		if (QDir(filepath).removeRecursively())
 		{
 			++caches_removed;
-			game_list_log.notice("Removed shaders cache dir: %s", sstr(filepath));
+			game_list_log.notice("Removed shaders cache dir: %s", filepath);
 		}
 		else
 		{
-			game_list_log.warning("Could not completely remove shaders cache dir: %s", sstr(filepath));
+			game_list_log.warning("Could not completely remove shaders cache dir: %s", filepath);
 		}
 
 		++caches_total;
@@ -1733,11 +1733,11 @@ bool game_list_frame::RemovePPUCache(const std::string& base_dir, bool is_intera
 		if (QFile::remove(filepath))
 		{
 			++files_removed;
-			game_list_log.notice("Removed PPU cache file: %s", sstr(filepath));
+			game_list_log.notice("Removed PPU cache file: %s", filepath);
 		}
 		else
 		{
-			game_list_log.warning("Could not remove PPU cache file: %s", sstr(filepath));
+			game_list_log.warning("Could not remove PPU cache file: %s", filepath);
 		}
 
 		++files_total;
@@ -1784,11 +1784,11 @@ bool game_list_frame::RemoveSPUCache(const std::string& base_dir, bool is_intera
 		if (QFile::remove(filepath))
 		{
 			++files_removed;
-			game_list_log.notice("Removed SPU cache file: %s", sstr(filepath));
+			game_list_log.notice("Removed SPU cache file: %s", filepath);
 		}
 		else
 		{
-			game_list_log.warning("Could not remove SPU cache file: %s", sstr(filepath));
+			game_list_log.warning("Could not remove SPU cache file: %s", filepath);
 		}
 
 		++files_total;

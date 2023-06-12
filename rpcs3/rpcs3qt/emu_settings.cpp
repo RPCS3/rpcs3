@@ -325,7 +325,7 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, 
 			const QVariantList var_list = combobox->itemData(i).toList();
 			if (var_list.size() != 2 || !var_list[0].canConvert<QString>())
 			{
-				fmt::throw_exception("Invalid data found in combobox entry %d (text='%s', listsize=%d, itemcount=%d)", i, sstr(combobox->itemText(i)), var_list.size(), combobox->count());
+				fmt::throw_exception("Invalid data found in combobox entry %d (text='%s', listsize=%d, itemcount=%d)", i, combobox->itemText(i), var_list.size(), combobox->count());
 			}
 
 			if (value == var_list[0].toString())
@@ -381,7 +381,7 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, 
 			const QVariantList var_list = combobox->itemData(index).toList();
 			if (var_list.size() != 2 || !var_list[0].canConvert<QString>())
 			{
-				fmt::throw_exception("Invalid data found in combobox entry %d (text='%s', listsize=%d, itemcount=%d)", index, sstr(combobox->itemText(index)), var_list.size(), combobox->count());
+				fmt::throw_exception("Invalid data found in combobox entry %d (text='%s', listsize=%d, itemcount=%d)", index, combobox->itemText(index), var_list.size(), combobox->count());
 			}
 			SetSetting(type, sstr(var_list[0]));
 		}
@@ -531,8 +531,7 @@ void emu_settings::EnhanceDateTimeEdit(QDateTimeEdit* date_time_edit, emu_settin
 		if (!val.isValid() || val < min || val > max)
 		{
 			cfg_log.error("EnhanceDateTimeEdit '%s' tried to set an invalid value: %s. Setting to default: %s Allowed range: [%s, %s]",
-				cfg_adapter::get_setting_name(type), val.toString(Qt::ISODate).toStdString(), def.toString(Qt::ISODate).toStdString(),
-				min.toString(Qt::ISODate).toStdString(), max.toString(Qt::ISODate).toStdString());
+				cfg_adapter::get_setting_name(type), val.toString(Qt::ISODate), def.toString(Qt::ISODate), min.toString(Qt::ISODate), max.toString(Qt::ISODate));
 			val = def;
 			m_broken_types.insert(type);
 			SetSetting(type, sstr(def.toString(Qt::ISODate)));
@@ -795,7 +794,7 @@ void emu_settings::EnhanceRadioButton(QButtonGroup* button_group, emu_settings_t
 	{
 		ensure(def_pos >= 0);
 
-		cfg_log.error("EnhanceRadioButton '%s' tried to set an invalid value: %s. Setting to default: %s.", cfg_adapter::get_setting_name(type), sstr(selected), sstr(def));
+		cfg_log.error("EnhanceRadioButton '%s' tried to set an invalid value: %s. Setting to default: %s.", cfg_adapter::get_setting_name(type), selected, def);
 		m_broken_types.insert(type);
 
 		// Select the default option on invalid setting string
@@ -1299,7 +1298,7 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 				type_string += loc;
 			}
 		}
-		fmt::throw_exception("Missing translation for emu setting (original=%s, type='%s'=%d, index=%d)", original.toStdString(), type_string.empty() ? "?" : type_string, static_cast<int>(type), index);
+		fmt::throw_exception("Missing translation for emu setting (original=%s, type='%s'=%d, index=%d)", original, type_string.empty() ? "?" : type_string, static_cast<int>(type), index);
 	}
 
 	return original;

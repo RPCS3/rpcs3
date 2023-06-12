@@ -131,7 +131,7 @@ void pad_thread::Init()
 		input_log.notice("Reloaded empty pad config");
 	}
 
-	input_log.trace("Using pad config:\n%s", g_cfg_input.to_string());
+	input_log.trace("Using pad config:\n%s", g_cfg_input);
 
 	std::shared_ptr<keyboard_pad_handler> keyptr;
 

@@ -250,7 +250,7 @@ EmuCallbacks main_application::CreateCallbacks()
 			}
 			else
 			{
-				sys_log.error("get_image_info failed to read '%s'. Error='%s'", filename, reader.errorString().toStdString());
+				sys_log.error("get_image_info failed to read '%s'. Error='%s'", filename, reader.errorString());
 			}
 		});
 		return success;
@@ -320,7 +320,7 @@ EmuCallbacks main_application::CreateCallbacks()
 			}
 			else
 			{
-				sys_log.error("get_scaled_image failed to read '%s'. Error='%s'", path, reader.errorString().toStdString());
+				sys_log.error("get_scaled_image failed to read '%s'. Error='%s'", path, reader.errorString());
 			}
 		});
 		return success;

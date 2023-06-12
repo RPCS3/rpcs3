@@ -328,7 +328,7 @@ namespace gui::utils
 
 		if (!description.empty())
 		{
-			fmt::append(file_content, "Comment=%s\n", QString::fromStdString(description).simplified().toStdString());
+			fmt::append(file_content, "Comment=%s\n", QString::fromStdString(description).simplified());
 		}
 
 		if (!src_icon_path.empty() && !target_icon_dir.empty())

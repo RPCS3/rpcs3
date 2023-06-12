@@ -119,8 +119,7 @@ u64 memory_viewer_panel::OnSearch(std::string wstr, u32 mode)
 
 		if (const usz pos = wstr.find_first_not_of(hex_chars); pos != umax)
 		{
-			gui_log.error("String '%s' cannot be interpreted as hexadecimal byte string due to unknown character '%c'.",
-				m_search_line->text().toStdString(), wstr[pos]);
+			gui_log.error("String '%s' cannot be interpreted as hexadecimal byte string due to unknown character '%c'.", m_search_line->text(), wstr[pos]);
 			return 0;
 		}
 

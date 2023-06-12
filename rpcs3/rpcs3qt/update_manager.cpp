@@ -177,7 +177,7 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 
 	const qint64 diff_msec = cur_date.msecsTo(lts_date);
 
-	update_log.notice("Current: %s, latest: %s, difference: %lld ms", cur_str.toStdString(), lts_str.toStdString(), diff_msec);
+	update_log.notice("Current: %s, latest: %s, difference: %lld ms", cur_str, lts_str, diff_msec);
 
 	const Localized localized;
 

@@ -84,7 +84,7 @@ bool config_checker::check_config(QString content, QString& result, bool is_log)
 
 	if (!config.from_string(content.toStdString()))
 	{
-		gui_log.error("log_viewer: Failed to parse config:\n%s", content.toStdString());
+		gui_log.error("log_viewer: Failed to parse config:\n%s", content);
 		result = tr("Cannot find any config!");
 		return false;
 	}

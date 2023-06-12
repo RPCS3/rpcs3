@@ -15,7 +15,7 @@ qt_camera_handler::qt_camera_handler() : camera_handler_base()
 	// List available cameras
 	for (const QCameraInfo& cameraInfo : QCameraInfo::availableCameras())
 	{
-		camera_log.success("Found camera: name=%s, description=%s", cameraInfo.deviceName().toStdString(), cameraInfo.description().toStdString());
+		camera_log.success("Found camera: name=%s, description=%s", cameraInfo.deviceName(), cameraInfo.description());
 	}
 
 	if (!g_cfg_camera.load())
@@ -48,7 +48,7 @@ void qt_camera_handler::set_camera(const QCameraInfo& camera_info)
 	// Determine if the camera is front facing, in which case we will need to flip the image horizontally.
 	const bool front_facing = camera_info.position() == QCamera::Position::FrontFace;
 
-	camera_log.success("Using camera: name=\"%s\", description=\"%s\", front_facing=%d", camera_info.deviceName().toStdString(), camera_info.description().toStdString(), front_facing);
+	camera_log.success("Using camera: name=\"%s\", description=\"%s\", front_facing=%d", camera_info.deviceName(), camera_info.description(), front_facing);
 
 	// Create camera and video surface
 	m_surface.reset(new qt_camera_video_surface(front_facing, nullptr));

@@ -94,5 +94,5 @@ void qt_music_error_handler::handle_music_state(QMediaPlayer::State state)
 
 void qt_music_error_handler::handle_music_error(QMediaPlayer::Error error)
 {
-	music_log.error("Error event: \"%s\" (error=%s)", m_media_player ? m_media_player->errorString().toStdString() : "", error);
+	music_log.error("Error event: \"%s\" (error=%s)", m_media_player ? m_media_player->errorString() : "", error);
 }
