@@ -1008,11 +1008,11 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 						add_toc(toc);
 						add_func(func.addr, toc, 0);
 					}
-					else if (new_func.toc - func.toc != toc_add)
-					{
-						//func.toc = -1;
-						//new_func.toc = -1;
-					}
+					//else if (new_func.toc - func.toc != toc_add)
+					//{
+					//	func.toc = -1;
+					//	new_func.toc = -1;
+					//}
 
 					if (new_func.blocks.empty())
 					{
@@ -1055,11 +1055,11 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 						add_toc(toc);
 						add_func(func.addr, toc, 0);
 					}
-					else if (new_func.toc - func.toc != toc_add)
-					{
-						//func.toc = -1;
-						//new_func.toc = -1;
-					}
+					//else if (new_func.toc - func.toc != toc_add)
+					//{
+					//	func.toc = -1;
+					//	new_func.toc = -1;
+					//}
 
 					if (new_func.blocks.empty())
 					{
@@ -1472,7 +1472,8 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 			{
 				break;
 			}
-			else if (addr == start && op.opcode == ppu_instructions::NOP())
+
+			if (addr == start && op.opcode == ppu_instructions::NOP())
 			{
 				if (start == func.addr + func.size)
 				{
@@ -1483,16 +1484,19 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 				start += 4;
 				continue;
 			}
-			else if (type == ppu_itype::SC && op.opcode != ppu_instructions::SC(0))
+
+			if (type == ppu_itype::SC && op.opcode != ppu_instructions::SC(0))
 			{
 				break;
 			}
-			else if (addr == start && op.opcode == ppu_instructions::BLR())
+
+			if (addr == start && op.opcode == ppu_instructions::BLR())
 			{
 				start += 4;
 				continue;
 			}
-			else if (type == ppu_itype::B || type == ppu_itype::BC)
+
+			if (type == ppu_itype::B || type == ppu_itype::BC)
 			{
 				const u32 target = (op.aa ? 0 : addr) + (type == ppu_itype::B ? +op.bt24 : +op.bt14);
 
@@ -1539,7 +1543,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 		end = 0;
 	}
 
-	for (auto&& [_, func] : as_rvalue(std::move(fmap)))
+	for (auto&& [_, func] : as_rvalue(fmap))
 	{
 		if (func.attr & ppu_attr::no_size && entry)
 		{
@@ -1560,7 +1564,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 			continue;
 		}
 
-		for (auto [addr, size] : func.blocks)
+		for (const auto& [addr, size] : func.blocks)
 		{
 			if (!size)
 			{
@@ -1598,7 +1602,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 	for (auto& rel : this->relocs)
 	{
 		// Disabled (TODO)
-		if (1 || !vm::check_addr<4>(rel.addr))
+		//if (!vm::check_addr<4>(rel.addr))
 		{
 			continue;
 		}
@@ -1722,9 +1726,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 							break;
 						}
 
-						const auto found = fmap.find(target);
-
-						if (target != i_pos && found == fmap.cend())
+						if (target != i_pos && !fmap.contains(target))
 						{
 							if (block_set.count(target) == 0)
 							{
@@ -1782,9 +1784,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 			else if (is_good && is_fallback && lim < end)
 			{
 				// Register fallback target
-				const auto found = fmap.find(lim);
-
-				if (found == fmap.cend() && block_set.count(lim) == 0)
+				if (!fmap.contains(lim) && !block_set.contains(lim))
 				{
 					ppu_log.trace("Block target found: 0x%x (i_pos=0x%x)", lim, i_pos);
 					block_queue.emplace_back(lim, 0);
