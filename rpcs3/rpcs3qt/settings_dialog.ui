@@ -4120,7 +4120,7 @@
              <item>
               <widget class="QCheckBox" name="gpuTextureScaling">
                <property name="text">
-                <string>Use GPU Texture Scaling</string>
+                <string>Force GPU Texture Scaling</string>
                </property>
               </widget>
              </item>
