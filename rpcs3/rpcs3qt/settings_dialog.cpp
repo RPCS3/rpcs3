@@ -1728,9 +1728,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->exitOnStop, emu_settings_type::ExitRPCS3OnFinish);
 	SubscribeTooltip(ui->exitOnStop, tooltips.settings.exit_on_stop);
 
-	m_emu_settings->EnhanceCheckBox(ui->alwaysStart, emu_settings_type::StartOnBoot);
-	SubscribeTooltip(ui->alwaysStart, tooltips.settings.start_on_boot);
-
 	m_emu_settings->EnhanceCheckBox(ui->startGameFullscreen, emu_settings_type::StartGameFullscreen);
 	SubscribeTooltip(ui->startGameFullscreen, tooltips.settings.start_game_fullscreen);
 
@@ -2310,6 +2307,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	SubscribeTooltip(ui->disableVertexCache, tooltips.settings.disable_vertex_cache);
 
 	// Checkboxes: core debug options
+	m_emu_settings->EnhanceCheckBox(ui->alwaysStart, emu_settings_type::StartOnBoot);
+	SubscribeTooltip(ui->alwaysStart, tooltips.settings.start_on_boot);
+
 	m_emu_settings->EnhanceCheckBox(ui->ppuDebug, emu_settings_type::PPUDebug);
 	SubscribeTooltip(ui->ppuDebug, tooltips.settings.ppu_debug);
 
