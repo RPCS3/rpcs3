@@ -198,7 +198,7 @@ void hid_pad_handler<Device>::update_devices()
 			}
 			else
 			{
-				hid_log.warning("%s adding device: vid=N/A, pid=N/A, path='%s'", m_type, path);
+				hid_log.warning("%s adding device: vid=N/A, pid=N/A, path='%s', error='%s'", m_type, path, hid_error(dev));
 			}
 
 			check_add_device(dev, path, m_enumerated_serials[path]);
