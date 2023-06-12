@@ -24,7 +24,6 @@
 #include "Utilities/Thread.h"
 #include "util/atomic.hpp"
 
-LOG_CHANNEL(input_log, "Input");
 LOG_CHANNEL(sys_log, "SYS");
 
 extern bool is_input_allowed();

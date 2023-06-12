@@ -7,103 +7,21 @@
 
 cfg_input g_cfg_input;
 
-LOG_CHANNEL(input_log, "Input");
-
 PadHandlerBase::PadHandlerBase(pad_handler type) : m_type(type)
 {
 }
 
-// Search an unordered map for a string value and return found keycode
-int PadHandlerBase::FindKeyCode(const std::unordered_map<u32, std::string>& map, const cfg::string& name, bool fallback)
+std::set<u32> PadHandlerBase::narrow_set(const std::set<u64>& src)
 {
-	const std::string def = name.def;
-	const std::string nam = name.to_string();
-	int def_code = -1;
+	if (src.empty())
+		return {};
 
-	for (auto it = map.begin(); it != map.end(); ++it)
+	std::set<u32> dst;
+	for (const u64& s : src)
 	{
-		if (it->second == nam)
-			return it->first;
-
-		if (fallback && it->second == def)
-			def_code = it->first;
+		dst.insert(::narrow<u32>(s));
 	}
-
-	if (fallback)
-	{
-		if (!nam.empty())
-			input_log.error("int FindKeyCode for [name = %s] returned with [def_code = %d] for [def = %s]", nam, def_code, def);
-
-		if (def_code < 0)
-			def_code = 0;
-	}
-
-	return def_code;
-}
-
-long PadHandlerBase::FindKeyCode(const std::unordered_map<u64, std::string>& map, const cfg::string& name, bool fallback)
-{
-	const std::string def = name.def;
-	const std::string nam = name.to_string();
-	long def_code = -1;
-
-	for (auto it = map.begin(); it != map.end(); ++it)
-	{
-		if (it->second == nam)
-			return static_cast<long>(it->first);
-
-		if (fallback && it->second == def)
-			def_code = static_cast<long>(it->first);
-	}
-
-	if (fallback)
-	{
-		if (!nam.empty())
-			input_log.error("long FindKeyCode for [name = %s] returned with [def_code = %d] for [def = %s]", nam, def_code, def);
-
-		if (def_code < 0)
-			def_code = 0;
-	}
-
-	return def_code;
-}
-
-// Search an unordered map for a string value and return found keycode
-int PadHandlerBase::FindKeyCodeByString(const std::unordered_map<u32, std::string>& map, const std::string& name, bool fallback)
-{
-	for (auto it = map.begin(); it != map.end(); ++it)
-	{
-		if (it->second == name)
-			return it->first;
-	}
-
-	if (fallback)
-	{
-		if (!name.empty())
-			input_log.error("long FindKeyCodeByString for [name = %s] returned with 0", name);
-		return 0;
-	}
-
-	return -1;
-}
-
-// Search an unordered map for a string value and return found keycode
-long PadHandlerBase::FindKeyCodeByString(const std::unordered_map<u64, std::string>& map, const std::string& name, bool fallback)
-{
-	for (auto it = map.begin(); it != map.end(); ++it)
-	{
-		if (it->second == name)
-			return static_cast<long>(it->first);
-	}
-
-	if (fallback)
-	{
-		if (!name.empty())
-			input_log.error("long FindKeyCodeByString for [name = %s] returned with 0", name);
-		return 0;
-	}
-
-	return -1;
+	return dst;
 }
 
 // Get new multiplied value based on the multiplier
@@ -351,7 +269,7 @@ PadHandlerBase::connection PadHandlerBase::get_next_button_press(const std::stri
 
 	auto device = get_device(pad_id);
 
-	const auto status = update_connection(device);
+	const connection status = update_connection(device);
 	if (status == connection::disconnected)
 	{
 		if (fail_callback)
@@ -432,7 +350,7 @@ void PadHandlerBase::get_motion_sensors(const std::string& pad_id, const motion_
 	// Reset sensors
 	auto device = get_device(pad_id);
 
-	const auto status = update_connection(device);
+	const connection status = update_connection(device);
 	if (status == connection::disconnected)
 	{
 		if (fail_callback)
@@ -536,11 +454,11 @@ bool PadHandlerBase::bindPadToDevice(std::shared_ptr<Pad> pad, u8 player_id)
 		return false;
 	}
 
-	std::array<u32, button::button_count> mapping = get_mapped_key_codes(pad_device, config);
+	std::array<std::set<u32>, button::button_count> mapping = get_mapped_key_codes(pad_device, config);
 
 	u32 pclass_profile = 0x0;
 
-	for (const auto& product : input::get_products_by_class(config->device_class_type))
+	for (const input::product_info& product : input::get_products_by_class(config->device_class_type))
 	{
 		if (product.vendor_id == config->vendor_id && product.product_id == config->product_id)
 		{
@@ -599,50 +517,50 @@ bool PadHandlerBase::bindPadToDevice(std::shared_ptr<Pad> pad, u8 player_id)
 	return true;
 }
 
-std::array<u32, PadHandlerBase::button::button_count> PadHandlerBase::get_mapped_key_codes(const std::shared_ptr<PadDevice>& device, const cfg_pad* cfg)
+std::array<std::set<u32>, PadHandlerBase::button::button_count> PadHandlerBase::get_mapped_key_codes(const std::shared_ptr<PadDevice>& device, const cfg_pad* cfg)
 {
-	std::array<u32, button::button_count> mapping{};
+	std::array<std::set<u32>, button::button_count> mapping{};
 	if (!device || !cfg)
 		return mapping;
 
-	device->trigger_code_left  = FindKeyCode(button_list, cfg->l2);
-	device->trigger_code_right = FindKeyCode(button_list, cfg->r2);
-	device->axis_code_left[0]  = FindKeyCode(button_list, cfg->ls_left);
-	device->axis_code_left[1]  = FindKeyCode(button_list, cfg->ls_right);
-	device->axis_code_left[2]  = FindKeyCode(button_list, cfg->ls_down);
-	device->axis_code_left[3]  = FindKeyCode(button_list, cfg->ls_up);
-	device->axis_code_right[0] = FindKeyCode(button_list, cfg->rs_left);
-	device->axis_code_right[1] = FindKeyCode(button_list, cfg->rs_right);
-	device->axis_code_right[2] = FindKeyCode(button_list, cfg->rs_down);
-	device->axis_code_right[3] = FindKeyCode(button_list, cfg->rs_up);
+	device->trigger_code_left  = FindKeyCodes<u32, u64>(button_list, cfg->l2);
+	device->trigger_code_right = FindKeyCodes<u32, u64>(button_list, cfg->r2);
+	device->axis_code_left[0]  = FindKeyCodes<u32, u64>(button_list, cfg->ls_left);
+	device->axis_code_left[1]  = FindKeyCodes<u32, u64>(button_list, cfg->ls_right);
+	device->axis_code_left[2]  = FindKeyCodes<u32, u64>(button_list, cfg->ls_down);
+	device->axis_code_left[3]  = FindKeyCodes<u32, u64>(button_list, cfg->ls_up);
+	device->axis_code_right[0] = FindKeyCodes<u32, u64>(button_list, cfg->rs_left);
+	device->axis_code_right[1] = FindKeyCodes<u32, u64>(button_list, cfg->rs_right);
+	device->axis_code_right[2] = FindKeyCodes<u32, u64>(button_list, cfg->rs_down);
+	device->axis_code_right[3] = FindKeyCodes<u32, u64>(button_list, cfg->rs_up);
 
-	mapping[button::up]       = FindKeyCode(button_list, cfg->up);
-	mapping[button::down]     = FindKeyCode(button_list, cfg->down);
-	mapping[button::left]     = FindKeyCode(button_list, cfg->left);
-	mapping[button::right]    = FindKeyCode(button_list, cfg->right);
-	mapping[button::cross]    = FindKeyCode(button_list, cfg->cross);
-	mapping[button::square]   = FindKeyCode(button_list, cfg->square);
-	mapping[button::circle]   = FindKeyCode(button_list, cfg->circle);
-	mapping[button::triangle] = FindKeyCode(button_list, cfg->triangle);
-	mapping[button::start]    = FindKeyCode(button_list, cfg->start);
-	mapping[button::select]   = FindKeyCode(button_list, cfg->select);
-	mapping[button::l1]       = FindKeyCode(button_list, cfg->l1);
-	mapping[button::l2]       = ::narrow<u32>(device->trigger_code_left);
-	mapping[button::l3]       = FindKeyCode(button_list, cfg->l3);
-	mapping[button::r1]       = FindKeyCode(button_list, cfg->r1);
-	mapping[button::r2]       = ::narrow<u32>(device->trigger_code_right);
-	mapping[button::r3]       = FindKeyCode(button_list, cfg->r3);
-	mapping[button::ls_left]  = ::narrow<u32>(device->axis_code_left[0]);
-	mapping[button::ls_right] = ::narrow<u32>(device->axis_code_left[1]);
-	mapping[button::ls_down]  = ::narrow<u32>(device->axis_code_left[2]);
-	mapping[button::ls_up]    = ::narrow<u32>(device->axis_code_left[3]);
-	mapping[button::rs_left]  = ::narrow<u32>(device->axis_code_right[0]);
-	mapping[button::rs_right] = ::narrow<u32>(device->axis_code_right[1]);
-	mapping[button::rs_down]  = ::narrow<u32>(device->axis_code_right[2]);
-	mapping[button::rs_up]    = ::narrow<u32>(device->axis_code_right[3]);
-	mapping[button::ps]       = FindKeyCode(button_list, cfg->ps);
+	mapping[button::up]       = FindKeyCodes<u32, u32>(button_list, cfg->up);
+	mapping[button::down]     = FindKeyCodes<u32, u32>(button_list, cfg->down);
+	mapping[button::left]     = FindKeyCodes<u32, u32>(button_list, cfg->left);
+	mapping[button::right]    = FindKeyCodes<u32, u32>(button_list, cfg->right);
+	mapping[button::cross]    = FindKeyCodes<u32, u32>(button_list, cfg->cross);
+	mapping[button::square]   = FindKeyCodes<u32, u32>(button_list, cfg->square);
+	mapping[button::circle]   = FindKeyCodes<u32, u32>(button_list, cfg->circle);
+	mapping[button::triangle] = FindKeyCodes<u32, u32>(button_list, cfg->triangle);
+	mapping[button::start]    = FindKeyCodes<u32, u32>(button_list, cfg->start);
+	mapping[button::select]   = FindKeyCodes<u32, u32>(button_list, cfg->select);
+	mapping[button::l1]       = FindKeyCodes<u32, u32>(button_list, cfg->l1);
+	mapping[button::l2]       = narrow_set(device->trigger_code_left);
+	mapping[button::l3]       = FindKeyCodes<u32, u32>(button_list, cfg->l3);
+	mapping[button::r1]       = FindKeyCodes<u32, u32>(button_list, cfg->r1);
+	mapping[button::r2]       = narrow_set(device->trigger_code_right);
+	mapping[button::r3]       = FindKeyCodes<u32, u32>(button_list, cfg->r3);
+	mapping[button::ls_left]  = narrow_set(device->axis_code_left[0]);
+	mapping[button::ls_right] = narrow_set(device->axis_code_left[1]);
+	mapping[button::ls_down]  = narrow_set(device->axis_code_left[2]);
+	mapping[button::ls_up]    = narrow_set(device->axis_code_left[3]);
+	mapping[button::rs_left]  = narrow_set(device->axis_code_right[0]);
+	mapping[button::rs_right] = narrow_set(device->axis_code_right[1]);
+	mapping[button::rs_down]  = narrow_set(device->axis_code_right[2]);
+	mapping[button::rs_up]    = narrow_set(device->axis_code_right[3]);
+	mapping[button::ps]       = FindKeyCodes<u32, u32>(button_list, cfg->ps);
 
-	mapping[button::pressure_intensity_button] = FindKeyCode(button_list, cfg->pressure_intensity_button);
+	mapping[button::pressure_intensity_button] = FindKeyCodes<u32, u32>(button_list, cfg->pressure_intensity_button);
 
 	return mapping;
 }
@@ -655,7 +573,7 @@ void PadHandlerBase::get_mapping(const pad_ensemble& binding)
 	if (!device || !pad)
 		return;
 
-	const auto cfg = device->config;
+	const cfg_pad* cfg = device->config;
 
 	auto button_values = get_button_values(device);
 
@@ -664,40 +582,70 @@ void PadHandlerBase::get_mapping(const pad_ensemble& binding)
 	const bool adjust_pressure = pad->get_pressure_intensity_enabled(cfg->pressure_intensity_toggle_mode.get());
 
 	// Translate any corresponding keycodes to our normal DS3 buttons and triggers
-	for (auto& btn : pad->m_buttons)
+	for (Button& btn : pad->m_buttons)
 	{
-		// Using a temporary buffer because the values can change during translation
-		Button tmp = btn;
-		tmp.m_value = button_values[btn.m_keyCode];
+		bool pressed{};
+		u16 value{};
 
-		TranslateButtonPress(device, tmp.m_keyCode, tmp.m_pressed, tmp.m_value);
-
-		// Modify pressure if necessary if the button was pressed
-		if (adjust_pressure && tmp.m_pressed)
+		for (u32 code : btn.m_key_codes)
 		{
-			tmp.m_value = pad->m_pressure_intensity;
+			bool press{};
+			u16 val = button_values[code];
+
+			TranslateButtonPress(device, code, press, val);
+
+			if (press)
+			{
+				// Modify pressure if necessary if the button was pressed
+				if (adjust_pressure)
+				{
+					val = pad->m_pressure_intensity;
+				}
+
+				value = std::max(value, val);
+				pressed = true;
+			}
 		}
 
-		btn = tmp;
+		btn.m_value = value;
+		btn.m_pressed = pressed;
 	}
 
 	// used to get the absolute value of an axis
-	s32 stick_val[4]{ 0 };
+	s32 stick_val[4]{};
 
 	// Translate any corresponding keycodes to our two sticks. (ignoring thresholds for now)
 	for (int i = 0; i < static_cast<int>(pad->m_sticks.size()); i++)
 	{
-		bool pressed;
+		bool pressed{};
+		u16 val_min{};
+		u16 val_max{};
 
-		// m_keyCodeMin is the mapped key for left or down
-		const u32 key_min = pad->m_sticks[i].m_keyCodeMin;
-		u16 val_min = button_values[key_min];
-		TranslateButtonPress(device, key_min, pressed, val_min, true);
+		// m_key_codes_min are the mapped keys for left or down
+		for (u32 key_min : pad->m_sticks[i].m_key_codes_min)
+		{
+			u16 val = button_values[key_min];
 
-		// m_keyCodeMax is the mapped key for right or up
-		const u32 key_max = pad->m_sticks[i].m_keyCodeMax;
-		u16 val_max = button_values[key_max];
-		TranslateButtonPress(device, key_max, pressed, val_max, true);
+			TranslateButtonPress(device, key_min, pressed, val, true);
+
+			if (pressed)
+			{
+				val_min = std::max(val_min, val);
+			}
+		}
+
+		// m_key_codes_max are the mapped keys for right or up
+		for (u32 key_max : pad->m_sticks[i].m_key_codes_max)
+		{
+			u16 val = button_values[key_max];
+
+			TranslateButtonPress(device, key_max, pressed, val, true);
+
+			if (pressed)
+			{
+				val_max = std::max(val_max, val);
+			}
+		}
 
 		// cancel out opposing values and get the resulting difference
 		stick_val[i] = val_max - val_min;
@@ -741,7 +689,7 @@ void PadHandlerBase::process()
 		if (!device || !pad)
 			continue;
 
-		const auto status = update_connection(device);
+		const connection status = update_connection(device);
 
 		switch (status)
 		{

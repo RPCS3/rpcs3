@@ -341,9 +341,9 @@ class evdev_joystick_handler final : public PadHandlerBase
 
 	struct EvdevButton
 	{
-		u32 code = 0;
-		int dir = 0;
-		int type = 0;
+		u32 code = 0; // key code of our button or axis
+		int dir = 0;  // dir is -1 in case of a button, 0 in case of a regular axis and 1 in case of a reverse axis
+		int type = 0; // EV_KEY or EV_ABS
 	};
 
 	struct evdev_sensor : public EvdevButton
@@ -356,14 +356,14 @@ class evdev_joystick_handler final : public PadHandlerBase
 	{
 		libevdev* device{ nullptr };
 		std::string path;
-		std::unordered_map<int, bool> axis_orientations; // value is true if key was found in rev_axis_list
 		std::array<s32, 4> stick_val{};
 		std::array<u16, 4> val_min{};
 		std::array<u16, 4> val_max{};
-		EvdevButton trigger_left{};
-		EvdevButton trigger_right{};
-		std::array<EvdevButton, 4> axis_left{};
-		std::array<EvdevButton, 4> axis_right{};
+		std::vector<EvdevButton> all_buttons;
+		std::set<u32> trigger_left{};
+		std::set<u32> trigger_right{};
+		std::array<std::set<u32>, 4> axis_left{};
+		std::array<std::set<u32>, 4> axis_right{};
 		std::array<evdev_sensor, 4> axis_motion{};
 		int cur_dir = 0;
 		int cur_type = 0;
@@ -397,20 +397,17 @@ private:
 	std::unordered_map<u64, std::pair<u16, bool>> GetButtonValues(const std::shared_ptr<EvdevDevice>& device);
 	void SetRumble(EvdevDevice* device, u8 large, u8 small);
 
-	// Search axis_orientations map for the direction by index, returns -1 if not found, 0 for positive and 1 for negative
-	int FindAxisDirection(const std::unordered_map<int, bool>& map, int index);
-
 	positive_axis m_pos_axis_config;
 	std::vector<u32> m_positive_axis;
 	std::vector<std::string> m_blacklist;
 	std::unordered_map<std::string, std::shared_ptr<evdev_joystick_handler::EvdevDevice>> m_settings_added;
 	std::unordered_map<std::string, std::shared_ptr<evdev_joystick_handler::EvdevDevice>> m_motion_settings_added;
 	std::shared_ptr<EvdevDevice> m_dev;
-	bool m_is_button_or_trigger;
-	bool m_is_negative;
+	bool m_is_button_or_trigger{};
+	bool m_is_negative{};
 
-	bool check_button(const EvdevButton& b, const u32 code);
-	bool check_buttons(const std::array<EvdevButton, 4>& b, const u32 code);
+	bool check_button_set(const std::set<u32>& indices, const u32 code);
+	bool check_button_sets(const std::array<std::set<u32>, 4>& sets, const u32 code);
 
 	void handle_input_event(const input_event& evt, const std::shared_ptr<Pad>& pad);
 

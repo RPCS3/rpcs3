@@ -6,6 +6,26 @@ LOG_CHANNEL(input_log, "Input");
 
 extern std::string g_pad_profile_override;
 
+std::vector<std::string> cfg_pad::get_buttons(const std::string& str)
+{
+	std::vector<std::string> vec = fmt::split(str, {","});;
+
+	// Remove duplicates
+	std::sort(vec.begin(), vec.end());
+	vec.erase(std::unique(vec.begin(), vec.end()), vec.end());
+
+	return vec;
+}
+
+std::string cfg_pad::get_buttons(std::vector<std::string> vec)
+{
+	// Remove duplicates
+	std::sort(vec.begin(), vec.end());
+	vec.erase(std::unique(vec.begin(), vec.end()), vec.end());
+
+	return fmt::merge(vec, ",");
+}
+
 bool cfg_input::load(const std::string& title_id, const std::string& profile, bool strict)
 {
 	input_log.notice("Loading pad config (title_id='%s', profile='%s', strict=%d)", title_id, profile, strict);
