@@ -2923,7 +2923,7 @@
                <item>
                 <widget class="QCheckBox" name="pausedSavestates">
                  <property name="text">
-                  <string>Start Savestates Paused</string>
+                  <string>Pause emulation after loading savestates</string>
                  </property>
                 </widget>
                </item>
