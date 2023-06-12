@@ -24,6 +24,8 @@ public:
 		u16 product_version = 0;
 		u16 firmware_version = 0;
 
+		bool is_virtual_device = false;
+
 		bool has_led = false;
 		bool has_rumble = false;
 		bool has_rumble_triggers = false;
@@ -112,6 +114,7 @@ private:
 	std::map<std::string, std::shared_ptr<SDLDevice>> m_controllers;
 
 	void enumerate_devices();
+	std::shared_ptr<SDLDevice> get_device_by_game_controller(SDL_GameController* game_controller) const;
 
 	std::shared_ptr<PadDevice> get_device(const std::string& device) override;
 	PadHandlerBase::connection update_connection(const std::shared_ptr<PadDevice>& device) override;

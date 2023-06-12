@@ -243,13 +243,15 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 		bool to_store = false;
 		u32  storage_address = -1;
 
+		m_frame_stats.vertex_cache_request_count++;
+
 		if (m_vertex_layout.interleaved_blocks.size() == 1 &&
 			rsx::method_registers.current_draw_clause.command != rsx::draw_command::inlined_array)
 		{
 			const auto data_offset = (vertex_base * m_vertex_layout.interleaved_blocks[0]->attribute_stride);
 			storage_address = m_vertex_layout.interleaved_blocks[0]->real_offset_address + data_offset;
 
-			if (auto cached = m_vertex_cache->find_vertex_range(storage_address, VK_FORMAT_R8_UINT, required.first))
+			if (auto cached = m_vertex_cache->find_vertex_range(storage_address, required.first))
 			{
 				ensure(cached->local_address == storage_address);
 
@@ -264,13 +266,15 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 
 		if (!in_cache)
 		{
+			m_frame_stats.vertex_cache_miss_count++;
+
 			persistent_offset = static_cast<u32>(m_attrib_ring_info.alloc<256>(required.first));
 			persistent_range_base = static_cast<u32>(persistent_offset);
 
 			if (to_store)
 			{
 				//store ref in vertex cache
-				m_vertex_cache->store_range(storage_address, VK_FORMAT_R8_UINT, required.first, static_cast<u32>(persistent_offset));
+				m_vertex_cache->store_range(storage_address, required.first, static_cast<u32>(persistent_offset));
 			}
 		}
 	}

@@ -13,11 +13,18 @@ public:
 		Enhanced
 	};
 
+	enum class DualSenseFeatureSet
+	{
+		Normal,
+		Edge
+	};
+
 	bool bt_controller{false};
 	u8 bt_sequence{0};
 	bool has_calib_data{false};
 	std::array<CalibData, CalibIndex::COUNT> calib_data{};
 	DualSenseDataMode data_mode{DualSenseDataMode::Simple};
+	DualSenseFeatureSet feature_set{DualSenseFeatureSet::Normal};
 	bool init_lightbar{true};
 	bool update_lightbar{true};
 	bool update_player_leds{true};
@@ -63,7 +70,12 @@ class dualsense_pad_handler final : public hid_pad_handler<DualSenseDevice>
 		RSXNeg,
 		RSXPos,
 		RSYNeg,
-		RSYPos
+		RSYPos,
+
+		EdgeFnL,
+		EdgeFnR,
+		EdgeLB,
+		EdgeRB,
 	};
 
 public:

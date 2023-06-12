@@ -195,7 +195,7 @@ gl::vertex_upload_info GLGSRender::set_vertex_buffer()
 			const auto data_offset = (vertex_base * m_vertex_layout.interleaved_blocks[0]->attribute_stride);
 			storage_address = m_vertex_layout.interleaved_blocks[0]->real_offset_address + data_offset;
 
-			if (auto cached = m_vertex_cache->find_vertex_range(storage_address, GL_R8UI, required.first))
+			if (auto cached = m_vertex_cache->find_vertex_range(storage_address, required.first))
 			{
 				ensure(cached->local_address == storage_address);
 
@@ -216,7 +216,7 @@ gl::vertex_upload_info GLGSRender::set_vertex_buffer()
 			if (to_store)
 			{
 				//store ref in vertex cache
-				m_vertex_cache->store_range(storage_address, GL_R8UI, required.first, persistent_mapping.second);
+				m_vertex_cache->store_range(storage_address, required.first, persistent_mapping.second);
 			}
 		}
 

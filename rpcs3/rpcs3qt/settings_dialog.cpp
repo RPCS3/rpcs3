@@ -648,11 +648,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceCheckBox(ui->multithreadedRSX, emu_settings_type::MultithreadedRSX);
 	SubscribeTooltip(ui->multithreadedRSX, tooltips.settings.multithreaded_rsx);
-	connect(ui->multithreadedRSX, &QCheckBox::toggled, [this](bool checked)
-	{
-		ui->disableVertexCache->setEnabled(!checked);
-	});
-	ui->disableVertexCache->setEnabled(!ui->multithreadedRSX->isChecked());
 
 	m_emu_settings->EnhanceCheckBox(ui->strictModeRendering, emu_settings_type::StrictRenderingMode);
 	SubscribeTooltip(ui->strictModeRendering, tooltips.settings.strict_rendering_mode);

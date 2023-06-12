@@ -1103,29 +1103,45 @@ int main(int argc, char** argv)
 				std::cout << "Not a file: " << mod.toStdString() << std::endl;
 				return 1;
 			}
+
 			vec_modules.push_back(fi.absoluteFilePath().toStdString());
 		}
 
-		const auto input_cb = [](std::string old_path, std::string path, bool tried) -> std::string
-		{
-			const std::string hint = fmt::format("Hint: KLIC (KLicense key) is a 16-byte long string. (32 hexadecimal characters)"
-				"\nAnd is logged with some sceNpDrm* functions when the game/application which owns \"%0\" is running.", path);
+		Emu.Init();
 
-			if (tried)
+		std::shared_ptr<decrypt_binaries_t> decrypter = std::make_shared<decrypt_binaries_t>(std::move(vec_modules));
+
+		usz mod_index = decrypter->decrypt();
+		usz repeat_count = mod_index == 0 ? 1 : 0;
+
+		while (!decrypter->done())
+		{
+			const std::string& path = (*decrypter)[mod_index];
+			const std::string filename = path.substr(path.find_last_of(fs::delim) + 1);
+
+			const std::string hint = fmt::format("Hint: KLIC (KLicense key) is a 16-byte long string. (32 hexadecimal characters)"
+				"\nAnd is logged with some sceNpDrm* functions when the game/application which owns \"%0\" is running.", filename);
+
+			if (repeat_count >= 2)
 			{
-				std::cout << "Failed to decrypt " << old_path << " with specfied KLIC, retrying.\n" << hint << std::endl;
+				std::cout << "Failed to decrypt " << path << " with specfied KLIC, retrying.\n" << hint << std::endl;
 			}
 
-			std::cout << "Enter KLIC of " << path << "\nHexadecimal only, 32 characters:" << std::endl;
+			std::cout << "Enter KLIC of " << filename << "\nHexadecimal only, 32 characters:" << std::endl;
 
 			std::string input;
 			std::cin >> input;
 
-			return input;
-		};
+			if (input.empty())
+			{
+				break;
+			}
 
-		Emu.Init();
-		decrypt_sprx_libraries(vec_modules, input_cb);
+			const usz new_index = decrypter->decrypt(input);
+			repeat_count = new_index == mod_index ? repeat_count + 1 : 0;
+			mod_index = new_index;
+		}
+
 		Emu.Quit(true);
 		return 0;
 	}

@@ -214,9 +214,9 @@ error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString,
 
 	dlg->type = _type;
 
-	dlg->on_close = [callback, userData, &return_code, wptr = std::weak_ptr<MsgDialogBase>(dlg)](s32 status)
+	dlg->on_close = [callback, userData, is_blocking, &return_code, wptr = std::weak_ptr<MsgDialogBase>(dlg)](s32 status)
 	{
-		if (return_code)
+		if (is_blocking && return_code)
 		{
 			*return_code = status;
 		}

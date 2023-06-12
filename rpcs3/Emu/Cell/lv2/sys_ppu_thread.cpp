@@ -563,7 +563,7 @@ error_code sys_ppu_thread_start(ppu_thread& ppu, u32 thread_id)
 
 		thread.cmd_list
 		({
-			{ppu_cmd::opd_call, 0}, thread.entry_func
+			{ppu_cmd::entry_call, 0},
 		});
 
 		return {};

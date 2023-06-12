@@ -43,7 +43,7 @@ struct pad_list_entry
 	bool is_buddy_only = false;
 
 	explicit pad_list_entry(std::string _name, bool _is_buddy_only)
-		: name(_name), is_buddy_only(_is_buddy_only)
+		: name(std::move(_name)), is_buddy_only(_is_buddy_only)
 	{}
 };
 

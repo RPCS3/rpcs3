@@ -38,7 +38,7 @@ GLGSRender::GLGSRender(utils::serial* ar) noexcept : GSRender(ar)
 {
 	m_shaders_cache = std::make_unique<gl::shader_cache>(m_prog_buffer, "opengl", "v1.94");
 
-	if (g_cfg.video.disable_vertex_cache || g_cfg.video.multithreaded_rsx)
+	if (g_cfg.video.disable_vertex_cache)
 		m_vertex_cache = std::make_unique<gl::null_vertex_cache>();
 	else
 		m_vertex_cache = std::make_unique<gl::weak_vertex_cache>();

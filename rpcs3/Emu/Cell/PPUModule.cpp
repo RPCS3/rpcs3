@@ -2121,7 +2121,7 @@ bool ppu_load_exec(const ppu_exec_object& elf, utils::serial* ar)
 	}
 
 	// Program entry
-	u32 entry = 0;
+	u32 entry = static_cast<u32>(elf.header.e_entry); // Run entry from elf (HLE)
 
 	// Set path (TODO)
 	_main.name.clear();
@@ -2264,6 +2264,7 @@ bool ppu_load_exec(const ppu_exec_object& elf, utils::serial* ar)
 	ppu_thread_params p{};
 	p.stack_addr = vm::cast(vm::alloc(primary_stacksize, vm::stack, 4096));
 	p.stack_size = primary_stacksize;
+	p.entry = vm::_ref<ppu_func_opd_t>(entry);
 
 	auto ppu = idm::make_ptr<named_thread<ppu_thread>>(p, "main_thread", primary_prio, 1);
 
@@ -2278,7 +2279,7 @@ bool ppu_load_exec(const ppu_exec_object& elf, utils::serial* ar)
 
 	ppu->cmd_push({ppu_cmd::initialize, 0});
 
-	if (!entry && !Emu.IsVsh())
+	if (entry == static_cast<u32>(elf.header.e_entry) && !Emu.IsVsh())
 	{
 		// Set TLS args, call sys_initialize_tls
 		ppu->cmd_list
@@ -2286,11 +2287,6 @@ bool ppu_load_exec(const ppu_exec_object& elf, utils::serial* ar)
 			{ ppu_cmd::set_args, 4 }, u64{ppu->id}, u64{tls_vaddr}, u64{tls_fsize}, u64{tls_vsize},
 			{ ppu_cmd::hle_call, FIND_FUNC(sys_initialize_tls) },
 		});
-	}
-
-	if (!entry)
-	{
-		entry = static_cast<u32>(elf.header.e_entry); // Run entry from elf
 	}
 
 	// Run start functions
@@ -2315,7 +2311,7 @@ bool ppu_load_exec(const ppu_exec_object& elf, utils::serial* ar)
 		{ ppu_cmd::set_args, 8 }, u64{Emu.argv.size()}, u64{argv.addr()}, u64{envp.addr()}, u64{0}, u64{ppu->id}, u64{tls_vaddr}, u64{tls_fsize}, u64{tls_vsize},
 		{ ppu_cmd::set_gpr, 11 }, u64{elf.header.e_entry},
 		{ ppu_cmd::set_gpr, 12 }, u64{malloc_pagesize},
-		{ ppu_cmd::lle_call, entry },
+		{ ppu_cmd::entry_call, 0 },
 	});
 
 	// Set actual memory protection (experimental)

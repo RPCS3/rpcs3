@@ -211,12 +211,20 @@ std::optional<s32> lv2_socket_native::connect(const sys_net_sockaddr& addr)
 		dnshook.add_dns_spy(lv2_id);
 	}
 
+#ifdef _WIN32
+	bool was_connecting = connecting;
+#endif
+
 	if (::connect(socket, reinterpret_cast<struct sockaddr*>(&native_addr), native_addr_len) == 0)
 	{
 		return CELL_OK;
 	}
 
+#ifdef _WIN32
+	sys_net_error result = get_last_error(!so_nbio, was_connecting);
+#else
 	sys_net_error result = get_last_error(!so_nbio);
+#endif
 
 	if (result)
 	{
