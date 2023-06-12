@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "sys_lwcond.h"
 
 #include "Emu/IdManager.h"
@@ -566,8 +566,6 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 		{
 			if (lv2_obj::wait_timeout(timeout, &ppu))
 			{
-				const u64 start_time = ppu.start_time;
-
 				// Wait for rescheduling
 				if (ppu.check_state())
 				{

@@ -75,7 +75,6 @@ usz decrypt_binaries_t::decrypt(std::string klic_input)
 
 		fs::file elf_file;
 
-		bool tried = false;
 		bool invalid = false;
 		usz key_it = 0;
 		u32 file_magic{};
