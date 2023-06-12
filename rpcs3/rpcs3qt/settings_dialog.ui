@@ -2366,6 +2366,13 @@
                 </widget>
                </item>
                <item>
+                <widget class="QCheckBox" name="accurateSpuDMA">
+                 <property name="text">
+                  <string>Accurate SPU DMA</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QCheckBox" name="ppuNJFixup">
                  <property name="text">
                   <string>PPU Non-Java Mode Fixup</string>
@@ -4216,13 +4223,6 @@
               <widget class="QCheckBox" name="accuratePPUFPCC">
                <property name="text">
                 <string>Accurate PPU Float Condition Control</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QCheckBox" name="accurateSpuDMA">
-               <property name="text">
-                <string>Accurate SPU DMA</string>
                </property>
               </widget>
              </item>
