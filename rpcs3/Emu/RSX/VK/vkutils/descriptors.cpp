@@ -5,7 +5,7 @@
 namespace vk
 {
 	// Error handler callback
-	extern void on_descriptor_pool_fragmentation();
+	extern void on_descriptor_pool_fragmentation(bool fatal);
 
 	namespace descriptors
 	{
@@ -228,24 +228,18 @@ namespace vk
 		m_current_subpool_offset = 0;
 		m_current_subpool_index = umax;
 
-		// Only attempt recovery once. Can be bumped up if we have a more complex setup in future.
-		int retries = 1;
+		const int max_retries = 2;
+		int retries = max_retries;
 
-		while (m_current_subpool_index == umax)
+		do
 		{
 			for (u32 index = 0; index < m_device_subpools.size(); ++index)
 			{
 				if (!m_device_subpools[index].busy)
 				{
 					m_current_subpool_index = index;
-					break;
+					goto done; // Nested break
 				}
-			}
-
-			if (m_current_subpool_index != umax)
-			{
-				// We found something, exit early
-				break;
 			}
 
 			VkDescriptorPool subpool = VK_NULL_HANDLE;
@@ -254,12 +248,12 @@ namespace vk
 				if (retries-- && (result == VK_ERROR_FRAGMENTATION_EXT))
 				{
 					rsx_log.warning("Descriptor pool creation failed with fragmentation error. Will attempt to recover.");
-					vk::on_descriptor_pool_fragmentation();
+					vk::on_descriptor_pool_fragmentation(!retries);
 					continue;
 				}
 
 				vk::die_with_error(result);
-				break;
+				fmt::throw_exception("Unreachable");
 			}
 
 			// New subpool created successfully
@@ -272,8 +266,10 @@ namespace vk
 			});
 
 			m_current_subpool_index = m_device_subpools.size() - 1;
-		}
 
+		} while (m_current_subpool_index == umax);
+
+	done:
 		m_device_subpools[m_current_subpool_index].busy = VK_TRUE;
 		m_current_pool_handle = m_device_subpools[m_current_subpool_index].handle;
 	}
