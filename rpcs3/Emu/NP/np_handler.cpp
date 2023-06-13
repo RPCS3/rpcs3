@@ -476,6 +476,15 @@ namespace np
 	bool np_handler::discover_ip_address()
 	{
 		auto sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+#ifdef _WIN32
+		if (sockfd == INVALID_SOCKET)
+#else
+		if (sockfd == -1)
+#endif
+		{
+			nph_log.error("Creating socket to discover local ip failed: %d", get_native_error());
+			return false;
+		}
 
 		auto close_socket = [&]()
 		{
@@ -499,7 +508,7 @@ namespace np
 			return false; // offline
 		}
 
-		sockaddr_in client_addr;
+		sockaddr_in client_addr{};
 		socklen_t client_addr_size = sizeof(client_addr);
 		if (getsockname(sockfd, reinterpret_cast<struct sockaddr*>(&client_addr), &client_addr_size) != 0)
 		{
