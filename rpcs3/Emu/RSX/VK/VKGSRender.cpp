@@ -1202,8 +1202,15 @@ bool VKGSRender::on_vram_exhausted(rsx::problem_severity severity)
 	return any_cache_relieved;
 }
 
-void VKGSRender::on_descriptor_pool_fragmentation()
+void VKGSRender::on_descriptor_pool_fragmentation(bool is_fatal)
 {
+	if (!is_fatal)
+	{
+		// It is very likely that the release is simply in progress (enqueued)
+		m_primary_cb_list.wait_all();
+		return;
+	}
+
 	// Just flush everything. Unless the hardware is very deficient, this should happen very rarely.
 	flush_command_queue(true, true);
 }

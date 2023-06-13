@@ -345,6 +345,14 @@ namespace vk
 			}
 		}
 
+		void wait_all()
+		{
+			for (auto& cb : m_cb_list)
+			{
+				cb.wait();
+			}
+		}
+
 		inline command_buffer_chunk* next()
 		{
 			const auto result_id = ++m_current_index % Count;

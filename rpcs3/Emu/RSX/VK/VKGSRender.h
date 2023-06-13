@@ -264,7 +264,7 @@ public:
 	bool on_vram_exhausted(rsx::problem_severity severity);
 
 	// Handle pool creation failure due to fragmentation
-	void on_descriptor_pool_fragmentation();
+	void on_descriptor_pool_fragmentation(bool is_fatal);
 
 	// Conditional rendering
 	void begin_conditional_rendering(const std::vector<rsx::reports::occlusion_query_info*>& sources) override;
