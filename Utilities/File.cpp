@@ -1072,7 +1072,23 @@ bool fs::utime(const std::string& path, s64 atime, s64 mtime)
 	FILETIME _mtime = from_time(mtime);
 	if (!SetFileTime(handle, nullptr, &_atime, &_mtime))
 	{
-		g_tls_error = to_error(GetLastError());
+		const DWORD last_error = GetLastError();
+		g_tls_error = to_error(last_error);
+
+		// Some filesystems fail to set a date lower than 01/01/1980 00:00:00
+		if (last_error == ERROR_INVALID_PARAMETER && (atime < 315532800 || mtime < 315532800))
+		{
+			// Try again with 01/01/1980 00:00:00
+			_atime = from_time(std::max<s64>(atime, 315532800));
+			_mtime = from_time(std::max<s64>(mtime, 315532800));
+
+			if (SetFileTime(handle, nullptr, &_atime, &_mtime))
+			{
+				CloseHandle(handle);
+				return true;
+			}
+		}
+
 		CloseHandle(handle);
 		return false;
 	}
