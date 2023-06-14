@@ -1394,12 +1394,6 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 					// Workaround for analyser glitches
 					ensure(vm::falloc(0x10000, 0xf0000, vm::main));
 				}
-
-				if (IsStopped())
-				{
-					GetCallbacks().on_stop(); // Call on_stop to refresh gui
-					return game_boot_result::no_errors;
-				}
 			}
 
 			if (auto& _main = g_fxo->get<main_ppu_module>(); _main.path.empty())
