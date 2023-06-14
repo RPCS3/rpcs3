@@ -124,7 +124,7 @@ protected:
 	std::array<cfg_pad, MAX_GAMEPADS> m_pad_configs;
 	std::vector<pad_ensemble> m_bindings;
 	std::unordered_map<u32, std::string> button_list;
-	std::vector<u32> blacklist;
+	std::set<u32> blacklist;
 
 	static std::set<u32> narrow_set(const std::set<u64>& src);
 

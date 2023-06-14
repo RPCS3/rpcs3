@@ -240,14 +240,14 @@ PadHandlerBase::connection mm_joystick_handler::get_next_button_press(const std:
 		{
 			u16 value = data[keycode];
 
-			if (!get_blacklist && std::find(m_blacklist.cbegin(), m_blacklist.cend(), keycode) != m_blacklist.cend())
+			if (!get_blacklist && m_blacklist.contains(keycode))
 				continue;
 
 			if (value > m_thumb_threshold)
 			{
 				if (get_blacklist)
 				{
-					m_blacklist.push_back(keycode);
+					m_blacklist.insert(keycode);
 					input_log.error("MMJOY Calibration: Added axis [ %d = %s ] to blacklist. Value = %d", keycode, name, value);
 				}
 				else if (value > pressed_button.value)
@@ -261,14 +261,14 @@ PadHandlerBase::connection mm_joystick_handler::get_next_button_press(const std:
 		{
 			const u16 value = data[keycode];
 
-			if (!get_blacklist && std::find(m_blacklist.cbegin(), m_blacklist.cend(), keycode) != m_blacklist.cend())
+			if (!get_blacklist && m_blacklist.contains(keycode))
 				continue;
 
 			if (value > 0)
 			{
 				if (get_blacklist)
 				{
-					m_blacklist.push_back(keycode);
+					m_blacklist.insert(keycode);
 					input_log.error("MMJOY Calibration: Added pov [ %d = %s ] to blacklist. Value = %d", keycode, name, value);
 				}
 				else if (value > pressed_button.value)
@@ -283,7 +283,7 @@ PadHandlerBase::connection mm_joystick_handler::get_next_button_press(const std:
 			if (keycode == NO_BUTTON)
 				continue;
 
-			if (!get_blacklist && std::find(m_blacklist.cbegin(), m_blacklist.cend(), keycode) != m_blacklist.cend())
+			if (!get_blacklist && m_blacklist.contains(keycode))
 				continue;
 
 			const u16 value = data[keycode];
@@ -292,7 +292,7 @@ PadHandlerBase::connection mm_joystick_handler::get_next_button_press(const std:
 			{
 				if (get_blacklist)
 				{
-					m_blacklist.push_back(keycode);
+					m_blacklist.insert(keycode);
 					input_log.error("MMJOY Calibration: Added button [ %d = %s ] to blacklist. Value = %d", keycode, name, value);
 				}
 				else if (value > pressed_button.value)

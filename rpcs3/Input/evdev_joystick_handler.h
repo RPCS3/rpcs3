@@ -352,19 +352,38 @@ class evdev_joystick_handler final : public PadHandlerBase
 		s32 shift = 0;
 	};
 
+	struct input_event_wrapper
+	{
+		int type{}; // EV_KEY or EV_ABS
+		bool is_initialized{};
+	};
+
+	struct key_event_wrapper : public input_event_wrapper
+	{
+		key_event_wrapper() { type = EV_KEY; }
+		u16 value{};
+	};
+
+	struct axis_event_wrapper : public input_event_wrapper
+	{
+		axis_event_wrapper() { type = EV_ABS; }
+		std::map<bool, u16> values{}; // direction (negative = true)
+		bool is_trigger{};
+		int min{};
+		int max{};
+	};
+
 	struct EvdevDevice : public PadDevice
 	{
 		libevdev* device{ nullptr };
 		std::string path;
-		std::array<s32, 4> stick_val{};
-		std::array<u16, 4> val_min{};
-		std::array<u16, 4> val_max{};
 		std::vector<EvdevButton> all_buttons;
 		std::set<u32> trigger_left{};
 		std::set<u32> trigger_right{};
 		std::array<std::set<u32>, 4> axis_left{};
 		std::array<std::set<u32>, 4> axis_right{};
 		std::array<evdev_sensor, 4> axis_motion{};
+		std::map<u32, std::shared_ptr<input_event_wrapper>> events_by_code;
 		int cur_dir = 0;
 		int cur_type = 0;
 		int effect_id = -1;
@@ -393,23 +412,20 @@ private:
 	bool update_device(const std::shared_ptr<PadDevice>& device);
 	std::shared_ptr<evdev_joystick_handler::EvdevDevice> add_device(const std::string& device, bool in_settings = false);
 	std::shared_ptr<evdev_joystick_handler::EvdevDevice> add_motion_device(const std::string& device, bool in_settings);
-	u32 GetButtonInfo(const input_event& evt, const std::shared_ptr<EvdevDevice>& device, int& button_code);
 	std::unordered_map<u64, std::pair<u16, bool>> GetButtonValues(const std::shared_ptr<EvdevDevice>& device);
 	void SetRumble(EvdevDevice* device, u8 large, u8 small);
 
 	positive_axis m_pos_axis_config;
-	std::vector<u32> m_positive_axis;
-	std::vector<std::string> m_blacklist;
+	std::set<u32> m_positive_axis;
+	std::set<std::string> m_blacklist;
 	std::unordered_map<std::string, std::shared_ptr<evdev_joystick_handler::EvdevDevice>> m_settings_added;
 	std::unordered_map<std::string, std::shared_ptr<evdev_joystick_handler::EvdevDevice>> m_motion_settings_added;
 	std::shared_ptr<EvdevDevice> m_dev;
-	bool m_is_button_or_trigger{};
-	bool m_is_negative{};
 
 	bool check_button_set(const std::set<u32>& indices, const u32 code);
 	bool check_button_sets(const std::array<std::set<u32>, 4>& sets, const u32 code);
 
-	void handle_input_event(const input_event& evt, const std::shared_ptr<Pad>& pad);
+	void apply_input_events(const std::shared_ptr<Pad>& pad);
 
 	u16 get_sensor_value(const libevdev* dev, const AnalogSensor& sensor, const input_event& evt) const;
 

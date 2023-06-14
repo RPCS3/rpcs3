@@ -298,7 +298,7 @@ PadHandlerBase::connection PadHandlerBase::get_next_button_press(const std::stri
 	{
 		const u16& value = data[keycode];
 
-		if (!get_blacklist && std::find(blacklist.begin(), blacklist.end(), keycode) != blacklist.end())
+		if (!get_blacklist && blacklist.contains(keycode))
 			continue;
 
 		const bool is_trigger = get_is_left_trigger(device, keycode) || get_is_right_trigger(device, keycode);
@@ -309,7 +309,7 @@ PadHandlerBase::connection PadHandlerBase::get_next_button_press(const std::stri
 		{
 			if (get_blacklist)
 			{
-				blacklist.emplace_back(keycode);
+				blacklist.insert(keycode);
 				input_log.error("%s Calibration: Added key [ %d = %s ] to blacklist. Value = %d", m_type, keycode, name, value);
 			}
 			else if (value > pressed_button.value)
@@ -574,6 +574,8 @@ void PadHandlerBase::get_mapping(const pad_ensemble& binding)
 		return;
 
 	const cfg_pad* cfg = device->config;
+	if (!cfg)
+		return;
 
 	auto button_values = get_button_values(device);
 
@@ -582,12 +584,12 @@ void PadHandlerBase::get_mapping(const pad_ensemble& binding)
 	const bool adjust_pressure = pad->get_pressure_intensity_enabled(cfg->pressure_intensity_toggle_mode.get());
 
 	// Translate any corresponding keycodes to our normal DS3 buttons and triggers
-	for (Button& btn : pad->m_buttons)
+	for (Button& button : pad->m_buttons)
 	{
 		bool pressed{};
 		u16 value{};
 
-		for (u32 code : btn.m_key_codes)
+		for (u32 code : button.m_key_codes)
 		{
 			bool press{};
 			u16 val = button_values[code];
@@ -607,8 +609,8 @@ void PadHandlerBase::get_mapping(const pad_ensemble& binding)
 			}
 		}
 
-		btn.m_value = value;
-		btn.m_pressed = pressed;
+		button.m_value = value;
+		button.m_pressed = pressed;
 	}
 
 	// used to get the absolute value of an axis
@@ -708,6 +710,7 @@ void PadHandlerBase::process()
 			if (status == connection::no_data)
 			{
 				// TODO: don't skip entirely if buddy device has data
+				apply_pad_data(m_bindings[i]);
 				continue;
 			}
 
