@@ -120,7 +120,7 @@ bool evdev_joystick_handler::Init()
 			if (code < 0)
 				evdev_log.error("Failed to read axis name from %s. [code = %d] [name = %s]", m_pos_axis_config.cfg_name, code, name);
 			else
-				m_positive_axis.emplace_back(code);
+				m_positive_axis.insert(code);
 		}
 	}
 
@@ -263,7 +263,7 @@ std::unordered_map<u64, std::pair<u16, bool>> evdev_joystick_handler::GetButtonV
 		const int max = libevdev_get_abs_maximum(dev, code);
 
 		// Triggers do not need handling of negative values
-		if (min >= 0 && std::find(m_positive_axis.begin(), m_positive_axis.end(), code) == m_positive_axis.end())
+		if (min >= 0 && !m_positive_axis.contains(code))
 		{
 			const float fvalue = ScaledInput(val, min, max);
 			button_values.emplace(code, std::make_pair<u16, bool>(static_cast<u16>(fvalue), false));
@@ -402,7 +402,7 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 		if (is_sony_controller && !is_sony_guitar && (code == BTN_TL2 || code == BTN_TR2))
 			continue;
 
-		if (!get_blacklist && std::find(m_blacklist.begin(), m_blacklist.end(), name) != m_blacklist.end())
+		if (!get_blacklist && m_blacklist.contains(name))
 			continue;
 
 		const u16 value = data[code].first;
@@ -410,7 +410,7 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 		{
 			if (get_blacklist)
 			{
-				m_blacklist.emplace_back(name);
+				m_blacklist.insert(name);
 				evdev_log.error("Evdev Calibration: Added button [ %d = %s = %s ] to blacklist. Value = %d", code, libevdev_event_code_get_name(EV_KEY, code), name, value);
 			}
 			else if (value > pressed_button.value)
@@ -425,7 +425,7 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 		if (data[code].second)
 			continue;
 
-		if (!get_blacklist && std::find(m_blacklist.begin(), m_blacklist.end(), name) != m_blacklist.end())
+		if (!get_blacklist && m_blacklist.contains(name))
 			continue;
 
 		const u16 value = data[code].first;
@@ -435,7 +435,7 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 			{
 				const int min = libevdev_get_abs_minimum(dev, code);
 				const int max = libevdev_get_abs_maximum(dev, code);
-				m_blacklist.emplace_back(name);
+				m_blacklist.insert(name);
 				evdev_log.error("Evdev Calibration: Added axis [ %d = %s = %s ] to blacklist. [ Value = %d ] [ Min = %d ] [ Max = %d ]", code, libevdev_event_code_get_name(EV_ABS, code), name, value, min, max);
 			}
 			else if (value > pressed_button.value)
@@ -450,7 +450,7 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 		if (!data[code].second)
 			continue;
 
-		if (!get_blacklist && std::find(m_blacklist.begin(), m_blacklist.end(), name) != m_blacklist.end())
+		if (!get_blacklist && m_blacklist.contains(name))
 			continue;
 
 		const u16 value = data[code].first;
@@ -460,7 +460,7 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 			{
 				const int min = libevdev_get_abs_minimum(dev, code);
 				const int max = libevdev_get_abs_maximum(dev, code);
-				m_blacklist.emplace_back(name);
+				m_blacklist.insert(name);
 				evdev_log.error("Evdev Calibration: Added rev axis [ %d = %s = %s ] to blacklist. [ Value = %d ] [ Min = %d ] [ Max = %d ]", code, libevdev_event_code_get_name(EV_ABS, code), name, value, min, max);
 			}
 			else if (value > pressed_button.value)
@@ -641,58 +641,6 @@ void evdev_joystick_handler::SetPadData(const std::string& padId, u8 /*player_id
 	}
 
 	SetRumble(static_cast<EvdevDevice*>(dev.get()), large_motor, small_motor);
-}
-
-u32 evdev_joystick_handler::GetButtonInfo(const input_event& evt, const std::shared_ptr<EvdevDevice>& device, int& value)
-{
-	const u32 code         = evt.code;
-	const int val          = evt.value;
-	m_is_button_or_trigger = false;
-
-	switch (evt.type)
-	{
-	case EV_KEY:
-	{
-		m_is_button_or_trigger = true;
-
-		// get the button value and return its code
-		if (button_list.find(code) == button_list.end())
-		{
-			evdev_log.error("Evdev button %s (%d) is unknown. Please add it to the button list.", libevdev_event_code_get_name(EV_KEY, code), code);
-			return umax;
-		}
-
-		value = val > 0 ? 255 : 0;
-		return code;
-	}
-	case EV_ABS:
-	{
-		if (!device || !device->device)
-		{
-			return umax;
-		}
-
-		libevdev* dev = device->device;
-		const int min = libevdev_get_abs_minimum(dev, code);
-		const int max = libevdev_get_abs_maximum(dev, code);
-
-		// Triggers do not need handling of negative values
-		if (min >= 0 && std::find(m_positive_axis.begin(), m_positive_axis.end(), code) == m_positive_axis.end())
-		{
-			m_is_negative          = false;
-			m_is_button_or_trigger = true;
-			value                  = static_cast<u16>(ScaledInput(val, min, max));
-			return code;
-		}
-
-		const float fvalue = ScaledInput2(val, min, max);
-		m_is_negative      = fvalue < 0;
-		value              = static_cast<u16>(std::abs(fvalue));
-		return code;
-	}
-	default:
-		return umax;
-	}
 }
 
 std::vector<pad_list_entry> evdev_joystick_handler::list_devices()
@@ -927,6 +875,7 @@ void evdev_joystick_handler::get_mapping(const pad_ensemble& binding)
 		return;
 
 	// Try to fetch all new events from the joystick.
+	bool got_changes = false;
 	input_event evt;
 	int ret = LIBEVDEV_READ_STATUS_SUCCESS;
 	while (ret >= 0)
@@ -943,7 +892,97 @@ void evdev_joystick_handler::get_mapping(const pad_ensemble& binding)
 
 		if (ret == LIBEVDEV_READ_STATUS_SUCCESS)
 		{
-			handle_input_event(evt, pad);
+			switch (evt.type)
+			{
+			case EV_KEY:
+			{
+				auto& wrapper = m_dev->events_by_code[evt.code];
+
+				if (!wrapper)
+				{
+					wrapper.reset(new key_event_wrapper());
+				}
+
+				key_event_wrapper* key_wrapper = static_cast<key_event_wrapper*>(wrapper.get());
+
+				if (!key_wrapper->is_initialized)
+				{
+					if (!button_list.contains(evt.code))
+					{
+						evdev_log.error("Evdev button %s (%d) is unknown. Please add it to the button list.", libevdev_event_code_get_name(EV_KEY, evt.code), evt.code);
+					}
+
+					key_wrapper->is_initialized = true;
+				}
+
+				const u16 new_value = evt.value > 0 ? 255 : 0;
+
+				if (key_wrapper->value != new_value)
+				{
+					key_wrapper->value = new_value;
+					got_changes = true;
+				}
+				break;
+			}
+			case EV_ABS:
+			{
+				auto& wrapper = m_dev->events_by_code[evt.code];
+
+				if (!wrapper)
+				{
+					wrapper.reset(new axis_event_wrapper());
+				}
+
+				axis_event_wrapper* axis_wrapper = static_cast<axis_event_wrapper*>(wrapper.get());
+
+				if (!axis_wrapper->is_initialized)
+				{
+					axis_wrapper->min = libevdev_get_abs_minimum(dev, evt.code);
+					axis_wrapper->max = libevdev_get_abs_maximum(dev, evt.code);
+					axis_wrapper->is_initialized = true;
+
+					// Triggers do not need handling of negative values
+					if (axis_wrapper->min >= 0 && !m_positive_axis.contains(evt.code))
+					{
+						axis_wrapper->is_trigger = true;
+					}
+				}
+
+				// Triggers do not need handling of negative values
+				if (axis_wrapper->is_trigger)
+				{
+					const u16 new_value = static_cast<u16>(ScaledInput(evt.value, axis_wrapper->min, axis_wrapper->max));
+					u16& key_value = axis_wrapper->values[false];
+
+					if (key_value != new_value)
+					{
+						key_value = new_value;
+						got_changes = true;
+					}
+				}
+				else
+				{
+					const float fvalue = ScaledInput2(evt.value, axis_wrapper->min, axis_wrapper->max);
+					const bool is_negative = fvalue < 0;
+
+					const u16 new_value_0 = static_cast<u16>(std::abs(fvalue));
+					const u16 new_value_1 = 0; // We need to reset the other direction of this axis
+
+					u16& key_value_0 = axis_wrapper->values[is_negative];
+					u16& key_value_1 = axis_wrapper->values[!is_negative];
+
+					if (key_value_0 != new_value_0 || key_value_1 != new_value_1)
+					{
+						key_value_0 = new_value_0;
+						key_value_1 = new_value_1;
+						got_changes = true;
+					}
+				}
+				break;
+			}
+			default:
+				break;
+			}
 		}
 	}
 
@@ -952,6 +991,12 @@ void evdev_joystick_handler::get_mapping(const pad_ensemble& binding)
 		// -EAGAIN signifies no available events, not an actual *error*.
 		if (ret != -EAGAIN)
 			evdev_log.error("Failed to read latest event from joystick: %s [errno %d]", strerror(-ret), -ret);
+	}
+
+	// Apply all events
+	if (got_changes)
+	{
+		apply_input_events(pad);
 	}
 }
 
@@ -1023,16 +1068,9 @@ u16 evdev_joystick_handler::get_sensor_value(const libevdev* dev, const AnalogSe
 	return 0;
 }
 
-void evdev_joystick_handler::handle_input_event(const input_event& evt, const std::shared_ptr<Pad>& pad)
+void evdev_joystick_handler::apply_input_events(const std::shared_ptr<Pad>& pad)
 {
 	if (!pad)
-		return;
-
-	m_dev->cur_type = evt.type;
-
-	int value;
-	const u32 button_code = GetButtonInfo(evt, m_dev, value);
-	if (button_code == NO_BUTTON || value < 0)
 		return;
 
 	const cfg_pad* cfg = m_dev->config;
@@ -1043,138 +1081,125 @@ void evdev_joystick_handler::handle_input_event(const input_event& evt, const st
 	// These buttons will have a delay of one cycle, but whatever.
 	const bool adjust_pressure = pad->get_pressure_intensity_enabled(cfg->pressure_intensity_toggle_mode.get());
 
-	// We can only have one match for this physical event in our button sets.
-	const auto find_evdev_button = [this, &button_code, &evt](const std::set<u32>& indices) -> const EvdevButton*
+	const auto update_values = [&](bool& pressed, u16& final_value, bool is_stick_value, u32 code, u16 val)
 	{
-		for (u32 index : indices)
+		bool press{};
+		TranslateButtonPress(m_dev, code, press, val, is_stick_value);
+
+		if (press)
 		{
-			const EvdevButton& evdev_button = ::at32(m_dev->all_buttons, index);
-			if (evdev_button.code == button_code && evdev_button.type == evt.type)
+			if (!is_stick_value)
 			{
-				return &evdev_button;
+				// Modify pressure if necessary if the button was pressed
+				if (adjust_pressure)
+				{
+					val = pad->m_pressure_intensity;
+				}
 			}
+
+			pressed = true;
+			final_value = std::max(final_value, val);
 		}
-		return nullptr;
+	};
+
+	const auto process_mapped_button = [&](u32 index, bool& pressed, u16& final_value, bool is_stick_value)
+	{
+		const EvdevButton& evdev_button = ::at32(m_dev->all_buttons, index);
+		auto& wrapper = m_dev->events_by_code[evdev_button.code];
+		if (!wrapper || !wrapper->is_initialized)
+		{
+			return;
+		}
+
+		// We need to set the current direction and type for TranslateButtonPress
+		m_dev->cur_type = wrapper->type;
+		m_dev->cur_dir = evdev_button.dir;
+
+		switch (wrapper->type)
+		{
+		case EV_KEY:
+		{
+			key_event_wrapper* key_wrapper = static_cast<key_event_wrapper*>(wrapper.get());
+			update_values(pressed, final_value, is_stick_value, evdev_button.code, key_wrapper->value);
+			break;
+		}
+		case EV_ABS: // Be careful to handle mapped axis specially
+		{
+			if (evdev_button.dir < 0)
+			{
+				evdev_log.error("Invalid axis direction = %d, Button Nr.%d", evdev_button.dir, index);
+				break;
+			}
+
+			axis_event_wrapper* axis_wrapper = static_cast<axis_event_wrapper*>(wrapper.get());
+
+			if (is_stick_value && axis_wrapper->is_trigger)
+			{
+				update_values(pressed, final_value, is_stick_value, evdev_button.code, axis_wrapper->values[false]);
+				break;
+			}
+
+			for (const auto& [is_negative, value] : axis_wrapper->values)
+			{
+				// Only set value if the stick / hat is actually pointing to the correct direction.
+				if (is_negative == (evdev_button.dir == 1))
+				{
+					update_values(pressed, final_value, is_stick_value, evdev_button.code, value);
+				}
+			}
+			break;
+		}
+		default:
+			fmt::throw_exception("Unknown evdev input_event_wrapper type: %d", wrapper->type);
+		}
 	};
 
 	// Translate any corresponding keycodes to our normal DS3 buttons and triggers
-	for (int i = 0; i < static_cast<int>(pad->m_buttons.size()); i++)
+	for (Button& button : pad->m_buttons)
 	{
-		Button& button = pad->m_buttons[i];
-
-		const EvdevButton* evdev_button = find_evdev_button(button.m_key_codes);
-		if (!evdev_button)
-			continue;
-
-		// Be careful to handle mapped axis specially
-		if (evt.type == EV_ABS)
-		{
-			// get axis direction for TranslateButtonPress and skip on error.
-			m_dev->cur_dir = evdev_button->dir;
-
-			if (evdev_button->dir < 0)
-			{
-				evdev_log.error("Invalid axis direction = %d, Button Nr.%d, value = %d", evdev_button->dir, i, value);
-				continue;
-			}
-
-			//  Set to 0 if the stick / hat is actually pointing to the other direction.
-			if (evdev_button->dir != (m_is_negative ? 1 : 0))
-			{
-				button.m_value   = 0;
-				button.m_pressed = 0;
-				continue;
-			}
-		}
-
 		bool pressed{};
-		u16 val = static_cast<u16>(value);
+		u16 final_value{};
 
-		TranslateButtonPress(m_dev, button_code, pressed, val);
-
-		// Modify pressure if necessary if the button was pressed
-		if (adjust_pressure && pressed)
+		for (u32 index : button.m_key_codes)
 		{
-			val = pad->m_pressure_intensity;
+			process_mapped_button(index, pressed, final_value, false);
 		}
 
-		button.m_value = val;
+		button.m_value = final_value;
 		button.m_pressed = pressed;
 	}
 
+	// used to get the absolute value of an axis
+	s32 stick_val[4]{};
+
 	// Translate any corresponding keycodes to our two sticks. (ignoring thresholds for now)
-	for (int idx = 0; idx < static_cast<int>(pad->m_sticks.size()); idx++)
+	for (int i = 0; i < static_cast<int>(pad->m_sticks.size()); i++)
 	{
-		bool pressed_min = false;
-		bool pressed_max = false;
+		bool pressed{}; // unused
+		u16 val_min{};
+		u16 val_max{};
 
 		// m_key_codes_min are the mapped keys for left or down
-		if (const EvdevButton* evdev_button = find_evdev_button(pad->m_sticks[idx].m_key_codes_min))
+		for (u32 index : pad->m_sticks[i].m_key_codes_min)
 		{
-			bool is_direction_min = false;
-
-			if (!m_is_button_or_trigger && evt.type == EV_ABS)
-			{
-				const int min_direction = evdev_button->dir;
-
-				// We need to set the current direction for TranslateButtonPress
-				m_dev->cur_dir = min_direction;
-
-				if (min_direction < 0)
-					evdev_log.error("min_direction = %d, Axis Nr.%d, value = %d", min_direction, idx, value);
-				else
-					is_direction_min = m_is_negative == (min_direction == 1);
-			}
-
-			if (m_is_button_or_trigger || is_direction_min)
-			{
-				m_dev->val_min[idx] = value;
-				TranslateButtonPress(m_dev, button_code, pressed_min, m_dev->val_min[idx], true);
-			}
-			else // set to 0 to avoid remnant counter axis values
-			{
-				m_dev->val_min[idx] = 0;
-			}
+			process_mapped_button(index, pressed, val_min, true);
 		}
 
 		// m_key_codes_max are the mapped keys for right or up
-		if (const EvdevButton* evdev_button = find_evdev_button(pad->m_sticks[idx].m_key_codes_max))
+		for (u32 index : pad->m_sticks[i].m_key_codes_max)
 		{
-			bool is_direction_max = false;
-
-			if (!m_is_button_or_trigger && evt.type == EV_ABS)
-			{
-				const int max_direction = evdev_button->dir;
-
-				// We need to set the current direction for TranslateButtonPress
-				m_dev->cur_dir = max_direction;
-
-				if (max_direction < 0)
-					evdev_log.error("max_direction = %d, Axis Nr.%d, value = %d", max_direction, idx, value);
-				else
-					is_direction_max = m_is_negative == (max_direction == 1);
-			}
-
-			if (m_is_button_or_trigger || is_direction_max)
-			{
-				m_dev->val_max[idx] = value;
-				TranslateButtonPress(m_dev, button_code, pressed_max, m_dev->val_max[idx], true);
-			}
-			else // set to 0 to avoid remnant counter axis values
-			{
-				m_dev->val_max[idx] = 0;
-			}
+			process_mapped_button(index, pressed, val_max, true);
 		}
 
 		// cancel out opposing values and get the resulting difference. if there was no change, use the old value.
-		m_dev->stick_val[idx] = m_dev->val_max[idx] - m_dev->val_min[idx];
+		stick_val[i] = val_max - val_min;
 	}
 
 	u16 lx, ly, rx, ry;
 
 	// Normalize and apply pad squircling
-	convert_stick_values(lx, ly, m_dev->stick_val[0], m_dev->stick_val[1], cfg->lstickdeadzone, cfg->lpadsquircling);
-	convert_stick_values(rx, ry, m_dev->stick_val[2], m_dev->stick_val[3], cfg->rstickdeadzone, cfg->rpadsquircling);
+	convert_stick_values(lx, ly, stick_val[0], stick_val[1], cfg->lstickdeadzone, cfg->lpadsquircling);
+	convert_stick_values(rx, ry, stick_val[2], stick_val[3], cfg->rstickdeadzone, cfg->rpadsquircling);
 
 	pad->m_sticks[0].m_value = lx;
 	pad->m_sticks[1].m_value = 255 - ly;
@@ -1196,8 +1221,8 @@ void evdev_joystick_handler::apply_pad_data(const pad_ensemble& binding)
 		return;
 
 	// Handle vibration
-	const int idx_l       = cfg->switch_vibration_motors ? 1 : 0;
-	const int idx_s       = cfg->switch_vibration_motors ? 0 : 1;
+	const int idx_l      = cfg->switch_vibration_motors ? 1 : 0;
+	const int idx_s      = cfg->switch_vibration_motors ? 0 : 1;
 	const u8 force_large = cfg->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value * 257 : 0;
 	const u8 force_small = cfg->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value * 257 : 0;
 	SetRumble(evdev_device, force_large, force_small);

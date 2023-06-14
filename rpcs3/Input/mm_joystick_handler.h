@@ -123,7 +123,7 @@ private:
 
 	bool m_is_init = false;
 
-	std::vector<u64> m_blacklist;
+	std::set<u64> m_blacklist;
 	std::unordered_map<int, MMJOYDevice> m_devices;
 
 	template <typename T>
