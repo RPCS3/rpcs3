@@ -53,9 +53,13 @@ inline bool CreateConfigFile(const QString& dir, const QString& name)
 	return true;
 }
 
-void pad_settings_dialog::pad_button::insert_key(const std::string& key)
+void pad_settings_dialog::pad_button::insert_key(const std::string& key, bool append_key)
 {
-	std::vector<std::string> buttons = cfg_pad::get_buttons(keys);
+	std::vector<std::string> buttons;
+	if (append_key)
+	{
+		buttons = cfg_pad::get_buttons(keys);
+	}
 	buttons.push_back(key);
 
 	keys = cfg_pad::get_buttons(std::move(buttons));
@@ -458,7 +462,7 @@ void pad_settings_dialog::InitButtons()
 
 		if (m_button_id > button_ids::id_pad_begin && m_button_id < button_ids::id_pad_end)
 		{
-			m_cfg_entries[m_button_id].insert_key(name);
+			m_cfg_entries[m_button_id].insert_key(name, m_enable_multi_binding);
 			ReactivateButtons();
 		}
 	};
@@ -709,6 +713,7 @@ void pad_settings_dialog::ReactivateButtons()
 {
 	m_remap_timer.stop();
 	m_seconds = MAX_SECONDS;
+	m_enable_multi_binding = false;
 
 	if (m_button_id == button_ids::id_pad_begin)
 	{
@@ -763,8 +768,8 @@ void pad_settings_dialog::RepaintPreviewLabel(QLabel* l, int deadzone, int desir
 
 	const bool show_emulated_values = ui->chb_show_emulated_values->isChecked();
 
-	[[maybe_unused]] qreal ingame_x = 0.0;
-	[[maybe_unused]] qreal ingame_y = 0.0;
+	qreal ingame_x = 0.0;
+	qreal ingame_y = 0.0;
 
 	// Set up the canvas for our work of art
 	QPixmap pixmap(scaled_width, scaled_width);
@@ -852,7 +857,7 @@ void pad_settings_dialog::keyPressEvent(QKeyEvent *keyEvent)
 	}
 	else
 	{
-		m_cfg_entries[m_button_id].insert_key(keyboard_pad_handler::GetKeyName(keyEvent));
+		m_cfg_entries[m_button_id].insert_key(keyboard_pad_handler::GetKeyName(keyEvent), m_enable_multi_binding);
 	}
 
 	ReactivateButtons();
@@ -879,7 +884,7 @@ void pad_settings_dialog::mouseReleaseEvent(QMouseEvent* event)
 	}
 	else
 	{
-		m_cfg_entries[m_button_id].insert_key((static_cast<keyboard_pad_handler*>(m_handler.get()))->GetMouseName(event));
+		m_cfg_entries[m_button_id].insert_key((static_cast<keyboard_pad_handler*>(m_handler.get()))->GetMouseName(event), m_enable_multi_binding);
 	}
 
 	ReactivateButtons();
@@ -941,7 +946,7 @@ void pad_settings_dialog::wheelEvent(QWheelEvent *event)
 		}
 	}
 
-	m_cfg_entries[m_button_id].insert_key((static_cast<keyboard_pad_handler*>(m_handler.get()))->GetMouseName(key));
+	m_cfg_entries[m_button_id].insert_key((static_cast<keyboard_pad_handler*>(m_handler.get()))->GetMouseName(key), m_enable_multi_binding);
 	ReactivateButtons();
 }
 
@@ -991,7 +996,7 @@ void pad_settings_dialog::mouseMoveEvent(QMouseEvent* event)
 
 		if (key != 0)
 		{
-			m_cfg_entries[m_button_id].insert_key((static_cast<keyboard_pad_handler*>(m_handler.get()))->GetMouseName(key));
+			m_cfg_entries[m_button_id].insert_key((static_cast<keyboard_pad_handler*>(m_handler.get()))->GetMouseName(key), m_enable_multi_binding);
 			ReactivateButtons();
 		}
 	}
@@ -1249,6 +1254,12 @@ void pad_settings_dialog::OnPadButtonClicked(int id)
 	}
 	default:
 		break;
+	}
+
+	// On shift+click or shift+space enable multi key binding
+	if (QApplication::keyboardModifiers() & Qt::KeyboardModifier::ShiftModifier)
+	{
+		m_enable_multi_binding = true;
 	}
 
 	for (auto but : m_pad_buttons->buttons())
