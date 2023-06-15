@@ -37,6 +37,7 @@
 #define NO_PSK
 #define HAVE_EXTENDED_MASTER
 #define WOLFSSL_SNIFFER
+#define WOLFSSL_IGNORE_FILE_WARN
 #define HAVE_AESGCM
 #define HAVE_SUPPORTED_CURVES
 #define HAVE_TLS_EXTENSIONS
@@ -63,10 +64,15 @@ extern FILE* wolfSSL_fopen_utf8(const char* name, const char* mode);
 #define XFWRITE    fwrite
 #define XFCLOSE    fclose
 #define XSEEK_END  SEEK_END
+#define XSEEK_SET  SEEK_SET
 #define XBADFILE   NULL
 #define XFGETS     fgets
 #define XFPRINTF   fprintf
 #define XFFLUSH    fflush
+
+/* For some reason we need to define ssize_t */
+#define HAVE_SSIZE_T
+#define ssize_t __int64
 
 #include <sys/stat.h>
 extern int wolfSSL_stat_utf8(const char* path, struct _stat* buffer);
