@@ -4,9 +4,9 @@ brew install -f --overwrite nasm ninja git p7zip create-dmg ccache pipenv
 
 #/usr/sbin/softwareupdate --install-rosetta --agree-to-license
 arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-arch -x86_64 /usr/local/homebrew/bin/brew update
-arch -x86_64 /usr/local/homebrew/bin/brew install -f --overwrite llvm@16 sdl2 glew cmake
-arch -x86_64 /usr/local/homebrew/bin/brew link -f llvm@16
+arch -x86_64 /usr/local/bin/brew update
+arch -x86_64 /usr/local/bin/brew install -f --overwrite llvm@16 sdl2 glew cmake faudio molten-vk@1.2.4 vulkan-headers
+arch -x86_64 /usr/local/bin/brew link -f llvm@16
 
 #export MACOSX_DEPLOYMENT_TARGET=12.0
 export CXX=clang++
@@ -15,7 +15,7 @@ export CC=clang
 export BREW_PATH;
 BREW_PATH="$(brew --prefix)"
 export BREW_X64_PATH;
-BREW_X64_PATH="$("/usr/local/homebrew/bin/brew" --prefix)"
+BREW_X64_PATH="$("/usr/local/bin/brew" --prefix)"
 export BREW_BIN="/usr/local/bin"
 export BREW_SBIN="/usr/local/sbin"
 export CMAKE_EXTRA_OPTS='-DLLVM_TARGETS_TO_BUILD=X86'
@@ -40,7 +40,15 @@ export CPPFLAGS="-I$BREW_X64_PATH/include -msse -msse2 -mcx16 -no-pie"
 export LIBRARY_PATH="$BREW_X64_PATH/lib"
 export LD_LIBRARY_PATH="$BREW_X64_PATH/lib"
 
-git submodule update --init --recursive --depth 1
+export VULKAN_SDK
+VULKAN_SDK="$BREW_X64_PATH/opt/molten-vk"
+ln -s "$VULKAN_SDK/lib/libMoltenVK.dylib" "$VULKAN_SDK/lib/libvulkan.dylib"
+export VK_ICD_FILENAMES="$VULKAN_SDK/share/vulkan/icd.d/MoltenVK_icd.json"
+
+export LLVM_DIR
+LLVM_DIR="BREW_X64_PATH/opt/llvm@16"
+# exclude FAudio, SPIRV, moltenvk and LLVM from submodule update
+git submodule -q update --init --depth=1 --jobs=8 $(awk '/path/ && !/FAudio/ && !/MoltenVK && !/llvm/ && !/SPIRV/ { print $3 }' .gitmodules)
 
 # 3rdparty fixes
 sed -i '' "s/extern const double NSAppKitVersionNumber;/const double NSAppKitVersionNumber = 1343;/g" 3rdparty/hidapi/hidapi/mac/hid.c
@@ -53,7 +61,9 @@ mkdir build && cd build || exit 1
     -DLLVM_INCLUDE_DOCS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_TOOLS=OFF \
     -DLLVM_INCLUDE_UTILS=OFF -DLLVM_USE_PERF=OFF -DLLVM_ENABLE_Z3_SOLVER=OFF \
     -DUSE_NATIVE_INSTRUCTIONS=OFF \
-    -DUSE_SYSTEM_MVK=OFF \
+    -DUSE_SYSTEM_MVK=ON \
+    -DUSE_SYSTEM_FAUDIO=ON \
+    -DUSE_SYSTEM_SDL=ON \
     $CMAKE_EXTRA_OPTS \
     -DLLVM_TARGET_ARCH=X86_64 -DCMAKE_OSX_ARCHITECTURES=x86_64 -DCMAKE_IGNORE_PATH="$BREW_PATH/lib" \
     -G Ninja
@@ -61,7 +71,6 @@ mkdir build && cd build || exit 1
 "$BREW_PATH/bin/ninja"; build_status=$?;
 
 cd ..
-
 {   [ "$CI_HAS_ARTIFACTS" = "true" ];
 } && SHOULD_DEPLOY="true" || SHOULD_DEPLOY="false"
 
