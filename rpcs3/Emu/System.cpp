@@ -75,6 +75,7 @@ extern void spu_load_exec(const spu_exec_object&);
 extern void spu_load_rel_exec(const spu_rel_object&);
 extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_module*>* loaded_prx);
 extern bool ppu_initialize(const ppu_module&, bool = false);
+extern void ppu_initialize();
 extern void ppu_finalize(const ppu_module&);
 extern void ppu_unload_prx(const lv2_prx&);
 extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&, s64 = 0, utils::serial* = nullptr);
@@ -1403,12 +1404,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 			g_fxo->init<named_thread>("SPRX Loader"sv, [this, dir_queue]() mutable
 			{
-				if (auto& _main = g_fxo->get<main_ppu_module>(); !_main.path.empty())
-				{
-					ppu_initialize(_main);
-				}
-
-				ppu_precompile(dir_queue, nullptr);
+				ppu_initialize();
 
 				// Exit "process"
 				CallFromMainThread([this]
