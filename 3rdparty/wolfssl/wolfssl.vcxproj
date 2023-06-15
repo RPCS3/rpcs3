@@ -73,6 +73,7 @@
   <ItemGroup>
     <ClCompile Include="wolfssl\src\crl.c" />
     <ClCompile Include="wolfssl\src\internal.c" />
+    <ClCompile Include="wolfssl\src\ssl_asn1.c" />
     <ClCompile Include="wolfssl\src\wolfio.c" />
     <ClCompile Include="wolfssl\src\keys.c" />
     <ClCompile Include="wolfssl\src\ocsp.c" />
