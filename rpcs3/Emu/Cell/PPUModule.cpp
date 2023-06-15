@@ -1051,8 +1051,6 @@ void init_ppu_functions(utils::serial* ar, bool full = false)
 
 	if (full)
 	{
-		ensure(ar);
-
 		// Initialize HLE modules
 		ppu_initialize_modules(&g_fxo->get<ppu_linkage_info>(), ar);
 	}

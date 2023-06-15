@@ -107,8 +107,8 @@ struct ppu_module
 
 struct main_ppu_module : public ppu_module
 {
-	u32 elf_entry;
-	u32 seg0_code_end;
+	u32 elf_entry{};
+	u32 seg0_code_end{};
 	std::basic_string<u32> applied_pathes;
 };
 

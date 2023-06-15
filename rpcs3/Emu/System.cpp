@@ -1329,8 +1329,6 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			argv[0] = "/dev_bdvd/PS3_GAME/USRDIR/EBOOT.BIN";
 			m_dir = "/dev_bdvd/PS3_GAME";
 
-			Run(false);
-
 			std::string path;
 			std::vector<std::string> dir_queue;
 			dir_queue.emplace_back(m_path + '/');
@@ -1394,24 +1392,34 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 					// Workaround for analyser glitches
 					ensure(vm::falloc(0x10000, 0xf0000, vm::main));
 				}
-
-				if (IsStopped())
-				{
-					GetCallbacks().on_stop(); // Call on_stop to refresh gui
-					return game_boot_result::no_errors;
-				}
 			}
 
 			if (auto& _main = g_fxo->get<main_ppu_module>(); _main.path.empty())
 			{
-				init_fxo_for_exec(nullptr, false);
+				init_fxo_for_exec(nullptr, true);
+			}
+
+			if (auto main_ppu = idm::get<named_thread<ppu_thread>>(ppu_thread::id_base))
+			{
+				// Created by ppu_load_exec, unwanted
+				main_ppu->state += cpu_flag::exit;
 			}
 
 			g_fxo->init<named_thread>("SPRX Loader"sv, [this, dir_queue]() mutable
 			{
 				if (auto& _main = g_fxo->get<main_ppu_module>(); !_main.path.empty())
 				{
+					if (!_main.analyse(0, _main.elf_entry, _main.seg0_code_end, _main.applied_pathes, [](){ return Emu.IsStopped(); }))
+					{
+						return;
+					}
+
 					ppu_initialize(_main);
+				}
+
+				if (Emu.IsStopped())
+				{
+					return;
 				}
 
 				ppu_precompile(dir_queue, nullptr);
@@ -1423,6 +1431,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 					m_path = m_path_old; // Reset m_path to fix boot from gui
 				});
 			});
+
+			Run(false);
 
 			return game_boot_result::no_errors;
 		}

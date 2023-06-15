@@ -12,15 +12,15 @@ namespace rpcs3::cache
 {
 	std::string get_ppu_cache()
 	{
-		auto& _main = g_fxo->get<main_ppu_module>();
+		const auto _main = g_fxo->try_get<main_ppu_module>();
 
-		if (!g_fxo->is_init<main_ppu_module>() || _main.cache.empty())
+		if (!_main || _main->cache.empty())
 		{
 			ppu_log.error("PPU Cache location not initialized.");
 			return {};
 		}
 
-		return _main.cache;
+		return _main->cache;
 	}
 
 	void limit_cache_size()
