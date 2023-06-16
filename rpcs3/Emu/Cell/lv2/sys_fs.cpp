@@ -13,6 +13,7 @@
 #include "Emu/IdManager.h"
 #include "Emu/system_utils.hpp"
 #include "Emu/Cell/lv2/sys_process.h"
+#include "Emu/associative_map_file.h"
 
 #include <span>
 
@@ -120,6 +121,120 @@ bool verify_mself(const fs::file& mself_file)
 
 	return true;
 }
+
+void init_fxo_vfs();
+
+struct lv2_file_alternative_timestamps
+{
+	std::map<std::string, associative_map_file, std::less<>> m_map;
+
+	shared_mutex m_mutex;
+
+	lv2_file_alternative_timestamps() noexcept
+	{
+		init_fxo_vfs();
+		g_fxo->init<lv2_fs_mount_info_map>();
+	}
+
+	struct file_times
+	{
+		s64 atime;
+		s64 mtime;
+	};
+
+	static constexpr std::string_view s_version = "1";
+
+	std::pair<bool, file_times> get_times(std::string_view filename)
+	{
+		if (filename.empty())
+		{
+			return {};
+		}
+
+		auto [mp_times, file_key] = get_keys(filename);
+
+		if (!mp_times)
+		{
+			return {};
+		}
+
+		file_times times{};
+
+		const std::string data = mp_times->get_entry(file_key);
+
+		usz a_index = data.find("atime: "sv);
+		usz m_index = data.find("mtime: "sv);
+
+		if (a_index != umax)
+		{
+			if (std::from_chars(data.data() + a_index + std::size("atime: "sv), data.data() + data.size(), times.atime).ec != std::errc())
+			{
+				return {};
+			}
+		}
+
+		if (m_index != umax)
+		{
+			if (std::from_chars(data.data() + m_index + std::size("mtime: "sv), data.data() + data.size(), times.mtime).ec != std::errc())
+			{
+				return {};
+			}
+		}
+
+		times.ctime = file_times.mtime;
+		return {true, times};
+	}
+
+	bool set_times(std::string_view filename, file_times times)
+	{
+		if (filename.empty())
+		{
+			return false;
+		}
+
+		const auto [mp_times, file_key] = get_keys(filename);
+
+		if (!mp_times)
+		{
+			return false;
+		}
+
+		mp_times->set_entry(file_key, fmt::format("version: %s, mtime: %d, atime: %d.", s_version, times.mtime, times.atime));
+		return true;
+	}
+
+	std::pair<associative_map_file*, std::string> get_keys(std::string view filename) const
+	{
+		std::string root = lv2_fs_object::get_device_root(filename);
+		std::string vfs_root = vfs::get(root);
+
+		if (!m_map.contains(vfs_root))
+		{
+			m_map.emplace(vfs_root, associative_map_file(vfs_root + u8"/＄vfs-data"));
+		}
+
+		return {&m_map.at(vfs_root), "file-timestamp-" + vfs::get(filename).substr(vfs_root.size())};
+	}
+
+	bool move_times(std::string_view source, std::string_view dest)
+	{
+		const auto [mp_times_source, file_key_sorce] = get_keys(source);
+		const auto [mp_times_dest, file_key_dest] = get_keys(filename);
+
+		if (mp_times_dest != mp_times_source)
+		{
+			return false;
+		}
+
+		return mp_times_source->move_entries_with_prefix(source, dest);
+	}
+
+	bool remove_times(std::string_view filename)
+	{
+		const auto [mp_times, file_key] = get_keys(filename);
+		return mp_times->remove_entry(file_key);
+	}
+};
 
 lv2_fs_mount_info_map::lv2_fs_mount_info_map()
 {
@@ -838,6 +953,11 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 		return {CELL_EIO};
 	}
 
+	if (open_mode & fs::trunc)
+	{
+		g_fxo->get<lv2_file_alternative_timestamps>().remove_times(vfs::retrieve(local_path));
+	}
+
 	if (flags & CELL_FS_O_MSELF && !verify_mself(file))
 	{
 		return {CELL_ENOTMSELF};
@@ -1059,6 +1179,13 @@ error_code sys_fs_read(ppu_thread& ppu, u32 fd, vm::ptr<void> buf, u64 nbytes, v
 
 	const u64 read_bytes = file->op_read(buf, nbytes);
 	const bool failure = !read_bytes && file->file.pos() < file->file.size();
+
+	if (read_bytes)
+	{
+		// TODO: Remove only atime
+		g_fxo->get<lv2_file_alternative_timestamps>().remove_times(vfs::retrieve(file->real_path));
+	}
+
 	lock.unlock();
 	ppu.check_state();
 
@@ -1149,6 +1276,12 @@ error_code sys_fs_write(ppu_thread& ppu, u32 fd, vm::cptr<void> buf, u64 nbytes,
 	}
 
 	const u64 written = file->op_write(buf, nbytes);
+
+	if (written)
+	{
+		g_fxo->get<lv2_file_alternative_timestamps>().remove_times(vfs::retrieve(file->real_path));
+	}
+
 	lock.unlock();
 	ppu.check_state();
 
@@ -1308,6 +1441,16 @@ error_code sys_fs_opendir(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u32> fd)
 				// Files hidden from emulation
 				data.resize(data.size() - 1);
 				continue;
+			}
+
+			if (!mp.read_only)
+			{
+				if (auto [ok, times] = g_fxo->get<lv2_file_alternative_timestamps>().get_times(std::string(vpath) + "/" + data.back().name); ok)
+				{
+					data.back().atime = times.atime;
+					data.back().mtime = times.mtime;
+					data.back().ctime = times.mtime;
+				}
 			}
 
 			// Add additional entries for split file candidates (while ends with .66600)
@@ -1504,6 +1647,16 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 		}
 	}
 
+	if (!mp.read_only)
+	{
+		if (auto [ok, times] = g_fxo->get<lv2_file_alternative_timestamps>().get_times(vpath); ok)
+		{
+			info.atime = times.atime;
+			info.mtime = times.mtime;
+			info.ctime = times.mtime;
+		}
+	}
+
 	lock.unlock();
 	ppu.check_state();
 
@@ -1553,7 +1706,18 @@ error_code sys_fs_fstat(ppu_thread& ppu, u32 fd, vm::ptr<CellFsStat> sb)
 		return CELL_EIO;
 	}
 
-	const fs::stat_t info = file->file.stat();
+	fs::stat_t info = file->file.stat();
+
+	if (!mp.read_only)
+	{
+		if (auto [ok, times] = g_fxo->get<lv2_file_alternative_timestamps>().get_times(vfs::retrieve(vpath)); ok)
+		{
+			info.atime = times.atime;
+			info.mtime = times.mtime;
+			info.ctime = times.mtime;
+		}
+	}
+
 	lock.unlock();
 	ppu.check_state();
 
@@ -1687,10 +1851,9 @@ error_code sys_fs_rename(ppu_thread& ppu, vm::cptr<char> from, vm::cptr<char> to
 		return CELL_EROFS;
 	}
 
-	// Done in vfs::host::rename
-	//std::lock_guard lock(mp->mutex);
+	std::lock_guard lock(mp->mutex);
 
-	if (!vfs::host::rename(local_from, local_to, mp.mp, false))
+	if (!vfs::host::rename(local_from, local_to, mp.mp, false, false))
 	{
 		switch (auto error = fs::g_tls_error)
 		{
@@ -1701,6 +1864,8 @@ error_code sys_fs_rename(ppu_thread& ppu, vm::cptr<char> from, vm::cptr<char> to
 
 		return {CELL_EIO, from}; // ???
 	}
+
+	g_fxo->get<lv2_file_alternative_timestamps>().move_times(from, to);
 
 	sys_fs.notice("sys_fs_rename(): %s renamed to %s", from, to);
 	return CELL_OK;
@@ -1752,6 +1917,8 @@ error_code sys_fs_rmdir(ppu_thread& ppu, vm::cptr<char> path)
 
 		return {CELL_EIO, path}; // ???
 	}
+
+	g_fxo->get<lv2_file_alternative_timestamps>().remove_times(vpath);
 
 	sys_fs.notice("sys_fs_rmdir(): directory %s removed", path);
 	return CELL_OK;
@@ -1811,6 +1978,8 @@ error_code sys_fs_unlink(ppu_thread& ppu, vm::cptr<char> path)
 
 		return {CELL_EIO, path}; // ???
 	}
+
+	ensure(g_fxo->get<lv2_file_alternative_timestamps>().remove_times(vpath));
 
 	sys_fs.notice("sys_fs_unlink(): file %s deleted", path);
 	return CELL_OK;
@@ -1925,6 +2094,11 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 		arg->out_size = op == 0x8000000a
 			? file->op_read(arg->buf, arg->size)
 			: file->op_write(arg->buf, arg->size);
+
+		if (!file->mp.read_only && arg->out_size)
+		{
+			g_fxo->get<lv2_file_alternative_timestamps>().remove_times(vfs::retrieve(file->real_path));
+		}
 
 		ensure(old_pos == file->file.seek(old_pos));
 
@@ -2747,6 +2921,8 @@ error_code sys_fs_ftruncate(ppu_thread& ppu, u32 fd, u64 size)
 		return CELL_EIO; // ???
 	}
 
+	g_fxo->get<lv2_file_alternative_timestamps>().remove_times(vfs::retrieve(file->real_path));
+
 	return CELL_OK;
 }
 
@@ -2884,21 +3060,24 @@ error_code sys_fs_utime(ppu_thread& ppu, vm::cptr<char> path, vm::cptr<CellFsUti
 		return {CELL_EROFS, path};
 	}
 
+	const s64 actime = timep->actime;
+	const s64 modtime = timep->modtime;
+
 	std::lock_guard lock(mp->mutex);
 
-	if (!fs::utime(local_path, timep->actime, timep->modtime))
+	// Not actually required to succeed
+	if (fs::utime(local_path, actime, modtime))
 	{
-		switch (auto error = fs::g_tls_error)
-		{
-		case fs::error::noent:
-		{
-			return {mp == &g_mp_sys_dev_hdd1 ? sys_fs.warning : sys_fs.error, CELL_ENOENT, path};
-		}
-		default: sys_fs.error("sys_fs_utime(): unknown error %s", error);
-		}
-
-		return {CELL_EIO, path}; // ???
+		g_fxo->get<lv2_file_alternative_timestamps>().remove_times(vpath);
+		return CELL_OK;
 	}
+
+	if (!fs::exists(local_path))
+	{
+		return {mp == &g_mp_sys_dev_hdd1 ? sys_fs.warning : sys_fs.erro, CELL_ENOENT, path};
+	}
+
+	ensure(g_fxo->get<lv2_file_alternative_timestamps>().set_times(vpath, {.atime = actime, .mtime =  modtime}));
 
 	return CELL_OK;
 }

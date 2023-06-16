@@ -35,6 +35,11 @@ struct vfs_manager
 	SAVESTATE_INIT_POS(48);
 };
 
+extern void init_fxo_vfs()
+{
+	g_fxo->need<vfs_manager>();
+}
+
 bool vfs::mount(std::string_view vpath, std::string_view path, bool is_dir)
 {
 	if (vpath.empty())
@@ -927,13 +932,16 @@ std::string vfs::host::hash_path(const std::string& path, const std::string& dev
 	return fmt::format(u8"%s/＄%s%s", dev_root, fmt::base57(std::hash<std::string>()(path)), fmt::base57(utils::get_unique_tsc()));
 }
 
-bool vfs::host::rename(const std::string& from, const std::string& to, const lv2_fs_mount_point* mp, bool overwrite)
+bool vfs::host::rename(const std::string& from, const std::string& to, const lv2_fs_mount_point* mp, bool overwrite, bool unlocked) noexcept
 {
 	// Lock mount point, close file descriptors, retry
 	const auto from0 = std::string_view(from).substr(0, from.find_last_not_of(fs::delim) + 1);
 	const auto escaped_from = Emu.GetCallbacks().resolve_path(from);
 
-	std::lock_guard lock(mp->mutex);
+	if (!unlocked)
+	{
+		mp->mutex.lock();
+	}
 
 	auto check_path = [&](std::string_view path)
 	{
@@ -1006,6 +1014,11 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 			file.file.seek(file.restore_data.seek_pos);
 		}
 	});
+
+	if (!unlocked)
+	{
+		mp->mutex.unlock();
+	}
 
 	fs::g_tls_error = fs_error;
 	return res;

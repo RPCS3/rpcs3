@@ -1165,6 +1165,9 @@
     <ClCompile Include="Emu\Io\pad_types.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\associative_map_file.cpp">
+      <Filter>Emu</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -2367,6 +2370,9 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\Common\unordered_map.hpp">
       <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\associative_map_file.h">
+      <Filter>Emu</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

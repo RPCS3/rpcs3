@@ -34,7 +34,7 @@ namespace vfs
 		std::string hash_path(const std::string& path, const std::string& dev_root);
 
 		// Call fs::rename with retry on access error
-		bool rename(const std::string& from, const std::string& to, const lv2_fs_mount_point* mp, bool overwrite);
+		bool rename(const std::string& from, const std::string& to, const lv2_fs_mount_point* mp, bool overwrite, bool unlocked = false);
 
 		// Delete file without deleting its contents, emulated with MoveFileEx on Windows
 		bool unlink(const std::string& path, const std::string& dev_root);
