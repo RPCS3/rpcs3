@@ -605,10 +605,13 @@ void gs_frame::close()
 		if (!Emu.IsStopped())
 		{
 			// Blocking shutdown request. Obsolete, but I'm keeping it here as last resort.
-			Emu.GracefulShutdown(true, false);
+			Emu.after_kill_callback = [this](){ deleteLater(); };
+			Emu.GracefulShutdown(true);
 		}
-
-		deleteLater();
+		else
+		{
+			deleteLater();
+		}
 	});
 }
 

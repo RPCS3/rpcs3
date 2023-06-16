@@ -177,10 +177,10 @@ void Emulator::BlockingCallFromMainThread(std::function<void()>&& func) const
 
 	CallFromMainThread(std::move(func), &wake_up);
 
-	while (!wake_up && !IsStopped())
+	while (!wake_up)
 	{
 		ensure(thread_ctrl::get_current());
-		thread_ctrl::wait_on(wake_up, false);
+		wake_up.wait(false);
 	}
 }
 
@@ -635,6 +635,11 @@ std::string Emulator::GetBackgroundPicturePath() const
 
 bool Emulator::BootRsxCapture(const std::string& path)
 {
+	if (m_state != system_state::stopped)
+	{
+		return false;
+	}
+
 	fs::file in_file(path);
 
 	if (!in_file)
@@ -781,6 +786,11 @@ void Emulator::SetForceBoot(bool force_boot)
 
 game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch, usz recursion_count)
 {
+	if (m_state != system_state::stopped)
+	{
+		return game_boot_result::still_running;
+	}
+
 	m_ar.reset();
 
 	{
@@ -815,11 +825,6 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 			m_boot_source_type = CELL_GAME_GAMETYPE_SYS;
 		}
-	}
-
-	if (!IsStopped())
-	{
-		Kill();
 	}
 
 	if (!title_id.empty())
@@ -2422,8 +2427,14 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 {
 	const auto old_state = m_state.load();
 
-	if (old_state == system_state::stopped)
+	if (old_state == system_state::stopped || old_state == system_state::stopping)
 	{
+		while (!async_op && m_state != system_state::stopped)
+		{
+			process_qt_events();
+			std::this_thread::sleep_for(16ms);
+		}
+
 		return;
 	}
 
@@ -2438,6 +2449,13 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 	{
 		// The callback has been rudely ignored, we have no other option but to force termination
 		Kill(allow_autoexit && !savestate, savestate);
+
+		while (!async_op && m_state != system_state::stopped)
+		{
+			process_qt_events();
+			std::this_thread::sleep_for(16ms);
+		}
+
 		return;
 	}
 
@@ -2483,22 +2501,26 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 	else
 	{
 		perform_kill();
+
+		while (m_state != system_state::stopped)
+		{
+			process_qt_events();
+			std::this_thread::sleep_for(16ms);
+		}
 	}
 }
 
 extern bool try_lock_vdec_context_creation();
 extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool revert_lock = false);
 
-std::shared_ptr<utils::serial> Emulator::Kill(bool allow_autoexit, bool savestate)
+void Emulator::Kill(bool allow_autoexit, bool savestate)
 {
-	std::shared_ptr<utils::serial> to_ar;
-
-	if (savestate && !try_lock_spu_threads_in_a_state_compatible_with_savestates())
+	if (!IsStopped() && savestate && !try_lock_spu_threads_in_a_state_compatible_with_savestates())
 	{
 		sys_log.error("Failed to savestate: failed to lock SPU threads execution.");
 	}
 
-	if (savestate && !try_lock_vdec_context_creation())
+	if (!IsStopped() && savestate && !try_lock_vdec_context_creation())
 	{
 		try_lock_spu_threads_in_a_state_compatible_with_savestates(true);
 
@@ -2507,7 +2529,7 @@ std::shared_ptr<utils::serial> Emulator::Kill(bool allow_autoexit, bool savestat
 			"\nYou need to close the game for to take effect."
 			"\nIf you cannot close the game due to losing important progress your best chance is to skip the current cutscenes if any are played and retry.");
 
-		return to_ar;
+		return;
 	}
 
 	g_tls_log_prefix = []()
@@ -2515,8 +2537,23 @@ std::shared_ptr<utils::serial> Emulator::Kill(bool allow_autoexit, bool savestat
 		return std::string();
 	};
 
-	if (m_state.exchange(system_state::stopped) == system_state::stopped)
+	if (system_state old_state = m_state.fetch_op([](system_state& state)
 	{
+		if (state == system_state::stopping || state == system_state::stopped)
+		{
+			return false;
+		}
+
+		state = system_state::stopping;
+		return true;
+	}).first; old_state <= system_state::stopping)
+	{
+		if (old_state == system_state::stopping)
+		{
+			// Termination is in progress
+			return;
+		}
+
 		// Ensure clean state
 		m_ar.reset();
 		argv.clear();
@@ -2526,11 +2563,12 @@ std::shared_ptr<utils::serial> Emulator::Kill(bool allow_autoexit, bool savestat
 		klic.clear();
 		hdd1.clear();
 		init_mem_containers = nullptr;
+		after_kill_callback = nullptr;
 		m_config_path.clear();
 		m_config_mode = cfg_mode::custom;
 		read_used_savestate_versions();
 		m_savestate_extension_flags1 = {};
-		return to_ar;
+		return;
 	}
 
 	sys_log.notice("Stopping emulator...");
@@ -2545,28 +2583,6 @@ std::shared_ptr<utils::serial> Emulator::Kill(bool allow_autoexit, bool savestat
 			std::this_thread::sleep_for(20ms); // Enough for one frame to be rendered
 		}
 	}
-
-	named_thread stop_watchdog("Stop Watchdog", [&]()
-	{
-		for (int i = 0; thread_ctrl::state() != thread_state::aborting;)
-		{
-			// We don't need accurate timekeeping, using clocks may interfere with debugging
-			if (i >= (savestate ? 2000 : 1000))
-			{
-				// Total amount of waiting: about 5s
-				report_fatal_error("Stopping emulator took too long."
-					"\nSome thread has probably deadlocked. Aborting.");
-			}
-
-			thread_ctrl::wait_for(5'000);
-
-			if (!g_watchdog_hold_ctr)
-			{
-				// Don't count if there are still uninterruptable threads like PPU LLVM workers
-				i++;
-			}
-		}
-	});
 
 	// Signal threads
 
@@ -2588,257 +2604,313 @@ std::shared_ptr<utils::serial> Emulator::Kill(bool allow_autoexit, bool savestat
 	// Wait fot newly created cpu_thread to see that emulation has been stopped
 	id_manager::g_mutex.lock_unlock();
 
-	GetCallbacks().on_stop();
+	// Type-less smart pointer container for thread (cannot know its type with this approach)
+	// There is no race condition because it is only accessed by the same thread
+	std::shared_ptr<std::shared_ptr<void>> join_thread = std::make_shared<std::shared_ptr<void>>();
 
-	// Join threads
-	for (const auto& [type, data] : *g_fxo)
+	auto make_ptr = [](auto ptr)
 	{
-		if (type.stop)
-		{
-			type.stop(data, thread_state::finished);
-		}
-	}
+		return std::shared_ptr<std::remove_pointer_t<decltype(ptr)>>(ptr);
+	};
 
-	// Save it first for maximum timing accuracy
-	const u64 timestamp = get_timebased_time();
-
-	stop_watchdog = thread_state::aborting;
-
-	sys_log.notice("All threads have been stopped.");
-
-	if (savestate)
+	*join_thread = make_ptr(new named_thread("Emulation Join Thread"sv, [join_thread, savestate, allow_autoexit, this]() mutable
 	{
-		to_ar = std::make_unique<utils::serial>();
-
-		// Savestate thread
-		named_thread emu_state_cap_thread("Emu State Capture Thread", [&]()
+		named_thread stop_watchdog("Stop Watchdog"sv, [this]()
 		{
-			g_tls_log_prefix = []()
+			const auto closed_sucessfully = std::make_shared<atomic_t<bool>>(false);
+
+			for (int i = 0; thread_ctrl::state() != thread_state::aborting;)
 			{
-				return fmt::format("Emu State Capture Thread: '%s'", g_tls_serialize_name);
-			};
-
-			auto& ar = *to_ar;
-
-			read_used_savestate_versions(); // Reset version data
-			USING_SERIALIZATION_VERSION(global_version);
-
-			// Avoid duplicating TAR object memory because it can be very large
-			auto save_tar = [&](const std::string& path)
-			{
-				ar(usz{}); // Reserve memory to be patched later with correct size
-				const usz old_size = ar.data.size();
-				ar.data = tar_object::save_directory(path, std::move(ar.data));
-				ar.seek_end();
-				const usz tar_size = ar.data.size() - old_size;
-				std::memcpy(ar.data.data() + old_size - sizeof(usz), &tar_size, sizeof(usz));
-				sys_log.success("Saved the contents of directory '%s' (size=0x%x)", path, tar_size);
-			};
-
-			auto save_hdd1 = [&]()
-			{
-				const std::string _path = vfs::get("/dev_hdd1");
-				std::string_view path = _path;
-
-				path = path.substr(0, path.find_last_not_of(fs::delim) + 1);
-
-				ar(std::string(path.substr(path.find_last_of(fs::delim) + 1)));
-
-				if (!_path.empty())
+				// We don't need accurate timekeeping, using clocks may interfere with debugging
+				if (i >= 2000)
 				{
-					save_tar(_path);
-				}
-			};
+					// Total amount of waiting: about 10s
+					GetCallbacks().on_emulation_stop_no_response(closed_sucessfully, 10);
 
-			auto save_hdd0 = [&]()
-			{
-				if (g_cfg.savestate.save_disc_game_data)
-				{
-					const std::string path = vfs::get("/dev_hdd0/game/");
-
-					for (auto& entry : fs::dir(path))
+					while (thread_ctrl::state() != thread_state::aborting)
 					{
-						if (entry.is_directory && entry.name != "." && entry.name != "..")
+						thread_ctrl::wait_for(5'000);
+					}
+
+					break;
+				}
+
+				thread_ctrl::wait_for(5'000);
+
+				if (!g_watchdog_hold_ctr)
+				{
+					// Don't count if there are still uninterruptable threads like PPU LLVM workers
+					i++;
+				}
+			}
+
+			*closed_sucessfully = true;
+		});
+
+		// Join threads
+		for (const auto& [type, data] : *g_fxo)
+		{
+			if (type.stop)
+			{
+				type.stop(data, thread_state::finished);
+			}
+		}
+
+		// Save it first for maximum timing accuracy
+		const u64 timestamp = get_timebased_time();
+
+		sys_log.notice("All threads have been stopped.");
+
+		std::unique_ptr<utils::serial> to_ar;
+
+		if (savestate)
+		{
+			to_ar = std::make_unique<utils::serial>();
+
+			// Savestate thread
+			named_thread emu_state_cap_thread("Emu State Capture Thread", [&]()
+			{
+				g_tls_log_prefix = []()
+				{
+					return fmt::format("Emu State Capture Thread: '%s'", g_tls_serialize_name);
+				};
+
+				auto& ar = *to_ar;
+
+				read_used_savestate_versions(); // Reset version data
+				USING_SERIALIZATION_VERSION(global_version);
+
+				// Avoid duplicating TAR object memory because it can be very large
+				auto save_tar = [&](const std::string& path)
+				{
+					ar(usz{}); // Reserve memory to be patched later with correct size
+					const usz old_size = ar.data.size();
+					ar.data = tar_object::save_directory(path, std::move(ar.data));
+					ar.seek_end();
+					const usz tar_size = ar.data.size() - old_size;
+					std::memcpy(ar.data.data() + old_size - sizeof(usz), &tar_size, sizeof(usz));
+					sys_log.success("Saved the contents of directory '%s' (size=0x%x)", path, tar_size);
+				};
+
+				auto save_hdd1 = [&]()
+				{
+					const std::string _path = vfs::get("/dev_hdd1");
+					std::string_view path = _path;
+
+					path = path.substr(0, path.find_last_not_of(fs::delim) + 1);
+
+					ar(std::string(path.substr(path.find_last_of(fs::delim) + 1)));
+
+					if (!_path.empty())
+					{
+						save_tar(_path);
+					}
+				};
+
+				auto save_hdd0 = [&]()
+				{
+					if (g_cfg.savestate.save_disc_game_data)
+					{
+						const std::string path = vfs::get("/dev_hdd0/game/");
+
+						for (auto& entry : fs::dir(path))
 						{
-							if (auto res = psf::load(path + entry.name + "/PARAM.SFO"); res && /*!m_title_id.empty() &&*/ psf::get_string(res.sfo, "TITLE_ID") == m_title_id && psf::get_string(res.sfo, "CATEGORY") == "GD")
+							if (entry.is_directory && entry.name != "." && entry.name != "..")
 							{
-								ar(entry.name);
-								save_tar(path + entry.name);
+								if (auto res = psf::load(path + entry.name + "/PARAM.SFO"); res && /*!m_title_id.empty() &&*/ psf::get_string(res.sfo, "TITLE_ID") == m_title_id && psf::get_string(res.sfo, "CATEGORY") == "GD")
+								{
+									ar(entry.name);
+									save_tar(path + entry.name);
+								}
 							}
 						}
 					}
+
+					ar(std::string{});
+				};
+
+				ar("RPCS3SAV"_u64);
+				ar(std::endian::native == std::endian::little);
+				ar(g_cfg.savestate.state_inspection_mode.get());
+				ar(std::array<u8, 32>{}); // Reserved for future use
+				ar(usz{0}); // Offset of versioning data, to be overwritten at the end of saving
+
+				if (auto dir = vfs::get("/dev_bdvd/PS3_GAME"); fs::is_dir(dir) && !fs::is_file(fs::get_parent_dir(dir) + "/PS3_DISC.SFB"))
+				{
+					// Fake /dev_bdvd/PS3_GAME detected, use HDD0 for m_path restoration
+					ensure(vfs::unmount("/dev_bdvd/PS3_GAME"));
+					ar(vfs::retrieve(m_path));
+					ar(vfs::retrieve(disc));
+					ensure(vfs::mount("/dev_bdvd/PS3_GAME", dir));
+				}
+				else
+				{
+					ar(vfs::retrieve(m_path));
+					ar(!m_title_id.empty() && !vfs::get("/dev_bdvd").empty() ? m_title_id : vfs::retrieve(disc));
 				}
 
-				ar(std::string{});
-			};
+				ar(klic.empty() ? std::array<u8, 16>{} : std::bit_cast<std::array<u8, 16>>(klic[0]));
+				ar(m_game_dir);
+				save_hdd1();
+				save_hdd0();
+				ar(std::array<u8, 32>{}); // Reserved for future use
+				vm::save(ar);
+				g_fxo->save(ar);
 
-			ar("RPCS3SAV"_u64);
-			ar(std::endian::native == std::endian::little);
-			ar(g_cfg.savestate.state_inspection_mode.get());
-			ar(std::array<u8, 32>{}); // Reserved for future use
-			ar(usz{0}); // Offset of versioning data, to be overwritten at the end of saving
+				bs_t<SaveStateExtentionFlags1> extension_flags{SaveStateExtentionFlags1::SupportsMenuOpenResume};
 
-			if (auto dir = vfs::get("/dev_bdvd/PS3_GAME"); fs::is_dir(dir) && !fs::is_file(fs::get_parent_dir(dir) + "/PS3_DISC.SFB"))
+				if (g_fxo->get<SysutilMenuOpenStatus>().active)
+				{
+					extension_flags += SaveStateExtentionFlags1::ShouldCloseMenu;
+				}
+
+				ar(extension_flags);
+
+				ar(std::array<u8, 32>{}); // Reserved for future use
+				ar(timestamp);
+			});
+
+			// Join it
+			emu_state_cap_thread();
+
+			if (emu_state_cap_thread == thread_state::errored)
 			{
-				// Fake /dev_bdvd/PS3_GAME detected, use HDD0 for m_path restoration
-				ensure(vfs::unmount("/dev_bdvd/PS3_GAME"));
-				ar(vfs::retrieve(m_path));
-				ar(vfs::retrieve(disc));
-				ensure(vfs::mount("/dev_bdvd/PS3_GAME", dir));
+				sys_log.error("Saving savestate failed due to fatal error!");
+				to_ar.reset();
+				savestate = false;
+			}
+		}
+
+		stop_watchdog = thread_state::aborting;
+
+		if (savestate)
+		{
+			const std::string path = get_savestate_path(m_title_id, m_path);
+
+			fs::pending_file file(path);
+
+			// Identifer -> version
+			std::vector<std::pair<u16, u16>> used_serial = read_used_savestate_versions();
+
+			auto& ar = *to_ar;
+			const usz pos = ar.seek_end();
+			std::memcpy(&ar.data[10], &pos, 8);// Set offset
+			ar(used_serial);
+
+			if (!file.file || (file.file.write(ar.data), !file.commit()))
+			{
+				sys_log.error("Failed to write savestate to file! (path='%s', %s)", path, fs::g_tls_error);
+				savestate = false;
 			}
 			else
 			{
-				ar(vfs::retrieve(m_path));
-				ar(!m_title_id.empty() && !vfs::get("/dev_bdvd").empty() ? m_title_id : vfs::retrieve(disc));
+				std::string old_path = path.substr(0, path.find_last_not_of(fs::delim));
+				std::string old_path2 = old_path;
+
+				old_path2.insert(old_path.find_last_of(fs::delim) + 1, "old-"sv);
+				old_path.insert(old_path.find_last_of(fs::delim) + 1, "used_"sv);
+
+				if (fs::remove_file(old_path))
+				{
+					sys_log.success("Old savestate has been removed: path='%s'", old_path);
+				}
+
+				// For backwards compatibility - avoid having loose files
+				if (fs::remove_file(old_path2))
+				{
+					sys_log.success("Old savestate has been removed: path='%s'", old_path2);
+				}
+
+				sys_log.success("Saved savestate! path='%s'", path);
+
+				if (!g_cfg.savestate.suspend_emu)
+				{
+					// Allow to reboot from GUI
+					m_path = path;
+				}
 			}
 
-			ar(klic.empty() ? std::array<u8, 16>{} : std::bit_cast<std::array<u8, 16>>(klic[0]));
-			ar(m_game_dir);
-			save_hdd1();
-			save_hdd0();
-			ar(std::array<u8, 32>{}); // Reserved for future use
-			vm::save(ar);
-			g_fxo->save(ar);
+			ar.set_reading_state();
+		}
 
-			bs_t<SaveStateExtentionFlags1> extension_flags{SaveStateExtentionFlags1::SupportsMenuOpenResume};
+		// Final termination from main thread (move the last ownership of join thread in order to destroy it)
+		CallFromMainThread([join_thread = std::move(join_thread), allow_autoexit, this]() mutable
+		{
+			cpu_thread::cleanup();
 
-			if (g_fxo->get<SysutilMenuOpenStatus>().active)
+			initialize_timebased_time(0, true);
+
+			lv2_obj::cleanup();
+
+			g_fxo->reset();
+
+			sys_log.notice("Objects cleared...");
+
+			vm::close();
+
+			jit_runtime::finalize();
+
+			perf_stat_base::report();
+
+			static u64 aw_refs = 0;
+			static u64 aw_colm = 0;
+			static u64 aw_colc = 0;
+			static u64 aw_used = 0;
+
+			aw_refs = 0;
+			aw_colm = 0;
+			aw_colc = 0;
+			aw_used = 0;
+
+			atomic_wait::parse_hashtable([](u64 /*id*/, u32 refs, u64 ptr, u32 maxc) -> bool
 			{
-				extension_flags += SaveStateExtentionFlags1::ShouldCloseMenu;
+				aw_refs += refs != 0;
+				aw_used += ptr != 0;
+
+				aw_colm = std::max<u64>(aw_colm, maxc);
+				aw_colc += maxc != 0;
+
+				return false;
+			});
+
+			sys_log.notice("Atomic wait hashtable stats: [in_use=%u, used=%u, max_collision_weight=%u, total_collisions=%u]", aw_refs, aw_used, aw_colm, aw_colc);
+
+			m_stop_ctr++;
+			m_stop_ctr.notify_all();
+
+			// Boot arg cleanup (preserved in the case restarting)
+			argv.clear();
+			envp.clear();
+			data.clear();
+			disc.clear();
+			klic.clear();
+			hdd1.clear();
+			init_mem_containers = nullptr;
+			m_config_path.clear();
+			m_config_mode = cfg_mode::custom;
+			m_ar.reset();
+			read_used_savestate_versions();
+			m_savestate_extension_flags1 = {};
+
+			// Complete the operation
+			m_state = system_state::stopped;
+			GetCallbacks().on_stop();
+
+			// Always Enable display sleep, not only if it was prevented.
+			enable_display_sleep();
+
+			if (allow_autoexit)
+			{
+				Quit(g_cfg.misc.autoexit.get());
 			}
 
-			ar(extension_flags);
-
-			ar(std::array<u8, 32>{}); // Reserved for future use
-			ar(timestamp);
+			if (after_kill_callback)
+			{
+				after_kill_callback();
+				after_kill_callback = nullptr;
+			}
 		});
-
-		// Join it
-		emu_state_cap_thread();
-
-		if (emu_state_cap_thread == thread_state::errored)
-		{
-			sys_log.error("Saving savestate failed due to fatal error!");
-			to_ar.reset();
-			savestate = false;
-		}
-	}
-
-	cpu_thread::cleanup();
-
-	initialize_timebased_time(0, true);
-
-	lv2_obj::cleanup();
-
-	g_fxo->reset();
-
-	sys_log.notice("Objects cleared...");
-
-	vm::close();
-
-	jit_runtime::finalize();
-
-	perf_stat_base::report();
-
-	static u64 aw_refs = 0;
-	static u64 aw_colm = 0;
-	static u64 aw_colc = 0;
-	static u64 aw_used = 0;
-
-	aw_refs = 0;
-	aw_colm = 0;
-	aw_colc = 0;
-	aw_used = 0;
-
-	atomic_wait::parse_hashtable([](u64 /*id*/, u32 refs, u64 ptr, u32 maxc) -> bool
-	{
-		aw_refs += refs != 0;
-		aw_used += ptr != 0;
-
-		aw_colm = std::max<u64>(aw_colm, maxc);
-		aw_colc += maxc != 0;
-
-		return false;
-	});
-
-	sys_log.notice("Atomic wait hashtable stats: [in_use=%u, used=%u, max_collision_weight=%u, total_collisions=%u]", aw_refs, aw_used, aw_colm, aw_colc);
-
-	m_stop_ctr++;
-	m_stop_ctr.notify_all();
-
-	if (savestate)
-	{
-		const std::string path = get_savestate_path(m_title_id, m_path);
-
-		fs::pending_file file(path);
-
-		// Identifer -> version
-		std::vector<std::pair<u16, u16>> used_serial = read_used_savestate_versions();
-
-		auto& ar = *to_ar;
-		const usz pos = ar.seek_end();
-		std::memcpy(&ar.data[10], &pos, 8);// Set offset
-		ar(used_serial);
-
-		if (!file.file || (file.file.write(ar.data), !file.commit()))
-		{
-			sys_log.error("Failed to write savestate to file! (path='%s', %s)", path, fs::g_tls_error);
-			savestate = false;
-		}
-		else
-		{
-			std::string old_path = path.substr(0, path.find_last_not_of(fs::delim));
-			std::string old_path2 = old_path;
-
-			old_path2.insert(old_path.find_last_of(fs::delim) + 1, "old-"sv);
-			old_path.insert(old_path.find_last_of(fs::delim) + 1, "used_"sv);
-
-			if (fs::remove_file(old_path))
-			{
-				sys_log.success("Old savestate has been removed: path='%s'", old_path);
-			}
-
-			// For backwards compatibility - avoid having loose files
-			if (fs::remove_file(old_path2))
-			{
-				sys_log.success("Old savestate has been removed: path='%s'", old_path2);
-			}
-
-			sys_log.success("Saved savestate! path='%s'", path);
-
-			if (!g_cfg.savestate.suspend_emu)
-			{
-				// Allow to reboot from GUI
-				m_path = path;
-			}
-		}
-
-		ar.set_reading_state();
-	}
-
-	// Boot arg cleanup (preserved in the case restarting)
-	argv.clear();
-	envp.clear();
-	data.clear();
-	disc.clear();
-	klic.clear();
-	hdd1.clear();
-	init_mem_containers = nullptr;
-	m_config_path.clear();
-	m_config_mode = cfg_mode::custom;
-	m_ar.reset();
-	read_used_savestate_versions();
-	m_savestate_extension_flags1 = {};
-
-	// Always Enable display sleep, not only if it was prevented.
-	enable_display_sleep();
-
-	if (allow_autoexit)
-	{
-		Quit(g_cfg.misc.autoexit.get());
-	}
-
-	return to_ar;
+	}));
 }
 
 game_boot_result Emulator::Restart(bool graceful)
