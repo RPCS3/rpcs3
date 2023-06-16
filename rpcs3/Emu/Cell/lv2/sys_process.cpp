@@ -425,7 +425,6 @@ void lv2_exitspawn(ppu_thread& ppu, std::vector<std::string>& argv, std::vector<
 
 		std::string path = vfs::get(argv[0]);
 		std::string hdd1 = vfs::get("/dev_hdd1/");
-		std::string old_config = Emu.GetUsedConfig();
 
 		const u128 klic = g_fxo->get<loaded_npdrm_keys>().last_key();
 
@@ -457,27 +456,32 @@ void lv2_exitspawn(ppu_thread& ppu, std::vector<std::string>& argv, std::vector<
 			g_fxo->init<lv2_memory_container>(std::min(old_size - total_size, sdk_suggested_mem) + total_size);
 		};
 
+		Emu.after_kill_callback = [func = std::move(func), argv = std::move(argv), envp = std::move(envp), data = std::move(data),
+			disc = std::move(disc), path = std::move(path), hdd1 = std::move(hdd1), old_config = Emu.GetUsedConfig(), klic]() mutable
+		{
+			Emu.argv = std::move(argv);
+			Emu.envp = std::move(envp);
+			Emu.data = std::move(data);
+			Emu.disc = std::move(disc);
+			Emu.hdd1 = std::move(hdd1);
+			Emu.init_mem_containers = std::move(func);
+
+			if (klic)
+			{
+				Emu.klic.emplace_back(klic);
+			}
+
+			Emu.SetForceBoot(true);
+
+			auto res = Emu.BootGame(path, "", true, cfg_mode::continuous, old_config);
+
+			if (res != game_boot_result::no_errors)
+			{
+				sys_process.fatal("Failed to boot from exitspawn! (path=\"%s\", error=%s)", path, res);
+			}
+		};
+
 		Emu.Kill(false);
-		Emu.argv = std::move(argv);
-		Emu.envp = std::move(envp);
-		Emu.data = std::move(data);
-		Emu.disc = std::move(disc);
-		Emu.hdd1 = std::move(hdd1);
-		Emu.init_mem_containers = std::move(func);
-
-		if (klic)
-		{
-			Emu.klic.emplace_back(klic);
-		}
-
-		Emu.SetForceBoot(true);
-
-		auto res = Emu.BootGame(path, "", true, cfg_mode::continuous, old_config);
-
-		if (res != game_boot_result::no_errors)
-		{
-			sys_process.fatal("Failed to boot from exitspawn! (path=\"%s\", error=%s)", path, res);
-		}
 	});
 
 	// Wait for GUI thread
