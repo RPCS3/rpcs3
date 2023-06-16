@@ -76,5 +76,5 @@ void qt_camera_error_handler::handle_capture_modes(QCamera::CaptureModes capture
 
 void qt_camera_error_handler::handle_camera_error(QCamera::Error error)
 {
-	camera_log.error("Error event: \"%s\" (error=%d)", m_camera ? m_camera->errorString().toStdString() : "", static_cast<int>(error));
+	camera_log.error("Error event: \"%s\" (error=%d)", m_camera ? m_camera->errorString() : "", static_cast<int>(error));
 }

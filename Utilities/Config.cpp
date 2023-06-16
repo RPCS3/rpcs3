@@ -7,6 +7,12 @@
 
 LOG_CHANNEL(cfg_log, "CFG");
 
+template <>
+void fmt_class_string<cfg::node>::format(std::string& out, u64 arg)
+{
+ 	out += get_object(arg).to_string();
+}
+
 namespace cfg
 {
 	_base::_base(type _type)

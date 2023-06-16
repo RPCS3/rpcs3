@@ -42,9 +42,10 @@ namespace rsx
 		home_menu_settings_video::home_menu_settings_video(u16 x, u16 y, u16 width, u16 height, bool use_separators, home_menu_page* parent)
 			: home_menu_settings_page(x, y, width, height, use_separators, parent, get_localized_string(localized_string_id::HOME_MENU_SETTINGS_VIDEO))
 		{
-			add_dropdown(&g_cfg.video.frame_limit, "Frame limit");
+			add_dropdown(&g_cfg.video.frame_limit, "Frame Limit");
 			add_unsigned_slider(&g_cfg.video.anisotropic_level_override, "Anisotropic Filter Override", "", 2);
 
+			add_dropdown(&g_cfg.video.output_scaling, "Output Scaling");
 			if (g_cfg.video.renderer == video_renderer::vulkan && g_cfg.video.output_scaling == output_scaling_mode::fsr)
 			{
 				add_unsigned_slider(&g_cfg.video.vk.rcas_sharpening_intensity, "FidelityFX CAS Sharpening Intensity", " %", 1);
@@ -94,6 +95,7 @@ namespace rsx
 		{
 			add_checkbox(&g_cfg.misc.show_trophy_popups, "Show Trophy Popups");
 			add_checkbox(&g_cfg.misc.show_shader_compilation_hint, "Show Shader Compilation Hint");
+			add_checkbox(&g_cfg.misc.show_ppu_compilation_hint, "Show PPU Compilation Hint");
 
 			apply_layout();
 		}

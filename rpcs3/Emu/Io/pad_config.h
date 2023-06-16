@@ -25,6 +25,9 @@ struct cfg_pad final : cfg::node
 	cfg_pad() {};
 	cfg_pad(node* owner, const std::string& name) : cfg::node(owner, name) {}
 
+	static std::vector<std::string> get_buttons(const std::string& str);
+	static std::string get_buttons(std::vector<std::string> vec);
+
 	cfg::string ls_left{ this, "Left Stick Left", "" };
 	cfg::string ls_down{ this, "Left Stick Down", "" };
 	cfg::string ls_right{ this, "Left Stick Right", "" };

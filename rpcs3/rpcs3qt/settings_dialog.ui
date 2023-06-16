@@ -79,13 +79,6 @@
                 </widget>
                </item>
                <item>
-                <widget class="QRadioButton" name="ppu_dynamic">
-                 <property name="text">
-                  <string notr="true">Interpreter (dynamic)</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
                 <widget class="QRadioButton" name="ppu_llvm">
                  <property name="text">
                   <string notr="true">LLVM Recompiler (fastest)</string>
@@ -180,13 +173,6 @@
                 <widget class="QCheckBox" name="spuLoopDetection">
                  <property name="text">
                   <string>Enable SPU loop detection</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="fullWidthAVX512">
-                 <property name="text">
-                  <string>Increase AVX-512 instruction width</string>
                  </property>
                 </widget>
                </item>
@@ -972,13 +958,6 @@
                 <widget class="QCheckBox" name="stretchToDisplayArea">
                  <property name="text">
                   <string>Stretch To Display Area</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="disableVertexCache">
-                 <property name="text">
-                  <string>Disable Vertex Cache</string>
                  </property>
                 </widget>
                </item>
@@ -2373,9 +2352,23 @@
                 </widget>
                </item>
                <item>
+                <widget class="QCheckBox" name="accurateGETLLAR">
+                 <property name="text">
+                  <string>Accurate GETLLAR</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QCheckBox" name="accurateRSXAccess">
                  <property name="text">
                   <string>Accurate RSX reservation access</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="accurateSpuDMA">
+                 <property name="text">
+                  <string>Accurate SPU DMA</string>
                  </property>
                 </widget>
                </item>
@@ -2387,37 +2380,9 @@
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="accuratePPUSAT">
-                 <property name="text">
-                  <string>Accurate PPU Saturation Bit</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="accuratePPUNJ">
-                 <property name="text">
-                  <string>Accurate PPU Non-Java Mode</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
                 <widget class="QCheckBox" name="fixupPPUVNAN">
                  <property name="text">
                   <string>PPU Vector NaN Fixup</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="accuratePPUVNAN">
-                 <property name="text">
-                  <string>Accurate PPU Vector NaN Handling</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="accuratePPUFPCC">
-                 <property name="text">
-                  <string>Accurate PPU Float Condition Control</string>
                  </property>
                 </widget>
                </item>
@@ -2439,13 +2404,6 @@
                 <widget class="QCheckBox" name="suspendSavestates">
                  <property name="text">
                   <string>Suspend-Emulation Savestates Mode</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="pausedSavestates">
-                 <property name="text">
-                  <string>Start Savestates Paused</string>
                  </property>
                 </widget>
                </item>
@@ -2654,6 +2612,13 @@
                 <widget class="QCheckBox" name="disableOnDiskShaderCache">
                  <property name="text">
                   <string>Disable On-Disk Shader Cache</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="disableVertexCache">
+                 <property name="text">
+                  <string>Disable Vertex Cache</string>
                  </property>
                 </widget>
                </item>
@@ -2907,16 +2872,16 @@
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="alwaysStart">
+                <widget class="QCheckBox" name="pausedSavestates">
                  <property name="text">
-                  <string>Automatically start games after boot</string>
+                  <string>Pause emulation after loading savestates</string>
                  </property>
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="startGameFullscreen">
+                <widget class="QCheckBox" name="pauseDuringHomeMenu">
                  <property name="text">
-                  <string>Start games in Fullscreen mode</string>
+                  <string>Pause emulation during home menu</string>
                  </property>
                 </widget>
                </item>
@@ -2935,9 +2900,9 @@
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="useNativeInterface">
+                <widget class="QCheckBox" name="showPPUCompilationHint">
                  <property name="text">
-                  <string>Use native user interface</string>
+                  <string>Show PPU compilation hint</string>
                  </property>
                 </widget>
                </item>
@@ -2949,9 +2914,16 @@
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="pauseDuringHomeMenu">
+                <widget class="QCheckBox" name="startGameFullscreen">
                  <property name="text">
-                  <string>Pause emulation during home menu</string>
+                  <string>Start games in fullscreen mode</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="useNativeInterface">
+                 <property name="text">
+                  <string>Use native user interface</string>
                  </property>
                 </widget>
                </item>
@@ -4066,16 +4038,6 @@
             </property>
             <layout class="QVBoxLayout" name="gb_debug_gpu_layout">
              <item alignment="Qt::AlignTop">
-              <widget class="QCheckBox" name="renderdocCompatibility">
-               <property name="enabled">
-                <bool>true</bool>
-               </property>
-               <property name="text">
-                <string>Renderdoc Compatibility Mode</string>
-               </property>
-              </widget>
-             </item>
-             <item alignment="Qt::AlignTop">
               <widget class="QCheckBox" name="debugOutput">
                <property name="text">
                 <string>Debug Output</string>
@@ -4090,23 +4052,9 @@
               </widget>
              </item>
              <item>
-              <widget class="QCheckBox" name="logProg">
+              <widget class="QCheckBox" name="disableFIFOReordering">
                <property name="text">
-                <string>Log Shader Programs</string>
-               </property>
-              </widget>
-             </item>
-             <item alignment="Qt::AlignTop">
-              <widget class="QCheckBox" name="forceHighpZ">
-               <property name="text">
-                <string>Use High Precision Z-buffer</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QCheckBox" name="disableHwOcclusionQueries">
-               <property name="text">
-                <string>Disable ZCull Occlusion Queries</string>
+                <string>Disable FIFO Reordering</string>
                </property>
               </widget>
              </item>
@@ -4118,13 +4066,6 @@
               </widget>
              </item>
              <item>
-              <widget class="QCheckBox" name="forceCpuBlitEmulation">
-               <property name="text">
-                <string>Force CPU blit emulation</string>
-               </property>
-              </widget>
-             </item>
-             <item>
               <widget class="QCheckBox" name="disableVulkanMemAllocator">
                <property name="text">
                 <string>Disable Vulkan Memory Allocator</string>
@@ -4132,9 +4073,40 @@
               </widget>
              </item>
              <item>
-              <widget class="QCheckBox" name="disableFIFOReordering">
+              <widget class="QCheckBox" name="disableHwOcclusionQueries">
                <property name="text">
-                <string>Disable FIFO Reordering</string>
+                <string>Disable ZCull Occlusion Queries</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="forceCpuBlitEmulation">
+               <property name="text">
+                <string>Force CPU Blit Emulation</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="gpuTextureScaling">
+               <property name="text">
+                <string>Force GPU Texture Scaling</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="logProg">
+               <property name="text">
+                <string>Log Shader Programs</string>
+               </property>
+              </widget>
+             </item>
+             <item alignment="Qt::AlignTop">
+              <widget class="QCheckBox" name="renderdocCompatibility">
+               <property name="enabled">
+                <bool>true</bool>
+               </property>
+               <property name="text">
+                <string>Renderdoc Compatibility Mode</string>
                </property>
               </widget>
              </item>
@@ -4145,10 +4117,10 @@
                </property>
               </widget>
              </item>
-             <item>
-              <widget class="QCheckBox" name="gpuTextureScaling">
+             <item alignment="Qt::AlignTop">
+              <widget class="QCheckBox" name="forceHighpZ">
                <property name="text">
-                <string>Use GPU Texture Scaling</string>
+                <string>Use High Precision Z-Buffer</string>
                </property>
               </widget>
              </item>
@@ -4178,6 +4150,27 @@
             </property>
             <layout class="QVBoxLayout" name="gb_debug_core_layout">
              <item>
+              <widget class="QCheckBox" name="alwaysStart">
+               <property name="text">
+                <string>Automatically start games after boot</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="perfReport">
+               <property name="text">
+                <string>Enable performance report</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="hookStFunc">
+               <property name="text">
+                <string>Hook static functions</string>
+               </property>
+              </widget>
+             </item>
+             <item>
               <widget class="QCheckBox" name="ppuDebug">
                <property name="text">
                 <string>PPU Debug</string>
@@ -4206,16 +4199,30 @@
               </widget>
              </item>
              <item>
-              <widget class="QCheckBox" name="accurateGETLLAR">
+              <widget class="QCheckBox" name="accuratePPUSAT">
                <property name="text">
-                <string>Accurate GETLLAR</string>
+                <string>Accurate PPU Saturation Bit</string>
                </property>
               </widget>
              </item>
              <item>
-              <widget class="QCheckBox" name="accurateSpuDMA">
+              <widget class="QCheckBox" name="accuratePPUNJ">
                <property name="text">
-                <string>Accurate SPU DMA</string>
+                <string>Accurate PPU Non-Java Mode</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="accuratePPUVNAN">
+               <property name="text">
+                <string>Accurate PPU Vector NaN Handling</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="accuratePPUFPCC">
+               <property name="text">
+                <string>Accurate PPU Float Condition Control</string>
                </property>
               </widget>
              </item>
@@ -4223,20 +4230,6 @@
               <widget class="QCheckBox" name="accurateClineStores">
                <property name="text">
                 <string>Accurate Cache Line Stores</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QCheckBox" name="hookStFunc">
-               <property name="text">
-                <string>Hook static functions</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QCheckBox" name="perfReport">
-               <property name="text">
-                <string>Enable Performance Report</string>
                </property>
               </widget>
              </item>

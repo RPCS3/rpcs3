@@ -268,4 +268,12 @@ namespace vk
 
 		renderer->emergency_query_cleanup(&cmd);
 	}
+
+	void on_descriptor_pool_fragmentation(bool is_fatal)
+	{
+		if (auto vkthr = dynamic_cast<VKGSRender*>(rsx::get_current_renderer()))
+		{
+			vkthr->on_descriptor_pool_fragmentation(is_fatal);
+		}
+	}
 }

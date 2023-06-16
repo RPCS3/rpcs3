@@ -75,7 +75,11 @@ s32 lv2_socket_native::create_socket()
 
 	auto socket_res = ::socket(native_domain, native_type, native_proto);
 
+#ifdef _WIN32
+	if (socket_res == INVALID_SOCKET)
+#else
 	if (socket_res == -1)
+#endif
 	{
 		return -get_last_error(false);
 	}

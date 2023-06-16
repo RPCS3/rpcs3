@@ -34,8 +34,6 @@ namespace
 	// Helper converters
 	constexpr auto qstr = QString::fromStdString;
 
-	[[maybe_unused]] inline std::string sstr(const QString& _in) { return _in.toStdString(); }
-
 	QString FormatTimestamp(s64 time)
 	{
 		QDateTime dateTime;

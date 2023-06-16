@@ -3,7 +3,6 @@
 enum class ppu_decoder_type : unsigned
 {
 	_static,
-	dynamic,
 	llvm,
 };
 

@@ -116,7 +116,7 @@ pad_motion_settings_dialog::pad_motion_settings_dialog(QDialog* parent, std::sha
 				std::lock_guard lock(m_config_mutex);
 				if (!m_config_entries[i]->axis.from_string(m_axis_names[i]->itemText(index).toStdString()))
 				{
-					cfg_log.error("Failed to convert motion axis string: %s", m_axis_names[i]->itemData(index).toString().toStdString());
+					cfg_log.error("Failed to convert motion axis string: %s", m_axis_names[i]->itemData(index).toString());
 				}
 			});
 		}

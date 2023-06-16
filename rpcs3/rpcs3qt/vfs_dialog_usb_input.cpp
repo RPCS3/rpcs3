@@ -7,8 +7,6 @@
 
 #include "Emu/vfs_config.h"
 
-inline std::string sstr(const QString& _in) { return _in.toStdString(); }
-
 vfs_dialog_usb_input::vfs_dialog_usb_input(const QString& name, const cfg::device_info& default_info, cfg::device_info* info, std::shared_ptr<gui_settings> _gui_settings, QWidget* parent)
 	: QDialog(parent), m_gui_settings(std::move(_gui_settings)), m_gui_save(gui::fs_dev_usb_list)
 {

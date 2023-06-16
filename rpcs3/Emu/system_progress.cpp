@@ -71,7 +71,7 @@ void progress_dialog_server::operator()()
 			renderer->is_initialized.wait(false, atomic_wait_timeout(5 * 1000000000ull));
 
 			auto manager  = g_fxo->try_get<rsx::overlays::display_manager>();
-			show_overlay_message = show_overlay_message_only;
+			show_overlay_message = g_fxo->get<progress_dialog_workaround>().show_overlay_message_only;
 
 			if (manager && !show_overlay_message)
 			{
@@ -144,7 +144,10 @@ void progress_dialog_server::operator()()
 				if (show_overlay_message)
 				{
 					// Show a message instead
-					rsx::overlays::show_ppu_compile_notification();
+					if (g_cfg.misc.show_ppu_compilation_hint)
+					{
+						rsx::overlays::show_ppu_compile_notification();
+					}
 					thread_ctrl::wait_for(10000);
 					continue;
 				}

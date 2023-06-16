@@ -47,7 +47,11 @@ nt_p2p_port::nt_p2p_port(u16 port)
 	// Creates and bind P2P Socket
 	p2p_socket = ::socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
 
+#ifdef _WIN32
+	if (p2p_socket == INVALID_SOCKET)
+#else
 	if (p2p_socket == -1)
+#endif
 		fmt::throw_exception("Failed to create DGRAM socket for P2P socket: %s!", get_last_error(true));
 
 #ifdef _WIN32

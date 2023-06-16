@@ -4,6 +4,9 @@
 
 namespace vk
 {
+	// Error handler callback
+	extern void on_descriptor_pool_fragmentation(bool fatal);
+
 	namespace descriptors
 	{
 		class dispatch_manager
@@ -111,6 +114,7 @@ namespace vk
 		ensure(max_sets > 16);
 
 		m_create_info_pool_sizes = pool_sizes;
+
 		for (auto& size : m_create_info_pool_sizes)
 		{
 			ensure(size.descriptorCount < 128); // Sanity check. Remove before commit.
@@ -221,24 +225,39 @@ namespace vk
 			vk::get_gc()->dispose(cleanup_obj);
 		}
 
-		std::lock_guard lock(m_subpool_lock);
-
 		m_current_subpool_offset = 0;
 		m_current_subpool_index = umax;
 
-		for (u32 index = 0; index < m_device_subpools.size(); ++index)
-		{
-			if (!m_device_subpools[index].busy)
-			{
-				m_current_subpool_index = index;
-				break;
-			}
-		}
+		const int max_retries = 2;
+		int retries = max_retries;
 
-		if (m_current_subpool_index == umax)
+		do
 		{
+			for (u32 index = 0; index < m_device_subpools.size(); ++index)
+			{
+				if (!m_device_subpools[index].busy)
+				{
+					m_current_subpool_index = index;
+					goto done; // Nested break
+				}
+			}
+
 			VkDescriptorPool subpool = VK_NULL_HANDLE;
-			CHECK_RESULT(vkCreateDescriptorPool(*m_owner, &m_create_info, nullptr, &subpool));
+			if (VkResult result = vkCreateDescriptorPool(*m_owner, &m_create_info, nullptr, &subpool))
+			{
+				if (retries-- && (result == VK_ERROR_FRAGMENTATION_EXT))
+				{
+					rsx_log.warning("Descriptor pool creation failed with fragmentation error. Will attempt to recover.");
+					vk::on_descriptor_pool_fragmentation(!retries);
+					continue;
+				}
+
+				vk::die_with_error(result);
+				fmt::throw_exception("Unreachable");
+			}
+
+			// New subpool created successfully
+			std::lock_guard lock(m_subpool_lock);
 
 			m_device_subpools.push_back(
 			{
@@ -247,8 +266,10 @@ namespace vk
 			});
 
 			m_current_subpool_index = m_device_subpools.size() - 1;
-		}
 
+		} while (m_current_subpool_index == umax);
+
+	done:
 		m_device_subpools[m_current_subpool_index].busy = VK_TRUE;
 		m_current_pool_handle = m_device_subpools[m_current_subpool_index].handle;
 	}

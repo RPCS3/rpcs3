@@ -123,12 +123,16 @@ private:
 
 	bool m_is_init = false;
 
-	std::vector<u64> m_blacklist;
+	std::set<u64> m_blacklist;
 	std::unordered_map<int, MMJOYDevice> m_devices;
 
-	u64 find_key(const std::string& name) const;
+	template <typename T>
+	std::set<T> find_keys(const std::vector<std::string>& names) const;
 
-	std::array<u32, PadHandlerBase::button::button_count> get_mapped_key_codes(const std::shared_ptr<PadDevice>& device, const cfg_pad* cfg) override;
+	template <typename T>
+	std::set<T> find_keys(const cfg::string& cfg_string) const;
+
+	std::array<std::set<u32>, PadHandlerBase::button::button_count> get_mapped_key_codes(const std::shared_ptr<PadDevice>& device, const cfg_pad* cfg) override;
 	std::shared_ptr<PadDevice> get_device(const std::string& device) override;
 	bool get_is_left_trigger(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
 	bool get_is_right_trigger(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;

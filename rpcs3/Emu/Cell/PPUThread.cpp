@@ -1535,7 +1535,7 @@ void ppu_thread::cpu_task()
 			// Wait until the progress dialog is closed.
 			// We don't want to open a cell dialog while a native progress dialog is still open.
 			thread_ctrl::wait_on<atomic_wait::op_ne>(g_progr_ptotal, 0);
-			g_fxo->get<progress_dialog_server>().show_overlay_message_only = true;
+			g_fxo->get<progress_dialog_workaround>().show_overlay_message_only = true;
 
 			// Sadly we can't postpone initializing guest time because we need to run PPU threads
 			// (the farther it's postponed, the less accuracy of guest time has been lost)
@@ -2267,7 +2267,7 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 		ppu.use_full_rdata = false;
 	}
 
-	if ((addr & addr_mask) == (ppu.last_faddr & addr_mask))
+	if (ppu_log.trace && (addr & addr_mask) == (ppu.last_faddr & addr_mask))
 	{
 		ppu_log.trace(u8"LARX after fail: addr=0x%x, faddr=0x%x, time=%u c", addr, ppu.last_faddr, (perf0.get() - ppu.last_ftsc));
 	}

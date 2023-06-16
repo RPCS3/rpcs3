@@ -96,6 +96,9 @@ namespace vk
 		case VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR:
 			error_message = "Invalid external handle (VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR)";
 			break;
+		case VK_ERROR_FRAGMENTATION_EXT:
+			error_message = "Descriptor pool creation failed (VK_ERROR_FRAGMENTATION)";
+			break;
 		default:
 			error_message = fmt::format("Unknown Code (%Xh, %d)%s", static_cast<s32>(error_code), static_cast<s32>(error_code), src_loc{line, col, file, func});
 			break;
