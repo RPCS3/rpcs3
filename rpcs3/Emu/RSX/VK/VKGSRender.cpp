@@ -2894,7 +2894,7 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 			if (!query_info.indices.empty())
 			{
 				const auto& index = query_info.indices.front();
-				m_occlusion_query_manager->get_query_result_indirect(*m_current_command_buffer, index, m_cond_render_buffer->value, 0);
+				m_occlusion_query_manager->get_query_result_indirect(*m_current_command_buffer, index, 1, m_cond_render_buffer->value, 0);
 
 				vk::insert_buffer_memory_barrier(*m_current_command_buffer, m_cond_render_buffer->value, 0, 4,
 					VK_PIPELINE_STAGE_TRANSFER_BIT, dst_stage,
@@ -2912,14 +2912,56 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 	{
 		// We'll need to do some result aggregation using a compute shader.
 		auto scratch = vk::get_scratch_buffer(*m_current_command_buffer, num_hw_queries * 4);
+
+		// Range latching. Because of how the query pool manages allocations using a stack, we get an inverse sequential set of handles/indices that we can easily group together.
+		// This drastically boosts performance on some drivers like the NVIDIA proprietary one that seems to have a rather high cost for every individual query transer command.
+		std::pair<u32, u32> query_range = { umax, 0 };
+
+		auto copy_query_range_impl = [&]()
+		{
+			const auto count = (query_range.second - query_range.first + 1);
+			m_occlusion_query_manager->get_query_result_indirect(*m_current_command_buffer, query_range.first, count, scratch->value, dst_offset);
+			dst_offset += count * 4;
+		};
+
 		for (usz i = first; i < last; ++i)
 		{
 			auto& query_info = m_occlusion_map[sources[i]->driver_handle];
 			for (const auto& index : query_info.indices)
 			{
-				m_occlusion_query_manager->get_query_result_indirect(*m_current_command_buffer, index, scratch->value, dst_offset);
-				dst_offset += 4;
+				// First iteration?
+				if (query_range.first == umax)
+				{
+					query_range = { index, index };
+					continue;
+				}
+
+				// Head?
+				if ((query_range.first - 1) == index)
+				{
+					query_range.first = index;
+					continue;
+				}
+
+				// Tail?
+				if ((query_range.second + 1) == index)
+				{
+					query_range.second = index;
+					continue;
+				}
+
+				// Flush pending queue. In practice, this is never reached and we fall out to the spill block outside the loops
+				copy_query_range_impl();
+
+				// Start a new range for the current index
+				query_range = { index, index };
 			}
+		}
+
+		if (query_range.first != umax)
+		{
+			// Dangling queries, flush
+			copy_query_range_impl();
 		}
 
 		// Sanity check

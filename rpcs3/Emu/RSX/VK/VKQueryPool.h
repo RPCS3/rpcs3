@@ -47,7 +47,7 @@ namespace vk
 
 		bool check_query_status(u32 index);
 		u32  get_query_result(u32 index);
-		void get_query_result_indirect(vk::command_buffer& cmd, u32 index, VkBuffer dst, VkDeviceSize dst_offset);
+		void get_query_result_indirect(vk::command_buffer& cmd, u32 index, u32 count, VkBuffer dst, VkDeviceSize dst_offset);
 
 		u32 allocate_query(vk::command_buffer& cmd);
 		void free_query(vk::command_buffer&/*cmd*/, u32 index);

@@ -168,11 +168,11 @@ namespace vk
 		return query_info.data;
 	}
 
-	void query_pool_manager::get_query_result_indirect(vk::command_buffer& cmd, u32 index, VkBuffer dst, VkDeviceSize dst_offset)
+	void query_pool_manager::get_query_result_indirect(vk::command_buffer& cmd, u32 index, u32 count, VkBuffer dst, VkDeviceSize dst_offset)
 	{
 		// We're technically supposed to stop any active renderpasses before streaming the results out, but that doesn't matter on IMR hw
 		// On TBDR setups like the apple M series, the stop is required (results are all 0 if you don't flush the RP), but this introduces a very heavy performance loss.
-		vkCmdCopyQueryPoolResults(cmd, *query_slot_status[index].pool, index, 1, dst, dst_offset, 4, VK_QUERY_RESULT_WAIT_BIT);
+		vkCmdCopyQueryPoolResults(cmd, *query_slot_status[index].pool, index, count, dst, dst_offset, 4, VK_QUERY_RESULT_WAIT_BIT);
 	}
 
 	void query_pool_manager::free_query(vk::command_buffer&/*cmd*/, u32 index)
