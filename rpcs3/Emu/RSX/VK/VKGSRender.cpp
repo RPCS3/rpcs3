@@ -2915,11 +2915,11 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 
 		// Range latching. Because of how the query pool manages allocations using a stack, we get an inverse sequential set of handles/indices that we can easily group together.
 		// This drastically boosts performance on some drivers like the NVIDIA proprietary one that seems to have a rather high cost for every individual query transer command.
-		std::pair<u32, u32> query_range = { umax, 0 };
+		struct { u32 first, last; } query_range = { umax, 0 };
 
 		auto copy_query_range_impl = [&]()
 		{
-			const auto count = (query_range.second - query_range.first + 1);
+			const auto count = (query_range.last - query_range.first + 1);
 			m_occlusion_query_manager->get_query_result_indirect(*m_current_command_buffer, query_range.first, count, scratch->value, dst_offset);
 			dst_offset += count * 4;
 		};
@@ -2944,9 +2944,9 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 				}
 
 				// Tail?
-				if ((query_range.second + 1) == index)
+				if ((query_range.last + 1) == index)
 				{
-					query_range.second = index;
+					query_range.last = index;
 					continue;
 				}
 
