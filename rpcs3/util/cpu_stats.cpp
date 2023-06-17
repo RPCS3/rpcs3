@@ -195,6 +195,10 @@ namespace utils
 						}
 					}
 				}
+				else if (PDH_CALC_NEGATIVE_DENOMINATOR == status) // Apparently this is a common uncritical error
+				{
+					perf_log.notice("Failed to get per core cpu usage: %s", pdh_error(status));
+				}
 				else
 				{
 					perf_log.error("Failed to get per core cpu usage: %s", pdh_error(status));
