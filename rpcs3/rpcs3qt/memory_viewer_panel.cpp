@@ -185,6 +185,8 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, std::shared_ptr<CPUDis
 	cbox_img_mode->addItem("ARGB", QVariant::fromValue(color_format::ARGB));
 	cbox_img_mode->addItem("RGBA", QVariant::fromValue(color_format::RGBA));
 	cbox_img_mode->addItem("ABGR", QVariant::fromValue(color_format::ABGR));
+	cbox_img_mode->addItem("G8", QVariant::fromValue(color_format::G8));
+	cbox_img_mode->addItem("G32MAX", QVariant::fromValue(color_format::G32MAX));
 	cbox_img_mode->setCurrentIndex(1); //ARGB
 	hbox_tools_img_mode->addWidget(cbox_img_mode);
 	tools_img_mode->setLayout(hbox_tools_img_mode);
@@ -946,7 +948,7 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, color_format form
 		return;
 	}
 
-	const auto convertedBuffer = new (std::nothrow) u8[memsize];
+	const auto convertedBuffer = new (std::nothrow) u8[memsize / texel_bytes * u64{4}];
 
 	if (!convertedBuffer)
 	{
@@ -1020,6 +1022,47 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, color_format form
 				convertedBuffer[offset + x + 3] = originalBuffer[offset + x + 0];
 			}
 		}
+		break;
+	}
+	case color_format::G8:
+	{
+		const u32 pitch = width * 1;
+		const u32 pitch_new = width * 4;
+		for (u32 y = 0; y < height; y++)
+		{
+			const u32 offset = y * pitch;
+			const u32 offset_new = y * pitch_new;
+			for (u32 x = 0; x < pitch; x++)
+			{
+				const u8 color = originalBuffer[offset + x];
+				convertedBuffer[offset_new + x * 4 + 0] = color;
+				convertedBuffer[offset_new + x * 4 + 1] = color;
+				convertedBuffer[offset_new + x * 4 + 2] = color;
+				convertedBuffer[offset_new + x * 4 + 3] = 255;
+			}
+		}
+		break;
+	}
+	case color_format::G32MAX:
+	{
+		// Special: whitens as 4-byte groups tend to have a higher value, in order to perceive memory contents
+		// May be used to search for instructions or floats for example
+
+		const u32 pitch = width * 4;
+
+		for (u32 y = 0; y < height; y++)
+		{
+			const u32 offset = y * pitch;
+			for (u32 x = 0; x < pitch; x += 4)
+			{
+				const u8 color = std::max({originalBuffer[offset + x + 0], originalBuffer[offset + x + 1], originalBuffer[offset + x + 2], originalBuffer[offset + x + 3]});
+				convertedBuffer[offset + x + 0] = color;
+				convertedBuffer[offset + x + 1] = color;
+				convertedBuffer[offset + x + 2] = color;
+				convertedBuffer[offset + x + 3] = 255;
+			}
+		}
+
 		break;
 	}
 	}

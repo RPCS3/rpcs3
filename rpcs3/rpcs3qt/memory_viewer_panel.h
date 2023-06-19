@@ -57,7 +57,9 @@ public:
 		RGB,
 		ARGB,
 		RGBA,
-		ABGR
+		ABGR,
+		G8,
+		G32MAX
 	};
 	Q_ENUM(color_format)
 
