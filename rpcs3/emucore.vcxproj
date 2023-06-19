@@ -911,6 +911,7 @@
     <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXFragmentTextureMSAAOpsInternal.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXFragmentTextureOps.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXProgramCommon.glsl" />
+    <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXVertexFetch.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXVertexPrologue.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\ShuffleBytes.glsl" />
   </ItemGroup>
