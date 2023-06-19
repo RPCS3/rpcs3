@@ -142,10 +142,19 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, std::shared_ptr<CPUDis
 	hbox_tools_mem_buttons->addWidget(b_fnext);
 	tools_mem_buttons->setLayout(hbox_tools_mem_buttons);
 
+	QGroupBox* tools_mem_refresh = new QGroupBox(tr("Refresh"));
+	QHBoxLayout* hbox_tools_mem_refresh = new QHBoxLayout(this);
+	QPushButton* button_auto_refresh = new QPushButton(QStringLiteral(" "), this);
+	button_auto_refresh->setFixedWidth(20);
+	button_auto_refresh->setAutoDefault(false);
+	hbox_tools_mem_refresh->addWidget(button_auto_refresh);
+	tools_mem_refresh->setLayout(hbox_tools_mem_refresh);
+
 	// Merge Tools: Memory Viewer
 	hbox_tools_mem->addWidget(tools_mem_addr);
 	hbox_tools_mem->addWidget(tools_mem_words);
 	hbox_tools_mem->addWidget(tools_mem_buttons);
+	hbox_tools_mem->addWidget(tools_mem_refresh);
 	tools_mem->setLayout(hbox_tools_mem);
 
 	// Tools: Raw Image Preview Options
@@ -424,6 +433,34 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, std::shared_ptr<CPUDis
 		const int sizex = sb_img_size_x->value();
 		const int sizey = sb_img_size_y->value();
 		ShowImage(this, m_addr, format, sizex, sizey, false);
+	});
+
+	QTimer* auto_refresh_timer = new QTimer(this);
+
+	connect(auto_refresh_timer, &QTimer::timeout, this, [this]()
+	{
+		ShowMemory();
+	});
+
+	connect(button_auto_refresh, &QAbstractButton::clicked, this, [=, this]()
+	{
+		const bool is_checked = button_auto_refresh->text() != " ";
+		if (auto_refresh_timer->isActive() != is_checked)
+		{
+			return;
+		}
+
+		if (is_checked)
+		{
+			button_auto_refresh->setText(QStringLiteral(" "));
+			auto_refresh_timer->stop();
+		}
+		else
+		{
+			button_auto_refresh->setText(reinterpret_cast<const char*>(u8"█"));
+			ShowMemory();
+			auto_refresh_timer->start(16);
+		}
 	});
 
 	if (!m_rsx)
@@ -821,9 +858,14 @@ void memory_viewer_panel::ShowMemory()
 	m_mem_hex->setVisible(m_rowcount != 0);
 	m_mem_ascii->setVisible(m_rowcount != 0);
 
-	m_mem_addr->setText(t_mem_addr_str);
-	m_mem_hex->setText(t_mem_hex_str);
-	m_mem_ascii->setText(t_mem_ascii_str);
+	if (t_mem_addr_str != m_mem_addr->text())
+		m_mem_addr->setText(t_mem_addr_str);
+
+	if (t_mem_hex_str != m_mem_hex->text())
+		m_mem_hex->setText(t_mem_hex_str);
+
+	if (t_mem_ascii_str != m_mem_ascii->text())
+		m_mem_ascii->setText(t_mem_ascii_str);
 
 	auto mask_height = [&](int height)
 	{
