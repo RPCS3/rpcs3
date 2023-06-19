@@ -310,6 +310,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 			"\nKeys Ctrl+C: Copy instruction contents."
 			"\nKeys Ctrl+F: Find thread."
 			"\nKeys Alt+S: Capture SPU images of selected SPU or generalized form when used from PPU."
+			"\nKeys Alt+S: Launch a memory viewer pointed to the current RSX semaphores location when used from RSX."
 			"\nKeys Alt+R: Load last saved SPU state capture."
 			"\nKey D: SPU MFC commands logger, MFC debug setting must be enabled."
 			"\nKey D: Also PPU calling history logger, interpreter and non-zero call history size must be used."
@@ -642,6 +643,17 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 
 			if (modifiers & Qt::AltModifier)
 			{
+				if (cpu->id_type() == 0x55)
+				{
+					if (u32 addr = static_cast<rsx::thread*>(cpu)->label_addr)
+					{
+						// Memory viewer pointing to RSX semaphores
+						idm::make<memory_viewer_handle>(this, m_disasm, addr, make_check_cpu(nullptr));
+					}
+
+					return;
+				}
+
 				if (cpu->id_type() == 1)
 				{
 					new elf_memory_dumping_dialog(pc, m_gui_settings, this);
