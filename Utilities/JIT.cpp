@@ -1505,7 +1505,7 @@ void jit_compiler::add(const std::string& path)
 
 	if (auto object_file = llvm::object::ObjectFile::createObjectFile(*cache))
 	{
-		m_engine->addObjectFile( std::move(*object_file) );
+		m_engine->addObjectFile(llvm::object::OwningBinary<llvm::object::ObjectFile>(std::move(*object_file), std::move(cache)));
 	}
 	else
 	{
