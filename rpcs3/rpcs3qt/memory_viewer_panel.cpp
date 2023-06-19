@@ -898,9 +898,15 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, color_format form
 	}
 
 	const auto originalBuffer  = static_cast<u8*>(this->to_ptr(addr, memsize));
+
+	if (!originalBuffer)
+	{
+		return;
+	}
+
 	const auto convertedBuffer = new (std::nothrow) u8[memsize];
 
-	if (!originalBuffer || !convertedBuffer)
+	if (!convertedBuffer)
 	{
 		// OOM or invalid memory address, give up
 		return;
