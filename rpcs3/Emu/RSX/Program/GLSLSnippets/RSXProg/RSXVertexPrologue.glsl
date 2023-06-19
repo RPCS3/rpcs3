@@ -1,5 +1,6 @@
 R"(
 #ifdef _FORCE_POSITION_INVARIANCE
+// PS3 has shader invariance, but we don't really care about most attributes outside ATTR0
 invariant gl_Position;
 #endif
 
@@ -53,6 +54,5 @@ vec4 apply_zclip_xform(
 	return vec4(pos.x, pos.y, d * pos.w, pos.w);
 }\n
 #endif
-
 
 )"

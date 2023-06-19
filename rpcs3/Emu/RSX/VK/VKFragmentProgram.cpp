@@ -243,6 +243,7 @@ void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	m_shader_props.require_texture_expand = properties.has_exp_tex_op;
 	m_shader_props.require_srgb_to_linear = properties.has_upg;
 	m_shader_props.require_linear_to_srgb = properties.has_pkg;
+	m_shader_props.require_fog_read = properties.in_register_mask & in_fogc;
 	m_shader_props.emulate_coverage_tests = g_cfg.video.antialiasing_level == msaa_level::none;
 	m_shader_props.emulate_shadow_compare = device_props.emulate_depth_compare;
 	m_shader_props.low_precision_tests = device_props.has_low_precision_rounding && !(m_prog.ctrl & RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION);
@@ -255,9 +256,6 @@ void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 
 void VKFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 {
-	if (properties.in_register_mask & in_fogc)
-		program_common::insert_fog_declaration(OS);
-
 	std::set<std::string> output_registers;
 	if (m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS)
 	{
