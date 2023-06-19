@@ -16,6 +16,7 @@ class QComboBox;
 class QLabel;
 class QThread;
 class QHBoxLayout;
+class QKeyEvent;
 
 class cpu_thread;
 class CPUDisAsm;
@@ -43,7 +44,7 @@ enum search_mode : unsigned
 	search_mode_last = 256,
 };
 
-class memory_viewer_panel : public QDialog
+class memory_viewer_panel final : public QDialog
 {
 	Q_OBJECT
 
@@ -112,10 +113,12 @@ private:
 	void* to_ptr(u32 addr, u32 size = 1) const;
 	void SetPC(const uint pc);
 
-	virtual void ShowMemory();
+	void ShowMemory();
 
 	void ShowImage(QWidget* parent, u32 addr, color_format format, u32 width, u32 height, bool flipv) const;
 	u64 OnSearch(std::string wstr, u32 mode);
+
+	void keyPressEvent(QKeyEvent* event) override;
 };
 
 // Lifetime management with IDM
