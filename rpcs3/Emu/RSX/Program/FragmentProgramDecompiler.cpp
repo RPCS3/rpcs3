@@ -1069,7 +1069,7 @@ bool FragmentProgramDecompiler::handle_sct_scb(u32 opcode)
 		SetDst("_builtin_lit($0)");
 		properties.has_lit_op = true;
 		return true;
-	case RSX_FP_OPCODE_LIF: SetDst("$Ty(1.0, $0.y, ($0.y > 0 ? pow(2.0, $0.w) : 0.0), 1.0)", OPFLAGS::op_extern); return true;
+	case RSX_FP_OPCODE_LIF: SetDst("$Ty(1.0, $0.y, ($0.y > 0 ? exp2($0.w) : 0.0), 1.0)", OPFLAGS::op_extern); return true;
 	case RSX_FP_OPCODE_LRP: SetDst("$Ty($2 * (1 - $0) + $1 * $0)", OPFLAGS::skip_type_cast); return true;
 	case RSX_FP_OPCODE_LG2: SetDst("_builtin_log2($0.x).xxxx"); return true;
 	// Pack operations. See https://www.khronos.org/registry/OpenGL/extensions/NV/NV_fragment_program.txt
