@@ -2570,13 +2570,6 @@ std::shared_ptr<utils::serial> Emulator::Kill(bool allow_autoexit, bool savestat
 
 	// Signal threads
 
-	// Stop the replay thread "game" first
-	if (auto thr = g_fxo->try_get<named_thread<rsx::rsx_replay_thread>>())
-	{
-		sys_log.notice("Stopping RSX replay thread...");
-		*thr = thread_state::finished;
-	}
-
 	if (auto rsx = g_fxo->try_get<rsx::thread>())
 	{
 		*static_cast<cpu_thread*>(rsx) = thread_state::aborting;
