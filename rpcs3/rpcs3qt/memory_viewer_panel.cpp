@@ -20,6 +20,7 @@
 #include <QWheelEvent>
 #include <QTimer>
 #include <QThread>
+#include <QKeyEvent>
 
 #include "util/logs.hpp"
 #include "util/asm.hpp"
@@ -886,6 +887,47 @@ void memory_viewer_panel::ShowMemory()
 void memory_viewer_panel::SetPC(const uint pc)
 {
 	m_addr = pc;
+}
+
+void memory_viewer_panel::keyPressEvent(QKeyEvent* event)
+{
+	if (!isActiveWindow())
+	{
+		QDialog::keyPressEvent(event);
+		return;
+	}
+
+	if (event->modifiers() == Qt::ControlModifier)
+	{
+		switch (const auto key = event->key())
+		{
+		case Qt::Key_PageUp:
+		case Qt::Key_PageDown:
+		{
+			scroll(key == Qt::Key_PageDown ? m_rowcount : 0u - m_rowcount);
+			break;
+		}
+		case Qt::Key_F5:
+		{
+			if (event->isAutoRepeat())
+			{
+				break;
+			}
+
+			// Single refresh
+			ShowMemory();
+			break;
+		}
+		case Qt::Key_F:
+		{
+			m_addr_line->setFocus();
+			break;
+		}
+		default: break;
+		}
+	}
+
+	QDialog::keyPressEvent(event);
 }
 
 void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, color_format format, u32 width, u32 height, bool flipv) const
