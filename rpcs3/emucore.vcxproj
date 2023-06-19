@@ -904,6 +904,14 @@
     <None Include="Emu\RSX\Program\GLSLSnippets\GPUDeswizzle.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\OverlayRenderFS.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\OverlayRenderVS.glsl" />
+    <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXDefines2.glsl" />
+    <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXFragmentPrologue.glsl" />
+    <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXFragmentTextureDepthConversion.glsl" />
+    <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXFragmentTextureMSAAOps.glsl" />
+    <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXFragmentTextureMSAAOpsInternal.glsl" />
+    <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXFragmentTextureOps.glsl" />
+    <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXProgramCommon.glsl" />
+    <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXVertexPrologue.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\ShuffleBytes.glsl" />
   </ItemGroup>
   <PropertyGroup Label="UserMacros" />
