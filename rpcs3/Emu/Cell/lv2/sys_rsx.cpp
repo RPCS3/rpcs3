@@ -48,6 +48,17 @@ static void set_rsx_dmactl(rsx::thread* render, u64 get_put)
 		// Unconditional set
 		while (!render->new_get_put.compare_and_swap_test(u64{umax}, get_put))
 		{
+			// Wait for the first store to complete (or be aborted)
+			if (auto cpu = cpu_thread::get_current())
+			{
+				if (cpu->state & cpu_flag::exit)
+				{
+					// Retry
+					cpu->state += cpu_flag::again;
+					return;
+				}
+			}
+
 			utils::pause();
 		}
 
@@ -60,12 +71,13 @@ static void set_rsx_dmactl(rsx::thread* render, u64 get_put)
 		// Wait for the first store to complete (or be aborted)
 		while (render->new_get_put != usz{umax})
 		{
-			if (Emu.IsStopped())
+			if (cpu->state & cpu_flag::exit)
 			{
 				if (render->new_get_put.compare_and_swap_test(get_put, umax))
 				{
 					// Retry
 					cpu->state += cpu_flag::again;
+					return;
 				}
 			}
 
