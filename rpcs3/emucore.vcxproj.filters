@@ -2430,5 +2430,8 @@
     <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXDefines2.glsl">
       <Filter>Emu\GPU\RSX\Program\Snippets\RSXProg</Filter>
     </None>
+    <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXVertexFetch.glsl">
+      <Filter>Emu\GPU\RSX\Program\Snippets\RSXProg</Filter>
+    </None>
   </ItemGroup>
 </Project>
