@@ -484,16 +484,37 @@ void ppu_reservation_fallback(ppu_thread& ppu)
 	}
 }
 
-static std::unordered_map<u32, u32>* s_ppu_toc;
+struct ppu_toc_manager
+{
+	std::unordered_map<u32, u32> toc_map;
+
+	shared_mutex mutex;
+};
 
 static void ppu_check_toc(ppu_thread& ppu, ppu_opcode_t op, be_t<u32>* this_op, ppu_intrp_func* next_fn)
 {
-	// Compare TOC with expected value
-	const auto found = s_ppu_toc->find(ppu.cia);
+	ppu.cia = vm::get_addr(this_op);
 
-	if (ppu.gpr[2] != found->second)
 	{
-		ppu_log.error("Unexpected TOC (0x%x, expected 0x%x)", ppu.gpr[2], found->second);
+		auto& toc_manager = g_fxo->get<ppu_toc_manager>();
+
+		reader_lock lock(toc_manager.mutex);
+
+		auto& ppu_toc = toc_manager.toc_map;
+
+		const auto found = ppu_toc.find(ppu.cia);
+
+		if (found != ppu_toc.end())
+		{
+			const u32 toc = atomic_storage<u32>::load(found->second);
+
+			// Compare TOC with expected value
+			if (toc != umax && ppu.gpr[2] != toc)
+			{
+				ppu_log.error("Unexpected TOC (0x%x, expected 0x%x)", ppu.gpr[2], toc);
+				atomic_storage<u32>::exchange(found->second, u32{umax});
+			}
+		}
 	}
 
 	// Fallback to the interpreter function
@@ -3385,13 +3406,6 @@ extern void ppu_initialize()
 	}
 }
 
-struct ppu_toc_manager
-{
-	std::unordered_map<u32, u32> toc_map;
-
-	shared_mutex mutex;
-};
-
 bool ppu_initialize(const ppu_module& info, bool check_only)
 {
 	if (g_cfg.core.ppu_decoder != ppu_decoder_type::llvm)
@@ -3401,8 +3415,11 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 			return false;
 		}
 
-		// Temporarily
-		s_ppu_toc = &g_fxo->get<ppu_toc_manager>().toc_map;
+		auto& toc_manager = g_fxo->get<ppu_toc_manager>();
+
+		std::lock_guard lock(toc_manager.mutex);
+
+		auto& ppu_toc = toc_manager.toc_map;
 
 		for (const auto& func : info.funcs)
 		{
@@ -3413,7 +3430,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 
 			if (g_cfg.core.ppu_debug && func.size && func.toc != umax)
 			{
-				s_ppu_toc->emplace(func.addr, func.toc);
+				ppu_toc.emplace(func.addr, func.toc);
 				ppu_ref(func.addr) = &ppu_check_toc;
 			}
 		}
