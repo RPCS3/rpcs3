@@ -76,13 +76,6 @@ namespace rsx
 	};
 }
 
-namespace program_common
-{
-	void insert_compare_op(std::ostream& OS, bool low_precision);
-	void insert_compare_op_vector(std::ostream& OS);
-	void insert_fog_declaration(std::ostream& OS, std::string_view vector_type = "vec4", std::string_view input_coord = "fog_c");
-}
-
 namespace glsl
 {
 	struct two_sided_lighting_config
