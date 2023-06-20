@@ -18,20 +18,21 @@ namespace glsl
 	struct shader_properties
 	{
 		glsl::program_domain domain : 3;
+
 		// Applicable in vertex stage
 		bool require_lit_emulation : 1;
+		bool require_explicit_invariance : 1;
+		bool emulate_zclip_transform : 1;
+		bool emulate_depth_clip_only : 1;
 
 		// Only relevant for fragment programs
 		bool fp32_outputs : 1;
 		bool require_wpos : 1;
 		bool require_srgb_to_linear : 1;
 		bool require_linear_to_srgb : 1;
-		bool require_explicit_invariance: 1;
 		bool require_fog_read : 1;
 		bool emulate_coverage_tests : 1;
 		bool emulate_shadow_compare : 1;
-		bool emulate_zclip_transform : 1;
-		bool emulate_depth_clip_only : 1;
 		bool low_precision_tests : 1;
 		bool disable_early_discard : 1;
 		bool supports_native_fp16 : 1;

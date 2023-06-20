@@ -84,7 +84,7 @@ float _texcoord_xform(const in float coord, const in sampler_info params)
 #ifdef _ENABLE_TEX2D
 vec2 _texcoord_xform(const in vec2 coord, const in sampler_info params)
 {
-	float result = fma(
+	vec2 result = fma(
 		coord,
 		vec2(params.scale_x, params.scale_y),
 		vec2(params.bias_x, params.bias_y)
@@ -106,7 +106,7 @@ vec2 _texcoord_xform(const in vec2 coord, const in sampler_info params)
 #ifdef _ENABLE_TEX3D
 vec3 _texcoord_xform(const in vec3 coord, const in sampler_info params)
 {
-	float result = fma(
+	vec3 result = fma(
 		coord,
 		vec3(params.scale_x, params.scale_y, params.scale_z),
 		vec3(params.bias_x, params.bias_y, params.bias_z)
