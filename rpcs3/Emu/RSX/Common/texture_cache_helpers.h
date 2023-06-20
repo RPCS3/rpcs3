@@ -58,6 +58,7 @@ namespace rsx
 		u16 slice_h;
 		u8  bpp;
 		bool swizzled;
+		bool edge_clamped;
 	};
 
 	struct blit_op_result
@@ -501,6 +502,47 @@ namespace rsx
 			return false;
 		}
 
+		template <typename sampled_image_descriptor>
+		void calculate_sample_clip_parameters(
+			sampled_image_descriptor& desc,
+			const position2i& offset,
+			const size2i& desired_dimensions,
+			const size2i& actual_dimensions)
+		{
+			const f32 scale_x = f32(desired_dimensions.width) / actual_dimensions.width;
+			const f32 scale_y = f32(desired_dimensions.height) / actual_dimensions.height;
+			const f32 offset_x = f32(offset.x) / actual_dimensions.width;
+			const f32 offset_y = f32(offset.y) / actual_dimensions.height;
+
+			desc.texcoord_xform.scale[0] *= scale_x;
+			desc.texcoord_xform.scale[1] *= scale_y;
+			desc.texcoord_xform.bias[0] += offset_x;
+			desc.texcoord_xform.bias[1] += offset_y;
+			desc.texcoord_xform.clamp_min[0] = offset_x;
+			desc.texcoord_xform.clamp_min[1] = offset_y;
+			desc.texcoord_xform.clamp_max[0] = offset_x + scale_x;
+			desc.texcoord_xform.clamp_max[1] = offset_y + scale_y;
+			desc.texcoord_xform.clamp = true;
+		}
+
+		template <typename sampled_image_descriptor>
+		void convert_image_copy_to_clip_descriptor(
+			sampled_image_descriptor& desc,
+			const position2i& offset,
+			const size2i& desired_dimensions,
+			const size2i& actual_dimensions,
+			u32 encoded_remap,
+			const texture_channel_remap_t& decoded_remap,
+			bool cyclic_reference)
+		{
+			desc.image_handle = desc.external_subresource_desc.as_viewable()->get_view(encoded_remap, decoded_remap);
+			desc.is_cyclic_reference = cyclic_reference;
+			desc.samples = desc.external_subresource_desc.external_handle->samples();
+			desc.external_subresource_desc = {};
+
+			calculate_sample_clip_parameters(desc, offset, desired_dimensions, actual_dimensions);
+		}
+
 		template <typename sampled_image_descriptor, typename commandbuffer_type, typename render_target_type>
 		sampled_image_descriptor process_framebuffer_resource_fast(commandbuffer_type& cmd,
 			render_target_type texptr,
@@ -557,22 +599,30 @@ namespace rsx
 					ensure(attr.height == 1);
 				}
 
-				bool requires_processing = false;
+				// A GPU operation must be performed on the data before sampling. Implies transfer_read access.
+				bool requires_processing = force_convert;
+				// A GPU clip operation may be performed by combining texture coordinate scaling with a clamp.
+				bool requires_clip = false;
+
 				rsx::surface_access access_type = rsx::surface_access::shader_read;
 
-				if (attr.width != surface_width || attr.height != surface_height || force_convert)
+				if (attr.width != surface_width || attr.height != surface_height)
 				{
-					// A GPU operation must be performed on the data before sampling. Implies transfer_read access
-					requires_processing = true;
+					// If we can get away with clip only, do it
+					if (attr.edge_clamped)
+						requires_clip = true;
+					else
+						requires_processing = true;
 				}
-				else if (surface_is_rop_target && g_cfg.video.strict_rendering_mode)
+
+				if (surface_is_rop_target && g_cfg.video.strict_rendering_mode)
 				{
 					// Framebuffer feedback avoidance. For MSAA, we do not need to make copies; just use the resolve target
 					if (texptr->samples() == 1)
 					{
 						requires_processing = true;
 					}
-					else
+					else if (!requires_processing)
 					{
 						// Select resolve target instead of MSAA image
 						access_type = rsx::surface_access::transfer_read;
@@ -592,8 +642,15 @@ namespace rsx
 
 				texptr->memory_barrier(cmd, access_type);
 				auto viewed_surface = texptr->get_surface(access_type);
-				return { viewed_surface->get_view(encoded_remap, decoded_remap), texture_upload_context::framebuffer_storage,
+				sampled_image_descriptor result = { viewed_surface->get_view(encoded_remap, decoded_remap), texture_upload_context::framebuffer_storage,
 						texptr->format_class(), scale, rsx::texture_dimension_extended::texture_dimension_2d, surface_is_rop_target, viewed_surface->samples() };
+
+				if (requires_clip)
+				{
+					calculate_sample_clip_parameters(result, position2i(0, 0), size2i(attr.width, attr.height), size2i(surface_width, surface_height));
+				}
+
+				return result;
 			}
 
 			texptr->memory_barrier(cmd, rsx::surface_access::transfer_read);

@@ -26,6 +26,7 @@ namespace gl
 		using image_view_type         = gl::texture_view*;
 		using image_storage_type      = gl::texture;
 		using texture_format          = gl::texture::format;
+		using viewable_image_type     = gl::viewable_image*;
 	};
 
 	class cached_texture_section : public rsx::cached_texture_section<gl::cached_texture_section, gl::texture_cache_traits>
@@ -388,7 +389,7 @@ namespace gl
 			return vram_texture->get_view(remap_encoding, remap);
 		}
 
-		gl::texture* get_raw_texture() const
+		gl::viewable_image* get_raw_texture() const
 		{
 			return managed_texture.get();
 		}

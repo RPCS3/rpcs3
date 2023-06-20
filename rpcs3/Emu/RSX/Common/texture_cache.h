@@ -26,6 +26,7 @@ namespace rsx
 		using image_view_type      = typename traits::image_view_type;
 		using image_storage_type   = typename traits::image_storage_type;
 		using texture_format       = typename traits::texture_format;
+		using viewable_image_type  = typename traits::viewable_image_type;
 
 		using predictor_type       = texture_cache_predictor<traits>;
 		using ranged_storage       = rsx::ranged_storage<traits>;
@@ -160,6 +161,11 @@ namespace rsx
 				, y(offset.y)
 			{
 				static_cast<image_section_attributes_t&>(*this) = attr;
+			}
+
+			viewable_image_type as_viewable() const
+			{
+				return static_cast<viewable_image_type>(external_handle);
 			}
 		};
 
@@ -1904,6 +1910,17 @@ namespace rsx
 							auto new_attr = attr;
 							new_attr.gcm_format = gcm_format;
 
+							if (last->get_gcm_format() == attr.gcm_format && attr.edge_clamped)
+							{
+								// Clipped view
+								auto viewed_image = last->get_raw_texture();
+								sampled_image_descriptor result = { viewed_image->get_view(encoded_remap, remap), last->get_context(),
+									viewed_image->format_class(), scale, extended_dimension, false, viewed_image->samples() };
+
+								helpers::calculate_sample_clip_parameters(result, position2i(0, 0), size2i(attr.width, attr.height), size2i(normalized_width, last->get_height()));
+								return result;
+							}
+
 							return { last->get_raw_texture(), deferred_request_command::copy_image_static, new_attr, {},
 									last->get_context(), classify_format(gcm_format), scale, extended_dimension, remap };
 						}
@@ -1912,15 +1929,27 @@ namespace rsx
 					auto result = helpers::merge_cache_resources<sampled_image_descriptor>(
 						cmd, overlapping_fbos, overlapping_locals, attr, scale, extended_dimension, encoded_remap, remap, _pool);
 
+					const bool is_simple_subresource_copy =
+						(result.external_subresource_desc.op == deferred_request_command::copy_image_static) ||
+						(result.external_subresource_desc.op == deferred_request_command::copy_image_dynamic);
+
+					if (is_simple_subresource_copy && attr.edge_clamped)
+					{
+						helpers::convert_image_copy_to_clip_descriptor(
+							result,
+							position2i(result.external_subresource_desc.x, result.external_subresource_desc.y),
+							size2i(result.external_subresource_desc.width, result.external_subresource_desc.width),
+							size2i(result.external_subresource_desc.external_handle->width(), result.external_subresource_desc.external_handle->height()),
+							encoded_remap, remap, false /*FIXME*/);
+
+						return result;
+					}
+
 					if (options.skip_texture_merge)
 					{
-						switch (result.external_subresource_desc.op)
+						if (is_simple_subresource_copy)
 						{
-						case deferred_request_command::copy_image_static:
-						case deferred_request_command::copy_image_dynamic:
 							return result;
-						default:
-							break;
 						}
 
 						return {};
@@ -2146,12 +2175,14 @@ namespace rsx
 				attributes.depth = 1;
 				attributes.height = 1;
 				attributes.slice_h = 1;
+				attributes.edge_clamped = (tex.wrap_s() == rsx::texture_wrap_mode::clamp_to_edge);
 				scale.height = scale.depth = 0.f;
 				subsurface_count = 1;
 				required_surface_height = 1;
 				break;
 			case rsx::texture_dimension_extended::texture_dimension_2d:
 				attributes.depth = 1;
+				attributes.edge_clamped = (tex.wrap_s() == rsx::texture_wrap_mode::clamp_to_edge && tex.wrap_t() == rsx::texture_wrap_mode::clamp_to_edge);
 				scale.depth = 0.f;
 				subsurface_count = options.is_compressed_format? 1 : tex.get_exact_mipmap_count();
 				attributes.slice_h = required_surface_height = attributes.height;
