@@ -18,6 +18,8 @@
 #include <QComboBox>
 #include <QCheckBox>
 #include <QWheelEvent>
+#include <QHoverEvent>
+#include <QMouseEvent>
 #include <QTimer>
 #include <QThread>
 #include <QKeyEvent>
@@ -934,8 +936,25 @@ void memory_viewer_panel::keyPressEvent(QKeyEvent* event)
 
 void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, color_format format, u32 width, u32 height, bool flipv) const
 {
+	u32 texel_bytes = 4;
+
+	switch (format)
+	{
+	case color_format::RGB:
+	{
+		texel_bytes = 3;
+		break;
+	}
+	case color_format::G8:
+	{
+		texel_bytes = 1;
+		break;
+	}
+	default: break;
+	}
+
 	// If exceeds 32-bits it is invalid as well, UINT32_MAX always fails checks
-	const u32 memsize = static_cast<u32>(std::min<u64>(4ull * width * height, u32{umax}));
+	const u32 memsize = utils::mul_saturate<u32>(utils::mul_saturate<u32>(texel_bytes, width), height);
 	if (memsize == 0)
 	{
 		return;
@@ -1084,20 +1103,135 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, color_format form
 		}
 	}
 
-	const QImage image(convertedBuffer, width, height, QImage::Format_ARGB32, [](void* buffer){ delete[] static_cast<u8*>(buffer); }, convertedBuffer);
-	if (image.isNull()) return;
+	std::unique_ptr<QImage> image = std::make_unique<QImage>(convertedBuffer, width, height, QImage::Format_ARGB32, [](void* buffer){ delete[] static_cast<u8*>(buffer); }, convertedBuffer);
+	if (image->isNull()) return;
 
 	QLabel* canvas = new QLabel();
 	canvas->setFixedSize(width, height);
-	canvas->setPixmap(QPixmap::fromImage(image.scaled(width, height, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
+	canvas->setAttribute(Qt::WA_Hover);
+	canvas->setPixmap(QPixmap::fromImage(*image));
 
-	QHBoxLayout* layout = new QHBoxLayout();
+	QLabel* image_title = new QLabel();
+
+	QVBoxLayout* layout = new QVBoxLayout();
 	layout->setContentsMargins(0, 0, 0, 0);
+	layout->addWidget(image_title);
 	layout->addWidget(canvas);
 
-	QDialog* f_image_viewer = new QDialog(parent);
+	struct image_viewer : public QDialog
+	{
+		QLabel* const m_canvas;
+		QLabel* const m_image_title;
+		const std::unique_ptr<QImage> m_image;
+		const u32 m_addr;
+		const int m_addr_scale = 1;
+		const u32 m_pitch;
+		const u32 m_width;
+		const u32 m_height;
+		int m_canvas_scale = 1;
+
+		image_viewer(QWidget* parent, QLabel* canvas, QLabel* image_title, std::unique_ptr<QImage> image, u32 addr, u32 addr_scale, u32 pitch, u32 width, u32 height) noexcept
+			: QDialog(parent)
+			, m_canvas(canvas)
+			, m_image_title(image_title)
+			, m_image(std::move(image))
+			, m_addr(addr)
+			, m_addr_scale(addr_scale)
+			, m_pitch(pitch)
+			, m_width(width)
+			, m_height(height)
+		{
+		}
+
+		bool eventFilter(QObject* object, QEvent* event) override
+		{
+			if (object == m_canvas && (event->type() == QEvent::HoverMove || event->type() == QEvent::HoverEnter || event->type() == QEvent::HoverLeave))
+			{
+				const QPoint xy = static_cast<QHoverEvent*>(event)->pos() / m_canvas_scale;
+				set_window_name_by_coordinates(xy.x(), xy.y());
+				return false;
+			}
+
+			if (object == m_canvas && event->type() == QEvent::MouseButtonDblClick && static_cast<QMouseEvent*>(event)->button() == Qt::LeftButton)
+			{
+				QLineEdit* addr_line = static_cast<memory_viewer_panel*>(parent())->m_addr_line;
+
+				const QPoint xy = static_cast<QMouseEvent*>(event)->pos() / m_canvas_scale;
+				addr_line->setText(qstr(fmt::format("%08x", get_pointed_addr(xy.x(), xy.y()))));
+				Q_EMIT addr_line->returnPressed();
+				close();
+				return false;
+			}
+
+			return QDialog::eventFilter(object, event);
+		}
+
+		u32 get_pointed_addr(u32 x, u32 y) const
+		{
+			return m_addr + m_addr_scale * (y * m_pitch + x) / m_canvas_scale;
+		}
+
+		void set_window_name_by_coordinates(int x, int y)
+		{
+			if (x < 0 || y < 0)
+			{
+				m_image_title->setText(qstr(fmt::format("[-, -]: NA")));
+				return;
+			}
+
+			m_image_title->setText(qstr(fmt::format("[x:%d, y:%d]: 0x%x", x, y, get_pointed_addr(x, y))));
+		}
+
+		void keyPressEvent(QKeyEvent* event) override
+		{
+			if (!isActiveWindow())
+			{
+				QDialog::keyPressEvent(event);
+				return;
+			}
+
+			if (event->modifiers() == Qt::ControlModifier)
+			{
+				switch (const auto key = event->key())
+				{
+				case Qt::Key_Equal: // Also plus
+				case Qt::Key_Plus:
+				case Qt::Key_Minus:
+				{
+					m_canvas_scale = std::clamp(m_canvas_scale + (key == Qt::Key_Minus ? -1 : 1), 1, 5);
+
+					const QSize fixed_size(m_width * m_canvas_scale, m_height * m_canvas_scale);
+
+					// Fast transformation makes it not blurry, does not use bilinear filtering
+					m_canvas->setPixmap(QPixmap::fromImage(m_image->scaled(fixed_size.width(), fixed_size.height(), Qt::KeepAspectRatio, Qt::FastTransformation)));
+
+					m_canvas->setFixedSize(fixed_size);
+
+					QTimer::singleShot(0, this, [this]()
+					{
+						// sizeHint() evaluates properly after events have been processed
+						setFixedSize(sizeHint());
+					});
+
+					break;
+				}
+				}
+			}
+
+			QDialog::keyPressEvent(event);
+		}
+	};
+
+	image_viewer* f_image_viewer = new image_viewer(parent, canvas, image_title, std::move(image), addr, texel_bytes, width, width, height);
+	canvas->installEventFilter(f_image_viewer);
 	f_image_viewer->setWindowTitle(qstr(fmt::format("Raw Image @ 0x%x", addr)));
-	f_image_viewer->setFixedSize(QSize(width, height));
 	f_image_viewer->setLayout(layout);
+	f_image_viewer->setAttribute(Qt::WA_DeleteOnClose);
 	f_image_viewer->show();
+
+	QTimer::singleShot(0, f_image_viewer, [f_image_viewer]()
+	{
+		// sizeHint() evaluates properly after events have been processed
+		f_image_viewer->setFixedSize(f_image_viewer->sizeHint());
+	});
 }
