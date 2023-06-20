@@ -222,8 +222,6 @@ game_list_frame::~game_list_frame()
 	WaitAndAbortRepaintThreads();
 	gui::utils::stop_future_watcher(m_parsing_watcher, true);
 	gui::utils::stop_future_watcher(m_refresh_watcher, true);
-
-	SaveSettings();
 }
 
 void game_list_frame::OnColClicked(int col)
@@ -2226,6 +2224,9 @@ void game_list_frame::FocusAndSelectFirstEntryIfNoneIs()
 
 void game_list_frame::closeEvent(QCloseEvent *event)
 {
+	SaveSettings();
+	m_gui_settings->sync();
+
 	QDockWidget::closeEvent(event);
 	Q_EMIT GameListFrameClosed();
 }
