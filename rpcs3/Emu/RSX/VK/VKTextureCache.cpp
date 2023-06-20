@@ -730,15 +730,18 @@ namespace vk
 		VkImageSubresourceRange dst_range = { dst_aspect, 0, 1, 0, 1 };
 		vk::change_image_layout(cmd, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, dst_range);
 
-		if (!(dst_aspect & VK_IMAGE_ASPECT_DEPTH_BIT))
+		if (sections_to_copy[0].dst_w != width || sections_to_copy[0].dst_h != height)
 		{
-			VkClearColorValue clear = {};
-			vkCmdClearColorImage(cmd, image->value, image->current_layout, &clear, 1, &dst_range);
-		}
-		else
-		{
-			VkClearDepthStencilValue clear = { 1.f, 0 };
-			vkCmdClearDepthStencilImage(cmd, image->value, image->current_layout, &clear, 1, &dst_range);
+			if (!(dst_aspect & VK_IMAGE_ASPECT_DEPTH_BIT))
+			{
+				VkClearColorValue clear = {};
+				vkCmdClearColorImage(cmd, image->value, image->current_layout, &clear, 1, &dst_range);
+			}
+			else
+			{
+				VkClearDepthStencilValue clear = { 1.f, 0 };
+				vkCmdClearDepthStencilImage(cmd, image->value, image->current_layout, &clear, 1, &dst_range);
+			}
 		}
 
 		copy_transfer_regions_impl(cmd, image, sections_to_copy);
