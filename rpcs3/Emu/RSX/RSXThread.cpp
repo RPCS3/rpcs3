@@ -2296,16 +2296,18 @@ namespace rsx
 
 			if (tex.enabled() && sampler_descriptors[i]->format_class != RSX_FORMAT_CLASS_UNDEFINED)
 			{
-				current_fragment_program.texture_params[i].scale[0] = sampler_descriptors[i]->scale_x;
-				current_fragment_program.texture_params[i].scale[1] = sampler_descriptors[i]->scale_y;
-				current_fragment_program.texture_params[i].scale[2] = sampler_descriptors[i]->scale_z;
-				current_fragment_program.texture_params[i].subpixel_bias = 0.f;
+				std::memcpy(current_fragment_program.texture_params[i].scale, sampler_descriptors[i]->texcoord_xform.scale, 10 * sizeof(float));
 				current_fragment_program.texture_params[i].remap = tex.remap();
 
 				m_graphics_state |= rsx::pipeline_state::fragment_texture_state_dirty;
 
 				u32 texture_control = 0;
 				current_fp_texture_state.set_dimension(sampler_descriptors[i]->image_type, i);
+
+				if (sampler_descriptors[i]->texcoord_xform.clamp)
+				{
+					texture_control |= (1 << rsx::texture_control_bits::CLAMP_TEXCOORDS_BIT);
+				}
 
 				if (tex.alpha_kill_enabled())
 				{
@@ -2324,7 +2326,11 @@ namespace rsx
 					{
 						// Subpixel offset so that (X + bias) * scale will round correctly.
 						// This is done to work around fdiv precision issues in some GPUs (NVIDIA)
-						current_fragment_program.texture_params[i].subpixel_bias = 0.01f;
+						// We apply the simplification where (x + bias) * z = xz + zbias here.
+						const auto subpixel_bias = 0.01f;
+						current_fragment_program.texture_params[i].bias[0] += (subpixel_bias * current_fragment_program.texture_params[i].scale[0]);
+						current_fragment_program.texture_params[i].bias[1] += (subpixel_bias * current_fragment_program.texture_params[i].scale[1]);
+						current_fragment_program.texture_params[i].bias[2] += (subpixel_bias * current_fragment_program.texture_params[i].scale[2]);
 					}
 				}
 

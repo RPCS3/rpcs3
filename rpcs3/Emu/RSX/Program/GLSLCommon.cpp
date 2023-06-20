@@ -119,10 +119,10 @@ namespace glsl
 			{ "VTX_FMT_SNORM16", RSX_VERTEX_BASE_TYPE_SNORM16 },
 			{ "VTX_FMT_FLOAT32", RSX_VERTEX_BASE_TYPE_FLOAT },
 			{ "VTX_FMT_FLOAT16", RSX_VERTEX_BASE_TYPE_HALF_FLOAT },
-			{ "VTX_FMT_UNORM8", RSX_VERTEX_BASE_TYPE_UNORM8 },
-			{ "VTX_FMT_SINT16", RSX_VERTEX_BASE_TYPE_SINT16 },
-			{ "VTX_FMT_COMP32", RSX_VERTEX_BASE_TYPE_CMP32 },
-			{ "VTX_FMT_UINT8", RSX_VERTEX_BASE_TYPE_UINT8 }
+			{ "VTX_FMT_UNORM8 ", RSX_VERTEX_BASE_TYPE_UNORM8 },
+			{ "VTX_FMT_SINT16 ", RSX_VERTEX_BASE_TYPE_SINT16 },
+			{ "VTX_FMT_COMP32 ", RSX_VERTEX_BASE_TYPE_CMP32 },
+			{ "VTX_FMT_UINT8  ", RSX_VERTEX_BASE_TYPE_UINT8 }
 		});
 
 		// For intel GPUs which cannot access vectors in indexed mode (driver bug? or glsl version too low?)
@@ -258,17 +258,17 @@ namespace glsl
 			OS << "// ROP control\n";
 			program_common::define_glsl_constants<rsx::ROP_control_bits>(OS,
 			{
-				{ "ALPHA_TEST_ENABLE_BIT        ", rsx::ROP_control_bits::ALPHA_TEST_ENABLE_BIT },
-				{ "SRGB_FRAMEBUFFER_BIT         ", rsx::ROP_control_bits::SRGB_FRAMEBUFFER_BIT },
-				{ "ALPHA_TO_COVERAGE_ENABLE_BIT ", rsx::ROP_control_bits::ALPHA_TO_COVERAGE_ENABLE_BIT },
-				{ "MSAA_WRITE_ENABLE_BIT        ", rsx::ROP_control_bits::MSAA_WRITE_ENABLE_BIT },
-				{ "INT_FRAMEBUFFER_BIT          ", rsx::ROP_control_bits::INT_FRAMEBUFFER_BIT },
-				{ "POLYGON_STIPPLE_ENABLE_BIT   ", rsx::ROP_control_bits::POLYGON_STIPPLE_ENABLE_BIT },
-				{ "ALPHA_TEST_FUNC_OFFSET       ", rsx::ROP_control_bits::ALPHA_FUNC_OFFSET },
-				{ "ALPHA_TEST_FUNC_LENGTH       ", rsx::ROP_control_bits::ALPHA_FUNC_NUM_BITS },
-				{ "MSAA_SAMPLE_CTRL_OFFSET      ", rsx::ROP_control_bits::MSAA_SAMPLE_CTRL_OFFSET },
-				{ "MSAA_SAMPLE_CTRL_LENGTH      ", rsx::ROP_control_bits::MSAA_SAMPLE_CTRL_NUM_BITS },
-				{ "ROP_CMD_MASK                 ", rsx::ROP_control_bits::ROP_CMD_MASK }
+				{ "ALPHA_TEST_ENABLE_BIT       ", rsx::ROP_control_bits::ALPHA_TEST_ENABLE_BIT },
+				{ "SRGB_FRAMEBUFFER_BIT        ", rsx::ROP_control_bits::SRGB_FRAMEBUFFER_BIT },
+				{ "ALPHA_TO_COVERAGE_ENABLE_BIT", rsx::ROP_control_bits::ALPHA_TO_COVERAGE_ENABLE_BIT },
+				{ "MSAA_WRITE_ENABLE_BIT       ", rsx::ROP_control_bits::MSAA_WRITE_ENABLE_BIT },
+				{ "INT_FRAMEBUFFER_BIT         ", rsx::ROP_control_bits::INT_FRAMEBUFFER_BIT },
+				{ "POLYGON_STIPPLE_ENABLE_BIT  ", rsx::ROP_control_bits::POLYGON_STIPPLE_ENABLE_BIT },
+				{ "ALPHA_TEST_FUNC_OFFSET      ", rsx::ROP_control_bits::ALPHA_FUNC_OFFSET },
+				{ "ALPHA_TEST_FUNC_LENGTH      ", rsx::ROP_control_bits::ALPHA_FUNC_NUM_BITS },
+				{ "MSAA_SAMPLE_CTRL_OFFSET     ", rsx::ROP_control_bits::MSAA_SAMPLE_CTRL_OFFSET },
+				{ "MSAA_SAMPLE_CTRL_LENGTH     ", rsx::ROP_control_bits::MSAA_SAMPLE_CTRL_NUM_BITS },
+				{ "ROP_CMD_MASK                ", rsx::ROP_control_bits::ROP_CMD_MASK }
 			});
 
 			if (props.fp32_outputs || !props.supports_native_fp16)
@@ -343,12 +343,12 @@ namespace glsl
 		{
 			program_common::define_glsl_constants<rsx::fog_mode>(OS,
 			{
-				{ "FOG_LINEAR", rsx::fog_mode::linear },
-				{ "FOG_EXP", rsx::fog_mode::exponential },
-				{ "FOG_EXP2", rsx::fog_mode::exponential2 },
+				{ "FOG_LINEAR    ", rsx::fog_mode::linear },
+				{ "FOG_EXP       ", rsx::fog_mode::exponential },
+				{ "FOG_EXP2      ", rsx::fog_mode::exponential2 },
 				{ "FOG_LINEAR_ABS", rsx::fog_mode::linear_abs },
-				{ "FOG_EXP_ABS", rsx::fog_mode::exponential_abs },
-				{ "FOG_EXP2_ABS", rsx::fog_mode::exponential2_abs },
+				{ "FOG_EXP_ABS   ", rsx::fog_mode::exponential_abs },
+				{ "FOG_EXP2_ABS  ", rsx::fog_mode::exponential2_abs },
 			});
 
 			enabled_options.push_back("_ENABLE_FOG_READ");
@@ -365,25 +365,26 @@ namespace glsl
 		if (props.require_texture_ops)
 		{
 			// Declare special texture control flags
-			OS << "#define GAMMA_R_MASK  (1 << " << rsx::texture_control_bits::GAMMA_R << ")\n";
-			OS << "#define GAMMA_G_MASK  (1 << " << rsx::texture_control_bits::GAMMA_G << ")\n";
-			OS << "#define GAMMA_B_MASK  (1 << " << rsx::texture_control_bits::GAMMA_B << ")\n";
-			OS << "#define GAMMA_A_MASK  (1 << " << rsx::texture_control_bits::GAMMA_A << ")\n";
-			OS << "#define EXPAND_R_MASK (1 << " << rsx::texture_control_bits::EXPAND_R << ")\n";
-			OS << "#define EXPAND_G_MASK (1 << " << rsx::texture_control_bits::EXPAND_G << ")\n";
-			OS << "#define EXPAND_B_MASK (1 << " << rsx::texture_control_bits::EXPAND_B << ")\n";
-			OS << "#define EXPAND_A_MASK (1 << " << rsx::texture_control_bits::EXPAND_A << ")\n\n";
+			program_common::define_glsl_constants<rsx::texture_control_bits>(OS,
+			{
+				{ "GAMMA_R_BIT " , rsx::texture_control_bits::GAMMA_R },
+				{ "GAMMA_G_BIT " , rsx::texture_control_bits::GAMMA_G },
+				{ "GAMMA_B_BIT " , rsx::texture_control_bits::GAMMA_B },
+				{ "GAMMA_A_BIT " , rsx::texture_control_bits::GAMMA_A },
+				{ "EXPAND_R_BIT" , rsx::texture_control_bits::EXPAND_R },
+				{ "EXPAND_G_BIT" , rsx::texture_control_bits::EXPAND_G },
+				{ "EXPAND_B_BIT" , rsx::texture_control_bits::EXPAND_B },
+				{ "EXPAND_A_BIT" , rsx::texture_control_bits::EXPAND_A },
 
-			OS << "#define ALPHAKILL     " << rsx::texture_control_bits::ALPHAKILL << "\n";
-			OS << "#define RENORMALIZE   " << rsx::texture_control_bits::RENORMALIZE << "\n";
-			OS << "#define DEPTH_FLOAT   " << rsx::texture_control_bits::DEPTH_FLOAT << "\n";
-			OS << "#define DEPTH_COMPARE " << rsx::texture_control_bits::DEPTH_COMPARE_OP << "\n";
-			OS << "#define FILTERED_MAG_BIT  " << rsx::texture_control_bits::FILTERED_MAG << "\n";
-			OS << "#define FILTERED_MIN_BIT  " << rsx::texture_control_bits::FILTERED_MIN << "\n";
-			OS << "#define INT_COORDS_BIT    " << rsx::texture_control_bits::UNNORMALIZED_COORDS << "\n";
-			OS << "#define GAMMA_CTRL_MASK  (GAMMA_R_MASK|GAMMA_G_MASK|GAMMA_B_MASK|GAMMA_A_MASK)\n";
-			OS << "#define SIGN_EXPAND_MASK (EXPAND_R_MASK|EXPAND_G_MASK|EXPAND_B_MASK|EXPAND_A_MASK)\n";
-			OS << "#define FILTERED_MASK    (FILTERED_MAG_BIT|FILTERED_MIN_BIT)\n\n";
+				{ "ALPHAKILL    ", rsx::texture_control_bits::ALPHAKILL },
+				{ "RENORMALIZE  ", rsx::texture_control_bits::RENORMALIZE },
+				{ "DEPTH_FLOAT  ", rsx::texture_control_bits::DEPTH_FLOAT },
+				{ "DEPTH_COMPARE", rsx::texture_control_bits::DEPTH_COMPARE_OP },
+				{ "FILTERED_MAG_BIT", rsx::texture_control_bits::FILTERED_MAG },
+				{ "FILTERED_MIN_BIT", rsx::texture_control_bits::FILTERED_MIN },
+				{ "INT_COORDS_BIT  ", rsx::texture_control_bits::UNNORMALIZED_COORDS },
+				{ "CLAMP_COORDS_BIT", rsx::texture_control_bits::CLAMP_TEXCOORDS_BIT }
+			});
 
 			if (props.require_texture_expand)
 			{
@@ -393,6 +394,26 @@ namespace glsl
 			if (props.emulate_shadow_compare)
 			{
 				enabled_options.push_back("_EMULATED_TEXSHADOW");
+			}
+
+			if (props.require_tex_shadow_ops)
+			{
+				enabled_options.push_back("_ENABLE_SHADOW");
+			}
+
+			if (props.require_tex1D_ops)
+			{
+				enabled_options.push_back("_ENABLE_TEX1D");
+			}
+
+			if (props.require_tex2D_ops)
+			{
+				enabled_options.push_back("_ENABLE_TEX2D");
+			}
+
+			if (props.require_tex3D_ops)
+			{
+				enabled_options.push_back("_ENABLE_TEX3D");
 			}
 
 			program_common::define_glsl_switches(OS, enabled_options);

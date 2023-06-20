@@ -238,7 +238,7 @@ void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	m_shader_props.require_depth_conversion = properties.redirected_sampler_mask != 0;
 	m_shader_props.require_wpos = !!(properties.in_register_mask & in_wpos);
 	m_shader_props.require_texture_ops = properties.has_tex_op;
-	m_shader_props.require_shadow_ops = properties.shadow_sampler_mask != 0;
+	m_shader_props.require_tex_shadow_ops = properties.shadow_sampler_mask != 0;
 	m_shader_props.require_msaa_ops = m_prog.texture_state.multisampled_textures != 0;
 	m_shader_props.require_texture_expand = properties.has_exp_tex_op;
 	m_shader_props.require_srgb_to_linear = properties.has_upg;
@@ -250,6 +250,9 @@ void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	m_shader_props.disable_early_discard = vk::get_driver_vendor() != vk::driver_vendor::NVIDIA;
 	m_shader_props.supports_native_fp16 = device_props.has_native_half_support;
 	m_shader_props.ROP_output_rounding = vk::get_driver_vendor() == vk::driver_vendor::NVIDIA;
+	m_shader_props.require_tex1D_ops = properties.has_tex1D;
+	m_shader_props.require_tex2D_ops = properties.has_tex2D;
+	m_shader_props.require_tex3D_ops = properties.has_tex3D;
 
 	glsl::insert_glsl_legacy_function(OS, m_shader_props);
 }
