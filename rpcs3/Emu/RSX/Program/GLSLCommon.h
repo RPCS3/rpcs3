@@ -29,6 +29,7 @@ namespace rsx
 		FILTERED_MAG,
 		FILTERED_MIN,
 		UNNORMALIZED_COORDS,
+		CLAMP_TEXCOORDS_BIT,
 
 		GAMMA_CTRL_MASK = (1 << GAMMA_R) | (1 << GAMMA_G) | (1 << GAMMA_B) | (1 << GAMMA_A),
 		EXPAND_MASK = (1 << EXPAND_R) | (1 << EXPAND_G) | (1 << EXPAND_B) | (1 << EXPAND_A),

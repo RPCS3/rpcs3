@@ -179,11 +179,16 @@ namespace rsx
 				upload_context = ctx;
 				format_class = ftype;
 				is_cyclic_reference = cyclic_reference;
-				scale_x = scale.width;
-				scale_y = scale.height;
-				scale_z = scale.depth;
 				image_type = type;
 				samples = msaa_samples;
+
+				texcoord_xform.scale[0] = scale.width;
+				texcoord_xform.scale[1] = scale.height;
+				texcoord_xform.scale[2] = scale.depth;
+				texcoord_xform.bias[0] = 0.;
+				texcoord_xform.bias[1] = 0.;
+				texcoord_xform.bias[2] = 0.;
+				texcoord_xform.clamp = false;
 			}
 
 			sampled_image_descriptor(image_resource_type external_handle, deferred_request_command reason,
@@ -196,10 +201,15 @@ namespace rsx
 				image_handle = 0;
 				upload_context = ctx;
 				format_class = ftype;
-				scale_x = scale.width;
-				scale_y = scale.height;
-				scale_z = scale.depth;
 				image_type = type;
+
+				texcoord_xform.scale[0] = scale.width;
+				texcoord_xform.scale[1] = scale.height;
+				texcoord_xform.scale[2] = scale.depth;
+				texcoord_xform.bias[0] = 0.;
+				texcoord_xform.bias[1] = 0.;
+				texcoord_xform.bias[2] = 0.;
+				texcoord_xform.clamp = false;
 			}
 
 			void simplify()

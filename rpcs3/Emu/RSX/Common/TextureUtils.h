@@ -133,9 +133,17 @@ namespace rsx
 		u8 samples = 1;
 		u32 ref_address = 0;
 		u64 surface_cache_tag = 0;
-		f32 scale_x = 1.f;
-		f32 scale_y = 1.f;
-		f32 scale_z = 1.f;
+
+#pragma pack(push, 1)
+		struct
+		{
+			f32 scale[3];
+			f32 bias[3];
+			f32 clamp_min[2];
+			f32 clamp_max[2];
+			bool clamp = false;
+		} texcoord_xform;
+#pragma pack(pop)
 
 		virtual ~sampled_image_descriptor_base() = default;
 		virtual u32 encoded_component_map() const = 0;

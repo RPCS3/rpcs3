@@ -253,15 +253,19 @@ std::string FragmentProgramDecompiler::AddTex()
 	switch (m_prog.get_texture_dimension(dst.tex_num))
 	{
 	case rsx::texture_dimension_extended::texture_dimension_1d:
+		properties.has_tex1D = true;
 		sampler = "sampler1D";
 		break;
 	case rsx::texture_dimension_extended::texture_dimension_cubemap:
+		properties.has_tex3D = true;
 		sampler = "samplerCube";
 		break;
 	case rsx::texture_dimension_extended::texture_dimension_2d:
+		properties.has_tex2D = true;
 		sampler = "sampler2D";
 		break;
 	case rsx::texture_dimension_extended::texture_dimension_3d:
+		properties.has_tex3D = true;
 		sampler = "sampler3D";
 		break;
 	}
