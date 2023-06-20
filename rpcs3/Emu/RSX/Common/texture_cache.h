@@ -218,11 +218,15 @@ namespace rsx
 				texcoord_xform.clamp = false;
 			}
 
-			bool section_fills_target(const copy_region_descriptor& cpy) const
+			inline bool section_fills_target(const copy_region_descriptor& cpy) const
 			{
 				return cpy.dst_x == 0 && cpy.dst_y == 0 &&
-					cpy.dst_w == external_subresource_desc.width && cpy.dst_h == external_subresource_desc.height &&
-					cpy.src_w == cpy.dst_w && cpy.src_h == cpy.dst_h;
+					cpy.dst_w == external_subresource_desc.width && cpy.dst_h == external_subresource_desc.height;
+			}
+
+			inline bool section_is_transfer_only(const copy_region_descriptor& cpy) const
+			{
+				return cpy.src_w == cpy.dst_w && cpy.src_h == cpy.dst_h;
 			}
 
 			void simplify()
@@ -256,12 +260,21 @@ namespace rsx
 				// Optimizations in the straightforward methods copy_image_static and copy_image_dynamic make them preferred over the atlas method
 				if (sections.size() == 1 && section_fills_target(sections[0]))
 				{
-					// Change the command to copy_image_static
 					const auto cpy = sections[0];
-					external_subresource_desc.external_handle = cpy.src;
-					external_subresource_desc.x = cpy.src_x;
-					external_subresource_desc.y = cpy.src_y;
-					external_subresource_desc.op = deferred_request_command::copy_image_static;
+					if (section_is_transfer_only(cpy))
+					{
+						// Change the command to copy_image_static
+						external_subresource_desc.external_handle = cpy.src;
+						external_subresource_desc.x = cpy.src_x;
+						external_subresource_desc.y = cpy.src_y;
+						external_subresource_desc.op = deferred_request_command::copy_image_static;
+					}
+					else
+					{
+						// Blit op is a semantic variant of the copy and atlas ops.
+						// We can simply reuse the atlas handler for this for now, but this allows simplification.
+						external_subresource_desc.op = deferred_request_command::blit_image_static;
+					}
 				}
 			}
 
@@ -1693,6 +1706,7 @@ namespace rsx
 				break;
 			}
 			case deferred_request_command::atlas_gather:
+			case deferred_request_command::blit_image_static:
 			{
 				result = generate_atlas_from_images(cmd, desc.gcm_format, desc.width, desc.height, desc.sections_to_copy, desc.remap);
 				break;
