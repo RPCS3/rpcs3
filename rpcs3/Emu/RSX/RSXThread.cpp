@@ -2296,7 +2296,7 @@ namespace rsx
 
 			if (tex.enabled() && sampler_descriptors[i]->format_class != RSX_FORMAT_CLASS_UNDEFINED)
 			{
-				std::memcpy(current_fragment_program.texture_params[i].scale, sampler_descriptors[i]->texcoord_xform.scale, 10 * sizeof(float));
+				std::memcpy(current_fragment_program.texture_params[i].scale, sampler_descriptors[i]->texcoord_xform.scale, 6 * sizeof(float));
 				current_fragment_program.texture_params[i].remap = tex.remap();
 
 				m_graphics_state |= rsx::pipeline_state::fragment_texture_state_dirty;
@@ -2306,6 +2306,7 @@ namespace rsx
 
 				if (sampler_descriptors[i]->texcoord_xform.clamp)
 				{
+					std::memcpy(current_fragment_program.texture_params[i].clamp_min, sampler_descriptors[i]->texcoord_xform.clamp_min, 4 * sizeof(float));
 					texture_control |= (1 << rsx::texture_control_bits::CLAMP_TEXCOORDS_BIT);
 				}
 
