@@ -1972,16 +1972,29 @@ namespace rsx
 
 					const bool is_simple_subresource_copy =
 						(result.external_subresource_desc.op == deferred_request_command::copy_image_static) ||
-						(result.external_subresource_desc.op == deferred_request_command::copy_image_dynamic);
+						(result.external_subresource_desc.op == deferred_request_command::copy_image_dynamic) ||
+						(result.external_subresource_desc.op == deferred_request_command::blit_image_static);
 
+					// FIXME: We need to check if the formats are compatible here!
 					if (is_simple_subresource_copy && attr.edge_clamped)
 					{
-						helpers::convert_image_copy_to_clip_descriptor(
-							result,
-							position2i(result.external_subresource_desc.x, result.external_subresource_desc.y),
-							size2i(result.external_subresource_desc.width, result.external_subresource_desc.width),
-							size2i(result.external_subresource_desc.external_handle->width(), result.external_subresource_desc.external_handle->height()),
-							encoded_remap, remap, false /*FIXME*/);
+						if (result.external_subresource_desc.op != deferred_request_command::blit_image_static) [[ likely ]]
+						{
+							helpers::convert_image_copy_to_clip_descriptor(
+								result,
+								position2i(result.external_subresource_desc.x, result.external_subresource_desc.y),
+								size2i(result.external_subresource_desc.width, result.external_subresource_desc.height),
+								size2i(result.external_subresource_desc.external_handle->width(), result.external_subresource_desc.external_handle->height()),
+								encoded_remap, remap, false /* FIXME */);
+						}
+						else
+						{
+							helpers::convert_image_blit_to_clip_descriptor(
+								result,
+								encoded_remap,
+								remap,
+								false /* FIXME */);
+						}
 
 						return result;
 					}
