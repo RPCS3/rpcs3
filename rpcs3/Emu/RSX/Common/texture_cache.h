@@ -218,23 +218,50 @@ namespace rsx
 				texcoord_xform.clamp = false;
 			}
 
+			bool section_fills_target(const copy_region_descriptor& cpy) const
+			{
+				return cpy.dst_x == 0 && cpy.dst_y == 0 &&
+					cpy.dst_w == external_subresource_desc.width && cpy.dst_h == external_subresource_desc.height &&
+					cpy.src_w == cpy.dst_w && cpy.src_h == cpy.dst_h;
+			}
+
 			void simplify()
 			{
-				// Optimizations in the straightforward methods copy_image_static and copy_image_dynamic make them preferred over the atlas method
-				if (external_subresource_desc.op == deferred_request_command::atlas_gather &&
-					external_subresource_desc.sections_to_copy.size() == 1)
+				if (external_subresource_desc.op != deferred_request_command::atlas_gather)
 				{
-					// Check if the subresource fills the target, if so, change the command to copy_image_static
-					const auto &cpy = external_subresource_desc.sections_to_copy.front();
-					if (cpy.dst_x == 0 && cpy.dst_y == 0 &&
-						cpy.dst_w == external_subresource_desc.width && cpy.dst_h == external_subresource_desc.height &&
-						cpy.src_w == cpy.dst_w && cpy.src_h == cpy.dst_h)
+					// Only atlas simplification supported for now
+					return;
+				}
+
+				auto& sections = external_subresource_desc.sections_to_copy;
+				if (sections.size() > 1)
+				{
+					// GPU image copies are expensive, cull unnecessary transfers if possible
+					for (auto idx = sections.size() - 1; idx >= 1; idx--)
 					{
-						external_subresource_desc.external_handle = cpy.src;
-						external_subresource_desc.x = cpy.src_x;
-						external_subresource_desc.y = cpy.src_y;
-						external_subresource_desc.op = deferred_request_command::copy_image_static;
+						if (section_fills_target(sections[idx]))
+						{
+							const auto remaining = sections.size() - idx;
+							std::memcpy(
+								sections.data(),
+								&sections[idx],
+								remaining * sizeof(sections[0])
+							);
+							sections.resize(remaining);
+							break;
+						}
 					}
+				}
+
+				// Optimizations in the straightforward methods copy_image_static and copy_image_dynamic make them preferred over the atlas method
+				if (sections.size() == 1 && section_fills_target(sections[0]))
+				{
+					// Change the command to copy_image_static
+					const auto cpy = sections[0];
+					external_subresource_desc.external_handle = cpy.src;
+					external_subresource_desc.x = cpy.src_x;
+					external_subresource_desc.y = cpy.src_y;
+					external_subresource_desc.op = deferred_request_command::copy_image_static;
 				}
 			}
 
