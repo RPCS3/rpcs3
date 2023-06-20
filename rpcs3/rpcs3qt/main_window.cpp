@@ -109,7 +109,6 @@ main_window::main_window(std::shared_ptr<gui_settings> gui_settings, std::shared
 
 main_window::~main_window()
 {
-	SaveWindowState();
 }
 
 /* An init method is used so that RPCS3App can create the necessary connects before calling init (specifically the stylesheet connect).
@@ -1667,6 +1666,8 @@ void main_window::SaveWindowState() const
 	m_game_list_frame->SaveSettings();
 	// Save splitter state
 	m_debugger_frame->SaveSettings();
+
+	m_gui_settings->sync();
 }
 
 void main_window::RepaintThumbnailIcons()
@@ -3204,6 +3205,7 @@ void main_window::closeEvent(QCloseEvent* closeEvent)
 		Emu.GracefulShutdown(false);
 	}
 
+	SaveWindowState();
 	Emu.Quit(true);
 }
 

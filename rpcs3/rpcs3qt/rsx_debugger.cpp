@@ -267,6 +267,7 @@ void rsx_debugger::closeEvent(QCloseEvent* event)
 
 	m_gui_settings->SetValue(gui::rsx_states, states);
 	m_gui_settings->SetValue(gui::rsx_geometry, saveGeometry());
+	m_gui_settings->sync();
 
 	QDialog::closeEvent(event);
 }

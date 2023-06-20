@@ -151,11 +151,18 @@ patch_manager_dialog::patch_manager_dialog(std::shared_ptr<gui_settings> gui_set
 	download_update(true, false);
 }
 
-patch_manager_dialog::~patch_manager_dialog()
+void patch_manager_dialog::closeEvent(QCloseEvent* event)
 {
 	// Save gui settings
 	m_gui_settings->SetValue(gui::pm_geometry, saveGeometry());
 	m_gui_settings->SetValue(gui::pm_splitter_state, ui->splitter->saveState());
+	m_gui_settings->sync();
+
+	QDialog::closeEvent(event);
+}
+
+patch_manager_dialog::~patch_manager_dialog()
+{
 }
 
 int patch_manager_dialog::exec()
