@@ -544,6 +544,35 @@ namespace rsx
 			calculate_sample_clip_parameters(desc, offset, desired_dimensions, actual_dimensions);
 		}
 
+		template <typename sampled_image_descriptor>
+		void convert_image_blit_to_clip_descriptor(
+			sampled_image_descriptor& desc,
+			u32 encoded_remap,
+			const texture_channel_remap_t& decoded_remap,
+			bool cyclic_reference)
+		{
+			const auto& section = desc.external_subresource_desc.sections_to_copy[0];
+
+			// Our "desired" output is the source window, and the "actual" output is the real size
+			const auto aa_scale_x = section.src->samples() % 2;
+			const auto aa_scale_y = section.src->samples() / 2;
+			const auto surface_width = section.src->width() * aa_scale_x;
+			const auto surface_height = section.src->height() * aa_scale_y;
+
+			// First, we convert this descriptor to a copy descriptor
+			desc.external_subresource_desc.external_handle = section.src;
+
+			// Now apply conversion
+			convert_image_copy_to_clip_descriptor(
+				desc,
+				position2i(section.src_x, section.src_y),
+				size2i(section.src_w, section.src_h),
+				size2i(surface_width, surface_height),
+				encoded_remap,
+				decoded_remap,
+				cyclic_reference);
+		}
+
 		template <typename sampled_image_descriptor, typename commandbuffer_type, typename render_target_type>
 		sampled_image_descriptor process_framebuffer_resource_fast(commandbuffer_type& cmd,
 			render_target_type texptr,
