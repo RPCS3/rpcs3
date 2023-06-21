@@ -191,9 +191,23 @@ namespace vk
 
 		src->pop_layout(cmd);
 
+		VkMemoryBarrier2KHR copy_memory_barrier = {
+			.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2_KHR,
+			.pNext = nullptr,
+			.srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT_KHR,
+			.srcAccessMask = VK_ACCESS_2_MEMORY_READ_BIT_KHR | VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
+			.dstStageMask = VK_PIPELINE_STAGE_2_NONE_KHR,
+			.dstAccessMask = 0
+		};
+
 		// Create event object for this transfer and queue signal op
 		dma_fence = std::make_unique<vk::event>(*m_device, sync_domain::any);
-		dma_fence->signal(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT);
+		dma_fence->signal(cmd,
+		{
+			.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR,
+			.memoryBarrierCount = 1,
+			.pMemoryBarriers = &copy_memory_barrier
+		});
 
 		// Set cb flag for queued dma operations
 		cmd.set_flag(vk::command_buffer::cb_has_dma_transfer);
