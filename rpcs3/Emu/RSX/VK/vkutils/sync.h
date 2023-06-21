@@ -9,6 +9,7 @@
 namespace vk
 {
 	class command_buffer;
+	class image;
 
 	enum class sync_domain
 	{
@@ -54,20 +55,18 @@ namespace vk
 
 	class event
 	{
-		VkDevice m_device = VK_NULL_HANDLE;
+		const vk::render_device* m_device = nullptr;
 		VkEvent m_vk_event = VK_NULL_HANDLE;
-
-		std::unique_ptr<buffer> m_buffer;
-		volatile u32* m_value = nullptr;
+		bool v2 = true;
 
 	public:
 		event(const render_device& dev, sync_domain domain);
 		~event();
 		event(const event&) = delete;
 
-		void signal(const command_buffer& cmd, VkPipelineStageFlags stages, VkAccessFlags access);
+		void signal(const command_buffer& cmd, const VkDependencyInfoKHR& dependency);
 		void host_signal() const;
-		void gpu_wait(const command_buffer& cmd) const;
+		void gpu_wait(const command_buffer& cmd, const VkDependencyInfoKHR& dependency) const;
 		VkResult status() const;
 		void reset() const;
 	};

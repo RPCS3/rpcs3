@@ -79,6 +79,7 @@ namespace vk
 			bool sampler_mirror_clamped = false;
 			bool shader_stencil_export = false;
 			bool surface_capabilities_2 = false;
+			bool synchronization_2 = false;
 			bool unrestricted_depth_range = false;
 		} optional_features_support;
 
@@ -135,6 +136,8 @@ namespace vk
 		PFN_vkSetDebugUtilsObjectNameEXT _vkSetDebugUtilsObjectNameEXT = nullptr;
 		PFN_vkQueueInsertDebugUtilsLabelEXT _vkQueueInsertDebugUtilsLabelEXT = nullptr;
 		PFN_vkCmdInsertDebugUtilsLabelEXT _vkCmdInsertDebugUtilsLabelEXT = nullptr;
+		PFN_vkCmdSetEvent2KHR _vkCmdSetEvent2KHR = nullptr;
+		PFN_vkCmdWaitEvents2KHR _vkCmdWaitEvents2KHR = nullptr;
 
 	public:
 		render_device() = default;
@@ -168,6 +171,7 @@ namespace vk
 		bool get_framebuffer_loops_support() const { return pgpu->optional_features_support.framebuffer_loops; }
 		bool get_barycoords_support() const { return pgpu->optional_features_support.barycentric_coords; }
 		bool get_custom_border_color_support() const { return pgpu->optional_features_support.custom_border_color; }
+		bool get_synchronization2_support() const { return pgpu->optional_features_support.synchronization_2; }
 
 		u64 get_descriptor_update_after_bind_support() const { return pgpu->descriptor_indexing_support.update_after_bind_mask; }
 		u32 get_descriptor_max_draw_calls() const { return pgpu->descriptor_max_draw_calls; }
