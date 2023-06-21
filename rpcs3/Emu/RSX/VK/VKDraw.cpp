@@ -478,7 +478,7 @@ void VKGSRender::load_texture_env()
 			// Sync any async scheduler tasks
 			if (auto ev = async_task_scheduler.get_primary_sync_label())
 			{
-				ev->gpu_wait(*m_current_command_buffer, { .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR });
+				ev->gpu_wait(*m_current_command_buffer, m_async_compute_dependency_info);
 			}
 		}
 	}

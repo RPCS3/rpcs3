@@ -822,8 +822,25 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 
 	if (backend_config.supports_asynchronous_compute)
 	{
+		m_async_compute_memory_barrier =
+		{
+			.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2_KHR,
+			.pNext = nullptr,
+			.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT_KHR | VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
+			.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
+			.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR | VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT_KHR,
+			.dstAccessMask = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT_KHR
+		};
+
+		m_async_compute_dependency_info =
+		{
+			.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR,
+			.memoryBarrierCount = 1,
+			.pMemoryBarriers = &m_async_compute_memory_barrier
+		};
+
 		// Run only if async compute can be used.
-		g_fxo->init<vk::AsyncTaskScheduler>(g_cfg.video.vk.asynchronous_scheduler);
+		g_fxo->init<vk::AsyncTaskScheduler>(g_cfg.video.vk.asynchronous_scheduler, m_async_compute_dependency_info);
 	}
 
 	if (backend_config.supports_host_gpu_labels)
