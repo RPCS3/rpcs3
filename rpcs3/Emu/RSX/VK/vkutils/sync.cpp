@@ -59,7 +59,7 @@ namespace vk
 			std::vector<VkMemoryBarrier> result;
 			for (u32 i = 0; i < dependency.memoryBarrierCount; ++i)
 			{
-				result.emplace_back
+				result.push_back
 				({
 					VK_STRUCTURE_TYPE_MEMORY_BARRIER,
 					nullptr,
@@ -75,7 +75,7 @@ namespace vk
 			std::vector<VkImageMemoryBarrier> result;
 			for (u32 i = 0; i < dependency.imageMemoryBarrierCount; ++i)
 			{
-				result.emplace_back
+				result.push_back
 				({
 					VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
 					nullptr,
@@ -97,7 +97,7 @@ namespace vk
 			std::vector<VkBufferMemoryBarrier> result;
 			for (u32 i = 0; i < dependency.bufferMemoryBarrierCount; ++i)
 			{
-				result.emplace_back
+				result.push_back
 				({
 					VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
 					nullptr,
