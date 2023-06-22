@@ -62,7 +62,7 @@ namespace vk
 				result.emplace_back
 				(
 					VK_STRUCTURE_TYPE_MEMORY_BARRIER,
-					nullptr,
+					static_cast<const void*>(nullptr),
 					static_cast<VkAccessFlags>(dependency.pMemoryBarriers[i].srcAccessMask),
 					static_cast<VkAccessFlags>(dependency.pMemoryBarriers[i].dstAccessMask)
 				);
@@ -78,7 +78,7 @@ namespace vk
 				result.emplace_back
 				(
 					VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-					nullptr,
+					static_cast<const void*>(nullptr),
 					static_cast<VkAccessFlags>(dependency.pImageMemoryBarriers[i].srcAccessMask),
 					static_cast<VkAccessFlags>(dependency.pImageMemoryBarriers[i].dstAccessMask),
 					dependency.pImageMemoryBarriers[i].oldLayout,
@@ -100,7 +100,7 @@ namespace vk
 				result.emplace_back
 				(
 					VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
-					nullptr,
+					static_cast<const void*>(nullptr),
 					static_cast<VkAccessFlags>(dependency.pBufferMemoryBarriers[i].srcAccessMask),
 					static_cast<VkAccessFlags>(dependency.pBufferMemoryBarriers[i].dstAccessMask),
 					dependency.pBufferMemoryBarriers[i].srcQueueFamilyIndex,
