@@ -60,12 +60,12 @@ namespace vk
 			for (u32 i = 0; i < dependency.memoryBarrierCount; ++i)
 			{
 				result.emplace_back
-				(
+				({
 					VK_STRUCTURE_TYPE_MEMORY_BARRIER,
 					nullptr,
 					static_cast<VkAccessFlags>(dependency.pMemoryBarriers[i].srcAccessMask),
 					static_cast<VkAccessFlags>(dependency.pMemoryBarriers[i].dstAccessMask)
-				);
+				});
 			}
 			return result;
 		}
@@ -76,7 +76,7 @@ namespace vk
 			for (u32 i = 0; i < dependency.imageMemoryBarrierCount; ++i)
 			{
 				result.emplace_back
-				(
+				({
 					VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
 					nullptr,
 					static_cast<VkAccessFlags>(dependency.pImageMemoryBarriers[i].srcAccessMask),
@@ -87,7 +87,7 @@ namespace vk
 					dependency.pImageMemoryBarriers[i].dstQueueFamilyIndex,
 					dependency.pImageMemoryBarriers[i].image,
 					dependency.pImageMemoryBarriers[i].subresourceRange
-				);
+				});
 			}
 			return result;
 		}
@@ -98,7 +98,7 @@ namespace vk
 			for (u32 i = 0; i < dependency.bufferMemoryBarrierCount; ++i)
 			{
 				result.emplace_back
-				(
+				({
 					VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
 					nullptr,
 					static_cast<VkAccessFlags>(dependency.pBufferMemoryBarriers[i].srcAccessMask),
@@ -108,7 +108,7 @@ namespace vk
 					dependency.pBufferMemoryBarriers[i].buffer,
 					dependency.pBufferMemoryBarriers[i].offset,
 					dependency.pBufferMemoryBarriers[i].size
-				);
+				});
 			}
 			return result;
 		}
