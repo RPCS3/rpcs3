@@ -14,7 +14,7 @@ class welcome_dialog : public QDialog
 	Q_OBJECT
 
 public:
-	explicit welcome_dialog(std::shared_ptr<gui_settings> gui_settings, QWidget* parent = nullptr);
+	explicit welcome_dialog(std::shared_ptr<gui_settings> gui_settings, bool is_manual_show, QWidget* parent = nullptr);
 	~welcome_dialog();
 
 private:
