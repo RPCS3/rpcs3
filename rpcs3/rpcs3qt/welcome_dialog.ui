@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>611</width>
-    <height>272</height>
+    <height>319</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -183,6 +183,33 @@
         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
        </property>
       </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="create_desktop_shortcut">
+       <property name="text">
+        <string>Create desktop shortcut</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="create_applications_menu_shortcut">
+       <property name="text">
+        <string>Create Start Menu shortcut</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="verticalSpacer">
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>20</width>
+         <height>10</height>
+        </size>
+       </property>
+      </spacer>
      </item>
      <item>
       <layout class="QHBoxLayout" name="button_layout">
