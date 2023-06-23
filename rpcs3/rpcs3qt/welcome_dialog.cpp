@@ -16,6 +16,7 @@ welcome_dialog::welcome_dialog(std::shared_ptr<gui_settings> gui_settings, QWidg
 	ui->setupUi(this);
 
 	setWindowFlags(windowFlags() & Qt::WindowTitleHint);
+	setAttribute(Qt::WA_DeleteOnClose);
 
 	ui->okay->setEnabled(false);
 	ui->icon_label->load(QStringLiteral(":/rpcs3.svg"));
