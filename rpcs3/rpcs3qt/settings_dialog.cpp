@@ -677,7 +677,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	{
 		if (percentage == resolution_scale_def)
 		{
-			return tr("100% (Default)", "Resolution scale");
+			return tr("100% (1280x720) (Default)", "Resolution scale");
 		}
 		return tr("%1% (%2x%3)", "Resolution scale").arg(percentage).arg(1280 * percentage / 100).arg(720 * percentage / 100);
 	};
