@@ -2,7 +2,10 @@
 #include "ui_welcome_dialog.h"
 
 #include "gui_settings.h"
+#include "shortcut_utils.h"
 #include "qt_utils.h"
+
+#include "Utilities/File.h"
 
 #include <QPushButton>
 #include <QCheckBox>
@@ -21,6 +24,7 @@ welcome_dialog::welcome_dialog(std::shared_ptr<gui_settings> gui_settings, bool 
 	ui->okay->setEnabled(is_manual_show);
 	ui->i_have_read->setChecked(is_manual_show);
 	ui->i_have_read->setEnabled(!is_manual_show);
+	ui->do_not_show->setEnabled(!is_manual_show);
 	ui->do_not_show->setChecked(!m_gui_settings->GetValue(gui::ib_show_welcome).toBool());
 	ui->icon_label->load(QStringLiteral(":/rpcs3.svg"));
 	ui->label_3->setText(tr(
@@ -63,7 +67,28 @@ welcome_dialog::welcome_dialog(std::shared_ptr<gui_settings> gui_settings, bool 
 
 	connect(ui->okay, &QPushButton::clicked, this, &QDialog::accept);
 
+#ifdef _WIN32
+	ui->create_applications_menu_shortcut->setText(tr("&Create Start Menu shortcut"));
+#elif defined(__APPLE__)
+	ui->create_applications_menu_shortcut->setText(tr("&Create Launchpad shortcut"));
+#else
+	ui->create_applications_menu_shortcut->setText(tr("&Create Application Menu shortcut"));
+#endif
+
 	layout()->setSizeConstraint(QLayout::SetFixedSize);
+
+	connect(this, &QDialog::finished, this, [this]()
+	{
+		if (ui->create_desktop_shortcut->isChecked())
+		{
+			gui::utils::create_shortcut("RPCS3", "", "RPCS3", ":/rpcs3.svg", fs::get_temp_dir(), gui::utils::shortcut_location::desktop);
+		}
+
+		if (ui->create_applications_menu_shortcut->isChecked())
+		{
+			gui::utils::create_shortcut("RPCS3", "", "RPCS3", ":/rpcs3.svg", fs::get_temp_dir(), gui::utils::shortcut_location::applications);
+		}
+	});
 }
 
 welcome_dialog::~welcome_dialog()
