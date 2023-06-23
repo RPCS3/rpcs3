@@ -135,7 +135,7 @@ bool gui_application::Init()
 
 	if (m_gui_settings->GetValue(gui::ib_show_welcome).toBool())
 	{
-		welcome_dialog* welcome = new welcome_dialog(m_gui_settings);
+		welcome_dialog* welcome = new welcome_dialog(m_gui_settings, false);
 		welcome->exec();
 	}
 

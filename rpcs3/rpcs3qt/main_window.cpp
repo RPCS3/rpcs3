@@ -35,6 +35,7 @@
 #include "shortcut_dialog.h"
 #include "system_cmd_dialog.h"
 #include "emulated_pad_settings_dialog.h"
+#include "welcome_dialog.h"
 
 #include <thread>
 #include <charconv>
@@ -2737,6 +2738,12 @@ void main_window::CreateConnects()
 		m_updater.check_for_updates(false, false, false, this);
 	});
 
+	connect(ui->welcomeAct, &QAction::triggered, this, [this]()
+	{
+		welcome_dialog* welcome = new welcome_dialog(m_gui_settings, true, this);
+		welcome->open();
+	});
+
 	connect(ui->aboutAct, &QAction::triggered, this, [this]
 	{
 		about_dialog dlg(this);
@@ -3388,4 +3395,25 @@ void main_window::dragMoveEvent(QDragMoveEvent* event)
 void main_window::dragLeaveEvent(QDragLeaveEvent* event)
 {
 	event->accept();
+}
+
+void main_window::keyPressEvent(QKeyEvent* event)
+{
+	QMainWindow::keyPressEvent(event);
+
+	if (event->isAutoRepeat() || event->modifiers())
+	{
+		return;
+	}
+
+	switch (event->key())
+	{
+	case Qt::Key_F1:
+	{
+		welcome_dialog* welcome = new welcome_dialog(m_gui_settings, true, this);
+		welcome->open();
+		break;
+	}
+	default: break;
+	}
 }
