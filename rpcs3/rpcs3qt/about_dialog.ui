@@ -353,6 +353,20 @@
       </widget>
      </item>
      <item>
+      <widget class="QPushButton" name="discord">
+       <property name="text">
+        <string>Discord</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="wiki">
+       <property name="text">
+        <string>Wiki</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QPushButton" name="patreon">
        <property name="text">
         <string>Patreon</string>

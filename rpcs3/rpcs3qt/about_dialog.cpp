@@ -31,6 +31,8 @@ about_dialog::about_dialog(QWidget* parent) : QDialog(parent), ui(new Ui::about_
 	connect(ui->website, &QPushButton::clicked, [] { QDesktopServices::openUrl(QUrl("https://www.rpcs3.net")); });
 	connect(ui->forum, &QPushButton::clicked, [] { QDesktopServices::openUrl(QUrl("https://forums.rpcs3.net")); });
 	connect(ui->patreon, &QPushButton::clicked, [] { QDesktopServices::openUrl(QUrl("https://www.patreon.com/Nekotekina")); });
+	connect(ui->discord, &QPushButton::clicked, [] { QDesktopServices::openUrl(QUrl("https://discord.me/RPCS3")); });
+	connect(ui->wiki, &QPushButton::clicked, [] { QDesktopServices::openUrl(QUrl("https://wiki.rpcs3.net/index.php?title=Main_Page")); });
 	connect(ui->close, &QPushButton::clicked, this, &QWidget::close);
 }
 
