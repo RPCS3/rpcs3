@@ -3364,14 +3364,8 @@ void main_window::dropEvent(QDropEvent* event)
 	}
 	case drop_type::drop_dir: // import valid games to gamelist (games.yaml)
 	{
-		if (!m_gui_settings->GetBootConfirmation(this))
-		{
-			return;
-		}
-
 		for (const auto& path : drop_paths)
 		{
-			Emu.GracefulShutdown(false);
 			AddGamesFromDir(path);
 		}
 
