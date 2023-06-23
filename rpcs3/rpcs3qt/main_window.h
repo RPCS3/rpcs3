@@ -71,9 +71,8 @@ class main_window : public QMainWindow
 	enum class drop_type
 	{
 		drop_error,
-		drop_pkg,
+		drop_rap_edat_pkg,
 		drop_pup,
-		drop_rap_edat,
 		drop_psf,
 		drop_dir,
 		drop_game,

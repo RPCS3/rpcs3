@@ -3255,21 +3255,21 @@ main_window::drop_type main_window::IsValidFile(const QMimeData& md, QStringList
 		}
 		else if (info.suffix().toLower() == "pkg")
 		{
-			if (drop_type != drop_type::drop_pkg && drop_type != drop_type::drop_error)
+			if (drop_type != drop_type::drop_rap_edat_pkg && drop_type != drop_type::drop_error)
 			{
 				return drop_type::drop_error;
 			}
 
-			drop_type = drop_type::drop_pkg;
+			drop_type = drop_type::drop_rap_edat_pkg;
 		}
 		else if (info.suffix().toLower() == "rap" || info.suffix().toLower() == "edat")
 		{
-			if (info.size() < 0x10 || (drop_type != drop_type::drop_rap_edat && drop_type != drop_type::drop_error))
+			if (info.size() < 0x10 || (drop_type != drop_type::drop_rap_edat_pkg && drop_type != drop_type::drop_error))
 			{
 				return drop_type::drop_error;
 			}
 
-			drop_type = drop_type::drop_rap_edat;
+			drop_type = drop_type::drop_rap_edat_pkg;
 		}
 		else if (list.size() == 1)
 		{
@@ -3309,7 +3309,7 @@ void main_window::dropEvent(QDropEvent* event)
 		event->ignore();
 		break;
 	}
-	case drop_type::drop_pkg: // install the packages
+	case drop_type::drop_rap_edat_pkg: // install the packages
 	{
 		InstallPackages(drop_paths);
 		break;
@@ -3317,35 +3317,6 @@ void main_window::dropEvent(QDropEvent* event)
 	case drop_type::drop_pup: // install the firmware
 	{
 		InstallPup(drop_paths.first());
-		break;
-	}
-	case drop_type::drop_rap_edat: // import rap files to exdata dir
-	{
-		int installed_count = 0;
-
-		for (const auto& path : drop_paths)
-		{
-			const QFileInfo file_info = path;
-			const std::string extension = file_info.suffix().toLower().toStdString();
-			const std::string filename = sstr(file_info.fileName());
-
-			if (InstallFileInExData(extension, path, filename))
-			{
-				gui_log.success("Successfully copied %s file by drop: %s", extension, filename);
-				installed_count++;
-			}
-			else
-			{
-				gui_log.error("Could not copy %s file by drop: %s", extension, filename);
-			}
-		}
-
-		if (installed_count > 0)
-		{
-			// Refresh game list since we probably unlocked some games now.
-			m_game_list_frame->Refresh(true);
-		}
-
 		break;
 	}
 	case drop_type::drop_psf: // Display PARAM.SFO content
