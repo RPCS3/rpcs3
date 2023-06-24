@@ -385,7 +385,7 @@ shared_ptr<fs::device_base> fs::set_virtual_device(const std::string& name, shar
 	return get_device_manager().set_device(name, std::move(device));
 }
 
-std::string fs::get_parent_dir(std::string_view path, u32 parent_level)
+std::string_view fs::get_parent_dir_view(std::string_view path, u32 parent_level)
 {
 	std::string_view result = path;
 
@@ -433,7 +433,7 @@ std::string fs::get_parent_dir(std::string_view path, u32 parent_level)
 		return "/";
 	}
 
-	return std::string{result};
+	return result;
 }
 
 bool fs::stat(const std::string& path, stat_t& info)
