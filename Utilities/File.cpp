@@ -385,26 +385,55 @@ shared_ptr<fs::device_base> fs::set_virtual_device(const std::string& name, shar
 	return get_device_manager().set_device(name, std::move(device));
 }
 
-std::string fs::get_parent_dir(std::string_view path, u32 parent_level)
+std::string_view fs::get_parent_dir_view(std::string_view path, u32 parent_level)
 {
-	std::string normalized_path = std::filesystem::path(path).lexically_normal().string();
+	std::string_view result = path;
 
-#ifdef _WIN32
-	std::replace(normalized_path.begin(), normalized_path.end(), '\\', '/');
-#endif
+	// Number of path components to remove
+	usz to_remove = parent_level;
 
-	if (normalized_path.ends_with('/'))
-		normalized_path.pop_back();
-
-	while (parent_level--)
+	while (to_remove--)
 	{
-		if (const auto pos = normalized_path.find_last_of('/'); pos != umax)
-			normalized_path = normalized_path.substr(0, pos);
+		// Trim contiguous delimiters at the end
+		if (usz sz = result.find_last_not_of(delim) + 1)
+		{
+			result = result.substr(0, sz);
+		}
 		else
+		{
+			return "/";
+		}
+
+		const auto elem = result.substr(result.find_last_of(delim) + 1);
+
+		if (elem.empty() || elem.size() == result.size())
+		{
 			break;
+		}
+
+		if (elem == ".")
+		{
+			to_remove += 1;
+		}
+
+		if (elem == "..")
+		{
+			to_remove += 2;
+		}
+
+		result.remove_suffix(elem.size());
 	}
 
-	return normalized_path.empty() ? "/" : normalized_path;
+	if (usz sz = result.find_last_not_of(delim) + 1)
+	{
+		result = result.substr(0, sz);
+	}
+	else
+	{
+		return "/";
+	}
+
+	return result;
 }
 
 bool fs::stat(const std::string& path, stat_t& info)
