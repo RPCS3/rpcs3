@@ -1682,7 +1682,7 @@ void ppu_unload_prx(const lv2_prx& prx)
 	}
 }
 
-bool ppu_load_exec(const ppu_exec_object& elf, utils::serial* ar)
+bool ppu_load_exec(const ppu_exec_object& elf, const std::string& elf_path, utils::serial* ar)
 {
 	if (elf != elf_error::ok)
 	{
@@ -2126,7 +2126,7 @@ bool ppu_load_exec(const ppu_exec_object& elf, utils::serial* ar)
 
 	// Set path (TODO)
 	_main.name.clear();
-	_main.path = vfs::get(Emu.argv[0]);
+	_main.path = elf_path;
 
 	_main.elf_entry = static_cast<u32>(elf.header.e_entry);
 	_main.seg0_code_end = end;
