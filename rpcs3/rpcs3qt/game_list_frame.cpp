@@ -1564,7 +1564,7 @@ bool game_list_frame::CreatePPUCache(const std::string& path, const std::string&
 	Emu.GracefulShutdown(false);
 	Emu.SetForceBoot(true);
 
-	if (const auto error = Emu.BootGame(path, serial, true); error != game_boot_result::no_errors)
+	if (const auto error = Emu.BootGame(fs::is_file(path) ? fs::get_parent_dir(path) : path, serial, true); error != game_boot_result::no_errors)
 	{
 		game_list_log.error("Could not create PPU Cache for %s, error: %s", path, error);
 		return false;

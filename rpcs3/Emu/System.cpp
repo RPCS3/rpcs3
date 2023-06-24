@@ -70,7 +70,7 @@ std::string g_cfg_defaults;
 
 atomic_t<u64> g_watchdog_hold_ctr{0};
 
-extern bool ppu_load_exec(const ppu_exec_object&, utils::serial* = nullptr);
+extern bool ppu_load_exec(const ppu_exec_object&, const std::string&, utils::serial* = nullptr);
 extern void spu_load_exec(const spu_exec_object&);
 extern void spu_load_rel_exec(const spu_rel_object&);
 extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_module*>* loaded_prx);
@@ -1383,7 +1383,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 					const ppu_exec_object obj = src;
 
-					if (obj == elf_error::ok && ppu_load_exec(obj))
+					if (obj == elf_error::ok && ppu_load_exec(obj, path))
 					{
 						g_fxo->get<main_ppu_module>().path = path;
 					}
@@ -1960,7 +1960,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 			g_fxo->init<main_ppu_module>();
 
-			if (ppu_load_exec(ppu_exec, DeserialManager()))
+			if (ppu_load_exec(ppu_exec, m_path, DeserialManager()))
 			{
 			}
 			// Overlay (OVL) executable (only load it)
