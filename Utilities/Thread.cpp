@@ -1661,6 +1661,11 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 		}
 	}
 
+	if (cpu)
+	{
+		cpu->state += cpu_flag::wait;
+	}
+
 	Emu.Pause(true);
 
 	if (!g_tls_access_violation_recovered)
