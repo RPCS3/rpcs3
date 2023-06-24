@@ -173,6 +173,7 @@ namespace rsx
 		std::unique_ptr<FIFO::FIFO_control> fifo_ctrl;
 		atomic_t<bool> rsx_thread_running{ false };
 		std::vector<std::pair<u32, u32>> dump_callstack_list() const override;
+		std::string dump_misc() const override;
 
 	protected:
 		FIFO::flattening_helper m_flattener;
