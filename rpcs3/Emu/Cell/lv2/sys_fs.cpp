@@ -3225,7 +3225,7 @@ error_code sys_fs_unmount(ppu_thread& ppu, vm::cptr<char> path, s32 unk1, s32 un
 		return {CELL_EPERM, vpath};
 
 	if (mp == &g_mp_sys_no_device)
-		return {CELL_ENOTMOUNTED, vpath};
+		return {CELL_EINVAL, vpath};
 
 	if (mp == &g_mp_sys_dev_root || !lock.try_lock())
 		return {CELL_EBUSY, vpath};
