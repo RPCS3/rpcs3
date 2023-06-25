@@ -185,12 +185,12 @@ void sys_spu_image::deploy(u8* loc, std::span<const sys_spu_segment> segs, bool 
 	}
 
 	// Apply the patch
-	auto applied = g_fxo->get<patch_engine>().apply(hash, loc);
+	auto applied = g_fxo->get<patch_engine>().apply(hash, [loc](u32 addr) { return loc + addr; });
 
 	if (!Emu.GetTitleID().empty())
 	{
 		// Alternative patch
-		applied += g_fxo->get<patch_engine>().apply(Emu.GetTitleID() + '-' + hash, loc);
+		applied += g_fxo->get<patch_engine>().apply(Emu.GetTitleID() + '-' + hash, [loc](u32 addr) { return loc + addr; });
 	}
 
 	(is_verbose ? spu_log.notice : sys_spu.trace)("Loaded SPU image: %s (<- %u)%s", hash, applied.size(), dump);

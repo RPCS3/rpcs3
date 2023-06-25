@@ -805,7 +805,7 @@ void unmap_vm_area(std::shared_ptr<vm::block_t>& ptr)
 }
 
 // Returns old 'applied' size
-static usz apply_modification(std::basic_string<u32>& applied, patch_engine::patch_info& patch, u8* dst, u32 filesz, u32 min_addr)
+static usz apply_modification(std::basic_string<u32>& applied, patch_engine::patch_info& patch, std::function<u8*(u32)> mem_translate, u32 filesz, u32 min_addr)
 {
 	const usz old_applied_size = applied.size();
 
@@ -846,8 +846,8 @@ static usz apply_modification(std::basic_string<u32>& applied, patch_engine::pat
 	{
 		if (p.type != patch_type::alloc) continue;
 
-		// Do not allow null address or if dst is not a VM ptr
-		if (const u32 alloc_at = vm::try_get_addr(dst + (p.offset & -4096)).first; alloc_at >> 16)
+		// Do not allow null address or if resultant ptr is not a VM ptr
+		if (const u32 alloc_at = vm::try_get_addr(mem_translate(p.offset & -4096)).first; alloc_at >> 16)
 		{
 			const u32 alloc_size = utils::align(static_cast<u32>(p.value.long_value) + alloc_at % 4096, 4096);
 
@@ -934,7 +934,13 @@ static usz apply_modification(std::basic_string<u32>& applied, patch_engine::pat
 
 		offset -= min_addr;
 
-		auto ptr = dst + offset;
+		auto ptr = mem_translate(offset);
+
+		if (!ptr)
+		{
+			// Memory translation failed
+			continue;
+		}
 
 		if (relocate_instructions_at)
 		{
@@ -960,7 +966,7 @@ static usz apply_modification(std::basic_string<u32>& applied, patch_engine::pat
 		}
 		case patch_type::code_alloc:
 		{
-			const u32 out_branch = vm::try_get_addr(dst + (offset & -4)).first;
+			const u32 out_branch = vm::try_get_addr(mem_translate(offset & -4)).first;
 
 			// Allow only if points to a PPU executable instruction
 			if (out_branch < 0x10000 || out_branch >= 0x4000'0000 || !vm::check_addr<4>(out_branch, vm::page_executable))
@@ -1044,7 +1050,7 @@ static usz apply_modification(std::basic_string<u32>& applied, patch_engine::pat
 		case patch_type::jump:
 		case patch_type::jump_link:
 		{
-			const u32 out_branch = vm::try_get_addr(dst + (offset & -4)).first;
+			const u32 out_branch = vm::try_get_addr(mem_translate(offset & -4)).first;
 			const u32 dest = static_cast<u32>(p.value.long_value);
 
 			// Allow only if points to a PPU executable instruction
@@ -1060,7 +1066,7 @@ static usz apply_modification(std::basic_string<u32>& applied, patch_engine::pat
 		{
 			const std::string& str = p.original_value;
 
-			const u32 out_branch = vm::try_get_addr(dst + (offset & -4)).first;
+			const u32 out_branch = vm::try_get_addr(mem_translate(offset & -4)).first;
 			const usz sep_pos = str.find_first_of(':');
 
 			// Must contain only a single ':' or none
@@ -1251,7 +1257,7 @@ static usz apply_modification(std::basic_string<u32>& applied, patch_engine::pat
 	return old_applied_size;
 }
 
-std::basic_string<u32> patch_engine::apply(const std::string& name, u8* dst, u32 filesz, u32 min_addr)
+std::basic_string<u32> patch_engine::apply(const std::string& name, std::function<u8*(u32)> mem_translate, u32 filesz, u32 min_addr)
 {
 	if (!m_map.contains(name))
 	{
@@ -1392,7 +1398,7 @@ std::basic_string<u32> patch_engine::apply(const std::string& name, u8* dst, u32
 		{
 			if (patch)
 			{
-				const usz old_size = apply_modification(applied_total, *patch, dst, filesz, min_addr);
+				const usz old_size = apply_modification(applied_total, *patch, mem_translate, filesz, min_addr);
 
 				if (applied_total.size() != old_size)
 				{

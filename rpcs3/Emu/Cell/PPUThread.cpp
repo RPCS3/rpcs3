@@ -161,9 +161,10 @@ extern void ppu_initialize();
 extern void ppu_finalize(const ppu_module& info);
 extern bool ppu_initialize(const ppu_module& info, bool = false);
 static void ppu_initialize2(class jit_compiler& jit, const ppu_module& module_part, const std::string& cache_path, const std::string& obj_name);
-extern std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object&, const std::string& path, s64 file_offset, utils::serial* = nullptr);
+extern bool ppu_load_exec(const ppu_exec_object&, bool virtual_load, const std::string&, utils::serial* = nullptr);
+extern std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object&, bool virtual_load, const std::string& path, s64 file_offset, utils::serial* = nullptr);
 extern void ppu_unload_prx(const lv2_prx&);
-extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&, s64 file_offset, utils::serial* = nullptr);
+extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, bool virtual_load, const std::string&, s64 file_offset, utils::serial* = nullptr);
 extern void ppu_execute_syscall(ppu_thread& ppu, u64 code);
 static void ppu_break(ppu_thread&, ppu_opcode_t, be_t<u32>*, ppu_intrp_func*);
 
@@ -3140,7 +3141,8 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 
 	atomic_t<usz> fnext = 0;
 
-	shared_mutex sprx_mtx, ovl_mtx;
+	lf_queue<std::string> possible_exec_file_paths;
+	shared_mutex ovl_mtx;
 
 	named_thread_group workers("SPRX Worker ", std::min<u32>(utils::get_thread_count(), ::size32(file_queue)), [&]
 	{
@@ -3192,17 +3194,11 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 
 			if (ppu_prx_object obj = src; (prx_err = obj, obj == elf_error::ok))
 			{
-				std::unique_lock lock(sprx_mtx);
-
-				if (auto prx = ppu_load_prx(obj, path, offset))
+				if (auto prx = ppu_load_prx(obj, true, path, offset))
 				{
-					lock.unlock();
 					obj.clear(), src.close(); // Clear decrypted file and elf object memory
 					ppu_initialize(*prx);
-					idm::remove<lv2_obj, lv2_prx>(idm::last_id());
-					lock.lock();
 					ppu_unload_prx(*prx);
-					lock.unlock();
 					ppu_finalize(*prx);
 					continue;
 				}
@@ -3215,10 +3211,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 			{
 				while (ovl_err == elf_error::ok)
 				{
-					// Only one thread compiles OVL atm, other can compile PRX cuncurrently
-					std::unique_lock lock(ovl_mtx);
-
-					auto [ovlm, error] = ppu_load_overlay(obj, path, offset);
+					auto [ovlm, error] = ppu_load_overlay(obj, true, path, offset);
 
 					if (error)
 					{
@@ -3229,15 +3222,13 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 
 					obj.clear(), src.close(); // Clear decrypted file and elf object memory
 
-					ppu_initialize(*ovlm);
-
-					for (auto& seg : ovlm->segs)
 					{
-						vm::dealloc(seg.addr);
+						// Does not really require this lock, this is done for performance reasons.
+						// Seems like too many created threads is hard for Windows to manage efficiently with many CPU threads.
+						std::lock_guard lock(ovl_mtx);
+						ppu_initialize(*ovlm);
 					}
 
-					lock.unlock();
-					idm::remove<lv2_obj, lv2_overlay>(idm::last_id());
 					ppu_finalize(*ovlm);
 					break;
 				}
@@ -3248,13 +3239,105 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 				}
 			}
 
-			ppu_log.notice("Failed to precompile '%s' (prx: %s, ovl: %s)", path, prx_err, ovl_err);
+			ppu_log.notice("Failed to precompile '%s' (prx: %s, ovl: %s): Attempting tratment as executable file", path, prx_err, ovl_err);
+			possible_exec_file_paths.push(path);
 			continue;
 		}
 	});
 
 	// Join every thread
 	workers.join();
+
+	named_thread exec_worker("PPU Exec Worker", [&]
+	{
+		if (!possible_exec_file_paths)
+		{
+			return;
+		}
+
+#ifdef __APPLE__
+		pthread_jit_write_protect_np(false);
+#endif
+		// Set low priority
+		thread_ctrl::scoped_priority low_prio(-1);
+
+		auto slice = possible_exec_file_paths.pop_all();
+
+		auto main_module = std::move(g_fxo->get<main_ppu_module>());
+
+		for (; slice; slice.pop_front(), g_progr_fdone++)
+		{
+			g_progr_ftotal++;
+
+			if (Emu.IsStopped())
+			{
+				continue;
+			}
+
+			const std::string path = *slice;
+
+			ppu_log.notice("Trying to load as executable: %s", path);
+
+			// Load MSELF, SPRX or SELF
+			fs::file src{path};
+
+			if (!src)
+			{
+				ppu_log.error("Failed to open '%s' (%s)", path, fs::g_tls_error);
+				continue;
+			}
+
+			// Some files may fail to decrypt due to the lack of klic
+			src = decrypt_self(std::move(src));
+
+			if (!src)
+			{
+				ppu_log.notice("Failed to decrypt '%s'", path);
+				continue;
+			}
+
+			elf_error exec_err{};
+
+			if (ppu_exec_object obj = src; (exec_err = obj, obj == elf_error::ok))
+			{
+				while (exec_err == elf_error::ok)
+				{
+					if (!ppu_load_exec(obj, true, path))
+					{
+						// Abort
+						exec_err = elf_error::header_type;
+						break;
+					}
+
+					main_ppu_module& _main = g_fxo->get<main_ppu_module>();
+
+					if (!_main.analyse(0, _main.elf_entry, _main.seg0_code_end, _main.applied_pathes, [](){ return Emu.IsStopped(); }))
+					{
+						break;
+					}
+
+					obj.clear(), src.close(); // Clear decrypted file and elf object memory
+
+					ppu_initialize(_main);
+					ppu_finalize(_main);
+					_main = {};
+					break;
+				}
+
+				if (exec_err == elf_error::ok)
+				{
+					continue;
+				}
+			}
+
+			ppu_log.notice("Failed to precompile '%s' as executable (%s)", path, exec_err);
+			continue;
+		}
+
+		g_fxo->get<main_ppu_module>() = std::move(main_module);
+	});
+
+	exec_worker();
 
 	// Revert changes
 
@@ -3360,7 +3443,7 @@ extern void ppu_initialize()
 		{
 			const std::string eseibrd = mount_point + "/vsh/module/eseibrd.sprx";
 
-			if (auto prx = ppu_load_prx(ppu_prx_object{decrypt_self(fs::file{eseibrd})}, eseibrd, 0))
+			if (auto prx = ppu_load_prx(ppu_prx_object{decrypt_self(fs::file{eseibrd})}, true, eseibrd, 0))
 			{
 				// Check if cache exists for this infinitesimally small prx
 				dev_flash_located = ppu_initialize(*prx, true);
@@ -3563,9 +3646,11 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 				continue;
 			}
 
-			for (u32 i = addr; i < addr + size; i += 4)
+			auto i_ptr = ensure(info.get_ptr<u32>(addr));
+
+			for (u32 i = addr; i < addr + size; i += 4, i_ptr++)
 			{
-				if (g_ppu_itype.decode(vm::read32(i)) == ppu_itype::MFVSCR)
+				if (g_ppu_itype.decode(*i_ptr) == ppu_itype::MFVSCR)
 				{
 					ppu_log.warning("MFVSCR found");
 					has_mfvscr = true;
@@ -3708,7 +3793,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 						if (roff > addr)
 						{
 							// Hash from addr to the beginning of the relocation
-							sha1_update(&ctx, vm::_ptr<const u8>(addr), roff - addr);
+							sha1_update(&ctx, ensure(info.get_ptr<const u8>(addr)), roff - addr);
 						}
 
 						// Hash relocation type instead
@@ -3721,9 +3806,11 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 
 					if (has_dcbz == 1)
 					{
-						for (u32 i = addr, end = block.second + block.first - 1; i <= end; i += 4)
+						auto i_ptr = ensure(info.get_ptr<u32>(addr));
+
+						for (u32 i = addr, end = block.second + block.first - 1; i <= end; i += 4, i_ptr++)
 						{
-							if (g_ppu_itype.decode(vm::read32(i)) == ppu_itype::DCBZ)
+							if (g_ppu_itype.decode(*i_ptr) == ppu_itype::DCBZ)
 							{
 								has_dcbz = 2;
 								break;
@@ -3732,7 +3819,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 					}
 
 					// Hash from addr to the end of the block
-					sha1_update(&ctx, vm::_ptr<const u8>(addr), block.second - (addr - block.first));
+					sha1_update(&ctx, ensure(info.get_ptr<const u8>(addr)), block.second - (addr - block.first));
 				}
 
 				if (reloc)
@@ -3742,9 +3829,11 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 
 				if (has_dcbz == 1)
 				{
-					for (u32 i = func.addr, end = func.addr + func.size - 1; i <= end; i += 4)
+					auto i_ptr = ensure(info.get_ptr<u32>(func.addr));
+
+					for (u32 i = func.addr, end = func.addr + func.size - 1; i <= end; i += 4, i_ptr++)
 					{
-						if (g_ppu_itype.decode(vm::read32(i)) == ppu_itype::DCBZ)
+						if (g_ppu_itype.decode(*i_ptr) == ppu_itype::DCBZ)
 						{
 							has_dcbz = 2;
 							break;
@@ -3752,7 +3841,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 					}
 				}
 
-				sha1_update(&ctx, vm::_ptr<const u8>(func.addr), func.size);
+				sha1_update(&ctx, ensure(info.get_ptr<const u8>(func.addr)), func.size);
 			}
 
 			if (false)
