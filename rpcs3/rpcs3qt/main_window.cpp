@@ -319,6 +319,12 @@ void main_window::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const Q
 
 	switch (shortcut_key)
 	{
+	case gui::shortcuts::shortcut::mw_welcome_dialog:
+	{
+		welcome_dialog* welcome = new welcome_dialog(m_gui_settings, true, this);
+		welcome->open();
+		break;
+	}
 	case gui::shortcuts::shortcut::mw_toggle_fullscreen:
 	{
 		ui->toolbar_fullscreen->trigger();
@@ -3395,25 +3401,4 @@ void main_window::dragMoveEvent(QDragMoveEvent* event)
 void main_window::dragLeaveEvent(QDragLeaveEvent* event)
 {
 	event->accept();
-}
-
-void main_window::keyPressEvent(QKeyEvent* event)
-{
-	QMainWindow::keyPressEvent(event);
-
-	if (event->isAutoRepeat() || event->modifiers())
-	{
-		return;
-	}
-
-	switch (event->key())
-	{
-	case Qt::Key_F1:
-	{
-		welcome_dialog* welcome = new welcome_dialog(m_gui_settings, true, this);
-		welcome->open();
-		break;
-	}
-	default: break;
-	}
 }
