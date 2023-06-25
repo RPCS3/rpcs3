@@ -148,7 +148,6 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 	if (enable_play_last)
 	{
 		ui->sysPauseAct->setText(tr("&Play last played game"));
-		ui->sysPauseAct->setShortcut(QKeySequence("Ctrl+R"));
 		ui->sysPauseAct->setIcon(m_icon_play);
 		ui->toolbar_start->setToolTip(start_tooltip);
 	}
