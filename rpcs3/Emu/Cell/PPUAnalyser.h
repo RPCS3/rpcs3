@@ -3,8 +3,10 @@
 #include <string>
 #include <map>
 #include <set>
+#include <deque>
 #include "util/types.hpp"
 #include "util/endian.hpp"
+#include "util/to_endian.hpp"
 
 #include "Utilities/bit_set.h"
 #include "PPUOpcodes.h"
@@ -65,6 +67,7 @@ struct ppu_segment
 	u32 type;
 	u32 flags;
 	u32 filesz;
+	void* ptr{};
 };
 
 // PPU Module Information
@@ -89,6 +92,8 @@ struct ppu_module
 	std::vector<ppu_segment> segs{};
 	std::vector<ppu_segment> secs{};
 	std::vector<ppu_function> funcs{};
+	std::deque<std::shared_ptr<void>> allocations;
+	std::map<u32, u32> addr_to_seg_index;
 
 	// Copy info without functions
 	void copy_part(const ppu_module& info)
@@ -99,10 +104,44 @@ struct ppu_module
 		relocs = info.relocs;
 		segs = info.segs;
 		secs = info.secs;
+		allocations = info.allocations;
+		addr_to_seg_index = info.addr_to_seg_index;
 	}
 
 	bool analyse(u32 lib_toc, u32 entry, u32 end, const std::basic_string<u32>& applied, std::function<bool()> check_aborted = {});
 	void validate(u32 reloc);
+
+	template <typename T>
+	to_be_t<T>* get_ptr(u32 addr) const
+	{
+		auto it = addr_to_seg_index.upper_bound(addr);
+
+		if (it == addr_to_seg_index.begin())
+		{
+			return nullptr;
+		}
+
+		it--;
+
+		const auto& seg = segs[it->second];
+		const u32 seg_size = seg.size;
+		const u32 seg_addr = seg.addr;
+
+		constexpr usz size_element = std::is_void_v<T> ? 0 : sizeof(std::conditional_t<std::is_void_v<T>, char, T>);
+
+		if (seg_size >= std::max<usz>(size_element, 1) && addr <= seg_addr + seg_size - size_element)
+		{
+			return reinterpret_cast<to_be_t<T>*>(static_cast<u8*>(seg.ptr) + (addr - seg_addr));
+		}
+
+		return nullptr;
+	}
+
+	template <typename T, typename U> requires requires (const U& obj) { +obj.addr() * 0; }
+	to_be_t<T>* get_ptr(U&& addr) const
+	{
+		return get_ptr<T>(addr.addr());
+	}
 };
 
 struct main_ppu_module : public ppu_module

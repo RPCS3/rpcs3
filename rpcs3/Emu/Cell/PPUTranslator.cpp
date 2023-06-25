@@ -150,7 +150,7 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 
 	for (u32 addr = m_addr; addr < m_addr + info.size; addr += 4)
 	{
-		const u32 op = vm::read32(vm::cast(addr + base));
+		const u32 op = *ensure(m_info.get_ptr<u32>(addr + base));
 
 		switch (g_ppu_itype.decode(op))
 		{
@@ -214,7 +214,7 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 	const auto block = std::make_pair(info.addr, info.size);
 	{
 		// Optimize BLR (prefetch LR)
-		if (vm::read32(vm::cast(block.first + block.second - 4)) == ppu_instructions::BLR())
+		if (*ensure(m_info.get_ptr<u32>(block.first + block.second - 4)) == ppu_instructions::BLR())
 		{
 			RegLoad(m_lr);
 		}
@@ -239,7 +239,7 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 				m_rel = nullptr;
 			}
 
-			const u32 op = vm::read32(vm::cast(m_addr + base));
+			const u32 op = *ensure(m_info.get_ptr<u32>(m_addr + base));
 
 			(this->*(s_ppu_decoder.decode(op)))({op});
 

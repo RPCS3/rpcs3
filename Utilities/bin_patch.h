@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <unordered_map>
+#include <functional>
 
 #include "util/types.hpp"
 #include "util/yaml.hpp"
@@ -212,7 +213,7 @@ public:
 	void append_title_patches(const std::string& title_id);
 
 	// Apply patch (returns the number of entries applied)
-	std::basic_string<u32> apply(const std::string& name, u8* dst, u32 filesz = -1, u32 min_addr = 0);
+	std::basic_string<u32> apply(const std::string& name, std::function<u8*(u32)> mem_translate, u32 filesz = -1, u32 min_addr = 0);
 
 	// Deallocate memory used by patches
 	void unload(const std::string& name);

@@ -70,15 +70,15 @@ std::string g_cfg_defaults;
 
 atomic_t<u64> g_watchdog_hold_ctr{0};
 
-extern bool ppu_load_exec(const ppu_exec_object&, const std::string&, utils::serial* = nullptr);
+extern bool ppu_load_exec(const ppu_exec_object&, bool virtual_load, const std::string&, utils::serial* = nullptr);
 extern void spu_load_exec(const spu_exec_object&);
 extern void spu_load_rel_exec(const spu_rel_object&);
 extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_module*>* loaded_prx);
 extern bool ppu_initialize(const ppu_module&, bool = false);
 extern void ppu_finalize(const ppu_module&);
 extern void ppu_unload_prx(const lv2_prx&);
-extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&, s64 = 0, utils::serial* = nullptr);
-extern std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object&, const std::string& path, s64 = 0, utils::serial* = nullptr);
+extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, bool virtual_load, const std::string&, s64 = 0, utils::serial* = nullptr);
+extern std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object&, bool virtual_load, const std::string& path, s64 = 0, utils::serial* = nullptr);
 extern bool ppu_load_rel_exec(const ppu_rel_object&);
 extern bool is_savestate_version_compatible(const std::vector<std::pair<u16, u16>>& data, bool is_boot_check);
 extern std::vector<std::pair<u16, u16>> read_used_savestate_versions();
@@ -1338,6 +1338,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			std::vector<std::string> dir_queue;
 			dir_queue.emplace_back(m_path + '/');
 
+			init_fxo_for_exec(nullptr, true);
+
 			{
 				if (m_title_id.empty())
 				{
@@ -1384,7 +1386,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 					const ppu_exec_object obj = src;
 
-					if (obj == elf_error::ok && ppu_load_exec(obj, path))
+					if (obj == elf_error::ok && ppu_load_exec(obj, true, path))
 					{
 						g_fxo->get<main_ppu_module>().path = path;
 					}
@@ -1393,22 +1395,6 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 						sys_log.error("Failed to load binary '%s' (%s)", path, obj.get_error());
 					}
 				}
-				else
-				{
-					// Workaround for analyser glitches
-					ensure(vm::falloc(0x10000, 0xf0000, vm::main));
-				}
-			}
-
-			if (auto& _main = g_fxo->get<main_ppu_module>(); _main.path.empty())
-			{
-				init_fxo_for_exec(nullptr, true);
-			}
-
-			if (auto main_ppu = idm::get<named_thread<ppu_thread>>(ppu_thread::id_base))
-			{
-				// Created by ppu_load_exec, unwanted
-				main_ppu->state += cpu_flag::exit;
 			}
 
 			g_fxo->init<named_thread>("SPRX Loader"sv, [this, dir_queue]() mutable
@@ -1961,11 +1947,11 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 			g_fxo->init<main_ppu_module>();
 
-			if (ppu_load_exec(ppu_exec, m_path, DeserialManager()))
+			if (ppu_load_exec(ppu_exec, false, m_path, DeserialManager()))
 			{
 			}
 			// Overlay (OVL) executable (only load it)
-			else if (vm::map(0x3000'0000, 0x1000'0000, 0x200); !ppu_load_overlay(ppu_exec, m_path).first)
+			else if (vm::map(0x3000'0000, 0x1000'0000, 0x200); !ppu_load_overlay(ppu_exec, false, m_path).first)
 			{
 				ppu_exec.set_error(elf_error::header_type);
 			}
@@ -1989,7 +1975,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			// PPU PRX
 			GetCallbacks().on_ready();
 			g_fxo->init(false);
-			ppu_load_prx(ppu_prx, m_path);
+			ppu_load_prx(ppu_prx, false, m_path);
 			Pause(true);
 		}
 		else if (spu_exec.open(elf_file) == elf_error::ok)
