@@ -14,6 +14,7 @@
 #include "Emu/system_utils.hpp"
 #include "Emu/Cell/lv2/sys_process.h"
 
+#include <filesystem>
 #include <span>
 
 LOG_CHANNEL(sys_fs);
@@ -163,13 +164,14 @@ const lv2_fs_mount_info& lv2_fs_mount_info_map::lookup(std::string_view path, bo
 	if (path.starts_with("/"sv))
 	{
 		constexpr std::string_view cell_fs_path = "CELL_FS_PATH:"sv;
-		std::string path_dir;
+		const std::string normalized_path = lv2_fs_object::get_normalized_path(path);
+		std::string_view parent_dir;
 		u32 parent_level = 0;
 
 		do
 		{
-			path_dir = fs::get_parent_dir(path, parent_level++);
-			if (const auto iterator = map.find(path_dir); iterator != map.end())
+			parent_dir = fs::get_parent_dir_view(normalized_path, parent_level++);
+			if (const auto iterator = map.find(parent_dir); iterator != map.end())
 			{
 				if (iterator->second == &g_mp_sys_dev_root && parent_level > 1)
 					break;
@@ -177,7 +179,7 @@ const lv2_fs_mount_info& lv2_fs_mount_info_map::lookup(std::string_view path, bo
 					return lookup(iterator->second.device.substr(cell_fs_path.size()), no_cell_fs_path); // Recursively look up the parent mount info
 				return iterator->second;
 			}
-		} while (path_dir.length() > 1); // Exit the loop when path_dir == "/" or empty
+		} while (parent_dir.length() > 1); // Exit the loop when parent_dir == "/" or empty
 	}
 
 	return g_mi_sys_not_found;
@@ -247,22 +249,34 @@ bool lv2_fs_mount_info_map::vfs_unmount(std::string_view vpath, bool remove_from
 	return result;
 }
 
-std::string lv2_fs_object::get_device_root(std::string_view filename)
+std::string lv2_fs_object::get_normalized_path(std::string_view path)
 {
-	if (filename.starts_with("/"sv))
-	{
-		std::string path_dir;
-		u32 parent_level = 0;
+	std::string normalized_path = std::filesystem::u8path(path).lexically_normal().string();
 
-		do
-		{
-			path_dir = fs::get_parent_dir(filename, parent_level++);
-			if (path_dir.find_last_of("/") == 0)
-				return path_dir;
-		} while (path_dir.length() > 1); // Exit the loop when path_dir == "/" or empty
+#ifdef _WIN32
+	std::replace(normalized_path.begin(), normalized_path.end(), '\\', '/');
+#endif
+
+	if (normalized_path.ends_with('/'))
+		normalized_path.pop_back();
+
+	return normalized_path.empty() ? "/" : normalized_path;
+}
+
+std::string_view lv2_fs_object::get_device_root(std::string_view path)
+{
+	if (const auto first = path.find_first_not_of("/"sv); first != umax)
+	{
+		if (const auto pos = path.substr(first).find_first_of("/"sv); pos != umax)
+			path = path.substr(0, first + pos);
+		path.remove_prefix(std::max<usz>(0, first - 1)); // Remove duplicate leading '/' while keeping only one
+	}
+	else
+	{
+		path = path.substr(0, 1);
 	}
 
-	return std::string(filename);
+	return path;
 }
 
 lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename, std::string* vfs_path)
@@ -273,8 +287,8 @@ lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename, std::string
 	if (is_cell_fs_path)
 		filename.remove_prefix(cell_fs_path.size());
 
-	const bool is_path = filename.starts_with('/');
-	std::string mp_name = get_device_root(filename);
+	const bool is_path = filename.starts_with("/"sv);
+	std::string mp_name = std::string(is_path ? get_device_root(filename) : filename);
 
 	const auto check_mp = [&]()
 	{
@@ -3115,7 +3129,7 @@ error_code sys_fs_mount(ppu_thread& ppu, vm::cptr<char> dev_name, vm::cptr<char>
 		return {path_error, path_sv};
 	}
 
-	const std::string vpath = fs::get_parent_dir(path_sv, 0); // Just normalize the path
+	const std::string vpath = lv2_fs_object::get_normalized_path(path_sv);
 
 	std::string vfs_path;
 	const auto mp = lv2_fs_object::get_mp(device_name, &vfs_path);

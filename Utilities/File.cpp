@@ -3,7 +3,6 @@
 #include "StrFmt.h"
 #include "Crypto/sha1.h"
 
-#include <filesystem>
 #include <unordered_map>
 #include <algorithm>
 #include <cstring>
