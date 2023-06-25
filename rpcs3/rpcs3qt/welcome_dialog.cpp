@@ -19,8 +19,8 @@ welcome_dialog::welcome_dialog(std::shared_ptr<gui_settings> gui_settings, bool 
 	ui->setupUi(this);
 
 	setAttribute(Qt::WA_DeleteOnClose);
-
 	setWindowFlag(Qt::WindowCloseButtonHint, is_manual_show);
+
 	ui->okay->setEnabled(is_manual_show);
 	ui->i_have_read->setChecked(is_manual_show);
 	ui->i_have_read->setEnabled(!is_manual_show);
@@ -51,12 +51,12 @@ welcome_dialog::welcome_dialog(std::shared_ptr<gui_settings> gui_settings, bool 
 
 	if (!is_manual_show)
 	{
-		connect(ui->i_have_read, &QCheckBox::clicked, [this](bool checked)
+		connect(ui->i_have_read, &QCheckBox::clicked, this, [this](bool checked)
 		{
 			ui->okay->setEnabled(checked);
 		});
 
-		connect(ui->do_not_show, &QCheckBox::clicked, [this](bool checked)
+		connect(ui->do_not_show, &QCheckBox::clicked, this, [this](bool checked)
 		{
 			m_gui_settings->SetValue(gui::ib_show_welcome, QVariant(!checked));
 		});
