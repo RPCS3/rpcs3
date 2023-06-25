@@ -1360,8 +1360,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 						if (fs::is_file(hdd0_path + "/USRDIR/EBOOT.BIN"))
 						{
 							m_path = hdd0_path;
-							dir_queue.emplace_back(m_path + '/');
 						}
+
+						dir_queue.emplace_back(hdd0_path + '/');
 					}
 
 					// Memorize path to EBOOT.BIN
