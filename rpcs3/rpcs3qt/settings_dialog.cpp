@@ -1244,6 +1244,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->showMoveCursorBox, emu_settings_type::ShowMoveCursor);
 	SubscribeTooltip(ui->showMoveCursorBox, tooltips.settings.show_move_cursor);
 
+	m_emu_settings->EnhanceCheckBox(ui->lockOverlayInputToPlayerOne, emu_settings_type::LockOvlIptToP1);
+	SubscribeTooltip(ui->lockOverlayInputToPlayerOne, tooltips.settings.lock_overlay_input_to_player_one);
+
 	// Midi
 	const QString midi_none = m_emu_settings->m_midi_creator.get_none();
 	const midi_device def_midi_device{ .type = midi_device_type::keyboard, .name = midi_none.toStdString() };

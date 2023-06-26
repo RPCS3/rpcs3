@@ -223,6 +223,11 @@ namespace rsx
 						continue;
 					}
 
+					if (pad_index > 0 && g_cfg.io.lock_overlay_input_to_player_one)
+					{
+						continue;
+					}
+
 					if (!pad)
 					{
 						rsx_log.fatal("Pad %d is nullptr", pad_index);
