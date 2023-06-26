@@ -832,7 +832,7 @@ namespace rsx
 			AUDIT(fault_range_in.valid());
 			address_range fault_range = fault_range_in.to_page_range();
 
-			intersecting_set trampled_set = std::move(get_intersecting_set(fault_range));
+			const intersecting_set trampled_set = get_intersecting_set(fault_range);
 
 			thrashed_set result = {};
 			result.cause = cause;
