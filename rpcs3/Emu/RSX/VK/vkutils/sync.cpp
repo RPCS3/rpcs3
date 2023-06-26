@@ -174,7 +174,7 @@ namespace vk
 		return m_handle;
 	}
 
-	event::event(const render_device& dev, sync_domain /*domain*/)
+	event::event(const render_device& dev, sync_domain domain)
 		: m_device(&dev), v2(dev.get_synchronization2_support())
 	{
 		VkEventCreateInfo info
@@ -183,6 +183,12 @@ namespace vk
 			.pNext = nullptr,
 			.flags = 0
 		};
+
+		if (v2 && domain == sync_domain::gpu)
+		{
+			info.flags = VK_EVENT_CREATE_DEVICE_ONLY_BIT_KHR;
+		}
+
 		CHECK_RESULT(vkCreateEvent(dev, &info, nullptr, &m_vk_event));
 	}
 
