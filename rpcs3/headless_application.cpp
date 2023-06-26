@@ -10,6 +10,8 @@
 
 #include <clocale>
 
+[[noreturn]] void report_fatal_error(std::string_view text, bool is_html = false, bool include_help_text = true);
+
 // For now, a trivial constructor/destructor. May add command line usage later.
 headless_application::headless_application(int& argc, char** argv) : QCoreApplication(argc, argv)
 {
@@ -137,6 +139,14 @@ void headless_application::InitializeCallbacks()
 	callbacks.on_resume = []() {};
 	callbacks.on_stop   = []() {};
 	callbacks.on_ready  = []() {};
+	callbacks.on_emulation_stop_no_response = [](std::shared_ptr<atomic_t<bool>> closed_successfully, int /*seconds_waiting_already*/)
+	{
+		if (!closed_successfully || !*closed_successfully)
+		{
+			report_fatal_error(tr("Stopping emulator took too long."
+						"\nSome thread has probably deadlocked. Aborting.").toStdString());
+		}
+	};
 
 	callbacks.enable_disc_eject  = [](bool) {};
 	callbacks.enable_disc_insert = [](bool) {};

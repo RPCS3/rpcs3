@@ -49,6 +49,8 @@
 
 LOG_CHANNEL(gui_log, "GUI");
 
+[[noreturn]] void report_fatal_error(std::string_view text, bool is_html = false, bool include_help_text = true);
+
 gui_application::gui_application(int& argc, char** argv) : QApplication(argc, argv)
 {
 }
@@ -568,6 +570,61 @@ void gui_application::InitializeCallbacks()
 			return m_main_window->InstallPackages(pkg_list, true);
 		};
 	}
+
+	callbacks.on_emulation_stop_no_response = [this](std::shared_ptr<atomic_t<bool>> closed_successfully, int seconds_waiting_already)
+	{
+		const std::string terminate_message = tr("Stopping emulator took too long."
+			"\nSome thread has probably deadlocked. Aborting.").toStdString();
+
+		if (!closed_successfully)
+		{
+			report_fatal_error(terminate_message);
+		}
+
+		Emu.CallFromMainThread([this, closed_successfully, seconds_waiting_already, terminate_message]
+		{
+			const auto seconds = std::make_shared<int>(seconds_waiting_already);
+
+			QMessageBox* mb = new QMessageBox();
+			mb->setWindowTitle(tr("PS3 Game/Application Is Unresponsive"));
+			mb->setIcon(QMessageBox::Critical);
+			mb->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+			mb->setDefaultButton(QMessageBox::No);
+			mb->button(QMessageBox::Yes)->setText(tr("Terminate RPCS3"));
+			mb->button(QMessageBox::No)->setText(tr("Keep Waiting"));
+
+			QString text_base = tr("Waiting for %0 second(s) already to stop emulation without success."
+			                       "\nKeep waiting or terminate RPCS3 unsafely at your own risk?");
+
+			mb->setText(text_base.arg(10));
+			mb->layout()->setSizeConstraint(QLayout::SetFixedSize);
+			mb->setAttribute(Qt::WA_DeleteOnClose);
+
+			QTimer* update_timer = new QTimer(mb);
+
+			connect(update_timer, &QTimer::timeout, [mb, seconds, text_base, closed_successfully]()
+			{
+				*seconds += 1;
+				mb->setText(text_base.arg(*seconds));
+
+				if (*closed_successfully)
+				{
+					mb->reject();
+				}
+			});
+
+			connect(mb, &QDialog::accepted, mb, [closed_successfully, terminate_message]
+			{
+				if (!*closed_successfully)
+				{
+					report_fatal_error(terminate_message);
+				}
+			});
+
+			mb->open();
+			update_timer->start(1000);
+		});
+	};
 
 	Emu.SetCallbacks(std::move(callbacks));
 }

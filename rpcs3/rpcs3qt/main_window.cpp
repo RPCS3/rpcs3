@@ -444,6 +444,9 @@ void main_window::show_boot_error(game_boot_result status)
 	case game_boot_result::savestate_version_unsupported:
 		message = tr("Savestate versioning data differes from your RPCS3 build.");
 		break;
+	case game_boot_result::still_running:
+		message = tr("A game or PS3 application is still running or has yet to be fully stopped.");
+		break;
 	case game_boot_result::firmware_missing: // Handled elsewhere
 	case game_boot_result::no_errors:
 		return;
@@ -1858,8 +1861,6 @@ void main_window::OnEmuStop()
 {
 	const QString title = GetCurrentTitle();
 	const QString play_tooltip = tr("Play %0").arg(title);
-
-	m_debugger_frame->UpdateUI();
 
 	ui->sysPauseAct->setText(tr("&Play"));
 	ui->sysPauseAct->setIcon(m_icon_play);
