@@ -37,6 +37,18 @@ namespace vk
 		heap_changed    = 4,
 	};
 
+	struct image_readback_options_t
+	{
+		bool swap_bytes = false;
+		struct
+		{
+			u64 offset = 0;
+			u64 length = 0;
+
+			operator bool() const { return length != 0; }
+		} sync_region {};
+	};
+
 	const vk::render_device *get_current_renderer();
 	void set_current_renderer(const vk::render_device &device);
 
@@ -74,7 +86,7 @@ namespace vk
 		VkImageAspectFlags flags, vk::data_heap &upload_heap, u32 heap_align, rsx::flags32_t image_setup_flags);
 
 	// Other texture management helpers
-	void copy_image_to_buffer(const vk::command_buffer& cmd, const vk::image* src, const vk::buffer* dst, const VkBufferImageCopy& region, bool swap_bytes = false);
+	void copy_image_to_buffer(const vk::command_buffer& cmd, const vk::image* src, const vk::buffer* dst, const VkBufferImageCopy& region, const image_readback_options_t& options = {});
 	void copy_buffer_to_image(const vk::command_buffer& cmd, const vk::buffer* src, const vk::image* dst, const VkBufferImageCopy& region);
 	u64  calculate_working_buffer_size(u64 base_size, VkImageAspectFlags aspect);
 
