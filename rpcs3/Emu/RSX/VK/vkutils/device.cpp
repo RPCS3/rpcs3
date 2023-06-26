@@ -687,6 +687,13 @@ namespace vk
 
 		CHECK_RESULT_EX(vkCreateDevice(*pgpu, &device, nullptr, &dev), message_on_error);
 
+		// Dump some diagnostics to the log
+		rsx_log.notice("%u extensions loaded:", ::size32(requested_extensions));
+		for (const auto& ext : requested_extensions)
+		{
+			rsx_log.always()("** Using %s", ext);
+		}
+
 		// Initialize queues
 		vkGetDeviceQueue(dev, graphics_queue_idx, 0, &m_graphics_queue);
 		vkGetDeviceQueue(dev, transfer_queue_idx, transfer_queue_sub_index, &m_transfer_queue);
