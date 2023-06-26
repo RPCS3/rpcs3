@@ -148,7 +148,6 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 	if (enable_play_last)
 	{
 		ui->sysPauseAct->setText(tr("&Play last played game"));
-		ui->sysPauseAct->setShortcut(QKeySequence("Ctrl+R"));
 		ui->sysPauseAct->setIcon(m_icon_play);
 		ui->toolbar_start->setToolTip(start_tooltip);
 	}
@@ -319,6 +318,12 @@ void main_window::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const Q
 
 	switch (shortcut_key)
 	{
+	case gui::shortcuts::shortcut::mw_welcome_dialog:
+	{
+		welcome_dialog* welcome = new welcome_dialog(m_gui_settings, true, this);
+		welcome->open();
+		break;
+	}
 	case gui::shortcuts::shortcut::mw_toggle_fullscreen:
 	{
 		ui->toolbar_fullscreen->trigger();
@@ -438,6 +443,9 @@ void main_window::show_boot_error(game_boot_result status)
 		break;
 	case game_boot_result::savestate_version_unsupported:
 		message = tr("Savestate versioning data differes from your RPCS3 build.");
+		break;
+	case game_boot_result::still_running:
+		message = tr("A game or PS3 application is still running or has yet to be fully stopped.");
 		break;
 	case game_boot_result::firmware_missing: // Handled elsewhere
 	case game_boot_result::no_errors:
@@ -1853,8 +1861,6 @@ void main_window::OnEmuStop()
 {
 	const QString title = GetCurrentTitle();
 	const QString play_tooltip = tr("Play %0").arg(title);
-
-	m_debugger_frame->UpdateUI();
 
 	ui->sysPauseAct->setText(tr("&Play"));
 	ui->sysPauseAct->setIcon(m_icon_play);
@@ -3395,25 +3401,4 @@ void main_window::dragMoveEvent(QDragMoveEvent* event)
 void main_window::dragLeaveEvent(QDragLeaveEvent* event)
 {
 	event->accept();
-}
-
-void main_window::keyPressEvent(QKeyEvent* event)
-{
-	QMainWindow::keyPressEvent(event);
-
-	if (event->isAutoRepeat() || event->modifiers())
-	{
-		return;
-	}
-
-	switch (event->key())
-	{
-	case Qt::Key_F1:
-	{
-		welcome_dialog* welcome = new welcome_dialog(m_gui_settings, true, this);
-		welcome->open();
-		break;
-	}
-	default: break;
-	}
 }

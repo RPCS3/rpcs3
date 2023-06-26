@@ -21,6 +21,7 @@ enum class video_renderer;
 enum class system_state : u32
 {
 	stopped,
+	stopping,
 	running,
 	paused,
 	frozen, // paused but cannot resume
@@ -43,6 +44,7 @@ enum class game_boot_result : u32
 	unsupported_disc_type,
 	savestate_corrupted,
 	savestate_version_unsupported,
+	still_running,
 };
 
 constexpr bool is_error(game_boot_result res)
@@ -59,6 +61,7 @@ struct EmuCallbacks
 	std::function<void()> on_stop;
 	std::function<void()> on_ready;
 	std::function<bool()> on_missing_fw;
+	std::function<void(std::shared_ptr<atomic_t<bool>>, int)> on_emulation_stop_no_response;
 	std::function<void(bool enabled)> enable_disc_eject;
 	std::function<void(bool enabled)> enable_disc_insert;
 	std::function<bool(bool, std::function<void()>)> try_to_quit; // (force_quit, on_exit) Try to close RPCS3
@@ -215,6 +218,7 @@ public:
 	std::string disc;
 	std::string hdd1;
 	std::function<void(u32)> init_mem_containers;
+	std::function<void()> after_kill_callback;
 
 	u32 m_boot_source_type = 0; // CELL_GAME_GAMETYPE_SYS
 
@@ -322,17 +326,17 @@ public:
 	bool Pause(bool freeze_emulation = false, bool show_resume_message = true);
 	void Resume();
 	void GracefulShutdown(bool allow_autoexit = true, bool async_op = false, bool savestate = false);
-	std::shared_ptr<utils::serial> Kill(bool allow_autoexit = true, bool savestate = false);
+	void Kill(bool allow_autoexit = true, bool savestate = false);
 	game_boot_result Restart(bool graceful = true);
 	bool Quit(bool force_quit);
 	static void CleanUp();
 
 	bool IsRunning() const { return m_state == system_state::running; }
 	bool IsPaused()  const { return m_state >= system_state::paused; } // ready/starting are also considered paused by this function
-	bool IsStopped() const { return m_state == system_state::stopped; }
+	bool IsStopped() const { return m_state <= system_state::stopping; }
 	bool IsReady()   const { return m_state == system_state::ready; }
 	bool IsStarting() const { return m_state == system_state::starting; }
-	auto GetStatus(bool fixup = true) const { system_state state = m_state; return fixup && state == system_state::frozen ? system_state::paused : state; }
+	auto GetStatus(bool fixup = true) const { system_state state = m_state; return fixup && state == system_state::frozen ? system_state::paused : fixup && state == system_state::stopping ? system_state::stopped : state; }
 
 	bool HasGui() const { return m_has_gui; }
 	void SetHasGui(bool has_gui) { m_has_gui = has_gui; }
