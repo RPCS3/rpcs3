@@ -681,6 +681,7 @@ namespace vk
 		{
 			synchronization2_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES;
 			synchronization2_info.pNext = const_cast<void*>(device.pNext);
+			synchronization2_info.synchronization2 = VK_TRUE;
 			device.pNext = &synchronization2_info;
 		}
 
