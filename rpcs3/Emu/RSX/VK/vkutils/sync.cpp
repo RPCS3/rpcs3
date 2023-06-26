@@ -174,7 +174,7 @@ namespace vk
 		return m_handle;
 	}
 
-	event::event(const render_device& dev, sync_domain domain)
+	event::event(const render_device& dev, sync_domain /*domain*/)
 		: m_device(&dev), v2(dev.get_synchronization2_support())
 	{
 		VkEventCreateInfo info
