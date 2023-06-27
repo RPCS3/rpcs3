@@ -183,6 +183,12 @@ namespace vk
 			.pNext = nullptr,
 			.flags = 0
 		};
+
+		if (v2 && domain == sync_domain::gpu)
+		{
+			info.flags = VK_EVENT_CREATE_DEVICE_ONLY_BIT_KHR;
+		}
+
 		CHECK_RESULT(vkCreateEvent(dev, &info, nullptr, &m_vk_event));
 	}
 

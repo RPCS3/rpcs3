@@ -92,6 +92,8 @@ namespace vk
 		rsx_pitch = pitch;
 
 		const bool require_format_conversion = !!(src->aspect() & VK_IMAGE_ASPECT_STENCIL_BIT) || src->format() == VK_FORMAT_D32_SFLOAT;
+		auto dma_mapping = vk::map_dma(valid_range.start, valid_range.length());
+
 		if (require_format_conversion || pack_unpack_swap_bytes)
 		{
 			const auto section_length = valid_range.length();
@@ -100,13 +102,16 @@ namespace vk
 			const auto working_buffer_length = calculate_working_buffer_size(task_length, src->aspect());
 
 			auto working_buffer = vk::get_scratch_buffer(cmd, working_buffer_length);
-			auto final_mapping = vk::map_dma(valid_range.start, section_length);
 
 			VkBufferImageCopy region = {};
 			region.imageSubresource = { src->aspect(), 0, 0, 1 };
 			region.imageOffset = { src_area.x1, src_area.y1, 0 };
 			region.imageExtent = { transfer_width, transfer_height, 1 };
-			vk::copy_image_to_buffer(cmd, src, working_buffer, region, (require_format_conversion && pack_unpack_swap_bytes));
+
+			bool require_rw_barrier = true;
+			image_readback_options_t xfer_options{};
+			xfer_options.swap_bytes = require_format_conversion && pack_unpack_swap_bytes;
+			vk::copy_image_to_buffer(cmd, src, working_buffer, region, xfer_options);
 
 			// NOTE: For depth/stencil formats, copying to buffer and byteswap are combined into one step above
 			if (pack_unpack_swap_bytes && !require_format_conversion)
@@ -132,23 +137,32 @@ namespace vk
 				if (shuffle_kernel)
 				{
 					vk::insert_buffer_memory_barrier(cmd, working_buffer->value, 0, task_length,
-						VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-						VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
+						VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+						VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
 
 					shuffle_kernel->run(cmd, working_buffer, task_length);
 
 					vk::insert_buffer_memory_barrier(cmd, working_buffer->value, 0, task_length,
 						VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
 						VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
+
+					require_rw_barrier = false;
 				}
+			}
+
+			if (require_rw_barrier)
+			{
+				vk::insert_buffer_memory_barrier(cmd, working_buffer->value, 0, working_buffer_length,
+					VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+					VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
 			}
 
 			if (rsx_pitch == real_pitch) [[likely]]
 			{
 				VkBufferCopy copy = {};
-				copy.dstOffset = final_mapping.first;
+				copy.dstOffset = dma_mapping.first;
 				copy.size = section_length;
-				vkCmdCopyBuffer(cmd, working_buffer->value, final_mapping.second->value, 1, &copy);
+				vkCmdCopyBuffer(cmd, working_buffer->value, dma_mapping.second->value, 1, &copy);
 			}
 			else
 			{
@@ -163,7 +177,7 @@ namespace vk
 				std::vector<VkBufferCopy> copy;
 				copy.reserve(transfer_height);
 
-				u32 dst_offset = final_mapping.first;
+				u32 dst_offset = dma_mapping.first;
 				u32 src_offset = 0;
 
 				for (unsigned row = 0; row < transfer_height; ++row)
@@ -173,7 +187,7 @@ namespace vk
 					dst_offset += rsx_pitch;
 				}
 
-				vkCmdCopyBuffer(cmd, working_buffer->value, final_mapping.second->value, transfer_height, copy.data());
+				vkCmdCopyBuffer(cmd, working_buffer->value, dma_mapping.second->value, transfer_height, copy.data());
 			}
 		}
 		else
@@ -184,19 +198,27 @@ namespace vk
 			region.imageOffset = { src_area.x1, src_area.y1, 0 };
 			region.imageExtent = { transfer_width, transfer_height, 1 };
 
-			auto mapping = vk::map_dma(valid_range.start, valid_range.length());
-			region.bufferOffset = mapping.first;
-			vkCmdCopyImageToBuffer(cmd, src->value, src->current_layout, mapping.second->value, 1, &region);
+			region.bufferOffset = dma_mapping.first;
+			vkCmdCopyImageToBuffer(cmd, src->value, src->current_layout, dma_mapping.second->value, 1, &region);
 		}
 
 		src->pop_layout(cmd);
 
-		VkMemoryBarrier2KHR copy_memory_barrier = {
+		// Inserting a buffer memory barrier into the pipe fixes sync on RADV. Adding the same barrier as an event dep does not work.
+		// The dependencies in the CmdSetEvents2 command are handled in a different path from regular pipeline deps.
+		vk::insert_buffer_memory_barrier(cmd,
+			dma_mapping.second->value, dma_mapping.first, valid_range.length(),
+			VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+			VK_ACCESS_TRANSFER_WRITE_BIT, 0);
+
+		// Not providing any deps to the signal makes AMDVLK hang (event never gets signaled)
+		// We also need to set this up correctly as the buffer barrier above by itself does not work for AMD/AMDVLK.
+		VkMemoryBarrier2KHR mem_barrier =
+		{
 			.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2_KHR,
-			.pNext = nullptr,
 			.srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT_KHR,
-			.srcAccessMask = VK_ACCESS_2_MEMORY_READ_BIT_KHR | VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
-			.dstStageMask = VK_PIPELINE_STAGE_2_NONE_KHR,
+			.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
+			.dstStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
 			.dstAccessMask = 0
 		};
 
@@ -204,9 +226,9 @@ namespace vk
 		dma_fence = std::make_unique<vk::event>(*m_device, sync_domain::any);
 		dma_fence->signal(cmd,
 		{
-			.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR,
+			.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
 			.memoryBarrierCount = 1,
-			.pMemoryBarriers = &copy_memory_barrier
+			.pMemoryBarriers = &mem_barrier
 		});
 
 		// Set cb flag for queued dma operations

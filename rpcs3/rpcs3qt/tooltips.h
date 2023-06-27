@@ -227,6 +227,8 @@ public:
 		const QString show_move_cursor  = tr("Shows the raw position of the PS Move input.\nThis can be very helpful during calibration screens.");
 		const QString midi_devices      = tr("Select up to 3 emulated midi devices and their type.");
 
+		const QString lock_overlay_input_to_player_one  = tr("Locks the native overlay input to the first player.");
+
 		// network
 
 		const QString net_status    = tr("If set to Connected, RPCS3 will allow programs to use your internet connection.");
