@@ -144,6 +144,7 @@ enum class emu_settings_type
 	// Input / Output
 	BackgroundInput,
 	ShowMoveCursor,
+	LockOvlIptToP1,
 	PadHandlerMode,
 	PadConnection,
 	KeyboardHandler,
@@ -327,6 +328,7 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	// Input / Output
 	{ emu_settings_type::BackgroundInput, { "Input/Output", "Background input enabled"}},
 	{ emu_settings_type::ShowMoveCursor,  { "Input/Output", "Show move cursor"}},
+	{ emu_settings_type::LockOvlIptToP1,  { "Input/Output", "Lock overlay input to player one"}},
 	{ emu_settings_type::PadHandlerMode,  { "Input/Output", "Pad handler mode"}},
 	{ emu_settings_type::PadConnection,   { "Input/Output", "Keep pads connected" }},
 	{ emu_settings_type::KeyboardHandler, { "Input/Output", "Keyboard"}},

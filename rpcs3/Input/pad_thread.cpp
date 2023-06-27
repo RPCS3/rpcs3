@@ -411,6 +411,9 @@ void pad_thread::operator()()
 
 			for (usz i = 0; i < m_pads.size() && !ps_button_pressed; i++)
 			{
+				if (i > 0 && g_cfg.io.lock_overlay_input_to_player_one)
+					break;
+
 				const auto& pad = m_pads[i];
 
 				if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
