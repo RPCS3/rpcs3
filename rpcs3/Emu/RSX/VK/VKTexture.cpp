@@ -122,8 +122,8 @@ namespace vk
 
 			if (options.sync_region)
 			{
-				u64 sync_end = options.sync_region.offset + options.sync_region.length;
-				u64 write_end = region.bufferOffset + packed16_length;
+				const u64 sync_end = options.sync_region.offset + options.sync_region.length;
+				const u64 write_end = region.bufferOffset + packed16_length;
 				const u64 sync_offset = std::min<u64>(region.bufferOffset, options.sync_region.offset);
 				const u64 sync_length = std::max<u64>(sync_end, write_end) - sync_offset;
 
@@ -202,8 +202,8 @@ namespace vk
 
 			if (options.sync_region)
 			{
-				u64 sync_end = options.sync_region.offset + options.sync_region.length;
-				u64 write_end = region.bufferOffset + packed_length;
+				const u64 sync_end = options.sync_region.offset + options.sync_region.length;
+				const u64 write_end = region.bufferOffset + packed_length;
 				const u64 sync_offset = std::min<u64>(region.bufferOffset, options.sync_region.offset);
 				const u64 sync_length = std::max<u64>(sync_end, write_end) - sync_offset;
 
