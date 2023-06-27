@@ -3110,11 +3110,16 @@ namespace rsx
 								update_cache_tag();
 							}
 						}
+						else if (!found->is_flushable())
+						{
+							found->discard(true);
+						}
 						else
 						{
+							// NOP
 							// Unlikely situation, but the only one which would allow re-upload from CPU to overlap this section.
-							ensure(!found->is_flushable());
-							found->discard(true);
+							// Technically this is possible in games that may change surface pitch at random (insomniac engine)
+							ensure(found->get_section_base() != dst_subres.base_address);
 						}
 					}
 				}
