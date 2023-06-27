@@ -681,10 +681,18 @@ namespace vk
 		{
 			synchronization2_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES;
 			synchronization2_info.pNext = const_cast<void*>(device.pNext);
+			synchronization2_info.synchronization2 = VK_TRUE;
 			device.pNext = &synchronization2_info;
 		}
 
 		CHECK_RESULT_EX(vkCreateDevice(*pgpu, &device, nullptr, &dev), message_on_error);
+
+		// Dump some diagnostics to the log
+		rsx_log.notice("%u extensions loaded:", ::size32(requested_extensions));
+		for (const auto& ext : requested_extensions)
+		{
+			rsx_log.always()("** Using %s", ext);
+		}
 
 		// Initialize queues
 		vkGetDeviceQueue(dev, graphics_queue_idx, 0, &m_graphics_queue);

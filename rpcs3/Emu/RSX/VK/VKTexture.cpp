@@ -46,7 +46,12 @@ namespace vk
 		}
 	}
 
-	void copy_image_to_buffer(const vk::command_buffer& cmd, const vk::image* src, const vk::buffer* dst, const VkBufferImageCopy& region, bool swap_bytes)
+	void copy_image_to_buffer(
+		const vk::command_buffer& cmd,
+		const vk::image* src,
+		const vk::buffer* dst,
+		const VkBufferImageCopy& region,
+		const image_readback_options_t& options)
 	{
 		// Always validate
 		ensure(src->current_layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL || src->current_layout == VK_IMAGE_LAYOUT_GENERAL);
@@ -63,8 +68,17 @@ namespace vk
 		{
 		default:
 		{
-			ensure(!swap_bytes); // "Implicit byteswap option not supported for speficied format"
+			ensure(!options.swap_bytes); // "Implicit byteswap option not supported for speficied format"
 			vkCmdCopyImageToBuffer(cmd, src->value, src->current_layout, dst->value, 1, &region);
+
+			if (options.sync_region)
+			{
+				// Post-Transfer barrier
+				vk::insert_buffer_memory_barrier(cmd, dst->value,
+					options.sync_region.offset, options.sync_region.length,
+					VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+					VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
+			}
 			break;
 		}
 		case VK_FORMAT_D32_SFLOAT:
@@ -95,7 +109,7 @@ namespace vk
 				VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
 
 			// 3. Do conversion with byteswap [D32->D16F]
-			if (!swap_bytes) [[likely]]
+			if (!options.swap_bytes) [[likely]]
 			{
 				auto job = vk::get_compute_task<vk::cs_fconvert_task<f32, f16>>();
 				job->run(cmd, dst, z32_offset, packed32_length, data_offset);
@@ -106,10 +120,18 @@ namespace vk
 				job->run(cmd, dst, z32_offset, packed32_length, data_offset);
 			}
 
-			// 4. Post-compute barrier
-			vk::insert_buffer_memory_barrier(cmd, dst->value, region.bufferOffset, packed16_length,
-				VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-				VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
+			if (options.sync_region)
+			{
+				const u64 sync_end = options.sync_region.offset + options.sync_region.length;
+				const u64 write_end = region.bufferOffset + packed16_length;
+				const u64 sync_offset = std::min<u64>(region.bufferOffset, options.sync_region.offset);
+				const u64 sync_length = std::max<u64>(sync_end, write_end) - sync_offset;
+
+				// 4. Post-compute barrier
+				vk::insert_buffer_memory_barrier(cmd, dst->value, sync_offset, sync_length,
+					VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+					VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
+			}
 			break;
 		}
 		case VK_FORMAT_D24_UNORM_S8_UINT:
@@ -141,7 +163,7 @@ namespace vk
 
 			// 2. Interleave the separated data blocks with a compute job
 			vk::cs_interleave_task *job;
-			if (!swap_bytes) [[likely]]
+			if (!options.swap_bytes) [[likely]]
 			{
 				if (src->format() == VK_FORMAT_D24_UNORM_S8_UINT)
 				{
@@ -178,9 +200,17 @@ namespace vk
 
 			job->run(cmd, dst, data_offset, packed_length, z_offset, s_offset);
 
-			vk::insert_buffer_memory_barrier(cmd, dst->value, region.bufferOffset, packed_length,
-				VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-				VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
+			if (options.sync_region)
+			{
+				const u64 sync_end = options.sync_region.offset + options.sync_region.length;
+				const u64 write_end = region.bufferOffset + packed_length;
+				const u64 sync_offset = std::min<u64>(region.bufferOffset, options.sync_region.offset);
+				const u64 sync_length = std::max<u64>(sync_end, write_end) - sync_offset;
+
+				vk::insert_buffer_memory_barrier(cmd, dst->value, sync_offset, sync_length,
+					VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+					VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
+			}
 			break;
 		}
 		}
