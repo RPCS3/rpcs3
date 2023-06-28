@@ -159,8 +159,10 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 		// Handle sticks
 		for (usz i = 0; i < pad.m_sticks.size(); i++)
 		{
-			const bool is_max = pad.m_sticks[i].m_key_codes_max.contains(code);
-			const bool is_min = pad.m_sticks[i].m_key_codes_min.contains(code);
+			AnalogStick& stick = pad.m_sticks[i];
+
+			const bool is_max = stick.m_key_codes_max.contains(code);
+			const bool is_min = stick.m_key_codes_min.contains(code);
 
 			if (!is_max && !is_min)
 			{
@@ -169,18 +171,45 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 
 			const bool is_left_stick = i < 2;
 
-			if (pressed)
-			{
-				value = MultipliedInput(value, is_left_stick ? m_l_stick_multiplier : m_r_stick_multiplier);
-			}
+			const u16 actual_value = pressed ? MultipliedInput(value, is_left_stick ? m_l_stick_multiplier : m_r_stick_multiplier) : value;
+			u16 normalized_value = std::ceil(actual_value / 2.0);
 
-			const u16 normalized_value = std::ceil(value / 2.0);
+			const auto register_new_stick_value = [&](std::map<u32, u16>& pressed_keys, bool is_max)
+			{
+				// Make sure we keep this stick pressed until all related keys are released.
+				if (pressed)
+				{
+					pressed_keys[code] = normalized_value;
+				}
+				else
+				{
+					pressed_keys.erase(code);
+				}
+
+				// Get the min/max value of all pressed keys for this stick
+				for (const auto& [key, val] : pressed_keys)
+				{
+					normalized_value = is_max ? std::max(normalized_value, val) : std::min(normalized_value, val);
+				}
+			};
 
 			if (is_max)
-				m_stick_max[i] = pressed ? std::min<int>(128 + normalized_value, 255) : 128;
+			{
+				register_new_stick_value(stick.m_pressed_keys_max, true);
+
+				const bool is_max_pressed = !stick.m_pressed_keys_max.empty();
+
+				m_stick_max[i] = is_max_pressed ? std::min<int>(128 + normalized_value, 255) : 128;
+			}
 
 			if (is_min)
-				m_stick_min[i] = pressed ? std::min<u8>(normalized_value, 128) : 0;
+			{
+				register_new_stick_value(stick.m_pressed_keys_min, false);
+
+				const bool is_min_pressed = !stick.m_pressed_keys_min.empty();
+
+				m_stick_min[i] = is_min_pressed ? std::min<u8>(normalized_value, 128) : 0;
+			}
 
 			m_stick_val[i] = m_stick_max[i] - m_stick_min[i];
 
@@ -189,7 +218,7 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 			// to get the fastest response time possible we don't wanna use any lerp with factor 1
 			if (stick_lerp_factor >= 1.0f)
 			{
-				pad.m_sticks[i].m_value = m_stick_val[i];
+				stick.m_value = m_stick_val[i];
 			}
 		}
 	}
