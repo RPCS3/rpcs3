@@ -340,18 +340,23 @@ namespace vk
 
 	void event::reset() const
 	{
-		if (m_backend == sync_backend::gpu_label)
+		if (m_backend != sync_backend::gpu_label) [[ likely ]]
 		{
-			m_label->reset();
+			vkResetEvent(*m_device, m_vk_event);
 			return;
 		}
 
-		vkResetEvent(*m_device, m_vk_event);
+		m_label->reset();
 	}
 
 	VkResult event::status() const
 	{
-		return vkGetEventStatus(*m_device, m_vk_event);
+		if (m_backend != sync_backend::gpu_label) [[ likely ]]
+		{
+			return vkGetEventStatus(*m_device, m_vk_event);
+		}
+
+		return m_label->signaled() ? VK_EVENT_SET : VK_EVENT_RESET;
 	}
 
 	gpu_label_pool::gpu_label_pool(const vk::render_device& dev, u32 count)
