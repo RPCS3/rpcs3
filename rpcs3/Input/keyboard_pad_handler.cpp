@@ -6,9 +6,6 @@
 
 #include <QApplication>
 
-inline std::string sstr(const QString& _in) { return _in.toStdString(); }
-constexpr auto qstr = QString::fromStdString;
-
 bool keyboard_pad_handler::Init()
 {
 	const steady_clock::time_point now = steady_clock::now();
@@ -281,7 +278,7 @@ void keyboard_pad_handler::processKeyEvent(QKeyEvent* event, bool pressed)
 		if (is_num_key)
 			list.removeAll("Num");
 
-		const QString name = qstr(GetKeyName(event));
+		const QString name = QString::fromStdString(GetKeyName(event));
 
 		// TODO: Edge case: switching numlock keeps numpad keys pressed due to now different modifier
 
@@ -642,7 +639,7 @@ QStringList keyboard_pad_handler::GetKeyNames(const QKeyEvent* keyEvent)
 	// Handle special cases
 	if (const std::string name = native_scan_code_to_string(keyEvent->nativeScanCode()); !name.empty())
 	{
-		list.append(qstr(name));
+		list.append(QString::fromStdString(name));
 	}
 
 	switch (keyEvent->key())
@@ -692,7 +689,7 @@ std::string keyboard_pad_handler::GetKeyName(const QKeyEvent* keyEvent)
 	case Qt::Key_Meta:
 		return "Meta";
 	case Qt::Key_NumLock:
-		return sstr(QKeySequence(keyEvent->key()).toString(QKeySequence::NativeText));
+		return QKeySequence(keyEvent->key()).toString(QKeySequence::NativeText).toStdString();
 #ifdef __APPLE__
 	// On macOS, the arrow keys are considered to be part of the keypad;
 	// since most Mac keyboards lack a keypad to begin with,
@@ -709,12 +706,12 @@ std::string keyboard_pad_handler::GetKeyName(const QKeyEvent* keyEvent)
 	default:
 		break;
 	}
-	return sstr(QKeySequence(keyEvent->key() | keyEvent->modifiers()).toString(QKeySequence::NativeText));
+	return QKeySequence(keyEvent->key() | keyEvent->modifiers()).toString(QKeySequence::NativeText).toStdString();
 }
 
 std::string keyboard_pad_handler::GetKeyName(const u32& keyCode)
 {
-	return sstr(QKeySequence(keyCode).toString(QKeySequence::NativeText));
+	return QKeySequence(keyCode).toString(QKeySequence::NativeText).toStdString();
 }
 
 std::set<u32> keyboard_pad_handler::GetKeyCodes(const cfg::string& cfg_string)
@@ -734,7 +731,7 @@ u32 keyboard_pad_handler::GetKeyCode(const QString& keyName)
 {
 	if (keyName.isEmpty())
 		return Qt::NoButton;
-	if (const int native_scan_code = native_scan_code_from_string(sstr(keyName)); native_scan_code >= 0)
+	if (const int native_scan_code = native_scan_code_from_string(keyName.toStdString()); native_scan_code >= 0)
 		return Qt::Key_unknown + native_scan_code; // Special cases that can't be expressed with Qt::Key
 	if (keyName == "Alt")
 		return Qt::Key_Alt;
