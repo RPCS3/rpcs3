@@ -286,6 +286,9 @@ struct AnalogStick
 	std::set<u32> m_key_codes_max{};
 	u16 m_value = 128;
 
+	std::map<u32, u16> m_pressed_keys_min{}; // only used in keyboard_pad_handler
+	std::map<u32, u16> m_pressed_keys_max{}; // only used in keyboard_pad_handler
+
 	AnalogStick(u32 offset, std::set<u32> key_codes_min, std::set<u32> key_codes_max)
 		: m_offset(offset)
 		, m_key_codes_min(std::move(key_codes_min))
