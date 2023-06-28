@@ -74,6 +74,29 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 
 	for (auto& pad : m_pads_internal)
 	{
+		const auto register_new_button_value = [&](std::map<u32, u16>& pressed_keys) -> u16
+		{
+			u16 actual_value = 0;
+
+			// Make sure we keep this button pressed until all related keys are released.
+			if (pressed)
+			{
+				pressed_keys[code] = value;
+			}
+			else
+			{
+				pressed_keys.erase(code);
+			}
+
+			// Get the max value of all pressed keys for this button
+			for (const auto& [key, val] : pressed_keys)
+			{
+				actual_value = std::max(actual_value, val);
+			}
+
+			return actual_value;
+		};
+
 		// Find out if special buttons are pressed (introduced by RPCS3).
 		// Activate the buttons here if possible since keys don't auto-repeat. This ensures that they are already pressed in the following loop.
 		if (pad.m_pressure_intensity_button_index >= 0)
@@ -82,42 +105,28 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 
 			if (pressure_intensity_button.m_key_codes.contains(code))
 			{
-				pressure_intensity_button.m_pressed = pressed;
-				pressure_intensity_button.m_value = value;
+				const u16 actual_value = register_new_button_value(pressure_intensity_button.m_pressed_keys);
+
+				pressure_intensity_button.m_pressed = actual_value > 0;
+				pressure_intensity_button.m_value = actual_value;
 			}
 		}
 
 		const bool adjust_pressure = pad.get_pressure_intensity_enabled(m_pressure_intensity_toggle_mode);
 
 		// Handle buttons
-		for (Button& button : pad.m_buttons)
+		for (usz i = 0; i < pad.m_buttons.size(); i++)
 		{
+			// Ignore pressure intensity button
+			if (static_cast<s32>(i) == pad.m_pressure_intensity_button_index)
+				continue;
+
+			Button& button = pad.m_buttons[i];
+
 			if (!button.m_key_codes.contains(code))
 				continue;
 
-			// Make sure we keep this button pressed until all related keys are released.
-			if (pressed)
-			{
-				button.m_pressed_keys.insert(code);
-
-				if (button.m_pressed_keys.size() > 1)
-				{
-					// This button was already pressed by another key. Ignore this key press.
-					continue;
-				}
-			}
-			else
-			{
-				button.m_pressed_keys.erase(code);
-
-				if (!button.m_pressed_keys.empty())
-				{
-					// This button is still pressed by another key. Ignore this key release.
-					continue;
-				}
-			}
-
-			button.m_actual_value = pressed ? value : 0;
+			button.m_actual_value = register_new_button_value(button.m_pressed_keys);
 
 			bool update_button = true;
 
@@ -133,17 +142,17 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 
 			if (update_button)
 			{
-				if (pressed)
+				button.m_pressed = button.m_actual_value > 0;
+
+				if (button.m_pressed)
 				{
 					// Modify pressure if necessary if the button was pressed
-					button.m_value = adjust_pressure ? pad.m_pressure_intensity : value;
+					button.m_value = adjust_pressure ? pad.m_pressure_intensity : button.m_actual_value;
 				}
 				else
 				{
 					button.m_value = 0;
 				}
-
-				button.m_pressed = pressed;
 			}
 		}
 
@@ -398,7 +407,7 @@ void keyboard_pad_handler::mouseReleaseEvent(QMouseEvent* event)
 
 bool keyboard_pad_handler::get_mouse_lock_state() const
 {
-	if (auto game_frame = dynamic_cast<gs_frame*>(m_target))
+	if (gs_frame* game_frame = dynamic_cast<gs_frame*>(m_target))
 		return game_frame->get_mouse_lock_state();
 	return false;
 }
@@ -840,10 +849,8 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, u8 player_i
 	const auto find_keys = [this](const cfg::string& name)
 	{
 		std::set<u32> keys = FindKeyCodes<u32, u32>(mouse_list, name, false);
-		if (keys.empty())
-		{
-			keys = GetKeyCodes(name);
-		}
+		for (const u32& key : GetKeyCodes(name)) keys.insert(key);
+
 		if (!keys.empty())
 		{
 			if (!m_mouse_move_used && (keys.contains(mouse::move_left) || keys.contains(mouse::move_right) || keys.contains(mouse::move_up) || keys.contains(mouse::move_down)))

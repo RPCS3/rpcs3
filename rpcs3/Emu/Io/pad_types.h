@@ -4,6 +4,7 @@
 #include "util/endian.hpp"
 #include "Emu/Io/pad_config_types.h"
 
+#include <map>
 #include <set>
 #include <vector>
 
@@ -246,10 +247,10 @@ struct Button
 	u16 m_value    = 0;
 	bool m_pressed = false;
 
-	u16 m_actual_value = 0;         // only used in keyboard_pad_handler
-	bool m_analog      = false;     // only used in keyboard_pad_handler
-	bool m_trigger     = false;     // only used in keyboard_pad_handler
-	std::set<u32> m_pressed_keys{}; // only used in keyboard_pad_handler
+	u16 m_actual_value = 0;              // only used in keyboard_pad_handler
+	bool m_analog      = false;          // only used in keyboard_pad_handler
+	bool m_trigger     = false;          // only used in keyboard_pad_handler
+	std::map<u32, u16> m_pressed_keys{}; // only used in keyboard_pad_handler
 
 	Button(u32 offset, std::set<u32> key_codes, u32 outKeyCode)
 		: m_offset(offset)
