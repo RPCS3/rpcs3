@@ -721,6 +721,7 @@ namespace vk
 		{
 			_vkCmdSetEvent2KHR = reinterpret_cast<PFN_vkCmdSetEvent2KHR>(vkGetDeviceProcAddr(dev, "vkCmdSetEvent2KHR"));
 			_vkCmdWaitEvents2KHR = reinterpret_cast<PFN_vkCmdWaitEvents2KHR>(vkGetDeviceProcAddr(dev, "vkCmdWaitEvents2KHR"));
+			_vkCmdPipelineBarrier2KHR = reinterpret_cast<PFN_vkCmdPipelineBarrier2KHR>(vkGetDeviceProcAddr(dev, "vkCmdPipelineBarrier2KHR"));
 		}
 
 		memory_map = vk::get_memory_mapping(pdev);

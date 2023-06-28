@@ -200,17 +200,54 @@ namespace vk
 		}
 	}
 
-	void event::signal(const command_buffer& cmd, const VkDependencyInfoKHR& dependency)
+	void event::resolve_dependencies(const command_buffer& cmd, const VkDependencyInfoKHR& dependency)
 	{
-		if (v2) [[ likely ]]
+		if (v2)
 		{
-			m_device->_vkCmdSetEvent2KHR(cmd, m_vk_event, &dependency);
+			m_device->_vkCmdPipelineBarrier2KHR(cmd, &dependency);
 		}
 		else
 		{
-			// Legacy fallback. Should be practically unused with the exception of in-development drivers.
-			const auto stages = v1_utils::gather_src_stages(dependency);
-			vkCmdSetEvent(cmd, m_vk_event, stages);
+			const auto src_stages = v1_utils::gather_src_stages(dependency);
+			const auto dst_stages = v1_utils::gather_dst_stages(dependency);
+			const auto memory_barriers = v1_utils::get_memory_barriers(dependency);
+			const auto image_memory_barriers = v1_utils::get_image_memory_barriers(dependency);
+			const auto buffer_memory_barriers = v1_utils::get_buffer_memory_barriers(dependency);
+
+			vkCmdPipelineBarrier(cmd, src_stages, dst_stages, dependency.dependencyFlags,
+				::size32(memory_barriers), memory_barriers.data(),
+				::size32(buffer_memory_barriers), buffer_memory_barriers.data(),
+				::size32(image_memory_barriers), image_memory_barriers.data());
+		}
+	}
+
+	void event::signal(const command_buffer& cmd, const VkDependencyInfoKHR& dependency)
+	{
+		// Resolve the actual dependencies on a pipeline barrier
+		resolve_dependencies(cmd, dependency);
+
+		// Signalling won't wait. The caller is responsible for setting up the dependencies correctly.
+		if (v2) [[ likely ]]
+		{
+			// We need a memory barrier to keep AMDVLK from hanging
+			VkMemoryBarrier2KHR mem_barrier =
+			{
+				.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2_KHR,
+				.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR,
+				.srcAccessMask = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT
+			};
+			// Empty dependency that does nothing
+			VkDependencyInfoKHR empty_dependency
+			{
+				.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR,
+				.memoryBarrierCount = 1,
+				.pMemoryBarriers = &mem_barrier
+			};
+			m_device->_vkCmdSetEvent2KHR(cmd, m_vk_event, &empty_dependency);
+		}
+		else
+		{
+			vkCmdSetEvent(cmd, m_vk_event, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 		}
 	}
 
