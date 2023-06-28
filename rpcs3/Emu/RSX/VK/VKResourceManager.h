@@ -56,6 +56,8 @@ namespace vk
 		std::deque<eid_scope_t> m_eid_map;
 		shared_mutex m_eid_map_lock;
 
+		std::vector<std::function<void()>> m_exit_handlers;
+
 		inline eid_scope_t& get_current_eid_scope()
 		{
 			const auto eid = current_event_id();
@@ -77,6 +79,12 @@ namespace vk
 		void destroy()
 		{
 			flush();
+
+			// Run the on-exit callbacks
+			for (const auto& callback : m_exit_handlers)
+			{
+				callback();
+			}
 		}
 
 		void flush()
@@ -119,6 +127,11 @@ namespace vk
 			auto ret = m_sampler_pool.emplace(key, result);
 			ret->add_ref();
 			return ret;
+		}
+
+		void add_exit_callback(std::function<void()> callback) override
+		{
+			m_exit_handlers.push_back(callback);
 		}
 
 		void dispose(vk::disposable_t& disposable) override
