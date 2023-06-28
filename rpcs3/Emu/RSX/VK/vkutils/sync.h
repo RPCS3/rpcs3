@@ -9,6 +9,7 @@
 namespace vk
 {
 	class command_buffer;
+	class gpu_label;
 	class image;
 
 	enum class sync_domain
@@ -55,9 +56,21 @@ namespace vk
 
 	class event
 	{
+		enum class sync_backend
+		{
+			events_v1,
+			events_v2,
+			gpu_label
+		};
+
 		const vk::render_device* m_device = nullptr;
+		sync_backend m_backend = sync_backend::events_v1;
+
+		// For events_v1 and events_v2
 		VkEvent m_vk_event = VK_NULL_HANDLE;
-		bool v2 = true;
+
+		// For gpu_label
+		std::unique_ptr<gpu_label> m_label{};
 
 		void resolve_dependencies(const command_buffer& cmd, const VkDependencyInfoKHR& dependency);
 
@@ -88,38 +101,60 @@ namespace vk
 		operator VkSemaphore() const;
 	};
 
-	class gpu_debug_marker_pool
+	// Custom primitives
+	class gpu_label_pool
 	{
-		std::unique_ptr<buffer> m_buffer;
+	public:
+		gpu_label_pool(const vk::render_device& dev, u32 count);
+		std::tuple<VkBuffer, u64, volatile u32*> allocate();
+
+	private:
+		void create_impl();
+
+		const vk::render_device* pdev = nullptr;
+		std::unique_ptr<buffer> m_buffer{};
 		volatile u32* m_mapped = nullptr;
 		u64 m_offset = 0;
 		u32 m_count = 0;
-
-		void create_impl();
-
-	public:
-		gpu_debug_marker_pool(const vk::render_device& dev, u32 count);
-		std::tuple<VkBuffer, u64, volatile u32*> allocate();
-
-		const vk::render_device* pdev = nullptr;
 	};
 
-	class gpu_debug_marker
+	class gpu_label
+	{
+	protected:
+		enum label_constants : u32
+		{
+			set_ = 0xCAFEBABE,
+			reset_ = 0xDEADBEEF
+		};
+
+		VkBuffer m_buffer_handle = VK_NULL_HANDLE;
+		u32 m_buffer_offset = 0;
+		volatile u32* m_ptr = nullptr;
+
+	public:
+		gpu_label(gpu_label_pool& pool);
+		virtual ~gpu_label();
+
+		void signal(const vk::command_buffer& cmd, const VkDependencyInfoKHR& dependency);
+		void reset() { *m_ptr = label_constants::reset_; }
+		bool signaled() const { return label_constants::set_ == *m_ptr; }
+	};
+
+	class gpu_debug_marker_pool : public gpu_label_pool
+	{
+		using gpu_label_pool::gpu_label_pool;
+	};
+
+	class gpu_debug_marker : public gpu_label
 	{
 		std::string m_message;
 		bool m_printed = false;
-
-		VkDevice m_device = VK_NULL_HANDLE;
-		VkBuffer m_buffer = VK_NULL_HANDLE;
-		u64 m_buffer_offset = 0;
-		volatile u32* m_value = nullptr;
 
 	public:
 		gpu_debug_marker(gpu_debug_marker_pool& pool, std::string message);
 		~gpu_debug_marker();
 		gpu_debug_marker(const event&) = delete;
 
-		void signal(const command_buffer& cmd, VkPipelineStageFlags stages, VkAccessFlags access);
 		void dump();
 		void dump() const;
 
