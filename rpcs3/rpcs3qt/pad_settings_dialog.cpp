@@ -1945,6 +1945,7 @@ void pad_settings_dialog::ResizeDialog()
 
 void pad_settings_dialog::SubscribeTooltip(QObject* object, const QString& tooltip)
 {
+	ensure(!!object);
 	m_descriptions[object] = tooltip;
 	object->installEventFilter(this);
 }
@@ -1967,6 +1968,11 @@ void pad_settings_dialog::SubscribeTooltips()
 	SubscribeTooltip(ui->gb_mouse_accel, tooltips.gamepad_settings.mouse_acceleration);
 	SubscribeTooltip(ui->gb_mouse_dz, tooltips.gamepad_settings.mouse_deadzones);
 	SubscribeTooltip(ui->gb_mouse_movement, tooltips.gamepad_settings.mouse_movement);
+	
+	for (int i = button_ids::id_pad_begin + 1; i < button_ids::id_pad_end; i++)
+	{
+		SubscribeTooltip(m_pad_buttons->button(i), tooltips.gamepad_settings.button_assignment);
+	}
 }
 
 void pad_settings_dialog::start_input_thread()
