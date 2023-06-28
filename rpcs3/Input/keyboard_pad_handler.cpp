@@ -113,6 +113,12 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 		}
 
 		const bool adjust_pressure = pad.get_pressure_intensity_enabled(m_pressure_intensity_toggle_mode);
+		const bool adjust_pressure_changed = pad.m_adjust_pressure_last != adjust_pressure;
+
+		if (adjust_pressure_changed)
+		{
+			pad.m_adjust_pressure_last = adjust_pressure;
+		}
 
 		// Handle buttons
 		for (usz i = 0; i < pad.m_buttons.size(); i++)
@@ -123,21 +129,26 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 
 			Button& button = pad.m_buttons[i];
 
-			if (!button.m_key_codes.contains(code))
-				continue;
-
-			button.m_actual_value = register_new_button_value(button.m_pressed_keys);
-
 			bool update_button = true;
 
-			// to get the fastest response time possible we don't wanna use any lerp with factor 1
-			if (button.m_analog)
+			if (!button.m_key_codes.contains(code))
 			{
-				update_button = m_analog_lerp_factor >= 1.0f;
+				// Handle pressure changes anyway
+				update_button = adjust_pressure_changed;
 			}
-			else if (button.m_trigger)
+			else
 			{
-				update_button = m_trigger_lerp_factor >= 1.0f;
+				button.m_actual_value = register_new_button_value(button.m_pressed_keys);
+
+				// to get the fastest response time possible we don't wanna use any lerp with factor 1
+				if (button.m_analog)
+				{
+					update_button = m_analog_lerp_factor >= 1.0f;
+				}
+				else if (button.m_trigger)
+				{
+					update_button = m_trigger_lerp_factor >= 1.0f;
+				}
 			}
 
 			if (update_button)
