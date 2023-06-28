@@ -138,6 +138,7 @@ namespace vk
 		PFN_vkCmdInsertDebugUtilsLabelEXT _vkCmdInsertDebugUtilsLabelEXT = nullptr;
 		PFN_vkCmdSetEvent2KHR _vkCmdSetEvent2KHR = nullptr;
 		PFN_vkCmdWaitEvents2KHR _vkCmdWaitEvents2KHR = nullptr;
+		PFN_vkCmdPipelineBarrier2KHR _vkCmdPipelineBarrier2KHR = nullptr;
 
 	public:
 		render_device() = default;

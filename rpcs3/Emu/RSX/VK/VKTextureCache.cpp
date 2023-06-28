@@ -204,22 +204,16 @@ namespace vk
 
 		src->pop_layout(cmd);
 
-		// Inserting a buffer memory barrier into the pipe fixes sync on RADV. Adding the same barrier as an event dep does not work.
-		// The dependencies in the CmdSetEvents2 command are handled in a different path from regular pipeline deps.
-		vk::insert_buffer_memory_barrier(cmd,
-			dma_mapping.second->value, dma_mapping.first, valid_range.length(),
-			VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-			VK_ACCESS_TRANSFER_WRITE_BIT, 0);
-
-		// Not providing any deps to the signal makes AMDVLK hang (event never gets signaled)
-		// We also need to set this up correctly as the buffer barrier above by itself does not work for AMD/AMDVLK.
-		VkMemoryBarrier2KHR mem_barrier =
+		VkBufferMemoryBarrier2KHR mem_barrier =
 		{
-			.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2_KHR,
-			.srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT_KHR,
-			.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
-			.dstStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
-			.dstAccessMask = 0
+			.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2_KHR,
+			.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT_KHR,      // Finish all transfer...
+			.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT_KHR,
+			.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR,  // ...before proceeding with any command
+			.dstAccessMask = 0,
+			.buffer = dma_mapping.second->value,
+			.offset = dma_mapping.first,
+			.size = valid_range.length()
 		};
 
 		// Create event object for this transfer and queue signal op
@@ -227,8 +221,8 @@ namespace vk
 		dma_fence->signal(cmd,
 		{
 			.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-			.memoryBarrierCount = 1,
-			.pMemoryBarriers = &mem_barrier
+			.bufferMemoryBarrierCount = 1,
+			.pBufferMemoryBarriers = &mem_barrier
 		});
 
 		// Set cb flag for queued dma operations

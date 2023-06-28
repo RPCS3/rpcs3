@@ -59,6 +59,8 @@ namespace vk
 		VkEvent m_vk_event = VK_NULL_HANDLE;
 		bool v2 = true;
 
+		void resolve_dependencies(const command_buffer& cmd, const VkDependencyInfoKHR& dependency);
+
 	public:
 		event(const render_device& dev, sync_domain domain);
 		~event();
