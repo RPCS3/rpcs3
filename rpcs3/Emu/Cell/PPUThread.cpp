@@ -2996,10 +2996,6 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 
 	const std::string firmware_sprx_path = vfs::get("/dev_flash/sys/external/");
 
-	// Map fixed address executables area, fake overlay support
-	const bool had_ovl = !vm::map(0x3000'0000, 0x1000'0000, 0x202).operator bool();
-	const u32 ppc_seg = std::exchange(g_ps3_process_info.ppc_seg, 0x3);
-
 	std::vector<std::pair<std::string, u64>> file_queue;
 	file_queue.reserve(2000);
 
@@ -3339,15 +3335,6 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 	});
 
 	exec_worker();
-
-	// Revert changes
-
-	if (!had_ovl)
-	{
-		ensure(vm::unmap(0x3000'0000).second);
-	}
-
-	g_ps3_process_info.ppc_seg = ppc_seg;
 }
 
 extern void ppu_initialize()
