@@ -304,29 +304,29 @@ namespace vk
 		resolve_dependencies(cmd, dependency);
 
 		// 2. Signalling won't wait. The caller is responsible for setting up the dependencies correctly.
-		if (m_backend == sync_backend::events_v2)
+		if (m_backend != sync_backend::events_v2)
 		{
-			// We need a memory barrier to keep AMDVLK from hanging
-			VkMemoryBarrier2KHR mem_barrier =
-			{
-				.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2_KHR,
-				.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR,
-				.srcAccessMask = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT
-			};
-
-			// Empty dependency that does nothing
-			VkDependencyInfoKHR empty_dependency
-			{
-				.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR,
-				.memoryBarrierCount = 1,
-				.pMemoryBarriers = &mem_barrier
-			};
-
-			m_device->_vkCmdSetEvent2KHR(cmd, m_vk_event, &empty_dependency);
+			vkCmdSetEvent(cmd, m_vk_event, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 			return;
 		}
 
-		vkCmdSetEvent(cmd, m_vk_event, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+		// We need a memory barrier to keep AMDVLK from hanging
+		VkMemoryBarrier2KHR mem_barrier =
+		{
+			.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2_KHR,
+			.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR,
+			.srcAccessMask = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT
+		};
+
+		// Empty dependency that does nothing
+		VkDependencyInfoKHR empty_dependency
+		{
+			.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR,
+			.memoryBarrierCount = 1,
+			.pMemoryBarriers = &mem_barrier
+		};
+
+		m_device->_vkCmdSetEvent2KHR(cmd, m_vk_event, &empty_dependency);
 	}
 
 	void event::host_signal() const
