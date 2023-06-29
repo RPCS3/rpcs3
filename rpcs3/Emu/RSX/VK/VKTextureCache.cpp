@@ -217,7 +217,7 @@ namespace vk
 		};
 
 		// Create event object for this transfer and queue signal op
-		dma_fence = std::make_unique<vk::event>(*m_device, sync_domain::any);
+		dma_fence = std::make_unique<vk::event>(*m_device, sync_domain::host);
 		dma_fence->signal(cmd,
 		{
 			.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,

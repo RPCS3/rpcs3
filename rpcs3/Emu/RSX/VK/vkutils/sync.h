@@ -14,7 +14,7 @@ namespace vk
 
 	enum class sync_domain
 	{
-		any = 0,
+		host = 0,
 		gpu = 1
 	};
 
@@ -64,6 +64,7 @@ namespace vk
 		};
 
 		const vk::render_device* m_device = nullptr;
+		sync_domain m_domain = sync_domain::any;
 		sync_backend m_backend = sync_backend::events_v1;
 
 		// For events_v1 and events_v2
@@ -106,6 +107,8 @@ namespace vk
 	{
 	public:
 		gpu_label_pool(const vk::render_device& dev, u32 count);
+		virtual ~gpu_label_pool();
+
 		std::tuple<VkBuffer, u64, volatile u32*> allocate();
 
 	private:
@@ -137,6 +140,7 @@ namespace vk
 
 		void signal(const vk::command_buffer& cmd, const VkDependencyInfoKHR& dependency);
 		void reset() { *m_ptr = label_constants::reset_; }
+		void set() { *m_ptr = label_constants::set_; }
 		bool signaled() const { return label_constants::set_ == *m_ptr; }
 	};
 
