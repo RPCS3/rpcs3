@@ -209,13 +209,13 @@ namespace vk
 	}
 
 	event::event(const render_device& dev, sync_domain domain)
-		: m_device(&dev)
+		: m_device(&dev), m_domain(domain)
 	{
 		m_backend = dev.get_synchronization2_support()
 			? sync_backend::events_v2
 			: sync_backend::events_v1;
 
-		if (domain != sync_domain::gpu &&
+		if (domain == sync_domain::host &&
 			vk::get_driver_vendor() == vk::driver_vendor::AMD &&
 			vk::get_chip_family() < vk::chip_class::AMD_navi1x)
 		{
@@ -280,10 +280,30 @@ namespace vk
 			return;
 		}
 
-		// Resolve the actual dependencies on a pipeline barrier
+		ensure(m_vk_event);
+
+		if (m_domain != sync_domain::host)
+		{
+			// As long as host is not involved, keep things consistent.
+			// The expectation is that this will be awaited using the gpu_wait function.
+			if (m_backend == sync_backend::events_v2) [[ likely ]]
+			{
+				m_device->_vkCmdSetEvent2KHR(cmd, m_vk_event, &dependency);
+			}
+			else
+			{
+				const auto dst_stages = v1_utils::gather_dst_stages(dependency);
+				vkCmdSetEvent(cmd, m_vk_event, dst_stages);
+			}
+
+			return;
+		}
+
+		// Host sync doesn't behave intuitively with events, so we use some workarounds.
+		// 1. Resolve the actual dependencies on a pipeline barrier.
 		resolve_dependencies(cmd, dependency);
 
-		// Signalling won't wait. The caller is responsible for setting up the dependencies correctly.
+		// 2. Signalling won't wait. The caller is responsible for setting up the dependencies correctly.
 		if (m_backend == sync_backend::events_v2)
 		{
 			// We need a memory barrier to keep AMDVLK from hanging
@@ -293,6 +313,7 @@ namespace vk
 				.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR,
 				.srcAccessMask = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT
 			};
+
 			// Empty dependency that does nothing
 			VkDependencyInfoKHR empty_dependency
 			{
@@ -310,13 +331,19 @@ namespace vk
 
 	void event::host_signal() const
 	{
-		ensure(m_vk_event);
-		vkSetEvent(*m_device, m_vk_event);
+		if (m_backend != sync_backend::gpu_label) [[ likely ]]
+		{
+			ensure(m_vk_event);
+			vkSetEvent(*m_device, m_vk_event);
+			return;
+		}
+
+		m_label->set();
 	}
 
 	void event::gpu_wait(const command_buffer& cmd, const VkDependencyInfoKHR& dependency) const
 	{
-		ensure(m_vk_event);
+		ensure(m_vk_event && m_domain != sync_domain::host);
 
 		if (m_backend == sync_backend::events_v2) [[ likely ]]
 		{
@@ -362,6 +389,15 @@ namespace vk
 	gpu_label_pool::gpu_label_pool(const vk::render_device& dev, u32 count)
 		: pdev(&dev), m_count(count)
 	{}
+
+	gpu_label_pool::~gpu_label_pool()
+	{
+		if (m_mapped)
+		{
+			ensure(m_buffer);
+			m_buffer->unmap();
+		}
+	}
 
 	std::tuple<VkBuffer, u64, volatile u32*> gpu_label_pool::allocate()
 	{
