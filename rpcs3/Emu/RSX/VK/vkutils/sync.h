@@ -64,7 +64,7 @@ namespace vk
 		};
 
 		const vk::render_device* m_device = nullptr;
-		sync_domain m_domain = sync_domain::any;
+		sync_domain m_domain = sync_domain::host;
 		sync_backend m_backend = sync_backend::events_v1;
 
 		// For events_v1 and events_v2
@@ -131,7 +131,7 @@ namespace vk
 		};
 
 		VkBuffer m_buffer_handle = VK_NULL_HANDLE;
-		u32 m_buffer_offset = 0;
+		u64 m_buffer_offset = 0;
 		volatile u32* m_ptr = nullptr;
 
 	public:
