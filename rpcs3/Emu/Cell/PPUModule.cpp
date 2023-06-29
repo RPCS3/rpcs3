@@ -1803,6 +1803,8 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 		error_handler.errored = false;
 	}
 
+	const auto old_process_info = g_ps3_process_info;
+
 	// Allocate memory at fixed positions
 	for (const auto& prog : elf.progs)
 	{
@@ -2199,30 +2201,33 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 	_main.seg0_code_end = end;
 	_main.applied_pathes = applied;
 
-	// Set SDK version
-	g_ps3_process_info.sdk_ver = sdk_version;
-
-	// Set ppc fixed allocations segment permission
-	g_ps3_process_info.ppc_seg = ppc_seg;
-
-	if (Emu.init_mem_containers)
-	{
-		// Refer to sys_process_exit2 for explanation
-		Emu.init_mem_containers(mem_size);
-	}
-	else if (!ar)
-	{
-		g_fxo->init<id_manager::id_map<lv2_memory_container>>();
-		g_fxo->init<lv2_memory_container>(mem_size);
-	}
-
 	if (!virtual_load)
 	{
+		// Set SDK version
+		g_ps3_process_info.sdk_ver = sdk_version;
+
+		// Set ppc fixed allocations segment permission
+		g_ps3_process_info.ppc_seg = ppc_seg;
+
+		if (Emu.init_mem_containers)
+		{
+			// Refer to sys_process_exit2 for explanation
+			// Make init_mem_containers empty before call
+			const auto callback = std::move(Emu.init_mem_containers);
+			callback(mem_size);
+		}
+		else if (!ar)
+		{
+			g_fxo->init<id_manager::id_map<lv2_memory_container>>();
+			g_fxo->init<lv2_memory_container>(mem_size);
+		}
+
 		void init_fxo_for_exec(utils::serial* ar, bool full);
 		init_fxo_for_exec(ar, false);
 	}
 	else
 	{
+		g_ps3_process_info = old_process_info;
 		Emu.ConfigurePPUCache();
 	}
 

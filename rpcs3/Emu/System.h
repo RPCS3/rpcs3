@@ -312,6 +312,11 @@ public:
 		return m_config_path;
 	}
 
+	bool IsChildProcess() const
+	{
+		return m_config_mode == cfg_mode::continuous;
+	}
+
 	game_boot_result BootGame(const std::string& path, const std::string& title_id = "", bool direct = false, cfg_mode config_mode = cfg_mode::custom, const std::string& config_path = "");
 	bool BootRsxCapture(const std::string& path);
 

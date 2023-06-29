@@ -2893,8 +2893,9 @@ void Emulator::Kill(bool allow_autoexit, bool savestate)
 
 			if (after_kill_callback)
 			{
-				after_kill_callback();
-				after_kill_callback = nullptr;
+				// Make after_kill_callback empty before call
+				const auto callback = std::move(after_kill_callback);
+				callback();
 			}
 		});
 	}));

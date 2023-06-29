@@ -3084,7 +3084,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 			}
 
 			// Check .self filename
-			if (upper.ends_with(".SELF"))
+			if (upper.ends_with(".SELF") && Emu.GetBoot() != dir_queue[i] + entry.name)
 			{
 				// Get full path
 				file_queue.emplace_back(dir_queue[i] + entry.name,  0);
@@ -3302,14 +3302,15 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 			{
 				while (exec_err == elf_error::ok)
 				{
+					main_ppu_module& _main = g_fxo->get<main_ppu_module>();
+					_main = {};
+
 					if (!ppu_load_exec(obj, true, path))
 					{
 						// Abort
 						exec_err = elf_error::header_type;
 						break;
 					}
-
-					main_ppu_module& _main = g_fxo->get<main_ppu_module>();
 
 					if (!_main.analyse(0, _main.elf_entry, _main.seg0_code_end, _main.applied_pathes, [](){ return Emu.IsStopped(); }))
 					{
@@ -3457,7 +3458,7 @@ extern void ppu_initialize()
 	}
 
 	// Avoid compilation if main's cache exists or it is a standalone SELF with no PARAM.SFO
-	if (compile_main && g_cfg.core.ppu_llvm_precompilation && !Emu.GetTitleID().empty())
+	if (compile_main && g_cfg.core.ppu_llvm_precompilation && !Emu.GetTitleID().empty() && !Emu.IsChildProcess())
 	{
 		// Try to add all related directories
 		const std::set<std::string> dirs = Emu.GetGameDirs();

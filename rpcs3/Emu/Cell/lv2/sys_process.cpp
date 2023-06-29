@@ -439,7 +439,7 @@ void lv2_exitspawn(ppu_thread& ppu, std::vector<std::string>& argv, std::vector<
 			}
 
 			// Save LV2 memory containers
-			g_fxo->init<id_map<lv2_memory_container>>()->vec = std::move(vec);
+			ensure(g_fxo->init<id_map<lv2_memory_container>>())->vec = std::move(vec);
 
 			// Empty the containers, accumulate their total size
 			u32 total_size = 0;
@@ -453,7 +453,7 @@ void lv2_exitspawn(ppu_thread& ppu, std::vector<std::string>& argv, std::vector<
 			// 1. If newer SDK version suggests higher memory capacity - it is ignored
 			// 2. If newer SDK version suggests lower memory capacity - it is lowered
 			// And if 2. happens while user memory containers exist, the left space can be spent on user memory containers
-			g_fxo->init<lv2_memory_container>(std::min(old_size - total_size, sdk_suggested_mem) + total_size);
+			ensure(g_fxo->init<lv2_memory_container>(std::min(old_size - total_size, sdk_suggested_mem) + total_size));
 		};
 
 		Emu.after_kill_callback = [func = std::move(func), argv = std::move(argv), envp = std::move(envp), data = std::move(data),
