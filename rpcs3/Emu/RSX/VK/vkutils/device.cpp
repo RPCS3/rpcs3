@@ -691,7 +691,7 @@ namespace vk
 		rsx_log.notice("%u extensions loaded:", ::size32(requested_extensions));
 		for (const auto& ext : requested_extensions)
 		{
-			rsx_log.always()("** Using %s", ext);
+			rsx_log.notice("** Using %s", ext);
 		}
 
 		// Initialize queues
