@@ -2606,13 +2606,20 @@ void Emulator::Kill(bool allow_autoexit, bool savestate)
 		{
 			const auto closed_sucessfully = std::make_shared<atomic_t<bool>>(false);
 
+			bool is_being_held_longer = false;
+
 			for (int i = 0; thread_ctrl::state() != thread_state::aborting;)
 			{
+				if (g_watchdog_hold_ctr)
+				{
+					is_being_held_longer = true;
+				}
+
 				// We don't need accurate timekeeping, using clocks may interfere with debugging
-				if (i >= 2000)
+				if (i >= (is_being_held_longer ? 5000 : 2000))
 				{
 					// Total amount of waiting: about 10s
-					GetCallbacks().on_emulation_stop_no_response(closed_sucessfully, 10);
+					GetCallbacks().on_emulation_stop_no_response(closed_sucessfully, is_being_held_longer ? 25 : 10);
 
 					while (thread_ctrl::state() != thread_state::aborting)
 					{
@@ -2623,12 +2630,6 @@ void Emulator::Kill(bool allow_autoexit, bool savestate)
 				}
 
 				thread_ctrl::wait_for(5'000);
-
-				if (!g_watchdog_hold_ctr)
-				{
-					// Don't count if there are still uninterruptable threads like PPU LLVM workers
-					i++;
-				}
 			}
 
 			*closed_sucessfully = true;
