@@ -280,8 +280,6 @@ namespace vk
 			return;
 		}
 
-		ensure(m_vk_event);
-
 		if (m_domain != sync_domain::host)
 		{
 			// As long as host is not involved, keep things consistent.
@@ -333,7 +331,6 @@ namespace vk
 	{
 		if (m_backend != sync_backend::gpu_label) [[ likely ]]
 		{
-			ensure(m_vk_event);
 			vkSetEvent(*m_device, m_vk_event);
 			return;
 		}
@@ -343,7 +340,7 @@ namespace vk
 
 	void event::gpu_wait(const command_buffer& cmd, const VkDependencyInfoKHR& dependency) const
 	{
-		ensure(m_vk_event && m_domain != sync_domain::host);
+		ensure(m_domain != sync_domain::host);
 
 		if (m_backend == sync_backend::events_v2) [[ likely ]]
 		{
