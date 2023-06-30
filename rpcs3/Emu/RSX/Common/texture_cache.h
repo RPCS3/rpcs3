@@ -143,6 +143,7 @@ namespace rsx
 			std::vector<copy_region_descriptor> sections_to_copy;
 			texture_channel_remap_t remap;
 			deferred_request_command op = deferred_request_command::nop;
+			u32 external_ref_addr = 0;
 			u16 x = 0;
 			u16 y = 0;
 
@@ -274,6 +275,7 @@ namespace rsx
 						// Blit op is a semantic variant of the copy and atlas ops.
 						// We can simply reuse the atlas handler for this for now, but this allows simplification.
 						external_subresource_desc.op = deferred_request_command::blit_image_static;
+						external_subresource_desc.external_ref_addr = cpy.base_addr;
 					}
 				}
 			}
@@ -1666,13 +1668,18 @@ namespace rsx
 				{
 					sections[n] =
 					{
-						desc.external_handle,
-						surface_transform::coordinate_transform,
-						0,
-						0, static_cast<u16>(desc.slice_h * n),
-						0, 0, n,
-						desc.width, desc.height,
-						desc.width, desc.height
+						.src = desc.external_handle,
+						.xform = surface_transform::coordinate_transform,
+						.level = 0,
+						.src_x = 0,
+						.src_y = static_cast<u16>(desc.slice_h * n),
+						.dst_x = 0,
+						.dst_y = 0,
+						.dst_z = n,
+						.src_w = desc.width,
+						.src_h = desc.height,
+						.dst_w = desc.width,
+						.dst_h = desc.height
 					};
 				}
 
@@ -1692,13 +1699,18 @@ namespace rsx
 				{
 					sections[n] =
 					{
-						desc.external_handle,
-						surface_transform::coordinate_transform,
-						0,
-						0, static_cast<u16>(desc.slice_h * n),
-						0, 0, n,
-						desc.width, desc.height,
-						desc.width, desc.height
+						.src = desc.external_handle,
+						.xform = surface_transform::coordinate_transform,
+						.level = 0,
+						.src_x = 0,
+						.src_y = static_cast<u16>(desc.slice_h * n),
+						.dst_x = 0,
+						.dst_y = 0,
+						.dst_z = n,
+						.src_w = desc.width,
+						.src_h = desc.height,
+						.dst_w = desc.width,
+						.dst_h = desc.height
 					};
 				}
 
