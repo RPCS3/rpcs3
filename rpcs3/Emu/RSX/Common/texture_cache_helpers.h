@@ -20,6 +20,7 @@ namespace rsx
 	{
 		image_resource_type src;
 		flags32_t xform;
+		u32 base_addr;
 		u8  level;
 		u16 src_x;
 		u16 src_y;
@@ -315,16 +316,19 @@ namespace rsx
 
 				out.push_back
 				({
-					section.surface->get_surface(rsx::surface_access::transfer_read),
-					surface_transform::identity,
-					0,
-					static_cast<u16>(src_x),
-					static_cast<u16>(src_y),
-					static_cast<u16>(dst_x),
-					static_cast<u16>(dst_y),
-					slice,
-					src_width, src_height,
-					dst_width, dst_height
+					.src = section.surface->get_surface(rsx::surface_access::transfer_read),
+					.xform = surface_transform::identity,
+					.base_addr = section.base_addr,
+					.level = 0,
+					.src_x = static_cast<u16>(src_x),
+					.src_y = static_cast<u16>(src_y),
+					.dst_x = static_cast<u16>(dst_x),
+					.dst_y = static_cast<u16>(dst_y),
+					.dst_z = slice,
+					.src_w = src_width,
+					.src_h = src_height,
+					.dst_w = dst_width,
+					.dst_h = dst_height
 				});
 			};
 
@@ -378,36 +382,37 @@ namespace rsx
 
 					out.push_back
 					({
-						section->get_raw_texture(),
-						surface_transform::identity,
-						0,
-						static_cast<u16>(src_offset.x),   // src.x
-						static_cast<u16>(src_offset.y),   // src.y
-						_dst_x,                           // dst.x
-						_dst_y,                           // dst.y
-						slice,
-						src_w,
-						height,
-						_dst_w,
-						_dst_h
+						.src = section->get_raw_texture(),
+						.xform = surface_transform::identity,
+						.base_addr = address,
+						.level = 0,
+						.src_x = static_cast<u16>(src_offset.x),   // src.x
+						.src_y = static_cast<u16>(src_offset.y),   // src.y
+						.dst_x = _dst_x,                           // dst.x
+						.dst_y = _dst_y,                           // dst.y
+						.dst_z = slice,
+						.src_w = src_w,
+						.src_h = height,
+						.dst_w = _dst_w,
+						.dst_h = _dst_h
 					});
 				}
 				else
 				{
 					out.push_back
 					({
-						section->get_raw_texture(),
-						surface_transform::identity,
-						0,
-						static_cast<u16>(src_offset.x),         // src.x
-						static_cast<u16>(src_offset.y),         // src.y
-						static_cast<u16>(dst_offset.x),         // dst.x
-						static_cast<u16>(dst_y - dst_slice_begin),  // dst.y
-						0,
-						src_w,
-						height,
-						dst_w,
-						height
+						.src = section->get_raw_texture(),
+						.xform = surface_transform::identity,
+						.level = 0,
+						.src_x = static_cast<u16>(src_offset.x),         // src.x
+						.src_y = static_cast<u16>(src_offset.y),         // src.y
+						.dst_x = static_cast<u16>(dst_offset.x),         // dst.x
+						.dst_y = static_cast<u16>(dst_y - dst_slice_begin),  // dst.y
+						.dst_z = 0,
+						.src_w = src_w,
+						.src_h = height,
+						.dst_w = dst_w,
+						.dst_h = height
 					});
 				}
 			};
@@ -561,6 +566,7 @@ namespace rsx
 
 			// First, we convert this descriptor to a copy descriptor
 			desc.external_subresource_desc.external_handle = section.src;
+			desc.external_subresource_desc.external_ref_addr = section.base_addr;
 
 			// Now apply conversion
 			convert_image_copy_to_clip_descriptor(
@@ -828,12 +834,14 @@ namespace rsx
 		{
 			if (level.image_handle)
 			{
-				copy_region_descriptor_type mip{};
-				mip.src = level.image_handle->image();
-				mip.xform = surface_transform::coordinate_transform;
-				mip.level = mipmap_level;
-				mip.dst_w = attr.width;
-				mip.dst_h = attr.height;
+				copy_region_descriptor_type mip
+				{
+					.src = level.image_handle->image(),
+					.xform = surface_transform::coordinate_transform,
+					.level = mipmap_level,
+					.dst_w = attr.width,
+					.dst_h = attr.height
+				};
 
 				// "Fast" framebuffer results are a perfect match for attr so we do not store transfer sizes
 				// Calculate transfer dimensions from attr
@@ -856,18 +864,21 @@ namespace rsx
 				case deferred_request_command::copy_image_dynamic:
 				case deferred_request_command::copy_image_static:
 				{
-					copy_region_descriptor_type mip{};
-					mip.src = level.external_subresource_desc.external_handle;
-					mip.xform = surface_transform::coordinate_transform;
-					mip.level = mipmap_level;
-					mip.dst_w = attr.width;
-					mip.dst_h = attr.height;
+					copy_region_descriptor_type mip
+					{
+						.src = level.external_subresource_desc.external_handle,
+						.xform = surface_transform::coordinate_transform,
+						.level = mipmap_level,
 
-					// NOTE: gather_texture_slices pre-applies resolution scaling
-					mip.src_x = level.external_subresource_desc.x;
-					mip.src_y = level.external_subresource_desc.y;
-					mip.src_w = level.external_subresource_desc.width;
-					mip.src_h = level.external_subresource_desc.height;
+						// NOTE: gather_texture_slices pre-applies resolution scaling
+						.src_x = level.external_subresource_desc.x,
+						.src_y = level.external_subresource_desc.y,
+						.src_w = level.external_subresource_desc.width,
+						.src_h = level.external_subresource_desc.height,
+
+						.dst_w = attr.width,
+						.dst_h = attr.height
+					};
 
 					sections.push_back(mip);
 					break;

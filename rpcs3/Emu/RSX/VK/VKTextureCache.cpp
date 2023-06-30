@@ -612,11 +612,14 @@ namespace vk
 		{
 			std::vector<copy_region_descriptor> region =
 			{ {
-				source,
-				rsx::surface_transform::coordinate_transform,
-				0,
-				x, y, 0, 0, 0,
-				w, h, w, h
+				.src = source,
+				.xform = rsx::surface_transform::coordinate_transform,
+				.src_x = x,
+				.src_y = y,
+				.src_w = w,
+				.src_h = h,
+				.dst_w = w,
+				.dst_h = h
 			} };
 
 			vk::change_image_layout(cmd, image.get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
@@ -800,11 +803,12 @@ namespace vk
 	{
 		std::vector<copy_region_descriptor> region =
 		{ {
-			src,
-			rsx::surface_transform::identity,
-			0,
-			0, 0, 0, 0, 0,
-			width, height, width, height
+			.src = src,
+			.xform = rsx::surface_transform::identity,
+			.src_w = width,
+			.src_h = height,
+			.dst_w = width,
+			.dst_h = height
 		} };
 
 		auto dst = dst_view->image();
