@@ -2328,7 +2328,7 @@ namespace rsx
 						// Subpixel offset so that (X + bias) * scale will round correctly.
 						// This is done to work around fdiv precision issues in some GPUs (NVIDIA)
 						// We apply the simplification where (x + bias) * z = xz + zbias here.
-						const auto subpixel_bias = 0.01f;
+						constexpr auto subpixel_bias = 0.01f;
 						current_fragment_program.texture_params[i].bias[0] += (subpixel_bias * current_fragment_program.texture_params[i].scale[0]);
 						current_fragment_program.texture_params[i].bias[1] += (subpixel_bias * current_fragment_program.texture_params[i].scale[1]);
 						current_fragment_program.texture_params[i].bias[2] += (subpixel_bias * current_fragment_program.texture_params[i].scale[2]);

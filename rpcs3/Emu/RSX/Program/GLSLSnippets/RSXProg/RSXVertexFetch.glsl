@@ -55,7 +55,7 @@ uint gen_bits(const in uint x, const in uint y, const in uint z, const in uint w
 
 uint gen_bits(const in uint x, const in uint y, const in bool swap)
 {
-	return (swap)? _set_bits(y, x, 8, 8) : _set_bits(x, y, 8, 8);
+	return (swap) ? _set_bits(y, x, 8, 8) : _set_bits(x, y, 8, 8);
 }
 
 // NOTE: (int(n) or int(n)) is broken on some NVIDIA and INTEL hardware when the sign bit is involved.
@@ -159,8 +159,8 @@ attribute_desc fetch_desc(const in int location)
 	uvec2 attrib = texelFetch(vertex_layout_stream, location + int(layout_ptr_offset)).xy;
 #else
 	// Data is packed into a ubo
-	int block = (location >> 1);
-	int sub_block = (location & 1) << 1;
+	const int block = (location >> 1);
+	const int sub_block = (location & 1) << 1;
 	uvec2 attrib = uvec2(
 		ref(input_attributes_blob[block], sub_block + 0),
 		ref(input_attributes_blob[block], sub_block + 1));
@@ -180,8 +180,9 @@ attribute_desc fetch_desc(const in int location)
 
 vec4 read_location(const in int location)
 {
+	int vertex_id;
 	attribute_desc desc = fetch_desc(location);
-	int vertex_id = _gl_VertexID - int(vertex_base_index);
+
 	if (desc.frequency == 0)
 	{
 		vertex_id = 0;
@@ -193,7 +194,7 @@ vec4 read_location(const in int location)
 	}
 	else
 	{
-		vertex_id /= int(desc.frequency); 
+		vertex_id = (_gl_VertexID - int(vertex_base_index)) / int(desc.frequency); 
 	}
 
 	if (desc.is_volatile)
