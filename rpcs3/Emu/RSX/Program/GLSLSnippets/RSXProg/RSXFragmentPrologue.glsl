@@ -50,7 +50,7 @@ vec4 fetch_fog_value(const in uint mode)
 		// exponential2_abs
 		result.y = exp(-pow(4.709 * (fog_param1 * abs(fog_c.x) + fog_param0 - 1.5), 2.));
 		break;
- case FOG_LINEAR_ABS:
+	case FOG_LINEAR_ABS:
 		// linear_abs
 		result.y = fog_param1 * abs(fog_c.x) + (fog_param0 - 1.);
 		break;
@@ -65,8 +65,8 @@ vec4 fetch_fog_value(const in uint mode)
 // Purely stochastic
 bool coverage_test_passes(const in vec4 _sample)
 {
-	float random  = _rand(gl_FragCoord);
-	return (_sample.a > random);
+	float random_val = _rand(gl_FragCoord);
+	return (_sample.a > random_val);
 }
 #endif
 
