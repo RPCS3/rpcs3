@@ -262,6 +262,8 @@ namespace rsx
 				if (sections.size() == 1 && section_fills_target(sections[0]))
 				{
 					const auto cpy = sections[0];
+					external_subresource_desc.external_ref_addr = cpy.base_addr;
+
 					if (section_is_transfer_only(cpy))
 					{
 						// Change the command to copy_image_static
@@ -275,7 +277,6 @@ namespace rsx
 						// Blit op is a semantic variant of the copy and atlas ops.
 						// We can simply reuse the atlas handler for this for now, but this allows simplification.
 						external_subresource_desc.op = deferred_request_command::blit_image_static;
-						external_subresource_desc.external_ref_addr = cpy.base_addr;
 					}
 				}
 			}
@@ -1997,7 +1998,7 @@ namespace rsx
 								position2i(result.external_subresource_desc.x, result.external_subresource_desc.y),
 								size2i(result.external_subresource_desc.width, result.external_subresource_desc.height),
 								size2i(result.external_subresource_desc.external_handle->width(), result.external_subresource_desc.external_handle->height()),
-								encoded_remap, remap, false /* FIXME */);
+								encoded_remap, remap, false);
 						}
 						else
 						{
@@ -2005,9 +2006,10 @@ namespace rsx
 								result,
 								encoded_remap,
 								remap,
-								false /* FIXME */);
+								false);
 						}
 
+						result.is_cyclic_reference = !!result.ref_address && m_rtts.address_is_bound(result.ref_address);
 						return result;
 					}
 

@@ -318,7 +318,7 @@ namespace rsx
 				({
 					.src = section.surface->get_surface(rsx::surface_access::transfer_read),
 					.xform = surface_transform::identity,
-					.base_addr = section.base_addr,
+					.base_addr = section.base_address,
 					.level = 0,
 					.src_x = static_cast<u16>(src_x),
 					.src_y = static_cast<u16>(src_y),
@@ -384,7 +384,6 @@ namespace rsx
 					({
 						.src = section->get_raw_texture(),
 						.xform = surface_transform::identity,
-						.base_addr = address,
 						.level = 0,
 						.src_x = static_cast<u16>(src_offset.x),   // src.x
 						.src_y = static_cast<u16>(src_offset.y),   // src.y
@@ -542,6 +541,7 @@ namespace rsx
 			bool cyclic_reference)
 		{
 			desc.image_handle = desc.external_subresource_desc.as_viewable()->get_view(encoded_remap, decoded_remap);
+			desc.ref_address = desc.external_subresource_desc.external_ref_addr;
 			desc.is_cyclic_reference = cyclic_reference;
 			desc.samples = desc.external_subresource_desc.external_handle->samples();
 			desc.external_subresource_desc = {};
