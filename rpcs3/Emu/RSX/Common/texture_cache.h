@@ -168,6 +168,22 @@ namespace rsx
 			{
 				return static_cast<viewable_image_type>(external_handle);
 			}
+
+			image_resource_type src0() const
+			{
+				if (external_handle)
+				{
+					return external_handle;
+				}
+
+				if (!sections_to_copy.empty())
+				{
+					return sections_to_copy[0].src;
+				}
+
+				// Return typed null
+				return external_handle;
+			}
 		};
 
 		struct sampled_image_descriptor : public sampled_image_descriptor_base
@@ -1988,8 +2004,9 @@ namespace rsx
 						(result.external_subresource_desc.op == deferred_request_command::copy_image_dynamic) ||
 						(result.external_subresource_desc.op == deferred_request_command::blit_image_static);
 
-					// FIXME: We need to check if the formats are compatible here!
-					if (is_simple_subresource_copy && attr.edge_clamped)
+					if (is_simple_subresource_copy &&
+						attr.edge_clamped &&
+						render_target_format_is_compatible(result.external_subresource_desc.src0(), attr.gcm_format))
 					{
 						if (result.external_subresource_desc.op != deferred_request_command::blit_image_static) [[ likely ]]
 						{
