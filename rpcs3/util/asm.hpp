@@ -30,6 +30,7 @@ extern "C"
 #include <intrin.h>
 #else
 #include <immintrin.h>
+#include <x86intrin.h>
 #endif
 
 namespace utils
@@ -139,7 +140,7 @@ namespace utils
 			return;
 		}
 
-#if defined(_M_X64) && !defined(__clang__)
+#if defined(_M_X64)
 		return _m_prefetchw(ptr);
 #else
 		return __builtin_prefetch(ptr, 1, 0);
