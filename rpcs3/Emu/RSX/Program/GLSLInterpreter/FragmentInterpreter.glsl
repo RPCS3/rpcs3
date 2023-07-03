@@ -298,6 +298,57 @@ bool check_cond()
 
 #ifdef WITH_TEXTURES
 
+#define RSX_SAMPLE_TEXTURE_1D   0
+#define RSX_SAMPLE_TEXTURE_2D   1
+#define RSX_SAMPLE_TEXTURE_CUBE 2
+#define RSX_SAMPLE_TEXTURE_3D   3
+
+// FIXME: Remove when codegen is unified
+#define CLAMP_COORDS_BIT 17
+
+float _texcoord_xform(const in float coord, const in sampler_info params)
+{
+	float result = fma(coord, params.scale_x, params.bias_x);
+	if (TEST_BIT(params.flags, CLAMP_COORDS_BIT))
+	{
+		result = clamp(result, params.clamp_min_x, params.clamp_max_x);
+	}
+
+	return result;
+}
+
+vec2 _texcoord_xform(const in vec2 coord, const in sampler_info params)
+{
+	vec2 result = fma(
+		coord,
+		vec2(params.scale_x, params.scale_y),
+		vec2(params.bias_x, params.bias_y)
+	);
+
+	if (TEST_BIT(params.flags, CLAMP_COORDS_BIT))
+	{
+		result = clamp(
+			result,
+			vec2(params.clamp_min_x, params.clamp_min_y),
+			vec2(params.clamp_max_x, params.clamp_max_y)
+		);
+	}
+
+	return result;
+}
+
+vec3 _texcoord_xform(const in vec3 coord, const in sampler_info params)
+{
+	vec3 result = fma(
+		coord,
+		vec3(params.scale_x, params.scale_y, params.scale_z),
+		vec3(params.bias_x, params.bias_y, params.bias_z)
+	);
+
+	// NOTE: Coordinate clamping not supported for CUBE and 3D textures
+	return result;
+}
+
 vec4 _texture(in vec4 coord, float bias)
 {
 	ur0 = GET_BITS(0, 17, 4);
@@ -308,18 +359,25 @@ vec4 _texture(in vec4 coord, float bias)
 
 	ur1 = ur0 + ur0;
 	const uint type = bitfieldExtract(texture_control, int(ur1), 2);
-	coord.xyz = (coord.xyz + texture_parameters[ur0].scale_bias.w) * texture_parameters[ur0].scale_bias.xyz;
 
 	switch (type)
 	{
-	case 0:
-		vr0 = texture(SAMPLER1D(ur0), coord.x, bias); break;
-	case 1:
-		vr0 = texture(SAMPLER2D(ur0), coord.xy, bias); break;
-	case 2:
-		vr0 = texture(SAMPLERCUBE(ur0), coord.xyz, bias); break;
-	case 3:
-		vr0 = texture(SAMPLER3D(ur0), coord.xyz, bias); break;
+	case RSX_SAMPLE_TEXTURE_1D:
+		coord.x = _texcoord_xform(coord.x, texture_parameters[ur0]);
+		vr0 = texture(SAMPLER1D(ur0), coord.x, bias);
+		break;
+	case RSX_SAMPLE_TEXTURE_2D:
+		coord.xy = _texcoord_xform(coord.xy, texture_parameters[ur0]);
+		vr0 = texture(SAMPLER2D(ur0), coord.xy, bias);
+		break;
+	case RSX_SAMPLE_TEXTURE_CUBE:
+		coord.xyz = _texcoord_xform(coord.xyz, texture_parameters[ur0]);
+		vr0 = texture(SAMPLERCUBE(ur0), coord.xyz, bias);
+		break;
+	case RSX_SAMPLE_TEXTURE_3D:
+		coord.xyz = _texcoord_xform(coord.xyz, texture_parameters[ur0]);
+		vr0 = texture(SAMPLER3D(ur0), coord.xyz, bias);
+		break;
 	}
 
 	if (TEST_BIT(0, 21))
@@ -340,23 +398,32 @@ vec4 _textureLod(in vec4 coord, float lod)
 
 	ur1 = ur0 + ur0;
 	const uint type = bitfieldExtract(texture_control, int(ur1), 2);
-	coord.xyz = (coord.xyz + texture_parameters[ur0].scale_bias.w) * texture_parameters[ur0].scale_bias.xyz;
 
 	switch (type)
 	{
-	case 0:
-		vr0 = textureLod(SAMPLER1D(ur0), coord.x, lod); break;
-	case 1:
-		vr0 = textureLod(SAMPLER2D(ur0), coord.xy, lod); break;
-	case 2:
-		vr0 = textureLod(SAMPLERCUBE(ur0), coord.xyz, lod); break;
-	case 3:
-		vr0 = textureLod(SAMPLER3D(ur0), coord.xyz, lod); break;
+	case RSX_SAMPLE_TEXTURE_1D:
+		coord.x = _texcoord_xform(coord.x, texture_parameters[ur0]);
+		vr0 = textureLod(SAMPLER1D(ur0), coord.x, lod);
+		break;
+	case RSX_SAMPLE_TEXTURE_2D:
+		coord.xy = _texcoord_xform(coord.xy, texture_parameters[ur0]);
+		vr0 = textureLod(SAMPLER2D(ur0), coord.xy, lod);
+		break;
+	case RSX_SAMPLE_TEXTURE_CUBE:
+		coord.xyz = _texcoord_xform(coord.xyz, texture_parameters[ur0]);
+		vr0 = textureLod(SAMPLERCUBE(ur0), coord.xyz, lod);
+		break;
+	case RSX_SAMPLE_TEXTURE_3D:
+		coord.xyz = _texcoord_xform(coord.xyz, texture_parameters[ur0]);
+		vr0 = textureLod(SAMPLER3D(ur0), coord.xyz, lod);
+		break;
 	}
 
 	if (TEST_BIT(0, 21))
 	{
-		vr0 = vr0 * 2. - 1.;
+		// Normal-expand, v = 2v - 1
+		vr0 += vr0;
+		vr0 -= 1.;
 	}
 
 	return vr0;
