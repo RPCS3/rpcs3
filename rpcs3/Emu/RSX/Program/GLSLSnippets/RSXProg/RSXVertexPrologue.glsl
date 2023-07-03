@@ -52,7 +52,7 @@ vec4 apply_zclip_xform(
 	}
 
 	return vec4(pos.x, pos.y, d * pos.w, pos.w);
-}\n
+}
 #endif
 
 )"
