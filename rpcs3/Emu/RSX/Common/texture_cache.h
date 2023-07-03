@@ -452,6 +452,7 @@ namespace rsx
 		atomic_t<u32> m_unavoidable_hard_faults_this_frame = { 0 };
 		atomic_t<u32> m_texture_upload_calls_this_frame = { 0 };
 		atomic_t<u32> m_texture_upload_misses_this_frame = { 0 };
+		atomic_t<u32> m_texture_copies_ellided_this_frame = { 0 };
 		static const u32 m_predict_max_flushes_per_frame = 50; // Above this number the predictions are disabled
 
 		// Invalidation
@@ -2327,6 +2328,10 @@ namespace rsx
 					// Deferred reconstruct
 					result.external_subresource_desc.cache_range = lookup_range;
 				}
+				else if (result.texcoord_xform.clamp)
+				{
+					m_texture_copies_ellided_this_frame++;
+				}
 
 				if (!result.ref_address)
 				{
@@ -3421,6 +3426,7 @@ namespace rsx
 			m_unavoidable_hard_faults_this_frame.store(0u);
 			m_texture_upload_calls_this_frame.store(0u);
 			m_texture_upload_misses_this_frame.store(0u);
+			m_texture_copies_ellided_this_frame.store(0u);
 		}
 
 		void on_flush()
@@ -3502,6 +3508,11 @@ namespace rsx
 		u32 get_texture_upload_miss_percentage() const
 		{
 			return (m_texture_upload_calls_this_frame)? (m_texture_upload_misses_this_frame * 100 / m_texture_upload_calls_this_frame) : 0;
+		}
+
+		u32 get_texture_copies_ellided_this_frame() const
+		{
+			return m_texture_copies_ellided_this_frame;
 		}
 	};
 }
