@@ -107,6 +107,11 @@ namespace rsx
 	public:
 		bitmask_t() = default;
 
+		bitmask_type load() const
+		{
+			return m_data;
+		}
+
 		bool operator & (bitmask_type mask) const
 		{
 			return !!(m_data & mask);
