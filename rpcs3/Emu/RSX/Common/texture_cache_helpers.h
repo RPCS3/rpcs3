@@ -646,9 +646,13 @@ namespace rsx
 				{
 					// If we can get away with clip only, do it
 					if (attr.edge_clamped)
+					{
 						requires_clip = true;
+					}
 					else
+					{
 						requires_processing = true;
+					}
 				}
 
 				if (surface_is_rop_target && g_cfg.video.strict_rendering_mode)

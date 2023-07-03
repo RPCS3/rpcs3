@@ -2004,8 +2004,9 @@ namespace rsx
 						(result.external_subresource_desc.op == deferred_request_command::copy_image_dynamic) ||
 						(result.external_subresource_desc.op == deferred_request_command::blit_image_static);
 
-					if (is_simple_subresource_copy &&
-						attr.edge_clamped &&
+					if (attr.edge_clamped &&
+						!g_cfg.video.strict_rendering_mode &&
+						is_simple_subresource_copy &&
 						render_target_format_is_compatible(result.external_subresource_desc.src0(), attr.gcm_format))
 					{
 						if (result.external_subresource_desc.op != deferred_request_command::blit_image_static) [[ likely ]]
@@ -2327,7 +2328,11 @@ namespace rsx
 					result.external_subresource_desc.cache_range = lookup_range;
 				}
 
-				result.ref_address = attributes.address;
+				if (!result.ref_address)
+				{
+					result.ref_address = attributes.address;
+				}
+
 				result.surface_cache_tag = m_rtts.write_tag;
 
 				if (subsurface_count == 1)
