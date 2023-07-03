@@ -518,6 +518,8 @@ namespace rsx
 			const f32 scale_y = f32(desired_dimensions.height) / actual_dimensions.height;
 			const f32 offset_x = f32(offset.x) / actual_dimensions.width;
 			const f32 offset_y = f32(offset.y) / actual_dimensions.height;
+			const f32 limit_x = f32(offset.x + desired_dimensions.width - 1) / actual_dimensions.width;
+			const f32 limit_y = f32(offset.y + desired_dimensions.height - 1) / actual_dimensions.height;
 
 			desc.texcoord_xform.scale[0] *= scale_x;
 			desc.texcoord_xform.scale[1] *= scale_y;
@@ -525,8 +527,8 @@ namespace rsx
 			desc.texcoord_xform.bias[1] += offset_y;
 			desc.texcoord_xform.clamp_min[0] = offset_x;
 			desc.texcoord_xform.clamp_min[1] = offset_y;
-			desc.texcoord_xform.clamp_max[0] = offset_x + scale_x;
-			desc.texcoord_xform.clamp_max[1] = offset_y + scale_y;
+			desc.texcoord_xform.clamp_max[0] = limit_x;
+			desc.texcoord_xform.clamp_max[1] = limit_y;
 			desc.texcoord_xform.clamp = true;
 		}
 
