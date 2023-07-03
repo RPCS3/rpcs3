@@ -2026,7 +2026,14 @@ namespace rsx
 								false);
 						}
 
-						result.is_cyclic_reference = !!result.ref_address && m_rtts.address_is_bound(result.ref_address);
+						if (!!result.ref_address && m_rtts.address_is_bound(result.ref_address))
+						{
+							result.is_cyclic_reference = true;
+
+							auto texptr = ensure(m_rtts.get_surface_at(result.ref_address));
+							insert_texture_barrier(cmd, texptr);
+						}
+
 						return result;
 					}
 
