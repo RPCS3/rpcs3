@@ -1,8 +1,10 @@
 #!/bin/sh -ex
 
 brew update
-brew install -f --overwrite nasm ninja git p7zip create-dmg ccache pipenv llvm@16 sdl2 glew cmake faudio qt@5 ffmpeg@6 molten-vk@1.2.4 vulkan-headers
-
+brew install -f --overwrite nasm ninja git p7zip create-dmg ccache pipenv llvm@16 sdl2 glew cmake faudio qt@5 ffmpeg@6 vulkan-headers
+# moltenvk based on commit for 1.2.4 release
+wget wget https://raw.githubusercontent.com/Homebrew/homebrew-core/b233d4f9f40f26d81da11140defbfd578cfe4a69/Formula/molten-vk.rb
+brew install -f --overwrite ./molten-vk.rb
 brew link -f llvm@16
 
 
