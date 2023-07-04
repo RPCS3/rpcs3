@@ -923,7 +923,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 void VKGSRender::begin()
 {
 	// Save shader state now before prefetch and loading happens
-	m_interpreter_state = (m_graphics_state & rsx::pipeline_state::invalidate_pipeline_bits);
+	m_interpreter_state = (m_graphics_state.load() & rsx::pipeline_state::invalidate_pipeline_bits);
 
 	rsx::thread::begin();
 

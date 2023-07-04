@@ -612,11 +612,14 @@ namespace vk
 		{
 			std::vector<copy_region_descriptor> region =
 			{ {
-				source,
-				rsx::surface_transform::coordinate_transform,
-				0,
-				x, y, 0, 0, 0,
-				w, h, w, h
+				.src = source,
+				.xform = rsx::surface_transform::coordinate_transform,
+				.src_x = x,
+				.src_y = y,
+				.src_w = w,
+				.src_h = h,
+				.dst_w = w,
+				.dst_h = h
 			} };
 
 			vk::change_image_layout(cmd, image.get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
@@ -730,15 +733,18 @@ namespace vk
 		VkImageSubresourceRange dst_range = { dst_aspect, 0, 1, 0, 1 };
 		vk::change_image_layout(cmd, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, dst_range);
 
-		if (!(dst_aspect & VK_IMAGE_ASPECT_DEPTH_BIT))
+		if (sections_to_copy[0].dst_w != width || sections_to_copy[0].dst_h != height)
 		{
-			VkClearColorValue clear = {};
-			vkCmdClearColorImage(cmd, image->value, image->current_layout, &clear, 1, &dst_range);
-		}
-		else
-		{
-			VkClearDepthStencilValue clear = { 1.f, 0 };
-			vkCmdClearDepthStencilImage(cmd, image->value, image->current_layout, &clear, 1, &dst_range);
+			if (!(dst_aspect & VK_IMAGE_ASPECT_DEPTH_BIT))
+			{
+				VkClearColorValue clear = {};
+				vkCmdClearColorImage(cmd, image->value, image->current_layout, &clear, 1, &dst_range);
+			}
+			else
+			{
+				VkClearDepthStencilValue clear = { 1.f, 0 };
+				vkCmdClearDepthStencilImage(cmd, image->value, image->current_layout, &clear, 1, &dst_range);
+			}
 		}
 
 		copy_transfer_regions_impl(cmd, image, sections_to_copy);
@@ -797,11 +803,12 @@ namespace vk
 	{
 		std::vector<copy_region_descriptor> region =
 		{ {
-			src,
-			rsx::surface_transform::identity,
-			0,
-			0, 0, 0, 0, 0,
-			width, height, width, height
+			.src = src,
+			.xform = rsx::surface_transform::identity,
+			.src_w = width,
+			.src_h = height,
+			.dst_w = width,
+			.dst_h = height
 		} };
 
 		auto dst = dst_view->image();
@@ -1105,7 +1112,7 @@ namespace vk
 		{
 		default:
 			//TODO
-			// warn_once("Format incompatibility detected, reporting failure to force data copy (VK_FORMAT=0x%X, GCM_FORMAT=0x%X)", static_cast<u32>(vk_format), gcm_format);
+			err_once("Format incompatibility detected, reporting failure to force data copy (VK_FORMAT=0x%X, GCM_FORMAT=0x%X)", static_cast<u32>(vk_format), gcm_format);
 			return false;
 #ifndef __APPLE__
 		case CELL_GCM_TEXTURE_R5G6B5:

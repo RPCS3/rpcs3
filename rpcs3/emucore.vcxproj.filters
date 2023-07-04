@@ -85,6 +85,9 @@
     <Filter Include="Emu\GPU\RSX\Overlays\HomeMenu\Pages">
       <UniqueIdentifier>{017e5a5d-b190-4032-baed-57f8020861a5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Emu\GPU\RSX\Program\Snippets\RSXProg">
+      <UniqueIdentifier>{f990b0be-adbd-4a1c-b8c7-d6f963d5b629}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Crypto\aes.cpp">
@@ -2402,6 +2405,33 @@
     </None>
     <None Include="Emu\RSX\Program\GLSLSnippets\OverlayRenderFS.glsl">
       <Filter>Emu\GPU\RSX\Program\Snippets</Filter>
+    </None>
+    <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXFragmentPrologue.glsl">
+      <Filter>Emu\GPU\RSX\Program\Snippets\RSXProg</Filter>
+    </None>
+    <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXFragmentTextureDepthConversion.glsl">
+      <Filter>Emu\GPU\RSX\Program\Snippets\RSXProg</Filter>
+    </None>
+    <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXFragmentTextureOps.glsl">
+      <Filter>Emu\GPU\RSX\Program\Snippets\RSXProg</Filter>
+    </None>
+    <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXProgramCommon.glsl">
+      <Filter>Emu\GPU\RSX\Program\Snippets\RSXProg</Filter>
+    </None>
+    <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXVertexPrologue.glsl">
+      <Filter>Emu\GPU\RSX\Program\Snippets\RSXProg</Filter>
+    </None>
+    <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXFragmentTextureMSAAOps.glsl">
+      <Filter>Emu\GPU\RSX\Program\Snippets\RSXProg</Filter>
+    </None>
+    <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXFragmentTextureMSAAOpsInternal.glsl">
+      <Filter>Emu\GPU\RSX\Program\Snippets\RSXProg</Filter>
+    </None>
+    <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXDefines2.glsl">
+      <Filter>Emu\GPU\RSX\Program\Snippets\RSXProg</Filter>
+    </None>
+    <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXVertexFetch.glsl">
+      <Filter>Emu\GPU\RSX\Program\Snippets\RSXProg</Filter>
     </None>
   </ItemGroup>
 </Project>

@@ -26,6 +26,7 @@ namespace rsx
 		using image_view_type      = typename traits::image_view_type;
 		using image_storage_type   = typename traits::image_storage_type;
 		using texture_format       = typename traits::texture_format;
+		using viewable_image_type  = typename traits::viewable_image_type;
 
 		using predictor_type       = texture_cache_predictor<traits>;
 		using ranged_storage       = rsx::ranged_storage<traits>;
@@ -142,6 +143,7 @@ namespace rsx
 			std::vector<copy_region_descriptor> sections_to_copy;
 			texture_channel_remap_t remap;
 			deferred_request_command op = deferred_request_command::nop;
+			u32 external_ref_addr = 0;
 			u16 x = 0;
 			u16 y = 0;
 
@@ -161,6 +163,27 @@ namespace rsx
 			{
 				static_cast<image_section_attributes_t&>(*this) = attr;
 			}
+
+			viewable_image_type as_viewable() const
+			{
+				return static_cast<viewable_image_type>(external_handle);
+			}
+
+			image_resource_type src0() const
+			{
+				if (external_handle)
+				{
+					return external_handle;
+				}
+
+				if (!sections_to_copy.empty())
+				{
+					return sections_to_copy[0].src;
+				}
+
+				// Return typed null
+				return external_handle;
+			}
 		};
 
 		struct sampled_image_descriptor : public sampled_image_descriptor_base
@@ -179,11 +202,16 @@ namespace rsx
 				upload_context = ctx;
 				format_class = ftype;
 				is_cyclic_reference = cyclic_reference;
-				scale_x = scale.width;
-				scale_y = scale.height;
-				scale_z = scale.depth;
 				image_type = type;
 				samples = msaa_samples;
+
+				texcoord_xform.scale[0] = scale.width;
+				texcoord_xform.scale[1] = scale.height;
+				texcoord_xform.scale[2] = scale.depth;
+				texcoord_xform.bias[0] = 0.;
+				texcoord_xform.bias[1] = 0.;
+				texcoord_xform.bias[2] = 0.;
+				texcoord_xform.clamp = false;
 			}
 
 			sampled_image_descriptor(image_resource_type external_handle, deferred_request_command reason,
@@ -196,28 +224,75 @@ namespace rsx
 				image_handle = 0;
 				upload_context = ctx;
 				format_class = ftype;
-				scale_x = scale.width;
-				scale_y = scale.height;
-				scale_z = scale.depth;
 				image_type = type;
+
+				texcoord_xform.scale[0] = scale.width;
+				texcoord_xform.scale[1] = scale.height;
+				texcoord_xform.scale[2] = scale.depth;
+				texcoord_xform.bias[0] = 0.;
+				texcoord_xform.bias[1] = 0.;
+				texcoord_xform.bias[2] = 0.;
+				texcoord_xform.clamp = false;
+			}
+
+			inline bool section_fills_target(const copy_region_descriptor& cpy) const
+			{
+				return cpy.dst_x == 0 && cpy.dst_y == 0 &&
+					cpy.dst_w == external_subresource_desc.width && cpy.dst_h == external_subresource_desc.height;
+			}
+
+			inline bool section_is_transfer_only(const copy_region_descriptor& cpy) const
+			{
+				return cpy.src_w == cpy.dst_w && cpy.src_h == cpy.dst_h;
 			}
 
 			void simplify()
 			{
-				// Optimizations in the straightforward methods copy_image_static and copy_image_dynamic make them preferred over the atlas method
-				if (external_subresource_desc.op == deferred_request_command::atlas_gather &&
-					external_subresource_desc.sections_to_copy.size() == 1)
+				if (external_subresource_desc.op != deferred_request_command::atlas_gather)
 				{
-					// Check if the subresource fills the target, if so, change the command to copy_image_static
-					const auto &cpy = external_subresource_desc.sections_to_copy.front();
-					if (cpy.dst_x == 0 && cpy.dst_y == 0 &&
-						cpy.dst_w == external_subresource_desc.width && cpy.dst_h == external_subresource_desc.height &&
-						cpy.src_w == cpy.dst_w && cpy.src_h == cpy.dst_h)
+					// Only atlas simplification supported for now
+					return;
+				}
+
+				auto& sections = external_subresource_desc.sections_to_copy;
+				if (sections.size() > 1)
+				{
+					// GPU image copies are expensive, cull unnecessary transfers if possible
+					for (auto idx = sections.size() - 1; idx >= 1; idx--)
 					{
+						if (section_fills_target(sections[idx]))
+						{
+							const auto remaining = sections.size() - idx;
+							std::memcpy(
+								sections.data(),
+								&sections[idx],
+								remaining * sizeof(sections[0])
+							);
+							sections.resize(remaining);
+							break;
+						}
+					}
+				}
+
+				// Optimizations in the straightforward methods copy_image_static and copy_image_dynamic make them preferred over the atlas method
+				if (sections.size() == 1 && section_fills_target(sections[0]))
+				{
+					const auto cpy = sections[0];
+					external_subresource_desc.external_ref_addr = cpy.base_addr;
+
+					if (section_is_transfer_only(cpy))
+					{
+						// Change the command to copy_image_static
 						external_subresource_desc.external_handle = cpy.src;
 						external_subresource_desc.x = cpy.src_x;
 						external_subresource_desc.y = cpy.src_y;
 						external_subresource_desc.op = deferred_request_command::copy_image_static;
+					}
+					else
+					{
+						// Blit op is a semantic variant of the copy and atlas ops.
+						// We can simply reuse the atlas handler for this for now, but this allows simplification.
+						external_subresource_desc.op = deferred_request_command::blit_image_static;
 					}
 				}
 			}
@@ -377,6 +452,7 @@ namespace rsx
 		atomic_t<u32> m_unavoidable_hard_faults_this_frame = { 0 };
 		atomic_t<u32> m_texture_upload_calls_this_frame = { 0 };
 		atomic_t<u32> m_texture_upload_misses_this_frame = { 0 };
+		atomic_t<u32> m_texture_copies_ellided_this_frame = { 0 };
 		static const u32 m_predict_max_flushes_per_frame = 50; // Above this number the predictions are disabled
 
 		// Invalidation
@@ -1610,13 +1686,18 @@ namespace rsx
 				{
 					sections[n] =
 					{
-						desc.external_handle,
-						surface_transform::coordinate_transform,
-						0,
-						0, static_cast<u16>(desc.slice_h * n),
-						0, 0, n,
-						desc.width, desc.height,
-						desc.width, desc.height
+						.src = desc.external_handle,
+						.xform = surface_transform::coordinate_transform,
+						.level = 0,
+						.src_x = 0,
+						.src_y = static_cast<u16>(desc.slice_h * n),
+						.dst_x = 0,
+						.dst_y = 0,
+						.dst_z = n,
+						.src_w = desc.width,
+						.src_h = desc.height,
+						.dst_w = desc.width,
+						.dst_h = desc.height
 					};
 				}
 
@@ -1636,13 +1717,18 @@ namespace rsx
 				{
 					sections[n] =
 					{
-						desc.external_handle,
-						surface_transform::coordinate_transform,
-						0,
-						0, static_cast<u16>(desc.slice_h * n),
-						0, 0, n,
-						desc.width, desc.height,
-						desc.width, desc.height
+						.src = desc.external_handle,
+						.xform = surface_transform::coordinate_transform,
+						.level = 0,
+						.src_x = 0,
+						.src_y = static_cast<u16>(desc.slice_h * n),
+						.dst_x = 0,
+						.dst_y = 0,
+						.dst_z = n,
+						.src_w = desc.width,
+						.src_h = desc.height,
+						.dst_w = desc.width,
+						.dst_h = desc.height
 					};
 				}
 
@@ -1650,6 +1736,7 @@ namespace rsx
 				break;
 			}
 			case deferred_request_command::atlas_gather:
+			case deferred_request_command::blit_image_static:
 			{
 				result = generate_atlas_from_images(cmd, desc.gcm_format, desc.width, desc.height, desc.sections_to_copy, desc.remap);
 				break;
@@ -1894,6 +1981,17 @@ namespace rsx
 							auto new_attr = attr;
 							new_attr.gcm_format = gcm_format;
 
+							if (last->get_gcm_format() == attr.gcm_format && attr.edge_clamped)
+							{
+								// Clipped view
+								auto viewed_image = last->get_raw_texture();
+								sampled_image_descriptor result = { viewed_image->get_view(encoded_remap, remap), last->get_context(),
+									viewed_image->format_class(), scale, extended_dimension, false, viewed_image->samples() };
+
+								helpers::calculate_sample_clip_parameters(result, position2i(0, 0), size2i(attr.width, attr.height), size2i(normalized_width, last->get_height()));
+								return result;
+							}
+
 							return { last->get_raw_texture(), deferred_request_command::copy_image_static, new_attr, {},
 									last->get_context(), classify_format(gcm_format), scale, extended_dimension, remap };
 						}
@@ -1902,15 +2000,50 @@ namespace rsx
 					auto result = helpers::merge_cache_resources<sampled_image_descriptor>(
 						cmd, overlapping_fbos, overlapping_locals, attr, scale, extended_dimension, encoded_remap, remap, _pool);
 
+					const bool is_simple_subresource_copy =
+						(result.external_subresource_desc.op == deferred_request_command::copy_image_static) ||
+						(result.external_subresource_desc.op == deferred_request_command::copy_image_dynamic) ||
+						(result.external_subresource_desc.op == deferred_request_command::blit_image_static);
+
+					if (attr.edge_clamped &&
+						!g_cfg.video.strict_rendering_mode &&
+						is_simple_subresource_copy &&
+						render_target_format_is_compatible(result.external_subresource_desc.src0(), attr.gcm_format))
+					{
+						if (result.external_subresource_desc.op != deferred_request_command::blit_image_static) [[ likely ]]
+						{
+							helpers::convert_image_copy_to_clip_descriptor(
+								result,
+								position2i(result.external_subresource_desc.x, result.external_subresource_desc.y),
+								size2i(result.external_subresource_desc.width, result.external_subresource_desc.height),
+								size2i(result.external_subresource_desc.external_handle->width(), result.external_subresource_desc.external_handle->height()),
+								encoded_remap, remap, false);
+						}
+						else
+						{
+							helpers::convert_image_blit_to_clip_descriptor(
+								result,
+								encoded_remap,
+								remap,
+								false);
+						}
+
+						if (!!result.ref_address && m_rtts.address_is_bound(result.ref_address))
+						{
+							result.is_cyclic_reference = true;
+
+							auto texptr = ensure(m_rtts.get_surface_at(result.ref_address));
+							insert_texture_barrier(cmd, texptr);
+						}
+
+						return result;
+					}
+
 					if (options.skip_texture_merge)
 					{
-						switch (result.external_subresource_desc.op)
+						if (is_simple_subresource_copy)
 						{
-						case deferred_request_command::copy_image_static:
-						case deferred_request_command::copy_image_dynamic:
 							return result;
-						default:
-							break;
 						}
 
 						return {};
@@ -2136,12 +2269,14 @@ namespace rsx
 				attributes.depth = 1;
 				attributes.height = 1;
 				attributes.slice_h = 1;
+				attributes.edge_clamped = (tex.wrap_s() == rsx::texture_wrap_mode::clamp_to_edge);
 				scale.height = scale.depth = 0.f;
 				subsurface_count = 1;
 				required_surface_height = 1;
 				break;
 			case rsx::texture_dimension_extended::texture_dimension_2d:
 				attributes.depth = 1;
+				attributes.edge_clamped = (tex.wrap_s() == rsx::texture_wrap_mode::clamp_to_edge && tex.wrap_t() == rsx::texture_wrap_mode::clamp_to_edge);
 				scale.depth = 0.f;
 				subsurface_count = options.is_compressed_format? 1 : tex.get_exact_mipmap_count();
 				attributes.slice_h = required_surface_height = attributes.height;
@@ -2193,8 +2328,16 @@ namespace rsx
 					// Deferred reconstruct
 					result.external_subresource_desc.cache_range = lookup_range;
 				}
+				else if (result.texcoord_xform.clamp)
+				{
+					m_texture_copies_ellided_this_frame++;
+				}
 
-				result.ref_address = attributes.address;
+				if (!result.ref_address)
+				{
+					result.ref_address = attributes.address;
+				}
+
 				result.surface_cache_tag = m_rtts.write_tag;
 
 				if (subsurface_count == 1)
@@ -3283,6 +3426,7 @@ namespace rsx
 			m_unavoidable_hard_faults_this_frame.store(0u);
 			m_texture_upload_calls_this_frame.store(0u);
 			m_texture_upload_misses_this_frame.store(0u);
+			m_texture_copies_ellided_this_frame.store(0u);
 		}
 
 		void on_flush()
@@ -3364,6 +3508,11 @@ namespace rsx
 		u32 get_texture_upload_miss_percentage() const
 		{
 			return (m_texture_upload_calls_this_frame)? (m_texture_upload_misses_this_frame * 100 / m_texture_upload_calls_this_frame) : 0;
+		}
+
+		u32 get_texture_copies_ellided_this_frame() const
+		{
+			return m_texture_copies_ellided_this_frame;
 		}
 	};
 }

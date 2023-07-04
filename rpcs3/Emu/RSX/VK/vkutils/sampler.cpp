@@ -51,7 +51,7 @@ namespace vk
 		info.addressModeU = clamp_u;
 		info.addressModeV = clamp_v;
 		info.addressModeW = clamp_w;
-		info.anisotropyEnable = dev.get_anisotropic_filtering_support();
+		info.anisotropyEnable = max_anisotropy >= 2. && dev.get_anisotropic_filtering_support();
 		info.compareEnable = depth_compare;
 		info.unnormalizedCoordinates = unnormalized_coordinates;
 		info.mipLodBias = mipLodBias;
