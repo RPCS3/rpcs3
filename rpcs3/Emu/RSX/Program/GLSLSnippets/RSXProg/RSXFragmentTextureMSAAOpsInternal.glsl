@@ -11,7 +11,8 @@ vec4 texelFetch2DMS(in _MSAA_SAMPLER_TYPE_ tex, const in vec2 sample_count, cons
 vec4 sampleTexture2DMS(in _MSAA_SAMPLER_TYPE_ tex, const in vec2 coords, const in int index)
 {
 	const uint flags = TEX_FLAGS(index);
-	const vec2 normalized_coords = COORD_SCALE2(index, coords);
+	const vec2 scaled_coords = COORD_SCALE2(index, coords);
+	const vec2 normalized_coords = mod(scaled_coords, vec2(1.0));
 	const vec2 sample_count = vec2(2., textureSamples(tex) * 0.5);
 	const vec2 image_size = textureSize(tex) * sample_count;
 	const ivec2 icoords = ivec2(normalized_coords * image_size);
