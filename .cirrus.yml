@@ -121,12 +121,16 @@ freebsd_task:
 
 macos_task:
   timeout_in: 12000m
+  homebrew_cache:
+    folder: /Users/admin/Library/Caches/Homebrew
+  qt_cache:
+    folder: /tmp/Qt
   ccache_cache:
     folder: /tmp/ccache_dir
   matrix:
     - name: Cirrus macOS
       macos_instance:
-        image: ghcr.io/cirruslabs/macos-monterey-xcode:14
+        image: ghcr.io/cirruslabs/macos-ventura-xcode:latest
       mac_script:
         - mkdir artifacts
         - chmod +x ".ci/build-mac.sh"
