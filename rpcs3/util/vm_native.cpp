@@ -508,17 +508,69 @@ namespace utils
 #ifdef _WIN32
 		fs::file f;
 
-		std::function<bool(const std::string&, HANDLE, usz)> set_sparse = [&](const std::string& storagex, HANDLE h, usz m_size) -> bool
+		auto open_with_cleanup = [](fs::file& f, const std::string& path)
 		{
+			f.close();
+
+			for (u32 try_count = 3, i = 0; !f && i < try_count; i++)
+			{
+				// Bug workaround: removing old file may be safer than rewriting it
+				if (!fs::remove_file(path) && fs::g_tls_error != fs::error::noent)
+				{
+					return false;
+				}
+
+				if (!f.open(path, fs::read + fs::write + fs::create + fs::excl) && fs::g_tls_error != fs::error::exist)
+				{
+					return false;
+				}
+			}
+
+			return f.operator bool();
+		};
+
+		std::string storage1 = fs::get_temp_dir();
+		std::string storage2 = fs::get_cache_dir();
+
+		if (storage.empty())
+		{
+			storage1 += "rpcs3_vm_sparse.tmp";
+			storage2 += "rpcs3_vm_sparse.tmp";
+		}
+		else
+		{
+			storage1 += storage;
+			storage2 += storage;
+		}
+
+		std::function<bool(const std::string&, HANDLE, usz)> set_sparse_and_map = [&](const std::string& storagex, HANDLE h, usz m_size) -> bool
+		{
+			// In case failed, revert changes and forward failure
+			auto clean = [&](bool result)
+			{
+				if (!result)
+				{
+					const fs::error last_fs_error = fs::g_tls_error;
+					const DWORD last_win_error = ::GetLastError();
+
+					fs::remove_file(storagex);
+
+					fs::g_tls_error = last_fs_error;
+					::SetLastError(last_win_error);
+				}
+
+				return result;
+			};
+
 			FILE_SET_SPARSE_BUFFER arg{.SetSparse = true};
 			FILE_BASIC_INFO info0{};
-			ensure(GetFileInformationByHandleEx(h, FileBasicInfo, &info0, sizeof(info0)));
+			ensure(clean(GetFileInformationByHandleEx(h, FileBasicInfo, &info0, sizeof(info0))));
 
 			if ((info0.FileAttributes & FILE_ATTRIBUTE_ARCHIVE) || (~info0.FileAttributes & FILE_ATTRIBUTE_TEMPORARY))
 			{
 				info0.FileAttributes &= ~FILE_ATTRIBUTE_ARCHIVE;
 				info0.FileAttributes |= FILE_ATTRIBUTE_TEMPORARY;
-				ensure(SetFileInformationByHandle(h, FileBasicInfo, &info0, sizeof(info0)));
+				ensure(clean(SetFileInformationByHandle(h, FileBasicInfo, &info0, sizeof(info0))));
 			}
 
 			if (DWORD bytesReturned{}; (info0.FileAttributes & FILE_ATTRIBUTE_SPARSE_FILE) || DeviceIoControl(h, FSCTL_SET_SPARSE, &arg, sizeof(arg), nullptr, 0, &bytesReturned, nullptr))
@@ -526,15 +578,18 @@ namespace utils
 				if ((info0.FileAttributes & FILE_ATTRIBUTE_SPARSE_FILE) == 0 && !storagex.empty())
 				{
 					// Retry once (bug workaround)
-					f.close();
-					f.open(storagex, fs::read + fs::write + fs::create);
-					return set_sparse("", f.get_handle(), m_size);
+					if (!open_with_cleanup(f, storagex))
+					{
+						return false;
+					}
+
+					return set_sparse_and_map("", f.get_handle(), m_size);
 				}
 
 				FILE_STANDARD_INFO info;
 				FILE_END_OF_FILE_INFO _eof{};
-				ensure(GetFileInformationByHandleEx(h, FileStandardInfo, &info, sizeof(info)));
-				ensure(GetFileSizeEx(h, &_eof.EndOfFile));
+				ensure(clean(GetFileInformationByHandleEx(h, FileStandardInfo, &info, sizeof(info))));
+				ensure(clean(GetFileSizeEx(h, &_eof.EndOfFile)));
 
 				if (info.AllocationSize.QuadPart && _eof.EndOfFile.QuadPart == m_size)
 				{
@@ -553,7 +608,26 @@ namespace utils
 				{
 					// Reset file size to 0 if it doesn't match
 					_eof.EndOfFile.QuadPart = 0;
-					ensure(SetFileInformationByHandle(h, FileEndOfFileInfo, &_eof, sizeof(_eof)));
+					ensure(clean(SetFileInformationByHandle(h, FileEndOfFileInfo, &_eof, sizeof(_eof))));
+				}
+
+				// It seems impossible to automatically delete file on exit when file mapping is used
+				if (f.size() != m_size)
+				{
+					// Resize the file gradually (bug workaround)
+					for (usz i = 0; i < m_size / (1024 * 1024 * 256); i++)
+					{
+						ensure(clean(f.trunc((i + 1) * (1024 * 1024 * 256))));
+					}
+
+					ensure(clean(f.trunc(m_size)));
+				}
+
+				m_handle = ::CreateFileMappingW(f.get_handle(), nullptr, PAGE_READWRITE, 0, 0, nullptr);
+				if (clean(!m_handle))
+				{
+					ensure(storagex == storage1);
+					return false;
 				}
 
 				return true;
@@ -562,26 +636,19 @@ namespace utils
 			return false;
 		};
 
-		std::string storage1 = fs::get_cache_dir();
-		std::string storage2 = fs::get_temp_dir();
+		// Attempt to remove from secondary storage in case this succeeds
+		fs::remove_file(storage2);
 
-		if (storage.empty())
+		if (!open_with_cleanup(f, storage1) || !set_sparse_and_map(storage1, f.get_handle(), m_size))
 		{
-			storage1 += "rpcs3_vm_sparse.tmp";
-			storage2 += "rpcs3_vm_sparse.tmp";
-		}
-		else
-		{
-			storage1 += storage;
-			storage2 += storage;
-		}
+			// Attempt to remove from main storage in case this succeeds
+			f.close();
+			fs::remove_file(storage1);
 
-		if (!f.open(storage1, fs::read + fs::write + fs::create) || !set_sparse(storage1, f.get_handle(), m_size))
-		{
 			// Fallback storage
-			ensure(f.open(storage2, fs::read + fs::write + fs::create));
+			ensure(open_with_cleanup(f, storage2));
 
-			if (!set_sparse(storage2, f.get_handle(), m_size))
+			if (!set_sparse_and_map(storage2, f.get_handle(), m_size))
 			{
 				MessageBoxW(0, L"Failed to initialize sparse file.\nCan't find a filesystem with sparse file support (NTFS).", L"RPCS3", MB_ICONERROR);
 			}
@@ -592,20 +659,6 @@ namespace utils
 		{
 			m_storage = std::move(storage1);
 		}
-
-		// It seems impossible to automatically delete file on exit when file mapping is used
-		if (f.size() != m_size)
-		{
-			// Resize the file gradually (bug workaround)
-			for (usz i = 0; i < m_size / (1024 * 1024 * 256); i++)
-			{
-				ensure(f.trunc((i + 1) * (1024 * 1024 * 256)));
-			}
-
-			ensure(f.trunc(m_size));
-		}
-
-		m_handle = ensure(::CreateFileMappingW(f.get_handle(), nullptr, PAGE_READWRITE, 0, 0, nullptr));
 #else
 
 #ifdef __linux__
