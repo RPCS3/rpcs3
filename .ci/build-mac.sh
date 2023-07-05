@@ -50,8 +50,8 @@ export VK_ICD_FILENAMES="$VULKAN_SDK/share/vulkan/icd.d/MoltenVK_icd.json"
 
 export LLVM_DIR
 LLVM_DIR="BREW_X64_PATH/opt/llvm@16"
-# exclude FAudio, SPIRV, moltenvk and LLVM from submodule update
-git submodule -q update --init --depth=1 --jobs=8 $(awk '/path/ && !/FAudio/ && !/MoltenVK && !/llvm/ && !/SPIRV/ { print $3 }' .gitmodules)
+# exclude FAudio, SPIRV, and LLVM from submodule update
+git submodule -q update --init --depth=1 --jobs=8 "$(awk '/path/ && !/FAudio/ && !/llvm/ && !/SPIRV/ { print $3 }' .gitmodules)"
 
 # 3rdparty fixes
 sed -i '' "s/extern const double NSAppKitVersionNumber;/const double NSAppKitVersionNumber = 1343;/g" 3rdparty/hidapi/hidapi/mac/hid.c
