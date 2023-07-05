@@ -558,13 +558,26 @@ namespace rsx
 			const texture_channel_remap_t& decoded_remap,
 			bool cyclic_reference)
 		{
+			// Our "desired" output is the source window, and the "actual" output is the real size
 			const auto& section = desc.external_subresource_desc.sections_to_copy[0];
 
-			// Our "desired" output is the source window, and the "actual" output is the real size
-			const auto aa_scale_x = section.src->samples() % 2;
-			const auto aa_scale_y = section.src->samples() / 2;
-			const auto surface_width = section.src->width() * aa_scale_x;
-			const auto surface_height = section.src->height() * aa_scale_y;
+			// Apply AA correct factor
+			auto surface_width = section.src->width();
+			auto surface_height = section.src->height();
+			switch (section.src->samples())
+			{
+			case 1:
+				break;
+			case 2:
+				surface_width *= 2;
+				break;
+			case 4:
+				surface_width *= 2;
+				surface_height *= 2;
+				break;
+			default:
+				fmt::throw_exception("Unsupported MSAA configuration");
+			}
 
 			// First, we convert this descriptor to a copy descriptor
 			desc.external_subresource_desc.external_handle = section.src;
