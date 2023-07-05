@@ -12,6 +12,7 @@
 
 #include <charconv>
 #include <unordered_map>
+#include <regex>
 
 #include "util/logs.hpp"
 #include "util/sysinfo.hpp"
@@ -40,7 +41,9 @@ void fmt_class_string<search_mode>::format(std::string& out, u64 arg)
 			case as_f64: return "Double";
 			case as_f32: return "Float";
 			case as_inst: return "Instruction";
+			case as_regex_inst: return "Regex-Instruction";
 			case as_fake_spu_inst: return "SPU Instruction";
+			case as_regex_fake_spu_inst: return "SPU Regex-Instruction";
 			default: return "";
 			}
 		}();
@@ -82,7 +85,9 @@ u64 memory_viewer_panel::OnSearch(std::string wstr, u32 mode)
 	{
 	case as_inst:
 	case as_string:
+	case as_regex_inst:
 	case as_fake_spu_inst:
+	case as_regex_fake_spu_inst:
 	{
 		case_insensitive = m_chkbox_case_insensitive->isChecked();
 
@@ -105,7 +110,7 @@ u64 memory_viewer_panel::OnSearch(std::string wstr, u32 mode)
 		{
 			if (part.size() % 2)
 			{
-				gui_log.warning("Padding string part with '0' at front due to odd hexadeciaml characters count.");
+				gui_log.warning("Padding string part with '0' at front due to odd hexadecimal characters count.");
 				part.insert(part.begin(), '0');
 			}
 		}
@@ -187,7 +192,7 @@ u64 memory_viewer_panel::OnSearch(std::string wstr, u32 mode)
 
 	const named_thread_group workers("Memory Searcher "sv, max_threads, [&]()
 	{
-		if (mode == as_inst || mode == as_fake_spu_inst)
+		if (mode == as_inst || mode == as_fake_spu_inst || mode == as_regex_inst || mode == as_regex_fake_spu_inst)
 		{
 			auto disasm = m_disasm->copy_type_erased();
 			disasm->change_mode(cpu_disasm_mode::normal);
@@ -260,7 +265,9 @@ u64 memory_viewer_panel::OnSearch(std::string wstr, u32 mode)
 							std::transform(last.begin(), last.end(), last.begin(), ::tolower);
 						}
 
-						if (last.find(wstr) != umax)
+						std::smatch sm;
+
+						if (mode & (as_regex_inst | as_regex_fake_spu_inst) ? std::regex_search(last, sm, std::regex(wstr)) : last.find(wstr) != umax)
 						{
 							gui_log.success("Found instruction at 0x%08x: '%s'", addr + i, last);
 							found++;
