@@ -11,8 +11,20 @@ vec3 compute2x2DownsampleWeights(const in float coord, const in float uv_step, c
 	const float next_sample_point = coord + actual_step;
 	const float next_coord_step = fma(floor(coord / uv_step), uv_step, uv_step);
 	const float next_coord_step_plus_one = next_coord_step + uv_step;
-	vec3 weights = vec3(next_coord_step, min(next_coord_step_plus_one, next_sample_point), max(next_coord_step_plus_one, next_sample_point)) - vec3(coord, next_coord_step, next_coord_step_plus_one);
-	return weights / actual_step;
+
+	// We calculate the weights by getting the distances of our sample points from the 'texel centers' and scaling by the actual step
+	// However, since our weights must add up to exactly 1.0, we can skip one term and just get the remainder for a more accurate result
+	// Let's allot the overflow to the original texel in this case (a)
+	// const float a0 = next_coord_step;
+	const float b0 = min(next_coord_step_plus_one, next_sample_point);
+	const float c0 = max(next_coord_step_plus_one, next_sample_point);
+
+	// const float a1 = coord;
+	const float b1 = next_coord_step;
+	const float c1 = next_coord_step_plus_one;
+
+	const vec2 computed_weights = vec2(b0 - b1, c0 - c1) / actual_step;
+	return vec3(1.0 - (computed_weights.x + computed_weights.y), computed_weights.xy);
 }
 
 )"
