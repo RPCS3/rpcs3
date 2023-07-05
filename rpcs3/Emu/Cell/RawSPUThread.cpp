@@ -318,6 +318,50 @@ bool spu_thread::write_reg(const u32 addr, const u32 value)
 	return false;
 }
 
+bool spu_thread::test_is_problem_state_register_offset(u32 offset, bool for_read, bool for_write) noexcept
+{
+	if (for_read)
+	{
+		switch (offset)
+		{
+		case MFC_CMDStatus_offs:
+		case MFC_QStatus_offs:
+		case SPU_Out_MBox_offs:
+		case SPU_MBox_Status_offs:
+		case SPU_Status_offs:
+		case Prxy_TagStatus_offs:
+		case SPU_NPC_offs:
+		case SPU_RunCntl_offs:
+			return true;
+		default: break;
+		}
+	}
+
+	if (for_write)
+	{
+		switch (offset)
+		{
+		case MFC_LSA_offs:
+		case MFC_EAH_offs:
+		case MFC_EAL_offs:
+		case MFC_Size_Tag_offs:
+		case MFC_Class_CMD_offs:
+		case Prxy_QueryType_offs:
+		case Prxy_QueryMask_offs:
+		case SPU_In_MBox_offs:
+		case SPU_RunCntl_offs:
+		case SPU_NPC_offs:
+		case SPU_RdSigNotify1_offs:
+		case SPU_RdSigNotify2_offs:
+		case (SPU_RdSigNotify2_offs & 0xffff): // Fow now accept both (this is used for an optimization so it can be imperfect)
+			return true;
+		default: break;
+		}
+	}
+
+	return false;
+}
+
 void spu_load_exec(const spu_exec_object& elf)
 {
 	spu_thread::g_raw_spu_ctr++;

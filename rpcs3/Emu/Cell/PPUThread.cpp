@@ -62,7 +62,9 @@
 #include <thread>
 #include <cfenv>
 #include <cctype>
+#include <span>
 #include <optional>
+
 #include "util/asm.hpp"
 #include "util/vm.hpp"
 #include "util/v128.hpp"
@@ -483,6 +485,167 @@ void ppu_reservation_fallback(ppu_thread& ppu)
 			return;
 		}
 	}
+}
+
+u32 ppu_read_mmio_aware_u32(u8* vm_base, u32 eal)
+{
+	if (eal >= RAW_SPU_BASE_ADDR)
+	{
+		// RawSPU MMIO
+		auto thread = idm::get<named_thread<spu_thread>>(spu_thread::find_raw_spu((eal - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET));
+
+		if (!thread)
+		{
+			// Access Violation
+		}
+		else if ((eal - RAW_SPU_BASE_ADDR) % RAW_SPU_OFFSET + sizeof(u32) - 1 < SPU_LS_SIZE) // LS access
+		{
+		}
+		else if (u32 value{}; thread->read_reg(eal, value))
+		{
+			return std::bit_cast<be_t<u32>>(value);
+		}
+		else
+		{
+			fmt::throw_exception("Invalid RawSPU MMIO offset (addr=0x%x)", eal);
+		}
+	}
+
+	// Value is assumed to be swapped
+	return read_from_ptr<u32>(vm_base + eal);
+}
+
+void ppu_write_mmio_aware_u32(u8* vm_base, u32 eal, u32 value)
+{
+	if (eal >= RAW_SPU_BASE_ADDR)
+	{
+		// RawSPU MMIO
+		auto thread = idm::get<named_thread<spu_thread>>(spu_thread::find_raw_spu((eal - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET));
+
+		if (!thread)
+		{
+			// Access Violation
+		}
+		else if ((eal - RAW_SPU_BASE_ADDR) % RAW_SPU_OFFSET + sizeof(u32) - 1 < SPU_LS_SIZE) // LS access
+		{
+		}
+		else if (thread->write_reg(eal, std::bit_cast<be_t<u32>>(value)))
+		{
+			return;
+		}
+		else
+		{
+			fmt::throw_exception("Invalid RawSPU MMIO offset (addr=0x%x)", eal);
+		}
+	}
+
+	// Value is assumed swapped
+	write_to_ptr<u32>(vm_base + eal, value);
+}
+
+extern bool ppu_test_address_may_be_mmio(std::span<const be_t<u32>> insts)
+{
+	std::set<u32> reg_offsets;
+	bool found_raw_spu_base = false;
+	bool found_spu_area_offset_element = false;
+
+	for (u32 inst : insts)
+	{
+		// Common around MMIO (orders IO)
+		if (inst == ppu_instructions::EIEIO())
+		{
+			return true;
+		}
+
+		const u32 op_imm16 = (inst & 0xfc00ffff);
+
+		// RawSPU MMIO base
+		// 0xe00000000 is a common constant so try to find an ORIS 0x10 or ADDIS 0x10 nearby (for multiplying SPU ID by it)
+		if (op_imm16 == ppu_instructions::ADDIS({}, {}, -0x2000) || op_imm16 == ppu_instructions::ORIS({}, {}, 0xe000)  || op_imm16 == ppu_instructions::XORIS({}, {}, 0xe000))
+		{
+			found_raw_spu_base = true;
+
+			if (found_spu_area_offset_element)
+			{
+				// Found both
+				return true;
+			}
+		}
+		else if (op_imm16 == ppu_instructions::ORIS({}, {}, 0x10) || op_imm16 == ppu_instructions::ADDIS({}, {}, 0x10))
+		{
+			found_spu_area_offset_element = true;
+
+			if (found_raw_spu_base)
+			{
+				// Found both
+				return true;
+			}
+		}
+		// RawSPU MMIO base + problem state offset
+		else if (op_imm16 == ppu_instructions::ADDIS({}, {}, -0x1ffc))
+		{
+			return true;
+		}
+		else if (op_imm16 == ppu_instructions::ORIS({}, {}, 0xe004))
+		{
+			return true;
+		}
+		else if (op_imm16 == ppu_instructions::XORIS({}, {}, 0xe004))
+		{
+			return true;
+		}
+		// RawSPU MMIO base + problem state offset + 64k of SNR1 offset
+		else if (op_imm16 == ppu_instructions::ADDIS({}, {}, -0x1ffb))
+		{
+			return true;
+		}
+		else if (op_imm16 == ppu_instructions::ORIS({}, {}, 0xe005))
+		{
+			return true;
+		}
+		else if (op_imm16 == ppu_instructions::XORIS({}, {}, 0xe005))
+		{
+			return true;
+		}
+		// RawSPU MMIO base + problem state offset + 264k of SNR2 offset (STW allows 32K+- offset so in order to access SNR2 it needs to first add another 64k)
+		// SNR2 is the only register currently implemented that has its 0x80000 bit is set so its the only one its hardcoded access is done this way
+		else if (op_imm16 == ppu_instructions::ADDIS({}, {}, -0x1ffa))
+		{
+			return true;
+		}
+		else if (op_imm16 == ppu_instructions::ORIS({}, {}, 0xe006))
+		{
+			return true;
+		}
+		else if (op_imm16 == ppu_instructions::XORIS({}, {}, 0xe006))
+		{
+			return true;
+		}
+		// Try to detect a function that receives RawSPU problem state base pointer as an argument
+		else if ((op_imm16 & ~0xffff) == ppu_instructions::LWZ({}, {}, 0) ||
+			(op_imm16 & ~0xffff) == ppu_instructions::STW({}, {}, 0) ||
+			(op_imm16 & ~0xffff) == ppu_instructions::ADDI({}, {}, 0))
+		{
+			const bool is_load = (op_imm16 & ~0xffff) == ppu_instructions::LWZ({}, {}, 0);
+			const bool is_store = (op_imm16 & ~0xffff) == ppu_instructions::STW({}, {}, 0);
+			const bool is_neither = !is_store && !is_load;
+			const bool is_snr = (is_store || is_neither) && ((op_imm16 & 0xffff) == (SPU_RdSigNotify2_offs & 0xffff) || (op_imm16 & 0xffff) == (SPU_RdSigNotify1_offs & 0xffff));
+
+			if (is_snr || spu_thread::test_is_problem_state_register_offset(op_imm16 & 0xffff, is_load || is_neither, is_store || is_neither))
+			{
+				reg_offsets.insert(op_imm16 & 0xffff);
+
+				if (reg_offsets.size() >= 2)
+				{
+					// Assume high MMIO likelyhood if more than one offset appears in nearby code
+					// Such as common IN_MBOX + OUT_MBOX
+					return true;
+				}
+			}
+		}
+	}
+
+	return false;
 }
 
 struct ppu_toc_manager
@@ -3529,6 +3692,8 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 			{ "__resupdate", reinterpret_cast<u64>(vm::reservation_update) },
 			{ "__resinterp", reinterpret_cast<u64>(ppu_reservation_fallback) },
 			{ "__escape", reinterpret_cast<u64>(+ppu_escape) },
+			{ "__read_maybe_mmio32", reinterpret_cast<u64>(+ppu_read_mmio_aware_u32) },
+			{ "__write_maybe_mmio32", reinterpret_cast<u64>(+ppu_write_mmio_aware_u32) },
 		};
 
 		for (u64 index = 0; index < 1024; index++)
