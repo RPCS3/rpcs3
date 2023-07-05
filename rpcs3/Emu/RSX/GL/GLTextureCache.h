@@ -26,6 +26,7 @@ namespace gl
 		using image_view_type         = gl::texture_view*;
 		using image_storage_type      = gl::texture;
 		using texture_format          = gl::texture::format;
+		using viewable_image_type     = gl::viewable_image*;
 	};
 
 	class cached_texture_section : public rsx::cached_texture_section<gl::cached_texture_section, gl::texture_cache_traits>
@@ -388,7 +389,7 @@ namespace gl
 			return vram_texture->get_view(remap_encoding, remap);
 		}
 
-		gl::texture* get_raw_texture() const
+		gl::viewable_image* get_raw_texture() const
 		{
 			return managed_texture.get();
 		}
@@ -590,11 +591,12 @@ namespace gl
 		{
 			std::vector<copy_region_descriptor> region =
 			{{
-				src,
-				rsx::surface_transform::identity,
-				0,
-				0, 0, 0, 0, 0,
-				width, height, width, height
+				.src = src,
+				.xform = rsx::surface_transform::identity,
+				.src_w = width,
+				.src_h = height,
+				.dst_w = width,
+				.dst_h = height
 			}};
 
 			copy_transfer_regions_impl(cmd, dst->image(), region);
@@ -763,8 +765,8 @@ namespace gl
 			switch (gcm_format)
 			{
 			default:
-				//TODO
-				// warn_once("Format incompatibility detected, reporting failure to force data copy (GL_INTERNAL_FORMAT=0x%X, GCM_FORMAT=0x%X)", static_cast<u32>(ifmt), gcm_format);
+				// TODO
+				err_once("Format incompatibility detected, reporting failure to force data copy (GL_INTERNAL_FORMAT=0x%X, GCM_FORMAT=0x%X)", static_cast<u32>(ifmt), gcm_format);
 				return false;
 			case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
 				return (ifmt == gl::texture::internal_format::rgba16f);

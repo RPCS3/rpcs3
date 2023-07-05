@@ -28,6 +28,7 @@ namespace vk
 		using image_view_type         = vk::image_view*;
 		using image_storage_type      = vk::image;
 		using texture_format          = VkFormat;
+		using viewable_image_type     = vk::viewable_image*;
 	};
 
 	class cached_texture_section : public rsx::cached_texture_section<vk::cached_texture_section, vk::texture_cache_traits>
@@ -153,7 +154,7 @@ namespace vk
 			return vram_texture->get_view(0xAAE4, rsx::default_remap_vector);
 		}
 
-		vk::image* get_raw_texture()
+		vk::viewable_image* get_raw_texture()
 		{
 			return managed_texture.get();
 		}

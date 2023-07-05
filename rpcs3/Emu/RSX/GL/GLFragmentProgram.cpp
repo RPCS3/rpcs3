@@ -187,25 +187,26 @@ void GLFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	m_shader_props.require_depth_conversion = properties.redirected_sampler_mask != 0;
 	m_shader_props.require_wpos = !!(properties.in_register_mask & in_wpos);
 	m_shader_props.require_texture_ops = properties.has_tex_op;
-	m_shader_props.require_shadow_ops = properties.shadow_sampler_mask != 0;
+	m_shader_props.require_tex_shadow_ops = properties.shadow_sampler_mask != 0;
 	m_shader_props.require_texture_expand = properties.has_exp_tex_op;
 	m_shader_props.require_srgb_to_linear = properties.has_upg;
 	m_shader_props.require_linear_to_srgb = properties.has_pkg;
+	m_shader_props.require_fog_read = properties.in_register_mask & in_fogc;
 	m_shader_props.emulate_coverage_tests = true; // g_cfg.video.antialiasing_level == msaa_level::none;
 	m_shader_props.emulate_shadow_compare = device_props.emulate_depth_compare;
 	m_shader_props.low_precision_tests = ::gl::get_driver_caps().vendor_NVIDIA && !(m_prog.ctrl & RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION);
 	m_shader_props.disable_early_discard = !::gl::get_driver_caps().vendor_NVIDIA;
 	m_shader_props.supports_native_fp16 = device_props.has_native_half_support;
 	m_shader_props.ROP_output_rounding = ::gl::get_driver_caps().vendor_NVIDIA;
+	m_shader_props.require_tex1D_ops = properties.has_tex1D;
+	m_shader_props.require_tex2D_ops = properties.has_tex2D;
+	m_shader_props.require_tex3D_ops = properties.has_tex3D;
 
 	glsl::insert_glsl_legacy_function(OS, m_shader_props);
 }
 
 void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 {
-	if (properties.in_register_mask & in_fogc)
-		program_common::insert_fog_declaration(OS);
-
 	std::set<std::string> output_registers;
 	if (m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS)
 	{

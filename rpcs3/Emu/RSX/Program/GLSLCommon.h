@@ -29,6 +29,7 @@ namespace rsx
 		FILTERED_MAG,
 		FILTERED_MIN,
 		UNNORMALIZED_COORDS,
+		CLAMP_TEXCOORDS_BIT,
 
 		GAMMA_CTRL_MASK = (1 << GAMMA_R) | (1 << GAMMA_G) | (1 << GAMMA_B) | (1 << GAMMA_A),
 		EXPAND_MASK = (1 << EXPAND_R) | (1 << EXPAND_G) | (1 << EXPAND_B) | (1 << EXPAND_A),
@@ -74,13 +75,6 @@ namespace rsx
 		void set_alpha_test_func(uint func) { value |= (func << ROP_control_bits::ALPHA_FUNC_OFFSET); }
 		void set_msaa_control(uint ctrl) { value |= (ctrl << ROP_control_bits::MSAA_SAMPLE_CTRL_OFFSET); }
 	};
-}
-
-namespace program_common
-{
-	void insert_compare_op(std::ostream& OS, bool low_precision);
-	void insert_compare_op_vector(std::ostream& OS);
-	void insert_fog_declaration(std::ostream& OS, std::string_view vector_type = "vec4", std::string_view input_coord = "fog_c");
 }
 
 namespace glsl

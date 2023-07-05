@@ -2,6 +2,7 @@
 #include "buffer_object.h"
 #include "commands.h"
 #include "device.h"
+#include "garbage_collector.h"
 #include "sync.h"
 #include "shared.h"
 
@@ -9,9 +10,6 @@
 
 #include "util/sysinfo.hpp"
 #include "util/asm.hpp"
-
-// FIXME: namespace pollution
-#include "../VKResourceManager.h"
 
 namespace vk
 {
@@ -413,7 +411,7 @@ namespace vk
 		if (m_buffer)
 		{
 			m_buffer->unmap();
-			vk::get_resource_manager()->dispose(m_buffer);
+			vk::get_gc()->dispose(m_buffer);
 		}
 
 		m_buffer = std::make_unique<buffer>
@@ -537,7 +535,7 @@ namespace vk
 
 		auto result = std::make_unique<gpu_debug_marker>(globals::get_shared_marker_pool(dev), message);
 		result->signal(cmd, dependency);
-		vk::get_resource_manager()->dispose(result);
+		vk::get_gc()->dispose(result);
 	}
 
 	debug_marker_scope::debug_marker_scope(const vk::command_buffer& cmd, const std::string& message)
