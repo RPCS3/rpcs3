@@ -304,16 +304,19 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, std::shared_ptr<CPUDis
 	m_cbox_input_mode->addItem(tr("Double"), QVariant::fromValue(+as_f64));
 	m_cbox_input_mode->addItem(tr("Float"), QVariant::fromValue(+as_f32));
 	m_cbox_input_mode->addItem(tr("Instruction"), QVariant::fromValue(+as_inst));
+	m_cbox_input_mode->addItem(tr("RegEx Instruction"), QVariant::fromValue(+as_regex_inst));
 
 	QString tooltip = tr("String: search the memory for the specified string."
 		"\nHEX bytes/integer: search the memory for hexadecimal values. Spaces, commas, \"0x\", \"0X\", \"\\x\", \"h\", \"H\" ensure separation of bytes but they are not mandatory."
 		"\nDouble: reinterpret the string as 64-bit precision floating point value. Values are searched for exact representation, meaning -0 != 0."
 		"\nFloat: reinterpret the string as 32-bit precision floating point value. Values are searched for exact representation, meaning -0 != 0."
-		"\nInstruction: search an instruction contains the text of the string.");
+		"\nInstruction: search an instruction contains the text of the string."
+		"\nRegEx: search an instruction containing text that matches the regular expression input.");
 
 	if (m_size != 0x40000/*SPU_LS_SIZE*/)
 	{
 		m_cbox_input_mode->addItem("SPU Instruction", QVariant::fromValue(+as_fake_spu_inst));
+		m_cbox_input_mode->addItem(tr("SPU RegEx-Instruction"), QVariant::fromValue(+as_regex_fake_spu_inst));
 		tooltip.append(tr("\nSPU Instruction: Search an SPU instruction contains the text of the string. For searching instructions within embedded SPU images.\nTip: SPU floats are commented along forming instructions."));
 	}
 
