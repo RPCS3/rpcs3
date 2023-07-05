@@ -286,6 +286,8 @@ namespace rsx
 						external_subresource_desc.external_handle = cpy.src;
 						external_subresource_desc.x = cpy.src_x;
 						external_subresource_desc.y = cpy.src_y;
+						external_subresource_desc.width = cpy.src_w;
+						external_subresource_desc.height = cpy.src_h;
 						external_subresource_desc.op = deferred_request_command::copy_image_static;
 					}
 					else
