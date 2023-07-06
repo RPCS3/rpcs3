@@ -3,7 +3,7 @@
 mkdir -p "/tmp/Qt/"
 
 export HOMEBREW_NO_AUTO_UPDATE=1
-#brew update
+brew update
 brew install -f --overwrite nasm ninja git p7zip create-dmg ccache pipenv llvm@16
 brew unlink llvm@16
 
