@@ -22,13 +22,13 @@ if [ "$BUILDING_FOR" = "arm64" ]; then
 # we have ffmpeg libs bundled in the app bundle in rpcs3.app/Contents/Frameworks , now we need to change the rpath to point to it
 # this is needed because we are using a homebrewed ffmpeg for arm64, and the rpath points to the system ffmpeg
 # for example we want to point to rpcs3.app/Contents/Frameworks/libavcodec.60.dylib
-	install_name_tool -change "/opt/homebrew/opt/ffmpeg/lib/libavcodec.60.dylib" "@executable_path/../Frameworks/libavcodec.60.dylib" "rpcs3.app/Contents/MacOS/rpcs3"
-	install_name_tool -change "/opt/homebrew/opt/ffmpeg/lib/libavdevice.60.dylib" "@executable_path/../Frameworks/libavdevice.60.dylib" "rpcs3.app/Contents/MacOS/rpcs3"
-	install_name_tool -change "/opt/homebrew/opt/ffmpeg/lib/libavfilter.7.dylib" "@executable_path/../Frameworks/libavfilter.7.dylib" "rpcs3.app/Contents/MacOS/rpcs3"
-	install_name_tool -change "/opt/homebrew/opt/ffmpeg/lib/libavformat.60.dylib" "@executable_path/../Frameworks/libavformat.60.dylib" "rpcs3.app/Contents/MacOS/rpcs3"
-	install_name_tool -change "/opt/homebrew/opt/ffmpeg/lib/libavutil.58.dylib" "@executable_path/../Frameworks/libavutil.58.dylib" "rpcs3.app/Contents/MacOS/rpcs3"
-	install_name_tool -change "/opt/homebrew/opt/ffmpeg/lib/libswresample.4.dylib" "@executable_path/../Frameworks/libswresample.4.dylib" "rpcs3.app/Contents/MacOS/rpcs3"
-	install_name_tool -change "/opt/homebrew/opt/ffmpeg/lib/libswscale.7.dylib" "@executable_path/../Frameworks/libswscale.7.dylib" "rpcs3.app/Contents/MacOS/rpcs3"
+	install_name_tool -change "/opt/homebrew/Cellar/ffmpeg/6.0/lib/libavcodec.60.dylib" "@executable_path/../Frameworks/libavcodec.60.dylib" "rpcs3.app/Contents/MacOS/rpcs3"
+	install_name_tool -change "/opt/homebrew/Cellar/ffmpeg/6.0/lib/libavdevice.60.dylib" "@executable_path/../Frameworks/libavdevice.60.dylib" "rpcs3.app/Contents/MacOS/rpcs3"
+	install_name_tool -change "/opt/homebrew/Cellar/ffmpeg/6.0/lib/libavfilter.7.dylib" "@executable_path/../Frameworks/libavfilter.7.dylib" "rpcs3.app/Contents/MacOS/rpcs3"
+	install_name_tool -change "/opt/homebrew/Cellar/ffmpeg/6.0/lib/libavformat.60.dylib" "@executable_path/../Frameworks/libavformat.60.dylib" "rpcs3.app/Contents/MacOS/rpcs3"
+	install_name_tool -change "/opt/homebrew/Cellar/ffmpeg/6.0/lib/libavutil.58.dylib" "@executable_path/../Frameworks/libavutil.58.dylib" "rpcs3.app/Contents/MacOS/rpcs3"
+	install_name_tool -change "/opt/homebrew/Cellar/ffmpeg/6.0/lib/libswresample.4.dylib" "@executable_path/../Frameworks/libswresample.4.dylib" "rpcs3.app/Contents/MacOS/rpcs3"
+	install_name_tool -change "/opt/homebrew/Cellar/ffmpeg/6.0/lib/libswscale.7.dylib" "@executable_path/../Frameworks/libswscale.7.dylib" "rpcs3.app/Contents/MacOS/rpcs3"
 
 	# do the same for sdl2
 	install_name_tool -change "/opt/homebrew/opt/sdl2/lib/libSDL2-2.0.0.dylib" "@executable_path/../Frameworks/libSDL2-2.0.0.dylib" "rpcs3.app/Contents/MacOS/rpcs3"
