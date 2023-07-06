@@ -34,9 +34,9 @@ export VK_ICD_FILENAMES="$VULKAN_SDK/share/vulkan/icd.d/MoltenVK_icd.json"
 export LLVM_DIR
 LLVM_DIR="$(brew --prefix llvm@16)"
 
-# exclude FAudio, SPIRV and LLVM from submodule update
+# exclude FAudio, SPIRV, SDL , ffmpeg and LLVM from submodule update
 # shellcheck disable=SC2046
-git submodule -q update --init --depth=1 --jobs=8 $(awk '/path/ && !/FAudio/ && !/llvm/ && !/SPIRV/ && !/SDL/ { print $3 }' .gitmodules)
+git submodule -q update --init --depth=1 --jobs=8 $(awk '/path/ && !/FAudio/ && !/llvm/ && !/SPIRV/ && !/SDL/ && !/ffmpeg/ { print $3 }' .gitmodules)
 
 # 3rdparty fixes
 sed -i '' "s/extern const double NSAppKitVersionNumber;/const double NSAppKitVersionNumber = 1343;/g" 3rdparty/hidapi/hidapi/mac/hid.c
@@ -50,9 +50,9 @@ mkdir build && cd build || exit 1
     -DLLVM_INCLUDE_UTILS=OFF -DLLVM_USE_PERF=OFF -DLLVM_ENABLE_Z3_SOLVER=OFF \
     -DUSE_NATIVE_INSTRUCTIONS=OFF \
     -DUSE_SYSTEM_FAUDIO=ON \
-    -DUSE_SYSTEM_MVK=OFF \
+    -DUSE_SYSTEM_MVK=ON \
     -DUSE_SYSTEM_SDL=ON \
-    -DUSE_SYSTEM_FFMPEG=OFF \
+    -DUSE_SYSTEM_FFMPEG=ON \
     -DPNG_ARM_NEON=on \
     $CMAKE_EXTRA_OPTS \
     -DLLVM_TARGET_ARCH="AArch64;ARM" -DCMAKE_OSX_ARCHITECTURES=arm64 \
