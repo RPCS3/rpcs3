@@ -38,17 +38,17 @@ namespace rpcs3::utils
 		return thread_count;
 	}
 
-	void configure_logs()
+	void configure_logs(bool force_enable)
 	{
 		static bool was_silenced = false;
 
-		const bool silenced = g_cfg.misc.silence_all_logs.get();
+		const bool silenced = g_cfg.misc.silence_all_logs.get() && !force_enable;
 
 		if (silenced)
 		{
 			if (!was_silenced)
 			{
-				sys_log.success("Disabling logging! Do not create issues on GitHub or on the forums while logging is disabled.");
+				sys_log.always()("Disabling logging! Do not create issues on GitHub or on the forums while logging is disabled.");
 			}
 
 			logs::silence();
