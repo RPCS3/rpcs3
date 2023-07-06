@@ -18,10 +18,7 @@ mkdir "rpcs3.app/Contents/lib/"
 # check if we are on ARM or x86_64
 if [ "$BUILDING_FOR" = "arm64" ]; then
 	cp "/opt/homebrew/opt/llvm@16/lib/c++/libc++abi.1.0.dylib" "rpcs3.app/Contents/lib/libc++abi.1.dylib"
-	# copy avfilter and avdevice as they are missing 
-	cp "/opt/homebrew/opt/ffmpeg/lib/libavfilter.7.dylib" "rpcs3.app/Contents/Frameworks/libavfilter.7.dylib"
-	cp "/opt/homebrew/opt/ffmpeg/lib/libavdevice.60.dylib" "rpcs3.app/Contents/Frameworks/libavdevice.60.dylib"
-	
+		
 # we have ffmpeg libs bundled in the app bundle in rpcs3.app/Contents/Frameworks , now we need to change the rpath to point to it
 # this is needed because we are using a homebrewed ffmpeg for arm64, and the rpath points to the system ffmpeg
 # for example we want to point to rpcs3.app/Contents/Frameworks/libavcodec.60.dylib
