@@ -34,8 +34,6 @@ namespace
 	// Helper converters
 	constexpr auto qstr = QString::fromStdString;
 
-	[[maybe_unused]] inline std::string sstr(const QString& _in) { return _in.toStdString(); }
-
 	QString FormatTimestamp(s64 time)
 	{
 		QDateTime dateTime;
@@ -591,6 +589,7 @@ void save_manager_dialog::SetIconSize(int size)
 void save_manager_dialog::closeEvent(QCloseEvent *event)
 {
 	m_gui_settings->SetValue(gui::sd_geometry, saveGeometry());
+	m_gui_settings->sync();
 
 	QDialog::closeEvent(event);
 }

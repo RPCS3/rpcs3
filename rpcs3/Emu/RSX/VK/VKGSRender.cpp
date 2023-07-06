@@ -822,8 +822,25 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 
 	if (backend_config.supports_asynchronous_compute)
 	{
+		m_async_compute_memory_barrier =
+		{
+			.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2_KHR,
+			.pNext = nullptr,
+			.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT_KHR | VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR,
+			.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT_KHR,
+			.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR | VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT_KHR,
+			.dstAccessMask = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT_KHR
+		};
+
+		m_async_compute_dependency_info =
+		{
+			.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR,
+			.memoryBarrierCount = 1,
+			.pMemoryBarriers = &m_async_compute_memory_barrier
+		};
+
 		// Run only if async compute can be used.
-		g_fxo->init<vk::AsyncTaskScheduler>(g_cfg.video.vk.asynchronous_scheduler);
+		g_fxo->init<vk::AsyncTaskScheduler>(g_cfg.video.vk.asynchronous_scheduler, m_async_compute_dependency_info);
 	}
 
 	if (backend_config.supports_host_gpu_labels)
@@ -2159,12 +2176,12 @@ void VKGSRender::load_program_env()
 	{
 		check_heap_status(VK_HEAP_CHECK_TEXTURE_ENV_STORAGE);
 
-		auto mem = m_fragment_texture_params_ring_info.alloc<256>(512);
-		auto buf = m_fragment_texture_params_ring_info.map(mem, 512);
+		auto mem = m_fragment_texture_params_ring_info.alloc<256>(768);
+		auto buf = m_fragment_texture_params_ring_info.map(mem, 768);
 
 		current_fragment_program.texture_params.write_to(buf, current_fp_metadata.referenced_textures_mask);
 		m_fragment_texture_params_ring_info.unmap();
-		m_fragment_texture_params_buffer_info = { m_fragment_texture_params_ring_info.heap->value, mem, 512 };
+		m_fragment_texture_params_buffer_info = { m_fragment_texture_params_ring_info.heap->value, mem, 768 };
 	}
 
 	if (update_raster_env)
@@ -2894,7 +2911,7 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 			if (!query_info.indices.empty())
 			{
 				const auto& index = query_info.indices.front();
-				m_occlusion_query_manager->get_query_result_indirect(*m_current_command_buffer, index, m_cond_render_buffer->value, 0);
+				m_occlusion_query_manager->get_query_result_indirect(*m_current_command_buffer, index, 1, m_cond_render_buffer->value, 0);
 
 				vk::insert_buffer_memory_barrier(*m_current_command_buffer, m_cond_render_buffer->value, 0, 4,
 					VK_PIPELINE_STAGE_TRANSFER_BIT, dst_stage,
@@ -2912,14 +2929,56 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 	{
 		// We'll need to do some result aggregation using a compute shader.
 		auto scratch = vk::get_scratch_buffer(*m_current_command_buffer, num_hw_queries * 4);
+
+		// Range latching. Because of how the query pool manages allocations using a stack, we get an inverse sequential set of handles/indices that we can easily group together.
+		// This drastically boosts performance on some drivers like the NVIDIA proprietary one that seems to have a rather high cost for every individual query transer command.
+		struct { u32 first, last; } query_range = { umax, 0 };
+
+		auto copy_query_range_impl = [&]()
+		{
+			const auto count = (query_range.last - query_range.first + 1);
+			m_occlusion_query_manager->get_query_result_indirect(*m_current_command_buffer, query_range.first, count, scratch->value, dst_offset);
+			dst_offset += count * 4;
+		};
+
 		for (usz i = first; i < last; ++i)
 		{
 			auto& query_info = m_occlusion_map[sources[i]->driver_handle];
 			for (const auto& index : query_info.indices)
 			{
-				m_occlusion_query_manager->get_query_result_indirect(*m_current_command_buffer, index, scratch->value, dst_offset);
-				dst_offset += 4;
+				// First iteration?
+				if (query_range.first == umax)
+				{
+					query_range = { index, index };
+					continue;
+				}
+
+				// Head?
+				if ((query_range.first - 1) == index)
+				{
+					query_range.first = index;
+					continue;
+				}
+
+				// Tail?
+				if ((query_range.last + 1) == index)
+				{
+					query_range.last = index;
+					continue;
+				}
+
+				// Flush pending queue. In practice, this is never reached and we fall out to the spill block outside the loops
+				copy_query_range_impl();
+
+				// Start a new range for the current index
+				query_range = { index, index };
 			}
+		}
+
+		if (query_range.first != umax)
+		{
+			// Dangling queries, flush
+			copy_query_range_impl();
 		}
 
 		// Sanity check

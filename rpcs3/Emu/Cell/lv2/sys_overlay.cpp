@@ -13,7 +13,7 @@
 #include "sys_overlay.h"
 #include "sys_fs.h"
 
-extern std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object&, const std::string& path, s64 file_offset, utils::serial* ar = nullptr);
+extern std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object&, bool virtual_load, const std::string& path, s64 file_offset, utils::serial* ar = nullptr);
 
 extern bool ppu_initialize(const ppu_module&, bool = false);
 extern void ppu_finalize(const ppu_module&);
@@ -43,7 +43,7 @@ static error_code overlay_load_module(vm::ptr<u32> ovlmid, const std::string& vp
 		return {CELL_ENOEXEC, obj.operator elf_error()};
 	}
 
-	const auto [ovlm, error] = ppu_load_overlay(obj, vfs::get(vpath), file_offset);
+	const auto [ovlm, error] = ppu_load_overlay(obj, false, vfs::get(vpath), file_offset);
 
 	obj.clear();
 
@@ -77,7 +77,7 @@ std::shared_ptr<void> lv2_overlay::load(utils::serial& ar)
 	{
 		u128 klic = g_fxo->get<loaded_npdrm_keys>().last_key();
 		file = make_file_view(std::move(file), offset);
-		ovlm = ppu_load_overlay(ppu_exec_object{ decrypt_self(std::move(file), reinterpret_cast<u8*>(&klic)) }, path, 0, &ar).first;
+		ovlm = ppu_load_overlay(ppu_exec_object{ decrypt_self(std::move(file), reinterpret_cast<u8*>(&klic)) }, false, path, 0, &ar).first;
 		ensure(ovlm);
 	}
 	else

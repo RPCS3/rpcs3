@@ -49,6 +49,8 @@
 
 LOG_CHANNEL(gui_log, "GUI");
 
+[[noreturn]] void report_fatal_error(std::string_view text, bool is_html = false, bool include_help_text = true);
+
 gui_application::gui_application(int& argc, char** argv) : QApplication(argc, argv)
 {
 }
@@ -135,7 +137,7 @@ bool gui_application::Init()
 
 	if (m_gui_settings->GetValue(gui::ib_show_welcome).toBool())
 	{
-		welcome_dialog* welcome = new welcome_dialog(m_gui_settings);
+		welcome_dialog* welcome = new welcome_dialog(m_gui_settings, false);
 		welcome->exec();
 	}
 
@@ -185,7 +187,7 @@ void gui_application::SwitchTranslator(QTranslator& translator, const QString& f
 	else if (const QString default_code = QLocale(QLocale::English).bcp47Name(); language_code != default_code)
 	{
 		// show error, but ignore default case "en", since it is handled in source code
-		gui_log.error("No translation file found in: %s", file_path.toStdString());
+		gui_log.error("No translation file found in: %s", file_path);
 
 		// reset current language to default "en"
 		m_language_code = default_code;
@@ -227,7 +229,7 @@ void gui_application::LoadLanguage(const QString& language_code)
 
 	m_gui_settings->SetValue(gui::loc_language, m_language_code);
 
-	gui_log.notice("Current language changed to %s (%s)", locale_name.toStdString(), language_code.toStdString());
+	gui_log.notice("Current language changed to %s (%s)", locale_name, language_code);
 }
 
 QStringList gui_application::GetAvailableLanguageCodes()
@@ -249,7 +251,7 @@ QStringList gui_application::GetAvailableLanguageCodes()
 
 			if (language_codes.contains(language_code))
 			{
-				gui_log.error("Found duplicate language '%s' (%s)", language_code.toStdString(), filename.toStdString());
+				gui_log.error("Found duplicate language '%s' (%s)", language_code, filename);
 			}
 			else
 			{
@@ -569,6 +571,61 @@ void gui_application::InitializeCallbacks()
 		};
 	}
 
+	callbacks.on_emulation_stop_no_response = [this](std::shared_ptr<atomic_t<bool>> closed_successfully, int seconds_waiting_already)
+	{
+		const std::string terminate_message = tr("Stopping emulator took too long."
+			"\nSome thread has probably deadlocked. Aborting.").toStdString();
+
+		if (!closed_successfully)
+		{
+			report_fatal_error(terminate_message);
+		}
+
+		Emu.CallFromMainThread([this, closed_successfully, seconds_waiting_already, terminate_message]
+		{
+			const auto seconds = std::make_shared<int>(seconds_waiting_already);
+
+			QMessageBox* mb = new QMessageBox();
+			mb->setWindowTitle(tr("PS3 Game/Application Is Unresponsive"));
+			mb->setIcon(QMessageBox::Critical);
+			mb->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+			mb->setDefaultButton(QMessageBox::No);
+			mb->button(QMessageBox::Yes)->setText(tr("Terminate RPCS3"));
+			mb->button(QMessageBox::No)->setText(tr("Keep Waiting"));
+
+			QString text_base = tr("Waiting for %0 second(s) already to stop emulation without success."
+			                       "\nKeep waiting or terminate RPCS3 unsafely at your own risk?");
+
+			mb->setText(text_base.arg(10));
+			mb->layout()->setSizeConstraint(QLayout::SetFixedSize);
+			mb->setAttribute(Qt::WA_DeleteOnClose);
+
+			QTimer* update_timer = new QTimer(mb);
+
+			connect(update_timer, &QTimer::timeout, [mb, seconds, text_base, closed_successfully]()
+			{
+				*seconds += 1;
+				mb->setText(text_base.arg(*seconds));
+
+				if (*closed_successfully)
+				{
+					mb->reject();
+				}
+			});
+
+			connect(mb, &QDialog::accepted, mb, [closed_successfully, terminate_message]
+			{
+				if (!*closed_successfully)
+				{
+					report_fatal_error(terminate_message);
+				}
+			});
+
+			mb->open();
+			update_timer->start(1000);
+		});
+	};
+
 	Emu.SetCallbacks(std::move(callbacks));
 }
 
@@ -715,7 +772,7 @@ void gui_application::OnChangeStyleSheetRequest()
 		}
 		else
 		{
-			gui_log.error("Could not find stylesheet '%s'. Using default.", stylesheet_name.toStdString());
+			gui_log.error("Could not find stylesheet '%s'. Using default.", stylesheet_name);
 			setStyleSheet(gui::stylesheets::default_style_sheet);
 		}
 	}

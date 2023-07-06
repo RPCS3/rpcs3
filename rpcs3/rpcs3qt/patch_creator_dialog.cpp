@@ -14,7 +14,6 @@
 LOG_CHANNEL(patch_log, "PAT");
 
 constexpr auto qstr = QString::fromStdString;
-inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
 Q_DECLARE_METATYPE(patch_type)
 
@@ -215,7 +214,7 @@ void patch_creator_dialog::add_instruction(int row)
 	ui->instructionTable->setItem(row, patch_column::value, new QTableWidgetItem(value));
 	ui->instructionTable->setItem(row, patch_column::comment, new QTableWidgetItem(comment));
 
-	patch_log.notice("Patch Creator: Inserted instruction [ %s, %s, %s ] at row %d", sstr(combo_box->currentText()), sstr(offset), sstr(value), row);
+	patch_log.notice("Patch Creator: Inserted instruction [ %s, %s, %s ] at row %d", combo_box->currentText(), offset, value, row);
 	generate_yml();
 }
 
@@ -377,11 +376,11 @@ void patch_creator_dialog::export_patch()
 	{
 		patch_file.write(ui->patchEdit->toPlainText().toUtf8());
 		patch_file.close();
-		patch_log.success("Exported patch to file '%s'", sstr(file_path));
+		patch_log.success("Exported patch to file '%s'", file_path);
 	}
 	else
 	{
-		patch_log.fatal("Failed to export patch to file '%s'", sstr(file_path));
+		patch_log.fatal("Failed to export patch to file '%s'", file_path);
 	}
 }
 

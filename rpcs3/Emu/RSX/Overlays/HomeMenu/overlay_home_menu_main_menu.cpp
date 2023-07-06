@@ -52,12 +52,15 @@ namespace rsx
 
 				Emu.CallFromMainThread([suspend_mode]()
 				{
-					Emu.Kill(false, true);
-
 					if (!suspend_mode)
 					{
-						Emu.Restart();
+						Emu.after_kill_callback = []()
+						{
+							Emu.Restart();
+						};
 					}
+
+					Emu.Kill(false, true);
 				});
 
 				return page_navigation::exit;

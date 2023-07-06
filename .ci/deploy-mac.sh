@@ -30,15 +30,15 @@ if [ "$BUILDING_FOR" = "arm64" ]; then
 	install_name_tool -change "/opt/homebrew/Cellar/ffmpeg/6.0/lib/libswresample.4.dylib" "@executable_path/../Frameworks/libswresample.4.dylib" "rpcs3.app/Contents/MacOS/rpcs3"
 	install_name_tool -change "/opt/homebrew/Cellar/ffmpeg/6.0/lib/libswscale.7.dylib" "@executable_path/../Frameworks/libswscale.7.dylib" "rpcs3.app/Contents/MacOS/rpcs3"
 
-	# do the same for sdl2
+else
+	cp "/usr/local/opt/llvm@16/lib/c++/libc++abi.1.0.dylib" "rpcs3.app/Contents/lib/libc++abi.1.dylib"
+
+	# change the path to app for sdl2
 	install_name_tool -change "/opt/homebrew/opt/sdl2/lib/libSDL2-2.0.0.dylib" "@executable_path/../Frameworks/libSDL2-2.0.0.dylib" "rpcs3.app/Contents/MacOS/rpcs3"
 	
 	# now faudio 
 	install_name_tool -change "/opt/homebrew/opt/faudio/lib/libFAudio.0.dylib" "@executable_path/../Frameworks/libFAudio.0.dylib" "rpcs3.app/Contents/MacOS/rpcs3"
-
-
-else
-	cp "/usr/local/opt/llvm@16/lib/c++/libc++abi.1.0.dylib" "rpcs3.app/Contents/lib/libc++abi.1.dylib"
+ 
 fi
 rm -rf "rpcs3.app/Contents/Frameworks/QtPdf.framework" \
 "rpcs3.app/Contents/Frameworks/QtQml.framework" \

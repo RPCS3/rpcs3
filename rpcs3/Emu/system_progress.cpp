@@ -71,7 +71,7 @@ void progress_dialog_server::operator()()
 			renderer->is_initialized.wait(false, atomic_wait_timeout(5 * 1000000000ull));
 
 			auto manager  = g_fxo->try_get<rsx::overlays::display_manager>();
-			show_overlay_message = show_overlay_message_only;
+			show_overlay_message = g_fxo->get<progress_dialog_workaround>().show_overlay_message_only;
 
 			if (manager && !show_overlay_message)
 			{

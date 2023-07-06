@@ -129,7 +129,7 @@ static QTreeWidgetItem* find_node(QTreeWidgetItem* root, u32 id)
 		}
 	}
 
-	sys_log.fatal("find_node(root=%s, id=%d) failed", root ? root->text(0).toStdString() : "?", id);
+	sys_log.fatal("find_node(root=%s, id=%d) failed", root ? root->text(0) : "?", id);
 	return nullptr;
 }
 
@@ -146,7 +146,7 @@ static QTreeWidgetItem* add_volatile_node(QTreeWidgetItem* parent, const QString
 	}
 	else
 	{
-		sys_log.fatal("add_volatile_node(parent=%s, regexp=%s) failed", parent ? parent->text(0).toStdString() : "?", base_text.toStdString() + ".*");
+		sys_log.fatal("add_volatile_node(parent=%s, regexp=%s) failed", parent ? parent->text(0) : "?", base_text + ".*");
 	}
 	return node;
 }
@@ -1010,7 +1010,7 @@ void kernel_explorer::log(u32 level, QTreeWidgetItem* item)
 		m_log_buf = qstr(fmt::format("Kernel Explorer: %s\n", Emu.GetTitleAndTitleID()));
 		log(level + 1, item);
 
-		sys_log.success("%s", m_log_buf.toStdString());
+		sys_log.success("%s", m_log_buf);
 		return;
 	}
 

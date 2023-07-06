@@ -78,7 +78,7 @@ void ppu_module::validate(u32 reloc)
 
 				if (size && size != funcs[index].size)
 				{
-					if (size + 4 != funcs[index].size || vm::read32(addr + size) != ppu_instructions::NOP())
+					if (size + 4 != funcs[index].size || *ensure(get_ptr<u32>(addr + size)) != ppu_instructions::NOP())
 					{
 						ppu_validator.error("%s.yml : function size mismatch at 0x%x(size=0x%x) (0x%x, 0x%x)", path, found, funcs[index].size, addr, size);
 					}
@@ -112,9 +112,9 @@ void ppu_module::validate(u32 reloc)
 	}
 }
 
-static u32 ppu_test(const vm::cptr<u32> ptr, vm::cptr<void> fend, ppu_pattern_array pat)
+static u32 ppu_test(const be_t<u32>* ptr, const void* fend, ppu_pattern_array pat)
 {
-	vm::cptr<u32> cur = ptr;
+	const be_t<u32>* cur = ptr;
 
 	for (auto& p : pat)
 	{
@@ -141,10 +141,10 @@ static u32 ppu_test(const vm::cptr<u32> ptr, vm::cptr<void> fend, ppu_pattern_ar
 		cur++;
 	}
 
-	return cur.addr() - ptr.addr();
+	return (cur - ptr) * sizeof(*ptr);
 }
 
-static u32 ppu_test(vm::cptr<u32> ptr, vm::cptr<void> fend, ppu_pattern_matrix pats)
+static u32 ppu_test(const be_t<u32>* ptr, const void* fend, ppu_pattern_matrix pats)
 {
 	for (auto pat : pats)
 	{
@@ -585,6 +585,14 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 		return func;
 	};
 
+	static const auto advance = [](auto& _ptr, auto& ptr, u32 count)
+	{
+		const auto old_ptr = ptr;
+		_ptr += count;
+		ptr += count;
+		return old_ptr;
+	};
+
 	// Register new TOC and find basic set of functions
 	auto add_toc = [&](u32 toc)
 	{
@@ -596,16 +604,24 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 		// Grope for OPD section (TODO: optimization, better constraints)
 		for (const auto& seg : segs)
 		{
-			if (!seg.addr) continue;
+			if (seg.size < 8) continue;
 
-			for (vm::cptr<u32> ptr = vm::cast(seg.addr); ptr.addr() < seg.addr + seg.size; ptr++)
+			const vm::cptr<void> seg_end = vm::cast(seg.addr + seg.size - 8);
+			vm::cptr<u32> _ptr = vm::cast(seg.addr);
+			auto ptr = get_ptr<u32>(_ptr);
+
+			for (; _ptr <= seg_end;)
 			{
-				if (ptr[0] >= start && ptr[0] < end && ptr[0] % 4 == 0 && ptr[1] == toc)
+				if (ptr[1] == toc && ptr[0] >= start && ptr[0] < end && ptr[0] % 4 == 0)
 				{
 					// New function
-					ppu_log.trace("OPD*: [0x%x] 0x%x (TOC=0x%x)", ptr, ptr[0], ptr[1]);
-					add_func(*ptr, addr_heap.count(ptr.addr()) ? toc : 0, 0);
-					ptr++;
+					ppu_log.trace("OPD*: [0x%x] 0x%x (TOC=0x%x)", _ptr, ptr[0], ptr[1]);
+					add_func(*ptr, addr_heap.count(_ptr.addr()) ? toc : 0, 0);
+					advance(_ptr, ptr, 2);
+				}
+				else
+				{
+					advance(_ptr, ptr, 1);
 				}
 			}
 		}
@@ -621,9 +637,13 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 	// Find references indiscriminately
 	for (const auto& seg : segs)
 	{
-		if (!seg.addr) continue;
+		if (seg.size < 4) continue;
 
-		for (vm::cptr<u32> ptr = vm::cast(seg.addr); ptr.addr() < seg.addr + seg.size; ptr++)
+		vm::cptr<u32> _ptr = vm::cast(seg.addr);
+		const vm::cptr<void> seg_end = vm::cast(seg.addr + seg.size - 4);
+		auto ptr = get_ptr<u32>(_ptr);
+
+		for (vm::cptr<u32> _ptr = vm::cast(seg.addr); _ptr <= seg_end; advance(_ptr, ptr, 1))
 		{
 			const u32 value = *ptr;
 
@@ -651,15 +671,17 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 		vm::cptr<void> sec_end = vm::cast(sec.addr + sec.size);
 
 		// Probe
-		for (vm::cptr<u32> ptr = vm::cast(sec.addr); ptr < sec_end; ptr += 2)
+		for (vm::cptr<u32> _ptr = vm::cast(sec.addr); _ptr < sec_end; _ptr += 2)
 		{
-			if (ptr + 6 <= sec_end && !ptr[0] && !ptr[2] && ptr[1] == ptr[4] && ptr[3] == ptr[5])
+			auto ptr = get_ptr<u32>(_ptr);
+
+			if (_ptr + 6 <= sec_end && !ptr[0] && !ptr[2] && ptr[1] == ptr[4] && ptr[3] == ptr[5])
 			{
 				// Special OPD format case (some homebrews)
-				ptr += 4;
+				advance(_ptr, ptr, 4);
 			}
 
-			if (ptr + 2 > sec_end)
+			if (_ptr + 2 > sec_end)
 			{
 				sec_end.set(0);
 				break;
@@ -673,7 +695,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 			//const u32 _toc_end = _toc + 0x8000;
 
 			// TODO: improve TOC constraints
-			if (_toc % 4 || !vm::check_addr(_toc) || _toc >= 0x40000000 || (_toc >= start && _toc < end))
+			if (_toc % 4 || !get_ptr<u32>(_toc) || _toc >= 0x40000000 || (_toc >= start && _toc < end))
 			{
 				sec_end.set(0);
 				break;
@@ -689,18 +711,20 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 		if (sec_end) ppu_log.notice("Reading OPD section at 0x%x...", sec.addr);
 
 		// Mine
-		for (vm::cptr<u32> ptr = vm::cast(sec.addr); ptr < sec_end; ptr += 2)
+		for (vm::cptr<u32> _ptr = vm::cast(sec.addr); _ptr < sec_end; _ptr += 2)
 		{
+			auto ptr = get_ptr<u32>(_ptr);
+
 			// Special case: see "Probe"
-			if (!ptr[0]) ptr += 4;
+			if (!ptr[0]) advance(_ptr, ptr, 4);
 
 			// Add function and TOC
 			const u32 addr = ptr[0];
 			const u32 toc = ptr[1];
-			ppu_log.trace("OPD: [0x%x] 0x%x (TOC=0x%x)", ptr, addr, toc);
+			ppu_log.trace("OPD: [0x%x] 0x%x (TOC=0x%x)", _ptr, addr, toc);
 
 			TOCs.emplace(toc);
-			auto& func = add_func(addr, addr_heap.count(ptr.addr()) ? toc : 0, 0);
+			auto& func = add_func(addr, addr_heap.count(_ptr.addr()) ? toc : 0, 0);
 			func.attr += ppu_attr::known_addr;
 			known_functions.emplace(addr);
 		}
@@ -709,7 +733,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 	// Register TOC from entry point
 	if (entry && !lib_toc)
 	{
-		lib_toc = vm::read32(entry) ? vm::read32(entry + 4) : vm::read32(entry + 20);
+		lib_toc = *ensure(get_ptr<u32>(entry)) ? *ensure(get_ptr<u32>(entry + 4)) : *ensure(get_ptr<u32>(entry + 20));
 	}
 
 	// Secondary attempt
@@ -733,23 +757,25 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 		vm::cptr<void> sec_end = vm::cast(sec.addr + sec.size);
 
 		// Probe
-		for (vm::cptr<u32> ptr = vm::cast(sec.addr); ptr < sec_end;)
+		for (vm::cptr<u32> _ptr = vm::cast(sec.addr); _ptr < sec_end;)
 		{
-			if (!ptr.aligned() || ptr.addr() < sec.addr || ptr >= sec_end)
+			if (!_ptr.aligned() || _ptr.addr() < sec.addr || _ptr >= sec_end)
 			{
 				sec_end.set(0);
 				break;
 			}
 
+			const auto ptr = get_ptr<u32>(_ptr);
+
 			const u32 size = ptr[0] + 4;
 
-			if (size == 4 && ptr + 1 == sec_end)
+			if (size == 4 && _ptr + 1 == sec_end)
 			{
 				// Null terminator
 				break;
 			}
 
-			if (size % 4 || size < 0x10 || ptr + size / 4 > sec_end)
+			if (size % 4 || size < 0x10 || _ptr + size / 4 > sec_end)
 			{
 				sec_end.set(0);
 				break;
@@ -757,7 +783,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 
 			if (ptr[1])
 			{
-				const u32 cie_off = ptr.addr() - ptr[1] + 4;
+				const u32 cie_off = _ptr.addr() - ptr[1] + 4;
 
 				if (cie_off % 4 || cie_off < sec.addr || cie_off >= sec_end.addr())
 				{
@@ -766,14 +792,16 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 				}
 			}
 
-			ptr = vm::cast(ptr.addr() + size);
+			_ptr = vm::cast(_ptr.addr() + size);
 		}
 
 		if (sec_end && sec.size > 4) ppu_log.notice("Reading .eh_frame section at 0x%x...", sec.addr);
 
 		// Mine
-		for (vm::cptr<u32> ptr = vm::cast(sec.addr); ptr < sec_end; ptr = vm::cast(ptr.addr() + ptr[0] + 4))
+		for (vm::cptr<u32> _ptr = vm::cast(sec.addr); _ptr < sec_end; _ptr = vm::cast(_ptr.addr() + *get_ptr<u32>(_ptr) + 4))
 		{
+			const auto ptr = get_ptr<u32>(_ptr);
+
 			if (ptr[0] == 0u)
 			{
 				// Null terminator
@@ -788,7 +816,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 			else
 			{
 				// Get associated CIE (currently unused)
-				const vm::cptr<u32> cie = vm::cast(ptr.addr() - ptr[1] + 4);
+				const vm::cptr<u32> cie = vm::cast(_ptr.addr() - ptr[1] + 4);
 
 				u32 addr = 0;
 				u32 size = 0;
@@ -817,7 +845,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 				// TODO: absolute/relative offset (approximation)
 				if (addr > 0xc0000000)
 				{
-					addr += ptr.addr() + 8;
+					addr += _ptr.addr() + 8;
 				}
 
 				ppu_log.trace(".eh_frame: [0x%x] FDE 0x%x (cie=*0x%x, addr=0x%x, size=0x%x)", ptr, ptr[0], cie, addr, size);
@@ -875,15 +903,16 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 		if (func.blocks.empty())
 		{
 			// Special function analysis
-			const vm::cptr<u32> ptr = vm::cast(func.addr);
+			const vm::cptr<u32> _ptr = vm::cast(func.addr);
 			const vm::cptr<void> fend = vm::cast(end);
+			const auto ptr = get_ptr<u32>(_ptr);
 
 			using namespace ppu_instructions;
 
-			if (ptr + 1 <= fend && (ptr[0] & 0xfc000001) == B({}, {}))
+			if (_ptr + 1 <= fend && (ptr[0] & 0xfc000001) == B({}, {}))
 			{
 				// Simple trampoline
-				const u32 target = (ptr[0] & 0x2 ? 0 : ptr.addr()) + ppu_opcode_t{ptr[0]}.bt24;
+				const u32 target = (ptr[0] & 0x2 ? 0 : _ptr.addr()) + ppu_opcode_t{ptr[0]}.bt24;
 
 				if (target == func.addr)
 				{
@@ -913,7 +942,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 				}
 			}
 
-			if (ptr + 0x4 <= fend &&
+			if (_ptr + 0x4 <= fend &&
 				(ptr[0] & 0xffff0000) == LIS(r11, 0) &&
 				(ptr[1] & 0xffff0000) == ADDI(r11, r11, 0) &&
 				ptr[2] == MTCTR(r11) &&
@@ -941,7 +970,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 				}
 			}
 
-			if (ptr + 0x7 <= fend &&
+			if (_ptr + 0x7 <= fend &&
 				ptr[0] == STD(r2, r1, 0x28) &&
 				(ptr[1] & 0xffff0000) == ADDIS(r12, r2, {}) &&
 				(ptr[2] & 0xffff0000) == LWZ(r11, r12, {}) &&
@@ -957,9 +986,10 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 				func.attr += ppu_attr::known_size;
 
 				// Look for another imports to fill gaps (hack)
-				auto p2 = ptr + 7;
+				auto _p2 = _ptr + 7;
+				auto p2 = get_ptr<u32>(_p2);
 
-				while (p2 + 0x7 <= fend &&
+				while (_p2 + 0x7 <= fend &&
 					p2[0] == STD(r2, r1, 0x28) &&
 					(p2[1] & 0xffff0000) == ADDIS(r12, r2, {}) &&
 					(p2[2] & 0xffff0000) == LWZ(r11, r12, {}) &&
@@ -968,18 +998,18 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 					p2[5] == MTCTR(r11) &&
 					p2[6] == BCTR())
 				{
-					auto& next = add_func(p2.addr(), -1, func.addr);
+					auto& next = add_func(_p2.addr(), -1, func.addr);
 					next.size = 0x1C;
 					next.blocks.emplace(next.addr, next.size);
 					next.attr += ppu_attr::known_addr;
 					next.attr += ppu_attr::known_size;
-					p2 += 7;
+					advance(_p2, p2, 7);
 				}
 
 				continue;
 			}
 
-			if (ptr + 0x7 <= fend &&
+			if (_ptr + 0x7 <= fend &&
 				ptr[0] == STD(r2, r1, 0x28) &&
 				(ptr[1] & 0xffff0000) == ADDIS(r2, r2, {}) &&
 				(ptr[2] & 0xffff0000) == ADDI(r2, r2, {}) &&
@@ -1029,7 +1059,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 				}
 			}
 
-			if (ptr + 4 <= fend &&
+			if (_ptr + 4 <= fend &&
 				ptr[0] == STD(r2, r1, 0x28) &&
 				(ptr[1] & 0xffff0000) == ADDIS(r2, r2, {}) &&
 				(ptr[2] & 0xffff0000) == ADDI(r2, r2, {}) &&
@@ -1037,7 +1067,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 			{
 				// Trampoline with TOC
 				const u32 toc_add = (ptr[1] << 16) + s16(ptr[2]);
-				const u32 target = (ptr[3] & 0x2 ? 0 : (ptr + 3).addr()) + ppu_opcode_t{ptr[3]}.bt24;
+				const u32 target = (ptr[3] & 0x2 ? 0 : (_ptr + 3).addr()) + ppu_opcode_t{ptr[3]}.bt24;
 
 				if (target >= start && target < end)
 				{
@@ -1076,7 +1106,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 				}
 			}
 
-			if (ptr + 8 <= fend &&
+			if (_ptr + 8 <= fend &&
 				(ptr[0] & 0xffff0000) == LI(r12, 0) &&
 				(ptr[1] & 0xffff0000) == ORIS(r12, r12, 0) &&
 				(ptr[2] & 0xffff0000) == LWZ(r12, r12, 0) &&
@@ -1095,9 +1125,10 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 				func.attr += ppu_attr::known_size;
 
 				// Look for another imports to fill gaps (hack)
-				auto p2 = ptr + 8;
+				auto _p2 = _ptr + 8;
+				auto p2 = get_ptr<u32>(_p2);
 
-				while (p2 + 8 <= fend &&
+				while (_p2 + 8 <= fend &&
 					(p2[0] & 0xffff0000) == LI(r12, 0) &&
 					(p2[1] & 0xffff0000) == ORIS(r12, r12, 0) &&
 					(p2[2] & 0xffff0000) == LWZ(r12, r12, 0) &&
@@ -1107,19 +1138,19 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 					p2[6] == MTCTR(r0) &&
 					p2[7] == BCTR())
 				{
-					auto& next = add_func(p2.addr(), -1, func.addr);
+					auto& next = add_func(_p2.addr(), -1, func.addr);
 					next.size = 0x20;
 					next.blocks.emplace(next.addr, next.size);
 					next.attr += ppu_attr::known_addr;
 					next.attr += ppu_attr::known_size;
-					p2 += 8;
+					advance(_p2, p2, 8);
 					known_functions.emplace(next.addr);
 				}
 
 				continue;
 			}
 
-			if (ptr + 3 <= fend &&
+			if (_ptr + 3 <= fend &&
 				ptr[0] == 0x7c0004acu &&
 				ptr[1] == 0x00000000u &&
 				ptr[2] == BLR())
@@ -1131,7 +1162,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 				continue;
 			}
 
-			if (const u32 len = ppu_test(ptr, fend, ppu_patterns::abort))
+			if (const u32 len = ppu_test(ptr, get_ptr<void>(fend), ppu_patterns::abort))
 			{
 				// Function "abort"
 				ppu_log.notice("Function [0x%x]: 'abort'", func.addr);
@@ -1199,10 +1230,13 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 		{
 			auto& block = block_queue[j].get();
 
-			for (vm::cptr<u32> _ptr = vm::cast(block.first); _ptr.addr() < func_end;)
+			vm::cptr<u32> _ptr = vm::cast(block.first);
+			auto ptr = ensure(get_ptr<u32>(_ptr));
+
+			for (; _ptr.addr() < func_end;)
 			{
 				const u32 iaddr = _ptr.addr();
-				const ppu_opcode_t op{*_ptr++};
+				const ppu_opcode_t op{*advance(_ptr, ptr, 1)};
 				const ppu_itype::type type = s_ppu_itype.decode(op.opcode);
 
 				if (type == ppu_itype::UNK)
@@ -1276,9 +1310,9 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 						const u32 jt_addr = _ptr.addr();
 						const u32 jt_end = func_end;
 
-						for (; _ptr.addr() < jt_end; _ptr++)
+						for (; _ptr.addr() < jt_end; advance(_ptr, ptr, 1))
 						{
-							const u32 addr = jt_addr + *_ptr;
+							const u32 addr = jt_addr + *ptr;
 
 							if (addr == jt_addr)
 							{
@@ -1331,7 +1365,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 					block.second = _ptr.addr() - block.first;
 					break;
 				}
-				else if (type == ppu_itype::STDU && func.attr & ppu_attr::no_size && (op.opcode == *_ptr || *_ptr == ppu_instructions::BLR()))
+				else if (type == ppu_itype::STDU && func.attr & ppu_attr::no_size && (op.opcode == *ptr || *ptr == ppu_instructions::BLR()))
 				{
 					// Hack
 					ppu_log.success("[0x%x] Instruction repetition: 0x%08x", iaddr, op.opcode);
@@ -1391,7 +1425,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 			for (vm::cptr<u32> _ptr = vm::cast(block.first); _ptr.addr() < block.first + block.second;)
 			{
 				const u32 iaddr = _ptr.addr();
-				const ppu_opcode_t op{*_ptr++};
+				const ppu_opcode_t op{*ensure(get_ptr<u32>(_ptr++))};
 				const ppu_itype::type type = s_ppu_itype.decode(op.opcode);
 
 				if (type == ppu_itype::B || type == ppu_itype::BC)
@@ -1465,7 +1499,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 		for (vm::cptr<u32> _ptr = vm::cast(start); _ptr.addr() < next;)
 		{
 			const u32 addr = _ptr.addr();
-			const ppu_opcode_t op{*_ptr++};
+			const ppu_opcode_t op{*ensure(get_ptr<u32>(_ptr++))};
 			const ppu_itype::type type = s_ppu_itype.decode(op.opcode);
 
 			if (type == ppu_itype::UNK)
@@ -1607,7 +1641,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 			continue;
 		}
 
-		const u32 target = vm::_ref<u32>(rel.addr);
+		const u32 target = *ensure(get_ptr<u32>(rel.addr));
 
 		if (target % 4 || target < start || target >= end)
 		{
@@ -1684,7 +1718,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 
 			for (; i_pos < lim; i_pos += 4)
 			{
-				const u32 opc = vm::_ref<u32>(i_pos);
+				const u32 opc = *ensure(get_ptr<u32>(i_pos));
 
 				switch (auto type = s_ppu_itype.decode(opc))
 				{

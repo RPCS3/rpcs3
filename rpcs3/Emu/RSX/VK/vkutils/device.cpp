@@ -113,6 +113,7 @@ namespace vk
 		optional_features_support.conditional_rendering    = device_extensions.is_supported(VK_EXT_CONDITIONAL_RENDERING_EXTENSION_NAME);
 		optional_features_support.external_memory_host     = device_extensions.is_supported(VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME);
 		optional_features_support.sampler_mirror_clamped   = device_extensions.is_supported(VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME);
+		optional_features_support.synchronization_2        = device_extensions.is_supported(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
 		optional_features_support.unrestricted_depth_range = device_extensions.is_supported(VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME);
 
 		optional_features_support.debug_utils              = instance_extensions.is_supported(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
@@ -486,6 +487,11 @@ namespace vk
 			requested_extensions.push_back(VK_EXT_CUSTOM_BORDER_COLOR_EXTENSION_NAME);
 		}
 
+		if (pgpu->optional_features_support.synchronization_2)
+		{
+			requested_extensions.push_back(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
+		}
+
 		enabled_features.robustBufferAccess = VK_TRUE;
 		enabled_features.fullDrawIndexUint32 = VK_TRUE;
 		enabled_features.independentBlend = VK_TRUE;
@@ -670,7 +676,23 @@ namespace vk
 			device.pNext = &custom_border_color_features;
 		}
 
+		VkPhysicalDeviceSynchronization2FeaturesKHR synchronization2_info{};
+		if (pgpu->optional_features_support.synchronization_2)
+		{
+			synchronization2_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES;
+			synchronization2_info.pNext = const_cast<void*>(device.pNext);
+			synchronization2_info.synchronization2 = VK_TRUE;
+			device.pNext = &synchronization2_info;
+		}
+
 		CHECK_RESULT_EX(vkCreateDevice(*pgpu, &device, nullptr, &dev), message_on_error);
+
+		// Dump some diagnostics to the log
+		rsx_log.notice("%u extensions loaded:", ::size32(requested_extensions));
+		for (const auto& ext : requested_extensions)
+		{
+			rsx_log.notice("** Using %s", ext);
+		}
 
 		// Initialize queues
 		vkGetDeviceQueue(dev, graphics_queue_idx, 0, &m_graphics_queue);
@@ -693,6 +715,13 @@ namespace vk
 			_vkSetDebugUtilsObjectNameEXT = reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(vkGetDeviceProcAddr(dev, "vkSetDebugUtilsObjectNameEXT"));
 			_vkQueueInsertDebugUtilsLabelEXT = reinterpret_cast<PFN_vkQueueInsertDebugUtilsLabelEXT>(vkGetDeviceProcAddr(dev, "vkQueueInsertDebugUtilsLabelEXT"));
 			_vkCmdInsertDebugUtilsLabelEXT = reinterpret_cast<PFN_vkCmdInsertDebugUtilsLabelEXT>(vkGetDeviceProcAddr(dev, "vkCmdInsertDebugUtilsLabelEXT"));
+		}
+
+		if (pgpu->optional_features_support.synchronization_2)
+		{
+			_vkCmdSetEvent2KHR = reinterpret_cast<PFN_vkCmdSetEvent2KHR>(vkGetDeviceProcAddr(dev, "vkCmdSetEvent2KHR"));
+			_vkCmdWaitEvents2KHR = reinterpret_cast<PFN_vkCmdWaitEvents2KHR>(vkGetDeviceProcAddr(dev, "vkCmdWaitEvents2KHR"));
+			_vkCmdPipelineBarrier2KHR = reinterpret_cast<PFN_vkCmdPipelineBarrier2KHR>(vkGetDeviceProcAddr(dev, "vkCmdPipelineBarrier2KHR"));
 		}
 
 		memory_map = vk::get_memory_mapping(pdev);

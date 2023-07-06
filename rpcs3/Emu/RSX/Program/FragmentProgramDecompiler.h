@@ -288,6 +288,10 @@ public:
 		bool has_pkg = false;
 		bool has_upg = false;
 		bool has_dynamic_register_load = false;
+
+		bool has_tex1D = false;
+		bool has_tex2D = false;
+		bool has_tex3D = false;
 	}
 	properties;
 

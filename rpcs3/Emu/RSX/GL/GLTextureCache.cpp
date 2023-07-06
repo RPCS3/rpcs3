@@ -161,11 +161,14 @@ namespace gl
 		{
 			std::vector<copy_region_descriptor> region =
 			{{
-				src,
-				rsx::surface_transform::coordinate_transform,
-				0,
-				x, y, 0, 0, 0,
-				width, height, width, height
+				.src = src,
+				.xform = rsx::surface_transform::coordinate_transform,
+				.src_x = x,
+				.src_y = y,
+				.src_w = width,
+				.src_h = height,
+				.dst_w = width,
+				.dst_h = height
 			}};
 
 			copy_transfer_regions_impl(cmd, dst, region);

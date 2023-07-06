@@ -677,7 +677,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	{
 		if (percentage == resolution_scale_def)
 		{
-			return tr("100% (Default)", "Resolution scale");
+			return tr("100% (1280x720) (Default)", "Resolution scale");
 		}
 		return tr("%1% (%2x%3)", "Resolution scale").arg(percentage).arg(1280 * percentage / 100).arg(720 * percentage / 100);
 	};
@@ -822,11 +822,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 				idx = 0;
 				if (renderer.old_adapter.isEmpty())
 				{
-					rsx_log.warning("%s adapter config empty: setting to default!", sstr(renderer.name));
+					rsx_log.warning("%s adapter config empty: setting to default!", renderer.name);
 				}
 				else
 				{
-					rsx_log.warning("Last used %s adapter not found: setting to default!", sstr(renderer.name));
+					rsx_log.warning("Last used %s adapter not found: setting to default!", renderer.name);
 				}
 			}
 			ui->graphicsAdapterBox->setCurrentIndex(idx);
@@ -1243,6 +1243,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceCheckBox(ui->showMoveCursorBox, emu_settings_type::ShowMoveCursor);
 	SubscribeTooltip(ui->showMoveCursorBox, tooltips.settings.show_move_cursor);
+
+	m_emu_settings->EnhanceCheckBox(ui->lockOverlayInputToPlayerOne, emu_settings_type::LockOvlIptToP1);
+	SubscribeTooltip(ui->lockOverlayInputToPlayerOne, tooltips.settings.lock_overlay_input_to_player_one);
 
 	// Midi
 	const QString midi_none = m_emu_settings->m_midi_creator.get_none();
@@ -2362,9 +2365,14 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	}
 }
 
-settings_dialog::~settings_dialog()
+void settings_dialog::closeEvent(QCloseEvent* event)
 {
 	m_gui_settings->SetValue(gui::cfg_geometry, saveGeometry());
+	m_gui_settings->sync();
+}
+
+settings_dialog::~settings_dialog()
+{
 }
 
 void settings_dialog::EnhanceSlider(emu_settings_type settings_type, QSlider* slider, QLabel* label, const QString& label_text) const
@@ -2428,7 +2436,7 @@ void settings_dialog::AddStylesheets()
 	}
 	else
 	{
-		cfg_log.warning("Trying to set an invalid stylesheets index: %d (%s)", index, sstr(m_current_stylesheet));
+		cfg_log.warning("Trying to set an invalid stylesheets index: %d (%s)", index, m_current_stylesheet);
 	}
 }
 

@@ -8,9 +8,12 @@
 #include <cmath>
 #include <functional>
 #include <string>
+#include <set>
 #include <vector>
 #include <memory>
 #include <unordered_map>
+
+LOG_CHANNEL(input_log, "Input");
 
 class PadDevice
 {
@@ -20,10 +23,10 @@ public:
 	u8 player_id{0};
 	u8 large_motor{0};
 	u8 small_motor{0};
-	u64 trigger_code_left = 0;
-	u64 trigger_code_right = 0;
-	std::array<u64, 4> axis_code_left{};
-	std::array<u64, 4> axis_code_right{};
+	std::set<u64> trigger_code_left{};
+	std::set<u64> trigger_code_right{};
+	std::array<std::set<u64>, 4> axis_code_left{};
+	std::array<std::set<u64>, 4> axis_code_right{};
 };
 
 struct pad_ensemble
@@ -121,19 +124,78 @@ protected:
 	std::array<cfg_pad, MAX_GAMEPADS> m_pad_configs;
 	std::vector<pad_ensemble> m_bindings;
 	std::unordered_map<u32, std::string> button_list;
-	std::vector<u32> blacklist;
+	std::set<u32> blacklist;
+
+	static std::set<u32> narrow_set(const std::set<u64>& src);
 
 	// Search an unordered map for a string value and return found keycode
-	static int FindKeyCode(const std::unordered_map<u32, std::string>& map, const cfg::string& name, bool fallback = true);
+	template <typename S, typename T>
+	static std::set<T> FindKeyCodes(const std::unordered_map<S, std::string>& map, const cfg::string& cfg_string, bool fallback = true)
+	{
+		std::set<T> key_codes;
+
+		const std::string& def = cfg_string.def;
+		const std::vector<std::string> names = cfg_pad::get_buttons(cfg_string);
+		T def_code = umax;
+
+		for (const std::string& nam : names)
+		{
+			for (const auto& [code, name] : map)
+			{
+				if (name == nam)
+				{
+					key_codes.insert(static_cast<T>(code));
+				}
+
+				if (fallback && name == def)
+					def_code = static_cast<T>(code);
+			}
+		}
+
+		if (!key_codes.empty())
+		{
+			return key_codes;
+		}
+
+		if (fallback)
+		{
+			if (!names.empty())
+				input_log.error("FindKeyCode for [name = %s] returned with [def_code = %d] for [def = %s]", cfg_string.to_string(), def_code, def);
+
+			if (def_code != umax)
+			{
+				return { def_code };
+			}
+		}
+
+		return {};
+	}
 
 	// Search an unordered map for a string value and return found keycode
-	static long FindKeyCode(const std::unordered_map<u64, std::string>& map, const cfg::string& name, bool fallback = true);
+	template <typename S, typename T>
+	static std::set<T> FindKeyCodes(const std::unordered_map<S, std::string>& map, const std::vector<std::string>& names)
+	{
+		std::set<T> key_codes;
 
-	// Search an unordered map for a string value and return found keycode
-	static int FindKeyCodeByString(const std::unordered_map<u32, std::string>& map, const std::string& name, bool fallback = true);
+		for (const std::string& name : names)
+		{
+			for (const auto& [code, nam] : map)
+			{
+				if (nam == name)
+				{
+					key_codes.insert(static_cast<T>(code));
+					break;
+				}
+			}
+		}
 
-	// Search an unordered map for a string value and return found keycode
-	static long FindKeyCodeByString(const std::unordered_map<u64, std::string>& map, const std::string& name, bool fallback = true);
+		if (!key_codes.empty())
+		{
+			return key_codes;
+		}
+
+		return {};
+	}
 
 	// Get new multiplied value based on the multiplier
 	static s32 MultipliedInput(s32 raw_value, s32 multiplier);
@@ -225,7 +287,7 @@ private:
 	virtual pad_preview_values get_preview_values(const std::unordered_map<u64, u16>& /*data*/) { return {}; }
 
 protected:
-	virtual std::array<u32, PadHandlerBase::button::button_count> get_mapped_key_codes(const std::shared_ptr<PadDevice>& device, const cfg_pad* cfg);
+	virtual std::array<std::set<u32>, PadHandlerBase::button::button_count> get_mapped_key_codes(const std::shared_ptr<PadDevice>& device, const cfg_pad* cfg);
 	virtual void get_mapping(const pad_ensemble& binding);
 	void TranslateButtonPress(const std::shared_ptr<PadDevice>& device, u64 keyCode, bool& pressed, u16& val, bool ignore_stick_threshold = false, bool ignore_trigger_threshold = false);
 	void init_configs();

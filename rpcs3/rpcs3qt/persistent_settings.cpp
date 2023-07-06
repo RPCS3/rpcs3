@@ -54,6 +54,6 @@ QString persistent_settings::GetCurrentUser(const QString& fallback) const
 		return user;
 	}
 
-	cfg_log.fatal("Could not parse user setting: '%s'.", user.toStdString());
+	cfg_log.fatal("Could not parse user setting: '%s'.", user);
 	return QString();
 }

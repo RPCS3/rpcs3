@@ -299,7 +299,7 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 
 void gs_frame::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKeySequence& key_sequence)
 {
-	gui_log.notice("Game window registered shortcut: %s (%s)", shortcut_key, key_sequence.toString().toStdString());
+	gui_log.notice("Game window registered shortcut: %s (%s)", shortcut_key, key_sequence.toString());
 
 	switch (shortcut_key)
 	{
@@ -605,10 +605,13 @@ void gs_frame::close()
 		if (!Emu.IsStopped())
 		{
 			// Blocking shutdown request. Obsolete, but I'm keeping it here as last resort.
-			Emu.GracefulShutdown(true, false);
+			Emu.after_kill_callback = [this](){ deleteLater(); };
+			Emu.GracefulShutdown(true);
 		}
-
-		deleteLater();
+		else
+		{
+			deleteLater();
+		}
 	});
 }
 

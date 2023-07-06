@@ -92,6 +92,8 @@ namespace vk
 		rsx_pitch = pitch;
 
 		const bool require_format_conversion = !!(src->aspect() & VK_IMAGE_ASPECT_STENCIL_BIT) || src->format() == VK_FORMAT_D32_SFLOAT;
+		auto dma_mapping = vk::map_dma(valid_range.start, valid_range.length());
+
 		if (require_format_conversion || pack_unpack_swap_bytes)
 		{
 			const auto section_length = valid_range.length();
@@ -100,13 +102,16 @@ namespace vk
 			const auto working_buffer_length = calculate_working_buffer_size(task_length, src->aspect());
 
 			auto working_buffer = vk::get_scratch_buffer(cmd, working_buffer_length);
-			auto final_mapping = vk::map_dma(valid_range.start, section_length);
 
 			VkBufferImageCopy region = {};
 			region.imageSubresource = { src->aspect(), 0, 0, 1 };
 			region.imageOffset = { src_area.x1, src_area.y1, 0 };
 			region.imageExtent = { transfer_width, transfer_height, 1 };
-			vk::copy_image_to_buffer(cmd, src, working_buffer, region, (require_format_conversion && pack_unpack_swap_bytes));
+
+			bool require_rw_barrier = true;
+			image_readback_options_t xfer_options{};
+			xfer_options.swap_bytes = require_format_conversion && pack_unpack_swap_bytes;
+			vk::copy_image_to_buffer(cmd, src, working_buffer, region, xfer_options);
 
 			// NOTE: For depth/stencil formats, copying to buffer and byteswap are combined into one step above
 			if (pack_unpack_swap_bytes && !require_format_conversion)
@@ -132,23 +137,32 @@ namespace vk
 				if (shuffle_kernel)
 				{
 					vk::insert_buffer_memory_barrier(cmd, working_buffer->value, 0, task_length,
-						VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-						VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
+						VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+						VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
 
 					shuffle_kernel->run(cmd, working_buffer, task_length);
 
 					vk::insert_buffer_memory_barrier(cmd, working_buffer->value, 0, task_length,
 						VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
 						VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
+
+					require_rw_barrier = false;
 				}
+			}
+
+			if (require_rw_barrier)
+			{
+				vk::insert_buffer_memory_barrier(cmd, working_buffer->value, 0, working_buffer_length,
+					VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+					VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
 			}
 
 			if (rsx_pitch == real_pitch) [[likely]]
 			{
 				VkBufferCopy copy = {};
-				copy.dstOffset = final_mapping.first;
+				copy.dstOffset = dma_mapping.first;
 				copy.size = section_length;
-				vkCmdCopyBuffer(cmd, working_buffer->value, final_mapping.second->value, 1, &copy);
+				vkCmdCopyBuffer(cmd, working_buffer->value, dma_mapping.second->value, 1, &copy);
 			}
 			else
 			{
@@ -163,7 +177,7 @@ namespace vk
 				std::vector<VkBufferCopy> copy;
 				copy.reserve(transfer_height);
 
-				u32 dst_offset = final_mapping.first;
+				u32 dst_offset = dma_mapping.first;
 				u32 src_offset = 0;
 
 				for (unsigned row = 0; row < transfer_height; ++row)
@@ -173,7 +187,7 @@ namespace vk
 					dst_offset += rsx_pitch;
 				}
 
-				vkCmdCopyBuffer(cmd, working_buffer->value, final_mapping.second->value, transfer_height, copy.data());
+				vkCmdCopyBuffer(cmd, working_buffer->value, dma_mapping.second->value, transfer_height, copy.data());
 			}
 		}
 		else
@@ -184,16 +198,32 @@ namespace vk
 			region.imageOffset = { src_area.x1, src_area.y1, 0 };
 			region.imageExtent = { transfer_width, transfer_height, 1 };
 
-			auto mapping = vk::map_dma(valid_range.start, valid_range.length());
-			region.bufferOffset = mapping.first;
-			vkCmdCopyImageToBuffer(cmd, src->value, src->current_layout, mapping.second->value, 1, &region);
+			region.bufferOffset = dma_mapping.first;
+			vkCmdCopyImageToBuffer(cmd, src->value, src->current_layout, dma_mapping.second->value, 1, &region);
 		}
 
 		src->pop_layout(cmd);
 
+		VkBufferMemoryBarrier2KHR mem_barrier =
+		{
+			.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2_KHR,
+			.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT_KHR,      // Finish all transfer...
+			.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT_KHR,
+			.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR,  // ...before proceeding with any command
+			.dstAccessMask = 0,
+			.buffer = dma_mapping.second->value,
+			.offset = dma_mapping.first,
+			.size = valid_range.length()
+		};
+
 		// Create event object for this transfer and queue signal op
-		dma_fence = std::make_unique<vk::event>(*m_device, sync_domain::any);
-		dma_fence->signal(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT);
+		dma_fence = std::make_unique<vk::event>(*m_device, sync_domain::host);
+		dma_fence->signal(cmd,
+		{
+			.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+			.bufferMemoryBarrierCount = 1,
+			.pBufferMemoryBarriers = &mem_barrier
+		});
 
 		// Set cb flag for queued dma operations
 		cmd.set_flag(vk::command_buffer::cb_has_dma_transfer);
@@ -582,11 +612,14 @@ namespace vk
 		{
 			std::vector<copy_region_descriptor> region =
 			{ {
-				source,
-				rsx::surface_transform::coordinate_transform,
-				0,
-				x, y, 0, 0, 0,
-				w, h, w, h
+				.src = source,
+				.xform = rsx::surface_transform::coordinate_transform,
+				.src_x = x,
+				.src_y = y,
+				.src_w = w,
+				.src_h = h,
+				.dst_w = w,
+				.dst_h = h
 			} };
 
 			vk::change_image_layout(cmd, image.get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
@@ -700,15 +733,18 @@ namespace vk
 		VkImageSubresourceRange dst_range = { dst_aspect, 0, 1, 0, 1 };
 		vk::change_image_layout(cmd, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, dst_range);
 
-		if (!(dst_aspect & VK_IMAGE_ASPECT_DEPTH_BIT))
+		if (sections_to_copy[0].dst_w != width || sections_to_copy[0].dst_h != height)
 		{
-			VkClearColorValue clear = {};
-			vkCmdClearColorImage(cmd, image->value, image->current_layout, &clear, 1, &dst_range);
-		}
-		else
-		{
-			VkClearDepthStencilValue clear = { 1.f, 0 };
-			vkCmdClearDepthStencilImage(cmd, image->value, image->current_layout, &clear, 1, &dst_range);
+			if (!(dst_aspect & VK_IMAGE_ASPECT_DEPTH_BIT))
+			{
+				VkClearColorValue clear = {};
+				vkCmdClearColorImage(cmd, image->value, image->current_layout, &clear, 1, &dst_range);
+			}
+			else
+			{
+				VkClearDepthStencilValue clear = { 1.f, 0 };
+				vkCmdClearDepthStencilImage(cmd, image->value, image->current_layout, &clear, 1, &dst_range);
+			}
 		}
 
 		copy_transfer_regions_impl(cmd, image, sections_to_copy);
@@ -767,11 +803,12 @@ namespace vk
 	{
 		std::vector<copy_region_descriptor> region =
 		{ {
-			src,
-			rsx::surface_transform::identity,
-			0,
-			0, 0, 0, 0, 0,
-			width, height, width, height
+			.src = src,
+			.xform = rsx::surface_transform::identity,
+			.src_w = width,
+			.src_h = height,
+			.dst_w = width,
+			.dst_h = height
 		} };
 
 		auto dst = dst_view->image();
@@ -1075,7 +1112,7 @@ namespace vk
 		{
 		default:
 			//TODO
-			// warn_once("Format incompatibility detected, reporting failure to force data copy (VK_FORMAT=0x%X, GCM_FORMAT=0x%X)", static_cast<u32>(vk_format), gcm_format);
+			err_once("Format incompatibility detected, reporting failure to force data copy (VK_FORMAT=0x%X, GCM_FORMAT=0x%X)", static_cast<u32>(vk_format), gcm_format);
 			return false;
 #ifndef __APPLE__
 		case CELL_GCM_TEXTURE_R5G6B5:

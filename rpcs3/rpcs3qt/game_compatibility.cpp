@@ -14,7 +14,6 @@
 LOG_CHANNEL(compat_log, "Compat");
 
 constexpr auto qstr = QString::fromStdString;
-inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
 game_compatibility::game_compatibility(std::shared_ptr<gui_settings> gui_settings, QWidget* parent)
 	: QObject(parent)
@@ -46,19 +45,19 @@ void game_compatibility::handle_download_finished(const QByteArray& content)
 
 		if (file.exists())
 		{
-			compat_log.notice("Database file found: %s", sstr(m_filepath));
+			compat_log.notice("Database file found: %s", m_filepath);
 		}
 
 		if (!file.open(QIODevice::WriteOnly))
 		{
-			compat_log.error("Database Error - Could not write database to file: %s", sstr(m_filepath));
+			compat_log.error("Database Error - Could not write database to file: %s", m_filepath);
 			return;
 		}
 
 		file.write(content);
 		file.close();
 
-		compat_log.success("Wrote database to file: %s", sstr(m_filepath));
+		compat_log.success("Wrote database to file: %s", m_filepath);
 	}
 
 	// We have a new database in map, therefore refresh gamelist to new state
@@ -116,7 +115,7 @@ bool game_compatibility::ReadJSON(const QJsonObject& json_data, bool after_downl
 	{
 		if (!json_results[key].isObject())
 		{
-			compat_log.error("Database Error - Unusable object %s", sstr(key));
+			compat_log.error("Database Error - Unusable object %s", key);
 			continue;
 		}
 
@@ -187,7 +186,7 @@ bool game_compatibility::ReadJSON(const QJsonObject& json_data, bool after_downl
 		}
 
 		// Add status to map
-		m_compat_database.emplace(std::pair<std::string, compat::status>(sstr(key), status));
+		m_compat_database.emplace(std::pair<std::string, compat::status>(key.toStdString(), status));
 	}
 
 	return true;
@@ -202,20 +201,20 @@ void game_compatibility::RequestCompatibility(bool online)
 
 		if (!file.exists())
 		{
-			compat_log.notice("Database file not found: %s", sstr(m_filepath));
+			compat_log.notice("Database file not found: %s", m_filepath);
 			return;
 		}
 
 		if (!file.open(QIODevice::ReadOnly))
 		{
-			compat_log.error("Database Error - Could not read database from file: %s", sstr(m_filepath));
+			compat_log.error("Database Error - Could not read database from file: %s", m_filepath);
 			return;
 		}
 
 		const QByteArray content = file.readAll();
 		file.close();
 
-		compat_log.notice("Finished reading database from file: %s", sstr(m_filepath));
+		compat_log.notice("Finished reading database from file: %s", m_filepath);
 
 		// Create new map from database
 		ReadJSON(QJsonDocument::fromJson(content).object(), online);
@@ -312,13 +311,13 @@ compat::package_info game_compatibility::GetPkgInfo(const QString& pkg_path, gam
 
 	if (compat)
 	{
-		compat::status stat = compat->GetCompatibility(sstr(info.title_id));
+		compat::status stat = compat->GetCompatibility(info.title_id.toStdString());
 		if (!stat.patch_sets.empty())
 		{
 			// We currently only handle the first patch set
 			for (const auto& package : stat.patch_sets.front().packages)
 			{
-				if (sstr(info.version) == package.version)
+				if (info.version.toStdString() == package.version)
 				{
 					if (const std::string localized_title = package.get_title(title_key); !localized_title.empty())
 					{

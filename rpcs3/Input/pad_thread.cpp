@@ -24,7 +24,6 @@
 #include "Utilities/Thread.h"
 #include "util/atomic.hpp"
 
-LOG_CHANNEL(input_log, "Input");
 LOG_CHANNEL(sys_log, "SYS");
 
 extern bool is_input_allowed();
@@ -131,7 +130,7 @@ void pad_thread::Init()
 		input_log.notice("Reloaded empty pad config");
 	}
 
-	input_log.trace("Using pad config:\n%s", g_cfg_input.to_string());
+	input_log.trace("Using pad config:\n%s", g_cfg_input);
 
 	std::shared_ptr<keyboard_pad_handler> keyptr;
 
@@ -412,6 +411,9 @@ void pad_thread::operator()()
 
 			for (usz i = 0; i < m_pads.size() && !ps_button_pressed; i++)
 			{
+				if (i > 0 && g_cfg.io.lock_overlay_input_to_player_one)
+					break;
+
 				const auto& pad = m_pads[i];
 
 				if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))

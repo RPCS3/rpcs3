@@ -173,7 +173,7 @@ namespace rsx
 
 		auto fifo_stops = alloc_write_fifo(context_id);
 
-		while (!Emu.IsStopped())
+		while (thread_ctrl::state() != thread_state::aborting)
 		{
 			// Load registers while the RSX is still idle
 			method_registers = frame->reg_state;
@@ -191,7 +191,7 @@ namespace rsx
 				while (Emu.IsPaused())
 					thread_ctrl::wait_for(10'000);
 
-				if (Emu.IsStopped())
+				if (thread_ctrl::state() == thread_state::aborting)
 					break;
 
 				// Loop and hunt down our next state change that needs to be done
@@ -199,11 +199,12 @@ namespace rsx
 					continue;
 
 				// wait until rsx idle and at our first 'stop' to apply state
-				while (!Emu.IsStopped() && !render->is_fifo_idle() && (render->ctrl->get != fifo_stops[stopIdx]))
+				while (thread_ctrl::state() != thread_state::aborting && !render->is_fifo_idle() && (render->ctrl->get != fifo_stops[stopIdx]))
 				{
-					while (Emu.IsPaused())
+					if (Emu.IsPaused())
 						thread_ctrl::wait_for(10'000);
-					std::this_thread::yield();
+					else
+						std::this_thread::yield();
 				}
 
 				stopIdx++;
@@ -221,10 +222,12 @@ namespace rsx
 			u32 end = fifo_stops.back();
 			render->ctrl->put = end;
 
-			while (!render->is_fifo_idle() && !Emu.IsStopped())
+			while (!render->is_fifo_idle() && thread_ctrl::state() != thread_state::aborting)
 			{
-				while (Emu.IsPaused())
+				if (Emu.IsPaused())
 					thread_ctrl::wait_for(10'000);
+				else
+					std::this_thread::yield();
 			}
 
 			// Check if the captured application used syscall instead of a gcm command to flip

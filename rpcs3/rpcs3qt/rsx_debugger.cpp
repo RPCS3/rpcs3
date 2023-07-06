@@ -267,6 +267,7 @@ void rsx_debugger::closeEvent(QCloseEvent* event)
 
 	m_gui_settings->SetValue(gui::rsx_states, states);
 	m_gui_settings->SetValue(gui::rsx_geometry, saveGeometry());
+	m_gui_settings->sync();
 
 	QDialog::closeEvent(event);
 }
@@ -392,11 +393,11 @@ void Buffer::ShowContextMenu(const QPoint& pos)
 
 		if (m_image.save(path, "PNG", 100))
 		{
-			rsx_debugger.success("Saved image to '%s'", path.toStdString());
+			rsx_debugger.success("Saved image to '%s'", path);
 		}
 		else
 		{
-			rsx_debugger.error("Failure to save image to '%s'", path.toStdString());
+			rsx_debugger.error("Failure to save image to '%s'", path);
 		}
 	});
 

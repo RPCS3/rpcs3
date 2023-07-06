@@ -566,11 +566,14 @@ namespace vk
 				}
 			};
 
-			vk::copy_image_to_buffer(cmd, source, dest, region);
-			vk::insert_buffer_memory_barrier(cmd,
-				dest->value, src_offset_in_buffer, max_copy_length,
-				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-				VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
+			// inject post-transfer barrier
+			image_readback_options_t options{};
+			options.sync_region =
+			{
+				.offset = src_offset_in_buffer,
+				.length = max_copy_length
+			};
+			vk::copy_image_to_buffer(cmd, source, dest, region, options);
 
 			if (dest != bo)
 			{

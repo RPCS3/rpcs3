@@ -366,6 +366,7 @@
      <addaction name="languageAct0"/>
     </widget>
     <addaction name="updateAct"/>
+    <addaction name="welcomeAct"/>
     <addaction name="separator"/>
     <addaction name="languageMenu"/>
     <addaction name="separator"/>
@@ -746,6 +747,11 @@
   <action name="updateAct">
    <property name="text">
     <string>Check for Updates</string>
+   </property>
+  </action>
+  <action name="welcomeAct">
+   <property name="text">
+    <string>View The Welcome Dialog</string>
    </property>
   </action>
   <action name="confVFSDialogAct">

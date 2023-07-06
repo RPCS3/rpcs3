@@ -5,6 +5,7 @@
 #include "Emu/Cell/Common.h"
 #include "PPUTranslator.h"
 #include "PPUThread.h"
+#include "SPUThread.h"
 
 #include "util/types.hpp"
 #include "util/endian.hpp"
@@ -12,6 +13,7 @@
 #include "util/v128.hpp"
 #include "util/simd.hpp"
 #include <algorithm>
+#include <span>
 
 using namespace llvm;
 
@@ -129,6 +131,7 @@ Type* PPUTranslator::GetContextType()
 }
 
 u32 ppu_get_far_jump(u32 pc);
+bool ppu_test_address_may_be_mmio(std::span<const be_t<u32>> insts);
 
 Function* PPUTranslator::Translate(const ppu_function& info)
 {
@@ -150,7 +153,7 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 
 	for (u32 addr = m_addr; addr < m_addr + info.size; addr += 4)
 	{
-		const u32 op = vm::read32(vm::cast(addr + base));
+		const u32 op = *ensure(m_info.get_ptr<u32>(addr + base));
 
 		switch (g_ppu_itype.decode(op))
 		{
@@ -214,7 +217,7 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 	const auto block = std::make_pair(info.addr, info.size);
 	{
 		// Optimize BLR (prefetch LR)
-		if (vm::read32(vm::cast(block.first + block.second - 4)) == ppu_instructions::BLR())
+		if (*ensure(m_info.get_ptr<u32>(block.first + block.second - 4)) == ppu_instructions::BLR())
 		{
 			RegLoad(m_lr);
 		}
@@ -239,7 +242,10 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 				m_rel = nullptr;
 			}
 
-			const u32 op = vm::read32(vm::cast(m_addr + base));
+			// Reset MMIO hint
+			m_may_be_mmio = true;
+
+			const u32 op = *ensure(m_info.get_ptr<u32>(m_addr + base));
 
 			(this->*(s_ppu_decoder.decode(op)))({op});
 
@@ -600,13 +606,51 @@ Value* PPUTranslator::ReadMemory(Value* addr, Type* type, bool is_be, u32 align)
 {
 	const u32 size = ::narrow<u32>(+type->getPrimitiveSizeInBits());
 
+	if (m_may_be_mmio && size == 32)
+	{
+		// Test for MMIO patterns
+		struct instructions_to_test
+		{
+			be_t<u32> insts[128];
+		};
+
+		m_may_be_mmio = false;
+
+		if (auto ptr = m_info.get_ptr<instructions_to_test>(std::max<u32>(m_info.segs[0].addr, (m_reloc ? m_reloc->addr : 0) + utils::sub_saturate<u32>(m_addr, sizeof(instructions_to_test) / 2))))
+		{
+			if (ppu_test_address_may_be_mmio(std::span(ptr->insts)))
+			{
+				m_may_be_mmio = true;
+			}
+		}
+	}
+
 	if (is_be ^ m_is_be && size > 8)
 	{
+		llvm::Value* value{};
+
 		// Read, byteswap, bitcast
 		const auto int_type = m_ir->getIntNTy(size);
-		const auto value = m_ir->CreateAlignedLoad(int_type, GetMemory(addr), llvm::MaybeAlign{align});
-		value->setVolatile(true);
+
+		if (m_may_be_mmio && size == 32)
+		{
+			ppu_log.notice("LLVM: Detected potential MMIO32 read at [0x%08x]", m_addr + (m_reloc ? m_reloc->addr : 0));
+			value = Call(GetType<u32>(), "__read_maybe_mmio32", m_base, addr);
+		}
+		else
+		{
+			const auto inst = m_ir->CreateAlignedLoad(int_type, GetMemory(addr), llvm::MaybeAlign{align});
+			inst->setVolatile(true);
+			value = inst;
+		}
+
 		return bitcast(Call(int_type, fmt::format("llvm.bswap.i%u", size), value), type);
+	}
+
+	if (m_may_be_mmio && size == 32)
+	{
+		ppu_log.notice("LLVM: Detected potential MMIO32 read at [0x%08x]", m_addr + (m_reloc ? m_reloc->addr : 0));
+		return Call(GetType<u32>(), "__read_maybe_mmio32", m_base, addr);
 	}
 
 	// Read normally
@@ -625,6 +669,25 @@ void PPUTranslator::WriteMemory(Value* addr, Value* value, bool is_be, u32 align
 		// Bitcast, byteswap
 		const auto int_type = m_ir->getIntNTy(size);
 		value = Call(int_type, fmt::format("llvm.bswap.i%u", size), bitcast(value, int_type));
+	}
+
+	if (m_may_be_mmio && size == 32)
+	{
+		// Test for MMIO patterns
+		struct instructions_to_test
+		{
+			be_t<u32> insts[128];
+		};
+
+		if (auto ptr = m_info.get_ptr<instructions_to_test>(std::max<u32>(m_info.segs[0].addr, (m_reloc ? m_reloc->addr : 0) + utils::sub_saturate<u32>(m_addr, sizeof(instructions_to_test) / 2))))
+		{
+			if (ppu_test_address_may_be_mmio(std::span(ptr->insts)))
+			{
+				ppu_log.notice("LLVM: Detected potential MMIO32 write at [0x%08x]", m_addr + (m_reloc ? m_reloc->addr : 0));
+				Call(GetType<void>(), "__write_maybe_mmio32", m_base, addr, value);
+				return;
+			}
+		}
 	}
 
 	// Write
@@ -2527,6 +2590,7 @@ void PPUTranslator::LDX(ppu_opcode_t op)
 
 void PPUTranslator::LWZX(ppu_opcode_t op)
 {
+	m_may_be_mmio &= (op.ra != 1u && op.ra != 13u && op.rb != 1u && op.rb != 13u); // Stack register and TLS address register are unlikely to be used in MMIO address calculation
 	SetGpr(op.rd, ReadMemory(op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb), GetType<u32>()));
 }
 
@@ -2601,6 +2665,9 @@ void PPUTranslator::DCBST(ppu_opcode_t)
 
 void PPUTranslator::LWZUX(ppu_opcode_t op)
 {
+	m_may_be_mmio &= (op.ra != 1u && op.ra != 13u && op.rb != 1u && op.rb != 13u); // Stack register and TLS address register are unlikely to be used in MMIO address calculation
+	m_may_be_mmio &= op.simm16 == 0 || spu_thread::test_is_problem_state_register_offset(op.uimm16, true, false); // Either exact MMIO address or MMIO base with completing s16 address offset
+
 	const auto addr = m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb));
 	SetGpr(op.rd, ReadMemory(addr, GetType<u32>()));
 	SetGpr(op.ra, addr);
@@ -2811,6 +2878,7 @@ void PPUTranslator::STWCX(ppu_opcode_t op)
 
 void PPUTranslator::STWX(ppu_opcode_t op)
 {
+	m_may_be_mmio &= (op.ra != 1u && op.ra != 13u && op.rb != 1u && op.rb != 13u); // Stack register and TLS address register are unlikely to be used in MMIO address calculation
 	WriteMemory(op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb), GetGpr(op.rs, 32));
 }
 
@@ -2830,6 +2898,7 @@ void PPUTranslator::STDUX(ppu_opcode_t op)
 void PPUTranslator::STWUX(ppu_opcode_t op)
 {
 	const auto addr = m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb));
+	m_may_be_mmio &= (op.ra != 1u && op.ra != 13u && op.rb != 1u && op.rb != 13u); // Stack register and TLS address register are unlikely to be used in MMIO address calculation
 	WriteMemory(addr, GetGpr(op.rs, 32));
 	SetGpr(op.ra, addr);
 }
@@ -3213,6 +3282,7 @@ void PPUTranslator::LWBRX(ppu_opcode_t op)
 
 void PPUTranslator::LFSX(ppu_opcode_t op)
 {
+	m_may_be_mmio &= (op.ra != 1u && op.ra != 13u && op.rb != 1u && op.rb != 13u); // Stack register and TLS address register are unlikely to be used in MMIO address calculation
 	SetFpr(op.frd, ReadMemory(op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb), GetType<f32>()));
 }
 
@@ -3541,6 +3611,44 @@ void PPUTranslator::LWZ(ppu_opcode_t op)
 		m_rel = nullptr;
 	}
 
+	m_may_be_mmio &= (op.ra != 1u && op.ra != 13u); // Stack register and TLS address register are unlikely to be used in MMIO address calculation
+	m_may_be_mmio &= op.simm16 == 0 || spu_thread::test_is_problem_state_register_offset(op.uimm16, true, false); // Either exact MMIO address or MMIO base with completing s16 address offset
+
+	if (m_may_be_mmio && !op.simm16)
+	{
+		struct instructions_data
+		{
+			be_t<u32> insts[2];
+		};
+
+		// Quick invalidation: expect exact MMIO address, so if the register is being reused with different offset than it's likely not MMIO
+		if (auto ptr = m_info.get_ptr<instructions_data>(m_addr + 4 + (m_reloc ? m_reloc->addr : 0)))
+		{
+			for (u32 inst : ptr->insts)
+			{
+				ppu_opcode_t test_op{inst};
+
+				if (test_op.simm16 == op.simm16 || test_op.ra != op.ra)
+				{
+					// Same offset (at least according to this test) or different register
+					continue;
+				}
+
+				switch (g_ppu_itype.decode(inst))
+				{
+				case ppu_itype::LWZ:
+				case ppu_itype::STW:
+				{
+					// Not MMIO
+					m_may_be_mmio = false;
+					break;
+				}
+				default: break;
+				}
+			}
+		}
+	}
+
 	SetGpr(op.rd, ReadMemory(op.ra ? m_ir->CreateAdd(GetGpr(op.ra), imm) : imm, GetType<u32>()));
 }
 
@@ -3553,6 +3661,9 @@ void PPUTranslator::LWZU(ppu_opcode_t op)
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
 	}
+
+	m_may_be_mmio &= (op.ra != 1u && op.ra != 13u); // Stack register and TLS address register are unlikely to be used in MMIO address calculation
+	m_may_be_mmio &= op.simm16 == 0 || spu_thread::test_is_problem_state_register_offset(op.uimm16, true, false); // Either exact MMIO address or MMIO base with completing s16 address offset
 
 	const auto addr = m_ir->CreateAdd(GetGpr(op.ra), imm);
 	SetGpr(op.rd, ReadMemory(addr, GetType<u32>()));
@@ -3597,6 +3708,44 @@ void PPUTranslator::STW(ppu_opcode_t op)
 		m_rel = nullptr;
 	}
 
+	m_may_be_mmio &= (op.ra != 1u && op.ra != 13u); // Stack register and TLS address register are unlikely to be used in MMIO address calculation
+	m_may_be_mmio &= op.simm16 == 0 || spu_thread::test_is_problem_state_register_offset(op.uimm16, false, true); // Either exact MMIO address or MMIO base with completing s16 address offset
+
+	if (m_may_be_mmio && !op.simm16)
+	{
+		struct instructions_data
+		{
+			be_t<u32> insts[3];
+		};
+
+		// Quick invalidation: expect exact MMIO address, so if the register is being reused with different offset than it's likely not MMIO
+		if (auto ptr = m_info.get_ptr<instructions_data>(m_addr + 4 + (m_reloc ? m_reloc->addr : 0)))
+		{
+			for (u32 inst : ptr->insts)
+			{
+				ppu_opcode_t test_op{inst};
+
+				if (test_op.simm16 == op.simm16 || test_op.ra != op.ra)
+				{
+					// Same offset (at least according to this test) or different register
+					continue;
+				}
+
+				switch (g_ppu_itype.decode(inst))
+				{
+				case ppu_itype::LWZ:
+				case ppu_itype::STW:
+				{
+					// Not MMIO
+					m_may_be_mmio = false;
+					break;
+				}
+				default: break;
+				}
+			}
+		}
+	}
+
 	const auto value = GetGpr(op.rs, 32);
 	const auto addr = op.ra ? m_ir->CreateAdd(GetGpr(op.ra), imm) : imm;
 	WriteMemory(addr, value);
@@ -3620,6 +3769,9 @@ void PPUTranslator::STWU(ppu_opcode_t op)
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
 	}
+
+	m_may_be_mmio &= (op.ra != 1u && op.ra != 13u);// Stack register and TLS address register are unlikely to be used in MMIO address calculatio
+	m_may_be_mmio &= op.simm16 == 0 || spu_thread::test_is_problem_state_register_offset(op.uimm16, false, true); // Either exact MMIO address or MMIO base with completing s16 address offset
 
 	const auto addr = m_ir->CreateAdd(GetGpr(op.ra), imm);
 	WriteMemory(addr, GetGpr(op.rs, 32));
@@ -3740,6 +3892,8 @@ void PPUTranslator::STHU(ppu_opcode_t op)
 
 void PPUTranslator::LMW(ppu_opcode_t op)
 {
+	m_may_be_mmio &= op.rd == 31u && (op.ra != 1u && op.ra != 13u); // Stack register and TLS address register are unlikely to be used in MMIO address calculatio
+
 	for (u32 i = 0; i < 32 - op.rd; i++)
 	{
 		SetGpr(i + op.rd, ReadMemory(op.ra ? m_ir->CreateAdd(m_ir->getInt64(op.simm16 + i * 4), GetGpr(op.ra)) : m_ir->getInt64(op.simm16 + i * 4), GetType<u32>()));
@@ -3748,6 +3902,8 @@ void PPUTranslator::LMW(ppu_opcode_t op)
 
 void PPUTranslator::STMW(ppu_opcode_t op)
 {
+	m_may_be_mmio &= op.rs == 31u && (op.ra != 1u && op.ra != 13u); // Stack register and TLS address register are unlikely to be used in MMIO address calculatio
+
 	for (u32 i = 0; i < 32 - op.rs; i++)
 	{
 		WriteMemory(op.ra ? m_ir->CreateAdd(m_ir->getInt64(op.simm16 + i * 4), GetGpr(op.ra)) : m_ir->getInt64(op.simm16 + i * 4), GetGpr(i + op.rs, 32));
@@ -3764,6 +3920,9 @@ void PPUTranslator::LFS(ppu_opcode_t op)
 		m_rel = nullptr;
 	}
 
+	m_may_be_mmio &= (op.ra != 1u && op.ra != 13u); // Stack register and TLS address register are unlikely to be used in MMIO address calculatio
+	m_may_be_mmio &= op.simm16 == 0 || spu_thread::test_is_problem_state_register_offset(op.uimm16, true, false); // Either exact MMIO address or MMIO base with completing s16 address offset
+
 	SetFpr(op.frd, ReadMemory(op.ra ? m_ir->CreateAdd(GetGpr(op.ra), imm) : imm, GetType<f32>()));
 }
 
@@ -3776,6 +3935,9 @@ void PPUTranslator::LFSU(ppu_opcode_t op)
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
 	}
+
+	m_may_be_mmio &= (op.ra != 1u && op.ra != 13u); // Stack register and TLS address register are unlikely to be used in MMIO address calculatio
+	m_may_be_mmio &= op.simm16 == 0 || spu_thread::test_is_problem_state_register_offset(op.uimm16, true, false); // Either exact MMIO address or MMIO base with completing s16 address offset
 
 	const auto addr = m_ir->CreateAdd(GetGpr(op.ra), imm);
 	SetFpr(op.frd, ReadMemory(addr, GetType<f32>()));
@@ -3819,7 +3981,12 @@ void PPUTranslator::STFS(ppu_opcode_t op)
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
 	}
+	else
+	{
+		m_may_be_mmio &= op.simm16 == 0 || spu_thread::test_is_problem_state_register_offset(op.uimm16, false, true); // Either exact MMIO address or MMIO base with completing s16 address offset
+	}
 
+	m_may_be_mmio &= (op.ra != 1u && op.ra != 13u); // Stack register and TLS address register are unlikely to be used in MMIO address calculation
 	WriteMemory(op.ra ? m_ir->CreateAdd(GetGpr(op.ra), imm) : imm, GetFpr(op.frs, 32));
 }
 
@@ -3832,6 +3999,12 @@ void PPUTranslator::STFSU(ppu_opcode_t op)
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
 	}
+	else
+	{
+		m_may_be_mmio &= op.simm16 == 0 || spu_thread::test_is_problem_state_register_offset(op.uimm16, false, true); // Either exact MMIO address or MMIO base with completing s16 address offset
+	}
+
+	m_may_be_mmio &= (op.ra != 1u && op.ra != 13u); // Stack register and TLS address register are unlikely to be used in MMIO address calculation
 
 	const auto addr = m_ir->CreateAdd(GetGpr(op.ra), imm);
 	WriteMemory(addr, GetFpr(op.frs, 32));

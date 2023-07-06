@@ -401,11 +401,10 @@ namespace utils
 		return minuend < subtrahend ? T{0} : static_cast<T>(minuend - subtrahend);
 	}
 
-
 	template <UnsignedInt T>
 	constexpr T mul_saturate(T factor1, T factor2)
 	{
-		return T{umax} / factor1 < factor2 ? T{umax} : static_cast<T>(factor1 * factor2);
+		return factor1 > 0 && T{umax} / factor1 < factor2 ? T{umax} : static_cast<T>(factor1 * factor2);
 	}
 
 	// Hack. Pointer cast util to workaround UB. Use with extreme care.

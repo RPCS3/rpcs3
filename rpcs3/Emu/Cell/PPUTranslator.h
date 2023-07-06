@@ -68,6 +68,7 @@ class PPUTranslator final : public cpu_translator
 	llvm::Value** const m_fc = m_locals + 131; // FPSCR bits (used partially)
 
 	llvm::Value* nan_vec4;
+	bool m_may_be_mmio = false;
 
 #define DEF_VALUE(loc, glb, pos)\
 	llvm::Value*& loc = m_locals[pos];\

@@ -17,10 +17,11 @@ namespace rsx
 		struct TIU_slot
 		{
 			float scale[3];
-			float subpixel_bias;
+			float bias[3];
+			float clamp_min[2];
+			float clamp_max[2];
 			u32 remap;
 			u32 control;
-			u32 padding[2];
 		}
 		slots_[16]; // QT headers will collide with any variable named 'slots' because reasons
 

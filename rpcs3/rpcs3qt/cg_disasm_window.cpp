@@ -13,9 +13,6 @@
 
 LOG_CHANNEL(gui_log, "GUI");
 
-constexpr auto qstr = QString::fromStdString;
-inline std::string sstr(const QString& _in) { return _in.toStdString(); }
-
 cg_disasm_window::cg_disasm_window(std::shared_ptr<gui_settings> gui_settings)
 	: m_gui_settings(std::move(gui_settings))
 {
@@ -111,15 +108,15 @@ void cg_disasm_window::ShowDisasm() const
 {
 	if (QFileInfo(m_path_last).isFile())
 	{
-		CgBinaryDisasm disasm(sstr(m_path_last));
+		CgBinaryDisasm disasm(m_path_last.toStdString());
 		disasm.BuildShaderBody();
-		m_disasm_text->setText(qstr(disasm.GetArbShader()));
-		m_glsl_text->setText(qstr(disasm.GetGlslShader()));
+		m_disasm_text->setText(QString::fromStdString(disasm.GetArbShader()));
+		m_glsl_text->setText(QString::fromStdString(disasm.GetGlslShader()));
 		m_gui_settings->SetValue(gui::fd_cg_disasm, m_path_last);
 	}
 	else if (!m_path_last.isEmpty())
 	{
-		gui_log.error("CgDisasm: Failed to open %s", sstr(m_path_last));
+		gui_log.error("CgDisasm: Failed to open %s", m_path_last);
 	}
 }
 

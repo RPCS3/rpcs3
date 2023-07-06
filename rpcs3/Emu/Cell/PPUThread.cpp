@@ -62,7 +62,9 @@
 #include <thread>
 #include <cfenv>
 #include <cctype>
+#include <span>
 #include <optional>
+
 #include "util/asm.hpp"
 #include "util/vm.hpp"
 #include "util/v128.hpp"
@@ -161,9 +163,10 @@ extern void ppu_initialize();
 extern void ppu_finalize(const ppu_module& info);
 extern bool ppu_initialize(const ppu_module& info, bool = false);
 static void ppu_initialize2(class jit_compiler& jit, const ppu_module& module_part, const std::string& cache_path, const std::string& obj_name);
-extern std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object&, const std::string& path, s64 file_offset, utils::serial* = nullptr);
+extern bool ppu_load_exec(const ppu_exec_object&, bool virtual_load, const std::string&, utils::serial* = nullptr);
+extern std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object&, bool virtual_load, const std::string& path, s64 file_offset, utils::serial* = nullptr);
 extern void ppu_unload_prx(const lv2_prx&);
-extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&, s64 file_offset, utils::serial* = nullptr);
+extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, bool virtual_load, const std::string&, s64 file_offset, utils::serial* = nullptr);
 extern void ppu_execute_syscall(ppu_thread& ppu, u64 code);
 static void ppu_break(ppu_thread&, ppu_opcode_t, be_t<u32>*, ppu_intrp_func*);
 
@@ -484,16 +487,198 @@ void ppu_reservation_fallback(ppu_thread& ppu)
 	}
 }
 
-static std::unordered_map<u32, u32>* s_ppu_toc;
+u32 ppu_read_mmio_aware_u32(u8* vm_base, u32 eal)
+{
+	if (eal >= RAW_SPU_BASE_ADDR)
+	{
+		// RawSPU MMIO
+		auto thread = idm::get<named_thread<spu_thread>>(spu_thread::find_raw_spu((eal - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET));
+
+		if (!thread)
+		{
+			// Access Violation
+		}
+		else if ((eal - RAW_SPU_BASE_ADDR) % RAW_SPU_OFFSET + sizeof(u32) - 1 < SPU_LS_SIZE) // LS access
+		{
+		}
+		else if (u32 value{}; thread->read_reg(eal, value))
+		{
+			return std::bit_cast<be_t<u32>>(value);
+		}
+		else
+		{
+			fmt::throw_exception("Invalid RawSPU MMIO offset (addr=0x%x)", eal);
+		}
+	}
+
+	// Value is assumed to be swapped
+	return read_from_ptr<u32>(vm_base + eal);
+}
+
+void ppu_write_mmio_aware_u32(u8* vm_base, u32 eal, u32 value)
+{
+	if (eal >= RAW_SPU_BASE_ADDR)
+	{
+		// RawSPU MMIO
+		auto thread = idm::get<named_thread<spu_thread>>(spu_thread::find_raw_spu((eal - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET));
+
+		if (!thread)
+		{
+			// Access Violation
+		}
+		else if ((eal - RAW_SPU_BASE_ADDR) % RAW_SPU_OFFSET + sizeof(u32) - 1 < SPU_LS_SIZE) // LS access
+		{
+		}
+		else if (thread->write_reg(eal, std::bit_cast<be_t<u32>>(value)))
+		{
+			return;
+		}
+		else
+		{
+			fmt::throw_exception("Invalid RawSPU MMIO offset (addr=0x%x)", eal);
+		}
+	}
+
+	// Value is assumed swapped
+	write_to_ptr<u32>(vm_base + eal, value);
+}
+
+extern bool ppu_test_address_may_be_mmio(std::span<const be_t<u32>> insts)
+{
+	std::set<u32> reg_offsets;
+	bool found_raw_spu_base = false;
+	bool found_spu_area_offset_element = false;
+
+	for (u32 inst : insts)
+	{
+		// Common around MMIO (orders IO)
+		if (inst == ppu_instructions::EIEIO())
+		{
+			return true;
+		}
+
+		const u32 op_imm16 = (inst & 0xfc00ffff);
+
+		// RawSPU MMIO base
+		// 0xe00000000 is a common constant so try to find an ORIS 0x10 or ADDIS 0x10 nearby (for multiplying SPU ID by it)
+		if (op_imm16 == ppu_instructions::ADDIS({}, {}, -0x2000) || op_imm16 == ppu_instructions::ORIS({}, {}, 0xe000)  || op_imm16 == ppu_instructions::XORIS({}, {}, 0xe000))
+		{
+			found_raw_spu_base = true;
+
+			if (found_spu_area_offset_element)
+			{
+				// Found both
+				return true;
+			}
+		}
+		else if (op_imm16 == ppu_instructions::ORIS({}, {}, 0x10) || op_imm16 == ppu_instructions::ADDIS({}, {}, 0x10))
+		{
+			found_spu_area_offset_element = true;
+
+			if (found_raw_spu_base)
+			{
+				// Found both
+				return true;
+			}
+		}
+		// RawSPU MMIO base + problem state offset
+		else if (op_imm16 == ppu_instructions::ADDIS({}, {}, -0x1ffc))
+		{
+			return true;
+		}
+		else if (op_imm16 == ppu_instructions::ORIS({}, {}, 0xe004))
+		{
+			return true;
+		}
+		else if (op_imm16 == ppu_instructions::XORIS({}, {}, 0xe004))
+		{
+			return true;
+		}
+		// RawSPU MMIO base + problem state offset + 64k of SNR1 offset
+		else if (op_imm16 == ppu_instructions::ADDIS({}, {}, -0x1ffb))
+		{
+			return true;
+		}
+		else if (op_imm16 == ppu_instructions::ORIS({}, {}, 0xe005))
+		{
+			return true;
+		}
+		else if (op_imm16 == ppu_instructions::XORIS({}, {}, 0xe005))
+		{
+			return true;
+		}
+		// RawSPU MMIO base + problem state offset + 264k of SNR2 offset (STW allows 32K+- offset so in order to access SNR2 it needs to first add another 64k)
+		// SNR2 is the only register currently implemented that has its 0x80000 bit is set so its the only one its hardcoded access is done this way
+		else if (op_imm16 == ppu_instructions::ADDIS({}, {}, -0x1ffa))
+		{
+			return true;
+		}
+		else if (op_imm16 == ppu_instructions::ORIS({}, {}, 0xe006))
+		{
+			return true;
+		}
+		else if (op_imm16 == ppu_instructions::XORIS({}, {}, 0xe006))
+		{
+			return true;
+		}
+		// Try to detect a function that receives RawSPU problem state base pointer as an argument
+		else if ((op_imm16 & ~0xffff) == ppu_instructions::LWZ({}, {}, 0) ||
+			(op_imm16 & ~0xffff) == ppu_instructions::STW({}, {}, 0) ||
+			(op_imm16 & ~0xffff) == ppu_instructions::ADDI({}, {}, 0))
+		{
+			const bool is_load = (op_imm16 & ~0xffff) == ppu_instructions::LWZ({}, {}, 0);
+			const bool is_store = (op_imm16 & ~0xffff) == ppu_instructions::STW({}, {}, 0);
+			const bool is_neither = !is_store && !is_load;
+			const bool is_snr = (is_store || is_neither) && ((op_imm16 & 0xffff) == (SPU_RdSigNotify2_offs & 0xffff) || (op_imm16 & 0xffff) == (SPU_RdSigNotify1_offs & 0xffff));
+
+			if (is_snr || spu_thread::test_is_problem_state_register_offset(op_imm16 & 0xffff, is_load || is_neither, is_store || is_neither))
+			{
+				reg_offsets.insert(op_imm16 & 0xffff);
+
+				if (reg_offsets.size() >= 2)
+				{
+					// Assume high MMIO likelyhood if more than one offset appears in nearby code
+					// Such as common IN_MBOX + OUT_MBOX
+					return true;
+				}
+			}
+		}
+	}
+
+	return false;
+}
+
+struct ppu_toc_manager
+{
+	std::unordered_map<u32, u32> toc_map;
+
+	shared_mutex mutex;
+};
 
 static void ppu_check_toc(ppu_thread& ppu, ppu_opcode_t op, be_t<u32>* this_op, ppu_intrp_func* next_fn)
 {
-	// Compare TOC with expected value
-	const auto found = s_ppu_toc->find(ppu.cia);
+	ppu.cia = vm::get_addr(this_op);
 
-	if (ppu.gpr[2] != found->second)
 	{
-		ppu_log.error("Unexpected TOC (0x%x, expected 0x%x)", ppu.gpr[2], found->second);
+		auto& toc_manager = g_fxo->get<ppu_toc_manager>();
+
+		reader_lock lock(toc_manager.mutex);
+
+		auto& ppu_toc = toc_manager.toc_map;
+
+		const auto found = ppu_toc.find(ppu.cia);
+
+		if (found != ppu_toc.end())
+		{
+			const u32 toc = atomic_storage<u32>::load(found->second);
+
+			// Compare TOC with expected value
+			if (toc != umax && ppu.gpr[2] != toc)
+			{
+				ppu_log.error("Unexpected TOC (0x%x, expected 0x%x)", ppu.gpr[2], toc);
+				atomic_storage<u32>::exchange(found->second, u32{umax});
+			}
+		}
 	}
 
 	// Fallback to the interpreter function
@@ -1535,7 +1720,7 @@ void ppu_thread::cpu_task()
 			// Wait until the progress dialog is closed.
 			// We don't want to open a cell dialog while a native progress dialog is still open.
 			thread_ctrl::wait_on<atomic_wait::op_ne>(g_progr_ptotal, 0);
-			g_fxo->get<progress_dialog_server>().show_overlay_message_only = true;
+			g_fxo->get<progress_dialog_workaround>().show_overlay_message_only = true;
 
 			// Sadly we can't postpone initializing guest time because we need to run PPU threads
 			// (the farther it's postponed, the less accuracy of guest time has been lost)
@@ -2267,7 +2452,7 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 		ppu.use_full_rdata = false;
 	}
 
-	if ((addr & addr_mask) == (ppu.last_faddr & addr_mask))
+	if (ppu_log.trace && (addr & addr_mask) == (ppu.last_faddr & addr_mask))
 	{
 		ppu_log.trace(u8"LARX after fail: addr=0x%x, faddr=0x%x, time=%u c", addr, ppu.last_faddr, (perf0.get() - ppu.last_ftsc));
 	}
@@ -2974,10 +3159,6 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 
 	const std::string firmware_sprx_path = vfs::get("/dev_flash/sys/external/");
 
-	// Map fixed address executables area, fake overlay support
-	const bool had_ovl = !vm::map(0x3000'0000, 0x1000'0000, 0x202).operator bool();
-	const u32 ppc_seg = std::exchange(g_ps3_process_info.ppc_seg, 0x3);
-
 	std::vector<std::pair<std::string, u64>> file_queue;
 	file_queue.reserve(2000);
 
@@ -3062,7 +3243,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 			}
 
 			// Check .self filename
-			if (upper.ends_with(".SELF"))
+			if (upper.ends_with(".SELF") && Emu.GetBoot() != dir_queue[i] + entry.name)
 			{
 				// Get full path
 				file_queue.emplace_back(dir_queue[i] + entry.name,  0);
@@ -3119,7 +3300,8 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 
 	atomic_t<usz> fnext = 0;
 
-	shared_mutex sprx_mtx, ovl_mtx;
+	lf_queue<std::string> possible_exec_file_paths;
+	shared_mutex ovl_mtx;
 
 	named_thread_group workers("SPRX Worker ", std::min<u32>(utils::get_thread_count(), ::size32(file_queue)), [&]
 	{
@@ -3171,17 +3353,11 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 
 			if (ppu_prx_object obj = src; (prx_err = obj, obj == elf_error::ok))
 			{
-				std::unique_lock lock(sprx_mtx);
-
-				if (auto prx = ppu_load_prx(obj, path, offset))
+				if (auto prx = ppu_load_prx(obj, true, path, offset))
 				{
-					lock.unlock();
 					obj.clear(), src.close(); // Clear decrypted file and elf object memory
 					ppu_initialize(*prx);
-					idm::remove<lv2_obj, lv2_prx>(idm::last_id());
-					lock.lock();
 					ppu_unload_prx(*prx);
-					lock.unlock();
 					ppu_finalize(*prx);
 					continue;
 				}
@@ -3194,10 +3370,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 			{
 				while (ovl_err == elf_error::ok)
 				{
-					// Only one thread compiles OVL atm, other can compile PRX cuncurrently
-					std::unique_lock lock(ovl_mtx);
-
-					auto [ovlm, error] = ppu_load_overlay(obj, path, offset);
+					auto [ovlm, error] = ppu_load_overlay(obj, true, path, offset);
 
 					if (error)
 					{
@@ -3208,15 +3381,13 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 
 					obj.clear(), src.close(); // Clear decrypted file and elf object memory
 
-					ppu_initialize(*ovlm);
-
-					for (auto& seg : ovlm->segs)
 					{
-						vm::dealloc(seg.addr);
+						// Does not really require this lock, this is done for performance reasons.
+						// Seems like too many created threads is hard for Windows to manage efficiently with many CPU threads.
+						std::lock_guard lock(ovl_mtx);
+						ppu_initialize(*ovlm);
 					}
 
-					lock.unlock();
-					idm::remove<lv2_obj, lv2_overlay>(idm::last_id());
 					ppu_finalize(*ovlm);
 					break;
 				}
@@ -3227,7 +3398,8 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 				}
 			}
 
-			ppu_log.notice("Failed to precompile '%s' (prx: %s, ovl: %s)", path, prx_err, ovl_err);
+			ppu_log.notice("Failed to precompile '%s' (prx: %s, ovl: %s): Attempting tratment as executable file", path, prx_err, ovl_err);
+			possible_exec_file_paths.push(path);
 			continue;
 		}
 	});
@@ -3235,14 +3407,97 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 	// Join every thread
 	workers.join();
 
-	// Revert changes
-
-	if (!had_ovl)
+	named_thread exec_worker("PPU Exec Worker", [&]
 	{
-		ensure(vm::unmap(0x3000'0000).second);
-	}
+		if (!possible_exec_file_paths)
+		{
+			return;
+		}
 
-	g_ps3_process_info.ppc_seg = ppc_seg;
+#ifdef __APPLE__
+		pthread_jit_write_protect_np(false);
+#endif
+		// Set low priority
+		thread_ctrl::scoped_priority low_prio(-1);
+
+		auto slice = possible_exec_file_paths.pop_all();
+
+		auto main_module = std::move(g_fxo->get<main_ppu_module>());
+
+		for (; slice; slice.pop_front(), g_progr_fdone++)
+		{
+			g_progr_ftotal++;
+
+			if (Emu.IsStopped())
+			{
+				continue;
+			}
+
+			const std::string path = *slice;
+
+			ppu_log.notice("Trying to load as executable: %s", path);
+
+			// Load MSELF, SPRX or SELF
+			fs::file src{path};
+
+			if (!src)
+			{
+				ppu_log.error("Failed to open '%s' (%s)", path, fs::g_tls_error);
+				continue;
+			}
+
+			// Some files may fail to decrypt due to the lack of klic
+			src = decrypt_self(std::move(src));
+
+			if (!src)
+			{
+				ppu_log.notice("Failed to decrypt '%s'", path);
+				continue;
+			}
+
+			elf_error exec_err{};
+
+			if (ppu_exec_object obj = src; (exec_err = obj, obj == elf_error::ok))
+			{
+				while (exec_err == elf_error::ok)
+				{
+					main_ppu_module& _main = g_fxo->get<main_ppu_module>();
+					_main = {};
+
+					if (!ppu_load_exec(obj, true, path))
+					{
+						// Abort
+						exec_err = elf_error::header_type;
+						break;
+					}
+
+					if (!_main.analyse(0, _main.elf_entry, _main.seg0_code_end, _main.applied_pathes, [](){ return Emu.IsStopped(); }))
+					{
+						break;
+					}
+
+					obj.clear(), src.close(); // Clear decrypted file and elf object memory
+
+					ppu_initialize(_main);
+					ppu_finalize(_main);
+					_main = {};
+					break;
+				}
+
+				if (exec_err == elf_error::ok)
+				{
+					continue;
+				}
+			}
+
+			ppu_log.notice("Failed to precompile '%s' as executable (%s)", path, exec_err);
+			continue;
+		}
+
+		g_fxo->get<main_ppu_module>() = std::move(main_module);
+	});
+
+	exec_worker();
 }
 
 extern void ppu_initialize()
@@ -3339,7 +3594,7 @@ extern void ppu_initialize()
 		{
 			const std::string eseibrd = mount_point + "/vsh/module/eseibrd.sprx";
 
-			if (auto prx = ppu_load_prx(ppu_prx_object{decrypt_self(fs::file{eseibrd})}, eseibrd, 0))
+			if (auto prx = ppu_load_prx(ppu_prx_object{decrypt_self(fs::file{eseibrd})}, true, eseibrd, 0))
 			{
 				// Check if cache exists for this infinitesimally small prx
 				dev_flash_located = ppu_initialize(*prx, true);
@@ -3353,7 +3608,7 @@ extern void ppu_initialize()
 	}
 
 	// Avoid compilation if main's cache exists or it is a standalone SELF with no PARAM.SFO
-	if (compile_main && g_cfg.core.ppu_llvm_precompilation && !Emu.GetTitleID().empty())
+	if (compile_main && g_cfg.core.ppu_llvm_precompilation && !Emu.GetTitleID().empty() && !Emu.IsChildProcess())
 	{
 		// Try to add all related directories
 		const std::set<std::string> dirs = Emu.GetGameDirs();
@@ -3385,13 +3640,6 @@ extern void ppu_initialize()
 	}
 }
 
-struct ppu_toc_manager
-{
-	std::unordered_map<u32, u32> toc_map;
-
-	shared_mutex mutex;
-};
-
 bool ppu_initialize(const ppu_module& info, bool check_only)
 {
 	if (g_cfg.core.ppu_decoder != ppu_decoder_type::llvm)
@@ -3401,8 +3649,11 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 			return false;
 		}
 
-		// Temporarily
-		s_ppu_toc = &g_fxo->get<ppu_toc_manager>().toc_map;
+		auto& toc_manager = g_fxo->get<ppu_toc_manager>();
+
+		std::lock_guard lock(toc_manager.mutex);
+
+		auto& ppu_toc = toc_manager.toc_map;
 
 		for (const auto& func : info.funcs)
 		{
@@ -3413,7 +3664,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 
 			if (g_cfg.core.ppu_debug && func.size && func.toc != umax)
 			{
-				s_ppu_toc->emplace(func.addr, func.toc);
+				ppu_toc.emplace(func.addr, func.toc);
 				ppu_ref(func.addr) = &ppu_check_toc;
 			}
 		}
@@ -3441,6 +3692,8 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 			{ "__resupdate", reinterpret_cast<u64>(vm::reservation_update) },
 			{ "__resinterp", reinterpret_cast<u64>(ppu_reservation_fallback) },
 			{ "__escape", reinterpret_cast<u64>(+ppu_escape) },
+			{ "__read_maybe_mmio32", reinterpret_cast<u64>(+ppu_read_mmio_aware_u32) },
+			{ "__write_maybe_mmio32", reinterpret_cast<u64>(+ppu_write_mmio_aware_u32) },
 		};
 
 		for (u64 index = 0; index < 1024; index++)
@@ -3546,9 +3799,11 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 				continue;
 			}
 
-			for (u32 i = addr; i < addr + size; i += 4)
+			auto i_ptr = ensure(info.get_ptr<u32>(addr));
+
+			for (u32 i = addr; i < addr + size; i += 4, i_ptr++)
 			{
-				if (g_ppu_itype.decode(vm::read32(i)) == ppu_itype::MFVSCR)
+				if (g_ppu_itype.decode(*i_ptr) == ppu_itype::MFVSCR)
 				{
 					ppu_log.warning("MFVSCR found");
 					has_mfvscr = true;
@@ -3691,7 +3946,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 						if (roff > addr)
 						{
 							// Hash from addr to the beginning of the relocation
-							sha1_update(&ctx, vm::_ptr<const u8>(addr), roff - addr);
+							sha1_update(&ctx, ensure(info.get_ptr<const u8>(addr)), roff - addr);
 						}
 
 						// Hash relocation type instead
@@ -3704,9 +3959,11 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 
 					if (has_dcbz == 1)
 					{
-						for (u32 i = addr, end = block.second + block.first - 1; i <= end; i += 4)
+						auto i_ptr = ensure(info.get_ptr<u32>(addr));
+
+						for (u32 i = addr, end = block.second + block.first - 1; i <= end; i += 4, i_ptr++)
 						{
-							if (g_ppu_itype.decode(vm::read32(i)) == ppu_itype::DCBZ)
+							if (g_ppu_itype.decode(*i_ptr) == ppu_itype::DCBZ)
 							{
 								has_dcbz = 2;
 								break;
@@ -3715,7 +3972,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 					}
 
 					// Hash from addr to the end of the block
-					sha1_update(&ctx, vm::_ptr<const u8>(addr), block.second - (addr - block.first));
+					sha1_update(&ctx, ensure(info.get_ptr<const u8>(addr)), block.second - (addr - block.first));
 				}
 
 				if (reloc)
@@ -3725,9 +3982,11 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 
 				if (has_dcbz == 1)
 				{
-					for (u32 i = func.addr, end = func.addr + func.size - 1; i <= end; i += 4)
+					auto i_ptr = ensure(info.get_ptr<u32>(func.addr));
+
+					for (u32 i = func.addr, end = func.addr + func.size - 1; i <= end; i += 4, i_ptr++)
 					{
-						if (g_ppu_itype.decode(vm::read32(i)) == ppu_itype::DCBZ)
+						if (g_ppu_itype.decode(*i_ptr) == ppu_itype::DCBZ)
 						{
 							has_dcbz = 2;
 							break;
@@ -3735,7 +3994,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 					}
 				}
 
-				sha1_update(&ctx, vm::_ptr<const u8>(func.addr), func.size);
+				sha1_update(&ctx, ensure(info.get_ptr<const u8>(func.addr)), func.size);
 			}
 
 			if (false)

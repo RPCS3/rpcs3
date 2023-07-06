@@ -16,7 +16,6 @@
 
 LOG_CHANNEL(gui_log, "GUI");
 
-inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 constexpr auto qstr = QString::fromStdString;
 
 namespace gui
@@ -368,8 +367,8 @@ namespace gui
 			{
 				// Get Icon for the gs_frame from path. this handles presumably all possible use cases
 				const QString qpath = qstr(path);
-				const std::string path_list[] = { path, sstr(qpath.section("/", 0, -2, QString::SectionIncludeTrailingSep)),
-					                              sstr(qpath.section("/", 0, -3, QString::SectionIncludeTrailingSep)) };
+				const std::string path_list[] = { path, qpath.section("/", 0, -2, QString::SectionIncludeTrailingSep).toStdString(),
+					                              qpath.section("/", 0, -3, QString::SectionIncludeTrailingSep).toStdString() };
 
 				for (const std::string& pth : path_list)
 				{
@@ -427,7 +426,7 @@ namespace gui
 #ifdef _WIN32
 				// Remove double slashes and convert to native separators. Double slashes don't seem to work with the explorer call.
 				path.replace(QRegularExpression("[\\\\|/]+"), QDir::separator());
-				gui_log.notice("gui::utils::open_dir: About to open file path '%s' (original: '%s')", path.toStdString(), spath);
+				gui_log.notice("gui::utils::open_dir: About to open file path '%s' (original: '%s')", path, spath);
 
 				if (!QProcess::startDetached("explorer.exe", {"/select,", path}))
 				{
@@ -470,7 +469,7 @@ namespace gui
 
 		void open_dir(const QString& path)
 		{
-			open_dir(sstr(path));
+			open_dir(path.toStdString());
 		}
 
 		QTreeWidgetItem* find_child(QTreeWidgetItem* parent, const QString& text)

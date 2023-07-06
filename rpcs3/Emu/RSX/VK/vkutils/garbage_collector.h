@@ -44,6 +44,8 @@ namespace vk
 	{
 		virtual void dispose(vk::disposable_t& object) = 0;
 
+		virtual void add_exit_callback(std::function<void()> callback) = 0;
+
 		template<typename T>
 		void dispose(std::unique_ptr<T>& object)
 		{

@@ -29,6 +29,7 @@ namespace vk
 		// Sync
 		event* m_sync_label = nullptr;
 		atomic_t<bool> m_sync_required = false;
+		VkDependencyInfoKHR m_dependency_info{};
 
 		static constexpr u32 events_pool_size = 16384;
 		std::vector<std::unique_ptr<vk::event>> m_events_pool;
@@ -39,12 +40,12 @@ namespace vk
 
 		shared_mutex m_submit_mutex;
 
-		void init_config_options(vk_gpu_scheduler_mode mode);
+		void init_config_options(vk_gpu_scheduler_mode mode, const VkDependencyInfoKHR& queue_dependency);
 		void delayed_init();
 		void insert_sync_event();
 
 	public:
-		AsyncTaskScheduler(vk_gpu_scheduler_mode mode); // This ctor stops default initialization by fxo
+		AsyncTaskScheduler(vk_gpu_scheduler_mode mode, const VkDependencyInfoKHR& queue_dependency);
 		~AsyncTaskScheduler();
 
 		command_buffer* get_current();

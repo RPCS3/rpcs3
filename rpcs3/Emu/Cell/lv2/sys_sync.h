@@ -84,6 +84,11 @@ private:
 public:
 	SAVESTATE_INIT_POS(4); // Dependency on PPUs
 
+	lv2_obj() noexcept = default;
+	lv2_obj(u32 i) noexcept : exists{ i } {}
+	lv2_obj(utils::serial&) noexcept {}
+	void save(utils::serial&) {}
+
 	// Existence validation (workaround for shared-ptr ref-counting)
 	atomic_t<u32> exists = 0;
 
@@ -93,17 +98,13 @@ public:
 		return ptr && ptr->exists;
 	}
 
-	static std::string name64(u64 name_u64)
+	// wrapper for name64 string formatting
+	struct name_64
 	{
-		const auto ptr = reinterpret_cast<const char*>(&name_u64);
+		u64 data;
+	};
 
-		// NTS string, ignore invalid/newline characters
-		// Example: "lv2\n\0tx" will be printed as "lv2"
-		std::string str{ptr, std::find(ptr, ptr + 7, '\0')};
-		str.erase(std::remove_if(str.begin(), str.end(), [](uchar c){ return !std::isprint(c); }), str.end());
-
-		return str;
-	}
+	static std::string name64(u64 name_u64);
 
 	// Find and remove the object from the linked list
 	template <bool ModifyNode = true, typename T>

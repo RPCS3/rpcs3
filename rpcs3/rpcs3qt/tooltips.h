@@ -227,6 +227,8 @@ public:
 		const QString show_move_cursor  = tr("Shows the raw position of the PS Move input.\nThis can be very helpful during calibration screens.");
 		const QString midi_devices      = tr("Select up to 3 emulated midi devices and their type.");
 
+		const QString lock_overlay_input_to_player_one  = tr("Locks the native overlay input to the first player.");
+
 		// network
 
 		const QString net_status    = tr("If set to Connected, RPCS3 will allow programs to use your internet connection.");
@@ -278,6 +280,7 @@ public:
 		const QString mouse_deadzones    = tr("The mouse deadzones represent the games' own deadzones on the x and y axes. Games usually enforce their own deadzones to filter out small unwanted stick movements. In consequence, mouse input feels unintuitive since it relies on immediate responsiveness. You can change these values temporarily during gameplay in order to find out the optimal values for your game (Alt+T and Alt+Y for x, Alt+U and Alt+I for y).");
 		const QString mouse_acceleration = tr("The mouse acceleration can be used to amplify your mouse movements on the x and y axes. Increase these values if your mouse movements feel too slow while playing a game. You can change these values temporarily during gameplay in order to find out the optimal values (Alt+G and Alt+H for x, Alt+J and Alt+K for y). Keep in mind that modern mice usually provide different modes and settings that can be used to change mouse movement speeds as well.");
 		const QString mouse_movement     = tr("The mouse movement mode determines how the mouse movement is translated to pad input.<br>Use the relative mode for traditional mouse movement.<br>Use the absolute mode to use the mouse's distance to the center of the screen as input value.");
+		const QString button_assignment  = tr("Left-click: remap this button.<br>Shift + Left-click: add an addition button mapping.<br>Right-click: clear this button mapping.");
 
 	} gamepad_settings;
 };

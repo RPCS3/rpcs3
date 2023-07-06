@@ -10,7 +10,7 @@
 
 namespace vk
 {
-	AsyncTaskScheduler::AsyncTaskScheduler([[maybe_unused]] vk_gpu_scheduler_mode mode)
+	AsyncTaskScheduler::AsyncTaskScheduler(vk_gpu_scheduler_mode mode, const VkDependencyInfoKHR& queue_dependency)
 	{
 		if (g_cfg.video.renderer != video_renderer::vulkan || !g_cfg.video.vk.asynchronous_texture_streaming)
 		{
@@ -20,7 +20,7 @@ namespace vk
 			return;
 		}
 
-		init_config_options(mode);
+		init_config_options(mode, queue_dependency);
 	}
 
 	AsyncTaskScheduler::~AsyncTaskScheduler()
@@ -32,7 +32,7 @@ namespace vk
 		}
 	}
 
-	void AsyncTaskScheduler::init_config_options(vk_gpu_scheduler_mode mode)
+	void AsyncTaskScheduler::init_config_options(vk_gpu_scheduler_mode mode, const VkDependencyInfoKHR& queue_dependency)
 	{
 		std::lock_guard lock(m_config_mutex);
 		if (std::exchange(m_options_initialized, true))
@@ -43,6 +43,8 @@ namespace vk
 
 		m_use_host_scheduler = (mode == vk_gpu_scheduler_mode::safe) || g_cfg.video.strict_rendering_mode;
 		rsx_log.notice("Asynchronous task scheduler is active running in %s mode", m_use_host_scheduler? "'Safe'" : "'Fast'");
+
+		m_dependency_info = queue_dependency;
 	}
 
 	void AsyncTaskScheduler::delayed_init()
@@ -76,7 +78,7 @@ namespace vk
 		auto& sync_label = m_events_pool[m_next_event_id++ % events_pool_size];
 
 		sync_label->reset();
-		sync_label->signal(*m_current_cb, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0);
+		sync_label->signal(*m_current_cb, m_dependency_info);
 		m_sync_label = sync_label.get();
 	}
 

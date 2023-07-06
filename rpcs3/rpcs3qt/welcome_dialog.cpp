@@ -2,22 +2,30 @@
 #include "ui_welcome_dialog.h"
 
 #include "gui_settings.h"
+#include "shortcut_utils.h"
 #include "qt_utils.h"
+
+#include "Utilities/File.h"
 
 #include <QPushButton>
 #include <QCheckBox>
 #include <QSvgWidget>
 
-welcome_dialog::welcome_dialog(std::shared_ptr<gui_settings> gui_settings, QWidget* parent)
+welcome_dialog::welcome_dialog(std::shared_ptr<gui_settings> gui_settings, bool is_manual_show, QWidget* parent)
 	: QDialog(parent)
 	, ui(new Ui::welcome_dialog)
 	, m_gui_settings(std::move(gui_settings))
 {
 	ui->setupUi(this);
 
-	setWindowFlags(windowFlags() & Qt::WindowTitleHint);
+	setAttribute(Qt::WA_DeleteOnClose);
+	setWindowFlag(Qt::WindowCloseButtonHint, is_manual_show);
 
-	ui->okay->setEnabled(false);
+	ui->okay->setEnabled(is_manual_show);
+	ui->i_have_read->setChecked(is_manual_show);
+	ui->i_have_read->setEnabled(!is_manual_show);
+	ui->do_not_show->setEnabled(!is_manual_show);
+	ui->do_not_show->setChecked(!m_gui_settings->GetValue(gui::ib_show_welcome).toBool());
 	ui->icon_label->load(QStringLiteral(":/rpcs3.svg"));
 	ui->label_3->setText(tr(
 		R"(
@@ -41,19 +49,43 @@ welcome_dialog::welcome_dialog(std::shared_ptr<gui_settings> gui_settings, QWidg
 		)"
 	).arg(gui::utils::get_link_style()));
 
-	connect(ui->i_have_read, &QCheckBox::clicked, [this](bool checked)
+	if (!is_manual_show)
 	{
-		ui->okay->setEnabled(checked);
-	});
+		connect(ui->i_have_read, &QCheckBox::clicked, this, [this](bool checked)
+		{
+			ui->okay->setEnabled(checked);
+		});
 
-	connect(ui->do_not_show, &QCheckBox::clicked, [this](bool checked)
-	{
-		m_gui_settings->SetValue(gui::ib_show_welcome, QVariant(!checked));
-	});
+		connect(ui->do_not_show, &QCheckBox::clicked, this, [this](bool checked)
+		{
+			m_gui_settings->SetValue(gui::ib_show_welcome, QVariant(!checked));
+		});
+	}
 
 	connect(ui->okay, &QPushButton::clicked, this, &QDialog::accept);
 
+#ifdef _WIN32
+	ui->create_applications_menu_shortcut->setText(tr("&Create Start Menu shortcut"));
+#elif defined(__APPLE__)
+	ui->create_applications_menu_shortcut->setText(tr("&Create Launchpad shortcut"));
+#else
+	ui->create_applications_menu_shortcut->setText(tr("&Create Application Menu shortcut"));
+#endif
+
 	layout()->setSizeConstraint(QLayout::SetFixedSize);
+
+	connect(this, &QDialog::finished, this, [this]()
+	{
+		if (ui->create_desktop_shortcut->isChecked())
+		{
+			gui::utils::create_shortcut("RPCS3", "", "RPCS3", ":/rpcs3.svg", fs::get_temp_dir(), gui::utils::shortcut_location::desktop);
+		}
+
+		if (ui->create_applications_menu_shortcut->isChecked())
+		{
+			gui::utils::create_shortcut("RPCS3", "", "RPCS3", ":/rpcs3.svg", fs::get_temp_dir(), gui::utils::shortcut_location::applications);
+		}
+	});
 }
 
 welcome_dialog::~welcome_dialog()

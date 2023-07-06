@@ -674,6 +674,7 @@ namespace ppu_instructions
 
 	inline u32 ADDI(u32 rt, u32 ra, s32 si) { ppu_opcode_t op{ 0x0eu << 26 }; op.rd = rt; op.ra = ra; op.simm16 = si; return op.opcode; }
 	inline u32 ADDIS(u32 rt, u32 ra, s32 si) { ppu_opcode_t op{ 0x0fu << 26 }; op.rd = rt; op.ra = ra; op.simm16 = si; return op.opcode; }
+	inline u32 XORIS(u32 rt, u32 ra, s32 si) { ppu_opcode_t op{ 0x1bu << 26 }; op.rd = rt; op.ra = ra; op.simm16 = si; return op.opcode; }
 	inline u32 ORI(u32 rt, u32 ra, u32 ui) { ppu_opcode_t op{ 0x18u << 26 }; op.rd = rt; op.ra = ra; op.uimm16 = ui; return op.opcode; }
 	inline u32 ORIS(u32 rt, u32 ra, u32 ui) { ppu_opcode_t op{ 0x19u << 26 }; op.rd = rt; op.ra = ra; op.uimm16 = ui; return op.opcode; }
 	inline u32 OR(u32 ra, u32 rs, u32 rb, bool rc = false) { ppu_opcode_t op{ 0x1fu << 26 | 0x1bcu << 1 }; op.rs = rs; op.ra = ra; op.rb = rb; op.rc = rc; return op.opcode; }
@@ -685,6 +686,7 @@ namespace ppu_instructions
 	inline u32 MFSPR(u32 rt, u32 spr) { ppu_opcode_t op{ 0x1fu << 26 | 0x153u << 1 }; op.rd = rt; op.spr = spr; return op.opcode; }
 	inline u32 MTSPR(u32 spr, u32 rs) { ppu_opcode_t op{ 0x1fu << 26 | 0x1d3u << 1 }; op.rs = rs; op.spr = spr; return op.opcode; }
 	inline u32 LWZ(u32 rt, u32 ra, s32 si) { ppu_opcode_t op{ 0x20u << 26 }; op.rd = rt; op.ra = ra; op.simm16 = si; return op.opcode; }
+	inline u32 STW(u32 rt, u32 ra, s32 si) { ppu_opcode_t op{ 0x24u << 26 }; op.rd = rt; op.ra = ra; op.simm16 = si; return op.opcode; }
 	inline u32 STD(u32 rs, u32 ra, s32 si) { ppu_opcode_t op{ 0x3eu << 26 }; op.rs = rs; op.ra = ra; op.ds = si / 4; return op.opcode; }
 	inline u32 STDU(u32 rs, u32 ra, s32 si) { ppu_opcode_t op{ 0x3eu << 26 | 1 }; op.rs = rs; op.ra = ra; op.ds = si / 4; return op.opcode; }
 	inline u32 LD(u32 rt, u32 ra, s32 si) { ppu_opcode_t op{ 0x3au << 26 }; op.rd = rt; op.ra = ra; op.ds = si / 4; return op.opcode; }
@@ -697,6 +699,7 @@ namespace ppu_instructions
 	inline u32 STVX(u32 vs, u32 ra, u32 rb) { ppu_opcode_t op{ 31 << 26 | 231 << 1 }; op.vs = vs; op.ra = ra; op.rb = rb; return op.opcode; }
 	inline u32 LFD(u32 frd, u32 ra, s32 si) { ppu_opcode_t op{ 50u << 26 }; op.frd = frd; op.ra = ra; op.simm16 = si; return op.opcode; }
 	inline u32 LVX(u32 vd, u32 ra, u32 rb) { ppu_opcode_t op{ 31 << 26 | 103 << 1 }; op.vd = vd; op.ra = ra; op.rb = rb; return op.opcode; }
+	inline constexpr u32 EIEIO() { return 0x7c0006ac; }
 
 	namespace implicts
 	{
@@ -734,7 +737,7 @@ namespace ppu_instructions
 		inline u32 CLRLDI(u32 x, u32 y, u32 n) { return RLDICL(x, y, 0, n, false); }
 		inline u32 CLRRDI(u32 x, u32 y, u32 n) { return RLDICR(x, y, 0, 63 - n, false); }
 
-		inline u32 TRAP() { return 0x7FE00008; } // tw 31,r0,r0
+		inline constexpr u32 TRAP() { return 0x7FE00008; } // tw 31,r0,r0
 	}
 
 	using namespace implicts;

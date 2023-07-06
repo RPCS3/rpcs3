@@ -80,8 +80,10 @@ class pad_settings_dialog : public QDialog
 	struct pad_button
 	{
 		cfg::string* cfg_text = nullptr;
-		std::string key;
+		std::string keys;
 		QString text;
+
+		void insert_key(const std::string& key, bool append_key);
 	};
 
 	const QString Disconnected_suffix = tr(" (disconnected)");
@@ -150,9 +152,10 @@ private:
 	int m_last_player_id = 0;
 
 	// Remap Timer
-	const int MAX_SECONDS = 5;
+	static constexpr int MAX_SECONDS = 5;
 	int m_seconds = MAX_SECONDS;
-	QTimer m_timer;
+	QTimer m_remap_timer;
+	bool m_enable_multi_binding = false;
 
 	// Mouse Move
 	QPoint m_last_pos;
@@ -233,4 +236,5 @@ protected:
 	void mouseMoveEvent(QMouseEvent *event) override;
 	void wheelEvent(QWheelEvent *event) override;
 	bool eventFilter(QObject* object, QEvent* event) override;
+	void closeEvent(QCloseEvent* event) override;
 };

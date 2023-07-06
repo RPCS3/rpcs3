@@ -865,6 +865,7 @@ public:
 
 	bool read_reg(const u32 addr, u32& value);
 	bool write_reg(const u32 addr, const u32 value);
+	static bool test_is_problem_state_register_offset(u32 offset, bool for_read, bool for_write) noexcept;
 
 	static atomic_t<u32> g_raw_spu_ctr;
 	static atomic_t<u32> g_raw_spu_id[5];

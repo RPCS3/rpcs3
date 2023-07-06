@@ -1224,6 +1224,7 @@ void trophy_manager_dialog::closeEvent(QCloseEvent *event)
 	m_gui_settings->SetValue(gui::tr_splitterState, m_splitter->saveState());
 	m_gui_settings->SetValue(gui::tr_games_state,  m_game_table->horizontalHeader()->saveState());
 	m_gui_settings->SetValue(gui::tr_trophy_state, m_trophy_table->horizontalHeader()->saveState());
+	m_gui_settings->sync();
 
 	QWidget::closeEvent(event);
 }

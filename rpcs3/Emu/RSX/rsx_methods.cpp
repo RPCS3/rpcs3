@@ -251,7 +251,8 @@ namespace rsx
 
 			if ((location & ~7) != (CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_0 & ~7))
 			{
-				rsx_log.trace("NV4097_NOTIFY: invalid context = 0x%x", method_registers.context_dma_notify());
+				if (rsx_log.trace)
+					rsx_log.trace("NV4097_NOTIFY: invalid context = 0x%x", method_registers.context_dma_notify());
 				return;
 			}
 

@@ -35,6 +35,7 @@
 #include "shortcut_dialog.h"
 #include "system_cmd_dialog.h"
 #include "emulated_pad_settings_dialog.h"
+#include "welcome_dialog.h"
 
 #include <thread>
 #include <charconv>
@@ -108,7 +109,6 @@ main_window::main_window(std::shared_ptr<gui_settings> gui_settings, std::shared
 
 main_window::~main_window()
 {
-	SaveWindowState();
 }
 
 /* An init method is used so that RPCS3App can create the necessary connects before calling init (specifically the stylesheet connect).
@@ -147,7 +147,6 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 	if (enable_play_last)
 	{
 		ui->sysPauseAct->setText(tr("&Play last played game"));
-		ui->sysPauseAct->setShortcut(QKeySequence("Ctrl+R"));
 		ui->sysPauseAct->setIcon(m_icon_play);
 		ui->toolbar_start->setToolTip(start_tooltip);
 	}
@@ -312,12 +311,18 @@ void main_window::ResizeIcons(int index)
 
 void main_window::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKeySequence& key_sequence)
 {
-	gui_log.notice("Main window registered shortcut: %s (%s)", shortcut_key, key_sequence.toString().toStdString());
+	gui_log.notice("Main window registered shortcut: %s (%s)", shortcut_key, key_sequence.toString());
 
 	const system_state status = Emu.GetStatus();
 
 	switch (shortcut_key)
 	{
+	case gui::shortcuts::shortcut::mw_welcome_dialog:
+	{
+		welcome_dialog* welcome = new welcome_dialog(m_gui_settings, true, this);
+		welcome->open();
+		break;
+	}
 	case gui::shortcuts::shortcut::mw_toggle_fullscreen:
 	{
 		ui->toolbar_fullscreen->trigger();
@@ -437,6 +442,9 @@ void main_window::show_boot_error(game_boot_result status)
 		break;
 	case game_boot_result::savestate_version_unsupported:
 		message = tr("Savestate versioning data differes from your RPCS3 build.");
+		break;
+	case game_boot_result::still_running:
+		message = tr("A game or PS3 application is still running or has yet to be fully stopped.");
 		break;
 	case game_boot_result::firmware_missing: // Handled elsewhere
 	case game_boot_result::no_errors:
@@ -781,7 +789,7 @@ bool main_window::InstallPackages(QStringList file_paths, bool from_boot)
 		if (QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Do you want to install this package?\n\n%0").arg(info_string),
 			QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
 		{
-			gui_log.notice("PKG: Cancelled installation from drop.\n%s", sstr(info_string));
+			gui_log.notice("PKG: Cancelled installation from drop.\n%s", info_string);
 			return true;
 		}
 	}
@@ -1006,25 +1014,25 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 			{
 			case package_reader::result::success:
 			{
-				gui_log.success("Successfully installed %s (title_id=%s, title=%s, version=%s).", sstr(package.path), sstr(package.title_id), sstr(package.title), sstr(package.version));
+				gui_log.success("Successfully installed %s (title_id=%s, title=%s, version=%s).", package.path, package.title_id, package.title, package.version);
 				break;
 			}
 			case package_reader::result::not_started:
 			case package_reader::result::started:
 			case package_reader::result::aborted:
 			{
-				gui_log.notice("Aborted installation of %s (title_id=%s, title=%s, version=%s).", sstr(package.path), sstr(package.title_id), sstr(package.title), sstr(package.version));
+				gui_log.notice("Aborted installation of %s (title_id=%s, title=%s, version=%s).", package.path, package.title_id, package.title, package.version);
 				break;
 			}
 			case package_reader::result::error:
 			{
-				gui_log.error("Failed to install %s (title_id=%s, title=%s, version=%s).", sstr(package.path), sstr(package.title_id), sstr(package.title), sstr(package.version));
+				gui_log.error("Failed to install %s (title_id=%s, title=%s, version=%s).", package.path, package.title_id, package.title, package.version);
 				break;
 			}
 			case package_reader::result::aborted_dirty:
 			case package_reader::result::error_dirty:
 			{
-				gui_log.error("Partially installed %s (title_id=%s, title=%s, version=%s).", sstr(package.path), sstr(package.title_id), sstr(package.title), sstr(package.version));
+				gui_log.error("Partially installed %s (title_id=%s, title=%s, version=%s).", package.path, package.title_id, package.title, package.version);
 				break;
 			}
 			}
@@ -1151,12 +1159,12 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 
 			if (error == package_error::app_version)
 			{
-				gui_log.error("Cannot install %s.", sstr(package->path));
+				gui_log.error("Cannot install %s.", package->path);
 				QMessageBox::warning(this, tr("Warning!"), tr("The following package cannot be installed on top of the current data:\n%1!").arg(package->path));
 			}
 			else
 			{
-				gui_log.error("Failed to install %s.", sstr(package->path));
+				gui_log.error("Failed to install %s.", package->path);
 				QMessageBox::critical(this, tr("Failure!"), tr("Failed to install software from package:\n%1!"
 					"\nThis is very likely caused by external interference from a faulty anti-virus software."
 					"\nPlease add RPCS3 to your anti-virus\' whitelist or use better anti-virus software.").arg(package->path));
@@ -1198,7 +1206,7 @@ void main_window::InstallPup(QString file_path)
 		if (QMessageBox::question(this, tr("RPCS3 Firmware Installer"), tr("Install firmware: %1?").arg(file_path),
 			QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
 		{
-			gui_log.notice("Firmware: Cancelled installation from drop. File: %s", sstr(file_path));
+			gui_log.notice("Firmware: Cancelled installation from drop. File: %s", file_path);
 			return;
 		}
 	}
@@ -1391,7 +1399,7 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 
 		if (!vfs::mount("/pup_extract", sstr(dir_path) + '/'))
 		{
-			gui_log.error("Error while extracting firmware: Failed to mount '%s'", sstr(dir_path));
+			gui_log.error("Error while extracting firmware: Failed to mount '%s'", dir_path);
 			critical(tr("Firmware extraction failed: VFS mounting failed."));
 			return;
 		}
@@ -1402,7 +1410,7 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 			critical(tr("Firmware installation failed: Firmware contents could not be extracted."));
 		}
 
-		gui_log.success("Extracted PUP file to %s", sstr(dir_path));
+		gui_log.success("Extracted PUP file to %s", dir_path);
 		return;
 	}
 
@@ -1597,7 +1605,7 @@ void main_window::DecryptSPRXLibraries()
 
 		if (repeat_count >= 2)
 		{
-			gui_log.error("Failed to decrypt %s with specified KLIC, retrying.\n%s", path, sstr(hint));
+			gui_log.error("Failed to decrypt %s with specified KLIC, retrying.\n%s", path, hint);
 		}
 
 		input_dialog* dlg = new input_dialog(39, "", tr("Enter KLIC of %0").arg(qstr(filename)),
@@ -1658,6 +1666,8 @@ void main_window::SaveWindowState() const
 	m_game_list_frame->SaveSettings();
 	// Save splitter state
 	m_debugger_frame->SaveSettings();
+
+	m_gui_settings->sync();
 }
 
 void main_window::RepaintThumbnailIcons()
@@ -1852,8 +1862,6 @@ void main_window::OnEmuStop()
 {
 	const QString title = GetCurrentTitle();
 	const QString play_tooltip = tr("Play %0").arg(title);
-
-	m_debugger_frame->UpdateUI();
 
 	ui->sysPauseAct->setText(tr("&Play"));
 	ui->sysPauseAct->setIcon(m_icon_play);
@@ -2737,6 +2745,12 @@ void main_window::CreateConnects()
 		m_updater.check_for_updates(false, false, false, this);
 	});
 
+	connect(ui->welcomeAct, &QAction::triggered, this, [this]()
+	{
+		welcome_dialog* welcome = new welcome_dialog(m_gui_settings, true, this);
+		welcome->open();
+	});
+
 	connect(ui->aboutAct, &QAction::triggered, this, [this]
 	{
 		about_dialog dlg(this);
@@ -3126,11 +3140,11 @@ void main_window::RemoveFirmwareCache()
 		if (QDir(path).removeRecursively())
 		{
 			++caches_removed;
-			gui_log.notice("Removed firmware cache: %s", sstr(path));
+			gui_log.notice("Removed firmware cache: %s", path);
 		}
 		else
 		{
-			gui_log.warning("Could not remove firmware cache: %s", sstr(path));
+			gui_log.warning("Could not remove firmware cache: %s", path);
 		}
 
 		++caches_total;
@@ -3191,6 +3205,7 @@ void main_window::closeEvent(QCloseEvent* closeEvent)
 		Emu.GracefulShutdown(false);
 	}
 
+	SaveWindowState();
 	Emu.Quit(true);
 }
 
@@ -3255,21 +3270,21 @@ main_window::drop_type main_window::IsValidFile(const QMimeData& md, QStringList
 		}
 		else if (info.suffix().toLower() == "pkg")
 		{
-			if (drop_type != drop_type::drop_pkg && drop_type != drop_type::drop_error)
+			if (drop_type != drop_type::drop_rap_edat_pkg && drop_type != drop_type::drop_error)
 			{
 				return drop_type::drop_error;
 			}
 
-			drop_type = drop_type::drop_pkg;
+			drop_type = drop_type::drop_rap_edat_pkg;
 		}
 		else if (info.suffix().toLower() == "rap" || info.suffix().toLower() == "edat")
 		{
-			if (info.size() < 0x10 || (drop_type != drop_type::drop_rap_edat && drop_type != drop_type::drop_error))
+			if (info.size() < 0x10 || (drop_type != drop_type::drop_rap_edat_pkg && drop_type != drop_type::drop_error))
 			{
 				return drop_type::drop_error;
 			}
 
-			drop_type = drop_type::drop_rap_edat;
+			drop_type = drop_type::drop_rap_edat_pkg;
 		}
 		else if (list.size() == 1)
 		{
@@ -3298,15 +3313,18 @@ main_window::drop_type main_window::IsValidFile(const QMimeData& md, QStringList
 
 void main_window::dropEvent(QDropEvent* event)
 {
+	event->accept();
+
 	QStringList drop_paths;
 
 	switch (IsValidFile(*event->mimeData(), &drop_paths)) // get valid file paths and drop type
 	{
 	case drop_type::drop_error:
 	{
+		event->ignore();
 		break;
 	}
-	case drop_type::drop_pkg: // install the packages
+	case drop_type::drop_rap_edat_pkg: // install the packages
 	{
 		InstallPackages(drop_paths);
 		break;
@@ -3314,35 +3332,6 @@ void main_window::dropEvent(QDropEvent* event)
 	case drop_type::drop_pup: // install the firmware
 	{
 		InstallPup(drop_paths.first());
-		break;
-	}
-	case drop_type::drop_rap_edat: // import rap files to exdata dir
-	{
-		int installed_count = 0;
-
-		for (const auto& path : drop_paths)
-		{
-			const QFileInfo file_info = path;
-			const std::string extension = file_info.suffix().toLower().toStdString();
-			const std::string filename = sstr(file_info.fileName());
-
-			if (InstallFileInExData(extension, path, filename))
-			{
-				gui_log.success("Successfully copied %s file by drop: %s", extension, filename);
-				installed_count++;
-			}
-			else
-			{
-				gui_log.error("Could not copy %s file by drop: %s", extension, filename);
-			}
-		}
-
-		if (installed_count > 0)
-		{
-			// Refresh game list since we probably unlocked some games now.
-			m_game_list_frame->Refresh(true);
-		}
-
 		break;
 	}
 	case drop_type::drop_psf: // Display PARAM.SFO content
@@ -3364,14 +3353,8 @@ void main_window::dropEvent(QDropEvent* event)
 	}
 	case drop_type::drop_dir: // import valid games to gamelist (games.yaml)
 	{
-		if (!m_gui_settings->GetBootConfirmation(this))
-		{
-			return;
-		}
-
 		for (const auto& path : drop_paths)
 		{
-			Emu.GracefulShutdown(false);
 			AddGamesFromDir(path);
 		}
 
@@ -3389,12 +3372,12 @@ void main_window::dropEvent(QDropEvent* event)
 
 		if (const auto error = Emu.BootGame(sstr(drop_paths.first()), "", true); error != game_boot_result::no_errors)
 		{
-			gui_log.error("Boot failed: reason: %s, path: %s", error, sstr(drop_paths.first()));
+			gui_log.error("Boot failed: reason: %s, path: %s", error, drop_paths.first());
 			show_boot_error(error);
 		}
 		else
 		{
-			gui_log.success("Elf Boot from drag and drop done: %s", sstr(drop_paths.first()));
+			gui_log.success("Elf Boot from drag and drop done: %s", drop_paths.first());
 			m_game_list_frame->Refresh(true);
 		}
 		break;
@@ -3409,18 +3392,12 @@ void main_window::dropEvent(QDropEvent* event)
 
 void main_window::dragEnterEvent(QDragEnterEvent* event)
 {
-	if (IsValidFile(*event->mimeData()) != drop_type::drop_error)
-	{
-		event->accept();
-	}
+	event->setAccepted(IsValidFile(*event->mimeData()) != drop_type::drop_error);
 }
 
 void main_window::dragMoveEvent(QDragMoveEvent* event)
 {
-	if (IsValidFile(*event->mimeData()) != drop_type::drop_error)
-	{
-		event->accept();
-	}
+	event->setAccepted(IsValidFile(*event->mimeData()) != drop_type::drop_error);
 }
 
 void main_window::dragLeaveEvent(QDragLeaveEvent* event)

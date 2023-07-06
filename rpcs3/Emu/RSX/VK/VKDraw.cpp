@@ -478,7 +478,7 @@ void VKGSRender::load_texture_env()
 			// Sync any async scheduler tasks
 			if (auto ev = async_task_scheduler.get_primary_sync_label())
 			{
-				ev->gpu_wait(*m_current_command_buffer);
+				ev->gpu_wait(*m_current_command_buffer, m_async_compute_dependency_info);
 			}
 		}
 	}
@@ -923,7 +923,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 void VKGSRender::begin()
 {
 	// Save shader state now before prefetch and loading happens
-	m_interpreter_state = (m_graphics_state & rsx::pipeline_state::invalidate_pipeline_bits);
+	m_interpreter_state = (m_graphics_state.load() & rsx::pipeline_state::invalidate_pipeline_bits);
 
 	rsx::thread::begin();
 

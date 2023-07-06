@@ -215,7 +215,7 @@
        <item>
         <widget class="QLabel" name="developers">
          <property name="text">
-          <string>&lt;p&gt;&lt;b&gt;Developers:&lt;/b&gt;&lt;br&gt;&lt;br&gt;¬DH&lt;br&gt;¬AlexAltea&lt;br&gt;¬Hykem&lt;br&gt;¬Oil&lt;br&gt;Nekotekina&lt;br&gt;¬Bigpet&lt;br&gt;¬gopalsr83&lt;br&gt;¬tambry&lt;br&gt;¬vlj&lt;br&gt;kd-11&lt;br&gt;¬jarveson&lt;br&gt;¬raven02&lt;br&gt;AniLeo&lt;br&gt;cornytrace&lt;br&gt;ssshadow&lt;br&gt;¬Numan&lt;br&gt;hcorion&lt;br&gt;Megamouse&lt;br&gt;¬flash-fire&lt;br&gt;DAGINATSUKO&lt;br&gt;GalCiv&lt;br&gt;eladash&lt;/p&gt;</string>
+          <string>&lt;p&gt;&lt;b&gt;Developers:&lt;/b&gt;&lt;br&gt;&lt;br&gt;¬DH&lt;br&gt;¬AlexAltea&lt;br&gt;¬Hykem&lt;br&gt;¬Oil&lt;br&gt;Nekotekina&lt;br&gt;¬Bigpet&lt;br&gt;¬gopalsr83&lt;br&gt;¬tambry&lt;br&gt;¬vlj&lt;br&gt;kd-11&lt;br&gt;¬jarveson&lt;br&gt;¬raven02&lt;br&gt;AniLeo&lt;br&gt;¬cornytrace&lt;br&gt;¬ssshadow&lt;br&gt;¬Numan&lt;br&gt;hcorion&lt;br&gt;Megamouse&lt;br&gt;¬flash-fire&lt;br&gt;DAGINATSUKO&lt;br&gt;GalCiv&lt;br&gt;eladash&lt;/p&gt;</string>
          </property>
          <property name="scaledContents">
           <bool>false</bool>
@@ -231,7 +231,7 @@
        <item>
         <widget class="QLabel" name="contributors">
          <property name="text">
-          <string>&lt;p&gt;&lt;b&gt;Contributors:&lt;/b&gt;&lt;br&gt;&lt;br&gt;BlackDaemon&lt;br&gt;elisha464&lt;br&gt;Aishou&lt;br&gt;krofna&lt;br&gt;xsacha&lt;br&gt;danilaml&lt;br&gt;unknownbrackets&lt;br&gt;Zangetsu38&lt;br&gt;lioncash&lt;br&gt;achurch&lt;br&gt;darkf&lt;br&gt;Syphurith&lt;br&gt;Blaypeg&lt;br&gt;Survanium90&lt;br&gt;georgemoralis&lt;br&gt;ikki84&lt;br&gt;scribam&lt;br&gt;TGE&lt;br&gt;velocity&lt;br&gt;Farseer&lt;br&gt;Dangles&lt;br&gt;ruipin&lt;br&gt;jbeich&lt;br&gt;CookiePLMonster&lt;br&gt;Whatcookie&lt;br&gt;rajkosto&lt;br&gt;Admiral Thrawn&lt;/p&gt;</string>
+          <string>&lt;p&gt;&lt;b&gt;Contributors:&lt;/b&gt;&lt;br&gt;&lt;br&gt;BlackDaemon&lt;br&gt;elisha464&lt;br&gt;Aishou&lt;br&gt;krofna&lt;br&gt;xsacha&lt;br&gt;danilaml&lt;br&gt;unknownbrackets&lt;br&gt;Zangetsu38&lt;br&gt;lioncash&lt;br&gt;achurch&lt;br&gt;darkf&lt;br&gt;Syphurith&lt;br&gt;Blaypeg&lt;br&gt;Survanium90&lt;br&gt;georgemoralis&lt;br&gt;ikki84&lt;br&gt;scribam&lt;br&gt;TGE&lt;br&gt;velocity&lt;br&gt;Farseer&lt;br&gt;Dangles&lt;br&gt;ruipin&lt;br&gt;jbeich&lt;br&gt;CookiePLMonster&lt;br&gt;Whatcookie&lt;br&gt;rajkosto&lt;br&gt;Admiral Thrawn&lt;br&gt;FlexBy&lt;br&gt;Dunastique&lt;br&gt;Jonathan44062&lt;br&gt;yurinator557&lt;br&gt;Satan&lt;br&gt;HoldTheMourning&lt;br&gt;illusion0001&lt;/p&gt;</string>
          </property>
          <property name="alignment">
           <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
@@ -349,6 +349,20 @@
       <widget class="QPushButton" name="forum">
        <property name="text">
         <string>Forum</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="discord">
+       <property name="text">
+        <string>Discord</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="wiki">
+       <property name="text">
+        <string>Wiki</string>
        </property>
       </widget>
      </item>

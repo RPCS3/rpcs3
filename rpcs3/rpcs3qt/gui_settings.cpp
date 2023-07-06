@@ -143,7 +143,7 @@ void gui_settings::ShowBox(QMessageBox::Icon icon, const QString& title, const Q
 
 	if (has_gui_setting && !GetValue(entry).toBool())
 	{
-		cfg_log.notice("%s Dialog for Entry %s was ignored", dialog_type, entry.name.toStdString());
+		cfg_log.notice("%s Dialog for Entry %s was ignored", dialog_type, entry.name);
 		return;
 	}
 
@@ -169,7 +169,7 @@ void gui_settings::ShowBox(QMessageBox::Icon icon, const QString& title, const Q
 		if (checkBox && checkBox->isChecked())
 		{
 			SetValue(entry, false);
-			cfg_log.notice("%s Dialog for Entry %s is now disabled", dialog_type, entry.name.toStdString());
+			cfg_log.notice("%s Dialog for Entry %s is now disabled", dialog_type, entry.name);
 		}
 	});
 

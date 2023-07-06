@@ -114,7 +114,7 @@ void system_cmd_dialog::send_command()
 	const qulonglong status = m_command_box->currentData().toULongLong(&ok);
 	if (!ok)
 	{
-		gui_log.error("system_cmd_dialog::send_command: command can not be converted to qulonglong: %s", m_command_box->currentText().toStdString());
+		gui_log.error("system_cmd_dialog::send_command: command can not be converted to qulonglong: %s", m_command_box->currentText());
 		QMessageBox::warning(this, tr("Listen!"), tr("The selected command is bugged.\nPlease contact a developer."));
 		return;
 	}
@@ -122,7 +122,7 @@ void system_cmd_dialog::send_command()
 	const qulonglong param = hex_value(m_value_input->text(), ok);
 	if (!ok)
 	{
-		gui_log.error("system_cmd_dialog::send_command: value can not be converted to qulonglong: %s", m_value_input->text().toStdString());
+		gui_log.error("system_cmd_dialog::send_command: value can not be converted to qulonglong: %s", m_value_input->text());
 		QMessageBox::information(this, tr("Listen!"), tr("Please select a proper value first."));
 		return;
 	}
@@ -137,7 +137,7 @@ void system_cmd_dialog::send_custom_command()
 	const qulonglong status = hex_value(m_custom_command_input->text(), ok);
 	if (!ok)
 	{
-		gui_log.error("system_cmd_dialog::send_custom_command: command can not be converted to qulonglong: %s", m_custom_command_input->text().toStdString());
+		gui_log.error("system_cmd_dialog::send_custom_command: command can not be converted to qulonglong: %s", m_custom_command_input->text());
 		QMessageBox::information(this, tr("Listen!"), tr("Please select a proper custom command first."));
 		return;
 	}
@@ -145,7 +145,7 @@ void system_cmd_dialog::send_custom_command()
 	const qulonglong param = hex_value(m_value_input->text(), ok);
 	if (!ok)
 	{
-		gui_log.error("system_cmd_dialog::send_custom_command: value can not be converted to qulonglong: %s", m_value_input->text().toStdString());
+		gui_log.error("system_cmd_dialog::send_custom_command: value can not be converted to qulonglong: %s", m_value_input->text());
 		QMessageBox::information(this, tr("Listen!"), tr("Please select a proper value first."));
 		return;
 	}

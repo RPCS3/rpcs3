@@ -2,6 +2,7 @@
 #include "buffer_object.h"
 #include "commands.h"
 #include "device.h"
+#include "garbage_collector.h"
 #include "sync.h"
 #include "shared.h"
 
@@ -10,11 +11,142 @@
 #include "util/sysinfo.hpp"
 #include "util/asm.hpp"
 
-// FIXME: namespace pollution
-#include "../VKResourceManager.h"
-
 namespace vk
 {
+	namespace globals
+	{
+		static std::unique_ptr<gpu_debug_marker_pool> g_gpu_debug_marker_pool;
+		static std::unique_ptr<gpu_label_pool> g_gpu_label_pool;
+
+		gpu_debug_marker_pool& get_shared_marker_pool(const vk::render_device& dev)
+		{
+			if (!g_gpu_debug_marker_pool)
+			{
+				g_gpu_debug_marker_pool = std::make_unique<gpu_debug_marker_pool>(dev, 65536);
+				vk::get_gc()->add_exit_callback([]()
+				{
+					g_gpu_debug_marker_pool.reset();
+				});
+			}
+
+			return *g_gpu_debug_marker_pool;
+		}
+
+		gpu_label_pool& get_shared_label_pool(const vk::render_device& dev)
+		{
+			if (!g_gpu_label_pool)
+			{
+				g_gpu_label_pool = std::make_unique<gpu_label_pool>(dev, 65536);
+				vk::get_gc()->add_exit_callback([]()
+				{
+					g_gpu_label_pool.reset();
+				});
+			}
+
+			return *g_gpu_label_pool;
+		}
+	}
+
+	// Util
+	namespace v1_utils
+	{
+		VkPipelineStageFlags gather_src_stages(const VkDependencyInfoKHR& dependency)
+		{
+			VkPipelineStageFlags stages = VK_PIPELINE_STAGE_NONE;
+			for (u32 i = 0; i < dependency.bufferMemoryBarrierCount; ++i)
+			{
+				stages |= dependency.pBufferMemoryBarriers[i].srcStageMask;
+			}
+			for (u32 i = 0; i < dependency.imageMemoryBarrierCount; ++i)
+			{
+				stages |= dependency.pImageMemoryBarriers[i].srcStageMask;
+			}
+			for (u32 i = 0; i < dependency.memoryBarrierCount; ++i)
+			{
+				stages |= dependency.pMemoryBarriers[i].srcStageMask;
+			}
+			return stages;
+		}
+
+		VkPipelineStageFlags gather_dst_stages(const VkDependencyInfoKHR& dependency)
+		{
+			VkPipelineStageFlags stages = VK_PIPELINE_STAGE_NONE;
+			for (u32 i = 0; i < dependency.bufferMemoryBarrierCount; ++i)
+			{
+				stages |= dependency.pBufferMemoryBarriers[i].dstStageMask;
+			}
+			for (u32 i = 0; i < dependency.imageMemoryBarrierCount; ++i)
+			{
+				stages |= dependency.pImageMemoryBarriers[i].dstStageMask;
+			}
+			for (u32 i = 0; i < dependency.memoryBarrierCount; ++i)
+			{
+				stages |= dependency.pMemoryBarriers[i].dstStageMask;
+			}
+			return stages;
+		}
+
+		auto get_memory_barriers(const VkDependencyInfoKHR& dependency)
+		{
+			std::vector<VkMemoryBarrier> result;
+			for (u32 i = 0; i < dependency.memoryBarrierCount; ++i)
+			{
+				result.push_back
+				({
+					VK_STRUCTURE_TYPE_MEMORY_BARRIER,
+					nullptr,
+					static_cast<VkAccessFlags>(dependency.pMemoryBarriers[i].srcAccessMask),
+					static_cast<VkAccessFlags>(dependency.pMemoryBarriers[i].dstAccessMask)
+				});
+			}
+			return result;
+		}
+
+		auto get_image_memory_barriers(const VkDependencyInfoKHR& dependency)
+		{
+			std::vector<VkImageMemoryBarrier> result;
+			for (u32 i = 0; i < dependency.imageMemoryBarrierCount; ++i)
+			{
+				result.push_back
+				({
+					VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+					nullptr,
+					static_cast<VkAccessFlags>(dependency.pImageMemoryBarriers[i].srcAccessMask),
+					static_cast<VkAccessFlags>(dependency.pImageMemoryBarriers[i].dstAccessMask),
+					dependency.pImageMemoryBarriers[i].oldLayout,
+					dependency.pImageMemoryBarriers[i].newLayout,
+					dependency.pImageMemoryBarriers[i].srcQueueFamilyIndex,
+					dependency.pImageMemoryBarriers[i].dstQueueFamilyIndex,
+					dependency.pImageMemoryBarriers[i].image,
+					dependency.pImageMemoryBarriers[i].subresourceRange
+				});
+			}
+			return result;
+		}
+
+		auto get_buffer_memory_barriers(const VkDependencyInfoKHR& dependency)
+		{
+			std::vector<VkBufferMemoryBarrier> result;
+			for (u32 i = 0; i < dependency.bufferMemoryBarrierCount; ++i)
+			{
+				result.push_back
+				({
+					VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+					nullptr,
+					static_cast<VkAccessFlags>(dependency.pBufferMemoryBarriers[i].srcAccessMask),
+					static_cast<VkAccessFlags>(dependency.pBufferMemoryBarriers[i].dstAccessMask),
+					dependency.pBufferMemoryBarriers[i].srcQueueFamilyIndex,
+					dependency.pBufferMemoryBarriers[i].dstQueueFamilyIndex,
+					dependency.pBufferMemoryBarriers[i].buffer,
+					dependency.pBufferMemoryBarriers[i].offset,
+					dependency.pBufferMemoryBarriers[i].size
+				});
+			}
+			return result;
+		}
+	}
+
+	// Objects
 	fence::fence(VkDevice dev)
 	{
 		owner                  = dev;
@@ -75,108 +207,194 @@ namespace vk
 	}
 
 	event::event(const render_device& dev, sync_domain domain)
-		: m_device(dev)
+		: m_device(&dev), m_domain(domain)
 	{
-		const auto vendor = dev.gpu().get_driver_vendor();
-		if (domain != sync_domain::gpu &&
-			(vendor == vk::driver_vendor::AMD || vendor == vk::driver_vendor::INTEL))
-		{
-			// Work around AMD and INTEL broken event signal synchronization scope
-			// Will be dropped after transitioning to VK1.3
-			m_buffer = std::make_unique<buffer>
-			(
-				dev,
-				4,
-				dev.get_memory_mapping().host_visible_coherent,
-				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-				VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-				0,
-				VMM_ALLOCATION_POOL_SYSTEM
-			);
+		m_backend = dev.get_synchronization2_support()
+			? sync_backend::events_v2
+			: sync_backend::events_v1;
 
-			m_value = reinterpret_cast<u32*>(m_buffer->map(0, 4));
-			*m_value = 0xCAFEBABE;
-		}
-		else
+		if (domain == sync_domain::host &&
+			vk::get_driver_vendor() == vk::driver_vendor::AMD &&
+			vk::get_chip_family() < vk::chip_class::AMD_navi1x)
 		{
-			VkEventCreateInfo info
-			{
-				.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO,
-				.pNext = nullptr,
-				.flags = 0
-			};
-			vkCreateEvent(dev, &info, nullptr, &m_vk_event);
+			// Events don't work quite right on AMD drivers
+			m_backend = sync_backend::gpu_label;
+
+			m_label = std::make_unique<vk::gpu_label>(globals::get_shared_label_pool(dev));
+			return;
 		}
+
+		VkEventCreateInfo info
+		{
+			.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO,
+			.pNext = nullptr,
+			.flags = 0
+		};
+
+		if (domain == sync_domain::gpu && m_backend == sync_backend::events_v2)
+		{
+			info.flags = VK_EVENT_CREATE_DEVICE_ONLY_BIT_KHR;
+		}
+
+		CHECK_RESULT(vkCreateEvent(dev, &info, nullptr, &m_vk_event));
 	}
 
 	event::~event()
 	{
 		if (m_vk_event) [[likely]]
 		{
-			vkDestroyEvent(m_device, m_vk_event, nullptr);
-		}
-		else
-		{
-			m_buffer->unmap();
-			m_buffer.reset();
-			m_value = nullptr;
+			vkDestroyEvent(*m_device, m_vk_event, nullptr);
 		}
 	}
 
-	void event::signal(const command_buffer& cmd, VkPipelineStageFlags stages, VkAccessFlags access)
+	void event::resolve_dependencies(const command_buffer& cmd, const VkDependencyInfoKHR& dependency)
 	{
-		if (m_vk_event) [[likely]]
+		ensure(m_backend != sync_backend::gpu_label);
+
+		if (m_backend == sync_backend::events_v2)
 		{
-			vkCmdSetEvent(cmd, m_vk_event, stages);
+			m_device->_vkCmdPipelineBarrier2KHR(cmd, &dependency);
+			return;
 		}
-		else
+
+		const auto src_stages = v1_utils::gather_src_stages(dependency);
+		const auto dst_stages = v1_utils::gather_dst_stages(dependency);
+		const auto memory_barriers = v1_utils::get_memory_barriers(dependency);
+		const auto image_memory_barriers = v1_utils::get_image_memory_barriers(dependency);
+		const auto buffer_memory_barriers = v1_utils::get_buffer_memory_barriers(dependency);
+
+		vkCmdPipelineBarrier(cmd, src_stages, dst_stages, dependency.dependencyFlags,
+			::size32(memory_barriers), memory_barriers.data(),
+			::size32(buffer_memory_barriers), buffer_memory_barriers.data(),
+			::size32(image_memory_barriers), image_memory_barriers.data());
+	}
+
+	void event::signal(const command_buffer& cmd, const VkDependencyInfoKHR& dependency)
+	{
+		if (m_backend == sync_backend::gpu_label)
 		{
-			insert_global_memory_barrier(cmd, stages, VK_PIPELINE_STAGE_TRANSFER_BIT, access, VK_ACCESS_TRANSFER_WRITE_BIT);
-			vkCmdFillBuffer(cmd, m_buffer->value, 0, 4, 0xDEADBEEF);
+			// Fallback path
+			m_label->signal(cmd, dependency);
+			return;
 		}
+
+		if (m_domain != sync_domain::host)
+		{
+			// As long as host is not involved, keep things consistent.
+			// The expectation is that this will be awaited using the gpu_wait function.
+			if (m_backend == sync_backend::events_v2) [[ likely ]]
+			{
+				m_device->_vkCmdSetEvent2KHR(cmd, m_vk_event, &dependency);
+			}
+			else
+			{
+				const auto dst_stages = v1_utils::gather_dst_stages(dependency);
+				vkCmdSetEvent(cmd, m_vk_event, dst_stages);
+			}
+
+			return;
+		}
+
+		// Host sync doesn't behave intuitively with events, so we use some workarounds.
+		// 1. Resolve the actual dependencies on a pipeline barrier.
+		resolve_dependencies(cmd, dependency);
+
+		// 2. Signalling won't wait. The caller is responsible for setting up the dependencies correctly.
+		if (m_backend != sync_backend::events_v2)
+		{
+			vkCmdSetEvent(cmd, m_vk_event, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+			return;
+		}
+
+		// We need a memory barrier to keep AMDVLK from hanging
+		VkMemoryBarrier2KHR mem_barrier =
+		{
+			.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2_KHR,
+			.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR,
+			.srcAccessMask = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT
+		};
+
+		// Empty dependency that does nothing
+		VkDependencyInfoKHR empty_dependency
+		{
+			.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR,
+			.memoryBarrierCount = 1,
+			.pMemoryBarriers = &mem_barrier
+		};
+
+		m_device->_vkCmdSetEvent2KHR(cmd, m_vk_event, &empty_dependency);
 	}
 
 	void event::host_signal() const
 	{
-		ensure(m_vk_event);
-		vkSetEvent(m_device, m_vk_event);
+		if (m_backend != sync_backend::gpu_label) [[ likely ]]
+		{
+			vkSetEvent(*m_device, m_vk_event);
+			return;
+		}
+
+		m_label->set();
 	}
 
-	void event::gpu_wait(const command_buffer& cmd) const
+	void event::gpu_wait(const command_buffer& cmd, const VkDependencyInfoKHR& dependency) const
 	{
-		ensure(m_vk_event);
-		vkCmdWaitEvents(cmd, 1, &m_vk_event, 0, 0, 0, nullptr, 0, nullptr, 0, nullptr);
+		ensure(m_domain != sync_domain::host);
+
+		if (m_backend == sync_backend::events_v2) [[ likely ]]
+		{
+			m_device->_vkCmdWaitEvents2KHR(cmd, 1, &m_vk_event, &dependency);
+			return;
+		}
+
+		const auto src_stages = v1_utils::gather_src_stages(dependency);
+		const auto dst_stages = v1_utils::gather_dst_stages(dependency);
+		const auto memory_barriers = v1_utils::get_memory_barriers(dependency);
+		const auto image_memory_barriers = v1_utils::get_image_memory_barriers(dependency);
+		const auto buffer_memory_barriers = v1_utils::get_buffer_memory_barriers(dependency);
+
+		vkCmdWaitEvents(cmd,
+			1, &m_vk_event,
+			src_stages, dst_stages,
+			::size32(memory_barriers), memory_barriers.data(),
+			::size32(buffer_memory_barriers), buffer_memory_barriers.data(),
+			::size32(image_memory_barriers), image_memory_barriers.data());
 	}
 
 	void event::reset() const
 	{
-		if (m_vk_event) [[likely]]
+		if (m_backend != sync_backend::gpu_label) [[ likely ]]
 		{
-			vkResetEvent(m_device, m_vk_event);
+			vkResetEvent(*m_device, m_vk_event);
+			return;
 		}
-		else
-		{
-			*m_value = 0xCAFEBABE;
-		}
+
+		m_label->reset();
 	}
 
 	VkResult event::status() const
 	{
-		if (m_vk_event) [[likely]]
+		if (m_backend != sync_backend::gpu_label) [[ likely ]]
 		{
-			return vkGetEventStatus(m_device, m_vk_event);
+			return vkGetEventStatus(*m_device, m_vk_event);
 		}
-		else
+
+		return m_label->signaled() ? VK_EVENT_SET : VK_EVENT_RESET;
+	}
+
+	gpu_label_pool::gpu_label_pool(const vk::render_device& dev, u32 count)
+		: pdev(&dev), m_count(count)
+	{}
+
+	gpu_label_pool::~gpu_label_pool()
+	{
+		if (m_mapped)
 		{
-			return (*m_value == 0xCAFEBABE) ? VK_EVENT_RESET : VK_EVENT_SET;
+			ensure(m_buffer);
+			m_buffer->unmap();
 		}
 	}
 
-	gpu_debug_marker_pool::gpu_debug_marker_pool(const vk::render_device& dev, u32 count)
-		: m_count(count), pdev(&dev)
-	{}
-
-	std::tuple<VkBuffer, u64, volatile u32*> gpu_debug_marker_pool::allocate()
+	std::tuple<VkBuffer, u64, volatile u32*> gpu_label_pool::allocate()
 	{
 		if (!m_buffer || m_offset >= m_count)
 		{
@@ -188,12 +406,12 @@ namespace vk
 		return { m_buffer->value, out_offset * 4, m_mapped + out_offset };
 	}
 
-	void gpu_debug_marker_pool::create_impl()
+	void gpu_label_pool::create_impl()
 	{
 		if (m_buffer)
 		{
 			m_buffer->unmap();
-			vk::get_resource_manager()->dispose(m_buffer);
+			vk::get_gc()->dispose(m_buffer);
 		}
 
 		m_buffer = std::make_unique<buffer>
@@ -211,12 +429,56 @@ namespace vk
 		m_offset = 0;
 	}
 
-	gpu_debug_marker::gpu_debug_marker(gpu_debug_marker_pool& pool, std::string message)
-		: m_message(std::move(message)), m_device(*pool.pdev)
+	gpu_label::gpu_label(gpu_label_pool& pool)
 	{
-		std::tie(m_buffer, m_buffer_offset, m_value) = pool.allocate();
-		*m_value = 0xCAFEBABE;
+		std::tie(m_buffer_handle, m_buffer_offset, m_ptr) = pool.allocate();
+		reset();
 	}
+
+	gpu_label::~gpu_label()
+	{
+		m_ptr = nullptr;
+		m_buffer_offset = 0;
+		m_buffer_handle = VK_NULL_HANDLE;
+	}
+
+	void gpu_label::signal(const vk::command_buffer& cmd, const VkDependencyInfoKHR& dependency)
+	{
+		const auto src_stages = v1_utils::gather_src_stages(dependency);
+		auto dst_stages = v1_utils::gather_dst_stages(dependency);
+		auto memory_barriers = v1_utils::get_memory_barriers(dependency);
+		const auto image_memory_barriers = v1_utils::get_image_memory_barriers(dependency);
+		const auto buffer_memory_barriers = v1_utils::get_buffer_memory_barriers(dependency);
+
+		// Ensure wait before filling the label
+		dst_stages |= VK_PIPELINE_STAGE_TRANSFER_BIT;
+		if (memory_barriers.empty())
+		{
+			const VkMemoryBarrier signal_barrier =
+			{
+				.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
+				.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT,
+				.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT
+			};
+			memory_barriers.push_back(signal_barrier);
+		}
+		else
+		{
+			auto& barrier = memory_barriers.front();
+			barrier.dstAccessMask |= VK_ACCESS_TRANSFER_WRITE_BIT;
+		}
+
+		vkCmdPipelineBarrier(cmd, src_stages, dst_stages, dependency.dependencyFlags,
+			::size32(memory_barriers), memory_barriers.data(),
+			::size32(buffer_memory_barriers), buffer_memory_barriers.data(),
+			::size32(image_memory_barriers), image_memory_barriers.data());
+
+		vkCmdFillBuffer(cmd, m_buffer_handle, m_buffer_offset, 4, label_constants::set_);
+	}
+
+	gpu_debug_marker::gpu_debug_marker(gpu_debug_marker_pool& pool, std::string message)
+		: gpu_label(pool), m_message(std::move(message))
+	{}
 
 	gpu_debug_marker::~gpu_debug_marker()
 	{
@@ -224,19 +486,11 @@ namespace vk
 		{
 			dump();
 		}
-
-		m_value = nullptr;
-	}
-
-	void gpu_debug_marker::signal(const command_buffer& cmd, VkPipelineStageFlags stages, VkAccessFlags access)
-	{
-		insert_global_memory_barrier(cmd, stages, VK_PIPELINE_STAGE_TRANSFER_BIT, access, VK_ACCESS_TRANSFER_WRITE_BIT);
-		vkCmdFillBuffer(cmd, m_buffer, m_buffer_offset, 4, 0xDEADBEEF);
 	}
 
 	void gpu_debug_marker::dump()
 	{
-		if (*m_value == 0xCAFEBABE)
+		if (*m_ptr == gpu_label::label_constants::reset_)
 		{
 			rsx_log.error("DEBUG MARKER NOT REACHED: %s", m_message);
 		}
@@ -246,7 +500,7 @@ namespace vk
 
 	void gpu_debug_marker::dump() const
 	{
-		if (*m_value == 0xCAFEBABE)
+		if (*m_ptr == gpu_label::label_constants::reset_)
 		{
 			rsx_log.error("DEBUG MARKER NOT REACHED: %s", m_message);
 		}
@@ -256,18 +510,6 @@ namespace vk
 		}
 	}
 
-	// FIXME
-	static std::unique_ptr<gpu_debug_marker_pool> g_gpu_debug_marker_pool;
-
-	gpu_debug_marker_pool& get_shared_marker_pool(const vk::render_device& dev)
-	{
-		if (!g_gpu_debug_marker_pool)
-		{
-			g_gpu_debug_marker_pool = std::make_unique<gpu_debug_marker_pool>(dev, 65536);
-		}
-		return *g_gpu_debug_marker_pool;
-	}
-
 	void gpu_debug_marker::insert(
 		const vk::render_device& dev,
 		const vk::command_buffer& cmd,
@@ -275,9 +517,25 @@ namespace vk
 		VkPipelineStageFlags stages,
 		VkAccessFlags access)
 	{
-		auto result = std::make_unique<gpu_debug_marker>(get_shared_marker_pool(dev), message);
-		result->signal(cmd, stages, access);
-		vk::get_resource_manager()->dispose(result);
+		VkMemoryBarrier2KHR barrier =
+		{
+			.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2_KHR,
+			.srcStageMask = stages,
+			.srcAccessMask = access,
+			.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT_KHR,
+			.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT
+		};
+
+		VkDependencyInfoKHR dependency =
+		{
+			.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR,
+			.memoryBarrierCount = 1,
+			.pMemoryBarriers = &barrier
+		};
+
+		auto result = std::make_unique<gpu_debug_marker>(globals::get_shared_marker_pool(dev), message);
+		result->signal(cmd, dependency);
+		vk::get_gc()->dispose(result);
 	}
 
 	debug_marker_scope::debug_marker_scope(const vk::command_buffer& cmd, const std::string& message)

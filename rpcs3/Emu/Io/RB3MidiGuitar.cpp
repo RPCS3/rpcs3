@@ -288,6 +288,49 @@ void usb_device_rb3_midi_guitar::write_state(u8* buf)
 	buf[10] = button_state.string_velocities[4];
 	buf[9] = button_state.string_velocities[5];
 
+	// encode frets for playing 5 fret on the pro guitar
+	// this actually isn't done by the real MPA, but Rock Band 3 allows this
+	// so there's no harm in supporting it.
+	for (u8 i : button_state.frets)
+	{
+		switch (i)
+		{
+			case 1:
+			case 6:
+			case 13:
+				buf[9] |= 0b1000'0000;
+				break;
+			case 2:
+			case 7:
+			case 14:
+				buf[10] |= 0b1000'0000;
+				break;
+			case 3:
+			case 8:
+			case 15:
+				buf[11] |= 0b1000'0000;
+				break;
+			case 4:
+			case 9:
+			case 16:
+				buf[12] |= 0b1000'0000;
+				break;
+			case 5:
+			case 10:
+			case 17:
+				buf[13] |= 0b1000'0000;
+				break;
+			default:
+				break;
+		}
+
+		// enable the solo bit for frets >= 13
+		if (i >= 13)
+		{
+				buf[8] |= 0b1000'0000;
+		}
+	}
+
 	// encode tilt sensor/sustain_pedal
 	if (button_state.tilt_sensor || button_state.sustain_pedal)
 	{

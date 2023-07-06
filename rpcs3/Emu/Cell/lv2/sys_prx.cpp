@@ -17,7 +17,7 @@
 #include "sys_memory.h"
 #include <span>
 
-extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&, s64, utils::serial* = nullptr);
+extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, bool virtual_load, const std::string&, s64, utils::serial* = nullptr);
 extern void ppu_unload_prx(const lv2_prx& prx);
 extern bool ppu_initialize(const ppu_module&, bool = false);
 extern void ppu_finalize(const ppu_module&);
@@ -270,7 +270,7 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 		return CELL_PRX_ERROR_ILLEGAL_LIBRARY;
 	}
 
-	const auto prx = ppu_load_prx(obj, path, file_offset);
+	const auto prx = ppu_load_prx(obj, false, path, file_offset);
 
 	obj.clear();
 
@@ -324,7 +324,7 @@ std::shared_ptr<void> lv2_prx::load(utils::serial& ar)
 		{
 			u128 klic = g_fxo->get<loaded_npdrm_keys>().last_key();
 			file = make_file_view(std::move(file), offset);
-			prx = ppu_load_prx(ppu_prx_object{ decrypt_self(std::move(file), reinterpret_cast<u8*>(&klic)) }, path, 0, &ar);
+			prx = ppu_load_prx(ppu_prx_object{ decrypt_self(std::move(file), reinterpret_cast<u8*>(&klic)) }, false, path, 0, &ar);
 			prx->m_loaded_flags = std::move(loaded_flags);
 			prx->m_external_loaded_flags = std::move(external_flags);
 
