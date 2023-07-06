@@ -130,7 +130,7 @@ macos_task:
   matrix:
     - name: Cirrus macOS
       macos_instance:
-        image: ghcr.io/cirruslabs/macos-ventura-xcode:latest
+        image: ghcr.io/cirruslabs/macos-monterey-xcode:latest
       mac_script:
         - mkdir artifacts
         - chmod +x ".ci/build-mac.sh"
