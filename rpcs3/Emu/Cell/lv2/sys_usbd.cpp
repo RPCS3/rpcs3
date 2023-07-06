@@ -247,6 +247,20 @@ usb_handler_thread::usb_handler_thread()
 		check_device(0x12BA, 0x2430, 0x243F, "Harmonix Button Guitar");
 		check_device(0x12BA, 0x2530, 0x253F, "Harmonix Real Guitar");
 
+		if (desc.idVendor == 0x1209 && desc.idProduct == 0x2882)
+		{
+			sys_usbd.success("Found device: Santroller");
+			// Send the device a specific control transfer so that it jumps to a RPCS3 compatible mode
+			libusb_device_handle* lusb_handle;
+			libusb_open(list[index], &lusb_handle);
+#ifdef __linux__
+			libusb_set_auto_detach_kernel_driver(lusb_handle, true);
+			libusb_claim_interface(lusb_handle, 2);
+#endif
+			libusb_control_transfer(lusb_handle, +LIBUSB_ENDPOINT_IN | +LIBUSB_REQUEST_TYPE_CLASS | +LIBUSB_RECIPIENT_INTERFACE, 0x01, 0x03f2, 2, nullptr, 0, 5000);
+			libusb_close(lusb_handle);
+		}
+
 		// Top Shot Elite controllers
 		check_device(0x12BA, 0x04A0, 0x04A0, "RO Gun Controller");
 		check_device(0x12BA, 0x04A1, 0x04A1, "RO Gun Controller 2012");
