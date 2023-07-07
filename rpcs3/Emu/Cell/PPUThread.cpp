@@ -1593,7 +1593,7 @@ void ppu_thread::dump_all(std::string& ret) const
 {
 	cpu_thread::dump_all(ret);
 
-	if (!call_history.data.empty())
+	if (call_history.data.size() > 1)
 	{
 		ret +=
 			"\nCalling History:"
@@ -1887,10 +1887,9 @@ ppu_thread::ppu_thread(const ppu_thread_params& param, std::string_view name, u3
 		state += cpu_flag::memory;
 	}
 
-	if (g_cfg.core.ppu_call_history)
-	{
-		call_history.data.resize(call_history_max_size);
-	}
+	call_history.data.resize(g_cfg.core.ppu_call_history ? call_history_max_size : 1);
+	syscall_history.data.resize(g_cfg.core.ppu_call_history ? syscall_history_max_size : 1);
+	syscall_history.count_debug_arguments = static_cast<u32>(g_cfg.core.ppu_call_history ? std::size(syscall_history.data[0].args) : 0);
 
 #ifdef __APPLE__
 	pthread_jit_write_protect_np(true);
@@ -1966,6 +1965,10 @@ ppu_thread::ppu_thread(utils::serial& ar)
 		bool pushed = false;
 		atomic_t<bool> inited = false;
 	};
+
+	call_history.data.resize(g_cfg.core.ppu_call_history ? call_history_max_size : 1);
+	syscall_history.data.resize(g_cfg.core.ppu_call_history ? syscall_history_max_size : 1);
+	syscall_history.count_debug_arguments = static_cast<u32>(g_cfg.core.ppu_call_history ? std::size(syscall_history.data[0].args) : 0);
 
 	serialize_common(ar);
 

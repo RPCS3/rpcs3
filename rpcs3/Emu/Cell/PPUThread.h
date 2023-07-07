@@ -311,6 +311,23 @@ public:
 
 	static constexpr u32 call_history_max_size = 4096;
 
+	struct syscall_history_t
+	{
+		struct entry_t
+		{
+			u64 cia;
+			const char* func_name;
+			u64 error;
+			std::array<u64, 4> args;
+		};
+
+		std::vector<entry_t> data;
+		u64 index = 0;
+		u32 count_debug_arguments;
+	} syscall_history;
+
+	static constexpr u32 syscall_history_max_size = 2048;
+
 	struct hle_func_call_with_toc_info_t
 	{
 		u32 cia;
