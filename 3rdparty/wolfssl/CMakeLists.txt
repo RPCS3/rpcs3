@@ -19,12 +19,7 @@ else()
 	set(WOLFSSL_OPENSSLEXTRA ON CACHE STRING "Enable extra OpenSSL API, size+ (default: disabled)")
 
 	add_subdirectory(wolfssl EXCLUDE_FROM_ALL)
-	export(EXPORT wolfssl-targets)
 
 	target_compile_definitions(wolfssl PUBLIC WOLFSSL_DES_ECB HAVE_WRITE_DUP)
 	target_compile_definitions(wolfssl PUBLIC FP_MAX_BITS=8192)
-	if(WIN32)
-		target_compile_definitions(wolfssl INTERFACE SIZEOF_LONG=${SIZEOF_LONG} SIZEOF_LONG_LONG=${SIZEOF_LONG_LONG})
-		target_link_libraries(wolfssl PRIVATE crypt32)
-	endif()
 endif()
