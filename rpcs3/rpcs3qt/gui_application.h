@@ -10,6 +10,8 @@
 
 #include "main_application.h"
 
+#include "Emu/System.h"
+
 #include <memory>
 #include <functional>
 
@@ -95,8 +97,14 @@ private:
 	bool m_start_games_fullscreen = false;
 	int m_game_screen_index = -1;
 
+	u64 m_pause_amend_time_on_focus_loss = umax;
+	u64 m_pause_delayed_tag = 0;
+	typename Emulator::stop_counter_t m_emu_focus_out_emulation_id{};
+	bool m_is_pause_on_focus_loss_active = false;
+
 private Q_SLOTS:
 	void OnChangeStyleSheetRequest();
+	void OnAppStateChanged(Qt::ApplicationState state);
 
 Q_SIGNALS:
 	void OnEmulatorRun(bool start_playtime);
