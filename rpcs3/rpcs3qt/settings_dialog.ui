@@ -2879,6 +2879,13 @@
                 </widget>
                </item>
                <item>
+                <widget class="QCheckBox" name="pauseOnFocusLoss">
+                 <property name="text">
+                  <string>Pause emulation on RPCS3 focus loss</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QCheckBox" name="pausedSavestates">
                  <property name="text">
                   <string>Pause emulation after loading savestates</string>
