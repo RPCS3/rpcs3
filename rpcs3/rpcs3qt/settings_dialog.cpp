@@ -1734,6 +1734,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->exitOnStop, emu_settings_type::ExitRPCS3OnFinish);
 	SubscribeTooltip(ui->exitOnStop, tooltips.settings.exit_on_stop);
 
+	m_emu_settings->EnhanceCheckBox(ui->pauseOnFocusLoss, emu_settings_type::PauseOnFocusLoss);
+	SubscribeTooltip(ui->pauseOnFocusLoss, tooltips.settings.pause_on_focus_loss);
+
 	m_emu_settings->EnhanceCheckBox(ui->startGameFullscreen, emu_settings_type::StartGameFullscreen);
 	SubscribeTooltip(ui->startGameFullscreen, tooltips.settings.start_game_fullscreen);
 

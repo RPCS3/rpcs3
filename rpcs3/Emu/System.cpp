@@ -792,6 +792,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		return game_boot_result::still_running;
 	}
 
+	// Enable logging
+	rpcs3::utils::configure_logs(true);
+
 	m_ar.reset();
 
 	{
@@ -2503,6 +2506,9 @@ extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool reve
 
 void Emulator::Kill(bool allow_autoexit, bool savestate)
 {
+	// Enable logging
+	rpcs3::utils::configure_logs(true);
+
 	if (!IsStopped() && savestate && !try_lock_spu_threads_in_a_state_compatible_with_savestates())
 	{
 		sys_log.error("Failed to savestate: failed to lock SPU threads execution.");

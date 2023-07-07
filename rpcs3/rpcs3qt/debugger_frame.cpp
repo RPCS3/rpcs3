@@ -462,6 +462,8 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 
 			auto copy_overlapping_list = [&] <typename T> (u64& index, u64 max, const std::vector<T>& in, std::vector<T>& out, bool& emptied)
 			{
+				max = std::min<u64>(max, in.size());
+
 				const u64 current_pos = index % in.size();
 				const u64 last_elements = std::min<u64>(current_pos, max);
 				const u64 overlapped_old_elements = std::min<u64>(index, max) - last_elements;
@@ -543,13 +545,16 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 
 				// Preallocate in order to save execution time when inside suspend_all.
 				std::vector<u32> copy(max);
+				std::vector<typename ppu_thread::syscall_history_t::entry_t> sys_copy(ppu_thread::syscall_history_max_size);
 
-				bool emptied = false;
+				std::array<bool, 2> emptied{};
 
 				cpu_thread::suspend_all(nullptr, {}, [&]
 				{
 					auto& list = static_cast<ppu_thread*>(cpu)->call_history;
-					copy_overlapping_list(list.index, max, list.data, copy, emptied);
+					auto& sys_list = static_cast<ppu_thread*>(cpu)->syscall_history;
+					copy_overlapping_list(list.index, max, list.data, copy, emptied[0]);
+					copy_overlapping_list(sys_list.index, max, sys_list.data, sys_copy, emptied[1]);
 				});
 
 				std::string ret;
@@ -563,14 +568,25 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 					fmt::append(ret, "\n(%u) 0x%08x: %s", i, *it, dis_asm.last_opcode);
 				}
 
+				i = 0;
+				for (auto it = sys_copy.rbegin(); it != sys_copy.rend(); it++, i++)
+				{
+					fmt::append(ret, "\n(%u) 0x%08x: %s, 0x%x, r3=0x%x, r4=0x%x, r5=0x%x, r6=0x%x", i, it->cia, it->func_name, it->error, it->args[0], it->args[1], it->args[2], it->args[3]);
+				}
+
 				if (ret.empty())
 				{
 					ret = "No PPU calls have been logged";
 				}
 
-				if (emptied)
+				if (emptied[0])
 				{
 					ret += "\nPrevious call history has been emptied!";
+				}
+
+				if (emptied[1])
+				{
+					ret += "\nPrevious HLE call history has been emptied!";
 				}
 
 				ppu_log.success("PPU calling history dump of '%s': %s", cpu->get_name(), ret);

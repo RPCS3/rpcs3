@@ -270,6 +270,7 @@ void gui_application::InitializeConnects()
 	connect(this, &gui_application::OnEmulatorStop, this, &gui_application::StopPlaytime);
 	connect(this, &gui_application::OnEmulatorPause, this, &gui_application::StopPlaytime);
 	connect(this, &gui_application::OnEmulatorResume, this, &gui_application::StartPlaytime);
+	connect(this, &QGuiApplication::applicationStateChanged, this, &gui_application::OnAppStateChanged);
 
 	if (m_main_window)
 	{
@@ -797,4 +798,77 @@ void gui_application::CallFromMainThread(const std::function<void()>& func, atom
 		*wake_up = true;
 		wake_up->notify_one();
 	}
+}
+
+void gui_application::OnAppStateChanged(Qt::ApplicationState state)
+{
+	// Invalidate previous delayed pause call (even when the setting is off because it is dynamic)
+	m_pause_delayed_tag++;
+
+	if (!g_cfg.misc.autopause)
+	{
+		return;
+	}
+
+	const auto emu_state = Emu.GetStatus();
+	const bool is_active = state == Qt::ApplicationActive;
+
+	if (emu_state != system_state::paused && emu_state != system_state::running)
+	{
+		return;
+	}
+
+	const bool is_paused = emu_state == system_state::paused;
+
+	if (is_active != is_paused)
+	{
+		// Nothing to do (either paused and this is focus-out event or running and this is a focus-in event)
+		// Invalidate data
+		m_is_pause_on_focus_loss_active = false;
+		m_emu_focus_out_emulation_id = Emulator::stop_counter_t{};
+		return;
+	}
+
+	if (is_paused)
+	{
+		// Check if Emu.Resume() or Emu.Kill() has not been called since
+		if (m_is_pause_on_focus_loss_active && m_pause_amend_time_on_focus_loss == Emu.GetPauseTime() && m_emu_focus_out_emulation_id == Emu.GetEmulationIdentifier())
+		{
+			m_is_pause_on_focus_loss_active = false;
+			Emu.Resume();
+		}
+
+		return;
+	}
+
+	// Gather validation data
+	m_emu_focus_out_emulation_id = Emu.GetEmulationIdentifier();
+
+	auto pause_callback = [this, delayed_tag = m_pause_delayed_tag]()
+	{
+		// Check if Emu.Kill() has not been called since
+		if (applicationState() != Qt::ApplicationActive && Emu.IsRunning() &&
+		    m_emu_focus_out_emulation_id == Emu.GetEmulationIdentifier() &&
+		    delayed_tag == m_pause_delayed_tag &&
+			!m_is_pause_on_focus_loss_active)
+		{
+			if (Emu.Pause())
+			{
+				// Gather validation data
+				m_pause_amend_time_on_focus_loss = Emu.GetPauseTime();
+				m_emu_focus_out_emulation_id = Emu.GetEmulationIdentifier();
+				m_is_pause_on_focus_loss_active = true;
+			}
+		}
+	};
+
+	if (state == Qt::ApplicationSuspended)
+	{
+		// Must be invoked now (otherwise it may not happen later)
+		pause_callback();
+		return;
+	}
+
+	// Delay pause so it won't immediately pause the emulated application
+	QTimer::singleShot(1000, this, pause_callback);
 }
