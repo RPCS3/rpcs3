@@ -27,9 +27,9 @@ R"(
 #define COORD_SCALE1(index, coord1) _texcoord_xform(coord1, texture_parameters[index])
 #define COORD_SCALE2(index, coord2) _texcoord_xform(coord2, texture_parameters[index])
 #define COORD_SCALE3(index, coord3) _texcoord_xform(coord3, texture_parameters[index])
-#define COORD_PROJ1(index, coord2) COORD_SCALE1(coord2.x / coord2.y, texture_parameters[index])
-#define COORD_PROJ2(index, coord3) COORD_SCALE2(coord3.xy / coord3.z, texture_parameters[index])
-#define COORD_PROJ3(index, coord4) COORD_SCALE3(coord4.xyz / coord4.w, texture_parameters[index])
+#define COORD_PROJ1(index, coord2) COORD_SCALE1(index, coord2.x / coord2.y)
+#define COORD_PROJ2(index, coord3) COORD_SCALE2(index, coord3.xy / coord3.z)
+#define COORD_PROJ3(index, coord4) COORD_SCALE3(index, coord4.xyz / coord4.w)
 
 #ifdef _ENABLE_TEX1D
 #define TEX1D(index, coord1) _process_texel(texture(TEX_NAME(index), COORD_SCALE1(index, coord1)), TEX_FLAGS(index))
@@ -106,7 +106,7 @@ vec2 _texcoord_xform(const in vec2 coord, const in sampler_info params)
 }
 #endif
 
-#ifdef _ENABLE_TEX3D
+#if defined(_ENABLE_TEX3D) || defined(_ENABLE_SHADOWPROJ)
 vec3 _texcoord_xform(const in vec3 coord, const in sampler_info params)
 {
 	vec3 result = fma(
