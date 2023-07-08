@@ -120,9 +120,10 @@ namespace rsx
 		struct home_menu_slider : public home_menu_setting<T, C>
 		{
 		public:
-			home_menu_slider(C* setting, const std::string& text, const std::string& suffix, T minimum = C::min, T maximum = C::max)
+			home_menu_slider(C* setting, const std::string& text, const std::string& suffix, std::map<T, std::string> special_labels = {}, T minimum = C::min, T maximum = C::max)
 				: home_menu_setting<T, C>(setting, text)
 				, m_suffix(suffix)
+				, m_special_labels(std::move(special_labels))
 				, m_minimum(minimum)
 				, m_maximum(maximum)
 			{
@@ -148,15 +149,25 @@ namespace rsx
 					m_slider.set_pos(m_slider.x, this->y + (this->h - m_slider.h) / 2);
 					m_handle.set_pos(m_slider.x + static_cast<u16>(percentage * (m_slider.w - m_handle.w)), this->y + (this->h - m_handle.h) / 2);
 
-					if constexpr (std::is_floating_point<T>::value)
+					const auto set_label_text = [this]() -> void
 					{
-						m_value_label.set_text(fmt::format("%.2f%s", this->m_last_value, m_suffix));
-					}
-					else
-					{
-						m_value_label.set_text(fmt::format("%d%s", this->m_last_value, m_suffix));
-					}
+						if (const auto it = m_special_labels.find(this->m_last_value); it != m_special_labels.cend())
+						{
+							m_value_label.set_text(it->second);
+							return;
+						}
 
+						if constexpr (std::is_floating_point<T>::value)
+						{
+							m_value_label.set_text(fmt::format("%.2f%s", this->m_last_value, m_suffix));
+						}
+						else
+						{
+							m_value_label.set_text(fmt::format("%d%s", this->m_last_value, m_suffix));
+						}
+					};
+
+					set_label_text();
 					m_value_label.auto_resize();
 
 					constexpr u16 handle_margin = 10;
@@ -184,6 +195,7 @@ namespace rsx
 			overlay_element m_handle;
 			label m_value_label;
 			std::string m_suffix;
+			std::map<T, std::string> m_special_labels;
 			T m_minimum{};
 			T m_maximum{};
 		};
