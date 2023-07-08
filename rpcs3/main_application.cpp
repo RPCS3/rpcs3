@@ -79,10 +79,11 @@ void main_application::OnEmuSettingsChange()
 		}
 	}
 
-	rpcs3::utils::configure_logs();
-
 	if (!Emu.IsStopped())
 	{
+		// Change logging (only allowed during gameplay)
+		rpcs3::utils::configure_logs();
+
 		// Force audio provider
 		g_cfg.audio.provider.set(Emu.IsVsh() ? audio_provider::rsxaudio : audio_provider::cell_audio);
 	}
