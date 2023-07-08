@@ -27,13 +27,16 @@ R"(
 #define COORD_SCALE1(index, coord1) _texcoord_xform(coord1, texture_parameters[index])
 #define COORD_SCALE2(index, coord2) _texcoord_xform(coord2, texture_parameters[index])
 #define COORD_SCALE3(index, coord3) _texcoord_xform(coord3, texture_parameters[index])
+#define COORD_PROJ1(index, coord2) COORD_SCALE1(coord2.x / coord2.y, texture_parameters[index])
+#define COORD_PROJ2(index, coord3) COORD_SCALE2(coord3.xy / coord3.z, texture_parameters[index])
+#define COORD_PROJ3(index, coord4) COORD_SCALE3(coord4.xyz / coord4.w, texture_parameters[index])
 
 #ifdef _ENABLE_TEX1D
 #define TEX1D(index, coord1) _process_texel(texture(TEX_NAME(index), COORD_SCALE1(index, coord1)), TEX_FLAGS(index))
 #define TEX1D_BIAS(index, coord1, bias) _process_texel(texture(TEX_NAME(index), COORD_SCALE1(index, coord1), bias), TEX_FLAGS(index))
 #define TEX1D_LOD(index, coord1, lod) _process_texel(textureLod(TEX_NAME(index), COORD_SCALE1(index, coord1), lod), TEX_FLAGS(index))
 #define TEX1D_GRAD(index, coord1, dpdx, dpdy) _process_texel(textureGrad(TEX_NAME(index), COORD_SCALE1(index, coord1), dpdx, dpdy), TEX_FLAGS(index))
-#define TEX1D_PROJ(index, coord4) _process_texel(textureProj(TEX_NAME(index), vec2(COORD_SCALE1(index, coord4.x), coord4.w)), TEX_FLAGS(index))
+#define TEX1D_PROJ(index, coord4) _process_texel(texture(TEX_NAME(index), COORD_PROJ1(index, coord4.xw)), TEX_FLAGS(index))
 #endif
 
 #ifdef _ENABLE_TEX2D
@@ -41,14 +44,14 @@ R"(
 #define TEX2D_BIAS(index, coord2, bias) _process_texel(texture(TEX_NAME(index), COORD_SCALE2(index, coord2), bias), TEX_FLAGS(index))
 #define TEX2D_LOD(index, coord2, lod) _process_texel(textureLod(TEX_NAME(index), COORD_SCALE2(index, coord2), lod), TEX_FLAGS(index))
 #define TEX2D_GRAD(index, coord2, dpdx, dpdy) _process_texel(textureGrad(TEX_NAME(index), COORD_SCALE2(index, coord2), dpdx, dpdy), TEX_FLAGS(index))
-#define TEX2D_PROJ(index, coord4) _process_texel(textureProj(TEX_NAME(index), vec4(COORD_SCALE2(index, coord4.xy), coord4.z, coord4.w)), TEX_FLAGS(index))
+#define TEX2D_PROJ(index, coord4) _process_texel(texture(TEX_NAME(index), COORD_PROJ2(index, coord4)), TEX_FLAGS(index))
 #endif
 
 #ifdef _ENABLE_SHADOW
 #ifdef _EMULATED_TEXSHADOW
-	#define SHADOW_COORD(index, coord3) vec3(COORD_SCALE2(index, coord3.xy), _test_bit(TEX_FLAGS(index), DEPTH_FLOAT)? coord3.z : min(float(coord3.z), 1.0))
-	#define SHADOW_COORD4(index, coord4) vec4(SHADOW_COORD(index, coord4.xyz), coord4.w)
-	#define SHADOW_COORD_PROJ(index, coord4) vec4(COORD_SCALE2(index, coord4.xy), _test_bit(TEX_FLAGS(index), DEPTH_FLOAT)? coord4.z : min(coord4.z, coord4.w), coord4.w)
+	#define SHADOW_COORD(index, coord3) _texcoord_xform_shadow(coord3, texture_parameters[index])
+	#define SHADOW_COORD4(index, coord4) _texcoord_xform_shadow(coord4, texture_parameters[index])
+	#define SHADOW_COORD_PROJ(index, coord4) _texcoord_xform_shadow(coord4.xyz / coord4.w, texture_parameters[index])
 
 	#define TEX2D_SHADOW(index, coord3) texture(TEX_NAME(index), SHADOW_COORD(index, coord3))
 	#define TEX3D_SHADOW(index, coord4) texture(TEX_NAME(index), SHADOW_COORD4(index, coord4))
@@ -56,7 +59,7 @@ R"(
 #else
 	#define TEX2D_SHADOW(index, coord3) texture(TEX_NAME(index), vec3(COORD_SCALE2(index, coord3.xy), coord3.z))
 	#define TEX3D_SHADOW(index, coord4) texture(TEX_NAME(index), vec4(COORD_SCALE3(index, coord4.xyz), coord4.w))
-	#define TEX2D_SHADOWPROJ(index, coord4) textureProj(TEX_NAME(index), vec4(COORD_SCALE2(index, coord4.xy), coord4.zw))
+	#define TEX2D_SHADOWPROJ(index, coord4) texture(TEX_NAME(index), COORD_PROJ3(index, coord))
 #endif
 #endif
 
@@ -65,7 +68,7 @@ R"(
 #define TEX3D_BIAS(index, coord3, bias) _process_texel(texture(TEX_NAME(index), COORD_SCALE3(index, coord3), bias), TEX_FLAGS(index))
 #define TEX3D_LOD(index, coord3, lod) _process_texel(textureLod(TEX_NAME(index), COORD_SCALE3(index, coord3), lod), TEX_FLAGS(index))
 #define TEX3D_GRAD(index, coord3, dpdx, dpdy) _process_texel(textureGrad(TEX_NAME(index), COORD_SCALE3(index, coord3), dpdx, dpdy), TEX_FLAGS(index))
-#define TEX3D_PROJ(index, coord4) _process_texel(texture(TEX_NAME(index), COORD_SCALE3(index, coord4.xyz) / coord4.w), TEX_FLAGS(index))
+#define TEX3D_PROJ(index, coord4) _process_texel(texture(TEX_NAME(index), COORD_PROJ3(index, coord4).xyz), TEX_FLAGS(index))
 #endif
 
 #ifdef _ENABLE_TEX1D
@@ -116,6 +119,49 @@ vec3 _texcoord_xform(const in vec3 coord, const in sampler_info params)
 	return result;
 }
 #endif
+
+#if defined(_ENABLE_SHADOW) && defined(_EMULATED_TEXSHADOW)
+#ifdef _ENABLE_TEX2D
+vec3 _texcoord_xform_shadow(const in vec3 coord3, const in sampler_info params)
+{
+	vec3 result;
+	if (_test_bit(params.flags, DEPTH_FLOAT))
+	{
+		// Depth-float buffer, extended range supported
+		result.z = coord3.z;
+	}
+	else
+	{
+		// Clamp to MAX_DEPTH simulate UINT buffer behavior
+		result.z = min(coord3.z, 1.);
+	}
+
+	result.xy = _texcoord_xform(coord3.xy, params);
+	return result;
+}
+#endif // TEX2D
+
+#ifdef _ENABLE_TEX3D
+vec4 _texcoord_xform_shadow(const in vec4 coord4, const in sampler_info params)
+{
+	vec4 result;
+	if (_test_bit(params.flags, DEPTH_FLOAT))
+	{
+		// Depth-float buffer, extended range supported
+		result.w = coord4.w;
+	}
+	else
+	{
+		// Clamp to MAX_DEPTH to simulate UINT buffer behavior
+		result.w = min(coord4.w, 1.);
+	}
+
+	result.xyz = _texcoord_xform(coord4.xyz, params);
+	return result;
+}
+#endif // TEX3D
+
+#endif // _EMULATE_SHADOW
 
 vec4 _process_texel(in vec4 rgba, const in uint control_bits)
 {
