@@ -1145,6 +1145,19 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 			AddCode("_enable_texture_expand();");
 		}
 
+		// Shadow proj
+		switch (func_id)
+		{
+		case FUNCTION::TEXTURE_SAMPLE1D_SHADOW_PROJ:
+		case FUNCTION::TEXTURE_SAMPLE2D_SHADOW_PROJ:
+		case FUNCTION::TEXTURE_SAMPLE2DMS_SHADOW_PROJ:
+		case FUNCTION::TEXTURE_SAMPLE3D_SHADOW_PROJ:
+			properties.has_texShadowProj = true;
+			break;
+		default:
+			break;
+		}
+
 		SetDst(getFunction(func_id) + swz_mask);
 
 		if (dst.exp_tex)
