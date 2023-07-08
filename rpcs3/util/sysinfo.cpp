@@ -21,7 +21,7 @@
 #include "util/asm.hpp"
 #include "util/fence.hpp"
 
-#ifdef _MSC_VER
+#if defined(_M_X64) && defined(_MSC_VER)
 extern "C" u64 _xgetbv(u32);
 #endif
 

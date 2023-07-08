@@ -7,6 +7,7 @@
 extern bool g_use_rtm;
 extern u64 g_rtm_tx_limit1;
 
+#ifdef _M_X64
 #ifdef _MSC_VER
 extern "C"
 {
@@ -30,7 +31,7 @@ extern "C"
 #include <intrin.h>
 #else
 #include <immintrin.h>
-#include <x86intrin.h>
+#endif
 #endif
 
 namespace utils
@@ -140,7 +141,7 @@ namespace utils
 			return;
 		}
 
-#if defined(_M_X64)
+#if defined(_M_X64) && !defined(__clang__)
 		return _m_prefetchw(ptr);
 #else
 		return __builtin_prefetch(ptr, 1, 0);

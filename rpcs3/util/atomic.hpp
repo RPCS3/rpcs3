@@ -12,9 +12,7 @@
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable: 4996)
-#endif
 
-#ifdef _MSC_VER
 extern "C"
 {
 	void _ReadWriteBarrier();
@@ -74,7 +72,7 @@ namespace utils
 
 FORCE_INLINE void atomic_fence_consume()
 {
-#ifdef _MSC_VER
+#if defined(_M_X64) && defined(_MSC_VER)
 	_ReadWriteBarrier();
 #else
 	__atomic_thread_fence(__ATOMIC_CONSUME);
@@ -83,7 +81,7 @@ FORCE_INLINE void atomic_fence_consume()
 
 FORCE_INLINE void atomic_fence_acquire()
 {
-#ifdef _MSC_VER
+#if defined(_M_X64) && defined(_MSC_VER)
 	_ReadWriteBarrier();
 #else
 	__atomic_thread_fence(__ATOMIC_ACQUIRE);
@@ -92,7 +90,7 @@ FORCE_INLINE void atomic_fence_acquire()
 
 FORCE_INLINE void atomic_fence_release()
 {
-#ifdef _MSC_VER
+#if defined(_M_X64) && defined(_MSC_VER)
 	_ReadWriteBarrier();
 #else
 	__atomic_thread_fence(__ATOMIC_RELEASE);
@@ -101,7 +99,7 @@ FORCE_INLINE void atomic_fence_release()
 
 FORCE_INLINE void atomic_fence_acq_rel()
 {
-#ifdef _MSC_VER
+#if defined(_M_X64) && defined(_MSC_VER)
 	_ReadWriteBarrier();
 #else
 	__atomic_thread_fence(__ATOMIC_ACQ_REL);
@@ -110,7 +108,7 @@ FORCE_INLINE void atomic_fence_acq_rel()
 
 FORCE_INLINE void atomic_fence_seq_cst()
 {
-#ifdef _MSC_VER
+#if defined(_M_X64) && defined(_MSC_VER)
 	_ReadWriteBarrier();
 	_InterlockedOr(static_cast<long*>(_AddressOfReturnAddress()), 0);
 	_ReadWriteBarrier();
@@ -121,7 +119,7 @@ FORCE_INLINE void atomic_fence_seq_cst()
 #endif
 }
 
-#ifdef _MSC_VER
+#if defined(_M_X64) && defined(_MSC_VER)
 #pragma warning(pop)
 #endif
 
@@ -356,7 +354,7 @@ struct atomic_storage
 
 	using type = get_uint_t<sizeof(T)>;
 
-#ifndef _MSC_VER
+#if !defined(_MSC_VER) || !defined(_M_X64)
 
 #if defined(__ATOMIC_HLE_ACQUIRE) && defined(__ATOMIC_HLE_RELEASE)
 	static constexpr int s_hle_ack = __ATOMIC_SEQ_CST | __ATOMIC_HLE_ACQUIRE;
@@ -486,7 +484,7 @@ struct atomic_storage
 
 	/* Second part: MSVC-specific */
 
-#ifdef _MSC_VER
+#if defined(_M_X64) && defined(_MSC_VER)
 	static inline T add_fetch(T& dest, T value)
 	{
 		return atomic_storage<T>::fetch_add(dest, value) + value;
@@ -556,7 +554,7 @@ struct atomic_storage
 		}
 #endif
 
-#ifdef _MSC_VER
+#if defined(_M_X64) && defined(_MSC_VER)
 		return _interlockedbittestandset((long*)dst, bit) != 0;
 #elif defined(ARCH_X64)
 		bool result;
@@ -583,7 +581,7 @@ struct atomic_storage
 		}
 #endif
 
-#ifdef _MSC_VER
+#if defined(_M_X64) && defined(_MSC_VER)
 		return _interlockedbittestandreset((long*)dst, bit) != 0;
 #elif defined(ARCH_X64)
 		bool result;
@@ -610,7 +608,7 @@ struct atomic_storage
 		}
 #endif
 
-#ifdef _MSC_VER
+#if defined(_M_X64) && defined(_MSC_VER)
 		while (true)
 		{
 			// Keep trying until we actually invert desired bit
@@ -635,7 +633,7 @@ struct atomic_storage
 template <typename T>
 struct atomic_storage<T, 1> : atomic_storage<T, 0>
 {
-#ifdef _MSC_VER
+#if defined(_M_X64) && defined(_MSC_VER)
 	static inline bool compare_exchange(T& dest, T& comp, T exch)
 	{
 		const char v = std::bit_cast<char>(comp);
@@ -705,7 +703,7 @@ struct atomic_storage<T, 1> : atomic_storage<T, 0>
 template <typename T>
 struct atomic_storage<T, 2> : atomic_storage<T, 0>
 {
-#ifdef _MSC_VER
+#if defined(_M_X64) && defined(_MSC_VER)
 	static inline bool compare_exchange(T& dest, T& comp, T exch)
 	{
 		const short v = std::bit_cast<short>(comp);
@@ -883,7 +881,7 @@ struct atomic_storage<T, 4> : atomic_storage<T, 0>
 template <typename T>
 struct atomic_storage<T, 8> : atomic_storage<T, 0>
 {
-#ifdef _MSC_VER
+#if defined(_M_X64) && defined(_MSC_VER)
 	static inline bool compare_exchange(T& dest, T& comp, T exch)
 	{
 		const llong v = std::bit_cast<llong>(comp);
@@ -979,7 +977,7 @@ struct atomic_storage<T, 8> : atomic_storage<T, 0>
 template <typename T>
 struct atomic_storage<T, 16> : atomic_storage<T, 0>
 {
-#ifdef _MSC_VER
+#if defined(_M_X64) && defined(_MSC_VER)
 	static inline T load(const T& dest)
 	{
 		atomic_fence_acquire();
