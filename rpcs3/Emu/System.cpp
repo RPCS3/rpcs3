@@ -264,6 +264,14 @@ void Emulator::Init()
 	g_cfg.from_default();
 	g_cfg.name.clear();
 
+	const std::string cfg_path = fs::get_config_dir() + "/config.yml";
+
+	// Save new global config if it doesn't exist or is empty
+	if (fs::stat_t info{}; !fs::stat(cfg_path, info) || info.size == 0)
+	{
+		Emulator::SaveSettings(g_cfg.to_string(), {});
+	}
+
 	// Not all renderers are known at compile time, so set a provided default if possible
 	if (m_default_renderer == video_renderer::vulkan && !m_default_graphics_adapter.empty())
 	{
@@ -354,8 +362,6 @@ void Emulator::Init()
 	// Reload global configuration
 	if (m_config_mode != cfg_mode::config_override && m_config_mode != cfg_mode::default_config)
 	{
-		const auto cfg_path = fs::get_config_dir() + "/config.yml";
-
 		if (const fs::file cfg_file{cfg_path, fs::read + fs::create})
 		{
 			sys_log.notice("Applying global config: %s", cfg_path);
