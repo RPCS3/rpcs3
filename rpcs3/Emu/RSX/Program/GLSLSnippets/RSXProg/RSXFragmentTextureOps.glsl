@@ -59,7 +59,7 @@ R"(
 #else
 	#define TEX2D_SHADOW(index, coord3) texture(TEX_NAME(index), vec3(COORD_SCALE2(index, coord3.xy), coord3.z))
 	#define TEX3D_SHADOW(index, coord4) texture(TEX_NAME(index), vec4(COORD_SCALE3(index, coord4.xyz), coord4.w))
-	#define TEX2D_SHADOWPROJ(index, coord4) texture(TEX_NAME(index), COORD_PROJ3(index, coord))
+	#define TEX2D_SHADOWPROJ(index, coord4) texture(TEX_NAME(index), COORD_PROJ3(index, coord4))
 #endif
 #endif
 
