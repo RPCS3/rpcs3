@@ -66,7 +66,7 @@ namespace rsx
 			add_dropdown(&g_cfg.core.sleep_timers_accuracy, "Sleep Timers Accuracy");
 
 			add_unsigned_slider(&g_cfg.video.driver_wakeup_delay, "Driver Wake-Up Delay", " µs", 20, g_cfg.video.driver_wakeup_delay.min, 800);
-			add_signed_slider(&g_cfg.video.vblank_rate, "VBlank Frequency", " Hz", 1);
+			add_signed_slider(&g_cfg.video.vblank_rate, "VBlank Frequency", " Hz", 30);
 			add_checkbox(&g_cfg.video.vblank_ntsc, "VBlank NTSC Fixup");
 
 			apply_layout();
