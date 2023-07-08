@@ -780,16 +780,33 @@ bool main_window::InstallPackages(QStringList file_paths, bool from_boot)
 
 		if (!info.changelog.isEmpty())
 		{
-			info.changelog = tr("\n\nChangelog:\n%0", "Block for Changelog").arg(info.changelog);
+			info.changelog = tr("Changelog:\n%0", "Block for Changelog").arg(info.changelog);
 		}
 
-		const QString info_string = QStringLiteral("%0\n\n%1%2%3%4%5").arg(file_info.fileName()).arg(info.title).arg(info.local_cat)
-			.arg(info.title_id).arg(info.version).arg(info.changelog);
+		const QString info_string = QStringLiteral("%0\n\n%1%2%3%4").arg(file_info.fileName()).arg(info.title).arg(info.local_cat).arg(info.title_id).arg(info.version);
+		QString message = tr("Do you want to install this package?\n\n%0").arg(info_string);
 
-		if (QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Do you want to install this package?\n\n%0").arg(info_string),
-			QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
+		QMessageBox mb(QMessageBox::Icon::Question, tr("PKG Decrypter / Installer"), message, QMessageBox::Yes | QMessageBox::No, this);
+		mb.setDefaultButton(QMessageBox::No);
+
+		if (!info.changelog.isEmpty())
 		{
-			gui_log.notice("PKG: Cancelled installation from drop.\n%s", info_string);
+			mb.setInformativeText(tr("To see the changelog, please click \"Show Details\"."));
+			mb.setDetailedText(tr("%0").arg(info.changelog));
+
+			// Smartass hack to make the unresizeable message box wide enough for the changelog
+			const int log_width = QLabel(info.changelog).sizeHint().width();
+			while (QLabel(message).sizeHint().width() < log_width)
+			{
+				message += "          ";
+			}
+
+			mb.setText(message);
+		}
+
+		if (mb.exec() != QMessageBox::Yes)
+		{
+			gui_log.notice("PKG: Cancelled installation from drop.\n%s\n%s", info_string, info.changelog);
 			return true;
 		}
 	}
