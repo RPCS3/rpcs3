@@ -435,7 +435,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 				dlg.set_input_font(mono, false);
 				dlg.set_clear_button_enabled(false);
 				dlg.set_button_enabled(QDialogButtonBox::StandardButton::Ok, false);
-				dlg.set_validator(new QRegularExpressionValidator(QRegularExpression("^[1-9][0-9]*$")));
+				dlg.set_validator(new QRegularExpressionValidator(QRegularExpression("^[1-9][0-9]*$"), &dlg));
 
 				u32 max = 0;
 
@@ -1188,11 +1188,11 @@ void debugger_frame::ShowGotoAddressDialog()
 
 	if (const auto thread = get_cpu(); !thread || thread->id_type() != 2)
 	{
-		expression_input->setValidator(new QRegularExpressionValidator(QRegularExpression("^(0[xX])?0*[a-fA-F0-9]{0,8}$")));
+		expression_input->setValidator(new QRegularExpressionValidator(QRegularExpression("^(0[xX])?0*[a-fA-F0-9]{0,8}$"), this));
 	}
 	else
 	{
-		expression_input->setValidator(new QRegularExpressionValidator(QRegularExpression("^(0[xX])?0*[a-fA-F0-9]{0,5}$")));
+		expression_input->setValidator(new QRegularExpressionValidator(QRegularExpression("^(0[xX])?0*[a-fA-F0-9]{0,5}$"), this));
 	}
 
 	// Ok/Cancel

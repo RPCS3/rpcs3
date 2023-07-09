@@ -1633,7 +1633,7 @@ void main_window::DecryptSPRXLibraries()
 		dlg->set_input_font(mono, true, '0');
 		dlg->set_clear_button_enabled(false);
 		dlg->set_button_enabled(QDialogButtonBox::StandardButton::Ok, false);
-		dlg->set_validator(new QRegularExpressionValidator(QRegularExpression("^((((((K?L)?I)?C)?=)?0)?x)?[a-fA-F0-9]{0,32}$"))); // HEX only (with additional KLIC=0x prefix for convenience)
+		dlg->set_validator(new QRegularExpressionValidator(QRegularExpression("^((((((K?L)?I)?C)?=)?0)?x)?[a-fA-F0-9]{0,32}$"), this)); // HEX only (with additional KLIC=0x prefix for convenience)
 		dlg->setAttribute(Qt::WA_DeleteOnClose);
 
 		connect(dlg, &input_dialog::text_changed, dlg, [dlg](const QString& text)

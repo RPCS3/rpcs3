@@ -166,7 +166,7 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	tex_idx_line->setMaxLength(18);
 	tex_idx_line->setFixedWidth(75);
 	tex_idx_line->setFocus();
-	tex_idx_line->setValidator(new QRegularExpressionValidator(QRegularExpression("^(0[xX])?0*[a-fA-F0-9]{0,8}$")));
+	tex_idx_line->setValidator(new QRegularExpressionValidator(QRegularExpression("^(0[xX])?0*[a-fA-F0-9]{0,8}$"), this));
 
 	QLineEdit* tex_fmt_override_line = new QLineEdit(this);
 	tex_fmt_override_line->setPlaceholderText("00");
@@ -174,7 +174,7 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	tex_fmt_override_line->setMaxLength(18);
 	tex_fmt_override_line->setFixedWidth(75);
 	tex_fmt_override_line->setFocus();
-	tex_fmt_override_line->setValidator(new QRegularExpressionValidator(QRegularExpression("^(0[xX])?0*[a-fA-F0-9]{0,2}$")));
+	tex_fmt_override_line->setValidator(new QRegularExpressionValidator(QRegularExpression("^(0[xX])?0*[a-fA-F0-9]{0,2}$"), this));
 
 	hbox_idx_line->addWidget(tex_idx_line);
 	hbox_idx_line->addWidget(tex_fmt_override_line);
