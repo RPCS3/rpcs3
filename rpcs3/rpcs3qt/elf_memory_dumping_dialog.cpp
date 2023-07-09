@@ -34,13 +34,13 @@ elf_memory_dumping_dialog::elf_memory_dumping_dialog(u32 ppu_debugger_addr, std:
 	m_seg_list->setMinimumWidth(gui::utils::get_label_width(tr("PPU Address: 0x00000000, LS Address: 0x00000, Segment Size: 0x00000, Flags: 0x0")));
 
 	// Address expression input
-	auto make_hex_edit = [mono](u32 max_digits)
+	auto make_hex_edit = [this, mono](u32 max_digits)
 	{
 		QLineEdit* le = new QLineEdit();
 		le->setFont(mono);
 		le->setMaxLength(max_digits + 2);
 		le->setPlaceholderText("0x" + QStringLiteral("0").repeated(max_digits));
-		le->setValidator(new QRegularExpressionValidator(QRegularExpression(QStringLiteral("^(0[xX])?0*[a-fA-F0-9]{0,%1}$").arg(max_digits))));
+		le->setValidator(new QRegularExpressionValidator(QRegularExpression(QStringLiteral("^(0[xX])?0*[a-fA-F0-9]{0,%1}$").arg(max_digits)), this));
 		return le;
 	};
 

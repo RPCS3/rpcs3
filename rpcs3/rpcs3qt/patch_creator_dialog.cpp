@@ -31,11 +31,15 @@ patch_creator_dialog::patch_creator_dialog(QWidget* parent)
 	, mMonoFont(QFontDatabase::systemFont(QFontDatabase::FixedFont))
 	, mValidColor(gui::utils::get_label_color("log_level_success"))
 	, mInvalidColor(gui::utils::get_label_color("log_level_error"))
+	, m_offset_validator(new QRegularExpressionValidator(QRegularExpression("^(0[xX])?[a-fA-F0-9]{0,8}$"), this))
 {
 	ui->setupUi(this);
 	ui->patchEdit->setFont(mMonoFont);
 	ui->addPatchOffsetEdit->setFont(mMonoFont);
+	ui->addPatchOffsetEdit->setClearButtonEnabled(true);
 	ui->addPatchValueEdit->setFont(mMonoFont);
+	ui->addPatchValueEdit->setClearButtonEnabled(true);
+	ui->addPatchCommentEdit->setClearButtonEnabled(true);
 	ui->instructionTable->setFont(mMonoFont);
 	ui->instructionTable->setItemDelegate(new table_item_delegate(this, false));
 	ui->instructionTable->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeMode::Fixed);
@@ -66,6 +70,8 @@ patch_creator_dialog::patch_creator_dialog(QWidget* parent)
 	connect(ui->addPatchButton, &QAbstractButton::clicked, this, [this]() { add_instruction(ui->instructionTable->rowCount()); });
 
 	init_patch_type_bombo_box(ui->addPatchTypeComboBox, patch_type::be32, false);
+	connect(ui->addPatchTypeComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index){ update_validator(index, ui->addPatchTypeComboBox, ui->addPatchOffsetEdit); });
+	update_validator(ui->addPatchTypeComboBox->currentIndex(), ui->addPatchTypeComboBox, ui->addPatchOffsetEdit);
 
 	generate_yml();
 }
@@ -198,6 +204,25 @@ void patch_creator_dialog::show_table_menu(const QPoint& pos)
 	menu.exec(ui->instructionTable->viewport()->mapToGlobal(pos));
 }
 
+void patch_creator_dialog::update_validator(int index, QComboBox* combo_box, QLineEdit* line_edit)
+{
+	if (index < 0 || !combo_box || !line_edit || !combo_box->itemData(index).canConvert<patch_type>())
+	{
+		return;
+	}
+
+	switch (combo_box->itemData(index).value<patch_type>())
+	{
+	case patch_type::move_file:
+	case patch_type::hide_file:
+		line_edit->setValidator(nullptr);
+		break;
+	default:
+		line_edit->setValidator(m_offset_validator);
+		break;
+	}
+}
+
 void patch_creator_dialog::add_instruction(int row)
 {
 	const QString type    = ui->addPatchTypeComboBox->currentText();
@@ -206,6 +231,25 @@ void patch_creator_dialog::add_instruction(int row)
 	const QString comment = ui->addPatchCommentEdit->text();
 
 	const patch_type t = patch_engine::get_patch_type(type.toStdString());
+
+	switch (t)
+	{
+	case patch_type::move_file:
+	case patch_type::hide_file:
+		break;
+	default:
+	{
+		int pos = 0;
+		QString text_to_validate = offset;
+		if (m_offset_validator->validate(text_to_validate, pos) == QValidator::Invalid)
+		{
+			QMessageBox::information(this, tr("Offset invalid!"), tr("The patch offset is invalid.\nThe offset has to be a hexadecimal number with 8 digits at most."));
+			return;
+		}
+		break;
+	}
+	}
+
 	QComboBox* combo_box = create_patch_type_bombo_box(t);
 
 	ui->instructionTable->insertRow(std::max(0, std::min(row, ui->instructionTable->rowCount())));
