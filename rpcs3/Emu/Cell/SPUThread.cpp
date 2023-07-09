@@ -5278,7 +5278,7 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 
 	case MFC_Size:
 	{
-		ch_mfc_cmd.size = value & 0x7fff;
+		ch_mfc_cmd.size = static_cast<u16>(std::min<u32>(value, 0xffff));
 		return true;
 	}
 
