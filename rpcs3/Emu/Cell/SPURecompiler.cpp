@@ -6811,7 +6811,7 @@ public:
 		}
 		case MFC_Size:
 		{
-			set_reg_fixed(s_reg_mfc_size, trunc<u16>(val & 0x7fff).eval(m_ir));
+			set_reg_fixed(s_reg_mfc_size, trunc<u16>(val).eval(m_ir));
 			return;
 		}
 		case MFC_TagID:
