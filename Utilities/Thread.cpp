@@ -110,11 +110,7 @@ std::string dump_useful_thread_info()
 
 	if (auto cpu = get_current_cpu_thread())
 	{
-		// Wrap it to disable some internal exceptions when printing (not thrown on main thread)
-		Emu.BlockingCallFromMainThread([&]()
-		{
-			cpu->dump_all(result);
-		});
+		cpu->dump_all(result);
 	}
 
 	return result;
