@@ -11,11 +11,13 @@ brew unlink llvm@16
 arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 arch -x86_64 /usr/local/bin/brew update
 arch -x86_64 /usr/local/bin/brew install -f --overwrite llvm@16 sdl2 glew cmake faudio vulkan-headers
-arch -x86_64 /usr/local/bin/brew link -f llvm@16
 
 # moltenvk based on commit for 1.2.4 release
 wget https://raw.githubusercontent.com/Homebrew/homebrew-core/b233d4f9f40f26d81da11140defbfd578cfe4a69/Formula/molten-vk.rb
-arch -x86_64 /usr/local/bin/brew install -f --overwrite ./molten-vk.rb
+arch -x86_64 /usr/local/bin/brew install ./molten-vk.rb
+arch -x86_64 /usr/local/bin/brew link -f molten-vk
+
+
 #export MACOSX_DEPLOYMENT_TARGET=12.0
 export CXX="/opt/homebrew/opt/llvm@16/bin/clang++"
 export CC="/opt/homebrew/opt/llvm@16/bin/clang"
