@@ -2511,9 +2511,6 @@ extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool reve
 
 void Emulator::Kill(bool allow_autoexit, bool savestate)
 {
-	// Enable logging
-	rpcs3::utils::configure_logs(true);
-
 	if (!IsStopped() && savestate && !try_lock_spu_threads_in_a_state_compatible_with_savestates())
 	{
 		sys_log.error("Failed to savestate: failed to lock SPU threads execution.");
@@ -2567,8 +2564,14 @@ void Emulator::Kill(bool allow_autoexit, bool savestate)
 		m_config_mode = cfg_mode::custom;
 		read_used_savestate_versions();
 		m_savestate_extension_flags1 = {};
+
+		// Enable logging
+		rpcs3::utils::configure_logs(true);
 		return;
 	}
+
+	// Enable logging
+	rpcs3::utils::configure_logs(true);
 
 	sys_log.notice("Stopping emulator...");
 

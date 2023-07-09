@@ -133,11 +133,23 @@ void fmt_class_string<typename ppu_thread::call_history_t>::format(std::string& 
 
 	PPUDisAsm dis_asm(cpu_disasm_mode::normal, vm::g_sudo_addr);
 
-	for (u64 count = 0, idx = history.index - 1; idx != umax && count < ppu_thread::call_history_max_size; count++, idx--)
+	for (u64 count = 0, idx = history.index - 1; idx != umax && count < history.data.size(); count++, idx--)
 	{
-		const u32 pc = history.data[idx % ppu_thread::call_history_max_size];
+		const u32 pc = history.data[idx % history.data.size()];
 		dis_asm.disasm(pc);
 		fmt::append(out, "\n(%u) 0x%08x: %s", count, pc, dis_asm.last_opcode);
+	}
+}
+
+template <>
+void fmt_class_string<typename ppu_thread::syscall_history_t>::format(std::string& out, u64 arg)
+{
+	const auto& history = get_object(arg);
+
+	for (u64 count = 0, idx = history.index - 1; idx != umax && count < history.data.size(); count++, idx--)
+	{
+		const auto& entry = history.data[idx % history.data.size()];
+		fmt::append(out, "\n(%u) 0x%08x: %s, 0x%x, r3=0x%x, r4=0x%x, r5=0x%x, r6=0x%x", count, entry.cia, entry.func_name, entry.error, entry.args[0], entry.args[1], entry.args[2], entry.args[3]);
 	}
 }
 
@@ -1600,6 +1612,15 @@ void ppu_thread::dump_all(std::string& ret) const
 			"\n================";
 
 		fmt::append(ret, "%s", call_history);
+	}
+
+	if (syscall_history.data.size() > 1)
+	{
+		ret +=
+			"\nHLE/LV2 History:"
+			"\n================";
+
+		fmt::append(ret, "%s", syscall_history);
 	}
 }
 

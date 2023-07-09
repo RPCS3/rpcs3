@@ -252,6 +252,8 @@ error_code sys_rsx_context_allocate(cpu_thread& cpu, vm::ptr<u32> context_id, vm
 		return CELL_ENOMEM;
 	}
 
+	sys_rsx.warning("sys_rsx_context_allocate(): Mapped address 0x%x", dma_address);
+
 	*lpar_dma_control = dma_address;
 	*lpar_driver_info = dma_address + 0x100000;
 	*lpar_reports = dma_address + 0x200000;
@@ -944,6 +946,8 @@ error_code sys_rsx_device_map(cpu_thread& cpu, vm::ptr<u64> dev_addr, vm::ptr<u6
 		{
 			return CELL_ENOMEM;
 		}
+
+		sys_rsx.warning("sys_rsx_device_map(): Mapped address 0x%x", addr);
 
 		*dev_addr = addr;
 		render->device_addr = addr;

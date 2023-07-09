@@ -11,6 +11,7 @@
 #include <chrono>
 #include <cstring>
 #include <cerrno>
+#include <regex>
 
 using namespace std::literals::chrono_literals;
 
@@ -210,6 +211,24 @@ namespace logs
 	void set_level(const std::string& ch_name, level value)
 	{
 		std::lock_guard lock(g_mutex);
+
+		if (ch_name.find_first_of(".+*?^$()[]{}|\\") != umax)
+		{
+			const std::regex ex(ch_name);
+
+			// RegEx pattern
+			for (auto& channel_pair : get_logger()->channels)
+			{
+				std::smatch sm;
+
+				if (std::regex_match(channel_pair.first, sm, ex))
+				{
+					channel_pair.second->enabled.release(value);
+				}
+			}
+
+			return;
+		}
 
 		auto found = get_logger()->channels.equal_range(ch_name);
 
