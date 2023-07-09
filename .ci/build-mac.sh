@@ -4,8 +4,7 @@ mkdir -p "/tmp/Qt/"
 
 export HOMEBREW_NO_AUTO_UPDATE=1
 brew update
-brew install -f --overwrite nasm ninja git p7zip create-dmg ccache pipenv llvm@16
-brew unlink llvm@16
+brew install -f --overwrite nasm ninja git p7zip create-dmg ccache pipenv
 
 #/usr/sbin/softwareupdate --install-rosetta --agree-to-license
 arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
@@ -19,8 +18,8 @@ arch -x86_64 /usr/local/bin/brew link -f molten-vk
 
 
 #export MACOSX_DEPLOYMENT_TARGET=12.0
-export CXX="/opt/homebrew/opt/llvm@16/bin/clang++"
-export CC="/opt/homebrew/opt/llvm@16/bin/clang"
+export CXX=clang++
+export CC=clang
 
 export BREW_PATH;
 BREW_PATH="$(brew --prefix)"
