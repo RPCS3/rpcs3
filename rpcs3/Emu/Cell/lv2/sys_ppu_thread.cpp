@@ -63,9 +63,14 @@ void ppu_thread_exit(ppu_thread& ppu, ppu_opcode_t, be_t<u32>*, struct ppu_intrp
 
 	if (ppu.call_history.index)
 	{
-		std::string str = fmt::format("%s", ppu.call_history);
+		ppu_log.notice("Calling history: %s", ppu.call_history);
 		ppu.call_history.index = 0;
-		ppu_log.notice("Calling history: %s", str);
+	}
+
+	if (ppu.syscall_history.index)
+	{
+		ppu_log.notice("HLE/LV2 history: %s", ppu.syscall_history);
+		ppu.syscall_history.index = 0;
 	}
 }
 
