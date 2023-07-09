@@ -416,6 +416,11 @@ namespace glsl
 				enabled_options.push_back("_ENABLE_TEX3D");
 			}
 
+			if (props.require_shadowProj_ops)
+			{
+				enabled_options.push_back("_ENABLE_SHADOWPROJ");
+			}
+
 			program_common::define_glsl_switches(OS, enabled_options);
 			enabled_options.clear();
 

@@ -253,6 +253,7 @@ void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	m_shader_props.require_tex1D_ops = properties.has_tex1D;
 	m_shader_props.require_tex2D_ops = properties.has_tex2D;
 	m_shader_props.require_tex3D_ops = properties.has_tex3D;
+	m_shader_props.require_shadowProj_ops = properties.shadow_sampler_mask != 0 && properties.has_texShadowProj;
 
 	glsl::insert_glsl_legacy_function(OS, m_shader_props);
 }
