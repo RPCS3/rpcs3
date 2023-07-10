@@ -3028,7 +3028,7 @@ error_code sys_fs_truncate2(ppu_thread&, u32 fd, u64 size)
 
 error_code sys_fs_get_mount_info_size(ppu_thread&, vm::ptr<u64> len)
 {
-	sys_fs.trace("sys_fs_get_mount_info_size(len=*0x%x)", len);
+	sys_fs.warning("sys_fs_get_mount_info_size(len=*0x%x)", len);
 
 	if (!len)
 	{
@@ -3042,7 +3042,7 @@ error_code sys_fs_get_mount_info_size(ppu_thread&, vm::ptr<u64> len)
 
 error_code sys_fs_get_mount_info(ppu_thread&, vm::ptr<CellFsMountInfo> info, u64 len, vm::ptr<u64> out_len)
 {
-	sys_fs.trace("sys_fs_get_mount_info(info=*0x%x, len=0x%x, out_len=*0x%x)", info, len, out_len);
+	sys_fs.warning("sys_fs_get_mount_info(info=*0x%x, len=0x%x, out_len=*0x%x)", info, len, out_len);
 
 	if (!info || !out_len)
 	{
@@ -3058,7 +3058,7 @@ error_code sys_fs_newfs(ppu_thread& ppu, vm::cptr<char> dev_name, vm::cptr<char>
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_fs.trace("sys_fs_newfs(dev_name=%s, file_system=%s, unk1=0x%x, str1=%s)", dev_name, file_system, unk1, str1);
+	sys_fs.warning("sys_fs_newfs(dev_name=%s, file_system=%s, unk1=0x%x, str1=%s)", dev_name, file_system, unk1, str1);
 
 	const auto [dev_error, device_name] = translate_to_sv(dev_name, false);
 
@@ -3106,7 +3106,7 @@ error_code sys_fs_mount(ppu_thread& ppu, vm::cptr<char> dev_name, vm::cptr<char>
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_fs.trace("sys_fs_mount(dev_name=%s, file_system=%s, path=%s, unk1=0x%x, prot=%d, unk3=0x%x, str1=%s, str_len=%d)", dev_name, file_system, path, unk1, prot, unk3, str1, str_len);
+	sys_fs.warning("sys_fs_mount(dev_name=%s, file_system=%s, path=%s, unk1=0x%x, prot=%d, unk3=0x%x, str1=%s, str_len=%d)", dev_name, file_system, path, unk1, prot, unk3, str1, str_len);
 
 	const auto [dev_error, device_name] = translate_to_sv(dev_name, false);
 
@@ -3209,7 +3209,7 @@ error_code sys_fs_unmount(ppu_thread& ppu, vm::cptr<char> path, s32 unk1, s32 un
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_fs.trace("sys_fs_unmount(path=%s, unk1=0x%x, unk2=0x%x)", path, unk1, unk2);
+	sys_fs.warning("sys_fs_unmount(path=%s, unk1=0x%x, unk2=0x%x)", path, unk1, unk2);
 
 	const auto [path_error, vpath] = translate_to_sv(path);
 
