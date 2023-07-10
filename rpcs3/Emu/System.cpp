@@ -1613,7 +1613,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		}
 		else if (!inherited_ps3_game_path.empty() || (from_hdd0_game && m_cat == "DG" && disc.empty()))
 		{
-			// Disc game located in /dev_hdd0/game
+			// Disc game located in dev_hdd0/game
 			bdvd_dir = g_cfg_vfs.get(g_cfg_vfs.dev_bdvd, rpcs3::utils::get_emu_dir());
 
 			if (fs::get_dir_size(bdvd_dir))
