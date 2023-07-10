@@ -6,7 +6,7 @@ namespace rsx
 {
 	class fragment_texture;
 	class vertex_texture;
-	struct sampled_image_descriptor_base;
+	class sampled_image_descriptor_base;
 }
 
 namespace gl

@@ -1,10 +1,11 @@
 #pragma once
 
+#include "io_buffer.h"
 #include "../RSXTexture.h"
 
 #include <span>
+#include <stack>
 #include <vector>
-#include "io_buffer.h"
 
 namespace rsx
 {
@@ -123,9 +124,39 @@ namespace rsx
 
 	using namespace format_class_;
 
-	//Sampled image descriptor
-	struct sampled_image_descriptor_base
+	// Sampled image descriptor
+	class sampled_image_descriptor_base
 	{
+#pragma pack(push, 1)
+		struct texcoord_xform_t
+		{
+			f32 scale[3];
+			f32 bias[3];
+			f32 clamp_min[2];
+			f32 clamp_max[2];
+			bool clamp = false;
+		};
+#pragma pack(pop)
+
+		// Texure matrix stack
+		std::stack<texcoord_xform_t> m_texcoord_xform_stack;
+
+	public:
+		virtual ~sampled_image_descriptor_base() = default;
+		virtual u32 encoded_component_map() const = 0;
+
+		void push_texcoord_xform()
+		{
+			m_texcoord_xform_stack.push(texcoord_xform);
+		}
+
+		void pop_texcoord_xform()
+		{
+			ensure(!m_texcoord_xform_stack.empty());
+			std::memcpy(&texcoord_xform, &m_texcoord_xform_stack.top(), sizeof(texcoord_xform_t));
+			m_texcoord_xform_stack.pop();
+		}
+
 		texture_upload_context upload_context = texture_upload_context::shader_read;
 		rsx::texture_dimension_extended image_type = texture_dimension_extended::texture_dimension_2d;
 		rsx::format_class format_class = RSX_FORMAT_CLASS_UNDEFINED;
@@ -134,19 +165,7 @@ namespace rsx
 		u32 ref_address = 0;
 		u64 surface_cache_tag = 0;
 
-#pragma pack(push, 1)
-		struct
-		{
-			f32 scale[3];
-			f32 bias[3];
-			f32 clamp_min[2];
-			f32 clamp_max[2];
-			bool clamp = false;
-		} texcoord_xform;
-#pragma pack(pop)
-
-		virtual ~sampled_image_descriptor_base() = default;
-		virtual u32 encoded_component_map() const = 0;
+		texcoord_xform_t texcoord_xform;
 	};
 
 	struct typeless_xfer
