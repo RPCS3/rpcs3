@@ -2416,6 +2416,12 @@ namespace rsx
 					result.external_subresource_desc = { 0, deferred_request_command::mipmap_gather, attributes, {}, tex.decoded_remap() };
 					result.format_class = rsx::classify_format(attributes.gcm_format);
 
+					if (result.texcoord_xform.clamp)
+					{
+						// Revert clamp configuration
+						result.pop_texcoord_xform();
+					}
+
 					if (use_upscaling)
 					{
 						// Grab the correct image dimensions from the base mipmap level
