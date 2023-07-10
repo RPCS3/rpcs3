@@ -128,7 +128,6 @@ struct cmd64
 enum class ppu_debugger_mode : u32
 {
 	_default,
-	is_float,
 	is_decimal,
 
 	max_mode,

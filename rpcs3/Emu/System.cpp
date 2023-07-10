@@ -858,6 +858,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		}
 	} cleanup{this};
 
+	std::string inherited_ps3_game_path;
+
 	{
 		Init();
 
@@ -924,7 +926,15 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				// Load /dev_bdvd/ from game list if available
 				if (std::string game_path = m_games_config.get_path(m_title_id); !game_path.empty())
 				{
-					disc = std::move(game_path);
+					if (game_path.ends_with("/./"))
+					{
+						// Marked as PS3_GAME directory
+						inherited_ps3_game_path = std::move(game_path).substr(0, game_path.size() - 3);
+					}
+					else
+					{
+						disc = std::move(game_path);
+					}
 				}
 				else if (!g_cfg.savestate.state_inspection_mode)
 				{
@@ -1491,7 +1501,15 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			// Load /dev_bdvd/ from game list if available
 			if (std::string game_path = m_games_config.get_path(m_title_id); !game_path.empty())
 			{
-				bdvd_dir = std::move(game_path);
+				if (game_path.ends_with("/./"))
+				{
+					// Marked as PS3_GAME directory
+					inherited_ps3_game_path = std::move(game_path).substr(0, game_path.size() - 3);
+				}
+				else
+				{
+					bdvd_dir = std::move(game_path);
+				}
 			}
 			else
 			{
@@ -1593,7 +1611,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				vfs::mount("/dev_hdd0/game/" + m_title_id, game_dir + '/');
 			}
 		}
-		else if (m_cat == "DG" && from_hdd0_game && disc.empty())
+		else if (!inherited_ps3_game_path.empty() || (from_hdd0_game && m_cat == "DG" && disc.empty()))
 		{
 			// Disc game located in dev_hdd0/game
 			bdvd_dir = g_cfg_vfs.get(g_cfg_vfs.dev_bdvd, rpcs3::utils::get_emu_dir());
@@ -1604,9 +1622,23 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				return game_boot_result::invalid_bdvd_folder;
 			}
 
+			// TODO: Verify timestamps and error codes with sys_fs
 			vfs::mount("/dev_bdvd", bdvd_dir);
-			vfs::mount("/dev_bdvd/PS3_GAME", hdd0_game + m_path.substr(hdd0_game.size(), 10));
-			sys_log.notice("Game: %s", vfs::get("/dev_bdvd/PS3_GAME"));
+
+			vfs::mount("/dev_bdvd/PS3_GAME", inherited_ps3_game_path.empty() ? hdd0_game + m_path.substr(hdd0_game.size(), 10) : inherited_ps3_game_path);
+
+			const std::string new_ps3_game = vfs::get("/dev_bdvd/PS3_GAME");
+			sys_log.notice("Game: %s", new_ps3_game);
+
+			// Store /dev_bdvd/PS3_GAME location
+			if (m_games_config.add_game(m_title_id, new_ps3_game + "/./"))
+			{
+				sys_log.notice("Registered BDVD/PS3_GAME game directory for title '%s': %s", m_title_id, new_ps3_game);
+			}
+			else
+			{
+				sys_log.error("Failed to save BDVD/PS3_GAME location of title '%s' (error=%s)", m_title_id, fs::g_tls_error);
+			}
 		}
 		else if (disc.empty())
 		{
