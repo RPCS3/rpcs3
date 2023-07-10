@@ -346,7 +346,7 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 
 		Emu.AddGamesFromDir(g_cfg_vfs.get(g_cfg_vfs.games_dir, rpcs3::utils::get_emu_dir()));
 
-		const std::string _hdd = rpcs3::utils::get_hdd0_dir();
+		const std::string _hdd = Emu.GetCallbacks().resolve_path(rpcs3::utils::get_hdd0_dir()) + '/';
 
 		m_parsing_watcher.setFuture(QtConcurrent::map(m_parsing_threads, [this, _hdd](int index)
 		{
