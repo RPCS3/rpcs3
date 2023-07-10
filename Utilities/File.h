@@ -89,7 +89,7 @@ namespace fs
 	{
 		virtual ~file_base();
 
-		[[noreturn]] virtual stat_t stat();
+		[[noreturn]] virtual stat_t get_stat();
 		virtual void sync();
 		virtual bool trunc(u64 length) = 0;
 		virtual u64 read(void* buffer, u64 size) = 0;
@@ -273,14 +273,14 @@ namespace fs
 		}
 
 		// Get file information
-		stat_t stat(
+		stat_t get_stat(
 			u32 line = __builtin_LINE(),
 			u32 col = __builtin_COLUMN(),
 			const char* file = __builtin_FILE(),
 			const char* func = __builtin_FUNCTION()) const
 		{
 			if (!m_file) xnull({line, col, file, func});
-			return m_file->stat();
+			return m_file->get_stat();
 		}
 
 		// Sync file buffers
@@ -814,7 +814,7 @@ namespace fs
 			return obj.size();
 		}
 
-		stat_t stat() override
+		stat_t get_stat() override
 		{
 			return m_stat;
 		}

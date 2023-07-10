@@ -499,8 +499,8 @@ void lv2_file::save(utils::serial& ar)
 			return true;
 		}
 
-		fs::stat_t test_s = test.stat();
-		fs::stat_t file_s = file.stat();
+		fs::stat_t test_s = test.get_stat();
+		fs::stat_t file_s = file.get_stat();
 
 		// They don't matter for comparison and only create problems with encrypted files
 		test_s.is_writable = file_s.is_writable;
@@ -518,7 +518,7 @@ void lv2_file::save(utils::serial& ar)
 	if (in_mem)
 	{
 		ar(file.to_vector<u8>());
-		ar(file.stat());
+		ar(file.get_stat());
 	}
 
 	ar(file.pos());
@@ -589,9 +589,9 @@ struct lv2_file::file_view : fs::file_base
 	{
 	}
 
-	fs::stat_t stat() override
+	fs::stat_t get_stat() override
 	{
-		return m_file->file.stat();
+		return m_file->file.get_stat();
 	}
 
 	bool trunc(u64) override
@@ -1567,7 +1567,7 @@ error_code sys_fs_fstat(ppu_thread& ppu, u32 fd, vm::ptr<CellFsStat> sb)
 		return CELL_EIO;
 	}
 
-	const fs::stat_t info = file->file.stat();
+	const fs::stat_t info = file->file.get_stat();
 	lock.unlock();
 	ppu.check_state();
 

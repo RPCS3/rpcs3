@@ -6,10 +6,6 @@
 
 #include "Utilities/File.h"
 
-#ifdef _WIN32
-#undef stat
-#endif
-
 constexpr u32 SDAT_FLAG = 0x01000000;
 constexpr u32 EDAT_COMPRESSED_FLAG = 0x00000001;
 constexpr u32 EDAT_FLAG_0x02 = 0x00000002;
@@ -99,9 +95,9 @@ public:
 	bool ReadHeader();
 	u64 ReadData(u64 pos, u8* data, u64 size);
 
-	fs::stat_t stat() override
+	fs::stat_t get_stat() override
 	{
-		fs::stat_t stats = edata_file.stat();
+		fs::stat_t stats = edata_file.get_stat();
 		stats.is_writable = false; // TODO
 		stats.size = file_size;
 		return stats;
