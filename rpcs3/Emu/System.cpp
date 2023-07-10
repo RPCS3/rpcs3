@@ -929,7 +929,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 					if (game_path.ends_with("/./"))
 					{
 						// Marked as PS3_GAME directory
-						inherited_ps3_game_path = std::move(game_path).substr(0, game_path.size() - 3):
+						inherited_ps3_game_path = std::move(game_path).substr(0, game_path.size() - 3);
 					}
 					else
 					{
@@ -1504,7 +1504,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				if (game_path.ends_with("/./"))
 				{
 					// Marked as PS3_GAME directory
-					inherited_ps3_game_path = std::move(game_path).substr(0, game_path.size() - 3):
+					inherited_ps3_game_path = std::move(game_path).substr(0, game_path.size() - 3);
 				}
 				else
 				{
