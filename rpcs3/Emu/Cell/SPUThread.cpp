@@ -1019,7 +1019,12 @@ spu_imm_table_t::spu_imm_table_t()
 
 void spu_thread::dump_regs(std::string& ret) const
 {
-	const bool floats_only = debugger_float_mode.load();
+	const system_state emu_state = Emu.GetStatus(false);
+	const bool is_stopped_or_frozen = state & cpu_flag::exit || emu_state == system_state::frozen || emu_state <= system_state::stopping;
+	const spu_debugger_mode mode = debugger_mode.load();
+
+	const bool floats_only = !is_stopped_or_frozen && mode == spu_debugger_mode::is_float;
+	const bool is_decimal = !is_stopped_or_frozen && mode == spu_debugger_mode::is_decimal;
 
 	SPUDisAsm dis_asm(cpu_disasm_mode::normal, ls);
 
@@ -1097,12 +1102,26 @@ void spu_thread::dump_regs(std::string& ret) const
 			if (!printed_error)
 			{
 				// Shortand formatting
-				fmt::append(ret, "%08x", i3);
+				if (is_decimal)
+				{
+					fmt::append(ret, "%-11d", i3);
+				}
+				else
+				{
+					fmt::append(ret, "%08x", i3);
+				}
 			}
 		}
 		else
 		{
-			fmt::append(ret, "%08x %08x %08x %08x", r.u32r[0], r.u32r[1], r.u32r[2], r.u32r[3]);
+			if (is_decimal)
+			{
+				fmt::append(ret, "%-11d %-11d %-11d %-11d", r.u32r[0], r.u32r[1], r.u32r[2], r.u32r[3]);
+			}
+			else
+			{
+				fmt::append(ret, "%08x %08x %08x %08x", r.u32r[0], r.u32r[1], r.u32r[2], r.u32r[3]);
+			}
 		}
 
 		if (i3 >= 0x80 && is_exec_code(i3, ls))

@@ -125,6 +125,15 @@ struct cmd64
 	}
 };
 
+enum class ppu_debugger_mode : u32
+{
+	_default,
+	is_float,
+	is_decimal,
+
+	max_mode,
+};
+
 class ppu_thread : public cpu_thread
 {
 public:
@@ -300,6 +309,7 @@ public:
 	u64 exec_bytes = 0; // Amount of "bytes" executed (4 for each instruction)
 
 	u32 dbg_step_pc = 0;
+	atomic_t<ppu_debugger_mode> debugger_mode{};
 
 	struct call_history_t
 	{
