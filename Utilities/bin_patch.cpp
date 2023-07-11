@@ -219,18 +219,18 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 	// Go through each main key in the file
 	for (auto pair : root)
 	{
-		const auto& main_key = pair.first.Scalar();
+		const std::string& main_key = pair.first.Scalar();
 
-		if (const auto yml_type = pair.second.Type(); yml_type != YAML::NodeType::Map)
+		if (main_key.empty())
 		{
-			append_log_message(log_messages, fmt::format("Error: Skipping key %s: expected Map, found %s (location: %s, file: %s)", main_key, yml_type, get_yaml_node_location(pair.second), path), &patch_log.error);
+			append_log_message(log_messages, fmt::format("Error: Skipping empty key (location: %s, file: %s)", get_yaml_node_location(pair.first), path), &patch_log.error);
 			is_valid = false;
 			continue;
 		}
 
-		if (main_key.empty())
+		if (const auto yml_type = pair.second.Type(); yml_type != YAML::NodeType::Map)
 		{
-			append_log_message(log_messages, fmt::format("Error: Skipping empty key (location: %s, file: %s)", get_yaml_node_location(pair.second), path), &patch_log.error);
+			append_log_message(log_messages, fmt::format("Error: Skipping key %s: expected Map, found %s (location: %s, file: %s)", main_key, yml_type, get_yaml_node_location(pair.second), path), &patch_log.error);
 			is_valid = false;
 			continue;
 		}
@@ -242,7 +242,7 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 		}
 
 		// Find or create an entry matching the key/hash in our map
-		auto& container = patches_map[main_key];
+		patch_container& container = patches_map[main_key];
 		container.hash    = main_key;
 		container.version = version;
 
@@ -337,7 +337,7 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 							continue;
 						}
 
-						patch_engine::patch_app_versions app_versions;
+						patch_app_versions app_versions;
 
 						for (const auto version : serial_node.second)
 						{
@@ -586,6 +586,14 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 			{
 				if (!read_patch_node(info, patch_node, root, log_messages))
 				{
+					for (const auto& it : patches_entry.second)
+					{
+						if (it.first.Scalar() == patch_key::patch)
+						{
+							append_log_message(log_messages, fmt::format("Skipping invalid patch node %s: (key: %s, location: %s)", info.description, main_key, get_yaml_node_location(it.first)), &patch_log.error);
+							break;
+						}
+					}
 					is_valid = false;
 				}
 			}
@@ -1372,9 +1380,9 @@ std::basic_string<u32> patch_engine::apply(const std::string& name, std::functio
 	}
 
 	std::basic_string<u32> applied_total;
-	const auto& container = ::at32(m_map, name);
-	const auto& serial = Emu.GetTitleID();
-	const auto& app_version = Emu.GetAppVersion();
+	const patch_container& container = ::at32(m_map, name);
+	const std::string& serial = Emu.GetTitleID();
+	const std::string& app_version = Emu.GetAppVersion();
 
 	// Different containers in order to separate the patches
 	std::vector<std::shared_ptr<patch_info>> patches_for_this_serial_and_this_version;
@@ -1408,7 +1416,7 @@ std::basic_string<u32> patch_engine::apply(const std::string& name, std::functio
 				continue;
 			}
 
-			const auto& app_versions = ::at32(serials, found_serial);
+			const patch_app_versions& app_versions = ::at32(serials, found_serial);
 			std::string found_app_version;
 
 			if (app_versions.contains(app_version))
@@ -1526,11 +1534,11 @@ void patch_engine::unload(const std::string& name)
 		return;
 	}
 
-	const auto& container = ::at32(m_map, name);
+	const patch_container& container = ::at32(m_map, name);
 
 	for (const auto& [description, patch] : container.patch_info_map)
 	{
-		for (auto& entry : patch.data_list)
+		for (const patch_data& entry : patch.data_list)
 		{
 			// Deallocate used memory
 			if (u32 addr = std::exchange(entry.alloc_addr, 0))
@@ -1658,7 +1666,7 @@ static void append_patches(patch_engine::patch_map& existing_patches, const patc
 			continue;
 		}
 
-		auto& container = existing_patches[hash];
+		patch_engine::patch_container& container = existing_patches[hash];
 
 		for (const auto& [description, new_info] : new_container.patch_info_map)
 		{
@@ -1669,7 +1677,7 @@ static void append_patches(patch_engine::patch_map& existing_patches, const patc
 				continue;
 			}
 
-			auto& info = container.patch_info_map[description];
+			patch_engine::patch_info& info = container.patch_info_map[description];
 
 			bool ok;
 			const bool version_is_bigger = utils::compare_versions(new_info.patch_version, info.patch_version, ok) > 0;
@@ -1832,7 +1840,7 @@ bool patch_engine::save_patches(const patch_map& patches, const std::string& pat
 
 bool patch_engine::import_patches(const patch_engine::patch_map& patches, const std::string& path, usz& count, usz& total, std::stringstream* log_messages)
 {
-	patch_engine::patch_map existing_patches;
+	patch_map existing_patches;
 
 	if (load(existing_patches, path, "", true, log_messages))
 	{
@@ -1845,13 +1853,13 @@ bool patch_engine::import_patches(const patch_engine::patch_map& patches, const 
 
 bool patch_engine::remove_patch(const patch_info& info)
 {
-	patch_engine::patch_map patches;
+	patch_map patches;
 
 	if (load(patches, info.source_path))
 	{
 		if (patches.contains(info.hash))
 		{
-			auto& container = patches[info.hash];
+			patch_container& container = patches[info.hash];
 
 			if (container.patch_info_map.contains(info.description))
 			{
