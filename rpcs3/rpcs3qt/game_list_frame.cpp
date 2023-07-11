@@ -346,7 +346,7 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 
 		Emu.AddGamesFromDir(g_cfg_vfs.get(g_cfg_vfs.games_dir, rpcs3::utils::get_emu_dir()));
 
-		const std::string _hdd = rpcs3::utils::get_hdd0_dir();
+		const std::string _hdd = Emu.GetCallbacks().resolve_path(rpcs3::utils::get_hdd0_dir()) + '/';
 
 		m_parsing_watcher.setFuture(QtConcurrent::map(m_parsing_threads, [this, _hdd](int index)
 		{
@@ -371,7 +371,9 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 				}
 			};
 
-			add_dir(_hdd + "game/", false);
+			const std::string hdd0_game = _hdd + "game/";
+
+			add_dir(hdd0_game, false);
 			add_dir(_hdd + "disc/", true); // Deprecated
 
 			for (const auto& [serial, path] : Emu.GetGamesConfig().get_games())
@@ -379,7 +381,7 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 				std::string game_dir = path;
 				game_dir.resize(game_dir.find_last_not_of('/') + 1);
 
-				if (game_dir.empty())
+				if (game_dir.empty() || path.starts_with(hdd0_game))
 				{
 					continue;
 				}

@@ -138,7 +138,7 @@ namespace rsx
 		bool supports_normalized_barycentrics; // Basically all GPUs except NVIDIA have properly normalized barycentrics
 	};
 
-	struct sampled_image_descriptor_base;
+	class sampled_image_descriptor_base;
 
 	struct desync_fifo_cmd_info
 	{

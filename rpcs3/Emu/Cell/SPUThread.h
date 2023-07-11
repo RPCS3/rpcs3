@@ -608,6 +608,15 @@ struct spu_memory_segment_dump_data
 	u32 flags = umax;
 };
 
+enum class spu_debugger_mode : u32
+{
+	_default,
+	is_float,
+	is_decimal,
+
+	max_mode,
+};
+
 class spu_thread : public cpu_thread
 {
 public:
@@ -794,7 +803,7 @@ public:
 	u64 start_time{}; // Starting time of STOP or RDCH bloking function
 	bool unsavable = false; // Flag indicating whether saving the spu thread state is currently unsafe
 
-	atomic_t<u8> debugger_float_mode = 0;
+	atomic_t<spu_debugger_mode> debugger_mode{};
 
 	// PC-based breakpoint list
 	std::array<atomic_t<bool>, SPU_LS_SIZE / 4> local_breakpoints{};

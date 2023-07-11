@@ -1237,6 +1237,12 @@ std::array<u32, 2> op_branch_targets(u32 pc, ppu_opcode_t op)
 
 void ppu_thread::dump_regs(std::string& ret) const
 {
+	const system_state emu_state = Emu.GetStatus(false);
+	const bool is_stopped_or_frozen = state & cpu_flag::exit || emu_state == system_state::frozen || emu_state <= system_state::stopping;
+	const ppu_debugger_mode mode = debugger_mode.load();
+
+	const bool is_decimal = !is_stopped_or_frozen && mode == ppu_debugger_mode::is_decimal;
+
 	PPUDisAsm dis_asm(cpu_disasm_mode::normal, vm::g_sudo_addr);
 
 	for (uint i = 0; i < 32; ++i)
@@ -1278,7 +1284,14 @@ void ppu_thread::dump_regs(std::string& ret) const
 
 		if (!printed_error)
 		{
-			fmt::append(ret, "0x%-8llx", reg);
+			if (is_decimal)
+			{
+				fmt::append(ret, "%-11d", reg);
+			}
+			else
+			{
+				fmt::append(ret, "0x%-8llx", reg);
+			}
 		}
 
 		constexpr u32 max_str_len = 32;
@@ -1824,7 +1837,7 @@ void ppu_thread::cpu_on_stop()
 	}
 
 	// TODO: More conditions
-	if (Emu.IsStopped() && g_cfg.core.spu_debug)
+	if (Emu.IsStopped() && g_cfg.core.ppu_debug)
 	{
 		std::string ret;
 		dump_all(ret);

@@ -2416,6 +2416,12 @@ namespace rsx
 					result.external_subresource_desc = { 0, deferred_request_command::mipmap_gather, attributes, {}, tex.decoded_remap() };
 					result.format_class = rsx::classify_format(attributes.gcm_format);
 
+					if (result.texcoord_xform.clamp)
+					{
+						// Revert clamp configuration
+						result.pop_texcoord_xform();
+					}
+
 					if (use_upscaling)
 					{
 						// Grab the correct image dimensions from the base mipmap level
@@ -3258,7 +3264,13 @@ namespace rsx
 						else
 						{
 							// Unlikely situation, but the only one which would allow re-upload from CPU to overlap this section.
-							ensure(!found->is_flushable());
+							if (found->is_flushable())
+							{
+								// Technically this is possible in games that may change surface pitch at random (insomniac engine)
+								// FIXME: A proper fix includes pitch conversion and surface inheritance chains between surface targets and blit targets (unified cache) which is a very long-term thing.
+								const auto range = found->get_section_range();
+								rsx_log.error("[Pitch Mismatch] GPU-resident data at 0x%x->0x%x is discarded due to surface cache data clobbering it.", range.start, range.end);
+							}
 							found->discard(true);
 						}
 					}
