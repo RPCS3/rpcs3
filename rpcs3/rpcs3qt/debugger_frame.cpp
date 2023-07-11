@@ -620,13 +620,26 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 				break;
 			}
 
-			if (cpu->id_type() != 2)
+			if (cpu->id_type() == 1)
 			{
-				break;
+				static_cast<ppu_thread*>(cpu)->debugger_mode.atomic_op([](ppu_debugger_mode& mode)
+				{
+					mode = static_cast<ppu_debugger_mode>((static_cast<u32>(mode) + 1) % static_cast<u32>(ppu_debugger_mode::max_mode));
+				});
+
+				return;
+			}
+			if (cpu->id_type() == 2)
+			{
+				static_cast<spu_thread*>(cpu)->debugger_mode.atomic_op([](spu_debugger_mode& mode)
+				{
+					mode = static_cast<spu_debugger_mode>((static_cast<u32>(mode) + 1) % static_cast<u32>(spu_debugger_mode::max_mode));
+				});
+
+				return;
 			}
 
-			static_cast<spu_thread*>(cpu)->debugger_float_mode ^= 1; // Switch mode
-			return;
+			break;
 		}
 		case Qt::Key_R:
 		{

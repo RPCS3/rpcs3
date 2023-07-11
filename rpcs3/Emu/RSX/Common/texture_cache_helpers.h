@@ -514,6 +514,9 @@ namespace rsx
 			const size2i& desired_dimensions,
 			const size2i& actual_dimensions)
 		{
+			// Back up the transformation before we destructively modify it.
+			desc.push_texcoord_xform();
+
 			desc.texcoord_xform.scale[0] *= f32(desired_dimensions.width) / actual_dimensions.width;
 			desc.texcoord_xform.scale[1] *= f32(desired_dimensions.height) / actual_dimensions.height;
 			desc.texcoord_xform.bias[0] += f32(offset.x) / actual_dimensions.width;

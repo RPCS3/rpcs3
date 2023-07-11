@@ -1019,7 +1019,12 @@ spu_imm_table_t::spu_imm_table_t()
 
 void spu_thread::dump_regs(std::string& ret) const
 {
-	const bool floats_only = debugger_float_mode.load();
+	const system_state emu_state = Emu.GetStatus(false);
+	const bool is_stopped_or_frozen = state & cpu_flag::exit || emu_state == system_state::frozen || emu_state <= system_state::stopping;
+	const spu_debugger_mode mode = debugger_mode.load();
+
+	const bool floats_only = !is_stopped_or_frozen && mode == spu_debugger_mode::is_float;
+	const bool is_decimal = !is_stopped_or_frozen && mode == spu_debugger_mode::is_decimal;
 
 	SPUDisAsm dis_asm(cpu_disasm_mode::normal, ls);
 
@@ -1097,12 +1102,26 @@ void spu_thread::dump_regs(std::string& ret) const
 			if (!printed_error)
 			{
 				// Shortand formatting
-				fmt::append(ret, "%08x", i3);
+				if (is_decimal)
+				{
+					fmt::append(ret, "%-11d", i3);
+				}
+				else
+				{
+					fmt::append(ret, "%08x", i3);
+				}
 			}
 		}
 		else
 		{
-			fmt::append(ret, "%08x %08x %08x %08x", r.u32r[0], r.u32r[1], r.u32r[2], r.u32r[3]);
+			if (is_decimal)
+			{
+				fmt::append(ret, "%-11d %-11d %-11d %-11d", r.u32r[0], r.u32r[1], r.u32r[2], r.u32r[3]);
+			}
+			else
+			{
+				fmt::append(ret, "%08x %08x %08x %08x", r.u32r[0], r.u32r[1], r.u32r[2], r.u32r[3]);
+			}
 		}
 
 		if (i3 >= 0x80 && is_exec_code(i3, ls))
@@ -1211,26 +1230,7 @@ std::vector<std::pair<u32, u32>> spu_thread::dump_callstack_list() const
 			return !addr || !is_exec_code(addr, ls);
 		};
 
-		if (is_invalid(lr))
-		{
-			if (first)
-			{
-				// Function hasn't saved LR, could be because it's a leaf function
-				// Use LR directly instead
-				lr = gpr0;
-
-				if (is_invalid(lr))
-				{
-					// Skip it, workaround
-					continue;
-				}
-			}
-			else
-			{
-				break;
-			}
-		}
-		else if (first && lr._u32[3] != gpr0._u32[3] && !is_invalid(gpr0))
+		if (first && lr._u32[3] != gpr0._u32[3] && !is_invalid(gpr0))
 		{
 			// Detect functions with no stack or before LR has been stored
 			std::vector<bool> passed(SPU_LS_SIZE / 4);
@@ -1319,8 +1319,15 @@ std::vector<std::pair<u32, u32>> spu_thread::dump_callstack_list() const
 			}
 		}
 
-		// TODO: function addresses too
-		call_stack_list.emplace_back(lr._u32[3], sp);
+		if (!is_invalid(lr))
+		{
+			// TODO: function addresses too
+			call_stack_list.emplace_back(lr._u32[3], sp);
+		}
+		else if (!first)
+		{
+			break;
+		}
 
 		const u32 temp_sp = _ref<u32>(sp);
 
@@ -4612,9 +4619,9 @@ void spu_thread::set_interrupt_status(bool enable)
 		// Detect enabling interrupts with events masked
 		if (auto mask = ch_events.load().mask; mask & SPU_EVENT_INTR_BUSY_CHECK)
 		{
-			if (g_cfg.core.spu_decoder != spu_decoder_type::_static)
+			if (g_cfg.core.spu_decoder != spu_decoder_type::_static && g_cfg.core.spu_decoder != spu_decoder_type::dynamic)
 			{
-				fmt::throw_exception("SPU Interrupts not implemented (mask=0x%x): Use static interpreter", mask);
+				fmt::throw_exception("SPU Interrupts not implemented (mask=0x%x): Use [%s] SPU decoder", mask, spu_decoder_type::dynamic);
 			}
 
 			spu_log.trace("SPU Interrupts (mask=0x%x) are using CPU busy checking mode", mask);
@@ -5290,7 +5297,7 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 
 	case MFC_Size:
 	{
-		ch_mfc_cmd.size = value & 0x7fff;
+		ch_mfc_cmd.size = static_cast<u16>(std::min<u32>(value, 0xffff));
 		return true;
 	}
 

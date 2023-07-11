@@ -47,5 +47,6 @@ namespace glsl
 		bool require_tex1D_ops : 1;             // Include 1D texture stuff
 		bool require_tex2D_ops : 1;             // Include 2D texture stuff
 		bool require_tex3D_ops : 1;             // Include 3D texture stuff (including cubemap)
+		bool require_shadowProj_ops : 1;        // Include shadow2DProj projection textures (1D is unsupported anyway)
 	};
 };

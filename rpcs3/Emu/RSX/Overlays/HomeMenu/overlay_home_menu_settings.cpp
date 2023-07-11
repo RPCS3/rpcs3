@@ -43,7 +43,7 @@ namespace rsx
 			: home_menu_settings_page(x, y, width, height, use_separators, parent, get_localized_string(localized_string_id::HOME_MENU_SETTINGS_VIDEO))
 		{
 			add_dropdown(&g_cfg.video.frame_limit, "Frame Limit");
-			add_unsigned_slider(&g_cfg.video.anisotropic_level_override, "Anisotropic Filter Override", "", 2);
+			add_unsigned_slider(&g_cfg.video.anisotropic_level_override, "Anisotropic Filter Override", "x", 2, {{0, "Auto"}});
 
 			add_dropdown(&g_cfg.video.output_scaling, "Output Scaling");
 			if (g_cfg.video.renderer == video_renderer::vulkan && g_cfg.video.output_scaling == output_scaling_mode::fsr)
@@ -52,10 +52,6 @@ namespace rsx
 			}
 
 			add_checkbox(&g_cfg.video.stretch_to_display_area, "Stretch To Display Area");
-
-			add_unsigned_slider(&g_cfg.video.driver_wakeup_delay, "Driver Wake-Up Delay", " µs", 20, g_cfg.video.driver_wakeup_delay.min, 800);
-			add_signed_slider(&g_cfg.video.vblank_rate, "VBlank Frequency", " Hz", 1);
-			add_checkbox(&g_cfg.video.vblank_ntsc, "VBlank NTSC Fixup");
 
 			apply_layout();
 		}
@@ -68,6 +64,10 @@ namespace rsx
 			add_unsigned_slider(&g_cfg.core.max_cpu_preempt_count_per_frame, "Max Power Saving CPU-Preemptions", "", 1);
 			add_checkbox(&g_cfg.core.rsx_accurate_res_access, "Accurate RSX reservation access");
 			add_dropdown(&g_cfg.core.sleep_timers_accuracy, "Sleep Timers Accuracy");
+
+			add_unsigned_slider(&g_cfg.video.driver_wakeup_delay, "Driver Wake-Up Delay", " µs", 20, {}, g_cfg.video.driver_wakeup_delay.min, 800);
+			add_signed_slider(&g_cfg.video.vblank_rate, "VBlank Frequency", " Hz", 30);
+			add_checkbox(&g_cfg.video.vblank_ntsc, "VBlank NTSC Fixup");
 
 			apply_layout();
 		}

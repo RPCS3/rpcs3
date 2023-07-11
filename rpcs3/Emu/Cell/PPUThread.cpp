@@ -133,11 +133,23 @@ void fmt_class_string<typename ppu_thread::call_history_t>::format(std::string& 
 
 	PPUDisAsm dis_asm(cpu_disasm_mode::normal, vm::g_sudo_addr);
 
-	for (u64 count = 0, idx = history.index - 1; idx != umax && count < ppu_thread::call_history_max_size; count++, idx--)
+	for (u64 count = 0, idx = history.index - 1; idx != umax && count < history.data.size(); count++, idx--)
 	{
-		const u32 pc = history.data[idx % ppu_thread::call_history_max_size];
+		const u32 pc = history.data[idx % history.data.size()];
 		dis_asm.disasm(pc);
 		fmt::append(out, "\n(%u) 0x%08x: %s", count, pc, dis_asm.last_opcode);
+	}
+}
+
+template <>
+void fmt_class_string<typename ppu_thread::syscall_history_t>::format(std::string& out, u64 arg)
+{
+	const auto& history = get_object(arg);
+
+	for (u64 count = 0, idx = history.index - 1; idx != umax && count < history.data.size(); count++, idx--)
+	{
+		const auto& entry = history.data[idx % history.data.size()];
+		fmt::append(out, "\n(%u) 0x%08x: %s, 0x%x, r3=0x%x, r4=0x%x, r5=0x%x, r6=0x%x", count, entry.cia, entry.func_name, entry.error, entry.args[0], entry.args[1], entry.args[2], entry.args[3]);
 	}
 }
 
@@ -1225,6 +1237,12 @@ std::array<u32, 2> op_branch_targets(u32 pc, ppu_opcode_t op)
 
 void ppu_thread::dump_regs(std::string& ret) const
 {
+	const system_state emu_state = Emu.GetStatus(false);
+	const bool is_stopped_or_frozen = state & cpu_flag::exit || emu_state == system_state::frozen || emu_state <= system_state::stopping;
+	const ppu_debugger_mode mode = debugger_mode.load();
+
+	const bool is_decimal = !is_stopped_or_frozen && mode == ppu_debugger_mode::is_decimal;
+
 	PPUDisAsm dis_asm(cpu_disasm_mode::normal, vm::g_sudo_addr);
 
 	for (uint i = 0; i < 32; ++i)
@@ -1266,7 +1284,14 @@ void ppu_thread::dump_regs(std::string& ret) const
 
 		if (!printed_error)
 		{
-			fmt::append(ret, "0x%-8llx", reg);
+			if (is_decimal)
+			{
+				fmt::append(ret, "%-11d", reg);
+			}
+			else
+			{
+				fmt::append(ret, "0x%-8llx", reg);
+			}
 		}
 
 		constexpr u32 max_str_len = 32;
@@ -1601,6 +1626,15 @@ void ppu_thread::dump_all(std::string& ret) const
 
 		fmt::append(ret, "%s", call_history);
 	}
+
+	if (syscall_history.data.size() > 1)
+	{
+		ret +=
+			"\nHLE/LV2 History:"
+			"\n================";
+
+		fmt::append(ret, "%s", syscall_history);
+	}
 }
 
 extern thread_local std::string(*g_tls_log_prefix)();
@@ -1803,7 +1837,7 @@ void ppu_thread::cpu_on_stop()
 	}
 
 	// TODO: More conditions
-	if (Emu.IsStopped() && g_cfg.core.spu_debug)
+	if (Emu.IsStopped() && g_cfg.core.ppu_debug)
 	{
 		std::string ret;
 		dump_all(ret);
