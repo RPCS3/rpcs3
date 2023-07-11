@@ -702,6 +702,33 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 
 	std::string error_message;
 
+	// Validate offset
+	switch (p_data.type)
+	{
+	case patch_type::move_file:
+	case patch_type::hide_file:
+		break;
+	default:
+	{
+		const u32 offset = get_yaml_node_value<u32>(addr_node, error_message);
+		if (!error_message.empty())
+		{
+			error_message = fmt::format("Skipping patch data entry: [ %s, 0x%.8x, %s ] (key: %s, location: %s) Invalid patch offset '%s' (not a valid u32 or overflow)",
+				p_data.type, p_data.offset, p_data.original_value.empty() ? "?" : p_data.original_value, info.hash, get_yaml_node_location(node), p_data.original_offset);
+			append_log_message(log_messages, error_message, &patch_log.error);
+			return false;
+		}
+		if ((0xFFFFFFFF - modifier) < p_data.offset)
+		{
+			error_message = fmt::format("Skipping patch data entry: [ %s, 0x%.8x, %s ] (key: %s, location: %s) Invalid combination of patch offset 0x%.8x and modifier 0x%.8x (overflow)",
+				p_data.type, p_data.offset, p_data.original_value.empty() ? "?" : p_data.original_value, info.hash, get_yaml_node_location(node), p_data.offset, modifier);
+			append_log_message(log_messages, error_message, &patch_log.error);
+			return false;
+		}
+		break;
+	}
+	}
+
 	switch (p_data.type)
 	{
 	case patch_type::utf8:
