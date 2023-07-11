@@ -251,6 +251,13 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 			// Each key in "Patches" is also the patch description
 			const std::string& description = patches_entry.first.Scalar();
 
+			if (description.empty())
+			{
+				append_log_message(log_messages, fmt::format("Error: Empty patch name (key: %s, location: %s, file: %s)", main_key, get_yaml_node_location(patches_entry.first), path), &patch_log.error);
+				is_valid = false;
+				continue;
+			}
+
 			// Compile patch information
 
 			if (const auto yml_type = patches_entry.second.Type(); yml_type != YAML::NodeType::Map)
