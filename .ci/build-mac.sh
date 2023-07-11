@@ -1,5 +1,6 @@
 #!/bin/sh -ex
 
+export HOMEBREW_NO_AUTO_UPDATE=1
 brew install -f --overwrite nasm ninja git p7zip create-dmg ccache pipenv
 
 #/usr/sbin/softwareupdate --install-rosetta --agree-to-license
@@ -27,12 +28,18 @@ export WORKDIR;
 WORKDIR="$(pwd)"
 
 # Get Qt
-git clone https://github.com/engnr/qt-downloader.git
-cd qt-downloader
-git checkout f52efee0f18668c6d6de2dec0234b8c4bc54c597
-"/opt/homebrew/bin/pipenv" run pip3 install py7zr requests semantic_version lxml
-"/opt/homebrew/bin/pipenv" run ./qt-downloader macos desktop 5.15.2 clang_64 --opensource
-cd ..
+if [ ! -d "/tmp/Qt/5.15.2" ]; then
+  mkdir -p "/tmp/Qt"
+  git clone https://github.com/engnr/qt-downloader.git
+  cd qt-downloader
+  git checkout f52efee0f18668c6d6de2dec0234b8c4bc54c597
+  cd "/tmp/Qt"
+  "/opt/homebrew/bin/pipenv" run pip3 install py7zr requests semantic_version lxml
+  "/opt/homebrew/bin/pipenv" run "$WORKDIR/qt-downloader/qt-downloader" macos desktop 5.15.2 clang_64 --opensource
+fi
+
+cd "$WORKDIR"
+ditto "/tmp/Qt/5.15.2" "qt-downloader/5.15.2"
 
 export Qt5_DIR="$WORKDIR/qt-downloader/5.15.2/clang_64/lib/cmake/Qt5"
 export SDL2_DIR="$BREW_X64_PATH/opt/sdl2/lib/cmake/SDL2"
