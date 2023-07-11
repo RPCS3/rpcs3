@@ -28,3 +28,4 @@ T get_yaml_node_value(YAML::Node node, std::string& error_message);
 
 // Get the location of the node in the document
 std::string get_yaml_node_location(YAML::Node node);
+std::string get_yaml_node_location(const YAML::detail::iterator_value& it);

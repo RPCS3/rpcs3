@@ -76,6 +76,11 @@ std::string get_yaml_node_location(YAML::Node node)
 	}
 }
 
+std::string get_yaml_node_location(const YAML::detail::iterator_value& it)
+{
+	return get_yaml_node_location(it.first);
+}
+
 template u32 get_yaml_node_value<u32>(YAML::Node, std::string&);
 template u64 get_yaml_node_value<u64>(YAML::Node, std::string&);
 template s64 get_yaml_node_value<s64>(YAML::Node, std::string&);
