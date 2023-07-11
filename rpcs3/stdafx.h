@@ -3,6 +3,7 @@
 #include "util/types.hpp"
 #include "util/atomic.hpp"
 #include "util/endian.hpp"
+#include "Utilities/Config.h"
 #include "Utilities/StrFmt.h"
 #include "Utilities/File.h"
 #include "util/logs.hpp"

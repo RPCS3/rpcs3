@@ -597,7 +597,7 @@ inline void gv_zeroupper()
 #if defined(ARCH_X64)
 	if (!g_use_avx)
 		return;
-#if defined(_M_X64)
+#if defined(_M_X64) && defined(_MSC_VER)
 	_mm256_zeroupper();
 #else
 	__asm__ volatile("vzeroupper;");

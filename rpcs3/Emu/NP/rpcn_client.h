@@ -29,7 +29,14 @@
 
 #include "generated/np2_structs_generated.h"
 
+#ifdef __clang__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
 #include <wolfssl/ssl.h>
+#ifdef __clang__
+#pragma GCC diagnostic pop
+#endif
 
 class vec_stream
 {
@@ -454,7 +461,11 @@ namespace rpcn
 
 		sockaddr_in addr_rpcn{};
 		sockaddr_in addr_rpcn_udp{};
+#ifdef _WIN32
+		SOCKET sockfd = 0;
+#else
 		int sockfd = 0;
+#endif
 
 		atomic_t<u64> rpcn_request_counter = 0x100000001; // Counter used for commands whose result is not forwarded to NP handler(login, create, sendmessage, etc)
 

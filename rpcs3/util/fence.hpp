@@ -3,7 +3,11 @@
 #include "util/types.hpp"
 
 #ifdef _M_X64
+#ifdef _MSC_VER
 extern "C" void _mm_lfence();
+#else
+#include <immintrin.h>
+#endif
 #endif
 
 namespace utils

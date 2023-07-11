@@ -2368,7 +2368,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	}
 }
 
-void settings_dialog::closeEvent(QCloseEvent* event)
+void settings_dialog::closeEvent([[maybe_unused]] QCloseEvent* event)
 {
 	m_gui_settings->SetValue(gui::cfg_geometry, saveGeometry());
 	m_gui_settings->sync();

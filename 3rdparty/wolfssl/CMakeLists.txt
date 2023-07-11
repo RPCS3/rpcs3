@@ -1,40 +1,26 @@
 if(USE_SYSTEM_WOLFSSL)
-	message("-- RPCS3: using shared wolfssl")
+	message(STATUS "RPCS3: using shared wolfssl")
 	pkg_check_modules(WolfSSL REQUIRED IMPORTED_TARGET wolfssl>=4.7.0)
 	add_library(wolfssl INTERFACE)
 	target_link_libraries(wolfssl INTERFACE PkgConfig::WolfSSL)
 else()
-	# TODO(cjj19970505@live.cn)
-	# OPENSSL_EXTRA, and HAVE_SNI are unconfigurable from CMake cache.
-	# but they do have it in a TODO list (wolfssl/CMakeList, 1021)
-	add_compile_definitions(OPENSSL_EXTRA WOLFSSL_DES_ECB HAVE_SNI HAVE_WRITE_DUP)
-	add_compile_definitions(FP_MAX_BITS=8192)
-
-	set(WOLFSSL_TLS13 "no" CACHE INTERNAL "")
-	set(WOLFSSL_SHA224 "yes" CACHE INTERNAL "")
-	set(WOLFSSL_SHA3 "yes" CACHE INTERNAL "")
-	set(WOLFSSL_SHAKE256 "yes" CACHE INTERNAL "")
-	set(WOLFSSL_BASE64_ENCODE "no" CACHE INTERNAL "")
-	set(WOLFSSL_DES3 "yes" CACHE INTERNAL "")
-	set(WOLFSSL_POLY1305 "yes" CACHE INTERNAL "")
-	set(WOLFSSL_CHACHA "yes" CACHE INTERNAL "")
-	set(WOLFSSL_FILESYSTEM "yes" CACHE INTERNAL "")
-	set(WOLFSSL_PWDBASED "yes" CACHE INTERNAL "")
-	set(WOLFSSL_FAST_MATH "yes" CACHE INTERNAL "")
-	set(WOLFSSL_EXAMPLES "no" CACHE INTERNAL "")
-	set(WOLFSSL_CRYPT_TESTS "no" CACHE INTERNAL "")
-	set(WOLFSSL_ASYNC_THREADS "no" CACHE INTERNAL "")
-	set(WOLFSSL_CONFIG_H "no" CACHE INTERNAL "")
+	set(WOLFSSL_TLS13 OFF CACHE STRING "Enable wolfSSL TLS v1.3 (default: enabled)")
+	set(WOLFSSL_SHA3 ON CACHE STRING "Enable wolfSSL SHA-3 support (default: enabled on x86_64/aarch64)")
+	set(WOLFSSL_SHAKE256 ON CACHE STRING "Enable wolfSSL SHAKE256 support (default: enabled on x86_64/aarch64)")
+	set(WOLFSSL_BASE64_ENCODE OFF CACHE STRING "Enable Base64 encoding (default: enabled on x86_64)")
+	set(WOLFSSL_DES3 ON CACHE STRING "Enable DES3 (default: disabled)")
+	set(WOLFSSL_PWDBASED ON CACHE STRING "Enable PWDBASED (default: disabled)")
+	set(WOLFSSL_FAST_MATH ON CACHE STRING "Enable fast math ops (default: disabled)")
+	set(WOLFSSL_EXAMPLES OFF CACHE STRING "Enable examples (default: enabled)")
+	set(WOLFSSL_CRYPT_TESTS OFF CACHE STRING "Enable Crypt Bench/Test (default: enabled)")
+	set(WOLFSSL_ASYNC_THREADS OFF CACHE STRING "Enable Asynchronous Threading (default: enabled)")
+	set(WOLFSSL_BUILD_OUT_OF_TREE ON CACHE STRING "Don't generate files in the source tree (default: no)")
+	set(WOLFSSL_SNI ON CACHE STRING "Enable SNI (default: disabled)")
+	set(WOLFSSL_OPENSSLEXTRA ON CACHE STRING "Enable extra OpenSSL API, size+ (default: disabled)")
+	set(WOLFSSL_HARDEN OFF CACHE STRING "Enable Hardened build, Enables Timing Resistance and Blinding (default: enabled)")
 
 	add_subdirectory(wolfssl EXCLUDE_FROM_ALL)
 
-	set(WolfSSL_LIBRARY "$<TARGET_FILE:wolfssl>" CACHE INTERNAL "")
-
-	# "${CMAKE_CURRENT_SOURCE_DIR}/wolfssl/wolfssl/" provides openssl headers
-	# So that curl can be built on an environment where openssl headers are not provided
-	set(WolfSSL_INCLUDE_DIR
-		"${CMAKE_CURRENT_SOURCE_DIR}/wolfssl/"
-		"${CMAKE_CURRENT_SOURCE_DIR}/wolfssl/wolfssl/"
-		"${CMAKE_CURRENT_BINARY_DIR}/wolfssl/"
-		CACHE INTERNAL "")
+	target_compile_definitions(wolfssl PUBLIC WOLFSSL_DES_ECB HAVE_WRITE_DUP)
+	target_compile_definitions(wolfssl PUBLIC FP_MAX_BITS=8192)
 endif()

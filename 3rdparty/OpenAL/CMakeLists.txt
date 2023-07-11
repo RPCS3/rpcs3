@@ -1,5 +1,5 @@
 # OpenAL
-if (MSVC)
+if (WIN32)
 	find_path(OPENAL_INCLUDE_DIR al.h PATHS include/)
 	find_library(OPENAL_LIBRARY OpenAL32 PATHS libs/Win64/)
 else()

@@ -3077,9 +3077,9 @@ namespace
 		{
 		}
 
-		fs::stat_t stat() override
+		fs::stat_t get_stat() override
 		{
-			return m_file.stat();
+			return m_file.get_stat();
 		}
 
 		bool trunc(u64) override

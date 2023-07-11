@@ -73,12 +73,12 @@ namespace utils
 	std::vector<std::string> get_backtrace_symbols(const std::vector<void*>& stack)
 	{
 		std::vector<std::string> result = {};
-		std::vector<u8> symbol_buf(sizeof(SYMBOL_INFO) + sizeof(TCHAR) * 256);
+		std::vector<u8> symbol_buf(sizeof(SYMBOL_INFOW) + sizeof(TCHAR) * 256);
 
 		const auto hProcess = ::GetCurrentProcess();
 
-		auto sym = reinterpret_cast<SYMBOL_INFO*>(symbol_buf.data());
-		sym->SizeOfStruct = sizeof(SYMBOL_INFO);
+		auto sym = reinterpret_cast<SYMBOL_INFOW*>(symbol_buf.data());
+		sym->SizeOfStruct = sizeof(SYMBOL_INFOW);
 		sym->MaxNameLen = 256;
 
 		IMAGEHLP_LINEW64 line_info{};
@@ -90,7 +90,7 @@ namespace utils
 		for (const auto& pointer : stack)
 		{
 			DWORD64 unused;
-			SymFromAddr(hProcess, reinterpret_cast<DWORD64>(pointer), &unused, sym);
+			SymFromAddrW(hProcess, reinterpret_cast<DWORD64>(pointer), &unused, sym);
 
 			if (sym->NameLen)
 			{
@@ -98,7 +98,7 @@ namespace utils
 
 				// Attempt to get file and line information if available
 				DWORD unused2;
-				if (SymGetLineFromAddrW(hProcess, reinterpret_cast<DWORD64>(pointer), &unused2, &line_info))
+				if (SymGetLineFromAddrW64(hProcess, reinterpret_cast<DWORD64>(pointer), &unused2, &line_info))
 				{
 					const auto full_path = fmt::format("%s:%u %s", wstr_to_utf8(line_info.FileName, -1), line_info.LineNumber, function_name);
 					result.push_back(full_path);

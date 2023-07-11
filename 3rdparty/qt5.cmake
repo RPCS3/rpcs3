@@ -20,7 +20,7 @@ endif()
 if(NOT Qt5Widgets_FOUND)
 	if(Qt5Widgets_VERSION VERSION_LESS ${QT_MIN_VER})
 		message("Minimum supported Qt5 version is ${QT_MIN_VER}! You have version ${Qt5Widgets_VERSION} installed, please upgrade!")
-		if(CMAKE_SYSTEM MATCHES "Linux")
+		if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 			message(FATAL_ERROR "Most distros do not provide an up-to-date version of Qt.
 If you're on Ubuntu or Linux Mint, there are PPAs you can use to install one of the latest qt5 versions.
 Find the correct ppa at https://launchpad.net/~beineri and follow the instructions.")
@@ -35,7 +35,7 @@ Find the correct ppa at https://launchpad.net/~beineri and follow the instructio
 	if(WIN32)
 		message(FATAL_ERROR "Make sure the QTDIR env variable has been set properly. (for example C:\\Qt\\${QT_MIN_VER}\\msvc2019_64\\)
 You can also try setting the Qt5_DIR preprocessor definiton.")
-	elseif(CMAKE_SYSTEM MATCHES "Linux")
+	elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 		message(FATAL_ERROR "Make sure to install your distro's qt5 package!")
 	else()
 		message(FATAL_ERROR "You need to have Qt5 installed, look online for instructions on installing Qt5 on ${CMAKE_SYSTEM}.")

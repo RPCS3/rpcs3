@@ -5,42 +5,43 @@ if (CMAKE_USE_PTHREADS_INIT)
 	set(PTHREADS_ENABLED TRUE)
 endif()
 
-if (WIN32 OR "${CMAKE_SYSTEM_NAME}" STREQUAL "CYGWIN")
+if (CYGWIN)
 	add_compile_definitions(PLATFORM_WINDOWS=1)
-	set(OS_WINDOWS 1 CACHE INTERNAL "controls config.h macro definition" FORCE)
+	set(OS_WINDOWS 1)
 
-	# Enable MingW support for RC language (for CMake pre-2.8)
-	if (MINGW)
-		set(CMAKE_RC_COMPILER_INIT windres)
-		set(CMAKE_RC_COMPILE_OBJECT "<CMAKE_RC_COMPILER> <FLAGS> -O coff <DEFINES> -i <SOURCE> -o <OBJECT>")
-	endif()
-	enable_language(RC)
-
-	if ("${CMAKE_SYSTEM_NAME}" STREQUAL "CYGWIN")
-		message(STATUS "Detected cygwin")
-		set(PTHREADS_ENABLED TRUE)
-		set(WITHOUT_POLL_H TRUE CACHE INTERNAL "Disable using poll.h even if it's available - use windows poll instead fo cygwin's" FORCE)
-	endif()
+	message(STATUS "Detected Cygwin")
+	set(PTHREADS_ENABLED TRUE)
+	set(WITHOUT_POLL_H TRUE)
 
 	list(APPEND PLATFORM_SRC
 		events_windows.c
 		windows_usbdk.c
 		windows_common.c
 		windows_winusb.c
-		threads_windows.c
 	)
 
 	if (PTHREADS_ENABLED AND NOT WITHOUT_PTHREADS)
 		list(APPEND PLATFORM_SRC threads_posix)
-	else()
-		list(APPEND PLATFORM_SRC threads_windows.c)
 	endif()
+elseif(WIN32)
+	add_compile_definitions(PLATFORM_WINDOWS=1)
+	set(OS_WINDOWS 1)
+	set(PTHREADS_ENABLED FALSE)
+
+	list(APPEND PLATFORM_SRC
+		events_windows.c
+		windows_usbdk.c
+		windows_common.c
+		windows_winusb.c
+	)
+
+	list(APPEND PLATFORM_SRC threads_windows.c)
 elseif (APPLE)
 	# Apple != OSX alone
 	add_compile_definitions(PLATFORM_POSIX=1 HAVE_CLOCK_GETTIME)
-	set(OS_DARWIN 1 CACHE INTERNAL "controls config.h macro definition" FORCE)
+	set(OS_DARWIN 1)
 
-	if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
+	if (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
 		set(PLATFORM_SRC
 			darwin_usb.c
 			threads_posix.c
@@ -77,7 +78,7 @@ elseif (UNIX)
 	# Unix is for all *NIX systems including OSX
 	add_compile_definitions(PLATFORM_POSIX=1 HAVE_CLOCK_GETTIME)
 	if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
-		set(OS_LINUX 1 CACHE INTERNAL "controls config.h macro definition" FORCE)
+		set(OS_LINUX 1)
 
 		set(PLATFORM_SRC
 			linux_usbfs.c
@@ -108,4 +109,4 @@ set(LIBUSB_LIBRARIES ${LIBUSB_LIBRARIES} PARENT_SCOPE)
 if (WITHOUT_PTHREADS)
 	set(PTHREADS_ENABLED FALSE)
 endif()
-set(THREADS_POSIX ${PTHREADS_ENABLED} CACHE INTERNAL "use pthreads" FORCE)
+set(THREADS_POSIX ${PTHREADS_ENABLED})

@@ -21,7 +21,7 @@
 #include "util/asm.hpp"
 #include "util/fence.hpp"
 
-#ifdef _M_X64
+#if defined(_M_X64) && defined(_MSC_VER)
 extern "C" u64 _xgetbv(u32);
 #endif
 
@@ -470,8 +470,8 @@ std::string utils::get_OS_version()
 	std::vector<char> holder(service_pack.Length + 1, '\0');
 	if (has_sp)
 	{
-		WideCharToMultiByte(CP_UTF8, NULL, service_pack.Buffer, service_pack.Length,
-			(LPSTR) holder.data(), static_cast<int>(holder.size()), nullptr, nullptr);
+		WideCharToMultiByte(CP_UTF8, 0, service_pack.Buffer, service_pack.Length,
+			static_cast<LPSTR>(holder.data()), static_cast<int>(holder.size()), nullptr, nullptr);
 	}
 
 	fmt::append(output,

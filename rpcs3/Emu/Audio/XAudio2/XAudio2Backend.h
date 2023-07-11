@@ -8,7 +8,11 @@
 #include "Utilities/mutex.h"
 #include "Emu/Audio/AudioBackend.h"
 
+#ifdef _MSC_VER
 #include <xaudio2redist.h>
+#else
+#include <xaudio2.h>
+#endif
 #include <wrl/client.h>
 #include <MMDeviceAPI.h>
 

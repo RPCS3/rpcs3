@@ -89,7 +89,11 @@ set(PACKAGE_URL "http://www.libusb.org" CACHE INTERNAL "package url" FORCE)
 set(PACKAGE_TARNAME "libusb" CACHE INTERNAL "tarball name" FORCE)
 set(VERSION "${PACKAGE_VERSION}" CACHE INTERNAL "version" FORCE)
 
-configure_file(config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h @ONLY)
+if(MSVC)
+	file(COPY libusb/msvc/config.h DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+else()
+	configure_file(config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h @ONLY)
+endif()
 message(STATUS "Generated configuration file in ${CMAKE_CURRENT_BINARY_DIR}/config.h")
 
 # for generated config.h

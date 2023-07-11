@@ -86,12 +86,20 @@ namespace utils
 	constexpr int c_mfd_huge_2mb = 0;
 #endif
 
+#ifndef MEM_RESERVE_PLACEHOLDER
+#define MEM_RESERVE_PLACEHOLDER 0x00040000
+#endif
+
+#ifndef MEM_REPLACE_PLACEHOLDER
+#define MEM_REPLACE_PLACEHOLDER 0x00004000
+#endif
+
 #ifdef _WIN32
 	DYNAMIC_IMPORT("KernelBase.dll", VirtualAlloc2, PVOID(HANDLE Process, PVOID Base, SIZE_T Size, ULONG AllocType, ULONG Prot, MEM_EXTENDED_PARAMETER*, ULONG));
 	DYNAMIC_IMPORT("KernelBase.dll", MapViewOfFile3, PVOID(HANDLE Handle, HANDLE Process, PVOID Base, ULONG64 Off, SIZE_T ViewSize, ULONG AllocType, ULONG Prot, MEM_EXTENDED_PARAMETER*, ULONG));
 	DYNAMIC_IMPORT("KernelBase.dll", UnmapViewOfFile2, BOOL(HANDLE Process, PVOID BaseAddress, ULONG UnmapFlags));
 
-	const bool has_win10_memory_mapping_api()
+	bool has_win10_memory_mapping_api()
 	{
 		return VirtualAlloc2 && MapViewOfFile3 && UnmapViewOfFile2;
 	}
@@ -442,7 +450,7 @@ namespace utils
 #endif
 	}
 
-	void* memory_map_fd(native_handle fd, usz size, protection prot)
+	void* memory_map_fd([[maybe_unused]] native_handle fd, [[maybe_unused]] usz size, [[maybe_unused]] protection prot)
 	{
 #ifdef _WIN32
 		// TODO
@@ -591,7 +599,7 @@ namespace utils
 				ensure(clean(GetFileInformationByHandleEx(h, FileStandardInfo, &info, sizeof(info))));
 				ensure(clean(GetFileSizeEx(h, &_eof.EndOfFile)));
 
-				if (info.AllocationSize.QuadPart && _eof.EndOfFile.QuadPart == m_size)
+				if (info.AllocationSize.QuadPart && _eof.EndOfFile.QuadPart == static_cast<LONGLONG>(m_size))
 				{
 					// Truncate file since it may be dirty (fool-proof)
 					DWORD ret = 0;
@@ -604,7 +612,7 @@ namespace utils
 					}
 				}
 
-				if (_eof.EndOfFile.QuadPart != m_size)
+				if (_eof.EndOfFile.QuadPart != static_cast<LONGLONG>(m_size))
 				{
 					// Reset file size to 0 if it doesn't match
 					_eof.EndOfFile.QuadPart = 0;
@@ -870,7 +878,7 @@ namespace utils
 			return {nullptr, fmt::format("VirtualQuery() Unexpceted memory info: state=0x%x, %s", mem.State, std::as_bytes(std::span(&mem, 1)))};
 		}
 
-		const auto base = (u8*)mem.AllocationBase;
+		const auto base = static_cast<u8*>(mem.AllocationBase);
 		const auto size = mem.RegionSize + (target - base);
 
 		if (is_memory_mappping_memory(ptr))
@@ -981,7 +989,7 @@ namespace utils
 			::MEMORY_BASIC_INFORMATION mem{}, mem2{};
 			ensure(::VirtualQuery(target - 1, &mem, sizeof(mem)) && ::VirtualQuery(target + m_size, &mem2, sizeof(mem2)));
 
-			const auto size1 = mem.State == MEM_RESERVE ? target - (u8*)mem.AllocationBase : 0;
+			const auto size1 = mem.State == MEM_RESERVE ? target - static_cast<u8*>(mem.AllocationBase) : 0;
 			const auto size2 =  mem2.State == MEM_RESERVE ? mem2.RegionSize : 0;
 
 			if (!size1 && !size2)
@@ -1011,7 +1019,7 @@ namespace utils
 			return;
 		}
 
-		const auto size1 = mem.State == MEM_RESERVE ? target - (u8*)mem.AllocationBase : 0;
+		const auto size1 = mem.State == MEM_RESERVE ? target - static_cast<u8*>(mem.AllocationBase) : 0;
 		const auto size2 = mem2.State == MEM_RESERVE ? mem2.RegionSize : 0;
 
 		if (!::VirtualAlloc(mem.State == MEM_RESERVE ? mem.AllocationBase : target, m_size + size1 + size2, MEM_RESERVE, PAGE_NOACCESS))

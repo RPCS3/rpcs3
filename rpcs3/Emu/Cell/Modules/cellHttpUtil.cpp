@@ -7,7 +7,9 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <codecvt>
+#ifdef _MSC_VER
 #pragma comment(lib, "Winhttp.lib")
+#endif
 #endif
 
 LOG_CHANNEL(cellHttpUtil);

@@ -4,6 +4,11 @@ include(CMakeDependentOption)
 
 set(CMAKE_CXX_STANDARD 20)
 
+# Warnings are silenced for 3rdparty code
+if(NOT MSVC)
+	add_compile_options("$<$<COMPILE_LANGUAGE:CXX,C>:-w>")
+endif()
+
 # Dummy target to use when lib isn't available
 add_library(3rdparty_dummy_lib INTERFACE)
 
@@ -42,16 +47,16 @@ endif()
 
 
 # libusb
-if(CMAKE_SYSTEM MATCHES "DragonFly|FreeBSD")
+if(CMAKE_SYSTEM_NAME MATCHES "DragonFly|FreeBSD")
 	pkg_check_modules(LIBUSB REQUIRED IMPORTED_TARGET libusb-1.0>=1.0 )
-	CMAKE_DEPENDENT_OPTION( USE_SYSTEM_LIBUSB "Use system libusb-1.0 as shared library" ON
+	cmake_dependent_option(USE_SYSTEM_LIBUSB "Use system libusb-1.0 as shared library" ON
 			"LIBUSB_FOUND" OFF)
 else()
 	pkg_check_modules(LIBUSB IMPORTED_TARGET libusb-1.0>=1.0 )
-	CMAKE_DEPENDENT_OPTION( USE_SYSTEM_LIBUSB "Use system libusb-1.0 as shared library" OFF
+	cmake_dependent_option(USE_SYSTEM_LIBUSB "Use system libusb-1.0 as shared library" OFF
 			"LIBUSB_FOUND" OFF)
 endif()
-if(CMAKE_SYSTEM MATCHES "DragonFly|FreeBSD")
+if(CMAKE_SYSTEM_NAME MATCHES "DragonFly|FreeBSD")
 	# Always use system libusb as reference implementation isn't supported
 	add_library(usb-1.0-shared INTERFACE)
 	target_link_libraries(usb-1.0-shared INTERFACE PkgConfig::LIBUSB)
@@ -100,10 +105,6 @@ endif()
 
 # OpenGL
 
-# Prefer GLVND for OpenGL rather than legacy, unless it's been defined elsewhere, in the case of AppImage builds
-if(NOT DEFINED OpenGL_GL_PREFERENCE)
-	set(OpenGL_GL_PREFERENCE GLVND)
-endif()
 find_package(OpenGL REQUIRED)
 
 add_library(3rdparty_opengl INTERFACE)
@@ -111,17 +112,14 @@ target_include_directories(3rdparty_opengl INTERFACE GL)
 
 if (WIN32)
 	if(NOT MSVC)
-		target_link_libraries(3rdparty_opengl INTERFACE ${OPENGL_LIBRARIES} opengl32.lib glu32.lib)
+		target_link_libraries(3rdparty_opengl INTERFACE OpenGL::GL OpenGL::GLU)
 	else()
 		target_link_libraries(3rdparty_opengl INTERFACE dxgi.lib d2d1.lib dwrite.lib)
 	endif()
+elseif(APPLE)
+	target_link_libraries(3rdparty_opengl INTERFACE OpenGL::GL OpenGL::GLU)
 else()
-	target_link_libraries(3rdparty_opengl INTERFACE ${OPENGL_LIBRARIES})
-
-	target_compile_definitions(3rdparty_opengl
-		INTERFACE
-			-DGL_GLEXT_PROTOTYPES
-			-DGLX_GLXEXT_PROTOTYPES)
+	target_link_libraries(3rdparty_opengl INTERFACE OpenGL::GL OpenGL::GLU OpenGL::GLX)
 endif()
 
 
@@ -160,9 +158,9 @@ set(VULKAN_TARGET 3rdparty_dummy_lib)
 if(USE_VULKAN)
 	if(APPLE)
 		if(USE_SYSTEM_MVK)
-			message("-- RPCS3: Using system MoltenVK")
+			message(STATUS "RPCS3: Using system MoltenVK")
 		else()
-			message("-- RPCS3: MoltenVK submodule")
+			message(STATUS "RPCS3: MoltenVK submodule")
 
 			execute_process(COMMAND "${CMAKE_COMMAND}" -G "${CMAKE_GENERATOR}" .
 				WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/MoltenVK"
@@ -204,9 +202,9 @@ if(USE_VULKAN)
 
 		set(VULKAN_TARGET 3rdparty_vulkan)
 	else()
-		message("WARNING! USE_VULKAN was enabled, but libvulkan was not found. RPCS3 will be compiled without Vulkan support.")
+		message(WARNING "USE_VULKAN was enabled, but libvulkan was not found. RPCS3 will be compiled without Vulkan support.")
 		if(APPLE)
-			message( FATAL_ERROR "ERROR! To build without Vulkan support on macOS, please disable USE_VULKAN.")
+			message(FATAL_ERROR "To build without Vulkan support on macOS, please disable USE_VULKAN.")
 		endif()
 	endif()
 endif()
@@ -225,7 +223,7 @@ if(USE_FAUDIO)
 	if (USE_SYSTEM_FAUDIO)
 		if (NOT SDL2_FOUND OR SDL2_VERSION VERSION_LESS 2.0.12)
 			message(WARNING
-				"-- RPCS3: System FAudio requires SDL 2.0.9 or newer. Please note, this warning"
+				"RPCS3: FAudio requires SDL 2.0.9 or newer. Please note, this warning"
 				"can also be displayed with SDL2 versions between 2.0.9-2.0.12, as the"
 				"CMake config files are not correctly installed. Since a valid SDL2"
 				">=2.0.9 version cannot be found, building with FAudio will be skipped.")
@@ -262,36 +260,36 @@ add_library(3rdparty_ffmpeg INTERFACE)
 
 # Select the version of ffmpeg to use, default is builtin
 if(USE_SYSTEM_FFMPEG)
-	message("-- RPCS3: using shared ffmpeg")
+	message(STATUS "RPCS3: using shared ffmpeg")
 	find_package(FFMPEG REQUIRED)
 
 	target_include_directories(3rdparty_ffmpeg INTERFACE ${FFMPEG_INCLUDE_DIR})
 	target_link_libraries(3rdparty_ffmpeg INTERFACE ${FFMPEG_LIBRARIES})
 else()
 	if (NOT MSVC AND WIN32)
-		message("-- RPCS3: building ffmpeg submodule")
+		message(STATUS "RPCS3: building ffmpeg submodule")
 
+		include(ProcessorCount)
+		ProcessorCount(N)
+		
 		ExternalProject_Add(ffmpeg-mingw
 			DOWNLOAD_COMMAND ""
 			SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/ffmpeg
 			BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/ffmpeg
-			CONFIGURE_COMMAND  ${CMAKE_CURRENT_SOURCE_DIR}/ffmpeg/configure --prefix=./windows/x86_64 --arch=x86_64 --disable-avdevice --disable-programs --disable-avfilter --disable-postproc --disable-doc --disable-pthreads --enable-w32threads --disable-network --disable-everything --disable-encoders --disable-muxers --disable-hwaccels --disable-parsers --disable-protocols --enable-dxva2 --enable-static --disable-shared --enable-decoder=aac --enable-decoder=aac_latm --enable-decoder=atrac3 --enable-decoder=atrac3p --enable-decoder=mp3 --enable-decoder=pcm_s16le --enable-decoder=pcm_s8 --enable-decoder=h264 --enable-decoder=mpeg4 --enable-decoder=mpeg2video --enable-decoder=mjpeg --enable-decoder=mjpegb --enable-encoder=pcm_s16le --enable-encoder=ffv1 --enable-encoder=mpeg4 --enable-parser=h264 --enable-parser=mpeg4video --enable-parser=mpegaudio --enable-parser=mpegvideo --enable-parser=mjpeg --enable-parser=aac --enable-parser=aac_latm --enable-muxer=avi --enable-demuxer=h264 --enable-demuxer=m4v --enable-demuxer=mp3 --enable-demuxer=mpegvideo --enable-demuxer=mpegps --enable-demuxer=mjpeg --enable-demuxer=avi --enable-demuxer=aac --enable-demuxer=pmp --enable-demuxer=oma --enable-demuxer=pcm_s16le --enable-demuxer=pcm_s8 --enable-demuxer=wav --enable-hwaccel=h264_dxva2 --enable-indev=dshow --enable-protocol=file
-			BUILD_COMMAND make -j 4
+			CONFIGURE_COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/ffmpeg/configure --prefix=./windows/x86_64 --arch=x86_64 --disable-avdevice --disable-programs --disable-avfilter --disable-postproc --disable-doc --disable-pthreads --enable-w32threads --disable-network --disable-everything --disable-encoders --disable-muxers --disable-hwaccels --disable-parsers --disable-protocols --enable-dxva2 --enable-static --disable-shared --enable-decoder=aac --enable-decoder=aac_latm --enable-decoder=atrac3 --enable-decoder=atrac3p --enable-decoder=mp3 --enable-decoder=pcm_s16le --enable-decoder=pcm_s8 --enable-decoder=h264 --enable-decoder=mpeg4 --enable-decoder=mpeg2video --enable-decoder=mjpeg --enable-decoder=mjpegb --enable-encoder=pcm_s16le --enable-encoder=ffv1 --enable-encoder=mpeg4 --enable-parser=h264 --enable-parser=mpeg4video --enable-parser=mpegaudio --enable-parser=mpegvideo --enable-parser=mjpeg --enable-parser=aac --enable-parser=aac_latm --enable-muxer=avi --enable-demuxer=h264 --enable-demuxer=m4v --enable-demuxer=mp3 --enable-demuxer=mpegvideo --enable-demuxer=mpegps --enable-demuxer=mjpeg --enable-demuxer=avi --enable-demuxer=aac --enable-demuxer=pmp --enable-demuxer=oma --enable-demuxer=pcm_s16le --enable-demuxer=pcm_s8 --enable-demuxer=wav --enable-hwaccel=h264_dxva2 --enable-indev=dshow --enable-protocol=file
+			BUILD_COMMAND make -j ${N}
 			INSTALL_COMMAND make install
 		)
 
-		set(FFMPEG_LIB_AVFORMAT "${CMAKE_CURRENT_BINARY_DIR}/ffmpeg/windows/x86_64/lib/libavformat.a")
-		set(FFMPEG_LIB_AVCODEC "${CMAKE_CURRENT_BINARY_DIR}/ffmpeg/windows/x86_64/lib/libavcodec.a")
-		set(FFMPEG_LIB_AVUTIL "${CMAKE_CURRENT_BINARY_DIR}/ffmpeg/windows/x86_64/lib/libavutil.a")
-		set(FFMPEG_LIB_SWSCALE "${CMAKE_CURRENT_BINARY_DIR}/ffmpeg/windows/x86_64/lib/libswscale.a")
-		set(FFMPEG_LIB_SWRESAMPLE "${CMAKE_CURRENT_BINARY_DIR}/ffmpeg/windows/x86_64/lib/libswresample.a")
+		target_link_directories(3rdparty_ffmpeg INTERFACE "${CMAKE_CURRENT_BINARY_DIR}/ffmpeg/windows/x86_64/lib")
+		target_link_libraries(3rdparty_ffmpeg INTERFACE avformat avcodec avutil swscale swresample iconv)
 	else()
-		message("-- RPCS3: using builtin ffmpeg")
+		message(STATUS "RPCS3: using builtin ffmpeg")
 
 		if (WIN32)
 			set(FFMPEG_LIB_DIR "ffmpeg/windows/x86_64")
 			target_link_libraries(3rdparty_ffmpeg INTERFACE "Bcrypt.lib")
-		elseif(CMAKE_SYSTEM MATCHES "Linux")
+		elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 			set(FFMPEG_LIB_DIR "ffmpeg/linux/x86_64")
 		elseif(APPLE)
 			set(FFMPEG_LIB_DIR "ffmpeg/macos/x86_64")
@@ -304,31 +302,31 @@ else()
 		find_library(FFMPEG_LIB_AVUTIL avutil PATHS ${FFMPEG_LIB_DIR} NO_DEFAULT_PATH)
 		find_library(FFMPEG_LIB_SWSCALE swscale PATHS ${FFMPEG_LIB_DIR} NO_DEFAULT_PATH)
 		find_library(FFMPEG_LIB_SWRESAMPLE swresample PATHS ${FFMPEG_LIB_DIR} NO_DEFAULT_PATH)
-	endif()
 
-	target_include_directories(3rdparty_ffmpeg INTERFACE "ffmpeg/include")
-
-	target_link_libraries(3rdparty_ffmpeg
+		target_link_libraries(3rdparty_ffmpeg
 		INTERFACE
 			${FFMPEG_LIB_AVFORMAT}
 			${FFMPEG_LIB_AVCODEC}
 			${FFMPEG_LIB_AVUTIL}
 			${FFMPEG_LIB_SWSCALE}
 			${FFMPEG_LIB_SWRESAMPLE}
-	)
+		)
+	endif()
+
+	target_include_directories(3rdparty_ffmpeg INTERFACE "ffmpeg/include")
 endif()
 
 
 # GLEW
 add_library(3rdparty_glew INTERFACE)
 if(NOT MSVC)
-	find_package(GLEW 1.13.0 REQUIRED)
+	find_package(GLEW REQUIRED)
 	target_link_libraries(3rdparty_glew INTERFACE GLEW::GLEW)
 endif()
 
 
 # LLVM
-include(llvm.cmake)
+add_subdirectory(llvm EXCLUDE_FROM_ALL)
 
 # WOLFSSL
 add_subdirectory(wolfssl EXCLUDE_FROM_ALL)

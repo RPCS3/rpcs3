@@ -2102,7 +2102,7 @@ rsxaudio_periodic_tmr::wait_result rsxaudio_periodic_tmr::wait(const std::functi
 		const HANDLE wait_arr[obj_wait_cnt] = { timer_handle, cancel_event };
 		const auto wait_status = WaitForMultipleObjects(obj_wait_cnt, wait_arr, false, INFINITE);
 
-		if (wait_status == WAIT_FAILED || wait_status >= WAIT_ABANDONED_0 && wait_status < WAIT_ABANDONED_0 + obj_wait_cnt)
+		if (wait_status == WAIT_FAILED || (wait_status >= WAIT_ABANDONED_0 && wait_status < WAIT_ABANDONED_0 + obj_wait_cnt))
 		{
 			tmr_error = true;
 		}

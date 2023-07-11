@@ -3,22 +3,6 @@ include(os.cmake)
 include(config.cmake)
 include(FindThreads)
 
-set (LIBUSB_COMMON
-	core.c
-	descriptor.c
-	io.c
-	sync.c
-	hotplug.c
-	strerror.c
-	libusb-1.0.rc
-	libusb-1.0.def
-)
-
-foreach(SRC IN LISTS LIBUSB_COMMON)
-	list(APPEND LIBUSB_COMMON_FINAL ${LIBUSB_SOURCE_DIR}/libusb/${SRC})
-endforeach()
-
-
 include_directories(${LIBUSB_SOURCE_DIR}/libusb)
 include_directories(${LIBUSB_SOURCE_DIR}/libusb/os)
 
@@ -28,7 +12,14 @@ endif()
 
 add_library(usb-1.0-static
 	STATIC
-	${LIBUSB_COMMON_FINAL}
+	libusb/libusb/core.c
+	libusb/libusb/descriptor.c
+	libusb/libusb/io.c
+	libusb/libusb/sync.c
+	libusb/libusb/hotplug.c
+	libusb/libusb/strerror.c
+	libusb/libusb/libusb-1.0.rc
+	libusb/libusb/libusb-1.0.def
 	${LIBUSB_PLATFORM}
 )
 

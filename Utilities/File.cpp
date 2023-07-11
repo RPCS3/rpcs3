@@ -225,9 +225,9 @@ namespace fs
 	{
 	}
 
-	[[noreturn]] stat_t file_base::stat()
+	[[noreturn]] stat_t file_base::get_stat()
 	{
-		fmt::throw_exception("fs::file::stat() not supported.");
+		fmt::throw_exception("fs::file::get_stat() not supported.");
 	}
 
 	void file_base::sync()
@@ -1131,7 +1131,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 			CloseHandle(m_handle);
 		}
 
-		stat_t stat() override
+		stat_t get_stat() override
 		{
 			FILE_BASIC_INFO basic_info;
 			ensure(GetFileInformationByHandleEx(m_handle, FileBasicInfo, &basic_info, sizeof(FILE_BASIC_INFO))); // "file::stat"
@@ -1356,7 +1356,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 			::close(m_fd);
 		}
 
-		stat_t stat() override
+		stat_t get_stat() override
 		{
 			struct ::stat file_info;
 			ensure(::fstat(m_fd, &file_info) == 0); // "file::stat"
@@ -1506,7 +1506,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 
 	m_file = std::make_unique<unix_file>(fd);
 
-	if (mode & fs::isfile && !(mode & fs::write) && stat().is_directory)
+	if (mode & fs::isfile && !(mode & fs::write) && get_stat().is_directory)
 	{
 		m_file.reset();
 		g_tls_error = error::isdir;
@@ -1657,7 +1657,7 @@ bool fs::dir::open(const std::string& path)
 			to_utf8(info.name, found.cFileName);
 			info.is_directory = (found.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
 			info.is_writable = (found.dwFileAttributes & FILE_ATTRIBUTE_READONLY) == 0;
-			info.size = ((u64)found.nFileSizeHigh << 32) | (u64)found.nFileSizeLow;
+			info.size = (static_cast<u64>(found.nFileSizeHigh) << 32) | static_cast<u64>(found.nFileSizeLow);
 			info.atime = to_time(found.ftLastAccessTime);
 			info.mtime = to_time(found.ftLastWriteTime);
 			info.ctime = info.mtime;
@@ -2002,13 +2002,13 @@ fs::file fs::make_gather(std::vector<fs::file> files)
 		{
 		}
 
-		fs::stat_t stat() override
+		fs::stat_t get_stat() override
 		{
 			fs::stat_t result{};
 
 			if (!files.empty())
 			{
-				result = files[0].stat();
+				result = files[0].get_stat();
 			}
 
 			result.is_directory = false;
