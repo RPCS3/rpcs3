@@ -45,7 +45,7 @@ private:
 
 private Q_SLOTS:
 	void show_table_menu(const QPoint& pos);
-	void validate();
+	void validate(const QString& patch);
 	void generate_yml(const QString& text = {});
 	void export_patch();
 
