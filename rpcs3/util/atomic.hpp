@@ -785,7 +785,7 @@ struct atomic_storage<T, 2> : atomic_storage<T, 0>
 template <typename T>
 struct atomic_storage<T, 4> : atomic_storage<T, 0>
 {
-#ifdef _MSC_VER
+#if defined(_M_X64) && defined(_MSC_VER)
 	static inline bool compare_exchange(T& dest, T& comp, T exch)
 	{
 		const long v = std::bit_cast<long>(comp);
