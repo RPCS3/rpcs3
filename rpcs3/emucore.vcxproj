@@ -54,6 +54,7 @@
     <ClCompile Include="..\Utilities\cheat_info.cpp" />
     <ClCompile Include="..\Utilities\stack_trace.cpp" />
     <ClCompile Include="Crypto\decrypt_binaries.cpp" />
+    <ClCompile Include="Emu\associative_map_file.cpp" />
     <ClCompile Include="Emu\Audio\audio_resampler.cpp" />
     <ClCompile Include="Emu\Audio\FAudio\FAudioBackend.cpp">
       <ExcludedFromBuild>true</ExcludedFromBuild>
@@ -483,6 +484,7 @@
     <ClInclude Include="..\Utilities\stack_trace.h" />
     <ClInclude Include="..\Utilities\transactional_storage.h" />
     <ClInclude Include="Crypto\decrypt_binaries.h" />
+    <ClInclude Include="Emu\associative_map_file.h" />
     <ClInclude Include="Emu\Audio\audio_resampler.h" />
     <ClInclude Include="Emu\Audio\audio_device_enumerator.h" />
     <ClInclude Include="Emu\Audio\FAudio\FAudioBackend.h">
