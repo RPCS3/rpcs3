@@ -1235,13 +1235,29 @@ std::array<u32, 2> op_branch_targets(u32 pc, ppu_opcode_t op)
 	return res;
 }
 
-void ppu_thread::dump_regs(std::string& ret) const
+void ppu_thread::dump_regs(std::string& ret, std::any& custom_data) const
 {
 	const system_state emu_state = Emu.GetStatus(false);
 	const bool is_stopped_or_frozen = state & cpu_flag::exit || emu_state == system_state::frozen || emu_state <= system_state::stopping;
 	const ppu_debugger_mode mode = debugger_mode.load();
 
 	const bool is_decimal = !is_stopped_or_frozen && mode == ppu_debugger_mode::is_decimal;
+
+	struct dump_registers_data_t
+	{
+		u32 preferred_cr_field_index = 7;
+	};
+
+	dump_registers_data_t* func_data = nullptr;
+
+	func_data = std::any_cast<dump_registers_data_t>(&custom_data);
+
+	if (!func_data)
+	{
+		custom_data.reset();
+		custom_data = std::make_any<dump_registers_data_t>();
+		func_data = ensure(std::any_cast<dump_registers_data_t>(&custom_data));
+	}
 
 	PPUDisAsm dis_asm(cpu_disasm_mode::normal, vm::g_sudo_addr);
 
@@ -1367,6 +1383,59 @@ void ppu_thread::dump_regs(std::string& ret) const
 		ret += '\n';
 	}
 
+	const u32 current_cia = cia;
+	const u32 cr_packed = cr.pack();
+
+	for (u32 addr :
+	{
+		current_cia,
+		current_cia + 4,
+		current_cia + 8,
+		current_cia - 4,
+		current_cia + 12,
+	})
+	{
+		dis_asm.disasm(addr);
+
+		if (dis_asm.last_opcode.size() <= 4)
+		{
+			continue;
+		}
+
+		if (usz index = dis_asm.last_opcode.rfind(",cr"); index < dis_asm.last_opcode.size() - 4)
+		{
+			const char result = dis_asm.last_opcode[index + 3];
+
+			if (result >= '0' && result <= '7')
+			{
+				func_data->preferred_cr_field_index = result - '0';
+				break;
+			}
+		}
+
+		if (usz index = dis_asm.last_opcode.rfind(" cr"); index < dis_asm.last_opcode.size() - 4)
+		{
+			const char result = dis_asm.last_opcode[index + 3];
+
+			if (result >= '0' && result <= '7')
+			{
+				func_data->preferred_cr_field_index = result - '0';
+				break;
+			}
+		}
+
+		if (dis_asm.last_opcode.find("stdcx.") != umax || dis_asm.last_opcode.find("stwcx.") != umax)
+		{
+			// Modifying CR0
+			func_data->preferred_cr_field_index = 0;
+			break;
+		}
+	}
+
+	const u32 displayed_cr_field = (cr_packed >> ((7 - func_data->preferred_cr_field_index) * 4)) & 0xf;
+
+	fmt::append(ret, "CR: 0x%08x, CR%d: [LT=%u GT=%u EQ=%u SO=%u]\n", cr_packed, func_data->preferred_cr_field_index, displayed_cr_field >> 3, (displayed_cr_field >> 2) & 1, (displayed_cr_field >> 1) & 1, displayed_cr_field & 1);
+
 	for (uint i = 0; i < 32; ++i)
 	{
 		const f64 r = fpr[i];
@@ -1400,8 +1469,7 @@ void ppu_thread::dump_regs(std::string& ret) const
 		}
 	}
 
-	fmt::append(ret, "CIA: 0x%x\n", cia);
-	fmt::append(ret, "CR: 0x%08x\n", cr.pack());
+	fmt::append(ret, "CIA: 0x%x\n", current_cia);
 	fmt::append(ret, "LR: 0x%llx\n", lr);
 	fmt::append(ret, "CTR: 0x%llx\n", ctr);
 	fmt::append(ret, "VRSAVE: 0x%08x\n", vrsave);
