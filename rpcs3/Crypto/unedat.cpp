@@ -493,7 +493,9 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 		memcpy(signature_r + 01, metadata_signature, 0x14);
 		memcpy(signature_s + 01, metadata_signature + 0x14, 0x14);
 		if ((!memcmp(signature_r, zero_buf, 0x15)) || (!memcmp(signature_s, zero_buf, 0x15)))
+		{
 			edat_log.warning("Metadata signature is invalid!");
+		}
 		else
 		{
 			// Setup signature hash.
@@ -524,7 +526,9 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 		memcpy(signature_s + 01, header_signature + 0x14, 0x14);
 
 		if ((!memcmp(signature_r, zero_buf, 0x15)) || (!memcmp(signature_s, zero_buf, 0x15)))
+		{
 			edat_log.warning("Header signature is invalid!");
+		}
 		else
 		{
 			// Setup header signature hash.
