@@ -77,6 +77,7 @@ void fmt_class_string<patch_type>::format(std::string& out, u64 arg)
 		case patch_type::lef32: return "lef32";
 		case patch_type::lef64: return "lef64";
 		case patch_type::utf8: return "utf8";
+		case patch_type::c_utf8: return "cutf8";
 		case patch_type::move_file: return "move_file";
 		case patch_type::hide_file: return "hide_file";
 		}
@@ -805,7 +806,7 @@ void unmap_vm_area(std::shared_ptr<vm::block_t>& ptr)
 }
 
 // Returns old 'applied' size
-static usz apply_modification(std::basic_string<u32>& applied, patch_engine::patch_info& patch, std::function<u8*(u32)> mem_translate, u32 filesz, u32 min_addr)
+static usz apply_modification(std::basic_string<u32>& applied, patch_engine::patch_info& patch, std::function<u8*(u32, u32)> mem_translate, u32 filesz, u32 min_addr)
 {
 	const usz old_applied_size = applied.size();
 
@@ -847,7 +848,7 @@ static usz apply_modification(std::basic_string<u32>& applied, patch_engine::pat
 		if (p.type != patch_type::alloc) continue;
 
 		// Do not allow null address or if resultant ptr is not a VM ptr
-		if (const u32 alloc_at = vm::try_get_addr(mem_translate(p.offset & -4096)).first; alloc_at >> 16)
+		if (const u32 alloc_at = (p.offset & -4096); alloc_at >> 16)
 		{
 			const u32 alloc_size = utils::align(static_cast<u32>(p.value.long_value) + alloc_at % 4096, 4096);
 
@@ -926,7 +927,74 @@ static usz apply_modification(std::basic_string<u32>& applied, patch_engine::pat
 			relocate_instructions_at = 0;
 		}
 
-		if (!relocate_instructions_at && (offset < min_addr || offset - min_addr >= filesz))
+		u32 memory_size = 0;
+
+		switch (p.type)
+		{
+		case patch_type::invalid:
+		case patch_type::load:
+		{
+			// Invalid in this context
+			break;
+		}
+		case patch_type::alloc:
+		{
+			// Applied before
+			memory_size = 0;
+			continue;
+		}
+		case patch_type::byte:
+		{
+			memory_size = sizeof(u8);
+			break;
+		}
+		case patch_type::le16:
+		case patch_type::be16:
+		{
+			memory_size = sizeof(u16);
+			break;
+		}
+		case patch_type::code_alloc:
+		case patch_type::jump:
+		case patch_type::jump_link:
+		case patch_type::jump_func:
+		case patch_type::le32:
+		case patch_type::lef32:
+		case patch_type::bd32:
+		case patch_type::be32:
+		case patch_type::bef32:
+		{
+			memory_size = sizeof(u32);
+			break;
+		}
+		case patch_type::lef64:
+		case patch_type::le64:
+		case patch_type::bd64:
+		case patch_type::be64:
+		case patch_type::bef64:
+		{
+			memory_size = sizeof(u64);
+			break;
+		}
+		case patch_type::utf8:
+		{
+			memory_size = p.original_value.size();
+			break;
+		}
+		case patch_type::c_utf8:
+		{
+			memory_size = utils::add_saturate<u32>(p.original_value.size(), 1);
+			break;
+		}
+		case patch_type::move_file:
+		case patch_type::hide_file:
+		{
+			memory_size = 0;
+			break;
+		}
+		}
+
+		if (memory_size != 0 && !relocate_instructions_at && (filesz < memory_size || offset < min_addr || offset - min_addr > filesz - memory_size))
 		{
 			// This patch is out of range for this segment
 			continue;
@@ -934,9 +1002,9 @@ static usz apply_modification(std::basic_string<u32>& applied, patch_engine::pat
 
 		offset -= min_addr;
 
-		auto ptr = mem_translate(offset);
+		auto ptr = mem_translate(offset, memory_size);
 
-		if (!ptr)
+		if (!ptr && memory_size != 0)
 		{
 			// Memory translation failed
 			continue;
@@ -966,7 +1034,7 @@ static usz apply_modification(std::basic_string<u32>& applied, patch_engine::pat
 		}
 		case patch_type::code_alloc:
 		{
-			const u32 out_branch = vm::try_get_addr(mem_translate(offset & -4)).first;
+			const u32 out_branch = vm::try_get_addr(mem_translate(offset & -4, 4)).first;
 
 			// Allow only if points to a PPU executable instruction
 			if (out_branch < 0x10000 || out_branch >= 0x4000'0000 || !vm::check_addr<4>(out_branch, vm::page_executable))
@@ -1050,7 +1118,7 @@ static usz apply_modification(std::basic_string<u32>& applied, patch_engine::pat
 		case patch_type::jump:
 		case patch_type::jump_link:
 		{
-			const u32 out_branch = vm::try_get_addr(mem_translate(offset & -4)).first;
+			const u32 out_branch = vm::try_get_addr(mem_translate(offset & -4, 4)).first;
 			const u32 dest = static_cast<u32>(p.value.long_value);
 
 			// Allow only if points to a PPU executable instruction
@@ -1066,7 +1134,7 @@ static usz apply_modification(std::basic_string<u32>& applied, patch_engine::pat
 		{
 			const std::string& str = p.original_value;
 
-			const u32 out_branch = vm::try_get_addr(mem_translate(offset & -4)).first;
+			const u32 out_branch = vm::try_get_addr(mem_translate(offset & -4, 4)).first;
 			const usz sep_pos = str.find_first_of(':');
 
 			// Must contain only a single ':' or none
@@ -1082,7 +1150,7 @@ static usz apply_modification(std::basic_string<u32>& applied, patch_engine::pat
 
 			if (func_name.starts_with("0x"sv))
 			{
-				// Raw hexadeciaml-formatted FNID (real function name cannot contain a digit at the start, derived from C/CPP which were used in PS3 development)
+				// Raw hexadecimal-formatted FNID (real function name cannot contain a digit at the start, derived from C/CPP which were used in PS3 development)
 				const auto result = std::from_chars(func_name.data() + 2, func_name.data() + func_name.size() - 2, id, 16);
 
 				if (result.ec != std::errc() || str.data() + sep_pos != result.ptr)
@@ -1203,6 +1271,11 @@ static usz apply_modification(std::basic_string<u32>& applied, patch_engine::pat
 			std::memcpy(ptr, p.original_value.data(), p.original_value.size());
 			break;
 		}
+		case patch_type::c_utf8:
+		{
+			std::memcpy(ptr, p.original_value.data(), p.original_value.size() + 1);
+			break;
+		}
 		case patch_type::move_file:
 		case patch_type::hide_file:
 		{
@@ -1257,7 +1330,7 @@ static usz apply_modification(std::basic_string<u32>& applied, patch_engine::pat
 	return old_applied_size;
 }
 
-std::basic_string<u32> patch_engine::apply(const std::string& name, std::function<u8*(u32)> mem_translate, u32 filesz, u32 min_addr)
+std::basic_string<u32> patch_engine::apply(const std::string& name, std::function<u8*(u32, u32)> mem_translate, u32 filesz, u32 min_addr)
 {
 	if (!m_map.contains(name))
 	{
@@ -1269,7 +1342,7 @@ std::basic_string<u32> patch_engine::apply(const std::string& name, std::functio
 	const auto& serial = Emu.GetTitleID();
 	const auto& app_version = Emu.GetAppVersion();
 
-	// Different containers in order to seperate the patches
+	// Different containers in order to separate the patches
 	std::vector<std::shared_ptr<patch_info>> patches_for_this_serial_and_this_version;
 	std::vector<std::shared_ptr<patch_info>> patches_for_this_serial_and_all_versions;
 	std::vector<std::shared_ptr<patch_info>> patches_for_all_serials_and_this_version;

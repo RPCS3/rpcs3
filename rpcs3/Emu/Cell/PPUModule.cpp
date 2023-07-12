@@ -1142,12 +1142,12 @@ static void ppu_check_patch_spu_images(const ppu_module& mod, const ppu_segment&
 		for (const auto& prog : obj.progs)
 		{
 			// Apply the patch
-			applied += g_fxo->get<patch_engine>().apply(hash, [&](u32 addr) { return addr + elf_header + prog.p_offset; }, prog.p_filesz, prog.p_vaddr);
+			applied += g_fxo->get<patch_engine>().apply(hash, [&](u32 addr, u32 /*size*/) { return addr + elf_header + prog.p_offset; }, prog.p_filesz, prog.p_vaddr);
 
 			if (!Emu.GetTitleID().empty())
 			{
 				// Alternative patch
-				applied += g_fxo->get<patch_engine>().apply(Emu.GetTitleID() + '-' + hash, [&](u32 addr) { return addr + elf_header + prog.p_offset; }, prog.p_filesz, prog.p_vaddr);
+				applied += g_fxo->get<patch_engine>().apply(Emu.GetTitleID() + '-' + hash, [&](u32 addr, u32 /*size*/) { return addr + elf_header + prog.p_offset; }, prog.p_filesz, prog.p_vaddr);
 			}
 		}
 
@@ -1617,12 +1617,12 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, bool virtual_lo
 		const std::string hash_seg = fmt::format("%s-%u", hash, i);
 
 		// Apply the patch
-		auto _applied = g_fxo->get<patch_engine>().apply(hash_seg, [&](u32 addr) { return prx->get_ptr<u8>(addr + seg.addr); }, seg.size);
+		auto _applied = g_fxo->get<patch_engine>().apply(hash_seg, [&](u32 addr, u32 size) { return prx->get_ptr<u8>(addr + seg.addr, size); }, seg.size);
 
 		if (!Emu.GetTitleID().empty())
 		{
 			// Alternative patch
-			_applied += g_fxo->get<patch_engine>().apply(Emu.GetTitleID() + '-' + hash_seg, [&](u32 addr) { return prx->get_ptr<u8>(addr + seg.addr); }, seg.size);
+			_applied += g_fxo->get<patch_engine>().apply(Emu.GetTitleID() + '-' + hash_seg, [&](u32 addr, u32 size) { return prx->get_ptr<u8>(addr + seg.addr, size); }, seg.size);
 		}
 
 		// Rebase patch offsets
@@ -1933,12 +1933,12 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 	Emu.SetExecutableHash(hash);
 
 	// Apply the patch
-	auto applied = g_fxo->get<patch_engine>().apply(!ar ? hash : std::string{}, [&](u32 addr) { return _main.get_ptr<u8>(addr); });
+	auto applied = g_fxo->get<patch_engine>().apply(!ar ? hash : std::string{}, [&](u32 addr, u32 size) { return _main.get_ptr<u8>(addr, size);  });
 
 	if (!ar && !Emu.GetTitleID().empty())
 	{
 		// Alternative patch
-		applied += g_fxo->get<patch_engine>().apply(Emu.GetTitleID() + '-' + hash, [&](u32 addr) { return _main.get_ptr<u8>(addr); });
+		applied += g_fxo->get<patch_engine>().apply(Emu.GetTitleID() + '-' + hash, [&](u32 addr, u32 size) { return _main.get_ptr<u8>(addr, size); });
 	}
 
 	if (applied.empty())
@@ -2571,12 +2571,12 @@ std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_ex
 	}
 
 	// Apply the patch
-	auto applied = g_fxo->get<patch_engine>().apply(hash, [ovlm](u32 addr) { return ovlm->get_ptr<u8>(addr); });
+	auto applied = g_fxo->get<patch_engine>().apply(hash, [ovlm](u32 addr, u32 size) { return ovlm->get_ptr<u8>(addr, size); });
 
 	if (!Emu.GetTitleID().empty())
 	{
 		// Alternative patch
-		applied += g_fxo->get<patch_engine>().apply(Emu.GetTitleID() + '-' + hash, [ovlm](u32 addr) { return ovlm->get_ptr<u8>(addr); });
+		applied += g_fxo->get<patch_engine>().apply(Emu.GetTitleID() + '-' + hash, [ovlm](u32 addr, u32 size) { return ovlm->get_ptr<u8>(addr, size); });
 	}
 
 	// Embedded SPU elf patching
