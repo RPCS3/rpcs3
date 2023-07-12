@@ -176,6 +176,8 @@ static thread_local u8 ec_N[21]{};
 static thread_local point ec_G{}; // mon
 static thread_local point ec_Q{}; // mon
 static thread_local u8 ec_k[21]{};
+static thread_local bool ec_curve_initialized{};
+static thread_local bool ec_pub_initialized{};
 
 static inline bool elt_is_zero(u8* d)
 {
@@ -382,6 +384,8 @@ static bool check_ecdsa(struct point* Q, u8* R, u8* S, u8* hash)
 
 void ecdsa_set_curve(const u8* p, const u8* a, const u8* b, const u8* N, const u8* Gx, const u8* Gy)
 {
+	if (ec_curve_initialized) return;
+
 	memcpy(ec_p, p, 20);
 	memcpy(ec_a, a, 20);
 	memcpy(ec_b, b, 20);
@@ -393,13 +397,19 @@ void ecdsa_set_curve(const u8* p, const u8* a, const u8* b, const u8* N, const u
 	bn_to_mon(ec_b, ec_p, 20);
 
 	point_to_mon(&ec_G);
+
+	ec_curve_initialized = true;
 }
 
 void ecdsa_set_pub(const u8* Q)
 {
+	if (ec_pub_initialized) return;
+
 	memcpy(ec_Q.x, Q, 20);
 	memcpy(ec_Q.y, Q + 20, 20);
 	point_to_mon(&ec_Q);
+
+	ec_pub_initialized = true;
 }
 
 void ecdsa_set_priv(const u8* k)
