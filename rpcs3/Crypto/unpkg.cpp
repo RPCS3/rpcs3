@@ -782,7 +782,7 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 		const bool is_psp = (entry.type & PKG_FILE_ENTRY_PSP) != 0u;
 		decrypt(entry.name_offset, entry.name_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data());
 
-		const std::string name{reinterpret_cast<char*>(m_bufs.back().get()), entry.name_size};
+		const std::string_view name{reinterpret_cast<char*>(m_bufs.back().get()), entry.name_size};
 		std::string path = m_install_path + vfs::escape(name);
 
 		if (entry.pad || (entry.type & ~PKG_FILE_ENTRY_KNOWN_BITS))
@@ -833,7 +833,7 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 
 			m_install_entries.push_back({
 				.weak_reference = map_ptr,
-				.name = name,
+				.name = std::string(name),
 				.file_offset = entry.file_offset,
 				.file_size = entry.file_size,
 				.type = entry.type,
