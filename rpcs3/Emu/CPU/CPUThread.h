@@ -4,6 +4,7 @@
 #include "../Utilities/bit_set.h"
 
 #include <vector>
+#include <any>
 
 template <typename Derived, typename Base>
 concept DerivedFrom = std::is_base_of_v<Base, Derived> &&
@@ -159,7 +160,7 @@ public:
 	virtual void dump_all(std::string&) const;
 
 	// Get CPU register dump
-	virtual void dump_regs(std::string&) const;
+	virtual void dump_regs(std::string& ret, std::any& custom_data) const;
 
 	// Get CPU call stack dump
 	virtual std::string dump_callstack() const;

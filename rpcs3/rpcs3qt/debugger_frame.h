@@ -11,6 +11,7 @@
 
 #include <memory>
 #include <vector>
+#include <any>
 
 class CPUDisAsm;
 class cpu_thread;
@@ -58,6 +59,7 @@ class debugger_frame : public custom_dock_widget
 	u32 m_last_pc = -1;
 	std::vector<char> m_last_query_state;
 	std::string m_last_reg_state;
+	std::any m_dump_reg_func_data;
 	u32 m_last_step_over_breakpoint = -1;
 	u64 m_ui_update_ctr = 0;
 	u64 m_ui_fast_update_permission_deadline = 0;

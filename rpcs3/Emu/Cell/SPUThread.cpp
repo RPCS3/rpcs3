@@ -1017,7 +1017,7 @@ spu_imm_table_t::spu_imm_table_t()
 	}
 }
 
-void spu_thread::dump_regs(std::string& ret) const
+void spu_thread::dump_regs(std::string& ret, std::any& /*custom_data*/) const
 {
 	const system_state emu_state = Emu.GetStatus(false);
 	const bool is_stopped_or_frozen = state & cpu_flag::exit || emu_state == system_state::frozen || emu_state <= system_state::stopping;
