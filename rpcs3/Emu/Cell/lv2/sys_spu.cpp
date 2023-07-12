@@ -184,13 +184,18 @@ void sys_spu_image::deploy(u8* loc, std::span<const sys_spu_segment> segs, bool 
 		hash[5 + i * 2] = pal[sha1_hash[i] & 15];
 	}
 
+	auto mem_translate = [loc](u32 addr, u32 size)
+	{
+		return utils::add_saturate<u32>(addr, size) <= SPU_LS_SIZE ? loc + addr : nullptr;
+	};
+
 	// Apply the patch
-	auto applied = g_fxo->get<patch_engine>().apply(hash, [loc](u32 addr) { return loc + addr; });
+	auto applied = g_fxo->get<patch_engine>().apply(hash, mem_translate);
 
 	if (!Emu.GetTitleID().empty())
 	{
 		// Alternative patch
-		applied += g_fxo->get<patch_engine>().apply(Emu.GetTitleID() + '-' + hash, [loc](u32 addr) { return loc + addr; });
+		applied += g_fxo->get<patch_engine>().apply(Emu.GetTitleID() + '-' + hash, mem_translate);
 	}
 
 	(is_verbose ? spu_log.notice : sys_spu.trace)("Loaded SPU image: %s (<- %u)%s", hash, applied.size(), dump);

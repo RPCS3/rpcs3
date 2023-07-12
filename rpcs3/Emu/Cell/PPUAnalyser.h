@@ -112,7 +112,7 @@ struct ppu_module
 	void validate(u32 reloc);
 
 	template <typename T>
-	to_be_t<T>* get_ptr(u32 addr) const
+	to_be_t<T>* get_ptr(u32 addr, u32 size_bytes) const
 	{
 		auto it = addr_to_seg_index.upper_bound(addr);
 
@@ -127,9 +127,7 @@ struct ppu_module
 		const u32 seg_size = seg.size;
 		const u32 seg_addr = seg.addr;
 
-		constexpr usz size_element = std::is_void_v<T> ? 0 : sizeof(std::conditional_t<std::is_void_v<T>, char, T>);
-
-		if (seg_size >= std::max<usz>(size_element, 1) && addr <= seg_addr + seg_size - size_element)
+		if (seg_size >= std::max<usz>(size_bytes, 1) && addr <= seg_addr + seg_size - size_bytes)
 		{
 			return reinterpret_cast<to_be_t<T>*>(static_cast<u8*>(seg.ptr) + (addr - seg_addr));
 		}
@@ -137,10 +135,18 @@ struct ppu_module
 		return nullptr;
 	}
 
-	template <typename T, typename U> requires requires (const U& obj) { +obj.addr() * 0; }
+	template <typename T>
+	to_be_t<T>* get_ptr(u32 addr) const
+	{
+		constexpr usz size_element = std::is_void_v<T> ? 0 : sizeof(std::conditional_t<std::is_void_v<T>, char, T>);
+		return get_ptr<T>(addr, u32{size_element});
+	}
+
+	template <typename T, typename U> requires requires (const U& obj) { +obj.size() * 0; }
 	to_be_t<T>* get_ptr(U&& addr) const
 	{
-		return get_ptr<T>(addr.addr());
+		constexpr usz size_element = std::is_void_v<T> ? 0 : sizeof(std::conditional_t<std::is_void_v<T>, char, T>);
+		return get_ptr<T>(addr.addr(), u32{size_element});
 	}
 };
 
