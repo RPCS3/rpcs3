@@ -1093,9 +1093,11 @@ std::shared_ptr<CPUDisAsm> make_disasm(const cpu_thread* cpu);
 
 void cpu_thread::dump_all(std::string& ret) const
 {
+	std::any func_data;
+
 	ret += dump_misc();
 	ret += '\n';
-	dump_regs(ret);
+	dump_regs(ret, func_data);
 	ret += '\n';
 	ret += dump_callstack();
 	ret += '\n';
@@ -1118,7 +1120,7 @@ void cpu_thread::dump_all(std::string& ret) const
 	}
 }
 
-void cpu_thread::dump_regs(std::string&) const
+void cpu_thread::dump_regs(std::string&, std::any&) const
 {
 }
 

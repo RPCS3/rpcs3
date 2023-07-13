@@ -3164,7 +3164,7 @@ namespace rsx
 
 	void invalid_method(thread*, u32, u32);
 
-	void thread::dump_regs(std::string& result) const
+	void thread::dump_regs(std::string& result, std::any& /*custom_data*/) const
 	{
 		if (ctrl)
 		{

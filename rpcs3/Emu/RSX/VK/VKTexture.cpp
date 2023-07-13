@@ -867,11 +867,27 @@ namespace vk
 
 	static const vk::command_buffer& prepare_for_transfer(const vk::command_buffer& primary_cb, vk::image* dst_image, rsx::flags32_t& flags)
 	{
-		const vk::command_buffer* pcmd = nullptr;
-		if (flags & image_upload_options::upload_contents_async)
+		AsyncTaskScheduler* async_scheduler = (flags & image_upload_options::upload_contents_async)
+			? std::addressof(g_fxo->get<AsyncTaskScheduler>())
+			: nullptr;
+
+		if (async_scheduler && (dst_image->aspect() & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)))
 		{
-			auto& async_scheduler = g_fxo->get<AsyncTaskScheduler>();
-			auto async_cmd = async_scheduler.get_current();
+			auto pdev = vk::get_current_renderer();
+			if (pdev->get_graphics_queue_family() != pdev->get_transfer_queue_family()) [[ likely ]]
+			{
+				// According to spec, we cannot call vkCopyBufferToImage on a queue that does not support VK_QUEUE_GRAPHICS_BIT (VUID-vkCmdCopyBufferToImage-commandBuffer-07737)
+				// AMD doesn't care about this, but NVIDIA will crash if you try to cheat.
+				// We can just disable it for this case - it is actually very rare to upload depth-stencil stuff from CPU and RDB already uses inline uploads
+				flags &= ~image_upload_options::upload_contents_async;
+				async_scheduler = nullptr;
+			}
+		}
+
+		const vk::command_buffer* pcmd = nullptr;
+		if (async_scheduler)
+		{
+			auto async_cmd = async_scheduler->get_current();
 			async_cmd->begin();
 			pcmd = async_cmd;
 
@@ -882,7 +898,7 @@ namespace vk
 
 			// Queue transfer stuff. Must release from primary if owned and acquire in secondary.
 			// Ignore queue transfers when running in the hacky "fast" mode. We're already violating spec there.
-			if (dst_image->current_layout != VK_IMAGE_LAYOUT_UNDEFINED && async_scheduler.is_host_mode())
+			if (dst_image->current_layout != VK_IMAGE_LAYOUT_UNDEFINED && async_scheduler->is_host_mode())
 			{
 				// Release barrier
 				dst_image->queue_release(primary_cb, pcmd->get_queue_family(), dst_image->current_layout);
