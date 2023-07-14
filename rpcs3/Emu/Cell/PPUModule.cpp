@@ -2682,8 +2682,16 @@ std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_ex
 
 	ovlm->entry = static_cast<u32>(elf.header.e_entry);
 
+	const auto cpu = cpu_thread::get_current();
+
 	// Analyse executable (TODO)
-	ovlm->analyse(0, ovlm->entry, end, applied);
+	if (!ovlm->analyse(0, ovlm->entry, end, applied, !cpu ? std::function<bool()>() : [cpu, is_being_used_in_emulation = (vm::base(ovlm->segs[0].addr) == ovlm->segs[0].ptr)]()
+	{
+		return is_being_used_in_emulation && cpu->state & cpu_flag::exit;
+	}))
+	{
+		return {nullptr, CellError{CELL_CANCEL + 0u}};
+	}
 
 	// Validate analyser results (not required)
 	ovlm->validate(0);
