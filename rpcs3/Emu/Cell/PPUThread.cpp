@@ -3479,6 +3479,12 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 
 					if (error)
 					{
+						if (error == CELL_CANCEL + 0u)
+						{
+							// Emulation stopped
+							break;
+						}
+
 						// Abort
 						ovl_err = elf_error::header_type;
 						break;
