@@ -3890,6 +3890,10 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 
 	bool has_mfvscr = false;
 
+	const bool is_being_used_in_emulation = vm::base(info.segs[0].addr) == info.segs[0].ptr;
+
+	const cpu_thread* cpu = cpu_thread::get_current();
+
 	for (auto& func : info.funcs)
 	{
 		if (func.size == 0)
@@ -3931,7 +3935,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 	while (!jit_mod.init && fpos < info.funcs.size())
 	{
 		// Initialize compiler instance
-		if (!jit && get_current_cpu_thread())
+		if (!jit && is_being_used_in_emulation)
 		{
 			jit = std::make_shared<jit_compiler>(s_link_table, g_cfg.core.llvm_cpu);
 		}
@@ -4267,7 +4271,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 
 		g_watchdog_hold_ctr--;
 
-		if (Emu.IsStopped() || !get_current_cpu_thread())
+		if (!is_being_used_in_emulation || (cpu ? cpu->state.all_of(cpu_flag::exit) : Emu.IsStopped()))
 		{
 			return compiled_new;
 		}
@@ -4280,7 +4284,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 
 		for (auto [obj_name, is_compiled] : link_workload)
 		{
-			if (Emu.IsStopped())
+			if (cpu ? cpu->state.all_of(cpu_flag::exit) : Emu.IsStopped())
 			{
 				break;
 			}
@@ -4295,7 +4299,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 		}
 	}
 
-	if (Emu.IsStopped() || !get_current_cpu_thread())
+	if (!is_being_used_in_emulation || (cpu ? cpu->state.all_of(cpu_flag::exit) : Emu.IsStopped()))
 	{
 		return compiled_new;
 	}
