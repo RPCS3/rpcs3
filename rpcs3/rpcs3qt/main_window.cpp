@@ -3248,11 +3248,26 @@ Check data for valid file types and cache their paths if necessary
 */
 main_window::drop_type main_window::IsValidFile(const QMimeData& md, QStringList* drop_paths)
 {
-	auto drop_type = drop_type::drop_error;
+	drop_type type = drop_type::drop_error;
 
-	const QList<QUrl> list = md.urls(); // get list of all the dropped file urls
+	QList<QUrl> list = md.urls(); // get list of all the dropped file urls
 
-	for (auto&& url : list) // check each file in url list for valid type
+	// Try to cache the data for half a second
+	if (m_drop_file_timestamp != umax && m_drop_file_url_list == list && get_system_time() - m_drop_file_timestamp < 500'000)
+	{
+		return m_drop_file_cached_drop_type;
+	}
+
+	m_drop_file_url_list = std::move(list);
+
+	auto set_result = [&](drop_type _type)
+	{
+		m_drop_file_timestamp = get_system_time();
+		m_drop_file_cached_drop_type = type;
+		return type;
+	};
+
+	for (auto&& url : m_drop_file_url_list) // check each file in url list for valid type
 	{
 		const QString path = url.toLocalFile(); // convert url to filepath
 		const QFileInfo info(path);
@@ -3262,72 +3277,77 @@ main_window::drop_type main_window::IsValidFile(const QMimeData& md, QStringList
 		// check for directories first, only valid if all other paths led to directories until now.
 		if (info.isDir())
 		{
-			if (drop_type != drop_type::drop_dir && drop_type != drop_type::drop_error)
+			if (type != drop_type::drop_dir && type != drop_type::drop_error)
 			{
-				return drop_type::drop_error;
+				return set_result(drop_type::drop_error);
 			}
 
-			drop_type = drop_type::drop_dir;
+			type = drop_type::drop_dir;
+		}
+		else if (!info.exists())
+		{
+			// If does not exist (anymore), ignore it
+			continue;
 		}
 		else if (info.size() < 0x4)
 		{
-			return drop_type::drop_error;
+			return set_result(drop_type::drop_error);
 		}
 		else if (info.suffix() == "PUP")
 		{
-			if (list.size() != 1)
+			if (m_drop_file_url_list.size() != 1)
 			{
-				return drop_type::drop_error;
+				return set_result(drop_type::drop_error);
 			}
 
-			drop_type = drop_type::drop_pup;
+			type = drop_type::drop_pup;
 		}
 		else if (info.fileName().toLower() == "param.sfo")
 		{
-			if (drop_type != drop_type::drop_psf && drop_type != drop_type::drop_error)
+			if (type != drop_type::drop_psf && type != drop_type::drop_error)
 			{
-				return drop_type::drop_error;
+				return set_result(drop_type::drop_error);
 			}
 
-			drop_type = drop_type::drop_psf;
+			type = drop_type::drop_psf;
 		}
 		else if (suffix_lo == "pkg")
 		{
-			if (drop_type != drop_type::drop_rap_edat_pkg && drop_type != drop_type::drop_error)
+			if (type != drop_type::drop_rap_edat_pkg && type != drop_type::drop_error)
 			{
-				return drop_type::drop_error;
+				return set_result(drop_type::drop_error);
 			}
 
-			drop_type = drop_type::drop_rap_edat_pkg;
+			type = drop_type::drop_rap_edat_pkg;
 		}
 		else if (suffix_lo == "rap" || suffix_lo == "edat")
 		{
-			if (info.size() < 0x10 || (drop_type != drop_type::drop_rap_edat_pkg && drop_type != drop_type::drop_error))
+			if (info.size() < 0x10 || (type != drop_type::drop_rap_edat_pkg && type != drop_type::drop_error))
 			{
-				return drop_type::drop_error;
+				return set_result(drop_type::drop_error);
 			}
 
-			drop_type = drop_type::drop_rap_edat_pkg;
+			type = drop_type::drop_rap_edat_pkg;
 		}
-		else if (list.size() == 1)
+		else if (m_drop_file_url_list.size() == 1)
 		{
 			if (suffix_lo == "rrc")
 			{
-				drop_type = drop_type::drop_rrc;
+				type = drop_type::drop_rrc;
 			}
 			// The emulator allows to execute ANY filetype, just not from drag-and-drop because it is confusing to users
 			else if (suffix_lo == "savestat" || suffix_lo == "sprx" || suffix_lo == "self" || suffix_lo == "bin" || suffix_lo == "prx" || suffix_lo == "elf" || suffix_lo == "o")
 			{
-				drop_type = drop_type::drop_game;
+				type = drop_type::drop_game;
 			}
 			else
 			{
-				return drop_type::drop_error;
+				return set_result(drop_type::drop_error);
 			}
 		}
 		else
 		{
-			return drop_type::drop_error;
+			return set_result(drop_type::drop_error);
 		}
 
 		if (drop_paths) // we only need to know the paths on drop
@@ -3336,7 +3356,7 @@ main_window::drop_type main_window::IsValidFile(const QMimeData& md, QStringList
 		}
 	}
 
-	return drop_type;
+	return set_result(type);
 }
 
 void main_window::dropEvent(QDropEvent* event)
