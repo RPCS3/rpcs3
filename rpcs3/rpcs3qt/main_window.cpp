@@ -3257,6 +3257,8 @@ main_window::drop_type main_window::IsValidFile(const QMimeData& md, QStringList
 		const QString path = url.toLocalFile(); // convert url to filepath
 		const QFileInfo info(path);
 
+		const QString suffix_lo = info.suffix().toLower();
+
 		// check for directories first, only valid if all other paths led to directories until now.
 		if (info.isDir())
 		{
@@ -3266,6 +3268,10 @@ main_window::drop_type main_window::IsValidFile(const QMimeData& md, QStringList
 			}
 
 			drop_type = drop_type::drop_dir;
+		}
+		else if (info.size() < 0x4)
+		{
+			return drop_type::drop_error;
 		}
 		else if (info.suffix() == "PUP")
 		{
@@ -3285,7 +3291,7 @@ main_window::drop_type main_window::IsValidFile(const QMimeData& md, QStringList
 
 			drop_type = drop_type::drop_psf;
 		}
-		else if (info.suffix().toLower() == "pkg")
+		else if (suffix_lo == "pkg")
 		{
 			if (drop_type != drop_type::drop_rap_edat_pkg && drop_type != drop_type::drop_error)
 			{
@@ -3294,7 +3300,7 @@ main_window::drop_type main_window::IsValidFile(const QMimeData& md, QStringList
 
 			drop_type = drop_type::drop_rap_edat_pkg;
 		}
-		else if (info.suffix().toLower() == "rap" || info.suffix().toLower() == "edat")
+		else if (suffix_lo == "rap" || suffix_lo == "edat")
 		{
 			if (info.size() < 0x10 || (drop_type != drop_type::drop_rap_edat_pkg && drop_type != drop_type::drop_error))
 			{
@@ -3305,13 +3311,18 @@ main_window::drop_type main_window::IsValidFile(const QMimeData& md, QStringList
 		}
 		else if (list.size() == 1)
 		{
-			if (info.suffix() == "rrc")
+			if (suffix_lo == "rrc")
 			{
 				drop_type = drop_type::drop_rrc;
 			}
-			else
+			// The emulator allows to execute ANY filetype, just not from drag-and-drop because it is confusing to users
+			else if (suffix_lo == "savestat" || suffix_lo == "sprx" || suffix_lo == "self" || suffix_lo == "bin" || suffix_lo == "prx" || suffix_lo == "elf" || suffix_lo == "o")
 			{
 				drop_type = drop_type::drop_game;
+			}
+			else
+			{
+				return drop_type::drop_error;
 			}
 		}
 		else
