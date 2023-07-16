@@ -3260,7 +3260,7 @@ main_window::drop_type main_window::IsValidFile(const QMimeData& md, QStringList
 
 	m_drop_file_url_list = std::move(list);
 
-	auto set_result = [&](drop_type _type)
+	auto set_result = [this](drop_type type)
 	{
 		m_drop_file_timestamp = get_system_time();
 		m_drop_file_cached_drop_type = type;
