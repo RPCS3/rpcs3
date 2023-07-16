@@ -8,6 +8,8 @@
 #include <QActionGroup>
 #include <QMainWindow>
 #include <QIcon>
+#include <QList>
+#include <QUrl>
 #include <QMimeData>
 
 #include "update_manager.h"
@@ -156,7 +158,10 @@ private:
 	void ExtractTar();
 	void ExtractMSELF();
 
-	static drop_type IsValidFile(const QMimeData& md, QStringList* drop_paths = nullptr);
+	QList<QUrl> m_drop_file_url_list;
+	u64 m_drop_file_timestamp = umax;
+	drop_type m_drop_file_cached_drop_type = drop_type::drop_error;
+	drop_type IsValidFile(const QMimeData& md, QStringList* drop_paths = nullptr);
 	static void AddGamesFromDir(const QString& path);
 
 	QAction* CreateRecentAction(const q_string_pair& entry, const uint& sc_idx);
