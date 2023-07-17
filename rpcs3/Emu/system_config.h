@@ -99,6 +99,7 @@ struct cfg_root : cfg::node
 #else
 		cfg::_enum<sleep_timers_accuracy_level> sleep_timers_accuracy{ this, "Sleep Timers Accuracy", sleep_timers_accuracy_level::_usleep, true };
 #endif
+		cfg::_int<-1000, 1500> usleep_addend{ this, "Usleep Time Addend", 0, true };
 
 		cfg::uint64 perf_report_threshold{this, "Performance Report Threshold", 500, true}; // In µs, 0.5ms = default, 0 = everything
 		cfg::_bool perf_report{this, "Enable Performance Report", false, true}; // Show certain perf-related logs
