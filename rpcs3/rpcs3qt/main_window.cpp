@@ -2398,12 +2398,22 @@ void main_window::CreateConnects()
 
 		if (archived_stat.size)
 		{
-			const std::string dest_archived_path = fs::get_cache_dir() + log_filename + ".log.gz";
+			std::string dest_archived_path = fs::get_cache_dir() + log_filename + ".log.gz";
 
-			if (!Emu.GetTitleID().empty() && rename_log(archived_path, dest_archived_path))
+			const QString file_path = QFileDialog::getOpenFileName(this, tr("Save RPCS3's log file"), qstr(dest_archived_path), tr("RPCS3 Archived Log File (*.log.gz);;All files (*.*)"));
+
+			if (file_path.isEmpty())
+			{
+				// Aborted - view the current location
+				gui::utils::open_dir(archived_path);
+				return;
+			}
+
+			dest_archived_path = file_path.toStdString();
+
+			if (!Emu.GetTitleID().empty() && !dest_archived_path.empty() && rename_log(archived_path, dest_archived_path))
 			{
 				gui_log.success("Moved log file to '%s'!", dest_archived_path);
-				gui::utils::open_dir(dest_archived_path);
 				return;
 			}
 
@@ -2411,22 +2421,32 @@ void main_window::CreateConnects()
 			return;
 		}
 
-		const std::string dest_raw_file_path = fs::get_cache_dir() + log_filename + ".log";
+		std::string dest_raw_file_path = fs::get_cache_dir() + log_filename + ".log";
 
-		if (!Emu.GetTitleID().empty() && rename_log(raw_file_path, dest_raw_file_path))
+		const QString file_path = QFileDialog::getOpenFileName(this, tr("Save RPCS3's log file"), qstr(dest_raw_file_path), tr("RPCS3 Non-Archived Log File (*.log);;All files (*.*)"));
+
+		if (file_path.isEmpty())
+		{
+			// Aborted - view the current location
+			gui::utils::open_dir(raw_file_path);
+			return;
+		}
+
+		dest_raw_file_path = file_path.toStdString();
+
+		if (!Emu.GetTitleID().empty() && !dest_raw_file_path.empty() && rename_log(raw_file_path, dest_raw_file_path))
 		{
 			gui_log.success("Moved log file to '%s'!", dest_raw_file_path);
-			gui::utils::open_dir(dest_raw_file_path);
 			return;
 		}
 
 		gui::utils::open_dir(raw_file_path);
 	});
 
-	connect(ui->exitAnchorAndLocateLogAct, &QAction::triggered, this, [this]()
+	connect(ui->exitAndSaveLogAct, &QAction::triggered, this, [this]()
 	{
 		m_requested_show_logs_on_exit = true;
-		QWidget::close();
+		close();
 	});
 	connect(ui->exitAct, &QAction::triggered, this, &QWidget::close);
 
