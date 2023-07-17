@@ -84,6 +84,9 @@ namespace logs
 		// Flush contents (file writer)
 		virtual void sync();
 
+		// Close file handle after flushing to disk (hazardous)
+		virtual void close_prematurely();
+
 		// Add new listener
 		static void add(listener*);
 
@@ -92,6 +95,9 @@ namespace logs
 
 		// Flush log to disk
 		static void sync_all();
+
+		// Close file handle after flushing to disk (hazardous)
+		static void close_all_prematurely();
 	};
 
 	struct alignas(16) channel : private message

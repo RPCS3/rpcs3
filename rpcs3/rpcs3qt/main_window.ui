@@ -213,7 +213,7 @@
     <addaction name="menuBatch"/>
     <addaction name="menuFirmware"/>
     <addaction name="separator"/>
-    <addaction name="exitAndLocateLogAct"/>
+    <addaction name="exitAnchorAndLocateLogAct"/>
     <addaction name="exitAct"/>
    </widget>
    <widget class="QMenu" name="menuEmulation">
@@ -589,12 +589,12 @@
     <string>Configure Auto Pause</string>
    </property>
   </action>
-  <action name="exitAndLocateLogAct">
+  <action name="exitAnchorAndLocateLogAct">
    <property name="text">
-    <string>Exit And Locate Log</string>
+    <string>Exit, Locate And Anchor Log</string>
    </property>
    <property name="toolTip">
-    <string>Exit RPCS3 and locate RPCS3.log.gz</string>
+    <string>Exit RPCS3, anchor the file log it and locate it</string>
    </property>
    <property name="statusTip">
     <string>Exit the application and locate the log</string>

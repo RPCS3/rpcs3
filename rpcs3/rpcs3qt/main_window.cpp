@@ -2375,16 +2375,55 @@ void main_window::CreateConnects()
 			return;
 		}
 
+		// Get new filename from title and title ID but simplified
+		std::string log_filename = Emu.GetTitleAndTitleID();
+		log_filename.erase(std::remove_if(log_filename.begin(), log_filename.end(), [](u8 c){ return !std::isalnum(c) && c != ' ' && c != '[' && ']'; }), log_filename.end());
+		fmt::trim_back(log_filename);
+
+		auto rename_log = [](const std::string& from, const std::string& to)
+		{
+			// Test writablity here to avoid closing the log with no *chance* of success
+			if (fs::file test_writable{to, fs::write + fs::create}; !test_writable)
+			{
+				return false;
+			}
+
+			// Close and flush log file handle (!)
+			// Cannot rename the file due to file management design
+			logs::listener::close_all_prematurely();
+
+			// Try to move it
+			return fs::rename(from, to, true);
+		};
+
 		if (archived_stat.size)
 		{
+			const std::string dest_archived_path = fs::get_cache_dir() + log_filename + ".log.gz";
+
+			if (!Emu.GetTitleID().empty() && rename_log(archived_path, dest_archived_path))
+			{
+				gui_log.success("Moved log file to '%s'!", dest_archived_path);
+				gui::utils::open_dir(dest_archived_path);
+				return;
+			}
+
 			gui::utils::open_dir(archived_path);
+			return;
+		}
+
+		const std::string dest_raw_file_path = fs::get_cache_dir() + log_filename + ".log";
+
+		if (!Emu.GetTitleID().empty() && rename_log(raw_file_path, dest_raw_file_path))
+		{
+			gui_log.success("Moved log file to '%s'!", dest_raw_file_path);
+			gui::utils::open_dir(dest_raw_file_path);
 			return;
 		}
 
 		gui::utils::open_dir(raw_file_path);
 	});
 
-	connect(ui->exitAndLocateLogAct, &QAction::triggered, this, [this]()
+	connect(ui->exitAnchorAndLocateLogAct, &QAction::triggered, this, [this]()
 	{
 		m_requested_show_logs_on_exit = true;
 		QWidget::close();
