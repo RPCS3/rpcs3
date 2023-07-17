@@ -3373,6 +3373,11 @@ Check data for valid file types and cache their paths if necessary
 */
 main_window::drop_type main_window::IsValidFile(const QMimeData& md, QStringList* drop_paths)
 {
+	if (drop_paths)
+	{
+		drop_paths->clear();
+	}
+
 	drop_type type = drop_type::drop_error;
 
 	QList<QUrl> list = md.urls(); // get list of all the dropped file urls
@@ -3380,6 +3385,14 @@ main_window::drop_type main_window::IsValidFile(const QMimeData& md, QStringList
 	// Try to cache the data for half a second
 	if (m_drop_file_timestamp != umax && m_drop_file_url_list == list && get_system_time() - m_drop_file_timestamp < 500'000)
 	{
+		if (drop_paths)
+		{
+			for (auto&& url : m_drop_file_url_list)
+			{
+				drop_paths->append(url.toLocalFile());
+			}
+		}
+
 		return m_drop_file_cached_drop_type;
 	}
 
