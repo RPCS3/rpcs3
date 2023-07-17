@@ -499,13 +499,10 @@ void lv2_file::save(utils::serial& ar)
 			return true;
 		}
 
-		fs::stat_t test_s = test.get_stat();
-		fs::stat_t file_s = file.get_stat();
+		fs::file_id test_s = test.get_id();
+		fs::file_id file_s = file.get_id();
 
-		// They don't matter for comparison and only create problems with encrypted files
-		test_s.is_writable = file_s.is_writable;
-		test_s.size = file_s.size;
-		return test_s != file_s;
+		return test_s.is_coherent_with(file_s);
 	}();
 
 	if (in_mem)
@@ -640,6 +637,18 @@ struct lv2_file::file_view : fs::file_base
 	u64 size() override
 	{
 		return m_file->file.size();
+	}
+
+	fs::file_id get_id() override
+	{
+		fs::file_id id = m_file->file.get_id();
+
+		be_t<u64> off = m_off;
+		const auto ptr = reinterpret_cast<u8*>(&off);
+
+		id.data.insert(id.data.end(), ptr, ptr + sizeof(off));
+		id.type.insert(0, "lv2_file::file_view: "sv);
+		return id;
 	}
 };
 
