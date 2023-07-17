@@ -1,6 +1,8 @@
 #include "gl_gs_frame.h"
 
+#include "Emu/System.h"
 #include "Emu/system_config.h"
+#include "util/atomic.hpp"
 
 #include <QOpenGLContext>
 #include <QOffscreenSurface>
@@ -29,13 +31,16 @@ draw_context_t gl_gs_frame::make_context()
 
 	if (m_primary_context)
 	{
-		auto surface = new QOffscreenSurface();
-		surface->setFormat(m_format);
-		surface->create();
+		atomic_t<QOffscreenSurface*> surface = new QOffscreenSurface();
+		surface.load()->setFormat(m_format);
+		Emu.BlockingCallFromMainThread([&]()
+		{
+			surface.load()->create();
+		});
 
 		// Share resources with the first created context
 		context->handle->setShareContext(m_primary_context->handle);
-		context->surface = surface;
+		context->surface = surface.load();
 		context->owner = true;
 	}
 	else
@@ -117,5 +122,8 @@ void gl_gs_frame::flip(draw_context_t context, bool skip_frame)
 
 	const auto gl_ctx = static_cast<GLContext*>(context);
 
-	gl_ctx->handle->swapBuffers(gl_ctx->surface);
+	if (auto window = dynamic_cast<QWindow*>(gl_ctx->surface); window && window->isExposed())
+	{
+		gl_ctx->handle->swapBuffers(gl_ctx->surface);
+	}
 }
