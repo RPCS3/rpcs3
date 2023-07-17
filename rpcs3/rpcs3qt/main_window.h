@@ -50,6 +50,7 @@ class main_window : public QMainWindow
 
 	bool m_is_list_mode = true;
 	bool m_save_slider_pos = false;
+	bool m_requested_show_logs_on_exit = false;
 	int m_other_slider_pos = 0;
 
 	QIcon m_app_icon;
@@ -95,6 +96,7 @@ Q_SIGNALS:
 	void RequestGlobalStylesheetChange();
 	void RequestTrophyManagerRepaint();
 	void NotifyEmuSettingsChange();
+	void NotifyWindowCloseEvent(bool closed);
 
 public Q_SLOTS:
 	void OnEmuStop();

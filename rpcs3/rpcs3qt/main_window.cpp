@@ -2347,6 +2347,48 @@ void main_window::CreateConnects()
 
 	connect(ui->bootInstallPkgAct, &QAction::triggered, this, [this] {InstallPackages(); });
 	connect(ui->bootInstallPupAct, &QAction::triggered, this, [this] {InstallPup(); });
+
+	connect(this, &main_window::NotifyWindowCloseEvent, this, [this](bool closed)
+	{
+		if (!closed)
+		{
+			// Cancel the request
+			m_requested_show_logs_on_exit = false;
+			return;
+		}
+
+		if (!m_requested_show_logs_on_exit)
+		{
+			// Not requested
+			return;
+		}
+
+		const std::string archived_path = fs::get_cache_dir() + "RPCS3.log.gz";
+		const std::string raw_file_path = fs::get_cache_dir() + "RPCS3.log";
+
+		fs::stat_t raw_stat{};
+		fs::stat_t archived_stat{};
+
+		if ((!fs::stat(raw_file_path, raw_stat) || raw_stat.is_directory) || (!fs::stat(archived_path, archived_stat) || archived_stat.is_directory) || (raw_stat.size == 0 && archived_stat.size == 0))
+		{
+			QMessageBox::warning(this, tr("Failed to locate log"), tr("Failed to locate log files.\nMake sure that RPCS3.log and RPCS3.log.gz are writable and can be created without permission issues."));
+			return;
+		}
+
+		if (archived_stat.size)
+		{
+			gui::utils::open_dir(archived_path);
+			return;
+		}
+
+		gui::utils::open_dir(raw_file_path);
+	});
+
+	connect(ui->exitAndLocateLogAct, &QAction::triggered, this, [this]()
+	{
+		m_requested_show_logs_on_exit = true;
+		QWidget::close();
+	});
 	connect(ui->exitAct, &QAction::triggered, this, &QWidget::close);
 
 	connect(ui->batchCreatePPUCachesAct, &QAction::triggered, m_game_list_frame, &game_list_frame::BatchCreatePPUCaches);
@@ -3212,6 +3254,7 @@ void main_window::closeEvent(QCloseEvent* closeEvent)
 {
 	if (!m_gui_settings->GetBootConfirmation(this, gui::ib_confirm_exit))
 	{
+		Q_EMIT NotifyWindowCloseEvent(false);
 		closeEvent->ignore();
 		return;
 	}
@@ -3223,6 +3266,12 @@ void main_window::closeEvent(QCloseEvent* closeEvent)
 	}
 
 	SaveWindowState();
+
+	// Flush logs here as well
+	logs::listener::sync_all();
+
+	Q_EMIT NotifyWindowCloseEvent(true);
+
 	Emu.Quit(true);
 }
 
