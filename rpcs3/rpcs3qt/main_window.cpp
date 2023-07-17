@@ -2376,12 +2376,19 @@ void main_window::CreateConnects()
 		}
 
 		// Get new filename from title and title ID but simplified
-		std::string log_filename = Emu.GetTitleAndTitleID();
+		std::string log_filename = Emu.GetTitleID().empty() ? "RPCS3" : Emu.GetTitleAndTitleID();
 		log_filename.erase(std::remove_if(log_filename.begin(), log_filename.end(), [](u8 c){ return !std::isalnum(c) && c != ' ' && c != '[' && ']'; }), log_filename.end());
 		fmt::trim_back(log_filename);
 
-		auto rename_log = [](const std::string& from, const std::string& to)
+		QString path_last_log = m_gui_settings->GetValue(gui::fd_save_log).toString();
+
+		auto move_log = [](const std::string& from, const std::string& to)
 		{
+			if (from == to)
+			{
+				return false;
+			}
+
 			// Test writablity here to avoid closing the log with no *chance* of success
 			if (fs::file test_writable{to, fs::write + fs::create}; !test_writable)
 			{
@@ -2393,26 +2400,37 @@ void main_window::CreateConnects()
 			logs::listener::close_all_prematurely();
 
 			// Try to move it
-			return fs::rename(from, to, true);
+			if (fs::rename(from, to, true))
+			{
+				return true;
+			}
+
+			// Try to copy it if fails
+			if (fs::copy_file(from, to, true))
+			{
+				fs::remove_file(from);
+				return true;
+			}
+
+			return false;
 		};
 
 		if (archived_stat.size)
 		{
-			std::string dest_archived_path = fs::get_cache_dir() + log_filename + ".log.gz";
+			const QString dir_path = QFileDialog::getExistingDirectory(this, tr("Select RPCS3's log saving location (saving %0)").arg(qstr(log_filename + ".log.gz")), path_last_log, QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
 
-			const QString file_path = QFileDialog::getOpenFileName(this, tr("Save RPCS3's log file"), qstr(dest_archived_path), tr("RPCS3 Archived Log File (*.log.gz);;All files (*.*)"));
-
-			if (file_path.isEmpty())
+			if (dir_path.isEmpty())
 			{
 				// Aborted - view the current location
 				gui::utils::open_dir(archived_path);
 				return;
 			}
 
-			dest_archived_path = file_path.toStdString();
+			const std::string dest_archived_path = dir_path.toStdString() + "/" + log_filename + ".log.gz";
 
-			if (!Emu.GetTitleID().empty() && !dest_archived_path.empty() && rename_log(archived_path, dest_archived_path))
+			if (!Emu.GetTitleID().empty() && !dest_archived_path.empty() && move_log(archived_path, dest_archived_path))
 			{
+				m_gui_settings->SetValue(gui::fd_save_log, dir_path);
 				gui_log.success("Moved log file to '%s'!", dest_archived_path);
 				return;
 			}
@@ -2421,21 +2439,20 @@ void main_window::CreateConnects()
 			return;
 		}
 
-		std::string dest_raw_file_path = fs::get_cache_dir() + log_filename + ".log";
+		const QString dir_path = QFileDialog::getExistingDirectory(this, tr("Select RPCS3's log saving location (saving %0)").arg(qstr(log_filename + ".log")), path_last_log, QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
 
-		const QString file_path = QFileDialog::getOpenFileName(this, tr("Save RPCS3's log file"), qstr(dest_raw_file_path), tr("RPCS3 Non-Archived Log File (*.log);;All files (*.*)"));
-
-		if (file_path.isEmpty())
+		if (dir_path.isEmpty())
 		{
 			// Aborted - view the current location
 			gui::utils::open_dir(raw_file_path);
 			return;
 		}
 
-		dest_raw_file_path = file_path.toStdString();
+		const std::string dest_raw_file_path = dir_path.toStdString() + "/" + log_filename + ".log";
 
-		if (!Emu.GetTitleID().empty() && !dest_raw_file_path.empty() && rename_log(raw_file_path, dest_raw_file_path))
+		if (!Emu.GetTitleID().empty() && !dest_raw_file_path.empty() && move_log(raw_file_path, dest_raw_file_path))
 		{
+			m_gui_settings->SetValue(gui::fd_save_log, dir_path);
 			gui_log.success("Moved log file to '%s'!", dest_raw_file_path);
 			return;
 		}
