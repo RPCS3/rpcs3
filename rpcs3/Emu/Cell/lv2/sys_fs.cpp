@@ -499,13 +499,10 @@ void lv2_file::save(utils::serial& ar)
 			return true;
 		}
 
-		fs::stat_t test_s = test.get_stat();
-		fs::stat_t file_s = file.get_stat();
+		fs::file_id test_s = test.get_id();
+		fs::file_id file_s = file.get_id();
 
-		// They don't matter for comparison and only create problems with encrypted files
-		test_s.is_writable = file_s.is_writable;
-		test_s.size = file_s.size;
-		return test_s != file_s;
+		return test_s.is_coherent_with(file_s);
 	}();
 
 	if (in_mem)
