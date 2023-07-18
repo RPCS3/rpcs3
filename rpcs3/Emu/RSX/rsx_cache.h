@@ -296,12 +296,12 @@ namespace rsx
 
 			// Writeback to cache either if file does not exist or it is invalid (unexpected size)
 			// Note: fs::write_file is not atomic, if the process is terminated in the middle an empty file is created
-			if (fs::stat_t s{}; !fs::stat(fp_name, s) || s.size != fp.ucode_length)
+			if (fs::stat_t s{}; !fs::get_stat(fp_name, s) || s.size != fp.ucode_length)
 			{
 				fs::write_file(fp_name, fs::rewrite, fp.get_data(), fp.ucode_length);
 			}
 
-			if (fs::stat_t s{}; !fs::stat(vp_name, s) || s.size != vp.data.size() * sizeof(u32))
+			if (fs::stat_t s{}; !fs::get_stat(vp_name, s) || s.size != vp.data.size() * sizeof(u32))
 			{
 				fs::write_file(vp_name, fs::rewrite, vp.data);
 			}

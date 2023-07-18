@@ -277,7 +277,7 @@ void Emulator::Init()
 	const std::string cfg_path = fs::get_config_dir() + "/config.yml";
 
 	// Save new global config if it doesn't exist or is empty
-	if (fs::stat_t info{}; !fs::stat(cfg_path, info) || info.size == 0)
+	if (fs::stat_t info{}; !fs::get_stat(cfg_path, info) || info.size == 0)
 	{
 		Emulator::SaveSettings(g_cfg_defaults, {});
 	}

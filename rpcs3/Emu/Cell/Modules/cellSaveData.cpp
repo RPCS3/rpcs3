@@ -1397,7 +1397,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		}
 
 		fs::stat_t dir_info{};
-		if (!fs::stat(dir_path, dir_info))
+		if (!fs::get_stat(dir_path, dir_info))
 		{
 			// funcStat is called even if the directory doesn't exist.
 		}
@@ -2099,7 +2099,7 @@ static NEVER_INLINE error_code savedata_get_list_item(vm::cptr<char> dirName, vm
 	if (dir)
 	{
 		fs::stat_t dir_info{};
-		if (!fs::stat(save_path, dir_info))
+		if (!fs::get_stat(save_path, dir_info))
 		{
 			return CELL_SAVEDATA_ERROR_INTERNAL;
 		}
