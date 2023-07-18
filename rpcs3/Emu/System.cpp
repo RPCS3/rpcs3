@@ -434,7 +434,6 @@ void Emulator::Init()
 			make_path_verbose(dev_usb + "PS3/SAVEDATA", false);
 			make_path_verbose(dev_usb + "PS3/THEME", false);
 			make_path_verbose(dev_usb + "PS3/UPDATE", false);
-			
 		}
 
 		if (make_path_verbose(dev_hdd1, true))
