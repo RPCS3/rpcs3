@@ -107,6 +107,9 @@ namespace logs
 
 		// Ensure written to disk
 		void sync();
+
+		// Close file handle after flushing to disk
+		void close_prematurely();
 	};
 
 	struct file_listener final : file_writer, public listener
@@ -120,6 +123,11 @@ namespace logs
 		void sync() override
 		{
 			file_writer::sync();
+		}
+
+		void close_prematurely() override
+		{
+			file_writer::close_prematurely();
 		}
 	};
 
@@ -353,11 +361,23 @@ void logs::listener::sync()
 {
 }
 
+void logs::listener::close_prematurely()
+{
+}
+
 void logs::listener::sync_all()
 {
 	for (listener* lis = get_logger(); lis; lis = lis->m_next)
 	{
 		lis->sync();
+	}
+}
+
+void logs::listener::close_all_prematurely()
+{
+	for (listener* lis = get_logger(); lis; lis = lis->m_next)
+	{
+		lis->close_prematurely();
 	}
 }
 
@@ -535,7 +555,7 @@ logs::file_writer::~file_writer()
 	}
 
 #ifdef _WIN32
-	// Cancel compressed log file autodeletion
+	// Cancel compressed log file auto-deletion
 	FILE_DISPOSITION_INFO disp;
 	disp.DeleteFileW = false;
 	SetFileInformationByHandle(m_fout2.get_handle(), FileDispositionInfo, &disp, sizeof(disp));
@@ -688,6 +708,56 @@ void logs::file_writer::sync()
 	if (m_fout2)
 	{
 		m_fout2.sync();
+	}
+}
+
+void logs::file_writer::close_prematurely()
+{
+	if (!m_fptr)
+	{
+		return;
+	}
+
+	// Ensure written to disk
+	sync();
+
+	std::lock_guard lock(m_m);
+
+	if (m_fout2)
+	{
+		m_zs.avail_in = 0;
+		m_zs.next_in  = nullptr;
+
+		do
+		{
+			m_zs.avail_out = sizeof(m_zout);
+			m_zs.next_out  = m_zout;
+
+			if (deflate(&m_zs, Z_FINISH) == Z_STREAM_ERROR || m_fout2.write(m_zout, sizeof(m_zout) - m_zs.avail_out) != sizeof(m_zout) - m_zs.avail_out)
+			{
+				break;
+			}
+		}
+		while (m_zs.avail_out == 0);
+
+		deflateEnd(&m_zs);
+
+#ifdef _WIN32
+		// Cancel compressed log file auto-deletion
+		FILE_DISPOSITION_INFO disp;
+		disp.DeleteFileW = false;
+		SetFileInformationByHandle(m_fout2.get_handle(), FileDispositionInfo, &disp, sizeof(disp));
+#else
+		// Restore compressed log file permissions
+		::fchmod(m_fout2.get_handle(), S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+#endif
+
+		m_fout2.close();
+	}
+
+	if (m_fout)
+	{
+		m_fout.close();
 	}
 }
 

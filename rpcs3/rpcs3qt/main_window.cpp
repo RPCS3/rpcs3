@@ -2347,6 +2347,124 @@ void main_window::CreateConnects()
 
 	connect(ui->bootInstallPkgAct, &QAction::triggered, this, [this] {InstallPackages(); });
 	connect(ui->bootInstallPupAct, &QAction::triggered, this, [this] {InstallPup(); });
+
+	connect(this, &main_window::NotifyWindowCloseEvent, this, [this](bool closed)
+	{
+		if (!closed)
+		{
+			// Cancel the request
+			m_requested_show_logs_on_exit = false;
+			return;
+		}
+
+		if (!m_requested_show_logs_on_exit)
+		{
+			// Not requested
+			return;
+		}
+
+		const std::string archived_path = fs::get_cache_dir() + "RPCS3.log.gz";
+		const std::string raw_file_path = fs::get_cache_dir() + "RPCS3.log";
+
+		fs::stat_t raw_stat{};
+		fs::stat_t archived_stat{};
+
+		if ((!fs::stat(raw_file_path, raw_stat) || raw_stat.is_directory) || (!fs::stat(archived_path, archived_stat) || archived_stat.is_directory) || (raw_stat.size == 0 && archived_stat.size == 0))
+		{
+			QMessageBox::warning(this, tr("Failed to locate log"), tr("Failed to locate log files.\nMake sure that RPCS3.log and RPCS3.log.gz are writable and can be created without permission issues."));
+			return;
+		}
+
+		// Get new filename from title and title ID but simplified
+		std::string log_filename = Emu.GetTitleID().empty() ? "RPCS3" : Emu.GetTitleAndTitleID();
+		log_filename.erase(std::remove_if(log_filename.begin(), log_filename.end(), [](u8 c){ return !std::isalnum(c) && c != ' ' && c != '[' && ']'; }), log_filename.end());
+		fmt::trim_back(log_filename);
+
+		QString path_last_log = m_gui_settings->GetValue(gui::fd_save_log).toString();
+
+		auto move_log = [](const std::string& from, const std::string& to)
+		{
+			if (from == to)
+			{
+				return false;
+			}
+
+			// Test writablity here to avoid closing the log with no *chance* of success
+			if (fs::file test_writable{to, fs::write + fs::create}; !test_writable)
+			{
+				return false;
+			}
+
+			// Close and flush log file handle (!)
+			// Cannot rename the file due to file management design
+			logs::listener::close_all_prematurely();
+
+			// Try to move it
+			if (fs::rename(from, to, true))
+			{
+				return true;
+			}
+
+			// Try to copy it if fails
+			if (fs::copy_file(from, to, true))
+			{
+				fs::remove_file(from);
+				return true;
+			}
+
+			return false;
+		};
+
+		if (archived_stat.size)
+		{
+			const QString dir_path = QFileDialog::getExistingDirectory(this, tr("Select RPCS3's log saving location (saving %0)").arg(qstr(log_filename + ".log.gz")), path_last_log, QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+
+			if (dir_path.isEmpty())
+			{
+				// Aborted - view the current location
+				gui::utils::open_dir(archived_path);
+				return;
+			}
+
+			const std::string dest_archived_path = dir_path.toStdString() + "/" + log_filename + ".log.gz";
+
+			if (!Emu.GetTitleID().empty() && !dest_archived_path.empty() && move_log(archived_path, dest_archived_path))
+			{
+				m_gui_settings->SetValue(gui::fd_save_log, dir_path);
+				gui_log.success("Moved log file to '%s'!", dest_archived_path);
+				return;
+			}
+
+			gui::utils::open_dir(archived_path);
+			return;
+		}
+
+		const QString dir_path = QFileDialog::getExistingDirectory(this, tr("Select RPCS3's log saving location (saving %0)").arg(qstr(log_filename + ".log")), path_last_log, QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+
+		if (dir_path.isEmpty())
+		{
+			// Aborted - view the current location
+			gui::utils::open_dir(raw_file_path);
+			return;
+		}
+
+		const std::string dest_raw_file_path = dir_path.toStdString() + "/" + log_filename + ".log";
+
+		if (!Emu.GetTitleID().empty() && !dest_raw_file_path.empty() && move_log(raw_file_path, dest_raw_file_path))
+		{
+			m_gui_settings->SetValue(gui::fd_save_log, dir_path);
+			gui_log.success("Moved log file to '%s'!", dest_raw_file_path);
+			return;
+		}
+
+		gui::utils::open_dir(raw_file_path);
+	});
+
+	connect(ui->exitAndSaveLogAct, &QAction::triggered, this, [this]()
+	{
+		m_requested_show_logs_on_exit = true;
+		close();
+	});
 	connect(ui->exitAct, &QAction::triggered, this, &QWidget::close);
 
 	connect(ui->batchCreatePPUCachesAct, &QAction::triggered, m_game_list_frame, &game_list_frame::BatchCreatePPUCaches);
@@ -3212,6 +3330,7 @@ void main_window::closeEvent(QCloseEvent* closeEvent)
 {
 	if (!m_gui_settings->GetBootConfirmation(this, gui::ib_confirm_exit))
 	{
+		Q_EMIT NotifyWindowCloseEvent(false);
 		closeEvent->ignore();
 		return;
 	}
@@ -3223,6 +3342,12 @@ void main_window::closeEvent(QCloseEvent* closeEvent)
 	}
 
 	SaveWindowState();
+
+	// Flush logs here as well
+	logs::listener::sync_all();
+
+	Q_EMIT NotifyWindowCloseEvent(true);
+
 	Emu.Quit(true);
 }
 
@@ -3248,6 +3373,11 @@ Check data for valid file types and cache their paths if necessary
 */
 main_window::drop_type main_window::IsValidFile(const QMimeData& md, QStringList* drop_paths)
 {
+	if (drop_paths)
+	{
+		drop_paths->clear();
+	}
+
 	drop_type type = drop_type::drop_error;
 
 	QList<QUrl> list = md.urls(); // get list of all the dropped file urls
@@ -3255,6 +3385,14 @@ main_window::drop_type main_window::IsValidFile(const QMimeData& md, QStringList
 	// Try to cache the data for half a second
 	if (m_drop_file_timestamp != umax && m_drop_file_url_list == list && get_system_time() - m_drop_file_timestamp < 500'000)
 	{
+		if (drop_paths)
+		{
+			for (auto&& url : m_drop_file_url_list)
+			{
+				drop_paths->append(url.toLocalFile());
+			}
+		}
+
 		return m_drop_file_cached_drop_type;
 	}
 

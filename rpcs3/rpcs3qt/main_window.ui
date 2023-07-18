@@ -213,6 +213,7 @@
     <addaction name="menuBatch"/>
     <addaction name="menuFirmware"/>
     <addaction name="separator"/>
+    <addaction name="exitAndSaveLogAct"/>
     <addaction name="exitAct"/>
    </widget>
    <widget class="QMenu" name="menuEmulation">
@@ -586,6 +587,17 @@
    </property>
    <property name="toolTip">
     <string>Configure Auto Pause</string>
+   </property>
+  </action>
+  <action name="exitAndSaveLogAct">
+   <property name="text">
+    <string>Exit And Save Log</string>
+   </property>
+   <property name="toolTip">
+    <string>Exit RPCS3, move the log file to a custom location</string>
+   </property>
+   <property name="statusTip">
+    <string>Exit the application and save the log to a user-defined location</string>
    </property>
   </action>
   <action name="exitAct">
