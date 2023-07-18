@@ -424,7 +424,18 @@ void Emulator::Init()
 		make_path_verbose(dev_flash, true);
 		make_path_verbose(dev_flash2, true);
 		make_path_verbose(dev_flash3, true);
-		make_path_verbose(dev_usb, true);
+		
+		if (make_path_verbose(dev_usb, true))
+		{
+			make_path_verbose(dev_usb + "MUSIC/", false);
+			make_path_verbose(dev_usb + "VIDEO/", false);
+			make_path_verbose(dev_usb + "PICTURE/", false);
+			make_path_verbose(dev_usb + "PS3/EXPORT/PSV/", false); // PS1 and PS2 Saves go here
+			make_path_verbose(dev_usb + "PS3/SAVEDATA", false);
+			make_path_verbose(dev_usb + "PS3/THEME", false);
+			make_path_verbose(dev_usb + "PS3/UPDATE", false);
+			
+		}
 
 		if (make_path_verbose(dev_hdd1, true))
 		{
@@ -453,6 +464,9 @@ void Emulator::Init()
 			make_path_verbose(dev_hdd0 + "savedata/", false);
 			make_path_verbose(dev_hdd0 + "savedata/vmc/", false);
 			make_path_verbose(dev_hdd0 + "photo/", false);
+			make_path_verbose(dev_hdd0 + "music/", false);
+			make_path_verbose(dev_hdd0 + "theme/", false);
+			make_path_verbose(dev_hdd0 + "video/", false);
 		}
 
 		const std::string games_common_dir = g_cfg_vfs.get(g_cfg_vfs.games_dir, emu_dir);
