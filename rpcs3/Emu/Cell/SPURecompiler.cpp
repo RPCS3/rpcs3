@@ -8572,8 +8572,13 @@ public:
 			return;
 		}
 
-		// (TODO: implement via known-bits-lookup) Check whether shuffle mask doesn't contain fixed value selectors
-		const auto [perm_only, dummy1] = match_expr(c, match<u8[16]>() & 31);
+		// Check whether shuffle mask doesn't contain fixed value selectors
+		bool perm_only = false;
+
+		if (auto k = get_known_bits(c); !!(k.Zero & 0x80))
+		{
+			perm_only = true;
+		}
 
 		const auto a = get_vr<u8[16]>(op.ra);
 		const auto b = get_vr<u8[16]>(op.rb);
@@ -8599,7 +8604,7 @@ public:
 					return;
 				}
 
-				const auto x = avg(noncast<u8[16]>(sext<s8[16]>((c & 0xc0) == 0xc0)), noncast<u8[16]>(sext<s8[16]>((c & 0xe0) == 0xc0)));
+				const auto x = pshufb(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
 				const auto ax = pshufb(as, c);
 				const auto bx = pshufb(bs, c);
 
@@ -8615,7 +8620,7 @@ public:
 				if (data == v128::from8p(data._u8[0]))
 				{
 					// See above
-					const auto x = avg(noncast<u8[16]>(sext<s8[16]>((c & 0xc0) == 0xc0)), noncast<u8[16]>(sext<s8[16]>((c & 0xe0) == 0xc0)));
+					const auto x = pshufb(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
 					const auto ax = pshufb(as, c);
 
 					if (perm_only)
@@ -8634,7 +8639,7 @@ public:
 				if (data == v128::from8p(data._u8[0]))
 				{
 					// See above
-					const auto x = avg(noncast<u8[16]>(sext<s8[16]>((c & 0xc0) == 0xc0)), noncast<u8[16]>(sext<s8[16]>((c & 0xe0) == 0xc0)));
+					const auto x = pshufb(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
 					const auto bx = pshufb(bs, c);
 
 					if (perm_only)
@@ -8662,7 +8667,7 @@ public:
 			return;
 		}
 
-		const auto x = avg(noncast<u8[16]>(sext<s8[16]>((c & 0xc0) == 0xc0)), noncast<u8[16]>(sext<s8[16]>((c & 0xe0) == 0xc0)));
+		const auto x = pshufb(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
 		const auto cr = eval(c ^ 0xf);
 		const auto ax = pshufb(a, cr);
 		const auto bx = pshufb(b, cr);
