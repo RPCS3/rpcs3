@@ -14,7 +14,7 @@ namespace utils
 
 		dynamic_library(const dynamic_library&) = delete;
 
-		dynamic_library(dynamic_library&& other)
+		dynamic_library(dynamic_library&& other) noexcept
 			: m_handle(other.m_handle)
 		{
 			other.m_handle = nullptr;
@@ -22,7 +22,7 @@ namespace utils
 
 		dynamic_library& operator=(const dynamic_library&) = delete;
 
-		dynamic_library& operator=(dynamic_library&& other)
+		dynamic_library& operator=(dynamic_library&& other) noexcept
 		{
 			std::swap(m_handle, other.m_handle);
 			return *this;
