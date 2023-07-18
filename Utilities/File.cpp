@@ -502,7 +502,7 @@ std::string_view fs::get_parent_dir_view(std::string_view path, u32 parent_level
 	return result;
 }
 
-bool fs::stat(const std::string& path, stat_t& info)
+bool fs::get_stat(const std::string& path, stat_t& info)
 {
 	// Ensure consistent information on failure
 	info = {};
@@ -618,13 +618,13 @@ bool fs::stat(const std::string& path, stat_t& info)
 bool fs::exists(const std::string& path)
 {
 	fs::stat_t info{};
-	return fs::stat(path, info);
+	return fs::get_stat(path, info);
 }
 
 bool fs::is_file(const std::string& path)
 {
 	fs::stat_t info{};
-	if (!fs::stat(path, info))
+	if (!fs::get_stat(path, info))
 	{
 		return false;
 	}
@@ -641,7 +641,7 @@ bool fs::is_file(const std::string& path)
 bool fs::is_dir(const std::string& path)
 {
 	fs::stat_t info{};
-	if (!fs::stat(path, info))
+	if (!fs::get_stat(path, info))
 	{
 		return false;
 	}

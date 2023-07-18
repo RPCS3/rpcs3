@@ -1488,7 +1488,7 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 
 	fs::stat_t info{};
 
-	if (!fs::stat(local_path, info))
+	if (!fs::get_stat(local_path, info))
 	{
 		switch (auto error = fs::g_tls_error)
 		{
@@ -1499,7 +1499,7 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 
 			for (u32 i = 66601; i <= 66699; i++)
 			{
-				if (fs::stat(fmt::format("%s.%u", local_path, i), info) && !info.is_directory)
+				if (fs::get_stat(fmt::format("%s.%u", local_path, i), info) && !info.is_directory)
 				{
 					total_size += info.size;
 				}
@@ -1510,7 +1510,7 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 			}
 
 			// Use attributes from the first fragment (consistently with sys_fs_open+fstat)
-			if (fs::stat(local_path + ".66600", info) && !info.is_directory)
+			if (fs::get_stat(local_path + ".66600", info) && !info.is_directory)
 			{
 				// Success
 				info.size += total_size;

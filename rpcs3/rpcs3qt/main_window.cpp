@@ -2384,7 +2384,7 @@ void main_window::CreateConnects()
 		fs::stat_t raw_stat{};
 		fs::stat_t archived_stat{};
 
-		if ((!fs::stat(raw_file_path, raw_stat) || raw_stat.is_directory) || (!fs::stat(archived_path, archived_stat) || archived_stat.is_directory) || (raw_stat.size == 0 && archived_stat.size == 0))
+		if ((!fs::get_stat(raw_file_path, raw_stat) || raw_stat.is_directory) || (!fs::get_stat(archived_path, archived_stat) || archived_stat.is_directory) || (raw_stat.size == 0 && archived_stat.size == 0))
 		{
 			QMessageBox::warning(this, tr("Failed to locate log"), tr("Failed to locate log files.\nMake sure that RPCS3.log and RPCS3.log.gz are writable and can be created without permission issues."));
 			return;
