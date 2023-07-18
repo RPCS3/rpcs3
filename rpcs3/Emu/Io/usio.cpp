@@ -122,12 +122,10 @@ void usb_device_usio::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue
 	transfer->fake = true;
 
 	// Control transfers are nearly instant
-	switch (bmRequestType)
+	if (true) // always true
 	{
-	default:
 		// Follow to default emulated handler
 		usb_device_emulated::control_transfer(bmRequestType, bRequest, wValue, wIndex, wLength, buf_size, buf, transfer);
-		break;
 	}
 }
 
