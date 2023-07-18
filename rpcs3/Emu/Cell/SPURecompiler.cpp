@@ -8572,8 +8572,13 @@ public:
 			return;
 		}
 
-		// (TODO: implement via known-bits-lookup) Check whether shuffle mask doesn't contain fixed value selectors
-		const auto [perm_only, dummy1] = match_expr(c, match<u8[16]>() & 31);
+		// Check whether shuffle mask doesn't contain fixed value selectors
+		bool perm_only = false;
+
+		if (auto k = get_known_bits(c); !!(k.Zero & 0x80))
+		{
+			perm_only = true;
+		}
 
 		const auto a = get_vr<u8[16]>(op.ra);
 		const auto b = get_vr<u8[16]>(op.rb);
