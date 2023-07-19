@@ -1,8 +1,8 @@
 #pragma once
 
 #ifdef _WIN32
-#include <QWinTHumbnailToolbar>
-#include <QWinTHumbnailToolbutton>
+#include <QWinThumbnailToolBar>
+#include <QWinThumbnailToolButton>
 #endif
 
 #include <QActionGroup>
