@@ -466,6 +466,13 @@ void Emulator::Init()
 			make_path_verbose(dev_hdd0 + "music/", false);
 			make_path_verbose(dev_hdd0 + "theme/", false);
 			make_path_verbose(dev_hdd0 + "video/", false);
+			make_path_verbose(dev_hdd0 + "drm/", false);
+			make_path_verbose(dev_hdd0 + "vsh/", false);
+			make_path_verbose(dev_hdd0 + "crash_report/", false);
+			make_path_verbose(dev_hdd0 + "tmp/", false);
+			make_path_verbose(dev_hdd0 + "mms/", false); //multimedia server for vsh, created from rebuilding the database
+			make_path_verbose(dev_hdd0 + "data/", false);
+			make_path_verbose(dev_hdd0 + "vm/", false);
 		}
 
 		const std::string games_common_dir = g_cfg_vfs.get(g_cfg_vfs.games_dir, emu_dir);
