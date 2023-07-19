@@ -251,7 +251,7 @@ bool lv2_fs_mount_info_map::vfs_unmount(std::string_view vpath, bool remove_from
 
 std::string lv2_fs_object::get_normalized_path(std::string_view path)
 {
-	std::string normalized_path = std::filesystem::u8path(path).lexically_normal().string();
+	std::string normalized_path = std::filesystem::path(path).lexically_normal().string();
 
 #ifdef _WIN32
 	std::replace(normalized_path.begin(), normalized_path.end(), '\\', '/');
