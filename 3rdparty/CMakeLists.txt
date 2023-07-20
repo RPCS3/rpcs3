@@ -326,7 +326,9 @@ endif()
 
 
 # LLVM
-add_subdirectory(llvm EXCLUDE_FROM_ALL)
+if(BUILD_LLVM)
+	add_subdirectory(llvm EXCLUDE_FROM_ALL)
+endif()
 
 # WOLFSSL
 add_subdirectory(wolfssl EXCLUDE_FROM_ALL)
