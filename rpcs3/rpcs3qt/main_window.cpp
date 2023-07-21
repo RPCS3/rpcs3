@@ -2376,9 +2376,14 @@ void main_window::CreateConnects()
 		}
 
 		// Get new filename from title and title ID but simplified
-		std::string log_filename = Emu.GetTitleID().empty() ? "RPCS3" : Emu.GetTitleAndTitleID();
-		log_filename.erase(std::remove_if(log_filename.begin(), log_filename.end(), [](u8 c){ return !std::isalnum(c) && c != ' ' && c != '[' && ']'; }), log_filename.end());
-		fmt::trim_back(log_filename);
+		QString log_filename_q = qstr(Emu.GetTitleID().empty() ? "RPCS3" : Emu.GetTitleAndTitleID());
+		ensure(!log_filename_q.isEmpty());
+
+		// Replace unfitting characters
+		std::replace_if(log_filename_q.begin(), log_filename_q.end(), [](QChar c){ return !c.isLetterOrNumber() && c != QChar::Space && c != '[' && c != ']'; }, QChar::Space);
+		log_filename_q = log_filename_q.simplified();
+
+		const std::string log_filename = log_filename_q.toStdString();
 
 		QString path_last_log = m_gui_settings->GetValue(gui::fd_save_log).toString();
 
@@ -2432,6 +2437,7 @@ void main_window::CreateConnects()
 			{
 				m_gui_settings->SetValue(gui::fd_save_log, dir_path);
 				gui_log.success("Moved log file to '%s'!", dest_archived_path);
+				gui::utils::open_dir(dest_archived_path);
 				return;
 			}
 
@@ -2454,6 +2460,7 @@ void main_window::CreateConnects()
 		{
 			m_gui_settings->SetValue(gui::fd_save_log, dir_path);
 			gui_log.success("Moved log file to '%s'!", dest_raw_file_path);
+			gui::utils::open_dir(dest_raw_file_path);
 			return;
 		}
 
