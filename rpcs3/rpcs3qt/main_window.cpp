@@ -2413,6 +2413,12 @@ void main_window::CreateConnects()
 			// Try to copy it if fails
 			if (fs::copy_file(from, to, true))
 			{
+				if (fs::file sync_fd{to, fs::write})
+				{
+					// Prevent data loss (expensive)
+					sync_fd.sync();
+				}
+
 				fs::remove_file(from);
 				return true;
 			}
