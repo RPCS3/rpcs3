@@ -704,6 +704,7 @@ namespace fs
 		isdir,
 		toolong,
 		nospace,
+		xdev,
 		unknown
 	};
 
