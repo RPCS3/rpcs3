@@ -2030,21 +2030,7 @@ void ppu_thread::serialize_common(utils::serial& ar)
 {
 	[[maybe_unused]] const s32 version = GET_OR_USE_SERIALIZATION_VERSION(ar.is_writing(), ppu);
 
-	ar(gpr, fpr, cr, fpscr.bits, lr, ctr, vrsave, cia, xer, sat, nj);
-
-	if (ar.is_writing())
-	{
-	 	ar(prio.load().all);
-	}
-	else if (version < 2)
-	{
-		prio.raw().all = 0;
-		prio.raw().prio = ar.operator s32();
-	}
-	else
-	{
-		ar(prio.raw().all);
-	}
+	ar(gpr, fpr, cr, fpscr.bits, lr, ctr, vrsave, cia, xer, sat, nj, prio.raw().all);
 
 	ar(optional_savestate_state, vr);
 
