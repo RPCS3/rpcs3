@@ -130,6 +130,7 @@ static fs::error to_error(DWORD e)
 	case ERROR_NOT_READY: return fs::error::noent;
 	case ERROR_FILENAME_EXCED_RANGE: return fs::error::toolong;
 	case ERROR_DISK_FULL: return fs::error::nospace;
+	case ERROR_NOT_SAME_DEVICE: return fs::error::xdev;
 	default: return fs::error::unknown;
 	}
 }
@@ -172,6 +173,7 @@ static fs::error to_error(int e)
 	case EROFS: return fs::error::readonly;
 	case EISDIR: return fs::error::isdir;
 	case ENOSPC: return fs::error::nospace;
+	case EXDEV: return fs::error::xdev;
 	default: return fs::error::unknown;
 	}
 }
@@ -2360,6 +2362,7 @@ void fmt_class_string<fs::error>::format(std::string& out, u64 arg)
 		case fs::error::isdir: return "Is a directory";
 		case fs::error::toolong: return "Path too long";
 		case fs::error::nospace: return "Not enough space on the device";
+		case fs::error::xdev: return "Device mismatch";
 		case fs::error::unknown: return "Unknown system error";
 		}
 
