@@ -1004,7 +1004,7 @@ cpu_thread& cpu_thread::operator=(thread_state)
 		{
 			if (u32 resv = atomic_storage<u32>::load(thread->raddr))
 			{
-				vm::reservation_notifier(resv).notify_one();
+				vm::reservation_notifier(resv).notify_all(-128);
 			}
 		}
 	}
