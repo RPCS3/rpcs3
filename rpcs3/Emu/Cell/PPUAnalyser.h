@@ -148,6 +148,40 @@ struct ppu_module
 		constexpr usz size_element = std::is_void_v<T> ? 0 : sizeof(std::conditional_t<std::is_void_v<T>, char, T>);
 		return get_ptr<T>(addr.addr(), u32{size_element});
 	}
+
+	template <typename T>
+	to_be_t<T>& get_ref(u32 addr,
+		u32 line = __builtin_LINE(),
+		u32 col = __builtin_COLUMN(),
+		const char* file = __builtin_FILE(),
+		const char* func = __builtin_FUNCTION()) const
+	{
+		constexpr usz size_element = std::is_void_v<T> ? 0 : sizeof(std::conditional_t<std::is_void_v<T>, char, T>);
+		if (auto ptr = get_ptr<T>(addr, u32{size_element}))
+		{
+			return *ptr;
+		}
+
+		fmt::throw_exception("get_ref(): Failure! (addr=0x%x)%s", addr, src_loc{line, col, file, func});
+		return *std::add_pointer_t<to_be_t<T>>{};
+	}
+
+	template <typename T, typename U> requires requires (const U& obj) { +obj.size() * 0; }
+	to_be_t<T>& get_ref(U&& addr,
+		u32 line = __builtin_LINE(),
+		u32 col = __builtin_COLUMN(),
+		const char* file = __builtin_FILE(),
+		const char* func = __builtin_FUNCTION()) const
+	{
+		constexpr usz size_element = std::is_void_v<T> ? 0 : sizeof(std::conditional_t<std::is_void_v<T>, char, T>);
+		if (auto ptr = get_ptr<T>(addr.addr(), u32{size_element}))
+		{
+			return *ptr;
+		}
+
+		fmt::throw_exception("get_ref(): Failure! (addr=0x%x)%s", addr.addr(), src_loc{line, col, file, func});
+		return *std::add_pointer_t<to_be_t<T>>{};
+	}
 };
 
 struct main_ppu_module : public ppu_module
