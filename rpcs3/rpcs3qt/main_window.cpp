@@ -182,15 +182,19 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 
 	connect(m_thumb_stop, &QWinThumbnailToolButton::clicked, this, []()
 	{
-		gui_log.notice("User clicked stop button on thumbnail toolbar");
+		gui_log.notice("User clicked the stop button on thumbnail toolbar");
 		Emu.GracefulShutdown(false, true);
 	});
 	connect(m_thumb_restart, &QWinThumbnailToolButton::clicked, this, []()
 	{
-		gui_log.notice("User clicked restart button on thumbnail toolbar");
+		gui_log.notice("User clicked the restart button on thumbnail toolbar");
 		Emu.Restart();
 	});
-	connect(m_thumb_playPause, &QWinThumbnailToolButton::clicked, this, &main_window::OnPlayOrPause);
+	connect(m_thumb_playPause, &QWinThumbnailToolButton::clicked, this, [this]()
+	{
+		gui_log.notice("User clicked the playPause button on thumbnail toolbar");
+		OnPlayOrPause();
+	});
 #endif
 
 	// RPCS3 Updater
