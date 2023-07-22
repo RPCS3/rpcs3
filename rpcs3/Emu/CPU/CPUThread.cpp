@@ -789,6 +789,19 @@ bool cpu_thread::check_state() noexcept
 					return store;
 				}
 
+				if (s_tls_thread_slot == umax)
+				{
+					if (cpu_flag::wait - state)
+					{
+						// Force wait flag (must be set during ownership of s_cpu_lock), this makes the atomic op fail as a side effect
+						state += cpu_flag::wait;
+						store = true;
+					}
+
+					// Restore thread in the suspend list
+					cpu_counter::add(this);
+				}
+
 				if (flags & cpu_flag::wait)
 				{
 					flags -= cpu_flag::wait;
@@ -843,12 +856,6 @@ bool cpu_thread::check_state() noexcept
 
 		if (escape)
 		{
-			if (s_tls_thread_slot == umax && !retval)
-			{
-				// Restore thread in the suspend list
-				cpu_counter::add(this);
-			}
-
 			if (cpu_can_stop && state0 & cpu_flag::pending)
 			{
 				// Execute pending work
