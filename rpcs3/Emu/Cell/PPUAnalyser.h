@@ -6,6 +6,7 @@
 #include <deque>
 #include "util/types.hpp"
 #include "util/endian.hpp"
+#include "util/asm.hpp"
 #include "util/to_endian.hpp"
 
 #include "Utilities/bit_set.h"
@@ -127,7 +128,7 @@ struct ppu_module
 		const u32 seg_size = seg.size;
 		const u32 seg_addr = seg.addr;
 
-		if (seg_size >= std::max<usz>(size_bytes, 1) && addr <= seg_addr + seg_size - size_bytes)
+		if (seg_size >= std::max<usz>(size_bytes, 1) && addr <= utils::align<u32>(seg_addr + seg_size, 0x10000) - size_bytes)
 		{
 			return reinterpret_cast<to_be_t<T>*>(static_cast<u8*>(seg.ptr) + (addr - seg_addr));
 		}
