@@ -362,8 +362,8 @@ void usb_device_usio::usio_write(u8 channel, u16 reg, std::vector<u8>& data)
 		usio_log.trace("Usio write of sram(chip: %d, addr: 0x%04X)", chip, reg);
 		auto& memory = g_fxo->get<usio_memory>().backup_memory;
 		const usz addr_end = reg + data.size();
-		if (data.size() > 0 && chip < usio_memory::chip_count && addr_end < usio_memory::chip_size)
-			memcpy(&memory[usio_memory::chip_size * chip + reg], data.data(), data.size());
+		if (data.size() > 0 && chip < usio_memory::chip_count && addr_end <= usio_memory::chip_size)
+			std::memcpy(&memory[usio_memory::chip_size * chip + reg], data.data(), data.size());
 		else
 			usio_log.error("Usio sram invalid write operation(chip: %d, addr: 0x%04X, size: %x)", chip, reg, data.size());
 	}
@@ -435,8 +435,8 @@ void usb_device_usio::usio_read(u8 channel, u16 reg, u16 size)
 		usio_log.trace("Usio read of sram(chip: %d, addr: 0x%04X)", chip, reg);
 		auto& memory = g_fxo->get<usio_memory>().backup_memory;
 		const usz addr_end = reg + size;
-		if (size > 0 && chip < usio_memory::chip_count && addr_end < usio_memory::chip_size)
-			response.insert(response.end(), &memory[usio_memory::chip_size * chip + reg], &memory[usio_memory::chip_size * chip + addr_end]);
+		if (size > 0 && chip < usio_memory::chip_count && addr_end <= usio_memory::chip_size)
+			response.insert(response.end(), memory.begin() + (usio_memory::chip_size * chip + reg), memory.begin() + (usio_memory::chip_size * chip + addr_end));
 		else
 			usio_log.error("Usio sram invalid read operation(chip: %d, addr: 0x%04X, size: %x)", chip, reg, size);
 	}
