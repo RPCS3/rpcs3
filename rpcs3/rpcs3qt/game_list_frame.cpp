@@ -1010,7 +1010,12 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	// Make Actions
 	QMenu menu;
 
-	const bool is_current_running_game = (Emu.IsRunning() || Emu.IsPaused()) && current_game.serial == Emu.GetTitleID();
+	static const auto is_game_running = [](const std::string& serial)
+	{
+		return Emu.GetStatus(false) != system_state::stopped && serial == Emu.GetTitleID();
+	};
+
+	const bool is_current_running_game = is_game_running(current_game.serial);
 
 	QAction* boot = new QAction(gameinfo->hasCustomConfig
 		? (is_current_running_game
@@ -1119,6 +1124,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	menu.addSeparator();
 	QMenu* remove_menu = menu.addMenu(tr("&Remove"));
 	QAction* remove_game = remove_menu->addAction(tr("&Remove %1").arg(gameinfo->localized_category));
+	remove_game->setEnabled(!is_current_running_game);
 	if (gameinfo->hasCustomConfig)
 	{
 		QAction* remove_custom_config = remove_menu->addAction(tr("&Remove Custom Configuration"));
@@ -1148,16 +1154,19 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	{
 		remove_menu->addSeparator();
 		QAction* remove_shaders_cache = remove_menu->addAction(tr("&Remove Shaders Cache"));
+		remove_shaders_cache->setEnabled(!is_current_running_game);
 		connect(remove_shaders_cache, &QAction::triggered, [this, cache_base_dir]()
 		{
 			RemoveShadersCache(cache_base_dir, true);
 		});
 		QAction* remove_ppu_cache = remove_menu->addAction(tr("&Remove PPU Cache"));
+		remove_ppu_cache->setEnabled(!is_current_running_game);
 		connect(remove_ppu_cache, &QAction::triggered, [this, cache_base_dir]()
 		{
 			RemovePPUCache(cache_base_dir, true);
 		});
 		QAction* remove_spu_cache = remove_menu->addAction(tr("&Remove SPU Cache"));
+		remove_spu_cache->setEnabled(!is_current_running_game);
 		connect(remove_spu_cache, &QAction::triggered, [this, cache_base_dir]()
 		{
 			RemoveSPUCache(cache_base_dir, true);
@@ -1179,6 +1188,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	if (has_hdd1_cache)
 	{
 		QAction* remove_hdd1_cache = remove_menu->addAction(tr("&Remove HDD1 Cache"));
+		remove_hdd1_cache->setEnabled(!is_current_running_game);
 		connect(remove_hdd1_cache, &QAction::triggered, [this, hdd1, serial = current_game.serial]()
 		{
 			RemoveHDD1Cache(hdd1, serial, true);
@@ -1188,8 +1198,12 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	if (has_cache_dir || has_hdd1_cache)
 	{
 		QAction* remove_all_caches = remove_menu->addAction(tr("&Remove All Caches"));
+		remove_all_caches->setEnabled(!is_current_running_game);
 		connect(remove_all_caches, &QAction::triggered, [this, current_game, cache_base_dir, hdd1]()
 		{
+			if (is_game_running(current_game.serial))
+				return;
+
 			if (QMessageBox::question(this, tr("Confirm Removal"), tr("Remove all caches?")) != QMessageBox::Yes)
 				return;
 
@@ -1432,6 +1446,12 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		if (current_game.path.empty())
 		{
 			game_list_log.fatal("Cannot remove game. Path is empty");
+			return;
+		}
+
+		if (is_game_running(current_game.serial))
+		{
+			QMessageBox::critical(this, tr("Cannot Remove Game"), tr("The PS3 application is still running, it cannot be removed!"));
 			return;
 		}
 
@@ -1976,6 +1996,11 @@ void game_list_frame::BatchCreatePPUCaches()
 
 void game_list_frame::BatchRemovePPUCaches()
 {
+	if (Emu.GetStatus(false) != system_state::stopped)
+	{
+		return;
+	}
+
 	std::set<std::string> serials;
 	for (const auto& game : m_game_data)
 	{
@@ -2017,6 +2042,11 @@ void game_list_frame::BatchRemovePPUCaches()
 
 void game_list_frame::BatchRemoveSPUCaches()
 {
+	if (Emu.GetStatus(false) != system_state::stopped)
+	{
+		return;
+	}
+
 	std::set<std::string> serials;
 	for (const auto& game : m_game_data)
 	{
@@ -2148,6 +2178,11 @@ void game_list_frame::BatchRemoveCustomPadConfigurations()
 
 void game_list_frame::BatchRemoveShaderCaches()
 {
+	if (Emu.GetStatus(false) != system_state::stopped)
+	{
+		return;
+	}
+
 	std::set<std::string> serials;
 	for (const auto& game : m_game_data)
 	{
