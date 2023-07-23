@@ -2,7 +2,6 @@
 
 #include "Emu/System.h"
 #include "Emu/system_config.h"
-#include "util/atomic.hpp"
 
 #include <QOpenGLContext>
 #include <QOffscreenSurface>
@@ -31,16 +30,16 @@ draw_context_t gl_gs_frame::make_context()
 
 	if (m_primary_context)
 	{
-		atomic_t<QOffscreenSurface*> surface = new QOffscreenSurface();
-		surface.load()->setFormat(m_format);
+		auto surface = new QOffscreenSurface();
+		surface->setFormat(m_format);
 		Emu.BlockingCallFromMainThread([&]()
 		{
-			surface.load()->create();
+			surface->create();
 		});
 
 		// Share resources with the first created context
 		context->handle->setShareContext(m_primary_context->handle);
-		context->surface = surface.load();
+		context->surface = surface;
 		context->owner = true;
 	}
 	else
