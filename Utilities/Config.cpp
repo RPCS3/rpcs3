@@ -289,6 +289,11 @@ std::vector<std::string> cfg::try_to_enum_list(decltype(&fmt_class_string<int>::
 
 void cfg::encode(YAML::Emitter& out, const cfg::_base& rhs)
 {
+	if (rhs.get_is_deprecated())
+	{
+		return;
+	}
+
 	switch (rhs.get_type())
 	{
 	case type::node:

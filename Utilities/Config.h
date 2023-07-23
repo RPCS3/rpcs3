@@ -51,13 +51,14 @@ namespace cfg
 
 	protected:
 		bool m_dynamic = true;
+		bool m_deprecated = false;
 		const std::string m_name{};
 
 		// Ownerless entry constructor
 		_base(type _type);
 
 		// Owned entry constructor
-		_base(type _type, class node* owner, std::string name, bool dynamic);
+		_base(type _type, class node* owner, std::string name, bool dynamic, bool deprecated);
 
 	public:
 		_base(const _base&) = delete;
@@ -73,6 +74,7 @@ namespace cfg
 
 		// Get dynamic property for reloading configs during games
 		bool get_is_dynamic() const { return m_dynamic; }
+		bool get_is_deprecated() const { return m_deprecated; }
 
 		// Reset defaults
 		virtual void from_default() = 0;
@@ -117,7 +119,7 @@ namespace cfg
 		}
 
 		// Registered node constructor
-		node(node* owner, std::string name, bool dynamic = true)
+		node(node* owner, std::string name, bool dynamic = true, bool deprecated = false)
 			: _base(type::node, owner, std::move(name), dynamic)
 		{
 		}
@@ -132,7 +134,7 @@ namespace cfg
 		std::string to_string() const override;
 
 		// Deserialize node
-		bool from_string(std::string_view value, bool dynamic = false) override;
+		bool from_string(std::string_view value, bool dynamic = false, bool deprecated = false) override;
 
 		// Set default values
 		void from_default() override;
@@ -145,7 +147,7 @@ namespace cfg
 	public:
 		bool def;
 
-		_bool(node* owner, std::string name, bool def = false, bool dynamic = false)
+		_bool(node* owner, std::string name, bool def = false, bool dynamic = false, bool deprecated = false)
 			: _base(type::_bool, owner, std::move(name), dynamic)
 			, m_value(def)
 			, def(def)
@@ -209,8 +211,8 @@ namespace cfg
 	public:
 		const T def;
 
-		_enum(node* owner, const std::string& name, T value = {}, bool dynamic = false)
-			: _base(type::_enum, owner, name, dynamic)
+		_enum(node* owner, const std::string& name, T value = {}, bool dynamic = false, bool deprecated = false)
+			: _base(type::_enum, owner, name, dynamic, deprecated)
 			, m_value(value)
 			, def(value)
 		{
@@ -293,8 +295,8 @@ namespace cfg
 		static constexpr s64 max = Max;
 		static constexpr s64 min = Min;
 
-		_int(node* owner, const std::string& name, int_type def = std::min<int_type>(Max, std::max<int_type>(Min, 0)), bool dynamic = false)
-			: _base(type::_int, owner, name, dynamic)
+		_int(node* owner, const std::string& name, int_type def = std::min<int_type>(Max, std::max<int_type>(Min, 0)), bool dynamic = false, bool deprecated = false)
+			: _base(type::_int, owner, name, dynamic, deprecated)
 			, m_value(def)
 			, def(def)
 		{
@@ -365,8 +367,8 @@ namespace cfg
 		static constexpr float_type max = Max;
 		static constexpr float_type min = Min;
 
-		_float(node* owner, const std::string& name, float_type def = std::min<float_type>(Max, std::max<float_type>(Min, 0)), bool dynamic = false)
-			: _base(type::_int, owner, name, dynamic)
+		_float(node* owner, const std::string& name, float_type def = std::min<float_type>(Max, std::max<float_type>(Min, 0)), bool dynamic = false, bool deprecated = false)
+			: _base(type::_int, owner, name, dynamic, deprecated)
 			, m_value(def)
 			, def(def)
 		{
@@ -457,8 +459,8 @@ namespace cfg
 		static constexpr u64 max = Max;
 		static constexpr u64 min = Min;
 
-		uint(node* owner, const std::string& name, int_type def = std::max<int_type>(Min, 0), bool dynamic = false)
-			: _base(type::uint, owner, name, dynamic)
+		uint(node* owner, const std::string& name, int_type def = std::max<int_type>(Min, 0), bool dynamic = false, bool deprecated = false)
+			: _base(type::uint, owner, name, dynamic, deprecated)
 			, m_value(def)
 			, def(def)
 		{
@@ -527,8 +529,8 @@ namespace cfg
 	public:
 		std::string def;
 
-		string(node* owner, std::string name, std::string def = {}, bool dynamic = false)
-			: _base(type::string, owner, name, dynamic)
+		string(node* owner, std::string name, std::string def = {}, bool dynamic = false, bool deprecated = false)
+			: _base(type::string, owner, name, dynamic, deprecated)
 			, m_value(def)
 			, def(std::move(def))
 		{
@@ -580,8 +582,8 @@ namespace cfg
 
 	public:
 		// Default value is empty list in current implementation
-		set_entry(node* owner, const std::string& name)
-			: _base(type::set, owner, name, false)
+		set_entry(node* owner, const std::string& name, bool deprecated = false)
+			: _base(type::set, owner, name, false, deprecated)
 		{
 		}
 
@@ -618,8 +620,8 @@ namespace cfg
 		map_of_type<std::string> m_map{};
 
 	public:
-		map_entry(node* owner, const std::string& name)
-			: _base(type::map, owner, name, true)
+		map_entry(node* owner, const std::string& name, bool deprecated)
+			: _base(type::map, owner, name, false, deprecated)
 		{
 		}
 
@@ -643,8 +645,8 @@ namespace cfg
 		map_of_type<logs::level> m_map{};
 
 	public:
-		log_entry(node* owner, const std::string& name)
-			: _base(type::log, owner, name, true)
+		log_entry(node* owner, const std::string& name, bool deprecated = false)
+			: _base(type::log, owner, name, false, deprecated)
 		{
 		}
 
@@ -673,8 +675,8 @@ namespace cfg
 		map_of_type<device_info> m_default{};
 
 	public:
-		device_entry(node* owner, const std::string& name, map_of_type<device_info> def = {})
-			: _base(type::device, owner, name, true)
+		device_entry(node* owner, const std::string& name, map_of_type<device_info> def = {}, bool deprecated = false)
+			: _base(type::device, owner, name, false, deprecated)
 			, m_map(std::move(def))
 		{
 			m_default = m_map;
