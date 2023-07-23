@@ -32,6 +32,7 @@ draw_context_t gl_gs_frame::make_context()
 	{
 		auto surface = new QOffscreenSurface();
 		surface->setFormat(m_format);
+		// Workaround for the Qt warning: "Attempting to create QWindow-based QOffscreenSurface outside the gui thread. Expect failures."
 		Emu.BlockingCallFromMainThread([&]()
 		{
 			surface->create();
