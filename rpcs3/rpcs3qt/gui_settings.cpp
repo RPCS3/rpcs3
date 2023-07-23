@@ -9,6 +9,8 @@
 #include <QCoreApplication>
 #include <QMessageBox>
 
+#include <thread>
+
 LOG_CHANNEL(cfg_log, "CFG");
 
 namespace gui
@@ -188,6 +190,12 @@ void gui_settings::ShowInfoBox(const QString& title, const QString& text, const 
 
 bool gui_settings::GetBootConfirmation(QWidget* parent, const gui_save& gui_save_entry)
 {
+	while (Emu.GetStatus(false) == system_state::stopping)
+	{
+		QCoreApplication::processEvents();
+		std::this_thread::sleep_for(16ms);
+	}
+
 	if (!Emu.IsStopped())
 	{
 		QString title = tr("Close Running Game?");
