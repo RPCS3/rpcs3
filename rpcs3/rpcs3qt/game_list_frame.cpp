@@ -1141,7 +1141,10 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			}
 		});
 	}
-	if (fs::is_dir(cache_base_dir))
+
+	const bool has_cache_dir = fs::is_dir(cache_base_dir);
+
+	if (has_cache_dir)
 	{
 		remove_menu->addSeparator();
 		QAction* remove_shaders_cache = remove_menu->addAction(tr("&Remove Shaders Cache"));
@@ -1159,8 +1162,33 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		{
 			RemoveSPUCache(cache_base_dir, true);
 		});
+	}
+
+	bool has_hdd1_cache = false;
+	const std::string hdd1 = rpcs3::utils::get_hdd1_dir() + "/caches/";
+
+	for (const auto& entry : fs::dir(hdd1))
+	{
+		if (entry.is_directory && entry.name.starts_with(current_game.serial))
+		{
+			has_hdd1_cache = true;
+			break;
+		}
+	}
+
+	if (has_hdd1_cache)
+	{
+		QAction* remove_hdd1_cache = remove_menu->addAction(tr("&Remove HDD1 Cache"));
+		connect(remove_hdd1_cache, &QAction::triggered, [this, hdd1, serial = current_game.serial]()
+		{
+			RemoveHDD1Cache(hdd1, serial, true);
+		});
+	}
+
+	if (has_cache_dir || has_hdd1_cache)
+	{
 		QAction* remove_all_caches = remove_menu->addAction(tr("&Remove All Caches"));
-		connect(remove_all_caches, &QAction::triggered, [this, cache_base_dir]()
+		connect(remove_all_caches, &QAction::triggered, [this, current_game, cache_base_dir, hdd1]()
 		{
 			if (QMessageBox::question(this, tr("Confirm Removal"), tr("Remove all caches?")) != QMessageBox::Yes)
 				return;
@@ -1169,8 +1197,11 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 				game_list_log.success("Removed cache directory: '%s'", cache_base_dir);
 			else
 				game_list_log.error("Could not remove cache directory: '%s' (%s)", cache_base_dir, fs::g_tls_error);
+
+			RemoveHDD1Cache(hdd1, current_game.serial);
 		});
 	}
+
 	menu.addSeparator();
 	QAction* open_game_folder = menu.addAction(tr("&Open Install Folder"));
 	if (gameinfo->hasCustomConfig)
@@ -1810,6 +1841,48 @@ bool game_list_frame::RemoveSPUCache(const std::string& base_dir, bool is_intera
 	}
 
 	return success;
+}
+
+void game_list_frame::RemoveHDD1Cache(const std::string& base_dir, const std::string& title_id, bool is_interactive)
+{
+	if (!fs::is_dir(base_dir))
+		return;
+
+	if (is_interactive && QMessageBox::question(this, tr("Confirm Removal"), tr("Remove HDD1 cache?")) != QMessageBox::Yes)
+		return;
+
+	u32 dirs_removed = 0;
+	u32 dirs_total = 0;
+
+	const QString q_base_dir = qstr(base_dir);
+
+	const QStringList filter{ qstr(title_id + "_*") };
+
+	QDirIterator dir_iter(q_base_dir, filter, QDir::Dirs | QDir::NoDotAndDotDot);
+
+	while (dir_iter.hasNext())
+	{
+		const QString filepath = dir_iter.next();
+
+		if (fs::remove_all(filepath.toStdString()))
+		{
+			++dirs_removed;
+			game_list_log.notice("Removed HDD1 cache directory: %s", filepath);
+		}
+		else
+		{
+			game_list_log.warning("Could not remove HDD1 cache directory: %s", filepath);
+		}
+
+		++dirs_total;
+	}
+
+	const bool success = dirs_removed == dirs_total;
+
+	if (success)
+		game_list_log.success("Removed HDD1 cache in %s (%s)", base_dir, title_id);
+	else
+		game_list_log.fatal("Only %d/%d HDD1 cache directories could be removed in %s (%s)", dirs_removed, dirs_total, base_dir, title_id);
 }
 
 void game_list_frame::BatchCreatePPUCaches()
