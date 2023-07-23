@@ -1909,6 +1909,12 @@ void main_window::OnEmuStop()
 		m_thumb_restart->setEnabled(true);
 #endif
 	}
+
+	ui->batchRemovePPUCachesAct->setEnabled(true);
+	ui->batchRemoveSPUCachesAct->setEnabled(true);
+	ui->batchRemoveShaderCachesAct->setEnabled(true);
+	ui->removeDiskCacheAct->setEnabled(true);
+
 	ui->actionManage_Users->setEnabled(true);
 	ui->confCamerasAct->setEnabled(true);
 
@@ -1951,6 +1957,11 @@ void main_window::OnEmuReady() const
 
 	ui->actionManage_Users->setEnabled(false);
 	ui->confCamerasAct->setEnabled(false);
+
+	ui->batchRemovePPUCachesAct->setEnabled(false);
+	ui->batchRemoveSPUCachesAct->setEnabled(false);
+	ui->batchRemoveShaderCachesAct->setEnabled(false);
+	ui->removeDiskCacheAct->setEnabled(false);
 }
 
 void main_window::EnableMenus(bool enabled) const
