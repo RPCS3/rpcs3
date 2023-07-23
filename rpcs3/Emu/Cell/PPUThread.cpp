@@ -3413,10 +3413,8 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 #ifdef __APPLE__
 		pthread_jit_write_protect_np(false);
 #endif
-#ifdef _WIN32
 		// Set low priority
 		thread_ctrl::scoped_priority low_prio(-1);
-#endif
 
 		for (usz func_i = fnext++; func_i < file_queue.size(); func_i = fnext++, g_progr_fdone++)
 		{
@@ -3530,10 +3528,8 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 #ifdef __APPLE__
 		pthread_jit_write_protect_np(false);
 #endif
-#ifdef _WIN32
 		// Set low priority
 		thread_ctrl::scoped_priority low_prio(-1);
-#endif
 
 		auto slice = possible_exec_file_paths.pop_all();
 
@@ -4243,10 +4239,8 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 
 		named_thread_group threads(fmt::format("PPUW.%u.", ++g_fxo->get<thread_index_allocator>().index), thread_count, [&]()
 		{
-#ifdef _WIN32
-		// Set low priority
-		thread_ctrl::scoped_priority low_prio(-1);
-#endif
+			// Set low priority
+			thread_ctrl::scoped_priority low_prio(-1);
 
 #ifdef __APPLE__
 			pthread_jit_write_protect_np(false);

@@ -479,6 +479,8 @@ namespace cpu_counter
 
 void cpu_thread::operator()()
 {
+	thread_ctrl::scoped_priority stock_prio(0);
+
 	const auto old_prefix = g_tls_log_prefix;
 
 	g_tls_this_thread = this;
