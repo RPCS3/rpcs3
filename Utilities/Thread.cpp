@@ -3029,19 +3029,26 @@ void thread_ctrl::set_native_priority(int priority)
 		sig_log.error("SetThreadPriority() failed: %s", fmt::win_error{GetLastError(), nullptr});
 	}
 #else
-	int policy;
-	struct sched_param param;
-
-	pthread_getschedparam(pthread_self(), &policy, &param);
-
+	// available niceness for nonroot: 0~19
+	int linuxprio = 0;
+	id_t threadpid = gettid();
+	
 	if (priority > 0)
-		param.sched_priority = sched_get_priority_max(policy);
-	if (priority < 0)
-		param.sched_priority = sched_get_priority_min(policy);
+		linuxprio = 0;
+	else if (priority < 0)
+		linuxprio = 19;
 
-	if (int err = pthread_setschedparam(pthread_self(), policy, &param))
+	// nonroot cannot increase niceness value
+	if (getpriority(PRIO_PROCESS, threadpid) < linuxprio)
 	{
-		sig_log.error("pthread_setschedparam() failed: %d", err);
+		if (int err = setpriority(PRIO_PROCESS, threadpid, linuxprio))
+		{
+			sig_log.error("setpriority(%d, %d) failed: %d", threadpid, linuxprio, err);
+		}
+		else
+		{
+			sig_log.success("setpriority(%d, %d) successful.", threadpid, linuxprio);
+		}
 	}
 #endif
 }

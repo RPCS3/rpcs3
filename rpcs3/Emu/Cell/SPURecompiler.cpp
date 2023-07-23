@@ -660,8 +660,10 @@ void spu_cache::initialize()
 #ifdef __APPLE__
 		pthread_jit_write_protect_np(false);
 #endif
+#ifdef _WIN32
 		// Set low priority
 		thread_ctrl::scoped_priority low_prio(-1);
+#endif
 
 		// Initialize compiler instances for parallel compilation
 		std::unique_ptr<spu_recompiler_base> compiler;
