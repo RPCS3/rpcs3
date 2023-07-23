@@ -40,10 +40,18 @@ void fmt_class_string<usio_btn>::format(std::string& out, u64 arg)
 struct usio_memory
 {
 	std::vector<u8> backup_memory;
-	std::vector<u8> last_game_status;
 
 	usio_memory(const usio_memory&) = delete;
 	usio_memory& operator=(const usio_memory&) = delete;
+
+	void init()
+	{
+		backup_memory.clear();
+		backup_memory.resize(chip_size * chip_count);
+	}
+
+	static constexpr usz chip_size = 0x10000;
+	static constexpr usz chip_count = 0x10;
 };
 
 usb_device_usio::usb_device_usio(const std::array<u8, 7>& location)
@@ -105,10 +113,6 @@ usb_device_usio::usb_device_usio(const std::array<u8, 7>& location)
 			.wMaxPacketSize   = 0x0008,
 			.bInterval        = 16}));
 
-	g_fxo->get<usio_memory>().backup_memory.clear();
-	g_fxo->get<usio_memory>().backup_memory.resize(0xB8);
-	g_fxo->get<usio_memory>().last_game_status.clear();
-	g_fxo->get<usio_memory>().last_game_status.resize(0x28);
 	load_backup();
 }
 
@@ -135,6 +139,8 @@ extern bool is_input_allowed();
 
 void usb_device_usio::load_backup()
 {
+	g_fxo->get<usio_memory>().init();
+
 	fs::file usio_backup_file;
 
 	if (!usio_backup_file.open(usio_backup_path, fs::read))
@@ -196,7 +202,7 @@ void usb_device_usio::translate_input()
 			return;
 		}
 
-		const std::size_t offset = (player * 8ULL);
+		const usz offset = (player * 8ULL);
 
 		const auto& cfg = ::at32(g_cfg_usio.players, pad_number);
 		cfg->handle_input(pad, false, [&](usio_btn btn, u16 /*value*/, bool pressed)
@@ -352,23 +358,14 @@ void usb_device_usio::usio_write(u8 channel, u16 reg, std::vector<u8>& data)
 	}
 	else if (channel >= 2)
 	{
-		usio_log.trace("Usio write of sram(chip: %d, addr: 0x%04X)", channel - 2, reg);
-		if (channel == 2)
-		{
-			switch (reg)
-			{
-			case 0x0000:
-			{
-				write_memory(g_fxo->get<usio_memory>().backup_memory);
-				break;
-			}
-			case 0x0180:
-			{
-				write_memory(g_fxo->get<usio_memory>().last_game_status);
-				break;
-			}
-			}
-		}
+		const u8 chip = channel - 2;
+		usio_log.trace("Usio write of sram(chip: %d, addr: 0x%04X)", chip, reg);
+		auto& memory = g_fxo->get<usio_memory>().backup_memory;
+		const usz addr_end = reg + data.size();
+		if (data.size() > 0 && chip < usio_memory::chip_count && addr_end <= usio_memory::chip_size)
+			std::memcpy(&memory[usio_memory::chip_size * chip + reg], data.data(), data.size());
+		else
+			usio_log.error("Usio sram invalid write operation(chip: %d, addr: 0x%04X, size: %x)", chip, reg, data.size());
 	}
 	else
 	{
@@ -434,50 +431,14 @@ void usb_device_usio::usio_read(u8 channel, u16 reg, u16 size)
 	}
 	else if (channel >= 2)
 	{
-		u8 chip = channel - 2;
+		const u8 chip = channel - 2;
 		usio_log.trace("Usio read of sram(chip: %d, addr: 0x%04X)", chip, reg);
-		switch (chip)
-		{
-		case 0:
-		{
-			switch (reg)
-			{
-			case 0x0000:
-			{
-				response = g_fxo->get<usio_memory>().backup_memory;
-				break;
-			}
-			case 0x0180:
-			{
-				response = g_fxo->get<usio_memory>().last_game_status;
-				break;
-			}
-			case 0x0200:
-			{
-				//ensure(size == 0x100);
-				// No data returned
-				break;
-			}
-			case 0x1000:
-			{
-				//ensure(size == 0x1000);
-				// No data returned
-				break;
-			}
-			default:
-			{
-				usio_log.error("Unhandled read of sram(chip: %d, addr: 0x%04X)", channel - 2, reg);
-				break;
-			}
-			}
-			break;
-		}
-		default:
-		{
-			usio_log.error("Unhandled read of sram(chip: %d, addr: 0x%04X)", channel - 2, reg);
-			break;
-		}
-		}
+		auto& memory = g_fxo->get<usio_memory>().backup_memory;
+		const usz addr_end = reg + size;
+		if (size > 0 && chip < usio_memory::chip_count && addr_end <= usio_memory::chip_size)
+			response.insert(response.end(), memory.begin() + (usio_memory::chip_size * chip + reg), memory.begin() + (usio_memory::chip_size * chip + addr_end));
+		else
+			usio_log.error("Usio sram invalid read operation(chip: %d, addr: 0x%04X, size: %x)", chip, reg, size);
 	}
 	else
 	{
