@@ -215,14 +215,7 @@ lv2_spu_group::lv2_spu_group(utils::serial& ar) noexcept
 	{
 		std::common_type_t<decltype(lv2_spu_group::prio)> prio{};
 
-		if (GET_SERIALIZATION_VERSION(spu) < 3)
-		{
-			prio.prio = ar.operator s32();
-		}
-		else
-		{
-			ar(prio.all);
-		}
+		ar(prio.all);
 
 		return prio;
 	}())
@@ -387,10 +380,7 @@ struct spu_limits_t
 
 	spu_limits_t(utils::serial& ar) noexcept
 	{
-		if (GET_SERIALIZATION_VERSION(spu) >= 2)
-		{
-			ar(max_raw, max_spu);
-		}
+		ar(max_raw, max_spu);
 	}
 
 	void save(utils::serial& ar)
@@ -1407,7 +1397,7 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 				if (prev_resv && prev_resv != resv)
 				{
 					// Batch reservation notifications if possible
-					vm::reservation_notifier(prev_resv).notify_all();
+					vm::reservation_notifier(prev_resv).notify_all(-128);
 				}
 
 				prev_resv = resv;
@@ -1417,7 +1407,7 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 
 	if (prev_resv)
 	{
-		vm::reservation_notifier(prev_resv).notify_all();
+		vm::reservation_notifier(prev_resv).notify_all(-128);
 	}
 
 	group->exit_status = value;

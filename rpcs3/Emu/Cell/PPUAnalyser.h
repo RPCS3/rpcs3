@@ -6,6 +6,7 @@
 #include <deque>
 #include "util/types.hpp"
 #include "util/endian.hpp"
+#include "util/asm.hpp"
 #include "util/to_endian.hpp"
 
 #include "Utilities/bit_set.h"
@@ -127,7 +128,7 @@ struct ppu_module
 		const u32 seg_size = seg.size;
 		const u32 seg_addr = seg.addr;
 
-		if (seg_size >= std::max<usz>(size_bytes, 1) && addr <= seg_addr + seg_size - size_bytes)
+		if (seg_size >= std::max<usz>(size_bytes, 1) && addr <= utils::align<u32>(seg_addr + seg_size, 0x10000) - size_bytes)
 		{
 			return reinterpret_cast<to_be_t<T>*>(static_cast<u8*>(seg.ptr) + (addr - seg_addr));
 		}
@@ -147,6 +148,40 @@ struct ppu_module
 	{
 		constexpr usz size_element = std::is_void_v<T> ? 0 : sizeof(std::conditional_t<std::is_void_v<T>, char, T>);
 		return get_ptr<T>(addr.addr(), u32{size_element});
+	}
+
+	template <typename T>
+	to_be_t<T>& get_ref(u32 addr,
+		u32 line = __builtin_LINE(),
+		u32 col = __builtin_COLUMN(),
+		const char* file = __builtin_FILE(),
+		const char* func = __builtin_FUNCTION()) const
+	{
+		constexpr usz size_element = std::is_void_v<T> ? 0 : sizeof(std::conditional_t<std::is_void_v<T>, char, T>);
+		if (auto ptr = get_ptr<T>(addr, u32{size_element}))
+		{
+			return *ptr;
+		}
+
+		fmt::throw_exception("get_ref(): Failure! (addr=0x%x)%s", addr, src_loc{line, col, file, func});
+		return *std::add_pointer_t<to_be_t<T>>{};
+	}
+
+	template <typename T, typename U> requires requires (const U& obj) { +obj.size() * 0; }
+	to_be_t<T>& get_ref(U&& addr,
+		u32 line = __builtin_LINE(),
+		u32 col = __builtin_COLUMN(),
+		const char* file = __builtin_FILE(),
+		const char* func = __builtin_FUNCTION()) const
+	{
+		constexpr usz size_element = std::is_void_v<T> ? 0 : sizeof(std::conditional_t<std::is_void_v<T>, char, T>);
+		if (auto ptr = get_ptr<T>(addr.addr(), u32{size_element}))
+		{
+			return *ptr;
+		}
+
+		fmt::throw_exception("get_ref(): Failure! (addr=0x%x)%s", addr.addr(), src_loc{line, col, file, func});
+		return *std::add_pointer_t<to_be_t<T>>{};
 	}
 };
 
