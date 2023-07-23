@@ -320,3 +320,11 @@ enum class stereo_render_mode_options
 	side_by_side,
 	over_under
 };
+
+enum class xfloat_accuracy
+{
+	accurate,
+	approximate,
+	relaxed, // Approximate accuracy for only the "FCGT", "FNMS", "FREST" AND "FRSQEST" instructions
+	inaccurate
+};
