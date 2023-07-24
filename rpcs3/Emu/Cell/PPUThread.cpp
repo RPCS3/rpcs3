@@ -3741,7 +3741,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 {
 	if (g_cfg.core.ppu_decoder != ppu_decoder_type::llvm)
 	{
-		if (check_only)
+		if (check_only || vm::base(info.segs[0].addr) != info.segs[0].ptr)
 		{
 			return false;
 		}
@@ -3761,7 +3761,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 
 			if (g_cfg.core.ppu_debug && func.size && func.toc != umax)
 			{
-				ppu_toc.emplace(func.addr, func.toc);
+				ppu_toc[func.addr] = func.toc;
 				ppu_ref(func.addr) = &ppu_check_toc;
 			}
 		}
