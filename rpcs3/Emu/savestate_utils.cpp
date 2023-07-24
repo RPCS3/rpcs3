@@ -35,20 +35,20 @@ static std::array<serial_ver_t, 23> s_serial_versions;
 		return ::s_serial_versions[identifier].current_version;\
 	}
 
-SERIALIZATION_VER(global_version, 0,                            12) // For stuff not listed here
-SERIALIZATION_VER(ppu, 1,                                       1, 2 /*thread sleep queue order*/)
-SERIALIZATION_VER(spu, 2,                                       1, 2 /*spu_limits_t ctor*/, 3 /*thread sleep queue order*/)
+SERIALIZATION_VER(global_version, 0,                            13) // For stuff not listed here
+SERIALIZATION_VER(ppu, 1,                                       1)
+SERIALIZATION_VER(spu, 2,                                       1)
 SERIALIZATION_VER(lv2_sync, 3,                                  1)
 SERIALIZATION_VER(lv2_vm, 4,                                    1)
-SERIALIZATION_VER(lv2_net, 5,                                   1, 2/*RECV/SEND timeout*/)
+SERIALIZATION_VER(lv2_net, 5,                                   1)
 SERIALIZATION_VER(lv2_fs, 6,                                    1)
-SERIALIZATION_VER(lv2_prx_overlay, 7,                           1, 2/*PRX dynamic exports*/, 4/*Conditionally Loaded Local Exports*/)
+SERIALIZATION_VER(lv2_prx_overlay, 7,                           1)
 SERIALIZATION_VER(lv2_memory, 8,                                1)
 SERIALIZATION_VER(lv2_config, 9,                                1)
 
 namespace rsx
 {
-	SERIALIZATION_VER(rsx, 10,                                  1, 2)
+	SERIALIZATION_VER(rsx, 10,                                  1)
 }
 
 namespace np
@@ -65,7 +65,7 @@ SERIALIZATION_VER(sceNp, 11)
 SERIALIZATION_VER(cellVdec, 12,                                 1)
 SERIALIZATION_VER(cellAudio, 13,                                1)
 SERIALIZATION_VER(cellCamera, 14,                               1)
-SERIALIZATION_VER(cellGem, 15,                                  1, 2/*frame_timestamp u32->u64*/)
+SERIALIZATION_VER(cellGem, 15,                                  1)
 SERIALIZATION_VER(sceNpTrophy, 16,                              1)
 SERIALIZATION_VER(cellMusic, 17,                                1)
 SERIALIZATION_VER(cellVoice, 18,                                1)
@@ -146,9 +146,25 @@ bool is_savestate_version_compatible(const std::vector<std::pair<u16, u16>>& dat
 	return ok;
 }
 
-std::string get_savestate_path(std::string_view title_id, std::string_view boot_path)
+std::string get_savestate_file(std::string_view title_id, std::string_view boot_path, s64 abs_id, s64 rel_id)
 {
-	return fs::get_cache_dir() + "/savestates/" + std::string{title_id.empty() ? boot_path.substr(boot_path.find_last_of(fs::delim) + 1) : title_id} + ".SAVESTAT";
+	const std::string title = std::string{title_id.empty() ? boot_path.substr(boot_path.find_last_of(fs::delim) + 1) : title_id};
+
+	if (abs_id == -1 && rel_id == -1)
+	{
+		// Return directory
+		return fs::get_cache_dir() + "/savestates/" + title + "/";
+	}
+
+	ensure(rel_id < 0 || abs_id >= 0, "Unimplemented!");
+
+	const std::string save_id = fmt::format("%d", abs_id);
+
+	// Make sure that savestate file with higher IDs are placed at the bottom of "by name" file ordering in directory view by adding a single character prefix which tells the ID length
+	// While not needing to keep a 59 chars long suffix at all times for this purpose
+	const char prefix = ::at32("0123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"sv, save_id.size());
+
+	return fs::get_cache_dir() + "/savestates/" + title + "/" + title + '_' + prefix + '_' + save_id + ".SAVESTAT";
 }
 
 bool is_savestate_compatible(const fs::file& file)

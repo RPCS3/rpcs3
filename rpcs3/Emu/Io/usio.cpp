@@ -1,5 +1,4 @@
 // v406 USIO emulator
-// Responses may be specific to Taiko no Tatsujin
 
 #include "stdafx.h"
 #include "usio.h"
@@ -18,18 +17,21 @@ void fmt_class_string<usio_btn>::format(std::string& out, u64 arg)
 		{
 		case usio_btn::test: return "Test";
 		case usio_btn::coin: return "Coin";
-		case usio_btn::enter: return "Enter";
+		case usio_btn::service: return "Service";
+		case usio_btn::enter: return "Enter/Start";
 		case usio_btn::up: return "Up";
 		case usio_btn::down: return "Down";
-		case usio_btn::service: return "Service";
-		case usio_btn::strong_hit_side_left: return "Strong Hit Side Left";
-		case usio_btn::strong_hit_side_right: return "Strong Hit Side Right";
-		case usio_btn::strong_hit_center_left: return "Strong Hit Center Left";
-		case usio_btn::strong_hit_center_right: return "Strong Hit Center Right";
-		case usio_btn::small_hit_side_left: return "Small Hit Side Left";
-		case usio_btn::small_hit_side_right: return "Small Hit Side Right";
-		case usio_btn::small_hit_center_left: return "Small Hit Center Left";
-		case usio_btn::small_hit_center_right: return "Small Hit Center Right";
+		case usio_btn::left: return "Left";
+		case usio_btn::right: return "Right";
+		case usio_btn::taiko_hit_side_left: return "Taiko Hit Side Left";
+		case usio_btn::taiko_hit_side_right: return "Taiko Hit Side Right";
+		case usio_btn::taiko_hit_center_left: return "Taiko Hit Center Left";
+		case usio_btn::taiko_hit_center_right: return "Taiko Hit Center Right";
+		case usio_btn::tekken_button1: return "Tekken Button 1";
+		case usio_btn::tekken_button2: return "Tekken Button 2";
+		case usio_btn::tekken_button3: return "Tekken Button 3";
+		case usio_btn::tekken_button4: return "Tekken Button 4";
+		case usio_btn::tekken_button5: return "Tekken Button 5";
 		case usio_btn::count: return "Count";
 		}
 
@@ -47,11 +49,11 @@ struct usio_memory
 	void init()
 	{
 		backup_memory.clear();
-		backup_memory.resize(chip_size * chip_count);
+		backup_memory.resize(page_size * page_count);
 	}
 
-	static constexpr usz chip_size = 0x10000;
-	static constexpr usz chip_count = 0x10;
+	static constexpr usz page_size = 0x10000;
+	static constexpr usz page_count = 0x10;
 };
 
 usb_device_usio::usb_device_usio(const std::array<u8, 7>& location)
@@ -179,15 +181,14 @@ void usb_device_usio::save_backup()
 	usio_backup_file.trunc(file_size);
 }
 
-void usb_device_usio::translate_input()
+void usb_device_usio::translate_input_taiko()
 {
 	std::lock_guard lock(pad::g_pad_mutex);
 	const auto handler = pad::get_current_handler();
 
-	std::vector<u8> input_buf = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x60, 0x00, 0x60, 0x00, 0x60, 0x00, 0x60, 0x00, 0x60, 0x00, 0x60, 0x00, 0x60, 0x00, 0x60, 0x00, 0x60, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-	constexpr le_t<u16> c_small_hit = 0x4D0;
-	constexpr le_t<u16> c_big_hit = 0x1800;
-	le_t<u16> test_keys = 0x0000;
+	std::vector<u8> input_buf(96);
+	constexpr le_t<u16> c_hit = 0x1800;
+	le_t<u16> digital_input = 0;
 
 	auto translate_from_pad = [&](usz pad_number, usz player)
 	{
@@ -202,7 +203,7 @@ void usb_device_usio::translate_input()
 			return;
 		}
 
-		const usz offset = (player * 8ULL);
+		const usz offset = player * 8ULL;
 
 		const auto& cfg = ::at32(g_cfg_usio.players, pad_number);
 		cfg->handle_input(pad, false, [&](usio_btn btn, u16 /*value*/, bool pressed)
@@ -221,89 +222,160 @@ void usb_device_usio::translate_input()
 						coin_counter++;
 					coin_key_pressed = pressed;
 					break;
+				case usio_btn::service:
+					if (player == 0 && pressed)
+						digital_input |= 0x4000;
+					break;
 				case usio_btn::enter:
 					if (player == 0 && pressed)
-						test_keys |= 0x200; // Enter
+						digital_input |= 0x200;
 					break;
 				case usio_btn::up:
 					if (player == 0 && pressed)
-						test_keys |= 0x2000; // Up
+						digital_input |= 0x2000;
 					break;
 				case usio_btn::down:
 					if (player == 0 && pressed)
-						test_keys |= 0x1000; // Down
+						digital_input |= 0x1000;
 					break;
-				case usio_btn::service:
-					if (player == 0 && pressed)
-						test_keys |= 0x4000; // Service
-					break;
-				case usio_btn::strong_hit_side_left:
-					// Strong hit side left
+				case usio_btn::taiko_hit_side_left:
 					if (pressed)
-						std::memcpy(input_buf.data() + 32 + offset, &c_big_hit, sizeof(u16));
+						std::memcpy(input_buf.data() + 32 + offset, &c_hit, sizeof(u16));
 					break;
-				case usio_btn::strong_hit_center_right:
-					// Strong hit center right
+				case usio_btn::taiko_hit_center_right:
 					if (pressed)
-						std::memcpy(input_buf.data() + 36 + offset, &c_big_hit, sizeof(u16));
+						std::memcpy(input_buf.data() + 36 + offset, &c_hit, sizeof(u16));
 					break;
-				case usio_btn::strong_hit_side_right:
-					// Strong hit side right
+				case usio_btn::taiko_hit_side_right:
 					if (pressed)
-						std::memcpy(input_buf.data() + 38 + offset, &c_big_hit, sizeof(u16));
+						std::memcpy(input_buf.data() + 38 + offset, &c_hit, sizeof(u16));
 					break;
-				case usio_btn::strong_hit_center_left:
-					// Strong hit center left
+				case usio_btn::taiko_hit_center_left:
 					if (pressed)
-						std::memcpy(input_buf.data() + 34 + offset, &c_big_hit, sizeof(u16));
+						std::memcpy(input_buf.data() + 34 + offset, &c_hit, sizeof(u16));
 					break;
-				case usio_btn::small_hit_center_left:
-					// Small hit center left
-					if (pressed)
-						std::memcpy(input_buf.data() + 34 + offset, &c_small_hit, sizeof(u16));
-					break;
-				case usio_btn::small_hit_center_right:
-					// Small hit center right
-					if (pressed)
-						std::memcpy(input_buf.data() + 36 + offset, &c_small_hit, sizeof(u16));
-					break;
-				case usio_btn::small_hit_side_left:
-					// Small hit side left
-					if (pressed)
-						std::memcpy(input_buf.data() + 32 + offset, &c_small_hit, sizeof(u16));
-					break;
-				case usio_btn::small_hit_side_right:
-					// Small hit side right
-					if (pressed)
-						std::memcpy(input_buf.data() + 38 + offset, &c_small_hit, sizeof(u16));
-					break;
-				case usio_btn::count:
+				default:
 					break;
 				}
 			});
 	};
 
 	for (usz i = 0; i < g_cfg_usio.players.size(); i++)
-	{
 		translate_from_pad(i, i);
-	}
 
-	test_keys |= test_on ? 0x80 : 0x00;
-	std::memcpy(input_buf.data(), &test_keys, sizeof(u16));
+	digital_input |= test_on ? 0x80 : 0x00;
+	std::memcpy(input_buf.data(), &digital_input, sizeof(u16));
 	std::memcpy(input_buf.data() + 16, &coin_counter, sizeof(u16));
+
+	response = std::move(input_buf);
+}
+
+void usb_device_usio::translate_input_tekken()
+{
+	std::lock_guard lock(pad::g_pad_mutex);
+	const auto handler = pad::get_current_handler();
+
+	std::vector<u8> input_buf(256);
+	le_t<u64> digital_input = 0;
+
+	auto translate_from_pad = [&](usz pad_number, usz player)
+	{
+		if (!is_input_allowed())
+		{
+			return;
+		}
+
+		const auto& pad = ::at32(handler->GetPads(), pad_number);
+		if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+		{
+			return;
+		}
+
+		const usz shift = player * 24ULL;
+
+		const auto& cfg = ::at32(g_cfg_usio.players, pad_number);
+		cfg->handle_input(pad, false, [&](usio_btn btn, u16 /*value*/, bool pressed)
+			{
+				switch (btn)
+				{
+				case usio_btn::test:
+					if (player != 0)
+						break;
+					if (pressed && !test_key_pressed) // Solve the need to hold the Test key
+						test_on = !test_on;
+					test_key_pressed = pressed;
+					break;
+				case usio_btn::coin:
+					if (player != 0)
+						break;
+					if (pressed && !coin_key_pressed) // Ensure only one coin is inserted each time the Coin key is pressed
+						coin_counter++;
+					coin_key_pressed = pressed;
+					break;
+				case usio_btn::service:
+					if (player == 0 && pressed)
+						digital_input |= 0x4000;
+					break;
+				case usio_btn::enter:
+					if (pressed)
+						digital_input |= 0x800000ULL << shift;
+					break;
+				case usio_btn::up:
+					if (pressed)
+						digital_input |= 0x200000ULL << shift;
+					break;
+				case usio_btn::down:
+					if ( pressed)
+						digital_input |= 0x100000ULL << shift;
+					break;
+				case usio_btn::left:
+					if (pressed)
+						digital_input |= 0x80000ULL << shift;
+					break;
+				case usio_btn::right:
+					if (pressed)
+						digital_input |= 0x40000ULL << shift;
+					break;
+				case usio_btn::tekken_button1:
+					if (pressed)
+						digital_input |= 0x20000ULL << shift;
+					break;
+				case usio_btn::tekken_button2:
+					if (pressed)
+						digital_input |= 0x10000ULL << shift;
+					break;
+				case usio_btn::tekken_button3:
+					if (pressed)
+						digital_input |= 0x40000000ULL << shift;
+					break;
+				case usio_btn::tekken_button4:
+					if (pressed)
+						digital_input |= 0x20000000ULL << shift;
+					break;
+				case usio_btn::tekken_button5:
+					if (pressed)
+						digital_input |= 0x80000000ULL << shift;
+					break;
+				default:
+					break;
+				}
+			});
+	};
+
+	for (usz i = 0; i < g_cfg_usio.players.size(); i++)
+		translate_from_pad(i, i);
+
+	digital_input |= test_on ? 0x80 : 0x00;
+	std::memcpy(input_buf.data() + 128, &digital_input, sizeof(u64));
+	std::memcpy(input_buf.data() + 128 + 16, &coin_counter, sizeof(u16));
+
+	input_buf[2] = 0b00010000; // DIP Switches, 8 in total
 
 	response = std::move(input_buf);
 }
 
 void usb_device_usio::usio_write(u8 channel, u16 reg, std::vector<u8>& data)
 {
-	auto write_memory = [&](std::vector<u8>& memory)
-	{
-		auto size = memory.size();
-		memory = std::move(data);
-		memory.resize(size);
-	};
-
 	const auto get_u16 = [&](std::string_view usio_func) -> u16
 	{
 		if (data.size() != 2)
@@ -351,27 +423,27 @@ void usb_device_usio::usio_write(u8 channel, u16 reg, std::vector<u8>& data)
 		}
 		default:
 		{
-			//usio_log.error("Unhandled channel 0 register write: 0x%04X", reg);
+			usio_log.trace("Unhandled channel 0 register write(reg: 0x%04X, size: 0x%04X, data: %s)", reg, data.size(), fmt::buf_to_hexstring(data.data(), data.size()));
 			break;
 		}
 		}
 	}
 	else if (channel >= 2)
 	{
-		const u8 chip = channel - 2;
-		usio_log.trace("Usio write of sram(chip: %d, addr: 0x%04X)", chip, reg);
+		const u8 page = channel - 2;
+		usio_log.trace("Usio write of sram(page: 0x%02X, addr: 0x%04X, size: 0x%04X, data: %s)", page, reg, data.size(), fmt::buf_to_hexstring(data.data(), data.size()));
 		auto& memory = g_fxo->get<usio_memory>().backup_memory;
 		const usz addr_end = reg + data.size();
-		if (data.size() > 0 && chip < usio_memory::chip_count && addr_end <= usio_memory::chip_size)
-			std::memcpy(&memory[usio_memory::chip_size * chip + reg], data.data(), data.size());
+		if (data.size() > 0 && page < usio_memory::page_count && addr_end <= usio_memory::page_size)
+			std::memcpy(&memory[usio_memory::page_size * page + reg], data.data(), data.size());
 		else
-			usio_log.error("Usio sram invalid write operation(chip: %d, addr: 0x%04X, size: %x)", chip, reg, data.size());
+			usio_log.error("Usio sram invalid write operation(page: 0x%02X, addr: 0x%04X, size: 0x%04X, data: %s)", page, reg, data.size(), fmt::buf_to_hexstring(data.data(), data.size()));
 	}
 	else
 	{
 		// Channel 1 is the endpoint for firmware update.
 		// We are not using any firmware since this is emulation.
-		usio_log.warning("Unsupported write operation(channel: 0x%02X, addr: 0x%04X)", channel, reg);
+		usio_log.trace("Unsupported write operation(channel: 0x%02X, addr: 0x%04X, size: 0x%04X, data: %s)", channel, reg, data.size(), fmt::buf_to_hexstring(data.data(), data.size()));
 	}
 }
 
@@ -401,50 +473,56 @@ void usb_device_usio::usio_read(u8 channel, u16 reg, u16 size)
 			// No data returned
 			break;
 		}
+		case 0x1000:
+		{
+			// Often called, gets input from usio for Tekken
+			translate_input_tekken();
+			break;
+		}
 		case 0x1080:
 		{
-			// Often called, gets input from usio
-			translate_input();
+			// Often called, gets input from usio for Taiko
+			translate_input_taiko();
 			break;
 		}
 		case 0x1800:
 		{
 			// Firmware
 			// "NBGI.;USIO01;Ver1.00;JPN,Multipurpose with PPG."
-			response = {0x4E, 0x42, 0x47, 0x49, 0x2E, 0x3B, 0x55, 0x53, 0x49, 0x4F, 0x30, 0x31, 0x3B, 0x56, 0x65, 0x72, 0x31, 0x2E, 0x30, 0x30, 0x3B, 0x4A, 0x50, 0x4E, 0x2C, 0x4D, 0x75, 0x6C, 0x74, 0x69, 0x70, 0x75, 0x72, 0x70, 0x6F, 0x73, 0x65, 0x20, 0x77, 0x69, 0x74, 0x68, 0x20, 0x50, 0x50, 0x47, 0x2E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+			response = {0x4E, 0x42, 0x47, 0x49, 0x2E, 0x3B, 0x55, 0x53, 0x49, 0x4F, 0x30, 0x31, 0x3B, 0x56, 0x65, 0x72, 0x31, 0x2E, 0x30, 0x30, 0x3B, 0x4A, 0x50, 0x4E, 0x2C, 0x4D, 0x75, 0x6C, 0x74, 0x69, 0x70, 0x75, 0x72, 0x70, 0x6F, 0x73, 0x65, 0x20, 0x77, 0x69, 0x74, 0x68, 0x20, 0x50, 0x50, 0x47, 0x2E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x4E, 0x42, 0x47, 0x49, 0x2E, 0x3B, 0x55, 0x53, 0x49, 0x4F, 0x30, 0x31, 0x3B, 0x56, 0x65, 0x72, 0x31, 0x2E, 0x30, 0x30, 0x3B, 0x4A, 0x50, 0x4E, 0x2C, 0x4D, 0x75, 0x6C, 0x74, 0x69, 0x70, 0x75, 0x72, 0x70, 0x6F, 0x73, 0x65, 0x20, 0x77, 0x69, 0x74, 0x68, 0x20, 0x50, 0x50, 0x47, 0x2E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x13, 0x00, 0x30, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x03, 0x02, 0x00, 0x08, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x03, 0x00, 0x75, 0x6C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 			break;
 		}
 		case 0x1880:
 		{
 			// Seems to contain a few extra bytes of info in addition to the firmware string
 			// Firmware
-			// "NBGI2;USIO01;Ver1.00;JPN,Multipurpose with PPG."
-			response = {0x4E, 0x42, 0x47, 0x49, 0x32, 0x3B, 0x55, 0x53, 0x49, 0x4F, 0x30, 0x31, 0x3B, 0x56, 0x65, 0x72, 0x31, 0x2E, 0x30, 0x30, 0x3B, 0x4A, 0x50, 0x4E, 0x2C, 0x4D, 0x75, 0x6C, 0x74, 0x69, 0x70, 0x75, 0x72, 0x70, 0x6F, 0x73, 0x65, 0x20, 0x77, 0x69, 0x74, 0x68, 0x20, 0x50, 0x50, 0x47, 0x2E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x13, 0x00, 0x30, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x03, 0x02, 0x00, 0x08, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x03, 0x00, 0x08, 0xE2, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+			// "NBGI.;USIO01;Ver1.00;JPN,Multipurpose with PPG."
+			response = {0x4E, 0x42, 0x47, 0x49, 0x2E, 0x3B, 0x55, 0x53, 0x49, 0x4F, 0x30, 0x31, 0x3B, 0x56, 0x65, 0x72, 0x31, 0x2E, 0x30, 0x30, 0x3B, 0x4A, 0x50, 0x4E, 0x2C, 0x4D, 0x75, 0x6C, 0x74, 0x69, 0x70, 0x75, 0x72, 0x70, 0x6F, 0x73, 0x65, 0x20, 0x77, 0x69, 0x74, 0x68, 0x20, 0x50, 0x50, 0x47, 0x2E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x13, 0x00, 0x30, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x03, 0x02, 0x00, 0x08, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x03, 0x00, 0x75, 0x6C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 			break;
 		}
 		default:
 		{
-			usio_log.error("Unhandled channel 0 register read: 0x%04X", reg);
+			usio_log.trace("Unhandled channel 0 register read(reg: 0x%04X, size: 0x%04X)", reg, size);
 			break;
 		}
 		}
 	}
 	else if (channel >= 2)
 	{
-		const u8 chip = channel - 2;
-		usio_log.trace("Usio read of sram(chip: %d, addr: 0x%04X)", chip, reg);
+		const u8 page = channel - 2;
+		usio_log.trace("Usio read of sram(page: 0x%02X, addr: 0x%04X, size: 0x%04X)", page, reg, size);
 		auto& memory = g_fxo->get<usio_memory>().backup_memory;
 		const usz addr_end = reg + size;
-		if (size > 0 && chip < usio_memory::chip_count && addr_end <= usio_memory::chip_size)
-			response.insert(response.end(), memory.begin() + (usio_memory::chip_size * chip + reg), memory.begin() + (usio_memory::chip_size * chip + addr_end));
+		if (size > 0 && page < usio_memory::page_count && addr_end <= usio_memory::page_size)
+			response.insert(response.end(), memory.begin() + (usio_memory::page_size * page + reg), memory.begin() + (usio_memory::page_size * page + addr_end));
 		else
-			usio_log.error("Usio sram invalid read operation(chip: %d, addr: 0x%04X, size: %x)", chip, reg, size);
+			usio_log.error("Usio sram invalid read operation(page: 0x%02X, addr: 0x%04X, size: 0x%04X)", page, reg, size);
 	}
 	else
 	{
 		// Channel 1 is the endpoint for firmware update.
 		// We are not using any firmware since this is emulation.
-		usio_log.warning("Unsupported read operation(channel: 0x%02X, addr: 0x%04X)", channel, reg);
+		usio_log.trace("Unsupported read operation(channel: 0x%02X, addr: 0x%04X, size: 0x%04X)", channel, reg, size);
 	}
 
 	response.resize(size); // Always resize the response vector to the given size

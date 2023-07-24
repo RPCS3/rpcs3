@@ -82,7 +82,7 @@ extern std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const
 extern bool ppu_load_rel_exec(const ppu_rel_object&);
 extern bool is_savestate_version_compatible(const std::vector<std::pair<u16, u16>>& data, bool is_boot_check);
 extern std::vector<std::pair<u16, u16>> read_used_savestate_versions();
-std::string get_savestate_path(std::string_view title_id, std::string_view boot_path);
+std::string get_savestate_file(std::string_view title_id, std::string_view boot_path, s64 abs_id, s64 rel_id);
 
 extern void send_close_home_menu_cmds();
 
@@ -492,7 +492,7 @@ void Emulator::Init()
 
 	make_path_verbose(fs::get_cache_dir() + "shaderlog/", false);
 	make_path_verbose(fs::get_cache_dir() + "spu_progs/", false);
-	make_path_verbose(fs::get_cache_dir() + "/savestates/", false);
+	make_path_verbose(fs::get_parent_dir(get_savestate_file("NO_ID", "/NO_FILE", -1, -1)), false);
 	make_path_verbose(fs::get_config_dir() + "captures/", false);
 	make_path_verbose(fs::get_config_dir() + "sounds/", false);
 	make_path_verbose(patch_engine::get_patches_path(), false);
@@ -2180,7 +2180,7 @@ void Emulator::FixGuestTime()
 			// Mark a known savestate location and the one we try to boot (in case we boot a moved/copied savestate)
 			if (g_cfg.savestate.suspend_emu)
 			{
-				for (std::string old_path : std::initializer_list<std::string>{m_ar ? m_path_old : "", m_title_id.empty() ? "" : get_savestate_path(m_title_id, m_path_old)})
+				for (std::string old_path : std::initializer_list<std::string>{m_ar ? m_path_old : "", m_title_id.empty() ? "" : get_savestate_file(m_title_id, m_path_old, 0, 0)})
 				{
 					if (old_path.empty())
 					{
@@ -2841,7 +2841,12 @@ void Emulator::Kill(bool allow_autoexit, bool savestate)
 
 		if (savestate)
 		{
-			const std::string path = get_savestate_path(m_title_id, m_path);
+			const std::string path = get_savestate_file(m_title_id, m_path, 0, 0);
+
+			if (!fs::create_path(fs::get_parent_dir(path)))
+			{
+				sys_log.error("Failed to create savestate directory! (path='%s', %s)", fs::get_parent_dir(path), fs::g_tls_error);
+			}
 
 			fs::pending_file file(path);
 

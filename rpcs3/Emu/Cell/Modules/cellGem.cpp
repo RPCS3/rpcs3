@@ -335,17 +335,7 @@ public:
 		[[maybe_unused]] const s32 version = GET_OR_USE_SERIALIZATION_VERSION(ar.is_writing(), cellGem);
 
 		ar(attribute, vc_attribute, status_flags, enable_pitch_correction, inertial_counter, controllers
-			, connected_controllers, update_started, camera_frame, memory_ptr);
-
-		if (version == 1 && !ar.is_writing())
-		{
-			u32 ts = ar;
-			start_timestamp_us = ts;
-		}
-		else
-		{
-			ar(start_timestamp_us);
-		}
+			, connected_controllers, update_started, camera_frame, memory_ptr, start_timestamp_us);
 	}
 
 	gem_config_data(utils::serial& ar)
