@@ -4316,7 +4316,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 			ppu_register_function_at(func.addr, 4, addr);
 
 			if (g_cfg.core.ppu_debug)
-				ppu_log.notice("Installing function %s at 0x%x: %p (reloc = 0x%x)", name, func.addr, ppu_ref(func.addr), reloc);
+				ppu_log.trace("Installing function %s at 0x%x: %p (reloc = 0x%x)", name, func.addr, ppu_ref(func.addr), reloc);
 		}
 
 		jit_mod.init = true;
@@ -4335,7 +4335,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 			ppu_register_function_at(func.addr, 4, addr);
 
 			if (g_cfg.core.ppu_debug)
-				ppu_log.notice("Reinstalling function at 0x%x: %p (reloc=0x%x)", func.addr, ppu_ref(func.addr), reloc);
+				ppu_log.trace("Reinstalling function at 0x%x: %p (reloc=0x%x)", func.addr, ppu_ref(func.addr), reloc);
 		}
 
 		index = 0;
