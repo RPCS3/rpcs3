@@ -1084,7 +1084,7 @@ void ppu_remove_hle_instructions(u32 addr, u32 size)
 	}
 }
 
-atomic_t<bool> g_debugger_pause_all_threads_on_bp = true;
+atomic_t<bool> g_debugger_pause_all_threads_on_bp = false;
 
 // Breakpoint entry point
 static void ppu_break(ppu_thread& ppu, ppu_opcode_t, be_t<u32>* this_op, ppu_intrp_func* next_fn)
