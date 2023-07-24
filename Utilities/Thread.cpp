@@ -48,6 +48,8 @@ DYNAMIC_IMPORT_RENAME("Kernel32.dll", SetThreadDescriptionImport, "SetThreadDesc
 #ifdef __linux__
 #include <sys/timerfd.h>
 #include <unistd.h>
+#include <sys/syscall.h>
+#define gettid() syscall(SYS_gettid)
 #endif
 
 #if defined(__APPLE__) || defined(__DragonFly__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
