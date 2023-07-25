@@ -3031,9 +3031,7 @@ void thread_ctrl::set_native_priority(int priority)
 		sig_log.error("SetThreadPriority() failed: %s", fmt::win_error{GetLastError(), nullptr});
 	}
 #elif defined(__linux__)
-	// available niceness for nonroot: 0~19
 	// available niceness for root: -20~19
-
 	int linuxprio = 0;
 	id_t threadpid = gettid();
 	uid_t euid = geteuid();
@@ -3045,19 +3043,7 @@ void thread_ctrl::set_native_priority(int priority)
 			linuxprio = -6;
 		else if (priority < 0)
 			linuxprio = 6;
-	}
-	else
-	{
-		linuxprio = 6;
-		if (priority > 0)
-			linuxprio = 0;
-		else if (priority < 0)
-			linuxprio = 12;
-	}
 
-	// nonroot cannot increase niceness value
-	if ((getpriority(PRIO_PROCESS, threadpid) < linuxprio) || (euid == 0))
-	{
 		if (int err = setpriority(PRIO_PROCESS, threadpid, linuxprio))
 		{
 			sig_log.error("setpriority(%d, %d) failed: %d", threadpid, linuxprio, err);
