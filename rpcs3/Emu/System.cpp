@@ -2977,6 +2977,21 @@ void Emulator::Kill(bool allow_autoexit, bool savestate)
 
 game_boot_result Emulator::Restart(bool graceful)
 {
+	if (m_state == system_state::stopping)
+	{
+		// Emulation stop is in progress
+		return game_boot_result::still_running;
+	}
+
+	Emu.after_kill_callback = [this]
+	{
+		// Reload with prior configs.
+		if (const auto error = Load(m_title_id); error != game_boot_result::no_errors)
+		{
+			sys_log.error("Restart failed: %s", error);
+		}
+	};
+
 	if (!IsStopped())
 	{
 		auto save_args = std::make_tuple(argv, envp, data, disc, klic, hdd1, m_config_mode, m_config_path);
@@ -2988,12 +3003,10 @@ game_boot_result Emulator::Restart(bool graceful)
 
 		std::tie(argv, envp, data, disc, klic, hdd1, m_config_mode, m_config_path) = std::move(save_args);
 	}
-
-	// Reload with prior configs.
-	if (const auto error = Load(m_title_id); error != game_boot_result::no_errors)
+	else
 	{
-		sys_log.error("Restart failed: %s", error);
-		return error;
+		// Execute and empty the callback
+		::as_rvalue(std::move(Emu.after_kill_callback))();
 	}
 
 	return game_boot_result::no_errors;
