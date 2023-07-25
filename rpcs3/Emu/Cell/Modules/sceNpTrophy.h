@@ -151,6 +151,11 @@ enum
 	SCE_NP_TROPHY_STATUS_CHANGES_DETECTED    = 9,
 };
 
+enum : u32
+{
+	NP_TROPHY_COMM_SIGN_MAGIC = 0xB9DDE13B,
+};
+
 using SceNpTrophyStatusCallback = s32(u32 context, u32 status, s32 completed, s32 total, vm::ptr<void> arg);
 
 // Forward declare this function since trophyunlock needs it
