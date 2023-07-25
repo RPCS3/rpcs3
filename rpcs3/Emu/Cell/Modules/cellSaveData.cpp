@@ -864,7 +864,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			if (listSet->fixedListNum > CELL_SAVEDATA_LISTITEM_MAX)
 			{
 				// ****** sysutil savedata parameter error : 38 ******
-				return {CELL_SAVEDATA_ERROR_PARAM, "38"};
+				return {CELL_SAVEDATA_ERROR_PARAM, "38 (fixedListNum=%d)", listSet->fixedListNum};
 			}
 
 			if (listSet->fixedListNum && !listSet->fixedList)
@@ -921,7 +921,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				default:
 				{
 					// ****** sysutil savedata parameter error : 43 ******
-					return {CELL_SAVEDATA_ERROR_PARAM, "43"};
+					return {CELL_SAVEDATA_ERROR_PARAM, "43 (iconPosition=0x%x)", listSet->newData->iconPosition};
 				}
 				}
 
@@ -1316,7 +1316,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 			default :
 				// ****** sysutil savedata parameter error : 81 ******
-				return {CELL_SAVEDATA_ERROR_PARAM, "81"};
+				return {CELL_SAVEDATA_ERROR_PARAM, "81 (option=0x%x)", fixedSet->option};
 			}
 
 			if (selected == -1)
@@ -1542,7 +1542,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			if (statSet->setParam->attribute > CELL_SAVEDATA_ATTR_NODUPLICATE)
 			{
 				// ****** sysutil savedata parameter error : 57 ******
-				return {CELL_SAVEDATA_ERROR_PARAM, "57"};
+				return {CELL_SAVEDATA_ERROR_PARAM, "57 (attribute=0x%x)", statSet->setParam->attribute};
 			}
 
 			if (g_ps3_process_info.sdk_ver > 0x36FFFF)
@@ -1551,7 +1551,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				if (statSet->setParam->parental_level)
 				{
 					// ****** sysutil savedata parameter error : 58 ******
-					return {CELL_SAVEDATA_ERROR_PARAM, "58"};
+					return {CELL_SAVEDATA_ERROR_PARAM, "58 (sdk_ver=0x%x, parental_level=%d)", g_ps3_process_info.sdk_ver, statSet->setParam->parental_level};
 				}
 			}
 			else
@@ -1559,7 +1559,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				if (statSet->setParam->parental_level > 11)
 				{
 					// ****** sysutil savedata parameter error : 58 ******
-					return {CELL_SAVEDATA_ERROR_PARAM, "58"};
+					return {CELL_SAVEDATA_ERROR_PARAM, "58 (sdk_ver=0x%x, parental_level=%d)", g_ps3_process_info.sdk_ver, statSet->setParam->parental_level};
 				}
 			}
 
@@ -2045,7 +2045,7 @@ static NEVER_INLINE error_code savedata_get_list_item(vm::cptr<char> dirName, vm
 	else if (userId > CELL_USERINFO_USER_MAX)
 	{
 		// ****** sysutil savedata parameter error : 137 ******
-		return {CELL_SAVEDATA_ERROR_PARAM, "137"};
+		return {CELL_SAVEDATA_ERROR_PARAM, "137 (userId=0x%x)", userId};
 	}
 
 	if (!dirName)

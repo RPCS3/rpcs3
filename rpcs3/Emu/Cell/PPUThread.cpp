@@ -1084,7 +1084,7 @@ void ppu_remove_hle_instructions(u32 addr, u32 size)
 	}
 }
 
-atomic_t<bool> g_debugger_pause_all_threads_on_bp = true;
+atomic_t<bool> g_debugger_pause_all_threads_on_bp = false;
 
 // Breakpoint entry point
 static void ppu_break(ppu_thread& ppu, ppu_opcode_t, be_t<u32>* this_op, ppu_intrp_func* next_fn)
@@ -3741,7 +3741,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 {
 	if (g_cfg.core.ppu_decoder != ppu_decoder_type::llvm)
 	{
-		if (check_only)
+		if (check_only || vm::base(info.segs[0].addr) != info.segs[0].ptr)
 		{
 			return false;
 		}
@@ -3761,7 +3761,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 
 			if (g_cfg.core.ppu_debug && func.size && func.toc != umax)
 			{
-				ppu_toc.emplace(func.addr, func.toc);
+				ppu_toc[func.addr] = func.toc;
 				ppu_ref(func.addr) = &ppu_check_toc;
 			}
 		}
@@ -4316,7 +4316,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 			ppu_register_function_at(func.addr, 4, addr);
 
 			if (g_cfg.core.ppu_debug)
-				ppu_log.notice("Installing function %s at 0x%x: %p (reloc = 0x%x)", name, func.addr, ppu_ref(func.addr), reloc);
+				ppu_log.trace("Installing function %s at 0x%x: %p (reloc = 0x%x)", name, func.addr, ppu_ref(func.addr), reloc);
 		}
 
 		jit_mod.init = true;
@@ -4335,7 +4335,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 			ppu_register_function_at(func.addr, 4, addr);
 
 			if (g_cfg.core.ppu_debug)
-				ppu_log.notice("Reinstalling function at 0x%x: %p (reloc=0x%x)", func.addr, ppu_ref(func.addr), reloc);
+				ppu_log.trace("Reinstalling function at 0x%x: %p (reloc=0x%x)", func.addr, ppu_ref(func.addr), reloc);
 		}
 
 		index = 0;
