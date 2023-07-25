@@ -3032,13 +3032,12 @@ void thread_ctrl::set_native_priority(int priority)
 	}
 #elif defined(__linux__)
 	// available niceness for root: -20~19
-	int linuxprio = 0;
 	id_t threadpid = gettid();
 	uid_t euid = geteuid();
 
 	if (euid == 0)
 	{
-		linuxprio = 0;
+		int linuxprio = 0;
 		if (priority > 0)
 			linuxprio = -6;
 		else if (priority < 0)
