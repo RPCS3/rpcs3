@@ -37,7 +37,7 @@ namespace gl
 	}
 
 	void pipe_compiler::operator()()
-	{		
+	{
 		while (thread_ctrl::state() != thread_state::aborting)
 		{
 			for (auto&& job : m_work_queue.pop_all())
