@@ -1,0 +1,22 @@
+# Documentation - https://github.com/actions/labeler
+
+'RSX':
+  - 'rpcs3/Emu/RSX/*'
+'CPU':
+  - '**SPU*'
+  - '**PPU*'
+  - '**MFC*'
+'Overlays':
+  - '**/RSX/Overlays/*'
+'Network':
+  - '**sys_net/*'
+  - '**sys_net.cpp'
+  - '**sys_net.h'
+  - 'RPCS3/Emu/NP/*'
+'Input':
+  - '**/Input/*'
+'GUI':
+  - 'rpcs3/rpcs3qt/*'
+  - 'rpcs3/qt/*'
+'Firmware: HLE':
+  - 'rpcs3/Emu/Cell/Modules/*'
