@@ -249,7 +249,8 @@ void fmt_class_string<SceNpCommunicationId>::format(std::string& out, u64 arg)
 {
 	const auto& id = get_object(arg);
 
-	fmt::append(out, "{ data='%s', term='%s' (0x%x), num=%d, dummy=%d }", id.data, std::isprint(id.data[9]) ? fmt::format("%c", id.data[9]) : "", id.data[9], id.num, id.dummy);
+	const u8 term = id.data[9];
+	fmt::append(out, "{ data='%s', term='%s' (0x%x), num=%d, dummy=%d }", id.data, std::isprint(term) ? fmt::format("%c", term) : "", term, id.num, id.dummy);
 }
 
 // Helpers
