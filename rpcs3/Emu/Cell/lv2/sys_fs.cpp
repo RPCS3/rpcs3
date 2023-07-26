@@ -2064,27 +2064,18 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 	{
 		const auto arg = vm::static_ptr_cast<lv2_file_c0000007>(_arg);
 
-		std::string_view device{arg->device.get_ptr(), arg->device_size};
-
-		// Trim trailing '\0'
-		if (const auto trim_pos = device.find('\0'); trim_pos != umax)
-			device.remove_suffix(device.size() - trim_pos);
-
-		if (device != "CELL_FS_IOS:ATA_HDD"sv)
-		{
-			arg->out_code = CELL_ENOTSUP;
-			return {CELL_ENOTSUP, device};
-		}
-
-		const auto model = g_cfg.sys.hdd_model.to_string();
-		const auto serial = g_cfg.sys.hdd_serial.to_string();
-
-		strcpy_trunc(std::span(arg->model.get_ptr(), arg->model_size), model);
-		strcpy_trunc(std::span(arg->serial.get_ptr(), arg->serial_size), serial);
-
 		arg->out_code = CELL_OK;
 
-		sys_fs.trace("sys_fs_fcntl(0xc0000007): found device \"%s\" (model=\"%s\", serial=\"%s\")", device, model, serial);
+		if (const auto size = arg->model_size; size > 0)
+			strcpy_trunc(std::span(arg->model.get_ptr(), size),
+				fmt::format("%-*s", size - 1, g_cfg.sys.hdd_model.to_string())); // Example: "TOSHIBA MK3265GSX H                     "
+
+		if (const auto size = arg->serial_size; size > 0)
+			strcpy_trunc(std::span(arg->serial.get_ptr(), size),
+				fmt::format("%*s", size - 1, g_cfg.sys.hdd_serial.to_string())); // Example: "           0A1B2C3D4"
+		else
+			return CELL_EFAULT; // CELL_EFAULT is returned only when arg->serial_size == 0
+
 		return CELL_OK;
 	}
 

@@ -334,7 +334,7 @@ void usb_device_usio::translate_input_tekken()
 					}
 					break;
 				case usio_btn::down:
-					if ( pressed)
+					if (pressed)
 					{
 						digital_input |= 0x100000ULL << shift;
 						if (player == 0)
