@@ -529,8 +529,8 @@ CHECK_SIZE(lv2_file_c0000006, 0x20);
 // sys_fs_fcntl: cellFsArcadeHddSerialNumber
 struct lv2_file_c0000007 : lv2_file_op
 {
-	be_t<u32> out_code;
-	vm::bcptr<char> device;
+	be_t<u32> out_code; // set to 0
+	vm::bcptr<char> device; // CELL_FS_IOS:ATA_HDD
 	be_t<u32> device_size;  // 0x14
 	vm::bptr<char> model;
 	be_t<u32> model_size; // 0x29
