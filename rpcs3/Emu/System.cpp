@@ -2125,6 +2125,8 @@ void Emulator::Run(bool start_playtime)
 	m_pause_start_time = 0;
 	m_pause_amend_time = 0;
 
+	m_tty_file_init_pos = g_tty ? g_tty.pos() : usz{umax};
+
 	rpcs3::utils::configure_logs();
 
 	m_state = system_state::starting;
@@ -2956,6 +2958,30 @@ void Emulator::Kill(bool allow_autoexit, bool savestate)
 			// Complete the operation
 			m_state = system_state::stopped;
 			GetCallbacks().on_stop();
+
+			if (g_tty)
+			{
+				// Write merged TTY output after emulation has been safely stopped
+
+				if (usz attempted_read_size = utils::sub_saturate<usz>(g_tty.pos(), m_tty_file_init_pos))
+				{
+					if (fs::file tty_read_fd{fs::get_cache_dir() + "TTY.log"})
+					{
+						// Enfore an arbitrary limit for now to avoid OOM in case the guest code has bombarded TTY
+						// 16MB, this should be enough
+						constexpr usz c_max_tty_spill_size = 0x10'0000;
+
+						std::string tty_buffer(std::min<usz>(attempted_read_size, c_max_tty_spill_size), '\0');
+						tty_buffer.resize(tty_read_fd.read_at(m_tty_file_init_pos, tty_buffer.data(), tty_buffer.size()));
+
+						if (!tty_buffer.empty())
+						{
+							// Mark start and end very clearly with RPCS3 put in it
+							sys_log.notice("\nAccumulated RPCS3 TTY:\n\n\n%s\n\n\nEnd RPCS3 TTY Section.\n", tty_buffer);
+						}
+					}
+				}
+			}
 
 			// Always Enable display sleep, not only if it was prevented.
 			enable_display_sleep();
