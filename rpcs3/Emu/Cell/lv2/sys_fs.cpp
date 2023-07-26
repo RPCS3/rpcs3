@@ -2064,27 +2064,18 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 	{
 		const auto arg = vm::static_ptr_cast<lv2_file_c0000007>(_arg);
 
-		std::string_view device{arg->device.get_ptr(), arg->device_size};
-
-		// Trim trailing '\0'
-		if (const auto trim_pos = device.find('\0'); trim_pos != umax)
-			device.remove_suffix(device.size() - trim_pos);
-
-		if (device != "CELL_FS_IOS:ATA_HDD"sv)
-		{
-			arg->out_code = CELL_ENOTSUP;
-			return {CELL_ENOTSUP, device};
-		}
-
-		const auto model = g_cfg.sys.hdd_model.to_string();
-		const auto serial = g_cfg.sys.hdd_serial.to_string();
-
-		strcpy_trunc(std::span(arg->model.get_ptr(), arg->model_size), model);
-		strcpy_trunc(std::span(arg->serial.get_ptr(), arg->serial_size), serial);
-
 		arg->out_code = CELL_OK;
 
-		sys_fs.trace("sys_fs_fcntl(0xc0000007): found device \"%s\" (model=\"%s\", serial=\"%s\")", device, model, serial);
+		if (const auto size = arg->model_size; size > 0)
+			strcpy_trunc(std::span(arg->model.get_ptr(), size),
+				fmt::format("%-*s", size - 1, g_cfg.sys.hdd_model.to_string())); // Example: "TOSHIBA MK3265GSX H                     "
+
+		if (const auto size = arg->serial_size; size > 0)
+			strcpy_trunc(std::span(arg->serial.get_ptr(), size),
+				fmt::format("%*s", size - 1, g_cfg.sys.hdd_serial.to_string())); // Example: "           0A1B2C3D4"
+		else
+			return CELL_EFAULT; // CELL_EFAULT is returned only when arg->serial_size == 0
+
 		return CELL_OK;
 	}
 
@@ -2190,39 +2181,37 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 			break;
 		}
 
-		std::string_view vpath{arg->name.get_ptr(), arg->name_size};
+		std::string_view vpath{arg->path.get_ptr(), arg->path_size};
+
+		if (vpath.size() == 0)
+			return CELL_ENOMEM;
 
 		// Trim trailing '\0'
 		if (const auto trim_pos = vpath.find('\0'); trim_pos != umax)
 			vpath.remove_suffix(vpath.size() - trim_pos);
 
-		if (vfs::get(vpath).empty())
+		arg->out_code = CELL_ENOTMOUNTED; // arg->out_code is set to CELL_ENOTMOUNTED on real hardware when the device doesn't exist or when the device isn't USB
+
+		if (!vfs::get(vpath).empty())
 		{
-			arg->out_code = CELL_ENOTMOUNTED;
-			return {CELL_ENOTMOUNTED, vpath};
+			if (const auto& mp = g_fxo->get<lv2_fs_mount_info_map>().lookup(vpath, true); mp == &g_mp_sys_dev_usb)
+			{
+				const cfg::device_info device = g_cfg_vfs.get_device(g_cfg_vfs.dev_usb, fmt::format("%s%s", mp->root, mp.device.substr(mp->device.size())));
+				const auto usb_ids = device.get_usb_ids();
+				std::tie(arg->vendorID, arg->productID) = usb_ids;
+
+				if (with_serial)
+				{
+					const auto arg_c000001c = vm::static_ptr_cast<lv2_file_c000001c>(_arg);
+					const std::u16string serial = utf8_to_utf16(device.serial); // Serial needs to be encoded to utf-16 BE
+					std::copy_n(serial.begin(), std::min(serial.size(), sizeof(arg_c000001c->serial) / sizeof(u16)), arg_c000001c->serial);
+				}
+
+				arg->out_code = CELL_OK;
+				sys_fs.trace("sys_fs_fcntl(0x%08x): found device \"%s\" (vid=0x%04x, pid=0x%04x, serial=\"%s\")", op, mp.device, usb_ids.first, usb_ids.second, device.serial);
+			}
 		}
 
-		const auto& mp = g_fxo->get<lv2_fs_mount_info_map>().lookup(vpath, true);
-
-		if (mp != &g_mp_sys_dev_usb)
-		{
-			arg->out_code = CELL_ENOTSUP;
-			return {CELL_ENOTSUP, vpath};
-		}
-
-		const cfg::device_info device = g_cfg_vfs.get_device(g_cfg_vfs.dev_usb, fmt::format("%s%s", mp->root, mp.device.substr(mp->device.size())));
-		std::tie(arg->vendorID, arg->productID) = device.get_usb_ids();
-
-		if (with_serial)
-		{
-			const auto arg_c000001c = vm::static_ptr_cast<lv2_file_c000001c>(_arg);
-			const std::u16string serial = utf8_to_utf16(device.serial); // Serial needs to be encoded to utf-16 BE
-			std::copy_n(serial.begin(), std::min(serial.size(), sizeof(arg_c000001c->serial) / sizeof(u16)), arg_c000001c->serial);
-		}
-
-		arg->out_code = CELL_OK;
-
-		sys_fs.trace("sys_fs_fcntl(0x%08x): found device \"%s\" (vid=0x%04x, pid=0x%04x, serial=\"%s\")", op, mp.device, arg->vendorID, arg->productID, device.serial);
 		return CELL_OK;
 	}
 
