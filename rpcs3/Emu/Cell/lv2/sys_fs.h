@@ -562,8 +562,8 @@ struct lv2_file_c0000015 : lv2_file_op
 	be_t<u32> size; // 0x20
 	be_t<u32> _x4;  // 0x10
 	be_t<u32> _x8;  // 0x18 - offset of out_code
-	be_t<u32> name_size;
-	vm::bcptr<char> name;
+	be_t<u32> path_size;
+	vm::bcptr<char> path;
 	be_t<u32> _x14; //
 	be_t<u16> vendorID;
 	be_t<u16> productID;
@@ -590,8 +590,8 @@ struct lv2_file_c000001c : lv2_file_op
 	be_t<u32> size; // 0x60
 	be_t<u32> _x4;  // 0x10
 	be_t<u32> _x8;  // 0x18 - offset of out_code
-	be_t<u32> name_size;
-	vm::bcptr<char> name;
+	be_t<u32> path_size;
+	vm::bcptr<char> path;
 	be_t<u32> unk1;
 	be_t<u16> vendorID;
 	be_t<u16> productID;
