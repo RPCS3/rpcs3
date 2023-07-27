@@ -3847,15 +3847,23 @@ void spu_recompiler_base::dump(const spu_program& result, std::string& out)
 		fmt::append(hash, "%s", fmt::base57(output));
 	}
 
-	fmt::append(out, "========== SPU BLOCK 0x%05x (size %u, %s) ==========\n", result.entry_point, result.data.size(), hash);
+	fmt::append(out, "========== SPU BLOCK 0x%05x (size %u, %s) ==========\n\n", result.entry_point, result.data.size(), hash);
 
 	for (auto& bb : m_bbs)
 	{
 		for (u32 pos = bb.first, end = bb.first + bb.second.size * 4; pos < end; pos += 4)
 		{
 			dis_asm.disasm(pos);
-			fmt::append(out, ">%s\n", dis_asm.last_opcode);
+
+			if (!dis_asm.last_opcode.ends_with('\n'))
+			{
+				dis_asm.last_opcode += '\n';
+			}
+
+			fmt::append(out, ">%s", dis_asm.last_opcode);
 		}
+
+		out += '\n';
 
 		if (m_block_info[bb.first / 4])
 		{
@@ -5823,7 +5831,7 @@ public:
 		if (g_cfg.core.spu_debug)
 		{
 			out.flush();
-			fs::file(m_spurt->get_cache_path() + "spu-ir.log", fs::write + fs::append).write(log);
+			fs::write_file(m_spurt->get_cache_path() + "spu-ir.log", fs::create + fs::write + fs::append, log);
 		}
 
 #if defined(__APPLE__)
@@ -6241,7 +6249,7 @@ public:
 
 			if (g_cfg.core.spu_debug)
 			{
-				fs::file(m_spurt->get_cache_path() + "spu-ir.log", fs::write + fs::append).write(log);
+				fs::write_file(m_spurt->get_cache_path() + "spu-ir.log", fs::create + fs::write + fs::append, log);
 			}
 
 			fmt::throw_exception("Compilation failed");
@@ -6276,7 +6284,7 @@ public:
 		if (g_cfg.core.spu_debug)
 		{
 			out.flush();
-			fs::file(m_spurt->get_cache_path() + "spu-ir.log", fs::write + fs::append).write(log);
+			fs::write_file(m_spurt->get_cache_path() + "spu-ir.log", fs::create + fs::write + fs::append, log);
 		}
 
 		return spu_runtime::g_interpreter;
@@ -11243,7 +11251,7 @@ struct spu_fast : public spu_recompiler_base
 		{
 			std::string log;
 			this->dump(func, log);
-			fs::file(m_spurt->get_cache_path() + "spu.log", fs::write + fs::append).write(log);
+			fs::write_file(m_spurt->get_cache_path() + "spu.log", fs::create + fs::write + fs::append, log);
 		}
 
 		// Allocate executable area with necessary size
