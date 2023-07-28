@@ -115,8 +115,6 @@ if(APPLE AND CMAKE_OSX_ARCHITECTURES STREQUAL "arm64")
     link_directories(/opt/homebrew/lib)
 endif()
 
-set(LLVM_ENABLE_WARNINGS OFF CACHE BOOL "Enable compiler warnings.")
-
 if(MSVC)
     add_compile_options(/wd4530 /utf-8) # C++ exception handler used, but unwind semantics are not enabled
 endif()
