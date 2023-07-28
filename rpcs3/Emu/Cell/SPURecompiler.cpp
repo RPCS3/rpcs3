@@ -7788,19 +7788,27 @@ public:
 	void ROTQMBY(spu_opcode_t op)
 	{
 		const auto a = get_vr<u8[16]>(op.ra);
-		const auto b = get_vr<u8[16]>(op.rb);
+		const auto b = get_vr<u32[4]>(op.rb);
+
+		auto minusb = eval(-b);
+		if (auto [ok, x] = match_expr(b, -match<u32[4]>()); ok)
+		{
+			minusb = eval(x);
+		}
+		
+		const auto minusbx = bitcast<u8[16]>(minusb);
 
 		// Data with swapped endian from a load instruction
 		if (auto [ok, as] = match_expr(a, byteswap(match<u8[16]>())); ok)
 		{
 			const auto sc = build<u8[16]>(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
-			const auto sh = sc - (-splat_scalar(b) & 0x1f);
+			const auto sh = sc - (splat_scalar(minusbx) & 0x1f);
 			set_vr(op.rt, pshufb(as, sh));
 			return;
 		}
 
 		const auto sc = build<u8[16]>(112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127);
-		const auto sh = sc + (-splat_scalar(b) & 0x1f);
+		const auto sh = sc + (splat_scalar(minusbx) & 0x1f);
 		set_vr(op.rt, pshufb(a, sh));
 	}
 
