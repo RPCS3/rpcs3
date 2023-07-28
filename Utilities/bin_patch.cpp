@@ -726,7 +726,7 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 		break;
 	default:
 	{
-		const u32 offset = get_yaml_node_value<u32>(addr_node, error_message);
+		get_yaml_node_value<u32>(addr_node, error_message);
 		if (!error_message.empty())
 		{
 			error_message = fmt::format("Skipping patch data entry: [ %s, 0x%.8x, %s ] (key: %s, location: %s) Invalid patch offset '%s' (not a valid u32 or overflow)",

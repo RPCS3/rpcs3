@@ -263,7 +263,7 @@ std::vector<u8> tar_object::save_directory(const std::string& src_dir, std::vect
 	const std::string& target_path = full_path.empty() ? src_dir : full_path;
 
 	fs::stat_t stat{};
-	if (!fs::stat(target_path, stat))
+	if (!fs::get_stat(target_path, stat))
 	{
 		return std::move(init);
 	}

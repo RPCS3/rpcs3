@@ -92,6 +92,8 @@ std::string dump_useful_thread_info();
 
 error_code sys_tty_write([[maybe_unused]] ppu_thread& ppu, s32 ch, vm::cptr<char> buf, u32 len, vm::ptr<u32> pwritelen)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_tty.notice("sys_tty_write(ch=%d, buf=*0x%x, len=%d, pwritelen=*0x%x)", ch, buf, len, pwritelen);
 
 	std::string msg;

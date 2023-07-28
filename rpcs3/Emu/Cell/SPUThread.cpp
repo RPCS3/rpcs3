@@ -326,6 +326,29 @@ extern thread_local u64 g_tls_fault_spu;
 
 const spu_decoder<spu_itype> s_spu_itype;
 
+namespace vm
+{
+	extern atomic_t<u64, 64> g_range_lock_set[64];
+
+	// Defined here for performance reasons
+	writer_lock::~writer_lock() noexcept
+	{
+		if (range_lock)
+		{
+			if (!*range_lock)
+			{
+				return;
+			}
+
+			g_range_lock_bits[1] &= ~(1ull << (range_lock - g_range_lock_set));
+			range_lock->release(0);
+			return;
+		}
+
+		g_range_lock_bits[1].release(0);
+	}
+}
+
 namespace spu
 {
 	namespace scheduler
@@ -3548,19 +3571,18 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 		{
 			// Full lock (heavyweight)
 			// TODO: vm::check_addr
-			vm::writer_lock lock(addr);
+			vm::writer_lock lock(addr, range_lock);
 
 			if (cmp_rdata(rdata, super_data))
 			{
 				mov_rdata(super_data, to_write);
-				res += 64;
 				return true;
 			}
 
-			res -= 64;
 			return false;
 		}();
 
+		res += success ? 64 : 0 - 64;
 		return success;
 	}())
 	{
@@ -3695,7 +3717,8 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 			vm::_ref<atomic_t<u32>>(addr) += 0;
 
 			// Hard lock
-			vm::writer_lock lock(addr);
+			auto spu = cpu ? cpu->try_get<spu_thread>() : nullptr;
+			vm::writer_lock lock(addr, spu ? spu->range_lock : nullptr);
 			mov_rdata(sdata, *static_cast<const spu_rdata_t*>(to_write));
 			vm::reservation_acquire(addr) += 32;
 		}
@@ -4461,7 +4484,7 @@ bool spu_thread::reservation_check(u32 addr, const decltype(rdata)& data) const
 	// Set range_lock first optimistically
 	range_lock->store(u64{128} << 32 | addr);
 
-	u64 lock_val = vm::g_range_lock;
+	u64 lock_val = *std::prev(std::end(vm::g_range_lock_set));
 	u64 old_lock = 0;
 
 	while (lock_val != old_lock)
@@ -4516,7 +4539,7 @@ bool spu_thread::reservation_check(u32 addr, const decltype(rdata)& data) const
 			break;
 		}
 
-		old_lock = std::exchange(lock_val, vm::g_range_lock);
+		old_lock = std::exchange(lock_val, *std::prev(std::end(vm::g_range_lock_set)));
 	}
 
 	if (!range_lock->load()) [[unlikely]]

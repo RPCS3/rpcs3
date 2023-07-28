@@ -277,7 +277,7 @@ void Emulator::Init()
 	const std::string cfg_path = fs::get_config_dir() + "/config.yml";
 
 	// Save new global config if it doesn't exist or is empty
-	if (fs::stat_t info{}; !fs::stat(cfg_path, info) || info.size == 0)
+	if (fs::stat_t info{}; !fs::get_stat(cfg_path, info) || info.size == 0)
 	{
 		Emulator::SaveSettings(g_cfg_defaults, {});
 	}
@@ -2125,6 +2125,8 @@ void Emulator::Run(bool start_playtime)
 	m_pause_start_time = 0;
 	m_pause_amend_time = 0;
 
+	m_tty_file_init_pos = g_tty ? g_tty.pos() : usz{umax};
+
 	rpcs3::utils::configure_logs();
 
 	m_state = system_state::starting;
@@ -2897,6 +2899,8 @@ void Emulator::Kill(bool allow_autoexit, bool savestate)
 		// Final termination from main thread (move the last ownership of join thread in order to destroy it)
 		CallFromMainThread([join_thread = std::move(join_thread), allow_autoexit, this]() mutable
 		{
+			const std::string cache_path = rpcs3::cache::get_ppu_cache();
+
 			cpu_thread::cleanup();
 
 			initialize_timebased_time(0, true);
@@ -2956,6 +2960,64 @@ void Emulator::Kill(bool allow_autoexit, bool savestate)
 			// Complete the operation
 			m_state = system_state::stopped;
 			GetCallbacks().on_stop();
+
+			if (g_tty && sys_log.notice)
+			{
+				// Write merged TTY output after emulation has been safely stopped
+
+				if (usz attempted_read_size = utils::sub_saturate<usz>(g_tty.pos(), m_tty_file_init_pos))
+				{
+					if (fs::file tty_read_fd{fs::get_cache_dir() + "TTY.log"})
+					{
+						// Enfore an arbitrary limit for now to avoid OOM in case the guest code has bombarded TTY
+						// 16MB, this should be enough
+						constexpr usz c_max_tty_spill_size = 0x10'0000;
+
+						std::string tty_buffer(std::min<usz>(attempted_read_size, c_max_tty_spill_size), '\0');
+						tty_buffer.resize(tty_read_fd.read_at(m_tty_file_init_pos, tty_buffer.data(), tty_buffer.size()));
+						tty_read_fd.close();
+
+						if (!tty_buffer.empty())
+						{
+							// Mark start and end very clearly with RPCS3 put in it
+							sys_log.notice("\nAccumulated RPCS3 TTY:\n\n\n%s\n\n\nEnd RPCS3 TTY Section.\n", tty_buffer);
+						}
+					}
+				}
+			}
+
+			if (g_cfg.core.spu_debug && sys_log.notice)
+			{
+				if (fs::file spu_log{cache_path + "/spu.log"})
+				{
+					// 96MB limit, this may be a lot but this only has an effect when enabling the debug option
+					constexpr usz c_max_tty_spill_size = 0x60'0000;
+
+					std::string log_buffer(std::min<usz>(spu_log.size(), c_max_tty_spill_size), '\0');
+					log_buffer.resize(spu_log.read(log_buffer.data(), log_buffer.size()));
+					spu_log.close();
+
+					if (!log_buffer.empty())
+					{
+						usz to_remove = 0;
+						usz part_ctr = 1;
+
+						for (std::string_view not_logged = log_buffer; !not_logged.empty(); part_ctr++, not_logged.remove_prefix(to_remove))
+						{
+							std::string_view to_log = not_logged;
+							to_log = to_log.substr(0, 0x8'0000);
+							to_log = to_log.substr(0, utils::add_saturate<usz>(to_log.rfind("\n========== SPU BLOCK"sv), 1));
+							to_remove = to_log.size();
+
+							// Cannot log it all at once due to technical reasons, split it to 8MB at maximum of whole functions
+							// Assume the block prefix exists because it is created by RPCS3 (or log it in an ugly manner if it does not exist)
+							sys_log.notice("Logging spu.log part %u:\n\n%s\n", part_ctr, to_log);
+						}
+
+						sys_log.notice("End spu.log");
+					}
+				}
+			}
 
 			// Always Enable display sleep, not only if it was prevented.
 			enable_display_sleep();
