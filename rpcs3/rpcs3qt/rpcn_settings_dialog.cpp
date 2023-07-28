@@ -257,10 +257,10 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 					case rpcn::ErrorType::CreationExistingUsername: error_message = tr("An account with that username already exists!"); break;
 					case rpcn::ErrorType::CreationBannedEmailProvider: error_message = tr("This email provider is banned!"); break;
 					case rpcn::ErrorType::CreationExistingEmail: error_message = tr("An account with that email already exists!"); break;
-					case rpcn::ErrorType::CreationError: error_message = tr("Unknown creation error"); break;
+					case rpcn::ErrorType::CreationError: error_message = tr("Unknown creation error!"); break;
 					default: error_message = tr("Unknown error"); break;
 					}
-					QMessageBox::critical(this, tr("Error Creating Account"), tr("Failed to create the account:\n%0").arg(error_message), QMessageBox::Ok);
+					QMessageBox::critical(this, tr("Error Creating Account!"), tr("Failed to create the account:\n%0").arg(error_message), QMessageBox::Ok);
 					return;
 				}
 			}
@@ -361,12 +361,12 @@ rpcn_add_server_dialog::rpcn_add_server_dialog(QWidget* parent)
 
 			if (description.isEmpty())
 			{
-				QMessageBox::critical(this, tr("Missing Description"), tr("You must enter a description!"), QMessageBox::Ok);
+				QMessageBox::critical(this, tr("Missing Description!"), tr("You must enter a description!"), QMessageBox::Ok);
 				return;
 			}
 			if (host.isEmpty())
 			{
-				QMessageBox::critical(this, tr("Missing Hostname"), tr("You must enter a hostname for the server!"), QMessageBox::Ok);
+				QMessageBox::critical(this, tr("Missing Hostname!"), tr("You must enter a hostname for the server!"), QMessageBox::Ok);
 				return;
 			}
 
@@ -413,12 +413,12 @@ rpcn_ask_username_dialog::rpcn_ask_username_dialog(QWidget* parent, const QStrin
 
 			if (username.empty())
 			{
-				QMessageBox::critical(this, tr("Missing Username"), tr("You must enter a username!"), QMessageBox::Ok);
+				QMessageBox::critical(this, tr("Missing Username!"), tr("You must enter a username!"), QMessageBox::Ok);
 				return;
 			}
 			if (!validate_rpcn_username(username))
 			{
-				QMessageBox::critical(this, tr("Invalid Username"), tr("Please enter a valid username!"), QMessageBox::Ok);
+				QMessageBox::critical(this, tr("Invalid Username!"), tr("Please enter a valid username!"), QMessageBox::Ok);
 			}
 
 			m_username = username;
@@ -729,7 +729,7 @@ void rpcn_account_edit_dialog::resend_token()
 	if (auto result = rpcn->wait_for_connection(); result != rpcn::rpcn_state::failure_no_failure)
 	{
 		const QString error_message = tr("Failed to connect to RPCN server:\n%0").arg(QString::fromStdString(rpcn::rpcn_state_to_string(result)));
-		QMessageBox::critical(this, tr("Error Connecting"), error_message, QMessageBox::Ok);
+		QMessageBox::critical(this, tr("Error Connecting!"), error_message, QMessageBox::Ok);
 		return;
 	}
 
@@ -745,7 +745,7 @@ void rpcn_account_edit_dialog::resend_token()
 		case rpcn::ErrorType::LoginError: error_message = tr("The username/password pair is invalid!"); break;
 		default: error_message = tr("Unknown error"); break;
 		}
-		QMessageBox::critical(this, tr("Error Sending Token"), tr("Failed to send the token:\n%0").arg(error_message), QMessageBox::Ok);
+		QMessageBox::critical(this, tr("Error Sending Token!"), tr("Failed to send the token:\n%0").arg(error_message), QMessageBox::Ok);
 		return;
 	}
 
@@ -778,7 +778,7 @@ void rpcn_account_edit_dialog::change_password()
 			if (auto result = rpcn->wait_for_connection(); result != rpcn::rpcn_state::failure_no_failure)
 			{
 				const QString error_message = tr("Failed to connect to RPCN server:\n%0").arg(QString::fromStdString(rpcn::rpcn_state_to_string(result)));
-				QMessageBox::critical(this, tr("Error Connecting"), error_message, QMessageBox::Ok);
+				QMessageBox::critical(this, tr("Error Connecting!"), error_message, QMessageBox::Ok);
 				return;
 			}
 
@@ -792,9 +792,9 @@ void rpcn_account_edit_dialog::change_password()
 				case rpcn::ErrorType::TooSoon: error_message = tr("You can only ask for a reset password token once every 24 hours!"); break;
 				case rpcn::ErrorType::EmailFail: error_message = tr("The mail couldn't be sent successfully!"); break;
 				case rpcn::ErrorType::LoginError: error_message = tr("The username/email pair is invalid!"); break;
-				default: error_message = tr("Unknown error"); break;
+				default: error_message = tr("Unknown error!"); break;
 				}
-				QMessageBox::critical(this, tr("Error Sending Password Reset Token"), tr("Failed to send the password reset token:\n%0").arg(error_message), QMessageBox::Ok);
+				QMessageBox::critical(this, tr("Error Sending Password Reset Token!"), tr("Failed to send the password reset token:\n%0").arg(error_message), QMessageBox::Ok);
 				return;
 			}
 
@@ -822,7 +822,7 @@ void rpcn_account_edit_dialog::change_password()
 			if (auto result = rpcn->wait_for_connection(); result != rpcn::rpcn_state::failure_no_failure)
 			{
 				const QString error_message = tr("Failed to connect to RPCN server:\n%0").arg(QString::fromStdString(rpcn::rpcn_state_to_string(result)));
-				QMessageBox::critical(this, tr("Error Connecting"), error_message, QMessageBox::Ok);
+				QMessageBox::critical(this, tr("Error Connecting!"), error_message, QMessageBox::Ok);
 				return;
 			}
 
@@ -964,7 +964,7 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 				{
 					if (!m_rpcn->remove_friend(str_sel_friend))
 					{
-						QMessageBox::critical(this, tr("Error removing a friend!"), tr("An error occured trying to remove a friend!"), QMessageBox::Ok);
+						QMessageBox::critical(this, tr("Error removing a friend!"), tr("An error occurred while trying to remove a friend!"), QMessageBox::Ok);
 					}
 					else
 					{
@@ -1000,7 +1000,7 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 				{
 					if (!m_rpcn->add_friend(str_sel_friend))
 					{
-						QMessageBox::critical(this, tr("Error adding a friend!"), tr("An error occured trying to add a friend!"), QMessageBox::Ok);
+						QMessageBox::critical(this, tr("Error adding a friend!"), tr("An error occurred while trying to add a friend!"), QMessageBox::Ok);
 					}
 					else
 					{
@@ -1031,17 +1031,17 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 					break;
 				}
 
-				QMessageBox::critical(this, tr("Error validating username"), tr("The username you entered is invalid"), QMessageBox::Ok);
+				QMessageBox::critical(this, tr("Error validating username!"), tr("The username you entered is invalid!"), QMessageBox::Ok);
 			}
 
 			if (!m_rpcn->add_friend(str_friend_username))
 			{
-				QMessageBox::critical(this, tr("Error adding friend"), tr("An error occured adding friend"), QMessageBox::Ok);
+				QMessageBox::critical(this, tr("Error adding friend!"), tr("An error occurred while adding a friend!"), QMessageBox::Ok);
 			}
 			else
 			{
 				add_update_list(m_lst_requests, QString::fromStdString(str_friend_username), m_orange_icon, QVariant(false));
-				QMessageBox::information(this, tr("Friend added"), tr("Friend was successfully added!"), QMessageBox::Ok);
+				QMessageBox::information(this, tr("Friend added!"), tr("Friend was successfully added!"), QMessageBox::Ok);
 			}
 		});
 

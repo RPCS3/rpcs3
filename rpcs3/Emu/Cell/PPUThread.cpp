@@ -1952,7 +1952,7 @@ void ppu_thread::exec_task()
 
 ppu_thread::~ppu_thread()
 {
-	perf_log.notice("Perf stats for STCX reload: successs %u, failure %u", last_succ, last_fail);
+	perf_log.notice("Perf stats for STCX reload: success %u, failure %u", last_succ, last_fail);
 	perf_log.notice("Perf stats for instructions: total %u", exec_bytes / 4);
 }
 

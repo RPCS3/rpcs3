@@ -214,7 +214,7 @@ void hid_pad_handler<Device>::update_devices()
 	{
 		hid_log.error("One or more %s pads were detected but couldn't be interacted with directly", m_type);
 #if defined(_WIN32) || defined(__linux__)
-		hid_log.error("Check https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration for intructions on how to solve this issue");
+		hid_log.error("Check https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration for instructions on how to solve this issue");
 #endif
 	}
 	else

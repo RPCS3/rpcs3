@@ -158,6 +158,6 @@ AudioChannelCnt AudioBackend::convert_channel_count(u64 raw)
 	case 1:
 		return AudioChannelCnt::STEREO;
 	case 0:
-		fmt::throw_exception("Usupported channel count");
+		fmt::throw_exception("Unsupported channel count");
 	}
 }

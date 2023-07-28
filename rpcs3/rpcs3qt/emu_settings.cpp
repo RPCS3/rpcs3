@@ -1011,7 +1011,7 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case camera_flip::none: return tr("No", "Camera flip");
 		case camera_flip::horizontal: return tr("Flip horizontally", "Camera flip");
 		case camera_flip::vertical: return tr("Flip vertically", "Camera flip");
-		case camera_flip::both: return tr("Flip both axis", "Camera flip");
+		case camera_flip::both: return tr("Flip both axes", "Camera flip");
 		}
 		break;
 	case emu_settings_type::Camera:
