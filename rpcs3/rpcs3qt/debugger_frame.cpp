@@ -699,7 +699,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 
 				if (!cpu->state.all_of(cpu_flag::wait + cpu_flag::dbg_pause))
 				{
-					QMessageBox::warning(this, QObject::tr("Pause the SPU Thread!"), QObject::tr("Cannot perform SPU capture due to the thread need manual pausing!"));
+					QMessageBox::warning(this, QObject::tr("Pause the SPU Thread!"), QObject::tr("Cannot perform SPU capture due to the thread needing manual pausing!"));
 					return;
 				}
 

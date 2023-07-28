@@ -312,7 +312,7 @@ namespace rpcn
 						*utils::bless<be_t<u32, 1>>(&ping[9]) = local_addr_sig;
 						if (send_packet_from_p2p_port(ping, addr_rpcn_udp) == -1)
 						{
-							rpcn_log.error("Failed to send ping to rpcn!");
+							rpcn_log.error("Failed to send ping to RPCN!");
 						}
 						last_ping_time = now;
 					}
@@ -397,7 +397,7 @@ namespace rpcn
 				}
 				else
 				{
-					rpcn_log.error("Tried to forward a reply whose packet_id marks it as internal to rpcn");
+					rpcn_log.error("Tried to forward a reply whose packet_id marks it as internal to RPCN");
 				}
 			}
 
@@ -2126,7 +2126,7 @@ namespace rpcn
 		if (!fb_mdata->communicationId() || fb_mdata->communicationId()->size() == 0 || fb_mdata->communicationId()->size() > 9 ||
 			!fb_mdata->subject() || !fb_mdata->body() || !fb_mdata->data())
 		{
-			rpcn_log.warning("Discarded invalid messaged!");
+			rpcn_log.warning("Discarded invalid message!");
 			return;
 		}
 

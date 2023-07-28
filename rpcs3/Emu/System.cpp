@@ -128,7 +128,7 @@ void fmt_class_string<game_boot_result>::format(std::string& out, u64 arg)
 		case game_boot_result::firmware_missing: return "Firmware is missing";
 		case game_boot_result::unsupported_disc_type: return "This disc type is not supported yet";
 		case game_boot_result::savestate_corrupted: return "Savestate data is corrupted or it's not an RPCS3 savestate";
-		case game_boot_result::savestate_version_unsupported: return "Savestate versioning data differes from your RPCS3 build";
+		case game_boot_result::savestate_version_unsupported: return "Savestate versioning data differs from your RPCS3 build";
 		case game_boot_result::still_running: return "Game is still running";
 		}
 		return unknown;
@@ -2576,9 +2576,9 @@ void Emulator::Kill(bool allow_autoexit, bool savestate)
 		try_lock_spu_threads_in_a_state_compatible_with_savestates(true);
 
 		sys_log.error("Failed to savestate: HLE VDEC (video decoder) context(s) exist."
-			"\nLLE libvdec.sprx by selecting it in Adavcned tab -> Firmware Libraries."
-			"\nYou need to close the game for to take effect."
-			"\nIf you cannot close the game due to losing important progress your best chance is to skip the current cutscenes if any are played and retry.");
+			"\nLLE libvdec.sprx by selecting it in Advanced tab -> Firmware Libraries."
+			"\nYou need to close the game for it to take effect."
+			"\nIf you cannot close the game due to losing important progress, your best chance is to skip the current cutscenes if any are played and retry.");
 
 		return;
 	}

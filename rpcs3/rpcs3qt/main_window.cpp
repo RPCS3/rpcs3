@@ -445,7 +445,7 @@ void main_window::show_boot_error(game_boot_result status)
 		message = tr("Savestate data is corrupted or it's not an RPCS3 savestate.");
 		break;
 	case game_boot_result::savestate_version_unsupported:
-		message = tr("Savestate versioning data differes from your RPCS3 build.");
+		message = tr("Savestate versioning data differs from your RPCS3 build.");
 		break;
 	case game_boot_result::still_running:
 		message = tr("A game or PS3 application is still running or has yet to be fully stopped.");
@@ -1317,7 +1317,7 @@ void main_window::ExtractTar()
 	if (!error.isEmpty())
 	{
 		pdlg.hide();
-		QMessageBox::critical(this, tr("Tar extraction failed"), error);
+		QMessageBox::critical(this, tr("TAR extraction failed"), error);
 	}
 }
 

@@ -121,7 +121,7 @@ bool is_savestate_version_compatible(const std::vector<std::pair<u16, u16>>& dat
 	{
 		if (identifier >= s_serial_versions.size())
 		{
-			(is_boot_check ? sys_log.error : sys_log.trace)("Savestate version identider is unknown! (category=%u, version=%u)", identifier, version);
+			(is_boot_check ? sys_log.error : sys_log.trace)("Savestate version identifier is unknown! (category=%u, version=%u)", identifier, version);
 			ok = false; // Log all mismatches
 		}
 		else if (!s_serial_versions[identifier].compatible_versions.count(version))
@@ -234,7 +234,7 @@ bool boot_last_savestate(bool testing)
 
 			if (game_boot_result error = Emu.BootGame(savestate_path, "", true); error != game_boot_result::no_errors)
 			{
-				sys_log.error("Failed to booting savestate \'%s\' using the Reload shortcut. (error: %s)", savestate_path, error);
+				sys_log.error("Failed to boot savestate \'%s\' using the Reload shortcut. (error: %s)", savestate_path, error);
 			}
 			else
 			{
