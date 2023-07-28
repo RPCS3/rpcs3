@@ -97,6 +97,18 @@ void fmt_class_string<spu_type>::format(std::string& out, u64 arg)
 	});
 }
 
+template <>
+void fmt_class_string<spu_block_hash>::format(std::string& out, u64 arg)
+{
+	fmt::append(out, "%s", fmt::base57(be_t<u64>{arg}));
+
+	// Print only 7 hash characters out of 11 (which covers roughly 48 bits)
+	out.resize(out.size() - 4);
+
+	// Print chunk address from lowest 16 bits
+	fmt::append(out, "...chunk-0x%05x", (arg & 0xffff) * 4);
+}
+
 // Verify AVX availability for TSX transactions
 static const bool s_tsx_avx = utils::has_avx();
 
@@ -1441,16 +1453,8 @@ std::string spu_thread::dump_misc() const
 
 	if (g_cfg.core.spu_prof)
 	{
-		// Get short function hash
-		const u64 name = atomic_storage<u64>::load(block_hash);
-
-		fmt::append(ret, "\nCurrent block: %s", fmt::base57(be_t<u64>{name}));
-
-		// Print only 7 hash characters out of 11 (which covers roughly 48 bits)
-		ret.resize(ret.size() - 4);
-
-		// Print chunk address from lowest 16 bits
-		fmt::append(ret, "...chunk-0x%05x", (name & 0xffff) * 4);
+		// Get short function hash and position in chunk
+		fmt::append(ret, "\nCurrent block: %s", spu_block_hash{atomic_storage<u64>::load(block_hash)});
 	}
 
 	const u32 offset = group ? SPU_FAKE_BASE_ADDR + (id & 0xffffff) * SPU_LS_SIZE : RAW_SPU_BASE_ADDR + index * RAW_SPU_OFFSET;
@@ -2426,6 +2430,7 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 					auto& dump = _this->mfc_history[_this->mfc_dump_idx++ % spu_thread::max_mfc_dump_idx];
 					dump.cmd = args;
 					dump.cmd.eah = _this->pc;
+					dump.block_hash = _this->block_hash;
 					std::memcpy(dump.data, is_get ? dst : src, std::min<u32>(args.size, 128));
 				}
 
@@ -2624,6 +2629,7 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 				auto& dump = _this->mfc_history[_this->mfc_dump_idx++ % spu_thread::max_mfc_dump_idx];
 				dump.cmd = args;
 				dump.cmd.eah = _this->pc;
+				dump.block_hash = _this->block_hash;
 				std::memcpy(dump.data, is_get ? dst : src, std::min<u32>(args.size, 128));
 			}
 
@@ -2787,6 +2793,7 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 			auto& dump = _this->mfc_history[_this->mfc_dump_idx++ % spu_thread::max_mfc_dump_idx];
 			dump.cmd = args;
 			dump.cmd.eah = _this->pc;
+			dump.block_hash = _this->block_hash;
 			std::memcpy(dump.data, is_get ? dst : src, std::min<u32>(args.size, 128));
 		}
 
@@ -2863,6 +2870,7 @@ plain_access:
 		auto& dump = _this->mfc_history[_this->mfc_dump_idx++ % spu_thread::max_mfc_dump_idx];
 		dump.cmd = args;
 		dump.cmd.eah = _this->pc;
+		dump.block_hash = _this->block_hash;
 		std::memcpy(dump.data, is_get ? dst : src, std::min<u32>(args.size, 128));
 	}
 }
@@ -4239,6 +4247,7 @@ bool spu_thread::process_mfc_cmd()
 								auto& dump = mfc_history[mfc_dump_idx++ % spu_thread::max_mfc_dump_idx];
 								dump.cmd = ch_mfc_cmd;
 								dump.cmd.eah = pc;
+								dump.block_hash = block_hash;
 								std::memcpy(dump.data, rdata, 128);
 							}
 
@@ -4294,6 +4303,7 @@ bool spu_thread::process_mfc_cmd()
 								auto& dump = mfc_history[mfc_dump_idx++ % spu_thread::max_mfc_dump_idx];
 								dump.cmd = ch_mfc_cmd;
 								dump.cmd.eah = pc;
+								dump.block_hash = block_hash;
 								std::memcpy(dump.data, rdata, 128);
 							}
 
@@ -4411,6 +4421,7 @@ bool spu_thread::process_mfc_cmd()
 			auto& dump = mfc_history[mfc_dump_idx++ % spu_thread::max_mfc_dump_idx];
 			dump.cmd = ch_mfc_cmd;
 			dump.cmd.eah = pc;
+			dump.block_hash = block_hash;
 			std::memcpy(dump.data, rdata, 128);
 		}
 
@@ -4437,6 +4448,7 @@ bool spu_thread::process_mfc_cmd()
 			dump.cmd = ch_mfc_cmd;
 			dump.cmd.eah = pc;
 			dump.cmd.tag = static_cast<u32>(ch_atomic_stat.get_value()); // Use tag as atomic status
+			dump.block_hash = block_hash;
 			std::memcpy(dump.data, _ptr<u8>(ch_mfc_cmd.lsa & 0x3ff80), 128);
 		}
 
@@ -4450,6 +4462,7 @@ bool spu_thread::process_mfc_cmd()
 			auto& dump = mfc_history[mfc_dump_idx++ % max_mfc_dump_idx];
 			dump.cmd = ch_mfc_cmd;
 			dump.cmd.eah = pc;
+			dump.block_hash = block_hash;
 			std::memcpy(dump.data, _ptr<u8>(ch_mfc_cmd.lsa & 0x3ff80), 128);
 		}
 
@@ -4465,6 +4478,7 @@ bool spu_thread::process_mfc_cmd()
 			auto& dump = mfc_history[mfc_dump_idx++ % max_mfc_dump_idx];
 			dump.cmd = ch_mfc_cmd;
 			dump.cmd.eah = pc;
+			dump.block_hash = block_hash;
 			std::memcpy(dump.data, _ptr<u8>(ch_mfc_cmd.lsa & 0x3ff80), 128);
 		}
 
