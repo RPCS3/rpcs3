@@ -506,7 +506,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 					auto& dump = *it;
 
 					const u32 pc = std::exchange(dump.cmd.eah, 0);
-					fmt::append(ret, "\n(%d) PC 0x%05x: [%s]", i, pc, dump.cmd);
+					fmt::append(ret, "\n(%d) PC 0x%05x: [%s] (%s)", i, pc, dump.cmd, spu_block_hash{dump.block_hash});
 
 					if (dump.cmd.cmd == MFC_PUTLLC_CMD)
 					{
