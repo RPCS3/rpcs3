@@ -9871,6 +9871,15 @@ public:
 				a = eval(a * s);
 
 			value_t<s32[4]> r;
+
+			if (m_use_avx512)
+			{
+				const auto sc = clamp_smax(a);
+				r.value = m_ir->CreateFPToUI(sc.value, get_type<s32[4]>());
+				set_vr(op.rt, r);
+				return;
+			}
+
 			r.value = m_ir->CreateFPToUI(a.value, get_type<s32[4]>());
 			set_vr(op.rt, select(bitcast<s32[4]>(a) > splat<s32[4]>(((32 + 127) << 23) - 1), splat<s32[4]>(-1), r & ~(bitcast<s32[4]>(a) >> 31)));
 		}
