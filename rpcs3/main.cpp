@@ -55,6 +55,7 @@ DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResoluti
 #ifdef __linux__
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <sys/prctl.h>
 #endif
 
 #if defined(__APPLE__)
@@ -1042,6 +1043,10 @@ int main(int argc, char** argv)
 			}
 		}
 	}
+
+#ifdef __linux__
+	prctl(PR_SET_TIMERSLACK, 1, 0, 0, 0);
+#endif
 
 #ifdef _WIN32
 	// Create dummy permanent low resolution timer to workaround messing with system timer resolution
