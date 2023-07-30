@@ -1044,6 +1044,7 @@ int main(int argc, char** argv)
 		}
 	}
 
+// Set timerslack value for Linux. The default value is 50,000ns. Change this to just 1 since we value precise timers.
 #ifdef __linux__
 	prctl(PR_SET_TIMERSLACK, 1, 0, 0, 0);
 #endif
