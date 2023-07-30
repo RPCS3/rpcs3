@@ -533,13 +533,15 @@ error_code cellMsgDialogAbort()
 			sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_END, 0);
 			return CELL_OK;
 		}
+
+		return CELL_OK; // Not CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED, tested on HW.
 	}
 
 	const auto dlg = g_fxo->get<msg_info>().get();
 
 	if (!dlg)
 	{
-		return CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED;
+		return CELL_OK; // Not CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED, tested on HW.
 	}
 
 	if (!dlg->state.compare_and_swap_test(MsgDialogState::Open, MsgDialogState::Abort))
