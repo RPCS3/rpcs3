@@ -897,7 +897,7 @@ bool log_frame::eventFilter(QObject* object, QEvent* event)
 			if (m_find_dialog && m_find_dialog->isVisible())
 				m_find_dialog->close();
 
-			m_find_dialog.reset(new find_dialog(static_cast<QTextEdit*>(object), this));
+			m_find_dialog.reset(new find_dialog(static_cast<QPlainTextEdit*>(object), this));
 		}
 	}
 
