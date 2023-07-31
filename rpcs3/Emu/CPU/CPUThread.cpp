@@ -261,7 +261,7 @@ struct cpu_prof
 			if (threads.empty())
 			{
 				// Wait for messages if no work (don't waste CPU)
-				thread_ctrl::wait_on(registered, nullptr);
+				thread_ctrl::wait_on(registered);
 				continue;
 			}
 
@@ -939,7 +939,7 @@ bool cpu_thread::check_state() noexcept
 						else
 						{
 							// TODO: fix the workaround
-							g_suspend_counter.wait(ctr, -4, atomic_wait_timeout{100});
+							g_suspend_counter.wait(ctr, atomic_wait_timeout{10'000});
 						}
 					}
 					else
@@ -972,8 +972,7 @@ bool cpu_thread::check_state() noexcept
 				}
 
 				// Short sleep when yield flag is present alone (makes no sense when other methods which can stop thread execution have been done)
-				// Pass a mask of a single bit which is often unused to avoid notifications
-				s_dummy_atomic.wait(0, 1u << 30, atomic_wait_timeout{80'000});
+				s_dummy_atomic.wait(0, atomic_wait_timeout{80'000});
 			}
 		}
 	}
@@ -1010,13 +1009,13 @@ cpu_thread& cpu_thread::operator=(thread_state)
 
 	if (old & cpu_flag::wait && old.none_of(cpu_flag::again + cpu_flag::exit))
 	{
-		state.notify_one(cpu_flag::exit);
+		state.notify_one();
 
 		if (auto thread = try_get<spu_thread>())
 		{
 			if (u32 resv = atomic_storage<u32>::load(thread->raddr))
 			{
-				vm::reservation_notifier(resv).notify_all(-128);
+				vm::reservation_notifier(resv).notify_all();
 			}
 		}
 	}

@@ -20,7 +20,7 @@ namespace rsx
 
 		u64 user_interface::alloc_thread_bit()
 		{
-			auto [_old, ok] = this->thread_bits.fetch_op([](u64& bits)
+			auto [_old, ok] = this->thread_bits.fetch_op([](u32& bits)
 			{
 				if (~bits)
 				{
@@ -385,7 +385,7 @@ namespace rsx
 			m_stop_pad_interception.release(stop_pad_interception);
 			m_stop_input_loop.release(true);
 
-			while (u64 b = thread_bits)
+			while (u32 b = thread_bits)
 			{
 				if (b == g_thread_bit)
 				{

@@ -374,7 +374,7 @@ public:
 	static constexpr auto thread_name = "Microphone Thread"sv;
 
 protected:
-	atomic_t<u64> wakey = 0;
+	atomic_t<u32> wakey = 0;
 
 	//	u32 signalStateLocalTalk = 9; // value is in range 0-10. 10 indicates talking, 0 indicating none.
 	//	u32 signalStateFarTalk = 0; // value is in range 0-10. 10 indicates talking from far away, 0 indicating none.

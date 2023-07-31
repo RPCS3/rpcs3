@@ -153,7 +153,7 @@ void fmt_class_string<cfg_mode>::format(std::string& out, u64 arg)
 	});
 }
 
-void Emulator::CallFromMainThread(std::function<void()>&& func, atomic_t<bool>* wake_up, bool track_emu_state, u64 stop_ctr) const
+void Emulator::CallFromMainThread(std::function<void()>&& func, atomic_t<u32>* wake_up, bool track_emu_state, u64 stop_ctr) const
 {
 	if (!track_emu_state)
 	{
@@ -174,14 +174,14 @@ void Emulator::CallFromMainThread(std::function<void()>&& func, atomic_t<bool>* 
 
 void Emulator::BlockingCallFromMainThread(std::function<void()>&& func) const
 {
-	atomic_t<bool> wake_up = false;
+	atomic_t<u32> wake_up = 0;
 
 	CallFromMainThread(std::move(func), &wake_up);
 
 	while (!wake_up)
 	{
 		ensure(thread_ctrl::get_current());
-		wake_up.wait(false);
+		wake_up.wait(0);
 	}
 }
 
@@ -424,7 +424,7 @@ void Emulator::Init()
 		make_path_verbose(dev_flash, true);
 		make_path_verbose(dev_flash2, true);
 		make_path_verbose(dev_flash3, true);
-		
+
 		if (make_path_verbose(dev_usb, true))
 		{
 			make_path_verbose(dev_usb + "MUSIC/", false);
@@ -2152,7 +2152,7 @@ void Emulator::RunPPU()
 		}
 
 		ensure(cpu.state.test_and_reset(cpu_flag::stop));
-		cpu.state.notify_one(cpu_flag::stop);
+		cpu.state.notify_one();
 		signalled_thread = true;
 	});
 
@@ -2165,7 +2165,7 @@ void Emulator::RunPPU()
 	if (auto thr = g_fxo->try_get<named_thread<rsx::rsx_replay_thread>>())
 	{
 		thr->state -= cpu_flag::stop;
-		thr->state.notify_one(cpu_flag::stop);
+		thr->state.notify_one();
 	}
 }
 
@@ -2234,7 +2234,7 @@ void Emulator::FinalizeRunRequest()
 		}
 
 		ensure(spu.state.test_and_reset(cpu_flag::stop));
-		spu.state.notify_one(cpu_flag::stop);
+		spu.state.notify_one();
 	};
 
 	if (m_savestate_extension_flags1 & SaveStateExtentionFlags1::ShouldCloseMenu)
@@ -2437,7 +2437,7 @@ void Emulator::Resume()
 	auto on_select = [](u32, cpu_thread& cpu)
 	{
 		cpu.state -= cpu_flag::dbg_global_pause;
-		cpu.state.notify_one(cpu_flag::dbg_global_pause);
+		cpu.state.notify_one();
 	};
 
 	idm::select<named_thread<ppu_thread>>(on_select);
