@@ -902,18 +902,20 @@ namespace
 	#undef KEY_STR
 }
 
-std::string rsx::get_method_name(const u32 id)
+std::pair<std::string_view, std::string_view> rsx::get_method_name(u32 id, std::string& string_name)
 {
 	const auto found = methods_name.find(id);
 
 	if (found != methods_name.end())
 	{
-		std::string prefix("CELL_GCM_"sv);
-		prefix.append(found->second.data(), found->second.size());
-		return prefix;
+		constexpr std::string_view prefix = "CELL_GCM_";
+
+		return {prefix, found->second};
 	}
 
-	return fmt::format("Unnamed method 0x%04x", id);
+	string_name.clear();
+	fmt::append(string_name, "Unnamed method 0x%04x", id);
+	return {};
 }
 
 // Various parameter pretty printing function
@@ -984,15 +986,15 @@ namespace
 	namespace
 	{
 		template <u32 Opcode>
-		std::string register_pretty_function(u32 /*id*/, u32 arg)
+		void register_pretty_function(std::string& out, u32 /*id*/, u32 arg)
 		{
-			return rsx::registers_decoder<Opcode>::dump(arg);
+			rsx::registers_decoder<Opcode>::dump(out, arg);
 		}
 
 		template <typename T, T... Index>
-		std::array<std::string(*)(u32, u32), 1 << 14> create_printing_table(std::integer_sequence<T, Index...>)
+		std::array<void(*)(std::string&, u32, u32), 1 << 14> create_printing_table(std::integer_sequence<T, Index...>)
 		{
-			std::array<std::string(*)(u32, u32), 1 << 14> result{};
+			std::array<void(*)(std::string&, u32, u32), 1 << 14> result{};
 
 			((result[opcode_list[Index * 5 + 0]] = &register_pretty_function<opcode_list[Index * 5 + 0]>,
 			result[opcode_list[Index * 5 + 1]] = &register_pretty_function<opcode_list[Index * 5 + 1]>,
@@ -1022,7 +1024,7 @@ namespace
 	 };*/
 }
 
-std::add_pointer_t<std::string(u32, u32)> rsx::get_pretty_printing_function(u32 id)
+std::add_pointer_t<void(std::string&, u32, u32)> rsx::get_pretty_printing_function(u32 id)
 {
 	const auto found = id < printing_functions.size() ? printing_functions[id] : nullptr;
 
@@ -1031,11 +1033,17 @@ std::add_pointer_t<std::string(u32, u32)> rsx::get_pretty_printing_function(u32 
 		return found;
 	}
 
-	return [](u32 id, u32 v)
+	return [](std::string& result, u32 id, u32 v)
 	{
-		const std::string name = rsx::get_method_name(id);
-		const std::string_view view = name, prefix = "CELL_GCM_"sv;
+		std::string string_name;
+		const auto [name_prefix, name] = rsx::get_method_name(id, string_name);
 
-		return fmt::format("%s: 0x%08x", name.starts_with("CELL_GCM_"sv) ? view.substr(prefix.size()) : view, v);
+		if (!string_name.empty())
+		{
+			fmt::append(result, "%s: 0x%08x", string_name, v);
+			return;
+		}
+
+		fmt::append(result, "%s: 0x%08x", name, v);
 	};
 }
