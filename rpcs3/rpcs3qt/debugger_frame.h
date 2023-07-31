@@ -5,7 +5,7 @@
 #include "custom_dock_widget.h"
 
 #include <QSplitter>
-#include <QTextEdit>
+#include <QPlainTextEdit>
 #include <QPushButton>
 #include <QComboBox>
 
@@ -42,8 +42,8 @@ class debugger_frame : public custom_dock_widget
 	debugger_list* m_debugger_list;
 	QSplitter* m_right_splitter;
 	QFont m_mono;
-	QTextEdit* m_misc_state;
-	QTextEdit* m_regs;
+	QPlainTextEdit* m_misc_state;
+	QPlainTextEdit* m_regs;
 	QPushButton* m_go_to_addr;
 	QPushButton* m_go_to_pc;
 	QPushButton* m_btn_step;
