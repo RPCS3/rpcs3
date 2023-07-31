@@ -3198,7 +3198,9 @@ namespace rsx
 			}
 			}
 
-			fmt::append(result, "[%04x] %s\n", i, ensure(rsx::get_pretty_printing_function(i))(i, method_registers.registers[i]));
+			fmt::append(result, "[%04x] ", i);
+			ensure(rsx::get_pretty_printing_function(i))(result, i, method_registers.registers[i]);
+			result += '\n';
 		}
 	}
 

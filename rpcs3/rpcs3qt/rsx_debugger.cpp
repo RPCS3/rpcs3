@@ -629,18 +629,21 @@ void rsx_debugger::GetMemory() const
 	std::string dump;
 	u32 cmd_i = 0;
 
+	std::string str;
+
 	for (const auto& command : frame_debug.command_queue)
 	{
-		const std::string str = rsx::get_pretty_printing_function(command.first)(command.first, command.second);
+		str.clear();
+		rsx::get_pretty_printing_function(command.first)(str, command.first, command.second);
 		m_list_captured_frame->setItem(cmd_i++, 0, new QTableWidgetItem(qstr(str)));
 
 		dump += str;
 		dump += '\n';
 	}
 
-	if (fs::file file = fs::file(fs::get_cache_dir() + "command_dump.log", fs::rewrite))
+	if (!dump.empty())
 	{
-		file.write(dump);
+		fs::write_file(fs::get_cache_dir() + "command_dump.log", fs::rewrite, dump);
 	}
 
 	for (u32 i = 0; i < frame_debug.draw_calls.size(); i++)

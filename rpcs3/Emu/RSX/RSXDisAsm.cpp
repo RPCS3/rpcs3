@@ -109,6 +109,8 @@ u32 RSXDisAsm::disasm(u32 pc)
 
 		pc += 4;
 
+		std::string str;
+
 		for (u32 i = 0; i < count; i++, pc += 4)
 		{
 			if (!try_read_op(pc))
@@ -137,7 +139,9 @@ u32 RSXDisAsm::disasm(u32 pc)
 				continue;
 			}
 
-			std::string str = rsx::get_pretty_printing_function(id)(id, m_op);
+			str.clear();
+			rsx::get_pretty_printing_function(id)(str, id, m_op);
+
 			Write(str, m_mode == cpu_disasm_mode::list ? i : count, non_inc, id);
 		}
 
