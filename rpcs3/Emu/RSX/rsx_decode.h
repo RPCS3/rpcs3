@@ -4526,7 +4526,7 @@ struct register_vertex_printer<u8, 4>
 		return "uchar4";
 	}
 
-	static std::string value(std::string& out, u32 v)
+	static std::string value(u32 v)
 	{
 		return fmt::format("%u %u %u %u", (v & 0xff), ((v >> 8) & 0xff), ((v >> 16) & 0xff), ((v >> 24) & 0xff));
 	}
