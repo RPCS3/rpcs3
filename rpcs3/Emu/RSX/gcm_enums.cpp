@@ -612,8 +612,21 @@ void fmt_class_string<texture_max_anisotropy>::format(std::string& out, u64 arg)
 
 namespace rsx
 {
-	std::string print_boolean(bool b)
+	enum class boolean_to_string_t : u8;
+}
+
+template <>
+void fmt_class_string<boolean_to_string_t>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](boolean_to_string_t value)
 	{
-		return b ? "enabled" : "disabled";
-	}
-} // end namespace rsx
+		switch (value)
+		{
+		case boolean_to_string_t{+true}: return "true";
+		case boolean_to_string_t{+false}: return "false";
+		default: break; // TODO: This is technically unreachable but need needs to be reachable when value is not 1 or 0
+		}
+
+		return unknown;
+	});
+}

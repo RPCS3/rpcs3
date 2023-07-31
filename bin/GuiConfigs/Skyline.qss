@@ -619,7 +619,7 @@ QLineEdit:focus {
 }
 
 /* Log colors */
-QTextEdit#log_frame {
+QPlainTextEdit#log_frame {
 	background-color: #FFFFFF;
 }
 

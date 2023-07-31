@@ -579,7 +579,7 @@ QLabel#thumbnail_icon_color {
 }
 
 /* Log colors */
-QTextEdit#log_frame {
+QPlainTextEdit#log_frame {
 	background-color: #23262d;
 }
 
@@ -620,7 +620,7 @@ QLabel#log_stack {
 }
 
 /* TTY colors */
-QTextEdit#tty_frame {
+QPlainTextEdit#tty_frame {
 	background-color: #23262d;
 }
 
