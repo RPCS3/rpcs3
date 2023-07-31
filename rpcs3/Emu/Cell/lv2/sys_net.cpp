@@ -257,7 +257,7 @@ lv2_socket::lv2_socket(utils::serial& ar, lv2_socket_type _type)
 	ar.pos += 8;
 #endif
 
-	const s32 version = GET_SERIALIZATION_VERSION(lv2_net);
+	[[maybe_unused]] const s32 version = GET_SERIALIZATION_VERSION(lv2_net);
 
 	ar(so_rcvtimeo, so_sendtimeo);
 
