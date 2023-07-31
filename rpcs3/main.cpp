@@ -55,6 +55,7 @@ DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResoluti
 #ifdef __linux__
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <sys/prctl.h>
 #endif
 
 #if defined(__APPLE__)
@@ -441,6 +442,11 @@ int main(int argc, char** argv)
 	struct ::rusage intro_stats{};
 	::getrusage(RUSAGE_THREAD, &intro_stats);
 	const u64 intro_time = (intro_stats.ru_utime.tv_sec + intro_stats.ru_stime.tv_sec) * 1000000000ull + (intro_stats.ru_utime.tv_usec + intro_stats.ru_stime.tv_usec) * 1000ull;
+#endif
+
+#ifdef __linux__
+	// Set timerslack value for Linux. The default value is 50,000ns. Change this to just 1 since we value precise timers.
+	prctl(PR_SET_TIMERSLACK, 1, 0, 0, 0);
 #endif
 
 	s_argv0 = argv[0]; // Save for report_fatal_error

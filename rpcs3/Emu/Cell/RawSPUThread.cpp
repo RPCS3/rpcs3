@@ -21,7 +21,7 @@ inline void try_start(spu_thread& spu)
 	}).second)
 	{
 		spu.state -= cpu_flag::stop;
-		spu.state.notify_one(cpu_flag::stop);
+		spu.state.notify_one();
 	}
 };
 
@@ -273,7 +273,7 @@ bool spu_thread::write_reg(const u32 addr, const u32 value)
 
 				for (status_npc_sync_var old; (old = status_npc).status & SPU_STATUS_RUNNING;)
 				{
-					status_npc.wait(old);
+					utils::bless<atomic_t<u32>>(&status_npc)[0].wait(old.status);
 				}
 			}
 		}

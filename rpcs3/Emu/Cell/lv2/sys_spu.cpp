@@ -1042,7 +1042,7 @@ error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 		{
 			for (; index != umax; index--)
 			{
-				threads[index]->state.notify_one(cpu_flag::stop);
+				threads[index]->state.notify_one();
 			}
 		}
 	} notify_threads;
@@ -1216,7 +1216,7 @@ error_code sys_spu_thread_group_resume(ppu_thread& ppu, u32 id)
 		{
 			for (; index != umax; index--)
 			{
-				threads[index]->state.notify_one(cpu_flag::suspend);
+				threads[index]->state.notify_one();
 			}
 		}
 	} notify_threads;
@@ -1397,7 +1397,7 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 				if (prev_resv && prev_resv != resv)
 				{
 					// Batch reservation notifications if possible
-					vm::reservation_notifier(prev_resv).notify_all(-128);
+					vm::reservation_notifier(prev_resv).notify_all();
 				}
 
 				prev_resv = resv;
@@ -1407,7 +1407,7 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 
 	if (prev_resv)
 	{
-		vm::reservation_notifier(prev_resv).notify_all(-128);
+		vm::reservation_notifier(prev_resv).notify_all();
 	}
 
 	group->exit_status = value;

@@ -118,8 +118,8 @@ Q_SIGNALS:
 	void OnEnableDiscEject(bool enabled);
 	void OnEnableDiscInsert(bool enabled);
 
-	void RequestCallFromMainThread(std::function<void()> func, atomic_t<bool>* wake_up);
+	void RequestCallFromMainThread(std::function<void()> func, atomic_t<u32>* wake_up);
 
 private Q_SLOTS:
-	static void CallFromMainThread(const std::function<void()>& func, atomic_t<bool>* wake_up);
+	static void CallFromMainThread(const std::function<void()>& func, atomic_t<u32>* wake_up);
 };

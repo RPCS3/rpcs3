@@ -853,9 +853,8 @@ namespace rsx
 
 		g_fxo->get<vblank_thread>().set_thread(std::shared_ptr<named_thread<std::function<void()>>>(new named_thread<std::function<void()>>("VBlank Thread"sv, [this]() -> void
 		{
-			// See sys_timer_usleep for details
 #ifdef __linux__
-			constexpr u32 host_min_quantum = 50;
+			constexpr u32 host_min_quantum = 10;
 #else
 			constexpr u32 host_min_quantum = 500;
 #endif
@@ -878,8 +877,12 @@ namespace rsx
 				// Calculate time remaining to that time (0 if we passed it)
 				const u64 wait_for = current >= post_event_time ? 0 : post_event_time - current;
 
+#ifdef __linux__
+				const u64 wait_sleep = wait_for;
+#else
 				// Substract host operating system min sleep quantom to get sleep time
 				const u64 wait_sleep = wait_for - u64{wait_for >= host_min_quantum} * host_min_quantum;
+#endif
 
 				if (!wait_for)
 				{
@@ -3116,7 +3119,7 @@ namespace rsx
 		{
 #ifdef __linux__
 			// NOTE: Assumption that timer initialization has succeeded
-			u64 host_min_quantum = remaining <= 1000 ? 10 : 50;
+			constexpr u64 host_min_quantum = 10;
 #else
 			// Host scheduler quantum for windows (worst case)
 			// NOTE: On ps3 this function has very high accuracy
@@ -3125,8 +3128,7 @@ namespace rsx
 			if (remaining >= host_min_quantum)
 			{
 #ifdef __linux__
-				// Do not wait for the last quantum to avoid loss of accuracy
-				thread_ctrl::wait_for(remaining - ((remaining % host_min_quantum) + host_min_quantum), false);
+				thread_ctrl::wait_for(remaining, false);
 #else
 				// Wait on multiple of min quantum for large durations to avoid overloading low thread cpus
 				thread_ctrl::wait_for(remaining - (remaining % host_min_quantum), false);

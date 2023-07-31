@@ -38,7 +38,29 @@ constexpr NTSTATUS NTSTATUS_ALERTED = 0x101;
 constexpr NTSTATUS NTSTATUS_TIMEOUT = 0x102;
 #endif
 
-#ifndef __linux__
+#ifdef __linux__
+#ifndef SYS_futex_waitv
+#if defined(ARCH_X64) || defined(ARCH_ARM64)
+#define SYS_futex_waitv 449
+#endif
+#endif
+
+#ifndef FUTEX_32
+#define FUTEX_32 2
+#endif
+
+#ifndef FUTEX_WAITV_MAX
+#define FUTEX_WAITV_MAX 128
+#endif
+
+struct futex_waitv
+{
+	__u64 val;
+	__u64 uaddr;
+	__u32 flags;
+	__u32 __reserved;
+};
+#else
 enum
 {
 	FUTEX_PRIVATE_FLAG = 0,
@@ -113,7 +135,7 @@ inline int futex(volatile void* uaddr, int futex_op, uint val, const timespec* t
 				}
 				else
 				{
-					// TODO
+					// TODO: absolute timeout
 				}
 
 				map.erase(std::find(map.find(uaddr), map.end(), ref));
