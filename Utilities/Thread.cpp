@@ -2008,37 +2008,8 @@ thread_local DECLARE(thread_ctrl::g_tls_error_callback) = nullptr;
 
 DECLARE(thread_ctrl::g_native_core_layout) { native_core_arrangement::undefined };
 
-static atomic_t<u128, 64> s_thread_bits{0};
-
-static atomic_t<thread_base**> s_thread_pool[128]{};
-
 void thread_base::start()
 {
-	for (u128 bits = s_thread_bits.load(); bits; bits &= bits - 1)
-	{
-		const u32 pos = utils::ctz128(bits);
-
-		if (!s_thread_pool[pos])
-		{
-			continue;
-		}
-
-		thread_base** tls = s_thread_pool[pos].exchange(nullptr);
-
-		if (!tls)
-		{
-			continue;
-		}
-
-		// Receive "that" native thread handle, sent "this" thread_base
-		const u64 _self = reinterpret_cast<u64>(atomic_storage<thread_base*>::load(*tls));
-		m_thread.release(_self);
-		ensure(_self != reinterpret_cast<u64>(this));
-		atomic_storage<thread_base*>::store(*tls, this);
-		s_thread_pool[pos].notify_one();
-		return;
-	}
-
 #ifdef _WIN32
 	m_thread = ::_beginthreadex(nullptr, 0, entry_point, this, CREATE_SUSPENDED, nullptr);
 	ensure(m_thread);
@@ -2232,112 +2203,13 @@ thread_base::native_entry thread_base::finalize(u64 _self) noexcept
 		return nullptr;
 	}
 
-	// Try to add self to thread pool
-	set_name("..pool");
-
-	thread_ctrl::set_native_priority(0);
-
-	thread_ctrl::set_thread_affinity_mask(0);
-
-	std::fesetround(FE_TONEAREST);
-
-	gv_unset_zeroing_denormals();
-
-	static constexpr u64 s_stop_bit = 0x8000'0000'0000'0000ull;
-
-	static atomic_t<u64> s_pool_ctr = []
-	{
-		std::atexit([]
-		{
-			s_pool_ctr |= s_stop_bit;
-
-			while (/*u64 remains = */s_pool_ctr & ~s_stop_bit)
-			{
-				for (u32 i = 0; i < std::size(s_thread_pool); i++)
-				{
-					if (thread_base** ptls = s_thread_pool[i].exchange(nullptr))
-					{
-						// Extract thread handle
-						const u64 _self = reinterpret_cast<u64>(*ptls);
-
-						// Wake up a thread and make sure it's joined
-						s_thread_pool[i].notify_one();
-
 #ifdef _WIN32
-						const HANDLE handle = reinterpret_cast<HANDLE>(_self);
-						WaitForSingleObject(handle, INFINITE);
-						CloseHandle(handle);
+	_endthreadex(0);
 #else
-						pthread_join(reinterpret_cast<pthread_t>(_self), nullptr);
+	pthread_exit(nullptr);
 #endif
-					}
-				}
-			}
-		});
 
-		return 0;
-	}();
-
-	s_pool_ctr++;
-
-	u32 pos = -1;
-
-	while (true)
-	{
-		const auto [bits, ok] = s_thread_bits.fetch_op([](u128& bits)
-		{
-			if (~bits) [[likely]]
-			{
-				// Set lowest clear bit
-				bits |= bits + 1;
-				return true;
-			}
-
-			return false;
-		});
-
-		if (ok) [[likely]]
-		{
-			pos = utils::ctz128(~bits);
-			break;
-		}
-
-		s_thread_bits.wait(bits);
-	}
-
-	const auto tls = &thread_ctrl::g_tls_this_thread;
-	s_thread_pool[pos] = tls;
-
-	atomic_wait::list<2> list{};
-	list.set<0>(s_pool_ctr, 0, s_stop_bit);
-	list.set<1>(s_thread_pool[pos], tls);
-
-	while (s_thread_pool[pos] == tls || atomic_storage<thread_base*>::load(*tls) == fake_self)
-	{
-		list.wait();
-
-		if (s_pool_ctr & s_stop_bit)
-		{
-			break;
-		}
-	}
-
-	// Free thread pool slot
-	s_thread_bits.atomic_op([pos](u128& val)
-	{
-		val &= ~(u128(1) << pos);
-	});
-
-	s_thread_bits.notify_one();
-
-	if (--s_pool_ctr & s_stop_bit)
-	{
-		return nullptr;
-	}
-
-	// Return new entry point
-	utils::prefetch_exec((*tls)->entry_point);
-	return (*tls)->entry_point;
+	return nullptr;
 }
 
 thread_base::native_entry thread_base::make_trampoline(u64(*entry)(thread_base* _base))
