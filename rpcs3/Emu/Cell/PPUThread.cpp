@@ -2457,10 +2457,10 @@ static void ppu_check(ppu_thread& ppu, u64 addr)
 {
 	ppu.cia = ::narrow<u32>(addr);
 
-	// ppu_check() shall not return directly
 	if (ppu.test_stopped())
-		{}
-	ppu_escape(&ppu);
+	{
+		return;
+	}
 }
 
 static void ppu_trace(u64 addr)
