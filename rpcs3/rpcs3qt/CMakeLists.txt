@@ -124,6 +124,7 @@ add_library(rpcs3_ui STATIC
 
 if(WIN32)
     target_sources(rpcs3_ui PUBLIC "../windows.qrc")
+    target_compile_definitions(rpcs3_ui PRIVATE UNICODE _UNICODE)
 endif()
 
 set_target_properties(rpcs3_ui
