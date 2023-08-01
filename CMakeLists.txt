@@ -105,11 +105,6 @@ if(CCACHE_FOUND)
     set(CMAKE_CXX_COMPILER_LAUNCHER ccache)
 endif()
 
-if(WIN32)
-    add_compile_definitions(UNICODE)
-    add_compile_definitions(_WIN32_WINNT=0x0602)
-endif()
-
 if(APPLE AND CMAKE_OSX_ARCHITECTURES STREQUAL "arm64")
     include_directories(/opt/homebrew/include)
     link_directories(/opt/homebrew/lib)
