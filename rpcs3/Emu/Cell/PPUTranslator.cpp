@@ -201,8 +201,12 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 		const auto vcheck = BasicBlock::Create(m_context, "__test", m_function);
 		m_ir->CreateCondBr(m_ir->CreateIsNull(vstate), body, vcheck, m_md_likely);
 
-		// Create tail call to the check function
 		m_ir->SetInsertPoint(vcheck);
+
+		// Raise wait flag as soon as possible
+		m_ir->CreateAtomicRMW(llvm::AtomicRMWInst::Or, ptr, m_ir->getInt32((+cpu_flag::wait).operator u32()), llvm::MaybeAlign{4}, llvm::AtomicOrdering::AcquireRelease);
+
+		// Create tail call to the check function
 		Call(GetType<void>(), "__check", m_thread, GetAddr())->setTailCall();
 		m_ir->CreateRetVoid();
 	}
