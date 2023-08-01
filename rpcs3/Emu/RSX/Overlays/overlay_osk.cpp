@@ -644,10 +644,10 @@ namespace rsx
 
 		void osk_dialog::on_button_pressed(pad_button button_press, bool is_auto_repeat)
 		{
-			if (!pad_input_enabled)
+			if (!pad_input_enabled || ignore_device_events)
 				return;
 
-			if (!ignore_device_events && input_device.exchange(CELL_OSKDIALOG_INPUT_DEVICE_PAD) != CELL_OSKDIALOG_INPUT_DEVICE_PAD)
+			if (input_device.exchange(CELL_OSKDIALOG_INPUT_DEVICE_PAD) != CELL_OSKDIALOG_INPUT_DEVICE_PAD)
 			{
 				osk.notice("on_button_pressed: sending CELL_SYSUTIL_OSKDIALOG_INPUT_DEVICE_CHANGED with CELL_OSKDIALOG_INPUT_DEVICE_PAD");
 				sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_INPUT_DEVICE_CHANGED, CELL_OSKDIALOG_INPUT_DEVICE_PAD);
@@ -900,10 +900,10 @@ namespace rsx
 
 		void osk_dialog::on_key_pressed(u32 led, u32 mkey, u32 key_code, u32 out_key_code, bool pressed, std::u32string key)
 		{
-			if (!pressed || !keyboard_input_enabled)
+			if (!pressed || !keyboard_input_enabled || ignore_device_events)
 				return;
 
-			if (!ignore_device_events && input_device.exchange(CELL_OSKDIALOG_INPUT_DEVICE_KEYBOARD) != CELL_OSKDIALOG_INPUT_DEVICE_KEYBOARD)
+			if (input_device.exchange(CELL_OSKDIALOG_INPUT_DEVICE_KEYBOARD) != CELL_OSKDIALOG_INPUT_DEVICE_KEYBOARD)
 			{
 				osk.notice("on_key_pressed: sending CELL_SYSUTIL_OSKDIALOG_INPUT_DEVICE_CHANGED with CELL_OSKDIALOG_INPUT_DEVICE_KEYBOARD");
 				sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_INPUT_DEVICE_CHANGED, CELL_OSKDIALOG_INPUT_DEVICE_KEYBOARD);
