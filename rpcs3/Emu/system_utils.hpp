@@ -7,7 +7,7 @@ namespace rpcs3::utils
 {
 	u32 get_max_threads();
 
-	void configure_logs();
+	void configure_logs(bool force_enable = false);
 
 	u32 check_user(const std::string& user);
 

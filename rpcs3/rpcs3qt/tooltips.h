@@ -49,13 +49,13 @@ public:
 		const QString wake_up_delay                = tr("Controls how much time it takes for RSX to start processing after waking up by the Cell processor.\nIncreasing wakeup delay improves stability, but very high values can lower RSX/GPU performance.\nIt is recommend to adjust this at 20µs to 40µs increments until the best value for optimal stability is reached.");
 		const QString disabled_from_global         = tr("Do not change this setting globally.\nRight-click a game in the game list and choose \"Configure\" instead.");
 		const QString vulkan_async_scheduler       = tr("Determines how to schedule GPU async compute jobs when using asynchronous streaming.\nUse 'Safe' mode for more spec compliant behavior at the cost of some CPU overhead. This setting works with all devices.\nUse 'Fast' to use a faster but hacky version. This option is internally disabled for NVIDIA GPUs due to causing GPU hangs.");
-		const QString disable_msl_fast_math        = tr("Disables Fast Math for MSL shaders, which may violate the IEEE 754 standard.\nDisabling it may fix some artefacts especially on Apple GPUs, at the cost of performance.");
-		const QString suspend_savestates           = tr("When this mode is on, emulation exits when saving and the savestate file is concealed after loading it, preventing reuse by RPCS3.\nThis mode is like hibernation of emulation: if you don't want to be able to cheat using savestates when playing the game, consider using this mode.\nDo note that the savestate file is not gone completely just ignored by RPCS3, you can manually relaunch it if needed.");
+		const QString disable_msl_fast_math        = tr("Disables Fast Math for MSL shaders, which may violate the IEEE 754 standard.\nDisabling it may fix some artifacts, especially on Apple GPUs, at the cost of performance.");
+		const QString suspend_savestates           = tr("When this mode is on, emulation exits when saving and the savestate file is concealed after loading it, preventing reuse by RPCS3.\nThis mode is like hibernation of emulation: if you don't want to be able to cheat using savestates when playing the game, consider using this mode.\nDo note that the savestate file is not gone completely, just ignored by RPCS3. You can manually relaunch it if needed.");
 		const QString paused_savestates            = tr("When this mode is on, savestates are loaded and paused on the first frame.\nThis allows players to prepare for gameplay without being thrown into the action immediately.");
 
 		// audio
 
-		const QString audio_out                 = tr("Cubeb uses a cross-platform approach and supports audio buffering, so it is the recommended option.\nXAudio2 uses native Windows sounds system, is the next best alternative.");
+		const QString audio_out                 = tr("Cubeb uses a cross-platform approach and supports audio buffering, so it is the recommended option.\nXAudio2 uses native Windows sounds system and is the next best alternative.");
 		const QString audio_out_linux           = tr("Cubeb uses a cross-platform approach and supports audio buffering, so it is the recommended option.\nIf it's not available, FAudio could be used instead.");
 		const QString audio_provider            = tr("Controls which PS3 audio API is used.\nGames use CellAudio, while VSH requires RSXAudio.");
 		const QString audio_avport              = tr("Controls which avport is used to sample audio data from.");
@@ -86,7 +86,7 @@ public:
 		const QString enable_tsx                = tr("Enable usage of TSX instructions.\nNeeds to be forced on some Haswell or Broadwell CPUs or CPUs with the TSX-FA instruction set.\nForcing TSX in these cases may lead to system and performance instability, use it with caution.");
 		const QString spu_block_size            = tr("This option controls the SPU analyser, particularly the size of compiled units. The Mega and Giga modes may improve performance by tying smaller units together, decreasing the number of compiled units but increasing their size.\nUse the Safe mode for maximum compatibility.");
 		const QString preferred_spu_threads     = tr("Some SPU stages are sensitive to race conditions and allowing a limited number at a time helps alleviate performance stalls.\nSetting this to a smaller value might improve performance and reduce stuttering in some games.\nLeave this on auto if performance is negatively affected when setting a small value.");
-		const QString max_cpu_preempt           = tr("Reduces CPU usage and power consumption, on mobile devices improves battery life. (0 means disabled)\nHigher values cause a more pronounced effect, but may cause audio or performance issues. A value of 50 or less is recommended.\nThis option forces an FPS limit because it's active when framerate is stable.\nThe lighter the game is on the hardware, the more power is saved by it. (until the preemption count barrier is reached)");
+		const QString max_cpu_preempt           = tr("Reduces CPU usage and power consumption, improving battery life on mobile devices. (0 means disabled)\nHigher values cause a more pronounced effect, but may cause audio or performance issues. A value of 50 or less is recommended.\nThis option forces an FPS limit because it's active when framerate is stable.\nThe lighter the game is on the hardware, the more power is saved by it. (until the preemption count barrier is reached)");
 
 		// debug
 
@@ -102,7 +102,7 @@ public:
 		const QString accurate_cache_line_stores   = tr("Accurately processes PPU DCBZ instruction.\nIn addition, when combined with Accurate SPU DMA, SPU PUT cache line accesses will be processed atomically.");
 		const QString mfc_delay_command            = tr("Forces delaying any odd MFC command, waits for at least 2 pending commands to execute them in a random order.\nMust be used with either SPU interpreters currently.\nSeverely degrades performance! If unsure, don't use this option.");
 		const QString hook_static_functions        = tr("Allows to hook some functions like 'memcpy' replacing them with high-level implementations. May do nothing or break things. Experimental.");
-		const QString renderdoc_compatibility      = tr("Enables use of classic OpenGL buffers which allows capturing tools to work with RPCS3 e.g RenderDoc.\nAlso allows vulkan to use debug markers for nicer Renderdoc captures.\nIf unsure, don't use this option.");
+		const QString renderdoc_compatibility      = tr("Enables use of classic OpenGL buffers which allows capturing tools to work with RPCS3 e.g RenderDoc.\nAlso allows Vulkan to use debug markers for nicer Renderdoc captures.\nIf unsure, don't use this option.");
 		const QString force_high_pz                = tr("Only useful when debugging differences in GPU hardware.\nNot necessary for average users.\nIf unsure, don't use this option.");
 		const QString debug_output                 = tr("Enables the selected API's inbuilt debugging functionality.\nWill cause severe performance degradation especially with Vulkan.\nOnly useful to developers.\nIf unsure, don't use this option.");
 		const QString debug_overlay                = tr("Provides a graphical overlay of various debugging information.\nIf unsure, don't use this option.");
@@ -122,6 +122,7 @@ public:
 		// emulator
 
 		const QString exit_on_stop                 = tr("Automatically close RPCS3 when closing a game, or when a game closes itself.");
+		const QString pause_on_focus_loss          = tr("Automatically pause emulation when RPCS3 loses its focus or the application is inactive in order to save power and reduce CPU usage.\nDo note that emulation pausing in general is not perfect and may not be compatible with all games.\nAlthough it currently also pauses gameplay, it is not recommended to rely on it as this behavior may be changed in the future and it is not the purpose of this setting.");
 		const QString start_game_fullscreen        = tr("Automatically puts the game window in fullscreen.\nDouble click on the game window or press Alt+Enter to toggle fullscreen and windowed mode.");
 		const QString prevent_display_sleep        = tr("Prevent the display from sleeping while a game is running.\nThis requires the org.freedesktop.ScreenSaver D-Bus service on Linux.\nThis option will be disabled if the current platform does not support display sleep control.");
 		const QString game_window_title_format     = tr("Configure the game window title.\nChanging this and/or adding the framerate may cause buggy or outdated recording software to not notice RPCS3.");
@@ -131,7 +132,7 @@ public:
 		const QString disable_kb_hotkeys           = tr("Disables keyboard hotkeys such as Ctrl+S, Ctrl+E, Ctrl+R, Ctrl+P while the game screen is active.\nThis does not include Ctrl+L (hide and lock mouse) and Alt+Enter (toggle fullscreen).\nCheck this if you want to play with mouse and keyboard.");
 		const QString max_llvm_threads             = tr("Limits the maximum number of threads used for the initial PPU and SPU module compilation.\nLower this in order to increase performance of other open applications.\nThe default uses all available threads.");
 		const QString show_mouse_in_fullscreen     = tr("Shows the mouse cursor when the fullscreen mode is active.\nCurrently this may not work every time.");
-		const QString lock_mouse_in_fullscreen     = tr("Locks the mouse cursor at center when the fullscreen mode is active.");
+		const QString lock_mouse_in_fullscreen     = tr("Locks the mouse cursor to the center when the fullscreen mode is active.");
 		const QString hide_mouse_on_idle           = tr("Hides the mouse cursor if no mouse movement is detected for the configured time.");
 		const QString show_shader_compilation_hint = tr("Shows 'Compiling shaders' hint using the native overlay.");
 		const QString show_ppu_compilation_hint    = tr("Shows 'Compiling PPU modules' hint using the native overlay.");
@@ -163,13 +164,13 @@ public:
 		const QString resolution                 = tr("This setting will be ignored if the Resolution Scale is set to anything other than 100%!\nLeave this on 1280x720. Every PS3 game is compatible with this resolution.\nOnly use 1920x1080 if the game supports it.\nRarely due to emulation bugs some games will only render at low resolutions like 480p.");
 		const QString graphics_adapter           = tr("On multi GPU systems select which GPU to use in RPCS3 when using Vulkan.\nThis is not needed when using OpenGL.");
 		const QString aspect_ratio               = tr("Leave this on 16:9 unless you have a 4:3 monitor.");
-		const QString frame_limit                = tr("Off is the fastest option.\nUsing the frame limiter will add extra overhead and slow down the game. However, some games will crash if the frame rate is too high.\nPS3 native should only be used if Auto is not working correctly as it can introduce frame-pacing issues.\nInfinite adds a positive feedback loop which adds another vblank signal per frame allowing more games to be fps limitless.");
+		const QString frame_limit                = tr("Off is the fastest option.\nUsing the frame limiter will add extra overhead and slow down the game. However, some games will crash if the framerate is too high.\nPS3 native should only be used if Auto is not working correctly as it can introduce frame-pacing issues.\nInfinite adds a positive feedback loop which adds another vblank signal per frame allowing more games to be fps limitless.");
 		const QString anti_aliasing              = tr("Emulate PS3 multisampling layout.\nCan fix some otherwise difficult to solve graphics glitches.\nLow to moderate performance hit depending on your GPU hardware.");
 		const QString anisotropic_filter         = tr("Higher values increase sharpness of textures on sloped surfaces at the cost of GPU resources.\nModern GPUs can handle this setting just fine, even at 16x.\nKeep this on Automatic if you want to use the original setting used by a real PS3.");
 		const QString resolution_scale           = tr("Scales the game's resolution by the given percentage.\nThe base resolution is always 1280x720.\nSet this value to 100% if you want to use the normal Resolution options.\nValues below 100% will usually not improve performance.");
 		const QString minimum_scalable_dimension = tr("Only framebuffers greater than this size will be upscaled.\nIncreasing this value might fix problems with missing graphics when upscaling, especially when Write Color Buffers is enabled.\nIf unsure, don't change this option.");
 		const QString dump_color                 = tr("Enable this option if you get missing graphics or broken lighting ingame.\nMight degrade performance and introduce stuttering in some cases.\nRequired for Demon's Souls.");
-		const QString vsync                      = tr("By having this off you might obtain a higher frame rate at the cost of tearing artifacts in the game.");
+		const QString vsync                      = tr("By having this off you might obtain a higher framerate at the cost of tearing artifacts in the game.");
 		const QString strict_rendering_mode      = tr("Enforces strict compliance to the API specification.\nMight result in degraded performance in some games.\nCan resolve rare cases of missing graphics and flickering.\nIf unsure, don't use this option.");
 		const QString stretch_to_display_area    = tr("Overrides the aspect ratio and stretches the image to the full display area.");
 		const QString multithreaded_rsx          = tr("Offloads some RSX operations to a secondary thread.\nImproves performance for high-core processors.\nMay cause slowdown in weaker CPUs due to the extra worker thread load.");
@@ -217,7 +218,7 @@ public:
 		const QString music_handler     = tr("Currently only used for cellMusic emulation.\nSelect Qt to use the default output device of your operating system.\nThis may not be able to play all audio formats.");
 		const QString camera            = tr("Select Qt Camera to use the default camera device of your operating system.");
 		const QString camera_type       = tr("Depending on the game, you may need to select a specific camera type.");
-		const QString camera_flip       = tr("Flips the camera image either horizontally, vertically, or on both axis.");
+		const QString camera_flip       = tr("Flips the camera image either horizontally, vertically, or on both axes.");
 		const QString camera_id         = tr("Select the camera that you want to use during gameplay.");
 		const QString move              = tr("PlayStation Move support.\nFake: Experimental! This maps Move controls to DS3 controller mappings.\nMouse: Emulate PSMove with Mouse handler.");
 		const QString buzz              = tr("Buzz! support.\nSelect 1 or 2 controllers if the game requires Buzz! controllers and you don't have real controllers.\nSelect Null if the game has support for DualShock or if you have real Buzz! controllers.");
@@ -225,7 +226,7 @@ public:
 		const QString ghltar            = tr("Guitar Hero Live (GHL) Guitar controller support.\nSelect 1 or 2 controllers if the game requires GHL Guitar controllers and you don't have real guitar controllers.\nSelect Null if the game has support for DualShock or if you have real guitar controllers.\nA real guitar controller can be used at the same time as an emulated guitar controller.");
 		const QString background_input  = tr("Allows pad and keyboard input while the game window is unfocused.");
 		const QString show_move_cursor  = tr("Shows the raw position of the PS Move input.\nThis can be very helpful during calibration screens.");
-		const QString midi_devices      = tr("Select up to 3 emulated midi devices and their type.");
+		const QString midi_devices      = tr("Select up to 3 emulated MIDI devices and their types.");
 
 		const QString lock_overlay_input_to_player_one  = tr("Locks the native overlay input to the first player.");
 
@@ -246,7 +247,7 @@ public:
 		const QString enter_button_assignment = tr("The button used for enter/accept/confirm in system dialogs.\nChange this to use the Circle button instead, which is the default configuration on Japanese systems and in many Japanese games.\nIn these cases having the cross button assigned can often lead to confusion.");
 		const QString enable_host_root        = tr("Required for some Homebrew.\nIf unsure, don't use this option.");
 		const QString limit_cache_size        = tr("Automatically removes older files from disk cache on boot if it grows larger than the specified value.\nGames can use the cache folder to temporarily store data outside of system memory. It is not used for long-term storage.\n\nThis setting is only available in the global configuration.");
-		const QString console_time_offset     = tr("Sets the time to be used within the console. This will be applied as an offset that tracks wall clock time.\nCan be reset to current wallclock time by clicking \"Set to Now\".");
+		const QString console_time_offset     = tr("Sets the time to be used within the console. This will be applied as an offset that tracks wall clock time.\nCan be reset to current wall clock time by clicking \"Set to Now\".");
 	} settings;
 
 	const struct gamepad_settings
@@ -264,7 +265,7 @@ public:
 		const QString dualsense_linux   = tr("The DualSense handler is recommended for official DualSense controllers.");
 		const QString dualsense_other   = tr("The DualSense handler is recommended for official DualSense controllers.");
 		const QString xinput      = tr("The XInput handler will work with Xbox controllers and many third-party PC-compatible controllers. Pressure sensitive buttons from SCP are supported when SCP's XInput1_3.dll is placed in the main RPCS3 directory. For more details, see the <a %0 href=\"https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration\">RPCS3 Wiki</a>.").arg(gui::utils::get_link_style());
-		const QString evdev       = tr("The evdev handler should work with any controller that has linux support.<br>If your joystick is not being centered properly, read the <a %0 href=\"https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration\">RPCS3 Wiki</a> for instructions.").arg(gui::utils::get_link_style());
+		const QString evdev       = tr("The evdev handler should work with any controller that has Linux support.<br>If your joystick is not being centered properly, read the <a %0 href=\"https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration\">RPCS3 Wiki</a> for instructions.").arg(gui::utils::get_link_style());
 		const QString mmjoy       = tr("The MMJoystick handler should work with almost any controller recognized by Windows. However, it is recommended that you use the more specific handlers if you have a controller that supports them.");
 		const QString sdl         = tr("The SDL handler supports a variety of controllers across different platforms.");
 
@@ -280,7 +281,7 @@ public:
 		const QString mouse_deadzones    = tr("The mouse deadzones represent the games' own deadzones on the x and y axes. Games usually enforce their own deadzones to filter out small unwanted stick movements. In consequence, mouse input feels unintuitive since it relies on immediate responsiveness. You can change these values temporarily during gameplay in order to find out the optimal values for your game (Alt+T and Alt+Y for x, Alt+U and Alt+I for y).");
 		const QString mouse_acceleration = tr("The mouse acceleration can be used to amplify your mouse movements on the x and y axes. Increase these values if your mouse movements feel too slow while playing a game. You can change these values temporarily during gameplay in order to find out the optimal values (Alt+G and Alt+H for x, Alt+J and Alt+K for y). Keep in mind that modern mice usually provide different modes and settings that can be used to change mouse movement speeds as well.");
 		const QString mouse_movement     = tr("The mouse movement mode determines how the mouse movement is translated to pad input.<br>Use the relative mode for traditional mouse movement.<br>Use the absolute mode to use the mouse's distance to the center of the screen as input value.");
-		const QString button_assignment  = tr("Left-click: remap this button.<br>Shift + Left-click: add an addition button mapping.<br>Right-click: clear this button mapping.");
+		const QString button_assignment  = tr("Left-click: remap this button.<br>Shift + Left-click: add an additional button mapping.<br>Right-click: clear this button mapping.");
 
 	} gamepad_settings;
 };

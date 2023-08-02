@@ -10,7 +10,9 @@
 #ifdef _WIN32
 #include "windows.h"
 #include "tlhelp32.h"
+#ifdef _MSC_VER
 #pragma comment(lib, "pdh.lib")
+#endif
 #else
 #include "fstream"
 #include "sstream"
@@ -99,13 +101,13 @@ namespace utils
 	void cpu_stats::init_cpu_query()
 	{
 #ifdef _WIN32
-		PDH_STATUS status = PdhOpenQuery(NULL, NULL, &m_cpu_query);
+		PDH_STATUS status = PdhOpenQuery(NULL, 0, &m_cpu_query);
 		if (ERROR_SUCCESS != status)
 		{
 			perf_log.error("Failed to open cpu query for per core cpu usage: %s", pdh_error(status));
 			return;
 		}
-		status = PdhAddEnglishCounter(m_cpu_query, L"\\Processor(*)\\% Processor Time", NULL, &m_cpu_cores);
+		status = PdhAddEnglishCounter(m_cpu_query, L"\\Processor(*)\\% Processor Time", 0, &m_cpu_cores);
 		if (ERROR_SUCCESS != status)
 		{
 			perf_log.error("Failed to add processor time counter for per core cpu usage: %s", pdh_error(status));
@@ -159,7 +161,7 @@ namespace utils
 		DWORD dwItemCount = 0;  // Number of items in the items buffer
 
 		status = PdhGetFormattedCounterArray(m_cpu_cores, PDH_FMT_DOUBLE, &dwBufferSize, &dwItemCount, nullptr);
-		if (PDH_MORE_DATA == status)
+		if (static_cast<PDH_STATUS>(PDH_MORE_DATA) == status)
 		{
 			std::vector<PDH_FMT_COUNTERVALUE_ITEM> items(utils::aligned_div(dwBufferSize, sizeof(PDH_FMT_COUNTERVALUE_ITEM)));
 			if (items.size() >= dwItemCount)
@@ -195,7 +197,7 @@ namespace utils
 						}
 					}
 				}
-				else if (PDH_CALC_NEGATIVE_DENOMINATOR == status) // Apparently this is a common uncritical error
+				else if (static_cast<PDH_STATUS>(PDH_CALC_NEGATIVE_DENOMINATOR) == status) // Apparently this is a common uncritical error
 				{
 					perf_log.notice("Failed to get per core cpu usage: %s", pdh_error(status));
 				}

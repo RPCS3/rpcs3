@@ -30,35 +30,35 @@ bool custom_table_widget_item::operator<(const QTableWidgetItem& other) const
 
 	const QVariant data_l       = data(m_sort_role);
 	const QVariant data_r       = other.data(m_sort_role);
-	const QVariant::Type type_l = data_l.type();
-	const QVariant::Type type_r = data_r.type();
+	const int type_l = data_l.metaType().id();
+	const int type_r = data_r.metaType().id();
 
 	ensure(type_l == type_r);
 
 	switch (type_l)
 	{
-	case QVariant::Type::Bool:
-	case QVariant::Type::Int:
+	case QMetaType::Type::Bool:
+	case QMetaType::Type::Int:
 		return data_l.toInt() < data_r.toInt();
-	case QVariant::Type::UInt:
+	case QMetaType::Type::UInt:
 		return data_l.toUInt() < data_r.toUInt();
-	case QVariant::Type::LongLong:
+	case QMetaType::Type::LongLong:
 		return data_l.toLongLong() < data_r.toLongLong();
-	case QVariant::Type::ULongLong:
+	case QMetaType::Type::ULongLong:
 		return data_l.toULongLong() < data_r.toULongLong();
-	case QVariant::Type::Double:
+	case QMetaType::Type::Double:
 		return data_l.toDouble() < data_r.toDouble();
-	case QVariant::Type::Date:
+	case QMetaType::Type::QDate:
 		return data_l.toDate() < data_r.toDate();
-	case QVariant::Type::Time:
+	case QMetaType::Type::QTime:
 		return data_l.toTime() < data_r.toTime();
-	case QVariant::Type::DateTime:
+	case QMetaType::Type::QDateTime:
 		return data_l.toDateTime() < data_r.toDateTime();
-	case QVariant::Type::Char:
-	case QVariant::Type::String:
+	case QMetaType::Type::Char:
+	case QMetaType::Type::QString:
 		return data_l.toString() < data_r.toString();
 	default:
-		fmt::throw_exception("Unimplemented type %s", QVariant::typeToName(type_l));
+		fmt::throw_exception("Unimplemented type %s", QMetaType(type_l).name());
 	}
 }
 

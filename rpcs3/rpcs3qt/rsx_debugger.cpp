@@ -166,7 +166,7 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	tex_idx_line->setMaxLength(18);
 	tex_idx_line->setFixedWidth(75);
 	tex_idx_line->setFocus();
-	tex_idx_line->setValidator(new QRegularExpressionValidator(QRegularExpression("^(0[xX])?0*[a-fA-F0-9]{0,8}$")));
+	tex_idx_line->setValidator(new QRegularExpressionValidator(QRegularExpression("^(0[xX])?0*[a-fA-F0-9]{0,8}$"), this));
 
 	QLineEdit* tex_fmt_override_line = new QLineEdit(this);
 	tex_fmt_override_line->setPlaceholderText("00");
@@ -174,7 +174,7 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	tex_fmt_override_line->setMaxLength(18);
 	tex_fmt_override_line->setFixedWidth(75);
 	tex_fmt_override_line->setFocus();
-	tex_fmt_override_line->setValidator(new QRegularExpressionValidator(QRegularExpression("^(0[xX])?0*[a-fA-F0-9]{0,2}$")));
+	tex_fmt_override_line->setValidator(new QRegularExpressionValidator(QRegularExpression("^(0[xX])?0*[a-fA-F0-9]{0,2}$"), this));
 
 	hbox_idx_line->addWidget(tex_idx_line);
 	hbox_idx_line->addWidget(tex_fmt_override_line);
@@ -629,18 +629,21 @@ void rsx_debugger::GetMemory() const
 	std::string dump;
 	u32 cmd_i = 0;
 
+	std::string str;
+
 	for (const auto& command : frame_debug.command_queue)
 	{
-		const std::string str = rsx::get_pretty_printing_function(command.first)(command.first, command.second);
+		str.clear();
+		rsx::get_pretty_printing_function(command.first)(str, command.first, command.second);
 		m_list_captured_frame->setItem(cmd_i++, 0, new QTableWidgetItem(qstr(str)));
 
 		dump += str;
 		dump += '\n';
 	}
 
-	if (fs::file file = fs::file(fs::get_cache_dir() + "command_dump.log", fs::rewrite))
+	if (!dump.empty())
 	{
-		file.write(dump);
+		fs::write_file(fs::get_cache_dir() + "command_dump.log", fs::rewrite, dump);
 	}
 
 	for (u32 i = 0; i < frame_debug.draw_calls.size(); i++)

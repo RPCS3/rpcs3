@@ -34,7 +34,6 @@
 #include <QLibraryInfo>
 #include <QDirIterator>
 #include <QFileInfo>
-#include <QSound>
 #include <QMessageBox>
 #include <QTextDocument>
 
@@ -173,7 +172,7 @@ void gui_application::SwitchTranslator(QTranslator& translator, const QString& f
 	// remove the old translator
 	removeTranslator(&translator);
 
-	const QString lang_path = QLibraryInfo::location(QLibraryInfo::TranslationsPath) + QStringLiteral("/");
+	const QString lang_path = QLibraryInfo::path(QLibraryInfo::TranslationsPath) + QStringLiteral("/");
 	const QString file_path = lang_path + filename;
 
 	if (QFileInfo(file_path).isFile())
@@ -236,7 +235,7 @@ QStringList gui_application::GetAvailableLanguageCodes()
 {
 	QStringList language_codes;
 
-	const QString language_path = QLibraryInfo::location(QLibraryInfo::TranslationsPath);
+	const QString language_path = QLibraryInfo::path(QLibraryInfo::TranslationsPath);
 
 	if (QFileInfo(language_path).isDir())
 	{
@@ -270,6 +269,7 @@ void gui_application::InitializeConnects()
 	connect(this, &gui_application::OnEmulatorStop, this, &gui_application::StopPlaytime);
 	connect(this, &gui_application::OnEmulatorPause, this, &gui_application::StopPlaytime);
 	connect(this, &gui_application::OnEmulatorResume, this, &gui_application::StartPlaytime);
+	connect(this, &QGuiApplication::applicationStateChanged, this, &gui_application::OnAppStateChanged);
 
 	if (m_main_window)
 	{
@@ -545,13 +545,17 @@ void gui_application::InitializeCallbacks()
 		return localized_emu::get_u32string(id, args);
 	};
 
-	callbacks.play_sound = [](const std::string& path)
+	callbacks.play_sound = [this](const std::string& path)
 	{
-		Emu.CallFromMainThread([path]()
+		Emu.CallFromMainThread([this, path]()
 		{
 			if (fs::is_file(path))
 			{
-				QSound::play(qstr(path));
+				m_sound_effect.stop();
+				m_sound_effect.setSource(QUrl::fromLocalFile(qstr(path)));
+				m_sound_effect.setVolume(g_cfg.audio.volume * 0.01f);
+				m_sound_effect.setLoopCount(1);
+				m_sound_effect.play();
 			}
 		});
 	};
@@ -797,4 +801,77 @@ void gui_application::CallFromMainThread(const std::function<void()>& func, atom
 		*wake_up = true;
 		wake_up->notify_one();
 	}
+}
+
+void gui_application::OnAppStateChanged(Qt::ApplicationState state)
+{
+	// Invalidate previous delayed pause call (even when the setting is off because it is dynamic)
+	m_pause_delayed_tag++;
+
+	if (!g_cfg.misc.autopause)
+	{
+		return;
+	}
+
+	const auto emu_state = Emu.GetStatus();
+	const bool is_active = state == Qt::ApplicationActive;
+
+	if (emu_state != system_state::paused && emu_state != system_state::running)
+	{
+		return;
+	}
+
+	const bool is_paused = emu_state == system_state::paused;
+
+	if (is_active != is_paused)
+	{
+		// Nothing to do (either paused and this is focus-out event or running and this is a focus-in event)
+		// Invalidate data
+		m_is_pause_on_focus_loss_active = false;
+		m_emu_focus_out_emulation_id = Emulator::stop_counter_t{};
+		return;
+	}
+
+	if (is_paused)
+	{
+		// Check if Emu.Resume() or Emu.Kill() has not been called since
+		if (m_is_pause_on_focus_loss_active && m_pause_amend_time_on_focus_loss == Emu.GetPauseTime() && m_emu_focus_out_emulation_id == Emu.GetEmulationIdentifier())
+		{
+			m_is_pause_on_focus_loss_active = false;
+			Emu.Resume();
+		}
+
+		return;
+	}
+
+	// Gather validation data
+	m_emu_focus_out_emulation_id = Emu.GetEmulationIdentifier();
+
+	auto pause_callback = [this, delayed_tag = m_pause_delayed_tag]()
+	{
+		// Check if Emu.Kill() has not been called since
+		if (applicationState() != Qt::ApplicationActive && Emu.IsRunning() &&
+		    m_emu_focus_out_emulation_id == Emu.GetEmulationIdentifier() &&
+		    delayed_tag == m_pause_delayed_tag &&
+			!m_is_pause_on_focus_loss_active)
+		{
+			if (Emu.Pause())
+			{
+				// Gather validation data
+				m_pause_amend_time_on_focus_loss = Emu.GetPauseTime();
+				m_emu_focus_out_emulation_id = Emu.GetEmulationIdentifier();
+				m_is_pause_on_focus_loss_active = true;
+			}
+		}
+	};
+
+	if (state == Qt::ApplicationSuspended)
+	{
+		// Must be invoked now (otherwise it may not happen later)
+		pause_callback();
+		return;
+	}
+
+	// Delay pause so it won't immediately pause the emulated application
+	QTimer::singleShot(1000, this, pause_callback);
 }

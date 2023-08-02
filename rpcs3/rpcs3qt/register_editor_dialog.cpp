@@ -156,7 +156,7 @@ register_editor_dialog::register_editor_dialog(QWidget *parent, CPUDisAsm* _disa
 	connect(button_cancel, &QAbstractButton::clicked, this, &register_editor_dialog::reject);
 	connect(m_register_combo, &QComboBox::currentTextChanged, this, [this](const QString&)
 	{
-		if (const auto qvar = m_register_combo->currentData(); qvar.canConvert(QMetaType::Int))
+		if (const auto qvar = m_register_combo->currentData(); qvar.canConvert<int>())
 		{
 			updateRegister(qvar.toInt());
 		}

@@ -292,7 +292,7 @@ QLabel#debugger_frame_pc {
 }
 
 /* Set Log colors */
-QTextEdit#log_frame {
+QPlainTextEdit#log_frame {
 	background-color: #000000; /* Black */
 }
 QLabel#log_level_always {
@@ -323,7 +323,7 @@ QLabel#log_stack {
 	color: #ffffff; /* White */
 }
 /* Set TTY colors */
-QTextEdit#tty_frame {
+QPlainTextEdit#tty_frame {
 	background-color: #000000; /* Black */
 }
 QLabel#tty_text {

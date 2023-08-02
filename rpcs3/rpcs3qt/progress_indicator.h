@@ -2,7 +2,7 @@
 
 #include <QWindow>
 
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 #include <QWinTaskbarButton>
 #endif
 
@@ -23,7 +23,7 @@ public:
 
 private:
 
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 	std::unique_ptr<QWinTaskbarButton> m_tb_button;
 #else
 	int m_value = 0;

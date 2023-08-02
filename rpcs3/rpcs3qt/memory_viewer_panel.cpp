@@ -92,7 +92,7 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, std::shared_ptr<CPUDis
 	m_addr_line->setMaxLength(18);
 	m_addr_line->setFixedWidth(75);
 	m_addr_line->setFocus();
-	m_addr_line->setValidator(new QRegularExpressionValidator(QRegularExpression(m_type == thread_type::spu ? "^(0[xX])?0*[a-fA-F0-9]{0,5}$" : "^(0[xX])?0*[a-fA-F0-9]{0,8}$")));
+	m_addr_line->setValidator(new QRegularExpressionValidator(QRegularExpression(m_type == thread_type::spu ? "^(0[xX])?0*[a-fA-F0-9]{0,5}$" : "^(0[xX])?0*[a-fA-F0-9]{0,8}$"), this));
 	hbox_tools_mem_addr->addWidget(m_addr_line);
 	tools_mem_addr->setLayout(hbox_tools_mem_addr);
 
@@ -304,16 +304,19 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, std::shared_ptr<CPUDis
 	m_cbox_input_mode->addItem(tr("Double"), QVariant::fromValue(+as_f64));
 	m_cbox_input_mode->addItem(tr("Float"), QVariant::fromValue(+as_f32));
 	m_cbox_input_mode->addItem(tr("Instruction"), QVariant::fromValue(+as_inst));
+	m_cbox_input_mode->addItem(tr("RegEx Instruction"), QVariant::fromValue(+as_regex_inst));
 
 	QString tooltip = tr("String: search the memory for the specified string."
 		"\nHEX bytes/integer: search the memory for hexadecimal values. Spaces, commas, \"0x\", \"0X\", \"\\x\", \"h\", \"H\" ensure separation of bytes but they are not mandatory."
 		"\nDouble: reinterpret the string as 64-bit precision floating point value. Values are searched for exact representation, meaning -0 != 0."
 		"\nFloat: reinterpret the string as 32-bit precision floating point value. Values are searched for exact representation, meaning -0 != 0."
-		"\nInstruction: search an instruction contains the text of the string.");
+		"\nInstruction: search an instruction contains the text of the string."
+		"\nRegEx: search an instruction containing text that matches the regular expression input.");
 
 	if (m_size != 0x40000/*SPU_LS_SIZE*/)
 	{
 		m_cbox_input_mode->addItem("SPU Instruction", QVariant::fromValue(+as_fake_spu_inst));
+		m_cbox_input_mode->addItem(tr("SPU RegEx-Instruction"), QVariant::fromValue(+as_regex_fake_spu_inst));
 		tooltip.append(tr("\nSPU Instruction: Search an SPU instruction contains the text of the string. For searching instructions within embedded SPU images.\nTip: SPU floats are commented along forming instructions."));
 	}
 
@@ -1147,7 +1150,7 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, color_format form
 		{
 			if (object == m_canvas && (event->type() == QEvent::HoverMove || event->type() == QEvent::HoverEnter || event->type() == QEvent::HoverLeave))
 			{
-				const QPoint xy = static_cast<QHoverEvent*>(event)->pos() / m_canvas_scale;
+				const QPointF xy = static_cast<QHoverEvent*>(event)->position() / m_canvas_scale;
 				set_window_name_by_coordinates(xy.x(), xy.y());
 				return false;
 			}
@@ -1156,7 +1159,7 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, color_format form
 			{
 				QLineEdit* addr_line = static_cast<memory_viewer_panel*>(parent())->m_addr_line;
 
-				const QPoint xy = static_cast<QMouseEvent*>(event)->pos() / m_canvas_scale;
+				const QPointF xy = static_cast<QMouseEvent*>(event)->position() / m_canvas_scale;
 				addr_line->setText(qstr(fmt::format("%08x", get_pointed_addr(xy.x(), xy.y()))));
 				Q_EMIT addr_line->returnPressed();
 				close();

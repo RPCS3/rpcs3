@@ -49,6 +49,12 @@ static error_code overlay_load_module(vm::ptr<u32> ovlmid, const std::string& vp
 
 	if (error)
 	{
+		if (error == CELL_CANCEL + 0u)
+		{
+			// Emulation stopped
+			return {};
+		}
+
 		return error;
 	}
 

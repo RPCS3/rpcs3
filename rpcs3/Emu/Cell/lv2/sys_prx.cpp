@@ -312,11 +312,7 @@ std::shared_ptr<void> lv2_prx::load(utils::serial& ar)
 	{
 		std::basic_string<bool> loaded_flags, external_flags;
 
-		if (version >= 4)
-		{
-			ar(loaded_flags);
-			ar(external_flags);
-		}
+		ar(loaded_flags, external_flags);
 
 		fs::file file{path.substr(0, path.size() - (offset ? fmt::format("_x%x", offset).size() : 0))};
 
@@ -328,19 +324,9 @@ std::shared_ptr<void> lv2_prx::load(utils::serial& ar)
 			prx->m_loaded_flags = std::move(loaded_flags);
 			prx->m_external_loaded_flags = std::move(external_flags);
 
-			if (version == 2 && (state == PRX_STATE_STARTED || state == PRX_STATE_STARTING))
-			{
-				prx->load_exports();
-			}
-
-			if (version >= 4 && state <= PRX_STATE_STARTED)
+			if (state <= PRX_STATE_STARTED)
 			{
 				prx->restore_exports();
-			}
-
-			if (version == 1)
-			{
-				prx->load_exports();
 			}
 
 			ensure(prx);

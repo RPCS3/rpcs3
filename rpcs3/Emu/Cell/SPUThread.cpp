@@ -326,6 +326,29 @@ extern thread_local u64 g_tls_fault_spu;
 
 const spu_decoder<spu_itype> s_spu_itype;
 
+namespace vm
+{
+	extern atomic_t<u64, 64> g_range_lock_set[64];
+
+	// Defined here for performance reasons
+	writer_lock::~writer_lock() noexcept
+	{
+		if (range_lock)
+		{
+			if (!*range_lock)
+			{
+				return;
+			}
+
+			g_range_lock_bits[1] &= ~(1ull << (range_lock - g_range_lock_set));
+			range_lock->release(0);
+			return;
+		}
+
+		g_range_lock_bits[1].release(0);
+	}
+}
+
 namespace spu
 {
 	namespace scheduler
@@ -1017,9 +1040,14 @@ spu_imm_table_t::spu_imm_table_t()
 	}
 }
 
-void spu_thread::dump_regs(std::string& ret) const
+void spu_thread::dump_regs(std::string& ret, std::any& /*custom_data*/) const
 {
-	const bool floats_only = debugger_float_mode.load();
+	const system_state emu_state = Emu.GetStatus(false);
+	const bool is_stopped_or_frozen = state & cpu_flag::exit || emu_state == system_state::frozen || emu_state <= system_state::stopping;
+	const spu_debugger_mode mode = debugger_mode.load();
+
+	const bool floats_only = !is_stopped_or_frozen && mode == spu_debugger_mode::is_float;
+	const bool is_decimal = !is_stopped_or_frozen && mode == spu_debugger_mode::is_decimal;
 
 	SPUDisAsm dis_asm(cpu_disasm_mode::normal, ls);
 
@@ -1097,12 +1125,26 @@ void spu_thread::dump_regs(std::string& ret) const
 			if (!printed_error)
 			{
 				// Shortand formatting
-				fmt::append(ret, "%08x", i3);
+				if (is_decimal)
+				{
+					fmt::append(ret, "%-11d", i3);
+				}
+				else
+				{
+					fmt::append(ret, "%08x", i3);
+				}
 			}
 		}
 		else
 		{
-			fmt::append(ret, "%08x %08x %08x %08x", r.u32r[0], r.u32r[1], r.u32r[2], r.u32r[3]);
+			if (is_decimal)
+			{
+				fmt::append(ret, "%-11d %-11d %-11d %-11d", r.u32r[0], r.u32r[1], r.u32r[2], r.u32r[3]);
+			}
+			else
+			{
+				fmt::append(ret, "%08x %08x %08x %08x", r.u32r[0], r.u32r[1], r.u32r[2], r.u32r[3]);
+			}
 		}
 
 		if (i3 >= 0x80 && is_exec_code(i3, ls))
@@ -1211,26 +1253,7 @@ std::vector<std::pair<u32, u32>> spu_thread::dump_callstack_list() const
 			return !addr || !is_exec_code(addr, ls);
 		};
 
-		if (is_invalid(lr))
-		{
-			if (first)
-			{
-				// Function hasn't saved LR, could be because it's a leaf function
-				// Use LR directly instead
-				lr = gpr0;
-
-				if (is_invalid(lr))
-				{
-					// Skip it, workaround
-					continue;
-				}
-			}
-			else
-			{
-				break;
-			}
-		}
-		else if (first && lr._u32[3] != gpr0._u32[3] && !is_invalid(gpr0))
+		if (first && lr._u32[3] != gpr0._u32[3] && !is_invalid(gpr0))
 		{
 			// Detect functions with no stack or before LR has been stored
 			std::vector<bool> passed(SPU_LS_SIZE / 4);
@@ -1319,8 +1342,15 @@ std::vector<std::pair<u32, u32>> spu_thread::dump_callstack_list() const
 			}
 		}
 
-		// TODO: function addresses too
-		call_stack_list.emplace_back(lr._u32[3], sp);
+		if (!is_invalid(lr))
+		{
+			// TODO: function addresses too
+			call_stack_list.emplace_back(lr._u32[3], sp);
+		}
+		else if (!first)
+		{
+			break;
+		}
 
 		const u32 temp_sp = _ref<u32>(sp);
 
@@ -1791,7 +1821,7 @@ spu_thread::~spu_thread()
 	utils::memory_release(ls - SPU_LS_SIZE * 2, SPU_LS_SIZE * 5);
 
 	perf_log.notice("Perf stats for transactions: success %u, failure %u", stx, ftx);
-	perf_log.notice("Perf stats for PUTLLC reload: successs %u, failure %u", last_succ, last_fail);
+	perf_log.notice("Perf stats for PUTLLC reload: success %u, failure %u", last_succ, last_fail);
 }
 
 u8* spu_thread::map_ls(utils::shm& shm, void* ptr)
@@ -3541,19 +3571,18 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 		{
 			// Full lock (heavyweight)
 			// TODO: vm::check_addr
-			vm::writer_lock lock(addr);
+			vm::writer_lock lock(addr, range_lock);
 
 			if (cmp_rdata(rdata, super_data))
 			{
 				mov_rdata(super_data, to_write);
-				res += 64;
 				return true;
 			}
 
-			res -= 64;
 			return false;
 		}();
 
+		res += success ? 64 : 0 - 64;
 		return success;
 	}())
 	{
@@ -3688,7 +3717,8 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 			vm::_ref<atomic_t<u32>>(addr) += 0;
 
 			// Hard lock
-			vm::writer_lock lock(addr);
+			auto spu = cpu ? cpu->try_get<spu_thread>() : nullptr;
+			vm::writer_lock lock(addr, spu ? spu->range_lock : nullptr);
 			mov_rdata(sdata, *static_cast<const spu_rdata_t*>(to_write));
 			vm::reservation_acquire(addr) += 32;
 		}
@@ -4454,7 +4484,7 @@ bool spu_thread::reservation_check(u32 addr, const decltype(rdata)& data) const
 	// Set range_lock first optimistically
 	range_lock->store(u64{128} << 32 | addr);
 
-	u64 lock_val = vm::g_range_lock;
+	u64 lock_val = *std::prev(std::end(vm::g_range_lock_set));
 	u64 old_lock = 0;
 
 	while (lock_val != old_lock)
@@ -4509,7 +4539,7 @@ bool spu_thread::reservation_check(u32 addr, const decltype(rdata)& data) const
 			break;
 		}
 
-		old_lock = std::exchange(lock_val, vm::g_range_lock);
+		old_lock = std::exchange(lock_val, *std::prev(std::end(vm::g_range_lock_set)));
 	}
 
 	if (!range_lock->load()) [[unlikely]]
@@ -4612,9 +4642,9 @@ void spu_thread::set_interrupt_status(bool enable)
 		// Detect enabling interrupts with events masked
 		if (auto mask = ch_events.load().mask; mask & SPU_EVENT_INTR_BUSY_CHECK)
 		{
-			if (g_cfg.core.spu_decoder != spu_decoder_type::_static)
+			if (g_cfg.core.spu_decoder != spu_decoder_type::_static && g_cfg.core.spu_decoder != spu_decoder_type::dynamic)
 			{
-				fmt::throw_exception("SPU Interrupts not implemented (mask=0x%x): Use static interpreter", mask);
+				fmt::throw_exception("SPU Interrupts not implemented (mask=0x%x): Use [%s] SPU decoder", mask, spu_decoder_type::dynamic);
 			}
 
 			spu_log.trace("SPU Interrupts (mask=0x%x) are using CPU busy checking mode", mask);
@@ -5290,7 +5320,7 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 
 	case MFC_Size:
 	{
-		ch_mfc_cmd.size = value & 0x7fff;
+		ch_mfc_cmd.size = static_cast<u16>(std::min<u32>(value, 0xffff));
 		return true;
 	}
 

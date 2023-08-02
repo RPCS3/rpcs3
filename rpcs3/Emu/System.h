@@ -106,7 +106,7 @@ class Emulator final
 
 	atomic_t<u64> m_pause_start_time{0}; // set when paused
 	atomic_t<u64> m_pause_amend_time{0}; // increased when resumed
-	atomic_t<u64> m_stop_ctr{0}; // Increments when emulation is stopped
+	atomic_t<u64> m_stop_ctr{1}; // Increments when emulation is stopped
 
 	games_config m_games_config;
 
@@ -138,6 +138,8 @@ class Emulator final
 	bool m_has_gui = true;
 
 	bool m_state_inspection_savestate = false;
+
+	usz m_tty_file_init_pos = umax;
 
 	std::vector<std::shared_ptr<atomic_t<u32>>> m_pause_msgs_refs;
 

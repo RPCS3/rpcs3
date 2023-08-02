@@ -6,6 +6,12 @@
 #include "lv2_socket_native.h"
 #include "sys_net_helpers.h"
 
+#ifdef _WIN32
+constexpr SOCKET invalid_socket = INVALID_SOCKET;
+#else
+constexpr int invalid_socket = -1;
+#endif
+
 LOG_CHANNEL(sys_net);
 
 lv2_socket_native::lv2_socket_native(lv2_socket_family family, lv2_socket_type type, lv2_ip_protocol protocol)
@@ -75,11 +81,7 @@ s32 lv2_socket_native::create_socket()
 
 	auto socket_res = ::socket(native_domain, native_type, native_proto);
 
-#ifdef _WIN32
-	if (socket_res == INVALID_SOCKET)
-#else
-	if (socket_res == -1)
-#endif
+	if (socket_res == invalid_socket)
 	{
 		return -get_last_error(false);
 	}
@@ -113,7 +115,7 @@ std::tuple<bool, s32, std::shared_ptr<lv2_socket>, sys_net_sockaddr> lv2_socket_
 
 	socket_type native_socket = ::accept(socket, reinterpret_cast<struct sockaddr*>(&native_addr), &native_addrlen);
 
-	if (native_socket != -1)
+	if (native_socket != invalid_socket)
 	{
 		auto newsock = std::make_shared<lv2_socket_native>(family, type, protocol);
 		newsock->set_socket(native_socket, family, type, protocol);

@@ -125,6 +125,14 @@ struct cmd64
 	}
 };
 
+enum class ppu_debugger_mode : u32
+{
+	_default,
+	is_decimal,
+
+	max_mode,
+};
+
 class ppu_thread : public cpu_thread
 {
 public:
@@ -133,7 +141,7 @@ public:
 	static const u32 id_count = 100;
 	static constexpr std::pair<u32, u32> id_invl_range = {12, 12};
 
-	virtual void dump_regs(std::string&) const override;
+	virtual void dump_regs(std::string&, std::any& custom_data) const override;
 	virtual std::string dump_callstack() const override;
 	virtual std::vector<std::pair<u32, u32>> dump_callstack_list() const override;
 	virtual std::string dump_misc() const override;
@@ -300,6 +308,7 @@ public:
 	u64 exec_bytes = 0; // Amount of "bytes" executed (4 for each instruction)
 
 	u32 dbg_step_pc = 0;
+	atomic_t<ppu_debugger_mode> debugger_mode{};
 
 	struct call_history_t
 	{
@@ -310,6 +319,23 @@ public:
 	} call_history;
 
 	static constexpr u32 call_history_max_size = 4096;
+
+	struct syscall_history_t
+	{
+		struct entry_t
+		{
+			u64 cia;
+			const char* func_name;
+			u64 error;
+			std::array<u64, 4> args;
+		};
+
+		std::vector<entry_t> data;
+		u64 index = 0;
+		u32 count_debug_arguments;
+	} syscall_history;
+
+	static constexpr u32 syscall_history_max_size = 2048;
 
 	struct hle_func_call_with_toc_info_t
 	{

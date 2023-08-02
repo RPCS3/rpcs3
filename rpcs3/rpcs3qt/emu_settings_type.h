@@ -162,6 +162,7 @@ enum class emu_settings_type
 	// Misc
 	ExitRPCS3OnFinish,
 	StartOnBoot,
+	PauseOnFocusLoss,
 	StartGameFullscreen,
 	PreventDisplaySleep,
 	ShowTrophyPopups,
@@ -346,6 +347,7 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	// Misc
 	{ emu_settings_type::ExitRPCS3OnFinish,         { "Miscellaneous", "Exit RPCS3 when process finishes" }},
 	{ emu_settings_type::StartOnBoot,               { "Miscellaneous", "Automatically start games after boot" }},
+	{ emu_settings_type::PauseOnFocusLoss,          { "Miscellaneous", "Pause emulation on RPCS3 focus loss" }},
 	{ emu_settings_type::StartGameFullscreen,       { "Miscellaneous", "Start games in fullscreen mode"}},
 	{ emu_settings_type::PreventDisplaySleep,       { "Miscellaneous", "Prevent display sleep while running games"}},
 	{ emu_settings_type::ShowTrophyPopups,          { "Miscellaneous", "Show trophy popups"}},

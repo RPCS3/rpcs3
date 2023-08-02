@@ -67,7 +67,7 @@ namespace id_manager
 		static constexpr std::pair<u32, u32> invl_range = get_invl_range<T>();
 		static constexpr bool uses_lowest_id = get_force_lowest_id<T>();
 
-		static_assert(count && step && u64{step} * (count - 1) + base < u32{umax} + u64{base != 0 ? 1 : 0}, "ID traits: invalid object range");
+		static_assert(u32{count} && u32{step} && u64{step} * (count - 1) + base < u32{umax} + u64{base != 0 ? 1 : 0}, "ID traits: invalid object range");
 
 		// TODO: Add more conditions
 		static_assert(!invl_range.second || (u64{invl_range.second} + invl_range.first <= 32 /*....*/ ));

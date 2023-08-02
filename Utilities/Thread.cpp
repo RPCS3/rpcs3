@@ -110,11 +110,7 @@ std::string dump_useful_thread_info()
 
 	if (auto cpu = get_current_cpu_thread())
 	{
-		// Wrap it to disable some internal exceptions when printing (not thrown on main thread)
-		Emu.BlockingCallFromMainThread([&]()
-		{
-			cpu->dump_all(result);
-		});
+		cpu->dump_all(result);
 	}
 
 	return result;
@@ -1639,7 +1635,7 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 			if (!g_tls_access_violation_recovered)
 			{
 				vm_log.notice("\n%s", dump_useful_thread_info());
-				vm_log.error("Access violation %s location 0x%x (%s)", is_writing ? "writing" : "reading", addr, (is_writing && vm::check_addr(addr)) ? "read-only memory" : "unmapped memory");
+				vm_log.error("[%s] Access violation %s location 0x%x (%s)", cpu->get_name(), is_writing ? "writing" : "reading", addr, (is_writing && vm::check_addr(addr)) ? "read-only memory" : "unmapped memory");
 			}
 
 			// TODO:
@@ -1832,15 +1828,15 @@ static LONG exception_filter(PEXCEPTION_POINTERS pExp) noexcept
 const bool s_exception_handler_set = []() -> bool
 {
 #ifdef USE_ASAN
-	if (!AddVectoredExceptionHandler(FALSE, (PVECTORED_EXCEPTION_HANDLER)exception_handler))
+	if (!AddVectoredExceptionHandler(FALSE, static_cast<PVECTORED_EXCEPTION_HANDLER>(exception_handler)))
 #else
-	if (!AddVectoredExceptionHandler(1, (PVECTORED_EXCEPTION_HANDLER)exception_handler))
+	if (!AddVectoredExceptionHandler(1, static_cast<PVECTORED_EXCEPTION_HANDLER>(exception_handler)))
 #endif
 	{
 		report_fatal_error("AddVectoredExceptionHandler() failed.");
 	}
 
-	if (!SetUnhandledExceptionFilter((LPTOP_LEVEL_EXCEPTION_FILTER)exception_filter))
+	if (!SetUnhandledExceptionFilter(static_cast<LPTOP_LEVEL_EXCEPTION_FILTER>(exception_filter)))
 	{
 		report_fatal_error("SetUnhandledExceptionFilter() failed.");
 	}
@@ -2046,7 +2042,7 @@ void thread_base::start()
 #ifdef _WIN32
 	m_thread = ::_beginthreadex(nullptr, 0, entry_point, this, CREATE_SUSPENDED, nullptr);
 	ensure(m_thread);
-	ensure(::ResumeThread(reinterpret_cast<HANDLE>(+m_thread)) != -1);
+	ensure(::ResumeThread(reinterpret_cast<HANDLE>(+m_thread)) != static_cast<DWORD>(-1));
 #elif defined(__APPLE__)
 	pthread_attr_t stack_size_attr;
 	pthread_attr_init(&stack_size_attr);
@@ -2154,7 +2150,7 @@ u64 thread_base::finalize(thread_state result_state) noexcept
 	tls_cycles += cycles;
 	FILETIME ctime, etime, ktime, utime;
 	GetThreadTimes(GetCurrentThread(), &ctime, &etime, &ktime, &utime);
-	const u64 time = ((ktime.dwLowDateTime | (u64)ktime.dwHighDateTime << 32) + (utime.dwLowDateTime | (u64)utime.dwHighDateTime << 32)) * 100ull - tls_time;
+	const u64 time = ((ktime.dwLowDateTime | static_cast<u64>(ktime.dwHighDateTime) << 32) + (utime.dwLowDateTime | static_cast<u64>(utime.dwHighDateTime) << 32)) * 100ull - tls_time;
 	tls_time += time;
 	const u64 fsoft = 0;
 	const u64 fhard = 0;

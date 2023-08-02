@@ -133,11 +133,23 @@ void fmt_class_string<typename ppu_thread::call_history_t>::format(std::string& 
 
 	PPUDisAsm dis_asm(cpu_disasm_mode::normal, vm::g_sudo_addr);
 
-	for (u64 count = 0, idx = history.index - 1; idx != umax && count < ppu_thread::call_history_max_size; count++, idx--)
+	for (u64 count = 0, idx = history.index - 1; idx != umax && count < history.data.size(); count++, idx--)
 	{
-		const u32 pc = history.data[idx % ppu_thread::call_history_max_size];
+		const u32 pc = history.data[idx % history.data.size()];
 		dis_asm.disasm(pc);
 		fmt::append(out, "\n(%u) 0x%08x: %s", count, pc, dis_asm.last_opcode);
+	}
+}
+
+template <>
+void fmt_class_string<typename ppu_thread::syscall_history_t>::format(std::string& out, u64 arg)
+{
+	const auto& history = get_object(arg);
+
+	for (u64 count = 0, idx = history.index - 1; idx != umax && count < history.data.size(); count++, idx--)
+	{
+		const auto& entry = history.data[idx % history.data.size()];
+		fmt::append(out, "\n(%u) 0x%08x: %s, 0x%x, r3=0x%x, r4=0x%x, r5=0x%x, r6=0x%x", count, entry.cia, entry.func_name, entry.error, entry.args[0], entry.args[1], entry.args[2], entry.args[3]);
 	}
 }
 
@@ -1072,7 +1084,7 @@ void ppu_remove_hle_instructions(u32 addr, u32 size)
 	}
 }
 
-atomic_t<bool> g_debugger_pause_all_threads_on_bp = true;
+atomic_t<bool> g_debugger_pause_all_threads_on_bp = false;
 
 // Breakpoint entry point
 static void ppu_break(ppu_thread& ppu, ppu_opcode_t, be_t<u32>* this_op, ppu_intrp_func* next_fn)
@@ -1223,8 +1235,30 @@ std::array<u32, 2> op_branch_targets(u32 pc, ppu_opcode_t op)
 	return res;
 }
 
-void ppu_thread::dump_regs(std::string& ret) const
+void ppu_thread::dump_regs(std::string& ret, std::any& custom_data) const
 {
+	const system_state emu_state = Emu.GetStatus(false);
+	const bool is_stopped_or_frozen = state & cpu_flag::exit || emu_state == system_state::frozen || emu_state <= system_state::stopping;
+	const ppu_debugger_mode mode = debugger_mode.load();
+
+	const bool is_decimal = !is_stopped_or_frozen && mode == ppu_debugger_mode::is_decimal;
+
+	struct dump_registers_data_t
+	{
+		u32 preferred_cr_field_index = 7;
+	};
+
+	dump_registers_data_t* func_data = nullptr;
+
+	func_data = std::any_cast<dump_registers_data_t>(&custom_data);
+
+	if (!func_data)
+	{
+		custom_data.reset();
+		custom_data = std::make_any<dump_registers_data_t>();
+		func_data = ensure(std::any_cast<dump_registers_data_t>(&custom_data));
+	}
+
 	PPUDisAsm dis_asm(cpu_disasm_mode::normal, vm::g_sudo_addr);
 
 	for (uint i = 0; i < 32; ++i)
@@ -1266,7 +1300,14 @@ void ppu_thread::dump_regs(std::string& ret) const
 
 		if (!printed_error)
 		{
-			fmt::append(ret, "0x%-8llx", reg);
+			if (is_decimal)
+			{
+				fmt::append(ret, "%-11d", reg);
+			}
+			else
+			{
+				fmt::append(ret, "0x%-8llx", reg);
+			}
 		}
 
 		constexpr u32 max_str_len = 32;
@@ -1342,6 +1383,59 @@ void ppu_thread::dump_regs(std::string& ret) const
 		ret += '\n';
 	}
 
+	const u32 current_cia = cia;
+	const u32 cr_packed = cr.pack();
+
+	for (u32 addr :
+	{
+		current_cia,
+		current_cia + 4,
+		current_cia + 8,
+		current_cia - 4,
+		current_cia + 12,
+	})
+	{
+		dis_asm.disasm(addr);
+
+		if (dis_asm.last_opcode.size() <= 4)
+		{
+			continue;
+		}
+
+		if (usz index = dis_asm.last_opcode.rfind(",cr"); index < dis_asm.last_opcode.size() - 4)
+		{
+			const char result = dis_asm.last_opcode[index + 3];
+
+			if (result >= '0' && result <= '7')
+			{
+				func_data->preferred_cr_field_index = result - '0';
+				break;
+			}
+		}
+
+		if (usz index = dis_asm.last_opcode.rfind(" cr"); index < dis_asm.last_opcode.size() - 4)
+		{
+			const char result = dis_asm.last_opcode[index + 3];
+
+			if (result >= '0' && result <= '7')
+			{
+				func_data->preferred_cr_field_index = result - '0';
+				break;
+			}
+		}
+
+		if (dis_asm.last_opcode.find("stdcx.") != umax || dis_asm.last_opcode.find("stwcx.") != umax)
+		{
+			// Modifying CR0
+			func_data->preferred_cr_field_index = 0;
+			break;
+		}
+	}
+
+	const u32 displayed_cr_field = (cr_packed >> ((7 - func_data->preferred_cr_field_index) * 4)) & 0xf;
+
+	fmt::append(ret, "CR: 0x%08x, CR%d: [LT=%u GT=%u EQ=%u SO=%u]\n", cr_packed, func_data->preferred_cr_field_index, displayed_cr_field >> 3, (displayed_cr_field >> 2) & 1, (displayed_cr_field >> 1) & 1, displayed_cr_field & 1);
+
 	for (uint i = 0; i < 32; ++i)
 	{
 		const f64 r = fpr[i];
@@ -1375,8 +1469,7 @@ void ppu_thread::dump_regs(std::string& ret) const
 		}
 	}
 
-	fmt::append(ret, "CIA: 0x%x\n", cia);
-	fmt::append(ret, "CR: 0x%08x\n", cr.pack());
+	fmt::append(ret, "CIA: 0x%x\n", current_cia);
 	fmt::append(ret, "LR: 0x%llx\n", lr);
 	fmt::append(ret, "CTR: 0x%llx\n", ctr);
 	fmt::append(ret, "VRSAVE: 0x%08x\n", vrsave);
@@ -1593,13 +1686,22 @@ void ppu_thread::dump_all(std::string& ret) const
 {
 	cpu_thread::dump_all(ret);
 
-	if (!call_history.data.empty())
+	if (call_history.data.size() > 1)
 	{
 		ret +=
 			"\nCalling History:"
 			"\n================";
 
 		fmt::append(ret, "%s", call_history);
+	}
+
+	if (syscall_history.data.size() > 1)
+	{
+		ret +=
+			"\nHLE/LV2 History:"
+			"\n================";
+
+		fmt::append(ret, "%s", syscall_history);
 	}
 }
 
@@ -1803,7 +1905,7 @@ void ppu_thread::cpu_on_stop()
 	}
 
 	// TODO: More conditions
-	if (Emu.IsStopped() && g_cfg.core.spu_debug)
+	if (Emu.IsStopped() && g_cfg.core.ppu_debug)
 	{
 		std::string ret;
 		dump_all(ret);
@@ -1850,7 +1952,7 @@ void ppu_thread::exec_task()
 
 ppu_thread::~ppu_thread()
 {
-	perf_log.notice("Perf stats for STCX reload: successs %u, failure %u", last_succ, last_fail);
+	perf_log.notice("Perf stats for STCX reload: success %u, failure %u", last_succ, last_fail);
 	perf_log.notice("Perf stats for instructions: total %u", exec_bytes / 4);
 }
 
@@ -1887,10 +1989,9 @@ ppu_thread::ppu_thread(const ppu_thread_params& param, std::string_view name, u3
 		state += cpu_flag::memory;
 	}
 
-	if (g_cfg.core.ppu_call_history)
-	{
-		call_history.data.resize(call_history_max_size);
-	}
+	call_history.data.resize(g_cfg.core.ppu_call_history ? call_history_max_size : 1);
+	syscall_history.data.resize(g_cfg.core.ppu_call_history ? syscall_history_max_size : 1);
+	syscall_history.count_debug_arguments = static_cast<u32>(g_cfg.core.ppu_call_history ? std::size(syscall_history.data[0].args) : 0);
 
 #ifdef __APPLE__
 	pthread_jit_write_protect_np(true);
@@ -1929,21 +2030,7 @@ void ppu_thread::serialize_common(utils::serial& ar)
 {
 	[[maybe_unused]] const s32 version = GET_OR_USE_SERIALIZATION_VERSION(ar.is_writing(), ppu);
 
-	ar(gpr, fpr, cr, fpscr.bits, lr, ctr, vrsave, cia, xer, sat, nj);
-
-	if (ar.is_writing())
-	{
-	 	ar(prio.load().all);
-	}
-	else if (version < 2)
-	{
-		prio.raw().all = 0;
-		prio.raw().prio = ar.operator s32();
-	}
-	else
-	{
-		ar(prio.raw().all);
-	}
+	ar(gpr, fpr, cr, fpscr.bits, lr, ctr, vrsave, cia, xer, sat, nj, prio.raw().all);
 
 	ar(optional_savestate_state, vr);
 
@@ -1966,6 +2053,10 @@ ppu_thread::ppu_thread(utils::serial& ar)
 		bool pushed = false;
 		atomic_t<bool> inited = false;
 	};
+
+	call_history.data.resize(g_cfg.core.ppu_call_history ? call_history_max_size : 1);
+	syscall_history.data.resize(g_cfg.core.ppu_call_history ? syscall_history_max_size : 1);
+	syscall_history.count_debug_arguments = static_cast<u32>(g_cfg.core.ppu_call_history ? std::size(syscall_history.data[0].args) : 0);
 
 	serialize_common(ar);
 
@@ -3040,9 +3131,9 @@ namespace
 		{
 		}
 
-		fs::stat_t stat() override
+		fs::stat_t get_stat() override
 		{
-			return m_file.stat();
+			return m_file.get_stat();
 		}
 
 		bool trunc(u64) override
@@ -3374,6 +3465,12 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 
 					if (error)
 					{
+						if (error == CELL_CANCEL + 0u)
+						{
+							// Emulation stopped
+							break;
+						}
+
 						// Abort
 						ovl_err = elf_error::header_type;
 						break;
@@ -3644,7 +3741,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 {
 	if (g_cfg.core.ppu_decoder != ppu_decoder_type::llvm)
 	{
-		if (check_only)
+		if (check_only || vm::base(info.segs[0].addr) != info.segs[0].ptr)
 		{
 			return false;
 		}
@@ -3664,7 +3761,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 
 			if (g_cfg.core.ppu_debug && func.size && func.toc != umax)
 			{
-				ppu_toc.emplace(func.addr, func.toc);
+				ppu_toc[func.addr] = func.toc;
 				ppu_ref(func.addr) = &ppu_check_toc;
 			}
 		}
@@ -3785,6 +3882,10 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 
 	bool has_mfvscr = false;
 
+	const bool is_being_used_in_emulation = vm::base(info.segs[0].addr) == info.segs[0].ptr;
+
+	const cpu_thread* cpu = cpu_thread::get_current();
+
 	for (auto& func : info.funcs)
 	{
 		if (func.size == 0)
@@ -3826,7 +3927,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 	while (!jit_mod.init && fpos < info.funcs.size())
 	{
 		// Initialize compiler instance
-		if (!jit && get_current_cpu_thread())
+		if (!jit && is_being_used_in_emulation)
 		{
 			jit = std::make_shared<jit_compiler>(s_link_table, g_cfg.core.llvm_cpu);
 		}
@@ -4162,7 +4263,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 
 		g_watchdog_hold_ctr--;
 
-		if (Emu.IsStopped() || !get_current_cpu_thread())
+		if (!is_being_used_in_emulation || (cpu ? cpu->state.all_of(cpu_flag::exit) : Emu.IsStopped()))
 		{
 			return compiled_new;
 		}
@@ -4175,7 +4276,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 
 		for (auto [obj_name, is_compiled] : link_workload)
 		{
-			if (Emu.IsStopped())
+			if (cpu ? cpu->state.all_of(cpu_flag::exit) : Emu.IsStopped())
 			{
 				break;
 			}
@@ -4190,7 +4291,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 		}
 	}
 
-	if (Emu.IsStopped() || !get_current_cpu_thread())
+	if (!is_being_used_in_emulation || (cpu ? cpu->state.all_of(cpu_flag::exit) : Emu.IsStopped()))
 	{
 		return compiled_new;
 	}
@@ -4215,7 +4316,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 			ppu_register_function_at(func.addr, 4, addr);
 
 			if (g_cfg.core.ppu_debug)
-				ppu_log.notice("Installing function %s at 0x%x: %p (reloc = 0x%x)", name, func.addr, ppu_ref(func.addr), reloc);
+				ppu_log.trace("Installing function %s at 0x%x: %p (reloc = 0x%x)", name, func.addr, ppu_ref(func.addr), reloc);
 		}
 
 		jit_mod.init = true;
@@ -4234,7 +4335,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 			ppu_register_function_at(func.addr, 4, addr);
 
 			if (g_cfg.core.ppu_debug)
-				ppu_log.notice("Reinstalling function at 0x%x: %p (reloc=0x%x)", func.addr, ppu_ref(func.addr), reloc);
+				ppu_log.trace("Reinstalling function at 0x%x: %p (reloc=0x%x)", func.addr, ppu_ref(func.addr), reloc);
 		}
 
 		index = 0;

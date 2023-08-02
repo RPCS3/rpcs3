@@ -14,7 +14,7 @@
 
 #include "glutils/ring_buffer.h"
 
-#ifdef _WIN32
+#ifdef _MSC_VER
 #pragma comment(lib, "opengl32.lib")
 #endif
 

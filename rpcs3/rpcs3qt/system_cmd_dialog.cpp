@@ -33,13 +33,13 @@ system_cmd_dialog::system_cmd_dialog(QWidget* parent)
 	m_value_input = new QLineEdit();
 	m_value_input->setFont(mono);
 	m_value_input->setMaxLength(18);
-	m_value_input->setValidator(new QRegularExpressionValidator(QRegularExpression("^(0[xX])?0*[a-fA-F0-9]{0,8}$")));
+	m_value_input->setValidator(new QRegularExpressionValidator(QRegularExpression("^(0[xX])?0*[a-fA-F0-9]{0,8}$"), this));
 	m_value_input->setPlaceholderText(QString("0x%1").arg(0, 16, 16, QChar('0')));
 
 	m_custom_command_input = new QLineEdit();
 	m_custom_command_input->setFont(mono);
 	m_custom_command_input->setMaxLength(18);
-	m_custom_command_input->setValidator(new QRegularExpressionValidator(QRegularExpression("^(0[xX])?0*[a-fA-F0-9]{0,8}$")));
+	m_custom_command_input->setValidator(new QRegularExpressionValidator(QRegularExpression("^(0[xX])?0*[a-fA-F0-9]{0,8}$"), this));
 	m_custom_command_input->setPlaceholderText(QString("0x%1").arg(0, 16, 16, QChar('0')));
 
 	m_command_box = new QComboBox();

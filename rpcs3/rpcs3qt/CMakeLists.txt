@@ -1,7 +1,4 @@
-﻿# prevent WolfSSL from warning about not having harden options
-add_compile_definitions(WC_NO_HARDEN)
-
-set(SRC_FILES
+add_library(rpcs3_ui STATIC
     about_dialog.cpp
     auto_pause_settings_dialog.cpp
     breakpoint_handler.cpp
@@ -68,7 +65,7 @@ set(SRC_FILES
     progress_indicator.cpp
     qt_camera_error_handler.cpp
     qt_camera_handler.cpp
-    qt_camera_video_surface.cpp
+    qt_camera_video_sink.cpp
     qt_music_error_handler.cpp
     qt_music_handler.cpp
     qt_utils.cpp
@@ -109,9 +106,7 @@ set(SRC_FILES
     vfs_dialog_usb_input.cpp
     vfs_dialog_usb_tab.cpp
     welcome_dialog.cpp
-)
 
-set(UI_FILES
     about_dialog.ui
     camera_settings_dialog.ui
     main_window.ui
@@ -123,15 +118,13 @@ set(UI_FILES
     settings_dialog.ui
     shortcut_dialog.ui
     welcome_dialog.ui
+
+    "../resources.qrc"
 )
 
-set(RES_FILES "../resources.qrc")
-
 if(WIN32)
-    list(APPEND RES_FILES "../windows.qrc")
+    target_sources(rpcs3_ui PUBLIC "../windows.qrc")
 endif()
-
-add_library(rpcs3_ui ${SRC_FILES} ${UI_FILES} ${RES_FILES})
 
 set_target_properties(rpcs3_ui
     PROPERTIES
@@ -147,7 +140,7 @@ target_compile_definitions(rpcs3_ui PRIVATE WIN32_LEAN_AND_MEAN)
 
 target_link_libraries(rpcs3_ui
     PUBLIC
-        3rdparty::qt5 3rdparty::yaml-cpp
+        3rdparty::qt6 3rdparty::yaml-cpp
 
     PRIVATE
         rpcs3_emu

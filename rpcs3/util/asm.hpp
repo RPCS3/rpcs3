@@ -8,6 +8,7 @@ extern bool g_use_rtm;
 extern u64 g_rtm_tx_limit1;
 
 #ifdef _M_X64
+#ifdef _MSC_VER
 extern "C"
 {
 	u32 _xbegin();
@@ -18,8 +19,6 @@ extern "C"
 
 	uchar _rotl8(uchar, uchar);
 	ushort _rotl16(ushort, uchar);
-	uint _rotl(uint, int);
-	u64 _rotl64(u64, int);
 	u64 __popcnt64(u64);
 
 	s64 __mulh(s64, s64);
@@ -29,6 +28,10 @@ extern "C"
 	u64 _udiv128(u64, u64, u64, u64*);
 	void __debugbreak();
 }
+#include <intrin.h>
+#else
+#include <immintrin.h>
+#endif
 #endif
 
 namespace utils
@@ -47,7 +50,7 @@ namespace utils
 #else
 			status = _xbegin();
 
-			if (status != umax) [[unlikely]]
+			if (status != _XBEGIN_STARTED) [[unlikely]]
 			{
 				goto retry;
 			}
@@ -138,7 +141,7 @@ namespace utils
 			return;
 		}
 
-#ifdef _M_X64
+#if defined(_M_X64) && !defined(__clang__)
 		return _m_prefetchw(ptr);
 #else
 		return __builtin_prefetch(ptr, 1, 0);

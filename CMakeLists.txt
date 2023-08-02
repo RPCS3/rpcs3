@@ -1,12 +1,14 @@
 cmake_minimum_required(VERSION 3.16.9)
 
-project(rpcs3)
+project(rpcs3 LANGUAGES C CXX)
 
-if(${CMAKE_CXX_COMPILER_ID} MATCHES "GNU")
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 11)
         message(FATAL_ERROR "RPCS3 requires at least gcc-11.")
     endif()
-elseif(${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 12.0)
         message(FATAL_ERROR "RPCS3 requires at least clang-12.0.")
     endif()
@@ -24,8 +26,9 @@ option(USE_VULKAN "Vulkan render backend" ON)
 option(USE_PRECOMPILED_HEADERS "Use precompiled headers" OFF)
 option(USE_SDL "Enables SDL input handler" OFF)
 option(USE_SYSTEM_SDL "Prefer system SDL instead of the builtin one" OFF)
+option(USE_SYSTEM_FFMPEG "Prefer system ffmpeg instead of the prebuild one" OFF)
 
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/buildfiles/cmake")
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/buildfiles/cmake")
 
 include(CheckCXXCompilerFlag)
 
@@ -43,7 +46,7 @@ else()
 endif()
 
 if(CMAKE_BUILD_TYPE MATCHES "Debug" AND NOT MSVC)
-    add_definitions(-D_DEBUG)
+    add_compile_definitions(_DEBUG)
 endif()
 
 if(MSVC)
@@ -75,7 +78,7 @@ if(MSVC)
     # TODO(cjj19970505@live.cn)
     # offical QT uses dynamic CRT.
     # When building our lib with static CRT and debug build type
-    # and linking with Qt with dynmaic CRT and debug build,
+    # and linking with Qt with dynamic CRT and debug build,
     # error is encountered in runtime (which is expected).
     # But building our lib with static CRT and release build type,
     # and linking with Qt with dynamic CRT and release build seems to be working,
@@ -90,6 +93,7 @@ if(MSVC)
             message(AUTHOR_WARNING "Debug build currently can not work with static CRT.")
         endif()
     endif()
+    add_compile_options(/MP)
 endif()
 
 if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -98,13 +102,12 @@ endif()
 
 find_program(CCACHE_FOUND ccache)
 if(CCACHE_FOUND)
-    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
-    set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
+    set(CMAKE_CXX_COMPILER_LAUNCHER ccache)
 endif()
 
 if(WIN32)
-    add_definitions(-DUNICODE)
-    add_definitions(-D_WIN32_WINNT=0x0602)
+    add_compile_definitions(UNICODE)
+    add_compile_definitions(_WIN32_WINNT=0x0602)
 endif()
 
 if(APPLE AND CMAKE_OSX_ARCHITECTURES STREQUAL "arm64")
@@ -112,19 +115,13 @@ if(APPLE AND CMAKE_OSX_ARCHITECTURES STREQUAL "arm64")
     link_directories(/opt/homebrew/lib)
 endif()
 
-# Warnings are silenced for 3rdparty code
-set(CMAKE_CXX_FLAGS -w)
-set(CMAKE_C_FLAGS -w)
-set(LLVM_ENABLE_WARNINGS OFF CACHE BOOL "")
+set(LLVM_ENABLE_WARNINGS OFF CACHE BOOL "Enable compiler warnings.")
 
 if(MSVC)
     add_compile_options(/wd4530 /utf-8) # C++ exception handler used, but unwind semantics are not enabled
 endif()
 
 add_subdirectory(3rdparty)
-
-unset(CMAKE_CXX_FLAGS)
-unset(CMAKE_C_FLAGS)
 
 if (DISABLE_LTO)
     if (CMAKE_C_FLAGS)
@@ -137,7 +134,7 @@ endif()
 
 string(FIND "${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS}" "-flto" FOUND_LTO)
 if (NOT FOUND_LTO EQUAL -1)
-    message(FATAL_ERROR "Rpcs3 doesn't support building with LTO, use -DDISABLE_LTO=TRUE to force-disable it")
+    message(FATAL_ERROR "RPCS3 doesn't support building with LTO, use -DDISABLE_LTO=TRUE to force-disable it")
 endif()
 
 if(NOT WIN32)
@@ -149,6 +146,6 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE "${PROJECT_BINARY_DIR}/bin")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG "${PROJECT_BINARY_DIR}/bin")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${PROJECT_BINARY_DIR}/bin")
 
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
 add_subdirectory(rpcs3)
+
+set_directory_properties(PROPERTIES VS_STARTUP_PROJECT rpcs3)

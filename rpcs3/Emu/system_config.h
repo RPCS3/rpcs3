@@ -99,6 +99,7 @@ struct cfg_root : cfg::node
 #else
 		cfg::_enum<sleep_timers_accuracy_level> sleep_timers_accuracy{ this, "Sleep Timers Accuracy", sleep_timers_accuracy_level::_usleep, true };
 #endif
+		cfg::_int<-1000, 1500> usleep_addend{ this, "Usleep Time Addend", 0, true };
 
 		cfg::uint64 perf_report_threshold{this, "Performance Report Threshold", 500, true}; // In µs, 0.5ms = default, 0 = everything
 		cfg::_bool perf_report{this, "Enable Performance Report", false, true}; // Show certain perf-related logs
@@ -326,6 +327,7 @@ struct cfg_root : cfg::node
 
 		cfg::_bool autostart{ this, "Automatically start games after boot", true, true };
 		cfg::_bool autoexit{ this, "Exit RPCS3 when process finishes", false, true };
+		cfg::_bool autopause{ this, "Pause emulation on RPCS3 focus loss", false, true };
 		cfg::_bool start_fullscreen{ this, "Start games in fullscreen mode", false, true };
 		cfg::_bool prevent_display_sleep{ this, "Prevent display sleep while running games", true, true };
 		cfg::_bool show_trophy_popups{ this, "Show trophy popups", true, true };

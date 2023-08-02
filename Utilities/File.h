@@ -84,12 +84,22 @@ namespace fs
 		usz iov_len;
 	};
 
+	struct file_id
+	{
+		std::string type;
+		std::vector<u8> data;
+
+		explicit operator bool() const;
+		bool is_mirror_of(const file_id&) const;
+		bool is_coherent_with(const file_id&) const;
+	};
+
 	// File handle base
 	struct file_base
 	{
 		virtual ~file_base();
 
-		[[noreturn]] virtual stat_t stat();
+		[[noreturn]] virtual stat_t get_stat();
 		virtual void sync();
 		virtual bool trunc(u64 length) = 0;
 		virtual u64 read(void* buffer, u64 size) = 0;
@@ -98,6 +108,7 @@ namespace fs
 		virtual u64 seek(s64 offset, seek_mode whence) = 0;
 		virtual u64 size() = 0;
 		virtual native_handle get_handle();
+		virtual file_id get_id();
 		virtual u64 write_gather(const iovec_clone* buffers, u64 buf_count);
 	};
 
@@ -175,7 +186,7 @@ namespace fs
 	}
 
 	// Get file information
-	bool stat(const std::string& path, stat_t& info);
+	bool get_stat(const std::string& path, stat_t& info);
 
 	// Check whether a file or a directory exists (not recommended, use is_file() or is_dir() instead)
 	bool exists(const std::string& path);
@@ -273,14 +284,14 @@ namespace fs
 		}
 
 		// Get file information
-		stat_t stat(
+		stat_t get_stat(
 			u32 line = __builtin_LINE(),
 			u32 col = __builtin_COLUMN(),
 			const char* file = __builtin_FILE(),
 			const char* func = __builtin_FUNCTION()) const
 		{
 			if (!m_file) xnull({line, col, file, func});
-			return m_file->stat();
+			return m_file->get_stat();
 		}
 
 		// Sync file buffers
@@ -505,6 +516,9 @@ namespace fs
 		// Get native handle if available
 		native_handle get_handle() const;
 
+		// Get file ID information (custom ID)
+		file_id get_id() const;
+
 		// Gathered write
 		u64 write_gather(const iovec_clone* buffers, u64 buf_count,
 			u32 line = __builtin_LINE(),
@@ -690,6 +704,7 @@ namespace fs
 		isdir,
 		toolong,
 		nospace,
+		xdev,
 		unknown
 	};
 
@@ -814,7 +829,7 @@ namespace fs
 			return obj.size();
 		}
 
-		stat_t stat() override
+		stat_t get_stat() override
 		{
 			return m_stat;
 		}

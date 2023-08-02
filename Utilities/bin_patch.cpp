@@ -77,6 +77,7 @@ void fmt_class_string<patch_type>::format(std::string& out, u64 arg)
 		case patch_type::lef32: return "lef32";
 		case patch_type::lef64: return "lef64";
 		case patch_type::utf8: return "utf8";
+		case patch_type::c_utf8: return "cutf8";
 		case patch_type::move_file: return "move_file";
 		case patch_type::hide_file: return "hide_file";
 		}
@@ -218,18 +219,18 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 	// Go through each main key in the file
 	for (auto pair : root)
 	{
-		const auto& main_key = pair.first.Scalar();
+		const std::string& main_key = pair.first.Scalar();
 
-		if (const auto yml_type = pair.second.Type(); yml_type != YAML::NodeType::Map)
+		if (main_key.empty())
 		{
-			append_log_message(log_messages, fmt::format("Error: Skipping key %s: expected Map, found %s (location: %s, file: %s)", main_key, yml_type, get_yaml_node_location(pair.second), path), &patch_log.error);
+			append_log_message(log_messages, fmt::format("Error: Skipping empty key (location: %s, file: %s)", get_yaml_node_location(pair.first), path), &patch_log.error);
 			is_valid = false;
 			continue;
 		}
 
-		if (main_key.empty())
+		if (const auto yml_type = pair.second.Type(); yml_type != YAML::NodeType::Map)
 		{
-			append_log_message(log_messages, fmt::format("Error: Skipping empty key (location: %s, file: %s)", get_yaml_node_location(pair.second), path), &patch_log.error);
+			append_log_message(log_messages, fmt::format("Error: Skipping key %s: expected Map, found %s (location: %s, file: %s)", main_key, yml_type, get_yaml_node_location(pair.second), path), &patch_log.error);
 			is_valid = false;
 			continue;
 		}
@@ -241,7 +242,7 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 		}
 
 		// Find or create an entry matching the key/hash in our map
-		auto& container = patches_map[main_key];
+		patch_container& container = patches_map[main_key];
 		container.hash    = main_key;
 		container.version = version;
 
@@ -250,6 +251,13 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 		{
 			// Each key in "Patches" is also the patch description
 			const std::string& description = patches_entry.first.Scalar();
+
+			if (description.empty())
+			{
+				append_log_message(log_messages, fmt::format("Error: Empty patch name (key: %s, location: %s, file: %s)", main_key, get_yaml_node_location(patches_entry.first), path), &patch_log.error);
+				is_valid = false;
+				continue;
+			}
 
 			// Compile patch information
 
@@ -329,7 +337,7 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 							continue;
 						}
 
-						patch_engine::patch_app_versions app_versions;
+						patch_app_versions app_versions;
 
 						for (const auto version : serial_node.second)
 						{
@@ -578,6 +586,14 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 			{
 				if (!read_patch_node(info, patch_node, root, log_messages))
 				{
+					for (const auto& it : patches_entry.second)
+					{
+						if (it.first.Scalar() == patch_key::patch)
+						{
+							append_log_message(log_messages, fmt::format("Skipping invalid patch node %s: (key: %s, location: %s)", info.description, main_key, get_yaml_node_location(it.first)), &patch_log.error);
+							break;
+						}
+					}
 					is_valid = false;
 				}
 			}
@@ -702,6 +718,33 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 
 	std::string error_message;
 
+	// Validate offset
+	switch (p_data.type)
+	{
+	case patch_type::move_file:
+	case patch_type::hide_file:
+		break;
+	default:
+	{
+		[[maybe_unused]] const u32 offset = get_yaml_node_value<u32>(addr_node, error_message);
+		if (!error_message.empty())
+		{
+			error_message = fmt::format("Skipping patch data entry: [ %s, 0x%.8x, %s ] (key: %s, location: %s) Invalid patch offset '%s' (not a valid u32 or overflow)",
+				p_data.type, p_data.offset, p_data.original_value.empty() ? "?" : p_data.original_value, info.hash, get_yaml_node_location(node), p_data.original_offset);
+			append_log_message(log_messages, error_message, &patch_log.error);
+			return false;
+		}
+		if ((0xFFFFFFFF - modifier) < p_data.offset)
+		{
+			error_message = fmt::format("Skipping patch data entry: [ %s, 0x%.8x, %s ] (key: %s, location: %s) Invalid combination of patch offset 0x%.8x and modifier 0x%.8x (overflow)",
+				p_data.type, p_data.offset, p_data.original_value.empty() ? "?" : p_data.original_value, info.hash, get_yaml_node_location(node), p_data.offset, modifier);
+			append_log_message(log_messages, error_message, &patch_log.error);
+			return false;
+		}
+		break;
+	}
+	}
+
 	switch (p_data.type)
 	{
 	case patch_type::utf8:
@@ -805,7 +848,7 @@ void unmap_vm_area(std::shared_ptr<vm::block_t>& ptr)
 }
 
 // Returns old 'applied' size
-static usz apply_modification(std::basic_string<u32>& applied, patch_engine::patch_info& patch, std::function<u8*(u32)> mem_translate, u32 filesz, u32 min_addr)
+static usz apply_modification(std::basic_string<u32>& applied, patch_engine::patch_info& patch, std::function<u8*(u32, u32)> mem_translate, u32 filesz, u32 min_addr)
 {
 	const usz old_applied_size = applied.size();
 
@@ -847,7 +890,7 @@ static usz apply_modification(std::basic_string<u32>& applied, patch_engine::pat
 		if (p.type != patch_type::alloc) continue;
 
 		// Do not allow null address or if resultant ptr is not a VM ptr
-		if (const u32 alloc_at = vm::try_get_addr(mem_translate(p.offset & -4096)).first; alloc_at >> 16)
+		if (const u32 alloc_at = (p.offset & -4096); alloc_at >> 16)
 		{
 			const u32 alloc_size = utils::align(static_cast<u32>(p.value.long_value) + alloc_at % 4096, 4096);
 
@@ -926,7 +969,74 @@ static usz apply_modification(std::basic_string<u32>& applied, patch_engine::pat
 			relocate_instructions_at = 0;
 		}
 
-		if (!relocate_instructions_at && (offset < min_addr || offset - min_addr >= filesz))
+		u32 memory_size = 0;
+
+		switch (p.type)
+		{
+		case patch_type::invalid:
+		case patch_type::load:
+		{
+			// Invalid in this context
+			break;
+		}
+		case patch_type::alloc:
+		{
+			// Applied before
+			memory_size = 0;
+			continue;
+		}
+		case patch_type::byte:
+		{
+			memory_size = sizeof(u8);
+			break;
+		}
+		case patch_type::le16:
+		case patch_type::be16:
+		{
+			memory_size = sizeof(u16);
+			break;
+		}
+		case patch_type::code_alloc:
+		case patch_type::jump:
+		case patch_type::jump_link:
+		case patch_type::jump_func:
+		case patch_type::le32:
+		case patch_type::lef32:
+		case patch_type::bd32:
+		case patch_type::be32:
+		case patch_type::bef32:
+		{
+			memory_size = sizeof(u32);
+			break;
+		}
+		case patch_type::lef64:
+		case patch_type::le64:
+		case patch_type::bd64:
+		case patch_type::be64:
+		case patch_type::bef64:
+		{
+			memory_size = sizeof(u64);
+			break;
+		}
+		case patch_type::utf8:
+		{
+			memory_size = p.original_value.size();
+			break;
+		}
+		case patch_type::c_utf8:
+		{
+			memory_size = utils::add_saturate<u32>(p.original_value.size(), 1);
+			break;
+		}
+		case patch_type::move_file:
+		case patch_type::hide_file:
+		{
+			memory_size = 0;
+			break;
+		}
+		}
+
+		if (memory_size != 0 && !relocate_instructions_at && (filesz < memory_size || offset < min_addr || offset - min_addr > filesz - memory_size))
 		{
 			// This patch is out of range for this segment
 			continue;
@@ -934,9 +1044,9 @@ static usz apply_modification(std::basic_string<u32>& applied, patch_engine::pat
 
 		offset -= min_addr;
 
-		auto ptr = mem_translate(offset);
+		auto ptr = mem_translate(offset, memory_size);
 
-		if (!ptr)
+		if (!ptr && memory_size != 0 && !relocate_instructions_at)
 		{
 			// Memory translation failed
 			continue;
@@ -966,7 +1076,7 @@ static usz apply_modification(std::basic_string<u32>& applied, patch_engine::pat
 		}
 		case patch_type::code_alloc:
 		{
-			const u32 out_branch = vm::try_get_addr(mem_translate(offset & -4)).first;
+			const u32 out_branch = vm::try_get_addr(relocate_instructions_at ? vm::get_super_ptr<u8>(offset & -4) : mem_translate(offset & -4, 4)).first;
 
 			// Allow only if points to a PPU executable instruction
 			if (out_branch < 0x10000 || out_branch >= 0x4000'0000 || !vm::check_addr<4>(out_branch, vm::page_executable))
@@ -1050,7 +1160,7 @@ static usz apply_modification(std::basic_string<u32>& applied, patch_engine::pat
 		case patch_type::jump:
 		case patch_type::jump_link:
 		{
-			const u32 out_branch = vm::try_get_addr(mem_translate(offset & -4)).first;
+			const u32 out_branch = vm::try_get_addr(relocate_instructions_at ? vm::get_super_ptr<u8>(offset & -4) : mem_translate(offset & -4, 4)).first;
 			const u32 dest = static_cast<u32>(p.value.long_value);
 
 			// Allow only if points to a PPU executable instruction
@@ -1066,7 +1176,7 @@ static usz apply_modification(std::basic_string<u32>& applied, patch_engine::pat
 		{
 			const std::string& str = p.original_value;
 
-			const u32 out_branch = vm::try_get_addr(mem_translate(offset & -4)).first;
+			const u32 out_branch = vm::try_get_addr(relocate_instructions_at ? vm::get_super_ptr<u8>(offset & -4) : mem_translate(offset & -4, 4)).first;
 			const usz sep_pos = str.find_first_of(':');
 
 			// Must contain only a single ':' or none
@@ -1082,7 +1192,7 @@ static usz apply_modification(std::basic_string<u32>& applied, patch_engine::pat
 
 			if (func_name.starts_with("0x"sv))
 			{
-				// Raw hexadeciaml-formatted FNID (real function name cannot contain a digit at the start, derived from C/CPP which were used in PS3 development)
+				// Raw hexadecimal-formatted FNID (real function name cannot contain a digit at the start, derived from C/CPP which were used in PS3 development)
 				const auto result = std::from_chars(func_name.data() + 2, func_name.data() + func_name.size() - 2, id, 16);
 
 				if (result.ec != std::errc() || str.data() + sep_pos != result.ptr)
@@ -1203,6 +1313,11 @@ static usz apply_modification(std::basic_string<u32>& applied, patch_engine::pat
 			std::memcpy(ptr, p.original_value.data(), p.original_value.size());
 			break;
 		}
+		case patch_type::c_utf8:
+		{
+			std::memcpy(ptr, p.original_value.data(), p.original_value.size() + 1);
+			break;
+		}
 		case patch_type::move_file:
 		case patch_type::hide_file:
 		{
@@ -1257,7 +1372,7 @@ static usz apply_modification(std::basic_string<u32>& applied, patch_engine::pat
 	return old_applied_size;
 }
 
-std::basic_string<u32> patch_engine::apply(const std::string& name, std::function<u8*(u32)> mem_translate, u32 filesz, u32 min_addr)
+std::basic_string<u32> patch_engine::apply(const std::string& name, std::function<u8*(u32, u32)> mem_translate, u32 filesz, u32 min_addr)
 {
 	if (!m_map.contains(name))
 	{
@@ -1265,11 +1380,11 @@ std::basic_string<u32> patch_engine::apply(const std::string& name, std::functio
 	}
 
 	std::basic_string<u32> applied_total;
-	const auto& container = ::at32(m_map, name);
-	const auto& serial = Emu.GetTitleID();
-	const auto& app_version = Emu.GetAppVersion();
+	const patch_container& container = ::at32(m_map, name);
+	const std::string& serial = Emu.GetTitleID();
+	const std::string& app_version = Emu.GetAppVersion();
 
-	// Different containers in order to seperate the patches
+	// Different containers in order to separate the patches
 	std::vector<std::shared_ptr<patch_info>> patches_for_this_serial_and_this_version;
 	std::vector<std::shared_ptr<patch_info>> patches_for_this_serial_and_all_versions;
 	std::vector<std::shared_ptr<patch_info>> patches_for_all_serials_and_this_version;
@@ -1301,7 +1416,7 @@ std::basic_string<u32> patch_engine::apply(const std::string& name, std::functio
 				continue;
 			}
 
-			const auto& app_versions = ::at32(serials, found_serial);
+			const patch_app_versions& app_versions = ::at32(serials, found_serial);
 			std::string found_app_version;
 
 			if (app_versions.contains(app_version))
@@ -1419,11 +1534,11 @@ void patch_engine::unload(const std::string& name)
 		return;
 	}
 
-	const auto& container = ::at32(m_map, name);
+	const patch_container& container = ::at32(m_map, name);
 
 	for (const auto& [description, patch] : container.patch_info_map)
 	{
-		for (auto& entry : patch.data_list)
+		for (const patch_data& entry : patch.data_list)
 		{
 			// Deallocate used memory
 			if (u32 addr = std::exchange(entry.alloc_addr, 0))
@@ -1551,7 +1666,7 @@ static void append_patches(patch_engine::patch_map& existing_patches, const patc
 			continue;
 		}
 
-		auto& container = existing_patches[hash];
+		patch_engine::patch_container& container = existing_patches[hash];
 
 		for (const auto& [description, new_info] : new_container.patch_info_map)
 		{
@@ -1562,7 +1677,7 @@ static void append_patches(patch_engine::patch_map& existing_patches, const patc
 				continue;
 			}
 
-			auto& info = container.patch_info_map[description];
+			patch_engine::patch_info& info = container.patch_info_map[description];
 
 			bool ok;
 			const bool version_is_bigger = utils::compare_versions(new_info.patch_version, info.patch_version, ok) > 0;
@@ -1725,7 +1840,7 @@ bool patch_engine::save_patches(const patch_map& patches, const std::string& pat
 
 bool patch_engine::import_patches(const patch_engine::patch_map& patches, const std::string& path, usz& count, usz& total, std::stringstream* log_messages)
 {
-	patch_engine::patch_map existing_patches;
+	patch_map existing_patches;
 
 	if (load(existing_patches, path, "", true, log_messages))
 	{
@@ -1738,13 +1853,13 @@ bool patch_engine::import_patches(const patch_engine::patch_map& patches, const 
 
 bool patch_engine::remove_patch(const patch_info& info)
 {
-	patch_engine::patch_map patches;
+	patch_map patches;
 
 	if (load(patches, info.source_path))
 	{
 		if (patches.contains(info.hash))
 		{
-			auto& container = patches[info.hash];
+			patch_container& container = patches[info.hash];
 
 			if (container.patch_info_map.contains(info.description))
 			{

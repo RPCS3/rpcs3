@@ -155,7 +155,7 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 	ui->toolbar_start->setEnabled(enable_play_last);
 
 	// create tool buttons for the taskbar thumbnail
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 	m_thumb_bar = new QWinThumbnailToolBar(this);
 	m_thumb_bar->setWindow(windowHandle());
 
@@ -182,15 +182,19 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 
 	connect(m_thumb_stop, &QWinThumbnailToolButton::clicked, this, []()
 	{
-		gui_log.notice("User clicked stop button on thumbnail toolbar");
+		gui_log.notice("User clicked the stop button on thumbnail toolbar");
 		Emu.GracefulShutdown(false, true);
 	});
 	connect(m_thumb_restart, &QWinThumbnailToolButton::clicked, this, []()
 	{
-		gui_log.notice("User clicked restart button on thumbnail toolbar");
+		gui_log.notice("User clicked the restart button on thumbnail toolbar");
 		Emu.Restart();
 	});
-	connect(m_thumb_playPause, &QWinThumbnailToolButton::clicked, this, &main_window::OnPlayOrPause);
+	connect(m_thumb_playPause, &QWinThumbnailToolButton::clicked, this, [this]()
+	{
+		gui_log.notice("User clicked the playPause button on thumbnail toolbar");
+		OnPlayOrPause();
+	});
 #endif
 
 	// RPCS3 Updater
@@ -441,7 +445,7 @@ void main_window::show_boot_error(game_boot_result status)
 		message = tr("Savestate data is corrupted or it's not an RPCS3 savestate.");
 		break;
 	case game_boot_result::savestate_version_unsupported:
-		message = tr("Savestate versioning data differes from your RPCS3 build.");
+		message = tr("Savestate versioning data differs from your RPCS3 build.");
 		break;
 	case game_boot_result::still_running:
 		message = tr("A game or PS3 application is still running or has yet to be fully stopped.");
@@ -780,16 +784,33 @@ bool main_window::InstallPackages(QStringList file_paths, bool from_boot)
 
 		if (!info.changelog.isEmpty())
 		{
-			info.changelog = tr("\n\nChangelog:\n%0", "Block for Changelog").arg(info.changelog);
+			info.changelog = tr("Changelog:\n%0", "Block for Changelog").arg(info.changelog);
 		}
 
-		const QString info_string = QStringLiteral("%0\n\n%1%2%3%4%5").arg(file_info.fileName()).arg(info.title).arg(info.local_cat)
-			.arg(info.title_id).arg(info.version).arg(info.changelog);
+		const QString info_string = QStringLiteral("%0\n\n%1%2%3%4").arg(file_info.fileName()).arg(info.title).arg(info.local_cat).arg(info.title_id).arg(info.version);
+		QString message = tr("Do you want to install this package?\n\n%0").arg(info_string);
 
-		if (QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Do you want to install this package?\n\n%0").arg(info_string),
-			QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
+		QMessageBox mb(QMessageBox::Icon::Question, tr("PKG Decrypter / Installer"), message, QMessageBox::Yes | QMessageBox::No, this);
+		mb.setDefaultButton(QMessageBox::No);
+
+		if (!info.changelog.isEmpty())
 		{
-			gui_log.notice("PKG: Cancelled installation from drop.\n%s", info_string);
+			mb.setInformativeText(tr("To see the changelog, please click \"Show Details\"."));
+			mb.setDetailedText(tr("%0").arg(info.changelog));
+
+			// Smartass hack to make the unresizeable message box wide enough for the changelog
+			const int log_width = QLabel(info.changelog).sizeHint().width();
+			while (QLabel(message).sizeHint().width() < log_width)
+			{
+				message += "          ";
+			}
+
+			mb.setText(message);
+		}
+
+		if (mb.exec() != QMessageBox::Yes)
+		{
+			gui_log.notice("PKG: Cancelled installation from drop.\n%s\n%s", info_string, info.changelog);
 			return true;
 		}
 	}
@@ -1296,7 +1317,7 @@ void main_window::ExtractTar()
 	if (!error.isEmpty())
 	{
 		pdlg.hide();
-		QMessageBox::critical(this, tr("Tar extraction failed"), error);
+		QMessageBox::critical(this, tr("TAR extraction failed"), error);
 	}
 }
 
@@ -1616,7 +1637,7 @@ void main_window::DecryptSPRXLibraries()
 		dlg->set_input_font(mono, true, '0');
 		dlg->set_clear_button_enabled(false);
 		dlg->set_button_enabled(QDialogButtonBox::StandardButton::Ok, false);
-		dlg->set_validator(new QRegularExpressionValidator(QRegularExpression("^((((((K?L)?I)?C)?=)?0)?x)?[a-fA-F0-9]{0,32}$"))); // HEX only (with additional KLIC=0x prefix for convenience)
+		dlg->set_validator(new QRegularExpressionValidator(QRegularExpression("^((((((K?L)?I)?C)?=)?0)?x)?[a-fA-F0-9]{0,32}$"), this)); // HEX only (with additional KLIC=0x prefix for convenience)
 		dlg->setAttribute(Qt::WA_DeleteOnClose);
 
 		connect(dlg, &input_dialog::text_changed, dlg, [dlg](const QString& text)
@@ -1679,7 +1700,7 @@ void main_window::RepaintThumbnailIcons()
 		return gui::utils::get_colorized_icon(QPixmap::fromImage(gui::utils::get_opaque_image_area(path)), Qt::black, new_color);
 	};
 
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 	if (!m_thumb_bar) return;
 
 	m_icon_thumb_play = icon(":/Icons/play.png");
@@ -1766,14 +1787,6 @@ void main_window::RepaintToolBarIcons()
 
 	// resize toolbar elements
 
-	// for highdpi resize toolbar icons and height dynamically
-	// choose factors to mimic Gui-Design in main_window.ui
-	// TODO: delete this in case Qt::AA_EnableHighDpiScaling is enabled in main.cpp
-#ifdef _WIN32
-	const int tool_icon_height = menuBar()->sizeHint().height() * 1.5;
-	ui->toolBar->setIconSize(QSize(tool_icon_height, tool_icon_height));
-#endif
-
 	const int tool_bar_height = ui->toolBar->sizeHint().height();
 
 	for (const auto& act : ui->toolBar->actions())
@@ -1799,7 +1812,7 @@ void main_window::OnEmuRun(bool /*start_playtime*/) const
 
 	m_debugger_frame->EnableButtons(true);
 
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 	m_thumb_stop->setToolTip(stop_tooltip);
 	m_thumb_restart->setToolTip(restart_tooltip);
 	m_thumb_playPause->setToolTip(pause_tooltip);
@@ -1822,7 +1835,7 @@ void main_window::OnEmuResume() const
 	const QString pause_tooltip = tr("Pause %0").arg(title);
 	const QString stop_tooltip = tr("Stop %0").arg(title);
 
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 	m_thumb_stop->setToolTip(stop_tooltip);
 	m_thumb_restart->setToolTip(restart_tooltip);
 	m_thumb_playPause->setToolTip(pause_tooltip);
@@ -1841,7 +1854,7 @@ void main_window::OnEmuPause() const
 	const QString title = GetCurrentTitle();
 	const QString resume_tooltip = tr("Resume %0").arg(title);
 
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 	m_thumb_playPause->setToolTip(resume_tooltip);
 	m_thumb_playPause->setIcon(m_icon_thumb_play);
 #endif
@@ -1865,7 +1878,7 @@ void main_window::OnEmuStop()
 
 	ui->sysPauseAct->setText(tr("&Play"));
 	ui->sysPauseAct->setIcon(m_icon_play);
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 	m_thumb_playPause->setToolTip(play_tooltip);
 	m_thumb_playPause->setIcon(m_icon_thumb_play);
 #endif
@@ -1887,11 +1900,17 @@ void main_window::OnEmuStop()
 		ui->toolbar_start->setText(tr("Restart"));
 		ui->toolbar_start->setToolTip(restart_tooltip);
 		ui->sysRebootAct->setEnabled(true);
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 		m_thumb_restart->setToolTip(restart_tooltip);
 		m_thumb_restart->setEnabled(true);
 #endif
 	}
+
+	ui->batchRemovePPUCachesAct->setEnabled(true);
+	ui->batchRemoveSPUCachesAct->setEnabled(true);
+	ui->batchRemoveShaderCachesAct->setEnabled(true);
+	ui->removeDiskCacheAct->setEnabled(true);
+
 	ui->actionManage_Users->setEnabled(true);
 	ui->confCamerasAct->setEnabled(true);
 
@@ -1920,7 +1939,7 @@ void main_window::OnEmuReady() const
 	const QString play_tooltip = tr("Play %0").arg(title);
 
 	m_debugger_frame->EnableButtons(true);
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 	m_thumb_playPause->setToolTip(play_tooltip);
 	m_thumb_playPause->setIcon(m_icon_thumb_play);
 #endif
@@ -1934,12 +1953,17 @@ void main_window::OnEmuReady() const
 
 	ui->actionManage_Users->setEnabled(false);
 	ui->confCamerasAct->setEnabled(false);
+
+	ui->batchRemovePPUCachesAct->setEnabled(false);
+	ui->batchRemoveSPUCachesAct->setEnabled(false);
+	ui->batchRemoveShaderCachesAct->setEnabled(false);
+	ui->removeDiskCacheAct->setEnabled(false);
 }
 
 void main_window::EnableMenus(bool enabled) const
 {
 	// Thumbnail Buttons
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 	m_thumb_playPause->setEnabled(enabled);
 	m_thumb_stop->setEnabled(enabled);
 	m_thumb_restart->setEnabled(enabled);
@@ -2330,6 +2354,137 @@ void main_window::CreateConnects()
 
 	connect(ui->bootInstallPkgAct, &QAction::triggered, this, [this] {InstallPackages(); });
 	connect(ui->bootInstallPupAct, &QAction::triggered, this, [this] {InstallPup(); });
+
+	connect(this, &main_window::NotifyWindowCloseEvent, this, [this](bool closed)
+	{
+		if (!closed)
+		{
+			// Cancel the request
+			m_requested_show_logs_on_exit = false;
+			return;
+		}
+
+		if (!m_requested_show_logs_on_exit)
+		{
+			// Not requested
+			return;
+		}
+
+		const std::string archived_path = fs::get_cache_dir() + "RPCS3.log.gz";
+		const std::string raw_file_path = fs::get_cache_dir() + "RPCS3.log";
+
+		fs::stat_t raw_stat{};
+		fs::stat_t archived_stat{};
+
+		if ((!fs::get_stat(raw_file_path, raw_stat) || raw_stat.is_directory) || (!fs::get_stat(archived_path, archived_stat) || archived_stat.is_directory) || (raw_stat.size == 0 && archived_stat.size == 0))
+		{
+			QMessageBox::warning(this, tr("Failed to locate log"), tr("Failed to locate log files.\nMake sure that RPCS3.log and RPCS3.log.gz are writable and can be created without permission issues."));
+			return;
+		}
+
+		// Get new filename from title and title ID but simplified
+		QString log_filename_q = qstr(Emu.GetTitleID().empty() ? "RPCS3" : Emu.GetTitleAndTitleID());
+		ensure(!log_filename_q.isEmpty());
+
+		// Replace unfitting characters
+		std::replace_if(log_filename_q.begin(), log_filename_q.end(), [](QChar c){ return !c.isLetterOrNumber() && c != QChar::Space && c != '[' && c != ']'; }, QChar::Space);
+		log_filename_q = log_filename_q.simplified();
+
+		const std::string log_filename = log_filename_q.toStdString();
+
+		QString path_last_log = m_gui_settings->GetValue(gui::fd_save_log).toString();
+
+		auto move_log = [](const std::string& from, const std::string& to)
+		{
+			if (from == to)
+			{
+				return false;
+			}
+
+			// Test writablity here to avoid closing the log with no *chance* of success
+			if (fs::file test_writable{to, fs::write + fs::create}; !test_writable)
+			{
+				return false;
+			}
+
+			// Close and flush log file handle (!)
+			// Cannot rename the file due to file management design
+			logs::listener::close_all_prematurely();
+
+			// Try to move it
+			if (fs::rename(from, to, true))
+			{
+				return true;
+			}
+
+			// Try to copy it if fails
+			if (fs::copy_file(from, to, true))
+			{
+				if (fs::file sync_fd{to, fs::write})
+				{
+					// Prevent data loss (expensive)
+					sync_fd.sync();
+				}
+
+				fs::remove_file(from);
+				return true;
+			}
+
+			return false;
+		};
+
+		if (archived_stat.size)
+		{
+			const QString dir_path = QFileDialog::getExistingDirectory(this, tr("Select RPCS3's log saving location (saving %0)").arg(qstr(log_filename + ".log.gz")), path_last_log, QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+
+			if (dir_path.isEmpty())
+			{
+				// Aborted - view the current location
+				gui::utils::open_dir(archived_path);
+				return;
+			}
+
+			const std::string dest_archived_path = dir_path.toStdString() + "/" + log_filename + ".log.gz";
+
+			if (!Emu.GetTitleID().empty() && !dest_archived_path.empty() && move_log(archived_path, dest_archived_path))
+			{
+				m_gui_settings->SetValue(gui::fd_save_log, dir_path);
+				gui_log.success("Moved log file to '%s'!", dest_archived_path);
+				gui::utils::open_dir(dest_archived_path);
+				return;
+			}
+
+			gui::utils::open_dir(archived_path);
+			return;
+		}
+
+		const QString dir_path = QFileDialog::getExistingDirectory(this, tr("Select RPCS3's log saving location (saving %0)").arg(qstr(log_filename + ".log")), path_last_log, QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+
+		if (dir_path.isEmpty())
+		{
+			// Aborted - view the current location
+			gui::utils::open_dir(raw_file_path);
+			return;
+		}
+
+		const std::string dest_raw_file_path = dir_path.toStdString() + "/" + log_filename + ".log";
+
+		if (!Emu.GetTitleID().empty() && !dest_raw_file_path.empty() && move_log(raw_file_path, dest_raw_file_path))
+		{
+			m_gui_settings->SetValue(gui::fd_save_log, dir_path);
+			gui_log.success("Moved log file to '%s'!", dest_raw_file_path);
+			gui::utils::open_dir(dest_raw_file_path);
+			return;
+		}
+
+		gui::utils::open_dir(raw_file_path);
+	});
+
+	connect(ui->exitAndSaveLogAct, &QAction::triggered, this, [this]()
+	{
+		m_requested_show_logs_on_exit = true;
+		close();
+	});
 	connect(ui->exitAct, &QAction::triggered, this, &QWidget::close);
 
 	connect(ui->batchCreatePPUCachesAct, &QAction::triggered, m_game_list_frame, &game_list_frame::BatchCreatePPUCaches);
@@ -2976,14 +3131,14 @@ void main_window::CreateDockWindows()
 
 			ui->toolbar_start->setEnabled(enable_play_buttons);
 			ui->sysPauseAct->setEnabled(enable_play_buttons);
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 			m_thumb_playPause->setEnabled(enable_play_buttons);
 #endif
 
 			if (!tooltip.isEmpty())
 			{
 				ui->toolbar_start->setToolTip(tooltip);
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 				m_thumb_playPause->setToolTip(tooltip);
 #endif
 			}
@@ -3195,6 +3350,7 @@ void main_window::closeEvent(QCloseEvent* closeEvent)
 {
 	if (!m_gui_settings->GetBootConfirmation(this, gui::ib_confirm_exit))
 	{
+		Q_EMIT NotifyWindowCloseEvent(false);
 		closeEvent->ignore();
 		return;
 	}
@@ -3206,6 +3362,12 @@ void main_window::closeEvent(QCloseEvent* closeEvent)
 	}
 
 	SaveWindowState();
+
+	// Flush logs here as well
+	logs::listener::sync_all();
+
+	Q_EMIT NotifyWindowCloseEvent(true);
+
 	Emu.Quit(true);
 }
 
@@ -3231,75 +3393,119 @@ Check data for valid file types and cache their paths if necessary
 */
 main_window::drop_type main_window::IsValidFile(const QMimeData& md, QStringList* drop_paths)
 {
-	auto drop_type = drop_type::drop_error;
+	if (drop_paths)
+	{
+		drop_paths->clear();
+	}
 
-	const QList<QUrl> list = md.urls(); // get list of all the dropped file urls
+	drop_type type = drop_type::drop_error;
 
-	for (auto&& url : list) // check each file in url list for valid type
+	QList<QUrl> list = md.urls(); // get list of all the dropped file urls
+
+	// Try to cache the data for half a second
+	if (m_drop_file_timestamp != umax && m_drop_file_url_list == list && get_system_time() - m_drop_file_timestamp < 500'000)
+	{
+		if (drop_paths)
+		{
+			for (auto&& url : m_drop_file_url_list)
+			{
+				drop_paths->append(url.toLocalFile());
+			}
+		}
+
+		return m_drop_file_cached_drop_type;
+	}
+
+	m_drop_file_url_list = std::move(list);
+
+	auto set_result = [this](drop_type type)
+	{
+		m_drop_file_timestamp = get_system_time();
+		m_drop_file_cached_drop_type = type;
+		return type;
+	};
+
+	for (auto&& url : m_drop_file_url_list) // check each file in url list for valid type
 	{
 		const QString path = url.toLocalFile(); // convert url to filepath
 		const QFileInfo info(path);
 
+		const QString suffix_lo = info.suffix().toLower();
+
 		// check for directories first, only valid if all other paths led to directories until now.
 		if (info.isDir())
 		{
-			if (drop_type != drop_type::drop_dir && drop_type != drop_type::drop_error)
+			if (type != drop_type::drop_dir && type != drop_type::drop_error)
 			{
-				return drop_type::drop_error;
+				return set_result(drop_type::drop_error);
 			}
 
-			drop_type = drop_type::drop_dir;
+			type = drop_type::drop_dir;
+		}
+		else if (!info.exists())
+		{
+			// If does not exist (anymore), ignore it
+			continue;
+		}
+		else if (info.size() < 0x4)
+		{
+			return set_result(drop_type::drop_error);
 		}
 		else if (info.suffix() == "PUP")
 		{
-			if (list.size() != 1)
+			if (m_drop_file_url_list.size() != 1)
 			{
-				return drop_type::drop_error;
+				return set_result(drop_type::drop_error);
 			}
 
-			drop_type = drop_type::drop_pup;
+			type = drop_type::drop_pup;
 		}
 		else if (info.fileName().toLower() == "param.sfo")
 		{
-			if (drop_type != drop_type::drop_psf && drop_type != drop_type::drop_error)
+			if (type != drop_type::drop_psf && type != drop_type::drop_error)
 			{
-				return drop_type::drop_error;
+				return set_result(drop_type::drop_error);
 			}
 
-			drop_type = drop_type::drop_psf;
+			type = drop_type::drop_psf;
 		}
-		else if (info.suffix().toLower() == "pkg")
+		else if (suffix_lo == "pkg")
 		{
-			if (drop_type != drop_type::drop_rap_edat_pkg && drop_type != drop_type::drop_error)
+			if (type != drop_type::drop_rap_edat_pkg && type != drop_type::drop_error)
 			{
-				return drop_type::drop_error;
+				return set_result(drop_type::drop_error);
 			}
 
-			drop_type = drop_type::drop_rap_edat_pkg;
+			type = drop_type::drop_rap_edat_pkg;
 		}
-		else if (info.suffix().toLower() == "rap" || info.suffix().toLower() == "edat")
+		else if (suffix_lo == "rap" || suffix_lo == "edat")
 		{
-			if (info.size() < 0x10 || (drop_type != drop_type::drop_rap_edat_pkg && drop_type != drop_type::drop_error))
+			if (info.size() < 0x10 || (type != drop_type::drop_rap_edat_pkg && type != drop_type::drop_error))
 			{
-				return drop_type::drop_error;
+				return set_result(drop_type::drop_error);
 			}
 
-			drop_type = drop_type::drop_rap_edat_pkg;
+			type = drop_type::drop_rap_edat_pkg;
 		}
-		else if (list.size() == 1)
+		else if (m_drop_file_url_list.size() == 1)
 		{
-			if (info.suffix() == "rrc")
+			if (suffix_lo == "rrc")
 			{
-				drop_type = drop_type::drop_rrc;
+				type = drop_type::drop_rrc;
+			}
+			// The emulator allows to execute ANY filetype, just not from drag-and-drop because it is confusing to users
+			else if (suffix_lo == "savestat" || suffix_lo == "sprx" || suffix_lo == "self" || suffix_lo == "bin" || suffix_lo == "prx" || suffix_lo == "elf" || suffix_lo == "o")
+			{
+				type = drop_type::drop_game;
 			}
 			else
 			{
-				drop_type = drop_type::drop_game;
+				return set_result(drop_type::drop_error);
 			}
 		}
 		else
 		{
-			return drop_type::drop_error;
+			return set_result(drop_type::drop_error);
 		}
 
 		if (drop_paths) // we only need to know the paths on drop
@@ -3308,7 +3514,7 @@ main_window::drop_type main_window::IsValidFile(const QMimeData& md, QStringList
 		}
 	}
 
-	return drop_type;
+	return set_result(type);
 }
 
 void main_window::dropEvent(QDropEvent* event)

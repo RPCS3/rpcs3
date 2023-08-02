@@ -138,7 +138,7 @@ namespace rsx
 		bool supports_normalized_barycentrics; // Basically all GPUs except NVIDIA have properly normalized barycentrics
 	};
 
-	struct sampled_image_descriptor_base;
+	class sampled_image_descriptor_base;
 
 	struct desync_fifo_cmd_info
 	{
@@ -228,7 +228,7 @@ namespace rsx
 		static void fifo_wake_delay(u64 div = 1);
 		u32 get_fifo_cmd() const;
 
-		void dump_regs(std::string&) const override;
+		void dump_regs(std::string&, std::any& custom_data) const override;
 		void cpu_wait(bs_t<cpu_flag> old) override;
 
 		static constexpr u32 id_base = 0x5555'5555; // See get_current_cpu_thread()

@@ -9,11 +9,11 @@ Other instructions may be found [here](https://wiki.rpcs3.net/index.php?title=Bu
 
 * [CMake 3.16.9+](https://www.cmake.org/download/) (add to PATH)
 * [Python 3.6+](https://www.python.org/downloads/) (add to PATH)
-* [Qt 5.15.2](https://www.qt.io/download-qt-installer)
+* [Qt 6.5.2](https://www.qt.io/download-qt-installer)
 * [Visual Studio 2019](https://visualstudio.microsoft.com/thank-you-downloading-visual-studio/?sku=Community)
 * [Vulkan SDK 1.3.224+](https://vulkan.lunarg.com/sdk/home) (See "Install the SDK" [here](https://vulkan.lunarg.com/doc/sdk/latest/windows/getting_started.html))
 
-**Either add the** `QTDIR` **environment variable, e.g.** `<QtInstallFolder>\5.15.2\msvc2019_64\` **, or use the [Visual Studio Qt Plugin](https://marketplace.visualstudio.com/items?itemName=TheQtCompany.QtVisualStudioTools2019)**
+**Either add the** `QTDIR` **environment variable, e.g.** `<QtInstallFolder>\6.5.2\msvc2019_64\` **, or use the [Visual Studio Qt Plugin](https://marketplace.visualstudio.com/items?itemName=TheQtCompany.QtVisualStudioTools2019)**
 
 ### Linux
 
@@ -21,7 +21,7 @@ These are the essentials tools to build RPCS3 on Linux. Some of them can be inst
 
 * Clang 12+ or GCC 11+
 * [CMake 3.16.9+](https://www.cmake.org/download/)
-* [Qt 5.15.2](https://www.qt.io/download-qt-installer)
+* [Qt 6.5.2](https://www.qt.io/download-qt-installer)
 * [Vulkan SDK 1.3.224+](https://vulkan.lunarg.com/sdk/home) (See "Install the SDK" [here](https://vulkan.lunarg.com/doc/sdk/latest/linux/getting_started.html))
 * [SDL2](https://github.com/libsdl-org/SDL/releases) (for the FAudio backend)
 
@@ -29,7 +29,7 @@ These are the essentials tools to build RPCS3 on Linux. Some of them can be inst
 
 #### Arch Linux
 
-    sudo pacman -S glew openal cmake vulkan-validation-layers qt5-base qt5-declarative qt5-multimedia sdl2 sndio jack2 base-devel
+    sudo pacman -S glew openal cmake vulkan-validation-layers qt6-base qt6-declarative qt6-multimedia sdl2 sndio jack2 base-devel
 
 #### Debian & Ubuntu
 
@@ -38,14 +38,7 @@ These are the essentials tools to build RPCS3 on Linux. Some of them can be inst
 Ubuntu is usually horrendously out of date, and some packages need to be downloaded by hand. This part is for Qt, GCC, Vulkan, and CMake
 ##### Qt PPA
 
-Ubuntu usually does not have a new enough Qt package to suit rpcs3's needs. There is a PPA available to work around this. Run the following:
-```
-. /etc/os-release
-sudo add-apt-repository ppa:beineri/opt-qt-5.15.2-$UBUNTU_CODENAME
-sudo apt-get update
-sudo apt-get install qt515base qt515svg
-. /opt/qt515/bin/qt515-env.sh >/dev/null 2>&1
-```
+Ubuntu usually does not have a new enough Qt package to suit rpcs3's needs. There is currently no PPA available to work around this.
 
 ##### GCC 11.x installation
 
@@ -82,11 +75,11 @@ sudo apt-get install cmake
 
 #### Fedora
 
-    sudo dnf install alsa-lib-devel cmake glew glew-devel libatomic libevdev-devel libudev-devel openal-devel qt5-qtbase-devel qt5-qtbase-private-devel vulkan-devel pipewire-jack-audio-connection-kit-devel qt5-qtmultimedia-devel qt5-qtsvg-devel
+    sudo dnf install alsa-lib-devel cmake glew glew-devel libatomic libevdev-devel libudev-devel openal-devel qt6-qtbase-devel qt6-qtbase-private-devel vulkan-devel pipewire-jack-audio-connection-kit-devel qt6-qtmultimedia-devel qt6-qtsvg-devel
 
 #### OpenSUSE
 
-    sudo zypper install git cmake libasound2 libpulse-devel openal-soft-devel glew-devel zlib-devel libedit-devel vulkan-devel libudev-devel libqt5-qtbase-devel libqt5-qtmultimedia-devel libqt5-qtsvg-devel libQt5Gui-private-headers-devel libevdev-devel libsndio7_1 libjack-devel
+    sudo zypper install git cmake libasound2 libpulse-devel openal-soft-devel glew-devel zlib-devel libedit-devel vulkan-devel libudev-devel libqt6-qtbase-devel libqt6-qtmultimedia-devel libqt6-qtsvg-devel libQt6Gui-private-headers-devel libevdev-devel libsndio7_1 libjack-devel
 
 ## Setup the project
 
@@ -103,7 +96,7 @@ git submodule update --init
 #### Configuring the Qt plugin (if used)
 
 1) Go to `Extensions->Qt VS Tools->Qt Versions`.
-2) Add the path to your Qt installation with compiler e.g. `<QtInstallFolder>\5.15.2\msvc2019_64`, version will fill in automatically.
+2) Add the path to your Qt installation with compiler e.g. `<QtInstallFolder>\6.5.2\msvc2019_64`, version will fill in automatically.
 3) Go to `Extensions->Qt VS Tools->Options->Legacy Project Format`.
 4) Set `Build: Run pre-build setup` to `true`.
 

@@ -31,7 +31,9 @@
 #include <7zCrc.h>
 #include <7zFile.h>
 
+#ifndef PATH_MAX
 #define PATH_MAX MAX_PATH
+#endif
 
 #else
 #include <unistd.h>

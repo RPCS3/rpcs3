@@ -1,18 +1,18 @@
 #pragma once
 
-#include <QAbstractVideoSurface>
+#include <QVideoFrame>
+#include <QVideoSink>
 #include <QImage>
 
 #include <array>
 
-class qt_camera_video_surface final : public QAbstractVideoSurface
+class qt_camera_video_sink final : public QVideoSink
 {
 public:
-	qt_camera_video_surface(bool front_facing, QObject *parent = nullptr);
-	virtual ~qt_camera_video_surface();
+	qt_camera_video_sink(bool front_facing, QObject *parent = nullptr);
+	virtual ~qt_camera_video_sink();
 
-	QList<QVideoFrame::PixelFormat> supportedPixelFormats(QAbstractVideoBuffer::HandleType type = QAbstractVideoBuffer::NoHandle) const override;
-	bool present(const QVideoFrame& frame) override;
+	bool present(const QVideoFrame& frame);
 
 	void set_format(s32 format, u32 bytesize);
 	void set_resolution(u32 width, u32 height);

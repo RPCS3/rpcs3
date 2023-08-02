@@ -597,7 +597,7 @@ inline void gv_zeroupper()
 #if defined(ARCH_X64)
 	if (!g_use_avx)
 		return;
-#if defined(_M_X64)
+#if defined(_M_X64) && defined(_MSC_VER)
 	_mm256_zeroupper();
 #else
 	__asm__ volatile("vzeroupper;");
@@ -1829,7 +1829,7 @@ inline v128 gv_fmafs(const v128& a, const v128& b, const v128& c)
 #elif defined(ARCH_X64)
 	// This is inaccurate implementation
 #ifdef __AVX__
-	const __m128 r = _mm256_cvtpd_ps(_mm256_add_ps(_mm256_mul_ps(_mm256_cvtps_pd(a), _mm256_cvtps_pd(b)), _mm256_cvtps_pd(c)));
+	const __m128 r = _mm256_cvtpd_ps(_mm256_add_pd(_mm256_mul_pd(_mm256_cvtps_pd(a), _mm256_cvtps_pd(b)), _mm256_cvtps_pd(c)));
 #else
 	const __m128d a0 = _mm_cvtps_pd(a);
 	const __m128d a1 = _mm_cvtps_pd(_mm_movehl_ps(a, a));

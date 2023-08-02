@@ -317,7 +317,7 @@ void keyboard_pad_handler::processKeyEvent(QKeyEvent* event, bool pressed)
 		return;
 	}
 
-	auto handle_key = [this, pressed, event]()
+	const auto handle_key = [this, pressed, event]()
 	{
 		QStringList list = GetKeyNames(event);
 		if (list.isEmpty())
@@ -332,7 +332,7 @@ void keyboard_pad_handler::processKeyEvent(QKeyEvent* event, bool pressed)
 		// TODO: Edge case: switching numlock keeps numpad keys pressed due to now different modifier
 
 		// Handle every possible key combination, for example: ctrl+A -> {ctrl, A, ctrl+A}
-		for (const auto& keyname : list)
+		for (const QString& keyname : list)
 		{
 			// skip the 'original keys' when handling numpad keys
 			if (is_num_key && !keyname.contains("Num"))
@@ -505,12 +505,13 @@ void keyboard_pad_handler::mouseMoveEvent(QMouseEvent* event)
 	{
 		static int last_pos_x = 0;
 		static int last_pos_y = 0;
+		const QPoint e_pos = event->pos();
 
-		movement_x = event->x() - last_pos_x;
-		movement_y = event->y() - last_pos_y;
+		movement_x = e_pos.x() - last_pos_x;
+		movement_y = e_pos.y() - last_pos_y;
 
-		last_pos_x = event->x();
-		last_pos_y = event->y();
+		last_pos_x = e_pos.x();
+		last_pos_y = e_pos.y();
 	}
 	else if (m_target && m_target->isActive())
 	{
@@ -807,8 +808,8 @@ u32 keyboard_pad_handler::GetKeyCode(const QString& keyName)
 	const QKeySequence seq(keyName);
 	u32 key_code = Qt::NoButton;
 
-	if (seq.count() == 1)
-		key_code = seq[0];
+	if (seq.count() == 1 && seq[0].key() != Qt::Key_unknown)
+		key_code = seq[0].key();
 	else
 		input_log.notice("GetKeyCode(%s): seq.count() = %d", keyName, seq.count());
 
@@ -907,7 +908,7 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, u8 player_i
 
 	u32 pclass_profile = 0x0;
 
-	for (const auto& product : input::get_products_by_class(cfg->device_class_type))
+	for (const input::product_info& product : input::get_products_by_class(cfg->device_class_type))
 	{
 		if (product.vendor_id == cfg->vendor_id && product.product_id == cfg->product_id)
 		{

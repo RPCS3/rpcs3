@@ -21,7 +21,7 @@
 #include "util/asm.hpp"
 #include "util/fence.hpp"
 
-#ifdef _M_X64
+#if defined(_M_X64) && defined(_MSC_VER)
 extern "C" u64 _xgetbv(u32);
 #endif
 
@@ -171,6 +171,71 @@ bool utils::has_avx512_vnni()
 #if defined(ARCH_X64)
 	// Check AVX512VNNI
 	static const bool g_value = has_avx512() && get_cpuid(7, 0)[2] & 0x00000800;
+	return g_value;
+#else
+	return false;
+#endif
+}
+
+bool utils::has_avx10()
+{
+#if defined(ARCH_X64)
+	// Implies support for most AVX-512 instructions
+	static const bool g_value = get_cpuid(0, 0)[0] >= 0x7 && get_cpuid(7, 1)[3] & 0x80000;
+	return g_value;
+#else
+	return false;
+#endif
+}
+
+bool utils::has_avx10_512()
+{
+#if defined(ARCH_X64)
+	// AVX10 with 512 wide vectors
+	static const bool g_value = has_avx10() && get_cpuid(24, 0)[2] & 0x40000;
+	return g_value;
+#else
+	return false;
+#endif
+}
+
+u32 utils::avx10_isa_version()
+{
+#if defined(ARCH_X64)
+	// 8bit value
+	static const u32 g_value = []()
+	{
+		u32 isa_version = 0;
+		if (has_avx10())
+		{
+			isa_version = get_cpuid(24, 0)[2] & 0x000ff;
+		}
+
+		return isa_version;
+	}();
+
+	return g_value;
+#else
+	return 0;
+#endif
+}
+
+bool utils::has_avx512_256()
+{
+#if defined(ARCH_X64)
+	// Either AVX10 or AVX512 implies support for 256-bit length AVX-512 SKL-X tier instructions
+	static const bool g_value = (has_avx512() || has_avx10());
+	return g_value;
+#else
+	return false;
+#endif
+}
+
+bool utils::has_avx512_icl_256()
+{
+#if defined(ARCH_X64)
+	// Check for AVX512_ICL or check for AVX10, together with GFNI, VAES, and VPCLMULQDQ, implies support for the same instructions that AVX-512_icl does at 256 bit length
+	static const bool g_value = (has_avx512_icl() || (has_avx10() && get_cpuid(7, 0)[2] & 0x00000700));
 	return g_value;
 #else
 	return false;
@@ -335,7 +400,21 @@ std::string utils::get_system_info()
 	{
 		result += " | AVX";
 
-		if (has_avx512())
+		if (has_avx10())
+		{
+			const u32 avx10_version = avx10_isa_version();
+			fmt::append(result, "10.%d", avx10_version);
+
+			if (has_avx10_512())
+			{
+				result += "-512";
+			}
+			else
+			{
+				result += "-256";
+			}
+		}
+		else if (has_avx512())
 		{
 			result += "-512";
 
@@ -470,8 +549,8 @@ std::string utils::get_OS_version()
 	std::vector<char> holder(service_pack.Length + 1, '\0');
 	if (has_sp)
 	{
-		WideCharToMultiByte(CP_UTF8, NULL, service_pack.Buffer, service_pack.Length,
-			(LPSTR) holder.data(), static_cast<int>(holder.size()), nullptr, nullptr);
+		WideCharToMultiByte(CP_UTF8, 0, service_pack.Buffer, service_pack.Length,
+			static_cast<LPSTR>(holder.data()), static_cast<int>(holder.size()), nullptr, nullptr);
 	}
 
 	fmt::append(output,

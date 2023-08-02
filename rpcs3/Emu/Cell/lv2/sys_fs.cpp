@@ -251,7 +251,7 @@ bool lv2_fs_mount_info_map::vfs_unmount(std::string_view vpath, bool remove_from
 
 std::string lv2_fs_object::get_normalized_path(std::string_view path)
 {
-	std::string normalized_path = std::filesystem::u8path(path).lexically_normal().string();
+	std::string normalized_path = std::filesystem::path(path).lexically_normal().string();
 
 #ifdef _WIN32
 	std::replace(normalized_path.begin(), normalized_path.end(), '\\', '/');
@@ -499,13 +499,10 @@ void lv2_file::save(utils::serial& ar)
 			return true;
 		}
 
-		fs::stat_t test_s = test.stat();
-		fs::stat_t file_s = file.stat();
+		fs::file_id test_s = test.get_id();
+		fs::file_id file_s = file.get_id();
 
-		// They don't matter for comparison and only create problems with encrypted files
-		test_s.is_writable = file_s.is_writable;
-		test_s.size = file_s.size;
-		return test_s != file_s;
+		return test_s.is_coherent_with(file_s);
 	}();
 
 	if (in_mem)
@@ -518,7 +515,7 @@ void lv2_file::save(utils::serial& ar)
 	if (in_mem)
 	{
 		ar(file.to_vector<u8>());
-		ar(file.stat());
+		ar(file.get_stat());
 	}
 
 	ar(file.pos());
@@ -589,9 +586,9 @@ struct lv2_file::file_view : fs::file_base
 	{
 	}
 
-	fs::stat_t stat() override
+	fs::stat_t get_stat() override
 	{
-		return m_file->file.stat();
+		return m_file->file.get_stat();
 	}
 
 	bool trunc(u64) override
@@ -640,6 +637,18 @@ struct lv2_file::file_view : fs::file_base
 	u64 size() override
 	{
 		return m_file->file.size();
+	}
+
+	fs::file_id get_id() override
+	{
+		fs::file_id id = m_file->file.get_id();
+
+		be_t<u64> off = m_off;
+		const auto ptr = reinterpret_cast<u8*>(&off);
+
+		id.data.insert(id.data.end(), ptr, ptr + sizeof(off));
+		id.type.insert(0, "lv2_file::file_view: "sv);
+		return id;
 	}
 };
 
@@ -1479,7 +1488,7 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 
 	fs::stat_t info{};
 
-	if (!fs::stat(local_path, info))
+	if (!fs::get_stat(local_path, info))
 	{
 		switch (auto error = fs::g_tls_error)
 		{
@@ -1490,7 +1499,7 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 
 			for (u32 i = 66601; i <= 66699; i++)
 			{
-				if (fs::stat(fmt::format("%s.%u", local_path, i), info) && !info.is_directory)
+				if (fs::get_stat(fmt::format("%s.%u", local_path, i), info) && !info.is_directory)
 				{
 					total_size += info.size;
 				}
@@ -1501,7 +1510,7 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 			}
 
 			// Use attributes from the first fragment (consistently with sys_fs_open+fstat)
-			if (fs::stat(local_path + ".66600", info) && !info.is_directory)
+			if (fs::get_stat(local_path + ".66600", info) && !info.is_directory)
 			{
 				// Success
 				info.size += total_size;
@@ -1567,7 +1576,7 @@ error_code sys_fs_fstat(ppu_thread& ppu, u32 fd, vm::ptr<CellFsStat> sb)
 		return CELL_EIO;
 	}
 
-	const fs::stat_t info = file->file.stat();
+	const fs::stat_t info = file->file.get_stat();
 	lock.unlock();
 	ppu.check_state();
 
@@ -2055,27 +2064,18 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 	{
 		const auto arg = vm::static_ptr_cast<lv2_file_c0000007>(_arg);
 
-		std::string_view device{arg->device.get_ptr(), arg->device_size};
-
-		// Trim trailing '\0'
-		if (const auto trim_pos = device.find('\0'); trim_pos != umax)
-			device.remove_suffix(device.size() - trim_pos);
-
-		if (device != "CELL_FS_IOS:ATA_HDD"sv)
-		{
-			arg->out_code = CELL_ENOTSUP;
-			return {CELL_ENOTSUP, device};
-		}
-
-		const auto model = g_cfg.sys.hdd_model.to_string();
-		const auto serial = g_cfg.sys.hdd_serial.to_string();
-
-		strcpy_trunc(std::span(arg->model.get_ptr(), arg->model_size), model);
-		strcpy_trunc(std::span(arg->serial.get_ptr(), arg->serial_size), serial);
-
 		arg->out_code = CELL_OK;
 
-		sys_fs.trace("sys_fs_fcntl(0xc0000007): found device \"%s\" (model=\"%s\", serial=\"%s\")", device, model, serial);
+		if (const auto size = arg->model_size; size > 0)
+			strcpy_trunc(std::span(arg->model.get_ptr(), size),
+				fmt::format("%-*s", size - 1, g_cfg.sys.hdd_model.to_string())); // Example: "TOSHIBA MK3265GSX H                     "
+
+		if (const auto size = arg->serial_size; size > 0)
+			strcpy_trunc(std::span(arg->serial.get_ptr(), size),
+				fmt::format("%*s", size - 1, g_cfg.sys.hdd_serial.to_string())); // Example: "           0A1B2C3D4"
+		else
+			return CELL_EFAULT; // CELL_EFAULT is returned only when arg->serial_size == 0
+
 		return CELL_OK;
 	}
 
@@ -2181,39 +2181,37 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 			break;
 		}
 
-		std::string_view vpath{arg->name.get_ptr(), arg->name_size};
+		std::string_view vpath{arg->path.get_ptr(), arg->path_size};
+
+		if (vpath.size() == 0)
+			return CELL_ENOMEM;
 
 		// Trim trailing '\0'
 		if (const auto trim_pos = vpath.find('\0'); trim_pos != umax)
 			vpath.remove_suffix(vpath.size() - trim_pos);
 
-		if (vfs::get(vpath).empty())
+		arg->out_code = CELL_ENOTMOUNTED; // arg->out_code is set to CELL_ENOTMOUNTED on real hardware when the device doesn't exist or when the device isn't USB
+
+		if (!vfs::get(vpath).empty())
 		{
-			arg->out_code = CELL_ENOTMOUNTED;
-			return {CELL_ENOTMOUNTED, vpath};
+			if (const auto& mp = g_fxo->get<lv2_fs_mount_info_map>().lookup(vpath, true); mp == &g_mp_sys_dev_usb)
+			{
+				const cfg::device_info device = g_cfg_vfs.get_device(g_cfg_vfs.dev_usb, fmt::format("%s%s", mp->root, mp.device.substr(mp->device.size())));
+				const auto usb_ids = device.get_usb_ids();
+				std::tie(arg->vendorID, arg->productID) = usb_ids;
+
+				if (with_serial)
+				{
+					const auto arg_c000001c = vm::static_ptr_cast<lv2_file_c000001c>(_arg);
+					const std::u16string serial = utf8_to_utf16(device.serial); // Serial needs to be encoded to utf-16 BE
+					std::copy_n(serial.begin(), std::min(serial.size(), sizeof(arg_c000001c->serial) / sizeof(u16)), arg_c000001c->serial);
+				}
+
+				arg->out_code = CELL_OK;
+				sys_fs.trace("sys_fs_fcntl(0x%08x): found device \"%s\" (vid=0x%04x, pid=0x%04x, serial=\"%s\")", op, mp.device, usb_ids.first, usb_ids.second, device.serial);
+			}
 		}
 
-		const auto& mp = g_fxo->get<lv2_fs_mount_info_map>().lookup(vpath, true);
-
-		if (mp != &g_mp_sys_dev_usb)
-		{
-			arg->out_code = CELL_ENOTSUP;
-			return {CELL_ENOTSUP, vpath};
-		}
-
-		const cfg::device_info device = g_cfg_vfs.get_device(g_cfg_vfs.dev_usb, fmt::format("%s%s", mp->root, mp.device.substr(mp->device.size())));
-		std::tie(arg->vendorID, arg->productID) = device.get_usb_ids();
-
-		if (with_serial)
-		{
-			const auto arg_c000001c = vm::static_ptr_cast<lv2_file_c000001c>(_arg);
-			const std::u16string serial = utf8_to_utf16(device.serial); // Serial needs to be encoded to utf-16 BE
-			std::copy_n(serial.begin(), std::min(serial.size(), sizeof(arg_c000001c->serial) / sizeof(u16)), arg_c000001c->serial);
-		}
-
-		arg->out_code = CELL_OK;
-
-		sys_fs.trace("sys_fs_fcntl(0x%08x): found device \"%s\" (vid=0x%04x, pid=0x%04x, serial=\"%s\")", op, mp.device, arg->vendorID, arg->productID, device.serial);
 		return CELL_OK;
 	}
 
@@ -3028,7 +3026,7 @@ error_code sys_fs_truncate2(ppu_thread&, u32 fd, u64 size)
 
 error_code sys_fs_get_mount_info_size(ppu_thread&, vm::ptr<u64> len)
 {
-	sys_fs.trace("sys_fs_get_mount_info_size(len=*0x%x)", len);
+	sys_fs.warning("sys_fs_get_mount_info_size(len=*0x%x)", len);
 
 	if (!len)
 	{
@@ -3042,7 +3040,7 @@ error_code sys_fs_get_mount_info_size(ppu_thread&, vm::ptr<u64> len)
 
 error_code sys_fs_get_mount_info(ppu_thread&, vm::ptr<CellFsMountInfo> info, u64 len, vm::ptr<u64> out_len)
 {
-	sys_fs.trace("sys_fs_get_mount_info(info=*0x%x, len=0x%x, out_len=*0x%x)", info, len, out_len);
+	sys_fs.warning("sys_fs_get_mount_info(info=*0x%x, len=0x%x, out_len=*0x%x)", info, len, out_len);
 
 	if (!info || !out_len)
 	{
@@ -3058,7 +3056,7 @@ error_code sys_fs_newfs(ppu_thread& ppu, vm::cptr<char> dev_name, vm::cptr<char>
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_fs.trace("sys_fs_newfs(dev_name=%s, file_system=%s, unk1=0x%x, str1=%s)", dev_name, file_system, unk1, str1);
+	sys_fs.warning("sys_fs_newfs(dev_name=%s, file_system=%s, unk1=0x%x, str1=%s)", dev_name, file_system, unk1, str1);
 
 	const auto [dev_error, device_name] = translate_to_sv(dev_name, false);
 
@@ -3106,7 +3104,7 @@ error_code sys_fs_mount(ppu_thread& ppu, vm::cptr<char> dev_name, vm::cptr<char>
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_fs.trace("sys_fs_mount(dev_name=%s, file_system=%s, path=%s, unk1=0x%x, prot=%d, unk3=0x%x, str1=%s, str_len=%d)", dev_name, file_system, path, unk1, prot, unk3, str1, str_len);
+	sys_fs.warning("sys_fs_mount(dev_name=%s, file_system=%s, path=%s, unk1=0x%x, prot=%d, unk3=0x%x, str1=%s, str_len=%d)", dev_name, file_system, path, unk1, prot, unk3, str1, str_len);
 
 	const auto [dev_error, device_name] = translate_to_sv(dev_name, false);
 
@@ -3209,7 +3207,7 @@ error_code sys_fs_unmount(ppu_thread& ppu, vm::cptr<char> path, s32 unk1, s32 un
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_fs.trace("sys_fs_unmount(path=%s, unk1=0x%x, unk2=0x%x)", path, unk1, unk2);
+	sys_fs.warning("sys_fs_unmount(path=%s, unk1=0x%x, unk2=0x%x)", path, unk1, unk2);
 
 	const auto [path_error, vpath] = translate_to_sv(path);
 

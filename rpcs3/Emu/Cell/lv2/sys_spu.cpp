@@ -184,13 +184,18 @@ void sys_spu_image::deploy(u8* loc, std::span<const sys_spu_segment> segs, bool 
 		hash[5 + i * 2] = pal[sha1_hash[i] & 15];
 	}
 
+	auto mem_translate = [loc](u32 addr, u32 size)
+	{
+		return utils::add_saturate<u32>(addr, size) <= SPU_LS_SIZE ? loc + addr : nullptr;
+	};
+
 	// Apply the patch
-	auto applied = g_fxo->get<patch_engine>().apply(hash, [loc](u32 addr) { return loc + addr; });
+	auto applied = g_fxo->get<patch_engine>().apply(hash, mem_translate);
 
 	if (!Emu.GetTitleID().empty())
 	{
 		// Alternative patch
-		applied += g_fxo->get<patch_engine>().apply(Emu.GetTitleID() + '-' + hash, [loc](u32 addr) { return loc + addr; });
+		applied += g_fxo->get<patch_engine>().apply(Emu.GetTitleID() + '-' + hash, mem_translate);
 	}
 
 	(is_verbose ? spu_log.notice : sys_spu.trace)("Loaded SPU image: %s (<- %u)%s", hash, applied.size(), dump);
@@ -210,14 +215,7 @@ lv2_spu_group::lv2_spu_group(utils::serial& ar) noexcept
 	{
 		std::common_type_t<decltype(lv2_spu_group::prio)> prio{};
 
-		if (GET_SERIALIZATION_VERSION(spu) < 3)
-		{
-			prio.prio = ar.operator s32();
-		}
-		else
-		{
-			ar(prio.all);
-		}
+		ar(prio.all);
 
 		return prio;
 	}())
@@ -382,10 +380,7 @@ struct spu_limits_t
 
 	spu_limits_t(utils::serial& ar) noexcept
 	{
-		if (GET_SERIALIZATION_VERSION(spu) >= 2)
-		{
-			ar(max_raw, max_spu);
-		}
+		ar(max_raw, max_spu);
 	}
 
 	void save(utils::serial& ar)
@@ -1402,7 +1397,7 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 				if (prev_resv && prev_resv != resv)
 				{
 					// Batch reservation notifications if possible
-					vm::reservation_notifier(prev_resv).notify_all();
+					vm::reservation_notifier(prev_resv).notify_all(-128);
 				}
 
 				prev_resv = resv;
@@ -1412,7 +1407,7 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 
 	if (prev_resv)
 	{
-		vm::reservation_notifier(prev_resv).notify_all();
+		vm::reservation_notifier(prev_resv).notify_all(-128);
 	}
 
 	group->exit_status = value;

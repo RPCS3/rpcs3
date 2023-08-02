@@ -2666,7 +2666,6 @@ void PPUTranslator::DCBST(ppu_opcode_t)
 void PPUTranslator::LWZUX(ppu_opcode_t op)
 {
 	m_may_be_mmio &= (op.ra != 1u && op.ra != 13u && op.rb != 1u && op.rb != 13u); // Stack register and TLS address register are unlikely to be used in MMIO address calculation
-	m_may_be_mmio &= op.simm16 == 0 || spu_thread::test_is_problem_state_register_offset(op.uimm16, true, false); // Either exact MMIO address or MMIO base with completing s16 address offset
 
 	const auto addr = m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb));
 	SetGpr(op.rd, ReadMemory(addr, GetType<u32>()));

@@ -2,7 +2,7 @@
 
 #include <QVBoxLayout>
 
-find_dialog::find_dialog(QTextEdit* edit, QWidget *parent, Qt::WindowFlags f) : QDialog(parent, f), m_text_edit(edit)
+find_dialog::find_dialog(QPlainTextEdit* edit, QWidget *parent, Qt::WindowFlags f) : QDialog(parent, f), m_text_edit(edit)
 {
 	setWindowTitle(tr("Find string"));
 

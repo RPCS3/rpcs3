@@ -679,7 +679,7 @@ void log_frame::UpdateUI()
 
 	const auto font_start_tag = [](const QColor& color) -> const QString { return QStringLiteral("<font color = \"") % color.name() % QStringLiteral("\">"); };
 	const QString font_start_tag_stack = "<font color = \"" % m_color_stack.name() % "\">";
-	const QString font_end_tag = QStringLiteral("</font>");
+	static const QString font_end_tag = QStringLiteral("</font>");
 
 	static constexpr auto escaped = [](const QString& text)
 	{
@@ -897,7 +897,7 @@ bool log_frame::eventFilter(QObject* object, QEvent* event)
 			if (m_find_dialog && m_find_dialog->isVisible())
 				m_find_dialog->close();
 
-			m_find_dialog.reset(new find_dialog(static_cast<QTextEdit*>(object), this));
+			m_find_dialog.reset(new find_dialog(static_cast<QPlainTextEdit*>(object), this));
 		}
 	}
 

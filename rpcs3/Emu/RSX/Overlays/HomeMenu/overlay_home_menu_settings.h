@@ -88,10 +88,10 @@ namespace rsx
 			}
 
 			template <s64 Min, s64 Max>
-			void add_signed_slider(cfg::_int<Min, Max>* setting, const std::string& text, const std::string& suffix, s64 step_size, s64 minimum = Min, s64 maximum = Max)
+			void add_signed_slider(cfg::_int<Min, Max>* setting, const std::string& text, const std::string& suffix, s64 step_size, std::map<s64, std::string> special_labels = {}, s64 minimum = Min, s64 maximum = Max)
 			{
 				ensure(setting && setting->get_is_dynamic());
-				std::unique_ptr<overlay_element> elem = std::make_unique<home_menu_signed_slider<Min, Max>>(setting, text, suffix, minimum, maximum);
+				std::unique_ptr<overlay_element> elem = std::make_unique<home_menu_signed_slider<Min, Max>>(setting, text, suffix, special_labels, minimum, maximum);
 
 				add_item(elem, [this, setting, text, step_size, minimum, maximum](pad_button btn) -> page_navigation
 				{
@@ -127,10 +127,10 @@ namespace rsx
 			}
 
 			template <u64 Min, u64 Max>
-			void add_unsigned_slider(cfg::uint<Min, Max>* setting, const std::string& text, const std::string& suffix, u64 step_size, u64 minimum = Min, u64 maximum = Max)
+			void add_unsigned_slider(cfg::uint<Min, Max>* setting, const std::string& text, const std::string& suffix, u64 step_size, std::map<u64, std::string> special_labels = {}, u64 minimum = Min, u64 maximum = Max)
 			{
 				ensure(setting && setting->get_is_dynamic());
-				std::unique_ptr<overlay_element> elem = std::make_unique<home_menu_unsigned_slider<Min, Max>>(setting, text, suffix, minimum, maximum);
+				std::unique_ptr<overlay_element> elem = std::make_unique<home_menu_unsigned_slider<Min, Max>>(setting, text, suffix, special_labels, minimum, maximum);
 
 				add_item(elem, [this, setting, text, step_size, minimum, maximum](pad_button btn) -> page_navigation
 				{
@@ -166,10 +166,10 @@ namespace rsx
 			}
 
 			template <s32 Min, s32 Max>
-			void add_float_slider(cfg::_float<Min, Max>* setting, const std::string& text, const std::string& suffix, f32 step_size, s32 minimum = Min, s32 maximum = Max)
+			void add_float_slider(cfg::_float<Min, Max>* setting, const std::string& text, const std::string& suffix, f32 step_size, std::map<f64, std::string> special_labels = {}, s32 minimum = Min, s32 maximum = Max)
 			{
 				ensure(setting && setting->get_is_dynamic());
-				std::unique_ptr<overlay_element> elem = std::make_unique<home_menu_float_slider<Min, Max>>(setting, text, suffix, minimum, maximum);
+				std::unique_ptr<overlay_element> elem = std::make_unique<home_menu_float_slider<Min, Max>>(setting, text, suffix, special_labels, minimum, maximum);
 
 				add_item(elem, [this, setting, text, step_size, minimum, maximum](pad_button btn) -> page_navigation
 				{

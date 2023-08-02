@@ -15,7 +15,7 @@ midi_creator::midi_creator()
 // We need to recreate the localized string because the midi creator is currently only created once.
 QString midi_creator::get_none()
 {
-	return tr("None", "Midi device");
+	return tr("None", "MIDI device");
 }
 
 void midi_creator::refresh_list()
@@ -49,11 +49,11 @@ void midi_creator::refresh_list()
 		s32 size = sizeof(buf);
 		if (rtmidi_get_port_name(midi_in.get(), port_number, buf, &size) == -1)
 		{
-			cfg_log.error("Error getting midi port name for port %d: %s", port_number, midi_in->msg);
+			cfg_log.error("Error getting MIDI port name for port %d: %s", port_number, midi_in->msg);
 			continue;
 		}
 
-		cfg_log.notice("Found midi device with name: %s", buf);
+		cfg_log.notice("Found MIDI device with name: %s", buf);
 		m_midi_list.append(QString::fromUtf8(buf));
 	}
 }

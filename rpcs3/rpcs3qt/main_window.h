@@ -1,13 +1,15 @@
 #pragma once
 
-#ifdef _WIN32
-#include <QWinTHumbnailToolbar>
-#include <QWinTHumbnailToolbutton>
+#ifdef HAS_QT_WIN_STUFF
+#include <QWinThumbnailToolBar>
+#include <QWinThumbnailToolButton>
 #endif
 
 #include <QActionGroup>
 #include <QMainWindow>
 #include <QIcon>
+#include <QList>
+#include <QUrl>
 #include <QMimeData>
 
 #include "update_manager.h"
@@ -48,6 +50,7 @@ class main_window : public QMainWindow
 
 	bool m_is_list_mode = true;
 	bool m_save_slider_pos = false;
+	bool m_requested_show_logs_on_exit = false;
 	int m_other_slider_pos = 0;
 
 	QIcon m_app_icon;
@@ -57,7 +60,7 @@ class main_window : public QMainWindow
 	QIcon m_icon_fullscreen_on;
 	QIcon m_icon_fullscreen_off;
 
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 	QIcon m_icon_thumb_play;
 	QIcon m_icon_thumb_pause;
 	QIcon m_icon_thumb_stop;
@@ -93,6 +96,7 @@ Q_SIGNALS:
 	void RequestGlobalStylesheetChange();
 	void RequestTrophyManagerRepaint();
 	void NotifyEmuSettingsChange();
+	void NotifyWindowCloseEvent(bool closed);
 
 public Q_SLOTS:
 	void OnEmuStop();
@@ -156,7 +160,10 @@ private:
 	void ExtractTar();
 	void ExtractMSELF();
 
-	static drop_type IsValidFile(const QMimeData& md, QStringList* drop_paths = nullptr);
+	QList<QUrl> m_drop_file_url_list;
+	u64 m_drop_file_timestamp = umax;
+	drop_type m_drop_file_cached_drop_type = drop_type::drop_error;
+	drop_type IsValidFile(const QMimeData& md, QStringList* drop_paths = nullptr);
 	static void AddGamesFromDir(const QString& path);
 
 	QAction* CreateRecentAction(const q_string_pair& entry, const uint& sc_idx);

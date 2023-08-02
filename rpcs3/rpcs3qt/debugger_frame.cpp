@@ -122,13 +122,13 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidg
 	hbox_b_main->addStretch();
 
 	// Misc state
-	m_misc_state = new QTextEdit(this);
-	m_misc_state->setLineWrapMode(QTextEdit::NoWrap);
+	m_misc_state = new QPlainTextEdit(this);
+	m_misc_state->setLineWrapMode(QPlainTextEdit::NoWrap);
 	m_misc_state->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
 
 	// Registers
-	m_regs = new QTextEdit(this);
-	m_regs->setLineWrapMode(QTextEdit::NoWrap);
+	m_regs = new QPlainTextEdit(this);
+	m_regs->setLineWrapMode(QPlainTextEdit::NoWrap);
 	m_regs->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
 
 	m_debugger_list->setFont(m_mono);
@@ -435,7 +435,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 				dlg.set_input_font(mono, false);
 				dlg.set_clear_button_enabled(false);
 				dlg.set_button_enabled(QDialogButtonBox::StandardButton::Ok, false);
-				dlg.set_validator(new QRegularExpressionValidator(QRegularExpression("^[1-9][0-9]*$")));
+				dlg.set_validator(new QRegularExpressionValidator(QRegularExpression("^[1-9][0-9]*$"), &dlg));
 
 				u32 max = 0;
 
@@ -462,6 +462,8 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 
 			auto copy_overlapping_list = [&] <typename T> (u64& index, u64 max, const std::vector<T>& in, std::vector<T>& out, bool& emptied)
 			{
+				max = std::min<u64>(max, in.size());
+
 				const u64 current_pos = index % in.size();
 				const u64 last_elements = std::min<u64>(current_pos, max);
 				const u64 overlapped_old_elements = std::min<u64>(index, max) - last_elements;
@@ -543,13 +545,16 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 
 				// Preallocate in order to save execution time when inside suspend_all.
 				std::vector<u32> copy(max);
+				std::vector<typename ppu_thread::syscall_history_t::entry_t> sys_copy(ppu_thread::syscall_history_max_size);
 
-				bool emptied = false;
+				std::array<bool, 2> emptied{};
 
 				cpu_thread::suspend_all(nullptr, {}, [&]
 				{
 					auto& list = static_cast<ppu_thread*>(cpu)->call_history;
-					copy_overlapping_list(list.index, max, list.data, copy, emptied);
+					auto& sys_list = static_cast<ppu_thread*>(cpu)->syscall_history;
+					copy_overlapping_list(list.index, max, list.data, copy, emptied[0]);
+					copy_overlapping_list(sys_list.index, max, sys_list.data, sys_copy, emptied[1]);
 				});
 
 				std::string ret;
@@ -563,14 +568,25 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 					fmt::append(ret, "\n(%u) 0x%08x: %s", i, *it, dis_asm.last_opcode);
 				}
 
+				i = 0;
+				for (auto it = sys_copy.rbegin(); it != sys_copy.rend(); it++, i++)
+				{
+					fmt::append(ret, "\n(%u) 0x%08x: %s, 0x%x, r3=0x%x, r4=0x%x, r5=0x%x, r6=0x%x", i, it->cia, it->func_name, it->error, it->args[0], it->args[1], it->args[2], it->args[3]);
+				}
+
 				if (ret.empty())
 				{
 					ret = "No PPU calls have been logged";
 				}
 
-				if (emptied)
+				if (emptied[0])
 				{
 					ret += "\nPrevious call history has been emptied!";
+				}
+
+				if (emptied[1])
+				{
+					ret += "\nPrevious HLE call history has been emptied!";
 				}
 
 				ppu_log.success("PPU calling history dump of '%s': %s", cpu->get_name(), ret);
@@ -604,13 +620,26 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 				break;
 			}
 
-			if (cpu->id_type() != 2)
+			if (cpu->id_type() == 1)
 			{
-				break;
+				static_cast<ppu_thread*>(cpu)->debugger_mode.atomic_op([](ppu_debugger_mode& mode)
+				{
+					mode = static_cast<ppu_debugger_mode>((static_cast<u32>(mode) + 1) % static_cast<u32>(ppu_debugger_mode::max_mode));
+				});
+
+				return;
+			}
+			if (cpu->id_type() == 2)
+			{
+				static_cast<spu_thread*>(cpu)->debugger_mode.atomic_op([](spu_debugger_mode& mode)
+				{
+					mode = static_cast<spu_debugger_mode>((static_cast<u32>(mode) + 1) % static_cast<u32>(spu_debugger_mode::max_mode));
+				});
+
+				return;
 			}
 
-			static_cast<spu_thread*>(cpu)->debugger_float_mode ^= 1; // Switch mode
-			return;
+			break;
 		}
 		case Qt::Key_R:
 		{
@@ -670,7 +699,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 
 				if (!cpu->state.all_of(cpu_flag::wait + cpu_flag::dbg_pause))
 				{
-					QMessageBox::warning(this, QObject::tr("Pause the SPU Thread!"), QObject::tr("Cannot perform SPU capture due to the thread need manual pausing!"));
+					QMessageBox::warning(this, QObject::tr("Pause the SPU Thread!"), QObject::tr("Cannot perform SPU capture due to the thread needing manual pausing!"));
 					return;
 				}
 
@@ -1118,7 +1147,7 @@ void debugger_frame::WritePanels()
 	int loc = m_misc_state->verticalScrollBar()->value();
 	int hloc = m_misc_state->horizontalScrollBar()->value();
 	m_misc_state->clear();
-	m_misc_state->setText(qstr(cpu->dump_misc()));
+	m_misc_state->setPlainText(qstr(cpu->dump_misc()));
 	m_misc_state->verticalScrollBar()->setValue(loc);
 	m_misc_state->horizontalScrollBar()->setValue(hloc);
 
@@ -1126,8 +1155,8 @@ void debugger_frame::WritePanels()
 	hloc = m_regs->horizontalScrollBar()->value();
 	m_regs->clear();
 	m_last_reg_state.clear();
-	cpu->dump_regs(m_last_reg_state);
-	m_regs->setText(qstr(m_last_reg_state));
+	cpu->dump_regs(m_last_reg_state, m_dump_reg_func_data);
+	m_regs->setPlainText(qstr(m_last_reg_state));
 	m_regs->verticalScrollBar()->setValue(loc);
 	m_regs->horizontalScrollBar()->setValue(hloc);
 
@@ -1159,11 +1188,11 @@ void debugger_frame::ShowGotoAddressDialog()
 
 	if (const auto thread = get_cpu(); !thread || thread->id_type() != 2)
 	{
-		expression_input->setValidator(new QRegularExpressionValidator(QRegularExpression("^(0[xX])?0*[a-fA-F0-9]{0,8}$")));
+		expression_input->setValidator(new QRegularExpressionValidator(QRegularExpression("^(0[xX])?0*[a-fA-F0-9]{0,8}$"), this));
 	}
 	else
 	{
-		expression_input->setValidator(new QRegularExpressionValidator(QRegularExpression("^(0[xX])?0*[a-fA-F0-9]{0,5}$")));
+		expression_input->setValidator(new QRegularExpressionValidator(QRegularExpression("^(0[xX])?0*[a-fA-F0-9]{0,5}$"), this));
 	}
 
 	// Ok/Cancel

@@ -506,13 +506,10 @@ namespace rsx
 				ar(u32{0});
 			}
 		}
-		else if (version > 1)
+		else if (u32 count = ar)
 		{
-			if (u32 count = ar)
-			{
-				restore_fifo_count = count;
-				ar(restore_fifo_cmd);
-			}
+			restore_fifo_count = count;
+			ar(restore_fifo_cmd);
 		}
 	}
 
@@ -3164,7 +3161,7 @@ namespace rsx
 
 	void invalid_method(thread*, u32, u32);
 
-	void thread::dump_regs(std::string& result) const
+	void thread::dump_regs(std::string& result, std::any& /*custom_data*/) const
 	{
 		if (ctrl)
 		{
@@ -3201,7 +3198,9 @@ namespace rsx
 			}
 			}
 
-			fmt::append(result, "[%04x] %s\n", i, ensure(rsx::get_pretty_printing_function(i))(i, method_registers.registers[i]));
+			fmt::append(result, "[%04x] ", i);
+			ensure(rsx::get_pretty_printing_function(i))(result, i, method_registers.registers[i]);
+			result += '\n';
 		}
 	}
 

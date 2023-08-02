@@ -25,6 +25,7 @@ private:
 	QColor mValidColor;
 	QColor mInvalidColor;
 	bool m_valid = true; // Will be invalidated immediately
+	QRegularExpressionValidator* m_offset_validator = nullptr;
 
 	enum class move_direction
 	{
@@ -40,9 +41,11 @@ private:
 	static void init_patch_type_bombo_box(QComboBox* combo_box, patch_type set_type, bool searchable);
 	QComboBox* create_patch_type_bombo_box(patch_type set_type);
 
+	void update_validator(int index, QComboBox* combo_box, QLineEdit* line_edit);
+
 private Q_SLOTS:
 	void show_table_menu(const QPoint& pos);
-	void validate();
+	void validate(const QString& patch);
 	void generate_yml(const QString& text = {});
 	void export_patch();
 

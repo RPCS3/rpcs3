@@ -10,7 +10,6 @@
 #include <QDesktopServices>
 #include <QMessageBox>
 #include <QGuiApplication>
-#include <QUrl>
 
 #include "user_manager_dialog.h"
 #include "table_item_delegate.h"

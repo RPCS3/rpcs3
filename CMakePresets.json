@@ -1,0 +1,68 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "gcc",
+      "generator": "Ninja",
+      "binaryDir": "build-gcc",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "USE_FAUDIO": "OFF",
+        "USE_SYSTEM_CURL": "OFF",
+        "USE_SYSTEM_ZLIB": "OFF",
+        "USE_SYSTEM_LIBPNG": "OFF",
+        "USE_NATIVE_INSTRUCTIONS": "ON",
+        "USE_PRECOMPILED_HEADERS": "ON",
+        "BUILD_LLVM": "OFF",
+        "STATIC_LINK_LLVM": "ON"
+      }
+    },
+    {
+      "name": "clang",
+      "generator": "Ninja",
+      "binaryDir": "build-clang64",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "USE_FAUDIO": "OFF",
+        "USE_SYSTEM_CURL": "OFF",
+        "USE_SYSTEM_ZLIB": "OFF",
+        "USE_SYSTEM_LIBPNG": "OFF",
+        "LLVM_ENABLE_LIBCXX": "ON",
+        "USE_NATIVE_INSTRUCTIONS": "ON",
+        "USE_PRECOMPILED_HEADERS": "ON",
+        "BUILD_LLVM": "OFF",
+        "STATIC_LINK_LLVM": "ON"
+      },
+      "environment": {
+        "CXX": "clang++",
+        "CC": "clang"
+      }
+    },
+    {
+      "name": "msvc",
+      "displayName": "Windows x64",
+      "generator": "Visual Studio 17 2022",
+      "binaryDir": "build-msvc",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
+      "cacheVariables": {
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
+        "USE_FAUDIO": "OFF",
+        "USE_PRECOMPILED_HEADERS": "ON",
+        "USE_SYSTEM_ZLIB": "OFF",
+        "USE_NATIVE_INSTRUCTIONS": "ON",
+        "BUILD_LLVM": "ON",
+        "STATIC_LINK_LLVM": "ON"
+      },
+      "vendor": {
+        "microsoft.com/VisualStudioSettings/CMake/1.0": {
+          "hostOS": [
+            "Windows"
+          ]
+        }
+      }
+    }
+  ]
+}

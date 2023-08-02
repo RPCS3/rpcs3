@@ -363,14 +363,14 @@ namespace utils
 			}
 
 			const int dst_channels = 2;
-			const u64 dst_channel_layout = AV_CH_LAYOUT_STEREO;
+			const AVChannelLayout dst_channel_layout = AV_CHANNEL_LAYOUT_STEREO;
 			const AVSampleFormat dst_format = AV_SAMPLE_FMT_FLT;
 
 			int set_err = 0;
-			if ((set_err = av_opt_set_int(av.swr, "in_channel_count", stream->codecpar->channels, 0)) ||
+			if ((set_err = av_opt_set_int(av.swr, "in_channel_count", stream->codecpar->ch_layout.nb_channels, 0)) ||
 				(set_err = av_opt_set_int(av.swr, "out_channel_count", dst_channels, 0)) ||
-				(set_err = av_opt_set_channel_layout(av.swr, "in_channel_layout", stream->codecpar->channel_layout, 0)) ||
-				(set_err = av_opt_set_channel_layout(av.swr, "out_channel_layout", dst_channel_layout, 0)) ||
+				(set_err = av_opt_set_chlayout(av.swr, "in_channel_layout", &stream->codecpar->ch_layout, 0)) ||
+				(set_err = av_opt_set_chlayout(av.swr, "out_channel_layout", &dst_channel_layout, 0)) ||
 				(set_err = av_opt_set_int(av.swr, "in_sample_rate", stream->codecpar->sample_rate, 0)) ||
 				(set_err = av_opt_set_int(av.swr, "out_sample_rate", sample_rate, 0)) ||
 				(set_err = av_opt_set_sample_fmt(av.swr, "in_sample_fmt", static_cast<AVSampleFormat>(stream->codecpar->format), 0)) ||
@@ -710,13 +710,40 @@ namespace utils
 				if (!codec)
 					return nullptr;
 
+				// Try to find a preferable output format
+				std::vector<const AVOutputFormat*> oformats;
+
 				void* opaque = nullptr;
 				for (const AVOutputFormat* oformat = av_muxer_iterate(&opaque); !!oformat; oformat = av_muxer_iterate(&opaque))
 				{
 					if (avformat_query_codec(oformat, codec->id, FF_COMPLIANCE_STRICT) == 1)
 					{
-						return oformat->name;
+						media_log.notice("video_encoder: Found output format '%s'", oformat->name);
+
+						switch (codec->id)
+						{
+						case AV_CODEC_ID_MPEG4:
+							if (strcmp(oformat->name, "avi") == 0)
+								return oformat->name;
+							break;
+						case AV_CODEC_ID_H264:
+						case AV_CODEC_ID_MJPEG:
+							// TODO
+							break;
+						default:
+							break;
+						}
+
+						oformats.push_back(oformat);
 					}
+				}
+
+				// Fallback to first found format
+				if (!oformats.empty() && oformats.front())
+				{
+					const AVOutputFormat* oformat = oformats.front();
+					media_log.notice("video_encoder: Falling back to output format '%s'", oformat->name);
+					return oformat->name;
 				}
 
 				return nullptr;

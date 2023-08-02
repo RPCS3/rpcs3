@@ -7,7 +7,9 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <codecvt>
+#ifdef _MSC_VER
 #pragma comment(lib, "Winhttp.lib")
+#endif
 #endif
 
 LOG_CHANNEL(cellHttpUtil);
@@ -130,7 +132,7 @@ error_code cellHttpUtilParseUri(vm::ptr<CellHttpUri> uri, vm::cptr<char> str, vm
 				parseError = "Error, URI didn't contain a slash";
 				break;
 			default:
-				parseError = "Error, unkown error #" + std::to_string(static_cast<int>(URL.m_ErrorCode));
+				parseError = "Error, unknown error #" + std::to_string(static_cast<int>(URL.m_ErrorCode));
 				break;
 		}
 		cellHttpUtil.error("%s, while parsing URI, %s.", parseError, str.get_ptr());

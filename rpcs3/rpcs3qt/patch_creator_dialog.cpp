@@ -10,6 +10,9 @@
 #include <QMessageBox>
 #include <QFileDialog>
 #include <QMenuBar>
+#include <QStringBuilder>
+
+#include <regex>
 
 LOG_CHANNEL(patch_log, "PAT");
 
@@ -31,11 +34,16 @@ patch_creator_dialog::patch_creator_dialog(QWidget* parent)
 	, mMonoFont(QFontDatabase::systemFont(QFontDatabase::FixedFont))
 	, mValidColor(gui::utils::get_label_color("log_level_success"))
 	, mInvalidColor(gui::utils::get_label_color("log_level_error"))
+	, m_offset_validator(new QRegularExpressionValidator(QRegularExpression("^(0[xX])?[a-fA-F0-9]{0,8}$"), this))
 {
 	ui->setupUi(this);
 	ui->patchEdit->setFont(mMonoFont);
+	ui->patchEdit->setAcceptRichText(true);
 	ui->addPatchOffsetEdit->setFont(mMonoFont);
+	ui->addPatchOffsetEdit->setClearButtonEnabled(true);
 	ui->addPatchValueEdit->setFont(mMonoFont);
+	ui->addPatchValueEdit->setClearButtonEnabled(true);
+	ui->addPatchCommentEdit->setClearButtonEnabled(true);
 	ui->instructionTable->setFont(mMonoFont);
 	ui->instructionTable->setItemDelegate(new table_item_delegate(this, false));
 	ui->instructionTable->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeMode::Fixed);
@@ -66,6 +74,8 @@ patch_creator_dialog::patch_creator_dialog(QWidget* parent)
 	connect(ui->addPatchButton, &QAbstractButton::clicked, this, [this]() { add_instruction(ui->instructionTable->rowCount()); });
 
 	init_patch_type_bombo_box(ui->addPatchTypeComboBox, patch_type::be32, false);
+	connect(ui->addPatchTypeComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index){ update_validator(index, ui->addPatchTypeComboBox, ui->addPatchOffsetEdit); });
+	update_validator(ui->addPatchTypeComboBox->currentIndex(), ui->addPatchTypeComboBox, ui->addPatchOffsetEdit);
 
 	generate_yml();
 }
@@ -198,6 +208,25 @@ void patch_creator_dialog::show_table_menu(const QPoint& pos)
 	menu.exec(ui->instructionTable->viewport()->mapToGlobal(pos));
 }
 
+void patch_creator_dialog::update_validator(int index, QComboBox* combo_box, QLineEdit* line_edit)
+{
+	if (index < 0 || !combo_box || !line_edit || !combo_box->itemData(index).canConvert<patch_type>())
+	{
+		return;
+	}
+
+	switch (combo_box->itemData(index).value<patch_type>())
+	{
+	case patch_type::move_file:
+	case patch_type::hide_file:
+		line_edit->setValidator(nullptr);
+		break;
+	default:
+		line_edit->setValidator(m_offset_validator);
+		break;
+	}
+}
+
 void patch_creator_dialog::add_instruction(int row)
 {
 	const QString type    = ui->addPatchTypeComboBox->currentText();
@@ -206,6 +235,25 @@ void patch_creator_dialog::add_instruction(int row)
 	const QString comment = ui->addPatchCommentEdit->text();
 
 	const patch_type t = patch_engine::get_patch_type(type.toStdString());
+
+	switch (t)
+	{
+	case patch_type::move_file:
+	case patch_type::hide_file:
+		break;
+	default:
+	{
+		int pos = 0;
+		QString text_to_validate = offset;
+		if (m_offset_validator->validate(text_to_validate, pos) == QValidator::Invalid)
+		{
+			QMessageBox::information(this, tr("Offset invalid!"), tr("The patch offset is invalid.\nThe offset has to be a hexadecimal number with 8 digits at most."));
+			return;
+		}
+		break;
+	}
+	}
+
 	QComboBox* combo_box = create_patch_type_bombo_box(t);
 
 	ui->instructionTable->insertRow(std::max(0, std::min(row, ui->instructionTable->rowCount())));
@@ -330,11 +378,12 @@ bool patch_creator_dialog::can_move_instructions(QModelIndexList& selection, mov
 	return selection.last().row() < ui->instructionTable->rowCount() - 1;
 }
 
-void patch_creator_dialog::validate()
+void patch_creator_dialog::validate(const QString& patch)
 {
 	patch_engine::patch_map patches;
-	const std::string content = ui->patchEdit->toPlainText().toStdString();
-	const bool is_valid = patch_engine::load(patches, "From Patch Creator", content, true);
+	const std::string content = patch.toStdString();
+	std::stringstream messages;
+	const bool is_valid = patch_engine::load(patches, "From Patch Creator", content, true, &messages);
 
 	if (is_valid != m_valid)
 	{
@@ -356,6 +405,50 @@ void patch_creator_dialog::validate()
 		ui->validLabel->setPalette(palette);
 		m_valid = is_valid;
 	}
+
+	if (is_valid)
+	{
+		ui->patchEdit->setText(patch);
+		return;
+	}
+
+	// Search for erronous yml node locations in log message
+	static const std::regex r("(line )(\\d+)(, column )(\\d+)");
+	std::smatch sm;
+	std::set<int> faulty_lines;
+
+	for (std::string err = messages.str(); !err.empty() && std::regex_search(err, sm, r) && sm.size() == 5; err = sm.suffix())
+	{
+		if (s64 row{}; try_to_int64(&row, sm[2].str(), 0, u32{umax}))
+		{
+			faulty_lines.insert(row);
+		}
+	}
+
+	// Create html and colorize offending lines
+	const QString font_start_tag = QStringLiteral("<font color = \"") % mInvalidColor.name() % QStringLiteral("\">");;
+	static const QString font_end_tag = QStringLiteral("</font>");
+	static const QString line_break_tag = QStringLiteral("<br/>");
+
+	QStringList lines = patch.split("\n");
+	QString new_text;
+
+	for (int i = 0; i < lines.size(); i++)
+	{
+		// Escape each line and replace raw whitespace
+		const QString line = lines[i].toHtmlEscaped().replace(" ", "&nbsp;");
+
+		if (faulty_lines.empty() || faulty_lines.contains(i))
+		{
+			new_text += font_start_tag + line + font_end_tag + line_break_tag;
+		}
+		else
+		{
+			new_text += line + line_break_tag;
+		}
+	}
+
+	ui->patchEdit->setHtml(new_text);
 }
 
 void patch_creator_dialog::export_patch()
@@ -421,8 +514,7 @@ void patch_creator_dialog::generate_yml(const QString& /*text*/)
 		patch.append(QString("      - [ %0, %1, %2 ]%3\n").arg(type).arg(offset).arg(value).arg(comment.isEmpty() ? QStringLiteral("") : QString(" # %0").arg(comment)));
 	}
 
-	ui->patchEdit->setText(patch);
-	validate();
+	validate(patch);
 }
 
 bool patch_creator_dialog::eventFilter(QObject* object, QEvent* event)

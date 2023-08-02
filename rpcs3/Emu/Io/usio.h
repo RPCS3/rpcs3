@@ -15,7 +15,8 @@ public:
 private:
 	void load_backup();
 	void save_backup();
-	void translate_input();
+	void translate_input_taiko();
+	void translate_input_tekken();
 	void usio_write(u8 channel, u16 reg, std::vector<u8>& data);
 	void usio_read(u8 channel, u16 reg, u16 size);
 

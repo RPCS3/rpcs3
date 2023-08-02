@@ -174,6 +174,8 @@ error_code sys_mmapper_allocate_address(ppu_thread& ppu, u64 size, u64 flags, u6
 	{
 		if (const auto area = vm::find_map(static_cast<u32>(size), static_cast<u32>(alignment), flags & SYS_MEMORY_PAGE_SIZE_MASK))
 		{
+			sys_mmapper.warning("sys_mmapper_allocate_address(): Found VM 0x%x area (vsize=0x%x)", area->addr, size);
+
 			ppu.check_state();
 			*alloc_addr = area->addr;
 			return CELL_OK;
@@ -722,8 +724,9 @@ error_code sys_mmapper_search_and_map(ppu_thread& ppu, u32 start_addr, u32 mem_i
 		return CELL_ENOMEM;
 	}
 
-	vm::lock_sudo(addr, mem->size);
+	sys_mmapper.notice("sys_mmapper_search_and_map(): Found 0x%x address", addr);
 
+	vm::lock_sudo(addr, mem->size);
 	ppu.check_state();
 	*alloc_addr = addr;
 	return CELL_OK;

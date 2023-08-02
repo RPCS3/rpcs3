@@ -32,6 +32,12 @@
 #endif
 #endif
 
+#ifdef _WIN32
+constexpr SOCKET invalid_socket = INVALID_SOCKET;
+#else
+constexpr int invalid_socket = -1;
+#endif
+
 namespace pine
 {
 	/**
@@ -381,7 +387,7 @@ namespace pine
 
 			m_msgsock = accept(m_sock, 0, 0);
 
-			if (m_msgsock == -1)
+			if (m_msgsock == invalid_socket)
 			{
 				// everything else is non recoverable in our scope
 				// we also mark as recoverable socket errors where it would block a
@@ -541,7 +547,7 @@ namespace pine
 			}
 			server.sin_port = htons(Impl::get_port());
 
-			if (bind(m_sock, (struct sockaddr*)&server, sizeof(server)) == SOCKET_ERROR)
+			if (bind(m_sock, reinterpret_cast<struct sockaddr*>(&server), sizeof(server)) == SOCKET_ERROR)
 			{
 				Impl::error("IPC: Error while binding to socket! Shutting down...");
 				return;

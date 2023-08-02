@@ -25,7 +25,7 @@ void gl::init()
 #ifdef _WIN32
 #define OPENGL_PROC(p, n) OPENGL_PROC2(p, gl##n, gl##n)
 #define WGL_PROC(p, n) OPENGL_PROC2(p, wgl##n, wgl##n)
-#define OPENGL_PROC2(p, n, tn) /*if(!gl##n)*/ if(!(n = (p)wglGetProcAddress(#tn))) rsx_log.error("OpenGL: initialization of " #tn " failed.")
+#define OPENGL_PROC2(p, n, tn) /*if(!gl##n)*/ if(!(n = reinterpret_cast<p>(wglGetProcAddress(#tn)))) rsx_log.error("OpenGL: initialization of " #tn " failed.")
 #include "GLProcTable.h"
 #undef OPENGL_PROC
 #undef WGL_PROC

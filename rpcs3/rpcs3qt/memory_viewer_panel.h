@@ -40,8 +40,10 @@ enum search_mode : unsigned
 	as_f64           = 16,
 	as_f32           = 32,
 	as_inst          = 64,
-	as_fake_spu_inst = 128,
-	search_mode_last = 256,
+	as_regex_inst    = 128,
+	as_fake_spu_inst = 256,
+	as_regex_fake_spu_inst = 512,
+	search_mode_last = 1024,
 };
 
 class memory_viewer_panel final : public QDialog

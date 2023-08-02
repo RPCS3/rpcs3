@@ -63,9 +63,14 @@ void ppu_thread_exit(ppu_thread& ppu, ppu_opcode_t, be_t<u32>*, struct ppu_intrp
 
 	if (ppu.call_history.index)
 	{
-		std::string str = fmt::format("%s", ppu.call_history);
+		ppu_log.notice("Calling history: %s", ppu.call_history);
 		ppu.call_history.index = 0;
-		ppu_log.notice("Calling history: %s", str);
+	}
+
+	if (ppu.syscall_history.index)
+	{
+		ppu_log.notice("HLE/LV2 history: %s", ppu.syscall_history);
+		ppu.syscall_history.index = 0;
 	}
 }
 
@@ -74,15 +79,7 @@ constexpr u32 c_max_ppu_name_size = 28;
 void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 {
 	ppu.state += cpu_flag::wait;
-
-	// Need to wait until the current writer finish
-	if (ppu.state & cpu_flag::memory)
-	{
-		while (vm::g_range_lock)
-		{
-			busy_wait(200);
-		}
-	}
+	u64 writer_mask = 0;
 
 	sys_ppu_thread.trace("_sys_ppu_thread_exit(errorcode=0x%llx)", errorcode);
 
@@ -121,6 +118,9 @@ void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 			old_ppu = g_fxo->get<ppu_thread_cleaner>().clean(std::move(idm::find_unlocked<named_thread<ppu_thread>>(ppu.id)->second));
 		}
 
+		// Get writers mask (wait for all current writers to quit)
+		writer_mask = vm::g_range_lock_bits[1];
+
 		// Unqueue
 		lv2_obj::sleep(ppu);
 		notify.cleanup();
@@ -148,6 +148,15 @@ void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 	{
 		// It is detached from IDM now so join must be done explicitly now
 		*static_cast<named_thread<ppu_thread>*>(old_ppu.get()) = thread_state::finished;
+	}
+
+	// Need to wait until the current writers finish
+	if (ppu.state & cpu_flag::memory)
+	{
+		for (; writer_mask; writer_mask &= vm::g_range_lock_bits[1])
+		{
+			busy_wait(200);
+		}
 	}
 }
 
