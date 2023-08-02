@@ -16,7 +16,7 @@ generate_post_data()
 EOF
 }
 
-curl -s \
+curl -fsS \
     -H "Authorization: token ${RPCS3_TOKEN}" \
     -H "Accept: application/vnd.github.v3+json" \
     --data "$(generate_post_data)" "https://api.github.com/repos/$UPLOAD_REPO_FULL_NAME/releases" >> release.json
@@ -28,7 +28,7 @@ echo "${id:?}"
 
 upload_file()
 {
-    curl -s \
+    curl -fsS \
         -H "Authorization: token ${RPCS3_TOKEN}" \
         -H "Accept: application/vnd.github.v3+json" \
         -H "Content-Type: application/octet-stream" \
