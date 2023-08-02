@@ -1,7 +1,7 @@
 #!/bin/sh -ex
 
 brew update
-brew install -f --overwrite nasm ninja git p7zip create-dmg ccache pipenv llvm@16 sdl2 glew cmake faudio qt@5 ffmpeg@6 vulkan-headers
+brew install -f --overwrite nasm ninja git p7zip create-dmg ccache pipenv llvm@16 sdl2 glew cmake qt@6 ffmpeg@6 vulkan-headers
 # moltenvk based on commit for 1.2.4 release
 wget https://raw.githubusercontent.com/Homebrew/homebrew-core/b233d4f9f40f26d81da11140defbfd578cfe4a69/Formula/molten-vk.rb
 brew install -f --overwrite ./molten-vk.rb
@@ -24,8 +24,8 @@ export LDFLAGS="-L$BREW_PATH/lib -Wl,-rpath,$BREW_PATH/lib"
 export CPPFLAGS="-I$BREW_PATH/include"
 export LIBRARY_PATH="$BREW_PATH/lib"
 export LD_LIBRARY_PATH="$BREW_PATH/lib"
-export Qt5_DIR
-Qt5_DIR="$(brew --prefix qt@5)/lib/cmake/Qt5"
+export Qt6_DIR
+Qt6_DIR="$(brew --prefix qt@6)/lib/cmake/Qt6"
 
 export VULKAN_SDK
 VULKAN_SDK="$(brew --prefix molten-vk)"
@@ -36,7 +36,7 @@ LLVM_DIR="$(brew --prefix llvm@16)"
 
 # exclude FAudio, SPIRV, SDL , ffmpeg and LLVM from submodule update
 # shellcheck disable=SC2046
-git submodule -q update --init --depth=1 --jobs=8 $(awk '/path/ && !/FAudio/ && !/llvm/ && !/SPIRV/ && !/SDL/ && !/ffmpeg/ { print $3 }' .gitmodules)
+git submodule -q update --init --depth=1 --jobs=8 $(awk '/path/ && !/llvm/ && !/SPIRV/ && !/SDL/ && !/ffmpeg/ { print $3 }' .gitmodules)
 
 # 3rdparty fixes
 sed -i '' "s/extern const double NSAppKitVersionNumber;/const double NSAppKitVersionNumber = 1343;/g" 3rdparty/hidapi/hidapi/mac/hid.c
@@ -44,12 +44,12 @@ sed -i '' "s/extern const double NSAppKitVersionNumber;/const double NSAppKitVer
 mkdir build && cd build || exit 1
 
 "$BREW_PATH/bin/cmake" .. \
-    -DUSE_SDL=ON -DUSE_DISCORD_RPC=OFF -DUSE_VULKAN=ON -DUSE_ALSA=OFF -DUSE_PULSE=OFF -DUSE_AUDIOUNIT=ON \
+    -DUSE_SDL=ON -DUSE_DISCORD_RPC=OFF -DUSE_VULKAN=ON -DUSE_ALSA=OFF -DUSE_PULSE=OFF -DUSE_FAUDIO=OFF -DUSE_AUDIOUNIT=ON \
     -DLLVM_CCACHE_BUILD=OFF -DLLVM_BUILD_RUNTIME=OFF -DLLVM_BUILD_TOOLS=OFF \
     -DLLVM_INCLUDE_DOCS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_TOOLS=OFF \
     -DLLVM_INCLUDE_UTILS=OFF -DLLVM_USE_PERF=OFF -DLLVM_ENABLE_Z3_SOLVER=OFF \
     -DUSE_NATIVE_INSTRUCTIONS=OFF \
-    -DUSE_SYSTEM_FAUDIO=ON \
+    -DUSE_SYSTEM_FAUDIO=OFF \
     -DUSE_SYSTEM_MVK=ON \
     -DUSE_SYSTEM_SDL=ON \
     -DUSE_SYSTEM_FFMPEG=ON \

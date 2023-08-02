@@ -140,9 +140,8 @@ macos_task:
       macos_instance:
         image: ghcr.io/cirruslabs/macos-monterey-xcode:14
       mac_script:
-        - mkdir artifacts
-        - chmod +x ".ci/build-mac-arm64.sh"
-        - chmod +x ".ci/deploy-mac.sh"
+        - mkdir -p artifacts
+        - chmod +x .ci/build-mac-arm64.sh .ci/deploy-mac.sh
         - ".ci/build-mac-arm64.sh"
 
   env:
