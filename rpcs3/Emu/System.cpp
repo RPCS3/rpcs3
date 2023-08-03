@@ -243,6 +243,39 @@ void fixup_ppu_settings()
 	}
 }
 
+void dump_executable(std::span<const u8> data, main_ppu_module* _main, std::string_view title_id)
+{
+	// Format filename and directory name
+	// Make each directory for each file so tools like IDA can work on it cleanly
+	const std::string dir_path = fs::get_cache_dir() + "ppu_progs/" + std::string{!title_id.empty() ? title_id : "untitled"} + fmt::format("-%s-%s", fmt::base57(_main->sha1), _main->path.substr(_main->path.find_last_of('/') + 1))  + '/';
+	const std::string filename = dir_path + "exec.elf";
+
+	if (fs::create_dir(dir_path) || fs::g_tls_error == fs::error::exist)
+	{
+		if (fs::file out{filename, fs::create + fs::write})
+		{
+			if (out.size() == data.size())
+			{
+				// Risky optimization: assume if file size match they are equal and does not need to rewrite it
+				// But it is a debug option and if there are problems the user/developer can remove the previous file
+			}
+			else
+			{
+				out.trunc(0);
+				out.write(data.data(), data.size());
+			}
+		}
+		else
+		{
+			sys_log.error("Failed to save decrypted executable of \"%s\": Failure to create file \"%s\" (%s)", Emu.GetBoot(), filename, fs::g_tls_error);
+		}
+	}
+	else
+	{
+		sys_log.error("Failed to save decrypted executable of \"%s\": Failure to create directory \"%s\" (%s)", Emu.GetBoot(), dir_path, fs::g_tls_error);
+	}
+}
+
 void Emulator::Init()
 {
 	jit_runtime::initialize();
@@ -492,6 +525,7 @@ void Emulator::Init()
 
 	make_path_verbose(fs::get_cache_dir() + "shaderlog/", false);
 	make_path_verbose(fs::get_cache_dir() + "spu_progs/", false);
+	make_path_verbose(fs::get_cache_dir() + "ppu_progs/", false);
 	make_path_verbose(fs::get_parent_dir(get_savestate_file("NO_ID", "/NO_FILE", -1, -1)), false);
 	make_path_verbose(fs::get_config_dir() + "captures/", false);
 	make_path_verbose(fs::get_config_dir() + "sounds/", false);
@@ -1884,10 +1918,13 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			return game_boot_result::invalid_file_or_folder;
 		}
 
+		bool had_been_decrypted = false;
+
 		// Check SELF header
 		if (elf_file.size() >= 4 && elf_file.read<u32>() == "SCE\0"_u32)
 		{
 			// Decrypt SELF
+			had_been_decrypted = true;
 			elf_file = decrypt_self(std::move(elf_file), klic.empty() ? nullptr : reinterpret_cast<u8*>(&klic[0]), &g_ps3_process_info.self_info);
 		}
 		else
@@ -2007,10 +2044,18 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				sys_log.error("Booting HG category outside of HDD0!");
 			}
 
-			g_fxo->init<main_ppu_module>();
+			const auto _main = g_fxo->init<main_ppu_module>();
 
 			if (ppu_load_exec(ppu_exec, false, m_path, DeserialManager()))
 			{
+				if (g_cfg.core.ppu_debug && had_been_decrypted)
+				{
+					// Auto-dump decrypted binaries if PPU debug is enabled
+
+					const auto exec_bin = elf_file.to_vector<u8>();
+
+					dump_executable({exec_bin.data(), exec_bin.size()}, _main, GetTitleID());
+				}
 			}
 			// Overlay (OVL) executable (only load it)
 			else if (vm::map(0x3000'0000, 0x1000'0000, 0x200); !ppu_load_overlay(ppu_exec, false, m_path).first)
