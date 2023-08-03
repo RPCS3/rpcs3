@@ -342,15 +342,14 @@ public:
 	void push(Args&&... args)
 	{
 		auto oldv = m_head.load();
-		auto _old = load(oldv);
-		auto item = new lf_queue_item<T>(_old, std::forward<Args>(args)...);
+		auto item = new lf_queue_item<T>(load(oldv), std::forward<Args>(args)...);
 
 		while (!m_head.compare_exchange(oldv, reinterpret_cast<u64>(item) << 16))
 		{
-			item->m_link = _old;
+			item->m_link = load(oldv);
 		}
 
-		if (!_old)
+		if (!oldv)
 		{
 			// Notify only if queue was empty
 			utils::bless<atomic_t<u32>>(&m_head)[1].notify_one();
