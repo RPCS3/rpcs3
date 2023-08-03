@@ -391,14 +391,19 @@ namespace vm
 					return;
 				}
 
+				if (!get_range_lock_bits(true)) [[likely]]
+				{
+					return;
+				}
+
 				if (i < 100)
 					busy_wait(200);
 				else
 					std::this_thread::yield();
 
-				if (!get_range_lock_bits(true)) [[likely]]
+				if (cpu_flag::wait - cpu.state)
 				{
-					return;
+					cpu.state += cpu_flag::wait;
 				}
 			}
 		}
