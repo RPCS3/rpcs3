@@ -2783,7 +2783,7 @@ bool ppu_load_rel_exec(const ppu_rel_object& elf)
 			_sec.addr = addr;
 			relm.secs.emplace_back(_sec);
 
-			std::memcpy(vm::base(addr), s.bin.data(), size);
+			std::memcpy(vm::base(addr), s.get_bin().data(), size);
 			addr = utils::align<u32>(addr + size, 128);
 		}
 	}
