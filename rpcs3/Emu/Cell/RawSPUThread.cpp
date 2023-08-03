@@ -410,7 +410,7 @@ void spu_load_rel_exec(const spu_rel_object& elf)
 	{
 		if (shdr.sh_type == sec_type::sht_progbits && shdr.sh_flags().all_of(sh_flag::shf_alloc))
 		{
-			std::memcpy(spu->_ptr<void>(offs), shdr.bin.data(), shdr.sh_size);
+			std::memcpy(spu->_ptr<void>(offs), shdr.get_bin().data(), shdr.sh_size);
 			offs = utils::align<u32>(offs + shdr.sh_size, 4);
 		}
 	}
