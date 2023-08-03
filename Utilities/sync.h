@@ -51,8 +51,6 @@ constexpr NTSTATUS NTSTATUS_TIMEOUT = 0x102;
 
 #ifndef FUTEX_WAITV_MAX
 #define FUTEX_WAITV_MAX 128
-#endif
-
 struct futex_waitv
 {
 	__u64 val;
@@ -60,6 +58,7 @@ struct futex_waitv
 	__u32 flags;
 	__u32 __reserved;
 };
+#endif
 #else
 enum
 {
