@@ -303,7 +303,7 @@ struct vdec_context final
 				return;
 			}
 
-			thread_ctrl::wait_on(in_cmd, nullptr);
+			thread_ctrl::wait_on(in_cmd);
 			slice = in_cmd.pop_all(); // Pop new command list
 		}())
 		{
@@ -921,7 +921,7 @@ static error_code vdecOpen(ppu_thread& ppu, T type, U res, vm::cptr<CellVdecCb> 
 	});
 
 	thrd->state -= cpu_flag::stop;
-	thrd->state.notify_one(cpu_flag::stop);
+	thrd->state.notify_one();
 
 	return CELL_OK;
 }

@@ -100,17 +100,19 @@ class thread_future
 protected:
 	atomic_t<void(*)(thread_base*, thread_future*)> exec{};
 
+	atomic_t<u32> done{0};
+
 public:
 	// Get reference to the atomic variable for inspection and waiting for
 	const auto& get_wait() const
 	{
-		return exec;
+		return done;
 	}
 
 	// Wait (preset)
 	void wait() const
 	{
-		exec.wait<atomic_wait::op_ne>(nullptr);
+		done.wait(0);
 	}
 };
 
@@ -131,8 +133,13 @@ private:
 	// Thread handle (platform-specific)
 	atomic_t<u64> m_thread{0};
 
-	// Thread state and cycles
-	atomic_t<u64> m_sync{0};
+	// Thread cycles
+	atomic_t<u64> m_cycles{0};
+
+	atomic_t<u32> m_dummy{0};
+
+	// Thread state
+	atomic_t<u32> m_sync{0};
 
 	// Thread name
 	atomic_ptr<std::string> m_tname;
@@ -284,16 +291,22 @@ public:
 		}
 
 		atomic_wait::list<Max + 2> list{};
-		list.template set<Max>(_this->m_sync, 0, 4 + 1);
-		list.template set<Max + 1>(_this->m_taskq, nullptr);
+		list.template set<Max>(_this->m_sync, 0);
+		list.template set<Max + 1>(_this->m_taskq);
 		setter(list);
 		list.wait(atomic_wait_timeout{usec <= 0xffff'ffff'ffff'ffff / 1000 ? usec * 1000 : 0xffff'ffff'ffff'ffff});
 	}
 
-	template <atomic_wait::op Op = atomic_wait::op::eq, typename T, typename U>
+	template <typename T, typename U>
 	static inline void wait_on(T& wait, U old, u64 usec = -1)
 	{
-		wait_on_custom<1>([&](atomic_wait::list<3>& list){ list.set<0, Op>(wait, old); }, usec);
+		wait_on_custom<1>([&](atomic_wait::list<3>& list) { list.template set<0>(wait, old); }, usec);
+	}
+
+	template <typename T>
+	static inline void wait_on(T& wait)
+	{
+		wait_on_custom<1>([&](atomic_wait::list<3>& list) { list.template set<0>(wait); });
 	}
 
 	// Exit.
@@ -637,7 +650,7 @@ public:
 	{
 		bool notify_sync = false;
 
-		if (s >= thread_state::aborting && thread::m_sync.fetch_op([](u64& v){ return !(v & 3) && (v |= 1); }).second)
+		if (s >= thread_state::aborting && thread::m_sync.fetch_op([](u32& v) { return !(v & 3) && (v |= 1); }).second)
 		{
 			notify_sync = true;
 		}
@@ -650,7 +663,7 @@ public:
 		if (notify_sync)
 		{
 			// Notify after context abortion has been made so all conditions for wake-up be satisfied by the time of notification
-			thread::m_sync.notify_one(1);
+			thread::m_sync.notify_all();
 		}
 
 		if (s == thread_state::finished)

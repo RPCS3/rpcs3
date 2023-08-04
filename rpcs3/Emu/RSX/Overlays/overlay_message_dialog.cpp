@@ -295,7 +295,7 @@ namespace rsx
 			{
 				if (!m_stop_input_loop)
 				{
-					const auto notify = std::make_shared<atomic_t<bool>>(false);
+					const auto notify = std::make_shared<atomic_t<u32>>(0);
 					auto& overlayman = g_fxo->get<display_manager>();
 
 					if (interactive)

@@ -213,7 +213,7 @@ namespace rsx
 		u32 last_known_code_start = 0;
 		atomic_t<u32> external_interrupt_lock{ 0 };
 		atomic_t<bool> external_interrupt_ack{ false };
-		atomic_t<bool> is_initialized{ false };
+		atomic_t<u32> is_initialized{0};
 		bool is_fifo_idle() const;
 		void flush_fifo();
 

@@ -1821,7 +1821,11 @@ void ppu_thread::cpu_task()
 
 			// Wait until the progress dialog is closed.
 			// We don't want to open a cell dialog while a native progress dialog is still open.
-			thread_ctrl::wait_on<atomic_wait::op_ne>(g_progr_ptotal, 0);
+			while (u32 v = g_progr_ptotal)
+			{
+				g_progr_ptotal.wait(v);
+			}
+
 			g_fxo->get<progress_dialog_workaround>().show_overlay_message_only = true;
 
 			// Sadly we can't postpone initializing guest time because we need to run PPU threads
@@ -1839,7 +1843,7 @@ void ppu_thread::cpu_task()
 					}
 
 					ensure(spu.state.test_and_reset(cpu_flag::stop));
-					spu.state.notify_one(cpu_flag::stop);
+					spu.state.notify_one();
 				}
 			});
 
@@ -2051,7 +2055,7 @@ ppu_thread::ppu_thread(utils::serial& ar)
 	struct init_pushed
 	{
 		bool pushed = false;
-		atomic_t<bool> inited = false;
+		atomic_t<u32> inited = false;
 	};
 
 	call_history.data.resize(g_cfg.core.ppu_call_history ? call_history_max_size : 1);
@@ -2100,7 +2104,7 @@ ppu_thread::ppu_thread(utils::serial& ar)
 				{
 					while (!Emu.IsStopped() && !g_fxo->get<init_pushed>().inited)
 					{
-						thread_ctrl::wait_on(g_fxo->get<init_pushed>().inited, false);
+						thread_ctrl::wait_on(g_fxo->get<init_pushed>().inited, 0);
 					}
 					return false;
 				}
@@ -2117,7 +2121,7 @@ ppu_thread::ppu_thread(utils::serial& ar)
 				{ppu_cmd::ptr_call, 0}, +[](ppu_thread&) -> bool
 				{
 					auto& inited = g_fxo->get<init_pushed>().inited;
-					inited = true;
+					inited = 1;
 					inited.notify_all();
 					return true;
 				}
@@ -2453,10 +2457,10 @@ static void ppu_check(ppu_thread& ppu, u64 addr)
 {
 	ppu.cia = ::narrow<u32>(addr);
 
-	// ppu_check() shall not return directly
 	if (ppu.test_stopped())
-		{}
-	ppu_escape(&ppu);
+	{
+		return;
+	}
 }
 
 static void ppu_trace(u64 addr)
@@ -3046,7 +3050,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 
 		if (ppu.cia < liblv2_begin || ppu.cia >= liblv2_end)
 		{
-			res.notify_all(-128);
+			res.notify_all();
 		}
 
 		if (addr == ppu.last_faddr)

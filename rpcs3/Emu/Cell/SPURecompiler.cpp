@@ -647,7 +647,10 @@ void spu_cache::initialize()
 	if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit || g_cfg.core.spu_decoder == spu_decoder_type::llvm)
 	{
 		// Initialize progress dialog (wait for previous progress done)
-		thread_ctrl::wait_on<atomic_wait::op_ne>(g_progr_ptotal, 0);
+		while (u32 v = g_progr_ptotal)
+		{
+			g_progr_ptotal.wait(v);
+		}
 
 		g_progr_ptotal += ::size32(func_list);
 		progr.emplace("Building SPU cache...");
@@ -7795,7 +7798,7 @@ public:
 		{
 			minusb = eval(x);
 		}
-		
+
 		const auto minusbx = bitcast<u8[16]>(minusb);
 
 		// Data with swapped endian from a load instruction
@@ -11011,7 +11014,7 @@ struct spu_llvm_worker
 				return;
 			}
 
-			thread_ctrl::wait_on(registered, nullptr);
+			thread_ctrl::wait_on(utils::bless<atomic_t<u32>>(&registered)[1], 0);
 			slice = registered.pop_all();
 		}())
 		{
@@ -11178,7 +11181,7 @@ struct spu_llvm
 			{
 				// Interrupt profiler thread and put it to sleep
 				static_cast<void>(prof_mutex.reset());
-				thread_ctrl::wait_on(registered, nullptr);
+				thread_ctrl::wait_on(utils::bless<atomic_t<u32>>(&registered)[1], 0);
 				continue;
 			}
 
