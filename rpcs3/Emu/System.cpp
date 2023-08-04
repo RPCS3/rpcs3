@@ -153,7 +153,7 @@ void fmt_class_string<cfg_mode>::format(std::string& out, u64 arg)
 	});
 }
 
-void Emulator::CallFromMainThread(std::function<void()>&& func, atomic_t<bool>* wake_up, bool track_emu_state, u64 stop_ctr) const
+void Emulator::CallFromMainThread(std::function<void()>&& func, atomic_t<u32>* wake_up, bool track_emu_state, u64 stop_ctr) const
 {
 	if (!track_emu_state)
 	{
@@ -174,14 +174,14 @@ void Emulator::CallFromMainThread(std::function<void()>&& func, atomic_t<bool>* 
 
 void Emulator::BlockingCallFromMainThread(std::function<void()>&& func) const
 {
-	atomic_t<bool> wake_up = false;
+	atomic_t<u32> wake_up = 0;
 
 	CallFromMainThread(std::move(func), &wake_up);
 
 	while (!wake_up)
 	{
 		ensure(thread_ctrl::get_current());
-		wake_up.wait(false);
+		wake_up.wait(0);
 	}
 }
 
@@ -240,6 +240,39 @@ void fixup_ppu_settings()
 			sys_log.todo("The setting '%s' is currently not supported with PPU decoder type '%s' and will therefore be disabled during emulation.", g_cfg.core.ppu_set_fpcc.get_name(), g_cfg.core.ppu_decoder.get());
 			g_cfg.core.ppu_set_fpcc.set(false);
 		}
+	}
+}
+
+void dump_executable(std::span<const u8> data, main_ppu_module* _main, std::string_view title_id)
+{
+	// Format filename and directory name
+	// Make each directory for each file so tools like IDA can work on it cleanly
+	const std::string dir_path = fs::get_cache_dir() + "ppu_progs/" + std::string{!title_id.empty() ? title_id : "untitled"} + fmt::format("-%s-%s", fmt::base57(_main->sha1), _main->path.substr(_main->path.find_last_of('/') + 1))  + '/';
+	const std::string filename = dir_path + "exec.elf";
+
+	if (fs::create_dir(dir_path) || fs::g_tls_error == fs::error::exist)
+	{
+		if (fs::file out{filename, fs::create + fs::write})
+		{
+			if (out.size() == data.size())
+			{
+				// Risky optimization: assume if file size match they are equal and does not need to rewrite it
+				// But it is a debug option and if there are problems the user/developer can remove the previous file
+			}
+			else
+			{
+				out.trunc(0);
+				out.write(data.data(), data.size());
+			}
+		}
+		else
+		{
+			sys_log.error("Failed to save decrypted executable of \"%s\": Failure to create file \"%s\" (%s)", Emu.GetBoot(), filename, fs::g_tls_error);
+		}
+	}
+	else
+	{
+		sys_log.error("Failed to save decrypted executable of \"%s\": Failure to create directory \"%s\" (%s)", Emu.GetBoot(), dir_path, fs::g_tls_error);
 	}
 }
 
@@ -424,7 +457,7 @@ void Emulator::Init()
 		make_path_verbose(dev_flash, true);
 		make_path_verbose(dev_flash2, true);
 		make_path_verbose(dev_flash3, true);
-		
+
 		if (make_path_verbose(dev_usb, true))
 		{
 			make_path_verbose(dev_usb + "MUSIC/", false);
@@ -492,6 +525,7 @@ void Emulator::Init()
 
 	make_path_verbose(fs::get_cache_dir() + "shaderlog/", false);
 	make_path_verbose(fs::get_cache_dir() + "spu_progs/", false);
+	make_path_verbose(fs::get_cache_dir() + "ppu_progs/", false);
 	make_path_verbose(fs::get_parent_dir(get_savestate_file("NO_ID", "/NO_FILE", -1, -1)), false);
 	make_path_verbose(fs::get_config_dir() + "captures/", false);
 	make_path_verbose(fs::get_config_dir() + "sounds/", false);
@@ -1884,10 +1918,13 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			return game_boot_result::invalid_file_or_folder;
 		}
 
+		bool had_been_decrypted = false;
+
 		// Check SELF header
 		if (elf_file.size() >= 4 && elf_file.read<u32>() == "SCE\0"_u32)
 		{
 			// Decrypt SELF
+			had_been_decrypted = true;
 			elf_file = decrypt_self(std::move(elf_file), klic.empty() ? nullptr : reinterpret_cast<u8*>(&klic[0]), &g_ps3_process_info.self_info);
 		}
 		else
@@ -2007,10 +2044,18 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				sys_log.error("Booting HG category outside of HDD0!");
 			}
 
-			g_fxo->init<main_ppu_module>();
+			const auto _main = g_fxo->init<main_ppu_module>();
 
 			if (ppu_load_exec(ppu_exec, false, m_path, DeserialManager()))
 			{
+				if (g_cfg.core.ppu_debug && had_been_decrypted)
+				{
+					// Auto-dump decrypted binaries if PPU debug is enabled
+
+					const auto exec_bin = elf_file.to_vector<u8>();
+
+					dump_executable({exec_bin.data(), exec_bin.size()}, _main, GetTitleID());
+				}
 			}
 			// Overlay (OVL) executable (only load it)
 			else if (vm::map(0x3000'0000, 0x1000'0000, 0x200); !ppu_load_overlay(ppu_exec, false, m_path).first)
@@ -2152,7 +2197,7 @@ void Emulator::RunPPU()
 		}
 
 		ensure(cpu.state.test_and_reset(cpu_flag::stop));
-		cpu.state.notify_one(cpu_flag::stop);
+		cpu.state.notify_one();
 		signalled_thread = true;
 	});
 
@@ -2165,7 +2210,7 @@ void Emulator::RunPPU()
 	if (auto thr = g_fxo->try_get<named_thread<rsx::rsx_replay_thread>>())
 	{
 		thr->state -= cpu_flag::stop;
-		thr->state.notify_one(cpu_flag::stop);
+		thr->state.notify_one();
 	}
 }
 
@@ -2234,7 +2279,7 @@ void Emulator::FinalizeRunRequest()
 		}
 
 		ensure(spu.state.test_and_reset(cpu_flag::stop));
-		spu.state.notify_one(cpu_flag::stop);
+		spu.state.notify_one();
 	};
 
 	if (m_savestate_extension_flags1 & SaveStateExtentionFlags1::ShouldCloseMenu)
@@ -2437,7 +2482,7 @@ void Emulator::Resume()
 	auto on_select = [](u32, cpu_thread& cpu)
 	{
 		cpu.state -= cpu_flag::dbg_global_pause;
-		cpu.state.notify_one(cpu_flag::dbg_global_pause);
+		cpu.state.notify_one();
 	};
 
 	idm::select<named_thread<ppu_thread>>(on_select);

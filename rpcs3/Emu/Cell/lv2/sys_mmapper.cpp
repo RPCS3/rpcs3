@@ -862,7 +862,7 @@ error_code mmapper_thread_recover_page_fault(cpu_thread* cpu)
 
 	if (cpu->state & cpu_flag::signal)
 	{
-		cpu->state.notify_one(cpu_flag::signal);
+		cpu->state.notify_one();
 	}
 
 	return CELL_OK;

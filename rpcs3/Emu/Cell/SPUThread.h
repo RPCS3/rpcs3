@@ -235,7 +235,7 @@ public:
 
 				// Turn off waiting bit manually (must succeed because waiting bit can only be resetted by the thread pushed to jostling_value)
 				ensure(this->data.bit_test_reset(off_wait));
-				data.notify_one();
+				utils::bless<atomic_t<u32>>(&data)[1].notify_one();
 			}
 
 			// Return true if count has changed from 0 to 1, this condition is considered satisfied even if we pushed a value directly to the special storage for waiting SPUs
@@ -294,7 +294,7 @@ public:
 
 		if ((old & mask) == mask)
 		{
-			data.notify_one();
+			utils::bless<atomic_t<u32>>(&data)[1].notify_one();
 		}
 
 		return static_cast<u32>(old);
@@ -386,7 +386,7 @@ struct spu_channel_4_t
 
 				// Turn off waiting bit manually (must succeed because waiting bit can only be resetted by the thread pushing to jostling_value)
 				ensure(atomic_storage<u8>::exchange(values.raw().waiting, 0));
-				values.notify_one();
+				utils::bless<atomic_t<u32>>(&values)[0].notify_one();
 			}
 
 			return;

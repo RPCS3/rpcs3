@@ -1366,7 +1366,7 @@ void debugger_frame::DoStep(bool step_over)
 				}
 			});
 
-			cpu->state.notify_one(s_pause_flags);
+			cpu->state.notify_one();
 		}
 	}
 
@@ -1412,7 +1412,7 @@ void debugger_frame::RunBtnPress()
 				Emu.Resume();
 			}
 
-			cpu->state.notify_one(s_pause_flags);
+			cpu->state.notify_one();
 			m_debugger_list->EnableThreadFollowing();
 		}
 	}

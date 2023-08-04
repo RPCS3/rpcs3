@@ -60,7 +60,7 @@ void headless_application::InitializeCallbacks()
 
 		return false;
 	};
-	callbacks.call_from_main_thread = [this](std::function<void()> func, atomic_t<bool>* wake_up)
+	callbacks.call_from_main_thread = [this](std::function<void()> func, atomic_t<u32>* wake_up)
 	{
 		RequestCallFromMainThread(std::move(func), wake_up);
 	};
@@ -166,7 +166,7 @@ void headless_application::InitializeCallbacks()
 /**
  * Using connects avoids timers being unable to be used in a non-qt thread. So, even if this looks stupid to just call func, it's succinct.
  */
-void headless_application::CallFromMainThread(const std::function<void()>& func, atomic_t<bool>* wake_up)
+void headless_application::CallFromMainThread(const std::function<void()>& func, atomic_t<u32>* wake_up)
 {
 	func();
 
