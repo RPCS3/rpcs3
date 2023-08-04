@@ -2,7 +2,7 @@
 
 #include "util/types.hpp"
 #include "util/atomic.hpp"
-#include "util/asm.hpp"
+#include "util/bless.hpp"
 
 //! Simple unshrinkable array base for concurrent access. Only growths automatically.
 //! There is no way to know the current size. The smaller index is, the faster it's accessed.
