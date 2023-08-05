@@ -73,6 +73,7 @@ bool gui_application::Init()
 		gui_log.warning("Experimental Build Warning! Build origin: %s", branch_name);
 
 		QMessageBox msg;
+		msg.setWindowModality(Qt::WindowModal);
 		msg.setWindowTitle(tr("Experimental Build Warning"));
 		msg.setIcon(QMessageBox::Critical);
 		msg.setTextFormat(Qt::RichText);
