@@ -3645,7 +3645,7 @@ extern void ppu_initialize()
 	const std::string firmware_sprx_path = vfs::get("/dev_flash/sys/external/");
 
 	// If empty we have no indication for firmware cache state, check everything
-	bool compile_fw = true;
+	bool compile_fw = !Emu.IsVsh();
 
 	idm::select<lv2_obj, lv2_prx>([&](u32, lv2_prx& _module)
 	{
@@ -3691,7 +3691,7 @@ extern void ppu_initialize()
 
 	const std::string mount_point = vfs::get("/dev_flash/");
 
-	bool dev_flash_located = !Emu.GetCat().ends_with('P') && Emu.IsPathInsideDir(Emu.GetBoot(), mount_point);
+	bool dev_flash_located = !Emu.GetCat().ends_with('P') && Emu.IsPathInsideDir(Emu.GetBoot(), mount_point) && g_cfg.core.ppu_llvm_precompilation;
 
 	if (compile_fw || dev_flash_located)
 	{
