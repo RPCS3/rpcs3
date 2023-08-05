@@ -298,7 +298,7 @@ bool utils::has_fma4()
 bool utils::has_fast_vperm2b()
 {
 #if defined(ARCH_X64)
-	static const bool g_value = has_avx512() && (get_cpuid(7, 0)[2] & 0x2) == 0x2 && get_cpuid(0, 0)[0] >= 0x7 && (get_cpuid(0x80000001, 0)[2] & 0x20) == 0x20;
+	static const bool g_value = has_avx512() && (get_cpuid(7, 0)[2] & 0x2) == 0x2 && get_cpuid(0, 0)[0] >= 0x7 && (get_cpuid(0x80000001, 0)[2] & 0x40) == 0x40;
 	return g_value;
 #else
 	return false;
@@ -322,6 +322,39 @@ bool utils::has_fsrm()
 	return g_value;
 #else
 	return false;
+#endif
+}
+
+bool utils::has_waitx()
+{
+#if defined(ARCH_X64)
+	static const bool g_value = get_cpuid(0, 0)[0] >= 0x7 && (get_cpuid(0x80000001, 0)[2] & 0x20000000) == 0x20000000;
+	return g_value;
+#else
+	return false;
+#endif
+}
+
+bool utils::has_waitpkg()
+{
+#if defined(ARCH_X64)
+	static const bool g_value = get_cpuid(0, 0)[0] >= 0x7 && (get_cpuid(7, 0)[2] & 0x20) == 0x20;
+	return g_value;
+#else
+	return false;
+#endif
+}
+
+// User mode waits may be unfriendly to low thread CPUs
+// Filter out systems with less than 8 threads for linux and less than 12 threads for other platforms
+bool utils::has_appropriate_um_wait()
+{
+#ifdef __linux__
+	static const bool g_value = (has_waitx() || has_waitpkg()) && (get_thread_count() >= 8) && get_tsc_freq();
+	return g_value;
+#else
+	static const bool g_value = (has_waitx() || has_waitpkg()) && (get_thread_count() >= 12) && get_tsc_freq();
+	return g_value;
 #endif
 }
 

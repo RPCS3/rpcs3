@@ -53,6 +53,12 @@ namespace utils
 
 	bool has_fsrm();
 
+	bool has_waitx();
+
+	bool has_waitpkg();
+
+	bool has_appropriate_um_wait();
+
 	std::string get_cpu_brand();
 
 	std::string get_system_info();
