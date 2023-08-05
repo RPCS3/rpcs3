@@ -16,7 +16,7 @@ public:
 
     bool done() const
     {
-        return m_index >= m_klics.size();
+        return m_index >= m_modules.size();
     }
 
     const std::string& operator[](usz index) const

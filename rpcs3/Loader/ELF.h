@@ -4,6 +4,8 @@
 #include "../../Utilities/File.h"
 #include "../../Utilities/bit_set.h"
 
+#include <span>
+
 enum class elf_os : u8
 {
 	none = 0,
@@ -191,10 +193,21 @@ template<template<typename T> class en_t, typename sz_t>
 struct elf_shdata final : elf_shdr<en_t, sz_t>
 {
 	std::vector<uchar> bin{};
+	std::span<const uchar> bin_view{};
 
 	using base = elf_shdr<en_t, sz_t>;
 
 	elf_shdata() = default;
+
+	std::span<const uchar> get_bin() const
+	{
+		if (!bin_view.empty())
+		{
+			return bin_view;
+		}
+
+		return {bin.data(), bin.size()};
+	}
 };
 
 // ELF loading options
@@ -340,6 +353,26 @@ public:
 
 			if (!(opts & elf_opt::no_data) && is_memorizable_section(shdr.sh_type, shdr.sh_flags()))
 			{
+				usz p_index = umax;
+
+				for (const auto& hdr : _phdrs)
+				{
+					// Try to find it in phdr data instead of allocating new section
+					p_index++;
+
+					if (hdr.p_offset <= shdr.sh_offset && shdr.sh_offset + shdr.sh_size - 1 <= hdr.p_offset + hdr.p_filesz - 1)
+					{
+						const auto& prog = ::at32(progs, p_index);
+						shdrs.back().bin_view = {prog.bin.data() + shdr.sh_offset - hdr.p_offset, shdr.sh_size};
+					}
+				}
+
+				if (!shdrs.back().bin_view.empty())
+				{
+					// Optimized
+					continue;
+				}
+
 				stream.seek(offset + shdr.sh_offset);
 				if (!stream.read(shdrs.back().bin, shdr.sh_size))
 					return set_error(elf_error::stream_data);
@@ -400,14 +433,49 @@ public:
 			stream.write(shdr_t{});
 		}
 
-		for (shdr_t shdr : shdrs)
+		for (const auto& shdr : shdrs)
 		{
+			shdr_t out = static_cast<shdr_t>(shdr);
+
 			if (is_memorizable_section(shdr.sh_type, shdr.sh_flags()))
 			{
-				shdr.sh_offset = std::exchange(off, off + shdr.sh_size);
+				usz p_index = umax;
+				usz data_base = header.e_shoff + u32{sizeof(shdr_t)} * ::size32(shdrs);
+				bool result = false;
+
+				for (const auto& hdr : progs)
+				{
+					if (shdr.bin_view.empty())
+					{
+						break;
+					}
+
+					// Try to find it in phdr data instead of writing new section
+					p_index++;
+
+					// Rely on previous sh_offset value!
+					if (hdr.p_offset <= shdr.sh_offset && shdr.sh_offset + shdr.sh_size - 1 <= hdr.p_offset + hdr.p_filesz - 1)
+					{
+						const auto& prog = ::at32(progs, p_index);
+						out.sh_offset = data_base + shdr.sh_offset - hdr.p_offset;
+						result = true;
+						break;
+					}
+
+					data_base += ::at32(progs, p_index).p_filesz;
+				}
+
+				if (result)
+				{
+					// Optimized
+				}
+				else
+				{
+					out.sh_offset = std::exchange(off, off + shdr.sh_size);
+				}
 			}
 
-			stream.write(shdr);
+			stream.write(static_cast<shdr_t>(out));
 		}
 
 		// Write data
@@ -418,7 +486,7 @@ public:
 
 		for (const auto& shdr : shdrs)
 		{
-			if (!is_memorizable_section(shdr.sh_type, shdr.sh_flags()))
+			if (!is_memorizable_section(shdr.sh_type, shdr.sh_flags()) || !shdr.bin_view.empty())
 			{
 				continue;
 			}

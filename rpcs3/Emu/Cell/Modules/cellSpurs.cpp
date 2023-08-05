@@ -2477,8 +2477,8 @@ s32 _spurs::add_workload(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, vm::ptr<u32>
 	spurs_res += 127;
 	spurs_res2 += 127;
 
-	spurs_res.notify_all(-128);
-	spurs_res2.notify_all(-128);
+	spurs_res.notify_all();
+	spurs_res2.notify_all();
 
 	u32 res_wkl;
 	const auto wkl = &spurs->wklInfo(wnum);

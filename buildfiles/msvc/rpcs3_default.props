@@ -24,7 +24,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>xxhash.lib;ws2_32.lib;Iphlpapi.lib;Bcrypt.lib;avcodec.lib;avformat.lib;avutil.lib;swresample.lib;swscale.lib</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\3rdparty\ffmpeg\windows\x86_64</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\3rdparty\ffmpeg\lib\windows\x86_64</AdditionalLibraryDirectories>
       <StackReserveSize>8388608</StackReserveSize>
       <StackCommitSize>1048576</StackCommitSize>
     </Link>

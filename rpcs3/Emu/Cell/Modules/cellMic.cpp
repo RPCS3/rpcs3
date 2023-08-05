@@ -73,7 +73,7 @@ void mic_context::operator()()
 	// Timestep in microseconds
 	constexpr u64 TIMESTEP = 256ull * 1'000'000ull / 48000ull;
 	u64 timeout = 0;
-	u64 oldvalue = 0;
+	u32 oldvalue = 0;
 
 	while (thread_ctrl::state() != thread_state::aborting)
 	{

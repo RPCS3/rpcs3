@@ -1642,7 +1642,7 @@ bool lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
 
 			if (is_paused(target->state - cpu_flag::suspend))
 			{
-				target->state.notify_one(cpu_flag::suspend);
+				target->state.notify_one();
 			}
 		}
 	}
@@ -1695,7 +1695,7 @@ void lv2_obj::schedule_all(u64 current_time)
 				if (notify_later_idx == std::size(g_to_notify))
 				{
 					// Out of notification slots, notify locally (resizable container is not worth it)
-					target->state.notify_one(cpu_flag::signal + cpu_flag::suspend);
+					target->state.notify_one();
 				}
 				else
 				{
@@ -1729,7 +1729,7 @@ void lv2_obj::schedule_all(u64 current_time)
 				if (notify_later_idx == std::size(g_to_notify))
 				{
 					// Out of notification slots, notify locally (resizable container is not worth it)
-					target->state.notify_one(cpu_flag::notify);
+					target->state.notify_one();
 				}
 				else
 				{
@@ -1987,6 +1987,7 @@ bool lv2_obj::wait_timeout(u64 usec, ppu_thread* cpu, bool scale, bool is_usleep
 
 		u64 remaining = usec - passed;
 #ifdef __linux__
+		// NOTE: Assumption that timer initialization has succeeded
 		constexpr u64 host_min_quantum = 10;
 #else
 		// Host scheduler quantum for windows (worst case)
@@ -2004,7 +2005,7 @@ bool lv2_obj::wait_timeout(u64 usec, ppu_thread* cpu, bool scale, bool is_usleep
 			if (remaining > host_min_quantum)
 			{
 #ifdef __linux__
-				// With timerslack set low, Linux is precise for all values above 10us
+				// With timerslack set low, Linux is precise for all values above
 				wait_for(remaining);
 #else
 				// Wait on multiple of min quantum for large durations to avoid overloading low thread cpus

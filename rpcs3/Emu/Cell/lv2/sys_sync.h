@@ -434,7 +434,7 @@ public:
 			{
 				// Note: by the time of notification the thread could have been deallocated which is why the direct function is used
 				// TODO: Pass a narrower mask
-				atomic_wait_engine::notify_one(cpu, 4, atomic_wait::default_mask<atomic_bs_t<cpu_flag>>);
+				atomic_wait_engine::notify_one(cpu);
 			}
 		}
 
