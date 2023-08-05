@@ -2041,8 +2041,6 @@ bool lv2_obj::wait_timeout(u64 usec, ppu_thread* cpu, bool scale, bool is_usleep
 	return true;
 }
 
-
-
 void lv2_obj::prepare_for_sleep(cpu_thread& cpu)
 {
 	vm::temporary_unlock(cpu);
