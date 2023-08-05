@@ -3452,7 +3452,6 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 				{
 					obj.clear(), src.close(); // Clear decrypted file and elf object memory
 					ppu_initialize(*prx);
-					ppu_unload_prx(*prx);
 					ppu_finalize(*prx);
 					continue;
 				}
@@ -3704,8 +3703,6 @@ extern void ppu_initialize()
 			{
 				// Check if cache exists for this infinitesimally small prx
 				dev_flash_located = ppu_initialize(*prx, true);
-				idm::remove<lv2_obj, lv2_prx>(idm::last_id());
-				ppu_unload_prx(*prx);
 			}
 		}
 
