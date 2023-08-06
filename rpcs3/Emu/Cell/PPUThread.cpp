@@ -3199,7 +3199,7 @@ extern fs::file make_file_view(fs::file&& _file, u64 offset)
 
 extern void ppu_finalize(const ppu_module& info)
 {
-	if (!info.cache.empty())
+	if (info.name.empty())
 	{
 		// Don't remove main module from memory
 		return;
@@ -3573,7 +3573,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 
 					if (std::memcpy(main_module.sha1, _main.sha1, sizeof(_main.sha1)) == 0)
 					{
-						continue;
+						break;
 					}
 
 					if (!_main.analyse(0, _main.elf_entry, _main.seg0_code_end, _main.applied_pathes, [](){ return Emu.IsStopped(); }))
@@ -3584,6 +3584,8 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 					obj.clear(), src.close(); // Clear decrypted file and elf object memory
 
 					ppu_initialize(_main);
+
+					_main.name = ' '; // Make ppu_finalize work
 					ppu_finalize(_main);
 					_main = {};
 					break;
@@ -3600,6 +3602,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 		}
 
 		g_fxo->get<main_ppu_module>() = std::move(main_module);
+		Emu.ConfigurePPUCache();
 	});
 
 	exec_worker();

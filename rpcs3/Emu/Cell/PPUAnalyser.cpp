@@ -532,6 +532,11 @@ namespace ppu_patterns
 
 bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::basic_string<u32>& applied, std::function<bool()> check_aborted)
 {
+	if (segs.empty())
+	{
+		return false;
+	}
+
 	// Assume first segment is executable
 	const u32 start = segs[0].addr;
 
