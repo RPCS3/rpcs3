@@ -174,12 +174,11 @@ namespace vm
 			range_lock->store(to_store);
 		}
 
-		for (u64 i = 0, to_clear = umax;; i++)
+		for (u64 i = 0;; i++)
 		{
 			const u64 is_share = g_shmem[begin >> 16].load();
-			to_clear &= get_range_lock_bits(true);
 
-			const u64 busy = for_all_range_locks(to_clear, [&](u64 addr_exec, u32 size_exec)
+			const u64 busy = for_all_range_locks(get_range_lock_bits(true), [&](u64 addr_exec, u32 size_exec)
 			{
 				u64 addr = begin;
 
