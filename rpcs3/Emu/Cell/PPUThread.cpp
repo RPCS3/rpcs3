@@ -1823,6 +1823,11 @@ void ppu_thread::cpu_task()
 			// We don't want to open a cell dialog while a native progress dialog is still open.
 			while (u32 v = g_progr_ptotal)
 			{
+				if (Emu.IsStopped())
+				{
+					return;
+				}
+
 				g_progr_ptotal.wait(v);
 			}
 
