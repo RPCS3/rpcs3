@@ -1,7 +1,6 @@
 #include "atomic.hpp"
 
 #if defined(__linux__)
-// This definition is unused on Linux
 #define USE_FUTEX
 #elif !defined(_WIN32)
 #define USE_STD
@@ -28,6 +27,21 @@ namespace utils
 
 #include "Utilities/sync.h"
 #include "Utilities/StrFmt.h"
+
+#ifdef __linux__
+static bool has_waitv()
+{
+	static const bool s_has_waitv = []
+	{
+		syscall(SYS_futex_waitv, 0, 0, 0, 0, 0);
+		if (errno == ENOSYS)
+			return false;
+		return true;
+	}();
+
+	return s_has_waitv;
+}
+#endif
 
 #include <utility>
 #include <cstdint>
@@ -843,7 +857,7 @@ atomic_wait_engine::wait(const void* data, u32 old_value, u64 timeout, atomic_wa
 	::timespec ts{};
 	if (timeout + 1)
 	{
-		if (ext) [[unlikely]]
+		if (ext && ext->data) [[unlikely]]
 		{
 			// futex_waitv uses absolute timeout
 			::clock_gettime(CLOCK_MONOTONIC, &ts);
@@ -851,7 +865,7 @@ atomic_wait_engine::wait(const void* data, u32 old_value, u64 timeout, atomic_wa
 
 		ts.tv_sec += timeout / 1'000'000'000;
 		ts.tv_nsec += timeout % 1'000'000'000;
-		if (ts.tv_nsec > 1'000'000'000)
+		if (ts.tv_nsec >= 1'000'000'000)
 		{
 			ts.tv_sec++;
 			ts.tv_nsec -= 1'000'000'000;
@@ -874,7 +888,7 @@ atomic_wait_engine::wait(const void* data, u32 old_value, u64 timeout, atomic_wa
 		}
 	}
 
-	if (ext_size) [[unlikely]]
+	if (ext_size && has_waitv()) [[unlikely]]
 	{
 		if (syscall(SYS_futex_waitv, +vec, ext_size + 1, 0, timeout + 1 ? &ts : nullptr, CLOCK_MONOTONIC) == -1)
 		{
@@ -887,8 +901,9 @@ atomic_wait_engine::wait(const void* data, u32 old_value, u64 timeout, atomic_wa
 				fmt::throw_exception("futex_waitv: bad param");
 			}
 		}
+		return;
 	}
-	else
+	else if (has_waitv())
 	{
 		if (futex(const_cast<void*>(data), FUTEX_WAIT_PRIVATE, old_value, timeout + 1 ? &ts : nullptr) == -1)
 		{
@@ -897,9 +912,8 @@ atomic_wait_engine::wait(const void* data, u32 old_value, u64 timeout, atomic_wa
 				fmt::throw_exception("futex: bad param");
 			}
 		}
+		return;
 	}
-
-	return;
 #endif
 
 	if (!s_tls_wait_cb(data, 0, 0))
@@ -1242,8 +1256,14 @@ void atomic_wait_engine::notify_one(const void* data)
 		s_tls_notify_cb(data, 0);
 
 #ifdef __linux__
-	futex(const_cast<void*>(data), FUTEX_WAKE_PRIVATE, 1);
-#else
+	if (has_waitv())
+	{
+		futex(const_cast<void*>(data), FUTEX_WAKE_PRIVATE, 1);
+		if (s_tls_notify_cb)
+			s_tls_notify_cb(data, -1);
+		return;
+	}
+#endif
 	const uptr iptr = reinterpret_cast<uptr>(data) & (~s_ref_mask >> 16);
 
 	root_info::slot_search(iptr, [&](u32 cond_id)
@@ -1255,7 +1275,6 @@ void atomic_wait_engine::notify_one(const void* data)
 
 		return false;
 	});
-#endif
 
 	if (s_tls_notify_cb)
 		s_tls_notify_cb(data, -1);
@@ -1268,8 +1287,14 @@ atomic_wait_engine::notify_all(const void* data)
 		s_tls_notify_cb(data, 0);
 
 #ifdef __linux__
-	futex(const_cast<void*>(data), FUTEX_WAKE_PRIVATE, 1);
-#else
+	if (has_waitv())
+	{
+		futex(const_cast<void*>(data), FUTEX_WAKE_PRIVATE, INT_MAX);
+		if (s_tls_notify_cb)
+			s_tls_notify_cb(data, -1);
+		return;
+	}
+#endif
 	const uptr iptr = reinterpret_cast<uptr>(data) & (~s_ref_mask >> 16);
 
 	// Array count for batch notification
@@ -1342,7 +1367,6 @@ atomic_wait_engine::notify_all(const void* data)
 	{
 		cond_free(~*(std::end(cond_ids) - i - 1));
 	}
-#endif
 
 	if (s_tls_notify_cb)
 		s_tls_notify_cb(data, -1);
