@@ -422,7 +422,7 @@ template <>
 void fmt_class_string<std::chrono::sys_time<typename std::chrono::system_clock::duration>>::format(std::string& out, u64 arg)
 {
 	const std::time_t dateTime = std::chrono::system_clock::to_time_t(get_object(arg));
- 	out += date_time::fmt_time("%Y-%m-%eT%H:%M:%S", dateTime);
+ 	out += date_time::fmt_time("%Y-%m-%dT%H:%M:%S", dateTime);
 }
 
 void run_platform_sanity_checks()
@@ -1048,6 +1048,11 @@ int main(int argc, char** argv)
 			}
 		}
 	}
+
+// Set timerslack value for Linux. The default value is 50,000ns. Change this to just 1 since we value precise timers.
+#ifdef __linux__
+	prctl(PR_SET_TIMERSLACK, 1, 0, 0, 0);
+#endif
 
 #ifdef _WIN32
 	// Create dummy permanent low resolution timer to workaround messing with system timer resolution

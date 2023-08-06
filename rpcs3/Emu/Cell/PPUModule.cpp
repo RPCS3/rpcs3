@@ -1658,6 +1658,11 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, bool virtual_lo
 
 void ppu_unload_prx(const lv2_prx& prx)
 {
+	if (prx.segs[0].ptr != vm::base(prx.segs[0].addr))
+	{
+		return;
+	}
+
 	std::unique_lock lock(g_fxo->get<ppu_linkage_info>().mutex, std::defer_lock);
 
 	// Clean linkage info
@@ -1708,10 +1713,7 @@ void ppu_unload_prx(const lv2_prx& prx)
 	{
 		if (!seg.size) continue;
 
-		if (seg.ptr == vm::base(seg.addr))
-		{
-			vm::dealloc(seg.addr, vm::main);
-		}
+		vm::dealloc(seg.addr, vm::main);
 
 		const std::string hash_seg = fmt::format("%s-%u", hash, &seg - prx.segs.data());
 
@@ -2224,15 +2226,15 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 
 		void init_fxo_for_exec(utils::serial* ar, bool full);
 		init_fxo_for_exec(ar, false);
+
+		liblv2_begin = 0;
+		liblv2_end = 0;
 	}
 	else
 	{
 		g_ps3_process_info = old_process_info;
 		Emu.ConfigurePPUCache();
 	}
-
-	liblv2_begin = 0;
-	liblv2_end = 0;
 
 	if (!load_libs.empty())
 	{

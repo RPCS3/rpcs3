@@ -3199,7 +3199,7 @@ extern fs::file make_file_view(fs::file&& _file, u64 offset)
 
 extern void ppu_finalize(const ppu_module& info)
 {
-	if (info.name.empty())
+	if (!info.cache.empty())
 	{
 		// Don't remove main module from memory
 		return;
@@ -3226,7 +3226,7 @@ extern void ppu_finalize(const ppu_module& info)
 	fmt::append(cache_path, "ppu-%s-%s/", fmt::base57(info.sha1), info.path.substr(info.path.find_last_of('/') + 1));
 
 #ifdef LLVM_AVAILABLE
-	g_fxo->get<jit_module_manager>().remove(cache_path + info.name + "_" + std::to_string(info.segs[0].addr));
+	g_fxo->get<jit_module_manager>().remove(cache_path + info.name + "_" + std::to_string(std::bit_cast<usz>(info.segs[0].ptr)));
 #endif
 }
 
@@ -3452,7 +3452,6 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 				{
 					obj.clear(), src.close(); // Clear decrypted file and elf object memory
 					ppu_initialize(*prx);
-					ppu_unload_prx(*prx);
 					ppu_finalize(*prx);
 					continue;
 				}
@@ -3572,6 +3571,11 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 						break;
 					}
 
+					if (std::memcpy(main_module.sha1, _main.sha1, sizeof(_main.sha1)) == 0)
+					{
+						continue;
+					}
+
 					if (!_main.analyse(0, _main.elf_entry, _main.seg0_code_end, _main.applied_pathes, [](){ return Emu.IsStopped(); }))
 					{
 						break;
@@ -3641,7 +3645,7 @@ extern void ppu_initialize()
 	const std::string firmware_sprx_path = vfs::get("/dev_flash/sys/external/");
 
 	// If empty we have no indication for firmware cache state, check everything
-	bool compile_fw = true;
+	bool compile_fw = !Emu.IsVsh();
 
 	idm::select<lv2_obj, lv2_prx>([&](u32, lv2_prx& _module)
 	{
@@ -3687,7 +3691,7 @@ extern void ppu_initialize()
 
 	const std::string mount_point = vfs::get("/dev_flash/");
 
-	bool dev_flash_located = !Emu.GetCat().ends_with('P') && Emu.IsPathInsideDir(Emu.GetBoot(), mount_point);
+	bool dev_flash_located = !Emu.GetCat().ends_with('P') && Emu.IsPathInsideDir(Emu.GetBoot(), mount_point) && g_cfg.core.ppu_llvm_precompilation;
 
 	if (compile_fw || dev_flash_located)
 	{
@@ -3699,8 +3703,6 @@ extern void ppu_initialize()
 			{
 				// Check if cache exists for this infinitesimally small prx
 				dev_flash_located = ppu_initialize(*prx, true);
-				idm::remove<lv2_obj, lv2_prx>(idm::last_id());
-				ppu_unload_prx(*prx);
 			}
 		}
 
@@ -3812,7 +3814,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 	// Get cache path for this executable
 	std::string cache_path;
 
-	if (info.name.empty())
+	if (!info.cache.empty())
 	{
 		cache_path = info.cache;
 	}
@@ -3862,7 +3864,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 	};
 
 	// Permanently loaded compiled PPU modules (name -> data)
-	jit_module& jit_mod = g_fxo->get<jit_module_manager>().get(cache_path + info.name + "_" + std::to_string(info.segs[0].addr));
+	jit_module& jit_mod = g_fxo->get<jit_module_manager>().get(cache_path + info.name + "_" + std::to_string(std::bit_cast<usz>(info.segs[0].ptr)));
 
 	// Compiler instance (deferred initialization)
 	std::shared_ptr<jit_compiler>& jit = jit_mod.pjit;

@@ -5,11 +5,11 @@ cd build || exit 1
 if [ "$DEPLOY_APPIMAGE" = "true" ]; then
     DESTDIR=AppDir ninja install
 
-    curl -sL -o /usr/bin/linuxdeploy https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+    curl -fsSLo /usr/bin/linuxdeploy https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
     chmod +x /usr/bin/linuxdeploy
-    curl -sL -o /usr/bin/linuxdeploy-plugin-qt https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
+    curl -fsSLo /usr/bin/linuxdeploy-plugin-qt https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
     chmod +x /usr/bin/linuxdeploy-plugin-qt
-    curl -sL -o linuxdeploy-plugin-checkrt.sh https://github.com/linuxdeploy/linuxdeploy-plugin-checkrt/releases/download/continuous/linuxdeploy-plugin-checkrt-x86_64.sh
+    curl -fsSLo linuxdeploy-plugin-checkrt.sh https://github.com/linuxdeploy/linuxdeploy-plugin-checkrt/releases/download/continuous/linuxdeploy-plugin-checkrt-x86_64.sh
     chmod +x ./linuxdeploy-plugin-checkrt.sh
 
     EXTRA_QT_PLUGINS="svg;" APPIMAGE_EXTRACT_AND_RUN=1 linuxdeploy --appdir AppDir --plugin qt
