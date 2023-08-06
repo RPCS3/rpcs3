@@ -131,7 +131,7 @@ error_code sys_memory_allocate(cpu_thread& cpu, u32 size, u64 flags, vm::ptr<u32
 
 			if (alloc_addr)
 			{
-				sys_memory.notice("sys_mmapper_search_and_map(): Allocated 0x%x address (size=0x%x)", addr, size);
+				sys_memory.notice("sys_memory_allocate(): Allocated 0x%x address (size=0x%x)", addr, size);
 
 				vm::lock_sudo(addr, size);
 				cpu.check_state();
