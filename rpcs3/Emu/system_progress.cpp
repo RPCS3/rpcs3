@@ -226,6 +226,11 @@ void progress_dialog_server::operator()()
 		native_dlg->set_text("Stopping. Please wait...");
 		native_dlg->refresh();
 	}
+
+	if (g_progr_ptotal.exchange(0))
+	{
+		g_progr_ptotal.notify_all();
+	}
 }
 
 progress_dialog_server::~progress_dialog_server()

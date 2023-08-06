@@ -649,6 +649,11 @@ void spu_cache::initialize()
 		// Initialize progress dialog (wait for previous progress done)
 		while (u32 v = g_progr_ptotal)
 		{
+			if (Emu.IsStopped())
+			{
+				break;
+			}
+
 			g_progr_ptotal.wait(v);
 		}
 
