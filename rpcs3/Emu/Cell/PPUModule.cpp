@@ -1658,7 +1658,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, bool virtual_lo
 
 void ppu_unload_prx(const lv2_prx& prx)
 {
-	if (prx.segs[0].ptr != vm::base(prx.segs[0].addr))
+	if (prx.segs.empty() || prx.segs[0].ptr != vm::base(prx.segs[0].addr))
 	{
 		return;
 	}
