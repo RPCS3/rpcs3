@@ -326,6 +326,29 @@ extern thread_local u64 g_tls_fault_spu;
 
 const spu_decoder<spu_itype> s_spu_itype;
 
+namespace vm
+{
+	extern atomic_t<u64, 64> g_range_lock_set[64];
+
+	// Defined here for performance reasons
+	writer_lock::~writer_lock() noexcept
+	{
+		if (range_lock)
+		{
+			if (!*range_lock)
+			{
+				return;
+			}
+
+			g_range_lock_bits[1] &= ~(1ull << (range_lock - g_range_lock_set));
+			range_lock->release(0);
+			return;
+		}
+
+		g_range_lock_bits[1].release(0);
+	}
+}
+
 namespace spu
 {
 	namespace scheduler
@@ -1798,7 +1821,7 @@ spu_thread::~spu_thread()
 	utils::memory_release(ls - SPU_LS_SIZE * 2, SPU_LS_SIZE * 5);
 
 	perf_log.notice("Perf stats for transactions: success %u, failure %u", stx, ftx);
-	perf_log.notice("Perf stats for PUTLLC reload: successs %u, failure %u", last_succ, last_fail);
+	perf_log.notice("Perf stats for PUTLLC reload: success %u, failure %u", last_succ, last_fail);
 }
 
 u8* spu_thread::map_ls(utils::shm& shm, void* ptr)
@@ -2395,7 +2418,7 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 						}
 					}
 
-					if (++i < 10)
+					if (true || ++i < 10)
 					{
 						busy_wait(500);
 					}
@@ -2403,7 +2426,7 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 					{
 						// Wait
 						_cpu->state += cpu_flag::wait + cpu_flag::temp;
-						bits->wait(old, wmask);
+						// bits->wait(old, wmask);
 						_cpu->check_state();
 					}
 				}())
@@ -2519,7 +2542,7 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 					v &= ~wmask;
 				});
 
-				bits->notify_all(wmask);
+				// bits->notify_all(wmask);
 
 				if (size == size0)
 				{
@@ -3548,25 +3571,24 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 		{
 			// Full lock (heavyweight)
 			// TODO: vm::check_addr
-			vm::writer_lock lock(addr);
+			vm::writer_lock lock(addr, range_lock);
 
 			if (cmp_rdata(rdata, super_data))
 			{
 				mov_rdata(super_data, to_write);
-				res += 64;
 				return true;
 			}
 
-			res -= 64;
 			return false;
 		}();
 
+		res += success ? 64 : 0 - 64;
 		return success;
 	}())
 	{
 		if (raddr)
 		{
-			vm::reservation_notifier(addr).notify_all(-128);
+			vm::reservation_notifier(addr).notify_all();
 			raddr = 0;
 		}
 
@@ -3695,7 +3717,8 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 			vm::_ref<atomic_t<u32>>(addr) += 0;
 
 			// Hard lock
-			vm::writer_lock lock(addr);
+			auto spu = cpu ? cpu->try_get<spu_thread>() : nullptr;
+			vm::writer_lock lock(addr, spu ? spu->range_lock : nullptr);
 			mov_rdata(sdata, *static_cast<const spu_rdata_t*>(to_write));
 			vm::reservation_acquire(addr) += 32;
 		}
@@ -3752,7 +3775,7 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 	}
 
 	do_cell_atomic_128_store(addr, _ptr<spu_rdata_t>(args.lsa & 0x3ff80));
-	vm::reservation_notifier(addr).notify_all(-128);
+	vm::reservation_notifier(addr).notify_all();
 }
 
 bool spu_thread::do_mfc(bool can_escape, bool must_finish)
@@ -4461,7 +4484,7 @@ bool spu_thread::reservation_check(u32 addr, const decltype(rdata)& data) const
 	// Set range_lock first optimistically
 	range_lock->store(u64{128} << 32 | addr);
 
-	u64 lock_val = vm::g_range_lock;
+	u64 lock_val = *std::prev(std::end(vm::g_range_lock_set));
 	u64 old_lock = 0;
 
 	while (lock_val != old_lock)
@@ -4516,7 +4539,7 @@ bool spu_thread::reservation_check(u32 addr, const decltype(rdata)& data) const
 			break;
 		}
 
-		old_lock = std::exchange(lock_val, vm::g_range_lock);
+		old_lock = std::exchange(lock_val, *std::prev(std::end(vm::g_range_lock_set)));
 	}
 
 	if (!range_lock->load()) [[unlikely]]
@@ -4885,7 +4908,11 @@ s64 spu_thread::get_ch_value(u32 ch)
 			}
 		}
 
+#ifdef __linux__
+		const bool reservation_busy_waiting = false;
+#else
 		const bool reservation_busy_waiting = ((utils::get_tsc() >> 8) % 100 + ((raddr == spurs_addr) ? 50 : 0)) < g_cfg.core.spu_reservation_busy_waiting_percentage;
+#endif
 
 		for (; !events.count; events = get_events(mask1 & ~SPU_EVENT_LR, true, true))
 		{
@@ -4907,8 +4934,11 @@ s64 spu_thread::get_ch_value(u32 ch)
 			if (raddr && (mask1 & ~SPU_EVENT_TM) == SPU_EVENT_LR)
 			{
 				// Don't busy-wait with TSX - memory is sensitive
-				if (!reservation_busy_waiting)
+				if (g_use_rtm || !reservation_busy_waiting)
 				{
+#ifdef __linux__
+					vm::reservation_notifier(raddr).wait(rtime, atomic_wait_timeout{50'000});
+#else
 					if (raddr - spurs_addr <= 0x80 && !g_cfg.core.spu_accurate_reservations && mask1 == SPU_EVENT_LR)
 					{
 						atomic_wait_engine::set_one_time_use_wait_callback(+[](u64) -> bool
@@ -4921,7 +4951,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 						// Wait without timeout, in this situation we have notifications for all writes making it possible
 						// Abort notifications are handled specially for performance reasons
-						vm::reservation_notifier(raddr).wait(rtime, -128);
+						vm::reservation_notifier(raddr).wait(rtime);
 						continue;
 					}
 
@@ -4953,7 +4983,8 @@ s64 spu_thread::get_ch_value(u32 ch)
 						return true;
 					});
 
-					vm::reservation_notifier(raddr).wait(rtime, -128, atomic_wait_timeout{80'000});
+					vm::reservation_notifier(raddr).wait(rtime, atomic_wait_timeout{80'000});
+#endif
 				}
 				else
 				{
@@ -5441,7 +5472,7 @@ extern void resume_spu_thread_group_from_waiting(spu_thread& spu)
 	{
 		group->run_state = SPU_THREAD_GROUP_STATUS_SUSPENDED;
 		spu.state += cpu_flag::signal;
-		spu.state.notify_one(cpu_flag::signal);
+		spu.state.notify_one();
 		return;
 	}
 
@@ -5459,7 +5490,7 @@ extern void resume_spu_thread_group_from_waiting(spu_thread& spu)
 				thread->state -= cpu_flag::suspend;
 			}
 
-			thread->state.notify_one(cpu_flag::suspend + cpu_flag::signal);
+			thread->state.notify_one();
 		}
 	}
 }
@@ -6221,7 +6252,7 @@ s64 spu_channel::pop_wait(cpu_thread& spu, bool pop)
 
 	while (true)
 	{
-		thread_ctrl::wait_on(data, bit_wait);
+		thread_ctrl::wait_on(utils::bless<atomic_t<u32>>(&data)[1], u32{bit_wait >> 32});
 		old = data;
 
 		if (!(old & bit_wait))
@@ -6302,7 +6333,7 @@ bool spu_channel::push_wait(cpu_thread& spu, u32 value, bool push)
 			return false;
 		}
 
-		thread_ctrl::wait_on(data, state);
+		thread_ctrl::wait_on(utils::bless<atomic_t<u32>>(&data)[1], u32(state >> 32));
 		state = data;
 	}
 }
@@ -6346,7 +6377,7 @@ std::pair<u32, u32> spu_channel_4_t::pop_wait(cpu_thread& spu)
 
 	while (true)
 	{
-		thread_ctrl::wait_on(values, old);
+		thread_ctrl::wait_on(utils::bless<atomic_t<u32>>(&values)[0], u32(u64(std::bit_cast<u128>(old))));
 		old = values;
 
 		if (!old.waiting)

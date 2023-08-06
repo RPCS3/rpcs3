@@ -86,7 +86,7 @@ private:
 		case localized_string_id::CELL_MSG_DIALOG_ERROR_80010004: return tr("Memory allocation failed.\n(%0)", "Error code").arg(std::forward<Args>(args)...);
 		case localized_string_id::CELL_MSG_DIALOG_ERROR_80010005: return tr("The resource with the specified identifier does not exist.\n(%0)", "Error code").arg(std::forward<Args>(args)...);
 		case localized_string_id::CELL_MSG_DIALOG_ERROR_80010006: return tr("The file does not exist.\n(%0)", "Error code").arg(std::forward<Args>(args)...);
-		case localized_string_id::CELL_MSG_DIALOG_ERROR_80010007: return tr("The file is in unrecognized format / The file is not a valid ELF file.\n(%0)", "Error code").arg(std::forward<Args>(args)...);
+		case localized_string_id::CELL_MSG_DIALOG_ERROR_80010007: return tr("The file is in an unrecognized format / The file is not a valid ELF file.\n(%0)", "Error code").arg(std::forward<Args>(args)...);
 		case localized_string_id::CELL_MSG_DIALOG_ERROR_80010008: return tr("Resource deadlock is avoided.\n(%0)", "Error code").arg(std::forward<Args>(args)...);
 		case localized_string_id::CELL_MSG_DIALOG_ERROR_80010009: return tr("Operation not permitted.\n(%0)", "Error code").arg(std::forward<Args>(args)...);
 		case localized_string_id::CELL_MSG_DIALOG_ERROR_8001000A: return tr("The device or resource is busy.\n(%0)", "Error code").arg(std::forward<Args>(args)...);
@@ -135,7 +135,7 @@ private:
 		case localized_string_id::CELL_MSG_DIALOG_ERROR_80010036: return tr("Not empty.\n(%0)", "Error code").arg(std::forward<Args>(args)...);
 		case localized_string_id::CELL_MSG_DIALOG_ERROR_80010037: return tr("Not supported.\n(%0)", "Error code").arg(std::forward<Args>(args)...);
 		case localized_string_id::CELL_MSG_DIALOG_ERROR_80010038: return tr("File-system specific error.\n(%0)", "Error code").arg(std::forward<Args>(args)...);
-		case localized_string_id::CELL_MSG_DIALOG_ERROR_80010039: return tr("Overflow occured.\n(%0)", "Error code").arg(std::forward<Args>(args)...);
+		case localized_string_id::CELL_MSG_DIALOG_ERROR_80010039: return tr("Overflow occurred.\n(%0)", "Error code").arg(std::forward<Args>(args)...);
 		case localized_string_id::CELL_MSG_DIALOG_ERROR_8001003A: return tr("Filesystem not mounted.\n(%0)", "Error code").arg(std::forward<Args>(args)...);
 		case localized_string_id::CELL_MSG_DIALOG_ERROR_8001003B: return tr("Not SData.\n(%0)", "Error code").arg(std::forward<Args>(args)...);
 		case localized_string_id::CELL_MSG_DIALOG_ERROR_8001003C: return tr("Incorrect version in sys_load_param.\n(%0)", "Error code").arg(std::forward<Args>(args)...);

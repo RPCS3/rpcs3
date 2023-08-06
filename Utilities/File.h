@@ -186,7 +186,7 @@ namespace fs
 	}
 
 	// Get file information
-	bool stat(const std::string& path, stat_t& info);
+	bool get_stat(const std::string& path, stat_t& info);
 
 	// Check whether a file or a directory exists (not recommended, use is_file() or is_dir() instead)
 	bool exists(const std::string& path);

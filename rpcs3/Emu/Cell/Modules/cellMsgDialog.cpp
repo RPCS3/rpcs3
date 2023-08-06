@@ -164,7 +164,7 @@ error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString,
 			return CellSysutilError{ret + 0u};
 		}
 
-		const auto notify = std::make_shared<atomic_t<bool>>(false);
+		const auto notify = std::make_shared<atomic_t<u32>>(0);
 
 		const auto res = manager->create<rsx::overlays::message_dialog>()->show(is_blocking, msgString.get_ptr(), _type, [callback, userData, &return_code, is_blocking, notify](s32 status)
 		{
@@ -186,7 +186,7 @@ error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString,
 
 			if (is_blocking && notify)
 			{
-				*notify = true;
+				*notify = 1;
 				notify->notify_one();
 			}
 		});
@@ -533,13 +533,15 @@ error_code cellMsgDialogAbort()
 			sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_END, 0);
 			return CELL_OK;
 		}
+
+		return CELL_OK; // Not CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED, tested on HW.
 	}
 
 	const auto dlg = g_fxo->get<msg_info>().get();
 
 	if (!dlg)
 	{
-		return CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED;
+		return CELL_OK; // Not CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED, tested on HW.
 	}
 
 	if (!dlg->state.compare_and_swap_test(MsgDialogState::Open, MsgDialogState::Abort))

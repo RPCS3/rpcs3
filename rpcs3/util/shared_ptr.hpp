@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <memory>
 #include "atomic.hpp"
+#include "asm.hpp"
 
 namespace stx
 {
@@ -21,7 +22,7 @@ namespace stx
 	// Basic assumption of userspace pointer size
 	constexpr uint c_ptr_size = 48;
 
-	// Use lower 17 bits as atomic_ptr internal counter of borrowed refs (pointer itself is shifted)
+	// Use lower 16 bits as atomic_ptr internal counter of borrowed refs (pointer itself is shifted)
 	constexpr uint c_ref_mask = 0xffff, c_ref_size = 16;
 
 	// Remaining pointer bits
@@ -1054,20 +1055,19 @@ namespace stx
 			return observe() == r.get();
 		}
 
-		template <atomic_wait::op Flags = atomic_wait::op::eq>
-		void wait(const volatile void* value, atomic_wait_timeout timeout = atomic_wait_timeout::inf)
+		void wait(std::nullptr_t, atomic_wait_timeout timeout = atomic_wait_timeout::inf)
 		{
-			m_val.wait<Flags>(reinterpret_cast<uptr>(value) << c_ref_size, c_ptr_mask, timeout);
+			utils::bless<atomic_t<u32>>(&m_val)[1].wait(0, timeout);
 		}
 
 		void notify_one()
 		{
-			m_val.notify_one(c_ptr_mask);
+			utils::bless<atomic_t<u32>>(&m_val)[1].notify_one();
 		}
 
 		void notify_all()
 		{
-			m_val.notify_all(c_ptr_mask);
+			utils::bless<atomic_t<u32>>(&m_val)[1].notify_all();
 		}
 	};
 
@@ -1108,18 +1108,6 @@ namespace stx
 		}
 
 	} null_ptr;
-}
-
-namespace atomic_wait
-{
-	template <typename T>
-	constexpr u128 default_mask<stx::atomic_ptr<T>> = stx::c_ptr_mask;
-
-	template <typename T>
-	constexpr u128 get_value(stx::atomic_ptr<T>&, const volatile void* value = nullptr)
-	{
-		return reinterpret_cast<uptr>(value) << stx::c_ref_size;
-	}
 }
 
 using stx::null_ptr;

@@ -235,8 +235,11 @@ void log_viewer::show_log()
 	{
 		m_gui_settings->SetValue(gui::fd_log_viewer, m_path_last);
 
-		QTextStream stream(&file);
-		m_full_log = stream.readAll();
+		// TODO: Due to a bug in Qt 6.5.2 QTextStream::readAll is ridiculously slow to the point where it gets stuck on large files.
+		//       In Qt 5.15.2 this was much faster than QFile::readAll. Use QTextStream again once this bug is fixed upstream.
+		//QTextStream stream(&file);
+		//m_full_log = stream.readAll();
+		m_full_log = file.readAll();
 		m_full_log.replace('\0', '0');
 		file.close();
 	}
@@ -455,7 +458,7 @@ bool log_viewer::eventFilter(QObject* object, QEvent* event)
 			if (m_find_dialog && m_find_dialog->isVisible())
 				m_find_dialog->close();
 
-			m_find_dialog.reset(new find_dialog(static_cast<QTextEdit*>(object), this));
+			m_find_dialog.reset(new find_dialog(static_cast<QPlainTextEdit*>(object), this));
 		}
 	}
 

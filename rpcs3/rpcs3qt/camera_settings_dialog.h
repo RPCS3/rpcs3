@@ -2,6 +2,7 @@
 
 #include <QCamera>
 #include <QDialog>
+#include <QMediaCaptureSession>
 
 namespace Ui
 {
@@ -25,5 +26,6 @@ private:
 	void save_config();
 
 	std::unique_ptr<Ui::camera_settings_dialog> ui;
-	std::shared_ptr<QCamera> m_camera;
+	std::unique_ptr<QCamera> m_camera;
+	std::unique_ptr<QMediaCaptureSession> m_media_capture_session;
 };

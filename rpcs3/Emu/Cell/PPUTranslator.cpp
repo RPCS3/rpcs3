@@ -201,8 +201,12 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 		const auto vcheck = BasicBlock::Create(m_context, "__test", m_function);
 		m_ir->CreateCondBr(m_ir->CreateIsNull(vstate), body, vcheck, m_md_likely);
 
-		// Create tail call to the check function
 		m_ir->SetInsertPoint(vcheck);
+
+		// Raise wait flag as soon as possible
+		m_ir->CreateAtomicRMW(llvm::AtomicRMWInst::Or, ptr, m_ir->getInt32((+cpu_flag::wait).operator u32()), llvm::MaybeAlign{4}, llvm::AtomicOrdering::AcquireRelease);
+
+		// Create tail call to the check function
 		Call(GetType<void>(), "__check", m_thread, GetAddr())->setTailCall();
 		m_ir->CreateRetVoid();
 	}
@@ -3613,11 +3617,11 @@ void PPUTranslator::LWZ(ppu_opcode_t op)
 	m_may_be_mmio &= (op.ra != 1u && op.ra != 13u); // Stack register and TLS address register are unlikely to be used in MMIO address calculation
 	m_may_be_mmio &= op.simm16 == 0 || spu_thread::test_is_problem_state_register_offset(op.uimm16, true, false); // Either exact MMIO address or MMIO base with completing s16 address offset
 
-	if (m_may_be_mmio && !op.simm16)
+	if (m_may_be_mmio)
 	{
 		struct instructions_data
 		{
-			be_t<u32> insts[2];
+			be_t<u32> insts[3];
 		};
 
 		// Quick invalidation: expect exact MMIO address, so if the register is being reused with different offset than it's likely not MMIO
@@ -3630,6 +3634,12 @@ void PPUTranslator::LWZ(ppu_opcode_t op)
 				if (test_op.simm16 == op.simm16 || test_op.ra != op.ra)
 				{
 					// Same offset (at least according to this test) or different register
+					continue;
+				}
+
+				if (op.simm16 && spu_thread::test_is_problem_state_register_offset(test_op.uimm16, true, false))
+				{
+					// Found register reuse with different MMIO offset
 					continue;
 				}
 
@@ -3710,7 +3720,7 @@ void PPUTranslator::STW(ppu_opcode_t op)
 	m_may_be_mmio &= (op.ra != 1u && op.ra != 13u); // Stack register and TLS address register are unlikely to be used in MMIO address calculation
 	m_may_be_mmio &= op.simm16 == 0 || spu_thread::test_is_problem_state_register_offset(op.uimm16, false, true); // Either exact MMIO address or MMIO base with completing s16 address offset
 
-	if (m_may_be_mmio && !op.simm16)
+	if (m_may_be_mmio)
 	{
 		struct instructions_data
 		{
@@ -3727,6 +3737,12 @@ void PPUTranslator::STW(ppu_opcode_t op)
 				if (test_op.simm16 == op.simm16 || test_op.ra != op.ra)
 				{
 					// Same offset (at least according to this test) or different register
+					continue;
+				}
+
+				if (op.simm16 && spu_thread::test_is_problem_state_register_offset(test_op.uimm16, false, true))
+				{
+					// Found register reuse with different MMIO offset
 					continue;
 				}
 

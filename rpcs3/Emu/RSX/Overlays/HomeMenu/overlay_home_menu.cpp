@@ -161,7 +161,7 @@ namespace rsx
 			this->on_close = std::move(on_close);
 			visible = true;
 
-			const auto notify = std::make_shared<atomic_t<bool>>(false);
+			const auto notify = std::make_shared<atomic_t<u32>>(0);
 			auto& overlayman = g_fxo->get<display_manager>();
 
 			overlayman.attach_thread_input(

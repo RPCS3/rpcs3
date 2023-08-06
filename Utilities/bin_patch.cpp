@@ -726,7 +726,7 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 		break;
 	default:
 	{
-		const u32 offset = get_yaml_node_value<u32>(addr_node, error_message);
+		[[maybe_unused]] const u32 offset = get_yaml_node_value<u32>(addr_node, error_message);
 		if (!error_message.empty())
 		{
 			error_message = fmt::format("Skipping patch data entry: [ %s, 0x%.8x, %s ] (key: %s, location: %s) Invalid patch offset '%s' (not a valid u32 or overflow)",
@@ -1046,7 +1046,7 @@ static usz apply_modification(std::basic_string<u32>& applied, patch_engine::pat
 
 		auto ptr = mem_translate(offset, memory_size);
 
-		if (!ptr && memory_size != 0)
+		if (!ptr && memory_size != 0 && !relocate_instructions_at)
 		{
 			// Memory translation failed
 			continue;
@@ -1076,7 +1076,7 @@ static usz apply_modification(std::basic_string<u32>& applied, patch_engine::pat
 		}
 		case patch_type::code_alloc:
 		{
-			const u32 out_branch = vm::try_get_addr(mem_translate(offset & -4, 4)).first;
+			const u32 out_branch = vm::try_get_addr(relocate_instructions_at ? vm::get_super_ptr<u8>(offset & -4) : mem_translate(offset & -4, 4)).first;
 
 			// Allow only if points to a PPU executable instruction
 			if (out_branch < 0x10000 || out_branch >= 0x4000'0000 || !vm::check_addr<4>(out_branch, vm::page_executable))
@@ -1160,7 +1160,7 @@ static usz apply_modification(std::basic_string<u32>& applied, patch_engine::pat
 		case patch_type::jump:
 		case patch_type::jump_link:
 		{
-			const u32 out_branch = vm::try_get_addr(mem_translate(offset & -4, 4)).first;
+			const u32 out_branch = vm::try_get_addr(relocate_instructions_at ? vm::get_super_ptr<u8>(offset & -4) : mem_translate(offset & -4, 4)).first;
 			const u32 dest = static_cast<u32>(p.value.long_value);
 
 			// Allow only if points to a PPU executable instruction
@@ -1176,7 +1176,7 @@ static usz apply_modification(std::basic_string<u32>& applied, patch_engine::pat
 		{
 			const std::string& str = p.original_value;
 
-			const u32 out_branch = vm::try_get_addr(mem_translate(offset & -4, 4)).first;
+			const u32 out_branch = vm::try_get_addr(relocate_instructions_at ? vm::get_super_ptr<u8>(offset & -4) : mem_translate(offset & -4, 4)).first;
 			const usz sep_pos = str.find_first_of(':');
 
 			// Must contain only a single ':' or none

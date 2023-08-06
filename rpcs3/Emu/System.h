@@ -54,7 +54,7 @@ constexpr bool is_error(game_boot_result res)
 
 struct EmuCallbacks
 {
-	std::function<void(std::function<void()>, atomic_t<bool>*)> call_from_main_thread;
+	std::function<void(std::function<void()>, atomic_t<u32>*)> call_from_main_thread;
 	std::function<void(bool)> on_run; // (start_playtime) continuing or going ingame, so start the clock
 	std::function<void()> on_pause;
 	std::function<void()> on_resume;
@@ -139,6 +139,8 @@ class Emulator final
 
 	bool m_state_inspection_savestate = false;
 
+	usz m_tty_file_init_pos = umax;
+
 	std::vector<std::shared_ptr<atomic_t<u32>>> m_pause_msgs_refs;
 
 	std::vector<std::function<void()>> deferred_deserialization;
@@ -178,7 +180,7 @@ public:
 	}
 
 	// Call from the GUI thread
-	void CallFromMainThread(std::function<void()>&& func, atomic_t<bool>* wake_up = nullptr, bool track_emu_state = true, u64 stop_ctr = umax) const;
+	void CallFromMainThread(std::function<void()>&& func, atomic_t<u32>* wake_up = nullptr, bool track_emu_state = true, u64 stop_ctr = umax) const;
 
 	// Blocking call from the GUI thread
 	void BlockingCallFromMainThread(std::function<void()>&& func) const;

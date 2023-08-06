@@ -70,5 +70,5 @@ void fmt_class_string<spu_mfc_cmd>::format(std::string& out, u64 arg)
 
 	const u8 tag = cmd.tag;
 
-	fmt::append(out, "%s #%02u 0x%05x:0x%08llx 0x%x%s", cmd.cmd, tag & 0x7f, cmd.lsa, u64{cmd.eah} << 32 | cmd.eal, cmd.size, (tag & 0x80) ? " (stalled)" : "");
+	fmt::append(out, "%-8s #%02u 0x%05x:0x%08llx 0x%x%s", cmd.cmd, tag & 0x7f, cmd.lsa, u64{cmd.eah} << 32 | cmd.eal, cmd.size, (tag & 0x80) ? " (stalled)" : "");
 }

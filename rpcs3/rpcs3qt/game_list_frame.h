@@ -107,6 +107,7 @@ private:
 	bool RemoveShadersCache(const std::string& base_dir, bool is_interactive = false);
 	bool RemovePPUCache(const std::string& base_dir, bool is_interactive = false);
 	bool RemoveSPUCache(const std::string& base_dir, bool is_interactive = false);
+	void RemoveHDD1Cache(const std::string& base_dir, const std::string& title_id, bool is_interactive = false);
 	static bool CreatePPUCache(const std::string& path, const std::string& serial = {});
 	static bool CreatePPUCache(const game_info& game);
 

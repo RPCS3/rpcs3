@@ -142,7 +142,7 @@ namespace gui
 		template <typename T>
 		void stop_future_watcher(QFutureWatcher<T>& watcher, bool cancel, std::shared_ptr<atomic_t<bool>> cancel_flag = nullptr)
 		{
-			if (watcher.isPaused() || watcher.isRunning())
+			if (watcher.isSuspended() || watcher.isRunning())
 			{
 				watcher.resume();
 

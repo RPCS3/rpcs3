@@ -647,7 +647,10 @@ void spu_cache::initialize()
 	if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit || g_cfg.core.spu_decoder == spu_decoder_type::llvm)
 	{
 		// Initialize progress dialog (wait for previous progress done)
-		thread_ctrl::wait_on<atomic_wait::op_ne>(g_progr_ptotal, 0);
+		while (u32 v = g_progr_ptotal)
+		{
+			g_progr_ptotal.wait(v);
+		}
 
 		g_progr_ptotal += ::size32(func_list);
 		progr.emplace("Building SPU cache...");
@@ -3847,15 +3850,23 @@ void spu_recompiler_base::dump(const spu_program& result, std::string& out)
 		fmt::append(hash, "%s", fmt::base57(output));
 	}
 
-	fmt::append(out, "========== SPU BLOCK 0x%05x (size %u, %s) ==========\n", result.entry_point, result.data.size(), hash);
+	fmt::append(out, "========== SPU BLOCK 0x%05x (size %u, %s) ==========\n\n", result.entry_point, result.data.size(), hash);
 
 	for (auto& bb : m_bbs)
 	{
 		for (u32 pos = bb.first, end = bb.first + bb.second.size * 4; pos < end; pos += 4)
 		{
 			dis_asm.disasm(pos);
-			fmt::append(out, ">%s\n", dis_asm.last_opcode);
+
+			if (!dis_asm.last_opcode.ends_with('\n'))
+			{
+				dis_asm.last_opcode += '\n';
+			}
+
+			fmt::append(out, ">%s", dis_asm.last_opcode);
 		}
+
+		out += '\n';
 
 		if (m_block_info[bb.first / 4])
 		{
@@ -5823,7 +5834,7 @@ public:
 		if (g_cfg.core.spu_debug)
 		{
 			out.flush();
-			fs::file(m_spurt->get_cache_path() + "spu-ir.log", fs::write + fs::append).write(log);
+			fs::write_file(m_spurt->get_cache_path() + "spu-ir.log", fs::create + fs::write + fs::append, log);
 		}
 
 #if defined(__APPLE__)
@@ -6241,7 +6252,7 @@ public:
 
 			if (g_cfg.core.spu_debug)
 			{
-				fs::file(m_spurt->get_cache_path() + "spu-ir.log", fs::write + fs::append).write(log);
+				fs::write_file(m_spurt->get_cache_path() + "spu-ir.log", fs::create + fs::write + fs::append, log);
 			}
 
 			fmt::throw_exception("Compilation failed");
@@ -6276,7 +6287,7 @@ public:
 		if (g_cfg.core.spu_debug)
 		{
 			out.flush();
-			fs::file(m_spurt->get_cache_path() + "spu-ir.log", fs::write + fs::append).write(log);
+			fs::write_file(m_spurt->get_cache_path() + "spu-ir.log", fs::create + fs::write + fs::append, log);
 		}
 
 		return spu_runtime::g_interpreter;
@@ -7780,19 +7791,27 @@ public:
 	void ROTQMBY(spu_opcode_t op)
 	{
 		const auto a = get_vr<u8[16]>(op.ra);
-		const auto b = get_vr<u8[16]>(op.rb);
+		const auto b = get_vr<u32[4]>(op.rb);
+
+		auto minusb = eval(-b);
+		if (auto [ok, x] = match_expr(b, -match<u32[4]>()); ok)
+		{
+			minusb = eval(x);
+		}
+
+		const auto minusbx = bitcast<u8[16]>(minusb);
 
 		// Data with swapped endian from a load instruction
 		if (auto [ok, as] = match_expr(a, byteswap(match<u8[16]>())); ok)
 		{
 			const auto sc = build<u8[16]>(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
-			const auto sh = sc - (-splat_scalar(b) & 0x1f);
+			const auto sh = sc - (splat_scalar(minusbx) & 0x1f);
 			set_vr(op.rt, pshufb(as, sh));
 			return;
 		}
 
 		const auto sc = build<u8[16]>(112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127);
-		const auto sh = sc + (-splat_scalar(b) & 0x1f);
+		const auto sh = sc + (splat_scalar(minusbx) & 0x1f);
 		set_vr(op.rt, pshufb(a, sh));
 	}
 
@@ -9905,6 +9924,15 @@ public:
 				a = eval(a * s);
 
 			value_t<s32[4]> r;
+
+			if (m_use_avx512)
+			{
+				const auto sc = clamp_smax(a);
+				r.value = m_ir->CreateFPToUI(sc.value, get_type<s32[4]>());
+				set_vr(op.rt, r);
+				return;
+			}
+
 			r.value = m_ir->CreateFPToUI(a.value, get_type<s32[4]>());
 			set_vr(op.rt, select(bitcast<s32[4]>(a) > splat<s32[4]>(((32 + 127) << 23) - 1), splat<s32[4]>(-1), r & ~(bitcast<s32[4]>(a) >> 31)));
 		}
@@ -11036,7 +11064,7 @@ struct spu_llvm_worker
 				return;
 			}
 
-			thread_ctrl::wait_on(registered, nullptr);
+			thread_ctrl::wait_on(utils::bless<atomic_t<u32>>(&registered)[1], 0);
 			slice = registered.pop_all();
 		}())
 		{
@@ -11203,7 +11231,7 @@ struct spu_llvm
 			{
 				// Interrupt profiler thread and put it to sleep
 				static_cast<void>(prof_mutex.reset());
-				thread_ctrl::wait_on(registered, nullptr);
+				thread_ctrl::wait_on(utils::bless<atomic_t<u32>>(&registered)[1], 0);
 				continue;
 			}
 
@@ -11293,7 +11321,7 @@ struct spu_fast : public spu_recompiler_base
 		{
 			std::string log;
 			this->dump(func, log);
-			fs::file(m_spurt->get_cache_path() + "spu.log", fs::write + fs::append).write(log);
+			fs::write_file(m_spurt->get_cache_path() + "spu.log", fs::create + fs::write + fs::append, log);
 		}
 
 		// Allocate executable area with necessary size

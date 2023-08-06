@@ -52,7 +52,7 @@ namespace utils
 #ifdef MAP_NORESERVE
 	constexpr int c_map_noreserve = MAP_NORESERVE;
 #else
-	constexpr int c_map_noreserve = 0;
+	[[maybe_unused]] constexpr int c_map_noreserve = 0;
 #endif
 
 #ifdef MADV_FREE
@@ -66,7 +66,7 @@ namespace utils
 #ifdef MADV_HUGEPAGE
 	constexpr int c_madv_hugepage = MADV_HUGEPAGE;
 #else
-	constexpr int c_madv_hugepage = 0;
+	[[maybe_unused]] constexpr int c_madv_hugepage = 0;
 #endif
 
 #if defined(MADV_DONTDUMP) && defined(MADV_DODUMP)
@@ -76,8 +76,8 @@ namespace utils
 	constexpr int c_madv_no_dump = MADV_NOCORE;
 	constexpr int c_madv_dump = MADV_CORE;
 #else
-	constexpr int c_madv_no_dump = 0;
-	constexpr int c_madv_dump = 0;
+	[[maybe_unused]] constexpr int c_madv_no_dump = 0;
+	[[maybe_unused]] constexpr int c_madv_dump = 0;
 #endif
 
 #if defined(MFD_HUGETLB) && defined(MFD_HUGE_2MB)

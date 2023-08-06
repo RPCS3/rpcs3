@@ -529,7 +529,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	}
 	else
 	{
-		rsx_log.fatal("Could not find a vulkan compatible GPU driver. Your GPU(s) may not support Vulkan, or you need to install the vulkan runtime and drivers");
+		rsx_log.fatal("Could not find a Vulkan compatible GPU driver. Your GPU(s) may not support Vulkan, or you need to install the Vulkan runtime and drivers");
 		m_device = VK_NULL_HANDLE;
 		return;
 	}
@@ -799,7 +799,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 #endif
 		if (backend_config.supports_passthrough_dma)
 		{
-			rsx_log.error("AMDGPU kernel driver on linux and INTEL driver on some platforms cannot support passthrough DMA buffers.");
+			rsx_log.error("AMDGPU kernel driver on Linux and INTEL driver on some platforms cannot support passthrough DMA buffers.");
 			backend_config.supports_passthrough_dma = false;
 		}
 		break;
@@ -1442,7 +1442,7 @@ void VKGSRender::on_init_thread()
 {
 	if (m_device == VK_NULL_HANDLE)
 	{
-		fmt::throw_exception("No vulkan device was created");
+		fmt::throw_exception("No Vulkan device was created");
 	}
 
 	GSRender::on_init_thread();
@@ -3010,7 +3010,7 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 	else if (m_program)
 	{
 		// This can sometimes happen when shaders are compiling, only log if there is a program hit
-		rsx_log.warning("Dubious query data pushed to cond render!, Please report to developers(q.pending=%d)", sources.front()->pending);
+		rsx_log.warning("Dubious query data pushed to cond render! Please report to developers(q.pending=%d)", sources.front()->pending);
 	}
 
 	rsx::thread::begin_conditional_rendering(sources);

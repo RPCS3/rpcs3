@@ -261,7 +261,7 @@ struct cpu_prof
 			if (threads.empty())
 			{
 				// Wait for messages if no work (don't waste CPU)
-				thread_ctrl::wait_on(registered, nullptr);
+				thread_ctrl::wait_on(registered);
 				continue;
 			}
 
@@ -682,6 +682,7 @@ static atomic_t<u32> s_dummy_atomic = 0;
 bool cpu_thread::check_state() noexcept
 {
 	bool cpu_sleep_called = false;
+	bool cpu_memory_checked = false;
 	bool cpu_can_stop = true;
 	bool escape{}, retval{};
 
@@ -770,7 +771,7 @@ bool cpu_thread::check_state() noexcept
 			if (!is_stopped(flags) && flags.none_of(cpu_flag::ret))
 			{
 				// Check pause flags which hold thread inside check_state (ignore suspend/debug flags on cpu_flag::temp)
-				if (flags & (cpu_flag::pause + cpu_flag::memory) || (cpu_can_stop && flags & (cpu_flag::dbg_global_pause + cpu_flag::dbg_pause + cpu_flag::suspend + cpu_flag::yield + cpu_flag::preempt)))
+				if (flags & cpu_flag::pause || (!cpu_memory_checked && flags & cpu_flag::memory) || (cpu_can_stop && flags & (cpu_flag::dbg_global_pause + cpu_flag::dbg_pause + cpu_flag::suspend + cpu_flag::yield + cpu_flag::preempt)))
 				{
 					if (!(flags & cpu_flag::wait))
 					{
@@ -789,10 +790,23 @@ bool cpu_thread::check_state() noexcept
 					return store;
 				}
 
-				if (flags & cpu_flag::wait)
+				if (flags & (cpu_flag::wait + cpu_flag::memory))
 				{
-					flags -= cpu_flag::wait;
+					flags -= (cpu_flag::wait + cpu_flag::memory);
 					store = true;
+				}
+
+				if (s_tls_thread_slot == umax)
+				{
+					if (cpu_flag::wait - this->state.load())
+					{
+						// Force wait flag (must be set during ownership of s_cpu_lock), this makes the atomic op fail as a side effect
+						this->state += cpu_flag::wait;
+						store = true;
+					}
+
+					// Restore thread in the suspend list
+					cpu_counter::add(this);
 				}
 
 				retval = false;
@@ -843,10 +857,12 @@ bool cpu_thread::check_state() noexcept
 
 		if (escape)
 		{
-			if (s_tls_thread_slot == umax && !retval)
+			if (vm::g_range_lock_bits[1] && vm::g_tls_locked && *vm::g_tls_locked == this)
 			{
-				// Restore thread in the suspend list
-				cpu_counter::add(this);
+				state += cpu_flag::wait + cpu_flag::memory;
+				cpu_sleep_called = false;
+				cpu_memory_checked = false;
+				continue;
 			}
 
 			if (cpu_can_stop && state0 & cpu_flag::pending)
@@ -859,6 +875,7 @@ bool cpu_thread::check_state() noexcept
 					// Work could have changed flags
 					// Reset internal flags as if check_state() has just been called
 					cpu_sleep_called = false;
+					cpu_memory_checked = false;
 					continue;
 				}
 			}
@@ -876,6 +893,7 @@ bool cpu_thread::check_state() noexcept
 		{
 			cpu_sleep();
 			cpu_sleep_called = true;
+			cpu_memory_checked = false;
 
 			if (s_tls_thread_slot != umax)
 			{
@@ -900,6 +918,7 @@ bool cpu_thread::check_state() noexcept
 			if (state0 & cpu_flag::memory)
 			{
 				vm::passive_lock(*this);
+				cpu_memory_checked = true;
 				continue;
 			}
 
@@ -920,7 +939,7 @@ bool cpu_thread::check_state() noexcept
 						else
 						{
 							// TODO: fix the workaround
-							g_suspend_counter.wait(ctr, -4, atomic_wait_timeout{100});
+							g_suspend_counter.wait(ctr, atomic_wait_timeout{10'000});
 						}
 					}
 					else
@@ -953,8 +972,7 @@ bool cpu_thread::check_state() noexcept
 				}
 
 				// Short sleep when yield flag is present alone (makes no sense when other methods which can stop thread execution have been done)
-				// Pass a mask of a single bit which is often unused to avoid notifications
-				s_dummy_atomic.wait(0, 1u << 30, atomic_wait_timeout{80'000});
+				s_dummy_atomic.wait(0, atomic_wait_timeout{80'000});
 			}
 		}
 	}
@@ -991,13 +1009,13 @@ cpu_thread& cpu_thread::operator=(thread_state)
 
 	if (old & cpu_flag::wait && old.none_of(cpu_flag::again + cpu_flag::exit))
 	{
-		state.notify_one(cpu_flag::exit);
+		state.notify_one();
 
 		if (auto thread = try_get<spu_thread>())
 		{
 			if (u32 resv = atomic_storage<u32>::load(thread->raddr))
 			{
-				vm::reservation_notifier(resv).notify_one();
+				vm::reservation_notifier(resv).notify_all();
 			}
 		}
 	}

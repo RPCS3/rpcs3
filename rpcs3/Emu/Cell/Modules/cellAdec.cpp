@@ -588,10 +588,10 @@ public:
 						frame.auAddr = task.au.addr;
 						frame.auSize = task.au.size;
 						frame.userdata = task.au.userdata;
-						frame.size = frame.data->nb_samples * frame.data->channels * nbps;
+						frame.size = frame.data->nb_samples * frame.data->ch_layout.nb_channels * nbps;
 
 						//cellAdec.notice("got audio frame (pts=0x%llx, nb_samples=%d, ch=%d, sample_rate=%d, nbps=%d)",
-							//frame.pts, frame.data->nb_samples, frame.data->channels, frame.data->sample_rate, nbps);
+							//frame.pts, frame.data->nb_samples, frame.data->ch_layout.nb_channels, frame.data->sample_rate, nbps);
 
 						if (frames.push(frame, &is_closed))
 						{
@@ -944,7 +944,7 @@ error_code cellAdecGetPcm(u32 handle, vm::ptr<float> outBuffer)
 	if (outBuffer)
 	{
 		// reverse byte order:
-		if (frame->format == AV_SAMPLE_FMT_FLTP && frame->channels == 1)
+		if (frame->format == AV_SAMPLE_FMT_FLTP && frame->ch_layout.nb_channels == 1)
 		{
 			float* in_f = reinterpret_cast<float*>(frame->extended_data[0]);
 			for (u32 i = 0; i < af.size / 4; i++)
@@ -952,7 +952,7 @@ error_code cellAdecGetPcm(u32 handle, vm::ptr<float> outBuffer)
 				outBuffer[i] = in_f[i];
 			}
 		}
-		else if (frame->format == AV_SAMPLE_FMT_FLTP && frame->channels == 2)
+		else if (frame->format == AV_SAMPLE_FMT_FLTP && frame->ch_layout.nb_channels == 2)
 		{
 			float* in_f[2];
 			in_f[0] = reinterpret_cast<float*>(frame->extended_data[0]);
@@ -963,7 +963,7 @@ error_code cellAdecGetPcm(u32 handle, vm::ptr<float> outBuffer)
 				outBuffer[i * 2 + 1] = in_f[1][i];
 			}
 		}
-		else if (frame->format == AV_SAMPLE_FMT_FLTP && frame->channels == 6)
+		else if (frame->format == AV_SAMPLE_FMT_FLTP && frame->ch_layout.nb_channels == 6)
 		{
 			float* in_f[6];
 			in_f[0] = reinterpret_cast<float*>(frame->extended_data[0]);
@@ -982,7 +982,7 @@ error_code cellAdecGetPcm(u32 handle, vm::ptr<float> outBuffer)
 				outBuffer[i * 6 + 5] = in_f[5][i];
 			}
 		}
-		else if (frame->format == AV_SAMPLE_FMT_FLTP && frame->channels == 8)
+		else if (frame->format == AV_SAMPLE_FMT_FLTP && frame->ch_layout.nb_channels == 8)
 		{
 			float* in_f[8];
 			in_f[0] = reinterpret_cast<float*>(frame->extended_data[0]);
@@ -1005,7 +1005,7 @@ error_code cellAdecGetPcm(u32 handle, vm::ptr<float> outBuffer)
 				outBuffer[i * 8 + 7] = in_f[7][i];
 			}
 		}
-		else if (frame->format == AV_SAMPLE_FMT_S16P && frame->channels == 1)
+		else if (frame->format == AV_SAMPLE_FMT_S16P && frame->ch_layout.nb_channels == 1)
 		{
 			s16* in_i = reinterpret_cast<s16*>(frame->extended_data[0]);
 			for (u32 i = 0; i < af.size / 2; i++)
@@ -1013,7 +1013,7 @@ error_code cellAdecGetPcm(u32 handle, vm::ptr<float> outBuffer)
 				outBuffer[i] = in_i[i] / 32768.f;
 			}
 		}
-		else if (frame->format == AV_SAMPLE_FMT_S16P && frame->channels == 2)
+		else if (frame->format == AV_SAMPLE_FMT_S16P && frame->ch_layout.nb_channels == 2)
 		{
 			s16* in_i[2];
 			in_i[0] = reinterpret_cast<s16*>(frame->extended_data[0]);
@@ -1026,7 +1026,7 @@ error_code cellAdecGetPcm(u32 handle, vm::ptr<float> outBuffer)
 		}
 		else
 		{
-			fmt::throw_exception("Unsupported frame format (channels=%d, format=%d)", frame->channels, frame->format);
+			fmt::throw_exception("Unsupported frame format (channels=%d, format=%d)", frame->ch_layout.nb_channels, frame->format);
 		}
 	}
 
@@ -1078,25 +1078,26 @@ error_code cellAdecGetPcmItem(u32 handle, vm::pptr<CellAdecPcmItem> pcmItem)
 
 		atx->samplingFreq = frame->sample_rate;
 		atx->nbytes = frame->nb_samples * u32{sizeof(float)};
-		if (frame->channels == 1)
+
+		switch (frame->ch_layout.nb_channels)
 		{
-			atx->channelConfigIndex = 1;
-		}
-		else if (frame->channels == 2)
+		case 1:
+		case 2:
+		case 6:
 		{
-			atx->channelConfigIndex = 2;
+			atx->channelConfigIndex = frame->ch_layout.nb_channels;
+			break;
 		}
-		else if (frame->channels == 6)
-		{
-			atx->channelConfigIndex = 6;
-		}
-		else if (frame->channels == 8)
+		case 8:
 		{
 			atx->channelConfigIndex = 7;
+			break;
 		}
-		else
+		default:
 		{
-			cellAdec.fatal("cellAdecGetPcmItem(): unsupported channel count (%d)", frame->channels);
+			cellAdec.fatal("cellAdecGetPcmItem(): unsupported channel count (%d)", frame->ch_layout.nb_channels);
+			break;
+		}
 		}
 	}
 	else if (adec->type == CELL_ADEC_TYPE_MP3)

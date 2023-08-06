@@ -155,7 +155,7 @@ error_code select_photo(std::string dst_dir)
 				{
 					fs::stat_t f_info{};
 
-					if (!fs::stat(info.path, f_info) || f_info.is_directory)
+					if (!fs::get_stat(info.path, f_info) || f_info.is_directory)
 					{
 						cellPhotoImportUtil.error("Path does not belong to a valid file: '%s'", info.path);
 						result = CELL_PHOTO_IMPORT_ERROR_ACCESS_ERROR; // TODO: is this correct ?

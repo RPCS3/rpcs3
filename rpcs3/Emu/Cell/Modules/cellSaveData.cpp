@@ -864,7 +864,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			if (listSet->fixedListNum > CELL_SAVEDATA_LISTITEM_MAX)
 			{
 				// ****** sysutil savedata parameter error : 38 ******
-				return {CELL_SAVEDATA_ERROR_PARAM, "38"};
+				return {CELL_SAVEDATA_ERROR_PARAM, "38 (fixedListNum=%d)", listSet->fixedListNum};
 			}
 
 			if (listSet->fixedListNum && !listSet->fixedList)
@@ -921,7 +921,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				default:
 				{
 					// ****** sysutil savedata parameter error : 43 ******
-					return {CELL_SAVEDATA_ERROR_PARAM, "43"};
+					return {CELL_SAVEDATA_ERROR_PARAM, "43 (iconPosition=0x%x)", listSet->newData->iconPosition};
 				}
 				}
 
@@ -1316,7 +1316,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 			default :
 				// ****** sysutil savedata parameter error : 81 ******
-				return {CELL_SAVEDATA_ERROR_PARAM, "81"};
+				return {CELL_SAVEDATA_ERROR_PARAM, "81 (option=0x%x)", fixedSet->option};
 			}
 
 			if (selected == -1)
@@ -1380,6 +1380,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 	bool recreated = false;
 
 	lv2_sleep(ppu, 250);
+	ppu.state += cpu_flag::wait;
 
 	// Check if RPCS3_BLIST section exist in PARAM.SFO
 	// This section contains the list of files in the save ordered as they would be in BSD filesystem
@@ -1397,7 +1398,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		}
 
 		fs::stat_t dir_info{};
-		if (!fs::stat(dir_path, dir_info))
+		if (!fs::get_stat(dir_path, dir_info))
 		{
 			// funcStat is called even if the directory doesn't exist.
 		}
@@ -1523,6 +1524,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 		// Stat Callback
 		funcStat(ppu, result, statGet, statSet);
+		ppu.state += cpu_flag::wait;
 
 		if (const s32 res = result->result; res != CELL_SAVEDATA_CBRESULT_OK_NEXT)
 		{
@@ -1542,7 +1544,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			if (statSet->setParam->attribute > CELL_SAVEDATA_ATTR_NODUPLICATE)
 			{
 				// ****** sysutil savedata parameter error : 57 ******
-				return {CELL_SAVEDATA_ERROR_PARAM, "57"};
+				return {CELL_SAVEDATA_ERROR_PARAM, "57 (attribute=0x%x)", statSet->setParam->attribute};
 			}
 
 			if (g_ps3_process_info.sdk_ver > 0x36FFFF)
@@ -1551,7 +1553,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				if (statSet->setParam->parental_level)
 				{
 					// ****** sysutil savedata parameter error : 58 ******
-					return {CELL_SAVEDATA_ERROR_PARAM, "58"};
+					return {CELL_SAVEDATA_ERROR_PARAM, "58 (sdk_ver=0x%x, parental_level=%d)", g_ps3_process_info.sdk_ver, statSet->setParam->parental_level};
 				}
 			}
 			else
@@ -1559,7 +1561,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				if (statSet->setParam->parental_level > 11)
 				{
 					// ****** sysutil savedata parameter error : 58 ******
-					return {CELL_SAVEDATA_ERROR_PARAM, "58"};
+					return {CELL_SAVEDATA_ERROR_PARAM, "58 (sdk_ver=0x%x, parental_level=%d)", g_ps3_process_info.sdk_ver, statSet->setParam->parental_level};
 				}
 			}
 
@@ -1689,6 +1691,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		std::memset(result.get_ptr(), 0, ::offset32(&CellSaveDataCBResult::userdata));
 
 		funcFile(ppu, result, fileGet, fileSet);
+		ppu.state += cpu_flag::wait;
 
 		if (const s32 res = result->result; res != CELL_SAVEDATA_CBRESULT_OK_NEXT)
 		{
@@ -2045,7 +2048,7 @@ static NEVER_INLINE error_code savedata_get_list_item(vm::cptr<char> dirName, vm
 	else if (userId > CELL_USERINFO_USER_MAX)
 	{
 		// ****** sysutil savedata parameter error : 137 ******
-		return {CELL_SAVEDATA_ERROR_PARAM, "137"};
+		return {CELL_SAVEDATA_ERROR_PARAM, "137 (userId=0x%x)", userId};
 	}
 
 	if (!dirName)
@@ -2099,7 +2102,7 @@ static NEVER_INLINE error_code savedata_get_list_item(vm::cptr<char> dirName, vm
 	if (dir)
 	{
 		fs::stat_t dir_info{};
-		if (!fs::stat(save_path, dir_info))
+		if (!fs::get_stat(save_path, dir_info))
 		{
 			return CELL_SAVEDATA_ERROR_INTERNAL;
 		}
@@ -2406,8 +2409,10 @@ error_code cellSaveDataFixedExport(ppu_thread& ppu, vm::cptr<char> dirName, u32 
 	return CELL_OK;
 }
 
-error_code cellSaveDataGetListItem(vm::cptr<char> dirName, vm::ptr<CellSaveDataDirStat> dir, vm::ptr<CellSaveDataSystemFileParam> sysFileParam, vm::ptr<u32> bind, vm::ptr<u32> sizeKB)
+error_code cellSaveDataGetListItem(ppu_thread& ppu, vm::cptr<char> dirName, vm::ptr<CellSaveDataDirStat> dir, vm::ptr<CellSaveDataSystemFileParam> sysFileParam, vm::ptr<u32> bind, vm::ptr<u32> sizeKB)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellSaveData.warning("cellSaveDataGetListItem(dirName=%s, dir=*0x%x, sysFileParam=*0x%x, bind=*0x%x, sizeKB=*0x%x)", dirName, dir, sysFileParam, bind, sizeKB);
 
 	return savedata_get_list_item(dirName, dir, sysFileParam, bind, sizeKB, 0);

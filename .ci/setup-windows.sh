@@ -11,25 +11,26 @@ PR_NUMBER="$SYSTEM_PULLREQUEST_PULLREQUESTID"
 QT_HOST="http://qt.mirror.constant.com/"
 QT_URL_VER=$(echo "$QT_VER" | sed "s/\.//g")
 QT_VER_MSVC_UP=$(echo "${QT_VER_MSVC}" | tr '[:lower:]' '[:upper:]')
-QT_PREFIX="online/qtsdkrepository/windows_x86/desktop/qt${QT_VER_MAIN}_${QT_URL_VER}/qt.qt${QT_VER_MAIN}.${QT_URL_VER}.win64_${QT_VER_MSVC}_64/${QT_VER}-0-${QT_DATE}"
-QT_SUFFIX="-Windows-Windows_10-${QT_VER_MSVC_UP}-Windows-Windows_10-X86_64.7z"
-QT_BASE_URL="${QT_HOST}${QT_PREFIX}qtbase${QT_SUFFIX}"
-QT_WINE_URL="${QT_HOST}${QT_PREFIX}qtwinextras${QT_SUFFIX}"
-QT_DECL_URL="${QT_HOST}${QT_PREFIX}qtdeclarative${QT_SUFFIX}"
-QT_TOOL_URL="${QT_HOST}${QT_PREFIX}qttools${QT_SUFFIX}"
-QT_MM_URL="${QT_HOST}${QT_PREFIX}qtmultimedia${QT_SUFFIX}"
-QT_SVG_URL="${QT_HOST}${QT_PREFIX}qtsvg${QT_SUFFIX}"
+QT_PREFIX="online/qtsdkrepository/windows_x86/desktop/qt${QT_VER_MAIN}_${QT_URL_VER}/qt.qt${QT_VER_MAIN}.${QT_URL_VER}."
+QT_PREFIX_2="win64_${QT_VER_MSVC}_64/${QT_VER}-0-${QT_DATE}"
+QT_SUFFIX="-Windows-Windows_10_22H2-${QT_VER_MSVC_UP}-Windows-Windows_10_22H2-X86_64.7z"
+QT_BASE_URL="${QT_HOST}${QT_PREFIX}${QT_PREFIX_2}qtbase${QT_SUFFIX}"
+QT_DECL_URL="${QT_HOST}${QT_PREFIX}${QT_PREFIX_2}qtdeclarative${QT_SUFFIX}"
+QT_TOOL_URL="${QT_HOST}${QT_PREFIX}${QT_PREFIX_2}qttools${QT_SUFFIX}"
+QT_MM_URL="${QT_HOST}${QT_PREFIX}addons.qtmultimedia.${QT_PREFIX_2}qtmultimedia${QT_SUFFIX}"
+QT_SVG_URL="${QT_HOST}${QT_PREFIX}${QT_PREFIX_2}qtsvg${QT_SUFFIX}"
+QT_5CMP_URL="${QT_HOST}${QT_PREFIX}qt5compat.${QT_PREFIX_2}qt5compat${QT_SUFFIX}"
 LLVMLIBS_URL='https://github.com/RPCS3/llvm-mirror/releases/download/custom-build-win-16.0.1/llvmlibs_mt.7z'
 GLSLANG_URL='https://github.com/RPCS3/glslang/releases/download/custom-build-win/glslanglibs_mt.7z'
 VULKAN_SDK_URL="https://www.dropbox.com/s/cs77c3iv5mbo0bt/VulkanSDK-${VULKAN_VER}-Installer.exe"
 
 DEP_URLS="         \
     $QT_BASE_URL   \
-    $QT_WINE_URL   \
     $QT_DECL_URL   \
     $QT_TOOL_URL   \
     $QT_MM_URL     \
     $QT_SVG_URL    \
+    $QT_5CMP_URL   \
     $LLVMLIBS_URL  \
     $GLSLANG_URL   \
     $VULKAN_SDK_URL"
@@ -59,7 +60,7 @@ download_and_verify()
     fileName="$4"
 
     for _ in 1 2 3; do
-        [ -e "$CACHE_DIR/$fileName" ] || curl -L -o "$CACHE_DIR/$fileName" "$url"
+        [ -e "$CACHE_DIR/$fileName" ] || curl -fLo "$CACHE_DIR/$fileName" "$url"
         fileChecksum=$("${algo}sum" "$CACHE_DIR/$fileName" | awk '{ print $1 }')
         [ "$fileChecksum" = "$correctChecksum" ] && return 0
         rm "$CACHE_DIR/$fileName"
@@ -78,9 +79,9 @@ for url in $DEP_URLS; do
 
     # shellcheck disable=SC1003
     case "$url" in
-    *qt*) checksum=$(curl -L "${url}.sha1"); algo="sha1"; outDir='C:\Qt\' ;;
-    *llvm*) checksum=$(curl -L "${url}.sha256"); algo="sha256"; outDir="./3rdparty/llvm" ;;
-    *glslang*) checksum=$(curl -L "${url}.sha256"); algo="sha256"; outDir="./lib/Release-x64" ;;
+    *qt*) checksum=$(curl -fL "${url}.sha1"); algo="sha1"; outDir='C:\Qt\' ;;
+    *llvm*) checksum=$(curl -fL "${url}.sha256"); algo="sha256"; outDir="./3rdparty/llvm" ;;
+    *glslang*) checksum=$(curl -fL "${url}.sha256"); algo="sha256"; outDir="./lib/Release-x64" ;;
     *Vulkan*)
         # Vulkan setup needs to be run in batch environment
         # Need to subshell this or else it doesn't wait

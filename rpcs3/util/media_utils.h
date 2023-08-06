@@ -77,8 +77,8 @@ namespace utils
 		std::vector<u8> data;
 		atomic_t<u64> m_size = 0;
 		atomic_t<u64> duration_ms = 0;
-		atomic_t<bool> track_fully_decoded{false};
-		atomic_t<bool> track_fully_consumed{false};
+		atomic_t<u32> track_fully_decoded{0};
+		atomic_t<u32> track_fully_consumed{0};
 		atomic_t<bool> has_error{false};
 		std::deque<std::pair<u64, u64>> timestamps_ms;
 

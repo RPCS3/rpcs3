@@ -78,7 +78,7 @@ void ppu_module::validate(u32 reloc)
 
 				if (size && size != funcs[index].size)
 				{
-					if (size + 4 != funcs[index].size || *ensure(get_ptr<u32>(addr + size)) != ppu_instructions::NOP())
+					if (size + 4 != funcs[index].size || get_ref<u32>(addr + size) != ppu_instructions::NOP())
 					{
 						ppu_validator.error("%s.yml : function size mismatch at 0x%x(size=0x%x) (0x%x, 0x%x)", path, found, funcs[index].size, addr, size);
 					}
@@ -733,7 +733,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 	// Register TOC from entry point
 	if (entry && !lib_toc)
 	{
-		lib_toc = *ensure(get_ptr<u32>(entry)) ? *ensure(get_ptr<u32>(entry + 4)) : *ensure(get_ptr<u32>(entry + 20));
+		lib_toc = get_ref<u32>(entry) ? get_ref<u32>(entry + 4) : get_ref<u32>(entry + 20);
 	}
 
 	// Secondary attempt
@@ -1425,7 +1425,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 			for (vm::cptr<u32> _ptr = vm::cast(block.first); _ptr.addr() < block.first + block.second;)
 			{
 				const u32 iaddr = _ptr.addr();
-				const ppu_opcode_t op{*ensure(get_ptr<u32>(_ptr++))};
+				const ppu_opcode_t op{get_ref<u32>(_ptr++)};
 				const ppu_itype::type type = s_ppu_itype.decode(op.opcode);
 
 				if (type == ppu_itype::B || type == ppu_itype::BC)
@@ -1499,7 +1499,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 		for (vm::cptr<u32> _ptr = vm::cast(start); _ptr.addr() < next;)
 		{
 			const u32 addr = _ptr.addr();
-			const ppu_opcode_t op{*ensure(get_ptr<u32>(_ptr++))};
+			const ppu_opcode_t op{get_ref<u32>(_ptr++)};
 			const ppu_itype::type type = s_ppu_itype.decode(op.opcode);
 
 			if (type == ppu_itype::UNK)
@@ -1641,7 +1641,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 			continue;
 		}
 
-		const u32 target = *ensure(get_ptr<u32>(rel.addr));
+		const u32 target = get_ref<u32>(rel.addr);
 
 		if (target % 4 || target < start || target >= end)
 		{
@@ -1718,7 +1718,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 
 			for (; i_pos < lim; i_pos += 4)
 			{
-				const u32 opc = *ensure(get_ptr<u32>(i_pos));
+				const u32 opc = get_ref<u32>(i_pos);
 
 				switch (auto type = s_ppu_itype.decode(opc))
 				{

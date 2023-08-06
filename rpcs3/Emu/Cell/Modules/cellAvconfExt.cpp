@@ -202,7 +202,7 @@ error_code cellVideoOutSetupDisplay(u32 videoOut)
 
 error_code cellAudioInGetDeviceInfo(u32 deviceNumber, u32 deviceIndex, vm::ptr<CellAudioInDeviceInfo> info)
 {
-	cellAvconfExt.todo("cellAudioInGetDeviceInfo(deviceNumber=0x%x, deviceIndex=0x%x, info=*0x%x)", deviceNumber, deviceIndex, info);
+	cellAvconfExt.trace("cellAudioInGetDeviceInfo(deviceNumber=0x%x, deviceIndex=0x%x, info=*0x%x)", deviceNumber, deviceIndex, info);
 
 	if (deviceIndex != 0 || !info)
 	{
@@ -277,7 +277,7 @@ error_code cellVideoOutGetGamma(u32 videoOut, vm::ptr<f32> gamma)
 
 error_code cellAudioInGetAvailableDeviceInfo(u32 count, vm::ptr<CellAudioInDeviceInfo> device_info)
 {
-	cellAvconfExt.todo("cellAudioInGetAvailableDeviceInfo(count=%d, info=*0x%x)", count, device_info);
+	cellAvconfExt.trace("cellAudioInGetAvailableDeviceInfo(count=%d, info=*0x%x)", count, device_info);
 
 	if (count > 16 || !device_info)
 	{

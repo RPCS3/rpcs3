@@ -256,7 +256,7 @@ error_code cell_music_decode_read(vm::ptr<void> buf, vm::ptr<u32> startTime, u64
 	{
 		dec.read_pos = 0;
 		dec.decoder.clear();
-		dec.decoder.track_fully_consumed = true;
+		dec.decoder.track_fully_consumed = 1;
 		dec.decoder.track_fully_consumed.notify_one();
 		break;
 	}

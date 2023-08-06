@@ -1,5 +1,6 @@
 #include <QButtonGroup>
-#include <QCameraInfo>
+#include <QCameraDevice>
+#include <QMediaDevices>
 #include <QDialogButtonBox>
 #include <QFontMetrics>
 #include <QPushButton>
@@ -10,7 +11,6 @@
 #include <QSpinBox>
 #include <QTimer>
 #include <QScreen>
-#include <QUrl>
 
 #include "gui_settings.h"
 #include "display_sleep_control.h"
@@ -1191,10 +1191,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		const std::string selected_camera = m_emu_settings->GetSetting(emu_settings_type::CameraID);
 		ui->cameraIdBox->addItem(tr("None", "Camera Device"), "");
 		ui->cameraIdBox->addItem(tr("Default", "Camera Device"), qstr(default_camera));
-		for (const QCameraInfo& camera_info : QCameraInfo::availableCameras())
+		for (const QCameraDevice& camera_info : QMediaDevices::videoInputs())
 		{
 			if (!camera_info.isNull())
-				ui->cameraIdBox->addItem(camera_info.description(), camera_info.deviceName());
+				ui->cameraIdBox->addItem(camera_info.description(), camera_info.id());
 		}
 		if (const int index = ui->cameraIdBox->findData(qstr(selected_camera)); index >= 0)
 		{

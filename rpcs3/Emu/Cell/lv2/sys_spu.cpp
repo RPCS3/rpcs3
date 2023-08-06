@@ -215,14 +215,7 @@ lv2_spu_group::lv2_spu_group(utils::serial& ar) noexcept
 	{
 		std::common_type_t<decltype(lv2_spu_group::prio)> prio{};
 
-		if (GET_SERIALIZATION_VERSION(spu) < 3)
-		{
-			prio.prio = ar.operator s32();
-		}
-		else
-		{
-			ar(prio.all);
-		}
+		ar(prio.all);
 
 		return prio;
 	}())
@@ -387,10 +380,7 @@ struct spu_limits_t
 
 	spu_limits_t(utils::serial& ar) noexcept
 	{
-		if (GET_SERIALIZATION_VERSION(spu) >= 2)
-		{
-			ar(max_raw, max_spu);
-		}
+		ar(max_raw, max_spu);
 	}
 
 	void save(utils::serial& ar)
@@ -1052,7 +1042,7 @@ error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 		{
 			for (; index != umax; index--)
 			{
-				threads[index]->state.notify_one(cpu_flag::stop);
+				threads[index]->state.notify_one();
 			}
 		}
 	} notify_threads;
@@ -1226,7 +1216,7 @@ error_code sys_spu_thread_group_resume(ppu_thread& ppu, u32 id)
 		{
 			for (; index != umax; index--)
 			{
-				threads[index]->state.notify_one(cpu_flag::suspend);
+				threads[index]->state.notify_one();
 			}
 		}
 	} notify_threads;

@@ -543,7 +543,7 @@ void CubebBackend::device_collection_changed_cb(cubeb* context, void* user_ptr)
 
 	if (context != cubeb->m_ctx)
 	{
-		Cubeb.error("device_collection_changed_cb called with unkown context");
+		Cubeb.error("device_collection_changed_cb called with unknown context");
 		return;
 	}
 

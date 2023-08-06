@@ -1635,7 +1635,7 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 			if (!g_tls_access_violation_recovered)
 			{
 				vm_log.notice("\n%s", dump_useful_thread_info());
-				vm_log.error("Access violation %s location 0x%x (%s)", is_writing ? "writing" : "reading", addr, (is_writing && vm::check_addr(addr)) ? "read-only memory" : "unmapped memory");
+				vm_log.error("[%s] Access violation %s location 0x%x (%s)", cpu->get_name(), is_writing ? "writing" : "reading", addr, (is_writing && vm::check_addr(addr)) ? "read-only memory" : "unmapped memory");
 			}
 
 			// TODO:
@@ -2008,37 +2008,8 @@ thread_local DECLARE(thread_ctrl::g_tls_error_callback) = nullptr;
 
 DECLARE(thread_ctrl::g_native_core_layout) { native_core_arrangement::undefined };
 
-static atomic_t<u128, 64> s_thread_bits{0};
-
-static atomic_t<thread_base**> s_thread_pool[128]{};
-
 void thread_base::start()
 {
-	for (u128 bits = s_thread_bits.load(); bits; bits &= bits - 1)
-	{
-		const u32 pos = utils::ctz128(bits);
-
-		if (!s_thread_pool[pos])
-		{
-			continue;
-		}
-
-		thread_base** tls = s_thread_pool[pos].exchange(nullptr);
-
-		if (!tls)
-		{
-			continue;
-		}
-
-		// Receive "that" native thread handle, sent "this" thread_base
-		const u64 _self = reinterpret_cast<u64>(atomic_storage<thread_base*>::load(*tls));
-		m_thread.release(_self);
-		ensure(_self != reinterpret_cast<u64>(this));
-		atomic_storage<thread_base*>::store(*tls, this);
-		s_thread_pool[pos].notify_one();
-		return;
-	}
-
 #ifdef _WIN32
 	m_thread = ::_beginthreadex(nullptr, 0, entry_point, this, CREATE_SUSPENDED, nullptr);
 	ensure(m_thread);
@@ -2201,14 +2172,14 @@ u64 thread_base::finalize(thread_state result_state) noexcept
 	const u64 _self = m_thread;
 
 	// Set result state (errored or finalized)
-	m_sync.fetch_op([&](u64& v)
+	m_sync.fetch_op([&](u32& v)
 	{
 		v &= -4;
 		v |= static_cast<u32>(result_state);
 	});
 
 	// Signal waiting threads
-	m_sync.notify_all(2);
+	m_sync.notify_all();
 
 	return _self;
 }
@@ -2232,112 +2203,13 @@ thread_base::native_entry thread_base::finalize(u64 _self) noexcept
 		return nullptr;
 	}
 
-	// Try to add self to thread pool
-	set_name("..pool");
-
-	thread_ctrl::set_native_priority(0);
-
-	thread_ctrl::set_thread_affinity_mask(0);
-
-	std::fesetround(FE_TONEAREST);
-
-	gv_unset_zeroing_denormals();
-
-	static constexpr u64 s_stop_bit = 0x8000'0000'0000'0000ull;
-
-	static atomic_t<u64> s_pool_ctr = []
-	{
-		std::atexit([]
-		{
-			s_pool_ctr |= s_stop_bit;
-
-			while (/*u64 remains = */s_pool_ctr & ~s_stop_bit)
-			{
-				for (u32 i = 0; i < std::size(s_thread_pool); i++)
-				{
-					if (thread_base** ptls = s_thread_pool[i].exchange(nullptr))
-					{
-						// Extract thread handle
-						const u64 _self = reinterpret_cast<u64>(*ptls);
-
-						// Wake up a thread and make sure it's joined
-						s_thread_pool[i].notify_one();
-
 #ifdef _WIN32
-						const HANDLE handle = reinterpret_cast<HANDLE>(_self);
-						WaitForSingleObject(handle, INFINITE);
-						CloseHandle(handle);
+	_endthreadex(0);
 #else
-						pthread_join(reinterpret_cast<pthread_t>(_self), nullptr);
+	pthread_exit(nullptr);
 #endif
-					}
-				}
-			}
-		});
 
-		return 0;
-	}();
-
-	s_pool_ctr++;
-
-	u32 pos = -1;
-
-	while (true)
-	{
-		const auto [bits, ok] = s_thread_bits.fetch_op([](u128& bits)
-		{
-			if (~bits) [[likely]]
-			{
-				// Set lowest clear bit
-				bits |= bits + 1;
-				return true;
-			}
-
-			return false;
-		});
-
-		if (ok) [[likely]]
-		{
-			pos = utils::ctz128(~bits);
-			break;
-		}
-
-		s_thread_bits.wait(bits);
-	}
-
-	const auto tls = &thread_ctrl::g_tls_this_thread;
-	s_thread_pool[pos] = tls;
-
-	atomic_wait::list<2> list{};
-	list.set<0>(s_pool_ctr, 0, s_stop_bit);
-	list.set<1>(s_thread_pool[pos], tls);
-
-	while (s_thread_pool[pos] == tls || atomic_storage<thread_base*>::load(*tls) == fake_self)
-	{
-		list.wait();
-
-		if (s_pool_ctr & s_stop_bit)
-		{
-			break;
-		}
-	}
-
-	// Free thread pool slot
-	s_thread_bits.atomic_op([pos](u128& val)
-	{
-		val &= ~(u128(1) << pos);
-	});
-
-	s_thread_bits.notify_one();
-
-	if (--s_pool_ctr & s_stop_bit)
-	{
-		return nullptr;
-	}
-
-	// Return new entry point
-	utils::prefetch_exec((*tls)->entry_point);
-	return (*tls)->entry_point;
+	return nullptr;
 }
 
 thread_base::native_entry thread_base::make_trampoline(u64(*entry)(thread_base* _base))
@@ -2394,7 +2266,17 @@ thread_state thread_ctrl::state()
 
 void thread_ctrl::wait_for(u64 usec, [[maybe_unused]] bool alert /* true */)
 {
+	if (!usec)
+	{
+		return;
+	}
+
 	auto _this = g_tls_this_thread;
+
+	if (!alert && usec > 50000)
+	{
+		usec = 50000;
+	}
 
 #ifdef __linux__
 	static thread_local struct linux_timer_handle_t
@@ -2424,13 +2306,13 @@ void thread_ctrl::wait_for(u64 usec, [[maybe_unused]] bool alert /* true */)
 		}
 	} fd_timer;
 
-	if (!alert && usec > 0 && usec <= 1000 && fd_timer != -1)
+	if (!alert && fd_timer != -1)
 	{
 		struct itimerspec timeout;
 		u64 missed;
 
-		timeout.it_value.tv_nsec = usec * 1'000ull;
-		timeout.it_value.tv_sec = 0;
+		timeout.it_value.tv_nsec = usec % 1'000'000 * 1'000ull;
+		timeout.it_value.tv_sec = usec / 1'000'000;
 		timeout.it_interval.tv_sec = 0;
 		timeout.it_interval.tv_nsec = 0;
 		timerfd_settime(fd_timer, 0, &timeout, NULL);
@@ -2440,15 +2322,27 @@ void thread_ctrl::wait_for(u64 usec, [[maybe_unused]] bool alert /* true */)
 	}
 #endif
 
-	if (_this->m_sync.bit_test_reset(2) || _this->m_taskq)
+	if (alert)
 	{
-		return;
+		if (_this->m_sync.bit_test_reset(2) || _this->m_taskq)
+		{
+			return;
+		}
 	}
 
 	// Wait for signal and thread state abort
 	atomic_wait::list<2> list{};
-	list.set<0>(_this->m_sync, 0, 4 + 1);
-	list.set<1>(_this->m_taskq, nullptr);
+
+	if (alert)
+	{
+		list.set<0>(_this->m_sync, 0);
+		list.set<1>(utils::bless<atomic_t<u32>>(&_this->m_taskq)[1], 0);
+	}
+	else
+	{
+		list.set<0>(_this->m_dummy, 0);
+	}
+
 	list.wait(atomic_wait_timeout{usec <= 0xffff'ffff'ffff'ffff / 1000 ? usec * 1000 : 0xffff'ffff'ffff'ffff});
 }
 
@@ -2459,29 +2353,27 @@ void thread_ctrl::wait_for_accurate(u64 usec)
 		return;
 	}
 
+	if (usec > 50000)
+	{
+		fmt::throw_exception("thread_ctrl::wait_for_accurate: unsupported amount");
+	}
+
+#ifdef __linux__
+	return wait_for(usec, false);
+#else
 	using namespace std::chrono_literals;
 
 	const auto until = std::chrono::steady_clock::now() + 1us * usec;
 
 	while (true)
 	{
-#ifdef __linux__
-		// NOTE: Assumption that timer initialization has succeeded
-		u64 host_min_quantum = usec <= 1000 ? 10 : 50;
-#else
 		// Host scheduler quantum for windows (worst case)
-		// NOTE: On ps3 this function has very high accuracy
 		constexpr u64 host_min_quantum = 500;
-#endif
+
 		if (usec >= host_min_quantum)
 		{
-#ifdef __linux__
-			// Do not wait for the last quantum to avoid loss of accuracy
-			wait_for(usec - ((usec % host_min_quantum) + host_min_quantum), false);
-#else
 			// Wait on multiple of min quantum for large durations to avoid overloading low thread cpus
 			wait_for(usec - (usec % host_min_quantum), false);
-#endif
 		}
 		// TODO: Determine best value for yield delay
 		else if (usec >= host_min_quantum / 2)
@@ -2502,6 +2394,7 @@ void thread_ctrl::wait_for_accurate(u64 usec)
 
 		usec = (until - current).count();
 	}
+#endif
 }
 
 std::string thread_ctrl::get_name_cached()
@@ -2568,7 +2461,7 @@ bool thread_base::join(bool dtor) const
 
 	for (u64 i = 0; (m_sync & 3) <= 1; i++)
 	{
-		m_sync.wait(0, 2, timeout);
+		m_sync.wait(m_sync & ~2, timeout);
 
 		if (m_sync & 2)
 		{
@@ -2588,7 +2481,7 @@ void thread_base::notify()
 {
 	// Set notification
 	m_sync |= 4;
-	m_sync.notify_one(4);
+	m_sync.notify_all();
 }
 
 u64 thread_base::get_native_id() const
@@ -2625,7 +2518,7 @@ u64 thread_base::get_cycles()
 	{
 		cycles = static_cast<u64>(thread_time.tv_sec) * 1'000'000'000 + thread_time.tv_nsec;
 #endif
-		if (const u64 old_cycles = m_sync.fetch_op([&](u64& v){ v &= 7; v |= (cycles << 3); }) >> 3)
+		if (const u64 old_cycles = m_cycles.exchange(cycles))
 		{
 			return cycles - old_cycles;
 		}
@@ -2635,7 +2528,7 @@ u64 thread_base::get_cycles()
 	}
 	else
 	{
-		return m_sync >> 3;
+		return m_cycles;
 	}
 }
 
@@ -2688,8 +2581,8 @@ void thread_base::exec()
 				}
 
 				// Notify waiters
-				ptr->exec.release(nullptr);
-				ptr->exec.notify_all();
+				ptr->done.release(1);
+				ptr->done.notify_all();
 			}
 
 			if (ptr->next)
