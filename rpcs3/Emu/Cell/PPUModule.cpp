@@ -2118,11 +2118,8 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 
 				ppu_linkage_info dummy{};
 
-				if (!virtual_load)
-				{
-					ppu_load_exports(_main, virtual_load ? &dummy : &link, proc_prx_param.libent_start, proc_prx_param.libent_end);
-					ppu_load_imports(_main, _main.relocs, virtual_load ? &dummy : &link, proc_prx_param.libstub_start, proc_prx_param.libstub_end);
-				}
+				ppu_load_exports(_main, virtual_load ? &dummy : &link, proc_prx_param.libent_start, proc_prx_param.libent_end);
+				ppu_load_imports(_main, _main.relocs, virtual_load ? &dummy : &link, proc_prx_param.libstub_start, proc_prx_param.libstub_end);
 
 				std::stable_sort(_main.relocs.begin(), _main.relocs.end());
 			}
@@ -2682,11 +2679,8 @@ std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_ex
 
 				ppu_linkage_info dummy{};
 
-				if (!virtual_load)
-				{
-					ppu_load_exports(*ovlm, virtual_load ? &dummy : &link, proc_prx_param.libent_start, proc_prx_param.libent_end);
-					ppu_load_imports(*ovlm, ovlm->relocs, virtual_load ? &dummy : &link, proc_prx_param.libstub_start, proc_prx_param.libstub_end);
-				}
+				ppu_load_exports(*ovlm, virtual_load ? &dummy : &link, proc_prx_param.libent_start, proc_prx_param.libent_end);
+				ppu_load_imports(*ovlm, ovlm->relocs, virtual_load ? &dummy : &link, proc_prx_param.libstub_start, proc_prx_param.libstub_end);
 			}
 			break;
 		}
