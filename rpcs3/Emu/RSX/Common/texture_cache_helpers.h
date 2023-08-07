@@ -11,8 +11,7 @@ namespace rsx
 	enum surface_transform : u32
 	{
 		identity = 0,                // Nothing
-		argb_to_bgra = 1,            // Swap ARGB to BGRA (endian swap)
-		coordinate_transform = 2     // Incoming source coordinates may generated based on the format of the secondary (dest) surface. Recalculate them before use.
+		coordinate_transform = 1     // Incoming source coordinates may generated based on the format of the secondary (dest) surface. Recalculate them before use.
 	};
 
 	template<typename image_resource_type>

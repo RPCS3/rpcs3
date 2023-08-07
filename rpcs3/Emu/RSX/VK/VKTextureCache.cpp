@@ -368,12 +368,9 @@ namespace vk
 			}
 
 			ensure(src_image->current_layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL || src_image->current_layout == VK_IMAGE_LAYOUT_GENERAL);
+			ensure(transform == rsx::surface_transform::identity);
 
-			// Final aspect mask of the 'final' transfer source
-			const auto new_src_aspect = src_image->aspect();
-			const bool require_scaling = src_w != section.dst_w || src_h != section.dst_h;
-
-			if (!require_scaling && transform == rsx::surface_transform::identity) [[likely]]
+			if (src_w == section.dst_w && src_h == section.dst_h) [[likely]]
 			{
 				const auto copy_rgn = get_output_region(src_x, src_y, src_w, src_h, src_image);
 				vkCmdCopyImage(cmd, src_image->value, src_image->current_layout, dst->value, dst->current_layout, 1, &copy_rgn);
@@ -381,18 +378,11 @@ namespace vk
 			else
 			{
 				u16 dst_x = section.dst_x, dst_y = section.dst_y;
-				vk::image* _dst;
+				vk::image* _dst = dst;
 
-				// Check for best-case scenario - we write directly to the output in this case
-				if (src_image->info.format == dst->info.format &&
-					section.level == 0 &&
-					section.dst_z == 0) [[likely]]
+				if (src_image->info.format != dst->info.format || section.level != 0 || section.dst_z != 0) [[ unlikely ]]
 				{
-					_dst = dst;
-				}
-				else
-				{
-					// Either a bitcast is required or a scale+copy to mipmap level
+					// Either a bitcast is required or a scale+copy to mipmap level / layer
 					const u32 requested_width = dst->width();
 					const u32 requested_height = src_y + src_h + section.dst_h;
 					_dst = vk::get_typeless_helper(src_image->format(), src_image->format_class(), requested_width, requested_height);
@@ -407,59 +397,11 @@ namespace vk
 					dst_y = src_y + src_h;
 				}
 
-				if (transform == rsx::surface_transform::identity)
-				{
-					vk::copy_scaled_image(cmd, src_image, _dst,
-						coordi{ { src_x, src_y }, { src_w, src_h } },
-						coordi{ { dst_x, dst_y }, { section.dst_w, section.dst_h } },
-						1, src_image->format() == _dst->format(),
-						VK_FILTER_NEAREST);
-				}
-				else if (transform == rsx::surface_transform::argb_to_bgra)
-				{
-					VkBufferImageCopy copy{};
-					copy.imageExtent = { src_w, src_h, 1 };
-					copy.imageOffset = { src_x, src_y, 0 };
-					copy.imageSubresource = { src_image->aspect(), 0, 0, 1 };
-
-					const auto mem_length = src_w * src_h * dst_bpp;
-					auto scratch_buf = vk::get_scratch_buffer(cmd, mem_length);
-					vkCmdCopyImageToBuffer(cmd, src_image->value, src_image->current_layout, scratch_buf->value, 1, &copy);
-
-					vk::insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, mem_length, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-						VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
-
-					auto shuffle_kernel = vk::get_compute_task<vk::cs_shuffle_32>();
-					shuffle_kernel->run(cmd, scratch_buf, mem_length);
-
-					vk::insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, mem_length, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-						VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
-
-					auto tmp = vk::get_typeless_helper(src_image->format(), src_image->format_class(), section.dst_w, section.dst_h);
-					tmp->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-
-					dst_x = dst_y = 0;
-					copy.imageOffset = { 0, 0, 0 };
-					vkCmdCopyBufferToImage(cmd, scratch_buf->value, tmp->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy);
-
-					if (require_scaling)
-					{
-						// Optionally scale if needed
-						vk::copy_scaled_image(cmd, tmp, _dst,
-							areai{ 0, 0, src_w, static_cast<s32>(src_h) },
-							coordi{ { dst_x, dst_y }, { section.dst_w, section.dst_h } },
-							1, tmp->info.format == _dst->info.format,
-							VK_FILTER_NEAREST);
-					}
-					else
-					{
-						_dst = tmp;
-					}
-				}
-				else
-				{
-					fmt::throw_exception("Unreachable");
-				}
+				vk::copy_scaled_image(cmd, src_image, _dst,
+					coordi{ { src_x, src_y }, { src_w, src_h } },
+					coordi{ { dst_x, dst_y }, { section.dst_w, section.dst_h } },
+					1, src_image->format() == _dst->format(),
+					VK_FILTER_NEAREST);
 
 				if (_dst != dst) [[unlikely]]
 				{
