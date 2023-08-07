@@ -3769,10 +3769,18 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 		{
 			for (auto& block : func.blocks)
 			{
+				const auto targets = g_fxo->get<ppu_far_jumps_t>().get_targets(block.first, block.second);
+
+				if (!targets.empty())
+				{
+					// Replace the block with ppu_far_jump
+					continue;
+				}
+
 				ppu_register_function_at(block.first, block.second);
 			}
 
-			if (g_cfg.core.ppu_debug && func.size && func.toc != umax)
+			if (g_cfg.core.ppu_debug && func.size && func.toc != umax && !ppu_get_far_jump(func.addr))
 			{
 				ppu_toc[func.addr] = func.toc;
 				ppu_ref(func.addr) = &ppu_check_toc;
