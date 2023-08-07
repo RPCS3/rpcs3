@@ -258,14 +258,12 @@ namespace gl
 			}
 			else
 			{
-				ensure(dst_image->get_target() == gl::texture::target::texture2D);
-
 				auto _blitter = gl::g_hw_blitter;
 				const areai src_rect = { src_x, src_y, src_x + src_w, src_y + src_h };
 				const areai dst_rect = { slice.dst_x, slice.dst_y, slice.dst_x + slice.dst_w, slice.dst_y + slice.dst_h };
 
 				gl::texture* _dst;
-				if (src_image->get_internal_format() == dst_image->get_internal_format() && slice.level == 0)
+				if (src_image->get_internal_format() == dst_image->get_internal_format() && slice.level == 0 && slice.dst_z == 0)
 				{
 					_dst = dst_image;
 				}
