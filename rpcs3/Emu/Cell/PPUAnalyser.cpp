@@ -558,7 +558,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 
 	auto verify_func = [&](u32 addr)
 	{
-		if (!entry)
+		if (entry)
 		{
 			// Fixed addresses
 			return true;
@@ -643,7 +643,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 
 			for (; _ptr <= seg_end;)
 			{
-				if (ptr[1] == toc && ptr[0] >= start && ptr[0] < end && ptr[0] % 4 == 0 && verify_func(_ptr.addr()))
+				if (ptr[1] == toc && FN(x >= start && x < end && x % 4 == 0)(ptr[0]) && verify_func(_ptr.addr()))
 				{
 					// New function
 					ppu_log.trace("OPD*: [0x%x] 0x%x (TOC=0x%x)", _ptr, ptr[0], ptr[1]);
@@ -726,7 +726,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 			//const u32 _toc_end = _toc + 0x8000;
 
 			// TODO: improve TOC constraints
-			if (_toc % 4 || !get_ptr<void>(_toc) || _toc >= 0x40000000 || (_toc >= start && _toc < end))
+			if (_toc % 4 || !get_ptr<u8>(_toc) || _toc >= 0x40000000 || (_toc >= start && _toc < end))
 			{
 				sec_end.set(0);
 				break;
@@ -954,7 +954,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 					continue;
 				}
 
-				if (target >= start && target < end)
+				if (target >= start && target < end && (~ptr[0] & 0x2 || verify_func(_ptr.addr())))
 				{
 					auto& new_func = add_func(target, func.toc, func.addr);
 
@@ -1100,7 +1100,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 				const u32 toc_add = (ptr[1] << 16) + s16(ptr[2]);
 				const u32 target = (ptr[3] & 0x2 ? 0 : (_ptr + 3).addr()) + ppu_opcode_t{ptr[3]}.bt24;
 
-				if (target >= start && target < end && verify_func((_ptr + 3).addr()))
+				if (target >= start && target < end && (~ptr[3] & 0x2 || verify_func((_ptr + 3).addr())))
 				{
 					auto& new_func = add_func(target, 0, func.addr);
 
@@ -1463,7 +1463,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 				{
 					const u32 target = (op.aa ? 0 : iaddr) + (type == ppu_itype::B ? +op.bt24 : +op.bt14);
 
-					if (target >= start && target < end && verify_func((_ptr - 1).addr()))
+					if (target >= start && target < end && (op.aa && verify_func(iaddr)))
 					{
 						if (target < func.addr || target >= func.addr + func.size)
 						{
