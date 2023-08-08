@@ -1463,7 +1463,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 				{
 					const u32 target = (op.aa ? 0 : iaddr) + (type == ppu_itype::B ? +op.bt24 : +op.bt14);
 
-					if (target >= start && target < end && (op.aa && verify_func(iaddr)))
+					if (target >= start && target < end && (!op.aa || verify_func(iaddr)))
 					{
 						if (target < func.addr || target >= func.addr + func.size)
 						{
