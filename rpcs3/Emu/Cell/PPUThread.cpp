@@ -1206,9 +1206,7 @@ std::array<u32, 2> op_branch_targets(u32 pc, ppu_opcode_t op)
 {
 	std::array<u32, 2> res{pc + 4, umax};
 
-	g_fxo->need<ppu_far_jumps_t>();
-
-	if (u32 target = g_fxo->get<ppu_far_jumps_t>().get_target(pc))
+	if (u32 target = g_fxo->is_init<ppu_far_jumps_t>() ? g_fxo->get<ppu_far_jumps_t>().get_target(pc) : 0)
 	{
 		res[0] = target;
 		return res;
