@@ -17,7 +17,6 @@ if [ "$INSTALL_DEPS" = "true" ] ; then
   brew install -f --overwrite nasm ninja git p7zip create-dmg ccache pipenv
 
   arch -x86_64 /usr/local/bin/brew -v || arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-  arch -x86_64 /usr/local/bin/brew update
   arch -x86_64 /usr/local/bin/brew install -f --overwrite llvm@16 glew cmake sdl2 vulkan-headers ffmpeg
   arch -x86_64 /usr/local/bin/brew link -f llvm@16
 

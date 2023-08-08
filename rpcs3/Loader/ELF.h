@@ -456,7 +456,6 @@ public:
 					// Rely on previous sh_offset value!
 					if (hdr.p_offset <= shdr.sh_offset && shdr.sh_offset + shdr.sh_size - 1 <= hdr.p_offset + hdr.p_filesz - 1)
 					{
-						const auto& prog = ::at32(progs, p_index);
 						out.sh_offset = data_base + shdr.sh_offset - hdr.p_offset;
 						result = true;
 						break;
