@@ -1,3 +1,7 @@
+#if defined(__clang__)
+#pragma clang diagnostic ignored "-Wold-style-cast"
+#endif
+
 #import <Foundation/Foundation.h>
 
 namespace Darwin_Version

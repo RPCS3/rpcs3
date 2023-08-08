@@ -145,6 +145,9 @@ macos_task:
     UPLOAD_COMMIT_HASH: 51ae32f468089a8169aaf1567de355ff4a3e0842
     UPLOAD_REPO_FULL_NAME: "rpcs3/rpcs3-binaries-mac"
     RELEASE_MESSAGE: "../GitHubReleaseMessage.txt"
+    INSTALL_DEPS: true
+    USE_APPLE_CLANG: true
+    CLEAN_BUILDDIR: true
   artifacts:
     name: Artifact
     path: "artifacts/*"
