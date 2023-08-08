@@ -198,6 +198,11 @@ struct pad_info
 	pad_info() = default;
 	pad_info(utils::serial& ar);
 	void save(utils::serial& ar);
+
+	u32 get_max_connect() const
+	{
+		return std::min<u32>(max_connect, CELL_PAD_MAX_PORT_NUM);
+	}
 };
 
 error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data);

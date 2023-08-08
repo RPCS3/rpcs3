@@ -79,7 +79,7 @@ error_code cellPadInit(u32 max_connect)
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
 	libio_sys_config_init();
-	config.max_connect = std::min<u32>(max_connect, CELL_PAD_MAX_PORT_NUM);
+	config.max_connect = max_connect;
 	config.port_setting.fill(CELL_PAD_SETTING_PRESS_OFF | CELL_PAD_SETTING_SENSOR_OFF);
 	return CELL_OK;
 }
@@ -138,7 +138,7 @@ error_code cellPadClearBuf(u32 port_no)
 
 	const auto& pads = handler->GetPads();
 
-	if (port_no >= config.max_connect)
+	if (port_no >= config.get_max_connect())
 		return CELL_PAD_ERROR_NO_DEVICE;
 
 	const auto& pad = pads[port_no];
@@ -171,7 +171,7 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 
 	const auto& pads = handler->GetPads();
 
-	if (port_no >= config.max_connect)
+	if (port_no >= config.get_max_connect())
 		return CELL_PAD_ERROR_NO_DEVICE;
 
 	const auto& pad = pads[port_no];
@@ -413,7 +413,7 @@ error_code cellPadPeriphGetInfo(vm::ptr<CellPadPeriphInfo> info)
 
 	for (u32 i = 0; i < CELL_PAD_MAX_PORT_NUM; ++i)
 	{
-		if (i >= config.max_connect)
+		if (i >= config.get_max_connect())
 			break;
 
 		info->port_status[i] = pads[i]->m_port_status;
@@ -447,7 +447,7 @@ error_code cellPadPeriphGetData(u32 port_no, vm::ptr<CellPadPeriphData> data)
 
 	const auto& pads = handler->GetPads();
 
-	if (port_no >= config.max_connect)
+	if (port_no >= config.get_max_connect())
 		return CELL_PAD_ERROR_NO_DEVICE;
 
 	const auto& pad = pads[port_no];
@@ -482,7 +482,7 @@ error_code cellPadGetRawData(u32 port_no, vm::ptr<CellPadData> data)
 
 	const auto& pads = handler->GetPads();
 
-	if (port_no >= config.max_connect)
+	if (port_no >= config.get_max_connect())
 		return CELL_PAD_ERROR_NO_DEVICE;
 
 	const auto& pad = pads[port_no];
@@ -548,7 +548,7 @@ error_code cellPadSetActDirect(u32 port_no, vm::ptr<CellPadActParam> param)
 
 	const auto& pads = handler->GetPads();
 
-	if (port_no >= config.max_connect)
+	if (port_no >= config.get_max_connect())
 		return CELL_PAD_ERROR_NO_DEVICE;
 
 	const auto& pad = pads[port_no];
@@ -592,7 +592,7 @@ error_code cellPadGetInfo(vm::ptr<CellPadInfo> info)
 
 	for (u32 i = 0; i < CELL_MAX_PADS; ++i)
 	{
-		if (i >= config.max_connect)
+		if (i >= config.get_max_connect())
 			break;
 
 		pads[i]->m_port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES; // TODO: should ASSIGN flags be cleared here?
@@ -657,7 +657,7 @@ error_code cellPadGetInfo2(vm::ptr<CellPadInfo2> info)
 	std::memset(info.get_ptr(), 0, sizeof(CellPadInfo2));
 
 	const PadInfo& rinfo = handler->GetInfo();
-	info->max_connect = config.max_connect;
+	info->max_connect = config.get_max_connect(); // Here it is forcibly clamped
 	info->now_connect = rinfo.now_connect;
 	info->system_info = rinfo.system_info;
 
@@ -665,7 +665,7 @@ error_code cellPadGetInfo2(vm::ptr<CellPadInfo2> info)
 
 	for (u32 i = 0; i < CELL_PAD_MAX_PORT_NUM; ++i)
 	{
-		if (i >= config.max_connect)
+		if (i >= config.get_max_connect())
 			break;
 
 		info->port_status[i] = pads[i]->m_port_status;
@@ -696,7 +696,7 @@ error_code cellPadGetCapabilityInfo(u32 port_no, vm::ptr<CellPadCapabilityInfo> 
 
 	const auto& pads = handler->GetPads();
 
-	if (port_no >= config.max_connect)
+	if (port_no >= config.get_max_connect())
 		return CELL_PAD_ERROR_NO_DEVICE;
 
 	const auto& pad = pads[port_no];
@@ -754,7 +754,7 @@ error_code cellPadInfoPressMode(u32 port_no)
 
 	const auto& pads = handler->GetPads();
 
-	if (port_no >= config.max_connect)
+	if (port_no >= config.get_max_connect())
 		return CELL_PAD_ERROR_NO_DEVICE;
 
 	const auto& pad = pads[port_no];
@@ -783,7 +783,7 @@ error_code cellPadInfoSensorMode(u32 port_no)
 
 	const auto& pads = handler->GetPads();
 
-	if (port_no >= config.max_connect)
+	if (port_no >= config.get_max_connect())
 		return CELL_PAD_ERROR_NO_DEVICE;
 
 	const auto& pad = pads[port_no];
