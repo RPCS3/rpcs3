@@ -347,7 +347,7 @@ namespace stx
 		}
 
 		// Check if object is not initialized but shall be initialized first (to use in initializing other objects)
-		template <typename T>
+		template <typename T> requires (std::is_constructible_v<T, manual_typemap&> || std::is_default_constructible_v<T>)
 		void need() noexcept
 		{
 			if (!m_init[stx::typeindex<typeinfo, std::decay_t<T>>()])
