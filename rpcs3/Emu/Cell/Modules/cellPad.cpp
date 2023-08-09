@@ -3,13 +3,14 @@
 #include "Emu/system_config.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_process.h"
+#include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Io/pad_types.h"
 #include "Input/pad_thread.h"
 #include "Input/product_info.h"
 #include "cellPad.h"
 
-extern void libio_sys_config_init();
-extern void libio_sys_config_end();
+error_code sys_config_start(ppu_thread& ppu);
+error_code sys_config_stop(ppu_thread& ppu);
 
 extern bool is_input_allowed();
 
@@ -63,8 +64,40 @@ void pad_info::save(utils::serial& ar)
 	ar(max_connect, port_setting);
 }
 
+extern void send_sys_io_connect_event(u32 index, u32 state);
 
-error_code cellPadInit(u32 max_connect)
+void cellPad_NotifyStateChange(u32 index, u32 state)
+{
+	auto info = g_fxo->try_get<pad_info>();
+
+	if (!info)
+	{
+		return;
+	}
+
+	std::lock_guard lock(pad::g_pad_mutex);
+
+	if (!info->max_connect)
+	{
+		return;
+	}
+
+	const u32 old = info->reported_statuses[index];
+
+	if (~(old ^ state) & CELL_PAD_STATUS_CONNECTED)
+	{
+		return;
+	}
+
+	info->reported_statuses[index] = (state & CELL_PAD_STATUS_CONNECTED) | CELL_PAD_STATUS_ASSIGN_CHANGES;
+}
+
+extern void pad_state_notify_state_change(u32 index, u32 state)
+{
+	cellPad_NotifyStateChange(index, state);
+}
+
+error_code cellPadInit(ppu_thread& ppu, u32 max_connect)
 {
 	sys_io.warning("cellPadInit(max_connect=%d)", max_connect);
 
@@ -78,13 +111,33 @@ error_code cellPadInit(u32 max_connect)
 	if (max_connect == 0 || max_connect > CELL_MAX_PADS)
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
-	libio_sys_config_init();
+	sys_config_start(ppu);
+
 	config.max_connect = max_connect;
 	config.port_setting.fill(CELL_PAD_SETTING_PRESS_OFF | CELL_PAD_SETTING_SENSOR_OFF);
+	config.reported_statuses = {};
+
+	std::array<s32, CELL_MAX_PADS> statuses{};
+
+	const auto handler = pad::get_current_handler();
+
+	const auto& pads = handler->GetPads();
+
+	for (u32 i = 0; i < statuses.size(); ++i)
+	{
+		if (i >= config.get_max_connect())
+			break;
+
+		if (pads[i]->m_port_status & CELL_PAD_STATUS_CONNECTED)
+		{
+			send_sys_io_connect_event(i, CELL_PAD_STATUS_CONNECTED);
+		}
+	}
+
 	return CELL_OK;
 }
 
-error_code cellPadEnd()
+error_code cellPadEnd(ppu_thread& ppu)
 {
 	sys_io.notice("cellPadEnd()");
 
@@ -95,7 +148,7 @@ error_code cellPadEnd()
 	if (!config.max_connect.exchange(0))
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
-	libio_sys_config_end();
+	sys_config_stop(ppu);
 	return CELL_OK;
 }
 
@@ -143,7 +196,7 @@ error_code cellPadClearBuf(u32 port_no)
 
 	const auto& pad = pads[port_no];
 
-	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (!config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	clear_pad_buffer(pad);
@@ -176,7 +229,7 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 
 	const auto& pad = pads[port_no];
 
-	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (!config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	pad_get_data(port_no, data.get_ptr());
@@ -452,7 +505,7 @@ error_code cellPadPeriphGetData(u32 port_no, vm::ptr<CellPadPeriphData> data)
 
 	const auto& pad = pads[port_no];
 
-	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (!config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	pad_get_data(port_no, &data->cellpad_data);
@@ -487,7 +540,7 @@ error_code cellPadGetRawData(u32 port_no, vm::ptr<CellPadData> data)
 
 	const auto& pad = pads[port_no];
 
-	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (!config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	// ?
@@ -553,7 +606,7 @@ error_code cellPadSetActDirect(u32 port_no, vm::ptr<CellPadActParam> param)
 
 	const auto& pad = pads[port_no];
 
-	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (!config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	// TODO: find out if this is checked here or later or at all
@@ -585,8 +638,9 @@ error_code cellPadGetInfo(vm::ptr<CellPadInfo> info)
 
 	const PadInfo& rinfo = handler->GetInfo();
 	info->max_connect = config.max_connect;
-	info->now_connect = rinfo.now_connect;
 	info->system_info = rinfo.system_info;
+
+	u32 now_connect = 0;
 
 	const auto& pads = handler->GetPads();
 
@@ -595,8 +649,16 @@ error_code cellPadGetInfo(vm::ptr<CellPadInfo> info)
 		if (i >= config.get_max_connect())
 			break;
 
-		pads[i]->m_port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES; // TODO: should ASSIGN flags be cleared here?
-		info->status[i] = pads[i]->m_port_status;
+		if (!config.is_reportedly_connected(i))
+			continue;
+
+		config.reported_statuses[i] &= ~CELL_PAD_STATUS_ASSIGN_CHANGES; // TODO: should ASSIGN flags be cleared here?
+		info->status[i] = config.reported_statuses[i];
+
+		if (config.reported_statuses[i] & CELL_PAD_STATUS_CONNECTED)
+		{
+			now_connect++;
+		}
 
 		if (pads[i]->m_vendor_id == 0 || pads[i]->m_product_id == 0)
 		{
@@ -635,6 +697,7 @@ error_code cellPadGetInfo(vm::ptr<CellPadInfo> info)
 		}
 	}
 
+	info->now_connect = now_connect;
 	return CELL_OK;
 }
 
@@ -658,8 +721,9 @@ error_code cellPadGetInfo2(vm::ptr<CellPadInfo2> info)
 
 	const PadInfo& rinfo = handler->GetInfo();
 	info->max_connect = config.get_max_connect(); // Here it is forcibly clamped
-	info->now_connect = rinfo.now_connect;
 	info->system_info = rinfo.system_info;
+
+	u32 now_connect = 0;
 
 	const auto& pads = handler->GetPads();
 
@@ -668,13 +732,22 @@ error_code cellPadGetInfo2(vm::ptr<CellPadInfo2> info)
 		if (i >= config.get_max_connect())
 			break;
 
-		info->port_status[i] = pads[i]->m_port_status;
-		pads[i]->m_port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES;
+		if (!config.is_reportedly_connected(i))
+			continue;
+
+		info->port_status[i] = config.reported_statuses[i];
+		config.reported_statuses[i] &= ~CELL_PAD_STATUS_ASSIGN_CHANGES;
 		info->port_setting[i] = config.port_setting[i];
 		info->device_capability[i] = pads[i]->m_device_capability;
 		info->device_type[i] = pads[i]->m_device_type;
+
+		if (config.reported_statuses[i] & CELL_PAD_STATUS_CONNECTED)
+		{
+			now_connect++;
+		}
 	}
 
+	info->now_connect = now_connect;
 	return CELL_OK;
 }
 
@@ -701,7 +774,7 @@ error_code cellPadGetCapabilityInfo(u32 port_no, vm::ptr<CellPadCapabilityInfo> 
 
 	const auto& pad = pads[port_no];
 
-	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (!config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	// Should return the same as device capability mask, psl1ght has it backwards in pad->h
@@ -759,7 +832,7 @@ error_code cellPadInfoPressMode(u32 port_no)
 
 	const auto& pad = pads[port_no];
 
-	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (!config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	return not_an_error((pad->m_device_capability & CELL_PAD_CAPABILITY_PRESS_MODE) ? 1 : 0);
@@ -788,7 +861,7 @@ error_code cellPadInfoSensorMode(u32 port_no)
 
 	const auto& pad = pads[port_no];
 
-	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (!config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	return not_an_error((pad->m_device_capability & CELL_PAD_CAPABILITY_SENSOR_MODE) ? 1 : 0);
