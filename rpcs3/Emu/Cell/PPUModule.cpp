@@ -2337,13 +2337,13 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 	if (!Emu.data.empty())
 	{
 		std::memcpy(vm::base(ppu->stack_addr + ppu->stack_size - ::size32(Emu.data)), Emu.data.data(), Emu.data.size());
-		ppu->gpr[1] -= Emu.data.size();
+		ppu->gpr[1] -= utils::align<u32>(Emu.data.size(), 0x10);
 	}
 
 	// Initialize process arguments
 
 	// Calculate storage requirements on the stack
-	const u32 pointers_storage_size = u32{sizeof(u64)} * (::size32(Emu.envp) + ::size32(Emu.argv) + 3);
+	const u32 pointers_storage_size = u32{sizeof(u64)} * utils::align<u32>(::size32(Emu.envp) + ::size32(Emu.argv) + 2, 2);
 
 	u32 stack_alloc_size = pointers_storage_size;
 
@@ -2376,7 +2376,7 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 
 	*args++ = 0;
 
-	const vm::ptr<u64> envp = vm::cast(utils::align<u32>(args.addr(), 8));
+	const vm::ptr<u64> envp = args;
 	args = envp;
 
 	for (const auto& arg : Emu.envp)
@@ -2390,8 +2390,6 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 	}
 
 	*args++ = 0;
-
-	*args++ = 0; // Unknown
 
 	ppu->gpr[1] -= stack_alloc_size;
 
