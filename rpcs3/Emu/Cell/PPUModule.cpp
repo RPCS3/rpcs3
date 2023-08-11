@@ -2337,7 +2337,7 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 	if (!Emu.data.empty())
 	{
 		std::memcpy(vm::base(ppu->stack_addr + ppu->stack_size - ::size32(Emu.data)), Emu.data.data(), Emu.data.size());
-		ppu->gpr[1] -= utils::align<u32>(Emu.data.size(), 0x10);
+		ppu->gpr[1] -= utils::align<u64>(Emu.data.size(), 0x10);
 	}
 
 	// Initialize process arguments
