@@ -9882,7 +9882,7 @@ public:
 
 			if (m_use_avx512)
 			{
-				const auto sc = clamp_smax(a);
+				const auto sc = eval(bitcast<f32[4]>(max(bitcast<s32[4]>(a),splat<s32[4]>(0x0))));
 				r.value = m_ir->CreateFPToUI(sc.value, get_type<s32[4]>());
 				set_vr(op.rt, r);
 				return;
