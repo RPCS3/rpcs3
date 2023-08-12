@@ -378,13 +378,21 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 				{
 					for (const auto note : notes_node)
 					{
-						if (note && note.IsScalar())
+						if (note)
 						{
-							info.notes += note.Scalar();
+							if (note.IsScalar())
+							{
+								info.notes += note.Scalar();
+							}
+							else
+							{
+								append_log_message(log_messages, fmt::format("Error: Skipping sequenced Note (patch: %s, key: %s, location: %s, file: %s)", description, main_key, get_yaml_node_location(note), path), &patch_log.error);
+								is_valid = false;
+							}
 						}
 						else
 						{
-							append_log_message(log_messages, fmt::format("Error: Skipping sequenced Note (patch: %s, key: %s, location: %s, file: %s)", description, main_key, get_yaml_node_location(note), path), &patch_log.error);
+							append_log_message(log_messages, fmt::format("Error: Skipping sequenced Note (patch: %s, key: %s, location: %s, file: %s)", description, main_key, get_yaml_node_location(notes_node), path), &patch_log.error);
 							is_valid = false;
 						}
 					}
@@ -1752,9 +1760,9 @@ bool patch_engine::save_patches(const patch_map& patches, const std::string& pat
 				{
 					out << serial << YAML::BeginSeq;
 
-					for (const auto& app_version : app_versions)
+					for (const auto& [app_version, patch_config] : app_versions)
 					{
-						out << app_version.first;
+						out << app_version;
 					}
 
 					out << YAML::EndSeq;
@@ -1891,7 +1899,7 @@ patch_engine::patch_map patch_engine::load_config()
 
 		for (const auto pair : root)
 		{
-			const auto& hash = pair.first.Scalar();
+			const std::string& hash = pair.first.Scalar();
 
 			if (const auto yml_type = pair.second.Type(); yml_type != YAML::NodeType::Map)
 			{
@@ -1901,7 +1909,7 @@ patch_engine::patch_map patch_engine::load_config()
 
 			for (const auto patch : pair.second)
 			{
-				const auto& description = patch.first.Scalar();
+				const std::string& description = patch.first.Scalar();
 
 				if (const auto yml_type = patch.second.Type(); yml_type != YAML::NodeType::Map)
 				{
@@ -1911,7 +1919,7 @@ patch_engine::patch_map patch_engine::load_config()
 
 				for (const auto title_node : patch.second)
 				{
-					const auto& title = title_node.first.Scalar();
+					const std::string& title = title_node.first.Scalar();
 
 					if (const auto yml_type = title_node.second.Type(); yml_type != YAML::NodeType::Map)
 					{
@@ -1921,7 +1929,7 @@ patch_engine::patch_map patch_engine::load_config()
 
 					for (const auto serial_node : title_node.second)
 					{
-						const auto& serial = serial_node.first.Scalar();
+						const std::string& serial = serial_node.first.Scalar();
 
 						if (const auto yml_type = serial_node.second.Type(); yml_type != YAML::NodeType::Map)
 						{
