@@ -604,14 +604,14 @@ namespace utils
 		m_audio_codec_id = codec_id;
 	}
 
-	void video_encoder::add_frame(std::vector<u8>& frame, const u32 width, const u32 height, s32 pixel_format, usz timestamp_ms)
+	void video_encoder::add_frame(std::vector<u8>& frame, u32 pitch, u32 width, u32 height, s32 pixel_format, usz timestamp_ms)
 	{
 		// Do not allow new frames while flushing
 		if (m_flush)
 			return;
 
 		std::lock_guard lock(m_mtx);
-		m_frames_to_encode.emplace_back(timestamp_ms, width, height, pixel_format, std::move(frame));
+		m_frames_to_encode.emplace_back(timestamp_ms, pitch, width, height, pixel_format, std::move(frame));
 	}
 
 	void video_encoder::pause(bool flush)
