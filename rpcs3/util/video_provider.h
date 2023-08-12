@@ -20,7 +20,7 @@ namespace utils
 		bool set_image_sink(std::shared_ptr<image_sink> sink, recording_mode type);
 		void set_pause_time(usz pause_time_ms);
 		bool can_consume_frame();
-		void present_frame(std::vector<u8>& data, const u32 width, const u32 height, bool is_bgra);
+		void present_frame(std::vector<u8>& data, u32 pitch, u32 width, u32 height, bool is_bgra);
 
 	private:
 		recording_mode m_type = recording_mode::stopped;
