@@ -59,7 +59,6 @@ namespace rsx
 		home_menu_settings_advanced::home_menu_settings_advanced(u16 x, u16 y, u16 width, u16 height, bool use_separators, home_menu_page* parent)
 			: home_menu_settings_page(x, y, width, height, use_separators, parent, get_localized_string(localized_string_id::HOME_MENU_SETTINGS_ADVANCED))
 		{
-			add_checkbox(&g_cfg.core.spu_loop_detection, "SPU Loop Detection");
 			add_signed_slider(&g_cfg.core.preferred_spu_threads, "Preferred SPU Threads", "", 1);
 			add_unsigned_slider(&g_cfg.core.max_cpu_preempt_count_per_frame, "Max Power Saving CPU-Preemptions", "", 1);
 			add_checkbox(&g_cfg.core.rsx_accurate_res_access, "Accurate RSX reservation access");
