@@ -66,6 +66,7 @@ camera_settings_dialog::camera_settings_dialog(QWidget* parent)
 	{
 		if (camera_info.isNull()) continue;
 		ui->combo_camera->addItem(camera_info.description(), QVariant::fromValue(camera_info));
+		camera_log.notice("Found camera: '%s'", camera_info.description());
 	}
 
 	connect(ui->combo_camera, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &camera_settings_dialog::handle_camera_change);
