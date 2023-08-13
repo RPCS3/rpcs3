@@ -445,6 +445,7 @@ void rec_info::set_audio_params(s32 audio_format)
 	case CELL_REC_PARAM_AUDIO_FMT_PCM_1536K:
 		audio_codec_id = 65556; // AV_CODEC_ID_PCM_F32BE
 		//audio_codec_id = 65557; // AV_CODEC_ID_PCM_F32LE // TODO: maybe this one?
+		break;
 	default:
 		audio_codec_id = 86018; // AV_CODEC_ID_AAC
 		break;
