@@ -34,6 +34,10 @@ if [ "$BUILDING_FOR" = "arm64" ]; then
 	
 	# now faudio
 	install_name_tool -change "/opt/homebrew/opt/faudio/lib/libFAudio.0.dylib" "@executable_path/../Frameworks/libFAudio.0.dylib" "rpcs3.app/Contents/MacOS/rpcs3"
+
+	# now harfbuzz
+	install_name_tool -change "/opt/homebrew/opt/harfbuzz/lib/libharfbuzz.0.dylib" "@executable_path/../Frameworks/libharfbuzz.0.dylib" "rpcs3.app/Contents/MacOS/rpcs3"
+
 else
 	cp "/usr/local/opt/llvm@16/lib/c++/libc++abi.1.0.dylib" "rpcs3.app/Contents/lib/libc++abi.1.dylib"
 
@@ -42,7 +46,8 @@ else
 	
 	# now faudio 
 	install_name_tool -change "/usr/local/opt/faudio/lib/libFAudio.0.dylib" "@executable_path/../Frameworks/libFAudio.0.dylib" "rpcs3.app/Contents/MacOS/rpcs3"
- 
+	# now harfbuzz
+	install_name_tool -change "/usr/local/opt/harfbuzz/lib/libharfbuzz.0.dylib" "@executable_path/../Frameworks/libharfbuzz.0.dylib" "rpcs3.app/Contents/MacOS/rpcs3"
 fi
 rm -rf "rpcs3.app/Contents/Frameworks/QtPdf.framework" \
 "rpcs3.app/Contents/Frameworks/QtQml.framework" \
