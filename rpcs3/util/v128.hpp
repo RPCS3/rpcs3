@@ -1,93 +1,91 @@
-#pragma once // No BOM and only basic ASCII in this header, or a neko will die
-
+#pragma once
 #include "util/types.hpp"
 
 template <typename T>
 concept Vector128 = (sizeof(T) == 16) && (std::is_trivial_v<T>);
 
-// 128-bit vector type
 union alignas(16) v128
 {
-	uchar _bytes[16];
-	char _chars[16];
+    uchar _bytes[16];
+    char _chars[16];
 
-	template <typename T, usz N, usz M>
-	struct masked_array_t // array type accessed as (index ^ M)
-	{
-		T m_data[N];
+    template <typename T, usz N, usz M>
+    struct masked_array_t
+    {
+        T m_data[N];
 
-	public:
-		T& operator[](usz index)
-		{
-			return m_data[index ^ M];
-		}
+    public:
+        T& operator[](usz index)
+        {
+            return m_data[index ^ M];
+        }
 
-		const T& operator[](usz index) const
-		{
-			return m_data[index ^ M];
-		}
-	};
+        const T& operator[](usz index) const
+        {
+            return m_data[index ^ M];
+        }
+    };
 
-	template <typename T, usz N = 16 / sizeof(T)>
-	using normal_array_t = masked_array_t<T, N, std::endian::little == std::endian::native ? 0 : N - 1>;
-	template <typename T, usz N = 16 / sizeof(T)>
-	using reversed_array_t = masked_array_t<T, N, std::endian::little == std::endian::native ? N - 1 : 0>;
+    template <typename T, usz N = 16 / sizeof(T)>
+    using normal_array_t = masked_array_t<T, N, std::endian::little == std::endian::native ? 0 : N - 1>;
+    template <typename T, usz N = 16 / sizeof(T)>
+    using reversed_array_t = masked_array_t<T, N, std::endian::little == std::endian::native ? N - 1 : 0>;
 
-	normal_array_t<u64> _u64;
-	normal_array_t<s64> _s64;
-	reversed_array_t<u64> u64r;
-	reversed_array_t<s64> s64r;
+    normal_array_t<u64> _u64;
+    normal_array_t<s64> _s64;
+    reversed_array_t<u64> u64r;
+    reversed_array_t<s64> s64r;
 
-	normal_array_t<u32> _u32;
-	normal_array_t<s32> _s32;
-	reversed_array_t<u32> u32r;
-	reversed_array_t<s32> s32r;
+    normal_array_t<u32> _u32;
+    normal_array_t<s32> _s32;
+    reversed_array_t<u32> u32r;
+    reversed_array_t<s32> s32r;
 
-	normal_array_t<u16> _u16;
-	normal_array_t<s16> _s16;
-	reversed_array_t<u16> u16r;
-	reversed_array_t<s16> s16r;
+    normal_array_t<u16> _u16;
+    normal_array_t<s16> _s16;
+    reversed_array_t<u16> u16r;
+    reversed_array_t<s16> s16r;
 
-	normal_array_t<u8> _u8;
-	normal_array_t<s8> _s8;
-	reversed_array_t<u8> u8r;
-	reversed_array_t<s8> s8r;
+    normal_array_t<u8> _u8;
+    normal_array_t<s8> _s8;
+    reversed_array_t<u8> u8r;
+    reversed_array_t<s8> s8r;
 
-	normal_array_t<f32> _f;
-	normal_array_t<f64> _d;
-	reversed_array_t<f32> fr;
-	reversed_array_t<f64> dr;
+    normal_array_t<f32> _f;
+    normal_array_t<f64> _d;
+    reversed_array_t<f32> fr;
+    reversed_array_t<f64> dr;
 
-	u128 _u;
-	s128 _s;
+    u128 _u;
+    s128 _s;
 
-	v128() = default;
+    v128() = default;
 
-	constexpr v128(const v128&) noexcept = default;
+    constexpr v128(const v128&) noexcept = default;
 
-	template <Vector128 T>
-	constexpr v128(const T& rhs) noexcept
-		: v128(std::bit_cast<v128>(rhs))
-	{
-	}
+    template <Vector128 T>
+    constexpr v128(const T& rhs) noexcept
+        : v128(std::bit_cast<v128>(rhs))
+    {
+    }
 
-	constexpr v128& operator=(const v128&) noexcept = default;
+    constexpr v128& operator=(const v128&) noexcept = default;
 
-	template <Vector128 T>
-	constexpr operator T() const noexcept
-	{
-		return std::bit_cast<T>(*this);
-	}
+    template <Vector128 T>
+    constexpr operator T() const noexcept
+    {
+        return std::bit_cast<T>(*this);
+    }
 
-	ENABLE_BITWISE_SERIALIZATION;
+    ENABLE_BITWISE_SERIALIZATION;
 
-	static v128 from64(u64 _0, u64 _1 = 0)
-	{
-		v128 ret;
-		ret._u64[0] = _0;
-		ret._u64[1] = _1;
-		return ret;
-	}
+    static v128 from64(u64 _0, u64 _1 = 0)
+    {
+        v128 ret;
+        ret._u64[0] = _0;
+        ret._u64[1] = _1;
+        return ret;
+    }
 
 	static v128 from64r(u64 _1, u64 _0 = 0)
 	{
