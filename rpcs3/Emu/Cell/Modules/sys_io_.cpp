@@ -62,11 +62,36 @@ void config_event_entry(ppu_thread& ppu)
 	ppu_execute<&sys_ppu_thread_exit>(ppu, 0);
 }
 
+std::unique_lock<shared_mutex> lock_lv2_mutex_alike(shared_mutex& mtx, ppu_thread* ppu)
+{
+	std::unique_lock<shared_mutex> lock(mtx, std::defer_lock);
+
+	while (!lock.try_lock())
+	{
+		if (ppu)
+		{
+			// Could not be acquired, put PPU to sleep
+			lv2_obj::sleep(*ppu);
+		}
+
+		// Wait for unlock without owning the lock
+		mtx.lock_unlock();
+
+		if (ppu)
+		{
+			// Awake, still not owning
+			ppu->check_state();
+		}
+	}
+
+	return lock;
+}
+
 extern void send_sys_io_connect_event(u32 index, u32 state)
 {
 	auto& cfg = g_fxo->get<libio_sys_config>();
 
-	std::lock_guard lock(cfg.mtx);
+	auto lock = lock_lv2_mutex_alike(cfg.mtx, cpu_thread::get_current<ppu_thread>());
 
 	if (cfg.init_ctr)
 	{
@@ -83,7 +108,7 @@ error_code sys_config_start(ppu_thread& ppu)
 
 	auto& cfg = g_fxo->get<libio_sys_config>();
 
-	std::lock_guard lock(cfg.mtx);
+	auto lock = lock_lv2_mutex_alike(cfg.mtx, &ppu);
 
 	if (cfg.init_ctr++ == 0)
 	{
@@ -98,10 +123,13 @@ error_code sys_config_start(ppu_thread& ppu)
 		attr->name_u64 = 0;
 
 		ensure(CELL_OK == sys_event_queue_create(ppu, queue_id, attr, 0, 0x20));
+		ppu.check_state();
+		cfg.queue_id = *queue_id;
+
 		ensure(CELL_OK == ppu_execute<&sys_ppu_thread_create>(ppu, +_tid, g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(config_event_entry)), 0, 512, 0x2000, SYS_PPU_THREAD_CREATE_JOINABLE, +_name));
+		ppu.check_state();
 
 		cfg.ppu_id = static_cast<u32>(*_tid);
-		cfg.queue_id = *queue_id;
 	}
 
 	return CELL_OK;
@@ -113,11 +141,12 @@ error_code sys_config_stop(ppu_thread& ppu)
 
 	auto& cfg = g_fxo->get<libio_sys_config>();
 
-	std::lock_guard lock(cfg.mtx);
+	auto lock = lock_lv2_mutex_alike(cfg.mtx, &ppu);
 
 	if (cfg.init_ctr && cfg.init_ctr-- == 1)
 	{
 		ensure(CELL_OK == sys_event_queue_destroy(ppu, cfg.queue_id, SYS_EVENT_QUEUE_DESTROY_FORCE));
+		ppu.check_state();
 		ensure(CELL_OK == sys_ppu_thread_join(ppu, cfg.ppu_id, +vm::var<u64>{}));
 	}
 	else
