@@ -255,6 +255,11 @@ namespace vk
 		{
 			const auto gpu_name = get_name();
 
+			if (gpu_name.find("RADV") != umax)
+			{
+				return driver_vendor::RADV;
+			}
+
 			if (gpu_name.find("Radeon") != umax)
 			{
 				return driver_vendor::AMD;
@@ -263,11 +268,6 @@ namespace vk
 			if (gpu_name.find("NVIDIA") != umax || gpu_name.find("GeForce") != umax || gpu_name.find("Quadro") != umax)
 			{
 				return driver_vendor::NVIDIA;
-			}
-
-			if (gpu_name.find("RADV") != umax)
-			{
-				return driver_vendor::RADV;
 			}
 
 			if (gpu_name.find("Intel") != umax)

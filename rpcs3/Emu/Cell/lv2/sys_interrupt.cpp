@@ -183,7 +183,7 @@ error_code _sys_interrupt_thread_establish(ppu_thread& ppu, vm::ptr<u32> ih, u32
 		});
 
 		it->state -= cpu_flag::stop;
-		it->state.notify_one(cpu_flag::stop);
+		it->state.notify_one();
 
 		return result;
 	});

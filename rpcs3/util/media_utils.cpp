@@ -259,8 +259,8 @@ namespace utils
 
 	void audio_decoder::clear()
 	{
-		track_fully_decoded = false;
-		track_fully_consumed = false;
+		track_fully_decoded = 0;
+		track_fully_consumed = 0;
 		has_error = false;
 		m_size = 0;
 		duration_ms = 0;
@@ -274,7 +274,7 @@ namespace utils
 		{
 			auto& thread = *m_thread;
 			thread = thread_state::aborting;
-			track_fully_consumed = true;
+			track_fully_consumed = 1;
 			track_fully_consumed.notify_one();
 			thread();
 			m_thread.reset();
@@ -511,7 +511,7 @@ namespace utils
 				media_log.notice("audio_decoder: about to decode: %s (index=%d)", ::at32(m_context.playlist, m_context.current_track), m_context.current_track);
 
 				decode_track(::at32(m_context.playlist, m_context.current_track));
-				track_fully_decoded = true;
+				track_fully_decoded = 1;
 
 				if (has_error)
 				{
@@ -521,7 +521,7 @@ namespace utils
 
 				// Let's only decode one track at a time. Wait for the consumer to finish reading the track.
 				media_log.notice("audio_decoder: waiting until track is consumed...");
-				thread_ctrl::wait_on(track_fully_consumed, false);
+				thread_ctrl::wait_on(track_fully_consumed, 0);
 				track_fully_consumed = false;
 			}
 
@@ -604,14 +604,14 @@ namespace utils
 		m_audio_codec_id = codec_id;
 	}
 
-	void video_encoder::add_frame(std::vector<u8>& frame, const u32 width, const u32 height, s32 pixel_format, usz timestamp_ms)
+	void video_encoder::add_frame(std::vector<u8>& frame, u32 pitch, u32 width, u32 height, s32 pixel_format, usz timestamp_ms)
 	{
 		// Do not allow new frames while flushing
 		if (m_flush)
 			return;
 
 		std::lock_guard lock(m_mtx);
-		m_frames_to_encode.emplace_back(timestamp_ms, width, height, pixel_format, std::move(frame));
+		m_frames_to_encode.emplace_back(timestamp_ms, pitch, width, height, pixel_format, std::move(frame));
 	}
 
 	void video_encoder::pause(bool flush)

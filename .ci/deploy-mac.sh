@@ -80,6 +80,7 @@ DMG_FILEPATH="$BUILD_ARTIFACTSTAGINGDIRECTORY/rpcs3-v${COMM_TAG}-${COMM_COUNT}-$
 --hide-extension Quickstart.url \
 --app-drop-link 600 185 \
 --skip-jenkins \
+--format ULMO \
 "$DMG_FILEPATH" \
 RPCS3.app
 

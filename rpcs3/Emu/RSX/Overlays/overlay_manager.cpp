@@ -295,7 +295,7 @@ namespace rsx
 				}
 				else if (!m_input_thread_abort)
 				{
-					thread_ctrl::wait_on(m_input_token_stack, nullptr);
+					thread_ctrl::wait_on(m_input_token_stack);
 				}
 			}
 		}

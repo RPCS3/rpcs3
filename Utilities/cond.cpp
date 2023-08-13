@@ -9,7 +9,7 @@ void cond_variable::imp_wait(u32 _old, u64 _timeout) noexcept
 	ensure(_old);
 
 	// Wait with timeout
-	m_value.wait(_old, c_signal_mask, atomic_wait_timeout{_timeout > max_timeout ? umax : _timeout * 1000});
+	m_value.wait(_old, atomic_wait_timeout{_timeout > max_timeout ? umax : _timeout * 1000});
 
 	// Cleanup
 	m_value.atomic_op([](u32& value)
@@ -47,10 +47,10 @@ void cond_variable::imp_wake(u32 _count) noexcept
 	if (_count > 1 || ((_old + (c_signal_mask & (0 - c_signal_mask))) & c_signal_mask) == c_signal_mask)
 	{
 		// Resort to notify_all if signal count reached max
-		m_value.notify_all(c_signal_mask);
+		m_value.notify_all();
 	}
 	else
 	{
-		m_value.notify_one(c_signal_mask);
+		m_value.notify_one();
 	}
 }

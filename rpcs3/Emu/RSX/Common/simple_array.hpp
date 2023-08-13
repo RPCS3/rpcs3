@@ -2,6 +2,7 @@
 
 #include <util/types.hpp>
 #include <functional>
+#include <algorithm>
 
 namespace rsx
 {

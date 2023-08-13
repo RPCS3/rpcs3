@@ -158,14 +158,14 @@ public:
 		has_error = false;
 	}
 
-	void add_frame(std::vector<u8>& frame, const u32 width, const u32 height, s32 pixel_format, usz timestamp_ms) override
+	void add_frame(std::vector<u8>& frame, u32 pitch, u32 width, u32 height, s32 pixel_format, usz timestamp_ms) override
 	{
 		std::lock_guard lock(m_mtx);
 
 		if (m_flush)
 			return;
 
-		m_frames_to_encode.emplace_back(timestamp_ms, width, height, pixel_format, std::move(frame));
+		m_frames_to_encode.emplace_back(timestamp_ms, pitch, width, height, pixel_format, std::move(frame));
 	}
 
 	encoder_frame get_frame()
@@ -587,7 +587,7 @@ void rec_info::start_image_provider()
 						{
 							std::vector<u8> frame(frame_size);
 							std::memcpy(frame.data(), video_input_buffer.get_ptr(), frame.size());
-							encoder->add_frame(frame, input_format.pitch, input_format.height, input_format.av_pixel_format, timestamp_ms);
+							encoder->add_frame(frame, input_format.pitch, input_format.width, input_format.height, input_format.av_pixel_format, timestamp_ms);
 						}
 					}
 
@@ -680,7 +680,7 @@ void rec_info::stop_image_provider(bool flush)
 		{
 			const usz pos = (start_offset + i) % video_ringbuffer.size();
 			utils::image_sink::encoder_frame& frame_data = video_ringbuffer[pos];
-			encoder->add_frame(frame_data.data, frame_data.width, frame_data.height, frame_data.av_pixel_format, encoder->get_timestamp_ms(frame_data.pts - start_pts));
+			encoder->add_frame(frame_data.data, frame_data.pitch, frame_data.width, frame_data.height, frame_data.av_pixel_format, encoder->get_timestamp_ms(frame_data.pts - start_pts));
 
 			// TODO: add audio data to encoder
 		}

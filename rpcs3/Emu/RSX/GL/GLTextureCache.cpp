@@ -193,7 +193,9 @@ namespace gl
 		for (const auto &slice : sources)
 		{
 			if (!slice.src)
+			{
 				continue;
+			}
 
 			const bool typeless = !formats_are_bitcast_compatible(slice.src, dst_image);
 			ensure(typeless || dst_aspect == slice.src->aspect());
@@ -258,25 +260,18 @@ namespace gl
 			}
 			else
 			{
-				ensure(dst_image->get_target() == gl::texture::target::texture2D);
-
 				auto _blitter = gl::g_hw_blitter;
 				const areai src_rect = { src_x, src_y, src_x + src_w, src_y + src_h };
 				const areai dst_rect = { slice.dst_x, slice.dst_y, slice.dst_x + slice.dst_w, slice.dst_y + slice.dst_h };
 
-				gl::texture* _dst;
-				if (src_image->get_internal_format() == dst_image->get_internal_format() && slice.level == 0)
-				{
-					_dst = dst_image;
-				}
-				else
+				gl::texture* _dst = dst_image;
+				if (src_image->get_internal_format() != dst_image->get_internal_format() || slice.level != 0 || slice.dst_z != 0) [[ unlikely ]]
 				{
 					tmp = std::make_unique<texture>(GL_TEXTURE_2D, dst_rect.x2, dst_rect.y2, 1, 1, static_cast<GLenum>(slice.src->get_internal_format()));
 					_dst = tmp.get();
 				}
 
-				_blitter->scale_image(cmd, src_image, _dst,
-					src_rect, dst_rect, false, {});
+				_blitter->scale_image(cmd, src_image, _dst, src_rect, dst_rect, false, {});
 
 				if (_dst != dst_image)
 				{

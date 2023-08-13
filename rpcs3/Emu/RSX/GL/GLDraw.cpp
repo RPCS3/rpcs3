@@ -341,21 +341,29 @@ void GLGSRender::load_texture_env()
 
 		auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
 		const auto& tex = rsx::method_registers.fragment_textures[i];
+		const auto previous_format_class = sampler_state->format_class;
 
 		if (m_samplers_dirty || m_textures_dirty[i] || m_gl_texture_cache.test_if_descriptor_expired(cmd, m_rtts, sampler_state, tex))
 		{
 			if (tex.enabled())
 			{
 				*sampler_state = m_gl_texture_cache.upload_texture(cmd, tex, m_rtts);
+
+				if (sampler_state->validate())
+				{
+					if (m_textures_dirty[i])
+					{
+						m_fs_sampler_states[i].apply(tex, fs_sampler_state[i].get());
+					}
+					else if (sampler_state->format_class != previous_format_class)
+					{
+						m_graphics_state |= rsx::fragment_program_state_dirty;
+					}
+				}
 			}
 			else
 			{
 				*sampler_state = {};
-			}
-
-			if (m_textures_dirty[i] && sampler_state->validate())
-			{
-				m_fs_sampler_states[i].apply(tex, fs_sampler_state[i].get());
 			}
 
 			m_textures_dirty[i] = false;
@@ -372,21 +380,29 @@ void GLGSRender::load_texture_env()
 
 		auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(vs_sampler_state[i].get());
 		const auto& tex = rsx::method_registers.vertex_textures[i];
+		const auto previous_format_class = sampler_state->format_class;
 
 		if (m_samplers_dirty || m_vertex_textures_dirty[i] || m_gl_texture_cache.test_if_descriptor_expired(cmd, m_rtts, sampler_state, tex))
 		{
 			if (rsx::method_registers.vertex_textures[i].enabled())
 			{
 				*sampler_state = m_gl_texture_cache.upload_texture(cmd, rsx::method_registers.vertex_textures[i], m_rtts);
+
+				if (sampler_state->validate())
+				{
+					if (m_vertex_textures_dirty[i])
+					{
+						m_vs_sampler_states[i].apply(tex, vs_sampler_state[i].get());
+					}
+					else if (sampler_state->format_class != previous_format_class)
+					{
+						m_graphics_state |= rsx::vertex_program_state_dirty;
+					}
+				}
 			}
 			else
 			{
 				*sampler_state = {};
-			}
-
-			if (m_vertex_textures_dirty[i] && sampler_state->validate())
-			{
-				m_vs_sampler_states[i].apply(tex, vs_sampler_state[i].get());
 			}
 
 			m_vertex_textures_dirty[i] = false;

@@ -6,7 +6,7 @@ brew install -f --overwrite nasm ninja git p7zip create-dmg ccache pipenv
 #/usr/sbin/softwareupdate --install-rosetta --agree-to-license
 arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 arch -x86_64 /usr/local/bin/brew update
-arch -x86_64 /usr/local/bin/brew install -f --overwrite llvm@16 sdl2 glew cmake faudio vulkan-headers ffmpeg
+arch -x86_64 /usr/local/bin/brew install -f --overwrite llvm@16 glew cmake sdl2 vulkan-headers ffmpeg
 arch -x86_64 /usr/local/bin/brew link -f llvm@16
 
 # moltenvk based on commit for 1.2.4 release
@@ -60,7 +60,7 @@ export LLVM_DIR
 LLVM_DIR="BREW_X64_PATH/opt/llvm@16"
 # exclude FAudio, SPIRV and LLVM, and sdl from submodule update
 # shellcheck disable=SC2046
-git submodule -q update --init --depth=1 --jobs=8 $(awk '/path/ && !/FAudio/ && !/llvm/ && !/SPIRV/ && !/SDL/ { print $3 }' .gitmodules)
+git submodule -q update --init --depth=1 --jobs=8 $(awk '/path/ && !/llvm/ && !/SPIRV/ && !/SDL/ { print $3 }' .gitmodules)
 
 # 3rdparty fixes
 sed -i '' "s/extern const double NSAppKitVersionNumber;/const double NSAppKitVersionNumber = 1343;/g" 3rdparty/hidapi/hidapi/mac/hid.c
@@ -87,7 +87,7 @@ mkdir build && cd build || exit 1
     -DLLVM_ENABLE_Z3_SOLVER=OFF \
     -DUSE_NATIVE_INSTRUCTIONS=OFF \
     -DUSE_SYSTEM_MVK=ON \
-    -DUSE_SYSTEM_FAUDIO=ON \
+    -DUSE_SYSTEM_FAUDIO=OFF \
     -DUSE_SYSTEM_SDL=ON \
     $CMAKE_EXTRA_OPTS \
     -DLLVM_TARGET_ARCH=X86_64 \

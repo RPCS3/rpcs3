@@ -1699,7 +1699,7 @@ struct registers_decoder<NV4097_SET_SHADER_CONTROL>
 	static void dump(std::string& out, const decoded_type& decoded)
 	{
 		fmt::append(out, "Shader control: raw_value: 0x%x reg_count: %u%s%s",
-			decoded.shader_ctrl(), ((decoded.shader_ctrl() >> 24) & 0xFF), ((decoded.shader_ctrl() & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT) ? " depth_replace" : ""), 
+			decoded.shader_ctrl(), ((decoded.shader_ctrl() >> 24) & 0xFF), ((decoded.shader_ctrl() & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT) ? " depth_replace" : ""),
 			((decoded.shader_ctrl() & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) ? " 32b_exports" : ""));
 	}
 };

@@ -55,7 +55,7 @@ namespace gl
 				job.completion_callback(result);
 			}
 
-			thread_ctrl::wait_on(m_work_queue, nullptr);
+			thread_ctrl::wait_on(m_work_queue);
 		}
 	}
 

@@ -6,33 +6,35 @@
 // Mutex that tries to maintain the order of acquisition
 class fifo_mutex
 {
-	// Low 8 bits are incremented on acquisition, high 8 bits are incremented on release
-	atomic_t<u16> m_value{0};
+	// Low 16 bits are incremented on acquisition, high 16 bits are incremented on release
+	atomic_t<u32> m_value{0};
 
 public:
 	constexpr fifo_mutex() noexcept = default;
 
 	void lock() noexcept
 	{
-		const u16 val = m_value.fetch_op([](u16& val)
+		// clang-format off
+		const u32 val = m_value.fetch_op([](u32& val)
 		{
-			val = (val & 0xff00) | ((val + 1) & 0xff);
+			val = (val & 0xffff0000) | ((val + 1) & 0xffff);
 		});
+		// clang-format on
 
-		if (val >> 8 != (val & 0xff)) [[unlikely]]
+		if (val >> 16 != (val & 0xffff)) [[unlikely]]
 		{
 			// TODO: implement busy waiting along with moving to cpp file
-			m_value.wait<atomic_wait::op_ne>(((val + 1) & 0xff) << 8, 0xff00);
+			m_value.wait((val & 0xffff0000) | ((val + 1) & 0xffff));
 		}
 	}
 
 	bool try_lock() noexcept
 	{
-		const u16 val = m_value.load();
+		const u32 val = m_value.load();
 
-		if (val >> 8 == (val & 0xff))
+		if (val >> 16 == (val & 0xffff))
 		{
-			if (m_value.compare_and_swap(val, ((val + 1) & 0xff) | (val & 0xff00)))
+			if (m_value.compare_and_swap(val, ((val + 1) & 0xffff) | (val & 0xffff0000)))
 			{
 				return true;
 			}
@@ -43,9 +45,9 @@ public:
 
 	void unlock() noexcept
 	{
-		const u16 val = m_value.add_fetch(0x100);
+		const u32 val = m_value.add_fetch(0x10000);
 
-		if (val >> 8 != (val & 0xff))
+		if (val >> 16 != (val & 0xffff))
 		{
 			m_value.notify_one();
 		}
@@ -53,9 +55,9 @@ public:
 
 	bool is_free() const noexcept
 	{
-		const u16 val = m_value.load();
+		const u32 val = m_value.load();
 
-		return (val >> 8) == (val & 0xff);
+		return (val >> 16) == (val & 0xffff);
 	}
 
 	void lock_unlock() noexcept

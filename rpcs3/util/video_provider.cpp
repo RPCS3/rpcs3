@@ -92,7 +92,7 @@ namespace utils
 		return pts > m_last_pts_incoming;
 	}
 
-	void video_provider::present_frame(std::vector<u8>& data, const u32 width, const u32 height, bool is_bgra)
+	void video_provider::present_frame(std::vector<u8>& data, u32 pitch, u32 width, u32 height, bool is_bgra)
 	{
 		std::lock_guard lock(m_mutex);
 
@@ -132,6 +132,6 @@ namespace utils
 		m_last_pts_incoming = pts;
 
 		m_current_encoder_frame++;
-		m_image_sink->add_frame(data, width, height, is_bgra ? AVPixelFormat::AV_PIX_FMT_BGRA : AVPixelFormat::AV_PIX_FMT_RGBA, timestamp_ms);
+		m_image_sink->add_frame(data, pitch, width, height, is_bgra ? AVPixelFormat::AV_PIX_FMT_BGRA : AVPixelFormat::AV_PIX_FMT_RGBA, timestamp_ms);
 	}
 }

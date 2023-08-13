@@ -1206,9 +1206,7 @@ std::array<u32, 2> op_branch_targets(u32 pc, ppu_opcode_t op)
 {
 	std::array<u32, 2> res{pc + 4, umax};
 
-	g_fxo->need<ppu_far_jumps_t>();
-
-	if (u32 target = g_fxo->get<ppu_far_jumps_t>().get_target(pc))
+	if (u32 target = g_fxo->is_init<ppu_far_jumps_t>() ? g_fxo->get<ppu_far_jumps_t>().get_target(pc) : 0)
 	{
 		res[0] = target;
 		return res;
@@ -1821,7 +1819,16 @@ void ppu_thread::cpu_task()
 
 			// Wait until the progress dialog is closed.
 			// We don't want to open a cell dialog while a native progress dialog is still open.
-			thread_ctrl::wait_on<atomic_wait::op_ne>(g_progr_ptotal, 0);
+			while (u32 v = g_progr_ptotal)
+			{
+				if (Emu.IsStopped())
+				{
+					return;
+				}
+
+				g_progr_ptotal.wait(v);
+			}
+
 			g_fxo->get<progress_dialog_workaround>().show_overlay_message_only = true;
 
 			// Sadly we can't postpone initializing guest time because we need to run PPU threads
@@ -1839,7 +1846,7 @@ void ppu_thread::cpu_task()
 					}
 
 					ensure(spu.state.test_and_reset(cpu_flag::stop));
-					spu.state.notify_one(cpu_flag::stop);
+					spu.state.notify_one();
 				}
 			});
 
@@ -2051,7 +2058,7 @@ ppu_thread::ppu_thread(utils::serial& ar)
 	struct init_pushed
 	{
 		bool pushed = false;
-		atomic_t<bool> inited = false;
+		atomic_t<u32> inited = false;
 	};
 
 	call_history.data.resize(g_cfg.core.ppu_call_history ? call_history_max_size : 1);
@@ -2100,7 +2107,7 @@ ppu_thread::ppu_thread(utils::serial& ar)
 				{
 					while (!Emu.IsStopped() && !g_fxo->get<init_pushed>().inited)
 					{
-						thread_ctrl::wait_on(g_fxo->get<init_pushed>().inited, false);
+						thread_ctrl::wait_on(g_fxo->get<init_pushed>().inited, 0);
 					}
 					return false;
 				}
@@ -2117,7 +2124,7 @@ ppu_thread::ppu_thread(utils::serial& ar)
 				{ppu_cmd::ptr_call, 0}, +[](ppu_thread&) -> bool
 				{
 					auto& inited = g_fxo->get<init_pushed>().inited;
-					inited = true;
+					inited = 1;
 					inited.notify_all();
 					return true;
 				}
@@ -2453,10 +2460,10 @@ static void ppu_check(ppu_thread& ppu, u64 addr)
 {
 	ppu.cia = ::narrow<u32>(addr);
 
-	// ppu_check() shall not return directly
 	if (ppu.test_stopped())
-		{}
-	ppu_escape(&ppu);
+	{
+		return;
+	}
 }
 
 static void ppu_trace(u64 addr)
@@ -3046,7 +3053,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 
 		if (ppu.cia < liblv2_begin || ppu.cia >= liblv2_end)
 		{
-			res.notify_all(-128);
+			res.notify_all();
 		}
 
 		if (addr == ppu.last_faddr)
@@ -3222,7 +3229,7 @@ extern void ppu_finalize(const ppu_module& info)
 	fmt::append(cache_path, "ppu-%s-%s/", fmt::base57(info.sha1), info.path.substr(info.path.find_last_of('/') + 1));
 
 #ifdef LLVM_AVAILABLE
-	g_fxo->get<jit_module_manager>().remove(cache_path + info.name + "_" + std::to_string(info.segs[0].addr));
+	g_fxo->get<jit_module_manager>().remove(cache_path + "_" + std::to_string(std::bit_cast<usz>(info.segs[0].ptr)));
 #endif
 }
 
@@ -3448,7 +3455,6 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 				{
 					obj.clear(), src.close(); // Clear decrypted file and elf object memory
 					ppu_initialize(*prx);
-					ppu_unload_prx(*prx);
 					ppu_finalize(*prx);
 					continue;
 				}
@@ -3568,6 +3574,11 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 						break;
 					}
 
+					if (std::memcpy(main_module.sha1, _main.sha1, sizeof(_main.sha1)) == 0)
+					{
+						break;
+					}
+
 					if (!_main.analyse(0, _main.elf_entry, _main.seg0_code_end, _main.applied_pathes, [](){ return Emu.IsStopped(); }))
 					{
 						break;
@@ -3575,6 +3586,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 
 					obj.clear(), src.close(); // Clear decrypted file and elf object memory
 
+					_main.name = ' '; // Make ppu_finalize work
 					ppu_initialize(_main);
 					ppu_finalize(_main);
 					_main = {};
@@ -3592,6 +3604,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 		}
 
 		g_fxo->get<main_ppu_module>() = std::move(main_module);
+		Emu.ConfigurePPUCache();
 	});
 
 	exec_worker();
@@ -3637,7 +3650,7 @@ extern void ppu_initialize()
 	const std::string firmware_sprx_path = vfs::get("/dev_flash/sys/external/");
 
 	// If empty we have no indication for firmware cache state, check everything
-	bool compile_fw = true;
+	bool compile_fw = !Emu.IsVsh();
 
 	idm::select<lv2_obj, lv2_prx>([&](u32, lv2_prx& _module)
 	{
@@ -3683,7 +3696,7 @@ extern void ppu_initialize()
 
 	const std::string mount_point = vfs::get("/dev_flash/");
 
-	bool dev_flash_located = !Emu.GetCat().ends_with('P') && Emu.IsPathInsideDir(Emu.GetBoot(), mount_point);
+	bool dev_flash_located = !Emu.GetCat().ends_with('P') && Emu.IsPathInsideDir(Emu.GetBoot(), mount_point) && g_cfg.core.ppu_llvm_precompilation;
 
 	if (compile_fw || dev_flash_located)
 	{
@@ -3695,8 +3708,6 @@ extern void ppu_initialize()
 			{
 				// Check if cache exists for this infinitesimally small prx
 				dev_flash_located = ppu_initialize(*prx, true);
-				idm::remove<lv2_obj, lv2_prx>(idm::last_id());
-				ppu_unload_prx(*prx);
 			}
 		}
 
@@ -3756,10 +3767,16 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 		{
 			for (auto& block : func.blocks)
 			{
+				if (g_fxo->is_init<ppu_far_jumps_t>() && !g_fxo->get<ppu_far_jumps_t>().get_targets(block.first, block.second).empty())
+				{
+					// Replace the block with ppu_far_jump
+					continue;
+				}
+
 				ppu_register_function_at(block.first, block.second);
 			}
 
-			if (g_cfg.core.ppu_debug && func.size && func.toc != umax)
+			if (g_cfg.core.ppu_debug && func.size && func.toc != umax && !ppu_get_far_jump(func.addr))
 			{
 				ppu_toc[func.addr] = func.toc;
 				ppu_ref(func.addr) = &ppu_check_toc;
@@ -3808,7 +3825,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 	// Get cache path for this executable
 	std::string cache_path;
 
-	if (info.name.empty())
+	if (!info.cache.empty())
 	{
 		cache_path = info.cache;
 	}
@@ -3858,7 +3875,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 	};
 
 	// Permanently loaded compiled PPU modules (name -> data)
-	jit_module& jit_mod = g_fxo->get<jit_module_manager>().get(cache_path + info.name + "_" + std::to_string(info.segs[0].addr));
+	jit_module& jit_mod = g_fxo->get<jit_module_manager>().get(cache_path + "_" + std::to_string(std::bit_cast<usz>(info.segs[0].ptr)));
 
 	// Compiler instance (deferred initialization)
 	std::shared_ptr<jit_compiler>& jit = jit_mod.pjit;

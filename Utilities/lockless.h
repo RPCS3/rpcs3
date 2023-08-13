@@ -2,6 +2,7 @@
 
 #include "util/types.hpp"
 #include "util/atomic.hpp"
+#include "util/asm.hpp"
 
 //! Simple unshrinkable array base for concurrent access. Only growths automatically.
 //! There is no way to know the current size. The smaller index is, the faster it's accessed.
@@ -280,12 +281,17 @@ public:
 template <typename T>
 class lf_queue final
 {
-	atomic_t<lf_queue_item<T>*> m_head{nullptr};
+	atomic_t<u64> m_head{0};
+
+	lf_queue_item<T>* load(u64 value) const noexcept
+	{
+		return reinterpret_cast<lf_queue_item<T>*>(value >> 16);
+	}
 
 	// Extract all elements and reverse element order (FILO to FIFO)
 	lf_queue_item<T>* reverse() noexcept
 	{
-		if (auto* head = m_head.load() ? m_head.exchange(nullptr) : nullptr)
+		if (auto* head = load(m_head) ? load(m_head.exchange(0)) : nullptr)
 		{
 			if (auto* prev = head->m_link)
 			{
@@ -311,43 +317,42 @@ public:
 
 	~lf_queue()
 	{
-		delete m_head.load();
+		delete load(m_head);
 	}
 
-	template <atomic_wait::op Flags = atomic_wait::op::eq>
 	void wait(std::nullptr_t /*null*/ = nullptr) noexcept
 	{
-		if (m_head == nullptr)
+		if (m_head == 0)
 		{
-			m_head.template wait<Flags>(nullptr);
+			utils::bless<atomic_t<u32>>(&m_head)[1].wait(0);
 		}
 	}
 
 	const volatile void* observe() const noexcept
 	{
-		return m_head.load();
+		return load(m_head);
 	}
 
 	explicit operator bool() const noexcept
 	{
-		return m_head != nullptr;
+		return m_head != 0;
 	}
 
 	template <typename... Args>
 	void push(Args&&... args)
 	{
-		auto _old = m_head.load();
-		auto item = new lf_queue_item<T>(_old, std::forward<Args>(args)...);
+		auto oldv = m_head.load();
+		auto item = new lf_queue_item<T>(load(oldv), std::forward<Args>(args)...);
 
-		while (!m_head.compare_exchange(_old, item))
+		while (!m_head.compare_exchange(oldv, reinterpret_cast<u64>(item) << 16))
 		{
-			item->m_link = _old;
+			item->m_link = load(oldv);
 		}
 
-		if (!_old)
+		if (!oldv)
 		{
 			// Notify only if queue was empty
-			m_head.notify_one();
+			utils::bless<atomic_t<u32>>(&m_head)[1].notify_one();
 		}
 	}
 
@@ -363,7 +368,7 @@ public:
 	lf_queue_slice<T> pop_all_reversed()
 	{
 		lf_queue_slice<T> result;
-		result.m_head = m_head.exchange(nullptr);
+		result.m_head = load(m_head.exchange(0));
 		return result;
 	}
 

@@ -77,8 +77,8 @@ namespace utils
 		std::vector<u8> data;
 		atomic_t<u64> m_size = 0;
 		atomic_t<u64> duration_ms = 0;
-		atomic_t<bool> track_fully_decoded{false};
-		atomic_t<bool> track_fully_consumed{false};
+		atomic_t<u32> track_fully_decoded{0};
+		atomic_t<u32> track_fully_consumed{0};
 		atomic_t<bool> has_error{false};
 		std::deque<std::pair<u64, u64>> timestamps_ms;
 
@@ -120,7 +120,7 @@ namespace utils
 		void set_sample_rate(u32 sample_rate);
 		void set_audio_bitrate(u32 bitrate);
 		void set_audio_codec(s32 codec_id);
-		void add_frame(std::vector<u8>& frame, const u32 width, const u32 height, s32 pixel_format, usz timestamp_ms) override;
+		void add_frame(std::vector<u8>& frame, u32 pitch, u32 width, u32 height, s32 pixel_format, usz timestamp_ms) override;
 		void pause(bool flush = true);
 		void stop(bool flush = true) override;
 		void encode();

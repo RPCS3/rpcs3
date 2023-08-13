@@ -1547,21 +1547,34 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				return {CELL_SAVEDATA_ERROR_PARAM, "57 (attribute=0x%x)", statSet->setParam->attribute};
 			}
 
-			if (g_ps3_process_info.sdk_ver > 0x36FFFF)
+			if (statSet->setParam->parental_level > 11)
 			{
-				// In firmware 3.70 or higher parental_level was changed to reserved2 and has to zeroes
-				if (statSet->setParam->parental_level)
-				{
-					// ****** sysutil savedata parameter error : 58 ******
-					return {CELL_SAVEDATA_ERROR_PARAM, "58 (sdk_ver=0x%x, parental_level=%d)", g_ps3_process_info.sdk_ver, statSet->setParam->parental_level};
-				}
+				// ****** sysutil savedata parameter error : 58 ******
+				return {CELL_SAVEDATA_ERROR_PARAM, "58 (sdk_ver=0x%x, parental_level=%d)", g_ps3_process_info.sdk_ver, statSet->setParam->parental_level};
 			}
-			else
+
+			// Note: in firmware 3.70 or higher parental_level was changed to reserved2
+
+			for (usz index = 0;; index++)
 			{
-				if (statSet->setParam->parental_level > 11)
+				// Convert to pointer to avoid UB when accessing out of range
+				const u8 c = (+statSet->setParam->listParam)[index];
+
+				if (c == 0 || index >= (g_ps3_process_info.sdk_ver > 0x36FFFF ? std::size(statSet->setParam->listParam) - 1 : std::size(statSet->setParam->listParam)))
 				{
-					// ****** sysutil savedata parameter error : 58 ******
-					return {CELL_SAVEDATA_ERROR_PARAM, "58 (sdk_ver=0x%x, parental_level=%d)", g_ps3_process_info.sdk_ver, statSet->setParam->parental_level};
+					if (c)
+					{
+						// ****** sysutil savedata parameter error : 76 ******
+						return {CELL_SAVEDATA_ERROR_PARAM, "76 (listParam=0x%016x)", std::bit_cast<be_t<u64>>(statSet->setParam->listParam)};
+					}
+
+					break;
+				}
+
+				if ((c < 'A' || c > 'Z') && (c < '0' || c > '9') && c != '-' && c != '_')
+				{
+					// ****** sysutil savedata parameter error : 77 ******
+					return {CELL_SAVEDATA_ERROR_PARAM, "77 (listParam=0x%016x)", std::bit_cast<be_t<u64>>(statSet->setParam->listParam)};
 				}
 			}
 

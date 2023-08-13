@@ -240,7 +240,7 @@ namespace rsx
 			this->on_close = std::move(on_close);
 			visible = true;
 
-			const auto notify = std::make_shared<atomic_t<bool>>(false);
+			const auto notify = std::make_shared<atomic_t<u32>>(0);
 			auto& overlayman = g_fxo->get<display_manager>();
 
 			overlayman.attach_thread_input(
@@ -250,7 +250,7 @@ namespace rsx
 
 			while (!Emu.IsStopped() && !*notify)
 			{
-				notify->wait(false, atomic_wait_timeout{1'000'000});
+				notify->wait(0, atomic_wait_timeout{1'000'000});
 			}
 
 			return CELL_OK;

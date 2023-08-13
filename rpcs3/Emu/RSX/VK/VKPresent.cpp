@@ -712,7 +712,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			}
 			else
 			{
-				m_frame->present_frame(sshot_frame, buffer_width, buffer_height, is_bgra);
+				m_frame->present_frame(sshot_frame, buffer_width * 4, buffer_width, buffer_height, is_bgra);
 			}
 		}
 	}

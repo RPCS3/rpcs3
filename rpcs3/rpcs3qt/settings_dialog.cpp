@@ -265,30 +265,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	SubscribeTooltip(ui->spuLoopDetection, tooltips.settings.spu_loop_detection);
 
 	// Comboboxes
+	m_emu_settings->EnhanceComboBox(ui->xfloatAccuracy, emu_settings_type::XFloatAccuracy);
 	SubscribeTooltip(ui->gb_xfloat_accuracy, tooltips.settings.xfloat);
-	ui->xfloatAccuracy->addItem(tr("Accurate XFloat"));
-	ui->xfloatAccuracy->addItem(tr("Approximate XFloat"));
-	ui->xfloatAccuracy->addItem(tr("Relaxed XFloat"));
-
-	connect(ui->xfloatAccuracy, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
-	{
-		if (index < 0) return;
-
-		m_emu_settings->SetSetting(emu_settings_type::AccurateXFloat, index == 0 ? "true" : "false");
-		m_emu_settings->SetSetting(emu_settings_type::ApproximateXFloat, index == 1 ? "true" : "false");
-	});
-
-	connect(m_emu_settings.get(), &emu_settings::RestoreDefaultsSignal, this, [this]()
-	{
-		ui->xfloatAccuracy->setCurrentIndex(1);
-	});
-
-	if (m_emu_settings->GetSetting(emu_settings_type::AccurateXFloat) == "true")
-		ui->xfloatAccuracy->setCurrentIndex(0);
-	else if (m_emu_settings->GetSetting(emu_settings_type::ApproximateXFloat) == "true")
-		ui->xfloatAccuracy->setCurrentIndex(1);
-	else
-		ui->xfloatAccuracy->setCurrentIndex(2);
+	remove_item(ui->xfloatAccuracy, static_cast<int>(xfloat_accuracy::inaccurate), static_cast<int>(g_cfg.core.spu_xfloat_accuracy.def));
 
 	m_emu_settings->EnhanceComboBox(ui->spuBlockSize, emu_settings_type::SPUBlockSize);
 	SubscribeTooltip(ui->gb_spuBlockSize, tooltips.settings.spu_block_size);

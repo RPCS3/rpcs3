@@ -73,6 +73,7 @@ bool gui_application::Init()
 		gui_log.warning("Experimental Build Warning! Build origin: %s", branch_name);
 
 		QMessageBox msg;
+		msg.setWindowModality(Qt::WindowModal);
 		msg.setWindowTitle(tr("Experimental Build Warning"));
 		msg.setIcon(QMessageBox::Critical);
 		msg.setTextFormat(Qt::RichText);
@@ -421,7 +422,7 @@ void gui_application::InitializeCallbacks()
 
 		return false;
 	};
-	callbacks.call_from_main_thread = [this](std::function<void()> func, atomic_t<bool>* wake_up)
+	callbacks.call_from_main_thread = [this](std::function<void()> func, atomic_t<u32>* wake_up)
 	{
 		RequestCallFromMainThread(std::move(func), wake_up);
 	};
@@ -792,7 +793,7 @@ void gui_application::OnChangeStyleSheetRequest()
 /**
  * Using connects avoids timers being unable to be used in a non-qt thread. So, even if this looks stupid to just call func, it's succinct.
  */
-void gui_application::CallFromMainThread(const std::function<void()>& func, atomic_t<bool>* wake_up)
+void gui_application::CallFromMainThread(const std::function<void()>& func, atomic_t<u32>* wake_up)
 {
 	func();
 

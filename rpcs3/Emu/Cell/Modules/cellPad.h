@@ -192,14 +192,27 @@ struct pad_info
 {
 	atomic_t<u32> max_connect = 0;
 	std::array<u32, CELL_PAD_MAX_PORT_NUM> port_setting{ 0 };
+	std::array<u32, CELL_PAD_MAX_PORT_NUM> reported_statuses{};
 
 	SAVESTATE_INIT_POS(11);
 
 	pad_info() = default;
 	pad_info(utils::serial& ar);
 	void save(utils::serial& ar);
+
+	u32 get_max_connect() const
+	{
+		return std::min<u32>(max_connect, CELL_PAD_MAX_PORT_NUM);
+	}
+
+	// Unreliable way the firmware uses to optimize away pad calls for disconnected pads
+	// This result relies on data updates from config events on a dedicated thread to receive them
+	bool is_reportedly_connected(u32 port_no) const
+	{
+		return port_no < get_max_connect() && !!(reported_statuses[port_no] & CELL_PAD_STATUS_CONNECTED);
+	}
 };
 
 error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data);
-error_code cellPadInit(u32 max_connect);
+error_code cellPadInit(ppu_thread& ppu, u32 max_connect);
 error_code cellPadSetPortSetting(u32 port_no, u32 port_setting);
