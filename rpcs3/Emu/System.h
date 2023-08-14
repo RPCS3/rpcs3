@@ -353,7 +353,7 @@ public:
 
 	std::string GetFormattedTitle(double fps) const;
 
-	void ConfigurePPUCache() const;
+	void ConfigurePPUCache(bool with_title_id = true) const;
 
 	std::set<std::string> GetGameDirs() const;
 	void AddGamesFromDir(const std::string& path);

@@ -3243,13 +3243,13 @@ s32 error_code::error_report(s32 result, const logs::message* channel, const cha
 	return result;
 }
 
-void Emulator::ConfigurePPUCache() const
+void Emulator::ConfigurePPUCache(bool with_title_id) const
 {
 	auto& _main = g_fxo->get<main_ppu_module>();
 
 	_main.cache = rpcs3::utils::get_cache_dir();
 
-	if (!m_title_id.empty() && m_cat != "1P")
+	if (with_title_id && !m_title_id.empty() && m_cat != "1P")
 	{
 		_main.cache += GetTitleID();
 		_main.cache += '/';
