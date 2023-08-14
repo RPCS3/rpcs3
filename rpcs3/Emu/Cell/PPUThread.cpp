@@ -11,6 +11,7 @@
 #include "Emu/Memory/vm_locking.h"
 #include "Emu/RSX/Core/RSXReservationLock.hpp"
 #include "Emu/VFS.h"
+#include "Emu/vfs_config.h"
 #include "Emu/system_progress.hpp"
 #include "Emu/system_utils.hpp"
 #include "PPUThread.h"
@@ -3574,7 +3575,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 						break;
 					}
 
-					if (std::memcpy(main_module.sha1, _main.sha1, sizeof(_main.sha1)) == 0)
+					if (std::memcmp(main_module.sha1, _main.sha1, sizeof(_main.sha1)) == 0)
 					{
 						break;
 					}
@@ -3587,6 +3588,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 					obj.clear(), src.close(); // Clear decrypted file and elf object memory
 
 					_main.name = ' '; // Make ppu_finalize work
+					Emu.ConfigurePPUCache(!Emu.IsPathInsideDir(_main.path, g_cfg_vfs.get_dev_flash()));
 					ppu_initialize(_main);
 					ppu_finalize(_main);
 					_main = {};

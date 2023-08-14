@@ -2243,7 +2243,6 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 	else
 	{
 		g_ps3_process_info = old_process_info;
-		Emu.ConfigurePPUCache();
 	}
 
 	if (!load_libs.empty())
