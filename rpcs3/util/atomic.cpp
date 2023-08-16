@@ -914,6 +914,8 @@ atomic_wait_engine::wait(const void* data, u32 old_value, u64 timeout, atomic_wa
 		}
 		return;
 	}
+
+	ext_size = 0;
 #endif
 
 	if (!s_tls_wait_cb(data, 0, 0))
