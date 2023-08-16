@@ -12,10 +12,6 @@
 #include <Windows.h>
 #include <system_error>
 
-#ifdef _MSC_VER
-#pragma comment(lib, "xaudio2_9redist.lib")
-#endif
-
 #ifndef XAUDIO2_USE_DEFAULT_PROCESSOR
 #define XAUDIO2_USE_DEFAULT_PROCESSOR XAUDIO2_DEFAULT_PROCESSOR
 #endif
