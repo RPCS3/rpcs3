@@ -37,6 +37,15 @@
 #include "util/sysinfo.hpp"
 #include "util/serialization.hpp"
 
+#if defined(ARCH_X64)
+#ifdef _MSC_VER
+#include <intrin.h>
+#include <immintrin.h>
+#else
+#include <x86intrin.h>
+#endif
+#endif
+
 using spu_rdata_t = decltype(spu_thread::rdata);
 
 template <>
@@ -319,6 +328,40 @@ extern void mov_rdata_nt(spu_rdata_t& _dst, const spu_rdata_t& _src)
 	std::memcpy(_dst, _src, 128);
 #endif
 }
+
+#if defined(_MSC_VER)
+#define mwaitx_func
+#define waitpkg_func
+#else
+#define mwaitx_func __attribute__((__target__("mwaitx")))
+#define waitpkg_func __attribute__((__target__("waitpkg")))
+#endif
+
+#if defined(ARCH_X64)
+// Waits for a number of TSC clock cycles in power optimized state
+// Cstate is represented in bits [7:4]+1 cstate. So C0 requires bits [7:4] to be set to 0xf, C1 requires bits [7:4] to be set to 0.
+template <typename T, typename... Args>
+mwaitx_func static void __mwaitx(u32 cycles, u32 cstate, const void* cline, const Args&... args)
+{
+	constexpr u32 timer_enable = 0x2;
+
+	// monitorx will wake if the cache line is written to, use it for reservations which fits it almost perfectly
+	_mm_monitorx(const_cast<void*>(cline), 0, 0);
+
+	// Use static function to force inline
+	if (T::needs_wait(args...))
+	{
+		_mm_mwaitx(timer_enable, cstate, cycles);
+	}
+}
+
+// First bit indicates cstate, 0x0 for C.02 state (lower power) or 0x1 for C.01 state (higher power)
+waitpkg_func static void __tpause(u32 cycles, u32 cstate)
+{
+	const u64 tsc = utils::get_tsc() + cycles;
+	_tpause(cstate, tsc);
+}
+#endif
 
 void do_cell_atomic_128_store(u32 addr, const void* to_write);
 
@@ -4113,7 +4156,32 @@ bool spu_thread::process_mfc_cmd()
 
 							if (getllar_busy_waiting_switch == 1)
 							{
-								busy_wait(300);
+#if defined(ARCH_X64)
+								if (utils::has_um_wait())
+								{
+									if (utils::has_waitpkg())
+									{
+										__tpause(std::min<u32>(getllar_spin_count, 10) * 500, 0x1);
+									}
+									else
+									{
+										struct check_wait_t
+										{
+											static FORCE_INLINE bool needs_wait(u64 rtime, const atomic_t<u64>& mem_rtime) noexcept
+											{
+												return rtime == mem_rtime;
+											}
+										};
+
+										// Provide the first X64 cache line of the reservation to be tracked
+										__mwaitx<check_wait_t>(std::min<u32>(getllar_spin_count, 17) * 500, 0xf0, std::addressof(data), +rtime, vm::reservation_acquire(addr));
+									}
+								}
+								else
+#endif
+								{
+									busy_wait(300);
+								}
 							}
 
 							return true;
