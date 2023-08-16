@@ -465,7 +465,8 @@ public:
 
 				// While IDM mutex is still locked (this function assumes so) check if the notification is still needed
 				// Pending flag is meant for forced notification (if the CPU really has pending work it can restore the flag in theory)
-				if (cpu != &g_to_notify && static_cast<const decltype(cpu_thread::state)*>(cpu)->none_of(cpu_flag::signal + cpu_flag::pending))
+				// Disabled to allow reservation notifications from here
+				if (false && cpu != &g_to_notify && static_cast<const decltype(cpu_thread::state)*>(cpu)->none_of(cpu_flag::signal + cpu_flag::pending))
 				{
 					// Omit it (this is a void pointer, it can hold anything)
 					cpu = &g_to_notify;
