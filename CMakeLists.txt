@@ -105,17 +105,10 @@ if(CCACHE_FOUND)
     set(CMAKE_CXX_COMPILER_LAUNCHER ccache)
 endif()
 
-if(WIN32)
-    add_compile_definitions(UNICODE)
-    add_compile_definitions(_WIN32_WINNT=0x0602)
-endif()
-
 if(APPLE AND CMAKE_OSX_ARCHITECTURES STREQUAL "arm64")
     include_directories(/opt/homebrew/include)
     link_directories(/opt/homebrew/lib)
 endif()
-
-set(LLVM_ENABLE_WARNINGS OFF CACHE BOOL "Enable compiler warnings.")
 
 if(MSVC)
     add_compile_options(/wd4530 /utf-8) # C++ exception handler used, but unwind semantics are not enabled
