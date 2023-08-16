@@ -358,6 +358,13 @@ bool utils::has_appropriate_um_wait()
 #endif
 }
 
+// Similar to the above function but allow execution if alternatives such as yield are not wanted
+bool utils::has_um_wait()
+{
+	static const bool g_value = (has_waitx() || has_waitpkg()) && get_tsc_freq();
+	return g_value;
+}
+
 u32 utils::get_rep_movsb_threshold()
 {
 	static const u32 g_value = []()
