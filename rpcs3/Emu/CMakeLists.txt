@@ -141,12 +141,8 @@ if(USE_FAUDIO)
 endif()
 
 if(WIN32)
-    target_include_directories(rpcs3_emu PUBLIC "${PROJECT_SOURCE_DIR}/3rdparty/XAudio2Redist/include")
-    if(MSVC)
-        target_link_libraries(rpcs3_emu PRIVATE "${PROJECT_SOURCE_DIR}/3rdparty/XAudio2Redist/libs/xaudio2_9redist.lib")
-        target_link_options(rpcs3_emu PRIVATE /DELAYLOAD:xaudio2_9redist.dll)
-    else()
-        target_link_libraries(rpcs3_emu PRIVATE xaudio2_8)
+    if(NOT MSVC)
+        target_link_libraries(rpcs3_emu PRIVATE xaudio2_9)
     endif()
     target_sources(rpcs3_emu PRIVATE
         Audio/XAudio2/XAudio2Backend.cpp
