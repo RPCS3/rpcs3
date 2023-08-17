@@ -22,7 +22,7 @@ namespace vm
 	extern u8* const g_exec_addr;
 	extern u8* const g_stat_addr;
 	extern u8* const g_free_addr;
-	extern u8 g_reservations[];
+	extern u8 g_reservations[65536 / 128 * 64];
 
 	struct writer_lock;
 
