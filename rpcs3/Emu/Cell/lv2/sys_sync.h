@@ -60,6 +60,11 @@ enum
 
 enum ppu_thread_status : u32;
 
+namespace vm
+{
+	extern u8 g_reservations[65536 / 128 * 64];
+}
+
 // Base class for some kernel objects (shared set of 8192 objects).
 struct lv2_obj
 {
@@ -432,9 +437,15 @@ public:
 
 			if (cpu != &g_to_notify)
 			{
-				// Note: by the time of notification the thread could have been deallocated which is why the direct function is used
-				// TODO: Pass a narrower mask
-				atomic_wait_engine::notify_one(cpu);
+				if (cpu >= vm::g_reservations && cpu <= vm::g_reservations + (std::size(vm::g_reservations) - 1))
+				{
+					atomic_wait_engine::notify_all(cpu);
+				}
+				else
+				{
+					// Note: by the time of notification the thread could have been deallocated which is why the direct function is used
+					atomic_wait_engine::notify_one(cpu);
+				}
 			}
 		}
 
