@@ -417,6 +417,11 @@ namespace np
 
 		np_memory.save(ar);
 
+		if (GET_SERIALIZATION_VERSION(sceNp) >= 2)
+		{
+			ar(np2_match2_thread_id);
+		}
+
 		// TODO: IDM-tied objects are not yet saved
 	}
 
@@ -466,6 +471,8 @@ namespace np
 		ar(is_NP_Lookup_init, is_NP_Score_init, is_NP2_init, is_NP2_Match2_init, is_NP_Auth_init, manager_cb, manager_cb_arg, std::as_bytes(std::span(&basic_handler, 1)), is_connected, is_psn_active, hostname, ether_address, local_ip_addr, public_ip_addr, dns_ip);
 
 		np_memory.save(ar);
+
+		ar(np2_match2_thread_id);
 	}
 
 	void memory_allocator::save(utils::serial& ar)

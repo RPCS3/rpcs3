@@ -25,6 +25,7 @@
 #include "lv2/sys_prx.h"
 #include "lv2/sys_overlay.h"
 #include "lv2/sys_process.h"
+#include "lv2/sys_memory.h"
 #include "lv2/sys_spu.h"
 
 #ifdef LLVM_AVAILABLE
@@ -179,7 +180,7 @@ static void ppu_initialize2(class jit_compiler& jit, const ppu_module& module_pa
 extern bool ppu_load_exec(const ppu_exec_object&, bool virtual_load, const std::string&, utils::serial* = nullptr);
 extern std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object&, bool virtual_load, const std::string& path, s64 file_offset, utils::serial* = nullptr);
 extern void ppu_unload_prx(const lv2_prx&);
-extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, bool virtual_load, const std::string&, s64 file_offset, utils::serial* = nullptr);
+extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, bool virtual_load, const std::string&, s64 file_offset, bool is_hle = false, utils::serial* = nullptr);
 extern void ppu_execute_syscall(ppu_thread& ppu, u64 code);
 static void ppu_break(ppu_thread&, ppu_opcode_t, be_t<u32>*, ppu_intrp_func*);
 
@@ -3692,6 +3693,24 @@ extern void ppu_initialize()
 		{
 			// Postpone testing
 			compile_fw = false;
+		}
+
+		if (!Emu.DeserialManager())
+		{
+			// Moved here for backwards compatibility with savestates
+
+			u32 segs_size = 0;
+
+			for (auto& seg : _module.segs)
+			{
+				segs_size += utils::align<u32>(seg.size, 0x10000);
+			}
+
+			if (segs_size)
+			{
+				_module.mem_ct = g_fxo->try_get<lv2_memory_container>();
+				ensure(_module.mem_ct->take(segs_size));
+			}
 		}
 
 		module_list.emplace_back(&_module);

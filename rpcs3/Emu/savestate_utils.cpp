@@ -42,7 +42,7 @@ SERIALIZATION_VER(lv2_sync, 3,                                  1)
 SERIALIZATION_VER(lv2_vm, 4,                                    1)
 SERIALIZATION_VER(lv2_net, 5,                                   1)
 SERIALIZATION_VER(lv2_fs, 6,                                    1)
-SERIALIZATION_VER(lv2_prx_overlay, 7,                           1)
+SERIALIZATION_VER(lv2_prx_overlay, 7,                           1, 2/*Add HLE memory allocs*/)
 SERIALIZATION_VER(lv2_memory, 8,                                1)
 SERIALIZATION_VER(lv2_config, 9,                                1)
 
@@ -53,7 +53,7 @@ namespace rsx
 
 namespace np
 {
-	SERIALIZATION_VER(sceNp, 11,                                1)
+	SERIALIZATION_VER(sceNp, 11,                                1, 2/*PPU match2 ID*/)
 }
 
 #ifdef _MSC_VER

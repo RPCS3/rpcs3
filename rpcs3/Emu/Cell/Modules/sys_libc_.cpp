@@ -367,8 +367,10 @@ vm::cptr<char> _sys_strrchr(vm::cptr<char> str, char ch)
 	return res;
 }
 
-u32 _sys_malloc(u32 size)
+u32 _sys_malloc(ppu_thread& ppu, u32 size)
 {
+	ppu.state += cpu_flag::wait;
+
 	sysPrxForUser.warning("_sys_malloc(size=0x%x)", size);
 
 	return vm::alloc(size, vm::main);
@@ -381,8 +383,10 @@ u32 _sys_memalign(u32 align, u32 size)
 	return vm::alloc(size, vm::main, std::max<u32>(align, 0x10000));
 }
 
-error_code _sys_free(u32 addr)
+error_code _sys_free(ppu_thread& ppu, u32 addr)
 {
+	ppu.state += cpu_flag::wait;
+
 	sysPrxForUser.warning("_sys_free(addr=0x%x)", addr);
 
 	vm::dealloc(addr, vm::main);

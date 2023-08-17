@@ -172,6 +172,8 @@ enum : u32
 	PRX_STATE_DESTROYED, // Last state, the module cannot be restarted
 };
 
+struct lv2_memory_container;
+
 struct lv2_prx final : lv2_obj, ppu_module
 {
 	static const u32 id_base = 0x23000000;
@@ -201,6 +203,9 @@ struct lv2_prx final : lv2_obj, ppu_module
 	void load_exports(); // (Re)load exports
 	void restore_exports(); // For savestates
 	void unload_exports();
+
+	lv2_memory_container* mem_ct{};
+	bool is_hle = false;
 
 	lv2_prx() noexcept = default;
 	lv2_prx(utils::serial&) {}
