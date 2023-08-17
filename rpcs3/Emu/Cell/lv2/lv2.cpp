@@ -2,6 +2,7 @@
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/Memory/vm_ptr.h"
+#include "Emu/Memory/vm_reservation.h"
 #include "Emu/Memory/vm_locking.h"
 
 #include "Emu/Cell/PPUFunction.h"
@@ -1268,6 +1269,31 @@ bool lv2_obj::sleep(cpu_thread& cpu, const u64 timeout)
 		prepare_for_sleep(cpu);
 	}
 
+	if (cpu.id_type() == 1)
+	{
+		if (u32 addr = static_cast<ppu_thread&>(cpu).res_notify)
+		{
+			static_cast<ppu_thread&>(cpu).res_notify = 0;
+
+			const usz notify_later_idx = std::basic_string_view<const void*>{g_to_notify, std::size(g_to_notify)}.find_first_of(std::add_pointer_t<const void>{});
+
+			if (notify_later_idx != umax)
+			{
+				g_to_notify[notify_later_idx] = &vm::reservation_notifier(addr);
+
+				if (notify_later_idx < std::size(g_to_notify) - 1)
+				{
+					// Null-terminate the list if it ends before last slot
+					g_to_notify[notify_later_idx + 1] = nullptr;
+				}
+			}
+			else
+			{
+				vm::reservation_notifier(addr).notify_all();
+			}
+		}
+	}
+
 	bool result = false;
 	const u64 current_time = get_guest_system_time();
 	{
@@ -1294,6 +1320,31 @@ bool lv2_obj::sleep(cpu_thread& cpu, const u64 timeout)
 
 bool lv2_obj::awake(cpu_thread* thread, s32 prio)
 {
+	if (ppu_thread* ppu = cpu_thread::get_current<ppu_thread>())
+	{
+		if (u32 addr = ppu->res_notify)
+		{
+			ppu->res_notify = 0;
+
+			const usz notify_later_idx = std::basic_string_view<const void*>{g_to_notify, std::size(g_to_notify)}.find_first_of(std::add_pointer_t<const void>{});
+
+			if (notify_later_idx != umax)
+			{
+				g_to_notify[notify_later_idx] = &vm::reservation_notifier(addr);
+
+				if (notify_later_idx < std::size(g_to_notify) - 1)
+				{
+					// Null-terminate the list if it ends before last slot
+					g_to_notify[notify_later_idx + 1] = nullptr;
+				}
+			}
+			else
+			{
+				vm::reservation_notifier(addr).notify_all();
+			}
+		}
+	}
+
 	bool result = false;
 	{
 		std::lock_guard lock(g_mutex);
@@ -1673,7 +1724,7 @@ void lv2_obj::cleanup()
 
 void lv2_obj::schedule_all(u64 current_time)
 {
-	usz notify_later_idx = 0;
+	usz notify_later_idx = std::basic_string_view<const void*>{g_to_notify, std::size(g_to_notify)}.find_first_of(std::add_pointer_t<const void>{});
 
 	if (!g_pending && g_scheduler_ready)
 	{
@@ -1692,7 +1743,7 @@ void lv2_obj::schedule_all(u64 current_time)
 					continue;
 				}
 
-				if (notify_later_idx == std::size(g_to_notify))
+				if (notify_later_idx >= std::size(g_to_notify))
 				{
 					// Out of notification slots, notify locally (resizable container is not worth it)
 					target->state.notify_one();
@@ -1726,7 +1777,7 @@ void lv2_obj::schedule_all(u64 current_time)
 				ensure(!target->state.test_and_set(cpu_flag::notify));
 
 				// Otherwise notify it to wake itself
-				if (notify_later_idx == std::size(g_to_notify))
+				if (notify_later_idx >= std::size(g_to_notify))
 				{
 					// Out of notification slots, notify locally (resizable container is not worth it)
 					target->state.notify_one();
