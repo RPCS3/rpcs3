@@ -35,7 +35,9 @@ namespace stx
 
 		static constexpr u16 swap(u16 src) noexcept
 		{
-#if defined(__GNUG__)
+#if __cpp_lib_byteswap >= 202110L
+			return std::byteswap(src);
+#elif defined(__GNUG__)
 			return __builtin_bswap16(src);
 #else
 			if (std::is_constant_evaluated())
@@ -55,7 +57,9 @@ namespace stx
 
 		static constexpr u32 swap(u32 src) noexcept
 		{
-#if defined(__GNUG__)
+#if __cpp_lib_byteswap >= 202110L
+			return std::byteswap(src);
+#elif defined(__GNUG__)
 			return __builtin_bswap32(src);
 #else
 			if (std::is_constant_evaluated())
@@ -76,7 +80,9 @@ namespace stx
 
 		static constexpr u64 swap(u64 src) noexcept
 		{
-#if defined(__GNUG__)
+#if __cpp_lib_byteswap >= 202110L
+			return std::byteswap(src);
+#elif defined(__GNUG__)
 			return __builtin_bswap64(src);
 #else
 			if (std::is_constant_evaluated())
