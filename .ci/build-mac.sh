@@ -9,8 +9,8 @@ arch -x86_64 /usr/local/bin/brew update
 arch -x86_64 /usr/local/bin/brew install -f --overwrite llvm@16 glew cmake sdl2 vulkan-headers ffmpeg
 arch -x86_64 /usr/local/bin/brew link -f llvm@16
 
-# moltenvk based on commit for 1.2.4 release
-wget https://raw.githubusercontent.com/Homebrew/homebrew-core/b233d4f9f40f26d81da11140defbfd578cfe4a69/Formula/molten-vk.rb
+# moltenvk based on commit for 1.2.5 release
+wget https://raw.githubusercontent.com/Homebrew/homebrew-core/055ae78415b61ecf1fa3de32b76b8a149855f903/Formula/m/molten-vk.rb
 arch -x86_64 /usr/local/bin/brew install -f --overwrite ./molten-vk.rb
 #export MACOSX_DEPLOYMENT_TARGET=12.0
 export CXX=clang++
