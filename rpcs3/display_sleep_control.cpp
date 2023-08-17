@@ -4,6 +4,10 @@
 #include <windows.h>
 
 #elif defined(__APPLE__)
+#if defined(__clang__)
+#pragma clang diagnostic ignored "-Wold-style-cast"
+#endif
+
 #include <IOKit/pwr_mgt/IOPMLib.h>
 
 static IOPMAssertionID s_pm_assertion = kIOPMNullAssertionID;
