@@ -3049,12 +3049,29 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 		return false;
 	}())
 	{
-		// Test a common pattern in lwmutex
 		extern atomic_t<u32> liblv2_begin, liblv2_end;
 
+		const u32 notify = ppu.res_notify;
+
+		if (notify)
+		{
+			vm::reservation_notifier(notify).notify_all();
+			ppu.res_notify = 0;
+		}
+
+		// Avoid notifications from lwmutex or sys_spinlock
 		if (ppu.cia < liblv2_begin || ppu.cia >= liblv2_end)
 		{
-			res.notify_all();
+			if (!notify)
+			{
+				// Try to postpone notification to when PPU is asleep or join notifications on the same address
+				// This also optimizes a mutex - won't notify after lock is aqcuired (prolonging the critical section duration), only notifies on unlock
+				ppu.res_notify = addr;
+			}
+			else if ((addr ^ notify) & -128)
+			{
+				res.notify_all();
+			}
 		}
 
 		if (addr == ppu.last_faddr)
@@ -3064,6 +3081,16 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 
 		ppu.last_faddr = 0;
 		return true;
+	}
+
+	const u32 notify = ppu.res_notify;
+
+	// Do not risk postponing too much (because this is probably an indefinite loop)
+	// And on failure it has some time to do something else
+	if (notify && ((addr ^ notify) & -128))
+	{
+		vm::reservation_notifier(notify).notify_all();
+		ppu.res_notify = 0;
 	}
 
 	return false;
