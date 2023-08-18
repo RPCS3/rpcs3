@@ -5204,7 +5204,9 @@ auto LVRX()
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op)
 	{
 		const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-		const u128 data = ppu_feed_data<u128, Flags...>(ppu, addr & -16);
+
+		// Read from instruction address if offset is 0, this prevents accessing potentially bad memory from addr (because no actual memory is dereferenced)
+		const u128 data = ppu_feed_data<u128, Flags...>(ppu, ((addr & 15) == 0 ? ppu.cia : addr) & -16);
 		ppu.vr[op.vd] = data >> ((~addr & 15) * 8) >> 8;
 	};
 
