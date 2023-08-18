@@ -349,7 +349,7 @@ void disc_change_manager::insert_disc(u32 disc_type, std::string title_id)
 	});
 }
 
-void lv2_sleep(u64 timeout, ppu_thread* ppu = nullptr)
+extern void lv2_sleep(u64 timeout, ppu_thread* ppu = nullptr)
 {
 	if (!ppu)
 	{

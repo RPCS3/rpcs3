@@ -10,6 +10,8 @@
 
 LOG_CHANNEL(cellAudio);
 
+extern void lv2_sleep(u64 timeout, ppu_thread* ppu = nullptr);
+
 vm::gvar<char, AUDIO_PORT_OFFSET * AUDIO_PORT_COUNT> g_audio_buffer;
 
 struct alignas(16) aligned_index_t
@@ -1252,8 +1254,6 @@ error_code cellAudioPortOpen(vm::ptr<CellAudioPortParam> audioParam, vm::ptr<u32
 
 	auto& g_audio = g_fxo->get<cell_audio>();
 
-	std::lock_guard lock(g_audio.mutex);
-
 	if (!g_audio.init)
 	{
 		return CELL_AUDIO_ERROR_NOT_INIT;
@@ -1317,6 +1317,16 @@ error_code cellAudioPortOpen(vm::ptr<CellAudioPortParam> audioParam, vm::ptr<u32
 	if (attr & 0xFFFFFFFFF0EFEFEEULL)
 	{
 		cellAudio.todo("cellAudioPortOpen(): unknown attributes (0x%llx)", attr);
+	}
+
+	// Waiting for VSH and doing some more things
+	lv2_sleep(200);
+
+	std::lock_guard lock(g_audio.mutex);
+
+	if (!g_audio.init)
+	{
+		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
 
 	// Open audio port
@@ -1410,8 +1420,6 @@ error_code cellAudioPortStart(u32 portNum)
 
 	auto& g_audio = g_fxo->get<cell_audio>();
 
-	std::lock_guard lock(g_audio.mutex);
-
 	if (!g_audio.init)
 	{
 		return CELL_AUDIO_ERROR_NOT_INIT;
@@ -1420,6 +1428,16 @@ error_code cellAudioPortStart(u32 portNum)
 	if (portNum >= AUDIO_PORT_COUNT)
 	{
 		return CELL_AUDIO_ERROR_PARAM;
+	}
+
+	// Waiting for VSH
+	lv2_sleep(30);
+
+	std::lock_guard lock(g_audio.mutex);
+
+	if (!g_audio.init)
+	{
+		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
 
 	switch (audio_port_state state = g_audio.ports[portNum].state.compare_and_swap(audio_port_state::opened, audio_port_state::started))
@@ -1650,9 +1668,68 @@ error_code cellAudioCreateNotifyEventQueueEx(ppu_thread& ppu, vm::ptr<u32> id, v
 	return AudioCreateNotifyEventQueue(ppu, id, key, queue_type);
 }
 
-error_code AudioSetNotifyEventQueue(u64 key, u32 iFlags)
+error_code AudioSetNotifyEventQueue(ppu_thread& ppu, u64 key, u32 iFlags)
 {
 	auto& g_audio = g_fxo->get<cell_audio>();
+
+	if (!g_audio.init)
+	{
+		return CELL_AUDIO_ERROR_NOT_INIT;
+	}
+
+	// Waiting for VSH
+	lv2_sleep(20, &ppu);
+
+	// Dirty hack for sound: confirm the creation of _mxr000 event queue by _cellsurMixerMain thread
+	constexpr u64 c_mxr000 = 0x8000cafe0246030;
+
+	if (key == c_mxr000 || key == 0)
+	{
+		bool has_sur_mixer_thread = false;
+
+		for (usz count = 0; !lv2_event_queue::find(c_mxr000) && count < 100; count++)
+		{
+			if (has_sur_mixer_thread || idm::select<named_thread<ppu_thread>>([&](u32 id, named_thread<ppu_thread>& test_ppu)
+			{
+				// Confirm thread existence
+				if (id == ppu.id)
+				{
+					return false;
+				}
+
+				const auto ptr = test_ppu.ppu_tname.load();
+
+				if (!ptr)
+				{
+					return false;
+				}
+
+				return *ptr == "_cellsurMixerMain"sv;
+			}).ret)
+			{
+				has_sur_mixer_thread = true;
+			}
+			else
+			{
+				break;
+			}
+
+			if (ppu.is_stopped())
+			{
+				ppu.state += cpu_flag::again;
+				return {};
+			}
+
+			cellAudio.error("AudioSetNotifyEventQueue(): Waiting for _mxr000. x%d", count);
+
+			lv2_sleep(50'000, &ppu);
+		}
+
+		if (has_sur_mixer_thread && lv2_event_queue::find(c_mxr000))
+		{
+			key = c_mxr000;
+		}
+	}
 
 	std::lock_guard lock(g_audio.mutex);
 
@@ -1687,27 +1764,33 @@ error_code AudioSetNotifyEventQueue(u64 key, u32 iFlags)
 	}
 
 	// Set unique source associated with the key
-	g_audio.keys.push_back({
+	g_audio.keys.push_back
+	({
 		.start_period = g_audio.event_period,
 		.flags = iFlags,
 		.source = ((process_getpid() + u64{}) << 32) + lv2_event_port::id_base + (g_audio.key_count++ * lv2_event_port::id_step),
 		.ack_timestamp = 0,
 		.port = std::move(q)
 	});
+
 	g_audio.key_count %= lv2_event_port::id_count;
 
 	return CELL_OK;
 }
 
-error_code cellAudioSetNotifyEventQueue(u64 key)
+error_code cellAudioSetNotifyEventQueue(ppu_thread& ppu, u64 key)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellAudio.warning("cellAudioSetNotifyEventQueue(key=0x%llx)", key);
 
-	return AudioSetNotifyEventQueue(key, 0);
+	return AudioSetNotifyEventQueue(ppu, key, 0);
 }
 
-error_code cellAudioSetNotifyEventQueueEx(u64 key, u32 iFlags)
+error_code cellAudioSetNotifyEventQueueEx(ppu_thread& ppu, u64 key, u32 iFlags)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellAudio.todo("cellAudioSetNotifyEventQueueEx(key=0x%llx, iFlags=0x%x)", key, iFlags);
 
 	if (iFlags & (~0u >> 5))
@@ -1715,7 +1798,7 @@ error_code cellAudioSetNotifyEventQueueEx(u64 key, u32 iFlags)
 		return CELL_AUDIO_ERROR_PARAM;
 	}
 
-	return AudioSetNotifyEventQueue(key, iFlags);
+	return AudioSetNotifyEventQueue(ppu, key, iFlags);
 }
 
 error_code AudioRemoveNotifyEventQueue(u64 key, u32 iFlags)
