@@ -38,13 +38,13 @@ jobs:
     displayName: ccache
 
   - bash: |
-      docker pull --quiet rpcs3/rpcs3-ci-focal:1.2
+      docker pull --quiet rpcs3/rpcs3-ci-focal:1.3
       docker run                      \
         -v $(pwd):/rpcs3              \
         --env-file .ci/docker.env \
         -v $CCACHE_DIR:/root/.ccache  \
         -v $BUILD_ARTIFACTSTAGINGDIRECTORY:/root/artifacts \
-        rpcs3/rpcs3-ci-focal:1.2 \
+        rpcs3/rpcs3-ci-focal:1.3 \
         /rpcs3/.ci/build-linux.sh
     displayName: Docker setup and build
 
@@ -69,9 +69,9 @@ jobs:
   variables:
     COMPILER: msvc
     QT_VER_MAIN: '6'
-    QT_VER: '6.5.3'
+    QT_VER: '6.6.0'
     QT_VER_MSVC: 'msvc2019'
-    QT_DATE: '202309260341'
+    QT_DATE: '202310040911'
     QTDIR: C:\Qt\$(QT_VER)\$(QT_VER_MSVC)_64
     VULKAN_VER: '1.3.224.1'
     VULKAN_SDK_SHA: '2029e652e39ee6a6036cff3765da31e1e6c595fd2413d3cd111dfab7855621ea'
@@ -132,7 +132,7 @@ jobs:
     UPLOAD_REPO_FULL_NAME: "RPCS3/rpcs3-binaries-mac"
     RELEASE_MESSAGE: "../GitHubReleaseMessage.txt"
     ARTDIR: $(Build.ArtifactStagingDirectory)
-    QT_VER: '6.5.3'
+    QT_VER: '6.6.0'
     QT_VER_MAIN: '6'
 
   pool:

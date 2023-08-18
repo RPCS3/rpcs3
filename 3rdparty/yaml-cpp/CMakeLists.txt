@@ -3,6 +3,8 @@
 # to disable it...
 # So we just install it to a different directory
 set(YAML_CPP_INSTALL OFF CACHE BOOL "Don't install YAML")
+set(YAML_CPP_DISABLE_UNINSTALL ON CACHE BOOL "Disable yaml-cpp uninstall")
+
 set(CMAKE_INSTALL_PREFIX_OLD ${CMAKE_INSTALL_PREFIX})
 set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/yaml-cpp_install)
 
