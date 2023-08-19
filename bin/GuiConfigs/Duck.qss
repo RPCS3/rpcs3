@@ -1,0 +1,426 @@
+QWidget {
+	font-family: "SCE-PS3 Rodin LATIN";
+	font-size: 9pt;
+	color: #03A9F4;
+	background: transparent;
+	alternate-background-color: transparent;
+}
+QTabWidget#tab_widget_log::tab-bar {
+	alignment: left;
+}
+QTabWidget::pane {
+	border: 0em solid #000000;
+}
+QTextEdit, QPlainTextEdit {
+	background: rgba(0, 0, 0, 0.9);
+	border: 0.0em solid #333333;
+	border-right: 0.05em solid #333333;
+	color: #03A9F4;
+	font-family: none;
+	font-size: 9pt;
+}
+QListWidget::item {
+	margin-top: 0.05em;
+	margin-bottom: 0.05em;
+}
+QListWidget::indicator, QTreeWidget::indicator {
+	border: 0.05em solid #333333;
+}
+QListWidget::indicator::unchecked, QTreeWidget::indicator::unchecked {
+	background-color: #000000;
+}
+QListWidget::indicator::checked, QTreeWidget::indicator::checked {
+	background-color: #03A9F4;
+}
+QListWidget::indicator::disabled, QTreeWidget::indicator::disabled {
+	background-color: #A80000;
+	
+}
+QListWidget::item:selected:active, QTreeWidget::item:selected:active {
+selection-background-color: #013e59;
+selection-color: #03A9F4;
+}
+QListWidget::item:selected:!active, QTreeWidget::item:selected:!active {
+selection-background-color: #013e59;
+selection-color: #03A9F4;
+}
+QTableWidget::item:selected:active {
+selection-background-color: #013e59;
+selection-color: #03A9F4;
+}
+QTableWidget::item:selected:!active {
+selection-background-color: #013e59;
+selection-color: #03A9F4;
+}
+QTableWidget {
+	alternate-background-color: black;
+	background-color: black;
+	border: none;
+}
+QTableWidget#game_grid {
+	alternate-background-color: black;
+	background-color: black;
+	font-weight: 600;
+	font-size: 8pt;
+	font-family: SCE-PS3 Rodin LATIN;
+	color: #03A9F4;
+	selection-color: #212947;
+	border: none;
+}
+QTableView {
+	selection-background-color: #013e59;
+}
+QTableView::item {
+	border: 0em solid #001122;
+}
+QTableView::item:selected {
+	background-color: #191F36;
+}
+QTableView#game_grid::item:hover:!selected {
+	background-color: #111525;
+}
+QTableView#game_grid::item:hover:selected {
+	background-color: #212947;
+}
+QHeaderView::section {
+	background: #000000;
+	color: #03A9F4;
+	padding-left: 0.20em;
+	padding-top: 0.25em;
+	margin-bottom: 0.05em;
+	border: none;
+}
+QHeaderView::section:hover {
+	background: #212947;
+	color: #03A9F4;
+	padding-left: 0.20em;
+	padding-top: 0.25em;
+	margin-bottom: 0.05em;
+	border: none;
+}
+QToolTip {
+	background-color: transparent;
+	border: transparent;
+	color: #03A9F4;
+}
+QHeaderView::section {
+	background: #0D0D0D;
+	color: #03A9F4;
+	padding-left: 0.20em;
+	padding-top: 0.25em;
+	margin-bottom: 0.05em;
+	border: none;
+}
+QTabBar {
+	text-transform: uppercase;
+	font: bold 10.5pt;
+	padding: 1em;
+	border: transparent;
+}
+QTabBar::tab {
+	background: transparent;
+}
+QTabBar::tab:!selected:hover {
+	background: transparent;
+	color: #2E1F78;
+}
+QTabBar::tab::selected {
+	background: transparent;
+	color: #4E34C9;
+}
+QCheckBox::indicator {
+	border-radius: 0.1em;
+}
+QRadioButton::indicator {
+	border-radius: 0.4em;
+}
+QCheckBox::indicator, QRadioButton::indicator {
+	border: 0.05em solid #333333;
+	margin-top: 0.05em;
+	margin-bottom: 0.05em;
+	width: 0.8em;
+	height: 0.8em;
+}
+QCheckBox::indicator:checked, QRadioButton::indicator:checked {
+	background-color: #03A9F4;
+}
+QCheckBox::indicator:unchecked, QRadioButton::indicator:unchecked {
+	background-color: #000000;
+}
+QCheckBox::indicator::disabled, QRadioButton::indicator::disabled {
+	background-color: #a80000;
+}
+QComboBox, QDateTimeEdit, QLineEdit {
+	background: transparent;
+	color: #c9c9c9;
+	border: 0.05em solid #333333;
+	padding-top: 0.2em;				   
+	padding-bottom: 0.2em;
+	padding-left: 0.4em;
+}
+QComboBox QAbstractItemView {
+	background: #000000;
+	selection-background-color: #013e59;
+    selection-color: #03A9F4;
+	outline: 0px; 
+}
+QComboBox::disabled, QDateTimeEdit::disabled, QLineEdit::disabled {
+	background: #a80000;
+	color: #000000;
+}
+QGroupBox {
+	margin-top: 0.75em;
+	border: 0.05em solid #333333;
+}
+QGroupBox::title {
+	subcontrol-origin: margin;
+	subcontrol-position: top;
+	padding: 0.05em 0.05em 0.05em 0.05em;
+	color: #03A9F4;
+}
+QPushButton {
+	background: #191F36;
+}
+QPushButton::disabled {
+	background: #a80000;
+}
+QSpinBox, QDoubleSpinBox {
+	background-color: #000000;
+	border: 0.10em solid #333333;
+}
+QSpinBox::disabled, QDoubleSpinBox::disabled {
+	background-color: #a80000;
+	border: 0.10em solid #333333;
+}
+QSlider::groove:horizontal {
+	border: 0.1em solid #333333;
+	border-radius: 0.1em;
+}
+QSlider::handle:horizontal {
+	background: #03A9F4;
+	width: 0.5em;
+}
+QSlider::disabled {
+	background: #a80000;
+}
+QDockWidget {
+	background: transparent;
+	color: #4E34C9;
+	font-weight: 500;
+}
+QDockWidget::title {
+	background: #000000;
+	padding-top: 0.2em;
+}
+QDockWidget::close-button, QDockWidget::float-button {
+	background-color: #4E34C9;
+}
+QDateTimeEdit, QDateTimeEdit::drop-down {
+	background: transparent;
+	border: 0.05em solid #333333;
+	border-radius: 0.10em;
+	color: #03A9F4;
+}
+QCalendarWidget QWidget{
+	background-color: #000000;
+	color: #03A9F4;
+}
+QTabWidget::tab-bar {
+	alignment: center;
+}			  
+QMenuBar {
+	font-size: 12pt;
+}
+QMenuBar::item {
+	margin-right: 0.20em;
+	margin-left: 0.20em;
+	padding-left: 0.6em;
+	padding-right: 0.6em;
+}
+QMenuBar::item:selected {
+	background: #013e59;
+	color: #03A9F4
+}
+QMenu {
+	background: #000000;
+	color: #03A9F4;
+}
+QMenu::item {
+	padding-left: 1.5em;
+	padding-right: 0.75em;
+	padding-top: 0.25em;
+	padding-bottom: 0.25em;
+}
+QMenu::item:selected {
+	background: #013e59;
+	color: #03A9F4;
+}
+QMenu::item:disabled {
+	background-color: #a80000;
+	color: #000000;
+}
+QToolButton {
+	background: transparent;
+}
+QLabel#toolbar_icon_color {
+	color: #03A9F4;
+}
+QLabel#toolbar_icon_color_disabled {
+	color: #A80000;
+}
+QLabel#toolbar_icon_color_active {
+	color: #2E1F78;
+}
+QToolButton::hover {
+	background-color: #013e59;
+}
+QWidget#trophy_notification_frame {
+	background-color: #333333;
+	font-color: #4E34C9;
+}
+QSlider#sizeSlider::groove:horizontal {
+	height: 1.5em;
+}
+#debugger QListWidget, #debugger QTextEdit {
+	background: transparent;
+	border: 0.05em solid #333333;
+	color: #c9c9c9;
+	font-family: none;
+	font-size: 9.5pt;
+}
+QTabBar#tab_bar_log::tab {
+ 
+	margin-right: 0em;
+}
+QLabel#l_controller {
+	color: #4E34C9;
+}
+QLabel#trophy_manager_icon_background_color {
+	color: transparent
+}
+QLabel#save_manager_icon_background_color {
+	color: transparent
+}
+QLabel#gamelist_icon_background_color {
+	color: transparent
+}
+QLabel#thumbnail_icon_color {
+	color: transparent
+}
+QTableWidget#game_grid {
+	font-weight: 600;
+	color: #c9c9c9;
+	selection-color: #c9c9c9;
+}
+QLabel#color_button {
+	background: transparent;
+}
+QLineEdit {
+	margin-left: 0.7em;
+	border: 0.05em solid #333333;
+	color: #03A9F4;
+}
+QLineEdit#mw_searchbar {
+	border: 0.05em solid #333333;
+	color: #03A9F4;
+	font-size: 10.5pt;
+	margin-left: 0.7em;
+	margin-top: 0.85em;
+	margin-bottom: 0.85em;			   
+}
+QLabel#gamelist_icon_background_color {
+	color: transparent;
+}
+QLabel#thumbnail_icon_color {
+	color: #666666;
+}
+QTextEdit#log_frame {
+	background-color: #000000;
+}
+QLabel#log_level_always {
+	color: #00ffff;
+}
+QLabel#log_level_fatal {
+	color: #ff00ff;
+}
+QLabel#log_level_error {
+	color: #ff0000;
+}
+QLabel#log_level_todo {
+	color: #ff6000;
+}
+QLabel#log_level_success {
+	color: #00ff00;
+}
+QLabel#log_level_warning {
+	color: #ffff00;
+}
+QLabel#log_level_notice {
+	color: #ffffff;
+}
+QLabel#log_level_trace {
+	color: #808080;
+}
+QLabel#log_stack {
+	color: #ffffff;
+}
+QTextEdit#tty_frame {
+	background-color: #000;
+}
+QLabel#tty_text {
+	color: #c9c9c9;
+}
+QLabel#rsx_debugger_display_buffer {
+	background-color: #000000;
+}
+QDialog#kernel_explorer {
+	background-color: #000000;
+}
+QDialog#memory_viewer {
+	background-color: #000000;
+	color: #c9c9c9;
+}
+QLabel#memory_viewer_address_panel {
+	color: #00cbff;
+	background-color: #000000;
+}
+QLabel#memory_viewer_hex_panel {
+	color: #c9c9c9;
+	background-color: #000000;
+}
+QLabel#memory_viewer_ascii_panel {
+	background-color: #000000;
+} 
+QLabel#debugger_frame_breakpoint {
+	color: #000000;
+	background-color: #ffff00;
+}
+QLabel#debugger_frame_pc {
+	color: #000000;
+	background-color: #00ff00;
+}
+QLabel#validLabel {
+	font-weight: 600;
+}
+/* Game Grid */
+#game_list_grid_item:hover {
+	background: #212947;
+}
+#game_list_grid_item:focus {
+	background: #0078D7;
+}
+
+/* Game Grid Font */
+#game_list_grid_item #game_list_grid_item_title_label {
+	font-size: 9pt;
+	font-family: "SCE-PS3 Rodin LATIN";
+	color: #111525;
+}
+
+/* Game Grid hover and focus: we need to handle properties differently when using descendants */
+#game_list_grid_item[hover="true"] #game_list_grid_item_title_label {
+	background-color: #212947;
+}
+#game_list_grid_item[focus="true"] #game_list_grid_item_title_label {
+	background-color: #111525;
+}

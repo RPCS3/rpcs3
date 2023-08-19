@@ -98,6 +98,12 @@ struct ps3_process_info_t
 
 extern ps3_process_info_t  g_ps3_process_info;
 
+struct spawn_self_stack
+{
+	u8 _x0[0x20];
+	const char self_path[0x30];
+};
+
 // Auxiliary functions
 s32 process_getpid();
 s32 process_get_sdk_version(u32 pid, s32& ver);
@@ -123,4 +129,4 @@ error_code sys_process_detach_child(u64 unk);
 void _sys_process_exit(ppu_thread& ppu, s32 status, u32 arg2, u32 arg3);
 void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> arg, u32 arg_size, u32 arg4);
 void sys_process_exit3(ppu_thread& ppu, s32 status);
-error_code sys_process_spawns_a_self2(vm::ptr<u32> pid, u32 primary_prio, u64 flags, vm::ptr<void> stack, u32 stack_size, u32 mem_id, vm::ptr<void> param_sfo, vm::ptr<void> dbg_data);
+error_code sys_process_spawns_a_self2(ppu_thread& ppu, vm::ptr<u32> pid, u32 primary_prio, u64 flags, vm::ptr<spawn_self_stack> stack, u32 stack_size, u32 mem_id, vm::ptr<void> param_sfo, vm::ptr<void> dbg_data);
