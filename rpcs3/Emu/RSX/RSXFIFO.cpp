@@ -195,7 +195,7 @@ namespace rsx
 				}
 			}
 
-			const auto ret = utils::bless<const be_t<u32>>(&m_cache)[(addr - m_cache_addr) >> 2];
+			const auto ret = read_from_ptr<be_t<u32>>(+m_cache[0], addr - m_cache_addr);
 			return {true, ret};
 		}
 
