@@ -317,12 +317,9 @@ f64 XAudio2Backend::GetCallbackFrameLen()
 		return _10ms;
 	}
 
-#if _MSC_VER
 	Microsoft::WRL::ComPtr<IXAudio2Extension> xaudio_ext{};
-#endif
 	f64 min_latency{};
 
-#if _MSC_VER
 	if (HRESULT hr = m_xaudio2_instance->QueryInterface(IID_IXAudio2Extension, std::bit_cast<void**>(xaudio_ext.GetAddressOf())); FAILED(hr))
 	{
 		XAudio.error("QueryInterface() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
@@ -337,7 +334,6 @@ f64 XAudio2Backend::GetCallbackFrameLen()
 			min_latency = static_cast<f64>(samples_per_q) / freq;
 		}
 	}
-#endif
 
 	return std::max<f64>(min_latency, _10ms); // 10ms is the minimum for XAudio
 }
