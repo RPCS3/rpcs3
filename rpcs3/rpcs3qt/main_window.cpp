@@ -743,75 +743,93 @@ bool main_window::InstallPackages(QStringList file_paths, bool from_boot)
 		m_gui_settings->SetValue(gui::fd_install_pkg, file_info.path());
 	}
 
-	if (file_paths.count() == 1 && file_paths.front().endsWith(".pkg", Qt::CaseInsensitive))
+	if (file_paths.count() == 1)
 	{
 		const QString file_path = file_paths.front();
 		const QFileInfo file_info(file_path);
 
-		compat::package_info info = game_compatibility::GetPkgInfo(file_path, m_game_list_frame ? m_game_list_frame->GetGameCompatibility() : nullptr);
-
-		if (!info.is_valid)
+		// #14398 - [Feature request] Install multiple PKG from command line
+		if (file_info.isDir())
 		{
-			QMessageBox::warning(this, tr("Invalid package!"), tr("The selected package is invalid!\n\nPath:\n%0").arg(file_path));
-			return false;
-		}
+			const QDir dir(file_path);
+			const auto dir_file_infos = dir.entryInfoList(QDir::Files);
+			const auto dir_file_infos_count = dir_file_infos.count();
 
-		if (info.type != compat::package_type::other)
-		{
-			if (info.type == compat::package_type::dlc)
+			QList<QString> dir_file_paths(dir_file_infos_count);
+			for (int i = 0; i < dir_file_infos_count; i++)
 			{
-				info.local_cat = tr("\nDLC", "Block for package type (DLC)");
-			}
-			else
-			{
-				info.local_cat = tr("\nUpdate", "Block for package type (Update)");
-			}
-		}
-		else if (!info.local_cat.isEmpty())
-		{
-			info.local_cat = tr("\n%0", "Block for package type").arg(info.local_cat);
-		}
-
-		if (!info.title_id.isEmpty())
-		{
-			info.title_id = tr("\n%0", "Block for Title ID").arg(info.title_id);
-		}
-
-		if (!info.version.isEmpty())
-		{
-			info.version = tr("\nVersion %0", "Block for Version").arg(info.version);
-		}
-
-		if (!info.changelog.isEmpty())
-		{
-			info.changelog = tr("Changelog:\n%0", "Block for Changelog").arg(info.changelog);
-		}
-
-		const QString info_string = QStringLiteral("%0\n\n%1%2%3%4").arg(file_info.fileName()).arg(info.title).arg(info.local_cat).arg(info.title_id).arg(info.version);
-		QString message = tr("Do you want to install this package?\n\n%0").arg(info_string);
-
-		QMessageBox mb(QMessageBox::Icon::Question, tr("PKG Decrypter / Installer"), message, QMessageBox::Yes | QMessageBox::No, this);
-		mb.setDefaultButton(QMessageBox::No);
-
-		if (!info.changelog.isEmpty())
-		{
-			mb.setInformativeText(tr("To see the changelog, please click \"Show Details\"."));
-			mb.setDetailedText(tr("%0").arg(info.changelog));
-
-			// Smartass hack to make the unresizeable message box wide enough for the changelog
-			const int log_width = QLabel(info.changelog).sizeHint().width();
-			while (QLabel(message).sizeHint().width() < log_width)
-			{
-				message += "          ";
+				dir_file_paths[i] = dir_file_infos[i].absoluteFilePath();
 			}
 
-			mb.setText(message);
+			return InstallPackages(dir_file_paths, from_boot);
 		}
-
-		if (mb.exec() != QMessageBox::Yes)
+		else if (file_info.suffix().compare("pkg", Qt::CaseInsensitive) == 0)
 		{
-			gui_log.notice("PKG: Cancelled installation from drop.\n%s\n%s", info_string, info.changelog);
-			return true;
+			compat::package_info info = game_compatibility::GetPkgInfo(file_path, m_game_list_frame ? m_game_list_frame->GetGameCompatibility() : nullptr);
+
+			if (!info.is_valid)
+			{
+				QMessageBox::warning(this, tr("Invalid package!"), tr("The selected package is invalid!\n\nPath:\n%0").arg(file_path));
+				return false;
+			}
+
+			if (info.type != compat::package_type::other)
+			{
+				if (info.type == compat::package_type::dlc)
+				{
+					info.local_cat = tr("\nDLC", "Block for package type (DLC)");
+				}
+				else
+				{
+					info.local_cat = tr("\nUpdate", "Block for package type (Update)");
+				}
+			}
+			else if (!info.local_cat.isEmpty())
+			{
+				info.local_cat = tr("\n%0", "Block for package type").arg(info.local_cat);
+			}
+
+			if (!info.title_id.isEmpty())
+			{
+				info.title_id = tr("\n%0", "Block for Title ID").arg(info.title_id);
+			}
+
+			if (!info.version.isEmpty())
+			{
+				info.version = tr("\nVersion %0", "Block for Version").arg(info.version);
+			}
+
+			if (!info.changelog.isEmpty())
+			{
+				info.changelog = tr("Changelog:\n%0", "Block for Changelog").arg(info.changelog);
+			}
+
+			const QString info_string = QStringLiteral("%0\n\n%1%2%3%4").arg(file_info.fileName()).arg(info.title).arg(info.local_cat).arg(info.title_id).arg(info.version);
+			QString message = tr("Do you want to install this package?\n\n%0").arg(info_string);
+
+			QMessageBox mb(QMessageBox::Icon::Question, tr("PKG Decrypter / Installer"), message, QMessageBox::Yes | QMessageBox::No, this);
+			mb.setDefaultButton(QMessageBox::No);
+
+			if (!info.changelog.isEmpty())
+			{
+				mb.setInformativeText(tr("To see the changelog, please click \"Show Details\"."));
+				mb.setDetailedText(tr("%0").arg(info.changelog));
+
+				// Smartass hack to make the unresizeable message box wide enough for the changelog
+				const int log_width = QLabel(info.changelog).sizeHint().width();
+				while (QLabel(message).sizeHint().width() < log_width)
+				{
+					message += "          ";
+				}
+
+				mb.setText(message);
+			}
+
+			if (mb.exec() != QMessageBox::Yes)
+			{
+				gui_log.notice("PKG: Cancelled installation from drop.\n%s\n%s", info_string, info.changelog);
+				return true;
+			}
 		}
 	}
 
