@@ -126,6 +126,17 @@ enum
 	CELL_PADFILTER_IIR_CUTOFF_2ND_LPF_BT_010 = 2, // 10% Nyquist frequency
 };
 
+struct pad_data_internal
+{
+	u16 vendor_id;
+	u16 product_id;
+	u32 port_status;
+	u32 device_capability;
+	u32 device_type;
+	u32 pclass_type;
+	u32 pclass_profile;
+};
+
 struct CellPadInfo
 {
 	be_t<u32> max_connect;
@@ -192,7 +203,7 @@ struct pad_info
 {
 	atomic_t<u32> max_connect = 0;
 	std::array<u32, CELL_PAD_MAX_PORT_NUM> port_setting{ 0 };
-	std::array<u32, CELL_PAD_MAX_PORT_NUM> reported_statuses{};
+	std::array<pad_data_internal, CELL_PAD_MAX_PORT_NUM> reported_info{};
 
 	SAVESTATE_INIT_POS(11);
 
@@ -209,7 +220,7 @@ struct pad_info
 	// This result relies on data updates from config events on a dedicated thread to receive them
 	bool is_reportedly_connected(u32 port_no) const
 	{
-		return port_no < get_max_connect() && !!(reported_statuses[port_no] & CELL_PAD_STATUS_CONNECTED);
+		return port_no < get_max_connect() && !!(reported_info[port_no].port_status & CELL_PAD_STATUS_CONNECTED);
 	}
 };
 
