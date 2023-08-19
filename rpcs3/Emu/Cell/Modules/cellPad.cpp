@@ -82,14 +82,61 @@ void cellPad_NotifyStateChange(u32 index, u32 state)
 		return;
 	}
 
-	const u32 old = info->reported_statuses[index];
+	const auto handler = pad::get_current_handler();
+
+	const auto& pads = handler->GetPads();
+
+	const u32 old = info->reported_info[index].port_status;
+
+	// Ignore sent status for now, use the latest instead
+	state = (pads[index]->m_port_status & CELL_PAD_STATUS_CONNECTED);
 
 	if (~(old ^ state) & CELL_PAD_STATUS_CONNECTED)
 	{
 		return;
 	}
 
-	info->reported_statuses[index] = (state & CELL_PAD_STATUS_CONNECTED) | CELL_PAD_STATUS_ASSIGN_CHANGES;
+	info->reported_info[index].port_status = (state & CELL_PAD_STATUS_CONNECTED) | CELL_PAD_STATUS_ASSIGN_CHANGES;
+	info->reported_info[index].device_capability = pads[index]->m_device_capability;
+	info->reported_info[index].device_type = pads[index]->m_device_type;
+	info->reported_info[index].pclass_type = pads[index]->m_class_type;
+	info->reported_info[index].pclass_profile = pads[index]->m_class_profile;
+
+	if (pads[index]->m_vendor_id == 0 || pads[index]->m_product_id == 0)
+	{
+		// Fallback to defaults
+
+		input::product_info product;
+
+		switch (pads[index]->m_class_type)
+		{
+		case CELL_PAD_PCLASS_TYPE_GUITAR:
+			product = input::get_product_info(input::product_type::red_octane_gh_guitar);
+			break;
+		case CELL_PAD_PCLASS_TYPE_DRUM:
+			product = input::get_product_info(input::product_type::red_octane_gh_drum_kit);
+			break;
+		case CELL_PAD_PCLASS_TYPE_DJ:
+			product = input::get_product_info(input::product_type::dj_hero_turntable);
+			break;
+		case CELL_PAD_PCLASS_TYPE_DANCEMAT:
+			product = input::get_product_info(input::product_type::dance_dance_revolution_mat);
+			break;
+		case CELL_PAD_PCLASS_TYPE_NAVIGATION:
+		case CELL_PAD_PCLASS_TYPE_STANDARD:
+		default:
+			product = input::get_product_info(input::product_type::playstation_3_controller);
+			break;
+		}
+
+		info->reported_info[index].vendor_id = product.vendor_id;
+		info->reported_info[index].product_id = product.product_id;
+	}
+	else
+	{
+		info->reported_info[index].vendor_id = pads[index]->m_vendor_id;
+		info->reported_info[index].product_id = pads[index]->m_product_id;
+	}
 }
 
 extern void pad_state_notify_state_change(u32 index, u32 state)
@@ -115,7 +162,7 @@ error_code cellPadInit(ppu_thread& ppu, u32 max_connect)
 
 	config.max_connect = max_connect;
 	config.port_setting.fill(CELL_PAD_SETTING_PRESS_OFF | CELL_PAD_SETTING_SENSOR_OFF);
-	config.reported_statuses = {};
+	config.reported_info = {};
 
 	std::array<s32, CELL_MAX_PADS> statuses{};
 
@@ -459,24 +506,35 @@ error_code cellPadPeriphGetInfo(vm::ptr<CellPadPeriphInfo> info)
 	std::memset(info.get_ptr(), 0, sizeof(CellPadPeriphInfo));
 
 	info->max_connect = config.max_connect;
-	info->now_connect = rinfo.now_connect;
 	info->system_info = rinfo.system_info;
 
 	const auto& pads = handler->GetPads();
+
+	u32 now_connect = 0;
 
 	for (u32 i = 0; i < CELL_PAD_MAX_PORT_NUM; ++i)
 	{
 		if (i >= config.get_max_connect())
 			break;
 
-		info->port_status[i] = pads[i]->m_port_status;
-		pads[i]->m_port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES;
+		info->port_status[i] = config.reported_info[i].port_status;
+		config.reported_info[i].port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES;
 		info->port_setting[i] = config.port_setting[i];
-		info->device_capability[i] = pads[i]->m_device_capability;
-		info->device_type[i] = pads[i]->m_device_type;
-		info->pclass_type[i] = pads[i]->m_class_type;
-		info->pclass_profile[i] = pads[i]->m_class_profile;
+
+		if (~config.reported_info[i].port_status & CELL_PAD_STATUS_CONNECTED)
+		{
+			continue;
+		}
+
+		info->device_capability[i] = config.reported_info[i].device_capability;
+		info->device_type[i] = config.reported_info[i].device_type;
+		info->pclass_type[i] = config.reported_info[i].pclass_type;
+		info->pclass_profile[i] = config.reported_info[i].pclass_profile;
+
+		now_connect++;
 	}
+
+	info->now_connect = now_connect;
 
 	return CELL_OK;
 }
@@ -649,52 +707,18 @@ error_code cellPadGetInfo(vm::ptr<CellPadInfo> info)
 		if (i >= config.get_max_connect())
 			break;
 
-		if (!config.is_reportedly_connected(i))
+		config.reported_info[i].port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES; // TODO: should ASSIGN flags be cleared here?
+		info->status[i] = config.reported_info[i].port_status;
+
+		if (~config.reported_info[i].port_status & CELL_PAD_STATUS_CONNECTED)
+		{
 			continue;
-
-		config.reported_statuses[i] &= ~CELL_PAD_STATUS_ASSIGN_CHANGES; // TODO: should ASSIGN flags be cleared here?
-		info->status[i] = config.reported_statuses[i];
-
-		if (config.reported_statuses[i] & CELL_PAD_STATUS_CONNECTED)
-		{
-			now_connect++;
 		}
 
-		if (pads[i]->m_vendor_id == 0 || pads[i]->m_product_id == 0)
-		{
-			// Fallback to defaults
+		info->vendor_id[i] = config.reported_info[i].vendor_id;
+		info->product_id[i] = config.reported_info[i].product_id;
 
-			input::product_info product;
-
-			switch (pads[i]->m_class_type)
-			{
-			case CELL_PAD_PCLASS_TYPE_GUITAR:
-				product = input::get_product_info(input::product_type::red_octane_gh_guitar);
-				break;
-			case CELL_PAD_PCLASS_TYPE_DRUM:
-				product = input::get_product_info(input::product_type::red_octane_gh_drum_kit);
-				break;
-			case CELL_PAD_PCLASS_TYPE_DJ:
-				product = input::get_product_info(input::product_type::dj_hero_turntable);
-				break;
-			case CELL_PAD_PCLASS_TYPE_DANCEMAT:
-				product = input::get_product_info(input::product_type::dance_dance_revolution_mat);
-				break;
-			case CELL_PAD_PCLASS_TYPE_NAVIGATION:
-			case CELL_PAD_PCLASS_TYPE_STANDARD:
-			default:
-				product = input::get_product_info(input::product_type::playstation_3_controller);
-				break;
-			}
-
-			info->vendor_id[i] = product.vendor_id;
-			info->product_id[i] = product.product_id;
-		}
-		else
-		{
-			info->vendor_id[i] = pads[i]->m_vendor_id;
-			info->product_id[i] = pads[i]->m_product_id;
-		}
+		now_connect++;
 	}
 
 	info->now_connect = now_connect;
@@ -732,19 +756,19 @@ error_code cellPadGetInfo2(vm::ptr<CellPadInfo2> info)
 		if (i >= config.get_max_connect())
 			break;
 
-		if (!config.is_reportedly_connected(i))
-			continue;
-
-		info->port_status[i] = config.reported_statuses[i];
-		config.reported_statuses[i] &= ~CELL_PAD_STATUS_ASSIGN_CHANGES;
+		info->port_status[i] = config.reported_info[i].port_status;
+		config.reported_info[i].port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES;
 		info->port_setting[i] = config.port_setting[i];
+
+		if (~config.reported_info[i].port_status & CELL_PAD_STATUS_CONNECTED)
+		{
+			continue;
+		}
+
 		info->device_capability[i] = pads[i]->m_device_capability;
 		info->device_type[i] = pads[i]->m_device_type;
 
-		if (config.reported_statuses[i] & CELL_PAD_STATUS_CONNECTED)
-		{
-			now_connect++;
-		}
+		now_connect++;
 	}
 
 	info->now_connect = now_connect;
