@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <memory>
 #include "atomic.hpp"
-#include "asm.hpp"
+#include "bless.hpp"
 
 namespace stx
 {
