@@ -772,7 +772,8 @@ bool main_window::InstallPackages(QStringList file_paths, bool from_boot)
 
 			return InstallPackages(dir_file_paths, from_boot);
 		}
-		else if (file_info.suffix().compare("pkg", Qt::CaseInsensitive) == 0)
+
+		if (file_info.suffix().compare("pkg", Qt::CaseInsensitive) == 0)
 		{
 			compat::package_info info = game_compatibility::GetPkgInfo(file_path, m_game_list_frame ? m_game_list_frame->GetGameCompatibility() : nullptr);
 
