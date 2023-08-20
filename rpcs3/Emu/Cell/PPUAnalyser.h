@@ -262,6 +262,8 @@ struct ppu_pattern_matrix
 // PPU Instruction Type
 struct ppu_itype
 {
+	static constexpr struct branch_tag{} branch{}; // Branch Instructions
+
 	enum type
 	{
 		UNK = 0,
@@ -432,11 +434,8 @@ struct ppu_itype
 		ADDIC,
 		ADDI,
 		ADDIS,
-		BC,
 		SC,
-		B,
 		MCRF,
-		BCLR,
 		CRNOR,
 		CRANDC,
 		ISYNC,
@@ -446,7 +445,6 @@ struct ppu_itype
 		CREQV,
 		CRORC,
 		CROR,
-		BCCTR,
 		RLWIMI,
 		RLWINM,
 		RLWNM,
@@ -781,12 +779,22 @@ struct ppu_itype
 		FCTID_,
 		FCTIDZ_,
 		FCFID_,
+
+		B, // branch_tag first
+		BC,
+		BCLR,
+		BCCTR, // branch_tag last
 	};
 
 	// Enable address-of operator for ppu_decoder<>
 	friend constexpr type operator &(type value)
 	{
 		return value;
+	}
+
+	friend constexpr bool operator &(type value, branch_tag)
+	{
+		return value >= B && value <= BCCTR;
 	}
 };
 
