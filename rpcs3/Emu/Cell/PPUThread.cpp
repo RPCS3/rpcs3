@@ -1563,16 +1563,19 @@ std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 
 	std::vector<std::pair<u32, u32>> call_stack_list;
 
-	bool first = true;
+	bool is_first = true;
+	bool skip_single_frame = false;
+
+	const u64 _lr = this->lr;
+	const u32 _cia = this->cia;
+	const u64 gpr0 = this->gpr[0];
 
 	for (
 		u64 sp = r1;
 		sp % 0x10 == 0u && sp >= stack_min && sp <= stack_max - ppu_stack_start_offset;
-		first = false
+		is_first = false
 		)
 	{
-		u64 addr = *vm::get_super_ptr<u64>(static_cast<u32>(sp + 16));
-
 		auto is_invalid = [](u64 addr)
 		{
 			if (addr > u32{umax} || addr % 4 || !vm::check_addr(static_cast<u32>(addr), vm::page_executable))
@@ -1584,28 +1587,330 @@ std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 			return addr == g_fxo->get<ppu_function_manager>().func_addr(1, true);
 		};
 
-		if (is_invalid(addr))
+		if (is_first && !is_invalid(_lr))
 		{
-			if (first)
-			{
-				// Function hasn't saved LR, could be because it's a leaf function
-				// Use LR directly instead
-				addr = lr;
+			// Detect functions with no stack or before LR has been stored
 
-				if (is_invalid(addr))
+			// Tracking if instruction has already been passed through
+			// Instead of using map or set, use two vectors relative to CIA and resize as needed
+			std::vector<be_t<u32>> inst_neg;
+			std::vector<be_t<u32>> inst_pos;
+
+			auto get_inst = [&](u32 pos) -> be_t<u32>&
+			{
+				static be_t<u32> s_inst_empty{};
+
+				if (pos < _cia)
 				{
-					// Skip it, workaround
-					continue;
+					const u32 neg_dist = (_cia - pos - 4) / 4;
+
+					if (neg_dist >= inst_neg.size())
+					{
+						const u32 inst_bound = pos & -256;
+
+						const usz old_size = inst_neg.size();
+						const usz new_size = neg_dist + (pos - inst_bound) / 4 + 1;
+
+						if (new_size >= 0x8000)
+						{
+							// Gross lower limit for the function (if it is that size it is unlikely that it is even a leaf function)
+							return s_inst_empty;
+						}
+
+						inst_neg.resize(new_size);
+
+						if (!vm::try_access(inst_bound, &inst_neg[old_size], (new_size - old_size) * sizeof(be_t<u32>), false))
+						{
+							// Failure (this would be detected as failure by zeroes)
+						}
+
+						// Reverse the array (because this buffer directs backwards in address)
+
+						for (usz start = old_size, end = new_size - 1; start < end; start++, end--)
+						{
+							std::swap(inst_neg[start], inst_neg[end]);
+						}
+					}
+
+					return inst_neg[neg_dist];
+				}
+
+				const u32 pos_dist = (pos - _cia) / 4;
+
+				if (pos_dist >= inst_pos.size())
+				{
+					const u32 inst_bound = utils::align<u32>(pos, 256);
+
+					const usz old_size = inst_pos.size();
+					const usz new_size = pos_dist + (inst_bound - pos) / 4 + 1;
+
+					if (new_size >= 0x8000)
+					{
+						// Gross upper limit for the function (if it is that size it is unlikely that it is even a leaf function)
+						return s_inst_empty;
+					}
+
+					inst_pos.resize(new_size);
+
+					if (!vm::try_access(pos, &inst_pos[old_size], (new_size - old_size) * sizeof(be_t<u32>), false))
+					{
+						// Failure (this would be detected as failure by zeroes)
+					}
+				}
+
+				return inst_pos[pos_dist];
+			};
+
+			bool upper_abort = false;
+
+			struct context_t
+			{
+				u32 start_point;
+				bool maybe_leaf = false; // True if the function is leaf or at the very end/start of non-leaf
+				bool non_leaf = false; // Absolutely not a leaf
+				bool about_to_push_frame = false; // STDU incoming
+				bool about_to_store_lr = false; // Link is about to be stored on stack
+				bool about_to_pop_frame = false; // ADDI R1 is about to be issued
+				bool about_to_load_link = false; // MTLR is about to be issued
+				bool maybe_use_reg0_instead_of_lr = false; // Use R0 at the end of a non-leaf function if ADDI has been issued before MTLR
+			};
+
+			// Start with CIA
+			std::deque<context_t> workload{context_t{_cia}};
+
+			usz start = 0;
+
+			for (; start < workload.size(); start++)
+			{
+				for (u32 wa = workload[start].start_point; vm::check_addr(wa, vm::page_executable);)
+				{
+					be_t<u32>& opcode = get_inst(wa);
+
+					auto& [_, maybe_leaf, non_leaf, about_to_push_frame, about_to_store_lr,
+						about_to_pop_frame, about_to_load_link, maybe_use_reg0_instead_of_lr] = workload[start];
+
+					if (!opcode)
+					{
+						// Already passed or failure of reading
+						break;
+					}
+
+					const ppu_opcode_t op{opcode};
+
+					// Mark as passed through
+					opcode = 0;
+
+					const auto type = g_ppu_itype.decode(op.opcode);
+
+					if (workload.size() == 1 && type == ppu_itype::STDU && op.rs == 1u && op.ra == 1u)
+					{
+						if (op.simm16 >= 0)
+						{
+							// Against ABI
+							non_leaf = true;
+							upper_abort = true;
+							break;
+						}
+
+						// Saving LR to register: this is indeed a new function (ok because LR has not been saved yet)
+						maybe_leaf = true;
+						about_to_push_frame = true;
+						about_to_pop_frame = false;
+						upper_abort = true;
+						break;
+					}
+
+					if (workload.size() == 1 && type == ppu_itype::STD && op.ra == 1u && op.rs == 0u)
+					{
+						bool found_matching_stdu = false;
+
+						for (u32 back = 1; back < 20; back++)
+						{
+							be_t<u32>& opcode = get_inst(utils::sub_saturate<u32>(_cia, back * 4));
+
+							if (!opcode)
+							{
+								// Already passed or failure of reading
+								break;
+							}
+
+							const ppu_opcode_t test_op{opcode};
+
+							const auto type = g_ppu_itype.decode(test_op.opcode);
+
+							const u32 spr = ((test_op.spr >> 5) | ((test_op.spr & 0x1f) << 5));
+
+							if (type == ppu_itype::BCLR)
+							{
+								break;
+							}
+
+							if (type == ppu_itype::STDU && test_op.rs == 1u && test_op.ra == 1u)
+							{
+								if (0 - (test_op.ds << 2) == (op.ds << 2) - 0x10)
+								{
+									found_matching_stdu = true;
+								}
+
+								break;
+							}
+						}
+
+						if (found_matching_stdu)
+						{
+							// Saving LR to stack: this is indeed a new function (ok because LR has not been saved yet)
+							maybe_leaf = true;
+							about_to_store_lr = true;
+							about_to_pop_frame = true;
+							upper_abort = true;
+							break;
+						}
+					}
+
+					const u32 spr = ((op.spr >> 5) | ((op.spr & 0x1f) << 5));
+
+					// It can be placed before or after STDU, ignore for now
+					// if (workload.size() == 1 && type == ppu_itype::MFSPR && op.rs == 0u && spr == 0x8)
+					// {
+					// 	// Saving LR to register: this is indeed a new function (ok because LR has not been saved yet)
+					// 	maybe_leaf = true;
+					// 	about_to_store_lr = true;
+					// 	about_to_pop_frame = true;
+					// }
+
+					if (type == ppu_itype::MTSPR && spr == 0x8 && op.rs == 0u)
+					{
+						// Test for special case: if ADDI R1 is not found later in code, it means that LR is not restored and R0 should be used instead
+						// Can also search for ADDI R1 backwards and pull the value from stack (needs more research if it is more reliable)
+						maybe_use_reg0_instead_of_lr = true;
+					}
+
+					if (type == ppu_itype::UNK)
+					{
+						// Ignore for now
+						break;
+					}
+
+					if ((type & ppu_itype::branch) && op.lk)
+					{
+						// Gave up on LR before saving
+						non_leaf = true;
+						about_to_pop_frame = true;
+						upper_abort = true;
+						break;
+					}
+
+					// Even if BCLR is conditional, it still counts because LR value is ready for return
+					if (type == ppu_itype::BCLR)
+					{
+						// Returned
+						maybe_leaf = true;
+						upper_abort = true;
+						break;
+					}
+
+					if (type == ppu_itype::ADDI && op.ra == 1u && op.rd == 1u)
+					{
+						if (op.simm16 < 0)
+						{
+							// Against ABI
+							non_leaf = true;
+							upper_abort = true;
+							break;
+						}
+						else if (op.simm16 > 0)
+						{
+							// Remember that SP is about to be restored
+							about_to_pop_frame = true;
+							non_leaf = true;
+							upper_abort = true;
+							break;
+						}
+					}
+
+					const auto results = op_branch_targets(wa, op);
+
+					bool proceeded = false;
+
+					for (usz res_i = 0; res_i < results.size(); res_i++)
+					{
+						const u32 route_pc = results[res_i];
+
+						if (route_pc == umax)
+						{
+							continue;
+						}
+
+						if (vm::check_addr(route_pc, vm::page_executable) && get_inst(route_pc))
+						{
+							if (proceeded)
+							{
+								// Remember next route start point
+								workload.push_back(context_t{route_pc});
+							}
+							else
+							{
+								// Next PC
+								wa = route_pc;
+								proceeded = true;
+							}
+						}
+					}
+				}
+
+				if (upper_abort)
+				{
+					break;
 				}
 			}
-			else
+
+			const context_t& res = workload[start];
+
+			if (res.maybe_leaf && !res.non_leaf)
 			{
-				break;
+				const u32 result = res.maybe_use_reg0_instead_of_lr ? static_cast<u32>(gpr0) : static_cast<u32>(_lr);
+
+				// Same stack as far as we know
+				call_stack_list.emplace_back(result, static_cast<u32>(sp));
+
+				if (res.about_to_store_lr)
+				{
+					// LR has yet to be stored on stack, ignore the stack value
+					skip_single_frame = true;
+				}
+			}
+
+			if (res.about_to_pop_frame || (res.maybe_leaf && !res.non_leaf))
+			{
+				const u64 temp_sp = *vm::get_super_ptr<u64>(static_cast<u32>(sp));
+
+				if (temp_sp <= sp)
+				{
+					// Ensure inequality and that the old stack pointer is higher than current
+					break;
+				}
+
+				// Read the first stack frame so caller addresses can be obtained
+				sp = temp_sp;
+				continue;
 			}
 		}
 
-		// TODO: function addresses too
-		call_stack_list.emplace_back(static_cast<u32>(addr), static_cast<u32>(sp));
+		u64 addr = *vm::get_super_ptr<u64>(static_cast<u32>(sp + 16));
+
+		if (skip_single_frame)
+		{
+			skip_single_frame = false;
+		}
+		else if (!is_invalid(addr))
+		{
+			// TODO: function addresses too
+			call_stack_list.emplace_back(static_cast<u32>(addr), static_cast<u32>(sp));
+		}
+		else if (!is_first)
+		{
+			break;
+		}
 
 		const u64 temp_sp = *vm::get_super_ptr<u64>(static_cast<u32>(sp));
 
@@ -1616,6 +1921,8 @@ std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 		}
 
 		sp = temp_sp;
+
+		is_first = false;
 	}
 
 	return call_stack_list;

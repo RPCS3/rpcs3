@@ -1276,6 +1276,7 @@ std::vector<std::pair<u32, u32>> spu_thread::dump_callstack_list() const
 	bool first = true;
 
 	const v128 gpr0 = gpr[0];
+	const u32 _pc = pc;
 
 	// Declare first 128-bytes as invalid for stack (common values such as 0 do not make sense here)
 	for (u32 sp = gpr[1]._u32[3]; (sp & 0xF) == 0u && sp >= 0x80u && sp <= 0x3FFE0u; first = false)
@@ -1299,8 +1300,10 @@ std::vector<std::pair<u32, u32>> spu_thread::dump_callstack_list() const
 		if (first && lr._u32[3] != gpr0._u32[3] && !is_invalid(gpr0))
 		{
 			// Detect functions with no stack or before LR has been stored
-			std::vector<bool> passed(SPU_LS_SIZE / 4);
-			std::vector<u32> start_points{pc};
+			std::vector<bool> passed(_pc / 4);
+
+			// Start with PC
+			std::basic_string<u32> start_points{_pc};
 
 			bool is_ok = false;
 			bool all_failed = false;
@@ -1309,7 +1312,11 @@ std::vector<std::pair<u32, u32>> spu_thread::dump_callstack_list() const
 			{
 				for (u32 i = start_points[start]; i < SPU_LS_SIZE;)
 				{
-					if (passed[i / 4])
+					if (i / 4 >= passed.size())
+					{
+						passed.resize(i / 4 + 1);
+					}
+					else if (passed[i / 4])
 					{
 						// Already passed
 						break;
@@ -1322,7 +1329,7 @@ std::vector<std::pair<u32, u32>> spu_thread::dump_callstack_list() const
 
 					if (start == 0 && type == spu_itype::STQD && op.ra == 1u && op.rt == 0u)
 					{
-						// Saving LR to stack: this is indeed a new function
+						// Saving LR to stack: this is indeed a new function (ok because LR has not been saved yet)
 						is_ok = true;
 						break;
 					}
@@ -1360,12 +1367,23 @@ std::vector<std::pair<u32, u32>> spu_thread::dump_callstack_list() const
 					for (usz res_i = 0; res_i < results.size(); res_i++)
 					{
 						const u32 route_pc = results[res_i];
-						if (route_pc < SPU_LS_SIZE && !passed[route_pc / 4])
+
+						if (route_pc >= SPU_LS_SIZE)
+						{
+							continue;
+						}
+
+						if (route_pc / 4 >= passed.size())
+						{
+							passed.resize(route_pc / 4 + 1);
+						}
+
+						if (!passed[route_pc / 4])
 						{
 							if (proceeded)
 							{
 								// Remember next route start point
-								start_points.emplace_back(route_pc);
+								start_points.push_back(route_pc);
 							}
 							else
 							{
