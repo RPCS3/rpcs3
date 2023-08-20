@@ -751,8 +751,17 @@ bool main_window::InstallPackages(QStringList file_paths, bool from_boot)
 		// #14398 - [Feature request] Install multiple PKG from command line
 		if (file_info.isDir())
 		{
+			gui_log.notice("PKG: Trying to install packages from dir: '%s'", file_path);
+
 			const QDir dir(file_path);
 			const auto dir_file_infos = dir.entryInfoList(QDir::Files);
+
+			if (dir_file_infos.empty())
+			{
+				gui_log.notice("PKG: Could not find any files in dir: '%s'", file_path);
+				return true;
+			}
+
 			const auto dir_file_infos_count = dir_file_infos.count();
 
 			QList<QString> dir_file_paths(dir_file_infos_count);
