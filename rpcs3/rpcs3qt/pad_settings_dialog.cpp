@@ -1612,7 +1612,7 @@ void pad_settings_dialog::HandleDeviceClassChange(int index) const
 
 	ui->chooseProduct->clear();
 
-	for (const auto& product : input::get_products_by_class(index))
+	for (const input::product_info& product : input::get_products_by_class(index))
 	{
 		switch (product.type)
 		{
@@ -1659,6 +1659,11 @@ void pad_settings_dialog::HandleDeviceClassChange(int index) const
 		case input::product_type::rock_revolution_drum_kit:
 		{
 			ui->chooseProduct->addItem(tr("Rock Revolution", "Rock Revolution Drum Controller"), static_cast<int>(product.type));
+			break;
+		}
+		case input::product_type::ps_move_navigation:
+		{
+			ui->chooseProduct->addItem(tr("PS Move Navigation", "PS Move Navigation Controller"), static_cast<int>(product.type));
 			break;
 		}
 		}
