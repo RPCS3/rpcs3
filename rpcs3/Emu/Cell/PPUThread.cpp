@@ -1864,7 +1864,7 @@ std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 				}
 			}
 
-			const context_t& res = workload[start];
+			const context_t& res = workload[std::min<usz>(start, workload.size() - 1)];
 
 			if (res.maybe_leaf && !res.non_leaf)
 			{
