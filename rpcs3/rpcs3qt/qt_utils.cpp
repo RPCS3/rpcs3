@@ -164,13 +164,13 @@ namespace gui
 			return icon;
 		}
 
-		QStringList get_dir_entries(const QDir& dir, const QStringList& name_filters)
+		QStringList get_dir_entries(const QDir& dir, const QStringList& name_filters, bool full_path)
 		{
 			QFileInfoList entries = dir.entryInfoList(name_filters, QDir::Files);
 			QStringList res;
-			for (const QFileInfo &entry : entries)
+			for (const QFileInfo& entry : entries)
 			{
-				res.append(entry.baseName());
+				res.append(full_path ? entry.absoluteFilePath() : entry.baseName());
 			}
 			return res;
 		}
