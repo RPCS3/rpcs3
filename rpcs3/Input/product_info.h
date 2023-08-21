@@ -30,7 +30,6 @@ namespace input
 	{
 		red_octane_gh_guitar         = 0x0100, // RedOctane Guitar (Guitar Hero 4 Guitar Controller)
 		red_octane_gh_drum_kit       = 0x0120, // RedOctane Drum Kit (Guitar Hero 4 Drum Controller)
-		dance_dance_revolution_mat   = 0x0140, // Dance Dance Revolution Dance Mat Controller
 		dj_hero_turntable            = 0x0140, // DJ Hero Turntable Controller
 		harmonix_rockband_guitar     = 0x0200, // Harmonix Guitar (Rock Band II Guitar Controller)
 		harmonix_rockband_drum_kit   = 0x0210, // Harmonix Drum Kit (Rock Band II Drum Controller)
@@ -38,6 +37,7 @@ namespace input
 		playstation_3_controller     = 0x0268, // PlayStation 3 Controller
 		rock_revolution_drum_kit     = 0x0300, // Rock Revolution Drum Controller
 		ps_move_navigation           = 0x042F, // PlayStation Move navigation controller
+		dance_dance_revolution_mat   = 0x1010, // Dance Dance Revolution Dance Mat Controller
 	};
 
 	struct product_info
