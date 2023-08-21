@@ -2446,6 +2446,30 @@ bool game_list_frame::SearchMatchesApp(const QString& name, const QString& seria
 			{
 				return true;
 			}
+
+			// Initials-only search
+			if (search_text.size() >= 2 && search_text.count(QRegularExpression(QStringLiteral("[a-z0-9]"))) >= 2 && !search_text.contains(QRegularExpression(QStringLiteral("[^a-z0-9 ]"))))
+			{
+				QString initials = QStringLiteral("\\b");
+
+				for (auto it = search_text.begin(); it != search_text.end(); it++)
+				{
+					if (it->isSpace())
+					{
+						continue;
+					}
+
+					initials += *it;
+					initials += QStringLiteral("\\w*\\b ");
+				}
+
+				initials += QChar('?');
+
+				if (title_name_replaced_trademarks_with_spaces.contains(QRegularExpression(initials)))
+				{
+					return true;
+				}
+			}
 		}
 
 		return title_name.contains(search_text) || serial.toLower().contains(search_text);
