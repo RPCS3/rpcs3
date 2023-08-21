@@ -123,6 +123,8 @@ void cellPad_NotifyStateChange(u32 index, u32 state)
 			product = input::get_product_info(input::product_type::dance_dance_revolution_mat);
 			break;
 		case CELL_PAD_PCLASS_TYPE_NAVIGATION:
+			product = input::get_product_info(input::product_type::ps_move_navigation);
+			break;
 		case CELL_PAD_PCLASS_TYPE_STANDARD:
 		default:
 			product = input::get_product_info(input::product_type::playstation_3_controller);

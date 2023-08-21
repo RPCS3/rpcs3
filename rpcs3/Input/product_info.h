@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include "Emu/Io/pad_types.h"
 
 namespace input
 {
@@ -14,7 +15,8 @@ namespace input
 		harmonix_rockband_guitar,
 		harmonix_rockband_drum_kit,
 		harmonix_rockband_drum_kit_2,
-		rock_revolution_drum_kit
+		rock_revolution_drum_kit,
+		ps_move_navigation
 	};
 
 	enum vendor_id
@@ -35,14 +37,15 @@ namespace input
 		harmonix_rockband_drum_kit_2 = 0x0218, // Harmonix Pro-Drum Kit (Rock Band III Pro-Drum Controller)
 		playstation_3_controller     = 0x0268, // PlayStation 3 Controller
 		rock_revolution_drum_kit     = 0x0300, // Rock Revolution Drum Controller
+		ps_move_navigation           = 0x042F, // PlayStation Move navigation controller
 	};
 
 	struct product_info
 	{
 		product_type type;
-		unsigned short vendor_id;
-		unsigned short product_id;
-		unsigned int pclass_profile; // See CELL_PAD_PCLASS_PROFILE flags
+		u16 vendor_id;
+		u16 product_id;
+		u32 pclass_profile; // See CELL_PAD_PCLASS_PROFILE flags
 	};
 
 	inline product_info get_product_info(product_type type)
@@ -51,40 +54,172 @@ namespace input
 		{
 		case product_type::dance_dance_revolution_mat:
 		{
-			return product_info{ type, vendor_id::konami_de, product_id::dance_dance_revolution_mat, 0x000000FF };
+			constexpr u32 profile =
+				CELL_PAD_PCLASS_PROFILE_DANCEMAT_CIRCLE |
+				CELL_PAD_PCLASS_PROFILE_DANCEMAT_CROSS |
+				CELL_PAD_PCLASS_PROFILE_DANCEMAT_TRIANGLE |
+				CELL_PAD_PCLASS_PROFILE_DANCEMAT_SQUARE |
+				CELL_PAD_PCLASS_PROFILE_DANCEMAT_RIGHT |
+				CELL_PAD_PCLASS_PROFILE_DANCEMAT_LEFT |
+				CELL_PAD_PCLASS_PROFILE_DANCEMAT_UP |
+				CELL_PAD_PCLASS_PROFILE_DANCEMAT_DOWN;
+			return product_info{
+				.type = type,
+				.vendor_id = vendor_id::konami_de,
+				.product_id = product_id::dance_dance_revolution_mat,
+				.pclass_profile = profile
+			};
 		}
 		case product_type::dj_hero_turntable:
 		{
-			return product_info{ type, vendor_id::sony_cea, product_id::dj_hero_turntable, 0x000007FF };
+			constexpr u32 profile =
+				CELL_PAD_PCLASS_PROFILE_DJ_MIXER_ATTACK |
+				CELL_PAD_PCLASS_PROFILE_DJ_MIXER_CROSSFADER |
+				CELL_PAD_PCLASS_PROFILE_DJ_MIXER_DSP_DIAL |
+				CELL_PAD_PCLASS_PROFILE_DJ_DECK1_STREAM1 |
+				CELL_PAD_PCLASS_PROFILE_DJ_DECK1_STREAM2 |
+				CELL_PAD_PCLASS_PROFILE_DJ_DECK1_STREAM3 |
+				CELL_PAD_PCLASS_PROFILE_DJ_DECK1_PLATTER |
+				CELL_PAD_PCLASS_PROFILE_DJ_DECK2_STREAM1 |
+				CELL_PAD_PCLASS_PROFILE_DJ_DECK2_STREAM2 |
+				CELL_PAD_PCLASS_PROFILE_DJ_DECK2_STREAM3 |
+				CELL_PAD_PCLASS_PROFILE_DJ_DECK2_PLATTER;
+			return product_info{
+				.type = type,
+				.vendor_id = vendor_id::sony_cea,
+				.product_id = product_id::dj_hero_turntable,
+				.pclass_profile = profile
+			};
 		}
 		case product_type::harmonix_rockband_drum_kit:
 		{
-			return product_info{ type, vendor_id::sony_cea, product_id::harmonix_rockband_drum_kit, 0x000000FF };
+			constexpr u32 profile =
+				CELL_PAD_PCLASS_PROFILE_DRUM_SNARE |
+				CELL_PAD_PCLASS_PROFILE_DRUM_TOM |
+				CELL_PAD_PCLASS_PROFILE_DRUM_TOM2 |
+				CELL_PAD_PCLASS_PROFILE_DRUM_TOM_FLOOR |
+				CELL_PAD_PCLASS_PROFILE_DRUM_KICK |
+				CELL_PAD_PCLASS_PROFILE_DRUM_CYM_HiHAT |
+				CELL_PAD_PCLASS_PROFILE_DRUM_CYM_CRASH |
+				CELL_PAD_PCLASS_PROFILE_DRUM_CYM_RIDE;
+			return product_info{
+				.type = type,
+				.vendor_id = vendor_id::sony_cea,
+				.product_id = product_id::harmonix_rockband_drum_kit,
+				.pclass_profile = profile
+			};
 		}
 		case product_type::harmonix_rockband_drum_kit_2:
 		{
-			return product_info{ type, vendor_id::sony_cea, product_id::harmonix_rockband_drum_kit_2, 0x000000BF };
+			constexpr u32 profile =
+				CELL_PAD_PCLASS_PROFILE_DRUM_SNARE |
+				CELL_PAD_PCLASS_PROFILE_DRUM_TOM |
+				CELL_PAD_PCLASS_PROFILE_DRUM_TOM2 |
+				CELL_PAD_PCLASS_PROFILE_DRUM_TOM_FLOOR |
+				CELL_PAD_PCLASS_PROFILE_DRUM_KICK |
+				CELL_PAD_PCLASS_PROFILE_DRUM_CYM_HiHAT |
+				CELL_PAD_PCLASS_PROFILE_DRUM_CYM_RIDE;
+			return product_info{
+				.type = type,
+				.vendor_id = vendor_id::sony_cea,
+				.product_id = product_id::harmonix_rockband_drum_kit_2,
+				.pclass_profile = profile
+			};
 		}
 		case product_type::harmonix_rockband_guitar:
 		{
-			return product_info{ type, vendor_id::sony_cea, product_id::harmonix_rockband_guitar, 0x00007FFF };
+			constexpr u32 profile =
+				CELL_PAD_PCLASS_PROFILE_GUITAR_FRET_1 |
+				CELL_PAD_PCLASS_PROFILE_GUITAR_FRET_2 |
+				CELL_PAD_PCLASS_PROFILE_GUITAR_FRET_3 |
+				CELL_PAD_PCLASS_PROFILE_GUITAR_FRET_4 |
+				CELL_PAD_PCLASS_PROFILE_GUITAR_FRET_5 |
+				CELL_PAD_PCLASS_PROFILE_GUITAR_STRUM_UP |
+				CELL_PAD_PCLASS_PROFILE_GUITAR_STRUM_DOWN |
+				CELL_PAD_PCLASS_PROFILE_GUITAR_WHAMMYBAR |
+				CELL_PAD_PCLASS_PROFILE_GUITAR_FRET_H1 |
+				CELL_PAD_PCLASS_PROFILE_GUITAR_FRET_H2 |
+				CELL_PAD_PCLASS_PROFILE_GUITAR_FRET_H3 |
+				CELL_PAD_PCLASS_PROFILE_GUITAR_FRET_H4 |
+				CELL_PAD_PCLASS_PROFILE_GUITAR_FRET_H5 |
+				CELL_PAD_PCLASS_PROFILE_GUITAR_5WAY_EFFECT |
+				CELL_PAD_PCLASS_PROFILE_GUITAR_TILT_SENS;
+			return product_info{
+				.type = type,
+				.vendor_id = vendor_id::sony_cea,
+				.product_id = product_id::harmonix_rockband_guitar,
+				.pclass_profile = profile
+			};
 		}
 		case product_type::red_octane_gh_drum_kit:
 		{
-			return product_info{ type, vendor_id::sony_cea, product_id::red_octane_gh_drum_kit, 0x000000BB };
+			constexpr u32 profile =
+				CELL_PAD_PCLASS_PROFILE_DRUM_SNARE |
+				CELL_PAD_PCLASS_PROFILE_DRUM_TOM |
+				CELL_PAD_PCLASS_PROFILE_DRUM_TOM_FLOOR |
+				CELL_PAD_PCLASS_PROFILE_DRUM_KICK |
+				CELL_PAD_PCLASS_PROFILE_DRUM_CYM_HiHAT |
+				CELL_PAD_PCLASS_PROFILE_DRUM_CYM_RIDE;
+			return product_info{
+				.type = type,
+				.vendor_id = vendor_id::sony_cea,
+				.product_id = product_id::red_octane_gh_drum_kit,
+				.pclass_profile = profile
+			};
 		}
 		case product_type::red_octane_gh_guitar:
 		{
-			return product_info{ type, vendor_id::sony_cea, product_id::red_octane_gh_guitar, 0x000000FF };
+			constexpr u32 profile =
+				CELL_PAD_PCLASS_PROFILE_GUITAR_FRET_1 |
+				CELL_PAD_PCLASS_PROFILE_GUITAR_FRET_2 |
+				CELL_PAD_PCLASS_PROFILE_GUITAR_FRET_3 |
+				CELL_PAD_PCLASS_PROFILE_GUITAR_FRET_4 |
+				CELL_PAD_PCLASS_PROFILE_GUITAR_FRET_5 |
+				CELL_PAD_PCLASS_PROFILE_GUITAR_STRUM_UP |
+				CELL_PAD_PCLASS_PROFILE_GUITAR_STRUM_DOWN |
+				CELL_PAD_PCLASS_PROFILE_GUITAR_WHAMMYBAR;
+			return product_info{
+				.type = type,
+				.vendor_id = vendor_id::sony_cea,
+				.product_id = product_id::red_octane_gh_guitar,
+				.pclass_profile = profile
+			};
 		}
 		case product_type::rock_revolution_drum_kit:
 		{
-			return product_info{ type, vendor_id::sony_cea, product_id::rock_revolution_drum_kit, 0x000000FB };
+			constexpr u32 profile =
+				CELL_PAD_PCLASS_PROFILE_DRUM_SNARE |
+				CELL_PAD_PCLASS_PROFILE_DRUM_TOM |
+				CELL_PAD_PCLASS_PROFILE_DRUM_TOM_FLOOR |
+				CELL_PAD_PCLASS_PROFILE_DRUM_KICK |
+				CELL_PAD_PCLASS_PROFILE_DRUM_CYM_HiHAT |
+				CELL_PAD_PCLASS_PROFILE_DRUM_CYM_CRASH |
+				CELL_PAD_PCLASS_PROFILE_DRUM_CYM_RIDE;
+			return product_info{
+				.type = type,
+				.vendor_id = vendor_id::sony_cea,
+				.product_id = product_id::rock_revolution_drum_kit,
+				.pclass_profile = profile
+			};
+		}
+		case product_type::ps_move_navigation:
+		{
+			return product_info{
+				.type = type,
+				.vendor_id = vendor_id::sony_corp,
+				.product_id = product_id::ps_move_navigation,
+				.pclass_profile = 0x0
+			};
 		}
 		case product_type::playstation_3_controller:
 		default: // GCC doesn't like it when there is no return value if if all enum values are covered
 		{
-			return product_info{ type, vendor_id::sony_corp, product_id::playstation_3_controller, 0x0 };
+			return product_info{
+				.type = type,
+				.vendor_id = vendor_id::sony_corp,
+				.product_id = product_id::playstation_3_controller,
+				.pclass_profile = 0x0
+			};
 		}
 		}
 	}
@@ -94,14 +229,14 @@ namespace input
 		switch (class_id)
 		{
 		default:
-		case 0: // CELL_PAD_PCLASS_TYPE_STANDARD
+		case CELL_PAD_PCLASS_TYPE_STANDARD:
 		{
 			return
 			{
 				get_product_info(product_type::playstation_3_controller)
 			};
 		}
-		case 1: // CELL_PAD_PCLASS_TYPE_GUITAR
+		case CELL_PAD_PCLASS_TYPE_GUITAR:
 		{
 			return
 			{
@@ -109,7 +244,7 @@ namespace input
 				get_product_info(product_type::harmonix_rockband_guitar)
 			};
 		}
-		case 2: // CELL_PAD_PCLASS_TYPE_DRUM
+		case CELL_PAD_PCLASS_TYPE_DRUM:
 		{
 			return
 			{
@@ -119,25 +254,25 @@ namespace input
 				get_product_info(product_type::rock_revolution_drum_kit)
 			};
 		}
-		case 3: // CELL_PAD_PCLASS_TYPE_DJ
+		case CELL_PAD_PCLASS_TYPE_DJ:
 		{
 			return
 			{
 				get_product_info(product_type::dj_hero_turntable)
 			};
 		}
-		case 4: // CELL_PAD_PCLASS_TYPE_DANCEMAT
+		case CELL_PAD_PCLASS_TYPE_DANCEMAT:
 		{
 			return
 			{
 				get_product_info(product_type::dance_dance_revolution_mat)
 			};
 		}
-		case 5: // CELL_PAD_PCLASS_TYPE_NAVIGATION
+		case CELL_PAD_PCLASS_TYPE_NAVIGATION:
 		{
 			return
 			{
-				get_product_info(product_type::playstation_3_controller)
+				get_product_info(product_type::ps_move_navigation)
 			};
 		}
 		}
