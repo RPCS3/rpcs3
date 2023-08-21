@@ -753,20 +753,12 @@ bool main_window::InstallPackages(QStringList file_paths, bool from_boot)
 			gui_log.notice("PKG: Trying to install packages from dir: '%s'", file_path);
 
 			const QDir dir(file_path);
-			const auto dir_file_infos = dir.entryInfoList(QDir::Files);
+			const QStringList dir_file_paths = gui::utils::get_dir_entries(dir, {}, true);
 
-			if (dir_file_infos.empty())
+			if (dir_file_paths.empty())
 			{
 				gui_log.notice("PKG: Could not find any files in dir: '%s'", file_path);
 				return true;
-			}
-
-			const auto dir_file_infos_count = dir_file_infos.count();
-
-			QList<QString> dir_file_paths(dir_file_infos_count);
-			for (int i = 0; i < dir_file_infos_count; i++)
-			{
-				dir_file_paths[i] = dir_file_infos[i].absoluteFilePath();
 			}
 
 			return InstallPackages(dir_file_paths, from_boot);
@@ -848,7 +840,7 @@ bool main_window::InstallPackages(QStringList file_paths, bool from_boot)
 	const auto install_filetype = [&installed_rap_and_edat_count, &file_paths](const std::string extension)
 	{
 		const QString pattern = QString(".*\\.%1").arg(QString::fromStdString(extension));
-		for (const auto& file : file_paths.filter(QRegularExpression(pattern, QRegularExpression::PatternOption::CaseInsensitiveOption)))
+		for (const QString& file : file_paths.filter(QRegularExpression(pattern, QRegularExpression::PatternOption::CaseInsensitiveOption)))
 		{
 			const QFileInfo file_info(file);
 			const std::string filename = sstr(file_info.fileName());
