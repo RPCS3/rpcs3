@@ -1803,12 +1803,12 @@ namespace vm
 	{
 		const u32 max = (0xC0000000 - size) & (0 - align);
 
-		if (size > 0xC0000000 - 0x20000000 || max < 0x20000000)
+		if (size > 0xC0000000 - 0x10000000 || max < 0x10000000)
 		{
 			return nullptr;
 		}
 
-		for (u32 addr = utils::align<u32>(0x20000000, align);; addr += align)
+		for (u32 addr = utils::align<u32>(0x10000000, align);; addr += align)
 		{
 			if (_test_map(addr, size))
 			{
@@ -2131,8 +2131,8 @@ namespace vm
 
 			g_locations =
 			{
-				std::make_shared<block_t>(0x00010000, 0x1FFF0000, page_size_64k | preallocated), // main
-				std::make_shared<block_t>(0x20000000, 0x10000000, page_size_64k | bf0_0x1),		 // user 64k pages
+				std::make_shared<block_t>(0x00010000, 0x0FFF0000, page_size_64k | preallocated), // main
+				nullptr,		                                                                 // user 64k pages
 				nullptr,                                                                         // user 1m pages
 				nullptr,                                                                         // rsx context
 				std::make_shared<block_t>(0xC0000000, 0x10000000, page_size_64k | preallocated), // video
