@@ -11,7 +11,7 @@
 LOG_CHANNEL(sys_log, "SYS");
 
 // Progress display server synchronization variables
-atomic_t<const char*> g_progr{nullptr};
+atomic_t<progress_dialog_string_t> g_progr{};
 atomic_t<u32> g_progr_ftotal{0};
 atomic_t<u32> g_progr_fdone{0};
 atomic_t<u32> g_progr_ptotal{0};
@@ -40,7 +40,7 @@ void progress_dialog_server::operator()()
 	while (!g_system_progress_stopping && thread_ctrl::state() != thread_state::aborting)
 	{
 		// Wait for the start condition
-		auto text0 = +g_progr;
+		const char* text0 = g_progr.load();
 
 		while (!text0)
 		{
@@ -50,7 +50,7 @@ void progress_dialog_server::operator()()
 			}
 
 			thread_ctrl::wait_for(5000);
-			text0 = +g_progr;
+			text0 = g_progr.load();
 		}
 
 		if (g_system_progress_stopping || thread_ctrl::state() == thread_state::aborting)
@@ -120,7 +120,7 @@ void progress_dialog_server::operator()()
 		// Update progress
 		while (!g_system_progress_stopping && thread_ctrl::state() != thread_state::aborting)
 		{
-			const auto text_new = g_progr.load();
+			const auto text_new = +g_progr.load();
 
 			const u32 ftotal_new = g_progr_ftotal;
 			const u32 fdone_new  = g_progr_fdone;
@@ -239,5 +239,5 @@ progress_dialog_server::~progress_dialog_server()
 	g_progr_fdone.release(0);
 	g_progr_ptotal.release(0);
 	g_progr_pdone.release(0);
-	g_progr.release(nullptr);
+	g_progr.release(progress_dialog_string_t{});
 }

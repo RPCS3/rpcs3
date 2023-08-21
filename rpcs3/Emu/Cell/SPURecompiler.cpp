@@ -654,7 +654,7 @@ void spu_cache::initialize()
 				break;
 			}
 
-			g_progr_ptotal.wait(v);
+			thread_ctrl::wait_on(g_progr_ptotal, v);
 		}
 
 		g_progr_ptotal += ::size32(func_list);
