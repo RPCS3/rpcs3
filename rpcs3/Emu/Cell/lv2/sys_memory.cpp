@@ -85,6 +85,12 @@ struct sys_memory_address_table
 	}
 };
 
+std::shared_ptr<vm::block_t> reserve_map(u32 alloc_size, u32 align)
+{
+	return vm::reserve_map(align == 0x10000 ? vm::user64k : vm::user1m, 0, align == 0x10000 ? 0x20000000 : utils::align(alloc_size, 0x10000000)
+		, align == 0x10000 ? (vm::page_size_64k | vm::bf0_0x1) : (vm::page_size_1m | vm::bf0_0x1));
+}
+
 // Todo: fix order of error checks
 
 error_code sys_memory_allocate(cpu_thread& cpu, u32 size, u64 flags, vm::ptr<u32> alloc_addr)
@@ -123,7 +129,7 @@ error_code sys_memory_allocate(cpu_thread& cpu, u32 size, u64 flags, vm::ptr<u32
 		return CELL_ENOMEM;
 	}
 
-	if (const auto area = vm::reserve_map(align == 0x10000 ? vm::user64k : vm::user1m, 0, utils::align(size, 0x10000000), 0x401))
+	if (const auto area = reserve_map(size, align))
 	{
 		if (const u32 addr = area->alloc(size, nullptr, align))
 		{
@@ -197,7 +203,7 @@ error_code sys_memory_allocate_from_container(cpu_thread& cpu, u32 size, u32 cid
 		return ct.ret;
 	}
 
-	if (const auto area = vm::reserve_map(align == 0x10000 ? vm::user64k : vm::user1m, 0, utils::align(size, 0x10000000), 0x401))
+	if (const auto area = reserve_map(size, align))
 	{
 		if (const u32 addr = area->alloc(size))
 		{

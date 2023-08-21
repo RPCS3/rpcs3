@@ -1860,15 +1860,30 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 			else if (already_loaded)
 			{
 			}
-			else if (!vm::falloc(addr, size, vm::main))
+			else if (![&]() -> bool
 			{
-				ppu_loader.error("vm::falloc(vm::main) failed (addr=0x%x, memsz=0x%x)", addr, size); // TODO
+				// 1M pages if it is RSX shared
+				const u32 area_flags = (_seg.flags >> 28) ? vm::page_size_1m : vm::page_size_64k;
+				const u32 alloc_at = std::max<u32>(addr & -0x10000000, 0x10000);
 
-				if (!vm::falloc(addr, size))
+				const auto area = vm::reserve_map(vm::any, std::max<u32>(addr & -0x10000000, 0x10000), 0x10000000, area_flags);
+
+				if (!area)
 				{
-					ppu_loader.error("ppu_load_exec(): vm::falloc() failed (addr=0x%x, memsz=0x%x)", addr, size);
 					return false;
 				}
+
+				if (area->addr != alloc_at || (area->flags & 0xf00) != area_flags)
+				{
+					ppu_loader.error("Failed to allocate memory at 0x%x - conflicting memory area exists: area->addr=0x%x, area->flags=0x%x", addr, area->addr, area->flags);
+					return false;
+				}
+
+				return area->falloc(addr, size);
+			}())
+			{
+				ppu_loader.error("ppu_load_exec(): vm::falloc() failed (addr=0x%x, memsz=0x%x)", addr, size);
+				return false;
 			}
 
 			// Store only LOAD segments (TODO)
