@@ -579,7 +579,7 @@ bool gs_frame::get_mouse_lock_state()
 
 void gs_frame::hide_on_close()
 {
-	if (!(+g_progr))
+	if (!g_progr.load())
 	{
 		// Hide the dialog before stopping if no progress bar is being shown.
 		// Otherwise users might think that the game softlocked if stopping takes too long.

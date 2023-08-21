@@ -3971,7 +3971,7 @@ extern void ppu_initialize()
 	// Validate analyser results (not required)
 	_main.validate(0);
 
-	g_progr = "Scanning PPU Modules...";
+	progr = "Scanning PPU Modules...";
 
 	bool compile_main = false;
 
@@ -4556,7 +4556,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 
 	if (!workload.empty())
 	{
-		g_progr = "Compiling PPU modules...";
+		*progr = "Compiling PPU modules...";
 	}
 
 	// Create worker threads for compilation (TODO: how many threads)
@@ -4624,7 +4624,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 		if (workload.size() < link_workload.size())
 		{
 			// Only show this message if this task is relevant
-			g_progr = "Linking PPU modules...";
+			*progr = "Linking PPU modules...";
 		}
 
 		for (auto [obj_name, is_compiled] : link_workload)
