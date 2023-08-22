@@ -3751,7 +3751,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 				continue;
 			}
 
-			auto [path, offset] = std::as_const(file_queue)[func_i];
+			auto& [path, offset] = file_queue[func_i];
 
 			ppu_log.notice("Trying to load: %s", path);
 
@@ -3802,7 +3802,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 			{
 				while (ovl_err == elf_error::ok)
 				{
-					auto [ovlm, error] = ppu_load_overlay(obj, true, path, offset);
+					const auto [ovlm, error] = ppu_load_overlay(obj, true, path, offset);
 
 					if (error)
 					{
@@ -4627,7 +4627,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 			*progr = "Linking PPU modules...";
 		}
 
-		for (auto [obj_name, is_compiled] : link_workload)
+		for (const auto& [obj_name, is_compiled] : link_workload)
 		{
 			if (cpu ? cpu->state.all_of(cpu_flag::exit) : Emu.IsStopped())
 			{
