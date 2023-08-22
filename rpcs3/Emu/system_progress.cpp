@@ -117,6 +117,8 @@ void progress_dialog_server::operator()()
 		u32 pdone  = 0;
 		auto text1 = text0;
 
+		const u64 start_time = get_system_time();
+
 		// Update progress
 		while (!g_system_progress_stopping && thread_ctrl::state() != thread_state::aborting)
 		{
@@ -153,11 +155,14 @@ void progress_dialog_server::operator()()
 
 				if (show_overlay_message)
 				{
-					// Show a message instead
-					if (g_cfg.misc.show_ppu_compilation_hint)
+					// Show a message instead (if compilation period is estimated to be lengthy)
+					const u64 passed = (get_system_time() - start_time);
+
+					if (pdone < ptotal && g_cfg.misc.show_ppu_compilation_hint && (pdone ? (passed * (ptotal - pdone) / pdone) : (passed * (ptotal + 1))) >= 100'000)
 					{
 						rsx::overlays::show_ppu_compile_notification();
 					}
+
 					thread_ctrl::wait_for(10000);
 					continue;
 				}
