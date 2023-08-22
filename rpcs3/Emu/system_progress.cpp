@@ -49,6 +49,41 @@ void progress_dialog_server::operator()()
 				break;
 			}
 
+			if (g_progr_ftotal || g_progr_fdone || g_progr_ptotal || g_progr_pdone)
+			{
+				auto whole_state = std::make_tuple(+g_progr.load(), +g_progr_ftotal, +g_progr_fdone, +g_progr_ptotal, +g_progr_pdone);
+
+				while (true)
+				{
+					const auto new_state = std::make_tuple(+g_progr.load(), +g_progr_ftotal, +g_progr_fdone, +g_progr_ptotal, +g_progr_pdone);
+
+					if (new_state == whole_state)
+					{
+						// Only leave while it has a complete (atomic) state
+						break;
+					}
+
+					whole_state = new_state;
+				}
+
+				const auto [text_new, ftotal, fdone, ptotal, pdone] = whole_state;
+
+				if (text_new)
+				{
+					text0 = text_new;
+					break;
+				}
+				else if ((ftotal || ptotal) && ftotal == fdone && ptotal == pdone)
+				{
+					// Cleanup (missed message but do not cry over spilt milk)
+					g_progr_fdone -= fdone;
+					g_progr_pdone -= pdone;
+					g_progr_ftotal -= ftotal;
+					g_progr_ptotal -= ptotal;
+					g_progr_ptotal.notify_all();
+				}
+			}
+
 			thread_ctrl::wait_for(5000);
 			text0 = g_progr.load();
 		}
