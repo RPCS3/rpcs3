@@ -120,12 +120,22 @@ void progress_dialog_server::operator()()
 		// Update progress
 		while (!g_system_progress_stopping && thread_ctrl::state() != thread_state::aborting)
 		{
-			const auto text_new = +g_progr.load();
+			auto whole_state = std::make_tuple(+g_progr.load(), +g_progr_ftotal, +g_progr_fdone, +g_progr_ptotal, +g_progr_pdone);
 
-			const u32 ftotal_new = g_progr_ftotal;
-			const u32 fdone_new  = g_progr_fdone;
-			const u32 ptotal_new = g_progr_ptotal;
-			const u32 pdone_new  = g_progr_pdone;
+			while (true)
+			{
+				const auto new_state = std::make_tuple(+g_progr.load(), +g_progr_ftotal, +g_progr_fdone, +g_progr_ptotal, +g_progr_pdone);
+
+				if (new_state == whole_state)
+				{
+					// Only leave while it has a complete (atomic) state
+					break;
+				}
+
+				whole_state = new_state;
+			}
+
+			const auto [text_new, ftotal_new, fdone_new, ptotal_new, pdone_new] = whole_state;
 
 			if (ftotal != ftotal_new || fdone != fdone_new || ptotal != ptotal_new || pdone != pdone_new || text_new != text1)
 			{
@@ -137,8 +147,8 @@ void progress_dialog_server::operator()()
 
 				if (!text_new)
 				{
-					// Close dialog
-					break;
+					// Incomplete state
+					continue;
 				}
 
 				if (show_overlay_message)
@@ -181,6 +191,12 @@ void progress_dialog_server::operator()()
 						dlg->ProgressBarSetValue(0, static_cast<u32>(std::floor(value)));
 					});
 				}
+			}
+			// Leave only if total count is equal to done count
+			else if (ftotal == fdone && ptotal == pdone && !text_new)
+			{
+				// Complete state, empty message: close dialog
+				break;
 			}
 
 			if (show_overlay_message)
