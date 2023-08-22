@@ -40,7 +40,7 @@ namespace rsx
 		}
 	}
 
-	void shader_loading_dialog::update_msg(u32 index, const std::string& msg)
+	void shader_loading_dialog::update_msg(u32 index, std::string msg)
 	{
 		if (!dlg)
 		{
@@ -49,9 +49,9 @@ namespace rsx
 
 		ref_cnt++;
 
-		Emu.CallFromMainThread([&, index, msg]()
+		Emu.CallFromMainThread([&, index, message = std::move(msg)]()
 		{
-			dlg->ProgressBarSetMsg(index, msg);
+			dlg->ProgressBarSetMsg(index, message);
 			ref_cnt--;
 		});
 	}

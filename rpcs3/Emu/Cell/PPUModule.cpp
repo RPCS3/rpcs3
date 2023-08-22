@@ -2494,7 +2494,7 @@ std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_ex
 		}
 	}
 
-	const auto ovlm = std::make_shared<lv2_overlay>();
+	std::shared_ptr<lv2_overlay> ovlm = std::make_shared<lv2_overlay>();
 
 	// Set path (TODO)
 	ovlm->name = path.substr(path.find_last_of('/') + 1);

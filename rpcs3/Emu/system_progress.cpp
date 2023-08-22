@@ -37,6 +37,26 @@ void progress_dialog_server::operator()()
 	std::shared_ptr<rsx::overlays::progress_dialog> native_dlg;
 	g_system_progress_stopping = false;
 
+	const auto get_state = []()
+	{
+		auto whole_state = std::make_tuple(+g_progr.load(), +g_progr_ftotal, +g_progr_fdone, +g_progr_ptotal, +g_progr_pdone);
+
+		while (true)
+		{
+			auto new_state = std::make_tuple(+g_progr.load(), +g_progr_ftotal, +g_progr_fdone, +g_progr_ptotal, +g_progr_pdone);
+
+			if (new_state == whole_state)
+			{
+				// Only leave while it has a complete (atomic) state
+				return whole_state;
+			}
+
+			whole_state = std::move(new_state);
+		}
+
+		return whole_state;
+	};
+
 	while (!g_system_progress_stopping && thread_ctrl::state() != thread_state::aborting)
 	{
 		// Wait for the start condition
@@ -51,29 +71,15 @@ void progress_dialog_server::operator()()
 
 			if (g_progr_ftotal || g_progr_fdone || g_progr_ptotal || g_progr_pdone)
 			{
-				auto whole_state = std::make_tuple(+g_progr.load(), +g_progr_ftotal, +g_progr_fdone, +g_progr_ptotal, +g_progr_pdone);
-
-				while (true)
-				{
-					const auto new_state = std::make_tuple(+g_progr.load(), +g_progr_ftotal, +g_progr_fdone, +g_progr_ptotal, +g_progr_pdone);
-
-					if (new_state == whole_state)
-					{
-						// Only leave while it has a complete (atomic) state
-						break;
-					}
-
-					whole_state = new_state;
-				}
-
-				const auto [text_new, ftotal, fdone, ptotal, pdone] = whole_state;
+				const auto& [text_new, ftotal, fdone, ptotal, pdone] = get_state();
 
 				if (text_new)
 				{
 					text0 = text_new;
 					break;
 				}
-				else if ((ftotal || ptotal) && ftotal == fdone && ptotal == pdone)
+
+				if ((ftotal || ptotal) && ftotal == fdone && ptotal == pdone)
 				{
 					// Cleanup (missed message but do not cry over spilt milk)
 					g_progr_fdone -= fdone;
@@ -157,22 +163,7 @@ void progress_dialog_server::operator()()
 		// Update progress
 		while (!g_system_progress_stopping && thread_ctrl::state() != thread_state::aborting)
 		{
-			auto whole_state = std::make_tuple(+g_progr.load(), +g_progr_ftotal, +g_progr_fdone, +g_progr_ptotal, +g_progr_pdone);
-
-			while (true)
-			{
-				const auto new_state = std::make_tuple(+g_progr.load(), +g_progr_ftotal, +g_progr_fdone, +g_progr_ptotal, +g_progr_pdone);
-
-				if (new_state == whole_state)
-				{
-					// Only leave while it has a complete (atomic) state
-					break;
-				}
-
-				whole_state = new_state;
-			}
-
-			const auto [text_new, ftotal_new, fdone_new, ptotal_new, pdone_new] = whole_state;
+			const auto& [text_new, ftotal_new, fdone_new, ptotal_new, pdone_new] = get_state();
 
 			if (ftotal != ftotal_new || fdone != fdone_new || ptotal != ptotal_new || pdone != pdone_new || text_new != text1)
 			{
@@ -191,11 +182,16 @@ void progress_dialog_server::operator()()
 				if (show_overlay_message)
 				{
 					// Show a message instead (if compilation period is estimated to be lengthy)
-					const u64 passed = (get_system_time() - start_time);
-
-					if (pdone < ptotal && g_cfg.misc.show_ppu_compilation_hint && (pdone ? (passed * (ptotal - pdone) / pdone) : (passed * (ptotal + 1))) >= 100'000)
+					if (pdone < ptotal && g_cfg.misc.show_ppu_compilation_hint)
 					{
-						rsx::overlays::show_ppu_compile_notification();
+						const u64 passed_usec = (get_system_time() - start_time);
+						const u64 remaining_usec = passed_usec * (pdone ? ((static_cast<u64>(ptotal) - pdone) / pdone) : ptotal);
+
+						// Only show compile notification if we estimate at least 100ms
+						if (remaining_usec >= 100'000ULL)
+						{
+							rsx::overlays::show_ppu_compile_notification();
+						}
 					}
 
 					thread_ctrl::wait_for(10000);
@@ -219,7 +215,7 @@ void progress_dialog_server::operator()()
 				if (native_dlg)
 				{
 					native_dlg->set_text(text_new);
-					native_dlg->progress_bar_set_message(0, progr);
+					native_dlg->progress_bar_set_message(0, std::move(progr));
 					native_dlg->progress_bar_set_value(0, std::floor(value));
 				}
 				else if (dlg)
