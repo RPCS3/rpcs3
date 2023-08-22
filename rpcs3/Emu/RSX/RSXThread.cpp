@@ -354,12 +354,12 @@ namespace rsx
 
 			const u32 index_size = index_type == rsx::index_array_type::u32 ? 4 : 2;
 
+			const auto render = rsx::get_current_renderer();
+
 			// If we can access a bit a more memory than required - do it
 			// The alternative would be re-iterating again over all of them
 			if (get_location(real_offset_address) == CELL_GCM_LOCATION_LOCAL)
 			{
-				const auto render = rsx::get_current_renderer();
-
 				if (utils::add_saturate<u32>(real_offset_address - rsx::constants::local_mem_base, (_max_index + 1) * attribute_stride) <= render->local_mem_size)
 				{
 					break;
@@ -372,14 +372,18 @@ namespace rsx
 
 			_max_index = 0;
 
-			// Force aligned indices as realhw
-			const u32 address = (0 - index_size) & get_address(rsx::method_registers.index_array_address(), rsx::method_registers.index_array_location());
-
-			auto re_evaluate = [&](auto ptr)
+			auto re_evaluate = [&] <typename T> (const std::byte* ptr, T)
 			{
+				const u64 restart = rsx::method_registers.restart_index_enabled() ? rsx::method_registers.restart_index() : u64{umax};
+
 				for (u32 _index = first; _index < first + count; _index++)
 				{
-					const auto value = ptr[_index];
+					const auto value = read_from_ptr<be_t<T>>(ptr, _index * sizeof(T));
+
+					if (value == restart)
+					{
+						continue;
+					}
 
 					for (u32 freq_it = 0; freq_it < freq_count; freq_it++)
 					{
@@ -387,7 +391,7 @@ namespace rsx
 
 						if (res > _max_index)
 						{
-							_max_index = value;
+							_max_index = res;
 						}
 					}
 				}
@@ -395,11 +399,29 @@ namespace rsx
 
 			if (index_size == 4)
 			{
-				re_evaluate(vm::get_super_ptr<u32>(address));
+				if (!render->element_push_buffer.empty()) [[unlikely]]
+				{
+					// Indices provided via immediate mode
+					re_evaluate(reinterpret_cast<const std::byte*>(render->element_push_buffer.data()), u32{});
+				}
+				else
+				{
+					const u32 address = (0 - index_size) & get_address(rsx::method_registers.index_array_address(), rsx::method_registers.index_array_location());
+					re_evaluate(vm::get_super_ptr<std::byte>(address), u32{});
+				}
 			}
 			else
 			{
-				re_evaluate(vm::get_super_ptr<u16>(address));
+				if (!render->element_push_buffer.empty()) [[unlikely]]
+				{
+					// Indices provided via immediate mode
+					re_evaluate(reinterpret_cast<const std::byte*>(render->element_push_buffer.data()), u16{});
+				}
+				else
+				{
+					const u32 address = (0 - index_size) & get_address(rsx::method_registers.index_array_address(), rsx::method_registers.index_array_location());
+					re_evaluate(vm::get_super_ptr<std::byte>(address), u16{});
+				}
 			}
 
 			break;

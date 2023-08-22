@@ -159,7 +159,6 @@ namespace rsx
 	protected:
 
 		std::array<push_buffer_vertex_info, 16> vertex_push_buffers;
-		rsx::simple_array<u32> element_push_buffer;
 
 		s32 m_skip_frame_ctr = 0;
 		bool skip_current_frame = false;
@@ -215,6 +214,7 @@ namespace rsx
 		atomic_t<u32> external_interrupt_lock{ 0 };
 		atomic_t<bool> external_interrupt_ack{ false };
 		atomic_t<u32> is_initialized{0};
+		rsx::simple_array<u32> element_push_buffer;
 		bool is_fifo_idle() const;
 		void flush_fifo();
 
