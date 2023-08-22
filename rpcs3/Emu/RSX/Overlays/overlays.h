@@ -90,9 +90,9 @@ namespace rsx
 			bool m_keyboard_pad_handler_active = true; // Initialized as true to prevent keyboard input until proven otherwise.
 			bool m_allow_input_on_pause = false;
 
-			static thread_local u64 g_thread_bit;
+			static thread_local u32 g_thread_bit;
 
-			u64 alloc_thread_bit();
+			u32 alloc_thread_bit();
 
 			std::function<void(s32 status)> on_close = nullptr;
 
@@ -114,7 +114,7 @@ namespace rsx
 
 			private:
 				user_interface* m_parent;
-				u64 m_thread_bit;
+				u32 m_thread_bit;
 			};
 		public:
 			s32 return_code = 0; // CELL_OK

@@ -11,7 +11,7 @@ namespace rsx
 
 		virtual ~shader_loading_dialog() = default;
 		virtual void create(const std::string& msg, const std::string& title);
-		virtual void update_msg(u32 index, const std::string& msg);
+		virtual void update_msg(u32 index, std::string msg);
 		virtual void inc_value(u32 index, u32 value);
 		virtual void set_value(u32 index, u32 value);
 		virtual void set_limit(u32 index, u32 limit);
