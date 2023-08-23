@@ -703,7 +703,7 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 
 	auto& perm = g_fxo->get<content_permission>();
 
-	lv2_sleep(5000);
+	lv2_sleep(500);
 
 	const auto init = perm.init.init();
 
@@ -831,8 +831,6 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 
 	const std::string dir = type == CELL_GAME_GAMETYPE_DISC ? "/dev_bdvd/PS3_GAME"s : "/dev_hdd0/game/" + name;
 
-	lv2_sleep(5000);
-
 	// TODO: not sure what should be checked there
 
 	auto& perm = g_fxo->get<content_permission>();
@@ -841,8 +839,13 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 
 	if (!init)
 	{
+		lv2_sleep(300);
 		return CELL_GAME_ERROR_BUSY;
 	}
+
+	// This function is incredibly slow, slower for DISC type and even if the game/disc data does not exist
+	// Null size does not change it
+	lv2_sleep(type == CELL_GAME_GAMETYPE_DISC ? 300000 : 120000);
 
 	auto [sfo, psf_error] = psf::load(vfs::get(dir + "/PARAM.SFO"));
 
@@ -870,7 +873,7 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 		size->hddFreeSizeKB = 40 * 1024 * 1024 - 1; // Read explanation in cellHddGameCheck
 
 		// TODO: Calculate data size for game data, if necessary.
-		size->sizeKB = CELL_GAME_SIZEKB_NOTCALC;
+		size->sizeKB = sfo.empty() ? 0 : CELL_GAME_SIZEKB_NOTCALC;
 		size->sysSizeKB = 0; // TODO
 	}
 
