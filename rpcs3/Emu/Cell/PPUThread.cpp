@@ -1738,8 +1738,6 @@ std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 
 							const auto type = g_ppu_itype.decode(test_op.opcode);
 
-							const u32 spr = ((test_op.spr >> 5) | ((test_op.spr & 0x1f) << 5));
-
 							if (type == ppu_itype::BCLR)
 							{
 								break;
