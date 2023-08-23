@@ -699,6 +699,11 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 	// Find OPD section
 	for (const auto& sec : secs)
 	{
+		if (sec.size % 8)
+		{
+			continue;
+		}
+
 		vm::cptr<void> sec_end = vm::cast(sec.addr + sec.size);
 
 		// Probe
@@ -785,6 +790,11 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 	// Find .eh_frame section
 	for (const auto& sec : secs)
 	{
+		if (sec.size % 4)
+		{
+			continue;
+		}
+
 		vm::cptr<void> sec_end = vm::cast(sec.addr + sec.size);
 
 		// Probe
