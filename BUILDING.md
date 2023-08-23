@@ -57,7 +57,7 @@ For Ubuntu systems, it is strongly recommended to use the PPA from [LunarG](http
 ```
 . /etc/os-release
 wget -qO - https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -
-sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.3.224-$UBUNTU_CODENAME.list https://packages.lunarg.com/vulkan/1.3.224/lunarg-vulkan-1.2.198-$UBUNTU_CODENAME.list
+sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.3.224-$UBUNTU_CODENAME.list https://packages.lunarg.com/vulkan/1.3.224/lunarg-vulkan-1.3.224-$UBUNTU_CODENAME.list
 sudo apt update
 sudo apt install vulkan-sdk
 ```
