@@ -510,8 +510,6 @@ error_code cellPadPeriphGetInfo(vm::ptr<CellPadPeriphInfo> info)
 	info->max_connect = config.max_connect;
 	info->system_info = rinfo.system_info;
 
-	const auto& pads = handler->GetPads();
-
 	u32 now_connect = 0;
 
 	for (u32 i = 0; i < CELL_PAD_MAX_PORT_NUM; ++i)
@@ -701,8 +699,6 @@ error_code cellPadGetInfo(vm::ptr<CellPadInfo> info)
 	info->system_info = rinfo.system_info;
 
 	u32 now_connect = 0;
-
-	const auto& pads = handler->GetPads();
 
 	for (u32 i = 0; i < CELL_MAX_PADS; ++i)
 	{
