@@ -1356,12 +1356,6 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, bool virtual_lo
 				// Initialize executable code if necessary
 				if (prog.p_flags & 0x1 && !virtual_load)
 				{
-					if (ar)
-					{
-						// Disable analysis optimization for savestates (it's not compatible with savestate with patches applied)
-						end = std::max(end, utils::align<u32>(addr + mem_size, 0x10000));
-					}
-
 					ppu_register_range(addr, mem_size);
 				}
 			}
@@ -1651,6 +1645,36 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, bool virtual_lo
 		}
 	}
 
+	// Disabled for PRX for now (problematic and does not seem to have any benefit)
+	end = 0;
+
+	if (!applied.empty() || ar)
+	{
+		// Compare memory changes in memory after executable code sections end
+		if (end >= prx->segs[0].addr && end < prx->segs[0].addr + prx->segs[0].size)
+		{
+			for (const auto& prog : elf.progs)
+			{
+				// Find the first segment
+				if (prog.p_type == 0x1u /* LOAD */ && prog.p_memsz)
+				{
+					std::basic_string_view<uchar> elf_memory{prog.bin.data(), prog.bin.size()};
+					elf_memory.remove_prefix(end - prx->segs[0].addr);
+
+					if (elf_memory != std::basic_string_view<uchar>{&prx->get_ref<uchar>(end), elf_memory.size()})
+					{
+						// There are changes, disable analysis optimization
+						ppu_loader.notice("Disabling analysis optimization due to memory changes from original file");
+
+						end = 0;
+					}
+
+					break;
+				}
+			}
+		}
+	}
+
 	// Embedded SPU elf patching
 	for (const auto& seg : prx->segs)
 	{
@@ -1910,12 +1934,6 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 			// Initialize executable code if necessary
 			if (prog.p_flags & 0x1 && !virtual_load)
 			{
-				if (already_loaded && ar)
-				{
-					// Disable analysis optimization for savestates (it's not compatible with savestate with patches applied)
-					end = std::max(end, utils::align<u32>(addr + size, 0x10000));
-				}
-
 				ppu_register_range(addr, size);
 			}
 		}
@@ -1967,6 +1985,33 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 	{
 		// Alternative patch
 		applied += g_fxo->get<patch_engine>().apply(Emu.GetTitleID() + '-' + hash, [&](u32 addr, u32 size) { return _main.get_ptr<u8>(addr, size); });
+	}
+
+	if (!applied.empty() || ar)
+	{
+		// Compare memory changes in memory after executable code sections end
+		if (end >= _main.segs[0].addr && end < _main.segs[0].addr + _main.segs[0].size)
+		{
+			for (const auto& prog : elf.progs)
+			{
+				// Find the first segment
+				if (prog.p_type == 0x1u /* LOAD */ && prog.p_memsz)
+				{
+					std::basic_string_view<uchar> elf_memory{prog.bin.data(), prog.bin.size()};
+					elf_memory.remove_prefix(end - _main.segs[0].addr);
+
+					if (elf_memory != std::basic_string_view<uchar>{&_main.get_ref<u8>(end), elf_memory.size()})
+					{
+						// There are changes, disable analysis optimization
+						ppu_loader.notice("Disabling analysis optimization due to memory changes from original file");
+
+						end = 0;
+					}
+
+					break;
+				}
+			}
+		}
 	}
 
 	if (applied.empty())
@@ -2574,12 +2619,6 @@ std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_ex
 			// Initialize executable code if necessary
 			if (prog.p_flags & 0x1 && !virtual_load)
 			{
-				if (ar)
-				{
-					// Disable analysis optimization for savestates (it's not compatible with savestate with patches applied)
-					end = std::max(end, utils::align<u32>(addr + size, 0x10000));
-				}
-
 				ppu_register_range(addr, size);
 			}
 		}
@@ -2629,6 +2668,33 @@ std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_ex
 	{
 		// Alternative patch
 		applied += g_fxo->get<patch_engine>().apply(Emu.GetTitleID() + '-' + hash, [ovlm](u32 addr, u32 size) { return ovlm->get_ptr<u8>(addr, size); });
+	}
+
+	if (!applied.empty() || ar)
+	{
+		// Compare memory changes in memory after executable code sections end
+		if (end >= ovlm->segs[0].addr && end < ovlm->segs[0].addr + ovlm->segs[0].size)
+		{
+			for (const auto& prog : elf.progs)
+			{
+				// Find the first segment
+				if (prog.p_type == 0x1u /* LOAD */ && prog.p_memsz)
+				{
+					std::basic_string_view<uchar> elf_memory{prog.bin.data(), prog.bin.size()};
+					elf_memory.remove_prefix(end - ovlm->segs[0].addr);
+
+					if (elf_memory != std::basic_string_view<uchar>{&ovlm->get_ref<u8>(end), elf_memory.size()})
+					{
+						// There are changes, disable analysis optimization
+						ppu_loader.notice("Disabling analysis optimization due to memory changes from original file");
+
+						end = 0;
+					}
+
+					break;
+				}
+			}
+		}
 	}
 
 	// Embedded SPU elf patching
