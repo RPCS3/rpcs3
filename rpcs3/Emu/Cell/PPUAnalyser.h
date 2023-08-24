@@ -263,6 +263,7 @@ struct ppu_pattern_matrix
 struct ppu_itype
 {
 	static constexpr struct branch_tag{} branch{}; // Branch Instructions
+	static constexpr struct trap_tag{} trap{}; // Branch Instructions
 
 	enum type
 	{
@@ -425,8 +426,6 @@ struct ppu_itype
 		VUPKLSB,
 		VUPKLSH,
 		VXOR,
-		TDI,
-		TWI,
 		MULLI,
 		SUBFIC,
 		CMPLI,
@@ -461,7 +460,6 @@ struct ppu_itype
 		RLDCL,
 		RLDCR,
 		CMP,
-		TW,
 		LVSL,
 		LVEBX,
 		SUBFC,
@@ -488,7 +486,6 @@ struct ppu_itype
 		LWZUX,
 		CNTLZD,
 		ANDC,
-		TD,
 		LVEWX,
 		MULHD,
 		MULHW,
@@ -784,6 +781,11 @@ struct ppu_itype
 		BC,
 		BCLR,
 		BCCTR, // branch_tag last
+
+		TD, // trap_tag first
+		TW,
+		TDI,
+		TWI, // trap_tag last
 	};
 
 	// Enable address-of operator for ppu_decoder<>
@@ -795,6 +797,11 @@ struct ppu_itype
 	friend constexpr bool operator &(type value, branch_tag)
 	{
 		return value >= B && value <= BCCTR;
+	}
+
+	friend constexpr bool operator &(type value, trap_tag)
+	{
+		return value >= TD && value <= TWI;
 	}
 };
 
