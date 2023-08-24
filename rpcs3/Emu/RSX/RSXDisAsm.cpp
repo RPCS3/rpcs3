@@ -167,7 +167,11 @@ void RSXDisAsm::Write(std::string_view str, s32 count, bool is_non_inc, u32 id)
 	{
 		last_opcode.clear();
 
-		if (count >= 0)
+		if (count == 1 && !is_non_inc)
+		{
+			fmt::append(last_opcode, "[%08x] ( )", dump_pc);
+		}
+		else if (count >= 0)
 		{
 			fmt::append(last_opcode, "[%08x] (%s%u)", dump_pc, is_non_inc ? "+" : "", count);
 		}
