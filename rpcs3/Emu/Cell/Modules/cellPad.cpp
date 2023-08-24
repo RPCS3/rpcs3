@@ -67,6 +67,8 @@ void pad_info::save(utils::serial& ar)
 	USING_SERIALIZATION_VERSION(sys_io);
 
 	ar(max_connect, port_setting);
+
+	sys_io_serialize(ar);
 }
 
 extern void send_sys_io_connect_event(u32 index, u32 state);
