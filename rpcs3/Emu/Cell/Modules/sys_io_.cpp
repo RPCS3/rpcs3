@@ -23,7 +23,18 @@ struct libio_sys_config
 	~libio_sys_config() noexcept
 	{
 	}
+
+	void save_or_load(utils::serial& ar)
+	{
+		ar(init_ctr, ppu_id, queue_id);
+	}
 };
+
+extern void sys_io_serialize(utils::serial& ar)
+{
+	// Do not assign a serialization tag for now, call it from cellPad serialization
+	g_fxo->get<libio_sys_config>().save_or_load(ar);
+}
 
 extern void cellPad_NotifyStateChange(u32 index, u32 state);
 
@@ -31,8 +42,11 @@ void config_event_entry(ppu_thread& ppu)
 {
 	auto& cfg = g_fxo->get<libio_sys_config>();
 
-	// Ensure awake
-	ppu.check_state();
+	if (!ppu.loaded_from_savestate)
+	{
+		// Ensure awake
+		ppu.check_state();
+	}
 
 	while (!sys_event_queue_receive(ppu, cfg.queue_id, vm::null, 0))
 	{

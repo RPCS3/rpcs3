@@ -18,7 +18,7 @@ struct serial_ver_t
 	std::set<s32> compatible_versions;
 };
 
-static std::array<serial_ver_t, 23> s_serial_versions;
+static std::array<serial_ver_t, 26> s_serial_versions;
 
 #define SERIALIZATION_VER(name, identifier, ...) \
 \
@@ -35,7 +35,7 @@ static std::array<serial_ver_t, 23> s_serial_versions;
 		return ::s_serial_versions[identifier].current_version;\
 	}
 
-SERIALIZATION_VER(global_version, 0,                            13) // For stuff not listed here
+SERIALIZATION_VER(global_version, 0,                            14) // For stuff not listed here
 SERIALIZATION_VER(ppu, 1,                                       1)
 SERIALIZATION_VER(spu, 2,                                       1)
 SERIALIZATION_VER(lv2_sync, 3,                                  1)
@@ -73,6 +73,11 @@ SERIALIZATION_VER(cellGcm, 19,                                  1)
 SERIALIZATION_VER(sysPrxForUser, 20,                            1)
 SERIALIZATION_VER(cellSaveData, 21,                             1)
 SERIALIZATION_VER(cellAudioOut, 22,                             1)
+SERIALIZATION_VER(sys_io, 23,                                   1)
+
+// Misc versions for HLE/LLE not included so main version would not invalidated
+SERIALIZATION_VER(LLE, 24,                                      1)
+SERIALIZATION_VER(HLE, 25,                                      1)
 
 std::vector<std::pair<u16, u16>> get_savestate_versioning_data(const fs::file& file)
 {
