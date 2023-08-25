@@ -71,9 +71,9 @@ void pad_info::save(utils::serial& ar)
 	sys_io_serialize(ar);
 }
 
-extern void send_sys_io_connect_event(u32 index, u32 state);
+extern void send_sys_io_connect_event(usz index, u32 state);
 
-void cellPad_NotifyStateChange(u32 index, u32 state)
+void cellPad_NotifyStateChange(usz index, u32 state)
 {
 	auto info = g_fxo->try_get<pad_info>();
 
@@ -84,7 +84,7 @@ void cellPad_NotifyStateChange(u32 index, u32 state)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	if (!info->max_connect)
+	if (index >= info->get_max_connect())
 	{
 		return;
 	}
@@ -148,7 +148,7 @@ void cellPad_NotifyStateChange(u32 index, u32 state)
 	}
 }
 
-extern void pad_state_notify_state_change(u32 index, u32 state)
+extern void pad_state_notify_state_change(usz index, u32 state)
 {
 	cellPad_NotifyStateChange(index, state);
 }
@@ -179,7 +179,7 @@ error_code cellPadInit(ppu_thread& ppu, u32 max_connect)
 
 	const auto& pads = handler->GetPads();
 
-	for (u32 i = 0; i < statuses.size(); ++i)
+	for (usz i = 0; i < statuses.size(); ++i)
 	{
 		if (i >= config.get_max_connect())
 			break;
