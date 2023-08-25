@@ -73,7 +73,7 @@ void pad_info::save(utils::serial& ar)
 
 extern void send_sys_io_connect_event(usz index, u32 state);
 
-void cellPad_NotifyStateChange(usz index, u32 state)
+void cellPad_NotifyStateChange(usz index, u32 /*state*/)
 {
 	auto info = g_fxo->try_get<pad_info>();
 
@@ -90,32 +90,37 @@ void cellPad_NotifyStateChange(usz index, u32 state)
 	}
 
 	const auto handler = pad::get_current_handler();
-
 	const auto& pads = handler->GetPads();
+	const auto& pad = pads[index];
 
-	const u32 old = info->reported_info[index].port_status;
+	pad_data_internal& reported_info = info->reported_info[index];
+	const u32 old_status = reported_info.port_status;
 
 	// Ignore sent status for now, use the latest instead
-	state = (pads[index]->m_port_status & CELL_PAD_STATUS_CONNECTED);
+	// NOTE 1: The state's CONNECTED bit should currently be identical to the current
+	//         m_port_status CONNECTED bit when called from our pad handlers.
+	// NOTE 2: Make sure to propagate all other status bits to the reported status.
+	const u32 new_status = pads[index]->m_port_status;
 
-	if (~(old ^ state) & CELL_PAD_STATUS_CONNECTED)
+	if (~(old_status ^ new_status) & CELL_PAD_STATUS_CONNECTED)
 	{
+		// old and new have the same connection status
 		return;
 	}
 
-	info->reported_info[index].port_status = (state & CELL_PAD_STATUS_CONNECTED) | CELL_PAD_STATUS_ASSIGN_CHANGES;
-	info->reported_info[index].device_capability = pads[index]->m_device_capability;
-	info->reported_info[index].device_type = pads[index]->m_device_type;
-	info->reported_info[index].pclass_type = pads[index]->m_class_type;
-	info->reported_info[index].pclass_profile = pads[index]->m_class_profile;
+	reported_info.port_status = new_status | CELL_PAD_STATUS_ASSIGN_CHANGES;
+	reported_info.device_capability = pad->m_device_capability;
+	reported_info.device_type = pad->m_device_type;
+	reported_info.pclass_type = pad->m_class_type;
+	reported_info.pclass_profile = pad->m_class_profile;
 
-	if (pads[index]->m_vendor_id == 0 || pads[index]->m_product_id == 0)
+	if (pad->m_vendor_id == 0 || pad->m_product_id == 0)
 	{
 		// Fallback to defaults
 
 		input::product_info product;
 
-		switch (pads[index]->m_class_type)
+		switch (pad->m_class_type)
 		{
 		case CELL_PAD_PCLASS_TYPE_GUITAR:
 			product = input::get_product_info(input::product_type::red_octane_gh_guitar);
@@ -138,13 +143,13 @@ void cellPad_NotifyStateChange(usz index, u32 state)
 			break;
 		}
 
-		info->reported_info[index].vendor_id = product.vendor_id;
-		info->reported_info[index].product_id = product.product_id;
+		reported_info.vendor_id = product.vendor_id;
+		reported_info.product_id = product.product_id;
 	}
 	else
 	{
-		info->reported_info[index].vendor_id = pads[index]->m_vendor_id;
-		info->reported_info[index].product_id = pads[index]->m_product_id;
+		reported_info.vendor_id = pad->m_vendor_id;
+		reported_info.product_id = pad->m_product_id;
 	}
 }
 
