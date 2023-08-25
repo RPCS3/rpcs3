@@ -617,19 +617,22 @@ error_code cellPadPeriphGetInfo(vm::ptr<CellPadPeriphInfo> info)
 		if (i >= config.get_max_connect())
 			break;
 
-		info->port_status[i] = config.reported_info[i].port_status;
-		config.reported_info[i].port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES;
+		pad_data_internal& reported_info = config.reported_info[i];
+
+		info->port_status[i] = reported_info.port_status;
 		info->port_setting[i] = config.port_setting[i];
 
-		if (~config.reported_info[i].port_status & CELL_PAD_STATUS_CONNECTED)
+		reported_info.port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES;
+
+		if (~reported_info.port_status & CELL_PAD_STATUS_CONNECTED)
 		{
 			continue;
 		}
 
-		info->device_capability[i] = config.reported_info[i].device_capability;
-		info->device_type[i] = config.reported_info[i].device_type;
-		info->pclass_type[i] = config.reported_info[i].pclass_type;
-		info->pclass_profile[i] = config.reported_info[i].pclass_profile;
+		info->device_capability[i] = reported_info.device_capability;
+		info->device_type[i] = reported_info.device_type;
+		info->pclass_type[i] = reported_info.pclass_type;
+		info->pclass_profile[i] = reported_info.pclass_profile;
 
 		now_connect++;
 	}
@@ -804,16 +807,18 @@ error_code cellPadGetInfo(vm::ptr<CellPadInfo> info)
 		if (i >= config.get_max_connect())
 			break;
 
-		config.reported_info[i].port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES; // TODO: should ASSIGN flags be cleared here?
-		info->status[i] = config.reported_info[i].port_status;
+		pad_data_internal& reported_info = config.reported_info[i];
+		reported_info.port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES; // TODO: should ASSIGN flags be cleared here?
 
-		if (~config.reported_info[i].port_status & CELL_PAD_STATUS_CONNECTED)
+		info->status[i] = reported_info.port_status;
+
+		if (~reported_info.port_status & CELL_PAD_STATUS_CONNECTED)
 		{
 			continue;
 		}
 
-		info->vendor_id[i] = config.reported_info[i].vendor_id;
-		info->product_id[i] = config.reported_info[i].product_id;
+		info->vendor_id[i] = reported_info.vendor_id;
+		info->product_id[i] = reported_info.product_id;
 
 		now_connect++;
 	}
@@ -853,11 +858,14 @@ error_code cellPadGetInfo2(vm::ptr<CellPadInfo2> info)
 		if (i >= config.get_max_connect())
 			break;
 
-		info->port_status[i] = config.reported_info[i].port_status;
-		config.reported_info[i].port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES;
+		pad_data_internal& reported_info = config.reported_info[i];
+
+		info->port_status[i] = reported_info.port_status;
 		info->port_setting[i] = config.port_setting[i];
 
-		if (~config.reported_info[i].port_status & CELL_PAD_STATUS_CONNECTED)
+		reported_info.port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES;
+
+		if (~reported_info.port_status & CELL_PAD_STATUS_CONNECTED)
 		{
 			continue;
 		}
