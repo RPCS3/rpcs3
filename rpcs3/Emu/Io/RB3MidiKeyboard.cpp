@@ -199,7 +199,7 @@ void usb_device_rb3_midi_keyboard::parse_midi_message(u8* msg, usz size)
 	// handle note on/off messages
 	if (size == 3 && (msg[0] == 0x80 || msg[0] == 0x90))
 	{
-		bool note_on = (0x10 & msg[0]) == 0x10 && msg[2] != 0;
+		const bool note_on = (0x10 & msg[0]) == 0x10 && msg[2] != 0;
 
 		// handle navigation buttons
 		switch (msg[1])
