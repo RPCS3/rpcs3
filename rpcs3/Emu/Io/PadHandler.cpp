@@ -7,7 +7,7 @@
 
 cfg_input g_cfg_input;
 
-extern void pad_state_notify_state_change(u32 index, u32 state);
+extern void pad_state_notify_state_change(usz index, u32 state);
 
 PadHandlerBase::PadHandlerBase(pad_handler type) : m_type(type)
 {
