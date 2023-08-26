@@ -578,7 +578,8 @@ void PadHandlerBase::get_mapping(const pad_ensemble& binding)
 
 	// Find out if special buttons are pressed (introduced by RPCS3).
 	// These buttons will have a delay of one cycle, but whatever.
-	const bool adjust_pressure = pad->get_pressure_intensity_enabled(cfg->pressure_intensity_toggle_mode.get());
+	const bool adjust_pressure = pad->get_pressure_intensity_button_active(cfg->pressure_intensity_toggle_mode.get());
+	const u32 pressure_intensity_deadzone = cfg->pressure_intensity_deadzone.get();
 
 	// Translate any corresponding keycodes to our normal DS3 buttons and triggers
 	for (Button& button : pad->m_buttons)
@@ -600,9 +601,17 @@ void PadHandlerBase::get_mapping(const pad_ensemble& binding)
 				{
 					val = pad->m_pressure_intensity;
 				}
+				else if (pressure_intensity_deadzone > 0)
+				{
+					// Ignore triggers, since they have their own deadzones
+					if (!get_is_left_trigger(device, code) && !get_is_right_trigger(device, code))
+					{
+						val = NormalizeDirectedInput(val, pressure_intensity_deadzone, 255);
+					}
+				}
 
 				value = std::max(value, val);
-				pressed = true;
+				pressed = value > 0;
 			}
 		}
 
