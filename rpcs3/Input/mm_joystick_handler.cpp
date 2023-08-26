@@ -174,6 +174,13 @@ std::array<std::set<u32>, PadHandlerBase::button::button_count> mm_joystick_hand
 	mapping[button::rs_down]  = narrow_set(joy_device->axis_code_right[2]);
 	mapping[button::rs_up]    = narrow_set(joy_device->axis_code_right[3]);
 
+	mapping[button::skateboard_ir_nose]    = find_keys<u32>(cfg->ir_nose);
+	mapping[button::skateboard_ir_tail]    = find_keys<u32>(cfg->ir_tail);
+	mapping[button::skateboard_ir_left]    = find_keys<u32>(cfg->ir_left);
+	mapping[button::skateboard_ir_right]   = find_keys<u32>(cfg->ir_right);
+	mapping[button::skateboard_tilt_left]  = find_keys<u32>(cfg->tilt_left);
+	mapping[button::skateboard_tilt_right] = find_keys<u32>(cfg->tilt_right);
+
 	mapping[button::pressure_intensity_button] = find_keys<u32>(cfg->pressure_intensity_button);
 
 	return mapping;

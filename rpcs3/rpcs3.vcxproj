@@ -180,6 +180,7 @@
     <ClCompile Include="Input\evdev_gun_handler.cpp" />
     <ClCompile Include="Input\hid_pad_handler.cpp" />
     <ClCompile Include="Input\sdl_pad_handler.cpp" />
+    <ClCompile Include="Input\skateboard_pad_handler.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="main_application.cpp" />
     <ClCompile Include="Input\basic_keyboard_handler.cpp" />
@@ -923,6 +924,7 @@
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(QTDIR)\bin\moc.exe;%(FullPath);$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
     </CustomBuild>
     <ClInclude Include="Input\sdl_pad_handler.h" />
+    <ClInclude Include="Input\skateboard_pad_handler.h" />
     <ClInclude Include="main_application.h" />
     <ClInclude Include="Input/mm_joystick_handler.h" />
     <CustomBuild Include="rpcs3qt\cg_disasm_window.h">

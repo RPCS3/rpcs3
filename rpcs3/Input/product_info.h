@@ -16,7 +16,8 @@ namespace input
 		harmonix_rockband_drum_kit,
 		harmonix_rockband_drum_kit_2,
 		rock_revolution_drum_kit,
-		ps_move_navigation
+		ps_move_navigation,
+		ride_skateboard
 	};
 
 	enum vendor_id
@@ -38,6 +39,7 @@ namespace input
 		rock_revolution_drum_kit     = 0x0300, // Rock Revolution Drum Controller
 		ps_move_navigation           = 0x042F, // PlayStation Move navigation controller
 		dance_dance_revolution_mat   = 0x1010, // Dance Dance Revolution Dance Mat Controller
+		ride_skateboard              = 0x0400, // Tony Hawk RIDE Skateboard Controller
 	};
 
 	struct product_info
@@ -46,6 +48,7 @@ namespace input
 		u16 vendor_id;
 		u16 product_id;
 		u32 pclass_profile; // See CELL_PAD_PCLASS_PROFILE flags
+		u32 capabilites; // See CELL_PAD_CAPABILITY flags
 	};
 
 	inline product_info get_product_info(product_type type)
@@ -67,7 +70,8 @@ namespace input
 				.type = type,
 				.vendor_id = vendor_id::konami_de,
 				.product_id = product_id::dance_dance_revolution_mat,
-				.pclass_profile = profile
+				.pclass_profile = profile,
+				.capabilites = CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_HP_ANALOG_STICK | CELL_PAD_CAPABILITY_ACTUATOR | CELL_PAD_CAPABILITY_SENSOR_MODE
 			};
 		}
 		case product_type::dj_hero_turntable:
@@ -88,7 +92,8 @@ namespace input
 				.type = type,
 				.vendor_id = vendor_id::sony_cea,
 				.product_id = product_id::dj_hero_turntable,
-				.pclass_profile = profile
+				.pclass_profile = profile,
+				.capabilites = CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_HP_ANALOG_STICK | CELL_PAD_CAPABILITY_ACTUATOR | CELL_PAD_CAPABILITY_SENSOR_MODE
 			};
 		}
 		case product_type::harmonix_rockband_drum_kit:
@@ -106,7 +111,8 @@ namespace input
 				.type = type,
 				.vendor_id = vendor_id::sony_cea,
 				.product_id = product_id::harmonix_rockband_drum_kit,
-				.pclass_profile = profile
+				.pclass_profile = profile,
+				.capabilites = CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_HP_ANALOG_STICK | CELL_PAD_CAPABILITY_ACTUATOR | CELL_PAD_CAPABILITY_SENSOR_MODE
 			};
 		}
 		case product_type::harmonix_rockband_drum_kit_2:
@@ -123,7 +129,8 @@ namespace input
 				.type = type,
 				.vendor_id = vendor_id::sony_cea,
 				.product_id = product_id::harmonix_rockband_drum_kit_2,
-				.pclass_profile = profile
+				.pclass_profile = profile,
+				.capabilites = CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_HP_ANALOG_STICK | CELL_PAD_CAPABILITY_ACTUATOR | CELL_PAD_CAPABILITY_SENSOR_MODE
 			};
 		}
 		case product_type::harmonix_rockband_guitar:
@@ -148,7 +155,8 @@ namespace input
 				.type = type,
 				.vendor_id = vendor_id::sony_cea,
 				.product_id = product_id::harmonix_rockband_guitar,
-				.pclass_profile = profile
+				.pclass_profile = profile,
+				.capabilites = CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_HP_ANALOG_STICK | CELL_PAD_CAPABILITY_ACTUATOR | CELL_PAD_CAPABILITY_SENSOR_MODE
 			};
 		}
 		case product_type::red_octane_gh_drum_kit:
@@ -164,7 +172,8 @@ namespace input
 				.type = type,
 				.vendor_id = vendor_id::sony_cea,
 				.product_id = product_id::red_octane_gh_drum_kit,
-				.pclass_profile = profile
+				.pclass_profile = profile,
+				.capabilites = CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_HP_ANALOG_STICK | CELL_PAD_CAPABILITY_ACTUATOR | CELL_PAD_CAPABILITY_SENSOR_MODE
 			};
 		}
 		case product_type::red_octane_gh_guitar:
@@ -182,7 +191,8 @@ namespace input
 				.type = type,
 				.vendor_id = vendor_id::sony_cea,
 				.product_id = product_id::red_octane_gh_guitar,
-				.pclass_profile = profile
+				.pclass_profile = profile,
+				.capabilites = CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_HP_ANALOG_STICK | CELL_PAD_CAPABILITY_ACTUATOR | CELL_PAD_CAPABILITY_SENSOR_MODE
 			};
 		}
 		case product_type::rock_revolution_drum_kit:
@@ -199,7 +209,8 @@ namespace input
 				.type = type,
 				.vendor_id = vendor_id::sony_cea,
 				.product_id = product_id::rock_revolution_drum_kit,
-				.pclass_profile = profile
+				.pclass_profile = profile,
+				.capabilites = CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_HP_ANALOG_STICK | CELL_PAD_CAPABILITY_ACTUATOR | CELL_PAD_CAPABILITY_SENSOR_MODE
 			};
 		}
 		case product_type::ps_move_navigation:
@@ -208,7 +219,18 @@ namespace input
 				.type = type,
 				.vendor_id = vendor_id::sony_corp,
 				.product_id = product_id::ps_move_navigation,
-				.pclass_profile = 0x0
+				.pclass_profile = 0x0,
+				.capabilites = CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_HP_ANALOG_STICK | CELL_PAD_CAPABILITY_ACTUATOR | CELL_PAD_CAPABILITY_SENSOR_MODE
+			};
+		}
+		case product_type::ride_skateboard:
+		{
+			return product_info{
+				.type = type,
+				.vendor_id = vendor_id::sony_cea,
+				.product_id = product_id::ride_skateboard,
+				.pclass_profile = 0x0,
+				.capabilites = CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_SENSOR_MODE
 			};
 		}
 		case product_type::playstation_3_controller:
@@ -218,7 +240,8 @@ namespace input
 				.type = type,
 				.vendor_id = vendor_id::sony_corp,
 				.product_id = product_id::playstation_3_controller,
-				.pclass_profile = 0x0
+				.pclass_profile = 0x0,
+				.capabilites = CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_HP_ANALOG_STICK | CELL_PAD_CAPABILITY_ACTUATOR | CELL_PAD_CAPABILITY_SENSOR_MODE
 			};
 		}
 		}
@@ -273,6 +296,13 @@ namespace input
 			return
 			{
 				get_product_info(product_type::ps_move_navigation)
+			};
+		}
+		case CELL_PAD_PCLASS_TYPE_SKATEBOARD:
+		{
+			return
+			{
+				get_product_info(product_type::ride_skateboard)
 			};
 		}
 		}

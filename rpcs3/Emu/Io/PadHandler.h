@@ -98,6 +98,13 @@ protected:
 		rs_down,
 		rs_up,
 
+		skateboard_ir_nose,
+		skateboard_ir_tail,
+		skateboard_ir_left,
+		skateboard_ir_right,
+		skateboard_tilt_left,
+		skateboard_tilt_right,
+
 		pressure_intensity_button,
 
 		button_count
