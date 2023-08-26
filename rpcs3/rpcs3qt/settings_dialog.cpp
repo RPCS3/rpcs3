@@ -1226,6 +1226,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->lockOverlayInputToPlayerOne, emu_settings_type::LockOvlIptToP1);
 	SubscribeTooltip(ui->lockOverlayInputToPlayerOne, tooltips.settings.lock_overlay_input_to_player_one);
 
+#if HAVE_SDL2
+	m_emu_settings->EnhanceCheckBox(ui->loadSdlMappings, emu_settings_type::SDLMappings);
+	SubscribeTooltip(ui->loadSdlMappings, tooltips.settings.sdl_mappings);
+#else
+	ui->loadSdlMappings->setVisible(false);
+#endif
+
 	// Midi
 	const QString midi_none = m_emu_settings->m_midi_creator.get_none();
 	const midi_device def_midi_device{ .type = midi_device_type::keyboard, .name = midi_none.toStdString() };
