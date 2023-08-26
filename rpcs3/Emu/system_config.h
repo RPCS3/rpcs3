@@ -278,6 +278,7 @@ struct cfg_root : cfg::node
 		cfg::_bool show_move_cursor{this, "Show move cursor", false, true};
 		cfg::_bool lock_overlay_input_to_player_one{this, "Lock overlay input to player one", false, true};
 		cfg::string midi_devices{ this, "Emulated Midi devices", "ßßß@@@ßßß@@@ßßß@@@" };
+		cfg::_bool load_sdl_mappings{ this, "Load SDL GameController Mappings", true };
 	} io{ this };
 
 	struct node_sys : cfg::node
