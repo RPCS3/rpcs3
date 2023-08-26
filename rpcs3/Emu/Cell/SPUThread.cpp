@@ -487,7 +487,27 @@ std::array<u32, 2> op_branch_targets(u32 pc, spu_opcode_t op)
 	case spu_itype::BRASL:
 	{
 		const int index = (type == spu_itype::BR || type == spu_itype::BRA || type == spu_itype::BRSL || type == spu_itype::BRASL ? 0 : 1);
+
+		// if (type == spu_itype::BRASL || type == spu_itype::BRA)
+		// {
+		// 	res[index] = spu_branch_target(0, op.i16);
+		// }
+		// else
+		// {
+		// 	// Treat i16 as signed, this allows the caller to detect "overflows" and "underflows" in address in order to detect invalid branches
+		// 	// Example:
+		// 	// [0x3fffc] BR +4 -> BR 0 -> invalid
+		// 	// [0x3fffc] BR 0x3fff4 -> BR 0 -> invalid
+		// 	const u32 add = static_cast<s16>(op.si16);
+		// }
+
 		res[index] = (spu_branch_target(type == spu_itype::BRASL || type == spu_itype::BRA ? 0 : pc, op.i16));
+
+		if (res[0] == res[1])
+		{
+			res[1] = umax;
+		}
+
 		break;
 	}
 	case spu_itype::IRET:
@@ -4013,7 +4033,7 @@ bool spu_thread::check_mfc_interrupts(u32 next_pc)
 	return false;
 }
 
-bool spu_thread::is_exec_code(u32 addr, const u8* ls_ptr)
+bool spu_thread::is_exec_code(u32 addr, const void* ls_ptr)
 {
 	if (addr & ~0x3FFFC)
 	{
@@ -4022,8 +4042,8 @@ bool spu_thread::is_exec_code(u32 addr, const u8* ls_ptr)
 
 	for (u32 i = 0; i < 30; i++)
 	{
-		const u32 addr0 = addr + (i * 4);
-		const u32 op = read_from_ptr<be_t<u32>>(ls_ptr + addr0);
+		const u32 addr0 = spu_branch_target(addr);
+		const u32 op = read_from_ptr<be_t<u32>>(static_cast<const u8*>(ls_ptr) + addr0);
 		const auto type = s_spu_itype.decode(op);
 
 		if (type == spu_itype::UNK || !op)
@@ -4033,9 +4053,38 @@ bool spu_thread::is_exec_code(u32 addr, const u8* ls_ptr)
 
 		if (type & spu_itype::branch)
 		{
-			// TODO
-			break;
+			const auto results = op_branch_targets(addr, spu_opcode_t{op});
+
+			if (results[0] == umax)
+			{
+				break;
+			}
+
+			for (usz res_i = 1; res_i < results.size(); res_i++)
+			{
+				const u32 route_pc = results[res_i];
+
+				if (route_pc >= SPU_LS_SIZE)
+				{
+					continue;
+				}
+
+				// Test the validity of a single instruction of the optional target
+				// This function can't be too slow and is unlikely to improve results by a great deal
+				const u32 op0 = read_from_ptr<be_t<u32>>(static_cast<const u8*>(ls_ptr) + route_pc);
+				const auto type0 = s_spu_itype.decode(op);
+
+				if (type == spu_itype::UNK || !op)
+				{
+					return false;
+				}
+			}
+
+			addr = spu_branch_target(results[0]);
+			continue;
 		}
+
+		addr += 4;
 	}
 
 	return true;
