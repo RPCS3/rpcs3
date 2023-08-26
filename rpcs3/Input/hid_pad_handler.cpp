@@ -2,6 +2,7 @@
 #include "ds3_pad_handler.h"
 #include "ds4_pad_handler.h"
 #include "dualsense_pad_handler.h"
+#include "skateboard_pad_handler.h"
 #include "util/logs.hpp"
 #include "Utilities/Timer.h"
 #include "Emu/System.h"
@@ -267,3 +268,4 @@ u32 hid_pad_handler<Device>::get_battery_color(u8 battery_level, u32 brightness)
 template class hid_pad_handler<ds3_device>;
 template class hid_pad_handler<DS4Device>;
 template class hid_pad_handler<DualSenseDevice>;
+template class hid_pad_handler<skateboard_device>;

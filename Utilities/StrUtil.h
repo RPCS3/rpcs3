@@ -181,11 +181,13 @@ namespace fmt
 
 	struct buf_to_hexstring
 	{
-		buf_to_hexstring(const u8* buf, usz len)
-			: buf(buf), len(len) {}
+		buf_to_hexstring(const u8* buf, usz len, usz line_length = 16, bool with_prefix = false)
+			: buf(buf), len(len), line_length(line_length), with_prefix(with_prefix) {}
 
 		const u8* buf;
 		usz len;
+		usz line_length;
+		bool with_prefix;
 	};
 
 	struct string_hash
