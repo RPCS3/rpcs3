@@ -554,7 +554,12 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 	std::vector<std::reference_wrapper<ppu_function>> func_queue;
 
 	// Known references (within segs, addr and value alignment = 4)
-	std::set<u32> addr_heap{entry};
+	std::set<u32> addr_heap;
+
+	if (entry)
+	{
+		addr_heap.emplace(entry);
+	}
 
 	auto verify_func = [&](u32 addr)
 	{
@@ -727,17 +732,17 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 			const u32 _toc = ptr[1];
 
 			// Rough Table of Contents borders
-			//const u32 _toc_begin = _toc - 0x8000;
-			//const u32 _toc_end = _toc + 0x8000;
+			const u32 toc_begin = _toc - 0x8000;
+			//const u32 toc_end = _toc + 0x7ffc;
 
 			// TODO: improve TOC constraints
-			if (_toc % 4 || !get_ptr<u8>(_toc) || _toc >= 0x40000000 || (_toc >= start && _toc < end))
+			if (toc_begin % 4 || !get_ptr<u8>(toc_begin) || toc_begin >= 0x40000000 || (toc_begin >= start && toc_begin < end))
 			{
 				sec_end.set(0);
 				break;
 			}
 
-			if (addr % 4 || addr < start || addr >= end || addr == _toc || !verify_func(_ptr.addr()))
+			if (addr % 4 || addr < start || addr >= end || !verify_func(_ptr.addr()))
 			{
 				sec_end.set(0);
 				break;
