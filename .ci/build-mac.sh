@@ -12,7 +12,7 @@ arch -x86_64 /usr/local/bin/brew link -f llvm@16
 # moltenvk based on commit for 1.2.5 release
 wget https://raw.githubusercontent.com/Homebrew/homebrew-core/055ae78415b61ecf1fa3de32b76b8a149855f903/Formula/m/molten-vk.rb
 arch -x86_64 /usr/local/bin/brew install -f --overwrite ./molten-vk.rb
-#export MACOSX_DEPLOYMENT_TARGET=12.0
+export MACOSX_DEPLOYMENT_TARGET=12.6
 export CXX=clang++
 export CC=clang
 
@@ -58,7 +58,7 @@ export VK_ICD_FILENAMES="$VULKAN_SDK/share/vulkan/icd.d/MoltenVK_icd.json"
 
 export LLVM_DIR
 LLVM_DIR="BREW_X64_PATH/opt/llvm@16"
-# exclude FAudio, SPIRV and LLVM, and sdl from submodule update
+# exclude SPIRV and LLVM, and sdl from submodule update
 # shellcheck disable=SC2046
 git submodule -q update --init --depth=1 --jobs=8 $(awk '/path/ && !/llvm/ && !/SPIRV/ && !/SDL/ { print $3 }' .gitmodules)
 
