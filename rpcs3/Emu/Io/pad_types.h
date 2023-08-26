@@ -430,7 +430,7 @@ struct Pad
 	bool m_pressure_intensity_toggled{}; // Whether the sensitivity is toggled on or off.
 	u8 m_pressure_intensity{127}; // 0-255
 	bool m_adjust_pressure_last{}; // only used in keyboard_pad_handler
-	bool get_pressure_intensity_enabled(bool is_toggle_mode);
+	bool get_pressure_intensity_button_active(bool is_toggle_mode);
 
 	// Cable State:   0 - 1  plugged in ?
 	u8 m_cable_state{0};

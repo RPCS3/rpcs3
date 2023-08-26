@@ -112,7 +112,7 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 			}
 		}
 
-		const bool adjust_pressure = pad.get_pressure_intensity_enabled(m_pressure_intensity_toggle_mode);
+		const bool adjust_pressure = pad.get_pressure_intensity_button_active(m_pressure_intensity_toggle_mode);
 		const bool adjust_pressure_changed = pad.m_adjust_pressure_last != adjust_pressure;
 
 		if (adjust_pressure_changed)
@@ -153,16 +153,28 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 
 			if (update_button)
 			{
-				button.m_pressed = button.m_actual_value > 0;
-
-				if (button.m_pressed)
+				if (button.m_actual_value > 0)
 				{
 					// Modify pressure if necessary if the button was pressed
-					button.m_value = adjust_pressure ? pad.m_pressure_intensity : button.m_actual_value;
+					if (adjust_pressure)
+					{
+						button.m_value = pad.m_pressure_intensity;
+					}
+					else if (m_pressure_intensity_deadzone > 0)
+					{
+						button.m_value = NormalizeDirectedInput(button.m_actual_value, m_pressure_intensity_deadzone, 255);
+					}
+					else
+					{
+						button.m_value = button.m_actual_value;
+					}
+
+					button.m_pressed = button.m_value > 0;
 				}
 				else
 				{
 					button.m_value = 0;
+					button.m_pressed = false;
 				}
 			}
 		}
@@ -886,6 +898,7 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, u8 player_i
 	m_l_stick_multiplier = cfg->lstickmultiplier;
 	m_r_stick_multiplier = cfg->rstickmultiplier;
 	m_pressure_intensity_toggle_mode = cfg->pressure_intensity_toggle_mode.get();
+	m_pressure_intensity_deadzone = cfg->pressure_intensity_deadzone.get();
 
 	const auto find_keys = [this](const cfg::string& name)
 	{

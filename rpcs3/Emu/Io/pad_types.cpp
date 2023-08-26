@@ -132,7 +132,7 @@ u32 get_axis_keycode(u32 offset, u16 value)
 	}
 }
 
-bool Pad::get_pressure_intensity_enabled(bool is_toggle_mode)
+bool Pad::get_pressure_intensity_button_active(bool is_toggle_mode)
 {
 	if (m_pressure_intensity_button_index < 0)
 	{

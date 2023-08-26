@@ -1178,6 +1178,11 @@ void pad_settings_dialog::UpdateLabels(bool is_reset)
 		// Update pressure sensitivity toggle mode
 		ui->cb_pressure_intensity_toggle_mode->setChecked(cfg.pressure_intensity_toggle_mode.get());
 
+		// Update pressure sensitivity deadzone
+		range = cfg.pressure_intensity_deadzone.to_list();
+		ui->pressure_intensity_deadzone->setRange(std::stoi(range.front()), std::stoi(range.back()));
+		ui->pressure_intensity_deadzone->setValue(cfg.pressure_intensity_deadzone.get());
+
 		// Apply stored/default LED settings to the device
 		m_enable_led = m_handler->has_led();
 		SetPadData(0, 0);
@@ -1813,6 +1818,8 @@ void pad_settings_dialog::ApplyCurrentPlayerConfig(int new_player_id)
 		cfg.pressure_intensity_toggle_mode.set(ui->cb_pressure_intensity_toggle_mode->isChecked());
 	}
 
+	cfg.pressure_intensity_deadzone.set(ui->pressure_intensity_deadzone->value());
+
 	if (m_handler->m_type == pad_handler::keyboard)
 	{
 		const int mouse_move_mode = ui->mouse_movement->currentData().toInt();
@@ -1961,6 +1968,7 @@ void pad_settings_dialog::SubscribeTooltips()
 	const Tooltips tooltips;
 
 	SubscribeTooltip(ui->gb_pressure_intensity, tooltips.gamepad_settings.pressure_intensity);
+	SubscribeTooltip(ui->gb_pressure_intensity_deadzone, tooltips.gamepad_settings.pressure_deadzone);
 	SubscribeTooltip(ui->gb_squircle, tooltips.gamepad_settings.squircle_factor);
 	SubscribeTooltip(ui->gb_stick_multi, tooltips.gamepad_settings.stick_multiplier);
 	SubscribeTooltip(ui->gb_kb_stick_multi, tooltips.gamepad_settings.stick_multiplier);
