@@ -99,7 +99,7 @@ private Q_SLOTS:
 	void ChangeHandler();
 	void ChangeProfile(const QString& profile);
 	void ChangeDevice(int index);
-	void HandleDeviceClassChange(int index) const;
+	void HandleDeviceClassChange(u32 class_id) const;
 	void AddProfile();
 	/** Update the current player config with the GUI values. */
 	void ApplyCurrentPlayerConfig(int new_player_id);

@@ -174,14 +174,18 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 	// Refresh Button
 	connect(ui->b_refresh, &QPushButton::clicked, this, &pad_settings_dialog::RefreshHandlers);
 
-	ui->chooseClass->addItem(tr("Standard (Pad)")); // CELL_PAD_PCLASS_TYPE_STANDARD   = 0x00,
-	ui->chooseClass->addItem(tr("Guitar"));         // CELL_PAD_PCLASS_TYPE_GUITAR     = 0x01,
-	ui->chooseClass->addItem(tr("Drum"));           // CELL_PAD_PCLASS_TYPE_DRUM       = 0x02,
-	ui->chooseClass->addItem(tr("DJ"));             // CELL_PAD_PCLASS_TYPE_DJ         = 0x03,
-	ui->chooseClass->addItem(tr("Dance Mat"));      // CELL_PAD_PCLASS_TYPE_DANCEMAT   = 0x04,
-	ui->chooseClass->addItem(tr("Navigation"));     // CELL_PAD_PCLASS_TYPE_NAVIGATION = 0x05,
+	ui->chooseClass->addItem(tr("Standard (Pad)"), u32{CELL_PAD_PCLASS_TYPE_STANDARD});
+	ui->chooseClass->addItem(tr("Guitar"),         u32{CELL_PAD_PCLASS_TYPE_GUITAR});
+	ui->chooseClass->addItem(tr("Drum"),           u32{CELL_PAD_PCLASS_TYPE_DRUM});
+	ui->chooseClass->addItem(tr("DJ"),             u32{CELL_PAD_PCLASS_TYPE_DJ});
+	ui->chooseClass->addItem(tr("Dance Mat"),      u32{CELL_PAD_PCLASS_TYPE_DANCEMAT});
+	ui->chooseClass->addItem(tr("Navigation"),     u32{CELL_PAD_PCLASS_TYPE_NAVIGATION});
 
-	connect(ui->chooseClass, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &pad_settings_dialog::HandleDeviceClassChange);
+	connect(ui->chooseClass, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
+	{
+		if (index < 0) return;
+		HandleDeviceClassChange(ui->chooseClass->currentData().toUInt());
+	});
 
 	ui->chb_show_emulated_values->setChecked(m_gui_settings->GetValue(gui::pads_show_emulated).toBool());
 
@@ -1075,10 +1079,11 @@ void pad_settings_dialog::UpdateLabels(bool is_reset)
 		const cfg_pad& cfg = GetPlayerConfig();
 
 		// Update device class
-		ui->chooseClass->setCurrentIndex(cfg.device_class_type);
+		const int index = ui->chooseClass->findData(cfg.device_class_type.get());
+		ui->chooseClass->setCurrentIndex(index);
 
 		// Trigger the change manually in case that the class dropdown didn't fire an event
-		HandleDeviceClassChange(ui->chooseClass->currentIndex());
+		HandleDeviceClassChange(cfg.device_class_type);
 
 		const auto products = input::get_products_by_class(cfg.device_class_type);
 
@@ -1608,16 +1613,11 @@ void pad_settings_dialog::ChangeDevice(int index)
 	}
 }
 
-void pad_settings_dialog::HandleDeviceClassChange(int index) const
+void pad_settings_dialog::HandleDeviceClassChange(u32 class_id) const
 {
-	if (index < 0)
-	{
-		return;
-	}
-
 	ui->chooseProduct->clear();
 
-	for (const input::product_info& product : input::get_products_by_class(index))
+	for (const input::product_info& product : input::get_products_by_class(class_id))
 	{
 		switch (product.type)
 		{
@@ -1833,7 +1833,7 @@ void pad_settings_dialog::ApplyCurrentPlayerConfig(int new_player_id)
 		cfg.r_stick_lerp_factor.set(ui->right_stick_lerp->value() * 100);
 	}
 
-	cfg.device_class_type.set(ui->chooseClass->currentIndex());
+	cfg.device_class_type.set(ui->chooseClass->currentData().toUInt());
 
 	const auto info = input::get_product_info(static_cast<input::product_type>(ui->chooseProduct->currentData().toInt()));
 
