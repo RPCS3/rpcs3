@@ -55,15 +55,14 @@ u16 PadHandlerBase::NormalizeTriggerInput(u16 value, int threshold) const
 	{
 		return static_cast<u16>(0);
 	}
-	else if (threshold <= trigger_min)
+
+	if (threshold <= trigger_min)
 	{
 		return static_cast<u16>(ScaledInput(value, trigger_min, trigger_max));
 	}
-	else
-	{
-		const s32 val = static_cast<s32>(static_cast<f32>(trigger_max) * (value - threshold) / (trigger_max - threshold));
-		return static_cast<u16>(ScaledInput(val, trigger_min, trigger_max));
-	}
+
+	const s32 val = static_cast<s32>(static_cast<f32>(trigger_max) * (value - threshold) / (trigger_max - threshold));
+	return static_cast<u16>(ScaledInput(val, trigger_min, trigger_max));
 }
 
 // normalizes a directed input, meaning it will correspond to a single "button" and not an axis with two directions
@@ -81,11 +80,9 @@ u16 PadHandlerBase::NormalizeDirectedInput(s32 raw_value, s32 threshold, s32 max
 	{
 		return static_cast<u16>(255.0f * val);
 	}
-	else
-	{
-		const f32 thresh = static_cast<f32>(threshold) / maximum; // threshold converted to [0, 1]
-		return static_cast<u16>(255.0f * std::min(1.0f, (val - thresh) / (1.0f - thresh)));
-	}
+
+	const f32 thresh = static_cast<f32>(threshold) / maximum; // threshold converted to [0, 1]
+	return static_cast<u16>(255.0f * std::clamp((val - thresh) / (1.0f - thresh), 0.0f, 1.0f));
 }
 
 u16 PadHandlerBase::NormalizeStickInput(u16 raw_value, int threshold, int multiplier, bool ignore_threshold) const
@@ -96,10 +93,8 @@ u16 PadHandlerBase::NormalizeStickInput(u16 raw_value, int threshold, int multip
 	{
 		return static_cast<u16>(ScaledInput(scaled_value, 0, thumb_max));
 	}
-	else
-	{
-		return NormalizeDirectedInput(scaled_value, threshold, thumb_max);
-	}
+
+	return NormalizeDirectedInput(scaled_value, threshold, thumb_max);
 }
 
 // This function normalizes stick deadzone based on the DS3's deadzone, which is ~13%
