@@ -1107,6 +1107,13 @@ static void ppu_check_patch_spu_images(const ppu_module& mod, const ppu_segment&
 
 			if (prog.p_type == 0x1u /* LOAD */ && prog.p_filesz > 0u)
 			{
+				if (prog.p_vaddr)
+				{
+					extern void utilize_spu_data_segment(u32 vaddr, const void* ls_data_vaddr, u32 size);
+
+					utilize_spu_data_segment(prog.p_vaddr, (elf_header + prog.p_offset), prog.p_filesz);
+				}
+
 				sha1_update(&sha2, (elf_header + prog.p_offset), prog.p_filesz);
 			}
 
@@ -1119,7 +1126,7 @@ static void ppu_check_patch_spu_images(const ppu_module& mod, const ppu_segment&
 
 				if (!name.empty())
 				{
-					fmt::append(dump, "\n\tSPUNAME: '%s'", name);
+					fmt::append(dump, "\n\tSPUNAME: '%s' (image addr: 0x%x)", name, seg.addr + i);
 				}
 			}
 		}

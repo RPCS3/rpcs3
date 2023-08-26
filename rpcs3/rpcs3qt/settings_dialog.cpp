@@ -1452,8 +1452,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->fixupPPUVNAN, emu_settings_type::FixupPPUVNAN);
 	SubscribeTooltip(ui->fixupPPUVNAN, tooltips.settings.fixup_ppuvnan);
 
-	m_emu_settings->EnhanceCheckBox(ui->ppuPrecompilation, emu_settings_type::PPULLVMPrecompilation);
-	SubscribeTooltip(ui->ppuPrecompilation, tooltips.settings.ppu_precompilation);
+	m_emu_settings->EnhanceCheckBox(ui->llvmPrecompilation, emu_settings_type::LLVMPrecompilation);
+	SubscribeTooltip(ui->llvmPrecompilation, tooltips.settings.llvm_precompilation);
 
 	m_emu_settings->EnhanceCheckBox(ui->suspendSavestates, emu_settings_type::SuspendEmulationSavestateMode);
 	SubscribeTooltip(ui->suspendSavestates, tooltips.settings.suspend_savestates);
