@@ -685,6 +685,12 @@ void PadHandlerBase::get_mapping(const pad_ensemble& binding)
 		pad->m_sticks[2].m_value = rx;
 		pad->m_sticks[3].m_value = 255 - ry;
 	}
+
+	if (m_type == pad_handler::skateboard)
+	{
+		// Skateboards seem to only work with these values
+		// TODO
+	}
 }
 
 void PadHandlerBase::process()

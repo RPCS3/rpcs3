@@ -1382,6 +1382,7 @@ void pad_settings_dialog::ChangeHandler()
 			m_description = tooltips.gamepad_settings.null;
 		break;
 	case pad_handler::keyboard: m_description = tooltips.gamepad_settings.keyboard; break;
+	case pad_handler::skateboard: m_description = tooltips.gamepad_settings.skateboard; break;
 #ifdef _WIN32
 	case pad_handler::xinput: m_description = tooltips.gamepad_settings.xinput; break;
 	case pad_handler::mm: m_description = tooltips.gamepad_settings.mmjoy; break;
@@ -1446,6 +1447,7 @@ void pad_settings_dialog::ChangeHandler()
 	case pad_handler::ds3:
 	case pad_handler::ds4:
 	case pad_handler::dualsense:
+	case pad_handler::skateboard:
 	{
 		const QString name_string = qstr(m_handler->name_string());
 		for (usz i = 1; i <= m_handler->max_devices(); i++) // Controllers 1-n in GUI
@@ -1892,6 +1894,7 @@ QString pad_settings_dialog::GetLocalizedPadHandler(const QString& original, pad
 		case pad_handler::ds3: return tr("DualShock 3");
 		case pad_handler::ds4: return tr("DualShock 4");
 		case pad_handler::dualsense: return tr("DualSense");
+		case pad_handler::skateboard: return tr("Skateboard");
 #ifdef _WIN32
 		case pad_handler::xinput: return tr("XInput");
 		case pad_handler::mm: return tr("MMJoystick");

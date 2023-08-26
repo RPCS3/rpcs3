@@ -4,6 +4,7 @@
 #include "ds3_pad_handler.h"
 #include "ds4_pad_handler.h"
 #include "dualsense_pad_handler.h"
+#include "skateboard_pad_handler.h"
 #ifdef _WIN32
 #include "xinput_pad_handler.h"
 #include "mm_joystick_handler.h"
@@ -167,6 +168,9 @@ void pad_thread::Init()
 				break;
 			case pad_handler::dualsense:
 				cur_pad_handler = std::make_shared<dualsense_pad_handler>();
+				break;
+			case pad_handler::skateboard:
+				cur_pad_handler = std::make_shared<skateboard_pad_handler>();
 				break;
 #ifdef _WIN32
 			case pad_handler::xinput:
@@ -609,6 +613,8 @@ std::shared_ptr<PadHandlerBase> pad_thread::GetHandler(pad_handler type)
 		return std::make_unique<ds4_pad_handler>();
 	case pad_handler::dualsense:
 		return std::make_unique<dualsense_pad_handler>();
+	case pad_handler::skateboard:
+		return std::make_unique<skateboard_pad_handler>();
 #ifdef _WIN32
 	case pad_handler::xinput:
 		return std::make_unique<xinput_pad_handler>();
