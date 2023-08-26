@@ -1359,6 +1359,16 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, u8 player
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_buttons(cfg->left),     CELL_PAD_CTRL_LEFT);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_buttons(cfg->right),    CELL_PAD_CTRL_RIGHT);
 
+	if (pad->m_class_type == CELL_PAD_PCLASS_TYPE_SKATEBOARD)
+	{
+		pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_PRESS_PIGGYBACK, find_buttons(cfg->ir_nose), CELL_PAD_CTRL_PRESS_TRIANGLE);
+		pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_PRESS_PIGGYBACK, find_buttons(cfg->ir_tail), CELL_PAD_CTRL_PRESS_CIRCLE);
+		pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_PRESS_PIGGYBACK, find_buttons(cfg->ir_left), CELL_PAD_CTRL_PRESS_CROSS);
+		pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_PRESS_PIGGYBACK, find_buttons(cfg->ir_right), CELL_PAD_CTRL_PRESS_SQUARE);
+		pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_PRESS_PIGGYBACK, find_buttons(cfg->tilt_left), CELL_PAD_CTRL_PRESS_L1);
+		pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_PRESS_PIGGYBACK, find_buttons(cfg->tilt_right), CELL_PAD_CTRL_PRESS_R1);
+	}
+
 	m_dev->axis_left[0]  = find_buttons(cfg->ls_right);
 	m_dev->axis_left[1]  = find_buttons(cfg->ls_left);
 	m_dev->axis_left[2]  = find_buttons(cfg->ls_up);

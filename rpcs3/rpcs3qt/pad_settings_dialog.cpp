@@ -180,6 +180,7 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 	ui->chooseClass->addItem(tr("DJ"),             u32{CELL_PAD_PCLASS_TYPE_DJ});
 	ui->chooseClass->addItem(tr("Dance Mat"),      u32{CELL_PAD_PCLASS_TYPE_DANCEMAT});
 	ui->chooseClass->addItem(tr("Navigation"),     u32{CELL_PAD_PCLASS_TYPE_NAVIGATION});
+	ui->chooseClass->addItem(tr("Skateboard"),     u32{CELL_PAD_PCLASS_TYPE_SKATEBOARD});
 
 	connect(ui->chooseClass, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
 	{
@@ -1382,6 +1383,7 @@ void pad_settings_dialog::ChangeHandler()
 			m_description = tooltips.gamepad_settings.null;
 		break;
 	case pad_handler::keyboard: m_description = tooltips.gamepad_settings.keyboard; break;
+	case pad_handler::skateboard: m_description = tooltips.gamepad_settings.skateboard; break;
 #ifdef _WIN32
 	case pad_handler::xinput: m_description = tooltips.gamepad_settings.xinput; break;
 	case pad_handler::mm: m_description = tooltips.gamepad_settings.mmjoy; break;
@@ -1446,6 +1448,7 @@ void pad_settings_dialog::ChangeHandler()
 	case pad_handler::ds3:
 	case pad_handler::ds4:
 	case pad_handler::dualsense:
+	case pad_handler::skateboard:
 	{
 		const QString name_string = qstr(m_handler->name_string());
 		for (usz i = 1; i <= m_handler->max_devices(); i++) // Controllers 1-n in GUI
@@ -1672,6 +1675,11 @@ void pad_settings_dialog::HandleDeviceClassChange(u32 class_id) const
 			ui->chooseProduct->addItem(tr("PS Move Navigation", "PS Move Navigation Controller"), static_cast<int>(product.type));
 			break;
 		}
+		case input::product_type::ride_skateboard:
+		{
+			ui->chooseProduct->addItem(tr("RIDE Skateboard", "Tony Hawk RIDE Skateboard Controller"), static_cast<int>(product.type));
+			break;
+		}
 		}
 	}
 }
@@ -1892,6 +1900,7 @@ QString pad_settings_dialog::GetLocalizedPadHandler(const QString& original, pad
 		case pad_handler::ds3: return tr("DualShock 3");
 		case pad_handler::ds4: return tr("DualShock 4");
 		case pad_handler::dualsense: return tr("DualSense");
+		case pad_handler::skateboard: return tr("Skateboard");
 #ifdef _WIN32
 		case pad_handler::xinput: return tr("XInput");
 		case pad_handler::mm: return tr("MMJoystick");

@@ -137,6 +137,9 @@ void cellPad_NotifyStateChange(usz index, u32 /*state*/)
 		case CELL_PAD_PCLASS_TYPE_NAVIGATION:
 			product = input::get_product_info(input::product_type::ps_move_navigation);
 			break;
+		case CELL_PAD_PCLASS_TYPE_SKATEBOARD:
+			product = input::get_product_info(input::product_type::ride_skateboard);
+			break;
 		case CELL_PAD_PCLASS_TYPE_STANDARD:
 		default:
 			product = input::get_product_info(input::product_type::playstation_3_controller);
@@ -301,8 +304,15 @@ void pad_get_data(u32 port_no, CellPadData* data, bool get_periph_data = false)
 		const u16 d1Initial = pad->m_digital_1;
 		const u16 d2Initial = pad->m_digital_2;
 
-		const auto set_value = [&btnChanged](u16& value, u16 new_value)
+		// Check if this pad is configured as a skateboard which ignores sticks and pressure button values.
+		// Curiously it maps infrared on the press value of the face buttons for some reason.
+		const bool use_piggyback = pad->m_class_type == CELL_PAD_PCLASS_TYPE_SKATEBOARD;
+
+		const auto set_value = [&btnChanged, use_piggyback](u16& value, u16 new_value, bool is_piggyback = false)
 		{
+			if (use_piggyback && !is_piggyback)
+				return;
+
 			if (value != new_value)
 			{
 				btnChanged = true;
@@ -315,7 +325,9 @@ void pad_get_data(u32 port_no, CellPadData* data, bool get_periph_data = false)
 			// here we check btns, and set pad accordingly,
 			// if something changed, set btnChanged
 
-			if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL1)
+			switch (button.m_offset)
+			{
+			case CELL_PAD_BTN_OFFSET_DIGITAL1:
 			{
 				if (button.m_pressed)
 					pad->m_digital_1 |= button.m_outKeyCode;
@@ -335,8 +347,9 @@ void pad_get_data(u32 port_no, CellPadData* data, bool get_periph_data = false)
 				case CELL_PAD_CTRL_SELECT:
 				default: break;
 				}
+				break;
 			}
-			else if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL2)
+			case CELL_PAD_BTN_OFFSET_DIGITAL2:
 			{
 				if (button.m_pressed)
 					pad->m_digital_2 |= button.m_outKeyCode;
@@ -355,6 +368,30 @@ void pad_get_data(u32 port_no, CellPadData* data, bool get_periph_data = false)
 				case CELL_PAD_CTRL_L2: set_value(pad->m_press_L2, button.m_value); break;
 				default: break;
 				}
+				break;
+			}
+			case CELL_PAD_BTN_OFFSET_PRESS_PIGGYBACK:
+			{
+				switch (button.m_outKeyCode)
+				{
+				case CELL_PAD_CTRL_PRESS_RIGHT:    set_value(pad->m_press_right,    button.m_value, true); break;
+				case CELL_PAD_CTRL_PRESS_LEFT:     set_value(pad->m_press_left,     button.m_value, true); break;
+				case CELL_PAD_CTRL_PRESS_UP:       set_value(pad->m_press_up,       button.m_value, true); break;
+				case CELL_PAD_CTRL_PRESS_DOWN:     set_value(pad->m_press_down,     button.m_value, true); break;
+				case CELL_PAD_CTRL_PRESS_TRIANGLE: set_value(pad->m_press_triangle, button.m_value, true); break;
+				case CELL_PAD_CTRL_PRESS_CIRCLE:   set_value(pad->m_press_circle,   button.m_value, true); break;
+				case CELL_PAD_CTRL_PRESS_CROSS:    set_value(pad->m_press_cross,    button.m_value, true); break;
+				case CELL_PAD_CTRL_PRESS_SQUARE:   set_value(pad->m_press_square,   button.m_value, true); break;
+				case CELL_PAD_CTRL_PRESS_L1:       set_value(pad->m_press_L1,       button.m_value, true); break;
+				case CELL_PAD_CTRL_PRESS_R1:       set_value(pad->m_press_R1,       button.m_value, true); break;
+				case CELL_PAD_CTRL_PRESS_L2:       set_value(pad->m_press_L2,       button.m_value, true); break;
+				case CELL_PAD_CTRL_PRESS_R2:       set_value(pad->m_press_R2,       button.m_value, true); break;
+				default: break;
+				}
+				break;
+			}
+			default:
+				break;
 			}
 		}
 
@@ -376,10 +413,10 @@ void pad_get_data(u32 port_no, CellPadData* data, bool get_periph_data = false)
 			{
 				switch (sensor.m_offset)
 				{
-				case CELL_PAD_BTN_OFFSET_SENSOR_X: set_value(pad->m_sensor_x, sensor.m_value); break;
-				case CELL_PAD_BTN_OFFSET_SENSOR_Y: set_value(pad->m_sensor_y, sensor.m_value); break;
-				case CELL_PAD_BTN_OFFSET_SENSOR_Z: set_value(pad->m_sensor_z, sensor.m_value); break;
-				case CELL_PAD_BTN_OFFSET_SENSOR_G: set_value(pad->m_sensor_g, sensor.m_value); break;
+				case CELL_PAD_BTN_OFFSET_SENSOR_X: set_value(pad->m_sensor_x, sensor.m_value, true); break;
+				case CELL_PAD_BTN_OFFSET_SENSOR_Y: set_value(pad->m_sensor_y, sensor.m_value, true); break;
+				case CELL_PAD_BTN_OFFSET_SENSOR_Z: set_value(pad->m_sensor_z, sensor.m_value, true); break;
+				case CELL_PAD_BTN_OFFSET_SENSOR_G: set_value(pad->m_sensor_g, sensor.m_value, true); break;
 				default: break;
 				}
 			}
@@ -446,8 +483,8 @@ void pad_get_data(u32 port_no, CellPadData* data, bool get_periph_data = false)
 			data->button[CELL_PAD_BTN_OFFSET_PRESS_CROSS] = pad->m_press_cross;
 			data->button[CELL_PAD_BTN_OFFSET_PRESS_SQUARE] = pad->m_press_square;
 			data->button[CELL_PAD_BTN_OFFSET_PRESS_L1] = pad->m_press_L1;
-			data->button[CELL_PAD_BTN_OFFSET_PRESS_L2] = pad->m_press_L2;
 			data->button[CELL_PAD_BTN_OFFSET_PRESS_R1] = pad->m_press_R1;
+			data->button[CELL_PAD_BTN_OFFSET_PRESS_L2] = pad->m_press_L2;
 			data->button[CELL_PAD_BTN_OFFSET_PRESS_R2] = pad->m_press_R2;
 		}
 		else
@@ -494,6 +531,7 @@ void pad_get_data(u32 port_no, CellPadData* data, bool get_periph_data = false)
 	default:
 	case CELL_PAD_PCLASS_TYPE_STANDARD:
 	case CELL_PAD_PCLASS_TYPE_NAVIGATION:
+	case CELL_PAD_PCLASS_TYPE_SKATEBOARD:
 	{
 		break;
 	}
