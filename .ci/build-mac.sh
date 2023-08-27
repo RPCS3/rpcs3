@@ -6,9 +6,9 @@ brew install -f --overwrite nasm ninja git p7zip create-dmg ccache pipenv
 #/usr/sbin/softwareupdate --install-rosetta --agree-to-license
 arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 arch -x86_64 /usr/local/bin/brew update
+arch -x86_64 /usr/local/bin/brew install --build-from-source ffmpeg webp
 arch -x86_64 /usr/local/bin/brew install -f --overwrite llvm@16 glew cmake sdl2 vulkan-headers
 arch -x86_64 /usr/local/bin/brew link -f llvm@16
-arch -x86_64 /usr/local/bin/brew install --build-from-source ffmpeg
 
 # moltenvk based on commit for 1.2.5 release
 wget https://raw.githubusercontent.com/Homebrew/homebrew-core/055ae78415b61ecf1fa3de32b76b8a149855f903/Formula/m/molten-vk.rb
