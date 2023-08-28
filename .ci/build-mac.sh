@@ -10,7 +10,7 @@ arch -x86_64 /usr/local/bin/brew install -f --overwrite llvm@16 glew cmake sdl2 
 arch -x86_64 /usr/local/bin/brew link -f llvm@16
 
 # moltenvk based on commit for 1.2.5 release
-wget https://raw.githubusercontent.com/Homebrew/homebrew-core/055ae78415b61ecf1fa3de32b76b8a149855f903/Formula/m/molten-vk.rb
+wget https://raw.githubusercontent.com/Homebrew/homebrew-core/b0bba05b617ef0fd796b3727be46addfd098a491/Formula/m/molten-vk.rb
 arch -x86_64 /usr/local/bin/brew install -f --overwrite ./molten-vk.rb
 #export MACOSX_DEPLOYMENT_TARGET=12.0
 export CXX=clang++
