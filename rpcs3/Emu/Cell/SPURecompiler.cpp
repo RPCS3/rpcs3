@@ -8674,6 +8674,20 @@ public:
 			{
 				if (data == v128::from8p(data._u8[0]))
 				{
+					if (m_use_avx512_icl)
+					{
+						if (perm_only)
+						{
+							set_vr(op.rt4, vperm2b256to128(as, b, c));
+							return;
+						}
+
+						const auto m = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
+						const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
+						const auto ab = vperm2b256to128(as, b, c);
+						set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab, mm));
+						return;
+					}
 					// See above
 					const auto x = pshufb(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
 					const auto ax = pshufb(as, c);
@@ -8708,6 +8722,42 @@ public:
 
 		if (m_use_avx512_icl && (op.ra != op.rb || m_interp_magn))
 		{
+			if (auto [ok, data] = get_const_vector(b.value, m_pos); ok)
+			{
+				if (data == v128::from8p(data._u8[0]))
+				{
+					if (perm_only)
+					{
+						set_vr(op.rt4, vperm2b256to128(a, b, eval(c ^ 0xf)));
+						return;
+					}
+
+					const auto m = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
+					const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
+					const auto ab = vperm2b256to128(a, b, eval(c ^ 0xf));
+					set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab, mm));
+					return;
+				}
+			}
+
+			if (auto [ok, data] = get_const_vector(a.value, m_pos); ok)
+			{
+				if (data == v128::from8p(data._u8[0]))
+				{
+					if (perm_only)
+					{
+						set_vr(op.rt4, vperm2b256to128(b, a, eval(c ^ 0x1f)));
+						return;
+					}
+
+					const auto m = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
+					const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
+					const auto ab = vperm2b256to128(b, a, eval(c ^ 0x1f));
+					set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab, mm));
+					return;
+				}
+			}
+
 			if (perm_only)
 			{
 				set_vr(op.rt4, vperm2b(a, b, eval(c ^ 0xf)));
