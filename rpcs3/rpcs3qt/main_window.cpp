@@ -2506,7 +2506,7 @@ void main_window::CreateConnects()
 	});
 	connect(ui->exitAct, &QAction::triggered, this, &QWidget::close);
 
-	connect(ui->batchCreatePPUCachesAct, &QAction::triggered, m_game_list_frame, &game_list_frame::BatchCreatePPUCaches);
+	connect(ui->batchCreateCPUCachesAct, &QAction::triggered, m_game_list_frame, &game_list_frame::BatchCreateCPUCaches);
 	connect(ui->batchRemovePPUCachesAct, &QAction::triggered, m_game_list_frame, &game_list_frame::BatchRemovePPUCaches);
 	connect(ui->batchRemoveSPUCachesAct, &QAction::triggered, m_game_list_frame, &game_list_frame::BatchRemoveSPUCaches);
 	connect(ui->batchRemoveShaderCachesAct, &QAction::triggered, m_game_list_frame, &game_list_frame::BatchRemoveShaderCaches);
