@@ -34,7 +34,7 @@ public:
 
 	void add(const struct spu_program& func);
 
-	static void initialize();
+	static void initialize(bool build_existing_cache = true);
 };
 
 struct spu_program

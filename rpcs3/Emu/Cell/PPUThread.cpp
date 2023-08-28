@@ -2112,7 +2112,14 @@ void ppu_thread::cpu_task()
 #endif
 			cmd_pop();
 
-			ppu_initialize(), spu_cache::initialize();
+			ppu_initialize();
+
+			if (Emu.IsStopped())
+			{
+				return;
+			}
+
+			spu_cache::initialize();
 
 #ifdef __APPLE__
 			pthread_jit_write_protect_np(true);

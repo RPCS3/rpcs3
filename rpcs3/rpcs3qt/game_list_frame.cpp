@@ -1101,7 +1101,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		? tr("&Change Custom Gamepad Configuration")
 		: tr("&Create Custom Gamepad Configuration"));
 	QAction* configure_patches = menu.addAction(tr("&Manage Game Patches"));
-	QAction* create_ppu_cache = menu.addAction(tr("&Create PPU Cache"));
+	QAction* create_ppu_cache = menu.addAction(tr("&Create PPU/SPU Cache"));
 
 	menu.addSeparator();
 
@@ -1440,7 +1440,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	{
 		if (m_gui_settings->GetBootConfirmation(this))
 		{
-			CreatePPUCache(gameinfo);
+			CreateCPUCaches(gameinfo);
 		}
 	});
 	connect(remove_game, &QAction::triggered, this, [this, current_game, gameinfo, cache_base_dir, name]
@@ -1612,23 +1612,24 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	menu.exec(global_pos);
 }
 
-bool game_list_frame::CreatePPUCache(const std::string& path, const std::string& serial)
+bool game_list_frame::CreateCPUCaches(const std::string& path, const std::string& serial)
 {
 	Emu.GracefulShutdown(false);
 	Emu.SetForceBoot(true);
 
 	if (const auto error = Emu.BootGame(fs::is_file(path) ? fs::get_parent_dir(path) : path, serial, true); error != game_boot_result::no_errors)
 	{
-		game_list_log.error("Could not create PPU Cache for %s, error: %s", path, error);
+		game_list_log.error("Could not create PPU and SPU caches for %s, error: %s", path, error);
 		return false;
 	}
-	game_list_log.warning("Creating PPU Cache for %s", path);
+
+	game_list_log.warning("Creating PPU/SPU Caches for %s", path);
 	return true;
 }
 
-bool game_list_frame::CreatePPUCache(const game_info& game)
+bool game_list_frame::CreateCPUCaches(const game_info& game)
 {
-	return game && CreatePPUCache(game->info.path, game->info.serial);
+	return game && CreateCPUCaches(game->info.path, game->info.serial);
 }
 
 bool game_list_frame::RemoveCustomConfiguration(const std::string& title_id, const game_info& game, bool is_interactive)
@@ -1907,7 +1908,7 @@ void game_list_frame::RemoveHDD1Cache(const std::string& base_dir, const std::st
 		game_list_log.fatal("Only %d/%d HDD1 cache directories could be removed in %s (%s)", dirs_removed, dirs_total, base_dir, title_id);
 }
 
-void game_list_frame::BatchCreatePPUCaches()
+void game_list_frame::BatchCreateCPUCaches()
 {
 	const std::string vsh_path = g_cfg_vfs.get_dev_flash() + "vsh/module/";
 	const bool vsh_exists = fs::is_file(vsh_path + "vsh.self");
@@ -1952,7 +1953,7 @@ void game_list_frame::BatchCreatePPUCaches()
 		pdlg->setLabelText(tr("%0\nProgress: %1/%2. Compiling caches for VSH...", "Second line after main label").arg(main_label).arg(created).arg(total));
 		QApplication::processEvents();
 
-		if (CreatePPUCache(vsh_path) && wait_until_compiled())
+		if (CreateCPUCaches(vsh_path) && wait_until_compiled())
 		{
 			pdlg->SetValue(++created);
 		}
@@ -1968,7 +1969,7 @@ void game_list_frame::BatchCreatePPUCaches()
 		pdlg->setLabelText(tr("%0\nProgress: %1/%2. Compiling caches for %3...", "Second line after main label").arg(main_label).arg(created).arg(total).arg(qstr(game->info.serial)));
 		QApplication::processEvents();
 
-		if (CreatePPUCache(game) && wait_until_compiled())
+		if (CreateCPUCaches(game) && wait_until_compiled())
 		{
 			pdlg->SetValue(++created);
 		}
