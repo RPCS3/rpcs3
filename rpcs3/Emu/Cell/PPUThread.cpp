@@ -4030,7 +4030,7 @@ extern void ppu_initialize()
 
 	const std::string mount_point = vfs::get("/dev_flash/");
 
-	bool dev_flash_located = !Emu.GetCat().ends_with('P') && Emu.IsPathInsideDir(Emu.GetBoot(), mount_point) && g_cfg.core.ppu_llvm_precompilation;
+	bool dev_flash_located = !Emu.GetCat().ends_with('P') && Emu.IsPathInsideDir(Emu.GetBoot(), mount_point) && g_cfg.core.llvm_precompilation;
 
 	if (compile_fw || dev_flash_located)
 	{
@@ -4050,7 +4050,7 @@ extern void ppu_initialize()
 	}
 
 	// Avoid compilation if main's cache exists or it is a standalone SELF with no PARAM.SFO
-	if (compile_main && g_cfg.core.ppu_llvm_precompilation && !Emu.GetTitleID().empty() && !Emu.IsChildProcess())
+	if (compile_main && g_cfg.core.llvm_precompilation && !Emu.GetTitleID().empty() && !Emu.IsChildProcess())
 	{
 		// Try to add all related directories
 		const std::set<std::string> dirs = Emu.GetGameDirs();

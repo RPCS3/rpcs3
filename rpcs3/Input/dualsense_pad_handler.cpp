@@ -195,6 +195,7 @@ void dualsense_pad_handler::check_add_device(hid_device* hidDevice, std::string_
 	if (res < 0 || buf[0] != 0x09)
 	{
 		dualsense_log.error("check_add_device: hid_get_feature_report 0x09 failed! result=%d, buf[0]=0x%x, error=%s", res, buf[0], hid_error(hidDevice));
+		hid_close(hidDevice);
 		return;
 	}
 

@@ -516,6 +516,84 @@ spu_cache::~spu_cache()
 {
 }
 
+struct spu_section_data
+{
+	struct data_t
+	{
+		u32 vaddr;
+		std::basic_string<u32> inst_data;
+		std::vector<u32> funcs;
+	};
+
+	shared_mutex mtx;
+	atomic_t<bool> had_been_used = false;
+	std::vector<data_t> data;
+};
+
+extern void utilize_spu_data_segment(u32 vaddr, const void* ls_data_vaddr, u32 size)
+{
+	if (vaddr % 4)
+	{
+		return;
+	}
+
+	size &= -4;
+
+	if (!size || vaddr + size > SPU_LS_SIZE)
+	{
+		return;
+	}
+
+	if (!g_cfg.core.llvm_precompilation)
+	{
+		return;
+	}
+
+	g_fxo->need<spu_section_data>();
+
+	if (g_fxo->get<spu_section_data>().had_been_used)
+	{
+		return;
+	}
+
+	std::basic_string<u32> data(size / 4, 0);
+	std::memcpy(data.data(), ls_data_vaddr, size);
+
+	spu_section_data::data_t obj{vaddr, std::move(data)};
+
+	std::vector<u8> ls_data(SPU_LS_SIZE);
+	std::memcpy(ls_data.data() + vaddr, ls_data_vaddr, size);
+
+	obj.funcs = spu_thread::discover_functions(ls_data.data(), umax);
+
+	if (obj.funcs.empty())
+	{
+		// Nothing to add
+		return;
+	}
+
+	for (u32 addr : obj.funcs)
+	{
+		spu_log.notice("Found SPU function at: 0x%05x", addr);
+	}
+
+	spu_log.notice("Found %u SPU functions", obj.funcs.size());
+
+	std::lock_guard lock(g_fxo->get<spu_section_data>().mtx);
+
+	for (const auto& data : g_fxo->get<spu_section_data>().data)
+	{
+		// TODO: More robust duplicates filtering
+		if (data.vaddr == vaddr && data.inst_data.starts_with(obj.inst_data))
+		{
+			spu_log.notice("Avoided duplicate SPU segment");
+			return;
+		}
+	}
+
+	g_fxo->get<spu_section_data>().data.emplace_back(std::move(obj));
+}
+
 std::deque<spu_program> spu_cache::get()
 {
 	std::deque<spu_program> result;
@@ -618,6 +696,23 @@ void spu_cache::initialize()
 	atomic_t<usz> fnext{};
 	atomic_t<u8> fail_flag{0};
 
+	auto data_list = std::move(g_fxo->get<spu_section_data>().data);
+	g_fxo->get<spu_section_data>().had_been_used = true;
+
+	const bool spu_precompilation_enabled = func_list.empty() && g_cfg.core.spu_cache && g_cfg.core.llvm_precompilation;
+
+	if (spu_precompilation_enabled)
+	{
+		// What compiles in this case goes straight to disk
+		g_fxo->get<spu_cache>() = std::move(cache);
+	}
+	else
+	{
+		data_list.clear();
+	}
+
+	atomic_t<usz> data_indexer = 0;
+
 	if (g_cfg.core.spu_decoder == spu_decoder_type::dynamic || g_cfg.core.spu_decoder == spu_decoder_type::llvm)
 	{
 		if (auto compiler = spu_recompiler_base::make_llvm_recompiler(11))
@@ -657,7 +752,15 @@ void spu_cache::initialize()
 			thread_ctrl::wait_on(g_progr_ptotal, v);
 		}
 
-		g_progr_ptotal += ::size32(func_list);
+		u32 add_count = ::size32(func_list);
+
+		for (auto& sec : data_list)
+		{
+			add_count += sec.funcs.size();
+		}
+
+		g_progr_ptotal += add_count;
+
 		progr.emplace("Building SPU cache...");
 
 		worker_count = rpcs3::utils::get_max_threads();
@@ -744,12 +847,108 @@ void spu_cache::initialize()
 			{
 				// Likely, out of JIT memory. Signal to prevent further building.
 				fail_flag |= 1;
+				continue;
 			}
 
 			// Clear fake LS
 			std::memset(ls.data() + start / 4, 0, 4 * (size0 - 1));
 
 			result++;
+		}
+
+		u32 last_sec_idx = umax;
+
+		for (usz func_i = data_indexer++;; func_i = data_indexer++, g_progr_pdone++)
+		{
+			u32 passed_count = 0;
+			u32 func_addr = 0;
+			u32 sec_addr = umax;
+			u32 sec_idx = 0;
+			std::basic_string_view<u32> inst_data;
+
+			// Try to get the data this index points to
+			for (auto& sec : data_list)
+			{
+				if (func_i < passed_count + sec.funcs.size())
+				{
+					sec_addr = sec.vaddr;
+					func_addr = ::at32(sec.funcs, func_i - passed_count);
+					inst_data = sec.inst_data;
+					break;
+				}
+
+				passed_count += sec.funcs.size();
+				sec_idx++;
+			}
+
+			if (sec_addr == umax)
+			{
+				// End of compilation for thread
+				break;
+			}
+
+			if (Emu.IsStopped() || fail_flag)
+			{
+				continue;
+			}
+
+			if (last_sec_idx != sec_idx)
+			{
+				if (last_sec_idx != umax)
+				{
+					// Clear fake LS of previous section
+					auto& sec = data_list[last_sec_idx];
+					std::memset(ls.data() + sec.vaddr / 4, 0, sec.inst_data.size() * 4);
+				}
+
+				// Initialize LS with the entire section data
+				for (u32 i = 0, pos = sec_addr; i < inst_data.size(); i++, pos += 4)
+				{
+					ls[pos / 4] =  std::bit_cast<be_t<u32>>(inst_data[i]);
+				}
+
+				last_sec_idx = sec_idx;
+			}
+
+			// Call analyser
+			spu_program func2 = compiler->analyse(ls.data(), func_addr);
+
+			while (!func2.data.empty())
+			{
+				const u32 last_inst = std::bit_cast<be_t<u32>>(func2.data.back());
+				const u32 prog_size = func2.data.size();
+
+				if (!compiler->compile(std::move(func2)))
+				{
+					// Likely, out of JIT memory. Signal to prevent further building.
+					fail_flag |= 1;
+					break;
+				}
+
+				result++;
+
+				if (g_cfg.core.spu_block_size >= spu_block_size_type::mega)
+				{
+					// Should already take care of the entire function
+					break;
+				}
+
+				if (auto type = g_spu_itype.decode(last_inst);
+					type == spu_itype::BRSL || type == spu_itype::BRASL || type == spu_itype::BISL)
+				{
+					const u32 start_new = func_addr + prog_size * 4;
+
+					if (start_new < SPU_LS_SIZE && ls[start_new / 4] && g_spu_itype.decode(ls[start_new / 4]) != spu_itype::UNK)
+					{
+						spu_log.notice("Precompiling fallthrough to 0x%05x", start_new);
+						func2 = compiler->analyse(ls.data(), start_new);
+						func_addr = start_new;
+						continue;
+					}
+				}
+
+				break;
+			}
 		}
 
 		return result;
@@ -881,7 +1080,7 @@ void spu_cache::initialize()
 	}
 
 	// Initialize global cache instance
-	if (g_cfg.core.spu_cache)
+	if (g_cfg.core.spu_cache && cache)
 	{
 		g_fxo->get<spu_cache>() = std::move(cache);
 	}
@@ -1902,6 +2101,63 @@ void spu_recompiler_base::old_interpreter(spu_thread& spu, void* ls, u8* /*rip*/
 		if (table.decode(op)(spu, {op}))
 			spu.pc += 4;
 	}
+}
+
+std::vector<u32> spu_thread::discover_functions(const void* ls_start, u32 /*entry*/)
+{
+	std::vector<u32> calls;
+	calls.reserve(100);
+
+	// Discover functions
+	// Use the most simple method: search for instructions that calls them
+	// And then filter invalid cases (does not detect tail calls)
+	for (u32 i = 0x10; i < SPU_LS_SIZE; i += 0x10)
+	{
+		// Search for BRSL and BRASL
+		// TODO: BISL
+		const v128 inst = read_from_ptr<be_t<v128>>(static_cast<const u8*>(ls_start), i);
+		const v128 shifted = gv_shr32(inst, 23);
+		const v128 eq_brsl = gv_eq32(shifted, v128::from32p(0x66));
+		const v128 eq_brasl = gv_eq32(shifted, v128::from32p(0x62));
+		const v128 result = eq_brsl | eq_brasl;
+
+		if (!gv_testz(result))
+		{
+			for (u32 j = 0; j < 4; j++)
+			{
+				if (result.u32r[j])
+				{
+					calls.push_back(i + j * 4);
+				}
+			}
+		}
+	}
+
+	calls.erase(std::remove_if(calls.begin(), calls.end(), [&](u32 caller)
+	{
+		// Check the validity of both the callee code and the following caller code
+		return !is_exec_code(caller, ls_start) || !is_exec_code(caller + 4, ls_start);
+	}), calls.end());
+
+	std::vector<u32> addrs;
+
+	for (u32 addr : calls)
+	{
+		const spu_opcode_t op{read_from_ptr<be_t<u32>>(static_cast<const u8*>(ls_start), addr)};
+
+		const u32 func = op_branch_targets(addr, op)[0];
+
+		if (func == umax || std::count(addrs.begin(), addrs.end(), func))
+		{
+			continue;
+		}
+
+		addrs.push_back(func);
+	}
+
+	std::sort(addrs.begin(), addrs.end());
+
+	return addrs;
 }
 
 spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
@@ -8674,6 +8930,20 @@ public:
 			{
 				if (data == v128::from8p(data._u8[0]))
 				{
+					if (m_use_avx512_icl)
+					{
+						if (perm_only)
+						{
+							set_vr(op.rt4, vperm2b256to128(as, b, c));
+							return;
+						}
+
+						const auto m = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
+						const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
+						const auto ab = vperm2b256to128(as, b, c);
+						set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab, mm));
+						return;
+					}
 					// See above
 					const auto x = pshufb(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
 					const auto ax = pshufb(as, c);
@@ -8708,6 +8978,42 @@ public:
 
 		if (m_use_avx512_icl && (op.ra != op.rb || m_interp_magn))
 		{
+			if (auto [ok, data] = get_const_vector(b.value, m_pos); ok)
+			{
+				if (data == v128::from8p(data._u8[0]))
+				{
+					if (perm_only)
+					{
+						set_vr(op.rt4, vperm2b256to128(a, b, eval(c ^ 0xf)));
+						return;
+					}
+
+					const auto m = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
+					const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
+					const auto ab = vperm2b256to128(a, b, eval(c ^ 0xf));
+					set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab, mm));
+					return;
+				}
+			}
+
+			if (auto [ok, data] = get_const_vector(a.value, m_pos); ok)
+			{
+				if (data == v128::from8p(data._u8[0]))
+				{
+					if (perm_only)
+					{
+						set_vr(op.rt4, vperm2b256to128(b, a, eval(c ^ 0x1f)));
+						return;
+					}
+
+					const auto m = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
+					const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
+					const auto ab = vperm2b256to128(b, a, eval(c ^ 0x1f));
+					set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab, mm));
+					return;
+				}
+			}
+
 			if (perm_only)
 			{
 				set_vr(op.rt4, vperm2b(a, b, eval(c ^ 0xf)));
