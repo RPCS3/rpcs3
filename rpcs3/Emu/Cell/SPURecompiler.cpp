@@ -699,7 +699,19 @@ void spu_cache::initialize()
 	auto data_list = std::move(g_fxo->get<spu_section_data>().data);
 	g_fxo->get<spu_section_data>().had_been_used = true;
 
-	atomic_t<usz> data_indexer{};
+	const bool spu_precompilation_enabled = func_list.empty() && g_cfg.core.spu_cache && g_cfg.core.llvm_precompilation;
+
+	if (spu_precompilation_enabled)
+	{
+		// What compiles in this case goes straight to disk
+		g_fxo->get<spu_cache>() = std::move(cache);
+	}
+	else
+	{
+		data_list.clear();
+	}
+
+	atomic_t<usz> data_indexer = 0;
 
 	if (g_cfg.core.spu_decoder == spu_decoder_type::dynamic || g_cfg.core.spu_decoder == spu_decoder_type::llvm)
 	{
@@ -742,12 +754,9 @@ void spu_cache::initialize()
 
 		u32 add_count = ::size32(func_list);
 
-		if (func_list.empty())
+		for (auto& sec : data_list)
 		{
-			for (auto& sec : data_list)
-			{
-				add_count += sec.funcs.size();
-			}
+			add_count += sec.funcs.size();
 		}
 
 		g_progr_ptotal += add_count;
@@ -845,12 +854,6 @@ void spu_cache::initialize()
 			std::memset(ls.data() + start / 4, 0, 4 * (size0 - 1));
 
 			result++;
-		}
-
-		if (!func_list.empty() || !g_cfg.core.llvm_precompilation)
-		{
-			// Cache has already been initiated or the user does not want to precompile SPU programs
-			return result;
 		}
 
 		u32 last_sec_idx = umax;
@@ -1077,7 +1080,7 @@ void spu_cache::initialize()
 	}
 
 	// Initialize global cache instance
-	if (g_cfg.core.spu_cache)
+	if (g_cfg.core.spu_cache && cache)
 	{
 		g_fxo->get<spu_cache>() = std::move(cache);
 	}
@@ -2900,8 +2903,6 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 		}
 	}
 
-	spu_program result2 = result;
-
 	while (lsa > 0 || limit < 0x40000)
 	{
 		const u32 initial_size = ::size32(result.data);
@@ -3348,13 +3349,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 	{
 		workload.clear();
 		workload.push_back(entry_point);
-		if (!m_bbs.count(entry_point))
-		{
-			std::string func_bad;
-			dump(result2, func_bad);
-			spu_log.error("%s", func_bad);
-			return {};
-		}
+		ensure(m_bbs.count(entry_point));
 
 		std::basic_string<u32> new_entries;
 
