@@ -63,7 +63,7 @@ public:
 	bool IsEntryVisible(const game_info& game, bool search_fallback = false) const;
 
 public Q_SLOTS:
-	void BatchCreatePPUCaches();
+	void BatchCreateCPUCaches();
 	void BatchRemovePPUCaches();
 	void BatchRemoveSPUCaches();
 	void BatchRemoveCustomConfigurations();
@@ -108,8 +108,8 @@ private:
 	bool RemovePPUCache(const std::string& base_dir, bool is_interactive = false);
 	bool RemoveSPUCache(const std::string& base_dir, bool is_interactive = false);
 	void RemoveHDD1Cache(const std::string& base_dir, const std::string& title_id, bool is_interactive = false);
-	static bool CreatePPUCache(const std::string& path, const std::string& serial = {});
-	static bool CreatePPUCache(const game_info& game);
+	static bool CreateCPUCaches(const std::string& path, const std::string& serial = {});
+	static bool CreateCPUCaches(const game_info& game);
 
 	static std::string GetCacheDirBySerial(const std::string& serial);
 	static std::string GetDataDirBySerial(const std::string& serial);

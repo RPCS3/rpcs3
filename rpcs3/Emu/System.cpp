@@ -15,6 +15,7 @@
 #include "Emu/Cell/PPUDisAsm.h"
 #include "Emu/Cell/PPUAnalyser.h"
 #include "Emu/Cell/SPUThread.h"
+#include "Emu/Cell/SPURecompiler.h"
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/Cell/lv2/sys_sync.h"
@@ -1385,6 +1386,10 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			// Force LLVM recompiler
 			g_cfg.core.ppu_decoder.from_default();
 
+			// Force SPU cache and precompilation
+			g_cfg.core.llvm_precompilation.set(true);
+			g_cfg.core.spu_cache.set(true);
+
 			// Disable incompatible settings
 			fixup_ppu_settings();
 
@@ -1489,6 +1494,13 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				}
 
 				ppu_precompile(dir_queue, nullptr);
+
+				if (Emu.IsStopped())
+				{
+					return;
+				}
+
+				spu_cache::initialize(false);
 
 				// Exit "process"
 				CallFromMainThread([this]

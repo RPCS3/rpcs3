@@ -661,7 +661,7 @@ void spu_cache::add(const spu_program& func)
 	m_file.write_gather(gather, 3);
 }
 
-void spu_cache::initialize()
+void spu_cache::initialize(bool build_existing_cache)
 {
 	spu_runtime::g_interpreter = spu_runtime::g_gateway;
 
@@ -699,12 +699,23 @@ void spu_cache::initialize()
 	auto data_list = std::move(g_fxo->get<spu_section_data>().data);
 	g_fxo->get<spu_section_data>().had_been_used = true;
 
-	const bool spu_precompilation_enabled = func_list.empty() && g_cfg.core.spu_cache && g_cfg.core.llvm_precompilation;
+	u32 total_precompile = 0;
+
+	for (auto& sec : data_list)
+	{
+		total_precompile += sec.funcs.size();
+	}
+
+	const bool spu_precompilation_enabled = (build_existing_cache ? func_list.empty() : func_list.size() < total_precompile) && g_cfg.core.spu_cache && g_cfg.core.llvm_precompilation;
 
 	if (spu_precompilation_enabled)
 	{
 		// What compiles in this case goes straight to disk
 		g_fxo->get<spu_cache>() = std::move(cache);
+	}
+	else if (!build_existing_cache)
+	{
+		return;
 	}
 	else
 	{
@@ -752,16 +763,13 @@ void spu_cache::initialize()
 			thread_ctrl::wait_on(g_progr_ptotal, v);
 		}
 
-		u32 add_count = ::size32(func_list);
+		const u32 add_count = ::size32(func_list) + total_precompile;
 
-		for (auto& sec : data_list)
+		if (add_count)
 		{
-			add_count += sec.funcs.size();
+			g_progr_ptotal += add_count;
+			progr.emplace("Building SPU cache...");
 		}
-
-		g_progr_ptotal += add_count;
-
-		progr.emplace("Building SPU cache...");
 
 		worker_count = rpcs3::utils::get_max_threads();
 	}
