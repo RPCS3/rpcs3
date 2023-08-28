@@ -487,20 +487,6 @@ std::array<u32, 2> op_branch_targets(u32 pc, spu_opcode_t op)
 	case spu_itype::BRASL:
 	{
 		const int index = (type == spu_itype::BR || type == spu_itype::BRA || type == spu_itype::BRSL || type == spu_itype::BRASL ? 0 : 1);
-
-		// if (type == spu_itype::BRASL || type == spu_itype::BRA)
-		// {
-		// 	res[index] = spu_branch_target(0, op.i16);
-		// }
-		// else
-		// {
-		// 	// Treat i16 as signed, this allows the caller to detect "overflows" and "underflows" in address in order to detect invalid branches
-		// 	// Example:
-		// 	// [0x3fffc] BR +4 -> BR 0 -> invalid
-		// 	// [0x3fffc] BR 0x3fff4 -> BR 0 -> invalid
-		// 	const u32 add = static_cast<s16>(op.si16);
-		// }
-
 		res[index] = (spu_branch_target(type == spu_itype::BRASL || type == spu_itype::BRA ? 0 : pc, op.i16));
 
 		if (res[0] == res[1])
