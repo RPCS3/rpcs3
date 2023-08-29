@@ -1221,6 +1221,7 @@ void pad_settings_dialog::SwitchButtons(bool is_enabled)
 	ui->kb_stick_multi_right->setEnabled(is_enabled);
 	ui->squircle_left->setEnabled(is_enabled);
 	ui->squircle_right->setEnabled(is_enabled);
+	ui->gb_pressure_intensity_deadzone->setEnabled(is_enabled);
 	ui->gb_pressure_intensity->setEnabled(is_enabled && m_enable_pressure_intensity_button);
 	ui->gb_vibration->setEnabled(is_enabled && m_enable_rumble);
 	ui->gb_motion_controls->setEnabled(is_enabled && m_enable_motion);

@@ -1062,7 +1062,7 @@ void keyboard_pad_handler::process()
 		{
 			if (update_sticks)
 			{
-				for (int j = 0; j < static_cast<int>(pad.m_sticks.size()); j++)
+				for (usz j = 0; j < pad.m_sticks.size(); j++)
 				{
 					const f32 stick_lerp_factor = (j < 2) ? m_l_stick_lerp_factor : m_r_stick_lerp_factor;
 
