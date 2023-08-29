@@ -15,8 +15,40 @@ echo "AVVER=$AVVER" >> ../.ci/ci-vars.env
 cd bin
 mkdir "rpcs3.app/Contents/lib/"
 
-cp "/usr/local/opt/llvm@16/lib/c++/libc++abi.1.0.dylib" "rpcs3.app/Contents/lib/libc++abi.1.dylib"
+# check if we are on ARM or x86_64
+if [ "$BUILDING_FOR" = "arm64" ]; then
+	cp "/opt/homebrew/opt/llvm@16/lib/c++/libc++abi.1.0.dylib" "rpcs3.app/Contents/lib/libc++abi.1.dylib"
+		
+# we have ffmpeg libs bundled in the app bundle in rpcs3.app/Contents/Frameworks , now we need to change the rpath to point to it
+# this is needed because we are using a homebrewed ffmpeg for arm64, and the rpath points to the system ffmpeg
+# for example we want to point to rpcs3.app/Contents/Frameworks/libavcodec.60.dylib
+	install_name_tool -change "/opt/homebrew/Cellar/ffmpeg/6.0/lib/libavcodec.60.dylib" "@executable_path/../Frameworks/libavcodec.60.dylib" "rpcs3.app/Contents/MacOS/rpcs3"
+	install_name_tool -change "/opt/homebrew/Cellar/ffmpeg/6.0/lib/libavdevice.60.dylib" "@executable_path/../Frameworks/libavdevice.60.dylib" "rpcs3.app/Contents/MacOS/rpcs3"
+	install_name_tool -change "/opt/homebrew/Cellar/ffmpeg/6.0/lib/libavfilter.7.dylib" "@executable_path/../Frameworks/libavfilter.7.dylib" "rpcs3.app/Contents/MacOS/rpcs3"
+	install_name_tool -change "/opt/homebrew/Cellar/ffmpeg/6.0/lib/libavformat.60.dylib" "@executable_path/../Frameworks/libavformat.60.dylib" "rpcs3.app/Contents/MacOS/rpcs3"
+	install_name_tool -change "/opt/homebrew/Cellar/ffmpeg/6.0/lib/libavutil.58.dylib" "@executable_path/../Frameworks/libavutil.58.dylib" "rpcs3.app/Contents/MacOS/rpcs3"
+	install_name_tool -change "/opt/homebrew/Cellar/ffmpeg/6.0/lib/libswresample.4.dylib" "@executable_path/../Frameworks/libswresample.4.dylib" "rpcs3.app/Contents/MacOS/rpcs3"
+	install_name_tool -change "/opt/homebrew/Cellar/ffmpeg/6.0/lib/libswscale.7.dylib" "@executable_path/../Frameworks/libswscale.7.dylib" "rpcs3.app/Contents/MacOS/rpcs3"
+	# change the path to app for sdl2
+	install_name_tool -change "/opt/homebrew/opt/sdl2/lib/libSDL2-2.0.0.dylib" "@executable_path/../Frameworks/libSDL2-2.0.0.dylib" "rpcs3.app/Contents/MacOS/rpcs3"
+	
+	# now faudio
+	install_name_tool -change "/opt/homebrew/opt/faudio/lib/libFAudio.0.dylib" "@executable_path/../Frameworks/libFAudio.0.dylib" "rpcs3.app/Contents/MacOS/rpcs3"
 
+	# now harfbuzz
+	install_name_tool -change "/opt/homebrew/opt/harfbuzz/lib/libharfbuzz.0.dylib" "@executable_path/../Frameworks/libharfbuzz.0.dylib" "rpcs3.app/Contents/MacOS/rpcs3"
+
+else
+	cp "/usr/local/opt/llvm@16/lib/c++/libc++abi.1.0.dylib" "rpcs3.app/Contents/lib/libc++abi.1.dylib"
+
+	# change the path to app for sdl2
+	install_name_tool -change "/usr/local/opt/sdl2/lib/libSDL2-2.0.0.dylib" "@executable_path/../Frameworks/libSDL2-2.0.0.dylib" "rpcs3.app/Contents/MacOS/rpcs3"
+	
+	# now faudio 
+	install_name_tool -change "/usr/local/opt/faudio/lib/libFAudio.0.dylib" "@executable_path/../Frameworks/libFAudio.0.dylib" "rpcs3.app/Contents/MacOS/rpcs3"
+	# now harfbuzz
+	install_name_tool -change "/usr/local/opt/harfbuzz/lib/libharfbuzz.0.dylib" "@executable_path/../Frameworks/libharfbuzz.0.dylib" "rpcs3.app/Contents/MacOS/rpcs3"
+fi
 rm -rf "rpcs3.app/Contents/Frameworks/QtPdf.framework" \
 "rpcs3.app/Contents/Frameworks/QtQml.framework" \
 "rpcs3.app/Contents/Frameworks/QtQmlModels.framework" \
@@ -26,6 +58,9 @@ rm -rf "rpcs3.app/Contents/Frameworks/QtPdf.framework" \
 "rpcs3.app/Contents/Plugins/virtualkeyboard" \
 "rpcs3.app/Contents/Resources/git"
 
+
+# codesign it 
+codesign --force --deep --sign - "rpcs3.app/Contents/MacOS/rpcs3"
 # Need to do this rename hack due to case insensitive filesystem
 mv rpcs3.app RPCS3_.app
 mv RPCS3_.app RPCS3.app

@@ -136,6 +136,14 @@ macos_task:
         - chmod +x ".ci/build-mac.sh"
         - chmod +x ".ci/deploy-mac.sh"
         - ".ci/build-mac.sh"
+    - name: Cirrus macOS arm64
+      macos_instance:
+        image: ghcr.io/cirruslabs/macos-monterey-xcode:14
+      mac_script:
+        - mkdir -p artifacts
+        - chmod +x .ci/build-mac-arm64.sh .ci/deploy-mac.sh
+        - ".ci/build-mac-arm64.sh"
+
   env:
     BUILD_ARTIFACTSTAGINGDIRECTORY: ${CIRRUS_WORKING_DIR}/artifacts
     ARTDIR: ${CIRRUS_WORKING_DIR}/artifacts/
