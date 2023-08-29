@@ -561,10 +561,7 @@ extern void utilize_spu_data_segment(u32 vaddr, const void* ls_data_vaddr, u32 s
 
 	spu_section_data::data_t obj{vaddr, std::move(data)};
 
-	std::vector<u8> ls_data(SPU_LS_SIZE);
-	std::memcpy(ls_data.data() + vaddr, ls_data_vaddr, size);
-
-	obj.funcs = spu_thread::discover_functions(ls_data.data(), umax);
+	obj.funcs = spu_thread::discover_functions(vaddr, { reinterpret_cast<const u8*>(ls_data_vaddr), size }, true, umax);
 
 	if (obj.funcs.empty())
 	{
@@ -2111,7 +2108,7 @@ void spu_recompiler_base::old_interpreter(spu_thread& spu, void* ls, u8* /*rip*/
 	}
 }
 
-std::vector<u32> spu_thread::discover_functions(const void* ls_start, u32 /*entry*/)
+std::vector<u32> spu_thread::discover_functions(u32 base_addr, std::span<const u8> ls, bool is_known_addr, u32 /*entry*/)
 {
 	std::vector<u32> calls;
 	calls.reserve(100);
@@ -2119,14 +2116,16 @@ std::vector<u32> spu_thread::discover_functions(const void* ls_start, u32 /*entr
 	// Discover functions
 	// Use the most simple method: search for instructions that calls them
 	// And then filter invalid cases (does not detect tail calls)
-	for (u32 i = 0x10; i < SPU_LS_SIZE; i += 0x10)
+	const v128 brasl_mask = is_known_addr ? v128::from32p(0x62) : v128::from32p(umax);
+
+	for (u32 i = utils::align<u32>(base_addr, 0x10); i < std::min<u32>(base_addr + ls.size(), 0x3FFF0); i += 0x10)
 	{
 		// Search for BRSL and BRASL
 		// TODO: BISL
-		const v128 inst = read_from_ptr<be_t<v128>>(static_cast<const u8*>(ls_start), i);
+		const v128 inst = read_from_ptr<be_t<v128>>(ls.data(), i - base_addr);
 		const v128 shifted = gv_shr32(inst, 23);
 		const v128 eq_brsl = gv_eq32(shifted, v128::from32p(0x66));
-		const v128 eq_brasl = gv_eq32(shifted, v128::from32p(0x62));
+		const v128 eq_brasl = gv_eq32(shifted, brasl_mask);
 		const v128 result = eq_brsl | eq_brasl;
 
 		if (!gv_testz(result))
@@ -2144,14 +2143,14 @@ std::vector<u32> spu_thread::discover_functions(const void* ls_start, u32 /*entr
 	calls.erase(std::remove_if(calls.begin(), calls.end(), [&](u32 caller)
 	{
 		// Check the validity of both the callee code and the following caller code
-		return !is_exec_code(caller, ls_start) || !is_exec_code(caller + 4, ls_start);
+		return !is_exec_code(caller, ls, base_addr) || !is_exec_code(caller + 4, ls, base_addr);
 	}), calls.end());
 
 	std::vector<u32> addrs;
 
 	for (u32 addr : calls)
 	{
-		const spu_opcode_t op{read_from_ptr<be_t<u32>>(static_cast<const u8*>(ls_start), addr)};
+		const spu_opcode_t op{read_from_ptr<be_t<u32>>(ls, addr - base_addr)};
 
 		const u32 func = op_branch_targets(addr, op)[0];
 

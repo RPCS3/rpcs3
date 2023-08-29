@@ -1196,7 +1196,7 @@ void spu_thread::dump_regs(std::string& ret, std::any& /*custom_data*/) const
 			}
 		}
 
-		if (i3 >= 0x80 && is_exec_code(i3, ls))
+		if (i3 >= 0x80 && is_exec_code(i3, { ls, SPU_LS_SIZE }))
 		{
 			dis_asm.disasm(i3);
 			fmt::append(ret, " -> %s", dis_asm.last_opcode);
@@ -1300,7 +1300,7 @@ std::vector<std::pair<u32, u32>> spu_thread::dump_callstack_list() const
 				return true;
 			}
 
-			return !addr || !is_exec_code(addr, ls);
+			return !addr || !is_exec_code(addr, { ls, SPU_LS_SIZE });
 		};
 
 		if (first && lr._u32[3] != gpr0._u32[3] && !is_invalid(gpr0))
@@ -4019,17 +4019,22 @@ bool spu_thread::check_mfc_interrupts(u32 next_pc)
 	return false;
 }
 
-bool spu_thread::is_exec_code(u32 addr, const void* ls_ptr)
+bool spu_thread::is_exec_code(u32 addr, std::span<const u8> ls_ptr, u32 base_addr)
 {
-	if (addr & ~0x3FFFC)
-	{
-		return false;
-	}
-
 	for (u32 i = 0; i < 30; i++)
 	{
+		if (addr & ~0x3FFFC)
+		{
+			return false;
+		}
+
+		if (addr < base_addr || addr >= base_addr + ls_ptr.size())
+		{
+			return false;
+		}
+
 		const u32 addr0 = spu_branch_target(addr);
-		const u32 op = read_from_ptr<be_t<u32>>(static_cast<const u8*>(ls_ptr) + addr0);
+		const u32 op = read_from_ptr<be_t<u32>>(ls_ptr, addr0 - base_addr);
 		const auto type = s_spu_itype.decode(op);
 
 		if (type == spu_itype::UNK || !op)
@@ -4055,9 +4060,14 @@ bool spu_thread::is_exec_code(u32 addr, const void* ls_ptr)
 					continue;
 				}
 
+				if (route_pc < base_addr || route_pc >= base_addr + ls_ptr.size())
+				{
+					return false;
+				}
+
 				// Test the validity of a single instruction of the optional target
 				// This function can't be too slow and is unlikely to improve results by a great deal
-				const u32 op0 = read_from_ptr<be_t<u32>>(static_cast<const u8*>(ls_ptr) + route_pc);
+				const u32 op0 = read_from_ptr<be_t<u32>>(ls_ptr, route_pc - base_addr);
 				const auto type0 = s_spu_itype.decode(op);
 
 				if (type == spu_itype::UNK || !op)
@@ -6151,12 +6161,12 @@ spu_exec_object spu_thread::capture_memory_as_elf(std::span<spu_memory_segment_d
 	{
 		for (pc0 = pc_hint; pc0; pc0 -= 4)
 		{
-			const u32 op = read_from_ptr<be_t<u32>>(all_data.data(), pc0 - 4);
+			const u32 op = read_from_ptr<be_t<u32>>(all_data, pc0 - 4);
 
 			// Try to find function entry (if they are placed sequentially search for BI $LR of previous function)
 			if (!op || op == 0x35000000u || s_spu_itype.decode(op) == spu_itype::UNK)
 			{
-				if (is_exec_code(pc0, all_data.data()))
+				if (is_exec_code(pc0, { all_data.data(), SPU_LS_SIZE }))
 					break;
 			}
 		}
@@ -6166,7 +6176,7 @@ spu_exec_object spu_thread::capture_memory_as_elf(std::span<spu_memory_segment_d
 		for (pc0 = 0; pc0 < SPU_LS_SIZE; pc0 += 4)
 		{
 			// Try to find a function entry (very basic)
-			if (is_exec_code(pc0, all_data.data()))
+			if (is_exec_code(pc0, { all_data.data(), SPU_LS_SIZE }))
 				break;
 		}
 	}
