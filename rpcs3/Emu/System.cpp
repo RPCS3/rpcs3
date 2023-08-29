@@ -1467,7 +1467,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 					if (obj == elf_error::ok && ppu_load_exec(obj, true, path))
 					{
-						g_fxo->get<main_ppu_module>().path = path;
+						ensure(g_fxo->try_get<main_ppu_module>())->path = path;
 					}
 					else
 					{
@@ -1478,13 +1478,14 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 			g_fxo->init<named_thread>("SPRX Loader"sv, [this, dir_queue]() mutable
 			{
-				if (auto& _main = g_fxo->get<main_ppu_module>(); !_main.path.empty())
+				if (auto& _main = *ensure(g_fxo->try_get<main_ppu_module>()); !_main.path.empty())
 				{
 					if (!_main.analyse(0, _main.elf_entry, _main.seg0_code_end, _main.applied_pathes, [](){ return Emu.IsStopped(); }))
 					{
 						return;
 					}
 
+					Emu.ConfigurePPUCache();
 					ppu_initialize(_main);
 				}
 
