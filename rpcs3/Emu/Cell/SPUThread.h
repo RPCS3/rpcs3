@@ -825,8 +825,8 @@ public:
 	void set_events(u32 bits);
 	void set_interrupt_status(bool enable);
 	bool check_mfc_interrupts(u32 next_pc);
-	static bool is_exec_code(u32 addr, const void* ls_ptr); // Only a hint, do not rely on it other than debugging purposes
-	static std::vector<u32> discover_functions(const void* ls_start, u32 /*entry*/);
+	static bool is_exec_code(u32 addr, std::span<const u8> ls_ptr, u32 base_addr = 0); // Only a hint, do not rely on it other than debugging purposes
+	static std::vector<u32> discover_functions(u32 base_addr, std::span<const u8> ls, bool is_known_addr, u32 /*entry*/);
 	u32 get_ch_count(u32 ch);
 	s64 get_ch_value(u32 ch);
 	bool set_ch_value(u32 ch, u32 value);
