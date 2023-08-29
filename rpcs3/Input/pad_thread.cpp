@@ -27,7 +27,7 @@
 LOG_CHANNEL(sys_log, "SYS");
 
 extern bool is_input_allowed();
-extern std::string g_pad_profile_override;
+extern std::string g_input_config_override;
 
 namespace pad
 {
@@ -100,19 +100,19 @@ void pad_thread::Init()
 
 	handlers.clear();
 
-	g_cfg_profile.load();
+	g_cfg_input_configs.load();
 
-	std::string active_profile = g_cfg_profile.active_profiles.get_value(pad::g_title_id);
+	std::string active_config = g_cfg_input_configs.active_configs.get_value(pad::g_title_id);
 
-	if (active_profile.empty())
+	if (active_config.empty())
 	{
-		active_profile = g_cfg_profile.active_profiles.get_value(g_cfg_profile.global_key);
+		active_config = g_cfg_input_configs.active_configs.get_value(g_cfg_input_configs.global_key);
 	}
 
-	input_log.notice("Using pad profile: '%s' (override='%s')", active_profile, g_pad_profile_override);
+	input_log.notice("Using input configuration: '%s' (override='%s')", active_config, g_input_config_override);
 
 	// Load in order to get the pad handlers
-	if (!g_cfg_input.load(pad::g_title_id, active_profile))
+	if (!g_cfg_input.load(pad::g_title_id, active_config))
 	{
 		input_log.notice("Loaded empty pad config");
 	}
@@ -125,7 +125,7 @@ void pad_thread::Init()
 	}
 
 	// Reload with proper defaults
-	if (!g_cfg_input.load(pad::g_title_id, active_profile))
+	if (!g_cfg_input.load(pad::g_title_id, active_config))
 	{
 		input_log.notice("Reloaded empty pad config");
 	}
