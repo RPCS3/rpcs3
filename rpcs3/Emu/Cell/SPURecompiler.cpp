@@ -561,7 +561,7 @@ extern void utilize_spu_data_segment(u32 vaddr, const void* ls_data_vaddr, u32 s
 
 	spu_section_data::data_t obj{vaddr, std::move(data)};
 
-	obj.funcs = spu_thread::discover_functions(vaddr, { reinterpret_cast<const u8*>(ls_data_vaddr), size }, true, umax);
+	obj.funcs = spu_thread::discover_functions(vaddr, { reinterpret_cast<const u8*>(ls_data_vaddr), size }, vaddr != 0, umax);
 
 	if (obj.funcs.empty())
 	{
@@ -703,7 +703,7 @@ void spu_cache::initialize(bool build_existing_cache)
 		total_precompile += sec.funcs.size();
 	}
 
-	const bool spu_precompilation_enabled = (build_existing_cache ? func_list.empty() : func_list.size() < total_precompile) && g_cfg.core.spu_cache && g_cfg.core.llvm_precompilation;
+	const bool spu_precompilation_enabled = func_list.empty() && g_cfg.core.spu_cache && g_cfg.core.llvm_precompilation;
 
 	if (spu_precompilation_enabled)
 	{
@@ -716,6 +716,7 @@ void spu_cache::initialize(bool build_existing_cache)
 	}
 	else
 	{
+		total_precompile = 0;
 		data_list.clear();
 	}
 
@@ -959,11 +960,16 @@ void spu_cache::initialize(bool build_existing_cache)
 		return result;
 	});
 
+	u32 built_total = 0;
+
 	// Join (implicitly) and print individual results
 	for (u32 i = 0; i < workers.size(); i++)
 	{
 		spu_log.notice("SPU Runtime: Worker %u built %u programs.", i + 1, workers[i]);
+		built_total += workers[i];
 	}
+
+	spu_log.notice("SPU Runtime: Workers built %u programs.", built_total);
 
 	if (Emu.IsStopped())
 	{
