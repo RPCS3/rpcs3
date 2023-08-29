@@ -956,14 +956,12 @@ int dualsense_pad_handler::send_output_report(DualSenseDevice* device)
 
 		return hid_write(device->hidDevice, &report.report_id, DUALSENSE_BLUETOOTH_REPORT_SIZE);
 	}
-	else
-	{
-		output_report_usb report{};
-		report.report_id = 0x02; // report id for usb
-		report.common    = common;
 
-		return hid_write(device->hidDevice, &report.report_id, DUALSENSE_USB_REPORT_SIZE);
-	}
+	output_report_usb report{};
+	report.report_id = 0x02; // report id for usb
+	report.common    = common;
+
+	return hid_write(device->hidDevice, &report.report_id, DUALSENSE_USB_REPORT_SIZE);
 }
 
 void dualsense_pad_handler::apply_pad_data(const pad_ensemble& binding)
