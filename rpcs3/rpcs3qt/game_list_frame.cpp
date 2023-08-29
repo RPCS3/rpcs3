@@ -1684,10 +1684,10 @@ bool game_list_frame::RemoveCustomPadConfiguration(const std::string& title_id, 
 		: tr("Remove custom pad configuration?")) != QMessageBox::Yes)
 		return true;
 
-	g_cfg_profile.load();
-	g_cfg_profile.active_profiles.erase(title_id);
-	g_cfg_profile.save();
-	game_list_log.notice("Removed active pad profile entry for key '%s'", title_id);
+	g_cfg_input_configs.load();
+	g_cfg_input_configs.active_configs.erase(title_id);
+	g_cfg_input_configs.save();
+	game_list_log.notice("Removed active input configuration entry for key '%s'", title_id);
 
 	if (QDir(qstr(config_dir)).removeRecursively())
 	{

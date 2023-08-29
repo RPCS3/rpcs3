@@ -131,18 +131,18 @@ struct cfg_input final : cfg::node
 	void save(const std::string& title_id, const std::string& profile = "") const;
 };
 
-struct cfg_profile final : cfg::node
+struct cfg_input_configurations final : cfg::node
 {
-	cfg_profile();
+	cfg_input_configurations();
 	bool load();
 	void save() const;
 
 	const std::string path;
 	const std::string global_key = "global";
-	const std::string default_profile = "Default";
+	const std::string default_config = "Default";
 
-	cfg::map_entry active_profiles{ this, "Active Profiles" };
+	cfg::map_entry active_configs{ this, "Active Configurations" };
 };
 
 extern cfg_input g_cfg_input;
-extern cfg_profile g_cfg_profile;
+extern cfg_input_configurations g_cfg_input_configs;
