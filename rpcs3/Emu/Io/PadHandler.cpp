@@ -623,7 +623,7 @@ void PadHandlerBase::get_mapping(const pad_ensemble& binding)
 	s32 stick_val[4]{};
 
 	// Translate any corresponding keycodes to our two sticks. (ignoring thresholds for now)
-	for (int i = 0; i < static_cast<int>(pad->m_sticks.size()); i++)
+	for (usz i = 0; i < pad->m_sticks.size(); i++)
 	{
 		bool pressed{};
 		u16 val_min{};
