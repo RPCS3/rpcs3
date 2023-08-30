@@ -365,22 +365,14 @@ void MetadataInfo::Show() const
 
 void MetadataHeader::Load(u8* in)
 {
-	memcpy(&signature_input_length, in, 8);
-	memcpy(&unknown1, in + 8, 4);
-	memcpy(&section_count, in + 12, 4);
-	memcpy(&key_count, in + 16, 4);
-	memcpy(&opt_header_size, in + 20, 4);
-	memcpy(&unknown2, in + 24, 4);
-	memcpy(&unknown3, in + 28, 4);
-
 	// Endian swap.
-	signature_input_length = swap64(signature_input_length);
-	unknown1 = swap32(unknown1);
-	section_count = swap32(section_count);
-	key_count = swap32(key_count);
-	opt_header_size = swap32(opt_header_size);
-	unknown2 = swap32(unknown2);
-	unknown3 = swap32(unknown3);
+	signature_input_length = read_from_ptr<be_t<u64>>(in);
+	unknown1               = read_from_ptr<be_t<u32>>(in, 8);
+	section_count          = read_from_ptr<be_t<u32>>(in, 12);
+	key_count              = read_from_ptr<be_t<u32>>(in, 16);
+	opt_header_size        = read_from_ptr<be_t<u32>>(in, 20);
+	unknown2               = read_from_ptr<be_t<u32>>(in, 24);
+	unknown3               = read_from_ptr<be_t<u32>>(in, 28);
 }
 
 void MetadataHeader::Show() const
@@ -396,28 +388,17 @@ void MetadataHeader::Show() const
 
 void MetadataSectionHeader::Load(u8* in)
 {
-	memcpy(&data_offset, in, 8);
-	memcpy(&data_size, in + 8, 8);
-	memcpy(&type, in + 16, 4);
-	memcpy(&program_idx, in + 20, 4);
-	memcpy(&hashed, in + 24, 4);
-	memcpy(&sha1_idx, in + 28, 4);
-	memcpy(&encrypted, in + 32, 4);
-	memcpy(&key_idx, in + 36, 4);
-	memcpy(&iv_idx, in + 40, 4);
-	memcpy(&compressed, in + 44, 4);
-
 	// Endian swap.
-	data_offset = swap64(data_offset);
-	data_size = swap64(data_size);
-	type = swap32(type);
-	program_idx = swap32(program_idx);
-	hashed = swap32(hashed);
-	sha1_idx = swap32(sha1_idx);
-	encrypted = swap32(encrypted);
-	key_idx = swap32(key_idx);
-	iv_idx = swap32(iv_idx);
-	compressed = swap32(compressed);
+	data_offset = read_from_ptr<be_t<u64>>(in);
+	data_size   = read_from_ptr<be_t<u64>>(in, 8);
+	type        = read_from_ptr<be_t<u32>>(in, 16);
+	program_idx = read_from_ptr<be_t<u32>>(in, 20);
+	hashed      = read_from_ptr<be_t<u32>>(in, 24);
+	sha1_idx    = read_from_ptr<be_t<u32>>(in, 28);
+	encrypted   = read_from_ptr<be_t<u32>>(in, 32);
+	key_idx     = read_from_ptr<be_t<u32>>(in, 36);
+	iv_idx      = read_from_ptr<be_t<u32>>(in, 40);
+	compressed  = read_from_ptr<be_t<u32>>(in, 44);
 }
 
 void MetadataSectionHeader::Show() const
@@ -936,19 +917,29 @@ bool SELFDecrypter::LoadHeaders(bool isElf32, SelfAdditionalInfo* out_info)
 		}
 	}
 
-
 	// Read section info.
 	m_seg_ext_hdr.clear();
 	self_f.seek(m_ext_hdr.segment_ext_hdr_offset);
 
-	for(u32 i = 0; i < ((isElf32) ? elf32_hdr.e_phnum : elf64_hdr.e_phnum); ++i)
+	for(u32 i = 0; i < (isElf32 ? elf32_hdr.e_phnum : elf64_hdr.e_phnum); ++i)
 	{
+		if (self_f.pos() >= self_f.size())
+		{
+			return false;
+		}
+
 		m_seg_ext_hdr.emplace_back();
 		m_seg_ext_hdr.back().Load(self_f);
 	}
 
+	if (m_ext_hdr.version_hdr_offset == 0 || utils::add_saturate<u64>(m_ext_hdr.version_hdr_offset, sizeof(version_header)) > self_f.size())
+	{
+		return false;
+	}
+
 	// Read SCE version info.
 	self_f.seek(m_ext_hdr.version_hdr_offset);
+
 	m_version_hdr.Load(self_f);
 
 	// Read control info.
@@ -957,6 +948,11 @@ bool SELFDecrypter::LoadHeaders(bool isElf32, SelfAdditionalInfo* out_info)
 
 	for (u64 i = 0; i < m_ext_hdr.supplemental_hdr_size;)
 	{
+		if (self_f.pos() >= self_f.size())
+		{
+			return false;
+		}
+
 		m_supplemental_hdr_arr.emplace_back();
 		supplemental_header& cinfo = m_supplemental_hdr_arr.back();
 		cinfo.Load(self_f);
