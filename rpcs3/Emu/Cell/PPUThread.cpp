@@ -3667,8 +3667,8 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 				return g_prx_list.count(entry.name) && ::at32(g_prx_list, entry.name) != 0;
 			};
 
-			// Check .sprx filename
-			if (upper.ends_with(".SPRX") && entry.name != "libfs_utility_init.sprx"sv)
+			// Check PRX filename
+			if (upper.ends_with(".PRX") || (upper.ends_with(".SPRX") && entry.name != "libfs_utility_init.sprx"sv))
 			{
 				if (is_ignored(0))
 				{
@@ -3680,8 +3680,8 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 				continue;
 			}
 
-			// Check .self filename
-			if (upper.ends_with(".SELF") && Emu.GetBoot() != dir_queue[i] + entry.name)
+			// Check ELF filename
+			if ((entry.name == "EBOOT.BIN" || upper.ends_with(".ELF") || upper.ends_with(".SELF")) && Emu.GetBoot() != dir_queue[i] + entry.name)
 			{
 				// Get full path
 				file_queue.emplace_back(dir_queue[i] + entry.name,  0);
