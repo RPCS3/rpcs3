@@ -1073,6 +1073,8 @@ static void ppu_check_patch_spu_images(const ppu_module& mod, const ppu_segment&
 
 	const bool is_firmware = mod.path.starts_with(vfs::get("/dev_flash/"));
 
+	const auto _main = g_fxo->try_get<main_ppu_module>();
+
 	const std::string_view seg_view{ensure(mod.get_ptr<char>(seg.addr)), seg.size};
 
 	auto find_first_of_multiple = [](std::string_view data, std::initializer_list<std::string_view> values, usz index)
@@ -1231,7 +1233,7 @@ static void ppu_check_patch_spu_images(const ppu_module& mod, const ppu_segment&
 
 					ppu_log.success("Found valid roaming SPU code at 0x%x..0x%x (guessed_ls_addr=0x%x)", seg.addr + begin, seg.addr + end, guessed_ls_addr);
 
-					if (!is_firmware)
+					if (!is_firmware && _main == &mod)
 					{
 						// Siginify that the base address is unknown by passing 0
 						utilize_spu_data_segment(guessed_ls_addr ? guessed_ls_addr : 0x4000, seg_view.data() + begin, end - begin);
@@ -1282,7 +1284,7 @@ static void ppu_check_patch_spu_images(const ppu_module& mod, const ppu_segment&
 
 			if (prog.p_type == 0x1u /* LOAD */ && prog.p_filesz > 0u)
 			{
-				if (prog.p_vaddr && !is_firmware)
+				if (prog.p_vaddr && !is_firmware && _main == &mod)
 				{
 					extern void utilize_spu_data_segment(u32 vaddr, const void* ls_data_vaddr, u32 size);
 
