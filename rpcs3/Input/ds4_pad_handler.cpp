@@ -16,8 +16,8 @@ namespace
 	constexpr u32 DS4_GYRO_RES_PER_DEG_S = 86; // technically this could be 1024, but keeping it at 86 keeps us within 16 bits of precision
 	constexpr u32 DS4_FEATURE_REPORT_0x02_SIZE = 37;
 	constexpr u32 DS4_FEATURE_REPORT_0x05_SIZE = 41;
-	constexpr u32 DS4_FEATURE_REPORT_0x12_SIZE = 16;
-	constexpr u32 DS4_FEATURE_REPORT_0x81_SIZE = 7;
+	//constexpr u32 DS4_FEATURE_REPORT_0x12_SIZE = 16;
+	//constexpr u32 DS4_FEATURE_REPORT_0x81_SIZE = 7;
 	constexpr u32 DS4_FEATURE_REPORT_0xA3_SIZE = 49;
 	constexpr u32 DS4_INPUT_REPORT_0x11_SIZE = 78;
 	constexpr u32 DS4_OUTPUT_REPORT_0x05_SIZE = 32;
