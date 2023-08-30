@@ -379,6 +379,6 @@ namespace rpcs3::utils
 	std::string get_custom_input_config_path(const std::string& title_id)
 	{
 		if (title_id.empty()) return "";
-		return get_input_config_dir(title_id) + g_cfg_profile.default_profile + ".yml";
+		return get_input_config_dir(title_id) + g_cfg_input_configs.default_config + ".yml";
 	}
 }
