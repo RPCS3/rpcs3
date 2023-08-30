@@ -147,11 +147,11 @@
            </widget>
           </item>
           <item>
-           <widget class="QGroupBox" name="gb_profiles">
+           <widget class="QGroupBox" name="gb_config_files">
             <property name="title">
-             <string>Profiles</string>
+             <string>Configuration Files</string>
             </property>
-            <layout class="QHBoxLayout" name="gb_profiles_layout">
+            <layout class="QHBoxLayout" name="gb_config_files_layout">
              <property name="leftMargin">
               <number>5</number>
              </property>
@@ -165,12 +165,12 @@
               <number>5</number>
              </property>
              <item>
-              <widget class="QComboBox" name="chooseProfile"/>
+              <widget class="QComboBox" name="chooseConfig"/>
              </item>
              <item>
-              <widget class="QPushButton" name="b_addProfile">
+              <widget class="QPushButton" name="b_addConfig">
                <property name="text">
-                <string>Add Profile</string>
+                <string>Add Configuration</string>
                </property>
                <property name="autoDefault">
                 <bool>false</bool>
