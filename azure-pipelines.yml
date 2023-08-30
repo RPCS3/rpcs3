@@ -101,7 +101,7 @@ jobs:
     - task: VSBuild@1
       inputs:
         solution: 'rpcs3.sln'
-        maximumCpuCount: true
+        maximumCpuCount: false
         platform: x64
         configuration: 'Release'
       displayName: Compile RPCS3
