@@ -4068,9 +4068,9 @@ bool spu_thread::is_exec_code(u32 addr, std::span<const u8> ls_ptr, u32 base_add
 				// Test the validity of a single instruction of the optional target
 				// This function can't be too slow and is unlikely to improve results by a great deal
 				const u32 op0 = read_from_ptr<be_t<u32>>(ls_ptr, route_pc - base_addr);
-				const auto type0 = s_spu_itype.decode(op);
+				const spu_itype::type type0 = s_spu_itype.decode(op0);
 
-				if (type == spu_itype::UNK || !op)
+				if (type0 == spu_itype::UNK || !op0)
 				{
 					return false;
 				}
