@@ -5,7 +5,10 @@ trigger:
   tags:
     exclude:
       - '*'
-pr: none
+pr:
+  branches:
+    include:
+      - master
 jobs:
 - job: Linux_Build
   strategy:
