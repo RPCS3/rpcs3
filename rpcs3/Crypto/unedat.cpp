@@ -135,9 +135,9 @@ std::tuple<u64, s32, s32> dec_section(unsigned char* metadata)
 	dec[0x0E] = (metadata[0x6] ^ metadata[0x2] ^ metadata[0x1E]);
 	dec[0x0F] = (metadata[0x7] ^ metadata[0x3] ^ metadata[0x1F]);
 
-	u64 offset = swap64(*reinterpret_cast<u64*>(&dec[0]));
-	s32 length = swap32(*reinterpret_cast<s32*>(&dec[8]));
-	s32 compression_end = swap32(*reinterpret_cast<s32*>(&dec[12]));
+	u64 offset = read_from_ptr<be_t<u64>>(dec, 0);
+	s32 length = read_from_ptr<be_t<s32>>(dec, 8);
+	s32 compression_end = read_from_ptr<be_t<s32>>(dec, 12);
 
 	return std::make_tuple(offset, length, compression_end);
 }
@@ -149,7 +149,7 @@ u128 get_block_key(int block, NPD_HEADER *npd)
 	u128 dest_key{};
 	std::memcpy(&dest_key, src_key, 0xC);
 
-	s32 swappedBlock = swap32(block);
+	s32 swappedBlock = std::bit_cast<be_t<s32>>(block);
 	std::memcpy(reinterpret_cast<uchar*>(&dest_key) + 0xC, &swappedBlock, sizeof(swappedBlock));
 	return dest_key;
 }
@@ -193,9 +193,9 @@ s64 decrypt_block(const fs::file* in, u8* out, EDAT_HEADER *edat, NPD_HEADER *np
 		// NOTE: For NPD version 1 the metadata is not encrypted.
 		if (npd->version <= 1)
 		{
-			offset = swap64(*reinterpret_cast<u64*>(&metadata[0x10]));
-			length = swap32(*reinterpret_cast<s32*>(&metadata[0x18]));
-			compression_end = swap32(*reinterpret_cast<s32*>(&metadata[0x1C]));
+			offset = read_from_ptr<be_t<u64>>(metadata, 0x10);
+			length = read_from_ptr<be_t<s32>>(metadata, 0x18);
+			compression_end = read_from_ptr<be_t<s32>>(metadata, 0x1C);
 		}
 		else
 		{
@@ -433,17 +433,26 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 			edat_log.warning("COMPRESSED data detected!");
 	}
 
-	const int block_num = static_cast<int>((edat->file_size + edat->block_size - 1) / edat->block_size);
-	const int metadata_offset = 0x100;
-	const int metadata_size = metadata_section_size * block_num;
+	if (!edat->block_size)
+	{
+		return 1;
+	}
+
+	const usz block_num = utils::aligned_div<u64>(edat->file_size, edat->block_size);
+	constexpr usz metadata_offset = 0x100;
+	const usz metadata_size = utils::mul_saturate<u64>(metadata_section_size, block_num);
 	u64 metadata_section_offset = metadata_offset;
 
-	long bytes_read = 0;
-	long bytes_to_read = metadata_size;
-	std::unique_ptr<u8[]> metadata(new u8[metadata_size]);
-	std::unique_ptr<u8[]> empty_metadata(new u8[metadata_size]);
+	if (utils::add_saturate<u64>(utils::add_saturate<u64>(file_offset, metadata_section_offset), metadata_size) > f->size())
+	{
+		return 1;
+	}
 
-	while (bytes_to_read > 0)
+	u64 bytes_read = 0;
+	const auto metadata = std::make_unique<u8[]>(metadata_size);
+	const auto empty_metadata = std::make_unique<u8[]>(metadata_size);
+
+	while (bytes_read < metadata_size)
 	{
 		// Locate the metadata blocks.
 		f->seek(file_offset + metadata_section_offset);
@@ -453,7 +462,6 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 
 		// Adjust sizes.
 		bytes_read += metadata_section_size;
-		bytes_to_read -= metadata_section_size;
 
 		if (((edat->flags & EDAT_FLAG_0x20) != 0)) // Metadata block before each data block.
 			metadata_section_offset += (metadata_section_size + edat->block_size);
@@ -553,18 +561,18 @@ bool validate_dev_klic(const u8* klicensee, NPD_HEADER *npd)
 		return true;
 	}
 
-	unsigned char dev[0x60] = { 0 };
+	unsigned char dev[0x60]{};
 
 	// Build the dev buffer (first 0x60 bytes of NPD header in big-endian).
-	memcpy(dev, npd, 0x60);
+	std::memcpy(dev, npd, 0x60);
 
 	// Fix endianness.
-	int version = swap32(npd->version);
-	int license = swap32(npd->license);
-	int type = swap32(npd->type);
-	memcpy(dev + 0x4, &version, 4);
-	memcpy(dev + 0x8, &license, 4);
-	memcpy(dev + 0xC, &type, 4);
+	s32 version = std::bit_cast<be_t<s32>>(npd->version);
+	s32 license = std::bit_cast<be_t<s32>>(npd->license);
+	s32 type = std::bit_cast<be_t<s32>>(npd->type);
+	std::memcpy(dev + 0x4, &version, 4);
+	std::memcpy(dev + 0x8, &license, 4);
+	std::memcpy(dev + 0xC, &type, 4);
 
 	// Check for an empty dev_hash (can't validate if devklic is NULL);
 	u128 klic;
@@ -638,20 +646,20 @@ void read_npd_edat_header(const fs::file* input, NPD_HEADER& NPD, EDAT_HEADER& E
 	input->read(npd_header, sizeof(npd_header));
 	input->read(edat_header, sizeof(edat_header));
 
-	memcpy(&NPD.magic, npd_header, 4);
-	NPD.version = swap32(*reinterpret_cast<s32*>(&npd_header[4]));
-	NPD.license = swap32(*reinterpret_cast<s32*>(&npd_header[8]));
-	NPD.type = swap32(*reinterpret_cast<s32*>(&npd_header[12]));
-	memcpy(NPD.content_id, &npd_header[16], 0x30);
-	memcpy(NPD.digest, &npd_header[64], 0x10);
-	memcpy(NPD.title_hash, &npd_header[80], 0x10);
-	memcpy(NPD.dev_hash, &npd_header[96], 0x10);
-	NPD.activate_time = swap64(*reinterpret_cast<s64*>(&npd_header[112]));
-	NPD.expire_time = swap64(*reinterpret_cast<s64*>(&npd_header[120]));
+	std::memcpy(&NPD.magic, npd_header, 4);
+	NPD.version = read_from_ptr<be_t<s32>>(npd_header, 4);
+	NPD.license = read_from_ptr<be_t<s32>>(npd_header, 8);
+	NPD.type = read_from_ptr<be_t<s32>>(npd_header, 12);
+	std::memcpy(NPD.content_id, &npd_header[16], 0x30);
+	std::memcpy(NPD.digest, &npd_header[64], 0x10);
+	std::memcpy(NPD.title_hash, &npd_header[80], 0x10);
+	std::memcpy(NPD.dev_hash, &npd_header[96], 0x10);
+	NPD.activate_time = read_from_ptr<be_t<s64>>(npd_header, 112);
+	NPD.expire_time = read_from_ptr<be_t<s64>>(npd_header, 120);
 
-	EDAT.flags = swap32(*reinterpret_cast<s32*>(&edat_header[0]));
-	EDAT.block_size = swap32(*reinterpret_cast<s32*>(&edat_header[4]));
-	EDAT.file_size = swap64(*reinterpret_cast<u64*>(&edat_header[8]));
+	EDAT.flags = read_from_ptr<be_t<s32>>(edat_header, 0);
+	EDAT.block_size = read_from_ptr<be_t<s32>>(edat_header, 4);
+	EDAT.file_size = read_from_ptr<be_t<u64>>(edat_header, 8);
 }
 
 bool extract_all_data(const fs::file* input, const fs::file* output, const char* input_file_name, unsigned char* devklic, bool verbose)
