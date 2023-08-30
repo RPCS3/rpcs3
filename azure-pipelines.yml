@@ -35,13 +35,13 @@ jobs:
     displayName: ccache
 
   - bash: |
-      docker pull --quiet rpcs3/rpcs3-ci-bionic:1.3
+      docker pull --quiet rpcs3/rpcs3-ci-focal:1.1
       docker run                      \
         -v $(pwd):/rpcs3              \
         --env-file .ci/docker.env \
         -v $CCACHE_DIR:/root/.ccache  \
         -v $BUILD_ARTIFACTSTAGINGDIRECTORY:/root/artifacts \
-        rpcs3/rpcs3-ci-bionic:1.3 \
+        rpcs3/rpcs3-ci-focal:1.1 \
         /rpcs3/.ci/build-linux.sh
     displayName: Docker setup and build
 
@@ -49,18 +49,18 @@ jobs:
     condition: succeeded()
     artifact: RPCS3 for Linux ($(COMPILER))
 
-  # - bash: |
-  #     COMM_TAG=$(awk '/version{.*}/ { printf("%d.%d.%d", $5, $6, $7) }' ./rpcs3/rpcs3_version.cpp)
-  #     COMM_COUNT=$(git rev-list --count HEAD)
-  #     COMM_HASH=$(git rev-parse --short=8 HEAD)
+  - bash: |
+      COMM_TAG=$(awk '/version{.*}/ { printf("%d.%d.%d", $5, $6, $7) }' ./rpcs3/rpcs3_version.cpp)
+      COMM_COUNT=$(git rev-list --count HEAD)
+      COMM_HASH=$(git rev-parse --short=8 HEAD)
 
-  #     export AVVER="${COMM_TAG}-${COMM_COUNT}"
+      export AVVER="${COMM_TAG}-${COMM_COUNT}"
 
-  #     .ci/github-upload.sh
-  #   condition: and(ne(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.Repository.Name'], 'RPCS3/rpcs3'), eq(variables['Build.SourceBranch'], 'refs/heads/master'), eq(variables['COMPILER'], 'gcc'))
-  #   displayName: Push build to GitHub
-  #   env:
-  #     RPCS3_TOKEN: $(RPCS3-Token)
+      .ci/github-upload.sh
+    condition: and(ne(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.Repository.Name'], 'RPCS3/rpcs3'), eq(variables['Build.SourceBranch'], 'refs/heads/master'), eq(variables['COMPILER'], 'gcc'))
+    displayName: Push build to GitHub
+    env:
+      RPCS3_TOKEN: $(RPCS3-Token)
 
 - job: Windows_Build
   variables:
@@ -121,8 +121,9 @@ jobs:
       condition: succeeded()
       artifact: RPCS3 for Windows
 
-    # - bash: .ci/github-upload.sh
-    #   condition: and(ne(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.Repository.Name'], 'RPCS3/rpcs3'), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
-    #   displayName: Push build to GitHub
-    #   env:
-    #     RPCS3_TOKEN: $(RPCS3-Token)
+    - bash: |
+        .ci/github-upload.sh
+      condition: and(ne(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.Repository.Name'], 'RPCS3/rpcs3'), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+      displayName: Push build to GitHub
+      env:
+        RPCS3_TOKEN: $(RPCS3-Token)
