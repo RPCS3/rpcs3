@@ -4,6 +4,8 @@ if [ -z "$CIRRUS_CI" ]; then
    cd rpcs3 || exit 1
 fi
 
+git config --global --add safe.directory '*'
+
 # Pull all the submodules except llvm
 # Note: Tried to use git submodule status, but it takes over 20 seconds
 # shellcheck disable=SC2046
