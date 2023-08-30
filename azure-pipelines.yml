@@ -98,14 +98,6 @@ jobs:
     - bash: .ci/export-azure-vars.sh
       displayName: Export Variables
 
-    - task: MSBuild@1
-      inputs:
-        solution: './3rdparty/SPIRV/spirv.vcxproj'
-        maximumCpuCount: true
-        platform: x64
-        configuration: 'Release'
-      displayName: Compile SPIRV-Tools
-
     - task: VSBuild@1
       inputs:
         solution: 'rpcs3.sln'
@@ -121,8 +113,7 @@ jobs:
       condition: succeeded()
       artifact: RPCS3 for Windows
 
-    - bash: |
-        .ci/github-upload.sh
+    - bash: .ci/github-upload.sh
       condition: and(ne(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.Repository.Name'], 'RPCS3/rpcs3'), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
       displayName: Push build to GitHub
       env:
