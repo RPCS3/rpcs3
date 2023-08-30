@@ -97,7 +97,7 @@ extern thread_local std::string_view g_tls_serialize_name;
 extern char **environ;
 #endif
 
-LOG_CHANNEL(sys_log, "SYS");
+LOG_CHANNEL(sys_log, "SISSY");
 LOG_CHANNEL(q_debug, "QDEBUG");
 
 [[noreturn]] extern void report_fatal_error(std::string_view _text, bool is_html = false, bool include_help_text = true)
