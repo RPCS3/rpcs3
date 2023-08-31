@@ -60,6 +60,7 @@ namespace rsx
 			std::vector<section_storage_type*> sections_to_unprotect; // These sections are to be unpotected and discarded by caller
 			std::vector<section_storage_type*> sections_to_exclude; // These sections are do be excluded from protection manipulation (subtracted from other sections)
 			u32 num_flushable = 0;
+			u32 num_excluded = 0;  // Sections-to-exclude + sections that would have been excluded but are false positives
 			u64 cache_tag = 0;
 
 			address_range fault_range;
@@ -1013,6 +1014,7 @@ namespace rsx
 							// Do not exclude hashed pages from unprotect! They will cause protection holes
 							result.sections_to_exclude.push_back(&tex);
 						}
+						result.num_excluded++;
 						continue;
 					}
 
@@ -1100,7 +1102,7 @@ namespace rsx
 				else
 				{
 					// This is a read and all overlapping sections were RO and were excluded (except for cause == superseded_by_fbo)
-					AUDIT(cause.skip_fbos() || (cause.is_read() && !result.sections_to_exclude.empty()));
+					AUDIT(cause.skip_fbos() || (cause.is_read() && result.num_excluded > 0));
 
 					// We did not handle this violation
 					result.clear_sections();
