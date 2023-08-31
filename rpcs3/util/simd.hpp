@@ -2988,6 +2988,24 @@ inline v128 gv_rol32(const v128& a, const v128& b)
 #endif
 }
 
+// For each 32-bit element, r = rotate a by count
+inline v128 gv_rol32(const v128& a, u32 count)
+{
+	count %= 32;
+#if defined(ARCH_X64)
+	return _mm_or_epi32(_mm_srli_epi32(a, 32 - count), _mm_slli_epi32(a, count));
+#elif defined(ARCH_ARM64)
+	const auto amt1 = vdupq_n_s32(count);
+	const auto amt2 = vdupq_n_s32(count - 32);
+	return vorrq_u32(vshlq_u32(a, amt1), vshlq_u32(a, amt2));
+#else
+	v128 r;
+	for (u32 i = 0; i < 4; i++)
+		r._u32[i] = utils::rol32(a._u32[i], count);
+	return r;
+#endif
+}
+
 // For each 8-bit element, r = (a << (c & 7)) | (b >> (~c & 7) >> 1)
 template <typename A, typename B, typename C>
 inline auto gv_fshl8(A&& a, B&& b, C&& c)
