@@ -71,8 +71,12 @@ void debugger_list::UpdateCPUData(cpu_thread* cpu, CPUDisAsm* disasm)
 u32 debugger_list::GetStartAddress(u32 address)
 {
 	const u32 steps = m_item_count / 3;
+	const u32 inst_count_jump_on_step = std::min<u32>(steps, 4);
 
-	u32 result = address;
+	const bool is_spu = m_cpu && m_cpu->id_type() == 2;
+	const u32 address_mask = (is_spu ? 0x3fffc : ~3);
+
+	u32 result = address & address_mask;
 
 	if (m_cpu && m_cpu->id_type() == 0x55)
 	{
@@ -83,13 +87,43 @@ u32 debugger_list::GetStartAddress(u32 address)
 	}
 	else
 	{
-		result = address - (steps * 4);
+		result = (address - (steps * 4)) & address_mask;
 	}
 
-	if (address > m_pc || m_start_addr > address)
+	u32 upper_bound = (m_start_addr + (steps * 4)) & address_mask;
+
+	if (m_cpu && m_cpu->id_type() == 0x55)
+	{
+		if (auto [count, res] = static_cast<rsx::thread*>(m_cpu)->try_get_pc_of_x_cmds_backwards(0 - steps, m_start_addr); count == steps)
+		{
+			upper_bound = res;
+		}
+	}
+
+	bool goto_addr = false;
+
+	if (upper_bound > m_start_addr)
+	{
+		goto_addr = address < m_start_addr || address >= upper_bound;
+	}
+	else
+	{
+		// Overflowing bounds case
+		goto_addr = address < m_start_addr && address >= upper_bound;
+	}
+
+	if (goto_addr)
 	{
 		m_pc = address;
-		m_start_addr = result;
+
+		if (address > upper_bound && address - upper_bound < inst_count_jump_on_step * 4)
+		{
+			m_start_addr = result + inst_count_jump_on_step * 4;
+		}
+		else
+		{
+			m_start_addr = result;
+		}
 	}
 
 	return m_start_addr;
