@@ -3106,9 +3106,9 @@ namespace rsx
 		fifo_ctrl->invalidate_cache();
 	}
 
-	std::pair<u32, u32> thread::try_get_pc_of_x_cmds_backwards(u32 count, u32 get) const
+	std::pair<u32, u32> thread::try_get_pc_of_x_cmds_backwards(s32 count, u32 get) const
 	{
-		if (!ctrl)
+		if (!ctrl || state & cpu_flag::exit)
 		{
 			return {0, umax};
 		}
@@ -3124,31 +3124,61 @@ namespace rsx
 		RSXDisAsm disasm(cpu_disasm_mode::survey_cmd_size, vm::g_sudo_addr, 0, this);
 
 		std::vector<u32> pcs_of_valid_cmds;
-		pcs_of_valid_cmds.reserve(std::min<u32>((get - start) / 16, 0x4000)); // Rough estimation of final array size
+
+		if (get > start)
+		{
+			pcs_of_valid_cmds.reserve(std::min<u32>((get - start) / 16, 0x4000)); // Rough estimation of final array size
+		}
 
 		auto probe_code_region = [&](u32 probe_start) -> std::pair<u32, u32>
 		{
-			pcs_of_valid_cmds.clear();
-			pcs_of_valid_cmds.push_back(probe_start);
-
-			while (pcs_of_valid_cmds.back() < get)
-			{
-				if (u32 advance = disasm.disasm(pcs_of_valid_cmds.back()))
-				{
-					pcs_of_valid_cmds.push_back(pcs_of_valid_cmds.back() + advance);
-				}
-				else
-				{
-					return {0, get};
-				}
-			}
-
-			if (pcs_of_valid_cmds.size() == 1u || pcs_of_valid_cmds.back() != get)
+			if (probe_start > get)
 			{
 				return {0, get};
 			}
 
-			u32 found_cmds_count = std::min(count, ::size32(pcs_of_valid_cmds) - 1);
+			pcs_of_valid_cmds.clear();
+			pcs_of_valid_cmds.push_back(probe_start);
+
+			usz index_of_get = umax;
+			usz until = umax;
+
+			while (pcs_of_valid_cmds.size() < until)
+			{
+				if (u32 advance = disasm.disasm(pcs_of_valid_cmds.back()))
+				{
+					pcs_of_valid_cmds.push_back(utils::add_saturate<u32>(pcs_of_valid_cmds.back(), advance));
+				}
+				else
+				{
+					break;
+				}
+
+				if (index_of_get == umax && pcs_of_valid_cmds.back() >= get)
+				{
+					index_of_get = pcs_of_valid_cmds.size() - 1;
+					until = index_of_get + 1;
+
+					if (count < 0 && pcs_of_valid_cmds.back() == get)
+					{
+						until -= count;
+					}
+				}
+			}
+
+			if (index_of_get == umax || pcs_of_valid_cmds[index_of_get] != get)
+			{
+				return {0, get};
+			}
+
+			if (count < 0)
+			{
+				const u32 found_cmds_count = std::min<u32>(-count, ::size32(pcs_of_valid_cmds) - 1 - index_of_get);
+
+				return {found_cmds_count, pcs_of_valid_cmds[index_of_get + found_cmds_count]};
+			}
+
+			const u32 found_cmds_count = std::min<u32>(count, ::size32(pcs_of_valid_cmds) - 1);
 
 			return {found_cmds_count, *(pcs_of_valid_cmds.end() - 1 - found_cmds_count)};
 		};
