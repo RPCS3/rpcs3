@@ -2122,16 +2122,16 @@ std::vector<u32> spu_thread::discover_functions(u32 base_addr, std::span<const u
 	// Discover functions
 	// Use the most simple method: search for instructions that calls them
 	// And then filter invalid cases (does not detect tail calls)
-	const v128 brasl_mask = is_known_addr ? v128::from32p(0x62) : v128::from32p(umax);
+	const v128 brasl_mask = is_known_addr ? v128::from32p(0x62u << 23) : v128::from32p(umax);
 
 	for (u32 i = utils::align<u32>(base_addr, 0x10); i < std::min<u32>(base_addr + ls.size(), 0x3FFF0); i += 0x10)
 	{
-		// Search for BRSL and BRASL
+		// Search for BRSL LR and BRASL LR
 		// TODO: BISL
 		const v128 inst = read_from_ptr<be_t<v128>>(ls.data(), i - base_addr);
-		const v128 shifted = gv_shr32(inst, 23);
-		const v128 eq_brsl = gv_eq32(shifted, v128::from32p(0x66));
-		const v128 eq_brasl = gv_eq32(shifted, brasl_mask);
+		const v128 cleared_i16 = gv_and32(inst, v128::from32p(utils::rol32(~0xffff, 7)));
+		const v128 eq_brsl = gv_eq32(cleared_i16, v128::from32p(0x66u << 23));
+		const v128 eq_brasl = gv_eq32(cleared_i16, brasl_mask);
 		const v128 result = eq_brsl | eq_brasl;
 
 		if (!gv_testz(result))
@@ -2160,7 +2160,7 @@ std::vector<u32> spu_thread::discover_functions(u32 base_addr, std::span<const u
 
 		const u32 func = op_branch_targets(addr, op)[0];
 
-		if (func == umax || std::count(addrs.begin(), addrs.end(), func))
+		if (func == umax || addr + 4 == func || func == addr || std::count(addrs.begin(), addrs.end(), func))
 		{
 			continue;
 		}
