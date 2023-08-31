@@ -328,8 +328,8 @@ void debugger_list::keyPressEvent(QKeyEvent* event)
 	{
 	case Qt::Key_PageUp:   scroll(0 - m_item_count); return;
 	case Qt::Key_PageDown: scroll(m_item_count); return;
-	case Qt::Key_Up:       scroll(1); return;
-	case Qt::Key_Down:     scroll(-1); return;
+	case Qt::Key_Up:       scroll(-1); return;
+	case Qt::Key_Down:     scroll(1); return;
 	case Qt::Key_I:
 	{
 		if (event->isAutoRepeat())
