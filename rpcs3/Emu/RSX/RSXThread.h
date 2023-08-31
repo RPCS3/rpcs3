@@ -219,7 +219,7 @@ namespace rsx
 		void flush_fifo();
 
 		// Returns [count of found commands, PC of their start]
-		std::pair<u32, u32> try_get_pc_of_x_cmds_backwards(u32 count, u32 get) const;
+		std::pair<u32, u32> try_get_pc_of_x_cmds_backwards(s32 count, u32 get) const;
 
 		void recover_fifo(u32 line = __builtin_LINE(),
 			u32 col = __builtin_COLUMN(),
