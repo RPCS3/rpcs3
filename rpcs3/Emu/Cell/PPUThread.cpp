@@ -3907,6 +3907,8 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 					main_ppu_module& _main = g_fxo->get<main_ppu_module>();
 					_main = {};
 
+					auto current_cache = std::move(g_fxo->get<spu_cache>());
+
 					if (!ppu_load_exec(obj, true, path))
 					{
 						// Abort
@@ -3916,11 +3918,13 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 
 					if (std::memcmp(main_module.sha1, _main.sha1, sizeof(_main.sha1)) == 0)
 					{
+						g_fxo->get<spu_cache>() = std::move(current_cache);
 						break;
 					}
 
 					if (!_main.analyse(0, _main.elf_entry, _main.seg0_code_end, _main.applied_pathes, [](){ return Emu.IsStopped(); }))
 					{
+						g_fxo->get<spu_cache>() = std::move(current_cache);
 						break;
 					}
 
@@ -3929,8 +3933,10 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 					_main.name = ' '; // Make ppu_finalize work
 					Emu.ConfigurePPUCache(!Emu.IsPathInsideDir(_main.path, g_cfg_vfs.get_dev_flash()));
 					ppu_initialize(_main);
+					spu_cache::initialize(false);
 					ppu_finalize(_main);
 					_main = {};
+					g_fxo->get<spu_cache>() = std::move(current_cache);
 					break;
 				}
 
@@ -3945,6 +3951,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 		}
 
 		g_fxo->get<main_ppu_module>() = std::move(main_module);
+		g_fxo->get<spu_cache>().collect_funcs_to_precompile = true;
 		Emu.ConfigurePPUCache();
 	});
 

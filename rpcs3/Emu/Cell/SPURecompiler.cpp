@@ -516,20 +516,6 @@ spu_cache::~spu_cache()
 {
 }
 
-struct spu_section_data
-{
-	struct data_t
-	{
-		u32 vaddr;
-		std::basic_string<u32> inst_data;
-		std::vector<u32> funcs;
-	};
-
-	shared_mutex mtx;
-	atomic_t<bool> had_been_used = false;
-	std::vector<data_t> data;
-};
-
 extern void utilize_spu_data_segment(u32 vaddr, const void* ls_data_vaddr, u32 size)
 {
 	if (vaddr % 4)
@@ -549,9 +535,9 @@ extern void utilize_spu_data_segment(u32 vaddr, const void* ls_data_vaddr, u32 s
 		return;
 	}
 
-	g_fxo->need<spu_section_data>();
+	g_fxo->need<spu_cache>();
 
-	if (g_fxo->get<spu_section_data>().had_been_used)
+	if (!g_fxo->get<spu_cache>().collect_funcs_to_precompile)
 	{
 		return;
 	}
@@ -559,7 +545,7 @@ extern void utilize_spu_data_segment(u32 vaddr, const void* ls_data_vaddr, u32 s
 	std::basic_string<u32> data(size / 4, 0);
 	std::memcpy(data.data(), ls_data_vaddr, size);
 
-	spu_section_data::data_t obj{vaddr, std::move(data)};
+	spu_cache::precompile_data_t obj{vaddr, std::move(data)};
 
 	obj.funcs = spu_thread::discover_functions(vaddr, { reinterpret_cast<const u8*>(ls_data_vaddr), size }, vaddr != 0, umax);
 
@@ -576,19 +562,7 @@ extern void utilize_spu_data_segment(u32 vaddr, const void* ls_data_vaddr, u32 s
 
 	spu_log.notice("Found %u SPU functions", obj.funcs.size());
 
-	std::lock_guard lock(g_fxo->get<spu_section_data>().mtx);
-
-	for (const auto& data : g_fxo->get<spu_section_data>().data)
-	{
-		// TODO: More robust duplicates filtering
-		if (data.vaddr == vaddr && data.inst_data.starts_with(obj.inst_data))
-		{
-			spu_log.notice("Avoided duplicate SPU segment");
-			return;
-		}
-	}
-
-	g_fxo->get<spu_section_data>().data.emplace_back(std::move(obj));
+	g_fxo->get<spu_cache>().precompile_funcs.push(std::move(obj));
 }
 
 std::deque<spu_program> spu_cache::get()
@@ -693,8 +667,8 @@ void spu_cache::initialize(bool build_existing_cache)
 	atomic_t<usz> fnext{};
 	atomic_t<u8> fail_flag{0};
 
-	auto data_list = std::move(g_fxo->get<spu_section_data>().data);
-	g_fxo->get<spu_section_data>().had_been_used = true;
+	auto data_list = g_fxo->get<spu_cache>().precompile_funcs.pop_all();
+	g_fxo->get<spu_cache>().collect_funcs_to_precompile = false;
 
 	u32 total_precompile = 0;
 
@@ -717,7 +691,7 @@ void spu_cache::initialize(bool build_existing_cache)
 	else
 	{
 		total_precompile = 0;
-		data_list.clear();
+		data_list = {};
 	}
 
 	atomic_t<usz> data_indexer = 0;
