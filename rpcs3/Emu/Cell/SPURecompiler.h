@@ -35,6 +35,17 @@ public:
 	void add(const struct spu_program& func);
 
 	static void initialize(bool build_existing_cache = true);
+
+	struct precompile_data_t
+	{
+		u32 vaddr;
+		std::basic_string<u32> inst_data;
+		std::vector<u32> funcs;
+	};
+
+	bool collect_funcs_to_precompile = true;
+
+	lf_queue<precompile_data_t> precompile_funcs;
 };
 
 struct spu_program
