@@ -2382,6 +2382,12 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 
 				spu_log.warning("[0x%x] At 0x%x: indirect branch to 0x%x%s", entry_point, pos, target, op.d ? " (D)" : op.e ? " (E)" : "");
 
+				if (type == spu_itype::BI && target == pos + 4 && op.d)
+				{
+					// Disable interrupts idiom
+					break;
+				}
+
 				m_targets[pos].push_back(target);
 
 				if (g_cfg.core.spu_block_size == spu_block_size_type::giga)
@@ -10869,6 +10875,13 @@ public:
 
 		// Create jump table if necessary (TODO)
 		const auto tfound = m_targets.find(m_pos);
+
+		if (op.d && tfound != m_targets.end() && tfound->second.size() == 1 && tfound->second[0] == spu_branch_target(m_pos, 1))
+		{
+			// Interrupts-disable pattern
+			m_ir->CreateStore(m_ir->getFalse(), spu_ptr<bool>(&spu_thread::interrupts_enabled));
+			return;
+		}
 
 		if (!op.d && !op.e && tfound != m_targets.end() && tfound->second.size() > 1)
 		{
