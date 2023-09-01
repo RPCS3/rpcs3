@@ -851,6 +851,13 @@ public:
 	}
 	void BR(spu_opcode_t op)
 	{
+		if (op.rt && op.rt != 127u)
+		{
+			// Valid but makes no sense
+			DisAsm("br??", DisAsmBranchTarget(op.i16));
+			return;
+		}
+
 		DisAsm("br", DisAsmBranchTarget(op.i16));
 	}
 	void FSMBI(spu_opcode_t op)
