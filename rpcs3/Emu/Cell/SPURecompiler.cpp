@@ -842,6 +842,7 @@ void spu_cache::initialize(bool build_existing_cache)
 		{
 			u32 passed_count = 0;
 			u32 func_addr = 0;
+			u32 next_func = 0;
 			u32 sec_addr = umax;
 			u32 sec_idx = 0;
 			std::basic_string_view<u32> inst_data;
@@ -853,6 +854,7 @@ void spu_cache::initialize(bool build_existing_cache)
 				{
 					sec_addr = sec.vaddr;
 					func_addr = ::at32(sec.funcs, func_i - passed_count);
+					next_func = ::at32(sec.funcs, std::min<usz>(func_i - passed_count + 1, sec.funcs.size() - 1));
 					inst_data = sec.inst_data;
 					break;
 				}
@@ -907,24 +909,54 @@ void spu_cache::initialize(bool build_existing_cache)
 
 				result++;
 
-				if (g_cfg.core.spu_block_size >= spu_block_size_type::mega)
-				{
-					// Should already take care of the entire function
-					break;
-				}
+				u32 start_new = func_addr + prog_size * 4;
 
 				if (auto type = g_spu_itype.decode(last_inst);
 					type == spu_itype::BRSL || type == spu_itype::BRASL || type == spu_itype::BISL)
 				{
-					const u32 start_new = func_addr + prog_size * 4;
-
-					if (start_new < SPU_LS_SIZE && ls[start_new / 4] && g_spu_itype.decode(ls[start_new / 4]) != spu_itype::UNK)
+					if (start_new < SPU_LS_SIZE && start_new != next_func && ls[start_new / 4] && g_spu_itype.decode(ls[start_new / 4]) != spu_itype::UNK)
 					{
 						spu_log.notice("Precompiling fallthrough to 0x%05x", start_new);
 						func2 = compiler->analyse(ls.data(), start_new);
 						func_addr = start_new;
 						continue;
 					}
+				}
+
+				// Disabled
+				if (0 && next_func > func_addr && start_new < next_func)
+				{
+					if (auto type = g_spu_itype.decode(ls[start_new / 4]); start_new % 8 && (type == spu_itype::LNOP || type == spu_itype::NOP))
+					{
+						start_new += 4;
+
+						if (start_new == next_func)
+						{
+							break;
+						}
+					}
+
+					if (!spu_thread::is_exec_code(start_new, { reinterpret_cast<const u8*>(ls.data()), SPU_LS_SIZE }, 0))
+					{
+						break;
+					}
+
+					spu_log.notice("Precompiling filler space at 0x%05x", start_new);
+					func2 = compiler->analyse(ls.data(), start_new);
+
+					if (start_new + func2.data.size() * 4 > next_func)
+					{
+						break;
+					}
+
+					while (func2.data.size() == 1 && start_new + 4 < next_func)
+					{
+						start_new += 4;
+						func2 = compiler->analyse(ls.data(), start_new);
+					}
+
+					func_addr = start_new;
+					continue;
 				}
 
 				break;
