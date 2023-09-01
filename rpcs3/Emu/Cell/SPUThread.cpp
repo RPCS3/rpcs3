@@ -4042,8 +4042,18 @@ bool spu_thread::is_exec_code(u32 addr, std::span<const u8> ls_ptr, u32 base_add
 			return false;
 		}
 
+		if (type == spu_itype::STOP && op.rb)
+		{
+			return false;
+		}
+
 		if (type & spu_itype::branch)
 		{
+			if (type == spu_itype::BR && op.rt && op.rt != 127u)
+			{
+				return false;
+			}
+
 			const auto results = op_branch_targets(addr, spu_opcode_t{op});
 
 			if (results[0] == umax)
