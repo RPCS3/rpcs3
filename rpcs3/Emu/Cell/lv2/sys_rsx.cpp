@@ -177,6 +177,12 @@ error_code sys_rsx_memory_allocate(cpu_thread& cpu, vm::ptr<u32> mem_handle, vm:
 	if (vm::falloc(rsx::constants::local_mem_base, size, vm::video))
 	{
 		rsx::get_current_renderer()->local_mem_size = size;
+
+		if (u32 addr = rsx::get_current_renderer()->driver_info)
+		{
+			vm::_ref<RsxDriverInfo>(addr).memory_size = size;
+		}
+
 		*mem_addr = rsx::constants::local_mem_base;
 		*mem_handle = 0x5a5a5a5b;
 		return CELL_OK;
@@ -285,6 +291,7 @@ error_code sys_rsx_context_allocate(cpu_thread& cpu, vm::ptr<u32> context_id, vm
 
 	driverInfo.version_driver = 0x211;
 	driverInfo.version_gpu = 0x5c;
+	driverInfo.memory_size = render->local_mem_size;
 	driverInfo.nvcore_frequency = 500000000; // 0x1DCD6500
 	driverInfo.memory_frequency = 650000000; // 0x26BE3680
 	driverInfo.reportsNotifyOffset = 0x1000;
