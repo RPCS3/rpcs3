@@ -160,6 +160,12 @@
     <Filter Include="StyleSheets">
       <UniqueIdentifier>{b927140a-5214-4628-a648-8380ae793179}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Scripts">
+      <UniqueIdentifier>{f4ff05a1-e8c9-44f8-ba05-2c731919a878}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CI">
+      <UniqueIdentifier>{b3bba7ee-4f23-41b6-8ddf-e40f848015de}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -1553,6 +1559,51 @@
     </None>
     <None Include="..\bin\GuiConfigs\Envy.qss">
       <Filter>StyleSheets</Filter>
+    </None>
+    <None Include="..\Utilities\git-version-gen.cmd">
+      <Filter>Scripts</Filter>
+    </None>
+    <None Include="..\.cirrus.yml">
+      <Filter>CI</Filter>
+    </None>
+    <None Include="..\azure-pipelines.yml">
+      <Filter>CI</Filter>
+    </None>
+    <None Include="..\.ci\build-freebsd.sh">
+      <Filter>CI</Filter>
+    </None>
+    <None Include="..\.ci\build-linux.sh">
+      <Filter>CI</Filter>
+    </None>
+    <None Include="..\.ci\build-mac.sh">
+      <Filter>CI</Filter>
+    </None>
+    <None Include="..\.ci\deploy-linux.sh">
+      <Filter>CI</Filter>
+    </None>
+    <None Include="..\.ci\deploy-mac.sh">
+      <Filter>CI</Filter>
+    </None>
+    <None Include="..\.ci\deploy-windows.sh">
+      <Filter>CI</Filter>
+    </None>
+    <None Include="..\.ci\export-azure-vars.sh">
+      <Filter>CI</Filter>
+    </None>
+    <None Include="..\.ci\export-cirrus-vars.sh">
+      <Filter>CI</Filter>
+    </None>
+    <None Include="..\.ci\get_keys-windows.sh">
+      <Filter>CI</Filter>
+    </None>
+    <None Include="..\.ci\github-upload.sh">
+      <Filter>CI</Filter>
+    </None>
+    <None Include="..\.ci\setup-windows.sh">
+      <Filter>CI</Filter>
+    </None>
+    <None Include="..\.ci\install-freebsd.sh">
+      <Filter>CI</Filter>
     </None>
   </ItemGroup>
 </Project>
