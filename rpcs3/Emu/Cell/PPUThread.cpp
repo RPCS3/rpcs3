@@ -3749,7 +3749,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 		// Set low priority
 		thread_ctrl::scoped_priority low_prio(-1);
 
-		for (usz func_i = fnext++; func_i < file_queue.size(); func_i = fnext++, g_progr_fdone++)
+		for (usz func_i = fnext++, inc_fdone = 1; func_i < file_queue.size(); func_i = fnext++, g_progr_fdone += std::exchange(inc_fdone, 1))
 		{
 			if (Emu.IsStopped())
 			{
@@ -3843,7 +3843,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 
 			ppu_log.notice("Failed to precompile '%s' (prx: %s, ovl: %s): Attempting tratment as executable file", path, prx_err, ovl_err);
 			possible_exec_file_paths.push(path);
-			continue;
+			inc_fdone = 0;
 		}
 	});
 
@@ -3869,8 +3869,6 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 
 		for (; slice; slice.pop_front(), g_progr_fdone++)
 		{
-			g_progr_ftotal++;
-
 			if (Emu.IsStopped())
 			{
 				continue;
@@ -3947,7 +3945,6 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 			}
 
 			ppu_log.notice("Failed to precompile '%s' as executable (%s)", path, exec_err);
-			continue;
 		}
 
 		g_fxo->get<main_ppu_module>() = std::move(main_module);
