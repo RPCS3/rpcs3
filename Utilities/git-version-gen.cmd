@@ -90,7 +90,6 @@ rem // Get commit count from (unshallowed) HEAD
 for /F %%I IN ('call %GIT% rev-list HEAD --count') do set COMMIT_COUNT=%%I
 
 rem // Check if the current build system sets the git branch and version.
-rem // The name is misleading. This is also used for master builds.
 if defined BUILD_SOURCEBRANCHNAME (
 
 	rem // This must be a CI build
@@ -143,8 +142,8 @@ if defined BUILD_SOURCEBRANCHNAME (
 	)
 
 ) else (
-	rem // The name is misleading. This is also used for master builds.
-	echo SYSTEM_PULLREQUEST_SOURCEBRANCH undefined
+	echo BUILD_SOURCEBRANCHNAME undefined
+	echo Assuming local build
 
 	rem // Make GIT_VERSION the last commit (shortened); Don't include commit count on non-release builds
 	for /F %%I IN ('call %GIT% rev-parse --short^=8 HEAD') do set GIT_VERSION=%%I
