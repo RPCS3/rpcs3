@@ -9,12 +9,6 @@ pr:
   branches:
     include:
       - master
-variables:
-  BUILD_REPOSITORY_NAME: $(Build.Repository.Name)
-  SYSTEM_PULLREQUEST_SOURCEBRANCH: $(System.PullRequest.SourceBranch)
-  SYSTEM_PULLREQUEST_PULLREQUESTID: $(System.PullRequest.PullRequestId)
-  BUILD_SOURCEVERSION: $(Build.SourceVersion)
-  BUILD_SOURCEBRANCHNAME: $(Build.SourceBranchName)
 jobs:
 - job: Linux_Build
   strategy:
