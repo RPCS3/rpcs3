@@ -764,8 +764,9 @@ void spu_cache::initialize(bool build_existing_cache)
 		// Initialize progress dialog (wait for previous progress done)
 		while (u32 v = g_progr_ptotal)
 		{
-			if (Emu.IsStopped())
+			if (Emu.IsStopped() || !build_existing_cache)
 			{
+				// Workaround: disable progress dialog updates in the case of sole SPU precompilation
 				break;
 			}
 
@@ -776,7 +777,7 @@ void spu_cache::initialize(bool build_existing_cache)
 
 		if (add_count)
 		{
-			g_progr_ptotal += add_count;
+			g_progr_ptotal += build_existing_cache ? add_count : 0;
 			progr.emplace("Building SPU cache...");
 		}
 
@@ -812,7 +813,7 @@ void spu_cache::initialize(bool build_existing_cache)
 		std::vector<be_t<u32>> ls(0x10000);
 
 		// Build functions
-		for (usz func_i = fnext++; func_i < func_list.size(); func_i = fnext++, g_progr_pdone++)
+		for (usz func_i = fnext++; func_i < func_list.size(); func_i = fnext++, g_progr_pdone += build_existing_cache ? 1 : 0)
 		{
 			const spu_program& func = std::as_const(func_list)[func_i];
 
@@ -875,7 +876,7 @@ void spu_cache::initialize(bool build_existing_cache)
 
 		u32 last_sec_idx = umax;
 
-		for (usz func_i = data_indexer++;; func_i = data_indexer++, g_progr_pdone++)
+		for (usz func_i = data_indexer++;; func_i = data_indexer++, g_progr_pdone += build_existing_cache ? 1 : 0)
 		{
 			u32 passed_count = 0;
 			u32 func_addr = 0;
