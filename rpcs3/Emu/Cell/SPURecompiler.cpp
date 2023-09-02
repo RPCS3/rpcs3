@@ -889,9 +889,10 @@ void spu_cache::initialize(bool build_existing_cache)
 			{
 				if (func_i < passed_count + sec.funcs.size())
 				{
+					const u32 func_idx = func_i - passed_count;
 					sec_addr = sec.vaddr;
-					func_addr = ::at32(sec.funcs, func_i - passed_count);
-					next_func = ::at32(sec.funcs, std::min<usz>(func_i - passed_count + 1, sec.funcs.size() - 1));
+					func_addr = ::at32(sec.funcs, func_idx);
+					next_func = sec.funcs.size() >= func_idx + 1 ? SPU_LS_SIZE : sec.funcs[func_idx];
 					inst_data = sec.inst_data;
 					break;
 				}
@@ -929,8 +930,12 @@ void spu_cache::initialize(bool build_existing_cache)
 				last_sec_idx = sec_idx;
 			}
 
+			u32 block_addr = func_addr;
+
 			// Call analyser
-			spu_program func2 = compiler->analyse(ls.data(), func_addr);
+			spu_program func2 = compiler->analyse(ls.data(), block_addr);
+
+			std::map<u32, std::basic_string<u32>> targets;
 
 			while (!func2.data.empty())
 			{
@@ -946,57 +951,76 @@ void spu_cache::initialize(bool build_existing_cache)
 
 				result++;
 
-				u32 start_new = func_addr + prog_size * 4;
+				const u32 start_new = block_addr + prog_size * 4;
+
+				if (start_new >= next_func || (start_new == next_func - 4 && ls[start_new / 4] == 0x200000u))
+				{
+					// Completed
+					break;
+				}
+
+				targets.insert(compiler->get_targets().begin(), compiler->get_targets().end());
 
 				if (auto type = g_spu_itype.decode(last_inst);
 					type == spu_itype::BRSL || type == spu_itype::BRASL || type == spu_itype::BISL)
 				{
-					if (start_new < SPU_LS_SIZE && start_new != next_func && ls[start_new / 4] && g_spu_itype.decode(ls[start_new / 4]) != spu_itype::UNK)
+					if (ls[start_new / 4] && g_spu_itype.decode(ls[start_new / 4]) != spu_itype::UNK)
 					{
 						spu_log.notice("Precompiling fallthrough to 0x%05x", start_new);
 						func2 = compiler->analyse(ls.data(), start_new);
-						func_addr = start_new;
+						block_addr = start_new;
 						continue;
 					}
 				}
 
-				// Disabled
-				if (0 && next_func > func_addr && start_new < next_func)
+				if (targets.empty())
 				{
-					if (auto type = g_spu_itype.decode(ls[start_new / 4]); start_new % 8 && (type == spu_itype::LNOP || type == spu_itype::NOP))
-					{
-						start_new += 4;
-
-						if (start_new == next_func)
-						{
-							break;
-						}
-					}
-
-					if (!spu_thread::is_exec_code(start_new, { reinterpret_cast<const u8*>(ls.data()), SPU_LS_SIZE }, 0))
-					{
-						break;
-					}
-
-					spu_log.notice("Precompiling filler space at 0x%05x", start_new);
-					func2 = compiler->analyse(ls.data(), start_new);
-
-					if (start_new + func2.data.size() * 4 > next_func)
-					{
-						break;
-					}
-
-					while (func2.data.size() == 1 && start_new + 4 < next_func)
-					{
-						start_new += 4;
-						func2 = compiler->analyse(ls.data(), start_new);
-					}
-
-					func_addr = start_new;
-					continue;
+					break;
 				}
 
-				break;
+				const auto upper = targets.upper_bound(func_addr);
+
+				if (upper == targets.begin())
+				{
+					break;
+				}
+
+				u32 new_entry = umax;
+
+				// Find the lowest target in the space in-between
+				for (auto it = std::prev(upper); it != targets.end() && it->first < start_new && new_entry > start_new; it++)
+				{
+					for (u32 target : it->second)
+					{
+						if (target >= start_new && target < next_func)
+						{
+							if (target < new_entry)
+							{
+								new_entry = target;
+
+								if (new_entry == start_new)
+								{
+									// Cannot go lower
+									break;
+								}
+							}
+						}
+					}
+				}
+
+				if (new_entry == umax)
+				{
+					break;
+				}
+
+				if (!spu_thread::is_exec_code(new_entry, { reinterpret_cast<const u8*>(ls.data()), SPU_LS_SIZE }))
+				{
+					break;
+				}
+
+				spu_log.notice("Precompiling filler space at 0x%05x (next=0x%05x)", new_entry, next_func);
+				func2 = compiler->analyse(ls.data(), new_entry);
+				block_addr = new_entry;
 			}
 		}
 
