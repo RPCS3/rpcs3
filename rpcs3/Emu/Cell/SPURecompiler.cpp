@@ -565,6 +565,21 @@ extern void utilize_spu_data_segment(u32 vaddr, const void* ls_data_vaddr, u32 s
 	g_fxo->get<spu_cache>().precompile_funcs.push(std::move(obj));
 }
 
+// For SPU cache validity check
+static u16 calculate_crc16(const uchar* data, usz length)
+{
+	u16 crc = umax;
+
+	while (length--)
+	{
+		u8 x = (crc >> 8) ^ *data++;
+		x ^= (x >> 4);
+		crc = static_cast<u16>((crc << 8) ^ (x << 12) ^ (x << 5) ^ x);
+	}
+
+	return crc;
+}
+
 std::deque<spu_program> spu_cache::get()
 {
 	std::deque<spu_program> result;
@@ -579,19 +594,28 @@ std::deque<spu_program> spu_cache::get()
 	// TODO: signal truncated or otherwise broken file
 	while (true)
 	{
-		be_t<u32> size;
-		be_t<u32> addr;
+		struct block_info_t
+		{
+			be_t<u16> crc;
+			be_t<u16> size;
+			be_t<u32> addr;
+		} block_info{};
+
+		if (!m_file.read(block_info))
+		{
+			break;
+		}
+
+		const u32 crc = block_info.crc;
+		const u32 size = block_info.size;
+		const u32 addr = block_info.addr;
+
+		if (utils::add_saturate<u32>(addr, size * 4) > SPU_LS_SIZE)
+		{
+			break;
+		}
+
 		std::vector<u32> func;
-
-		if (!m_file.read(size) || !m_file.read(addr))
-		{
-			break;
-		}
-
-		if (utils::add_saturate<u32>(addr, utils::mul_saturate<u32>(size, 4)) > SPU_LS_SIZE)
-		{
-			break;
-		}
 
 		if (!m_file.read(func, size))
 		{
@@ -601,6 +625,13 @@ std::deque<spu_program> spu_cache::get()
 		if (!size || !func[0])
 		{
 			// Skip old format Giga entries
+			continue;
+		}
+
+		// CRC check is optional to be compatible with old format
+		if (crc && std::max<u32>(calculate_crc16(reinterpret_cast<const uchar*>(func.data()), size * 4), 1) != crc)
+		{
+			// Invalid, but continue anyway
 			continue;
 		}
 
@@ -623,6 +654,9 @@ void spu_cache::add(const spu_program& func)
 
 	be_t<u32> size = ::size32(func.data);
 	be_t<u32> addr = func.entry_point;
+
+	// Add CRC (forced non-zero)
+	size |= std::max<u32>(calculate_crc16(reinterpret_cast<const uchar*>(func.data.data()), size * 4), 1) << 16;
 
 	const fs::iovec_clone gather[3]
 	{
