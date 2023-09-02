@@ -156,7 +156,7 @@ void progress_dialog_server::operator()()
 		u32 fdone  = 0;
 		u32 ptotal = 0;
 		u32 pdone  = 0;
-		auto text1 = text0;
+		const char* text1 = nullptr;
 
 		const u64 start_time = get_system_time();
 
@@ -171,11 +171,17 @@ void progress_dialog_server::operator()()
 				fdone  = fdone_new;
 				ptotal = ptotal_new;
 				pdone  = pdone_new;
-				text1  = text_new;
 
-				if (!text_new)
+				const bool text_changed = text_new && text_new != text1;
+
+				if (text_new)
 				{
-					// Incomplete state
+					text1 = text_new;
+				}
+
+				if (!text1)
+				{
+					// Cannot do anything
 					continue;
 				}
 
@@ -202,7 +208,7 @@ void progress_dialog_server::operator()()
 				// Assume not all programs were found if files were not compiled (as it may contain more)
 				const u64 total = std::max<u64>(ptotal, 1) * std::max<u64>(ftotal, 1);
 				const u64 done  = pdone * std::max<u64>(fdone, 1);
-				const f32 value = static_cast<f32>(std::fmin(done * 100. / total, 100.f));
+				const u32 value = static_cast<u32>(done >= total ? 100 : done * 100 / total);
 
 				std::string progr = "Progress:";
 
@@ -214,31 +220,40 @@ void progress_dialog_server::operator()()
 				// Changes detected, send update
 				if (native_dlg)
 				{
-					native_dlg->set_text(text_new);
+					if (text_changed)
+					{
+						native_dlg->set_text(text1);
+					}
+
 					native_dlg->progress_bar_set_message(0, std::move(progr));
-					native_dlg->progress_bar_set_value(0, std::floor(value));
+					native_dlg->progress_bar_set_value(0, static_cast<f32>(value));
 				}
 				else if (dlg)
 				{
 					Emu.CallFromMainThread([=]()
 					{
-						dlg->SetMsg(text_new);
+						if (text_changed)
+						{
+							dlg->SetMsg(text1);
+						}
+
 						dlg->ProgressBarSetMsg(0, progr);
-						dlg->ProgressBarSetValue(0, static_cast<u32>(std::floor(value)));
+						dlg->ProgressBarSetValue(0, value);
 					});
 				}
-			}
-			// Leave only if total count is equal to done count
-			else if (ftotal == fdone && ptotal == pdone && !text_new)
-			{
-				// Complete state, empty message: close dialog
-				break;
 			}
 
 			if (show_overlay_message)
 			{
 				// Make sure to update any pending messages. PPU compilation may freeze the image.
 				rsx::overlays::refresh_message_queue();
+			}
+
+			// Leave only if total count is equal to done count
+			if (ftotal == fdone && ptotal == pdone && !text_new)
+			{
+				// Complete state, empty message: close dialog
+				break;
 			}
 
 			thread_ctrl::wait_for(10000);
