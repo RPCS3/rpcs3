@@ -1893,6 +1893,20 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\.cirrus.yml" />
+    <None Include="..\.ci\build-freebsd.sh" />
+    <None Include="..\.ci\build-linux.sh" />
+    <None Include="..\.ci\build-mac.sh" />
+    <None Include="..\.ci\deploy-linux.sh" />
+    <None Include="..\.ci\deploy-mac.sh" />
+    <None Include="..\.ci\deploy-windows.sh" />
+    <None Include="..\.ci\export-azure-vars.sh" />
+    <None Include="..\.ci\export-cirrus-vars.sh" />
+    <None Include="..\.ci\get_keys-windows.sh" />
+    <None Include="..\.ci\github-upload.sh" />
+    <None Include="..\.ci\install-freebsd.sh" />
+    <None Include="..\.ci\setup-windows.sh" />
+    <None Include="..\azure-pipelines.yml" />
     <None Include="..\bin\GuiConfigs\Classic (Bright).qss" />
     <None Include="..\bin\GuiConfigs\Darker Style by TheMitoSan.qss" />
     <None Include="..\bin\GuiConfigs\Envy.qss" />
@@ -1902,6 +1916,7 @@
     <None Include="..\bin\GuiConfigs\Skyline (Nightfall).qss" />
     <None Include="..\bin\GuiConfigs\Skyline.qss" />
     <None Include="..\bin\GuiConfigs\YoRHa by Ani.qss" />
+    <None Include="..\Utilities\git-version-gen.cmd" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
