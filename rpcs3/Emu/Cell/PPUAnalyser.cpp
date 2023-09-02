@@ -1397,7 +1397,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 				}
 				else if (type & ppu_itype::trap)
 				{
-					if (op.opcode != ppu_instructions::TRAP())
+					if (op.bo != 31)
 					{
 						add_block(_ptr.addr());
 					}

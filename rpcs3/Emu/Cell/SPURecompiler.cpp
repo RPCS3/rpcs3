@@ -962,7 +962,7 @@ void spu_cache::initialize(bool build_existing_cache)
 				targets.insert(compiler->get_targets().begin(), compiler->get_targets().end());
 
 				if (auto type = g_spu_itype.decode(last_inst);
-					type == spu_itype::BRSL || type == spu_itype::BRASL || type == spu_itype::BISL)
+					type == spu_itype::BRSL || type == spu_itype::BRASL || type == spu_itype::BISL || type == spu_itype::SYNC)
 				{
 					if (ls[start_new / 4] && g_spu_itype.decode(ls[start_new / 4]) != spu_itype::UNK)
 					{
