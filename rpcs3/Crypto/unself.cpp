@@ -1403,7 +1403,7 @@ static bool CheckDebugSelf(fs::file& s)
 	return false;
 }
 
-fs::file decrypt_self(fs::file elf_or_self, u8* klic_key, SelfAdditionalInfo* out_info)
+fs::file decrypt_self(fs::file elf_or_self, u8* klic_key, SelfAdditionalInfo* out_info, bool require_encrypted)
 {
 	if (out_info)
 	{
@@ -1418,8 +1418,14 @@ fs::file decrypt_self(fs::file elf_or_self, u8* klic_key, SelfAdditionalInfo* ou
 	elf_or_self.seek(0);
 
 	// Check SELF header first. Check for a debug SELF.
-	if (elf_or_self.size() >= 4 && elf_or_self.read<u32>() == "SCE\0"_u32 && !CheckDebugSelf(elf_or_self))
+	if (elf_or_self.size() >= 4 && elf_or_self.read<u32>() == "SCE\0"_u32)
 	{
+		if (CheckDebugSelf(elf_or_self))
+		{
+			// TODO: Decrypt
+			return elf_or_self;
+		}
+
 		// Check the ELF file class (32 or 64 bit).
 		const bool isElf32 = IsSelfElf32(elf_or_self);
 
@@ -1449,6 +1455,11 @@ fs::file decrypt_self(fs::file elf_or_self, u8* klic_key, SelfAdditionalInfo* ou
 
 		// Make a new ELF file from this SELF.
 		return self_dec.MakeElf(isElf32);
+	}
+
+	if (require_encrypted)
+	{
+		return {};
 	}
 
 	return elf_or_self;

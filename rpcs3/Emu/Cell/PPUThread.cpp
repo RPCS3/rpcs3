@@ -3890,7 +3890,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 			}
 
 			// Some files may fail to decrypt due to the lack of klic
-			src = decrypt_self(std::move(src));
+			src = decrypt_self(std::move(src), nullptr, nullptr, true);
 
 			if (!src)
 			{
