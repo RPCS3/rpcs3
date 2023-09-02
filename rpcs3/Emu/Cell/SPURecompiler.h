@@ -342,6 +342,11 @@ public:
 		return *m_spurt;
 	}
 
+	const auto& get_targets() const
+	{
+		return m_targets;
+	}
+
 	// Create recompiler instance (ASMJIT)
 	static std::unique_ptr<spu_recompiler_base> make_asmjit_recompiler();
 
