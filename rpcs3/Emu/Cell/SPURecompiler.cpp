@@ -2270,7 +2270,7 @@ std::vector<u32> spu_thread::discover_functions(u32 base_addr, std::span<const u
 		// Search for AI R1, +x or OR R3/4, Rx, 0
 		// Reasoning: AI R1, +x means stack pointer restoration, branch after that is likely a tail call
 		// R3 and R4 are common function arguments because they are the first two
-		for (u32 back = addr - 4, it = 5; it && back >= base_addr; back -= 4)
+		for (u32 back = addr - 4, it = 10; it && back >= base_addr && back < std::min<u32>(base_addr + ls.size(), 0x3FFF0); it--, back -= 4)
 		{
 			const spu_opcode_t test_op{read_from_ptr<be_t<u32>>(ls, back - base_addr)};
 			const auto type = g_spu_itype.decode(test_op.opcode);
