@@ -1197,7 +1197,7 @@ static void ppu_check_patch_spu_images(const ppu_module& mod, const ppu_segment&
 						{
 							// SPURS GUID pattern
 							end = it;
-							ppu_log.success("Found SPURS GUID Pattern for terminagtor at 0x%05x", end + seg.addr);
+							ppu_log.success("Found SPURS GUID Pattern for terminator at 0x%05x", end + seg.addr);
 							break;
 						}
 

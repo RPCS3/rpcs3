@@ -4034,21 +4034,50 @@ bool spu_thread::is_exec_code(u32 addr, std::span<const u8> ls_ptr, u32 base_add
 		}
 
 		const u32 addr0 = spu_branch_target(addr);
-		const u32 op = read_from_ptr<be_t<u32>>(ls_ptr, addr0 - base_addr);
-		const auto type = s_spu_itype.decode(op);
+		const spu_opcode_t op{read_from_ptr<be_t<u32>>(ls_ptr, addr0 - base_addr)};
+		const auto type = s_spu_itype.decode(op.opcode);
 
-		if (type == spu_itype::UNK || !op)
+		if (type == spu_itype::UNK || !op.opcode)
+		{
+			return false;
+		}
+
+		if (type == spu_itype::STOP && op.rb)
 		{
 			return false;
 		}
 
 		if (type & spu_itype::branch)
 		{
-			const auto results = op_branch_targets(addr, spu_opcode_t{op});
+			if (type == spu_itype::BR && op.rt && op.rt != 127u)
+			{
+				return false;
+			}
+
+			auto results = op_branch_targets(addr, op);
 
 			if (results[0] == umax)
 			{
-				break;
+				switch (type)
+				{
+				case spu_itype::BIZ:
+				case spu_itype::BINZ:
+				case spu_itype::BIHZ:
+				case spu_itype::BIHNZ:
+				{
+					results[0] = addr + 4;
+					break;
+				}
+				default:
+				{
+					break;
+				}
+				}
+
+				if (results[0] == umax)
+				{
+					break;
+				}
 			}
 
 			for (usz res_i = 1; res_i < results.size(); res_i++)
@@ -4068,9 +4097,9 @@ bool spu_thread::is_exec_code(u32 addr, std::span<const u8> ls_ptr, u32 base_add
 				// Test the validity of a single instruction of the optional target
 				// This function can't be too slow and is unlikely to improve results by a great deal
 				const u32 op0 = read_from_ptr<be_t<u32>>(ls_ptr, route_pc - base_addr);
-				const auto type0 = s_spu_itype.decode(op);
+				const spu_itype::type type0 = s_spu_itype.decode(op0);
 
-				if (type == spu_itype::UNK || !op)
+				if (type0 == spu_itype::UNK || !op0)
 				{
 					return false;
 				}

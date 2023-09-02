@@ -43,6 +43,11 @@ u32 RSXDisAsm::disasm(u32 pc)
 
 	if (m_op & RSX_METHOD_NON_METHOD_CMD_MASK)
 	{
+		if (m_mode == cpu_disasm_mode::survey_cmd_size)
+		{
+			return 4;
+		}
+
 		if ((m_op & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD)
 		{
 			u32 jumpAddr = m_op & RSX_METHOD_OLD_JUMP_OFFSET_MASK;
@@ -86,10 +91,13 @@ u32 RSXDisAsm::disasm(u32 pc)
 			}
 		}
 
-		if (i == 1)
-			Write("nop", 0);
-		else
-			Write(fmt::format("nop x%u", i), 0);
+		if (m_mode != cpu_disasm_mode::survey_cmd_size)
+		{
+			if (i == 1)
+				Write("nop", 0);
+			else
+				Write(fmt::format("nop x%u", i), 0);
+		}
 
 		return i * 4;
 	}

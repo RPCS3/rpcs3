@@ -516,20 +516,6 @@ spu_cache::~spu_cache()
 {
 }
 
-struct spu_section_data
-{
-	struct data_t
-	{
-		u32 vaddr;
-		std::basic_string<u32> inst_data;
-		std::vector<u32> funcs;
-	};
-
-	shared_mutex mtx;
-	atomic_t<bool> had_been_used = false;
-	std::vector<data_t> data;
-};
-
 extern void utilize_spu_data_segment(u32 vaddr, const void* ls_data_vaddr, u32 size)
 {
 	if (vaddr % 4)
@@ -549,9 +535,9 @@ extern void utilize_spu_data_segment(u32 vaddr, const void* ls_data_vaddr, u32 s
 		return;
 	}
 
-	g_fxo->need<spu_section_data>();
+	g_fxo->need<spu_cache>();
 
-	if (g_fxo->get<spu_section_data>().had_been_used)
+	if (!g_fxo->get<spu_cache>().collect_funcs_to_precompile)
 	{
 		return;
 	}
@@ -559,7 +545,7 @@ extern void utilize_spu_data_segment(u32 vaddr, const void* ls_data_vaddr, u32 s
 	std::basic_string<u32> data(size / 4, 0);
 	std::memcpy(data.data(), ls_data_vaddr, size);
 
-	spu_section_data::data_t obj{vaddr, std::move(data)};
+	spu_cache::precompile_data_t obj{vaddr, std::move(data)};
 
 	obj.funcs = spu_thread::discover_functions(vaddr, { reinterpret_cast<const u8*>(ls_data_vaddr), size }, vaddr != 0, umax);
 
@@ -576,19 +562,22 @@ extern void utilize_spu_data_segment(u32 vaddr, const void* ls_data_vaddr, u32 s
 
 	spu_log.notice("Found %u SPU functions", obj.funcs.size());
 
-	std::lock_guard lock(g_fxo->get<spu_section_data>().mtx);
+	g_fxo->get<spu_cache>().precompile_funcs.push(std::move(obj));
+}
 
-	for (const auto& data : g_fxo->get<spu_section_data>().data)
+// For SPU cache validity check
+static u16 calculate_crc16(const uchar* data, usz length)
+{
+	u16 crc = umax;
+
+	while (length--)
 	{
-		// TODO: More robust duplicates filtering
-		if (data.vaddr == vaddr && data.inst_data.starts_with(obj.inst_data))
-		{
-			spu_log.notice("Avoided duplicate SPU segment");
-			return;
-		}
+		u8 x = (crc >> 8) ^ *data++;
+		x ^= (x >> 4);
+		crc = static_cast<u16>((crc << 8) ^ (x << 12) ^ (x << 5) ^ x);
 	}
 
-	g_fxo->get<spu_section_data>().data.emplace_back(std::move(obj));
+	return crc;
 }
 
 std::deque<spu_program> spu_cache::get()
@@ -605,18 +594,30 @@ std::deque<spu_program> spu_cache::get()
 	// TODO: signal truncated or otherwise broken file
 	while (true)
 	{
-		be_t<u32> size;
-		be_t<u32> addr;
-		std::vector<u32> func;
+		struct block_info_t
+		{
+			be_t<u16> crc;
+			be_t<u16> size;
+			be_t<u32> addr;
+		} block_info{};
 
-		if (!m_file.read(size) || !m_file.read(addr))
+		if (!m_file.read(block_info))
 		{
 			break;
 		}
 
-		func.resize(size);
+		const u32 crc = block_info.crc;
+		const u32 size = block_info.size;
+		const u32 addr = block_info.addr;
 
-		if (m_file.read(func.data(), func.size() * 4) != func.size() * 4)
+		if (utils::add_saturate<u32>(addr, size * 4) > SPU_LS_SIZE)
+		{
+			break;
+		}
+
+		std::vector<u32> func;
+
+		if (!m_file.read(func, size))
 		{
 			break;
 		}
@@ -624,6 +625,13 @@ std::deque<spu_program> spu_cache::get()
 		if (!size || !func[0])
 		{
 			// Skip old format Giga entries
+			continue;
+		}
+
+		// CRC check is optional to be compatible with old format
+		if (crc && std::max<u32>(calculate_crc16(reinterpret_cast<const uchar*>(func.data()), size * 4), 1) != crc)
+		{
+			// Invalid, but continue anyway
 			continue;
 		}
 
@@ -646,6 +654,9 @@ void spu_cache::add(const spu_program& func)
 
 	be_t<u32> size = ::size32(func.data);
 	be_t<u32> addr = func.entry_point;
+
+	// Add CRC (forced non-zero)
+	size |= std::max<u32>(calculate_crc16(reinterpret_cast<const uchar*>(func.data.data()), size * 4), 1) << 16;
 
 	const fs::iovec_clone gather[3]
 	{
@@ -693,8 +704,8 @@ void spu_cache::initialize(bool build_existing_cache)
 	atomic_t<usz> fnext{};
 	atomic_t<u8> fail_flag{0};
 
-	auto data_list = std::move(g_fxo->get<spu_section_data>().data);
-	g_fxo->get<spu_section_data>().had_been_used = true;
+	auto data_list = g_fxo->get<spu_cache>().precompile_funcs.pop_all();
+	g_fxo->get<spu_cache>().collect_funcs_to_precompile = false;
 
 	u32 total_precompile = 0;
 
@@ -717,7 +728,7 @@ void spu_cache::initialize(bool build_existing_cache)
 	else
 	{
 		total_precompile = 0;
-		data_list.clear();
+		data_list = {};
 	}
 
 	atomic_t<usz> data_indexer = 0;
@@ -868,6 +879,7 @@ void spu_cache::initialize(bool build_existing_cache)
 		{
 			u32 passed_count = 0;
 			u32 func_addr = 0;
+			u32 next_func = 0;
 			u32 sec_addr = umax;
 			u32 sec_idx = 0;
 			std::basic_string_view<u32> inst_data;
@@ -879,6 +891,7 @@ void spu_cache::initialize(bool build_existing_cache)
 				{
 					sec_addr = sec.vaddr;
 					func_addr = ::at32(sec.funcs, func_i - passed_count);
+					next_func = ::at32(sec.funcs, std::min<usz>(func_i - passed_count + 1, sec.funcs.size() - 1));
 					inst_data = sec.inst_data;
 					break;
 				}
@@ -933,24 +946,54 @@ void spu_cache::initialize(bool build_existing_cache)
 
 				result++;
 
-				if (g_cfg.core.spu_block_size >= spu_block_size_type::mega)
-				{
-					// Should already take care of the entire function
-					break;
-				}
+				u32 start_new = func_addr + prog_size * 4;
 
 				if (auto type = g_spu_itype.decode(last_inst);
 					type == spu_itype::BRSL || type == spu_itype::BRASL || type == spu_itype::BISL)
 				{
-					const u32 start_new = func_addr + prog_size * 4;
-
-					if (start_new < SPU_LS_SIZE && ls[start_new / 4] && g_spu_itype.decode(ls[start_new / 4]) != spu_itype::UNK)
+					if (start_new < SPU_LS_SIZE && start_new != next_func && ls[start_new / 4] && g_spu_itype.decode(ls[start_new / 4]) != spu_itype::UNK)
 					{
 						spu_log.notice("Precompiling fallthrough to 0x%05x", start_new);
 						func2 = compiler->analyse(ls.data(), start_new);
 						func_addr = start_new;
 						continue;
 					}
+				}
+
+				// Disabled
+				if (0 && next_func > func_addr && start_new < next_func)
+				{
+					if (auto type = g_spu_itype.decode(ls[start_new / 4]); start_new % 8 && (type == spu_itype::LNOP || type == spu_itype::NOP))
+					{
+						start_new += 4;
+
+						if (start_new == next_func)
+						{
+							break;
+						}
+					}
+
+					if (!spu_thread::is_exec_code(start_new, { reinterpret_cast<const u8*>(ls.data()), SPU_LS_SIZE }, 0))
+					{
+						break;
+					}
+
+					spu_log.notice("Precompiling filler space at 0x%05x", start_new);
+					func2 = compiler->analyse(ls.data(), start_new);
+
+					if (start_new + func2.data.size() * 4 > next_func)
+					{
+						break;
+					}
+
+					while (func2.data.size() == 1 && start_new + 4 < next_func)
+					{
+						start_new += 4;
+						func2 = compiler->analyse(ls.data(), start_new);
+					}
+
+					func_addr = start_new;
+					continue;
 				}
 
 				break;
@@ -2117,21 +2160,25 @@ void spu_recompiler_base::old_interpreter(spu_thread& spu, void* ls, u8* /*rip*/
 std::vector<u32> spu_thread::discover_functions(u32 base_addr, std::span<const u8> ls, bool is_known_addr, u32 /*entry*/)
 {
 	std::vector<u32> calls;
+	std::vector<u32> branches;
+
 	calls.reserve(100);
 
 	// Discover functions
 	// Use the most simple method: search for instructions that calls them
-	// And then filter invalid cases (does not detect tail calls)
-	const v128 brasl_mask = is_known_addr ? v128::from32p(0x62) : v128::from32p(umax);
+	// And then filter invalid cases
+	// TODO: Does not detect jumptables or fixed-addr indirect calls
+	const v128 brasl_mask = is_known_addr ? v128::from32p(0x62u << 23) : v128::from32p(umax);
 
 	for (u32 i = utils::align<u32>(base_addr, 0x10); i < std::min<u32>(base_addr + ls.size(), 0x3FFF0); i += 0x10)
 	{
-		// Search for BRSL and BRASL
+		// Search for BRSL LR and BRASL LR or BR
 		// TODO: BISL
 		const v128 inst = read_from_ptr<be_t<v128>>(ls.data(), i - base_addr);
-		const v128 shifted = gv_shr32(inst, 23);
-		const v128 eq_brsl = gv_eq32(shifted, v128::from32p(0x66));
-		const v128 eq_brasl = gv_eq32(shifted, brasl_mask);
+		const v128 cleared_i16 = gv_and32(inst, v128::from32p(utils::rol32(~0xffff, 7)));
+		const v128 eq_brsl = gv_eq32(cleared_i16, v128::from32p(0x66u << 23));
+		const v128 eq_brasl = gv_eq32(cleared_i16, brasl_mask);
+		const v128 eq_br = gv_eq32(cleared_i16, v128::from32p(0x64u << 23));
 		const v128 result = eq_brsl | eq_brasl;
 
 		if (!gv_testz(result))
@@ -2144,6 +2191,17 @@ std::vector<u32> spu_thread::discover_functions(u32 base_addr, std::span<const u
 				}
 			}
 		}
+
+		if (!gv_testz(eq_br))
+		{
+			for (u32 j = 0; j < 4; j++)
+			{
+				if (eq_br.u32r[j])
+				{
+					branches.push_back(i + j * 4);
+				}
+			}
+		}
 	}
 
 	calls.erase(std::remove_if(calls.begin(), calls.end(), [&](u32 caller)
@@ -2151,6 +2209,12 @@ std::vector<u32> spu_thread::discover_functions(u32 base_addr, std::span<const u
 		// Check the validity of both the callee code and the following caller code
 		return !is_exec_code(caller, ls, base_addr) || !is_exec_code(caller + 4, ls, base_addr);
 	}), calls.end());
+
+	branches.erase(std::remove_if(branches.begin(), branches.end(), [&](u32 caller)
+	{
+		// Check the validity of the callee code
+		return !is_exec_code(caller, ls, base_addr);
+	}), branches.end());
 
 	std::vector<u32> addrs;
 
@@ -2160,12 +2224,75 @@ std::vector<u32> spu_thread::discover_functions(u32 base_addr, std::span<const u
 
 		const u32 func = op_branch_targets(addr, op)[0];
 
-		if (func == umax || std::count(addrs.begin(), addrs.end(), func))
+		if (func == umax || addr + 4 == func || func == addr || std::count(addrs.begin(), addrs.end(), func))
 		{
 			continue;
 		}
 
 		addrs.push_back(func);
+	}
+
+	for (u32 addr : branches)
+	{
+		const spu_opcode_t op{read_from_ptr<be_t<u32>>(ls, addr - base_addr)};
+
+		const u32 func = op_branch_targets(addr, op)[0];
+
+		if (func == umax || addr + 4 == func || func == addr || !addr)
+		{
+			continue;
+		}
+
+		// Search for AI R1, +x or OR R3/4, Rx, 0
+		// Reasoning: AI R1, +x means stack pointer restoration, branch after that is likely a tail call
+		// R3 and R4 are common function arguments because they are the first two
+		for (u32 back = addr - 4, it = 5; it && back >= base_addr; back -= 4)
+		{
+			const spu_opcode_t test_op{read_from_ptr<be_t<u32>>(ls, back - base_addr)};
+			const auto type = g_spu_itype.decode(test_op.opcode);
+
+			if (type & spu_itype::branch)
+			{
+				break;
+			}
+
+			bool is_tail = false;
+
+			if (type == spu_itype::AI && test_op.rt == 1u && test_op.ra == 1u)
+			{
+				if (test_op.si10 <= 0)
+				{
+					break;
+				}
+
+				is_tail = true;
+			}
+			else if (!(type & spu_itype::zregmod))
+			{
+				const u32 op_rt = type & spu_itype::_quadrop ? +test_op.rt4 : +test_op.rt;
+
+				if (op_rt >= 80u && (type != spu_itype::LQD || test_op.ra != 1u))
+				{
+					// Modifying non-volatile registers, not a call (and not context restoration)
+					break;
+				}
+
+				//is_tail = op_rt == 3u || op_rt == 4u;
+			}
+
+			if (!is_tail)
+			{
+				continue;
+			}
+
+			if (std::count(addrs.begin(), addrs.end(), func))
+			{
+				break;
+			}
+
+			addrs.push_back(func);
+			break;
+		}
 	}
 
 	std::sort(addrs.begin(), addrs.end());
