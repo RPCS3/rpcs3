@@ -3681,7 +3681,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 			}
 
 			// Check ELF filename
-			if ((entry.name == "EBOOT.BIN" || upper.ends_with(".ELF") || upper.ends_with(".SELF")) && Emu.GetBoot() != dir_queue[i] + entry.name)
+			if ((upper.ends_with(".ELF") || upper.ends_with(".SELF")) && Emu.GetBoot() != dir_queue[i] + entry.name)
 			{
 				// Get full path
 				file_queue.emplace_back(dir_queue[i] + entry.name,  0);
