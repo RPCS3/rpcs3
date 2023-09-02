@@ -588,9 +588,12 @@ std::deque<spu_program> spu_cache::get()
 			break;
 		}
 
-		func.resize(size);
+		if (utils::add_saturate<u32>(addr, utils::mul_saturate<u32>(size, 4)) > SPU_LS_SIZE)
+		{
+			break;
+		}
 
-		if (m_file.read(func.data(), func.size() * 4) != func.size() * 4)
+		if (!m_file.read(func, size))
 		{
 			break;
 		}
