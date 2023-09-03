@@ -2,7 +2,7 @@
 
 #include "util/types.hpp"
 #include "util/atomic.hpp"
-#include "util/asm.hpp"
+#include "util/bless.hpp"
 
 //! Simple unshrinkable array base for concurrent access. Only growths automatically.
 //! There is no way to know the current size. The smaller index is, the faster it's accessed.
@@ -270,6 +270,30 @@ public:
 		return {};
 	}
 
+	const T& operator[](usz index) const noexcept
+	{
+		lf_queue_iterator<T> result = begin();
+
+		while (--index != umax)
+		{
+			result++;
+		}
+
+		return *result;
+	}
+
+	T& operator[](usz index) noexcept
+	{
+		lf_queue_iterator<T> result = begin();
+
+		while (--index != umax)
+		{
+			result++;
+		}
+
+		return *result;
+	}
+
 	lf_queue_slice& pop_front()
 	{
 		delete std::exchange(m_head, std::exchange(m_head->m_link, nullptr));
@@ -314,6 +338,23 @@ class lf_queue final
 
 public:
 	constexpr lf_queue() = default;
+
+	lf_queue(lf_queue&& other) noexcept
+	{
+		m_head.release(other.m_head.exchange(0));
+	}
+
+	lf_queue& operator=(lf_queue&& other) noexcept
+	{
+		if (this == std::addressof(other))
+		{
+			return *this;
+		}
+
+		delete load(m_head);
+		m_head.release(other.m_head.exchange(0));
+		return *this;
+	}
 
 	~lf_queue()
 	{

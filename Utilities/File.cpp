@@ -1319,12 +1319,12 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 
 				DWORD nwritten = 0;
 				OVERLAPPED ovl{};
-				const u64 pos = m_pos;
+				const u64 pos = m_pos.fetch_add(size);
 				ovl.Offset = DWORD(pos);
 				ovl.OffsetHigh = DWORD(pos >> 32);
 				ensure(WriteFile(m_handle, data, size, &nwritten, &ovl)); // "file::write"
+				ensure(nwritten == size);
 				nwritten_sum += nwritten;
-				m_pos += nwritten;
 
 				if (nwritten < size)
 				{

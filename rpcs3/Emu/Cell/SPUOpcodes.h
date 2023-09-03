@@ -26,17 +26,17 @@ union spu_opcode_t
 	bf_t<u32, 7, 18> i18; // 7..24
 };
 
-inline u32 spu_branch_target(u32 pc, u32 imm = 0)
+constexpr u32 spu_branch_target(u32 pc, u32 imm = 0)
 {
 	return (pc + (imm << 2)) & 0x3fffc;
 }
 
-inline u32 spu_ls_target(u32 pc, u32 imm = 0)
+constexpr u32 spu_ls_target(u32 pc, u32 imm = 0)
 {
 	return (pc + (imm << 2)) & 0x3fff0;
 }
 
-inline u32 spu_decode(u32 inst)
+constexpr u32 spu_decode(u32 inst)
 {
 	return inst >> 21;
 }

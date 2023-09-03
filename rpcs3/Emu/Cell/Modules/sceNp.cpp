@@ -17,6 +17,7 @@
 
 #include "Emu/Cell/lv2/sys_time.h"
 #include "Emu/Cell/lv2/sys_fs.h"
+#include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/NP/np_handler.h"
 #include "Emu/NP/np_contexts.h"
 #include "Emu/NP/np_helpers.h"
@@ -408,6 +409,8 @@ void message_data::print() const
 	sceNp.notice("commId: %s, msgId: %d, mainType: %d, subType: %d, subject: %s, body: %s, data_size: %d", static_cast<const char *>(commId.data), msgId, mainType, subType, subject, body, data.size());
 }
 
+extern void lv2_sleep(u64 timeout, ppu_thread* ppu = nullptr);
+
 error_code sceNpInit(u32 poolsize, vm::ptr<void> poolptr)
 {
 	sceNp.warning("sceNpInit(poolsize=0x%x, poolptr=*0x%x)", poolsize, poolptr);
@@ -553,18 +556,40 @@ error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_pat
 	return CELL_OK;
 }
 
-error_code sceNpDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_path)
+error_code sceNpDrmIsAvailable(ppu_thread& ppu, vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_path)
 {
 	sceNp.warning("sceNpDrmIsAvailable(k_licensee=*0x%x, drm_path=*0x%x)", k_licensee_addr, drm_path);
 
-	return npDrmIsAvailable(k_licensee_addr, drm_path);
+	if (!drm_path)
+	{
+		return SCE_NP_DRM_ERROR_INVALID_PARAM;
+	}
+
+	lv2_obj::sleep(ppu);
+
+	const auto ret = npDrmIsAvailable(k_licensee_addr, drm_path);
+	lv2_sleep(100000, &ppu);
+
+	return ret;
 }
 
-error_code sceNpDrmIsAvailable2(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_path)
+error_code sceNpDrmIsAvailable2(ppu_thread& ppu, vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_path)
 {
 	sceNp.warning("sceNpDrmIsAvailable2(k_licensee=*0x%x, drm_path=*0x%x)", k_licensee_addr, drm_path);
 
-	return npDrmIsAvailable(k_licensee_addr, drm_path);
+	if (!drm_path)
+	{
+		return SCE_NP_DRM_ERROR_INVALID_PARAM;
+	}
+
+	lv2_obj::sleep(ppu);
+
+	const auto ret = npDrmIsAvailable(k_licensee_addr, drm_path);
+
+	// TODO: Accurate sleep time
+	//lv2_sleep(20000, &ppu);
+
+	return ret;
 }
 
 error_code npDrmVerifyUpgradeLicense(vm::cptr<char> content_id)

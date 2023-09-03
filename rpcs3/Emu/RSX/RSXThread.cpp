@@ -269,8 +269,14 @@ namespace rsx
 		}
 	}
 
-	std::pair<u32, u32> interleaved_range_info::calculate_required_range(u32 first, u32 count) const
+	std::pair<u32, u32> interleaved_range_info::calculate_required_range(u32 first, u32 count)
 	{
+		if (vertex_range.second)
+		{
+			// Cached result
+			return vertex_range;
+		}
+
 		if (single_vertex)
 		{
 			return { 0, 1 };
@@ -280,10 +286,15 @@ namespace rsx
 		u32 _max_index = 0;
 		u32 _min_index = first;
 
+		u32 frequencies[rsx::limits::vertex_count];
+		u32 freq_count = rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed ? 0 : u32{umax};
+		u32 max_result_by_division = 0; // Guaranteed maximum
+
 		for (const auto &attrib : locations)
 		{
 			if (attrib.frequency <= 1) [[likely]]
 			{
+				freq_count = umax;
 				_max_index = max_index;
 			}
 			else
@@ -294,12 +305,24 @@ namespace rsx
 					{
 						// Actually uses the modulo operator
 						_min_index = 0;
-						_max_index = attrib.frequency - 1;
+						_max_index = std::max<u32>(_max_index, attrib.frequency - 1);
+
+						if (max_result_by_division < _max_index)
+						{
+							if (freq_count != umax)
+							{
+								if (std::find(frequencies, frequencies + freq_count, attrib.frequency) == frequencies + freq_count)
+								{
+									frequencies[freq_count++] = attrib.frequency;
+								}
+							}
+						}
 					}
 					else
 					{
 						// Same as having no modulo
 						_max_index = max_index;
+						freq_count = umax;
 					}
 				}
 				else
@@ -307,12 +330,106 @@ namespace rsx
 					// Division operator
 					_min_index = std::min(_min_index, first / attrib.frequency);
 					_max_index = std::max<u32>(_max_index, utils::aligned_div(max_index, attrib.frequency));
+
+					if (freq_count > 0 && freq_count != umax)
+					{
+						const u32 max = utils::aligned_div(max_index, attrib.frequency);
+						max_result_by_division = std::max<u32>(max_result_by_division, max);
+
+						// Discard lower frequencies because it has been proven that there are indices higher than them
+						freq_count -= frequencies + freq_count - std::remove_if(frequencies, frequencies + freq_count, [&max_result_by_division](u32 freq)
+						{
+							return freq <= max_result_by_division;
+						});
+					}
 				}
 			}
 		}
 
+		while (freq_count > 0 && freq_count != umax)
+		{
+			const rsx::index_array_type index_type = rsx::method_registers.current_draw_clause.is_immediate_draw ?
+				rsx::index_array_type::u32 :
+				rsx::method_registers.index_type();
+
+			const u32 index_size = index_type == rsx::index_array_type::u32 ? 4 : 2;
+
+			const auto render = rsx::get_current_renderer();
+
+			// If we can access a bit a more memory than required - do it
+			// The alternative would be re-iterating again over all of them
+			if (get_location(real_offset_address) == CELL_GCM_LOCATION_LOCAL)
+			{
+				if (utils::add_saturate<u32>(real_offset_address - rsx::constants::local_mem_base, (_max_index + 1) * attribute_stride) <= render->local_mem_size)
+				{
+					break;
+				}
+			}
+			else if (real_offset_address % 0x100000 + (_max_index + 1) * attribute_stride <= 0x100000)//(vm::check_addr(real_offset_address, vm::page_readable, (_max_index + 1) * attribute_stride))
+			{
+				break;
+			}
+
+			_max_index = 0;
+
+			auto re_evaluate = [&] <typename T> (const std::byte* ptr, T)
+			{
+				const u64 restart = rsx::method_registers.restart_index_enabled() ? rsx::method_registers.restart_index() : u64{umax};
+
+				for (u32 _index = first; _index < first + count; _index++)
+				{
+					const auto value = read_from_ptr<be_t<T>>(ptr, _index * sizeof(T));
+
+					if (value == restart)
+					{
+						continue;
+					}
+
+					for (u32 freq_it = 0; freq_it < freq_count; freq_it++)
+					{
+						const auto res = value % frequencies[freq_it];
+
+						if (res > _max_index)
+						{
+							_max_index = res;
+						}
+					}
+				}
+			};
+
+			if (index_size == 4)
+			{
+				if (!render->element_push_buffer.empty()) [[unlikely]]
+				{
+					// Indices provided via immediate mode
+					re_evaluate(reinterpret_cast<const std::byte*>(render->element_push_buffer.data()), u32{});
+				}
+				else
+				{
+					const u32 address = (0 - index_size) & get_address(rsx::method_registers.index_array_address(), rsx::method_registers.index_array_location());
+					re_evaluate(vm::get_super_ptr<std::byte>(address), u32{});
+				}
+			}
+			else
+			{
+				if (!render->element_push_buffer.empty()) [[unlikely]]
+				{
+					// Indices provided via immediate mode
+					re_evaluate(reinterpret_cast<const std::byte*>(render->element_push_buffer.data()), u16{});
+				}
+				else
+				{
+					const u32 address = (0 - index_size) & get_address(rsx::method_registers.index_array_address(), rsx::method_registers.index_array_location());
+					re_evaluate(vm::get_super_ptr<std::byte>(address), u16{});
+				}
+			}
+
+			break;
+		}
+
 		ensure(_max_index >= _min_index);
-		return { _min_index, (_max_index - _min_index) + 1 };
+		vertex_range = { _min_index, (_max_index - _min_index) + 1 };
+		return vertex_range;
 	}
 
 	u32 get_vertex_type_size_on_host(vertex_base_type type, u32 size)
@@ -2798,7 +2915,7 @@ namespace rsx
 
 		if (persistent != nullptr)
 		{
-			for (const auto &block : layout.interleaved_blocks)
+			for (interleaved_range_info* block : layout.interleaved_blocks)
 			{
 				auto range = block->calculate_required_range(first_vertex, vertex_count);
 
@@ -2989,9 +3106,9 @@ namespace rsx
 		fifo_ctrl->invalidate_cache();
 	}
 
-	std::pair<u32, u32> thread::try_get_pc_of_x_cmds_backwards(u32 count, u32 get) const
+	std::pair<u32, u32> thread::try_get_pc_of_x_cmds_backwards(s32 count, u32 get) const
 	{
-		if (!ctrl)
+		if (!ctrl || state & cpu_flag::exit)
 		{
 			return {0, umax};
 		}
@@ -3007,31 +3124,61 @@ namespace rsx
 		RSXDisAsm disasm(cpu_disasm_mode::survey_cmd_size, vm::g_sudo_addr, 0, this);
 
 		std::vector<u32> pcs_of_valid_cmds;
-		pcs_of_valid_cmds.reserve(std::min<u32>((get - start) / 16, 0x4000)); // Rough estimation of final array size
+
+		if (get > start)
+		{
+			pcs_of_valid_cmds.reserve(std::min<u32>((get - start) / 16, 0x4000)); // Rough estimation of final array size
+		}
 
 		auto probe_code_region = [&](u32 probe_start) -> std::pair<u32, u32>
 		{
-			pcs_of_valid_cmds.clear();
-			pcs_of_valid_cmds.push_back(probe_start);
-
-			while (pcs_of_valid_cmds.back() < get)
-			{
-				if (u32 advance = disasm.disasm(pcs_of_valid_cmds.back()))
-				{
-					pcs_of_valid_cmds.push_back(pcs_of_valid_cmds.back() + advance);
-				}
-				else
-				{
-					return {0, get};
-				}
-			}
-
-			if (pcs_of_valid_cmds.size() == 1u || pcs_of_valid_cmds.back() != get)
+			if (probe_start > get)
 			{
 				return {0, get};
 			}
 
-			u32 found_cmds_count = std::min(count, ::size32(pcs_of_valid_cmds) - 1);
+			pcs_of_valid_cmds.clear();
+			pcs_of_valid_cmds.push_back(probe_start);
+
+			usz index_of_get = umax;
+			usz until = umax;
+
+			while (pcs_of_valid_cmds.size() < until)
+			{
+				if (u32 advance = disasm.disasm(pcs_of_valid_cmds.back()))
+				{
+					pcs_of_valid_cmds.push_back(utils::add_saturate<u32>(pcs_of_valid_cmds.back(), advance));
+				}
+				else
+				{
+					break;
+				}
+
+				if (index_of_get == umax && pcs_of_valid_cmds.back() >= get)
+				{
+					index_of_get = pcs_of_valid_cmds.size() - 1;
+					until = index_of_get + 1;
+
+					if (count < 0 && pcs_of_valid_cmds.back() == get)
+					{
+						until -= count;
+					}
+				}
+			}
+
+			if (index_of_get == umax || pcs_of_valid_cmds[index_of_get] != get)
+			{
+				return {0, get};
+			}
+
+			if (count < 0)
+			{
+				const u32 found_cmds_count = std::min<u32>(-count, ::size32(pcs_of_valid_cmds) - 1 - index_of_get);
+
+				return {found_cmds_count, pcs_of_valid_cmds[index_of_get + found_cmds_count]};
+			}
+
+			const u32 found_cmds_count = std::min<u32>(count, ::size32(pcs_of_valid_cmds) - 1);
 
 			return {found_cmds_count, *(pcs_of_valid_cmds.end() - 1 - found_cmds_count)};
 		};
@@ -3087,6 +3234,25 @@ namespace rsx
 		}
 
 		recovered_fifo_cmds_history.push({fifo_ctrl->last_cmd(), current_time});
+	}
+
+	std::string thread::dump_misc() const
+	{
+		std::string ret = cpu_thread::dump_misc();
+
+		const auto flags = +state;
+
+		if (is_paused(flags) && flags & cpu_flag::wait)
+		{
+			fmt::append(ret, "\nFragment Program Hash: %X.fp", current_fragment_program.get_data() ? program_hash_util::fragment_program_utils::get_fragment_program_ucode_hash(current_fragment_program) : 0);
+			fmt::append(ret, "\nVertex Program Hash: %X.vp", current_vertex_program.data.empty() ? 0 : program_hash_util::vertex_program_utils::get_vertex_program_ucode_hash(current_vertex_program));
+		}
+		else
+		{
+			fmt::append(ret, "\n");
+		}
+
+		return ret;
 	}
 
 	std::vector<std::pair<u32, u32>> thread::dump_callstack_list() const

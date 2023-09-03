@@ -15,6 +15,7 @@
 #include "Emu/Cell/PPUDisAsm.h"
 #include "Emu/Cell/PPUAnalyser.h"
 #include "Emu/Cell/SPUThread.h"
+#include "Emu/Cell/SPURecompiler.h"
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/Cell/lv2/sys_sync.h"
@@ -1385,6 +1386,10 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			// Force LLVM recompiler
 			g_cfg.core.ppu_decoder.from_default();
 
+			// Force SPU cache and precompilation
+			g_cfg.core.llvm_precompilation.set(true);
+			g_cfg.core.spu_cache.set(true);
+
 			// Disable incompatible settings
 			fixup_ppu_settings();
 
@@ -1462,7 +1467,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 					if (obj == elf_error::ok && ppu_load_exec(obj, true, path))
 					{
-						g_fxo->get<main_ppu_module>().path = path;
+						ensure(g_fxo->try_get<main_ppu_module>())->path = path;
 					}
 					else
 					{
@@ -1473,13 +1478,14 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 			g_fxo->init<named_thread>("SPRX Loader"sv, [this, dir_queue]() mutable
 			{
-				if (auto& _main = g_fxo->get<main_ppu_module>(); !_main.path.empty())
+				if (auto& _main = *ensure(g_fxo->try_get<main_ppu_module>()); !_main.path.empty())
 				{
 					if (!_main.analyse(0, _main.elf_entry, _main.seg0_code_end, _main.applied_pathes, [](){ return Emu.IsStopped(); }))
 					{
 						return;
 					}
 
+					Emu.ConfigurePPUCache();
 					ppu_initialize(_main);
 				}
 
@@ -1489,6 +1495,13 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				}
 
 				ppu_precompile(dir_queue, nullptr);
+
+				if (Emu.IsStopped())
+				{
+					return;
+				}
+
+				spu_cache::initialize(false);
 
 				// Exit "process"
 				CallFromMainThread([this]
@@ -2678,7 +2691,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate)
 	{
 		// Show visual feedback to the user in case that stopping takes a while.
 		// This needs to be done before actually stopping, because otherwise the necessary threads will be terminated before we can show an image.
-		if (auto progress_dialog = g_fxo->try_get<named_thread<progress_dialog_server>>(); progress_dialog && +g_progr)
+		if (auto progress_dialog = g_fxo->try_get<named_thread<progress_dialog_server>>(); progress_dialog && g_progr.load())
 		{
 			// We are currently showing a progress dialog. Notify it that we are going to stop emulation.
 			g_system_progress_stopping = true;
@@ -3243,13 +3256,13 @@ s32 error_code::error_report(s32 result, const logs::message* channel, const cha
 	return result;
 }
 
-void Emulator::ConfigurePPUCache() const
+void Emulator::ConfigurePPUCache(bool with_title_id) const
 {
 	auto& _main = g_fxo->get<main_ppu_module>();
 
 	_main.cache = rpcs3::utils::get_cache_dir();
 
-	if (!m_title_id.empty() && m_cat != "1P")
+	if (with_title_id && !m_title_id.empty() && m_cat != "1P")
 	{
 		_main.cache += GetTitleID();
 		_main.cache += '/';

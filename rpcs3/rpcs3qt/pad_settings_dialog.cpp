@@ -30,7 +30,7 @@ LOG_CHANNEL(cfg_log, "CFG");
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 constexpr auto qstr = QString::fromStdString;
 
-cfg_profile g_cfg_profile;
+cfg_input_configurations g_cfg_input_configs;
 
 inline bool CreateConfigFile(const QString& dir, const QString& name)
 {
@@ -85,38 +85,38 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 		setWindowTitle(tr("Gamepad Settings"));
 	}
 
-	// Load profiles
-	g_cfg_profile.load();
+	// Load input configs
+	g_cfg_input_configs.load();
 
 	if (m_title_id.empty())
 	{
-		const QString profile_dir = qstr(rpcs3::utils::get_input_config_dir(m_title_id));
-		QStringList profiles = gui::utils::get_dir_entries(QDir(profile_dir), QStringList() << "*.yml");
-		QString active_profile = qstr(g_cfg_profile.active_profiles.get_value(g_cfg_profile.global_key));
+		const QString input_config_dir = qstr(rpcs3::utils::get_input_config_dir(m_title_id));
+		QStringList config_files = gui::utils::get_dir_entries(QDir(input_config_dir), QStringList() << "*.yml");
+		QString active_config_file = qstr(g_cfg_input_configs.active_configs.get_value(g_cfg_input_configs.global_key));
 
-		if (!profiles.contains(active_profile))
+		if (!config_files.contains(active_config_file))
 		{
-			const QString default_profile = qstr(g_cfg_profile.default_profile);
+			const QString default_config_file = qstr(g_cfg_input_configs.default_config);
 
-			if (!profiles.contains(default_profile) && CreateConfigFile(profile_dir, default_profile))
+			if (!config_files.contains(default_config_file) && CreateConfigFile(input_config_dir, default_config_file))
 			{
-				profiles.prepend(default_profile);
+				config_files.prepend(default_config_file);
 			}
 
-			active_profile = default_profile;
+			active_config_file = default_config_file;
 		}
 
-		for (const QString& profile : profiles)
+		for (const QString& profile : config_files)
 		{
-			ui->chooseProfile->addItem(profile);
+			ui->chooseConfig->addItem(profile);
 		}
 
-		ui->chooseProfile->setCurrentText(active_profile);
+		ui->chooseConfig->setCurrentText(active_config_file);
 	}
 	else
 	{
-		ui->chooseProfile->addItem(qstr(m_title_id));
-		ui->gb_profiles->setEnabled(false);
+		ui->chooseConfig->addItem(qstr(m_title_id));
+		ui->gb_config_files->setEnabled(false);
 	}
 
 	// Create tab widget for 7 players
@@ -143,11 +143,11 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 	// Combobox: Devices
 	connect(ui->chooseDevice, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &pad_settings_dialog::ChangeDevice);
 
-	// Combobox: Profiles
-	connect(ui->chooseProfile, &QComboBox::currentTextChanged, this, &pad_settings_dialog::ChangeProfile);
+	// Combobox: Configs
+	connect(ui->chooseConfig, &QComboBox::currentTextChanged, this, &pad_settings_dialog::ChangeConfig);
 
-	// Pushbutton: Add Profile
-	connect(ui->b_addProfile, &QAbstractButton::clicked, this, &pad_settings_dialog::AddProfile);
+	// Pushbutton: Add config file
+	connect(ui->b_addConfig, &QAbstractButton::clicked, this, &pad_settings_dialog::AddConfigFile);
 
 	ui->buttonBox->button(QDialogButtonBox::Reset)->setText(tr("Filter Noise"));
 
@@ -174,14 +174,18 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 	// Refresh Button
 	connect(ui->b_refresh, &QPushButton::clicked, this, &pad_settings_dialog::RefreshHandlers);
 
-	ui->chooseClass->addItem(tr("Standard (Pad)")); // CELL_PAD_PCLASS_TYPE_STANDARD   = 0x00,
-	ui->chooseClass->addItem(tr("Guitar"));         // CELL_PAD_PCLASS_TYPE_GUITAR     = 0x01,
-	ui->chooseClass->addItem(tr("Drum"));           // CELL_PAD_PCLASS_TYPE_DRUM       = 0x02,
-	ui->chooseClass->addItem(tr("DJ"));             // CELL_PAD_PCLASS_TYPE_DJ         = 0x03,
-	ui->chooseClass->addItem(tr("Dance Mat"));      // CELL_PAD_PCLASS_TYPE_DANCEMAT   = 0x04,
-	ui->chooseClass->addItem(tr("Navigation"));     // CELL_PAD_PCLASS_TYPE_NAVIGATION = 0x05,
+	ui->chooseClass->addItem(tr("Standard (Pad)"), u32{CELL_PAD_PCLASS_TYPE_STANDARD});
+	ui->chooseClass->addItem(tr("Guitar"),         u32{CELL_PAD_PCLASS_TYPE_GUITAR});
+	ui->chooseClass->addItem(tr("Drum"),           u32{CELL_PAD_PCLASS_TYPE_DRUM});
+	ui->chooseClass->addItem(tr("DJ"),             u32{CELL_PAD_PCLASS_TYPE_DJ});
+	ui->chooseClass->addItem(tr("Dance Mat"),      u32{CELL_PAD_PCLASS_TYPE_DANCEMAT});
+	ui->chooseClass->addItem(tr("Navigation"),     u32{CELL_PAD_PCLASS_TYPE_NAVIGATION});
 
-	connect(ui->chooseClass, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &pad_settings_dialog::HandleDeviceClassChange);
+	connect(ui->chooseClass, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
+	{
+		if (index < 0) return;
+		HandleDeviceClassChange(ui->chooseClass->currentData().toUInt());
+	});
 
 	ui->chb_show_emulated_values->setChecked(m_gui_settings->GetValue(gui::pads_show_emulated).toBool());
 
@@ -217,7 +221,7 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 
 	// Set up first tab
 	OnTabChanged(0);
-	ChangeProfile(ui->chooseProfile->currentText());
+	ChangeConfig(ui->chooseConfig->currentText());
 }
 
 void pad_settings_dialog::closeEvent(QCloseEvent* event)
@@ -304,7 +308,7 @@ void pad_settings_dialog::InitButtons()
 	insert_button(button_ids::id_pressure_intensity, ui->b_pressure_intensity);
 
 	m_pad_buttons->addButton(ui->b_refresh, button_ids::id_refresh);
-	m_pad_buttons->addButton(ui->b_addProfile, button_ids::id_add_profile);
+	m_pad_buttons->addButton(ui->b_addConfig, button_ids::id_add_config_file);
 
 	connect(m_pad_buttons, &QButtonGroup::idClicked, this, &pad_settings_dialog::OnPadButtonClicked);
 
@@ -747,7 +751,7 @@ void pad_settings_dialog::ReactivateButtons()
 	ui->tabWidget->setFocusPolicy(Qt::TabFocus);
 	ui->scrollArea->setFocusPolicy(Qt::StrongFocus);
 
-	ui->chooseProfile->setFocusPolicy(Qt::WheelFocus);
+	ui->chooseConfig->setFocusPolicy(Qt::WheelFocus);
 	ui->chooseHandler->setFocusPolicy(Qt::WheelFocus);
 	ui->chooseDevice->setFocusPolicy(Qt::WheelFocus);
 	ui->chooseClass->setFocusPolicy(Qt::WheelFocus);
@@ -1075,10 +1079,11 @@ void pad_settings_dialog::UpdateLabels(bool is_reset)
 		const cfg_pad& cfg = GetPlayerConfig();
 
 		// Update device class
-		ui->chooseClass->setCurrentIndex(cfg.device_class_type);
+		const int index = ui->chooseClass->findData(cfg.device_class_type.get());
+		ui->chooseClass->setCurrentIndex(index);
 
 		// Trigger the change manually in case that the class dropdown didn't fire an event
-		HandleDeviceClassChange(ui->chooseClass->currentIndex());
+		HandleDeviceClassChange(cfg.device_class_type);
 
 		const auto products = input::get_products_by_class(cfg.device_class_type);
 
@@ -1178,6 +1183,11 @@ void pad_settings_dialog::UpdateLabels(bool is_reset)
 		// Update pressure sensitivity toggle mode
 		ui->cb_pressure_intensity_toggle_mode->setChecked(cfg.pressure_intensity_toggle_mode.get());
 
+		// Update pressure sensitivity deadzone
+		range = cfg.pressure_intensity_deadzone.to_list();
+		ui->pressure_intensity_deadzone->setRange(std::stoi(range.front()), std::stoi(range.back()));
+		ui->pressure_intensity_deadzone->setValue(cfg.pressure_intensity_deadzone.get());
+
 		// Apply stored/default LED settings to the device
 		m_enable_led = m_handler->has_led();
 		SetPadData(0, 0);
@@ -1211,6 +1221,7 @@ void pad_settings_dialog::SwitchButtons(bool is_enabled)
 	ui->kb_stick_multi_right->setEnabled(is_enabled);
 	ui->squircle_left->setEnabled(is_enabled);
 	ui->squircle_right->setEnabled(is_enabled);
+	ui->gb_pressure_intensity_deadzone->setEnabled(is_enabled);
 	ui->gb_pressure_intensity->setEnabled(is_enabled && m_enable_pressure_intensity_button);
 	ui->gb_vibration->setEnabled(is_enabled && m_enable_rumble);
 	ui->gb_motion_controls->setEnabled(is_enabled && m_enable_motion);
@@ -1240,7 +1251,7 @@ void pad_settings_dialog::OnPadButtonClicked(int id)
 	case button_ids::id_led:
 	case button_ids::id_pad_begin:
 	case button_ids::id_pad_end:
-	case button_ids::id_add_profile:
+	case button_ids::id_add_config_file:
 	case button_ids::id_refresh:
 	case button_ids::id_ok:
 	case button_ids::id_cancel:
@@ -1279,7 +1290,7 @@ void pad_settings_dialog::OnPadButtonClicked(int id)
 	ui->tabWidget->setFocusPolicy(Qt::ClickFocus);
 	ui->scrollArea->setFocusPolicy(Qt::ClickFocus);
 
-	ui->chooseProfile->setFocusPolicy(Qt::ClickFocus);
+	ui->chooseConfig->setFocusPolicy(Qt::ClickFocus);
 	ui->chooseHandler->setFocusPolicy(Qt::ClickFocus);
 	ui->chooseDevice->setFocusPolicy(Qt::ClickFocus);
 	ui->chooseClass->setFocusPolicy(Qt::ClickFocus);
@@ -1540,15 +1551,15 @@ void pad_settings_dialog::ChangeHandler()
 	}
 }
 
-void pad_settings_dialog::ChangeProfile(const QString& profile)
+void pad_settings_dialog::ChangeConfig(const QString& config_file)
 {
-	if (profile.isEmpty())
+	if (config_file.isEmpty())
 		return;
 
-	m_profile = sstr(profile);
+	m_config_file = sstr(config_file);
 
 	// Load in order to get the pad handlers
-	if (!g_cfg_input.load(m_title_id, m_profile, true))
+	if (!g_cfg_input.load(m_title_id, m_config_file, true))
 	{
 		cfg_log.notice("Loaded empty pad config");
 	}
@@ -1561,7 +1572,7 @@ void pad_settings_dialog::ChangeProfile(const QString& profile)
 	}
 
 	// Reload with proper defaults
-	if (!g_cfg_input.load(m_title_id, m_profile, true))
+	if (!g_cfg_input.load(m_title_id, m_config_file, true))
 	{
 		cfg_log.notice("Reloaded empty pad config");
 	}
@@ -1603,16 +1614,11 @@ void pad_settings_dialog::ChangeDevice(int index)
 	}
 }
 
-void pad_settings_dialog::HandleDeviceClassChange(int index) const
+void pad_settings_dialog::HandleDeviceClassChange(u32 class_id) const
 {
-	if (index < 0)
-	{
-		return;
-	}
-
 	ui->chooseProduct->clear();
 
-	for (const auto& product : input::get_products_by_class(index))
+	for (const input::product_info& product : input::get_products_by_class(class_id))
 	{
 		switch (product.type)
 		{
@@ -1661,40 +1667,45 @@ void pad_settings_dialog::HandleDeviceClassChange(int index) const
 			ui->chooseProduct->addItem(tr("Rock Revolution", "Rock Revolution Drum Controller"), static_cast<int>(product.type));
 			break;
 		}
+		case input::product_type::ps_move_navigation:
+		{
+			ui->chooseProduct->addItem(tr("PS Move Navigation", "PS Move Navigation Controller"), static_cast<int>(product.type));
+			break;
+		}
 		}
 	}
 }
 
-void pad_settings_dialog::AddProfile()
+void pad_settings_dialog::AddConfigFile()
 {
 	QInputDialog* dialog = new QInputDialog(this);
 	dialog->setWindowTitle(tr("Choose a unique name"));
-	dialog->setLabelText(tr("Profile Name: "));
+	dialog->setLabelText(tr("Configuration Name: "));
 	dialog->setFixedSize(500, 100);
 
 	while (dialog->exec() != QDialog::Rejected)
 	{
-		const QString profile_name = dialog->textValue();
+		const QString config_name = dialog->textValue();
 
-		if (profile_name.isEmpty())
+		if (config_name.isEmpty())
 		{
 			QMessageBox::warning(this, tr("Error"), tr("Name cannot be empty"));
 			continue;
 		}
-		if (profile_name.contains("."))
+		if (config_name.contains("."))
 		{
 			QMessageBox::warning(this, tr("Error"), tr("Must choose a name without '.'"));
 			continue;
 		}
-		if (ui->chooseProfile->findText(profile_name) != -1)
+		if (ui->chooseConfig->findText(config_name) != -1)
 		{
 			QMessageBox::warning(this, tr("Error"), tr("Please choose a non-existing name"));
 			continue;
 		}
-		if (CreateConfigFile(qstr(rpcs3::utils::get_input_config_dir(m_title_id)), profile_name))
+		if (CreateConfigFile(qstr(rpcs3::utils::get_input_config_dir(m_title_id)), config_name))
 		{
-			ui->chooseProfile->addItem(profile_name);
-			ui->chooseProfile->setCurrentText(profile_name);
+			ui->chooseConfig->addItem(config_name);
+			ui->chooseConfig->setCurrentText(config_name);
 		}
 		break;
 	}
@@ -1808,6 +1819,8 @@ void pad_settings_dialog::ApplyCurrentPlayerConfig(int new_player_id)
 		cfg.pressure_intensity_toggle_mode.set(ui->cb_pressure_intensity_toggle_mode->isChecked());
 	}
 
+	cfg.pressure_intensity_deadzone.set(ui->pressure_intensity_deadzone->value());
+
 	if (m_handler->m_type == pad_handler::keyboard)
 	{
 		const int mouse_move_mode = ui->mouse_movement->currentData().toInt();
@@ -1821,7 +1834,7 @@ void pad_settings_dialog::ApplyCurrentPlayerConfig(int new_player_id)
 		cfg.r_stick_lerp_factor.set(ui->right_stick_lerp->value() * 100);
 	}
 
-	cfg.device_class_type.set(ui->chooseClass->currentIndex());
+	cfg.device_class_type.set(ui->chooseClass->currentData().toUInt());
 
 	const auto info = input::get_product_info(static_cast<input::product_type>(ui->chooseProduct->currentData().toInt()));
 
@@ -1851,12 +1864,12 @@ void pad_settings_dialog::SaveExit()
 		}
 	}
 
-	const std::string profile_key = m_title_id.empty() ? g_cfg_profile.global_key : m_title_id;
+	const std::string config_file_key = m_title_id.empty() ? g_cfg_input_configs.global_key : m_title_id;
 
-	g_cfg_profile.active_profiles.set_value(profile_key, m_profile);
-	g_cfg_profile.save();
+	g_cfg_input_configs.active_configs.set_value(config_file_key, m_config_file);
+	g_cfg_input_configs.save();
 
-	g_cfg_input.save(m_title_id, m_profile);
+	g_cfg_input.save(m_title_id, m_config_file);
 
 	QDialog::accept();
 }
@@ -1864,7 +1877,7 @@ void pad_settings_dialog::SaveExit()
 void pad_settings_dialog::CancelExit()
 {
 	// Reloads configs from file or defaults
-	g_cfg_profile.load();
+	g_cfg_input_configs.load();
 	g_cfg_input.from_default();
 
 	QDialog::reject();
@@ -1956,6 +1969,7 @@ void pad_settings_dialog::SubscribeTooltips()
 	const Tooltips tooltips;
 
 	SubscribeTooltip(ui->gb_pressure_intensity, tooltips.gamepad_settings.pressure_intensity);
+	SubscribeTooltip(ui->gb_pressure_intensity_deadzone, tooltips.gamepad_settings.pressure_deadzone);
 	SubscribeTooltip(ui->gb_squircle, tooltips.gamepad_settings.squircle_factor);
 	SubscribeTooltip(ui->gb_stick_multi, tooltips.gamepad_settings.stick_multiplier);
 	SubscribeTooltip(ui->gb_kb_stick_multi, tooltips.gamepad_settings.stick_multiplier);

@@ -62,11 +62,12 @@ namespace rsx
 		u32  real_offset_address = 0;
 		u8   memory_location = 0;
 		u8   attribute_stride = 0;
+		std::pair<u32, u32> vertex_range{};
 
 		rsx::simple_array<interleaved_attribute_t> locations;
 
 		// Check if we need to upload a full unoptimized range, i.e [0-max_index]
-		std::pair<u32, u32> calculate_required_range(u32 first, u32 count) const;
+		std::pair<u32, u32> calculate_required_range(u32 first, u32 count);
 	};
 
 	enum attribute_buffer_placement : u8
@@ -100,6 +101,7 @@ namespace rsx
 			result->single_vertex = false;
 			result->locations.clear();
 			result->interleaved = true;
+			result->vertex_range.second = 0;
 			return result;
 		}
 

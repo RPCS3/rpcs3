@@ -13,6 +13,7 @@
 #include "Emu/VFS.h"
 
 #include "Emu/Cell/PPUOpcodes.h"
+#include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/PPUAnalyser.h"
 
 #include "Emu/Cell/lv2/sys_process.h"
@@ -1070,11 +1071,187 @@ static void ppu_check_patch_spu_images(const ppu_module& mod, const ppu_segment&
 		return;
 	}
 
+	const bool is_firmware = mod.path.starts_with(vfs::get("/dev_flash/"));
+
+	const auto _main = g_fxo->try_get<main_ppu_module>();
+
 	const std::string_view seg_view{ensure(mod.get_ptr<char>(seg.addr)), seg.size};
 
-	for (usz i = seg_view.find("\177ELF"); i < seg.size; i = seg_view.find("\177ELF", i + 4))
+	auto find_first_of_multiple = [](std::string_view data, std::initializer_list<std::string_view> values, usz index)
+	{
+		usz pos = umax;
+
+		for (std::string_view value : values)
+		{
+			if (usz pos0 = data.substr(index, pos - index).find(value); pos0 != umax && pos0 + index < pos)
+			{
+				pos = pos0 + index;
+			}
+		}
+
+		return pos;
+	};
+
+	extern void utilize_spu_data_segment(u32 vaddr, const void* ls_data_vaddr, u32 size);
+
+	// Search for [stqd lr,0x10(sp)] instruction or ELF file signature, whichever comes first
+	const std::initializer_list<std::string_view> prefixes = {"\177ELF"sv, "\x24\0\x40\x80"sv};
+
+	usz prev_bound = 0;
+
+	for (usz i = find_first_of_multiple(seg_view, prefixes, 0); i < seg.size; i = find_first_of_multiple(seg_view, prefixes, utils::align<u32>(i + 1, 4)))
 	{
 		const auto elf_header = ensure(mod.get_ptr<u8>(seg.addr + i));
+
+		if (i % 4 == 0 && std::memcmp(elf_header, "\x24\0\x40\x80", 4) == 0)
+		{
+			bool next = true;
+			const u32 old_i = i;
+
+			for (u32 search = i & -128, tries = 10; tries && search >= prev_bound; tries--, search = utils::sub_saturate<u32>(search, 128))
+			{
+				if (seg_view[search] != 0x42 && seg_view[search] != 0x43)
+				{
+					continue;
+				}
+
+				const u32 inst1 = read_from_ptr<be_t<u32>>(seg_view, search);
+				const u32 inst2 = read_from_ptr<be_t<u32>>(seg_view, search + 4);
+				const u32 inst3 = read_from_ptr<be_t<u32>>(seg_view, search + 8);
+				const u32 inst4 = read_from_ptr<be_t<u32>>(seg_view, search + 12);
+
+				if ((inst1 & 0xfe'00'00'7f) != 0x42000002 || (inst2 & 0xfe'00'00'7f) != 0x42000002 || (inst3 & 0xfe'00'00'7f) != 0x42000002 || (inst4 & 0xfe'00'00'7f) != 0x42000002)
+				{
+					continue;
+				}
+
+				ppu_log.success("Found SPURS GUID Pattern at 0x%05x", search + seg.addr);
+				i = search;
+				next = false;
+				break;
+			}
+
+			if (next)
+			{
+				continue;
+			}
+
+			std::string_view ls_segment = seg_view.substr(i);
+
+			// Bound to a bit less than LS size
+			ls_segment = ls_segment.substr(0, 0x38000);
+
+			for (usz addr_last = 0, valid_count = 0, invalid_count = 0;;)
+			{
+				usz instruction = ls_segment.find("\x24\0\x40\x80"sv, addr_last);
+
+				if (instruction != umax)
+				{
+					if (instruction % 4 != i % 4)
+					{
+						// Unaligned, continue
+						addr_last = instruction + (i % 4 - instruction % 4) % 4;
+						continue;
+					}
+
+					// FIXME: This seems to terminate SPU code prematurely in some cases
+					// Likely due to absolute branches
+					if (spu_thread::is_exec_code(instruction, {reinterpret_cast<const u8*>(ls_segment.data()), ls_segment.size()}, 0))
+					{
+						addr_last = instruction + 4;
+						valid_count++;
+						invalid_count = 0;
+						continue;
+					}
+
+					if (invalid_count == 0)
+					{
+						// Allow a single case of invalid data
+						addr_last = instruction + 4;
+						invalid_count++;
+						continue;
+					}
+
+					addr_last = instruction;
+				}
+
+				if (addr_last >= 0x80 && valid_count >= 2)
+				{
+					const u32 begin = i & -128;
+					u32 end = std::min<u32>(seg.size, utils::align<u32>(i + addr_last + 256, 128));
+
+					u32 guessed_ls_addr = 0;
+
+					// Try to guess LS address by observing the pattern for disable/enable interrupts
+					// ILA R2, PC + 8
+					// BIE/BID R2
+
+					for (u32 found = 0, last_vaddr = 0, it = begin + 16; it < end - 16; it += 4)
+					{
+						const u32 inst1 = read_from_ptr<be_t<u32>>(seg_view, it);
+						const u32 inst2 = read_from_ptr<be_t<u32>>(seg_view, it + 4);
+						const u32 inst3 = read_from_ptr<be_t<u32>>(seg_view, it + 8);
+						const u32 inst4 = read_from_ptr<be_t<u32>>(seg_view, it + 12);
+
+						if ((inst1 & 0xfe'00'00'7f) == 0x42000002 && (inst2 & 0xfe'00'00'7f) == 0x42000002 && (inst3 & 0xfe'00'00'7f) == 0x42000002 && (inst4 & 0xfe'00'00'7f) == 0x42000002)
+						{
+							// SPURS GUID pattern
+							end = it;
+							ppu_log.success("Found SPURS GUID Pattern for terminator at 0x%05x", end + seg.addr);
+							break;
+						}
+
+						if ((inst1 >> 7) % 4 == 0 && (inst1 & 0xfe'00'00'7f) == 0x42000002 && (inst2 == 0x35040100 || inst2 == 0x35080100))
+						{
+							const u32 addr_inst = (inst1 >> 7) % 0x40000;
+
+							if (u32 addr_seg = addr_inst - std::min<u32>(it + 8 - begin, addr_inst))
+							{
+								if (last_vaddr != addr_seg)
+								{
+									guessed_ls_addr = 0;
+									found = 0;
+								}
+
+								found++;
+								last_vaddr = addr_seg;
+
+								if (found >= 2)
+								{
+									// Good segment address
+									guessed_ls_addr = last_vaddr;
+									ppu_log.notice("Found IENABLE/IDSIABLE Pattern at 0x%05x", it + seg.addr);
+								}
+							}
+						}
+					}
+
+					if (guessed_ls_addr)
+					{
+						end = begin + std::min<u32>(end - begin, SPU_LS_SIZE - guessed_ls_addr);
+					}
+
+					ppu_log.success("Found valid roaming SPU code at 0x%x..0x%x (guessed_ls_addr=0x%x)", seg.addr + begin, seg.addr + end, guessed_ls_addr);
+
+					if (!is_firmware && _main == &mod)
+					{
+						// Siginify that the base address is unknown by passing 0
+						utilize_spu_data_segment(guessed_ls_addr ? guessed_ls_addr : 0x4000, seg_view.data() + begin, end - begin);
+					}
+
+					i = std::max<u32>(end, i + 4) - 4;
+					prev_bound = i + 4;
+				}
+				else
+				{
+					i = old_i;
+				}
+
+				break;
+			}
+
+			continue;
+		}
 
 		// Try to load SPU image
 		const spu_exec_object obj(fs::file(elf_header, seg.size - i));
@@ -1107,6 +1284,13 @@ static void ppu_check_patch_spu_images(const ppu_module& mod, const ppu_segment&
 
 			if (prog.p_type == 0x1u /* LOAD */ && prog.p_filesz > 0u)
 			{
+				if (prog.p_vaddr && !is_firmware && _main == &mod)
+				{
+					extern void utilize_spu_data_segment(u32 vaddr, const void* ls_data_vaddr, u32 size);
+
+					utilize_spu_data_segment(prog.p_vaddr, (elf_header + prog.p_offset), prog.p_filesz);
+				}
+
 				sha1_update(&sha2, (elf_header + prog.p_offset), prog.p_filesz);
 			}
 
@@ -1123,6 +1307,8 @@ static void ppu_check_patch_spu_images(const ppu_module& mod, const ppu_segment&
 				}
 			}
 		}
+
+		fmt::append(dump, " (image addr: 0x%x, size: 0x%x)", seg.addr + i, obj.highest_offset);
 
 		sha1_finish(&sha2, sha1_hash);
 
@@ -1166,6 +1352,9 @@ static void ppu_check_patch_spu_images(const ppu_module& mod, const ppu_segment&
 		{
 			ppu_loader.success("SPU executable hash: %s (<- %u)%s", hash, applied.size(), dump);
 		}
+
+		i += obj.highest_offset - 4;
+		prev_bound = i + 4;
 	}
 }
 
@@ -1356,12 +1545,6 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, bool virtual_lo
 				// Initialize executable code if necessary
 				if (prog.p_flags & 0x1 && !virtual_load)
 				{
-					if (ar)
-					{
-						// Disable analysis optimization for savestates (it's not compatible with savestate with patches applied)
-						end = std::max(end, utils::align<u32>(addr + mem_size, 0x10000));
-					}
-
 					ppu_register_range(addr, mem_size);
 				}
 			}
@@ -1651,6 +1834,36 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, bool virtual_lo
 		}
 	}
 
+	// Disabled for PRX for now (problematic and does not seem to have any benefit)
+	end = 0;
+
+	if (!applied.empty() || ar)
+	{
+		// Compare memory changes in memory after executable code sections end
+		if (end >= prx->segs[0].addr && end < prx->segs[0].addr + prx->segs[0].size)
+		{
+			for (const auto& prog : elf.progs)
+			{
+				// Find the first segment
+				if (prog.p_type == 0x1u /* LOAD */ && prog.p_memsz)
+				{
+					std::basic_string_view<uchar> elf_memory{prog.bin.data(), prog.bin.size()};
+					elf_memory.remove_prefix(end - prx->segs[0].addr);
+
+					if (elf_memory != std::basic_string_view<uchar>{&prx->get_ref<uchar>(end), elf_memory.size()})
+					{
+						// There are changes, disable analysis optimization
+						ppu_loader.notice("Disabling analysis optimization due to memory changes from original file");
+
+						end = 0;
+					}
+
+					break;
+				}
+			}
+		}
+	}
+
 	// Embedded SPU elf patching
 	for (const auto& seg : prx->segs)
 	{
@@ -1860,15 +2073,30 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 			else if (already_loaded)
 			{
 			}
-			else if (!vm::falloc(addr, size, vm::main))
+			else if (![&]() -> bool
 			{
-				ppu_loader.error("vm::falloc(vm::main) failed (addr=0x%x, memsz=0x%x)", addr, size); // TODO
+				// 1M pages if it is RSX shared
+				const u32 area_flags = (_seg.flags >> 28) ? vm::page_size_1m : vm::page_size_64k;
+				const u32 alloc_at = std::max<u32>(addr & -0x10000000, 0x10000);
 
-				if (!vm::falloc(addr, size))
+				const auto area = vm::reserve_map(vm::any, std::max<u32>(addr & -0x10000000, 0x10000), 0x10000000, area_flags);
+
+				if (!area)
 				{
-					ppu_loader.error("ppu_load_exec(): vm::falloc() failed (addr=0x%x, memsz=0x%x)", addr, size);
 					return false;
 				}
+
+				if (area->addr != alloc_at || (area->flags & 0xf00) != area_flags)
+				{
+					ppu_loader.error("Failed to allocate memory at 0x%x - conflicting memory area exists: area->addr=0x%x, area->flags=0x%x", addr, area->addr, area->flags);
+					return false;
+				}
+
+				return area->falloc(addr, size);
+			}())
+			{
+				ppu_loader.error("ppu_load_exec(): vm::falloc() failed (addr=0x%x, memsz=0x%x)", addr, size);
+				return false;
 			}
 
 			// Store only LOAD segments (TODO)
@@ -1895,12 +2123,6 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 			// Initialize executable code if necessary
 			if (prog.p_flags & 0x1 && !virtual_load)
 			{
-				if (already_loaded && ar)
-				{
-					// Disable analysis optimization for savestates (it's not compatible with savestate with patches applied)
-					end = std::max(end, utils::align<u32>(addr + size, 0x10000));
-				}
-
 				ppu_register_range(addr, size);
 			}
 		}
@@ -1952,6 +2174,33 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 	{
 		// Alternative patch
 		applied += g_fxo->get<patch_engine>().apply(Emu.GetTitleID() + '-' + hash, [&](u32 addr, u32 size) { return _main.get_ptr<u8>(addr, size); });
+	}
+
+	if (!applied.empty() || ar)
+	{
+		// Compare memory changes in memory after executable code sections end
+		if (end >= _main.segs[0].addr && end < _main.segs[0].addr + _main.segs[0].size)
+		{
+			for (const auto& prog : elf.progs)
+			{
+				// Find the first segment
+				if (prog.p_type == 0x1u /* LOAD */ && prog.p_memsz)
+				{
+					std::basic_string_view<uchar> elf_memory{prog.bin.data(), prog.bin.size()};
+					elf_memory.remove_prefix(end - _main.segs[0].addr);
+
+					if (elf_memory != std::basic_string_view<uchar>{&_main.get_ref<u8>(end), elf_memory.size()})
+					{
+						// There are changes, disable analysis optimization
+						ppu_loader.notice("Disabling analysis optimization due to memory changes from original file");
+
+						end = 0;
+					}
+
+					break;
+				}
+			}
+		}
 	}
 
 	if (applied.empty())
@@ -2243,7 +2492,6 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 	else
 	{
 		g_ps3_process_info = old_process_info;
-		Emu.ConfigurePPUCache();
 	}
 
 	if (!load_libs.empty())
@@ -2480,7 +2728,7 @@ std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_ex
 		}
 	}
 
-	const auto ovlm = std::make_shared<lv2_overlay>();
+	std::shared_ptr<lv2_overlay> ovlm = std::make_shared<lv2_overlay>();
 
 	// Set path (TODO)
 	ovlm->name = path.substr(path.find_last_of('/') + 1);
@@ -2560,12 +2808,6 @@ std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_ex
 			// Initialize executable code if necessary
 			if (prog.p_flags & 0x1 && !virtual_load)
 			{
-				if (ar)
-				{
-					// Disable analysis optimization for savestates (it's not compatible with savestate with patches applied)
-					end = std::max(end, utils::align<u32>(addr + size, 0x10000));
-				}
-
 				ppu_register_range(addr, size);
 			}
 		}
@@ -2615,6 +2857,33 @@ std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_ex
 	{
 		// Alternative patch
 		applied += g_fxo->get<patch_engine>().apply(Emu.GetTitleID() + '-' + hash, [ovlm](u32 addr, u32 size) { return ovlm->get_ptr<u8>(addr, size); });
+	}
+
+	if (!applied.empty() || ar)
+	{
+		// Compare memory changes in memory after executable code sections end
+		if (end >= ovlm->segs[0].addr && end < ovlm->segs[0].addr + ovlm->segs[0].size)
+		{
+			for (const auto& prog : elf.progs)
+			{
+				// Find the first segment
+				if (prog.p_type == 0x1u /* LOAD */ && prog.p_memsz)
+				{
+					std::basic_string_view<uchar> elf_memory{prog.bin.data(), prog.bin.size()};
+					elf_memory.remove_prefix(end - ovlm->segs[0].addr);
+
+					if (elf_memory != std::basic_string_view<uchar>{&ovlm->get_ref<u8>(end), elf_memory.size()})
+					{
+						// There are changes, disable analysis optimization
+						ppu_loader.notice("Disabling analysis optimization due to memory changes from original file");
+
+						end = 0;
+					}
+
+					break;
+				}
+			}
+		}
 	}
 
 	// Embedded SPU elf patching

@@ -195,6 +195,7 @@ void dualsense_pad_handler::check_add_device(hid_device* hidDevice, std::string_
 	if (res < 0 || buf[0] != 0x09)
 	{
 		dualsense_log.error("check_add_device: hid_get_feature_report 0x09 failed! result=%d, buf[0]=0x%x, error=%s", res, buf[0], hid_error(hidDevice));
+		hid_close(hidDevice);
 		return;
 	}
 
@@ -955,14 +956,12 @@ int dualsense_pad_handler::send_output_report(DualSenseDevice* device)
 
 		return hid_write(device->hidDevice, &report.report_id, DUALSENSE_BLUETOOTH_REPORT_SIZE);
 	}
-	else
-	{
-		output_report_usb report{};
-		report.report_id = 0x02; // report id for usb
-		report.common    = common;
 
-		return hid_write(device->hidDevice, &report.report_id, DUALSENSE_USB_REPORT_SIZE);
-	}
+	output_report_usb report{};
+	report.report_id = 0x02; // report id for usb
+	report.common    = common;
+
+	return hid_write(device->hidDevice, &report.report_id, DUALSENSE_USB_REPORT_SIZE);
 }
 
 void dualsense_pad_handler::apply_pad_data(const pad_ensemble& binding)

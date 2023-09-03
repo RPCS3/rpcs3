@@ -182,7 +182,7 @@
      <property name="title">
       <string>All Titles</string>
      </property>
-     <addaction name="batchCreatePPUCachesAct"/>
+     <addaction name="batchCreateCPUCachesAct"/>
      <addaction name="separator"/>
      <addaction name="batchRemoveCustomConfigurationsAct"/>
      <addaction name="batchRemoveCustomPadConfigurationsAct"/>
@@ -1094,9 +1094,9 @@
     <string>Show Title Bars</string>
    </property>
   </action>
-  <action name="batchCreatePPUCachesAct">
+  <action name="batchCreateCPUCachesAct">
    <property name="text">
-    <string>Create PPU Caches</string>
+    <string>Create PPU/SPU Caches</string>
    </property>
   </action>
   <action name="batchRemoveCustomConfigurationsAct">

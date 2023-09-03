@@ -7,7 +7,7 @@
 
 cfg_input g_cfg_input;
 
-extern void pad_state_notify_state_change(u32 index, u32 state);
+extern void pad_state_notify_state_change(usz index, u32 state);
 
 PadHandlerBase::PadHandlerBase(pad_handler type) : m_type(type)
 {
@@ -55,15 +55,14 @@ u16 PadHandlerBase::NormalizeTriggerInput(u16 value, int threshold) const
 	{
 		return static_cast<u16>(0);
 	}
-	else if (threshold <= trigger_min)
+
+	if (threshold <= trigger_min)
 	{
 		return static_cast<u16>(ScaledInput(value, trigger_min, trigger_max));
 	}
-	else
-	{
-		const s32 val = static_cast<s32>(static_cast<f32>(trigger_max) * (value - threshold) / (trigger_max - threshold));
-		return static_cast<u16>(ScaledInput(val, trigger_min, trigger_max));
-	}
+
+	const s32 val = static_cast<s32>(static_cast<f32>(trigger_max) * (value - threshold) / (trigger_max - threshold));
+	return static_cast<u16>(ScaledInput(val, trigger_min, trigger_max));
 }
 
 // normalizes a directed input, meaning it will correspond to a single "button" and not an axis with two directions
@@ -81,11 +80,9 @@ u16 PadHandlerBase::NormalizeDirectedInput(s32 raw_value, s32 threshold, s32 max
 	{
 		return static_cast<u16>(255.0f * val);
 	}
-	else
-	{
-		const f32 thresh = static_cast<f32>(threshold) / maximum; // threshold converted to [0, 1]
-		return static_cast<u16>(255.0f * std::min(1.0f, (val - thresh) / (1.0f - thresh)));
-	}
+
+	const f32 thresh = static_cast<f32>(threshold) / maximum; // threshold converted to [0, 1]
+	return static_cast<u16>(255.0f * std::clamp((val - thresh) / (1.0f - thresh), 0.0f, 1.0f));
 }
 
 u16 PadHandlerBase::NormalizeStickInput(u16 raw_value, int threshold, int multiplier, bool ignore_threshold) const
@@ -96,10 +93,8 @@ u16 PadHandlerBase::NormalizeStickInput(u16 raw_value, int threshold, int multip
 	{
 		return static_cast<u16>(ScaledInput(scaled_value, 0, thumb_max));
 	}
-	else
-	{
-		return NormalizeDirectedInput(scaled_value, threshold, thumb_max);
-	}
+
+	return NormalizeDirectedInput(scaled_value, threshold, thumb_max);
 }
 
 // This function normalizes stick deadzone based on the DS3's deadzone, which is ~13%
@@ -583,7 +578,8 @@ void PadHandlerBase::get_mapping(const pad_ensemble& binding)
 
 	// Find out if special buttons are pressed (introduced by RPCS3).
 	// These buttons will have a delay of one cycle, but whatever.
-	const bool adjust_pressure = pad->get_pressure_intensity_enabled(cfg->pressure_intensity_toggle_mode.get());
+	const bool adjust_pressure = pad->get_pressure_intensity_button_active(cfg->pressure_intensity_toggle_mode.get());
+	const u32 pressure_intensity_deadzone = cfg->pressure_intensity_deadzone.get();
 
 	// Translate any corresponding keycodes to our normal DS3 buttons and triggers
 	for (Button& button : pad->m_buttons)
@@ -605,9 +601,17 @@ void PadHandlerBase::get_mapping(const pad_ensemble& binding)
 				{
 					val = pad->m_pressure_intensity;
 				}
+				else if (pressure_intensity_deadzone > 0)
+				{
+					// Ignore triggers, since they have their own deadzones
+					if (!get_is_left_trigger(device, code) && !get_is_right_trigger(device, code))
+					{
+						val = NormalizeDirectedInput(val, pressure_intensity_deadzone, 255);
+					}
+				}
 
 				value = std::max(value, val);
-				pressed = true;
+				pressed = value > 0;
 			}
 		}
 
@@ -619,7 +623,7 @@ void PadHandlerBase::get_mapping(const pad_ensemble& binding)
 	s32 stick_val[4]{};
 
 	// Translate any corresponding keycodes to our two sticks. (ignoring thresholds for now)
-	for (int i = 0; i < static_cast<int>(pad->m_sticks.size()); i++)
+	for (usz i = 0; i < pad->m_sticks.size(); i++)
 	{
 		bool pressed{};
 		u16 val_min{};

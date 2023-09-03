@@ -195,7 +195,7 @@ namespace rsx
 				}
 			}
 
-			const auto ret = utils::bless<const be_t<u32>>(&m_cache)[(addr - m_cache_addr) >> 2];
+			const auto ret = read_from_ptr<be_t<u32>>(+m_cache[0], addr - m_cache_addr);
 			return {true, ret};
 		}
 
@@ -699,6 +699,24 @@ namespace rsx
 					rsx_log.error("FIFO: RET found without corresponding CALL (last cmd = 0x%x)", get_fifo_cmd());
 					recover_fifo();
 					return;
+				}
+
+				// Optimize returning to another CALL
+				if ((ctrl->put & ~3) != fifo_ret_addr)
+				{
+					if (u32 addr = iomap_table.get_addr(fifo_ret_addr); addr != umax)
+					{
+						const u32 cmd0 = vm::read32(addr);
+
+						// Check for missing step flags, in case the user is single-stepping in the debugger
+						if ((cmd0 & RSX_METHOD_CALL_CMD_MASK) == RSX_METHOD_CALL_CMD && cpu_flag::dbg_step - state)
+						{
+							fifo_ctrl->set_get(cmd0 & RSX_METHOD_CALL_OFFSET_MASK);
+							last_known_code_start = ctrl->get;
+							fifo_ret_addr += 4;
+							return;
+						}
+					}
 				}
 
 				fifo_ctrl->set_get(std::exchange(fifo_ret_addr, RSX_CALL_STACK_EMPTY));

@@ -472,7 +472,6 @@ namespace rsx
 		block_type blocks[num_blocks];
 		texture_cache_type *m_tex_cache;
 		std::unordered_set<block_type*> m_in_use;
-		bool m_purging = false;
 
 	public:
 		atomic_t<u32> m_unreleased_texture_objects = { 0 }; //Number of invalidated objects not yet freed from memory
@@ -554,7 +553,6 @@ namespace rsx
 
 		void purge_unreleased_sections()
 		{
-			m_purging = true;
 			std::vector<section_storage_type*> textures_to_remove;
 
 			// Reclaims all graphics memory consumed by dirty textures
@@ -579,7 +577,6 @@ namespace rsx
 				tex->destroy();
 			}
 
-			m_purging = false;
 			AUDIT(m_unreleased_texture_objects == 0);
 		}
 
@@ -663,16 +660,12 @@ namespace rsx
 
 		void on_ranged_block_first_section_created(block_type& block)
 		{
-			AUDIT(!m_purging);
 			AUDIT(m_in_use.find(&block) == m_in_use.end());
 			m_in_use.insert(&block);
 		}
 
 		void on_ranged_block_last_section_destroyed(block_type& block)
 		{
-			if (m_purging)
-				return;
-
 			AUDIT(m_in_use.find(&block) != m_in_use.end());
 			m_in_use.erase(&block);
 		}

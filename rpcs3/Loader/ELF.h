@@ -260,6 +260,8 @@ public:
 	std::vector<prog_t> progs{};
 	std::vector<shdata_t> shdrs{};
 
+	usz highest_offset = 0;
+
 public:
 	elf_object() = default;
 
@@ -270,6 +272,8 @@ public:
 
 	elf_error open(const fs::file& stream, u64 offset = 0, bs_t<elf_opt> opts = {})
 	{
+		highest_offset = 0;
+
 		// Check stream
 		if (!stream)
 			return set_error(elf_error::stream);
@@ -322,6 +326,7 @@ public:
 			stream.seek(offset + header.e_phoff);
 			if (!stream.read(_phdrs, header.e_phnum))
 				return set_error(elf_error::stream_phdrs);
+			highest_offset = std::max<usz>(highest_offset, stream.pos());
 		}
 
 		if (!(opts & elf_opt::no_sections))
@@ -329,6 +334,7 @@ public:
 			stream.seek(offset + header.e_shoff);
 			if (!stream.read(_shdrs, header.e_shnum))
 				return set_error(elf_error::stream_shdrs);
+			highest_offset = std::max<usz>(highest_offset, stream.pos());
 		}
 
 		progs.clear();
@@ -342,6 +348,7 @@ public:
 				stream.seek(offset + hdr.p_offset);
 				if (!stream.read(progs.back().bin, hdr.p_filesz))
 					return set_error(elf_error::stream_data);
+				highest_offset = std::max<usz>(highest_offset, stream.pos());
 			}
 		}
 

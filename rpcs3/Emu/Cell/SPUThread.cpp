@@ -37,6 +37,15 @@
 #include "util/sysinfo.hpp"
 #include "util/serialization.hpp"
 
+#if defined(ARCH_X64)
+#ifdef _MSC_VER
+#include <intrin.h>
+#include <immintrin.h>
+#else
+#include <x86intrin.h>
+#endif
+#endif
+
 using spu_rdata_t = decltype(spu_thread::rdata);
 
 template <>
@@ -320,6 +329,40 @@ extern void mov_rdata_nt(spu_rdata_t& _dst, const spu_rdata_t& _src)
 #endif
 }
 
+#if defined(_MSC_VER)
+#define mwaitx_func
+#define waitpkg_func
+#else
+#define mwaitx_func __attribute__((__target__("mwaitx")))
+#define waitpkg_func __attribute__((__target__("waitpkg")))
+#endif
+
+#if defined(ARCH_X64)
+// Waits for a number of TSC clock cycles in power optimized state
+// Cstate is represented in bits [7:4]+1 cstate. So C0 requires bits [7:4] to be set to 0xf, C1 requires bits [7:4] to be set to 0.
+template <typename T, typename... Args>
+mwaitx_func static void __mwaitx(u32 cycles, u32 cstate, const void* cline, const Args&... args)
+{
+	constexpr u32 timer_enable = 0x2;
+
+	// monitorx will wake if the cache line is written to, use it for reservations which fits it almost perfectly
+	_mm_monitorx(const_cast<void*>(cline), 0, 0);
+
+	// Use static function to force inline
+	if (T::needs_wait(args...))
+	{
+		_mm_mwaitx(timer_enable, cstate, cycles);
+	}
+}
+
+// First bit indicates cstate, 0x0 for C.02 state (lower power) or 0x1 for C.01 state (higher power)
+waitpkg_func static void __tpause(u32 cycles, u32 cstate)
+{
+	const u64 tsc = utils::get_tsc() + cycles;
+	_tpause(cstate, tsc);
+}
+#endif
+
 void do_cell_atomic_128_store(u32 addr, const void* to_write);
 
 extern thread_local u64 g_tls_fault_spu;
@@ -445,6 +488,12 @@ std::array<u32, 2> op_branch_targets(u32 pc, spu_opcode_t op)
 	{
 		const int index = (type == spu_itype::BR || type == spu_itype::BRA || type == spu_itype::BRSL || type == spu_itype::BRASL ? 0 : 1);
 		res[index] = (spu_branch_target(type == spu_itype::BRASL || type == spu_itype::BRA ? 0 : pc, op.i16));
+
+		if (res[0] == res[1])
+		{
+			res[1] = umax;
+		}
+
 		break;
 	}
 	case spu_itype::IRET:
@@ -1147,7 +1196,7 @@ void spu_thread::dump_regs(std::string& ret, std::any& /*custom_data*/) const
 			}
 		}
 
-		if (i3 >= 0x80 && is_exec_code(i3, ls))
+		if (i3 >= 0x80 && is_exec_code(i3, { ls, SPU_LS_SIZE }))
 		{
 			dis_asm.disasm(i3);
 			fmt::append(ret, " -> %s", dis_asm.last_opcode);
@@ -1233,6 +1282,7 @@ std::vector<std::pair<u32, u32>> spu_thread::dump_callstack_list() const
 	bool first = true;
 
 	const v128 gpr0 = gpr[0];
+	const u32 _pc = pc;
 
 	// Declare first 128-bytes as invalid for stack (common values such as 0 do not make sense here)
 	for (u32 sp = gpr[1]._u32[3]; (sp & 0xF) == 0u && sp >= 0x80u && sp <= 0x3FFE0u; first = false)
@@ -1250,14 +1300,16 @@ std::vector<std::pair<u32, u32>> spu_thread::dump_callstack_list() const
 				return true;
 			}
 
-			return !addr || !is_exec_code(addr, ls);
+			return !addr || !is_exec_code(addr, { ls, SPU_LS_SIZE });
 		};
 
 		if (first && lr._u32[3] != gpr0._u32[3] && !is_invalid(gpr0))
 		{
 			// Detect functions with no stack or before LR has been stored
-			std::vector<bool> passed(SPU_LS_SIZE / 4);
-			std::vector<u32> start_points{pc};
+			std::vector<bool> passed(_pc / 4);
+
+			// Start with PC
+			std::basic_string<u32> start_points{_pc};
 
 			bool is_ok = false;
 			bool all_failed = false;
@@ -1266,7 +1318,11 @@ std::vector<std::pair<u32, u32>> spu_thread::dump_callstack_list() const
 			{
 				for (u32 i = start_points[start]; i < SPU_LS_SIZE;)
 				{
-					if (passed[i / 4])
+					if (i / 4 >= passed.size())
+					{
+						passed.resize(i / 4 + 1);
+					}
+					else if (passed[i / 4])
 					{
 						// Already passed
 						break;
@@ -1279,7 +1335,7 @@ std::vector<std::pair<u32, u32>> spu_thread::dump_callstack_list() const
 
 					if (start == 0 && type == spu_itype::STQD && op.ra == 1u && op.rt == 0u)
 					{
-						// Saving LR to stack: this is indeed a new function
+						// Saving LR to stack: this is indeed a new function (ok because LR has not been saved yet)
 						is_ok = true;
 						break;
 					}
@@ -1317,12 +1373,23 @@ std::vector<std::pair<u32, u32>> spu_thread::dump_callstack_list() const
 					for (usz res_i = 0; res_i < results.size(); res_i++)
 					{
 						const u32 route_pc = results[res_i];
-						if (route_pc < SPU_LS_SIZE && !passed[route_pc / 4])
+
+						if (route_pc >= SPU_LS_SIZE)
+						{
+							continue;
+						}
+
+						if (route_pc / 4 >= passed.size())
+						{
+							passed.resize(route_pc / 4 + 1);
+						}
+
+						if (!passed[route_pc / 4])
 						{
 							if (proceeded)
 							{
 								// Remember next route start point
-								start_points.emplace_back(route_pc);
+								start_points.push_back(route_pc);
 							}
 							else
 							{
@@ -3952,29 +4019,97 @@ bool spu_thread::check_mfc_interrupts(u32 next_pc)
 	return false;
 }
 
-bool spu_thread::is_exec_code(u32 addr, const u8* ls_ptr)
+bool spu_thread::is_exec_code(u32 addr, std::span<const u8> ls_ptr, u32 base_addr)
 {
-	if (addr & ~0x3FFFC)
-	{
-		return false;
-	}
-
 	for (u32 i = 0; i < 30; i++)
 	{
-		const u32 addr0 = addr + (i * 4);
-		const u32 op = read_from_ptr<be_t<u32>>(ls_ptr + addr0);
-		const auto type = s_spu_itype.decode(op);
+		if (addr & ~0x3FFFC)
+		{
+			return false;
+		}
 
-		if (type == spu_itype::UNK || !op)
+		if (addr < base_addr || addr >= base_addr + ls_ptr.size())
+		{
+			return false;
+		}
+
+		const u32 addr0 = spu_branch_target(addr);
+		const spu_opcode_t op{read_from_ptr<be_t<u32>>(ls_ptr, addr0 - base_addr)};
+		const auto type = s_spu_itype.decode(op.opcode);
+
+		if (type == spu_itype::UNK || !op.opcode)
+		{
+			return false;
+		}
+
+		if (type == spu_itype::STOP && op.rb)
 		{
 			return false;
 		}
 
 		if (type & spu_itype::branch)
 		{
-			// TODO
-			break;
+			if (type == spu_itype::BR && op.rt && op.rt != 127u)
+			{
+				return false;
+			}
+
+			auto results = op_branch_targets(addr, op);
+
+			if (results[0] == umax)
+			{
+				switch (type)
+				{
+				case spu_itype::BIZ:
+				case spu_itype::BINZ:
+				case spu_itype::BIHZ:
+				case spu_itype::BIHNZ:
+				{
+					results[0] = addr + 4;
+					break;
+				}
+				default:
+				{
+					break;
+				}
+				}
+
+				if (results[0] == umax)
+				{
+					break;
+				}
+			}
+
+			for (usz res_i = 1; res_i < results.size(); res_i++)
+			{
+				const u32 route_pc = results[res_i];
+
+				if (route_pc >= SPU_LS_SIZE)
+				{
+					continue;
+				}
+
+				if (route_pc < base_addr || route_pc >= base_addr + ls_ptr.size())
+				{
+					return false;
+				}
+
+				// Test the validity of a single instruction of the optional target
+				// This function can't be too slow and is unlikely to improve results by a great deal
+				const u32 op0 = read_from_ptr<be_t<u32>>(ls_ptr, route_pc - base_addr);
+				const spu_itype::type type0 = s_spu_itype.decode(op0);
+
+				if (type0 == spu_itype::UNK || !op0)
+				{
+					return false;
+				}
+			}
+
+			addr = spu_branch_target(results[0]);
+			continue;
 		}
+
+		addr += 4;
 	}
 
 	return true;
@@ -4113,7 +4248,32 @@ bool spu_thread::process_mfc_cmd()
 
 							if (getllar_busy_waiting_switch == 1)
 							{
-								busy_wait(300);
+#if defined(ARCH_X64)
+								if (utils::has_um_wait())
+								{
+									if (utils::has_waitpkg())
+									{
+										__tpause(std::min<u32>(getllar_spin_count, 10) * 500, 0x1);
+									}
+									else
+									{
+										struct check_wait_t
+										{
+											static FORCE_INLINE bool needs_wait(u64 rtime, const atomic_t<u64>& mem_rtime) noexcept
+											{
+												return rtime == mem_rtime;
+											}
+										};
+
+										// Provide the first X64 cache line of the reservation to be tracked
+										__mwaitx<check_wait_t>(std::min<u32>(getllar_spin_count, 17) * 500, 0xf0, std::addressof(data), +rtime, vm::reservation_acquire(addr));
+									}
+								}
+								else
+#endif
+								{
+									busy_wait(300);
+								}
 							}
 
 							return true;
@@ -6030,12 +6190,12 @@ spu_exec_object spu_thread::capture_memory_as_elf(std::span<spu_memory_segment_d
 	{
 		for (pc0 = pc_hint; pc0; pc0 -= 4)
 		{
-			const u32 op = read_from_ptr<be_t<u32>>(all_data.data(), pc0 - 4);
+			const u32 op = read_from_ptr<be_t<u32>>(all_data, pc0 - 4);
 
 			// Try to find function entry (if they are placed sequentially search for BI $LR of previous function)
 			if (!op || op == 0x35000000u || s_spu_itype.decode(op) == spu_itype::UNK)
 			{
-				if (is_exec_code(pc0, all_data.data()))
+				if (is_exec_code(pc0, { all_data.data(), SPU_LS_SIZE }))
 					break;
 			}
 		}
@@ -6045,7 +6205,7 @@ spu_exec_object spu_thread::capture_memory_as_elf(std::span<spu_memory_segment_d
 		for (pc0 = 0; pc0 < SPU_LS_SIZE; pc0 += 4)
 		{
 			// Try to find a function entry (very basic)
-			if (is_exec_code(pc0, all_data.data()))
+			if (is_exec_code(pc0, { all_data.data(), SPU_LS_SIZE }))
 				break;
 		}
 	}

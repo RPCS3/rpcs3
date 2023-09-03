@@ -2,6 +2,8 @@
 
 #include "stdafx.h"
 #include "sdl_pad_handler.h"
+#include "Emu/system_utils.hpp"
+#include "Emu/system_config.h"
 
 LOG_CHANNEL(sdl_log, "SDL");
 
@@ -216,6 +218,24 @@ bool sdl_pad_handler::Init()
 			break;
 		}
 	}, nullptr);
+
+	if (g_cfg.io.load_sdl_mappings)
+	{
+		const std::string db_path = rpcs3::utils::get_input_config_root() + "gamecontrollerdb.txt";
+		sdl_log.notice("Adding mappings from file '%s'", db_path);
+
+		if (fs::is_file(db_path))
+		{
+			if (SDL_GameControllerAddMappingsFromFile(db_path.c_str()) < 0)
+			{
+				sdl_log.error("Could not add mappings from file '%s'! SDL Error: %s", db_path, SDL_GetError());
+			}
+		}
+		else
+		{
+			sdl_log.error("Could not add mappings from file '%s'! File does not exist!", db_path);
+		}
+	}
 
 	m_is_init = true;
 	enumerate_devices();

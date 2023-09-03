@@ -36,7 +36,7 @@ static error_code overlay_load_module(vm::ptr<u32> ovlmid, const std::string& vp
 
 	u128 klic = g_fxo->get<loaded_npdrm_keys>().last_key();
 
-	ppu_exec_object obj = decrypt_self(std::move(src), reinterpret_cast<u8*>(&klic));
+	ppu_exec_object obj = decrypt_self(std::move(src), reinterpret_cast<u8*>(&klic), nullptr, true);
 
 	if (obj != elf_error::ok)
 	{

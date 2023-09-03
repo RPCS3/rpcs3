@@ -516,6 +516,70 @@ spu_cache::~spu_cache()
 {
 }
 
+extern void utilize_spu_data_segment(u32 vaddr, const void* ls_data_vaddr, u32 size)
+{
+	if (vaddr % 4)
+	{
+		return;
+	}
+
+	size &= -4;
+
+	if (!size || vaddr + size > SPU_LS_SIZE)
+	{
+		return;
+	}
+
+	if (!g_cfg.core.llvm_precompilation)
+	{
+		return;
+	}
+
+	g_fxo->need<spu_cache>();
+
+	if (!g_fxo->get<spu_cache>().collect_funcs_to_precompile)
+	{
+		return;
+	}
+
+	std::basic_string<u32> data(size / 4, 0);
+	std::memcpy(data.data(), ls_data_vaddr, size);
+
+	spu_cache::precompile_data_t obj{vaddr, std::move(data)};
+
+	obj.funcs = spu_thread::discover_functions(vaddr, { reinterpret_cast<const u8*>(ls_data_vaddr), size }, vaddr != 0, umax);
+
+	if (obj.funcs.empty())
+	{
+		// Nothing to add
+		return;
+	}
+
+	for (u32 addr : obj.funcs)
+	{
+		spu_log.notice("Found SPU function at: 0x%05x", addr);
+	}
+
+	spu_log.notice("Found %u SPU functions", obj.funcs.size());
+
+	g_fxo->get<spu_cache>().precompile_funcs.push(std::move(obj));
+}
+
+// For SPU cache validity check
+static u16 calculate_crc16(const uchar* data, usz length)
+{
+	u16 crc = umax;
+
+	while (length--)
+	{
+		u8 x = (crc >> 8) ^ *data++;
+		x ^= (x >> 4);
+		crc = static_cast<u16>((crc << 8) ^ (x << 12) ^ (x << 5) ^ x);
+	}
+
+	return crc;
+}
+
 std::deque<spu_program> spu_cache::get()
 {
 	std::deque<spu_program> result;
@@ -530,18 +594,30 @@ std::deque<spu_program> spu_cache::get()
 	// TODO: signal truncated or otherwise broken file
 	while (true)
 	{
-		be_t<u32> size;
-		be_t<u32> addr;
-		std::vector<u32> func;
+		struct block_info_t
+		{
+			be_t<u16> crc;
+			be_t<u16> size;
+			be_t<u32> addr;
+		} block_info{};
 
-		if (!m_file.read(size) || !m_file.read(addr))
+		if (!m_file.read(block_info))
 		{
 			break;
 		}
 
-		func.resize(size);
+		const u32 crc = block_info.crc;
+		const u32 size = block_info.size;
+		const u32 addr = block_info.addr;
 
-		if (m_file.read(func.data(), func.size() * 4) != func.size() * 4)
+		if (utils::add_saturate<u32>(addr, size * 4) > SPU_LS_SIZE)
+		{
+			break;
+		}
+
+		std::vector<u32> func;
+
+		if (!m_file.read(func, size))
 		{
 			break;
 		}
@@ -549,6 +625,13 @@ std::deque<spu_program> spu_cache::get()
 		if (!size || !func[0])
 		{
 			// Skip old format Giga entries
+			continue;
+		}
+
+		// CRC check is optional to be compatible with old format
+		if (crc && std::max<u32>(calculate_crc16(reinterpret_cast<const uchar*>(func.data()), size * 4), 1) != crc)
+		{
+			// Invalid, but continue anyway
 			continue;
 		}
 
@@ -572,6 +655,9 @@ void spu_cache::add(const spu_program& func)
 	be_t<u32> size = ::size32(func.data);
 	be_t<u32> addr = func.entry_point;
 
+	// Add CRC (forced non-zero)
+	size |= std::max<u32>(calculate_crc16(reinterpret_cast<const uchar*>(func.data.data()), size * 4), 1) << 16;
+
 	const fs::iovec_clone gather[3]
 	{
 		{&size, sizeof(size)},
@@ -583,7 +669,7 @@ void spu_cache::add(const spu_program& func)
 	m_file.write_gather(gather, 3);
 }
 
-void spu_cache::initialize()
+void spu_cache::initialize(bool build_existing_cache)
 {
 	spu_runtime::g_interpreter = spu_runtime::g_gateway;
 
@@ -618,6 +704,35 @@ void spu_cache::initialize()
 	atomic_t<usz> fnext{};
 	atomic_t<u8> fail_flag{0};
 
+	auto data_list = g_fxo->get<spu_cache>().precompile_funcs.pop_all();
+	g_fxo->get<spu_cache>().collect_funcs_to_precompile = false;
+
+	u32 total_precompile = 0;
+
+	for (auto& sec : data_list)
+	{
+		total_precompile += sec.funcs.size();
+	}
+
+	const bool spu_precompilation_enabled = func_list.empty() && g_cfg.core.spu_cache && g_cfg.core.llvm_precompilation;
+
+	if (spu_precompilation_enabled)
+	{
+		// What compiles in this case goes straight to disk
+		g_fxo->get<spu_cache>() = std::move(cache);
+	}
+	else if (!build_existing_cache)
+	{
+		return;
+	}
+	else
+	{
+		total_precompile = 0;
+		data_list = {};
+	}
+
+	atomic_t<usz> data_indexer = 0;
+
 	if (g_cfg.core.spu_decoder == spu_decoder_type::dynamic || g_cfg.core.spu_decoder == spu_decoder_type::llvm)
 	{
 		if (auto compiler = spu_recompiler_base::make_llvm_recompiler(11))
@@ -649,16 +764,22 @@ void spu_cache::initialize()
 		// Initialize progress dialog (wait for previous progress done)
 		while (u32 v = g_progr_ptotal)
 		{
-			if (Emu.IsStopped())
+			if (Emu.IsStopped() || !build_existing_cache)
 			{
+				// Workaround: disable progress dialog updates in the case of sole SPU precompilation
 				break;
 			}
 
-			g_progr_ptotal.wait(v);
+			thread_ctrl::wait_on(g_progr_ptotal, v);
 		}
 
-		g_progr_ptotal += ::size32(func_list);
-		progr.emplace("Building SPU cache...");
+		const u32 add_count = ::size32(func_list) + total_precompile;
+
+		if (add_count)
+		{
+			g_progr_ptotal += build_existing_cache ? add_count : 0;
+			progr.emplace("Building SPU cache...");
+		}
 
 		worker_count = rpcs3::utils::get_max_threads();
 	}
@@ -692,7 +813,7 @@ void spu_cache::initialize()
 		std::vector<be_t<u32>> ls(0x10000);
 
 		// Build functions
-		for (usz func_i = fnext++; func_i < func_list.size(); func_i = fnext++, g_progr_pdone++)
+		for (usz func_i = fnext++; func_i < func_list.size(); func_i = fnext++, g_progr_pdone += build_existing_cache ? 1 : 0)
 		{
 			const spu_program& func = std::as_const(func_list)[func_i];
 
@@ -744,6 +865,7 @@ void spu_cache::initialize()
 			{
 				// Likely, out of JIT memory. Signal to prevent further building.
 				fail_flag |= 1;
+				continue;
 			}
 
 			// Clear fake LS
@@ -752,14 +874,170 @@ void spu_cache::initialize()
 			result++;
 		}
 
+		u32 last_sec_idx = umax;
+
+		for (usz func_i = data_indexer++;; func_i = data_indexer++, g_progr_pdone += build_existing_cache ? 1 : 0)
+		{
+			u32 passed_count = 0;
+			u32 func_addr = 0;
+			u32 next_func = 0;
+			u32 sec_addr = umax;
+			u32 sec_idx = 0;
+			std::basic_string_view<u32> inst_data;
+
+			// Try to get the data this index points to
+			for (auto& sec : data_list)
+			{
+				if (func_i < passed_count + sec.funcs.size())
+				{
+					const u32 func_idx = func_i - passed_count;
+					sec_addr = sec.vaddr;
+					func_addr = ::at32(sec.funcs, func_idx);
+					next_func = sec.funcs.size() >= func_idx + 1 ? SPU_LS_SIZE : sec.funcs[func_idx];
+					inst_data = sec.inst_data;
+					break;
+				}
+
+				passed_count += sec.funcs.size();
+				sec_idx++;
+			}
+
+			if (sec_addr == umax)
+			{
+				// End of compilation for thread
+				break;
+			}
+
+			if (Emu.IsStopped() || fail_flag)
+			{
+				continue;
+			}
+
+			if (last_sec_idx != sec_idx)
+			{
+				if (last_sec_idx != umax)
+				{
+					// Clear fake LS of previous section
+					auto& sec = data_list[last_sec_idx];
+					std::memset(ls.data() + sec.vaddr / 4, 0, sec.inst_data.size() * 4);
+				}
+
+				// Initialize LS with the entire section data
+				for (u32 i = 0, pos = sec_addr; i < inst_data.size(); i++, pos += 4)
+				{
+					ls[pos / 4] =  std::bit_cast<be_t<u32>>(inst_data[i]);
+				}
+
+				last_sec_idx = sec_idx;
+			}
+
+			u32 block_addr = func_addr;
+
+			// Call analyser
+			spu_program func2 = compiler->analyse(ls.data(), block_addr);
+
+			std::map<u32, std::basic_string<u32>> targets;
+
+			while (!func2.data.empty())
+			{
+				const u32 last_inst = std::bit_cast<be_t<u32>>(func2.data.back());
+				const u32 prog_size = func2.data.size();
+
+				if (!compiler->compile(std::move(func2)))
+				{
+					// Likely, out of JIT memory. Signal to prevent further building.
+					fail_flag |= 1;
+					break;
+				}
+
+				result++;
+
+				const u32 start_new = block_addr + prog_size * 4;
+
+				if (start_new >= next_func || (start_new == next_func - 4 && ls[start_new / 4] == 0x200000u))
+				{
+					// Completed
+					break;
+				}
+
+				targets.insert(compiler->get_targets().begin(), compiler->get_targets().end());
+
+				if (auto type = g_spu_itype.decode(last_inst);
+					type == spu_itype::BRSL || type == spu_itype::BRASL || type == spu_itype::BISL || type == spu_itype::SYNC)
+				{
+					if (ls[start_new / 4] && g_spu_itype.decode(ls[start_new / 4]) != spu_itype::UNK)
+					{
+						spu_log.notice("Precompiling fallthrough to 0x%05x", start_new);
+						func2 = compiler->analyse(ls.data(), start_new);
+						block_addr = start_new;
+						continue;
+					}
+				}
+
+				if (targets.empty())
+				{
+					break;
+				}
+
+				const auto upper = targets.upper_bound(func_addr);
+
+				if (upper == targets.begin())
+				{
+					break;
+				}
+
+				u32 new_entry = umax;
+
+				// Find the lowest target in the space in-between
+				for (auto it = std::prev(upper); it != targets.end() && it->first < start_new && new_entry > start_new; it++)
+				{
+					for (u32 target : it->second)
+					{
+						if (target >= start_new && target < next_func)
+						{
+							if (target < new_entry)
+							{
+								new_entry = target;
+
+								if (new_entry == start_new)
+								{
+									// Cannot go lower
+									break;
+								}
+							}
+						}
+					}
+				}
+
+				if (new_entry == umax)
+				{
+					break;
+				}
+
+				if (!spu_thread::is_exec_code(new_entry, { reinterpret_cast<const u8*>(ls.data()), SPU_LS_SIZE }))
+				{
+					break;
+				}
+
+				spu_log.notice("Precompiling filler space at 0x%05x (next=0x%05x)", new_entry, next_func);
+				func2 = compiler->analyse(ls.data(), new_entry);
+				block_addr = new_entry;
+			}
+		}
+
 		return result;
 	});
+
+	u32 built_total = 0;
 
 	// Join (implicitly) and print individual results
 	for (u32 i = 0; i < workers.size(); i++)
 	{
 		spu_log.notice("SPU Runtime: Worker %u built %u programs.", i + 1, workers[i]);
+		built_total += workers[i];
 	}
+
+	spu_log.notice("SPU Runtime: Workers built %u programs.", built_total);
 
 	if (Emu.IsStopped())
 	{
@@ -881,7 +1159,7 @@ void spu_cache::initialize()
 	}
 
 	// Initialize global cache instance
-	if (g_cfg.core.spu_cache)
+	if (g_cfg.core.spu_cache && cache)
 	{
 		g_fxo->get<spu_cache>() = std::move(cache);
 	}
@@ -1904,6 +2182,149 @@ void spu_recompiler_base::old_interpreter(spu_thread& spu, void* ls, u8* /*rip*/
 	}
 }
 
+std::vector<u32> spu_thread::discover_functions(u32 base_addr, std::span<const u8> ls, bool is_known_addr, u32 /*entry*/)
+{
+	std::vector<u32> calls;
+	std::vector<u32> branches;
+
+	calls.reserve(100);
+
+	// Discover functions
+	// Use the most simple method: search for instructions that calls them
+	// And then filter invalid cases
+	// TODO: Does not detect jumptables or fixed-addr indirect calls
+	const v128 brasl_mask = is_known_addr ? v128::from32p(0x62u << 23) : v128::from32p(umax);
+
+	for (u32 i = utils::align<u32>(base_addr, 0x10); i < std::min<u32>(base_addr + ls.size(), 0x3FFF0); i += 0x10)
+	{
+		// Search for BRSL LR and BRASL LR or BR
+		// TODO: BISL
+		const v128 inst = read_from_ptr<be_t<v128>>(ls.data(), i - base_addr);
+		const v128 cleared_i16 = gv_and32(inst, v128::from32p(utils::rol32(~0xffff, 7)));
+		const v128 eq_brsl = gv_eq32(cleared_i16, v128::from32p(0x66u << 23));
+		const v128 eq_brasl = gv_eq32(cleared_i16, brasl_mask);
+		const v128 eq_br = gv_eq32(cleared_i16, v128::from32p(0x64u << 23));
+		const v128 result = eq_brsl | eq_brasl;
+
+		if (!gv_testz(result))
+		{
+			for (u32 j = 0; j < 4; j++)
+			{
+				if (result.u32r[j])
+				{
+					calls.push_back(i + j * 4);
+				}
+			}
+		}
+
+		if (!gv_testz(eq_br))
+		{
+			for (u32 j = 0; j < 4; j++)
+			{
+				if (eq_br.u32r[j])
+				{
+					branches.push_back(i + j * 4);
+				}
+			}
+		}
+	}
+
+	calls.erase(std::remove_if(calls.begin(), calls.end(), [&](u32 caller)
+	{
+		// Check the validity of both the callee code and the following caller code
+		return !is_exec_code(caller, ls, base_addr) || !is_exec_code(caller + 4, ls, base_addr);
+	}), calls.end());
+
+	branches.erase(std::remove_if(branches.begin(), branches.end(), [&](u32 caller)
+	{
+		// Check the validity of the callee code
+		return !is_exec_code(caller, ls, base_addr);
+	}), branches.end());
+
+	std::vector<u32> addrs;
+
+	for (u32 addr : calls)
+	{
+		const spu_opcode_t op{read_from_ptr<be_t<u32>>(ls, addr - base_addr)};
+
+		const u32 func = op_branch_targets(addr, op)[0];
+
+		if (func == umax || addr + 4 == func || func == addr || std::count(addrs.begin(), addrs.end(), func))
+		{
+			continue;
+		}
+
+		addrs.push_back(func);
+	}
+
+	for (u32 addr : branches)
+	{
+		const spu_opcode_t op{read_from_ptr<be_t<u32>>(ls, addr - base_addr)};
+
+		const u32 func = op_branch_targets(addr, op)[0];
+
+		if (func == umax || addr + 4 == func || func == addr || !addr)
+		{
+			continue;
+		}
+
+		// Search for AI R1, +x or OR R3/4, Rx, 0
+		// Reasoning: AI R1, +x means stack pointer restoration, branch after that is likely a tail call
+		// R3 and R4 are common function arguments because they are the first two
+		for (u32 back = addr - 4, it = 10; it && back >= base_addr && back < std::min<u32>(base_addr + ls.size(), 0x3FFF0); it--, back -= 4)
+		{
+			const spu_opcode_t test_op{read_from_ptr<be_t<u32>>(ls, back - base_addr)};
+			const auto type = g_spu_itype.decode(test_op.opcode);
+
+			if (type & spu_itype::branch)
+			{
+				break;
+			}
+
+			bool is_tail = false;
+
+			if (type == spu_itype::AI && test_op.rt == 1u && test_op.ra == 1u)
+			{
+				if (test_op.si10 <= 0)
+				{
+					break;
+				}
+
+				is_tail = true;
+			}
+			else if (!(type & spu_itype::zregmod))
+			{
+				const u32 op_rt = type & spu_itype::_quadrop ? +test_op.rt4 : +test_op.rt;
+
+				if (op_rt >= 80u && (type != spu_itype::LQD || test_op.ra != 1u))
+				{
+					// Modifying non-volatile registers, not a call (and not context restoration)
+					break;
+				}
+
+				//is_tail = op_rt == 3u || op_rt == 4u;
+			}
+
+			if (!is_tail)
+			{
+				continue;
+			}
+
+			if (std::count(addrs.begin(), addrs.end(), func))
+			{
+				break;
+			}
+
+			addrs.push_back(func);
+			break;
+		}
+	}
+
+	std::sort(addrs.begin(), addrs.end());
+
+	return addrs;
+}
+
 spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 {
 	// Result: addr + raw instruction data
@@ -2112,6 +2533,12 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 				const u32 target = spu_branch_target(av);
 
 				spu_log.warning("[0x%x] At 0x%x: indirect branch to 0x%x%s", entry_point, pos, target, op.d ? " (D)" : op.e ? " (E)" : "");
+
+				if (type == spu_itype::BI && target == pos + 4 && op.d)
+				{
+					// Disable interrupts idiom
+					break;
+				}
 
 				m_targets[pos].push_back(target);
 
@@ -8674,6 +9101,20 @@ public:
 			{
 				if (data == v128::from8p(data._u8[0]))
 				{
+					if (m_use_avx512_icl)
+					{
+						if (perm_only)
+						{
+							set_vr(op.rt4, vperm2b256to128(as, b, c));
+							return;
+						}
+
+						const auto m = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
+						const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
+						const auto ab = vperm2b256to128(as, b, c);
+						set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab, mm));
+						return;
+					}
 					// See above
 					const auto x = pshufb(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
 					const auto ax = pshufb(as, c);
@@ -8708,6 +9149,42 @@ public:
 
 		if (m_use_avx512_icl && (op.ra != op.rb || m_interp_magn))
 		{
+			if (auto [ok, data] = get_const_vector(b.value, m_pos); ok)
+			{
+				if (data == v128::from8p(data._u8[0]))
+				{
+					if (perm_only)
+					{
+						set_vr(op.rt4, vperm2b256to128(a, b, eval(c ^ 0xf)));
+						return;
+					}
+
+					const auto m = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
+					const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
+					const auto ab = vperm2b256to128(a, b, eval(c ^ 0xf));
+					set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab, mm));
+					return;
+				}
+			}
+
+			if (auto [ok, data] = get_const_vector(a.value, m_pos); ok)
+			{
+				if (data == v128::from8p(data._u8[0]))
+				{
+					if (perm_only)
+					{
+						set_vr(op.rt4, vperm2b256to128(b, a, eval(c ^ 0x1f)));
+						return;
+					}
+
+					const auto m = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
+					const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
+					const auto ab = vperm2b256to128(b, a, eval(c ^ 0x1f));
+					set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab, mm));
+					return;
+				}
+			}
+
 			if (perm_only)
 			{
 				set_vr(op.rt4, vperm2b(a, b, eval(c ^ 0xf)));
@@ -10550,6 +11027,13 @@ public:
 
 		// Create jump table if necessary (TODO)
 		const auto tfound = m_targets.find(m_pos);
+
+		if (op.d && tfound != m_targets.end() && tfound->second.size() == 1 && tfound->second[0] == spu_branch_target(m_pos, 1))
+		{
+			// Interrupts-disable pattern
+			m_ir->CreateStore(m_ir->getFalse(), spu_ptr<bool>(&spu_thread::interrupts_enabled));
+			return;
+		}
 
 		if (!op.d && !op.e && tfound != m_targets.end() && tfound->second.size() > 1)
 		{

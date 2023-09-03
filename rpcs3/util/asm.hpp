@@ -410,23 +410,6 @@ namespace utils
 		return factor1 > 0 && T{umax} / factor1 < factor2 ? T{umax} : static_cast<T>(factor1 * factor2);
 	}
 
-	// Hack. Pointer cast util to workaround UB. Use with extreme care.
-	template <typename T, typename U>
-	[[nodiscard]] T* bless(U* ptr)
-	{
-#ifdef _MSC_VER
-		return (T*)ptr;
-#elif defined(ARCH_X64)
-		T* result;
-		__asm__("movq %1, %0;" : "=r" (result) : "r" (ptr) : "memory");
-		return result;
-#elif defined(ARCH_ARM64)
-		T* result;
-		__asm__("mov %0, %1" : "=r" (result) : "r" (ptr) : "memory");
-		return result;
-#endif
-	}
-
 	inline void trap()
 	{
 #ifdef _M_X64

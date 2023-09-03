@@ -3310,8 +3310,11 @@ void PPUTranslator::SRD(ppu_opcode_t op)
 void PPUTranslator::LVRX(ppu_opcode_t op)
 {
 	const auto addr = op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb);
-	const auto data = ReadMemory(m_ir->CreateAnd(addr, ~0xfull), GetType<u8[16]>(), m_is_be, 16);
-	set_vr(op.vd, pshufb(value<u8[16]>(data), build<u8[16]>(255, 254, 253, 252, 251, 250, 249, 248, 247, 246, 245, 244, 243, 242, 241, 240) + vsplat<u8[16]>(trunc<u8>(value<u64>(addr) & 0xf))));
+	const auto offset = eval(trunc<u8>(value<u64>(addr) & 0xf));
+
+	// Read from instruction address if offset is 0, this prevents accessing potentially bad memory from addr (because no actual memory is dereferenced)
+	const auto data = ReadMemory(m_ir->CreateAnd(m_ir->CreateSelect(m_ir->CreateIsNull(offset.value), m_reloc ? m_seg0 : GetAddr(0), addr), ~0xfull), GetType<u8[16]>(), m_is_be, 16);
+	set_vr(op.vd, pshufb(value<u8[16]>(data), build<u8[16]>(255, 254, 253, 252, 251, 250, 249, 248, 247, 246, 245, 244, 243, 242, 241, 240) + vsplat<u8[16]>(offset)));
 }
 
 void PPUTranslator::LSWI(ppu_opcode_t op)

@@ -31,9 +31,9 @@ namespace rsx
 		});
 	}
 
-	void shader_loading_dialog_native::update_msg(u32 index, const std::string& msg)
+	void shader_loading_dialog_native::update_msg(u32 index, std::string msg)
 	{
-		dlg->progress_bar_set_message(index, msg);
+		dlg->progress_bar_set_message(index, std::move(msg));
 		owner->flip({});
 	}
 

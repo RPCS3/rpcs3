@@ -1592,7 +1592,7 @@ struct registers_decoder<NV4097_SET_SURFACE_ZETA_OFFSET>
 
 	static void dump(std::string& out, const decoded_type& decoded)
 	{
-		fmt::append(out, "Surface: Z offset: %u", decoded.surface_z_offset());
+		fmt::append(out, "Surface: Z offset: 0x%x", decoded.surface_z_offset());
 	}
 };
 
@@ -3040,10 +3040,21 @@ struct registers_decoder<NV4097_SET_COLOR_MASK>
 		{
 			return value != 0;
 		}
+
+		u32 is_invalid() const
+		{
+			return (value & 0xfefefefe) ? value : 0;
+		}
 	};
 
 	static void dump(std::string& out, const decoded_type& decoded)
 	{
+		if (u32 invalid_value = decoded.is_invalid())
+		{
+			fmt::append(out, "Surface: color mask: invalid = 0x%08x", invalid_value);
+			return;
+		}
+
 		fmt::append(out, "Surface: color mask A = %s R = %s G = %s B = %s"
 			, print_boolean(decoded.color_a()), print_boolean(decoded.color_r()), print_boolean(decoded.color_g()), print_boolean(decoded.color_b()));
 	}

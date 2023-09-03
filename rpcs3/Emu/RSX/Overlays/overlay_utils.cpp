@@ -60,10 +60,10 @@ static auto s_ascii_lowering_map = []()
 }();
 
 template<typename F>
-void process_multibyte(const std::string s, F&& func)
+void process_multibyte(const std::string& s, F&& func)
 {
-	const auto end = s.length();
-	for (u32 index = 0; index < end; ++index)
+	const usz end = s.length();
+	for (usz index = 0; index < end; ++index)
 	{
 		const u8 code = static_cast<u8>(s[index]);
 
@@ -78,7 +78,7 @@ void process_multibyte(const std::string s, F&& func)
 			continue;
 		}
 
-		const auto extra_bytes = (code <= 0xDF) ? 1u : (code <= 0xEF) ? 2u : 3u;
+		const u32 extra_bytes = (code <= 0xDF) ? 1u : (code <= 0xEF) ? 2u : 3u;
 		if ((index + extra_bytes) > end)
 		{
 			// Malformed string, abort

@@ -262,6 +262,9 @@ struct ppu_pattern_matrix
 // PPU Instruction Type
 struct ppu_itype
 {
+	static constexpr struct branch_tag{} branch{}; // Branch Instructions
+	static constexpr struct trap_tag{} trap{}; // Branch Instructions
+
 	enum type
 	{
 		UNK = 0,
@@ -423,8 +426,6 @@ struct ppu_itype
 		VUPKLSB,
 		VUPKLSH,
 		VXOR,
-		TDI,
-		TWI,
 		MULLI,
 		SUBFIC,
 		CMPLI,
@@ -432,11 +433,8 @@ struct ppu_itype
 		ADDIC,
 		ADDI,
 		ADDIS,
-		BC,
 		SC,
-		B,
 		MCRF,
-		BCLR,
 		CRNOR,
 		CRANDC,
 		ISYNC,
@@ -446,7 +444,6 @@ struct ppu_itype
 		CREQV,
 		CRORC,
 		CROR,
-		BCCTR,
 		RLWIMI,
 		RLWINM,
 		RLWNM,
@@ -463,7 +460,6 @@ struct ppu_itype
 		RLDCL,
 		RLDCR,
 		CMP,
-		TW,
 		LVSL,
 		LVEBX,
 		SUBFC,
@@ -490,7 +486,6 @@ struct ppu_itype
 		LWZUX,
 		CNTLZD,
 		ANDC,
-		TD,
 		LVEWX,
 		MULHD,
 		MULHW,
@@ -781,12 +776,32 @@ struct ppu_itype
 		FCTID_,
 		FCTIDZ_,
 		FCFID_,
+
+		B, // branch_tag first
+		BC,
+		BCLR,
+		BCCTR, // branch_tag last
+
+		TD, // trap_tag first
+		TW,
+		TDI,
+		TWI, // trap_tag last
 	};
 
 	// Enable address-of operator for ppu_decoder<>
 	friend constexpr type operator &(type value)
 	{
 		return value;
+	}
+
+	friend constexpr bool operator &(type value, branch_tag)
+	{
+		return value >= B && value <= BCCTR;
+	}
+
+	friend constexpr bool operator &(type value, trap_tag)
+	{
+		return value >= TD && value <= TWI;
 	}
 };
 

@@ -1079,7 +1079,8 @@ void evdev_joystick_handler::apply_input_events(const std::shared_ptr<Pad>& pad)
 
 	// Find out if special buttons are pressed (introduced by RPCS3).
 	// These buttons will have a delay of one cycle, but whatever.
-	const bool adjust_pressure = pad->get_pressure_intensity_enabled(cfg->pressure_intensity_toggle_mode.get());
+	const bool adjust_pressure = pad->get_pressure_intensity_button_active(cfg->pressure_intensity_toggle_mode.get());
+	const u32 pressure_intensity_deadzone = cfg->pressure_intensity_deadzone.get();
 
 	const auto update_values = [&](bool& pressed, u16& final_value, bool is_stick_value, u32 code, u16 val)
 	{
@@ -1095,10 +1096,18 @@ void evdev_joystick_handler::apply_input_events(const std::shared_ptr<Pad>& pad)
 				{
 					val = pad->m_pressure_intensity;
 				}
+				else if (pressure_intensity_deadzone > 0)
+				{
+					// Ignore triggers, since they have their own deadzones
+					if (!get_is_left_trigger(m_dev, code) && !get_is_right_trigger(m_dev, code))
+					{
+						val = NormalizeDirectedInput(val, pressure_intensity_deadzone, 255);
+					}
+				}
 			}
 
-			pressed = true;
 			final_value = std::max(final_value, val);
+			pressed = final_value > 0;
 		}
 	};
 

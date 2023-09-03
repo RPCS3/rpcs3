@@ -14,12 +14,13 @@ struct spu_itype
 	static constexpr struct floating_tag{} floating{}; // Floating-Point Instructions
 	static constexpr struct quadrop_tag{} _quadrop{}; // 4-op Instructions
 	static constexpr struct xfloat_tag{} xfloat{}; // Instructions producing xfloat values
+	static constexpr struct zregmod_tag{} zregmod{}; // Instructions not modifying any GPR
 
 	enum type : unsigned char
 	{
 		UNK = 0,
 
-		HEQ,
+		HEQ, // zregmod_tag first
 		HEQI,
 		HGT,
 		HGTI,
@@ -36,11 +37,21 @@ struct spu_itype
 		NOP,
 		SYNC,
 		DSYNC,
-		MFSPR,
 		MTSPR,
+		WRCH,
+
+		STQD, // memory_tag first
+		STQX,
+		STQA,
+		STQR, // zregmod_tag last
+		LQD,
+		LQX,
+		LQA,
+		LQR, // memory_tag last
+
+		MFSPR,
 		RDCH,
 		RCHCNT,
-		WRCH,
 
 		BR, // branch_tag first
 		BRA,
@@ -58,15 +69,6 @@ struct spu_itype
 		BINZ,
 		BIHZ,
 		BIHNZ, // branch_tag last
-
-		LQD, // memory_tag first
-		LQX,
-		LQA,
-		LQR,
-		STQD,
-		STQX,
-		STQA,
-		STQR, // memory_tag last
 
 		ILH, // constant_tag_first
 		ILHU,
@@ -267,7 +269,7 @@ struct spu_itype
 	// Test for memory instruction
 	friend constexpr bool operator &(type value, memory_tag)
 	{
-		return value >= LQD && value <= STQR;
+		return value >= STQD && value <= LQR;
 	}
 
 	// Test for compare instruction
@@ -292,6 +294,12 @@ struct spu_itype
 	friend constexpr bool operator &(type value, constant_tag)
 	{
 		return value >= ILH && value <= FSMBI;
+	}
+
+	// Test for non register-modifying instruction
+	friend constexpr bool operator &(type value, zregmod_tag)
+	{
+		return value >= HEQ && value <= STQR;
 	}
 };
 

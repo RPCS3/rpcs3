@@ -67,7 +67,7 @@ LogHighlighter::LogHighlighter(QTextDocument* parent) : Highlighter(parent)
 
 AsmHighlighter::AsmHighlighter(QTextDocument *parent) : Highlighter(parent)
 {
-	addRule("^[A-Z0-9]+",             Qt::darkBlue);    // Instructions
+	addRule("^\\b[A-Z0-9]+\\b",       Qt::darkBlue);    // Instructions
 	addRule("-?R\\d[^,;\\s]*",        Qt::darkRed);     // -R0.*
 	addRule("-?H\\d[^,;\\s]*",        Qt::red);         // -H1.*
 	addRule("-?v\\[\\d\\]*[^,;\\s]*", Qt::darkCyan);    // -v[xyz].*

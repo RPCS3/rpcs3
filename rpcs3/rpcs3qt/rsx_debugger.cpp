@@ -426,12 +426,12 @@ namespace
 		{
 		case rsx::surface_color_format::b8:
 		{
-			const u8 value = utils::bless<const u8>(orig_buffer)[idx];
+			const u8 value = read_from_ptr<u8>(orig_buffer, idx);
 			return{ value, value, value };
 		}
 		case rsx::surface_color_format::x32:
 		{
-			const be_t<u32> stored_val = utils::bless<const be_t<u32>>(orig_buffer)[idx];
+			const be_t<u32> stored_val = read_from_ptr<be_t<u32>>(orig_buffer, idx);
 			const u32 swapped_val = stored_val;
 			const f32 float_val = std::bit_cast<f32>(swapped_val);
 			const u8 val = float_val * 255.f;
@@ -441,14 +441,14 @@ namespace
 		case rsx::surface_color_format::x8b8g8r8_o8b8g8r8:
 		case rsx::surface_color_format::x8b8g8r8_z8b8g8r8:
 		{
-			const auto ptr = utils::bless<const u8>(orig_buffer);
+			const auto ptr = reinterpret_cast<const u8*>(orig_buffer.data());
 			return{ ptr[1 + idx * 4], ptr[2 + idx * 4], ptr[3 + idx * 4] };
 		}
 		case rsx::surface_color_format::a8r8g8b8:
 		case rsx::surface_color_format::x8r8g8b8_o8r8g8b8:
 		case rsx::surface_color_format::x8r8g8b8_z8r8g8b8:
 		{
-			const auto ptr = utils::bless<const u8>(orig_buffer);
+			const auto ptr = reinterpret_cast<const u8*>(orig_buffer.data());
 			return{ ptr[3 + idx * 4], ptr[2 + idx * 4], ptr[1 + idx * 4] };
 		}
 		case rsx::surface_color_format::w16z16y16x16:
@@ -581,7 +581,7 @@ void rsx_debugger::OnClickDrawCalls()
 			{
 				for (u32 col = 0; col < width; col++)
 				{
-					const u8 stencil_val = utils::bless<const u8>(orig_buffer)[row * width + col];
+					const u8 stencil_val = reinterpret_cast<const u8*>(orig_buffer.data())[row * width + col];
 					buffer[4 * col + 0 + width * row * 4] = stencil_val;
 					buffer[4 * col + 1 + width * row * 4] = stencil_val;
 					buffer[4 * col + 2 + width * row * 4] = stencil_val;

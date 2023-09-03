@@ -199,41 +199,43 @@ void usb_device_rb3_midi_keyboard::parse_midi_message(u8* msg, usz size)
 	// handle note on/off messages
 	if (size == 3 && (msg[0] == 0x80 || msg[0] == 0x90))
 	{
+		const bool note_on = (0x10 & msg[0]) == 0x10 && msg[2] != 0;
+
 		// handle navigation buttons
 		switch (msg[1])
 		{
 		case 44: // G#2
-			button_state.cross = ((0x10 & msg[0]) == 0x10);
+			button_state.cross = note_on;
 			break;
 		case 42: // F#2
-			button_state.circle = ((0x10 & msg[0]) == 0x10);
+			button_state.circle = note_on;
 			break;
 		case 39: // D#2
-			button_state.square = ((0x10 & msg[0]) == 0x10);
+			button_state.square = note_on;
 			break;
 		case 37: // C#2
-			button_state.triangle = ((0x10 & msg[0]) == 0x10);
+			button_state.triangle = note_on;
 			break;
 		case 46: // A#2
-			button_state.start = ((0x10 & msg[0]) == 0x10);
+			button_state.start = note_on;
 			break;
 		case 36: // C2
-			button_state.select = ((0x10 & msg[0]) == 0x10);
+			button_state.select = note_on;
 			break;
 		case 45: // A2
-			button_state.overdrive = ((0x10 & msg[0]) == 0x10);
+			button_state.overdrive = note_on;
 			break;
 		case 41: // F2
-			button_state.dpad_up = ((0x10 & msg[0]) == 0x10);
+			button_state.dpad_up = note_on;
 			break;
 		case 43: // G2
-			button_state.dpad_down = ((0x10 & msg[0]) == 0x10);
+			button_state.dpad_down = note_on;
 			break;
 		case 38: // D2
-			button_state.dpad_left = ((0x10 & msg[0]) == 0x10);
+			button_state.dpad_left = note_on;
 			break;
 		case 40: // E2
-			button_state.dpad_right = ((0x10 & msg[0]) == 0x10);
+			button_state.dpad_right = note_on;
 			break;
 		default:
 			break;
@@ -243,7 +245,7 @@ void usb_device_rb3_midi_keyboard::parse_midi_message(u8* msg, usz size)
 		if (msg[1] >= 48 && msg[1] <= (48 + button_state.keys.size()))
 		{
 			const u32 key = msg[1] - 48;
-			button_state.keys[key] = ((0x10 & msg[0]) == 0x10);
+			button_state.keys[key] = note_on;
 			button_state.velocities[key] = msg[2];
 		}
 	}
