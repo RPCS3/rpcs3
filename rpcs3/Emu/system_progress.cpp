@@ -212,10 +212,17 @@ void progress_dialog_server::operator()()
 
 				std::string progr = "Progress:";
 
-				if (ftotal)
-					fmt::append(progr, " file %u of %u%s", fdone, ftotal, ptotal ? "," : "");
-				if (ptotal)
-					fmt::append(progr, " module %u of %u", pdone, ptotal);
+				if (ftotal || ptotal)
+				{
+					if (ftotal)
+						fmt::append(progr, " file %u of %u%s", fdone, ftotal, ptotal ? "," : "");
+					if (ptotal)
+						fmt::append(progr, " module %u of %u", pdone, ptotal);
+				}
+				else
+				{
+					fmt::append(progr, " analysing...");
+				}
 
 				// Changes detected, send update
 				if (native_dlg)
