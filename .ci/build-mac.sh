@@ -18,7 +18,7 @@ if [ "$INSTALL_DEPS" = "true" ] ; then
 
   arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   arch -x86_64 /usr/local/bin/brew update
-  arch -x86_64 /usr/local/bin/brew install --build-from-source ffmpeg gnutls
+  arch -x86_64 /usr/local/bin/brew install --build-from-source ffmpeg gnutls freetype
   arch -x86_64 /usr/local/bin/brew install -f --overwrite llvm@16 glew cmake sdl2 vulkan-headers coreutils
   arch -x86_64 /usr/local/bin/brew link -f llvm@16
 
