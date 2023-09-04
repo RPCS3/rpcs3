@@ -5,7 +5,7 @@
 #elif defined(__APPLE__)
 // nothing
 #elif defined(HAVE_X11)
-// Cannot include Xlib.h before Qt5
+// Cannot include Xlib.h before Qt
 // and we don't need all of Xlib anyway
 using Display = struct _XDisplay;
 using Window  = unsigned long;

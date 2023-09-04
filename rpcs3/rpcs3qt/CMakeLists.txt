@@ -65,7 +65,7 @@ add_library(rpcs3_ui STATIC
     progress_indicator.cpp
     qt_camera_error_handler.cpp
     qt_camera_handler.cpp
-    qt_camera_video_surface.cpp
+    qt_camera_video_sink.cpp
     qt_music_error_handler.cpp
     qt_music_handler.cpp
     qt_utils.cpp
@@ -124,6 +124,7 @@ add_library(rpcs3_ui STATIC
 
 if(WIN32)
     target_sources(rpcs3_ui PUBLIC "../windows.qrc")
+    target_compile_definitions(rpcs3_ui PRIVATE UNICODE _UNICODE)
 endif()
 
 set_target_properties(rpcs3_ui
@@ -140,7 +141,7 @@ target_compile_definitions(rpcs3_ui PRIVATE WIN32_LEAN_AND_MEAN)
 
 target_link_libraries(rpcs3_ui
     PUBLIC
-        3rdparty::qt5 3rdparty::yaml-cpp
+        3rdparty::qt6 3rdparty::yaml-cpp
 
     PRIVATE
         rpcs3_emu

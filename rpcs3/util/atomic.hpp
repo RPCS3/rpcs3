@@ -129,53 +129,20 @@ enum class atomic_wait_timeout : u64
 	inf = 0xffffffffffffffff,
 };
 
+template <typename T>
+class lf_queue;
+
+namespace stx
+{
+	template <typename T>
+	class atomic_ptr;
+}
+
 // Various extensions for atomic_t::wait
 namespace atomic_wait
 {
 	// Max number of simultaneous atomic variables to wait on (can be extended if really necessary)
 	constexpr uint max_list = 8;
-
-	enum class op : u8
-	{
-		eq, // Wait while value is bitwise equal to
-		slt, // Wait while signed value is less than
-		sgt, // Wait while signed value is greater than
-		ult, // Wait while unsigned value is less than
-		ugt, // Wait while unsigned value is greater than
-		alt, // Wait while absolute value is less than
-		agt, // Wait while absolute value is greater than
-		pop, // Wait while set bit count of the value is less than
-		__max
-	};
-
-	static_assert(static_cast<u8>(op::__max) == 8);
-
-	enum class op_flag : u8
-	{
-		inverse = 1 << 4, // Perform inverse operation (negate the result)
-		bit_not = 1 << 5, // Perform bitwise NOT on loaded value before operation
-		byteswap = 1 << 6, // Perform byteswap on both arguments and masks when applicable
-	};
-
-	constexpr op_flag op_be = std::endian::native == std::endian::little ? op_flag::byteswap : op_flag{0};
-	constexpr op_flag op_le = std::endian::native == std::endian::little ? op_flag{0} : op_flag::byteswap;
-
-	constexpr op operator |(op_flag lhs, op_flag rhs)
-	{
-		return op{static_cast<u8>(static_cast<u8>(lhs) | static_cast<u8>(rhs))};
-	}
-
-	constexpr op operator |(op_flag lhs, op rhs)
-	{
-		return op{static_cast<u8>(static_cast<u8>(lhs) | static_cast<u8>(rhs))};
-	}
-
-	constexpr op operator |(op lhs, op_flag rhs)
-	{
-		return op{static_cast<u8>(static_cast<u8>(lhs) | static_cast<u8>(rhs))};
-	}
-
-	constexpr op op_ne = op::eq | op_flag::inverse;
 
 	constexpr struct any_value_t
 	{
@@ -186,46 +153,10 @@ namespace atomic_wait
 		}
 	} any_value;
 
-	template <typename X>
-	using payload_type = decltype(std::declval<X>().observe());
-
-	template <typename X, typename T = payload_type<X>>
-	constexpr u128 default_mask = sizeof(T) <= 8 ? u128{u64{umax} >> ((64 - sizeof(T) * 8) & 63)} : u128(-1);
-
-	template <typename X, typename T = payload_type<X>>
-	constexpr u128 get_value(X&, T value = T{}, ...)
-	{
-		static_assert((sizeof(T) & (sizeof(T) - 1)) == 0);
-		static_assert(sizeof(T) <= 16);
-		return std::bit_cast<get_uint_t<sizeof(T)>, T>(value);
-	}
-
 	struct info
 	{
 		const void* data;
-		u32 size;
-		u128 old;
-		u128 mask;
-
-		template <typename X, typename T = payload_type<X>>
-		constexpr void set_value(X& a, T value = T{})
-		{
-			old = get_value(a, value);
-		}
-
-		template <typename X, typename T = payload_type<X>>
-		constexpr void set_mask(T value)
-		{
-			static_assert((sizeof(T) & (sizeof(T) - 1)) == 0);
-			static_assert(sizeof(T) <= 16);
-			mask = std::bit_cast<get_uint_t<sizeof(T)>, T>(value);
-		}
-
-		template <typename X, typename T = payload_type<X>>
-		constexpr void set_mask()
-		{
-			mask = default_mask<X>;
-		}
+		u32 old;
 	};
 
 	template <uint Max, typename... T>
@@ -243,9 +174,9 @@ namespace atomic_wait
 
 		constexpr list& operator=(const list&) noexcept = default;
 
-		template <typename... U, typename = std::void_t<decltype(std::declval<U>().template wait<op::eq>(any_value))...>>
+		template <typename... U, typename = std::void_t<decltype(std::declval<U>().wait(any_value))...>>
 		constexpr list(U&... vars)
-			: m_info{{&vars, sizeof(vars.observe()), get_value(vars), default_mask<U>}...}
+			: m_info{{&vars, 0}...}
 		{
 			static_assert(sizeof...(U) == Max, "Inconsistent amount of atomics.");
 		}
@@ -256,40 +187,37 @@ namespace atomic_wait
 			static_assert(sizeof...(U) == Max, "Inconsistent amount of values.");
 
 			auto* ptr = m_info;
-			((ptr->template set_value<T>(*static_cast<T*>(ptr->data), values), ptr++), ...);
+			(((ptr->old = std::bit_cast<u32>(values)), ptr++), ...);
 			return *this;
 		}
 
-		template <typename... U>
-		constexpr list& masks(U... masks)
-		{
-			static_assert(sizeof...(U) <= Max, "Too many masks.");
-
-			auto* ptr = m_info;
-			((ptr++)->template set_mask<T>(masks), ...);
-			return *this;
-		}
-
-		template <uint Index, op Flags = op::eq, typename T2, typename U, typename = std::void_t<decltype(std::declval<T2>().template wait<op::eq>(any_value))>>
+		template <uint Index, typename T2, typename U, typename = std::void_t<decltype(std::declval<T2>().wait(any_value))>>
 		constexpr void set(T2& var, U value)
 		{
 			static_assert(Index < Max);
 
 			m_info[Index].data = &var;
-			m_info[Index].size = sizeof(var.observe()) | (static_cast<u8>(Flags) << 8);
-			m_info[Index].template set_value<T2>(var, value);
-			m_info[Index].template set_mask<T2>();
+			m_info[Index].old = std::bit_cast<u32>(value);
 		}
 
-		template <uint Index, op Flags = op::eq, typename T2, typename U, typename V, typename = std::void_t<decltype(std::declval<T2>().template wait<op::eq>(any_value))>>
-		constexpr void set(T2& var, U value, V mask)
+		template <uint Index, typename T2>
+		constexpr void set(lf_queue<T2>& var, std::nullptr_t = nullptr)
 		{
 			static_assert(Index < Max);
+			static_assert(sizeof(var) == sizeof(uptr));
 
-			m_info[Index].data = &var;
-			m_info[Index].size = sizeof(var.observe()) | (static_cast<u8>(Flags) << 8);
-			m_info[Index].template set_value<T2>(var, value);
-			m_info[Index].template set_mask<T2>(mask);
+			m_info[Index].data = reinterpret_cast<char*>(&var) + sizeof(u32);
+			m_info[Index].old = 0;
+		}
+
+		template <uint Index, typename T2>
+		constexpr void set(stx::atomic_ptr<T2>& var, std::nullptr_t = nullptr)
+		{
+			static_assert(Index < Max);
+			static_assert(sizeof(var) == sizeof(uptr));
+
+			m_info[Index].data = reinterpret_cast<char*>(&var) + sizeof(u32);
+			m_info[Index].old = 0;
 		}
 
 		// Timeout is discouraged
@@ -302,7 +230,7 @@ namespace atomic_wait
 		}
 	};
 
-	template <typename... T, typename = std::void_t<decltype(std::declval<T>().template wait<op::eq>(any_value))...>>
+	template <typename... T, typename = std::void_t<decltype(std::declval<T>().wait(any_value))...>>
 	list(T&... vars) -> list<sizeof...(T), T...>;
 }
 
@@ -322,20 +250,15 @@ private:
 	template <uint Max, typename... T>
 	friend class atomic_wait::list;
 
-	static void wait(const void* data, u32 size, u128 old_value, u64 timeout, u128 mask, atomic_wait::info* ext = nullptr);
+	static void wait(const void* data, u32 old_value, u64 timeout, atomic_wait::info* ext = nullptr);
 
 public:
-	static void notify_one(const void* data, u32 size, u128 mask128);
-	static void notify_all(const void* data, u32 size, u128 mask128);
+	static void notify_one(const void* data);
+	static void notify_all(const void* data);
 
 	static void set_wait_callback(bool(*cb)(const void* data, u64 attempts, u64 stamp0));
 	static void set_notify_callback(void(*cb)(const void* data, u64 progress));
-	static void set_one_time_use_wait_callback(bool(*cb)(u64 progress));
-
-	static void notify_all(const void* data)
-	{
-		notify_all(data, 0, u128(-1));
-	}
+	static void set_one_time_use_wait_callback(bool (*cb)(u64 progress));
 };
 
 template <uint Max, typename... T>
@@ -343,7 +266,7 @@ void atomic_wait::list<Max, T...>::wait(atomic_wait_timeout timeout)
 {
 	static_assert(!!Max, "Cannot initiate atomic wait with empty list.");
 
-	atomic_wait_engine::wait(m_info[0].data, m_info[0].size, m_info[0].old, static_cast<u64>(timeout), m_info[0].mask, m_info + 1);
+	atomic_wait_engine::wait(m_info[0].data, m_info[0].old, static_cast<u64>(timeout), m_info + 1);
 }
 
 // Helper class, provides access to compiler-specific atomic intrinsics
@@ -1759,46 +1682,31 @@ public:
 		});
 	}
 
-	// Timeout is discouraged
-	template <atomic_wait::op Flags = atomic_wait::op::eq>
-	void wait(type old_value, atomic_wait_timeout timeout = atomic_wait_timeout::inf) const noexcept
+	void wait(type old_value, atomic_wait_timeout timeout = atomic_wait_timeout::inf) const
+		requires(sizeof(type) == 4)
 	{
-		const u128 old = std::bit_cast<get_uint_t<sizeof(T)>>(old_value);
-		const u128 mask = atomic_wait::default_mask<atomic_t>;
-		atomic_wait_engine::wait(&m_data, sizeof(T) | (static_cast<u8>(Flags) << 8), old, static_cast<u64>(timeout), mask);
+		atomic_wait_engine::wait(&m_data, std::bit_cast<u32>(old_value), static_cast<u64>(timeout));
 	}
 
-	// Overload with mask (only selected bits are checked), timeout is discouraged
-	template <atomic_wait::op Flags = atomic_wait::op::eq>
-	void wait(type old_value, type mask_value, atomic_wait_timeout timeout = atomic_wait_timeout::inf) const noexcept
+	[[deprecated]] void wait(type old_value, atomic_wait_timeout timeout = atomic_wait_timeout::inf) const
+		requires(sizeof(type) == 8)
 	{
-		const u128 old = std::bit_cast<get_uint_t<sizeof(T)>>(old_value);
-		const u128 mask = std::bit_cast<get_uint_t<sizeof(T)>>(mask_value);
-		atomic_wait_engine::wait(&m_data, sizeof(T) | (static_cast<u8>(Flags) << 8), old, static_cast<u64>(timeout), mask);
+		atomic_wait::info ext[2]{};
+		ext[0].data = reinterpret_cast<const char*>(&m_data) + 4;
+		ext[0].old = std::bit_cast<u64>(old_value) >> 32;
+		atomic_wait_engine::wait(&m_data, std::bit_cast<u64>(old_value), static_cast<u64>(timeout), ext);
 	}
 
-	void notify_one() noexcept
+	void notify_one()
+		requires(sizeof(type) == 4 || sizeof(type) == 8)
 	{
-		atomic_wait_engine::notify_one(&m_data, sizeof(T), atomic_wait::default_mask<atomic_t>);
+		atomic_wait_engine::notify_one(&m_data);
 	}
 
-	// Notify with mask, allowing to not wake up thread which doesn't wait on this mask
-	void notify_one(type mask_value) noexcept
+	void notify_all()
+		requires(sizeof(type) == 4 || sizeof(type) == 8)
 	{
-		const u128 mask = std::bit_cast<get_uint_t<sizeof(T)>>(mask_value);
-		atomic_wait_engine::notify_one(&m_data, sizeof(T), mask);
-	}
-
-	void notify_all() noexcept
-	{
-		atomic_wait_engine::notify_all(&m_data, sizeof(T), atomic_wait::default_mask<atomic_t>);
-	}
-
-	// Notify all threads with mask, allowing to not wake up threads which don't wait on them
-	void notify_all(type mask_value) noexcept
-	{
-		const u128 mask = std::bit_cast<get_uint_t<sizeof(T)>>(mask_value);
-		atomic_wait_engine::notify_all(&m_data, sizeof(T), mask);
+		atomic_wait_engine::notify_all(&m_data);
 	}
 };
 
@@ -1874,23 +1782,6 @@ public:
 	{
 		return base::fetch_xor(1) != 0;
 	}
-
-	// Timeout is discouraged
-	template <atomic_wait::op Flags = atomic_wait::op::eq>
-	void wait(bool old_value, atomic_wait_timeout timeout = atomic_wait_timeout::inf) const noexcept
-	{
-		base::template wait<Flags>(old_value, 1, timeout);
-	}
-
-	void notify_one() noexcept
-	{
-		base::notify_one(1);
-	}
-
-	void notify_all() noexcept
-	{
-		base::notify_all(1);
-	}
 };
 
 // Specializations
@@ -1903,12 +1794,6 @@ struct std::common_type<atomic_t<T, Align>, T2> : std::common_type<T, std::commo
 
 template <typename T, typename T2, usz Align2>
 struct std::common_type<T, atomic_t<T2, Align2>> : std::common_type<std::common_type_t<T>, T2> {};
-
-namespace atomic_wait
-{
-	template <usz Align>
-	constexpr u128 default_mask<atomic_t<bool, Align>> = 1;
-}
 
 #ifndef _MSC_VER
 #pragma GCC diagnostic pop

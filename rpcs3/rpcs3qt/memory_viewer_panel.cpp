@@ -1150,7 +1150,7 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, color_format form
 		{
 			if (object == m_canvas && (event->type() == QEvent::HoverMove || event->type() == QEvent::HoverEnter || event->type() == QEvent::HoverLeave))
 			{
-				const QPoint xy = static_cast<QHoverEvent*>(event)->pos() / m_canvas_scale;
+				const QPointF xy = static_cast<QHoverEvent*>(event)->position() / m_canvas_scale;
 				set_window_name_by_coordinates(xy.x(), xy.y());
 				return false;
 			}
@@ -1159,7 +1159,7 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, color_format form
 			{
 				QLineEdit* addr_line = static_cast<memory_viewer_panel*>(parent())->m_addr_line;
 
-				const QPoint xy = static_cast<QMouseEvent*>(event)->pos() / m_canvas_scale;
+				const QPointF xy = static_cast<QMouseEvent*>(event)->position() / m_canvas_scale;
 				addr_line->setText(qstr(fmt::format("%08x", get_pointed_addr(xy.x(), xy.y()))));
 				Q_EMIT addr_line->returnPressed();
 				close();

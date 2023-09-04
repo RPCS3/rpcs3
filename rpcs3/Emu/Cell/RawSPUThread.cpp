@@ -21,7 +21,7 @@ inline void try_start(spu_thread& spu)
 	}).second)
 	{
 		spu.state -= cpu_flag::stop;
-		spu.state.notify_one(cpu_flag::stop);
+		spu.state.notify_one();
 	}
 };
 
@@ -273,7 +273,7 @@ bool spu_thread::write_reg(const u32 addr, const u32 value)
 
 				for (status_npc_sync_var old; (old = status_npc).status & SPU_STATUS_RUNNING;)
 				{
-					status_npc.wait(old);
+					utils::bless<atomic_t<u32>>(&status_npc)[0].wait(old.status);
 				}
 			}
 		}
@@ -382,6 +382,18 @@ void spu_load_exec(const spu_exec_object& elf)
 
 	spu->status_npc = {SPU_STATUS_RUNNING, elf.header.e_entry};
 	atomic_storage<u32>::release(spu->pc, elf.header.e_entry);
+
+	const auto funcs = spu->discover_functions(0, { spu->ls , SPU_LS_SIZE }, true, umax);
+
+	for (u32 addr : funcs)
+	{
+		spu_log.success("Found SPU function at: 0x%08x", addr);
+	}
+
+	if (!funcs.empty())
+	{
+		spu_log.success("Found %u SPU functions", funcs.size());
+	}
 }
 
 void spu_load_rel_exec(const spu_rel_object& elf)
@@ -410,7 +422,7 @@ void spu_load_rel_exec(const spu_rel_object& elf)
 	{
 		if (shdr.sh_type == sec_type::sht_progbits && shdr.sh_flags().all_of(sh_flag::shf_alloc))
 		{
-			std::memcpy(spu->_ptr<void>(offs), shdr.bin.data(), shdr.sh_size);
+			std::memcpy(spu->_ptr<void>(offs), shdr.get_bin().data(), shdr.sh_size);
 			offs = utils::align<u32>(offs + shdr.sh_size, 4);
 		}
 	}

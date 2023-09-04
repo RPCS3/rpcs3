@@ -14,8 +14,8 @@ if(WITH_LLVM)
 		option(LLVM_INCLUDE_TESTS OFF)
 		option(LLVM_INCLUDE_TOOLS OFF)
 		option(LLVM_INCLUDE_UTILS OFF)
-		# we globally enable ccache
-		set(LLVM_CCACHE_BUILD OFF CACHE BOOL "Set to ON for a ccache enabled build")
+		option(LLVM_CCACHE_BUILD ON)
+		set(LLVM_ENABLE_WARNINGS OFF CACHE BOOL "Enable compiler warnings.")
 
 		if(WIN32)
 			set(LLVM_USE_INTEL_JITEVENTS ON)

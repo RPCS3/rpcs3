@@ -28,7 +28,7 @@ struct cfg_root : cfg::node
 		cfg::string llvm_cpu{ this, "Use LLVM CPU" };
 		cfg::_int<0, 1024> llvm_threads{ this, "Max LLVM Compile Threads", 0 };
 		cfg::_bool ppu_llvm_greedy_mode{ this, "PPU LLVM Greedy Mode", false, false };
-		cfg::_bool ppu_llvm_precompilation{ this, "PPU LLVM Precompilation", true };
+		cfg::_bool llvm_precompilation{ this, "LLVM Precompilation", true };
 		cfg::_enum<thread_scheduler_mode> thread_scheduler{this, "Thread Scheduler Mode", thread_scheduler_mode::os};
 		cfg::_bool set_daz_and_ftz{ this, "Set DAZ and FTZ", false };
 		cfg::_enum<spu_decoder_type> spu_decoder{ this, "SPU Decoder", spu_decoder_type::llvm };
@@ -38,7 +38,7 @@ struct cfg_root : cfg::node
 		cfg::_bool mfc_debug{ this, "MFC Debug" };
 		cfg::_int<0, 6> preferred_spu_threads{ this, "Preferred SPU Threads", 0, true }; // Number of hardware threads dedicated to heavy simultaneous spu tasks
 		cfg::_int<0, 16> spu_delay_penalty{ this, "SPU delay penalty", 3 }; // Number of milliseconds to block a thread if a virtual 'core' isn't free
-		cfg::_bool spu_loop_detection{ this, "SPU loop detection", false, true }; // Try to detect wait loops and trigger thread yield
+		cfg::_bool spu_loop_detection{ this, "SPU loop detection", false }; // Try to detect wait loops and trigger thread yield
 		cfg::_int<0, 6> max_spurs_threads{ this, "Max SPURS Threads", 6 }; // HACK. If less then 6, max number of running SPURS threads in each thread group.
 		cfg::_enum<spu_block_size_type> spu_block_size{ this, "SPU Block Size", spu_block_size_type::safe };
 		cfg::_bool spu_accurate_getllar{ this, "Accurate GETLLAR", false, true };
@@ -66,9 +66,7 @@ struct cfg_root : cfg::node
 		cfg::uint<0, 10000> mfc_transfers_timeout{ this, "MFC Commands Timeout", 0, true };
 		cfg::_bool mfc_shuffling_in_steps{ this, "MFC Commands Shuffling In Steps", false, true };
 		cfg::_enum<tsx_usage> enable_TSX{ this, "Enable TSX", enable_tsx_by_default() ? tsx_usage::enabled : tsx_usage::disabled }; // Enable TSX. Forcing this on Haswell/Broadwell CPUs should be used carefully
-		cfg::_bool spu_accurate_xfloat{ this, "Accurate xfloat", false };
-		cfg::_bool spu_approx_xfloat{ this, "Approximate xfloat", true };
-		cfg::_bool spu_relaxed_xfloat{ this, "Relaxed xfloat", true }; // Approximate accuracy for only the "FCGT", "FNMS", "FREST" AND "FRSQEST" instructions
+		cfg::_enum<xfloat_accuracy> spu_xfloat_accuracy{ this, "XFloat Accuracy", xfloat_accuracy::approximate, false };
 		cfg::_int<-1, 14> ppu_128_reservations_loop_max_length{ this, "Accurate PPU 128-byte Reservation Op Max Length", 0, true }; // -1: Always accurate, 0: Never accurate, 1-14: max accurate loop length
 		cfg::_int<-64, 64> stub_ppu_traps{ this, "Stub PPU Traps", 0, true }; // Hack, skip PPU traps for rare cases where the trap is continueable (specify relative instructions to skip)
 		cfg::_bool full_width_avx512{ this, "Full Width AVX-512", true };
@@ -280,6 +278,7 @@ struct cfg_root : cfg::node
 		cfg::_bool show_move_cursor{this, "Show move cursor", false, true};
 		cfg::_bool lock_overlay_input_to_player_one{this, "Lock overlay input to player one", false, true};
 		cfg::string midi_devices{ this, "Emulated Midi devices", "ßßß@@@ßßß@@@ßßß@@@" };
+		cfg::_bool load_sdl_mappings{ this, "Load SDL GameController Mappings", true };
 	} io{ this };
 
 	struct node_sys : cfg::node

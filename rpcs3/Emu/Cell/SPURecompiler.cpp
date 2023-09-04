@@ -516,6 +516,70 @@ spu_cache::~spu_cache()
 {
 }
 
+extern void utilize_spu_data_segment(u32 vaddr, const void* ls_data_vaddr, u32 size)
+{
+	if (vaddr % 4)
+	{
+		return;
+	}
+
+	size &= -4;
+
+	if (!size || vaddr + size > SPU_LS_SIZE)
+	{
+		return;
+	}
+
+	if (!g_cfg.core.llvm_precompilation)
+	{
+		return;
+	}
+
+	g_fxo->need<spu_cache>();
+
+	if (!g_fxo->get<spu_cache>().collect_funcs_to_precompile)
+	{
+		return;
+	}
+
+	std::basic_string<u32> data(size / 4, 0);
+	std::memcpy(data.data(), ls_data_vaddr, size);
+
+	spu_cache::precompile_data_t obj{vaddr, std::move(data)};
+
+	obj.funcs = spu_thread::discover_functions(vaddr, { reinterpret_cast<const u8*>(ls_data_vaddr), size }, vaddr != 0, umax);
+
+	if (obj.funcs.empty())
+	{
+		// Nothing to add
+		return;
+	}
+
+	for (u32 addr : obj.funcs)
+	{
+		spu_log.notice("Found SPU function at: 0x%05x", addr);
+	}
+
+	spu_log.notice("Found %u SPU functions", obj.funcs.size());
+
+	g_fxo->get<spu_cache>().precompile_funcs.push(std::move(obj));
+}
+
+// For SPU cache validity check
+static u16 calculate_crc16(const uchar* data, usz length)
+{
+	u16 crc = umax;
+
+	while (length--)
+	{
+		u8 x = (crc >> 8) ^ *data++;
+		x ^= (x >> 4);
+		crc = static_cast<u16>((crc << 8) ^ (x << 12) ^ (x << 5) ^ x);
+	}
+
+	return crc;
+}
+
 std::deque<spu_program> spu_cache::get()
 {
 	std::deque<spu_program> result;
@@ -530,18 +594,30 @@ std::deque<spu_program> spu_cache::get()
 	// TODO: signal truncated or otherwise broken file
 	while (true)
 	{
-		be_t<u32> size;
-		be_t<u32> addr;
-		std::vector<u32> func;
+		struct block_info_t
+		{
+			be_t<u16> crc;
+			be_t<u16> size;
+			be_t<u32> addr;
+		} block_info{};
 
-		if (!m_file.read(size) || !m_file.read(addr))
+		if (!m_file.read(block_info))
 		{
 			break;
 		}
 
-		func.resize(size);
+		const u32 crc = block_info.crc;
+		const u32 size = block_info.size;
+		const u32 addr = block_info.addr;
 
-		if (m_file.read(func.data(), func.size() * 4) != func.size() * 4)
+		if (utils::add_saturate<u32>(addr, size * 4) > SPU_LS_SIZE)
+		{
+			break;
+		}
+
+		std::vector<u32> func;
+
+		if (!m_file.read(func, size))
 		{
 			break;
 		}
@@ -549,6 +625,13 @@ std::deque<spu_program> spu_cache::get()
 		if (!size || !func[0])
 		{
 			// Skip old format Giga entries
+			continue;
+		}
+
+		// CRC check is optional to be compatible with old format
+		if (crc && std::max<u32>(calculate_crc16(reinterpret_cast<const uchar*>(func.data()), size * 4), 1) != crc)
+		{
+			// Invalid, but continue anyway
 			continue;
 		}
 
@@ -572,6 +655,9 @@ void spu_cache::add(const spu_program& func)
 	be_t<u32> size = ::size32(func.data);
 	be_t<u32> addr = func.entry_point;
 
+	// Add CRC (forced non-zero)
+	size |= std::max<u32>(calculate_crc16(reinterpret_cast<const uchar*>(func.data.data()), size * 4), 1) << 16;
+
 	const fs::iovec_clone gather[3]
 	{
 		{&size, sizeof(size)},
@@ -583,7 +669,7 @@ void spu_cache::add(const spu_program& func)
 	m_file.write_gather(gather, 3);
 }
 
-void spu_cache::initialize()
+void spu_cache::initialize(bool build_existing_cache)
 {
 	spu_runtime::g_interpreter = spu_runtime::g_gateway;
 
@@ -618,6 +704,35 @@ void spu_cache::initialize()
 	atomic_t<usz> fnext{};
 	atomic_t<u8> fail_flag{0};
 
+	auto data_list = g_fxo->get<spu_cache>().precompile_funcs.pop_all();
+	g_fxo->get<spu_cache>().collect_funcs_to_precompile = false;
+
+	u32 total_precompile = 0;
+
+	for (auto& sec : data_list)
+	{
+		total_precompile += sec.funcs.size();
+	}
+
+	const bool spu_precompilation_enabled = func_list.empty() && g_cfg.core.spu_cache && g_cfg.core.llvm_precompilation;
+
+	if (spu_precompilation_enabled)
+	{
+		// What compiles in this case goes straight to disk
+		g_fxo->get<spu_cache>() = std::move(cache);
+	}
+	else if (!build_existing_cache)
+	{
+		return;
+	}
+	else
+	{
+		total_precompile = 0;
+		data_list = {};
+	}
+
+	atomic_t<usz> data_indexer = 0;
+
 	if (g_cfg.core.spu_decoder == spu_decoder_type::dynamic || g_cfg.core.spu_decoder == spu_decoder_type::llvm)
 	{
 		if (auto compiler = spu_recompiler_base::make_llvm_recompiler(11))
@@ -647,10 +762,24 @@ void spu_cache::initialize()
 	if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit || g_cfg.core.spu_decoder == spu_decoder_type::llvm)
 	{
 		// Initialize progress dialog (wait for previous progress done)
-		thread_ctrl::wait_on<atomic_wait::op_ne>(g_progr_ptotal, 0);
+		while (u32 v = g_progr_ptotal)
+		{
+			if (Emu.IsStopped() || !build_existing_cache)
+			{
+				// Workaround: disable progress dialog updates in the case of sole SPU precompilation
+				break;
+			}
 
-		g_progr_ptotal += ::size32(func_list);
-		progr.emplace("Building SPU cache...");
+			thread_ctrl::wait_on(g_progr_ptotal, v);
+		}
+
+		const u32 add_count = ::size32(func_list) + total_precompile;
+
+		if (add_count)
+		{
+			g_progr_ptotal += build_existing_cache ? add_count : 0;
+			progr.emplace("Building SPU cache...");
+		}
 
 		worker_count = rpcs3::utils::get_max_threads();
 	}
@@ -684,7 +813,7 @@ void spu_cache::initialize()
 		std::vector<be_t<u32>> ls(0x10000);
 
 		// Build functions
-		for (usz func_i = fnext++; func_i < func_list.size(); func_i = fnext++, g_progr_pdone++)
+		for (usz func_i = fnext++; func_i < func_list.size(); func_i = fnext++, g_progr_pdone += build_existing_cache ? 1 : 0)
 		{
 			const spu_program& func = std::as_const(func_list)[func_i];
 
@@ -736,6 +865,7 @@ void spu_cache::initialize()
 			{
 				// Likely, out of JIT memory. Signal to prevent further building.
 				fail_flag |= 1;
+				continue;
 			}
 
 			// Clear fake LS
@@ -744,14 +874,170 @@ void spu_cache::initialize()
 			result++;
 		}
 
+		u32 last_sec_idx = umax;
+
+		for (usz func_i = data_indexer++;; func_i = data_indexer++, g_progr_pdone += build_existing_cache ? 1 : 0)
+		{
+			u32 passed_count = 0;
+			u32 func_addr = 0;
+			u32 next_func = 0;
+			u32 sec_addr = umax;
+			u32 sec_idx = 0;
+			std::basic_string_view<u32> inst_data;
+
+			// Try to get the data this index points to
+			for (auto& sec : data_list)
+			{
+				if (func_i < passed_count + sec.funcs.size())
+				{
+					const u32 func_idx = func_i - passed_count;
+					sec_addr = sec.vaddr;
+					func_addr = ::at32(sec.funcs, func_idx);
+					next_func = sec.funcs.size() >= func_idx + 1 ? SPU_LS_SIZE : sec.funcs[func_idx];
+					inst_data = sec.inst_data;
+					break;
+				}
+
+				passed_count += sec.funcs.size();
+				sec_idx++;
+			}
+
+			if (sec_addr == umax)
+			{
+				// End of compilation for thread
+				break;
+			}
+
+			if (Emu.IsStopped() || fail_flag)
+			{
+				continue;
+			}
+
+			if (last_sec_idx != sec_idx)
+			{
+				if (last_sec_idx != umax)
+				{
+					// Clear fake LS of previous section
+					auto& sec = data_list[last_sec_idx];
+					std::memset(ls.data() + sec.vaddr / 4, 0, sec.inst_data.size() * 4);
+				}
+
+				// Initialize LS with the entire section data
+				for (u32 i = 0, pos = sec_addr; i < inst_data.size(); i++, pos += 4)
+				{
+					ls[pos / 4] =  std::bit_cast<be_t<u32>>(inst_data[i]);
+				}
+
+				last_sec_idx = sec_idx;
+			}
+
+			u32 block_addr = func_addr;
+
+			// Call analyser
+			spu_program func2 = compiler->analyse(ls.data(), block_addr);
+
+			std::map<u32, std::basic_string<u32>> targets;
+
+			while (!func2.data.empty())
+			{
+				const u32 last_inst = std::bit_cast<be_t<u32>>(func2.data.back());
+				const u32 prog_size = func2.data.size();
+
+				if (!compiler->compile(std::move(func2)))
+				{
+					// Likely, out of JIT memory. Signal to prevent further building.
+					fail_flag |= 1;
+					break;
+				}
+
+				result++;
+
+				const u32 start_new = block_addr + prog_size * 4;
+
+				if (start_new >= next_func || (start_new == next_func - 4 && ls[start_new / 4] == 0x200000u))
+				{
+					// Completed
+					break;
+				}
+
+				targets.insert(compiler->get_targets().begin(), compiler->get_targets().end());
+
+				if (auto type = g_spu_itype.decode(last_inst);
+					type == spu_itype::BRSL || type == spu_itype::BRASL || type == spu_itype::BISL || type == spu_itype::SYNC)
+				{
+					if (ls[start_new / 4] && g_spu_itype.decode(ls[start_new / 4]) != spu_itype::UNK)
+					{
+						spu_log.notice("Precompiling fallthrough to 0x%05x", start_new);
+						func2 = compiler->analyse(ls.data(), start_new);
+						block_addr = start_new;
+						continue;
+					}
+				}
+
+				if (targets.empty())
+				{
+					break;
+				}
+
+				const auto upper = targets.upper_bound(func_addr);
+
+				if (upper == targets.begin())
+				{
+					break;
+				}
+
+				u32 new_entry = umax;
+
+				// Find the lowest target in the space in-between
+				for (auto it = std::prev(upper); it != targets.end() && it->first < start_new && new_entry > start_new; it++)
+				{
+					for (u32 target : it->second)
+					{
+						if (target >= start_new && target < next_func)
+						{
+							if (target < new_entry)
+							{
+								new_entry = target;
+
+								if (new_entry == start_new)
+								{
+									// Cannot go lower
+									break;
+								}
+							}
+						}
+					}
+				}
+
+				if (new_entry == umax)
+				{
+					break;
+				}
+
+				if (!spu_thread::is_exec_code(new_entry, { reinterpret_cast<const u8*>(ls.data()), SPU_LS_SIZE }))
+				{
+					break;
+				}
+
+				spu_log.notice("Precompiling filler space at 0x%05x (next=0x%05x)", new_entry, next_func);
+				func2 = compiler->analyse(ls.data(), new_entry);
+				block_addr = new_entry;
+			}
+		}
+
 		return result;
 	});
+
+	u32 built_total = 0;
 
 	// Join (implicitly) and print individual results
 	for (u32 i = 0; i < workers.size(); i++)
 	{
 		spu_log.notice("SPU Runtime: Worker %u built %u programs.", i + 1, workers[i]);
+		built_total += workers[i];
 	}
+
+	spu_log.notice("SPU Runtime: Workers built %u programs.", built_total);
 
 	if (Emu.IsStopped())
 	{
@@ -873,7 +1159,7 @@ void spu_cache::initialize()
 	}
 
 	// Initialize global cache instance
-	if (g_cfg.core.spu_cache)
+	if (g_cfg.core.spu_cache && cache)
 	{
 		g_fxo->get<spu_cache>() = std::move(cache);
 	}
@@ -1896,6 +2182,149 @@ void spu_recompiler_base::old_interpreter(spu_thread& spu, void* ls, u8* /*rip*/
 	}
 }
 
+std::vector<u32> spu_thread::discover_functions(u32 base_addr, std::span<const u8> ls, bool is_known_addr, u32 /*entry*/)
+{
+	std::vector<u32> calls;
+	std::vector<u32> branches;
+
+	calls.reserve(100);
+
+	// Discover functions
+	// Use the most simple method: search for instructions that calls them
+	// And then filter invalid cases
+	// TODO: Does not detect jumptables or fixed-addr indirect calls
+	const v128 brasl_mask = is_known_addr ? v128::from32p(0x62u << 23) : v128::from32p(umax);
+
+	for (u32 i = utils::align<u32>(base_addr, 0x10); i < std::min<u32>(base_addr + ls.size(), 0x3FFF0); i += 0x10)
+	{
+		// Search for BRSL LR and BRASL LR or BR
+		// TODO: BISL
+		const v128 inst = read_from_ptr<be_t<v128>>(ls.data(), i - base_addr);
+		const v128 cleared_i16 = gv_and32(inst, v128::from32p(utils::rol32(~0xffff, 7)));
+		const v128 eq_brsl = gv_eq32(cleared_i16, v128::from32p(0x66u << 23));
+		const v128 eq_brasl = gv_eq32(cleared_i16, brasl_mask);
+		const v128 eq_br = gv_eq32(cleared_i16, v128::from32p(0x64u << 23));
+		const v128 result = eq_brsl | eq_brasl;
+
+		if (!gv_testz(result))
+		{
+			for (u32 j = 0; j < 4; j++)
+			{
+				if (result.u32r[j])
+				{
+					calls.push_back(i + j * 4);
+				}
+			}
+		}
+
+		if (!gv_testz(eq_br))
+		{
+			for (u32 j = 0; j < 4; j++)
+			{
+				if (eq_br.u32r[j])
+				{
+					branches.push_back(i + j * 4);
+				}
+			}
+		}
+	}
+
+	calls.erase(std::remove_if(calls.begin(), calls.end(), [&](u32 caller)
+	{
+		// Check the validity of both the callee code and the following caller code
+		return !is_exec_code(caller, ls, base_addr) || !is_exec_code(caller + 4, ls, base_addr);
+	}), calls.end());
+
+	branches.erase(std::remove_if(branches.begin(), branches.end(), [&](u32 caller)
+	{
+		// Check the validity of the callee code
+		return !is_exec_code(caller, ls, base_addr);
+	}), branches.end());
+
+	std::vector<u32> addrs;
+
+	for (u32 addr : calls)
+	{
+		const spu_opcode_t op{read_from_ptr<be_t<u32>>(ls, addr - base_addr)};
+
+		const u32 func = op_branch_targets(addr, op)[0];
+
+		if (func == umax || addr + 4 == func || func == addr || std::count(addrs.begin(), addrs.end(), func))
+		{
+			continue;
+		}
+
+		addrs.push_back(func);
+	}
+
+	for (u32 addr : branches)
+	{
+		const spu_opcode_t op{read_from_ptr<be_t<u32>>(ls, addr - base_addr)};
+
+		const u32 func = op_branch_targets(addr, op)[0];
+
+		if (func == umax || addr + 4 == func || func == addr || !addr)
+		{
+			continue;
+		}
+
+		// Search for AI R1, +x or OR R3/4, Rx, 0
+		// Reasoning: AI R1, +x means stack pointer restoration, branch after that is likely a tail call
+		// R3 and R4 are common function arguments because they are the first two
+		for (u32 back = addr - 4, it = 10; it && back >= base_addr && back < std::min<u32>(base_addr + ls.size(), 0x3FFF0); it--, back -= 4)
+		{
+			const spu_opcode_t test_op{read_from_ptr<be_t<u32>>(ls, back - base_addr)};
+			const auto type = g_spu_itype.decode(test_op.opcode);
+
+			if (type & spu_itype::branch)
+			{
+				break;
+			}
+
+			bool is_tail = false;
+
+			if (type == spu_itype::AI && test_op.rt == 1u && test_op.ra == 1u)
+			{
+				if (test_op.si10 <= 0)
+				{
+					break;
+				}
+
+				is_tail = true;
+			}
+			else if (!(type & spu_itype::zregmod))
+			{
+				const u32 op_rt = type & spu_itype::_quadrop ? +test_op.rt4 : +test_op.rt;
+
+				if (op_rt >= 80u && (type != spu_itype::LQD || test_op.ra != 1u))
+				{
+					// Modifying non-volatile registers, not a call (and not context restoration)
+					break;
+				}
+
+				//is_tail = op_rt == 3u || op_rt == 4u;
+			}
+
+			if (!is_tail)
+			{
+				continue;
+			}
+
+			if (std::count(addrs.begin(), addrs.end(), func))
+			{
+				break;
+			}
+
+			addrs.push_back(func);
+			break;
+		}
+	}
+
+	std::sort(addrs.begin(), addrs.end());
+
+	return addrs;
+}
+
 spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 {
 	// Result: addr + raw instruction data
@@ -2104,6 +2533,12 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 				const u32 target = spu_branch_target(av);
 
 				spu_log.warning("[0x%x] At 0x%x: indirect branch to 0x%x%s", entry_point, pos, target, op.d ? " (D)" : op.e ? " (E)" : "");
+
+				if (type == spu_itype::BI && target == pos + 4 && op.d)
+				{
+					// Disable interrupts idiom
+					break;
+				}
 
 				m_targets[pos].push_back(target);
 
@@ -5313,7 +5748,7 @@ public:
 						if (src > 0x40000)
 						{
 							// Use the xfloat hint to create 256-bit (4x double) PHI
-							llvm::Type* type = g_cfg.core.spu_accurate_xfloat && bb.reg_maybe_xf[i] ? get_type<f64[4]>() : get_reg_type(i);
+							llvm::Type* type = g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate && bb.reg_maybe_xf[i] ? get_type<f64[4]>() : get_reg_type(i);
 
 							const auto _phi = m_ir->CreatePHI(type, ::size32(bb.preds), fmt::format("phi0x%05x_r%u", baddr, i));
 							m_block->phi[i] = _phi;
@@ -6513,6 +6948,24 @@ public:
 		}
 		case SPU_RdDec:
 		{
+			if (utils::get_tsc_freq() && !(g_cfg.core.spu_loop_detection) && (g_cfg.core.clocks_scale == 100))
+			{
+				const auto timestamp = m_ir->CreateLoad(get_type<u64>(), spu_ptr<u64>(&spu_thread::ch_dec_start_timestamp));
+				const auto dec_value = m_ir->CreateLoad(get_type<u32>(), spu_ptr<u32>(&spu_thread::ch_dec_value));
+				const auto tsc = m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::x86_rdtsc));
+				const auto tscx = m_ir->CreateMul(m_ir->CreateUDiv(tsc, m_ir->getInt64(utils::get_tsc_freq())), m_ir->getInt64(80000000));
+				const auto tscm = m_ir->CreateUDiv(m_ir->CreateMul(m_ir->CreateURem(tsc, m_ir->getInt64(utils::get_tsc_freq())), m_ir->getInt64(80000000)), m_ir->getInt64(utils::get_tsc_freq()));
+				const auto tsctb = m_ir->CreateAdd(tscx, tscm);
+
+				const auto frz = m_ir->CreateLoad(get_type<u8>(), spu_ptr<u8>(&spu_thread::is_dec_frozen));
+				const auto frzev = m_ir->CreateICmpEQ(frz, m_ir->getInt8(0));
+
+				const auto delta = m_ir->CreateTrunc(m_ir->CreateSub(tsctb, timestamp), get_type<u32>());
+				const auto deltax = m_ir->CreateSelect(frzev, delta, m_ir->getInt32(0));
+				res.value = m_ir->CreateSub(dec_value, deltax);
+				break;
+			}
+
 			res.value = call("spu_read_decrementer", &exec_read_dec, m_thread);
 			break;
 		}
@@ -7180,7 +7633,20 @@ public:
 		case SPU_WrDec:
 		{
 			call("spu_get_events", &exec_get_events, m_thread, m_ir->getInt32(SPU_EVENT_TM));
-			m_ir->CreateStore(call("get_timebased_time", &get_timebased_time), spu_ptr<u64>(&spu_thread::ch_dec_start_timestamp));
+
+			if (utils::get_tsc_freq() && !(g_cfg.core.spu_loop_detection) && (g_cfg.core.clocks_scale == 100))
+			{
+				const auto tsc = m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::x86_rdtsc));
+				const auto tscx = m_ir->CreateMul(m_ir->CreateUDiv(tsc, m_ir->getInt64(utils::get_tsc_freq())), m_ir->getInt64(80000000));
+				const auto tscm = m_ir->CreateUDiv(m_ir->CreateMul(m_ir->CreateURem(tsc, m_ir->getInt64(utils::get_tsc_freq())), m_ir->getInt64(80000000)), m_ir->getInt64(utils::get_tsc_freq()));
+				const auto tsctb = m_ir->CreateAdd(tscx, tscm);
+				m_ir->CreateStore(tsctb, spu_ptr<u64>(&spu_thread::ch_dec_start_timestamp));
+			}
+			else
+			{
+				m_ir->CreateStore(call("get_timebased_time", &get_timebased_time), spu_ptr<u64>(&spu_thread::ch_dec_start_timestamp));
+			}
+
 			m_ir->CreateStore(val.value, spu_ptr<u32>(&spu_thread::ch_dec_value));
 			m_ir->CreateStore(m_ir->getInt8(0), spu_ptr<u8>(&spu_thread::is_dec_frozen));
 			return;
@@ -7788,19 +8254,27 @@ public:
 	void ROTQMBY(spu_opcode_t op)
 	{
 		const auto a = get_vr<u8[16]>(op.ra);
-		const auto b = get_vr<u8[16]>(op.rb);
+		const auto b = get_vr<u32[4]>(op.rb);
+
+		auto minusb = eval(-b);
+		if (auto [ok, x] = match_expr(b, -match<u32[4]>()); ok)
+		{
+			minusb = eval(x);
+		}
+
+		const auto minusbx = bitcast<u8[16]>(minusb);
 
 		// Data with swapped endian from a load instruction
 		if (auto [ok, as] = match_expr(a, byteswap(match<u8[16]>())); ok)
 		{
 			const auto sc = build<u8[16]>(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
-			const auto sh = sc - (-splat_scalar(b) & 0x1f);
+			const auto sh = sc - (splat_scalar(minusbx) & 0x1f);
 			set_vr(op.rt, pshufb(as, sh));
 			return;
 		}
 
 		const auto sc = build<u8[16]>(112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127);
-		const auto sh = sc + (-splat_scalar(b) & 0x1f);
+		const auto sh = sc + (splat_scalar(minusbx) & 0x1f);
 		set_vr(op.rt, pshufb(a, sh));
 	}
 
@@ -8627,6 +9101,20 @@ public:
 			{
 				if (data == v128::from8p(data._u8[0]))
 				{
+					if (m_use_avx512_icl)
+					{
+						if (perm_only)
+						{
+							set_vr(op.rt4, vperm2b256to128(as, b, c));
+							return;
+						}
+
+						const auto m = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
+						const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
+						const auto ab = vperm2b256to128(as, b, c);
+						set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab, mm));
+						return;
+					}
 					// See above
 					const auto x = pshufb(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
 					const auto ax = pshufb(as, c);
@@ -8661,6 +9149,42 @@ public:
 
 		if (m_use_avx512_icl && (op.ra != op.rb || m_interp_magn))
 		{
+			if (auto [ok, data] = get_const_vector(b.value, m_pos); ok)
+			{
+				if (data == v128::from8p(data._u8[0]))
+				{
+					if (perm_only)
+					{
+						set_vr(op.rt4, vperm2b256to128(a, b, eval(c ^ 0xf)));
+						return;
+					}
+
+					const auto m = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
+					const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
+					const auto ab = vperm2b256to128(a, b, eval(c ^ 0xf));
+					set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab, mm));
+					return;
+				}
+			}
+
+			if (auto [ok, data] = get_const_vector(a.value, m_pos); ok)
+			{
+				if (data == v128::from8p(data._u8[0]))
+				{
+					if (perm_only)
+					{
+						set_vr(op.rt4, vperm2b256to128(b, a, eval(c ^ 0x1f)));
+						return;
+					}
+
+					const auto m = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
+					const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
+					const auto ab = vperm2b256to128(b, a, eval(c ^ 0x1f));
+					set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab, mm));
+					return;
+				}
+			}
+
 			if (perm_only)
 			{
 				set_vr(op.rt4, vperm2b(a, b, eval(c ^ 0xf)));
@@ -8865,7 +9389,7 @@ public:
 	void FREST(spu_opcode_t op)
 	{
 		// TODO
-		if (g_cfg.core.spu_accurate_xfloat)
+		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate)
 		{
 			const auto a = get_vr<f32[4]>(op.ra);
 			const auto mask_ov = sext<s32[4]>(bitcast<s32[4]>(fabs(a)) > splat<s32[4]>(0x7e7fffff));
@@ -8874,7 +9398,7 @@ public:
 			return;
 		}
 
-		if (g_cfg.core.spu_approx_xfloat)
+		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
 		{
 			register_intrinsic("spu_frest", [&](llvm::CallInst* ci)
 			{
@@ -8907,13 +9431,13 @@ public:
 	void FRSQEST(spu_opcode_t op)
 	{
 		// TODO
-		if (g_cfg.core.spu_accurate_xfloat)
+		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate)
 		{
 			set_vr(op.rt, fsplat<f64[4]>(1.0) / fsqrt(fabs(get_vr<f64[4]>(op.ra))));
 			return;
 		}
 
-		if (g_cfg.core.spu_approx_xfloat)
+		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
 		{
 			register_intrinsic("spu_frsqest", [&](llvm::CallInst* ci)
 			{
@@ -8945,7 +9469,7 @@ public:
 
 	void FCGT(spu_opcode_t op)
 	{
-		if (g_cfg.core.spu_accurate_xfloat)
+		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate)
 		{
 			set_vr(op.rt, sext<s32[4]>(fcmp_ord(get_vr<f64[4]>(op.ra) > get_vr<f64[4]>(op.rb))));
 			return;
@@ -8992,7 +9516,7 @@ public:
 				return eval(sext<s32[4]>(bitcast<s32[4]>(a) > bitcast<s32[4]>(b)));
 			}
 
-			if (g_cfg.core.spu_approx_xfloat || g_cfg.core.spu_relaxed_xfloat)
+			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate || g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::relaxed)
 			{
 				const auto ai = eval(bitcast<s32[4]>(a));
 				const auto bi = eval(bitcast<s32[4]>(b));
@@ -9023,7 +9547,7 @@ public:
 
 	void FCMGT(spu_opcode_t op)
 	{
-		if (g_cfg.core.spu_accurate_xfloat)
+		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate)
 		{
 			set_vr(op.rt, sext<s32[4]>(fcmp_ord(fabs(get_vr<f64[4]>(op.ra)) > fabs(get_vr<f64[4]>(op.rb)))));
 			return;
@@ -9069,7 +9593,7 @@ public:
 				return eval(sext<s32[4]>(mai > mbi));
 			}
 
-			if (g_cfg.core.spu_approx_xfloat)
+			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
 			{
 				return eval(sext<s32[4]>(fcmp_uno(ma > mb) & (mai > mbi)));
 			}
@@ -9090,7 +9614,7 @@ public:
 
 	void FA(spu_opcode_t op)
 	{
-		if (g_cfg.core.spu_accurate_xfloat)
+		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate)
 		{
 			set_vr(op.rt, get_vr<f64[4]>(op.ra) + get_vr<f64[4]>(op.rb));
 			return;
@@ -9115,7 +9639,7 @@ public:
 
 	void FS(spu_opcode_t op)
 	{
-		if (g_cfg.core.spu_accurate_xfloat)
+		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate)
 		{
 			set_vr(op.rt, get_vr<f64[4]>(op.ra) - get_vr<f64[4]>(op.rb));
 			return;
@@ -9126,7 +9650,7 @@ public:
 			const auto a = value<f32[4]>(ci->getOperand(0));
 			const auto b = value<f32[4]>(ci->getOperand(1));
 
-			if (g_cfg.core.spu_approx_xfloat)
+			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
 			{
 				const auto bc = clamp_smax(b); // for #4478
 				return eval(a - bc);
@@ -9148,7 +9672,7 @@ public:
 
 	void FM(spu_opcode_t op)
 	{
-		if (g_cfg.core.spu_accurate_xfloat)
+		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate)
 		{
 			set_vr(op.rt, get_vr<f64[4]>(op.ra) * get_vr<f64[4]>(op.rb));
 			return;
@@ -9159,7 +9683,7 @@ public:
 			const auto a = value<f32[4]>(ci->getOperand(0));
 			const auto b = value<f32[4]>(ci->getOperand(1));
 
-			if (g_cfg.core.spu_approx_xfloat)
+			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
 			{
 				if (a.value == b.value)
 				{
@@ -9195,7 +9719,7 @@ public:
 
 	void FESD(spu_opcode_t op)
 	{
-		if (g_cfg.core.spu_accurate_xfloat)
+		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate)
 		{
 			const auto r = zshuffle(get_vr<f64[4]>(op.ra), 1, 3);
 			const auto d = bitcast<s64[2]>(r);
@@ -9225,7 +9749,7 @@ public:
 
 	void FRDS(spu_opcode_t op)
 	{
-		if (g_cfg.core.spu_accurate_xfloat)
+		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate)
 		{
 			const auto r = get_vr<f64[2]>(op.ra);
 			const auto d = bitcast<s64[2]>(r);
@@ -9256,7 +9780,7 @@ public:
 
 	void FCEQ(spu_opcode_t op)
 	{
-		if (g_cfg.core.spu_accurate_xfloat)
+		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate)
 		{
 			set_vr(op.rt, sext<s32[4]>(fcmp_ord(get_vr<f64[4]>(op.ra) == get_vr<f64[4]>(op.rb))));
 			return;
@@ -9309,7 +9833,7 @@ public:
 				return eval(sext<s32[4]>(bitcast<s32[4]>(a) == bitcast<s32[4]>(b)));
 			}
 
-			if (g_cfg.core.spu_approx_xfloat)
+			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
 			{
 				return eval(sext<s32[4]>(fcmp_ord(a == b)) | sext<s32[4]>(bitcast<s32[4]>(a) == bitcast<s32[4]>(b)));
 			}
@@ -9330,7 +9854,7 @@ public:
 
 	void FCMEQ(spu_opcode_t op)
 	{
-		if (g_cfg.core.spu_accurate_xfloat)
+		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate)
 		{
 			set_vr(op.rt, sext<s32[4]>(fcmp_ord(fabs(get_vr<f64[4]>(op.ra)) == fabs(get_vr<f64[4]>(op.rb)))));
 			return;
@@ -9386,7 +9910,7 @@ public:
 				return eval(sext<s32[4]>(bitcast<s32[4]>(fa) == bitcast<s32[4]>(fb)));
 			}
 
-			if (g_cfg.core.spu_approx_xfloat)
+			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
 			{
 				return eval(sext<s32[4]>(fcmp_ord(fa == fb)) | sext<s32[4]>(bitcast<s32[4]>(fa) == bitcast<s32[4]>(fb)));
 			}
@@ -9479,7 +10003,7 @@ public:
 	void FNMS(spu_opcode_t op)
 	{
 		// See FMA.
-		if (g_cfg.core.spu_accurate_xfloat)
+		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate)
 		{
 			const auto [a, b, c] = get_vrs<f64[4]>(op.ra, op.rb, op.rc);
 			set_vr(op.rt4, fmuladd(-a, b, c));
@@ -9492,7 +10016,7 @@ public:
 			const auto b = value<f32[4]>(ci->getOperand(1));
 			const auto c = value<f32[4]>(ci->getOperand(2));
 
-			if (g_cfg.core.spu_approx_xfloat || g_cfg.core.spu_relaxed_xfloat)
+			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate || g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::relaxed)
 			{
 				return fma32x4(eval(-clamp_smax(a)), clamp_smax(b), c);
 			}
@@ -9514,7 +10038,7 @@ public:
 	void FMA(spu_opcode_t op)
 	{
 		// Hardware FMA produces the same result as multiple + add on the limited double range (xfloat).
-		if (g_cfg.core.spu_accurate_xfloat)
+		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate)
 		{
 			const auto [a, b, c] = get_vrs<f64[4]>(op.ra, op.rb, op.rc);
 			set_vr(op.rt4, fmuladd(a, b, c));
@@ -9527,7 +10051,7 @@ public:
 			const auto b = value<f32[4]>(ci->getOperand(1));
 			const auto c = value<f32[4]>(ci->getOperand(2));
 
-			if (g_cfg.core.spu_approx_xfloat)
+			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
 			{
 				const auto ma = sext<s32[4]>(fcmp_uno(a != fsplat<f32[4]>(0.)));
 				const auto mb = sext<s32[4]>(fcmp_uno(b != fsplat<f32[4]>(0.)));
@@ -9588,7 +10112,7 @@ public:
 	void FMS(spu_opcode_t op)
 	{
 		// See FMA.
-		if (g_cfg.core.spu_accurate_xfloat)
+		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate)
 		{
 			const auto [a, b, c] = get_vrs<f64[4]>(op.ra, op.rb, op.rc);
 			set_vr(op.rt4, fmuladd(a, b, -c));
@@ -9601,7 +10125,7 @@ public:
 			const auto b = value<f32[4]>(ci->getOperand(1));
 			const auto c = value<f32[4]>(ci->getOperand(2));
 
-			if (g_cfg.core.spu_approx_xfloat)
+			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
 			{
 				return fma32x4(clamp_smax(a), clamp_smax(b), eval(-c));
 			}
@@ -9635,7 +10159,7 @@ public:
 	void FI(spu_opcode_t op)
 	{
 		// TODO
-		if (g_cfg.core.spu_accurate_xfloat)
+		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate)
 		{
 			set_vr(op.rt, get_vr<f64[4]>(op.rb));
 			// const auto [a, b] = get_vrs<f64[4]>(op.ra, op.rb);
@@ -9663,7 +10187,7 @@ public:
 			return bitcast<f32[4]>((b & 0xff800000u) | (bitcast<u32[4]>(fpcast<f32[4]>(bnew)) & ~0xff800000u)); // Inject old sign and exponent
 		});
 
-		if (g_cfg.core.spu_approx_xfloat)
+		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
 		{
 			register_intrinsic("spu_re", [&](llvm::CallInst* ci)
 			{
@@ -9722,7 +10246,7 @@ public:
 
 	void CFLTS(spu_opcode_t op)
 	{
-		if (g_cfg.core.spu_accurate_xfloat)
+		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate)
 		{
 			value_t<f64[4]> a = get_vr<f64[4]>(op.ra);
 			value_t<f64[4]> s;
@@ -9796,7 +10320,7 @@ public:
 
 	void CFLTU(spu_opcode_t op)
 	{
-		if (g_cfg.core.spu_accurate_xfloat)
+		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate)
 		{
 			value_t<f64[4]> a = get_vr<f64[4]>(op.ra);
 			value_t<f64[4]> s;
@@ -9863,6 +10387,15 @@ public:
 				a = eval(a * s);
 
 			value_t<s32[4]> r;
+
+			if (m_use_avx512)
+			{
+				const auto sc = eval(bitcast<f32[4]>(max(bitcast<s32[4]>(a),splat<s32[4]>(0x0))));
+				r.value = m_ir->CreateFPToUI(sc.value, get_type<s32[4]>());
+				set_vr(op.rt, r);
+				return;
+			}
+
 			r.value = m_ir->CreateFPToUI(a.value, get_type<s32[4]>());
 			set_vr(op.rt, select(bitcast<s32[4]>(a) > splat<s32[4]>(((32 + 127) << 23) - 1), splat<s32[4]>(-1), r & ~(bitcast<s32[4]>(a) >> 31)));
 		}
@@ -9870,7 +10403,7 @@ public:
 
 	void CSFLT(spu_opcode_t op)
 	{
-		if (g_cfg.core.spu_accurate_xfloat)
+		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate)
 		{
 			value_t<s32[4]> a = get_vr<s32[4]>(op.ra);
 			value_t<f64[4]> r;
@@ -9910,7 +10443,7 @@ public:
 
 	void CUFLT(spu_opcode_t op)
 	{
-		if (g_cfg.core.spu_accurate_xfloat)
+		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate)
 		{
 			value_t<s32[4]> a = get_vr<s32[4]>(op.ra);
 			value_t<f64[4]> r;
@@ -10495,6 +11028,13 @@ public:
 		// Create jump table if necessary (TODO)
 		const auto tfound = m_targets.find(m_pos);
 
+		if (op.d && tfound != m_targets.end() && tfound->second.size() == 1 && tfound->second[0] == spu_branch_target(m_pos, 1))
+		{
+			// Interrupts-disable pattern
+			m_ir->CreateStore(m_ir->getFalse(), spu_ptr<bool>(&spu_thread::interrupts_enabled));
+			return;
+		}
+
 		if (!op.d && !op.e && tfound != m_targets.end() && tfound->second.size() > 1)
 		{
 			// Shift aligned address for switch
@@ -10994,7 +11534,7 @@ struct spu_llvm_worker
 				return;
 			}
 
-			thread_ctrl::wait_on(registered, nullptr);
+			thread_ctrl::wait_on(utils::bless<atomic_t<u32>>(&registered)[1], 0);
 			slice = registered.pop_all();
 		}())
 		{
@@ -11161,7 +11701,7 @@ struct spu_llvm
 			{
 				// Interrupt profiler thread and put it to sleep
 				static_cast<void>(prof_mutex.reset());
-				thread_ctrl::wait_on(registered, nullptr);
+				thread_ctrl::wait_on(utils::bless<atomic_t<u32>>(&registered)[1], 0);
 				continue;
 			}
 

@@ -295,7 +295,7 @@ namespace rsx
 			{
 				if (!m_stop_input_loop)
 				{
-					const auto notify = std::make_shared<atomic_t<bool>>(false);
+					const auto notify = std::make_shared<atomic_t<u32>>(0);
 					auto& overlayman = g_fxo->get<display_manager>();
 
 					if (interactive)
@@ -342,9 +342,9 @@ namespace rsx
 			return CELL_OK;
 		}
 
-		void message_dialog::set_text(const std::string& text)
+		void message_dialog::set_text(std::string text)
 		{
-			text_guard.set_text(text);
+			text_guard.set_text(std::move(text));
 		}
 
 		void message_dialog::update_custom_background()
@@ -411,12 +411,12 @@ namespace rsx
 			taskbar_index = index;
 		}
 
-		error_code message_dialog::progress_bar_set_message(u32 index, const std::string& msg)
+		error_code message_dialog::progress_bar_set_message(u32 index, std::string msg)
 		{
 			if (index >= num_progress_bars)
 				return CELL_MSGDIALOG_ERROR_PARAM;
 
-			::at32(bar_text_guard, index).set_text(msg);
+			::at32(bar_text_guard, index).set_text(std::move(msg));
 
 			return CELL_OK;
 		}

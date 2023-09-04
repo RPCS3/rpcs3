@@ -11,6 +11,7 @@
 #include "Emu/Memory/vm_locking.h"
 #include "Emu/RSX/Core/RSXReservationLock.hpp"
 #include "Emu/VFS.h"
+#include "Emu/vfs_config.h"
 #include "Emu/system_progress.hpp"
 #include "Emu/system_utils.hpp"
 #include "PPUThread.h"
@@ -1206,9 +1207,7 @@ std::array<u32, 2> op_branch_targets(u32 pc, ppu_opcode_t op)
 {
 	std::array<u32, 2> res{pc + 4, umax};
 
-	g_fxo->need<ppu_far_jumps_t>();
-
-	if (u32 target = g_fxo->get<ppu_far_jumps_t>().get_target(pc))
+	if (u32 target = g_fxo->is_init<ppu_far_jumps_t>() ? g_fxo->get<ppu_far_jumps_t>().get_target(pc) : 0)
 	{
 		res[0] = target;
 		return res;
@@ -1564,16 +1563,19 @@ std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 
 	std::vector<std::pair<u32, u32>> call_stack_list;
 
-	bool first = true;
+	bool is_first = true;
+	bool skip_single_frame = false;
+
+	const u64 _lr = this->lr;
+	const u32 _cia = this->cia;
+	const u64 gpr0 = this->gpr[0];
 
 	for (
 		u64 sp = r1;
 		sp % 0x10 == 0u && sp >= stack_min && sp <= stack_max - ppu_stack_start_offset;
-		first = false
+		is_first = false
 		)
 	{
-		u64 addr = *vm::get_super_ptr<u64>(static_cast<u32>(sp + 16));
-
 		auto is_invalid = [](u64 addr)
 		{
 			if (addr > u32{umax} || addr % 4 || !vm::check_addr(static_cast<u32>(addr), vm::page_executable))
@@ -1585,28 +1587,328 @@ std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 			return addr == g_fxo->get<ppu_function_manager>().func_addr(1, true);
 		};
 
-		if (is_invalid(addr))
+		if (is_first && !is_invalid(_lr))
 		{
-			if (first)
-			{
-				// Function hasn't saved LR, could be because it's a leaf function
-				// Use LR directly instead
-				addr = lr;
+			// Detect functions with no stack or before LR has been stored
 
-				if (is_invalid(addr))
+			// Tracking if instruction has already been passed through
+			// Instead of using map or set, use two vectors relative to CIA and resize as needed
+			std::vector<be_t<u32>> inst_neg;
+			std::vector<be_t<u32>> inst_pos;
+
+			auto get_inst = [&](u32 pos) -> be_t<u32>&
+			{
+				static be_t<u32> s_inst_empty{};
+
+				if (pos < _cia)
 				{
-					// Skip it, workaround
-					continue;
+					const u32 neg_dist = (_cia - pos - 4) / 4;
+
+					if (neg_dist >= inst_neg.size())
+					{
+						const u32 inst_bound = pos & -256;
+
+						const usz old_size = inst_neg.size();
+						const usz new_size = neg_dist + (pos - inst_bound) / 4 + 1;
+
+						if (new_size >= 0x8000)
+						{
+							// Gross lower limit for the function (if it is that size it is unlikely that it is even a leaf function)
+							return s_inst_empty;
+						}
+
+						inst_neg.resize(new_size);
+
+						if (!vm::try_access(inst_bound, &inst_neg[old_size], (new_size - old_size) * sizeof(be_t<u32>), false))
+						{
+							// Failure (this would be detected as failure by zeroes)
+						}
+
+						// Reverse the array (because this buffer directs backwards in address)
+
+						for (usz start = old_size, end = new_size - 1; start < end; start++, end--)
+						{
+							std::swap(inst_neg[start], inst_neg[end]);
+						}
+					}
+
+					return inst_neg[neg_dist];
+				}
+
+				const u32 pos_dist = (pos - _cia) / 4;
+
+				if (pos_dist >= inst_pos.size())
+				{
+					const u32 inst_bound = utils::align<u32>(pos, 256);
+
+					const usz old_size = inst_pos.size();
+					const usz new_size = pos_dist + (inst_bound - pos) / 4 + 1;
+
+					if (new_size >= 0x8000)
+					{
+						// Gross upper limit for the function (if it is that size it is unlikely that it is even a leaf function)
+						return s_inst_empty;
+					}
+
+					inst_pos.resize(new_size);
+
+					if (!vm::try_access(pos, &inst_pos[old_size], (new_size - old_size) * sizeof(be_t<u32>), false))
+					{
+						// Failure (this would be detected as failure by zeroes)
+					}
+				}
+
+				return inst_pos[pos_dist];
+			};
+
+			bool upper_abort = false;
+
+			struct context_t
+			{
+				u32 start_point;
+				bool maybe_leaf = false; // True if the function is leaf or at the very end/start of non-leaf
+				bool non_leaf = false; // Absolutely not a leaf
+				bool about_to_push_frame = false; // STDU incoming
+				bool about_to_store_lr = false; // Link is about to be stored on stack
+				bool about_to_pop_frame = false; // ADDI R1 is about to be issued
+				bool about_to_load_link = false; // MTLR is about to be issued
+				bool maybe_use_reg0_instead_of_lr = false; // Use R0 at the end of a non-leaf function if ADDI has been issued before MTLR
+			};
+
+			// Start with CIA
+			std::deque<context_t> workload{context_t{_cia}};
+
+			usz start = 0;
+
+			for (; start < workload.size(); start++)
+			{
+				for (u32 wa = workload[start].start_point; vm::check_addr(wa, vm::page_executable);)
+				{
+					be_t<u32>& opcode = get_inst(wa);
+
+					auto& [_, maybe_leaf, non_leaf, about_to_push_frame, about_to_store_lr,
+						about_to_pop_frame, about_to_load_link, maybe_use_reg0_instead_of_lr] = workload[start];
+
+					if (!opcode)
+					{
+						// Already passed or failure of reading
+						break;
+					}
+
+					const ppu_opcode_t op{opcode};
+
+					// Mark as passed through
+					opcode = 0;
+
+					const auto type = g_ppu_itype.decode(op.opcode);
+
+					if (workload.size() == 1 && type == ppu_itype::STDU && op.rs == 1u && op.ra == 1u)
+					{
+						if (op.simm16 >= 0)
+						{
+							// Against ABI
+							non_leaf = true;
+							upper_abort = true;
+							break;
+						}
+
+						// Saving LR to register: this is indeed a new function (ok because LR has not been saved yet)
+						maybe_leaf = true;
+						about_to_push_frame = true;
+						about_to_pop_frame = false;
+						upper_abort = true;
+						break;
+					}
+
+					if (workload.size() == 1 && type == ppu_itype::STD && op.ra == 1u && op.rs == 0u)
+					{
+						bool found_matching_stdu = false;
+
+						for (u32 back = 1; back < 20; back++)
+						{
+							be_t<u32>& opcode = get_inst(utils::sub_saturate<u32>(_cia, back * 4));
+
+							if (!opcode)
+							{
+								// Already passed or failure of reading
+								break;
+							}
+
+							const ppu_opcode_t test_op{opcode};
+
+							const auto type = g_ppu_itype.decode(test_op.opcode);
+
+							if (type == ppu_itype::BCLR)
+							{
+								break;
+							}
+
+							if (type == ppu_itype::STDU && test_op.rs == 1u && test_op.ra == 1u)
+							{
+								if (0 - (test_op.ds << 2) == (op.ds << 2) - 0x10)
+								{
+									found_matching_stdu = true;
+								}
+
+								break;
+							}
+						}
+
+						if (found_matching_stdu)
+						{
+							// Saving LR to stack: this is indeed a new function (ok because LR has not been saved yet)
+							maybe_leaf = true;
+							about_to_store_lr = true;
+							about_to_pop_frame = true;
+							upper_abort = true;
+							break;
+						}
+					}
+
+					const u32 spr = ((op.spr >> 5) | ((op.spr & 0x1f) << 5));
+
+					// It can be placed before or after STDU, ignore for now
+					// if (workload.size() == 1 && type == ppu_itype::MFSPR && op.rs == 0u && spr == 0x8)
+					// {
+					// 	// Saving LR to register: this is indeed a new function (ok because LR has not been saved yet)
+					// 	maybe_leaf = true;
+					// 	about_to_store_lr = true;
+					// 	about_to_pop_frame = true;
+					// }
+
+					if (type == ppu_itype::MTSPR && spr == 0x8 && op.rs == 0u)
+					{
+						// Test for special case: if ADDI R1 is not found later in code, it means that LR is not restored and R0 should be used instead
+						// Can also search for ADDI R1 backwards and pull the value from stack (needs more research if it is more reliable)
+						maybe_use_reg0_instead_of_lr = true;
+					}
+
+					if (type == ppu_itype::UNK)
+					{
+						// Ignore for now
+						break;
+					}
+
+					if ((type & ppu_itype::branch) && op.lk)
+					{
+						// Gave up on LR before saving
+						non_leaf = true;
+						about_to_pop_frame = true;
+						upper_abort = true;
+						break;
+					}
+
+					// Even if BCLR is conditional, it still counts because LR value is ready for return
+					if (type == ppu_itype::BCLR)
+					{
+						// Returned
+						maybe_leaf = true;
+						upper_abort = true;
+						break;
+					}
+
+					if (type == ppu_itype::ADDI && op.ra == 1u && op.rd == 1u)
+					{
+						if (op.simm16 < 0)
+						{
+							// Against ABI
+							non_leaf = true;
+							upper_abort = true;
+							break;
+						}
+						else if (op.simm16 > 0)
+						{
+							// Remember that SP is about to be restored
+							about_to_pop_frame = true;
+							non_leaf = true;
+							upper_abort = true;
+							break;
+						}
+					}
+
+					const auto results = op_branch_targets(wa, op);
+
+					bool proceeded = false;
+
+					for (usz res_i = 0; res_i < results.size(); res_i++)
+					{
+						const u32 route_pc = results[res_i];
+
+						if (route_pc == umax)
+						{
+							continue;
+						}
+
+						if (vm::check_addr(route_pc, vm::page_executable) && get_inst(route_pc))
+						{
+							if (proceeded)
+							{
+								// Remember next route start point
+								workload.push_back(context_t{route_pc});
+							}
+							else
+							{
+								// Next PC
+								wa = route_pc;
+								proceeded = true;
+							}
+						}
+					}
+				}
+
+				if (upper_abort)
+				{
+					break;
 				}
 			}
-			else
+
+			const context_t& res = workload[std::min<usz>(start, workload.size() - 1)];
+
+			if (res.maybe_leaf && !res.non_leaf)
 			{
-				break;
+				const u32 result = res.maybe_use_reg0_instead_of_lr ? static_cast<u32>(gpr0) : static_cast<u32>(_lr);
+
+				// Same stack as far as we know
+				call_stack_list.emplace_back(result, static_cast<u32>(sp));
+
+				if (res.about_to_store_lr)
+				{
+					// LR has yet to be stored on stack, ignore the stack value
+					skip_single_frame = true;
+				}
+			}
+
+			if (res.about_to_pop_frame || (res.maybe_leaf && !res.non_leaf))
+			{
+				const u64 temp_sp = *vm::get_super_ptr<u64>(static_cast<u32>(sp));
+
+				if (temp_sp <= sp)
+				{
+					// Ensure inequality and that the old stack pointer is higher than current
+					break;
+				}
+
+				// Read the first stack frame so caller addresses can be obtained
+				sp = temp_sp;
+				continue;
 			}
 		}
 
-		// TODO: function addresses too
-		call_stack_list.emplace_back(static_cast<u32>(addr), static_cast<u32>(sp));
+		u64 addr = *vm::get_super_ptr<u64>(static_cast<u32>(sp + 16));
+
+		if (skip_single_frame)
+		{
+			skip_single_frame = false;
+		}
+		else if (!is_invalid(addr))
+		{
+			// TODO: function addresses too
+			call_stack_list.emplace_back(static_cast<u32>(addr), static_cast<u32>(sp));
+		}
+		else if (!is_first)
+		{
+			break;
+		}
 
 		const u64 temp_sp = *vm::get_super_ptr<u64>(static_cast<u32>(sp));
 
@@ -1617,6 +1919,8 @@ std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 		}
 
 		sp = temp_sp;
+
+		is_first = false;
 	}
 
 	return call_stack_list;
@@ -1808,7 +2112,14 @@ void ppu_thread::cpu_task()
 #endif
 			cmd_pop();
 
-			ppu_initialize(), spu_cache::initialize();
+			ppu_initialize();
+
+			if (Emu.IsStopped())
+			{
+				return;
+			}
+
+			spu_cache::initialize();
 
 #ifdef __APPLE__
 			pthread_jit_write_protect_np(true);
@@ -1821,7 +2132,16 @@ void ppu_thread::cpu_task()
 
 			// Wait until the progress dialog is closed.
 			// We don't want to open a cell dialog while a native progress dialog is still open.
-			thread_ctrl::wait_on<atomic_wait::op_ne>(g_progr_ptotal, 0);
+			while (u32 v = g_progr_ptotal)
+			{
+				if (Emu.IsStopped())
+				{
+					return;
+				}
+
+				g_progr_ptotal.wait(v);
+			}
+
 			g_fxo->get<progress_dialog_workaround>().show_overlay_message_only = true;
 
 			// Sadly we can't postpone initializing guest time because we need to run PPU threads
@@ -1839,7 +2159,7 @@ void ppu_thread::cpu_task()
 					}
 
 					ensure(spu.state.test_and_reset(cpu_flag::stop));
-					spu.state.notify_one(cpu_flag::stop);
+					spu.state.notify_one();
 				}
 			});
 
@@ -1952,7 +2272,7 @@ void ppu_thread::exec_task()
 
 ppu_thread::~ppu_thread()
 {
-	perf_log.notice("Perf stats for STCX reload: successs %u, failure %u", last_succ, last_fail);
+	perf_log.notice("Perf stats for STCX reload: success %u, failure %u", last_succ, last_fail);
 	perf_log.notice("Perf stats for instructions: total %u", exec_bytes / 4);
 }
 
@@ -2051,7 +2371,7 @@ ppu_thread::ppu_thread(utils::serial& ar)
 	struct init_pushed
 	{
 		bool pushed = false;
-		atomic_t<bool> inited = false;
+		atomic_t<u32> inited = false;
 	};
 
 	call_history.data.resize(g_cfg.core.ppu_call_history ? call_history_max_size : 1);
@@ -2100,7 +2420,7 @@ ppu_thread::ppu_thread(utils::serial& ar)
 				{
 					while (!Emu.IsStopped() && !g_fxo->get<init_pushed>().inited)
 					{
-						thread_ctrl::wait_on(g_fxo->get<init_pushed>().inited, false);
+						thread_ctrl::wait_on(g_fxo->get<init_pushed>().inited, 0);
 					}
 					return false;
 				}
@@ -2117,7 +2437,7 @@ ppu_thread::ppu_thread(utils::serial& ar)
 				{ppu_cmd::ptr_call, 0}, +[](ppu_thread&) -> bool
 				{
 					auto& inited = g_fxo->get<init_pushed>().inited;
-					inited = true;
+					inited = 1;
 					inited.notify_all();
 					return true;
 				}
@@ -2453,10 +2773,10 @@ static void ppu_check(ppu_thread& ppu, u64 addr)
 {
 	ppu.cia = ::narrow<u32>(addr);
 
-	// ppu_check() shall not return directly
 	if (ppu.test_stopped())
-		{}
-	ppu_escape(&ppu);
+	{
+		return;
+	}
 }
 
 static void ppu_trace(u64 addr)
@@ -3041,12 +3361,29 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 		return false;
 	}())
 	{
-		// Test a common pattern in lwmutex
 		extern atomic_t<u32> liblv2_begin, liblv2_end;
 
+		const u32 notify = ppu.res_notify;
+
+		if (notify)
+		{
+			vm::reservation_notifier(notify).notify_all();
+			ppu.res_notify = 0;
+		}
+
+		// Avoid notifications from lwmutex or sys_spinlock
 		if (ppu.cia < liblv2_begin || ppu.cia >= liblv2_end)
 		{
-			res.notify_all(-128);
+			if (!notify)
+			{
+				// Try to postpone notification to when PPU is asleep or join notifications on the same address
+				// This also optimizes a mutex - won't notify after lock is aqcuired (prolonging the critical section duration), only notifies on unlock
+				ppu.res_notify = addr;
+			}
+			else if ((addr ^ notify) & -128)
+			{
+				res.notify_all();
+			}
 		}
 
 		if (addr == ppu.last_faddr)
@@ -3056,6 +3393,16 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 
 		ppu.last_faddr = 0;
 		return true;
+	}
+
+	const u32 notify = ppu.res_notify;
+
+	// Do not risk postponing too much (because this is probably an indefinite loop)
+	// And on failure it has some time to do something else
+	if (notify && ((addr ^ notify) & -128))
+	{
+		vm::reservation_notifier(notify).notify_all();
+		ppu.res_notify = 0;
 	}
 
 	return false;
@@ -3222,7 +3569,7 @@ extern void ppu_finalize(const ppu_module& info)
 	fmt::append(cache_path, "ppu-%s-%s/", fmt::base57(info.sha1), info.path.substr(info.path.find_last_of('/') + 1));
 
 #ifdef LLVM_AVAILABLE
-	g_fxo->get<jit_module_manager>().remove(cache_path + info.name + "_" + std::to_string(info.segs[0].addr));
+	g_fxo->get<jit_module_manager>().remove(cache_path + "_" + std::to_string(std::bit_cast<usz>(info.segs[0].ptr)));
 #endif
 }
 
@@ -3320,8 +3667,8 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 				return g_prx_list.count(entry.name) && ::at32(g_prx_list, entry.name) != 0;
 			};
 
-			// Check .sprx filename
-			if (upper.ends_with(".SPRX") && entry.name != "libfs_utility_init.sprx"sv)
+			// Check PRX filename
+			if (upper.ends_with(".PRX") || (upper.ends_with(".SPRX") && entry.name != "libfs_utility_init.sprx"sv))
 			{
 				if (is_ignored(0))
 				{
@@ -3333,8 +3680,8 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 				continue;
 			}
 
-			// Check .self filename
-			if (upper.ends_with(".SELF") && Emu.GetBoot() != dir_queue[i] + entry.name)
+			// Check ELF filename
+			if ((upper.ends_with(".ELF") || upper.ends_with(".SELF")) && Emu.GetBoot() != dir_queue[i] + entry.name)
 			{
 				// Get full path
 				file_queue.emplace_back(dir_queue[i] + entry.name,  0);
@@ -3402,14 +3749,14 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 		// Set low priority
 		thread_ctrl::scoped_priority low_prio(-1);
 
-		for (usz func_i = fnext++; func_i < file_queue.size(); func_i = fnext++, g_progr_fdone++)
+		for (usz func_i = fnext++, inc_fdone = 1; func_i < file_queue.size(); func_i = fnext++, g_progr_fdone += std::exchange(inc_fdone, 1))
 		{
 			if (Emu.IsStopped())
 			{
 				continue;
 			}
 
-			auto [path, offset] = std::as_const(file_queue)[func_i];
+			auto& [path, offset] = file_queue[func_i];
 
 			ppu_log.notice("Trying to load: %s", path);
 
@@ -3448,7 +3795,6 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 				{
 					obj.clear(), src.close(); // Clear decrypted file and elf object memory
 					ppu_initialize(*prx);
-					ppu_unload_prx(*prx);
 					ppu_finalize(*prx);
 					continue;
 				}
@@ -3461,7 +3807,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 			{
 				while (ovl_err == elf_error::ok)
 				{
-					auto [ovlm, error] = ppu_load_overlay(obj, true, path, offset);
+					const auto [ovlm, error] = ppu_load_overlay(obj, true, path, offset);
 
 					if (error)
 					{
@@ -3497,7 +3843,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 
 			ppu_log.notice("Failed to precompile '%s' (prx: %s, ovl: %s): Attempting tratment as executable file", path, prx_err, ovl_err);
 			possible_exec_file_paths.push(path);
-			continue;
+			inc_fdone = 0;
 		}
 	});
 
@@ -3523,8 +3869,6 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 
 		for (; slice; slice.pop_front(), g_progr_fdone++)
 		{
-			g_progr_ftotal++;
-
 			if (Emu.IsStopped())
 			{
 				continue;
@@ -3544,7 +3888,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 			}
 
 			// Some files may fail to decrypt due to the lack of klic
-			src = decrypt_self(std::move(src));
+			src = decrypt_self(std::move(src), nullptr, nullptr, true);
 
 			if (!src)
 			{
@@ -3561,6 +3905,8 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 					main_ppu_module& _main = g_fxo->get<main_ppu_module>();
 					_main = {};
 
+					auto current_cache = std::move(g_fxo->get<spu_cache>());
+
 					if (!ppu_load_exec(obj, true, path))
 					{
 						// Abort
@@ -3568,16 +3914,27 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 						break;
 					}
 
+					if (std::memcmp(main_module.sha1, _main.sha1, sizeof(_main.sha1)) == 0)
+					{
+						g_fxo->get<spu_cache>() = std::move(current_cache);
+						break;
+					}
+
 					if (!_main.analyse(0, _main.elf_entry, _main.seg0_code_end, _main.applied_pathes, [](){ return Emu.IsStopped(); }))
 					{
+						g_fxo->get<spu_cache>() = std::move(current_cache);
 						break;
 					}
 
 					obj.clear(), src.close(); // Clear decrypted file and elf object memory
 
+					_main.name = ' '; // Make ppu_finalize work
+					Emu.ConfigurePPUCache(!Emu.IsPathInsideDir(_main.path, g_cfg_vfs.get_dev_flash()));
 					ppu_initialize(_main);
+					spu_cache::initialize(false);
 					ppu_finalize(_main);
 					_main = {};
+					g_fxo->get<spu_cache>() = std::move(current_cache);
 					break;
 				}
 
@@ -3588,10 +3945,11 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 			}
 
 			ppu_log.notice("Failed to precompile '%s' as executable (%s)", path, exec_err);
-			continue;
 		}
 
 		g_fxo->get<main_ppu_module>() = std::move(main_module);
+		g_fxo->get<spu_cache>().collect_funcs_to_precompile = true;
+		Emu.ConfigurePPUCache();
 	});
 
 	exec_worker();
@@ -3622,7 +3980,7 @@ extern void ppu_initialize()
 	// Validate analyser results (not required)
 	_main.validate(0);
 
-	g_progr = "Scanning PPU Modules...";
+	progr = "Scanning PPU Modules...";
 
 	bool compile_main = false;
 
@@ -3637,7 +3995,7 @@ extern void ppu_initialize()
 	const std::string firmware_sprx_path = vfs::get("/dev_flash/sys/external/");
 
 	// If empty we have no indication for firmware cache state, check everything
-	bool compile_fw = true;
+	bool compile_fw = !Emu.IsVsh();
 
 	idm::select<lv2_obj, lv2_prx>([&](u32, lv2_prx& _module)
 	{
@@ -3683,7 +4041,7 @@ extern void ppu_initialize()
 
 	const std::string mount_point = vfs::get("/dev_flash/");
 
-	bool dev_flash_located = !Emu.GetCat().ends_with('P') && Emu.IsPathInsideDir(Emu.GetBoot(), mount_point);
+	bool dev_flash_located = !Emu.GetCat().ends_with('P') && Emu.IsPathInsideDir(Emu.GetBoot(), mount_point) && g_cfg.core.llvm_precompilation;
 
 	if (compile_fw || dev_flash_located)
 	{
@@ -3695,8 +4053,6 @@ extern void ppu_initialize()
 			{
 				// Check if cache exists for this infinitesimally small prx
 				dev_flash_located = ppu_initialize(*prx, true);
-				idm::remove<lv2_obj, lv2_prx>(idm::last_id());
-				ppu_unload_prx(*prx);
 			}
 		}
 
@@ -3705,7 +4061,7 @@ extern void ppu_initialize()
 	}
 
 	// Avoid compilation if main's cache exists or it is a standalone SELF with no PARAM.SFO
-	if (compile_main && g_cfg.core.ppu_llvm_precompilation && !Emu.GetTitleID().empty() && !Emu.IsChildProcess())
+	if (compile_main && g_cfg.core.llvm_precompilation && !Emu.GetTitleID().empty() && !Emu.IsChildProcess())
 	{
 		// Try to add all related directories
 		const std::set<std::string> dirs = Emu.GetGameDirs();
@@ -3756,10 +4112,16 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 		{
 			for (auto& block : func.blocks)
 			{
+				if (g_fxo->is_init<ppu_far_jumps_t>() && !g_fxo->get<ppu_far_jumps_t>().get_targets(block.first, block.second).empty())
+				{
+					// Replace the block with ppu_far_jump
+					continue;
+				}
+
 				ppu_register_function_at(block.first, block.second);
 			}
 
-			if (g_cfg.core.ppu_debug && func.size && func.toc != umax)
+			if (g_cfg.core.ppu_debug && func.size && func.toc != umax && !ppu_get_far_jump(func.addr))
 			{
 				ppu_toc[func.addr] = func.toc;
 				ppu_ref(func.addr) = &ppu_check_toc;
@@ -3808,7 +4170,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 	// Get cache path for this executable
 	std::string cache_path;
 
-	if (info.name.empty())
+	if (!info.cache.empty())
 	{
 		cache_path = info.cache;
 	}
@@ -3858,7 +4220,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 	};
 
 	// Permanently loaded compiled PPU modules (name -> data)
-	jit_module& jit_mod = g_fxo->get<jit_module_manager>().get(cache_path + info.name + "_" + std::to_string(info.segs[0].addr));
+	jit_module& jit_mod = g_fxo->get<jit_module_manager>().get(cache_path + "_" + std::to_string(std::bit_cast<usz>(info.segs[0].ptr)));
 
 	// Compiler instance (deferred initialization)
 	std::shared_ptr<jit_compiler>& jit = jit_mod.pjit;
@@ -4203,7 +4565,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 
 	if (!workload.empty())
 	{
-		g_progr = "Compiling PPU modules...";
+		*progr = "Compiling PPU modules...";
 	}
 
 	// Create worker threads for compilation (TODO: how many threads)
@@ -4271,10 +4633,10 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 		if (workload.size() < link_workload.size())
 		{
 			// Only show this message if this task is relevant
-			g_progr = "Linking PPU modules...";
+			*progr = "Linking PPU modules...";
 		}
 
-		for (auto [obj_name, is_compiled] : link_workload)
+		for (const auto& [obj_name, is_compiled] : link_workload)
 		{
 			if (cpu ? cpu->state.all_of(cpu_flag::exit) : Emu.IsStopped())
 			{

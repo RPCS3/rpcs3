@@ -122,13 +122,13 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidg
 	hbox_b_main->addStretch();
 
 	// Misc state
-	m_misc_state = new QTextEdit(this);
-	m_misc_state->setLineWrapMode(QTextEdit::NoWrap);
+	m_misc_state = new QPlainTextEdit(this);
+	m_misc_state->setLineWrapMode(QPlainTextEdit::NoWrap);
 	m_misc_state->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
 
 	// Registers
-	m_regs = new QTextEdit(this);
-	m_regs->setLineWrapMode(QTextEdit::NoWrap);
+	m_regs = new QPlainTextEdit(this);
+	m_regs->setLineWrapMode(QPlainTextEdit::NoWrap);
 	m_regs->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
 
 	m_debugger_list->setFont(m_mono);
@@ -699,7 +699,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 
 				if (!cpu->state.all_of(cpu_flag::wait + cpu_flag::dbg_pause))
 				{
-					QMessageBox::warning(this, QObject::tr("Pause the SPU Thread!"), QObject::tr("Cannot perform SPU capture due to the thread need manual pausing!"));
+					QMessageBox::warning(this, QObject::tr("Pause the SPU Thread!"), QObject::tr("Cannot perform SPU capture due to the thread needing manual pausing!"));
 					return;
 				}
 
@@ -1147,7 +1147,7 @@ void debugger_frame::WritePanels()
 	int loc = m_misc_state->verticalScrollBar()->value();
 	int hloc = m_misc_state->horizontalScrollBar()->value();
 	m_misc_state->clear();
-	m_misc_state->setText(qstr(cpu->dump_misc()));
+	m_misc_state->setPlainText(qstr(cpu->dump_misc()));
 	m_misc_state->verticalScrollBar()->setValue(loc);
 	m_misc_state->horizontalScrollBar()->setValue(hloc);
 
@@ -1156,7 +1156,7 @@ void debugger_frame::WritePanels()
 	m_regs->clear();
 	m_last_reg_state.clear();
 	cpu->dump_regs(m_last_reg_state, m_dump_reg_func_data);
-	m_regs->setText(qstr(m_last_reg_state));
+	m_regs->setPlainText(qstr(m_last_reg_state));
 	m_regs->verticalScrollBar()->setValue(loc);
 	m_regs->horizontalScrollBar()->setValue(hloc);
 
@@ -1330,7 +1330,7 @@ void debugger_frame::DoStep(bool step_over)
 					ppu_opcode_t ppu_op{result};
 					const ppu_itype::type itype = g_ppu_itype.decode(ppu_op.opcode);
 
-					should_step_over = (itype == ppu_itype::BC || itype == ppu_itype::B || itype == ppu_itype::BCCTR || itype == ppu_itype::BCLR) && ppu_op.lk;
+					should_step_over = (itype & ppu_itype::branch && ppu_op.lk);
 				}
 			}
 
@@ -1366,7 +1366,7 @@ void debugger_frame::DoStep(bool step_over)
 				}
 			});
 
-			cpu->state.notify_one(s_pause_flags);
+			cpu->state.notify_one();
 		}
 	}
 
@@ -1412,7 +1412,7 @@ void debugger_frame::RunBtnPress()
 				Emu.Resume();
 			}
 
-			cpu->state.notify_one(s_pause_flags);
+			cpu->state.notify_one();
 			m_debugger_list->EnableThreadFollowing();
 		}
 	}

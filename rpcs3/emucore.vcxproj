@@ -611,6 +611,7 @@
     <ClInclude Include="Loader\mself.hpp" />
     <ClInclude Include="io_buffer.h" />
     <ClInclude Include="util\atomic.hpp" />
+    <ClInclude Include="util\bless.hpp" />
     <ClInclude Include="util\image_sink.h" />
     <ClInclude Include="util\video_provider.h" />
     <ClInclude Include="util\media_utils.h" />

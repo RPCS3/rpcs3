@@ -65,11 +65,11 @@ namespace gui
 			"QDockWidget::close-button, QDockWidget::float-button{ background-color: #e3e3e3; }"
 
 			// log frame tty
-			"QTextEdit#tty_frame { background-color: #ffffff; }"
+			"QPlainTextEdit#tty_frame { background-color: #ffffff; }"
 			"QLabel#tty_text { color: #000000; }"
 
 			// log frame log
-			"QTextEdit#log_frame { background-color: #ffffff; }"
+			"QPlainTextEdit#log_frame { background-color: #ffffff; }"
 			"QLabel#log_level_always { color: #107896; }"
 			"QLabel#log_level_fatal { color: #ff00ff; }"
 			"QLabel#log_level_error { color: #C02F1D; }"

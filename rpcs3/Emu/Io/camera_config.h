@@ -15,8 +15,6 @@ struct cfg_camera final : cfg::node
 		double min_fps = 0;
 		double max_fps = 0;
 		int format = 0;
-		int pixel_aspect_width = 0;
-		int pixel_aspect_height = 0;
 
 		static const u32 member_count = 7;
 

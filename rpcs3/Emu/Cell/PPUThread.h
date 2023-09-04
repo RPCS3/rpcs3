@@ -262,6 +262,7 @@ public:
 	u64 rtime{0};
 	alignas(64) std::byte rdata[128]{}; // Reservation data
 	bool use_full_rdata{};
+	u32 res_notify{};
 
 	union ppu_prio_t
 	{

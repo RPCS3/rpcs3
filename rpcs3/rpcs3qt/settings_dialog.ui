@@ -1590,7 +1590,7 @@
           <item row="2" column="2">
            <widget class="QGroupBox" name="gb_ghltar_emulated">
             <property name="title">
-             <string>Guitar Hero Live emulated guitar</string>
+             <string>Guitar Hero Live Emulated Guitar</string>
             </property>
             <layout class="QVBoxLayout" name="gb_ghltar_emulated_layout">
              <item>
@@ -1614,7 +1614,7 @@
           <item row="1" column="2">
            <widget class="QGroupBox" name="gb_turntable_emulated">
             <property name="title">
-             <string>DJ Hero emulated turntable</string>
+             <string>DJ Hero Emulated Turntable</string>
             </property>
             <layout class="QVBoxLayout" name="gb_turntable_emulated_layout">
              <item>
@@ -1638,7 +1638,7 @@
           <item row="0" column="2">
            <widget class="QGroupBox" name="gb_buzz_emulated">
             <property name="title">
-             <string>Buzz! emulated controller</string>
+             <string>Buzz! Emulated Controller</string>
             </property>
             <layout class="QVBoxLayout" name="gb_buzz_emulated_layout">
              <item>
@@ -1722,7 +1722,7 @@
           <item row="3" column="2">
            <widget class="QGroupBox" name="gb_midi_1">
             <property name="title">
-             <string>Emulated Midi device 1</string>
+             <string>Emulated MIDI Device 1</string>
             </property>
             <layout class="QVBoxLayout" name="midLayout1">
              <item>
@@ -1741,7 +1741,7 @@
           <item row="6" column="2">
            <widget class="QGroupBox" name="gb_midi_3">
             <property name="title">
-             <string>Emulated Midi device 3</string>
+             <string>Emulated MIDI Device 3</string>
             </property>
             <layout class="QVBoxLayout" name="midLayout3">
              <item>
@@ -1760,7 +1760,7 @@
           <item row="5" column="2">
            <widget class="QGroupBox" name="gb_midi_2">
             <property name="title">
-             <string>Emulated Midi device 2</string>
+             <string>Emulated MIDI Device 2</string>
             </property>
             <layout class="QVBoxLayout" name="midLayout2">
              <item>
@@ -1807,6 +1807,13 @@
               <widget class="QCheckBox" name="lockOverlayInputToPlayerOne">
                <property name="text">
                 <string>Lock Overlay Input To Player One</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="loadSdlMappings">
+               <property name="text">
+                <string>Use SDL GameController Database</string>
                </property>
               </widget>
              </item>
@@ -2040,7 +2047,7 @@
           <item>
            <widget class="QGroupBox" name="gb_DiskCacheClearing">
             <property name="title">
-             <string>Disk cache</string>
+             <string>Disk Cache</string>
             </property>
             <layout class="QVBoxLayout" name="gb_DiskCacheClearing_layout">
              <item>
@@ -2394,9 +2401,9 @@
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="ppuPrecompilation">
+                <widget class="QCheckBox" name="llvmPrecompilation">
                  <property name="text">
-                  <string>PPU LLVM Precompilation</string>
+                  <string>PPU/SPU LLVM Precompilation</string>
                  </property>
                 </widget>
                </item>

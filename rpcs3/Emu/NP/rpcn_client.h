@@ -59,7 +59,7 @@ public:
 			error = true;
 			return 0;
 		}
-		T res = *utils::bless<le_t<T, 1>>(&vec[i]);
+		T res = read_from_ptr<le_t<T>>(&vec[i]);
 		i += sizeof(T);
 		return res;
 	}

@@ -8,7 +8,6 @@ class camera_handler_base
 public:
 	enum class camera_handler_state
 	{
-		not_available,
 		closed,
 		open,
 		running
@@ -33,7 +32,7 @@ public:
 
 protected:
 	std::mutex m_mutex;
-	atomic_t<camera_handler_state> m_state = camera_handler_state::not_available;
+	atomic_t<camera_handler_state> m_state = camera_handler_state::closed;
 	bool m_mirrored = false;
 	s32 m_format = 2; // CELL_CAMERA_RAW8
 	u32 m_bytesize = 0;

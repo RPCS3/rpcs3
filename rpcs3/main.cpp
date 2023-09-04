@@ -1,4 +1,4 @@
-// Qt5.10+ frontend implementation for rpcs3. Known to work on Windows, Linux, Mac
+// Qt6 frontend implementation for rpcs3. Known to work on Windows, Linux, Mac
 // by Sacha Refshauge, Megamouse and flash-fire
 
 #include <iostream>
@@ -55,6 +55,7 @@ DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResoluti
 #ifdef __linux__
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <sys/prctl.h>
 #endif
 
 #if defined(__APPLE__)
@@ -87,7 +88,7 @@ static atomic_t<bool> s_headless = false;
 static atomic_t<bool> s_no_gui = false;
 static atomic_t<char*> s_argv0;
 
-std::string g_pad_profile_override;
+std::string g_input_config_override;
 
 extern thread_local std::string(*g_tls_log_prefix)();
 extern thread_local std::string_view g_tls_serialize_name;
@@ -290,7 +291,7 @@ constexpr auto arg_styles       = "styles";
 constexpr auto arg_style        = "style";
 constexpr auto arg_stylesheet   = "stylesheet";
 constexpr auto arg_config       = "config";
-constexpr auto arg_pad_profile  = "pad-profile"; // only useful with no-gui
+constexpr auto arg_input_config = "input-config"; // only useful with no-gui
 constexpr auto arg_q_debug      = "qDebug";
 constexpr auto arg_error        = "error";
 constexpr auto arg_updating     = "updating";
@@ -348,9 +349,6 @@ QCoreApplication* create_application(int& argc, char* argv[])
 		// Set QT_ENABLE_HIGHDPI_SCALING from environment. Defaults to cli argument, which defaults to 1.
 		use_high_dpi = "1" == qEnvironmentVariable("QT_ENABLE_HIGHDPI_SCALING", high_dpi_setting);
 	}
-
-	// AA_EnableHighDpiScaling has to be set before creating a QApplication
-	QApplication::setAttribute(use_high_dpi ? Qt::AA_EnableHighDpiScaling : Qt::AA_DisableHighDpiScaling);
 
 	if (use_high_dpi)
 	{
@@ -424,7 +422,7 @@ template <>
 void fmt_class_string<std::chrono::sys_time<typename std::chrono::system_clock::duration>>::format(std::string& out, u64 arg)
 {
 	const std::time_t dateTime = std::chrono::system_clock::to_time_t(get_object(arg));
- 	out += date_time::fmt_time("%Y-%m-%eT%H:%M:%S", dateTime);
+ 	out += date_time::fmt_time("%Y-%m-%dT%H:%M:%S", dateTime);
 }
 
 void run_platform_sanity_checks()
@@ -444,6 +442,11 @@ int main(int argc, char** argv)
 	struct ::rusage intro_stats{};
 	::getrusage(RUSAGE_THREAD, &intro_stats);
 	const u64 intro_time = (intro_stats.ru_utime.tv_sec + intro_stats.ru_stime.tv_sec) * 1000000000ull + (intro_stats.ru_utime.tv_usec + intro_stats.ru_stime.tv_usec) * 1000ull;
+#endif
+
+#ifdef __linux__
+	// Set timerslack value for Linux. The default value is 50,000ns. Change this to just 1 since we value precise timers.
+	prctl(PR_SET_TIMERSLACK, 1, 0, 0, 0);
 #endif
 
 	s_argv0 = argv[0]; // Save for report_fatal_error
@@ -649,8 +652,8 @@ int main(int argc, char** argv)
 	parser.addOption(QCommandLineOption(arg_stylesheet, "Loads a custom stylesheet.", "path", ""));
 	const QCommandLineOption config_option(arg_config, "Forces the emulator to use this configuration file for CLI-booted game.", "path", "");
 	parser.addOption(config_option);
-	const QCommandLineOption pad_profile_option(arg_pad_profile, "Forces the emulator to use this pad profile file for CLI-booted game.", "name", "");
-	parser.addOption(pad_profile_option);
+	const QCommandLineOption input_config_option(arg_input_config, "Forces the emulator to use this input config file for CLI-booted game.", "name", "");
+	parser.addOption(input_config_option);
 	const QCommandLineOption installfw_option(arg_installfw, "Forces the emulator to install this firmware file.", "path", "");
 	parser.addOption(installfw_option);
 	const QCommandLineOption installpkg_option(arg_installpkg, "Forces the emulator to install this pkg file.", "path", "");
@@ -974,8 +977,6 @@ int main(int argc, char** argv)
 
 	if (gui_application* gui_app = qobject_cast<gui_application*>(app.data()))
 	{
-		gui_app->setAttribute(Qt::AA_UseHighDpiPixmaps);
-		gui_app->setAttribute(Qt::AA_DisableWindowContextHelpButton);
 		gui_app->setAttribute(Qt::AA_DontCheckOpenGLContextThreadAffinity);
 
 		gui_app->SetShowGui(!s_no_gui);
@@ -1048,6 +1049,11 @@ int main(int argc, char** argv)
 		}
 	}
 
+// Set timerslack value for Linux. The default value is 50,000ns. Change this to just 1 since we value precise timers.
+#ifdef __linux__
+	prctl(PR_SET_TIMERSLACK, 1, 0, 0, 0);
+#endif
+
 #ifdef _WIN32
 	// Create dummy permanent low resolution timer to workaround messing with system timer resolution
 	QTimer* dummy_timer = new QTimer(app.data());
@@ -1057,7 +1063,7 @@ int main(int argc, char** argv)
 	bool got_timer_resolution = NtQueryTimerResolution(&min_res, &max_res, &orig_res) == 0;
 
 	// Set 0.5 msec timer resolution for best performance
-	// - As QT5 timers (QTimer) sets the timer resolution to 1 msec, override it here.
+	// - As QT timers (QTimer) sets the timer resolution to 1 msec, override it here.
 	if (parser.value(arg_timer).toStdString() == "1")
 	{
 		ULONG new_res;
@@ -1283,18 +1289,18 @@ int main(int argc, char** argv)
 			}
 		}
 
-		if (parser.isSet(arg_pad_profile))
+		if (parser.isSet(arg_input_config))
 		{
 			if (!s_no_gui)
 			{
-				report_fatal_error(fmt::format("The option '%s' can only be used in combination with '%s'.", arg_pad_profile, arg_no_gui));
+				report_fatal_error(fmt::format("The option '%s' can only be used in combination with '%s'.", arg_input_config, arg_no_gui));
 			}
 
-			g_pad_profile_override = parser.value(pad_profile_option).toStdString();
+			g_input_config_override = parser.value(input_config_option).toStdString();
 
-			if (g_pad_profile_override.empty())
+			if (g_input_config_override.empty())
 			{
-				report_fatal_error(fmt::format("Pad profile name is empty"));
+				report_fatal_error(fmt::format("Input config file name is empty"));
 			}
 		}
 

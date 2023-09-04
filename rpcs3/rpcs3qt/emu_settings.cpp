@@ -1011,7 +1011,7 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case camera_flip::none: return tr("No", "Camera flip");
 		case camera_flip::horizontal: return tr("Flip horizontally", "Camera flip");
 		case camera_flip::vertical: return tr("Flip vertically", "Camera flip");
-		case camera_flip::both: return tr("Flip both axis", "Camera flip");
+		case camera_flip::both: return tr("Flip both axes", "Camera flip");
 		}
 		break;
 	case emu_settings_type::Camera:
@@ -1283,6 +1283,14 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case midi_device_type::keyboard: return tr("Keyboard", "Midi Device Type");
 		}
 		break;
+	case emu_settings_type::XFloatAccuracy:
+		switch (static_cast<xfloat_accuracy>(index))
+		{
+		case xfloat_accuracy::accurate: return tr("Accurate XFloat");
+		case xfloat_accuracy::approximate: return tr("Approximate XFloat");
+		case xfloat_accuracy::relaxed: return tr("Relaxed XFloat");
+		case xfloat_accuracy::inaccurate: return tr("Inaccurate XFloat");
+		}
 	default:
 		break;
 	}

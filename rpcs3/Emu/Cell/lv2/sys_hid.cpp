@@ -12,7 +12,7 @@
 
 LOG_CHANNEL(sys_hid);
 
-error_code sys_hid_manager_open(u64 device_type, u64 port_no, vm::ptr<u32> handle)
+error_code sys_hid_manager_open(ppu_thread& ppu, u64 device_type, u64 port_no, vm::ptr<u32> handle)
 {
 	sys_hid.todo("sys_hid_manager_open(device_type=0x%llx, port_no=0x%llx, handle=*0x%llx)", device_type, port_no, handle);
 
@@ -34,7 +34,7 @@ error_code sys_hid_manager_open(u64 device_type, u64 port_no, vm::ptr<u32> handl
 
 	if (device_type == 1)
 	{
-		cellPadInit(7);
+		cellPadInit(ppu, 7);
 		cellPadSetPortSetting(::narrow<u32>(port_no) /* 0 */, CELL_PAD_SETTING_LDD | CELL_PAD_SETTING_PRESS_ON | CELL_PAD_SETTING_SENSOR_ON);
 	}
 

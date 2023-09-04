@@ -29,11 +29,11 @@ if(UNIX AND NOT APPLE)
     endif()
 endif()
 
-# Qt5
+# Qt
 # finds Qt libraries and setups custom commands for MOC and UIC
 # Must be done here because generated MOC and UIC targets cant
 # be found otherwise
-include(${CMAKE_SOURCE_DIR}/3rdparty/qt5.cmake)
+include(${CMAKE_SOURCE_DIR}/3rdparty/qt6.cmake)
 
 # subdirectories
 add_subdirectory(Emu)
@@ -42,6 +42,7 @@ add_subdirectory(rpcs3qt)
 if(WIN32)
     add_executable(rpcs3 WIN32)
     target_sources(rpcs3 PRIVATE rpcs3.rc)
+    target_compile_definitions(rpcs3 PRIVATE UNICODE _UNICODE)
 elseif(APPLE)
     add_executable(rpcs3 MACOSX_BUNDLE)
     target_sources(rpcs3 PRIVATE rpcs3.icns)
@@ -84,7 +85,7 @@ set_target_properties(rpcs3
         AUTOUIC ON)
 
 target_link_libraries(rpcs3 PRIVATE rpcs3_emu rpcs3_ui)
-target_link_libraries(rpcs3 PRIVATE 3rdparty::discordRPC 3rdparty::qt5 3rdparty::hidapi 3rdparty::libusb 3rdparty::wolfssl 3rdparty::libcurl 3rdparty::zlib)
+target_link_libraries(rpcs3 PRIVATE 3rdparty::discordRPC 3rdparty::qt6 3rdparty::hidapi 3rdparty::libusb 3rdparty::wolfssl 3rdparty::libcurl 3rdparty::zlib)
 target_link_libraries(rpcs3 PRIVATE ${ADDITIONAL_LIBS})
 
 # Unix display manager
@@ -110,14 +111,6 @@ endif()
 
 if(USE_PRECOMPILED_HEADERS)
     target_precompile_headers(rpcs3 PRIVATE stdafx.h)
-endif()
-
-get_target_property(_qmake_executable Qt5::qmake IMPORTED_LOCATION)
-get_filename_component(_qt_bin_dir "${_qmake_executable}" DIRECTORY)
-if(APPLE)
-    find_program(MACDEPLOYQT_EXECUTABLE macdeployqt HINTS "${_qt_bin_dir}")
-elseif(WIN32)
-    find_program(WINDEPLOYQT_EXECUTABLE windeployqt HINTS "${_qt_bin_dir}")
 endif()
 
 # Copy icons to executable directory
@@ -148,35 +141,9 @@ elseif(UNIX)
             COMMAND ${CMAKE_COMMAND} -E copy_directory
             ${CMAKE_SOURCE_DIR}/bin/git $<TARGET_FILE_DIR:rpcs3>/git)
 elseif(WIN32)
-    # TODO(cjj19970505@live.cn)
-    # offical Qt binaries are built with -MD(d) only as stated in offical wiki
-    # https://wiki.qt.io/Technical_FAQ#Why_does_a_statically_built_Qt_use_the_dynamic_Visual_Studio_runtime_libraries_.3F_Do_I_need_to_deploy_those_with_my_application_.3F
-    # If we build our libs with /MT(d), we might encounter some issues.
-    # https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=msvc-160#what-problems-exist-if-an-application-uses-more-than-one-crt-version
-
-    # Qt installed from Qt installer has following hierarchy:
-    # bin/ for release and debug dlls and windeployqt tools
-    # lib/cmake/Qt5/ for Qt5_Dir
-    # Qt installed from vcpkg has following hierarchy:
-    # bin/ for release dlls
-    # debug/bin/ for debug dlls
-    # tools/qt5/bin/ for tools including windeployqt
-    # tools/qt5/debug/bin/ for tools with debug build including windeployqt
-    # share/cmake/Qt5/ for Qt5_Dir
-
-    # If Qt5 is installed from official Qt installer
-    # list(APPEND _QT5_TOOLS_PATHS "${Qt5_DIR}/../../../bin/")
-
-    # If Qt5 is installed from vcpkg
-    # list(APPEND _QT5_TOOLS_PATHS "${Qt5_DIR}/../../../tools/qt5$<$<CONFIG:Debug>:/debug>/bin/")
-
     add_custom_command(TARGET rpcs3 POST_BUILD
-        # COMMAND set PATH=${_QT5_TOOLS_PATHS}$<SEMICOLON>%PATH%
         COMMAND "${CMAKE_COMMAND}" -E copy_directory "${CMAKE_SOURCE_DIR}/bin" "$<TARGET_FILE_DIR:rpcs3>"
-        # If Qt5 is installed from vcpkg, add binary path to PATH
-        # otherwise windeployqt tool won't be able to locate necessary dlls
-        # COMMAND set PATH=${Qt5_DIR}/../../../$<$<CONFIG:Debug>:debug/>bin/$<SEMICOLON>%PATH% 
-        COMMAND "${WINDEPLOYQT_EXECUTABLE}" --no-angle --no-compiler-runtime --no-opengl-sw --no-patchqt --no-translations --no-quick --plugindir "$<TARGET_FILE_DIR:rpcs3>/qt/plugins" --verbose 0 "$<TARGET_FILE:rpcs3>")
+        COMMAND "${WINDEPLOYQT_EXECUTABLE}" --no-compiler-runtime --no-opengl-sw --no-patchqt --no-translations --no-quick --no-system-d3d-compiler --no-quick-import --plugindir "$<IF:$<CXX_COMPILER_ID:MSVC>,$<TARGET_FILE_DIR:rpcs3>/plugins,$<TARGET_FILE_DIR:rpcs3>/share/qt6/plugins>" --verbose 0 "$<TARGET_FILE:rpcs3>")
 endif()
 
 # Unix installation

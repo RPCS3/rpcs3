@@ -579,7 +579,7 @@ bool gs_frame::get_mouse_lock_state()
 
 void gs_frame::hide_on_close()
 {
-	if (!(+g_progr))
+	if (!g_progr.load())
 	{
 		// Hide the dialog before stopping if no progress bar is being shown.
 		// Otherwise users might think that the game softlocked if stopping takes too long.
@@ -762,13 +762,13 @@ bool gs_frame::can_consume_frame() const
 	return video_provider.can_consume_frame();
 }
 
-void gs_frame::present_frame(std::vector<u8>& data, const u32 width, const u32 height, bool is_bgra) const
+void gs_frame::present_frame(std::vector<u8>& data, u32 pitch, u32 width, u32 height, bool is_bgra) const
 {
 	utils::video_provider& video_provider = g_fxo->get<utils::video_provider>();
-	video_provider.present_frame(data, width, height, is_bgra);
+	video_provider.present_frame(data, pitch, width, height, is_bgra);
 }
 
-void gs_frame::take_screenshot(std::vector<u8> data, const u32 sshot_width, const u32 sshot_height, bool is_bgra)
+void gs_frame::take_screenshot(std::vector<u8> data, u32 sshot_width, u32 sshot_height, bool is_bgra)
 {
 	std::thread(
 		[sshot_width, sshot_height, is_bgra](std::vector<u8> sshot_data)

@@ -7,10 +7,13 @@ ARTIFACT_DIR="$BUILD_ARTIFACTSTAGINGDIRECTORY"
 rm -f ./bin/rpcs3.exp ./bin/rpcs3.lib ./bin/rpcs3.pdb ./bin/vc_redist.x64.exe
 rm -rf ./bin/git
 
-# Prepare compatibility database for packaging, as well as
+# Prepare compatibility and SDL database for packaging, as well as
 # certificate for ssl (auto-updater)
-curl -sL 'https://rpcs3.net/compatibility?api=v1&export' | iconv -t UTF-8 > ./bin/GuiConfigs/compat_database.dat
-curl -sL 'https://curl.haxx.se/ca/cacert.pem' > ./bin/cacert.pem
+mkdir ./bin/config
+mkdir ./bin/config/input_configs
+curl -fsSL 'https://raw.githubusercontent.com/gabomdq/SDL_GameControllerDB/master/gamecontrollerdb.txt' 1> ./bin/config/input_configs/gamecontrollerdb.txt
+curl -fsSL 'https://rpcs3.net/compatibility?api=v1&export' | iconv -t UTF-8 1> ./bin/GuiConfigs/compat_database.dat
+curl -fsSL 'https://curl.haxx.se/ca/cacert.pem' 1> ./bin/cacert.pem
 
 # Package artifacts
 7z a -m0=LZMA2 -mx9 "$BUILD" ./bin/*

@@ -6,6 +6,7 @@
 #include "util/atomic.hpp"
 #include "util/shared_ptr.hpp"
 
+#include <algorithm>
 #include <utility>
 #include <string>
 #include <vector>

@@ -34,7 +34,6 @@
 #include <QLibraryInfo>
 #include <QDirIterator>
 #include <QFileInfo>
-#include <QSound>
 #include <QMessageBox>
 #include <QTextDocument>
 
@@ -74,6 +73,7 @@ bool gui_application::Init()
 		gui_log.warning("Experimental Build Warning! Build origin: %s", branch_name);
 
 		QMessageBox msg;
+		msg.setWindowModality(Qt::WindowModal);
 		msg.setWindowTitle(tr("Experimental Build Warning"));
 		msg.setIcon(QMessageBox::Critical);
 		msg.setTextFormat(Qt::RichText);
@@ -173,7 +173,7 @@ void gui_application::SwitchTranslator(QTranslator& translator, const QString& f
 	// remove the old translator
 	removeTranslator(&translator);
 
-	const QString lang_path = QLibraryInfo::location(QLibraryInfo::TranslationsPath) + QStringLiteral("/");
+	const QString lang_path = QLibraryInfo::path(QLibraryInfo::TranslationsPath) + QStringLiteral("/");
 	const QString file_path = lang_path + filename;
 
 	if (QFileInfo(file_path).isFile())
@@ -236,7 +236,7 @@ QStringList gui_application::GetAvailableLanguageCodes()
 {
 	QStringList language_codes;
 
-	const QString language_path = QLibraryInfo::location(QLibraryInfo::TranslationsPath);
+	const QString language_path = QLibraryInfo::path(QLibraryInfo::TranslationsPath);
 
 	if (QFileInfo(language_path).isDir())
 	{
@@ -422,7 +422,7 @@ void gui_application::InitializeCallbacks()
 
 		return false;
 	};
-	callbacks.call_from_main_thread = [this](std::function<void()> func, atomic_t<bool>* wake_up)
+	callbacks.call_from_main_thread = [this](std::function<void()> func, atomic_t<u32>* wake_up)
 	{
 		RequestCallFromMainThread(std::move(func), wake_up);
 	};
@@ -546,13 +546,17 @@ void gui_application::InitializeCallbacks()
 		return localized_emu::get_u32string(id, args);
 	};
 
-	callbacks.play_sound = [](const std::string& path)
+	callbacks.play_sound = [this](const std::string& path)
 	{
-		Emu.CallFromMainThread([path]()
+		Emu.CallFromMainThread([this, path]()
 		{
 			if (fs::is_file(path))
 			{
-				QSound::play(qstr(path));
+				m_sound_effect.stop();
+				m_sound_effect.setSource(QUrl::fromLocalFile(qstr(path)));
+				m_sound_effect.setVolume(g_cfg.audio.volume * 0.01f);
+				m_sound_effect.setLoopCount(1);
+				m_sound_effect.play();
 			}
 		});
 	};
@@ -789,7 +793,7 @@ void gui_application::OnChangeStyleSheetRequest()
 /**
  * Using connects avoids timers being unable to be used in a non-qt thread. So, even if this looks stupid to just call func, it's succinct.
  */
-void gui_application::CallFromMainThread(const std::function<void()>& func, atomic_t<bool>* wake_up)
+void gui_application::CallFromMainThread(const std::function<void()>& func, atomic_t<u32>* wake_up)
 {
 	func();
 

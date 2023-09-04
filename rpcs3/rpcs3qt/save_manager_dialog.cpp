@@ -18,7 +18,6 @@
 #include <QMenu>
 #include <QMessageBox>
 #include <QGuiApplication>
-#include <QUrl>
 #include <QDesktopServices>
 #include <QPainter>
 #include <QScreen>

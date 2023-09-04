@@ -7,8 +7,8 @@
 
 #include "cellMouse.h"
 
-extern void libio_sys_config_init();
-extern void libio_sys_config_end();
+error_code sys_config_start(ppu_thread& ppu);
+error_code sys_config_stop(ppu_thread& ppu);
 
 extern bool is_input_allowed();
 
@@ -61,7 +61,7 @@ void MouseHandlerBase::save(utils::serial& ar)
 	ar(inited ? m_info.max_connect : 0);
 }
 
-error_code cellMouseInit(u32 max_connect)
+error_code cellMouseInit(ppu_thread& ppu, u32 max_connect)
 {
 	sys_io.notice("cellMouseInit(max_connect=%d)", max_connect);
 
@@ -78,7 +78,7 @@ error_code cellMouseInit(u32 max_connect)
 		return CELL_MOUSE_ERROR_INVALID_PARAMETER;
 	}
 
-	libio_sys_config_init();
+	sys_config_start(ppu);
 	handler.Init(std::min(max_connect, 7u));
 
 	return CELL_OK;
@@ -121,7 +121,7 @@ error_code cellMouseClearBuf(u32 port_no)
 	return CELL_OK;
 }
 
-error_code cellMouseEnd()
+error_code cellMouseEnd(ppu_thread& ppu)
 {
 	sys_io.notice("cellMouseEnd()");
 
@@ -133,7 +133,7 @@ error_code cellMouseEnd()
 		return CELL_MOUSE_ERROR_UNINITIALIZED;
 
 	// TODO
-	libio_sys_config_end();
+	sys_config_stop(ppu);
 	return CELL_OK;
 }
 

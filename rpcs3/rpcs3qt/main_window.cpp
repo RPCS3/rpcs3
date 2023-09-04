@@ -155,7 +155,7 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 	ui->toolbar_start->setEnabled(enable_play_last);
 
 	// create tool buttons for the taskbar thumbnail
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 	m_thumb_bar = new QWinThumbnailToolBar(this);
 	m_thumb_bar->setWindow(windowHandle());
 
@@ -445,7 +445,7 @@ void main_window::show_boot_error(game_boot_result status)
 		message = tr("Savestate data is corrupted or it's not an RPCS3 savestate.");
 		break;
 	case game_boot_result::savestate_version_unsupported:
-		message = tr("Savestate versioning data differes from your RPCS3 build.");
+		message = tr("Savestate versioning data differs from your RPCS3 build.");
 		break;
 	case game_boot_result::still_running:
 		message = tr("A game or PS3 application is still running or has yet to be fully stopped.");
@@ -743,75 +743,94 @@ bool main_window::InstallPackages(QStringList file_paths, bool from_boot)
 		m_gui_settings->SetValue(gui::fd_install_pkg, file_info.path());
 	}
 
-	if (file_paths.count() == 1 && file_paths.front().endsWith(".pkg", Qt::CaseInsensitive))
+	if (file_paths.count() == 1)
 	{
 		const QString file_path = file_paths.front();
 		const QFileInfo file_info(file_path);
 
-		compat::package_info info = game_compatibility::GetPkgInfo(file_path, m_game_list_frame ? m_game_list_frame->GetGameCompatibility() : nullptr);
-
-		if (!info.is_valid)
+		if (file_info.isDir())
 		{
-			QMessageBox::warning(this, tr("Invalid package!"), tr("The selected package is invalid!\n\nPath:\n%0").arg(file_path));
-			return false;
-		}
+			gui_log.notice("PKG: Trying to install packages from dir: '%s'", file_path);
 
-		if (info.type != compat::package_type::other)
-		{
-			if (info.type == compat::package_type::dlc)
+			const QDir dir(file_path);
+			const QStringList dir_file_paths = gui::utils::get_dir_entries(dir, {}, true);
+
+			if (dir_file_paths.empty())
 			{
-				info.local_cat = tr("\nDLC", "Block for package type (DLC)");
-			}
-			else
-			{
-				info.local_cat = tr("\nUpdate", "Block for package type (Update)");
-			}
-		}
-		else if (!info.local_cat.isEmpty())
-		{
-			info.local_cat = tr("\n%0", "Block for package type").arg(info.local_cat);
-		}
-
-		if (!info.title_id.isEmpty())
-		{
-			info.title_id = tr("\n%0", "Block for Title ID").arg(info.title_id);
-		}
-
-		if (!info.version.isEmpty())
-		{
-			info.version = tr("\nVersion %0", "Block for Version").arg(info.version);
-		}
-
-		if (!info.changelog.isEmpty())
-		{
-			info.changelog = tr("Changelog:\n%0", "Block for Changelog").arg(info.changelog);
-		}
-
-		const QString info_string = QStringLiteral("%0\n\n%1%2%3%4").arg(file_info.fileName()).arg(info.title).arg(info.local_cat).arg(info.title_id).arg(info.version);
-		QString message = tr("Do you want to install this package?\n\n%0").arg(info_string);
-
-		QMessageBox mb(QMessageBox::Icon::Question, tr("PKG Decrypter / Installer"), message, QMessageBox::Yes | QMessageBox::No, this);
-		mb.setDefaultButton(QMessageBox::No);
-
-		if (!info.changelog.isEmpty())
-		{
-			mb.setInformativeText(tr("To see the changelog, please click \"Show Details\"."));
-			mb.setDetailedText(tr("%0").arg(info.changelog));
-
-			// Smartass hack to make the unresizeable message box wide enough for the changelog
-			const int log_width = QLabel(info.changelog).sizeHint().width();
-			while (QLabel(message).sizeHint().width() < log_width)
-			{
-				message += "          ";
+				gui_log.notice("PKG: Could not find any files in dir: '%s'", file_path);
+				return true;
 			}
 
-			mb.setText(message);
+			return InstallPackages(dir_file_paths, from_boot);
 		}
 
-		if (mb.exec() != QMessageBox::Yes)
+		if (file_info.suffix().compare("pkg", Qt::CaseInsensitive) == 0)
 		{
-			gui_log.notice("PKG: Cancelled installation from drop.\n%s\n%s", info_string, info.changelog);
-			return true;
+			compat::package_info info = game_compatibility::GetPkgInfo(file_path, m_game_list_frame ? m_game_list_frame->GetGameCompatibility() : nullptr);
+
+			if (!info.is_valid)
+			{
+				QMessageBox::warning(this, tr("Invalid package!"), tr("The selected package is invalid!\n\nPath:\n%0").arg(file_path));
+				return false;
+			}
+
+			if (info.type != compat::package_type::other)
+			{
+				if (info.type == compat::package_type::dlc)
+				{
+					info.local_cat = tr("\nDLC", "Block for package type (DLC)");
+				}
+				else
+				{
+					info.local_cat = tr("\nUpdate", "Block for package type (Update)");
+				}
+			}
+			else if (!info.local_cat.isEmpty())
+			{
+				info.local_cat = tr("\n%0", "Block for package type").arg(info.local_cat);
+			}
+
+			if (!info.title_id.isEmpty())
+			{
+				info.title_id = tr("\n%0", "Block for Title ID").arg(info.title_id);
+			}
+
+			if (!info.version.isEmpty())
+			{
+				info.version = tr("\nVersion %0", "Block for Version").arg(info.version);
+			}
+
+			if (!info.changelog.isEmpty())
+			{
+				info.changelog = tr("Changelog:\n%0", "Block for Changelog").arg(info.changelog);
+			}
+
+			const QString info_string = QStringLiteral("%0\n\n%1%2%3%4").arg(file_info.fileName()).arg(info.title).arg(info.local_cat).arg(info.title_id).arg(info.version);
+			QString message = tr("Do you want to install this package?\n\n%0").arg(info_string);
+
+			QMessageBox mb(QMessageBox::Icon::Question, tr("PKG Decrypter / Installer"), message, QMessageBox::Yes | QMessageBox::No, this);
+			mb.setDefaultButton(QMessageBox::No);
+
+			if (!info.changelog.isEmpty())
+			{
+				mb.setInformativeText(tr("To see the changelog, please click \"Show Details\"."));
+				mb.setDetailedText(tr("%0").arg(info.changelog));
+
+				// Smartass hack to make the unresizeable message box wide enough for the changelog
+				const int log_width = QLabel(info.changelog).sizeHint().width();
+				while (QLabel(message).sizeHint().width() < log_width)
+				{
+					message += "          ";
+				}
+
+				mb.setText(message);
+			}
+
+			if (mb.exec() != QMessageBox::Yes)
+			{
+				gui_log.notice("PKG: Cancelled installation from drop.\n%s\n%s", info_string, info.changelog);
+				return true;
+			}
 		}
 	}
 
@@ -821,7 +840,7 @@ bool main_window::InstallPackages(QStringList file_paths, bool from_boot)
 	const auto install_filetype = [&installed_rap_and_edat_count, &file_paths](const std::string extension)
 	{
 		const QString pattern = QString(".*\\.%1").arg(QString::fromStdString(extension));
-		for (const auto& file : file_paths.filter(QRegularExpression(pattern, QRegularExpression::PatternOption::CaseInsensitiveOption)))
+		for (const QString& file : file_paths.filter(QRegularExpression(pattern, QRegularExpression::PatternOption::CaseInsensitiveOption)))
 		{
 			const QFileInfo file_info(file);
 			const std::string filename = sstr(file_info.fileName());
@@ -1317,7 +1336,7 @@ void main_window::ExtractTar()
 	if (!error.isEmpty())
 	{
 		pdlg.hide();
-		QMessageBox::critical(this, tr("Tar extraction failed"), error);
+		QMessageBox::critical(this, tr("TAR extraction failed"), error);
 	}
 }
 
@@ -1700,7 +1719,7 @@ void main_window::RepaintThumbnailIcons()
 		return gui::utils::get_colorized_icon(QPixmap::fromImage(gui::utils::get_opaque_image_area(path)), Qt::black, new_color);
 	};
 
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 	if (!m_thumb_bar) return;
 
 	m_icon_thumb_play = icon(":/Icons/play.png");
@@ -1787,14 +1806,6 @@ void main_window::RepaintToolBarIcons()
 
 	// resize toolbar elements
 
-	// for highdpi resize toolbar icons and height dynamically
-	// choose factors to mimic Gui-Design in main_window.ui
-	// TODO: delete this in case Qt::AA_EnableHighDpiScaling is enabled in main.cpp
-#ifdef _WIN32
-	const int tool_icon_height = menuBar()->sizeHint().height() * 1.5;
-	ui->toolBar->setIconSize(QSize(tool_icon_height, tool_icon_height));
-#endif
-
 	const int tool_bar_height = ui->toolBar->sizeHint().height();
 
 	for (const auto& act : ui->toolBar->actions())
@@ -1820,7 +1831,7 @@ void main_window::OnEmuRun(bool /*start_playtime*/) const
 
 	m_debugger_frame->EnableButtons(true);
 
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 	m_thumb_stop->setToolTip(stop_tooltip);
 	m_thumb_restart->setToolTip(restart_tooltip);
 	m_thumb_playPause->setToolTip(pause_tooltip);
@@ -1843,7 +1854,7 @@ void main_window::OnEmuResume() const
 	const QString pause_tooltip = tr("Pause %0").arg(title);
 	const QString stop_tooltip = tr("Stop %0").arg(title);
 
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 	m_thumb_stop->setToolTip(stop_tooltip);
 	m_thumb_restart->setToolTip(restart_tooltip);
 	m_thumb_playPause->setToolTip(pause_tooltip);
@@ -1862,7 +1873,7 @@ void main_window::OnEmuPause() const
 	const QString title = GetCurrentTitle();
 	const QString resume_tooltip = tr("Resume %0").arg(title);
 
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 	m_thumb_playPause->setToolTip(resume_tooltip);
 	m_thumb_playPause->setIcon(m_icon_thumb_play);
 #endif
@@ -1886,7 +1897,7 @@ void main_window::OnEmuStop()
 
 	ui->sysPauseAct->setText(tr("&Play"));
 	ui->sysPauseAct->setIcon(m_icon_play);
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 	m_thumb_playPause->setToolTip(play_tooltip);
 	m_thumb_playPause->setIcon(m_icon_thumb_play);
 #endif
@@ -1908,7 +1919,7 @@ void main_window::OnEmuStop()
 		ui->toolbar_start->setText(tr("Restart"));
 		ui->toolbar_start->setToolTip(restart_tooltip);
 		ui->sysRebootAct->setEnabled(true);
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 		m_thumb_restart->setToolTip(restart_tooltip);
 		m_thumb_restart->setEnabled(true);
 #endif
@@ -1947,7 +1958,7 @@ void main_window::OnEmuReady() const
 	const QString play_tooltip = tr("Play %0").arg(title);
 
 	m_debugger_frame->EnableButtons(true);
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 	m_thumb_playPause->setToolTip(play_tooltip);
 	m_thumb_playPause->setIcon(m_icon_thumb_play);
 #endif
@@ -1971,7 +1982,7 @@ void main_window::OnEmuReady() const
 void main_window::EnableMenus(bool enabled) const
 {
 	// Thumbnail Buttons
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 	m_thumb_playPause->setEnabled(enabled);
 	m_thumb_stop->setEnabled(enabled);
 	m_thumb_restart->setEnabled(enabled);
@@ -2495,7 +2506,7 @@ void main_window::CreateConnects()
 	});
 	connect(ui->exitAct, &QAction::triggered, this, &QWidget::close);
 
-	connect(ui->batchCreatePPUCachesAct, &QAction::triggered, m_game_list_frame, &game_list_frame::BatchCreatePPUCaches);
+	connect(ui->batchCreateCPUCachesAct, &QAction::triggered, m_game_list_frame, &game_list_frame::BatchCreateCPUCaches);
 	connect(ui->batchRemovePPUCachesAct, &QAction::triggered, m_game_list_frame, &game_list_frame::BatchRemovePPUCaches);
 	connect(ui->batchRemoveSPUCachesAct, &QAction::triggered, m_game_list_frame, &game_list_frame::BatchRemoveSPUCaches);
 	connect(ui->batchRemoveShaderCachesAct, &QAction::triggered, m_game_list_frame, &game_list_frame::BatchRemoveShaderCaches);
@@ -3139,14 +3150,14 @@ void main_window::CreateDockWindows()
 
 			ui->toolbar_start->setEnabled(enable_play_buttons);
 			ui->sysPauseAct->setEnabled(enable_play_buttons);
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 			m_thumb_playPause->setEnabled(enable_play_buttons);
 #endif
 
 			if (!tooltip.isEmpty())
 			{
 				ui->toolbar_start->setToolTip(tooltip);
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 				m_thumb_playPause->setToolTip(tooltip);
 #endif
 			}

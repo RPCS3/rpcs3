@@ -147,11 +147,11 @@
            </widget>
           </item>
           <item>
-           <widget class="QGroupBox" name="gb_profiles">
+           <widget class="QGroupBox" name="gb_config_files">
             <property name="title">
-             <string>Profiles</string>
+             <string>Configuration Files</string>
             </property>
-            <layout class="QHBoxLayout" name="gb_profiles_layout">
+            <layout class="QHBoxLayout" name="gb_config_files_layout">
              <property name="leftMargin">
               <number>5</number>
              </property>
@@ -165,12 +165,12 @@
               <number>5</number>
              </property>
              <item>
-              <widget class="QComboBox" name="chooseProfile"/>
+              <widget class="QComboBox" name="chooseConfig"/>
              </item>
              <item>
-              <widget class="QPushButton" name="b_addProfile">
+              <widget class="QPushButton" name="b_addConfig">
                <property name="text">
-                <string>Add Profile</string>
+                <string>Add Configuration</string>
                </property>
                <property name="autoDefault">
                 <bool>false</bool>
@@ -718,6 +718,22 @@
              </widget>
             </item>
             <item>
+             <widget class="QGroupBox" name="gb_pressure_intensity_deadzone">
+              <property name="title">
+               <string>Pressure Sensitivity Deadzone</string>
+              </property>
+              <layout class="QHBoxLayout" name="layout_gb_pressure_intensity_deadzone">
+               <item>
+                <widget class="QSlider" name="pressure_intensity_deadzone">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
              <widget class="QStackedWidget" name="left_stack">
               <property name="lineWidth">
                <number>0</number>
@@ -844,34 +860,6 @@
                     <widget class="QCheckBox" name="chb_vibration_switch">
                      <property name="text">
                       <string>Switch</string>
-                     </property>
-                    </widget>
-                   </item>
-                  </layout>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QGroupBox" name="gb_stick_preview">
-                  <property name="title">
-                   <string>Stick Preview</string>
-                  </property>
-                  <layout class="QVBoxLayout" name="gb_stick_preview_layout">
-                   <property name="leftMargin">
-                    <number>5</number>
-                   </property>
-                   <property name="topMargin">
-                    <number>5</number>
-                   </property>
-                   <property name="rightMargin">
-                    <number>5</number>
-                   </property>
-                   <property name="bottomMargin">
-                    <number>5</number>
-                   </property>
-                   <item>
-                    <widget class="QCheckBox" name="chb_show_emulated_values">
-                     <property name="text">
-                      <string>Show Emulated Values</string>
                      </property>
                     </widget>
                    </item>
@@ -2365,6 +2353,34 @@
                       </size>
                      </property>
                     </spacer>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QGroupBox" name="gb_stick_preview">
+                  <property name="title">
+                   <string>Stick Preview</string>
+                  </property>
+                  <layout class="QVBoxLayout" name="gb_stick_preview_layout">
+                   <property name="leftMargin">
+                    <number>5</number>
+                   </property>
+                   <property name="topMargin">
+                    <number>5</number>
+                   </property>
+                   <property name="rightMargin">
+                    <number>5</number>
+                   </property>
+                   <property name="bottomMargin">
+                    <number>5</number>
+                   </property>
+                   <item>
+                    <widget class="QCheckBox" name="chb_show_emulated_values">
+                     <property name="text">
+                      <string>Show Emulated Values</string>
+                     </property>
+                    </widget>
                    </item>
                   </layout>
                  </widget>

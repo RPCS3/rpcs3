@@ -16,8 +16,8 @@ namespace
 	constexpr u32 DS4_GYRO_RES_PER_DEG_S = 86; // technically this could be 1024, but keeping it at 86 keeps us within 16 bits of precision
 	constexpr u32 DS4_FEATURE_REPORT_0x02_SIZE = 37;
 	constexpr u32 DS4_FEATURE_REPORT_0x05_SIZE = 41;
-	constexpr u32 DS4_FEATURE_REPORT_0x12_SIZE = 16;
-	constexpr u32 DS4_FEATURE_REPORT_0x81_SIZE = 7;
+	//constexpr u32 DS4_FEATURE_REPORT_0x12_SIZE = 16;
+	//constexpr u32 DS4_FEATURE_REPORT_0x81_SIZE = 7;
 	constexpr u32 DS4_FEATURE_REPORT_0xA3_SIZE = 49;
 	constexpr u32 DS4_INPUT_REPORT_0x11_SIZE = 78;
 	constexpr u32 DS4_OUTPUT_REPORT_0x05_SIZE = 32;
@@ -514,38 +514,18 @@ void ds4_pad_handler::check_add_device(hid_device* hidDevice, std::string_view p
 	}
 
 	std::string serial;
+	for (wchar_t ch : wide_serial)
+		serial += static_cast<uchar>(ch);
 
-	// There isnt a nice 'portable' way with hidapi to detect bt vs wired as the pid/vid's are the same
-	// Let's try getting 0x81 feature report, which should return the mac address on wired, and should an error on bluetooth
-	std::array<u8, 64> buf{};
-	buf[0] = 0x81;
-	int res = hid_get_feature_report(hidDevice, buf.data(), DS4_FEATURE_REPORT_0x81_SIZE);
-	if (res > 0)
+	const hid_device_info* devinfo = hid_get_device_info(hidDevice);
+	if (!devinfo)
 	{
-		if (res != DS4_FEATURE_REPORT_0x81_SIZE || buf[0] != 0x81)
-		{
-			// Controller may not be genuine. These controllers do not have feature 0x81 implemented and calibration data is in bluetooth format even in USB mode!
-			ds4_log.warning("check_add_device: DS4 controller may not be genuine. Workaround enabled. (result=%d, buf[0]=0x%x)", res, buf[0]);
-
-			// Read feature report 0x12 instead which is what the console uses.
-			buf = {};
-			buf[0] = 0x12;
-			if (res = hid_get_feature_report(hidDevice, buf.data(), DS4_FEATURE_REPORT_0x12_SIZE); res != DS4_FEATURE_REPORT_0x12_SIZE || buf[0] != 0x12)
-			{
-				ds4_log.error("check_add_device: hid_get_feature_report 0x12 failed! result=%d, buf[0]=0x%x, error=%s", res, buf[0], hid_error(hidDevice));
-			}
-		}
-
-		serial = fmt::format("%x%x%x%x%x%x", buf[6], buf[5], buf[4], buf[3], buf[2], buf[1]);
-	}
-	else
-	{
-		ds4_log.warning("check_add_device: DS4 Bluetooth controller detected. (hid_get_feature_report 0x81 failed, result=%d, buf[0]=0x%x, error=%s)", res, buf[0], hid_error(hidDevice));
-		device->bt_controller = true;
-		for (wchar_t ch : wide_serial)
-			serial += static_cast<uchar>(ch);
+		ds4_log.error("check_add_device: hid_get_device_info failed! error=%s", hid_error(hidDevice));
+		hid_close(hidDevice);
+		return;
 	}
 
+	device->bt_controller = (devinfo->bus_type == HID_API_BUS_BLUETOOTH);
 	device->hidDevice = hidDevice;
 
 	if (!GetCalibrationData(device))
@@ -559,10 +539,10 @@ void ds4_pad_handler::check_add_device(hid_device* hidDevice, std::string_view p
 	u32 hw_version{};
 	u32 fw_version{};
 
-	buf = {};
+	std::array<u8, 64> buf{};
 	buf[0] = 0xA3;
 
-	res = hid_get_feature_report(hidDevice, buf.data(), DS4_FEATURE_REPORT_0xA3_SIZE);
+	int res = hid_get_feature_report(hidDevice, buf.data(), DS4_FEATURE_REPORT_0xA3_SIZE);
 	if (res != DS4_FEATURE_REPORT_0xA3_SIZE || buf[0] != 0xA3)
 	{
 		ds4_log.error("check_add_device: hid_get_feature_report 0xA3 failed! Could not retrieve firmware version! result=%d, buf[0]=0x%x, error=%s", res, buf[0], hid_error(hidDevice));

@@ -1,13 +1,10 @@
 #!/bin/sh -ex
 
-# Setup Qt variables
-export QT_BASE_DIR=/opt/qt"${QTVERMIN}"
-export PATH="$QT_BASE_DIR"/bin:"$PATH"
-export LD_LIBRARY_PATH="$QT_BASE_DIR"/lib/x86_64-linux-gnu:"$QT_BASE_DIR"/lib
-
 if [ -z "$CIRRUS_CI" ]; then
    cd rpcs3 || exit 1
 fi
+
+git config --global --add safe.directory '*'
 
 # Pull all the submodules except llvm
 # Note: Tried to use git submodule status, but it takes over 20 seconds
@@ -45,6 +42,7 @@ cmake ..                                               \
     -DCMAKE_RANLIB="$RANLIB"                           \
     -DUSE_SYSTEM_CURL=ON                               \
     -DUSE_SDL=ON                                       \
+    -DUSE_SYSTEM_FFMPEG=OFF                            \
     -DOpenGL_GL_PREFERENCE=LEGACY                      \
     -DLLVM_DIR=/opt/llvm/lib/cmake/llvm                \
     -DSTATIC_LINK_LLVM=ON                              \

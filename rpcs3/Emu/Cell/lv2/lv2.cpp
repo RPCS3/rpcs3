@@ -2,6 +2,7 @@
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/Memory/vm_ptr.h"
+#include "Emu/Memory/vm_reservation.h"
 #include "Emu/Memory/vm_locking.h"
 
 #include "Emu/Cell/PPUFunction.h"
@@ -53,6 +54,17 @@
 #include <optional>
 #include <deque>
 #include "util/tsc.hpp"
+#include "util/sysinfo.hpp"
+
+#if defined(ARCH_X64)
+#ifdef _MSC_VER
+#include <intrin.h>
+#include <immintrin.h>
+#else
+#include <x86intrin.h>
+#endif
+#endif
+
 
 extern std::string ppu_get_syscall_name(u64 code);
 
@@ -1257,6 +1269,31 @@ bool lv2_obj::sleep(cpu_thread& cpu, const u64 timeout)
 		prepare_for_sleep(cpu);
 	}
 
+	if (cpu.id_type() == 1)
+	{
+		if (u32 addr = static_cast<ppu_thread&>(cpu).res_notify)
+		{
+			static_cast<ppu_thread&>(cpu).res_notify = 0;
+
+			const usz notify_later_idx = std::basic_string_view<const void*>{g_to_notify, std::size(g_to_notify)}.find_first_of(std::add_pointer_t<const void>{});
+
+			if (notify_later_idx != umax)
+			{
+				g_to_notify[notify_later_idx] = &vm::reservation_notifier(addr);
+
+				if (notify_later_idx < std::size(g_to_notify) - 1)
+				{
+					// Null-terminate the list if it ends before last slot
+					g_to_notify[notify_later_idx + 1] = nullptr;
+				}
+			}
+			else
+			{
+				vm::reservation_notifier(addr).notify_all();
+			}
+		}
+	}
+
 	bool result = false;
 	const u64 current_time = get_guest_system_time();
 	{
@@ -1283,6 +1320,31 @@ bool lv2_obj::sleep(cpu_thread& cpu, const u64 timeout)
 
 bool lv2_obj::awake(cpu_thread* thread, s32 prio)
 {
+	if (ppu_thread* ppu = cpu_thread::get_current<ppu_thread>())
+	{
+		if (u32 addr = ppu->res_notify)
+		{
+			ppu->res_notify = 0;
+
+			const usz notify_later_idx = std::basic_string_view<const void*>{g_to_notify, std::size(g_to_notify)}.find_first_of(std::add_pointer_t<const void>{});
+
+			if (notify_later_idx != umax)
+			{
+				g_to_notify[notify_later_idx] = &vm::reservation_notifier(addr);
+
+				if (notify_later_idx < std::size(g_to_notify) - 1)
+				{
+					// Null-terminate the list if it ends before last slot
+					g_to_notify[notify_later_idx + 1] = nullptr;
+				}
+			}
+			else
+			{
+				vm::reservation_notifier(addr).notify_all();
+			}
+		}
+	}
+
 	bool result = false;
 	{
 		std::lock_guard lock(g_mutex);
@@ -1631,7 +1693,7 @@ bool lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
 
 			if (is_paused(target->state - cpu_flag::suspend))
 			{
-				target->state.notify_one(cpu_flag::suspend);
+				target->state.notify_one();
 			}
 		}
 	}
@@ -1662,7 +1724,7 @@ void lv2_obj::cleanup()
 
 void lv2_obj::schedule_all(u64 current_time)
 {
-	usz notify_later_idx = 0;
+	usz notify_later_idx = std::basic_string_view<const void*>{g_to_notify, std::size(g_to_notify)}.find_first_of(std::add_pointer_t<const void>{});
 
 	if (!g_pending && g_scheduler_ready)
 	{
@@ -1681,10 +1743,10 @@ void lv2_obj::schedule_all(u64 current_time)
 					continue;
 				}
 
-				if (notify_later_idx == std::size(g_to_notify))
+				if (notify_later_idx >= std::size(g_to_notify))
 				{
 					// Out of notification slots, notify locally (resizable container is not worth it)
-					target->state.notify_one(cpu_flag::signal + cpu_flag::suspend);
+					target->state.notify_one();
 				}
 				else
 				{
@@ -1715,10 +1777,10 @@ void lv2_obj::schedule_all(u64 current_time)
 				ensure(!target->state.test_and_set(cpu_flag::notify));
 
 				// Otherwise notify it to wake itself
-				if (notify_later_idx == std::size(g_to_notify))
+				if (notify_later_idx >= std::size(g_to_notify))
 				{
 					// Out of notification slots, notify locally (resizable container is not worth it)
-					target->state.notify_one(cpu_flag::notify);
+					target->state.notify_one();
 				}
 				else
 				{
@@ -1880,6 +1942,35 @@ void lv2_obj::set_yield_frequency(u64 freq, u64 max_allowed_tsc)
 	g_lv2_preempts_taken.release(0);
 }
 
+#if defined(_MSC_VER)
+#define mwaitx_func
+#define waitpkg_func
+#else
+#define mwaitx_func __attribute__((__target__("mwaitx")))
+#define waitpkg_func __attribute__((__target__("waitpkg")))
+#endif
+
+#if defined(ARCH_X64)
+// Waits for a number of TSC clock cycles in power optimized state
+// Cstate is represented in bits [7:4]+1 cstate. So C0 requires bits [7:4] to be set to 0xf, C1 requires bits [7:4] to be set to 0.
+mwaitx_func static void __mwaitx(u32 cycles, u32 cstate)
+{
+	constexpr u32 timer_enable = 0x2;
+
+	// monitorx will wake if the cache line is written to. We don't want this, so place the monitor value on it's own cache line.
+	alignas(64) u64 monitor_var{};
+	_mm_monitorx(&monitor_var, 0, 0);
+	_mm_mwaitx(timer_enable, cstate, cycles);
+}
+
+// First bit indicates cstate, 0x0 for C.02 state (lower power) or 0x1 for C.01 state (higher power)
+waitpkg_func static void __tpause(u32 cycles, u32 cstate)
+{
+	const u64 tsc = utils::get_tsc() + cycles;
+	_tpause(cstate, tsc);
+}
+#endif
+
 bool lv2_obj::wait_timeout(u64 usec, ppu_thread* cpu, bool scale, bool is_usleep)
 {
 	static_assert(u64{umax} / max_timeout >= 100, "max timeout is not valid for scaling");
@@ -1948,7 +2039,7 @@ bool lv2_obj::wait_timeout(u64 usec, ppu_thread* cpu, bool scale, bool is_usleep
 		u64 remaining = usec - passed;
 #ifdef __linux__
 		// NOTE: Assumption that timer initialization has succeeded
-		u64 host_min_quantum = is_usleep && remaining <= 1000 ? 10 : 50;
+		constexpr u64 host_min_quantum = 10;
 #else
 		// Host scheduler quantum for windows (worst case)
 		// NOTE: On ps3 this function has very high accuracy
@@ -1965,14 +2056,29 @@ bool lv2_obj::wait_timeout(u64 usec, ppu_thread* cpu, bool scale, bool is_usleep
 			if (remaining > host_min_quantum)
 			{
 #ifdef __linux__
-				// Do not wait for the last quantum to avoid loss of accuracy
-				wait_for(remaining - ((remaining % host_min_quantum) + host_min_quantum));
+				// With timerslack set low, Linux is precise for all values above
+				wait_for(remaining);
 #else
 				// Wait on multiple of min quantum for large durations to avoid overloading low thread cpus
 				wait_for(remaining - (remaining % host_min_quantum));
 #endif
 			}
 			// TODO: Determine best value for yield delay
+#if defined(ARCH_X64)
+			else if (utils::has_appropriate_um_wait())
+			{
+				u32 us_in_tsc_clocks = remaining * (utils::get_tsc_freq() / 1000000);
+
+				if (utils::has_waitpkg())
+				{
+					__tpause(us_in_tsc_clocks, 0x1);
+				}
+				else
+				{
+					__mwaitx(us_in_tsc_clocks, 0xf0);
+				}
+			}
+#endif
 			else
 			{
 				// Try yielding. May cause long wake latency but helps weaker CPUs a lot by alleviating resource pressure

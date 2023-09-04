@@ -1,5 +1,6 @@
 #include <QButtonGroup>
-#include <QCameraInfo>
+#include <QCameraDevice>
+#include <QMediaDevices>
 #include <QDialogButtonBox>
 #include <QFontMetrics>
 #include <QPushButton>
@@ -10,7 +11,6 @@
 #include <QSpinBox>
 #include <QTimer>
 #include <QScreen>
-#include <QUrl>
 
 #include "gui_settings.h"
 #include "display_sleep_control.h"
@@ -265,30 +265,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	SubscribeTooltip(ui->spuLoopDetection, tooltips.settings.spu_loop_detection);
 
 	// Comboboxes
+	m_emu_settings->EnhanceComboBox(ui->xfloatAccuracy, emu_settings_type::XFloatAccuracy);
 	SubscribeTooltip(ui->gb_xfloat_accuracy, tooltips.settings.xfloat);
-	ui->xfloatAccuracy->addItem(tr("Accurate XFloat"));
-	ui->xfloatAccuracy->addItem(tr("Approximate XFloat"));
-	ui->xfloatAccuracy->addItem(tr("Relaxed XFloat"));
-
-	connect(ui->xfloatAccuracy, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
-	{
-		if (index < 0) return;
-
-		m_emu_settings->SetSetting(emu_settings_type::AccurateXFloat, index == 0 ? "true" : "false");
-		m_emu_settings->SetSetting(emu_settings_type::ApproximateXFloat, index == 1 ? "true" : "false");
-	});
-
-	connect(m_emu_settings.get(), &emu_settings::RestoreDefaultsSignal, this, [this]()
-	{
-		ui->xfloatAccuracy->setCurrentIndex(1);
-	});
-
-	if (m_emu_settings->GetSetting(emu_settings_type::AccurateXFloat) == "true")
-		ui->xfloatAccuracy->setCurrentIndex(0);
-	else if (m_emu_settings->GetSetting(emu_settings_type::ApproximateXFloat) == "true")
-		ui->xfloatAccuracy->setCurrentIndex(1);
-	else
-		ui->xfloatAccuracy->setCurrentIndex(2);
+	remove_item(ui->xfloatAccuracy, static_cast<int>(xfloat_accuracy::inaccurate), static_cast<int>(g_cfg.core.spu_xfloat_accuracy.def));
 
 	m_emu_settings->EnhanceComboBox(ui->spuBlockSize, emu_settings_type::SPUBlockSize);
 	SubscribeTooltip(ui->gb_spuBlockSize, tooltips.settings.spu_block_size);
@@ -1191,10 +1170,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		const std::string selected_camera = m_emu_settings->GetSetting(emu_settings_type::CameraID);
 		ui->cameraIdBox->addItem(tr("None", "Camera Device"), "");
 		ui->cameraIdBox->addItem(tr("Default", "Camera Device"), qstr(default_camera));
-		for (const QCameraInfo& camera_info : QCameraInfo::availableCameras())
+		for (const QCameraDevice& camera_info : QMediaDevices::videoInputs())
 		{
 			if (!camera_info.isNull())
-				ui->cameraIdBox->addItem(camera_info.description(), camera_info.deviceName());
+				ui->cameraIdBox->addItem(camera_info.description(), camera_info.id());
 		}
 		if (const int index = ui->cameraIdBox->findData(qstr(selected_camera)); index >= 0)
 		{
@@ -1246,6 +1225,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceCheckBox(ui->lockOverlayInputToPlayerOne, emu_settings_type::LockOvlIptToP1);
 	SubscribeTooltip(ui->lockOverlayInputToPlayerOne, tooltips.settings.lock_overlay_input_to_player_one);
+
+#if HAVE_SDL2
+	m_emu_settings->EnhanceCheckBox(ui->loadSdlMappings, emu_settings_type::SDLMappings);
+	SubscribeTooltip(ui->loadSdlMappings, tooltips.settings.sdl_mappings);
+#else
+	ui->loadSdlMappings->setVisible(false);
+#endif
 
 	// Midi
 	const QString midi_none = m_emu_settings->m_midi_creator.get_none();
@@ -1473,8 +1459,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->fixupPPUVNAN, emu_settings_type::FixupPPUVNAN);
 	SubscribeTooltip(ui->fixupPPUVNAN, tooltips.settings.fixup_ppuvnan);
 
-	m_emu_settings->EnhanceCheckBox(ui->ppuPrecompilation, emu_settings_type::PPULLVMPrecompilation);
-	SubscribeTooltip(ui->ppuPrecompilation, tooltips.settings.ppu_precompilation);
+	m_emu_settings->EnhanceCheckBox(ui->llvmPrecompilation, emu_settings_type::LLVMPrecompilation);
+	SubscribeTooltip(ui->llvmPrecompilation, tooltips.settings.llvm_precompilation);
 
 	m_emu_settings->EnhanceCheckBox(ui->suspendSavestates, emu_settings_type::SuspendEmulationSavestateMode);
 	SubscribeTooltip(ui->suspendSavestates, tooltips.settings.suspend_savestates);

@@ -159,7 +159,6 @@ namespace rsx
 	protected:
 
 		std::array<push_buffer_vertex_info, 16> vertex_push_buffers;
-		rsx::simple_array<u32> element_push_buffer;
 
 		s32 m_skip_frame_ctr = 0;
 		bool skip_current_frame = false;
@@ -173,6 +172,7 @@ namespace rsx
 		std::unique_ptr<FIFO::FIFO_control> fifo_ctrl;
 		atomic_t<bool> rsx_thread_running{ false };
 		std::vector<std::pair<u32, u32>> dump_callstack_list() const override;
+		std::string dump_misc() const override;
 
 	protected:
 		FIFO::flattening_helper m_flattener;
@@ -213,12 +213,13 @@ namespace rsx
 		u32 last_known_code_start = 0;
 		atomic_t<u32> external_interrupt_lock{ 0 };
 		atomic_t<bool> external_interrupt_ack{ false };
-		atomic_t<bool> is_initialized{ false };
+		atomic_t<u32> is_initialized{0};
+		rsx::simple_array<u32> element_push_buffer;
 		bool is_fifo_idle() const;
 		void flush_fifo();
 
 		// Returns [count of found commands, PC of their start]
-		std::pair<u32, u32> try_get_pc_of_x_cmds_backwards(u32 count, u32 get) const;
+		std::pair<u32, u32> try_get_pc_of_x_cmds_backwards(s32 count, u32 get) const;
 
 		void recover_fifo(u32 line = __builtin_LINE(),
 			u32 col = __builtin_COLUMN(),

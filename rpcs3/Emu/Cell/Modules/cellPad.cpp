@@ -3,13 +3,14 @@
 #include "Emu/system_config.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_process.h"
+#include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Io/pad_types.h"
 #include "Input/pad_thread.h"
 #include "Input/product_info.h"
 #include "cellPad.h"
 
-extern void libio_sys_config_init();
-extern void libio_sys_config_end();
+error_code sys_config_start(ppu_thread& ppu);
+error_code sys_config_stop(ppu_thread& ppu);
 
 extern bool is_input_allowed();
 
@@ -52,19 +53,112 @@ void fmt_class_string<CellPadFilterError>::format(std::string& out, u64 arg)
 	});
 }
 
+extern void sys_io_serialize(utils::serial& ar);
+
 pad_info::pad_info(utils::serial& ar)
 	: max_connect(ar)
 	, port_setting(ar)
 {
+	sys_io_serialize(ar);
 }
 
 void pad_info::save(utils::serial& ar)
 {
+	USING_SERIALIZATION_VERSION(sys_io);
+
 	ar(max_connect, port_setting);
+
+	sys_io_serialize(ar);
 }
 
+extern void send_sys_io_connect_event(usz index, u32 state);
 
-error_code cellPadInit(u32 max_connect)
+void cellPad_NotifyStateChange(usz index, u32 /*state*/)
+{
+	auto info = g_fxo->try_get<pad_info>();
+
+	if (!info)
+	{
+		return;
+	}
+
+	std::lock_guard lock(pad::g_pad_mutex);
+
+	if (index >= info->get_max_connect())
+	{
+		return;
+	}
+
+	const auto handler = pad::get_current_handler();
+	const auto& pads = handler->GetPads();
+	const auto& pad = pads[index];
+
+	pad_data_internal& reported_info = info->reported_info[index];
+	const u32 old_status = reported_info.port_status;
+
+	// Ignore sent status for now, use the latest instead
+	// NOTE 1: The state's CONNECTED bit should currently be identical to the current
+	//         m_port_status CONNECTED bit when called from our pad handlers.
+	// NOTE 2: Make sure to propagate all other status bits to the reported status.
+	const u32 new_status = pads[index]->m_port_status;
+
+	if (~(old_status ^ new_status) & CELL_PAD_STATUS_CONNECTED)
+	{
+		// old and new have the same connection status
+		return;
+	}
+
+	reported_info.port_status = new_status | CELL_PAD_STATUS_ASSIGN_CHANGES;
+	reported_info.device_capability = pad->m_device_capability;
+	reported_info.device_type = pad->m_device_type;
+	reported_info.pclass_type = pad->m_class_type;
+	reported_info.pclass_profile = pad->m_class_profile;
+
+	if (pad->m_vendor_id == 0 || pad->m_product_id == 0)
+	{
+		// Fallback to defaults
+
+		input::product_info product;
+
+		switch (pad->m_class_type)
+		{
+		case CELL_PAD_PCLASS_TYPE_GUITAR:
+			product = input::get_product_info(input::product_type::red_octane_gh_guitar);
+			break;
+		case CELL_PAD_PCLASS_TYPE_DRUM:
+			product = input::get_product_info(input::product_type::red_octane_gh_drum_kit);
+			break;
+		case CELL_PAD_PCLASS_TYPE_DJ:
+			product = input::get_product_info(input::product_type::dj_hero_turntable);
+			break;
+		case CELL_PAD_PCLASS_TYPE_DANCEMAT:
+			product = input::get_product_info(input::product_type::dance_dance_revolution_mat);
+			break;
+		case CELL_PAD_PCLASS_TYPE_NAVIGATION:
+			product = input::get_product_info(input::product_type::ps_move_navigation);
+			break;
+		case CELL_PAD_PCLASS_TYPE_STANDARD:
+		default:
+			product = input::get_product_info(input::product_type::playstation_3_controller);
+			break;
+		}
+
+		reported_info.vendor_id = product.vendor_id;
+		reported_info.product_id = product.product_id;
+	}
+	else
+	{
+		reported_info.vendor_id = pad->m_vendor_id;
+		reported_info.product_id = pad->m_product_id;
+	}
+}
+
+extern void pad_state_notify_state_change(usz index, u32 state)
+{
+	cellPad_NotifyStateChange(index, state);
+}
+
+error_code cellPadInit(ppu_thread& ppu, u32 max_connect)
 {
 	sys_io.warning("cellPadInit(max_connect=%d)", max_connect);
 
@@ -78,13 +172,33 @@ error_code cellPadInit(u32 max_connect)
 	if (max_connect == 0 || max_connect > CELL_MAX_PADS)
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
-	libio_sys_config_init();
-	config.max_connect = std::min<u32>(max_connect, CELL_PAD_MAX_PORT_NUM);
+	sys_config_start(ppu);
+
+	config.max_connect = max_connect;
 	config.port_setting.fill(CELL_PAD_SETTING_PRESS_OFF | CELL_PAD_SETTING_SENSOR_OFF);
+	config.reported_info = {};
+
+	std::array<s32, CELL_MAX_PADS> statuses{};
+
+	const auto handler = pad::get_current_handler();
+
+	const auto& pads = handler->GetPads();
+
+	for (usz i = 0; i < statuses.size(); ++i)
+	{
+		if (i >= config.get_max_connect())
+			break;
+
+		if (pads[i]->m_port_status & CELL_PAD_STATUS_CONNECTED)
+		{
+			send_sys_io_connect_event(i, CELL_PAD_STATUS_CONNECTED);
+		}
+	}
+
 	return CELL_OK;
 }
 
-error_code cellPadEnd()
+error_code cellPadEnd(ppu_thread& ppu)
 {
 	sys_io.notice("cellPadEnd()");
 
@@ -95,7 +209,7 @@ error_code cellPadEnd()
 	if (!config.max_connect.exchange(0))
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
-	libio_sys_config_end();
+	sys_config_stop(ppu);
 	return CELL_OK;
 }
 
@@ -138,12 +252,12 @@ error_code cellPadClearBuf(u32 port_no)
 
 	const auto& pads = handler->GetPads();
 
-	if (port_no >= config.max_connect)
+	if (port_no >= config.get_max_connect())
 		return CELL_PAD_ERROR_NO_DEVICE;
 
 	const auto& pad = pads[port_no];
 
-	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (!config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	clear_pad_buffer(pad);
@@ -151,39 +265,7 @@ error_code cellPadClearBuf(u32 port_no)
 	return CELL_OK;
 }
 
-void pad_get_data(u32 port_no, CellPadData* data);
-
-error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
-{
-	sys_io.trace("cellPadGetData(port_no=%d, data=*0x%x)", port_no, data);
-
-	std::lock_guard lock(pad::g_pad_mutex);
-
-	auto& config = g_fxo->get<pad_info>();
-
-	if (!config.max_connect)
-		return CELL_PAD_ERROR_UNINITIALIZED;
-
-	const auto handler = pad::get_current_handler();
-
-	if (port_no >= CELL_MAX_PADS || !data)
-		return CELL_PAD_ERROR_INVALID_PARAMETER;
-
-	const auto& pads = handler->GetPads();
-
-	if (port_no >= config.max_connect)
-		return CELL_PAD_ERROR_NO_DEVICE;
-
-	const auto& pad = pads[port_no];
-
-	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
-		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
-
-	pad_get_data(port_no, data.get_ptr());
-	return CELL_OK;
-}
-
-void pad_get_data(u32 port_no, CellPadData* data)
+void pad_get_data(u32 port_no, CellPadData* data, bool get_periph_data = false)
 {
 	auto& config = g_fxo->get<pad_info>();
 	const auto handler = pad::get_current_handler();
@@ -196,7 +278,7 @@ void pad_get_data(u32 port_no, CellPadData* data)
 		return;
 	}
 
-	const auto setting = config.port_setting[port_no];
+	const u32 setting = config.port_setting[port_no];
 	bool btnChanged = false;
 
 	if (rinfo.ignore_input || !is_input_allowed())
@@ -383,6 +465,131 @@ void pad_get_data(u32 port_no, CellPadData* data)
 			data->button[CELL_PAD_BTN_OFFSET_SENSOR_G] = pad->m_sensor_g;
 		}
 	}
+
+	if (!get_periph_data || data->len <= CELL_PAD_LEN_CHANGE_SENSOR_ON)
+	{
+		return;
+	}
+
+	const auto get_pressure_value = [setting](u16 val, u16 min, u16 max) -> u16
+	{
+		if (setting & CELL_PAD_SETTING_PRESS_ON)
+		{
+			return std::clamp(val, min, max);
+		}
+
+		if (val > 0)
+		{
+			return max;
+		}
+
+		return 0;
+	};
+
+	// TODO: support for 'unique' controllers, which goes in offsets 24+ in padData (CELL_PAD_PCLASS_BTN_OFFSET)
+	// TODO: update data->len accordingly
+
+	switch (pad->m_class_profile)
+	{
+	default:
+	case CELL_PAD_PCLASS_TYPE_STANDARD:
+	case CELL_PAD_PCLASS_TYPE_NAVIGATION:
+	{
+		break;
+	}
+	case CELL_PAD_PCLASS_TYPE_GUITAR:
+	{
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_1]      = get_pressure_value(0, 0x0, 0xFF);
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_2]      = get_pressure_value(0, 0x0, 0xFF);
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_3]      = get_pressure_value(0, 0x0, 0xFF);
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_4]      = get_pressure_value(0, 0x0, 0xFF);
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_5]      = get_pressure_value(0, 0x0, 0xFF);
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_STRUM_UP]    = get_pressure_value(0, 0x0, 0xFF);
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_STRUM_DOWN]  = get_pressure_value(0, 0x0, 0xFF);
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_WHAMMYBAR]   = 0x80; // 0x80 – 0xFF
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_H1]     = get_pressure_value(0, 0x0, 0xFF);
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_H2]     = get_pressure_value(0, 0x0, 0xFF);
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_H3]     = get_pressure_value(0, 0x0, 0xFF);
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_H4]     = get_pressure_value(0, 0x0, 0xFF);
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_H5]     = get_pressure_value(0, 0x0, 0xFF);
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_5WAY_EFFECT] = 0x0019; // One of 5 values: 0x0019, 0x004C, 0x007F (or 0x0096), 0x00B2, 0x00E5 (or 0x00E2)
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_TILT_SENS]   = get_pressure_value(0, 0x0, 0xFF);
+		break;
+	}
+	case CELL_PAD_PCLASS_TYPE_DRUM:
+	{
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DRUM_SNARE]     = get_pressure_value(0, 0x0, 0xFF);
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DRUM_TOM]       = get_pressure_value(0, 0x0, 0xFF);
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DRUM_TOM2]      = get_pressure_value(0, 0x0, 0xFF);
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DRUM_TOM_FLOOR] = get_pressure_value(0, 0x0, 0xFF);
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DRUM_KICK]      = get_pressure_value(0, 0x0, 0xFF);
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DRUM_CYM_HiHAT] = get_pressure_value(0, 0x0, 0xFF);
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DRUM_CYM_CRASH] = get_pressure_value(0, 0x0, 0xFF);
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DRUM_CYM_RIDE]  = get_pressure_value(0, 0x0, 0xFF);
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DRUM_KICK2]     = get_pressure_value(0, 0x0, 0xFF);
+		break;
+	}
+	case CELL_PAD_PCLASS_TYPE_DJ:
+	{
+		// First deck
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DJ_MIXER_ATTACK]     = 0;    // 0x0 or 0xFF
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DJ_MIXER_CROSSFADER] = 0;    // 0x0 - 0x3FF
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DJ_MIXER_DSP_DIAL]   = 0;    // 0x0 - 0x3FF
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK1_STREAM1]    = 0;    // 0x0 or 0xFF
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK1_STREAM2]    = 0;    // 0x0 or 0xFF
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK1_STREAM3]    = 0;    // 0x0 or 0xFF
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK1_PLATTER]    = 0x80; // 0x0 - 0xFF (neutral: 0x80)
+
+		// Second deck
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK2_STREAM1]    = 0;    // 0x0 or 0xFF
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK2_STREAM2]    = 0;    // 0x0 or 0xFF
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK2_STREAM3]    = 0;    // 0x0 or 0xFF
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK2_PLATTER]    = 0x80; // 0x0 - 0xFF (neutral: 0x80)
+		break;
+	}
+	case CELL_PAD_PCLASS_TYPE_DANCEMAT:
+	{
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_CIRCLE]   = 0; // 0x0 or 0xFF
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_CROSS]    = 0; // 0x0 or 0xFF
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_TRIANGLE] = 0; // 0x0 or 0xFF
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_SQUARE]   = 0; // 0x0 or 0xFF
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_RIGHT]    = 0; // 0x0 or 0xFF
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_LEFT]     = 0; // 0x0 or 0xFF
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_UP]       = 0; // 0x0 or 0xFF
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_DOWN]     = 0; // 0x0 or 0xFF
+		break;
+	}
+	}
+}
+
+error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
+{
+	sys_io.trace("cellPadGetData(port_no=%d, data=*0x%x)", port_no, data);
+
+	std::lock_guard lock(pad::g_pad_mutex);
+
+	auto& config = g_fxo->get<pad_info>();
+
+	if (!config.max_connect)
+		return CELL_PAD_ERROR_UNINITIALIZED;
+
+	const auto handler = pad::get_current_handler();
+
+	if (port_no >= CELL_MAX_PADS || !data)
+		return CELL_PAD_ERROR_INVALID_PARAMETER;
+
+	const auto& pads = handler->GetPads();
+
+	if (port_no >= config.get_max_connect())
+		return CELL_PAD_ERROR_NO_DEVICE;
+
+	const auto& pad = pads[port_no];
+
+	if (!config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
+
+	pad_get_data(port_no, data.get_ptr());
+	return CELL_OK;
 }
 
 error_code cellPadPeriphGetInfo(vm::ptr<CellPadPeriphInfo> info)
@@ -406,24 +613,36 @@ error_code cellPadPeriphGetInfo(vm::ptr<CellPadPeriphInfo> info)
 	std::memset(info.get_ptr(), 0, sizeof(CellPadPeriphInfo));
 
 	info->max_connect = config.max_connect;
-	info->now_connect = rinfo.now_connect;
 	info->system_info = rinfo.system_info;
 
-	const auto& pads = handler->GetPads();
+	u32 now_connect = 0;
 
 	for (u32 i = 0; i < CELL_PAD_MAX_PORT_NUM; ++i)
 	{
-		if (i >= config.max_connect)
+		if (i >= config.get_max_connect())
 			break;
 
-		info->port_status[i] = pads[i]->m_port_status;
-		pads[i]->m_port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES;
+		pad_data_internal& reported_info = config.reported_info[i];
+
+		info->port_status[i] = reported_info.port_status;
 		info->port_setting[i] = config.port_setting[i];
-		info->device_capability[i] = pads[i]->m_device_capability;
-		info->device_type[i] = pads[i]->m_device_type;
-		info->pclass_type[i] = pads[i]->m_class_type;
-		info->pclass_profile[i] = pads[i]->m_class_profile;
+
+		reported_info.port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES;
+
+		if (~reported_info.port_status & CELL_PAD_STATUS_CONNECTED)
+		{
+			continue;
+		}
+
+		info->device_capability[i] = reported_info.device_capability;
+		info->device_type[i] = reported_info.device_type;
+		info->pclass_type[i] = reported_info.pclass_type;
+		info->pclass_profile[i] = reported_info.pclass_profile;
+
+		now_connect++;
 	}
+
+	info->now_connect = now_connect;
 
 	return CELL_OK;
 }
@@ -447,20 +666,19 @@ error_code cellPadPeriphGetData(u32 port_no, vm::ptr<CellPadPeriphData> data)
 
 	const auto& pads = handler->GetPads();
 
-	if (port_no >= config.max_connect)
+	if (port_no >= config.get_max_connect())
 		return CELL_PAD_ERROR_NO_DEVICE;
 
 	const auto& pad = pads[port_no];
 
-	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (!config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
-	pad_get_data(port_no, &data->cellpad_data);
+	pad_get_data(port_no, &data->cellpad_data, true);
 
 	data->pclass_type = pad->m_class_type;
 	data->pclass_profile = pad->m_class_profile;
 
-	// TODO: support for 'unique' controllers, which goes in offsets 24+ in padData (CELL_PAD_PCLASS_BTN_OFFSET)
 	return CELL_OK;
 }
 
@@ -482,12 +700,12 @@ error_code cellPadGetRawData(u32 port_no, vm::ptr<CellPadData> data)
 
 	const auto& pads = handler->GetPads();
 
-	if (port_no >= config.max_connect)
+	if (port_no >= config.get_max_connect())
 		return CELL_PAD_ERROR_NO_DEVICE;
 
 	const auto& pad = pads[port_no];
 
-	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (!config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	// ?
@@ -548,12 +766,12 @@ error_code cellPadSetActDirect(u32 port_no, vm::ptr<CellPadActParam> param)
 
 	const auto& pads = handler->GetPads();
 
-	if (port_no >= config.max_connect)
+	if (port_no >= config.get_max_connect())
 		return CELL_PAD_ERROR_NO_DEVICE;
 
 	const auto& pad = pads[port_no];
 
-	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (!config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	// TODO: find out if this is checked here or later or at all
@@ -585,56 +803,32 @@ error_code cellPadGetInfo(vm::ptr<CellPadInfo> info)
 
 	const PadInfo& rinfo = handler->GetInfo();
 	info->max_connect = config.max_connect;
-	info->now_connect = rinfo.now_connect;
 	info->system_info = rinfo.system_info;
 
-	const auto& pads = handler->GetPads();
+	u32 now_connect = 0;
 
 	for (u32 i = 0; i < CELL_MAX_PADS; ++i)
 	{
-		if (i >= config.max_connect)
+		if (i >= config.get_max_connect())
 			break;
 
-		pads[i]->m_port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES; // TODO: should ASSIGN flags be cleared here?
-		info->status[i] = pads[i]->m_port_status;
+		pad_data_internal& reported_info = config.reported_info[i];
+		reported_info.port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES; // TODO: should ASSIGN flags be cleared here?
 
-		if (pads[i]->m_vendor_id == 0 || pads[i]->m_product_id == 0)
+		info->status[i] = reported_info.port_status;
+
+		if (~reported_info.port_status & CELL_PAD_STATUS_CONNECTED)
 		{
-			// Fallback to defaults
-
-			input::product_info product;
-
-			switch (pads[i]->m_class_type)
-			{
-			case CELL_PAD_PCLASS_TYPE_GUITAR:
-				product = input::get_product_info(input::product_type::red_octane_gh_guitar);
-				break;
-			case CELL_PAD_PCLASS_TYPE_DRUM:
-				product = input::get_product_info(input::product_type::red_octane_gh_drum_kit);
-				break;
-			case CELL_PAD_PCLASS_TYPE_DJ:
-				product = input::get_product_info(input::product_type::dj_hero_turntable);
-				break;
-			case CELL_PAD_PCLASS_TYPE_DANCEMAT:
-				product = input::get_product_info(input::product_type::dance_dance_revolution_mat);
-				break;
-			case CELL_PAD_PCLASS_TYPE_NAVIGATION:
-			case CELL_PAD_PCLASS_TYPE_STANDARD:
-			default:
-				product = input::get_product_info(input::product_type::playstation_3_controller);
-				break;
-			}
-
-			info->vendor_id[i] = product.vendor_id;
-			info->product_id[i] = product.product_id;
+			continue;
 		}
-		else
-		{
-			info->vendor_id[i] = pads[i]->m_vendor_id;
-			info->product_id[i] = pads[i]->m_product_id;
-		}
+
+		info->vendor_id[i] = reported_info.vendor_id;
+		info->product_id[i] = reported_info.product_id;
+
+		now_connect++;
 	}
 
+	info->now_connect = now_connect;
 	return CELL_OK;
 }
 
@@ -657,24 +851,37 @@ error_code cellPadGetInfo2(vm::ptr<CellPadInfo2> info)
 	std::memset(info.get_ptr(), 0, sizeof(CellPadInfo2));
 
 	const PadInfo& rinfo = handler->GetInfo();
-	info->max_connect = config.max_connect;
-	info->now_connect = rinfo.now_connect;
+	info->max_connect = config.get_max_connect(); // Here it is forcibly clamped
 	info->system_info = rinfo.system_info;
+
+	u32 now_connect = 0;
 
 	const auto& pads = handler->GetPads();
 
 	for (u32 i = 0; i < CELL_PAD_MAX_PORT_NUM; ++i)
 	{
-		if (i >= config.max_connect)
+		if (i >= config.get_max_connect())
 			break;
 
-		info->port_status[i] = pads[i]->m_port_status;
-		pads[i]->m_port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES;
+		pad_data_internal& reported_info = config.reported_info[i];
+
+		info->port_status[i] = reported_info.port_status;
 		info->port_setting[i] = config.port_setting[i];
+
+		reported_info.port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES;
+
+		if (~reported_info.port_status & CELL_PAD_STATUS_CONNECTED)
+		{
+			continue;
+		}
+
 		info->device_capability[i] = pads[i]->m_device_capability;
 		info->device_type[i] = pads[i]->m_device_type;
+
+		now_connect++;
 	}
 
+	info->now_connect = now_connect;
 	return CELL_OK;
 }
 
@@ -696,12 +903,12 @@ error_code cellPadGetCapabilityInfo(u32 port_no, vm::ptr<CellPadCapabilityInfo> 
 
 	const auto& pads = handler->GetPads();
 
-	if (port_no >= config.max_connect)
+	if (port_no >= config.get_max_connect())
 		return CELL_PAD_ERROR_NO_DEVICE;
 
 	const auto& pad = pads[port_no];
 
-	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (!config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	// Should return the same as device capability mask, psl1ght has it backwards in pad->h
@@ -754,12 +961,12 @@ error_code cellPadInfoPressMode(u32 port_no)
 
 	const auto& pads = handler->GetPads();
 
-	if (port_no >= config.max_connect)
+	if (port_no >= config.get_max_connect())
 		return CELL_PAD_ERROR_NO_DEVICE;
 
 	const auto& pad = pads[port_no];
 
-	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (!config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	return not_an_error((pad->m_device_capability & CELL_PAD_CAPABILITY_PRESS_MODE) ? 1 : 0);
@@ -783,12 +990,12 @@ error_code cellPadInfoSensorMode(u32 port_no)
 
 	const auto& pads = handler->GetPads();
 
-	if (port_no >= config.max_connect)
+	if (port_no >= config.get_max_connect())
 		return CELL_PAD_ERROR_NO_DEVICE;
 
 	const auto& pad = pads[port_no];
 
-	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (!config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	return not_an_error((pad->m_device_capability & CELL_PAD_CAPABILITY_SENSOR_MODE) ? 1 : 0);

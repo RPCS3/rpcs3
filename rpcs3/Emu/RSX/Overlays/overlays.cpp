@@ -18,9 +18,9 @@ namespace rsx
 	{
 		thread_local DECLARE(user_interface::g_thread_bit) = 0;
 
-		u64 user_interface::alloc_thread_bit()
+		u32 user_interface::alloc_thread_bit()
 		{
-			auto [_old, ok] = this->thread_bits.fetch_op([](u64& bits)
+			auto [_old, ok] = this->thread_bits.fetch_op([](u32& bits)
 			{
 				if (~bits)
 				{
@@ -38,7 +38,7 @@ namespace rsx
 				return 0;
 			}
 
-			const u64 r = u64{1} << std::countr_one(_old);
+			const u32 r = u32{1} << std::countr_one(_old);
 			::overlays.trace("Bit allocated (%u)", r);
 			return r;
 		}
@@ -385,7 +385,7 @@ namespace rsx
 			m_stop_pad_interception.release(stop_pad_interception);
 			m_stop_input_loop.release(true);
 
-			while (u64 b = thread_bits)
+			while (u32 b = thread_bits)
 			{
 				if (b == g_thread_bit)
 				{

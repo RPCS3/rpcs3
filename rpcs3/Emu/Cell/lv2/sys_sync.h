@@ -60,6 +60,11 @@ enum
 
 enum ppu_thread_status : u32;
 
+namespace vm
+{
+	extern u8 g_reservations[65536 / 128 * 64];
+}
+
 // Base class for some kernel objects (shared set of 8192 objects).
 struct lv2_obj
 {
@@ -432,9 +437,15 @@ public:
 
 			if (cpu != &g_to_notify)
 			{
-				// Note: by the time of notification the thread could have been deallocated which is why the direct function is used
-				// TODO: Pass a narrower mask
-				atomic_wait_engine::notify_one(cpu, 4, atomic_wait::default_mask<atomic_bs_t<cpu_flag>>);
+				if (cpu >= vm::g_reservations && cpu <= vm::g_reservations + (std::size(vm::g_reservations) - 1))
+				{
+					atomic_wait_engine::notify_all(cpu);
+				}
+				else
+				{
+					// Note: by the time of notification the thread could have been deallocated which is why the direct function is used
+					atomic_wait_engine::notify_one(cpu);
+				}
 			}
 		}
 
@@ -465,7 +476,8 @@ public:
 
 				// While IDM mutex is still locked (this function assumes so) check if the notification is still needed
 				// Pending flag is meant for forced notification (if the CPU really has pending work it can restore the flag in theory)
-				if (cpu != &g_to_notify && static_cast<const decltype(cpu_thread::state)*>(cpu)->none_of(cpu_flag::signal + cpu_flag::pending))
+				// Disabled to allow reservation notifications from here
+				if (false && cpu != &g_to_notify && static_cast<const decltype(cpu_thread::state)*>(cpu)->none_of(cpu_flag::signal + cpu_flag::pending))
 				{
 					// Omit it (this is a void pointer, it can hold anything)
 					cpu = &g_to_notify;

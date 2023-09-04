@@ -259,8 +259,8 @@ namespace utils
 
 	void audio_decoder::clear()
 	{
-		track_fully_decoded = false;
-		track_fully_consumed = false;
+		track_fully_decoded = 0;
+		track_fully_consumed = 0;
 		has_error = false;
 		m_size = 0;
 		duration_ms = 0;
@@ -274,7 +274,7 @@ namespace utils
 		{
 			auto& thread = *m_thread;
 			thread = thread_state::aborting;
-			track_fully_consumed = true;
+			track_fully_consumed = 1;
 			track_fully_consumed.notify_one();
 			thread();
 			m_thread.reset();
@@ -363,14 +363,14 @@ namespace utils
 			}
 
 			const int dst_channels = 2;
-			const u64 dst_channel_layout = AV_CH_LAYOUT_STEREO;
+			const AVChannelLayout dst_channel_layout = AV_CHANNEL_LAYOUT_STEREO;
 			const AVSampleFormat dst_format = AV_SAMPLE_FMT_FLT;
 
 			int set_err = 0;
-			if ((set_err = av_opt_set_int(av.swr, "in_channel_count", stream->codecpar->channels, 0)) ||
+			if ((set_err = av_opt_set_int(av.swr, "in_channel_count", stream->codecpar->ch_layout.nb_channels, 0)) ||
 				(set_err = av_opt_set_int(av.swr, "out_channel_count", dst_channels, 0)) ||
-				(set_err = av_opt_set_channel_layout(av.swr, "in_channel_layout", stream->codecpar->channel_layout, 0)) ||
-				(set_err = av_opt_set_channel_layout(av.swr, "out_channel_layout", dst_channel_layout, 0)) ||
+				(set_err = av_opt_set_chlayout(av.swr, "in_channel_layout", &stream->codecpar->ch_layout, 0)) ||
+				(set_err = av_opt_set_chlayout(av.swr, "out_channel_layout", &dst_channel_layout, 0)) ||
 				(set_err = av_opt_set_int(av.swr, "in_sample_rate", stream->codecpar->sample_rate, 0)) ||
 				(set_err = av_opt_set_int(av.swr, "out_sample_rate", sample_rate, 0)) ||
 				(set_err = av_opt_set_sample_fmt(av.swr, "in_sample_fmt", static_cast<AVSampleFormat>(stream->codecpar->format), 0)) ||
@@ -511,7 +511,7 @@ namespace utils
 				media_log.notice("audio_decoder: about to decode: %s (index=%d)", ::at32(m_context.playlist, m_context.current_track), m_context.current_track);
 
 				decode_track(::at32(m_context.playlist, m_context.current_track));
-				track_fully_decoded = true;
+				track_fully_decoded = 1;
 
 				if (has_error)
 				{
@@ -521,7 +521,7 @@ namespace utils
 
 				// Let's only decode one track at a time. Wait for the consumer to finish reading the track.
 				media_log.notice("audio_decoder: waiting until track is consumed...");
-				thread_ctrl::wait_on(track_fully_consumed, false);
+				thread_ctrl::wait_on(track_fully_consumed, 0);
 				track_fully_consumed = false;
 			}
 
@@ -604,14 +604,14 @@ namespace utils
 		m_audio_codec_id = codec_id;
 	}
 
-	void video_encoder::add_frame(std::vector<u8>& frame, const u32 width, const u32 height, s32 pixel_format, usz timestamp_ms)
+	void video_encoder::add_frame(std::vector<u8>& frame, u32 pitch, u32 width, u32 height, s32 pixel_format, usz timestamp_ms)
 	{
 		// Do not allow new frames while flushing
 		if (m_flush)
 			return;
 
 		std::lock_guard lock(m_mtx);
-		m_frames_to_encode.emplace_back(timestamp_ms, width, height, pixel_format, std::move(frame));
+		m_frames_to_encode.emplace_back(timestamp_ms, pitch, width, height, pixel_format, std::move(frame));
 	}
 
 	void video_encoder::pause(bool flush)
@@ -710,13 +710,40 @@ namespace utils
 				if (!codec)
 					return nullptr;
 
+				// Try to find a preferable output format
+				std::vector<const AVOutputFormat*> oformats;
+
 				void* opaque = nullptr;
 				for (const AVOutputFormat* oformat = av_muxer_iterate(&opaque); !!oformat; oformat = av_muxer_iterate(&opaque))
 				{
 					if (avformat_query_codec(oformat, codec->id, FF_COMPLIANCE_STRICT) == 1)
 					{
-						return oformat->name;
+						media_log.notice("video_encoder: Found output format '%s'", oformat->name);
+
+						switch (codec->id)
+						{
+						case AV_CODEC_ID_MPEG4:
+							if (strcmp(oformat->name, "avi") == 0)
+								return oformat->name;
+							break;
+						case AV_CODEC_ID_H264:
+						case AV_CODEC_ID_MJPEG:
+							// TODO
+							break;
+						default:
+							break;
+						}
+
+						oformats.push_back(oformat);
 					}
+				}
+
+				// Fallback to first found format
+				if (!oformats.empty() && oformats.front())
+				{
+					const AVOutputFormat* oformat = oformats.front();
+					media_log.notice("video_encoder: Falling back to output format '%s'", oformat->name);
+					return oformat->name;
 				}
 
 				return nullptr;

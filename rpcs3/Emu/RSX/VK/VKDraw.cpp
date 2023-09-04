@@ -256,6 +256,7 @@ void VKGSRender::load_texture_env()
 
 		auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
 		const auto& tex = rsx::method_registers.fragment_textures[i];
+		const auto previous_format_class = fs_sampler_state[i]->format_class;
 
 		if (m_samplers_dirty || m_textures_dirty[i] || !check_surface_cache_sampler(sampler_state, tex))
 		{
@@ -274,6 +275,12 @@ void VKGSRender::load_texture_env()
 				if (sampler_state->is_cyclic_reference)
 				{
 					check_for_cyclic_refs |= true;
+				}
+
+				if (!m_textures_dirty[i] && sampler_state->format_class != previous_format_class)
+				{
+					// Host details changed but RSX is not aware
+					m_graphics_state |= rsx::fragment_program_state_dirty;
 				}
 
 				bool replace = !fs_sampler_handles[i];
@@ -403,6 +410,7 @@ void VKGSRender::load_texture_env()
 
 		auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(vs_sampler_state[i].get());
 		const auto& tex = rsx::method_registers.vertex_textures[i];
+		const auto previous_format_class = sampler_state->format_class;
 
 		if (m_samplers_dirty || m_vertex_textures_dirty[i] || !check_surface_cache_sampler(sampler_state, tex))
 		{
@@ -421,6 +429,12 @@ void VKGSRender::load_texture_env()
 				if (sampler_state->is_cyclic_reference || sampler_state->external_subresource_desc.do_not_cache)
 				{
 					check_for_cyclic_refs |= true;
+				}
+
+				if (!m_vertex_textures_dirty[i] && sampler_state->format_class != previous_format_class)
+				{
+					// Host details changed but RSX is not aware
+					m_graphics_state |= rsx::vertex_program_state_dirty;
 				}
 
 				bool replace = !vs_sampler_handles[i];
@@ -704,8 +718,17 @@ void VKGSRender::emit_geometry(u32 sub_index)
 		// Rebase vertex bases instead of
 		for (auto& info : m_vertex_layout.interleaved_blocks)
 		{
+			info->vertex_range.second = 0;
 			const auto vertex_base_offset = rsx::method_registers.vertex_data_base_offset();
 			info->real_offset_address = rsx::get_address(rsx::get_vertex_offset_from_base(vertex_base_offset, info->base_offset), info->memory_location);
+		}
+	}
+	else
+	{
+		// Discard cached results
+		for (auto& info : m_vertex_layout.interleaved_blocks)
+		{
+			info->vertex_range.second = 0;
 		}
 	}
 
@@ -1015,10 +1038,17 @@ void VKGSRender::end()
 	// Now bind the shader resources. It is important that this takes place after the barriers so that we don't end up with stale descriptors
 	for (int retry = 0; retry < 3; ++retry)
 	{
-		if (m_samplers_dirty) [[ unlikely ]]
+		if (retry > 0 && m_samplers_dirty) [[ unlikely ]]
 		{
 			// Reload texture env if referenced objects were invalidated during OOM handling.
 			load_texture_env();
+
+			// Do not trust fragment/vertex texture state after a texture state reset.
+			// NOTE: We don't want to change the program - it's too late for that now. We just need to harmonize the state.
+			m_graphics_state |= rsx::vertex_program_state_dirty | rsx::fragment_program_state_dirty;
+			get_current_fragment_program(fs_sampler_state);
+			get_current_vertex_program(vs_sampler_state);
+			m_graphics_state.clear(rsx::pipeline_state::invalidate_pipeline_bits);
 		}
 
 		const bool out_of_memory = m_shader_interpreter.is_interpreter(m_program)

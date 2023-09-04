@@ -849,6 +849,23 @@ namespace rsx
 			}
 		}
 
+		void set_color_mask(thread* rsx, u32 reg, u32 arg)
+		{
+			if (arg == method_registers.register_previous_value)
+			{
+				return;
+			}
+
+			if (method_registers.decode<NV4097_SET_COLOR_MASK>(arg).is_invalid()) [[ unlikely ]]
+			{
+				method_registers.decode(reg, method_registers.register_previous_value);
+			}
+			else
+			{
+				set_surface_options_dirty_bit(rsx, reg, arg);
+			}
+		}
+
 		void set_stencil_op(thread* rsx, u32 reg, u32 arg)
 		{
 			if (arg == method_registers.register_previous_value)
@@ -3550,7 +3567,7 @@ namespace rsx
 		bind(NV4097_SET_DEPTH_TEST_ENABLE, nv4097::set_surface_options_dirty_bit);
 		bind(NV4097_SET_DEPTH_FUNC, nv4097::set_surface_options_dirty_bit);
 		bind(NV4097_SET_DEPTH_MASK, nv4097::set_surface_options_dirty_bit);
-		bind(NV4097_SET_COLOR_MASK, nv4097::set_surface_options_dirty_bit);
+		bind(NV4097_SET_COLOR_MASK, nv4097::set_color_mask);
 		bind(NV4097_SET_COLOR_MASK_MRT, nv4097::set_surface_options_dirty_bit);
 		bind(NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE, nv4097::set_surface_options_dirty_bit);
 		bind(NV4097_SET_STENCIL_TEST_ENABLE, nv4097::set_surface_options_dirty_bit);

@@ -664,3 +664,20 @@ void fmt_class_string<output_scaling_mode>::format(std::string& out, u64 arg)
 		return unknown;
 	});
 }
+
+template <>
+void fmt_class_string<xfloat_accuracy>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](xfloat_accuracy value)
+	{
+		switch (value)
+		{
+		case xfloat_accuracy::accurate: return "Accurate";
+		case xfloat_accuracy::approximate: return "Approximate";
+		case xfloat_accuracy::relaxed: return "Relaxed";
+		case xfloat_accuracy::inaccurate: return "Inaccurate";
+		}
+
+		return unknown;
+	});
+}

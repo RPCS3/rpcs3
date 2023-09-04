@@ -5,8 +5,6 @@
 #include <QPushButton>
 #include <QFormLayout>
 
-constexpr auto qstr = QString::fromStdString;
-
 void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 {
 	state = MsgDialogState::Open;
@@ -16,10 +14,10 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 	Close(true);
 
 	m_dialog = new custom_dialog(type.disable_cancel);
-	m_dialog->setWindowTitle(title.empty() ? (type.se_normal ? tr("Normal dialog") : tr("Error dialog")) : qstr(title));
+	m_dialog->setWindowTitle(title.empty() ? (type.se_normal ? tr("Normal dialog") : tr("Error dialog")) : QString::fromStdString(title));
 	m_dialog->setWindowOpacity(type.bg_invisible ? 1. : 0.75);
 
-	m_text = new QLabel(qstr(msg));
+	m_text = new QLabel(QString::fromStdString(msg));
 	m_text->setAlignment(Qt::AlignCenter);
 
 	// Layout
@@ -159,7 +157,7 @@ void msg_dialog_frame::SetMsg(const std::string& msg)
 {
 	if (m_dialog)
 	{
-		m_text->setText(qstr(msg));
+		m_text->setText(QString::fromStdString(msg));
 	}
 }
 
@@ -171,14 +169,14 @@ void msg_dialog_frame::ProgressBarSetMsg(u32 index, const std::string& msg)
 		{
 			if (m_text1)
 			{
-				m_text1->setText(qstr(msg));
+				m_text1->setText(QString::fromStdString(msg));
 			}
 		}
 		else if (index == 1)
 		{
 			if (m_text2)
 			{
-				m_text2->setText(qstr(msg));
+				m_text2->setText(QString::fromStdString(msg));
 			}
 		}
 	}

@@ -15,6 +15,7 @@
 #include "Emu/Cell/PPUDisAsm.h"
 #include "Emu/Cell/PPUAnalyser.h"
 #include "Emu/Cell/SPUThread.h"
+#include "Emu/Cell/SPURecompiler.h"
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/Cell/lv2/sys_sync.h"
@@ -128,7 +129,7 @@ void fmt_class_string<game_boot_result>::format(std::string& out, u64 arg)
 		case game_boot_result::firmware_missing: return "Firmware is missing";
 		case game_boot_result::unsupported_disc_type: return "This disc type is not supported yet";
 		case game_boot_result::savestate_corrupted: return "Savestate data is corrupted or it's not an RPCS3 savestate";
-		case game_boot_result::savestate_version_unsupported: return "Savestate versioning data differes from your RPCS3 build";
+		case game_boot_result::savestate_version_unsupported: return "Savestate versioning data differs from your RPCS3 build";
 		case game_boot_result::still_running: return "Game is still running";
 		}
 		return unknown;
@@ -153,7 +154,7 @@ void fmt_class_string<cfg_mode>::format(std::string& out, u64 arg)
 	});
 }
 
-void Emulator::CallFromMainThread(std::function<void()>&& func, atomic_t<bool>* wake_up, bool track_emu_state, u64 stop_ctr) const
+void Emulator::CallFromMainThread(std::function<void()>&& func, atomic_t<u32>* wake_up, bool track_emu_state, u64 stop_ctr) const
 {
 	if (!track_emu_state)
 	{
@@ -174,14 +175,14 @@ void Emulator::CallFromMainThread(std::function<void()>&& func, atomic_t<bool>* 
 
 void Emulator::BlockingCallFromMainThread(std::function<void()>&& func) const
 {
-	atomic_t<bool> wake_up = false;
+	atomic_t<u32> wake_up = 0;
 
 	CallFromMainThread(std::move(func), &wake_up);
 
 	while (!wake_up)
 	{
 		ensure(thread_ctrl::get_current());
-		wake_up.wait(false);
+		wake_up.wait(0);
 	}
 }
 
@@ -240,6 +241,39 @@ void fixup_ppu_settings()
 			sys_log.todo("The setting '%s' is currently not supported with PPU decoder type '%s' and will therefore be disabled during emulation.", g_cfg.core.ppu_set_fpcc.get_name(), g_cfg.core.ppu_decoder.get());
 			g_cfg.core.ppu_set_fpcc.set(false);
 		}
+	}
+}
+
+void dump_executable(std::span<const u8> data, main_ppu_module* _main, std::string_view title_id)
+{
+	// Format filename and directory name
+	// Make each directory for each file so tools like IDA can work on it cleanly
+	const std::string dir_path = fs::get_cache_dir() + "ppu_progs/" + std::string{!title_id.empty() ? title_id : "untitled"} + fmt::format("-%s-%s", fmt::base57(_main->sha1), _main->path.substr(_main->path.find_last_of('/') + 1))  + '/';
+	const std::string filename = dir_path + "exec.elf";
+
+	if (fs::create_dir(dir_path) || fs::g_tls_error == fs::error::exist)
+	{
+		if (fs::file out{filename, fs::create + fs::write})
+		{
+			if (out.size() == data.size())
+			{
+				// Risky optimization: assume if file size match they are equal and does not need to rewrite it
+				// But it is a debug option and if there are problems the user/developer can remove the previous file
+			}
+			else
+			{
+				out.trunc(0);
+				out.write(data.data(), data.size());
+			}
+		}
+		else
+		{
+			sys_log.error("Failed to save decrypted executable of \"%s\": Failure to create file \"%s\" (%s)", Emu.GetBoot(), filename, fs::g_tls_error);
+		}
+	}
+	else
+	{
+		sys_log.error("Failed to save decrypted executable of \"%s\": Failure to create directory \"%s\" (%s)", Emu.GetBoot(), dir_path, fs::g_tls_error);
 	}
 }
 
@@ -424,7 +458,7 @@ void Emulator::Init()
 		make_path_verbose(dev_flash, true);
 		make_path_verbose(dev_flash2, true);
 		make_path_verbose(dev_flash3, true);
-		
+
 		if (make_path_verbose(dev_usb, true))
 		{
 			make_path_verbose(dev_usb + "MUSIC/", false);
@@ -492,6 +526,7 @@ void Emulator::Init()
 
 	make_path_verbose(fs::get_cache_dir() + "shaderlog/", false);
 	make_path_verbose(fs::get_cache_dir() + "spu_progs/", false);
+	make_path_verbose(fs::get_cache_dir() + "ppu_progs/", false);
 	make_path_verbose(fs::get_parent_dir(get_savestate_file("NO_ID", "/NO_FILE", -1, -1)), false);
 	make_path_verbose(fs::get_config_dir() + "captures/", false);
 	make_path_verbose(fs::get_config_dir() + "sounds/", false);
@@ -1351,6 +1386,10 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			// Force LLVM recompiler
 			g_cfg.core.ppu_decoder.from_default();
 
+			// Force SPU cache and precompilation
+			g_cfg.core.llvm_precompilation.set(true);
+			g_cfg.core.spu_cache.set(true);
+
 			// Disable incompatible settings
 			fixup_ppu_settings();
 
@@ -1428,7 +1467,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 					if (obj == elf_error::ok && ppu_load_exec(obj, true, path))
 					{
-						g_fxo->get<main_ppu_module>().path = path;
+						ensure(g_fxo->try_get<main_ppu_module>())->path = path;
 					}
 					else
 					{
@@ -1439,13 +1478,14 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 			g_fxo->init<named_thread>("SPRX Loader"sv, [this, dir_queue]() mutable
 			{
-				if (auto& _main = g_fxo->get<main_ppu_module>(); !_main.path.empty())
+				if (auto& _main = *ensure(g_fxo->try_get<main_ppu_module>()); !_main.path.empty())
 				{
 					if (!_main.analyse(0, _main.elf_entry, _main.seg0_code_end, _main.applied_pathes, [](){ return Emu.IsStopped(); }))
 					{
 						return;
 					}
 
+					Emu.ConfigurePPUCache();
 					ppu_initialize(_main);
 				}
 
@@ -1455,6 +1495,13 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				}
 
 				ppu_precompile(dir_queue, nullptr);
+
+				if (Emu.IsStopped())
+				{
+					return;
+				}
+
+				spu_cache::initialize(false);
 
 				// Exit "process"
 				CallFromMainThread([this]
@@ -1884,10 +1931,13 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			return game_boot_result::invalid_file_or_folder;
 		}
 
+		bool had_been_decrypted = false;
+
 		// Check SELF header
 		if (elf_file.size() >= 4 && elf_file.read<u32>() == "SCE\0"_u32)
 		{
 			// Decrypt SELF
+			had_been_decrypted = true;
 			elf_file = decrypt_self(std::move(elf_file), klic.empty() ? nullptr : reinterpret_cast<u8*>(&klic[0]), &g_ps3_process_info.self_info);
 		}
 		else
@@ -2007,10 +2057,18 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				sys_log.error("Booting HG category outside of HDD0!");
 			}
 
-			g_fxo->init<main_ppu_module>();
+			const auto _main = g_fxo->init<main_ppu_module>();
 
 			if (ppu_load_exec(ppu_exec, false, m_path, DeserialManager()))
 			{
+				if (g_cfg.core.ppu_debug && had_been_decrypted)
+				{
+					// Auto-dump decrypted binaries if PPU debug is enabled
+
+					const auto exec_bin = elf_file.to_vector<u8>();
+
+					dump_executable({exec_bin.data(), exec_bin.size()}, _main, GetTitleID());
+				}
 			}
 			// Overlay (OVL) executable (only load it)
 			else if (vm::map(0x3000'0000, 0x1000'0000, 0x200); !ppu_load_overlay(ppu_exec, false, m_path).first)
@@ -2152,7 +2210,7 @@ void Emulator::RunPPU()
 		}
 
 		ensure(cpu.state.test_and_reset(cpu_flag::stop));
-		cpu.state.notify_one(cpu_flag::stop);
+		cpu.state.notify_one();
 		signalled_thread = true;
 	});
 
@@ -2165,7 +2223,7 @@ void Emulator::RunPPU()
 	if (auto thr = g_fxo->try_get<named_thread<rsx::rsx_replay_thread>>())
 	{
 		thr->state -= cpu_flag::stop;
-		thr->state.notify_one(cpu_flag::stop);
+		thr->state.notify_one();
 	}
 }
 
@@ -2234,7 +2292,7 @@ void Emulator::FinalizeRunRequest()
 		}
 
 		ensure(spu.state.test_and_reset(cpu_flag::stop));
-		spu.state.notify_one(cpu_flag::stop);
+		spu.state.notify_one();
 	};
 
 	if (m_savestate_extension_flags1 & SaveStateExtentionFlags1::ShouldCloseMenu)
@@ -2437,7 +2495,7 @@ void Emulator::Resume()
 	auto on_select = [](u32, cpu_thread& cpu)
 	{
 		cpu.state -= cpu_flag::dbg_global_pause;
-		cpu.state.notify_one(cpu_flag::dbg_global_pause);
+		cpu.state.notify_one();
 	};
 
 	idm::select<named_thread<ppu_thread>>(on_select);
@@ -2576,9 +2634,9 @@ void Emulator::Kill(bool allow_autoexit, bool savestate)
 		try_lock_spu_threads_in_a_state_compatible_with_savestates(true);
 
 		sys_log.error("Failed to savestate: HLE VDEC (video decoder) context(s) exist."
-			"\nLLE libvdec.sprx by selecting it in Adavcned tab -> Firmware Libraries."
-			"\nYou need to close the game for to take effect."
-			"\nIf you cannot close the game due to losing important progress your best chance is to skip the current cutscenes if any are played and retry.");
+			"\nLLE libvdec.sprx by selecting it in Advanced tab -> Firmware Libraries."
+			"\nYou need to close the game for it to take effect."
+			"\nIf you cannot close the game due to losing important progress, your best chance is to skip the current cutscenes if any are played and retry.");
 
 		return;
 	}
@@ -2633,7 +2691,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate)
 	{
 		// Show visual feedback to the user in case that stopping takes a while.
 		// This needs to be done before actually stopping, because otherwise the necessary threads will be terminated before we can show an image.
-		if (auto progress_dialog = g_fxo->try_get<named_thread<progress_dialog_server>>(); progress_dialog && +g_progr)
+		if (auto progress_dialog = g_fxo->try_get<named_thread<progress_dialog_server>>(); progress_dialog && g_progr.load())
 		{
 			// We are currently showing a progress dialog. Notify it that we are going to stop emulation.
 			g_system_progress_stopping = true;
@@ -2896,11 +2954,72 @@ void Emulator::Kill(bool allow_autoexit, bool savestate)
 			ar.set_reading_state();
 		}
 
-		// Final termination from main thread (move the last ownership of join thread in order to destroy it)
-		CallFromMainThread([join_thread = std::move(join_thread), allow_autoexit, this]() mutable
+		// Log additional debug information - do not do it on the main thread due to the concern of halting UI events
+
+		if (g_tty && sys_log.notice)
+		{
+			// Write merged TTY output after emulation has been safely stopped
+
+			if (usz attempted_read_size = utils::sub_saturate<usz>(g_tty.pos(), m_tty_file_init_pos))
+			{
+				if (fs::file tty_read_fd{fs::get_cache_dir() + "TTY.log"})
+				{
+					// Enfore an arbitrary limit for now to avoid OOM in case the guest code has bombarded TTY
+					// 3MB, this should be enough
+					constexpr usz c_max_tty_spill_size = 0x30'0000;
+
+					std::string tty_buffer(std::min<usz>(attempted_read_size, c_max_tty_spill_size), '\0');
+					tty_buffer.resize(tty_read_fd.read_at(m_tty_file_init_pos, tty_buffer.data(), tty_buffer.size()));
+					tty_read_fd.close();
+
+					if (!tty_buffer.empty())
+					{
+						// Mark start and end very clearly with RPCS3 put in it
+						sys_log.notice("\nAccumulated RPCS3 TTY:\n\n\n%s\n\n\nEnd RPCS3 TTY Section.\n", tty_buffer);
+					}
+				}
+			}
+		}
+
+		if (g_cfg.core.spu_debug && sys_log.notice)
 		{
 			const std::string cache_path = rpcs3::cache::get_ppu_cache();
 
+			if (fs::file spu_log{cache_path + "/spu.log"})
+			{
+				// 96MB limit, this may be a lot but this only has an effect when enabling the debug option
+				constexpr usz c_max_spu_log_spill_size = 0x600'0000;
+				const usz total_size = spu_log.size();
+
+				std::string log_buffer(std::min<usz>(spu_log.size(), c_max_spu_log_spill_size), '\0');
+				log_buffer.resize(spu_log.read(log_buffer.data(), log_buffer.size()));
+				spu_log.close();
+
+				if (!log_buffer.empty())
+				{
+					usz to_remove = 0;
+					usz part_ctr = 1;
+
+					for (std::string_view not_logged = log_buffer; !not_logged.empty(); part_ctr++, not_logged.remove_prefix(to_remove))
+					{
+						std::string_view to_log = not_logged;
+						to_log = to_log.substr(0, 0x2'0000);
+						to_log = to_log.substr(0, utils::add_saturate<usz>(to_log.rfind("\n========== SPU BLOCK"sv), 1));
+						to_remove = to_log.size();
+
+						// Cannot log it all at once due to technical reasons, split it to 8MB at maximum of whole functions
+						// Assume the block prefix exists because it is created by RPCS3 (or log it in an ugly manner if it does not exist)
+						sys_log.notice("Logging spu.log part %u:\n\n%s\n", part_ctr, to_log);
+					}
+
+					sys_log.notice("End spu.log (%u bytes)", total_size);
+				}
+			}
+		}
+
+		// Final termination from main thread (move the last ownership of join thread in order to destroy it)
+		CallFromMainThread([join_thread = std::move(join_thread), allow_autoexit, this]() mutable
+		{
 			cpu_thread::cleanup();
 
 			initialize_timebased_time(0, true);
@@ -2960,64 +3079,6 @@ void Emulator::Kill(bool allow_autoexit, bool savestate)
 			// Complete the operation
 			m_state = system_state::stopped;
 			GetCallbacks().on_stop();
-
-			if (g_tty && sys_log.notice)
-			{
-				// Write merged TTY output after emulation has been safely stopped
-
-				if (usz attempted_read_size = utils::sub_saturate<usz>(g_tty.pos(), m_tty_file_init_pos))
-				{
-					if (fs::file tty_read_fd{fs::get_cache_dir() + "TTY.log"})
-					{
-						// Enfore an arbitrary limit for now to avoid OOM in case the guest code has bombarded TTY
-						// 16MB, this should be enough
-						constexpr usz c_max_tty_spill_size = 0x10'0000;
-
-						std::string tty_buffer(std::min<usz>(attempted_read_size, c_max_tty_spill_size), '\0');
-						tty_buffer.resize(tty_read_fd.read_at(m_tty_file_init_pos, tty_buffer.data(), tty_buffer.size()));
-						tty_read_fd.close();
-
-						if (!tty_buffer.empty())
-						{
-							// Mark start and end very clearly with RPCS3 put in it
-							sys_log.notice("\nAccumulated RPCS3 TTY:\n\n\n%s\n\n\nEnd RPCS3 TTY Section.\n", tty_buffer);
-						}
-					}
-				}
-			}
-
-			if (g_cfg.core.spu_debug && sys_log.notice)
-			{
-				if (fs::file spu_log{cache_path + "/spu.log"})
-				{
-					// 96MB limit, this may be a lot but this only has an effect when enabling the debug option
-					constexpr usz c_max_tty_spill_size = 0x60'0000;
-
-					std::string log_buffer(std::min<usz>(spu_log.size(), c_max_tty_spill_size), '\0');
-					log_buffer.resize(spu_log.read(log_buffer.data(), log_buffer.size()));
-					spu_log.close();
-
-					if (!log_buffer.empty())
-					{
-						usz to_remove = 0;
-						usz part_ctr = 1;
-
-						for (std::string_view not_logged = log_buffer; !not_logged.empty(); part_ctr++, not_logged.remove_prefix(to_remove))
-						{
-							std::string_view to_log = not_logged;
-							to_log = to_log.substr(0, 0x8'0000);
-							to_log = to_log.substr(0, utils::add_saturate<usz>(to_log.rfind("\n========== SPU BLOCK"sv), 1));
-							to_remove = to_log.size();
-
-							// Cannot log it all at once due to technical reasons, split it to 8MB at maximum of whole functions
-							// Assume the block prefix exists because it is created by RPCS3 (or log it in an ugly manner if it does not exist)
-							sys_log.notice("Logging spu.log part %u:\n\n%s\n", part_ctr, to_log);
-						}
-
-						sys_log.notice("End spu.log");
-					}
-				}
-			}
 
 			// Always Enable display sleep, not only if it was prevented.
 			enable_display_sleep();
@@ -3195,13 +3256,13 @@ s32 error_code::error_report(s32 result, const logs::message* channel, const cha
 	return result;
 }
 
-void Emulator::ConfigurePPUCache() const
+void Emulator::ConfigurePPUCache(bool with_title_id) const
 {
 	auto& _main = g_fxo->get<main_ppu_module>();
 
 	_main.cache = rpcs3::utils::get_cache_dir();
 
-	if (!m_title_id.empty() && m_cat != "1P")
+	if (with_title_id && !m_title_id.empty() && m_cat != "1P")
 	{
 		_main.cache += GetTitleID();
 		_main.cache += '/';

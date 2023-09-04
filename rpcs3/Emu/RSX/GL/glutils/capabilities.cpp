@@ -39,7 +39,7 @@ namespace gl
 
 		if (!ext_count)
 		{
-			rsx_log.error("Coult not initialize GL driver capabilities. Is OpenGL initialized?");
+			rsx_log.error("Could not initialize GL driver capabilities. Is OpenGL initialized?");
 			return;
 		}
 

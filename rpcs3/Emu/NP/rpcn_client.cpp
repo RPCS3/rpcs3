@@ -292,8 +292,8 @@ namespace rpcn
 					{
 						if (msg.size() == 6)
 						{
-							addr_sig = *utils::bless<le_t<u32>>(&msg[0]);
-							port_sig = *utils::bless<be_t<u16>>(&msg[4]);
+							addr_sig = read_from_ptr<le_t<u32>>(&msg[0]);
+							port_sig = read_from_ptr<be_t<u16>>(&msg[4]);
 
 							last_pong_time = now;
 						}
@@ -308,11 +308,11 @@ namespace rpcn
 					{
 						std::vector<u8> ping(13);
 						ping[0]                               = 1;
-						*utils::bless<le_t<s64, 1>>(&ping[1]) = user_id;
-						*utils::bless<be_t<u32, 1>>(&ping[9]) = local_addr_sig;
+						write_to_ptr<le_t<s64>>(ping, 1, user_id);
+						write_to_ptr<be_t<u32>>(ping, 9, +local_addr_sig);
 						if (send_packet_from_p2p_port(ping, addr_rpcn_udp) == -1)
 						{
-							rpcn_log.error("Failed to send ping to rpcn!");
+							rpcn_log.error("Failed to send ping to RPCN!");
 						}
 						last_ping_time = now;
 					}
@@ -354,9 +354,9 @@ namespace rpcn
 		}
 
 		const u8 packet_type  = header[0];
-		const u16 command     = *utils::bless<le_t<u16>>(&header[1]);
-		const u32 packet_size = *utils::bless<le_t<u32>>(&header[3]);
-		const u64 packet_id   = *utils::bless<le_t<u64>>(&header[7]);
+		const u16 command     = read_from_ptr<le_t<u16>>(&header[1]);
+		const u32 packet_size = read_from_ptr<le_t<u32>>(&header[3]);
+		const u64 packet_id   = read_from_ptr<le_t<u64>>(&header[7]);
 
 		if (packet_size < RPCN_HEADER_SIZE)
 			return error_and_disconnect("Invalid packet size");
@@ -397,7 +397,7 @@ namespace rpcn
 				}
 				else
 				{
-					rpcn_log.error("Tried to forward a reply whose packet_id marks it as internal to rpcn");
+					rpcn_log.error("Tried to forward a reply whose packet_id marks it as internal to RPCN");
 				}
 			}
 
@@ -1707,7 +1707,7 @@ namespace rpcn
 		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u64));
 
 		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
-		*utils::bless<le_t<u64>>(&data[COMMUNICATION_ID_SIZE]) = room_id;
+		write_to_ptr<le_t<u64>>(data, COMMUNICATION_ID_SIZE, room_id);
 
 		return forge_send(CommandType::PingRoomOwner, req_id, data);
 	}
@@ -1811,7 +1811,7 @@ namespace rpcn
 	{
 		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32));
 		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
-		*utils::bless<le_t<u32>>(&data[COMMUNICATION_ID_SIZE]) = board_id;
+		write_to_ptr<le_t<u32>>(data, COMMUNICATION_ID_SIZE, board_id);
 
 		return forge_send(CommandType::GetBoardInfos, req_id, data);
 	}
@@ -2126,7 +2126,7 @@ namespace rpcn
 		if (!fb_mdata->communicationId() || fb_mdata->communicationId()->size() == 0 || fb_mdata->communicationId()->size() > 9 ||
 			!fb_mdata->subject() || !fb_mdata->body() || !fb_mdata->data())
 		{
-			rpcn_log.warning("Discarded invalid messaged!");
+			rpcn_log.warning("Discarded invalid message!");
 			return;
 		}
 

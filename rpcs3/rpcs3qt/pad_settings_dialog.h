@@ -72,7 +72,7 @@ class pad_settings_dialog : public QDialog
 		id_reset_parameters,
 		id_blacklist,
 		id_refresh,
-		id_add_profile,
+		id_add_config_file,
 		id_ok,
 		id_cancel
 	};
@@ -97,10 +97,10 @@ private Q_SLOTS:
 	void OnTabChanged(int index);
 	void RefreshHandlers();
 	void ChangeHandler();
-	void ChangeProfile(const QString& profile);
+	void ChangeConfig(const QString& config_file);
 	void ChangeDevice(int index);
-	void HandleDeviceClassChange(int index) const;
-	void AddProfile();
+	void HandleDeviceClassChange(u32 class_id) const;
+	void AddConfigFile();
 	/** Update the current player config with the GUI values. */
 	void ApplyCurrentPlayerConfig(int new_player_id);
 	void RefreshPads();
@@ -147,7 +147,7 @@ private:
 	std::mutex m_handler_mutex;
 	std::string m_device_name;
 	std::string m_buddy_device_name;
-	std::string m_profile;
+	std::string m_config_file;
 	QTimer m_timer_pad_refresh;
 	int m_last_player_id = 0;
 

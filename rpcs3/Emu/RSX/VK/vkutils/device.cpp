@@ -207,7 +207,7 @@ namespace vk
 		get_physical_device_features(allow_extensions);
 		get_physical_device_properties(allow_extensions);
 
-		rsx_log.always()("Found vulkan-compatible GPU: '%s' running on driver %s", get_name(), get_driver_version());
+		rsx_log.always()("Found Vulkan-compatible GPU: '%s' running on driver %s", get_name(), get_driver_version());
 
 		if (get_driver_vendor() == driver_vendor::RADV && get_name().find("LLVM 8.0.0") != umax)
 		{
@@ -255,6 +255,11 @@ namespace vk
 		{
 			const auto gpu_name = get_name();
 
+			if (gpu_name.find("RADV") != umax)
+			{
+				return driver_vendor::RADV;
+			}
+
 			if (gpu_name.find("Radeon") != umax)
 			{
 				return driver_vendor::AMD;
@@ -263,11 +268,6 @@ namespace vk
 			if (gpu_name.find("NVIDIA") != umax || gpu_name.find("GeForce") != umax || gpu_name.find("Quadro") != umax)
 			{
 				return driver_vendor::NVIDIA;
-			}
-
-			if (gpu_name.find("RADV") != umax)
-			{
-				return driver_vendor::RADV;
 			}
 
 			if (gpu_name.find("Intel") != umax)

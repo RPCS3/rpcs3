@@ -63,7 +63,7 @@ namespace gui
 		QIcon get_colorized_icon(const QIcon& old_icon, const QColor& old_color, const std::map<QIcon::Mode, QColor>& new_colors, bool use_special_masks = false, bool colorize_all = false);
 
 		// Returns a list of all base names of files in dir whose complete file names contain one of the given name_filters
-		QStringList get_dir_entries(const QDir& dir, const QStringList& name_filters);
+		QStringList get_dir_entries(const QDir& dir, const QStringList& name_filters, bool full_path = false);
 
 		// Returns the color specified by its color_role for the QLabels with object_name
 		QColor get_label_color(const QString& object_name, QPalette::ColorRole color_role = QPalette::WindowText);
@@ -142,7 +142,7 @@ namespace gui
 		template <typename T>
 		void stop_future_watcher(QFutureWatcher<T>& watcher, bool cancel, std::shared_ptr<atomic_t<bool>> cancel_flag = nullptr)
 		{
-			if (watcher.isPaused() || watcher.isRunning())
+			if (watcher.isSuspended() || watcher.isRunning())
 			{
 				watcher.resume();
 

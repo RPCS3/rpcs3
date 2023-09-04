@@ -57,7 +57,7 @@
      </property>
      <layout class="QVBoxLayout" name="preview_layout">
       <item>
-       <widget class="QCameraViewfinder" name="viewfinder" native="true">
+       <widget class="QVideoWidget" name="videoWidget" native="true">
         <property name="minimumSize">
          <size>
           <width>64</width>
@@ -86,9 +86,9 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>QCameraViewfinder</class>
+   <class>QVideoWidget</class>
    <extends>QWidget</extends>
-   <header>qcameraviewfinder.h</header>
+   <header>qvideowidget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
