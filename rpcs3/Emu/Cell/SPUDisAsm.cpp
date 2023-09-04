@@ -104,8 +104,7 @@ std::pair<bool, v128> SPUDisAsm::try_get_const_value(u32 reg, u32 pc, u32 TTL) c
 
 		//const auto flag = g_spu_iflag.decode(opcode);
 
-		// TODO: It detects spurious register modifications
-		if (u32 dst = type & spu_itype::_quadrop ? +op0.rt4 : +op0.rt; dst == reg)
+		if (u32 dst = type & spu_itype::_quadrop ? +op0.rt4 : +op0.rt; dst == reg && !(type & spu_itype::zregmod))
 		{
 			// Note: It's not 100% reliable because it won't detect branch targets within [i, dump_pc] range (e.g. if-else statement for command's value)
 			switch (type)
@@ -182,15 +181,6 @@ std::pair<bool, v128> SPUDisAsm::try_get_const_value(u32 reg, u32 pc, u32 TTL) c
 				GET_CONST_REG(reg_val, op0.rt);
 
 				return { true, reg_val | v128::from32p(op0.i16) };
-			}
-			case spu_itype::STQA:
-			case spu_itype::STQD:
-			case spu_itype::STQR:
-			case spu_itype::STQX:
-			case spu_itype::WRCH:
-			{
-				// Do not modify RT
-				break;
 			}
 			case spu_itype::SHLQBYI:
 			{
