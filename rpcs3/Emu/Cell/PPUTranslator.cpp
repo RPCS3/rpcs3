@@ -5045,13 +5045,32 @@ void PPUTranslator::SetOverflow(Value* bit)
 
 Value* PPUTranslator::CheckTrapCondition(u32 to, Value* left, Value* right)
 {
-	Value* trap_condition = m_ir->getFalse();
-	if (to & 0x10) trap_condition = m_ir->CreateOr(trap_condition, m_ir->CreateICmpSLT(left, right));
-	if (to & 0x8) trap_condition = m_ir->CreateOr(trap_condition, m_ir->CreateICmpSGT(left, right));
-	if (to & 0x4) trap_condition = m_ir->CreateOr(trap_condition, m_ir->CreateICmpEQ(left, right));
-	if (to & 0x2) trap_condition = m_ir->CreateOr(trap_condition, m_ir->CreateICmpULT(left, right));
-	if (to & 0x1) trap_condition = m_ir->CreateOr(trap_condition, m_ir->CreateICmpUGT(left, right));
-	return trap_condition;
+	if ((to & 0x3) == 0x3 || (to & 0x18) == 0x18)
+	{
+		// Not-equal check or always-true
+		return to & 0x4 ? m_ir->getTrue() : m_ir->CreateICmpNE(left, right);
+	}
+
+	Value* trap_condition = nullptr;
+
+	auto add_condition = [&](Value* cond)
+	{
+		if (!trap_condition)
+		{
+			trap_condition = cond;
+			return;
+		}
+
+		trap_condition = m_ir->CreateOr(trap_condition, cond);
+	};
+
+	if (to & 0x10) add_condition(m_ir->CreateICmpSLT(left, right));
+	if (to & 0x8) add_condition(m_ir->CreateICmpSGT(left, right));
+	if (to & 0x4) add_condition(m_ir->CreateICmpEQ(left, right));
+	if (to & 0x2) add_condition(m_ir->CreateICmpULT(left, right));
+	if (to & 0x1) add_condition(m_ir->CreateICmpUGT(left, right));
+
+	return trap_condition ? trap_condition : m_ir->getFalse();
 }
 
 void PPUTranslator::Trap()
