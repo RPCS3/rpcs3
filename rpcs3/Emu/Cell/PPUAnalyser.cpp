@@ -587,6 +587,23 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 		return false;
 	};
 
+	auto can_trap_continue = [](ppu_opcode_t op, ppu_itype::type type)
+	{
+		if ((op.bo & 0x1c) == 0x1c || (op.bo & 0x7) == 0x7)
+		{
+			// All signed or unsigned <=>, must be true
+			return false;
+		}
+
+		if (op.simm16 == 0 && (type == ppu_itype::TWI || type == ppu_itype::TDI) && (op.bo & 0x5) == 0x5)
+		{
+			// Logically greater or equal to 0
+			return false;
+		}
+
+		return true;
+	};
+
 	// Register new function
 	auto add_func = [&](u32 addr, u32 toc, u32 caller) -> ppu_function&
 	{
@@ -1395,9 +1412,9 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 					block.second = _ptr.addr() - block.first;
 					break;
 				}
-				else if (type & ppu_itype::trap)
+				else if (type & ppu_itype::trap && op.bo)
 				{
-					if (op.bo != 31)
+					if (can_trap_continue(op, type))
 					{
 						add_block(_ptr.addr());
 					}
@@ -1782,7 +1799,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 				case ppu_itype::TDI:
 				case ppu_itype::TWI:
 				{
-					if (op.ra == 1u || op.ra == 13u || op.ra == 2u)
+					if (op.bo && (op.ra == 1u || op.ra == 13u || op.ra == 2u))
 					{
 						// Non-user registers, checking them against a constant value makes no sense
 						is_good = false;
@@ -1793,16 +1810,36 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 				}
 				case ppu_itype::TD:
 				case ppu_itype::TW:
+				{
+					if (!op.bo)
+					{
+						continue;
+					}
+
+					if (!can_trap_continue(op, type))
+					{
+						is_fallback = false;
+					}
+
+					[[fallthrough]];
+				}
 				case ppu_itype::B:
 				case ppu_itype::BC:
 				{
-					if (type == ppu_itype::B)
+					if (type == ppu_itype::B || (type == ppu_itype::BC && (op.bo & 0x14) == 0x14))
 					{
 						is_fallback = false;
 					}
 
 					if (type == ppu_itype::B || type == ppu_itype::BC)
 					{
+						if (type == ppu_itype::BC && (op.bo & 0x14) == 0x14 && op.bo & 0xd)
+						{
+							// Invalid form
+							is_good = false;
+							break;
+						}
+
 						if (entry == 0 && op.aa)
 						{
 							// Ignore absolute branches in PIC (PRX)
@@ -1829,7 +1866,12 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 						}
 
 						// Test another instruction just in case (testing more is unlikely to improve results by much)
-						if (!(type0 & ppu_itype::branch))
+
+						if (type0 == ppu_itype::SC || (type0 & ppu_itype::trap && !can_trap_continue(test_op, type0)))
+						{
+							// May not be followed by a valid instruction
+						}
+						else if (!(type0 & ppu_itype::branch))
 						{
 							if (target + 4 >= segs[0].addr + segs[0].size)
 							{
@@ -1845,8 +1887,8 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 								break;
 							}
 						}
-						else if (u32 target0 = (test_op.aa ? 0 : target) + (type == ppu_itype::B ? +test_op.bt24 : +test_op.bt14);
-							target0 < segs[0].addr || target0 >= segs[0].addr + segs[0].size)
+						else if (u32 target0 = (test_op.aa ? 0 : target) + (type0 == ppu_itype::B ? +test_op.bt24 : +test_op.bt14);
+							(type0 == ppu_itype::B || ppu_itype::BC) && target0 < segs[0].addr || target0 >= segs[0].addr + segs[0].size)
 						{
 							// Sanity check
 							is_good = false;
@@ -1855,7 +1897,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 
 						if (target != i_pos && !fmap.contains(target))
 						{
-							if (block_set.count(target) == 0 && std::count(block_edges, block_edges + edge_count, target) == 0)
+							if (block_set.count(target) == 0)
 							{
 								ppu_log.trace("Block target found: 0x%x (i_pos=0x%x)", target, i_pos);
 								block_queue.emplace_back(target, 0);
@@ -1870,7 +1912,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 				case ppu_itype::BCLR:
 				case ppu_itype::SC:
 				{
-					if (type == ppu_itype::SC && op.opcode != ppu_instructions::SC(0))
+					if (type == ppu_itype::SC && op.opcode != ppu_instructions::SC(0) && op.opcode != ppu_instructions::SC(1))
 					{
 						// Strict garbage filter
 						is_good = false;
@@ -1891,13 +1933,19 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 						break;
 					}
 
-					if ((type & ppu_itype::branch && op.lk) || type & ppu_itype::trap || type == ppu_itype::BC)
+					if (type == ppu_itype::BCCTR || type == ppu_itype::BCLR)
+					{
+						is_fallback = false;
+					}
+
+					if ((type & ppu_itype::branch && op.lk) || is_fallback)
 					{
 						// if farther instructions are valid: register all blocks
 						// Otherwise, register none (all or nothing)
-						if (edge_count < std::size(block_edges))
+						if (edge_count < std::size(block_edges) && i_pos + 4 < lim)
 						{
 							block_edges[edge_count++] = i_pos + 4;
+							is_fallback = true; // Reset value
 							continue;
 						}
 					}
