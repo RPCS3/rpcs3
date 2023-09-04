@@ -1745,6 +1745,28 @@ static LONG exception_handler(PEXCEPTION_POINTERS pExp) noexcept
 		}
 	}
 
+	switch (pExp->ExceptionRecord->ExceptionCode)
+	{
+	case EXCEPTION_ACCESS_VIOLATION:
+	case EXCEPTION_ARRAY_BOUNDS_EXCEEDED:
+	case EXCEPTION_DATATYPE_MISALIGNMENT:
+	case EXCEPTION_ILLEGAL_INSTRUCTION:
+	case EXCEPTION_IN_PAGE_ERROR:
+	case EXCEPTION_INT_DIVIDE_BY_ZERO:
+	case EXCEPTION_NONCONTINUABLE_EXCEPTION:
+	case EXCEPTION_PRIV_INSTRUCTION:
+	//case EXCEPTION_STACK_OVERFLOW:
+	{
+		sys_log.notice("\n%s", dump_useful_thread_info());
+		logs::listener::sync_all();
+		break;
+	}
+	default:
+	{
+		break;
+	}
+	}
+
 	return EXCEPTION_CONTINUE_SEARCH;
 }
 
@@ -1826,6 +1848,9 @@ static LONG exception_filter(PEXCEPTION_POINTERS pExp) noexcept
 	fmt::append(msg, "RPCS3 image base: %p.\n", GetModuleHandle(NULL));
 
 	// TODO: print registers and the callstack
+
+	sys_log.fatal("\n%s", msg);
+	logs::listener::sync_all();
 
 	thread_ctrl::emergency_exit(msg);
 }
@@ -1912,12 +1937,12 @@ static void signal_handler(int /*sig*/, siginfo_t* info, void* uct) noexcept
 
 	append_thread_name(msg);
 
+	sys_log.fatal("\n%s", msg);
+	sys_log.notice("\n%s", dump_useful_thread_info());
+	logs::listener::sync_all();
+
 	if (IsDebuggerPresent())
 	{
-		sys_log.fatal("\n%s", msg);
-
-		sys_log.notice("\n%s", dump_useful_thread_info());
-
 		// Convert to SIGTRAP
 		raise(SIGTRAP);
 		return;
@@ -1932,12 +1957,12 @@ static void sigill_handler(int /*sig*/, siginfo_t* info, void* /*uct*/) noexcept
 
 	append_thread_name(msg);
 
+	sys_log.fatal("\n%s", msg);
+	sys_log.notice("\n%s", dump_useful_thread_info());
+	logs::listener::sync_all();
+
 	if (IsDebuggerPresent())
 	{
-		sys_log.fatal("\n%s", msg);
-
-		sys_log.notice("\n%s", dump_useful_thread_info());
-
 		// Convert to SIGTRAP
 		raise(SIGTRAP);
 		return;
