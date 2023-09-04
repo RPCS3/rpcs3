@@ -4662,6 +4662,9 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 #ifdef __APPLE__
 	pthread_jit_write_protect_np(false);
 #endif
+	// Try to patch all single and unregistered BLRs with the same function (TODO: Maybe generalize it into PIC code detection and patching)
+	ppu_intrp_func_t BLR_func = nullptr;
+
 	if (jit && !jit_mod.init)
 	{
 		jit->fin();
@@ -4674,6 +4677,11 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 			const auto name = fmt::format("__0x%x", func.addr - reloc);
 			const auto addr = ensure(reinterpret_cast<ppu_intrp_func_t>(jit->get(name)));
 			jit_mod.funcs.emplace_back(addr);
+
+			if (func.size == 4 & !BLR_func && *info.get_ptr<u32>(func.addr) == ppu_instructions::BLR())
+			{
+				BLR_func = addr;
+			}
 
 			ppu_register_function_at(func.addr, 4, addr);
 
@@ -4694,6 +4702,11 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 
 			const u64 addr = reinterpret_cast<uptr>(ensure(jit_mod.funcs[index++]));
 
+			if (func.size == 4 & !BLR_func && *info.get_ptr<u32>(func.addr) == ppu_instructions::BLR())
+			{
+				BLR_func = reinterpret_cast<ppu_intrp_func_t>(addr);
+			}
+
 			ppu_register_function_at(func.addr, 4, addr);
 
 			if (g_cfg.core.ppu_debug)
@@ -4701,6 +4714,19 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 		}
 
 		index = 0;
+	}
+
+	if (BLR_func)
+	{
+		auto inst_ptr = info.get_ptr<u32>(info.segs[0].addr);
+
+		for (u32 addr = info.segs[0].addr; addr < info.segs[0].addr + info.segs[0].size; addr += 4, inst_ptr++)
+		{
+			if (*inst_ptr == ppu_instructions::BLR() && (reinterpret_cast<uptr>(ppu_ref(addr)) << 16 >> 16) == reinterpret_cast<uptr>(ppu_recompiler_fallback_ghc))
+			{
+				ppu_register_function_at(addr, 4, BLR_func);
+			}
+		}
 	}
 
 	return compiled_new;
