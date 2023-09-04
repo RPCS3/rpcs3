@@ -326,7 +326,7 @@ public:
 	static void old_interpreter(spu_thread&, void* ls, u8*);
 
 	// Get the function data at specified address
-	spu_program analyse(const be_t<u32>* ls, u32 entry_point);
+	spu_program analyse(const be_t<u32>* ls, u32 entry_point, std::map<u32, std::basic_string<u32>>* out_target_list = nullptr);
 
 	// Print analyser internal state
 	void dump(const spu_program& result, std::string& out);
@@ -340,11 +340,6 @@ public:
 		}
 
 		return *m_spurt;
-	}
-
-	const auto& get_targets() const
-	{
-		return m_targets;
 	}
 
 	// Create recompiler instance (ASMJIT)
