@@ -4286,6 +4286,8 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 		}
 	}
 
+	u32 total_compile = 0;
+
 	while (!jit_mod.init && fpos < info.funcs.size())
 	{
 		// Initialize compiler instance
@@ -4523,8 +4525,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 
 		if (!check_only)
 		{
-			// Update progress dialog
-			g_progr_ptotal++;
+			total_compile++;
 
 			link_workload.emplace_back(obj_name, false);
 		}
@@ -4536,8 +4537,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 			{
 				ppu_log.success("LLVM: Module exists: %s", obj_name);
 
-				// Update progress dialog
-				g_progr_pdone++;
+				total_compile++;
 			}
 
 			continue;
@@ -4561,6 +4561,17 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 	if (check_only)
 	{
 		return false;
+	}
+
+	// Update progress dialog
+	if (total_compile)
+	{
+		g_progr_ptotal += total_compile;
+	}
+
+	if (g_progr_ftotal)
+	{
+		g_progr_fknown++;
 	}
 
 	if (!workload.empty())
