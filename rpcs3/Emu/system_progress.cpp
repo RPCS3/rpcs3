@@ -160,8 +160,8 @@ void progress_dialog_server::operator()()
 
 		u32 ftotal = 0;
 		u32 fdone = 0;
-		u32 fknown_bits = 0;
-		u32 ftotal_bits = 0;
+		u64 fknown_bits = 0;
+		u64 ftotal_bits = 0;
 		u32 ptotal = 0;
 		u32 pdone = 0;
 		const char* text1 = nullptr;
@@ -236,9 +236,10 @@ void progress_dialog_server::operator()()
 						const u64 passed = (get_system_time() - start_time);
 						const u64 seconds_passed = passed / 1'000'000;
 						const u64 seconds_total = (passed / 1'000'000 * 100 / value);
-						const u64 seconds = seconds_total % 60;
-						const u64 minutes = (seconds_total / 60) % 60;
-						const u64 hours = (seconds_total / 3600);
+						const u64 seconds_remaining = seconds_total - seconds_passed;
+						const u64 seconds = seconds_remaining % 60;
+						const u64 minutes = (seconds_remaining / 60) % 60;
+						const u64 hours = (seconds_remaining / 3600);
 
 						if (seconds_passed < 4)
 						{
@@ -251,6 +252,10 @@ void progress_dialog_server::operator()()
 						else if (minutes >= 2)
 						{
 							fmt::append(progr, " (%um remaining)", minutes);
+						}
+						else if (minutes == 0)
+						{
+							fmt::append(progr, " (%02us remaining)", seconds);
 						}
 						else
 						{
