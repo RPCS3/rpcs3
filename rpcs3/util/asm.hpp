@@ -315,6 +315,14 @@ namespace utils
 		return r;
 	}
 
+#ifdef _MSC_VER
+	inline u128 operator/(u128 lhs, u64 rhs)
+	{
+		u64 rem = 0;
+		return _udiv128(lhs.hi, lhs.lo, rhs, &rem);
+	}
+#endif
+
 	constexpr u32 ctz128(u128 arg)
 	{
 #ifdef _MSC_VER
@@ -403,7 +411,7 @@ namespace utils
 
 		if constexpr (sizeof(T) <= sizeof(u128) / 2)
 		{
-			return static_cast<T>(value * u128{numerator} / u128{denominator});
+			return static_cast<T>(value * u128{numerator} / u64{denominator});
 		}
 
 		return static_cast<T>(value / denominator * numerator + (value % denominator) * numerator / denominator);
