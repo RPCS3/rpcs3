@@ -345,7 +345,7 @@ dualsense_pad_handler::DataStatus dualsense_pad_handler::get_data(DualSenseDevic
 
 	std::array<u8, 128> buf{};
 
-	const int res = hid_read(device->hidDevice, buf.data(), 128);
+	const int res = hid_read(device->hidDevice, buf.data(), buf.size());
 
 	if (res == -1)
 	{

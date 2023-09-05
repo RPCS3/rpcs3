@@ -963,6 +963,16 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, u8 player_i
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_keys(cfg->r2),       CELL_PAD_CTRL_R2);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_keys(cfg->l2),       CELL_PAD_CTRL_L2);
 
+	if (pad->m_class_type == CELL_PAD_PCLASS_TYPE_SKATEBOARD)
+	{
+		pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_PRESS_PIGGYBACK, find_keys(cfg->ir_nose), CELL_PAD_CTRL_PRESS_TRIANGLE);
+		pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_PRESS_PIGGYBACK, find_keys(cfg->ir_tail), CELL_PAD_CTRL_PRESS_CIRCLE);
+		pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_PRESS_PIGGYBACK, find_keys(cfg->ir_left), CELL_PAD_CTRL_PRESS_CROSS);
+		pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_PRESS_PIGGYBACK, find_keys(cfg->ir_right), CELL_PAD_CTRL_PRESS_SQUARE);
+		pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_PRESS_PIGGYBACK, find_keys(cfg->tilt_left), CELL_PAD_CTRL_PRESS_L1);
+		pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_PRESS_PIGGYBACK, find_keys(cfg->tilt_right), CELL_PAD_CTRL_PRESS_R1);
+	}
+
 	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X,  find_keys(cfg->ls_left), find_keys(cfg->ls_right));
 	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y,  find_keys(cfg->ls_up),   find_keys(cfg->ls_down));
 	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, find_keys(cfg->rs_left), find_keys(cfg->rs_right));

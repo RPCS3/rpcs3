@@ -221,16 +221,23 @@ void fmt_class_string<fmt::buf_to_hexstring>::format(std::string& out, u64 arg)
 	const std::vector<u8> buf(_arg.buf, _arg.buf + _arg.len);
 	out.reserve(out.size() + (buf.size() * 3));
 	static constexpr char hex[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
+	const bool use_linebreak = _arg.line_length > 0;
 
 	for (usz index = 0; index < buf.size(); index++)
 	{
+		if (index > 0)
+		{
+			if (use_linebreak && (index % _arg.line_length) == 0)
+				out += '\n';
+			else
+				out += ' ';
+		}
+
+		if (_arg.with_prefix)
+			out += "0x";
+
 		out += hex[buf[index] >> 4];
 		out += hex[buf[index] & 15];
-
-		if (((index + 1) % 16) == 0)
-			out += '\n';
-		else
-			out += ' ';
 	}
 }
 

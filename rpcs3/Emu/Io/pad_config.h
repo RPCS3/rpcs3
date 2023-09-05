@@ -54,6 +54,13 @@ struct cfg_pad final : cfg::node
 	cfg::string l2{ this, "L2", "" };
 	cfg::string l3{ this, "L3", "" };
 
+	cfg::string ir_nose{ this, "IR Nose", "" };
+	cfg::string ir_tail{ this, "IR Tail", "" };
+	cfg::string ir_left{ this, "IR Left", "" };
+	cfg::string ir_right{ this, "IR Right", "" };
+	cfg::string tilt_left{ this, "Tilt Left", "" };
+	cfg::string tilt_right{ this, "Tilt Right", "" };
+
 	cfg_sensor motion_sensor_x{ this, "Motion Sensor X" };
 	cfg_sensor motion_sensor_y{ this, "Motion Sensor Y" };
 	cfg_sensor motion_sensor_z{ this, "Motion Sensor Z" };
@@ -97,7 +104,7 @@ struct cfg_pad final : cfg::node
 	cfg::uint<0, 100> analog_lerp_factor{ this, "Analog Button Lerp Factor", 100 };
 	cfg::uint<0, 100> trigger_lerp_factor{ this, "Trigger Lerp Factor", 100 };
 
-	cfg::uint<CELL_PAD_PCLASS_TYPE_STANDARD, CELL_PAD_PCLASS_TYPE_NAVIGATION> device_class_type{ this, "Device Class Type", 0 };
+	cfg::uint<CELL_PAD_PCLASS_TYPE_STANDARD, CELL_PAD_PCLASS_TYPE_SKATEBOARD> device_class_type{ this, "Device Class Type", 0 };
 	cfg::uint<0, 65535> vendor_id{ this, "Vendor ID", 0 };
 	cfg::uint<0, 65535> product_id{ this, "Product ID", 0 };
 };
