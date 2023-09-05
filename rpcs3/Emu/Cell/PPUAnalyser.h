@@ -265,7 +265,7 @@ struct ppu_itype
 	static constexpr struct branch_tag{} branch{}; // Branch Instructions
 	static constexpr struct trap_tag{} trap{}; // Branch Instructions
 
-	enum type
+	enum class type
 	{
 		UNK = 0,
 
@@ -787,6 +787,8 @@ struct ppu_itype
 		TDI,
 		TWI, // trap_tag last
 	};
+
+	using enum type;
 
 	// Enable address-of operator for ppu_decoder<>
 	friend constexpr type operator &(type value)

@@ -16,7 +16,7 @@ struct spu_itype
 	static constexpr struct xfloat_tag{} xfloat{}; // Instructions producing xfloat values
 	static constexpr struct zregmod_tag{} zregmod{}; // Instructions not modifying any GPR
 
-	enum type : unsigned char
+	enum class type : unsigned char
 	{
 		UNK = 0,
 
@@ -235,6 +235,8 @@ struct spu_itype
 		CLGT,
 		CLGTI, // compare_tag last
 	};
+
+	using enum type;
 
 	// Enable address-of operator for spu_decoder<>
 	friend constexpr type operator &(type value)

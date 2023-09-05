@@ -6455,7 +6455,7 @@ public:
 			{
 				if (last_itype != itype)
 				{
-					ifuncs[itype] = f;
+					ifuncs[static_cast<usz>(itype)] = f;
 				}
 
 				f->setCallingConv(CallingConv::GHC);
