@@ -15,7 +15,7 @@
 
 extern std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object&, bool virtual_load, const std::string& path, s64 file_offset, utils::serial* ar = nullptr);
 
-extern bool ppu_initialize(const ppu_module&, bool = false);
+extern bool ppu_initialize(const ppu_module&, bool check_only = false, u64 file_size = 0);
 extern void ppu_finalize(const ppu_module&);
 
 LOG_CHANNEL(sys_overlay);

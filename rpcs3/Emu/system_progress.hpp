@@ -17,8 +17,9 @@ struct alignas(16) progress_dialog_string_t
 
 extern atomic_t<progress_dialog_string_t> g_progr;
 extern atomic_t<u32> g_progr_ftotal;
-extern atomic_t<u32> g_progr_fknown;
 extern atomic_t<u32> g_progr_fdone;
+extern atomic_t<u64> g_progr_ftotal_bits;
+extern atomic_t<u64> g_progr_fknown_bits;
 extern atomic_t<u32> g_progr_ptotal;
 extern atomic_t<u32> g_progr_pdone;
 extern atomic_t<bool> g_system_progress_canceled;
