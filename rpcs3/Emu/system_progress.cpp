@@ -8,13 +8,16 @@
 #include "Emu/RSX/Overlays/overlay_compile_notification.h"
 #include "Emu/System.h"
 
+#include "util/asm.hpp"
+
 LOG_CHANNEL(sys_log, "SYS");
 
 // Progress display server synchronization variables
 atomic_t<progress_dialog_string_t> g_progr{};
 atomic_t<u32> g_progr_ftotal{0};
-atomic_t<u32> g_progr_fknown{0};
 atomic_t<u32> g_progr_fdone{0};
+atomic_t<u64> g_progr_ftotal_bits{0};
+atomic_t<u64> g_progr_fknown_bits{0};
 atomic_t<u32> g_progr_ptotal{0};
 atomic_t<u32> g_progr_pdone{0};
 
@@ -40,11 +43,11 @@ void progress_dialog_server::operator()()
 
 	const auto get_state = []()
 	{
-		auto whole_state = std::make_tuple(+g_progr.load(), +g_progr_ftotal, +g_progr_fknown, +g_progr_fdone, +g_progr_ptotal, +g_progr_pdone);
+		auto whole_state = std::make_tuple(+g_progr.load(), +g_progr_ftotal, +g_progr_fdone, +g_progr_ftotal_bits, +g_progr_fknown_bits, +g_progr_ptotal, +g_progr_pdone);
 
 		while (true)
 		{
-			auto new_state = std::make_tuple(+g_progr.load(), +g_progr_ftotal, +g_progr_fknown, +g_progr_fdone, +g_progr_ptotal, +g_progr_pdone);
+			auto new_state = std::make_tuple(+g_progr.load(), +g_progr_ftotal, +g_progr_fdone, +g_progr_ftotal_bits, +g_progr_fknown_bits, +g_progr_ptotal, +g_progr_pdone);
 
 			if (new_state == whole_state)
 			{
@@ -72,7 +75,7 @@ void progress_dialog_server::operator()()
 
 			if (g_progr_ftotal || g_progr_fdone || g_progr_ptotal || g_progr_pdone)
 			{
-				const auto& [text_new, ftotal, fknown, fdone, ptotal, pdone] = get_state();
+				const auto& [text_new, ftotal, fdone, ftotal_bits, fknown_bits, ptotal, pdone] = get_state();
 
 				if (text_new)
 				{
@@ -84,8 +87,9 @@ void progress_dialog_server::operator()()
 				{
 					// Cleanup (missed message but do not cry over spilt milk)
 					g_progr_fdone -= fdone;
-					g_progr_fknown -= fknown;
 					g_progr_pdone -= pdone;
+					g_progr_ftotal_bits -= ftotal_bits;
+					g_progr_fknown_bits -= fknown_bits;
 					g_progr_ftotal -= ftotal;
 					g_progr_ptotal -= ptotal;
 					g_progr_ptotal.notify_all();
@@ -155,10 +159,11 @@ void progress_dialog_server::operator()()
 		}
 
 		u32 ftotal = 0;
-		u32 fdone  = 0;
-		u32 fknown = 0;
+		u32 fdone = 0;
+		u32 fknown_bits = 0;
+		u32 ftotal_bits = 0;
 		u32 ptotal = 0;
-		u32 pdone  = 0;
+		u32 pdone = 0;
 		const char* text1 = nullptr;
 
 		const u64 start_time = get_system_time();
@@ -166,13 +171,14 @@ void progress_dialog_server::operator()()
 		// Update progress
 		while (!g_system_progress_stopping && thread_ctrl::state() != thread_state::aborting)
 		{
-			const auto& [text_new, ftotal_new, fknown_new, fdone_new, ptotal_new, pdone_new] = get_state();
+			const auto& [text_new, ftotal_new, fdone_new, ftotal_bits_new, fknown_bits_new, ptotal_new, pdone_new] = get_state();
 
-			if (ftotal != ftotal_new || fknown != fknown_new || fdone != fdone_new || ptotal != ptotal_new || pdone != pdone_new || text_new != text1)
+			if (ftotal != ftotal_new || fdone != fdone_new || fknown_bits != fknown_bits_new || ftotal_bits != ftotal_bits_new || ptotal != ptotal_new || pdone != pdone_new || text_new != text1)
 			{
 				ftotal = ftotal_new;
-				fknown = fknown_new;
 				fdone  = fdone_new;
+				ftotal_bits = ftotal_bits_new;
+				fknown_bits = fknown_bits_new;
 				ptotal = ptotal_new;
 				pdone  = pdone_new;
 
@@ -210,8 +216,9 @@ void progress_dialog_server::operator()()
 
 				// Compute new progress in percents
 				// Assume not all programs were found if files were not compiled (as it may contain more)
-				const u64 known_files = ftotal && fknown ? fknown : ftotal;
-				const u64 total = std::max<u64>(ptotal, 1) * std::max<u64>(ftotal, 1) / std::max<u64>(known_files, 1);
+				const bool use_bits = fknown_bits && ftotal_bits;
+				const u64 known_files = use_bits ? fknown_bits : ftotal;
+				const u64 total = utils::rational_mul<u64>(std::max<u64>(ptotal, 1), std::max<u64>(use_bits ? ftotal_bits : ftotal, 1), std::max<u64>(known_files, 1));
 				const u64 done  = pdone;
 				const u32 value = static_cast<u32>(done >= total ? 100 : done * 100 / total);
 
@@ -224,7 +231,7 @@ void progress_dialog_server::operator()()
 					if (ptotal)
 						fmt::append(progr, " module %u of %u", pdone, ptotal);
 
-					if (value >= 3)
+					if (value)
 					{
 						const u64 passed = (get_system_time() - start_time);
 						const u64 seconds_passed = passed / 1'000'000;
@@ -321,8 +328,9 @@ void progress_dialog_server::operator()()
 
 		// Cleanup
 		g_progr_fdone -= fdone;
-		g_progr_fknown -= fknown;
 		g_progr_pdone -= pdone;
+		g_progr_ftotal_bits -= ftotal_bits;
+		g_progr_fknown_bits -= fknown_bits;
 		g_progr_ftotal -= ftotal;
 		g_progr_ptotal -= ptotal;
 		g_progr_ptotal.notify_all();
@@ -343,8 +351,9 @@ void progress_dialog_server::operator()()
 progress_dialog_server::~progress_dialog_server()
 {
 	g_progr_ftotal.release(0);
-	g_progr_fknown.release(0);
 	g_progr_fdone.release(0);
+	g_progr_ftotal_bits.release(0);
+	g_progr_fknown_bits.release(0);
 	g_progr_ptotal.release(0);
 	g_progr_pdone.release(0);
 	g_progr.release(progress_dialog_string_t{});
