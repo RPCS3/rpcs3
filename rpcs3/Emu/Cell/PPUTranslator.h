@@ -148,7 +148,7 @@ public:
 	llvm::Value* RotateLeft(llvm::Value* arg, llvm::Value* n);
 
 	// Emit function call
-	void CallFunction(u64 target, llvm::Value* indirect = nullptr);
+	void CallFunction(u64 target, llvm::Value* indirect = nullptr, llvm::BasicBlock* prev_block = nullptr);
 
 	// Initialize global for writing
 	llvm::Value* RegInit(llvm::Value*& local);
@@ -292,7 +292,7 @@ public:
 	llvm::MDNode* CheckBranchProbability(u32 bo);
 
 	// Branch to next instruction if condition failed, never branch on nullptr
-	void UseCondition(llvm::MDNode* hint, llvm::Value* = nullptr);
+	void UseCondition(llvm::MDNode* hint, llvm::Value* = nullptr, llvm::BasicBlock* prev_block = nullptr);
 
 	// Get memory pointer
 	llvm::Value* GetMemory(llvm::Value* addr);
