@@ -454,19 +454,21 @@ bool PadHandlerBase::bindPadToDevice(std::shared_ptr<Pad> pad, u8 player_id)
 	std::array<std::set<u32>, button::button_count> mapping = get_mapped_key_codes(pad_device, config);
 
 	u32 pclass_profile = 0x0;
+	u32 capabilities = CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_HP_ANALOG_STICK | CELL_PAD_CAPABILITY_ACTUATOR | CELL_PAD_CAPABILITY_SENSOR_MODE;
 
 	for (const input::product_info& product : input::get_products_by_class(config->device_class_type))
 	{
 		if (product.vendor_id == config->vendor_id && product.product_id == config->product_id)
 		{
 			pclass_profile = product.pclass_profile;
+			capabilities = product.capabilites;
 		}
 	}
 
 	pad->Init
 	(
 		CELL_PAD_STATUS_DISCONNECTED,
-		CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_HP_ANALOG_STICK | CELL_PAD_CAPABILITY_ACTUATOR | CELL_PAD_CAPABILITY_SENSOR_MODE,
+		capabilities,
 		CELL_PAD_DEV_TYPE_STANDARD,
 		config->device_class_type,
 		pclass_profile,
@@ -495,6 +497,16 @@ bool PadHandlerBase::bindPadToDevice(std::shared_ptr<Pad> pad, u8 player_id)
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, mapping[button::start], CELL_PAD_CTRL_START);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, mapping[button::select], CELL_PAD_CTRL_SELECT);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, mapping[button::ps], CELL_PAD_CTRL_PS);
+
+	if (pad->m_class_type == CELL_PAD_PCLASS_TYPE_SKATEBOARD)
+	{
+		pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_PRESS_PIGGYBACK, mapping[button::skateboard_ir_nose], CELL_PAD_CTRL_PRESS_TRIANGLE);
+		pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_PRESS_PIGGYBACK, mapping[button::skateboard_ir_tail], CELL_PAD_CTRL_PRESS_CIRCLE);
+		pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_PRESS_PIGGYBACK, mapping[button::skateboard_ir_left], CELL_PAD_CTRL_PRESS_CROSS);
+		pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_PRESS_PIGGYBACK, mapping[button::skateboard_ir_right], CELL_PAD_CTRL_PRESS_SQUARE);
+		pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_PRESS_PIGGYBACK, mapping[button::skateboard_tilt_left], CELL_PAD_CTRL_PRESS_L1);
+		pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_PRESS_PIGGYBACK, mapping[button::skateboard_tilt_right], CELL_PAD_CTRL_PRESS_R1);
+	}
 
 	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X, mapping[button::ls_left], mapping[button::ls_right]);
 	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y, mapping[button::ls_down], mapping[button::ls_up]);
@@ -556,6 +568,13 @@ std::array<std::set<u32>, PadHandlerBase::button::button_count> PadHandlerBase::
 	mapping[button::rs_down]  = narrow_set(device->axis_code_right[2]);
 	mapping[button::rs_up]    = narrow_set(device->axis_code_right[3]);
 	mapping[button::ps]       = FindKeyCodes<u32, u32>(button_list, cfg->ps);
+
+	mapping[button::skateboard_ir_nose]    = FindKeyCodes<u32, u32>(button_list, cfg->ir_nose);
+	mapping[button::skateboard_ir_tail]    = FindKeyCodes<u32, u32>(button_list, cfg->ir_tail);
+	mapping[button::skateboard_ir_left]    = FindKeyCodes<u32, u32>(button_list, cfg->ir_left);
+	mapping[button::skateboard_ir_right]   = FindKeyCodes<u32, u32>(button_list, cfg->ir_right);
+	mapping[button::skateboard_tilt_left]  = FindKeyCodes<u32, u32>(button_list, cfg->tilt_left);
+	mapping[button::skateboard_tilt_right] = FindKeyCodes<u32, u32>(button_list, cfg->tilt_right);
 
 	mapping[button::pressure_intensity_button] = FindKeyCodes<u32, u32>(button_list, cfg->pressure_intensity_button);
 

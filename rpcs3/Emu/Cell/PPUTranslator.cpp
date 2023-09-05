@@ -13,6 +13,7 @@
 #include "util/v128.hpp"
 #include "util/simd.hpp"
 #include <algorithm>
+#include <unordered_set>
 #include <span>
 
 using namespace llvm;
@@ -371,8 +372,50 @@ void PPUTranslator::CallFunction(u64 target, Value* indirect)
 
 		if (_target >= caddr && _target <= cend)
 		{
-			callee = m_module->getOrInsertFunction(fmt::format("__0x%x", target), type);
-			cast<Function>(callee.getCallee())->setCallingConv(CallingConv::GHC);
+			std::unordered_set<u64> passed_targets{_target};
+
+			u32 target_last = _target;
+
+			// Try to follow unconditional branches as long as there is no infinite loop
+			while (target_last != _target)
+			{
+				const ppu_opcode_t op{*ensure(m_info.get_ptr<u32>(target_last))};
+				const ppu_itype::type itype = g_ppu_itype.decode(op.opcode);
+
+				if (((itype == ppu_itype::BC && (op.bo & 0x14) == 0x14) || itype == ppu_itype::B) && !op.lk)
+				{
+					const u32 new_target = (op.aa ? 0 : target_last) + (itype == ppu_itype::B ? +op.bt24 : +op.bt14);
+
+					if (target_last >= caddr && target_last <= cend)
+					{
+						if (passed_targets.emplace(new_target).second)
+						{
+							// Ok
+							target_last = new_target;
+							continue;
+						}
+
+						// Infinite loop detected
+						target_last = _target;
+					}
+
+					// Odd destination
+				}
+				else if (itype == ppu_itype::BCLR && (op.bo & 0x14) == 0x14 && !op.lk)
+				{
+					// Special case: empty function
+					// In this case the branch can be treated as BCLR because previous CIA does not matter
+					indirect = RegLoad(m_lr);
+				}
+
+				break;
+			}
+
+			if (!indirect)
+			{
+				callee = m_module->getOrInsertFunction(fmt::format("__0x%x", target_last - base), type);
+				cast<Function>(callee.getCallee())->setCallingConv(CallingConv::GHC);
+			}
 		}
 		else
 		{
@@ -5045,13 +5088,32 @@ void PPUTranslator::SetOverflow(Value* bit)
 
 Value* PPUTranslator::CheckTrapCondition(u32 to, Value* left, Value* right)
 {
-	Value* trap_condition = m_ir->getFalse();
-	if (to & 0x10) trap_condition = m_ir->CreateOr(trap_condition, m_ir->CreateICmpSLT(left, right));
-	if (to & 0x8) trap_condition = m_ir->CreateOr(trap_condition, m_ir->CreateICmpSGT(left, right));
-	if (to & 0x4) trap_condition = m_ir->CreateOr(trap_condition, m_ir->CreateICmpEQ(left, right));
-	if (to & 0x2) trap_condition = m_ir->CreateOr(trap_condition, m_ir->CreateICmpULT(left, right));
-	if (to & 0x1) trap_condition = m_ir->CreateOr(trap_condition, m_ir->CreateICmpUGT(left, right));
-	return trap_condition;
+	if ((to & 0x3) == 0x3 || (to & 0x18) == 0x18)
+	{
+		// Not-equal check or always-true
+		return to & 0x4 ? m_ir->getTrue() : m_ir->CreateICmpNE(left, right);
+	}
+
+	Value* trap_condition = nullptr;
+
+	auto add_condition = [&](Value* cond)
+	{
+		if (!trap_condition)
+		{
+			trap_condition = cond;
+			return;
+		}
+
+		trap_condition = m_ir->CreateOr(trap_condition, cond);
+	};
+
+	if (to & 0x10) add_condition(m_ir->CreateICmpSLT(left, right));
+	if (to & 0x8) add_condition(m_ir->CreateICmpSGT(left, right));
+	if (to & 0x4) add_condition(m_ir->CreateICmpEQ(left, right));
+	if (to & 0x2) add_condition(m_ir->CreateICmpULT(left, right));
+	if (to & 0x1) add_condition(m_ir->CreateICmpUGT(left, right));
+
+	return trap_condition ? trap_condition : m_ir->getFalse();
 }
 
 void PPUTranslator::Trap()

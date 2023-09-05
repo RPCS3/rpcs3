@@ -315,6 +315,14 @@ namespace utils
 		return r;
 	}
 
+#ifdef _MSC_VER
+	inline u128 operator/(u128 lhs, u64 rhs)
+	{
+		u64 rem = 0;
+		return _udiv128(lhs.hi, lhs.lo, rhs, &rem);
+	}
+#endif
+
 	constexpr u32 ctz128(u128 arg)
 	{
 #ifdef _MSC_VER
@@ -390,6 +398,23 @@ namespace utils
 		}
 
 		return static_cast<T>(value / align + (value > 0 ? T{(value % align) > (align / 2)} : 0 - T{(value % align) < (align / 2)}));
+	}
+
+	// Multiplying by ratio, semi-resistant to overflows
+	template <UnsignedInt T>
+	constexpr T rational_mul(T value, std::type_identity_t<T> numerator, std::type_identity_t<T> denominator)
+	{
+		if constexpr (sizeof(T) <= sizeof(u64) / 2)
+		{
+			return static_cast<T>(value * u64{numerator} / u64{denominator});
+		}
+
+		if constexpr (sizeof(T) <= sizeof(u128) / 2)
+		{
+			return static_cast<T>(value * u128{numerator} / u64{denominator});
+		}
+
+		return static_cast<T>(value / denominator * numerator + (value % denominator) * numerator / denominator);
 	}
 
 	template <UnsignedInt T>

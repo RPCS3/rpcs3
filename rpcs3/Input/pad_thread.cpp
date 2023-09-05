@@ -4,6 +4,7 @@
 #include "ds3_pad_handler.h"
 #include "ds4_pad_handler.h"
 #include "dualsense_pad_handler.h"
+#include "skateboard_pad_handler.h"
 #ifdef _WIN32
 #include "xinput_pad_handler.h"
 #include "mm_joystick_handler.h"
@@ -167,6 +168,9 @@ void pad_thread::Init()
 				break;
 			case pad_handler::dualsense:
 				cur_pad_handler = std::make_shared<dualsense_pad_handler>();
+				break;
+			case pad_handler::skateboard:
+				cur_pad_handler = std::make_shared<skateboard_pad_handler>();
 				break;
 #ifdef _WIN32
 			case pad_handler::xinput:
@@ -558,7 +562,7 @@ void pad_thread::InitLddPad(u32 handle, const u32* port_status)
 		port_status ? *port_status : CELL_PAD_STATUS_CONNECTED | CELL_PAD_STATUS_ASSIGN_CHANGES | CELL_PAD_STATUS_CUSTOM_CONTROLLER,
 		CELL_PAD_CAPABILITY_PS3_CONFORMITY,
 		CELL_PAD_DEV_TYPE_LDD,
-		0, // CELL_PAD_PCLASS_TYPE_STANDARD
+		CELL_PAD_PCLASS_TYPE_STANDARD,
 		product.pclass_profile,
 		product.vendor_id,
 		product.product_id,
@@ -609,6 +613,8 @@ std::shared_ptr<PadHandlerBase> pad_thread::GetHandler(pad_handler type)
 		return std::make_unique<ds4_pad_handler>();
 	case pad_handler::dualsense:
 		return std::make_unique<dualsense_pad_handler>();
+	case pad_handler::skateboard:
+		return std::make_unique<skateboard_pad_handler>();
 #ifdef _WIN32
 	case pad_handler::xinput:
 		return std::make_unique<xinput_pad_handler>();
