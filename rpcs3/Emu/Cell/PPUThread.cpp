@@ -174,7 +174,7 @@ bool serialize<ppu_thread::cr_bits>(utils::serial& ar, typename ppu_thread::cr_b
 
 extern void ppu_initialize();
 extern void ppu_finalize(const ppu_module& info);
-extern bool ppu_initialize(const ppu_module& info, bool = false);
+extern bool ppu_initialize(const ppu_module& info, bool check_only = false, u64 file_size = 0);
 static void ppu_initialize2(class jit_compiler& jit, const ppu_module& module_part, const std::string& cache_path, const std::string& obj_name);
 extern bool ppu_load_exec(const ppu_exec_object&, bool virtual_load, const std::string&, utils::serial* = nullptr);
 extern std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object&, bool virtual_load, const std::string& path, s64 file_offset, utils::serial* = nullptr);
@@ -3597,7 +3597,23 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 
 	const std::string firmware_sprx_path = vfs::get("/dev_flash/sys/external/");
 
-	std::vector<std::pair<std::string, u64>> file_queue;
+	struct file_info
+	{
+		std::string path;
+		u64 offset;
+		u64 file_size;
+
+		file_info() noexcept = default;
+
+		file_info(std::string _path, u64 offs, u64 size) noexcept
+			: path(std::move(_path))
+			, offset(offs)
+			, file_size(size)
+		{
+		}
+	};
+
+	std::vector<file_info> file_queue;
 	file_queue.reserve(2000);
 
 	// Find all .sprx files recursively
@@ -3626,6 +3642,12 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 					dir_queue.emplace_back(dir_queue[i] + entry.name + '/');
 				}
 
+				continue;
+			}
+
+			// SCE header size
+			if (entry.size <= 0x20)
+			{
 				continue;
 			}
 
@@ -3676,7 +3698,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 				}
 
 				// Get full path
-				file_queue.emplace_back(dir_queue[i] + entry.name, 0);
+				file_queue.emplace_back(dir_queue[i] + entry.name, 0, entry.size);
 				continue;
 			}
 
@@ -3684,7 +3706,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 			if ((upper.ends_with(".ELF") || upper.ends_with(".SELF")) && Emu.GetBoot() != dir_queue[i] + entry.name)
 			{
 				// Get full path
-				file_queue.emplace_back(dir_queue[i] + entry.name,  0);
+				file_queue.emplace_back(dir_queue[i] + entry.name, 0, entry.size);
 				continue;
 			}
 
@@ -3710,14 +3732,14 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 								if (upper.ends_with(".SPRX"))
 								{
 									// .sprx inside .mself found
-									file_queue.emplace_back(dir_queue[i] + entry.name, rec.off);
+									file_queue.emplace_back(dir_queue[i] + entry.name, rec.off, rec.size);
 									continue;
 								}
 
 								if (upper.ends_with(".SELF"))
 								{
 									// .self inside .mself found
-									file_queue.emplace_back(dir_queue[i] + entry.name, rec.off);
+									file_queue.emplace_back(dir_queue[i] + entry.name, rec.off, rec.size);
 									continue;
 								}
 							}
@@ -3734,11 +3756,21 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 	}
 
 	g_progr_ftotal += file_queue.size();
+
+	u64 total_files_size = 0;
+
+	for (const file_info& info : file_queue)
+	{
+		total_files_size += info.file_size;
+	}
+
+	g_progr_ftotal_bits += total_files_size;
+
 	scoped_progress_dialog progr = "Compiling PPU modules...";
 
 	atomic_t<usz> fnext = 0;
 
-	lf_queue<std::string> possible_exec_file_paths;
+	lf_queue<file_info> possible_exec_file_paths;
 	shared_mutex ovl_mtx;
 
 	named_thread_group workers("SPRX Worker ", std::min<u32>(utils::get_thread_count(), ::size32(file_queue)), [&]
@@ -3756,7 +3788,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 				continue;
 			}
 
-			auto& [path, offset] = file_queue[func_i];
+			auto& [path, offset, file_size] = file_queue[func_i];
 
 			ppu_log.notice("Trying to load: %s", path);
 
@@ -3794,7 +3826,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 				if (auto prx = ppu_load_prx(obj, true, path, offset))
 				{
 					obj.clear(), src.close(); // Clear decrypted file and elf object memory
-					ppu_initialize(*prx);
+					ppu_initialize(*prx, false, file_size);
 					ppu_finalize(*prx);
 					continue;
 				}
@@ -3828,7 +3860,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 						// Does not really require this lock, this is done for performance reasons.
 						// Seems like too many created threads is hard for Windows to manage efficiently with many CPU threads.
 						std::lock_guard lock(ovl_mtx);
-						ppu_initialize(*ovlm);
+						ppu_initialize(*ovlm, false, file_size);
 					}
 
 					ppu_finalize(*ovlm);
@@ -3842,7 +3874,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 			}
 
 			ppu_log.notice("Failed to precompile '%s' (prx: %s, ovl: %s): Attempting tratment as executable file", path, prx_err, ovl_err);
-			possible_exec_file_paths.push(path);
+			possible_exec_file_paths.push(path, offset, file_size);
 			inc_fdone = 0;
 		}
 	});
@@ -3874,7 +3906,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 				continue;
 			}
 
-			const std::string path = *slice;
+			const auto& [path, _, file_size] = *slice;
 
 			ppu_log.notice("Trying to load as executable: %s", path);
 
@@ -3930,7 +3962,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 
 					_main.name = ' '; // Make ppu_finalize work
 					Emu.ConfigurePPUCache(!Emu.IsPathInsideDir(_main.path, g_cfg_vfs.get_dev_flash()));
-					ppu_initialize(_main);
+					ppu_initialize(_main, false, file_size);
 					spu_cache::initialize(false);
 					ppu_finalize(_main);
 					_main = {};
@@ -4093,7 +4125,7 @@ extern void ppu_initialize()
 	}
 }
 
-bool ppu_initialize(const ppu_module& info, bool check_only)
+bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 {
 	if (g_cfg.core.ppu_decoder != ppu_decoder_type::llvm)
 	{
@@ -4569,9 +4601,9 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 		g_progr_ptotal += total_compile;
 	}
 
-	if (g_progr_ftotal)
+	if (g_progr_ftotal_bits && file_size)
 	{
-		g_progr_fknown++;
+		g_progr_fknown_bits += file_size;
 	}
 
 	if (!workload.empty())

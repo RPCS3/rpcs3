@@ -392,6 +392,23 @@ namespace utils
 		return static_cast<T>(value / align + (value > 0 ? T{(value % align) > (align / 2)} : 0 - T{(value % align) < (align / 2)}));
 	}
 
+	// Multiplying by ratio, semi-resistant to overflows
+	template <UnsignedInt T>
+	constexpr T rational_mul(T value, std::type_identity_t<T> numerator, std::type_identity_t<T> denominator)
+	{
+		if constexpr (sizeof(T) <= sizeof(u64) / 2)
+		{
+			return static_cast<T>(value * u64{numerator} / u64{denominator});
+		}
+
+		if constexpr (sizeof(T) <= sizeof(u128) / 2)
+		{
+			return static_cast<T>(value * u128{numerator} / u128{denominator});
+		}
+
+		return static_cast<T>(value / denominator * numerator + (value % denominator) * numerator / denominator);
+	}
+
 	template <UnsignedInt T>
 	constexpr T add_saturate(T addend1, T addend2)
 	{
