@@ -12023,7 +12023,7 @@ struct spu_fast : public spu_recompiler_base
 				raw += 4;
 
 				// call spu_* (specially built interpreter function)
-				const s64 rel = spu_runtime::g_interpreter_table[std::to_underlying(type)] - reinterpret_cast<u64>(raw) - 5;
+				const s64 rel = spu_runtime::g_interpreter_table[static_cast<usz>(type)] - reinterpret_cast<u64>(raw) - 5;
 				*raw++ = 0xe8;
 				std::memcpy(raw, &rel, 4);
 				raw += 4;
