@@ -4721,7 +4721,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 			const auto addr = ensure(reinterpret_cast<ppu_intrp_func_t>(jit->get(name)));
 			jit_mod.funcs.emplace_back(addr);
 
-			if (func.size == 4 & !BLR_func && *info.get_ptr<u32>(func.addr) == ppu_instructions::BLR())
+			if (func.size == 4 && !BLR_func && *info.get_ptr<u32>(func.addr) == ppu_instructions::BLR())
 			{
 				BLR_func = addr;
 			}
@@ -4745,7 +4745,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 
 			const u64 addr = reinterpret_cast<uptr>(ensure(jit_mod.funcs[index++]));
 
-			if (func.size == 4 & !BLR_func && *info.get_ptr<u32>(func.addr) == ppu_instructions::BLR())
+			if (func.size == 4 && !BLR_func && *info.get_ptr<u32>(func.addr) == ppu_instructions::BLR())
 			{
 				BLR_func = reinterpret_cast<ppu_intrp_func_t>(addr);
 			}

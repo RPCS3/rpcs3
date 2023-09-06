@@ -1888,7 +1888,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 							}
 						}
 						else if (u32 target0 = (test_op.aa ? 0 : target) + (type0 == ppu_itype::B ? +test_op.bt24 : +test_op.bt14);
-							(type0 == ppu_itype::B || ppu_itype::BC) && target0 < segs[0].addr || target0 >= segs[0].addr + segs[0].size)
+							(type0 == ppu_itype::B || type0 == ppu_itype::BC) && target0 < segs[0].addr || target0 >= segs[0].addr + segs[0].size)
 						{
 							// Sanity check
 							is_good = false;
