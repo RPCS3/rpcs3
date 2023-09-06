@@ -50,9 +50,9 @@ struct cfg_usio final : public emulated_pad_config<usio_btn>
 	cfg_pad_btn<usio_btn> tekken_button5{this, "Tekken Button 5", usio_btn::tekken_button5, pad_button::R1};
 };
 
-struct cfg_usios final : public emulated_pads_config<cfg_usio, 2>
+struct cfg_usios final : public emulated_pads_config<cfg_usio, 4>
 {
-	cfg_usios() : emulated_pads_config<cfg_usio, 2>("usio") {};
+	cfg_usios() : emulated_pads_config<cfg_usio, 4>("usio") {};
 };
 
 extern cfg_usios g_cfg_usio;
