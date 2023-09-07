@@ -1171,6 +1171,18 @@ concept PtrSame = (is_same_ptr<X, Y>());
 
 namespace stx
 {
+	template <typename T, typename U>
+	class copy_cv
+	{
+		using C = std::conditional_t<std::is_const<T>::value, std::add_const_t<U>, U>;
+		using V = std::conditional_t<std::is_volatile<T>::value, std::add_volatile_t<C>, C>;
+	public:
+		using type = V;
+	};
+
+	template <typename T, typename U>
+	using copy_cv_t = typename copy_cv<T,U>::type;
+
 	template <typename T>
 	struct exact_t
 	{
@@ -1186,7 +1198,7 @@ namespace stx
 
 // Read object of type T from raw pointer, array, string, vector, or any contiguous container
 template <typename T, typename U>
-constexpr T read_from_ptr(U&& array, usz pos = 0)
+constexpr SAFE_BUFFERS(T) read_from_ptr(U&& array, usz pos = 0)
 {
 	// TODO: ensure array element types are trivial
 	static_assert(sizeof(T) % sizeof(array[0]) == 0);
@@ -1199,7 +1211,7 @@ constexpr T read_from_ptr(U&& array, usz pos = 0)
 }
 
 template <typename T, typename U>
-constexpr void write_to_ptr(U&& array, usz pos, const T& value)
+constexpr SAFE_BUFFERS(void) write_to_ptr(U&& array, usz pos, const T& value)
 {
 	static_assert(sizeof(T) % sizeof(array[0]) == 0);
 	if (!std::is_constant_evaluated())
@@ -1209,13 +1221,9 @@ constexpr void write_to_ptr(U&& array, usz pos, const T& value)
 }
 
 template <typename T, typename U>
-constexpr void write_to_ptr(U&& array, const T& value)
+constexpr SAFE_BUFFERS(void) write_to_ptr(U&& array, const T& value)
 {
-	static_assert(sizeof(T) % sizeof(array[0]) == 0);
-	if (!std::is_constant_evaluated())
-		std::memcpy(&array[0], &value, sizeof(value));
-	else
-		ensure(!"Unimplemented");
+	return write_to_ptr<T>(std::forward<U>(array), 0, value);
 }
 
 constexpr struct aref_tag_t{} aref_tag{};
@@ -1256,13 +1264,13 @@ public:
 	}
 
 	template <typename MT, typename T2> requires (std::is_convertible_v<const volatile T*, const volatile T2*>) && PtrSame<T, T2>
-	aref<MT, U> ref(MT T2::*const mptr) const
+	aref<stx::copy_cv_t<T, MT>, U> ref(MT T2::*const mptr) const
 	{
 		return aref<MT, U>(aref_tag, m_ptr + offset32(mptr) / sizeof(U));
 	}
 
 	template <typename MT, typename T2, typename ET = std::remove_extent_t<MT>> requires (std::is_convertible_v<const volatile T*, const volatile T2*>) && PtrSame<T, T2>
-	aref<ET, U> ref(MT T2::*const mptr, usz index) const
+	aref<stx::copy_cv_t<T, ET>, U> ref(MT T2::*const mptr, usz index) const
 	{
 		return aref<ET, U>(aref_tag, m_ptr + offset32(mptr) / sizeof(U) + sizeof(ET) / sizeof(U) * index);
 	}

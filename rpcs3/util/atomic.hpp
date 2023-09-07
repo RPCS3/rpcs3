@@ -1185,7 +1185,6 @@ protected:
 	alignas(Align) type m_data;
 
 public:
-	static constexpr usz align = Align;
 	ENABLE_BITWISE_SERIALIZATION;
 
 	atomic_t() noexcept = default;
@@ -1716,8 +1715,6 @@ class atomic_t<bool, Align> : private atomic_t<uchar, Align>
 	using base = atomic_t<uchar, Align>;
 
 public:
-	static constexpr usz align = Align;
-
 	atomic_t() noexcept = default;
 
 	atomic_t(const atomic_t&) = delete;

@@ -10,9 +10,6 @@ struct ppu_func_opd_t;
 
 namespace vm
 {
-	template <typename T, typename AT>
-	class _ref_base;
-
 	// Enables comparison between comparable types of pointers
 	template<typename T1, typename T2>
 	concept PtrComparable = requires (T1* t1, T2* t2) { t1 == t2; };
@@ -79,27 +76,6 @@ namespace vm
 		_ptr_base<ET, u32> ptr(MT T2::*const mptr, u32 index) const
 		{
 			return vm::cast(vm::cast(m_addr) + offset32(mptr) + u32{sizeof(ET)} * index);
-		}
-
-		// Get vm reference to a struct member
-		template <typename MT, typename T2> requires PtrComparable<T, T2> && (!std::is_void_v<T>)
-		_ref_base<MT, u32> ref(MT T2::*const mptr) const
-		{
-			return vm::cast(vm::cast(m_addr) + offset32(mptr));
-		}
-
-		// Get vm reference to a struct member with array subscription
-		template <typename MT, typename T2, typename ET = std::remove_extent_t<MT>> requires PtrComparable<T, T2> && (!std::is_void_v<T>)
-		_ref_base<ET, u32> ref(MT T2::*const mptr, u32 index) const
-		{
-			return vm::cast(vm::cast(m_addr) + offset32(mptr) + u32{sizeof(ET)} * index);
-		}
-
-		// Get vm reference
-		template <bool = false> requires (!std::is_void_v<T>)
-		_ref_base<T, u32> ref() const
-		{
-			return vm::cast(m_addr);
 		}
 
 		T* get_ptr() const
