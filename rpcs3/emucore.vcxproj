@@ -91,6 +91,7 @@
     <ClCompile Include="Emu\NP\upnp_handler.cpp" />
     <ClCompile Include="Emu\perf_monitor.cpp" />
     <ClCompile Include="Emu\RSX\Common\texture_cache.cpp" />
+    <ClCompile Include="Emu\RSX\Core\RSXContext.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_components.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_message_box.cpp" />
@@ -558,6 +559,7 @@
     <ClInclude Include="Emu\RSX\Common\surface_cache_dma.hpp" />
     <ClInclude Include="Emu\RSX\Common\time.hpp" />
     <ClInclude Include="Emu\RSX\Common\unordered_map.hpp" />
+    <ClInclude Include="Emu\RSX\Core\RSXContext.h" />
     <ClInclude Include="Emu\RSX\Core\RSXEngLock.hpp" />
     <ClInclude Include="Emu\RSX\Core\RSXFrameBuffer.h" />
     <ClInclude Include="Emu\RSX\Core\RSXIOMap.hpp" />
