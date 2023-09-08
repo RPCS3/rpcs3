@@ -1168,6 +1168,9 @@
     <ClCompile Include="Emu\Io\pad_types.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\Core\RSXContext.cpp">
+      <Filter>Emu\GPU\RSX\Core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -2373,6 +2376,9 @@
     </ClInclude>
     <ClInclude Include="util\bless.hpp">
       <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Core\RSXContext.h">
+      <Filter>Emu\GPU\RSX\Core</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
