@@ -2460,7 +2460,7 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 
 	_main.elf_entry = static_cast<u32>(elf.header.e_entry);
 	_main.seg0_code_end = end;
-	_main.applied_pathes = applied;
+	_main.applied_patches = applied;
 
 	if (!virtual_load)
 	{
@@ -2987,13 +2987,23 @@ std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_ex
 	}
 
 	ovlm->entry = static_cast<u32>(elf.header.e_entry);
+	ovlm->seg0_code_end = end;
+	ovlm->applied_patches = std::move(applied);
+
+	const bool is_being_used_in_emulation = (vm::base(ovlm->segs[0].addr) == ovlm->segs[0].ptr);
+
+	if (!is_being_used_in_emulation)
+	{
+		// Postpone to later
+		return {std::move(ovlm), {}};
+	}
 
 	const auto cpu = cpu_thread::get_current();
 
 	// Analyse executable (TODO)
-	if (!ovlm->analyse(0, ovlm->entry, end, applied, !cpu ? std::function<bool()>() : [cpu, is_being_used_in_emulation = (vm::base(ovlm->segs[0].addr) == ovlm->segs[0].ptr)]()
+	if (!ovlm->analyse(0, ovlm->entry, end, ovlm->applied_patches, !cpu ? std::function<bool()>() : [cpu]()
 	{
-		return is_being_used_in_emulation && cpu->state & cpu_flag::exit;
+		return !!(cpu->state & cpu_flag::exit);
 	}))
 	{
 		return {nullptr, CellError{CELL_CANCEL + 0u}};

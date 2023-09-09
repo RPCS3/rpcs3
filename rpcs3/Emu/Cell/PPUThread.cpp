@@ -3418,6 +3418,19 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 	return ppu_store_reservation<u64>(ppu, addr, reg_value);
 }
 
+struct jit_core_allocator
+{
+	const s32 thread_count = g_cfg.core.llvm_threads ? std::min<s32>(g_cfg.core.llvm_threads, limit()) : limit();
+
+	// Initialize global semaphore with the max number of threads
+	::semaphore<0x7fffffff> sem{std::max<s32>(thread_count, 1)};
+
+	static s32 limit()
+	{
+		return static_cast<s32>(utils::get_thread_count());
+	}
+};
+
 #ifdef LLVM_AVAILABLE
 namespace
 {
@@ -3771,7 +3784,6 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 	atomic_t<usz> fnext = 0;
 
 	lf_queue<file_info> possible_exec_file_paths;
-	shared_mutex ovl_mtx;
 
 	named_thread_group workers("SPRX Worker ", std::min<u32>(utils::get_thread_count(), ::size32(file_queue)), [&]
 	{
@@ -3854,15 +3866,18 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 						break;
 					}
 
-					obj.clear(), src.close(); // Clear decrypted file and elf object memory
-
+					// Participate in thread execution limitation (takes a long time)
+					if (std::lock_guard lock(g_fxo->get<jit_core_allocator>().sem); !ovlm->analyse(0, ovlm->entry, ovlm->seg0_code_end, ovlm->applied_patches, []()
 					{
-						// Does not really require this lock, this is done for performance reasons.
-						// Seems like too many created threads is hard for Windows to manage efficiently with many CPU threads.
-						std::lock_guard lock(ovl_mtx);
-						ppu_initialize(*ovlm, false, file_size);
+						return Emu.IsStopped();
+					}))
+					{
+						// Emulation stopped
+						break;
 					}
 
+					obj.clear(), src.close(); // Clear decrypted file and elf object memory
+					ppu_initialize(*ovlm, false, file_size);
 					ppu_finalize(*ovlm);
 					break;
 				}
@@ -3910,7 +3925,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 
 			ppu_log.notice("Trying to load as executable: %s", path);
 
-			// Load MSELF, SPRX or SELF
+			// Load SELF
 			fs::file src{path};
 
 			if (!src)
@@ -3952,7 +3967,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 						break;
 					}
 
-					if (!_main.analyse(0, _main.elf_entry, _main.seg0_code_end, _main.applied_pathes, [](){ return Emu.IsStopped(); }))
+					if (!_main.analyse(0, _main.elf_entry, _main.seg0_code_end, _main.applied_patches, [](){ return Emu.IsStopped(); }))
 					{
 						g_fxo->get<spu_cache>() = std::move(current_cache);
 						break;
@@ -4004,7 +4019,7 @@ extern void ppu_initialize()
 	scoped_progress_dialog progr = "Analyzing PPU Executable...";
 
 	// Analyse executable
-	if (!_main.analyse(0, _main.elf_entry, _main.seg0_code_end, _main.applied_pathes, [](){ return Emu.IsStopped(); }))
+	if (!_main.analyse(0, _main.elf_entry, _main.seg0_code_end, _main.applied_patches, [](){ return Emu.IsStopped(); }))
 	{
 		return;
 	}
@@ -4237,19 +4252,6 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 		// Initialize progress dialog
 		progr.emplace("Loading PPU modules...");
 	}
-
-	struct jit_core_allocator
-	{
-		const s32 thread_count = g_cfg.core.llvm_threads ? std::min<s32>(g_cfg.core.llvm_threads, limit()) : limit();
-
-		// Initialize global semaphore with the max number of threads
-		::semaphore<0x7fffffff> sem{std::max<s32>(thread_count, 1)};
-
-		static s32 limit()
-		{
-			return static_cast<s32>(utils::get_thread_count());
-		}
-	};
 
 	// Permanently loaded compiled PPU modules (name -> data)
 	jit_module& jit_mod = g_fxo->get<jit_module_manager>().get(cache_path + "_" + std::to_string(std::bit_cast<usz>(info.segs[0].ptr)));
@@ -4606,13 +4608,11 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 		g_progr_fknown_bits += file_size;
 	}
 
+	// Create worker threads for compilation
 	if (!workload.empty())
 	{
 		*progr = "Compiling PPU modules...";
-	}
 
-	// Create worker threads for compilation (TODO: how many threads)
-	{
 		u32 thread_count = rpcs3::utils::get_max_threads();
 
 		if (workload.size() < thread_count)
@@ -4625,49 +4625,93 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 			atomic_t<u64> index = 0;
 		};
 
+		struct thread_op
+		{
+			atomic_t<u32>& work_cv;
+			std::vector<std::pair<std::string, ppu_module>>& workload;
+			const std::string& cache_path;
+			const cpu_thread* cpu;
+
+			std::unique_lock<decltype(jit_core_allocator::sem)> core_lock;
+
+			thread_op(atomic_t<u32>& work_cv, std::vector<std::pair<std::string, ppu_module>>& workload
+				, const cpu_thread* cpu, const std::string& cache_path, decltype(jit_core_allocator::sem)& sem) noexcept
+
+				: work_cv(work_cv)
+				, workload(workload)
+				, cache_path(cache_path)
+				, cpu(cpu)
+			{
+				// Save mutex
+				core_lock = std::unique_lock{sem, std::defer_lock};
+			}
+
+			thread_op(const thread_op& other) noexcept
+				: work_cv(other.work_cv)
+				, workload(other.workload)
+				, cache_path(other.cache_path)
+				, cpu(other.cpu)
+			{
+				if (auto mtx = other.core_lock.mutex())
+				{
+					// Save mutex
+					core_lock = std::unique_lock{*mtx, std::defer_lock};
+				}
+			}
+
+			thread_op(thread_op&& other) noexcept = default;
+
+			void operator()()
+			{
+				// Set low priority
+				thread_ctrl::scoped_priority low_prio(-1);
+
+	#ifdef __APPLE__
+				pthread_jit_write_protect_np(false);
+	#endif
+				for (u32 i = work_cv++; i < workload.size(); i = work_cv++, g_progr_pdone++)
+				{
+					if (cpu ? cpu->state.all_of(cpu_flag::exit) : Emu.IsStopped())
+					{
+						continue;
+					}
+
+					// Keep allocating workload
+					const auto& [obj_name, part] = std::as_const(workload)[i];
+
+					ppu_log.warning("LLVM: Compiling module %s%s", cache_path, obj_name);
+
+					// Use another JIT instance
+					jit_compiler jit2({}, g_cfg.core.llvm_cpu, 0x1);
+					ppu_initialize2(jit2, part, cache_path, obj_name);
+
+					ppu_log.success("LLVM: Compiled module %s", obj_name);
+				}
+
+				core_lock.unlock();
+			}
+		};
+
 		// Prevent watchdog thread from terminating
 		g_watchdog_hold_ctr++;
 
-		named_thread_group threads(fmt::format("PPUW.%u.", ++g_fxo->get<thread_index_allocator>().index), thread_count, [&]()
+		named_thread_group threads(fmt::format("PPUW.%u.", ++g_fxo->get<thread_index_allocator>().index), thread_count
+			, thread_op(work_cv, workload, cpu, cache_path, g_fxo->get<jit_core_allocator>().sem)
+			, [&](u32 /*thread_index*/, thread_op& op)
 		{
-			// Set low priority
-			thread_ctrl::scoped_priority low_prio(-1);
+			// Allocate "core"
+			op.core_lock.lock();
 
-#ifdef __APPLE__
-			pthread_jit_write_protect_np(false);
-#endif
-			for (u32 i = work_cv++; i < workload.size(); i = work_cv++, g_progr_pdone++)
-			{
-				if (Emu.IsStopped())
-				{
-					continue;
-				}
-
-				// Keep allocating workload
-				const auto& [obj_name, part] = std::as_const(workload)[i];
-
-				// Allocate "core"
-				std::lock_guard jlock(g_fxo->get<jit_core_allocator>().sem);
-
-				if (Emu.IsStopped())
-				{
-					continue;
-				}
-
-				ppu_log.warning("LLVM: Compiling module %s%s", cache_path, obj_name);
-
-				// Use another JIT instance
-				jit_compiler jit2({}, g_cfg.core.llvm_cpu, 0x1);
-				ppu_initialize2(jit2, part, cache_path, obj_name);
-
-				ppu_log.success("LLVM: Compiled module %s", obj_name);
-			}
+			// Second check before creating another thread
+			return work_cv < workload.size() && (cpu ? !cpu->state.all_of(cpu_flag::exit) : !Emu.IsStopped());
 		});
 
 		threads.join();
 
 		g_watchdog_hold_ctr--;
+	}
 
+	{
 		if (!is_being_used_in_emulation || (cpu ? cpu->state.all_of(cpu_flag::exit) : Emu.IsStopped()))
 		{
 			return compiled_new;
