@@ -3444,28 +3444,45 @@ namespace
 
 	struct jit_module_manager
 	{
-		shared_mutex mutex;
-		std::unordered_map<std::string, jit_module> map;
+		struct bucket_t
+		{
+			shared_mutex mutex;
+			std::unordered_map<std::string, jit_module> map;
+		};
+
+		std::array<bucket_t, 30> buckets;
+
+		bucket_t& get_bucket(std::string_view sv)
+		{
+			return buckets[std::hash<std::string_view>()(sv) % std::size(buckets)];
+		}
 
 		jit_module& get(const std::string& name)
 		{
-			std::lock_guard lock(mutex);
-			return map.emplace(name, jit_module{}).first->second;
+			bucket_t& bucket = get_bucket(name);
+			std::lock_guard lock(bucket.mutex);
+			return bucket.map.emplace(name, jit_module{}).first->second;
 		}
 
 		void remove(const std::string& name) noexcept
 		{
-			std::lock_guard lock(mutex);
+			bucket_t& bucket = get_bucket(name);
 
-			const auto found = map.find(name);
+			jit_module to_destroy{};
 
-			if (found == map.end()) [[unlikely]]
+			std::lock_guard lock(bucket.mutex);
+			const auto found = bucket.map.find(name);
+
+			if (found == bucket.map.end()) [[unlikely]]
 			{
 				ppu_log.error("Failed to remove module %s", name);
 				return;
 			}
 
-			map.erase(found);
+			to_destroy.funcs = std::move(found->second.funcs);
+			to_destroy.pjit = std::move(found->second.pjit);
+
+			bucket.map.erase(found);
 		}
 	};
 }
