@@ -781,7 +781,7 @@ void spu_cache::initialize(bool build_existing_cache)
 			progr.emplace("Building SPU cache...");
 		}
 
-		worker_count = rpcs3::utils::get_max_threads();
+		worker_count = std::min<u32>(rpcs3::utils::get_max_threads(), add_count);
 	}
 
 	named_thread_group workers("SPU Worker ", worker_count, [&]() -> uint
