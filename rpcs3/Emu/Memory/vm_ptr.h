@@ -33,7 +33,7 @@ namespace vm
 
 		_ptr_base() = default;
 
-		_ptr_base(vm::addr_t addr)
+		_ptr_base(vm::addr_t addr) noexcept
 			: m_addr(addr)
 		{
 		}
@@ -57,12 +57,12 @@ namespace vm
 
 		// Enable only the conversions which are originally possible between pointer types
 		template <typename T2, typename AT2> requires (std::is_convertible_v<T*, T2*>)
-		operator _ptr_base<T2, AT2>() const
+		operator _ptr_base<T2, AT2>() const noexcept
 		{
 			return vm::cast(m_addr);
 		}
 
-		explicit operator bool() const
+		explicit operator bool() const noexcept
 		{
 			return m_addr != 0u;
 		}
@@ -96,8 +96,7 @@ namespace vm
 		}
 
 		// Get vm reference
-		template <bool = false> requires (!std::is_void_v<T>)
-		_ref_base<T, u32> ref() const
+		_ref_base<T, u32> ref() const requires (!std::is_void_v<T>)
 		{
 			return vm::cast(m_addr);
 		}
@@ -107,18 +106,17 @@ namespace vm
 			return static_cast<T*>(vm::base(vm::cast(m_addr)));
 		}
 
-		template <bool = false> requires (!std::is_void_v<T>)
-		T* operator ->() const
+		T* operator ->() const requires (!std::is_void_v<T>)
 		{
 			return get_ptr();
 		}
 
-		std::add_lvalue_reference_t<T> operator *() const
+		std::add_lvalue_reference_t<T> operator *() const requires (!std::is_void_v<T>)
 		{
 			return *static_cast<T*>(vm::base(vm::cast(m_addr)));
 		}
 
-		std::add_lvalue_reference_t<T> operator [](u32 index) const
+		std::add_lvalue_reference_t<T> operator [](u32 index) const requires (!std::is_void_v<T>)
 		{
 			return *static_cast<T*>(vm::base(vm::cast(m_addr) + u32{sizeof(T)} * index));
 		}
@@ -130,13 +128,13 @@ namespace vm
 		}
 
 		// Get type size
-		static constexpr u32 size()
+		static constexpr u32 size() noexcept requires (!std::is_void_v<T>)
 		{
 			return sizeof(T);
 		}
 
 		// Get type alignment
-		static constexpr u32 align()
+		static constexpr u32 align() noexcept requires (!std::is_void_v<T>)
 		{
 			return alignof(T);
 		}
@@ -146,17 +144,17 @@ namespace vm
 			return vm::cast(m_addr);
 		}
 
-		_ptr_base<T, u32> operator +(u32 count) const
+		_ptr_base<T, u32> operator +(u32 count) const requires (!std::is_void_v<T>)
 		{
 			return vm::cast(vm::cast(m_addr) + count * size());
 		}
 
-		_ptr_base<T, u32> operator -(u32 count) const
+		_ptr_base<T, u32> operator -(u32 count) const requires (!std::is_void_v<T>)
 		{
 			return vm::cast(vm::cast(m_addr) - count * size());
 		}
 
-		friend _ptr_base<T, u32> operator +(u32 count, const _ptr_base& ptr)
+		friend _ptr_base<T, u32> operator +(u32 count, const _ptr_base& ptr) requires (!std::is_void_v<T>)
 		{
 			return vm::cast(vm::cast(ptr.m_addr) + count * size());
 		}
@@ -168,60 +166,57 @@ namespace vm
 			return static_cast<s32>(vm::cast(m_addr) - vm::cast(right.m_addr)) / size();
 		}
 
-		_ptr_base operator ++(int)
+		_ptr_base operator ++(int) requires (!std::is_void_v<T>)
 		{
 			_ptr_base result = *this;
 			m_addr = vm::cast(m_addr) + size();
 			return result;
 		}
 
-		_ptr_base& operator ++()
+		_ptr_base& operator ++() requires (!std::is_void_v<T>)
 		{
 			m_addr = vm::cast(m_addr) + size();
 			return *this;
 		}
 
-		_ptr_base operator --(int)
+		_ptr_base operator --(int) requires (!std::is_void_v<T>)
 		{
 			_ptr_base result = *this;
 			m_addr = vm::cast(m_addr) - size();
 			return result;
 		}
 
-		_ptr_base& operator --()
+		_ptr_base& operator --() requires (!std::is_void_v<T>)
 		{
 			m_addr = vm::cast(m_addr) - size();
 			return *this;
 		}
 
-		_ptr_base& operator +=(s32 count)
+		_ptr_base& operator +=(s32 count) requires (!std::is_void_v<T>)
 		{
 			m_addr = vm::cast(m_addr) + count * size();
 			return *this;
 		}
 
-		_ptr_base& operator -=(s32 count)
+		_ptr_base& operator -=(s32 count) requires (!std::is_void_v<T>)
 		{
 			m_addr = vm::cast(m_addr) - count * size();
 			return *this;
 		}
 
-		template <bool = false> requires (std::is_copy_constructible_v<T>)
-		std::pair<bool, std::conditional_t<std::is_void_v<T>, char, std::remove_const_t<T>>> try_read() const
+		std::pair<bool, std::conditional_t<std::is_void_v<T>, char, std::remove_const_t<T>>> try_read() const requires (std::is_copy_constructible_v<T>)
 		{
 			alignas(sizeof(T) >= 16 ? 16 : 8) char buf[sizeof(T)]{};
 			const bool ok = vm::try_access(vm::cast(m_addr), buf, sizeof(T), false);
 			return { ok, std::bit_cast<decltype(try_read().second)>(buf) };
 		}
 
-		template <bool = false> requires (!std::is_void_v<T>)
-		bool try_read(std::conditional_t<std::is_void_v<T>, char, std::remove_const_t<T>>& out) const
+		bool try_read(std::conditional_t<std::is_void_v<T>, char, std::remove_const_t<T>>& out) const requires (!std::is_void_v<T>)
 		{
 			return vm::try_access(vm::cast(m_addr), std::addressof(out), sizeof(T), false);
 		}
 
-		template <bool = false> requires (!std::is_void_v<T> && !std::is_const_v<T>)
-		bool try_write(const std::conditional_t<std::is_void_v<T>, char, T>& _in) const
+		bool try_write(const std::conditional_t<std::is_void_v<T>, char, T>& _in) const requires (!std::is_void_v<T>)
 		{
 			return vm::try_access(vm::cast(m_addr), const_cast<T*>(std::addressof(_in)), sizeof(T), true);
 		}
