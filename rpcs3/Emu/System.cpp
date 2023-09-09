@@ -1480,7 +1480,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			{
 				if (auto& _main = *ensure(g_fxo->try_get<main_ppu_module>()); !_main.path.empty())
 				{
-					if (!_main.analyse(0, _main.elf_entry, _main.seg0_code_end, _main.applied_pathes, [](){ return Emu.IsStopped(); }))
+					if (!_main.analyse(0, _main.elf_entry, _main.seg0_code_end, _main.applied_patches, [](){ return Emu.IsStopped(); }))
 					{
 						return;
 					}

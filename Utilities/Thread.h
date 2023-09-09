@@ -694,7 +694,7 @@ class named_thread_group final
 {
 	using Thread = named_thread<Context>;
 
-	const u32 m_count;
+	u32 m_count = 0;
 
 	Thread* m_threads;
 
@@ -705,7 +705,7 @@ class named_thread_group final
 
 public:
 	// Lambda constructor, also the implicit deduction guide candidate
-	named_thread_group(std::string_view name, u32 count, const Context& f)
+	named_thread_group(std::string_view name, u32 count, Context&& f) noexcept
 		: m_count(count)
 		, m_threads(nullptr)
 	{
@@ -717,14 +717,60 @@ public:
 		init_threads();
 
 		// Create all threads
-		for (u32 i = 0; i < m_count; i++)
+		for (u32 i = 0; i < m_count - 1; i++)
 		{
-			new (static_cast<void*>(m_threads + i)) Thread(std::string(name) + std::to_string(i + 1), f);
+			// Copy the context
+			new (static_cast<void*>(m_threads + i)) Thread(std::string(name) + std::to_string(i + 1), static_cast<const Context&>(f));
 		}
+
+		// Move the context (if movable)
+		new (static_cast<void*>(m_threads + m_count - 1)) Thread(std::string(name) + std::to_string(m_count - 1), std::forward<Context>(f));
+	}
+
+	// Constructor with a function performed before adding more threads
+	template <typename CheckAndPrepare>
+	named_thread_group(std::string_view name, u32 count, Context&& f, CheckAndPrepare&& check) noexcept
+		: m_count(count)
+		, m_threads(nullptr)
+	{
+		if (count == 0)
+		{
+			return;
+		}
+
+		init_threads();
+		m_count = 0;
+
+		// Create all threads
+		for (u32 i = 0; i < count - 1; i++)
+		{
+			// Copy the context
+			std::remove_cvref_t<Context> context(static_cast<const Context&>(f));
+
+			// Perform the check and additional preparations for each context
+			if (!std::invoke(std::forward<CheckAndPrepare>(check), i, context))
+			{
+				return;
+			}
+
+			m_count++;
+			new (static_cast<void*>(m_threads + i)) Thread(std::string(name) + std::to_string(i + 1), std::move(context));
+		}
+
+		// Move the context (if movable)
+		std::remove_cvref_t<Context> context(std::forward<Context>(f));
+
+		if (!std::invoke(std::forward<CheckAndPrepare>(check), m_count - 1, context))
+		{
+			return;
+		}
+
+		m_count++;
+		new (static_cast<void*>(m_threads + m_count - 1)) Thread(std::string(name) + std::to_string(m_count - 1), std::move(context));
 	}
 
 	// Default constructor
-	named_thread_group(std::string_view name, u32 count)
+	named_thread_group(std::string_view name, u32 count) noexcept
 		: m_count(count)
 		, m_threads(nullptr)
 	{
@@ -791,10 +837,10 @@ public:
 		return m_count;
 	}
 
-	~named_thread_group()
+	~named_thread_group() noexcept
 	{
 		// Destroy all threads (it should join them)
-		for (u32 i = 0; i < m_count; i++)
+		for (u32 i = m_count - 1; i < m_count; i--)
 		{
 			std::launder(m_threads + i)->~Thread();
 		}
