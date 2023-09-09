@@ -8,6 +8,8 @@ struct lv2_overlay final : lv2_obj, ppu_module
 	static const u32 id_base = 0x25000000;
 
 	u32 entry;
+	u32 seg0_code_end{};
+	std::basic_string<u32> applied_patches;
 
 	lv2_overlay() = default;
 	lv2_overlay(utils::serial&){}

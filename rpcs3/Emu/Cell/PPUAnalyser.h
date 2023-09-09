@@ -189,7 +189,7 @@ struct main_ppu_module : public ppu_module
 {
 	u32 elf_entry{};
 	u32 seg0_code_end{};
-	std::basic_string<u32> applied_pathes;
+	std::basic_string<u32> applied_patches;
 };
 
 // Aux
