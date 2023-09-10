@@ -4569,7 +4569,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 			fmt::append(obj_name, "v6-kusa-%s-%s-%s.obj", fmt::base57(output, 16), fmt::base57(settings), jit_compiler::cpu(g_cfg.core.llvm_cpu));
 		}
 
-		if (Emu.IsStopped())
+		if (cpu ? cpu->state.all_of(cpu_flag::exit) : Emu.IsStopped())
 		{
 			break;
 		}
@@ -4588,7 +4588,9 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 			{
 				ppu_log.success("LLVM: Module exists: %s", obj_name);
 
-				total_compile++;
+				// Done already, revert total amount increase
+				// Avoid incrementing "pdone" instead because it creates false appreciation for both the progress dialog and the user
+				total_compile--;
 			}
 
 			continue;
