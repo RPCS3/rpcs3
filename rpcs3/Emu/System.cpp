@@ -2071,14 +2071,20 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				}
 			}
 			// Overlay (OVL) executable (only load it)
-			else if (vm::map(0x3000'0000, 0x1000'0000, 0x200); !ppu_load_overlay(ppu_exec, false, m_path).first)
-			{
-				ppu_exec.set_error(elf_error::header_type);
-			}
 			else
 			{
-				// Preserve emulation state for OVL executable
-				Pause(true);
+				GetCallbacks().on_ready();
+				g_fxo->init(false);
+
+				if (!vm::map(0x3000'0000, 0x1000'0000, 0x200) || !ppu_load_overlay(ppu_exec, false, m_path).first)
+				{
+					ppu_exec.set_error(elf_error::header_type);
+				}
+				else
+				{
+					// Preserve emulation state for OVL executable
+					Pause(true);
+				}
 			}
 
 			if (ppu_exec != elf_error::ok)
