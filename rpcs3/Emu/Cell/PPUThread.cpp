@@ -3420,14 +3420,14 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 
 struct jit_core_allocator
 {
-	const s32 thread_count = g_cfg.core.llvm_threads ? std::min<s32>(g_cfg.core.llvm_threads, limit()) : limit();
+	const s16 thread_count = g_cfg.core.llvm_threads ? std::min<s32>(g_cfg.core.llvm_threads, limit()) : limit();
 
 	// Initialize global semaphore with the max number of threads
-	::semaphore<0x7fffffff> sem{std::max<s32>(thread_count, 1)};
+	::semaphore<0x7fff> sem{std::max<s16>(thread_count, 1)};
 
-	static s32 limit()
+	static s16 limit()
 	{
-		return static_cast<s32>(utils::get_thread_count());
+		return static_cast<s16>(std::min<s32>(0x7fff, utils::get_thread_count()));
 	}
 };
 

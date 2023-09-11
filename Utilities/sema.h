@@ -7,14 +7,22 @@
 class semaphore_base
 {
 	// Semaphore value
-	atomic_t<s32> m_value;
+	atomic_t<u32> m_value;
+
+	enum : u32
+	{
+		c_value = 1u << 0,
+		c_value_mask = +c_value * 0xffff,
+		c_waiter = 1u << 16,
+		c_waiter_mask = +c_waiter * 0xffff,
+	};
 
 	void imp_wait();
 
-	void imp_post(s32 _old);
+	void imp_post(u32 _old);
 
 protected:
-	explicit constexpr semaphore_base(s32 value)
+	explicit constexpr semaphore_base(u32 value) noexcept
 		: m_value{value}
 	{
 	}
@@ -22,10 +30,10 @@ protected:
 	void wait()
 	{
 		// Load value
-		const s32 value = m_value.load();
+		const u32 value = m_value.load();
 
 		// Conditional decrement
-		if (value <= 0 || !m_value.compare_and_swap_test(value, value - 1)) [[unlikely]]
+		if ((value & c_value_mask) == 0 || !m_value.compare_and_swap_test(value, value - c_value)) [[unlikely]]
 		{
 			imp_wait();
 		}
@@ -33,36 +41,47 @@ protected:
 
 	bool try_wait()
 	{
-		return m_value.try_dec(0);
+		return m_value.fetch_op([](u32& value)
+		{
+			if (value & c_value_mask)
+			{
+				value -= c_value;
+				return true;
+			}
+
+			return false;
+		}).second;
 	}
 
-	void post(s32 _max)
+	void post(u32 _max)
 	{
 		// Unconditional increment
-		const s32 value = m_value.fetch_add(1);
+		const u32 value = m_value.fetch_add(c_value);
 
-		if (value < 0 || value >= _max) [[unlikely]]
+		if (value & c_waiter_mask || (value & c_value_mask) >= std::min<u32>(c_value_mask, _max)) [[unlikely]]
 		{
 			imp_post(value);
 		}
 	}
 
-	bool try_post(s32 _max);
+	bool try_post(u32 _max);
 
 public:
 	// Get current semaphore value
 	s32 get() const
 	{
 		// Load value
-		const s32 value = m_value;
+		const u32 raw_value = m_value;
+		const u32 waiters = (raw_value & c_waiter_mask) / c_waiter;
+		const u32 value = (raw_value & c_value_mask) / c_value;
 
 		// Return only positive value
-		return value < 0 ? 0 : value;
+		return static_cast<s32>(waiters >= value ? 0 : value - waiters);
 	}
 };
 
 // Lightweight semaphore template (default arguments define binary semaphore and Def == Max)
-template <s32 Max = 1, s32 Def = Max>
+template <s16 Max = 1, s16 Def = Max>
 class semaphore final : public semaphore_base
 {
 	static_assert(Max >= 0, "semaphore<>: Max is out of bounds");
@@ -73,13 +92,13 @@ class semaphore final : public semaphore_base
 
 public:
 	// Default constructor (recommended)
-	constexpr semaphore()
+	constexpr semaphore() noexcept
 		: base(Def)
 	{
 	}
 
 	// Explicit value constructor (not recommended)
-	explicit constexpr semaphore(s32 value)
+	explicit constexpr semaphore(s16 value) noexcept
 		: base(value)
 	{
 	}
