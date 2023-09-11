@@ -92,16 +92,24 @@ namespace vk
 		rsx_pitch = pitch;
 
 		const bool require_format_conversion = !!(src->aspect() & VK_IMAGE_ASPECT_STENCIL_BIT) || src->format() == VK_FORMAT_D32_SFLOAT;
+		const auto tiled_region = rsx::get_current_renderer()->get_tiled_memory_region(valid_range);
+		const bool require_tiling = !!tiled_region;
+		const bool require_gpu_transform = require_format_conversion || pack_unpack_swap_bytes || require_tiling;
 		auto dma_mapping = vk::map_dma(valid_range.start, valid_range.length());
 
-		if (require_format_conversion || pack_unpack_swap_bytes)
+		if (require_gpu_transform)
 		{
 			const auto section_length = valid_range.length();
 			const auto transfer_pitch = real_pitch;
 			const auto task_length = transfer_pitch * src_area.height();
-			const auto working_buffer_length = calculate_working_buffer_size(task_length, src->aspect());
+			auto working_buffer_length = calculate_working_buffer_size(task_length, src->aspect());
+
+			if (require_tiling) {
+				working_buffer_length += tiled_region.tile->size;
+			}
 
 			auto working_buffer = vk::get_scratch_buffer(cmd, working_buffer_length);
+			u32 result_offset = 0;
 
 			VkBufferImageCopy region = {};
 			region.imageSubresource = { src->aspect(), 0, 0, 1 };
@@ -142,17 +150,56 @@ namespace vk
 
 					shuffle_kernel->run(cmd, working_buffer, task_length);
 
-					vk::insert_buffer_memory_barrier(cmd, working_buffer->value, 0, task_length,
-						VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-						VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
+					if (!require_tiling)
+					{
+						vk::insert_buffer_memory_barrier(cmd, working_buffer->value, 0, task_length,
+							VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+							VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
 
-					require_rw_barrier = false;
+						require_rw_barrier = false;
+					}
 				}
+			}
+
+			if (require_tiling)
+			{
+#if !DEBUG_DMA_TILING
+				// Compute -> Compute barrier
+				vk::insert_buffer_memory_barrier(cmd, working_buffer->value, 0, task_length,
+					VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+					VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_ACCESS_SHADER_READ_BIT);
+
+				// Prepare payload
+				const RSX_detiler_config config =
+				{
+					.tile_base_address = tiled_region.base_address,
+					.tile_base_offset = valid_range.start - tiled_region.base_address,
+					.tile_size = tiled_region.tile->size,
+					.tile_pitch = tiled_region.tile->pitch,
+					.bank = tiled_region.tile->bank,
+
+					.dst = working_buffer,
+					.dst_offset = task_length,
+					.src = working_buffer,
+					.src_offset = 0,
+
+					.image_width = width,
+					.image_height = height,
+					.image_pitch = real_pitch
+				};
+
+				// Execute
+				const auto job = vk::get_compute_task<vk::cs_tile_memcpy<RSX_detiler_op::encode>>();
+				job->run(cmd, config);
+
+				result_offset = task_length;
+				require_rw_barrier = true;
+#endif
 			}
 
 			if (require_rw_barrier)
 			{
-				vk::insert_buffer_memory_barrier(cmd, working_buffer->value, 0, working_buffer_length,
+				vk::insert_buffer_memory_barrier(cmd, working_buffer->value, result_offset, working_buffer_length,
 					VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
 					VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
 			}
@@ -160,6 +207,7 @@ namespace vk
 			if (rsx_pitch == real_pitch) [[likely]]
 			{
 				VkBufferCopy copy = {};
+				copy.srcOffset = result_offset;
 				copy.dstOffset = dma_mapping.first;
 				copy.size = section_length;
 				vkCmdCopyBuffer(cmd, working_buffer->value, dma_mapping.second->value, 1, &copy);
@@ -178,7 +226,7 @@ namespace vk
 				copy.reserve(transfer_height);
 
 				u32 dst_offset = dma_mapping.first;
-				u32 src_offset = 0;
+				u32 src_offset = result_offset;
 
 				for (unsigned row = 0; row < transfer_height; ++row)
 				{
