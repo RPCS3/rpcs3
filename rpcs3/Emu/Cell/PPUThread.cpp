@@ -3802,6 +3802,8 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 
 	lf_queue<file_info> possible_exec_file_paths;
 
+	::semaphore<2> ovl_sema;
+
 	named_thread_group workers("SPRX Worker ", std::min<u32>(utils::get_thread_count(), ::size32(file_queue)), [&]
 	{
 #ifdef __APPLE__
@@ -3868,6 +3870,15 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 			{
 				while (ovl_err == elf_error::ok)
 				{
+					// Try not to process too many files at once because it seems to reduce performance
+					// Concurrently compiling more OVL files does not have much theoretical benefit
+					std::lock_guard lock(ovl_sema);
+
+					if (Emu.IsStopped())
+					{
+						break;
+					}
+
 					const auto [ovlm, error] = ppu_load_overlay(obj, true, path, offset);
 
 					if (error)
