@@ -14,7 +14,7 @@
 #include <memory>
 #include <vector>
 
-#define DEBUG_DMA_TILING 1
+#define DEBUG_DMA_TILING 0
 
 #if DEBUG_DMA_TILING
 #include "../Common/tiled_dma_copy.hpp"
