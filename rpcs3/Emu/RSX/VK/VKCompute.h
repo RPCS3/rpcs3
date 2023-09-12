@@ -524,6 +524,7 @@ namespace vk
 		u16 image_width;
 		u16 image_height;
 		u32 image_pitch;
+		u8  image_bpp;
 	};
 
 	template <RSX_detiler_op Op>
@@ -542,6 +543,7 @@ namespace vk
 			u32 tile_bank;
 			u32 image_width;
 			u32 image_height;
+			u32 image_pitch;
 			u32 image_bpp;
 		} params;
 #pragma pack (pop)
@@ -557,7 +559,7 @@ namespace vk
 		{
 			ssbo_count = 2;
 			use_push_constants = true;
-			push_constants_size = 44;
+			push_constants_size = 48;
 
 			create();
 
@@ -565,7 +567,6 @@ namespace vk
 			#include "../Program/GLSLSnippets/RSXMemoryTiling.glsl"
 				;
 
-			optimal_group_size = 1;
 			const std::pair<std::string_view, std::string> syntax_replace[] =
 			{
 				{ "%loc", "0" },
@@ -646,11 +647,14 @@ namespace vk
 			params.tile_pitch = config.tile_pitch;
 			params.tile_bank = config.bank;
 			params.image_width = config.image_width;
-			params.image_height = config.image_height;
-			params.image_bpp = config.image_pitch / config.image_width;
+			params.image_height = tiled_height;
+			params.image_pitch = config.image_pitch;
+			params.image_bpp = config.image_bpp;
 			set_parameters(cmd);
 
-			const u32 invocations_x = utils::aligned_div(config.image_width, optimal_group_size);
+			const u32 subtexels_per_invocation = (config.image_bpp < 4) ? (4 / config.image_bpp) : 1;
+			const u32 virtual_width = config.image_width / subtexels_per_invocation;
+			const u32 invocations_x = utils::aligned_div(virtual_width, optimal_group_size);
 			compute_task::run(cmd, invocations_x, config.image_height, 1);
 		}
 	};

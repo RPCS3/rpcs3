@@ -39,6 +39,7 @@ layout(%push_block) uniform Configuration
 	uint tile_bank;
 	uint image_width;
 	uint image_height;
+	uint image_pitch;
 	uint image_bpp;
 };
 #else
@@ -52,6 +53,7 @@ layout(%push_block) uniform Configuration
 	uniform uint tile_bank;
 	uniform uint image_width;
 	uniform uint image_height;
+	uniform uint image_pitch;
 	uniform uint image_bpp;
 #endif
 
@@ -306,7 +308,7 @@ void do_memory_op(const in uint row, const in uint col)
 	tile_address ^= ((tile_address >> 11) & 1) << 10;
 
 	// Calculate relative addresses and sample
-	uint linear_image_offset = (row * tile_pitch) + (col * image_bpp);
+	uint linear_image_offset = (row * image_pitch) + (col * image_bpp);
 	uint tile_data_offset = tile_address - (tile_base_address + tile_offset);
 
 	if (tile_data_offset >= tile_size)
@@ -335,7 +337,7 @@ void main()
 	const uint row = gl_GlobalInvocationID.y;
 	const uint col0 = gl_GlobalInvocationID.x;
 	
-	// for (uint col = col0; col < (col0 + num_iterations); ++col)
+	for (uint col = col0; col < (col0 + num_iterations); ++col)
 	{
 		if (row >= image_height || col0 >= image_width)
 		{
