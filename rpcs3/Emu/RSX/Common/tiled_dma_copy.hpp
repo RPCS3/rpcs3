@@ -19,6 +19,7 @@ namespace rsx
 		uint32_t tile_bank;
 		uint32_t image_width;
 		uint32_t image_height;
+		uint32_t image_pitch;
 		uint32_t image_bpp;
 	};
 
@@ -98,7 +99,7 @@ namespace rsx
 		tile_address ^= ((tile_address >> 11) & 1) << 10;
 
 		// Calculate relative addresses and sample
-		uint32_t linear_image_offset = (row * conf.tile_pitch) + (col * conf.image_bpp);
+		uint32_t linear_image_offset = (row * conf.image_pitch) + (col * conf.image_bpp);
 		uint32_t tile_data_offset = tile_address - (conf.tile_base_address + conf.tile_offset);
 
 		if (tile_data_offset >= conf.tile_size)
@@ -160,6 +161,7 @@ namespace rsx
 			.tile_bank = bank_sense,
 			.image_width = image_width,
 			.image_height = image_height,
+			.image_pitch = row_pitch_in_bytes,
 			.image_bpp = sizeof(T)
 		};
 

@@ -99,13 +99,24 @@ namespace vk
 
 		if (require_gpu_transform)
 		{
-			const auto section_length = valid_range.length();
+			auto section_length = valid_range.length();
 			const auto transfer_pitch = real_pitch;
 			const auto task_length = transfer_pitch * src_area.height();
 			auto working_buffer_length = calculate_working_buffer_size(task_length, src->aspect());
 
-			if (require_tiling) {
+			if (require_tiling)
+			{
 				working_buffer_length += tiled_region.tile->size;
+
+				// Calculate actual section length
+				const auto available_tile_size = tiled_region.tile->size - (valid_range.start - tiled_region.base_address);
+				const auto max_content_size = tiled_region.tile->pitch * utils::align(height, 64);
+				section_length = std::min(max_content_size, available_tile_size);
+
+				if (section_length > valid_range.length()) [[ likely ]]
+				{
+					dma_mapping = vk::map_dma(valid_range.start, section_length);
+				}
 			}
 
 			auto working_buffer = vk::get_scratch_buffer(cmd, working_buffer_length);
@@ -185,14 +196,17 @@ namespace vk
 
 					.image_width = width,
 					.image_height = height,
-					.image_pitch = real_pitch
+					.image_pitch = real_pitch,
+					.image_bpp = rsx::get_format_block_size_in_bytes(gcm_format)
 				};
 
 				// Execute
 				const auto job = vk::get_compute_task<vk::cs_tile_memcpy<RSX_detiler_op::encode>>();
 				job->run(cmd, config);
 
+				// Update internal variables
 				result_offset = task_length;
+				real_pitch = tiled_region.tile->pitch;
 				require_rw_barrier = true;
 #endif
 			}

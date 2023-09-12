@@ -291,7 +291,17 @@ namespace vk
 
 			// Calculate smallest range to flush - for framebuffers, the raster region is enough
 			const auto range = (context == rsx::texture_upload_context::framebuffer_storage) ? get_section_range() : get_confirmed_range();
-			vk::flush_dma(range.start, range.length());
+			auto flush_length = range.length();
+
+			const auto tiled_region = rsx::get_current_renderer()->get_tiled_memory_region(range);
+			if (tiled_region)
+			{
+				const auto available_tile_size = tiled_region.tile->size - (range.start - tiled_region.base_address);
+				const auto max_content_size = tiled_region.tile->pitch * utils::align(height, 64);
+				flush_length = std::min(max_content_size, available_tile_size);
+			}
+
+			vk::flush_dma(range.start, flush_length);
 
 #if DEBUG_DMA_TILING
 			// Are we a tiled region?
@@ -310,10 +320,7 @@ namespace vk
 					width,
 					height
 				);
-				const auto available_tile_size = tiled_region.tile->size - (range.start - tiled_region.base_address);
-				const auto max_content_size = tiled_region.tile->pitch * utils::align(height, 64);
-				const auto write_length = std::min(max_content_size, available_tile_size);
-				std::memcpy(real_data, out_data.data(), write_length);
+				std::memcpy(real_data, out_data.data(), flush_length);
 			}
 #endif
 
