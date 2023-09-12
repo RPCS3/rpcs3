@@ -297,10 +297,22 @@ void pad_get_data(u32 port_no, CellPadData* data, bool get_periph_data = false)
 		// Curiously it maps infrared on the press value of the face buttons for some reason.
 		const bool use_piggyback = pad->m_class_type == CELL_PAD_PCLASS_TYPE_SKATEBOARD;
 
-		const auto set_value = [&btnChanged, use_piggyback](u16& value, u16 new_value, bool is_piggyback = false)
+		const auto set_value = [&btnChanged, use_piggyback, &pad](u16& value, u16 new_value, bool force_processing = false, u16 old_max_value = 255, u16 new_max_value = 255)
 		{
-			if (use_piggyback && !is_piggyback)
-				return;
+			if (use_piggyback)
+			{
+				if (!force_processing)
+					return;
+
+				// Some piggyback values need to be scaled down on emulated devices
+				if (old_max_value != new_max_value)
+				{
+					if (pad->m_class_type == CELL_PAD_PCLASS_TYPE_SKATEBOARD && pad->m_pad_handler != pad_handler::skateboard)
+					{
+						new_value = static_cast<u16>(new_max_value * std::clamp(new_value / static_cast<f32>(old_max_value), 0.0f, 1.0f));
+					}
+				}
+			}
 
 			if (value != new_value)
 			{
@@ -367,10 +379,10 @@ void pad_get_data(u32 port_no, CellPadData* data, bool get_periph_data = false)
 				case CELL_PAD_CTRL_PRESS_LEFT:     set_value(pad->m_press_left,     button.m_value, true); break;
 				case CELL_PAD_CTRL_PRESS_UP:       set_value(pad->m_press_up,       button.m_value, true); break;
 				case CELL_PAD_CTRL_PRESS_DOWN:     set_value(pad->m_press_down,     button.m_value, true); break;
-				case CELL_PAD_CTRL_PRESS_TRIANGLE: set_value(pad->m_press_triangle, button.m_value, true); break;
-				case CELL_PAD_CTRL_PRESS_CIRCLE:   set_value(pad->m_press_circle,   button.m_value, true); break;
-				case CELL_PAD_CTRL_PRESS_CROSS:    set_value(pad->m_press_cross,    button.m_value, true); break;
-				case CELL_PAD_CTRL_PRESS_SQUARE:   set_value(pad->m_press_square,   button.m_value, true); break;
+				case CELL_PAD_CTRL_PRESS_TRIANGLE: set_value(pad->m_press_triangle, button.m_value, true, 255, 63); break; // Infrared on RIDE Skateboard
+				case CELL_PAD_CTRL_PRESS_CIRCLE:   set_value(pad->m_press_circle,   button.m_value, true, 255, 63); break; // Infrared on RIDE Skateboard
+				case CELL_PAD_CTRL_PRESS_CROSS:    set_value(pad->m_press_cross,    button.m_value, true, 255, 63); break; // Infrared on RIDE Skateboard
+				case CELL_PAD_CTRL_PRESS_SQUARE:   set_value(pad->m_press_square,   button.m_value, true, 255, 63); break; // Infrared on RIDE Skateboard
 				case CELL_PAD_CTRL_PRESS_L1:       set_value(pad->m_press_L1,       button.m_value, true); break;
 				case CELL_PAD_CTRL_PRESS_R1:       set_value(pad->m_press_R1,       button.m_value, true); break;
 				case CELL_PAD_CTRL_PRESS_L2:       set_value(pad->m_press_L2,       button.m_value, true); break;
