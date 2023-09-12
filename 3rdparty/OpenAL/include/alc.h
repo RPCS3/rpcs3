@@ -1,7 +1,7 @@
 #ifndef AL_ALC_H
 #define AL_ALC_H
 
-#if defined(__cplusplus)
+#ifdef __cplusplus
 extern "C" {
 #endif
 
@@ -15,7 +15,7 @@ extern "C" {
  #endif
 #endif
 
-#if defined(_WIN32)
+#ifdef _WIN32
  #define ALC_APIENTRY __cdecl
 #else
  #define ALC_APIENTRY
@@ -41,41 +41,41 @@ typedef char ALCboolean;
 /** character */
 typedef char ALCchar;
 
-/** signed 8-bit 2's complement integer */
+/** signed 8-bit integer */
 typedef signed char ALCbyte;
 
 /** unsigned 8-bit integer */
 typedef unsigned char ALCubyte;
 
-/** signed 16-bit 2's complement integer */
+/** signed 16-bit integer */
 typedef short ALCshort;
 
 /** unsigned 16-bit integer */
 typedef unsigned short ALCushort;
 
-/** signed 32-bit 2's complement integer */
+/** signed 32-bit integer */
 typedef int ALCint;
 
 /** unsigned 32-bit integer */
 typedef unsigned int ALCuint;
 
-/** non-negative 32-bit binary integer size */
+/** non-negative 32-bit integer size */
 typedef int ALCsizei;
 
-/** enumerated 32-bit value */
+/** 32-bit enumeration value */
 typedef int ALCenum;
 
-/** 32-bit IEEE754 floating-point */
+/** 32-bit IEEE-754 floating-point */
 typedef float ALCfloat;
 
-/** 64-bit IEEE754 floating-point */
+/** 64-bit IEEE-754 floating-point */
 typedef double ALCdouble;
 
 /** void type (for opaque pointers only) */
 typedef void ALCvoid;
 
 
-/* Enumerant values begin at column 50. No tabs. */
+/* Enumeration values begin at column 50. Do not use tabs. */
 
 /** Boolean False. */
 #define ALC_FALSE                                0
@@ -107,10 +107,10 @@ typedef void ALCvoid;
 /** Invalid context handle. */
 #define ALC_INVALID_CONTEXT                      0xA002
 
-/** Invalid enum parameter passed to an ALC call. */
+/** Invalid enumeration passed to an ALC call. */
 #define ALC_INVALID_ENUM                         0xA003
 
-/** Invalid value parameter passed to an ALC call. */
+/** Invalid value passed to an ALC call. */
 #define ALC_INVALID_VALUE                        0xA004
 
 /** Out of memory. */
@@ -130,9 +130,9 @@ typedef void ALCvoid;
 /** String for the default device specifier. */
 #define ALC_DEFAULT_DEVICE_SPECIFIER             0x1004
 /**
- * String for the given device's specifier.
+ * Device specifier string.
  *
- * If device handle is NULL, it is instead a null-char separated list of
+ * If device handle is NULL, it is instead a null-character separated list of
  * strings of known device specifiers (list ends with an empty string).
  */
 #define ALC_DEVICE_SPECIFIER                     0x1005
@@ -143,9 +143,9 @@ typedef void ALCvoid;
 /** Capture extension */
 #define ALC_EXT_CAPTURE 1
 /**
- * String for the given capture device's specifier.
+ * Capture device specifier string.
  *
- * If device handle is NULL, it is instead a null-char separated list of
+ * If device handle is NULL, it is instead a null-character separated list of
  * strings of known capture device specifiers (list ends with an empty string).
  */
 #define ALC_CAPTURE_DEVICE_SPECIFIER             0x310
@@ -160,14 +160,15 @@ typedef void ALCvoid;
 /** String for the default extended device specifier. */
 #define ALC_DEFAULT_ALL_DEVICES_SPECIFIER        0x1012
 /**
- * String for the given extended device's specifier.
+ * Device's extended specifier string.
  *
- * If device handle is NULL, it is instead a null-char separated list of
+ * If device handle is NULL, it is instead a null-character separated list of
  * strings of known extended device specifiers (list ends with an empty string).
  */
 #define ALC_ALL_DEVICES_SPECIFIER                0x1013
 
 
+#ifndef ALC_NO_PROTOTYPES
 /* Context management. */
 
 /** Create and attach a context to the given device. */
@@ -234,14 +235,17 @@ ALC_API void           ALC_APIENTRY alcGetIntegerv(ALCdevice *device, ALCenum pa
 ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *devicename, ALCuint frequency, ALCenum format, ALCsizei buffersize);
 /** Closes the given capture device. */
 ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *device);
-/** Starts capturing samples into the device buffer.  */
+/** Starts capturing samples into the device buffer. */
 ALC_API void       ALC_APIENTRY alcCaptureStart(ALCdevice *device);
 /** Stops capturing samples. Samples in the device buffer remain available. */
 ALC_API void       ALC_APIENTRY alcCaptureStop(ALCdevice *device);
 /** Reads samples from the device buffer. */
 ALC_API void       ALC_APIENTRY alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, ALCsizei samples);
+#endif /* ALC_NO_PROTOTYPES */
 
-/* Pointer-to-function type, useful for dynamically getting ALC entry points. */
+/* Pointer-to-function types, useful for storing dynamically loaded ALC entry
+ * points.
+ */
 typedef ALCcontext*    (ALC_APIENTRY *LPALCCREATECONTEXT)(ALCdevice *device, const ALCint *attrlist);
 typedef ALCboolean     (ALC_APIENTRY *LPALCMAKECONTEXTCURRENT)(ALCcontext *context);
 typedef void           (ALC_APIENTRY *LPALCPROCESSCONTEXT)(ALCcontext *context);
@@ -263,8 +267,8 @@ typedef void           (ALC_APIENTRY *LPALCCAPTURESTART)(ALCdevice *device);
 typedef void           (ALC_APIENTRY *LPALCCAPTURESTOP)(ALCdevice *device);
 typedef void           (ALC_APIENTRY *LPALCCAPTURESAMPLES)(ALCdevice *device, ALCvoid *buffer, ALCsizei samples);
 
-#if defined(__cplusplus)
-}
+#ifdef __cplusplus
+} /* extern "C" */
 #endif
 
 #endif /* AL_ALC_H */

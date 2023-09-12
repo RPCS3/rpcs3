@@ -1,23 +1,3 @@
-/**
- * OpenAL cross platform audio library
- * Copyright (C) 2008 by authors.
- * This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU Library General Public
- *  License as published by the Free Software Foundation; either
- *  version 2 of the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  Library General Public License for more details.
- *
- * You should have received a copy of the GNU Library General Public
- *  License along with this library; if not, write to the
- *  Free Software Foundation, Inc.,
- *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- * Or go to http://www.gnu.org/copyleft/lgpl.html
- */
-
 #ifndef AL_ALEXT_H
 #define AL_ALEXT_H
 
@@ -161,9 +141,9 @@ extern "C" {
 
 #ifndef AL_EXT_STATIC_BUFFER
 #define AL_EXT_STATIC_BUFFER 1
-typedef void (AL_APIENTRY*PFNALBUFFERDATASTATICPROC)(const ALint,ALenum,ALvoid*,ALsizei,ALsizei);
+typedef void (AL_APIENTRY*PFNALBUFFERDATASTATICPROC)(const ALuint,ALenum,ALvoid*,ALsizei,ALsizei);
 #ifdef AL_ALEXT_PROTOTYPES
-AL_API void AL_APIENTRY alBufferDataStatic(const ALint buffer, ALenum format, ALvoid *data, ALsizei len, ALsizei freq);
+void AL_APIENTRY alBufferDataStatic(const ALuint buffer, ALenum format, ALvoid *data, ALsizei size, ALsizei freq);
 #endif
 #endif
 
@@ -411,6 +391,13 @@ AL_API void AL_APIENTRY alProcessUpdatesSOFT(void);
 /*#define AL_SEC_LENGTH_SOFT                       0x200B*/
 #endif
 
+#ifndef AL_SOFT_buffer_length_query
+#define AL_SOFT_buffer_length_query 1
+/*#define AL_BYTE_LENGTH_SOFT                      0x2009*/
+/*#define AL_SAMPLE_LENGTH_SOFT                    0x200A*/
+/*#define AL_SEC_LENGTH_SOFT                       0x200B*/
+#endif
+
 #ifndef ALC_SOFT_pause_device
 #define ALC_SOFT_pause_device 1
 typedef void (ALC_APIENTRY*LPALCDEVICEPAUSESOFT)(ALCdevice *device);
@@ -576,6 +563,88 @@ AL_API void AL_APIENTRY alEventControlSOFT(ALsizei count, const ALenum *types, A
 AL_API void AL_APIENTRY alEventCallbackSOFT(ALEVENTPROCSOFT callback, void *userParam);
 AL_API void* AL_APIENTRY alGetPointerSOFT(ALenum pname);
 AL_API void AL_APIENTRY alGetPointervSOFT(ALenum pname, void **values);
+#endif
+#endif
+
+#ifndef ALC_SOFT_reopen_device
+#define ALC_SOFT_reopen_device
+typedef ALCboolean (ALC_APIENTRY*LPALCREOPENDEVICESOFT)(ALCdevice *device,
+    const ALCchar *deviceName, const ALCint *attribs);
+#ifdef AL_ALEXT_PROTOTYPES
+ALCboolean ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device, const ALCchar *deviceName,
+    const ALCint *attribs);
+#endif
+#endif
+
+#ifndef AL_SOFT_callback_buffer
+#define AL_SOFT_callback_buffer
+#define AL_BUFFER_CALLBACK_FUNCTION_SOFT         0x19A0
+#define AL_BUFFER_CALLBACK_USER_PARAM_SOFT       0x19A1
+typedef ALsizei (AL_APIENTRY*ALBUFFERCALLBACKTYPESOFT)(ALvoid *userptr, ALvoid *sampledata, ALsizei numbytes);
+typedef void (AL_APIENTRY*LPALBUFFERCALLBACKSOFT)(ALuint buffer, ALenum format, ALsizei freq, ALBUFFERCALLBACKTYPESOFT callback, ALvoid *userptr);
+typedef void (AL_APIENTRY*LPALGETBUFFERPTRSOFT)(ALuint buffer, ALenum param, ALvoid **value);
+typedef void (AL_APIENTRY*LPALGETBUFFER3PTRSOFT)(ALuint buffer, ALenum param, ALvoid **value1, ALvoid **value2, ALvoid **value3);
+typedef void (AL_APIENTRY*LPALGETBUFFERPTRVSOFT)(ALuint buffer, ALenum param, ALvoid **values);
+#ifdef AL_ALEXT_PROTOTYPES
+AL_API void AL_APIENTRY alBufferCallbackSOFT(ALuint buffer, ALenum format, ALsizei freq, ALBUFFERCALLBACKTYPESOFT callback, ALvoid *userptr);
+AL_API void AL_APIENTRY alGetBufferPtrSOFT(ALuint buffer, ALenum param, ALvoid **ptr);
+AL_API void AL_APIENTRY alGetBuffer3PtrSOFT(ALuint buffer, ALenum param, ALvoid **ptr0, ALvoid **ptr1, ALvoid **ptr2);
+AL_API void AL_APIENTRY alGetBufferPtrvSOFT(ALuint buffer, ALenum param, ALvoid **ptr);
+#endif
+#endif
+
+#ifndef AL_SOFT_UHJ
+#define AL_SOFT_UHJ
+#define AL_FORMAT_UHJ2CHN8_SOFT                  0x19A2
+#define AL_FORMAT_UHJ2CHN16_SOFT                 0x19A3
+#define AL_FORMAT_UHJ2CHN_FLOAT32_SOFT           0x19A4
+#define AL_FORMAT_UHJ3CHN8_SOFT                  0x19A5
+#define AL_FORMAT_UHJ3CHN16_SOFT                 0x19A6
+#define AL_FORMAT_UHJ3CHN_FLOAT32_SOFT           0x19A7
+#define AL_FORMAT_UHJ4CHN8_SOFT                  0x19A8
+#define AL_FORMAT_UHJ4CHN16_SOFT                 0x19A9
+#define AL_FORMAT_UHJ4CHN_FLOAT32_SOFT           0x19AA
+
+#define AL_STEREO_MODE_SOFT                      0x19B0
+#define AL_NORMAL_SOFT                           0x0000
+#define AL_SUPER_STEREO_SOFT                     0x0001
+#define AL_SUPER_STEREO_WIDTH_SOFT               0x19B1
+#endif
+
+#ifndef AL_SOFT_UHJ_ex
+#define AL_SOFT_UHJ_ex
+#define AL_FORMAT_UHJ2CHN_MULAW_SOFT             0x19B3
+#define AL_FORMAT_UHJ2CHN_ALAW_SOFT              0x19B4
+#define AL_FORMAT_UHJ2CHN_IMA4_SOFT              0x19B5
+#define AL_FORMAT_UHJ2CHN_MSADPCM_SOFT           0x19B6
+#define AL_FORMAT_UHJ3CHN_MULAW_SOFT             0x19B7
+#define AL_FORMAT_UHJ3CHN_ALAW_SOFT              0x19B8
+#define AL_FORMAT_UHJ4CHN_MULAW_SOFT             0x19B9
+#define AL_FORMAT_UHJ4CHN_ALAW_SOFT              0x19BA
+#endif
+
+#ifndef ALC_SOFT_output_mode
+#define ALC_SOFT_output_mode
+#define ALC_OUTPUT_MODE_SOFT                     0x19AC
+#define ALC_ANY_SOFT                             0x19AD
+/*#define ALC_MONO_SOFT                            0x1500*/
+/*#define ALC_STEREO_SOFT                          0x1501*/
+#define ALC_STEREO_BASIC_SOFT                    0x19AE
+#define ALC_STEREO_UHJ_SOFT                      0x19AF
+#define ALC_STEREO_HRTF_SOFT                     0x19B2
+/*#define ALC_QUAD_SOFT                            0x1503*/
+#define ALC_SURROUND_5_1_SOFT                    0x1504
+#define ALC_SURROUND_6_1_SOFT                    0x1505
+#define ALC_SURROUND_7_1_SOFT                    0x1506
+#endif
+
+#ifndef AL_SOFT_source_start_delay
+#define AL_SOFT_source_start_delay
+typedef void (AL_APIENTRY*LPALSOURCEPLAYATTIMESOFT)(ALuint source, ALint64SOFT start_time);
+typedef void (AL_APIENTRY*LPALSOURCEPLAYATTIMEVSOFT)(ALsizei n, const ALuint *sources, ALint64SOFT start_time);
+#ifdef AL_ALEXT_PROTOTYPES
+void AL_APIENTRY alSourcePlayAtTimeSOFT(ALuint source, ALint64SOFT start_time);
+void AL_APIENTRY alSourcePlayAtTimevSOFT(ALsizei n, const ALuint *sources, ALint64SOFT start_time);
 #endif
 #endif
 
