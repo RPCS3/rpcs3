@@ -861,19 +861,18 @@ error_code cellMicGetDeviceAttr(s32 dev_num, CellMicDeviceAttr deviceAttributes,
 	{
 		switch (deviceAttributes)
 		{
+		case CELLMIC_DEVATTR_CHANVOL:
+			if (*arg1 > 2 || !arg2)
+				return CELL_MICIN_ERROR_PARAM;
+			*arg2 = ::at32(device.attr_chanvol, *arg1);
+			 break;
 		case CELLMIC_DEVATTR_LED: *arg1 = device.attr_led; break;
 		case CELLMIC_DEVATTR_GAIN: *arg1 = device.attr_gain; break;
 		case CELLMIC_DEVATTR_VOLUME: *arg1 = device.attr_volume; break;
 		case CELLMIC_DEVATTR_AGC: *arg1 = device.attr_agc; break;
-		case CELLMIC_DEVATTR_CHANVOL: *arg1 = device.attr_volume; break;
 		case CELLMIC_DEVATTR_DSPTYPE: *arg1 = device.attr_dsptype; break;
 		default: return CELL_MICIN_ERROR_PARAM;
 		}
-	}
-
-	if (arg2)
-	{
-		// TODO
 	}
 
 	return CELL_OK;
