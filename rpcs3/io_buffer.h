@@ -1,5 +1,6 @@
 #pragma once
 #include <util/types.hpp>
+#include <util/bless.hpp>
 #include <span>
 #include <vector>
 #include <functional>
@@ -18,8 +19,8 @@ namespace rsx
 
 	class io_buffer
 	{
-		void* m_ptr = nullptr;
-		usz m_size = 0;
+		mutable void* m_ptr = nullptr;
+		mutable usz m_size = 0;
 
 		std::function<std::tuple<void*, usz> ()> m_allocator = nullptr;
 
@@ -27,7 +28,7 @@ namespace rsx
 		io_buffer() = default;
 
 		template <SpanLike T>
-		io_buffer(T& container)
+		io_buffer(const T& container)
 		{
 			m_ptr = reinterpret_cast<void*>(container.data());
 			m_size = container.size_bytes();
@@ -39,8 +40,18 @@ namespace rsx
 			m_allocator = allocator;
 		}
 
-		template<Integral T>
-		T* data()
+		template <Integral T>
+		io_buffer(void* ptr, T size)
+			: m_ptr(ptr), m_size(size)
+		{}
+
+		template <Integral T>
+		io_buffer(const void* ptr, T size)
+			: m_ptr(const_cast<void*>(ptr)), m_size(size)
+		{}
+
+		template <Integral T = u8>
+		T* data() const
 		{
 			if (!m_ptr && m_allocator)
 			{
@@ -55,11 +66,11 @@ namespace rsx
 			return m_size;
 		}
 
-		template<Integral T>
-		std::span<T> as_span()
+		template<typename T>
+		std::span<T> as_span() const
 		{
-			const auto bytes = data<T>();
-			return { bytes, m_size / sizeof(T) };
+			auto bytes = data();
+			return { utils::bless<T>(bytes), m_size / sizeof(T) };
 		}
 	};
 }
