@@ -700,7 +700,7 @@ namespace vk
 				subres.width_in_block,
 				subres.height_in_block
 			);
-			subres.data = ext_data;
+			subres.data = std::span(ext_data);
 		}
 
 		if (g_cfg.video.resolution_scale_percent == 100 && spp == 1) [[likely]]
