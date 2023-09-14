@@ -2335,7 +2335,7 @@
     <ClInclude Include="Emu\NP\upnp_config.h">
       <Filter>Emu\NP</Filter>
     </ClInclude>
-    <ClInclude Include="io_buffer.h">
+    <ClInclude Include="Emu\RSX\Common\io_buffer.h">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
 	<ClInclude Include="Emu\RSX\Common\tiled_dma_copy.hpp">

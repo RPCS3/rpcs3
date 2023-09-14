@@ -27,13 +27,6 @@ namespace rsx
 	public:
 		io_buffer() = default;
 
-		io_buffer(const io_buffer& that)
-		{
-			m_ptr = that.m_ptr;
-			m_size = that.m_size;
-			m_allocator = that.m_allocator;
-		}
-
 		template <SpanLike T>
 		io_buffer(const T& container)
 		{
