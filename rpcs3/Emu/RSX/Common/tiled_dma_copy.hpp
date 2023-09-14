@@ -3,6 +3,9 @@
 #include <util/types.hpp>
 #include <cstdint>
 
+// Set this to 1 to force all decoding to be done on the CPU.
+#define DEBUG_DMA_TILING 0
+
 // This is a 1:1 port of the GPU code for my own sanity when debugging misplaced bits
 // For a high-level explanation, read https://envytools.readthedocs.io/en/latest/hw/memory/vram.html
 namespace rsx
