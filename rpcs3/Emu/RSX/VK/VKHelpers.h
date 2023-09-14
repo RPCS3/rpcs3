@@ -75,6 +75,7 @@ namespace vk
 		upload_contents_async   = 1,
 		initialize_image_layout = 2,
 		preserve_image_layout   = 4,
+		source_is_gpu_resident  = 8,
 
 		// meta-flags
 		upload_contents_inline    = 0,
