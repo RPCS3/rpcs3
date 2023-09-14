@@ -194,6 +194,7 @@ namespace vk
 					.src = working_buffer,
 					.src_offset = 0,
 
+					// TODO: Check interaction with anti-aliasing
 					.image_width = width,
 					.image_height = height,
 					.image_pitch = real_pitch,

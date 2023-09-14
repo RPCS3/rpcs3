@@ -22,15 +22,22 @@ namespace rsx
 		mutable void* m_ptr = nullptr;
 		mutable usz m_size = 0;
 
-		std::function<std::tuple<void*, usz> ()> m_allocator = nullptr;
+		std::function<std::tuple<void*, usz>()> m_allocator{};
 
 	public:
 		io_buffer() = default;
 
+		io_buffer(const io_buffer& that)
+		{
+			m_ptr = that.m_ptr;
+			m_size = that.m_size;
+			m_allocator = that.m_allocator;
+		}
+
 		template <SpanLike T>
 		io_buffer(const T& container)
 		{
-			m_ptr = reinterpret_cast<void*>(container.data());
+			m_ptr = const_cast<void*>(reinterpret_cast<const void*>(container.data()));
 			m_size = container.size_bytes();
 		}
 
@@ -49,6 +56,11 @@ namespace rsx
 		io_buffer(const void* ptr, T size)
 			: m_ptr(const_cast<void*>(ptr)), m_size(size)
 		{}
+
+		std::pair<void*, usz> raw() const
+		{
+			return { m_ptr, m_size };
+		}
 
 		template <Integral T = u8>
 		T* data() const
