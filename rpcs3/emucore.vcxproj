@@ -553,6 +553,7 @@
     <ClInclude Include="Emu\RSX\Common\buffer_stream.hpp" />
     <ClInclude Include="Emu\RSX\Common\tiled_dma_copy.hpp" />
     <ClInclude Include="Emu\RSX\Common\expected.hpp" />
+    <ClInclude Include="Emu\RSX\Common\io_buffer.h" />
     <ClInclude Include="Emu\RSX\Common\profiling_timer.hpp" />
     <ClInclude Include="Emu\RSX\Common\ranged_map.hpp" />
     <ClInclude Include="Emu\RSX\Common\simple_array.hpp" />
@@ -612,7 +613,6 @@
     <ClInclude Include="Emu\vfs_config.h" />
     <ClInclude Include="Loader\disc.h" />
     <ClInclude Include="Loader\mself.hpp" />
-    <ClInclude Include="io_buffer.h" />
     <ClInclude Include="util\atomic.hpp" />
     <ClInclude Include="util\bless.hpp" />
     <ClInclude Include="util\image_sink.h" />
