@@ -687,8 +687,28 @@ namespace vk
 		rsx::flags32_t upload_flags = upload_contents_inline;
 		u32 heap_align = rsx_pitch;
 
+#if DEBUG_DMA_TILING
+		std::vector<u8> ext_data;
+#endif
+
 		if (auto tiled_region = rsx::get_current_renderer()->get_tiled_memory_region(range))
 		{
+#if DEBUG_DMA_TILING
+			auto real_data = vm::get_super_ptr<u8>(range.start);
+			ext_data.resize(tiled_region.tile->size);
+			rsx::tile_texel_data<u32, true>(
+				ext_data.data(),
+				real_data,
+				tiled_region.base_address,
+				range.start - tiled_region.base_address,
+				tiled_region.tile->size,
+				tiled_region.tile->bank,
+				tiled_region.tile->pitch,
+				subres.width_in_block,
+				subres.height_in_block
+				);
+			subres.data = std::span(ext_data);
+#else
 			const auto available_tile_size = tiled_region.tile->size - (range.start - tiled_region.base_address);
 			const auto max_content_size = tiled_region.tile->pitch * utils::align<u32>(subres.height_in_block, 64);
 			const auto section_length = std::min(max_content_size, available_tile_size);
@@ -747,6 +767,7 @@ namespace vk
 			subres.data = { scratch_buf, linear_data_scratch_offset };
 			upload_flags |= source_is_gpu_resident;
 			heap_align = subres.width_in_block * get_bpp();
+#endif
 		}
 
 		if (g_cfg.video.resolution_scale_percent == 100 && spp == 1) [[likely]]

@@ -8,17 +8,12 @@
 #include "vkutils/image_helpers.h"
 
 #include "../Common/texture_cache.h"
+#include "../Common/tiled_dma_copy.hpp"
 
 #include "Emu/Cell/timers.hpp"
 
 #include <memory>
 #include <vector>
-
-#define DEBUG_DMA_TILING 0
-
-#if DEBUG_DMA_TILING
-#include "../Common/tiled_dma_copy.hpp"
-#endif
 
 namespace vk
 {
