@@ -473,6 +473,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Common/surface_store.cpp
     RSX/Common/TextureUtils.cpp
     RSX/Common/texture_cache.cpp
+    RSX/Core/RSXContext.cpp
     RSX/Null/NullGSRender.cpp
     RSX/Overlays/HomeMenu/overlay_home_menu.cpp
     RSX/Overlays/HomeMenu/overlay_home_menu_components.cpp
