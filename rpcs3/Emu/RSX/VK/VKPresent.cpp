@@ -14,11 +14,6 @@
 extern atomic_t<bool> g_user_asked_for_screenshot;
 extern atomic_t<recording_mode> g_recording_mode;
 
-namespace vk
-{
-	u32 g_debug_vis_address = 0;
-}
-
 void VKGSRender::reinitialize_swapchain()
 {
 	m_swapchain_dims.width = m_frame->client_width();
@@ -482,18 +477,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		present_info.format = av_format;
 		present_info.address = rsx::get_address(display_buffers[info.buffer].offset, CELL_GCM_LOCATION_LOCAL);
 
-		if (vk::g_debug_vis_address)
-		{
-			//std::vector<u8> temp_data(5120 * 1024);
-			//std::memcpy(temp_data.data(), vm::get_super_ptr(vk::g_debug_vis_address), 5120 * 1024);
-			//rsx::untile_texel_data<u32>(vm::get_super_ptr(vk::g_debug_vis_address), temp_data.data(), vk::g_debug_vis_address, 0, 0, 5120, 1280, 720);
-			image_to_flip = m_texture_cache.upload_image_simple(*m_current_command_buffer, VK_FORMAT_B8G8R8A8_UNORM, vk::g_debug_vis_address, 1280, 720, 5120);
-			vk::g_debug_vis_address = 0;
-		}
-		else
-		{
-			image_to_flip = get_present_source(&present_info, avconfig);
-		}
+		image_to_flip = get_present_source(&present_info, avconfig);
 
 		if (avconfig.stereo_mode != stereo_render_mode_options::disabled) [[unlikely]]
 		{
