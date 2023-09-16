@@ -135,10 +135,19 @@ bool gui_application::Init()
 	// Create connects to propagate events throughout Gui.
 	InitializeConnects();
 
+	bool set_dark_theme = false;
+
 	if (m_gui_settings->GetValue(gui::ib_show_welcome).toBool())
 	{
 		welcome_dialog* welcome = new welcome_dialog(m_gui_settings, false);
 		welcome->exec();
+
+		if (welcome->does_user_want_dark_theme())
+		{
+			m_gui_settings->SetValue(gui::m_currentStylesheet, "Darker Style by TheMitoSan");
+		}
+
+		m_gui_settings->sync();
 	}
 
 	// Check maxfiles
