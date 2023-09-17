@@ -48,6 +48,7 @@
 #include <QFontDatabase>
 #include <QBuffer>
 #include <QTemporaryFile>
+#include <QDesktopServices>
 
 #include "rpcs3_version.h"
 #include "Emu/IdManager.h"
@@ -2923,6 +2924,11 @@ void main_window::CreateConnects()
 	{
 		welcome_dialog* welcome = new welcome_dialog(m_gui_settings, true, this);
 		welcome->open();
+	});
+
+	connect(ui->supportAct, &QAction::triggered, this, [this]
+	{
+		QDesktopServices::openUrl(QUrl("https://www.patreon.com/Nekotekina"));
 	});
 
 	connect(ui->aboutAct, &QAction::triggered, this, [this]
