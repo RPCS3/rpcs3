@@ -2338,7 +2338,7 @@
     <ClInclude Include="Emu\RSX\Common\io_buffer.h">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
-	<ClInclude Include="Emu\RSX\Common\tiled_dma_copy.hpp">
+    <ClInclude Include="Emu\RSX\Common\tiled_dma_copy.hpp">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
     <ClInclude Include="Emu\games_config.h">
