@@ -114,40 +114,37 @@ freebsd_task:
   install_script: "sh -ex ./.ci/install-freebsd.sh"
   script: "./.ci/build-freebsd.sh"
 
-macos_task:
-  timeout_in: 12000m
-  homebrew_cache:
-    folder: /Users/admin/Library/Caches/Homebrew
-  qt_cache:
-    folder: /tmp/Qt
-  ccache_cache:
-    folder: /tmp/ccache_dir
-  matrix:
-    - name: Cirrus macOS
-      macos_instance:
-        image: ghcr.io/cirruslabs/macos-monterey-xcode:latest
-      mac_script:
-        - mkdir artifacts
-        - chmod +x ".ci/build-mac.sh"
-        - chmod +x ".ci/deploy-mac.sh"
-        - ".ci/build-mac.sh"
-  env:
-    BUILD_ARTIFACTSTAGINGDIRECTORY: ${CIRRUS_WORKING_DIR}/artifacts
-    ARTDIR: ${CIRRUS_WORKING_DIR}/artifacts/
-    CCACHE_DIR: "/tmp/ccache_dir"
-    CCACHE_MAXSIZE: 300M
-    CI_HAS_ARTIFACTS: true
-    UPLOAD_COMMIT_HASH: 51ae32f468089a8169aaf1567de355ff4a3e0842
-    UPLOAD_REPO_FULL_NAME: "rpcs3/rpcs3-binaries-mac"
-    RELEASE_MESSAGE: "../GitHubReleaseMessage.txt"
-    INSTALL_DEPS: true
-    USE_APPLE_CLANG: true
-    CLEAN_BUILDDIR: true
-  artifacts:
-    name: Artifact
-    path: "artifacts/*"
-  push_script: |
-    if [ "$CIRRUS_REPO_OWNER" = "RPCS3" ] && [ -z "$CIRRUS_PR" ] && [ "$CIRRUS_BRANCH" = "master" ]; then
-      source './.ci/export-cirrus-vars.sh'
-      .ci/github-upload.sh
-    fi;
+# macos_task:
+#   timeout_in: 12000m
+#   homebrew_cache:
+#     folder: /Users/admin/Library/Caches/Homebrew
+#   qt_cache:
+#     folder: /tmp/Qt
+#   ccache_cache:
+#     folder: /tmp/ccache_dir
+#   matrix:
+#     - name: Cirrus macOS
+#       macos_instance:
+#         image: ghcr.io/cirruslabs/macos-monterey-xcode:latest
+#       mac_script:
+#         - mkdir artifacts
+#         - chmod +x ".ci/build-mac.sh"
+#         - chmod +x ".ci/deploy-mac.sh"
+#         - ".ci/build-mac.sh"
+#   env:
+#     BUILD_ARTIFACTSTAGINGDIRECTORY: ${CIRRUS_WORKING_DIR}/artifacts
+#     ARTDIR: ${CIRRUS_WORKING_DIR}/artifacts/
+#     CCACHE_DIR: "/tmp/ccache_dir"
+#     CCACHE_MAXSIZE: 300M
+#     CI_HAS_ARTIFACTS: true
+#     UPLOAD_COMMIT_HASH: 51ae32f468089a8169aaf1567de355ff4a3e0842
+#     UPLOAD_REPO_FULL_NAME: "rpcs3/rpcs3-binaries-mac"
+#     RELEASE_MESSAGE: "../GitHubReleaseMessage.txt"
+#   artifacts:
+#     name: Artifact
+#     path: "artifacts/*"
+#   push_script: |
+#     if [ "$CIRRUS_REPO_OWNER" = "RPCS3" ] && [ -z "$CIRRUS_PR" ] && [ "$CIRRUS_BRANCH" = "master" ]; then
+#       source './.ci/export-cirrus-vars.sh'
+#       .ci/github-upload.sh
+#     fi;
