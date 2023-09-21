@@ -384,15 +384,15 @@ namespace vk
 				{
 					// Either a bitcast is required or a scale+copy to mipmap level / layer
 					const u32 requested_width = dst->width();
-					const u32 requested_height = src_y + src_h + section.dst_h;
+					const u32 requested_height = src_y + src_h + section.dst_h; // Accounts for possible typeless ref on the same helper on src
 					_dst = vk::get_typeless_helper(src_image->format(), src_image->format_class(), requested_width, requested_height);
 					_dst->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 				}
 
-				if (_dst == src_image)
+				if (_dst != dst)
 				{
-					// Write-to-self situation. Account for the initial typeless copy.
-					ensure(dst != _dst);
+					// We place the output after the source to account for the initial typeless-xfer if applicable
+					// If src_image == _dst then this is just a write-to-self. Either way, use best-fit placement.
 					dst_x = 0;
 					dst_y = src_y + src_h;
 				}

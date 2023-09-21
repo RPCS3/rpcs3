@@ -35,9 +35,9 @@ if [ ! -d "/tmp/Qt/$QT_VER" ]; then
   cd qt-downloader
   git checkout f52efee0f18668c6d6de2dec0234b8c4bc54c597
   cd "/tmp/Qt"
-  "/opt/homebrew/bin/pipenv" run pip3 install py7zr requests semantic_version lxml
+  "$BREW_X64_PATH/bin/pipenv" run pip3 install py7zr requests semantic_version lxml
   mkdir -p "$QT_VER/macos" ; ln -s "macos" "$QT_VER/clang_64"
-  "/opt/homebrew/bin/pipenv" run "$WORKDIR/qt-downloader/qt-downloader" macos desktop "$QT_VER" clang_64 --opensource --addons qtmultimedia
+  "$BREW_X64_PATH/bin/pipenv" run "$WORKDIR/qt-downloader/qt-downloader" macos desktop "$QT_VER" clang_64 --opensource --addons qtmultimedia
 fi
 
 cd "$WORKDIR"
