@@ -307,10 +307,10 @@ public:
 	u32 read_dsp(u8* buf, u32 size) { return rbuf_dsp.read_bytes(buf, size); }
 
 	// Microphone attributes
-	u32 attr_gain       = 3;
-	u32 attr_volume     = 145;
-	u32 attr_agc        = 0;
-	std::array<u32, 2> attr_chanvol = {145, 145};
+	u32 attr_gain       = 3;                      // 0 to 5.   Default is 3.
+	u32 attr_volume     = 145;                    // 0 to 241. Default is 145.
+	u32 attr_agc        = 0;                      // 0 to 241. Default is 0.
+	std::array<u32, 2> attr_chanvol = {100, 100}; // 0 to 100. Default is ?.
 	u32 attr_led        = 0;
 	u32 attr_dsptype    = 0;
 
