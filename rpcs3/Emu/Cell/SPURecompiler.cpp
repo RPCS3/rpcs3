@@ -7998,6 +7998,18 @@ public:
 
 	void GB(spu_opcode_t op)
 	{
+		// GFNI trick to extract selected bit from bytes
+		// By treating the first input as constant, and the second input as variable,
+		// with only 1 bit set in our constant, gf2p8affineqb will extract that selected bit
+		// from each byte of the second operand
+		if (m_use_gfni)
+		{
+			const auto a = get_vr<u8[16]>(op.ra);
+			const auto as = zshuffle(a, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 12, 8, 4, 0);
+			set_vr(op.rt, gf2p8affineqb(build<u8[16]>(0x0, 0x0, 0x0, 0x0, 0x01, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x01, 0x0, 0x0, 0x0), as, 0x0));
+			return;
+		}
+
 		const auto a = get_vr<s32[4]>(op.ra);
 		const auto m = zext<u32>(bitcast<i4>(trunc<bool[4]>(a)));
 		set_vr(op.rt, insert(splat<u32[4]>(0), 3, eval(m)));
@@ -8005,6 +8017,14 @@ public:
 
 	void GBH(spu_opcode_t op)
 	{
+		if (m_use_gfni)
+		{
+			const auto a = get_vr<u8[16]>(op.ra);
+			const auto as = zshuffle(a, 16, 16, 16, 16, 16, 16, 16, 16, 14, 12, 10, 8, 6, 4, 2, 0);
+			set_vr(op.rt, gf2p8affineqb(build<u8[16]>(0x0, 0x0, 0x0, 0x0, 0x01, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x01, 0x0, 0x0, 0x0), as, 0x0));
+			return;
+		}
+
 		const auto a = get_vr<s16[8]>(op.ra);
 		const auto m = zext<u32>(bitcast<u8>(trunc<bool[8]>(a)));
 		set_vr(op.rt, insert(splat<u32[4]>(0), 3, eval(m)));
@@ -8012,7 +8032,16 @@ public:
 
 	void GBB(spu_opcode_t op)
 	{
-		const auto a = get_vr<s8[16]>(op.ra);
+		const auto a = get_vr<u8[16]>(op.ra);
+
+		if (m_use_gfni)
+		{
+			const auto as = zshuffle(a, 7, 6, 5, 4, 3, 2, 1, 0, 15, 14, 13, 12, 11, 10, 9, 8);
+			const auto m = gf2p8affineqb(build<u8[16]>(0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x01, 0x01, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0), as, 0x0);
+			set_vr(op.rt, zshuffle(m, 16, 16, 16, 16, 16, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10));
+			return;
+		}
+
 		const auto m = zext<u32>(bitcast<u16>(trunc<bool[16]>(a)));
 		set_vr(op.rt, insert(splat<u32[4]>(0), 3, eval(m)));
 	}
