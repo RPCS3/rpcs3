@@ -2971,6 +2971,9 @@ protected:
 	// Allow VNNI
 	bool m_use_vnni = false;
 
+	// Allow GFNI
+	bool m_use_gfni = false;
+
 	// Allow Icelake tier AVX-512
 	bool m_use_avx512_icl = false;
 
