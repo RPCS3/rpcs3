@@ -713,8 +713,8 @@ namespace vk
 			const auto max_content_size = tiled_region.tile->pitch * utils::align<u32>(subres.height_in_block, 64);
 			const auto section_length = std::min(max_content_size, available_tile_size);
 
-			vk::load_dma(range.start, section_length);
 			const auto dma_mapping = vk::map_dma(range.start, section_length);
+			vk::load_dma(range.start, section_length);
 			const auto scratch_buf = vk::get_scratch_buffer(cmd, section_length * 3); // 0 = linear data, 1 = padding (deswz), 2 = tiled data
 			const auto tiled_data_scratch_offset = section_length * 2;
 			const auto linear_data_scratch_offset = 0;
