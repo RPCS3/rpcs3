@@ -198,7 +198,7 @@ namespace vk
 					.image_width = width,
 					.image_height = height,
 					.image_pitch = real_pitch,
-					.image_bpp = rsx::get_format_block_size_in_bytes(gcm_format)
+					.image_bpp = context == rsx::texture_upload_context::dma ? internal_bpp : rsx::get_format_block_size_in_bytes(gcm_format)
 				};
 
 				// Execute
