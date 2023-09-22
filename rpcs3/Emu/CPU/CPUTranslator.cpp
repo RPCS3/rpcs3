@@ -154,6 +154,16 @@ void cpu_translator::initialize(llvm::LLVMContext& context, llvm::ExecutionEngin
 		m_use_vnni = true;
 	}
 
+	// Test GFNI feature (TODO)
+	if (cpu == "tremont" ||
+		cpu == "gracemont" ||
+		cpu == "alderlake" ||
+		cpu == "raptorlake" ||
+		cpu == "meteorlake")
+	{
+		m_use_gfni = true;
+	}
+
 	// Test AVX-512_icelake features (TODO)
 	if (cpu == "icelake" ||
 		cpu == "icelake-client" ||
@@ -168,6 +178,7 @@ void cpu_translator::initialize(llvm::LLVMContext& context, llvm::ExecutionEngin
 		m_use_avx512 = true;
 		m_use_avx512_icl = true;
 		m_use_vnni = true;
+		m_use_gfni = true;
 	}
 
 	// Aarch64 CPUs
