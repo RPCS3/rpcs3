@@ -1,9 +1,11 @@
 #include "stdafx.h"
 #include "perf_monitor.hpp"
+
+#include "Emu/System.h"
 #include "util/cpu_stats.hpp"
 #include "Utilities/Thread.h"
 
-LOG_CHANNEL(sys_log, "SYS");
+LOG_CHANNEL(perf_log, "PERF");
 
 void perf_monitor::operator()()
 {
@@ -14,19 +16,50 @@ void perf_monitor::operator()()
 	utils::cpu_stats stats;
 	stats.init_cpu_query();
 
+	u32 logged_pause = 0;
+	u64 last_pause_time = umax;
+
+	std::vector<double> per_core_usage;
+
 	while (thread_ctrl::state() != thread_state::aborting)
 	{
 		thread_ctrl::wait_for(update_interval_us);
 		elapsed_us += update_interval_us;
 
+		if (thread_ctrl::state() == thread_state::aborting)
+		{
+			break;
+		}
+
 		double total_usage = 0.0;
-		std::vector<double> per_core_usage;
 
 		stats.get_per_core_usage(per_core_usage, total_usage);
 
 		if (elapsed_us >= log_interval_us)
 		{
 			elapsed_us = 0;
+
+			const bool is_paused = Emu.IsPaused();
+			const u64 pause_time = Emu.GetPauseTime();
+
+			if (!is_paused || last_pause_time != pause_time)
+			{
+				// Resumed or not paused since last check
+				logged_pause = 0;
+				last_pause_time = pause_time;
+			}
+
+			if (is_paused)
+			{
+				if (logged_pause >= 2)
+				{
+					// Let's not spam the log when emulation is paused
+					// But still emit the message two times so even paused state can be debugged and inspected
+					continue;
+				}
+
+				logged_pause++;
+			}
 
 			std::string msg = fmt::format("CPU Usage: Total: %.1f%%", total_usage);
 
@@ -40,7 +73,7 @@ void perf_monitor::operator()()
 				fmt::append(msg, "%s %.1f%%", i > 0 ? "," : "", per_core_usage[i]);
 			}
 
-			sys_log.notice("%s", msg);
+			perf_log.notice("%s", msg);
 		}
 	}
 }

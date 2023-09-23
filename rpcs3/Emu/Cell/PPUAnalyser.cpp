@@ -1833,7 +1833,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 
 					if (type == ppu_itype::B || type == ppu_itype::BC)
 					{
-						if (type == ppu_itype::BC && (op.bo & 0x14) == 0x14 && op.bo & 0xd)
+						if (type == ppu_itype::BC && (op.bo & 0x14) == 0x14 && op.bo & 0xB)
 						{
 							// Invalid form
 							is_good = false;

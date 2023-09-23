@@ -371,6 +371,8 @@
     <addaction name="separator"/>
     <addaction name="languageMenu"/>
     <addaction name="separator"/>
+    <addaction name="supportAct"/>
+    <addaction name="separator"/>
     <addaction name="aboutAct"/>
     <addaction name="aboutQtAct"/>
    </widget>
@@ -707,6 +709,14 @@
    </property>
    <property name="text">
     <string>Show Log/TTY</string>
+   </property>
+  </action>
+  <action name="supportAct">
+   <property name="text">
+    <string>Support Us</string>
+   </property>
+   <property name="toolTip">
+    <string>To ensure continued improvements of RPCS3, become a part of our Patreon group!</string>
    </property>
   </action>
   <action name="aboutAct">

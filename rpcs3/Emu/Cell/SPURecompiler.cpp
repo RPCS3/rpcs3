@@ -8124,19 +8124,33 @@ public:
 	void ROTQMBYBI(spu_opcode_t op)
 	{
 		const auto a = get_vr<u8[16]>(op.ra);
-		const auto b = get_vr<u8[16]>(op.rb);
+		const auto b = get_vr<s32[4]>(op.rb);
+
+		auto minusb = eval(-(b >> 3));
+		if (auto [ok, v0, v1] = match_expr(b, match<s32[4]>() - match<s32[4]>()); ok)
+		{
+			if (auto [ok1, data] = get_const_vector(v0.value, m_pos); ok1)
+			{
+				if (data == v128::from32p(7))
+				{
+					minusb = eval(v1 >> 3);
+				}
+			}
+		}
+
+		const auto minusbx = eval(bitcast<u8[16]>(minusb) & 0x1f);
 
 		// Data with swapped endian from a load instruction
 		if (auto [ok, as] = match_expr(a, byteswap(match<u8[16]>())); ok)
 		{
 			const auto sc = build<u8[16]>(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
-			const auto sh = sc - (-(splat_scalar(b) >> 3) & 0x1f);
+			const auto sh = sc - splat_scalar(minusbx);
 			set_vr(op.rt, pshufb(as, sh));
 			return;
 		}
 
 		const auto sc = build<u8[16]>(112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127);
-		const auto sh = sc + (-(splat_scalar(b) >> 3) & 0x1f);
+		const auto sh = sc + splat_scalar(minusbx);
 		set_vr(op.rt, pshufb(a, sh));
 	}
 
@@ -8229,9 +8243,16 @@ public:
 
 	void ROTQMBI(spu_opcode_t op)
 	{
-		const auto a = get_vr(op.ra);
-		const auto b = splat_scalar(-get_vr(op.rb) & 0x7);
-		set_vr(op.rt, fshr(zshuffle(a, 1, 2, 3, 4), a, b));
+		const auto [a, b] = get_vrs<u32[4]>(op.ra, op.rb);
+
+		auto minusb = eval(-b);
+		if (auto [ok, x] = match_expr(b, -match<u32[4]>()); ok)
+		{
+			minusb = eval(x);
+		}
+		
+		const auto bx = splat_scalar(minusb) & 0x7;
+		set_vr(op.rt, fshr(zshuffle(a, 1, 2, 3, 4), a, bx));
 	}
 
 	void SHLQBI(spu_opcode_t op)

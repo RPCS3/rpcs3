@@ -106,6 +106,10 @@ rpcs3/rpcs3_autogen/*
 CMakeLists.txt.user
 *.autosave
 
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
 # CLion
 /.idea/*
 /cmake-build-*/
