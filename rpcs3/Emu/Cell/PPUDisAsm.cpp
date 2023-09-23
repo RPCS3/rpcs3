@@ -1342,7 +1342,7 @@ void PPUDisAsm::BC(ppu_opcode_t op)
 
 	if (!inst)
 	{
-		fmt::append(last_opcode, "bc 0x%x, 0x%x, 0x%x, %d, %d", bo, bi, bd, aa, lk);
+		fmt::append(last_opcode, "%-*s 0x%x, 0x%x, 0x%x, %d, %d", PadOp(), "bc", bo, bi, bd, aa, lk);
 		return;
 	}
 

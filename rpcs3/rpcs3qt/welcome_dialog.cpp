@@ -10,6 +10,13 @@
 #include <QPushButton>
 #include <QCheckBox>
 #include <QSvgWidget>
+#include <QStyleHints>
+#include <QGuiApplication>
+
+static bool recommend_dark_theme()
+{
+	return QGuiApplication::styleHints()->colorScheme() == Qt::ColorScheme::Dark;
+}
 
 welcome_dialog::welcome_dialog(std::shared_ptr<gui_settings> gui_settings, bool is_manual_show, QWidget* parent)
 	: QDialog(parent)
@@ -26,6 +33,7 @@ welcome_dialog::welcome_dialog(std::shared_ptr<gui_settings> gui_settings, bool 
 	ui->i_have_read->setEnabled(!is_manual_show);
 	ui->do_not_show->setEnabled(!is_manual_show);
 	ui->do_not_show->setChecked(!m_gui_settings->GetValue(gui::ib_show_welcome).toBool());
+	ui->use_dark_theme->setChecked(recommend_dark_theme());
 	ui->icon_label->load(QStringLiteral(":/rpcs3.svg"));
 	ui->label_3->setText(tr(
 		R"(
@@ -85,6 +93,8 @@ welcome_dialog::welcome_dialog(std::shared_ptr<gui_settings> gui_settings, bool 
 		{
 			gui::utils::create_shortcut("RPCS3", "", "RPCS3", ":/rpcs3.svg", fs::get_temp_dir(), gui::utils::shortcut_location::applications);
 		}
+
+		m_user_wants_dark_theme = ui->use_dark_theme->isChecked();
 	});
 }
 
