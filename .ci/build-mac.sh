@@ -6,6 +6,7 @@ brew install -f --overwrite nasm ninja git p7zip create-dmg ccache pipenv
 #/usr/sbin/softwareupdate --install-rosetta --agree-to-license
 arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 arch -x86_64 /usr/local/bin/brew update
+arch -x86_64 /usr/local/bin/brew uninstall jpeg-xl
 arch -x86_64 /usr/local/bin/brew install --build-from-source ffmpeg gnutls freetype jpeg-xl
 arch -x86_64 /usr/local/bin/brew install -f --overwrite llvm@16 glew cmake sdl2 vulkan-headers coreutils
 arch -x86_64 /usr/local/bin/brew link -f llvm@16
