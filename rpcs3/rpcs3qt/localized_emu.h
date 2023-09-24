@@ -176,6 +176,7 @@ private:
 		case localized_string_id::HOME_MENU_TITLE: return tr("Home Menu");
 		case localized_string_id::HOME_MENU_EXIT_GAME: return tr("Exit Game");
 		case localized_string_id::HOME_MENU_RESUME: return tr("Resume Game");
+		case localized_string_id::HOME_MENU_RESTART: return tr("Restart Game");
 		case localized_string_id::HOME_MENU_SETTINGS: return tr("Settings");
 		case localized_string_id::HOME_MENU_SETTINGS_SAVE: return tr("Save custom configuration?");
 		case localized_string_id::HOME_MENU_SETTINGS_SAVE_BUTTON: return tr("Save");
