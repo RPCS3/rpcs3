@@ -1250,6 +1250,11 @@ void debugger_frame::PerformGoToRequest(const QString& text_argument)
 	}
 }
 
+void debugger_frame::PerformAddBreakpointRequest(u32 addr)
+{
+	m_debugger_list->BreakpointRequested(addr, true);
+}
+
 u64 debugger_frame::EvaluateExpression(const QString& expression)
 {
 	bool ok = false;
