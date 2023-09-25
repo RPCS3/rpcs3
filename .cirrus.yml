@@ -7,52 +7,52 @@ env:
   BUILD_SOURCEBRANCHNAME: $CIRRUS_BRANCH
   RPCS3_TOKEN: ENCRYPTED[!a4c3850e29ab150692286a74bec29819d25971a7ec431b86de2a35f7ed90c5b2ab3c93469f9298e30924d843599110e9!]
   QT_VER_MAIN: '6'
-  QT_VER: '6.5.2'
+  QT_VER: '6.2.4'
 
-# windows_task:
-#   matrix:
-#     - name: Cirrus Windows
-#       windows_container:
-#         image: cirrusci/windowsservercore:visualstudio2019
-#         cpu: 8
-#         memory: 16G
-#   env:
-#     CIRRUS_SHELL: "bash"
-#     COMPILER: msvc
-#     BUILD_ARTIFACTSTAGINGDIRECTORY: ${CIRRUS_WORKING_DIR}\artifacts\
-#     QT_VER_MSVC: 'msvc2019'
-#     QT_DATE: '202307080351'
-#     QTDIR: C:\Qt\${QT_VER}\${QT_VER_MSVC}_64
-#     VULKAN_VER: '1.3.224.1'
-#     VULKAN_SDK_SHA: '2029e652e39ee6a6036cff3765da31e1e6c595fd2413d3cd111dfab7855621ea'
-#     VULKAN_SDK: C:\VulkanSDK\${VULKAN_VER}
-#     CACHE_DIR: "./cache"
-#     UPLOAD_COMMIT_HASH: 7d09e3be30805911226241afbb14f8cdc2eb054e
-#     UPLOAD_REPO_FULL_NAME: "rpcs3/rpcs3-binaries-win"
-#   deps_cache:
-#     folder: "./cache"
-#   #obj_cache:
-#   #  folder: "./tmp"
-#   #obj2_cache:
-#   #  folder: "./rpcs3/x64"
-#   setup_script:
-#     - './.ci/get_keys-windows.sh'
-#     - './.ci/setup-windows.sh'
-#   rpcs3_script:
-#     - export PATH=${PATH}:"C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin"
-#     - msbuild.exe rpcs3.sln //p:Configuration=Release //m
-#   deploy_script:
-#     - mkdir artifacts
-#     - source './.ci/export-cirrus-vars.sh'
-#     - './.ci/deploy-windows.sh'
-#   artifacts:
-#     name: Artifact
-#     path: "*.7z*"
-#   push_script: |
-#     if [ "$CIRRUS_REPO_OWNER" = "RPCS3" ] && [ -z "$CIRRUS_PR" ] && [ "$CIRRUS_BRANCH" = "master" ]; then
-#       source './.ci/export-cirrus-vars.sh'
-#       './.ci/github-upload.sh'
-#     fi;
+windows_task:
+  matrix:
+    - name: Cirrus Windows
+      windows_container:
+        image: cirrusci/windowsservercore:visualstudio2022
+        cpu: 8
+        memory: 16G
+  env:
+    CIRRUS_SHELL: "bash"
+    COMPILER: msvc
+    BUILD_ARTIFACTSTAGINGDIRECTORY: ${CIRRUS_WORKING_DIR}\artifacts\
+    QT_VER_MSVC: 'msvc2019'
+    QT_DATE: '202203140926'
+    QTDIR: C:\Qt\${QT_VER}\${QT_VER_MSVC}_64
+    VULKAN_VER: '1.3.224.1'
+    VULKAN_SDK_SHA: '2029e652e39ee6a6036cff3765da31e1e6c595fd2413d3cd111dfab7855621ea'
+    VULKAN_SDK: C:\VulkanSDK\${VULKAN_VER}
+    CACHE_DIR: "./cache"
+    UPLOAD_COMMIT_HASH: 7d09e3be30805911226241afbb14f8cdc2eb054e
+    UPLOAD_REPO_FULL_NAME: "rpcs3/rpcs3-binaries-win"
+  deps_cache:
+    folder: "./cache"
+  #obj_cache:
+  #  folder: "./tmp"
+  #obj2_cache:
+  #  folder: "./rpcs3/x64"
+  setup_script:
+    - './.ci/get_keys-windows.sh'
+    - './.ci/setup-windows.sh'
+  rpcs3_script:
+    - export PATH=${PATH}:"C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin"
+    - msbuild.exe rpcs3.sln //p:Configuration=Release //m
+  deploy_script:
+    - mkdir artifacts
+    - source './.ci/export-cirrus-vars.sh'
+    - './.ci/deploy-windows.sh'
+  artifacts:
+    name: Artifact
+    path: "*.7z*"
+  push_script: |
+    if [ "$CIRRUS_REPO_OWNER" = "RPCS3" ] && [ -z "$CIRRUS_PR" ] && [ "$CIRRUS_BRANCH" = "master" ]; then
+      source './.ci/export-cirrus-vars.sh'
+      './.ci/github-upload.sh'
+    fi;
 
 # linux_task:
 #   container:
@@ -99,20 +99,20 @@ env:
 #       .ci/github-upload.sh
 #     fi;
 
-freebsd_task:
-  matrix:
-    - name: Cirrus FreeBSD
-      freebsd_instance:
-        image_family: freebsd-13-2
-        cpu: 8
-        memory: 8G
-  env:
-    CCACHE_MAXSIZE: 300M # 3x clean build, rounded
-    CCACHE_DIR: /tmp/ccache_dir
-  ccache_cache:
-    folder: /tmp/ccache_dir
-  install_script: "sh -ex ./.ci/install-freebsd.sh"
-  script: "./.ci/build-freebsd.sh"
+# freebsd_task:
+#   matrix:
+#     - name: Cirrus FreeBSD
+#       freebsd_instance:
+#         image_family: freebsd-13-2
+#         cpu: 8
+#         memory: 8G
+#   env:
+#     CCACHE_MAXSIZE: 300M # 3x clean build, rounded
+#     CCACHE_DIR: /tmp/ccache_dir
+#   ccache_cache:
+#     folder: /tmp/ccache_dir
+#   install_script: "sh -ex ./.ci/install-freebsd.sh"
+#   script: "./.ci/build-freebsd.sh"
 
 # macos_task:
 #   timeout_in: 12000m
