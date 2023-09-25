@@ -41,7 +41,7 @@
 #pragma GCC diagnostic ignored "-Wmissing-noreturn"
 #endif
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/Host.h"
+#include "llvm/TargetParser/Host.h"
 #include "llvm/Object/ObjectFile.h"
 #if LLVM_VERSION_MAJOR < 17
 #include "llvm/ADT/Triple.h"

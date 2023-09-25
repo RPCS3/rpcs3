@@ -39,6 +39,10 @@ if(WITH_LLVM)
 		# now tries to find LLVM again
 		find_package(LLVM 16.0 CONFIG)
 		if(NOT LLVM_FOUND)
+			set(LLVM_DIR "${CMAKE_CURRENT_BINARY_DIR}/llvm_build/lib/cmake/llvm/")
+			find_package(LLVM 17.0 CONFIG)
+		endif()
+		if(NOT LLVM_FOUND)
 			message(FATAL_ERROR "Couldn't build LLVM from the submodule. You might need to run `git submodule update --init`")
 		endif()
 	else()
@@ -50,10 +54,13 @@ if(WITH_LLVM)
 		endif()
 
 		find_package(LLVM 16.0 CONFIG)
+		if(NOT LLVM_FOUND)
+			find_package(LLVM 17.0 CONFIG)
+		endif()
 
 		if (NOT LLVM_FOUND)
 			if (LLVM_VERSION AND LLVM_VERSION_MAJOR LESS 16)
-				message(FATAL_ERROR "Found LLVM version ${LLVM_VERSION}. Required version 16. \
+				message(FATAL_ERROR "Found LLVM version ${LLVM_VERSION}. Required versions 16...17. \
 														 Enable BUILD_LLVM option to build LLVM from included as a git submodule.")
 			endif()
 

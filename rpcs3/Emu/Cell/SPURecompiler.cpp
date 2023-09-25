@@ -4373,7 +4373,7 @@ void spu_recompiler_base::dump(const spu_program& result, std::string& out)
 #if LLVM_VERSION_MAJOR < 17
 #include "llvm/ADT/Triple.h"
 #endif
-#include "llvm/Support/Host.h"
+#include "llvm/TargetParser/Host.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IR/InlineAsm.h"
@@ -6304,9 +6304,15 @@ public:
 		pm.add(createEarlyCSEPass());
 		pm.add(createCFGSimplificationPass());
 		//pm.add(createNewGVNPass());
+#if LLVM_VERSION_MAJOR < 17
 		pm.add(createDeadStoreEliminationPass());
+#endif
 		pm.add(createLICMPass());
+#if LLVM_VERSION_MAJOR < 17
 		pm.add(createAggressiveDCEPass());
+#else
+		pm.add(createDeadCodeEliminationPass());
+#endif
 		//pm.add(createLintPass()); // Check
 
 		for (auto& f : *m_module)
@@ -6772,8 +6778,12 @@ public:
 		// Basic optimizations
 		pm.add(createEarlyCSEPass());
 		pm.add(createCFGSimplificationPass());
+#if LLVM_VERSION_MAJOR < 17
 		pm.add(createDeadStoreEliminationPass());
 		pm.add(createAggressiveDCEPass());
+#else
+		pm.add(createDeadCodeEliminationPass());
+#endif
 		//pm.add(createLintPass());
 
 		for (auto& f : *_module)
