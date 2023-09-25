@@ -91,6 +91,7 @@ struct EmuCallbacks
 	std::string(*resolve_path)(std::string_view) = [](std::string_view arg){ return std::string{arg}; }; // Resolve path using Qt
 	std::function<std::vector<std::string>()> get_font_dirs;
 	std::function<bool(const std::vector<std::string>&)> on_install_pkgs;
+	std::function<void(u32)> add_breakpoint;
 };
 
 namespace utils

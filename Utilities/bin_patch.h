@@ -52,6 +52,7 @@ enum class patch_type
 	bd64, // be64 with data hint (non-code)
 	bef32,
 	bef64,
+	bp_exec, // Execution Breakpoint 
 	utf8, // Text of string (not null-terminated automatically)
 	c_utf8, // Text of string (null-terminated automatically)
 	move_file, // Move file
