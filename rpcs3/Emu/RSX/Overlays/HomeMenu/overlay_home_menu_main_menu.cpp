@@ -28,20 +28,6 @@ namespace rsx
 				rsx_log.notice("User selected resume in home menu");
 				return page_navigation::exit;
 			});
-			
-			std::unique_ptr<overlay_element> restart = std::make_unique<home_menu_entry>(get_localized_string(localized_string_id::HOME_MENU_RESTART));
-			add_item(restart, [](pad_button btn) -> page_navigation
-			{
-				if (btn != pad_button::cross) return page_navigation::stay;
-
-				rsx_log.notice("User selected restart in home menu");
-				
-				Emu.CallFromMainThread([]()
-				{
-					Emu.Restart(false);
-				});
-				return page_navigation::exit;
-			});
 
 			add_page(std::make_shared<home_menu_settings>(x, y, width, height, use_separators, this));
 
@@ -52,6 +38,16 @@ namespace rsx
 
 				rsx_log.notice("User selected screenshot in home menu");
 				g_user_asked_for_screenshot = true;
+				return page_navigation::exit;
+			});
+
+			std::unique_ptr<overlay_element> recording = std::make_unique<home_menu_entry>(get_localized_string(localized_string_id::HOME_MENU_RECORDING));
+			add_item(recording, [](pad_button btn) -> page_navigation
+			{
+				if (btn != pad_button::cross) return page_navigation::stay;
+
+				rsx_log.notice("User selected recording in home menu");
+				g_user_asked_for_recording = true;
 				return page_navigation::exit;
 			});
 
@@ -98,13 +94,17 @@ namespace rsx
 				});
 			}
 
-			std::unique_ptr<overlay_element> recording = std::make_unique<home_menu_entry>(get_localized_string(localized_string_id::HOME_MENU_RECORDING));
-			add_item(recording, [](pad_button btn) -> page_navigation
+			std::unique_ptr<overlay_element> restart = std::make_unique<home_menu_entry>(get_localized_string(localized_string_id::HOME_MENU_RESTART));
+			add_item(restart, [](pad_button btn) -> page_navigation
 			{
 				if (btn != pad_button::cross) return page_navigation::stay;
 
-				rsx_log.notice("User selected recording in home menu");
-				g_user_asked_for_recording = true;
+				rsx_log.notice("User selected restart in home menu");
+				
+				Emu.CallFromMainThread([]()
+				{
+					Emu.Restart(false);
+				});
 				return page_navigation::exit;
 			});
 
