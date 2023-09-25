@@ -7,6 +7,7 @@
 #endif
 
 /* Configurations */
+#define WOLFSSL_SYS_CA_CERTS
 #define WOLFSSL_DES_ECB
 #define HAVE_FFDHE_2048
 #define TFM_TIMING_RESISTANT

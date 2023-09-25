@@ -378,9 +378,6 @@
     <ClCompile Include="curl\lib\vtls\bearssl.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="curl\lib\vtls\gskit.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="curl\lib\vtls\gtls.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -388,9 +385,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="curl\lib\vtls\mbedtls_threadlock.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="curl\lib\vtls\nss.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="curl\lib\vtls\openssl.c">
@@ -474,9 +468,6 @@
     <ClCompile Include="curl\lib\idn.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="curl\lib\curl_log.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="curl\lib\cf-https-connect.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -508,6 +499,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="curl\lib\cf-haproxy.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="curl\lib\curl_trc.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -902,9 +896,6 @@
     <ClInclude Include="curl\lib\vtls\bearssl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="curl\lib\vtls\gskit.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="curl\lib\vtls\gtls.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -912,9 +903,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="curl\lib\vtls\mbedtls_threadlock.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="curl\lib\vtls\nssg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="curl\lib\vtls\openssl.h">
@@ -1001,9 +989,6 @@
     <ClInclude Include="curl\lib\idn.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="curl\lib\curl_log.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="curl\lib\cf-https-connect.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -1038,6 +1023,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="curl\lib\cf-haproxy.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="curl\lib\curl_trc.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
