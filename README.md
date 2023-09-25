@@ -1,7 +1,7 @@
 RPCS3
 =====
 QT 6.2.4 build, it can combine with api-ms-win-core-synch-Win7(my fork) run on Win7. (https://github.com/okt04175/api-ms-win-core-synch-Win7)
-# [![Azure Build Status](https://dev.azure.com/nekotekina/nekotekina/_apis/build/status/RPCS3.rpcs3?branchName=master)](https://dev.azure.com/nekotekina/nekotekina/_build?definitionId=4&branchName=master)
+
 [![Cirrus CI - Base Branch Build Status](https://img.shields.io/cirrus/github/okt04175/rpcs3-qt64?label=Cirrus%20CI&logo=cirrus-ci)](https://cirrus-ci.com/github/okt04175/rpcs3-qt64)
 [![RPCS3 Discord Server](https://img.shields.io/discord/272035812277878785?color=5865F2&label=RPCS3%20Discord&logo=discord&logoColor=white)](https://discord.me/rpcs3)
 
