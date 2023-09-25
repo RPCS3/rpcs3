@@ -35,6 +35,11 @@ namespace rsx
 				if (btn != pad_button::cross) return page_navigation::stay;
 
 				rsx_log.notice("User selected restart in home menu");
+				
+				Emu.CallFromMainThread([]()
+				{
+					Emu.Restart(false);
+				});
 				return page_navigation::exit;
 			});
 
