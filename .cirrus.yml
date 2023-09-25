@@ -39,7 +39,7 @@ windows_task:
     - './.ci/get_keys-windows.sh'
     - './.ci/setup-windows.sh'
   rpcs3_script:
-    - export PATH=${PATH}:"C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin"
+    - export PATH=${PATH}:"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\MSBuild\Current\Bin"
     - msbuild.exe rpcs3.sln //p:Configuration=Release //m
   deploy_script:
     - mkdir artifacts
