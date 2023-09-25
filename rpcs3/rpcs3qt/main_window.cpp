@@ -2007,6 +2007,14 @@ void main_window::EnableMenus(bool enabled) const
 	ui->actionCreate_Savestate->setEnabled(enabled);
 }
 
+void main_window::OnAddBreakpoint(u32 addr) const
+{
+	if (m_debugger_frame)
+	{
+		m_debugger_frame->PerformAddBreakpointRequest(addr);
+	}
+}
+
 void main_window::OnEnableDiscEject(bool enabled) const
 {
 	ui->ejectDiscAct->setEnabled(enabled);
