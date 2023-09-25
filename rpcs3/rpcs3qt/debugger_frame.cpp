@@ -1250,6 +1250,29 @@ void debugger_frame::PerformGoToRequest(const QString& text_argument)
 	}
 }
 
+void debugger_frame::PerformGoToThreadRequest(const QString& text_argument)
+{
+	const u64 thread_id = EvaluateExpression(text_argument);
+
+	if (thread_id != umax)
+	{
+		for (int i = 0; i < m_choice_units->count(); i++)
+		{
+			QVariant cpu = m_choice_units->itemData(i);
+
+			if (cpu.canConvert<data_type>())
+			{
+				if (cpu_thread* ptr = cpu.value<data_type>()(); ptr && ptr->id == thread_id)
+				{
+					// Success
+					m_choice_units->setCurrentIndex(i);
+					return;
+				}
+			}
+		}
+	}
+}
+
 void debugger_frame::PerformAddBreakpointRequest(u32 addr)
 {
 	m_debugger_list->BreakpointRequested(addr, true);
