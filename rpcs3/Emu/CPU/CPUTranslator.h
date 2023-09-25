@@ -922,6 +922,14 @@ inline llvm_div<T1, T2> operator /(T1&& a1, T2&& a2)
 	return {a1, a2};
 }
 
+inline llvm::Constant* getZeroValueForNegation(llvm::Type* Ty)
+{
+	if (Ty->isFPOrFPVectorTy())
+		return llvm::ConstantFP::getNegativeZero(Ty);
+
+	return llvm::Constant::getNullValue(Ty);
+}
+
 template <typename A1, typename T = llvm_common_t<A1>>
 struct llvm_neg
 {
@@ -971,7 +979,7 @@ struct llvm_neg
 		{
 			v1 = i->getOperand(1);
 
-			if (i->getOperand(0) == llvm::ConstantFP::getZeroValueForNegation(v1->getType()))
+			if (i->getOperand(0) == getZeroValueForNegation(v1->getType()))
 			{
 				if (auto r1 = a1.match(v1, _m); v1)
 				{
