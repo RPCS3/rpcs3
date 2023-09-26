@@ -53,7 +53,7 @@ DMG_FILEPATH="$BUILD_ARTIFACTSTAGINGDIRECTORY/rpcs3-v${COMM_TAG}-${COMM_COUNT}-$
 "$DMG_FILEPATH" \
 RPCS3.app
 
-"$BREW_X64_PATH/bin/7z" a -mx9 rpcs3-v"${COMM_TAG}"-"${COMM_COUNT}"-"${COMM_HASH}"_macos.7z RPCS3.app
+#"$BREW_X64_PATH/bin/7z" a -mx9 rpcs3-v"${COMM_TAG}"-"${COMM_COUNT}"-"${COMM_HASH}"_macos.7z RPCS3.app
 
 FILESIZE=$(stat -f %z "$DMG_FILEPATH")
 SHA256SUM=$(shasum -a 256 "$DMG_FILEPATH" | awk '{ print $1 }')
@@ -61,4 +61,4 @@ cd ..
 echo "${SHA256SUM};${FILESIZE}B" > "$RELEASE_MESSAGE"
 cd bin
 
-mv ./rpcs3*_macos.7z "$ARTDIR"
+#mv ./rpcs3*_macos.7z "$ARTDIR"
