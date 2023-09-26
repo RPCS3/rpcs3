@@ -252,7 +252,14 @@ void log_frame::CreateAndConnectActions()
 	connect(m_perform_goto_on_debugger, &QAction::triggered, [this]()
 	{
 		QPlainTextEdit* pte = (m_tabWidget->currentIndex() == 1 ? m_tty : m_log);
-		Q_EMIT PerformGoToOnDebugger(pte->textCursor().selectedText());
+		Q_EMIT PerformGoToOnDebugger(pte->textCursor().selectedText(), true);
+	});
+
+	m_perform_goto_thread_on_debugger = new QAction(tr("Show Thread On The Debugger"), this);
+	connect(m_perform_goto_thread_on_debugger, &QAction::triggered, [this]()
+	{
+		QPlainTextEdit* pte = (m_tabWidget->currentIndex() == 1 ? m_tty : m_log);
+		Q_EMIT PerformGoToOnDebugger(pte->textCursor().selectedText(), false);
 	});
 
 	m_stack_act_tty = new QAction(tr("Stack Mode (TTY)"), this);
@@ -351,11 +358,14 @@ void log_frame::CreateAndConnectActions()
 		QMenu* menu = m_log->createStandardContextMenu();
 		menu->addAction(m_clear_act);
 		menu->addAction(m_perform_goto_on_debugger);
+		menu->addAction(m_perform_goto_thread_on_debugger);
 
 		std::shared_ptr<bool> goto_signal_accepted = std::make_shared<bool>(false);
-		Q_EMIT PerformGoToOnDebugger("", true, goto_signal_accepted);
+		Q_EMIT PerformGoToOnDebugger("", true, true, goto_signal_accepted);
 		m_perform_goto_on_debugger->setEnabled(m_log->textCursor().hasSelection() && *goto_signal_accepted);
+		m_perform_goto_thread_on_debugger->setEnabled(m_log->textCursor().hasSelection() && *goto_signal_accepted);
 		m_perform_goto_on_debugger->setToolTip(tr("Jump to the selected hexadecimal address from the log text on the debugger."));
+		m_perform_goto_thread_on_debugger->setToolTip(tr("Show the thread that corresponds to the thread ID from lthe log text on the debugger."));
 
 		menu->addSeparator();
 		menu->addActions(m_log_level_acts->actions());
@@ -373,7 +383,7 @@ void log_frame::CreateAndConnectActions()
 		menu->addAction(m_perform_goto_on_debugger);
 
 		std::shared_ptr<bool> goto_signal_accepted = std::make_shared<bool>(false);
-		Q_EMIT PerformGoToOnDebugger("", true, goto_signal_accepted);
+		Q_EMIT PerformGoToOnDebugger("", false, true, goto_signal_accepted);
 		m_perform_goto_on_debugger->setEnabled(m_tty->textCursor().hasSelection() && *goto_signal_accepted);
 		m_perform_goto_on_debugger->setToolTip(tr("Jump to the selected hexadecimal address from the TTY text on the debugger."));
 

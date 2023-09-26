@@ -106,6 +106,7 @@ public Q_SLOTS:
 	void OnEmuReady() const;
 	void OnEnableDiscEject(bool enabled) const;
 	void OnEnableDiscInsert(bool enabled) const;
+	void OnAddBreakpoint(u32 addr) const;
 
 	void RepaintGui();
 	void RetranslateUI(const QStringList& language_codes, const QString& language);

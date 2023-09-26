@@ -30,7 +30,7 @@ public:
 	QColor m_text_color_pc;
 
 Q_SIGNALS:
-	void BreakpointRequested(u32 loc);
+	void BreakpointRequested(u32 loc, bool only_add = false);
 public:
 	debugger_list(QWidget* parent, std::shared_ptr<gui_settings> settings, breakpoint_handler* handler);
 	void UpdateCPUData(cpu_thread* cpu, CPUDisAsm* disasm);
