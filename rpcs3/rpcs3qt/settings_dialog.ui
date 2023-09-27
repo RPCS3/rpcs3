@@ -2623,6 +2623,13 @@
                 </widget>
                </item>
                <item>
+                <widget class="QCheckBox" name="handleTiledMemory">
+                 <property name="text">
+                  <string>Handle RSX memory tiling</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QCheckBox" name="disableOnDiskShaderCache">
                  <property name="text">
                   <string>Disable On-Disk Shader Cache</string>
