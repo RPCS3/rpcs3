@@ -9,11 +9,11 @@ Other instructions may be found [here](https://wiki.rpcs3.net/index.php?title=Bu
 
 * [CMake 3.16.9+](https://www.cmake.org/download/) (add to PATH)
 * [Python 3.6+](https://www.python.org/downloads/) (add to PATH)
-* [Qt 6.5.2](https://www.qt.io/download-qt-installer)
+* [Qt 6.5.3](https://www.qt.io/download-qt-installer)
 * [Visual Studio 2019](https://visualstudio.microsoft.com/thank-you-downloading-visual-studio/?sku=Community)
 * [Vulkan SDK 1.3.224](https://vulkan.lunarg.com/sdk/home) (See "Install the SDK" [here](https://vulkan.lunarg.com/doc/sdk/latest/windows/getting_started.html)) for now future SDKs don't work. You need precisely 1.3.224.
 
-**Either add the** `QTDIR` **environment variable, e.g.** `<QtInstallFolder>\6.5.2\msvc2019_64\` **, or use the [Visual Studio Qt Plugin](https://marketplace.visualstudio.com/items?itemName=TheQtCompany.QtVisualStudioTools2019)**
+**Either add the** `QTDIR` **environment variable, e.g.** `<QtInstallFolder>\6.5.3\msvc2019_64\` **, or use the [Visual Studio Qt Plugin](https://marketplace.visualstudio.com/items?itemName=TheQtCompany.QtVisualStudioTools2019)**
 
 ### Linux
 
@@ -21,7 +21,7 @@ These are the essentials tools to build RPCS3 on Linux. Some of them can be inst
 
 * Clang 12+ or GCC 11+
 * [CMake 3.16.9+](https://www.cmake.org/download/)
-* [Qt 6.5.2](https://www.qt.io/download-qt-installer)
+* [Qt 6.5.3](https://www.qt.io/download-qt-installer)
 * [Vulkan SDK 1.3.224](https://vulkan.lunarg.com/sdk/home) (See "Install the SDK" [here](https://vulkan.lunarg.com/doc/sdk/latest/linux/getting_started.html)) for now future SDKs don't work. You need precisely 1.3.224.
 * [SDL2](https://github.com/libsdl-org/SDL/releases) (for the FAudio backend)
 
@@ -96,7 +96,7 @@ git submodule update --init
 #### Configuring the Qt plugin (if used)
 
 1) Go to `Extensions->Qt VS Tools->Qt Versions`.
-2) Add the path to your Qt installation with compiler e.g. `<QtInstallFolder>\6.5.2\msvc2019_64`, version will fill in automatically.
+2) Add the path to your Qt installation with compiler e.g. `<QtInstallFolder>\6.5.3\msvc2019_64`, version will fill in automatically.
 3) Go to `Extensions->Qt VS Tools->Options->Legacy Project Format`.
 4) Set `Build: Run pre-build setup` to `true`.
 
