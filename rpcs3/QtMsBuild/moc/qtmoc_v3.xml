@@ -1,0 +1,698 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--************************************************************************************************
+ Copyright (C) 2023 The Qt Company Ltd.
+ SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+****************************************************************************************************
+**          This file was generated automatically.
+****************************************************************************************************
+-->
+
+<ProjectSchemaDefinitions
+  xmlns="http://schemas.microsoft.com/build/2009/properties"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:sys="clr-namespace:System;assembly=mscorlib">
+  <Rule
+    Name="QtRule30_Moc"
+    PageTemplate="tool"
+    DisplayName="Qt Meta-Object Compiler"
+    Order="9">
+    <Rule.DataSource>
+      <DataSource
+        Persistence="ProjectFile"
+        ItemType="QtMoc" />
+    </Rule.DataSource>
+    <Rule.Categories>
+      <Category Name="General" DisplayName="moc"/>
+      <Category Name="MocCpp" DisplayName="Override C/C++"/>
+    </Rule.Categories>
+    <StringListProperty
+      Name="Inputs"
+      Category="General"
+      IsRequired="true"
+      Visible="False">
+      <StringListProperty.DataSource>
+        <DataSource
+           Persistence="ProjectFile"
+           ItemType="QtMoc"
+           SourceType="Item" />
+      </StringListProperty.DataSource>
+    </StringListProperty>
+    <StringProperty
+      Name="ExecutionDescription"
+      DisplayName="Execution Description"
+      IncludeInCommandLine="False"/>
+    <StringProperty
+      Name="QtMocDir"
+      Category="General"
+      DisplayName="Output Directory"
+      Description="Specifies the path of the generated moc output directory."/>
+    <StringProperty
+      Name="QtMocFileName"
+      Category="General"
+      DisplayName="Output File Name"
+      Description="Specifies the name of the generated moc output file."/>
+    <StringProperty
+      Name="QTDIR"
+      DisplayName="Qt Directory"
+      Visible="false"/>
+    <StringProperty
+      Name="InputFile"
+      DisplayName="Input File"
+      Visible="false"/>
+    <StringProperty
+      Name="OutputFile"
+      DisplayName="Output File"
+      Visible="false"/>
+    <StringProperty
+      Name="MacFramework"
+      HelpUrl="http://doc.qt.io/qt-5/moc.html"
+      DisplayName="macOS Framework"
+      Description=
+"Add macOS &lt;framework&gt; to the include path for header files. (-F &lt;framework&gt;)"
+      Switch="-F &quot;[value]&quot;"
+      Visible="False"/>
+    <BoolProperty
+      Name="PreprocessOnly"
+      HelpUrl="http://doc.qt.io/qt-5/moc.html"
+      DisplayName="Preprocess Only"
+      Description="Preprocess only; do not generate meta object code. (-E)"
+      Switch="-E"
+      Visible="False"/>
+    <StringListProperty
+      Name="Metadata"
+      HelpUrl="http://doc.qt.io/qt-5/moc.html"
+      DisplayName="Plugin Meta Data"
+      Description=
+"Add key/value pair to plugin meta data; separate with semicolons if more than one.
+(-M&lt;key=value&gt;)"
+      Switch="-M[value]" />
+    <StringProperty
+      Name="CompilerFlavor"
+      HelpUrl="http://doc.qt.io/qt-5/moc.html"
+      DisplayName="Compiler Flavor"
+      Description=
+"Set the compiler &lt;flavor&gt;: either &quot;msvc&quot; or &quot;unix&quot;.
+(--compiler-flavor &lt;flavor&gt;)"
+      Switch="--compiler-flavor [value]"/>
+    <BoolProperty
+      Name="NoInclude"
+      HelpUrl="http://doc.qt.io/qt-5/moc.html"
+      DisplayName="No Include"
+      Description="Do not generate an #include statement. (-i)"
+      Switch="-i"/>
+    <StringProperty
+      Name="PathPrefix"
+      HelpUrl="http://doc.qt.io/qt-5/moc.html"
+      DisplayName="Path Prefix"
+      Description="&lt;path&gt; prefix for included file. (-p &lt;path&gt;)"
+      Switch="-p [value]"/>
+    <StringListProperty
+      Name="ForceInclude"
+      HelpUrl="http://doc.qt.io/qt-5/moc.html"
+      DisplayName="Force Include"
+      Description=
+"Force #include &lt;file&gt; (overwrite default); separate with semicolons if more than one.
+(-f &lt;file&gt;)"
+      Switch="-f &quot;[value]&quot;"/>
+    <StringListProperty
+      Name="PrependInclude"
+      HelpUrl="http://doc.qt.io/qt-5/moc.html"
+      DisplayName="Prepend Include"
+      Description=
+"Prepend #include &lt;file&gt; (preserve default); separate with semicolons if more than one.
+(-b &lt;file&gt;)"
+      Switch="-b &quot;[value]&quot;"/>
+    <StringListProperty
+      Name="Include"
+      HelpUrl="http://doc.qt.io/qt-5/moc.html"
+      DisplayName="Include"
+      Description=
+"Parse &lt;file&gt; as an #include before the main source(s); separate with semicolons if more
+than one. (--include &lt;file&gt;)"
+      Switch="--include &quot;[value]&quot;"/>
+    <StringListProperty
+      Name="NoNotesWarnings"
+      HelpUrl="http://doc.qt.io/qt-5/moc.html"
+      DisplayName="No Notes Or Warnings"
+      Description=
+"Do not display notes (-nn) or warnings (-nw); Compatibility option; separate with semicolons if
+more than one. (-n&lt;n|w&gt;)"
+      Switch="-n[value]"
+      Visible="False"/>
+    <BoolProperty
+      Name="NoNotes"
+      HelpUrl="http://doc.qt.io/qt-5/moc.html"
+      DisplayName="No Notes"
+      Description="Do not display notes. (--no-notes)"
+      Switch="--no-notes"/>
+    <BoolProperty
+      Name="NoWarnings"
+      HelpUrl="http://doc.qt.io/qt-5/moc.html"
+      DisplayName="No Warnings"
+      Description="Do not display warnings (implies --no-notes). (--no-warnings)"
+      Switch="--no-warnings"/>
+    <BoolProperty
+      Name="IgnoreConflicts"
+      HelpUrl="http://doc.qt.io/qt-5/moc.html"
+      DisplayName="Ignore Conflicts"
+      Description=
+"Ignore all options that conflict with compilers, like -pthread conflicting with moc's -p option.
+(--ignore-option-clashes)"
+      Switch="--ignore-option-clashes"/>
+    <StringProperty
+      Name="OptionsFile"
+      HelpUrl="http://doc.qt.io/qt-5/moc.html"
+      DisplayName="Options File"
+      Description="Read additional command-line options from &lt;file&gt;. (@&lt;file&gt;)"
+      Switch="&quot;@[value]&quot;" />
+    <StringProperty
+      Name="CommandLineTemplate"
+      DisplayName="Command Line"
+      Visible="False"
+      IncludeInCommandLine="False" />
+    <DynamicEnumProperty
+      Name="QtMocBeforeTargets"
+      Category="General"
+      EnumProvider="Targets"
+      IncludeInCommandLine="False" Visible="False">
+      <DynamicEnumProperty.DisplayName>
+        <sys:String>Execute Before</sys:String>
+      </DynamicEnumProperty.DisplayName>
+      <DynamicEnumProperty.Description>
+        <sys:String>Specifies the targets for the build customization to run before.</sys:String>
+      </DynamicEnumProperty.Description>
+      <DynamicEnumProperty.ProviderSettings>
+        <NameValuePair
+          Name="Exclude"
+          Value="^QtMocBeforeTargets|^Compute" />
+      </DynamicEnumProperty.ProviderSettings>
+      <DynamicEnumProperty.DataSource>
+        <DataSource
+          Persistence="ProjectFile"
+          ItemType=""
+          HasConfigurationCondition="true" />
+      </DynamicEnumProperty.DataSource>
+    </DynamicEnumProperty>
+    <DynamicEnumProperty
+      Name="QtMocAfterTargets"
+      Category="General"
+      EnumProvider="Targets"
+      IncludeInCommandLine="False" Visible="False">
+      <DynamicEnumProperty.DisplayName>
+        <sys:String>Execute After</sys:String>
+      </DynamicEnumProperty.DisplayName>
+      <DynamicEnumProperty.Description>
+        <sys:String>Specifies the targets for the build customization to run after.</sys:String>
+      </DynamicEnumProperty.Description>
+      <DynamicEnumProperty.ProviderSettings>
+        <NameValuePair
+          Name="Exclude"
+          Value="^QtMocAfterTargets|^Compute" />
+      </DynamicEnumProperty.ProviderSettings>
+      <DynamicEnumProperty.DataSource>
+        <DataSource
+          Persistence="ProjectFile"
+          ItemType=""
+          HasConfigurationCondition="true" />
+      </DynamicEnumProperty.DataSource>
+    </DynamicEnumProperty>
+    <StringListProperty
+      Name="Outputs"
+      DisplayName="Outputs"
+      IncludeInCommandLine="False"
+      Visible="False" />
+    <StringListProperty
+      Name="AdditionalDependencies"
+      DisplayName="Additional Dependencies"
+      IncludeInCommandLine="False"/>
+    <StringProperty
+      Subtype="AdditionalOptions"
+      Name="AdditionalOptions"
+      Category="General">
+      <StringProperty.DisplayName>
+        <sys:String>Additional Options</sys:String>
+      </StringProperty.DisplayName>
+      <StringProperty.Description>
+        <sys:String>Additional Options</sys:String>
+      </StringProperty.Description>
+    </StringProperty>
+    <EnumProperty
+      Name="DynamicSource"
+      DisplayName="Dynamic C++ Source"
+      Description="Add file to list of C++ sources during build.">
+      <EnumValue
+        Name="output"
+        DisplayName="Output File"
+        Description="Use output as dynamic C++ source."/>
+      <EnumValue
+        Name="input"
+        DisplayName="Input File"
+        Description="Use input as dynamic C++ source."/>
+      <EnumValue
+        Name="false"
+        DisplayName="Disable"
+        Description="Disable dynamic source."/>
+    </EnumProperty>
+    <BoolProperty
+      Name="ParallelProcess"
+      DisplayName="Parallel Process"
+      Description="Run tool in parallel process."/>
+    <StringListProperty Name="IncludePath" Visible="false"/>
+    <StringListProperty Name="Define" Visible="false"/>
+    <StringListProperty Name="Undefine" Visible="false"/>
+    <EnumProperty
+      Name="OverrideClCompile"
+      Category="MocCpp"
+      DisplayName="Override C/C++ Properties"
+      Description="Define how C/C++ properties are redefined for moc">
+      <EnumValue Name="extend" DisplayName=
+"Extend (append override definitions to C/C++ list properties; replace other properties)"/>
+      <EnumValue Name="replace" DisplayName=
+"Replace (use override definitions instead of C/C++ properties)"/>
+      <EnumValue Name="false" DisplayName=
+"Disabled (use C/C++ properties; ignore override definitions)"/>
+    </EnumProperty>
+    <!-- BEGIN Generated Text -->
+<StringProperty Name="QtCppHeader_General" Category="MocCpp" ReadOnly="true" DisplayName="########## General ##############################" />
+<StringListProperty Subtype="folder" Name="AdditionalIncludeDirectories" DisplayName="Additional Include Directories" Description="(overrides C/C++ property) Specifies one or more directories to add to the include path. Separate with ';' if more than one.     (/I[path])" Category="MocCpp" Switch="I" F1Keyword="VC.Project.VCCLCompilerTool.AdditionalIncludeDirectories">
+  </StringListProperty>
+<StringListProperty Subtype="folder" Name="AdditionalUsingDirectories" DisplayName="Additional #using Directories" Description="(overrides C/C++ property) Specifies one or more directories to be searched to resolve names passed to a #using directive. Separate with ';' if more than one. (/AI[path])" Category="MocCpp" Switch="AI" F1Keyword="VC.Project.VCCLCompilerTool.AdditionalUsingDirectories">
+  </StringListProperty>
+<StringListProperty Subtype="folder" Name="AdditionalBMIDirectories" DisplayName="Additional BMI Directories" Description="(overrides C/C++ property) Specifies one or more directories to be searched to resolve names passed to an import directive. Separate with ';' if more than one.  (/ifcSearchDir[path])" Category="MocCpp" Switch="ifcSearchDir " F1Keyword="VC.Project.VCCLCompilerTool.AdditionalModuleDirectories">
+  </StringListProperty>
+<StringListProperty Subtype="file" Name="AdditionalModuleDependencies" DisplayName="Additional Module Dependencies" Description="(overrides C/C++ property) Specifies one or more modules to be used to resolve names passed to an import directive. Separate with ';' if more than one.  (/reference[[module_name=]path])" Category="MocCpp" Switch="reference " F1Keyword="VC.Project.VCCLCompilerTool.AdditionalModuleDependencies">
+  </StringListProperty>
+<StringListProperty Subtype="file" Name="AdditionalHeaderUnitDependencies" DisplayName="Additional Header Unit Dependencies" Description="(overrides C/C++ property) Specifies one or more header units to be used to resolve names passed to an import header directive. Separate with ';' if more than one.  (/headerUnit[header=path])" Category="MocCpp" Switch="headerUnit " F1Keyword="VC.Project.VCCLCompilerTool.AdditionalModuleDependencies">
+  </StringListProperty>
+<BoolProperty Name="ScanSourceForModuleDependencies" DisplayName="Scan Sources for Module Dependencies" Description="(overrides C/C++ property) Makes the build scan all c++ sources, not just module interface and header unit sources, for module and header units dependencies and build the full dependencies graph." Category="MocCpp" IncludeInCommandLine="false" F1Keyword="VC.Project.VCCLCompilerTool.ScanSourceForModuleDependencies">
+  </BoolProperty>
+<BoolProperty Name="TranslateIncludes" DisplayName="Translate Includes to Imports" Description="(overrides C/C++ property) Enables the compiler to translate #include directives into import directives for the available header units.  (/translateInclude)" Category="MocCpp" Switch="translateInclude" F1Keyword="VC.Project.VCCLCompilerTool.TranslateIncludes">
+  </BoolProperty>
+<EnumProperty Name="DebugInformationFormat" DisplayName="Debug Information Format" Description="(overrides C/C++ property) Specifies the type of debugging information generated by the compiler.  This requires compatible linker settings.    (/Z7, /Zi, /ZI)" Category="MocCpp" F1Keyword="VC.Project.VCCLCompilerTool.DebugInformationFormat">
+    <EnumValue Name="None" Switch="" DisplayName="None" Description="Produces no debugging information, so compilation may be faster.">
+    </EnumValue>
+    <EnumValue Name="OldStyle" Switch="Z7" DisplayName="C7 compatible" Description="Select the type of debugging information created for your program and whether this information is kept in object (.obj) files or in a program database (PDB).">
+    </EnumValue>
+    <EnumValue Name="ProgramDatabase" Switch="Zi" DisplayName="Program Database" Description="Produces a program database (PDB) that contains type information and symbolic debugging information for use with the debugger. The symbolic debugging information includes the names and types of variables, as well as functions and line numbers. ">
+    </EnumValue>
+    <EnumValue Name="EditAndContinue" Switch="ZI" DisplayName="Program Database for Edit And Continue" Description="Produces a program database, as described above, in a format that supports the Edit and Continue feature.">
+    </EnumValue>
+  </EnumProperty>
+<BoolProperty Name="SupportJustMyCode" DisplayName="Support Just My Code Debugging" Description="(overrides C/C++ property) Adds supporting code for enabling Just My Code debugging in this compilation unit.  (/JMC)" Category="MocCpp" Switch="JMC" F1Keyword="VC.Project.VCCLCompilerTool.SupportJustMyCode">
+  </BoolProperty>
+<EnumProperty Name="CompileAsManaged" DisplayName="Common Language RunTime Support" Description="(overrides C/C++ property) Use the .NET runtime service.  This switch is incompatible with some other switches; see the documentation on the /clr family of switches for details." Category="MocCpp" F1Keyword="VC.Project.VCCLCompilerTool.CompileAsManaged">
+    <EnumValue Name="false" Switch="" DisplayName="No Common Language RunTime Support" Description="No Common Language RunTime Support">
+    </EnumValue>
+    <EnumValue Name="true" Switch="clr" DisplayName="Common Language RunTime Support" Description="Creates metadata for your application that can be consumed by other CLR applications, and allows your application to consume types and data in the metadata of other CLR components.">
+    </EnumValue>
+    <EnumValue Name="Pure" Switch="clr:pure" DisplayName="Pure MSIL Common Language RunTime Support" Description="Produces an MSIL-only output file with no native executable code, although it can contain native types compiled to MSIL.">
+    </EnumValue>
+    <EnumValue Name="Safe" Switch="clr:safe" DisplayName="Safe MSIL Common Language RunTime Support" Description="Produces an MSIL-only (no native executable code) and verifiable output file.">
+    </EnumValue>
+  </EnumProperty>
+<BoolProperty Name="CompileAsWinRT" DisplayName="Consume Windows Runtime Extension" Description="(overrides C/C++ property) Consume the Windows Run Time languages extensions.  (/ZW)" Category="MocCpp" Switch="ZW" F1Keyword="VC.Project.VCCLCompilerTool.CompileAsWinRT">
+  </BoolProperty>
+<BoolProperty Name="SuppressStartupBanner" DisplayName="Suppress Startup Banner" Description="(overrides C/C++ property) Suppresses the display of the sign-on banner when the compiler starts up and display of informational messages during compiling." Category="MocCpp" Switch="nologo" F1Keyword="VC.Project.VCCLCompilerTool.SuppressStartupBanner">
+  </BoolProperty>
+<EnumProperty Name="WarningLevel" DisplayName="Warning Level" Description="(overrides C/C++ property) Select how strict you want the compiler to be about code errors.     (/W0 - /W4)" Category="MocCpp" F1Keyword="VC.Project.VCCLCompilerTool.WarningLevel">
+    <EnumValue Name="TurnOffAllWarnings" Switch="W0" DisplayName="Turn Off All Warnings" Description="Level 0 disables all warnings.">
+    </EnumValue>
+    <EnumValue Name="Level1" Switch="W1" DisplayName="Level1" Description="Level 1 displays severe warnings. Level 1 is the default warning level at the command line.">
+    </EnumValue>
+    <EnumValue Name="Level2" Switch="W2" DisplayName="Level2" Description="Level 2 displays all level 1 warnings and warnings less severe than level 1.">
+    </EnumValue>
+    <EnumValue Name="Level3" Switch="W3" DisplayName="Level3" Description="Level 3 displays all level 2 warnings and all other warnings recommended for production purposes.">
+    </EnumValue>
+    <EnumValue Name="Level4" Switch="W4" DisplayName="Level4" Description="Level 4 displays all level 3 warnings plus informational warnings, which in most cases can be safely ignored.">
+    </EnumValue>
+    <EnumValue Name="EnableAllWarnings" Switch="Wall" DisplayName="EnableAllWarnings" Description="Enables all warnings, including those disabled by default.">
+    </EnumValue>
+  </EnumProperty>
+<BoolProperty ReverseSwitch="WX-" Name="TreatWarningAsError" DisplayName="Treat Warnings As Errors" Description="(overrides C/C++ property) Treats all compiler warnings as errors. For a new project, it may be best to use /WX in all compilations; resolving all warnings will ensure the fewest possible hard-to-find code defects." Category="MocCpp" Switch="WX" F1Keyword="VC.Project.VCCLCompilerTool.WarnAsError">
+  </BoolProperty>
+<StringProperty Name="WarningVersion" DisplayName="Warning Version" Description="(overrides C/C++ property) Hide warnings introduced after a specific version of the compiler.     (/Wv:xx[.yy[.zzzzz]])" Category="MocCpp" Switch="Wv:" F1Keyword="VC.Project.VCCLCompilerTool.WarningVersion">
+  </StringProperty>
+<EnumProperty Name="DiagnosticsFormat" DisplayName="Diagnostics Format" Description="(overrides C/C++ property) Enables rich diagnostics, with column information and source context in diagnostic messages." Category="MocCpp" F1Keyword="VC.Project.VCCLCompilerTool.DiagnosticsFormat">
+    <EnumValue Name="Caret" Switch="diagnostics:caret" DisplayName="Caret" Description="Provides column information in the diagnostic message, as well as outputting the relevant line of source code with a caret indicating the offending column.">
+    </EnumValue>
+    <EnumValue Name="Column" Switch="diagnostics:column" DisplayName="Column Info" Description="Additionally provides the column number within the line where the diagnostic is issued, where applicable.">
+    </EnumValue>
+    <EnumValue Name="Classic" Switch="diagnostics:classic" DisplayName="Classic" Description="Retains the prior, concise diagnostic messages with the line number.">
+    </EnumValue>
+  </EnumProperty>
+<BoolProperty ReverseSwitch="sdl-" Name="SDLCheck" DisplayName="SDL checks" Description="(overrides C/C++ property) Additional Security Development Lifecycle (SDL) recommended checks; includes enabling additional secure code generation features and enables extra security-relevant warnings as errors.     (/sdl, /sdl-)" Category="MocCpp" Switch="sdl" F1Keyword="VC.Project.VCCLCompilerTool.SDLCheck">
+  </BoolProperty>
+<BoolProperty Name="MultiProcessorCompilation" DisplayName="Multi-processor Compilation" Description="(overrides C/C++ property) Multi-processor Compilation." Category="MocCpp" Switch="MP" F1Keyword="VC.Project.VCCLCompilerTool.MultiProcessorCompilation">
+    <Argument Property="ProcessorNumber" IsRequired="false" />
+  </BoolProperty>
+<StringProperty Name="QtCppHeader_Optimization" Category="MocCpp" ReadOnly="true" DisplayName="########## Optimization ##############################" />
+<EnumProperty Name="Optimization" DisplayName="Optimization" Description="(overrides C/C++ property) Select option for code optimization; choose Custom to use specific optimization options.     (/Od, /O1, /O2)" Category="MocCpp" F1Keyword="VC.Project.VCCLCompilerTool.Optimization">
+    <EnumValue Name="Custom" Switch="" DisplayName="Custom" Description="Custom optimization.">
+    </EnumValue>
+    <EnumValue Name="Disabled" Switch="Od" DisplayName="Disabled" Description="Disable optimization.">
+    </EnumValue>
+    <EnumValue Name="MinSpace" Switch="O1" DisplayName="Maximum Optimization (Favor Size)" Description="Equivalent to /Og /Os /Oy /Ob2 /Gs /GF /Gy">
+    </EnumValue>
+    <EnumValue Name="MaxSpeed" Switch="O2" DisplayName="Maximum Optimization (Favor Speed)" Description="Equivalent to /Og /Oi /Ot /Oy /Ob2 /Gs /GF /Gy">
+    </EnumValue>
+    <EnumValue Name="Full" Switch="Ox" DisplayName="Optimizations (Favor Speed)" Description="Equivalent to /Og /Oi /Ot /Oy /Ob2">
+    </EnumValue>
+  </EnumProperty>
+<EnumProperty Name="InlineFunctionExpansion" DisplayName="Inline Function Expansion" Description="(overrides C/C++ property) Select the level of inline function expansion for the build.     (/Ob1, /Ob2)" Category="MocCpp" F1Keyword="VC.Project.VCCLCompilerTool.InlineFunctionExpansion">
+    <EnumValue Name="Default" Switch="" DisplayName="Default">
+    </EnumValue>
+    <EnumValue Name="Disabled" Switch="Ob0" DisplayName="Disabled" Description="Disables inline expansion, which is on by default.">
+    </EnumValue>
+    <EnumValue Name="OnlyExplicitInline" Switch="Ob1" DisplayName="Only __inline" Description="Expands only functions marked as inline, __inline, __forceinline or __inline or, in a C++ member function, defined within a class declaration.">
+    </EnumValue>
+    <EnumValue Name="AnySuitable" Switch="Ob2" DisplayName="Any Suitable" Description="Expands functions marked as inline or __inline and any other function that the compiler chooses (expansion occurs at the compiler's discretion, often referred to as auto-inlining).">
+    </EnumValue>
+  </EnumProperty>
+<BoolProperty Name="IntrinsicFunctions" DisplayName="Enable Intrinsic Functions" Description="(overrides C/C++ property) Enables intrinsic functions.  Using intrinsic functions generates faster, but possibly larger, code.     (/Oi)" Category="MocCpp" Switch="Oi" F1Keyword="VC.Project.VCCLCompilerTool.EnableIntrinsicFunctions">
+  </BoolProperty>
+<EnumProperty Name="FavorSizeOrSpeed" DisplayName="Favor Size Or Speed" Description="(overrides C/C++ property) Whether to favor code size or code speed; 'Global Optimization' must be turned on.     (/Ot, /Os)" Category="MocCpp" F1Keyword="VC.Project.VCCLCompilerTool.FavorSizeOrSpeed">
+    <EnumValue Name="Size" Switch="Os" DisplayName="Favor small code" Description="Favor Small Code. Minimizes the size of EXEs and DLLs by instructing the compiler to favor size over speed.">
+    </EnumValue>
+    <EnumValue Name="Speed" Switch="Ot" DisplayName="Favor fast code" Description="Favor Fast Code. Maximizes the speed of EXEs and DLLs by instructing the compiler to favor speed over size. (This is the default.) ">
+    </EnumValue>
+    <EnumValue Name="Neither" Switch="" DisplayName="Neither" Description="No size nor speed optimization.">
+    </EnumValue>
+  </EnumProperty>
+<BoolProperty ReverseSwitch="Oy-" Name="OmitFramePointers" DisplayName="Omit Frame Pointers" Description="(overrides C/C++ property) Suppresses creation of frame pointers on the call stack." Category="MocCpp" Switch="Oy" F1Keyword="VC.Project.VCCLCompilerTool.OmitFramePointers">
+  </BoolProperty>
+<BoolProperty Name="EnableFiberSafeOptimizations" DisplayName="Enable Fiber-Safe Optimizations" Description="(overrides C/C++ property) Enables memory space optimization when using fibers and thread local storage access.     (/GT)" Category="MocCpp" Switch="GT" F1Keyword="VC.Project.VCCLCompilerTool.EnableFiberSafeOptimizations">
+  </BoolProperty>
+<BoolProperty Name="WholeProgramOptimization" DisplayName="Whole Program Optimization" Description="(overrides C/C++ property) Enables cross-module optimizations by delaying code generation to link time; requires that linker option 'Link Time Code Generation' be turned on.     (/GL)" Category="MocCpp" Switch="GL" F1Keyword="VC.Project.VCCLWCECompilerTool.WholeProgramOptimization">
+  </BoolProperty>
+<StringProperty Name="QtCppHeader_Preprocessor" Category="MocCpp" ReadOnly="true" DisplayName="########## Preprocessor ##############################" />
+<StringListProperty Name="PreprocessorDefinitions" DisplayName="Preprocessor Definitions" Description="(overrides C/C++ property) Defines a preprocessing symbols for your source file." Category="MocCpp" Switch="D " F1Keyword="VC.Project.VCCLCompilerTool.PreprocessorDefinitions">
+  </StringListProperty>
+<StringListProperty Name="UndefinePreprocessorDefinitions" DisplayName="Undefine Preprocessor Definitions" Description="(overrides C/C++ property) Specifies one or more preprocessor undefines.     (/U[macro])" Category="MocCpp" Switch="U" F1Keyword="VC.Project.VCCLCompilerTool.UndefinePreprocessorDefinitions">
+  </StringListProperty>
+<BoolProperty Name="UndefineAllPreprocessorDefinitions" DisplayName="Undefine All Preprocessor Definitions" Description="(overrides C/C++ property) Undefine all previously defined preprocessor values.     (/u)" Category="MocCpp" Switch="u" F1Keyword="VC.Project.VCCLCompilerTool.UndefineAllPreprocessorDefinitions">
+  </BoolProperty>
+<BoolProperty Name="IgnoreStandardIncludePath" DisplayName="Ignore Standard Include Paths" Description="(overrides C/C++ property) Prevents the compiler from searching for include files in directories specified in the INCLUDE environment variables." Category="MocCpp" Switch="X" F1Keyword="VC.Project.VCCLCompilerTool.IgnoreStandardIncludePath">
+  </BoolProperty>
+<BoolProperty Name="PreprocessToFile" DisplayName="Preprocess to a File" Description="(overrides C/C++ property) Preprocesses C and C++ source files and writes the preprocessed output to a file. This option suppresses compilation, thus it does not produce an .obj file." Category="MocCpp" Switch="P" F1Keyword="VC.Project.VCCLCompilerTool.GeneratePreprocessedFile">
+  </BoolProperty>
+<BoolProperty Name="PreprocessSuppressLineNumbers" DisplayName="Preprocess Suppress Line Numbers" Description="(overrides C/C++ property) Preprocess without #line directives." Category="MocCpp" Switch="EP" F1Keyword="VC.Project.VCCLCompilerTool.GeneratePreprocessedFileNoLines">
+  </BoolProperty>
+<BoolProperty Name="PreprocessKeepComments" DisplayName="Keep Comments" Description="(overrides C/C++ property) Suppresses comment strip from source code; requires that one of the 'Preprocessing' options be set.     (/C)" Category="MocCpp" Switch="C" F1Keyword="VC.Project.VCCLCompilerTool.KeepComments">
+  </BoolProperty>
+<BoolProperty ReverseSwitch="Zc:preprocessor-" Name="UseStandardPreprocessor" DisplayName="Use Standard Conforming Preprocessor" Description="(overrides C/C++ property) Use a standard conforming preprocessor (/Zc:preprocessor). Currently implied by /std:c11 and /std:c17. To use legacy preprocessor set this property to 'No'. " Category="MocCpp" Switch="Zc:preprocessor" F1Keyword="VC.Project.VCCLCompilerTool.PreprocessorStandard">
+  </BoolProperty>
+<StringProperty Name="QtCppHeader_Code_Generation" Category="MocCpp" ReadOnly="true" DisplayName="########## Code Generation ##############################" />
+<BoolProperty ReverseSwitch="GF-" Name="StringPooling" DisplayName="Enable String Pooling" Description="(overrides C/C++ property) Enables the compiler to create a single read-only copy of identical strings in the program image and in memory during execution, resulting in smaller programs, an optimization called string pooling. /O1, /O2, and /ZI  automatically set /GF option. " Category="MocCpp" Switch="GF" F1Keyword="VC.Project.VCCLCompilerTool.StringPooling">
+  </BoolProperty>
+<BoolProperty ReverseSwitch="Gm-" Name="MinimalRebuild" DisplayName="Enable Minimal Rebuild" Description="(overrides C/C++ property) Enables minimal rebuild, which determines whether C++ source files that include changed C++ class definitions (stored in header (.h) files) need to be recompiled." Category="MocCpp" Switch="Gm" F1Keyword="VC.Project.VCCLCompilerTool.MinimalRebuild">
+  </BoolProperty>
+<EnumProperty Name="ExceptionHandling" DisplayName="Enable C++ Exceptions" Description="(overrides C/C++ property) Specifies the model of exception handling to be used by the compiler." Category="MocCpp" F1Keyword="VC.Project.VCCLCompilerTool.ExceptionHandling">
+    <EnumValue Name="Async" Switch="EHa" DisplayName="Yes with SEH Exceptions" Description="The exception-handling model that catches asynchronous (structured) and synchronous (C++) exceptions. (/EHa)">
+    </EnumValue>
+    <EnumValue Name="Sync" Switch="EHsc" DisplayName="Yes" Description="The exception-handling model that catches C++ exceptions only and tells the compiler to assume that extern C functions never throw a C++ exception. (/EHsc)">
+    </EnumValue>
+    <EnumValue Name="SyncCThrow" Switch="EHs" DisplayName="Yes with Extern C functions" Description="The exception-handling model that catches C++ exceptions only and tells the compiler to assume that extern C functions do throw an exception. (/EHs)">
+    </EnumValue>
+    <EnumValue Name="false" Switch="" DisplayName="No" Description="No exception handling.">
+    </EnumValue>
+  </EnumProperty>
+<BoolProperty Name="SmallerTypeCheck" DisplayName="Smaller Type Check" Description="(overrides C/C++ property) Enable checking for conversion to smaller types, incompatible with any optimization type other than debug.     (/RTCc)" Category="MocCpp" Switch="RTCc" F1Keyword="VC.Project.VCCLCompilerTool.SmallerTypeCheck">
+  </BoolProperty>
+<EnumProperty Name="BasicRuntimeChecks" DisplayName="Basic Runtime Checks" Description="(overrides C/C++ property) Perform basic runtime error checks, incompatible with any optimization type other than debug.     (/RTCs, /RTCu, /RTC1)" Category="MocCpp" F1Keyword="VC.Project.VCCLCompilerTool.BasicRuntimeChecks">
+    <EnumValue Name="StackFrameRuntimeCheck" Switch="RTCs" DisplayName="Stack Frames" Description="Enables stack frame run-time error checking.">
+    </EnumValue>
+    <EnumValue Name="UninitializedLocalUsageCheck" Switch="RTCu" DisplayName="Uninitialized variables" Description="Reports when a variable is used without having been initialized.">
+    </EnumValue>
+    <EnumValue Name="EnableFastChecks" Switch="RTC1" DisplayName="Both (/RTC1, equiv. to /RTCsu)" Description="Equivalent of /RTCsu.">
+    </EnumValue>
+    <EnumValue Name="Default" Switch="" DisplayName="Default" Description="Default runtime checks.">
+    </EnumValue>
+  </EnumProperty>
+<EnumProperty Name="RuntimeLibrary" DisplayName="Runtime Library" Description="(overrides C/C++ property) Specify runtime library for linking.     (/MT, /MTd, /MD, /MDd)" Category="MocCpp" F1Keyword="VC.Project.VCCLCompilerTool.RuntimeLibrary">
+    <EnumValue Name="MultiThreaded" Switch="MT" DisplayName="Multi-threaded" Description="Causes your application to use the multithread, static version of the run-time library.">
+    </EnumValue>
+    <EnumValue Name="MultiThreadedDebug" Switch="MTd" DisplayName="Multi-threaded Debug" Description="Defines _DEBUG and _MT. This option also causes the compiler to place the library name LIBCMTD.lib into the .obj file so that the linker will use LIBCMTD.lib to resolve external symbols.">
+    </EnumValue>
+    <EnumValue Name="MultiThreadedDLL" Switch="MD" DisplayName="Multi-threaded DLL" Description="Causes your application to use the multithread- and DLL-specific version of the run-time library. Defines _MT and _DLL and causes the compiler to place the library name MSVCRT.lib into the .obj file.">
+    </EnumValue>
+    <EnumValue Name="MultiThreadedDebugDLL" Switch="MDd" DisplayName="Multi-threaded Debug DLL" Description="Defines _DEBUG, _MT, and _DLL and causes your application to use the debug multithread- and DLL-specific version of the run-time library. It also causes the compiler to place the library name MSVCRTD.lib into the .obj file.">
+    </EnumValue>
+  </EnumProperty>
+<EnumProperty Name="StructMemberAlignment" DisplayName="Struct Member Alignment" Description="(overrides C/C++ property) Specifies 1, 2, 4, 8, or 16-byte boundaries for struct member alignment.     (/Zp[num])" Category="MocCpp" F1Keyword="VC.Project.VCCLCompilerTool.StructMemberAlignment">
+    <EnumValue Name="1Byte" Switch="Zp1" DisplayName="1 Byte" Description="Packs structures on 1-byte boundaries. Same as /Zp.">
+    </EnumValue>
+    <EnumValue Name="2Bytes" Switch="Zp2" DisplayName="2 Bytes" Description="Packs structures on 2-byte boundaries.">
+    </EnumValue>
+    <EnumValue Name="4Bytes" Switch="Zp4" DisplayName="4 Byte" Description="Packs structures on 4-byte boundaries.">
+    </EnumValue>
+    <EnumValue Name="8Bytes" Switch="Zp8" DisplayName="8 Bytes" Description="Packs structures on 8-byte boundaries (default).">
+    </EnumValue>
+    <EnumValue Name="16Bytes" Switch="Zp16" DisplayName="16 Bytes" Description="Packs structures on 16-byte boundaries.">
+    </EnumValue>
+    <EnumValue Name="Default" Switch="" DisplayName="Default" Description="Default alignment settings.">
+    </EnumValue>
+  </EnumProperty>
+<EnumProperty Name="BufferSecurityCheck" DisplayName="Security Check" Description="(overrides C/C++ property) The Security Check helps detect stack-buffer over-runs, a common attempted attack upon a program's security.  .  (/GS-, /GS)" Category="MocCpp" F1Keyword="VC.Project.VCCLCompilerTool.BufferSecurityCheck">
+    <EnumValue Name="false" Switch="GS-" DisplayName="Disable Security Check" Description="Disable Security Check. (/GS-)">
+    </EnumValue>
+    <EnumValue Name="true" Switch="GS" DisplayName="Enable Security Check" Description="Enable Security Check. (/GS)">
+    </EnumValue>
+  </EnumProperty>
+<EnumProperty Name="ControlFlowGuard" DisplayName="Control Flow Guard" Description="(overrides C/C++ property) Guard security check helps detect attempts to dispatch to illegal block of code. (/guard:cf)" Category="MocCpp" F1Keyword="VC.Project.VCCLCompilerTool.ControlFlowGuard">
+    <EnumValue Name="Guard" Switch="guard:cf" DisplayName="Yes" Description="Enable Security Check with Guard (/guard:cf)">
+    </EnumValue>
+    <EnumValue Name="false" Switch="" DisplayName="No">
+    </EnumValue>
+  </EnumProperty>
+<BoolProperty ReverseSwitch="Gy-" Name="FunctionLevelLinking" DisplayName="Enable Function-Level Linking" Description="(overrides C/C++ property) Allows the compiler to package individual functions in the form of packaged functions (COMDATs). Required for edit and continue to work.     (/Gy)" Category="MocCpp" Switch="Gy" F1Keyword="VC.Project.VCCLCompilerTool.EnableFunctionLevelLinking">
+  </BoolProperty>
+<BoolProperty ReverseSwitch="Qpar-" Name="EnableParallelCodeGeneration" DisplayName="Enable Parallel Code Generation" Description="(overrides C/C++ property) Allows the compiler to generate parallel code for loops identified using #pragma loop(hint_parallel[(n)]) when optimization is enabled." Category="MocCpp" Switch="Qpar" F1Keyword="VC.Project.VCCLCompilerTool.EnableParallelCodeGeneration">
+  </BoolProperty>
+<EnumProperty Name="EnableEnhancedInstructionSet" DisplayName="Enable Enhanced Instruction Set" Description="(overrides C/C++ property) Enable use of instructions found on processors that support enhanced instruction sets, e.g., the SSE, SSE2, AVX, AVX2 and AVX-512 enhancements to IA-32; AVX, AVX2 and AVX-512 to x64. Currently /arch:SSE and /arch:SSE2 are only available when building for the x86 architecture. If no option is specified, the compiler will use instructions found on processors that support SSE2. Use of enhanced instructions can be disabled with /arch:IA32.   (/arch:SSE, /arch:SSE2, /arch:AVX, /arch:AVX2, /arch:AVX512, /arch:IA32)" Category="MocCpp" F1Keyword="VC.Project.VCCLCompilerTool.EnableEnhancedInstructionSet">
+    <EnumValue Name="StreamingSIMDExtensions" Switch="arch:SSE" DisplayName="Streaming SIMD Extensions" Description="Streaming SIMD Extensions. (/arch:SSE)">
+    </EnumValue>
+    <EnumValue Name="StreamingSIMDExtensions2" Switch="arch:SSE2" DisplayName="Streaming SIMD Extensions 2" Description="Streaming SIMD Extensions 2. (/arch:SSE2)">
+    </EnumValue>
+    <EnumValue Name="AdvancedVectorExtensions" Switch="arch:AVX" DisplayName="Advanced Vector Extensions" Description="Advanced Vector Extensions. (/arch:AVX)">
+    </EnumValue>
+    <EnumValue Name="AdvancedVectorExtensions2" Switch="arch:AVX2" DisplayName="Advanced Vector Extensions 2" Description="Advanced Vector Extensions 2. (/arch:AVX2)">
+    </EnumValue>
+    <EnumValue Name="AdvancedVectorExtensions512" Switch="arch:AVX512" DisplayName="Advanced Vector Extensions 512" Description="Advanced Vector Extensions 512. (/arch:AVX512)">
+    </EnumValue>
+    <EnumValue Name="NoExtensions" Switch="arch:IA32" DisplayName="No Enhanced Instructions" Description="No Enhanced Instructions. (/arch:IA32)">
+    </EnumValue>
+    <EnumValue Name="NotSet" Switch="" DisplayName="Not Set" Description="Not Set.">
+    </EnumValue>
+  </EnumProperty>
+<EnumProperty Name="FloatingPointModel" DisplayName="Floating Point Model" Description="(overrides C/C++ property) Sets the floating point model.     (/fp:precise, /fp:strict, /fp:fast)" Category="MocCpp" F1Keyword="VC.Project.VCCLCompilerTool.floatingPointModel">
+    <EnumValue Name="Precise" Switch="fp:precise" DisplayName="Precise" Description="Default. Improves the consistency of floating-point tests for equality and inequality.">
+    </EnumValue>
+    <EnumValue Name="Strict" Switch="fp:strict" DisplayName="Strict" Description="The strictest floating-point model. /fp:strict causes fp_contract to be OFF and fenv_access to be ON. /fp:except is implied and can be disabled by explicitly specifying /fp:except-. When used with /fp:except-, /fp:strict enforces strict floating-point semantics but without respect for exceptional events.">
+    </EnumValue>
+    <EnumValue Name="Fast" Switch="fp:fast" DisplayName="Fast" Description="Creates the fastest code in the majority of cases. ">
+    </EnumValue>
+  </EnumProperty>
+<BoolProperty ReverseSwitch="fp:except-" Name="FloatingPointExceptions" DisplayName="Enable Floating Point Exceptions" Description="(overrides C/C++ property) Reliable floating-point exception model. Exceptions will be raised immediately after they are triggered.      (/fp:except)" Category="MocCpp" Switch="fp:except" F1Keyword="VC.Project.VCCLCompilerTool.FloatingPointExceptions">
+  </BoolProperty>
+<BoolProperty Name="CreateHotpatchableImage" DisplayName="Create Hotpatchable Image" Description="(overrides C/C++ property) When hotpatching is on, the compiler ensures that first instruction of each function is two bytes, which is required for hot patching.  (/hotpatch)" Category="MocCpp" Switch="hotpatch" F1Keyword="VC.Project.VCCLCompilerTool.CreateHotpatchableImage">
+  </BoolProperty>
+<BoolProperty Name="IntelJCCErratum" DisplayName="Enable Intel JCC Erratum Mitigation" Description="(overrides C/C++ property)  Software mitigation for the performance impact caused by the Intel JCC erratum microcode update.       (/QIntel-jcc-erratum)" Category="MocCpp" Switch="QIntel-jcc-erratum" F1Keyword="VC.Project.VCCLCompilerTool.IntelJCCErratum">
+  </BoolProperty>
+<BoolProperty ReverseSwitch="guard:ehcont-" Name="GuardEHContMetadata" DisplayName="Enable EH Continuation Metadata" Description="(overrides C/C++ property) Generates a sorted list of all the valid exception handling continuation targets for a binary, used during runtime for RIP validation. Currently available for x64 builds.  (/guard:ehcont)" Category="MocCpp" Switch="guard:ehcont" F1Keyword="VC.Project.VCCLCompilerTool.GuardEHContMetadata">
+  </BoolProperty>
+<BoolProperty ReverseSwitch="guard:signret-" Name="GuardSignedReturns" DisplayName="Enable Signed Returns" Description="(overrides C/C++ property) Enables signed returns which help detect and prevent attempts to dispatch to illegal blocks from function returns. Currently available for ARM64 builds. (/guard:signret)" Category="MocCpp" Switch="guard:signret" F1Keyword="VC.Project.VCCLCompilerTool.GuardSignedReturns">
+  </BoolProperty>
+<StringProperty Name="QtCppHeader_Language" Category="MocCpp" ReadOnly="true" DisplayName="########## Language ##############################" />
+<BoolProperty Name="DisableLanguageExtensions" DisplayName="Disable Language Extensions" Description="(overrides C/C++ property) Suppresses or enables language extensions.     (/Za)" Category="MocCpp" Switch="Za" F1Keyword="VC.Project.VCCLCompilerTool.DisableLanguageExtensions">
+  </BoolProperty>
+<BoolProperty ReverseSwitch="Zc:wchar_t-" Name="TreatWChar_tAsBuiltInType" DisplayName="Treat WChar_t As Built in Type" Description="(overrides C/C++ property) When specified, the type wchar_t becomes a native type that maps to __wchar_t in the same way that short maps to __int16. /Zc:wchar_t is on by default." Category="MocCpp" Switch="Zc:wchar_t" F1Keyword="VC.Project.VCCLCompilerTool.TreatWChar_tAsBuiltInType">
+  </BoolProperty>
+<BoolProperty ReverseSwitch="Zc:forScope-" Name="ForceConformanceInForLoopScope" DisplayName="Force Conformance in For Loop Scope" Description="(overrides C/C++ property) Used to implement standard C++ behavior for the for statement loops with Microsoft extensions (/Za, /Ze (Disable Language Extensions)). /Zc:forScope is on by default." Category="MocCpp" Switch="Zc:forScope" F1Keyword="VC.Project.VCCLCompilerTool.ForceConformanceInForLoopScope">
+  </BoolProperty>
+<BoolProperty Name="RemoveUnreferencedCodeData" DisplayName="Remove unreferenced code and data" Description="(overrides C/C++ property) When specified, compiler no longer generates symbol information for unreferenced code and data." Category="MocCpp" Switch="Zc:inline" F1Keyword="VC.Project.VCCLCompilerTool.RemoveUnreferencedCodeData">
+  </BoolProperty>
+<BoolProperty ReverseSwitch="Zc:rvalueCast-" Name="EnforceTypeConversionRules" DisplayName="Enforce type conversion rules" Description="(overrides C/C++ property) Used to identify an rvalue reference type as the result of a cast operation in accordance with the C++11 standard." Category="MocCpp" Switch="Zc:rvalueCast" F1Keyword="VC.Project.VCCLCompilerTool.EnforceTypeConversionRules">
+  </BoolProperty>
+<BoolProperty ReverseSwitch="GR-" Name="RuntimeTypeInfo" DisplayName="Enable Run-Time Type Information" Description="(overrides C/C++ property) Adds code for checking C++ object types at run time (runtime type information).     (/GR, /GR-)" Category="MocCpp" Switch="GR" F1Keyword="VC.Project.VCCLCompilerTool.RuntimeTypeInfo">
+  </BoolProperty>
+<BoolProperty ReverseSwitch="openmp-" Name="OpenMPSupport" DisplayName="Open MP Support" Description="(overrides C/C++ property) Enable OpenMP 2.0 language extensions.     (/openmp)" Category="MocCpp" Switch="openmp" F1Keyword="VC.Project.VCCLCompilerTool.OpenMP">
+  </BoolProperty>
+<EnumProperty Name="LanguageStandard" DisplayName="C++ Language Standard" Description="(overrides C/C++ property) Determines the C++ language standard the compiler will enforce. It is recommended to use the latest version when possible. (/std:c++14, /std:c++17, /std:c++20, /std:c++latest)" Category="MocCpp" F1Keyword="VC.Project.VCCLCompilerTool.CppLanguageStandard">
+    <EnumValue Name="Default" Switch="" DisplayName="Default (ISO C++14 Standard)">
+    </EnumValue>
+    <EnumValue Name="stdcpp14" Switch="std:c++14" DisplayName="ISO C++14 Standard">
+    </EnumValue>
+    <EnumValue Name="stdcpp17" Switch="std:c++17" DisplayName="ISO C++17 Standard">
+    </EnumValue>
+    <EnumValue Name="stdcpp20" Switch="std:c++20" DisplayName="ISO C++20 Standard">
+    </EnumValue>
+    <EnumValue Name="stdcpplatest" Switch="std:c++latest" DisplayName="Preview - Features from the Latest C++ Working Draft">
+    </EnumValue>
+  </EnumProperty>
+<EnumProperty Name="LanguageStandard_C" DisplayName="C Language Standard" Description="(overrides C/C++ property) Determines the C language standard the compiler will enforce. It is recommended to use the latest version when possible. (/std:c11, /std:c17)" Category="MocCpp" F1Keyword="VC.Project.VCCLCompilerTool.CLanguageStandard">
+    <EnumValue Name="Default" Switch="" DisplayName="Default (Legacy MSVC)">
+    </EnumValue>
+    <EnumValue Name="stdc11" Switch="std:c11" DisplayName="ISO C11 Standard">
+    </EnumValue>
+    <EnumValue Name="stdc17" Switch="std:c17" DisplayName="ISO C17 (2018) Standard">
+    </EnumValue>
+  </EnumProperty>
+<EnumProperty Name="ConformanceMode" DisplayName="Conformance mode" Description="(overrides C/C++ property) Enables or suppresses conformance mode. (/permissive-, /permissive). " Category="MocCpp" F1Keyword="VC.Project.VCCLCompilerTool.ConformanceMode">
+    <EnumValue Name="Default" Switch="" DisplayName="Default">
+    </EnumValue>
+    <EnumValue Name="true" Switch="permissive-" DisplayName="Yes">
+    </EnumValue>
+    <EnumValue Name="false" Switch="permissive" DisplayName="No">
+    </EnumValue>
+  </EnumProperty>
+<BoolProperty Name="EnableModules" DisplayName="Enable Experimental C++ Standard Library Modules" Description="(overrides C/C++ property) Enables support for experimental C++ Standard Library modules." Category="MocCpp" Switch="experimental:module" F1Keyword="VC.Project.VCCLCompilerTool.ModulesSupport">
+  </BoolProperty>
+<StringProperty Name="QtCppHeader_Precompiled_Headers" Category="MocCpp" ReadOnly="true" DisplayName="########## Precompiled Headers ##############################" />
+<EnumProperty Name="PrecompiledHeader" DisplayName="Precompiled Header" Description="(overrides C/C++ property) Create/Use Precompiled Header : Enables creation or use of a precompiled header during the build.     (/Yc, /Yu)" Category="MocCpp" F1Keyword="VC.Project.VCCLCompilerTool.UsePrecompiledHeader">
+    <EnumValue Name="Create" Switch="Yc" DisplayName="Create" Description="Instructs the compiler to create a precompiled header (.pch) file that represents the state of compilation at a certain point.">
+      <Argument Property="PrecompiledHeaderFile" IsRequired="false" />
+    </EnumValue>
+    <EnumValue Name="Use" Switch="Yu" DisplayName="Use" Description="Instructs the compiler to use an existing precompiled header (.pch) file in the current compilation.">
+      <Argument Property="PrecompiledHeaderFile" IsRequired="false" />
+    </EnumValue>
+    <EnumValue Name="NotUsing" Switch="" DisplayName="Not Using Precompiled Headers" Description="Not using precompiled headers. ">
+    </EnumValue>
+  </EnumProperty>
+<StringProperty Subtype="file" Name="PrecompiledHeaderFile" DisplayName="Precompiled Header File" Description="(overrides C/C++ property) Specifies header file name to use when creating or using a precompiled header file. (/Yc[name], /Yu[name])" Category="MocCpp" F1Keyword="VC.Project.VCCLCompilerTool.PrecompiledHeaderThrough">
+  </StringProperty>
+<StringProperty Subtype="file" Name="PrecompiledHeaderOutputFile" DisplayName="Precompiled Header Output File" Description="(overrides C/C++ property) Specifies the path and/or name of the generated precompiled header file. (/Fp[name])" Category="MocCpp" Switch="Fp" F1Keyword="VC.Project.VCCLCompilerTool.PrecompiledHeaderFile">
+  </StringProperty>
+<StringProperty Name="QtCppHeader_Output_Files" Category="MocCpp" ReadOnly="true" DisplayName="########## Output Files ##############################" />
+<BoolProperty Name="ExpandAttributedSource" DisplayName="Expand Attributed Source" Description="(overrides C/C++ property) Create listing file with expanded attributes injected into source file.     (/Fx)" Category="MocCpp" Switch="Fx" F1Keyword="VC.Project.VCCLCompilerTool.ExpandAttributedSource">
+  </BoolProperty>
+<EnumProperty Name="AssemblerOutput" DisplayName="Assembler Output" Description="(overrides C/C++ property) Specifies the contents of assembly language output file.     (/FA, /FAc, /FAs, /FAcs)" Category="MocCpp" F1Keyword="VC.Project.VCCLCompilerTool.AssemblerOutput">
+    <EnumValue Name="NoListing" Switch="" DisplayName="No Listing" Description="No listing. ">
+    </EnumValue>
+    <EnumValue Name="AssemblyCode" Switch="FA" DisplayName="Assembly-Only Listing" Description="Assembly code; .asm">
+    </EnumValue>
+    <EnumValue Name="AssemblyAndMachineCode" Switch="FAc" DisplayName="Assembly With Machine Code" Description="Machine and assembly code; .cod">
+    </EnumValue>
+    <EnumValue Name="AssemblyAndSourceCode" Switch="FAs" DisplayName="Assembly With Source Code" Description="Source and assembly code; .asm">
+    </EnumValue>
+    <EnumValue Name="All" Switch="FAcs" DisplayName="Assembly, Machine Code and Source" Description="Assembly, machine code and source code; .cod">
+    </EnumValue>
+  </EnumProperty>
+<BoolProperty Name="UseUnicodeForAssemblerListing" DisplayName="Use Unicode For Assembler Listing" Description="(overrides C/C++ property) Causes the output file to be created in UTF-8 format. " Category="MocCpp" Switch="FAu" F1Keyword="VC.Project.VCCLCompilerTool.UseUnicodeForAssemblerListing">
+  </BoolProperty>
+<StringProperty Subtype="file" Name="AssemblerListingLocation" DisplayName="ASM List Location" Description="(overrides C/C++ property) Specifies relative path and/or name for ASM listing file; can be file or directory name.     (/Fa[name])" Category="MocCpp" Switch="Fa" F1Keyword="VC.Project.VCCLCompilerTool.AssemblerListingLocation">
+  </StringProperty>
+<StringProperty Subtype="file" Name="ModuleOutputFile" DisplayName="Module Output File Name" Description="(overrides C/C++ property) Module or header unit output (BMI) file location; can be file or directory name.     (/ifcOutput[name])" Category="MocCpp" Switch="ifcOutput " F1Keyword="VC.Project.VCCLCompilerTool.ModuleOutputFile">
+  </StringProperty>
+<StringProperty Subtype="file" Name="ModuleDependenciesFile" DisplayName="Module Dependencies File Name" Description="(overrides C/C++ property) Specifies the path and/or name of the generated module dependencies file. (/sourceDependencies:directives[path])" Category="MocCpp" F1Keyword="VC.Project.VCCLCompilerTool.ModuleDependenciesFile">
+  </StringProperty>
+<StringProperty Subtype="file" Name="ObjectFileName" DisplayName="Object File Name" Description="(overrides C/C++ property) Specifies a name to override the default object file name; can be file or directory name.     (/Fo[name])" Category="MocCpp" Switch="Fo" F1Keyword="VC.Project.VCCLCompilerTool.ObjectFile">
+  </StringProperty>
+<StringProperty Subtype="file" Name="ProgramDataBaseFileName" DisplayName="Program Database File Name" Description="(overrides C/C++ property) Specifies a name for a compiler-generated PDB file; also specifies base name for the required compiler-generated IDB file; can be file or directory name.     (/Fd[name])" Category="MocCpp" Switch="Fd" F1Keyword="VC.Project.VCCLCompilerTool.ProgramDataBaseFileName">
+  </StringProperty>
+<BoolProperty Name="GenerateXMLDocumentationFiles" DisplayName="Generate XML Documentation Files" Description="(overrides C/C++ property) Specifies that the compiler should generate XML documentation comment files (.XDC).     (/doc)" Category="MocCpp" Switch="doc" F1Keyword="VC.Project.VCCLCompilerTool.GenerateXMLDocumentationFiles">
+    <Argument Property="XMLDocumentationFileName" IsRequired="false" />
+  </BoolProperty>
+<StringProperty Subtype="file" Name="XMLDocumentationFileName" DisplayName="XML Documentation File Name" Description="(overrides C/C++ property) Specifies the name of the generated XML documentation files; can be file or directory name.     (/doc[name])" Category="MocCpp" F1Keyword="VC.Project.VCCLCompilerTool.XMLDocumentationFileName">
+  </StringProperty>
+<BoolProperty Name="GenerateSourceDependencies" DisplayName="Generate Source Dependencies File" Description="(overrides C/C++ property) Generates a json file with the list of all files the compiler used for the compilation of the source.     (/sourceDependencies)" Category="MocCpp" Switch="sourceDependencies " F1Keyword="VC.Project.VCCLCompilerTool.GenerateSourceDependencies">
+    <Argument Property="SourceDependenciesFile" IsRequired="false" />
+  </BoolProperty>
+<StringProperty Subtype="file" Name="SourceDependenciesFile" DisplayName="Source Dependencies File Name" Description="(overrides C/C++ property) Specifies the path and/or name of the generated source dependencies file. (/sourceDependencies[path])" Category="MocCpp" F1Keyword="VC.Project.VCCLCompilerTool.SourceDependenciesFile">
+  </StringProperty>
+<StringProperty Name="QtCppHeader_Browse_Information" Category="MocCpp" ReadOnly="true" DisplayName="########## Browse Information ##############################" />
+<BoolProperty Name="BrowseInformation" DisplayName="Enable Browse Information" Description="(overrides C/C++ property) Specifies that the compiler should generate .bsc file. Note that Visual Studio doesn't use .bsc files for C++ intellisense or browsing, so it is recommended to set this property to 'No'.    (/FR)" Category="MocCpp" Switch="FR" F1Keyword="VC.Project.VCCLCompilerTool.BrowseInformation">
+    <Argument Property="BrowseInformationFile" IsRequired="false" />
+  </BoolProperty>
+<StringProperty Subtype="file" Name="BrowseInformationFile" DisplayName="Browse Information File" Description="(overrides C/C++ property) Browse File : Specifies optional name for browser information file.     (/FR[name])" Category="MocCpp" F1Keyword="VC.Project.VCCLCompilerTool.BrowseInformationFile">
+  </StringProperty>
+<StringProperty Name="QtCppHeader_External_Includes" Category="MocCpp" ReadOnly="true" DisplayName="########## External Includes ##############################" />
+<BoolProperty Name="TreatAngleIncludeAsExternal" DisplayName="Treat Files Included with Angle Brackets as External" Description="(overrides C/C++ property) Specifies whether to treat files included with angle brackets as external.   (/external:anglebrackets)" Category="MocCpp" Switch="external:anglebrackets" F1Keyword="VC.Project.VCCLCompilerTool.ExternalIncludeDirectories">
+  </BoolProperty>
+<EnumProperty Name="ExternalWarningLevel" DisplayName="External Header Warning Level" Description="(overrides C/C++ property) Select how strict you want the compiler to be about code errors in external headers.     (/external:W0 - /external:W4)" Category="MocCpp" F1Keyword="VC.Project.VCCLCompilerTool.ExternalWarningLevel">
+    <EnumValue Name="TurnOffAllWarnings" Switch="external:W0" DisplayName="Turn Off All Warnings">
+    </EnumValue>
+    <EnumValue Name="Level1" Switch="external:W1" DisplayName="Level1">
+    </EnumValue>
+    <EnumValue Name="Level2" Switch="external:W2" DisplayName="Level2">
+    </EnumValue>
+    <EnumValue Name="Level3" Switch="external:W3" DisplayName="Level3">
+    </EnumValue>
+    <EnumValue Name="Level4" Switch="external:W4" DisplayName="Level4">
+    </EnumValue>
+    <EnumValue Name="InheritWarningLevel" Switch="" DisplayName="Inherit Project Warning Level">
+    </EnumValue>
+  </EnumProperty>
+<BoolProperty Name="ExternalTemplatesDiagnostics" DisplayName="Template Diagnostics in External Headers" Description="(overrides C/C++ property) Specifies whether to evaluate warning level across template instantiation chain.   (/external:templates-)" Category="MocCpp" Switch="external:templates-" F1Keyword="VC.Project.VCCLCompilerTool.TreatExternalTemplatesAsInternal">
+  </BoolProperty>
+<BoolProperty Name="DisableAnalyzeExternal" DisplayName="Disable Code Analysis for External Headers" Description="(overrides C/C++ property) Disables code analysis for external headers.     (/analyze:external-)" Category="MocCpp" Switch="analyze:external-" F1Keyword="VC.Project.VCCLCompilerTool.DisableAnalyzeExternal">
+  </BoolProperty>
+<DynamicEnumProperty EnumProvider="CARuleset" Name="AnalyzeExternalRuleset" DisplayName="Analysis Ruleset for External Headers" Description="(overrides C/C++ property) Specifies a code analysis ruleset override for external headers. If not specified, the Code Analysis setting is used.   (/analyze:external:ruleset[path])" Category="MocCpp" Switch="analyze:external:ruleset" F1Keyword="VC.Project.VCCLCompilerTool.AnalyzeExternalRuleset">
+    <DynamicEnumProperty.ValueEditors>
+      <ValueEditor EditorType="DefaultFilePropertyEditor" DisplayName="&lt;Browse...&gt;" />
+      <ValueEditor EditorType="DefaultStringPropertyEditor" DisplayName="&lt;Edit...&gt;" />
+    </DynamicEnumProperty.ValueEditors>
+  </DynamicEnumProperty>
+<StringProperty Name="QtCppHeader_Advanced" Category="MocCpp" ReadOnly="true" DisplayName="########## Advanced ##############################" />
+<EnumProperty Name="CallingConvention" DisplayName="Calling Convention" Description="(overrides C/C++ property) Select the default calling convention for your application (can be overridden by function).     (/Gd, /Gr, /Gz, /Gv)" Category="MocCpp" F1Keyword="VC.Project.VCCLCompilerTool.CallingConvention">
+    <EnumValue Name="Cdecl" Switch="Gd" DisplayName="__cdecl" Description="Specifies the __cdecl calling convention for all functions except C++ member functions and functions marked __stdcall or __fastcall.">
+    </EnumValue>
+    <EnumValue Name="FastCall" Switch="Gr" DisplayName="__fastcall" Description="Specifies the __fastcall calling convention for all functions except C++ member sfunctions and functions marked __cdecl or __stdcall. All __fastcall functions must have prototypes.">
+    </EnumValue>
+    <EnumValue Name="StdCall" Switch="Gz" DisplayName="__stdcall" Description="Specifies the __stdcall calling convention for all functions except C++ member functions and functions marked __cdecl or __fastcall. All __stdcall functions must have prototypes.">
+    </EnumValue>
+    <EnumValue Name="VectorCall" Switch="Gv" DisplayName="__vectorcall" Description="Specifies the __vectorcall calling convention for all functions except C++ member functions and functions marked __cdecl, __fastcall, or __stdcall. All __vectorcall functions must have prototypes.">
+    </EnumValue>
+  </EnumProperty>
+<EnumProperty Name="CompileAs" DisplayName="Compile As" Description="(overrides C/C++ property) Select compile language option for .c and .cpp files.     (/TC, /TP, /interface, /internalPartition, /exportHeader)" Category="MocCpp" F1Keyword="VC.Project.VCCLCompilerTool.CompileAs">
+    <EnumValue Name="Default" Switch="" DisplayName="Default" Description="Default.">
+    </EnumValue>
+    <EnumValue Name="CompileAsC" Switch="TC" DisplayName="Compile as C Code" Description="Compile as C Code.">
+    </EnumValue>
+    <EnumValue Name="CompileAsCpp" Switch="TP" DisplayName="Compile as C++ Code" Description="Compile as C++ Code.">
+    </EnumValue>
+    <EnumValue Name="CompileAsCppModule" Switch="interface " DisplayName="Compile as C++ Module Code" Description="Compile as C++ Module Interace.">
+    </EnumValue>
+    <EnumValue Name="CompileAsCppModuleInternalPartition" Switch="internalPartition " DisplayName="Compile as C++ Module Internal Partition" Description="Compile as C++ Module Internal Partition.">
+    </EnumValue>
+    <EnumValue Name="CompileAsHeaderUnit" Switch="exportHeader " DisplayName="Compile as C++ Header Unit" Description="Compile as C++ Header Unit.">
+    </EnumValue>
+  </EnumProperty>
+<StringListProperty Name="DisableSpecificWarnings" DisplayName="Disable Specific Warnings" Description="(overrides C/C++ property) Disable the desired warning numbers; put numbers in a semi-colon delimited list.     (/wd[num])" Category="MocCpp" Switch="wd" F1Keyword="VC.Project.VCCLCompilerTool.DisableSpecificWarnings">
+  </StringListProperty>
+<StringListProperty Subtype="file" Name="ForcedIncludeFiles" DisplayName="Forced Include File" Description="(overrides C/C++ property) one or more forced include files.     (/FI[name])" Category="MocCpp" Switch="FI" F1Keyword="VC.Project.VCCLCompilerTool.ForcedIncludeFiles">
+  </StringListProperty>
+<StringListProperty Subtype="file" Name="ForcedUsingFiles" DisplayName="Forced #using File" Description="(overrides C/C++ property) Specifies one or more forced #using files.     (/FU[name])" Category="MocCpp" Switch="FU" F1Keyword="VC.Project.VCCLCompilerTool.ForcedUsingFiles">
+  </StringListProperty>
+<BoolProperty Name="ShowIncludes" DisplayName="Show Includes" Description="(overrides C/C++ property) Generates a list of include files with compiler output.     (/showIncludes)" Category="MocCpp" Switch="showIncludes" F1Keyword="VC.Project.VCCLCompilerTool.ShowIncludes">
+  </BoolProperty>
+<BoolProperty Name="UseFullPaths" DisplayName="Use Full Paths" Description="(overrides C/C++ property) Use full paths in diagnostic messages.     (/FC)" Category="MocCpp" Switch="FC" F1Keyword="VC.Project.VCCLCompilerTool.UseFullPaths">
+  </BoolProperty>
+<BoolProperty Name="OmitDefaultLibName" DisplayName="Omit Default Library Name" Description="(overrides C/C++ property) Do not include default library names in .obj files.     (/Zl)" Category="MocCpp" Switch="Zl" F1Keyword="VC.Project.VCCLCompilerTool.OmitDefaultLibName">
+  </BoolProperty>
+<EnumProperty Name="ErrorReporting" DisplayName="Internal Compiler Error Reporting" Description="(overrides C/C++ property) Specifies how internal tool errors should be reported back to Microsoft.  The default in the IDE is prompt.  The default from command line builds is queue.     (/errorReport:[method])" Category="MocCpp" F1Keyword="VC.Project.VCCLCompilerTool.ErrorReporting">
+    <EnumValue Name="None" Switch="errorReport:none" DisplayName="Do Not Send Report" Description="Reports about internal compiler errors will not be collected or sent to Microsoft.">
+    </EnumValue>
+    <EnumValue Name="Prompt" Switch="errorReport:prompt" DisplayName="Prompt Immediately" Description="Prompts you to send a report when you receive an internal compiler error.">
+    </EnumValue>
+    <EnumValue Name="Queue" Switch="errorReport:queue" DisplayName="Queue For Next Login" Description="Queues the error report. When you log in with administrator privileges, a pop-up window is displayed and allows you to report any failures since the last time you were logged in (you will not be prompted to send reports for failures more than once every three days). queue is the default when compiling an application at the command line.">
+    </EnumValue>
+    <EnumValue Name="Send" Switch="errorReport:send" DisplayName="Send Automatically" Description="Automatically sends reports of internal compiler errors to Microsoft. To enable this option, you must first agree to Microsoft%27s data collection policy. The first time you specify /errorReport:send on a computer, a compiler message will refer you to a website that contains Microsoft%27s data collection policy.">
+    </EnumValue>
+  </EnumProperty>
+<StringListProperty Name="TreatSpecificWarningsAsErrors" DisplayName="Treat Specific Warnings As Errors" Description="(overrides C/C++ property) Treats the specific compiler warning as an error where n is a compiler warning." Category="MocCpp" Switch="we" F1Keyword="VC.Project.VCCLCompilerTool.TreatSpecificWarningsAsErrors">
+  </StringListProperty>
+      <!-- END Generated Text -->
+    <StringProperty
+      Name="AdditionalCppOptions"
+      DisplayName="Additional Options"
+      Description="Additional Options."
+      Category="MocCpp"/>
+  </Rule>
+  <ItemType
+    Name="QtMoc"
+    DisplayName="Qt Meta-Object Compiler (moc)" />
+  <ContentType
+    Name="QtMoc"
+    DisplayName="Qt Meta-Object Compiler (moc)"
+    ItemType="QtMoc" />
+</ProjectSchemaDefinitions>

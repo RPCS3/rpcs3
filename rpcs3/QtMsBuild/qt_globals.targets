@@ -1,0 +1,772 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+/***************************************************************************************************
+ Copyright (C) 2023 The Qt Company Ltd.
+ SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+***************************************************************************************************/
+-->
+
+<!--
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/// Qt/MSBuild global definitions
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// -->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Build dependencies
+  // -->
+  <PropertyGroup>
+    <BuildDependsOn>
+      QtVersion;
+      $(BuildDependsOn);
+      Qt
+    </BuildDependsOn>
+    <CleanDependsOn>
+      $(CleanDependsOn);
+      QtClean
+    </CleanDependsOn>
+    <DesignTimeBuildInitTargets>
+      $(DesignTimeBuildInitTargets);
+      Qt
+    </DesignTimeBuildInitTargets>
+    <ComputeCompileInputsTargets>
+      $(ComputeCompileInputsTargets);
+      Qt
+    </ComputeCompileInputsTargets>
+    <BeforeClCompileTargets>
+      $(BeforeClCompileTargets);
+      Qt
+    </BeforeClCompileTargets>
+    <ComputeLinkInputsTargets>
+      $(ComputeLinkInputsTargets);
+      Qt
+    </ComputeLinkInputsTargets>
+  </PropertyGroup>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Qt/MSBuild global properties
+  // -->
+  <Import Project="..\version.targets" Condition="Exists('..\version.targets')"/>
+  <PropertyGroup>
+    <QtMsBuildVersion>$(QtVSToolsVersion)</QtMsBuildVersion>
+    <QtDebug Condition="'$(QtDebug)' == ''">false</QtDebug>
+    <QtLogFilePath Condition="'$(QtLogFilePath)' == ''"
+      >$([System.IO.Path]::Combine($(ProjectDir),$(IntDir)qt_work.log))</QtLogFilePath>
+    <QtMaxProcs Condition="'$(QtMaxProcs)' == ''"
+      >$([System.Environment]::ProcessorCount)</QtMaxProcs>
+  </PropertyGroup>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Set up inner build if Qt vars property file is outdated
+  // -->
+  <PropertyGroup Condition="'$(QtInnerBuild)' == ''">
+    <QtVarsOutdated>false</QtVarsOutdated>
+    <CleanQtModules
+      >$([System.String]::Join(';',$(QtModules.Split(';',StringSplitOptions.RemoveEmptyEntries))))</CleanQtModules>
+    <QtVarsOutdated
+      Condition="!Exists('$(QtVarsFilePath)')
+        OR '$(QtBkup_QtInstall)'                != '$(QtInstall)'
+        OR '$(QtBkup_QtModules)'                != '$(CleanQtModules)'
+        OR '$(QtBkup_QtPathBinaries)'           != '$(QtPathBinaries)'
+        OR '$(QtBkup_QtPathLibraryExecutables)' != '$(QtPathLibraryExecutables)'
+        OR '$(QtBkup_QtHeaderSearchPath)'       != '$(QtHeaderSearchPath)'
+        OR '$(QtBkup_QtLibrarySearchPath)'      != '$(QtLibrarySearchPath)'
+        OR '$(QtBkup_QtVars)'                   != '$(QtVars)'
+        OR '$(QtBkup_QMakeCodeLines)'           != '$(QMakeCodeLines)'
+        OR '$(QtBkup_QtBuildConfig)'            != '$(QtBuildConfig)'"
+    >true</QtVarsOutdated>
+  </PropertyGroup>
+
+  <!-- // Enable inner build targets -->
+  <Import Condition="'$(QtVarsOutdated)' == 'true'" Project="qt_inner.targets"/>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TARGET QtGetDefaultClCompile
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Get default C++ properties
+  // -->
+  <Target Name="QtGetDefaultClCompile">
+    <ItemGroup>
+      <ClCompile Include="DefaultClCompile"/>
+    </ItemGroup>
+  </Target>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TARGET QtClean
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Clean-up from previous build
+  // -->
+  <Target Name="QtClean">
+    <Message Importance="High" Condition="'$(QtDebug)' == 'true'" Text="## Qt Clean"/>
+    <Delete Files="$(QtLogFilePath)"/>
+  </Target>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TARGET QtVersion
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Print debug message with Qt/MSBuild version
+  // -->
+  <Target Name="QtVersion">
+    <Message Importance="High" Condition="'$(QtDebug)' == 'true'"
+      Text="Qt/MSBuild v$(QtMsBuildVersion) ($(MSBuildThisFileDirectory))"/>
+  </Target>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TARGET QtPrepare
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Prepare Qt build: read and parse work log file
+  // -->
+  <Target Name="QtPrepare"
+    Condition="'$(QtSkipWork)' != 'true'"
+    DependsOnTargets="$(QtDependsOn)"
+    BeforeTargets="QtWorkPrepare">
+
+    <Message Importance="High" Condition="'$(QtDebug)' == 'true'" Text="#### QtPrepare"/>
+    <CriticalSection Lock="true" Name="$(ProjectGuid)" />
+
+    <ReadLinesFromFile File="$(QtLogFilePath)">
+      <Output TaskParameter="Lines" ItemName="QtLogData"/>
+    </ReadLinesFromFile>
+    <ItemGroup Condition="'@(QtLogData)' != ''">
+      <QtWorkLog
+        Include="@(QtLogData->'$([System.String]::Copy('%(QtLogData.Identity)').Split('|')[0])')">
+        <Hash>$([System.String]::Copy('%(QtLogData.Identity)').Split('|')[1])</Hash>
+      </QtWorkLog>
+    </ItemGroup>
+  </Target>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TARGET QtWorkPrepare
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Analyze work request and decide if the Qt tool needs to be called or if the output from the
+  // previous call is still valid.
+  // -->
+  <Target Name="QtWorkPrepare" DependsOnTargets="$(QtDependsOn);$(QtBuildTargets)"
+    Condition="'$(QtSkipWork)' != 'true'"
+    Inputs="%(QtWork.WorkType)(%(QtWork.Identity))"
+    Outputs="@(QtWork->'####### Don't skip this target #######')">
+
+    <Message Importance="High" Condition="'$(QtDebug)' == 'true' AND '@(QtWork)' != ''"
+      Text="## QtWorkPrepare %(QtWork.Identity)" />
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Calculate hash for the requested work item, based on its associated tool and options
+    // -->
+    <GetItemHash Condition="'@(QtWork)' != ''"
+      Item="@(QtWork)" Keys="Identity;WorkType;ToolPath;Options">
+      <Output TaskParameter="Hash" PropertyName="work_hash" />
+    </GetItemHash>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Try to find entry in Qt work log for the requested work item; get logged hash
+    // -->
+    <PropertyGroup Condition="'@(QtWork)' != ''">
+      <work_key>@(QtWork->'%(WorkType)(%(Identity))')</work_key>
+      <dependencies_changed>@(QtWork->'%(DependenciesChanged)')</dependencies_changed>
+      <input_changed>@(QtWork->'%(InputChanged)')</input_changed>
+      <project_changed
+        Condition="'$(dependencies_changed)' == 'true' AND '$(input_changed)' != 'true'"
+        >true</project_changed>
+    </PropertyGroup>
+
+    <FindInList Condition="'@(QtWork)' != '' AND '$(input_changed)' != 'true'"
+      CaseSensitive="false" List="@(QtWorkLog)" ItemSpecToFind="$(work_key)">
+      <Output TaskParameter="ItemFound" ItemName="log_entry"/>
+    </FindInList>
+
+    <PropertyGroup Condition="'@(QtWork)' != ''">
+      <log_hash Condition="'@(log_entry)' != ''">@(log_entry->'%(Hash)')</log_hash>
+    </PropertyGroup>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Skip work item if:
+    //  * work is not needed:
+    //      - input was not modified
+    //      - AND project was not modified OR command line did not change (i.e. hashes are the same)
+    //  * OR we're in a design-time build
+    // -->
+    <PropertyGroup>
+      <do_work
+        Condition="'$(input_changed)' == 'true'
+               OR ('$(project_changed)' == 'true' AND '$(log_hash)' != '$(work_hash)')"
+        >true</do_work>
+      <skip_work
+        Condition="'$(do_work)' != 'true'
+          OR ('$(QtDesignTimeBuild)' == 'true' AND '$(QtToolsDesignTime)' != 'true')"
+        >true</skip_work>
+    </PropertyGroup>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Skip work item
+    // -->
+    <ItemGroup Condition="'@(QtWork)' != '' AND '$(skip_work)' == 'true'">
+      <QtWorkResult Include="@(QtWork)">
+        <ExitCode>0</ExitCode>
+        <Skipped>true</Skipped>
+      </QtWorkResult>
+      <QtWork Remove="@(QtWork)" />
+    </ItemGroup>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Generate new work log entry and ensure path to output exists
+    // -->
+    <ItemGroup Condition="'@(QtWork)' != '' AND '$(skip_work)' != 'true'">
+      <QtWorkLog Remove="$(work_key)"/>
+      <QtWorkLog Include="$(work_key)">
+        <Hash>$(work_hash)</Hash>
+      </QtWorkLog>
+    </ItemGroup>
+
+    <MakeDir Condition="'@(QtWork)' != '' AND '$(skip_work)' != 'true'"
+      Directories="$([System.IO.Path]::GetDirectoryName(%(QtWork.OutputFile)))"/>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Clean-up
+    // -->
+    <PropertyGroup>
+      <work_key/>
+      <log_hash/>
+      <dependencies_changed/>
+      <input_changed/>
+      <project_changed/>
+      <do_work/>
+      <skip_work/>
+    </PropertyGroup>
+    <ItemGroup>
+      <log_entry Remove="@(log_entry)"/>
+    </ItemGroup>
+  </Target>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TARGET QtWork
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Run Qt tools and add dynamic C++ sources to build
+  // -->
+  <Target Name="QtWork"
+    Condition="'$(QtSkipWork)' != 'true'"
+    DependsOnTargets="QtWorkPrepare;QtGetDefaultClCompile">
+
+    <Message Importance="High" Condition="'$(QtDebug)' == 'true'"
+      Text="## Qt Build $(QtBuildTargets.Replace(';',' ').Trim())" />
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Run work locally in parallel processes
+    // -->
+    <QtRunWork
+      Condition="'$(ApplicationType)' != 'Linux' AND '@(QtWork)' != ''
+        AND '%(QtWork.ParallelBuild)' == 'true'"
+      QtWork="@(QtWork)" QtMaxProcs="$(QtMaxProcs)" QtDebug="$(QtDebug)">
+      <Output TaskParameter="Result" ItemName="QtWorkResult" />
+    </QtRunWork>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Run work locally in a single process
+    // -->
+    <QtRunWork
+      Condition="'$(ApplicationType)' != 'Linux' AND '@(QtWork)' != ''
+        AND '%(QtWork.ParallelBuild)' != 'true'"
+      QtWork="@(QtWork)" QtMaxProcs="1" QtDebug="$(QtDebug)">
+      <Output TaskParameter="Result" ItemName="QtWorkResult" />
+    </QtRunWork>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Run work in build host
+    // -->
+    <!-- // Translate local paths to host paths -->
+    <Flatten
+      Condition="'$(ApplicationType)' == 'Linux'
+        AND '@(QtWork)' != '' AND '$(QtDesignTimeBuild)' != 'true'"
+      Items="@(QtWork)" Metadata="ResourceFiles">
+      <Output TaskParameter="Result" ItemName="ResourceFiles"/>
+    </Flatten>
+    <ItemGroup
+      Condition="'$(ApplicationType)' == 'Linux'
+        AND '@(QtWork)' != '' AND '$(QtDesignTimeBuild)' != 'true'">
+      <LocalPath Include="%(QtWork.Identity)">
+        <Name>InputPath</Name>
+        <Item>%(QtWork.Identity)</Item>
+        <Value>%(QtWork.Identity)</Value>
+      </LocalPath>
+      <LocalPath
+        Condition="'%(ResourceFiles.Identity)' != ''"
+        Include="@(ResourceFiles->'%(Item)')">
+        <Name>InputPath</Name>
+        <Item>@(ResourceFiles->'%(Value)')</Item>
+        <Value>@(ResourceFiles->'%(Value)')</Value>
+      </LocalPath>
+      <LocalPath Include="%(QtWork.Identity)">
+        <Name>OutputPath</Name>
+        <Item>%(QtWork.OutputFile)</Item>
+        <Value>%(QtWork.OutputFile)</Value>
+      </LocalPath>
+    </ItemGroup>
+    <HostTranslatePaths
+      Condition="'$(ApplicationType)' == 'Linux'
+        AND '@(QtWork)' != '' AND '$(QtDesignTimeBuild)' != 'true'"
+      Items="@(LocalPath)" Names="InputPath;OutputPath">
+      <Output TaskParameter="Result" ItemName="HostPath"/>
+    </HostTranslatePaths>
+    <ItemGroup>
+      <InputPath Include="@(HostPath->WithMetadataValue('Name', 'InputPath'))" />
+      <OutputPath Include="@(HostPath->WithMetadataValue('Name', 'OutputPath'))" />
+    </ItemGroup>
+
+    <!-- // Run command -->
+    <HostExec
+      Condition="'$(ApplicationType)' == 'Linux'
+        AND '%(Identity)' != '' AND '$(QtDesignTimeBuild)' != 'true'"
+      Message="@(QtWork->'%(WorkType) %(Identity)')"
+      Command="@(QtWork->'%(ToolPath) %(Options)')"
+      Inputs="@(InputPath)"
+      Outputs="@(OutputPath)"
+      RemoteTarget="$(ResolvedRemoteTarget)"
+      RemoteProjectDir="$(_ResolvedRemoteProjectDir)">
+    </HostExec>
+
+    <!-- // Generate result item -->
+    <ItemGroup
+      Condition="'$(ApplicationType)' == 'Linux'
+        AND '@(QtWork)' != '' AND '$(QtDesignTimeBuild)' != 'true'">
+      <QtWorkResult Include="@(QtWork)">
+        <ExitCode>0</ExitCode>
+      </QtWorkResult>
+    </ItemGroup>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Save tracking log of files read during build; used by VS to check the up-to-date status
+    // -->
+    <ItemGroup>
+      <read_log Include="^%(QtWorkResult.FullPath);%(QtWorkResult.AdditionalDependencies)"
+        Condition="'%(QtWorkResult.ExitCode)' == '0'
+               AND '%(QtWorkResult.DisableLog)' != 'true'
+               AND '%(QtWorkResult.Skipped)' != 'true'">
+        <WorkType>%(QtWorkResult.WorkType)</WorkType>
+      </read_log>
+      <read_log>
+        <Path Condition="$([System.String]::Copy('%(Identity)').StartsWith('^'))">%(Identity)</Path>
+        <Path Condition="!$([System.String]::Copy('%(Identity)').StartsWith('^'))"
+          >$([System.IO.Path]::Combine('$(MSBuildProjectDirectory)','%(Identity)'))</Path>
+      </read_log>
+    </ItemGroup>
+
+    <WriteLinesToFile
+      Condition="'@(read_log)' != ''"
+      File="$(TLogLocation)%(read_log.WorkType).read.1u.tlog"
+      Lines="@(read_log->MetaData('Path')->ToUpperInvariant());"
+      Overwrite="true"
+      Encoding="Unicode"/>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Save tracking log of files written during build; used by VS to check the up-to-date status
+    // -->
+    <ItemGroup>
+      <write_log Include="^%(QtWorkResult.FullPath);%(QtWorkResult.OutputFile)"
+        Condition="'%(QtWorkResult.ExitCode)' == '0'
+               AND '%(QtWorkResult.DisableLog)' != 'true'
+               AND '%(QtWorkResult.Skipped)' != 'true'">
+        <WorkType>%(QtWorkResult.WorkType)</WorkType>
+      </write_log>
+      <write_log>
+        <Path Condition="$([System.String]::Copy('%(Identity)').StartsWith('^'))">%(Identity)</Path>
+        <Path Condition="!$([System.String]::Copy('%(Identity)').StartsWith('^'))"
+          >$([System.IO.Path]::Combine('$(MSBuildProjectDirectory)','%(Identity)'))</Path>
+      </write_log>
+    </ItemGroup>
+
+    <WriteLinesToFile Condition="'@(write_log)' != ''"
+     File="$(TLogLocation)%(write_log.WorkType).write.1u.tlog"
+     Lines="@(write_log->MetaData('Path')->ToUpperInvariant());"
+     Overwrite="true" Encoding="Unicode"/>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Log output files; this is used by VS to determine what files to delete on "Clean"
+    // -->
+    <ItemGroup>
+      <clean_log Include="%(QtWorkResult.OutputFile)"
+        Condition="'%(QtWorkResult.ExitCode)' == '0'">
+        <Source>@(QtWorkResult, '|')</Source>
+      </clean_log>
+    </ItemGroup>
+
+    <WriteLinesToFile Condition="'@(clean_log)' != ''"
+      File="$(TLogLocation)$(ProjectName).write.1u.tlog"
+      Lines="^%(clean_log.Source);@(clean_log->'%(Fullpath)')"
+      Encoding="Unicode"/>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Log calls to Qt tools; used in QtWorkPrepare to detect changes to the options of Qt tools
+    // -->
+    <WriteLinesToFile Condition="'@(QtWorkLog)' != ''"
+      File="$(QtLogFilePath)"
+      Lines="@(QtWorkLog->'%(Identity)|%(Hash)')"
+      Overwrite="true" Encoding="Unicode"/>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Generate build error if a Qt tool did not terminate correctly
+    // -->
+    <Error
+      Condition="'%(QtWorkResult.ExitCode)' != ''
+        AND '%(QtWorkResult.ExitCode)' != '0'"
+      File="%(QtWorkResult.Identity)" Code="%(QtWorkResult.ExitCode)"
+      Text="%(QtWorkResult.WorkType) (%(QtWorkResult.ToolPath))"/>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Add dynamic C++ sources to build
+    // -->
+    <ItemGroup>
+      <QtWork_ClCompile
+        Condition="'%(QtWorkResult.ExitCode)' == '0' AND '%(QtWorkResult.ClCompile)' != ''"
+        Include="@(QtWorkResult->'%(ClCompile)')"/>
+      <QtWork_ClCompile
+        Condition="Exists('$(QtVarsOutputDir)\qtvars_plugin_import.cpp')"
+        Include="$(QtVarsOutputDir)\qtvars_plugin_import.cpp"/>
+      <!-- Add QML static plugins -->
+      <QtWork_ClCompile
+        Condition="Exists('$(QtQmlPluginImportCpp)')"
+        Include="$(QtQmlPluginImportCpp)"/>
+    </ItemGroup>
+    <ItemGroup Condition="'$(ApplicationType)' == 'Linux'">
+      <QtWork_ClCompile Condition="'%(QtWork_ClCompile.ObjectFileName)' == ''">
+        <ObjectFileName>$(IntDir)%(Filename).o</ObjectFileName>
+      </QtWork_ClCompile>
+    </ItemGroup>
+
+    <!-- // Copy default C++ compiler properties -->
+    <Expand Condition="'@(QtWork_ClCompile)' != ''"
+      Items="@(QtWork_ClCompile)"
+      BaseItem="@(ClCompile->WithMetadataValue('Identity', 'DefaultClCompile'))">
+      <Output TaskParameter="Result" ItemName="QtWork_ClCompile_Expanded"/>
+    </Expand>
+
+    <!-- // Force pre-compiled header include -->
+    <ItemGroup Condition="'$(ApplicationType)' != 'Linux'">
+      <QtWork_ClCompile_Expanded>
+        <AdditionalIncludeDirectories
+          >$(ProjectDir);%(QtWork_ClCompile_Expanded.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+        <ForcedIncludeFiles Condition="'%(PrecompiledHeader)' == 'Use'"
+          >%(PrecompiledHeaderFile)</ForcedIncludeFiles>
+        <AdditionalOptions>$([System.String]::Copy(
+'%(QtWork_ClCompile_Expanded.AdditionalOptions) %(QtWork_ClCompile_Expanded.AdditionalCppOptions)')
+          .Trim())</AdditionalOptions>
+      </QtWork_ClCompile_Expanded>
+    </ItemGroup>
+
+    <!-- // Add C++ source items and clean-up temp items -->
+    <ItemGroup>
+      <ClCompile Include="@(QtWork_ClCompile_Expanded)"/>
+      <QtWork_ClCompile_Expanded Remove="@(QtWork_ClCompile_Expanded)"/>
+      <QtWork_ClCompile Remove="@(QtWork_ClCompile)"/>
+    </ItemGroup>
+
+    <!--// If sources were manually selected (e.g. by the 'Compile' option in the context menu for
+        // project items), add generated C++ sources to the list of selected files -->
+    <PropertyGroup Condition="'$(SelectedFiles)' != ''">
+      <SelectedClCompile>@(QtWorkResult->'%(ClCompile)')</SelectedClCompile>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(SelectedClCompile)' != ''">
+      <SelectedFiles>$(SelectedFiles);$(SelectedClCompile)</SelectedFiles>
+    </PropertyGroup>
+    <ItemGroup Condition="'$(SelectedClCompile)' != ''">
+      <SelectedFiles Include="$(SelectedClCompile)"/>
+    </ItemGroup>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Update C++ sources with generated information
+    // -->
+    <PropertyGroup>
+      <QtIncludePath>@(QtIncludePath->Distinct())</QtIncludePath>
+    </PropertyGroup>
+    <ItemGroup>
+      <ClCompile_Updated Include="@(ClCompile)">
+        <AdditionalIncludeDirectories
+>$(QtIncludePath);%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      </ClCompile_Updated>
+      <ClCompile Remove="@(ClCompile)"/>
+      <ClCompile Include="@(ClCompile_Updated)"/>
+      <ClCompile_Updated Remove="@(ClCompile_Updated)"/>
+    </ItemGroup>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Clean-up
+    // -->
+    <ItemGroup>
+      <ClCompile    Remove="DefaultClCompile" />
+      <QtWork       Remove="@(QtWork)"/>
+      <QtWorkResult Remove="@(QtWorkResult)"/>
+      <QtWorkLog    Remove="@(QtWorkLog)"/>
+      <read_log     Remove="@(read_log)"/>
+      <write_log    Remove="@(write_log)"/>
+      <clean_log    Remove="@(clean_log)"/>
+    </ItemGroup>
+  </Target>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TARGET QtSetAdditionalOptions
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Adds additional compiler options flowing from Qt.
+  // Skips options that are already specified in the user project.
+  // -->
+  <Target Name="QtSetAdditionalOptions" Condition="'@(ClCompile)' != ''">
+
+    <!-- Command line parser regex -->
+    <PropertyGroup>
+      <CmdLineParser>"[^"]*"|[^\s]+</CmdLineParser>
+    </PropertyGroup>
+
+    <!-- Parse compiler options from Qt -->
+    <PropertyGroup>
+      <QtCmdLine
+          >$([System.Text.RegularExpressions.Regex]::Matches(
+            '$(Qt_CL_OPTIONS_)', '$(CmdLineParser)'))</QtCmdLine>
+    </PropertyGroup>
+
+    <!-- Calculate command line for each source file in the project -->
+    <QtRunTask
+      Items="@(ClCompile)"
+      AssemblyPath="$(VCTargetsPath)\Microsoft.Build.CPPTasks.Common.dll"
+      TaskName="Microsoft.Build.CPPTasks.CLCommandLine"
+      TaskInput="Sources"
+      TaskOutput="CommandLines"
+      NewMetadata="ProjectOptions">
+      <Output TaskParameter="Result" ItemName="ClCompile_CmdLine" />
+    </QtRunTask>
+
+    <!-- Append excluded Qt options to calculated command line -->
+    <ItemGroup>
+      <ClCompile_CmdLine Condition="'$(QtExcludedOptions)' != ''">
+        <ProjectOptions>%(ProjectOptions) $(QtExcludedOptions)</ProjectOptions>
+      </ClCompile_CmdLine>
+    </ItemGroup>
+
+    <!-- Parse compiler command line of each source file -->
+    <ItemGroup>
+      <ClCompile_CmdLine>
+        <ProjectOptions
+          >$([System.Text.RegularExpressions.Regex]::Matches(
+            '%(ProjectOptions)', '$(CmdLineParser)'))</ProjectOptions>
+      </ClCompile_CmdLine>
+    </ItemGroup>
+
+    <!-- Add (previously parsed) Qt options to each source file -->
+    <ItemGroup>
+      <ClCompile_CmdLine>
+        <QtOptions>$(QtCmdLine)</QtOptions>
+      </ClCompile_CmdLine>
+    </ItemGroup>
+
+    <!-- Result of parsing command lines, per source file:
+          * ClCompile_CmdLine ::= (Item x ProjectOptions x QtOptions), where:
+             * Item ::= source file
+             * ProjectOptions ::= list of tokens from the compiler command line for Item
+             * QtOptions ::= list of tokens from the Qt additional options -->
+
+    <!-- Flatten results into a list of tokens per source file:
+          * ClOptions ::= (Item x Name x Value), where:
+             * Item  ::= source file
+             * Name  ::= token origin: from compiler command line or from Qt
+             * Value ::= token value -->
+    <Flatten Items="@(ClCompile_CmdLine)" Metadata="ProjectOptions;QtOptions">
+      <Output TaskParameter="Result" ItemName="ClOptions" />
+    </Flatten>
+
+    <!-- Remove non-switch tokens, i.e. tokens that do not start with '/' or '-' -->
+    <ItemGroup>
+      <ClOptions
+        Remove="@(ClOptions)"
+        Condition="!$([System.String]::Copy('%(Value)').StartsWith('-'))
+               AND !$([System.String]::Copy('%(Value)').StartsWith('/'))"/>
+    </ItemGroup>
+
+    <!-- Calculate option id: token without leading '/' or '-', and without trailing '-' -->
+    <ItemGroup>
+      <ClOptions>
+        <OptionId>$([System.String]::Copy('%(Value)').Substring(1).TrimEnd('-'))</OptionId>
+      </ClOptions>
+    </ItemGroup>
+
+    <!-- Split into list of Qt options and list of project options -->
+    <ItemGroup>
+      <QtOptions
+        Include="@(ClOptions->'%(Item)')"
+        Condition="'%(ClOptions.Name)' == 'QtOptions'"/>
+      <ProjectOptions
+        Include="@(ClOptions->'%(Item)')"
+        Condition="'%(ClOptions.Name)' == 'ProjectOptions'"/>
+    </ItemGroup>
+
+    <!-- Find conflicting options, i.e. defined both in Qt options and project options -->
+    <ItemGroup>
+      <QtOptions
+        Condition="'@(QtOptions)' != ''
+               AND '@(ProjectOptions)' != ''
+               AND '%(Item)' != ''
+               AND '%(OptionId)' != ''">
+        <Conflict>true</Conflict>
+      </QtOptions>
+    </ItemGroup>
+
+    <!-- Set additional compiler options for all source files -->
+    <ItemGroup>
+      <ClCompile Condition="'%(Identity)' != '' AND '%(QtOptions.Conflict)' != 'true'">
+        <AdditionalOptions
+          >@(QtOptions->'%(Value)', ' ') @(ClCompile->'%(AdditionalOptions)')</AdditionalOptions>
+      </ClCompile>
+      <ClCompile Condition="'%(AdditionalOptions)' != ''">
+        <AdditionalOptions
+          >$([System.String]::Copy('%(AdditionalOptions)').Trim())</AdditionalOptions>
+      </ClCompile>
+    </ItemGroup>
+
+    <!-- Print result to build log, if requested -->
+    <Message
+      Condition="'$(QtOptionsBuildLog)' == 'true'"
+      Importance="High"
+      Text=" Qt - Additional Compiler Options"/>
+    <Message
+      Condition="'$(QtOptionsBuildLog)' == 'true'
+             AND '%(Identity)' != '' AND '%(QtOptions.Conflict)' != 'true'"
+      Importance="High"
+      Text="    [%(Identity)]: @(QtOptions->'%(Value)', ' ')"/>
+
+    <!-- Clean-up -->
+    <PropertyGroup>
+      <CmdLineParser/>
+      <QtCmdLine/>
+    </PropertyGroup>
+    <ItemGroup>
+      <ClCompile_CmdLine Remove="@(ClCompile_CmdLine)"/>
+      <ClOptions Remove="@(ClOptions)"/>
+      <ProjectOptions Remove="@(ProjectOptions)"/>
+      <QtOptions Remove="@(QtOptions)"/>
+    </ItemGroup>
+  </Target>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TARGET Qt
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Root Qt target
+  // -->
+  <Target
+    Name="Qt"
+    DependsOnTargets="QtPrepare;QtWork;QtSetAdditionalOptions">
+    <CriticalSection Lock="false" Name="$(ProjectGuid)" />
+    <OnError ExecuteTargets="QtLeaveCriticalSection_OnError"/>
+  </Target>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TARGET QtEnterCriticalSection_... / QtLeaveCriticalSection_InitializeBuildStatus
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Synchronize calls to InitializeBuildStatus
+  // -->
+  <Target Name="QtEnterCriticalSection_InitializeBuildStatus" BeforeTargets="InitializeBuildStatus">
+    <CriticalSection Lock="true" Name="$(ProjectGuid)" />
+  </Target>
+  <Target Name="QtLeaveCriticalSection_InitializeBuildStatus" AfterTargets="InitializeBuildStatus">
+    <CriticalSection Lock="false" Name="$(ProjectGuid)" />
+  </Target>
+  <PropertyGroup>
+    <!--// Schedule critical section enter/leave targets around InitializeBuildStatus -->
+    <QtSync_InitializeBuildStatus>
+      QtEnterCriticalSection_InitializeBuildStatus;
+      InitializeBuildStatus;
+      QtLeaveCriticalSection_InitializeBuildStatus
+    </QtSync_InitializeBuildStatus>
+    <!--// Replace 'InitializeBuildStatus' with '$(QtSync_InitializeBuildStatus)' -->
+    <BuildDependsOn>
+      $([MSBuild]::Unescape(
+        $([System.Text.RegularExpressions.Regex]::Replace(' $(BuildDependsOn) ',
+          '(?&lt;!\w)InitializeBuildStatus(?!\w)', $(QtSync_InitializeBuildStatus)))))
+    </BuildDependsOn>
+  </PropertyGroup>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TARGET QtEnterCriticalSection_... / QtLeaveCriticalSection_FinalizeBuildStatus
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Synchronize calls to FinalizeBuildStatus
+  // -->
+  <Target Name="QtEnterCriticalSection_FinalizeBuildStatus" BeforeTargets="FinalizeBuildStatus">
+    <CriticalSection Lock="true" Name="$(ProjectGuid)" />
+  </Target>
+  <Target Name="QtLeaveCriticalSection_FinalizeBuildStatus" AfterTargets="FinalizeBuildStatus">
+    <CriticalSection Lock="false" Name="$(ProjectGuid)" />
+  </Target>
+  <PropertyGroup>
+    <!--// Schedule critical section enter/leave targets around FinalizeBuildStatus -->
+    <QtSync_FinalizeBuildStatus>
+      QtEnterCriticalSection_FinalizeBuildStatus;
+      FinalizeBuildStatus;
+      QtLeaveCriticalSection_FinalizeBuildStatus
+    </QtSync_FinalizeBuildStatus>
+    <!--// Replace 'FinalizeBuildStatus' with '$(QtSync_FinalizeBuildStatus)' -->
+    <BuildDependsOn>
+      $([MSBuild]::Unescape(
+        $([System.Text.RegularExpressions.Regex]::Replace(' $(BuildDependsOn) ',
+          '(?&lt;!\w)FinalizeBuildStatus(?!\w)', $(QtSync_FinalizeBuildStatus)))))
+    </BuildDependsOn>
+  </PropertyGroup>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TARGET QtLeaveCriticalSection_OnError
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Fail-safe release of critical section lock, to be used in OnError tasks
+  // -->
+  <Target Name="QtLeaveCriticalSection_OnError">
+    <CriticalSection Lock="false" Name="$(ProjectGuid)" />
+  </Target>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TARGET QtNatvis
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Copies the .natvis file matching the Qt version and replaces the namespace placeholder
+  // -->
+  <Target Name="QtNatvis" BeforeTargets="Link"
+          Condition="'$(Configuration)' == 'Debug' AND '$(LinkNatvisFile)' == 'true'"
+          Inputs="$(MSBuildProjectFile);$(QtMsBuild)\qt$(QtVersionMajor).natvis.xml"
+          Outputs="$(IntDir)\qt.natvis">
+    <PropertyGroup>
+      <InputFile>$(QtMsBuild)\qt$(QtVersionMajor).natvis.xml</InputFile>
+    </PropertyGroup>
+    <WriteLinesToFile Condition="'$(QtNamespace)' == ''"
+      Overwrite="true"
+      File="$(IntDir)\qt.natvis"
+      Lines="$([System.IO.File]::ReadAllText($(InputFile)).Replace('##NAMESPACE##::',''))" />
+    <WriteLinesToFile Condition="'$(QtNamespace)' != ''"
+      Overwrite="true"
+      File="$(IntDir)\qt.natvis"
+      Lines="$([System.IO.File]::ReadAllText($(InputFile)).Replace('##NAMESPACE##','$(QtNamespace)'))" />
+  </Target>
+
+</Project>

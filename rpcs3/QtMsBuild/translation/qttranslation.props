@@ -1,0 +1,73 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+/***************************************************************************************************
+ Copyright (C) 2023 The Qt Company Ltd.
+ SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+***************************************************************************************************/
+-->
+
+<!--
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Qt/MSBuild Translation property definitions
+// -->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Import pre-requisites
+  // -->
+  <Import
+    Condition="'$(QtMsBuildProps_BeforeTranslation)' != ''"
+    Project="$(QtMsBuildProps_BeforeTranslation)"/>
+
+  <!--
+  ///////////////////////////////////////////////////////////////////////////////////////////////////
+  // Default values of Translation settings
+  // -->
+  <PropertyGroup>
+    <QtTranslationInput Condition="'$(QtTranslationInput)' == ''"
+      >@(ClCompile);@(ClInclude);@(QtMoc);@(QtUic);@(QtRCC)</QtTranslationInput>
+  </PropertyGroup>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // QtTranslation item template
+  // -->
+  <ItemDefinitionGroup>
+    <QtTranslation>
+      <BuildAction>false</BuildAction>
+      <!-- lupdate -->
+      <UpdateDescription>lupdate %(Identity)</UpdateDescription>
+      <UpdateAdditionalOptions>$(QtLUpdateOptions)</UpdateAdditionalOptions>
+      <SourceLanguage>default</SourceLanguage>
+      <TargetLanguage>default</TargetLanguage>
+      <NoObsolete>false</NoObsolete>
+      <PluralOnly>false</PluralOnly>
+      <UpdateSilent>false</UpdateSilent>
+      <NoSort>false</NoSort>
+      <Locations>false</Locations>
+      <NoUiLines>false</NoUiLines>
+      <DisableSameTextHeuristic>false</DisableSameTextHeuristic>
+      <DisableSimilarTextHeuristic>false</DisableSimilarTextHeuristic>
+      <DisableNumberHeuristic>false</DisableNumberHeuristic>
+      <!-- lrelease -->
+      <ReleaseDescription>lrelease %(Identity)</ReleaseDescription>
+      <QmOutputDir>$(OutDir)</QmOutputDir>
+      <QmOutputFile>%(Filename).qm</QmOutputFile>
+      <ReleaseAdditionalOptions>$(QtLReleaseOptions)</ReleaseAdditionalOptions>
+      <IdBased>false</IdBased>
+      <Compress>false</Compress>
+      <NoUnfinished>false</NoUnfinished>
+      <RemoveIdentical>false</RemoveIdentical>
+      <ReleaseSilent>false</ReleaseSilent>
+    </QtTranslation>
+  </ItemDefinitionGroup>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Import dependants
+  // -->
+  <Import
+    Condition="'$(QtMsBuildProps_AfterTranslation)' != ''"
+    Project="$(QtMsBuildProps_AfterTranslation)"/>
+
+</Project>

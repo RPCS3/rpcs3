@@ -1,0 +1,349 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+/***************************************************************************************************
+ Copyright (C) 2023 The Qt Company Ltd.
+ SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+***************************************************************************************************/
+-->
+
+<!--
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// windeployqt Property Page
+//
+// -->
+<ProjectSchemaDefinitions
+  xmlns="http://schemas.microsoft.com/build/2009/properties"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:sys="clr-namespace:System;assembly=mscorlib">
+  <Rule
+    Name="QtRule70_Deploy"
+    PageTemplate="generic"
+    DisplayName="Qt Deploy Tool"
+    Order="8">
+    <Rule.DataSource>
+      <DataSource
+        Persistence="ProjectFile"
+        Label="QtDeploy"
+        HasConfigurationCondition="true"/>
+    </Rule.DataSource>
+    <Rule.Categories>
+      <Category Name="General" DisplayName="General"/>
+      <Category Name="Settings" DisplayName="windeployqt"/>
+    </Rule.Categories>
+    <BoolProperty
+      Name="QtDeploy"
+      Category="General"
+      DisplayName="Run Deployment Tool"
+      Description="Select whether Qt for Windows Deployment Tool (windeployqt) should be called after build."/>
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Application Binary
+    // -->
+    <StringListProperty
+      Name="QtDeployFiles" Category="Settings" DisplayName="Application Binary">
+      <StringListProperty.Description>
+        <sys:String>
+          <![CDATA[Binaries or directory containing the application binary ( [files] ).]]>
+        </sys:String>
+      </StringListProperty.Description>
+    </StringListProperty>
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Deployment Directory
+    // -->
+    <StringProperty
+      Name="QtDeployDir" Category="Settings" DisplayName="Deployment Directory">
+      <StringProperty.Description>
+        <sys:String>
+          <![CDATA[Use directory instead of binary directory ( --dir <directory> ).]]>
+        </sys:String>
+      </StringProperty.Description>
+    </StringProperty>
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Library Directory
+    // -->
+    <StringProperty
+      Name="QtDeployLibDir" Category="Settings" DisplayName="Library Directory">
+      <StringProperty.Description>
+        <sys:String>
+          <![CDATA[Copy libraries to path ( --libdir <path> ).]]>
+        </sys:String>
+      </StringProperty.Description>
+    </StringProperty>
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Plugin Directory
+    // -->
+    <StringProperty
+      Name="QtDeployPluginDir" Category="Settings" DisplayName="Plugin Directory">
+      <StringProperty.Description>
+        <sys:String>
+          <![CDATA[Copy plugins to path ( --plugindir <path> ).]]>
+        </sys:String>
+      </StringProperty.Description>
+    </StringProperty>
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Debug/Release Binaries
+    // -->
+    <EnumProperty
+      Name="QtDeployDebugRelease" Category="Settings" DisplayName="Debug/Release Binaries">
+      <EnumProperty.Description>
+        <sys:String>
+          <![CDATA[Assume debug or release binaries ( --debug | --release ).]]>
+        </sys:String>
+      </EnumProperty.Description>
+      <EnumValue Name="false" DisplayName="Default"/>
+      <EnumValue Name="debug" DisplayName="Debug ( --debug )"/>
+      <EnumValue Name="release" DisplayName="Release ( --release )"/>
+    </EnumProperty>
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Deploy PDB Files
+    // -->
+    <EnumProperty
+      Name="QtDeployPdb" Category="Settings" DisplayName="Deploy PDB Files">
+      <EnumProperty.Description>
+        <sys:String>
+          <![CDATA[Deploy .pdb files (MSVC) ( --pdb ).]]>
+        </sys:String>
+      </EnumProperty.Description>
+      <EnumValue Name="false" DisplayName="Disabled"/>
+      <EnumValue Name="true" DisplayName="Enabled ( --pdb )"/>
+    </EnumProperty>
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    //
+    // -->
+    <EnumProperty
+      Name="QtDeployForce" Category="Settings" DisplayName="Force Update">
+      <EnumProperty.Description>
+        <sys:String>
+          <![CDATA[Force updating files ( --force ).]]>
+        </sys:String>
+      </EnumProperty.Description>
+      <EnumValue Name="false" DisplayName="Disabled"/>
+      <EnumValue Name="true" DisplayName="Enabled ( --force )"/>
+    </EnumProperty>
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Skip Qt5Core Patch
+    // -->
+    <EnumProperty
+      Name="QtDeployNoPatchQt" Category="Settings" DisplayName="Skip Qt5Core Patch">
+      <EnumProperty.Description>
+        <sys:String>
+          <![CDATA[Do not patch the Qt5Core library ( --no-patchqt ).]]>
+        </sys:String>
+      </EnumProperty.Description>
+      <EnumValue Name="false" DisplayName="Disabled"/>
+      <EnumValue Name="true" DisplayName="Enabled ( --no-patchqt )"/>
+    </EnumProperty>
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Skip Plugins
+    // -->
+    <EnumProperty
+      Name="QtDeployNoPlugins" Category="Settings" DisplayName="Skip Plugins">
+      <EnumProperty.Description>
+        <sys:String>
+          <![CDATA[Skip plugin deployment ( --no-plugins ).]]>
+        </sys:String>
+      </EnumProperty.Description>
+      <EnumValue Name="false" DisplayName="Disabled"/>
+      <EnumValue Name="true" DisplayName="Enabled ( --no-plugins )"/>
+    </EnumProperty>
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Skip Libraries
+    // -->
+    <EnumProperty
+      Name="QtDeployNoLibraries" Category="Settings" DisplayName="Skip Libraries">
+      <EnumProperty.Description>
+        <sys:String>
+          <![CDATA[Skip library deployment ( --no-libraries ).]]>
+        </sys:String>
+      </EnumProperty.Description>
+      <EnumValue Name="false" DisplayName="Disabled"/>
+      <EnumValue Name="true" DisplayName="Enabled ( --no-libraries )"/>
+    </EnumProperty>
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // QML Directories Root
+    // -->
+    <StringProperty
+      Name="QtDeployQmlDir" Category="Settings" DisplayName="QML Directories Root">
+      <StringProperty.Description>
+        <sys:String>
+          <![CDATA[Scan for QML-imports starting from directory ( --qmldir <directory> ).]]>
+        </sys:String>
+      </StringProperty.Description>
+    </StringProperty>
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // QML Modules Path
+    // -->
+    <StringListProperty
+      Name="QtDeployQmlImport"  Category="Settings" DisplayName="QML Modules Path">
+      <StringListProperty.Description>
+        <sys:String>
+          <![CDATA[Add the given path to the QML module search locations ( --qmlimport <directory> ).]]>
+        </sys:String>
+      </StringListProperty.Description>
+    </StringListProperty>
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Skip Qt Quick Imports
+    // -->
+    <EnumProperty
+      Name="QtDeployNoQuickImport" Category="Settings" DisplayName="Skip Qt Quick Imports">
+      <EnumProperty.Description>
+        <sys:String>
+          <![CDATA[Skip deployment of Qt Quick imports ( --no-quick-import ).]]>
+        </sys:String>
+      </EnumProperty.Description>
+      <EnumValue Name="false" DisplayName="Disabled"/>
+      <EnumValue Name="true" DisplayName="Enabled ( --no-quick-import )"/>
+    </EnumProperty>
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Skip Translations
+    // -->
+    <EnumProperty
+      Name="QtDeployNoTranslations" Category="Settings" DisplayName="Skip Translations">
+      <EnumProperty.Description>
+        <sys:String>
+          <![CDATA[Skip deployment of translations ( --no-translations ).]]>
+        </sys:String>
+      </EnumProperty.Description>
+      <EnumValue Name="false" DisplayName="Disabled"/>
+      <EnumValue Name="true" DisplayName="Enabled ( --no-translations )"/>
+    </EnumProperty>
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Skip Direct3D Compiler
+    // -->
+    <EnumProperty
+      Name="QtDeployNoSystemD3dCompiler" Category="Settings" DisplayName="Skip Direct3D Compiler">
+      <EnumProperty.Description>
+        <sys:String>
+          <![CDATA[Skip deployment of the system D3D compiler ( --no-system-d3d-compiler ).]]>
+        </sys:String>
+      </EnumProperty.Description>
+      <EnumValue Name="false" DisplayName="Disabled"/>
+      <EnumValue Name="true" DisplayName="Enabled ( --no-system-d3d-compiler )"/>
+    </EnumProperty>
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Skip Virtual Keyboard
+    // -->
+    <EnumProperty
+      Name="QtDeployNoVirtualKeyboard" Category="Settings" DisplayName="Skip Virtual Keyboard">
+      <EnumProperty.Description>
+        <sys:String>
+          <![CDATA[Disable deployment of the Virtual Keyboard ( --no-virtualkeyboard ).]]>
+        </sys:String>
+      </EnumProperty.Description>
+      <EnumValue Name="false" DisplayName="Disabled"/>
+      <EnumValue Name="true" DisplayName="Enabled ( --no-virtualkeyboard )"/>
+    </EnumProperty>
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Compiler Runtime
+    // -->
+    <EnumProperty
+      Name="QtDeployCompilerRuntime" Category="Settings" DisplayName="Compiler Runtime">
+      <EnumProperty.Description>
+        <sys:String>
+          <![CDATA[Deploy compiler runtime (Desktop only).]]>
+        </sys:String>
+      </EnumProperty.Description>
+      <EnumValue Name="false" DisplayName="Default"/>
+      <EnumValue Name="deploy" DisplayName="Deploy ( --compiler-runtime )"/>
+      <EnumValue Name="skip" DisplayName="Do Not Deploy ( --no-compiler-runtime )"/>
+    </EnumProperty>
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // WebKit2 Deployment
+    // -->
+    <EnumProperty
+      Name="QtDeployWebkit2" Category="Settings" DisplayName="WebKit2 Deployment">
+      <EnumProperty.Description>
+        <sys:String>
+          <![CDATA[Deployment of WebKit2 (web process).]]>
+        </sys:String>
+      </EnumProperty.Description>
+      <EnumValue Name="false" DisplayName="Default"/>
+      <EnumValue Name="deploy" DisplayName="Deploy ( --webkit2 )"/>
+      <EnumValue Name="skip" DisplayName="Do Not Deploy ( --no-webkit2 )"/>
+    </EnumProperty>
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // ANGLE Deployment
+    // -->
+    <EnumProperty
+      Name="QtDeployAngle" Category="Settings" DisplayName="ANGLE Deployment">
+      <EnumProperty.Description>
+        <sys:String>
+          <![CDATA[Deployment of ANGLE.]]>
+        </sys:String>
+      </EnumProperty.Description>
+      <EnumValue Name="false" DisplayName="Default"/>
+      <EnumValue Name="deploy" DisplayName="Deploy ( --angle )"/>
+      <EnumValue Name="skip" DisplayName="Do Not Deploy ( --no-angle )"/>
+    </EnumProperty>
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Skip Rasterizer Library
+    // -->
+    <EnumProperty
+      Name="QtDeployNoOpenglSw" Category="Settings" DisplayName="Skip Rasterizer Library">
+      <EnumProperty.Description>
+        <sys:String>
+          <![CDATA[Do not deploy the software rasterizer library ( --no-opengl-sw ).]]>
+        </sys:String>
+      </EnumProperty.Description>
+      <EnumValue Name="false" DisplayName="Disabled"/>
+      <EnumValue Name="true" DisplayName="Enabled ( --no-opengl-sw )"/>
+    </EnumProperty>
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Include Qt Libraries
+    // -->
+    <StringListProperty
+      Name="QtDeployIncludeModules" Category="Settings" DisplayName="Include Qt Libraries">
+      <StringListProperty.Description>
+        <sys:String>
+          <![CDATA[Qt libraries can be added by passing their name ( -<name> ).]]>
+        </sys:String>
+      </StringListProperty.Description>
+    </StringListProperty>
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Exclude Qt Libraries
+    // -->
+    <StringListProperty
+      Name="QtDeployExcludeModules"  Category="Settings" DisplayName="Exclude Qt Libraries">
+      <StringListProperty.Description>
+        <sys:String>
+          <![CDATA[Qt libraries can be removed by passing their prepended by --no- ( --no-<name> ).]]>
+        </sys:String>
+      </StringListProperty.Description>
+    </StringListProperty>
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Set As Solution Deployment Content
+    // -->
+    <EnumProperty
+      Name="QtDeployVsContent" Category="Settings" DisplayName="Set As Solution Deployment Content">
+      <EnumProperty.Description>
+        <sys:String>
+          <![CDATA[Mark deployed files as solution deployment content.]]>
+        </sys:String>
+      </EnumProperty.Description>
+      <EnumValue Name="false" DisplayName="Disabled"/>
+      <EnumValue Name="true" DisplayName="Enable"/>
+    </EnumProperty>
+  </Rule>
+</ProjectSchemaDefinitions>

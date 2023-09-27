@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+/***************************************************************************************************
+ Copyright (C) 2023 The Qt Company Ltd.
+ SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+***************************************************************************************************/
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <PropertyGroup
+    Condition="'$(QtInnerBuild)' == ''">
+    <!--// Outer build: invoke inner build -->
+    <BuildDependsOn>
+      $(QtOuterBuildPrepare);
+      QtOuterBuild;
+      $(QtOuterBuildFinalize)
+    </BuildDependsOn>
+    <QtInnerBuild>$(MSBuildProjectFullPath)</QtInnerBuild>
+    <RandomFileName>$([System.IO.Path]::GetRandomFileName())</RandomFileName>
+  </PropertyGroup>
+
+  <PropertyGroup
+    Condition="'$(QtInnerBuild)' != '$(MSBuildProjectFullPath)'">
+    <!--// Dependent project inner build: skip build -->
+    <BuildDependsOn>$(QtOuterBuildPrepare);$(QtOuterBuildFinalize)</BuildDependsOn>
+  </PropertyGroup>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TARGET QtOuterBuild
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Run targets in $(QtOuterBuildDependsOn) and then recursively invoke build
+  // -->
+  <Target Name="QtOuterBuild" DependsOnTargets="$(QtOuterBuildDependsOn)">
+    <!--// Invoke inner build: recursive build in second MSBuild instance -->
+    <MSBuild
+      Projects="$(MSBuildProjectFullPath)"
+      Targets="Build"
+      Properties="QtInnerBuild=$(MSBuildProjectFullPath);RandomFileName=$(RandomFileName);BuildProjectReferences=false">
+    </MSBuild>
+    <OnError ExecuteTargets="QtLeaveCriticalSection_OnError"/>
+  </Target>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TARGET GetClCommandLineForReference
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  //
+  // -->
+  <Target
+    Name="GetClCommandLineForReference"
+    DependsOnTargets="$(QtOuterBuildDependsOn)"
+    Returns="@(ClCommandLineForReference)">
+    <MSBuild
+      Projects="$(MSBuildProjectFullPath)"
+      Targets="GetClCommandLineForReference"
+      Properties="QtInnerBuild=$(MSBuildProjectFullPath);RandomFileName=$(RandomFileName);BuildProjectReferences=false">
+      <Output TaskParameter="TargetOutputs" ItemName="ClCommandLineForReference"/>
+    </MSBuild>
+  </Target>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TARGET GetGeneratedFiles
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  //
+  // -->
+  <Target
+    Name="GetGeneratedFiles"
+    DependsOnTargets="$(QtOuterBuildDependsOn)"
+    Returns="@(_GeneratedFiles)">
+    <MSBuild
+      Projects="$(MSBuildProjectFullPath)"
+      Targets="GetGeneratedFiles"
+      Properties="QtInnerBuild=$(MSBuildProjectFullPath);RandomFileName=$(RandomFileName);BuildProjectReferences=false">
+      <Output TaskParameter="TargetOutputs" ItemName="_GeneratedFiles"/>
+    </MSBuild>
+  </Target>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TARGET GetProjectReferencesInfo
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  //
+  // -->
+  <Target
+    Name="GetProjectReferencesInfo"
+    DependsOnTargets="$(QtOuterBuildDependsOn)"
+    Returns="@(_ProjectReferencesInfo)">
+    <MSBuild
+      Projects="$(MSBuildProjectFullPath)"
+      Targets="GetProjectReferencesInfo"
+      Properties="QtInnerBuild=$(MSBuildProjectFullPath);RandomFileName=$(RandomFileName);BuildProjectReferences=false">
+      <Output TaskParameter="TargetOutputs" ItemName="_ProjectReferencesInfo"/>
+    </MSBuild>
+  </Target>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TARGET GetClCommandLines
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  //
+  // -->
+  <Target
+    Name="GetClCommandLines"
+    DependsOnTargets="$(QtOuterBuildDependsOn)"
+    Returns="@(ClCommandLines)">
+    <MSBuild
+      Projects="$(MSBuildProjectFullPath)"
+      Targets="GetClCommandLines"
+      Properties="QtInnerBuild=$(MSBuildProjectFullPath);RandomFileName=$(RandomFileName);BuildProjectReferences=false">
+      <Output TaskParameter="TargetOutputs" ItemName="ClCommandLines"/>
+    </MSBuild>
+  </Target>
+</Project>

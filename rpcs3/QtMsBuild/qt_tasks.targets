@@ -1,0 +1,1685 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--************************************************************************************************
+ Copyright (C) 2023 The Qt Company Ltd.
+ SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+****************************************************************************************************
+**          This file was generated automatically.
+*****************************************************************************
+-->
+
+<!--
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Helper inline tasks used by the Qt/MSBuild targets
+// -->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <!-- BEGIN Generated code -->
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TASK CriticalSection
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Enter or leave a critical section during build
+  // Parameters:
+  //      in bool   Lock: 'true' when entering the critical section, 'false' when leaving
+  //      in string Name: Critical section lock name
+  -->
+  <UsingTask TaskName="CriticalSection"
+    TaskFactory="CodeTaskFactory"
+    AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Lock ParameterType="System.Boolean" Required="true"/>
+      <Name ParameterType="System.String" Required="true"/>
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System"/>
+      <Using Namespace="System.Diagnostics"/>
+      <Using Namespace="System.IO"/>
+      <Using Namespace="System.Threading"/>
+      <Using Namespace="Microsoft.Build.Framework"/>
+      <Using Namespace="Microsoft.Win32"/>
+      <Code Type="Fragment" Language="cs">
+        <![CDATA[
+            var buildEngine = BuildEngine as IBuildEngine4;
+
+            // Acquire lock
+            string lockName = string.Format("Global\\{0}", Name);
+            EventWaitHandle buildLock = null;
+            if (!EventWaitHandle.TryOpenExisting(lockName, out buildLock)) {
+                // Lock does not exist; create lock
+                bool lockCreated;
+                buildLock = new EventWaitHandle(
+                    true, EventResetMode.AutoReset, lockName, out lockCreated);
+                if (lockCreated) {
+                    // Keep lock alive until end of build
+                    buildEngine.RegisterTaskObject(
+                        Name, buildLock, RegisteredTaskObjectLifetime.Build, false);
+                }
+            }
+            if (buildLock == null) {
+                Log.LogError("Qt::BuildLock[{0}]: Error accessing lock", Name);
+                return false;
+            }
+            if (Lock) {
+                // Wait until locked
+                if (!buildLock.WaitOne(1000)) {
+                    var t = Stopwatch.StartNew();
+                    do {
+                        // Check for build errors
+                        if (Log.HasLoggedErrors) {
+                            Log.LogError("Qt::BuildLock[{0}]: Errors logged; wait aborted", Name);
+                            return false;
+                        }
+                        // Timeout after 10 secs.
+                        if (t.ElapsedMilliseconds >= 10000) {
+                            Log.LogError("Qt::BuildLock[{0}]: Timeout; wait aborted", Name);
+                            return false;
+                        }
+                    } while (!buildLock.WaitOne(1000));
+                }
+            } else {
+                // Unlock
+                buildLock.Set();
+            }
+        ]]>
+      </Code>
+    </Task>
+  </UsingTask>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TASK DumpItems
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Dump contents of items as a log message. The contents are formatted as XML.
+  // Parameters:
+  //      in string       ItemType:     type of the items; this is used as the parent node of each
+  //                                    item dump
+  //      in ITaskItem[]  Items:        items to dump
+  //      in bool         DumpReserved: include MSBuild reserved metadata in dump?
+  //      in string       Metadata:     list of names of metadata to include in dump; omit to
+  //                                    include all metadata
+  -->
+  <UsingTask TaskName="DumpItems"
+    TaskFactory="CodeTaskFactory"
+    AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <ItemType ParameterType="System.String" Required="true"/>
+      <Items ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true"/>
+      <DumpReserved ParameterType="System.Boolean"/>
+      <Metadata ParameterType="System.String"/>
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System"/>
+      <Using Namespace="System.Collections.Generic"/>
+      <Using Namespace="System.Linq"/>
+      <Using Namespace="System.Text"/>
+      <Using Namespace="Microsoft.Build.Framework"/>
+      <Code Type="Fragment" Language="cs">
+        <![CDATA[
+            var reserved = new HashSet<string>
+            {
+                "AccessedTime", "CreatedTime", "DefiningProjectDirectory",
+                "DefiningProjectExtension", "DefiningProjectFullPath", "DefiningProjectName",
+                "Directory", "Extension", "Filename", "FullPath", "Identity", "ModifiedTime",
+                "RecursiveDir", "RelativeDir", "RootDir"
+            };
+            if (Metadata == null)
+                Metadata = "";
+            var requestedNames = new HashSet<string>(Metadata.Split(new[] { ';' },
+                StringSplitOptions.RemoveEmptyEntries));
+            var itemXml = new StringBuilder();
+            if (Items.Any()) {
+                foreach (var item in Items) {
+                    if (itemXml.Length > 0)
+                        itemXml.Append("\r\n");
+                    itemXml.AppendFormat("<{0} Include=\"{1}\"", ItemType, item.ItemSpec);
+                    var names = item.MetadataNames.Cast<string>()
+                        .Where(x => (DumpReserved || !reserved.Contains(x))
+                            && (!requestedNames.Any() || requestedNames.Contains(x)))
+                        .OrderBy(x => x)
+                        .ToList();
+                    if (names.Any()) {
+                        itemXml.Append(">\r\n");
+                        foreach (string name in names) {
+                            if (!DumpReserved && reserved.Contains(name))
+                                continue;
+                            if (!item.MetadataNames.Cast<string>().Contains(name))
+                                continue;
+                            var value = item.GetMetadata(name);
+                            if (!string.IsNullOrEmpty(value))
+                                itemXml.AppendFormat("  <{0}>{1}</{0}>\r\n", name, value);
+                            else
+                                itemXml.AppendFormat("  <{0}/>\r\n", name);
+                        }
+                        itemXml.AppendFormat("</{0}>", ItemType);
+                    } else {
+                        itemXml.Append("/>");
+                    }
+                }
+            } else {
+                itemXml.AppendFormat("<{0}/>", ItemType);
+            }
+            Log.LogMessage(MessageImportance.High, itemXml.ToString());
+        ]]>
+      </Code>
+    </Task>
+  </UsingTask>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TASK Expand
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Expand a list of items, taking additional metadata from a base item and from a template item.
+  // Parameters:
+  //      in ITaskItem[] Items:    items to expand
+  //      in ITaskItem   BaseItem: base item from which the expanded items derive
+  //      in ITaskItem   Template = null: (optional) template containing metadata to add / update
+  //     out ITaskItem[] Result:   list of new items
+  -->
+  <UsingTask TaskName="Expand"
+    TaskFactory="CodeTaskFactory"
+    AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Items ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true"/>
+      <BaseItem ParameterType="Microsoft.Build.Framework.ITaskItem" Required="true"/>
+      <Template ParameterType="Microsoft.Build.Framework.ITaskItem"/>
+      <Result ParameterType="Microsoft.Build.Framework.ITaskItem[]" Output="true"/>
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System"/>
+      <Using Namespace="System.Collections.Generic"/>
+      <Using Namespace="System.Linq"/>
+      <Using Namespace="System.Text.RegularExpressions"/>
+      <Using Namespace="Microsoft.Build.Framework"/>
+      <Using Namespace="Microsoft.Build.Utilities"/>
+      <Code Type="Fragment" Language="cs">
+        <![CDATA[
+            Result = new ITaskItem[] { };
+            var reserved = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase)
+            {
+                "AccessedTime", "CreatedTime", "DefiningProjectDirectory",
+                "DefiningProjectExtension", "DefiningProjectFullPath", "DefiningProjectName",
+                "Directory", "Extension", "Filename", "FullPath", "Identity", "ModifiedTime",
+                "RecursiveDir", "RelativeDir", "RootDir"
+            };
+            var newItems = new List<ITaskItem>();
+            foreach (var item in Items) {
+                var newItem = new TaskItem(item);
+                if (BaseItem != null)
+                    BaseItem.CopyMetadataTo(newItem);
+                var itemExt = newItem.GetMetadata("Extension");
+                if (!string.IsNullOrEmpty(itemExt))
+                    newItem.SetMetadata("Suffix", itemExt.Substring(1));
+                if (Template != null) {
+                    var metadataNames = Template.MetadataNames
+                        .Cast<string>().Where(x => !reserved.Contains(x));
+                    foreach (var metadataName in metadataNames) {
+                        var metadataValue = Template.GetMetadata(metadataName);
+                        newItem.SetMetadata(metadataName,
+                            Regex.Replace(metadataValue, @"(%<)(\w+)(>)",
+                            match => newItem.GetMetadata(match.Groups[2].Value)));
+                    }
+                }
+                newItems.Add(newItem);
+            }
+            Result = newItems.ToArray();
+        ]]>
+      </Code>
+    </Task>
+  </UsingTask>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TASK Flatten
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Destructure items into a "flat" list of metadata. The output is a list of (Name, Value) pairs,
+  // each corresponding to one item metadata. Semi-colon-separated lists will also expand to many
+  // items in the output list, with the metadata name shared among them.
+  // Example:
+  //     INPUT:
+  //         <QtMoc>
+  //           <InputFile>foo.h</InputFile>
+  //           <IncludePath>C:\FOO;D:\BAR</IncludePath>
+  //         </QtMoc>
+  //     OUTPUT:
+  //         <Result>
+  //           <Name>InputFile</Name>
+  //           <Value>foo.h</Value>
+  //         </Result>
+  //         <Result>
+  //           <Name>IncludePath</Name>
+  //           <Value>C:\FOO</Value>
+  //         </Result>
+  //         <Result>
+  //           <Name>IncludePath</Name>
+  //           <Value>D:\BAR</Value>
+  //         </Result>
+  // Parameters:
+  //      in ITaskItem[] Items:    list of items to flatten
+  //      in string[]    Metadata: names of metadata to look for; omit to include all metadata
+  //     out ITaskItem[] Result:   list of metadata from all items
+  -->
+  <UsingTask TaskName="Flatten"
+    TaskFactory="CodeTaskFactory"
+    AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Items ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true"/>
+      <Metadata ParameterType="System.String[]"/>
+      <Result ParameterType="Microsoft.Build.Framework.ITaskItem[]" Output="true"/>
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System"/>
+      <Using Namespace="System.Collections.Generic"/>
+      <Using Namespace="System.Linq"/>
+      <Using Namespace="Microsoft.Build.Framework"/>
+      <Using Namespace="Microsoft.Build.Utilities"/>
+      <Code Type="Fragment" Language="cs">
+        <![CDATA[
+            Result = new ITaskItem[] { };
+            var reserved = new HashSet<string>
+            {
+                "AccessedTime", "CreatedTime", "DefiningProjectDirectory",
+                "DefiningProjectExtension", "DefiningProjectFullPath", "DefiningProjectName",
+                "Directory", "Extension", "Filename", "FullPath", "Identity", "ModifiedTime",
+                "RecursiveDir", "RelativeDir", "RootDir"
+            };
+            if (Metadata == null)
+                Metadata = Array.Empty<string>();
+            var requestedNames = new HashSet<string>(Metadata.Where(x => !string.IsNullOrEmpty(x)));
+            var newItems = new List<ITaskItem>();
+            foreach (var item in Items) {
+                var itemName = item.ItemSpec;
+                var names = item.MetadataNames.Cast<string>().Where(x => !reserved.Contains(x)
+                    && (!requestedNames.Any() || requestedNames.Contains(x)));
+                foreach (string name in names) {
+                    var values = item.GetMetadata(name).Split(';');
+                    foreach (string value in values.Where(v => !string.IsNullOrEmpty(v))) {
+                        newItems.Add(new TaskItem(string.Format("{0}={1}", name, value),
+                            new Dictionary<string, string>
+                            {
+                                { "Item",  itemName },
+                                { "Name",  name },
+                                { "Value", value }
+                            }));
+                    }
+                }
+            }
+            Result = newItems.ToArray();
+        ]]>
+      </Code>
+    </Task>
+  </UsingTask>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TASK GetItemHash
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Calculate an hash code (Deflate + Base64) for an item, given a list of metadata to use as key
+  // Parameters:
+  //      in ITaskItem Item: item for which the hash will be calculated
+  //      in string[]  Keys: list of names of the metadata to use as item key
+  //     out string    Hash: hash code (Base64 representation of Deflate'd UTF-8 item key)
+  -->
+  <UsingTask TaskName="GetItemHash"
+    TaskFactory="CodeTaskFactory"
+    AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Item ParameterType="Microsoft.Build.Framework.ITaskItem" Required="true"/>
+      <Keys ParameterType="System.String[]" Required="true"/>
+      <Hash ParameterType="System.String" Output="true"/>
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System"/>
+      <Using Namespace="System.Linq"/>
+      <Using Namespace="System.Text"/>
+      <Using Namespace="System.IO"/>
+      <Using Namespace="System.IO.Compression"/>
+      <Code Type="Fragment" Language="cs">
+        <![CDATA[
+            var data = Encoding.UTF8.GetBytes(string.Concat(Keys.OrderBy(x => x)
+                .Select(x => string.Format("[{0}={1}]", x, Item.GetMetadata(x))))
+                .ToUpper());
+            using (var dataZipped = new MemoryStream()) {
+                using (var zip = new DeflateStream(dataZipped, CompressionLevel.Fastest))
+                    zip.Write(data, 0, data.Length);
+                Hash = Convert.ToBase64String(dataZipped.ToArray());
+            }
+        ]]>
+      </Code>
+    </Task>
+  </UsingTask>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TASK GetVarsFromMakefile
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  //
+  -->
+  <UsingTask TaskName="GetVarsFromMakefile"
+    TaskFactory="CodeTaskFactory"
+    AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Makefile ParameterType="System.String" Required="true"/>
+      <ExcludeValues ParameterType="System.String[]" Required="true"/>
+      <VarDefs ParameterType="Microsoft.Build.Framework.ITaskItem[]"/>
+      <OutVars ParameterType="Microsoft.Build.Framework.ITaskItem[]" Output="true"/>
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System"/>
+      <Using Namespace="System.Collections.Generic"/>
+      <Using Namespace="System.Linq"/>
+      <Using Namespace="System.Text.RegularExpressions"/>
+      <Using Namespace="System.IO"/>
+      <Using Namespace="Microsoft.Build.Utilities"/>
+      <Code Type="Fragment" Language="cs">
+        <![CDATA[
+            var makefileVars = Regex.Matches(
+                File.ReadAllText(Makefile),
+                @"^(\w+)[^\=\r\n\S]*\=[^\r\n\S]*([^\r\n]+)[\r\n]",
+                RegexOptions.Multiline)
+                .Cast<Match>()
+                .Where(x => x.Groups.Count > 2 && x.Groups[1].Success && x.Groups[2].Success
+                    && !string.IsNullOrEmpty(x.Groups[1].Value))
+                .GroupBy(x => x.Groups[1].Value)
+                .ToDictionary(g => g.Key, g => g.Last().Groups[2].Value);
+            OutVars = VarDefs
+                .Where(x => makefileVars.ContainsKey(x.GetMetadata("Name")))
+                .Select(x => new TaskItem(x.ItemSpec, new Dictionary<string, string>
+                { {
+                    "Value",
+                    string.Join(";", Regex
+                        .Matches(makefileVars[x.GetMetadata("Name")], x.GetMetadata("Pattern"))
+                        .Cast<Match>()
+                        .Select(y => Regex
+                            .Replace(y.Value, x.GetMetadata("Pattern"), x.GetMetadata("Value")))
+                        .Where(y => !string.IsNullOrEmpty(y)
+                            && !ExcludeValues.Contains(y,
+                                StringComparer.InvariantCultureIgnoreCase))
+                        .ToHashSet())
+                } }))
+                .Where(x => !string.IsNullOrEmpty(x.GetMetadata("Value")))
+                .ToArray();
+        ]]>
+      </Code>
+    </Task>
+  </UsingTask>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TASK GetVarsFromMSBuild
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  //
+  -->
+  <UsingTask TaskName="GetVarsFromMSBuild"
+    TaskFactory="CodeTaskFactory"
+    AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Project ParameterType="System.String" Required="true"/>
+      <VarDefs ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true"/>
+      <ExcludeValues ParameterType="System.String[]" Required="true"/>
+      <OutVars ParameterType="Microsoft.Build.Framework.ITaskItem[]" Output="true"/>
+    </ParameterGroup>
+    <Task>
+      <Reference Include="System.Xml"/>
+      <Reference Include="System.Xml.Linq"/>
+      <Reference Include="System.Xml.XPath.XDocument"/>
+      <Using Namespace="System"/>
+      <Using Namespace="System.Collections.Generic"/>
+      <Using Namespace="System.Linq"/>
+      <Using Namespace="System.Text.RegularExpressions"/>
+      <Using Namespace="System.Xml"/>
+      <Using Namespace="System.Xml.Linq"/>
+      <Using Namespace="System.Xml.XPath"/>
+      <Using Namespace="Microsoft.Build.Utilities"/>
+      <Code Type="Fragment" Language="cs">
+        <![CDATA[
+            OutVars = null;
+            var result = new List<Microsoft.Build.Framework.ITaskItem>();
+            var projectXml = XDocument.Load(Project);
+            projectXml.Descendants().ToList().ForEach(x => x.Name = x.Name.LocalName);
+            foreach (var varDef in VarDefs) {
+                string varName = varDef.GetMetadata("Name");
+                string varXPath = varDef.GetMetadata("XPath");
+                string varValue = "";
+                var valueElement = projectXml.XPathSelectElement(varXPath);
+                if (valueElement != null) {
+                    var propertyName = valueElement.Name.LocalName;
+                    varValue = Regex.Replace(valueElement.Value,
+                        string.Format(@"[ ;][%$]\({0}\)$", propertyName),
+                        string.Empty);
+                }
+                if (!ExcludeValues.Contains(varValue, StringComparer.InvariantCultureIgnoreCase)) {
+                    var outVar = new TaskItem(varName.Trim());
+                    outVar.SetMetadata("Value", varValue.Trim());
+                    result.Add(outVar);
+                }
+            }
+            OutVars = result.ToArray();
+        ]]>
+      </Code>
+    </Task>
+  </UsingTask>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TASK HostExec
+  ///  * Linux build over SSL
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Run command in build host.
+  // Parameters:
+  //     in string      Command: Command to run on the build host
+  //     in string      RedirectStdOut: Path to file to receive redirected output messages
+  //                      * can be NUL to discard messages
+  //     in string      RedirectStdErr: Path to file to receive redirected error messages
+  //                      * can be NUL to discard messages
+  //                      * can be STDOUT to apply the same redirection as output messages
+  //     in string      WorkingDirectory: Path to directory where command will be run
+  //     in ITaskItem[] Inputs: List of local -> host path mappings for command inputs
+  //                      * item format: cf. HostTranslatePaths task
+  //     in ITaskItem[] Outputs: List of host -> local path mappings for command outputs
+  //                      * item format: cf. HostTranslatePaths task
+  //     in string      RemoteTarget: Set by ResolveRemoteDir in SSH mode; null otherwise
+  //     in string      RemoteProjectDir: Set by ResolveRemoteDir in SSH mode; null otherwise
+  //     in bool        IgnoreExitCode: Set flag to disable build error if command failed
+  //    out int         ExitCode: status code at command exit
+  -->
+  <UsingTask TaskName="HostExec" Condition="'$(ApplicationType)' == 'Linux' AND '$(PlatformToolset)' != 'WSL_1_0'"
+    TaskFactory="CodeTaskFactory"
+    AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Command ParameterType="System.String" Required="true"/>
+      <Message ParameterType="System.String"/>
+      <RedirectStdOut ParameterType="System.String"/>
+      <RedirectStdErr ParameterType="System.String"/>
+      <WorkingDirectory ParameterType="System.String"/>
+      <Inputs ParameterType="Microsoft.Build.Framework.ITaskItem[]"/>
+      <Outputs ParameterType="Microsoft.Build.Framework.ITaskItem[]"/>
+      <RemoteTarget ParameterType="System.String"/>
+      <RemoteProjectDir ParameterType="System.String"/>
+      <IgnoreExitCode ParameterType="System.Boolean"/>
+      <ExitCode ParameterType="System.Int32" Output="true"/>
+    </ParameterGroup>
+    <Task>
+      <Reference Include="$(VCTargetsPath)\Application Type\Linux\1.0\Microsoft.Build.Linux.Tasks.dll"/>
+      <Using Namespace="System"/>
+      <Using Namespace="System.Collections.Generic"/>
+      <Using Namespace="System.Linq"/>
+      <Using Namespace="Microsoft.Build.Framework"/>
+      <Code Type="Fragment" Language="cs">
+        <![CDATA[
+            if (!string.IsNullOrEmpty(Message))
+                Log.LogMessage(MessageImportance.High, Message);
+            var createDirs = new List<string>
+            {
+                string.Format("{0}/{1}", RemoteProjectDir, WorkingDirectory)
+            };
+
+            var localFilesToCopyRemotelyMapping = Array.Empty<string>();
+            if (Inputs != null) {
+                localFilesToCopyRemotelyMapping = Inputs
+                    .Select(x => string.Format(@"{0}:={1}/{2}",
+                        x.GetMetadata("Item"),
+                        RemoteProjectDir,
+                        x.GetMetadata("Value")))
+                    .ToArray();
+                createDirs.AddRange(Inputs
+                    .Select(x => string.Format("\x24(dirname {0})", x.GetMetadata("Value"))));
+            }
+
+            var remoteFilesToCopyLocallyMapping = Array.Empty<string>();
+            if (Outputs != null) {
+                remoteFilesToCopyLocallyMapping = Outputs
+                  .Select(x => string.Format(@"{0}/{1}:={2}",
+                      RemoteProjectDir,
+                      x.GetMetadata("Value"),
+                      x.GetMetadata("Item")))
+                  .ToArray();
+                createDirs.AddRange(Outputs
+                    .Select(x => string.Format("\x24(dirname {0})", x.GetMetadata("Value"))));
+            }
+
+            Command = "(" + Command + ")";
+            if (RedirectStdOut == "NUL" || RedirectStdOut == "/dev/null")
+                Command += " 1> /dev/null";
+            else if (!string.IsNullOrEmpty(RedirectStdOut))
+                Command += " 1> " + RedirectStdOut;
+            if (RedirectStdErr == "NUL" || RedirectStdErr == "/dev/null")
+                Command += " 2> /dev/null";
+            else if (RedirectStdErr == "STDOUT")
+                Command += " 2>&1";
+            else if (!string.IsNullOrEmpty(RedirectStdErr))
+                Command += " 2> " + RedirectStdErr;
+            Command = string.Format("cd {0}/{1}; {2}", RemoteProjectDir, WorkingDirectory, Command);
+
+            var taskCopyFiles = new Microsoft.Build.Linux.Tasks.Execute
+            {
+                BuildEngine = BuildEngine,
+                HostObject = HostObject,
+                ProjectDir = @"$(ProjectDir)",
+                IntermediateDir = @"$(IntDir)",
+                RemoteTarget = RemoteTarget,
+                RemoteProjectDir = RemoteProjectDir,
+                Command = string.Join("; ", createDirs.Select(x => string.Format("mkdir -p {0}", x))),
+                LocalFilesToCopyRemotelyMapping = localFilesToCopyRemotelyMapping
+            };
+            var taskExec = new Microsoft.Build.Linux.Tasks.Execute
+            {
+                BuildEngine = BuildEngine,
+                HostObject = HostObject,
+                ProjectDir = @"$(ProjectDir)",
+                IntermediateDir = @"$(IntDir)",
+                RemoteTarget = RemoteTarget,
+                RemoteProjectDir = RemoteProjectDir,
+                Command = Command,
+                RemoteFilesToCopyLocallyMapping = remoteFilesToCopyLocallyMapping
+            };
+
+            Log.LogMessage("\r\n==== HostExec: Microsoft.Build.Linux.Tasks.Execute");
+            Log.LogMessage("ProjectDir: {0}", taskExec.ProjectDir);
+            Log.LogMessage("IntermediateDir: {0}", taskExec.IntermediateDir);
+            Log.LogMessage("RemoteTarget: {0}", taskExec.RemoteTarget);
+            Log.LogMessage("RemoteProjectDir: {0}", taskExec.RemoteProjectDir);
+            if (taskExec.LocalFilesToCopyRemotelyMapping.Any())
+                Log.LogMessage("LocalFilesToCopyRemotelyMapping: {0}",
+                    taskExec.LocalFilesToCopyRemotelyMapping);
+            if (taskExec.RemoteFilesToCopyLocallyMapping.Any())
+                Log.LogMessage("RemoteFilesToCopyLocallyMapping: {0}",
+                    taskExec.RemoteFilesToCopyLocallyMapping);
+            Log.LogMessage("CreateDirs: {0}", taskCopyFiles.Command);
+            Log.LogMessage("Command: {0}", taskExec.Command);
+
+            if (!taskCopyFiles.ExecuteTool()) {
+                ExitCode = taskCopyFiles.ExitCode;
+                return false;
+            }
+            bool ok = taskExec.ExecuteTool();
+            Log.LogMessage("== {0} ExitCode: {1}\r\n", ok ? "OK" : "FAIL", taskExec.ExitCode);
+
+            ExitCode = taskExec.ExitCode;
+            if (!ok && !IgnoreExitCode) {
+                Log.LogError("Host command failed.");
+                return false;
+            }
+        ]]>
+      </Code>
+    </Task>
+  </UsingTask>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TASK HostExec
+  ///  * Linux build over WSL
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Run command in build host.
+  // Parameters:
+  //     in string      Command: Command to run on the build host
+  //     in string      RedirectStdOut: Path to file to receive redirected output messages
+  //                      * can be NUL to discard messages
+  //     in string      RedirectStdErr: Path to file to receive redirected error messages
+  //                      * can be NUL to discard messages
+  //                      * can be STDOUT to apply the same redirection as output messages
+  //     in string      WorkingDirectory: Path to directory where command will be run
+  //     in ITaskItem[] Inputs: List of local -> host path mappings for command inputs
+  //                      * item format: cf. HostTranslatePaths task
+  //     in ITaskItem[] Outputs: List of host -> local path mappings for command outputs
+  //                      * item format: cf. HostTranslatePaths task
+  //     in string      RemoteTarget: Set by ResolveRemoteDir in SSH mode; null otherwise
+  //     in string      RemoteProjectDir: Set by ResolveRemoteDir in SSH mode; null otherwise
+  //     in bool        IgnoreExitCode: Set flag to disable build error if command failed
+  //    out int         ExitCode: status code at command exit
+  -->
+  <UsingTask TaskName="HostExec" Condition="('$(VisualStudioVersion)' == '16.0' OR '$(VisualStudioVersion)' == '17.0') AND '$(ApplicationType)' == 'Linux' AND '$(PlatformToolset)' == 'WSL_1_0'"
+    TaskFactory="CodeTaskFactory"
+    AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Command ParameterType="System.String" Required="true"/>
+      <Message ParameterType="System.String"/>
+      <RedirectStdOut ParameterType="System.String"/>
+      <RedirectStdErr ParameterType="System.String"/>
+      <WorkingDirectory ParameterType="System.String"/>
+      <Inputs ParameterType="Microsoft.Build.Framework.ITaskItem[]"/>
+      <Outputs ParameterType="Microsoft.Build.Framework.ITaskItem[]"/>
+      <RemoteTarget ParameterType="System.String"/>
+      <RemoteProjectDir ParameterType="System.String"/>
+      <IgnoreExitCode ParameterType="System.Boolean"/>
+      <ExitCode ParameterType="System.Int32" Output="true"/>
+    </ParameterGroup>
+    <Task>
+      <Reference Include="$(VCTargetsPath)\Application Type\Linux\1.0\Microsoft.Build.Linux.Tasks.dll"/>
+      <Using Namespace="System.Collections.Generic"/>
+      <Using Namespace="System.Linq"/>
+      <Using Namespace="Microsoft.Build.Framework"/>
+      <Code Type="Fragment" Language="cs">
+        <![CDATA[
+            if (!string.IsNullOrEmpty(Message))
+                Log.LogMessage(MessageImportance.High, Message);
+            Command = "(" + Command + ")";
+            if (RedirectStdOut == "NUL" || RedirectStdOut == "/dev/null")
+                Command += " 1> /dev/null";
+            else if (!string.IsNullOrEmpty(RedirectStdOut))
+                Command += " 1> " + RedirectStdOut;
+            if (RedirectStdErr == "NUL" || RedirectStdErr == "/dev/null")
+                Command += " 2> /dev/null";
+            else if (RedirectStdErr == "STDOUT")
+                Command += " 2>&1";
+            else if (!string.IsNullOrEmpty(RedirectStdErr))
+                Command += " 2> " + RedirectStdErr;
+
+            var createDirs = new List<string>();
+            if (Inputs != null) {
+                createDirs.AddRange(Inputs
+                    .Select(x => string.Format("\x24(dirname {0})", x.GetMetadata("Value"))));
+            }
+            if (Outputs != null) {
+                createDirs.AddRange(Outputs
+                    .Select(x => string.Format("\x24(dirname {0})", x.GetMetadata("Value"))));
+            }
+            if (!string.IsNullOrEmpty(WorkingDirectory)) {
+                createDirs.Add(WorkingDirectory);
+                Command = string.Format("cd {0}; {1}", WorkingDirectory, Command);
+            }
+            if (createDirs.Any()) {
+                Command = string.Format("{0}; {1}",
+                    string.Join("; ", createDirs.Select(x => string.Format("mkdir -p {0}", x))),
+                    Command);
+            }
+
+            var taskExec = new Microsoft.Build.Linux.WSL.Tasks.ExecuteCommand
+            {
+                BuildEngine = BuildEngine,
+                HostObject = HostObject,
+                ProjectDir = @"$(ProjectDir)",
+                IntermediateDir = @"$(IntDir)",
+                WSLPath = @"$(WSLPath)",
+                Command = Command
+            };
+            Log.LogMessage("\r\n==== HostExec: Microsoft.Build.Linux.WSL.Tasks.ExecuteCommand");
+            Log.LogMessage("ProjectDir: {0}", taskExec.ProjectDir);
+            Log.LogMessage("IntermediateDir: {0}", taskExec.IntermediateDir);
+            Log.LogMessage("WSLPath: {0}", taskExec.WSLPath);
+            Log.LogMessage("Command: {0}", taskExec.Command);
+
+            bool ok = taskExec.Execute();
+            Log.LogMessage("== {0} ExitCode: {1}\r\n", ok ? "OK" : "FAIL", taskExec.ExitCode);
+
+            ExitCode = taskExec.ExitCode;
+            if (!ok && !IgnoreExitCode) {
+                Log.LogError("Host command failed.");
+                return false;
+            }
+        ]]>
+      </Code>
+    </Task>
+  </UsingTask>
+
+  <!--
+  
+  -->
+  <UsingTask TaskName="HostExec" Condition="('$(VisualStudioVersion)' != '16.0' AND '$(VisualStudioVersion)' != '17.0') AND '$(ApplicationType)' == 'Linux' AND '$(PlatformToolset)' == 'WSL_1_0'"
+    TaskFactory="CodeTaskFactory"
+    AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Command ParameterType="System.String" Required="true"/>
+      <Message ParameterType="System.String"/>
+      <RedirectStdOut ParameterType="System.String"/>
+      <RedirectStdErr ParameterType="System.String"/>
+      <WorkingDirectory ParameterType="System.String"/>
+      <Inputs ParameterType="Microsoft.Build.Framework.ITaskItem[]"/>
+      <Outputs ParameterType="Microsoft.Build.Framework.ITaskItem[]"/>
+      <RemoteTarget ParameterType="System.String"/>
+      <RemoteProjectDir ParameterType="System.String"/>
+      <IgnoreExitCode ParameterType="System.Boolean"/>
+      <ExitCode ParameterType="System.Int32" Output="true"/>
+    </ParameterGroup>
+    <Task>
+      <Code Type="Fragment" Language="cs">
+        <![CDATA[
+            ExitCode = 1;
+            Log.LogError("Cross-compilation of Qt projects in WSL not supported.");
+            return false;
+        ]]>
+      </Code>
+    </Task>
+  </UsingTask>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TASK HostTranslatePaths
+  ///  * Local (Windows) build
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Translate local (Windows) paths to build host paths. This could be a Linux host for cross
+  // compilation, or a simple copy (i.e. "no-op") when building in Windows.
+  // Input and output items are in the form:
+  //    <...>
+  //      <Item>...</Item>
+  //      <Name>...</Name>
+  //      <Value>...</Value>
+  //    </...>
+  // where <Item> is the local path, <Name> is a filter criteria identifier matched with the Names
+  // parameter, and <Value> is set to the host path in output items (for input items <Value> must
+  // be equal to <Item>).
+  // Parameters:
+  //      in ITaskItem[] Items:  input items with local paths
+  //      in string[]    Names:  filter criteria; unmatched items will simply be copied (i.e. no-op)
+  //     out ITaskItem[] Result: output items with translated host paths
+  -->
+  <UsingTask TaskName="HostExec" Condition="'$(ApplicationType)' != 'Linux'"
+    TaskFactory="CodeTaskFactory"
+    AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Command ParameterType="System.String" Required="true"/>
+      <Message ParameterType="System.String"/>
+      <RedirectStdOut ParameterType="System.String"/>
+      <RedirectStdErr ParameterType="System.String"/>
+      <WorkingDirectory ParameterType="System.String"/>
+      <Inputs ParameterType="Microsoft.Build.Framework.ITaskItem[]"/>
+      <Outputs ParameterType="Microsoft.Build.Framework.ITaskItem[]"/>
+      <RemoteTarget ParameterType="System.String"/>
+      <RemoteProjectDir ParameterType="System.String"/>
+      <IgnoreExitCode ParameterType="System.Boolean"/>
+      <ExitCode ParameterType="System.Int32" Output="true"/>
+    </ParameterGroup>
+    <Task>
+      <Reference Include="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll"/>
+      <Reference Include="$(MSBuildToolsPath)\Microsoft.Build.Utilities.Core.dll"/>
+      <Using Namespace="Microsoft.Build.Framework"/>
+      <Code Type="Fragment" Language="cs">
+        <![CDATA[
+            if (!string.IsNullOrEmpty(Message))
+                Log.LogMessage(MessageImportance.High, Message);
+            Command = "(" + Command + ")";
+            if (RedirectStdOut == "NUL" || RedirectStdOut == "/dev/null")
+                Command += " 1> NUL";
+            else if (!string.IsNullOrEmpty(RedirectStdOut))
+                Command += " 1> " + RedirectStdOut;
+            if (RedirectStdErr == "NUL" || RedirectStdErr == "/dev/null")
+                Command += " 2> NUL";
+            else if (RedirectStdErr == "STDOUT")
+                Command += " 2>&1";
+            else if (!string.IsNullOrEmpty(RedirectStdErr))
+                Command += " 2> " + RedirectStdErr;
+
+            var taskExec = new Microsoft.Build.Tasks.Exec
+            {
+                BuildEngine = BuildEngine,
+                HostObject = HostObject,
+                WorkingDirectory = WorkingDirectory,
+                Command = Command,
+                IgnoreExitCode = IgnoreExitCode
+            };
+
+            Log.LogMessage("\r\n==== HostExec: Microsoft.Build.Tasks.Exec");
+            Log.LogMessage("WorkingDirectory: {0}", taskExec.WorkingDirectory);
+            Log.LogMessage("Command: {0}", taskExec.Command);
+
+            bool ok = taskExec.Execute();
+            Log.LogMessage("== {0} ExitCode: {1}\r\n", ok ? "OK" : "FAIL", taskExec.ExitCode);
+
+            ExitCode = taskExec.ExitCode;
+            if (!ok)
+                return false;
+        ]]>
+      </Code>
+    </Task>
+  </UsingTask>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TASK HostTranslatePaths
+  ///  * Linux build over SSL
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Translate local (Windows) paths to build host paths. This could be a Linux host for cross
+  // compilation, or a simple copy (i.e. "no-op") when building in Windows.
+  // Input and output items are in the form:
+  //    <...>
+  //      <Item>...</Item>
+  //      <Name>...</Name>
+  //      <Value>...</Value>
+  //    </...>
+  // where <Item> is the local path, <Name> is a filter criteria identifier matched with the Names
+  // parameter, and <Value> is set to the host path in output items (for input items <Value> must
+  // be equal to <Item>).
+  // Parameters:
+  //      in ITaskItem[] Items:  input items with local paths
+  //      in string[]    Names:  filter criteria; unmatched items will simply be copied (i.e. no-op)
+  //     out ITaskItem[] Result: output items with translated host paths
+  -->
+  <UsingTask TaskName="HostTranslatePaths" Condition = "'$(ApplicationType)' == 'Linux' AND '$(PlatformToolset)' != 'WSL_1_0'"
+    TaskFactory="CodeTaskFactory"
+    AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Items ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true"/>
+      <Names ParameterType="System.String[]"/>
+      <Result ParameterType="Microsoft.Build.Framework.ITaskItem[]" Output="true"/>
+    </ParameterGroup>
+    <Task>
+      <Reference Include="$(VCTargetsPath)\Application Type\Linux\1.0\Microsoft.Build.Linux.Tasks.dll"/>
+      <Using Namespace="System"/>
+      <Using Namespace="System.Collections.Generic"/>
+      <Using Namespace="System.Linq"/>
+      <Using Namespace="System.IO"/>
+      <Using Namespace="Microsoft.Build.Framework"/>
+      <Using Namespace="Microsoft.Build.Utilities"/>
+      <Code Type="Fragment" Language="cs">
+        <![CDATA[
+            Result = new ITaskItem[] { };
+            var newItems = new List<ITaskItem>();
+            foreach (var item in Items) {
+                string itemName = item.GetMetadata("Name");
+                string itemValue = item.GetMetadata("Value");
+                if (Names.Contains(itemName)) {
+                    if (Path.IsPathRooted(itemValue) && !itemValue.StartsWith("/")) {
+                        var projectdir = new Uri(@"$(ProjectDir)");
+                        var itemFileName = Path.GetFileName(itemValue);
+                        var itemDirName = Path.GetFullPath(Path.GetDirectoryName(itemValue));
+                        if (!itemDirName.EndsWith(@"\"))
+                            itemDirName += @"\";
+                        var itemDir = new Uri(itemDirName);
+                        if (projectdir.IsBaseOf(itemDir)) {
+                            itemValue = projectdir.MakeRelativeUri(itemDir).OriginalString
+                              + itemFileName;
+                        } else {
+                            Log.LogWarning("Unable to translate path: {0}", itemValue);
+                        }
+                    } else {
+                        itemValue = itemValue.Replace(@"\", "/");
+                    }
+                }
+                newItems.Add(new TaskItem(item.ItemSpec,
+                    new Dictionary<string, string>
+                    {
+                      { "Item",  item.GetMetadata("Item") },
+                      { "Name",  itemName },
+                      { "Value", itemValue }
+                    }));
+            }
+            Result = newItems.ToArray();
+        ]]>
+      </Code>
+    </Task>
+  </UsingTask>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TASK HostTranslatePaths
+  ///  * Linux build over WSL
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Translate local (Windows) paths to build host paths. This could be a Linux host for cross
+  // compilation, or a simple copy (i.e. "no-op") when building in Windows.
+  // Input and output items are in the form:
+  //    <...>
+  //      <Item>...</Item>
+  //      <Name>...</Name>
+  //      <Value>...</Value>
+  //    </...>
+  // where <Item> is the local path, <Name> is a filter criteria identifier matched with the Names
+  // parameter, and <Value> is set to the host path in output items (for input items <Value> must
+  // be equal to <Item>).
+  // Parameters:
+  //      in ITaskItem[] Items:  input items with local paths
+  //      in string[]    Names:  filter criteria; unmatched items will simply be copied (i.e. no-op)
+  //     out ITaskItem[] Result: output items with translated host paths
+  -->
+  <UsingTask TaskName="HostTranslatePaths" Condition="('$(VisualStudioVersion)' == '16.0' OR '$(VisualStudioVersion)' == '17.0') AND '$(ApplicationType)' == 'Linux' AND '$(PlatformToolset)' == 'WSL_1_0'"
+    TaskFactory="CodeTaskFactory"
+    AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Items ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true"/>
+      <Names ParameterType="System.String[]"/>
+      <Result ParameterType="Microsoft.Build.Framework.ITaskItem[]" Output="true"/>
+    </ParameterGroup>
+    <Task>
+      <Reference Include="$(VCTargetsPath)\Application Type\Linux\1.0\liblinux.dll"/>
+      <Using Namespace="System.Collections.Generic"/>
+      <Using Namespace="System.Linq"/>
+      <Using Namespace="System.IO"/>
+      <Using Namespace="Microsoft.Build.Framework"/>
+      <Using Namespace="Microsoft.Build.Utilities"/>
+      <Using Namespace="liblinux.IO"/>
+      <Code Type="Fragment" Language="cs">
+        <![CDATA[
+            Result = new ITaskItem[] { };
+            var newItems = new List<ITaskItem>();
+            foreach (var item in Items) {
+                string itemName = item.GetMetadata("Name");
+                string itemValue = item.GetMetadata("Value");
+                if (Names.Contains(itemName)) {
+                    if (Path.IsPathRooted(itemValue) && !itemValue.StartsWith("/"))
+                        itemValue = PathUtils.TranslateWindowsPathToWSLPath(itemValue);
+                    else
+                        itemValue = itemValue.Replace(@"\", "/");
+                }
+                newItems.Add(new TaskItem(item.ItemSpec,
+                    new Dictionary<string, string>
+                    {
+                      { "Item",  item.GetMetadata("Item") },
+                      { "Name",  itemName },
+                      { "Value", itemValue }
+                    }));
+            }
+            Result = newItems.ToArray();
+        ]]>
+      </Code>
+    </Task>
+  </UsingTask>
+
+  <!--
+  
+  -->
+  <UsingTask TaskName="HostTranslatePaths" Condition="('$(VisualStudioVersion)' != '16.0' AND '$(VisualStudioVersion)' != '17.0') AND '$(ApplicationType)' == 'Linux' AND '$(PlatformToolset)' == 'WSL_1_0'"
+    TaskFactory="CodeTaskFactory"
+    AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Items ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true"/>
+      <Names ParameterType="System.String[]"/>
+      <Result ParameterType="Microsoft.Build.Framework.ITaskItem[]" Output="true"/>
+    </ParameterGroup>
+    <Task>
+      <Code Type="Fragment" Language="cs">
+        <![CDATA[
+            Result = null;
+            Log.LogError("Cross-compilation of Qt projects in WSL not supported.");
+            return false;
+        ]]>
+      </Code>
+    </Task>
+  </UsingTask>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TASK HostTranslatePaths
+  ///  * Local (Windows) build
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Translate local (Windows) paths to build host paths. This could be a Linux host for cross
+  // compilation, or a simple copy (i.e. "no-op") when building in Windows.
+  // Input and output items are in the form:
+  //    <...>
+  //      <Item>...</Item>
+  //      <Name>...</Name>
+  //      <Value>...</Value>
+  //    </...>
+  // where <Item> is the local path, <Name> is a filter criteria identifier matched with the Names
+  // parameter, and <Value> is set to the host path in output items (for input items <Value> must
+  // be equal to <Item>).
+  // Parameters:
+  //      in ITaskItem[] Items:  input items with local paths
+  //      in string[]    Names:  filter criteria; unmatched items will simply be copied (i.e. no-op)
+  //     out ITaskItem[] Result: output items with translated host paths
+  -->
+  <UsingTask TaskName="HostTranslatePaths" Condition = "'$(ApplicationType)' != 'Linux'"
+    TaskFactory="CodeTaskFactory"
+    AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Items ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true"/>
+      <Names ParameterType="System.String[]"/>
+      <Result ParameterType="Microsoft.Build.Framework.ITaskItem[]" Output="true"/>
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System.Linq"/>
+      <Code Type="Fragment" Language="cs">
+        <![CDATA[
+            Result = Items.ToArray();
+        ]]>
+      </Code>
+    </Task>
+  </UsingTask>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TASK Join
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Combines two lists of items into a single list containing items with common metadata values.
+  // Example:
+  //     INPUT:
+  //         Left = <LeftItem><X>foo</X><Y>42</Y></LeftItem>
+  //                <LeftItem><X>sna</X><Y>99</Y></LeftItem>
+  //                <LeftItem><X>bar</X><Y>3.14159</Y></LeftItem>
+  //         Right = <RightItem><Z>foo</Z><Y>99</Y></RightItem>
+  //                 <RightItem><Z>sna</Z><Y>2.71828</Y></RightItem>
+  //                 <RightItem><Z>bar</Z><Y>42</Y></RightItem>
+  //                 <RightItem><Z>bar</Z><Y>99</Y></RightItem>
+  //     OUTPUT:
+  //         Result = <Item><X>foo</X><Y>42</Y><Z>bar</Z></Item>
+  //                  <Item><X>sna</X><Y>99</Y><Z>foo</Z></Item>
+  //                  <Item><X>sna</X><Y>99</Y><Z>bar</Z></Item>
+  // Parameters:
+  //            in ITaskItem[]  LeftItems: first list of items to join
+  //            in ITaskItem[] RightItems: second list of items to join
+  //           out ITaskItem[]     Result: resulting list of items with common metadata
+  //   optional in    string[]         On: join criteria, list of names of metadata to match in both
+  //                                       input lists; all metadata in the criteria must be matched;
+  //                                       by default, %(Identity) will be used as criteria; the
+  //                                       special value 'ROW_NUMBER' will match the position of items
+  //                                       (i.e. items with the same index in each input list).
+  -->
+  <UsingTask TaskName="Join"
+    TaskFactory="CodeTaskFactory"
+    AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <LeftItems ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true"/>
+      <RightItems ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true"/>
+      <On ParameterType="System.String[]"/>
+      <Result ParameterType="Microsoft.Build.Framework.ITaskItem[]" Output="true"/>
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System"/>
+      <Using Namespace="System.Collections.Generic"/>
+      <Using Namespace="System.Linq"/>
+      <Using Namespace="Microsoft.Build.Framework"/>
+      <Using Namespace="Microsoft.Build.Utilities"/>
+      <Code Type="Fragment" Language="cs">
+        <![CDATA[
+            Result = new ITaskItem[] { };
+            var resultItems = new List<ITaskItem>();
+            List<string> matchFields = null;
+            if (On != null)
+                matchFields = new List<string>(On);
+            if (matchFields == null || !matchFields.Any())
+                matchFields = new List<string> { "Identity" };
+
+            var reserved = new HashSet<string>
+            {
+                "AccessedTime", "CreatedTime", "DefiningProjectDirectory",
+                "DefiningProjectExtension", "DefiningProjectFullPath", "DefiningProjectName",
+                "Directory", "Extension", "Filename", "FullPath", "Identity", "ModifiedTime",
+                "RecursiveDir", "RelativeDir", "RootDir"
+            };
+
+            for (int leftRowNum = 0; leftRowNum < LeftItems.Length; leftRowNum++) {
+                for (int rightRowNum = 0; rightRowNum < RightItems.Length; rightRowNum++) {
+                    var leftItem = LeftItems[leftRowNum];
+                    var rightItem = RightItems[rightRowNum];
+                    bool match = true;
+                    foreach (string field in matchFields) {
+                        if (field.Equals("ROW_NUMBER", StringComparison.OrdinalIgnoreCase)) {
+                            match = leftRowNum == rightRowNum;
+                        } else {
+                            string leftField = leftItem.GetMetadata(field);
+                            string rightField = rightItem.GetMetadata(field);
+                            match = leftField.Equals(rightField, StringComparison.OrdinalIgnoreCase);
+                        }
+                        if (!match)
+                            break;
+                    }
+                    if (match) {
+                        var resultItem = new TaskItem(leftItem.ItemSpec);
+                        foreach (string rightMetadata in rightItem.MetadataNames) {
+                            if (!reserved.Contains(rightMetadata)) {
+                                var metadataValue = rightItem.GetMetadata(rightMetadata);
+                                if (!string.IsNullOrEmpty(metadataValue))
+                                    resultItem.SetMetadata(rightMetadata, metadataValue);
+                            }
+                        }
+                        foreach (string leftMetadata in leftItem.MetadataNames) {
+                            if (!reserved.Contains(leftMetadata)) {
+                                var metadataValue = leftItem.GetMetadata(leftMetadata);
+                                if (!string.IsNullOrEmpty(metadataValue))
+                                    resultItem.SetMetadata(leftMetadata, metadataValue);
+                            }
+                        }
+                        resultItems.Add(resultItem);
+                    }
+                }
+            }
+
+            Result = resultItems.ToArray();
+        ]]>
+      </Code>
+    </Task>
+  </UsingTask>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TASK ListQrc
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // List resource paths in a QRC file.
+  // Parameters:
+  //      in string    QrcFilePath: path to QRC file
+  //     out string[]  Result: paths to files referenced in QRC
+  -->
+  <UsingTask TaskName="ListQrc"
+    TaskFactory="CodeTaskFactory"
+    AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <QrcFilePath ParameterType="System.String" Required="true"/>
+      <Result ParameterType="System.String[]" Output="true"/>
+    </ParameterGroup>
+    <Task>
+      <Reference Include="System.Xml"/>
+      <Reference Include="System.Xml.Linq"/>
+      <Using Namespace="System"/>
+      <Using Namespace="System.Collections.Generic"/>
+      <Using Namespace="System.Linq"/>
+      <Using Namespace="System.Xml.Linq"/>
+      <Code Type="Fragment" Language="cs">
+        <![CDATA[
+            XDocument qrc = XDocument.Load(QrcFilePath, LoadOptions.SetLineInfo);
+            IEnumerable<XElement> files = qrc
+                .Element("RCC")
+                .Elements("qresource")
+                .Elements("file");
+            Uri QrcPath = new Uri(QrcFilePath);
+            Result = files
+                .Select(x => new Uri(QrcPath, x.Value).LocalPath)
+                .ToArray();
+        ]]>
+      </Code>
+    </Task>
+  </UsingTask>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TASK ParseVarDefs
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  //
+  -->
+  <UsingTask TaskName="ParseVarDefs"
+    TaskFactory="CodeTaskFactory"
+    AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <QtVars ParameterType="System.String" Required="true"/>
+      <OutVarDefs ParameterType="Microsoft.Build.Framework.ITaskItem[]" Output="true"/>
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System.Collections.Generic"/>
+      <Using Namespace="System.Linq"/>
+      <Using Namespace="System.Text.RegularExpressions"/>
+      <Using Namespace="Microsoft.Build.Utilities"/>
+      <Code Type="Fragment" Language="cs">
+        <![CDATA[
+            OutVarDefs = Regex.Matches(QtVars,
+                @"\s*(\w+)\s*(?:;|=\s*(\w*)\s*(?:\/((?:\\.|[^;\/])*)\/((?:\\.|[^;\/])*)\/)?)?")
+                .Cast<Match>()
+                .Where(x => x.Groups.Count > 4 && !string.IsNullOrEmpty(x.Groups[1].Value))
+                .Select(x => x.Groups
+                      .Cast<Group>()
+                      .Select(y => !string.IsNullOrEmpty(y.Value) ? y.Value : null)
+                      .ToArray())
+                .Select(x => new TaskItem(x[1],
+                    new Dictionary<string, string>
+                    {
+                        { "Name" ,    x[2] ?? x[1] },
+                        { "Pattern" , x[3] ?? ".*" },
+                        { "Value" ,   x[4] ?? "$0" }
+                    }))
+                .ToArray();
+        ]]>
+      </Code>
+    </Task>
+  </UsingTask>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TASK QtRunTask
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Execute a task from the specified assembly, taking as input a list of items. Each item
+  // metadata is copied to a task property with the same name. After the task is executed, the
+  // result for each item is then stored in a new metadata for that item. The final output is the
+  // list of modified items.
+  // Parameters /////////////////////////////////////////////////////////////////////////////////
+  //  in ITaskItem[]   Items........................List of source items.
+  //  in String        AssemblyPath.................Path to assembly containing the task.
+  //  in String        TaskName.....................Full name of task, including namespace.
+  //  in String        TaskInput....................Name of task input property.
+  //  in String        TaskOutput (optional)........Name of task output property.
+  //    If unspecified, task output is ignored.
+  //  in String        NewMetadata (optional).......Name of new item metadata to store result.
+  //    If unspecified, defaults to TaskOutput.
+  // out ITaskItem[]   Result.......................Output list of modified items.
+  //    If TaskOutput is unspecified, Result will be empty.
+  // Example //////////////////////////////////////////////////////////////////////////////////////
+  //  Items = {
+  //      ClCompile {
+  //          Identity = "main.cpp",
+  //          ...
+  //          EnforceTypeConversionRules = False,
+  //          ...
+  //      }
+  //  }
+  //  AssemblyPath = "$(VCTargetsPath)\Microsoft.Build.CPPTasks.Common.dll"
+  //  TaskName = "Microsoft.Build.CPPTasks.CLCommandLine"
+  //  TaskInput = "Sources"
+  //  TaskOutput = "CommandLines"
+  //  NewMetadata = "CommandLine"
+  //  Result = {
+  //      ClCompile_Modified {
+  //          Identity = "main.cpp",
+  //          ...
+  //          EnforceTypeConversionRules = False,
+  //          ...
+  //          CommandLine = "... /Zc:rvalueCast- ..."
+  //      }
+  //  }
+  -->
+  <UsingTask TaskName="QtRunTask"
+    TaskFactory="CodeTaskFactory"
+    AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Items ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true"/>
+      <AssemblyPath ParameterType="System.String" Required="true"/>
+      <TaskName ParameterType="System.String" Required="true"/>
+      <TaskInput ParameterType="System.String" Required="true"/>
+      <TaskOutput ParameterType="System.String"/>
+      <NewMetadata ParameterType="System.String"/>
+      <Result ParameterType="Microsoft.Build.Framework.ITaskItem[]" Output="true"/>
+    </ParameterGroup>
+    <Task>
+      <Reference Include="System.Runtime"/>
+      <Using Namespace="System"/>
+      <Using Namespace="System.Collections.Generic"/>
+      <Using Namespace="System.Linq"/>
+      <Using Namespace="System.Reflection"/>
+      <Using Namespace="Microsoft.Build.Framework"/>
+      <Using Namespace="Microsoft.Build.Utilities"/>
+      <Code Type="Fragment" Language="cs">
+        <![CDATA[
+            var reserved = new HashSet<string>
+            {
+                "AccessedTime", "CreatedTime", "DefiningProjectDirectory",
+                "DefiningProjectExtension", "DefiningProjectFullPath", "DefiningProjectName",
+                "Directory", "Extension", "Filename", "FullPath", "Identity", "ModifiedTime",
+                "RecursiveDir", "RelativeDir", "RootDir"
+            };
+
+            // Output default values
+            Result = null;
+
+            // Load specified assembly
+            var taskAssembly = Assembly.LoadFile(AssemblyPath);
+            if (taskAssembly == null)
+                throw new ArgumentException("AssemblyPath");
+
+            // Access task type
+            var taskType = taskAssembly.GetType(TaskName);
+            if (taskType == null)
+                throw new ArgumentException("TaskName");
+
+            // Task type has the following requirements:
+            //  * Must be a descendant of the ToolTask type
+            //  * Cannot be an abstract class
+            //  * Cannot have generic type arguments
+            //  * Must have a public default constructor
+            if (!typeof(ToolTask).IsAssignableFrom(taskType))
+                throw new NotSupportedException("Not a ToolTask derived type");
+            if (taskType.IsAbstract)
+                throw new NotSupportedException("Abstract class");
+            if (taskType.ContainsGenericParameters)
+                throw new NotSupportedException("Generic class");
+            var ctorInfo = ((TypeInfo)taskType).DeclaredConstructors
+                .FirstOrDefault(x => x.GetParameters().Length == 0);
+            if (ctorInfo == null)
+                throw new NotSupportedException("No default constructor");
+
+            // Access input property of task type
+            var inputProperty = taskType.GetProperty(TaskInput);
+            if (inputProperty == null)
+                throw new ArgumentException("TaskInput");
+            if (inputProperty.PropertyType != typeof(ITaskItem)
+                && inputProperty.PropertyType != typeof(ITaskItem[])) {
+                throw new NotSupportedException("Input property type is not supported");
+            }
+
+            // If output was specified, access corresponding property of task type
+            PropertyInfo outputProperty = null;
+            if (TaskOutput != null) {
+                outputProperty = taskType.GetProperty(TaskOutput);
+                if (outputProperty == null)
+                    throw new ArgumentException("TaskOutput");
+                if (outputProperty.PropertyType != typeof(string)
+                    && outputProperty.PropertyType != typeof(string[])
+                    && outputProperty.PropertyType != typeof(ITaskItem[])) {
+                    throw new NotSupportedException("Output property type is not supported");
+                }
+                if (NewMetadata == null)
+                    NewMetadata = TaskOutput;
+            }
+
+            var resultItems = new List<ITaskItem>();
+            foreach (var item in Items) {
+                // For each source item ...
+
+                // Instantiate task
+                var task = ctorInfo.Invoke(Array.Empty<object>()) as ToolTask;
+                task.BuildEngine = BuildEngine;
+                task.HostObject = HostObject;
+
+                // Set task input property to the source item
+                var inputPropertyType = inputProperty.PropertyType;
+                if (inputPropertyType == typeof(ITaskItem)) {
+                    inputProperty.SetValue(task, item);
+                } else if (inputPropertyType == typeof(ITaskItem[])) {
+                    inputProperty.SetValue(task, new ITaskItem[] { item });
+                }
+
+                var names = item.MetadataNames.Cast<string>()
+                    .Where(x => !reserved.Contains(x));
+                foreach (var name in names) {
+                    // For each metadata in the source item ...
+
+                    // Try to obtain a task property with the same name
+                    var taskProperty = taskType.GetProperty(name);
+                    if (taskProperty != null) {
+                        // If the property exists, set it to the metadata value
+                        string metadataValue = item.GetMetadata(name);
+                        var propertyType = taskProperty.PropertyType;
+                        if (propertyType == typeof(bool)) {
+                            taskProperty.SetValue(task, metadataValue.Equals("true",
+                                StringComparison.InvariantCultureIgnoreCase));
+                        } else if (propertyType == typeof(string)) {
+                            taskProperty.SetValue(task, metadataValue);
+                        } else if (propertyType == typeof(string[])) {
+                            taskProperty.SetValue(task, metadataValue.Split(';'));
+                        }
+                    }
+                }
+
+                // Run task
+                if (!task.Execute())
+                    throw new Exception(string.Format("Task failed ({0})", item.ItemSpec));
+
+                // Record task output
+                if (TaskOutput != null) {
+                    // Create output item as copy of source item
+                    var resultItem = new TaskItem(item);
+
+                    // Set new metadata and add output item to the result list
+                    string outputValue;
+                    object propertyValue = outputProperty.GetValue(task);
+                    if (propertyValue == null)
+                        outputValue = string.Empty;
+                    else if (outputProperty.PropertyType == typeof(string))
+                        outputValue = propertyValue as string;
+                    else if (outputProperty.PropertyType == typeof(string[]))
+                        outputValue = (propertyValue as string[]).FirstOrDefault();
+                    else if (outputProperty.PropertyType == typeof(ITaskItem[]))
+                        outputValue = (propertyValue as ITaskItem[]).FirstOrDefault().ItemSpec;
+                    else
+                        outputValue = string.Empty;
+                    if (NewMetadata != null)
+                        resultItem.SetMetadata(NewMetadata, outputValue);
+                    resultItems.Add(resultItem);
+                }
+            }
+
+            // Return the list of output items
+            Result = resultItems.ToArray();
+        ]]>
+      </Code>
+    </Task>
+  </UsingTask>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TASK QtRunWork
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Run work items in parallel processes.
+  // Parameters:
+  //      in ITaskItem[] QtWork:      work items
+  //      in int         QtMaxProcs:  maximum number of processes to run in parallel
+  //      in bool        QtDebug:     generate debug messages
+  //     out ITaskItem[] Result:      list of new items with the result of each work item
+  -->
+  <UsingTask TaskName="QtRunWork"
+    TaskFactory="CodeTaskFactory"
+    AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <QtWork ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true"/>
+      <QtMaxProcs ParameterType="System.Int32" Required="true"/>
+      <QtDebug ParameterType="System.Boolean" Required="true"/>
+      <Result ParameterType="Microsoft.Build.Framework.ITaskItem[]" Output="true"/>
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System"/>
+      <Using Namespace="System.Diagnostics"/>
+      <Using Namespace="System.Linq"/>
+      <Using Namespace="System.Collections.Generic"/>
+      <Using Namespace="Microsoft.Build.Framework"/>
+      <Using Namespace="Microsoft.Build.Utilities"/>
+      <Code Type="Fragment" Language="cs">
+        <![CDATA[
+            Result = new ITaskItem[] { };
+            bool ok = true;
+            var Comparer = StringComparer.InvariantCultureIgnoreCase;
+            var Comparison = StringComparison.InvariantCultureIgnoreCase;
+
+            // Work item key = "%(WorkType)(%(Identity))"
+            Func<string, string, string> KeyString = (x, y) => string.Format("{0}{{{1}}}", x, y);
+            Func<ITaskItem, string> Key = item =>
+                KeyString(item.GetMetadata("WorkType"), item.ItemSpec);
+            var workItemKeys = new HashSet<string>(QtWork.Select(x => Key(x)), Comparer);
+
+            // Work items, indexed by %(Identity)
+            var workItemsByIdentity = QtWork
+                .GroupBy(x => x.ItemSpec, x => Key(x), Comparer)
+                .ToDictionary(x => x.Key, x => new List<string>(x), Comparer);
+
+            // Work items, indexed by work item key
+            var workItems = QtWork.Select(x => new
+            {
+                Self = x,
+                Key = Key(x),
+                ToolPath = x.GetMetadata("ToolPath"),
+                Message = x.GetMetadata("Message"),
+                DependsOn = new HashSet<string>(comparer: Comparer,
+                    collection: x.GetMetadata("DependsOn")
+                        .Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
+                        .Where(y => workItemsByIdentity.ContainsKey(y))
+                        .SelectMany(y => workItemsByIdentity[y])
+                    .Union(x.GetMetadata("DependsOnWork")
+                        .Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
+                        .Select(y => KeyString(y, x.ItemSpec))
+                        .Where(y => workItemKeys.Contains(y)))
+                    .GroupBy(y => y, Comparer).Select(y => y.Key)
+                    .Where(y => !y.Equals(Key(x), Comparison))),
+                ProcessStartInfo = new ProcessStartInfo
+                {
+                    FileName = x.GetMetadata("ToolPath"),
+                    Arguments = x.GetMetadata("Options"),
+                    CreateNoWindow = true,
+                    UseShellExecute = false,
+                    RedirectStandardError = true,
+                    RedirectStandardOutput = true
+                }
+            })
+            // In case of items with duplicate keys, use only the first one
+            .GroupBy(x => x.Key, Comparer)
+            .ToDictionary(x => x.Key, x => x.First(), Comparer);
+
+            // Result
+            var result = workItems.Values
+                .ToDictionary(x => x.Key, x => new TaskItem(x.Self));
+
+            // Dependency relation [item -> dependent items]
+            var dependentsOf = workItems.Values
+                .Where(x => x.DependsOn.Any())
+                .SelectMany(x => x.DependsOn.Select(y => new { Dependent = x.Key, Dependency = y }))
+                .GroupBy(x => x.Dependency, x => x.Dependent, Comparer)
+                .ToDictionary(x => x.Key, x => new List<string>(x), Comparer);
+
+            // Work items that are ready to start; initially queue all independent items
+            var workQueue = new Queue<string>(workItems.Values
+                .Where(x => !x.DependsOn.Any())
+                .Select(x => x.Key));
+
+            if (QtDebug) {
+                Log.LogMessage(MessageImportance.High,
+                    string.Format("## QtRunWork queueing\r\n##    {0}",
+                    string.Join("\r\n##    ", workQueue)));
+            }
+
+            // Postponed items; save dependent items to queue later when ready
+            var postponedItems = new HashSet<string>(workItems.Values
+                .Where(x => x.DependsOn.Any())
+                .Select(x => x.Key));
+
+            if (QtDebug && postponedItems.Any()) {
+                Log.LogMessage(MessageImportance.High,
+                    string.Format("## QtRunWork postponed dependents\r\n##    {0}",
+                    string.Join("\r\n##    ", postponedItems
+                        .Select(x => string.Format("{0} <- {1}", x,
+                                     string.Join(", ", workItems[x].DependsOn))))));
+            }
+
+            // Work items that are running; must synchronize with the exit of all processes
+            var running = new Queue<KeyValuePair<string, Process>>();
+
+            // Work items that have terminated
+            var terminated = new HashSet<string>(Comparer);
+
+            // While there are work items queued, start a process for each item
+            while (ok && workQueue.Any()) {
+
+                var workItem = workItems[workQueue.Dequeue()];
+                Log.LogMessage(MessageImportance.High, workItem.Message);
+
+                try {
+                    var proc = Process.Start(workItem.ProcessStartInfo);
+                    proc.OutputDataReceived += (sender, e) =>
+                    {
+                        if (!string.IsNullOrEmpty(e.Data)) {
+                            Log.LogMessage(MessageImportance.High, string.Join(" ",
+                                QtDebug ? "[" + ((Process)sender).Id + "]" : "", e.Data));
+                        }
+                    };
+                    proc.ErrorDataReceived += (sender, e) =>
+                    {
+                        if (!string.IsNullOrEmpty(e.Data)) {
+                            Log.LogMessage(MessageImportance.High, string.Join(" ",
+                                QtDebug ? "[" + ((Process)sender).Id + "]" : "", e.Data));
+                        }
+                    };
+                    proc.BeginOutputReadLine();
+                    proc.BeginErrorReadLine();
+                    running.Enqueue(new KeyValuePair<string, Process>(workItem.Key, proc));
+                } catch (Exception e) {
+                    Log.LogError(
+                        string.Format("[QtRunWork] Error starting process {0}: {1}",
+                        workItem.ToolPath, e.Message));
+                    ok = false;
+                }
+
+                string qtDebugRunning = "";
+                if (QtDebug) {
+                    qtDebugRunning = string.Format("## QtRunWork waiting {0}",
+                        string.Join(", ", running
+                            .Select(x => string.Format("{0} [{1}]", x.Key, x.Value.Id))));
+                }
+
+                // Wait for process to terminate when there are processes running, and...
+                while (ok && running.Any()
+                    // ...work is queued but already reached the maximum number of processes, or...
+                    && ((workQueue.Any() && running.Count >= QtMaxProcs)
+                    // ...work queue is empty but there are dependents that haven't yet been queued
+                    || (!workQueue.Any() && postponedItems.Any()))) {
+
+                    var itemProc = running.Dequeue();
+                    workItem = workItems[itemProc.Key];
+                    var proc = itemProc.Value;
+
+                    if (QtDebug && !string.IsNullOrEmpty(qtDebugRunning)) {
+                        Log.LogMessage(MessageImportance.High, qtDebugRunning);
+                        qtDebugRunning = "";
+                    }
+
+                    if (proc.WaitForExit(100)) {
+                        if (QtDebug) {
+                            Log.LogMessage(MessageImportance.High,
+                                string.Format("## QtRunWork exit {0} [{1}] = {2} ({3:0.00} msecs)",
+                                workItem.Key, proc.Id, proc.ExitCode,
+                                (proc.ExitTime - proc.StartTime).TotalMilliseconds));
+                        }
+
+                        // Process terminated; check exit code and close
+                        terminated.Add(workItem.Key);
+                        result[workItem.Key].SetMetadata("ExitCode", proc.ExitCode.ToString());
+                        ok &= proc.ExitCode == 0;
+                        proc.Close();
+
+                        // Add postponed dependent items to work queue
+                        if (ok && dependentsOf.ContainsKey(workItem.Key)) {
+                            // Dependents of workItem...
+                            var readyDependents = dependentsOf[workItem.Key]
+                                // ...that have not yet been queued...
+                                .Where(x => postponedItems.Contains(x)
+                                    // ...and whose dependending items have all terminated.
+                                    && workItems[x].DependsOn.All(y => terminated.Contains(y)))
+                                .ToList();
+                            if (QtDebug && readyDependents.Any()) {
+                                Log.LogMessage(MessageImportance.High,
+                                string.Format("## QtRunWork queueing\r\n##    {0}",
+                                string.Join("\r\n##    ", readyDependents)));
+                            }
+
+                            foreach (var dependent in readyDependents) {
+                                postponedItems.Remove(dependent);
+                                workQueue.Enqueue(dependent);
+                            }
+                        }
+                    } else {
+                        // Process is still running; feed it back into the running queue
+                        running.Enqueue(itemProc);
+                    }
+                }
+            }
+
+            // If there are items still haven't been queued, that means a circular dependency exists
+            if (ok && postponedItems.Any()) {
+                ok = false;
+                Log.LogError("[QtRunWork] Error: circular dependency");
+                if (QtDebug) {
+                    Log.LogMessage(MessageImportance.High,
+                        string.Format("## QtRunWork circularity\r\n##    {0}",
+                        string.Join("\r\n##    ", postponedItems
+                            .Select(x => string.Format("{0} <- {1}", x,
+                                         string.Join(", ", workItems[x].DependsOn))))));
+                }
+            }
+
+            if (ok && QtDebug) {
+                Log.LogMessage(MessageImportance.High,
+                    "## QtRunWork all work queued");
+                if (running.Any()) {
+                    Log.LogMessage(MessageImportance.High,
+                        string.Format("## QtRunWork waiting {0}",
+                        string.Join(", ", running
+                            .Select(x => string.Format("{0} [{1}]", x.Key, x.Value.Id)))));
+                }
+            }
+
+            // Wait for all running processes to terminate
+            while (running.Any()) {
+                var itemProc = running.Dequeue();
+                var workItem = workItems[itemProc.Key];
+                var proc = itemProc.Value;
+                if (proc.WaitForExit(100)) {
+                    if (QtDebug) {
+                        Log.LogMessage(MessageImportance.High,
+                            string.Format("## QtRunWork exit {0} [{1}] = {2} ({3:0.00} msecs)",
+                            workItem.Key, proc.Id, proc.ExitCode,
+                            (proc.ExitTime - proc.StartTime).TotalMilliseconds));
+                    }
+                    // Process terminated; check exit code and close
+                    result[workItem.Key].SetMetadata("ExitCode", proc.ExitCode.ToString());
+                    ok &= proc.ExitCode == 0;
+                    proc.Close();
+                } else {
+                    // Process is still running; feed it back into the running queue
+                    running.Enqueue(itemProc);
+                }
+            }
+
+            if (QtDebug) {
+                Log.LogMessage(MessageImportance.High,
+                    string.Format("## QtRunWork result {0}", ok ? "ok" : "FAILED!"));
+            }
+
+            Result = result.Values.ToArray();
+            if (!ok)
+                return false;
+        ]]>
+      </Code>
+    </Task>
+  </UsingTask>
+  <!-- END Generated code -->
+
+</Project>
+<!---->

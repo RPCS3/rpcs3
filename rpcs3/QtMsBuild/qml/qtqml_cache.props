@@ -1,0 +1,61 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+/***************************************************************************************************
+ Copyright (C) 2023 The Qt Company Ltd.
+ SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+***************************************************************************************************/
+-->
+<!--
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Qt/MSBuild QML property definitions
+// -->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Import pre-requisites
+  // -->
+  <Import
+    Condition="'$(QtMsBuildProps_BeforeQmlCache)' != ''"
+    Project="$(QtMsBuildProps_BeforeQmlCache)"/>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // QtRcc item template, QML cache generation properties
+  // -->
+  <ItemDefinitionGroup>
+    <QtRcc>
+      <QmlCacheGenerate>false</QmlCacheGenerate>
+      <!--
+      // QML cache generation -->
+      <QmlCacheGenMessage
+        ><![CDATA[Qt Quick Compiler: compiling %<Identity> ahead of time]]></QmlCacheGenMessage>
+      <QmlCacheOutputFile
+        ><![CDATA[$(ProjectDir)GeneratedFiles\%<Filename>_%<Suffix>.cpp]]></QmlCacheOutputFile>
+      <!--
+      // QRC filtering -->
+      <QmlCacheFilterMessage
+        >Qt Quick Compiler: filtering %(Identity)</QmlCacheFilterMessage>
+      <QmlCacheFilteredFile
+        >$(ProjectDir)GeneratedFiles\%(Filename)_qmlcache.qrc</QmlCacheFilteredFile>
+      <QmlCacheFilteredOutputFile
+        >$(ProjectDir)GeneratedFiles\qrc_%(Filename)_qmlcache.cpp</QmlCacheFilteredOutputFile>
+      <QmlCacheFilteredInitFuncName
+        >%(Filename)_qmlcache</QmlCacheFilteredInitFuncName>
+      <!--
+      // QML cache loader generation -->
+      <QmlCacheLoaderMessage
+        >Qt Quick Compiler: generating cache loader</QmlCacheLoaderMessage>
+      <QmlCacheLoaderFile
+        >$(ProjectDir)GeneratedFiles\qmlcache_loader.cpp</QmlCacheLoaderFile>
+    </QtRcc>
+  </ItemDefinitionGroup>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Import dependants
+  // -->
+  <Import
+    Condition="'$(QtMsBuildProps_AfterQmlCache)' != ''"
+    Project="$(QtMsBuildProps_AfterQmlCache)"/>
+
+</Project>

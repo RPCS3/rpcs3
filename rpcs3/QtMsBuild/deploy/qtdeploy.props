@@ -1,0 +1,50 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+/***************************************************************************************************
+ Copyright (C) 2023 The Qt Company Ltd.
+ SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+***************************************************************************************************/
+-->
+
+<!--
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Deployment of Qt dependencies
+// -->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <QtDeploy Condition="'$(QtDeploy)' == ''">false</QtDeploy>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <QtDeploy>
+      <QtDeployFiles>$(TargetPath)</QtDeployFiles>
+      <QtDeployDir Condition="'$(QtDeployToProjectDir)' == 'true'">$(ProjectDir)</QtDeployDir>
+      <QtDeployDir Condition="'$(QtDeployToProjectDir)' != 'true'">$(OutDir)</QtDeployDir>
+      <QtDeployLibDir/>
+      <QtDeployPluginDir/>
+      <QtDeployDebugRelease>false</QtDeployDebugRelease>
+      <QtDeployPdb>false</QtDeployPdb>
+      <QtDeployForce>false</QtDeployForce>
+      <QtDeployNoPatchQt>false</QtDeployNoPatchQt>
+      <QtDeployNoPlugins>false</QtDeployNoPlugins>
+      <QtDeployNoLibraries>false</QtDeployNoLibraries>
+      <QtDeployQmlDir/>
+      <QtDeployQmlImport/>
+      <QtDeployNoQuickImport>false</QtDeployNoQuickImport>
+      <QtDeployNoTranslations>false</QtDeployNoTranslations>
+      <QtDeployNoSystemD3dCompiler>false</QtDeployNoSystemD3dCompiler>
+      <QtDeployNoVirtualKeyboard>false</QtDeployNoVirtualKeyboard>
+      <QtDeployCompilerRuntime>false</QtDeployCompilerRuntime>
+      <QtDeployWebkit2>false</QtDeployWebkit2>
+      <QtDeployAngle>false</QtDeployAngle>
+      <QtDeployNoOpenglSw>false</QtDeployNoOpenglSw>
+      <QtDeployIncludeModules/>
+      <QtDeployExcludeModules/>
+      <QtDeployVerbose>false</QtDeployVerbose>
+      <QtDeployVsContent Condition="'$(QtDeployVsContent)' == 'true'">true</QtDeployVsContent>
+      <QtDeployVsContent Condition="'$(QtDeployVsContent)' != 'true'">false</QtDeployVsContent>
+    </QtDeploy>
+  </ItemDefinitionGroup>
+  <ItemGroup Condition="'$(QtDeploy)' == 'true'">
+    <ProjectTools Include="QtDeploy"/>
+  </ItemGroup>
+</Project>

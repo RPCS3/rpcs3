@@ -1,0 +1,214 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+/***************************************************************************************************
+ Copyright (C) 2023 The Qt Company Ltd.
+ SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+***************************************************************************************************/
+-->
+
+<!--
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Defines the fields included in the repc property page, as well as any
+// other metadata associated to QtRepc items
+// -->
+<ProjectSchemaDefinitions
+  xmlns="http://schemas.microsoft.com/build/2009/properties"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:sys="clr-namespace:System;assembly=mscorlib">
+  <Rule
+    Name="QtRule60_Repc"
+    PageTemplate="tool"
+    DisplayName="Qt Remote Objects Compiler"
+    Order="9">
+    <Rule.DataSource>
+      <DataSource
+        Persistence="ProjectFile"
+        ItemType="QtRepc" />
+    </Rule.DataSource>
+    <Rule.Categories>
+      <Category
+        Name="General">
+        <Category.DisplayName>
+          <sys:String>repc.exe</sys:String>
+        </Category.DisplayName>
+      </Category>
+    </Rule.Categories>
+    <StringListProperty
+      Name="Inputs"
+      Category="General"
+      IsRequired="true"
+      Visible="False">
+      <StringListProperty.DataSource>
+        <DataSource
+           Persistence="ProjectFile"
+           ItemType="QtRepc"
+           SourceType="Item" />
+      </StringListProperty.DataSource>
+    </StringListProperty>
+    <StringProperty
+      Name="ExecutionDescription"
+      DisplayName="Execution Description"
+      IncludeInCommandLine="False" />
+    <StringProperty
+      Name="QTDIR"
+      DisplayName="Qt Directory"
+      Description="Path to installation of Qt."/>
+    <EnumProperty
+      Name="InputFileType"
+      HelpUrl="https://doc.qt.io/qt-5/qtremoteobjects-repc.html"
+      DisplayName="Input File Type">
+      <EnumValue
+        Name="rep"
+        DisplayName="Replicant template"/>
+      <EnumValue
+        Name="src"
+        DisplayName="C++ QObject derived classes"/>
+    </EnumProperty>
+    <StringProperty
+      Name="InputFile"
+      HelpUrl="https://doc.qt.io/qt-5/qtremoteobjects-repc.html"
+      DisplayName="Input File"
+      Description="Input header/rep file to read from. ([header-file/rep-file])" />
+    <EnumProperty
+      Name="OutputFileType"
+      HelpUrl="https://doc.qt.io/qt-5/qtremoteobjects-repc.html"
+      DisplayName="Output File Type">
+      <EnumValue
+        Name="source"
+        DisplayName="source (Source header)"/>
+      <EnumValue
+        Name="replica"
+        DisplayName="replica (Replica header)"/>
+      <EnumValue
+        Name="merged"
+        DisplayName="merged (Combined replica/source)"/>
+      <EnumValue
+        Name="rep"
+        DisplayName="rep (Replicant template)"/>
+    </EnumProperty>
+    <StringProperty
+      Name="OutputFile"
+      HelpUrl="https://doc.qt.io/qt-5/qtremoteobjects-repc.html"
+      DisplayName="Output File"
+      Description="Output header/rep file to write to. ([rep-file/header-file])" />
+    <StringListProperty
+      Name="IncludePath"
+      HelpUrl="https://doc.qt.io/qt-5/qtremoteobjects-repc.html"
+      DisplayName="Include Path"
+      Description=
+"Add &lt;dir&gt; to the include path for header files. This parameter is needed only if the input
+file type is src (.h file). Separate with semicolons if more than one. (-I&lt;dir&gt;)"/>
+    <BoolProperty
+      Name="AlwaysClass"
+      HelpUrl="https://doc.qt.io/qt-5/qtremoteobjects-repc.html"
+      DisplayName="Always Output Class Type"
+      Description="Always output 'class' type for .rep files and never 'POD'. (-c)"/>
+    <BoolProperty
+      Name="PrintDebug"
+      HelpUrl="https://doc.qt.io/qt-5/qtremoteobjects-repc.html"
+      DisplayName="Print Debug Information"
+      Description="Print out parsing debug information (for troubleshooting). (-d)"/>
+    <StringProperty
+      Name="CommandLineTemplate"
+      DisplayName="Command Line"
+      Visible="False"
+      IncludeInCommandLine="False" />
+    <DynamicEnumProperty
+      Name="QtRepcBeforeTargets"
+      Category="General"
+      EnumProvider="Targets"
+      IncludeInCommandLine="False" Visible="False">
+      <DynamicEnumProperty.DisplayName>
+        <sys:String>Execute Before</sys:String>
+      </DynamicEnumProperty.DisplayName>
+      <DynamicEnumProperty.Description>
+        <sys:String>Specifies the targets for the build customization to run before.</sys:String>
+      </DynamicEnumProperty.Description>
+      <DynamicEnumProperty.ProviderSettings>
+        <NameValuePair
+          Name="Exclude"
+          Value="^QtRepcBeforeTargets|^Compute" />
+      </DynamicEnumProperty.ProviderSettings>
+      <DynamicEnumProperty.DataSource>
+        <DataSource
+          Persistence="ProjectFile"
+          ItemType=""
+          HasConfigurationCondition="true" />
+      </DynamicEnumProperty.DataSource>
+    </DynamicEnumProperty>
+    <DynamicEnumProperty
+      Name="QtRepcAfterTargets"
+      Category="General"
+      EnumProvider="Targets"
+      IncludeInCommandLine="False" Visible="False">
+      <DynamicEnumProperty.DisplayName>
+        <sys:String>Execute After</sys:String>
+      </DynamicEnumProperty.DisplayName>
+      <DynamicEnumProperty.Description>
+        <sys:String>Specifies the targets for the build customization to run after.</sys:String>
+      </DynamicEnumProperty.Description>
+      <DynamicEnumProperty.ProviderSettings>
+        <NameValuePair
+          Name="Exclude"
+          Value="^QtRepcAfterTargets|^Compute" />
+      </DynamicEnumProperty.ProviderSettings>
+      <DynamicEnumProperty.DataSource>
+        <DataSource
+          Persistence="ProjectFile"
+          ItemType=""
+          HasConfigurationCondition="true" />
+      </DynamicEnumProperty.DataSource>
+    </DynamicEnumProperty>
+    <StringListProperty
+      Name="Outputs"
+      DisplayName="Outputs"
+      IncludeInCommandLine="False"
+      Visible="False" />
+    <StringListProperty
+      Name="AdditionalDependencies"
+      DisplayName="Additional Dependencies"
+      IncludeInCommandLine="False"/>
+    <StringProperty
+      Subtype="AdditionalOptions"
+      Name="AdditionalOptions"
+      Category="General">
+      <StringProperty.DisplayName>
+        <sys:String>Additional Options</sys:String>
+      </StringProperty.DisplayName>
+      <StringProperty.Description>
+        <sys:String>Additional Options</sys:String>
+      </StringProperty.Description>
+    </StringProperty>
+    <EnumProperty
+      Name="DynamicSource"
+      DisplayName="Dynamic moc Source"
+      Description="Add output file to list of moc sources during build.">
+      <EnumValue
+        Name="moc_cpp"
+        DisplayName="Output moc header and moc-generated C++"
+        Description="Use output as dynamic moc source, and output of moc as dynamic C++ source."/>
+      <EnumValue
+        Name="moc"
+        DisplayName="Output moc header"
+        Description="Use output as dynamic moc source."/>
+      <EnumValue
+        Name="false"
+        DisplayName="Disable"
+        Description="Disable dynamic source."/>
+    </EnumProperty>
+    <BoolProperty
+      Name="ParallelProcess"
+      DisplayName="Parallel Process"
+      Description="Run tool in parallel process."/>
+  </Rule>
+  <ItemType
+    Name="QtRepc"
+    DisplayName="Qt Remote Objects Compiler (repc)" />
+  <FileExtension
+    Name="*.rep"
+    ContentType="QtRepc" />
+  <ContentType
+    Name="QtRepc"
+    DisplayName="Qt Remote Objects Compiler (repc)"
+    ItemType="QtRepc" />
+</ProjectSchemaDefinitions>

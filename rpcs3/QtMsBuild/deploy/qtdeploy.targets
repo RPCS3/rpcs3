@@ -1,0 +1,319 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+/***************************************************************************************************
+ Copyright (C) 2023 The Qt Company Ltd.
+ SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+***************************************************************************************************/
+-->
+
+<!--
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Deployment of Qt dependencies
+// -->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Setup property page
+  // -->
+  <ItemGroup>
+    <PropertyPageSchema
+      Include="$(MSBuildThisFileDirectory)qtdeploy.xml" />
+  </ItemGroup>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Default deploy log location
+  // -->
+  <PropertyGroup>
+    <QtDeployLog Condition="'$(QtDeployLog)' == ''">$(IntDir)windeployqt.log</QtDeployLog>
+  </PropertyGroup>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Schedule QtDeploy target to run after Link
+  // -->
+  <PropertyGroup Condition="'$(QtDeploy)' == 'true' AND '$(ApplicationType)' != 'Linux'">
+    <BuildLinkTargets>$(BuildLinkTargets);QtDeploy</BuildLinkTargets>
+  </PropertyGroup>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Deploy Qt files
+  // -->
+  <Target Name="QtDeploy"
+    AfterTargets="Link"
+    Inputs="$(TargetPath)" Outputs="$(QtDeployLog)"
+    Condition="'$(QtDeploy)' == 'true' AND '$(ApplicationType)' != 'Linux'">
+
+    <ItemGroup>
+      <QtDeploy Include="$(TargetPath)"/>
+    </ItemGroup>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Convert string lists in source item properties to lists of items
+    // -->
+    <Flatten Items="@(QtDeploy)"
+      Metadata="QtDeployFiles;
+                QtDeployDir;
+                QtDeployLibDir;
+                QtDeployPluginDir;
+                QtDeployDebugRelease;
+                QtDeployPdb;
+                QtDeployForce;
+                QtDeployNoPatchQt;
+                QtDeployNoPlugins;
+                QtDeployNoLibraries;
+                QtDeployQmlDir;
+                QtDeployQmlImport;
+                QtDeployNoQuickImport;
+                QtDeployNoTranslations;
+                QtDeployNoSystemD3dCompiler;
+                QtDeployNoVirtualKeyboard;
+                QtDeployCompilerRuntime;
+                QtDeployWebkit2;
+                QtDeployAngle;
+                QtDeployNoOpenglSw;
+                QtDeployIncludeModules;
+                QtDeployExcludeModules;
+                QtDeployVerbose">
+      <Output
+        TaskParameter="Result" ItemName="Options" />
+    </Flatten>
+
+    <ItemGroup>
+      <!--
+      /////////////////////////////////////////////////////////////////////////////////////////////
+      // Remove quotes from all paths
+      // -->
+      <Options>
+        <Value Condition="( '%(Name)' == 'QtDeployFiles'
+                         OR '%(Name)' == 'QtDeployDir'
+                         OR '%(Name)' == 'QtDeployLibDir'
+                         OR '%(Name)' == 'QtDeployPluginDir'
+                         OR '%(Name)' == 'QtDeployQmlDir'
+                         OR '%(Name)' == 'QtDeployQmlImport' )"
+          >$([System.String]::Copy('%(Value)').Replace('&quot;', ''))</Value>
+      </Options>
+      <!--
+        ///////////////////////////////////////////////////////////////////////////////////////////
+        // Escape trailing back-slash in paths
+        // -->
+      <Options>
+        <Value Condition="( '%(Name)' == 'QtDeployFiles'
+                         OR '%(Name)' == 'QtDeployDir'
+                         OR '%(Name)' == 'QtDeployLibDir'
+                         OR '%(Name)' == 'QtDeployPluginDir'
+                         OR '%(Name)' == 'QtDeployQmlDir'
+                         OR '%(Name)' == 'QtDeployQmlImport' )
+                        AND $([System.String]::Copy('%(Value)').Contains(' '))
+                        AND $([System.String]::Copy('%(Value)').EndsWith('\'))"
+          >%(Value)\</Value>
+      </Options>
+      <!--
+        ///////////////////////////////////////////////////////////////////////////////////////////
+        // Add quotes to paths containing spaces
+        // -->
+      <Options>
+        <Value Condition="( '%(Name)' == 'QtDeployFiles'
+                         OR '%(Name)' == 'QtDeployDir'
+                         OR '%(Name)' == 'QtDeployLibDir'
+                         OR '%(Name)' == 'QtDeployPluginDir'
+                         OR '%(Name)' == 'QtDeployQmlDir'
+                         OR '%(Name)' == 'QtDeployQmlImport' )
+                        AND $([System.String]::Copy('%(Value)').Contains(' '))"
+          >&quot;%(Value)&quot;</Value>
+      </Options>
+      <!--
+      /////////////////////////////////////////////////////////////////////////////////////////////
+      // Generate tool command line arguments
+      // -->
+      <Options>
+        <!-- [files]                  Binaries or directory containing the binary. -->
+        <PosArg Condition="'%(Name)' == 'QtDeployFiles'">%(Value)</PosArg>
+      </Options>
+      <Options>
+        <!-- -dir <directory>         Use directory instead of binary directory. -->
+        <Arg Condition="'%(Name)' == 'QtDeployDir'">--dir %(Value)</Arg>
+      </Options>
+      <Options>
+        <!-- -libdir <path>           Copy libraries to path. -->
+        <Arg Condition="'%(Name)' == 'QtDeployLibDir'">--libdir %(Value)</Arg>
+      </Options>
+      <Options>
+        <!-- -plugindir <path>        Copy plugins to path. -->
+        <Arg Condition="'%(Name)' == 'QtDeployPluginDir'">--plugindir %(Value)</Arg>
+      </Options>
+      <Options>
+        <!-- -debug                   Assume debug binaries.
+             -release                 Assume release binaries.-->
+        <Arg Condition="'%(Name)' == 'QtDeployDebugRelease' AND '%(Value)' == 'debug'"
+               >--debug</Arg>
+        <Arg Condition="'%(Name)' == 'QtDeployDebugRelease' AND '%(Value)' == 'release'"
+               >--release</Arg>
+      </Options>
+      <Options>
+        <!-- -pdb                     Deploy .pdb files (MSVC). -->
+        <Arg Condition="'%(Name)' == 'QtDeployPdb' AND '%(Value)' == 'true'"
+               >--pdb</Arg>
+      </Options>
+      <Options>
+        <!-- -force                   Force updating files. -->
+        <Arg Condition="'%(Name)' == 'QtDeployForce' AND '%(Value)' == 'true'"
+               >--force</Arg>
+      </Options>
+      <Options>
+        <!-- -no-patchqt              Do not patch the Qt5Core library. -->
+        <Arg Condition="'%(Name)' == 'QtDeployNoPatchQt' AND '%(Value)' == 'true'"
+               >--no-patchqt</Arg>
+      </Options>
+      <Options>
+        <!-- -no-plugins              Skip plugin deployment. -->
+        <Arg Condition="'%(Name)' == 'QtDeployNoPlugins' AND '%(Value)' == 'true'"
+               >--no-plugins</Arg>
+      </Options>
+      <Options>
+        <!-- -no-libraries            Skip library deployment. -->
+        <Arg Condition="'%(Name)' == 'QtDeployNoLibraries' AND '%(Value)' == 'true'"
+               >--no-libraries</Arg>
+      </Options>
+      <Options>
+        <!-- -qmldir <directory>      Scan for QML-imports starting from directory. -->
+        <Arg Condition="'%(Name)' == 'QtDeployQmlDir'">--qmldir %(Value)</Arg>
+      </Options>
+      <Options>
+        <!-- -qmlimport <directory>   Add the given path to the QML module search
+                                      locations. -->
+        <Arg Condition="'%(Name)' == 'QtDeployQmlImport'">--qmlimport %(Value)</Arg>
+      </Options>
+      <Options>
+        <!-- -no-quick-import         Skip deployment of Qt Quick imports. -->
+        <Arg Condition="'%(Name)' == 'QtDeployNoQuickImport' AND '%(Value)' == 'true'"
+               >--no-quick-import</Arg>
+      </Options>
+      <Options>
+        <!-- -no-translations         Skip deployment of translations. -->
+        <Arg Condition="'%(Name)' == 'QtDeployNoTranslations' AND '%(Value)' == 'true'"
+               >--no-translations</Arg>
+      </Options>
+      <Options>
+        <!-- -no-system-d3d-compiler  Skip deployment of the system D3D compiler. -->
+        <Arg Condition="'%(Name)' == 'QtDeployNoSystemD3dCompiler' AND '%(Value)' == 'true'"
+               >--no-system-d3d-compiler</Arg>
+      </Options>
+      <Options>
+        <!-- -no-virtualkeyboard      Disable deployment of the Virtual Keyboard. -->
+        <Arg Condition="'%(Name)' == 'QtDeployNoVirtualKeyboard' AND '%(Value)' == 'true'"
+               >--no-virtualkeyboard</Arg>
+      </Options>
+      <Options>
+        <!-- -compiler-runtime        Deploy compiler runtime (Desktop only).
+             -no-compiler-runtime     Do not deploy compiler runtime (Desktop only). -->
+        <Arg Condition="'%(Name)' == 'QtDeployCompilerRuntime' AND '%(Value)' == 'deploy'"
+               >--compiler-runtime</Arg>
+        <Arg Condition="'%(Name)' == 'QtDeployCompilerRuntime' AND '%(Value)' == 'skip'"
+               >--no-compiler-runtime</Arg>
+      </Options>
+      <Options>
+        <!-- -webkit2                 Deployment of WebKit2 (web process).
+             -no-webkit2              Skip deployment of WebKit2. -->
+        <Arg Condition="'%(Name)' == 'QtDeployWebkit2' AND '%(Value)' == 'deploy'"
+               >--webkit2</Arg>
+        <Arg Condition="'%(Name)' == 'QtDeployWebkit2' AND '%(Value)' == 'skip'"
+               >--no-webkit2</Arg>
+      </Options>
+      <Options>
+        <!-- -angle                   Force deployment of ANGLE.
+             -no-angle                Disable deployment of ANGLE. -->
+        <Arg Condition="'%(Name)' == 'QtDeployAngle' AND '%(Value)' == 'deploy'"
+               >--angle</Arg>
+        <Arg Condition="'%(Name)' == 'QtDeployAngle' AND '%(Value)' == 'skip'"
+               >--no-angle</Arg>
+      </Options>
+      <Options>
+        <!-- -no-opengl-sw            Do not deploy the software rasterizer library. -->
+        <Arg Condition="'%(Name)' == 'QtDeployNoOpenglSw' AND '%(Value)' == 'true'"
+               >--no-opengl-sw</Arg>
+      </Options>
+      <Options>
+        <!-- Qt libraries can be added by passing their name (-xml) ... -->
+        <Arg Condition="'%(Name)' == 'QtDeployIncludeModules'">-%(Value)</Arg>
+      </Options>
+      <Options>
+        <!-- ... or removed by passing the name prepended by -no- (-no-xml). -->
+        <Arg Condition="'%(Name)' == 'QtDeployExcludeModules'">--no-%(Value)</Arg>
+      </Options>
+    </ItemGroup>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Run windeployqt
+    // -->
+    <PropertyGroup>
+      <Cmd><![CDATA["$(QtToolsPath)\windeployqt.exe"]]></Cmd>
+      <Cmd>$(Cmd) --list target</Cmd>
+      <Cmd Condition="'%(Options.Arg)' != ''">$(Cmd) %(Options.Arg)</Cmd>
+      <Cmd Condition="'%(Options.PosArg)' != ''">$(Cmd) %(Options.PosArg)</Cmd>
+    </PropertyGroup>
+    <Message Importance="high" Text="windeployqt: $(Cmd)" />
+    <Exec Command="$(Cmd) > &quot;$(QtDeployLog)&quot;" />
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Read deploy log into QtDeployed list
+    // -->
+    <ReadLinesFromFile File="$(QtDeployLog)">
+      <Output TaskParameter="Lines" ItemName="QtDeployed" />
+    </ReadLinesFromFile>
+    <ItemGroup>
+      <QtDeployed Remove="@(QtDeployed)" Condition="!Exists('%(Fullpath)')"/>
+    </ItemGroup>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Mark deployed files as source content for VS deployment project
+    // -->
+    <ItemGroup>
+      <None Include="@(QtDeployed)" Condition="'%(QtDeploy.QtDeployVsContent)' == 'true'">
+        <DeploymentContent>true</DeploymentContent>
+        <RootFolder>$(ProjectDir)</RootFolder>
+      </None>
+    </ItemGroup>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Log output files; used by VS on clean and up-to-date check
+    // -->
+    <ItemGroup>
+      <QtDeployLog Include="$(QtDeployLog)"/>
+      <QtDeployed Include="$(QtDeployLog)"/>
+    </ItemGroup>
+    <WriteLinesToFile
+      File="$(TLogLocation)windeployqt.read.1u.tlog"
+      Lines="^$(ProjectPath)"
+      Overwrite="true" Encoding="Unicode"/>
+    <WriteLinesToFile
+      File="$(TLogLocation)windeployqt.write.1u.tlog"
+      Lines="^$(ProjectPath);@(QtDeployLog->'%(Fullpath)')"
+      Overwrite="true" Encoding="Unicode"/>
+    <WriteLinesToFile
+      File="$(TLogLocation)$(ProjectName).write.1u.tlog"
+      Lines="^$(ProjectFileName);@(QtDeployed->'%(Fullpath)')"
+      Overwrite="false" Encoding="Unicode"/>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Clean-up
+    // -->
+    <PropertyGroup>
+      <Cmd/>
+    </PropertyGroup>
+    <ItemGroup>
+      <Options Remove="@(Options)"/>
+      <QtDeploy Remove="@(QtDeploy)"/>
+      <QtDeployLog Remove="@(QtDeployLog)"/>
+      <QtDeployed Remove="@(QtDeployed)"/>
+    </ItemGroup>
+  </Target>
+</Project>

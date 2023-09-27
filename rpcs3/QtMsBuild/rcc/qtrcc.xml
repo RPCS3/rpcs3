@@ -1,0 +1,367 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+/***************************************************************************************************
+ Copyright (C) 2023 The Qt Company Ltd.
+ SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+***************************************************************************************************/
+-->
+
+<!--
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Defines the fields included in the rcc property page, as well as any
+// other metadata associated to QtRcc items
+// -->
+<ProjectSchemaDefinitions
+  xmlns="http://schemas.microsoft.com/build/2009/properties"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:sys="clr-namespace:System;assembly=mscorlib">
+  <Rule
+    Name="QtRule40_Rcc"
+    PageTemplate="tool"
+    DisplayName="Qt Resource Compiler"
+    Order="9">
+    <Rule.DataSource>
+      <DataSource
+        Persistence="ProjectFile"
+        ItemType="QtRcc" />
+    </Rule.DataSource>
+    <Rule.Categories>
+      <Category Name="General" DisplayName="rcc"/>
+      <Category Name="QMLCache" DisplayName="Qt Quick Compiler"/>
+    </Rule.Categories>
+    <StringListProperty
+      Name="Inputs"
+      Category="General"
+      IsRequired="true"
+      Visible="False">
+      <StringListProperty.DataSource>
+        <DataSource
+           Persistence="ProjectFile"
+           ItemType="QtRcc"
+           SourceType="Item" />
+      </StringListProperty.DataSource>
+    </StringListProperty>
+    <StringProperty
+      Name="ExecutionDescription"
+      DisplayName="Execution Description"
+      IncludeInCommandLine="False"/>
+    <StringProperty
+      Name="QTDIR"
+      DisplayName="Qt Directory"
+      Description="Path to installation of Qt."/>
+    <StringProperty
+      Name="InputFile"
+      HelpUrl="http://doc.qt.io/qt-5/rcc.html"
+      DisplayName="Input File"
+      Description="Specifies the full path of the input file. (&lt;file&gt;)"
+      Switch="&quot;[value]&quot;" />
+    <StringProperty
+      Name="OutputFile"
+      HelpUrl="http://doc.qt.io/qt-5/rcc.html"
+      DisplayName="Output File"
+      Description="Specifies the full path of the output file. (-o &lt;file&gt;)"
+      Switch="-o &quot;[value]&quot;" />
+    <StringProperty
+      Name="TempFile"
+      HelpUrl="http://doc.qt.io/qt-5/rcc.html"
+      DisplayName="Temporary File"
+      Description="Use temporary &lt;file&gt; for big resources. (--temp &lt;file&gt;)"
+      Switch="--temp &quot;[value]&quot;" />
+    <StringProperty
+      Name="InitFuncName"
+      HelpUrl="http://doc.qt.io/qt-5/rcc.html"
+      DisplayName="Initialization Function Name"
+      Description=
+"Create an external initialization function with &lt;name&gt;. (--name &lt;name&gt;)"
+      Switch="--name [value]" />
+    <StringProperty
+      Name="Root"
+      HelpUrl="http://doc.qt.io/qt-5/rcc.html"
+      DisplayName="Root"
+      Description="Prefix resource access path with root &lt;path&gt;. (--root &lt;path&gt;)"
+      Switch="--root &quot;[value]&quot;" />
+    <EnumProperty
+      Name="Compression"
+      HelpUrl="http://doc.qt.io/qt-5/rcc.html"
+      DisplayName="Compression"
+      Description="Compress input files to the given compression level.">
+      <EnumValue
+        Name="default"
+        Switch=""
+        DisplayName="Default (use zlib's default compression level)"
+        Description=
+"The default value for level is -1, which means use zlib's default compression level."/>
+      <EnumValue
+        Name="level1"
+        Switch="--compress 1"
+        DisplayName="Level 1 (least compression / fastest)"
+        Description="Compression level 1. (--compress 1)"/>
+      <EnumValue
+        Name="level2"
+        Switch="--compress 2"
+        DisplayName="Level 2"
+        Description="Compression level 2. (--compress 2)"/>
+      <EnumValue
+        Name="level3"
+        Switch="--compress 3"
+        DisplayName="Level 3"
+        Description="Compression level 3. (--compress 3)"/>
+      <EnumValue
+        Name="level4"
+        Switch="--compress 4"
+        DisplayName="Level 4"
+        Description="Compression level 4. (--compress 4)"/>
+      <EnumValue
+        Name="level5"
+        Switch="--compress 5"
+        DisplayName="Level 5"
+        Description="Compression level 5. (--compress 5)"/>
+      <EnumValue
+        Name="level6"
+        Switch="--compress 6"
+        DisplayName="Level 6"
+        Description="Compression level 6. (--compress 6)"/>
+      <EnumValue
+        Name="level7"
+        Switch="--compress 7"
+        DisplayName="Level 7"
+        Description="Compression level 7. (--compress 7)"/>
+      <EnumValue
+        Name="level8"
+        Switch="--compress 8"
+        DisplayName="Level 8"
+        Description="Compression level 8. (--compress 8)"/>
+      <EnumValue
+        Name="level9"
+        Switch="--compress 9"
+        DisplayName="Level 9 (most compression / slowest)"
+        Description="Compression level 9. (--compress 9)"/>
+    </EnumProperty>
+    <BoolProperty
+      Name="NoCompression"
+      HelpUrl="http://doc.qt.io/qt-5/rcc.html"
+      DisplayName="No Compression"
+      Description="Disable all compression. (--no-compress)"
+      Switch="--no-compress"/>
+    <StringProperty
+      Name="CompressThreshold"
+      HelpUrl="http://doc.qt.io/qt-5/rcc.html"
+      DisplayName="Compression Threshold"
+      Description=
+"Threshold &lt;level&gt; to consider compressing files. (--threshold &lt;level&gt;)"
+      Switch="--threshold [value]" />
+    <BoolProperty
+      Name="BinaryOutput"
+      HelpUrl="http://doc.qt.io/qt-5/rcc.html"
+      DisplayName="Binary Output"
+      Description="Output a binary file for use as a dynamic resource. (--binary)"
+      Switch="--binary"/>
+    <BoolProperty
+      Name="NoZstd"
+      HelpUrl="http://doc.qt.io/qt-6/rcc.html"
+      DisplayName="No Zstd"
+      Description="Disable usage of zstd compression. (--no-zstd)"
+      Switch="--no-zstd"/>
+    <StringProperty
+      Name="PassNumber"
+      HelpUrl="http://doc.qt.io/qt-5/rcc.html"
+      DisplayName="Pass Number"
+      Description="Pass &lt;number&gt; for big resources. (--pass &lt;number&gt;)"
+      Switch="--pass [value]" />
+    <BoolProperty
+      Name="NoNamespace"
+      HelpUrl="http://doc.qt.io/qt-5/rcc.html"
+      DisplayName="Disable Namespace Macros"
+      Description="Turn off namespace macros. (--namespace)"
+      Switch="--namespace"/>
+    <BoolProperty
+      Name="Verbose"
+      HelpUrl="http://doc.qt.io/qt-5/rcc.html"
+      DisplayName="Verbose"
+      Description="Enable verbose mode. (--verbose)"
+      Switch="--verbose"/>
+    <BoolProperty
+      Name="List"
+      HelpUrl="http://doc.qt.io/qt-5/rcc.html"
+      DisplayName="List"
+      Description="Only list .qrc file entries, do not generate code. (--list)"
+      Switch="--list"/>
+    <BoolProperty
+      Name="Project"
+      HelpUrl="http://doc.qt.io/qt-5/rcc.html"
+      DisplayName="Project"
+      Description=
+"Output a resource file containing all files from the current directory. (--project)"
+      Switch="--project"/>
+    <StringProperty
+      Name="FormatVersion"
+      HelpUrl="http://doc.qt.io/qt-5/rcc.html"
+      DisplayName="Format Version"
+      Description="The RCC format version to write. (--format-version &lt;number&gt;)"
+      Switch="--format-version [value]" />
+    <BoolProperty
+      Name="TwoPass"
+      DisplayName="Two-Pass Mode"
+      Description="1st pass: generate source file; 2nd pass: overwrite resouce data in object file"/>
+    <StringProperty
+      Name="CommandLineTemplate"
+      DisplayName="Command Line"
+      Visible="False"
+      IncludeInCommandLine="False" />
+    <DynamicEnumProperty
+      Name="QtRccBeforeTargets"
+      Category="General"
+      EnumProvider="Targets"
+      IncludeInCommandLine="False" Visible="False">
+      <DynamicEnumProperty.DisplayName>
+        <sys:String>Execute Before</sys:String>
+      </DynamicEnumProperty.DisplayName>
+      <DynamicEnumProperty.Description>
+        <sys:String>Specifies the targets for the build customization to run before.</sys:String>
+      </DynamicEnumProperty.Description>
+      <DynamicEnumProperty.ProviderSettings>
+        <NameValuePair
+          Name="Exclude"
+          Value="^QtRccBeforeTargets|^Compute" />
+      </DynamicEnumProperty.ProviderSettings>
+      <DynamicEnumProperty.DataSource>
+        <DataSource
+          Persistence="ProjectFile"
+          ItemType=""
+          HasConfigurationCondition="true" />
+      </DynamicEnumProperty.DataSource>
+    </DynamicEnumProperty>
+    <DynamicEnumProperty
+      Name="QtRccAfterTargets"
+      Category="General"
+      EnumProvider="Targets"
+      IncludeInCommandLine="False" Visible="False">
+      <DynamicEnumProperty.DisplayName>
+        <sys:String>Execute After</sys:String>
+      </DynamicEnumProperty.DisplayName>
+      <DynamicEnumProperty.Description>
+        <sys:String>Specifies the targets for the build customization to run after.</sys:String>
+      </DynamicEnumProperty.Description>
+      <DynamicEnumProperty.ProviderSettings>
+        <NameValuePair
+          Name="Exclude"
+          Value="^QtRccAfterTargets|^Compute" />
+      </DynamicEnumProperty.ProviderSettings>
+      <DynamicEnumProperty.DataSource>
+        <DataSource
+          Persistence="ProjectFile"
+          ItemType=""
+          HasConfigurationCondition="true" />
+      </DynamicEnumProperty.DataSource>
+    </DynamicEnumProperty>
+    <StringListProperty
+      Name="Outputs"
+      DisplayName="Outputs"
+      IncludeInCommandLine="False"
+      Visible="False" />
+    <StringListProperty
+      Name="AdditionalDependencies"
+      DisplayName="Additional Dependencies"
+      IncludeInCommandLine="False"/>
+    <StringProperty
+      Subtype="AdditionalOptions"
+      Name="AdditionalOptions"
+      Category="General">
+      <StringProperty.DisplayName>
+        <sys:String>Additional Options</sys:String>
+      </StringProperty.DisplayName>
+      <StringProperty.Description>
+        <sys:String>Additional Options</sys:String>
+      </StringProperty.Description>
+    </StringProperty>
+    <EnumProperty
+      Name="DynamicSource"
+      DisplayName="Dynamic C++ Source"
+      Description="Add file to list of C++ sources during build.">
+      <EnumValue
+        Name="output"
+        DisplayName="Output File"
+        Description="Use output as dynamic C++ source."/>
+      <EnumValue
+        Name="false"
+        DisplayName="Disable"
+        Description="Disable dynamic source."/>
+    </EnumProperty>
+    <BoolProperty
+      Name="ParallelProcess"
+      DisplayName="Parallel Process"
+      Description="Run tool in parallel process."/>
+    <BoolProperty
+      Name="QmlCacheGenerate"
+      Category="QMLCache"
+      DisplayName="Enable Qt Quick Compiler"
+      Description="Enable or disable ahead-of-time compilation using the Qt Quick Compiler." />
+    <!--
+    // QML cache generation -->
+    <StringProperty Name="QMLCacheHeader_Generation" Category="QMLCache" ReadOnly="true"
+      DisplayName="########## QML Cache Generation ##############################"/>
+    <StringProperty
+      Name="QmlCacheGenMessage"
+      Category="QMLCache"
+      DisplayName="Execution Description of QML cache generation"
+      IncludeInCommandLine="False"/>
+    <StringProperty
+      Name="QmlCacheOutputFile"
+      Category="QMLCache"
+      DisplayName="Cache File"
+      Description=
+"Specifies the full path of the output cache files. Use %&lt;metadata&gt; to reference QML file
+metadata (e.g. %&lt;Filename&gt;)." />
+    <!--
+    // QRC filtering -->
+    <StringProperty Name="QMLCacheHeader_Filtering" Category="QMLCache" ReadOnly="true"
+      DisplayName="########## QRC Filtering ##############################"/>
+    <StringProperty
+      Name="QmlCacheFilterMessage"
+      Category="QMLCache"
+      DisplayName="Execution Description of QRC filtering"
+      IncludeInCommandLine="False"/>
+    <StringProperty
+      Name="QmlCacheFilteredFile"
+      Category="QMLCache"
+      DisplayName="Filtered Resource File"
+      Description=
+"Specifies the full path of the resource file copy with QML files filtered out." />
+    <StringProperty
+      Name="QmlCacheFilteredOutputFile"
+      Category="QMLCache"
+      DisplayName="Filtered Resource File Output"
+      Description=
+"Specifies the full path of the output file for the processing of the filtered resource file." />
+    <StringProperty
+      Name="QmlCacheFilteredInitFuncName"
+      Category="QMLCache"
+      DisplayName="Filtered Resource File Initialization Function"
+      Description=
+"Create an external initialization function with &lt;name&gt;. (--name &lt;name&gt;)" />
+    <!--
+    // QML cache loader generation -->
+    <StringProperty Name="QMLCacheHeader_Loader" Category="QMLCache" ReadOnly="true"
+      DisplayName="########## QML Cache Loader ##############################"/>
+    <StringProperty
+      Name="QmlCacheLoaderMessage"
+      Category="QMLCache"
+      DisplayName="Execution Description of QML cache loader generation"
+      IncludeInCommandLine="False"/>
+    <StringProperty
+      Name="QmlCacheLoaderFile"
+      Category="QMLCache"
+      DisplayName="Cache Loader Source File"
+      Description="Specifies the full path of the QML cache loader source file." />
+  </Rule>
+  <ItemType
+    Name="QtRcc"
+    DisplayName="Qt Resource Compiler (rcc)" />
+  <FileExtension
+    Name="*.qrc"
+    ContentType="QtRcc" />
+  <ContentType
+    Name="QtRcc"
+    DisplayName="Qt Resource Compiler (rcc)"
+    ItemType="QtRcc" />
+</ProjectSchemaDefinitions>

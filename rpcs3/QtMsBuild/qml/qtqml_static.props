@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+/***************************************************************************************************
+ Copyright (C) 2023 The Qt Company Ltd.
+ SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+***************************************************************************************************/
+-->
+<!--
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Qt/MSBuild property definitions for QML static imports
+// -->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Import pre-requisites
+  // -->
+  <Import
+    Condition="'$(QtMsBuildProps_BeforeQmlStatic)' != ''"
+    Project="$(QtMsBuildProps_BeforeQmlStatic)"/>
+
+  <PropertyGroup>
+    <QtQmlPluginImportCpp>$(QtQmlIntDir)\qml_plugin_import.cpp</QtQmlPluginImportCpp>
+  </PropertyGroup>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Import dependants
+  // -->
+  <Import
+    Condition="'$(QtMsBuildProps_AfterQmlStatic)' != ''"
+    Project="$(QtMsBuildProps_AfterQmlStatic)"/>
+
+</Project>

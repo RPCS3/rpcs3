@@ -1,0 +1,602 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+/***************************************************************************************************
+ Copyright (C) 2023 The Qt Company Ltd.
+ SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+***************************************************************************************************/
+-->
+
+<!--
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Targets required to build the QML cache (aka. qtquickcompiler)
+// -->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Import pre-requisites
+  // -->
+  <Import
+    Condition="'$(QtMsBuildTargets_BeforeQmlCache)' != ''"
+    Project="$(QtMsBuildTargets_BeforeQmlCache)"/>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Qt/MSBuild global properties
+  // -->
+  <PropertyGroup>
+    <QtBuildTargets>$(QtBuildTargets);QtQmlCache</QtBuildTargets>
+    <QtRccDependsOn>$(QtRccDependsOn);QtQmlCache</QtRccDependsOn>
+  </PropertyGroup>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // TARGET QtQmlCachePrepare
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Pre-process rcc source files marked for QML cache generation
+  // -->
+  <Target Name="QtQmlCachePrepare"
+    DependsOnTargets="QtRccSetDependencies"
+    BeforeTargets="QtRccPrepare" Condition="'@(QtRcc)' != ''"
+    Inputs="%(QtRcc.Identity)" Outputs="@(QtRcc->'####### Don't skip this target #######')">
+    <ItemGroup>
+      <selected_files Include="$(SelectedFiles)"/>
+    </ItemGroup>
+
+    <Message Importance="High" Condition="'$(QtDebug)' == 'true'"
+      Text="## QtQmlCachePrepare %(QtRcc.Identity)" />
+
+    <!--// Remove sources excluded from build -->
+    <ItemGroup>
+      <QtRcc Remove="@(QtRcc)"
+        Condition="'$(SelectedFiles)' == '' AND '%(QtRcc.ExcludedFromBuild)' == 'true'"/>
+    </ItemGroup>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // $(is_selected) ::= file is selected to build
+    // -->
+    <PropertyGroup>
+      <selected_files>[@(selected_files->'%(Identity)','][')]</selected_files>
+      <file>[@(QtRcc->'%(Identity)')]</file>
+      <output_file>@(QtRcc->'%(OutputFile)')</output_file>
+      <is_selected
+        Condition="'@(selected_files)' == '' OR $(selected_files.Contains('$(file)'))"
+        >true</is_selected>
+      <is_selected
+        Condition="'@(selected_files)' != '' AND !$(selected_files.Contains('$(file)'))"
+        >false</is_selected>
+    </PropertyGroup>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Parse QRC file
+    // @(res_file)    ::= names of resource files
+    // @(res_qml_js)  ::= names of QML and JS resource files
+    // @(res_other)   ::= names of other resource files
+    // -->
+    <ItemGroup>
+      <res_file
+        Condition="'@(QtRcc)' != '' AND '%(QtRcc.QmlCacheGenerate)' == 'true'"
+        Include="%(QtRcc.ResourceFiles)"/>
+    </ItemGroup>
+    <ItemGroup Condition="'@(res_file)' != ''">
+      <res_qml_js Include="%(res_file.Identity)"
+        Condition="'%(res_file.Extension)' == '.qml' OR '%(res_file.Extension)' == '.js'"/>
+      <res_other Include="%(res_file.Identity)"
+        Condition="'%(res_file.Extension)' != '.qml' AND '%(res_file.Extension)' != '.js'"/>
+    </ItemGroup>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Expand QML and JS build items
+    // -->
+    <ItemGroup Condition="'@(res_qml_js)' != ''">
+      <template Include="template">
+        <InputFile><![CDATA[%<FullPath>]]></InputFile>
+        <OutputFile>@(QtRcc->'%(QmlCacheOutputFile)')</OutputFile>
+        <Message>@(QtRcc->'%(QmlCacheGenMessage)')</Message>
+        <Outputs>%(OutputFile)</Outputs>
+        <ResourceFile>@(QtRcc->'%(FullPath)')</ResourceFile>
+        <IsSelected>$(is_selected)</IsSelected>
+        <AdditionalDependencies>@(QtRcc)</AdditionalDependencies>
+      </template>
+    </ItemGroup>
+    <!--
+    // @(QtQmlCacheItem) ::= QML and JS resource files to be cached -->
+    <Expand Condition="'@(res_qml_js)' != ''"
+      Items="@(res_qml_js)" BaseItem="@(QtRcc)" Template="@(template)">
+      <Output TaskParameter="Result" ItemName="QtQmlCacheItem"/>
+    </Expand>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Convert rcc sources to QML cache generation filter sources
+    // -->
+    <ItemGroup Condition="'@(QtQmlCacheItem)' != ''">
+      <!--
+      // @(QtRccFilter) ::= QRC files to be filtered -->
+      <QtRccFilter Include="@(QtRcc)">
+        <QtQmlCacheItems>@(QtQmlCacheItem)</QtQmlCacheItems>
+        <OtherResources>@(res_other->'%(Identity)')</OtherResources>
+        <InputChanged>false</InputChanged>
+        <OutputFile>%(QtRcc.QmlCacheFilteredFile)</OutputFile>
+        <Outputs>%(QtRcc.QmlCacheFilteredFile)</Outputs>
+        <IsSelected>$(is_selected)</IsSelected>
+      </QtRccFilter>
+      <QtRcc Remove="@(QtRcc)"/>
+    </ItemGroup>
+    <!--
+    // Delete output file to force build of source if it was manually selected to build
+    //  (e.g. by the 'Compile' option in the context menu for the file) -->
+    <Delete
+      Condition="'$(SelectedFiles)' != '' AND '$(is_selected)' == 'true'"
+      Files="%(QtRccFilter.OutputFile)"/>
+    <Delete
+      Condition="'$(SelectedFiles)' != '' AND '$(is_selected)' == 'true'"
+      Files="%(QtQmlCacheItem.OutputFile)"/>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Clean-up
+    // -->
+    <PropertyGroup>
+      <selected_files/>
+      <file/>
+      <output_file/>
+      <is_selected/>
+    </PropertyGroup>
+    <ItemGroup>
+      <res_file Remove="@(res_file)"/>
+      <res_qml_js Remove="@(res_qml_js)"/>
+      <res_other Remove="@(res_other)"/>
+      <template Remove="@(res_other)"/>
+    </ItemGroup>
+  </Target>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // TARGET QtRccFilterSetModified
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Set InputModified flag for modified files (i.e. Inputs newer than Outputs)
+  // -->
+  <Target Name="QtRccFilterSetModified" DependsOnTargets="QtQmlCachePrepare"
+    Inputs="%(QtRccFilter.FullPath);%(QtRccFilter.AdditionalDependencies)"
+    Outputs="@(QtRccFilter->'%(OutputFile)')">
+
+    <Message Importance="High" Condition="'$(QtDebug)' == 'true' AND '@(QtRccFilter)' != ''"
+      Text="## QtRccFilterSetModified %(QtRccFilter.Identity) => %(QtRccFilter.OutputFile)"/>
+
+    <PropertyGroup>
+      <input_changed/>
+    </PropertyGroup>
+    <CreateProperty Condition="'@(QtRccFilter)' != ''" Value="true">
+      <Output TaskParameter="ValueSetByTask" PropertyName="input_changed" />
+    </CreateProperty>
+    <ItemGroup>
+      <QtRccFilter>
+        <InputChanged>$(input_changed)</InputChanged>
+        <IsSelected Condition="'$(input_changed)' == 'true'">true</IsSelected>
+      </QtRccFilter>
+    </ItemGroup>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Clean-up
+    // -->
+    <PropertyGroup>
+      <input_changed/>
+    </PropertyGroup>
+  </Target>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // TARGET QtRccFilter
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Filter QRC file:
+  //    - Filter QML and JS resources from QRC
+  //    - If other resources are present, generate new QRC with filtered contents
+  //    - Collect data to use in cache loader generation
+  // -->
+  <Target Name="QtRccFilter" DependsOnTargets="QtRccFilterSetModified"
+    Inputs="%(QtRccFilter.FullPath);%(QtRccFilter.AdditionalDependencies);$(MSBuildProjectFile)"
+    Outputs="@(QtRccFilter->'%(OutputFile)')">
+
+    <Message Importance="High" Condition="'$(QtDebug)' == 'true'"
+      Text="## QtRccFilter %(QtRccFilter.Identity) => @(QtRccFilter->'%(OutputFile)')" />
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Set DependenciesChanged flag for modified files or dependencies
+    // -->
+    <PropertyGroup>
+      <dependencies_changed/>
+    </PropertyGroup>
+    <CreateProperty Value="true">
+      <Output TaskParameter="ValueSetByTask" PropertyName="dependencies_changed" />
+    </CreateProperty>
+    <ItemGroup>
+      <QtRccFilter>
+        <DependenciesChanged>$(dependencies_changed)</DependenciesChanged>
+      </QtRccFilter>
+    </ItemGroup>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // @(input_file)    ::= QRC file to filter
+    // @(filtered_file) ::= filtered QRC file
+    // -->
+    <ItemGroup>
+      <input_file Include="%(QtRccFilter.InputFile)"
+        Condition="'%(QtRccFilter.QtQmlCacheItems)' != '' AND '%(QtRccFilter.InputFile)' != ''"/>
+      <filtered_file Include="%(QtRccFilter.QmlCacheFilteredFile)"
+        Condition="'%(QtRccFilter.QmlCacheFilteredFile)' != ''"/>
+    </ItemGroup>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Prepare qmlcachegen command for QRC filtering
+    // -->
+    <PropertyGroup>
+      <!--
+      // $(options) ::= qmlcachegen command line options -->
+      <options Condition="'%(QtRccFilter.QtQmlCacheItems)' != '' AND '@(input_file)' != ''"
+        >$(options) @(input_file->'--filter-resource-file &quot;%(Identity)&quot;')</options>
+      <options Condition="'%(QtRccFilter.QtQmlCacheItems)' != '' AND '@(filtered_file)' != ''"
+        >$(options) @(filtered_file->'-o &quot;%(Identity)&quot;')</options>
+      <!--
+      // $(full_path) ::= full path of filtered file -->
+      <full_path Condition="'%(QtRccFilter.QtQmlCacheItems)' != ''"
+>$([System.IO.Path]::Combine($(MSBuildProjectDirectory),%(QmlCacheFilteredFile)))</full_path>
+      <!--
+      // $(relative_path) ::= path of filtered file, relative to project directory -->
+      <relative_path Condition="'%(QtRccFilter.QtQmlCacheItems)' != ''"
+>$([MSBuild]::MakeRelative($(MSBuildProjectDirectory),$(full_path)).TrimStart('\'))</relative_path>
+      <!--
+      // $(run_parallel) ::= run qmlcachegen in a parallel process
+      // $(run_single)   ::= run qmlcachegen in single process mode -->
+      <run_parallel Condition="'@(QtRccFilter)' != ''
+        AND '%(QtRccFilter.ParallelProcess)' == 'true' AND '$(SelectedFiles)' == ''"
+      >true</run_parallel>
+      <run_single Condition="'@(QtRccFilter)' != ''
+        AND ('%(QtRccFilter.ParallelProcess)' != 'true' OR '$(SelectedFiles)' != '')"
+      >true</run_single>
+    </PropertyGroup>
+
+    <ItemGroup Condition="'@(QtRccFilter)' != ''">
+      <!--
+      /////////////////////////////////////////////////////////////////////////////////////////////
+      // Create work item for QRC filtering
+      // -->
+      <QtWork
+        Include="@(QtRccFilter)"
+        Condition="'%(QtRccFilter.QtQmlCacheItems)' != ''
+          AND '%(QtRccFilter.OtherResources)' != ''
+          AND '%(QtRccFilter.IsSelected)' == 'true'">
+        <WorkType>qmlcachegen_filter</WorkType>
+        <ToolPath Condition="'$(QtVsProjectSettings)' == 'true'"
+          >$(QtToolsPath)\qmlcachegen.exe</ToolPath>
+        <ToolPath Condition="'$(QtVsProjectSettings)' != 'true'"
+          >%(QtRccFilter.QTDIR)\bin\qmlcachegen.exe</ToolPath>
+        <Options>$(options)</Options>
+        <OutputFile>$(full_path)</OutputFile>
+        <Message>%(QtRccFilter.QmlCacheFilterMessage)</Message>
+        <ParallelBuild Condition="'$(run_parallel)' == 'true'">true</ParallelBuild>
+        <ParallelBuild Condition="'$(run_single)'   == 'true'">false</ParallelBuild>
+      </QtWork>
+
+      <!--
+      /////////////////////////////////////////////////////////////////////////////////////////////
+      // Create build item for generated QRC file
+      // -->
+      <QtRcc Condition="'%(QtRccFilter.QtQmlCacheItems)' != ''
+          AND '%(QtRccFilter.OtherResources)' != ''"
+        Include="@(QtRccFilter->'$(relative_path)')">
+        <InputFile>@(QtRccFilter->'%(QmlCacheFilteredFile)')</InputFile>
+        <OutputFile>@(QtRccFilter->'%(QmlCacheFilteredOutputFile)')</OutputFile>
+        <InitFuncName>@(QtRccFilter->'%(QmlCacheFilteredInitFuncName)')</InitFuncName>
+        <DependsOn>@(QtRccFilter)</DependsOn>
+      </QtRcc>
+    </ItemGroup>
+
+    <!--
+    /////////////////////////////////////////////////////////////////////////////////////////////
+    // If sources were manually selected (e.g. by the 'Compile' option in the context menu for
+    // project items), add generated QRC to the list of selected files
+    // -->
+    <PropertyGroup>
+      <selected_rcc
+        Condition="'$(SelectedFiles)' != ''
+          AND '%(QtRccFilter.IsSelected)' == 'true'
+          AND '%(QtRccFilter.QtQmlCacheItems)' != ''
+          AND '%(QtRccFilter.OtherResources)' != ''"
+        >$(relative_path)</selected_rcc>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(selected_rcc)' != ''">
+      <SelectedFiles>$(SelectedFiles);$(selected_rcc)</SelectedFiles>
+    </PropertyGroup>
+    <ItemGroup Condition="'$(selected_rcc)' != ''">
+      <selected_files Include="$(selected_rcc)"/>
+      <SelectedFiles Include="$(selected_rcc)"/>
+    </ItemGroup>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Update timestamp of generated QRC file to force rcc target to run
+    // -->
+    <MakeDir Directories="$([System.IO.Path]::GetDirectoryName(%(QtRccFilter.OutputFile)))"/>
+    <Touch Condition="'%(QtRccFilter.InputChanged)' == 'true'"
+      AlwaysCreate="true" Files="%(QtRccFilter.OutputFile)"/>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Create loader input item, used in cache loader generation
+    // -->
+    <ItemGroup Condition="'@(QtRccFilter)' != ''">
+      <loader_input Include="@(QtRccFilter->'QtQmlCacheLoader')">
+        <Inputs>%(QtRccFilter.Identity)</Inputs>
+        <InputFile>%(QtRccFilter.InputFile)</InputFile>
+        <Mapping Condition="'%(QtRccFilter.QtQmlCacheItems)' != '' AND '%(QtRccFilter.OtherResources)' != ''"
+          >%(QtRccFilter.InputFile)=$(full_path)</Mapping>
+      </loader_input>
+    </ItemGroup>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Clean-up
+    // -->
+    <ItemGroup>
+      <input_file Remove="@(input_file)"/>
+      <filtered_file Remove="@(filtered_file)"/>
+    </ItemGroup>
+    <PropertyGroup>
+      <dependencies_changed/>
+      <options/>
+      <full_path/>
+      <relative_path/>
+      <run_parallel/>
+      <run_single/>
+      <selected_rcc/>
+    </PropertyGroup>
+  </Target>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // TARGET QtQmlCacheLoader
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Generate QML cache loader
+  // -->
+  <Target Name="QtQmlCacheLoader" DependsOnTargets="QtRccFilter">
+
+    <Message Importance="High" Condition="'$(QtDebug)' == 'true'"
+      Text="## QtQmlCacheLoader @(QtQmlCacheLoader->'%(Inputs)')" />
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Get QML cache loader properties from project rcc property page
+    // -->
+    <ItemGroup>
+      <QtRcc Include="qmlcachengen_loader"/>
+      <loader Include="@(QtRcc)" Condition="'%(QtRcc.Identity)' == 'qmlcachengen_loader'"/>
+    </ItemGroup>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Generate QML cache loader
+    // -->
+    <PropertyGroup>
+      <!--
+      // $(options) ::= qmlcachegen command line options -->
+      <options Condition="'@(loader_input)' != ''"
+        >$(options) @(loader_input->'--resource-file-mapping=&quot;%(Mapping)&quot;',' ')</options>
+      <options Condition="'@(loader_input)' != ''"
+        >$(options) @(loader_input->'&quot;%(InputFile)&quot;',' ')</options>
+      <options Condition="'@(loader)' != ''"
+        >$(options) @(loader->'-o &quot;%(QmlCacheLoaderFile)&quot;')</options>
+      <!--
+      // $(run_parallel) ::= run qmlcachegen in a parallel process
+      // $(run_single)   ::= run qmlcachegen in single process mode -->
+      <run_parallel Condition="'@(QtQmlCacheLoader)' != ''
+        AND '%(loader.ParallelProcess)' == 'true' AND '$(SelectedFiles)' == ''">true</run_parallel>
+      <run_single Condition="'@(QtQmlCacheLoader)' != ''
+        AND ('%(loader.ParallelProcess)' != 'true' OR  '$(SelectedFiles)' != '')">true</run_single>
+      <!--
+      // $(dependencies_changed)  ::= source QRC files changed status
+      // $(input_changed)         ::= source QRC files input changed status -->
+      <dependencies_changed>@(loader_input->'%(DependenciesChanged)')</dependencies_changed>
+      <input_changed>@(loader_input->'%(InputChanged)')</input_changed>
+      <input_changed Condition="!Exists('@(loader->'%(QmlCacheLoaderFile)')')">true</input_changed>
+      <is_selected>@(loader_input->'%(IsSelected)')</is_selected>
+
+      <!--// Get relative path to output -->
+      <cache_loader_path>@(loader->'%(QmlCacheLoaderFile)')</cache_loader_path>
+      <output_relative
+>$([MSBuild]::MakeRelative($(ProjectDir), $(cache_loader_path)).TrimStart('\'))</output_relative>
+    </PropertyGroup>
+    <ItemGroup>
+      <!--
+      //  Create work item to generate QML cache loader -->
+      <QtWork
+        Include="qmlcachengen_loader"
+        Condition="'@(loader_input)' != ''
+          AND $(is_selected.Contains('true'))">
+        <WorkType>qmlcachengen_loader</WorkType>
+        <ToolPath Condition="'$(QtVsProjectSettings)' == 'true'"
+          >$(QtToolsPath)\qmlcachegen.exe</ToolPath>
+        <ToolPath Condition="'$(QtVsProjectSettings)' != 'true'"
+          >@(loader->'%(QTDIR)')\bin\qmlcachegen.exe</ToolPath>
+        <Options>$(options)</Options>
+        <OutputFile>@(loader->'%(QmlCacheLoaderFile)')</OutputFile>
+        <Message>@(loader->'%(QmlCacheLoaderMessage)')</Message>
+        <ParallelBuild Condition="'$(run_parallel)' == 'true'">true</ParallelBuild>
+        <ParallelBuild Condition="'$(run_single)'   == 'true'">false</ParallelBuild>
+        <DisableLog>true</DisableLog>
+        <DependenciesChanged>$(dependencies_changed.Contains('true'))</DependenciesChanged>
+        <InputChanged>$(input_changed.Contains('true'))</InputChanged>
+        <ClCompile Condition="'%(loader.DynamicSource)' != 'false'">$(output_relative)</ClCompile>
+        <DependsOn>@(loader_input->'%(Inputs)')</DependsOn>
+      </QtWork>
+    </ItemGroup>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Clean-up
+    // -->
+    <ItemGroup>
+      <loader_mapping_option  Remove="@(mapping_option)"/>
+      <loader_input_option    Remove="@(loader_input_option)"/>
+      <loader                 Remove="@(loader)"/>
+      <QtRcc                  Remove="qmlcachengen_loader"/>
+    </ItemGroup>
+    <PropertyGroup>
+      <options/>
+      <run_parallel/>
+      <run_single/>
+      <dependencies_changed/>
+      <input_changed/>
+      <cache_loader_path/>
+      <output_relative/>
+    </PropertyGroup>
+  </Target>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TARGET QtQmlSetModified
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Set InputModified flag for modified files (i.e. Inputs newer than Outputs)
+  // -->
+  <Target Name="QtQmlSetModified" DependsOnTargets="QtQmlCachePrepare"
+    Inputs="%(QtQmlCacheItem.FullPath);%(QtQmlCacheItem.AdditionalDependencies)"
+    Outputs="@(QtQmlCacheItem->'%(OutputFile)')">
+
+    <Message Importance="High" Condition="'$(QtDebug)' == 'true'"
+      Text="## QtQmlSetModified %(QtQmlCacheItem.Identity) => @(QtQmlCacheItem->'%(OutputFile)')"/>
+
+    <PropertyGroup>
+      <input_changed/>
+    </PropertyGroup>
+    <CreateProperty Value="true">
+      <Output TaskParameter="ValueSetByTask" PropertyName="input_changed" />
+    </CreateProperty>
+    <ItemGroup>
+      <QtQmlCacheItem>
+        <InputChanged>$(input_changed)</InputChanged>
+      </QtQmlCacheItem>
+    </ItemGroup>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Clean-up
+    // -->
+    <PropertyGroup>
+      <input_changed/>
+    </PropertyGroup>
+  </Target>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // TARGET QtQmlCacheItem
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // -->
+  <Target Name="QtQmlCacheItem" DependsOnTargets="QtQmlSetModified"
+    Inputs="%(QtQmlCacheItem.FullPath);%(QtQmlCacheItem.AdditionalDependencies);$(MSBuildProjectFile)"
+    Outputs="@(QtQmlCacheItem->'%(OutputFile)')">
+
+    <Message Importance="High" Condition="'$(QtDebug)' == 'true'"
+      Text="## QtQmlCacheItem %(QtQmlCacheItem.Identity) => @(QtQmlCacheItem->'%(OutputFile)')" />
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Set DependenciesChanged flag for modified files or dependencies
+    // -->
+    <PropertyGroup>
+      <dependencies_changed/>
+    </PropertyGroup>
+    <CreateProperty Value="true">
+      <Output TaskParameter="ValueSetByTask" PropertyName="dependencies_changed" />
+    </CreateProperty>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Generate QML cache
+    // -->
+    <PropertyGroup>
+      <!--
+      // $(options) ::= qmlcachegen command line options -->
+      <options Condition="'@(QtQmlCacheItem)' != ''"
+        >$(options) --resource=&quot;%(ResourceFile)&quot;</options>
+      <options Condition="'@(QtQmlCacheItem)' != ''"
+        >$(options) &quot;%(FullPath)&quot;</options>
+      <options Condition="'@(QtQmlCacheItem)' != ''"
+        >$(options) -o &quot;%(OutputFile)&quot;</options>
+      <!--
+      // $(run_parallel) ::= run qmlcachegen in a parallel process
+      // $(run_single)   ::= run qmlcachegen in single process mode -->
+      <run_parallel Condition="'@(QtQmlCacheItem)' != ''
+        AND '%(QtQmlCacheItem.ParallelProcess)' == 'true' AND '$(SelectedFiles)' == ''"
+      >true</run_parallel>
+      <run_single Condition="'@(QtQmlCacheItem)' != ''
+        AND ('%(QtQmlCacheItem.ParallelProcess)' != 'true' OR '$(SelectedFiles)' != '')"
+      >true</run_single>
+
+      <!--// Get relative path to output -->
+      <output_relative
+>$([MSBuild]::MakeRelative($(ProjectDir), %(QtQmlCacheItem.OutputFile)).TrimStart('\'))</output_relative>
+    </PropertyGroup>
+    <ItemGroup>
+      <!--
+      //  Create work item to generate QML cache -->
+      <QtWork
+        Include="@(QtQmlCacheItem)"
+        Condition="'@(QtQmlCacheItem)' != ''
+          AND '%(QtQmlCacheItem.IsSelected)' == 'true'">
+        <WorkType>qmlcachegen</WorkType>
+        <ToolPath Condition="'$(QtVsProjectSettings)' == 'true'"
+          >$(QtToolsPath)\qmlcachegen.exe</ToolPath>
+        <ToolPath Condition="'$(QtVsProjectSettings)' != 'true'"
+          >%(QtQmlCacheItem.QTDIR)\bin\qmlcachegen.exe</ToolPath>
+        <Options>$(options)</Options>
+        <Message>%(QtQmlCacheItem.Message)</Message>
+        <DependenciesChanged>$(dependencies_changed)</DependenciesChanged>
+        <ParallelBuild Condition="'$(run_parallel)' == 'true'">true</ParallelBuild>
+        <ParallelBuild Condition="'$(run_single)'   == 'true'">false</ParallelBuild>
+        <ClCompile Condition="'%(QtQmlCacheItem.DynamicSource)' != 'false'">$(output_relative)</ClCompile>
+      </QtWork>
+    </ItemGroup>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Clean-up
+    // -->
+    <PropertyGroup>
+      <dependencies_changed/>
+      <options/>
+      <run_parallel/>
+      <run_single/>
+      <output_relative/>
+    </PropertyGroup>
+    <ItemGroup>
+      <selected_files Remove="@(selected_files)"/>
+    </ItemGroup>
+  </Target>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // TARGET QtQmlCache
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Root target of QML cache generation
+  // -->
+  <Target Name="QtQmlCache"
+    DependsOnTargets="QtQmlCacheLoader;QtQmlCacheItem"
+    BeforeTargets="QtRcc">
+    <Message Importance="High" Condition="'$(QtDebug)' == 'true'" Text="## QtQmlCache" />
+  </Target>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Import dependants
+  // -->
+  <Import
+    Condition="'$(QtMsBuildTargets_AfterQmlCache)' != ''"
+    Project="$(QtMsBuildTargets_AfterQmlCache)"/>
+
+</Project>

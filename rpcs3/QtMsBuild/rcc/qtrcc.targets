@@ -1,0 +1,581 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+/***************************************************************************************************
+ Copyright (C) 2023 The Qt Company Ltd.
+ SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+***************************************************************************************************/
+-->
+
+<!--
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/// Definitions specific to rcc
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// -->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Import pre-requisites
+  // -->
+  <Import
+    Condition="'$(QtMsBuildTargets_BeforeRcc)' != ''"
+    Project="$(QtMsBuildTargets_BeforeRcc)"/>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Qt/MSBuild global properties
+  // -->
+  <PropertyGroup>
+    <QtBuildTargets>QtRcc;$(QtBuildTargets)</QtBuildTargets>
+  </PropertyGroup>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Setup item type and property page
+  // -->
+  <Choose>
+    <When Condition="'$(QtVsProjectSettings)' == 'true' AND '$(QtVsProjectClProperties)' == 'true'">
+      <ItemGroup>
+        <PropertyPageSchema
+          Include="$(MSBuildThisFileDirectory)qtrcc_v3.xml" />
+      </ItemGroup>
+    </When>
+    <Otherwise>
+      <ItemGroup>
+        <PropertyPageSchema
+          Include="$(MSBuildThisFileDirectory)qtrcc.xml" />
+      </ItemGroup>
+    </Otherwise>
+  </Choose>
+  <ItemGroup>
+    <AvailableItemName Include="QtRcc">
+      <Targets>Qt;_ClCompile</Targets>
+    </AvailableItemName>
+  </ItemGroup>
+  <PropertyGroup>
+    <QtRccRuleName>QtRule40_Rcc</QtRccRuleName>
+  </PropertyGroup>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TARGET QtRccInit
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Initialize default metadata
+  // -->
+  <Target Name="QtRccInit">
+    <!--// Initialize %(OutputFile) -->
+    <ItemGroup Condition="'$(QtVsProjectSettings)' == 'true' AND '@(QtRcc)' != ''">
+      <QtRccAux Include="@(QtRcc)">
+        <OutputFile
+          >$([System.IO.Path]::Combine('%(QtRcc.QtRccDir)','%(QtRcc.QtRccFileName)'))</OutputFile>
+      </QtRccAux>
+      <QtRcc Remove="@(QtRcc)"/>
+      <QtRcc Include="@(QtRccAux)"/>
+      <QtRccAux Remove="@(QtRccAux)"/>
+    </ItemGroup>
+  </Target>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TARGET QtRccSetDependencies
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Add resource files as dependencies of the QRC file
+  // -->
+  <Target Name="QtRccSetDependencies" DependsOnTargets="QtRccInit"
+    Inputs="%(QtRcc.Identity)" Outputs="@(QtRcc->'####### Don't skip this target #######')">
+    <ItemGroup>
+      <selected_files Include="$(SelectedFiles)"/>
+    </ItemGroup>
+
+    <!--// Parse QRC -->
+    <ListQrc QrcFilePath="%(QtRcc.FullPath)">
+      <Output TaskParameter="Result" ItemName="res_file"/>
+    </ListQrc>
+
+    <!--// Add dependencies -->
+    <ItemGroup Condition="'@(QtRcc)' != '' AND '@(res_file)' != ''">
+      <QtRcc>
+        <ResourceFiles>@(res_file)</ResourceFiles>
+        <AdditionalDependencies
+          >%(QtRcc.AdditionalDependencies);@(res_file->'%(FullPath)')</AdditionalDependencies>
+      </QtRcc>
+    </ItemGroup>
+
+    <!--// Clean-up -->
+    <PropertyGroup>
+      <QtRccExeQuoted/>
+      <QtRccQuoted/>
+      <RccListQuoted/>
+    </PropertyGroup>
+    <ItemGroup>
+      <res_file Remove="@(res_file)"/>
+    </ItemGroup>
+  </Target>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TARGET QtRccPrepare
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Prepare items for processing
+  // -->
+  <Target Name="QtRccPrepare" DependsOnTargets="QtRccSetDependencies"
+    Inputs="%(QtRcc.Identity)" Outputs="@(QtRcc->'####### Don't skip this target #######')">
+
+    <Message Importance="High" Condition="'$(QtDebug)' == 'true'"
+        Text="## QtRccPrepare @(QtRcc)"/>
+
+    <PropertyGroup>
+      <selected_files>[@(selected_files->'%(Identity)','][')]</selected_files>
+      <file>[@(QtRcc->'%(Identity)')]</file>
+      <output_file>@(QtRcc->'%(OutputFile)')</output_file>
+      <is_selected Condition="$(selected_files.Contains('$(file)'))">true</is_selected>
+      <is_selected Condition="!$(selected_files.Contains('$(file)'))">false</is_selected>
+    </PropertyGroup>
+
+    <!--// Delete output file to force build of source if it was manually selected to build
+        //  (e.g. by the 'Compile' option in the context menu for the file) -->
+    <Delete Files="$(output_file)"
+      Condition="'$(SelectedFiles)' != '' AND '$(is_selected)' == 'true'" />
+
+    <!--// If a source was manually selected to build, remove all other sources -->
+    <ItemGroup Condition="'@(selected_files)' != ''">
+      <QtRcc Remove="@(QtRcc)"
+        Condition="'$(SelectedFiles)' != '' AND '$(is_selected)' != 'true'" />
+    </ItemGroup>
+
+    <!--// Remove sources excluded from build -->
+    <ItemGroup>
+      <QtRcc Remove="@(QtRcc)"
+        Condition="'$(SelectedFiles)' == '' AND '%(QtRcc.ExcludedFromBuild)' == 'true'"/>
+    </ItemGroup>
+
+    <!--// Clean-up -->
+    <PropertyGroup>
+      <selected_files/>
+      <file/>
+      <output_file/>
+      <is_selected/>
+    </PropertyGroup>
+  </Target>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TARGET QtRccSetModified
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Set InputModified flag for modified files (i.e. Inputs newer than Outputs)
+  // -->
+  <Target Name="QtRccSetModified" DependsOnTargets="QtRccPrepare"
+    Condition="'@(QtRcc)' != ''"
+    Inputs="%(QtRcc.FullPath);%(QtRcc.AdditionalDependencies)" Outputs="@(QtRcc->'%(OutputFile)')">
+
+    <Message Importance="High" Condition="'$(QtDebug)' == 'true'"
+      Text="## QtRccSetModified @(QtRcc)" />
+
+    <CreateProperty Value="true">
+      <!-- // Using ValueSetByTask ensures $(input_changed) is only set to 'true' when the target
+           // is actually executed and not when MSBuild is figuring out which targets to run -->
+      <Output TaskParameter="ValueSetByTask" PropertyName="input_changed" />
+    </CreateProperty>
+    <ItemGroup>
+      <QtRcc>
+        <InputChanged>$(input_changed)</InputChanged>
+      </QtRcc>
+    </ItemGroup>
+  </Target>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TARGET QtRccOverrideCpp
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  //
+  // -->
+  <Import Project="qtrcc_cl.targets"/>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TARGET QtRcc
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Process each QRC file and produce the corresponding QtWork items
+  // -->
+  <PropertyGroup>
+    <QtRccDependsOn>
+      QtPrepare;
+      QtRccPrepare;
+      QtRccSetModified;
+      QtRccOverrideCpp;
+      $(QtRccDependsOn)
+    </QtRccDependsOn>
+  </PropertyGroup>
+  <Target Name="QtRcc"
+    DependsOnTargets="$(QtRccDependsOn)"
+    BeforeTargets="$(QtRccBeforeTargets)" AfterTargets="$(QtRccAfterTargets)"
+    Condition="'@(QtRcc)' != ''"
+    Inputs="%(QtRcc.FullPath);%(QtRcc.AdditionalDependencies);$(MSBuildProjectFile)"
+    Outputs="@(QtRcc->'%(OutputFile)')">
+
+    <Message Importance="High" Condition="'$(QtDebug)' == 'true'" Text="## QtRcc @(QtRcc)" />
+
+    <CreateProperty Value="true">
+      <Output TaskParameter="ValueSetByTask" PropertyName="dependencies_changed" />
+    </CreateProperty>
+
+    <PropertyGroup>
+      <two_pass Condition="'%(QtRcc.TwoPass)' == 'true'">true</two_pass>
+    </PropertyGroup>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Convert string lists in source item properties to lists of items
+    // -->
+    <Flatten Items="@(QtRcc)"
+      Metadata="InputFile;
+                OutputFile;
+                TempFile;
+                InitFuncName;
+                Root;
+                Compression;
+                NoCompression;
+                CompressThreshold;
+                BinaryOutput;
+                NoZstd;
+                PassNumber;
+                NoNamespace;
+                Verbose;
+                List;
+                Project;
+                FormatVersion">
+      <Output
+        TaskParameter="Result" ItemName="LocalOptions" />
+    </Flatten>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Translate local paths to build host paths
+    // -->
+    <HostTranslatePaths
+      Items="@(LocalOptions)"
+      Names="InputFile;
+            OutputFile;
+            TempFile;
+            Root">
+      <Output
+        TaskParameter="Result" ItemName="options" />
+    </HostTranslatePaths>
+
+    <ItemGroup>
+      <!--
+      /////////////////////////////////////////////////////////////////////////////////////////////
+      // Remove quotes from all paths
+      // Escape trailing back-slash in paths
+      // Add quotes to paths containing spaces
+      // -->
+      <options>
+        <Value Condition="'%(Name)' == 'InputFile' OR '%(Name)' == 'OutputFile'
+          OR '%(Name)' == 'TempFile' OR '%(Name)' == 'Root'"
+          >$([System.String]::Copy('%(Value)').Replace('&quot;', ''))</Value>
+      </options>
+      <options>
+        <Value Condition="('%(Name)' == 'InputFile' OR '%(Name)' == 'OutputFile'
+            OR '%(Name)' == 'TempFile' OR '%(Name)' == 'Root')
+          AND $([System.String]::Copy('%(Value)').Contains(' '))
+          AND $([System.String]::Copy('%(Value)').EndsWith('\'))"
+          >%(Value)\</Value>
+      </options>
+      <options>
+        <Value Condition="('%(Name)' == 'InputFile' OR '%(Name)' == 'OutputFile'
+            OR '%(Name)' == 'TempFile' OR '%(Name)' == 'Root')
+          AND $([System.String]::Copy('%(Value)').Contains(' '))"
+          >&quot;%(Value)&quot;</Value>
+      </options>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Generate tool command line arguments
+    // -->
+      <!--//  inputs                     Input files (*.qrc) -->
+      <options>
+        <Value Condition="'%(Name)' == 'InputFile'">%(Value)</Value>
+      </options>
+
+      <!--//  -o,  -output <file>        Write output to <file> -->
+      <options>
+        <Value Condition="'%(Name)' == 'OutputFile' AND '$(two_pass)' != 'true'">-o %(Value)</Value>
+      </options>
+      <options>
+        <Value Condition="'%(Name)' == 'OutputFile' AND '$(two_pass)' == 'true'"></Value>
+      </options>
+
+      <!--//  -t,  -temp <file>          Use temporary <file> for big resources -->
+      <options>
+        <Value Condition="'%(Name)' == 'TempFile'">--temp %(Value)</Value>
+      </options>
+
+      <!--//   -name <name>              Create an external initialization function with <name> -->
+      <options>
+        <Value Condition="'%(Name)' == 'InitFuncName'">--name %(Value)</Value>
+      </options>
+
+      <!--//   -root <path>              Prefix resource access path with root path -->
+      <options>
+        <Value Condition="'%(Name)' == 'Root'">--root %(Value)</Value>
+      </options>
+
+      <!--//   -compress <level>         Compress input files by <level> -->
+      <options>
+        <Value
+          Condition="'%(Name)' == 'Compression' AND '%(Value)' == 'level1'">--compress 1</Value>
+      </options>
+      <options>
+        <Value
+          Condition="'%(Name)' == 'Compression' AND '%(Value)' == 'level2'">--compress 2</Value>
+      </options>
+      <options>
+        <Value
+          Condition="'%(Name)' == 'Compression' AND '%(Value)' == 'level3'">--compress 3</Value>
+      </options>
+      <options>
+        <Value
+          Condition="'%(Name)' == 'Compression' AND '%(Value)' == 'level4'">--compress 4</Value>
+      </options>
+      <options>
+        <Value
+          Condition="'%(Name)' == 'Compression' AND '%(Value)' == 'level5'">--compress 5</Value>
+      </options>
+      <options>
+        <Value
+          Condition="'%(Name)' == 'Compression' AND '%(Value)' == 'level6'">--compress 6</Value>
+      </options>
+      <options>
+        <Value
+          Condition="'%(Name)' == 'Compression' AND '%(Value)' == 'level7'">--compress 7</Value>
+      </options>
+      <options>
+        <Value
+          Condition="'%(Name)' == 'Compression' AND '%(Value)' == 'level8'">--compress 8</Value>
+      </options>
+      <options>
+        <Value
+          Condition="'%(Name)' == 'Compression' AND '%(Value)' == 'level9'">--compress 9</Value>
+      </options>
+      <options>
+        <Value
+          Condition="'%(Name)' == 'Compression'
+          AND !$([System.String]::Copy('%(Value)').StartsWith('--compress'))"></Value>
+      </options>
+
+      <!--//   -no-compress              Disable all compression -->
+      <options>
+        <Value
+          Condition="'%(Name)' == 'NoCompression' AND '%(Value)' != 'true'"></Value>
+      </options>
+      <options>
+        <Value
+          Condition="'%(Name)' == 'NoCompression' AND '%(Value)' == 'true'">--no-compress</Value>
+      </options>
+
+      <!--//   -threshold <level>        Threshold to consider compressing files -->
+      <options>
+        <Value Condition="'%(Name)' == 'CompressThreshold'">--threshold %(Value)</Value>
+      </options>
+
+      <!--//   -binary                   Output a binary file for use as a dynamic source -->
+      <options>
+        <Value Condition="'%(Name)' == 'BinaryOutput' AND '%(Value)' != 'true'"></Value>
+      </options>
+      <options>
+        <Value Condition="'%(Name)' == 'BinaryOutput' AND '%(Value)' == 'true'">--binary</Value>
+      </options>
+
+      <!--//   -no-zstd                 Disable usage of zstd compression -->
+      <options>
+        <Value Condition="'%(Name)' == 'NoZstd' AND '%(Value)' != 'true'"></Value>
+      </options>
+      <options>
+        <Value Condition="'%(Name)' == 'NoZstd' AND '%(Value)' == 'true'">--no-zstd</Value>
+      </options>
+
+      <!--//   -pass <number>            Pass number for big resources -->
+      <options>
+        <Value Condition="'%(Name)' == 'PassNumber'">--pass %(Value)</Value>
+      </options>
+
+      <!--//   -namespace                Turn off namespace macros -->
+      <options>
+        <Value Condition="'%(Name)' == 'NoNamespace' AND '%(Value)' != 'true'"></Value>
+      </options>
+      <options>
+        <Value Condition="'%(Name)' == 'NoNamespace' AND '%(Value)' == 'true'">--namespace</Value>
+      </options>
+
+      <!--//   -verbose                  Enable verbose mode -->
+      <options>
+        <Value Condition="'%(Name)' == 'Verbose' AND '%(Value)' != 'true'"></Value>
+      </options>
+      <options>
+        <Value Condition="'%(Name)' == 'Verbose' AND '%(Value)' == 'true'">--verbose</Value>
+      </options>
+
+      <!--//   -list                     Only list .qrc file entries, do not generate code -->
+      <options>
+        <Value Condition="'%(Name)' == 'List' AND '%(Value)' != 'true'"></Value>
+      </options>
+      <options>
+        <Value Condition="'%(Name)' == 'List' AND '%(Value)' == 'true'">--list</Value>
+      </options>
+
+      <!--//   -project                  Output a resource file containing all files from the
+          //                             current directory -->
+      <options>
+        <Value Condition="'%(Name)' == 'Project' AND '%(Value)' != 'true'"></Value>
+      </options>
+      <options>
+        <Value Condition="'%(Name)' == 'Project' AND '%(Value)' == 'true'">--project</Value>
+      </options>
+
+      <!--//   -format-version <number>  The RCC format version to write -->
+      <options>
+        <Value Condition="'%(Name)' == 'FormatVersion'">--format-version %(Value)</Value>
+      </options>
+    </ItemGroup>
+    <PropertyGroup>
+      <options>@(options->'%(Value)', ' ')</options>
+    </PropertyGroup>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Aux properties
+    // -->
+    <PropertyGroup>
+      <!--// Force modified flag if source was manually selected to build -->
+      <input_changed Condition="'$(SelectedFiles)' == ''"
+        >%(QtRcc.InputChanged)</input_changed>
+      <input_changed Condition="'$(SelectedFiles)' != ''"
+        >true</input_changed>
+
+      <!--// Run work in parallel processes -->
+      <run_parallel Condition="'@(QtRcc)' != ''
+        AND '%(QtRcc.ParallelProcess)' == 'true'
+        AND '$(SelectedFiles)' == ''"
+        >true</run_parallel>
+
+      <!--// Run work in single process -->
+      <run_single Condition="'@(QtRcc)' != ''
+        AND ('%(QtRcc.ParallelProcess)' != 'true'
+         OR '$(SelectedFiles)' != '')"
+        >true</run_single>
+
+      <!--// Get relative path to output -->
+      <output_relative
+>$([MSBuild]::MakeRelative($(ProjectDir), %(QtRcc.OutputFile)).TrimStart('\'))</output_relative>
+    </PropertyGroup>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Create work item
+    // -->
+    <ItemGroup Condition="'$(run_parallel)' == 'true' OR '$(run_single)' == 'true'">
+      <QtWork Include="@(QtRcc)">
+        <WorkType>rcc</WorkType>
+        <ToolPath Condition="'$(QtVsProjectSettings)' == 'true'">$(QtToolsPath)/rcc</ToolPath>
+        <ToolPath Condition="'$(QtVsProjectSettings)' != 'true'">%(QtRcc.QTDIR)\bin\rcc.exe</ToolPath>
+        <Options>$(options)</Options>
+        <Message>%(QtRcc.ExecutionDescription)</Message>
+        <DependenciesChanged>$(dependencies_changed)</DependenciesChanged>
+        <InputChanged>$(input_changed)</InputChanged>
+        <ParallelBuild Condition="'$(run_parallel)' == 'true'">true</ParallelBuild>
+        <ParallelBuild Condition="'$(run_single)'   == 'true'">false</ParallelBuild>
+        <!--
+        ///////////////////////////////////////////////////////////////////////////////////////////
+        // Two-pass ("resources_big"): pass 1 -->
+        <Message Condition="'%(QtRcc.TwoPass)' == 'true'">%(QtRcc.ExecutionDescription) [pass 1]</Message>
+        <RccPass Condition="'%(QtRcc.TwoPass)' == 'true'">1</RccPass>
+        <RccOptions Condition="'%(QtRcc.TwoPass)' == 'true'">$(options)</RccOptions>
+        <Options Condition="'%(QtRcc.TwoPass)' == 'true'"
+          >$(options) -pass 1 -o &quot;%(OutputFile)&quot;</Options>
+        <Optimization Condition="'%(QtRcc.TwoPass)' == 'true'">Disabled</Optimization>
+        <!--
+        ///////////////////////////////////////////////////////////////////////////////////////////
+        // C++ dynamic source -->
+        <ClCompile Condition="'%(QtRcc.DynamicSource)' == 'output'">$(output_relative)</ClCompile>
+      </QtWork>
+    </ItemGroup>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Clean-up
+    // -->
+    <PropertyGroup>
+      <options/>
+      <dependencies_changed/>
+      <input_changed/>
+      <run_parallel/>
+      <run_single/>
+      <output_relative/>
+      <two_pass/>
+    </PropertyGroup>
+    <ItemGroup>
+      <LocalOptions Remove="@(LocalOptions)"/>
+      <options Remove="@(options)"/>
+      <selected_files Remove="@(selected_files)"/>
+    </ItemGroup>
+  </Target>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TARGET QtRccPass2
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Two-pass ("resources_big"): pass 2
+  // -->
+  <Target Name="QtRccPass2"
+    DependsOnTargets="QtRccPass2_GetObjs;QtRccPass2_Exec"/>
+
+  <Target Name="QtRccPass2_GetObjs"
+    DependsOnTargets="ComputeCLOutputs">
+    <ItemGroup>
+      <QtRccObj Include="@(Obj->WithMetadataValue('RccPass', '1'))">
+        <RccPass>2</RccPass>
+      </QtRccObj>
+    </ItemGroup>
+  </Target>
+
+  <Target Name="QtRccPass2_Exec"
+    DependsOnTargets="QtRccPass2_GetObjs"
+    Condition="'@(QtRccObj)' != ''">
+    <Move
+      SourceFiles="%(QtRccObj.Identity)"
+      DestinationFiles="%(QtRccObj.Identity)_TMP"/>
+    <Exec
+      Command="@(QtRccObj->'ECHO %(ExecutionDescription) [pass 2] &amp; %(ToolPath) %(RccOptions) -pass 2 -temp &quot;%(Identity)_TMP&quot; -o &quot;%(Identity)&quot;')"
+      IgnoreExitCode="true"/>
+    <ItemGroup>
+      <Obj Remove="@(QtRccObj->'%(Identity)')"/>
+      <Obj Include="@(QtRccObj)"/>
+      <QtRccObj Remove="@(QtRccObj)"/>
+    </ItemGroup>
+  </Target>
+
+  <Target Name="QtRccPass2_Link"
+    DependsOnTargets="QtRccPass2"/>
+
+  <Target Name="QtRccPass2_Lib"
+    DependsOnTargets="QtRccPass2"/>
+
+  <PropertyGroup>
+    <ComputeLinkInputsTargets>
+      $(ComputeLinkInputsTargets);
+      ;QtRccPass2_Link;
+    </ComputeLinkInputsTargets>
+    <ComputeLibInputsTargets>
+      $(ComputeLibInputsTargets);
+      ;QtRccPass2_Lib;
+    </ComputeLibInputsTargets>
+  </PropertyGroup>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Import dependants
+  // -->
+  <Import
+    Condition="'$(QtMsBuildTargets_AfterRcc)' != ''"
+    Project="$(QtMsBuildTargets_AfterRcc)"/>
+
+</Project>

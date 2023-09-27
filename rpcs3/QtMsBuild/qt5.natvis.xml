@@ -1,0 +1,814 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--************************************************************************************************
+ Copyright (C) 2023 The Qt Company Ltd.
+ SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+*************************************************************************************************-->
+
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+
+    <Type Name="##NAMESPACE##::QUuid">
+        <DisplayString>{{{data1,Xb}-{data2,Xb}-{data3,Xb}-{(data4[0]),nvoXb}{(data4[1]),nvoXb}-{(data4[2]),nvoXb}{(data4[3]),nvoXb}{(data4[4]),nvoXb}{(data4[5]),nvoXb}{(data4[6]),nvoXb}{(data4[7]),nvoXb}}}</DisplayString>
+    </Type>
+
+  <Type Name="##NAMESPACE##::QPoint">
+        <AlternativeType Name="##NAMESPACE##::QPointF"/>
+        <DisplayString>{{ x = {xp}, y = {yp} }}</DisplayString>
+        <Expand>
+            <Item Name="[x]">xp</Item>
+            <Item Name="[y]">yp</Item>
+        </Expand>
+    </Type>
+
+    <Type Name="##NAMESPACE##::QRect">
+        <DisplayString>{{ x = {x1}, y = {y1}, width = {x2 - x1 + 1}, height = {y2 - y1 + 1} }}</DisplayString>
+        <Expand>
+            <Item Name="[x]">x1</Item>
+            <Item Name="[y]">y1</Item>
+            <Item Name="[width]">x2 - x1 + 1</Item>
+            <Item Name="[height]">y2 - y1 + 1</Item>
+        </Expand>
+    </Type>
+
+    <Type Name="##NAMESPACE##::QRectF">
+        <DisplayString>{{ x = {xp}, y = {yp}, width = {w}, height = {h} }}</DisplayString>
+        <Expand>
+            <Item Name="[x]">xp</Item>
+            <Item Name="[y]">yp</Item>
+            <Item Name="[width]">w</Item>
+            <Item Name="[height]">h</Item>
+        </Expand>
+    </Type>
+
+    <Type Name="##NAMESPACE##::QSize">
+        <AlternativeType Name="##NAMESPACE##::QSizeF"/>
+        <DisplayString>{{ width = {wd}, height = {ht} }}</DisplayString>
+        <Expand>
+            <Item Name="[width]">wd</Item>
+            <Item Name="[height]">ht</Item>
+        </Expand>
+    </Type>
+
+    <Type Name="##NAMESPACE##::QLine">
+        <AlternativeType Name="##NAMESPACE##::QLineF"/>
+        <DisplayString>{{ start point = {pt1}, end point = {pt2} }}</DisplayString>
+        <Expand>
+            <Synthetic Name="[start point]">
+                <DisplayString>{pt1}</DisplayString>
+                <Expand>
+                    <ExpandedItem>pt1</ExpandedItem>
+                </Expand>
+            </Synthetic>
+            <Synthetic Name="[end point]">
+                <DisplayString>{pt2}</DisplayString>
+                <Expand>
+                    <ExpandedItem>pt2</ExpandedItem>
+                </Expand>
+            </Synthetic>
+
+        </Expand>
+    </Type>
+
+    <Type Name="##NAMESPACE##::QPolygon">
+        <DisplayString>{{ size = {d-&gt;size} }}</DisplayString>
+        <Expand>
+            <Item Name="[referenced]">d-&gt;ref.atomic._q_value</Item>
+            <ArrayItems>
+                <Size>d-&gt;size</Size>
+                <ValuePointer>(##NAMESPACE##::QPoint*)((reinterpret_cast&lt;char*&gt;(d)) + d-&gt;offset)</ValuePointer>
+            </ArrayItems>
+        </Expand>
+    </Type>
+
+    <Type Name="##NAMESPACE##::QPolygonF">
+        <DisplayString>{{ size = {d-&gt;size} }}</DisplayString>
+        <Expand>
+            <Item Name="[closed]">
+                d-&gt;size &gt; 0
+                    &amp;&amp; ((((##NAMESPACE##::QPointF*)((reinterpret_cast&lt;char*&gt;(d)) + d-&gt;offset)[0]).xp
+                == (((##NAMESPACE##::QPointF*)((reinterpret_cast&lt;char*&gt;(d)) + d-&gt;offset)[d-&gt;size - 1]).xp)
+                    &amp;&amp; ((((##NAMESPACE##::QPointF*)((reinterpret_cast&lt;char*&gt;(d)) + d-&gt;offset)[0]).yp
+                == (((##NAMESPACE##::QPointF*)((reinterpret_cast&lt;char*&gt;(d)) + d-&gt;offset)[d-&gt;size - 1]).yp)
+            </Item>
+            <Item Name="[referenced]">d-&gt;ref.atomic._q_value</Item>
+            <ArrayItems>
+                <Size>d-&gt;size</Size>
+                <ValuePointer>(##NAMESPACE##::QPointF*)((reinterpret_cast&lt;char*&gt;(d)) + d-&gt;offset)</ValuePointer>
+            </ArrayItems>
+        </Expand>
+    </Type>
+
+    <Type Name ="##NAMESPACE##::QVector2D">
+        <DisplayString>{{ x = {xp}, y = {yp} }}</DisplayString>
+        <Expand>
+            <Item Name="[x]">xp</Item>
+            <Item Name="[y]">yp</Item>
+        </Expand>
+    </Type>
+
+    <Type Name ="##NAMESPACE##::QVector3D">
+        <DisplayString>{{ x = {xp}, y = {yp}, z = {zp} }}</DisplayString>
+        <Expand>
+            <Item Name="[x]">xp</Item>
+            <Item Name="[y]">yp</Item>
+            <Item Name="[z]">zp</Item>
+        </Expand>
+    </Type>
+
+    <Type Name ="##NAMESPACE##::QVector4D">
+        <DisplayString>{{ x = {xp}, y = {yp}, z = {zp}, w = {wp} }}</DisplayString>
+        <Expand>
+            <Item Name="[x]">xp</Item>
+            <Item Name="[y]">yp</Item>
+            <Item Name="[z]">zp</Item>
+            <Item Name="[w]">wp</Item>
+        </Expand>
+    </Type>
+
+    <Type Name ="##NAMESPACE##::QMatrix">
+        <DisplayString>
+            {{ m11 = {_m11}, m12 = {_m12}, m21 = {_m21}, m22 = {_m22}, ... }}
+        </DisplayString>
+        <Expand>
+            <Item Name="[m11]">_m11</Item>
+            <Item Name="[m12]">_m12</Item>
+            <Item Name="[m21]">_m21</Item>
+            <Item Name="[m22]">_m22</Item>
+            <Item Name="[dx]">_dx</Item>
+            <Item Name="[dy]">_dy</Item>
+        </Expand>
+    </Type>
+
+    <Type Name ="##NAMESPACE##::QMatrix4x4">
+        <DisplayString>
+            {{ m11 = {m[0][0]}, m12 = {m[1][0]}, m13 = {m[2][0]}, m14 = {m[3][0]}, ... }}
+        </DisplayString>
+        <Expand>
+            <Item Name="[m11]">m[0][0]</Item>
+            <Item Name="[m12]">m[1][0]</Item>
+            <Item Name="[m13]">m[2][0]</Item>
+            <Item Name="[m14]">m[3][0]</Item>
+            <Item Name="[m21]">m[0][1]</Item>
+            <Item Name="[m22]">m[1][1]</Item>
+            <Item Name="[m23]">m[2][1]</Item>
+            <Item Name="[m24]">m[3][1]</Item>
+            <Item Name="[m31]">m[0][2]</Item>
+            <Item Name="[m32]">m[1][2]</Item>
+            <Item Name="[m33]">m[2][2]</Item>
+            <Item Name="[m34]">m[3][2]</Item>
+            <Item Name="[m41]">m[0][3]</Item>
+            <Item Name="[m42]">m[1][3]</Item>
+            <Item Name="[m43]">m[2][3]</Item>
+            <Item Name="[m44]">m[3][3]</Item>
+        </Expand>
+    </Type>
+
+    <Type Name="##NAMESPACE##::QSizePolicy">
+        <DisplayString>
+            {{ horizontal = {static_cast&lt;Policy&gt;(bits.horPolicy)}, vertical = {static_cast&lt;Policy&gt;(bits.verPolicy)}, type = {ControlType(1 &lt;&lt; bits.ctype)} }}
+        </DisplayString>
+        <Expand>
+            <Synthetic Name="[vertical policy]">
+                <DisplayString>##NAMESPACE##::QSizePolicy::Policy::{static_cast&lt;Policy&gt;(bits.verPolicy)}</DisplayString>
+            </Synthetic>
+            <Synthetic Name="[horizontal policy]">
+                <DisplayString>##NAMESPACE##::QSizePolicy::Policy::{static_cast&lt;Policy&gt;(bits.horPolicy)}</DisplayString>
+            </Synthetic>
+            <Synthetic Name="[control type]">
+                <DisplayString>##NAMESPACE##::QSizePolicy::ControlType::{ControlType(1 &lt;&lt; bits.ctype)}</DisplayString>
+            </Synthetic>
+            <Synthetic Name="[expanding directions]">
+                <DisplayString
+                    Condition="(static_cast&lt;Policy&gt;(bits.verPolicy) &amp; ExpandFlag)">
+                        ##NAMESPACE##::Qt::Vertical (2)
+                    </DisplayString>
+                <DisplayString
+                    Condition="(static_cast&lt;Policy&gt;(bits.horPolicy) &amp; ExpandFlag)">
+                        ##NAMESPACE##::Qt::Horizontal (1)
+                </DisplayString>
+            </Synthetic>
+            <Item Name="[vertical stretch]">static_cast&lt;int&gt;(bits.verStretch)</Item>
+            <Item Name="[horizontal stretch]">static_cast&lt;int&gt;(bits.horStretch)</Item>
+            <Item Name="[has height for width]">bits.hfw == 1</Item>
+            <Item Name="[has width for height]">bits.wfh == 1</Item>
+        </Expand>
+    </Type>
+
+    <Type Name="##NAMESPACE##::QChar">
+        <DisplayString>{ucs,c}</DisplayString>
+        <StringView>ucs,c</StringView>
+        <Expand>
+            <Item Name="[latin 1]">ucs > 0xff ? '\0' : char(ucs),c</Item>
+            <Item Name="[unicode]">ucs,c</Item>
+        </Expand>
+    </Type>
+
+    <Type Name="##NAMESPACE##::QString">
+        <DisplayString>{((reinterpret_cast&lt;unsigned short*&gt;(d)) + d-&gt;offset / 2),sub}</DisplayString>
+        <StringView>((reinterpret_cast&lt;unsigned short*&gt;(d)) + d-&gt;offset / 2),sub</StringView>
+        <Expand>
+            <Item Name="[size]">d-&gt;size</Item>
+            <Item Name="[referenced]">d-&gt;ref.atomic._q_value</Item>
+            <ArrayItems>
+                <Size>d-&gt;size</Size>
+                <ValuePointer>((reinterpret_cast&lt;unsigned short*&gt;(d)) + d-&gt;offset / 2),c</ValuePointer>
+            </ArrayItems>
+        </Expand>
+    </Type>
+
+    <Type Name="##NAMESPACE##::QStringRef">
+        <Intrinsic Name="offset" Expression="(reinterpret_cast&lt;char16_t*&gt;(m_string-&gt;d))
+            + m_string-&gt;d->offset / 2" />
+        <DisplayString Condition="m_string == nullptr">{m_string,[m_size]} u""</DisplayString>
+        <DisplayString Condition="m_string != nullptr">{offset() + m_position,[m_size]}</DisplayString>
+        <Expand>
+            <Item Name="[position]" ExcludeView="simple">m_position</Item>
+            <Item Name="[size]" ExcludeView="simple">m_size</Item>
+            <ArrayItems Condition="m_string != nullptr">
+                <Size>m_size</Size>
+                <ValuePointer>offset()+m_position</ValuePointer>
+            </ArrayItems>
+        </Expand>
+    </Type>
+
+    <Type Name="##NAMESPACE##::QStringView">
+        <DisplayString>{m_data,[m_size]}</DisplayString>
+        <StringView>m_data,[m_size]</StringView>
+        <Expand>
+            <Item Name="[size]" ExcludeView="simple">m_size</Item>
+            <ArrayItems>
+                <Size>m_size</Size>
+                <ValuePointer>m_data</ValuePointer>
+            </ArrayItems>
+        </Expand>
+    </Type>
+
+    <Type Name="##NAMESPACE##::QByteArray">
+        <DisplayString>{((reinterpret_cast&lt;char*&gt;(d)) + d-&gt;offset),sb}</DisplayString>
+        <StringView>((reinterpret_cast&lt;char*&gt;(d)) + d-&gt;offset),sb</StringView>
+        <Expand>
+            <Item Name="[size]">d-&gt;size</Item>
+            <Item Name="[referenced]">d-&gt;ref.atomic._q_value</Item>
+            <ArrayItems>
+                <Size>d-&gt;size</Size>
+                <ValuePointer>((reinterpret_cast&lt;char*&gt;(d)) + d-&gt;offset),c</ValuePointer>
+            </ArrayItems>
+        </Expand>
+    </Type>
+
+    <Type Name="##NAMESPACE##::QUrl">
+        <Intrinsic Name="isEmpty" Expression="size==0">
+            <Parameter Name="size" Type="int"/>
+        </Intrinsic>
+        <Intrinsic Name="memberOffset" Expression="sizeof(QAtomicInt) + sizeof(int) + (sizeof(QString) * count)">
+            <Parameter Name="count" Type="int"/>
+        </Intrinsic>
+        <Intrinsic Name="scheme" Expression="*((QString*)(((char*)(d) + memberOffset(0))))" />
+        <Intrinsic Name="username" Expression="*((QString*)(((char*)(d) + memberOffset(1))))" />
+        <Intrinsic Name="password" Expression="*((QString*)(((char*)(d) + memberOffset(2))))" />
+        <Intrinsic Name="host" Expression="*((QString*)(((char*)(d) + memberOffset(3))))" />
+        <Intrinsic Name="path" Expression="*((QString*)(((char*)(d) + memberOffset(4))))" />
+        <Intrinsic Name="query" Expression="*((QString*)(((char*)(d) + memberOffset(5))))" />
+        <Intrinsic Name="fragment" Expression="*((QString*)(((char*)(d) + memberOffset(6))))" />
+
+        <DisplayString Condition="!isEmpty(scheme().d-&gt;size)">{scheme()}://{host()}{path()}</DisplayString>
+        <DisplayString Condition="isEmpty(scheme().d-&gt;size)">{path()}</DisplayString>
+        <Expand>
+            <Item Name="[scheme]">scheme()</Item>
+            <Item Name="[username]">username()</Item>
+            <Item Name="[password]">password()</Item>
+            <Item Name="[host]">host()</Item>
+            <Item Name="[path]">path()</Item>
+            <Item Name="[query]">query()</Item>
+            <Item Name="[fragment]">fragment()</Item>
+        </Expand>
+    </Type>
+
+    <Type Name="##NAMESPACE##::QBitArray">
+        <DisplayString>{{ size = {(d.d-&gt;size &lt;&lt; 3) - *((reinterpret_cast&lt;char*&gt;(d.d)) + d.d-&gt;offset)} }}</DisplayString>
+        <Expand>
+            <Item Name="[referenced]">d.d-&gt;ref.atomic._q_value</Item>
+            <IndexListItems>
+                <Size>(d.d-&gt;size &lt;&lt; 3) - *((reinterpret_cast&lt;char*&gt;(d.d)) + d.d-&gt;offset)</Size>
+                <ValueNode>
+                    (*(reinterpret_cast&lt;const unsigned char*&gt;((reinterpret_cast&lt;char*&gt;(d.d)) + d.d-&gt;offset) + 1
+                        + ($i &gt;&gt; 3)) &amp; (1 &lt;&lt; ($i &amp; 7))) != 0
+                </ValueNode>
+            </IndexListItems>
+        </Expand>
+    </Type>
+
+    <Type Name="##NAMESPACE##::QVarLengthArray&lt;*&gt;">
+        <AlternativeType Name="##NAMESPACE##::QVarLengthArray&lt;*, int&gt;"/>
+        <DisplayString>{{ size = {s} }}</DisplayString>
+        <Expand>
+            <Item Name="[capacity]">a</Item>
+            <ArrayItems>
+                <Size>s</Size>
+                <ValuePointer>ptr</ValuePointer>
+            </ArrayItems>
+        </Expand>
+    </Type>
+
+    <Type Name="##NAMESPACE##::QDate">
+        <DisplayString>{{ julian day = {jd} }}</DisplayString>
+        <Expand></Expand>
+    </Type>
+
+    <Type Name="##NAMESPACE##::QTime">
+        <DisplayString
+            Condition="mds == 1">{{ millisecond = {mds} }}</DisplayString>
+        <DisplayString
+            Condition="mds != 1">{{ milliseconds = {mds} }}</DisplayString>
+        <Expand>
+            <Item Name="[hour]"
+                  Condition="(mds / 3600000) == 1">mds / 3600000, d</Item>
+            <Item Name="[hours]"
+                  Condition="(mds / 3600000) != 1">mds / 3600000, d</Item>
+            <Item Name="[minute]"
+                  Condition="((mds % 3600000) / 60000) == 1">(mds % 3600000) / 60000, d</Item>
+            <Item Name="[minutes]"
+                  Condition="((mds % 3600000) / 60000) != 1">(mds % 3600000) / 60000, d</Item>
+            <Item Name="[second]"
+                  Condition="((mds / 1000) % 60) == 1">(mds / 1000) % 60, d</Item>
+            <Item Name="[seconds]"
+                  Condition="((mds / 1000) % 60) != 1">(mds / 1000) % 60, d</Item>
+            <Item Name="[millisecond]"
+                  Condition="(mds % 1000) == 1">mds % 1000, d</Item>
+            <Item Name="[milliseconds]"
+                  Condition="(mds % 1000) != 1">mds % 1000, d</Item>
+        </Expand>
+    </Type>
+
+    <Type Name="##NAMESPACE##::QRegularExpression">
+        <DisplayString>{d.pattern}</DisplayString>
+    </Type>
+
+    <Type Name="##NAMESPACE##::QSharedData">
+        <Expand>
+            <Item Name="[referenced]">ref._q_value</Item>
+        </Expand>
+    </Type>
+
+    <Type Name="##NAMESPACE##::QSharedPointer&lt;*&gt;">
+        <DisplayString>strong reference to shared pointer of type {"$T1"}</DisplayString>
+        <Expand>
+            <Item Name="[is null]">value == 0</Item>
+            <Item Name="[weak referenced]">d-&gt;weakref._q_value</Item>
+            <Item Name="[strong referenced]">d-&gt;strongref._q_value</Item>
+        </Expand>
+    </Type>
+
+    <Type Name="##NAMESPACE##::QSharedDataPointer&lt;*&gt;">
+        <DisplayString>pointer to implicit shared object of type {"$T1"}</DisplayString>
+        <Expand>
+            <ExpandedItem>d</ExpandedItem>
+        </Expand>
+    </Type>
+
+    <Type Name="##NAMESPACE##::QExplicitlySharedDataPointer&lt;*&gt;">
+        <DisplayString>pointer to explicit shared object of type {"$T1"}</DisplayString>
+        <Expand>
+            <ExpandedItem>d</ExpandedItem>
+        </Expand>
+    </Type>
+
+    <Type Name="##NAMESPACE##::QPointer&lt;*&gt;">
+        <DisplayString>guarded pointer to subclass of QObject of type {"$T1"}</DisplayString>
+        <Expand>
+            <Item Name="[is null]">wp.d == 0 || wp.d-&gt;strongref._q_value == 0 || wp.value == 0</Item>
+        </Expand>
+    </Type>
+
+    <Type Name="##NAMESPACE##::QWeakPointer&lt;*&gt;">
+        <DisplayString>weak reference to shared pointer of type {"$T1"}</DisplayString>
+        <Expand>
+            <Item Name="[is null]">d == 0 || d-&gt;strongref._q_value == 0 || value == 0</Item>
+            <Item Name="[weak referenced]">d-&gt;weakref._q_value</Item>
+            <Item Name="[strong referenced]">d-&gt;strongref._q_value</Item>
+        </Expand>
+    </Type>
+
+    <Type Name="##NAMESPACE##::QScopedPointer&lt;*&gt;">
+        <DisplayString>scoped pointer to a dynamically allocated object of type {"$T1"}</DisplayString>
+        <Expand>
+            <Item Name="[is null]">!d</Item>
+        </Expand>
+    </Type>
+
+    <Type Name="##NAMESPACE##::QScopedArrayPointer&lt;*&gt;">
+        <DisplayString>scoped pointer to dynamically allocated array of objects of type {"$T1"}</DisplayString>
+        <Expand>
+            <Item Name="[is null]">!d</Item>
+        </Expand>
+    </Type>
+
+    <Type Name="##NAMESPACE##::QPair&lt;*,*&gt;">
+        <DisplayString>({first}, {second})</DisplayString>
+        <Expand>
+            <Item Name="[first]">first</Item>
+            <Item Name="[second]">second</Item>
+        </Expand>
+    </Type>
+
+    <Type Name="##NAMESPACE##::QVector&lt;*&gt;">
+        <AlternativeType Name="##NAMESPACE##::QStack&lt;*&gt;"></AlternativeType>
+        <DisplayString>{{ size = {d-&gt;size} }}</DisplayString>
+        <Expand>
+            <Item Name="[referenced]">d-&gt;ref.atomic._q_value</Item>
+            <ArrayItems>
+                <Size>d-&gt;size</Size>
+                <ValuePointer>($T1*)((reinterpret_cast&lt;char*&gt;(d)) + d-&gt;offset)</ValuePointer>
+            </ArrayItems>
+        </Expand>
+    </Type>
+
+    <Type Name="##NAMESPACE##::QList&lt;*&gt;">
+        <AlternativeType Name="##NAMESPACE##::QQueue&lt;*&gt;"></AlternativeType>
+        <DisplayString>{{ size = {d-&gt;end - d-&gt;begin} }}</DisplayString>
+        <Expand>
+            <Item Name="[referenced]">d-&gt;ref.atomic._q_value</Item>
+            <IndexListItems>
+                <Size>d-&gt;end - d-&gt;begin</Size>
+                <ValueNode>*reinterpret_cast&lt;$T1*&gt;((sizeof($T1) &gt; sizeof(void*))
+                    ? reinterpret_cast&lt;Node*&gt;(d-&gt;array + d-&gt;begin + $i)-&gt;v
+                    : reinterpret_cast&lt;$T1*&gt;(d-&gt;array + d-&gt;begin + $i))
+                </ValueNode>
+            </IndexListItems>
+        </Expand>
+    </Type>
+
+    <Type Name="##NAMESPACE##::QStringList">
+        <DisplayString>{{ size = {d-&gt;end - d-&gt;begin} }}</DisplayString>
+        <Expand>
+            <Item Name="[referenced]">d-&gt;ref.atomic._q_value</Item>
+            <IndexListItems>
+                <Size>d-&gt;end - d-&gt;begin</Size>
+                <ValueNode>
+                    *reinterpret_cast&lt;QString*&gt;((sizeof(QString) &gt; sizeof(void*))
+                    ? reinterpret_cast&lt;Node*&gt;(d-&gt;array + d-&gt;begin + $i)-&gt;v
+                    : reinterpret_cast&lt;QString*&gt;(d-&gt;array + d-&gt;begin + $i))
+                </ValueNode>
+            </IndexListItems>
+        </Expand>
+    </Type>
+
+    <Type Name="##NAMESPACE##::QList&lt;QVariant&gt;">
+        <DisplayString>{{ size = {d-&gt;end - d-&gt;begin} }}</DisplayString>
+        <Expand>
+            <Item Name="[referenced]">d-&gt;ref.atomic._q_value</Item>
+            <IndexListItems>
+                <Size>d-&gt;end - d-&gt;begin</Size>
+                <ValueNode>
+                    *reinterpret_cast&lt;QVariant*&gt;((sizeof(QVariant) &gt; sizeof(void*))
+                    ? reinterpret_cast&lt;Node*&gt;(d-&gt;array + d-&gt;begin + $i)-&gt;v
+                    : reinterpret_cast&lt;QVariant*&gt;(d-&gt;array + d-&gt;begin + $i))
+                </ValueNode>
+            </IndexListItems>
+        </Expand>
+    </Type>
+
+    <Type Name="##NAMESPACE##::QLinkedList&lt;*&gt;">
+        <DisplayString>{{ size = {d-&gt;size} }}</DisplayString>
+        <Expand>
+            <Item Name="[referenced]">d-&gt;ref.atomic._q_value</Item>
+            <LinkedListItems>
+                <Size>d-&gt;size</Size>
+                <HeadPointer>d-&gt;n</HeadPointer>
+                <NextPointer>n</NextPointer>
+                <ValueNode>(*(##NAMESPACE##::QLinkedListNode&lt;$T1&gt;*)this).t</ValueNode>
+            </LinkedListItems>
+        </Expand>
+    </Type>
+
+    <Type Name="##NAMESPACE##::QMapNode&lt;*,*&gt;">
+        <DisplayString>({key}, {value})</DisplayString>
+        <Expand>
+            <Item Name="[key]">key</Item>
+            <Item Name="[value]">value</Item>
+        </Expand>
+    </Type>
+
+    <Type Name="##NAMESPACE##::QMap&lt;*,*&gt;">
+        <AlternativeType Name="##NAMESPACE##::QMultiMap&lt;*,*&gt;"/>
+        <DisplayString>{{ size = {d-&gt;size} }}</DisplayString>
+        <Expand>
+            <Item Name="[referenced]">d-&gt;ref.atomic._q_value</Item>
+            <TreeItems>
+                <Size>d-&gt;size</Size>
+                <HeadPointer>d-&gt;header.left</HeadPointer>
+                <LeftPointer>left</LeftPointer>
+                <RightPointer>right</RightPointer>
+                <ValueNode>*((##NAMESPACE##::QMapNode&lt;$T1,$T2&gt;*)this)</ValueNode>
+            </TreeItems>
+        </Expand>
+    </Type>
+
+    <Type Name="##NAMESPACE##::QHashNode&lt;*,*&gt;">
+        <DisplayString Condition="next == 0">(empty)</DisplayString>
+        <DisplayString Condition="next != 0">({key}, {value})</DisplayString>
+        <Expand>
+            <Item Name="[key]" Condition="next != 0">key</Item>
+            <Item Name="[value]" Condition="next != 0">value</Item>
+            <Item Name="[next]" Condition="next != 0">next</Item>
+        </Expand>
+    </Type>
+
+    <Type Name="##NAMESPACE##::QHash&lt;*,*&gt;">
+        <AlternativeType Name="##NAMESPACE##::QMultiHash&lt;*,*&gt;"/>
+        <DisplayString>{{ size = {d-&gt;size} }}</DisplayString>
+        <Expand>
+            <ArrayItems IncludeView="buckets">
+                <Size>d-&gt;numBuckets</Size>
+                <ValuePointer>reinterpret_cast&lt;Node **&gt;(d-&gt;buckets)</ValuePointer>
+            </ArrayItems>
+            <CustomListItems ExcludeView="buckets">
+                <Variable Name="n" InitialValue="d-&gt;numBuckets"/>
+                <Variable Name="bucket" InitialValue="d-&gt;buckets"/>
+                <Variable Name="node" InitialValue="d-&gt;buckets[0]"/>
+                <Variable Name="keyValuePair" InitialValue="reinterpret_cast&lt;Node *&gt;(0)"/>
+                <Size>d-&gt;size</Size>
+                <Loop>
+                    <Break Condition="n == 0"/>
+                    <Exec>node = *(bucket++)</Exec>
+                    <Exec>--n</Exec>
+                    <Loop>
+                        <Break Condition="!node || !node-&gt;next"/>
+                        <Exec>keyValuePair = reinterpret_cast&lt;Node *&gt;(node)</Exec>
+                        <Item Name="[{keyValuePair-&gt;key}]">keyValuePair-&gt;value</Item>
+                        <Exec>node = node-&gt;next</Exec>
+                    </Loop>
+                </Loop>
+            </CustomListItems>
+        </Expand>
+    </Type>
+
+    <Type Name="##NAMESPACE##::QHashNode&lt;*,##NAMESPACE##::QHashDummyValue&gt;">
+        <DisplayString Condition="next == 0">(empty)</DisplayString>
+        <DisplayString Condition="next != 0">({key})</DisplayString>
+        <Expand>
+            <Item Name="[key]" Condition="next != 0">key</Item>
+        </Expand>
+    </Type>
+
+    <Type Name="##NAMESPACE##::QSet&lt;*&gt;">
+        <DisplayString>{{ size = {q_hash.d-&gt;size} }}</DisplayString>
+        <Expand>
+            <ExpandedItem>q_hash</ExpandedItem>
+        </Expand>
+    </Type>
+
+    <Type Name="##NAMESPACE##::QCache&lt;*,*&gt;::Node">
+        <DisplayString>({*keyPtr}, {*t})</DisplayString>
+        <Expand>
+            <Item Name="[key]">*keyPtr</Item>
+            <Item Name="[value]">*t</Item>
+        </Expand>
+    </Type>
+
+    <Type Name="##NAMESPACE##::QCache&lt;*,*&gt;">
+        <DisplayString>{{ size = {hash.d-&gt;size} }}</DisplayString>
+        <Expand>
+            <Item Name="[max coast]">mx</Item>
+            <Item Name="[total coast]">total</Item>
+            <Item Name="[referenced]">hash.d-&gt;ref.atomic._q_value</Item>
+            <LinkedListItems>
+                <Size>hash.d-&gt;size</Size>
+                <HeadPointer>f</HeadPointer>
+                <NextPointer>n</NextPointer>
+                <ValueNode>*((Node*)this)</ValueNode>
+            </LinkedListItems>
+        </Expand>
+    </Type>
+
+    <Type Name="##NAMESPACE##::QStandardItemPrivate">
+        <Intrinsic Name="memberOffset" Expression="sizeof(QStandardItemModel *)
+                                                 + sizeof(QStandardItem *)
+                                                 + sizeof(int *)
+                                                 + sizeof(int *)
+                                                 + (sizeof(int) * count)">
+            <Parameter Name="count" Type="int"/>
+        </Intrinsic>
+        <Intrinsic Name="rows" Expression="*((int*)(((char*)(this)) + memberOffset(0)))" />
+        <Intrinsic Name="columns" Expression="*((int*)(((char*)(this)) + memberOffset(1)))" />
+    </Type>
+
+    <Type Name="##NAMESPACE##::QStandardItem">
+        <DisplayString>{{ row count = {(*d_ptr.d).rows()}, column count = {(*d_ptr.d).columns()} }}</DisplayString>
+        <Expand>
+            <Item Name="[d]">d_ptr.d,!</Item>
+            <Item Name="[row count]">(*d_ptr.d).rows()</Item>
+            <Item Name="[column count]">(*d_ptr.d).columns()</Item>
+        </Expand>
+    </Type>
+
+    <Type Name="##NAMESPACE##::QVariant">
+        <!--Region DisplayString QVariant-->
+
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::UnknownType">Invalid</DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::Bool">{d.data.b}</DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::Int">{d.data.i}</DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::UInt">{d.data.u}</DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::LongLong">{d.data.ll}</DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::ULongLong">{d.data.ull}</DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::Double">{d.data.d}</DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QChar">{d.data.c}</DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QVariantMap">
+            {*((##NAMESPACE##::QMap&lt;##NAMESPACE##::QString,##NAMESPACE##::QVariant&gt;*)(d.is_shared ? d.data.shared-&gt;ptr
+                : reinterpret_cast&lt;const void *&gt;(&amp;d.data.ptr)))}
+        </DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QVariantList">
+            {*((##NAMESPACE##::QList&lt;##NAMESPACE##::QVariant&gt;*)(d.is_shared ? d.data.shared-&gt;ptr
+                : reinterpret_cast&lt;const void *&gt;(&amp;d.data.ptr)))}
+        </DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QString">
+            {*((##NAMESPACE##::QString*)(d.is_shared ? d.data.shared-&gt;ptr
+                : reinterpret_cast&lt;const void *&gt;(&amp;d.data.ptr)))}
+        </DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QStringList">
+            {*((##NAMESPACE##::QStringList*)(d.is_shared ? d.data.shared-&gt;ptr
+                : reinterpret_cast&lt;const void *&gt;(&amp;d.data.ptr)))}
+        </DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QByteArray">
+            {*((##NAMESPACE##::QByteArray*)(d.is_shared ? d.data.shared-&gt;ptr
+                : reinterpret_cast&lt;const void *&gt;(&amp;d.data.ptr)))}
+        </DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QBitArray">
+            {*((##NAMESPACE##::QBitArray*)(d.is_shared ? d.data.shared-&gt;ptr
+                : reinterpret_cast&lt;const void *&gt;(&amp;d.data.ptr)))}
+        </DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QDate">
+            {*((##NAMESPACE##::QDate*)(d.is_shared ? d.data.shared-&gt;ptr
+                : reinterpret_cast&lt;const void *&gt;(&amp;d.data.ptr)))}
+        </DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QTime">
+            {*((##NAMESPACE##::QTime*)(d.is_shared ? d.data.shared-&gt;ptr
+                : reinterpret_cast&lt;const void *&gt;(&amp;d.data.ptr)))}
+        </DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QDateTime">DateTime</DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QUrl">Url</DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QLocale">Locale</DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QRect">
+            {*((##NAMESPACE##::QRect*)(d.is_shared ? d.data.shared-&gt;ptr
+                : reinterpret_cast&lt;const void *&gt;(&amp;d.data.ptr)))}
+        </DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QRectF">
+            {*((##NAMESPACE##::QRectF*)(d.is_shared ? d.data.shared-&gt;ptr
+                : reinterpret_cast&lt;const void *&gt;(&amp;d.data.ptr)))}
+        </DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QSize">
+            {*((##NAMESPACE##::QSize*)(d.is_shared ? d.data.shared-&gt;ptr
+                : reinterpret_cast&lt;const void *&gt;(&amp;d.data.ptr)))}
+        </DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QSizeF">
+            {*((##NAMESPACE##::QSizeF*)(d.is_shared ? d.data.shared-&gt;ptr
+                : reinterpret_cast&lt;const void *&gt;(&amp;d.data.ptr)))}
+        </DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QLine">
+            {*((##NAMESPACE##::QLine*)(d.is_shared ? d.data.shared-&gt;ptr
+                : reinterpret_cast&lt;const void *&gt;(&amp;d.data.ptr)))}
+        </DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QLineF">
+            {*((##NAMESPACE##::QLineF*)(d.is_shared ? d.data.shared-&gt;ptr
+                : reinterpret_cast&lt;const void *&gt;(&amp;d.data.ptr)))}
+        </DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QPoint">
+            {*((##NAMESPACE##::QPoint*)(d.is_shared ? d.data.shared-&gt;ptr
+                : reinterpret_cast&lt;const void *&gt;(&amp;d.data.ptr)))}
+        </DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QPointF">
+            {*((##NAMESPACE##::QPointF*)(d.is_shared ? d.data.shared-&gt;ptr
+                : reinterpret_cast&lt;const void *&gt;(&amp;d.data.ptr)))}
+        </DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QRegExp">RegExp</DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QRegularExpression">RegularExpression</DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QVariantHash">
+            {*((##NAMESPACE##::QHash&lt;##NAMESPACE##::QString,##NAMESPACE##::QVariant&gt;*)(d.is_shared ? d.data.shared-&gt;ptr
+                : reinterpret_cast&lt;const void *&gt;(&amp;d.data.ptr)))}
+        </DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QEasingCurve">EasingCurve</DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QUuid">Uuid</DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QModelIndex">ModelIndex</DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::LastCoreType">LastCoreType</DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QFont">Font</DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QPixmap">Pixmap</DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QBrush">Brush</DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QColor">Color</DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QPalette">Palette</DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QImage">Image</DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QPolygon">Polygon</DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QRegion">Region</DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QBitmap">Bitmap</DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QCursor">Cursor</DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QKeySequence">KeySequence</DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QPen">Pen</DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QTextLength">TextLength</DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QTextFormat">TextFormat</DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QMatrix">Matrix</DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QTransform">Transform</DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QMatrix4x4">Matrix4x4</DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QVector2D">Vector2D</DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QVector3D">Vector3D</DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QVector4D">Vector4D</DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QQuaternion">Quaternion</DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QPolygonF">PolygonF</DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QIcon">Icon</DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::LastGuiType">LastGuiType</DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::QSizePolicy">SizePolicy</DisplayString>
+        <DisplayString Condition="d.type == ##NAMESPACE##::QMetaType::User">UserType</DisplayString>
+        <DisplayString Condition="d.type == 0xffffffff">LastType</DisplayString>
+
+        <!--End region DisplayString QVariant-->
+
+        <!--Region DisplayView QVariant-->
+
+        <StringView Condition="d.type == ##NAMESPACE##::QMetaType::QChar">d.data.c</StringView>
+
+        <StringView Condition="d.type == ##NAMESPACE##::QMetaType::QString">
+            *((##NAMESPACE##::QString*)(d.is_shared ? d.data.shared-&gt;ptr
+                : reinterpret_cast&lt;const void *&gt;(&amp;d.data.ptr)))
+        </StringView>
+
+        <StringView Condition="d.type == ##NAMESPACE##::QMetaType::QByteArray">
+            *((##NAMESPACE##::QByteArray*)(d.is_shared ? d.data.shared-&gt;ptr
+                : reinterpret_cast&lt;const void *&gt;(&amp;d.data.ptr)))
+        </StringView>
+
+        <!--End region DisplayView QVariant-->
+
+        <!--Region Expand QVariant-->
+
+        <Expand>
+            <ExpandedItem Condition="d.type == ##NAMESPACE##::QMetaType::QVariantMap">
+                *((##NAMESPACE##::QMap&lt;##NAMESPACE##::QString,##NAMESPACE##::QVariant&gt;*)(d.is_shared ? d.data.shared-&gt;ptr
+                    : reinterpret_cast&lt;const void *&gt;(&amp;d.data.ptr)))
+            </ExpandedItem>
+            <ExpandedItem Condition="d.type == ##NAMESPACE##::QMetaType::QVariantList">
+                *((##NAMESPACE##::QList&lt;##NAMESPACE##::QVariant&gt;*)(d.is_shared ? d.data.shared-&gt;ptr
+                    : reinterpret_cast&lt;const void *&gt;(&amp;d.data.ptr)))
+            </ExpandedItem>
+            <ExpandedItem Condition="d.type == ##NAMESPACE##::QMetaType::QString">
+                *((##NAMESPACE##::QString*)(d.is_shared ? d.data.shared-&gt;ptr
+                    : reinterpret_cast&lt;const void *&gt;(&amp;d.data.ptr)))
+            </ExpandedItem>
+            <ExpandedItem Condition="d.type == ##NAMESPACE##::QMetaType::QStringList">
+                *((##NAMESPACE##::QStringList*)(d.is_shared ? d.data.shared-&gt;ptr
+                    : reinterpret_cast&lt;const void *&gt;(&amp;d.data.ptr)))
+            </ExpandedItem>
+            <ExpandedItem Condition="d.type == ##NAMESPACE##::QMetaType::QByteArray">
+                *((##NAMESPACE##::QByteArray*)(d.is_shared ? d.data.shared-&gt;ptr
+                    : reinterpret_cast&lt;const void *&gt;(&amp;d.data.ptr)))
+            </ExpandedItem>
+            <ExpandedItem Condition="d.type == ##NAMESPACE##::QMetaType::QBitArray">
+                *((##NAMESPACE##::QBitArray*)(d.is_shared ? d.data.shared-&gt;ptr
+                    : reinterpret_cast&lt;const void *&gt;(&amp;d.data.ptr)))
+            </ExpandedItem>
+            <ExpandedItem Condition="d.type == ##NAMESPACE##::QMetaType::QDate">
+                *((##NAMESPACE##::QDate*)(d.is_shared ? d.data.shared-&gt;ptr
+                    : reinterpret_cast&lt;const void *&gt;(&amp;d.data.ptr)))
+            </ExpandedItem>
+            <ExpandedItem Condition="d.type == ##NAMESPACE##::QMetaType::QTime">
+                *((##NAMESPACE##::QTime*)(d.is_shared ? d.data.shared-&gt;ptr
+                    : reinterpret_cast&lt;const void *&gt;(&amp;d.data.ptr)))
+            </ExpandedItem>
+            <ExpandedItem Condition="d.type == ##NAMESPACE##::QMetaType::QRect">
+                *((##NAMESPACE##::QRect*)(d.is_shared ? d.data.shared-&gt;ptr
+                    : reinterpret_cast&lt;const void *&gt;(&amp;d.data.ptr)))
+            </ExpandedItem>
+            <ExpandedItem Condition="d.type == ##NAMESPACE##::QMetaType::QRectF">
+                *((##NAMESPACE##::QRectF*)(d.is_shared ? d.data.shared-&gt;ptr
+                    : reinterpret_cast&lt;const void *&gt;(&amp;d.data.ptr)))
+            </ExpandedItem>
+            <ExpandedItem Condition="d.type == ##NAMESPACE##::QMetaType::QSize">
+                *((##NAMESPACE##::QSize*)(d.is_shared ? d.data.shared-&gt;ptr
+                : reinterpret_cast&lt;const void *&gt;(&amp;d.data.ptr)))
+            </ExpandedItem>
+            <ExpandedItem Condition="d.type == ##NAMESPACE##::QMetaType::QSizeF">
+                *((##NAMESPACE##::QSizeF*)(d.is_shared ? d.data.shared-&gt;ptr
+                : reinterpret_cast&lt;const void *&gt;(&amp;d.data.ptr)))
+            </ExpandedItem>
+            <ExpandedItem Condition="d.type == ##NAMESPACE##::QMetaType::QLine">
+                *((##NAMESPACE##::QLine*)(d.is_shared ? d.data.shared-&gt;ptr
+                    : reinterpret_cast&lt;const void *&gt;(&amp;d.data.ptr)))
+            </ExpandedItem>
+            <ExpandedItem Condition="d.type == ##NAMESPACE##::QMetaType::QLineF">
+                *((##NAMESPACE##::QLineF*)(d.is_shared ? d.data.shared-&gt;ptr
+                    : reinterpret_cast&lt;const void *&gt;(&amp;d.data.ptr)))
+            </ExpandedItem>
+            <ExpandedItem Condition="d.type == ##NAMESPACE##::QMetaType::QPoint">
+                *((##NAMESPACE##::QPoint*)(d.is_shared ? d.data.shared-&gt;ptr
+                    : reinterpret_cast&lt;const void *&gt;(&amp;d.data.ptr)))
+            </ExpandedItem>
+            <ExpandedItem Condition="d.type == ##NAMESPACE##::QMetaType::QPointF">
+                *((##NAMESPACE##::QPointF*)(d.is_shared ? d.data.shared-&gt;ptr
+                    : reinterpret_cast&lt;const void *&gt;(&amp;d.data.ptr)))
+            </ExpandedItem>
+            <ExpandedItem Condition="d.type == ##NAMESPACE##::QMetaType::QVariantHash">
+                *((##NAMESPACE##::QHash&lt;##NAMESPACE##::QString,##NAMESPACE##::QVariant&gt;*)(d.is_shared ? d.data.shared-&gt;ptr
+                    : reinterpret_cast&lt;const void *&gt;(&amp;d.data.ptr)))
+            </ExpandedItem>
+        </Expand>
+
+        <!--End region Expand QVariant-->
+    </Type>
+
+</AutoVisualizer>

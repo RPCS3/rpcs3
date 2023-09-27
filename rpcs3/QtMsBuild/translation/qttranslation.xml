@@ -1,0 +1,129 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+/***************************************************************************************************
+ Copyright (C) 2023 The Qt Company Ltd.
+ SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+***************************************************************************************************/
+-->
+<ProjectSchemaDefinitions
+  xmlns="http://schemas.microsoft.com/build/2009/properties"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:sys="clr-namespace:System;assembly=mscorlib">
+  <Rule
+    Name="QtRule_Translation"
+    PageTemplate="tool"
+    DisplayName="Qt Translation"
+    Order="9">
+    <Rule.DataSource>
+      <DataSource Persistence="ProjectFile" ItemType="QtTranslation" />
+    </Rule.DataSource>
+    <Rule.Categories>
+      <Category Name="General" DisplayName="General"/>
+      <Category Name="Update" DisplayName="lupdate"/>
+      <Category Name="Release" DisplayName="lrelease"/>
+    </Rule.Categories>
+    <!-- General -->
+    <EnumProperty
+      Name="BuildAction" Category="General" DisplayName="Run Translation Tool During Build">
+      <EnumValue Name="false" DisplayName="Disabled"/>
+      <EnumValue Name="lupdate" DisplayName="lupdate"/>
+      <EnumValue Name="lrelease" DisplayName="lrelease"/>
+      <EnumValue Name="lupdate_lrelease" DisplayName="lupdate + lrelease"/>
+    </EnumProperty>
+    <!-- lupdate -->
+    <StringProperty
+      Name="UpdateDescription" Category="lupdate" DisplayName="Execution Description" />
+    <EnumProperty
+      Name="SourceLanguage" Category="lupdate" DisplayName="Source Language"
+      Description="Specify the language of the source strings for new files.     -source-language &lt;language&gt;[_&lt;region&gt;]">
+      <EnumValue Name="default" DisplayName="POSIX"/>
+    </EnumProperty>
+    <EnumProperty
+      Name="TargetLanguage" Category="lupdate" DisplayName="Target Language"
+      Description="Specify the language of the translations for new files.      -target-language &lt;language&gt;[_&lt;region&gt;]">
+      <EnumValue Name="default" DisplayName="Guess from file name"/>
+    </EnumProperty>
+    <BoolProperty
+      Name="NoObsolete" Category="lupdate" DisplayName="Drop Obsolete Strings"
+      Description="Drop all obsolete and vanished strings.     -no-obsolete"/>
+    <BoolProperty
+      Name="PluralOnly" Category="lupdate" DisplayName="Plural Only"
+      Description="Only include plural form messages.     -pluralonly"/>
+    <BoolProperty
+      Name="UpdateSilent" Category="lupdate" DisplayName="Silent"
+      Description="Do not explain what is being done.     -silent"/>
+    <BoolProperty
+      Name="NoSort" Category="lupdate" DisplayName="Disable Sort"
+      Description="Do not sort contexts in TS files.     -no-sort"/>
+    <EnumProperty
+      Name="Locations" Category="lupdate" DisplayName="Locations"
+      Description="Specify/override how source code references are saved in TS files. Default is absolute for new files.     -locations {absolute|relative|none}">
+      <EnumValue Name="absolute" DisplayName="Absolute"/>
+      <EnumValue Name="relative" DisplayName="Relative"/>
+      <EnumValue Name="none" DisplayName="None"/>
+      <EnumValue Name="false" DisplayName="Guess from TS file"/>
+    </EnumProperty>
+    <BoolProperty
+      Name="NoUiLines" Category="lupdate" DisplayName="Disable UI Lines"
+      Description="Do not record line numbers in references to UI files.     -no-ui-lines"/>
+    <BoolProperty
+      Name="DisableSameTextHeuristic" Category="lupdate" DisplayName="Disable Same Text Merge Heuristic"
+      Description="Disable the named merge heuristic. Can be specified multiple times.     -disable-heuristic sametext"/>
+    <BoolProperty
+      Name="DisableSimilarTextHeuristic" Category="lupdate" DisplayName="Disable Similar Text Merge Heuristic"
+      Description="Disable the named merge heuristic. Can be specified multiple times.     -disable-heuristic similartext"/>
+    <BoolProperty
+      Name="DisableNumberHeuristic" Category="lupdate" DisplayName="Disable Number Merge Heuristic"
+      Description="Disable the named merge heuristic. Can be specified multiple times.     -disable-heuristic number"/>
+    <StringListProperty
+      Name="IncludePath" Category="lupdate" DisplayName="Include Path"
+      Description="Additional locations to look for include files.     -I &lt;includepath&gt;"/>
+    <StringListProperty
+      Name="FunctionAliases" Category="lupdate" DisplayName="Function Aliases"
+      Description="With +=, recognize &lt;alias&gt; as an alternative spelling of &lt;function&gt;. With =, recognize &lt;alias&gt; as the only spelling of &lt;function&gt;.     -tr-function-alias &lt;function&gt;{+=,=}&lt;alias&gt;[,&lt;function&gt;{+=,=}&lt;alias&gt;]..."/>
+    <StringProperty
+      Name="UpdateAdditionalOptions" Category="lupdate" DisplayName="AdditionalOptions"/>
+    <!-- lrelease -->
+    <StringProperty
+      Name="ReleaseDescription" Category="lrelease" DisplayName="Execution Description" />
+    <StringProperty
+      Name="QmOutputDir" Category="lrelease" DisplayName="Output Directory"
+      Description="Specifies the path of the generated QM output directory."/>
+    <StringProperty
+      Name="QmOutputFile" Category="lrelease" DisplayName="Output File Name"
+      Description="Specifies the name of the generated QM output file."/>
+    <BoolProperty
+      Name="IdBased" Category="lrelease" DisplayName="ID Based"
+      Description="Use IDs instead of source strings for message keying     -idbased"/>
+    <BoolProperty
+      Name="Compress" Category="lrelease" DisplayName="Compress"
+      Description="Compress the QM files     -compress"/>
+    <BoolProperty
+      Name="NoUnfinished" Category="lrelease" DisplayName="Skip Unfinished"
+      Description="Do not include unfinished translations     -nounfinished"/>
+    <BoolProperty
+      Name="RemoveIdentical" Category="lrelease" DisplayName="Remove Identical"
+      Description="If the translated text is the same as the source text, do not include the message     -removeidentical"/>
+    <StringProperty
+      Name="Project" Category="lrelease" DisplayName="Project"
+      Description="Name of a file containing the project's description in JSON format. Such a file may be generated from a .pro file using the lprodump tool.     -project &lt;filename&gt;"/>
+    <StringProperty
+      Name="UntranslatedPrefix" Category="lrelease" DisplayName="Untranslated Prefix"
+      Description="If a message has no real translation, use the source text prefixed with the given string instead     -markuntranslated &lt;prefix&gt;"/>
+    <BoolProperty
+      Name="ReleaseSilent" Category="lrelease" DisplayName="Silent"
+      Description="Do not explain what is being done     -silent"/>
+    <StringProperty
+      Name="ReleaseAdditionalOptions" Category="lrelease" DisplayName="AdditionalOptions"/>
+  </Rule>
+  <ItemType
+    Name="QtTranslation"
+    DisplayName="Qt Translation File" />
+  <FileExtension
+    Name="*.ts"
+    ContentType="QtTranslation" />
+  <ContentType
+    Name="QtTranslation"
+    DisplayName="Qt Translation File"
+    ItemType="QtTranslation" />
+</ProjectSchemaDefinitions>

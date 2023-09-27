@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--************************************************************************************************
+ Copyright (C) 2023 The Qt Company Ltd.
+ SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+****************************************************************************************************
+**          This file was generated automatically.
+****************************************************************************************************
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Target Name="QtMocOverrideCpp" DependsOnTargets="QtMocPrepare;QtGetDefaultClCompile"
+    Inputs="%(QtMoc.Identity)" Outputs="@(QtMoc->'####### Don't skip this target #######')">
+
+    <Message Importance="High" Condition="'$(QtDebug)' == 'true'"
+      Text="## QtMocOverrideCpp @(QtMoc)" />
+
+    <PropertyGroup Condition="'$(QtVsProjectClProperties)' == 'true'">
+      <override_cl_compile>%(QtMoc.OverrideClCompile)</override_cl_compile>
+    </PropertyGroup>
+
+    <ItemGroup Condition="'$(override_cl_compile)' == 'extend'">
+      <QtMoc>
+        <!-- BEGIN Generated Text -->
+<AdditionalIncludeDirectories>@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(AdditionalIncludeDirectories)');%(QtMoc.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+<AdditionalUsingDirectories>@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(AdditionalUsingDirectories)');%(QtMoc.AdditionalUsingDirectories)</AdditionalUsingDirectories>
+<AdditionalBMIDirectories>@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(AdditionalBMIDirectories)');%(QtMoc.AdditionalBMIDirectories)</AdditionalBMIDirectories>
+<AdditionalModuleDependencies>@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(AdditionalModuleDependencies)');%(QtMoc.AdditionalModuleDependencies)</AdditionalModuleDependencies>
+<AdditionalHeaderUnitDependencies>@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(AdditionalHeaderUnitDependencies)');%(QtMoc.AdditionalHeaderUnitDependencies)</AdditionalHeaderUnitDependencies>
+<PreprocessorDefinitions>@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(PreprocessorDefinitions)');%(QtMoc.PreprocessorDefinitions)</PreprocessorDefinitions>
+<UndefinePreprocessorDefinitions>@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(UndefinePreprocessorDefinitions)');%(QtMoc.UndefinePreprocessorDefinitions)</UndefinePreprocessorDefinitions>
+<DisableSpecificWarnings>@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(DisableSpecificWarnings)');%(QtMoc.DisableSpecificWarnings)</DisableSpecificWarnings>
+<ForcedIncludeFiles>@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(ForcedIncludeFiles)');%(QtMoc.ForcedIncludeFiles)</ForcedIncludeFiles>
+<ForcedUsingFiles>@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(ForcedUsingFiles)');%(QtMoc.ForcedUsingFiles)</ForcedUsingFiles>
+<TreatSpecificWarningsAsErrors>@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(TreatSpecificWarningsAsErrors)');%(QtMoc.TreatSpecificWarningsAsErrors)</TreatSpecificWarningsAsErrors>
+        <!-- END Generated Text -->
+      <AdditionalCppOptions
+        Condition="'%(QtMoc.AdditionalCppOptions)' != ''"
+        >@(ClCompile->
+          WithMetadataValue('Identity','DefaultClCompile')->
+          '%(AdditionalOptions)') %(QtMoc.AdditionalCppOptions)</AdditionalCppOptions>
+      <AdditionalCppOptions
+        Condition="'%(QtMoc.AdditionalCppOptions)' == ''"
+        >@(ClCompile->
+          WithMetadataValue('Identity','DefaultClCompile')->
+          '%(AdditionalOptions)')</AdditionalCppOptions>
+      </QtMoc>
+      <QtMoc>
+        <IncludePath>%(QtMoc.AdditionalIncludeDirectories)</IncludePath>
+        <Define>%(QtMoc.PreprocessorDefinitions)</Define>
+        <Undefine>%(QtMoc.UndefinePreprocessorDefinitions)</Undefine>
+      </QtMoc>
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(override_cl_compile)' == 'replace'">
+      <QtMoc>
+        <IncludePath Condition="'%(QtMoc.AdditionalIncludeDirectories)' != ''"
+          >%(QtMoc.AdditionalIncludeDirectories)</IncludePath>
+        <IncludePath Condition="'%(QtMoc.AdditionalIncludeDirectories)' == ''"
+          >@(ClCompile->
+            WithMetadataValue('Identity', 'DefaultClCompile')->
+            '%(AdditionalIncludeDirectories)')</IncludePath>
+        <Define Condition="'%(QtMoc.PreprocessorDefinitions)' != ''"
+          >%(QtMoc.PreprocessorDefinitions)</Define>
+        <Define Condition="'%(QtMoc.PreprocessorDefinitions)' == ''"
+          >@(ClCompile->
+            WithMetadataValue('Identity','DefaultClCompile')->
+            '%(PreprocessorDefinitions)')</Define>
+        <Undefine Condition="'%(QtMoc.UndefinePreprocessorDefinitions)' == ''"
+          >%(QtMoc.UndefinePreprocessorDefinitions)</Undefine>
+        <Undefine Condition="'%(QtMoc.UndefinePreprocessorDefinitions)' != ''"
+          >@(ClCompile->
+            WithMetadataValue('Identity','DefaultClCompile')->
+            '%(UndefinePreprocessorDefinitions)')</Undefine>
+      </QtMoc>
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(override_cl_compile)' == 'false'">
+      <QtMoc>
+        <!-- BEGIN Generated Text -->
+<AdditionalIncludeDirectories Condition="'%(QtMoc.AdditionalIncludeDirectories)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(AdditionalIncludeDirectories)')</AdditionalIncludeDirectories>
+<AdditionalUsingDirectories Condition="'%(QtMoc.AdditionalUsingDirectories)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(AdditionalUsingDirectories)')</AdditionalUsingDirectories>
+<AdditionalBMIDirectories Condition="'%(QtMoc.AdditionalBMIDirectories)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(AdditionalBMIDirectories)')</AdditionalBMIDirectories>
+<AdditionalModuleDependencies Condition="'%(QtMoc.AdditionalModuleDependencies)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(AdditionalModuleDependencies)')</AdditionalModuleDependencies>
+<AdditionalHeaderUnitDependencies Condition="'%(QtMoc.AdditionalHeaderUnitDependencies)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(AdditionalHeaderUnitDependencies)')</AdditionalHeaderUnitDependencies>
+<ScanSourceForModuleDependencies Condition="'%(QtMoc.ScanSourceForModuleDependencies)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(ScanSourceForModuleDependencies)')</ScanSourceForModuleDependencies>
+<TranslateIncludes Condition="'%(QtMoc.TranslateIncludes)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(TranslateIncludes)')</TranslateIncludes>
+<DebugInformationFormat Condition="'%(QtMoc.DebugInformationFormat)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(DebugInformationFormat)')</DebugInformationFormat>
+<SupportJustMyCode Condition="'%(QtMoc.SupportJustMyCode)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(SupportJustMyCode)')</SupportJustMyCode>
+<CompileAsManaged Condition="'%(QtMoc.CompileAsManaged)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(CompileAsManaged)')</CompileAsManaged>
+<CompileAsWinRT Condition="'%(QtMoc.CompileAsWinRT)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(CompileAsWinRT)')</CompileAsWinRT>
+<SuppressStartupBanner Condition="'%(QtMoc.SuppressStartupBanner)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(SuppressStartupBanner)')</SuppressStartupBanner>
+<WarningLevel Condition="'%(QtMoc.WarningLevel)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(WarningLevel)')</WarningLevel>
+<TreatWarningAsError Condition="'%(QtMoc.TreatWarningAsError)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(TreatWarningAsError)')</TreatWarningAsError>
+<WarningVersion Condition="'%(QtMoc.WarningVersion)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(WarningVersion)')</WarningVersion>
+<DiagnosticsFormat Condition="'%(QtMoc.DiagnosticsFormat)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(DiagnosticsFormat)')</DiagnosticsFormat>
+<SDLCheck Condition="'%(QtMoc.SDLCheck)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(SDLCheck)')</SDLCheck>
+<MultiProcessorCompilation Condition="'%(QtMoc.MultiProcessorCompilation)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(MultiProcessorCompilation)')</MultiProcessorCompilation>
+<Optimization Condition="'%(QtMoc.Optimization)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(Optimization)')</Optimization>
+<InlineFunctionExpansion Condition="'%(QtMoc.InlineFunctionExpansion)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(InlineFunctionExpansion)')</InlineFunctionExpansion>
+<IntrinsicFunctions Condition="'%(QtMoc.IntrinsicFunctions)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(IntrinsicFunctions)')</IntrinsicFunctions>
+<FavorSizeOrSpeed Condition="'%(QtMoc.FavorSizeOrSpeed)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(FavorSizeOrSpeed)')</FavorSizeOrSpeed>
+<OmitFramePointers Condition="'%(QtMoc.OmitFramePointers)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(OmitFramePointers)')</OmitFramePointers>
+<EnableFiberSafeOptimizations Condition="'%(QtMoc.EnableFiberSafeOptimizations)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(EnableFiberSafeOptimizations)')</EnableFiberSafeOptimizations>
+<WholeProgramOptimization Condition="'%(QtMoc.WholeProgramOptimization)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(WholeProgramOptimization)')</WholeProgramOptimization>
+<PreprocessorDefinitions Condition="'%(QtMoc.PreprocessorDefinitions)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(PreprocessorDefinitions)')</PreprocessorDefinitions>
+<UndefinePreprocessorDefinitions Condition="'%(QtMoc.UndefinePreprocessorDefinitions)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(UndefinePreprocessorDefinitions)')</UndefinePreprocessorDefinitions>
+<UndefineAllPreprocessorDefinitions Condition="'%(QtMoc.UndefineAllPreprocessorDefinitions)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(UndefineAllPreprocessorDefinitions)')</UndefineAllPreprocessorDefinitions>
+<IgnoreStandardIncludePath Condition="'%(QtMoc.IgnoreStandardIncludePath)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(IgnoreStandardIncludePath)')</IgnoreStandardIncludePath>
+<PreprocessToFile Condition="'%(QtMoc.PreprocessToFile)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(PreprocessToFile)')</PreprocessToFile>
+<PreprocessSuppressLineNumbers Condition="'%(QtMoc.PreprocessSuppressLineNumbers)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(PreprocessSuppressLineNumbers)')</PreprocessSuppressLineNumbers>
+<PreprocessKeepComments Condition="'%(QtMoc.PreprocessKeepComments)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(PreprocessKeepComments)')</PreprocessKeepComments>
+<UseStandardPreprocessor Condition="'%(QtMoc.UseStandardPreprocessor)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(UseStandardPreprocessor)')</UseStandardPreprocessor>
+<StringPooling Condition="'%(QtMoc.StringPooling)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(StringPooling)')</StringPooling>
+<MinimalRebuild Condition="'%(QtMoc.MinimalRebuild)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(MinimalRebuild)')</MinimalRebuild>
+<ExceptionHandling Condition="'%(QtMoc.ExceptionHandling)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(ExceptionHandling)')</ExceptionHandling>
+<SmallerTypeCheck Condition="'%(QtMoc.SmallerTypeCheck)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(SmallerTypeCheck)')</SmallerTypeCheck>
+<BasicRuntimeChecks Condition="'%(QtMoc.BasicRuntimeChecks)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(BasicRuntimeChecks)')</BasicRuntimeChecks>
+<RuntimeLibrary Condition="'%(QtMoc.RuntimeLibrary)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(RuntimeLibrary)')</RuntimeLibrary>
+<StructMemberAlignment Condition="'%(QtMoc.StructMemberAlignment)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(StructMemberAlignment)')</StructMemberAlignment>
+<BufferSecurityCheck Condition="'%(QtMoc.BufferSecurityCheck)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(BufferSecurityCheck)')</BufferSecurityCheck>
+<ControlFlowGuard Condition="'%(QtMoc.ControlFlowGuard)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(ControlFlowGuard)')</ControlFlowGuard>
+<FunctionLevelLinking Condition="'%(QtMoc.FunctionLevelLinking)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(FunctionLevelLinking)')</FunctionLevelLinking>
+<EnableParallelCodeGeneration Condition="'%(QtMoc.EnableParallelCodeGeneration)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(EnableParallelCodeGeneration)')</EnableParallelCodeGeneration>
+<EnableEnhancedInstructionSet Condition="'%(QtMoc.EnableEnhancedInstructionSet)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(EnableEnhancedInstructionSet)')</EnableEnhancedInstructionSet>
+<FloatingPointModel Condition="'%(QtMoc.FloatingPointModel)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(FloatingPointModel)')</FloatingPointModel>
+<FloatingPointExceptions Condition="'%(QtMoc.FloatingPointExceptions)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(FloatingPointExceptions)')</FloatingPointExceptions>
+<CreateHotpatchableImage Condition="'%(QtMoc.CreateHotpatchableImage)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(CreateHotpatchableImage)')</CreateHotpatchableImage>
+<IntelJCCErratum Condition="'%(QtMoc.IntelJCCErratum)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(IntelJCCErratum)')</IntelJCCErratum>
+<GuardEHContMetadata Condition="'%(QtMoc.GuardEHContMetadata)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(GuardEHContMetadata)')</GuardEHContMetadata>
+<GuardSignedReturns Condition="'%(QtMoc.GuardSignedReturns)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(GuardSignedReturns)')</GuardSignedReturns>
+<DisableLanguageExtensions Condition="'%(QtMoc.DisableLanguageExtensions)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(DisableLanguageExtensions)')</DisableLanguageExtensions>
+<TreatWChar_tAsBuiltInType Condition="'%(QtMoc.TreatWChar_tAsBuiltInType)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(TreatWChar_tAsBuiltInType)')</TreatWChar_tAsBuiltInType>
+<ForceConformanceInForLoopScope Condition="'%(QtMoc.ForceConformanceInForLoopScope)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(ForceConformanceInForLoopScope)')</ForceConformanceInForLoopScope>
+<RemoveUnreferencedCodeData Condition="'%(QtMoc.RemoveUnreferencedCodeData)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(RemoveUnreferencedCodeData)')</RemoveUnreferencedCodeData>
+<EnforceTypeConversionRules Condition="'%(QtMoc.EnforceTypeConversionRules)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(EnforceTypeConversionRules)')</EnforceTypeConversionRules>
+<RuntimeTypeInfo Condition="'%(QtMoc.RuntimeTypeInfo)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(RuntimeTypeInfo)')</RuntimeTypeInfo>
+<OpenMPSupport Condition="'%(QtMoc.OpenMPSupport)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(OpenMPSupport)')</OpenMPSupport>
+<LanguageStandard Condition="'%(QtMoc.LanguageStandard)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(LanguageStandard)')</LanguageStandard>
+<LanguageStandard_C Condition="'%(QtMoc.LanguageStandard_C)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(LanguageStandard_C)')</LanguageStandard_C>
+<ConformanceMode Condition="'%(QtMoc.ConformanceMode)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(ConformanceMode)')</ConformanceMode>
+<EnableModules Condition="'%(QtMoc.EnableModules)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(EnableModules)')</EnableModules>
+<PrecompiledHeader Condition="'%(QtMoc.PrecompiledHeader)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(PrecompiledHeader)')</PrecompiledHeader>
+<PrecompiledHeaderFile Condition="'%(QtMoc.PrecompiledHeaderFile)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(PrecompiledHeaderFile)')</PrecompiledHeaderFile>
+<PrecompiledHeaderOutputFile Condition="'%(QtMoc.PrecompiledHeaderOutputFile)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(PrecompiledHeaderOutputFile)')</PrecompiledHeaderOutputFile>
+<ExpandAttributedSource Condition="'%(QtMoc.ExpandAttributedSource)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(ExpandAttributedSource)')</ExpandAttributedSource>
+<AssemblerOutput Condition="'%(QtMoc.AssemblerOutput)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(AssemblerOutput)')</AssemblerOutput>
+<UseUnicodeForAssemblerListing Condition="'%(QtMoc.UseUnicodeForAssemblerListing)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(UseUnicodeForAssemblerListing)')</UseUnicodeForAssemblerListing>
+<AssemblerListingLocation Condition="'%(QtMoc.AssemblerListingLocation)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(AssemblerListingLocation)')</AssemblerListingLocation>
+<ModuleOutputFile Condition="'%(QtMoc.ModuleOutputFile)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(ModuleOutputFile)')</ModuleOutputFile>
+<ModuleDependenciesFile Condition="'%(QtMoc.ModuleDependenciesFile)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(ModuleDependenciesFile)')</ModuleDependenciesFile>
+<ObjectFileName Condition="'%(QtMoc.ObjectFileName)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(ObjectFileName)')</ObjectFileName>
+<ProgramDataBaseFileName Condition="'%(QtMoc.ProgramDataBaseFileName)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(ProgramDataBaseFileName)')</ProgramDataBaseFileName>
+<GenerateXMLDocumentationFiles Condition="'%(QtMoc.GenerateXMLDocumentationFiles)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(GenerateXMLDocumentationFiles)')</GenerateXMLDocumentationFiles>
+<XMLDocumentationFileName Condition="'%(QtMoc.XMLDocumentationFileName)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(XMLDocumentationFileName)')</XMLDocumentationFileName>
+<GenerateSourceDependencies Condition="'%(QtMoc.GenerateSourceDependencies)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(GenerateSourceDependencies)')</GenerateSourceDependencies>
+<SourceDependenciesFile Condition="'%(QtMoc.SourceDependenciesFile)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(SourceDependenciesFile)')</SourceDependenciesFile>
+<BrowseInformation Condition="'%(QtMoc.BrowseInformation)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(BrowseInformation)')</BrowseInformation>
+<BrowseInformationFile Condition="'%(QtMoc.BrowseInformationFile)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(BrowseInformationFile)')</BrowseInformationFile>
+<TreatAngleIncludeAsExternal Condition="'%(QtMoc.TreatAngleIncludeAsExternal)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(TreatAngleIncludeAsExternal)')</TreatAngleIncludeAsExternal>
+<ExternalWarningLevel Condition="'%(QtMoc.ExternalWarningLevel)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(ExternalWarningLevel)')</ExternalWarningLevel>
+<ExternalTemplatesDiagnostics Condition="'%(QtMoc.ExternalTemplatesDiagnostics)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(ExternalTemplatesDiagnostics)')</ExternalTemplatesDiagnostics>
+<DisableAnalyzeExternal Condition="'%(QtMoc.DisableAnalyzeExternal)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(DisableAnalyzeExternal)')</DisableAnalyzeExternal>
+<AnalyzeExternalRuleset Condition="'%(QtMoc.AnalyzeExternalRuleset)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(AnalyzeExternalRuleset)')</AnalyzeExternalRuleset>
+<CallingConvention Condition="'%(QtMoc.CallingConvention)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(CallingConvention)')</CallingConvention>
+<CompileAs Condition="'%(QtMoc.CompileAs)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(CompileAs)')</CompileAs>
+<DisableSpecificWarnings Condition="'%(QtMoc.DisableSpecificWarnings)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(DisableSpecificWarnings)')</DisableSpecificWarnings>
+<ForcedIncludeFiles Condition="'%(QtMoc.ForcedIncludeFiles)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(ForcedIncludeFiles)')</ForcedIncludeFiles>
+<ForcedUsingFiles Condition="'%(QtMoc.ForcedUsingFiles)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(ForcedUsingFiles)')</ForcedUsingFiles>
+<ShowIncludes Condition="'%(QtMoc.ShowIncludes)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(ShowIncludes)')</ShowIncludes>
+<UseFullPaths Condition="'%(QtMoc.UseFullPaths)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(UseFullPaths)')</UseFullPaths>
+<OmitDefaultLibName Condition="'%(QtMoc.OmitDefaultLibName)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(OmitDefaultLibName)')</OmitDefaultLibName>
+<ErrorReporting Condition="'%(QtMoc.ErrorReporting)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(ErrorReporting)')</ErrorReporting>
+<TreatSpecificWarningsAsErrors Condition="'%(QtMoc.TreatSpecificWarningsAsErrors)' != ''">@(ClCompile-&gt;WithMetadataValue('Identity','DefaultClCompile')-&gt;'%(TreatSpecificWarningsAsErrors)')</TreatSpecificWarningsAsErrors>
+        <!-- END Generated Text -->
+        <IncludePath
+          >@(ClCompile->
+            WithMetadataValue('Identity','DefaultClCompile')->
+            '%(AdditionalIncludeDirectories)')</IncludePath>
+        <Define
+          >@(ClCompile->
+            WithMetadataValue('Identity','DefaultClCompile')->
+            '%(PreprocessorDefinitions)')</Define>
+        <Undefine
+          >@(ClCompile->
+            WithMetadataValue('Identity','DefaultClCompile')->
+            '%(UndefinePreprocessorDefinitions)')</Undefine>
+        <AdditionalCppOptions
+          >@(ClCompile->
+            WithMetadataValue('Identity','DefaultClCompile')->
+            '%(AdditionalOptions)')</AdditionalCppOptions>
+      </QtMoc>
+    </ItemGroup>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Clean-up
+    // -->
+    <PropertyGroup>
+      <override_cl_compile/>
+    </PropertyGroup>
+  </Target>
+</Project>

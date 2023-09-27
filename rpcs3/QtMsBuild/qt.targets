@@ -1,0 +1,54 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+/***************************************************************************************************
+ Copyright (C) 2023 The Qt Company Ltd.
+ SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+***************************************************************************************************/
+-->
+
+<!--
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Qt/MSBuild
+// -->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Fail-safe import of private definitions
+  // -->
+  <Import
+    Condition="'$(QtPrivateLoaded)' != 'true'"
+    Project="$(MSBuildThisFileDirectory)\qt_private.props"/>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Defaults for project version constants
+  // -->
+  <PropertyGroup>
+    <QtVsProjectVersion
+      Condition="'$(QtVsProjectVersion)' == ''"
+      >0</QtVsProjectVersion>
+    <QtVsProjectMinVersion_Settings
+      Condition="'$(QtVsProjectMinVersion_Settings)' == ''"
+      >0</QtVsProjectMinVersion_Settings>
+    <QtVsProjectMinVersion_ClProperties
+      Condition="'$(QtVsProjectMinVersion_ClProperties)' == ''"
+      >0</QtVsProjectMinVersion_ClProperties>
+  </PropertyGroup>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Qt Common Targets
+  // -->
+  <Import Project="qt_globals.targets"/>
+  <Import Project="qt_settings.targets"/>
+  <Import Project="qt_tasks.targets"/>
+  <Import Project="qt_vars.targets"/>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Import subfolder targets
+  // -->
+  <Import
+    Project="$(QtMsBuildTargets)"/>
+
+</Project>

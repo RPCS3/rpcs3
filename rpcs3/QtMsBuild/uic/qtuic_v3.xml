@@ -1,0 +1,195 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+/***************************************************************************************************
+ Copyright (C) 2023 The Qt Company Ltd.
+ SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+***************************************************************************************************/
+-->
+<ProjectSchemaDefinitions
+  xmlns="http://schemas.microsoft.com/build/2009/properties"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:sys="clr-namespace:System;assembly=mscorlib">
+  <Rule
+    Name="QtRule50_Uic"
+    PageTemplate="tool"
+    DisplayName="Qt User Interface Compiler"
+    Order="9">
+    <Rule.DataSource>
+      <DataSource
+        Persistence="ProjectFile"
+        ItemType="QtUic" />
+    </Rule.DataSource>
+    <Rule.Categories>
+      <Category Name="General" DisplayName="uic"/>
+    </Rule.Categories>
+    <StringListProperty
+      Name="Inputs"
+      Category="General"
+      IsRequired="true"
+      Visible="False">
+      <StringListProperty.DataSource>
+        <DataSource
+           Persistence="ProjectFile"
+           ItemType="QtUic"
+           SourceType="Item" />
+      </StringListProperty.DataSource>
+    </StringListProperty>
+    <StringProperty
+      Name="ExecutionDescription"
+      DisplayName="Execution Description"
+      IncludeInCommandLine="False" />
+    <StringProperty
+      Name="QtUicDir"
+      DisplayName="Output Directory"
+      Description="Specifies the path of the generated uic output directory."/>
+    <StringProperty
+      Name="QtUicFileName"
+      DisplayName="Output File Name"
+      Description="Specifies the name of the generated uic output file."/>
+    <StringProperty
+      Name="QTDIR"
+      DisplayName="Qt Directory"
+      Visible="false"/>
+    <StringProperty
+      Name="InputFile"
+      DisplayName="Input File"
+      Visible="false"/>
+    <StringProperty
+      Name="OutputFile"
+      DisplayName="Output File"
+      Visible="false"/>
+    <BoolProperty
+      Name="DisplayDependencies"
+      HelpUrl="http://doc.qt.io/qt-5/uic.html"
+      DisplayName="Display Dependencies"
+      Description="Display the dependencies. (--dependencies)"
+      Switch="--dependencies"/>
+    <BoolProperty
+      Name="NoProtection"
+      HelpUrl="http://doc.qt.io/qt-5/uic.html"
+      DisplayName="No Protection"
+      Description="Disable header protection. (--no-protection)"
+      Switch="--no-protection"/>
+    <BoolProperty
+      Name="NoImplicitIncludes"
+      HelpUrl="http://doc.qt.io/qt-5/uic.html"
+      DisplayName="No Implicit Includes"
+      Description="Disable generation of #include-directives. (--no-implicit-includes)"
+      Switch="--no-implicit-includes"/>
+    <StringProperty
+      Name="Postfix"
+      HelpUrl="http://doc.qt.io/qt-5/uic.html"
+      DisplayName="Postfix"
+      Description="&lt;postfix&gt; to add to all generated classnames. (--postfix &lt;postfix&gt;)"
+      Switch="--postfix [value]"/>
+    <StringProperty
+      Name="Translate"
+      HelpUrl="http://doc.qt.io/qt-5/uic.html"
+      DisplayName="Translate"
+      Description="Use &lt;function&gt; for i18n. (--tr &lt;function&gt;)"
+      Switch="--tr [value]" />
+    <StringProperty
+      Name="Include"
+      HelpUrl="http://doc.qt.io/qt-5/uic.html"
+      DisplayName="Include"
+      Description="Add #include &lt;file&gt; to the output. (--include &lt;file&gt;)"
+      Switch="--include &quot;[value]&quot;" />
+    <StringProperty
+      Name="Generator"
+      HelpUrl="http://doc.qt.io/qt-5/uic.html"
+      DisplayName="Generator"
+      Description="Select generator. (-g &lt;java|cpp&gt;)"
+      Switch="-g [value]" />
+    <BoolProperty
+      Name="IdBased"
+      HelpUrl="http://doc.qt.io/qt-5/uic.html"
+      DisplayName="ID Based"
+      Description="Use id based function for i18n. (--idbased)"
+      Switch="--idbased"/>
+    <StringProperty
+      Name="CommandLineTemplate"
+      DisplayName="Command Line"
+      Visible="False"
+      IncludeInCommandLine="False" />
+    <DynamicEnumProperty
+      Name="QtUicBeforeTargets"
+      Category="General"
+      EnumProvider="Targets"
+      IncludeInCommandLine="False" Visible="False">
+      <DynamicEnumProperty.DisplayName>
+        <sys:String>Execute Before</sys:String>
+      </DynamicEnumProperty.DisplayName>
+      <DynamicEnumProperty.Description>
+        <sys:String>Specifies the targets for the build customization to run before.</sys:String>
+      </DynamicEnumProperty.Description>
+      <DynamicEnumProperty.ProviderSettings>
+        <NameValuePair
+          Name="Exclude"
+          Value="^QtUicBeforeTargets|^Compute" />
+      </DynamicEnumProperty.ProviderSettings>
+      <DynamicEnumProperty.DataSource>
+        <DataSource
+          Persistence="ProjectFile"
+          ItemType=""
+          HasConfigurationCondition="true" />
+      </DynamicEnumProperty.DataSource>
+    </DynamicEnumProperty>
+    <DynamicEnumProperty
+      Name="QtUicAfterTargets"
+      Category="General"
+      EnumProvider="Targets"
+      IncludeInCommandLine="False" Visible="False">
+      <DynamicEnumProperty.DisplayName>
+        <sys:String>Execute After</sys:String>
+      </DynamicEnumProperty.DisplayName>
+      <DynamicEnumProperty.Description>
+        <sys:String>Specifies the targets for the build customization to run after.</sys:String>
+      </DynamicEnumProperty.Description>
+      <DynamicEnumProperty.ProviderSettings>
+        <NameValuePair
+          Name="Exclude"
+          Value="^QtUicAfterTargets|^Compute" />
+      </DynamicEnumProperty.ProviderSettings>
+      <DynamicEnumProperty.DataSource>
+        <DataSource
+          Persistence="ProjectFile"
+          ItemType=""
+          HasConfigurationCondition="true" />
+      </DynamicEnumProperty.DataSource>
+    </DynamicEnumProperty>
+    <StringListProperty
+      Name="Outputs"
+      DisplayName="Outputs"
+      IncludeInCommandLine="False"
+      Visible="False" />
+    <StringListProperty
+      Name="AdditionalDependencies"
+      DisplayName="Additional Dependencies"
+      IncludeInCommandLine="False"/>
+    <StringProperty
+      Subtype="AdditionalOptions"
+      Name="AdditionalOptions"
+      Category="General">
+      <StringProperty.DisplayName>
+        <sys:String>Additional Options</sys:String>
+      </StringProperty.DisplayName>
+      <StringProperty.Description>
+        <sys:String>Additional Options</sys:String>
+      </StringProperty.Description>
+    </StringProperty>
+    <BoolProperty
+      Name="ParallelProcess"
+      DisplayName="Parallel Process"
+      Description="Run tool in parallel process."/>
+  </Rule>
+  <ItemType
+    Name="QtUic"
+    DisplayName="Qt User Interface Compiler (uic)" />
+  <FileExtension
+    Name="*.ui"
+    ContentType="QtUic" />
+  <ContentType
+    Name="QtUic"
+    DisplayName="Qt User Interface Compiler (uic)"
+    ItemType="QtUic" />
+</ProjectSchemaDefinitions>

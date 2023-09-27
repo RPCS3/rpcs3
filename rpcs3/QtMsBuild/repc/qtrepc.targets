@@ -1,0 +1,364 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+/***************************************************************************************************
+ Copyright (C) 2023 The Qt Company Ltd.
+ SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+***************************************************************************************************/
+-->
+
+<!--
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Definitions specific to repc
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// -->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Import pre-requisites
+  // -->
+  <Import
+    Condition="'$(QtMsBuildTargets_BeforeRepc)' != ''"
+    Project="$(QtMsBuildTargets_BeforeRepc)"/>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Qt/MSBuild global properties
+  // -->
+  <PropertyGroup>
+    <QtBuildTargets>QtRepc;$(QtBuildTargets)</QtBuildTargets>
+  </PropertyGroup>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Setup item type and property page
+  // -->
+  <Choose>
+    <When Condition="'$(QtVsProjectSettings)' == 'true' AND '$(QtVsProjectClProperties)' == 'true'">
+      <ItemGroup>
+        <PropertyPageSchema
+          Include="$(MSBuildThisFileDirectory)qtrepc_v3.xml" />
+      </ItemGroup>
+    </When>
+    <Otherwise>
+      <ItemGroup>
+        <PropertyPageSchema
+          Include="$(MSBuildThisFileDirectory)qtrepc.xml" />
+      </ItemGroup>
+    </Otherwise>
+  </Choose>
+  <ItemGroup>
+    <AvailableItemName Include="QtRepc">
+      <Targets>Qt</Targets>
+    </AvailableItemName>
+  </ItemGroup>
+  <PropertyGroup>
+    <QtRepcRuleName>QtRule60_Repc</QtRepcRuleName>
+  </PropertyGroup>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TARGET QtRepcPrepare
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Prepare to process sources
+  // -->
+  <Target Name="QtRepcPrepare"
+    Inputs="%(QtRepc.Identity)" Outputs="@(QtRepc->'####### Don't skip this target #######')">
+    <ItemGroup>
+      <selected_files Include="$(SelectedFiles)"/>
+    </ItemGroup>
+
+    <Message Importance="High" Condition="'$(QtDebug)' == 'true'"
+        Text="## QtRepcPrepare @(QtRepc)"/>
+
+    <!--// Expand build-time metadata ( %<Foo> ) -->
+    <Expand Condition="'@(QtRepc)' != ''"
+      Items="@(QtRepc)" BaseItem="@(QtRepc)" Template="@(QtRepc)">
+      <Output TaskParameter="Result" ItemName="QtRepcExp"/>
+    </Expand>
+    <ItemGroup>
+      <QtRepc Remove="@(QtRepc)"/>
+      <QtRepc Include="@(QtRepcExp->'%(Identity)')"/>
+      <QtRepcExp Remove="@(QtRepcExp)"/>
+    </ItemGroup>
+
+    <PropertyGroup>
+      <selected_files>[@(selected_files->'%(Identity)','][')]</selected_files>
+      <file>[@(QtRepc->'%(Identity)')]</file>
+      <output_file>@(QtRepc->'%(OutputFile)')</output_file>
+      <is_selected Condition="$(selected_files.Contains('$(file)'))">true</is_selected>
+      <is_selected Condition="!$(selected_files.Contains('$(file)'))">false</is_selected>
+    </PropertyGroup>
+
+    <!--// Delete output file to force build of source if it was manually selected to build
+        //  (e.g. by the 'Compile' option in the context menu for the file) -->
+    <Delete Files="$(output_file)"
+      Condition="'$(SelectedFiles)' != '' AND '$(is_selected)' == 'true'" />
+
+    <!--// If a source was manually selected to build, remove all other sources -->
+    <ItemGroup Condition="'@(selected_files)' != ''">
+      <QtRepc Remove="@(QtRepc)"
+        Condition="'$(SelectedFiles)' != '' AND '$(is_selected)' != 'true'" />
+    </ItemGroup>
+
+    <!--// Remove sources excluded from build -->
+    <ItemGroup>
+      <QtRepc Remove="@(QtRepc)"
+        Condition="'$(SelectedFiles)' == '' AND '%(QtRepc.ExcludedFromBuild)' == 'true'"/>
+    </ItemGroup>
+
+    <!--// Add repc output dir to C++ include path -->
+    <ItemGroup Condition="'@(QtRepc)' != ''">
+      <QtIncludePath Include="$([System.IO.Path]::GetDirectoryName('%(QtRepc.OutputFile)'))"/>
+    </ItemGroup>
+
+    <!--// Clean-up -->
+    <PropertyGroup>
+      <selected_files/>
+      <file/>
+      <output_file/>
+      <is_selected/>
+    </PropertyGroup>
+  </Target>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TARGET QtRepcSetModified
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Set InputChanged flag if source file or dependencies have been modified
+  // -->
+  <Target Name="QtRepcSetModified" DependsOnTargets="QtRepcPrepare"
+    Condition="'@(QtRepc)' != ''"
+    Inputs="%(QtRepc.FullPath);%(QtRepc.AdditionalDependencies)" Outputs="@(QtRepc->'%(OutputFile)')">
+
+    <Message Importance="High" Condition="'$(QtDebug)' == 'true'"
+      Text="## QtRepcSetModified @(QtRepc)" />
+
+    <CreateProperty Value="true">
+      <!-- // Using ValueSetByTask ensures $(input_changed) is only set to 'true' when the target
+           // is actually executed and not when MSBuild is figuring out which targets to run -->
+      <Output TaskParameter="ValueSetByTask" PropertyName="input_changed" />
+    </CreateProperty>
+    <ItemGroup>
+      <QtRepc>
+        <InputChanged>$(input_changed)</InputChanged>
+      </QtRepc>
+    </ItemGroup>
+  </Target>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TARGET QtRepcOverrideCpp
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  //
+  // -->
+  <Import Project="qtrepc_cl.targets"/>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TARGET QtRepc
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Process each source file and produce the corresponding QtWork items
+  // -->
+  <PropertyGroup>
+    <QtRepcDependsOn>
+      QtPrepare;
+      QtRepcPrepare;
+      QtRepcSetModified;
+      QtRepcOverrideCpp;
+      $(QtRepcDependsOn)
+    </QtRepcDependsOn>
+  </PropertyGroup>
+  <Target Name="QtRepc"
+    DependsOnTargets="$(QtRepcDependsOn)"
+    BeforeTargets="$(QtRepcBeforeTargets)" AfterTargets="$(QtRepcAfterTargets)"
+    Condition="'@(QtRepc)' != ''"
+    Inputs="%(QtRepc.FullPath);%(QtRepc.AdditionalDependencies);$(MSBuildProjectFile)"
+    Outputs="@(QtRepc->'%(OutputFile)')">
+
+    <Message Importance="High" Condition="'$(QtDebug)' == 'true'" Text="## QtRepc @(QtRepc)" />
+
+    <CreateProperty Value="true">
+      <Output TaskParameter="ValueSetByTask" PropertyName="dependencies_changed" />
+    </CreateProperty>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Convert string lists in source item properties to lists of items
+    // -->
+    <Flatten Items="@(QtRepc)"
+      Metadata="InputFile;
+                OutputFile;
+                InputFileType;
+                OutputFileType;
+                IncludePath;
+                AlwaysClass;
+                PrintDebug">
+      <Output
+        TaskParameter="Result" ItemName="LocalOptions" />
+    </Flatten>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Translate local paths to build host paths
+    // -->
+    <HostTranslatePaths
+      Items="@(LocalOptions)"
+      Names="InputFile;
+            OutputFile;
+            IncludePath">
+      <Output
+        TaskParameter="Result" ItemName="options" />
+    </HostTranslatePaths>
+
+    <ItemGroup>
+      <!--
+      /////////////////////////////////////////////////////////////////////////////////////////////
+      // Remove quotes from all paths
+      // Escape trailing back-slash in paths
+      // Add quotes to paths containing spaces
+      // -->
+      <options>
+        <Value Condition="'%(Name)' == 'InputFile' OR '%(Name)' == 'OutputFile'
+          OR '%(Name)' == 'IncludePath'"
+          >$([System.String]::Copy('%(Value)').Replace('&quot;', ''))</Value>
+      </options>
+      <options>
+        <Value Condition="('%(Name)' == 'InputFile' OR '%(Name)' == 'OutputFile'
+            OR '%(Name)' == 'IncludePath')
+          AND $([System.String]::Copy('%(Value)').Contains(' '))
+          AND $([System.String]::Copy('%(Value)').EndsWith('\'))"
+          >%(Value)\</Value>
+      </options>
+      <options>
+        <Value Condition="('%(Name)' == 'InputFile' OR '%(Name)' == 'OutputFile'
+            OR '%(Name)' == 'IncludePath')
+          AND $([System.String]::Copy('%(Value)').Contains(' '))"
+          >&quot;%(Value)&quot;</Value>
+      </options>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Generate tool command line arguments
+    // -->
+      <!--//  -i <rep|src>                    Input file type -->
+      <options>
+        <Value Condition="'%(Name)' == 'InputFileType'">-i %(Value)</Value>
+      </options>
+
+      <!--//  -o <source|replica|merged|rep>  Output file type -->
+      <options>
+        <Value Condition="'%(Name)' == 'OutputFileType'">-o %(Value)</Value>
+      </options>
+
+      <!--//  -I <dir>                        Add dir to the include path for header files -->
+      <options>
+        <Value Condition="'%(Name)' == 'IncludePath'">-I%(Value)</Value>
+      </options>
+
+      <!--//  -c                              Always output 'class' type for .rep files -->
+      <options>
+        <Value Condition="'%(Name)' == 'AlwaysClass' AND '%(Value)' != 'true'"></Value>
+      </options>
+      <options>
+        <Value Condition="'%(Name)' == 'AlwaysClass' AND '%(Value)' == 'true'">-c</Value>
+      </options>
+
+      <!--//  -d                              Print out parsing debug information -->
+      <options>
+        <Value Condition="'%(Name)' == 'PrintDebug' AND '%(Value)' != 'true'"></Value>
+      </options>
+      <options>
+        <Value Condition="'%(Name)' == 'PrintDebug' AND '%(Value)' == 'true'">-d</Value>
+      </options>
+
+      <!--//  [header-file/rep-file]          Input header/rep file to read from -->
+      <options>
+        <Value Condition="'%(Name)' == 'InputFile'">%(Value)</Value>
+      </options>
+
+      <!--//  [rep-file/header-file]          Output header/rep file to write to -->
+      <options>
+        <Value Condition="'%(Name)' == 'OutputFile'">%(Value)</Value>
+      </options>
+    </ItemGroup>
+    <PropertyGroup>
+      <options>@(options->'%(Value)', ' ')</options>
+    </PropertyGroup>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Aux properties
+    // -->
+    <PropertyGroup>
+      <!--// Force modified flag if source was manually selected to build -->
+      <input_changed Condition="'$(SelectedFiles)' != ''"
+        >true</input_changed>
+      <input_changed Condition="'$(SelectedFiles)' == ''"
+        >%(QtRepc.InputChanged)</input_changed>
+
+      <!--// Run work in parallel processes -->
+      <run_parallel Condition="'@(QtRepc)' != ''
+        AND '%(QtRepc.ParallelProcess)' == 'true'
+        AND '$(SelectedFiles)' == ''"
+        >true</run_parallel>
+
+      <!--// Run work in single process -->
+      <run_single Condition="'@(QtRepc)' != ''
+        AND ('%(QtRepc.ParallelProcess)' != 'true'
+         OR '$(SelectedFiles)' != '')"
+        >true</run_single>
+    </PropertyGroup>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Create work item
+    // -->
+    <ItemGroup Condition="'$(run_parallel)' == 'true' OR '$(run_single)' == 'true'">
+      <QtWork Include="@(QtRepc)">
+        <WorkType>repc</WorkType>
+        <ToolPath Condition="'$(QtVsProjectSettings)' == 'true'">$(QtToolsPath)/repc</ToolPath>
+        <ToolPath Condition="'$(QtVsProjectSettings)' != 'true'">%(QtRepc.QTDIR)\bin\repc.exe</ToolPath>
+        <Options>$(options)</Options>
+        <Message>%(QtRepc.ExecutionDescription)</Message>
+        <DependenciesChanged>$(dependencies_changed)</DependenciesChanged>
+        <InputChanged>$(input_changed)</InputChanged>
+        <ParallelBuild Condition="'$(run_parallel)' == 'true'">true</ParallelBuild>
+        <ParallelBuild Condition="'$(run_single)'   == 'true'">false</ParallelBuild>
+      </QtWork>
+    </ItemGroup>
+
+    <ItemGroup Condition="'@(QtRepc)' != '' AND '@(QtRepc->'%(DynamicSource)')' != 'false'">
+      <QtMoc Include="%(QtRepc.OutputFile)">
+        <DependsOn>@(QtRepc)</DependsOn>
+        <DynamicSource Condition="'%(QtRepc.DynamicSource)' == 'moc_cpp'">output</DynamicSource>
+        <DynamicSource Condition="'%(QtRepc.DynamicSource)' == 'moc'">false</DynamicSource>
+      </QtMoc>
+    </ItemGroup>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Clean-up
+    // -->
+    <PropertyGroup>
+      <options/>
+      <dependencies_changed/>
+      <input_changed/>
+      <run_parallel/>
+      <run_single/>
+    </PropertyGroup>
+    <ItemGroup>
+      <LocalOptions Remove="@(LocalOptions)"/>
+      <options Remove="@(options)"/>
+      <selected_files Remove="@(selected_files)"/>
+    </ItemGroup>
+  </Target>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Import dependants
+  // -->
+  <Import
+    Condition="'$(QtMsBuildTargets_AfterRepc)' != ''"
+    Project="$(QtMsBuildTargets_AfterRepc)"/>
+
+</Project>

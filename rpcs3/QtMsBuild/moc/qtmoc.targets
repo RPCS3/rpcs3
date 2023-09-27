@@ -1,0 +1,487 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+/***************************************************************************************************
+ Copyright (C) 2023 The Qt Company Ltd.
+ SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+***************************************************************************************************/
+-->
+
+<!--
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Definitions specific to moc
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// -->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Import pre-requisites
+  // -->
+  <Import
+    Condition="'$(QtMsBuildTargets_BeforeMoc)' != ''"
+    Project="$(QtMsBuildTargets_BeforeMoc)"/>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Qt/MSBuild global properties
+  // -->
+  <PropertyGroup>
+    <QtBuildTargets>QtMoc;$(QtBuildTargets)</QtBuildTargets>
+  </PropertyGroup>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Setup item type and property page
+  // -->
+  <Choose>
+    <When Condition="'$(QtVsProjectSettings)' == 'true' AND '$(QtVsProjectClProperties)' == 'true'">
+      <ItemGroup>
+        <PropertyPageSchema
+          Include="$(MSBuildThisFileDirectory)qtmoc_v3.xml" />
+      </ItemGroup>
+    </When>
+    <Otherwise>
+      <ItemGroup Condition="'$(QtVsProjectSettings)' == 'false'">
+        <PropertyPageSchema
+          Include="$(MSBuildThisFileDirectory)qtmoc.xml" />
+      </ItemGroup>
+    </Otherwise>
+  </Choose>
+  <ItemGroup>
+    <AvailableItemName Include="QtMoc">
+      <Targets>Qt;_ClCompile</Targets>
+    </AvailableItemName>
+  </ItemGroup>
+  <PropertyGroup>
+    <QtMocRuleName>QtRule30_Moc</QtMocRuleName>
+  </PropertyGroup>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TARGET QtMocInit
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Initialize default metadata
+  // -->
+  <Target Name="QtMocInit">
+    <!--// Initialize %(OutputFile) -->
+    <ItemGroup Condition="'$(QtVsProjectSettings)' == 'true' AND '@(QtMoc)' != ''">
+      <QtMocAux Include="@(QtMoc)">
+        <OutputFile
+          >$([System.IO.Path]::Combine('%(QtMoc.QtMocDir)','%(QtMoc.QtMocFileName)'))</OutputFile>
+      </QtMocAux>
+      <QtMoc Remove="@(QtMoc)"/>
+      <QtMoc Include="@(QtMocAux)"/>
+      <QtMocAux Remove="@(QtMocAux)"/>
+    </ItemGroup>
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Add moc output dir to C++ include path
+    // -->
+    <ItemGroup Condition="'@(QtMoc)' != ''">
+      <QtIncludePath Include="$([System.IO.Path]::GetDirectoryName('%(QtMoc.OutputFile)'))"/>
+    </ItemGroup>
+  </Target>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TARGET QtMocPrepare
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Prepare to process sources
+  // -->
+  <Target Name="QtMocPrepare" DependsOnTargets="QtMocInit"
+    Inputs="%(QtMoc.Identity)" Outputs="@(QtMoc->'####### Don't skip this target #######')">
+    <ItemGroup>
+      <selected_files Include="$(SelectedFiles)"/>
+    </ItemGroup>
+
+    <Message Importance="High" Condition="'$(QtDebug)' == 'true'"
+        Text="## QtMocPrepare @(QtMoc)"/>
+
+    <PropertyGroup>
+      <selected_files>[@(selected_files->'%(Identity)','][')]</selected_files>
+      <file>[@(QtMoc->'%(Identity)')]</file>
+      <output_file>@(QtMoc->'%(OutputFile)')</output_file>
+      <is_selected Condition="$(selected_files.Contains('$(file)'))">true</is_selected>
+      <is_selected Condition="!$(selected_files.Contains('$(file)'))">false</is_selected>
+    </PropertyGroup>
+
+    <!--// Delete output file to force build of source if it was manually selected to build
+        //  (e.g. by the 'Compile' option in the context menu for the file) -->
+    <Delete Files="$(output_file)"
+      Condition="'$(SelectedFiles)' != '' AND '$(is_selected)' == 'true'" />
+
+    <!--// If a source was manually selected to build, remove all other sources -->
+    <ItemGroup Condition="'@(selected_files)' != ''">
+      <QtMoc Remove="@(QtMoc)"
+        Condition="'$(SelectedFiles)' != '' AND '$(is_selected)' != 'true'" />
+    </ItemGroup>
+
+    <!--// Remove sources excluded from build -->
+    <ItemGroup>
+      <QtMoc Remove="@(QtMoc)"
+        Condition="'$(SelectedFiles)' == '' AND '%(QtMoc.ExcludedFromBuild)' == 'true'"/>
+    </ItemGroup>
+
+    <PropertyGroup>
+      <selected_files/>
+      <file/>
+      <output_file/>
+      <is_selected/>
+    </PropertyGroup>
+  </Target>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TARGET QtMocSetModified
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Set InputChanged flag if source file or dependencies have been modified
+  // -->
+  <Target Name="QtMocSetModified" DependsOnTargets="QtMocPrepare"
+    Condition="'@(QtMoc)' != ''"
+    Inputs="%(QtMoc.FullPath);%(QtMoc.AdditionalDependencies)" Outputs="@(QtMoc->'%(OutputFile)')">
+
+    <Message Importance="High" Condition="'$(QtDebug)' == 'true'"
+      Text="## QtMocSetModified @(QtMoc)" />
+
+    <CreateProperty Value="true">
+      <Output TaskParameter="ValueSetByTask" PropertyName="input_changed" />
+    </CreateProperty>
+    <ItemGroup>
+      <QtMoc>
+        <InputChanged>$(input_changed)</InputChanged>
+      </QtMoc>
+    </ItemGroup>
+  </Target>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TARGET QtMocOverrideCpp
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  //
+  // -->
+  <Import Project="qtmoc_cl.targets"/>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  /// TARGET QtMoc
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Process each source file and produce the corresponding QtWork items
+  // -->
+  <PropertyGroup>
+    <QtMocDependsOn>
+      QtPrepare;
+      QtMocPrepare;
+      QtMocSetModified;
+      QtMocOverrideCpp;
+      $(QtMocDependsOn)
+    </QtMocDependsOn>
+  </PropertyGroup>
+  <Target Name="QtMoc"
+    DependsOnTargets="$(QtMocDependsOn)"
+    BeforeTargets="$(QtMocBeforeTargets)" AfterTargets="$(QtMocAfterTargets)"
+    Condition="'@(QtMoc)' != ''"
+    Inputs="%(QtMoc.FullPath);%(QtMoc.AdditionalDependencies);$(MSBuildProjectFile)"
+    Outputs="@(QtMoc->'%(OutputFile)')">
+
+    <Message Importance="High" Condition="'$(QtDebug)' == 'true'" Text="## QtMoc @(QtMoc)" />
+
+    <CreateProperty Value="true">
+      <Output TaskParameter="ValueSetByTask" PropertyName="dependencies_changed" />
+    </CreateProperty>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Convert string lists in source item properties to lists of items
+    // -->
+    <Flatten Items="@(QtMoc)"
+      Metadata="InputFile;
+                OutputFile;
+                IncludePath;
+                MacFramework;
+                PreprocessOnly;
+                Define;
+                Undefine;
+                Metadata;
+                CompilerFlavor;
+                NoInclude;
+                PathPrefix;
+                ForceInclude;
+                PrependInclude;
+                Include;
+                NoNotesWarnings;
+                NoNotes;
+                NoWarnings;
+                IgnoreConflicts;
+                OptionsFile">
+      <Output
+        TaskParameter="Result" ItemName="LocalOptions" />
+    </Flatten>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Translate local paths to build host paths
+    // -->
+    <HostTranslatePaths
+      Items="@(LocalOptions)"
+      Names="InputFile;
+            OutputFile;
+            IncludePath;
+            MacFramework;
+            PathPrefix;
+            ForceInclude;
+            PrependInclude;
+            Include;
+            OptionsFile">
+      <Output
+        TaskParameter="Result" ItemName="options" />
+    </HostTranslatePaths>
+
+    <ItemGroup>
+      <!--
+      /////////////////////////////////////////////////////////////////////////////////////////////
+      // Escape double-quotes in macro definitions
+      // -->
+      <options>
+        <Value Condition="('%(Name)' == 'Define' OR '%(Name)' == 'Undefine')
+          AND ($([System.String]::Copy('%(Value)').Contains(' '))
+            OR $([System.String]::Copy('%(Value)').Contains('&quot;')))"
+          > &quot;$([System.String]::Copy('%(Value)').Replace('&quot;', '\&quot;'))&quot;</Value>
+      </options>
+
+      <!--
+      /////////////////////////////////////////////////////////////////////////////////////////////
+      // Remove quotes from all paths
+      // Escape trailing back-slash in paths
+      // Add quotes to paths containing spaces
+      // -->
+      <options>
+        <Value Condition="'%(Name)' == 'InputFile' OR '%(Name)' == 'OutputFile'
+          OR '%(Name)' == 'IncludePath' OR '%(Name)' == 'MacFramework' OR '%(Name)' == 'PathPrefix'
+          OR '%(Name)' == 'ForceInclude' OR '%(Name)' == 'PrependInclude' OR '%(Name)' == 'Include'
+          OR '%(Name)' == 'OptionsFile'"
+          >$([System.String]::Copy('%(Value)').Replace('&quot;', ''))</Value>
+      </options>
+
+      <options>
+        <Value Condition="('%(Name)' == 'InputFile' OR '%(Name)' == 'OutputFile'
+          OR '%(Name)' == 'IncludePath' OR '%(Name)' == 'MacFramework' OR '%(Name)' == 'PathPrefix'
+          OR '%(Name)' == 'ForceInclude' OR '%(Name)' == 'PrependInclude' OR '%(Name)' == 'Include'
+          OR '%(Name)' == 'OptionsFile')
+          AND $([System.String]::Copy('%(Value)').Contains(' '))
+          AND $([System.String]::Copy('%(Value)').EndsWith('\'))"
+          >%(Value)\</Value>
+      </options>
+
+      <options>
+        <Value Condition="('%(Name)' == 'InputFile' OR '%(Name)' == 'OutputFile'
+          OR '%(Name)' == 'IncludePath' OR '%(Name)' == 'MacFramework' OR '%(Name)' == 'PathPrefix'
+          OR '%(Name)' == 'ForceInclude' OR '%(Name)' == 'PrependInclude' OR '%(Name)' == 'Include'
+          OR '%(Name)' == 'OptionsFile')
+          AND $([System.String]::Copy('%(Value)').Contains(' '))"
+          >&quot;%(Value)&quot;</Value>
+      </options>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Generate tool command line arguments
+    // -->
+      <!--//  [header-file]               Header file to read from -->
+      <options>
+        <Value Condition="'%(Name)' == 'InputFile'">%(Value)</Value>
+      </options>
+
+      <!--//  -o <file>                   Write output to file -->
+      <options>
+        <Value Condition="'%(Name)' == 'OutputFile'">-o %(Value)</Value>
+      </options>
+
+      <!--//  -I <dir>                    Add dir to the include path for header files -->
+      <options>
+        <Value Condition="'%(Name)' == 'IncludePath'">-I%(Value)</Value>
+      </options>
+
+      <!--//  -F <framework>              Add macOS framework to the include path for headers -->
+      <options>
+        <Value Condition="'%(Name)' == 'MacFramework'">-F %(Value)</Value>
+      </options>
+
+      <!--//  -E                          Preprocess only; do not generate meta object code -->
+      <options>
+        <Value Condition="'%(Name)' == 'PreprocessOnly' AND '%(Value)' != 'true'"></Value>
+      </options>
+      <options>
+        <Value Condition="'%(Name)' == 'PreprocessOnly' AND '%(Value)' == 'true'">-E</Value>
+      </options>
+
+      <!--//  -D <macro[=def]>            Define macro, with optional definition -->
+      <options>
+        <Value Condition="'%(Name)' == 'Define'">-D%(Value)</Value>
+      </options>
+
+      <!--//  -U <macro>                  Undefine macro-->
+      <options>
+        <Value Condition="'%(Name)' == 'Undefine'">-U%(Value)</Value>
+      </options>
+
+      <!--//  -M <key=value>              Add key/value pair to plugin meta data -->
+      <options>
+        <Value Condition="'%(Name)' == 'Metadata'">-M%(Value)</Value>
+      </options>
+
+      <!--//   -compiler-flavor <flavor>  Set the compiler flavor: either "msvc" or "unix" -->
+      <options>
+        <Value Condition="'%(Name)' == 'CompilerFlavor'">--compiler-flavor %(Value)</Value>
+      </options>
+
+      <!--//  -i                          Do not generate an #include statement -->
+      <options>
+        <Value Condition="'%(Name)' == 'NoInclude' AND '%(Value)' != 'true'"></Value>
+      </options>
+      <options>
+        <Value Condition="'%(Name)' == 'NoInclude' AND '%(Value)' == 'true'">-i</Value>
+      </options>
+
+      <!--//  -p <path>                   Path prefix for included file -->
+      <options>
+        <Value Condition="'%(Name)' == 'PathPrefix'">-p%(Value)</Value>
+      </options>
+
+      <!--//  -f <file>                   Force #include <file> (overwrite default) -->
+      <options>
+        <Value Condition="'%(Name)' == 'ForceInclude'">-f %(Value)</Value>
+      </options>
+
+      <!--//  -b <file>                   Prepend #include <file> (preserve default include) -->
+      <options>
+        <Value Condition="'%(Name)' == 'PrependInclude'">-b %(Value)</Value>
+      </options>
+
+      <!--//   -include <file>            Parse <file> as an #include before the main source(s) -->
+      <options>
+        <Value Condition="'%(Name)' == 'Include'">--include %(Value)</Value>
+      </options>
+
+      <!--//  -n <which>                  Do not display notes (-nn) or warnings (-nw) -->
+      <options>
+        <Value Condition="'%(Name)' == 'NoNotesWarnings'">-n%(Value)</Value>
+      </options>
+
+      <!--//   -no-notes                  Do not display notes -->
+      <options>
+        <Value Condition="'%(Name)' == 'NoNotes' AND '%(Value)' != 'true'"></Value>
+      </options>
+      <options>
+        <Value Condition="'%(Name)' == 'NoNotes' AND '%(Value)' == 'true'">--no-notes</Value>
+      </options>
+
+      <!--//   -no-warnings               Do not display warnings (implies  -no-notes) -->
+      <options>
+        <Value Condition="'%(Name)' == 'NoWarnings' AND '%(Value)' != 'true'"></Value>
+      </options>
+      <options>
+        <Value Condition="'%(Name)' == 'NoWarnings' AND '%(Value)' == 'true'">--no-warnings</Value>
+      </options>
+
+      <!--//   -ignore-option-clashes     Ignore all options that conflict with compilers -->
+      <options>
+        <Value Condition="'%(Name)' == 'IgnoreConflicts' AND '%(Value)' != 'true'"></Value>
+      </options>
+      <options>
+        <Value Condition="'%(Name)' == 'IgnoreConflicts' AND '%(Value)' == 'true'"
+          >--ignore-option-clashes</Value>
+      </options>
+
+      <!--//  [@option-file]              Read additional options from option-file-->
+      <options>
+        <Value Condition="'%(Name)' == 'OptionsFile'">@%(Value)</Value>
+      </options>
+    </ItemGroup>
+    <PropertyGroup>
+      <options>@(options->'%(Value)', ' ')</options>
+    </PropertyGroup>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Aux properties
+    // -->
+    <PropertyGroup>
+      <!--// Force modified flag if source was manually selected to build -->
+      <input_changed Condition="'$(SelectedFiles)' != ''"
+        >true</input_changed>
+      <input_changed Condition="'$(SelectedFiles)' == ''"
+        >%(QtMoc.InputChanged)</input_changed>
+
+      <!--// Run work in parallel processes -->
+      <run_parallel Condition="'@(QtMoc)' != ''
+        AND '%(QtMoc.ParallelProcess)' == 'true'
+        AND '$(SelectedFiles)' == ''"
+        >true</run_parallel>
+
+      <!--// Run work in single process -->
+      <run_single Condition="'@(QtMoc)' != ''
+        AND ('%(QtMoc.ParallelProcess)' != 'true'
+         OR '$(SelectedFiles)' != '')"
+        >true</run_single>
+
+      <!--// Get relative path to output -->
+      <output_relative
+>$([MSBuild]::MakeRelative($(ProjectDir), %(QtMoc.OutputFile)).TrimStart('\'))</output_relative>
+
+      <!--// Get relative path to input -->
+      <input_relative
+>$([MSBuild]::MakeRelative($(ProjectDir), %(QtMoc.InputFile)).TrimStart('\'))</input_relative>
+    </PropertyGroup>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Create work item
+    // -->
+    <ItemGroup Condition="'$(run_parallel)' == 'true' OR '$(run_single)' == 'true'">
+      <QtWork Include="@(QtMoc)">
+        <WorkType>moc</WorkType>
+        <ToolPath Condition="'$(QtVsProjectSettings)' == 'true'"
+          >$(QtToolsPath)/moc</ToolPath>
+        <ToolPath Condition="'$(QtVsProjectSettings)' != 'true'"
+          >%(QtMoc.QTDIR)\bin\moc.exe</ToolPath>
+        <Options>$(options)</Options>
+        <Message>%(QtMoc.ExecutionDescription)</Message>
+        <DependenciesChanged>$(dependencies_changed)</DependenciesChanged>
+        <InputChanged>$(input_changed)</InputChanged>
+        <ParallelBuild Condition="'$(run_parallel)' == 'true'">true</ParallelBuild>
+        <ParallelBuild Condition="'$(run_single)'   == 'true'">false</ParallelBuild>
+        <!--
+        ///////////////////////////////////////////////////////////////////////////////////////////
+        // C++ dynamic source -->
+        <ClCompile Condition="'%(QtMoc.DynamicSource)' == 'output'">$(output_relative)</ClCompile>
+        <ClCompile Condition="'%(QtMoc.DynamicSource)' ==  'input'">$(input_relative)</ClCompile>
+      </QtWork>
+    </ItemGroup>
+
+    <!--
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Clean-up
+    // -->
+    <PropertyGroup>
+      <options/>
+      <dependencies_changed/>
+      <input_changed/>
+      <run_parallel/>
+      <run_single/>
+      <output_relative/>
+      <input_relative/>
+    </PropertyGroup>
+    <ItemGroup>
+      <LocalOptions Remove="@(LocalOptions)"/>
+      <options Remove="@(options)"/>
+      <selected_files Remove="@(selected_files)"/>
+    </ItemGroup>
+  </Target>
+
+  <!--
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  // Import dependants
+  // -->
+  <Import
+    Condition="'$(QtMsBuildTargets_AfterMoc)' != ''"
+    Project="$(QtMsBuildTargets_AfterMoc)"/>
+
+</Project>
