@@ -1016,6 +1016,12 @@ namespace vk
 
 			auto buf_allocator = [&]() -> std::tuple<void*, usz>
 			{
+				if (image_setup_flags & source_is_gpu_resident)
+				{
+					// We should never reach here, unless something is very wrong...
+					fmt::throw_exception("Cannot allocate CPU memory for GPU-only data");
+				}
+
 				// Map with extra padding bytes in case of realignment
 				offset_in_upload_buffer = upload_heap.alloc<512>(image_linear_size + 8);
 				void* mapped_buffer = upload_heap.map(offset_in_upload_buffer, image_linear_size + 8);
@@ -1025,6 +1031,21 @@ namespace vk
 			auto io_buf = rsx::io_buffer(buf_allocator);
 			opt = upload_texture_subresource(io_buf, layout, format, is_swizzled, caps);
 			upload_heap.unmap();
+
+			if (image_setup_flags & source_is_gpu_resident)
+			{
+				// Read from GPU buf if the input is already uploaded.
+				auto [iobuf, io_offset] = layout.data.raw();
+				upload_buffer = static_cast<buffer*>(iobuf);
+				offset_in_upload_buffer = io_offset;
+				// Never upload. Data is already resident.
+				opt.require_upload = false;
+			}
+			else
+			{
+				// Read from upload buffer
+				upload_buffer = upload_heap.heap.get();
+			}
 
 			copy_regions.push_back({});
 			auto& copy_info = copy_regions.back();
@@ -1037,8 +1058,6 @@ namespace vk
 			copy_info.imageSubresource.baseArrayLayer = layout.layer;
 			copy_info.imageSubresource.mipLevel = layout.level;
 			copy_info.bufferRowLength = upload_pitch_in_texel;
-
-			upload_buffer = upload_heap.heap.get();
 
 			if (opt.require_upload)
 			{
@@ -1117,7 +1136,7 @@ namespace vk
 						copy.size = copy_cmd.length;
 					}
 				}
-				else
+				else if (upload_buffer != scratch_buf || offset_in_upload_buffer != scratch_offset)
 				{
 					buffer_copies.push_back({});
 					auto& copy = buffer_copies.back();
@@ -1163,7 +1182,7 @@ namespace vk
 					range_ptr += op.second;
 				}
 			}
-			else
+			else if (!buffer_copies.empty())
 			{
 				vkCmdCopyBuffer(cmd2, upload_buffer->value, scratch_buf->value, static_cast<u32>(buffer_copies.size()), buffer_copies.data());
 			}

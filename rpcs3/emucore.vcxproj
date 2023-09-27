@@ -91,6 +91,7 @@
     <ClCompile Include="Emu\NP\upnp_handler.cpp" />
     <ClCompile Include="Emu\perf_monitor.cpp" />
     <ClCompile Include="Emu\RSX\Common\texture_cache.cpp" />
+    <ClCompile Include="Emu\RSX\Core\RSXContext.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_components.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_message_box.cpp" />
@@ -550,13 +551,16 @@
     <ClInclude Include="Emu\perf_monitor.hpp" />
     <ClInclude Include="Emu\RSX\Common\bitfield.hpp" />
     <ClInclude Include="Emu\RSX\Common\buffer_stream.hpp" />
+    <ClInclude Include="Emu\RSX\Common\tiled_dma_copy.hpp" />
     <ClInclude Include="Emu\RSX\Common\expected.hpp" />
+    <ClInclude Include="Emu\RSX\Common\io_buffer.h" />
     <ClInclude Include="Emu\RSX\Common\profiling_timer.hpp" />
     <ClInclude Include="Emu\RSX\Common\ranged_map.hpp" />
     <ClInclude Include="Emu\RSX\Common\simple_array.hpp" />
     <ClInclude Include="Emu\RSX\Common\surface_cache_dma.hpp" />
     <ClInclude Include="Emu\RSX\Common\time.hpp" />
     <ClInclude Include="Emu\RSX\Common\unordered_map.hpp" />
+    <ClInclude Include="Emu\RSX\Core\RSXContext.h" />
     <ClInclude Include="Emu\RSX\Core\RSXEngLock.hpp" />
     <ClInclude Include="Emu\RSX\Core\RSXFrameBuffer.h" />
     <ClInclude Include="Emu\RSX\Core\RSXIOMap.hpp" />
@@ -609,7 +613,6 @@
     <ClInclude Include="Emu\vfs_config.h" />
     <ClInclude Include="Loader\disc.h" />
     <ClInclude Include="Loader\mself.hpp" />
-    <ClInclude Include="io_buffer.h" />
     <ClInclude Include="util\atomic.hpp" />
     <ClInclude Include="util\bless.hpp" />
     <ClInclude Include="util\image_sink.h" />
@@ -905,6 +908,7 @@
     <None Include="Emu\RSX\Program\GLSLSnippets\GPUDeswizzle.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\OverlayRenderFS.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\OverlayRenderVS.glsl" />
+    <None Include="Emu\RSX\Program\GLSLSnippets\RSXMemoryTiling.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXDefines2.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXFragmentPrologue.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXFragmentTextureDepthConversion.glsl" />

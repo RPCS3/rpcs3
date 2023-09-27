@@ -1242,12 +1242,62 @@ void debugger_frame::ShowGotoAddressDialog()
 
 void debugger_frame::PerformGoToRequest(const QString& text_argument)
 {
-	const u64 address = EvaluateExpression(text_argument);
+	const bool asterisk_prefixed = text_argument.startsWith(QChar('*'));
+	const u64 address = EvaluateExpression(asterisk_prefixed ? text_argument.sliced(1, text_argument.size() - 1) : text_argument);
 
 	if (address != umax)
 	{
+		// Try to read from OPD entry if prefixed by asterisk
+		if (asterisk_prefixed)
+		{
+			if (auto cpu = get_cpu())
+			{
+				if (auto ppu = cpu->try_get<ppu_thread>())
+				{
+					const vm::ptr<u32> func_ptr = vm::cast(static_cast<u32>(address));
+
+					be_t<u32> code_addr{};
+
+					if (func_ptr.try_read(code_addr))
+					{
+						m_debugger_list->ShowAddress(code_addr, true);
+					}
+				}
+			}
+
+			return;
+		}
+
 		m_debugger_list->ShowAddress(static_cast<u32>(address), true);
 	}
+}
+
+void debugger_frame::PerformGoToThreadRequest(const QString& text_argument)
+{
+	const u64 thread_id = EvaluateExpression(text_argument);
+
+	if (thread_id != umax)
+	{
+		for (int i = 0; i < m_choice_units->count(); i++)
+		{
+			QVariant cpu = m_choice_units->itemData(i);
+
+			if (cpu.canConvert<data_type>())
+			{
+				if (cpu_thread* ptr = cpu.value<data_type>()(); ptr && ptr->id == thread_id)
+				{
+					// Success
+					m_choice_units->setCurrentIndex(i);
+					return;
+				}
+			}
+		}
+	}
+}
+
+void debugger_frame::PerformAddBreakpointRequest(u32 addr)
+{
+	m_debugger_list->BreakpointRequested(addr, true);
 }
 
 u64 debugger_frame::EvaluateExpression(const QString& expression)
