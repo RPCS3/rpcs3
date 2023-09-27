@@ -12,6 +12,13 @@ namespace rsx
 			return {};
 		}
 
+		if (!g_cfg.video.handle_tiled_memory)
+		{
+			// Tiled memory sections will simply be ignored if the option is disabled.
+			// TODO: This option should never be needed.
+			return {};
+		}
+
 		for (const auto& tile : tiles)
 		{
 			if (!tile.bound || tile.location != CELL_GCM_LOCATION_MAIN)
