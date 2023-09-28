@@ -2628,23 +2628,73 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 extern bool try_lock_vdec_context_creation();
 extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool revert_lock = false);
 
-void Emulator::Kill(bool allow_autoexit, bool savestate)
+void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_stage)
 {
-	if (!IsStopped() && savestate && !try_lock_spu_threads_in_a_state_compatible_with_savestates())
+	static const auto make_ptr = [](auto ptr)
 	{
-		sys_log.error("Failed to savestate: failed to lock SPU threads execution.");
-	}
+		return std::shared_ptr<std::remove_pointer_t<decltype(ptr)>>(ptr);
+	};
 
-	if (!IsStopped() && savestate && !try_lock_vdec_context_creation())
+	if (!IsStopped() && savestate)
 	{
-		try_lock_spu_threads_in_a_state_compatible_with_savestates(true);
+		if (!save_stage || !save_stage->prepared)
+		{
+			if (m_savestate_pending.exchange(true))
+			{
+				return;
+			}
 
-		sys_log.error("Failed to savestate: HLE VDEC (video decoder) context(s) exist."
-			"\nLLE libvdec.sprx by selecting it in Advanced tab -> Firmware Libraries."
-			"\nYou need to close the game for it to take effect."
-			"\nIf you cannot close the game due to losing important progress, your best chance is to skip the current cutscenes if any are played and retry.");
+			std::shared_ptr<std::shared_ptr<void>> pause_thread = std::make_shared<std::shared_ptr<void>>();
 
-		return;
+			*pause_thread = make_ptr(new named_thread("Savestate Prepare Thread"sv, [pause_thread, allow_autoexit, this]() mutable
+			{
+				if (!try_lock_spu_threads_in_a_state_compatible_with_savestates())
+				{
+					sys_log.error("Failed to savestate: failed to lock SPU threads execution.");
+					m_savestate_pending = false;
+
+					CallFromMainThread([pause = std::move(pause_thread)]()
+					{
+						// Join thread
+					}, nullptr, false);
+
+					return;
+				}
+
+				if (!IsStopped() && !try_lock_vdec_context_creation())
+				{
+					try_lock_spu_threads_in_a_state_compatible_with_savestates(true);
+
+					sys_log.error("Failed to savestate: HLE VDEC (video decoder) context(s) exist."
+						"\nLLE libvdec.sprx by selecting it in Advanced tab -> Firmware Libraries."
+						"\nYou need to close the game for it to take effect."
+						"\nIf you cannot close the game due to losing important progress, your best chance is to skip the current cutscenes if any are played and retry.");
+
+					m_savestate_pending = false;
+
+					CallFromMainThread([pause = std::move(pause_thread)]()
+					{
+						// Join thread
+					}, nullptr, false);
+
+					return;
+				}
+
+				CallFromMainThread([allow_autoexit, this]()
+				{
+					savestate_stage stage{};
+					stage.prepared = true;
+					Kill(allow_autoexit, true, &stage);
+				});
+
+				CallFromMainThread([pause = std::move(pause_thread)]()
+				{
+					// Join thread
+				}, nullptr, false);
+			}));
+
+			return;
+		}
 	}
 
 	g_tls_log_prefix = []()
@@ -2683,6 +2733,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate)
 		m_config_mode = cfg_mode::custom;
 		read_used_savestate_versions();
 		m_savestate_extension_flags1 = {};
+		m_savestate_pending = false;
 
 		// Enable logging
 		rpcs3::utils::configure_logs(true);
@@ -2728,11 +2779,6 @@ void Emulator::Kill(bool allow_autoexit, bool savestate)
 	// Type-less smart pointer container for thread (cannot know its type with this approach)
 	// There is no race condition because it is only accessed by the same thread
 	std::shared_ptr<std::shared_ptr<void>> join_thread = std::make_shared<std::shared_ptr<void>>();
-
-	auto make_ptr = [](auto ptr)
-	{
-		return std::shared_ptr<std::remove_pointer_t<decltype(ptr)>>(ptr);
-	};
 
 	*join_thread = make_ptr(new named_thread("Emulation Join Thread"sv, [join_thread, savestate, allow_autoexit, this]() mutable
 	{
@@ -3081,6 +3127,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate)
 			m_ar.reset();
 			read_used_savestate_versions();
 			m_savestate_extension_flags1 = {};
+			m_savestate_pending = false;
 
 			// Complete the operation
 			m_state = system_state::stopped;
