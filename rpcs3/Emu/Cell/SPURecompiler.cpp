@@ -7110,10 +7110,23 @@ public:
 		case SPU_RdEventStat:
 		{
 			update_pc();
-			//ensure_gpr_stores();
-			m_ir->CreateStore(m_ir->getInt8(1), spu_ptr<u8>(&spu_thread::unsavable));
+
+			if (g_cfg.savestate.compatible_mode)
+			{
+				ensure_gpr_stores();
+			}
+			else
+			{
+				m_ir->CreateStore(m_ir->getInt8(1), spu_ptr<u8>(&spu_thread::unsavable));
+			}
+
 			res.value = call("spu_read_events", &exec_read_events, m_thread);
-			m_ir->CreateStore(m_ir->getInt8(0), spu_ptr<u8>(&spu_thread::unsavable));
+
+			if (!g_cfg.savestate.compatible_mode)
+			{
+				m_ir->CreateStore(m_ir->getInt8(0), spu_ptr<u8>(&spu_thread::unsavable));
+			}
+
 			break;
 		}
 		case SPU_RdMachStat:

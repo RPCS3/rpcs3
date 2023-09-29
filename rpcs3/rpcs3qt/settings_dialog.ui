@@ -2422,6 +2422,13 @@
                 </widget>
                </item>
                <item>
+                <widget class="QCheckBox" name="compatibleSavestates">
+                 <property name="text">
+                  <string>SPU-Compatible Savestates Mode</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QCheckBox" name="silenceAllLogs">
                  <property name="text">
                   <string>Silence All Logs</string>
