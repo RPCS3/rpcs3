@@ -24,7 +24,7 @@ public:
 Q_SIGNALS:
 	void RequestShowAddress(u32 addr, bool select_addr = true, bool force = false);
 public Q_SLOTS:
-	void HandleBreakpointRequest(u32 loc);
+	void HandleBreakpointRequest(u32 loc, bool add_only);
 private Q_SLOTS:
 	void OnBreakpointListDoubleClicked();
 	void OnBreakpointListRightClicked(const QPoint &pos);

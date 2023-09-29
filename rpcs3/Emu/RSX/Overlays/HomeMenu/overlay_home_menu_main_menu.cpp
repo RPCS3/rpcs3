@@ -41,6 +41,16 @@ namespace rsx
 				return page_navigation::exit;
 			});
 
+			std::unique_ptr<overlay_element> recording = std::make_unique<home_menu_entry>(get_localized_string(localized_string_id::HOME_MENU_RECORDING));
+			add_item(recording, [](pad_button btn) -> page_navigation
+			{
+				if (btn != pad_button::cross) return page_navigation::stay;
+
+				rsx_log.notice("User selected recording in home menu");
+				g_user_asked_for_recording = true;
+				return page_navigation::exit;
+			});
+
 			const bool suspend_mode = g_cfg.savestate.suspend_emu.get();
 
 			std::unique_ptr<overlay_element> save_state = std::make_unique<home_menu_entry>(get_localized_string(suspend_mode ? localized_string_id::HOME_MENU_SAVESTATE_AND_EXIT : localized_string_id::HOME_MENU_SAVESTATE));
@@ -84,13 +94,17 @@ namespace rsx
 				});
 			}
 
-			std::unique_ptr<overlay_element> recording = std::make_unique<home_menu_entry>(get_localized_string(localized_string_id::HOME_MENU_RECORDING));
-			add_item(recording, [](pad_button btn) -> page_navigation
+			std::unique_ptr<overlay_element> restart = std::make_unique<home_menu_entry>(get_localized_string(localized_string_id::HOME_MENU_RESTART));
+			add_item(restart, [](pad_button btn) -> page_navigation
 			{
 				if (btn != pad_button::cross) return page_navigation::stay;
 
-				rsx_log.notice("User selected recording in home menu");
-				g_user_asked_for_recording = true;
+				rsx_log.notice("User selected restart in home menu");
+				
+				Emu.CallFromMainThread([]()
+				{
+					Emu.Restart(false);
+				});
 				return page_navigation::exit;
 			});
 

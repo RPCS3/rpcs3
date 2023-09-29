@@ -1168,6 +1168,9 @@
     <ClCompile Include="Emu\Io\pad_types.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\Core\RSXContext.cpp">
+      <Filter>Emu\GPU\RSX\Core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -2332,7 +2335,10 @@
     <ClInclude Include="Emu\NP\upnp_config.h">
       <Filter>Emu\NP</Filter>
     </ClInclude>
-    <ClInclude Include="io_buffer.h">
+    <ClInclude Include="Emu\RSX\Common\io_buffer.h">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Common\tiled_dma_copy.hpp">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
     <ClInclude Include="Emu\games_config.h">
@@ -2373,6 +2379,9 @@
     </ClInclude>
     <ClInclude Include="util\bless.hpp">
       <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Core\RSXContext.h">
+      <Filter>Emu\GPU\RSX\Core</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -2435,6 +2444,9 @@
     </None>
     <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXVertexFetch.glsl">
       <Filter>Emu\GPU\RSX\Program\Snippets\RSXProg</Filter>
+    </None>
+    <None Include="Emu\RSX\Program\GLSLSnippets\RSXMemoryTiling.glsl">
+      <Filter>Emu\GPU\RSX\Program\Snippets</Filter>
     </None>
   </ItemGroup>
 </Project>

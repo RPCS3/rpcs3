@@ -76,6 +76,7 @@ void fmt_class_string<patch_type>::format(std::string& out, u64 arg)
 		case patch_type::bd64: return "bd64";
 		case patch_type::lef32: return "lef32";
 		case patch_type::lef64: return "lef64";
+		case patch_type::bp_exec: return "bpex";
 		case patch_type::utf8: return "utf8";
 		case patch_type::c_utf8: return "cutf8";
 		case patch_type::move_file: return "move_file";
@@ -755,6 +756,7 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 
 	switch (p_data.type)
 	{
+	case patch_type::bp_exec:
 	case patch_type::utf8:
 	case patch_type::jump_func:
 	case patch_type::move_file:
@@ -1008,6 +1010,7 @@ static usz apply_modification(std::basic_string<u32>& applied, patch_engine::pat
 		case patch_type::jump:
 		case patch_type::jump_link:
 		case patch_type::jump_func:
+		case patch_type::bp_exec:
 		case patch_type::le32:
 		case patch_type::lef32:
 		case patch_type::bd32:
@@ -1314,6 +1317,17 @@ static usz apply_modification(std::basic_string<u32>& applied, patch_engine::pat
 		{
 			be_t<f64> val = p.value.double_value;
 			std::memcpy(ptr, &val, sizeof(val));
+			break;
+		}
+		case patch_type::bp_exec:
+		{
+			const u32 exec_addr = vm::try_get_addr(relocate_instructions_at ? vm::get_super_ptr<u8>(offset & -4) : mem_translate(offset & -4, 4)).first;
+
+			if (exec_addr)
+			{
+				Emu.GetCallbacks().add_breakpoint(exec_addr);
+			}
+
 			break;
 		}
 		case patch_type::utf8:

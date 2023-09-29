@@ -100,7 +100,7 @@ bool breakpoint_list::AddBreakpoint(u32 pc)
 /**
 * If breakpoint exists, we remove it, else add new one.  Yeah, it'd be nicer from a code logic to have it be set/reset.  But, that logic has to happen somewhere anyhow.
 */
-void breakpoint_list::HandleBreakpointRequest(u32 loc)
+void breakpoint_list::HandleBreakpointRequest(u32 loc, bool only_add)
 {
 	if (!m_cpu || m_cpu->state & cpu_flag::exit)
 	{
@@ -167,7 +167,10 @@ void breakpoint_list::HandleBreakpointRequest(u32 loc)
 
 	if (m_ppu_breakpoint_handler->HasBreakpoint(loc))
 	{
-		RemoveBreakpoint(loc);
+		if (!only_add)
+		{
+			RemoveBreakpoint(loc);
+		}
 	}
 	else
 	{

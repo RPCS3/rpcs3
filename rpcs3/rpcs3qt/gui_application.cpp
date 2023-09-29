@@ -638,6 +638,14 @@ void gui_application::InitializeCallbacks()
 		});
 	};
 
+	callbacks.add_breakpoint = [this](u32 addr)
+	{
+		Emu.BlockingCallFromMainThread([this, addr]()
+		{
+			m_main_window->OnAddBreakpoint(addr);
+		});
+	};
+
 	Emu.SetCallbacks(std::move(callbacks));
 }
 

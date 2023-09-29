@@ -95,6 +95,8 @@ public:
 	void EnableButtons(bool enable);
 	void ShowGotoAddressDialog();
 	void PerformGoToRequest(const QString& text_argument);
+	void PerformGoToThreadRequest(const QString& text_argument);
+	void PerformAddBreakpointRequest(u32 addr);
 	u64 EvaluateExpression(const QString& expression);
 	void ClearBreakpoints() const; // Fallthrough method into breakpoint_list.
 	void ClearCallStack();

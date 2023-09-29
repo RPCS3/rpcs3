@@ -189,7 +189,7 @@ namespace rsx
 
 	struct subresource_layout
 	{
-		std::span<const std::byte> data;
+		rsx::io_buffer data;
 		u16 width_in_texel;
 		u16 height_in_texel;
 		u16 width_in_block;

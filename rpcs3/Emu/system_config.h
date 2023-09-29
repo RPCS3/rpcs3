@@ -139,6 +139,7 @@ struct cfg_root : cfg::node
 		cfg::_bool write_depth_buffer{ this, "Write Depth Buffer" };
 		cfg::_bool read_color_buffers{ this, "Read Color Buffers" };
 		cfg::_bool read_depth_buffer{ this, "Read Depth Buffer" };
+		cfg::_bool handle_tiled_memory{ this, "Handle RSX Memory Tiling", false, true };
 		cfg::_bool log_programs{ this, "Log shader programs" };
 		cfg::_bool vsync{ this, "VSync" };
 		cfg::_bool debug_output{ this, "Debug output" };
