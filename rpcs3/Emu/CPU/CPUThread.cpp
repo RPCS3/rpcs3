@@ -1390,8 +1390,8 @@ extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool reve
 		return &spu_list;
 	};
 
-	// Attempt to lock for half a second, if somehow takes longer abort it
-	for (u64 start = 0, passed_count = 0; passed_count < 10; std::this_thread::yield())
+	// Attempt to lock for a second, if somehow takes longer abort it
+	for (u64 start = 0, passed_count = 0; passed_count < 10;)
 	{
 		if (revert_lock)
 		{
@@ -1413,12 +1413,12 @@ extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool reve
 		// Try to fetch SPUs out of critical section
 		const auto spu_list = get_spus(true);
 
-		// Avoid using suspend_all when more than one thread is known to be unsavable
+		// Avoid using suspend_all when more than 2 threads known to be unsavable
 		u32 unsavable_threads = 0;
 
 		for (auto& spu : *spu_list)
 		{
-			if (spu->unsavable && !spu->state.all_of(cpu_flag::wait + cpu_flag::exit))
+			if (spu->unsavable)
 			{
 				unsavable_threads++;
 
@@ -1431,6 +1431,7 @@ extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool reve
 
 		if (unsavable_threads >= 3)
 		{
+			std::this_thread::yield();
 			continue;
 		}
 
@@ -1445,19 +1446,24 @@ extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool reve
 				return true;
 			}
 
+			bool failed = false;
+			const bool is_emu_paused = Emu.IsPaused();
+
 			for (auto& spu : *spu_list)
 			{
-				if (spu->unsavable && !spu->state.all_of(cpu_flag::wait + cpu_flag::exit))
+				if (spu->unsavable)
 				{
-					return true;
+					failed = true;
+					break;
 				}
 
-				if (Emu.IsPaused())
+				if (is_emu_paused)
 				{
 					// If emulation is paused, we can only hope it's already in a state compatible with savestates
 					if (!(spu->state & (cpu_flag::dbg_global_pause + cpu_flag::dbg_pause)))
 					{
-						return true;
+						failed = true;
+						break;
 					}
 				}
 				else
@@ -1467,7 +1473,16 @@ extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool reve
 				}
 			}
 
-			return false;
+			if (failed && paused_anyone)
+			{
+				// For faster signalling, first remove state flags then batch notifications
+				for (auto& spu : *spu_list)
+				{
+					spu->state -= cpu_flag::dbg_global_pause;
+				}
+			}
+
+			return failed;
 		}))
 		{
 			if (Emu.IsPaused())
@@ -1478,13 +1493,8 @@ extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool reve
 			if (!paused_anyone)
 			{
 				// Need not do anything
+				std::this_thread::yield();
 				continue;
-			}
-
-			// For faster signalling, first remove state flags then batch notifications
-			for (auto& spu : *spu_list)
-			{
-				spu->state -= cpu_flag::dbg_global_pause;
 			}
 
 			for (auto& spu : *spu_list)
@@ -1495,6 +1505,7 @@ extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool reve
 				}
 			}
 
+			std::this_thread::yield();
 			continue;
 		}
 
