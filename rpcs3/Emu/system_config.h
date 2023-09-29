@@ -317,6 +317,7 @@ struct cfg_root : cfg::node
 
 		cfg::_bool start_paused{ this, "Start Paused", false }; // Pause on first frame
 		cfg::_bool suspend_emu{ this, "Suspend Emulation Savestate Mode", false }; // Close emulation when saving, delete save after loading
+		cfg::_bool compatible_mode{ this, "Compatible Savestate Mode", false }; // SPU emulation optimized for savestate compatibility (off by default for performance reasons)
 		cfg::_bool state_inspection_mode{ this, "Inspection Mode Savestates" }; // Save memory stored in executable files, thus allowing to view state without any files (for debugging)
 		cfg::_bool save_disc_game_data{ this, "Save Disc Game Data", false };
 	} savestate{this};
