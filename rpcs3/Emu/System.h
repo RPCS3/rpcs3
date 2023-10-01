@@ -91,6 +91,7 @@ struct EmuCallbacks
 	std::string(*resolve_path)(std::string_view) = [](std::string_view arg){ return std::string{arg}; }; // Resolve path using Qt
 	std::function<std::vector<std::string>()> get_font_dirs;
 	std::function<bool(const std::vector<std::string>&)> on_install_pkgs;
+	std::function<void(u32)> add_breakpoint;
 };
 
 namespace utils
@@ -107,6 +108,7 @@ class Emulator final
 	atomic_t<u64> m_pause_start_time{0}; // set when paused
 	atomic_t<u64> m_pause_amend_time{0}; // increased when resumed
 	atomic_t<u64> m_stop_ctr{1}; // Increments when emulation is stopped
+	atomic_t<bool> m_savestate_pending = false;
 
 	games_config m_games_config;
 
@@ -330,10 +332,17 @@ public:
 	void FixGuestTime();
 	void FinalizeRunRequest();
 
+private:
+	struct savestate_stage
+	{
+		bool prepared = false;
+	};
+public:
+
 	bool Pause(bool freeze_emulation = false, bool show_resume_message = true);
 	void Resume();
 	void GracefulShutdown(bool allow_autoexit = true, bool async_op = false, bool savestate = false);
-	void Kill(bool allow_autoexit = true, bool savestate = false);
+	void Kill(bool allow_autoexit = true, bool savestate = false, savestate_stage* stage = nullptr);
 	game_boot_result Restart(bool graceful = true);
 	bool Quit(bool force_quit);
 	static void CleanUp();

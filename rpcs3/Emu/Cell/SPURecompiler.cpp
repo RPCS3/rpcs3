@@ -4474,6 +4474,11 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 
 		// Store instructions
 		std::array<llvm::StoreInst*, s_reg_max> store{};
+
+		// Store reordering/elimination protection
+		std::array<usz, s_reg_max> store_context_last_id = fill_array<usz>(0); // Protects against illegal forward ordering
+		std::array<usz, s_reg_max> store_context_first_id = fill_array<usz>(usz{umax}); // Protects against illegal past store elimination (backwards ordering is not implemented)
+		std::array<usz, s_reg_max> store_context_ctr = fill_array<usz>(1); // Store barrier cointer
 	};
 
 	struct function_info
@@ -5210,7 +5215,18 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		// Erase previous dead store instruction if necessary
 		if (_store)
 		{
-			_store->eraseFromParent();
+			if (m_block->store_context_last_id[index] == m_block->store_context_ctr[index])
+			{
+				// Erase store of it is not preserved by ensure_gpr_stores()
+				_store->eraseFromParent();
+			}
+		}
+
+		if (m_block)
+		{
+			// Keep the store's location in history of gpr preservaions
+			m_block->store_context_last_id[index] = m_block->store_context_ctr[index];
+			m_block->store_context_first_id[index] = std::min<usz>(m_block->store_context_first_id[index], m_block->store_context_ctr[index]);
 		}
 
 		if (m_finfo && m_finfo->fn)
@@ -5338,7 +5354,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	}
 
 	// Call cpu_thread::check_state if necessary and return or continue (full check)
-	void check_state(u32 addr)
+	void check_state(u32 addr, bool may_be_unsafe_for_savestate = true)
 	{
 		const auto pstate = spu_ptr<u32>(&spu_thread::state);
 		const auto _body = llvm::BasicBlock::Create(m_context, "", m_function);
@@ -5346,7 +5362,24 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		m_ir->CreateCondBr(m_ir->CreateICmpEQ(m_ir->CreateLoad(get_type<u32>(), pstate, true), m_ir->getInt32(0)), _body, check, m_md_likely);
 		m_ir->SetInsertPoint(check);
 		update_pc(addr);
+
+		if (may_be_unsafe_for_savestate && std::none_of(std::begin(m_block->phi), std::end(m_block->phi), FN(!!x)))
+		{
+			may_be_unsafe_for_savestate = false;
+		}
+
+		if (may_be_unsafe_for_savestate)
+		{
+			m_ir->CreateStore(m_ir->getInt8(1), spu_ptr<u8>(&spu_thread::unsavable))->setVolatile(true);
+		}
+
 		m_ir->CreateCall(m_test_state, {m_thread});
+
+		if (may_be_unsafe_for_savestate)
+		{
+			m_ir->CreateStore(m_ir->getInt8(0), spu_ptr<u8>(&spu_thread::unsavable))->setVolatile(true);
+		}
+
 		m_ir->CreateBr(_body);
 		m_ir->SetInsertPoint(_body);
 	}
@@ -5476,7 +5509,6 @@ public:
 
 		// Emit state check
 		const auto pstate = spu_ptr<u32>(&spu_thread::state);
-		m_ir->CreateStore(m_ir->getInt8(false), spu_ptr<u8>(&spu_thread::unsavable));
 		m_ir->CreateCondBr(m_ir->CreateICmpNE(m_ir->CreateLoad(get_type<u32>(), pstate), m_ir->getInt32(0)), label_stop, label_test, m_md_unlikely);
 
 		// Emit code check
@@ -5644,7 +5676,6 @@ public:
 		m_ir->SetInsertPoint(label_body);
 		const auto pbcount = spu_ptr<u64>(&spu_thread::block_counter);
 		m_ir->CreateStore(m_ir->CreateAdd(m_ir->CreateLoad(get_type<u64>(), pbcount), m_ir->getInt64(check_iterations)), pbcount);
-		m_ir->CreateStore(m_ir->getInt8(true), spu_ptr<u8>(&spu_thread::unsavable));
 
 		// Call the entry function chunk
 		const auto entry_chunk = add_function(m_pos);
@@ -5927,11 +5958,15 @@ public:
 					pois[bb] = i++;
 			}
 
+			// Basic block to block_info
+			std::unordered_map<llvm::BasicBlock*, block_info*> bb_to_info;
+
 			std::vector<block_info*> block_q;
 			block_q.reserve(m_blocks.size());
 			for (auto& [a, b] : m_blocks)
 			{
 				block_q.emplace_back(&b);
+				bb_to_info[b.block] = &b;
 			}
 
 			for (usz bi = 0; bi < block_q.size();)
@@ -5941,11 +5976,13 @@ public:
 				// TODO: process all registers up to s_reg_max
 				for (u32 i = 0; i < 128; i++)
 				{
-					if (auto& bs = bqbi->store[i])
+					// Check if the store is beyond the last barrier
+					if (auto& bs = bqbi->store[i]; bs && bqbi->store_context_last_id[i] == bqbi->store_context_ctr[i])
 					{
 						for (auto& [a, b] : m_blocks)
 						{
-							if (b.store[i] && b.store[i] != bs)
+							// Check if the store occurs before any barrier in the block
+							if (b.store[i] && b.store[i] != bs && b.store_context_first_id[i] == 1)
 							{
 								if (pdt.dominates(b.store[i], bs))
 								{
@@ -5999,26 +6036,37 @@ public:
 
 						// Look for possibly-dead store in CFG starting from the exit nodes
 						llvm::SetVector<llvm::BasicBlock*> work_list;
+						std::unordered_map<llvm::BasicBlock*, bool> worked_on;
+
 						if (std::count(killers.begin(), killers.end(), common_pdom) == 0)
 						{
 							if (common_pdom)
 							{
 								// Shortcut
 								work_list.insert(common_pdom);
+								worked_on[common_pdom] = true;
 							}
 							else
 							{
 								// Check all exits
 								for (auto* r : pdt.roots())
+								{
+									worked_on[r] = true;
 									work_list.insert(r);
+								}
 							}
 						}
+
+						std::vector<std::pair<llvm::BasicBlock*, bool>> work2_list;
 
 						for (usz wi = 0; wi < work_list.size(); wi++)
 						{
 							auto* cur = work_list[wi];
 							if (std::count(killers.begin(), killers.end(), cur))
+							{
+								work2_list.emplace_back(cur, bb_to_info[cur] && bb_to_info[cur]->store_context_first_id[i] > 1);
 								continue;
+							}
 
 							if (cur == bs->getParent())
 							{
@@ -6028,7 +6076,59 @@ public:
 							}
 
 							for (auto* p : llvm::predecessors(cur))
-								work_list.insert(p);
+							{
+								if (!worked_on[p])
+								{
+									worked_on[p] = true;
+									work_list.insert(p);
+								}
+							}
+						}
+
+						if (killers.empty())
+							continue;
+
+						worked_on.clear();
+
+						for (usz wi = 0; wi < work2_list.size(); wi++)
+						{
+							worked_on[work2_list[wi].first] = true;
+						}
+
+						for (usz wi = 0; wi < work2_list.size(); wi++)
+						{
+							auto [cur, found_user] = work2_list[wi];
+
+							if (cur == bs->getParent())
+							{
+								if (found_user)
+								{
+									// Reset: store is being used and preserved by ensure_gpr_stores()
+									killers.clear();
+									break;
+								}
+
+								continue;
+							}
+
+							if (!found_user && bb_to_info[cur] && bb_to_info[cur]->store_context_last_id[i])
+							{
+								found_user = true;
+							}
+
+							for (auto* p : llvm::predecessors(cur))
+							{
+								if (!worked_on[p])
+								{
+									worked_on[p] = true;
+									work2_list.push_back(std::make_pair(p, found_user));
+								}
+								// Enqueue a second iteration for found_user=true if only found with found_user=false 
+								else if (found_user && !std::find_if(work2_list.rbegin(), work2_list.rend(), [&](auto& it){ return it.first == p; })->second)
+								{
+									work2_list.push_back(std::make_pair(p, true));
+								}
+							}
 						}
 
 						// Finally erase the dead store
@@ -6055,7 +6155,7 @@ public:
 				for (u32 i = 0; i < 128; i++)
 				{
 					// If store isn't erased, try to sink it
-					if (auto& bs = block_q[bi]->store[i]; bs && block_q[bi]->bb->targets.size() > 1)
+					if (auto& bs = block_q[bi]->store[i]; bs && block_q[bi]->bb->targets.size() > 1 && block_q[bi]->store_context_last_id[i] == block_q[bi]->store_context_ctr[i])
 					{
 						std::map<u32, block_info*, std::greater<>> sucs;
 
@@ -6071,10 +6171,10 @@ public:
 
 						for (auto [a2, b2] : sucs)
 						{
-							auto ins = b2->block->getFirstNonPHI();
-
 							if (b2 != block_q[bi])
 							{
+								auto ins = b2->block->getFirstNonPHI();
+
 								if (b2->bb->preds.size() == 1)
 								{
 									if (!dt.dominates(bs->getOperand(0), ins))
@@ -6087,6 +6187,7 @@ public:
 									if (b2->store[i] == nullptr)
 									{
 										b2->store[i] = si;
+										b2->store_context_last_id[i] = 0;
 
 										if (!std::count(block_q.begin() + bi, block_q.end(), b2))
 										{
@@ -6817,6 +6918,7 @@ public:
 		{
 			m_block->block_end = m_ir->GetInsertBlock();
 			update_pc(m_pos + 4);
+			ensure_gpr_stores();
 			tail_chunk(m_dispatch);
 			return;
 		}
@@ -6870,6 +6972,15 @@ public:
 	{
 		// TODO
 		return exec_rdch(_spu, SPU_RdEventStat);
+	}
+
+	void ensure_gpr_stores()
+	{
+		if (m_block)
+		{
+			// Make previous stores not able to be reordered beyond this point or be deleted
+			std::for_each(m_block->store_context_ctr.begin(), m_block->store_context_ctr.end(), FN(x++));
+		}
 	}
 
 	llvm::Value* get_rdch(spu_opcode_t op, u32 off, bool atomic)
@@ -6928,6 +7039,7 @@ public:
 		case SPU_RdInMbox:
 		{
 			update_pc();
+			ensure_gpr_stores();
 			res.value = call("spu_read_in_mbox", &exec_read_in_mbox, m_thread);
 			break;
 		}
@@ -6943,11 +7055,15 @@ public:
 		}
 		case SPU_RdSigNotify1:
 		{
+			update_pc();
+			ensure_gpr_stores();
 			res.value = get_rdch(op, ::offset32(&spu_thread::ch_snr1), true);
 			break;
 		}
 		case SPU_RdSigNotify2:
 		{
+			update_pc();
+			ensure_gpr_stores();
 			res.value = get_rdch(op, ::offset32(&spu_thread::ch_snr2), true);
 			break;
 		}
@@ -6994,7 +7110,23 @@ public:
 		case SPU_RdEventStat:
 		{
 			update_pc();
+
+			if (g_cfg.savestate.compatible_mode)
+			{
+				ensure_gpr_stores();
+			}
+			else
+			{
+				m_ir->CreateStore(m_ir->getInt8(1), spu_ptr<u8>(&spu_thread::unsavable));
+			}
+
 			res.value = call("spu_read_events", &exec_read_events, m_thread);
+
+			if (!g_cfg.savestate.compatible_mode)
+			{
+				m_ir->CreateStore(m_ir->getInt8(0), spu_ptr<u8>(&spu_thread::unsavable));
+			}
+
 			break;
 		}
 		case SPU_RdMachStat:
@@ -7007,6 +7139,7 @@ public:
 		default:
 		{
 			update_pc();
+			ensure_gpr_stores();
 			res.value = call("spu_read_channel", &exec_rdch, m_thread, m_ir->getInt32(op.ra));
 			break;
 		}
@@ -7299,10 +7432,10 @@ public:
 		case MFC_Cmd:
 		{
 			// Prevent store elimination (TODO)
-			m_block->store[s_reg_mfc_eal] = nullptr;
-			m_block->store[s_reg_mfc_lsa] = nullptr;
-			m_block->store[s_reg_mfc_tag] = nullptr;
-			m_block->store[s_reg_mfc_size] = nullptr;
+			m_block->store_context_ctr[s_reg_mfc_eal]++;
+			m_block->store_context_ctr[s_reg_mfc_lsa]++;
+			m_block->store_context_ctr[s_reg_mfc_tag]++;
+			m_block->store_context_ctr[s_reg_mfc_size]++;
 
 			if (auto ci = llvm::dyn_cast<llvm::ConstantInt>(trunc<u8>(val).eval(m_ir)))
 			{
@@ -7352,6 +7485,7 @@ public:
 				case MFC_GETLB_CMD:
 				case MFC_GETLF_CMD:
 				{
+					ensure_gpr_stores();
 					[[fallthrough]];
 				}
 				case MFC_SDCRZ_CMD:
@@ -7639,6 +7773,7 @@ public:
 			const auto _mfc = llvm::BasicBlock::Create(m_context, "", m_function);
 			m_ir->CreateCondBr(m_ir->CreateICmpNE(_old, _new), _mfc, next);
 			m_ir->SetInsertPoint(_mfc);
+			ensure_gpr_stores();
 			update_pc();
 			call("spu_list_unstall", &exec_list_unstall, m_thread, eval(val & 0x1f).value);
 			m_ir->CreateBr(next);
@@ -7676,6 +7811,7 @@ public:
 		}
 
 		update_pc();
+		ensure_gpr_stores();
 		call("spu_write_channel", &exec_wrch, m_thread, m_ir->getInt32(op.ra), val.value);
 	}
 

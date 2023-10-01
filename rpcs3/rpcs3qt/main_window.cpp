@@ -2007,6 +2007,14 @@ void main_window::EnableMenus(bool enabled) const
 	ui->actionCreate_Savestate->setEnabled(enabled);
 }
 
+void main_window::OnAddBreakpoint(u32 addr) const
+{
+	if (m_debugger_frame)
+	{
+		m_debugger_frame->PerformAddBreakpointRequest(addr);
+	}
+}
+
 void main_window::OnEnableDiscEject(bool enabled) const
 {
 	ui->ejectDiscAct->setEnabled(enabled);
@@ -3063,7 +3071,7 @@ void main_window::CreateDockWindows()
 		}
 	});
 
-	connect(m_log_frame, &log_frame::PerformGoToOnDebugger, this, [this](const QString& text_argument, bool test_only, std::shared_ptr<bool> signal_accepted)
+	connect(m_log_frame, &log_frame::PerformGoToOnDebugger, this, [this](const QString& text_argument, bool is_address, bool test_only, std::shared_ptr<bool> signal_accepted)
 	{
 		if (m_debugger_frame && m_debugger_frame->isVisible())
 		{
@@ -3074,7 +3082,14 @@ void main_window::CreateDockWindows()
 
 			if (!test_only)
 			{
-				m_debugger_frame->PerformGoToRequest(text_argument);
+				if (is_address)
+				{
+					m_debugger_frame->PerformGoToRequest(text_argument);
+				}
+				else
+				{
+					m_debugger_frame->PerformGoToThreadRequest(text_argument);
+				}
 			}
 		}
 	});

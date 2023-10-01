@@ -36,6 +36,7 @@ enum class emu_settings_type
 	DebugConsoleMode,
 	SilenceAllLogs,
 	SuspendEmulationSavestateMode,
+	CompatibleEmulationSavestateMode,
 	StartSavestatePaused,
 	MaxSPURSThreads,
 	SleepTimersAccuracy,
@@ -62,6 +63,7 @@ enum class emu_settings_type
 	WriteColorBuffers,
 	ReadColorBuffers,
 	ReadDepthBuffer,
+	HandleRSXTiledMemory,
 	VSync,
 	DebugOutput,
 	DebugOverlay,
@@ -245,6 +247,7 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::WriteColorBuffers,          { "Video", "Write Color Buffers"}},
 	{ emu_settings_type::ReadColorBuffers,           { "Video", "Read Color Buffers"}},
 	{ emu_settings_type::ReadDepthBuffer,            { "Video", "Read Depth Buffer"}},
+	{ emu_settings_type::HandleRSXTiledMemory,       { "Video", "Handle RSX Memory Tiling"}},
 	{ emu_settings_type::VSync,                      { "Video", "VSync"}},
 	{ emu_settings_type::DebugOutput,                { "Video", "Debug output"}},
 	{ emu_settings_type::DebugOverlay,               { "Video", "Debug overlay"}},
@@ -378,5 +381,6 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 
 	// Savestates
 	{ emu_settings_type::SuspendEmulationSavestateMode,       { "Savestate", "Suspend Emulation Savestate Mode" }},
+	{ emu_settings_type::CompatibleEmulationSavestateMode,    { "Savestate", "Compatible Savestate Mode" }},
 	{ emu_settings_type::StartSavestatePaused,                { "Savestate", "Start Paused" }},
 };

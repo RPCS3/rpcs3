@@ -2422,6 +2422,13 @@
                 </widget>
                </item>
                <item>
+                <widget class="QCheckBox" name="compatibleSavestates">
+                 <property name="text">
+                  <string>SPU-Compatible Savestates Mode</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QCheckBox" name="silenceAllLogs">
                  <property name="text">
                   <string>Silence All Logs</string>
@@ -2619,6 +2626,13 @@
                 <widget class="QCheckBox" name="readColor">
                  <property name="text">
                   <string>Read Color Buffers</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="handleTiledMemory">
+                 <property name="text">
+                  <string>Handle RSX memory tiling</string>
                  </property>
                 </widget>
                </item>

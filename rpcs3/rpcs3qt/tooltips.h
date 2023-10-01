@@ -36,6 +36,7 @@ public:
 		const QString read_color                   = tr("Initializes render target memory using vm memory.");
 		const QString read_depth                   = tr("Initializes render target memory using vm memory.");
 		const QString dump_depth                   = tr("Writes depth buffer values to vm memory.");
+		const QString handle_tiled_memory          = tr("Obey RSX memory tiling configuration when writing GPU data to vm memory.\nThis can fix graphics corruption observed when Read Color or Read Depth options are enabled.");
 		const QString disable_on_disk_shader_cache = tr("Disables the loading and saving of shaders from and to the shader cache in the data directory.");
 		const QString allow_host_labels            = tr("Allows the host GPU to synchronize with CELL directly. This incurs a performance penalty, but exposes the true state of GPU objects to the guest CPU. Can help eliminate visual noise and glitching at the cost of performance. Use with caution.");
 		const QString disable_vertex_cache         = tr("Disables the vertex cache.\nMight resolve missing or flickering graphics output.\nMay degrade performance.");
@@ -51,6 +52,7 @@ public:
 		const QString vulkan_async_scheduler       = tr("Determines how to schedule GPU async compute jobs when using asynchronous streaming.\nUse 'Safe' mode for more spec compliant behavior at the cost of some CPU overhead. This setting works with all devices.\nUse 'Fast' to use a faster but hacky version. This option is internally disabled for NVIDIA GPUs due to causing GPU hangs.");
 		const QString disable_msl_fast_math        = tr("Disables Fast Math for MSL shaders, which may violate the IEEE 754 standard.\nDisabling it may fix some artifacts, especially on Apple GPUs, at the cost of performance.");
 		const QString suspend_savestates           = tr("When this mode is on, emulation exits when saving and the savestate file is concealed after loading it, preventing reuse by RPCS3.\nThis mode is like hibernation of emulation: if you don't want to be able to cheat using savestates when playing the game, consider using this mode.\nDo note that the savestate file is not gone completely, just ignored by RPCS3. You can manually relaunch it if needed.");
+		const QString compatible_savestates        = tr("When this mode is on, SPU emulation prioritizes savestate compatibility, however, it may reduce performance slightly.\nWhen this mode is off, some games may not allow making a savestate and show an SPU pause error in the log.");
 		const QString paused_savestates            = tr("When this mode is on, savestates are loaded and paused on the first frame.\nThis allows players to prepare for gameplay without being thrown into the action immediately.");
 
 		// audio

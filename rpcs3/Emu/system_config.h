@@ -139,6 +139,7 @@ struct cfg_root : cfg::node
 		cfg::_bool write_depth_buffer{ this, "Write Depth Buffer" };
 		cfg::_bool read_color_buffers{ this, "Read Color Buffers" };
 		cfg::_bool read_depth_buffer{ this, "Read Depth Buffer" };
+		cfg::_bool handle_tiled_memory{ this, "Handle RSX Memory Tiling", false, true };
 		cfg::_bool log_programs{ this, "Log shader programs" };
 		cfg::_bool vsync{ this, "VSync" };
 		cfg::_bool debug_output{ this, "Debug output" };
@@ -316,6 +317,7 @@ struct cfg_root : cfg::node
 
 		cfg::_bool start_paused{ this, "Start Paused", false }; // Pause on first frame
 		cfg::_bool suspend_emu{ this, "Suspend Emulation Savestate Mode", false }; // Close emulation when saving, delete save after loading
+		cfg::_bool compatible_mode{ this, "Compatible Savestate Mode", false }; // SPU emulation optimized for savestate compatibility (off by default for performance reasons)
 		cfg::_bool state_inspection_mode{ this, "Inspection Mode Savestates" }; // Save memory stored in executable files, thus allowing to view state without any files (for debugging)
 		cfg::_bool save_disc_game_data{ this, "Save Disc Game Data", false };
 	} savestate{this};

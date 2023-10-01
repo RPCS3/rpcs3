@@ -1465,6 +1465,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->suspendSavestates, emu_settings_type::SuspendEmulationSavestateMode);
 	SubscribeTooltip(ui->suspendSavestates, tooltips.settings.suspend_savestates);
 
+	m_emu_settings->EnhanceCheckBox(ui->compatibleSavestates, emu_settings_type::CompatibleEmulationSavestateMode);
+	SubscribeTooltip(ui->compatibleSavestates, tooltips.settings.compatible_savestates);
+
 	m_emu_settings->EnhanceCheckBox(ui->silenceAllLogs, emu_settings_type::SilenceAllLogs);
 	SubscribeTooltip(ui->silenceAllLogs, tooltips.settings.silence_all_logs);
 
@@ -1476,6 +1479,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceCheckBox(ui->dumpDepth, emu_settings_type::WriteDepthBuffer);
 	SubscribeTooltip(ui->dumpDepth, tooltips.settings.dump_depth);
+
+	m_emu_settings->EnhanceCheckBox(ui->handleTiledMemory, emu_settings_type::HandleRSXTiledMemory);
+	SubscribeTooltip(ui->handleTiledMemory, tooltips.settings.handle_tiled_memory);
 
 	m_emu_settings->EnhanceCheckBox(ui->disableOnDiskShaderCache, emu_settings_type::DisableOnDiskShaderCache);
 	SubscribeTooltip(ui->disableOnDiskShaderCache, tooltips.settings.disable_on_disk_shader_cache);
