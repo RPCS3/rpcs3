@@ -266,7 +266,7 @@ lv2_socket::lv2_socket(utils::serial& ar, lv2_socket_type _type)
 	ar(last_bound_addr);
 }
 
-std::shared_ptr<lv2_socket> lv2_socket::load(utils::serial& ar)
+std::shared_ptr<void> lv2_socket::load(utils::serial& ar)
 {
 	const lv2_socket_type type{ar};
 
