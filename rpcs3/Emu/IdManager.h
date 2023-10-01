@@ -50,6 +50,9 @@ namespace id_manager
 	template <typename T>
 	concept IdmCompatible = requires () { T::id_base, T::id_step, T::id_count; };
 
+	template <typename T>
+	concept IdmSavable = IdmCompatible<T> && T::savestate_init_pos != 0 && (requires () { std::declval<T>().save(std::declval<stx::exact_t<utils::serial&>>()); });
+
 	// Last allocated ID for constructors
 	extern thread_local u32 g_id;
 
@@ -169,7 +172,7 @@ namespace id_manager
 		{
 			typeinfo info{};
 
-			using C = std::conditional_t<IdmCompatible<T> && std::is_constructible_v<T, stx::exact_t<utils::serial&>>, T, dummy_construct>;
+			using C = std::conditional_t<IdmSavable<T>, T, dummy_construct>;
 			using Type = std::conditional_t<IdmCompatible<T>, T, dummy_construct>;
 
 			if constexpr (std::is_same_v<C, T>)
@@ -258,7 +261,7 @@ namespace id_manager
 		static constexpr double savestate_init_pos_original = T::savestate_init_pos;
 		static constexpr double savestate_init_pos = std::bit_cast<double>(std::bit_cast<u64>(savestate_init_pos_original) - 1);
 
-		id_map(utils::serial& ar) noexcept requires (savestate_init_pos_original != 0 && std::is_constructible_v<T, stx::exact_t<utils::serial&>>)
+		id_map(utils::serial& ar) noexcept requires IdmSavable<T>
 		{
 			vec.resize(T::id_count);
 
@@ -298,7 +301,7 @@ namespace id_manager
 			}
 		}
 
-		void save(utils::serial& ar) requires (savestate_init_pos_original != 0 && std::is_constructible_v<T, stx::exact_t<utils::serial&>>)
+		void save(utils::serial& ar) requires IdmSavable<T>
 		{
 			u32 obj_count = 0;
 			usz obj_count_offs = ar.data.size();

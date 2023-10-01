@@ -60,7 +60,7 @@ public:
 	lv2_socket(lv2_socket_family family, lv2_socket_type type, lv2_ip_protocol protocol);
 	lv2_socket(utils::serial&) {}
 	lv2_socket(utils::serial&, lv2_socket_type type);
-	static std::shared_ptr<lv2_socket> load(utils::serial& ar);
+	static std::shared_ptr<void> load(utils::serial& ar);
 	void save(utils::serial&, bool save_only_this_class = false);
 	virtual ~lv2_socket() = default;
 
