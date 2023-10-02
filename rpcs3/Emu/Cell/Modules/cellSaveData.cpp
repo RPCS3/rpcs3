@@ -1854,8 +1854,9 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			}
 
 			const auto file = std::as_const(all_files).find(file_path);
+			const u64 pos = fileSet->fileOffset;
 
-			if (file == all_files.cend() || file->second.size() <= fileSet->fileOffset)
+			if (file == all_files.cend() || file->second.size() <= pos)
 			{
 				cellSaveData.error("Failed to open file %s%s (size=%d, fileOffset=%d)", dir_path, file_path, file == all_files.cend() ? -1 : file->second.size(), fileSet->fileOffset);
 				savedata_result = CELL_SAVEDATA_ERROR_FAILURE;
@@ -1863,8 +1864,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			}
 
 			// Read from memory file to vm
-			file->second.seek(fileSet->fileOffset);
-			const u64 rr = lv2_file::op_read(file->second, fileSet->fileBuf, fileSet->fileSize);
+			const u64 rr = lv2_file::op_read(file->second, fileSet->fileBuf, fileSet->fileSize, pos);
 			fileGet->excSize = ::narrow<u32>(rr);
 			break;
 		}

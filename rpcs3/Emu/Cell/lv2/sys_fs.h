@@ -157,7 +157,7 @@ struct lv2_fs_mount_point
 	const bs_t<lv2_mp_flag> flags{};
 	lv2_fs_mount_point* const next = nullptr;
 
-	mutable std::recursive_mutex mutex;
+	mutable shared_mutex mutex;
 };
 
 extern lv2_fs_mount_point g_mp_sys_dev_hdd0;
@@ -340,11 +340,11 @@ struct lv2_file final : lv2_fs_object
 	static open_result_t open(std::string_view vpath, s32 flags, s32 mode, const void* arg = {}, u64 size = 0);
 
 	// File reading with intermediate buffer
-	static u64 op_read(const fs::file& file, vm::ptr<void> buf, u64 size);
+	static u64 op_read(const fs::file& file, vm::ptr<void> buf, u64 size, u64 opt_pos = umax);
 
-	u64 op_read(vm::ptr<void> buf, u64 size) const
+	u64 op_read(vm::ptr<void> buf, u64 size, u64 opt_pos = umax) const
 	{
-		return op_read(file, buf, size);
+		return op_read(file, buf, size, opt_pos);
 	}
 
 	// File writing with intermediate buffer
