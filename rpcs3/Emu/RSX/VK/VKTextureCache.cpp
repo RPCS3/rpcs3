@@ -1050,9 +1050,38 @@ namespace vk
 			upload_command_flags |= upload_contents_async;
 		}
 
+		std::vector<rsx::subresource_layout> tmp;
+		auto p_subresource_layout = &subresource_layout;
+		u32 heap_align = upload_heap_align_default;
+
+		if (auto tiled_region = rsx::get_current_renderer()->get_tiled_memory_region(rsx_range);
+			context == rsx::texture_upload_context::blit_engine_src && tiled_region)
+		{
+			if (mipmaps > 1)
+			{
+				// This really shouldn't happen on framebuffer tiled memory
+				rsx_log.error("Tiled decode of mipmapped textures is not supported.");
+			}
+			else
+			{
+				const auto bpp = rsx::get_format_block_size_in_bytes(gcm_format);
+				const auto [scratch_buf, linear_data_scratch_offset] = vk::detile_memory_block(cmd, tiled_region, rsx_range, width, height, bpp);
+
+				auto subres = subresource_layout.front();
+				// FIXME: !!EVIL!!
+				subres.data = { scratch_buf, linear_data_scratch_offset };
+				subres.pitch_in_block = width;
+				upload_command_flags |= source_is_gpu_resident;
+				heap_align = width * bpp;
+
+				tmp.push_back(subres);
+				p_subresource_layout = &tmp;
+			}
+		}
+
 		const u16 layer_count = (type == rsx::texture_dimension_extended::texture_dimension_cubemap) ? 6 : 1;
-		vk::upload_image(cmd, image, subresource_layout, gcm_format, input_swizzled, layer_count, image->aspect(),
-			*m_texture_upload_heap, upload_heap_align_default, upload_command_flags);
+		vk::upload_image(cmd, image, *p_subresource_layout, gcm_format, input_swizzled, layer_count, image->aspect(),
+			*m_texture_upload_heap, heap_align, upload_command_flags);
 
 		vk::leave_uninterruptible();
 

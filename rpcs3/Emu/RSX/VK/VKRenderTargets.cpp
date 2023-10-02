@@ -709,62 +709,11 @@ namespace vk
 				);
 			subres.data = std::span(ext_data);
 #else
-			const auto available_tile_size = tiled_region.tile->size - (range.start - tiled_region.base_address);
-			const auto max_content_size = tiled_region.tile->pitch * utils::align<u32>(subres.height_in_block, 64);
-			const auto section_length = std::min(max_content_size, available_tile_size);
-
-			const auto dma_mapping = vk::map_dma(range.start, section_length);
-			vk::load_dma(range.start, section_length);
-			const auto scratch_buf = vk::get_scratch_buffer(cmd, section_length * 3); // 0 = linear data, 1 = padding (deswz), 2 = tiled data
-			const auto tiled_data_scratch_offset = section_length * 2;
-			const auto linear_data_scratch_offset = 0;
-
-			// Schedule the job
-			const RSX_detiler_config config =
-			{
-				.tile_base_address = tiled_region.base_address,
-				.tile_base_offset = range.start - tiled_region.base_address,
-				.tile_size = tiled_region.tile->size,
-				.tile_pitch = tiled_region.tile->pitch,
-				.bank = tiled_region.tile->bank,
-
-				.dst = scratch_buf,
-				.dst_offset = linear_data_scratch_offset,
-				.src = scratch_buf,
-				.src_offset = section_length * 2,
-
-				.image_width = subres.width_in_block,
-				.image_height = subres.height_in_block,
-				.image_pitch = subres.width_in_block * static_cast<u32>(get_bpp()),
-				.image_bpp = get_bpp()
-			};
-
-			// Transfer
-			VkBufferCopy copy_rgn
-			{
-				.srcOffset = dma_mapping.first,
-				.dstOffset = tiled_data_scratch_offset,
-				.size = section_length
-			};
-			vkCmdCopyBuffer(cmd, dma_mapping.second->value, scratch_buf->value, 1, &copy_rgn);
-
-			// Barrier
-			vk::insert_buffer_memory_barrier(
-				cmd, scratch_buf->value, linear_data_scratch_offset, section_length,
-				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-				VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
-
-			// Detile
-			vk::get_compute_task<vk::cs_tile_memcpy<RSX_detiler_op::decode>>()->run(cmd, config);
-
-			// Barrier
-			vk::insert_buffer_memory_barrier(
-				cmd, scratch_buf->value, linear_data_scratch_offset, subres.width_in_block * get_bpp() * subres.height_in_block,
-				VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-				VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_TRANSFER_READ_BIT);
+			const auto [scratch_buf, linear_data_scratch_offset] = vk::detile_memory_block(cmd, tiled_region, range, subres.width_in_block, subres.height_in_block, get_bpp());
 
 			// FIXME: !!EVIL!!
 			subres.data = { scratch_buf, linear_data_scratch_offset };
+			subres.pitch_in_block = subres.width_in_block;
 			upload_flags |= source_is_gpu_resident;
 			heap_align = subres.width_in_block * get_bpp();
 #endif
