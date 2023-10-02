@@ -606,10 +606,7 @@ struct lv2_file::file_view : fs::file_base
 
 	u64 read(void* buffer, u64 size) override
 	{
-		const u64 old_pos = m_file->file.pos();
-		m_file->file.seek(m_off + m_pos);
-		const u64 result = m_file->file.read(buffer, size);
-		ensure(old_pos == m_file->file.seek(old_pos));
+		const u64 result = m_file->file.read_at(m_off + m_pos, buffer, size);
 
 		m_pos += result;
 		return result;
