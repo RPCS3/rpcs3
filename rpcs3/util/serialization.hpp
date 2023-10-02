@@ -324,6 +324,14 @@ namespace utils
 			return pos;
 		}
 
+		usz pad_from_end(usz forwards)
+		{
+			ensure(is_writing());
+			pos = data.size();
+			data.resize(pos + forwards);
+			return pos;
+		}
+
 		template <typename T> requires (std::is_copy_constructible_v<std::remove_const_t<T>>) && (std::is_constructible_v<std::remove_const_t<T>> || Bitcopy<std::remove_const_t<T>> ||
 			std::is_constructible_v<std::remove_const_t<T>, stx::exact_t<serial&>> || TupleAlike<std::remove_const_t<T>>)
 		operator T()
