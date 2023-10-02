@@ -2548,12 +2548,12 @@ namespace rsx
 				src_address += (src.width - src_w) * src_bpp;
 			}
 
-			const auto is_tiled = [&]()
+			const auto is_tiled_mem = [&](const utils::address_range& range)
 			{
 				auto rsxthr = rsx::get_current_renderer();
-				auto region = rsxthr->get_tiled_memory_region(utils::address_range::start_length(dst_address, dst.pitch * dst.clip_height));
+				auto region = rsxthr->get_tiled_memory_region(range);
 				return region.tile != nullptr;
-			}();
+			};
 
 			auto rtt_lookup = [&m_rtts, &cmd, &scale_x, &scale_y, this](u32 address, u32 width, u32 height, u32 pitch, u8 bpp, rsx::flags32_t access, bool allow_clipped) -> typename surface_store_type::surface_overlap_info
 			{
@@ -2637,6 +2637,10 @@ namespace rsx
 				return true;
 			};
 
+			// Check tiled mem
+			const auto dst_is_tiled = is_tiled_mem(utils::address_range::start_length(dst_address, dst.pitch * dst.clip_height));
+			const auto src_is_tiled = is_tiled_mem(utils::address_range::start_length(src_address, src.pitch * src.height));
+
 			// Check if src/dst are parts of render targets
 			typename surface_store_type::surface_overlap_info dst_subres;
 			bool use_null_region = false;
@@ -2645,7 +2649,6 @@ namespace rsx
 			// NOTE: Grab the src first as requirements for reading are more strict than requirements for writing
 			auto src_subres = rtt_lookup(src_address, src_w, src_h, src.pitch, src_bpp, surface_access::transfer_read, false);
 			src_is_render_target = src_subres.surface != nullptr;
-
 
 			if (get_location(dst_address) == CELL_GCM_LOCATION_LOCAL)
 			{
@@ -2657,7 +2660,7 @@ namespace rsx
 			else
 			{
 				// Surface exists in local memory.
-				use_null_region = (is_copy_op && !is_format_convert);
+				use_null_region = (is_copy_op && !is_format_convert && !src_is_tiled);
 
 				// Invalidate surfaces in range. Sample tests should catch overlaps in theory.
 				m_rtts.invalidate_range(utils::address_range::start_length(dst_address, dst.pitch* dst_h));
@@ -2693,7 +2696,7 @@ namespace rsx
 			else
 			{
 				// Determine whether to perform this transfer on CPU or GPU (src data may not be graphical)
-				const bool is_trivial_copy = is_copy_op && !is_format_convert && !dst.swizzled && !is_tiled;
+				const bool is_trivial_copy = is_copy_op && !is_format_convert && !dst.swizzled && !dst_is_tiled && !src_is_tiled;
 				const bool is_block_transfer = (dst_w == src_w && dst_h == src_h && (src.pitch == dst.pitch || src_h == 1));
 				const bool is_mirror_op = (dst.scale_x < 0.f || dst.scale_y < 0.f);
 
@@ -2723,17 +2726,11 @@ namespace rsx
 						skip_if_collision_exists = true;
 					}
 
-					if (!g_cfg.video.use_gpu_texture_scaling)
+					if (!g_cfg.video.use_gpu_texture_scaling && !dst_is_tiled && !src_is_tiled)
 					{
 						if (dst.swizzled)
 						{
 							// Swizzle operation requested. Use fallback
-							if (is_tiled)
-							{
-								// Corner case
-								// FIXME: We have had hw-accelerated swizzle support for some time now
-								rsx_log.error("Swizzled write to tiled area.");
-							}
 							return false;
 						}
 
