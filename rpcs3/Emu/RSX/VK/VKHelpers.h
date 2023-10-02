@@ -18,6 +18,11 @@
 
 #define OCCLUSION_MAX_POOL_SIZE   DESCRIPTOR_MAX_DRAW_CALLS
 
+namespace rsx
+{
+	struct GCM_tile_reference;
+}
+
 namespace vk
 {
 	// Forward declarations
@@ -85,6 +90,10 @@ namespace vk
 	void upload_image(const vk::command_buffer& cmd, vk::image* dst_image,
 		const std::vector<rsx::subresource_layout>& subresource_layout, int format, bool is_swizzled, u16 layer_count,
 		VkImageAspectFlags flags, vk::data_heap &upload_heap, u32 heap_align, rsx::flags32_t image_setup_flags);
+
+	std::pair<buffer*, u32> detile_memory_block(
+		const vk::command_buffer& cmd, const rsx::GCM_tile_reference& tiled_region, const utils::address_range& range,
+		u16 width, u16 height, u8 bpp);
 
 	// Other texture management helpers
 	void copy_image_to_buffer(const vk::command_buffer& cmd, const vk::image* src, const vk::buffer* dst, const VkBufferImageCopy& region, const image_readback_options_t& options = {});
