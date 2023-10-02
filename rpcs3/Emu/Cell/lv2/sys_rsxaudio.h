@@ -161,14 +161,13 @@ struct lv2_rsxaudio final : lv2_obj
 
 	vm::addr_t shmem{};
 
-	std::array<std::weak_ptr<lv2_event_queue>, SYS_RSXAUDIO_PORT_CNT> event_queue{};
+	std::array<std::shared_ptr<lv2_event_queue>, SYS_RSXAUDIO_PORT_CNT> event_queue{};
 
 	// lv2 uses port memory addresses for their names
 	static constexpr std::array<u64, SYS_RSXAUDIO_PORT_CNT> event_port_name{ 0x8000000000400100, 0x8000000000400200, 0x8000000000400300 };
 
-	lv2_rsxaudio()
-	{
-	}
+	lv2_rsxaudio() noexcept = default;
+	lv2_rsxaudio(utils::serial& ar) noexcept;	void save(utils::serial& ar);
 
 	void page_lock()
 	{
