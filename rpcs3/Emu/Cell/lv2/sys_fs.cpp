@@ -502,20 +502,28 @@ void lv2_file::save(utils::serial& ar)
 		fs::file_id test_s = test.get_id();
 		fs::file_id file_s = file.get_id();
 
-		return test_s.is_coherent_with(file_s);
+		return !test_s.is_coherent_with(file_s);
 	}();
-
-	if (in_mem)
-	{
-		sys_fs.error("Saving \'%s\' LV2 file descriptor in memory! (exists=%s, type=%s, flags=0x%x)", name.data(), fs::is_file(real_path), type, flags);
-	}
 
 	ar(in_mem);
 
 	if (in_mem)
 	{
-		ar(file.to_vector<u8>());
-		ar(file.get_stat());
+		fs::stat_t stats = file.get_stat();
+
+		sys_fs.error("Saving \'%s\' LV2 file descriptor in memory! (exists=%s, type=%s, flags=0x%x, size=0x%x)", name.data(), fs::is_file(real_path), type, flags, stats.size);
+
+		const usz old_end = ar.pad_from_end(stats.size);
+
+		if (usz read_size = file.read_at(0, &ar.data[old_end], stats.size); read_size != stats.size)
+		{
+			ensure(read_size < stats.size);
+			sys_fs.error("Read less than expected! (new-size=0x%x)", read_size);
+			stats.size = read_size;
+			ar.data.resize(old_end + stats.size);
+		}
+
+		ar(stats);
 	}
 
 	ar(file.pos());
