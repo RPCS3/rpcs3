@@ -103,6 +103,38 @@ namespace rsxaudio_ringbuf_reader
 	}
 }
 
+lv2_rsxaudio::lv2_rsxaudio(utils::serial& ar) noexcept
+	: lv2_obj{1}
+	, init(ar)
+{
+	if (init)
+	{
+		ar(shmem);
+
+		for (const auto& port : event_queue)
+		{
+			lv2_event_queue::save_ptr(ar, port.get());
+		}
+	}
+}
+
+void lv2_rsxaudio::save(utils::serial& ar)
+{
+	USING_SERIALIZATION_VERSION(LLE);
+
+	ar(init);
+
+	if (init)
+	{
+		ar(shmem);
+
+		for (auto& port : event_queue)
+		{
+			port = lv2_event_queue::load_ptr(ar, port);
+		}
+	}
+}
+
 error_code sys_rsxaudio_initialize(vm::ptr<u32> handle)
 {
 	sys_rsxaudio.trace("sys_rsxaudio_initialize(handle=*0x%x)", handle);
@@ -414,7 +446,7 @@ error_code sys_rsxaudio_start_process(u32 handle)
 
 	for (u32 q_idx = 0; q_idx < SYS_RSXAUDIO_PORT_CNT; q_idx++)
 	{
-		if (auto queue = rsxaudio_obj->event_queue[q_idx].lock(); queue && sh_page->ctrl.ringbuf[q_idx].active)
+		if (const auto& queue = rsxaudio_obj->event_queue[q_idx]; queue && sh_page->ctrl.ringbuf[q_idx].active)
 		{
 			queue->send(rsxaudio_obj->event_port_name[q_idx], q_idx, 0, 0);
 		}
@@ -823,7 +855,7 @@ void rsxaudio_data_thread::extract_audio_data()
 				// Too late to recover
 				reset_periods = true;
 
-				if (auto queue = rsxaudio_obj->event_queue[dst_raw].lock())
+				if (const auto& queue = rsxaudio_obj->event_queue[dst_raw])
 				{
 					queue->send(rsxaudio_obj->event_port_name[dst_raw], dst_raw, blk_idx, timestamp);
 				}

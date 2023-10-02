@@ -586,11 +586,12 @@ void kernel_explorer::update()
 			QTreeWidgetItem* rao_obj = add_solid_node(node, qstr(fmt::format(u8"RSXAudio 0x%08x: Shmem: 0x%08x", id, u32{rao.shmem})));
 			for (u64 q_idx = 0; q_idx < rao.event_queue.size(); q_idx++)
 			{
-				if (const auto eq = rao.event_queue[q_idx].lock())
+				if (const auto& eq = rao.event_queue[q_idx])
 				{
 					add_leaf(rao_obj, qstr(fmt::format(u8"Event Queue %u: ID: 0x%08x", q_idx, eq->id)));
 				}
 			}
+
 			break;
 		}
 		default:
