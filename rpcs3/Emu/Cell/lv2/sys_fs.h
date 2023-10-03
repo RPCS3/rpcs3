@@ -199,7 +199,7 @@ struct CellFsMountInfo; // Forward Declaration
 struct lv2_fs_mount_info_map
 {
 public:
-	SAVESTATE_INIT_POS(49);
+	SAVESTATE_INIT_POS(40);
 
 	lv2_fs_mount_info_map();
 	lv2_fs_mount_info_map(const lv2_fs_mount_info_map&) = delete;
@@ -228,7 +228,7 @@ struct lv2_fs_object
 	static constexpr u32 id_step = 1;
 	static constexpr u32 id_count = 255 - id_base;
 	static constexpr bool id_lowest = true;
-	SAVESTATE_INIT_POS(40);
+	SAVESTATE_INIT_POS(49);
 
 	// File Name (max 1055)
 	const std::array<char, 0x420> name;

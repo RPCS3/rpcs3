@@ -447,8 +447,11 @@ lv2_file::lv2_file(utils::serial& ar)
 
 	if (ar.operator bool()) // see lv2_file::save in_mem
 	{
-		std::vector<u8> buf = ar;
 		const fs::stat_t stat = ar;
+
+		std::vector<u8> buf(stat.size);
+		ar(std::span<u8>(buf.data(), buf.size()));
+
 		file = fs::make_stream<std::vector<u8>>(std::move(buf), stat);
 	}
 
@@ -514,6 +517,10 @@ void lv2_file::save(utils::serial& ar)
 
 		sys_fs.error("Saving \'%s\' LV2 file descriptor in memory! (exists=%s, type=%s, flags=0x%x, size=0x%x)", name.data(), fs::is_file(real_path), type, flags, stats.size);
 
+		const usz patch_stats_pos = ar.seek_end();
+
+		ar(stats);
+
 		const usz old_end = ar.pad_from_end(stats.size);
 
 		if (usz read_size = file.read_at(0, &ar.data[old_end], stats.size); read_size != stats.size)
@@ -522,9 +529,8 @@ void lv2_file::save(utils::serial& ar)
 			sys_fs.error("Read less than expected! (new-size=0x%x)", read_size);
 			stats.size = read_size;
 			ar.data.resize(old_end + stats.size);
+			write_to_ptr<fs::stat_t>(&ar.data[patch_stats_pos], stats);
 		}
-
-		ar(stats);
 	}
 
 	ar(file.pos());
