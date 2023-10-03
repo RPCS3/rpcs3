@@ -927,13 +927,18 @@ std::string vfs::host::hash_path(const std::string& path, const std::string& dev
 	return fmt::format(u8"%s/＄%s%s", dev_root, fmt::base57(std::hash<std::string>()(path)), fmt::base57(utils::get_unique_tsc()));
 }
 
-bool vfs::host::rename(const std::string& from, const std::string& to, const lv2_fs_mount_point* mp, bool overwrite)
+bool vfs::host::rename(const std::string& from, const std::string& to, const lv2_fs_mount_point* mp, bool overwrite, bool lock)
 {
 	// Lock mount point, close file descriptors, retry
 	const auto from0 = std::string_view(from).substr(0, from.find_last_not_of(fs::delim) + 1);
 	const auto escaped_from = Emu.GetCallbacks().resolve_path(from);
 
-	std::lock_guard lock(mp->mutex);
+	std::unique_lock mp_lock(mp->mutex, std::defer_lock);
+
+	if (lock)
+	{
+		mp_lock.lock();
+	}
 
 	auto check_path = [&](std::string_view path)
 	{
@@ -1045,7 +1050,7 @@ bool vfs::host::unlink(const std::string& path, [[maybe_unused]] const std::stri
 #endif
 }
 
-bool vfs::host::remove_all(const std::string& path, [[maybe_unused]] const std::string& dev_root, [[maybe_unused]] const lv2_fs_mount_point* mp, bool remove_root)
+bool vfs::host::remove_all(const std::string& path, [[maybe_unused]] const std::string& dev_root, [[maybe_unused]] const lv2_fs_mount_point* mp, bool remove_root, bool lock)
 {
 #ifdef _WIN32
 	if (remove_root)
@@ -1053,12 +1058,12 @@ bool vfs::host::remove_all(const std::string& path, [[maybe_unused]] const std::
 		// Rename to special dummy folder which will be ignored by VFS (but opened file handles can still read or write it)
 		const std::string dummy = hash_path(path, dev_root);
 
-		if (!vfs::host::rename(path, dummy, mp, false))
+		if (!vfs::host::rename(path, dummy, mp, false, lock))
 		{
 			return false;
 		}
 
-		if (!vfs::host::remove_all(dummy, dev_root, mp, false))
+		if (!vfs::host::remove_all(dummy, dev_root, mp, false, lock))
 		{
 			return false;
 		}
@@ -1093,7 +1098,7 @@ bool vfs::host::remove_all(const std::string& path, [[maybe_unused]] const std::
 			}
 			else
 			{
-				if (!vfs::host::remove_all(path + '/' + entry.name, dev_root, mp))
+				if (!vfs::host::remove_all(path + '/' + entry.name, dev_root, mp, true, lock))
 				{
 					return false;
 				}
