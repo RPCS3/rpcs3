@@ -31,8 +31,6 @@ struct vfs_manager
 
 	// VFS root
 	vfs_directory root{};
-
-	SAVESTATE_INIT_POS(48);
 };
 
 bool vfs::mount(std::string_view vpath, std::string_view path, bool is_dir)
