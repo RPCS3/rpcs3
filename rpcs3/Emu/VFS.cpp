@@ -931,7 +931,8 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 {
 	// Lock mount point, close file descriptors, retry
 	const auto from0 = std::string_view(from).substr(0, from.find_last_not_of(fs::delim) + 1);
-	const auto escaped_from = Emu.GetCallbacks().resolve_path(from);
+
+	std::vector<std::pair<std::shared_ptr<lv2_file>, std::string>> escaped_real;
 
 	std::unique_lock mp_lock(mp->mutex, std::defer_lock);
 
@@ -940,33 +941,43 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 		mp_lock.lock();
 	}
 
+	if (fs::rename(from, to, overwrite))
+	{
+		return true;
+	}
+
+	if (fs::g_tls_error != fs::error::acces)
+	{
+		return false;
+	}
+
+	const auto escaped_from = Emu.GetCallbacks().resolve_path(from);
+
 	auto check_path = [&](std::string_view path)
 	{
 		return path.starts_with(from) && (path.size() == from.size() || path[from.size()] == fs::delim[0] || path[from.size()] == fs::delim[1]);
 	};
 
-	std::map<u32, std::string> escaped_real;
 	idm::select<lv2_fs_object, lv2_file>([&](u32 id, lv2_file& file)
 	{
-		escaped_real[id] = Emu.GetCallbacks().resolve_path(file.real_path);
-		if (check_path(escaped_real[id]))
+		if (file.mp != mp)
 		{
-			ensure(file.mp == mp);
+			return;
+		}
 
+		std::string escaped = Emu.GetCallbacks().resolve_path(file.real_path);
+
+		if (check_path(escaped))
+		{
 			if (!file.file)
 			{
-				file.restore_data.seek_pos = -1;
 				return;
 			}
 
 			file.restore_data.seek_pos = file.file.pos();
 
-			if (!(file.mp.read_only && file.mp->flags & lv2_mp_flag::cache) && file.flags & CELL_FS_O_ACCMODE)
-			{
-				file.file.sync(); // For cellGameContentPermit atomicity
-			}
-
 			file.file.close(); // Actually close it!
+			escaped_real.emplace_back(ensure(idm::get_unlocked<lv2_file>(id)), std::move(escaped));
 		}
 	});
 
@@ -989,19 +1000,14 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 
 	const auto fs_error = fs::g_tls_error;
 
-	idm::select<lv2_fs_object, lv2_file>([&](u32 id, lv2_file& file)
+	for (const auto& [file_ptr, real_path] : escaped_real)
 	{
-		if (check_path(escaped_real[id]))
+		lv2_file& file = *file_ptr;
 		{
-			if (file.restore_data.seek_pos == umax)
-			{
-				return;
-			}
-
 			// Update internal path
 			if (res)
 			{
-				file.real_path = to + (escaped_real[id] != escaped_from ? '/' + file.real_path.substr(from0.size()) : ""s);
+				file.real_path = to + (real_path != escaped_from ? '/' + file.real_path.substr(from0.size()) : ""s);
 			}
 
 			// Reopen with ignored TRUNC, APPEND, CREATE and EXCL flags
@@ -1010,7 +1016,7 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 			ensure(file.file.operator bool());
 			file.file.seek(file.restore_data.seek_pos);
 		}
-	});
+	}
 
 	fs::g_tls_error = fs_error;
 	return res;
