@@ -123,6 +123,7 @@ jobs:
         RPCS3_TOKEN: $(RPCS3-Token)
 
 - job: Mac_Build
+  timeoutInMinutes: 180
   variables:
     CCACHE_DIR: "/tmp/ccache_dir"
     CCACHE_MAXSIZE: 300M
