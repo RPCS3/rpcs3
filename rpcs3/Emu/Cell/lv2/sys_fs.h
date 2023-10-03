@@ -289,7 +289,7 @@ struct lv2_file final : lv2_fs_object
 	// Stream lock
 	atomic_t<u32> lock{0};
 
-	// Some variables for convinience of data restoration
+	// Some variables for convenience of data restoration
 	struct save_restore_t
 	{
 		u64 seek_pos;

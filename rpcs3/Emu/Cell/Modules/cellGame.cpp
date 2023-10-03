@@ -926,13 +926,47 @@ error_code cellGameContentPermit(ppu_thread& ppu, vm::ptr<char[CELL_GAME_PATH_MA
 
 	if (!perm.temp.empty())
 	{
+		std::vector<std::shared_ptr<lv2_file>> lv2_files;
+
+		const std::string real_dir = vfs::get(dir) + "/";
+
+		std::lock_guard lock(g_mp_sys_dev_hdd0.mutex);
+
 		// Create PARAM.SFO
 		fs::pending_file temp(perm.temp + "/PARAM.SFO");
 		temp.file.write(psf::save_object(perm.sfo));
 		ensure(temp.commit());
 
+		idm::select<lv2_fs_object, lv2_file>([&](u32 id, lv2_file& file)
+		{
+			if (file.mp != &g_mp_sys_dev_hdd0)
+			{
+				return;
+			}
+
+			if (real_dir.starts_with(file.real_path))
+			{
+				if (!file.file)
+				{
+					return;
+				}
+
+				if (file.flags & CELL_FS_O_ACCMODE)
+				{
+					// Synchronize outside IDM lock scope
+					lv2_files.emplace_back(ensure(idm::get_unlocked<lv2_fs_object, lv2_file>(id)));
+				}
+			}
+		});
+
+		for (auto& file : lv2_files)
+		{
+			// For atomicity
+			file->file.sync();
+		}
+
 		// Make temporary directory persistent (atomically)
-		if (vfs::host::rename(perm.temp, vfs::get(dir), &g_mp_sys_dev_hdd0, false))
+		if (vfs::host::rename(perm.temp, real_dir, &g_mp_sys_dev_hdd0, false, false))
 		{
 			cellGame.success("cellGameContentPermit(): directory '%s' has been created", dir);
 
