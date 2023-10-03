@@ -419,7 +419,7 @@ cell_audio_thread::cell_audio_thread(utils::serial& ar)
 	for (key_info& k : keys)
 	{
 		ar(k.start_period, k.flags, k.source);
-		k.port = lv2_event_queue::load_ptr(ar, k.port);
+		k.port = lv2_event_queue::load_ptr(ar, k.port, "audio");
 	}
 
 	ar(ports);
