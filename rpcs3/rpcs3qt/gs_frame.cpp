@@ -579,6 +579,12 @@ bool gs_frame::get_mouse_lock_state()
 
 void gs_frame::hide_on_close()
 {
+	// Make sure not to save the hidden state, which is useless to us.
+	const Visibility current_visibility = visibility();
+	m_gui_settings->SetValue(gui::gs_visibility, current_visibility == Visibility::Hidden ? Visibility::AutomaticVisibility : current_visibility);
+	m_gui_settings->SetValue(gui::gs_geometry, geometry());
+	m_gui_settings->sync();
+
 	if (!g_progr.load())
 	{
 		// Hide the dialog before stopping if no progress bar is being shown.
@@ -630,9 +636,18 @@ void gs_frame::show()
 	Emu.CallFromMainThread([this]()
 	{
 		QWindow::show();
+
 		if (g_cfg.misc.start_fullscreen || m_start_games_fullscreen)
 		{
 			setVisibility(FullScreen);
+		}
+		else if (const QVariant var = m_gui_settings->GetValue(gui::gs_visibility); var.canConvert<Visibility>())
+		{
+			// Restore saved visibility from last time. Make sure not to hide the window, or the user can't access it anymore.
+			if (const Visibility visibility = var.value<Visibility>(); visibility != Visibility::Hidden)
+			{
+				setVisibility(visibility);
+			}
 		}
 	});
 

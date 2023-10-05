@@ -7,6 +7,7 @@
 #include <QSize>
 #include <QColor>
 #include <QMessageBox>
+#include <QWindow>
 
 namespace gui
 {
@@ -226,6 +227,8 @@ namespace gui
 	const gui_save gs_height            = gui_save(gs_frame, "height",                720);
 	const gui_save gs_hideMouseIdle     = gui_save(gs_frame, "hideMouseOnIdle",       false);
 	const gui_save gs_hideMouseIdleTime = gui_save(gs_frame, "hideMouseOnIdleTime",   2000);
+	const gui_save gs_geometry          = gui_save(gs_frame, "geometry",              QRect());
+	const gui_save gs_visibility        = gui_save(gs_frame, "visibility",            QWindow::Visibility::AutomaticVisibility);
 
 	const gui_save tr_icon_color    = gui_save(trophy, "icon_color",    gl_icon_color);
 	const gui_save tr_icon_height   = gui_save(trophy, "icon_height",   75);
