@@ -8,7 +8,13 @@ extern std::string g_input_config_override;
 
 std::vector<std::string> cfg_pad::get_buttons(const std::string& str)
 {
-	std::vector<std::string> vec = fmt::split(str, {","});;
+	std::vector<std::string> vec = fmt::split(str, {","});
+
+	// Handle special case: string contains separator itself as configured value
+	if (str == "," || str.find(",,") != umax)
+	{
+		vec.push_back(",");
+	}
 
 	// Remove duplicates
 	std::sort(vec.begin(), vec.end());
