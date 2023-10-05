@@ -52,7 +52,11 @@ draw_context_t gl_gs_frame::make_context()
 	}
 
 	context->handle->setFormat(m_format);
-	context->handle->create();
+
+	if (!context->handle->create())
+	{
+		fmt::throw_exception("Failed to create OpenGL context");
+	}
 
 	return context;
 }
@@ -74,7 +78,10 @@ void gl_gs_frame::set_current(draw_context_t ctx)
 		}
 		else if (!context->handle->isValid())
 		{
-			context->handle->create();
+			if (!context->handle->create())
+			{
+				fmt::throw_exception("Failed to create OpenGL context");
+			}
 		}
 
 		if (!context->handle->makeCurrent(context->surface))
