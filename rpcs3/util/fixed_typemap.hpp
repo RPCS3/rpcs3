@@ -117,13 +117,6 @@ namespace stx
 				*std::launder(static_cast<T*>(ptr)) = state;
 			}
 
-#ifdef _MSC_VER
-			template <typename T>
-			static void call_save(void*, utils::serial&) noexcept
-			{
-			}
-#endif
-
 			template <typename T> requires requires (T& a) { a.save(std::declval<stx::exact_t<utils::serial&>>()); }
 			static void call_save(void* ptr, utils::serial& ar) noexcept
 			{
@@ -144,10 +137,7 @@ namespace stx
 					r.stop = &call_stop<T>;
 				}
 
-				// TODO: Unconnement and remove call_save overload when MSVC implements it
-#ifndef _MSC_VER
 				if constexpr (!!(requires (T& a) { a.save(std::declval<stx::exact_t<utils::serial&>>()); }))
-#endif
 				{
 					r.save = &call_save<T>;
 				}
