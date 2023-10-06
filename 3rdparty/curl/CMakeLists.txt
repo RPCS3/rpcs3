@@ -28,6 +28,7 @@ else()
 
 	set(SSL_ENABLED ON)
 	set(USE_WOLFSSL ON)
+	set(SHARE_LIB_OBJECT OFF)
 
 	add_subdirectory(curl EXCLUDE_FROM_ALL)
 
