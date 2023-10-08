@@ -213,13 +213,13 @@ bool emu_settings::ValidateSettings(bool cleanup)
 			}
 			else
 			{
-				const auto get_full_key = [&keys](const std::string& seperator) -> std::string
+				const auto get_full_key = [&keys](const std::string& separator) -> std::string
 				{
 					std::string full_key;
 					for (usz i = 0; i < keys.size(); i++)
 					{
 						full_key += keys[i];
-						if (i < keys.size() - 1) full_key += seperator;
+						if (i < keys.size() - 1) full_key += separator;
 					}
 					return full_key;
 				};

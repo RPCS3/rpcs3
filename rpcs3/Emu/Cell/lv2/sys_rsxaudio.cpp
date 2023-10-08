@@ -111,9 +111,9 @@ lv2_rsxaudio::lv2_rsxaudio(utils::serial& ar) noexcept
 	{
 		ar(shmem);
 
-		for (const auto& port : event_queue)
+		for (auto& port : event_queue)
 		{
-			lv2_event_queue::save_ptr(ar, port.get());
+			port = lv2_event_queue::load_ptr(ar, port, "rsxaudio");
 		}
 	}
 }
@@ -128,9 +128,9 @@ void lv2_rsxaudio::save(utils::serial& ar)
 	{
 		ar(shmem);
 
-		for (auto& port : event_queue)
+		for (const auto& port : event_queue)
 		{
-			port = lv2_event_queue::load_ptr(ar, port);
+			lv2_event_queue::save_ptr(ar, port.get());
 		}
 	}
 }

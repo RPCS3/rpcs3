@@ -101,7 +101,7 @@ struct lv2_event_queue final : public lv2_obj
 	static std::shared_ptr<void> load(utils::serial& ar);
 	void save(utils::serial& ar);
 	static void save_ptr(utils::serial&, lv2_event_queue*);
-	static std::shared_ptr<lv2_event_queue> load_ptr(utils::serial& ar, std::shared_ptr<lv2_event_queue>& queue);
+	static std::shared_ptr<lv2_event_queue> load_ptr(utils::serial& ar, std::shared_ptr<lv2_event_queue>& queue, std::string_view msg = {});
 
 	CellError send(lv2_event event);
 
