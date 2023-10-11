@@ -90,7 +90,7 @@ struct jit_runtime final : jit_runtime_base
 	uchar* _alloc(usz size, usz align) noexcept override;
 
 	// Allocate memory
-	static u8* alloc(usz size, uint align, bool exec = true) noexcept;
+	static u8* alloc(usz size, usz align, bool exec = true) noexcept;
 
 	// Should be called at least once after global initialization
 	static void initialize();
