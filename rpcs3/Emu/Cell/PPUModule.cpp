@@ -1615,9 +1615,9 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, bool virtual_lo
 			{
 				const auto& rel = reinterpret_cast<const ppu_prx_relocation_info&>(prog.bin[i]);
 
-				if (rel.offset >= ::at32(prx->segs, rel.index_addr).size)
+				if (rel.offset >= utils::align<u64>(::at32(prx->segs, rel.index_addr).size, 0x100))
 				{
-					fmt::throw_exception("Relocation offset out of segment memory! (offset=0x%x, index_addr=%u)", rel.offset, rel.index_addr);
+					fmt::throw_exception("Relocation offset out of segment memory! (offset=0x%x, index_addr=%u, seg_size=0x%x)", rel.offset, rel.index_addr, prx->segs[rel.index_addr].size);
 				}
 
 				const u32 data_base = rel.index_value == 0xFF ? 0 : ::at32(prx->segs, rel.index_value).addr;
