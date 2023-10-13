@@ -323,7 +323,9 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 
 	auto [w, h] = ::at32(g_video_out_resolution_map, g_cfg.video.resolution);
 
-	if (m_gui_settings->GetValue(gui::gs_resize).toBool())
+	const bool resize_game_window = m_gui_settings->GetValue(gui::gs_resize).toBool();
+
+	if (resize_game_window)
 	{
 		if (m_gui_settings->GetValue(gui::gs_resize_manual).toBool())
 		{
@@ -343,11 +345,12 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 
 	// Use screen index set by CLI argument
 	int screen_index = m_game_screen_index;
+	const int last_screen_index = m_gui_settings->GetValue(gui::gs_screen).toInt();
 
-	// In no-gui mode: use last used screen if no CLI index was set
-	if (screen_index < 0 && !m_main_window)
+	// Use last used screen if no CLI index was set
+	if (screen_index < 0)
 	{
-		screen_index = m_gui_settings->GetValue(gui::gs_screen).toInt();
+		screen_index = last_screen_index;
 	}
 
 	// Try to find the specified screen
@@ -378,7 +381,21 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 		base_geometry = m_main_window ? m_main_window->frameGeometry() : primaryScreen()->geometry();
 	}
 
-	const QRect frame_geometry = gui::utils::create_centered_window_geometry(screen, base_geometry, w, h);
+	// Use saved geometry if possible. Ignore this if the last used screen is different than the requested screen.
+	QRect frame_geometry = screen_index != last_screen_index ? QRect{} : m_gui_settings->GetValue(gui::gs_geometry).value<QRect>();
+
+	if (frame_geometry.isNull() || frame_geometry.isEmpty())
+	{
+		// Center above main window or inside screen if the saved geometry is invalid
+		frame_geometry = gui::utils::create_centered_window_geometry(screen, base_geometry, w, h);
+	}
+	else if (resize_game_window)
+	{
+		// Apply size override to our saved geometry if needed
+		frame_geometry.setSize(QSize(w, h));
+	}
+
+	// Load AppIcon
 	const QIcon app_icon = m_main_window ? m_main_window->GetAppIcon() : gui::utils::get_app_icon_from_path(Emu.GetBoot(), Emu.GetTitleID());
 
 	gs_frame* frame = nullptr;
