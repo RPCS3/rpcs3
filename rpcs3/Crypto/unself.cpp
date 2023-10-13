@@ -5,9 +5,9 @@
 #include "Emu/VFS.h"
 #include "Emu/System.h"
 #include "Emu/system_utils.hpp"
+#include "Crypto/unzip.h"
 
 #include <algorithm>
-#include <zlib.h>
 
 inline u8 Read8(const fs::file& f)
 {
@@ -767,72 +767,32 @@ std::vector<fs::file> SCEDecrypter::MakeFile()
 	u32 data_buf_offset = 0;
 
 	// Write data.
-	for (unsigned int i = 0; i < meta_hdr.section_count; i++)
+	for (u32 i = 0; i < meta_hdr.section_count; i++)
 	{
+		const MetadataSectionHeader& hdr = meta_shdr[i];
+		const u8* src = data_buf.get() + data_buf_offset;
 		fs::file out_f = fs::make_stream<std::vector<u8>>();
 
-		bool isValid = true;
+		bool is_valid = true;
 
 		// Decompress if necessary.
-		if (meta_shdr[i].compressed == 2)
+		if (hdr.compressed == 2)
 		{
-			const usz BUFSIZE = 32 * 1024;
-			u8 tempbuf[BUFSIZE];
-			z_stream strm;
-			strm.zalloc = Z_NULL;
-			strm.zfree = Z_NULL;
-			strm.opaque = Z_NULL;
-			strm.avail_in = ::narrow<uInt>(meta_shdr[i].data_size);
-			strm.avail_out = BUFSIZE;
-			strm.next_in = data_buf.get()+data_buf_offset;
-			strm.next_out = tempbuf;
-#ifndef _MSC_VER
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wold-style-cast"
-#endif
-			int ret = inflateInit(&strm);
-#ifndef _MSC_VER
-#pragma GCC diagnostic pop
-#endif
-			while (strm.avail_in)
-			{
-				ret = inflate(&strm, Z_NO_FLUSH);
-				if (ret == Z_STREAM_END)
-					break;
-				if (ret != Z_OK)
-					isValid = false;
-
-				if (!strm.avail_out) {
-					out_f.write(tempbuf, BUFSIZE);
-					strm.next_out = tempbuf;
-					strm.avail_out = BUFSIZE;
-				}
-				else
-					break;
-			}
-
-			int inflate_res = Z_OK;
-			inflate_res = inflate(&strm, Z_FINISH);
-
-			if (inflate_res != Z_STREAM_END)
-				isValid = false;
-
-			out_f.write(tempbuf, BUFSIZE - strm.avail_out);
-			inflateEnd(&strm);
+			is_valid = unzip(src, hdr.data_size, out_f);
 		}
 		else
 		{
 			// Write the data.
-			out_f.write(data_buf.get()+data_buf_offset, meta_shdr[i].data_size);
+			out_f.write(src, hdr.data_size);
 		}
 
 		// Advance the data buffer offset by data size.
-		data_buf_offset += ::narrow<u32>(meta_shdr[i].data_size);
+		data_buf_offset += ::narrow<u32>(hdr.data_size);
 
 		if (out_f.pos() != out_f.size())
 			fmt::throw_exception("MakeELF written bytes (%llu) does not equal buffer size (%llu).", out_f.pos(), out_f.size());
 
-		if (isValid) vec.push_back(std::move(out_f));
+		if (is_valid) vec.push_back(std::move(out_f));
 	}
 
 	return vec;

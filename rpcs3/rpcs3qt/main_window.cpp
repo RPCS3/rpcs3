@@ -59,6 +59,7 @@
 
 #include "Crypto/unpkg.h"
 #include "Crypto/unself.h"
+#include "Crypto/unzip.h"
 #include "Crypto/decrypt_binaries.h"
 
 #include "Loader/PUP.h"
@@ -2747,7 +2748,7 @@ void main_window::CreateConnects()
 	connect(ui->toolsCheckConfigAct, &QAction::triggered, this, [this]
 	{
 		const QString path_last_cfg = m_gui_settings->GetValue(gui::fd_cfg_check).toString();
-		const QString file_path = QFileDialog::getOpenFileName(this, tr("Select rpcs3.log or config.yml"), path_last_cfg, tr("Log or Config files (*.log *.txt *.yml);;Log files (*.log);;Config Files (*.yml);;Text Files (*.txt);;All files (*.*)"));
+		const QString file_path = QFileDialog::getOpenFileName(this, tr("Select rpcs3.log or config.yml"), path_last_cfg, tr("Log or Config files (*.log *.gz *.txt *.yml);;Log files (*.log *.gz);;Config Files (*.yml);;Text Files (*.txt);;All files (*.*)"));
 		if (file_path.isEmpty())
 		{
 			// Aborted
@@ -2756,7 +2757,7 @@ void main_window::CreateConnects()
 
 		const QFileInfo file_info(file_path);
 
-		if (file_info.isExecutable() || !(file_path.endsWith(".log") || file_path.endsWith(".txt") || file_path.endsWith(".yml")))
+		if (file_info.isExecutable() || !(file_path.endsWith(".log") || file_path.endsWith(".log.gz") || file_path.endsWith(".txt") || file_path.endsWith(".yml")))
 		{
 			if (QMessageBox::question(this, tr("Weird file!"), tr("This file seems to have an unexpected type:\n%0\n\nCheck anyway?").arg(file_path)) != QMessageBox::Yes)
 			{
@@ -2764,8 +2765,31 @@ void main_window::CreateConnects()
 			}
 		}
 
-		QFile file(file_path);
-		if (!file.exists() || !file.open(QIODevice::ReadOnly))
+		bool failed = false;
+		QString content;
+
+		if (file_path.endsWith(".gz"))
+		{
+			if (fs::file file{file_path.toStdString()})
+			{
+				const std::vector<u8> decompressed = unzip(file.to_vector<u8>());
+				content = QString::fromUtf8(reinterpret_cast<const char*>(decompressed.data()), decompressed.size());
+			}
+			else
+			{
+				failed = true;
+			}
+		}
+		else if (QFile file(file_path); file.exists() && file.open(QIODevice::ReadOnly))
+		{
+			content = file.readAll();
+		}
+		else
+		{
+			failed = true;
+		}
+
+		if (failed)
 		{
 			QMessageBox::warning(this, tr("Failed to open file"), tr("The file could not be opened:\n%0").arg(file_path));
 			return;
@@ -2773,8 +2797,8 @@ void main_window::CreateConnects()
 
 		m_gui_settings->SetValue(gui::fd_cfg_check, file_info.path());
 
-		config_checker* dlg = new config_checker(this, file.readAll(), file_path.endsWith(".log"));
-		dlg->exec();
+		config_checker* dlg = new config_checker(this, content, file_path.endsWith(".log") || file_path.endsWith(".log.gz"));
+		dlg->open();
 	});
 
 	connect(ui->toolskernel_explorerAct, &QAction::triggered, this, [this]

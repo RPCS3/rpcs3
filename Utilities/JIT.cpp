@@ -9,8 +9,8 @@
 #include "util/asm.hpp"
 #include "util/v128.hpp"
 #include "util/simd.hpp"
+#include "Crypto/unzip.h"
 #include <charconv>
-#include <zlib.h>
 
 #ifdef __linux__
 #define CAN_OVERCOMMIT
@@ -136,7 +136,7 @@ static atomic_t<u64> s_code_pos{0}, s_data_pos{0};
 static std::vector<u8> s_code_init, s_data_init;
 
 template <atomic_t<u64>& Ctr, uint Off, utils::protection Prot>
-static u8* add_jit_memory(usz size, uint align)
+static u8* add_jit_memory(usz size, usz align)
 {
 	// Select subrange
 	u8* pointer = get_jit_memory() + Off;
@@ -251,7 +251,7 @@ uchar* jit_runtime::_alloc(usz size, usz align) noexcept
 	return jit_runtime::alloc(size, align, true);
 }
 
-u8* jit_runtime::alloc(usz size, uint align, bool exec) noexcept
+u8* jit_runtime::alloc(usz size, usz align, bool exec) noexcept
 {
 	if (exec)
 	{
@@ -866,7 +866,7 @@ void asmjit::simd_builder::vec_extract_gpr(u32 esize, const x86::Gp& dst, const 
 #endif
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/Host.h"
+#include "llvm/TargetParser/Host.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
 #include "llvm/ExecutionEngine/ObjectCache.h"
@@ -1170,42 +1170,18 @@ public:
 		//fs::file(name, fs::rewrite).write(obj.getBufferStart(), obj.getBufferSize());
 		name.append(".gz");
 
-		z_stream zs{};
-		uLong zsz = compressBound(::narrow<u32>(obj.getBufferSize())) + 256;
-		auto zbuf = std::make_unique<uchar[]>(zsz);
-#ifndef _MSC_VER
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wold-style-cast"
-#endif
-		deflateInit2(&zs, 9, Z_DEFLATED, 16 + 15, 9, Z_DEFAULT_STRATEGY);
-#ifndef _MSC_VER
-#pragma GCC diagnostic pop
-#endif
-		zs.avail_in  = static_cast<uInt>(obj.getBufferSize());
-		zs.next_in   = reinterpret_cast<uchar*>(const_cast<char*>(obj.getBufferStart()));
-		zs.avail_out = static_cast<uInt>(zsz);
-		zs.next_out  = zbuf.get();
+		const std::vector<u8> zbuf = zip(reinterpret_cast<const u8*>(obj.getBufferStart()), obj.getBufferSize());
 
-		switch (deflate(&zs, Z_FINISH))
-		{
-		case Z_OK:
-		case Z_STREAM_END:
-		{
-			deflateEnd(&zs);
-			break;
-		}
-		default:
+		if (zbuf.empty())
 		{
 			jit_log.error("LLVM: Failed to compress module: %s", _module->getName().data());
-			deflateEnd(&zs);
 			return;
 		}
-		}
 
-		if (!fs::write_file(name, fs::rewrite, zbuf.get(), zsz - zs.avail_out))
+		if (!fs::write_file(name, fs::rewrite, zbuf.data(), zbuf.size()))
 		{
-				jit_log.error("LLVM: Failed to create module file: %s (%s)", name, fs::g_tls_error);
-				return;
+			jit_log.error("LLVM: Failed to create module file: %s (%s)", name, fs::g_tls_error);
+			return;
 		}
 
 		jit_log.notice("LLVM: Created module: %s", _module->getName().data());
@@ -1215,56 +1191,20 @@ public:
 	{
 		if (fs::file cached{path + ".gz", fs::read})
 		{
-			std::vector<uchar> gz = cached.to_vector<uchar>();
-			std::vector<uchar> out;
-			z_stream zs{};
+			const std::vector<u8> cached_data = cached.to_vector<u8>();
 
-			if (gz.empty()) [[unlikely]]
+			if (cached_data.empty()) [[unlikely]]
 			{
 				return nullptr;
 			}
-#ifndef _MSC_VER
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wold-style-cast"
-#endif
-			inflateInit2(&zs, 16 + 15);
-#ifndef _MSC_VER
-#pragma GCC diagnostic pop
-#endif
-			zs.avail_in = static_cast<uInt>(gz.size());
-			zs.next_in  = gz.data();
-			out.resize(gz.size() * 6);
-			zs.avail_out = static_cast<uInt>(out.size());
-			zs.next_out  = out.data();
 
-			while (zs.avail_in)
+			const std::vector<u8> out = unzip(cached_data);
+
+			if (out.empty())
 			{
-				switch (inflate(&zs, Z_FINISH))
-				{
-				case Z_OK: break;
-				case Z_STREAM_END: break;
-				case Z_BUF_ERROR:
-				{
-					if (zs.avail_in)
-						break;
-					[[fallthrough]];
-				}
-				default:
-					inflateEnd(&zs);
-					return nullptr;
-				}
-
-				if (zs.avail_in)
-				{
-					auto cur_size = zs.next_out - out.data();
-					out.resize(out.size() + 65536);
-					zs.avail_out = static_cast<uInt>(out.size() - cur_size);
-					zs.next_out = out.data() + cur_size;
-				}
+				jit_log.error("LLVM: Failed to unzip module: '%s'", path);
+				return nullptr;
 			}
-
-			out.resize(zs.next_out - out.data());
-			inflateEnd(&zs);
 
 			auto buf = llvm::WritableMemoryBuffer::getNewUninitMemBuffer(out.size());
 			std::memcpy(buf->getBufferStart(), out.data(), out.size());
