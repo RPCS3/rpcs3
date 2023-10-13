@@ -119,7 +119,7 @@ Afterwards:
 
 While still in the project root:
 
-1) `cd .. && mkdir rpcs3_build && cd rpcs3_build`
+1) `cd .. && mkdir --parents rpcs3_build && cd rpcs3_build`
 2) `cmake ../rpcs3/ && make` or `CXX=g++-11 CC=gcc-11 cmake ../rpcs3/ && make` to force these compilers
 3) Run RPCS3 with `./bin/rpcs3`
 
