@@ -116,6 +116,7 @@ target_sources(rpcs3_emu PRIVATE
     ../Crypto/unedat.cpp
     ../Crypto/unpkg.cpp
     ../Crypto/unself.cpp
+    ../Crypto/unzip.cpp
     ../Crypto/utils.cpp
 )
 

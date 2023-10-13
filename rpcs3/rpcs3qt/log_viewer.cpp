@@ -4,6 +4,7 @@
 #include "gui_settings.h"
 #include "syntax_highlighter.h"
 #include "config_checker.h"
+#include "Crypto/unzip.h"
 
 #include <QActionGroup>
 #include <QApplication>
@@ -145,7 +146,7 @@ void log_viewer::show_context_menu(const QPoint& pos)
 
 	connect(open, &QAction::triggered, this, [this]()
 	{
-		const QString file_path = QFileDialog::getOpenFileName(this, tr("Select log file"), m_path_last, tr("Log files (*.log);;All files (*.*)"));
+		const QString file_path = QFileDialog::getOpenFileName(this, tr("Select log file"), m_path_last, tr("Log files (*.log *.gz);;All files (*.*)"));
 		if (file_path.isEmpty())
 			return;
 		m_path_last = file_path;
@@ -154,14 +155,27 @@ void log_viewer::show_context_menu(const QPoint& pos)
 
 	connect(save, &QAction::triggered, this, [this]()
 	{
-		const QString file_path = QFileDialog::getSaveFileName(this, tr("Save to file"), m_path_last, tr("Log files (*.log);;All files (*.*)"));
+		const QString file_path = QFileDialog::getSaveFileName(this, tr("Save to file"), m_path_last, tr("Log files (*.log *.gz);;All files (*.*)"));
 		if (file_path.isEmpty())
 			return;
 
-		if (QFile log_file(file_path); log_file.open(QIODevice::WriteOnly | QIODevice::Truncate))
+		if (fs::file log_file; log_file.open(file_path.toStdString(), fs::rewrite))
 		{
-			log_file.write(m_log_text->toPlainText().toUtf8());
-			log_file.close();
+			const QByteArray bytes = m_log_text->toPlainText().toUtf8();
+
+			if (file_path.endsWith(".gz"))
+			{
+				if (!zip(bytes.constData(), bytes.size(), log_file))
+				{
+					gui_log.error("Failed to zip filtered log to file '%s'", file_path);
+					return;
+				}
+			}
+			else
+			{
+				log_file.write(bytes.constData(), bytes.size());
+			}
+
 			gui_log.success("Exported filtered log to file '%s'", file_path);
 		}
 		else
@@ -230,23 +244,42 @@ void log_viewer::show_log()
 	m_log_text->setPlainText(tr("Loading file..."));
 	QApplication::processEvents();
 
-	if (QFile file(m_path_last);
-		file.exists() && file.open(QIODevice::ReadOnly | QIODevice::Text))
-	{
-		m_gui_settings->SetValue(gui::fd_log_viewer, m_path_last);
+	bool failed = false;
 
+	if (m_path_last.endsWith(".gz"))
+	{
+		if (fs::file file{m_path_last.toStdString()})
+		{
+			const std::vector<u8> decompressed = unzip(file.to_vector<u8>());
+			m_full_log = QString::fromUtf8(reinterpret_cast<const char*>(decompressed.data()), decompressed.size());
+		}
+		else
+		{
+			failed = true;
+		}
+	}
+	else if (QFile file(m_path_last); file.exists() && file.open(QIODevice::ReadOnly | QIODevice::Text))
+	{
 		// TODO: Due to a bug in Qt 6.5.2 QTextStream::readAll is ridiculously slow to the point where it gets stuck on large files.
 		//       In Qt 5.15.2 this was much faster than QFile::readAll. Use QTextStream again once this bug is fixed upstream.
 		//QTextStream stream(&file);
 		//m_full_log = stream.readAll();
 		m_full_log = file.readAll();
-		m_full_log.replace('\0', '0');
-		file.close();
 	}
 	else
 	{
+		failed = true;
+	}
+
+	if (failed)
+	{
 		gui_log.error("log_viewer: Failed to open %s", m_path_last);
 		m_log_text->setPlainText(tr("Failed to open '%0'").arg(m_path_last));
+	}
+	else
+	{
+		m_gui_settings->SetValue(gui::fd_log_viewer, m_path_last);
+		m_full_log.replace('\0', '0');
 	}
 
 	filter_log();
@@ -403,7 +436,7 @@ bool log_viewer::is_valid_file(const QMimeData& md, bool save)
 
 	const QString suffix = QFileInfo(urls[0].fileName()).suffix().toLower();
 
-	if (suffix == "log")
+	if (suffix == "log" || suffix == "gz")
 	{
 		if (save)
 		{
