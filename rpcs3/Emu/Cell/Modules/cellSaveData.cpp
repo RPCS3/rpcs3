@@ -91,6 +91,10 @@ enum : u32
 	SAVEDATA_OP_FIXED_SAVE     = 6,
 	SAVEDATA_OP_FIXED_LOAD     = 7,
 
+	SAVEDATA_OP_LIST_IMPORT    = 9,
+	SAVEDATA_OP_LIST_EXPORT    = 10,
+	SAVEDATA_OP_FIXED_IMPORT   = 11,
+	SAVEDATA_OP_FIXED_EXPORT   = 12,
 	SAVEDATA_OP_LIST_DELETE    = 13,
 	SAVEDATA_OP_FIXED_DELETE   = 14,
 };
@@ -443,7 +447,7 @@ static std::string get_confirmation_message(u32 operation, const SaveDataEntry& 
 
 static s32 savedata_check_args(u32 operation, u32 version, vm::cptr<char> dirName,
 	u32 errDialog, PSetList setList, PSetBuf setBuf, PFuncList funcList, PFuncFixed funcFixed, PFuncStat funcStat,
-	PFuncFile funcFile, u32 /*container*/, u32 unk_op_flags, vm::ptr<void> /*userdata*/, u32 userId, PFuncDone /*funcDone*/)
+	PFuncFile funcFile, u32 /*container*/, u32 unk_op_flags, vm::ptr<void> /*userdata*/, u32 userId, PFuncDone funcDone)
 {
 	if (version > CELL_SAVEDATA_VERSION_420)
 	{
@@ -457,7 +461,7 @@ static s32 savedata_check_args(u32 operation, u32 version, vm::cptr<char> dirNam
 		return 5;
 	}
 
-	if (operation <= SAVEDATA_OP_AUTO_LOAD)
+	if (operation <= SAVEDATA_OP_AUTO_LOAD || operation == SAVEDATA_OP_FIXED_IMPORT || operation == SAVEDATA_OP_FIXED_EXPORT)
 	{
 		if (!dirName)
 		{
@@ -482,7 +486,9 @@ static s32 savedata_check_args(u32 operation, u32 version, vm::cptr<char> dirNam
 		}
 	}
 
-	if ((operation >= SAVEDATA_OP_LIST_AUTO_SAVE && operation <= SAVEDATA_OP_FIXED_LOAD) || operation == SAVEDATA_OP_FIXED_DELETE)
+	if ((operation >= SAVEDATA_OP_LIST_AUTO_SAVE && operation <= SAVEDATA_OP_FIXED_LOAD) ||
+		operation == SAVEDATA_OP_LIST_IMPORT || operation == SAVEDATA_OP_LIST_EXPORT ||
+		operation == SAVEDATA_OP_LIST_DELETE || operation == SAVEDATA_OP_FIXED_DELETE)
 	{
 		if (!setList)
 		{
@@ -515,49 +521,54 @@ static s32 savedata_check_args(u32 operation, u32 version, vm::cptr<char> dirNam
 			return 17;
 		}
 
-		char cur, buf[CELL_SAVEDATA_DIRNAME_SIZE + 1]{};
+		const bool allow_asterisk = (operation == SAVEDATA_OP_LIST_DELETE); // TODO: SAVEDATA_OP_FIXED_DELETE ?
 
-		for (s32 pos = 0, posprefix = 0; cur = setList->dirNamePrefix[pos++], true;)
+		if (!allow_asterisk || !(setList->dirNamePrefix[0] == '*' && setList->dirNamePrefix[1] == '\0'))
 		{
-			if (cur == '\0' || cur == '|')
+			char cur, buf[CELL_SAVEDATA_DIRNAME_SIZE + 1]{};
+
+			for (s32 pos = 0, posprefix = 0; cur = setList->dirNamePrefix[pos++], true;)
 			{
-				// Check prefix if not empty
-				if (posprefix)
+				if (cur == '\0' || cur == '|')
 				{
-					switch (sysutil_check_name_string(buf, 1, CELL_SAVEDATA_DIRNAME_SIZE))
+					// Check prefix if not empty
+					if (posprefix)
 					{
-					case -1:
+						switch (sysutil_check_name_string(buf, 1, CELL_SAVEDATA_DIRNAME_SIZE))
+						{
+						case -1:
+						{
+							// ****** sysutil savedata parameter error : 16 ******
+							return 16;
+						}
+						case -2:
+						{
+							// ****** sysutil savedata parameter error : 17 ******
+							return 17;
+						}
+						case 0: break;
+						default: fmt::throw_exception("Unreachable");
+						}
+					}
+
+					if (cur == '\0')
 					{
-						// ****** sysutil savedata parameter error : 16 ******
-						return 16;
+						break;
 					}
-					case -2:
-					{
-						// ****** sysutil savedata parameter error : 17 ******
-						return 17;
-					}
-					case 0: break;
-					default: fmt::throw_exception("Unreachable");
-					}
+
+					// Note: no need to reset buffer, only position
+					posprefix = 0;
+					continue;
 				}
 
-				if (cur == '\0')
+				if (posprefix == CELL_SAVEDATA_DIRNAME_SIZE)
 				{
-					break;
+					// ****** sysutil savedata parameter error : 17 ******
+					return 17;
 				}
 
-				// Note: no need to reset buffer, only position
-				posprefix = 0;
-				continue;
+				buf[posprefix++] = cur;
 			}
-
-			if (posprefix == CELL_SAVEDATA_DIRNAME_SIZE)
-			{
-				// ****** sysutil savedata parameter error : 17 ******
-				return 17;
-			}
-
-			buf[posprefix++] = cur;
 		}
 
 		if (setList->reserved)
@@ -567,13 +578,25 @@ static s32 savedata_check_args(u32 operation, u32 version, vm::cptr<char> dirNam
 		}
 	}
 
+	if (operation >= SAVEDATA_OP_LIST_IMPORT && operation <= SAVEDATA_OP_FIXED_EXPORT)
+	{
+		if (!funcDone || userId > CELL_SYSUTIL_USERID_MAX)
+		{
+			// ****** sysutil savedata parameter error : 137 ******
+			return 137;
+		}
+
+		// There are no more parameters to check for the import and export functions.
+		return CELL_OK;
+	}
+
 	if (!setBuf)
 	{
 		// ****** sysutil savedata parameter error : 74 ******
 		return 74;
 	}
 
-	if ((operation >= SAVEDATA_OP_LIST_AUTO_SAVE && operation <= SAVEDATA_OP_FIXED_LOAD) || operation == SAVEDATA_OP_FIXED_DELETE)
+	if ((operation >= SAVEDATA_OP_LIST_AUTO_SAVE && operation <= SAVEDATA_OP_FIXED_LOAD) || operation == SAVEDATA_OP_LIST_DELETE || operation == SAVEDATA_OP_FIXED_DELETE)
 	{
 		if (setBuf->dirListMax > CELL_SAVEDATA_DIRLIST_MAX)
 		{
@@ -592,7 +615,7 @@ static s32 savedata_check_args(u32 operation, u32 version, vm::cptr<char> dirNam
 
 	CHECK_SIZE(CellSaveDataFileStat, 56);
 
-	if (operation == SAVEDATA_OP_FIXED_DELETE)
+	if (operation == SAVEDATA_OP_LIST_DELETE || operation == SAVEDATA_OP_FIXED_DELETE)
 	{
 		if (setBuf->fileListMax != 0u)
 		{
@@ -621,19 +644,22 @@ static s32 savedata_check_args(u32 operation, u32 version, vm::cptr<char> dirNam
 		}
 	}
 
-	if ((operation == SAVEDATA_OP_LIST_SAVE || operation == SAVEDATA_OP_LIST_LOAD) && !funcList)
+	if ((operation == SAVEDATA_OP_LIST_SAVE || operation == SAVEDATA_OP_LIST_LOAD || operation == SAVEDATA_OP_LIST_DELETE) && !funcList)
 	{
 		// ****** sysutil savedata parameter error : 18 ******
 		return 18;
 	}
-	else if ((operation == SAVEDATA_OP_FIXED_SAVE || operation == SAVEDATA_OP_FIXED_LOAD ||
+
+	if ((operation == SAVEDATA_OP_FIXED_SAVE || operation == SAVEDATA_OP_FIXED_LOAD ||
 		operation == SAVEDATA_OP_LIST_AUTO_LOAD || operation == SAVEDATA_OP_LIST_AUTO_SAVE || operation == SAVEDATA_OP_FIXED_DELETE) && !funcFixed)
 	{
 		// ****** sysutil savedata parameter error : 19 ******
 		return 19;
 	}
 
-	if (!(unk_op_flags & 0x2) || operation == SAVEDATA_OP_AUTO_SAVE || operation == SAVEDATA_OP_AUTO_LOAD)
+	// NOTE: funcStat and funcFile are not present in the delete functions. unk_op_flags is 0x2 for SAVEDATA_OP_FIXED_DELETE, but I added the redundant check anyway for clarity.
+	if (operation != SAVEDATA_OP_LIST_DELETE && operation != SAVEDATA_OP_FIXED_DELETE &&
+		(!(unk_op_flags & 0x2) || operation == SAVEDATA_OP_AUTO_SAVE || operation == SAVEDATA_OP_AUTO_LOAD))
 	{
 		if (!funcStat)
 		{
@@ -661,10 +687,10 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 	u32 errDialog, PSetList setList, PSetBuf setBuf, PFuncList funcList, PFuncFixed funcFixed, PFuncStat funcStat,
 	PFuncFile funcFile, u32 container, u32 unk_op_flags /*TODO*/, vm::ptr<void> userdata, u32 userId, PFuncDone funcDone)
 {
-	if (const auto [ok, list] = setList.try_read(); ok)
+	if (const auto& [ok, list] = setList.try_read(); ok)
 		cellSaveData.notice("savedata_op(): setList = { .sortType=%d, .sortOrder=%d, .dirNamePrefix='%s' }", list.sortType, list.sortOrder, list.dirNamePrefix);
 
-	if (const auto [ok, buf] = setBuf.try_read(); ok)
+	if (const auto& [ok, buf] = setBuf.try_read(); ok)
 		cellSaveData.notice("savedata_op(): setBuf  = { .dirListMax=%d, .fileListMax=%d, .bufSize=%d }", buf.dirListMax, buf.fileListMax, buf.bufSize);
 
 	if (const auto ecode = savedata_check_args(operation, version, dirName, errDialog, setList, setBuf, funcList, funcFixed, funcStat,
@@ -724,12 +750,22 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		listGet->dirList.set(setBuf->buf.addr());
 		std::memset(listGet->reserved, 0, sizeof(listGet->reserved));
 
-		auto prefix_list = fmt::split(setList->dirNamePrefix.get_ptr(), {"|"});
+		std::vector<std::string> prefix_list = fmt::split(setList->dirNamePrefix.get_ptr(), {"|"});
 
 		// if prefix_list is empty game wants to check all savedata
 		if (prefix_list.empty() && (operation == SAVEDATA_OP_LIST_LOAD || operation == SAVEDATA_OP_FIXED_LOAD))
 		{
+			cellSaveData.notice("savedata_op(): dirNamePrefix is empty. Listing all entries. operation=%d", operation);
 			prefix_list = {""};
+		}
+
+		// if prefix_list only contains an asterisk the game wants to check all savedata
+		const bool allow_asterisk = (operation == SAVEDATA_OP_LIST_DELETE); // TODO: SAVEDATA_OP_FIXED_DELETE ?
+		if (allow_asterisk && prefix_list.size() == 1 && prefix_list.front() == "*")
+		{
+			cellSaveData.notice("savedata_op(): dirNamePrefix is '*'. Listing all entries starting with '%s'. operation=%d", Emu.GetTitleID(), operation);
+			prefix_list.front() = Emu.GetTitleID(); // TODO: Let's be cautious for now and only list savedata starting with this game's ID
+			//prefix_list.front().clear(); // List savedata of all the games of this user
 		}
 
 		// get the saves matching the supplied prefix
@@ -740,7 +776,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				continue;
 			}
 
-			for (const auto& prefix : prefix_list)
+			for (const std::string& prefix : prefix_list)
 			{
 				if (entry.name.starts_with(prefix))
 				{
@@ -1108,6 +1144,13 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			}
 
 			std::memset(result.get_ptr(), 0, ::offset32(&CellSaveDataCBResult::userdata));
+
+			if (!funcDone)
+			{
+				// TODO: return CELL_SAVEDATA_ERROR_PARAM at the correct location
+				fmt::throw_exception("cellSaveData: funcDone is nullptr. operation=%d", operation);
+			}
+
 			funcDone(ppu, result, doneGet);
 		};
 
@@ -1353,7 +1396,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 		if (selected >= 0)
 		{
-			if (selected + 0u < save_entries.size())
+			if (static_cast<u32>(selected) < save_entries.size())
 			{
 				save_entry.dirName = std::move(save_entries[selected].dirName);
 				save_entry.escaped = vfs::escape(save_entry.dirName);
@@ -2396,28 +2439,60 @@ error_code cellSaveDataListDelete(ppu_thread& ppu, PSetList setList, PSetBuf set
 
 error_code cellSaveDataListImport(ppu_thread& ppu, PSetList setList, u32 maxSizeKB, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)
 {
-	UNIMPLEMENTED_FUNC(cellSaveData);
+	cellSaveData.todo("cellSaveDataListImport(setList=*0x%x, maxSizeKB=%d, funcDone=*0x%x, container=0x%x, userdata=*0x%x)", setList, maxSizeKB, funcDone, container, userdata);
+
+	if (const auto ecode = savedata_check_args(SAVEDATA_OP_LIST_IMPORT, CELL_SAVEDATA_VERSION_OLD, vm::null, CELL_SAVEDATA_ERRDIALOG_NONE,
+		setList, vm::null, vm::null, vm::null, vm::null, vm::null, container, 0x40, userdata, 0, funcDone))
+	{
+		return {CELL_SAVEDATA_ERROR_PARAM, " (error %d)", ecode};
+	}
+
+	// TODO
 
 	return CELL_OK;
 }
 
 error_code cellSaveDataListExport(ppu_thread& ppu, PSetList setList, u32 maxSizeKB, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)
 {
-	UNIMPLEMENTED_FUNC(cellSaveData);
+	cellSaveData.todo("cellSaveDataListExport(setList=*0x%x, maxSizeKB=%d, funcDone=*0x%x, container=0x%x, userdata=*0x%x)", setList, maxSizeKB, funcDone, container, userdata);
+	
+	if (const auto ecode = savedata_check_args(SAVEDATA_OP_LIST_EXPORT, CELL_SAVEDATA_VERSION_OLD, vm::null, CELL_SAVEDATA_ERRDIALOG_NONE,
+		setList, vm::null, vm::null, vm::null, vm::null, vm::null, container, 0x40, userdata, 0, funcDone))
+	{
+		return {CELL_SAVEDATA_ERROR_PARAM, " (error %d)", ecode};
+	}
+
+	// TODO
 
 	return CELL_OK;
 }
 
 error_code cellSaveDataFixedImport(ppu_thread& ppu, vm::cptr<char> dirName, u32 maxSizeKB, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)
 {
-	UNIMPLEMENTED_FUNC(cellSaveData);
+	cellSaveData.todo("cellSaveDataFixedImport(dirName=%s, maxSizeKB=%d, funcDone=*0x%x, container=0x%x, userdata=*0x%x)", dirName, maxSizeKB, funcDone, container, userdata);
+
+	if (const auto ecode = savedata_check_args(SAVEDATA_OP_FIXED_IMPORT, CELL_SAVEDATA_VERSION_OLD, dirName, CELL_SAVEDATA_ERRDIALOG_NONE,
+		vm::null, vm::null, vm::null, vm::null, vm::null, vm::null, container, 0x44, userdata, 0, funcDone))
+	{
+		return {CELL_SAVEDATA_ERROR_PARAM, " (error %d)", ecode};
+	}
+
+	// TODO
 
 	return CELL_OK;
 }
 
 error_code cellSaveDataFixedExport(ppu_thread& ppu, vm::cptr<char> dirName, u32 maxSizeKB, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)
 {
-	UNIMPLEMENTED_FUNC(cellSaveData);
+	cellSaveData.todo("cellSaveDataFixedExport(dirName=%s, maxSizeKB=%d, funcDone=*0x%x, container=0x%x, userdata=*0x%x)", dirName, maxSizeKB, funcDone, container, userdata);
+
+	if (const auto ecode = savedata_check_args(SAVEDATA_OP_FIXED_EXPORT, CELL_SAVEDATA_VERSION_OLD, dirName, CELL_SAVEDATA_ERRDIALOG_NONE,
+		vm::null, vm::null, vm::null, vm::null, vm::null, vm::null, container, 0x44, userdata, 0, funcDone))
+	{
+		return {CELL_SAVEDATA_ERROR_PARAM, " (error %d)", ecode};
+	}
+
+	// TODO
 
 	return CELL_OK;
 }
@@ -2440,28 +2515,60 @@ error_code cellSaveDataUserListDelete(ppu_thread& ppu, u32 userId, PSetList setL
 
 error_code cellSaveDataUserListImport(ppu_thread& ppu, u32 userId, PSetList setList, u32 maxSizeKB, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)
 {
-	UNIMPLEMENTED_FUNC(cellSaveData);
+	cellSaveData.todo("cellSaveDataUserListImport(userId=%d, setList=*0x%x, maxSizeKB=%d, funcDone=*0x%x, container=0x%x, userdata=*0x%x)", userId, setList, maxSizeKB, funcDone, container, userdata);
+
+	if (const auto ecode = savedata_check_args(SAVEDATA_OP_LIST_IMPORT, CELL_SAVEDATA_VERSION_OLD, vm::null, CELL_SAVEDATA_ERRDIALOG_NONE,
+		setList, vm::null, vm::null, vm::null, vm::null, vm::null, container, 0x44, userdata, userId, funcDone))
+	{
+		return {CELL_SAVEDATA_ERROR_PARAM, " (error %d)", ecode};
+	}
+
+	// TODO
 
 	return CELL_OK;
 }
 
 error_code cellSaveDataUserListExport(ppu_thread& ppu, u32 userId, PSetList setList, u32 maxSizeKB, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)
 {
-	UNIMPLEMENTED_FUNC(cellSaveData);
+	cellSaveData.todo("cellSaveDataUserListExport(userId=%d, setList=*0x%x, maxSizeKB=%d, funcDone=*0x%x, container=0x%x, userdata=*0x%x)", userId, setList, maxSizeKB, funcDone, container, userdata);
+
+	if (const auto ecode = savedata_check_args(SAVEDATA_OP_LIST_EXPORT, CELL_SAVEDATA_VERSION_OLD, vm::null, CELL_SAVEDATA_ERRDIALOG_NONE,
+		setList, vm::null, vm::null, vm::null, vm::null, vm::null, container, 0x44, userdata, userId, funcDone))
+	{
+		return {CELL_SAVEDATA_ERROR_PARAM, " (error %d)", ecode};
+	}
+
+	// TODO
 
 	return CELL_OK;
 }
 
 error_code cellSaveDataUserFixedImport(ppu_thread& ppu, u32 userId, vm::cptr<char> dirName, u32 maxSizeKB, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)
 {
-	UNIMPLEMENTED_FUNC(cellSaveData);
+	cellSaveData.todo("cellSaveDataUserFixedImport(userId=%d, dirName=%s, maxSizeKB=%d, funcDone=*0x%x, container=0x%x, userdata=*0x%x)", userId, dirName, maxSizeKB, funcDone, container, userdata);
+
+	if (const auto ecode = savedata_check_args(SAVEDATA_OP_FIXED_IMPORT, CELL_SAVEDATA_VERSION_OLD, dirName, CELL_SAVEDATA_ERRDIALOG_NONE,
+		vm::null, vm::null, vm::null, vm::null, vm::null, vm::null, container, 0x44, userdata, userId, funcDone))
+	{
+		return {CELL_SAVEDATA_ERROR_PARAM, " (error %d)", ecode};
+	}
+
+	// TODO
 
 	return CELL_OK;
 }
 
 error_code cellSaveDataUserFixedExport(ppu_thread& ppu, u32 userId, vm::cptr<char> dirName, u32 maxSizeKB, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)
 {
-	UNIMPLEMENTED_FUNC(cellSaveData);
+	cellSaveData.todo("cellSaveDataUserFixedExport(userId=%d, dirName=%s, maxSizeKB=%d, funcDone=*0x%x, container=0x%x, userdata=*0x%x)", userId, dirName, maxSizeKB, funcDone, container, userdata);
+
+	if (const auto ecode = savedata_check_args(SAVEDATA_OP_FIXED_EXPORT, CELL_SAVEDATA_VERSION_OLD, dirName, CELL_SAVEDATA_ERRDIALOG_NONE,
+		vm::null, vm::null, vm::null, vm::null, vm::null, vm::null, container, 0x44, userdata, userId, funcDone))
+	{
+		return {CELL_SAVEDATA_ERROR_PARAM, " (error %d)", ecode};
+	}
+
+	// TODO
 
 	return CELL_OK;
 }
