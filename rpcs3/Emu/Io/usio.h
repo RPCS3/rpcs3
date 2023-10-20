@@ -19,6 +19,7 @@ private:
 	void translate_input_tekken();
 	void usio_write(u8 channel, u16 reg, std::vector<u8>& data);
 	void usio_read(u8 channel, u16 reg, u16 size);
+	void usio_init(u8 channel, u16 reg, u16 size);
 
 private:
 	bool is_used = false;

@@ -190,24 +190,15 @@ void usb_device_usio::translate_input_taiko()
 	constexpr le_t<u16> c_hit = 0x1800;
 	le_t<u16> digital_input = 0;
 
-	auto translate_from_pad = [&](usz pad_number, usz player)
+	const auto translate_from_pad = [&](usz pad_number, usz player)
 	{
-		if (!is_input_allowed())
-		{
-			return;
-		}
-
-		const auto& pad = ::at32(handler->GetPads(), pad_number);
-		if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
-		{
-			return;
-		}
-
 		const usz offset = player * 8ULL;
 		auto& status = m_io_status[0];
 
-		const auto& cfg = ::at32(g_cfg_usio.players, pad_number);
-		cfg->handle_input(pad, false, [&](usio_btn btn, u16 /*value*/, bool pressed)
+		if (const auto& pad = ::at32(handler->GetPads(), pad_number); (pad->m_port_status & CELL_PAD_STATUS_CONNECTED) && is_input_allowed())
+		{
+			const auto& cfg = ::at32(g_cfg_usio.players, pad_number);
+			cfg->handle_input(pad, false, [&](usio_btn btn, u16 /*value*/, bool pressed)
 			{
 				switch (btn)
 				{
@@ -259,6 +250,7 @@ void usb_device_usio::translate_input_taiko()
 					break;
 				}
 			});
+		}
 
 		if (player == 0 && status.test_on)
 			digital_input |= 0x80;
@@ -282,25 +274,16 @@ void usb_device_usio::translate_input_tekken()
 	le_t<u64> digital_input[2]{};
 	le_t<u16> digital_input_lm = 0;
 
-	auto translate_from_pad = [&](usz pad_number, usz player)
+	const auto translate_from_pad = [&](usz pad_number, usz player)
 	{
-		if (!is_input_allowed())
-		{
-			return;
-		}
-
-		const auto& pad = ::at32(handler->GetPads(), pad_number);
-		if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
-		{
-			return;
-		}
-
 		const usz shift = (player % 2) * 24ULL;
 		auto& status = m_io_status[player / 2];
 		auto& input = digital_input[player / 2];
 
-		const auto& cfg = ::at32(g_cfg_usio.players, pad_number);
-		cfg->handle_input(pad, false, [&](usio_btn btn, u16 /*value*/, bool pressed)
+		if (const auto& pad = ::at32(handler->GetPads(), pad_number); (pad->m_port_status & CELL_PAD_STATUS_CONNECTED) && is_input_allowed())
+		{
+			const auto& cfg = ::at32(g_cfg_usio.players, pad_number);
+			cfg->handle_input(pad, false, [&](usio_btn btn, u16 /*value*/, bool pressed)
 			{
 				switch (btn)
 				{
@@ -390,6 +373,7 @@ void usb_device_usio::translate_input_tekken()
 					break;
 				}
 			});
+		}
 
 		if (player % 2 == 0 && status.test_on)
 		{
@@ -564,6 +548,36 @@ void usb_device_usio::usio_read(u8 channel, u16 reg, u16 size)
 	response.resize(size); // Always resize the response vector to the given size
 }
 
+void usb_device_usio::usio_init(u8 channel, u16 reg, u16 size)
+{
+	if (channel == 0)
+	{
+		switch (reg)
+		{
+		case 0x0008:
+		{
+			usio_log.trace("USIO Reset");
+			break;
+		}
+		case 0x000A:
+		{
+			usio_log.trace("USIO ClearSram");
+			g_fxo->get<usio_memory>().init();
+			break;
+		}
+		default:
+		{
+			usio_log.trace("Unhandled channel 0 register init(reg: 0x%04X, size: 0x%04X)", reg, size);
+			break;
+		}
+		}
+	}
+	else
+	{
+		usio_log.trace("Unsupported init operation(channel: 0x%02X, addr: 0x%04X, size: 0x%04X)", channel, reg, size);
+	}
+}
+
 void usb_device_usio::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, UsbTransfer* transfer)
 {
 	constexpr u8 USIO_COMMAND_WRITE = 0x90;
@@ -633,10 +647,10 @@ void usb_device_usio::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, Us
 			response.clear();
 			usio_read(usio_channel, usio_register, usio_length);
 		}
-		else if ((buf[0] & USIO_COMMAND_INIT) == USIO_COMMAND_INIT) // Init and reset commands
+		else if ((buf[0] & USIO_COMMAND_INIT) == USIO_COMMAND_INIT)
 		{
-			//const std::array<u8, 2> init_command = {0xA0, 0xF0}; // This kind of command starts with 0xA0, 0xF0 commonly. For example, {0xA0, 0xF0, 0x28, 0x00, 0x00, 0x80}
-			//ensure(memcmp(buf, init_command.data(), 2) == 0);
+			usio_log.trace("UsioInit(Channel: 0x%02X, Register: 0x%04X, Length: 0x%04X)", usio_channel, usio_register, usio_length);
+			usio_init(usio_channel, usio_register, usio_length);
 		}
 		else
 		{
