@@ -63,6 +63,25 @@ namespace vk
 		return table;
 	}();
 
+	static const chip_family_table s_INTEL_family_tree = []()
+	{
+		chip_family_table table;
+		table.default_ = chip_class::INTEL_generic; // UHD and other older chips we don't care about
+
+		// INTEL DG2+ cards. See https://github.com/torvalds/linux/blob/d88520ad73b79e71e3ddf08de335b8520ae41c5c/include/drm/i915_pciids.h#L702
+		// Naming on DG2 is pretty consistent, XX9X is mobile arc, XXAX is desktop and XXBX is Pro
+		table.add(0x5690, 0x5692, chip_class::INTEL_alchemist); // G10M
+		table.add(0x56A0, 0x56A2, chip_class::INTEL_alchemist); // G10
+		table.add(0x5693, 0x5695, chip_class::INTEL_alchemist); // G11M
+		table.add(0x56A5, 0x56A6, chip_class::INTEL_alchemist); // G11
+		table.add(0x56B0, 0x56B1, chip_class::INTEL_alchemist); // G11-Pro
+		table.add(0x5696, 0x5697, chip_class::INTEL_alchemist); // G12M
+		table.add(0x56A3, 0x56A4, chip_class::INTEL_alchemist); // G12
+		table.add(0x56B2, 0x56B3, chip_class::INTEL_alchemist); // G12-Pro
+
+		return table;
+	}();
+
 	chip_class g_chip_class = chip_class::unknown;
 
 	chip_class get_chip_family()
@@ -85,6 +104,11 @@ namespace vk
 		if (vendor_id == 0x106B)
 		{
 			return chip_class::MVK_apple;
+		}
+
+		if (vendor_id == 0x8086)
+		{
+			return s_INTEL_family_tree.find(device_id);
 		}
 
 		return chip_class::unknown;
