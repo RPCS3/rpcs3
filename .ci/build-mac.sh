@@ -24,7 +24,7 @@ if [ "$INSTALL_DEPS" = "true" ] ; then
   arch -x86_64 /usr/local/bin/brew link -f llvm@16
 
   # moltenvk based on commit for 1.2.5 release
-  wget https://raw.githubusercontent.com/Homebrew/homebrew-core/b0bba05b617ef0fd796b3727be46addfd098a491/Formula/m/molten-vk.rb
+  wget https://raw.githubusercontent.com/Homebrew/homebrew-core/4ac0cfaca4c2505abe2fcbcc0ce5816572103a6c/Formula/m/molten-vk.rb
   arch -x86_64 /usr/local/bin/brew install -f --overwrite ./molten-vk.rb
 fi
 
