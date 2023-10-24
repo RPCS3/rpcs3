@@ -2223,13 +2223,11 @@ thread_base::native_entry thread_base::finalize(u64 _self) noexcept
 	g_tls_wait_fail = 0;
 	g_tls_access_violation_recovered = false;
 
-	const auto fake_self = reinterpret_cast<thread_base*>(_self);
-
 	g_tls_log_prefix = []() -> std::string { return {}; };
-	thread_ctrl::g_tls_this_thread = fake_self;
 
-	if (!_self)
+	if (_self == umax)
 	{
+		thread_ctrl::g_tls_this_thread = nullptr;
 		return nullptr;
 	}
 
@@ -2463,8 +2461,7 @@ thread_base::~thread_base()
 	// Cleanup abandoned tasks: initialize default results and signal
 	this->exec();
 
-	// Only cleanup on errored status
-	if ((m_sync & 3) == 2)
+	// Cleanup
 	{
 #ifdef _WIN32
 		const HANDLE handle0 = reinterpret_cast<HANDLE>(m_thread.load());
@@ -2650,13 +2647,13 @@ void thread_base::exec()
 
 		u64 _self = _this->finalize(thread_state::errored);
 
-		if (!_self)
+		if (_self == umax)
 		{
 			// Unused, detached thread support remnant
 			delete _this;
 		}
 
-		thread_base::finalize(0);
+		thread_base::finalize(umax);
 
 #ifdef _WIN32
 		_endthreadex(0);
