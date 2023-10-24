@@ -380,13 +380,17 @@ namespace rsx
 		u32 offs_x0 = 0; //total y-carry offset for x
 		u32 y_incr = limit_mask;
 
-		u32 adv = pitch / sizeof(T);
+		// NOTE: The swizzled area is always a POT region and we must scan all of it to fill in the linear.
+		// It is assumed that there is no padding on the linear side for simplicity - backend upload/download will crop as needed.
+		// Remember, in cases of swizzling (and also tiled addressing) it is possible for tiled pixels to fall outside of their linear memory region.
+		const u32 pitch_in_blocks = pitch / sizeof(T);
+		u32 row_offset = 0;
 
 		if constexpr (!input_is_swizzled)
 		{
-			for (int y = 0; y < height; ++y)
+			for (int y = 0; y < height; ++y, row_offset += pitch_in_blocks)
 			{
-				auto src = static_cast<const T*>(input_pixels) + y * adv;
+				auto src = static_cast<const T*>(input_pixels) + row_offset;
 				auto dst = static_cast<T*>(output_pixels) + offs_y;
 				offs_x = offs_x0;
 
@@ -406,10 +410,10 @@ namespace rsx
 		}
 		else
 		{
-			for (int y = 0; y < height; ++y)
+			for (int y = 0; y < height; ++y, row_offset += pitch_in_blocks)
 			{
 				auto src = static_cast<const T*>(input_pixels) + offs_y;
-				auto dst = static_cast<T*>(output_pixels) + y * adv;
+				auto dst = static_cast<T*>(output_pixels) + row_offset;
 				offs_x = offs_x0;
 
 				for (int x = 0; x < width; ++x)
