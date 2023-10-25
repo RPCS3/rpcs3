@@ -233,7 +233,7 @@ bool sdl_pad_handler::Init()
 		}
 		else
 		{
-			sdl_log.error("Could not add mappings from file '%s'! File does not exist!", db_path);
+			sdl_log.warning("Could not add mappings from file '%s'! File does not exist!", db_path);
 		}
 	}
 

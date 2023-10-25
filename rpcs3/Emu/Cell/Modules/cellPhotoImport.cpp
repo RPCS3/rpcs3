@@ -7,7 +7,7 @@
 #include "Utilities/StrUtil.h"
 #include "cellSysutil.h"
 
-LOG_CHANNEL(cellPhotoImportUtil, "PhotoImport");
+LOG_CHANNEL(cellPhotoImportUtil, "cellPhotoImport");
 
 // Return Codes
 enum CellPhotoImportError : u32

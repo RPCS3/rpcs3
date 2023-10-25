@@ -98,9 +98,11 @@ struct alignas(16) spu_mfc_cmd
 	u32 eah;
 };
 
+enum class spu_block_hash : u64;
+
 struct mfc_cmd_dump
 {
 	spu_mfc_cmd cmd;
-
+	u64 block_hash;
 	alignas(16) u8 data[128];
 };

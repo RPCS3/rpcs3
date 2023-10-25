@@ -617,6 +617,8 @@ enum class spu_debugger_mode : u32
 	max_mode,
 };
 
+enum class spu_block_hash : u64 {};
+
 class spu_thread : public cpu_thread
 {
 public:
