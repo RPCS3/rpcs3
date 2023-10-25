@@ -604,14 +604,6 @@ namespace vk
 		}
 #endif
 
-		if (pgpu->get_driver_vendor() == driver_vendor::ANV &&
-			pgpu->descriptor_indexing_support.update_after_bind_mask & (1 << VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER))
-		{
-			// Just disable robust access for now. I'll revisit after ARC launches.
-			rsx_log.error("Robust buffer access is broken when enabled with EXT_descriptor_indexing on ANV");
-			enabled_features.robustBufferAccess = VK_FALSE;
-		}
-
 		VkDeviceCreateInfo device = {};
 		device.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 		device.pNext = nullptr;

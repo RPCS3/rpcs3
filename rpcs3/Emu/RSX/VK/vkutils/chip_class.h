@@ -23,7 +23,9 @@ namespace vk
 		NV_turing,
 		NV_ampere,
 		NV_lovelace,
-		MVK_apple
+		MVK_apple,
+		INTEL_generic,
+		INTEL_alchemist
 	};
 
 	enum class driver_vendor
