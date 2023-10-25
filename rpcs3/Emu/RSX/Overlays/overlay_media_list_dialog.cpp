@@ -268,7 +268,7 @@ namespace rsx
 			if (return_code >= 0 && m_media && m_media->type != media_list_dialog::media_type::directory)
 			{
 				result = *m_media;
-				rsx_log.error("Left media list dialog: return_code=%d, type=%d, path=%d", return_code, static_cast<s32>(result.type), result.info.path);
+				rsx_log.error("Left media list dialog: return_code=%d, type=%d, path=%s", return_code, static_cast<s32>(result.type), result.info.path);
 			}
 
 			return return_code;
