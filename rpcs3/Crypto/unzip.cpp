@@ -18,6 +18,10 @@ std::vector<u8> unzip(const void* src, usz size)
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #endif
 	int res = inflateInit2(&zs, 16 + 15);
+	if (res != Z_OK)
+	{
+		return {};
+	}
 #ifndef _MSC_VER
 #pragma GCC diagnostic pop
 #endif
@@ -79,6 +83,10 @@ bool unzip(const void* src, usz size, fs::file& out)
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #endif
 	int res = inflateInit(&strm);
+	if (res != Z_OK)
+	{
+		return false;
+	}
 #ifndef _MSC_VER
 #pragma GCC diagnostic pop
 #endif
@@ -138,6 +146,10 @@ std::vector<u8> zip(const void* src, usz size)
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #endif
 	int res = deflateInit2(&zs, 9, Z_DEFLATED, 16 + 15, 9, Z_DEFAULT_STRATEGY);
+	if (res != Z_OK)
+	{
+		return {};
+	}
 #ifndef _MSC_VER
 #pragma GCC diagnostic pop
 #endif
