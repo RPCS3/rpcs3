@@ -164,7 +164,7 @@ QSize flow_layout::sizeHint() const
 QSize flow_layout::minimumSize() const
 {
 	QSize size;
-	for (const QLayoutItem* item : qAsConst(itemList))
+	for (const QLayoutItem* item : itemList)
 	{
 		if (item)
 		{
