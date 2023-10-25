@@ -27,7 +27,7 @@ struct cfg_recording final : cfg::node
 	{
 		node_audio(cfg::node* _this) : cfg::node(_this, "Audio") {}
 		
-		cfg::uint<0x10000, 0x17000> audio_codec{this, "AVCodecID", 86019}; // AVCodecID::AV_CODEC_ID_AC3
+		cfg::uint<0x10000, 0x17000> audio_codec{this, "AVCodecID", 86018}; // AVCodecID::AV_CODEC_ID_AAC
 		cfg::uint<0, 25000000> audio_bps{this, "Audio Bitrate", 320000};
 
 	} audio{ this };

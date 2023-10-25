@@ -144,6 +144,6 @@ namespace utils
 		// Audio parameters
 		u32 m_channels = 2;
 		u32 m_audio_bitrate_bps = 320000;
-		s32 m_audio_codec_id = 86019; // AV_CODEC_ID_AC3
+		s32 m_audio_codec_id = 86018; // AV_CODEC_ID_AAC
 	};
 }
