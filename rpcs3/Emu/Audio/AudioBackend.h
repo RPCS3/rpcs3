@@ -230,7 +230,7 @@ public:
 
 		if (src_ch_cnt == static_cast<u32>(AudioChannelCnt::SURROUND_7_1))
 		{
-			if (dst_ch_cnt== static_cast<u32>(AudioChannelCnt::SURROUND_5_1))
+			if (dst_ch_cnt == static_cast<u32>(AudioChannelCnt::SURROUND_5_1))
 			{
 				AudioBackend::downmix<AudioChannelCnt::SURROUND_7_1, AudioChannelCnt::SURROUND_5_1>(sample_cnt, src, dst);
 			}
