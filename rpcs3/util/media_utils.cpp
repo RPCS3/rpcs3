@@ -285,9 +285,39 @@ namespace utils
 		}
 	};
 
+	static std::string channel_layout_name(const AVChannelLayout& ch_layout)
+	{
+		std::vector<char> ch_layout_buf(64);
+		int len = av_channel_layout_describe(&ch_layout, ch_layout_buf.data(), ch_layout_buf.size());
+		if (len < 0)
+		{
+			media_log.error("av_channel_layout_describe failed. Error: %d='%s'", len, av_error_to_string(len));
+			return {};
+		}
+
+		if (len > static_cast<int>(ch_layout_buf.size()))
+		{
+			// Try again with a bigger buffer
+			media_log.notice("av_channel_layout_describe needs a bigger buffer: len=%d", len);
+			ch_layout_buf.clear();
+			ch_layout_buf.resize(len);
+
+			len = av_channel_layout_describe(&ch_layout, ch_layout_buf.data(), ch_layout_buf.size());
+			if (len < 0)
+			{
+				media_log.error("av_channel_layout_describe failed. Error: %d='%s'", len, av_error_to_string(len));
+				return {};
+			}
+		}
+
+		return ch_layout_buf.data();
+	}
+
 	// check that a given sample format is supported by the encoder
 	static bool check_sample_fmt(const AVCodec* codec, enum AVSampleFormat sample_fmt)
 	{
+		if (!codec) return false;
+
 		for (const AVSampleFormat* p = codec->sample_fmts; p && *p != AV_SAMPLE_FMT_NONE; p++)
 		{
 			if (*p == sample_fmt)
@@ -301,7 +331,7 @@ namespace utils
 	// just pick the highest supported samplerate
 	static int select_sample_rate(const AVCodec* codec)
 	{
-		if (!codec->supported_samplerates)
+		if (!codec || !codec->supported_samplerates)
 			return 48000;
 
 		int best_samplerate = 0;
@@ -315,21 +345,45 @@ namespace utils
 		return best_samplerate;
 	}
 
-	// select layout with the highest channel count
+	AVChannelLayout get_preferred_channel_layout(int channels)
+	{
+		switch (channels)
+		{
+		case 2:
+			return AV_CHANNEL_LAYOUT_STEREO;
+		case 6:
+			return AV_CHANNEL_LAYOUT_5POINT1;
+		case 8:
+			return AV_CHANNEL_LAYOUT_7POINT1;
+		default:
+			break;
+		}
+		return {};
+	}
+
+	static constexpr AVChannelLayout empty_ch_layout = {};
+
+	// select layout with the exact channel count
 	static const AVChannelLayout* select_channel_layout(const AVCodec* codec, int channels)
 	{
-		constexpr AVChannelLayout empty_ch_layout = {};
+		if (!codec) return nullptr;
+
+		const AVChannelLayout preferred_ch_layout = get_preferred_channel_layout(channels);
+		const AVChannelLayout* found_ch_layout = nullptr;
 
 		for (const AVChannelLayout* ch_layout = codec->ch_layouts;
 			 ch_layout && memcmp(ch_layout, &empty_ch_layout, sizeof(AVChannelLayout)) != 0;
 			 ch_layout++)
 		{
-			if (ch_layout->nb_channels == channels)
+			media_log.notice("select_channel_layout: listing channel layout '%s' with %d channels", channel_layout_name(*ch_layout), ch_layout->nb_channels);
+
+			if (ch_layout->nb_channels == channels && memcmp(ch_layout, &preferred_ch_layout, sizeof(AVChannelLayout)) == 0)
 			{
-				return ch_layout;
+				found_ch_layout = ch_layout;
 			}
 		}
-		return nullptr;
+
+		return found_ch_layout;
 	}
 
 	audio_decoder::audio_decoder()
@@ -830,26 +884,43 @@ namespace utils
 				void* opaque = nullptr;
 				for (const AVOutputFormat* oformat = av_muxer_iterate(&opaque); !!oformat; oformat = av_muxer_iterate(&opaque))
 				{
-					if (avformat_query_codec(oformat, video_codec, FF_COMPLIANCE_STRICT) == 1 &&
-						avformat_query_codec(oformat, audio_codec, FF_COMPLIANCE_STRICT) == 1)
+					media_log.notice("video_encoder: Listing output format '%s' (video_codec=%d, audio_codec=%d)", oformat->name, static_cast<int>(oformat->video_codec), static_cast<int>(oformat->audio_codec));
+					if (avformat_query_codec(oformat, video_codec, FF_COMPLIANCE_NORMAL) == 1 &&
+						avformat_query_codec(oformat, audio_codec, FF_COMPLIANCE_NORMAL) == 1)
 					{
-						media_log.notice("video_encoder: Found output format '%s' (video_codec=%d, audio_codec=%d)", oformat->name, static_cast<int>(video_codec), static_cast<int>(audio_codec));
 						oformats.push_back(oformat);
 					}
 				}
 
-				// Fallback to first found format
-				if (!oformats.empty() && oformats.front())
+				for (const AVOutputFormat* oformat : oformats)
 				{
-					const AVOutputFormat* oformat = oformats.front();
-					media_log.notice("video_encoder: Falling back to output format '%s' (video_codec=%d, audio_codec=%d)", oformat->name, static_cast<int>(video_codec), static_cast<int>(audio_codec));
+					if (!oformat) continue;
+					media_log.notice("video_encoder: Found compatible output format '%s' (video_codec=%d, audio_codec=%d)", oformat->name, static_cast<int>(oformat->video_codec), static_cast<int>(oformat->audio_codec));
+				}
+
+				// Select best match
+				for (const AVOutputFormat* oformat : oformats)
+				{
+					if (oformat && oformat->video_codec == video_codec && oformat->audio_codec == audio_codec)
+					{
+						media_log.notice("video_encoder: Using matching output format '%s' (video_codec=%d, audio_codec=%d)", oformat->name, static_cast<int>(oformat->video_codec), static_cast<int>(oformat->audio_codec));
+						return oformat;
+					}
+				}
+
+				// Fallback to first found format
+				if (const AVOutputFormat* oformat = oformats.empty() ? nullptr : oformats.front())
+				{
+					media_log.notice("video_encoder: Using suboptimal output format '%s' (video_codec=%d, audio_codec=%d)", oformat->name, static_cast<int>(oformat->video_codec), static_cast<int>(oformat->audio_codec));
 					return oformat;
 				}
 
 				return nullptr;
 			};
 
-			const AVOutputFormat* out_format = find_format(static_cast<AVCodecID>(m_video_codec_id), static_cast<AVCodecID>(m_audio_codec_id));
+			const AVCodecID video_codec = static_cast<AVCodecID>(m_video_codec_id);
+			const AVCodecID audio_codec = static_cast<AVCodecID>(m_audio_codec_id);
+			const AVOutputFormat* out_format = find_format(video_codec, audio_codec);
 
 			if (out_format)
 			{
@@ -901,7 +972,7 @@ namespace utils
 				return;
 			}
 
-			const auto create_context = [this, &av](AVCodecID codec_id, bool is_video) -> bool
+			const auto create_context = [this, &av](bool is_video) -> bool
 			{
 				const std::string type = is_video ? "video" : "audio";
 				scoped_av::ctx& ctx = is_video ? av.video : av.audio;
@@ -910,7 +981,7 @@ namespace utils
 				{
 					if (!(ctx.codec = avcodec_find_encoder(av.format_context->oformat->video_codec)))
 					{
-						media_log.error("video_encoder: avcodec_find_encoder for video failed. video_codev=%d", static_cast<int>(av.format_context->oformat->video_codec));
+						media_log.error("video_encoder: avcodec_find_encoder for video failed. video_codec=%d", static_cast<int>(av.format_context->oformat->video_codec));
 						return false;
 					}
 				}
@@ -945,13 +1016,13 @@ namespace utils
 				return true;
 			};
 
-			if (!create_context(static_cast<AVCodecID>(m_video_codec_id), true))
+			if (!create_context(true))
 			{
 				has_error = true;
 				return;
 			}
 
-			if (!create_context(static_cast<AVCodecID>(m_audio_codec_id), false))
+			if (!create_context(false))
 			{
 				has_error = true;
 				return;
@@ -974,6 +1045,8 @@ namespace utils
 			{
 				if (const AVChannelLayout* ch_layout = select_channel_layout(av.audio.codec, m_channels))
 				{
+					media_log.notice("video_encoder: found channel layout '%s' with %d channels", channel_layout_name(*ch_layout), ch_layout->nb_channels);
+
 					if (int err = av_channel_layout_copy(&av.audio.context->ch_layout, ch_layout); err != 0)
 					{
 						media_log.error("video_encoder: av_channel_layout_copy failed. Error: %d='%s'", err, av_error_to_string(err));
@@ -983,9 +1056,23 @@ namespace utils
 				}
 				else
 				{
-					media_log.error("video_encoder: select_channel_layout returned nullptr");
-					has_error = true;
-					return;
+					media_log.notice("video_encoder: select_channel_layout returned nullptr, trying with own layout...");
+
+					const AVChannelLayout new_ch_layout = get_preferred_channel_layout(m_channels);
+
+					if (memcmp(&new_ch_layout, &empty_ch_layout, sizeof(AVChannelLayout)) == 0)
+					{
+						media_log.error("video_encoder: unsupported audio channel count: %d", m_channels);
+						has_error = true;
+						return;
+					}
+
+					if (int err = av_channel_layout_copy(&av.audio.context->ch_layout, &new_ch_layout); err != 0)
+					{
+						media_log.error("video_encoder: av_channel_layout_copy failed. Error: %d='%s'", err, av_error_to_string(err));
+						has_error = true;
+						return;
+					}
 				}
 
 				m_sample_rate = select_sample_rate(av.audio.codec);
@@ -1050,6 +1137,9 @@ namespace utils
 					has_error = true;
 					return;
 				}
+
+				// Log channel layout
+				media_log.notice("video_encoder: av_channel_layout='%s'", channel_layout_name(av.audio.frame->ch_layout));
 			}
 
 			// select video parameters supported by the encoder
@@ -1326,6 +1416,7 @@ namespace utils
 									return;
 								}
 
+								// NOTE: The ffmpeg channel layout should match our downmix channel layout
 								if (sample_fmt_is_planar)
 								{
 									const int channels = av.audio.frame->ch_layout.nb_channels;
