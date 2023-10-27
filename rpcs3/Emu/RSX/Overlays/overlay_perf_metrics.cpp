@@ -537,19 +537,19 @@ namespace rsx
 				}
 				case detail_level::minimal:
 				{
-					perf_text += fmt::format("FPS : %05.2f", m_fps);
+					fmt::append(perf_text, "FPS : %05.2f", m_fps);
 					break;
 				}
 				case detail_level::low:
 				{
-					perf_text += fmt::format("FPS : %05.2f\n"
+					fmt::append(perf_text, "FPS : %05.2f\n"
 					                         "CPU : %04.1f %%",
 					    m_fps, m_cpu_usage);
 					break;
 				}
 				case detail_level::medium:
 				{
-					perf_text += fmt::format("FPS : %05.2f\n\n"
+					fmt::append(perf_text, "FPS : %05.2f\n\n"
 					                         "%s\n"
 					                         " PPU   : %04.1f %%\n"
 					                         " SPU   : %04.1f %%\n"
@@ -560,7 +560,7 @@ namespace rsx
 				}
 				case detail_level::high:
 				{
-					perf_text += fmt::format("FPS : %05.2f (%03.1fms)\n\n"
+					fmt::append(perf_text, "FPS : %05.2f (%03.1fms)\n\n"
 					                         "%s\n"
 					                         " PPU   : %04.1f %% (%2u)\n"
 					                         " SPU   : %04.1f %% (%2u)\n"

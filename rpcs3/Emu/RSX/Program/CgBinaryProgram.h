@@ -193,7 +193,7 @@ public:
 		m_buffer_size = f.size();
 		m_buffer = new u8[m_buffer_size];
 		f.read(m_buffer, m_buffer_size);
-		m_arb_shader += fmt::format("Loading... [%s]\n", path.c_str());
+		fmt::append(m_arb_shader, "Loading... [%s]\n", path.c_str());
 	}
 
 	~CgBinaryDisasm()
@@ -243,7 +243,7 @@ public:
 		offset += 6;
 		while (offset < end_offset)
 		{
-			offsets += fmt::format(" %d,", m_buffer[offset] << 8 | m_buffer[offset + 1]);
+			fmt::append(offsets, " %d,", m_buffer[offset] << 8 | m_buffer[offset + 1]);
 			offset += 4;
 			num++;
 		}
@@ -322,12 +322,12 @@ public:
 		{
 			auto& fprog = GetCgRef<CgBinaryFragmentProgram>(prog.program);
 			m_arb_shader += "\n";
-			m_arb_shader += fmt::format("# binaryFormatRevision 0x%x\n", prog.binaryFormatRevision);
-			m_arb_shader += fmt::format("# profile sce_fp_rsx\n");
-			m_arb_shader += fmt::format("# parameterCount %d\n", prog.parameterCount);
-			m_arb_shader += fmt::format("# instructionCount %d\n", fprog.instructionCount);
-			m_arb_shader += fmt::format("# attributeInputMask 0x%x\n", fprog.attributeInputMask);
-			m_arb_shader += fmt::format("# registerCount %d\n\n", fprog.registerCount);
+			fmt::append(m_arb_shader, "# binaryFormatRevision 0x%x\n", prog.binaryFormatRevision);
+			fmt::append(m_arb_shader, "# profile sce_fp_rsx\n");
+			fmt::append(m_arb_shader, "# parameterCount %d\n", prog.parameterCount);
+			fmt::append(m_arb_shader, "# instructionCount %d\n", fprog.instructionCount);
+			fmt::append(m_arb_shader, "# attributeInputMask 0x%x\n", fprog.attributeInputMask);
+			fmt::append(m_arb_shader, "# registerCount %d\n\n", fprog.registerCount);
 
 			CgBinaryParameterOffset offset = prog.parameterArray;
 			for (u32 i = 0; i < prog.parameterCount; i++)
@@ -340,7 +340,7 @@ public:
 				std::string param_semantic = GetCgParamSemantic(fparam.semantic) + " ";
 				std::string param_const = GetCgParamValue(fparam.embeddedConst, fparam.name);
 
-				m_arb_shader += fmt::format("#%d ", i) + param_type + param_name + param_semantic + param_const + "\n";
+				fmt::append(m_arb_shader, "#%d%s%s%s%s\n", i, param_type, param_name, param_semantic, param_const);
 
 				offset += u32{sizeof(CgBinaryParameter)};
 			}
@@ -375,13 +375,13 @@ public:
 		{
 			const auto& vprog = GetCgRef<CgBinaryVertexProgram>(prog.program);
 			m_arb_shader += "\n";
-			m_arb_shader += fmt::format("# binaryFormatRevision 0x%x\n", prog.binaryFormatRevision);
-			m_arb_shader += fmt::format("# profile sce_vp_rsx\n");
-			m_arb_shader += fmt::format("# parameterCount %d\n", prog.parameterCount);
-			m_arb_shader += fmt::format("# instructionCount %d\n", vprog.instructionCount);
-			m_arb_shader += fmt::format("# registerCount %d\n", vprog.registerCount);
-			m_arb_shader += fmt::format("# attributeInputMask 0x%x\n", vprog.attributeInputMask);
-			m_arb_shader += fmt::format("# attributeOutputMask 0x%x\n\n", vprog.attributeOutputMask);
+			fmt::append(m_arb_shader, "# binaryFormatRevision 0x%x\n", prog.binaryFormatRevision);
+			fmt::append(m_arb_shader, "# profile sce_vp_rsx\n");
+			fmt::append(m_arb_shader, "# parameterCount %d\n", prog.parameterCount);
+			fmt::append(m_arb_shader, "# instructionCount %d\n", vprog.instructionCount);
+			fmt::append(m_arb_shader, "# registerCount %d\n", vprog.registerCount);
+			fmt::append(m_arb_shader, "# attributeInputMask 0x%x\n", vprog.attributeInputMask);
+			fmt::append(m_arb_shader, "# attributeOutputMask 0x%x\n\n", vprog.attributeOutputMask);
 
 			CgBinaryParameterOffset offset = prog.parameterArray;
 			for (u32 i = 0; i < prog.parameterCount; i++)
@@ -394,7 +394,7 @@ public:
 				std::string param_semantic = GetCgParamSemantic(vparam.semantic) + " ";
 				std::string param_const = GetCgParamValue(vparam.embeddedConst, vparam.name);
 
-				m_arb_shader += fmt::format("#%d ", i) + param_type + param_name + param_semantic + param_const + "\n";
+				fmt::append(m_arb_shader, "#%d%s%s%s%s\n", i, param_type, param_name, param_semantic, param_const);
 
 				offset += u32{sizeof(CgBinaryParameter)};
 			}

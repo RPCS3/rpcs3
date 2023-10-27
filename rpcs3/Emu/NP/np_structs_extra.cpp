@@ -27,14 +27,15 @@ namespace extra_nps
 
 	void print_bin_attr(const SceNpMatching2BinAttr* bin)
 	{
-		sceNp2.warning("Id: %d, Size: %d, ptr: 0x%x", bin->id, bin->size, bin->ptr);
+		const auto ptr = +bin->ptr;
+		const u32 size = bin->size;
 
-		std::string dadata{};
-		for (u32 i = 0; i < bin->size; i++)
+		sceNp2.warning("Id: %d, Size: %d, ptr: 0x%x", bin->id, size, ptr);
+
+		if (ptr && size)
 		{
-			dadata = fmt::format("%s %02X", dadata, bin->ptr[i]);
+			sceNp2.warning("Data: %s", std::basic_string_view<u8>{ptr.get_ptr(), size});
 		}
-		sceNp2.warning("Data: %s", dadata);
 	}
 
 	void print_bin_attr_internal(const SceNpMatching2RoomBinAttrInternal* bin)
@@ -51,12 +52,7 @@ namespace extra_nps
 
 	void print_presence_data(const SceNpMatching2PresenceOptionData* opt)
 	{
-		std::string dadata{};
-		for (int i = 0; i < 16; i++)
-		{
-			dadata = fmt::format("%s %02X", dadata, opt->data[i]);
-		}
-		sceNp2.warning("Data: %s", dadata);
+		sceNp2.warning("Data: %s", std::basic_string_view<u8>{std::data(opt->data), std::size(opt->data)});
 	}
 
 	void print_range(const SceNpMatching2Range* range)
