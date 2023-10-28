@@ -3493,13 +3493,26 @@ namespace
 	// Read-only file view starting with specified offset (for MSELF)
 	struct file_view : fs::file_base
 	{
-		const fs::file m_file;
+		const fs::file m_storage;
+		const fs::file& m_file;
 		const u64 m_off;
+		const u64 m_max_size;
 		u64 m_pos;
 
-		explicit file_view(fs::file&& _file, u64 offset)
-			: m_file(std::move(_file))
+		explicit file_view(const fs::file& _file, u64 offset, u64 max_size) noexcept
+			: m_storage(fs::file())
+			, m_file(_file)
 			, m_off(offset)
+			, m_max_size(max_size)
+			, m_pos(0)
+		{
+		}
+
+		explicit file_view(fs::file&& _file, u64 offset, u64 max_size) noexcept
+			: m_storage(std::move(_file))
+			, m_file(m_storage)
+			, m_off(offset)
+			, m_max_size(max_size)
 			, m_pos(0)
 		{
 		}
@@ -3520,18 +3533,14 @@ namespace
 
 		u64 read(void* buffer, u64 size) override
 		{
-			const u64 old_pos = m_file.pos();
-			m_file.seek(m_off + m_pos);
-			const u64 result = m_file.read(buffer, size);
-			ensure(old_pos == m_file.seek(old_pos));
-
+			const u64 result = file_view::read_at(m_pos, buffer, size);
 			m_pos += result;
 			return result;
 		}
 
 		u64 read_at(u64 offset, void* buffer, u64 size) override
 		{
-			return m_file.read_at(offset + m_off, buffer, size);
+			return m_file.read_at(m_off + m_pos, buffer, std::min<u64>(size, utils::sub_saturate<u64>(m_max_size, m_pos)));
 		}
 
 		u64 write(const void*, u64) override
@@ -3563,10 +3572,17 @@ namespace
 	};
 }
 
-extern fs::file make_file_view(fs::file&& _file, u64 offset)
+extern fs::file make_file_view(const fs::file& _file, u64 offset, u64 max_size = umax)
 {
 	fs::file file;
-	file.reset(std::make_unique<file_view>(std::move(_file), offset));
+	file.reset(std::make_unique<file_view>(_file, offset, max_size));
+	return file;
+}
+
+extern fs::file make_file_view(fs::file&& _file, u64 offset, u64 max_size = umax)
+{
+	fs::file file;
+	file.reset(std::make_unique<file_view>(std::move(_file), offset, max_size));
 	return file;
 }
 
@@ -3835,7 +3851,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 			if (u64 off = offset)
 			{
 				// Adjust offset for MSELF
-				src.reset(std::make_unique<file_view>(std::move(src), off));
+				src = make_file_view(std::move(src), offset);
 
 				// Adjust path for MSELF too
 				fmt::append(path, "_x%x", off);

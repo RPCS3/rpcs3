@@ -40,6 +40,7 @@
 #include "../Crypto/unself.h"
 #include "util/logs.hpp"
 #include "util/serialization.hpp"
+#include "savestate_utils.hpp"
 
 #include <fstream>
 #include <memory>
@@ -86,6 +87,8 @@ extern std::vector<std::pair<u16, u16>> read_used_savestate_versions();
 std::string get_savestate_file(std::string_view title_id, std::string_view boot_path, s64 abs_id, s64 rel_id);
 
 extern void send_close_home_menu_cmds();
+
+fs::file make_file_view(const fs::file& file, u64 offset, u64 size);
 
 fs::file g_tty;
 atomic_t<s64> g_tty_size{0};
@@ -711,9 +714,8 @@ bool Emulator::BootRsxCapture(const std::string& path)
 
 	std::unique_ptr<rsx::frame_capture_data> frame = std::make_unique<rsx::frame_capture_data>();
 	utils::serial load;
+	load.m_file_handler = make_uncompressed_serialization_file_handler(std::move(in_file));
 	load.set_reading_state();
-	in_file.read(load.data, in_file.size());
-	load.data.shrink_to_fit();
 
 	load(*frame);
 	in_file.close();
@@ -883,9 +885,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			{
 				m_ar = std::make_shared<utils::serial>();
 				m_ar->set_reading_state();
-				save.seek(0);
-				save.read(m_ar->data, save.size());
-				m_ar->data.shrink_to_fit();
+
+				m_ar->m_file_handler = make_uncompressed_serialization_file_handler(std::move(save));
 			}
 
 			m_boot_source_type = CELL_GAME_GAMETYPE_SYS;
@@ -946,22 +947,29 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				return game_boot_result::savestate_corrupted;
 			}
 
-			if (header.LE_format != (std::endian::native == std::endian::little) || header.offset >= m_ar->data.size())
+			if (header.LE_format != (std::endian::native == std::endian::little) || header.offset >= m_ar->get_size(header.offset))
 			{
 				return game_boot_result::savestate_corrupted;
 			}
 
 			g_cfg.savestate.state_inspection_mode.set(header.state_inspection_support);
 
-			// Emulate seek operation (please avoid using in other places)
-			m_ar->pos = header.offset;
-
-			if (!is_savestate_version_compatible(m_ar->operator std::vector<std::pair<u16, u16>>(), true))
 			{
-				return game_boot_result::savestate_version_unsupported;
-			}
+				// Read data on another container to keep the existing data
+				utils::serial ar_temp;
+				ar_temp.set_reading_state();
+				ar_temp.swap_handler(*m_ar);
+				ar_temp.seek_pos(header.offset);
+				ar_temp.m_avoid_large_prefetch = true;
 
-			m_ar->pos = sizeof(file_header); // Restore position
+				if (!is_savestate_version_compatible(ar_temp.operator std::vector<std::pair<u16, u16>>(), true))
+				{
+					return game_boot_result::savestate_version_unsupported;
+				}
+
+				// Restore file handler
+				ar_temp.swap_handler(*m_ar);
+			}
 
 			argv.clear();
 			klic.clear();
@@ -1006,8 +1014,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				if (size)
 				{
 					fs::remove_all(path, false);
-					ensure(tar_object(fs::file(&m_ar->data[m_ar->pos], size)).extract(path));
-					m_ar->pos += size;
+					m_ar->breathe(true);
+					ensure(tar_object(make_file_view(*static_cast<uncompressed_serialization_file_handler*>(m_ar->m_file_handler.get())->m_file, m_ar->data_offset, size)).extract(path));
+					m_ar->seek_pos(m_ar->pos + size, size >= 4096);
 				}
 			};
 
@@ -2831,10 +2840,34 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 		std::unique_ptr<utils::serial> to_ar;
 
+		fs::pending_file file;
+		std::string path;
+
+		while (savestate)
+		{
+			path = get_savestate_file(m_title_id, m_path, 0, 0);
+
+			if (!fs::create_path(fs::get_parent_dir(path)))
+			{
+				sys_log.error("Failed to create savestate directory! (path='%s', %s)", fs::get_parent_dir(path), fs::g_tls_error);
+				savestate = false;
+				break;
+			}
+
+			if (!file.open(path))
+			{
+				sys_log.error("Failed to create savestate temporary file! (path='%s', %s)", file.get_temp_path(), fs::g_tls_error);
+				savestate = false;
+				break;
+			}
+
+			to_ar = std::make_unique<utils::serial>();
+			to_ar->m_file_handler = make_uncompressed_serialization_file_handler(std::move(file.file));
+			break;
+		}
+
 		if (savestate)
 		{
-			to_ar = std::make_unique<utils::serial>();
-
 			// Savestate thread
 			named_thread emu_state_cap_thread("Emu State Capture Thread", [&]()
 			{
@@ -2851,12 +2884,33 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 				// Avoid duplicating TAR object memory because it can be very large
 				auto save_tar = [&](const std::string& path)
 				{
+					const usz old_data_start = ar.data_offset;
+					const usz old_pos = ar.seek_end();
+
+					ar.breathe();
+
 					ar(usz{}); // Reserve memory to be patched later with correct size
-					const usz old_size = ar.data.size();
-					ar.data = tar_object::save_directory(path, std::move(ar.data));
-					ar.seek_end();
-					const usz tar_size = ar.data.size() - old_size;
-					std::memcpy(ar.data.data() + old_size - sizeof(usz), &tar_size, sizeof(usz));
+					tar_object::save_directory(path, ar);
+
+					const usz new_pos = ar.seek_end();
+					const usz tar_size = new_pos - old_pos - sizeof(usz);
+
+					// Check if breathe() actually did something, in this case memory needs to be discarded
+					const bool was_emptied = old_data_start != ar.data_offset;
+
+					if (was_emptied)
+					{
+						ensure(ar.data_offset > old_data_start);
+
+						// Write to file directly (slower)
+						ar.m_file_handler->handle_file_op(ar, old_pos, sizeof(tar_size), &tar_size);
+					}
+					else
+					{
+						// If noty written to file, simply write to memory
+						std::memcpy(ar.data.data() + old_pos - old_data_start, &tar_size, sizeof(usz));
+					}
+
 					sys_log.success("Saved the contents of directory '%s' (size=0x%x)", path, tar_size);
 				};
 
@@ -2900,8 +2954,8 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 				ar("RPCS3SAV"_u64);
 				ar(std::endian::native == std::endian::little);
 				ar(g_cfg.savestate.state_inspection_mode.get());
-				ar(std::array<u8, 32>{}); // Reserved for future use
 				ar(usz{0}); // Offset of versioning data, to be overwritten at the end of saving
+				ar(std::array<u8, 32>{}); // Reserved for future use
 
 				if (auto dir = vfs::get("/dev_bdvd/PS3_GAME"); fs::is_dir(dir) && !fs::is_file(fs::get_parent_dir(dir) + "/PS3_DISC.SFB"))
 				{
@@ -2953,24 +3007,29 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 		if (savestate)
 		{
-			const std::string path = get_savestate_file(m_title_id, m_path, 0, 0);
-
-			if (!fs::create_path(fs::get_parent_dir(path)))
-			{
-				sys_log.error("Failed to create savestate directory! (path='%s', %s)", fs::get_parent_dir(path), fs::g_tls_error);
-			}
-
-			fs::pending_file file(path);
-
 			// Identifer -> version
 			std::vector<std::pair<u16, u16>> used_serial = read_used_savestate_versions();
 
 			auto& ar = *to_ar;
+
 			const usz pos = ar.seek_end();
-			std::memcpy(&ar.data[10], &pos, 8);// Set offset
+
+			// Patch offset with a direct write
+			ar.m_file_handler->handle_file_op(ar, 10, sizeof(usz), &pos);
+
+			// Write the version data at the end
 			ar(used_serial);
 
-			if (!file.file || (file.file.write(ar.data), !file.commit()))
+			// Final file write, the file is ready to be committed
+			ar.breathe(true);
+
+#ifndef _WIN32
+			// The temporary file's contents must be on disk before rename
+			// Flush to file
+			ar.m_file_handler->handle_file_op(ar, umax, umax, nullptr);
+#endif
+
+			if (!file.commit())
 			{
 				sys_log.error("Failed to write savestate to file! (path='%s', %s)", path, fs::g_tls_error);
 				savestate = false;
