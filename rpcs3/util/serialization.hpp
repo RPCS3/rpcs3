@@ -8,13 +8,13 @@ namespace utils
 	template <typename T>
 	concept FastRandomAccess = requires (T& obj)
 	{
-		std::data(obj)[0];
+		std::data(obj)[std::size(obj)];
 	};
 
 	template <typename T>
 	concept Reservable = requires (T& obj)
 	{
-		obj.reserve(0);
+		obj.reserve(std::size(obj));
 	};
 
 	template <typename T>
@@ -32,15 +32,29 @@ namespace utils
 	template <typename T>
 	concept ListAlike = requires (T& obj) { obj.insert(obj.end(), std::declval<typename T::value_type>()); };
 
+	struct serial;
+
+	struct serialization_file_handler
+	{
+		serialization_file_handler() = default;
+		virtual ~serialization_file_handler() = default;
+
+		virtual bool handle_file_op(serial& ar, usz pos, usz size, const void* data = nullptr) = 0;
+		virtual usz get_size(const utils::serial& ar, usz recommended = umax) const = 0;
+	};
+
 	struct serial
 	{
 		std::vector<u8> data;
+		usz data_offset = 0;
 		usz pos = 0;
 		bool m_is_writing = true;
+		bool m_avoid_large_prefetch = false;
+		std::unique_ptr<serialization_file_handler> m_file_handler;
 
-		serial() = default;
+		serial() noexcept = default;
 		serial(const serial&) = delete;
-		~serial() = default;
+		~serial() noexcept = default;
 
 		// Checks if this instance is currently used for serialization
 		bool is_writing() const
@@ -58,19 +72,42 @@ namespace utils
 			}
 		}
 
-		bool raw_serialize(const void* ptr, usz size)
+		template <typename Func> requires (std::is_convertible_v<std::invoke_result_t<Func>, const void*>)
+		bool raw_serialize(Func&& memory_provider, usz size)
 		{
+			if (!size)
+			{
+				return true;
+			}
+
+			// Overflow check
+			ensure(~pos >= size);
+
 			if (is_writing())
 			{
-				data.insert(data.begin() + pos, static_cast<const u8*>(ptr), static_cast<const u8*>(ptr) + size);
+				ensure(pos >= data_offset);
+				const auto ptr = reinterpret_cast<const u8*>(memory_provider());
+				data.insert(data.begin() + pos - data_offset, ptr, ptr + size);
 				pos += size;
 				return true;
 			}
 
-			ensure(data.size() - pos >= size);
-			std::memcpy(const_cast<void*>(ptr), data.data() + pos, size);
+			if (data.empty() || pos < data_offset || pos + size > data.size() + data_offset)
+			{
+				// Load from file
+				ensure(m_file_handler);
+				ensure(m_file_handler->handle_file_op(*this, pos, size, nullptr));
+				ensure(!data.empty() && pos >= data_offset && pos + size <= data.size() + data_offset);
+			}
+
+			std::memcpy(const_cast<void*>(static_cast<const void*>(memory_provider())), data.data() + pos - data_offset, size);
 			pos += size;
 			return true;
+		}
+
+		bool raw_serialize(const void* ptr, usz size)
+		{
+			return raw_serialize(FN(ptr), size);
 		}
 
 		template <typename T> requires Integral<T>
@@ -157,19 +194,15 @@ namespace utils
 				return true;
 			}
 
-			obj.clear();
-
 			usz size = 0;
 			if (!deserialize_vle(size))
 			{
 				return false;
 			}
 
-			obj.resize(size);
-
 			if constexpr (Bitcopy<typename T::value_type>)
 			{
-				if (!raw_serialize(obj.data(), sizeof(obj[0]) * size))
+				if (!raw_serialize([&](){ obj.resize(size); return obj.data(); }, sizeof(obj[0]) * size))
 				{
 					obj.clear();
 					return false;
@@ -177,6 +210,10 @@ namespace utils
 			}
 			else
 			{
+				// TODO: Postpone resizing to after file bounds checks
+				obj.clear();
+				obj.resize(size);
+
 				for (auto&& value : obj)
 				{
 					if (!serialize(value))
@@ -306,7 +343,9 @@ namespace utils
 			}
 
 			m_is_writing = false;
+			m_avoid_large_prefetch = false;
 			pos = 0;
+			data_offset = 0;
 		}
 
 		// Reset to empty serialization manager
@@ -315,21 +354,51 @@ namespace utils
 			data.clear();
 			m_is_writing = true;
 			pos = 0;
+			data_offset = 0;
+			m_file_handler.reset();
 		}
 
 		usz seek_end(usz backwards = 0)
 		{
-			ensure(pos >= backwards);
-			pos = data.size() - backwards;
+			ensure(data.size() + data_offset >= backwards);
+			pos = data.size() + data_offset - backwards;
 			return pos;
+		}
+
+		usz seek_pos(usz val, bool empty_data = false)
+		{
+			const usz old_pos = std::exchange(pos, val);
+
+			if (empty_data || data.empty())
+			{
+				// Relocate future data
+				data.clear();
+				data_offset = pos;
+			}
+
+			return old_pos;
 		}
 
 		usz pad_from_end(usz forwards)
 		{
 			ensure(is_writing());
-			pos = data.size();
-			data.resize(pos + forwards);
+			pos = data.size() + data_offset;
+			data.resize(data.size() + forwards);
 			return pos;
+		}
+
+		// Allow for memory saving operations: if writing, flush to file if too large. If reading, discard memory (not implemented).
+		// Execute only if past memory is known to not going be reused
+		void breathe(bool forced = false)
+		{
+			if (!forced && (!m_file_handler || (data.size() < 0x20'0000 && pos >= data_offset)))
+			{
+				// Let's not do anything if less than 32MB
+				return;
+			}
+
+			ensure(m_file_handler);
+			ensure(m_file_handler->handle_file_op(*this, 0, umax, nullptr));
 		}
 
 		template <typename T> requires (std::is_copy_constructible_v<std::remove_const_t<T>>) && (std::is_constructible_v<std::remove_const_t<T>> || Bitcopy<std::remove_const_t<T>> ||
@@ -364,6 +433,16 @@ namespace utils
 			}
 		}
 
+		void swap_handler(serial& ar)
+		{
+			std::swap(ar.m_file_handler, this->m_file_handler);
+		}
+
+		usz get_size(usz recommended = umax) const
+		{
+			return m_file_handler ? m_file_handler->get_size(*this, recommended) : data_offset + data.size();
+		}
+
 		template <typename T> requires (std::is_copy_constructible_v<T> && std::is_constructible_v<T> && Bitcopy<T>)
 		std::pair<bool, T> try_read()
 		{
@@ -372,10 +451,11 @@ namespace utils
 				return {};
 			}
 
-			const usz left = data.size() - pos;
+			const usz end_pos = pos + sizeof(T);
+			const usz size = get_size(end_pos);
 	 		using type = std::remove_const_t<T>;
 
-			if (left >= sizeof(type))
+			if (size >= end_pos)
 			{
 				u8 buf[sizeof(type)]{};
 				ensure(raw_serialize(buf, sizeof(buf)));
@@ -389,7 +469,8 @@ namespace utils
 		// Used when an invalid state is encountered somewhere in a place we can't check success code such as constructor)
 		bool is_valid() const
 		{
-			return pos <= data.size();
+			// TODO
+			return true;
 		}
 	};
 }
