@@ -8,6 +8,7 @@
 #include "TAR.h"
 
 #include "util/asm.hpp"
+#include "util/serialization.hpp"
 
 #include <charconv>
 
@@ -258,14 +259,14 @@ bool tar_object::extract(std::string prefix_path, bool is_vfs)
 	return true;
 }
 
-std::vector<u8> tar_object::save_directory(const std::string& src_dir, std::vector<u8>&& init, const process_func& func, std::string full_path)
+void tar_object::save_directory(const std::string& src_dir, utils::serial& ar, const process_func& func, std::string full_path)
 {
 	const std::string& target_path = full_path.empty() ? src_dir : full_path;
 
 	fs::stat_t stat{};
 	if (!fs::get_stat(target_path, stat))
 	{
-		return std::move(init);
+		return;
 	}
 
 	if (stat.is_directory)
@@ -276,13 +277,13 @@ std::vector<u8> tar_object::save_directory(const std::string& src_dir, std::vect
 		{
 			if (entry.name.find_first_not_of('.') == umax) continue;
 
-			init = save_directory(src_dir, std::move(init), func, target_path + '/' + entry.name);
+			save_directory(src_dir, ar, func, target_path + '/' + entry.name);
 			has_items = true;
 		}
 
 		if (has_items)
 		{
-			return std::move(init);
+			return;
 		}
 	}
 
@@ -304,34 +305,34 @@ std::vector<u8> tar_object::save_directory(const std::string& src_dir, std::vect
 
 	std::string saved_path{target_path.data() + src_dir.size(), target_path.size() - src_dir.size()};
 
-	const u64 old_size = init.size();
-	init.resize(old_size + sizeof(TARHeader));
+	const u64 old_size = ar.data.size();
+	ar.data.resize(old_size + sizeof(TARHeader));
 
 	if (!stat.is_directory)
 	{
 		fs::file fd(target_path);
 
-		const u64 old_size2 = init.size();
+		const u64 old_size2 = ar.data.size();
 
 		if (func)
 		{
 			// Use custom function for file saving if provided
 			// Allows for example to compress PNG files as JPEG in the TAR itself
-			if (!func(fd, saved_path, std::move(init)))
+			if (!func(fd, saved_path, ar))
 			{
 				// Revert (this entry should not be included if func returns false)
-				init.resize(old_size);
-				return std::move(init);
+				ar.data.resize(old_size);
+				return;
 			}
 		}
 		else
 		{
-			init.resize(init.size() + stat.size);
-			ensure(fd.read(init.data() + old_size2, stat.size) == stat.size);
+			ar.data.resize(ar.data.size() + stat.size);
+			ensure(fd.read(ar.data.data() + old_size2, stat.size) == stat.size);
 		}
 
 		// Align
-		init.resize(old_size2 + utils::align(init.size() - old_size2, 512));
+		ar.data.resize(old_size2 + utils::align(ar.data.size() - old_size2, 512));
 
 		fd.close();
 		fs::utime(target_path, stat.atime, stat.mtime);
@@ -352,8 +353,10 @@ std::vector<u8> tar_object::save_directory(const std::string& src_dir, std::vect
 	write_octal(header.padding, stat.atime);
 	header.filetype = stat.is_directory ? '5' : '0';
 
-	std::memcpy(init.data() + old_size, &header, sizeof(header));
-	return std::move(init);
+	std::memcpy(ar.data.data() + old_size, &header, sizeof(header));
+
+	// TAR is an old format which does not depend on previous data so memory ventilation is trivial here 
+	ar.breathe();
 }
 
 bool extract_tar(const std::string& file_path, const std::string& dir_path, fs::file file)

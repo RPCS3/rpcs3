@@ -1,15 +1,25 @@
 #include "stdafx.h"
 #include "util/types.hpp"
-#include "util/serialization.hpp"
 #include "util/logs.hpp"
+#include "util/asm.hpp"
 #include "Utilities/File.h"
+#include "Utilities/StrFmt.h"
 #include "system_config.h"
+#include "savestate_utils.hpp"
 
 #include "System.h"
 
 #include <set>
 
 LOG_CHANNEL(sys_log, "SYS");
+
+template <>
+void fmt_class_string<utils::serial>::format(std::string& out, u64 arg)
+{
+	const utils::serial& ar = get_object(arg);
+
+	fmt::append(out, "{ %s, 0x%x/0%x, memory=0x%x }", ar.is_writing() ? "writing" : "reading", ar.pos, ar.data_offset + ar.data.size(), ar.data.size());
+}
 
 struct serial_ver_t
 {
@@ -79,7 +89,7 @@ SERIALIZATION_VER(sys_io, 23,                                   1)
 SERIALIZATION_VER(LLE, 24,                                      1)
 SERIALIZATION_VER(HLE, 25,                                      1)
 
-std::vector<std::pair<u16, u16>> get_savestate_versioning_data(const fs::file& file)
+std::vector<std::pair<u16, u16>> get_savestate_versioning_data(fs::file&& file)
 {
 	if (!file)
 	{
@@ -105,11 +115,10 @@ std::vector<std::pair<u16, u16>> get_savestate_versioning_data(const fs::file& f
 		return {};
 	}
 
-	file.seek(offs);
-
 	utils::serial ar;
 	ar.set_reading_state();
-    file.read(ar.data, fsize - offs);
+	ar.m_file_handler = make_uncompressed_serialization_file_handler(std::move(file));
+	ar.seek_pos(offs);
 	return ar;
 }
 
@@ -172,9 +181,9 @@ std::string get_savestate_file(std::string_view title_id, std::string_view boot_
 	return fs::get_cache_dir() + "/savestates/" + title + "/" + title + '_' + prefix + '_' + save_id + ".SAVESTAT";
 }
 
-bool is_savestate_compatible(const fs::file& file)
+bool is_savestate_compatible(fs::file&& file)
 {
-	return is_savestate_version_compatible(get_savestate_versioning_data(file), false);
+	return is_savestate_version_compatible(get_savestate_versioning_data(std::move(file)), false);
 }
 
 std::vector<std::pair<u16, u16>> read_used_savestate_versions()
@@ -199,7 +208,7 @@ bool boot_last_savestate(bool testing)
 {
 	if (!g_cfg.savestate.suspend_emu && !Emu.GetTitleID().empty() && (Emu.IsRunning() || Emu.GetStatus() == system_state::paused))
 	{
-		extern bool is_savestate_compatible(const fs::file& file);
+		extern bool is_savestate_compatible(fs::file&& file);
 
 		const std::string save_dir = fs::get_cache_dir() + "/savestates/";
 
@@ -251,4 +260,150 @@ bool boot_last_savestate(bool testing)
 	}
 
 	return false;
+}
+
+bool uncompressed_serialization_file_handler::handle_file_op(utils::serial& ar, usz pos, usz size, const void* data)
+{
+	if (ar.is_writing())
+	{
+		if (data)
+		{
+			m_file->seek(pos);
+			m_file->write(data, size);
+			return  true;
+		}
+
+		m_file->seek(ar.data_offset);
+		m_file->write(ar.data);
+
+		if (pos == umax && size == umax)
+		{
+			// Request to flush the file to disk
+			m_file->sync();
+		}
+
+		ar.data_offset += ar.data.size();
+		ar.data.clear();
+		ar.seek_end();
+		return true;
+	}
+
+	if (!size)
+	{
+		return true;
+	}
+
+	if (pos == 0 && size == umax)
+	{
+		// Discard loaded data until pos if profitable
+		const usz limit = ar.data_offset + ar.data.size();
+
+		if (ar.pos > ar.data_offset && ar.pos < limit)
+		{
+			const usz may_discard_bytes = ar.pos - ar.data_offset;
+			const usz moved_byte_count_on_discard = limit - ar.pos;
+
+			// Cheeck profitability (check recycled memory and std::memmove costs)
+			if (may_discard_bytes >= 0x50'0000 || (may_discard_bytes >= 0x20'0000 && moved_byte_count_on_discard / may_discard_bytes < 3))
+			{
+				ar.data_offset += may_discard_bytes;
+				ar.data.erase(ar.data.begin(), ar.data.begin() + may_discard_bytes);
+
+				if (ar.data.capacity() >= 0x200'0000)
+				{
+					// Discard memory
+					ar.data.shrink_to_fit();
+				}
+			}
+
+			return true;
+		}
+
+		// Discard all loaded data
+		ar.data_offset += ar.data.size();
+		ar.data.clear();
+
+		if (ar.data.capacity() >= 0x200'0000)
+		{
+			// Discard memory
+			ar.data.shrink_to_fit();
+		}
+
+		return true;
+	}
+
+	if (~size < pos)
+	{
+		// Overflow
+		return false;
+	}
+
+	if (ar.data.empty() && pos != ar.pos)
+	{
+		// Relocate instead oof over-fetch
+		ar.seek_pos(pos);
+	}
+
+	const usz read_pre_buffer = utils::sub_saturate<usz>(ar.data_offset, pos);
+
+	if (read_pre_buffer)
+	{
+		// Read past data
+		// Harsh operation on performance, luckily rare and not typically needed
+		// Also this may would be disallowed when moving to compressed files
+		// This may be a result of wrong usage of breathe() function
+		ar.data.resize(ar.data.size() + read_pre_buffer);
+		std::memmove(ar.data.data() + read_pre_buffer, ar.data.data(), ar.data.size() - read_pre_buffer);
+		ensure(m_file->read_at(pos, ar.data.data(), read_pre_buffer) == read_pre_buffer);
+		ar.data_offset -= read_pre_buffer;
+	}
+
+	const usz read_past_buffer = utils::sub_saturate<usz>(pos + size, ar.data_offset + ar.data.size());
+
+	if (read_past_buffer)
+	{
+		// Read proceeding data
+		// More lightweight operation, this is the common operation
+		// Allowed to fail, if memory is truly needed an assert would take place later
+		const usz old_size = ar.data.size();
+
+		// Try to prefetch data by reading more than requested
+		ar.data.resize(std::max<usz>({ ar.data.capacity(), ar.data.size() + read_past_buffer * 3 / 2, ar.m_avoid_large_prefetch ? usz{4096} : usz{0x10'0000} }));
+		ar.data.resize(m_file->read_at(old_size + ar.data_offset, data ? const_cast<void*>(data) : ar.data.data() + old_size, ar.data.size() - old_size) + old_size);
+	}
+
+	return true;
+}
+
+
+usz uncompressed_serialization_file_handler::get_size(const utils::serial& ar, usz recommended) const
+{
+	if (ar.is_writing())
+	{
+		return m_file->size();
+	}
+
+	const usz memory_available = ar.data_offset + ar.data.size();
+
+	if (memory_available >= recommended)
+	{
+		// Avoid calling size() if possible
+		return memory_available;
+	}
+
+	return std::max<usz>(m_file->size(), memory_available);
+}
+
+namespace stx
+{
+	extern void serial_breathe(utils::serial& ar)
+	{
+		ar.breathe();
+	}
+}
+
+// MSVC bug workaround, see above similar case
+extern void serial_breathe(utils::serial& ar)
+{
+	::stx::serial_breathe(ar);
 }

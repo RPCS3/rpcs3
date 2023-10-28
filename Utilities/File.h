@@ -674,11 +674,23 @@ namespace fs
 
 		// This is meant to modify files atomically, overwriting is likely
 		bool commit(bool overwrite = true);
+		bool open(std::string_view path);
 
-		pending_file(std::string_view path);
+		pending_file() noexcept = default;
+
+		pending_file(std::string_view path) noexcept
+		{
+			open(path);
+		}
+
 		pending_file(const pending_file&) = delete;
 		pending_file& operator=(const pending_file&) = delete;
 		~pending_file();
+
+		const std::string& get_temp_path() const
+		{
+			return m_path;
+		}
 
 	private:
 		std::string m_path{}; // Pending file path

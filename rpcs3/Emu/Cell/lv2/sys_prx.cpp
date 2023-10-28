@@ -286,7 +286,7 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 	return not_an_error(idm::last_id());
 }
 
-fs::file make_file_view(fs::file&& _file, u64 offset);
+fs::file make_file_view(fs::file&& file, u64 offset, u64 size);
 
 std::shared_ptr<void> lv2_prx::load(utils::serial& ar)
 {
@@ -319,7 +319,7 @@ std::shared_ptr<void> lv2_prx::load(utils::serial& ar)
 		if (file)
 		{
 			u128 klic = g_fxo->get<loaded_npdrm_keys>().last_key();
-			file = make_file_view(std::move(file), offset);
+			file = make_file_view(std::move(file), offset, umax);
 			prx = ppu_load_prx(ppu_prx_object{ decrypt_self(std::move(file), reinterpret_cast<u8*>(&klic)) }, false, path, 0, &ar);
 			prx->m_loaded_flags = std::move(loaded_flags);
 			prx->m_external_loaded_flags = std::move(external_flags);

@@ -22,6 +22,11 @@ namespace fs
 	class file;
 }
 
+namespace utils
+{
+	struct serial;
+}
+
 class tar_object
 {
 	const fs::file& m_file;
@@ -38,13 +43,13 @@ public:
 
 	fs::file get_file(const std::string& path);
 
-	using process_func = std::function<bool(const fs::file&, std::string&, std::vector<u8>&&)>;
+	using process_func = std::function<bool(const fs::file&, std::string&, utils::serial&)>;
 
 	// Extract all files in archive to destination (as VFS if is_vfs is true)
 	// Allow to optionally specify explicit mount point (which may be directory meant for extraction)
 	bool extract(std::string prefix_path = {}, bool is_vfs = false);
 
-	static std::vector<u8> save_directory(const std::string& src_dir, std::vector<u8>&& init = std::vector<u8>{}, const process_func& func = {}, std::string append_path = {});
+	static void save_directory(const std::string& src_dir, utils::serial& ar, const process_func& func = {}, std::string append_path = {});
 };
 
 bool extract_tar(const std::string& file_path, const std::string& dir_path, fs::file file = {});
