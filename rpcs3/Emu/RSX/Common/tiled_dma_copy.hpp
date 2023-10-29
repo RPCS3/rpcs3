@@ -31,7 +31,7 @@ namespace rsx
 #define RSX_DMA_OP_ENCODE_TILE 0
 #define RSX_DMA_OP_DECODE_TILE 1
 
-	static inline void tiled_dma_copy(const uint32_t row, const uint32_t col, const detiler_config& conf, char* tiled_data, char* linear_data, int direction)
+	static void tiled_dma_copy(const uint32_t row, const uint32_t col, const detiler_config& conf, char* tiled_data, char* linear_data, int direction)
 	{
 		const uint32_t row_offset = (row * conf.tile_pitch) + conf.tile_base_address + conf.tile_offset;
 		const uint32_t this_address = row_offset + (col * conf.image_bpp);
