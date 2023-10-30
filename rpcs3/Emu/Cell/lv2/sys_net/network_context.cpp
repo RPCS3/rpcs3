@@ -96,27 +96,29 @@ void network_thread::operator()()
 
 	s_to_awake.clear();
 
-	::pollfd fds[lv2_socket::id_count]{};
+	std::vector<::pollfd> fds(lv2_socket::id_count);
 #ifdef _WIN32
-	bool connecting[lv2_socket::id_count]{};
-	bool was_connecting[lv2_socket::id_count]{};
+	std::vector<bool> connecting(lv2_socket::id_count);
+	std::vector<bool> was_connecting(lv2_socket::id_count);
 #endif
 
-	::pollfd p2p_fd[lv2_socket::id_count]{};
+	std::vector<::pollfd> p2p_fd(lv2_socket::id_count);
 
 	while (thread_ctrl::state() != thread_state::aborting)
 	{
+		ensure(socklist.size() <= lv2_socket::id_count);
+
 		// Wait with 1ms timeout
 #ifdef _WIN32
-		windows_poll(fds, ::size32(socklist), 1, connecting);
+		windows_poll(fds, socklist.size(), 1, connecting);
 #else
-		::poll(fds, socklist.size(), 1);
+		::poll(fds.data(), socklist.size(), 1);
 #endif
 
 		// Check P2P sockets for incoming packets(timeout could probably be set at 0)
 		{
 			std::lock_guard lock(list_p2p_ports_mutex);
-			std::memset(p2p_fd, 0, sizeof(p2p_fd));
+			std::memset(p2p_fd.data(), 0, p2p_fd.size() * sizeof(::pollfd));
 			auto num_p2p_sockets = 0;
 			for (const auto& p2p_port : list_p2p_ports)
 			{
@@ -129,9 +131,9 @@ void network_thread::operator()()
 			if (num_p2p_sockets)
 			{
 #ifdef _WIN32
-				const auto ret_p2p = WSAPoll(p2p_fd, num_p2p_sockets, 1);
+				const auto ret_p2p = WSAPoll(p2p_fd.data(), num_p2p_sockets, 1);
 #else
-				const auto ret_p2p = ::poll(p2p_fd, num_p2p_sockets, 1);
+				const auto ret_p2p = ::poll(p2p_fd.data(), num_p2p_sockets, 1);
 #endif
 				if (ret_p2p > 0)
 				{

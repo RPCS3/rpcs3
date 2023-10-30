@@ -351,7 +351,7 @@ error_code sys_net_bnet_accept(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr>
 
 	const auto sock = idm::check<lv2_socket>(s, [&, notify = lv2_obj::notify_all_t()](lv2_socket& sock)
 		{
-			const auto [success, res, res_socket, res_addr] = sock.accept();
+			auto [success, res, res_socket, res_addr] = sock.accept();
 
 			if (success)
 			{
@@ -713,7 +713,7 @@ error_code sys_net_bnet_getsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 				return -SYS_NET_EINVAL;
 			}
 
-			const auto [res, out_val, out_len] = sock.getsockopt(level, optname, *optlen);
+			const auto& [res, out_val, out_len] = sock.getsockopt(level, optname, *optlen);
 
 			if (res == CELL_OK)
 			{
@@ -1277,9 +1277,9 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 		std::unique_lock nw_lock(g_fxo->get<network_context>().s_nw_mutex);
 		std::shared_lock lock(id_manager::g_mutex);
 
-		::pollfd _fds[1024]{};
+		std::vector<::pollfd> _fds(nfds);
 #ifdef _WIN32
-		bool connecting[1024]{};
+		std::vector<bool> connecting(nfds);
 #endif
 
 		for (s32 i = 0; i < nfds; i++)
@@ -1309,7 +1309,7 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 #ifdef _WIN32
 		windows_poll(_fds, nfds, 0, connecting);
 #else
-		::poll(_fds, nfds, 0);
+		::poll(_fds.data(), nfds, 0);
 #endif
 		for (s32 i = 0; i < nfds; i++)
 		{
@@ -1330,7 +1330,7 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 		{
 			lock.unlock();
 			nw_lock.unlock();
-			std::memcpy(fds.get_ptr(), fds_buf.data(), nfds * sizeof(fds[0]));
+			std::memcpy(fds.get_ptr(), fds_buf.data(), nfds * sizeof(sys_net_pollfd));
 			return not_an_error(signaled);
 		}
 
@@ -1473,9 +1473,9 @@ error_code sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set
 
 		reader_lock lock(id_manager::g_mutex);
 
-		::pollfd _fds[1024]{};
+		std::vector<::pollfd> _fds(nfds);
 #ifdef _WIN32
-		bool connecting[1024]{};
+		std::vector<bool> connecting(nfds);
 #endif
 
 		for (s32 i = 0; i < nfds; i++)
@@ -1536,7 +1536,7 @@ error_code sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set
 #ifdef _WIN32
 		windows_poll(_fds, nfds, 0, connecting);
 #else
-		::poll(_fds, nfds, 0);
+		::poll(_fds.data(), nfds, 0);
 #endif
 		for (s32 i = 0; i < nfds; i++)
 		{

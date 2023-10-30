@@ -26,5 +26,5 @@ bool is_ip_public_address(const ::sockaddr_in& addr);
 s32 network_clear_queue(ppu_thread& ppu);
 
 #ifdef _WIN32
-void windows_poll(pollfd* fds, unsigned long nfds, int timeout, bool* connecting);
+void windows_poll(std::vector<pollfd>& fds, unsigned long nfds, int timeout, std::vector<bool>& connecting);
 #endif
