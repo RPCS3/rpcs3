@@ -984,7 +984,7 @@ std::optional<s32> lv2_socket_native::sendto(s32 flags, const std::vector<u8>& b
 		}
 	}
 
-	native_result = ::sendto(socket, reinterpret_cast<const char*>(buf.data()), buf.size(), native_flags, native_addr ? reinterpret_cast<struct sockaddr*>(&(*native_addr)) : nullptr, native_addr ? sizeof(*native_addr) : 0);
+	native_result = ::sendto(socket, reinterpret_cast<const char*>(buf.data()), buf.size(), native_flags, native_addr ? reinterpret_cast<struct sockaddr*>(&native_addr.value()) : nullptr, native_addr ? sizeof(sockaddr_in) : 0);
 
 	if (native_result >= 0)
 	{
