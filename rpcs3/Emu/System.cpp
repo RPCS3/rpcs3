@@ -87,6 +87,7 @@ extern std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const
 extern bool ppu_load_rel_exec(const ppu_rel_object&);
 
 extern void send_close_home_menu_cmds();
+extern void check_microphone_permissions();
 
 extern void signal_system_cache_can_stay();
 
@@ -1720,6 +1721,15 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			Run(false);
 
 			return game_boot_result::no_errors;
+		}
+
+		// Check microphone permissions
+		if (g_cfg.audio.microphone_type != microphone_handler::null)
+		{
+			if (const std::vector<std::string> device_list = fmt::split(g_cfg.audio.microphone_devices.to_string(), {"@@@"}); !device_list.empty())
+			{
+				check_microphone_permissions();
+			}
 		}
 
 		// Detect boot location
