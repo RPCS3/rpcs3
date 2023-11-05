@@ -58,7 +58,7 @@ QTabBar::tab:hover {
 }
 
 /* Checkboxes */
-QCheckBox::indicator {
+QCheckBox::indicator, QListWidget::indicator, QTreeWidget::indicator {
 	border-radius: 0.125em;
 	border-top-right-radius: 0em;
 	border-bottom-left-radius: 0em;
@@ -67,13 +67,13 @@ QCheckBox::indicator {
 	height: 0.8em;
 	margin-top: 0.0625em;
 }
-QCheckBox::indicator:checked {
+QCheckBox::indicator:checked, QListWidget::indicator::checked, QTreeWidget::indicator::checked {
 	background-color: #FFF; /* White */
 }
-QCheckBox::indicator:unchecked {
+QCheckBox::indicator:unchecked, QListWidget::indicator::unchecked, QTreeWidget::indicator::unchecked {
 	background-color: #000; /* Black */
 }
-QCheckBox::indicator::disabled {
+QCheckBox::indicator::disabled, QListWidget::indicator::disabled, QTreeWidget::indicator::disabled {
 	background-color: #af4949; /* Red */
 }
 
@@ -177,18 +177,6 @@ QMenu::item:selected {
 QMenu::item:disabled {
 	background-color: #313131;
 	color: #888888;
-	border-radius: 0.25em;
-}
-
-/* Libraries list */
-QListWidget::item:selected {
-	background-color: #3d3d3d;
-	color: #ecf0f1;
-	border-radius: 0.125em;
-}
-QListWidget::item:hover {
-	background-color: #4c4b4b;
-	color: #ecf0f1;
 	border-radius: 0.25em;
 }
 
