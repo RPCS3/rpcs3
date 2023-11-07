@@ -60,7 +60,7 @@ jobs:
       export AVVER="${COMM_TAG}-${COMM_COUNT}"
 
       .ci/github-upload.sh
-    condition: and(ne(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.Repository.Name'], 'RPCS3/rpcs3'), eq(variables['Build.SourceBranch'], 'refs/heads/master'), eq(variables['COMPILER'], 'gcc'))
+    condition: and(ne(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.Repository.Name'], 'RPCS3/rpcs3'), eq(variables['Build.SourceBranch'], 'refs/heads/master'), eq(variables['COMPILER'], 'clang'))
     displayName: Push build to GitHub
     env:
       RPCS3_TOKEN: $(RPCS3-Token)
