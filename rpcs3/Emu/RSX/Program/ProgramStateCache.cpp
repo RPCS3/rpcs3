@@ -50,7 +50,6 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 	{
 		u32 current_instruction = start;
 		std::set<u32> conditional_targets;
-		bool has_printed_error = false;
 
 		while (true)
 		{
@@ -60,21 +59,13 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 			{
 				if (!fast_exit)
 				{
-					if (!has_printed_error)
-					{
-						// This can be harmless if a dangling RET was encountered before.
-						// This can also be legal in case of BRB...BRI loops since BRIs are conditional. Might just be a loop with exit cond.
-						rsx_log.warning("vp_analyser: Possible infinite loop detected");
-						has_printed_error = true;
-					}
-					current_instruction++;
-					continue;
+					// This can be harmless if a dangling RET was encountered before.
+					// This can also be legal in case of BRB...BRI loops since BRIs are conditional. Might just be a loop with exit cond.
+					rsx_log.warning("vp_analyser: Possible infinite loop detected");
 				}
-				else
-				{
-					// Block walk, looking for earliest exit
-					break;
-				}
+
+				// There is never any reason to continue scanning after self-intersecting on the control-flow tree.
+				break;
 			}
 
 			const auto instruction = v128::loadu(&data[current_instruction * 4]);
@@ -212,9 +203,23 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 			}
 			}
 
-			if ((d3.end && (fast_exit || current_instruction >= instruction_range.second)) ||
-				(current_instruction + 1) == rsx::max_vertex_program_instructions)
+			// Check exit conditions...
+			if (d3.end)
 			{
+				// We have seen an end of instructions marker.
+				// Multiple exits may exist, usually skipped over by branching. Do not exit on end unless there is no branching.
+				if (!has_branch_instruction || fast_exit || current_instruction >= instruction_range.second)
+				{
+					// Conditions:
+					// 1. No branching so far. This will always be the exit.
+					// 2. Fast exit flag is set. This happens when walking through subroutines.
+					// 3. We've gone beyond the known instruction range. In this scenario, this is the furthest end marker seen so far. It has to be reached by some earlier branch.
+					break;
+				}
+			}
+			else if ((current_instruction + 1) == rsx::max_vertex_program_instructions)
+			{
+				// No more instructions to read.
 				break;
 			}
 
