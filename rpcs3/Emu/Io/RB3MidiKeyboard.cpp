@@ -23,27 +23,42 @@ usb_device_rb3_midi_keyboard::usb_device_rb3_midi_keyboard(const std::array<u8, 
 	midi_in = rtmidi_in_create_default();
 	ensure(midi_in);
 
-	rb3_midi_keyboard_log.notice("Using %s API", rtmidi_api_name(rtmidi_in_get_current_api(midi_in)));
-
 	if (!midi_in->ok)
 	{
 		rb3_midi_keyboard_log.error("Could not get MIDI in ptr: %s", midi_in->msg);
 		return;
 	}
 
-	const s32 port_count = rtmidi_get_port_count(midi_in);
+	const RtMidiApi api = rtmidi_in_get_current_api(midi_in);
 
-	if (port_count == -1)
+	if (!midi_in->ok)
+	{
+		rb3_midi_keyboard_log.error("Could not get MIDI api: %s", midi_in->msg);
+		return;
+	}
+
+	if (const char* api_name = rtmidi_api_name(api))
+	{
+		rb3_midi_keyboard_log.notice("Using %s api", api_name);
+	}
+	else
+	{
+		rb3_midi_keyboard_log.warning("Could not get MIDI api name");
+	}
+
+	const u32 port_count = rtmidi_get_port_count(midi_in);
+
+	if (!midi_in->ok || port_count == umax)
 	{
 		rb3_midi_keyboard_log.error("Could not get MIDI port count: %s", midi_in->msg);
 		return;
 	}
 
-	for (s32 port_number = 0; port_number < port_count; port_number++)
+	for (u32 port_number = 0; port_number < port_count; port_number++)
 	{
 		char buf[128]{};
 		s32 size = sizeof(buf);
-		if (rtmidi_get_port_name(midi_in, port_number, buf, &size) == -1)
+		if (rtmidi_get_port_name(midi_in, port_number, buf, &size) == -1 || !midi_in->ok)
 		{
 			rb3_midi_keyboard_log.error("Error getting port name for port %d: %s", port_number, midi_in->msg);
 			return;
@@ -54,6 +69,13 @@ usb_device_rb3_midi_keyboard::usb_device_rb3_midi_keyboard(const std::array<u8, 
 		if (device_name == buf)
 		{
 			rtmidi_open_port(midi_in, port_number, "RPCS3 MIDI Keyboard Input");
+
+			if (!midi_in->ok)
+			{
+				rb3_midi_keyboard_log.error("Could not open port %d for device '%s': %s", port_number, device_name, midi_in->msg);
+				return;
+			}
+
 			rb3_midi_keyboard_log.success("Connected to device: %s", device_name);
 			return;
 		}
