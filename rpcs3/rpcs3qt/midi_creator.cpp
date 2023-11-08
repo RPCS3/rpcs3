@@ -27,27 +27,42 @@ void midi_creator::refresh_list()
 	std::unique_ptr<RtMidiWrapper, decltype(deleter)> midi_in(rtmidi_in_create_default());
 	ensure(midi_in);
 
-	cfg_log.notice("MIDI: Using %s api", rtmidi_api_name(rtmidi_in_get_current_api(midi_in.get())));
-
 	if (!midi_in->ok)
 	{
 		cfg_log.error("Could not get MIDI in ptr: %s", midi_in->msg);
 		return;
 	}
 
-	const s32 port_count = rtmidi_get_port_count(midi_in.get());
+	const RtMidiApi api = rtmidi_in_get_current_api(midi_in.get());
 
-	if (port_count == -1)
+	if (!midi_in->ok)
+	{
+		cfg_log.error("Could not get MIDI api: %s", midi_in->msg);
+		return;
+	}
+
+	if (const char* api_name = rtmidi_api_name(api))
+	{
+		cfg_log.notice("MIDI: Using %s api", api_name);
+	}
+	else
+	{
+		cfg_log.warning("Could not get MIDI api name");
+	}
+
+	const u32 port_count = rtmidi_get_port_count(midi_in.get());
+
+	if (!midi_in->ok || port_count == umax)
 	{
 		cfg_log.error("Could not get MIDI port count: %s", midi_in->msg);
 		return;
 	}
 
-	for (s32 port_number = 0; port_number < port_count; port_number++)
+	for (u32 port_number = 0; port_number < port_count; port_number++)
 	{
 		char buf[128]{};
 		s32 size = sizeof(buf);
-		if (rtmidi_get_port_name(midi_in.get(), port_number, buf, &size) == -1)
+		if (rtmidi_get_port_name(midi_in.get(), port_number, buf, &size) == -1 || !midi_in->ok)
 		{
 			cfg_log.error("Error getting MIDI port name for port %d: %s", port_number, midi_in->msg);
 			continue;
