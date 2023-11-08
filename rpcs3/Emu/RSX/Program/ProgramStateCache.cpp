@@ -62,8 +62,9 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 				{
 					if (!has_printed_error)
 					{
-						// This can be harmless if a dangling RET was encountered before
-						rsx_log.error("vp_analyser: Possible infinite loop detected");
+						// This can be harmless if a dangling RET was encountered before.
+						// This can also be legal in case of BRB...BRI loops since BRIs are conditional. Might just be a loop with exit cond.
+						rsx_log.warning("vp_analyser: Possible infinite loop detected");
 						has_printed_error = true;
 					}
 					current_instruction++;
@@ -286,6 +287,17 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 			{
 				v128::storeu({}, dst);
 			}
+		}
+
+		// Typical ubershaders have the dispatch at the top with subroutines following. However...
+		// some games have the dispatch block at the end and the subroutines above them.
+		// We need to simulate a jump-to-entry in this situation
+		// Normally this condition is handled by the conditional_targets walk, but sometimes this doesn't work due to cyclic branches
+		if (instruction_range.first < dst_prog.entry)
+		{
+			// Is there a subroutine that jumps into the entry? If not, add to jump table
+			const auto target = dst_prog.entry - instruction_range.first;
+			dst_prog.jump_table.insert(target);
 		}
 
 		// Verification

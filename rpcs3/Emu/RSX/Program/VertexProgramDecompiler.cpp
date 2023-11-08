@@ -445,7 +445,7 @@ std::string VertexProgramDecompiler::Decompile()
 	const auto& data = m_prog.data;
 	m_instr_count = data.size() / 4;
 
-	bool is_has_BRA = false;
+	bool has_BRA = false;
 	bool program_end = false;
 	u32 i = 1;
 	u32 last_label_addr = 0;
@@ -527,7 +527,7 @@ std::string VertexProgramDecompiler::Decompile()
 		}
 	};
 
-	if (is_has_BRA || !m_prog.jump_table.empty())
+	if (has_BRA || !m_prog.jump_table.empty())
 	{
 		m_cur_instr = &m_instructions[0];
 
@@ -573,7 +573,7 @@ std::string VertexProgramDecompiler::Decompile()
 		{
 			//TODO: Subroutines can also have arbitrary jumps!
 			u32 jump_position = find_jump_lvl(i);
-			if (is_has_BRA || jump_position != umax)
+			if (has_BRA || jump_position != umax)
 			{
 				m_cur_instr->close_scopes++;
 				AddCode("}");
@@ -782,7 +782,7 @@ std::string VertexProgramDecompiler::Decompile()
 		}
 	}
 
-	if (is_has_BRA || !m_prog.jump_table.empty())
+	if (has_BRA || !m_prog.jump_table.empty())
 	{
 		m_cur_instr = &m_instructions[m_instr_count - 1];
 		m_cur_instr->close_scopes++;
