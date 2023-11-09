@@ -108,7 +108,7 @@ std::vector<std::pair<u16, u16>> get_savestate_versioning_data(fs::file&& file)
 	u64 offs = 0;
 	file.read(offs);
 
-    const usz fsize = file.size();
+	const usz fsize = file.size();
 
 	if (!offs || fsize <= offs)
 	{
