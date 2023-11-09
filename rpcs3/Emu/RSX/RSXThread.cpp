@@ -24,6 +24,7 @@
 #include "Program/GLSLCommon.h"
 #include "Utilities/date_time.h"
 #include "Utilities/StrUtil.h"
+#include "Crypto/unzip.h"
 
 #include "util/serialization.hpp"
 #include "util/asm.hpp"
@@ -3588,13 +3589,22 @@ namespace rsx
 		{
 			capture_current_frame = false;
 
-			const std::string file_path = fs::get_config_dir() + "captures/" + Emu.GetTitleID() + "_" + date_time::current_time_narrow() + "_capture.rrc";
+			std::string file_path = fs::get_config_dir() + "captures/" + Emu.GetTitleID() + "_" + date_time::current_time_narrow() + "_capture.rrc";
 
-			// todo: may want to compress this data?
 			utils::serial save_manager;
 			save_manager.reserve(0x800'0000); // 128MB
 
 			save_manager(frame_capture);
+
+			if (std::vector<u8> zipped = zip(save_manager.data); !zipped.empty())
+			{
+				file_path += ".gz";
+				save_manager.data = std::move(zipped);
+			}
+			else
+			{
+				rsx_log.error("Failed to compress capture");
+			}
 
 			fs::pending_file temp(file_path);
 
