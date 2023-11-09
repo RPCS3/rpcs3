@@ -38,6 +38,7 @@
 #include "Utilities/StrUtil.h"
 
 #include "../Crypto/unself.h"
+#include "../Crypto/unzip.h"
 #include "util/logs.hpp"
 #include "util/serialization.hpp"
 
@@ -714,6 +715,16 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	load.set_reading_state();
 	in_file.read(load.data, in_file.size());
 	load.data.shrink_to_fit();
+
+	if (fmt::to_lower(path).ends_with(".gz"))
+	{
+		load.data = unzip(load.data);
+		if (load.data.empty())
+		{
+			sys_log.error("Failed to unzip rsx capture file!");
+			return false;
+		}
+	}
 
 	load(*frame);
 	in_file.close();

@@ -654,7 +654,7 @@ void main_window::BootRsxCapture(std::string path)
 			is_stopped = true;
 		}
 
-		const QString file_path = QFileDialog::getOpenFileName(this, tr("Select RSX Capture"), qstr(fs::get_config_dir() + "captures/"), tr("RRC files (*.rrc *.RRC);;All files (*.*)"));
+		const QString file_path = QFileDialog::getOpenFileName(this, tr("Select RSX Capture"), qstr(fs::get_config_dir() + "captures/"), tr("RRC files (*.rrc *.RRC *.rrc.gz *.RRC.GZ);;All files (*.*)"));
 
 		if (file_path.isEmpty())
 		{
@@ -3553,7 +3553,7 @@ main_window::drop_type main_window::IsValidFile(const QMimeData& md, QStringList
 		}
 		else if (m_drop_file_url_list.size() == 1)
 		{
-			if (suffix_lo == "rrc")
+			if (suffix_lo == "rrc" || path.toLower().endsWith(".rrc.gz"))
 			{
 				type = drop_type::drop_rrc;
 			}
