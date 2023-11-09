@@ -453,7 +453,7 @@ namespace utils
 
 			const usz end_pos = pos + sizeof(T);
 			const usz size = get_size(end_pos);
-	 		using type = std::remove_const_t<T>;
+			using type = std::remove_const_t<T>;
 
 			if (size >= end_pos)
 			{

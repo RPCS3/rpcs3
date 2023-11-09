@@ -715,17 +715,20 @@ bool Emulator::BootRsxCapture(const std::string& path)
 
 	std::unique_ptr<rsx::frame_capture_data> frame = std::make_unique<rsx::frame_capture_data>();
 	utils::serial load;
-	load.m_file_handler = make_uncompressed_serialization_file_handler(std::move(in_file));
 	load.set_reading_state();
 
 	if (fmt::to_lower(path).ends_with(".gz"))
 	{
-		load.data = unzip(load.data);
+		load.data = unzip(in_file.to_vector<u8>());
 		if (load.data.empty())
 		{
 			sys_log.error("Failed to unzip rsx capture file!");
 			return false;
 		}
+	}
+	else
+	{
+		load.m_file_handler = make_uncompressed_serialization_file_handler(std::move(in_file));
 	}
 
 	load(*frame);
