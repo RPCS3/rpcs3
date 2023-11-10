@@ -2389,6 +2389,9 @@
     <ClInclude Include="Crypto\unzip.h">
       <Filter>Crypto</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\savestate_utils.hpp">
+      <Filter>Emu</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Emu\RSX\Program\GLSLSnippets\GPUDeswizzle.glsl">

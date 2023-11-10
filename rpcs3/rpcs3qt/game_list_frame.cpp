@@ -1078,7 +1078,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		});
 	}
 
-	extern bool is_savestate_compatible(const fs::file& file);
+	extern bool is_savestate_compatible(fs::file&& file);
 
 	if (const std::string sstate = get_savestate_file(current_game.serial, current_game.path, 0, 0); is_savestate_compatible(fs::file(sstate)))
 	{

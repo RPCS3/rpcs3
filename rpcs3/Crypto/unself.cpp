@@ -351,10 +351,10 @@ void MetadataInfo::Show() const
 	std::string iv_pad_str;
 	for (int i = 0; i < 0x10; i++)
 	{
-		key_str += fmt::format("%02x", key[i]);
-		key_pad_str += fmt::format("%02x", key_pad[i]);
-		iv_str += fmt::format("%02x", iv[i]);
-		iv_pad_str += fmt::format("%02x", iv_pad[i]);
+		fmt::append(key_str, "%02x", key[i]);
+		fmt::append(key_pad_str, "%02x", key_pad[i]);
+		fmt::append(iv_str, "%02x", iv[i]);
+		fmt::append(iv_pad_str, "%02x", iv_pad[i]);
 	}
 
 	self_log.notice("Key: %s", key_str.c_str());

@@ -251,6 +251,12 @@ namespace stx
 					*m_order++ = data;
 					*m_info++ = &type;
 					m_init[id] = true;
+
+					if (ar)
+					{
+						extern void serial_breathe(utils::serial& ar);
+						serial_breathe(*ar);
+					}
 				}
 			}
 
@@ -310,7 +316,8 @@ namespace stx
 			}
 		}
 
-		void save(utils::serial& ar)
+		template <typename T> requires (std::is_same_v<T&, utils::serial&>)
+		void save(T& ar)
 		{
 			if (!is_init())
 			{
@@ -332,7 +339,11 @@ namespace stx
 			// Save data in forward order
 			for (u32 i = _max; i; i--)
 			{
-				if (auto save = (*std::prev(m_info, i))->save) save(*std::prev(m_order, i), ar);
+				if (auto save = (*std::prev(m_info, i))->save)
+				{
+					save(*std::prev(m_order, i), ar);
+					ar.breathe();
+				}
 			}
 		}
 

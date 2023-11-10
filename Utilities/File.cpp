@@ -2255,8 +2255,22 @@ fs::file fs::make_gather(std::vector<fs::file> files)
 	return result;
 }
 
-fs::pending_file::pending_file(std::string_view path)
+bool fs::pending_file::open(std::string_view path)
 {
+	file.close();
+
+	if (!m_path.empty())
+	{
+		fs::remove_file(m_path);
+	}
+
+	if (path.empty())
+	{
+		fs::g_tls_error = fs::error::noent;
+		m_dest.clear();
+		return false;
+	}
+
 	do
 	{
 		m_path = fmt::format(u8"%s/＄%s.%s.tmp", get_parent_dir(path), path.substr(path.find_last_of(fs::delim) + 1), fmt::base57(utils::get_unique_tsc()));
@@ -2270,6 +2284,8 @@ fs::pending_file::pending_file(std::string_view path)
 		m_path.clear();
 	}
 	while (fs::g_tls_error == fs::error::exist); // Only retry if failed due to existing file
+
+	return file.operator bool();
 }
 
 fs::pending_file::~pending_file()
@@ -2284,7 +2300,7 @@ fs::pending_file::~pending_file()
 
 bool fs::pending_file::commit(bool overwrite)
 {
-	if (!file || m_path.empty())
+	if (m_path.empty())
 	{
 		fs::g_tls_error = fs::error::noent;
 		return false;
@@ -2292,7 +2308,11 @@ bool fs::pending_file::commit(bool overwrite)
 
 	// The temporary file's contents must be on disk before rename
 #ifndef _WIN32
-	file.sync();
+	if (file)
+	{
+		file.sync();
+	}
+
 #endif
 	file.close();
 

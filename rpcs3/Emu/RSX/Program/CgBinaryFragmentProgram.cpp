@@ -12,13 +12,13 @@ void CgBinaryDisasm::AddCodeAsm(const std::string& code)
 
 	if (dst.dest_reg == 63)
 	{
-		m_dst_reg_name = fmt::format("RC%s, ", GetMask().c_str());
+		m_dst_reg_name = fmt::format("RC%s, ", GetMask());
 		op_name = rsx_fp_op_names[m_opcode] + "XC";
 	}
 
 	else
 	{
-		m_dst_reg_name = fmt::format("%s%d%s, ", dst.fp16 ? "H" : "R", dst.dest_reg, GetMask().c_str());
+		m_dst_reg_name = fmt::format("%s%d%s, ", dst.fp16 ? "H" : "R", dst.dest_reg, GetMask());
 		op_name = rsx_fp_op_names[m_opcode] + std::string(dst.fp16 ? "H" : "R");
 	}
 
@@ -181,7 +181,7 @@ template<typename T> std::string CgBinaryDisasm::GetSrcDisAsm(T src)
 			{
 				const std::string perspective_correction = src2.perspective_corr ? "g" : "f";
 				const std::string input_attr_reg         = reg_table[dst.src_attr_reg_num];
-				ret += fmt::format("%s[%s]", perspective_correction.c_str(), input_attr_reg.c_str());
+				fmt::append(ret, "%s[%s]", perspective_correction, input_attr_reg);
 			}
 			else
 			{
