@@ -720,6 +720,8 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	if (fmt::to_lower(path).ends_with(".gz"))
 	{
 		load.data = unzip(in_file.to_vector<u8>());
+		in_file.close();
+
 		if (load.data.empty())
 		{
 			sys_log.error("Failed to unzip rsx capture file!");
@@ -732,7 +734,6 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	}
 
 	load(*frame);
-	in_file.close();
 
 	if (frame->magic != rsx::c_fc_magic)
 	{
