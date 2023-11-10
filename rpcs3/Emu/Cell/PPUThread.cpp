@@ -3540,7 +3540,7 @@ namespace
 
 		u64 read_at(u64 offset, void* buffer, u64 size) override
 		{
-			return m_file.read_at(m_off + m_pos, buffer, std::min<u64>(size, utils::sub_saturate<u64>(m_max_size, m_pos)));
+			return m_file.read_at(offset + m_off, buffer, std::min<u64>(size, utils::sub_saturate<u64>(m_max_size, m_pos)));
 		}
 
 		u64 write(const void*, u64) override
