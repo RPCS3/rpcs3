@@ -1145,7 +1145,7 @@ namespace utils
 					av_packet_rescale_ts(ctx.packet, ctx.context->time_base, ctx.stream->time_base);
 					ctx.packet->stream_index = ctx.stream->index;
 
-					if (int err = av_write_frame(av.format_context, ctx.packet); err < 0)
+					if (int err = av_interleaved_write_frame(av.format_context, ctx.packet); err < 0)
 					{
 						media_log.error("video_encoder: av_write_frame failed. Error: %d='%s'", err, av_error_to_string(err));
 						has_error = true;
