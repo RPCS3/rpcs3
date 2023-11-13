@@ -610,7 +610,7 @@ void rec_info::start_video_provider()
 			if (use_external_audio && audio_input_buffer)
 			{
 				// 2-channel interleaved (left-right), 256 samples, float
-				std::array<f32, 2 * 256> audio_data{};
+				std::array<f32, 2 * CELL_REC_AUDIO_BLOCK_SAMPLES> audio_data{};
 				std::memcpy(audio_data.data(), audio_input_buffer.get_ptr(), audio_data.size() * sizeof(f32));
 
 				// TODO: mix audio with param.audio_input_mix_vol
