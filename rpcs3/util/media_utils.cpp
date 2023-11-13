@@ -302,12 +302,12 @@ namespace utils
 	static int select_sample_rate(const AVCodec* codec)
 	{
 		if (!codec->supported_samplerates)
-			return 44100;
+			return 48000;
 
 		int best_samplerate = 0;
 		for (const int* samplerate = codec->supported_samplerates; samplerate && *samplerate != 0; samplerate++)
 		{
-			if (!best_samplerate || abs(44100 - *samplerate) < abs(44100 - best_samplerate))
+			if (!best_samplerate || abs(48000 - *samplerate) < abs(48000 - best_samplerate))
 			{
 				best_samplerate = *samplerate;
 			}
