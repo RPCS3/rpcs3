@@ -1432,7 +1432,7 @@ namespace utils
 								else if (pts > (last_audio_pts + 1))
 								{
 									// Add silence to fill the gap
-									const u32 silence_to_add = pts - (last_audio_pts + 1);
+									const u32 silence_to_add = static_cast<u32>(pts - (last_audio_pts + 1));
 									add_encoder_sample(false, silence_to_add);
 								}
 								else if (sample == 0)
