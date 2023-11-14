@@ -26,7 +26,7 @@ namespace utils
 			m_frames_to_encode.emplace_back(timestamp_ms, pitch, width, height, pixel_format, std::move(frame));
 		}
 
-		void add_audio_samples(u8* buf, u32 sample_count, u16 channels, usz timestamp_us)
+		void add_audio_samples(const u8* buf, u32 sample_count, u16 channels, usz timestamp_us)
 		{
 			// Do not allow new samples while flushing
 			if (m_flush || !buf || !sample_count || !channels)
@@ -51,12 +51,14 @@ namespace utils
 
 		usz get_timestamp_ms(s64 pts) const
 		{
-			return static_cast<usz>(std::round((pts * 1000) / static_cast<float>(m_framerate)));
+			return static_cast<usz>(std::round((pts * 1000) / static_cast<f32>(m_framerate)));
 		}
 
 		usz get_audio_timestamp_us(s64 pts) const
 		{
-			return static_cast<usz>(std::round((pts * 1000) / static_cast<float>(m_sample_rate)));
+			static constexpr f32 us_per_sec = 1000000.0f;
+			const f32 us_per_block = us_per_sec / (m_sample_rate / static_cast<f32>(m_samples_per_block));
+			return static_cast<usz>(pts * us_per_block);
 		}
 
 		atomic_t<bool> has_error{false};
