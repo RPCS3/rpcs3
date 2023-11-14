@@ -27,7 +27,7 @@ namespace utils
 		void present_samples(u8* buf, u32 sample_count, u16 channels);
 
 	private:
-		recording_mode check_state();
+		recording_mode check_mode();
 
 		recording_mode m_type = recording_mode::stopped;
 		std::shared_ptr<video_sink> m_video_sink;

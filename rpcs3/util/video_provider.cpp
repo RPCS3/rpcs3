@@ -84,7 +84,7 @@ namespace utils
 	{
 		std::lock_guard lock(m_mutex);
 
-		if (!m_video_sink)
+		if (!m_video_sink || !m_video_sink->use_internal_video)
 			return false;
 
 		const usz timestamp_ms = std::chrono::duration_cast<std::chrono::milliseconds>(steady_clock::now() - m_encoder_start).count() - m_pause_time_ms;
@@ -92,7 +92,7 @@ namespace utils
 		return pts > m_last_video_pts_incoming;
 	}
 
-	recording_mode video_provider::check_state()
+	recording_mode video_provider::check_mode()
 	{
 		if (!m_video_sink || m_video_sink->has_error)
 		{
@@ -125,7 +125,7 @@ namespace utils
 	{
 		std::lock_guard lock(m_mutex);
 
-		if (check_state() == recording_mode::stopped)
+		if (check_mode() == recording_mode::stopped)
 		{
 			return;
 		}
@@ -149,7 +149,7 @@ namespace utils
 	{
 		std::lock_guard lock(m_mutex);
 
-		if (!m_video_sink)
+		if (!m_video_sink || !m_video_sink->use_internal_audio)
 			return false;
 
 		const usz timestamp_us = std::chrono::duration_cast<std::chrono::microseconds>(steady_clock::now() - m_encoder_start).count() - (m_pause_time_ms * 1000ull);
@@ -166,7 +166,7 @@ namespace utils
 
 		std::lock_guard lock(m_mutex);
 
-		if (check_state() == recording_mode::stopped)
+		if (check_mode() == recording_mode::stopped)
 		{
 			return;
 		}
