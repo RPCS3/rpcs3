@@ -357,7 +357,6 @@ namespace utils
 		track_fully_consumed = 0;
 		has_error = false;
 		m_size = 0;
-		duration_ms = 0;
 		timestamps_ms.clear();
 		data.clear();
 	}
@@ -490,8 +489,6 @@ namespace utils
 				has_error = true;
 				return;
 			}
-
-			duration_ms = stream->duration / 1000;
 
 			AVPacket* packet = av_packet_alloc();
 			std::unique_ptr<AVPacket, decltype([](AVPacket* p){av_packet_unref(p);})> packet_(packet);

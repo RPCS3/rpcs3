@@ -76,7 +76,6 @@ namespace utils
 		const s32 sample_rate = 48000;
 		std::vector<u8> data;
 		atomic_t<u64> m_size = 0;
-		atomic_t<u64> duration_ms = 0;
 		atomic_t<u32> track_fully_decoded{0};
 		atomic_t<u32> track_fully_consumed{0};
 		atomic_t<bool> has_error{false};
