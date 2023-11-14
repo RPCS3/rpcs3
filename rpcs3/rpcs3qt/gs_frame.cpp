@@ -495,6 +495,8 @@ void gs_frame::toggle_recording()
 		output_format.height = g_cfg_recording.video.height;
 		output_format.pitch = g_cfg_recording.video.width * 4;
 
+		m_video_encoder->use_internal_audio = true;
+		m_video_encoder->use_internal_video = true;
 		m_video_encoder->set_path(video_path);
 		m_video_encoder->set_framerate(g_cfg_recording.video.framerate);
 		m_video_encoder->set_video_bitrate(g_cfg_recording.video.video_bps);

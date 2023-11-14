@@ -91,6 +91,10 @@ namespace utils
 			std::vector<u8> data;
 		};
 
+		// These two variables should only be set once before we start encoding, so we don't need mutexes or atomics.
+		bool use_internal_audio = false; // True if we want to fetch samples from cellAudio
+		bool use_internal_video = false; // True if we want to fetch frames from rsx
+
 	protected:
 		shared_mutex m_mtx;
 		std::deque<encoder_frame> m_frames_to_encode;
