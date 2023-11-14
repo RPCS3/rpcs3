@@ -136,6 +136,23 @@ struct rec_param
 			video_input, audio_input, audio_input_mix_vol, reduce_memsize, show_xmb, filename, metadata_filename, spurs_param.pSpurs, spurs_param.spu_usage_rate,
 			priority, movie_metadata.to_string(), scene_metadata.to_string());
 	}
+
+	bool use_external_audio() const
+	{
+		return audio_input != CELL_REC_PARAM_AUDIO_INPUT_DISABLE             // != DISABLE means that cellRec will add samples on its own
+			&& audio_input_mix_vol > CELL_REC_PARAM_AUDIO_INPUT_MIX_VOL_MIN; // We need to mix cellRec audio with internal audio
+	}
+
+	bool use_internal_audio() const
+	{
+		return audio_input == CELL_REC_PARAM_AUDIO_INPUT_DISABLE             // DISABLE means that cellRec won't add samples on its own
+		    || audio_input_mix_vol < CELL_REC_PARAM_AUDIO_INPUT_MIX_VOL_MAX; // We need to mix cellRec audio with internal audio
+	}
+
+	bool use_internal_video() const
+	{
+		return video_input == CELL_REC_PARAM_VIDEO_INPUT_DISABLE; // DISABLE means that cellRec won't add frames on its own
+	}
 };
 
 constexpr u32 rec_framerate = 30; // Always 30 fps
@@ -146,7 +163,7 @@ public:
 	rec_video_sink() : utils::video_sink()
 	{
 		m_framerate = rec_framerate;
-		m_sample_rate = 44100; // TODO
+		m_sample_rate = 48000; // TODO
 	}
 
 	void stop(bool flush = true) override
@@ -169,6 +186,20 @@ public:
 			encoder_frame frame = std::move(m_frames_to_encode.front());
 			m_frames_to_encode.pop_front();
 			return frame;
+		}
+
+		return {};
+	}
+
+	encoder_sample get_sample()
+	{
+		std::lock_guard lock(m_mtx);
+
+		if (!m_samples_to_encode.empty())
+		{
+			encoder_sample block = std::move(m_samples_to_encode.front());
+			m_samples_to_encode.pop_front();
+			return block;
 		}
 
 		return {};
@@ -201,11 +232,12 @@ struct rec_info
 		return pos;
 	}
 
-	std::shared_ptr<rec_video_sink> video_sink;
+	std::shared_ptr<rec_video_sink> ringbuffer_sink;
 	std::shared_ptr<utils::video_encoder> encoder;
 	std::unique_ptr<named_thread<std::function<void()>>> video_provider_thread;
 	atomic_t<bool> paused = false;
-	s64 last_pts = -1;
+	s64 last_video_pts = -1;
+	s64 last_audio_pts = -1;
 
 	// Video parameters
 	utils::video_encoder::frame_format output_format{};
@@ -523,13 +555,13 @@ void rec_info::start_video_provider()
 
 	video_provider_thread = std::make_unique<named_thread<std::function<void()>>>("cellRec video provider", [this]()
 	{
-		const bool use_internal_audio = param.audio_input == CELL_REC_PARAM_AUDIO_INPUT_DISABLE || param.audio_input_mix_vol < 100;
-		const bool use_external_audio = param.audio_input != CELL_REC_PARAM_AUDIO_INPUT_DISABLE && param.audio_input_mix_vol > 0;
-		const bool use_external_video = param.video_input != CELL_REC_PARAM_VIDEO_INPUT_DISABLE;
+		const bool use_internal_audio = param.use_internal_audio();
+		const bool use_external_audio = param.use_external_audio();
+		const bool use_external_video = !param.use_internal_video();
 		const bool use_ring_buffer = param.ring_sec > 0;
 		const usz frame_size = input_format.pitch * input_format.height;
 
-		cellRec.notice("video_provider_thread: use_ring_buffer=%d, video_ringbuffer_size=%d, audio_ringbuffer_size=%d, ring_sec=%d, frame_size=%d, use_external_video=%d, use_external_audio=%d, use_internal_audio=%d", use_ring_buffer, video_ringbuffer.size(), audio_ringbuffer.size(), param.ring_sec, frame_size, use_external_video, use_external_audio, use_internal_audio);
+		cellRec.notice("video_provider_thread: use_ring_buffer=%d, video_ringbuffer_size=%d, audio_ringbuffer_size=%d, ring_sec=%d, frame_size=%d, use_internal_video=%d, use_external_audio=%d, use_internal_audio=%d", use_ring_buffer, video_ringbuffer.size(), audio_ringbuffer.size(), param.ring_sec, frame_size, encoder->use_internal_video, use_external_audio, encoder->use_internal_audio);
 
 		while (thread_ctrl::state() != thread_state::aborting && encoder)
 		{
@@ -555,18 +587,25 @@ void rec_info::start_video_provider()
 				continue;
 			}
 
-			const usz timestamp_ms = (get_system_time() - recording_time_start - pause_time_total) / 1000;
+			// We only care for new video frames or audio samples that can be properly encoded, so we check the timestamps and pts.
+			const usz timestamp_us = get_system_time() - recording_time_start - pause_time_total;
+			const usz timestamp_ms = timestamp_us / 1000;
 
-			// We only care for new video frames that can be properly encoded
+			/////////////////
+			//    VIDEO    //
+			/////////////////
+
 			// TODO: wait for flip before adding a frame
 			if (use_external_video)
 			{
-				if (const s64 pts = encoder->get_pts(timestamp_ms); pts > last_pts)
+				// The video frames originate from cellRec instead of our render pipeline.
+				if (const s64 pts = encoder->get_pts(timestamp_ms); pts > last_video_pts)
 				{
 					if (video_input_buffer)
 					{
 						if (use_ring_buffer)
 						{
+							// The video frames originate from cellRec and are stored in a ringbuffer.
 							utils::video_sink::encoder_frame& frame_data = video_ringbuffer[next_video_ring_pos()];
 							frame_data.pts = pts;
 							frame_data.width = input_format.width;
@@ -578,29 +617,35 @@ void rec_info::start_video_provider()
 						}
 						else
 						{
+							// The video frames originate from cellRec and are pushed to the encoder immediately.
 							std::vector<u8> frame(frame_size);
 							std::memcpy(frame.data(), video_input_buffer.get_ptr(), frame.size());
 							encoder->add_frame(frame, input_format.pitch, input_format.width, input_format.height, input_format.av_pixel_format, timestamp_ms);
 						}
 					}
 
-					last_pts = pts;
+					last_video_pts = pts;
 				}
 			}
-			else if (use_ring_buffer && video_sink)
+			else if (use_ring_buffer && ringbuffer_sink)
 			{
-				utils::video_sink::encoder_frame frame = video_sink->get_frame();
+				// The video frames originate from our render pipeline and are stored in a ringbuffer.
+				utils::video_sink::encoder_frame frame = ringbuffer_sink->get_frame();
 
-				if (const s64 pts = encoder->get_pts(frame.timestamp_ms); pts > last_pts && frame.data.size() > 0)
+				if (const s64 pts = encoder->get_pts(frame.timestamp_ms); pts > last_video_pts && frame.data.size() > 0)
 				{
 					ensure(frame.data.size() == frame_size);
 					utils::video_sink::encoder_frame& frame_data = video_ringbuffer[next_video_ring_pos()];
 					frame_data = std::move(frame);
 					frame_data.pts = pts;
-					last_pts = pts;
+					last_video_pts = pts;
 					video_ring_frame_count++;
 				}
 			}
+			//else
+			//{
+				// The video frames originate from our render pipeline and are directly encoded by the encoder video sink itself.
+			//}
 
 			if (use_internal_audio)
 			{
@@ -657,6 +702,9 @@ void rec_info::stop_video_provider(bool flush)
 		video_provider_thread.reset();
 	}
 
+	// Flush the ringbuffer if necessary.
+	// This should only happen if the video sink is not the encoder itself.
+	// In this case the encoder should have been idle until now.
 	if (flush && param.ring_sec > 0 && !video_ringbuffer.empty())
 	{
 		cellRec.notice("Flushing video ringbuffer.");
@@ -919,11 +967,11 @@ error_code cellRecOpen(vm::cptr<char> pDirName, vm::cptr<char> pFileName, vm::cp
 
 			if (opt.value.audio_input == CELL_REC_PARAM_AUDIO_INPUT_DISABLE)
 			{
-				rec.param.audio_input_mix_vol = 0;
+				rec.param.audio_input_mix_vol = CELL_REC_PARAM_AUDIO_INPUT_MIX_VOL_MIN;
 			}
 			else
 			{
-				rec.param.audio_input_mix_vol = 100;
+				rec.param.audio_input_mix_vol = CELL_REC_PARAM_AUDIO_INPUT_MIX_VOL_MAX;
 			}
 			break;
 		}
@@ -1043,7 +1091,7 @@ error_code cellRecOpen(vm::cptr<char> pDirName, vm::cptr<char> pFileName, vm::cp
 
 	rec.cb = cb;
 	rec.cbUserData = cbUserData;
-	rec.last_pts = -1;
+	rec.last_video_pts = -1;
 	rec.audio_ringbuffer.clear();
 	rec.video_ringbuffer.clear();
 	rec.video_ring_frame_count = 0;
@@ -1065,10 +1113,15 @@ error_code cellRecOpen(vm::cptr<char> pDirName, vm::cptr<char> pFileName, vm::cp
 		rec.audio_ringbuffer.resize(audio_ring_buffer_size);
 		rec.audio_ring_step = audio_size_per_sample;
 		rec.video_ringbuffer.resize(video_ring_buffer_size, {});
-		rec.video_sink = std::make_shared<rec_video_sink>();
+
+		rec.ringbuffer_sink = std::make_shared<rec_video_sink>();
+		rec.ringbuffer_sink->use_internal_audio = rec.param.use_internal_audio();
+		rec.ringbuffer_sink->use_internal_video = rec.param.use_internal_video();
 	}
 
 	rec.encoder = std::make_shared<utils::video_encoder>();
+	rec.encoder->use_internal_audio = rec.param.use_internal_audio() && !rec.ringbuffer_sink;
+	rec.encoder->use_internal_video = rec.param.use_internal_video() && !rec.ringbuffer_sink;
 	rec.encoder->set_path(vfs::get(rec.param.filename));
 	rec.encoder->set_framerate(rec.fps);
 	rec.encoder->set_video_bitrate(rec.video_bps);
@@ -1110,9 +1163,9 @@ error_code cellRecClose(s32 isDiscard)
 			rec.stop_video_provider(false);
 			rec.encoder->stop(false);
 
-			if (rec.video_sink)
+			if (rec.ringbuffer_sink)
 			{
-				rec.video_sink->stop(false);
+				rec.ringbuffer_sink->stop(false);
 			}
 
 			if (fs::is_file(rec.param.filename))
@@ -1132,9 +1185,9 @@ error_code cellRecClose(s32 isDiscard)
 			rec.encoder->stop(true);
 			rec.recording_time_total = rec.encoder->get_timestamp_ms(rec.encoder->last_video_pts());
 
-			if (rec.video_sink)
+			if (rec.ringbuffer_sink)
 			{
-				rec.video_sink->stop(true);
+				rec.ringbuffer_sink->stop(true);
 			}
 
 			const s64 start_pts = rec.encoder->get_pts(rec.param.scene_metadata.start_time);
@@ -1151,7 +1204,7 @@ error_code cellRecClose(s32 isDiscard)
 		utils::video_provider& video_provider = g_fxo->get<utils::video_provider>();
 
 		// Release the video sink if it was used
-		if (rec.param.video_input == CELL_REC_PARAM_VIDEO_INPUT_DISABLE)
+		if (rec.param.use_internal_video() || rec.param.use_internal_audio())
 		{
 			const recording_mode old_mode = g_recording_mode.exchange(recording_mode::stopped);
 
@@ -1168,7 +1221,7 @@ error_code cellRecClose(s32 isDiscard)
 
 		rec.param = {};
 		rec.encoder.reset();
-		rec.video_sink.reset();
+		rec.ringbuffer_sink.reset();
 		rec.audio_ringbuffer.clear();
 		rec.video_ringbuffer.clear();
 		rec.state = rec_state::closed;
@@ -1201,7 +1254,7 @@ error_code cellRecStop()
 	sysutil_register_cb([&rec](ppu_thread& ppu) -> s32
 	{
 		// Disable video sink if it was used
-		if (rec.param.video_input == CELL_REC_PARAM_VIDEO_INPUT_DISABLE)
+		if (rec.param.use_internal_video() || rec.param.use_internal_audio())
 		{
 			const recording_mode old_mode = g_recording_mode.exchange(recording_mode::stopped);
 
@@ -1248,12 +1301,12 @@ error_code cellRecStart()
 		utils::video_provider& video_provider = g_fxo->get<utils::video_provider>();
 
 		// Setup an video sink if it is needed
-		if (rec.param.video_input == CELL_REC_PARAM_VIDEO_INPUT_DISABLE)
+		if (rec.param.use_internal_video() || rec.param.use_internal_audio())
 		{
-			if (rec.param.ring_sec <= 0)
+			if (rec.ringbuffer_sink)
 			{
-				// Regular recording
-				if (!video_provider.set_video_sink(rec.encoder, recording_mode::cell))
+				// Ringbuffer recording. Use cellRec's custom video sink. The encoder will stay idle until we flush the ringbuffer.
+				if (!video_provider.set_video_sink(rec.ringbuffer_sink, recording_mode::cell))
 				{
 					cellRec.error("Failed to set video sink");
 					rec.cb(ppu, CELL_REC_STATUS_ERR, CELL_REC_ERROR_FATAL, rec.cbUserData);
@@ -1262,8 +1315,8 @@ error_code cellRecStart()
 			}
 			else
 			{
-				// Ringbuffer recording
-				if (!video_provider.set_video_sink(rec.video_sink, recording_mode::cell))
+				// Regular recording. The encoder also acts as sink, so it will encode frames and samples as soon as we add them to the sink.
+				if (!video_provider.set_video_sink(rec.encoder, recording_mode::cell))
 				{
 					cellRec.error("Failed to set video sink");
 					rec.cb(ppu, CELL_REC_STATUS_ERR, CELL_REC_ERROR_FATAL, rec.cbUserData);
