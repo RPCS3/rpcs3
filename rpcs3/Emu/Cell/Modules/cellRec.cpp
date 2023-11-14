@@ -155,7 +155,8 @@ struct rec_param
 	}
 };
 
-constexpr u32 rec_framerate = 30; // Always 30 fps
+static constexpr u32 rec_framerate = 30; // Always 30 fps
+static constexpr u32 rec_channels = 2; // Always 2 channels
 
 class rec_video_sink : public utils::video_sink
 {
@@ -219,16 +220,33 @@ struct rec_info
 	vm::bptr<u8> video_input_buffer{}; // Used by the game to inject a frame right before it would render a frame to the screen.
 	vm::bptr<u8> audio_input_buffer{}; // Used by the game to inject audio: 2-channel interleaved (left-right) * 256 samples * sizeof(f32) at 48000 kHz
 
+	// Wrapper for our audio data
+	struct audio_block
+	{
+		// 2-channel interleaved (left-right), 256 samples, float
+		static constexpr usz block_size = rec_channels * CELL_REC_AUDIO_BLOCK_SAMPLES * sizeof(f32);
+		std::array<u8, block_size> block{};
+		s64 pts{};
+	};
+
 	std::vector<utils::video_sink::encoder_frame> video_ringbuffer;
-	std::vector<u8> audio_ringbuffer;
+	std::vector<audio_block> audio_ringbuffer;
 	usz video_ring_pos = 0;
 	usz video_ring_frame_count = 0;
-	usz audio_ring_step = 0;
+	usz audio_ring_pos = 0;
+	usz audio_ring_block_count = 0;
 
 	usz next_video_ring_pos()
 	{
 		const usz pos = video_ring_pos;
 		video_ring_pos = (video_ring_pos + 1) % video_ringbuffer.size();
+		return pos;
+	}
+
+	usz next_audio_ring_pos()
+	{
+		const usz pos = audio_ring_pos;
+		audio_ring_pos = (audio_ring_pos + 1) % audio_ringbuffer.size();
 		return pos;
 	}
 
@@ -245,13 +263,13 @@ struct rec_info
 	u32 video_bps = 512000;
 	s32 video_codec_id = 12; // AV_CODEC_ID_MPEG4
 	s32 max_b_frames = 2;
-	const u32 fps = rec_framerate; // Always 30 fps
+	static constexpr u32 fps = rec_framerate; // Always 30 fps
 
 	// Audio parameters
 	u32 sample_rate = 48000;
 	u32 audio_bps = 64000;
 	s32 audio_codec_id = 86018; // AV_CODEC_ID_AAC
-	const u32 channels = 2; // Always 2 channels
+	static constexpr u32 channels = rec_channels; // Always 2 channels
 
 	// Recording duration
 	atomic_t<u64> recording_time_start = 0;
@@ -588,8 +606,7 @@ void rec_info::start_video_provider()
 			}
 
 			// We only care for new video frames or audio samples that can be properly encoded, so we check the timestamps and pts.
-			const usz timestamp_us = get_system_time() - recording_time_start - pause_time_total;
-			const usz timestamp_ms = timestamp_us / 1000;
+			const usz timestamp_ms = (get_system_time() - recording_time_start - pause_time_total) / 1000;
 
 			/////////////////
 			//    VIDEO    //
@@ -632,7 +649,7 @@ void rec_info::start_video_provider()
 				// The video frames originate from our render pipeline and are stored in a ringbuffer.
 				utils::video_sink::encoder_frame frame = ringbuffer_sink->get_frame();
 
-				if (const s64 pts = encoder->get_pts(frame.timestamp_ms); pts > last_video_pts && frame.data.size() > 0)
+				if (const s64 pts = encoder->get_pts(frame.timestamp_ms); pts > last_video_pts && !frame.data.empty())
 				{
 					ensure(frame.data.size() == frame_size);
 					utils::video_sink::encoder_frame& frame_data = video_ringbuffer[next_video_ring_pos()];
@@ -647,34 +664,75 @@ void rec_info::start_video_provider()
 				// The video frames originate from our render pipeline and are directly encoded by the encoder video sink itself.
 			//}
 
-			if (use_internal_audio)
-			{
-				// TODO: fetch audio
-			}
+			/////////////////
+			//    AUDIO    //
+			/////////////////
 
-			if (use_external_audio && audio_input_buffer)
-			{
-				// 2-channel interleaved (left-right), 256 samples, float
-				std::array<f32, 2 * CELL_REC_AUDIO_BLOCK_SAMPLES> audio_data{};
-				std::memcpy(audio_data.data(), audio_input_buffer.get_ptr(), audio_data.size() * sizeof(f32));
+			const usz timestamp_us = get_system_time() - recording_time_start - pause_time_total;
 
-				// TODO: mix audio with param.audio_input_mix_vol
-			}
+			// TODO: mix external and internal audio with param.audio_input_mix_vol
+			// TODO: mix channels if necessary
+			if (use_external_audio)
+			{
+				// The audio samples originate from cellRec instead of our render pipeline.
+				// TODO: This needs to be synchronized with the game somehow if possible.
+				if (const s64 pts = encoder->get_audio_pts(timestamp_us); pts > last_audio_pts)
+				{
+					if (audio_input_buffer)
+					{
+						if (use_ring_buffer)
+						{
+							// The audio samples originate from cellRec and are stored in a ringbuffer.
+							audio_block& sample_block = audio_ringbuffer[next_audio_ring_pos()];
+							std::memcpy(sample_block.block.data(), audio_input_buffer.get_ptr(), sample_block.block.size());
+							sample_block.pts = pts;
+							audio_ring_block_count++;
+						}
+						else
+						{
+							// The audio samples originate from cellRec and are pushed to the encoder immediately.
+							encoder->add_audio_samples(audio_input_buffer.get_ptr(), CELL_REC_AUDIO_BLOCK_SAMPLES, channels, timestamp_us);
+						}
+					}
 
-			if (use_ring_buffer)
-			{
-				// TODO: add audio properly
-				//std::memcpy(&ringbuffer[get_ring_pos(pts) + ring_audio_offset], audio_data.data(), audio_data.size());
+					last_audio_pts = pts;
+				}
 			}
-			else
+			else if (use_ring_buffer && ringbuffer_sink && use_internal_audio)
 			{
-				// TODO: add audio to encoder
+				// The audio samples originate from cellAudio and are stored in a ringbuffer.
+				utils::video_sink::encoder_sample sample = ringbuffer_sink->get_sample();
+
+				if (!sample.data.empty() && sample.channels >= 2 && sample.sample_count >= CELL_REC_AUDIO_BLOCK_SAMPLES)
+				{
+					s64 pts = encoder->get_audio_pts(sample.timestamp_us);
+
+					// Each encoder_sample can have more than one block
+					for (usz i = 0; i < sample.sample_count; i += CELL_REC_AUDIO_BLOCK_SAMPLES)
+					{
+						if (pts > last_audio_pts)
+						{
+							audio_block& sample_block = audio_ringbuffer[next_audio_ring_pos()];
+							std::memcpy(sample_block.block.data(), &sample.data[i * channels * sizeof(f32)], sample_block.block.size());
+							sample_block.pts = pts;
+							last_audio_pts = pts;
+							audio_ring_block_count++;
+						}
+
+						// Increase pts for each sample block
+						pts++;
+					}
+				}
 			}
+			//else
+			//{
+				// The audio samples originate from cellAudio and are directly encoded by the encoder video sink itself.
+			//}
 
 			// Update recording time
 			recording_time_total = encoder->get_timestamp_ms(encoder->last_video_pts());
 
-			thread_ctrl::wait_for(100);
+			thread_ctrl::wait_for(1);
 		}
 	});
 }
@@ -705,7 +763,7 @@ void rec_info::stop_video_provider(bool flush)
 	// Flush the ringbuffer if necessary.
 	// This should only happen if the video sink is not the encoder itself.
 	// In this case the encoder should have been idle until now.
-	if (flush && param.ring_sec > 0 && !video_ringbuffer.empty())
+	if (flush && param.ring_sec > 0 && (!video_ringbuffer.empty() || !audio_ringbuffer.empty()))
 	{
 		cellRec.notice("Flushing video ringbuffer.");
 
@@ -714,19 +772,51 @@ void rec_info::stop_video_provider(bool flush)
 		ensure(encoder);
 
 		const usz frame_count = std::min(video_ringbuffer.size(), video_ring_frame_count);
-		const usz start_offset = video_ring_frame_count < video_ringbuffer.size() ? 0 : video_ring_frame_count;
-		const s64 start_pts = video_ringbuffer[start_offset % video_ringbuffer.size()].pts;
+		const usz video_start_offset = video_ring_frame_count < video_ringbuffer.size() ? 0 : video_ring_frame_count;
+		const s64 video_start_pts = video_ringbuffer.empty() ? 0 : video_ringbuffer[video_start_offset % video_ringbuffer.size()].pts;
 
-		for (usz i = 0; i < frame_count; i++)
+		const usz block_count = std::min(audio_ringbuffer.size(), audio_ring_block_count);
+		const usz audio_start_offset = audio_ring_block_count < audio_ringbuffer.size() ? 0 : audio_ring_block_count;
+		const s64 audio_start_pts = audio_ringbuffer.empty() ? 0 : audio_ringbuffer[audio_start_offset % audio_ringbuffer.size()].pts;
+
+		cellRec.error("Flushing video ringbuffer: block_count=%d, audio_ringbuffer.size=%d", block_count, audio_ringbuffer.size());
+		cellRec.error("Flushing video ringbuffer: video_start_pts=%d, audio_start_pts=%d", video_start_pts, audio_start_pts);
+
+		// Try to add the frames and samples in proper order
+		for (usz sync_timestamp_us = 0, frame = 0, block = 0; frame < frame_count || block < block_count; frame++)
 		{
-			const usz pos = (start_offset + i) % video_ringbuffer.size();
-			utils::video_sink::encoder_frame& frame_data = video_ringbuffer[pos];
-			encoder->add_frame(frame_data.data, frame_data.pitch, frame_data.width, frame_data.height, frame_data.av_pixel_format, encoder->get_timestamp_ms(frame_data.pts - start_pts));
+			// Add one frame
+			if (frame < frame_count)
+			{
+				const usz pos = (video_start_offset + frame) % video_ringbuffer.size();
+				utils::video_sink::encoder_frame& frame_data = video_ringbuffer[pos];
+				const usz timestamp_ms = encoder->get_timestamp_ms(frame_data.pts - video_start_pts);
+				encoder->add_frame(frame_data.data, frame_data.pitch, frame_data.width, frame_data.height, frame_data.av_pixel_format, timestamp_ms);
 
-			// TODO: add audio data to encoder
+				// Increase sync timestamp
+				sync_timestamp_us = timestamp_ms * 1000;
+			}
+
+			// Add all the samples that fit into the last frame
+			for (usz i = block; i < block_count; i++)
+			{
+				const usz pos = (audio_start_offset + i) % audio_ringbuffer.size();
+				const audio_block& sample_block = audio_ringbuffer[pos];
+				const usz timestamp_us = encoder->get_audio_timestamp_us(sample_block.pts - audio_start_pts);
+
+				// Stop adding new samples if the sync timestamp is exceeded, unless we already added all the frames.
+				if (timestamp_us > sync_timestamp_us && frame < frame_count)
+				{
+					break;
+				}
+
+				encoder->add_audio_samples(sample_block.block.data(), CELL_REC_AUDIO_BLOCK_SAMPLES, channels, timestamp_us);
+				block++;
+			}
 		}
 
 		video_ringbuffer.clear();
+		audio_ringbuffer.clear();
 	}
 }
 
@@ -1093,6 +1183,8 @@ error_code cellRecOpen(vm::cptr<char> pDirName, vm::cptr<char> pFileName, vm::cp
 	rec.cbUserData = cbUserData;
 	rec.last_video_pts = -1;
 	rec.audio_ringbuffer.clear();
+	rec.audio_ring_block_count = 0;
+	rec.audio_ring_pos = 0;
 	rec.video_ringbuffer.clear();
 	rec.video_ring_frame_count = 0;
 	rec.video_ring_pos = 0;
@@ -1103,16 +1195,13 @@ error_code cellRecOpen(vm::cptr<char> pDirName, vm::cptr<char> pFileName, vm::cp
 
 	if (rec.param.ring_sec > 0)
 	{
-		const u32 audio_size_per_sample = rec.channels * sizeof(float);
-		const u32 audio_size_per_second = rec.sample_rate * audio_size_per_sample;
-		const usz audio_ring_buffer_size = rec.param.ring_sec * audio_size_per_second;
+		const usz audio_ring_buffer_size = static_cast<usz>(std::ceil((rec.param.ring_sec * rec.sample_rate) / static_cast<f32>(CELL_REC_AUDIO_BLOCK_SAMPLES)));
 		const usz video_ring_buffer_size = rec.param.ring_sec * rec.fps;
 
 		cellRec.notice("Preparing ringbuffer for %d seconds. video_ring_buffer_size=%d, audio_ring_buffer_size=%d, pitch=%d, width=%d, height=%d", rec.param.ring_sec, video_ring_buffer_size, audio_ring_buffer_size, rec.input_format.pitch, rec.input_format.width, rec.input_format.height);
 
 		rec.audio_ringbuffer.resize(audio_ring_buffer_size);
-		rec.audio_ring_step = audio_size_per_sample;
-		rec.video_ringbuffer.resize(video_ring_buffer_size, {});
+		rec.video_ringbuffer.resize(video_ring_buffer_size);
 
 		rec.ringbuffer_sink = std::make_shared<rec_video_sink>();
 		rec.ringbuffer_sink->use_internal_audio = rec.param.use_internal_audio();
