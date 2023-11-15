@@ -767,6 +767,11 @@ namespace utils
 
 			av_log_set_callback([](void* avcl, int level, const char* fmt, va_list vl) -> void
 			{
+				if (level > av_log_get_level())
+				{
+					return;
+				}
+
 				constexpr int line_size = 1024;
 				char line[line_size]{};
 				int print_prefix = 1;
@@ -777,9 +782,17 @@ namespace utils
 					return;
 				}
 
-				media_log.error("av_log: %s", line); // TODO: decrease log level
+				std::string msg = line;
+				fmt::trim_back(msg, "\n\r\t ");
+
+				if (level <= AV_LOG_ERROR)
+					media_log.error("av_log: %s", msg);
+				else if (level <= AV_LOG_WARNING)
+					media_log.warning("av_log: %s", msg);
+				else
+					media_log.notice("av_log: %s", msg);
 			});
-			av_log_set_level(AV_LOG_TRACE);
+			av_log_set_level(AV_LOG_ERROR);
 
 			// Reset variables at all costs
 			scoped_av av;
@@ -1198,11 +1211,11 @@ namespace utils
 						// We need to skip this frame if it has the same timestamp.
 						if (pts <= last_video_pts)
 						{
-							media_log.trace("video_encoder: skipping frame. last_pts=%d, pts=%d", last_video_pts, pts);
+							media_log.trace("video_encoder: skipping frame. last_pts=%d, pts=%d, timestamp_ms=%d", last_video_pts, pts, frame_data.timestamp_ms);
 						}
 						else if (av.video.context)
 						{
-							media_log.trace("video_encoder: adding new frame. timestamp=%d", frame_data.timestamp_ms);
+							media_log.trace("video_encoder: adding new frame. timestamp_ms=%d", frame_data.timestamp_ms);
 
 							if (int err = av_frame_make_writable(av.video.frame); err < 0)
 							{
@@ -1289,7 +1302,7 @@ namespace utils
 						// We need to skip this frame if it has the same timestamp.
 						if (pts <= last_audio_pts)
 						{
-							media_log.error("video_encoder: skipping sample. last_pts=%d, pts=%d", last_audio_pts, pts);
+							media_log.trace("video_encoder: skipping sample. last_pts=%d, pts=%d, timestamp_us=%d", last_audio_pts, pts, sample_data.timestamp_us);
 						}
 						else if (av.audio.context)
 						{
