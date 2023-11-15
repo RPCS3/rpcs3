@@ -445,7 +445,7 @@ lv2_file::lv2_file(utils::serial& ar)
 
 	g_fxo->get<loaded_npdrm_keys>().npdrm_fds.raw() += type != lv2_file_type::regular;
 
-	if (ar.operator bool()) // see lv2_file::save in_mem
+	if (ar.pop<bool>()) // see lv2_file::save in_mem
 	{
 		const fs::stat_t stat = ar;
 

@@ -270,7 +270,7 @@ namespace id_manager
 		{
 			vec.resize(T::id_count);
 
-			u32 i = ar.operator u32();
+			u32 i = ar.pop<u32>();
 
 			ensure(i <= T::id_count);
 
@@ -309,7 +309,7 @@ namespace id_manager
 		void save(utils::serial& ar) requires IdmSavable<T>
 		{
 			u32 obj_count = 0;
-			usz obj_count_offs = ar.data.size();
+			usz obj_count_offs = ar.pos;
 
 			// To be patched at the end of the function
 			ar(obj_count);
@@ -340,7 +340,7 @@ namespace id_manager
 			}
 
 			// Patch object count
-			std::memcpy(ar.data.data() + obj_count_offs, &obj_count, sizeof(obj_count));
+			ar.patch_raw_data(obj_count_offs, &obj_count, sizeof(obj_count));
 		}
 
 		id_map& operator=(thread_state state) noexcept requires (std::is_assignable_v<T&, thread_state>)
