@@ -1842,39 +1842,8 @@ u32 rsxaudio_backend_thread::write_data_callback(u32 bytes, void* buf)
 			return bytes;
 		}
 
-		if (cb_cfg.input_ch_cnt > cb_cfg.output_ch_cnt)
-		{
-			if (cb_cfg.input_ch_cnt == static_cast<u32>(AudioChannelCnt::SURROUND_7_1))
-			{
-				if (cb_cfg.output_ch_cnt == static_cast<u32>(AudioChannelCnt::SURROUND_5_1))
-				{
-					AudioBackend::downmix<AudioChannelCnt::SURROUND_7_1, AudioChannelCnt::SURROUND_5_1>(sample_cnt, callback_tmp_buf.data(), callback_tmp_buf.data());
-				}
-				else if (cb_cfg.output_ch_cnt == static_cast<u32>(AudioChannelCnt::STEREO))
-				{
-					AudioBackend::downmix<AudioChannelCnt::SURROUND_7_1, AudioChannelCnt::STEREO>(sample_cnt, callback_tmp_buf.data(), callback_tmp_buf.data());
-				}
-				else
-				{
-					fmt::throw_exception("Invalid downmix combination: %u -> %u", cb_cfg.input_ch_cnt, cb_cfg.output_ch_cnt);
-				}
-			}
-			else if (cb_cfg.input_ch_cnt == static_cast<u32>(AudioChannelCnt::SURROUND_5_1))
-			{
-				if (cb_cfg.output_ch_cnt == static_cast<u32>(AudioChannelCnt::STEREO))
-				{
-					AudioBackend::downmix<AudioChannelCnt::SURROUND_5_1, AudioChannelCnt::STEREO>(sample_cnt, callback_tmp_buf.data(), callback_tmp_buf.data());
-				}
-				else
-				{
-					fmt::throw_exception("Invalid downmix combination: %u -> %u", cb_cfg.input_ch_cnt, cb_cfg.output_ch_cnt);
-				}
-			}
-			else
-			{
-				fmt::throw_exception("Invalid downmix combination: %u -> %u", cb_cfg.input_ch_cnt, cb_cfg.output_ch_cnt);
-			}
-		}
+		// Downmix if necessary
+		AudioBackend::downmix(sample_cnt, cb_cfg.input_ch_cnt, cb_cfg.output_ch_cnt, callback_tmp_buf.data(), callback_tmp_buf.data());
 
 		if (cb_cfg.target_volume != cb_cfg.current_volume)
 		{

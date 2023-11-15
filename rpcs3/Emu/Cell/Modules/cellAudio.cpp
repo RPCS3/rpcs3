@@ -295,39 +295,8 @@ void audio_ringbuffer::commit_data(f32* buf, u32 sample_cnt)
 		provider.present_samples(reinterpret_cast<u8*>(buf), sample_cnt, static_cast<u32>(cfg.audio_channels));
 	}
 
-	if (cfg.backend_ch_cnt < AudioChannelCnt{cfg.audio_channels})
-	{
-		if (AudioChannelCnt{cfg.audio_channels} == AudioChannelCnt::SURROUND_7_1)
-		{
-			if (cfg.backend_ch_cnt == AudioChannelCnt::SURROUND_5_1)
-			{
-				AudioBackend::downmix<AudioChannelCnt::SURROUND_7_1, AudioChannelCnt::SURROUND_5_1>(sample_cnt_in, buf, buf);
-			}
-			else if (cfg.backend_ch_cnt == AudioChannelCnt::STEREO)
-			{
-				AudioBackend::downmix<AudioChannelCnt::SURROUND_7_1, AudioChannelCnt::STEREO>(sample_cnt_in, buf, buf);
-			}
-			else
-			{
-				fmt::throw_exception("Invalid downmix combination: %u -> %u", cfg.audio_channels, static_cast<u32>(cfg.backend_ch_cnt));
-			}
-		}
-		else if (AudioChannelCnt{cfg.audio_channels} == AudioChannelCnt::SURROUND_5_1)
-		{
-			if (cfg.backend_ch_cnt == AudioChannelCnt::STEREO)
-			{
-				AudioBackend::downmix<AudioChannelCnt::SURROUND_5_1, AudioChannelCnt::STEREO>(sample_cnt_in, buf, buf);
-			}
-			else
-			{
-				fmt::throw_exception("Invalid downmix combination: %u -> %u", cfg.audio_channels, static_cast<u32>(cfg.backend_ch_cnt));
-			}
-		}
-		else
-		{
-			fmt::throw_exception("Invalid downmix combination: %u -> %u", cfg.audio_channels, static_cast<u32>(cfg.backend_ch_cnt));
-		}
-	}
+	// Downmix if necessary
+	AudioBackend::downmix(sample_cnt_in, cfg.audio_channels, static_cast<u32>(cfg.backend_ch_cnt), buf, buf);
 
 	if (cfg.backend->get_convert_to_s16())
 	{
