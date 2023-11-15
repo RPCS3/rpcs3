@@ -504,8 +504,7 @@ void gs_frame::toggle_recording()
 		m_video_encoder->set_max_b_frames(g_cfg_recording.video.max_b_frames);
 		m_video_encoder->set_gop_size(g_cfg_recording.video.gop_size);
 		m_video_encoder->set_output_format(output_format);
-		m_video_encoder->set_sample_rate(g_cfg_recording.audio.sample_rate);
-		//m_video_encoder->set_audio_channels(static_cast<u32>(g_fxo->get<cell_audio>().cfg.backend_ch_cnt));
+		m_video_encoder->set_sample_rate(g_fxo->get<cell_audio>().cfg.audio_sampling_rate);
 		m_video_encoder->set_audio_channels(static_cast<u32>(g_fxo->get<cell_audio>().cfg.audio_channels));
 		m_video_encoder->set_audio_bitrate(g_cfg_recording.audio.audio_bps);
 		m_video_encoder->set_audio_codec(g_cfg_recording.audio.audio_codec);

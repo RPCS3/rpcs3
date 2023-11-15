@@ -295,7 +295,7 @@ namespace psf
 
 		for (const auto& entry : psf)
 		{
-			def_table_t index;
+			def_table_t index{};
 			index.key_off = ::narrow<u32>(key_offset);
 			index.param_fmt = entry.second.type();
 			index.param_len = entry.second.size();
@@ -313,7 +313,7 @@ namespace psf
 		key_offset = utils::align(key_offset, 4);
 
 		// Generate header
-		header_t header;
+		header_t header{};
 		header.magic = "\0PSF"_u32;
 		header.version = 0x101;
 		header.off_key_table = ::narrow<u32>(sizeof(header_t) + sizeof(def_table_t) * psf.size());
