@@ -821,12 +821,7 @@ void rec_info::stop_video_provider(bool flush)
 		const usz audio_start_offset = audio_ring_block_count < audio_ringbuffer.size() ? 0 : audio_ring_block_count;
 		const s64 audio_start_pts = audio_ringbuffer.empty() ? 0 : audio_ringbuffer[audio_start_offset % audio_ringbuffer.size()].pts;
 
-		cellRec.error("Flushing video ringbuffer: frame_count=%d, video_ringbuffer.size=%d", frame_count, video_ringbuffer.size());
-		cellRec.error("Flushing video ringbuffer: block_count=%d, audio_ringbuffer.size=%d", block_count, audio_ringbuffer.size());
-		cellRec.error("Flushing video ringbuffer: video_start_pts=%d, audio_start_pts=%d", video_start_pts, audio_start_pts);
-
 		// Try to add the frames and samples in proper order
-		s64 last_pts = -1;
 		for (usz sync_timestamp_us = 0, frame = 0, block = 0; frame < frame_count || block < block_count; frame++)
 		{
 			// Add one frame
@@ -853,13 +848,6 @@ void rec_info::stop_video_provider(bool flush)
 				{
 					break;
 				}
-
-				if (sample_block.pts <= last_pts)
-				{
-					cellRec.error("Flushing video ringbuffer: last_pts=%d, sample_block.pts=%d", last_pts, sample_block.pts);
-				}
-
-				last_pts = sample_block.pts;
 
 				encoder->add_audio_samples(sample_block.block.data(), CELL_REC_AUDIO_BLOCK_SAMPLES, channels, timestamp_us);
 				block++;
