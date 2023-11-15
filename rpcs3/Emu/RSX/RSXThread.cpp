@@ -2210,6 +2210,7 @@ namespace rsx
 		const u32 input_mask = state.vertex_attrib_input_mask() & current_vp_metadata.referenced_inputs_mask;
 
 		result.clear();
+		result.attribute_mask = static_cast<u16>(input_mask);
 
 		if (state.current_draw_clause.command == rsx::draw_command::inlined_array)
 		{
@@ -2219,6 +2220,7 @@ namespace rsx
 			for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
 			{
 				auto &vinfo = state.vertex_arrays_info[index];
+				result.attribute_placement[index] = attribute_buffer_placement::none;
 
 				if (vinfo.size() > 0)
 				{
@@ -2233,7 +2235,7 @@ namespace rsx
 				}
 				else if (state.register_vertex_info[index].size > 0 && input_mask & (1u << index))
 				{
-					//Reads from register
+					// Reads from register
 					result.referenced_registers.push_back(index);
 					result.attribute_placement[index] = attribute_buffer_placement::transient;
 				}
@@ -2262,8 +2264,10 @@ namespace rsx
 				continue;
 			}
 
-			//Check for interleaving
-			const auto &info = state.vertex_arrays_info[index];
+			// Always reset attribute placement by default
+			result.attribute_placement[index] = attribute_buffer_placement::none;
+
+			// Check for interleaving
 			if (rsx::method_registers.current_draw_clause.is_immediate_draw &&
 				rsx::method_registers.current_draw_clause.command != rsx::draw_command::indexed)
 			{
@@ -2290,6 +2294,7 @@ namespace rsx
 				continue;
 			}
 
+			const auto& info = state.vertex_arrays_info[index];
 			if (!info.size())
 			{
 				if (state.register_vertex_info[index].size > 0)
