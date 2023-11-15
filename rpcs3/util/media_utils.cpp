@@ -777,7 +777,7 @@ namespace utils
 					return;
 				}
 
-				media_log.error("av_log: %s", line);
+				media_log.error("av_log: %s", line); // TODO: decrease log level
 			});
 			av_log_set_level(AV_LOG_TRACE);
 
@@ -944,17 +944,17 @@ namespace utils
 				return;
 			}
 
-			media_log.error("video_encoder: using audio_codec = %d", static_cast<int>(av.format_context->oformat->audio_codec));
-			media_log.error("video_encoder: using sample_rate = %d", m_sample_rate);
-			media_log.error("video_encoder: using audio_bitrate = %d", m_audio_bitrate_bps);
-			media_log.error("video_encoder: using audio channels = %d", m_channels);
-			media_log.error("video_encoder: using video_codec = %d", static_cast<int>(av.format_context->oformat->video_codec));
-			media_log.error("video_encoder: using video_bitrate = %d", m_video_bitrate_bps);
-			media_log.error("video_encoder: using out width = %d", m_out_format.width);
-			media_log.error("video_encoder: using out height = %d", m_out_format.height);
-			media_log.error("video_encoder: using framerate = %d", m_framerate);
-			media_log.error("video_encoder: using gop_size = %d", m_gop_size);
-			media_log.error("video_encoder: using max_b_frames = %d", m_max_b_frames);
+			media_log.notice("video_encoder: using audio_codec = %d", static_cast<int>(av.format_context->oformat->audio_codec));
+			media_log.notice("video_encoder: using sample_rate = %d", m_sample_rate);
+			media_log.notice("video_encoder: using audio_bitrate = %d", m_audio_bitrate_bps);
+			media_log.notice("video_encoder: using audio channels = %d", m_channels);
+			media_log.notice("video_encoder: using video_codec = %d", static_cast<int>(av.format_context->oformat->video_codec));
+			media_log.notice("video_encoder: using video_bitrate = %d", m_video_bitrate_bps);
+			media_log.notice("video_encoder: using out width = %d", m_out_format.width);
+			media_log.notice("video_encoder: using out height = %d", m_out_format.height);
+			media_log.notice("video_encoder: using framerate = %d", m_framerate);
+			media_log.notice("video_encoder: using gop_size = %d", m_gop_size);
+			media_log.notice("video_encoder: using max_b_frames = %d", m_max_b_frames);
 
 			// select audio parameters supported by the encoder
 			if (av.audio.context)
@@ -1095,7 +1095,7 @@ namespace utils
 				}
 			}
 
-			media_log.error("video_encoder: av_dump_format");
+			media_log.notice("video_encoder: av_dump_format");
 			for (u32 i = 0; i < av.format_context->nb_streams; i++)
 			{
 				av_dump_format(av.format_context, i, path.c_str(), 1);
