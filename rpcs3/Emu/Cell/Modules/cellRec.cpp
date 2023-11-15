@@ -165,7 +165,11 @@ public:
 	rec_video_sink() : utils::video_sink()
 	{
 		m_framerate = rec_framerate;
-		m_sample_rate = 48000; // TODO
+	}
+
+	void set_sample_rate(u32 sample_rate)
+	{
+		m_sample_rate = sample_rate;
 	}
 
 	void stop(bool flush = true) override
@@ -702,7 +706,7 @@ void rec_info::start_video_provider()
 				// The audio samples originate from cellAudio and are stored in a ringbuffer.
 				utils::video_sink::encoder_sample sample = sink->get_sample();
 
-				if (!sample.data.empty() && sample.channels >= 2 && sample.sample_count >= CELL_REC_AUDIO_BLOCK_SAMPLES)
+				if (!sample.data.empty() && sample.channels >= channels && sample.sample_count >= CELL_REC_AUDIO_BLOCK_SAMPLES)
 				{
 					s64 pts = encoder->get_audio_pts(sample.timestamp_us);
 
@@ -1248,6 +1252,7 @@ error_code cellRecOpen(vm::cptr<char> pDirName, vm::cptr<char> pFileName, vm::cp
 		rec.sink = std::make_shared<rec_video_sink>();
 		rec.sink->use_internal_audio = rec.param.use_internal_audio();
 		rec.sink->use_internal_video = rec.param.use_internal_video();
+		rec.sink->set_sample_rate(rec.sample_rate);
 	}
 
 	rec.encoder = std::make_shared<utils::video_encoder>();

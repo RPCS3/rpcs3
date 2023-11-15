@@ -73,7 +73,7 @@ namespace utils
 		u32 set_next_index(bool next);
 
 		shared_mutex m_mtx;
-		const s32 sample_rate = 48000;
+		static constexpr s32 sample_rate = 48000;
 		std::vector<u8> data;
 		atomic_t<u64> m_size = 0;
 		atomic_t<u32> track_fully_decoded{0};
