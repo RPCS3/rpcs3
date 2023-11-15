@@ -2277,6 +2277,12 @@ bool fs::pending_file::open(std::string_view path)
 
 		if (file.open(m_path, fs::create + fs::write + fs::read + fs::excl))
 		{
+#ifdef _WIN32
+			// Auto-delete pending log file
+			FILE_DISPOSITION_INFO disp;
+			disp.DeleteFileW = true;
+			SetFileInformationByHandle(file.get_handle(), FileDispositionInfo, &disp, sizeof(disp));
+#endif
 			m_dest = path;
 			break;
 		}
@@ -2314,6 +2320,14 @@ bool fs::pending_file::commit(bool overwrite)
 	}
 
 #endif
+
+#ifdef _WIN32
+	// Disable auto-delete
+	FILE_DISPOSITION_INFO disp;
+	disp.DeleteFileW = false;
+	SetFileInformationByHandle(file.get_handle(), FileDispositionInfo, &disp, sizeof(disp));
+#endif
+
 	file.close();
 
 #ifdef _WIN32

@@ -2,6 +2,8 @@
 #include "util/types.hpp"
 #include "util/logs.hpp"
 #include "util/asm.hpp"
+#include "util/v128.hpp"
+#include "util/simd.hpp"
 #include "Utilities/File.h"
 #include "Utilities/StrFmt.h"
 #include "system_config.h"
@@ -10,6 +12,9 @@
 #include "System.h"
 
 #include <set>
+#include <span>
+
+#include <zlib.h>
 
 LOG_CHANNEL(sys_log, "SYS");
 
@@ -18,14 +23,14 @@ void fmt_class_string<utils::serial>::format(std::string& out, u64 arg)
 {
 	const utils::serial& ar = get_object(arg);
 
-	fmt::append(out, "{ %s, 0x%x/0%x, memory=0x%x }", ar.is_writing() ? "writing" : "reading", ar.pos, ar.data_offset + ar.data.size(), ar.data.size());
+	fmt::append(out, "{ %s, 0x%x/0x%x, memory=0x%x }", ar.is_writing() ? "writing" : "reading", ar.pos, ar.data_offset + ar.data.size(), ar.data.size());
 }
 
 struct serial_ver_t
 {
 	bool used = false;
-	s32 current_version = 0;
-	std::set<s32> compatible_versions;
+	u16 current_version = 0;
+	std::set<u16> compatible_versions;
 };
 
 static std::array<serial_ver_t, 26> s_serial_versions;
@@ -89,7 +94,7 @@ SERIALIZATION_VER(sys_io, 23,                                   1)
 SERIALIZATION_VER(LLE, 24,                                      1)
 SERIALIZATION_VER(HLE, 25,                                      1)
 
-std::vector<std::pair<u16, u16>> get_savestate_versioning_data(fs::file&& file)
+std::vector<version_entry> get_savestate_versioning_data(fs::file&& file, std::string_view filepath)
 {
 	if (!file)
 	{
@@ -98,31 +103,36 @@ std::vector<std::pair<u16, u16>> get_savestate_versioning_data(fs::file&& file)
 
 	file.seek(0);
 
-	if (u64 r = 0; !file.read(r) || r != "RPCS3SAV"_u64)
+	utils::serial ar;
+	ar.set_reading_state();
+
+	ar.m_file_handler = filepath.ends_with(".gz") ? static_cast<std::unique_ptr<utils::serialization_file_handler>>(make_compressed_serialization_file_handler(std::move(file)))
+		: make_uncompressed_serialization_file_handler(std::move(file));
+
+	if (u64 r = 0; ar.try_read(r) != 0 || r != "RPCS3SAV"_u64)
 	{
 		return {};
 	}
 
-	file.seek(10);
+	ar.pos = 10;
 
-	u64 offs = 0;
-	file.read(offs);
+	u64 offs = ar.try_read<u64>().second;
 
-	const usz fsize = file.size();
+	const usz fsize = ar.get_size(offs);
 
 	if (!offs || fsize <= offs)
 	{
 		return {};
 	}
 
-	utils::serial ar;
-	ar.set_reading_state();
-	ar.m_file_handler = make_uncompressed_serialization_file_handler(std::move(file));
 	ar.seek_pos(offs);
-	return ar;
+	ar.breathe(true);
+
+	std::vector<version_entry> ver_data = ar.pop<std::vector<version_entry>>();
+	return std::move(ver_data);
 }
 
-bool is_savestate_version_compatible(const std::vector<std::pair<u16, u16>>& data, bool is_boot_check)
+bool is_savestate_version_compatible(const std::vector<version_entry>& data, bool is_boot_check)
 {
 	if (data.empty())
 	{
@@ -178,24 +188,31 @@ std::string get_savestate_file(std::string_view title_id, std::string_view boot_
 	// While not needing to keep a 59 chars long suffix at all times for this purpose
 	const char prefix = ::at32("0123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"sv, save_id.size());
 
-	return fs::get_cache_dir() + "/savestates/" + title + "/" + title + '_' + prefix + '_' + save_id + ".SAVESTAT";
+	std::string path = fs::get_cache_dir() + "/savestates/" + title + "/" + title + '_' + prefix + '_' + save_id + ".SAVESTAT";
+
+	if (std::string path_compressed = path + ".gz"; fs::is_file(path_compressed))
+	{
+		return std::move(path_compressed);
+	}
+
+	return std::move(path);
 }
 
-bool is_savestate_compatible(fs::file&& file)
+bool is_savestate_compatible(fs::file&& file, std::string_view filepath)
 {
-	return is_savestate_version_compatible(get_savestate_versioning_data(std::move(file)), false);
+	return is_savestate_version_compatible(get_savestate_versioning_data(std::move(file), filepath), false);
 }
 
-std::vector<std::pair<u16, u16>> read_used_savestate_versions()
+std::vector<version_entry> read_used_savestate_versions()
 {
-	std::vector<std::pair<u16, u16>> used_serial;
+	std::vector<version_entry> used_serial;
 	used_serial.reserve(s_serial_versions.size());
 
 	for (serial_ver_t& ver : s_serial_versions)
 	{
 		if (std::exchange(ver.used, false))
 		{
-			used_serial.emplace_back(&ver - s_serial_versions.data(), *ver.compatible_versions.rbegin());
+			used_serial.push_back(version_entry{static_cast<u16>(&ver - s_serial_versions.data()), *ver.compatible_versions.rbegin()});
 		}
 
 		ver.current_version = 0;
@@ -208,8 +225,6 @@ bool boot_last_savestate(bool testing)
 {
 	if (!g_cfg.savestate.suspend_emu && !Emu.GetTitleID().empty() && (Emu.IsRunning() || Emu.GetStatus() == system_state::paused))
 	{
-		extern bool is_savestate_compatible(fs::file&& file);
-
 		const std::string save_dir = fs::get_cache_dir() + "/savestates/";
 
 		std::string savestate_path;
@@ -225,7 +240,12 @@ bool boot_last_savestate(bool testing)
 			// Find the latest savestate file compatible with the game (TODO: Check app version and anything more)
 			if (entry.name.find(Emu.GetTitleID()) != umax && mtime <= entry.mtime)
 			{
-				if (std::string path = save_dir + entry.name; is_savestate_compatible(fs::file(path)))
+				if (std::string path = save_dir + entry.name + ".gz"; is_savestate_compatible(fs::file(path), path))
+				{
+					savestate_path = std::move(path);
+					mtime = entry.mtime;
+				}
+				else if (std::string path = save_dir + entry.name; is_savestate_compatible(fs::file(path), path))
 				{
 					savestate_path = std::move(path);
 					mtime = entry.mtime;
@@ -282,9 +302,9 @@ bool uncompressed_serialization_file_handler::handle_file_op(utils::serial& ar, 
 			m_file->sync();
 		}
 
-		ar.data_offset += ar.data.size();
-		ar.data.clear();
 		ar.seek_end();
+		ar.data_offset = ar.pos;
+		ar.data.clear();
 		return true;
 	}
 
@@ -320,7 +340,7 @@ bool uncompressed_serialization_file_handler::handle_file_op(utils::serial& ar, 
 		}
 
 		// Discard all loaded data
-		ar.data_offset += ar.data.size();
+		ar.data_offset = ar.pos;
 		ar.data.clear();
 
 		if (ar.data.capacity() >= 0x200'0000)
@@ -332,7 +352,7 @@ bool uncompressed_serialization_file_handler::handle_file_op(utils::serial& ar, 
 		return true;
 	}
 
-	if (~size < pos)
+	if (~pos < size - 1)
 	{
 		// Overflow
 		return false;
@@ -340,11 +360,11 @@ bool uncompressed_serialization_file_handler::handle_file_op(utils::serial& ar, 
 
 	if (ar.data.empty() && pos != ar.pos)
 	{
-		// Relocate instead oof over-fetch
+		// Relocate instead of over-fetch
 		ar.seek_pos(pos);
 	}
 
-	const usz read_pre_buffer = utils::sub_saturate<usz>(ar.data_offset, pos);
+	const usz read_pre_buffer = ar.data.empty() ? 0 : utils::sub_saturate<usz>(ar.data_offset, pos);
 
 	if (read_pre_buffer)
 	{
@@ -358,7 +378,10 @@ bool uncompressed_serialization_file_handler::handle_file_op(utils::serial& ar, 
 		ar.data_offset -= read_pre_buffer;
 	}
 
-	const usz read_past_buffer = utils::sub_saturate<usz>(pos + size, ar.data_offset + ar.data.size());
+	// Adjustment to prevent overflow
+	const usz subtrahend = ar.data.empty() ? 0 : 1;
+	const usz read_past_buffer = utils::sub_saturate<usz>(pos + (size - subtrahend), ar.data_offset + (ar.data.size() - subtrahend));
+	const usz read_limit = utils::sub_saturate<usz>(ar.m_max_data, ar.data_offset); 
 
 	if (read_past_buffer)
 	{
@@ -368,13 +391,12 @@ bool uncompressed_serialization_file_handler::handle_file_op(utils::serial& ar, 
 		const usz old_size = ar.data.size();
 
 		// Try to prefetch data by reading more than requested
-		ar.data.resize(std::max<usz>({ ar.data.capacity(), ar.data.size() + read_past_buffer * 3 / 2, ar.m_avoid_large_prefetch ? usz{4096} : usz{0x10'0000} }));
+		ar.data.resize(std::min<usz>(read_limit, std::max<usz>({ ar.data.capacity(), ar.data.size() + read_past_buffer * 3 / 2, ar.m_avoid_large_prefetch ? usz{4096} : usz{0x10'0000} })));
 		ar.data.resize(m_file->read_at(old_size + ar.data_offset, data ? const_cast<void*>(data) : ar.data.data() + old_size, ar.data.size() - old_size) + old_size);
 	}
 
 	return true;
 }
-
 
 usz uncompressed_serialization_file_handler::get_size(const utils::serial& ar, usz recommended) const
 {
@@ -392,6 +414,416 @@ usz uncompressed_serialization_file_handler::get_size(const utils::serial& ar, u
 	}
 
 	return std::max<usz>(m_file->size(), memory_available);
+}
+
+void uncompressed_serialization_file_handler::finalize(utils::serial& ar)
+{
+	ar.seek_end();
+	handle_file_op(ar, 0, umax, nullptr);
+	ar.data = {}; // Deallocate and clear
+}
+
+void compressed_serialization_file_handler::initialize(utils::serial& ar)
+{
+	if (!m_stream.has_value())
+	{
+		m_stream.emplace<z_stream>();
+	}
+
+	z_stream& m_zs = std::any_cast<z_stream&>(m_stream);
+
+	if (ar.is_writing())
+	{
+		if (m_write_inited)
+		{
+			return;
+		}
+
+#ifndef _MSC_VER
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
+		if (m_read_inited)
+		{
+			finalize(ar);
+		}
+
+		m_zs = {};
+		ensure(deflateInit2(&m_zs, 9, Z_DEFLATED, 16 + 15, 9, Z_DEFAULT_STRATEGY) == Z_OK);
+#ifndef _MSC_VER
+#pragma GCC diagnostic pop
+#endif
+		m_write_inited = true;
+	}
+	else
+	{
+		if (m_read_inited)
+		{
+			return;
+		}
+
+		if (m_write_inited)
+		{
+			finalize(ar);
+		}
+
+		m_zs.avail_in = 0;
+		m_zs.avail_out = 0;
+		m_zs.next_in = nullptr;
+		m_zs.next_out = nullptr;
+	#ifndef _MSC_VER
+	#pragma GCC diagnostic push
+	#pragma GCC diagnostic ignored "-Wold-style-cast"
+	#endif
+		ensure(inflateInit2(&m_zs, 16 + 15) == Z_OK);
+		m_read_inited = true;
+	}
+}
+
+bool compressed_serialization_file_handler::handle_file_op(utils::serial& ar, usz pos, usz size, const void* data)
+{
+	if (ar.is_writing())
+	{
+		initialize(ar);
+
+		z_stream& m_zs = std::any_cast<z_stream&>(m_stream);
+
+		if (data)
+		{
+			ensure(false);
+		}
+
+		// Writing not at the end is forbidden
+		ensure(ar.pos == ar.data_offset + ar.data.size());
+
+		m_zs.avail_in = static_cast<uInt>(ar.data.size());
+		m_zs.next_in  = ar.data.data();
+
+		do
+		{
+			m_stream_data.resize(std::max<usz>(m_stream_data.size(), ::compressBound(m_zs.avail_in)));
+			m_zs.avail_out = static_cast<uInt>(m_stream_data.size());
+			m_zs.next_out  = m_stream_data.data();
+
+			if (deflate(&m_zs, Z_NO_FLUSH) == Z_STREAM_ERROR || m_file->write(m_stream_data.data(), m_stream_data.size() - m_zs.avail_out) != m_stream_data.size() - m_zs.avail_out)
+			{
+				deflateEnd(&m_zs);
+				//m_file->close();
+				break;
+			}
+		}
+		while (m_zs.avail_out == 0);
+
+		ar.seek_end();
+		ar.data_offset = ar.pos;
+		ar.data.clear();
+
+		if (pos == umax && size == umax && *m_file)
+		{
+			// Request to flush the file to disk
+			m_file->sync();
+		}
+
+		return true;
+	}
+
+	initialize(ar);
+
+	if (!size)
+	{
+		return true;
+	}
+
+	if (pos == 0 && size == umax)
+	{
+		// Discard loaded data until pos if profitable
+		const usz limit = ar.data_offset + ar.data.size();
+
+		if (ar.pos > ar.data_offset && ar.pos < limit)
+		{
+			const usz may_discard_bytes = ar.pos - ar.data_offset;
+			const usz moved_byte_count_on_discard = limit - ar.pos;
+
+			// Cheeck profitability (check recycled memory and std::memmove costs)
+			if (may_discard_bytes >= 0x50'0000 || (may_discard_bytes >= 0x20'0000 && moved_byte_count_on_discard / may_discard_bytes < 3))
+			{
+				ar.data_offset += may_discard_bytes;
+				ar.data.erase(ar.data.begin(), ar.data.begin() + may_discard_bytes);
+
+				if (ar.data.capacity() >= 0x200'0000)
+				{
+					// Discard memory
+					ar.data.shrink_to_fit();
+				}
+			}
+
+			return true;
+		}
+
+		// Discard all loaded data
+		ar.data_offset += ar.data.size();
+		ensure(ar.pos >= ar.data_offset);
+		ar.data.clear();
+
+		if (ar.data.capacity() >= 0x200'0000)
+		{
+			// Discard memory
+			ar.data.shrink_to_fit();
+		}
+
+		return true;
+	}
+
+	if (~pos < size - 1)
+	{
+		// Overflow
+		return false;
+	}
+
+	// TODO: Investigate if this optimization is worth an implementation for compressed stream
+	// if (ar.data.empty() && pos != ar.pos)
+	// {
+	// 	// Relocate instead of over-fetch
+	// 	ar.seek_pos(pos);
+	// }
+
+	const usz read_pre_buffer = utils::sub_saturate<usz>(ar.data_offset, pos);
+
+	if (read_pre_buffer)
+	{
+		// Not allowed with compressed data for now
+		// Unless someone implements mechanism for it
+		ensure(false);
+	}
+
+	// Adjustment to prevent overflow
+	const usz subtrahend = ar.data.empty() ? 0 : 1;
+	const usz read_past_buffer = utils::sub_saturate<usz>(pos + (size - subtrahend), ar.data_offset + (ar.data.size() - subtrahend));
+	const usz read_limit = utils::sub_saturate<usz>(ar.m_max_data, ar.data_offset); 
+
+	if (read_past_buffer)
+	{
+		// Read proceeding data
+		// More lightweight operation, this is the common operation
+		// Allowed to fail, if memory is truly needed an assert would take place later
+		const usz old_size = ar.data.size();
+
+		// Try to prefetch data by reading more than requested
+		ar.data.resize(std::min<usz>(read_limit, std::max<usz>({ ar.data.capacity(), ar.data.size() + read_past_buffer * 3 / 2, ar.m_avoid_large_prefetch ? usz{4096} : usz{0x10'0000} })));
+		ar.data.resize(this->read_at(ar, old_size + ar.data_offset, data ? const_cast<void*>(data) : ar.data.data() + old_size, ar.data.size() - old_size) + old_size);
+	}
+
+	return true;
+}
+
+usz compressed_serialization_file_handler::read_at(utils::serial& ar, usz read_pos, void* data, usz size)
+{
+	ensure(read_pos == ar.data.size() + ar.data_offset - size);
+
+	if (!size)
+	{
+		return 0;
+	}
+
+	initialize(ar);
+
+	z_stream& m_zs = std::any_cast<z_stream&>(m_stream);
+
+	const usz total_to_read = size;
+	usz read_size = 0;
+	u8* out_data = static_cast<u8*>(data);
+
+	auto adjust_for_uint = [](usz size)
+	{
+		return static_cast<uInt>(std::min<usz>(uInt{umax}, size));
+	};
+
+	for (; read_size < total_to_read;)
+	{
+		// Drain extracted memory stash (also before first file read)
+		out_data = static_cast<u8*>(data) + read_size;
+		m_zs.avail_in = adjust_for_uint(m_stream_data.size() - m_stream_data_index);
+		m_zs.next_in = reinterpret_cast<const u8*>(m_stream_data.data() + m_stream_data_index);
+		m_zs.next_out = out_data;
+		m_zs.avail_out = adjust_for_uint(size - read_size);
+
+		while (read_size < total_to_read && m_zs.avail_in)
+		{
+			const int res = inflate(&m_zs, Z_BLOCK);
+
+			bool need_more_file_memory = false;
+
+			switch (res)
+			{
+			case Z_OK:
+			case Z_STREAM_END:
+				break;
+			case Z_BUF_ERROR:
+			{
+				if (m_zs.avail_in)
+				{
+					need_more_file_memory = true;
+					break;
+				}
+
+				[[fallthrough]];
+			}
+			default:
+				inflateEnd(&m_zs);
+				m_read_inited = false;
+				return read_size;
+			}
+
+			read_size = m_zs.next_out - static_cast<u8*>(data);
+			m_stream_data_index = m_zs.avail_in ? m_zs.next_in - m_stream_data.data() : m_stream_data.size();
+
+			// Adjust again in case the values simply did not fit into uInt
+			m_zs.avail_out = adjust_for_uint(utils::sub_saturate<usz>(total_to_read, read_size));
+			m_zs.avail_in = adjust_for_uint(m_stream_data.size() - m_stream_data_index);
+
+			if (need_more_file_memory)
+			{
+				break;
+			}
+		}
+
+		if (read_size >= total_to_read)
+		{
+			break;
+		}
+
+		const usz add_size = ar.m_avoid_large_prefetch ? 0x1'0000 : 0x10'0000;
+		const usz old_file_buf_size = m_stream_data.size();
+
+		m_stream_data.resize(old_file_buf_size + add_size);
+		m_stream_data.resize(old_file_buf_size + m_file->read_at(m_file_read_index, m_stream_data.data() + old_file_buf_size, add_size));
+
+		if (m_stream_data.size() == old_file_buf_size)
+		{
+			// EOF
+			break;
+		}
+
+		m_file_read_index += m_stream_data.size() - old_file_buf_size;
+	}
+
+	if (m_stream_data.size() - m_stream_data_index <= m_stream_data_index / 5)
+	{
+		// Shrink to required memory size
+		m_stream_data.erase(m_stream_data.begin(), m_stream_data.begin() + m_stream_data_index);
+
+		if (m_stream_data.capacity() >= 0x200'0000)
+		{
+			// Discard memory
+			m_stream_data.shrink_to_fit();
+		}
+
+		m_stream_data_index = 0;
+	}
+
+	return read_size;
+}
+
+void compressed_serialization_file_handler::skip_until(utils::serial& ar)
+{
+	ensure(!ar.is_writing() && ar.pos >= ar.data_offset);
+
+	if (ar.pos > ar.data_offset)
+	{
+		handle_file_op(ar, ar.data_offset, ar.pos - ar.data_offset, nullptr);
+	}
+}
+
+void compressed_serialization_file_handler::finalize(utils::serial& ar)
+{
+	handle_file_op(ar, 0, umax, nullptr);
+
+	if (!m_stream.has_value())
+	{
+		return;
+	}
+
+	z_stream& m_zs = std::any_cast<z_stream&>(m_stream);
+
+	if (m_read_inited)
+	{
+		m_read_inited = false;
+		ensure(inflateEnd(&m_zs) == Z_OK);
+		return;
+	}
+
+	m_write_inited = false;
+
+	m_zs.avail_in = 0;
+	m_zs.next_in  = nullptr;
+
+	m_stream_data.resize(m_zs.avail_out);
+
+	do
+	{
+		m_zs.avail_out = static_cast<uInt>(m_stream_data.size());
+		m_zs.next_out  = m_stream_data.data();
+
+		if (deflate(&m_zs, Z_FINISH) == Z_STREAM_ERROR)
+		{
+			break;
+		}
+
+		m_file->write(m_stream_data.data(), m_stream_data.size() - m_zs.avail_out);
+	}
+	while (m_zs.avail_out == 0);
+
+	m_stream_data = {};
+	ensure(deflateEnd(&m_zs) == Z_OK);
+	ar.data = {}; // Deallocate and clear
+}
+
+usz compressed_serialization_file_handler::get_size(const utils::serial& ar, usz recommended) const
+{
+	if (ar.is_writing())
+	{
+		return m_file->size();
+	}
+
+	const usz memory_available = ar.data_offset + ar.data.size();
+
+	if (memory_available >= recommended)
+	{
+		// Avoid calling size() if possible
+		return memory_available;
+	}
+
+	return std::max<usz>(utils::mul_saturate<usz>(m_file->size(), 6), memory_available);
+}
+
+bool null_serialization_file_handler::handle_file_op(utils::serial&, usz, usz, const void*)
+{
+	return true;
+}
+
+void null_serialization_file_handler::finalize(utils::serial&)
+{
+}
+
+bool load_and_check_reserved(utils::serial& ar, usz size)
+{
+	u8 bytes[4096];
+	std::memset(&bytes[size & (0 - sizeof(v128))], 0, sizeof(v128));
+	ensure(size <= std::size(bytes));
+
+	const usz old_pos = ar.pos;
+	ar(std::span<u8>(bytes, size));
+
+	// Check if all are 0
+	for (usz i = 0; i < size; i += sizeof(v128))
+	{
+		if (v128::loadu(&bytes[i]) != v128{})
+		{
+			return false;
+		}
+	}
+
+	return old_pos + size == ar.pos;
 }
 
 namespace stx

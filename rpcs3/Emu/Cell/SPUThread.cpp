@@ -1981,7 +1981,7 @@ spu_thread::spu_thread(utils::serial& ar, lv2_spu_group* group)
 	: cpu_thread(idm::last_id())
 	, group(group)
 	, index(ar)
-	, thread_type(group ? spu_type::threaded : ar.operator u8() ? spu_type::isolated : spu_type::raw)
+	, thread_type(group ? spu_type::threaded : ar.pop<u8>() ? spu_type::isolated : spu_type::raw)
 	, shm(ensure(vm::get(vm::spu)->peek(vm_offset()).second))
 	, ls(map_ls(*this->shm))
 	, option(ar)
@@ -2029,12 +2029,12 @@ spu_thread::spu_thread(utils::serial& ar, lv2_spu_group* group)
 		for (auto& pair : spuq)
 		{
 			ar(pair.first);
-			pair.second = idm::get_unlocked<lv2_obj, lv2_event_queue>(ar.operator u32());
+			pair.second = idm::get_unlocked<lv2_obj, lv2_event_queue>(ar.pop<u32>());
 		}
 
 		for (auto& q : spup)
 		{
-			q = idm::get_unlocked<lv2_obj, lv2_event_queue>(ar.operator u32());
+			q = idm::get_unlocked<lv2_obj, lv2_event_queue>(ar.pop<u32>());
 		}
 	}
 	else
@@ -2042,7 +2042,7 @@ spu_thread::spu_thread(utils::serial& ar, lv2_spu_group* group)
 		for (spu_int_ctrl_t& ctrl : int_ctrl)
 		{
 			ar(ctrl.mask, ctrl.stat);
-			ctrl.tag = idm::get_unlocked<lv2_obj, lv2_int_tag>(ar.operator u32());
+			ctrl.tag = idm::get_unlocked<lv2_obj, lv2_int_tag>(ar.pop<u32>());
 		}
 
 		g_raw_spu_ctr++;

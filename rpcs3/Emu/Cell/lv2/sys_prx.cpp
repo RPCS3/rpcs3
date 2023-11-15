@@ -292,7 +292,7 @@ std::shared_ptr<void> lv2_prx::load(utils::serial& ar)
 {
 	[[maybe_unused]] const s32 version = GET_SERIALIZATION_VERSION(lv2_prx_overlay);
 
-	const std::string path = vfs::get(ar.operator std::string());
+	const std::string path = vfs::get(ar.pop<std::string>());
 	const s64 offset = ar;
 	const u32 state = ar;
 

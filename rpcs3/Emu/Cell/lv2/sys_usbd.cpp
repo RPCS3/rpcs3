@@ -70,7 +70,7 @@ public:
 
 	usb_handler_thread(utils::serial& ar) : usb_handler_thread()
 	{
-		is_init = !!ar.operator u8();
+		is_init = !!ar.pop<u8>();
 	}
 
 	void save(utils::serial& ar)

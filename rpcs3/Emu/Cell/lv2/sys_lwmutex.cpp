@@ -12,8 +12,8 @@ LOG_CHANNEL(sys_lwmutex);
 
 lv2_lwmutex::lv2_lwmutex(utils::serial& ar)
 	: protocol(ar)
-	, control(ar.operator decltype(control)())
-	, name(ar.operator be_t<u64>())
+	, control(ar.pop<decltype(control)>())
+	, name(ar.pop<be_t<u64>>())
 {
 	ar(lv2_control.raw().signaled);
 }

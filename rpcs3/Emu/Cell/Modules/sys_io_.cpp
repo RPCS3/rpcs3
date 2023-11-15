@@ -52,6 +52,7 @@ void config_event_entry(ppu_thread& ppu)
 	{
 		if (ppu.is_stopped())
 		{
+			ppu.state += cpu_flag::again;
 			return;
 		}
 
@@ -72,6 +73,8 @@ void config_event_entry(ppu_thread& ppu)
 			cellPad_NotifyStateChange(arg2, arg3);
 		}
 	}
+
+	sys_io.notice("config_event_entry(): Exited with the following error code: %s", CellError{static_cast<u32>(ppu.gpr[3])});
 
 	ppu_execute<&sys_ppu_thread_exit>(ppu, 0);
 }

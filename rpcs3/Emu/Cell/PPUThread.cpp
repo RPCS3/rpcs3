@@ -2352,6 +2352,16 @@ void ppu_thread::serialize_common(utils::serial& ar)
 
 	ar(gpr, fpr, cr, fpscr.bits, lr, ctr, vrsave, cia, xer, sat, nj, prio.raw().all);
 
+	if (cia % 4 || !vm::check_addr(cia))
+	{
+		fmt::throw_exception("Failed to serialize PPU thread ID=0x%x (cia=0x%x, ar=%s)", this->id, cia, ar);
+	}
+
+	if (ar.is_writing())
+	{
+		ppu_log.notice("Saving PPU Thread [0x%x: %s]: cia=0x%x, state=%s", id, *ppu_tname.load(), cia, +state);
+	}
+
 	ar(optional_savestate_state, vr);
 
 	if (optional_savestate_state->data.empty())
@@ -2364,7 +2374,7 @@ ppu_thread::ppu_thread(utils::serial& ar)
 	: cpu_thread(idm::last_id()) // last_id() is showed to constructor on serialization
 	, stack_size(ar)
 	, stack_addr(ar)
-	, joiner(ar.operator ppu_join_status())
+	, joiner(ar.pop<ppu_join_status>())
 	, entry_func(std::bit_cast<ppu_func_opd_t, u64>(ar))
 	, is_interrupt_thread(ar)
 {
@@ -2397,7 +2407,7 @@ ppu_thread::ppu_thread(utils::serial& ar)
 		}
 	};
 
-	switch (const u32 status = ar.operator u32())
+	switch (const u32 status = ar.pop<u32>())
 	{
 	case PPU_THREAD_STATUS_IDLE:
 	{
@@ -2490,7 +2500,9 @@ ppu_thread::ppu_thread(utils::serial& ar)
 		state += cpu_flag::memory;
 	}
 
-	ppu_tname = make_single<std::string>(ar.operator std::string());
+	ppu_tname = make_single<std::string>(ar.pop<std::string>());
+
+	ppu_log.notice("Loading PPU Thread [0x%x: %s]: cia=0x%x, state=%s", id, *ppu_tname.load(), cia, +state);
 }
 
 void ppu_thread::save(utils::serial& ar)
@@ -2504,12 +2516,6 @@ void ppu_thread::save(utils::serial& ar)
 	{
 		// Joining thread should recover this member properly
 		_joiner = ppu_join_status::joinable;
-	}
-
-	if (state & cpu_flag::again)
-	{
-		std::memcpy(&gpr[3], syscall_args, sizeof(syscall_args));
-		cia -= 4;
 	}
 
 	ar(stack_size, stack_addr, _joiner, entry, is_interrupt_thread);
@@ -2683,6 +2689,13 @@ void ppu_thread::fast_call(u32 addr, u64 rtoc, bool is_thread_entry)
 			// For savestates
 			state += cpu_flag::again;
 			std::memcpy(syscall_args, &gpr[3], sizeof(syscall_args));
+		}
+
+		if (!old_cia && state & cpu_flag::again)
+		{
+			// Fixup argument registers and CIA for reloading
+			std::memcpy(&gpr[3], syscall_args, sizeof(syscall_args));
+			cia -= 4;
 		}
 
 		current_function = old_func;
