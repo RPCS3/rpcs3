@@ -1190,6 +1190,8 @@ namespace utils
 						m_frames_to_encode.pop_front();
 						m_mtx.unlock();
 
+						got_frame = true;
+
 						// Calculate presentation timestamp.
 						const s64 pts = get_pts(frame_data.timestamp_ms);
 
@@ -1201,8 +1203,6 @@ namespace utils
 						else if (av.video.context)
 						{
 							media_log.trace("video_encoder: adding new frame. timestamp=%d", frame_data.timestamp_ms);
-
-							got_frame = true;
 
 							if (int err = av_frame_make_writable(av.video.frame); err < 0)
 							{
@@ -1276,6 +1276,8 @@ namespace utils
 						m_samples_to_encode.pop_front();
 						m_audio_mtx.unlock();
 
+						got_sample = true;
+
 						if (sample_data.channels != av.audio.frame->ch_layout.nb_channels)
 						{
 							fmt::throw_exception("video_encoder: Audio sample channel count %d does not match frame channel count %d", sample_data.channels, av.audio.frame->ch_layout.nb_channels);
@@ -1303,7 +1305,6 @@ namespace utils
 								}
 
 								audio_samples_sample_count = 0;
-								got_sample = true;
 
 								if (int err = av_frame_make_writable(av.audio.frame); err < 0)
 								{
