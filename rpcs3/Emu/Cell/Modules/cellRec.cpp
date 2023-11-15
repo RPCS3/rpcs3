@@ -659,6 +659,7 @@ void rec_info::start_video_provider()
 					if (use_ring_buffer)
 					{
 						// The video frames originate from our render pipeline and are stored in a ringbuffer.
+						frame.pts = pts;
 						video_ringbuffer[next_video_ring_pos()] = std::move(frame);
 						video_ring_frame_count++;
 					}
