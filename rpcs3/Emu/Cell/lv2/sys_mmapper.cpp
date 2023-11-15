@@ -50,7 +50,7 @@ lv2_memory::lv2_memory(utils::serial& ar)
 	, flags(ar)
 	, key(ar)
 	, pshared(ar)
-	, ct(lv2_memory_container::search(ar.operator u32()))
+	, ct(lv2_memory_container::search(ar.pop<u32>()))
 	, shm([&](u32 addr)
 	{
 		if (addr)
@@ -61,7 +61,7 @@ lv2_memory::lv2_memory(utils::serial& ar)
 		const auto _shm = std::make_shared<utils::shm>(size, 1);
 		ar(std::span(_shm->map_self(), size));
 		return _shm;
-	}(ar.operator u32()))
+	}(ar.pop<u32>()))
 	, counter(ar)
 {
 #ifndef _WIN32
