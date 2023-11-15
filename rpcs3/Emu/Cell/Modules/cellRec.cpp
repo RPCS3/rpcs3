@@ -237,8 +237,8 @@ struct rec_info
 	std::vector<utils::video_sink::encoder_frame> video_ringbuffer;
 	std::vector<audio_block> audio_ringbuffer;
 	usz video_ring_pos = 0;
-	usz video_ring_frame_count = 0;
 	usz audio_ring_pos = 0;
+	usz video_ring_frame_count = 0;
 	usz audio_ring_block_count = 0;
 
 	usz next_video_ring_pos()
@@ -259,8 +259,6 @@ struct rec_info
 	std::shared_ptr<utils::video_encoder> encoder;
 	std::unique_ptr<named_thread<std::function<void()>>> video_provider_thread;
 	atomic_t<bool> paused = false;
-	s64 last_video_pts = -1;
-	s64 last_audio_pts = -1;
 
 	// Video parameters
 	utils::video_encoder::frame_format output_format{};
@@ -573,6 +571,7 @@ void rec_info::start_video_provider()
 	cellRec.notice("Starting video provider.");
 
 	recording_time_start = get_system_time();
+	pause_time_start = 0;
 	pause_time_total = 0;
 	video_provider.set_pause_time(0);
 
@@ -585,6 +584,8 @@ void rec_info::start_video_provider()
 		const usz frame_size = input_format.pitch * input_format.height;
 		audio_block buffer_external{}; // for cellRec input
 		audio_block buffer_internal{}; // for cellAudio input
+		s64 last_video_pts = -1;
+		s64 last_audio_pts = -1;
 
 		cellRec.notice("video_provider_thread: use_ring_buffer=%d, video_ringbuffer_size=%d, audio_ringbuffer_size=%d, ring_sec=%d, frame_size=%d, use_internal_video=%d, use_external_audio=%d, use_internal_audio=%d", use_ring_buffer, video_ringbuffer.size(), audio_ringbuffer.size(), param.ring_sec, frame_size, encoder->use_internal_video, use_external_audio, encoder->use_internal_audio);
 
@@ -1224,13 +1225,16 @@ error_code cellRecOpen(vm::cptr<char> pDirName, vm::cptr<char> pFileName, vm::cp
 
 	rec.cb = cb;
 	rec.cbUserData = cbUserData;
-	rec.last_video_pts = -1;
-	rec.audio_ringbuffer.clear();
-	rec.audio_ring_block_count = 0;
-	rec.audio_ring_pos = 0;
 	rec.video_ringbuffer.clear();
-	rec.video_ring_frame_count = 0;
+	rec.audio_ringbuffer.clear();
 	rec.video_ring_pos = 0;
+	rec.audio_ring_pos = 0;
+	rec.video_ring_frame_count = 0;
+	rec.audio_ring_block_count = 0;
+	rec.recording_time_start = 0;
+	rec.recording_time_total = 0;
+	rec.pause_time_start = 0;
+	rec.pause_time_total = 0;
 	rec.paused = false;
 
 	rec.set_video_params(pParam->videoFmt);
@@ -1440,7 +1444,7 @@ error_code cellRecStart()
 		g_fxo->need<utils::video_provider>();
 		utils::video_provider& video_provider = g_fxo->get<utils::video_provider>();
 
-		// Setup an video sink if it is needed
+		// Setup a video sink if it is needed
 		if (rec.param.use_internal_video() || rec.param.use_internal_audio())
 		{
 			if (rec.sink && !video_provider.set_video_sink(rec.sink, recording_mode::cell))
