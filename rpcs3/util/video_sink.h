@@ -39,25 +39,25 @@ namespace utils
 
 		s64 get_pts(usz timestamp_ms) const
 		{
-			return static_cast<s64>(std::round((timestamp_ms * m_framerate) / 1000.f));
+			return static_cast<s64>(std::round((timestamp_ms * m_framerate) / 1000.0));
 		}
 
 		s64 get_audio_pts(usz timestamp_us) const
 		{
-			static constexpr f32 us_per_sec = 1000000.0f;
-			const f32 us_per_block = us_per_sec / (m_sample_rate / static_cast<f32>(m_samples_per_block));
-			return static_cast<s64>(std::ceil(timestamp_us / us_per_block));
+			static constexpr f64 us_per_sec = 1000000.0;
+			const f64 us_per_block = us_per_sec / (m_sample_rate / static_cast<f64>(m_samples_per_block));
+			return static_cast<s64>(std::round(timestamp_us / us_per_block));
 		}
 
 		usz get_timestamp_ms(s64 pts) const
 		{
-			return static_cast<usz>(std::round((pts * 1000) / static_cast<f32>(m_framerate)));
+			return static_cast<usz>(std::round((pts * 1000) / static_cast<f64>(m_framerate)));
 		}
 
 		usz get_audio_timestamp_us(s64 pts) const
 		{
-			static constexpr f32 us_per_sec = 1000000.0f;
-			const f32 us_per_block = us_per_sec / (m_sample_rate / static_cast<f32>(m_samples_per_block));
+			static constexpr f64 us_per_sec = 1000000.0;
+			const f64 us_per_block = us_per_sec / (m_sample_rate / static_cast<f64>(m_samples_per_block));
 			return static_cast<usz>(pts * us_per_block);
 		}
 
