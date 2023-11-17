@@ -1033,7 +1033,10 @@ error_code sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::pt
 		sceNpTrophy.error("sceNpTrophyUnlockTrophy: Failed to get timestamp: 0x%x", +error);
 	}
 
-	ctxt->tropusr->UnlockTrophy(trophyId, tick->tick, tick->tick);
+	if (ctxt->tropusr->UnlockTrophy(trophyId, tick->tick, tick->tick))
+	{
+		sceNpTrophy.notice("Trophy %d unlocked", trophyId);
+	}
 
 	// TODO: Make sure that unlocking platinum trophies is properly implemented and improve upon it
 	const std::string& config_path = vfs::get("/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/" + ctxt->trp_name + "/TROPCONF.SFM");
@@ -1056,7 +1059,10 @@ error_code sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::pt
 	}
 
 	const std::string trophyPath = "/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/" + ctxt->trp_name + "/TROPUSR.DAT";
-	ctxt->tropusr->Save(trophyPath);
+	if (!ctxt->tropusr->Save(trophyPath))
+	{
+		sceNpTrophy.error("sceNpTrophyUnlockTrophy: failed to save '%s'", trophyPath);
+	}
 
 	if (g_cfg.misc.show_trophy_popups)
 	{
