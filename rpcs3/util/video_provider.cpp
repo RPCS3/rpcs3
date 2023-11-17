@@ -109,6 +109,7 @@ namespace utils
 		if (!m_active.exchange(true))
 		{
 			m_current_encoder_frame = 0;
+			m_current_encoder_sample = 0;
 			m_last_video_pts_incoming = -1;
 			m_last_audio_pts_incoming = -1;
 		}
