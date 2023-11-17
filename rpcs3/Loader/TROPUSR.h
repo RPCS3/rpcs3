@@ -81,10 +81,10 @@ class TROPUSRLoader
 	std::vector<TROPUSREntry4> m_table4;
 	std::vector<TROPUSREntry6> m_table6;
 
-	virtual bool Generate(const std::string& filepath, const std::string& configpath);
-	virtual bool LoadHeader();
-	virtual bool LoadTableHeaders();
-	virtual bool LoadTables();
+	[[nodiscard]] bool Generate(std::string_view filepath, std::string_view configpath);
+	[[nodiscard]] bool LoadHeader();
+	[[nodiscard]] bool LoadTableHeaders();
+	[[nodiscard]] bool LoadTables();
 
 public:
 	virtual ~TROPUSRLoader() = default;
@@ -95,17 +95,18 @@ public:
 		bool success;
 	};
 
-	virtual load_result Load(const std::string& filepath, const std::string& configpath);
-	virtual bool Save(const std::string& filepath);
+	[[nodiscard]] load_result Load(std::string_view filepath, std::string_view configpath);
+	[[nodiscard]] bool Save(std::string_view filepath);
 
-	virtual u32 GetTrophiesCount() const;
-	virtual u32 GetUnlockedTrophiesCount() const;
+	[[nodiscard]] u32 GetTrophiesCount() const;
+	[[nodiscard]] u32 GetUnlockedTrophiesCount() const;
 
-	virtual u32 GetUnlockedPlatinumID(u32 trophy_id, const std::string& config_path);
+	[[nodiscard]] u32 GetUnlockedPlatinumID(u32 trophy_id, const std::string& config_path);
 
-	virtual u32 GetTrophyGrade(u32 id) const;
-	virtual u32 GetTrophyUnlockState(u32 id) const;
-	virtual u64 GetTrophyTimestamp(u32 id) const;
+	[[nodiscard]] u32 GetTrophyGrade(u32 id) const;
+	[[nodiscard]] u32 GetTrophyUnlockState(u32 id) const;
+	[[nodiscard]] u64 GetTrophyTimestamp(u32 id) const;
 
-	virtual bool UnlockTrophy(u32 id, u64 timestamp1, u64 timestamp2);
+	[[nodiscard]] bool UnlockTrophy(u32 id, u64 timestamp1, u64 timestamp2);
+	[[nodiscard]] bool LockTrophy(u32 id);
 };
