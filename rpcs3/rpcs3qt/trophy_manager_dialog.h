@@ -81,6 +81,7 @@ private:
 	bool eventFilter(QObject *object, QEvent *event) override;
 
 	static QDateTime TickToDateTime(u64 tick);
+	static u64 DateTimeToTick(QDateTime date_time);
 
 	std::shared_ptr<gui_settings> m_gui_settings;
 

@@ -807,10 +807,10 @@ CellRtcDateTime tick_to_date_time(u64 tick)
 	bool exit_while = false;
 	do
 	{
-		bool leap = is_leap_year(years);
-		for (u32 m = 0; m <= 11; m++)
+		const bool leap = is_leap_year(years);
+		for (u32 m = 0; m < 12; m++)
 		{
-			u8 daysinmonth = DAYS_IN_MONTH[m + (leap * 12)];
+			const u8 daysinmonth = DAYS_IN_MONTH[m + (leap * 12)];
 			if (days_tmp >= daysinmonth)
 			{
 				months++;
@@ -840,6 +840,52 @@ CellRtcDateTime tick_to_date_time(u64 tick)
 		.microsecond = microseconds
 	};
 	return date_time;
+}
+
+u64 date_time_to_tick(CellRtcDateTime date_time)
+{
+	const auto get_days_in_year = [](u16 year, u16 months) -> u64
+	{
+		const bool leap = is_leap_year(year);
+		u64 days = 0;
+		for (u16 m = 0; m < months; m++)
+		{
+			days += DAYS_IN_MONTH[m + (leap * 12)];
+		}
+		return days;
+	};
+
+	u64 days = 0;
+
+	if (date_time.day > 1)
+	{
+		// We only need the whole days before "this" day
+		days += date_time.day - 1ULL;
+	}
+
+	if (date_time.month > 1)
+	{
+		// We only need the whole months before "this" month
+		days += get_days_in_year(date_time.year, date_time.month - 1ULL);
+	}
+
+	if (date_time.year > 1)
+	{
+		// We only need the whole years before "this" year
+		// NOTE: tick_to_date_time starts counting with year 1, so count [1,n[ instead of [0,n-1[
+		for (u16 year = 1; year < date_time.year; year++)
+		{
+			days += get_days_in_year(year, 12);
+		}
+	}
+
+	u64 tick = date_time.microsecond
+	         + u64{date_time.second} * 1000000ULL
+	         + u64{date_time.minute} * 60ULL * 1000000ULL
+	         + u64{date_time.hour}   * 60ULL * 60ULL * 1000000ULL
+	         + days                  * 24ULL * 60ULL * 60ULL * 1000000ULL;
+
+	return tick;
 }
 
 error_code cellRtcSetTick(vm::ptr<CellRtcDateTime> pTime, vm::cptr<CellRtcTick> pTick)
