@@ -330,16 +330,16 @@ void GLGSRender::on_init_thread()
 		sampler.bind(image_unit++);
 	}
 
-	for (auto &sampler : m_fs_sampler_mirror_states)
-	{
-		sampler.create();
-		sampler.apply_defaults();
-		sampler.bind(image_unit++);
-	}
-
 	for (auto &sampler : m_vs_sampler_states)
 	{
 		sampler.create();
+		sampler.bind(image_unit++);
+	}
+
+	for (auto& sampler : m_fs_sampler_mirror_states)
+	{
+		sampler.create();
+		sampler.apply_defaults();
 		sampler.bind(image_unit++);
 	}
 
