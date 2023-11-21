@@ -1170,15 +1170,15 @@ namespace utils
 			s64 last_video_pts = -1;
 
 			// Allocate audio buffer for our audio frame
-			std::vector<u8> audio_samples;
-			u32 audio_samples_sample_count = 0;
+			std::vector<u8> audio_frame;
+			u32 audio_frame_sample_count = 0;
 			const bool sample_fmt_is_planar = av.audio.context && av_sample_fmt_is_planar(av.audio.context->sample_fmt) != 0;
 			const int sample_fmt_bytes = av.audio.context ? av_get_bytes_per_sample(av.audio.context->sample_fmt) : 0;
 			ensure(sample_fmt_bytes == sizeof(f32)); // We only support FLT or FLTP for now
 
 			if (av.audio.frame)
 			{
-				audio_samples.resize(av.audio.frame->nb_samples * av.audio.frame->ch_layout.nb_channels * sizeof(f32));
+				audio_frame.resize(av.audio.frame->nb_samples * av.audio.frame->ch_layout.nb_channels * sizeof(f32));
 				last_audio_frame_pts -= av.audio.frame->nb_samples;
 			}
 
@@ -1312,12 +1312,12 @@ namespace utils
 
 							const auto send_frame = [&]()
 							{
-								if (audio_samples_sample_count < static_cast<u32>(av.audio.frame->nb_samples))
+								if (audio_frame_sample_count < static_cast<u32>(av.audio.frame->nb_samples))
 								{
 									return;
 								}
 
-								audio_samples_sample_count = 0;
+								audio_frame_sample_count = 0;
 
 								if (int err = av_frame_make_writable(av.audio.frame); err < 0)
 								{
@@ -1337,13 +1337,13 @@ namespace utils
 
 										for (int sample = 0; sample < samples; sample++)
 										{
-											dst[sample] = *reinterpret_cast<f32*>(&audio_samples[(sample * channels + ch) * sizeof(f32)]);
+											dst[sample] = *reinterpret_cast<f32*>(&audio_frame[(sample * channels + ch) * sizeof(f32)]);
 										}
 									}
 								}
 								else
 								{
-									std::memcpy(av.audio.frame->data[0], audio_samples.data(), audio_samples.size());
+									std::memcpy(av.audio.frame->data[0], audio_frame.data(), audio_frame.size());
 								}
 
 								av.audio.frame->pts = last_audio_frame_pts + av.audio.frame->nb_samples;
@@ -1373,14 +1373,14 @@ namespace utils
 								// Copy as many old samples to our audio frame as possible
 								if (leftover_sample_count > 0)
 								{
-									const u32 samples_to_add = std::min(leftover_sample_count, av.audio.frame->nb_samples - audio_samples_sample_count);
+									const u32 samples_to_add = std::min(leftover_sample_count, av.audio.frame->nb_samples - audio_frame_sample_count);
 
 									if (samples_to_add > 0)
 									{
 										const u8* src = &last_samples.data[(last_samples.sample_count - leftover_sample_count) * last_samples.channels * sizeof(f32)];
-										u8* dst = &audio_samples[audio_samples_sample_count * last_samples.channels * sizeof(f32)];
+										u8* dst = &audio_frame[audio_frame_sample_count * last_samples.channels * sizeof(f32)];
 										copy_samples<f32>(src, dst, samples_to_add * last_samples.channels, swap_endianness);
-										audio_samples_sample_count += samples_to_add;
+										audio_frame_sample_count += samples_to_add;
 										leftover_sample_count -= samples_to_add;
 										update_last_pts(samples_to_add);
 									}
@@ -1392,27 +1392,27 @@ namespace utils
 								}
 								else if (silence_to_add > 0)
 								{
-									const u32 samples_to_add = std::min<s32>(silence_to_add, av.audio.frame->nb_samples - audio_samples_sample_count);
+									const u32 samples_to_add = std::min<s32>(silence_to_add, av.audio.frame->nb_samples - audio_frame_sample_count);
 
 									if (samples_to_add > 0)
 									{
-										u8* dst = &audio_samples[audio_samples_sample_count * av.audio.frame->ch_layout.nb_channels * sizeof(f32)];
+										u8* dst = &audio_frame[audio_frame_sample_count * av.audio.frame->ch_layout.nb_channels * sizeof(f32)];
 										std::memset(dst, 0, samples_to_add * sample_data.channels * sizeof(f32));
-										audio_samples_sample_count += samples_to_add;
+										audio_frame_sample_count += samples_to_add;
 										update_last_pts(samples_to_add);
 									}
 								}
 								else if (add_new_sample)
 								{
 									// Copy as many new samples to our audio frame as possible
-									const u32 samples_to_add = std::min<s32>(sample_data.sample_count, av.audio.frame->nb_samples - audio_samples_sample_count);
+									const u32 samples_to_add = std::min<s32>(sample_data.sample_count, av.audio.frame->nb_samples - audio_frame_sample_count);
 
 									if (samples_to_add > 0)
 									{
 										const u8* src = sample_data.data.data();
-										u8* dst = &audio_samples[audio_samples_sample_count * sample_data.channels * sizeof(f32)];
+										u8* dst = &audio_frame[audio_frame_sample_count * sample_data.channels * sizeof(f32)];
 										copy_samples<f32>(src, dst, samples_to_add * sample_data.channels, swap_endianness);
-										audio_samples_sample_count += samples_to_add;
+										audio_frame_sample_count += samples_to_add;
 										update_last_pts(samples_to_add);
 									}
 
