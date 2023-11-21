@@ -725,7 +725,7 @@ void rec_info::start_video_provider()
 							if (sample.channels > channels)
 							{
 								// Downmix channels
-								AudioBackend::downmix(CELL_REC_AUDIO_BLOCK_SAMPLES, sample.channels, channels, src, reinterpret_cast<f32*>(dst_buffer.block.data()));
+								AudioBackend::downmix(CELL_REC_AUDIO_BLOCK_SAMPLES * sample.channels, sample.channels, channels, src, reinterpret_cast<f32*>(dst_buffer.block.data()));
 							}
 							else
 							{
