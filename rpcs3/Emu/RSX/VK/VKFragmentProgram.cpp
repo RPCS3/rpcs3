@@ -249,7 +249,7 @@ void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	m_shader_props.low_precision_tests = device_props.has_low_precision_rounding && !(m_prog.ctrl & RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION);
 	m_shader_props.disable_early_discard = vk::get_driver_vendor() != vk::driver_vendor::NVIDIA;
 	m_shader_props.supports_native_fp16 = device_props.has_native_half_support;
-	m_shader_props.ROP_output_rounding = vk::get_driver_vendor() == vk::driver_vendor::NVIDIA;
+	m_shader_props.ROP_output_rounding = g_cfg.video.shader_precision != gpu_preset_level::low;
 	m_shader_props.require_tex1D_ops = properties.has_tex1D;
 	m_shader_props.require_tex2D_ops = properties.has_tex2D;
 	m_shader_props.require_tex3D_ops = properties.has_tex3D;
