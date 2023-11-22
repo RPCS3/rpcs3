@@ -614,6 +614,7 @@ void game_list_frame::OnParsingFinished()
 		info.hasCustomConfig = fs::is_file(rpcs3::utils::get_custom_config_path(info.info.serial));
 		info.hasCustomPadConfig = fs::is_file(rpcs3::utils::get_custom_input_config_path(info.info.serial));
 		info.has_hover_gif = fs::is_file(game_icon_path + info.info.serial + "/hover.gif");
+		info.has_hover_pam = fs::is_file(info.info.get_pam_path());
 
 		m_games.push(std::make_shared<gui_game_info>(std::move(info)));
 	};
