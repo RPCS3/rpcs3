@@ -178,9 +178,28 @@ public:
 
 		std::lock_guard lock(m_mtx);
 		m_flush = flush;
+		m_paused = false;
 		m_frames_to_encode.clear();
 		m_samples_to_encode.clear();
 		has_error = false;
+	}
+
+	void pause(bool flush = true) override
+	{
+		cellRec.notice("Pausing video sink. flush=%d", flush);
+
+		std::lock_guard lock(m_mtx);
+		m_flush = flush;
+		m_paused = true;
+	}
+
+	void resume() override
+	{
+		cellRec.notice("Resuming video sink");
+
+		std::lock_guard lock(m_mtx);
+		m_flush = false;
+		m_paused = false;
 	}
 
 	encoder_frame get_frame()
@@ -563,7 +582,7 @@ void rec_info::start_video_provider()
 		const u64 pause_time_end = get_system_time();
 		ensure(pause_time_end > pause_time_start);
 		pause_time_total += (pause_time_end - pause_time_start);
-		video_provider.set_pause_time(pause_time_total / 1000);
+		video_provider.set_pause_time_us(pause_time_total);
 		cellRec.notice("Resuming video provider.");
 		return;
 	}
@@ -573,7 +592,7 @@ void rec_info::start_video_provider()
 	recording_time_start = get_system_time();
 	pause_time_start = 0;
 	pause_time_total = 0;
-	video_provider.set_pause_time(0);
+	video_provider.set_pause_time_us(0);
 
 	video_provider_thread = std::make_unique<named_thread<std::function<void()>>>("cellRec video provider", [this]()
 	{
@@ -785,7 +804,7 @@ void rec_info::start_video_provider()
 
 void rec_info::pause_video_provider()
 {
-	cellRec.notice("Pausing image provider.");
+	cellRec.notice("Pausing video provider.");
 
 	if (video_provider_thread)
 	{
@@ -1393,19 +1412,13 @@ error_code cellRecStop()
 
 	sysutil_register_cb([&rec](ppu_thread& ppu) -> s32
 	{
-		// Disable video sink if it was used
-		if (rec.param.use_internal_video() || rec.param.use_internal_audio())
-		{
-			const recording_mode old_mode = g_recording_mode.exchange(recording_mode::stopped);
-
-			if (old_mode != recording_mode::cell && old_mode != recording_mode::stopped)
-			{
-				cellRec.error("cellRecStop: Unexpected recording mode %s found while stopping video capture. (ring_sec=%d)", old_mode, rec.param.ring_sec);
-			}
-		}
-
 		// cellRecStop actually just pauses the recording
 		rec.pause_video_provider();
+
+		if (rec.sink)
+		{
+			rec.sink->pause(true);
+		}
 
 		ensure(!!rec.encoder);
 		rec.encoder->pause(true);
@@ -1464,6 +1477,11 @@ error_code cellRecStart()
 		}
 
 		rec.start_video_provider();
+
+		if (rec.sink)
+		{
+			rec.sink->resume();
+		}
 
 		if (rec.encoder->has_error)
 		{

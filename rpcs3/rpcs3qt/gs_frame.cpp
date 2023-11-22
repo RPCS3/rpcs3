@@ -525,7 +525,7 @@ void gs_frame::toggle_recording()
 			return;
 		}
 
-		video_provider.set_pause_time(0);
+		video_provider.set_pause_time_us(0);
 
 		g_recording_mode = recording_mode::rpcs3;
 

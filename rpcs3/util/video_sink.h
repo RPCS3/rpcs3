@@ -15,26 +15,30 @@ namespace utils
 		video_sink() = default;
 
 		virtual void stop(bool flush = true) = 0;
+		virtual void pause(bool flush = true) = 0;
+		virtual void resume() = 0;
 
-		void add_frame(std::vector<u8>& frame, u32 pitch, u32 width, u32 height, s32 pixel_format, usz timestamp_ms)
+		bool add_frame(std::vector<u8>& frame, u32 pitch, u32 width, u32 height, s32 pixel_format, usz timestamp_ms)
 		{
-			// Do not allow new frames while flushing
-			if (m_flush)
-				return;
+			// Do not allow new frames while flushing or paused
+			if (m_flush || m_paused)
+				return false;
 
 			std::lock_guard lock(m_mtx);
 			m_frames_to_encode.emplace_back(timestamp_ms, pitch, width, height, pixel_format, std::move(frame));
+			return true;
 		}
 
-		void add_audio_samples(const u8* buf, u32 sample_count, u16 channels, usz timestamp_us)
+		bool add_audio_samples(const u8* buf, u32 sample_count, u16 channels, usz timestamp_us)
 		{
-			// Do not allow new samples while flushing
-			if (m_flush || !buf || !sample_count || !channels)
-				return;
+			// Do not allow new samples while flushing or paused
+			if (m_flush || m_paused || !buf || !sample_count || !channels)
+				return false;
 
 			std::vector<u8> sample(buf, buf + sample_count * channels * sizeof(f32));
 			std::lock_guard lock(m_audio_mtx);
 			m_samples_to_encode.emplace_back(timestamp_us, sample_count, channels, std::move(sample));
+			return true;
 		}
 
 		s64 get_pts(usz timestamp_ms) const
@@ -102,6 +106,7 @@ namespace utils
 		std::deque<encoder_frame> m_frames_to_encode;
 		shared_mutex m_audio_mtx;
 		std::deque<encoder_sample> m_samples_to_encode;
+		atomic_t<bool> m_paused = false;
 		atomic_t<bool> m_flush = false;
 		u32 m_framerate = 30;
 		u32 m_sample_rate = 48000;
