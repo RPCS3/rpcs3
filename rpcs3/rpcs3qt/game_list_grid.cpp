@@ -75,16 +75,16 @@ void game_list_grid::populate(
 			item->setToolTip(tr("%0 [%1]\n\nNotes:\n%2").arg(title).arg(serial).arg(notes));
 		}
 
-		item->set_icon_func([this, item, game](int)
+		item->set_icon_func([this, item, game](const QVideoFrame& frame)
 		{
 			if (!item || !game)
 			{
 				return;
 			}
 
-			if (std::shared_ptr<QMovie> movie = item->movie(); movie && item->get_active())
+			if (const QPixmap pixmap = item->get_movie_image(frame); item->get_active() && !pixmap.isNull())
 			{
-				item->set_icon(gui::utils::get_centered_pixmap(movie->currentPixmap(), m_icon_size, 0, 0, 1.0, Qt::FastTransformation));
+				item->set_icon(gui::utils::get_centered_pixmap(pixmap, m_icon_size, 0, 0, 1.0, Qt::FastTransformation));
 			}
 			else
 			{
@@ -92,21 +92,22 @@ void game_list_grid::populate(
 
 				item->set_icon(game->pxmap);
 
-				if (!game->has_hover_gif)
+				if (!game->has_hover_gif && !game->has_hover_pam)
 				{
 					game->pxmap = {};
 				}
 
-				if (movie)
-				{
-					movie->stop();
-				}
+				item->stop_movie();
 			}
 		});
 
 		if (play_hover_movies && game->has_hover_gif)
 		{
-			item->init_movie(game_icon_path % serial % "/hover.gif");
+			item->set_movie_path(game_icon_path % serial % "/hover.gif");
+		}
+		else if (play_hover_movies && game->has_hover_pam)
+		{
+			item->set_movie_path(QString::fromStdString(game->info.get_pam_path()));
 		}
 
 		if (selected_item_id == game->info.path + game->info.icon_path)
