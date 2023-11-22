@@ -74,22 +74,10 @@ namespace utils
 		return true;
 	}
 
-	void video_provider::set_pause_time(usz pause_time_ms)
+	void video_provider::set_pause_time_us(usz pause_time_us)
 	{
 		std::lock_guard lock(m_mutex);
-		m_pause_time_ms = pause_time_ms;
-	}
-
-	bool video_provider::can_consume_frame()
-	{
-		std::lock_guard lock(m_mutex);
-
-		if (!m_video_sink || !m_video_sink->use_internal_video)
-			return false;
-
-		const usz timestamp_ms = std::chrono::duration_cast<std::chrono::milliseconds>(steady_clock::now() - m_encoder_start).count() - m_pause_time_ms;
-		const s64 pts = m_video_sink->get_pts(timestamp_ms);
-		return pts > m_last_video_pts_incoming;
+		m_pause_time_us = pause_time_us;
 	}
 
 	recording_mode video_provider::check_mode()
@@ -122,6 +110,21 @@ namespace utils
 		return g_recording_mode;
 	}
 
+	bool video_provider::can_consume_frame()
+	{
+		std::lock_guard lock(m_mutex);
+
+		if (!m_video_sink || !m_video_sink->use_internal_video)
+			return false;
+
+		const usz elapsed_us = std::chrono::duration_cast<std::chrono::microseconds>(steady_clock::now() - m_encoder_start).count();
+		ensure(elapsed_us >= m_pause_time_us);
+
+		const usz timestamp_ms = (elapsed_us - m_pause_time_us) / 1000;
+		const s64 pts = m_video_sink->get_pts(timestamp_ms);
+		return pts > m_last_video_pts_incoming;
+	}
+
 	void video_provider::present_frame(std::vector<u8>& data, u32 pitch, u32 width, u32 height, bool is_bgra)
 	{
 		std::lock_guard lock(m_mutex);
@@ -132,7 +135,10 @@ namespace utils
 		}
 
 		// Calculate presentation timestamp.
-		const usz timestamp_ms = std::chrono::duration_cast<std::chrono::milliseconds>(steady_clock::now() - m_encoder_start).count() - m_pause_time_ms;
+		const usz elapsed_us = std::chrono::duration_cast<std::chrono::microseconds>(steady_clock::now() - m_encoder_start).count();
+		ensure(elapsed_us >= m_pause_time_us);
+
+		const usz timestamp_ms = (elapsed_us - m_pause_time_us) / 1000;
 		const s64 pts = m_video_sink->get_pts(timestamp_ms);
 
 		// We can just skip this frame if it has the same timestamp.
@@ -141,9 +147,11 @@ namespace utils
 			return;
 		}
 
-		m_last_video_pts_incoming = pts;
-		m_current_encoder_frame++;
-		m_video_sink->add_frame(data, pitch, width, height, is_bgra ? AVPixelFormat::AV_PIX_FMT_BGRA : AVPixelFormat::AV_PIX_FMT_RGBA, timestamp_ms);
+		if (m_video_sink->add_frame(data, pitch, width, height, is_bgra ? AVPixelFormat::AV_PIX_FMT_BGRA : AVPixelFormat::AV_PIX_FMT_RGBA, timestamp_ms))
+		{
+			m_last_video_pts_incoming = pts;
+			m_current_encoder_frame++;
+		}
 	}
 
 	bool video_provider::can_consume_sample()
@@ -153,7 +161,10 @@ namespace utils
 		if (!m_video_sink || !m_video_sink->use_internal_audio)
 			return false;
 
-		const usz timestamp_us = std::chrono::duration_cast<std::chrono::microseconds>(steady_clock::now() - m_encoder_start).count() - (m_pause_time_ms * 1000ull);
+		const usz elapsed_us = std::chrono::duration_cast<std::chrono::microseconds>(steady_clock::now() - m_encoder_start).count();
+		ensure(elapsed_us >= m_pause_time_us);
+
+		const usz timestamp_us = elapsed_us - m_pause_time_us;
 		const s64 pts = m_video_sink->get_audio_pts(timestamp_us);
 		return pts > m_last_audio_pts_incoming;
 	}
@@ -173,7 +184,10 @@ namespace utils
 		}
 
 		// Calculate presentation timestamp.
-		const usz timestamp_us = std::chrono::duration_cast<std::chrono::microseconds>(steady_clock::now() - m_encoder_start).count() - (m_pause_time_ms * 1000ull);
+		const usz elapsed_us = std::chrono::duration_cast<std::chrono::microseconds>(steady_clock::now() - m_encoder_start).count();
+		ensure(elapsed_us >= m_pause_time_us);
+
+		const usz timestamp_us = elapsed_us - m_pause_time_us;
 		const s64 pts = m_video_sink->get_audio_pts(timestamp_us);
 
 		// We can just skip this sample if it has the same timestamp.
@@ -182,8 +196,10 @@ namespace utils
 			return;
 		}
 
-		m_last_audio_pts_incoming = pts;
-		m_current_encoder_sample += sample_count;
-		m_video_sink->add_audio_samples(buf, sample_count, channels, timestamp_us);
+		if (m_video_sink->add_audio_samples(buf, sample_count, channels, timestamp_us))
+		{
+			m_last_audio_pts_incoming = pts;
+			m_current_encoder_sample += sample_count;
+		}
 	}
 }

@@ -790,13 +790,20 @@ namespace utils
 		m_running = false;
 	}
 
+	void video_encoder::resume()
+	{
+		media_log.notice("video_encoder: Resuming video encoder");
+
+		m_flush = false;
+		m_paused = false;
+	}
+
 	void video_encoder::encode()
 	{
 		if (m_running)
 		{
 			// Resume
-			m_flush = false;
-			m_paused = false;
+			resume();
 			media_log.success("video_encoder: resuming recording of '%s'", m_path);
 			return;
 		}
