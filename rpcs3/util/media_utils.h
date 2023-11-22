@@ -120,8 +120,9 @@ namespace utils
 		void set_audio_channels(u32 channels);
 		void set_audio_bitrate(u32 bitrate);
 		void set_audio_codec(s32 codec_id);
-		void pause(bool flush = true);
+		void pause(bool flush = true) override;
 		void stop(bool flush = true) override;
+		void resume() override;
 		void encode();
 
 	private:
@@ -132,7 +133,6 @@ namespace utils
 		// Thread control
 		std::unique_ptr<named_thread<std::function<void()>>> m_thread;
 		atomic_t<bool> m_running = false;
-		atomic_t<bool> m_paused = false;
 
 		// Video parameters
 		u32 m_video_bitrate_bps = 0;
