@@ -1101,7 +1101,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		? tr("&Change Custom Gamepad Configuration")
 		: tr("&Create Custom Gamepad Configuration"));
 	QAction* configure_patches = menu.addAction(tr("&Manage Game Patches"));
-	QAction* create_ppu_cache = menu.addAction(tr("&Create PPU/SPU Cache"));
+	QAction* create_cpu_cache = menu.addAction(tr("&Create LLVM Cache"));
 
 	menu.addSeparator();
 
@@ -1436,7 +1436,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		m_gui_settings->SetValue(gui::gl_hidden_list, QStringList(m_hidden_list.values()));
 		Refresh();
 	});
-	connect(create_ppu_cache, &QAction::triggered, this, [gameinfo, this]
+	connect(create_cpu_cache, &QAction::triggered, this, [gameinfo, this]
 	{
 		if (m_gui_settings->GetBootConfirmation(this))
 		{
@@ -1619,11 +1619,11 @@ bool game_list_frame::CreateCPUCaches(const std::string& path, const std::string
 
 	if (const auto error = Emu.BootGame(fs::is_file(path) ? fs::get_parent_dir(path) : path, serial, true); error != game_boot_result::no_errors)
 	{
-		game_list_log.error("Could not create PPU and SPU caches for %s, error: %s", path, error);
+		game_list_log.error("Could not create LLVM caches for %s, error: %s", path, error);
 		return false;
 	}
 
-	game_list_log.warning("Creating PPU/SPU Caches for %s", path);
+	game_list_log.warning("Creating LLVM Caches for %s", path);
 	return true;
 }
 
@@ -1916,7 +1916,7 @@ void game_list_frame::BatchCreateCPUCaches()
 
 	if (total == 0)
 	{
-		QMessageBox::information(this, tr("PPU Cache Batch Creation"), tr("No titles found"), QMessageBox::Ok);
+		QMessageBox::information(this, tr("LLVM Cache Batch Creation"), tr("No titles found"), QMessageBox::Ok);
 		return;
 	}
 
@@ -1925,9 +1925,10 @@ void game_list_frame::BatchCreateCPUCaches()
 		return;
 	}
 
-	const QString main_label = tr("Creating all PPU caches");
+	const QString main_label = tr("Creating all LLVM caches");
 
-	progress_dialog* pdlg = new progress_dialog(tr("PPU Cache Batch Creation"), main_label, tr("Cancel"), 0, total, true, this);
+	progress_dialog* pdlg = new progress_dialog(tr("LLVM Cache Batch Creation"), main_label, tr("Cancel"), 0, total, true, this);
+	pdlg->setWindowFlags(Qt::Window | Qt::WindowMinimizeButtonHint);
 	pdlg->setAutoClose(false);
 	pdlg->setAutoReset(false);
 	pdlg->show();
