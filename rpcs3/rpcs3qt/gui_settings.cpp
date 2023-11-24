@@ -95,6 +95,8 @@ namespace gui
 			return "trophy_game_column_name";
 		case trophy_game_list_columns::progress:
 			return "trophy_game_column_progress";
+		case trophy_game_list_columns::trophies:
+			return "trophy_game_column_trophies";
 		case trophy_game_list_columns::count:
 			return "";
 		}

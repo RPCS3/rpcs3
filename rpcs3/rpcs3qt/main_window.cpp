@@ -2251,7 +2251,7 @@ void main_window::RepaintGui()
 	RepaintToolBarIcons();
 	RepaintThumbnailIcons();
 
-	Q_EMIT RequestTrophyManagerRepaint();
+	Q_EMIT RequestDialogRepaint();
 }
 
 void main_window::RetranslateUI(const QStringList& language_codes, const QString& language)
@@ -2667,14 +2667,14 @@ void main_window::CreateConnects()
 	connect(ui->confSavedataManagerAct, &QAction::triggered, this, [this]
 	{
 		save_manager_dialog* save_manager = new save_manager_dialog(m_gui_settings, m_persistent_settings);
-		connect(this, &main_window::RequestTrophyManagerRepaint, save_manager, &save_manager_dialog::HandleRepaintUiRequest);
+		connect(this, &main_window::RequestDialogRepaint, save_manager, &save_manager_dialog::HandleRepaintUiRequest);
 		save_manager->show();
 	});
 
 	connect(ui->actionManage_Trophy_Data, &QAction::triggered, this, [this]
 	{
 		trophy_manager_dialog* trop_manager = new trophy_manager_dialog(m_gui_settings);
-		connect(this, &main_window::RequestTrophyManagerRepaint, trop_manager, &trophy_manager_dialog::HandleRepaintUiRequest);
+		connect(this, &main_window::RequestDialogRepaint, trop_manager, &trophy_manager_dialog::HandleRepaintUiRequest);
 		trop_manager->show();
 	});
 
