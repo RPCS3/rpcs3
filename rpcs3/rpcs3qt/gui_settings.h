@@ -58,6 +58,7 @@ namespace gui
 		icon = 0,
 		name = 1,
 		progress = 2,
+		trophies = 3,
 
 		count
 	};
