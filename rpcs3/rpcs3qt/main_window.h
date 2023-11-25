@@ -94,7 +94,7 @@ public:
 Q_SIGNALS:
 	void RequestLanguageChange(const QString& language);
 	void RequestGlobalStylesheetChange();
-	void RequestTrophyManagerRepaint();
+	void RequestDialogRepaint();
 	void NotifyEmuSettingsChange();
 	void NotifyWindowCloseEvent(bool closed);
 
