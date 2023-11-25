@@ -2364,9 +2364,14 @@ void ppu_thread::serialize_common(utils::serial& ar)
 
 	ar(optional_savestate_state, vr);
 
-	if (optional_savestate_state->data.empty())
+	if (!ar.is_writing())
 	{
-		optional_savestate_state->clear();
+		if (optional_savestate_state->data.empty())
+		{
+			optional_savestate_state->clear();
+		}
+
+		optional_savestate_state->set_reading_state();
 	}
 }
 
