@@ -614,6 +614,9 @@ void gs_frame::close()
 
 		if (!Emu.IsStopped())
 		{
+			// Notify progress dialog cancellation
+			g_system_progress_canceled = true;
+
 			// Blocking shutdown request. Obsolete, but I'm keeping it here as last resort.
 			Emu.after_kill_callback = [this](){ deleteLater(); };
 			Emu.GracefulShutdown(true);
@@ -1112,6 +1115,9 @@ bool gs_frame::event(QEvent* ev)
 		}
 		else
 		{
+			// Notify progress dialog cancellation
+			g_system_progress_canceled = true;
+
 			// Issue async shutdown
 			Emu.GracefulShutdown(true, true);
 
