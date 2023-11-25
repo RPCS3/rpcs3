@@ -459,6 +459,7 @@ void compressed_serialization_file_handler::initialize(utils::serial& ar)
 #pragma GCC diagnostic pop
 #endif
 		m_write_inited = true;
+		m_errored = false;
 	}
 	else
 	{
@@ -482,6 +483,7 @@ void compressed_serialization_file_handler::initialize(utils::serial& ar)
 	#endif
 		ensure(inflateInit2(&m_zs, 16 + 15) == Z_OK);
 		m_read_inited = true;
+		m_errored = false;
 	}
 }
 
@@ -490,6 +492,11 @@ bool compressed_serialization_file_handler::handle_file_op(utils::serial& ar, us
 	if (ar.is_writing())
 	{
 		initialize(ar);
+
+		if (m_errored)
+		{
+			return false;
+		}
 
 		z_stream& m_zs = std::any_cast<z_stream&>(m_stream);
 
@@ -512,6 +519,7 @@ bool compressed_serialization_file_handler::handle_file_op(utils::serial& ar, us
 
 			if (deflate(&m_zs, Z_NO_FLUSH) == Z_STREAM_ERROR || m_file->write(m_stream_data.data(), m_stream_data.size() - m_zs.avail_out) != m_stream_data.size() - m_zs.avail_out)
 			{
+				m_errored = true;
 				deflateEnd(&m_zs);
 				//m_file->close();
 				break;
@@ -533,6 +541,11 @@ bool compressed_serialization_file_handler::handle_file_op(utils::serial& ar, us
 	}
 
 	initialize(ar);
+
+	if (m_errored)
+	{
+		return false;
+	}
 
 	if (!size)
 	{
@@ -625,7 +638,7 @@ usz compressed_serialization_file_handler::read_at(utils::serial& ar, usz read_p
 {
 	ensure(read_pos == ar.data.size() + ar.data_offset - size);
 
-	if (!size)
+	if (!size || m_errored)
 	{
 		return 0;
 	}
@@ -674,8 +687,10 @@ usz compressed_serialization_file_handler::read_at(utils::serial& ar, usz read_p
 				[[fallthrough]];
 			}
 			default:
+				m_errored = true;
 				inflateEnd(&m_zs);
 				m_read_inited = false;
+				sys_log.error("Failure of compressed data reading. (res=%d, read_size=0x%x, avail_in=0x%x, avail_out=0x%x, ar=%s)", res, read_size, m_zs.avail_in, m_zs.avail_out, ar);
 				return read_size;
 			}
 
