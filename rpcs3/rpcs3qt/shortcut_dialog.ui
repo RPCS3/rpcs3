@@ -43,9 +43,6 @@
      </item>
      <item>
       <widget class="QGroupBox" name="game_window_group_box">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
        <property name="title">
         <string>Game Window Shortcuts</string>
        </property>

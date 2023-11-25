@@ -121,6 +121,7 @@ private:
 
 private Q_SLOTS:
 	void OnChangeStyleSheetRequest();
+	void OnShortcutChange();
 	void OnAppStateChanged(Qt::ApplicationState state);
 
 Q_SIGNALS:

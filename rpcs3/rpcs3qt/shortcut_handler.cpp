@@ -4,7 +4,7 @@
 
 LOG_CHANNEL(shortcut_log, "Shortcuts");
 
-shortcut_handler::shortcut_handler(gui::shortcuts::shortcut_handler_id handler_id, QWidget* parent, const std::shared_ptr<gui_settings>& gui_settings)
+shortcut_handler::shortcut_handler(gui::shortcuts::shortcut_handler_id handler_id, QObject* parent, const std::shared_ptr<gui_settings>& gui_settings)
 	: QObject(parent), m_handler_id(handler_id), m_gui_settings(gui_settings)
 {
 	// Initialize shortcuts
