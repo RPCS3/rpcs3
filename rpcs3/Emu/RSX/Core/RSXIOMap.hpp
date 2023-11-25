@@ -23,10 +23,8 @@ namespace rsx
 				{
 					return ref.try_lock_shared();
 				}
-				else
-				{
-					return ref.try_lock();
-				}
+
+				return ref.try_lock();
 			}
 
 			void lock()
@@ -34,11 +32,10 @@ namespace rsx
 				if constexpr (Shared)
 				{
 					ref.lock_shared();
+					return;
 				}
-				else
-				{
-					ref.lock();
-				}
+
+				ref.lock();
 			}
 		};
 	}
@@ -82,13 +79,12 @@ namespace rsx
 					if (!self || self->id_type() != 0x55u)
 					{
 						mutex_.lock();
+						continue;
 					}
-					else
+
+					while (!mutex_.try_lock())
 					{
-						while (!mutex_.try_lock())
-						{
-							self->cpu_wait({});
-						}
+						self->cpu_wait({});
 					}
 				}
 			}
