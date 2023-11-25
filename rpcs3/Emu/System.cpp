@@ -2230,7 +2230,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			}
 		}
 
-		const bool autostart = (std::exchange(m_force_boot, false) || g_cfg.misc.autostart);
+		const bool autostart = m_ar || (std::exchange(m_force_boot, false) || g_cfg.misc.autostart);
 
 		if (IsReady())
 		{
@@ -2333,8 +2333,6 @@ void Emulator::FixGuestTime()
 				}
 			}
 
-			m_ar.reset();
-
 			g_tls_log_prefix = []()
 			{
 				return std::string();
@@ -2349,32 +2347,59 @@ void Emulator::FixGuestTime()
 
 void Emulator::FinalizeRunRequest()
 {
-	auto on_select = [](u32, spu_thread& spu)
+	const bool autostart = !m_ar || !!g_cfg.misc.autostart;
+
+	bs_t<cpu_flag> add_flags = cpu_flag::dbg_global_pause;
+
+	if (autostart)
 	{
+		add_flags -= cpu_flag::dbg_global_pause;
+	}
+
+	auto spu_select = [&](u32, spu_thread& spu)
+	{
+		bs_t<cpu_flag> sub_flags = cpu_flag::stop;
+
 		if (spu.group && spu.index == spu.group->waiter_spu_index)
 		{
-			return;
+			sub_flags -= cpu_flag::stop;
 		}
-
-		if (std::exchange(spu.stop_flag_removal_protection, false))
+		else if (std::exchange(spu.stop_flag_removal_protection, false))
 		{
-			return;
+			sub_flags -= cpu_flag::stop;
 		}
 
-		ensure(spu.state.test_and_reset(cpu_flag::stop));
-		spu.state.notify_one();
+		spu.add_remove_flags(add_flags, sub_flags);
 	};
+
+	auto ppu_select = [&](u32, ppu_thread& ppu)
+	{
+		ppu.state += add_flags;
+	};
+
+	if (auto rsx = g_fxo->try_get<rsx::thread>())
+	{
+		static_cast<cpu_thread*>(rsx)->add_remove_flags(add_flags, cpu_flag::suspend);
+	}
 
 	if (m_savestate_extension_flags1 & SaveStateExtentionFlags1::ShouldCloseMenu)
 	{
 		g_fxo->get<SysutilMenuOpenStatus>().active = true;
 	}
 
-	idm::select<named_thread<spu_thread>>(on_select);
+	idm::select<named_thread<spu_thread>>(spu_select);
+	idm::select<named_thread<ppu_thread>>(ppu_select);
 
 	lv2_obj::make_scheduler_ready();
 
 	m_state.compare_and_swap_test(system_state::starting, system_state::running);
+
+	m_ar.reset();
+
+	if (!autostart)
+	{
+		Pause();
+	}
 
 	if (m_savestate_extension_flags1 & SaveStateExtentionFlags1::ShouldCloseMenu)
 	{

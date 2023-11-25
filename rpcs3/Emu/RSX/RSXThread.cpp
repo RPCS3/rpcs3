@@ -652,12 +652,13 @@ namespace rsx
 			m_overlay_manager = g_fxo->init<rsx::overlays::display_manager>(0);
 		}
 
-		state -= cpu_flag::stop + cpu_flag::wait; // TODO: Remove workaround
-
 		if (!_ar)
 		{
+			add_remove_flags({}, cpu_flag::stop); // TODO: Remove workaround
 			return;
 		}
+
+		add_remove_flags(cpu_flag::suspend, cpu_flag::stop);
 
 		serialized = true;
 		save(*_ar);
