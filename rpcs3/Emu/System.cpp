@@ -1056,7 +1056,13 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 			auto load_tar = [&](const std::string& path)
 			{
-				const usz size = *m_ar;
+				const usz size = m_ar->pop<usz>();
+				const usz max_data_size = m_ar->get_size(utils::add_saturate<usz>(size, m_ar->pos));
+
+				if (size % 512 || max_data_size < size || max_data_size - size < m_ar->pos)
+				{
+					fmt::throw_exception("TAR desrialization failed: Invalid size. TAR size: 0x%x, path='%s', ar: %s", size, path, *m_ar);
+				}
 
 				fs::remove_all(path, size == 0);
 
@@ -1065,7 +1071,12 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 					m_ar->breathe(true);
 					m_ar->m_max_data = m_ar->pos + size;
 					ensure(tar_object(*m_ar).extract(path));
-					m_ar->seek_pos(m_ar->m_max_data, size >= 4096);
+
+					if (m_ar->m_max_data != m_ar->pos)
+					{
+						fmt::throw_exception("TAR desrialization failed: read bytes: 0x%x, expected: 0x%x, path='%s', ar: %s", m_ar->pos - (m_ar->m_max_data - size), size, path, *m_ar);
+					}
+
 					m_ar->m_max_data = umax;
 					m_ar->breathe();
 				}
@@ -1079,11 +1090,17 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 			for (const std::string hdd0_game = rpcs3::utils::get_hdd0_dir() + "game/";;)
 			{
-				const std::string game_data = *m_ar;
+				const std::string game_data = m_ar->pop<std::string>();
 
 				if (game_data.empty())
 				{
 					break;
+				}
+
+				if (game_data.find_first_of('\0') != umax || !sysutil_check_name_string(game_data.c_str(), 1, CELL_GAME_DIRNAME_SIZE))
+				{
+					const std::basic_string_view<u8> dirname{reinterpret_cast<const u8*>(game_data.data()), game_data.size()};
+					fmt::throw_exception("HDD0 deserialization failed: Invalid directory name: %s, ar=%s", dirname.substr(0, CELL_GAME_DIRNAME_SIZE + 1), *m_ar);
 				}
 
 				load_tar(hdd0_game + game_data);
@@ -2993,7 +3010,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 					const usz tar_size = new_pos - old_pos;
 
-					if (tar_size != ar_null.pos)
+					if (tar_size % 512 || tar_size != ar_null.pos)
 					{
 						fmt::throw_exception("Unexpected TAR entry size (size=0x%x, expected=0x%x, entries=0x%x)", tar_size, ar_null.pos, dir_entries.size());
 					}
