@@ -78,6 +78,9 @@ gui_save shortcut_settings::get_shortcut_gui_save(const QString& shortcut_name)
 
 QKeySequence shortcut_settings::get_key_sequence(const shortcut_info& entry, const std::shared_ptr<gui_settings>& gui_settings)
 {
+	if (!gui_settings)
+		return {};
+
 	const QString saved_value = gui_settings->GetValue(get_shortcut_gui_save(entry.name)).toString();
 
 	QKeySequence key_sequence = QKeySequence::fromString(saved_value);
