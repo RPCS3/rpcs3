@@ -1927,7 +1927,7 @@ void game_list_frame::BatchCreateCPUCaches()
 
 	const QString main_label = tr("Creating all LLVM caches");
 
-	progress_dialog* pdlg = new progress_dialog(tr("LLVM Cache Batch Creation"), main_label, tr("Cancel"), 0, total, true, this);
+	progress_dialog* pdlg = new progress_dialog(tr("LLVM Cache Batch Creation"), main_label, tr("Cancel"), 0, total, false, this);
 	pdlg->setWindowFlags(Qt::Window | Qt::WindowMinimizeButtonHint);
 	pdlg->setAutoClose(false);
 	pdlg->setAutoReset(false);
@@ -1978,24 +1978,17 @@ void game_list_frame::BatchCreateCPUCaches()
 
 	if (pdlg->wasCanceled() || g_system_progress_canceled)
 	{
-		game_list_log.notice("PPU Cache Batch Creation was canceled");
-
-		if (!Emu.IsStopped())
-		{
-			QApplication::processEvents();
-			Emu.GracefulShutdown(false);
-		}
-
-		if (!pdlg->wasCanceled())
-		{
-			pdlg->close();
-		}
-		return;
+		pdlg->deleteLater(); // We did not allow deletion earlier to prevent segfaults when canceling.
+		game_list_log.notice("LLVM Cache Batch Creation was canceled");
+		Emu.GracefulShutdown(false);
 	}
-
-	pdlg->setLabelText(tr("Created PPU Caches for %n title(s)", "", created));
-	pdlg->setCancelButtonText(tr("OK"));
-	QApplication::beep();
+	else
+	{
+		pdlg->SetDeleteOnClose();
+		pdlg->setLabelText(tr("Created LLVM Caches for %n title(s)", "", created));
+		pdlg->setCancelButtonText(tr("OK"));
+		QApplication::beep();
+	}
 }
 
 void game_list_frame::BatchRemovePPUCaches()
@@ -2018,7 +2011,7 @@ void game_list_frame::BatchRemovePPUCaches()
 		return;
 	}
 
-	progress_dialog* pdlg = new progress_dialog(tr("PPU Cache Batch Removal"), tr("Removing all PPU caches"), tr("Cancel"), 0, total, true, this);
+	progress_dialog* pdlg = new progress_dialog(tr("PPU Cache Batch Removal"), tr("Removing all PPU caches"), tr("Cancel"), 0, total, false, this);
 	pdlg->setAutoClose(false);
 	pdlg->setAutoReset(false);
 	pdlg->show();
@@ -2028,7 +2021,6 @@ void game_list_frame::BatchRemovePPUCaches()
 	{
 		if (pdlg->wasCanceled())
 		{
-			game_list_log.notice("PPU Cache Batch Removal was canceled");
 			break;
 		}
 		QApplication::processEvents();
@@ -2039,9 +2031,18 @@ void game_list_frame::BatchRemovePPUCaches()
 		}
 	}
 
-	pdlg->setLabelText(tr("%0/%1 caches cleared").arg(removed).arg(total));
-	pdlg->setCancelButtonText(tr("OK"));
-	QApplication::beep();
+	if (pdlg->wasCanceled())
+	{
+		pdlg->deleteLater(); // We did not allow deletion earlier to prevent segfaults when canceling.
+		game_list_log.notice("PPU Cache Batch Removal was canceled");
+	}
+	else
+	{
+		pdlg->SetDeleteOnClose();
+		pdlg->setLabelText(tr("%0/%1 caches cleared").arg(removed).arg(total));
+		pdlg->setCancelButtonText(tr("OK"));
+		QApplication::beep();
+	}
 }
 
 void game_list_frame::BatchRemoveSPUCaches()
@@ -2064,7 +2065,7 @@ void game_list_frame::BatchRemoveSPUCaches()
 		return;
 	}
 
-	progress_dialog* pdlg = new progress_dialog(tr("SPU Cache Batch Removal"), tr("Removing all SPU caches"), tr("Cancel"), 0, total, true, this);
+	progress_dialog* pdlg = new progress_dialog(tr("SPU Cache Batch Removal"), tr("Removing all SPU caches"), tr("Cancel"), 0, total, false, this);
 	pdlg->setAutoClose(false);
 	pdlg->setAutoReset(false);
 	pdlg->show();
@@ -2074,7 +2075,6 @@ void game_list_frame::BatchRemoveSPUCaches()
 	{
 		if (pdlg->wasCanceled())
 		{
-			game_list_log.notice("SPU Cache Batch Removal was canceled. %d/%d folders cleared", removed, total);
 			break;
 		}
 		QApplication::processEvents();
@@ -2085,9 +2085,18 @@ void game_list_frame::BatchRemoveSPUCaches()
 		}
 	}
 
-	pdlg->setLabelText(tr("%0/%1 caches cleared").arg(removed).arg(total));
-	pdlg->setCancelButtonText(tr("OK"));
-	QApplication::beep();
+	if (pdlg->wasCanceled())
+	{
+		pdlg->deleteLater(); // We did not allow deletion earlier to prevent segfaults when canceling.
+		game_list_log.notice("SPU Cache Batch Removal was canceled. %d/%d folders cleared", removed, total);
+	}
+	else
+	{
+		pdlg->SetDeleteOnClose();
+		pdlg->setLabelText(tr("%0/%1 caches cleared").arg(removed).arg(total));
+		pdlg->setCancelButtonText(tr("OK"));
+		QApplication::beep();
+	}
 }
 
 void game_list_frame::BatchRemoveCustomConfigurations()
@@ -2108,7 +2117,7 @@ void game_list_frame::BatchRemoveCustomConfigurations()
 		return;
 	}
 
-	progress_dialog* pdlg = new progress_dialog(tr("Custom Configuration Batch Removal"), tr("Removing all custom configurations"), tr("Cancel"), 0, total, true, this);
+	progress_dialog* pdlg = new progress_dialog(tr("Custom Configuration Batch Removal"), tr("Removing all custom configurations"), tr("Cancel"), 0, total, false, this);
 	pdlg->setAutoClose(false);
 	pdlg->setAutoReset(false);
 	pdlg->show();
@@ -2118,7 +2127,6 @@ void game_list_frame::BatchRemoveCustomConfigurations()
 	{
 		if (pdlg->wasCanceled())
 		{
-			game_list_log.notice("Custom Configuration Batch Removal was canceled. %d/%d custom configurations cleared", removed, total);
 			break;
 		}
 		QApplication::processEvents();
@@ -2129,9 +2137,19 @@ void game_list_frame::BatchRemoveCustomConfigurations()
 		}
 	}
 
-	pdlg->setLabelText(tr("%0/%1 custom configurations cleared").arg(removed).arg(total));
-	pdlg->setCancelButtonText(tr("OK"));
-	QApplication::beep();
+	if (pdlg->wasCanceled())
+	{
+		pdlg->deleteLater(); // We did not allow deletion earlier to prevent segfaults when canceling.
+		game_list_log.notice("Custom Configuration Batch Removal was canceled. %d/%d custom configurations cleared", removed, total);
+	}
+	else
+	{
+		pdlg->SetDeleteOnClose();
+		pdlg->setLabelText(tr("%0/%1 custom configurations cleared").arg(removed).arg(total));
+		pdlg->setCancelButtonText(tr("OK"));
+		QApplication::beep();
+	}
+
 	Refresh(true);
 }
 
@@ -2153,7 +2171,7 @@ void game_list_frame::BatchRemoveCustomPadConfigurations()
 		return;
 	}
 
-	progress_dialog* pdlg = new progress_dialog(tr("Custom Pad Configuration Batch Removal"), tr("Removing all custom pad configurations"), tr("Cancel"), 0, total, true, this);
+	progress_dialog* pdlg = new progress_dialog(tr("Custom Pad Configuration Batch Removal"), tr("Removing all custom pad configurations"), tr("Cancel"), 0, total, false, this);
 	pdlg->setAutoClose(false);
 	pdlg->setAutoReset(false);
 	pdlg->show();
@@ -2163,7 +2181,6 @@ void game_list_frame::BatchRemoveCustomPadConfigurations()
 	{
 		if (pdlg->wasCanceled())
 		{
-			game_list_log.notice("Custom Pad Configuration Batch Removal was canceled. %d/%d custom pad configurations cleared", removed, total);
 			break;
 		}
 		QApplication::processEvents();
@@ -2174,9 +2191,19 @@ void game_list_frame::BatchRemoveCustomPadConfigurations()
 		}
 	}
 
-	pdlg->setLabelText(tr("%0/%1 custom pad configurations cleared").arg(removed).arg(total));
-	pdlg->setCancelButtonText(tr("OK"));
-	QApplication::beep();
+	if (pdlg->wasCanceled())
+	{
+		pdlg->deleteLater(); // We did not allow deletion earlier to prevent segfaults when canceling.
+		game_list_log.notice("Custom Pad Configuration Batch Removal was canceled. %d/%d custom pad configurations cleared", removed, total);
+	}
+	else
+	{
+		pdlg->SetDeleteOnClose();
+		pdlg->setLabelText(tr("%0/%1 custom pad configurations cleared").arg(removed).arg(total));
+		pdlg->setCancelButtonText(tr("OK"));
+		QApplication::beep();
+	}
+
 	Refresh(true);
 }
 
@@ -2200,7 +2227,7 @@ void game_list_frame::BatchRemoveShaderCaches()
 		return;
 	}
 
-	progress_dialog* pdlg = new progress_dialog(tr("Shader Cache Batch Removal"), tr("Removing all shader caches"), tr("Cancel"), 0, total, true, this);
+	progress_dialog* pdlg = new progress_dialog(tr("Shader Cache Batch Removal"), tr("Removing all shader caches"), tr("Cancel"), 0, total, false, this);
 	pdlg->setAutoClose(false);
 	pdlg->setAutoReset(false);
 	pdlg->show();
@@ -2210,7 +2237,6 @@ void game_list_frame::BatchRemoveShaderCaches()
 	{
 		if (pdlg->wasCanceled())
 		{
-			game_list_log.notice("Shader Cache Batch Removal was canceled");
 			break;
 		}
 		QApplication::processEvents();
@@ -2221,9 +2247,18 @@ void game_list_frame::BatchRemoveShaderCaches()
 		}
 	}
 
-	pdlg->setLabelText(tr("%0/%1 shader caches cleared").arg(removed).arg(total));
-	pdlg->setCancelButtonText(tr("OK"));
-	QApplication::beep();
+	if (pdlg->wasCanceled())
+	{
+		pdlg->deleteLater(); // We did not allow deletion earlier to prevent segfaults when canceling.
+		game_list_log.notice("Shader Cache Batch Removal was canceled");
+	}
+	else
+	{
+		pdlg->SetDeleteOnClose();
+		pdlg->setLabelText(tr("%0/%1 shader caches cleared").arg(removed).arg(total));
+		pdlg->setCancelButtonText(tr("OK"));
+		QApplication::beep();
+	}
 }
 
 void game_list_frame::ShowCustomConfigIcon(const game_info& game)

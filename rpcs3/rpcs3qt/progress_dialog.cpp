@@ -13,7 +13,7 @@ progress_dialog::progress_dialog(const QString& windowTitle, const QString& labe
 
 	if (delete_on_close)
 	{
-		connect(this, &QProgressDialog::canceled, this, &QProgressDialog::deleteLater);
+		SetDeleteOnClose();
 	}
 
 	// Try to find a window handle first
@@ -47,6 +47,11 @@ void progress_dialog::SetValue(int progress)
 	m_progress_indicator->set_value(value);
 
 	QProgressDialog::setValue(value);
+}
+
+void progress_dialog::SetDeleteOnClose()
+{
+	connect(this, &QProgressDialog::canceled, this, &QProgressDialog::deleteLater);
 }
 
 void progress_dialog::SignalFailure() const
