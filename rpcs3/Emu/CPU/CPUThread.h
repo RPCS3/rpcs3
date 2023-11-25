@@ -149,7 +149,9 @@ public:
 	void notify();
 	cpu_thread& operator=(thread_state);
 
-public:
+	// Add/remove CPU state flags in an atomic operations, notifying if required
+	void add_remove_flags(bs_t<cpu_flag> to_add, bs_t<cpu_flag> to_remove);
+
 	// Thread stats for external observation
 	static atomic_t<u64> g_threads_created, g_threads_deleted, g_suspend_counter;
 
