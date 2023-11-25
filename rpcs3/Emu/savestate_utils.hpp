@@ -66,6 +66,7 @@ struct compressed_serialization_file_handler : utils::serialization_file_handler
 	usz m_file_read_index = 0;
 	bool m_write_inited = false;
 	bool m_read_inited = false;
+	bool m_errored = false;
 	std::any m_stream;
 
 	explicit compressed_serialization_file_handler(fs::file&& file) noexcept
