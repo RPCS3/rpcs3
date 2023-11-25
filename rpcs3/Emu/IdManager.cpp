@@ -12,10 +12,14 @@ namespace id_manager
 template <>
 bool serialize<std::shared_ptr<utils::serial>>(utils::serial& ar, std::shared_ptr<utils::serial>& o)
 {
-	if (!o || !ar.is_writing())
+	if (!o)
 	{
-		o.reset();
 		o = std::make_shared<utils::serial>();
+	}
+
+	if (!ar.is_writing())
+	{
+		o->set_reading_state();
 	}
 
 	ar(o->data);
