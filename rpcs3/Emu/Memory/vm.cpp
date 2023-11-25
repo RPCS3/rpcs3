@@ -2256,7 +2256,15 @@ namespace vm
 	void load(utils::serial& ar)
 	{
 		std::vector<std::shared_ptr<utils::shm>> shared;
-		shared.resize(ar.pop<usz>());
+
+		const usz shared_size = ar.pop<usz>();
+
+		if (!shared_size || ar.get_size(umax) / 4096 < shared_size)
+		{
+			fmt::throw_exception("Invalid VM serialization state: shared_size=0x%x, ar=%s", shared_size, ar);
+		}
+
+		shared.resize(shared_size);
 
 		for (auto& shm : shared)
 		{
