@@ -23,7 +23,12 @@ void fmt_class_string<utils::serial>::format(std::string& out, u64 arg)
 {
 	const utils::serial& ar = get_object(arg);
 
-	fmt::append(out, "{ %s, 0x%x/0x%x, memory=0x%x }", ar.is_writing() ? "writing" : "reading", ar.pos, ar.data_offset + ar.data.size(), ar.data.size());
+
+	be_t<u64> sample64 = 0;
+	const usz read_size = std::min<usz>(ar.data.size(), sizeof(sample64));
+	std::memcpy(&sample64, ar.data.data() + ar.data.size() - read_size, read_size);
+
+	fmt::append(out, "{ %s, 0x%x/0x%x, memory=0x%x, sample64=0x%016x }", ar.is_writing() ? "writing" : "reading", ar.pos, ar.data_offset + ar.data.size(), ar.data.size(), sample64);
 }
 
 struct serial_ver_t
