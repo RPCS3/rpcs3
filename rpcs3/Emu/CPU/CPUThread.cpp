@@ -1023,6 +1023,44 @@ cpu_thread& cpu_thread::operator=(thread_state)
 	return *this;
 }
 
+void cpu_thread::add_remove_flags(bs_t<cpu_flag> to_add, bs_t<cpu_flag> to_remove)
+{
+	bs_t<cpu_flag> result{};
+
+	if (!to_remove)
+	{
+		state.add_fetch(to_add);
+		return;
+	}
+	else if (!to_add)
+	{
+		result = state.sub_fetch(to_remove);
+	}
+	else
+	{
+		result = state.atomic_op([&](bs_t<cpu_flag>& v)
+		{
+			v += to_add;
+			v -= to_remove;
+			return v;
+		});
+	}
+
+	if (!::is_paused(to_remove) && !::is_stopped(to_remove))
+	{
+		// No notable change requiring notification
+		return;
+	}
+
+	if (::is_paused(result) || ::is_stopped(result))
+	{
+		// Flags that stop thread execution
+		return;
+	}
+
+	state.notify_one();
+}
+
 std::string cpu_thread::get_name() const
 {
 	// Downcast to correct type
