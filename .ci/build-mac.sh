@@ -8,7 +8,7 @@ arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebr
 arch -x86_64 /usr/local/bin/brew update
 arch -x86_64 /usr/local/bin/brew uninstall -f --ignore-dependencies ffmpeg
 arch -x86_64 /usr/local/bin/brew install -f --build-from-source ffmpeg
-arch -x86_64 /usr/local/bin/brew install -f --overwrite python@3.11
+arch -x86_64 /usr/local/bin/brew install -f --overwrite python@3.11 || arch -x86_64 /usr/local/bin/brew link --overwrite python@3.11
 arch -x86_64 /usr/local/bin/brew reinstall -f --build-from-source gnutls freetype jpeg-xl
 arch -x86_64 /usr/local/bin/brew install llvm@16 glew cmake sdl2 vulkan-headers coreutils
 arch -x86_64 /usr/local/bin/brew link -f llvm@16 ffmpeg
