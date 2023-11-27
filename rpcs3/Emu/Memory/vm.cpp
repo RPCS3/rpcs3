@@ -1617,14 +1617,14 @@ namespace vm
 		const v128 _5 = _1 | _2;
 		const v128 _6 = _3 | _4;
 		const v128 _7 = _5 | _6;
-		return _7 == v128{};
+		return gv_testz(_7);
 	}
 
 	static void serialize_memory_bytes(utils::serial& ar, u8* ptr, usz size)
 	{
 		ensure((size % 4096) == 0);
 
-		for (; size; ptr += 128 * 8)
+		for (usz iter_count = 0; size; iter_count++, ptr += 128 * 8)
 		{
 			const usz process_size = std::min<usz>(size, 128 * 8);
 			size -= process_size;
@@ -1633,12 +1633,20 @@ namespace vm
 
 			if (ar.is_writing())
 			{
-				for (usz i = 0; i < process_size; i += 128)
+				for (usz i = 0; i < process_size; i += 128 * 2)
 				{
-					if (!check_cache_line_zero(ptr + i))
+					const u64 sample64_1 = read_from_ptr<u64>(ptr, i);
+					const u64 sample64_2 = read_from_ptr<u64>(ptr, i + 128);
+
+					// Speed up testing in scenarios where it is likely non-zero data
+					if (sample64_1 && sample64_2)
 					{
-						bitmap |= 1u << (i / 128);
+						bitmap |= 3u << (i / 128);
+						continue;
 					}
+
+					bitmap |= (check_cache_line_zero(ptr + i + 0) ? 0 : 1) << (i / 128);
+					bitmap |= (check_cache_line_zero(ptr + i + 128) ? 0 : 2) << (i / 128);
 				}
 			}
 
@@ -1665,8 +1673,13 @@ namespace vm
 				i += block_count * 128;
 			}
 
-			ar.breathe();
+			if (iter_count % 256 == 0)
+			{
+				ar.breathe();
+			}
 		}
+
+		ar.breathe();
 	}
 
 	void block_t::save(utils::serial& ar, std::map<utils::shm*, usz>& shared)
