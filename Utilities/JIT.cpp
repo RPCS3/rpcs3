@@ -10,6 +10,7 @@
 #include "util/v128.hpp"
 #include "util/simd.hpp"
 #include "Crypto/unzip.h"
+
 #include <charconv>
 
 #ifdef __linux__
@@ -1170,17 +1171,19 @@ public:
 		//fs::file(name, fs::rewrite).write(obj.getBufferStart(), obj.getBufferSize());
 		name.append(".gz");
 
-		const std::vector<u8> zbuf = zip(reinterpret_cast<const u8*>(obj.getBufferStart()), obj.getBufferSize());
+		fs::file module_file(name, fs::rewrite);
 
-		if (zbuf.empty())
+		if (!module_file)
 		{
-			jit_log.error("LLVM: Failed to compress module: %s", _module->getName().data());
+			jit_log.error("LLVM: Failed to create module file: %s (%s)", name, fs::g_tls_error);
 			return;
 		}
 
-		if (!fs::write_file(name, fs::rewrite, zbuf.data(), zbuf.size()))
+		if (!zip(obj.getBufferStart(), obj.getBufferSize(), module_file))
 		{
-			jit_log.error("LLVM: Failed to create module file: %s (%s)", name, fs::g_tls_error);
+			jit_log.error("LLVM: Failed to compress module: %s", _module->getName().data());
+			module_file.close();
+			fs::remove_file(name);
 			return;
 		}
 
