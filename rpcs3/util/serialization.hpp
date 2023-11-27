@@ -453,9 +453,9 @@ namespace utils
 		// Execute only if past memory is known to not going be reused
 		void breathe(bool forced = false)
 		{
-			if (!forced && (!m_file_handler || (data.size() < 0x20'0000 && pos >= data_offset)))
+			if (!forced && (!m_file_handler || (data.size() < 0x100'0000 && pos >= data_offset)))
 			{
-				// Let's not do anything if less than 32MB
+				// Let's not do anything if less than 16MB
 				return;
 			}
 
