@@ -3,6 +3,8 @@
 
 #include <zlib.h>
 
+#include "Emu/savestate_utils.hpp"
+
 std::vector<u8> unzip(const void* src, usz size)
 {
 	if (!src || !size) [[unlikely]]
@@ -130,55 +132,6 @@ bool unzip(const void* src, usz size, fs::file& out)
 	return is_valid;
 }
 
-std::vector<u8> zip(const void* src, usz size)
-{
-	if (!src || !size)
-	{
-		return {};
-	}
-
-	const uLong zsz = compressBound(::narrow<u32>(size)) + 256;
-	std::vector<u8> out(zsz);
-
-	z_stream zs{};
-#ifndef _MSC_VER
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wold-style-cast"
-#endif
-	int res = deflateInit2(&zs, 9, Z_DEFLATED, 16 + 15, 9, Z_DEFAULT_STRATEGY);
-	if (res != Z_OK)
-	{
-		return {};
-	}
-#ifndef _MSC_VER
-#pragma GCC diagnostic pop
-#endif
-	zs.avail_in  = static_cast<u32>(size);
-	zs.next_in   = reinterpret_cast<const u8*>(src);
-	zs.avail_out = static_cast<u32>(out.size());
-	zs.next_out  = out.data();
-
-	res = deflate(&zs, Z_FINISH);
-
-	switch (res)
-	{
-	case Z_OK:
-	case Z_STREAM_END:
-		if (zs.avail_out)
-		{
-			out.resize(zsz - zs.avail_out);
-		}
-		break;
-	default:
-		out.clear();
-		break;
-	}
-
-	deflateEnd(&zs);
-
-	return out;
-}
-
 bool zip(const void* src, usz size, fs::file& out)
 {
 	if (!src || !size || !out)
@@ -186,9 +139,28 @@ bool zip(const void* src, usz size, fs::file& out)
 		return false;
 	}
 
-	const std::vector zipped = zip(src, size);
+	utils::serial compressor(false);
+	compressor.m_file_handler = make_compressed_serialization_file_handler(out);
 
-	if (zipped.empty() || out.write(zipped.data(), zipped.size()) != zipped.size())
+	std::string_view buffer_view{static_cast<const char*>(src), size};
+
+	while (!buffer_view.empty())
+	{
+		if (!compressor.m_file_handler->is_valid())
+		{
+			return false;
+		}
+
+		const std::string_view slice = buffer_view.substr(0, 0x50'0000);
+
+		compressor(slice);
+		compressor.breathe();
+		buffer_view = buffer_view.substr(slice.size());
+	}
+
+	compressor.m_file_handler->finalize(compressor);
+
+	if (!compressor.m_file_handler->is_valid())
 	{
 		return false;
 	}

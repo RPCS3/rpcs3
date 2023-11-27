@@ -93,6 +93,11 @@ struct compressed_serialization_file_handler : utils::serialization_file_handler
 	usz get_size(const utils::serial& ar, usz recommended) const override;
 	void skip_until(utils::serial& ar) override;
 
+	bool is_valid() const override
+	{
+		return !m_errored;
+	}
+
 	void finalize(utils::serial& ar) override;
 
 private:

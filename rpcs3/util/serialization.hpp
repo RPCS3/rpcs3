@@ -63,6 +63,11 @@ namespace utils
 		{
 		}
 
+		virtual bool is_valid() const
+		{
+			return true;
+		}
+
 		virtual void finalize(utils::serial&) = 0;
 	};
 
