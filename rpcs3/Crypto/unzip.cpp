@@ -3,7 +3,7 @@
 
 #include <zlib.h>
 
-#include "Emu/savestate_utils.hpp"
+#include "util/serialization_ext.hpp"
 
 std::vector<u8> unzip(const void* src, usz size)
 {
@@ -132,14 +132,14 @@ bool unzip(const void* src, usz size, fs::file& out)
 	return is_valid;
 }
 
-bool zip(const void* src, usz size, fs::file& out)
+bool zip(const void* src, usz size, fs::file& out, bool multi_thread_it)
 {
 	if (!src || !size || !out)
 	{
 		return false;
 	}
 
-	utils::serial compressor(false);
+	utils::serial compressor(!multi_thread_it || size < 0x40'0000);
 	compressor.m_file_handler = make_compressed_serialization_file_handler(out);
 
 	std::string_view buffer_view{static_cast<const char*>(src), size};

@@ -9,6 +9,7 @@
 #include "Emu/perf_monitor.hpp"
 #include "Emu/vfs_config.h"
 #include "Emu/IPC_config.h"
+#include "Emu/savestate_utils.hpp"
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
@@ -40,8 +41,6 @@
 #include "../Crypto/unself.h"
 #include "../Crypto/unzip.h"
 #include "util/logs.hpp"
-#include "util/serialization.hpp"
-#include "savestate_utils.hpp"
 
 #include <fstream>
 #include <memory>

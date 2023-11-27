@@ -73,15 +73,21 @@ namespace utils
 
 	struct serial
 	{
+private:
+		bool m_is_writing = true;
+		bool m_expect_little_data = false;
+public:
 		std::vector<u8> data;
 		usz data_offset = 0;
 		usz pos = 0;
 		usz m_max_data = umax;
-		bool m_is_writing = true;
-		bool m_avoid_large_prefetch = false;
 		std::unique_ptr<serialization_file_handler> m_file_handler;
 
-		serial() noexcept = default;
+		serial(bool expect_little_data = false) noexcept
+			: m_expect_little_data(expect_little_data)
+		{
+		}
+
 		serial(const serial&) = delete;
 		serial& operator=(const serial&) = delete;
 		explicit serial(serial&&) noexcept = default;
@@ -92,6 +98,12 @@ namespace utils
 		bool is_writing() const
 		{
 			return m_is_writing;
+		}
+
+		// Return true if small amounts of both input and output memory are expected (performance hint)  
+		bool expect_little_data() const
+		{
+			return m_expect_little_data;
 		}
 
 		// Reserve memory for serialization
@@ -393,7 +405,7 @@ namespace utils
 
 		// Convert serialization manager to deserializion manager
 		// If no arg is provided reuse saved buffer
-		void set_reading_state(std::vector<u8>&& _data = std::vector<u8>{}, bool avoid_large_prefetch = false)
+		void set_reading_state(std::vector<u8>&& _data = std::vector<u8>{}, bool expect_little_data = false)
 		{
 			if (!_data.empty())
 			{
@@ -401,7 +413,8 @@ namespace utils
 			}
 
 			m_is_writing = false;
-			m_avoid_large_prefetch = avoid_large_prefetch;
+			m_expect_little_data = expect_little_data;
+			m_max_data = umax;
 			pos = 0;
 			data_offset = 0;
 		}

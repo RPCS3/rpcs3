@@ -56,7 +56,6 @@
 #include "Emu/vfs_config.h"
 #include "Emu/System.h"
 #include "Emu/system_utils.hpp"
-#include "Emu/savestate_utils.hpp"
 
 #include "Crypto/unpkg.h"
 #include "Crypto/unself.h"
@@ -70,6 +69,7 @@
 
 #include "Utilities/Thread.h"
 #include "util/sysinfo.hpp"
+#include "util/serialization_ext.hpp"
 
 #include "ui_main_window.h"
 
