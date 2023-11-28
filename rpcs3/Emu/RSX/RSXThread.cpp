@@ -4,7 +4,6 @@
 #include "Emu/Cell/PPUCallback.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/timers.hpp"
-#include "Emu/savestate_utils.hpp"
 
 #include "Capture/rsx_capture.h"
 #include "Common/BufferUtils.h"
@@ -20,7 +19,7 @@
 #include "Emu/Cell/lv2/sys_event.h"
 #include "Emu/Cell/lv2/sys_time.h"
 #include "Emu/Cell/Modules/cellGcmSys.h"
-#include "Emu/savestate_utils.hpp"
+#include "util/serialization_ext.hpp"
 #include "Overlays/overlay_perf_metrics.h"
 #include "Overlays/overlay_message.h"
 #include "Program/GLSLCommon.h"
