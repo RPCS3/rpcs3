@@ -572,7 +572,7 @@ public:
 
 			if (size >= end_pos)
 			{
-				return {true, this->operator T()};
+				return {true, this->operator type()};
 			}
 
 			return {};
