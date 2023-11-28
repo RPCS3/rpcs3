@@ -3541,7 +3541,10 @@ namespace
 
 		fs::stat_t get_stat() override
 		{
-			return m_file.get_stat();
+			fs::stat_t stat = m_file.get_stat();
+			stat.size = std::min<u64>(utils::sub_saturate<u64>(stat.size, m_off), m_max_size);
+			stat.is_writable = false;
+			return stat;
 		}
 
 		bool trunc(u64) override
@@ -3558,7 +3561,7 @@ namespace
 
 		u64 read_at(u64 offset, void* buffer, u64 size) override
 		{
-			return m_file.read_at(offset + m_off, buffer, std::min<u64>(size, utils::sub_saturate<u64>(m_max_size, m_pos)));
+			return m_file.read_at(offset + m_off, buffer, std::min<u64>(size, utils::sub_saturate<u64>(m_max_size, offset)));
 		}
 
 		u64 write(const void*, u64) override
@@ -3585,7 +3588,7 @@ namespace
 
 		u64 size() override
 		{
-			return m_file.size();
+			return std::min<u64>(utils::sub_saturate<u64>(m_file.size(), m_off), m_max_size);
 		}
 	};
 }
