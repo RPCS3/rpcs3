@@ -120,7 +120,7 @@ std::vector<version_entry> get_savestate_versioning_data(fs::file&& file, std::s
 	ar.breathe(true);
 
 	std::vector<version_entry> ver_data = ar.pop<std::vector<version_entry>>();
-	return std::move(ver_data);
+	return ver_data;
 }
 
 bool is_savestate_version_compatible(const std::vector<version_entry>& data, bool is_boot_check)
@@ -183,10 +183,10 @@ std::string get_savestate_file(std::string_view title_id, std::string_view boot_
 
 	if (std::string path_compressed = path + ".gz"; fs::is_file(path_compressed))
 	{
-		return std::move(path_compressed);
+		return path_compressed;
 	}
 
-	return std::move(path);
+	return path;
 }
 
 bool is_savestate_compatible(fs::file&& file, std::string_view filepath)

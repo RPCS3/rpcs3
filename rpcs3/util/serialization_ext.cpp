@@ -658,9 +658,6 @@ void compressed_serialization_file_handler::file_writer_thread_op()
 {
 	compressed_stream_data& stream = *m_stream;
 
-	// Data recheck after an abort request is detected so there will not be any missed data
-	bool rechecked = false;
-
 	while (true)
 	{
 		stream.m_queued_data_to_write.wait();
