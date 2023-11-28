@@ -139,7 +139,7 @@ std::unique_ptr<utils::serial> tar_object::get_file(const std::string& path, std
 		}
 		else
 		{
-			tar_log.error("tar_object::get_file() failed to parse header: offset=0x%x, filesize=0x%x", offset, max_size);
+			tar_log.notice("tar_object::get_file() failed to parse header: offset=0x%x, filesize=0x%x, header_first16=0x%016x", offset, max_size, read_from_ptr<be_t<u128>>(reinterpret_cast<const u8*>(&header)));
 		}
 
 		return { size, {} };
