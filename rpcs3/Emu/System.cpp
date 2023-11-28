@@ -9,6 +9,7 @@
 #include "Emu/perf_monitor.hpp"
 #include "Emu/vfs_config.h"
 #include "Emu/IPC_config.h"
+#include "Emu/savestate_utils.hpp"
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
@@ -40,8 +41,6 @@
 #include "../Crypto/unself.h"
 #include "../Crypto/unzip.h"
 #include "util/logs.hpp"
-#include "util/serialization.hpp"
-#include "savestate_utils.hpp"
 
 #include <fstream>
 #include <memory>
@@ -2932,6 +2931,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 		// Save it first for maximum timing accuracy
 		const u64 timestamp = get_timebased_time();
+		const u64 start_time = get_system_time();
 
 		sys_log.notice("All threads have been stopped.");
 
@@ -3128,7 +3128,9 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 			ar.seek_end();
 			ar.m_file_handler->finalize(ar);
 
-			if (!file.commit())
+			fs::stat_t file_stat{};
+
+			if (!file.commit() || !fs::get_stat(path, file_stat))
 			{
 				sys_log.error("Failed to write savestate to file! (path='%s', %s)", path, fs::g_tls_error);
 				savestate = false;
@@ -3152,7 +3154,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 					sys_log.success("Old savestate has been removed: path='%s'", old_path2);
 				}
 
-				sys_log.success("Saved savestate! path='%s'", path);
+				sys_log.success("Saved savestate! path='%s' (file_size=0x%x, time_to_save=%gs)", path, file_stat.size, (get_system_time() - start_time) / 1000000.);
 
 				if (!g_cfg.savestate.suspend_emu)
 				{

@@ -56,7 +56,6 @@
 #include "Emu/vfs_config.h"
 #include "Emu/System.h"
 #include "Emu/system_utils.hpp"
-#include "Emu/savestate_utils.hpp"
 
 #include "Crypto/unpkg.h"
 #include "Crypto/unself.h"
@@ -70,6 +69,7 @@
 
 #include "Utilities/Thread.h"
 #include "util/sysinfo.hpp"
+#include "util/serialization_ext.hpp"
 
 #include "ui_main_window.h"
 
@@ -1535,10 +1535,7 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 				if (update_file_stream->m_file_handler)
 				{
 					// Forcefully read all the data
-					update_file_stream->pop<char>();
-					update_file_stream->pos = umax;
-					update_file_stream->pos /= 2; // Avoid internal overflows
-					update_file_stream->m_file_handler->handle_file_op(*update_file_stream, update_file_stream->pos, 1, nullptr);
+					update_file_stream->m_file_handler->handle_file_op(*update_file_stream, 0, update_file_stream->get_size(umax), nullptr);
 				}
 
 				fs::file update_file = fs::make_stream(std::move(update_file_stream->data));
