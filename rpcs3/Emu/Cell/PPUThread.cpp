@@ -3652,6 +3652,8 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 		return;
 	}
 
+	std::optional<scoped_progress_dialog> progr(std::in_place, "Scanning PPU Executable...");
+
 	// Make sure we only have one '/' at the end and remove duplicates.
 	for (std::string& dir : dir_queue)
 	{
@@ -3659,6 +3661,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 			dir.pop_back();
 		dir += '/';
 	}
+
 	std::sort(dir_queue.begin(), dir_queue.end());
 	dir_queue.erase(std::unique(dir_queue.begin(), dir_queue.end()), dir_queue.end());
 
@@ -3833,7 +3836,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 
 	g_progr_ftotal_bits += total_files_size;
 
-	scoped_progress_dialog progr = "Compiling PPU modules...";
+	*progr = "Compiling PPU Modules...";
 
 	atomic_t<usz> fnext = 0;
 
@@ -4081,7 +4084,7 @@ extern void ppu_initialize()
 
 	auto& _main = g_fxo->get<main_ppu_module>();
 
-	scoped_progress_dialog progr = "Analyzing PPU Executable...";
+	std::optional<scoped_progress_dialog> progr(std::in_place, "Analyzing PPU Executable...");
 
 	// Analyse executable
 	if (!_main.analyse(0, _main.elf_entry, _main.seg0_code_end, _main.applied_patches, [](){ return Emu.IsStopped(); }))
@@ -4092,7 +4095,7 @@ extern void ppu_initialize()
 	// Validate analyser results (not required)
 	_main.validate(0);
 
-	progr = "Scanning PPU Modules...";
+	*progr = "Scanning PPU Modules...";
 
 	bool compile_main = false;
 
@@ -4179,6 +4182,8 @@ extern void ppu_initialize()
 		const std::set<std::string> dirs = Emu.GetGameDirs();
 		dir_queue.insert(std::end(dir_queue), std::begin(dirs), std::end(dirs));
 	}
+
+	progr.reset();
 
 	ppu_precompile(dir_queue, &module_list);
 
@@ -4315,7 +4320,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 	if (!check_only)
 	{
 		// Initialize progress dialog
-		progr.emplace("Loading PPU modules...");
+		progr.emplace("Loading PPU Modules...");
 	}
 
 	// Permanently loaded compiled PPU modules (name -> data)
@@ -4678,7 +4683,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 	// Create worker threads for compilation
 	if (!workload.empty())
 	{
-		*progr = "Compiling PPU modules...";
+		*progr = "Compiling PPU Modules...";
 
 		u32 thread_count = rpcs3::utils::get_max_threads();
 
@@ -4787,7 +4792,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 		if (workload.size() < link_workload.size())
 		{
 			// Only show this message if this task is relevant
-			*progr = "Linking PPU modules...";
+			*progr = "Linking PPU Modules...";
 		}
 
 		for (const auto& [obj_name, is_compiled] : link_workload)
@@ -4807,6 +4812,8 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 		}
 	}
 
+	progr.reset();
+
 	if (!is_being_used_in_emulation || (cpu ? cpu->state.all_of(cpu_flag::exit) : Emu.IsStopped()))
 	{
 		return compiled_new;
@@ -4819,55 +4826,87 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 	// Try to patch all single and unregistered BLRs with the same function (TODO: Maybe generalize it into PIC code detection and patching)
 	ppu_intrp_func_t BLR_func = nullptr;
 
-	if (jit && !jit_mod.init)
+	const bool is_first = jit && !jit_mod.init;
+
+	if (is_first)
 	{
 		jit->fin();
-
-		// Get and install function addresses
-		for (const auto& func : info.funcs)
-		{
-			if (!func.size) continue;
-
-			const auto name = fmt::format("__0x%x", func.addr - reloc);
-			const auto addr = ensure(reinterpret_cast<ppu_intrp_func_t>(jit->get(name)));
-			jit_mod.funcs.emplace_back(addr);
-
-			if (func.size == 4 && !BLR_func && *info.get_ptr<u32>(func.addr) == ppu_instructions::BLR())
-			{
-				BLR_func = addr;
-			}
-
-			ppu_register_function_at(func.addr, 4, addr);
-
-			if (g_cfg.core.ppu_debug)
-				ppu_log.trace("Installing function %s at 0x%x: %p (reloc = 0x%x)", name, func.addr, ppu_ref(func.addr), reloc);
-		}
-
-		jit_mod.init = true;
 	}
-	else
+
+	usz index = 0;
+	usz max_count = 0;
+
+	for (const auto& func : info.funcs)
 	{
-		usz index = 0;
-
-		// Locate existing functions
-		for (const auto& func : info.funcs)
+		if (func.size)
 		{
-			if (!func.size) continue;
+			max_count++;
+		}
+	}
 
-			const u64 addr = reinterpret_cast<uptr>(ensure(jit_mod.funcs[index++]));
+	usz pending_progress = umax;
 
-			if (func.size == 4 && !BLR_func && *info.get_ptr<u32>(func.addr) == ppu_instructions::BLR())
-			{
-				BLR_func = reinterpret_cast<ppu_intrp_func_t>(addr);
-			}
+	bool early_exit = false;
 
-			ppu_register_function_at(func.addr, 4, addr);
-
-			if (g_cfg.core.ppu_debug)
-				ppu_log.trace("Reinstalling function at 0x%x: %p (reloc=0x%x)", func.addr, ppu_ref(func.addr), reloc);
+	// Get and install function addresses
+	for (const auto& func : info.funcs)
+	{
+		if (!func.size)
+		{
+			continue;
 		}
 
-		index = 0;
+		if (cpu ? cpu->state.all_of(cpu_flag::exit) : Emu.IsStopped())
+		{
+			// Revert partially commited changes
+			jit_mod.funcs.clear();
+			BLR_func = nullptr;
+			early_exit = true;
+			break;
+		}
+
+		const auto name = fmt::format("__0x%x", func.addr - reloc);
+
+		// Try to locate existing function if it is not the first time
+		const auto addr = is_first ? ensure(reinterpret_cast<ppu_intrp_func_t>(jit->get(name)))
+			: reinterpret_cast<ppu_intrp_func_t>(ensure(jit_mod.funcs[index]));
+
+		jit_mod.funcs.emplace_back(addr);
+
+		if (func.size == 4 && !BLR_func && *info.get_ptr<u32>(func.addr) == ppu_instructions::BLR())
+		{
+			BLR_func = addr;
+		}
+
+		ppu_register_function_at(func.addr, 4, addr);
+
+		if (g_cfg.core.ppu_debug)
+			ppu_log.trace("Installing function %s at 0x%x: %p (reloc = 0x%x)", name, func.addr, ppu_ref(func.addr), reloc);
+
+		index++;
+
+		if (pending_progress != umax)
+		{
+			pending_progress++;
+
+			if (pending_progress == 1024)
+			{
+				pending_progress = 0;
+				g_progr_pdone++;
+			}
+		}
+		else if (!g_progr.load() && !g_progr_ptotal && !g_progr_ftotal)
+		{
+			g_progr_pdone += index / 1024;
+			g_progr_ptotal += max_count / 1024;
+			pending_progress = index % 1024;
+			progr.emplace("Applying PPU Code...");
+		}
+	}
+
+	if (is_first && !early_exit)
+	{
+		jit_mod.init = true;
 	}
 
 	if (BLR_func)
