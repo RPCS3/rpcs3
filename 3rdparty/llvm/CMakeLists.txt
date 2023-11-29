@@ -80,6 +80,7 @@ if(WITH_LLVM)
 			Core
 			ExecutionEngine
 			MCJIT
+			Passes
 		)
 	else()
 		set(LLVM_LIBS LLVM)
