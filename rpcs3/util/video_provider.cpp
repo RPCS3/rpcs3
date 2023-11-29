@@ -45,7 +45,8 @@ namespace utils
 			return false;
 		}
 
-		std::lock_guard lock(m_mutex);
+		std::lock_guard lock_video(m_video_mutex);
+		std::lock_guard lock_audio(m_audio_mutex);
 
 		if (m_video_sink)
 		{
@@ -65,10 +66,13 @@ namespace utils
 
 		m_type = sink ? type : recording_mode::stopped;
 		m_video_sink = sink;
+		m_active = (m_type != recording_mode::stopped);
 
-		if (m_type == recording_mode::stopped)
+		if (!m_active)
 		{
-			m_active = false;
+			m_last_video_pts_incoming = -1;
+			m_last_audio_pts_incoming = -1;
+			m_start_time_us.store(umax);
 		}
 
 		return true;
@@ -76,7 +80,9 @@ namespace utils
 
 	void video_provider::set_pause_time_us(usz pause_time_us)
 	{
-		std::lock_guard lock(m_mutex);
+		std::lock_guard lock_video(m_video_mutex);
+		std::lock_guard lock_audio(m_audio_mutex);
+
 		m_pause_time_us = pause_time_us;
 	}
 
@@ -91,20 +97,6 @@ namespace utils
 		if (g_recording_mode == recording_mode::stopped)
 		{
 			m_active = false;
-			return g_recording_mode;
-		}
-
-		if (!m_active.exchange(true))
-		{
-			m_current_encoder_frame = 0;
-			m_current_encoder_sample = 0;
-			m_last_video_pts_incoming = -1;
-			m_last_audio_pts_incoming = -1;
-		}
-
-		if (m_current_encoder_frame == 0 && m_current_encoder_sample == 0)
-		{
-			m_encoder_start = steady_clock::now();
 		}
 
 		return g_recording_mode;
@@ -112,12 +104,19 @@ namespace utils
 
 	bool video_provider::can_consume_frame()
 	{
-		std::lock_guard lock(m_mutex);
+		if (!m_active)
+		{
+			return false;
+		}
+
+		std::lock_guard lock_video(m_video_mutex);
 
 		if (!m_video_sink || !m_video_sink->use_internal_video)
+		{
 			return false;
+		}
 
-		const usz elapsed_us = std::chrono::duration_cast<std::chrono::microseconds>(steady_clock::now() - m_encoder_start).count();
+		const usz elapsed_us = get_system_time() - m_start_time_us;
 		ensure(elapsed_us >= m_pause_time_us);
 
 		const usz timestamp_ms = (elapsed_us - m_pause_time_us) / 1000;
@@ -127,15 +126,27 @@ namespace utils
 
 	void video_provider::present_frame(std::vector<u8>& data, u32 pitch, u32 width, u32 height, bool is_bgra)
 	{
-		std::lock_guard lock(m_mutex);
+		if (!m_active)
+		{
+			return;
+		}
+
+		std::lock_guard lock_video(m_video_mutex);
 
 		if (check_mode() == recording_mode::stopped)
 		{
 			return;
 		}
 
+		const u64 current_time_us = get_system_time();
+
+		if (m_start_time_us.compare_and_swap_test(umax, current_time_us))
+		{
+			media_log.notice("video_provider: start time = %d", current_time_us);
+		}
+
 		// Calculate presentation timestamp.
-		const usz elapsed_us = std::chrono::duration_cast<std::chrono::microseconds>(steady_clock::now() - m_encoder_start).count();
+		const usz elapsed_us = current_time_us - m_start_time_us;
 		ensure(elapsed_us >= m_pause_time_us);
 
 		const usz timestamp_ms = (elapsed_us - m_pause_time_us) / 1000;
@@ -150,41 +161,37 @@ namespace utils
 		if (m_video_sink->add_frame(data, pitch, width, height, is_bgra ? AVPixelFormat::AV_PIX_FMT_BGRA : AVPixelFormat::AV_PIX_FMT_RGBA, timestamp_ms))
 		{
 			m_last_video_pts_incoming = pts;
-			m_current_encoder_frame++;
 		}
-	}
-
-	bool video_provider::can_consume_sample()
-	{
-		std::lock_guard lock(m_mutex);
-
-		if (!m_video_sink || !m_video_sink->use_internal_audio)
-			return false;
-
-		const usz elapsed_us = std::chrono::duration_cast<std::chrono::microseconds>(steady_clock::now() - m_encoder_start).count();
-		ensure(elapsed_us >= m_pause_time_us);
-
-		const usz timestamp_us = elapsed_us - m_pause_time_us;
-		const s64 pts = m_video_sink->get_audio_pts(timestamp_us);
-		return pts > m_last_audio_pts_incoming;
 	}
 
 	void video_provider::present_samples(u8* buf, u32 sample_count, u16 channels)
 	{
-		if (!buf || !sample_count || !channels)
+		if (!buf || !sample_count || !channels || !m_active)
 		{
 			return;
 		}
 
-		std::lock_guard lock(m_mutex);
+		std::lock_guard lock_audio(m_audio_mutex);
+
+		if (!m_video_sink || !m_video_sink->use_internal_audio)
+		{
+			return;
+		}
 
 		if (check_mode() == recording_mode::stopped)
 		{
 			return;
 		}
 
+		const u64 current_time_us = get_system_time();
+
+		if (m_start_time_us.compare_and_swap_test(umax, current_time_us))
+		{
+			media_log.notice("video_provider: start time = %d", current_time_us);
+		}
+
 		// Calculate presentation timestamp.
-		const usz elapsed_us = std::chrono::duration_cast<std::chrono::microseconds>(steady_clock::now() - m_encoder_start).count();
+		const usz elapsed_us = current_time_us - m_start_time_us;
 		ensure(elapsed_us >= m_pause_time_us);
 
 		const usz timestamp_us = elapsed_us - m_pause_time_us;
@@ -199,7 +206,6 @@ namespace utils
 		if (m_video_sink->add_audio_samples(buf, sample_count, channels, timestamp_us))
 		{
 			m_last_audio_pts_incoming = pts;
-			m_current_encoder_sample += sample_count;
 		}
 	}
 }
