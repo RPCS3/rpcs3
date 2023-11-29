@@ -781,7 +781,8 @@ namespace utils
 			m_thread.reset();
 		}
 
-		std::lock_guard lock(m_mtx);
+		std::lock_guard lock_video(m_video_mtx);
+		std::lock_guard lock_audio(m_audio_mtx);
 		m_frames_to_encode.clear();
 		m_samples_to_encode.clear();
 		has_error = false;
@@ -1288,17 +1289,17 @@ namespace utils
 				encoder_frame frame_data;
 				bool got_frame = false;
 				{
-					m_mtx.lock();
+					m_video_mtx.lock();
 
 					if (m_frames_to_encode.empty())
 					{
-						m_mtx.unlock();
+						m_video_mtx.unlock();
 					}
 					else
 					{
 						frame_data = std::move(m_frames_to_encode.front());
 						m_frames_to_encode.pop_front();
-						m_mtx.unlock();
+						m_video_mtx.unlock();
 
 						got_frame = true;
 

@@ -24,7 +24,7 @@ namespace utils
 			if (m_flush || m_paused)
 				return false;
 
-			std::lock_guard lock(m_mtx);
+			std::lock_guard lock(m_video_mtx);
 			m_frames_to_encode.emplace_back(timestamp_ms, pitch, width, height, pixel_format, std::move(frame));
 			return true;
 		}
@@ -102,7 +102,7 @@ namespace utils
 		bool use_internal_video = false; // True if we want to fetch frames from rsx
 
 	protected:
-		shared_mutex m_mtx;
+		shared_mutex m_video_mtx;
 		std::deque<encoder_frame> m_frames_to_encode;
 		shared_mutex m_audio_mtx;
 		std::deque<encoder_sample> m_samples_to_encode;
