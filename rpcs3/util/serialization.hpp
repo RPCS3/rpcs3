@@ -39,27 +39,71 @@ namespace utils
 		serialization_file_handler() = default;
 		virtual ~serialization_file_handler() = default;
 
+		// Handle read/write operations
 		virtual bool handle_file_op(serial& ar, usz pos, usz size, const void* data = nullptr) = 0;
-		virtual usz get_size(const utils::serial& ar, usz recommended = umax) const = 0;
+
+		// Obtain data size (targets to be only higher than 'recommended' and thus may not be accurate)
+		virtual usz get_size(const utils::serial& /*ar*/, usz /*recommended*/) const
+		{
+			return 0;
+		}
+
+		// Skip reading some (compressed) data
+		virtual void skip_until(utils::serial& /*ar*/)
+		{
+		}
+
+		// Detect empty stream (TODO: Clean this, instead perhaps use a magic static representing empty stream)
+		virtual bool is_null() const
+		{
+			return false;
+		}
+
+		virtual void finalize_block(utils::serial& /*ar*/)
+		{
+		}
+
+		virtual bool is_valid() const
+		{
+			return true;
+		}
+
+		virtual void finalize(utils::serial&) = 0;
 	};
 
 	struct serial
 	{
+private:
+		bool m_is_writing = true;
+		bool m_expect_little_data = false;
+public:
 		std::vector<u8> data;
 		usz data_offset = 0;
 		usz pos = 0;
-		bool m_is_writing = true;
-		bool m_avoid_large_prefetch = false;
+		usz m_max_data = umax;
 		std::unique_ptr<serialization_file_handler> m_file_handler;
 
-		serial() noexcept = default;
+		serial(bool expect_little_data = false) noexcept
+			: m_expect_little_data(expect_little_data)
+		{
+		}
+
 		serial(const serial&) = delete;
+		serial& operator=(const serial&) = delete;
+		explicit serial(serial&&) noexcept = default;
+		serial& operator=(serial&&) noexcept = default;
 		~serial() noexcept = default;
 
 		// Checks if this instance is currently used for serialization
 		bool is_writing() const
 		{
 			return m_is_writing;
+		}
+
+		// Return true if small amounts of both input and output memory are expected (performance hint)  
+		bool expect_little_data() const
+		{
+			return m_expect_little_data;
 		}
 
 		// Reserve memory for serialization
@@ -80,27 +124,34 @@ namespace utils
 				return true;
 			}
 
+			if (m_file_handler && m_file_handler->is_null())
+			{
+				// Instead of doing nothing at all, increase pos so it would be possible to estimate memory requirements
+				pos += size;
+				return true;
+			}
+
 			// Overflow check
-			ensure(~pos >= size);
+			ensure(~pos >= size - 1);
 
 			if (is_writing())
 			{
 				ensure(pos >= data_offset);
 				const auto ptr = reinterpret_cast<const u8*>(memory_provider());
-				data.insert(data.begin() + pos - data_offset, ptr, ptr + size);
+				data.insert(data.begin() + (pos - data_offset), ptr, ptr + size);
 				pos += size;
 				return true;
 			}
 
-			if (data.empty() || pos < data_offset || pos + size > data.size() + data_offset)
+			if (data.empty() || pos < data_offset || pos + (size - 1) > (data.size() - 1) + data_offset)
 			{
 				// Load from file
 				ensure(m_file_handler);
 				ensure(m_file_handler->handle_file_op(*this, pos, size, nullptr));
-				ensure(!data.empty() && pos >= data_offset && pos + size <= data.size() + data_offset);
+				ensure(!data.empty() && pos >= data_offset && pos + (size - 1) <= (data.size() - 1) + data_offset);
 			}
 
-			std::memcpy(const_cast<void*>(static_cast<const void*>(memory_provider())), data.data() + pos - data_offset, size);
+			std::memcpy(const_cast<void*>(static_cast<const void*>(memory_provider())), data.data() + (pos - data_offset), size);
 			pos += size;
 			return true;
 		}
@@ -169,7 +220,8 @@ namespace utils
 		}
 
 		// std::vector, std::basic_string
-		template <typename T> requires FastRandomAccess<T> && ListAlike<T>
+		// Discourage using std::pair/tuple with vectors because it eliminates the possibility of bitwise optimization
+		template <typename T> requires FastRandomAccess<T> && ListAlike<T> && (!TupleAlike<typename T::value_type>)
 		bool serialize(T& obj)
 		{
 			if (is_writing())
@@ -194,6 +246,13 @@ namespace utils
 				return true;
 			}
 
+			obj.clear();
+
+			if (m_file_handler && m_file_handler->is_null())
+			{
+				return true;
+			}
+
 			usz size = 0;
 			if (!deserialize_vle(size))
 			{
@@ -211,7 +270,6 @@ namespace utils
 			else
 			{
 				// TODO: Postpone resizing to after file bounds checks
-				obj.clear();
 				obj.resize(size);
 
 				for (auto&& value : obj)
@@ -270,6 +328,11 @@ namespace utils
 
 			obj.clear();
 
+			if (m_file_handler && m_file_handler->is_null())
+			{
+				return true;
+			}
+
 			usz size = 0;
 			if (!deserialize_vle(size))
 			{
@@ -326,16 +389,23 @@ namespace utils
 		}
 
 		// Wrapper for serialize(T&), allows to pass multiple objects at once
-		template <typename... Args>
-		bool operator()(Args&&... args)
+		template <typename... Args> requires (sizeof...(Args) != 0)
+		bool operator()(Args&&... args) noexcept
 		{
 			return ((AUDIT(!std::is_const_v<std::remove_reference_t<Args>> || is_writing())
 				, serialize(const_cast<std::remove_cvref_t<Args>&>(static_cast<const Args&>(args)))), ...);
 		}
 
+		// Code style utility, for when utils::serial is a pointer for example
+		template <typename... Args> requires (sizeof...(Args) > 1 || !(std::is_convertible_v<Args&&, Args&> && ...))
+		bool serialize(Args&&... args)
+		{
+			return this->operator()(std::forward<Args>(args)...);
+		}
+
 		// Convert serialization manager to deserializion manager
 		// If no arg is provided reuse saved buffer
-		void set_reading_state(std::vector<u8>&& _data = std::vector<u8>{})
+		void set_reading_state(std::vector<u8>&& _data = std::vector<u8>{}, bool expect_little_data = false)
 		{
 			if (!_data.empty())
 			{
@@ -343,7 +413,8 @@ namespace utils
 			}
 
 			m_is_writing = false;
-			m_avoid_large_prefetch = false;
+			m_expect_little_data = expect_little_data;
+			m_max_data = umax;
 			pos = 0;
 			data_offset = 0;
 		}
@@ -365,15 +436,19 @@ namespace utils
 			return pos;
 		}
 
-		usz seek_pos(usz val, bool empty_data = false)
+		usz seek_pos(usz val, bool cleanup = false)
 		{
 			const usz old_pos = std::exchange(pos, val);
 
-			if (empty_data || data.empty())
+			if (cleanup || data.empty())
 			{
 				// Relocate future data
-				data.clear();
-				data_offset = pos;
+				if (m_file_handler)
+				{
+					m_file_handler->skip_until(*this);
+				}
+
+				breathe();
 			}
 
 			return old_pos;
@@ -391,9 +466,9 @@ namespace utils
 		// Execute only if past memory is known to not going be reused
 		void breathe(bool forced = false)
 		{
-			if (!forced && (!m_file_handler || (data.size() < 0x20'0000 && pos >= data_offset)))
+			if (!forced && (!m_file_handler || (data.size() < 0x100'0000 && pos >= data_offset)))
 			{
-				// Let's not do anything if less than 32MB
+				// Let's not do anything if less than 16MB
 				return;
 			}
 
@@ -403,7 +478,7 @@ namespace utils
 
 		template <typename T> requires (std::is_copy_constructible_v<std::remove_const_t<T>>) && (std::is_constructible_v<std::remove_const_t<T>> || Bitcopy<std::remove_const_t<T>> ||
 			std::is_constructible_v<std::remove_const_t<T>, stx::exact_t<serial&>> || TupleAlike<std::remove_const_t<T>>)
-		operator T()
+		operator T() noexcept
 		{
 			AUDIT(!is_writing());
 
@@ -433,6 +508,13 @@ namespace utils
 			}
 		}
 
+		// Code style utility wrapper for operator T()
+		template <typename T>
+		T pop()
+		{
+			return this->operator T();
+		}
+
 		void swap_handler(serial& ar)
 		{
 			std::swap(ar.m_file_handler, this->m_file_handler);
@@ -440,7 +522,40 @@ namespace utils
 
 		usz get_size(usz recommended = umax) const
 		{
-			return m_file_handler ? m_file_handler->get_size(*this, recommended) : data_offset + data.size();
+			recommended = std::min<usz>(recommended, m_max_data);
+			return std::min<usz>(m_max_data, m_file_handler ? m_file_handler->get_size(*this, recommended) : data_offset + data.size());
+		}
+
+		template <typename T> requires (Bitcopy<T>)
+		usz predict_object_size(const T&)
+		{
+			return sizeof(T);
+		}
+
+		template <typename T> requires FastRandomAccess<T> && (!ListAlike<T>) && (!Bitcopy<T>)
+		usz predict_object_size(const T& obj)
+		{
+			return std::size(obj) * sizeof(obj[0]);
+		}
+
+		template <typename T> requires (std::is_copy_constructible_v<std::remove_reference_t<T>> && std::is_constructible_v<std::remove_reference_t<T>>)
+		usz try_read(T&& obj)
+		{
+			if (is_writing())
+			{
+				return 0;
+			}
+
+			const usz end_pos = pos + predict_object_size(std::forward<T>(obj));
+			const usz size = get_size(end_pos);
+
+			if (size >= end_pos)
+			{
+				serialize(std::forward<T>(obj));
+				return 0;
+			}
+
+			return end_pos - size;
 		}
 
 		template <typename T> requires (std::is_copy_constructible_v<T> && std::is_constructible_v<T> && Bitcopy<T>)
@@ -457,12 +572,25 @@ namespace utils
 
 			if (size >= end_pos)
 			{
-				u8 buf[sizeof(type)]{};
-				ensure(raw_serialize(buf, sizeof(buf)));
-				return {true, std::bit_cast<type>(buf)};
+				return {true, this->operator type()};
 			}
 
 			return {};
+		}
+
+		void patch_raw_data(usz pos, const void* data, usz size)
+		{
+			if (m_file_handler && m_file_handler->is_null())
+			{
+				return;
+			}
+
+			if (!size)
+			{
+				return;
+			}
+
+			std::memcpy(&::at32(this->data, pos - data_offset + size - 1) - (size - 1), data, size);
 		}
 
 		// Returns true if valid, can be invalidated by setting pos to umax

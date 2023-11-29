@@ -759,29 +759,28 @@ void spu_cache::initialize(bool build_existing_cache)
 
 	std::optional<scoped_progress_dialog> progr;
 
+	u32 total_funcs = 0;
+
 	if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit || g_cfg.core.spu_decoder == spu_decoder_type::llvm)
 	{
-		// Initialize progress dialog (wait for previous progress done)
-		while (u32 v = g_progr_ptotal)
-		{
-			if (Emu.IsStopped() || !build_existing_cache)
-			{
-				// Workaround: disable progress dialog updates in the case of sole SPU precompilation
-				break;
-			}
-
-			thread_ctrl::wait_on(g_progr_ptotal, v);
-		}
-
 		const u32 add_count = ::size32(func_list) + total_precompile;
 
 		if (add_count)
 		{
-			g_progr_ptotal += build_existing_cache ? add_count : 0;
-			progr.emplace("Building SPU cache...");
+			total_funcs = build_existing_cache ? add_count : 0;
 		}
 
 		worker_count = std::min<u32>(rpcs3::utils::get_max_threads(), add_count);
+	}
+
+	atomic_t<u32> pending_progress = 0;
+	atomic_t<bool> showing_progress = false;
+
+	if (!g_progr_ptotal)
+	{
+		g_progr_ptotal += total_funcs;
+		showing_progress.release(true);
+		progr.emplace("Building SPU cache...");
 	}
 
 	named_thread_group workers("SPU Worker ", worker_count, [&]() -> uint
@@ -812,8 +811,13 @@ void spu_cache::initialize(bool build_existing_cache)
 		// Fake LS
 		std::vector<be_t<u32>> ls(0x10000);
 
+		usz func_i = fnext++;
+
+		// Ensure some actions are performed on a single thread
+		const bool is_first_thread = func_i == 0;
+
 		// Build functions
-		for (usz func_i = fnext++; func_i < func_list.size(); func_i = fnext++, g_progr_pdone += build_existing_cache ? 1 : 0)
+		for (; func_i < func_list.size(); func_i = fnext++, (showing_progress ? g_progr_pdone : pending_progress) += build_existing_cache ? 1 : 0)
 		{
 			const spu_program& func = std::as_const(func_list)[func_i];
 
@@ -872,11 +876,27 @@ void spu_cache::initialize(bool build_existing_cache)
 			std::memset(ls.data() + start / 4, 0, 4 * (size0 - 1));
 
 			result++;
+
+			if (is_first_thread && !showing_progress)
+			{
+				if (!g_progr.load() && !g_progr_ptotal && !g_progr_ftotal)
+				{
+					showing_progress = true;
+					g_progr_pdone += pending_progress.exchange(0);
+					g_progr_ptotal += total_funcs;
+					progr.emplace("Building SPU cache...");
+				}
+			}
+			else if (showing_progress && pending_progress)
+			{
+				// Cover missing progress due to a race
+				g_progr_pdone += pending_progress.exchange(0);
+			}
 		}
 
 		u32 last_sec_idx = umax;
 
-		for (usz func_i = data_indexer++;; func_i = data_indexer++, g_progr_pdone += build_existing_cache ? 1 : 0)
+		for (func_i = data_indexer++;; func_i = data_indexer++, (showing_progress ? g_progr_pdone : pending_progress) += build_existing_cache ? 1 : 0)
 		{
 			u32 passed_count = 0;
 			u32 func_addr = 0;
@@ -1033,6 +1053,28 @@ void spu_cache::initialize(bool build_existing_cache)
 				func2 = compiler->analyse(ls.data(), new_entry, &targets);
 				block_addr = new_entry;
 			}
+
+			if (is_first_thread && !showing_progress)
+			{
+				if (!g_progr.load() && !g_progr_ptotal && !g_progr_ftotal)
+				{
+					showing_progress = true;
+					g_progr_pdone += pending_progress.exchange(0);
+					g_progr_ptotal += total_funcs;
+					progr.emplace("Building SPU cache...");
+				}
+			}
+			else if (showing_progress && pending_progress)
+			{
+				// Cover missing progress due to a race
+				g_progr_pdone += pending_progress.exchange(0);
+			}
+		}
+
+		if (showing_progress && pending_progress)
+		{
+			// Cover missing progress due to a race
+			g_progr_pdone += pending_progress.exchange(0);
 		}
 
 		return result;

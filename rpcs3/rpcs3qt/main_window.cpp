@@ -69,6 +69,7 @@
 
 #include "Utilities/Thread.h"
 #include "util/sysinfo.hpp"
+#include "util/serialization_ext.hpp"
 
 #include "ui_main_window.h"
 
@@ -589,7 +590,7 @@ void main_window::BootSavestate()
 	}
 
 	const QString file_path = QFileDialog::getOpenFileName(this, tr("Select Savestate To Boot"), qstr(fs::get_cache_dir() + "/savestates/"), tr(
-		"Savestate files (*.SAVESTAT);;"
+		"Savestate files (*.SAVESTAT *.SAVESTAT.gz);;"
 		"All files (*.*)"),
 		Q_NULLPTR, QFileDialog::DontResolveSymlinks);
 
@@ -1529,7 +1530,15 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 		{
 			for (const auto& update_filename : update_filenames)
 			{
-				fs::file update_file = update_files.get_file(update_filename);
+				auto update_file_stream = update_files.get_file(update_filename);
+
+				if (update_file_stream->m_file_handler)
+				{
+					// Forcefully read all the data
+					update_file_stream->m_file_handler->handle_file_op(*update_file_stream, 0, update_file_stream->get_size(umax), nullptr);
+				}
+
+				fs::file update_file = fs::make_stream(std::move(update_file_stream->data));
 
 				SCEDecrypter self_dec(update_file);
 				self_dec.LoadHeaders();
@@ -3558,7 +3567,7 @@ main_window::drop_type main_window::IsValidFile(const QMimeData& md, QStringList
 				type = drop_type::drop_rrc;
 			}
 			// The emulator allows to execute ANY filetype, just not from drag-and-drop because it is confusing to users
-			else if (suffix_lo == "savestat" || suffix_lo == "sprx" || suffix_lo == "self" || suffix_lo == "bin" || suffix_lo == "prx" || suffix_lo == "elf" || suffix_lo == "o")
+			else if (path.toLower().endsWith(".savestat.gz") || suffix_lo == "savestat" || suffix_lo == "sprx" || suffix_lo == "self" || suffix_lo == "bin" || suffix_lo == "prx" || suffix_lo == "elf" || suffix_lo == "o")
 			{
 				type = drop_type::drop_game;
 			}

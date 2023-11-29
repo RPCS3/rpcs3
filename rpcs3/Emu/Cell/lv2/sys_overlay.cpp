@@ -72,7 +72,7 @@ fs::file make_file_view(fs::file&& file, u64 offset, u64 size);
 
 std::shared_ptr<void> lv2_overlay::load(utils::serial& ar)
 {
-	const std::string path = vfs::get(ar.operator std::string());
+	const std::string path = vfs::get(ar.pop<std::string>());
 	const s64 offset = ar;
 
 	std::shared_ptr<lv2_overlay> ovlm;

@@ -1617,49 +1617,69 @@ namespace vm
 		const v128 _5 = _1 | _2;
 		const v128 _6 = _3 | _4;
 		const v128 _7 = _5 | _6;
-		return _7 == v128{};
+		return gv_testz(_7);
 	}
 
-	static void save_memory_bytes(utils::serial& ar, const u8* ptr, usz size)
+	static void serialize_memory_bytes(utils::serial& ar, u8* ptr, usz size)
 	{
-		AUDIT(ar.is_writing() && !(size % 1024));
+		ensure((size % 4096) == 0);
 
-		for (; size; ptr += 128 * 8, size -= 128 * 8)
+		for (usz iter_count = 0; size; iter_count++, ptr += 128 * 8)
 		{
-			ar(u8{}); // bitmap of 1024 bytes (bit is 128-byte)
-			u8 bitmap = 0, count = 0;
+			const usz process_size = std::min<usz>(size, 128 * 8);
+			size -= process_size;
 
-			for (usz i = 0, end = std::min<usz>(size, 128 * 8); i < end; i += 128)
+			u8 bitmap = 0;
+
+			if (ar.is_writing())
 			{
-				if (!check_cache_line_zero(ptr + i))
+				for (usz i = 0; i < process_size; i += 128 * 2)
 				{
-					bitmap |= 1u << (i / 128);
-					count++;
-					ar(std::span(ptr + i, 128));
+					const u64 sample64_1 = read_from_ptr<u64>(ptr, i);
+					const u64 sample64_2 = read_from_ptr<u64>(ptr, i + 128);
+
+					// Speed up testing in scenarios where it is likely non-zero data
+					if (sample64_1 && sample64_2)
+					{
+						bitmap |= 3u << (i / 128);
+						continue;
+					}
+
+					bitmap |= (check_cache_line_zero(ptr + i + 0) ? 0 : 1) << (i / 128);
+					bitmap |= (check_cache_line_zero(ptr + i + 128) ? 0 : 2) << (i / 128);
 				}
 			}
 
-			// Patch bitmap with correct value
-			*std::prev(&ar.data.back(), count * 128) = bitmap;
-		}
-	}
+			// bitmap of 1024 bytes (bit is 128-byte)
+			ar(bitmap);
 
-	static void load_memory_bytes(utils::serial& ar, u8* ptr, usz size)
-	{
-		AUDIT(!ar.is_writing() && !(size % 128));
-
-		for (; size; ptr += 128 * 8, size -= 128 * 8)
-		{
-			const u8 bitmap{ar};
-
-			for (usz i = 0, end = std::min<usz>(size, 128 * 8); i < end; i += 128)
+			for (usz i = 0; i < process_size;)
 			{
-				if (bitmap & (1u << (i / 128)))
+				usz block_count = 0;
+
+				for (usz bit = i / 128; bit < sizeof(bitmap) * 8 && (bitmap & (1u << bit)) != 0;)
 				{
-					ar(std::span(ptr + i, 128));
+					bit++;
+					block_count++;
 				}
+
+				if (!block_count)
+				{
+					i += 128;
+					continue;
+				}
+
+				ar(std::span<u8>(ptr + i, block_count * 128));
+				i += block_count * 128;
+			}
+
+			if (iter_count % 256 == 0)
+			{
+				ar.breathe();
 			}
 		}
+
+		ar.breathe();
 	}
 
 	void block_t::save(utils::serial& ar, std::map<utils::shm*, usz>& shared)
@@ -1682,14 +1702,15 @@ namespace vm
 				if (is_memory_compatible_for_copy_from_executable_optimization(addr, shm.first))
 				{
 					// Revert changes
-					ar.data.resize(ar.seek_end(sizeof(u32) * 2 + sizeof(memory_page)));
+					ar.data.resize(ar.data.size() - (sizeof(u32) * 2 + sizeof(memory_page)));
+					ar.seek_end();
 					vm_log.success("Removed memory block matching the memory of the executable from savestate. (addr=0x%x, size=0x%x)", addr, shm.first);
 					continue;
 				}
 
 				// Save raw binary image
 				const u32 guard_size = flags & stack_guarded ? 0x1000 : 0;
-				save_memory_bytes(ar, vm::get_super_ptr<const u8>(addr + guard_size), shm.first - guard_size * 2);
+				serialize_memory_bytes(ar, vm::get_super_ptr<u8>(addr + guard_size), shm.first - guard_size * 2);
 			}
 			else
 			{
@@ -1758,13 +1779,13 @@ namespace vm
 
 			// Map the memory through the same method as alloc() and falloc()
 			// Copy the shared handle unconditionally
-			ensure(try_alloc(addr0, pflags, size0, ::as_rvalue(flags & preallocated ? null_shm : shared[ar.operator usz()])));
+			ensure(try_alloc(addr0, pflags, size0, ::as_rvalue(flags & preallocated ? null_shm : shared[ar.pop<usz>()])));
 
 			if (flags & preallocated)
 			{
 				// Load binary image
 				const u32 guard_size = flags & stack_guarded ? 0x1000 : 0;
-				load_memory_bytes(ar, vm::get_super_ptr<u8>(addr0 + guard_size), size0 - guard_size * 2);
+				serialize_memory_bytes(ar, vm::get_super_ptr<u8>(addr0 + guard_size), size0 - guard_size * 2);
 			}
 		}
 	}
@@ -2224,9 +2245,8 @@ namespace vm
 			//  Save shared memory
 			ar(shm->flags());
 
-			// TODO: string_view serialization (even with load function, so the loaded address points to a position of the stream's buffer)
 			ar(shm->size());
-			save_memory_bytes(ar, vm::get_super_ptr<u8>(addr), shm->size());
+			serialize_memory_bytes(ar, vm::get_super_ptr<u8>(addr), shm->size());
 		}
 
 		// TODO: Serialize std::vector direcly
@@ -2249,19 +2269,27 @@ namespace vm
 	void load(utils::serial& ar)
 	{
 		std::vector<std::shared_ptr<utils::shm>> shared;
-		shared.resize(ar.operator usz());
+
+		const usz shared_size = ar.pop<usz>();
+
+		if (!shared_size || ar.get_size(umax) / 4096 < shared_size)
+		{
+			fmt::throw_exception("Invalid VM serialization state: shared_size=0x%x, ar=%s", shared_size, ar);
+		}
+
+		shared.resize(shared_size);
 
 		for (auto& shm : shared)
 		{
 			// Load shared memory
 
-			const u32 flags = ar;
-			const u64 size = ar;
+			const u32 flags = ar.pop<u32>();
+			const u64 size = ar.pop<u64>();
 			shm = std::make_shared<utils::shm>(size, flags);
 
 			// Load binary image
 			// elad335: I'm not proud about it as well.. (ideal situation is to not call map_self())
-			load_memory_bytes(ar, shm->map_self(), shm->size());
+			serialize_memory_bytes(ar, shm->map_self(), shm->size());
 		}
 
 		for (auto& block : g_locations)
@@ -2270,11 +2298,11 @@ namespace vm
 		}
 
 		g_locations.clear();
-		g_locations.resize(ar.operator usz());
+		g_locations.resize(ar.pop<usz>());
 
 		for (auto& loc : g_locations)
 		{
-			const u8 has = ar;
+			const u8 has = ar.pop<u8>();
 
 			if (has)
 			{

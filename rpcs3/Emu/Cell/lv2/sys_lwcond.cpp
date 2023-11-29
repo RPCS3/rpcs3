@@ -12,10 +12,10 @@
 LOG_CHANNEL(sys_lwcond);
 
 lv2_lwcond::lv2_lwcond(utils::serial& ar)
-	: name(ar.operator be_t<u64>())
+	: name(ar.pop<be_t<u64>>())
 	, lwid(ar)
 	, protocol(ar)
-	, control(ar.operator decltype(control)())
+	, control(ar.pop<decltype(control)>())
 {
 }
 
