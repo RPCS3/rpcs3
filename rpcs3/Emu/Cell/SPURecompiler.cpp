@@ -811,17 +811,14 @@ void spu_cache::initialize(bool build_existing_cache)
 		// Fake LS
 		std::vector<be_t<u32>> ls(0x10000);
 
-		bool is_first_thread = false;
+		usz func_i = fnext++;
+
+		// Ensure some actions are performed on a single thread
+		const bool is_first_thread = func_i == 0;
 
 		// Build functions
-		for (usz func_i = fnext++; func_i < func_list.size(); func_i = fnext++, (showing_progress ? g_progr_pdone : pending_progress) += build_existing_cache ? 1 : 0)
+		for (; func_i < func_list.size(); func_i = fnext++, (showing_progress ? g_progr_pdone : pending_progress) += build_existing_cache ? 1 : 0)
 		{
-			if (func_i == 0)
-			{
-				// Ensure some actions are performed on a single thread
-				ensure(std::exchange(is_first_thread, true) == false);
-			}
-
 			const spu_program& func = std::as_const(func_list)[func_i];
 
 			if (Emu.IsStopped() || fail_flag)
@@ -899,7 +896,7 @@ void spu_cache::initialize(bool build_existing_cache)
 
 		u32 last_sec_idx = umax;
 
-		for (usz func_i = data_indexer++;; func_i = data_indexer++, (showing_progress ? g_progr_pdone : pending_progress) += build_existing_cache ? 1 : 0)
+		for (func_i = data_indexer++;; func_i = data_indexer++, (showing_progress ? g_progr_pdone : pending_progress) += build_existing_cache ? 1 : 0)
 		{
 			u32 passed_count = 0;
 			u32 func_addr = 0;
