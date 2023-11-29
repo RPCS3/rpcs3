@@ -577,7 +577,6 @@ void rec_info::set_audio_params(s32 audio_format)
 void rec_info::start_video_provider()
 {
 	const bool was_paused = paused.exchange(false);
-	utils::video_provider& video_provider = g_fxo->get<utils::video_provider>();
 
 	if (video_provider_thread && was_paused)
 	{
@@ -585,7 +584,13 @@ void rec_info::start_video_provider()
 		const u64 pause_time_end = get_system_time();
 		ensure(pause_time_end > pause_time_start);
 		pause_time_total += (pause_time_end - pause_time_start);
-		video_provider.set_pause_time_us(pause_time_total);
+
+		if (param.use_internal_video() || param.use_internal_audio())
+		{
+			utils::video_provider& video_provider = g_fxo->get<utils::video_provider>();
+			video_provider.set_pause_time_us(pause_time_total);
+		}
+
 		cellRec.notice("Resuming video provider.");
 		return;
 	}
@@ -595,7 +600,12 @@ void rec_info::start_video_provider()
 	recording_time_start = get_system_time();
 	pause_time_start = 0;
 	pause_time_total = 0;
-	video_provider.set_pause_time_us(0);
+
+	if (param.use_internal_video() || param.use_internal_audio())
+	{
+		utils::video_provider& video_provider = g_fxo->get<utils::video_provider>();
+		video_provider.set_pause_time_us(0);
+	}
 
 	video_provider_thread = std::make_unique<named_thread<std::function<void()>>>("cellRec video provider", [this]()
 	{
@@ -1362,9 +1372,6 @@ error_code cellRecClose(s32 isDiscard)
 		vm::dealloc(rec.video_input_buffer.addr(), vm::main);
 		vm::dealloc(rec.audio_input_buffer.addr(), vm::main);
 
-		g_fxo->need<utils::video_provider>();
-		utils::video_provider& video_provider = g_fxo->get<utils::video_provider>();
-
 		// Release the video sink if it was used
 		if (rec.param.use_internal_video() || rec.param.use_internal_audio())
 		{
@@ -1374,6 +1381,9 @@ error_code cellRecClose(s32 isDiscard)
 			{
 				cellRec.error("cellRecClose: Unexpected recording mode %s found while stopping video capture.", old_mode);
 			}
+
+			g_fxo->need<utils::video_provider>();
+			utils::video_provider& video_provider = g_fxo->get<utils::video_provider>();
 
 			if (!video_provider.set_video_sink(nullptr, recording_mode::cell))
 			{
@@ -1457,12 +1467,12 @@ error_code cellRecStart()
 			rec.encoder->encode();
 		}
 
-		g_fxo->need<utils::video_provider>();
-		utils::video_provider& video_provider = g_fxo->get<utils::video_provider>();
-
 		// Setup a video sink if it is needed
 		if (rec.param.use_internal_video() || rec.param.use_internal_audio())
 		{
+			g_fxo->need<utils::video_provider>();
+			utils::video_provider& video_provider = g_fxo->get<utils::video_provider>();
+
 			if (rec.sink && !video_provider.set_video_sink(rec.sink, recording_mode::cell))
 			{
 				cellRec.error("Failed to set video sink");
