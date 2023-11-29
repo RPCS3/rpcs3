@@ -781,8 +781,7 @@ namespace utils
 			m_thread.reset();
 		}
 
-		std::lock_guard lock_video(m_video_mtx);
-		std::lock_guard lock_audio(m_audio_mtx);
+		std::scoped_lock lock(m_video_mtx, m_audio_mtx);
 		m_frames_to_encode.clear();
 		m_samples_to_encode.clear();
 		has_error = false;
