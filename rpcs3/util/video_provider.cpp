@@ -45,8 +45,7 @@ namespace utils
 			return false;
 		}
 
-		std::lock_guard lock_video(m_video_mutex);
-		std::lock_guard lock_audio(m_audio_mutex);
+		std::scoped_lock lock(m_video_mutex, m_audio_mutex);
 
 		if (m_video_sink)
 		{
@@ -80,9 +79,7 @@ namespace utils
 
 	void video_provider::set_pause_time_us(usz pause_time_us)
 	{
-		std::lock_guard lock_video(m_video_mutex);
-		std::lock_guard lock_audio(m_audio_mutex);
-
+		std::scoped_lock lock(m_video_mutex, m_audio_mutex);
 		m_pause_time_us = pause_time_us;
 	}
 
