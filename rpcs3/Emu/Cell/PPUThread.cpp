@@ -32,25 +32,25 @@
 #pragma warning(push, 0)
 #else
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#pragma GCC diagnostic ignored "-Wextra"
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #pragma GCC diagnostic ignored "-Wunused-parameter"
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#pragma GCC diagnostic ignored "-Weffc++"
 #pragma GCC diagnostic ignored "-Wmissing-noreturn"
 #endif
-#include "llvm/Support/FormattedStream.h"
-#include "llvm/TargetParser/Host.h"
-#include "llvm/Object/ObjectFile.h"
+#include <llvm/IR/Verifier.h>
+#include <llvm/Transforms/Utils/BasicBlockUtils.h>
 #if LLVM_VERSION_MAJOR < 17
-#include "llvm/ADT/Triple.h"
+#include <llvm/Support/FormattedStream.h>
+#include <llvm/TargetParser/Host.h>
+#include <llvm/Object/ObjectFile.h>
+#include <llvm/IR/InstIterator.h>
+#include <llvm/IR/LegacyPassManager.h>
+#include <llvm/Transforms/Scalar.h>
+#else
+#include <llvm/Analysis/CGSCCPassManager.h>
+#include <llvm/Analysis/LoopAnalysisManager.h>
+#include <llvm/Passes/PassBuilder.h>
+#include <llvm/Transforms/Scalar/EarlyCSE.h>
 #endif
-#include "llvm/IR/Verifier.h"
-#include "llvm/IR/InstIterator.h"
-#include "llvm/IR/LegacyPassManager.h"
-#include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/Transforms/Scalar.h"
 #ifdef _MSC_VER
 #pragma warning(pop)
 #else
@@ -60,7 +60,6 @@
 #include "PPUTranslator.h"
 #endif
 
-#include <thread>
 #include <cfenv>
 #include <cctype>
 #include <span>
@@ -5064,6 +5063,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 			translator.build_interpreter();
 		}
 
+#if LLVM_VERSION_MAJOR < 17
 		legacy::FunctionPassManager pm(_module.get());
 
 		// Basic optimizations
@@ -5085,6 +5085,32 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 		//pm.add(createAggressiveDCEPass());
 		//pm.add(createCFGSimplificationPass());
 		//pm.add(createLintPass()); // Check
+#else
+		// Create the analysis managers.
+		// These must be declared in this order so that they are destroyed in the
+		// correct order due to inter-analysis-manager references.
+		LoopAnalysisManager lam;
+		FunctionAnalysisManager fam;
+		CGSCCAnalysisManager cgam;
+		ModuleAnalysisManager mam;
+
+		// Create the new pass manager builder.
+		// Take a look at the PassBuilder constructor parameters for more
+		// customization, e.g. specifying a TargetMachine or various debugging
+		// options.
+		PassBuilder pb;
+
+		// Register all the basic analyses with the managers.
+		pb.registerModuleAnalyses(mam);
+		pb.registerCGSCCAnalyses(cgam);
+		pb.registerFunctionAnalyses(fam);
+		pb.registerLoopAnalyses(lam);
+		pb.crossRegisterProxies(lam, fam, cgam, mam);
+
+		FunctionPassManager fpm;
+		// Basic optimizations
+		fpm.addPass(EarlyCSEPass());
+#endif
 
 		// Translate functions
 		for (usz fi = 0, fmax = module_part.funcs.size(); fi < fmax; fi++)
@@ -5101,7 +5127,11 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 				if (const auto func = translator.Translate(module_part.funcs[fi]))
 				{
 					// Run optimization passes
+#if LLVM_VERSION_MAJOR < 17
 					pm.run(*func);
+#else
+					fpm.run(*func, fam);
+#endif
 				}
 				else
 				{
@@ -5117,7 +5147,11 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 			if (const auto func = translator.GetSymbolResolver(whole_module))
 			{
 				// Run optimization passes
+#if LLVM_VERSION_MAJOR < 17
 				pm.run(*func);
+#else
+				fpm.run(*func, fam);
+#endif
 			}
 			else
 			{

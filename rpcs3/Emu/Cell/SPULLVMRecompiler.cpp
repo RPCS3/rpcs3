@@ -11,6 +11,8 @@
 #include "SPUThread.h"
 #include "SPUAnalyser.h"
 #include "SPUInterpreter.h"
+#include "SPUDisAsm.h"
+#include <algorithm>
 #include <thread>
 #include <unordered_set>
 
@@ -30,26 +32,32 @@ const extern spu_decoder<spu_iflag> g_spu_iflag;
 #pragma warning(push, 0)
 #else
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#pragma GCC diagnostic ignored "-Wextra"
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #pragma GCC diagnostic ignored "-Wunused-parameter"
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#pragma GCC diagnostic ignored "-Weffc++"
 #pragma GCC diagnostic ignored "-Wmissing-noreturn"
 #endif
+#include <llvm/ADT/PostOrderIterator.h>
+#include <llvm/Analysis/PostDominators.h>
+#include <llvm/IR/InlineAsm.h>
+#include <llvm/IR/Verifier.h>
+#include <llvm/TargetParser/Host.h>
+#include <llvm/Transforms/Utils/BasicBlockUtils.h>
 #if LLVM_VERSION_MAJOR < 17
-#include "llvm/ADT/Triple.h"
+#include <llvm/IR/LegacyPassManager.h>
+#include <llvm/Transforms/Scalar.h>
+#include <llvm/Analysis/AliasAnalysis.h>
+#else
+#include <llvm/Analysis/CGSCCPassManager.h>
+#include <llvm/Analysis/LoopAnalysisManager.h>
+#include <llvm/IR/PassManager.h>
+#include <llvm/Passes/PassBuilder.h>
+#include <llvm/Transforms/Scalar/ADCE.h>
+#include <llvm/Transforms/Scalar/DeadStoreElimination.h>
+#include <llvm/Transforms/Scalar/EarlyCSE.h>
+#include <llvm/Transforms/Scalar/LICM.h>
+#include <llvm/Transforms/Scalar/LoopPassManager.h>
+#include <llvm/Transforms/Scalar/SimplifyCFG.h>
 #endif
-#include "llvm/TargetParser/Host.h"
-#include "llvm/IR/LegacyPassManager.h"
-#include "llvm/IR/Verifier.h"
-#include "llvm/IR/InlineAsm.h"
-#include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/Transforms/Scalar.h"
-#include "llvm/Analysis/PostDominators.h"
-#include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/ADT/PostOrderIterator.h"
 #ifdef _MSC_VER
 #pragma warning(pop)
 #else
@@ -2017,6 +2025,7 @@ public:
 			m_function_table->eraseFromParent();
 		}
 
+#if LLVM_VERSION_MAJOR < 17
 		// Initialize pass manager
 		legacy::FunctionPassManager pm(_module.get());
 
@@ -2024,16 +2033,42 @@ public:
 		pm.add(createEarlyCSEPass());
 		pm.add(createCFGSimplificationPass());
 		//pm.add(createNewGVNPass());
-#if LLVM_VERSION_MAJOR < 17
 		pm.add(createDeadStoreEliminationPass());
-#endif
 		pm.add(createLICMPass());
-#if LLVM_VERSION_MAJOR < 17
 		pm.add(createAggressiveDCEPass());
-#else
 		pm.add(createDeadCodeEliminationPass());
-#endif
 		//pm.add(createLintPass()); // Check
+#else
+
+		// Create the analysis managers.
+		// These must be declared in this order so that they are destroyed in the
+		// correct order due to inter-analysis-manager references.
+		LoopAnalysisManager lam;
+		FunctionAnalysisManager fam;
+		CGSCCAnalysisManager cgam;
+		ModuleAnalysisManager mam;
+
+		// Create the new pass manager builder.
+		// Take a look at the PassBuilder constructor parameters for more
+		// customization, e.g. specifying a TargetMachine or various debugging
+		// options.
+		PassBuilder pb;
+
+		// Register all the basic analyses with the managers.
+		pb.registerModuleAnalyses(mam);
+		pb.registerCGSCCAnalyses(cgam);
+		pb.registerFunctionAnalyses(fam);
+		pb.registerLoopAnalyses(lam);
+		pb.crossRegisterProxies(lam, fam, cgam, mam);
+
+		FunctionPassManager fpm;
+		// Basic optimizations
+		fpm.addPass(EarlyCSEPass(true));
+		fpm.addPass(SimplifyCFGPass());
+		fpm.addPass(DSEPass());
+		fpm.addPass(createFunctionToLoopPassAdaptor(LICMPass(LICMOptions()), true));
+		fpm.addPass(ADCEPass());
+#endif
 
 		for (auto& f : *m_module)
 		{
@@ -2043,7 +2078,11 @@ public:
 		for (const auto& func : m_functions)
 		{
 			const auto f = func.second.fn ? func.second.fn : func.second.chunk;
+#if LLVM_VERSION_MAJOR < 17
 			pm.run(*f);
+#else
+			fpm.run(*f, fam);
+#endif
 		}
 
 		// Clear context (TODO)
@@ -2507,24 +2546,9 @@ public:
 		m_function_table->setInitializer(ConstantArray::get(ArrayType::get(if_type->getPointerTo(), 1ull << m_interp_magn), iptrs));
 		m_function_table = nullptr;
 
-		// Initialize pass manager
-		legacy::FunctionPassManager pm(_module.get());
-
-		// Basic optimizations
-		pm.add(createEarlyCSEPass());
-		pm.add(createCFGSimplificationPass());
-#if LLVM_VERSION_MAJOR < 17
-		pm.add(createDeadStoreEliminationPass());
-		pm.add(createAggressiveDCEPass());
-#else
-		pm.add(createDeadCodeEliminationPass());
-#endif
-		//pm.add(createLintPass());
-
 		for (auto& f : *_module)
 		{
 			replace_intrinsics(f);
-			//pm.run(f);
 		}
 
 		std::string log;
