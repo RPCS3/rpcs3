@@ -176,7 +176,8 @@ public:
 	{
 		cellRec.notice("Stopping video sink. flush=%d", flush);
 
-		std::lock_guard lock(m_mtx);
+		std::lock_guard lock_video(m_video_mtx);
+		std::lock_guard lock_audio(m_audio_mtx);
 		m_flush = flush;
 		m_paused = false;
 		m_frames_to_encode.clear();
@@ -188,7 +189,8 @@ public:
 	{
 		cellRec.notice("Pausing video sink. flush=%d", flush);
 
-		std::lock_guard lock(m_mtx);
+		std::lock_guard lock_video(m_video_mtx);
+		std::lock_guard lock_audio(m_audio_mtx);
 		m_flush = flush;
 		m_paused = true;
 	}
@@ -197,14 +199,15 @@ public:
 	{
 		cellRec.notice("Resuming video sink");
 
-		std::lock_guard lock(m_mtx);
+		std::lock_guard lock_video(m_video_mtx);
+		std::lock_guard lock_audio(m_audio_mtx);
 		m_flush = false;
 		m_paused = false;
 	}
 
 	encoder_frame get_frame()
 	{
-		std::lock_guard lock(m_mtx);
+		std::lock_guard lock_video(m_video_mtx);
 
 		if (!m_frames_to_encode.empty())
 		{
@@ -218,7 +221,7 @@ public:
 
 	encoder_sample get_sample()
 	{
-		std::lock_guard lock(m_mtx);
+		std::lock_guard lock(m_audio_mtx);
 
 		if (!m_samples_to_encode.empty())
 		{

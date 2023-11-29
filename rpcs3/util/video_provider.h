@@ -23,7 +23,6 @@ namespace utils
 		bool can_consume_frame();
 		void present_frame(std::vector<u8>& data, u32 pitch, u32 width, u32 height, bool is_bgra);
 
-		bool can_consume_sample();
 		void present_samples(u8* buf, u32 sample_count, u16 channels);
 
 	private:
@@ -31,11 +30,10 @@ namespace utils
 
 		recording_mode m_type = recording_mode::stopped;
 		std::shared_ptr<video_sink> m_video_sink;
-		shared_mutex m_mutex{};
+		shared_mutex m_video_mutex{};
+		shared_mutex m_audio_mutex{};
 		atomic_t<bool> m_active{false};
-		atomic_t<usz> m_current_encoder_frame{0};
-		atomic_t<usz> m_current_encoder_sample{0};
-		steady_clock::time_point m_encoder_start{};
+		atomic_t<usz> m_start_time_us{umax};
 		s64 m_last_video_pts_incoming = -1;
 		s64 m_last_audio_pts_incoming = -1;
 		usz m_pause_time_us = 0;
