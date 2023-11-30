@@ -458,6 +458,9 @@ public:
 
 	void update_emu_cfg();
 
+	u32 get_sample_rate() const;
+	u8 get_channel_count() const;
+
 	static constexpr auto thread_name = "RsxAudio Backend Thread"sv;
 
 private:

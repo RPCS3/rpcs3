@@ -13,6 +13,7 @@
 #include "Emu/Cell/Modules/cellScreenshot.h"
 #include "Emu/Cell/Modules/cellVideoOut.h"
 #include "Emu/Cell/Modules/cellAudio.h"
+#include "Emu/Cell/lv2/sys_rsxaudio.h"
 #include "Emu/RSX/rsx_utils.h"
 #include "Emu/RSX/Overlays/overlay_message.h"
 #include "Emu/Io/recording_config.h"
@@ -504,8 +505,31 @@ void gs_frame::toggle_recording()
 		m_video_encoder->set_max_b_frames(g_cfg_recording.video.max_b_frames);
 		m_video_encoder->set_gop_size(g_cfg_recording.video.gop_size);
 		m_video_encoder->set_output_format(output_format);
-		m_video_encoder->set_sample_rate(g_fxo->get<cell_audio>().cfg.audio_sampling_rate);
-		m_video_encoder->set_audio_channels(static_cast<u32>(g_fxo->get<cell_audio>().cfg.audio_channels));
+
+		switch (g_cfg.audio.provider)
+		{
+		case audio_provider::none:
+		{
+			// Disable audio recording
+			m_video_encoder->use_internal_audio = false;
+			break;
+		}
+		case audio_provider::cell_audio:
+		{
+			const cell_audio_config& cfg = g_fxo->get<cell_audio>().cfg;
+			m_video_encoder->set_sample_rate(cfg.audio_sampling_rate);
+			m_video_encoder->set_audio_channels(cfg.audio_channels);
+			break;
+		}
+		case audio_provider::rsxaudio:
+		{
+			const auto& rsx_audio = g_fxo->get<rsx_audio_backend>();
+			m_video_encoder->set_sample_rate(rsx_audio.get_sample_rate());
+			m_video_encoder->set_audio_channels(rsx_audio.get_channel_count());
+			break;
+		}
+		}
+
 		m_video_encoder->set_audio_bitrate(g_cfg_recording.audio.audio_bps);
 		m_video_encoder->set_audio_codec(g_cfg_recording.audio.audio_codec);
 		m_video_encoder->encode();

@@ -295,7 +295,7 @@ void audio_ringbuffer::commit_data(f32* buf, u32 sample_cnt)
 	if (g_recording_mode != recording_mode::stopped)
 	{
 		utils::video_provider& provider = g_fxo->get<utils::video_provider>();
-		provider.present_samples(reinterpret_cast<u8*>(buf), sample_cnt, static_cast<u32>(cfg.audio_channels));
+		provider.present_samples(reinterpret_cast<u8*>(buf), sample_cnt, cfg.audio_channels);
 	}
 
 	// Downmix if necessary
@@ -1004,7 +1004,7 @@ void cell_audio_thread::operator()()
 			break;
 
 		default:
-			fmt::throw_exception("Unsupported channel count in cell_audio_config: %d", static_cast<u32>(cfg.audio_channels));
+			fmt::throw_exception("Unsupported channel count in cell_audio_config: %d", cfg.audio_channels);
 		}
 
 		// Enqueue
