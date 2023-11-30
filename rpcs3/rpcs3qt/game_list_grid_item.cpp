@@ -7,6 +7,7 @@ game_list_grid_item::game_list_grid_item(QWidget* parent, game_info game, const 
 	: flow_widget_item(parent), movie_item_base(), m_game(std::move(game))
 {
 	setObjectName("game_list_grid_item");
+	setAttribute(Qt::WA_Hover); // We need to enable the hover attribute to ensure that hover events are handled.
 
 	cb_on_first_visibility = [this]()
 	{
