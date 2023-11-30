@@ -4,6 +4,15 @@
 #include <QStyleOption>
 #include <QPainter>
 
+flow_widget_item::flow_widget_item(QWidget* parent) : QWidget(parent)
+{
+	setAttribute(Qt::WA_Hover); // We need to enable the hover attribute to ensure that hover events are handled.
+}
+
+flow_widget_item::~flow_widget_item()
+{
+}
+
 void flow_widget_item::polish_style()
 {
 	style()->unpolish(this);
