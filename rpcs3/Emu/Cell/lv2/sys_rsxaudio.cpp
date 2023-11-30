@@ -3,6 +3,7 @@
 #include "Emu/IdManager.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
+#include "util/video_provider.h"
 
 #include "sys_process.h"
 #include "sys_rsxaudio.h"
@@ -21,6 +22,8 @@
 #endif
 
 LOG_CHANNEL(sys_rsxaudio);
+
+extern atomic_t<recording_mode> g_recording_mode;
 
 namespace rsxaudio_ringbuf_reader
 {
@@ -1353,6 +1356,16 @@ void rsxaudio_backend_thread::update_emu_cfg()
 	}
 }
 
+u32 rsxaudio_backend_thread::get_sample_rate() const
+{
+	return callback_cfg.load().freq;
+}
+
+u8 rsxaudio_backend_thread::get_channel_count() const
+{
+	return callback_cfg.load().input_ch_cnt;
+}
+
 rsxaudio_backend_thread::emu_audio_cfg rsxaudio_backend_thread::get_emu_cfg()
 {
 	// Get max supported channel count
@@ -1466,7 +1479,8 @@ void rsxaudio_backend_thread::operator()()
 					state_update_c.wait(state_update_m, ERROR_SERVICE_PERIOD);
 					break;
 				}
-				else if (use_aux_ringbuf)
+
+				if (use_aux_ringbuf)
 				{
 					const u64 next_period_time = get_time_until_service();
 					should_service_stream = next_period_time <= SERVICE_THRESHOLD;
@@ -1570,6 +1584,7 @@ void rsxaudio_backend_thread::operator()()
 					crnt_buf_size = sample_cnt * bytes_per_sample;
 				}
 
+				// Dump audio if enabled
 				if (emu_cfg.dump_to_file)
 				{
 					dumper.WriteData(crnt_buf, static_cast<u32>(crnt_buf_size));
@@ -1840,6 +1855,13 @@ u32 rsxaudio_backend_thread::write_data_callback(u32 bytes, void* buf)
 		{
 			memset(buf, 0, bytes);
 			return bytes;
+		}
+
+		// Record audio if enabled
+		if (g_recording_mode != recording_mode::stopped)
+		{
+			utils::video_provider& provider = g_fxo->get<utils::video_provider>();
+			provider.present_samples(reinterpret_cast<u8*>(callback_tmp_buf.data()), sample_cnt / cb_cfg.input_ch_cnt, cb_cfg.input_ch_cnt);
 		}
 
 		// Downmix if necessary
