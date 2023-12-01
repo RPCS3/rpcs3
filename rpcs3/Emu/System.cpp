@@ -3717,8 +3717,9 @@ game_boot_result Emulator::AddGameToYml(const std::string& path)
 bool Emulator::IsPathInsideDir(std::string_view path, std::string_view dir) const
 {
 	const std::string dir_path = GetCallbacks().resolve_path(dir);
+	const std::string resolved_path = GetCallbacks().resolve_path(path);
 
-	return !dir_path.empty() && (GetCallbacks().resolve_path(path) + '/').starts_with((dir_path.back() == '/') ? dir_path : (dir_path + '/'));
+	return !dir_path.empty() && !resolved_path.empty() && (resolved_path + '/').starts_with((dir_path.back() == '/') ? dir_path : (dir_path + '/'));
 }
 
 game_boot_result Emulator::VerifyPathCasing(
