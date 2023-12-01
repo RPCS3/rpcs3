@@ -39,6 +39,7 @@
 
 #include <thread>
 #include <charconv>
+#include <unordered_set>
 
 #include <QScreen>
 #include <QDirIterator>
@@ -1046,7 +1047,8 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 	if (success)
 	{
 		pdlg.SetValue(pdlg.maximum());
-		std::this_thread::sleep_for(100ms);
+
+		const u64 start_time = get_system_time();
 
 		for (usz i = 0; i < packages.size(); i++)
 		{
@@ -1081,8 +1083,6 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 			}
 		}
 
-		m_game_list_frame->Refresh(true);
-
 		std::map<std::string, QString> bootable_paths_installed; // -> title id
 
 		for (usz index = 0; index < bootable_paths.size(); index++)
@@ -1095,80 +1095,44 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 			bootable_paths_installed[bootable_paths[index]] = packages[index].title_id;
 		}
 
-		pdlg.hide();
+		const bool installed_a_whole_package_without_new_software = bootable_paths_installed.empty() && !cancelled;
 
-		if (!cancelled || !bootable_paths_installed.empty())
+		if (!bootable_paths_installed.empty())
 		{
-			if (bootable_paths_installed.empty())
+			m_game_list_frame->AddRefreshedSlot<class KeyType>([this, paths = std::move(bootable_paths_installed)](std::set<QString>& IDs) mutable
 			{
-				m_gui_settings->ShowInfoBox(tr("Success!"), tr("Successfully installed software from package(s)!"), gui::ib_pkg_success, this);
-				return true;
-			}
-
-			auto dlg = new QDialog(this);
-			dlg->setWindowTitle(tr("Success!"));
-
-			QVBoxLayout* vlayout = new QVBoxLayout(dlg);
-
-			QCheckBox* desk_check = new QCheckBox(tr("Add desktop shortcut(s)"));
-#ifdef _WIN32
-			QCheckBox* quick_check = new QCheckBox(tr("Add Start menu shortcut(s)"));
-#elif defined(__APPLE__)
-			QCheckBox* quick_check = new QCheckBox(tr("Add dock shortcut(s)"));
-#else
-			QCheckBox* quick_check = new QCheckBox(tr("Add launcher shortcut(s)"));
-#endif
-			QLabel* label = new QLabel(tr("Successfully installed software from package(s)!\nWould you like to install shortcuts to the installed software? (%1 new software detected)\n\n").arg(bootable_paths_installed.size()), dlg);
-
-			vlayout->addWidget(label);
-			vlayout->addStretch(10);
-			vlayout->addWidget(desk_check);
-			vlayout->addStretch(3);
-			vlayout->addWidget(quick_check);
-			vlayout->addStretch(3);
-
-			QDialogButtonBox* btn_box = new QDialogButtonBox(QDialogButtonBox::Ok);
-
-			vlayout->addWidget(btn_box);
-			dlg->setLayout(vlayout);
-
-			bool create_desktop_shortcuts = false;
-			bool create_app_shortcut = false;
-
-			connect(btn_box, &QDialogButtonBox::accepted, this, [&]()
-			{
-				create_desktop_shortcuts = desk_check->isChecked();
-				create_app_shortcut = quick_check->isChecked();
-				dlg->accept();
-			});
-
-			dlg->setAttribute(Qt::WA_DeleteOnClose);
-			dlg->exec();
-
-			std::set<gui::utils::shortcut_location> locations;
-#ifdef _WIN32
-			locations.insert(gui::utils::shortcut_location::rpcs3_shortcuts);
-#endif
-			if (create_desktop_shortcuts)
-			{
-				locations.insert(gui::utils::shortcut_location::desktop);
-			}
-			if (create_app_shortcut)
-			{
-				locations.insert(gui::utils::shortcut_location::applications);
-			}
-
-			for (const auto& [boot_path, title_id] : bootable_paths_installed)
-			{
-				for (const game_info& gameinfo : m_game_list_frame->GetGameInfo())
+				// Try to claim operaions on ID
+				for (auto it = paths.begin(); it != paths.end();)
 				{
-					if (gameinfo && gameinfo->info.bootable && gameinfo->info.serial == sstr(title_id) && boot_path.starts_with(gameinfo->info.path))
+					if (IDs.count(it->second))
 					{
-						m_game_list_frame->CreateShortcuts(gameinfo, locations);
-						break;
+						it = paths.erase(it);
+					}
+					else
+					{
+						IDs.emplace(it->second);
+						it++;
 					}
 				}
-			}
+
+				ShowOptionalGamePreparations(tr("Success!"), tr("Successfully installed software from package(s)!"), std::move(paths));
+			});
+		}
+
+		m_game_list_frame->Refresh(true);
+
+		std::this_thread::sleep_for(std::chrono::microseconds(100'000 - std::min<usz>(100'000, get_system_time() - start_time)));
+		pdlg.hide();
+
+		if (installed_a_whole_package_without_new_software)
+		{
+			m_gui_settings->ShowInfoBox(tr("Success!"), tr("Successfully installed software from package(s)!"), gui::ib_pkg_success, this);
+			return true;
+		}
+
+		if (!cancelled)
+		{
+			return true;
 		}
 	}
 	else
@@ -2282,6 +2246,104 @@ void main_window::ShowTitleBars(bool show) const
 	m_log_frame->SetTitleBarVisible(show);
 }
 
+void main_window::ShowOptionalGamePreparations(const QString& title, const QString& message, std::map<std::string, QString> bootable_paths)
+{
+	if (bootable_paths.empty())
+	{
+		m_gui_settings->ShowInfoBox(title, message, gui::ib_pkg_success, this);
+		return;
+	}
+
+	QDialog* dlg = new QDialog(this);
+	dlg->setObjectName("game_prepare_window");
+	dlg->setWindowTitle(title);
+
+	QVBoxLayout* vlayout = new QVBoxLayout(dlg);
+
+	QCheckBox* desk_check = new QCheckBox(tr("Add desktop shortcut(s)"));
+#ifdef _WIN32
+	QCheckBox* quick_check = new QCheckBox(tr("Add Start menu shortcut(s)"));
+#elif defined(__APPLE__)
+	QCheckBox* quick_check = new QCheckBox(tr("Add dock shortcut(s)"));
+#else
+	QCheckBox* quick_check = new QCheckBox(tr("Add launcher shortcut(s)"));
+#endif
+	QCheckBox* precompile_check = new QCheckBox(tr("Precompile caches"));
+	QLabel* label = new QLabel(tr("%1\nWould you like to install shortcuts to the installed software and precompile caches? (%2 new software detected)\n\n").arg(message).arg(bootable_paths.size()), dlg);
+
+	vlayout->addWidget(label);
+	vlayout->addStretch(10);
+	vlayout->addWidget(desk_check);
+	vlayout->addStretch(3);
+	vlayout->addWidget(quick_check);
+	vlayout->addStretch(3);
+	vlayout->addWidget(precompile_check);
+	vlayout->addStretch(3);
+
+	precompile_check->setToolTip(tr("Spend time building data needed for game boot now instead of at launch."));
+
+	QDialogButtonBox* btn_box = new QDialogButtonBox(QDialogButtonBox::Ok);
+
+	vlayout->addWidget(btn_box);
+	dlg->setLayout(vlayout);
+
+	connect(btn_box, &QDialogButtonBox::accepted, this, [=, paths = std::move(bootable_paths)]()
+	{
+		const bool create_desktop_shortcuts = desk_check->isChecked();
+		const bool create_app_shortcut = quick_check->isChecked();
+		const bool create_caches = precompile_check->isChecked();
+
+		dlg->hide();
+		dlg->accept();
+
+		std::set<gui::utils::shortcut_location> locations;
+
+#ifdef _WIN32
+		locations.insert(gui::utils::shortcut_location::rpcs3_shortcuts);
+#endif
+		if (create_desktop_shortcuts)
+		{
+			locations.insert(gui::utils::shortcut_location::desktop);
+		}
+
+		if (create_app_shortcut)
+		{
+			locations.insert(gui::utils::shortcut_location::applications);
+		}
+
+		QList<game_info> game_data;
+
+		for (const auto& [boot_path, title_id] : paths)
+		{
+			for (const game_info& gameinfo : m_game_list_frame->GetGameInfo())
+			{
+				if (gameinfo && gameinfo->info.serial == sstr(title_id))
+				{
+					if (Emu.IsPathInsideDir(boot_path, gameinfo->info.path))
+					{
+						m_game_list_frame->CreateShortcuts(gameinfo, locations);
+
+						if (create_caches)
+						{
+							game_data.push_back(gameinfo);
+						}
+					}
+
+					break;
+				}
+			}
+		}
+
+		if (!game_data.isEmpty())
+		{
+			m_game_list_frame->BatchCreateCPUCaches(game_data);
+		}
+	});
+
+	dlg->setAttribute(Qt::WA_DeleteOnClose);
+	dlg->open();
+}
+
 void main_window::CreateActions()
 {
 	ui->exitAct->setShortcuts(QKeySequence::Quit);
@@ -2344,17 +2406,7 @@ void main_window::CreateConnects()
 
 		// Only select one folder for now
 		paths << QFileDialog::getExistingDirectory(this, tr("Select a folder containing one or more games"), qstr(fs::get_config_dir()), QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
-
-		if (!paths.isEmpty())
-		{
-			Emu.GracefulShutdown(false);
-
-			for (const QString& path : paths)
-			{
-				AddGamesFromDir(path);
-			}
-			m_game_list_frame->Refresh(true);
-		}
+		AddGamesFromDirs(paths);
 	});
 
 	connect(ui->bootRecentMenu, &QMenu::aboutToShow, this, [this]()
@@ -2525,7 +2577,7 @@ void main_window::CreateConnects()
 	});
 	connect(ui->exitAct, &QAction::triggered, this, &QWidget::close);
 
-	connect(ui->batchCreateCPUCachesAct, &QAction::triggered, m_game_list_frame, &game_list_frame::BatchCreateCPUCaches);
+	connect(ui->batchCreateCPUCachesAct, &QAction::triggered, m_game_list_frame, [list = m_game_list_frame]() { list->BatchCreateCPUCaches(); });
 	connect(ui->batchRemovePPUCachesAct, &QAction::triggered, m_game_list_frame, &game_list_frame::BatchRemovePPUCaches);
 	connect(ui->batchRemoveSPUCachesAct, &QAction::triggered, m_game_list_frame, &game_list_frame::BatchRemoveSPUCaches);
 	connect(ui->batchRemoveShaderCachesAct, &QAction::triggered, m_game_list_frame, &game_list_frame::BatchRemoveShaderCaches);
@@ -3446,16 +3498,73 @@ void main_window::closeEvent(QCloseEvent* closeEvent)
 
 /**
 Add valid disc games to gamelist (games.yml)
-@param path = dir path to scan for game
+@param paths = dir paths to scan for game
 */
-void main_window::AddGamesFromDir(const QString& path)
+void main_window::AddGamesFromDirs(const QStringList& paths)
 {
-	if (!QFileInfo(path).isDir())
+	if (paths.isEmpty())
 	{
 		return;
 	}
 
-	Emu.AddGamesFromDir(sstr(path));
+	// Obtain list of previously existing entries under the specificied parent paths for comparison
+	std::unordered_set<std::string_view> existing;
+
+	for (const game_info& game : m_game_list_frame->GetGameInfo())
+	{
+		if (game)
+		{
+			for (const auto& dir_path : paths)
+			{
+				if (dir_path.startsWith(game->info.path.c_str()) && fs::exists(game->info.path))
+				{
+					existing.insert(game->info.path);
+					break;
+				}
+			}
+		}
+	}
+
+	for (const QString& path : paths)
+	{
+		Emu.AddGamesFromDir(sstr(path));
+	}
+
+	m_game_list_frame->AddRefreshedSlot<class KeyType>([this, paths = std::move(paths), existing = std::move(existing)](std::set<QString>& IDs)
+	{
+		// Execute followup operations only for newly added entries under the specified paths
+		std::map<std::string, QString> paths_added; // -> title id
+
+		for (const game_info& game : m_game_list_frame->GetGameInfo())
+		{
+			if (game && !existing.contains(game->info.path))
+			{
+				for (const auto& dir_path : paths)
+				{
+					if (Emu.IsPathInsideDir(game->info.path, sstr(dir_path)))
+					{
+						// Try to claim operaion on ID
+						const QString title_id = qstr(game->info.serial);
+
+						if (!IDs.count(title_id))
+						{
+							IDs.emplace(title_id);
+							paths_added.emplace(game->info.path, title_id);
+						}
+
+						break;
+					}
+				}
+			}
+		}
+
+		if (!paths_added.empty())
+		{
+			ShowOptionalGamePreparations(tr("Success!"), tr("Successfully added software to game list from path(s)!"), std::move(paths_added));
+		}
+	});
+
+	m_game_list_frame->Refresh(true);
 }
 
 /**
@@ -3632,12 +3741,7 @@ void main_window::dropEvent(QDropEvent* event)
 	}
 	case drop_type::drop_dir: // import valid games to gamelist (games.yaml)
 	{
-		for (const auto& path : drop_paths)
-		{
-			AddGamesFromDir(path);
-		}
-
-		m_game_list_frame->Refresh(true);
+		AddGamesFromDirs(drop_paths);
 		break;
 	}
 	case drop_type::drop_game: // import valid games to gamelist (games.yaml)

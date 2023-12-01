@@ -813,6 +813,11 @@ void game_list_frame::OnRefreshFinished()
 		m_progress_dialog->deleteLater();
 		m_progress_dialog = nullptr;
 	}
+
+	// Emit signal and remove slots
+	Q_EMIT Refreshed();
+	m_refresh_funcs_manage_type.reset();
+	m_refresh_funcs_manage_type.emplace();
 }
 
 void game_list_frame::OnCompatFinished()
@@ -1923,11 +1928,11 @@ void game_list_frame::RemoveHDD1Cache(const std::string& base_dir, const std::st
 		game_list_log.fatal("Only %d/%d HDD1 cache directories could be removed in %s (%s)", dirs_removed, dirs_total, base_dir, title_id);
 }
 
-void game_list_frame::BatchCreateCPUCaches()
+void game_list_frame::BatchCreateCPUCaches(const QList<game_info>& game_data)
 {
 	const std::string vsh_path = g_cfg_vfs.get_dev_flash() + "vsh/module/";
-	const bool vsh_exists = fs::is_file(vsh_path + "vsh.self");
-	const u32 total = m_game_data.size() + (vsh_exists ? 1 : 0);
+	const bool vsh_exists = game_data.isEmpty() && fs::is_file(vsh_path + "vsh.self");
+	const u32 total = !game_data.isEmpty() ? game_data.size() : (m_game_data.size() + (vsh_exists ? 1 : 0));
 
 	if (total == 0)
 	{
@@ -1975,7 +1980,7 @@ void game_list_frame::BatchCreateCPUCaches()
 		}
 	}
 
-	for (const auto& game : m_game_data)
+	for (const auto& game : (game_data.isEmpty() ? m_game_data : game_data))
 	{
 		if (pdlg->wasCanceled() || g_system_progress_canceled)
 		{
