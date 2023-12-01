@@ -6,6 +6,7 @@
 #include "shortcut_utils.h"
 #include "Utilities/lockless.h"
 #include "Utilities/mutex.h"
+#include "util/auto_typemap.hpp"
 #include "Emu/config_mode.h"
 
 #include <QMainWindow>
@@ -17,6 +18,7 @@
 #include <QTimer>
 
 #include <memory>
+#include <optional>
 #include <set>
 
 class game_list_table;
@@ -63,7 +65,7 @@ public:
 	bool IsEntryVisible(const game_info& game, bool search_fallback = false) const;
 
 public Q_SLOTS:
-	void BatchCreateCPUCaches();
+	void BatchCreateCPUCaches(const QList<game_info>& game_data = QList<game_info>{});
 	void BatchRemovePPUCaches();
 	void BatchRemoveSPUCaches();
 	void BatchRemoveCustomConfigurations();
@@ -92,6 +94,31 @@ Q_SIGNALS:
 	void RequestIconSizeChange(const int& val);
 	void NotifyEmuSettingsChange();
 	void FocusToSearchBar();
+	void Refreshed();
+
+public:
+
+	template <typename KeyType>
+	struct GameIdsTable
+	{
+		// List of Game IDS an operation has been done on for the use of the slot function
+		std::set<QString> m_done_ids;
+	};
+
+	template <typename KeySlot, typename Func>
+	void AddRefreshedSlot(Func&& func)
+	{
+		if (!m_refresh_funcs_manage_type.has_value())
+		{
+			m_refresh_funcs_manage_type.emplace();
+		}
+
+		connect(this, &game_list_frame::Refreshed, this, [this, func = std::move(func)]() mutable
+		{
+			func(m_refresh_funcs_manage_type->get<GameIdsTable<KeySlot>>().m_done_ids);
+		}, Qt::SingleShotConnection);
+	}
+
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
 	void closeEvent(QCloseEvent* event) override;
@@ -168,6 +195,7 @@ private:
 	const std::array<int, 1> m_parsing_threads{0};
 	QFutureWatcher<void> m_parsing_watcher;
 	QFutureWatcher<void> m_refresh_watcher;
+	usz m_refresh_counter = 0;
 	QSet<QString> m_hidden_list;
 	bool m_show_hidden{false};
 
@@ -185,4 +213,5 @@ private:
 	bool m_draw_compat_status_to_grid = false;
 	bool m_show_custom_icons = true;
 	bool m_play_hover_movies = true;
+	std::optional<auto_typemap<game_list_frame>> m_refresh_funcs_manage_type;
 };
