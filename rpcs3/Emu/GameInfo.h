@@ -7,6 +7,7 @@ struct GameInfo
 {
 	std::string path;
 	std::string icon_path;
+	std::string movie_path;
 
 	std::string name = "Unknown";
 	std::string serial = "Unknown";
@@ -22,13 +23,4 @@ struct GameInfo
 	u32 resolution = 0;
 
 	u64 size_on_disk = umax;
-
-	std::string get_pam_path() const
-	{
-		if (icon_path.empty())
-		{
-			return {};
-		}
-		return icon_path.substr(0, icon_path.find_last_of("/")) + "/ICON1.PAM";
-	}
 };

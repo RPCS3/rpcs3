@@ -473,9 +473,9 @@ void game_list_frame::OnParsingFinished()
 	sort(m_path_entries.begin(), m_path_entries.end(), [](const path_entry& l, const path_entry& r){return l.path < r.path;});
 	m_path_entries.erase(unique(m_path_entries.begin(), m_path_entries.end(), [](const path_entry& l, const path_entry& r){return l.path == r.path;}), m_path_entries.end());
 
-	const std::string game_icon_path = m_play_hover_movies ? fs::get_config_dir() + "/Icons/game_icons/" : "";
+	const std::string game_icon_path = fs::get_config_dir() + "/Icons/game_icons/";
 
-	const auto add_game = [this, dev_flash, cat_unknown_localized = sstr(localized.category.unknown), cat_unknown = sstr(cat::cat_unknown), game_icon_path](const std::string& dir_or_elf)
+	const auto add_game = [this, dev_flash, cat_unknown_localized = sstr(localized.category.unknown), cat_unknown = sstr(cat::cat_unknown), game_icon_path, _hdd, play_hover_movies = m_play_hover_movies, show_custom_icons = m_show_custom_icons](const std::string& dir_or_elf)
 	{
 		GameInfo game{};
 		game.path = dir_or_elf;
@@ -535,20 +535,27 @@ void game_list_frame::OnParsingFinished()
 			game.bootable     = psf::get_integer(psf, "BOOTABLE", 0);
 			game.attr         = psf::get_integer(psf, "ATTRIBUTE", 0);
 			game.icon_path    = sfo_dir + "/ICON0.PNG";
+			game.movie_path   = sfo_dir + "/ICON1.PAM";
 
 			if (game.category == "DG")
 			{
-				std::string latest_icon = rpcs3::utils::get_hdd0_dir() + "game/" + game.serial + "/ICON0.PNG";
-				if (fs::is_file(latest_icon))
+				const std::string game_data_dir = _hdd + "game/" + game.serial;
+
+				if (std::string latest_icon = game_data_dir + "/ICON0.PNG"; fs::is_file(latest_icon))
 				{
 					game.icon_path = std::move(latest_icon);
+				}
+
+				if (std::string latest_movie = game_data_dir + "/ICON1.PAM"; fs::is_file(latest_movie))
+				{
+					game.movie_path = std::move(latest_movie);
 				}
 			}
 		}
 
-		if (m_show_custom_icons)
+		if (show_custom_icons)
 		{
-			if (std::string icon_path = fs::get_config_dir() + "/Icons/game_icons/" + game.serial + "/ICON0.PNG"; fs::is_file(icon_path))
+			if (std::string icon_path = game_icon_path + game.serial + "/ICON0.PNG"; fs::is_file(icon_path))
 			{
 				game.icon_path = std::move(icon_path);
 			}
@@ -614,7 +621,13 @@ void game_list_frame::OnParsingFinished()
 		info.hasCustomConfig = fs::is_file(rpcs3::utils::get_custom_config_path(info.info.serial));
 		info.hasCustomPadConfig = fs::is_file(rpcs3::utils::get_custom_input_config_path(info.info.serial));
 		info.has_hover_gif = fs::is_file(game_icon_path + info.info.serial + "/hover.gif");
-		info.has_hover_pam = fs::is_file(info.info.get_pam_path());
+		info.has_hover_pam = fs::is_file(info.info.movie_path);
+
+		// Free some memory
+		if (!info.has_hover_pam)
+		{
+			info.info.movie_path.clear();
+		}
 
 		m_games.push(std::make_shared<gui_game_info>(std::move(info)));
 	};

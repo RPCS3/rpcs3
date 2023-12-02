@@ -107,7 +107,7 @@ void game_list_grid::populate(
 		}
 		else if (play_hover_movies && game->has_hover_pam)
 		{
-			item->set_movie_path(QString::fromStdString(game->info.get_pam_path()));
+			item->set_movie_path(QString::fromStdString(game->info.movie_path));
 		}
 
 		if (selected_item_id == game->info.path + game->info.icon_path)
