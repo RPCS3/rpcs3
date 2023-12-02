@@ -289,7 +289,7 @@ void game_list_table::populate(
 		}
 		else if (play_hover_movies && game->has_hover_pam)
 		{
-			icon_item->set_movie_path(QString::fromStdString(game->info.get_pam_path()));
+			icon_item->set_movie_path(QString::fromStdString(game->info.movie_path));
 		}
 
 		icon_item->setData(Qt::UserRole, index, true);
