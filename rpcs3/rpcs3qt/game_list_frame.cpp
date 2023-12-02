@@ -497,6 +497,7 @@ void game_list_frame::OnParsingFinished()
 			game.serial = dir_or_elf.substr(dir_or_elf.find_last_of(fs::delim) + 1);
 			game.category = cat::cat_ps3_os.toStdString(); // Key for operating system executables
 			game.version = utils::get_firmware_version();
+			game.app_ver = game.version;
 			game.fw = game.version;
 			game.bootable = 1;
 			game.icon_path = dev_flash + "vsh/resource/explore/icon/icon_home.png";
@@ -516,7 +517,7 @@ void game_list_frame::OnParsingFinished()
 				}
 			}
 
-			if (game.name == "Unknown")
+			if (game.name.empty())
 			{
 				game.name = game.serial;
 			}

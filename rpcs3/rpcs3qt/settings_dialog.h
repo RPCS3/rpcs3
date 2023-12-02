@@ -21,7 +21,7 @@ class settings_dialog : public QDialog
 	Q_OBJECT
 
 public:
-	explicit settings_dialog(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, const int& tab_index = 0, QWidget *parent = nullptr, const GameInfo *game = nullptr);
+	explicit settings_dialog(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, const int& tab_index = 0, QWidget* parent = nullptr, const GameInfo* game = nullptr);
 	~settings_dialog();
 	int exec() override;
 Q_SIGNALS:

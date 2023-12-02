@@ -89,7 +89,7 @@ class pad_settings_dialog : public QDialog
 	const QString Disconnected_suffix = tr(" (disconnected)");
 
 public:
-	explicit pad_settings_dialog(std::shared_ptr<gui_settings> gui_settings, QWidget *parent = nullptr, const GameInfo *game = nullptr);
+	explicit pad_settings_dialog(std::shared_ptr<gui_settings> gui_settings, QWidget* parent = nullptr, const GameInfo* game = nullptr);
 	~pad_settings_dialog();
 
 private Q_SLOTS:
