@@ -66,7 +66,7 @@ void pad_settings_dialog::pad_button::insert_key(const std::string& key, bool ap
 	text = QString::fromStdString(keys).replace(",", ", ");
 }
 
-pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_settings, QWidget *parent, const GameInfo *game)
+pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_settings, QWidget* parent, const GameInfo* game)
 	: QDialog(parent)
 	, ui(new Ui::pad_settings_dialog)
 	, m_gui_settings(std::move(gui_settings))
