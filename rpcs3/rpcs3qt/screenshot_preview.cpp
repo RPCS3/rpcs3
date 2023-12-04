@@ -29,7 +29,7 @@ screenshot_preview::screenshot_preview(const QString& filepath, QWidget* parent)
 	connect(this, &screenshot_preview::customContextMenuRequested, this, &screenshot_preview::show_context_menu);
 }
 
-void screenshot_preview::show_context_menu(const QPoint & pos)
+void screenshot_preview::show_context_menu(const QPoint& pos)
 {
 	QMenu* menu = new QMenu();
 	menu->addAction(tr("&Copy"), [this]() { QGuiApplication::clipboard()->setImage(m_image); });
