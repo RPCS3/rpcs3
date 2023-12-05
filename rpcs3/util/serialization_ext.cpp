@@ -288,7 +288,7 @@ bool compressed_serialization_file_handler::handle_file_op(utils::serial& ar, us
 				{
 					v &= ~(1ull << 63);
 
-					if (v + ar.data.size() > 0x400'0000)
+					if (v > 0x400'0000)
 					{
 						v |= 1ull << 63;
 					}
