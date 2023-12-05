@@ -312,7 +312,7 @@ struct rec_info
 void rec_info::set_video_params(s32 video_format)
 {
 	const s32 video_type = video_format & 0xf000;
-	const s32 video_quality = video_format  & 0xf00;
+	const s32 video_quality = video_format & 0xf00;
 
 	switch (video_format)
 	{
@@ -688,8 +688,6 @@ void rec_info::start_video_provider()
 
 				if (const s64 pts = encoder->get_pts(frame.timestamp_ms); pts > last_video_pts && !frame.data.empty())
 				{
-					ensure(frame.data.size() == frame_size);
-
 					if (use_ring_buffer)
 					{
 						// The video frames originate from our render pipeline and are stored in a ringbuffer.
