@@ -1056,7 +1056,7 @@ namespace rsx
 
 				// 308A::COLOR can be used to create custom sync primitives.
 				// Hide this behind strict mode due to the potential performance implications.
-				if (count == 1 && !g_cfg.video.relaxed_zcull_sync && g_cfg.video.strict_rendering_mode)
+				if (count == 1 && g_cfg.video.strict_rendering_mode && !g_cfg.video.relaxed_zcull_sync)
 				{
 					rsx->sync();
 				}
