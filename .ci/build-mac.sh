@@ -1,7 +1,7 @@
 #!/bin/sh -ex
 
 export HOMEBREW_NO_AUTO_UPDATE=1
-brew install -f --overwrite nasm ninja git p7zip create-dmg ccache pipenv
+brew install -f --overwrite nasm ninja git p7zip ccache pipenv #create-dmg
 
 #/usr/sbin/softwareupdate --install-rosetta --agree-to-license
 arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
