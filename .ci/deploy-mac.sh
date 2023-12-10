@@ -52,7 +52,7 @@ echo "IconIndex=0" >> Quickstart.url
 #FILESIZE=$(stat -f %z "$DMG_FILEPATH")
 #SHA256SUM=$(shasum -a 256 "$DMG_FILEPATH" | awk '{ print $1 }')
 
-ARCHIVE_FILEPATH="$BUILD_ARTIFACTSTAGINGDIRECTORY/rpcs3-v"${COMM_TAG}"-"${COMM_COUNT}"-"${COMM_HASH}"_macos.7z"
+ARCHIVE_FILEPATH="$BUILD_ARTIFACTSTAGINGDIRECTORY/rpcs3-v${COMM_TAG}-${COMM_COUNT}-${COMM_HASH}_macos.7z"
 "$BREW_X64_PATH/bin/7z" a -mx9 "$ARCHIVE_FILEPATH" RPCS3.app Quickstart.url
 FILESIZE=$(stat -f %z "$ARCHIVE_FILEPATH")
 SHA256SUM=$(shasum -a 256 "$ARCHIVE_FILEPATH" | awk '{ print $1 }')
