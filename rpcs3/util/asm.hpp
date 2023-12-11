@@ -375,10 +375,10 @@ namespace utils
 	}
 
 	// Align to power of 2
-	template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
-	constexpr T align(T value, std::type_identity_t<T> align)
+	template <typename T, typename U, typename = std::enable_if_t<std::is_unsigned_v<T>>>
+	constexpr std::make_unsigned_t<std::common_type_t<T, U>> align(T value, U align)
 	{
-		return static_cast<T>((value + (align - 1)) & (T{0} - align));
+		return static_cast<std::make_unsigned_t<std::common_type_t<T, U>>>((value + (align - 1)) & (T{0} - align));
 	}
 
 	// General purpose aligned division, the result is rounded up not truncated

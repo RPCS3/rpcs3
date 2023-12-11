@@ -480,7 +480,8 @@ error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_pat
 		sceNp.success("npDrmIsAvailable(): PSP remaster KLicense key applied.");
 	}
 
-	const std::string enc_drm_path(drm_path.get_ptr(), std::find(drm_path.get_ptr(), drm_path.get_ptr() + 0x100, '\0'));
+	std::string enc_drm_path;
+	ensure(vm::read_string(drm_path.addr(), 0x100, enc_drm_path, true), "Secret access violation");
 
 	sceNp.warning(u8"npDrmIsAvailable(): drm_path=“%s”", enc_drm_path);
 
@@ -599,8 +600,10 @@ error_code npDrmVerifyUpgradeLicense(vm::cptr<char> content_id)
 		return SCE_NP_DRM_ERROR_INVALID_PARAM;
 	}
 
-	const std::string content_str(content_id.get_ptr(), std::find(content_id.get_ptr(), content_id.get_ptr() + 0x2f, '\0'));
-	sceNp.warning("npDrmVerifyUpgradeLicense(): content_id=%s", content_id);
+	std::string content_str;
+	ensure(vm::read_string(content_id.addr(), 0x2f, content_str, true), "Secret access violation");
+
+	sceNp.warning("npDrmVerifyUpgradeLicense(): content_id=%s", content_str);
 
 	if (!rpcs3::utils::verify_c00_unlock_edat(content_str))
 		return SCE_NP_DRM_ERROR_LICENSE_NOT_FOUND;
@@ -654,7 +657,9 @@ error_code sceNpDrmGetTimelimit(vm::cptr<char> path, vm::ptr<u64> time_remain)
 		return ret;
 	}
 
-	const std::string enc_drm_path(path.get_ptr(), std::find(path.get_ptr(), path.get_ptr() + 0x100, '\0'));
+	std::string enc_drm_path;
+	ensure(vm::read_string(path.addr(), 0x100, enc_drm_path, true), "Secret access violation");
+
 	const auto [fs_error, ppath, real_path, enc_file, type] = lv2_file::open(enc_drm_path, 0, 0);
 
 	if (fs_error)
