@@ -113,7 +113,7 @@ namespace utils
 		const void* ptr = reinterpret_cast<const void*>(value);
 
 #ifdef _M_X64
-		return _mm_prefetch(static_cast<const char*>(ptr), 2);
+		return _mm_prefetch(static_cast<const char*>(ptr), _MM_HINT_T1);
 #else
 		return __builtin_prefetch(ptr, 0, 2);
 #endif
@@ -128,7 +128,7 @@ namespace utils
 		}
 
 #ifdef _M_X64
-		return _mm_prefetch(static_cast<const char*>(ptr), 3);
+		return _mm_prefetch(static_cast<const char*>(ptr), _MM_HINT_T0);
 #else
 		return __builtin_prefetch(ptr, 0, 3);
 #endif
