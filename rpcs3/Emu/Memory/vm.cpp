@@ -2323,6 +2323,54 @@ namespace vm
 
 		return 0;
 	}
+
+	bool read_string(u32 addr, u32 max_size, std::string& out_string, bool check_pages) noexcept
+	{
+		if (!max_size)
+		{
+			return true;
+		}
+
+		// Prevent overflow
+		const u32 size = 0 - max_size < addr ? (0 - addr) : max_size;
+
+		for (u32 i = addr, end = utils::align(addr + size, 4096) - 1; i <= end;)
+		{
+			if (check_pages && !vm::check_addr(i, vm::page_readable))
+			{
+				// Invalid string termination
+				return false;
+			}
+
+			const char* s_start = vm::get_super_ptr<const char>(i);
+			const u32 space = std::min<u32>(end - i + 1, 4096 - (i % 4096));
+			const char* s_end = s_start + space;
+			const char* s_null = std::find(s_start, s_end, '\0');
+
+			// Append string
+			out_string.append(s_start, s_null);
+
+			// Recheck for zeroes after append
+			const usz old_size = out_string.size();
+			out_string.erase(std::find(out_string.end() - (s_null - s_start), out_string.end(), '\0'), out_string.end());
+
+			if (out_string.size() != old_size || s_null != s_end)
+			{
+				// Null terminated
+				return true;
+			}
+
+			i += space;
+
+			if (!i)
+			{
+				break;
+			}
+		}
+
+		// Non-null terminated but terminated by size limit (so the string may continue)
+		return size == max_size;
+	}
 }
 
 void fmt_class_string<vm::_ptr_base<const void, u32>>::format(std::string& out, u64 arg)
@@ -2339,8 +2387,8 @@ void fmt_class_string<vm::_ptr_base<const char, u32>>::format(std::string& out, 
 		return;
 	}
 
-	// Filter certainly invalid addresses (TODO)
-	if (arg < 0x10000 || arg >= 0xf0000000)
+	// Filter certainly invalid addresses
+	if (!vm::check_addr(arg, vm::page_readable))
 	{
 		out += reinterpret_cast<const char*>(u8"«INVALID_ADDRESS:");
 		fmt_class_string<u32>::format(out, arg);
@@ -2352,26 +2400,14 @@ void fmt_class_string<vm::_ptr_base<const char, u32>>::format(std::string& out, 
 
 	out += reinterpret_cast<const char*>(u8"“");
 
-	for (vm::_ptr_base<const volatile char, u32> ptr = vm::cast(arg);; ptr++)
+	if (!vm::read_string(arg, umax, out, true))
 	{
-		if (!vm::check_addr(ptr.addr()))
-		{
-			// TODO: optimize checks
-			out.resize(start);
-			out += reinterpret_cast<const char*>(u8"«INVALID_ADDRESS:");
-			fmt_class_string<u32>::format(out, arg);
-			out += reinterpret_cast<const char*>(u8"»");
-			return;
-		}
-
-		if (const char ch = *ptr)
-		{
-			out += ch;
-		}
-		else
-		{
-			break;
-		}
+		// Revert changes
+		out.resize(start);
+		out += reinterpret_cast<const char*>(u8"«INVALID_ADDRESS:");
+		fmt_class_string<u32>::format(out, arg);
+		out += reinterpret_cast<const char*>(u8"»");
+		return;
 	}
 
 	out += reinterpret_cast<const char*>(u8"”");

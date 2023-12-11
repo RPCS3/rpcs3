@@ -80,6 +80,9 @@ namespace vm
 		return !(~g_pages[addr / 4096] & (flags | page_allocated));
 	}
 
+	// Read string in a safe manner (page aware) (bool true = if null-termination)
+	bool read_string(u32 addr, u32 max_size, std::string& out_string, bool check_pages = true) noexcept;
+
 	// Search and map memory in specified memory location (min alignment is 0x10000)
 	u32 alloc(u32 size, memory_location_t location, u32 align = 0x10000);
 

@@ -522,9 +522,13 @@ error_code _sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, vm::p
 
 	if (threadname)
 	{
-		constexpr u32 max_size = c_max_ppu_name_size; // max size including null terminator
-		const auto pname = threadname.get_ptr();
-		ppu_name.assign(pname, std::find(pname, pname + max_size, '\0'));
+		constexpr u32 max_size = c_max_ppu_name_size - 1; // max size excluding null terminator
+
+		if (!vm::read_string(threadname.addr(), max_size, ppu_name, true))
+		{
+			dct.free(stack_size);
+			return CELL_EFAULT;
+		}
 	}
 
 	const u32 tid = idm::import<named_thread<ppu_thread>>([&]()
@@ -614,11 +618,16 @@ error_code sys_ppu_thread_rename(ppu_thread& ppu, u32 thread_id, vm::cptr<char> 
 		return CELL_EFAULT;
 	}
 
-	constexpr u32 max_size = c_max_ppu_name_size; // max size including null terminator
-	const auto pname = name.get_ptr();
+	constexpr u32 max_size = c_max_ppu_name_size - 1; // max size excluding null terminator
 
 	// Make valid name
-	auto _name = make_single<std::string>(pname, std::find(pname, pname + max_size, '\0'));
+	std::string out_str;
+	if (!vm::read_string(name.addr(), max_size, out_str, true))
+	{
+		return CELL_EFAULT;
+	}
+
+	auto _name = make_single<std::string>(std::move(out_str));
 
 	// thread_ctrl name is not changed (TODO)
 	sys_ppu_thread.warning(u8"sys_ppu_thread_rename(): Thread renamed to “%s”", *_name);
