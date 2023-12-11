@@ -1095,27 +1095,30 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 			bootable_paths_installed[bootable_paths[index]] = packages[index].title_id;
 		}
 
+		// Need to test here due to potential std::move later
 		const bool installed_a_whole_package_without_new_software = bootable_paths_installed.empty() && !cancelled;
 
 		if (!bootable_paths_installed.empty())
 		{
-			m_game_list_frame->AddRefreshedSlot<class KeyType>([this, paths = std::move(bootable_paths_installed)](std::set<QString>& IDs) mutable
+			m_game_list_frame->AddRefreshedSlot([this, paths = std::move(bootable_paths_installed)](std::set<std::string>& claimed_paths) mutable
 			{
 				// Try to claim operaions on ID
 				for (auto it = paths.begin(); it != paths.end();)
 				{
-					if (IDs.count(it->second))
+					std::string resolved_path = Emu.GetCallbacks().resolve_path(it->first);
+
+					if (resolved_path.empty() || claimed_paths.count(resolved_path))
 					{
 						it = paths.erase(it);
 					}
 					else
 					{
-						IDs.emplace(it->second);
+						claimed_paths.emplace(std::move(resolved_path));
 						it++;
 					}
 				}
 
-				ShowOptionalGamePreparations(tr("Success!"), tr("Successfully installed software from package(s)!"), std::move(paths));
+				ShowOptionalGamePreparations(tr("Success!"), tr("Successfully installed software from package(s)!"), paths);
 			});
 		}
 
@@ -1127,12 +1130,6 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 		if (installed_a_whole_package_without_new_software)
 		{
 			m_gui_settings->ShowInfoBox(tr("Success!"), tr("Successfully installed software from package(s)!"), gui::ib_pkg_success, this);
-			return true;
-		}
-
-		if (!cancelled)
-		{
-			return true;
 		}
 	}
 	else
@@ -2406,7 +2403,7 @@ void main_window::CreateConnects()
 
 		// Only select one folder for now
 		paths << QFileDialog::getExistingDirectory(this, tr("Select a folder containing one or more games"), qstr(fs::get_config_dir()), QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
-		AddGamesFromDirs(paths);
+		AddGamesFromDirs(std::move(paths));
 	});
 
 	connect(ui->bootRecentMenu, &QMenu::aboutToShow, this, [this]()
@@ -3500,7 +3497,7 @@ void main_window::closeEvent(QCloseEvent* closeEvent)
 Add valid disc games to gamelist (games.yml)
 @param paths = dir paths to scan for game
 */
-void main_window::AddGamesFromDirs(const QStringList& paths)
+void main_window::AddGamesFromDirs(QStringList&& paths)
 {
 	if (paths.isEmpty())
 	{
@@ -3508,7 +3505,7 @@ void main_window::AddGamesFromDirs(const QStringList& paths)
 	}
 
 	// Obtain list of previously existing entries under the specificied parent paths for comparison
-	std::unordered_set<std::string_view> existing;
+	std::unordered_set<std::string> existing;
 
 	for (const game_info& game : m_game_list_frame->GetGameInfo())
 	{
@@ -3530,7 +3527,7 @@ void main_window::AddGamesFromDirs(const QStringList& paths)
 		Emu.AddGamesFromDir(sstr(path));
 	}
 
-	m_game_list_frame->AddRefreshedSlot<class KeyType>([this, paths = std::move(paths), existing = std::move(existing)](std::set<QString>& IDs)
+	m_game_list_frame->AddRefreshedSlot([this, paths = std::move(paths), existing = std::move(existing)](std::set<std::string>& claimed_paths)
 	{
 		// Execute followup operations only for newly added entries under the specified paths
 		std::map<std::string, QString> paths_added; // -> title id
@@ -3543,13 +3540,14 @@ void main_window::AddGamesFromDirs(const QStringList& paths)
 				{
 					if (Emu.IsPathInsideDir(game->info.path, sstr(dir_path)))
 					{
-						// Try to claim operaion on ID
-						const QString title_id = qstr(game->info.serial);
+						// Try to claim operaion on directory path
 
-						if (!IDs.count(title_id))
+						std::string resolved_path = Emu.GetCallbacks().resolve_path(game->info.path);
+
+						if (!resolved_path.empty() && !claimed_paths.count(resolved_path))
 						{
-							IDs.emplace(title_id);
-							paths_added.emplace(game->info.path, title_id);
+							claimed_paths.emplace(game->info.path);
+							paths_added.emplace(game->info.path, qstr(game->info.serial));
 						}
 
 						break;
@@ -3560,7 +3558,7 @@ void main_window::AddGamesFromDirs(const QStringList& paths)
 
 		if (!paths_added.empty())
 		{
-			ShowOptionalGamePreparations(tr("Success!"), tr("Successfully added software to game list from path(s)!"), std::move(paths_added));
+			ShowOptionalGamePreparations(tr("Success!"), tr("Successfully added software to game list from path(s)!"), paths_added);
 		}
 	});
 
@@ -3741,7 +3739,7 @@ void main_window::dropEvent(QDropEvent* event)
 	}
 	case drop_type::drop_dir: // import valid games to gamelist (games.yaml)
 	{
-		AddGamesFromDirs(drop_paths);
+		AddGamesFromDirs(std::move(drop_paths));
 		break;
 	}
 	case drop_type::drop_game: // import valid games to gamelist (games.yaml)
