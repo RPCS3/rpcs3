@@ -97,25 +97,24 @@ Q_SIGNALS:
 	void Refreshed();
 
 public:
-
 	template <typename KeyType>
 	struct GameIdsTable
 	{
-		// List of Game IDS an operation has been done on for the use of the slot function
-		std::set<QString> m_done_ids;
+		// List of game paths an operation has been done on for the use of the slot function
+		std::set<std::string> m_done_paths;
 	};
 
-	template <typename KeySlot, typename Func>
+	// Enqueue slot for refreshed signal
+	// Allowing for an individual container for each distinct use case (currently disabled and contains only one such entry)
+	template <typename KeySlot = void, typename Func>
 	void AddRefreshedSlot(Func&& func)
 	{
-		if (!m_refresh_funcs_manage_type.has_value())
-		{
-			m_refresh_funcs_manage_type.emplace();
-		}
+		// NOTE: Remove assert when the need for individual containers arises
+		static_assert(std::is_void_v<KeySlot>);
 
 		connect(this, &game_list_frame::Refreshed, this, [this, func = std::move(func)]() mutable
 		{
-			func(m_refresh_funcs_manage_type->get<GameIdsTable<KeySlot>>().m_done_ids);
+			func(m_refresh_funcs_manage_type->get<GameIdsTable<KeySlot>>().m_done_paths);
 		}, Qt::SingleShotConnection);
 	}
 
@@ -195,7 +194,6 @@ private:
 	const std::array<int, 1> m_parsing_threads{0};
 	QFutureWatcher<void> m_parsing_watcher;
 	QFutureWatcher<void> m_refresh_watcher;
-	usz m_refresh_counter = 0;
 	QSet<QString> m_hidden_list;
 	bool m_show_hidden{false};
 
@@ -213,5 +211,5 @@ private:
 	bool m_draw_compat_status_to_grid = false;
 	bool m_show_custom_icons = true;
 	bool m_play_hover_movies = true;
-	std::optional<auto_typemap<game_list_frame>> m_refresh_funcs_manage_type;
+	std::optional<auto_typemap<game_list_frame>> m_refresh_funcs_manage_type{std::in_place};
 };
