@@ -1,11 +1,11 @@
 #!/bin/sh -ex
 
 export HOMEBREW_NO_AUTO_UPDATE=1
-brew install -f --overwrite nasm ninja git p7zip create-dmg ccache pipenv
+brew install -f --overwrite nasm ninja git p7zip ccache pipenv #create-dmg
 
 #/usr/sbin/softwareupdate --install-rosetta --agree-to-license
 arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-arch -x86_64 /usr/local/bin/brew install -f --overwrite python@3.11 || arch -x86_64 /usr/local/bin/brew link --overwrite python@3.11
+arch -x86_64 /usr/local/bin/brew install -f --overwrite python@3.12 || arch -x86_64 /usr/local/bin/brew link --overwrite python@3.12
 arch -x86_64 /usr/local/bin/brew update
 arch -x86_64 /usr/local/bin/brew uninstall -f --ignore-dependencies ffmpeg
 arch -x86_64 /usr/local/bin/brew install -f --build-from-source ffmpeg
