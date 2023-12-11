@@ -32,19 +32,52 @@ s32 PadHandlerBase::MultipliedInput(s32 raw_value, s32 multiplier)
 	return (multiplier * raw_value) / 100;
 }
 
-// Get new scaled value between 0 and 255 based on its minimum and maximum
-f32 PadHandlerBase::ScaledInput(s32 raw_value, int minimum, int maximum, f32 range)
+// Get new scaled value between 0 and range based on its minimum and maximum
+f32 PadHandlerBase::ScaledInput(f32 raw_value, f32 minimum, f32 maximum, f32 deadzone, f32 range)
 {
-	// value based on max range converted to [0, 1]
-	const f32 val = static_cast<f32>(std::clamp(raw_value, minimum, maximum) - minimum) / (abs(maximum) + abs(minimum));
+	if (deadzone > 0 && deadzone > minimum)
+	{
+		// adjust minimum so we smoothly start at 0 when we surpass the deadzone value
+		minimum = deadzone;
+	}
+
+	// convert [min, max] to [0, 1]
+	const f32 val = static_cast<f32>(std::clamp(raw_value, minimum, maximum) - minimum) / (maximum - minimum);
+
+	// convert [0, 1] to [0, range]
 	return range * val;
 }
 
-// Get new scaled value between -255 and 255 based on its minimum and maximum
-f32 PadHandlerBase::ScaledInput2(s32 raw_value, int minimum, int maximum, f32 range)
+// Get new scaled value between -range and range based on its minimum and maximum
+f32 PadHandlerBase::ScaledAxisInput(f32 raw_value, f32 minimum, f32 maximum, f32 deadzone, f32 range)
 {
-	// value based on max range converted to [0, 1]
-	const f32 val = static_cast<f32>(std::clamp(raw_value, minimum, maximum) - minimum) / (abs(maximum) + abs(minimum));
+	// convert [min, max] to [0, 1]
+	f32 val = static_cast<f32>(std::clamp(raw_value, minimum, maximum) - minimum) / (maximum - minimum);
+
+	if (deadzone > 0)
+	{
+		// convert [0, 1] to [-0.5, 0.5]
+		val -= 0.5f;
+
+		// Convert deadzone to [0, 0.5]
+		deadzone = std::max(0.0f, std::min(1.0f, deadzone / maximum)) / 2.0f;
+
+		if (val >= 0.0f)
+		{
+			// Apply deadzone. The result will be [0, 0.5]
+			val = ScaledInput(val, 0.0f, 0.5f, deadzone, 0.5f);
+		}
+		else
+		{
+			// Apply deadzone. The result will be [-0.5, 0]
+			val = ScaledInput(std::abs(val), 0, 0.5f, deadzone, 0.5f) * -1.0f;
+		}
+
+		// convert [-0.5, 0.5] back to [0, 1]
+		val += 0.5f;
+	}
+
+	// convert [0, 1] to [-range, range]
 	return (2.0f * range * val) - range;
 }
 
@@ -56,33 +89,19 @@ u16 PadHandlerBase::NormalizeTriggerInput(u16 value, int threshold) const
 		return static_cast<u16>(0);
 	}
 
-	if (threshold <= trigger_min)
-	{
-		return static_cast<u16>(ScaledInput(value, trigger_min, trigger_max));
-	}
-
-	const s32 val = static_cast<s32>(static_cast<f32>(trigger_max) * (value - threshold) / (trigger_max - threshold));
-	return static_cast<u16>(ScaledInput(val, trigger_min, trigger_max));
+	return static_cast<u16>(ScaledInput(value, trigger_min, trigger_max, threshold));
 }
 
 // normalizes a directed input, meaning it will correspond to a single "button" and not an axis with two directions
 // the input values must lie in 0+
 u16 PadHandlerBase::NormalizeDirectedInput(s32 raw_value, s32 threshold, s32 maximum) const
 {
-	if (threshold >= maximum || maximum <= 0)
+	if (threshold >= maximum || maximum <= 0 || raw_value < 0)
 	{
 		return static_cast<u16>(0);
 	}
 
-	const f32 val = static_cast<f32>(std::clamp(raw_value, 0, maximum)) / maximum; // value based on max range converted to [0, 1]
-
-	if (threshold <= 0)
-	{
-		return static_cast<u16>(255.0f * val);
-	}
-
-	const f32 thresh = static_cast<f32>(threshold) / maximum; // threshold converted to [0, 1]
-	return static_cast<u16>(255.0f * std::clamp((val - thresh) / (1.0f - thresh), 0.0f, 1.0f));
+	return static_cast<u16>(ScaledInput(raw_value, 0, maximum, threshold));
 }
 
 u16 PadHandlerBase::NormalizeStickInput(u16 raw_value, int threshold, int multiplier, bool ignore_threshold) const
@@ -91,10 +110,10 @@ u16 PadHandlerBase::NormalizeStickInput(u16 raw_value, int threshold, int multip
 
 	if (ignore_threshold)
 	{
-		return static_cast<u16>(ScaledInput(scaled_value, 0, thumb_max));
+		threshold = 0;
 	}
 
-	return NormalizeDirectedInput(scaled_value, threshold, thumb_max);
+	return static_cast<u16>(ScaledInput(scaled_value, 0, thumb_max, threshold));
 }
 
 // This function normalizes stick deadzone based on the DS3's deadzone, which is ~13%

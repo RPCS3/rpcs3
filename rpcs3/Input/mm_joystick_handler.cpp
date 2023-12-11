@@ -420,7 +420,8 @@ std::unordered_map<u64, u16> mm_joystick_handler::GetButtonValues(const JOYINFOE
 
 	auto add_axis_value = [&](DWORD axis, UINT min, UINT max, u64 pos, u64 neg)
 	{
-		const float val = ScaledInput2(axis, min, max);
+		constexpr int deadzone = 0;
+		const float val = ScaledAxisInput(axis, min, max, deadzone);
 		if (val < 0)
 		{
 			button_values.emplace(pos, 0);
