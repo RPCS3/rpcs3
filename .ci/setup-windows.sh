@@ -22,7 +22,7 @@ QT_SVG_URL="${QT_HOST}${QT_PREFIX}${QT_PREFIX_2}qtsvg${QT_SUFFIX}"
 QT_5CMP_URL="${QT_HOST}${QT_PREFIX}qt5compat.${QT_PREFIX_2}qt5compat${QT_SUFFIX}"
 LLVMLIBS_URL='https://github.com/RPCS3/llvm-mirror/releases/download/custom-build-win-16.0.1/llvmlibs_mt.7z'
 GLSLANG_URL='https://github.com/RPCS3/glslang/releases/download/custom-build-win/glslanglibs_mt.7z'
-VULKAN_SDK_URL="https://www.dropbox.com/s/cs77c3iv5mbo0bt/VulkanSDK-${VULKAN_VER}-Installer.exe"
+VULKAN_SDK_URL="https://www.dropbox.com/scl/fi/sjjh0fc4ld281pjbl2xzu/VulkanSDK-${VULKAN_VER}-Installer.exe?rlkey=f6wzc0lvms5vwkt2z3qabfv9d&dl=1"
 
 DEP_URLS="         \
     $QT_BASE_URL   \
@@ -73,8 +73,8 @@ download_and_verify()
 [ -d "./lib" ] || mkdir "./lib"
 
 for url in $DEP_URLS; do
-    # Get the filename from the URL. Breaks if urls have js args, so don't do that pls
-    fileName="$(rev "$(rev "$url" | cut -d'/' -f1)")"
+    # Get the filename from the URL and remove query strings (?arg=something).
+    fileName="$(rev "$(rev "$url" | cut -d'/' -f1)" | cut -d'?' -f1)"
     [ -z "$fileName" ] && echo "Unable to parse url: $url" && exit 1
 
     # shellcheck disable=SC1003
