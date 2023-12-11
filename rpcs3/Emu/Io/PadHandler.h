@@ -208,10 +208,10 @@ protected:
 	static s32 MultipliedInput(s32 raw_value, s32 multiplier);
 
 	// Get new scaled value between 0 and 255 based on its minimum and maximum
-	static f32 ScaledInput(s32 raw_value, int minimum, int maximum, f32 range = 255.0f);
+	static f32 ScaledInput(f32 raw_value, f32 minimum, f32 maximum, f32 deadzone, f32 range = 255.0f);
 
 	// Get new scaled value between -255 and 255 based on its minimum and maximum
-	static f32 ScaledInput2(s32 raw_value, int minimum, int maximum, f32 range = 255.0f);
+	static f32 ScaledAxisInput(f32 raw_value, f32 minimum, f32 maximum, f32 deadzone, f32 range = 255.0f);
 
 	// Get normalized trigger value based on the range defined by a threshold
 	u16 NormalizeTriggerInput(u16 value, int threshold) const;
