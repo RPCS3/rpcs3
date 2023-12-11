@@ -166,7 +166,7 @@ private:
 	u64 m_drop_file_timestamp = umax;
 	drop_type m_drop_file_cached_drop_type = drop_type::drop_error;
 	drop_type IsValidFile(const QMimeData& md, QStringList* drop_paths = nullptr);
-	void AddGamesFromDirs(const QStringList& paths);
+	void AddGamesFromDirs(QStringList&& paths);
 
 	QAction* CreateRecentAction(const q_string_pair& entry, const uint& sc_idx);
 	void BootRecentAction(const QAction* act);
