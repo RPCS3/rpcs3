@@ -71,12 +71,20 @@
     <ClCompile Include="asmjit\src\asmjit\arm\armformatter.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="asmjit\src\asmjit\a64.h" />
+    <ClInclude Include="asmjit\src\asmjit\arm.h" />
+    <ClInclude Include="asmjit\src\asmjit\arm\armutils.h" />
+    <ClInclude Include="asmjit\src\asmjit\asmjit-scope-begin.h" />
+    <ClInclude Include="asmjit\src\asmjit\asmjit-scope-end.h" />
+    <ClInclude Include="asmjit\src\asmjit\asmjit.h" />
+    <ClInclude Include="asmjit\src\asmjit\core.h" />
     <ClInclude Include="asmjit\src\asmjit\core\api-build_p.h" />
     <ClInclude Include="asmjit\src\asmjit\core\api-config.h" />
     <ClInclude Include="asmjit\src\asmjit\core\archcommons.h" />
     <ClInclude Include="asmjit\src\asmjit\core\archtraits.h" />
     <ClInclude Include="asmjit\src\asmjit\core\assembler.h" />
     <ClInclude Include="asmjit\src\asmjit\core\builder.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\builder_p.h" />
     <ClInclude Include="asmjit\src\asmjit\core\codebuffer.h" />
     <ClInclude Include="asmjit\src\asmjit\core\codeholder.h" />
     <ClInclude Include="asmjit\src\asmjit\core\codewriter_p.h" />
@@ -110,6 +118,7 @@
     <ClInclude Include="asmjit\src\asmjit\core\rastack_p.h" />
     <ClInclude Include="asmjit\src\asmjit\core\string.h" />
     <ClInclude Include="asmjit\src\asmjit\core\support.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\support_p.h" />
     <ClInclude Include="asmjit\src\asmjit\core\target.h" />
     <ClInclude Include="asmjit\src\asmjit\core\type.h" />
     <ClInclude Include="asmjit\src\asmjit\core\virtmem.h" />
@@ -120,6 +129,7 @@
     <ClInclude Include="asmjit\src\asmjit\core\zonestring.h" />
     <ClInclude Include="asmjit\src\asmjit\core\zonetree.h" />
     <ClInclude Include="asmjit\src\asmjit\core\zonevector.h" />
+    <ClInclude Include="asmjit\src\asmjit\x86.h" />
     <ClInclude Include="asmjit\src\asmjit\x86\x86archtraits_p.h" />
     <ClInclude Include="asmjit\src\asmjit\x86\x86assembler.h" />
     <ClInclude Include="asmjit\src\asmjit\x86\x86builder.h" />
@@ -185,7 +195,7 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <PreprocessorDefinitions>ASMJIT_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ASMJIT_STATIC;ASMJIT_NO_DEPRECATED;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Release'">MaxSpeed</Optimization>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MaxSpeed</Optimization>
     </ClCompile>
