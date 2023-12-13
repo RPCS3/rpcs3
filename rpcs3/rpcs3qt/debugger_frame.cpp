@@ -1252,7 +1252,7 @@ void debugger_frame::PerformGoToRequest(const QString& text_argument)
 		{
 			if (auto cpu = get_cpu())
 			{
-				if (auto ppu = cpu->try_get<ppu_thread>())
+				if (cpu->try_get<ppu_thread>())
 				{
 					const vm::ptr<u32> func_ptr = vm::cast(static_cast<u32>(address));
 

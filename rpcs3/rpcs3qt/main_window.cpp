@@ -2284,7 +2284,7 @@ void main_window::ShowOptionalGamePreparations(const QString& title, const QStri
 	vlayout->addWidget(btn_box);
 	dlg->setLayout(vlayout);
 
-	connect(btn_box, &QDialogButtonBox::accepted, this, [=, paths = std::move(bootable_paths)]()
+	connect(btn_box, &QDialogButtonBox::accepted, this, [=, this, paths = std::move(bootable_paths)]()
 	{
 		const bool create_desktop_shortcuts = desk_check->isChecked();
 		const bool create_app_shortcut = quick_check->isChecked();
