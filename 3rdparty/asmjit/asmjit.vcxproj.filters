@@ -143,5 +143,15 @@
     <ClInclude Include="asmjit\src\asmjit\arm\armformatter_p.h" />
     <ClInclude Include="asmjit\src\asmjit\arm\armglobals.h" />
     <ClInclude Include="asmjit\src\asmjit\arm\armoperand.h" />
+    <ClInclude Include="asmjit\src\asmjit\a64.h" />
+    <ClInclude Include="asmjit\src\asmjit\arm.h" />
+    <ClInclude Include="asmjit\src\asmjit\asmjit.h" />
+    <ClInclude Include="asmjit\src\asmjit\asmjit-scope-begin.h" />
+    <ClInclude Include="asmjit\src\asmjit\asmjit-scope-end.h" />
+    <ClInclude Include="asmjit\src\asmjit\core.h" />
+    <ClInclude Include="asmjit\src\asmjit\x86.h" />
+    <ClInclude Include="asmjit\src\asmjit\arm\armutils.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\builder_p.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\support_p.h" />
   </ItemGroup>
 </Project>
