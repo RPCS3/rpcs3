@@ -1,8 +1,8 @@
 /* Precomp.h -- StdAfx
-2013-11-12 : Igor Pavlov : Public domain */
+2023-04-02 : Igor Pavlov : Public domain */
 
-#ifndef __7Z_PRECOMP_H
-#define __7Z_PRECOMP_H
+#ifndef ZIP7_INC_PRECOMP_H
+#define ZIP7_INC_PRECOMP_H
 
 #include "Compiler.h"
 /* #include "7zTypes.h" */
