@@ -673,8 +673,10 @@ namespace rpcn
 		if (sockfd)
 		{
 #ifdef _WIN32
+			::shutdown(sockfd, SD_BOTH);
 			::closesocket(sockfd);
 #else
+			::shutdown(sockfd, SHUT_RDWR);
 			::close(sockfd);
 #endif
 			sockfd = 0;
