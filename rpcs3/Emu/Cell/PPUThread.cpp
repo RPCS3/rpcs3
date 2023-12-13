@@ -413,9 +413,14 @@ const auto ppu_recompiler_fallback_ghc = &ppu_recompiler_fallback;
 #endif
 
 // Get pointer to executable cache
+static ppu_intrp_func_t* ppu_ptr(u32 addr)
+{
+	return reinterpret_cast<ppu_intrp_func_t*>(vm::g_exec_addr + u64{addr} * 2);
+}
+
 static ppu_intrp_func_t& ppu_ref(u32 addr)
 {
-	return *reinterpret_cast<ppu_intrp_func_t*>(vm::g_exec_addr + u64{addr} * 2);
+	return *ppu_ptr(addr);
 }
 
 // Get interpreter cache value
@@ -710,7 +715,7 @@ extern void ppu_register_range(u32 addr, u32 size)
 	addr &= -0x10000;
 
 	// Register executable range at
-	utils::memory_commit(&ppu_ref(addr), u64{size} * 2, utils::protection::rw);
+	utils::memory_commit(ppu_ptr(addr), u64{size} * 2, utils::protection::rw);
 	ensure(vm::page_protect(addr, size, 0, vm::page_executable));
 
 	if (g_cfg.core.ppu_debug)

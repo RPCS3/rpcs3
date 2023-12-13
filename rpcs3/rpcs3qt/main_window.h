@@ -150,6 +150,7 @@ private:
 	void CreateDockWindows();
 	void EnableMenus(bool enabled) const;
 	void ShowTitleBars(bool show) const;
+	void ShowOptionalGamePreparations(const QString& title, const QString& message, std::map<std::string, QString> game_path);
 
 	static bool InstallFileInExData(const std::string& extension, const QString& path, const std::string& filename);
 
@@ -165,7 +166,7 @@ private:
 	u64 m_drop_file_timestamp = umax;
 	drop_type m_drop_file_cached_drop_type = drop_type::drop_error;
 	drop_type IsValidFile(const QMimeData& md, QStringList* drop_paths = nullptr);
-	static void AddGamesFromDir(const QString& path);
+	void AddGamesFromDirs(QStringList&& paths);
 
 	QAction* CreateRecentAction(const q_string_pair& entry, const uint& sc_idx);
 	void BootRecentAction(const QAction* act);
