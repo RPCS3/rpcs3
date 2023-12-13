@@ -1,5 +1,5 @@
 /* LzFindMt.c -- multithreaded Match finder for LZ algorithms
-2021-12-21 : Igor Pavlov : Public domain */
+2023-04-02 : Igor Pavlov : Public domain */
 
 #include "Precomp.h"
 
@@ -69,7 +69,7 @@ extern UInt64 g_NumIters_Bytes;
   UInt32 temp = p->crc[cur[0]] ^ cur[1]; \
   h3 = (temp ^ ((UInt32)cur[2] << 8)) & (kHash3Size - 1); }
 
-#define __MT_HASH4_CALC { \
+#define MT_HASH4_CALC { \
   UInt32 temp = p->crc[cur[0]] ^ cur[1]; \
   h2 = temp & (kHash2Size - 1); \
   temp ^= ((UInt32)cur[2] << 8); \
@@ -79,14 +79,14 @@ extern UInt64 g_NumIters_Bytes;
 */
 
 
-MY_NO_INLINE
+Z7_NO_INLINE
 static void MtSync_Construct(CMtSync *p)
 {
   p->affinity = 0;
   p->wasCreated = False;
   p->csWasInitialized = False;
   p->csWasEntered = False;
-  Thread_Construct(&p->thread);
+  Thread_CONSTRUCT(&p->thread)
   Event_Construct(&p->canStart);
   Event_Construct(&p->wasStopped);
   Semaphore_Construct(&p->freeSemaphore);
@@ -116,7 +116,7 @@ static void MtSync_Construct(CMtSync *p)
     (p)->csWasEntered = False; }
 
 
-MY_NO_INLINE
+Z7_NO_INLINE
 static UInt32 MtSync_GetNextBlock(CMtSync *p)
 {
   UInt32 numBlocks = 0;
@@ -140,14 +140,14 @@ static UInt32 MtSync_GetNextBlock(CMtSync *p)
 
   // buffer is UNLOCKED here
   Semaphore_Wait(&p->filledSemaphore);
-  LOCK_BUFFER(p);
+  LOCK_BUFFER(p)
   return numBlocks;
 }
 
 
 /* if Writing (Processing) thread was started, we must call MtSync_StopWriting() */
 
-MY_NO_INLINE
+Z7_NO_INLINE
 static void MtSync_StopWriting(CMtSync *p)
 {
   if (!Thread_WasCreated(&p->thread) || p->needStart)
@@ -185,7 +185,7 @@ static void MtSync_StopWriting(CMtSync *p)
 }
 
 
-MY_NO_INLINE
+Z7_NO_INLINE
 static void MtSync_Destruct(CMtSync *p)
 {
     PRF(printf("\nMtSync_Destruct %p\n", p));
@@ -220,11 +220,11 @@ static void MtSync_Destruct(CMtSync *p)
 
 // #define RINOK_THREAD(x) { if ((x) != 0) return SZ_ERROR_THREAD; }
 // we want to get real system error codes here instead of SZ_ERROR_THREAD
-#define RINOK_THREAD(x) RINOK(x)
+#define RINOK_THREAD(x)  RINOK_WRes(x)
 
 
 // call it before each new file (when new starting is required):
-MY_NO_INLINE
+Z7_NO_INLINE
 static SRes MtSync_Init(CMtSync *p, UInt32 numBlocks)
 {
   WRes wres;
@@ -245,12 +245,12 @@ static WRes MtSync_Create_WRes(CMtSync *p, THREAD_FUNC_TYPE startAddress, void *
   if (p->wasCreated)
     return SZ_OK;
 
-  RINOK_THREAD(CriticalSection_Init(&p->cs));
+  RINOK_THREAD(CriticalSection_Init(&p->cs))
   p->csWasInitialized = True;
   p->csWasEntered = False;
 
-  RINOK_THREAD(AutoResetEvent_CreateNotSignaled(&p->canStart));
-  RINOK_THREAD(AutoResetEvent_CreateNotSignaled(&p->wasStopped));
+  RINOK_THREAD(AutoResetEvent_CreateNotSignaled(&p->canStart))
+  RINOK_THREAD(AutoResetEvent_CreateNotSignaled(&p->wasStopped))
 
   p->needStart = True;
   p->exit = True;  /* p->exit is unused before (canStart) Event.
@@ -264,13 +264,13 @@ static WRes MtSync_Create_WRes(CMtSync *p, THREAD_FUNC_TYPE startAddress, void *
   else
     wres = Thread_Create(&p->thread, startAddress, obj);
 
-  RINOK_THREAD(wres);
+  RINOK_THREAD(wres)
   p->wasCreated = True;
   return SZ_OK;
 }
 
 
-MY_NO_INLINE
+Z7_NO_INLINE
 static SRes MtSync_Create(CMtSync *p, THREAD_FUNC_TYPE startAddress, void *obj)
 {
   const WRes wres = MtSync_Create_WRes(p, startAddress, obj);
@@ -519,7 +519,7 @@ static void HashThreadFunc(CMatchFinderMt *mt)
             if (mf->pos > (UInt32)kMtMaxValForNormalize - num)
             {
               const UInt32 subValue = (mf->pos - mf->historySize - 1); // & ~(UInt32)(kNormalizeAlign - 1);
-              Inline_MatchFinder_ReduceOffsets(mf, subValue);
+              MatchFinder_REDUCE_OFFSETS(mf, subValue)
               MatchFinder_Normalize3(subValue, mf->hash + mf->fixedHashSize, (size_t)mf->hashMask + 1);
             }
 
@@ -560,7 +560,7 @@ static void HashThreadFunc(CMatchFinderMt *mt)
 */
 
 
-UInt32 * MY_FAST_CALL  GetMatchesSpecN_2(const Byte *lenLimit, size_t pos, const Byte *cur, CLzRef *son,
+UInt32 * Z7_FASTCALL GetMatchesSpecN_2(const Byte *lenLimit, size_t pos, const Byte *cur, CLzRef *son,
     UInt32 _cutValue, UInt32 *d, size_t _maxLen, const UInt32 *hash, const UInt32 *limit, const UInt32 *size,
     size_t _cyclicBufferPos, UInt32 _cyclicBufferSize,
     UInt32 *posRes);
@@ -749,7 +749,7 @@ static void BtFillBlock(CMatchFinderMt *p, UInt32 globalBlockIndex)
 }
 
 
-MY_NO_INLINE
+Z7_NO_INLINE
 static void BtThreadFunc(CMatchFinderMt *mt)
 {
   CMtSync *p = &mt->btSync;
@@ -864,15 +864,15 @@ SRes MatchFinderMt_Create(CMatchFinderMt *p, UInt32 historySize, UInt32 keepAddB
   if (!MatchFinder_Create(mf, historySize, keepAddBufferBefore, matchMaxLen, keepAddBufferAfter, alloc))
     return SZ_ERROR_MEM;
 
-  RINOK(MtSync_Create(&p->hashSync, HashThreadFunc2, p));
-  RINOK(MtSync_Create(&p->btSync, BtThreadFunc2, p));
+  RINOK(MtSync_Create(&p->hashSync, HashThreadFunc2, p))
+  RINOK(MtSync_Create(&p->btSync, BtThreadFunc2, p))
   return SZ_OK;
 }
 
 
 SRes MatchFinderMt_InitMt(CMatchFinderMt *p)
 {
-  RINOK(MtSync_Init(&p->hashSync, kMtHashNumBlocks));
+  RINOK(MtSync_Init(&p->hashSync, kMtHashNumBlocks))
   return MtSync_Init(&p->btSync, kMtBtNumBlocks);
 }
 
@@ -941,7 +941,7 @@ void MatchFinderMt_ReleaseStream(CMatchFinderMt *p)
 }
 
 
-MY_NO_INLINE
+Z7_NO_INLINE
 static UInt32 MatchFinderMt_GetNextBlock_Bt(CMatchFinderMt *p)
 {
   if (p->failure_LZ_BT)
@@ -1163,7 +1163,7 @@ UInt32* MatchFinderMt_GetMatches_Bt4(CMatchFinderMt *p, UInt32 *d)
 */
 
 
-static UInt32 *MixMatches4(CMatchFinderMt *p, UInt32 matchMinPos, UInt32 *d)
+static UInt32 * MixMatches4(CMatchFinderMt *p, UInt32 matchMinPos, UInt32 *d)
 {
   UInt32 h2, h3, /* h4, */ c2, c3 /* , c4 */;
   UInt32 *hash = p->hash;
@@ -1179,9 +1179,8 @@ static UInt32 *MixMatches4(CMatchFinderMt *p, UInt32 matchMinPos, UInt32 *d)
   (hash + kFix3HashSize)[h3] = m;
   // (hash + kFix4HashSize)[h4] = m;
 
-  #define _USE_H2
-
-  #ifdef _USE_H2
+  // #define BT5_USE_H2
+  // #ifdef BT5_USE_H2
   if (c2 >= matchMinPos && cur[(ptrdiff_t)c2 - (ptrdiff_t)m] == cur[0])
   {
     d[1] = m - c2 - 1;
@@ -1197,8 +1196,8 @@ static UInt32 *MixMatches4(CMatchFinderMt *p, UInt32 matchMinPos, UInt32 *d)
       }
       d[0] = 3;
       d += 2;
-    
-      #ifdef _USE_H4
+
+      #ifdef BT5_USE_H4
       if (c4 >= matchMinPos)
         if (
           cur[(ptrdiff_t)c4 - (ptrdiff_t)m]     == cur[0] &&
@@ -1214,7 +1213,7 @@ static UInt32 *MixMatches4(CMatchFinderMt *p, UInt32 matchMinPos, UInt32 *d)
     d[0] = 2;
     d += 2;
   }
-  #endif
+  // #endif
   
   if (c3 >= matchMinPos && cur[(ptrdiff_t)c3 - (ptrdiff_t)m] == cur[0])
   {
@@ -1228,7 +1227,7 @@ static UInt32 *MixMatches4(CMatchFinderMt *p, UInt32 matchMinPos, UInt32 *d)
     d += 2;
   }
 
-  #ifdef _USE_H4
+  #ifdef BT5_USE_H4
   if (c4 >= matchMinPos)
     if (
       cur[(ptrdiff_t)c4 - (ptrdiff_t)m]     == cur[0] &&
@@ -1244,7 +1243,7 @@ static UInt32 *MixMatches4(CMatchFinderMt *p, UInt32 matchMinPos, UInt32 *d)
 }
 
 
-static UInt32* MatchFinderMt2_GetMatches(CMatchFinderMt *p, UInt32 *d)
+static UInt32 * MatchFinderMt2_GetMatches(CMatchFinderMt *p, UInt32 *d)
 {
   const UInt32 *bt = p->btBufPos;
   const UInt32 len = *bt++;
@@ -1268,7 +1267,7 @@ static UInt32* MatchFinderMt2_GetMatches(CMatchFinderMt *p, UInt32 *d)
 
 
 
-static UInt32* MatchFinderMt_GetMatches(CMatchFinderMt *p, UInt32 *d)
+static UInt32 * MatchFinderMt_GetMatches(CMatchFinderMt *p, UInt32 *d)
 {
   const UInt32 *bt = p->btBufPos;
   UInt32 len = *bt++;
@@ -1398,3 +1397,10 @@ void MatchFinderMt_CreateVTable(CMatchFinderMt *p, IMatchFinder2 *vTable)
       break;
   }
 }
+
+#undef RINOK_THREAD
+#undef PRF
+#undef MF
+#undef GetUi24hi_from32
+#undef LOCK_BUFFER
+#undef UNLOCK_BUFFER

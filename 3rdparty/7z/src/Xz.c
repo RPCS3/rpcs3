@@ -1,5 +1,5 @@
 /* Xz.c - Xz
-2021-02-09 : Igor Pavlov : Public domain */
+2023-04-02 : Igor Pavlov : Public domain */
 
 #include "Precomp.h"
 
@@ -70,7 +70,7 @@ int XzCheck_Final(CXzCheck *p, Byte *digest)
   switch (p->mode)
   {
     case XZ_CHECK_CRC32:
-      SetUi32(digest, CRC_GET_DIGEST(p->crc));
+      SetUi32(digest, CRC_GET_DIGEST(p->crc))
       break;
     case XZ_CHECK_CRC64:
     {

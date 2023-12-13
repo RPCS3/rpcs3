@@ -1,5 +1,5 @@
 /* 7zCrcOpt.c -- CRC32 calculation
-2021-02-09 : Igor Pavlov : Public domain */
+2023-04-02 : Igor Pavlov : Public domain */
 
 #include "Precomp.h"
 
@@ -9,8 +9,8 @@
 
 #define CRC_UPDATE_BYTE_2(crc, b) (table[((crc) ^ (b)) & 0xFF] ^ ((crc) >> 8))
 
-UInt32 MY_FAST_CALL CrcUpdateT4(UInt32 v, const void *data, size_t size, const UInt32 *table);
-UInt32 MY_FAST_CALL CrcUpdateT4(UInt32 v, const void *data, size_t size, const UInt32 *table)
+UInt32 Z7_FASTCALL CrcUpdateT4(UInt32 v, const void *data, size_t size, const UInt32 *table);
+UInt32 Z7_FASTCALL CrcUpdateT4(UInt32 v, const void *data, size_t size, const UInt32 *table)
 {
   const Byte *p = (const Byte *)data;
   for (; size > 0 && ((unsigned)(ptrdiff_t)p & 3) != 0; size--, p++)
@@ -29,8 +29,8 @@ UInt32 MY_FAST_CALL CrcUpdateT4(UInt32 v, const void *data, size_t size, const U
   return v;
 }
 
-UInt32 MY_FAST_CALL CrcUpdateT8(UInt32 v, const void *data, size_t size, const UInt32 *table);
-UInt32 MY_FAST_CALL CrcUpdateT8(UInt32 v, const void *data, size_t size, const UInt32 *table)
+UInt32 Z7_FASTCALL CrcUpdateT8(UInt32 v, const void *data, size_t size, const UInt32 *table);
+UInt32 Z7_FASTCALL CrcUpdateT8(UInt32 v, const void *data, size_t size, const UInt32 *table)
 {
   const Byte *p = (const Byte *)data;
   for (; size > 0 && ((unsigned)(ptrdiff_t)p & 7) != 0; size--, p++)
@@ -61,11 +61,11 @@ UInt32 MY_FAST_CALL CrcUpdateT8(UInt32 v, const void *data, size_t size, const U
 
 #ifndef MY_CPU_LE
 
-#define CRC_UINT32_SWAP(v) ((v >> 24) | ((v >> 8) & 0xFF00) | ((v << 8) & 0xFF0000) | (v << 24))
+#define CRC_UINT32_SWAP(v)  Z7_BSWAP32(v)
 
 #define CRC_UPDATE_BYTE_2_BE(crc, b) (table[(((crc) >> 24) ^ (b))] ^ ((crc) << 8))
 
-UInt32 MY_FAST_CALL CrcUpdateT1_BeT4(UInt32 v, const void *data, size_t size, const UInt32 *table)
+UInt32 Z7_FASTCALL CrcUpdateT1_BeT4(UInt32 v, const void *data, size_t size, const UInt32 *table)
 {
   const Byte *p = (const Byte *)data;
   table += 0x100;
@@ -86,7 +86,7 @@ UInt32 MY_FAST_CALL CrcUpdateT1_BeT4(UInt32 v, const void *data, size_t size, co
   return CRC_UINT32_SWAP(v);
 }
 
-UInt32 MY_FAST_CALL CrcUpdateT1_BeT8(UInt32 v, const void *data, size_t size, const UInt32 *table)
+UInt32 Z7_FASTCALL CrcUpdateT1_BeT8(UInt32 v, const void *data, size_t size, const UInt32 *table)
 {
   const Byte *p = (const Byte *)data;
   table += 0x100;
