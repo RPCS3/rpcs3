@@ -1,50 +1,62 @@
 # 7z sdk
 if(WIN32)
 	add_library(3rdparty_7z STATIC EXCLUDE_FROM_ALL
-		src/Sha256.c
-		src/Ppmd7Dec.c
-		src/XzDec.c
-		src/XzEnc.c
-		src/Lzma2Dec.c
-		src/XzCrc64.c
-		src/DllSecur.c
-		src/Lzma2DecMt.c
-		src/BraIA64.c
+		src/7zAlloc.c
+		src/7zArcIn.c
+		src/7zBuf.c
+		src/7zBuf2.c
+		src/7zCrc.c
+		src/7zCrcOpt.c
+		src/7zDec.c
 		src/7zFile.c
 		src/7zStream.c
-		src/Lzma86Enc.c
-		src/Threads.c
-		src/7zAlloc.c
-		src/LzmaEnc.c
-		src/MtCoder.c
-		src/Lzma86Dec.c
-		src/Sort.c
-		src/LzFindMt.c
-		src/7zDec.c
-		src/Bcj2.c
-		src/Ppmd7.c
-		src/Bra86.c
-		src/Bcj2Enc.c
-		src/7zBuf.c
 		src/Aes.c
 		src/AesOpt.c
-		src/XzCrc64Opt.c
-		src/7zArcIn.c
-		src/Lzma2Enc.c
+		src/Alloc.c
+		src/Bcj2.c
+		src/Bcj2Enc.c
+		src/Blake2s.c
 		src/Bra.c
-		src/7zCrcOpt.c
-		src/7zBuf2.c
-		src/LzFind.c
-		src/Ppmd7Enc.c
+		src/Bra86.c
+		src/BraIA64.c
+		src/BwtSort.c
 		src/CpuArch.c
 		src/Delta.c
-		src/XzIn.c
-		src/Alloc.c
-		src/Xz.c
+		src/DllSecur.c
+		src/HuffEnc.c
+		src/LzFind.c
+		src/LzFindMt.c
+		src/LzFindOpt.c
+		src/Lzma2Dec.c
+		src/Lzma2DecMt.c
+		src/Lzma2Enc.c
+		src/Lzma86Dec.c
+		src/Lzma86Enc.c
 		src/LzmaDec.c
+		src/LzmaEnc.c
 		src/LzmaLib.c
-		src/7zCrc.c
-		src/MtDec.c)
+		src/MtCoder.c
+		src/MtDec.c
+		src/Ppmd7.c
+		src/Ppmd7aDec.c
+		src/Ppmd7Dec.c
+		src/Ppmd7Enc.c
+		src/Ppmd8.c
+		src/Ppmd8Dec.c
+		src/Ppmd8Enc.c
+		src/Sha1.c
+		src/Sha1Opt.c
+		src/Sha256.c
+		src/Sha256Opt.c
+		src/Sort.c
+		src/SwapBytes.c
+		src/Threads.c
+		src/Xz.c
+		src/XzCrc64.c
+		src/XzCrc64Opt.c
+		src/XzDec.c
+		src/XzEnc.c
+		src/XzIn.c)
 	target_include_directories(3rdparty_7z INTERFACE
 		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
 		$<INSTALL_INTERFACE:/src>)

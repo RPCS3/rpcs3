@@ -1,8 +1,8 @@
 /* CpuArch.h -- CPU specific code
-2022-07-15 : Igor Pavlov : Public domain */
+2023-04-02 : Igor Pavlov : Public domain */
 
-#ifndef __CPU_ARCH_H
-#define __CPU_ARCH_H
+#ifndef ZIP7_INC_CPU_ARCH_H
+#define ZIP7_INC_CPU_ARCH_H
 
 #include "7zTypes.h"
 
@@ -51,7 +51,13 @@ MY_CPU_64BIT means that processor can work with 64-bit registers.
   || defined(__AARCH64EB__) \
   || defined(__aarch64__)
   #define MY_CPU_ARM64
-  #define MY_CPU_NAME "arm64"
+  #ifdef __ILP32__
+    #define MY_CPU_NAME "arm64-32"
+    #define MY_CPU_SIZEOF_POINTER 4
+  #else
+    #define MY_CPU_NAME "arm64"
+    #define MY_CPU_SIZEOF_POINTER 8
+  #endif
   #define MY_CPU_64BIT
 #endif
 
@@ -68,8 +74,10 @@ MY_CPU_64BIT means that processor can work with 64-bit registers.
   #define MY_CPU_ARM
 
   #if defined(__thumb__) || defined(__THUMBEL__) || defined(_M_ARMT)
+    #define MY_CPU_ARMT
     #define MY_CPU_NAME "armt"
   #else
+    #define MY_CPU_ARM32
     #define MY_CPU_NAME "arm"
   #endif
   /* #define MY_CPU_32BIT */
@@ -102,6 +110,8 @@ MY_CPU_64BIT means that processor can work with 64-bit registers.
   || defined(__powerpc__) \
   || defined(__PPC__) \
   || defined(_POWER)
+
+#define MY_CPU_PPC_OR_PPC64
 
 #if  defined(__ppc64__) \
   || defined(__powerpc64__) \
@@ -197,6 +207,9 @@ MY_CPU_64BIT means that processor can work with 64-bit registers.
   #error Stop_Compiling_Bad_Endian
 #endif
 
+#if !defined(MY_CPU_LE) && !defined(MY_CPU_BE)
+  #error Stop_Compiling_CPU_ENDIAN_must_be_detected_at_compile_time
+#endif
 
 #if defined(MY_CPU_32BIT) && defined(MY_CPU_64BIT)
   #error Stop_Compiling_Bad_32_64_BIT
@@ -253,6 +266,67 @@ MY_CPU_64BIT means that processor can work with 64-bit registers.
 
 
 
+#ifdef __has_builtin
+  #define Z7_has_builtin(x)  __has_builtin(x)
+#else
+  #define Z7_has_builtin(x)  0
+#endif
+
+
+#define Z7_BSWAP32_CONST(v) \
+       ( (((UInt32)(v) << 24)                   ) \
+       | (((UInt32)(v) <<  8) & (UInt32)0xff0000) \
+       | (((UInt32)(v) >>  8) & (UInt32)0xff00  ) \
+       | (((UInt32)(v) >> 24)                   ))
+
+
+#if defined(_MSC_VER) && (_MSC_VER >= 1300)
+
+#include <stdlib.h>
+
+/* Note: these macros will use bswap instruction (486), that is unsupported in 386 cpu */
+
+#pragma intrinsic(_byteswap_ushort)
+#pragma intrinsic(_byteswap_ulong)
+#pragma intrinsic(_byteswap_uint64)
+
+#define Z7_BSWAP16(v)  _byteswap_ushort(v)
+#define Z7_BSWAP32(v)  _byteswap_ulong (v)
+#define Z7_BSWAP64(v)  _byteswap_uint64(v)
+#define Z7_CPU_FAST_BSWAP_SUPPORTED
+
+#elif  (defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 3))) \
+    || (defined(__clang__) && Z7_has_builtin(__builtin_bswap16))
+ 
+#define Z7_BSWAP16(v)  __builtin_bswap16(v)
+#define Z7_BSWAP32(v)  __builtin_bswap32(v)
+#define Z7_BSWAP64(v)  __builtin_bswap64(v)
+#define Z7_CPU_FAST_BSWAP_SUPPORTED
+
+#else
+
+#define Z7_BSWAP16(v) ((UInt16) \
+       ( ((UInt32)(v) << 8) \
+       | ((UInt32)(v) >> 8) \
+       ))
+
+#define Z7_BSWAP32(v) Z7_BSWAP32_CONST(v)
+
+#define Z7_BSWAP64(v) \
+       ( ( ( (UInt64)(v)                           ) << 8 * 7 ) \
+       | ( ( (UInt64)(v) & ((UInt32)0xff << 8 * 1) ) << 8 * 5 ) \
+       | ( ( (UInt64)(v) & ((UInt32)0xff << 8 * 2) ) << 8 * 3 ) \
+       | ( ( (UInt64)(v) & ((UInt32)0xff << 8 * 3) ) << 8 * 1 ) \
+       | ( ( (UInt64)(v) >> 8 * 1 ) & ((UInt32)0xff << 8 * 3) ) \
+       | ( ( (UInt64)(v) >> 8 * 3 ) & ((UInt32)0xff << 8 * 2) ) \
+       | ( ( (UInt64)(v) >> 8 * 5 ) & ((UInt32)0xff << 8 * 1) ) \
+       | ( ( (UInt64)(v) >> 8 * 7 )                           ) \
+       )
+
+#endif
+
+
+
 #ifdef MY_CPU_LE
   #if defined(MY_CPU_X86_OR_AMD64) \
       || defined(MY_CPU_ARM64)
@@ -272,13 +346,11 @@ MY_CPU_64BIT means that processor can work with 64-bit registers.
 #define GetUi32(p) (*(const UInt32 *)(const void *)(p))
 #ifdef MY_CPU_LE_UNALIGN_64
 #define GetUi64(p) (*(const UInt64 *)(const void *)(p))
+#define SetUi64(p, v) { *(UInt64 *)(void *)(p) = (v); }
 #endif
 
 #define SetUi16(p, v) { *(UInt16 *)(void *)(p) = (v); }
 #define SetUi32(p, v) { *(UInt32 *)(void *)(p) = (v); }
-#ifdef MY_CPU_LE_UNALIGN_64
-#define SetUi64(p, v) { *(UInt64 *)(void *)(p) = (v); }
-#endif
 
 #else
 
@@ -305,50 +377,25 @@ MY_CPU_64BIT means that processor can work with 64-bit registers.
 #endif
 
 
-#ifndef MY_CPU_LE_UNALIGN_64
-
+#ifndef GetUi64
 #define GetUi64(p) (GetUi32(p) | ((UInt64)GetUi32(((const Byte *)(p)) + 4) << 32))
+#endif
 
+#ifndef SetUi64
 #define SetUi64(p, v) { Byte *_ppp2_ = (Byte *)(p); UInt64 _vvv2_ = (v); \
-    SetUi32(_ppp2_    , (UInt32)_vvv2_); \
-    SetUi32(_ppp2_ + 4, (UInt32)(_vvv2_ >> 32)); }
-
+    SetUi32(_ppp2_    , (UInt32)_vvv2_) \
+    SetUi32(_ppp2_ + 4, (UInt32)(_vvv2_ >> 32)) }
 #endif
 
 
+#if defined(MY_CPU_LE_UNALIGN) && defined(Z7_CPU_FAST_BSWAP_SUPPORTED)
 
+#define GetBe32(p)  Z7_BSWAP32 (*(const UInt32 *)(const void *)(p))
+#define SetBe32(p, v) { (*(UInt32 *)(void *)(p)) = Z7_BSWAP32(v); }
 
-#ifdef __has_builtin
-  #define MY__has_builtin(x) __has_builtin(x)
-#else
-  #define MY__has_builtin(x) 0
+#if defined(MY_CPU_LE_UNALIGN_64)
+#define GetBe64(p)  Z7_BSWAP64 (*(const UInt64 *)(const void *)(p))
 #endif
-
-#if defined(MY_CPU_LE_UNALIGN) && /* defined(_WIN64) && */ defined(_MSC_VER) && (_MSC_VER >= 1300)
-
-/* Note: we use bswap instruction, that is unsupported in 386 cpu */
-
-#include <stdlib.h>
-
-#pragma intrinsic(_byteswap_ushort)
-#pragma intrinsic(_byteswap_ulong)
-#pragma intrinsic(_byteswap_uint64)
-
-/* #define GetBe16(p) _byteswap_ushort(*(const UInt16 *)(const Byte *)(p)) */
-#define GetBe32(p) _byteswap_ulong (*(const UInt32 *)(const void *)(p))
-#define GetBe64(p) _byteswap_uint64(*(const UInt64 *)(const void *)(p))
-
-#define SetBe32(p, v) (*(UInt32 *)(void *)(p)) = _byteswap_ulong(v)
-
-#elif defined(MY_CPU_LE_UNALIGN) && ( \
-       (defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 3))) \
-    || (defined(__clang__) && MY__has_builtin(__builtin_bswap16)) )
-
-/* #define GetBe16(p) __builtin_bswap16(*(const UInt16 *)(const void *)(p)) */
-#define GetBe32(p) __builtin_bswap32(*(const UInt32 *)(const void *)(p))
-#define GetBe64(p) __builtin_bswap64(*(const UInt64 *)(const void *)(p))
-
-#define SetBe32(p, v) (*(UInt32 *)(void *)(p)) = __builtin_bswap32(v)
 
 #else
 
@@ -358,8 +405,6 @@ MY_CPU_64BIT means that processor can work with 64-bit registers.
     ((UInt32)((const Byte *)(p))[2] <<  8) | \
              ((const Byte *)(p))[3] )
 
-#define GetBe64(p) (((UInt64)GetBe32(p) << 32) | GetBe32(((const Byte *)(p)) + 4))
-
 #define SetBe32(p, v) { Byte *_ppp_ = (Byte *)(p); UInt32 _vvv_ = (v); \
     _ppp_[0] = (Byte)(_vvv_ >> 24); \
     _ppp_[1] = (Byte)(_vvv_ >> 16); \
@@ -368,50 +413,83 @@ MY_CPU_64BIT means that processor can work with 64-bit registers.
 
 #endif
 
+#ifndef GetBe64
+#define GetBe64(p) (((UInt64)GetBe32(p) << 32) | GetBe32(((const Byte *)(p)) + 4))
+#endif
 
 #ifndef GetBe16
-
 #define GetBe16(p) ( (UInt16) ( \
     ((UInt16)((const Byte *)(p))[0] << 8) | \
              ((const Byte *)(p))[1] ))
-
 #endif
 
+
+#if defined(MY_CPU_BE)
+#define Z7_CONV_BE_TO_NATIVE_CONST32(v)  (v)
+#define Z7_CONV_LE_TO_NATIVE_CONST32(v)  Z7_BSWAP32_CONST(v)
+#define Z7_CONV_NATIVE_TO_BE_32(v)       (v)
+#elif defined(MY_CPU_LE)
+#define Z7_CONV_BE_TO_NATIVE_CONST32(v)  Z7_BSWAP32_CONST(v)
+#define Z7_CONV_LE_TO_NATIVE_CONST32(v)  (v)
+#define Z7_CONV_NATIVE_TO_BE_32(v)       Z7_BSWAP32(v)
+#else
+#error Stop_Compiling_Unknown_Endian_CONV
+#endif
+
+
+#if defined(MY_CPU_BE)
+
+#define GetBe32a(p)      (*(const UInt32 *)(const void *)(p))
+#define GetBe16a(p)      (*(const UInt16 *)(const void *)(p))
+#define SetBe32a(p, v)   { *(UInt32 *)(void *)(p) = (v); }
+#define SetBe16a(p, v)   { *(UInt16 *)(void *)(p) = (v); }
+
+#define GetUi32a(p)      GetUi32(p)
+#define GetUi16a(p)      GetUi16(p)
+#define SetUi32a(p, v)   SetUi32(p, v)
+#define SetUi16a(p, v)   SetUi16(p, v)
+
+#elif defined(MY_CPU_LE)
+
+#define GetUi32a(p)      (*(const UInt32 *)(const void *)(p))
+#define GetUi16a(p)      (*(const UInt16 *)(const void *)(p))
+#define SetUi32a(p, v)   { *(UInt32 *)(void *)(p) = (v); }
+#define SetUi16a(p, v)   { *(UInt16 *)(void *)(p) = (v); }
+
+#define GetBe32a(p)      GetBe32(p)
+#define GetBe16a(p)      GetBe16(p)
+#define SetBe32a(p, v)   SetBe32(p, v)
+#define SetBe16a(p, v)   SetBe16(p, v)
+
+#else
+#error Stop_Compiling_Unknown_Endian_CPU_a
+#endif
+
+
+#if defined(MY_CPU_X86_OR_AMD64) \
+  || defined(MY_CPU_ARM_OR_ARM64) \
+  || defined(MY_CPU_PPC_OR_PPC64)
+  #define Z7_CPU_FAST_ROTATE_SUPPORTED
+#endif
 
 
 #ifdef MY_CPU_X86_OR_AMD64
 
-typedef struct
-{
-  UInt32 maxFunc;
-  UInt32 vendor[3];
-  UInt32 ver;
-  UInt32 b;
-  UInt32 c;
-  UInt32 d;
-} Cx86cpuid;
-
-enum
-{
-  CPU_FIRM_INTEL,
-  CPU_FIRM_AMD,
-  CPU_FIRM_VIA
-};
-
-void MyCPUID(UInt32 function, UInt32 *a, UInt32 *b, UInt32 *c, UInt32 *d);
-
-BoolInt x86cpuid_CheckAndRead(Cx86cpuid *p);
-int x86cpuid_GetFirm(const Cx86cpuid *p);
-
-#define x86cpuid_GetFamily(ver) (((ver >> 16) & 0xFF0) | ((ver >> 8) & 0xF))
-#define x86cpuid_GetModel(ver)  (((ver >> 12) &  0xF0) | ((ver >> 4) & 0xF))
-#define x86cpuid_GetStepping(ver) (ver & 0xF)
-
-BoolInt CPU_Is_InOrder(void);
+void Z7_FASTCALL z7_x86_cpuid(UInt32 a[4], UInt32 function);
+UInt32 Z7_FASTCALL z7_x86_cpuid_GetMaxFunc(void);
+#if defined(MY_CPU_AMD64)
+#define Z7_IF_X86_CPUID_SUPPORTED
+#else
+#define Z7_IF_X86_CPUID_SUPPORTED if (z7_x86_cpuid_GetMaxFunc())
+#endif
 
 BoolInt CPU_IsSupported_AES(void);
+BoolInt CPU_IsSupported_AVX(void);
 BoolInt CPU_IsSupported_AVX2(void);
 BoolInt CPU_IsSupported_VAES_AVX2(void);
+BoolInt CPU_IsSupported_CMOV(void);
+BoolInt CPU_IsSupported_SSE(void);
+BoolInt CPU_IsSupported_SSE2(void);
 BoolInt CPU_IsSupported_SSSE3(void);
 BoolInt CPU_IsSupported_SSE41(void);
 BoolInt CPU_IsSupported_SHA(void);
@@ -436,8 +514,8 @@ BoolInt CPU_IsSupported_AES(void);
 #endif
 
 #if defined(__APPLE__)
-int My_sysctlbyname_Get(const char *name, void *buf, size_t *bufSize);
-int My_sysctlbyname_Get_UInt32(const char *name, UInt32 *val);
+int z7_sysctlbyname_Get(const char *name, void *buf, size_t *bufSize);
+int z7_sysctlbyname_Get_UInt32(const char *name, UInt32 *val);
 #endif
 
 EXTERN_C_END
