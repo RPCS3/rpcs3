@@ -418,20 +418,16 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 
 	// 7z stuff (most of this stuff is from 7z Util sample and has been reworked to be more stl friendly)
 
-	ISzAlloc allocImp;
-	ISzAlloc allocTempImp;
-
 	CFileInStream archiveStream{};
-	CLookToRead2 lookStream;
+	CLookToRead2 lookStream{};
 	CSzArEx db;
-	SRes res;
 	UInt16 temp_u16[PATH_MAX];
 	u8 temp_u8[PATH_MAX];
 	const usz kInputBufSize = static_cast<usz>(1u << 18u);
 	const ISzAlloc g_Alloc     = {SzAlloc, SzFree};
 
-	allocImp     = g_Alloc;
-	allocTempImp = g_Alloc;
+	ISzAlloc allocImp     = g_Alloc;
+	ISzAlloc allocTempImp = g_Alloc;
 
 	if (InFile_Open(&archiveStream.file, tmpfile_path.c_str()))
 	{
@@ -441,9 +437,8 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 
 	FileInStream_CreateVTable(&archiveStream);
 	LookToRead2_CreateVTable(&lookStream, False);
-	lookStream.buf = nullptr;
 
-	res = SZ_OK;
+	SRes res = SZ_OK;
 	{
 		lookStream.buf = static_cast<Byte*>(ISzAlloc_Alloc(&allocImp, kInputBufSize));
 		if (!lookStream.buf)
@@ -452,7 +447,6 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 		{
 			lookStream.bufSize    = kInputBufSize;
 			lookStream.realStream = &archiveStream.vt;
-			LookToRead2_Init(&lookStream)
 		}
 	}
 
@@ -489,8 +483,8 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 		return false;
 	}
 
-	UInt32 blockIndex    = 0xFFFFFFFF;
-	Byte* outBuffer      = nullptr;
+	UInt32 blockIndex = 0xFFFFFFFF;
+	Byte* outBuffer   = nullptr;
 	usz outBufferSize = 0;
 
 	// Creates temp folder for moving active files
@@ -501,9 +495,8 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 	{
 		usz offset           = 0;
 		usz outSizeProcessed = 0;
-		usz len;
-		unsigned isDir = SzArEx_IsDir(&db, i);
-		len            = SzArEx_GetFileNameUtf16(&db, i, nullptr);
+		const bool isDir = SzArEx_IsDir(&db, i);
+		const usz len    = SzArEx_GetFileNameUtf16(&db, i, nullptr);
 
 		if (len >= PATH_MAX)
 		{
