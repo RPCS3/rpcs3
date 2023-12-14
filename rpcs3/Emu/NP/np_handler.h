@@ -76,6 +76,7 @@ namespace np
 		np_handler(utils::serial& ar);
 		void save(utils::serial& ar);
 
+		void init_np_handler_dependencies();
 		const std::array<u8, 6>& get_ether_addr() const;
 		const std::string& get_hostname() const;
 		u32 get_local_ip_addr() const;
@@ -304,6 +305,8 @@ namespace np
 
 		shared_mutex mutex_queue_basic_events;
 		std::queue<basic_event> queue_basic_events;
+
+		bool m_inited_np_handler_dependencies = false;
 
 	private:
 		bool is_connected  = false;

@@ -50,7 +50,6 @@ enum p2ps_tcp_flags : u8
 	CWR = (1 << 7),
 };
 
-void initialize_tcp_timeout_monitor();
 u16 u2s_tcp_checksum(const le_t<u16>* buffer, usz size);
 std::vector<u8> generate_u2s_packet(const p2ps_encapsulated_tcp& header, const u8* data, const u32 datasize);
 

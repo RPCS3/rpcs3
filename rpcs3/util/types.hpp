@@ -1174,13 +1174,21 @@ namespace stx
 	template <typename T>
 	struct exact_t
 	{
+		static_assert(std::is_reference_v<T> || std::is_convertible_v<T, const T&>);
+
 		T obj;
 
-		exact_t(T&& _obj) : obj(std::forward<T>(_obj)) {}
+		explicit exact_t(T&& _obj) : obj(std::forward<T>(_obj)) {}
+		exact_t& operator=(const exact_t&) = delete;
 
-		// TODO: More conversions
 		template <typename U> requires (std::is_same_v<U&, T>)
-		operator U&() const { return obj; };
+		operator U&() const noexcept { return obj; };
+
+		template <typename U> requires (std::is_same_v<const U&, T>)
+		operator const U&() const noexcept { return obj; };
+
+		template <typename U> requires (std::is_same_v<U, T> && std::is_copy_constructible_v<T>)
+		operator U() const noexcept { return obj; };
 	};
 }
 

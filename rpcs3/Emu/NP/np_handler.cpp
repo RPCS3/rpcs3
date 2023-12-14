@@ -339,6 +339,28 @@ namespace np
 		return;
 	}
 
+	extern void init_np_handler_dependencies()
+	{
+		if (auto handler = g_fxo->try_get<named_thread<np_handler>>())
+		{
+			handler->init_np_handler_dependencies();
+		}
+	}
+
+	void np_handler::init_np_handler_dependencies()
+	{
+		if (is_psn_active && g_cfg.net.psn_status == np_psn_status::psn_rpcn && g_fxo->is_init<network_context>() && !m_inited_np_handler_dependencies)
+		{
+			m_inited_np_handler_dependencies = true;
+
+			auto& nc = g_fxo->get<network_context>();
+			nc.bind_sce_np_port();
+
+			std::lock_guard lock(mutex_rpcn);
+			rpcn = rpcn::rpcn_client::get_instance();
+		}
+	}
+
 	np_handler::np_handler()
 	{
 		g_fxo->need<named_thread<signaling_handler>>();
@@ -387,16 +409,6 @@ namespace np
 
 			if (g_cfg.net.upnp_enabled)
 				upnp.upnp_enable();
-		}
-
-		if (is_psn_active && g_cfg.net.psn_status == np_psn_status::psn_rpcn)
-		{
-			g_fxo->need<network_context>();
-			auto& nc = g_fxo->get<network_context>();
-			nc.bind_sce_np_port();
-
-			std::lock_guard lock(mutex_rpcn);
-			rpcn = rpcn::rpcn_client::get_instance();
 		}
 	}
 

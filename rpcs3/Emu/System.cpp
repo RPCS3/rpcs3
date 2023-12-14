@@ -2875,9 +2875,9 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 	for (const auto& [type, data] : *g_fxo)
 	{
-		if (type.stop)
+		if (type.thread_op)
 		{
-			type.stop(data, thread_state::aborting);
+			type.thread_op(data, thread_state::aborting);
 		}
 	}
 
@@ -2928,9 +2928,9 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 		// Join threads
 		for (const auto& [type, data] : *g_fxo)
 		{
-			if (type.stop)
+			if (type.thread_op)
 			{
-				type.stop(data, thread_state::finished);
+				type.thread_op(data, thread_state::finished);
 			}
 		}
 
