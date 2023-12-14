@@ -6,6 +6,40 @@
 
 namespace rsx
 {
+	namespace iomap_helper
+	{
+		template <bool Shared>
+		struct io_lock
+		{
+			shared_mutex& ref;
+
+			io_lock(shared_mutex& obj)
+				: ref(obj)
+			{}
+
+			bool try_lock()
+			{
+				if constexpr (Shared)
+				{
+					return ref.try_lock_shared();
+				}
+
+				return ref.try_lock();
+			}
+
+			void lock()
+			{
+				if constexpr (Shared)
+				{
+					ref.lock_shared();
+					return;
+				}
+
+				ref.lock();
+			}
+		};
+	}
+
 	struct rsx_iomap_table
 	{
 		static constexpr u32 c_lock_stride = 8192;
@@ -33,9 +67,9 @@ namespace rsx
 
 			for (u32 block = addr / c_lock_stride; block <= (end / c_lock_stride); block += Stride)
 			{
-				auto& mutex_ = rs[block];
+				auto mutex_ = iomap_helper::io_lock<!IsFullLock>(rs[block]);
 
-				if (IsFullLock ? !mutex_.try_lock() : !mutex_.try_lock_shared()) [[ unlikely ]]
+				if (!mutex_.try_lock()) [[ unlikely ]]
 				{
 					if (self)
 					{
@@ -44,14 +78,13 @@ namespace rsx
 
 					if (!self || self->id_type() != 0x55u)
 					{
-						IsFullLock ? mutex_.lock() : mutex_.lock_shared();
+						mutex_.lock();
+						continue;
 					}
-					else
+
+					while (!mutex_.try_lock())
 					{
-						while (IsFullLock ? !mutex_.try_lock() : !mutex_.try_lock_shared())
-						{
-							self->cpu_wait({});
-						}
+						self->cpu_wait({});
 					}
 				}
 			}

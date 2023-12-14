@@ -5,10 +5,13 @@
 #include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/Cell/lv2/sys_event.h"
 #include "cellAudio.h"
+#include "util/video_provider.h"
 
 #include <cmath>
 
 LOG_CHANNEL(cellAudio);
+
+extern atomic_t<recording_mode> g_recording_mode;
 
 extern void lv2_sleep(u64 timeout, ppu_thread* ppu = nullptr);
 
@@ -69,7 +72,7 @@ void cell_audio_config::reset(bool backend_changed)
 	const AudioFreq freq = AudioFreq::FREQ_48K;
 	const AudioSampleSize sample_size = raw.convert_to_s16 ? AudioSampleSize::S16 : AudioSampleSize::FLOAT;
 
-	const auto [req_ch_cnt, downmix] = AudioBackend::get_channel_count_and_downmixer(0); // CELL_AUDIO_OUT_PRIMARY
+	const auto& [req_ch_cnt, downmix] = AudioBackend::get_channel_count_and_downmixer(0); // CELL_AUDIO_OUT_PRIMARY
 	f64 cb_frame_len = 0.0;
 	u32 ch_cnt = 2;
 
@@ -276,52 +279,27 @@ void audio_ringbuffer::process_resampled_data()
 {
 	if (!cfg.time_stretching_enabled) return;
 
-	const auto [buffer, samples] = resampler.get_samples(static_cast<u32>(cb_ringbuf.get_free_size() / (cfg.audio_sample_size * static_cast<u32>(cfg.backend_ch_cnt))));
+	const auto& [buffer, samples] = resampler.get_samples(static_cast<u32>(cb_ringbuf.get_free_size() / (cfg.audio_sample_size * static_cast<u32>(cfg.backend_ch_cnt))));
 	commit_data(buffer, samples);
 }
 
 void audio_ringbuffer::commit_data(f32* buf, u32 sample_cnt)
 {
-	sample_cnt *= cfg.audio_channels;
+	const u32 sample_cnt_in = sample_cnt * cfg.audio_channels;
+	const u32 sample_cnt_out = sample_cnt * static_cast<u32>(cfg.backend_ch_cnt);
 
 	// Dump audio if enabled
-	m_dump.WriteData(buf, sample_cnt * static_cast<u32>(AudioSampleSize::FLOAT));
+	m_dump.WriteData(buf, sample_cnt_in * static_cast<u32>(AudioSampleSize::FLOAT));
 
-	if (cfg.backend_ch_cnt < AudioChannelCnt{cfg.audio_channels})
+	// Record audio if enabled
+	if (g_recording_mode != recording_mode::stopped)
 	{
-		if (AudioChannelCnt{cfg.audio_channels} == AudioChannelCnt::SURROUND_7_1)
-		{
-			if (cfg.backend_ch_cnt == AudioChannelCnt::SURROUND_5_1)
-			{
-				AudioBackend::downmix<AudioChannelCnt::SURROUND_7_1, AudioChannelCnt::SURROUND_5_1>(sample_cnt, buf, buf);
-			}
-			else if (cfg.backend_ch_cnt == AudioChannelCnt::STEREO)
-			{
-				AudioBackend::downmix<AudioChannelCnt::SURROUND_7_1, AudioChannelCnt::STEREO>(sample_cnt, buf, buf);
-			}
-			else
-			{
-				fmt::throw_exception("Invalid downmix combination: %u -> %u", cfg.audio_channels, static_cast<u32>(cfg.backend_ch_cnt));
-			}
-		}
-		else if (AudioChannelCnt{cfg.audio_channels} == AudioChannelCnt::SURROUND_5_1)
-		{
-			if (cfg.backend_ch_cnt == AudioChannelCnt::STEREO)
-			{
-				AudioBackend::downmix<AudioChannelCnt::SURROUND_5_1, AudioChannelCnt::STEREO>(sample_cnt, buf, buf);
-			}
-			else
-			{
-				fmt::throw_exception("Invalid downmix combination: %u -> %u", cfg.audio_channels, static_cast<u32>(cfg.backend_ch_cnt));
-			}
-		}
-		else
-		{
-			fmt::throw_exception("Invalid downmix combination: %u -> %u", cfg.audio_channels, static_cast<u32>(cfg.backend_ch_cnt));
-		}
+		utils::video_provider& provider = g_fxo->get<utils::video_provider>();
+		provider.present_samples(reinterpret_cast<u8*>(buf), sample_cnt, cfg.audio_channels);
 	}
 
-	const u32 sample_cnt_out = sample_cnt / cfg.audio_channels * static_cast<u32>(cfg.backend_ch_cnt);
+	// Downmix if necessary
+	AudioBackend::downmix(sample_cnt_in, cfg.audio_channels, static_cast<u32>(cfg.backend_ch_cnt), buf, buf);
 
 	if (cfg.backend->get_convert_to_s16())
 	{
@@ -1026,7 +1004,7 @@ void cell_audio_thread::operator()()
 			break;
 
 		default:
-			fmt::throw_exception("Unsupported channel count in cell_audio_config: %d", static_cast<u32>(cfg.audio_channels));
+			fmt::throw_exception("Unsupported channel count in cell_audio_config: %d", cfg.audio_channels);
 		}
 
 		// Enqueue

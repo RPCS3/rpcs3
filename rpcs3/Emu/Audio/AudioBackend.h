@@ -221,6 +221,45 @@ public:
 		}
 	}
 
+	static void downmix(u32 sample_cnt, u32 src_ch_cnt, u32 dst_ch_cnt, const f32* src, f32* dst)
+	{
+		if (src_ch_cnt <= dst_ch_cnt)
+		{
+			return;
+		}
+
+		if (src_ch_cnt == static_cast<u32>(AudioChannelCnt::SURROUND_7_1))
+		{
+			if (dst_ch_cnt == static_cast<u32>(AudioChannelCnt::SURROUND_5_1))
+			{
+				AudioBackend::downmix<AudioChannelCnt::SURROUND_7_1, AudioChannelCnt::SURROUND_5_1>(sample_cnt, src, dst);
+			}
+			else if (dst_ch_cnt == static_cast<u32>(AudioChannelCnt::STEREO))
+			{
+				AudioBackend::downmix<AudioChannelCnt::SURROUND_7_1, AudioChannelCnt::STEREO>(sample_cnt, src, dst);
+			}
+			else
+			{
+				fmt::throw_exception("Invalid downmix combination: %u -> %u", src_ch_cnt, dst_ch_cnt);
+			}
+		}
+		else if (src_ch_cnt == static_cast<u32>(AudioChannelCnt::SURROUND_5_1))
+		{
+			if (dst_ch_cnt == static_cast<u32>(AudioChannelCnt::STEREO))
+			{
+				AudioBackend::downmix<AudioChannelCnt::SURROUND_5_1, AudioChannelCnt::STEREO>(sample_cnt, src, dst);
+			}
+			else
+			{
+				fmt::throw_exception("Invalid downmix combination: %u -> %u", src_ch_cnt, dst_ch_cnt);
+			}
+		}
+		else
+		{
+			fmt::throw_exception("Invalid downmix combination: %u -> %u", src_ch_cnt, dst_ch_cnt);
+		}
+	}
+
 protected:
 	AudioSampleSize m_sample_size = AudioSampleSize::FLOAT;
 	AudioFreq       m_sampling_rate = AudioFreq::FREQ_48K;

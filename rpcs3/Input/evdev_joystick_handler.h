@@ -371,6 +371,7 @@ class evdev_joystick_handler final : public PadHandlerBase
 		bool is_trigger{};
 		int min{};
 		int max{};
+		int flat{};
 	};
 
 	struct EvdevDevice : public PadDevice

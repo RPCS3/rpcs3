@@ -33,6 +33,8 @@ void audio_resampler::put_samples(const f32* buf, u32 sample_cnt)
 
 std::pair<f32* /* buffer */, u32 /* samples */> audio_resampler::get_samples(u32 sample_cnt)
 {
+	// NOTE: Make sure to get the buffer first because receiveSamples advances its position internally
+	//       and std::make_pair evaluates the second parameter first...
 	f32 *const buf = resampler.bufBegin();
 	return std::make_pair(buf, resampler.receiveSamples(sample_cnt));
 }

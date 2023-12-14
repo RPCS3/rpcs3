@@ -223,8 +223,8 @@ struct cell_audio_config
 
 	AudioChannelCnt audio_downmix = AudioChannelCnt::SURROUND_7_1;
 	AudioChannelCnt backend_ch_cnt = AudioChannelCnt::SURROUND_7_1;
-	u32 audio_channels = 0;
-	u32 audio_sampling_rate = 0;
+	u32 audio_channels = 2;
+	u32 audio_sampling_rate = DEFAULT_AUDIO_SAMPLING_RATE;
 	u32 audio_block_period = 0;
 	u32 audio_sample_size = 0;
 	f64 audio_min_buffer_duration = 0.0;

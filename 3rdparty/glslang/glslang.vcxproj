@@ -39,9 +39,9 @@
   <PropertyGroup Label="UserMacros">
     <CmakeGenerator>"Visual Studio $(VisualStudioVersion.Substring(0,2))"</CmakeGenerator>
     <CmakeReleaseCLI>call vsdevcmd.bat -arch=amd64
-      cmake -G $(CmakeGenerator) -A x64 -DCMAKE_BUILD_TYPE="Release" -DLLVM_USE_CRT_DEBUG=MTd -DLLVM_USE_CRT_RELEASE=MT -S glslang -B build</CmakeReleaseCLI>
+      cmake -G $(CmakeGenerator) -A x64 -DCMAKE_BUILD_TYPE="Release" -DLLVM_USE_CRT_DEBUG=MTd -DLLVM_USE_CRT_RELEASE=MT -DENABLE_OPT=OFF -S glslang -B build</CmakeReleaseCLI>
     <CmakeDebugCLI>call vsdevcmd.bat -arch=amd64
-      cmake -G $(CmakeGenerator) -A x64 -DCMAKE_BUILD_TYPE="Debug" -DLLVM_USE_CRT_DEBUG=MTd -DLLVM_USE_CRT_RELEASE=MT -S glslang -B build</CmakeDebugCLI>
+      cmake -G $(CmakeGenerator) -A x64 -DCMAKE_BUILD_TYPE="Debug" -DLLVM_USE_CRT_DEBUG=MTd -DLLVM_USE_CRT_RELEASE=MT -DENABLE_OPT=OFF -S glslang -B build</CmakeDebugCLI>
     <PropsAbsPath>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\buildfiles\msvc\common_default.props'))</PropsAbsPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -50,7 +50,9 @@
     <NMakeReBuildCommandLine>$(CmakeReleaseCLI)
       msbuild.exe build\ALL_BUILD.vcxproj /t:rebuild /p:Configuration=Release /p:ForceImportBeforeCppTargets="$(PropsAbsPath)" /m</NMakeReBuildCommandLine>
     <NMakeCleanCommandLine>$(CmakeReleaseCLI)
-      msbuild.exe build\ALL_BUILD.vcxproj /t:clean /p:Configuration=Release /p:ForceImportBeforeCppTargets="$(PropsAbsPath)" /m</NMakeCleanCommandLine>
+      msbuild.exe build\ALL_BUILD.vcxproj /t:clean /p:Configuration=Release /p:ForceImportBeforeCppTargets="$(PropsAbsPath)" /m
+      rmdir /s /q build
+    </NMakeCleanCommandLine>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <NMakeBuildCommandLine>$(CmakeDebugCLI)
@@ -61,6 +63,7 @@
     </NMakeReBuildCommandLine>
     <NMakeCleanCommandLine>$(CmakeDebugCLI)
       msbuild.exe build\ALL_BUILD.vcxproj /t:clean /p:Configuration=Debug /p:ForceImportBeforeCppTargets="$(PropsAbsPath)" /m
+      rmdir /s /q build
     </NMakeCleanCommandLine>
   </PropertyGroup>
   <ItemDefinitionGroup>

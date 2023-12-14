@@ -41,8 +41,7 @@ private:
 		u64 frame_number = 0;
 		u32 width = 0;
 		u32 height = 0;
-		u64 size = 0;
-		u8* data = nullptr;
+		std::vector<u8> data;
 	};
 	std::array<image_buffer, 2> m_image_buffer;
 };

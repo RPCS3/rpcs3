@@ -8,14 +8,30 @@
 #include "TAR.h"
 
 #include "util/asm.hpp"
-#include "util/serialization.hpp"
+
+#include "util/serialization_ext.hpp"
 
 #include <charconv>
+#include <span>
 
 LOG_CHANNEL(tar_log, "TAR");
 
+fs::file make_file_view(const fs::file& file, u64 offset, u64 size);
+
+// File constructor
 tar_object::tar_object(const fs::file& file)
-	: m_file(file)
+	: m_file(std::addressof(file))
+	, m_ar(nullptr)
+	, m_ar_tar_start(umax)
+{
+	ensure(*m_file);
+}
+
+// Stream (pipe-like) constructor
+tar_object::tar_object(utils::serial& ar)
+	: m_file(nullptr)
+	, m_ar(std::addressof(ar))
+	, m_ar_tar_start(ar.pos)
 {
 }
 
@@ -23,12 +39,14 @@ TARHeader tar_object::read_header(u64 offset) const
 {
 	TARHeader header{};
 
-	if (m_file.seek(offset) != offset)
+	if (m_ar)
 	{
+		ensure(m_ar->pos == m_ar_tar_start + offset);
+		m_ar->serialize(header);
 		return header;
 	}
 
-	if (!m_file.read(header))
+	if (m_file->read_at(offset, &header, sizeof(header)) != sizeof(header))
 	{
 		std::memset(&header, 0, sizeof(header));
 	}
@@ -38,13 +56,13 @@ TARHeader tar_object::read_header(u64 offset) const
 
 u64 octal_text_to_u64(std::string_view sv)
 {
-	u64 i = -1;
+	u64 i = umax;
 	const auto ptr = std::from_chars(sv.data(), sv.data() + sv.size(), i, 8).ptr;
 
 	// Range must be terminated with either NUL or space
 	if (ptr == sv.data() + sv.size() || (*ptr && *ptr != ' '))
 	{
-		i = -1;
+		i = umax;
 	}
 
 	return i;
@@ -53,114 +71,166 @@ u64 octal_text_to_u64(std::string_view sv)
 std::vector<std::string> tar_object::get_filenames()
 {
 	std::vector<std::string> vec;
+
 	get_file("");
+
 	for (auto it = m_map.cbegin(); it != m_map.cend(); ++it)
 	{
 		vec.push_back(it->first);
 	}
+
 	return vec;
 }
 
-fs::file tar_object::get_file(const std::string& path)
+std::unique_ptr<utils::serial> tar_object::get_file(const std::string& path, std::string* new_file_path)
 {
-	if (!m_file) return fs::file();
+	std::unique_ptr<utils::serial> m_out;
+
+	auto emplace_single_entry = [&](usz& offset, const usz max_size) -> std::pair<usz, std::string>
+	{
+		if (offset >= max_size)
+		{
+			return {};
+		}
+
+		TARHeader header = read_header(offset);
+		offset += 512;
+
+		u64 size = umax;
+
+		std::string filename;
+
+		if (std::memcmp(header.magic, "ustar", 5) == 0)
+		{
+			const std::string_view size_sv{header.size, std::size(header.size)};
+
+			size = octal_text_to_u64(size_sv);
+
+			// Check for overflows and if surpasses file size
+			if ((header.name[0] || header.prefix[0]) && ~size >= 512 && max_size >= size && max_size - size >= offset)
+			{
+				// Cache size in native u64 format
+				static_assert(sizeof(size) < sizeof(header.size));
+				std::memcpy(header.size, &size, 8);
+
+				std::string_view prefix_name{header.prefix, std::size(header.prefix)};
+				std::string_view name{header.name, std::size(header.name)};
+
+				prefix_name = prefix_name.substr(0, prefix_name.find_first_of('\0'));
+				name = name.substr(0, name.find_first_of('\0'));
+
+				filename += prefix_name;
+				filename += name;
+
+				// Save header and offset
+				m_map.insert_or_assign(filename, std::make_pair(offset, header));
+
+				if (new_file_path)
+				{
+					*new_file_path = filename;
+				}
+
+				return { size, std::move(filename) };
+			}
+			else
+			{
+				tar_log.error("tar_object::get_file() failed to convert header.size=%s, filesize=0x%x", size_sv, max_size);
+			}
+		}
+		else
+		{
+			tar_log.notice("tar_object::get_file() failed to parse header: offset=0x%x, filesize=0x%x, header_first16=0x%016x", offset, max_size, read_from_ptr<be_t<u128>>(reinterpret_cast<const u8*>(&header)));
+		}
+
+		return { size, {} };
+	};
 
 	if (auto it = m_map.find(path); it != m_map.end())
 	{
 		u64 size = 0;
 		std::memcpy(&size, it->second.second.size, sizeof(size));
-		std::vector<u8> buf(size);
-		m_file.seek(it->second.first);
-		m_file.read(buf, size);
-		return fs::make_stream(std::move(buf));
+
+		if (m_file)
+		{
+			m_out = std::make_unique<utils::serial>();
+			m_out->set_reading_state();
+			m_out->m_file_handler = make_uncompressed_serialization_file_handler(make_file_view(*m_file, it->second.first, size));
+		}
+		else
+		{
+			m_out = std::make_unique<utils::serial>();
+			*m_out = std::move(*m_ar);
+			m_out->m_max_data = m_ar_tar_start + it->second.first + size;
+		}
+
+		return m_out;
 	}
-	else //continue scanning from last file entered
+	else if (m_ar && path.empty())
 	{
-		const u64 max_size = m_file.size();
+		const u64 size = emplace_single_entry(largest_offset, m_ar->get_size(umax) - m_ar_tar_start).first;
+
+		// Advance offset to next block
+		largest_offset += utils::align(size, 512);
+	}
+	// Continue scanning from last file entered
+	else if (m_file)
+	{
+		const u64 max_size = m_file->size();
 
 		while (largest_offset < max_size)
 		{
-			TARHeader header = read_header(largest_offset);
-
-			u64 size = -1;
-
-			std::string filename;
-
-			if (std::memcmp(header.magic, "ustar", 5) == 0)
-			{
-				const std::string_view size_sv{header.size, std::size(header.size)};
-
-				size = octal_text_to_u64(size_sv);
-
-				// Check for overflows and if surpasses file size
-				if ((header.name[0] || header.prefix[0]) && size + 512 > size && max_size >= size + 512 && max_size - size - 512 >= largest_offset)
-				{
-					// Cache size in native u64 format
-					static_assert(sizeof(size) < sizeof(header.size));
-					std::memcpy(header.size, &size, 8);
-
-					std::string_view prefix_name{header.prefix, std::size(header.prefix)};
-					std::string_view name{header.name, std::size(header.name)};
-
-					prefix_name = prefix_name.substr(0, prefix_name.find_first_of('\0'));
-					name = name.substr(0, name.find_first_of('\0'));
-
-					filename += prefix_name;
-					filename += name;
-
-					// Save header and offset
-					m_map.insert_or_assign(filename, std::make_pair(largest_offset + 512, header));
-				}
-				else
-				{
-					// Invalid
-					size = -1;
-					tar_log.error("tar_object::get_file() failed to convert header.size=%s, filesize=0x%x", size_sv, max_size);
-				}
-			}
-			else
-			{
-				tar_log.trace("tar_object::get_file() failed to parse header: offset=0x%x, filesize=0x%x", largest_offset, max_size);
-			}
+			const auto [size, filename] = emplace_single_entry(largest_offset, max_size);
 
 			if (size == umax)
 			{
-				largest_offset += 512;
 				continue;
 			}
 
 			// Advance offset to next block
-			largest_offset += utils::align(size, 512) + 512;
+			largest_offset += utils::align(size, 512);
 
 			if (!path.empty() && path == filename)
 			{
-				// Path is equal, read file and advance offset to start of next block
-				std::vector<u8> buf(size);
-
-				if (m_file.read(buf, size))
-				{
-					return fs::make_stream(std::move(buf));
-				}
-
-				tar_log.error("tar_object::get_file() failed to read file entry %s (size=0x%x)", filename, size);
-				largest_offset -= utils::align(size, 512);
+				// Path is equal, return handle to the file data
+				return get_file(path);
 			}
 		}
-
-		return fs::file();
 	}
+
+	return m_out;
 }
 
 bool tar_object::extract(std::string prefix_path, bool is_vfs)
 {
-	if (!m_file) return false;
+	std::vector<u8> filedata_buffer(0x80'0000);
+	std::span<u8> filedata_span{filedata_buffer.data(), filedata_buffer.size()};
 
-	get_file(""); // Make sure we have scanned all files
+	auto iter = m_map.begin();
 
-	for (auto& iter : m_map)
+	auto get_next = [&](bool is_first)
 	{
-		const TARHeader& header = iter.second.second;
-		const std::string& name = iter.first;
+		if (m_ar)
+		{
+			ensure(!is_first || m_map.empty()); // Must be empty on first call
+			std::string name_iter;
+			get_file("", &name_iter); // Get next entry
+			return m_map.find(name_iter);
+		}
+		else if (is_first)
+		{
+			get_file(""); // Scan entries
+			return m_map.begin();
+		}
+		else
+		{
+			return std::next(iter);
+		}
+	};
+
+	for (iter = get_next(true); iter != m_map.end(); iter = get_next(false))
+	{
+		const TARHeader& header = iter->second.second;
+		const std::string& name = iter->first;
 
 		std::string result = name;
 
@@ -210,14 +280,52 @@ bool tar_object::extract(std::string prefix_path, bool is_vfs)
 				return false;
 			}
 
-			auto data = get_file(name).release();
+			// For restoring m_ar->m_max_data
+			usz restore_limit = umax;
+
+			if (!m_file)
+			{
+				// Restore m_ar (remove limit)
+				restore_limit = m_ar->m_max_data;
+			}
+
+			std::unique_ptr<utils::serial> file_data = get_file(name);
 
 			fs::file file(result, fs::rewrite);
 
-			if (file)
+			if (file && file_data)
 			{
-				file.write(static_cast<fs::container_stream<std::vector<u8>>*>(data.get())->obj);
+				while (true)
+				{
+					const usz unread_size = file_data->try_read(filedata_span);
+
+					if (unread_size == 0)
+					{
+						file.write(filedata_span.data(), filedata_span.size());
+						continue;
+					}
+
+					// Tail data
+
+					if (usz read_size = filedata_span.size() - unread_size)
+					{
+						ensure(file_data->try_read(filedata_span.first(read_size)) == 0);
+						file.write(filedata_span.data(), read_size);
+					}
+
+					break;
+				}
+
 				file.close();
+
+				file_data->seek_pos(m_ar_tar_start + largest_offset, true);
+
+				if (!m_file)
+				{
+					// Restore m_ar
+					*m_ar = std::move(*file_data);
+					m_ar->m_max_data = restore_limit;
+				}
 
 				if (mtime != umax && !fs::utime(result, atime, mtime))
 				{
@@ -227,6 +335,13 @@ bool tar_object::extract(std::string prefix_path, bool is_vfs)
 
 				tar_log.notice("TAR Loader: written file %s", name);
 				break;
+			}
+
+			if (!m_file)
+			{
+				// Restore m_ar
+				*m_ar = std::move(*file_data);
+				m_ar->m_max_data = restore_limit;
 			}
 
 			const auto old_error = fs::g_tls_error;
@@ -259,32 +374,14 @@ bool tar_object::extract(std::string prefix_path, bool is_vfs)
 	return true;
 }
 
-void tar_object::save_directory(const std::string& src_dir, utils::serial& ar, const process_func& func, std::string full_path)
+void tar_object::save_directory(const std::string& target_path, utils::serial& ar, const process_func& func, std::vector<fs::dir_entry>&& entries, bool has_evaluated_results, usz src_dir_pos)
 {
-	const std::string& target_path = full_path.empty() ? src_dir : full_path;
+	const bool is_null = ar.m_file_handler && ar.m_file_handler->is_null();
+	const bool reuse_entries = !is_null || has_evaluated_results;
 
-	fs::stat_t stat{};
-	if (!fs::get_stat(target_path, stat))
+	if (reuse_entries)
 	{
-		return;
-	}
-
-	if (stat.is_directory)
-	{
-		bool has_items = false;
-
-		for (auto& entry : fs::dir(target_path))
-		{
-			if (entry.name.find_first_not_of('.') == umax) continue;
-
-			save_directory(src_dir, ar, func, target_path + '/' + entry.name);
-			has_items = true;
-		}
-
-		if (has_items)
-		{
-			return;
-		}
+		ensure(!entries.empty());
 	}
 
 	auto write_octal = [](char* ptr, u64 i)
@@ -303,60 +400,224 @@ void tar_object::save_directory(const std::string& src_dir, utils::serial& ar, c
 		}
 	};
 
-	std::string saved_path{target_path.data() + src_dir.size(), target_path.size() - src_dir.size()};
-
-	const u64 old_size = ar.data.size();
-	ar.data.resize(old_size + sizeof(TARHeader));
-
-	if (!stat.is_directory)
+	auto save_file = [&](const fs::stat_t& file_stat, const std::string& file_name)
 	{
-		fs::file fd(target_path);
-
-		const u64 old_size2 = ar.data.size();
-
-		if (func)
+		if (!file_stat.size)
 		{
-			// Use custom function for file saving if provided
-			// Allows for example to compress PNG files as JPEG in the TAR itself
-			if (!func(fd, saved_path, ar))
+			return;
+		}
+
+		if (is_null && !func)
+		{
+			ar.pos += utils::align(file_stat.size, 512);
+			return;
+		}
+
+		if (fs::file fd{file_name})
+		{
+			const u64 old_pos = ar.pos;
+			const usz old_size = ar.data.size();
+
+			if (func)
 			{
-				// Revert (this entry should not be included if func returns false)
-				ar.data.resize(old_size);
+				std::string saved_path{&::at32(file_name, src_dir_pos), file_name.size() - src_dir_pos};
+
+				// Use custom function for file saving if provided
+				// Allows for example to compress PNG files as JPEG in the TAR itself
+				if (!func(fd, saved_path, ar))
+				{
+					// Revert (this entry should not be included if func returns false)
+
+					if (is_null)
+					{
+						ar.pos = old_pos;
+						return;
+					}
+
+					ar.data.resize(old_size);
+					ar.seek_end();
+					return;
+				}
+
+				if (is_null)
+				{
+					// Align
+					ar.pos += utils::align(ar.pos - old_pos, 512);
+					return;
+				}
+			}
+			else
+			{
+				constexpr usz transfer_block_size = 0x100'0000;
+
+				for (usz read_index = 0; read_index < file_stat.size; read_index += transfer_block_size)
+				{
+					const usz read_size = std::min<usz>(transfer_block_size, file_stat.size - read_index);
+
+					// Read file data
+					ar.data.resize(ar.data.size() + read_size);
+					ensure(fd.read_at(read_index, ar.data.data() + old_size, read_size) == read_size);
+
+					// Set position to the end of data, so breathe() would work correctly
+					ar.seek_end();
+
+					// Allow flushing to file if needed
+					ar.breathe();
+				}
+			}
+
+			// Align
+			const usz diff = ar.pos - old_pos;
+			ar.data.resize(ar.data.size() + utils::align(diff, 512) - diff);
+			ar.seek_end();
+
+			fd.close();
+			ensure(fs::utime(file_name, file_stat.atime, file_stat.mtime));
+		}
+		else
+		{
+			ensure(false);
+		}
+	};
+
+	auto save_header = [&](const fs::stat_t& stat, const std::string& name)
+	{
+		static_assert(sizeof(TARHeader) == 512);
+
+		std::string_view saved_path{name.size() == src_dir_pos ? name.c_str() : &::at32(name, src_dir_pos), name.size() - src_dir_pos};
+
+		if (is_null)
+		{
+			ar.pos += sizeof(TARHeader);
+			return;
+		}
+
+		if (usz pos = saved_path.find_first_not_of(fs::delim); pos != umax)
+		{
+			saved_path = saved_path.substr(pos, saved_path.size());
+		}
+		else
+		{
+			// Target the destination directory, I do not know if this is compliant with TAR format
+			saved_path = "/"sv;
+		}
+
+		TARHeader header{};
+		std::memcpy(header.magic, "ustar ", 6);
+
+		// Prefer saving to name field as much as we can
+		// If it doesn't fit, save 100 characters at name and 155 characters preceding to it at max
+		const u64 prefix_size = std::clamp<usz>(saved_path.size(), 100, 255) - 100;
+		std::memcpy(header.prefix, saved_path.data(), prefix_size);
+		const u64 name_size = std::min<usz>(saved_path.size(), 255) - prefix_size;
+		std::memcpy(header.name, saved_path.data() + prefix_size, name_size);
+
+		write_octal(header.size, stat.is_directory ? 0 : stat.size);
+		write_octal(header.mtime, stat.mtime);
+		write_octal(header.padding, stat.atime);
+		header.filetype = stat.is_directory ? '5' : '0';
+
+		ar(header);
+		ar.breathe();
+	};
+
+	fs::stat_t stat{};
+
+	if (src_dir_pos == umax)
+	{
+		// First call, get source directory string size so it can be cut from entry paths
+		src_dir_pos = target_path.size();
+	}
+
+	if (has_evaluated_results)
+	{
+		// Save from cached data by previous call
+		for (auto&& entry : entries)
+		{
+			ensure(entry.name.starts_with(target_path));
+			save_header(entry, entry.name);
+
+			if (!entry.is_directory)
+			{
+				save_file(entry, entry.name);
+			}
+		}
+	}
+	else
+	{
+		if (entries.empty())
+		{
+			if (!fs::get_stat(target_path, stat))
+			{
 				return;
+			}
+
+			save_header(stat, target_path);
+
+			// Optimization: avoid saving to list if this is not an evaluation call
+			if (is_null)
+			{
+				static_cast<fs::stat_t&>(entries.emplace_back()) = stat;
+				entries.back().name = target_path;
 			}
 		}
 		else
 		{
-			ar.data.resize(ar.data.size() + stat.size);
-			ensure(fd.read(ar.data.data() + old_size2, stat.size) == stat.size);
+			stat = entries.back();
+			save_header(stat, entries.back().name);
 		}
 
-		// Align
-		ar.data.resize(old_size2 + utils::align(ar.data.size() - old_size2, 512));
+		if (stat.is_directory)
+		{
+			bool exists = false;
 
-		fd.close();
-		fs::utime(target_path, stat.atime, stat.mtime);
+			for (auto&& entry : fs::dir(target_path))
+			{
+				exists = true;
+
+				if (entry.name.find_first_not_of('.') == umax)
+				{
+					continue;
+				}
+
+				entry.name = target_path.ends_with('/') ? target_path + entry.name : target_path + '/' + entry.name;
+
+				if (!entry.is_directory)
+				{
+					save_header(entry, entry.name);
+					save_file(entry, entry.name);
+
+					// TAR is an old format which does not depend on previous data so memory ventilation is trivial here
+					ar.breathe();
+
+					entries.emplace_back(std::move(entry));
+				}
+				else
+				{
+					if (!is_null)
+					{
+						// Optimization: avoid saving to list if this is not an evaluation call
+						entries.clear();
+					}
+
+					entries.emplace_back(std::move(entry));
+					save_directory(::as_rvalue(entries.back().name), ar, func, std::move(entries), false, src_dir_pos);
+				}
+			}
+
+			ensure(exists);
+		}
+		else
+		{
+			fs::dir_entry entry{};
+			entry.name = target_path;
+			static_cast<fs::stat_t&>(entry) = stat;
+
+			save_file(entry, entry.name);
+		}
+
+		ar.breathe();
 	}
-
-	TARHeader header{};
-	std::memcpy(header.magic, "ustar ", 6);
-
-	// Prefer saving to name field as much as we can
-	// If it doesn't fit, save 100 characters at name and 155 characters preceding to it at max
-	const u64 prefix_size = std::clamp<usz>(saved_path.size(), 100, 255) - 100;
-	std::memcpy(header.prefix, saved_path.data(), prefix_size);
-	const u64 name_size = std::min<usz>(saved_path.size(), 255) - prefix_size;
-	std::memcpy(header.name, saved_path.data() + prefix_size, name_size);
-
-	write_octal(header.size, stat.is_directory ? 0 : stat.size);
-	write_octal(header.mtime, stat.mtime);
-	write_octal(header.padding, stat.atime);
-	header.filetype = stat.is_directory ? '5' : '0';
-
-	std::memcpy(ar.data.data() + old_size, &header, sizeof(header));
-
-	// TAR is an old format which does not depend on previous data so memory ventilation is trivial here 
-	ar.breathe();
 }
 
 bool extract_tar(const std::string& file_path, const std::string& dir_path, fs::file file)

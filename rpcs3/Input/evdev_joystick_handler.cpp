@@ -261,16 +261,17 @@ std::unordered_map<u64, std::pair<u16, bool>> evdev_joystick_handler::GetButtonV
 
 		const int min = libevdev_get_abs_minimum(dev, code);
 		const int max = libevdev_get_abs_maximum(dev, code);
+		const int flat = libevdev_get_abs_flat(dev, code);
 
 		// Triggers do not need handling of negative values
 		if (min >= 0 && !m_positive_axis.contains(code))
 		{
-			const float fvalue = ScaledInput(val, min, max);
+			const float fvalue = ScaledInput(val, min, max, flat);
 			button_values.emplace(code, std::make_pair<u16, bool>(static_cast<u16>(fvalue), false));
 			continue;
 		}
 
-		const float fvalue = ScaledInput2(val, min, max);
+		const float fvalue = ScaledAxisInput(val, min, max, flat);
 		if (fvalue < 0)
 			button_values.emplace(code, std::make_pair<u16, bool>(static_cast<u16>(std::abs(fvalue)), true));
 		else
@@ -939,6 +940,7 @@ void evdev_joystick_handler::get_mapping(const pad_ensemble& binding)
 				{
 					axis_wrapper->min = libevdev_get_abs_minimum(dev, evt.code);
 					axis_wrapper->max = libevdev_get_abs_maximum(dev, evt.code);
+					axis_wrapper->flat = libevdev_get_abs_flat(dev, evt.code);
 					axis_wrapper->is_initialized = true;
 
 					// Triggers do not need handling of negative values
@@ -951,7 +953,7 @@ void evdev_joystick_handler::get_mapping(const pad_ensemble& binding)
 				// Triggers do not need handling of negative values
 				if (axis_wrapper->is_trigger)
 				{
-					const u16 new_value = static_cast<u16>(ScaledInput(evt.value, axis_wrapper->min, axis_wrapper->max));
+					const u16 new_value = static_cast<u16>(ScaledInput(evt.value, axis_wrapper->min, axis_wrapper->max, axis_wrapper->flat));
 					u16& key_value = axis_wrapper->values[false];
 
 					if (key_value != new_value)
@@ -962,7 +964,7 @@ void evdev_joystick_handler::get_mapping(const pad_ensemble& binding)
 				}
 				else
 				{
-					const float fvalue = ScaledInput2(evt.value, axis_wrapper->min, axis_wrapper->max);
+					const float fvalue = ScaledAxisInput(evt.value, axis_wrapper->min, axis_wrapper->max, axis_wrapper->flat);
 					const bool is_negative = fvalue < 0;
 
 					const u16 new_value_0 = static_cast<u16>(std::abs(fvalue));
@@ -1054,8 +1056,9 @@ u16 evdev_joystick_handler::get_sensor_value(const libevdev* dev, const AnalogSe
 	{
 		const int min = libevdev_get_abs_minimum(dev, evt.code);
 		const int max = libevdev_get_abs_maximum(dev, evt.code);
+		const int flat = libevdev_get_abs_flat(dev, evt.code);
 
-		s16 value = ScaledInput(evt.value, min, max, 1023.0f);
+		s16 value = ScaledInput(evt.value, min, max, flat, 1023.0f);
 
 		if (sensor.m_mirrored)
 		{

@@ -11,6 +11,7 @@ public:
 	~progress_dialog();
 	void SetRange(int min, int max);
 	void SetValue(int progress);
+	void SetDeleteOnClose();
 	void SignalFailure() const;
 
 private:

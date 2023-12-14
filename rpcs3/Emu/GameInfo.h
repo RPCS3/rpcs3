@@ -7,13 +7,14 @@ struct GameInfo
 {
 	std::string path;
 	std::string icon_path;
+	std::string movie_path;
 
-	std::string name = "Unknown";
-	std::string serial = "Unknown";
-	std::string app_ver = "Unknown";
-	std::string version = "Unknown";
-	std::string category = "Unknown";
-	std::string fw = "Unknown";
+	std::string name;
+	std::string serial;
+	std::string app_ver;
+	std::string version;
+	std::string category;
+	std::string fw;
 
 	u32 attr = 0;
 	u32 bootable = 0;

@@ -3,6 +3,7 @@
 #include "Emu/IdManager.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
+#include "util/video_provider.h"
 
 #include "sys_process.h"
 #include "sys_rsxaudio.h"
@@ -21,6 +22,8 @@
 #endif
 
 LOG_CHANNEL(sys_rsxaudio);
+
+extern atomic_t<recording_mode> g_recording_mode;
 
 namespace rsxaudio_ringbuf_reader
 {
@@ -952,10 +955,8 @@ void rsxaudio_data_thread::update_hw_param(std::function<void(rsxaudio_hw_param_
 			{
 				return port_cfg[static_cast<u8>(RsxaudioAvportIdx::AVMULTI)];
 			}
-			else
-			{
-				return rsxaudio_backend_thread::port_config{static_cast<AudioFreq>(new_hw_param->spdif_freq_base / new_hw_param->spdif[spdif_idx].freq_div), AudioChannelCnt::STEREO};
-			}
+
+			return rsxaudio_backend_thread::port_config{static_cast<AudioFreq>(new_hw_param->spdif_freq_base / new_hw_param->spdif[spdif_idx].freq_div), AudioChannelCnt::STEREO};
 		};
 
 		port_cfg[static_cast<u8>(RsxaudioAvportIdx::SPDIF_0)] = gen_spdif_port_cfg(0);
@@ -967,10 +968,8 @@ void rsxaudio_data_thread::update_hw_param(std::function<void(rsxaudio_hw_param_
 			{
 				return rsxaudio_backend_thread::port_config{port_cfg[static_cast<u8>(RsxaudioAvportIdx::SPDIF_1)].freq, new_hw_param->hdmi[hdmi_idx].ch_cfg.total_ch_cnt};
 			}
-			else
-			{
-				return rsxaudio_backend_thread::port_config{port_cfg[static_cast<u8>(RsxaudioAvportIdx::AVMULTI)].freq, new_hw_param->hdmi[hdmi_idx].ch_cfg.total_ch_cnt};
-			}
+
+			return rsxaudio_backend_thread::port_config{port_cfg[static_cast<u8>(RsxaudioAvportIdx::AVMULTI)].freq, new_hw_param->hdmi[hdmi_idx].ch_cfg.total_ch_cnt};
 		};
 
 		port_cfg[static_cast<u8>(RsxaudioAvportIdx::HDMI_0)] = gen_hdmi_port_cfg(0);
@@ -1120,10 +1119,8 @@ rsxaudio_backend_thread::avport_bit rsxaudio_data_thread::calc_avport_mute_state
 			// TODO: HW test if both serial and spdif mutes are used in serial mode for spdif
 			return !serial_active || hwp.spdif[spdif_port].freq_div != hwp.serial.freq_div || hwp.serial.muted || hwp.spdif[spdif_port].muted;
 		}
-		else
-		{
-			return !spdif_active[spdif_port] || hwp.spdif[spdif_port].muted;
-		}
+
+		return !spdif_active[spdif_port] || hwp.spdif[spdif_port].muted;
 	};
 
 	auto hdmi_muted  = [&](u8 hdmi_idx)
@@ -1134,10 +1131,8 @@ rsxaudio_backend_thread::avport_bit rsxaudio_data_thread::calc_avport_mute_state
 		{
 			return spdif_muted(1) || hwp.hdmi[hdmi_port].muted || hwp.hdmi[hdmi_port].force_mute || !hwp.hdmi[hdmi_port].init;
 		}
-		else
-		{
-			return !serial_active || hwp.serial.muted || hwp.hdmi[hdmi_port].muted || hwp.hdmi[hdmi_port].force_mute || !hwp.hdmi[hdmi_port].init;
-		}
+
+		return !serial_active || hwp.serial.muted || hwp.hdmi[hdmi_port].muted || hwp.hdmi[hdmi_port].force_mute || !hwp.hdmi[hdmi_port].init;
 	};
 
 	return { hdmi_muted(0), hdmi_muted(1), avmulti, spdif_muted(0), spdif_muted(1) };
@@ -1156,10 +1151,8 @@ bool rsxaudio_data_thread::calc_port_active_state(RsxaudioPort port, const rsxau
 		{
 			return gen_serial_active() && (hwp.spdif[spdif_idx].freq_div == hwp.serial.freq_div);
 		}
-		else
-		{
-			return hwp.spdif[spdif_idx].dma_en && hwp.spdif[spdif_idx].buf_empty_en && hwp.spdif[spdif_idx].en;
-		}
+
+		return hwp.spdif[spdif_idx].dma_en && hwp.spdif[spdif_idx].buf_empty_en && hwp.spdif[spdif_idx].en;
 	};
 
 	switch (port)
@@ -1353,6 +1346,16 @@ void rsxaudio_backend_thread::update_emu_cfg()
 	}
 }
 
+u32 rsxaudio_backend_thread::get_sample_rate() const
+{
+	return callback_cfg.load().freq;
+}
+
+u8 rsxaudio_backend_thread::get_channel_count() const
+{
+	return callback_cfg.load().input_ch_cnt;
+}
+
 rsxaudio_backend_thread::emu_audio_cfg rsxaudio_backend_thread::get_emu_cfg()
 {
 	// Get max supported channel count
@@ -1466,7 +1469,8 @@ void rsxaudio_backend_thread::operator()()
 					state_update_c.wait(state_update_m, ERROR_SERVICE_PERIOD);
 					break;
 				}
-				else if (use_aux_ringbuf)
+
+				if (use_aux_ringbuf)
 				{
 					const u64 next_period_time = get_time_until_service();
 					should_service_stream = next_period_time <= SERVICE_THRESHOLD;
@@ -1570,6 +1574,7 @@ void rsxaudio_backend_thread::operator()()
 					crnt_buf_size = sample_cnt * bytes_per_sample;
 				}
 
+				// Dump audio if enabled
 				if (emu_cfg.dump_to_file)
 				{
 					dumper.WriteData(crnt_buf, static_cast<u32>(crnt_buf_size));
@@ -1842,39 +1847,15 @@ u32 rsxaudio_backend_thread::write_data_callback(u32 bytes, void* buf)
 			return bytes;
 		}
 
-		if (cb_cfg.input_ch_cnt > cb_cfg.output_ch_cnt)
+		// Record audio if enabled
+		if (g_recording_mode != recording_mode::stopped)
 		{
-			if (cb_cfg.input_ch_cnt == static_cast<u32>(AudioChannelCnt::SURROUND_7_1))
-			{
-				if (cb_cfg.output_ch_cnt == static_cast<u32>(AudioChannelCnt::SURROUND_5_1))
-				{
-					AudioBackend::downmix<AudioChannelCnt::SURROUND_7_1, AudioChannelCnt::SURROUND_5_1>(sample_cnt, callback_tmp_buf.data(), callback_tmp_buf.data());
-				}
-				else if (cb_cfg.output_ch_cnt == static_cast<u32>(AudioChannelCnt::STEREO))
-				{
-					AudioBackend::downmix<AudioChannelCnt::SURROUND_7_1, AudioChannelCnt::STEREO>(sample_cnt, callback_tmp_buf.data(), callback_tmp_buf.data());
-				}
-				else
-				{
-					fmt::throw_exception("Invalid downmix combination: %u -> %u", cb_cfg.input_ch_cnt, cb_cfg.output_ch_cnt);
-				}
-			}
-			else if (cb_cfg.input_ch_cnt == static_cast<u32>(AudioChannelCnt::SURROUND_5_1))
-			{
-				if (cb_cfg.output_ch_cnt == static_cast<u32>(AudioChannelCnt::STEREO))
-				{
-					AudioBackend::downmix<AudioChannelCnt::SURROUND_5_1, AudioChannelCnt::STEREO>(sample_cnt, callback_tmp_buf.data(), callback_tmp_buf.data());
-				}
-				else
-				{
-					fmt::throw_exception("Invalid downmix combination: %u -> %u", cb_cfg.input_ch_cnt, cb_cfg.output_ch_cnt);
-				}
-			}
-			else
-			{
-				fmt::throw_exception("Invalid downmix combination: %u -> %u", cb_cfg.input_ch_cnt, cb_cfg.output_ch_cnt);
-			}
+			utils::video_provider& provider = g_fxo->get<utils::video_provider>();
+			provider.present_samples(reinterpret_cast<u8*>(callback_tmp_buf.data()), sample_cnt / cb_cfg.input_ch_cnt, cb_cfg.input_ch_cnt);
 		}
+
+		// Downmix if necessary
+		AudioBackend::downmix(sample_cnt, cb_cfg.input_ch_cnt, cb_cfg.output_ch_cnt, callback_tmp_buf.data(), callback_tmp_buf.data());
 
 		if (cb_cfg.target_volume != cb_cfg.current_volume)
 		{
@@ -2223,21 +2204,21 @@ rsxaudio_periodic_tmr::wait_result rsxaudio_periodic_tmr::wait(const std::functi
 	{
 		return wait_result::TIMER_ERROR;
 	}
-	else if (timeout)
+
+	if (timeout)
 	{
 		return wait_result::TIMEOUT;
 	}
-	else if (wait_canceled)
+
+	if (wait_canceled)
 	{
 		sched_timer();
 		return wait_result::TIMER_CANCELED;
 	}
-	else
-	{
-		callback();
-		sched_timer();
-		return wait_result::SUCCESS;
-	}
+
+	callback();
+	sched_timer();
+	return wait_result::SUCCESS;
 }
 
 u64 rsxaudio_periodic_tmr::get_rel_next_time()
@@ -2308,16 +2289,18 @@ void rsxaudio_periodic_tmr::disable_vtimer(u32 vtimer_id)
 
 bool rsxaudio_periodic_tmr::is_vtimer_behind(u32 vtimer_id, u64 crnt_time) const
 {
-	const vtimer& vtimer = vtmr_pool[vtimer_id];
 	ensure(vtimer_id < VTIMER_MAX);
+
+	const vtimer& vtimer = vtmr_pool[vtimer_id];
 
 	return is_vtimer_behind(vtimer, crnt_time);
 }
 
 void rsxaudio_periodic_tmr::vtimer_skip_periods(u32 vtimer_id, u64 crnt_time)
 {
-	vtimer& vtimer = vtmr_pool[vtimer_id];
 	ensure(vtimer_id < VTIMER_MAX);
+
+	vtimer& vtimer = vtmr_pool[vtimer_id];
 
 	if (is_vtimer_behind(vtimer, crnt_time))
 	{
@@ -2327,8 +2310,9 @@ void rsxaudio_periodic_tmr::vtimer_skip_periods(u32 vtimer_id, u64 crnt_time)
 
 void rsxaudio_periodic_tmr::vtimer_incr(u32 vtimer_id, u64 crnt_time)
 {
-	vtimer& vtimer = vtmr_pool[vtimer_id];
 	ensure(vtimer_id < VTIMER_MAX);
+
+	vtimer& vtimer = vtmr_pool[vtimer_id];
 
 	if (is_vtimer_behind(vtimer, crnt_time))
 	{
@@ -2338,16 +2322,18 @@ void rsxaudio_periodic_tmr::vtimer_incr(u32 vtimer_id, u64 crnt_time)
 
 bool rsxaudio_periodic_tmr::is_vtimer_active(u32 vtimer_id) const
 {
-	const vtimer& vtimer = vtmr_pool[vtimer_id];
 	ensure(vtimer_id < VTIMER_MAX);
+
+	const vtimer& vtimer = vtmr_pool[vtimer_id];
 
 	return vtimer.active;
 }
 
 u64 rsxaudio_periodic_tmr::vtimer_get_sched_time(u32 vtimer_id) const
 {
-	const vtimer& vtimer = vtmr_pool[vtimer_id];
 	ensure(vtimer_id < VTIMER_MAX);
+
+	const vtimer& vtimer = vtmr_pool[vtimer_id];
 
 	return static_cast<u64>(vtimer.blk_cnt * vtimer.blk_time);
 }

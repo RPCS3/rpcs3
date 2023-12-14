@@ -135,6 +135,9 @@
     <ClCompile Include="Emu\NP\rpcn_client.cpp" />
     <ClCompile Include="Emu\vfs_config.cpp" />
     <ClCompile Include="Loader\disc.cpp" />
+    <ClCompile Include="util\serialization_ext.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="util\atomic.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -618,10 +621,11 @@
     <ClInclude Include="Loader\mself.hpp" />
     <ClInclude Include="util\atomic.hpp" />
     <ClInclude Include="util\bless.hpp" />
-    <ClInclude Include="util\image_sink.h" />
+    <ClInclude Include="util\video_sink.h" />
     <ClInclude Include="util\video_provider.h" />
     <ClInclude Include="util\media_utils.h" />
     <ClInclude Include="util\serialization.hpp" />
+    <ClInclude Include="util\serialization_ext.hpp" />
     <ClInclude Include="util\v128.hpp" />
     <ClInclude Include="util\simd.hpp" />
     <ClInclude Include="util\to_endian.hpp" />

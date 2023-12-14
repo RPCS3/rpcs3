@@ -43,7 +43,7 @@ struct trophy_context_t
 	trophy_context_t() = default;
 
 	trophy_context_t(utils::serial& ar)
-		: trp_name(ar.operator std::string())
+		: trp_name(ar.pop<std::string>())
 	{
 		std::string trophy_path = vfs::get(Emu.GetDir() + "TROPDIR/" + trp_name + "/TROPHY.TRP");
 		fs::file trp_stream(trophy_path);
@@ -55,7 +55,7 @@ struct trophy_context_t
 			trp_stream.open(trophy_path);
 		}
 
-		if (!ar.operator bool())
+		if (!ar.pop<bool>())
 		{
 			ar(read_only);
 			return;

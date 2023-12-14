@@ -358,7 +358,7 @@ static void ppu_initialize_modules(ppu_linkage_info* link, utils::serial* ar = n
 
 			while (true)
 			{
-				const std::string name = ar.operator std::string();
+				const std::string name = ar.pop<std::string>();
 
 				if (name.empty())
 				{
@@ -370,10 +370,10 @@ static void ppu_initialize_modules(ppu_linkage_info* link, utils::serial* ar = n
 
 				auto& variable = _module->variables;
 
-				for (u32 i = 0, end = ar.operator usz(); i < end; i++)
+				for (u32 i = 0, end = ar.pop<usz>(); i < end; i++)
 				{
-					auto* ptr = &::at32(variable, ar.operator u32());
-					ptr->addr = ar.operator u32();
+					auto* ptr = &::at32(variable, ar.pop<u32>());
+					ptr->addr = ar.pop<u32>();
 					ensure(!!ptr->var);
 				}
 			}
@@ -1052,7 +1052,12 @@ void init_ppu_functions(utils::serial* ar, bool full = false)
 
 	if (ar)
 	{
-		ensure(vm::check_addr(g_fxo->init<ppu_function_manager>(*ar)->addr));
+		const u32 addr = g_fxo->init<ppu_function_manager>(*ar)->addr;
+
+		if (addr % 0x1000 || !vm::check_addr(addr))
+		{
+			fmt::throw_exception("init_ppu_functions(): Failure to initialize function manager. (addr=0x%x, %s)", addr, *ar);
+		}
 	}
 	else
 		g_fxo->init<ppu_function_manager>();

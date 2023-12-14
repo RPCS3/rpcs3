@@ -1054,6 +1054,13 @@ namespace rsx
 				// Skip "handled methods"
 				rsx->fifo_ctrl->skip_methods(count - 1);
 
+				// 308A::COLOR can be used to create custom sync primitives.
+				// Hide this behind strict mode due to the potential performance implications.
+				if (count == 1 && g_cfg.video.strict_rendering_mode && !g_cfg.video.relaxed_zcull_sync)
+				{
+					rsx->sync();
+				}
+
 				switch (*method_registers.blit_engine_nv3062_color_format())
 				{
 				case blit_engine::transfer_destination_format::a8r8g8b8:

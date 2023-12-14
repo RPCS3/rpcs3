@@ -6,11 +6,16 @@
 
 #include <QMovie>
 #include <QThread>
+#include <QBuffer>
+#include <QMediaPlayer>
+#include <QVideoSink>
+#include <QVideoFrame>
+#include <QPixmap>
 
 #include <memory>
 #include <functional>
 
-using icon_callback_t = std::function<void(int)>;
+using icon_callback_t = std::function<void(const QVideoFrame&)>;
 using icon_load_callback_t = std::function<void(int)>;
 using size_calc_callback_t = std::function<void()>;
 
@@ -29,12 +34,14 @@ public:
 		return m_active;
 	}
 
-	[[nodiscard]] std::shared_ptr<QMovie> movie() const
+	void set_movie_path(QString path)
 	{
-		return m_movie;
+		m_movie_path = std::move(path);
 	}
 
-	void init_movie(const QString& path);
+	void init_movie();
+	void stop_movie();
+	QPixmap get_movie_image(const QVideoFrame& frame) const;
 
 	void call_icon_func() const;
 	void set_icon_func(const icon_callback_t& func);
@@ -71,6 +78,11 @@ public:
 	shared_mutex pixmap_mutex;
 
 protected:
+	QString m_movie_path;
+	QByteArray m_movie_data{};
+	std::unique_ptr<QBuffer> m_movie_buffer;
+	std::unique_ptr<QMediaPlayer> m_media_player;
+	std::shared_ptr<QVideoSink> m_video_sink;
 	std::shared_ptr<QMovie> m_movie;
 
 private:

@@ -59,7 +59,7 @@ void lv2_event_queue::save_ptr(utils::serial& ar, lv2_event_queue* q)
 
 std::shared_ptr<lv2_event_queue> lv2_event_queue::load_ptr(utils::serial& ar, std::shared_ptr<lv2_event_queue>& queue, std::string_view msg)
 {
-	const u32 id = ar.operator u32();
+	const u32 id = ar.pop<u32>();
 
 	if (!id)
 	{

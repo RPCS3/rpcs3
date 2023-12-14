@@ -235,16 +235,16 @@ void game_list_table::populate(
 		custom_table_widget_item* icon_item = new custom_table_widget_item;
 		game->item = icon_item;
 
-		icon_item->set_icon_func([this, icon_item, game](int)
+		icon_item->set_icon_func([this, icon_item, game](const QVideoFrame& frame)
 		{
 			if (!icon_item || !game)
 			{
 				return;
 			}
 
-			if (std::shared_ptr<QMovie> movie = icon_item->movie(); movie && icon_item->get_active())
+			if (const QPixmap pixmap = icon_item->get_movie_image(frame); icon_item->get_active() && !pixmap.isNull())
 			{
-				icon_item->setData(Qt::DecorationRole, movie->currentPixmap().scaled(m_icon_size, Qt::KeepAspectRatio));
+				icon_item->setData(Qt::DecorationRole, pixmap.scaled(m_icon_size, Qt::KeepAspectRatio));
 			}
 			else
 			{
@@ -252,15 +252,12 @@ void game_list_table::populate(
 
 				icon_item->setData(Qt::DecorationRole, game->pxmap);
 
-				if (!game->has_hover_gif)
+				if (!game->has_hover_gif && !game->has_hover_pam)
 				{
 					game->pxmap = {};
 				}
 
-				if (movie)
-				{
-					movie->stop();
-				}
+				icon_item->stop_movie();
 			}
 		});
 
@@ -288,7 +285,11 @@ void game_list_table::populate(
 
 		if (play_hover_movies && game->has_hover_gif)
 		{
-			icon_item->init_movie(game_icon_path % serial % "/hover.gif");
+			icon_item->set_movie_path(game_icon_path % serial % "/hover.gif");
+		}
+		else if (play_hover_movies && game->has_hover_pam)
+		{
+			icon_item->set_movie_path(QString::fromStdString(game->info.movie_path));
 		}
 
 		icon_item->setData(Qt::UserRole, index, true);

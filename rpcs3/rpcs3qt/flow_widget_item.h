@@ -25,7 +25,8 @@ class flow_widget_item : public QWidget
 	Q_PROPERTY(bool selected MEMBER selected) // Stylesheet workaround for descendants with parent pseudo state
 
 public:
-	using QWidget::QWidget;
+	flow_widget_item(QWidget* parent);
+	virtual ~flow_widget_item();
 
 	virtual void polish_style();
 

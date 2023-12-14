@@ -113,6 +113,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	add_game_column(gui::trophy_game_list_columns::icon,     tr("Icon"),     tr("Show Icons"));
 	add_game_column(gui::trophy_game_list_columns::name,     tr("Game"),     tr("Show Games"));
 	add_game_column(gui::trophy_game_list_columns::progress, tr("Progress"), tr("Show Progress"));
+	add_game_column(gui::trophy_game_list_columns::trophies, tr("Trophies"), tr("Show Trophies"));
 
 	// Trophy Table
 	m_trophy_table = new game_list();
@@ -1072,6 +1073,7 @@ void trophy_manager_dialog::PopulateGameTable()
 		m_game_table->setItem(i, static_cast<int>(gui::trophy_game_list_columns::icon), icon_item);
 		m_game_table->setItem(i, static_cast<int>(gui::trophy_game_list_columns::name), new custom_table_widget_item(name));
 		m_game_table->setItem(i, static_cast<int>(gui::trophy_game_list_columns::progress), new custom_table_widget_item(progress, Qt::UserRole, percentage));
+		m_game_table->setItem(i, static_cast<int>(gui::trophy_game_list_columns::trophies), new custom_table_widget_item(QString::number(all_trophies), Qt::UserRole, all_trophies));
 
 		m_game_combo->addItem(name, i);
 	}

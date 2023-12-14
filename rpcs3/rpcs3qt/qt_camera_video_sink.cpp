@@ -16,17 +16,6 @@ qt_camera_video_sink::qt_camera_video_sink(bool front_facing, QObject *parent)
 
 qt_camera_video_sink::~qt_camera_video_sink()
 {
-	std::lock_guard lock(m_mutex);
-
-	// Free memory
-	for (auto& image_buffer : m_image_buffer)
-	{
-		if (image_buffer.data)
-		{
-			delete[] image_buffer.data;
-			image_buffer.data = nullptr;
-		}
-	}
 }
 
 bool qt_camera_video_sink::present(const QVideoFrame& frame)
@@ -90,26 +79,20 @@ bool qt_camera_video_sink::present(const QVideoFrame& frame)
 	image_buffer& image_buffer = m_image_buffer[m_write_index];
 
 	// Reset buffer if necessary
-	if (image_buffer.size != new_size)
+	if (image_buffer.data.size() != new_size)
 	{
-		image_buffer.size = 0;
-		if (image_buffer.data)
-		{
-			delete[] image_buffer.data;
-			image_buffer.data = nullptr;
-		}
+		image_buffer.data.clear();
 	}
 
 	// Create buffer if necessary
-	if (!image_buffer.data && new_size > 0)
+	if (image_buffer.data.empty() && new_size > 0)
 	{
-		image_buffer.data = new u8[new_size];
-		image_buffer.size = new_size;
+		image_buffer.data.resize(new_size);
 		image_buffer.width = m_width;
 		image_buffer.height = m_height;
 	}
 
-	if (image_buffer.size > 0 && !image.isNull())
+	if (!image_buffer.data.empty() && !image.isNull())
 	{
 		// Convert image to proper layout
 		// TODO: check if pixel format and bytes per pixel match and convert if necessary
@@ -231,7 +214,7 @@ bool qt_camera_video_sink::present(const QVideoFrame& frame)
 		case CELL_CAMERA_YUV420:
 		case CELL_CAMERA_FORMAT_UNKNOWN:
 		default:
-			std::memcpy(image_buffer.data, image.constBits(), std::min<usz>(image_buffer.size, image.height() * image.bytesPerLine()));
+			std::memcpy(image_buffer.data.data(), image.constBits(), std::min<usz>(image_buffer.data.size(), image.height() * image.bytesPerLine()));
 			break;
 		}
 	}
@@ -289,14 +272,14 @@ void qt_camera_video_sink::get_image(u8* buf, u64 size, u32& width, u32& height,
 	frame_number = image_buffer.frame_number;
 
 	// Copy to out buffer
-	if (buf && image_buffer.data)
+	if (buf && !image_buffer.data.empty())
 	{
-		bytes_read = std::min<u64>(image_buffer.size, size);
-		std::memcpy(buf, image_buffer.data, bytes_read);
+		bytes_read = std::min<u64>(image_buffer.data.size(), size);
+		std::memcpy(buf, image_buffer.data.data(), bytes_read);
 
-		if (image_buffer.size != size)
+		if (image_buffer.data.size() != size)
 		{
-			camera_log.error("Buffer size mismatch: in=%d, out=%d. Cropping to incoming size. Please contact a developer.", size, image_buffer.size);
+			camera_log.error("Buffer size mismatch: in=%d, out=%d. Cropping to incoming size. Please contact a developer.", size, image_buffer.data.size());
 		}
 	}
 	else

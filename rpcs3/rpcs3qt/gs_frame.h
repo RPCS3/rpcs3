@@ -5,7 +5,6 @@
 #include "util/types.hpp"
 #include "util/atomic.hpp"
 #include "util/media_utils.h"
-#include "util/video_provider.h"
 #include "Emu/RSX/GSFrameBase.h"
 
 #include <QWindow>

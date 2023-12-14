@@ -1106,7 +1106,7 @@
   </action>
   <action name="batchCreateCPUCachesAct">
    <property name="text">
-    <string>Create PPU/SPU Caches</string>
+    <string>Create LLVM Caches</string>
    </property>
   </action>
   <action name="batchRemoveCustomConfigurationsAct">

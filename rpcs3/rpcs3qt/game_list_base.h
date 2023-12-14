@@ -19,6 +19,7 @@ struct gui_game_info
 	bool hasCustomConfig = false;
 	bool hasCustomPadConfig = false;
 	bool has_hover_gif = false;
+	bool has_hover_pam = false;
 	movie_item_base* item = nullptr;
 };
 

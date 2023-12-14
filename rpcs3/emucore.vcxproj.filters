@@ -1099,6 +1099,9 @@
     <ClCompile Include="Emu\RSX\Overlays\overlay_cursor.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClCompile>
+    <ClCompile Include="util\serialization_ext.cpp">
+      <Filter>Emu</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\savestate_utils.cpp">
       <Filter>Emu</Filter>
     </ClCompile>
@@ -2109,6 +2112,9 @@
     <ClInclude Include="Emu\system_progress.hpp">
       <Filter>Emu</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\savestate_utils.hpp">
+      <Filter>Utilities</Filter>
+    </ClInclude>
     <ClInclude Include="rpcs3_version.h">
       <Filter>Emu</Filter>
     </ClInclude>
@@ -2275,7 +2281,7 @@
     <ClInclude Include="util\video_provider.h">
       <Filter>Utilities</Filter>
     </ClInclude>
-    <ClInclude Include="util\image_sink.h">
+    <ClInclude Include="util\video_sink.h">
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Io\recording_config.h">
@@ -2389,7 +2395,7 @@
     <ClInclude Include="Crypto\unzip.h">
       <Filter>Crypto</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\savestate_utils.hpp">
+    <ClInclude Include="util\serialization_ext.hpp">
       <Filter>Emu</Filter>
     </ClInclude>
   </ItemGroup>

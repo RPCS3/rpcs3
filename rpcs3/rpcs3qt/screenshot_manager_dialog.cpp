@@ -127,7 +127,7 @@ void screenshot_manager_dialog::showEvent(QShowEvent* event)
 
 bool screenshot_manager_dialog::eventFilter(QObject* watched, QEvent* event)
 {
-	if (event && event->type() == QEvent::MouseButtonDblClick)
+	if (event && event->type() == QEvent::MouseButtonDblClick && static_cast<QMouseEvent*>(event)->button() == Qt::LeftButton)
 	{
 		if (screenshot_item* item = static_cast<screenshot_item*>(watched))
 		{
