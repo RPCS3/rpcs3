@@ -9,6 +9,9 @@
 
 #include "ipc_settings_dialog.h"
 #include "Emu/IPC_config.h"
+#include "Emu/IPC_socket.h"
+#include "Emu/IdManager.h"
+#include "Emu/System.h"
 
 ipc_settings_dialog::ipc_settings_dialog(QWidget* parent)
 	: QDialog(parent)
@@ -53,6 +56,15 @@ ipc_settings_dialog::ipc_settings_dialog(QWidget* parent)
 			g_cfg_ipc.set_server_enabled(server_enabled);
 			g_cfg_ipc.set_port(server_port);
 			g_cfg_ipc.save();
+
+			if (auto manager = g_fxo->try_get<IPC_socket::IPC_server_manager>())
+			{
+				manager->set_server_enabled(server_enabled);
+			}
+			else if (server_enabled && Emu.IsRunning())
+			{
+				g_fxo->init<IPC_socket::IPC_server_manager>(true);
+			}
 
 			accept();
 		});
