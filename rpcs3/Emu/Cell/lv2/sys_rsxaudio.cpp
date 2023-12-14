@@ -3,6 +3,7 @@
 #include "Emu/IdManager.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
+#include "Emu//Cell/Modules/cellAudioOut.h"
 #include "util/video_provider.h"
 
 #include "sys_process.h"
@@ -1305,6 +1306,11 @@ namespace audio
 
 rsxaudio_backend_thread::rsxaudio_backend_thread()
 {
+	// Initialize dependencies
+	g_fxo->need<audio_out_configuration>();
+
+	new_emu_cfg = get_emu_cfg();
+
 	const u64 new_vol = g_cfg.audio.volume;
 
 	callback_cfg.atomic_op([&](callback_config& val)
