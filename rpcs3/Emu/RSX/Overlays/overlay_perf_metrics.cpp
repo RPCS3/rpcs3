@@ -878,21 +878,19 @@ namespace rsx
 			if (!g_cfg.misc.use_native_interface)
 				return;
 
-			if (auto& manager = g_fxo->get<rsx::overlays::display_manager>(); g_fxo->is_init<rsx::overlays::display_manager>())
+			if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
 			{
 				auto& perf_settings = g_cfg.video.perf_overlay;
-				auto perf_overlay = manager.get<rsx::overlays::perf_metrics_overlay>();
+				auto perf_overlay = manager->get<rsx::overlays::perf_metrics_overlay>();
 
 				if (perf_settings.perf_overlay_enabled)
 				{
-					const bool existed = !!perf_overlay;
-
-					if (!existed)
+					if (!perf_overlay)
 					{
-						perf_overlay = manager.create<rsx::overlays::perf_metrics_overlay>();
+						perf_overlay = manager->create<rsx::overlays::perf_metrics_overlay>();
 					}
 
-					std::lock_guard lock(manager);
+					std::lock_guard lock(*manager);
 
 					perf_overlay->set_detail_level(perf_settings.level);
 					perf_overlay->set_position(perf_settings.position);
@@ -912,7 +910,7 @@ namespace rsx
 				}
 				else if (perf_overlay)
 				{
-					manager.remove<rsx::overlays::perf_metrics_overlay>();
+					manager->remove<rsx::overlays::perf_metrics_overlay>();
 				}
 			}
 		}

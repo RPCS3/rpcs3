@@ -3,6 +3,7 @@
 #include "vkutils/buffer_object.h"
 #include "Emu/RSX/Overlays/overlay_manager.h"
 #include "Emu/RSX/Overlays/overlays.h"
+#include "Emu/RSX/Overlays/overlay_debug_overlay.h"
 #include "Emu/Cell/Modules/cellVideoOut.h"
 
 #include "upscalers/bilinear_pass.hpp"
@@ -763,32 +764,6 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 		if (g_cfg.video.overlay)
 		{
-			// TODO: Move this to native overlay! It is both faster and easier to manage
-			if (!m_text_writer)
-			{
-				auto key = vk::get_renderpass_key(m_swapchain->get_surface_format());
-				m_text_writer = std::make_unique<vk::text_writer>();
-				m_text_writer->init(*m_device, vk::get_renderpass(*m_device, key));
-			}
-
-			m_text_writer->set_scale(m_frame->client_device_pixel_ratio());
-
-			int y_loc = 0;
-			const auto println = [&](const std::string& text)
-			{
-				m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 4, y_loc, direct_fbo->width(), direct_fbo->height(), text);
-				y_loc += 16;
-			};
-
-			println(fmt::format("RSX Load:                 %3d%%", get_load()));
-			println(fmt::format("draw calls: %17d", info.stats.draw_calls));
-			println(fmt::format("submits: %20d", info.stats.submit_count));
-			println(fmt::format("draw call setup: %12dus", info.stats.setup_time));
-			println(fmt::format("vertex upload time: %9dus", info.stats.vertex_upload_time));
-			println(fmt::format("texture upload time: %8dus", info.stats.textures_upload_time));
-			println(fmt::format("draw call execution: %8dus", info.stats.draw_exec_time));
-			println(fmt::format("submit and flip: %12dus", info.stats.flip_time));
-
 			const auto num_dirty_textures = m_texture_cache.get_unreleased_textures_count();
 			const auto texture_memory_size = m_texture_cache.get_texture_memory_in_use() / (1024 * 1024);
 			const auto tmp_texture_memory_size = m_texture_cache.get_temporary_memory_in_use() / (1024 * 1024);
@@ -802,18 +777,33 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			const auto num_texture_upload_miss = m_texture_cache.get_texture_upload_misses_this_frame();
 			const auto texture_upload_miss_ratio = m_texture_cache.get_texture_upload_miss_percentage();
 			const auto texture_copies_ellided = m_texture_cache.get_texture_copies_ellided_this_frame();
-
-			println(fmt::format("Unreleased textures: %8d", num_dirty_textures));
-			println(fmt::format("Texture cache memory: %7dM", texture_memory_size));
-			println(fmt::format("Temporary texture memory: %3dM", tmp_texture_memory_size));
-			println(fmt::format("Flush requests: %13d  = %2d (%3d%%) hard faults, %2d unavoidable, %2d misprediction(s), %2d speculation(s)", num_flushes, num_misses, cache_miss_ratio, num_unavoidable, num_mispredict, num_speculate));
-			println(fmt::format("Texture uploads: %12u (%u from CPU - %02u%%, %u copies avoided)", num_texture_upload, num_texture_upload_miss, texture_upload_miss_ratio, texture_copies_ellided));
-
 			const auto vertex_cache_hit_count = (info.stats.vertex_cache_request_count - info.stats.vertex_cache_miss_count);
 			const auto vertex_cache_hit_ratio = info.stats.vertex_cache_request_count
 				? (vertex_cache_hit_count * 100) / info.stats.vertex_cache_request_count
 				: 0;
-			println(fmt::format("Vertex cache hits: %10u/%u (%u%%)", vertex_cache_hit_count, info.stats.vertex_cache_request_count, vertex_cache_hit_ratio));
+
+			rsx::overlays::set_debug_overlay_text(fmt::format(
+				"RSX Load:                 %3d%%\n"
+				"draw calls: %17d\n"
+				"submits: %20d\n"
+				"draw call setup: %12dus\n"
+				"vertex upload time: %9dus\n"
+				"texture upload time: %8dus\n"
+				"draw call execution: %8dus\n"
+				"submit and flip: %12dus\n"
+				"Unreleased textures: %8d\n"
+				"Texture cache memory: %7dM\n"
+				"Temporary texture memory: %3dM\n"
+				"Flush requests: %13d  = %2d (%3d%%) hard faults, %2d unavoidable, %2d misprediction(s), %2d speculation(s)\n"
+				"Texture uploads: %12u (%u from CPU - %02u%%, %u copies avoided)\n"
+				"Vertex cache hits: %10u/%u (%u%%)",
+				get_load(), info.stats.draw_calls, info.stats.submit_count, info.stats.setup_time, info.stats.vertex_upload_time,
+				info.stats.textures_upload_time, info.stats.draw_exec_time, info.stats.flip_time,
+				num_dirty_textures, texture_memory_size, tmp_texture_memory_size,
+				num_flushes, num_misses, cache_miss_ratio, num_unavoidable, num_mispredict, num_speculate,
+				num_texture_upload, num_texture_upload_miss, texture_upload_miss_ratio, texture_copies_ellided,
+				vertex_cache_hit_count, info.stats.vertex_cache_request_count, vertex_cache_hit_ratio)
+			);
 		}
 
 		direct_fbo->release();

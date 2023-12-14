@@ -965,9 +965,6 @@ VKGSRender::~VKGSRender()
 
 	m_stencil_mirror_sampler.reset();
 
-	// Overlay text handler
-	m_text_writer.reset();
-
 	// Pipeline descriptors
 	m_descriptor_pool.destroy();
 
