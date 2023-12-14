@@ -108,12 +108,14 @@ namespace IPC_socket
 			int port = g_cfg_ipc.get_port();
 			if (!m_ipc_server || port != m_old_port)
 			{
+				IPC.notice("Starting server with port %d", port);
 				m_ipc_server = std::make_unique<IPC_server>();
 				m_old_port = port;
 			}
 		}
-		else
+		else if (m_ipc_server)
 		{
+			IPC.notice("Stopping server");
 			m_ipc_server.reset();
 		}
 	}
