@@ -77,16 +77,14 @@ std::vector<signaling_message> get_sign_msgs()
 	return msgs;
 }
 
-void need_network()
+namespace np
 {
-	g_fxo->need<network_context>();
-	initialize_tcp_timeout_monitor();
+	void init_np_handler_dependencies();
 }
 
 network_thread::network_thread()
 {
-	// Ensures IDM for lv2_socket is always valid when the thread is running
-	g_fxo->init<id_manager::id_map<lv2_socket>>();
+	np::init_np_handler_dependencies();
 }
 
 void network_thread::bind_sce_np_port()

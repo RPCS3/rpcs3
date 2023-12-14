@@ -17,7 +17,6 @@
 
 LOG_CHANNEL(sign_log, "Signaling");
 
-void need_network();
 
 template <>
 void fmt_class_string<SignalingCommand>::format(std::string& out, u64 arg)
@@ -41,7 +40,6 @@ void fmt_class_string<SignalingCommand>::format(std::string& out, u64 arg)
 
 signaling_handler::signaling_handler()
 {
-	need_network();
 }
 
 /////////////////////////////

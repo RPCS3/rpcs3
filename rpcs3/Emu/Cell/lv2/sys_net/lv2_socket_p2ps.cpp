@@ -179,11 +179,6 @@ private:
 	std::unordered_map<s32, rtt_info> rtts; // (sock_id, rtt)
 };
 
-void initialize_tcp_timeout_monitor()
-{
-	g_fxo->need<named_thread<tcp_timeout_monitor>>();
-}
-
 u16 u2s_tcp_checksum(const le_t<u16>* buffer, usz size)
 {
 	u32 cksum = 0;

@@ -2040,6 +2040,12 @@ DECLARE(thread_ctrl::g_native_core_layout) { native_core_arrangement::undefined 
 
 void thread_base::start()
 {
+	m_sync.atomic_op([&](u32& v)
+	{
+		v &= ~static_cast<u32>(thread_state::mask);
+		v |= static_cast<u32>(thread_state::created);
+	});
+
 #ifdef _WIN32
 	m_thread = ::_beginthreadex(nullptr, 0, entry_point, this, CREATE_SUSPENDED, nullptr);
 	ensure(m_thread);
