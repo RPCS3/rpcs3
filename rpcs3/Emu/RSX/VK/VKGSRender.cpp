@@ -523,16 +523,17 @@ u64 VKGSRender::get_cycles()
 
 VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 {
-	if (m_instance.create("RPCS3"))
-	{
-		m_instance.bind();
-	}
-	else
+	// Initialize dependencies
+	g_fxo->need<rsx::dma_manager>();
+
+	if (!m_instance.create("RPCS3"))
 	{
 		rsx_log.fatal("Could not find a Vulkan compatible GPU driver. Your GPU(s) may not support Vulkan, or you need to install the Vulkan runtime and drivers");
 		m_device = VK_NULL_HANDLE;
 		return;
 	}
+
+	m_instance.bind();
 
 	std::vector<vk::physical_device>& gpus = m_instance.enumerate_devices();
 
@@ -890,9 +891,9 @@ VKGSRender::~VKGSRender()
 	vkDeviceWaitIdle(*m_device);
 
 	// Globals. TODO: Refactor lifetime management
-	if (backend_config.supports_asynchronous_compute)
+	if (auto async_scheduler = g_fxo->try_get<vk::AsyncTaskScheduler>())
 	{
-		g_fxo->get<vk::AsyncTaskScheduler>().destroy();
+		async_scheduler->destroy();
 	}
 
 	// GC cleanup
@@ -2412,12 +2413,12 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 		primary_submit_info.wait_on(wait_semaphore, pipeline_stage_flags);
 	}
 
-	auto& async_scheduler = g_fxo->get<vk::AsyncTaskScheduler>();
-	if (async_scheduler.is_recording())
+	if (auto async_scheduler = g_fxo->try_get<vk::AsyncTaskScheduler>();
+		async_scheduler && async_scheduler->is_recording())
 	{
-		if (async_scheduler.is_host_mode())
+		if (async_scheduler->is_host_mode())
 		{
-			const VkSemaphore async_sema = *async_scheduler.get_sema();
+			const VkSemaphore async_sema = *async_scheduler->get_sema();
 			secondary_submit_info.queue_signal(async_sema);
 			primary_submit_info.wait_on(async_sema, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 
@@ -2425,7 +2426,7 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 			vk::get_resource_manager()->push_down_current_scope();
 		}
 
-		async_scheduler.flush(secondary_submit_info, force_flush);
+		async_scheduler->flush(secondary_submit_info, force_flush);
 	}
 
 	if (signal_semaphore)

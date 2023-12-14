@@ -95,6 +95,12 @@ namespace IPC_socket
 		return *this;
 	}
 
+	IPC_server_manager::IPC_server_manager(bool enabled)
+	{
+		// Enable IPC if needed
+		set_server_enabled(enabled);
+	}
+
 	void IPC_server_manager::set_server_enabled(bool enabled)
 	{
 		if (enabled)

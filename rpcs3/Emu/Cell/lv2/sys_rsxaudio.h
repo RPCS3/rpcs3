@@ -528,7 +528,7 @@ private:
 	u64 start_time = get_system_time();
 	u64 time_period_idx = 1;
 
-	emu_audio_cfg new_emu_cfg{get_emu_cfg()};
+	emu_audio_cfg new_emu_cfg{};
 	bool emu_cfg_changed = true;
 
 	rsxaudio_state new_ra_state{};
