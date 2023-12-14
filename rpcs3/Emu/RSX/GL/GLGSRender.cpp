@@ -505,7 +505,6 @@ void GLGSRender::on_exit()
 	}
 
 	m_null_textures.clear();
-	m_text_printer.close();
 	m_gl_texture_cache.destroy();
 	m_ui_renderer.destroy();
 	m_video_output_pass.destroy();

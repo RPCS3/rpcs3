@@ -14,7 +14,6 @@
 #include "VKTextureCache.h"
 #include "VKRenderTargets.h"
 #include "VKFormats.h"
-#include "VKTextOut.h"
 #include "VKOverlays.h"
 #include "VKProgramBuffer.h"
 #include "VKFramebuffer.h"
@@ -72,7 +71,6 @@ private:
 	std::unique_ptr<vk::buffer> null_buffer;
 	std::unique_ptr<vk::buffer_view> null_buffer_view;
 
-	std::unique_ptr<vk::text_writer> m_text_writer;
 	std::unique_ptr<vk::upscaler> m_upscaler;
 	output_scaling_mode m_output_scaling{output_scaling_mode::bilinear};
 
