@@ -1177,6 +1177,9 @@
     <ClCompile Include="Crypto\unzip.cpp">
       <Filter>Crypto</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\Overlays\overlay_debug_overlay.cpp">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1772,9 +1775,6 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\gcm_printing.h">
       <Filter>Emu\GPU\RSX</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\Common\TextGlyphs.h">
-      <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\mutex.h">
       <Filter>Utilities</Filter>
@@ -2397,6 +2397,9 @@
     </ClInclude>
     <ClInclude Include="util\serialization_ext.hpp">
       <Filter>Emu</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\overlay_debug_overlay.h">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

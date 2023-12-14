@@ -21,6 +21,7 @@
 #include "Emu/Cell/Modules/cellGcmSys.h"
 #include "util/serialization_ext.hpp"
 #include "Overlays/overlay_perf_metrics.h"
+#include "Overlays/overlay_debug_overlay.h"
 #include "Overlays/overlay_message.h"
 #include "Program/GLSLCommon.h"
 #include "Utilities/date_time.h"
@@ -903,6 +904,7 @@ namespace rsx
 		if (!serialized) method_registers.init();
 
 		rsx::overlays::reset_performance_overlay();
+		rsx::overlays::reset_debug_overlay();
 
 		if (!is_initialized)
 		{

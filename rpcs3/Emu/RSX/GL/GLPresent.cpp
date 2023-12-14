@@ -2,6 +2,7 @@
 #include "GLGSRender.h"
 #include "Emu/Cell/Modules/cellVideoOut.h"
 #include "Emu/RSX/Overlays/overlay_manager.h"
+#include "Emu/RSX/Overlays/overlay_debug_overlay.h"
 #include "util/video_provider.h"
 
 LOG_CHANNEL(screenshot_log, "SCREENSHOT");
@@ -323,36 +324,8 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		}
 	}
 
-	if (g_cfg.video.overlay && gl::get_driver_caps().ARB_shader_draw_parameters_supported)
+	if (g_cfg.video.overlay)
 	{
-		if (!m_text_printer.is_enabled())
-		{
-			m_text_printer.init();
-			m_text_printer.set_enabled(true);
-		}
-
-		// Disable depth test
-		gl_state.depth_func(GL_ALWAYS);
-
-		gl::screen.bind();
-		glViewport(0, 0, width, height);
-
-		m_text_printer.set_scale(m_frame->client_device_pixel_ratio());
-
-		int y_loc = 0;
-		const auto println = [&](const std::string& text)
-		{
-			m_text_printer.print_text(cmd, 4, y_loc, width, height, text);
-			y_loc += 16;
-		};
-
-		println(fmt::format("RSX Load:                %3d%%", get_load()));
-		println(fmt::format("draw calls: %16d", info.stats.draw_calls));
-		println(fmt::format("draw call setup: %11dus", info.stats.setup_time));
-		println(fmt::format("vertex upload time: %8dus", info.stats.vertex_upload_time));
-		println(fmt::format("textures upload time: %6dus", info.stats.textures_upload_time));
-		println(fmt::format("draw call execution: %7dus", info.stats.draw_exec_time));
-
 		const auto num_dirty_textures = m_gl_texture_cache.get_unreleased_textures_count();
 		const auto texture_memory_size = m_gl_texture_cache.get_texture_memory_in_use() / (1024 * 1024);
 		const auto num_flushes = m_gl_texture_cache.get_num_flush_requests();
@@ -365,17 +338,29 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		const auto num_texture_upload_miss = m_gl_texture_cache.get_texture_upload_misses_this_frame();
 		const auto texture_upload_miss_ratio = m_gl_texture_cache.get_texture_upload_miss_percentage();
 		const auto texture_copies_ellided = m_gl_texture_cache.get_texture_copies_ellided_this_frame();
-
-		println(fmt::format("Unreleased textures: %7d", num_dirty_textures));
-		println(fmt::format("Texture memory: %12dM", texture_memory_size));
-		println(fmt::format("Flush requests: %12d  = %2d (%3d%%) hard faults, %2d unavoidable, %2d misprediction(s), %2d speculation(s)", num_flushes, num_misses, cache_miss_ratio, num_unavoidable, num_mispredict, num_speculate));
-		println(fmt::format("Texture uploads: %11u (%u from CPU - %02u%%, %u copies avoided)", num_texture_upload, num_texture_upload_miss, texture_upload_miss_ratio, texture_copies_ellided));
-
 		const auto vertex_cache_hit_count = (info.stats.vertex_cache_request_count - info.stats.vertex_cache_miss_count);
 		const auto vertex_cache_hit_ratio = info.stats.vertex_cache_request_count
 			? (vertex_cache_hit_count * 100) / info.stats.vertex_cache_request_count
 			: 0;
-		println(fmt::format("Vertex cache hits: %9u/%u (%u%%)", vertex_cache_hit_count, info.stats.vertex_cache_request_count, vertex_cache_hit_ratio));
+
+		rsx::overlays::set_debug_overlay_text(fmt::format(
+			"RSX Load:                %3d%%\n"
+			"draw calls: %16d\n"
+			"draw call setup: %11dus\n"
+			"vertex upload time: %8dus\n"
+			"textures upload time: %6dus\n"
+			"draw call execution: %7dus\n"
+			"Unreleased textures: %7d\n"
+			"Texture memory: %12dM\n"
+			"Flush requests: %12d  = %2d (%3d%%) hard faults, %2d unavoidable, %2d misprediction(s), %2d speculation(s)\n"
+			"Texture uploads: %11u (%u from CPU - %02u%%, %u copies avoided)\n"
+			"Vertex cache hits: %9u/%u (%u%%)",
+			get_load(), info.stats.draw_calls, info.stats.setup_time, info.stats.vertex_upload_time,
+			info.stats.textures_upload_time, info.stats.draw_exec_time, num_dirty_textures, texture_memory_size,
+			num_flushes, num_misses, cache_miss_ratio, num_unavoidable, num_mispredict, num_speculate,
+			num_texture_upload, num_texture_upload_miss, texture_upload_miss_ratio, texture_copies_ellided,
+			vertex_cache_hit_count, info.stats.vertex_cache_request_count, vertex_cache_hit_ratio)
+		);
 	}
 
 	if (gl::debug::g_vis_texture)

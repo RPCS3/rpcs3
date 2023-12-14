@@ -5,7 +5,6 @@
 #include "GLTextureCache.h"
 #include "GLRenderTargets.h"
 #include "GLProgramBuffer.h"
-#include "GLTextOut.h"
 #include "GLOverlays.h"
 #include "GLShaderInterpreter.h"
 
@@ -114,7 +113,6 @@ class GLGSRender : public GSRender, public ::rsx::reports::ZCULL_control
 
 	bool manually_flush_ring_buffers = false;
 
-	gl::text_writer m_text_printer;
 	gl::ui_overlay_renderer m_ui_renderer;
 	gl::video_out_calibration_pass m_video_output_pass;
 

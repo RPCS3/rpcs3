@@ -102,6 +102,7 @@
     <ClCompile Include="Emu\RSX\Overlays\overlay_animated_icon.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_controls.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_cursor.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\overlay_debug_overlay.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_manager.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_media_list_dialog.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_osk_panel.cpp" />
@@ -580,6 +581,7 @@
     <ClInclude Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_settings.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_animated_icon.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_cursor.h" />
+    <ClInclude Include="Emu\RSX\Overlays\overlay_debug_overlay.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_edit_text.hpp" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_list_view.hpp" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_loading_icon.hpp" />
@@ -832,7 +834,6 @@
     <ClInclude Include="Emu\RSX\Capture\rsx_trace.h" />
     <ClInclude Include="Emu\RSX\Program\GLSLCommon.h" />
     <ClInclude Include="Emu\RSX\Common\surface_utils.h" />
-    <ClInclude Include="Emu\RSX\Common\TextGlyphs.h" />
     <ClInclude Include="Emu\RSX\Common\texture_cache.h" />
     <ClInclude Include="Emu\RSX\Common\texture_cache_checker.h" />
     <ClInclude Include="Emu\RSX\Common\texture_cache_predictor.h" />
