@@ -54,6 +54,7 @@ namespace IPC_socket
 		int m_old_port = 0;
 
 	public:
+		explicit IPC_server_manager(bool enabled);
 		void set_server_enabled(bool enabled);
 	};
 }

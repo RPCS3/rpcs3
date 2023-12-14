@@ -43,6 +43,7 @@ struct usio_memory
 {
 	std::vector<u8> backup_memory;
 
+	usio_memory() = default;
 	usio_memory(const usio_memory&) = delete;
 	usio_memory& operator=(const usio_memory&) = delete;
 
@@ -59,6 +60,9 @@ struct usio_memory
 usb_device_usio::usb_device_usio(const std::array<u8, 7>& location)
 	: usb_device_emulated(location)
 {
+	// Initialize dependencies
+	g_fxo->need<usio_memory>();
+
 	device = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE,
 		UsbDeviceDescriptor{
 			.bcdUSB             = 0x0110,
@@ -141,7 +145,8 @@ extern bool is_input_allowed();
 
 void usb_device_usio::load_backup()
 {
-	g_fxo->get<usio_memory>().init();
+	usio_memory& memory = g_fxo->get<usio_memory>();
+	memory.init();
 
 	fs::file usio_backup_file;
 
@@ -151,7 +156,7 @@ void usb_device_usio::load_backup()
 		return;
 	}
 
-	const u64 file_size = g_fxo->get<usio_memory>().backup_memory.size();
+	const u64 file_size = memory.backup_memory.size();
 
 	if (usio_backup_file.size() != file_size)
 	{
@@ -159,7 +164,7 @@ void usb_device_usio::load_backup()
 		return;
 	}
 
-	usio_backup_file.read(g_fxo->get<usio_memory>().backup_memory.data(), file_size);
+	usio_backup_file.read(memory.backup_memory.data(), file_size);
 }
 
 void usb_device_usio::save_backup()

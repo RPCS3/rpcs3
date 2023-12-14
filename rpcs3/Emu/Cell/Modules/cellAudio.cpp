@@ -4,6 +4,7 @@
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/Cell/lv2/sys_event.h"
+#include "Emu/Cell/Modules/cellAudioOut.h"
 #include "cellAudio.h"
 #include "util/video_provider.h"
 
@@ -677,6 +678,9 @@ void cell_audio_thread::reset_counters()
 
 cell_audio_thread::cell_audio_thread()
 {
+	// Initialize dependencies
+	g_fxo->need<audio_out_configuration>();
+
 	// Initialize loop variables (regardless of provider in order to initialize timestamps)
 	reset_counters();
 
