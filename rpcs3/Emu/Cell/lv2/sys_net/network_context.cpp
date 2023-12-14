@@ -83,6 +83,12 @@ void need_network()
 	initialize_tcp_timeout_monitor();
 }
 
+network_thread::network_thread()
+{
+	// Ensures IDM for lv2_socket is always valid when the thread is running
+	g_fxo->init<id_manager::id_map<lv2_socket>>();
+}
+
 void network_thread::bind_sce_np_port()
 {
 	std::lock_guard list_lock(list_p2p_ports_mutex);
