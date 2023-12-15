@@ -53,3 +53,4 @@ error_code cellRtcGetTick(vm::cptr<CellRtcDateTime> pTime, vm::ptr<CellRtcTick> 
 error_code cellRtcGetCurrentTick(vm::ptr<CellRtcTick> pTick);
 
 CellRtcDateTime tick_to_date_time(u64 tick);
+u64 date_time_to_tick(CellRtcDateTime date_time);

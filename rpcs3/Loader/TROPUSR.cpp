@@ -31,9 +31,9 @@ std::shared_ptr<rXmlNode> trophy_xml_document::GetRoot()
 	return trophy_base;
 }
 
-TROPUSRLoader::load_result TROPUSRLoader::Load(const std::string& filepath, const std::string& configpath)
+TROPUSRLoader::load_result TROPUSRLoader::Load(std::string_view filepath, std::string_view configpath)
 {
-	const std::string& path = vfs::get(filepath);
+	const std::string path = vfs::get(filepath);
 
 	load_result res{};
 
@@ -143,7 +143,7 @@ bool TROPUSRLoader::LoadTables()
 }
 
 // TODO: TROPUSRLoader::Save deletes the TROPUSR and creates it again. This is probably very slow.
-bool TROPUSRLoader::Save(const std::string& filepath)
+bool TROPUSRLoader::Save(std::string_view filepath)
 {
 	fs::pending_file temp(vfs::get(filepath));
 
@@ -160,7 +160,7 @@ bool TROPUSRLoader::Save(const std::string& filepath)
 	return temp.commit();
 }
 
-bool TROPUSRLoader::Generate(const std::string& filepath, const std::string& configpath)
+bool TROPUSRLoader::Generate(std::string_view filepath, std::string_view configpath)
 {
 	fs::file config(vfs::get(configpath));
 
@@ -374,6 +374,21 @@ bool TROPUSRLoader::UnlockTrophy(u32 id, u64 timestamp1, u64 timestamp2)
 	m_table6[id].trophy_state = 1;
 	m_table6[id].timestamp1 = timestamp1;
 	m_table6[id].timestamp2 = timestamp2;
+
+	return true;
+}
+
+bool TROPUSRLoader::LockTrophy(u32 id)
+{
+	if (id >= m_table6.size())
+	{
+		trp_log.warning("TROPUSRLoader::LockTrophy: Invalid id=%d", id);
+		return false;
+	}
+
+	m_table6[id].trophy_state = 0;
+	m_table6[id].timestamp1 = 0;
+	m_table6[id].timestamp2 = 0;
 
 	return true;
 }
