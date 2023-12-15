@@ -396,14 +396,16 @@ namespace stx
 		}
 
 		// Explicitly initialize object of type T possibly with dynamic type As and arguments
-		template <typename T, typename As = T, typename... Args>
+		template <typename T, typename As = T, typename... Args> requires (std::is_constructible_v<std::decay_t<As>, Args&&...>)
 		As* init(Args&&... args) noexcept
 		{
-			if (std::exchange(m_init[stx::typeindex<typeinfo, std::decay_t<T>, std::decay_t<As>>()], true))
+			if (m_init[stx::typeindex<typeinfo, std::decay_t<T>, std::decay_t<As>>()])
 			{
 				// Already exists, recreation is not supported (may be added later)
 				return nullptr;
 			}
+
+			m_init[stx::typeindex<typeinfo, std::decay_t<T>, std::decay_t<As>>()] = true;
 
 			As* obj = nullptr;
 
@@ -471,7 +473,7 @@ namespace stx
 		{
 			if (is_init<T>())
 			{
-				[[likely]] return &get<T>();
+				[[likely]] return std::addressof(get<T>());
 			}
 
 			[[unlikely]] return nullptr;
