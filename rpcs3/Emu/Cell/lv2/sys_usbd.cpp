@@ -552,17 +552,15 @@ bool usb_handler_thread::add_ldd(std::string_view product, u16 id_vendor, u16 id
 			{
 				if (!dev->open_device())
 				{
-					sys_usbd.error("Failed to open device for LDD(VID:0x%04x PID:0x%04x)", dev->device._device.idVendor, dev->device._device.idProduct);
+					sys_usbd.error("Failed to open USB device(VID=0x%04x, PID=0x%04x) for LDD <%s>", dev->device._device.idVendor, dev->device._device.idProduct, product);
 					continue;
 				}
 
 				dev->read_descriptors();
 				dev->assigned_number = dev_counter++; // assign current dev_counter, and atomically increment
-
-				sys_usbd.notice("Ldd device matchup for <%s>, assigned as handled_device=0x%x", product, dev->assigned_number);
-
 				handled_devices.emplace(dev->assigned_number, std::pair(UsbInternalDevice{0x00, narrow<u8>(dev->assigned_number), 0x02, 0x40}, dev));
 				send_message(SYS_USBD_ATTACH, dev->assigned_number);
+				sys_usbd.success("USB device(VID=0x%04x, PID=0x%04x) matches up with LDD <%s>, assigned as handled_device=0x%x", dev->device._device.idVendor, dev->device._device.idProduct, product, dev->assigned_number);
 			}
 		}
 
@@ -585,8 +583,8 @@ bool usb_handler_thread::remove_ldd(std::string_view product)
 			{
 				if (handled_devices.erase(dev->assigned_number))
 				{
-					sys_usbd.notice("Ldd device matchup for <%s>, removed 0x%x from handled_devices", iterator->first, dev->assigned_number);
 					send_message(SYS_USBD_DETACH, dev->assigned_number);
+					sys_usbd.success("USB device(VID=0x%04x, PID=0x%04x) matches up with LDD <%s>, unassigned handled_device=0x%x", dev->device._device.idVendor, dev->device._device.idProduct, product, dev->assigned_number);
 					dev->assigned_number = 0;
 				}
 			}
@@ -861,8 +859,12 @@ error_code sys_usbd_get_descriptor(ppu_thread& ppu, u32 handle, u32 device_handl
 		return CELL_EINVAL;
 	}
 
-	u8* ptr = static_cast<u8*>(descriptor.get_ptr());
-	usbh.handled_devices[device_handle].second->device.write_data(ptr);
+	if (!descriptor)
+	{
+		return CELL_EFAULT;
+	}
+
+	usbh.handled_devices[device_handle].second->device.write_data(reinterpret_cast<u8*>(descriptor.get_ptr()), desc_size);
 
 	return CELL_OK;
 }
@@ -1040,11 +1042,11 @@ error_code sys_usbd_detect_event(ppu_thread& ppu)
 	return CELL_OK;
 }
 
-error_code sys_usbd_attach(ppu_thread& ppu, u32 handle)
+error_code sys_usbd_attach(ppu_thread& ppu, u32 handle, u32 unk1, u32 unk2, u32 device_handle)
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_usbd.todo("sys_usbd_attach(handle=0x%x)", handle);
+	sys_usbd.todo("sys_usbd_attach(handle=0x%x, unk1=0x%x, unk2=0x%x, device_handle=0x%x)", handle, unk1, unk2, device_handle);
 	return CELL_OK;
 }
 
