@@ -73,7 +73,7 @@ error_code sys_usbd_open_default_pipe(ppu_thread& ppu, u32 handle, u32 device_ha
 error_code sys_usbd_close_pipe(ppu_thread& ppu, u32 handle, u32 pipe_handle);
 error_code sys_usbd_receive_event(ppu_thread& ppu, u32 handle, vm::ptr<u64> arg1, vm::ptr<u64> arg2, vm::ptr<u64> arg3);
 error_code sys_usbd_detect_event(ppu_thread& ppu);
-error_code sys_usbd_attach(ppu_thread& ppu, u32 handle);
+error_code sys_usbd_attach(ppu_thread& ppu, u32 handle, u32 unk1, u32 unk2, u32 device_handle);
 error_code sys_usbd_transfer_data(ppu_thread& ppu, u32 handle, u32 id_pipe, vm::ptr<u8> buf, u32 buf_size, vm::ptr<UsbDeviceRequest> request, u32 type_transfer);
 error_code sys_usbd_isochronous_transfer_data(ppu_thread& ppu, u32 handle, u32 id_pipe, vm::ptr<UsbDeviceIsoRequest> iso_request);
 error_code sys_usbd_get_transfer_status(ppu_thread& ppu, u32 handle, u32 id_transfer, u32 unk1, vm::ptr<u32> result, vm::ptr<u32> count);
