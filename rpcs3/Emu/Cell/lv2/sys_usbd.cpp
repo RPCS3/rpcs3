@@ -850,6 +850,11 @@ error_code sys_usbd_get_descriptor(ppu_thread& ppu, u32 handle, u32 device_handl
 
 	sys_usbd.trace("sys_usbd_get_descriptor(handle=0x%x, deviceNumber=0x%x, descriptor=0x%x, desc_size=0x%x)", handle, device_handle, descriptor, desc_size);
 
+	if (!descriptor)
+	{
+		return CELL_EINVAL;
+	}
+
 	auto& usbh = g_fxo->get<named_thread<usb_handler_thread>>();
 
 	std::lock_guard lock(usbh.mutex);
@@ -859,9 +864,9 @@ error_code sys_usbd_get_descriptor(ppu_thread& ppu, u32 handle, u32 device_handl
 		return CELL_EINVAL;
 	}
 
-	if (!descriptor)
+	if (!desc_size)
 	{
-		return CELL_EFAULT;
+		return CELL_ENOMEM;
 	}
 
 	usbh.handled_devices[device_handle].second->device.write_data(reinterpret_cast<u8*>(descriptor.get_ptr()), desc_size);
