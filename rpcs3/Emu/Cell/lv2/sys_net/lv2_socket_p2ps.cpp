@@ -74,6 +74,12 @@ public:
 		while (thread_ctrl::state() != thread_state::aborting)
 		{
 			std::unique_lock<std::mutex> lock(data_mutex);
+
+			if (thread_ctrl::state() == thread_state::aborting)
+			{
+				break;
+			}
+
 			if (msgs.size())
 				wakey.wait_until(lock, msgs.begin()->first);
 			else
@@ -150,6 +156,8 @@ public:
 
 	tcp_timeout_monitor& operator=(thread_state)
 	{
+		data_mutex.lock();
+		data_mutex.unlock();
 		wakey.notify_one();
 		return *this;
 	}
