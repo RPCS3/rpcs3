@@ -2465,6 +2465,7 @@ namespace rsx
 					texture_upload_context::shader_read, format_class, scale, extended_dimension };
 		}
 
+		// FIXME: This function is way too large and needs an urgent refactor.
 		template <typename surface_store_type, typename blitter_type, typename ...Args>
 		blit_op_result upload_scaled_image(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate, commandbuffer_type& cmd, surface_store_type& m_rtts, blitter_type& blitter, Args&&... extras)
 		{
@@ -2637,6 +2638,27 @@ namespace rsx
 				return true;
 			};
 
+			auto validate_fbo_integrity = [&](const utils::address_range& range, bool is_depth_texture)
+			{
+				const bool will_upload = is_depth_texture ? !!g_cfg.video.read_depth_buffer : !!g_cfg.video.read_color_buffers;
+				if (!will_upload)
+				{
+					// Give a pass. The data is lost anyway.
+					return true;
+				}
+
+				const bool should_be_locked = is_depth_texture ? !!g_cfg.video.write_depth_buffer : !!g_cfg.video.write_color_buffers;
+				if (!should_be_locked)
+				{
+					// Data is lost anyway.
+					return true;
+				}
+
+				// Optimal setup. We have ideal conditions presented so we can correctly decide what to do here.
+				const auto section = find_cached_texture(range, { .gcm_format = RSX_GCM_FORMAT_IGNORED }, false, false, false);
+				return section && section->is_locked();
+			};
+
 			// Check tiled mem
 			const auto dst_is_tiled = is_tiled_mem(utils::address_range::start_length(dst_address, dst.pitch * dst.clip_height));
 			const auto src_is_tiled = is_tiled_mem(utils::address_range::start_length(src_address, src.pitch * src.height));
@@ -2664,6 +2686,22 @@ namespace rsx
 
 				// Invalidate surfaces in range. Sample tests should catch overlaps in theory.
 				m_rtts.invalidate_range(utils::address_range::start_length(dst_address, dst.pitch* dst_h));
+			}
+
+			// FBO re-validation. It is common for GPU and CPU data to desync as we do not have a way to share memory pages directly between the two (in most setups)
+			// To avoid losing data, we need to do some gymnastics
+			if (src_is_render_target && !validate_fbo_integrity(src_subres.surface->get_memory_range(), src_subres.is_depth))
+			{
+				src_is_render_target = false;
+				src_subres.surface = nullptr;
+			}
+
+			if (dst_is_render_target && !validate_fbo_integrity(dst_subres.surface->get_memory_range(), dst_subres.is_depth))
+			{
+				// This is a lot more serious that the src case. We have to signal surface cache to reload the memory and discard what we have GPU-side.
+				// Do the transfer CPU side and we should eventually "read" the data on RCB/RDB barrier.
+				dst_subres.surface->invalidate_GPU_memory();
+				return false;
 			}
 
 			if (src_is_render_target)
