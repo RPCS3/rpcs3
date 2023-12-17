@@ -1377,7 +1377,6 @@ error_code cellRecClose(s32 isDiscard)
 				cellRec.error("cellRecClose: Unexpected recording mode %s found while stopping video capture.", old_mode);
 			}
 
-			g_fxo->need<utils::video_provider>();
 			utils::video_provider& video_provider = g_fxo->get<utils::video_provider>();
 
 			if (!video_provider.set_video_sink(nullptr, recording_mode::cell))
@@ -1465,7 +1464,6 @@ error_code cellRecStart()
 		// Setup a video sink if it is needed
 		if (rec.param.use_internal_video() || rec.param.use_internal_audio())
 		{
-			g_fxo->need<utils::video_provider>();
 			utils::video_provider& video_provider = g_fxo->get<utils::video_provider>();
 
 			if (rec.sink && !video_provider.set_video_sink(rec.sink, recording_mode::cell))

@@ -144,8 +144,10 @@ bool vfs::unmount(std::string_view vpath)
 
 	vfs_log.notice("About to unmount '%s'", vpath);
 
-	// Workaround
-	g_fxo->need<vfs_manager>();
+	if (!g_fxo->is_init<vfs_manager>())
+	{
+		return false;
+	}
 
 	auto& table = g_fxo->get<vfs_manager>();
 
