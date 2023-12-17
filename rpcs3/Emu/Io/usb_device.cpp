@@ -200,16 +200,14 @@ bool usb_device_emulated::open_device()
 
 u32 usb_device_emulated::get_descriptor(u8 type, u8 index, u8* buf, u32 buf_size)
 {
-	u32 expected_count = 2;
+	std::array<u8, 2> header;
+	header = {header.size(), type};
 
-	if (buf_size < expected_count)
-	{
-		sys_usbd.error("Illegal buf_size: get_descriptor(type=0x%02x, index=0x%02x, buf=*0x%x, buf_size=0x%x)", type, index, buf, buf_size);
-		return 0;
-	}
+	u32 expected_count = buf ? std::min<u32>(header.size(), buf_size) : 0;
+	memcpy(buf, header.data(), expected_count);
 
-	buf[0] = expected_count;
-	buf[1] = type;
+	if (expected_count < header.size())
+		return expected_count;
 
 	switch (type)
 	{
@@ -217,7 +215,7 @@ u32 usb_device_emulated::get_descriptor(u8 type, u8 index, u8* buf, u32 buf_size
 	{
 		buf[0] = device.bLength;
 		expected_count = std::min(device.bLength, ::narrow<u8>(buf_size));
-		memcpy(buf + 2, device.data, expected_count - 2);
+		memcpy(buf + header.size(), device.data, expected_count - header.size());
 		break;
 	}
 	case USB_DESCRIPTOR_CONFIG:
@@ -226,7 +224,7 @@ u32 usb_device_emulated::get_descriptor(u8 type, u8 index, u8* buf, u32 buf_size
 		{
 			buf[0] = device.subnodes[index].bLength;
 			expected_count = std::min(device.subnodes[index].bLength, ::narrow<u8>(buf_size));
-			memcpy(buf + 2, device.subnodes[index].data, expected_count - 2);
+			memcpy(buf + header.size(), device.subnodes[index].data, expected_count - header.size());
 		}
 		break;
 	}
@@ -236,19 +234,19 @@ u32 usb_device_emulated::get_descriptor(u8 type, u8 index, u8* buf, u32 buf_size
 		{
 			if (index == 0)
 			{
-				constexpr u8 len = sizeof(u16) + 2;
+				constexpr u8 len = sizeof(u16) + header.size();
 				buf[0] = len;
 				expected_count = std::min(len, ::narrow<u8>(buf_size));
 				constexpr le_t<u16> langid = 0x0409; // English (United States)
-				memcpy(buf + 2, &langid, expected_count - 2);
+				memcpy(buf + header.size(), &langid, expected_count - header.size());
 			}
 			else
 			{
 				const std::u16string u16str = utf8_to_utf16(strings[index - 1]);
-				const u8 len = static_cast<u8>(std::min(u16str.size() * sizeof(u16) + 2, static_cast<usz>(0xFF)));
+				const u8 len = static_cast<u8>(std::min(u16str.size() * sizeof(u16) + header.size(), static_cast<usz>(0xFF)));
 				buf[0] = len;
 				expected_count = std::min(len, ::narrow<u8>(std::min<u32>(255, buf_size)));
-				memcpy(buf + 2, u16str.data(), expected_count - 2);
+				memcpy(buf + header.size(), u16str.data(), expected_count - header.size());
 			}
 		}
 		break;
@@ -261,14 +259,7 @@ u32 usb_device_emulated::get_descriptor(u8 type, u8 index, u8* buf, u32 buf_size
 
 u32 usb_device_emulated::get_status(bool self_powered, bool remote_wakeup, u8* buf, u32 buf_size)
 {
-	constexpr u32 expected_count = sizeof(u16);
-
-	if (buf_size < expected_count)
-	{
-		sys_usbd.error("Illegal buf_size: get_status(self_powered=0x%02x, remote_wakeup=0x%02x, buf=*0x%x, buf_size=0x%x)", self_powered, remote_wakeup, buf, buf_size);
-		return 0;
-	}
-
+	const u32 expected_count = buf ? std::min<u32>(sizeof(u16), buf_size) : 0;
 	const u16 device_status = static_cast<int>(self_powered) | static_cast<int>(remote_wakeup) << 1;
 	memcpy(buf, &device_status, expected_count);
 	return expected_count;
