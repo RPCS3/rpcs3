@@ -219,65 +219,27 @@ namespace vm
 		return vm::addr_t{static_cast<u32>(uptr(ptr))};
 	}
 
-	template<typename T>
-	struct cast_impl
-	{
-		static_assert(std::is_same<T, u32>::value, "vm::cast() error: unsupported type");
-	};
-
-	template<>
-	struct cast_impl<u32>
-	{
-		static vm::addr_t cast(u32 addr,
-			u32,
-			u32,
-			const char*,
-			const char*)
-		{
-			return static_cast<vm::addr_t>(addr);
-		}
-	};
-
-	template<>
-	struct cast_impl<u64>
-	{
-		static vm::addr_t cast(u64 addr,
-			u32 line,
-			u32 col,
-			const char* file,
-			const char* func)
-		{
-			return static_cast<vm::addr_t>(::narrow<u32>(addr, line, col, file, func));
-		}
-	};
-
-	template<typename T, bool Se>
-	struct cast_impl<se_t<T, Se>>
-	{
-		static vm::addr_t cast(const se_t<T, Se>& addr,
-			u32 line,
-			u32 col,
-			const char* file,
-			const char* func)
-		{
-			return cast_impl<T>::cast(addr, line, col, file, func);
-		}
-	};
-
-	template<typename T>
+	template<typename T> requires (std::is_integral_v<decltype(+T{})> && (sizeof(+T{}) > 4 || std::is_signed_v<decltype(+T{})>))
 	vm::addr_t cast(const T& addr,
 		u32 line = __builtin_LINE(),
 		u32 col = __builtin_COLUMN(),
 		const char* file = __builtin_FILE(),
 		const char* func = __builtin_FUNCTION())
 	{
-		return cast_impl<T>::cast(addr, line, col, file, func);
+		return vm::addr_t{::narrow<u32>(+addr, line, col, file, func)};
+	}
+
+	template<typename T> requires (std::is_integral_v<decltype(+T{})> && (sizeof(+T{}) <= 4 && !std::is_signed_v<decltype(+T{})>))
+	vm::addr_t cast(const T& addr, u32 = 0, u32 = 0, const char* = nullptr, const char* = nullptr)
+	{
+		return vm::addr_t{static_cast<u32>(+addr)};
 	}
 
 	// Convert specified PS3/PSV virtual memory address to a pointer for common access
-	inline void* base(u32 addr)
+	template <typename T> requires (std::is_integral_v<decltype(+T{})>)
+	inline void* base(T addr)
 	{
-		return g_base_addr + addr;
+		return g_base_addr + static_cast<u32>(vm::cast(addr));
 	}
 
 	inline const u8& read8(u32 addr)
@@ -296,15 +258,15 @@ namespace vm
 	inline namespace ps3_
 	{
 		// Convert specified PS3 address to a pointer of specified (possibly converted to BE) type
-		template<typename T> inline to_be_t<T>* _ptr(u32 addr)
+		template <typename T, typename U> inline to_be_t<T>* _ptr(const U& addr)
 		{
 			return static_cast<to_be_t<T>*>(base(addr));
 		}
 
 		// Convert specified PS3 address to a reference of specified (possibly converted to BE) type
-		template<typename T> inline to_be_t<T>& _ref(u32 addr)
+		template <typename T, typename U> inline to_be_t<T>& _ref(const U& addr)
 		{
-			return *_ptr<T>(addr);
+			return *static_cast<to_be_t<T>*>(base(addr));
 		}
 
 		// Access memory bypassing memory protection
