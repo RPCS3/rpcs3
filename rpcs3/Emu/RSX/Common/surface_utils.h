@@ -448,6 +448,13 @@ namespace rsx
 		}
 #endif
 
+		void invalidate_GPU_memory()
+		{
+			// Here be dragons. Use with caution.
+			shuffle_tag();
+			state_flags |= rsx::surface_state_flags::erase_bkgnd;
+		}
+
 		void clear_rw_barrier()
 		{
 			for (auto &e : old_contents)
