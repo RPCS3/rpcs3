@@ -66,7 +66,7 @@ void hex_to_bytes(unsigned char* data, const char* hex_str, unsigned int str_len
 
 
 // Crypto functions (AES128-CBC, AES128-ECB, SHA1-HMAC and AES-CMAC).
-void aescbc128_decrypt(unsigned char *key, unsigned char *iv, unsigned char *in, unsigned char *out, int len)
+void aescbc128_decrypt(unsigned char *key, unsigned char *iv, unsigned char *in, unsigned char *out, usz len)
 {
 	aes_context ctx;
 	aes_setkey_dec(&ctx, key, 128);
@@ -76,7 +76,7 @@ void aescbc128_decrypt(unsigned char *key, unsigned char *iv, unsigned char *in,
 	memset(iv, 0, 0x10);
 }
 
-void aescbc128_encrypt(unsigned char *key, unsigned char *iv, unsigned char *in, unsigned char *out, int len)
+void aescbc128_encrypt(unsigned char *key, unsigned char *iv, unsigned char *in, unsigned char *out, usz len)
 {
 	aes_context ctx;
 	aes_setkey_enc(&ctx, key, 128);
@@ -93,7 +93,7 @@ void aesecb128_encrypt(unsigned char *key, unsigned char *in, unsigned char *out
 	aes_crypt_ecb(&ctx, AES_ENCRYPT, in, out);
 }
 
-bool hmac_hash_compare(unsigned char *key, int key_len, unsigned char *in, int in_len, unsigned char *hash, int hash_len)
+bool hmac_hash_compare(unsigned char *key, int key_len, unsigned char *in, usz in_len, unsigned char *hash, usz hash_len)
 {
 	const std::unique_ptr<u8[]> out(new u8[key_len]);
 
@@ -102,12 +102,12 @@ bool hmac_hash_compare(unsigned char *key, int key_len, unsigned char *in, int i
 	return std::memcmp(out.get(), hash, hash_len) == 0;
 }
 
-void hmac_hash_forge(unsigned char *key, int key_len, unsigned char *in, int in_len, unsigned char *hash)
+void hmac_hash_forge(unsigned char *key, int key_len, unsigned char *in, usz in_len, unsigned char *hash)
 {
 	sha1_hmac(key, key_len, in, in_len, hash);
 }
 
-bool cmac_hash_compare(unsigned char *key, int key_len, unsigned char *in, int in_len, unsigned char *hash, int hash_len)
+bool cmac_hash_compare(unsigned char *key, int key_len, unsigned char *in, usz in_len, unsigned char *hash, usz hash_len)
 {
 	const std::unique_ptr<u8[]> out(new u8[key_len]);
 
@@ -118,7 +118,7 @@ bool cmac_hash_compare(unsigned char *key, int key_len, unsigned char *in, int i
 	return std::memcmp(out.get(), hash, hash_len) == 0;
 }
 
-void cmac_hash_forge(unsigned char *key, int /*key_len*/, unsigned char *in, int in_len, unsigned char *hash)
+void cmac_hash_forge(unsigned char *key, int /*key_len*/, unsigned char *in, usz in_len, unsigned char *hash)
 {
 	aes_context ctx;
 	aes_setkey_enc(&ctx, key, 128);

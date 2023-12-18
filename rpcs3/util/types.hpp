@@ -1045,7 +1045,18 @@ template <typename CT> requires requires (const CT& x) { std::size(x); }
 	const char* file = __builtin_FILE(),
 	const char* func = __builtin_FUNCTION())
 {
-	return narrow<u32>(std::size(container), line, col, file, func);
+	// TODO: Supoort std::array
+	constexpr bool is_const = std::is_array_v<std::remove_cvref_t<CT>>;
+
+	if constexpr (is_const)
+	{
+		constexpr usz Size = sizeof(container) / sizeof(container[0]);
+		return std::conditional_t<is_const, u32, usz>{Size};
+	}
+	else
+	{
+		return narrow<u32>(std::size(container), line, col, file, func);
+	}
 }
 
 template <typename CT, typename T> requires requires (CT&& x) { std::size(x); std::data(x); } || requires (CT&& x) { std::size(x); x.front(); }
