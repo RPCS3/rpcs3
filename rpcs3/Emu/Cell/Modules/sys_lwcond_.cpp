@@ -195,7 +195,12 @@ error_code sys_lwcond_signal_to(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, u
 
 	if (g_cfg.core.hle_lwmutex)
 	{
-		return sys_cond_signal_to(ppu, lwcond->lwcond_queue, ppu_thread_id);
+		if (ppu_thread_id == u32{umax})
+		{
+			return sys_cond_signal(ppu, lwcond->lwcond_queue);
+		}
+
+		return sys_cond_signal_to(ppu, lwcond->lwcond_queue, static_cast<u32>(ppu_thread_id));
 	}
 
 	const vm::ptr<sys_lwmutex_t> lwmutex = lwcond->lwmutex;
