@@ -370,7 +370,7 @@ static void ppu_initialize_modules(ppu_linkage_info* link, utils::serial* ar = n
 
 				auto& variable = _module->variables;
 
-				for (u32 i = 0, end = ar.pop<usz>(); i < end; i++)
+				for (usz i = 0, end = ar.pop<usz>(); i < end; i++)
 				{
 					auto* ptr = &::at32(variable, ar.pop<u32>());
 					ptr->addr = ar.pop<u32>();
@@ -973,7 +973,7 @@ void ppu_manual_load_imports_exports(u32 imports_start, u32 imports_size, u32 ex
 	auto& link = g_fxo->get<ppu_linkage_info>();
 
 	ppu_module vm_all_fake_module{};
-	vm_all_fake_module.segs.emplace_back(ppu_segment{0x10000, -0x10000u, 1 /*LOAD*/, 0, -0x1000u, vm::base(0x10000)});
+	vm_all_fake_module.segs.emplace_back(ppu_segment{0x10000, 0 - 0x10000u, 1 /*LOAD*/, 0, 0 - 0x1000u, vm::base(0x10000)});
 	vm_all_fake_module.addr_to_seg_index.emplace(0x10000, 0);
 
 	ppu_load_exports(vm_all_fake_module, &link, exports_start, exports_start + exports_size, false, &loaded_flags);
@@ -1084,13 +1084,13 @@ static void ppu_check_patch_spu_images(const ppu_module& mod, const ppu_segment&
 
 	auto find_first_of_multiple = [](std::string_view data, std::initializer_list<std::string_view> values, usz index)
 	{
-		usz pos = umax;
+		u32 pos = static_cast<u32>(data.size());
 
 		for (std::string_view value : values)
 		{
 			if (usz pos0 = data.substr(index, pos - index).find(value); pos0 != umax && pos0 + index < pos)
 			{
-				pos = pos0 + index;
+				pos = static_cast<u32>(pos0 + index);
 			}
 		}
 
@@ -1102,9 +1102,9 @@ static void ppu_check_patch_spu_images(const ppu_module& mod, const ppu_segment&
 	// Search for [stqd lr,0x10(sp)] instruction or ELF file signature, whichever comes first
 	const std::initializer_list<std::string_view> prefixes = {"\177ELF"sv, "\x24\0\x40\x80"sv};
 
-	usz prev_bound = 0;
+	u32 prev_bound = 0;
 
-	for (usz i = find_first_of_multiple(seg_view, prefixes, 0); i < seg.size; i = find_first_of_multiple(seg_view, prefixes, utils::align<u32>(i + 1, 4)))
+	for (u32 i = find_first_of_multiple(seg_view, prefixes, 0); i < seg.size; i = find_first_of_multiple(seg_view, prefixes, utils::align<u32>(i + 1, 4)))
 	{
 		const auto elf_header = ensure(mod.get_ptr<u8>(seg.addr + i));
 
@@ -1358,7 +1358,7 @@ static void ppu_check_patch_spu_images(const ppu_module& mod, const ppu_segment&
 			ppu_loader.success("SPU executable hash: %s (<- %u)%s", hash, applied.size(), dump);
 		}
 
-		i += obj.highest_offset - 4;
+		i += ::narrow<u32>(obj.highest_offset) - 4;
 		prev_bound = i + 4;
 	}
 }
@@ -1424,7 +1424,7 @@ struct prx_names_table
 
 			// Doesn't support addresses above 256MB because it wastes memory and is very unlikely (if somehow does occur increase it)
 			const u32 max0 = (seg.addr + seg.size - 1) >> 16;
-			const u32 max = std::min<u32>(std::size(lut), max0);
+			const u32 max = std::min<u32>(::size32(lut), max0);
 
 			if (max0 > max)
 			{

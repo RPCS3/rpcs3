@@ -509,7 +509,7 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 			// Setup signature hash.
 			if ((edat->flags & EDAT_FLAG_0x20) != 0) //Sony failed again, they used buffer from 0x100 with half size of real metadata.
 			{
-				int metadata_buf_size = block_num * 0x10;
+				const usz metadata_buf_size = block_num * 0x10;
 				std::unique_ptr<u8[]> metadata_buf(new u8[metadata_buf_size]);
 				f->seek(file_offset + metadata_offset);
 				f->read(metadata_buf.get(), metadata_buf_size);
@@ -941,7 +941,7 @@ bool EDATADecrypter::ReadHeader()
 	}*/
 
 	file_size = edatHeader.file_size;
-	total_blocks = utils::aligned_div(edatHeader.file_size, edatHeader.block_size);
+	total_blocks = ::narrow<u32>(utils::aligned_div(edatHeader.file_size, edatHeader.block_size));
 
 	// Try decrypting the first block instead
 	u8 data_sample[1];
