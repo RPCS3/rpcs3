@@ -503,7 +503,9 @@ public:
 			else if constexpr (TupleAlike<T>)
 			{
 				static_assert(std::tuple_size_v<type> == 2, "Unimplemented tuple serialization!");
-				return type{ operator std::remove_cvref_t<decltype(std::get<0>(std::declval<type&>()))>
+
+				auto first = operator std::remove_cvref_t<decltype(std::get<0>(std::declval<type&>()))>();
+				return type{ std::move(first)
 					, operator std::remove_cvref_t<decltype(std::get<1>(std::declval<type&>()))> };
 			}
 		}
