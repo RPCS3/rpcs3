@@ -31,8 +31,10 @@ std::string wchar_to_utf8(std::wstring_view src)
 #endif
 }
 
+#ifndef _MSC_VER
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
 std::string utf16_to_utf8(std::u16string_view src)
 {
 	std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> converter{};
@@ -44,7 +46,9 @@ std::u16string utf8_to_utf16(std::string_view src)
 	std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> converter{};
 	return converter.from_bytes(src.data());
 }
+#ifndef _MSC_VER
 #pragma GCC diagnostic pop
+#endif
 
 std::wstring utf8_to_wchar(std::string_view src)
 {
