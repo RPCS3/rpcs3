@@ -11,6 +11,7 @@
 #include <QSpinBox>
 #include <QTimer>
 #include <QScreen>
+#include <QStyleFactory>
 
 #include "gui_settings.h"
 #include "display_sleep_control.h"
@@ -2412,6 +2413,13 @@ void settings_dialog::AddStylesheets()
 	ui->combo_stylesheets->clear();
 
 	ui->combo_stylesheets->addItem(tr("None", "Stylesheets"), gui::NoStylesheet);
+
+	for (const QString& key : QStyleFactory::keys())
+	{
+		// Variant value: "native (<style>)"
+		ui->combo_stylesheets->addItem(tr("Native (%0)", "Stylesheets").arg(key), QString("%0 (%1)").arg(gui::NativeStylesheet, key));
+	}
+
 	ui->combo_stylesheets->addItem(tr("Default (Bright)", "Stylesheets"), gui::DefaultStylesheet);
 
 	for (const QString& entry : m_gui_settings->GetStylesheetEntries())
