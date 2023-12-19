@@ -1047,6 +1047,19 @@ int main(int argc, char** argv)
 				return 1;
 			}
 		}
+
+		// Check nonsensical archive locations
+		for (const std::string& expr : { "/Rar$" })
+		{
+			if (emu_dir.find(expr) != umax)
+			{
+				report_fatal_error(fmt::format(
+					"RPCS3 should never be run from an archive!\n"
+					"Please install RPCS3 in a persistent location.\n"
+					"Current location:\n%s", emu_dir));
+				return 1;
+			}
+		}
 	}
 
 // Set timerslack value for Linux. The default value is 50,000ns. Change this to just 1 since we value precise timers.
