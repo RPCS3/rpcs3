@@ -531,13 +531,19 @@ error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_pat
 			{
 				const std::string rap_file = rpcs3::utils::get_rap_file_path(npd.content_id);
 
-				if (fs::file rap_fd{rap_file}; rap_fd && rap_fd.size() >= sizeof(u128))
+				if (fs::file rap_fd{rap_file})
 				{
+					if (rap_fd.size() < sizeof(u128))
+					{
+						sceNp.error("npDrmIsAvailable(): Rap file too small: '%s' (%d bytes)", rap_file, rap_fd.size());
+						return {SCE_NP_DRM_ERROR_BAD_FORMAT, enc_drm_path};
+					}
+
 					npdrmkeys.install_decryption_key(GetEdatRifKeyFromRapFile(rap_fd));
 				}
 				else
 				{
-					sceNp.error(u8"npDrmIsAvailable(): Rap file not found: “%s”", rap_file);
+					sceNp.error("npDrmIsAvailable(): Rap file not found: '%s' (%s)", rap_file, fs::g_tls_error);
 					return {SCE_NP_DRM_ERROR_LICENSE_NOT_FOUND, enc_drm_path};
 				}
 			}
