@@ -1116,7 +1116,9 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 
 	QAction* configure = menu.addAction(gameinfo->hasCustomConfig
 		? tr("&Change Custom Configuration")
-		: tr("&Create Custom Configuration"));
+		: tr("&Create Custom Configuration From Global Settings"));
+	QAction* create_game_default_config = gameinfo->hasCustomConfig ? nullptr
+		: menu.addAction(tr("&Create Custom Configuration From Default Settings"));
 	QAction* pad_configure = menu.addAction(gameinfo->hasCustomPadConfig
 		? tr("&Change Custom Gamepad Configuration")
 		: tr("&Create Custom Gamepad Configuration"));
@@ -1422,9 +1424,11 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		sys_log.notice("Booting from gamelist per context menu...");
 		Q_EMIT RequestBoot(gameinfo, cfg_mode::global);
 	});
-	connect(configure, &QAction::triggered, this, [this, current_game, gameinfo]()
+
+	auto configure_l = [this, current_game, gameinfo](bool create_cfg_from_global_cfg)
 	{
-		settings_dialog dlg(m_gui_settings, m_emu_settings, 0, this, &current_game);
+		settings_dialog dlg(m_gui_settings, m_emu_settings, 0, this, &current_game, create_cfg_from_global_cfg);
+
 		connect(&dlg, &settings_dialog::EmuSettingsApplied, [this, gameinfo]()
 		{
 			if (!gameinfo->hasCustomConfig)
@@ -1434,8 +1438,20 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			}
 			Q_EMIT NotifyEmuSettingsChange();
 		});
+
 		dlg.exec();
-	});
+	};
+
+	if (create_game_default_config)
+	{
+		connect(configure, &QAction::triggered, this, [configure_l]() { configure_l(true); });
+		connect(create_game_default_config, &QAction::triggered, this, [configure_l = std::move(configure_l)]() { configure_l(false); });
+	}
+	else
+	{
+		connect(configure, &QAction::triggered, this, [configure_l = std::move(configure_l)]() { configure_l(true); });
+	}
+
 	connect(pad_configure, &QAction::triggered, this, [this, current_game, gameinfo]()
 	{
 		pad_settings_dialog dlg(m_gui_settings, this, &current_game);
