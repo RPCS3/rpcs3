@@ -91,7 +91,7 @@ bool emu_settings::Init()
 	return true;
 }
 
-void emu_settings::LoadSettings(const std::string& title_id)
+void emu_settings::LoadSettings(const std::string& title_id, bool create_config_from_global)
 {
 	m_title_id = title_id;
 
@@ -113,21 +113,25 @@ void emu_settings::LoadSettings(const std::string& title_id)
 			.arg(QString::fromStdString(default_error)), QMessageBox::Ok);
 	}
 
-	// Add global config
-	const std::string global_config_path = fs::get_config_dir() + "config.yml";
-	fs::file config(global_config_path, fs::read + fs::write + fs::create);
-	auto [global_config, global_error] = yaml_load(config.to_string());
-	config.close();
+	if (create_config_from_global)
+	{
+		// Add global config
+		const std::string global_config_path = fs::get_config_dir() + "config.yml";
+		fs::g_tls_error = fs::error::ok;
+		fs::file config(global_config_path, fs::read + fs::create);
+		auto [global_config, global_error] = yaml_load(config ? config.to_string() : "");
 
-	if (global_error.empty())
-	{
-		m_current_settings += global_config;
-	}
-	else
-	{
-		cfg_log.fatal("Failed to load global config %s:\n%s", global_config_path, global_error);
-		QMessageBox::critical(nullptr, tr("Config Error"), tr("Failed to load global config:\nFile: %0\nError: %1")
-			.arg(QString::fromStdString(global_config_path)).arg(QString::fromStdString(global_error)), QMessageBox::Ok);
+		if (config && global_error.empty())
+		{
+			m_current_settings += global_config;
+		}
+		else
+		{
+			config.close();
+			cfg_log.fatal("Failed to load global config %s:\n%s (%s)", global_config_path, global_error, fs::g_tls_error);
+			QMessageBox::critical(nullptr, tr("Config Error"), tr("Failed to load global config:\nFile: %0\nError: %1")
+				.arg(QString::fromStdString(global_config_path)).arg(QString::fromStdString(global_error)), QMessageBox::Ok);
+		}
 	}
 
 	// Add game config
@@ -146,7 +150,7 @@ void emu_settings::LoadSettings(const std::string& title_id)
 
 		if (!custom_config_path.empty())
 		{
-			if ((config = fs::file(custom_config_path, fs::read + fs::write)))
+			if (fs::file config{custom_config_path})
 			{
 				auto [custom_config, custom_error] = yaml_load(config.to_string());
 				config.close();
@@ -161,6 +165,12 @@ void emu_settings::LoadSettings(const std::string& title_id)
 					QMessageBox::critical(nullptr, tr("Config Error"), tr("Failed to load custom config:\nFile: %0\nError: %1")
 						.arg(QString::fromStdString(custom_config_path)).arg(QString::fromStdString(custom_error)), QMessageBox::Ok);
 				}
+			}
+			else if (fs::g_tls_error != fs::error::noent)
+			{
+				cfg_log.fatal("Failed to load custom config %s (file error: %s)", custom_config_path, fs::g_tls_error);
+					QMessageBox::critical(nullptr, tr("Config Error"), tr("Failed to load custom config:\nFile: %0\nError: %1")
+						.arg(QString::fromStdString(custom_config_path)).arg(QString::fromStdString(fmt::format("%s", fs::g_tls_error))), QMessageBox::Ok);
 			}
 		}
 	}
