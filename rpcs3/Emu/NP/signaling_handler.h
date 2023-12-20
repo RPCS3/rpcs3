@@ -5,7 +5,6 @@
 #include "Emu/Cell/Modules/sceNp2.h"
 #include "Utilities/Thread.h"
 #include <unordered_map>
-#include <condition_variable>
 #include <chrono>
 #include <optional>
 
@@ -134,8 +133,8 @@ private:
 	void retire_all_packets(std::shared_ptr<signaling_info>& si);
 	void stop_sig_nl(u32 conn_id);
 
-	std::mutex data_mutex;
-	std::condition_variable wakey;
+	shared_mutex data_mutex;
+	atomic_t<u32> wakey;
 
 	signaling_packet sig_packet{};
 
