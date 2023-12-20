@@ -36,6 +36,7 @@
 #include <QFileInfo>
 #include <QMessageBox>
 #include <QTextDocument>
+#include <QStyleFactory>
 
 #include <clocale>
 
@@ -746,13 +747,54 @@ void gui_application::OnChangeStyleSheetRequest()
 
 	const QString stylesheet_name = m_gui_settings->GetValue(gui::m_currentStylesheet).toString();
 
+	// Reset style to default before doing anything else, or we will get unexpected effects in custom stylesheets.
+	if (const QStringList styles = QStyleFactory::keys(); !styles.empty())
+	{
+		// The first style is the default style according to the Qt docs.
+		if (QStyle* style = QStyleFactory::create(styles.front()))
+		{
+			setStyle(style);
+		}
+	}
+
+	const auto match_native_style = [&stylesheet_name]() -> QString
+	{
+		// Search for "native (<style>)"
+		static const QRegularExpression expr(gui::NativeStylesheet + " \\((?<style>.*)\\)");
+		const QRegularExpressionMatch match = expr.match(stylesheet_name);
+
+		if (match.hasMatch())
+		{
+			return match.captured("style");
+		}
+
+		return {};
+	};
+
+	gui_log.notice("Changing stylesheet to '%s'", stylesheet_name);
+
 	if (stylesheet_name.isEmpty() || stylesheet_name == gui::DefaultStylesheet)
 	{
+		gui_log.notice("Using default stylesheet");
 		setStyleSheet(gui::stylesheets::default_style_sheet);
 	}
 	else if (stylesheet_name == gui::NoStylesheet)
 	{
+		gui_log.notice("Using empty style");
 		setStyleSheet("/* none */");
+	}
+	else if (const QString native_style = match_native_style(); !native_style.isEmpty())
+	{
+		if (QStyle* style = QStyleFactory::create(native_style))
+		{
+			gui_log.notice("Using native style '%s'", native_style);
+			setStyleSheet("/* none */");
+			setStyle(style);
+		}
+		else
+		{
+			gui_log.error("Failed to set stylesheet: Native style '%s' not available", native_style);
+		}
 	}
 	else
 	{

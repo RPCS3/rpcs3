@@ -89,6 +89,7 @@ namespace gui
 	const QString Settings = "CurrentSettings";
 	const QString DefaultStylesheet = "default";
 	const QString NoStylesheet = "none";
+	const QString NativeStylesheet = "native";
 
 	const QString main_window  = "main_window";
 	const QString game_list    = "GameList";
