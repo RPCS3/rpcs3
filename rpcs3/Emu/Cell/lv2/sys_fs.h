@@ -632,9 +632,6 @@ CHECK_SIZE(CellFsMountInfo, 0x94);
 // Default IO container
 struct default_sys_fs_container
 {
-	default_sys_fs_container(const default_sys_fs_container&) = delete;
-	default_sys_fs_container& operator=(const default_sys_fs_container&) = delete;
-
 	shared_mutex mutex;
 	u32 id   = 0;
 	u32 cap  = 0;
