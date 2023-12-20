@@ -344,16 +344,21 @@ void signaling_handler::process_incoming_messages()
 
 void signaling_handler::operator()()
 {
+	atomic_wait_timeout timeout = atomic_wait_timeout::inf;
+
 	while (thread_ctrl::state() != thread_state::aborting)
 	{
-		std::unique_lock<std::mutex> lock(data_mutex);
-		if (!qpackets.empty())
-			wakey.wait_until(lock, qpackets.begin()->first);
-		else
-			wakey.wait(lock);
+		if (!wakey)
+		{
+			wakey.wait(0, timeout);
+		}
+
+		wakey = 0;
 
 		if (thread_ctrl::state() == thread_state::aborting)
 			return;
+
+		std::lock_guard lock(data_mutex);
 
 		process_incoming_messages();
 
@@ -416,16 +421,36 @@ void signaling_handler::operator()()
 			it++;
 			reschedule_packet(si, cmd, now + delay);
 		}
+
+		if (!qpackets.empty())
+		{
+			const auto current_timepoint = steady_clock::now();
+			const auto expected_timepoint = qpackets.begin()->first;
+			if (current_timepoint > expected_timepoint)
+			{
+				wakey = 1;
+			}
+			else
+			{
+				timeout = static_cast<atomic_wait_timeout>(std::chrono::duration_cast<std::chrono::nanoseconds>(expected_timepoint - current_timepoint).count());
+			}
+		}
+		else
+		{
+			timeout = atomic_wait_timeout::inf;
+		}
 	}
 }
 
 void signaling_handler::wake_up()
 {
+	wakey.release(1);
 	wakey.notify_one();
 }
 
 signaling_handler& signaling_handler::operator=(thread_state)
 {
+	wakey.release(1);
 	wakey.notify_one();
 	return *this;
 }
