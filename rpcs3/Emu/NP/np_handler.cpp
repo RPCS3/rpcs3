@@ -410,6 +410,8 @@ namespace np
 			if (g_cfg.net.upnp_enabled)
 				upnp.upnp_enable();
 		}
+
+		init_np_handler_dependencies();
 	}
 
 	np_handler::np_handler(utils::serial& ar)
