@@ -747,14 +747,31 @@ void gui_application::OnChangeStyleSheetRequest()
 
 	const QString stylesheet_name = m_gui_settings->GetValue(gui::m_currentStylesheet).toString();
 
-	// Reset style to default before doing anything else, or we will get unexpected effects in custom stylesheets.
-	if (const QStringList styles = QStyleFactory::keys(); !styles.empty())
+	// Determine default style
+	if (m_default_style.isEmpty())
 	{
-		// The first style is the default style according to the Qt docs.
-		if (QStyle* style = QStyleFactory::create(styles.front()))
+		// Use the initial style as default style
+		if (const QStyle* style = QApplication::style())
 		{
-			setStyle(style);
+			m_default_style = style->name();
+			gui_log.notice("Determined '%s' as default style", m_default_style);
 		}
+
+		// Fallback to the first style, which is supposed to be the default style according to the Qt docs.
+		if (m_default_style.isEmpty())
+		{
+			if (const QStringList styles = QStyleFactory::keys(); !styles.empty())
+			{
+				m_default_style = styles.front();
+				gui_log.notice("Determined '%s' as default style (first style available)", m_default_style);
+			}
+		}
+	}
+
+	// Reset style to default before doing anything else, or we will get unexpected effects in custom stylesheets.
+	if (QStyle* style = QStyleFactory::create(m_default_style))
+	{
+		setStyle(style);
 	}
 
 	const auto match_native_style = [&stylesheet_name]() -> QString

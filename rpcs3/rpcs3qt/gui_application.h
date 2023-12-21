@@ -94,6 +94,8 @@ private:
 	std::shared_ptr<gui_settings> m_gui_settings;
 	std::shared_ptr<persistent_settings> m_persistent_settings;
 
+	QString m_default_style;
+
 	bool m_show_gui = true;
 	bool m_use_cli_style = false;
 	bool m_with_cli_boot = false;
