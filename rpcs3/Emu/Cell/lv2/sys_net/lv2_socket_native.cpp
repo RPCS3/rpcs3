@@ -59,8 +59,10 @@ lv2_socket_native::~lv2_socket_native()
 
 	if (bound_port)
 	{
-		auto& nph = g_fxo->get<named_thread<np::np_handler>>();
-		nph.upnp_remove_port_mapping(bound_port, type == SYS_NET_SOCK_STREAM ? "TCP" : "UDP");
+		if (auto* nph = g_fxo->try_get<named_thread<np::np_handler>>())
+		{
+			nph->upnp_remove_port_mapping(bound_port, type == SYS_NET_SOCK_STREAM ? "TCP" : "UDP");
+		}
 		bound_port = 0;
 	}
 }
