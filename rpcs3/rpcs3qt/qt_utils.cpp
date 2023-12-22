@@ -174,9 +174,28 @@ namespace gui
 			}
 			return res;
 		}
-
-		QColor get_label_color(const QString& object_name, QPalette::ColorRole color_role)
+		
+		QColor get_foreground_color()
 		{
+			QLabel dummy_color;
+			dummy_color.ensurePolished();
+			return dummy_color.palette().color(QPalette::ColorRole::WindowText);
+		}
+
+		QColor get_background_color()
+		{
+			QLabel dummy_color;
+			dummy_color.ensurePolished();
+			return dummy_color.palette().color(QPalette::ColorRole::Window);
+		}
+
+		QColor get_label_color(const QString& object_name, const QColor& fallback_light, const QColor& fallback_dark, QPalette::ColorRole color_role)
+		{
+			if (!gui::custom_stylesheet_active || !gui::stylesheet.contains(object_name))
+			{
+				return dark_mode_active() ? fallback_dark : fallback_light;
+			}
+
 			QLabel dummy_color;
 			dummy_color.setObjectName(object_name);
 			dummy_color.ensurePolished();
@@ -200,7 +219,7 @@ namespace gui
 
 		QColor get_link_color(const QString& name)
 		{
-			return gui::utils::get_label_color(name);
+			return gui::utils::get_label_color(name, QColor(0, 116, 231), QColor(135, 206, 250));
 		}
 
 		QString get_link_color_string(const QString& name)
@@ -210,11 +229,6 @@ namespace gui
 
 		QString get_link_style(const QString& name)
 		{
-			if (!gui::stylesheet.contains(name))
-			{
-				return {};
-			}
-
 			return QString("style=\"color: %0;\"").arg(get_link_color_string(name));
 		}
 

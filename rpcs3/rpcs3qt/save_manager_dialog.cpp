@@ -310,7 +310,7 @@ void save_manager_dialog::UpdateList()
 	}
 	else
 	{
-		m_icon_color = gui::utils::get_label_color("save_manager_icon_background_color");
+		m_icon_color = gui::utils::get_label_color("save_manager_icon_background_color", Qt::transparent, Qt::transparent);
 	}
 
 	QPixmap placeholder(320, 176);

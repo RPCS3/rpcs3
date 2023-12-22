@@ -493,7 +493,7 @@ void trophy_manager_dialog::RepaintUI(bool restore_layout)
 	}
 	else
 	{
-		m_game_icon_color = gui::utils::get_label_color("trophy_manager_icon_background_color");
+		m_game_icon_color = gui::utils::get_label_color("trophy_manager_icon_background_color", Qt::transparent, Qt::transparent);
 	}
 
 	PopulateGameTable();

@@ -1684,7 +1684,8 @@ void main_window::SaveWindowState() const
 
 void main_window::RepaintThumbnailIcons()
 {
-	[[maybe_unused]] const QColor new_color = gui::utils::get_label_color("thumbnail_icon_color");
+	const QColor color = gui::utils::get_foreground_color();
+	[[maybe_unused]] const QColor new_color = gui::utils::get_label_color("thumbnail_icon_color", color, color);
 
 	[[maybe_unused]] const auto icon = [&new_color](const QString& path)
 	{
@@ -1707,23 +1708,13 @@ void main_window::RepaintThumbnailIcons()
 
 void main_window::RepaintToolBarIcons()
 {
+	const QColor color = gui::utils::get_foreground_color();
+
 	std::map<QIcon::Mode, QColor> new_colors{};
-	new_colors[QIcon::Normal] = gui::utils::get_label_color("toolbar_icon_color");
-
-	const QString sheet = static_cast<QApplication *>(QCoreApplication::instance())->styleSheet();
-
-	if (sheet.contains("toolbar_icon_color_disabled"))
-	{
-		new_colors[QIcon::Disabled] = gui::utils::get_label_color("toolbar_icon_color_disabled");
-	}
-	if (sheet.contains("toolbar_icon_color_active"))
-	{
-		new_colors[QIcon::Active] = gui::utils::get_label_color("toolbar_icon_color_active");
-	}
-	if (sheet.contains("toolbar_icon_color_selected"))
-	{
-		new_colors[QIcon::Selected] = gui::utils::get_label_color("toolbar_icon_color_selected");
-	}
+	new_colors[QIcon::Normal] = gui::utils::get_label_color("toolbar_icon_color", color, color);
+	new_colors[QIcon::Disabled] = gui::utils::get_label_color("toolbar_icon_color_disabled", Qt::gray, Qt::lightGray);
+	new_colors[QIcon::Active] = gui::utils::get_label_color("toolbar_icon_color_active", color, color);
+	new_colors[QIcon::Selected] = gui::utils::get_label_color("toolbar_icon_color_selected", color, color);
 
 	const auto icon = [&new_colors](const QString& path)
 	{
