@@ -32,8 +32,8 @@ patch_creator_dialog::patch_creator_dialog(QWidget* parent)
 	: QDialog(parent)
 	, ui(new Ui::patch_creator_dialog)
 	, mMonoFont(QFontDatabase::systemFont(QFontDatabase::FixedFont))
-	, mValidColor(gui::utils::get_label_color("log_level_success"))
-	, mInvalidColor(gui::utils::get_label_color("log_level_error"))
+	, mValidColor(gui::utils::get_label_color("log_level_success", Qt::darkGreen, Qt::green))
+	, mInvalidColor(gui::utils::get_label_color("log_level_error", Qt::red, Qt::red))
 	, m_offset_validator(new QRegularExpressionValidator(QRegularExpression("^(0[xX])?[a-fA-F0-9]{0,8}$"), this))
 {
 	ui->setupUi(this);
@@ -120,7 +120,7 @@ void patch_creator_dialog::init_patch_type_bombo_box(QComboBox* combo_box, patch
 	}
 }
 
-QComboBox* patch_creator_dialog::create_patch_type_bombo_box(patch_type set_type)
+QComboBox* patch_creator_dialog::create_patch_type_bombo_box(patch_type set_type) const
 {
 	QComboBox* combo_box = new QComboBox;
 	init_patch_type_bombo_box(combo_box, set_type, true);
@@ -208,7 +208,7 @@ void patch_creator_dialog::show_table_menu(const QPoint& pos)
 	menu.exec(ui->instructionTable->viewport()->mapToGlobal(pos));
 }
 
-void patch_creator_dialog::update_validator(int index, QComboBox* combo_box, QLineEdit* line_edit)
+void patch_creator_dialog::update_validator(int index, QComboBox* combo_box, QLineEdit* line_edit) const
 {
 	if (index < 0 || !combo_box || !line_edit || !combo_box->itemData(index).canConvert<patch_type>())
 	{

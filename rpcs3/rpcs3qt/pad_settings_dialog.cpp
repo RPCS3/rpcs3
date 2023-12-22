@@ -214,7 +214,8 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 	QPainter painter(&controller_pixmap);
 	painter.setRenderHints(QPainter::TextAntialiasing | QPainter::Antialiasing | QPainter::SmoothPixmapTransform);
 	renderer.render(&painter, controller_pixmap.rect());
-	ui->l_controller->setPixmap(gui::utils::get_colorized_pixmap(controller_pixmap, QColor(), gui::utils::get_label_color("l_controller"), false, true));
+	const QColor color = gui::utils::get_foreground_color();
+	ui->l_controller->setPixmap(gui::utils::get_colorized_pixmap(controller_pixmap, QColor(), gui::utils::get_label_color("l_controller", color, color), false, true));
 
 	// Show default widgets first in order to calculate the required size for the scroll area (see pad_settings_dialog::ResizeDialog)
 	ui->left_stack->setCurrentIndex(0);

@@ -2344,7 +2344,7 @@ void game_list_frame::RepaintIcons(const bool& from_settings)
 		}
 		else
 		{
-			m_icon_color = gui::utils::get_label_color("gamelist_icon_background_color");
+			m_icon_color = gui::utils::get_label_color("gamelist_icon_background_color", Qt::transparent, Qt::transparent);
 		}
 	}
 
