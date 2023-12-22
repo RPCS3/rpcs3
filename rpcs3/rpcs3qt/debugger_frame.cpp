@@ -199,10 +199,12 @@ void debugger_frame::ChangeColors() const
 {
 	if (m_debugger_list)
 	{
-		m_debugger_list->m_color_bp = m_breakpoint_list->m_color_bp = gui::utils::get_label_color("debugger_frame_breakpoint", QPalette::Window);
-		m_debugger_list->m_color_pc = gui::utils::get_label_color("debugger_frame_pc", QPalette::Window);
-		m_debugger_list->m_text_color_bp = m_breakpoint_list->m_text_color_bp = gui::utils::get_label_color("debugger_frame_breakpoint");
-		m_debugger_list->m_text_color_pc = gui::utils::get_label_color("debugger_frame_pc");
+		const QColor color = gui::utils::get_foreground_color();
+
+		m_debugger_list->m_color_bp = m_breakpoint_list->m_color_bp = gui::utils::get_label_color("debugger_frame_breakpoint", Qt::yellow, Qt::darkYellow, QPalette::Window);
+		m_debugger_list->m_color_pc = gui::utils::get_label_color("debugger_frame_pc", Qt::green, Qt::darkGreen, QPalette::Window);
+		m_debugger_list->m_text_color_bp = m_breakpoint_list->m_text_color_bp = gui::utils::get_label_color("debugger_frame_breakpoint", color, color);
+		m_debugger_list->m_text_color_pc = gui::utils::get_label_color("debugger_frame_pc", color, color);
 	}
 }
 

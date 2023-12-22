@@ -55,14 +55,16 @@ void Highlighter::highlightBlock(const QString &text)
 
 LogHighlighter::LogHighlighter(QTextDocument* parent) : Highlighter(parent)
 {
-	//addRule("^[^·].*$", gui::utils::get_label_color("log_level_always")); // unused for now
-	addRule("^·F.*$", gui::utils::get_label_color("log_level_fatal"));
-	addRule("^·E.*$", gui::utils::get_label_color("log_level_error"));
-	addRule("^·U.*$", gui::utils::get_label_color("log_level_todo"));
-	addRule("^·S.*$", gui::utils::get_label_color("log_level_success"));
-	addRule("^·W.*$", gui::utils::get_label_color("log_level_warning"));
-	addRule("^·!.*$", gui::utils::get_label_color("log_level_notice"));
-	addRule("^·T.*$", gui::utils::get_label_color("log_level_trace"));
+	const QColor color = gui::utils::get_foreground_color();
+
+	//addRule("^[^·].*$", gui::utils::get_label_color("log_level_always", Qt::darkCyan, Qt::cyan)); // unused for now
+	addRule("^·F.*$", gui::utils::get_label_color("log_level_fatal", Qt::darkMagenta, Qt::magenta));
+	addRule("^·E.*$", gui::utils::get_label_color("log_level_error", Qt::red, Qt::red));
+	addRule("^·U.*$", gui::utils::get_label_color("log_level_todo", Qt::darkYellow, Qt::darkYellow));
+	addRule("^·S.*$", gui::utils::get_label_color("log_level_success", Qt::darkGreen, Qt::green));
+	addRule("^·W.*$", gui::utils::get_label_color("log_level_warning", Qt::darkYellow, Qt::darkYellow));
+	addRule("^·!.*$", gui::utils::get_label_color("log_level_notice", color, color));
+	addRule("^·T.*$", gui::utils::get_label_color("log_level_trace", color, color));
 }
 
 AsmHighlighter::AsmHighlighter(QTextDocument *parent) : Highlighter(parent)
