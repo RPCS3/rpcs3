@@ -90,11 +90,6 @@ nt_p2p_port::~nt_p2p_port()
 		::close(p2p_socket);
 #endif
 	}
-
-	if (auto* nph = g_fxo->try_get<named_thread<np::np_handler>>())
-	{
-		nph->upnp_remove_port_mapping(port, "UDP");
-	}
 }
 
 void nt_p2p_port::dump_packet(p2ps_encapsulated_tcp* tcph)
