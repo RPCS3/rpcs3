@@ -135,7 +135,12 @@ namespace stx
 			// Destroy objects in reverse order
 			for (; _max; _max--)
 			{
-				(*--m_info)->destroy(*--m_order);
+				auto* info = *--m_info;
+				const u32 type_index = static_cast<const type_info<typeinfo>*>(info)->index();
+				info->destroy(*--m_order);
+
+				// Set init to false. We don't want other fxo to use this fxo in their destructor.
+				m_init[type_index] = false;
 			}
 
 			// Pointers should be restored to their positions
