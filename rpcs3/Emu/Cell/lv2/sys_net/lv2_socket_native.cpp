@@ -56,15 +56,6 @@ lv2_socket_native::~lv2_socket_native()
 		::close(socket);
 #endif
 	}
-
-	if (bound_port)
-	{
-		if (auto* nph = g_fxo->try_get<named_thread<np::np_handler>>())
-		{
-			nph->upnp_remove_port_mapping(bound_port, type == SYS_NET_SOCK_STREAM ? "TCP" : "UDP");
-		}
-		bound_port = 0;
-	}
 }
 
 s32 lv2_socket_native::create_socket()
