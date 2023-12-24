@@ -4,6 +4,7 @@
 #include "rsx_utils.h"
 #include "rsx_decode.h"
 #include "Common/time.hpp"
+#include "Common/tiled_dma_copy.hpp"
 #include "Core/RSXReservationLock.hpp"
 #include "Emu/Cell/PPUCallback.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
@@ -1677,6 +1678,42 @@ namespace rsx
 			}
 		}
 
+		std::vector<u8> _mirror_transform(const blit_src_info& src, bool flip_x, bool flip_y)
+		{
+			std::vector<u8> temp1;
+			if (!flip_x && !flip_y)
+			{
+				return temp1;
+			}
+
+			const u32 packed_pitch = src.width * src.bpp;
+			temp1.resize(packed_pitch * src.height);
+
+			const s32 stride_y = (flip_y ? -1 : 1) * static_cast<s32>(src.pitch);
+
+			for (u32 y = 0; y < src.height; ++y)
+			{
+				u8* dst_pixels = temp1.data() + (packed_pitch * y);
+				u8* src_pixels = src.pixels + (static_cast<s32>(y) * stride_y);
+
+				if (flip_x)
+				{
+					if (src.bpp == 4) [[ likely ]]
+						{
+							rsx::memcpy_r<u32>(dst_pixels, src_pixels, src.width);
+							continue;
+						}
+
+						rsx::memcpy_r<u16>(dst_pixels, src_pixels, src.width);
+						continue;
+				}
+
+				std::memcpy(dst_pixels, src_pixels, packed_pitch);
+			}
+
+			return temp1;
+		}
+
 		void image_in(thread* rsx, u32 /*reg*/, u32 /*arg*/)
 		{
 			auto [success, src, dst] = _decode_transfer_registers(rsx);
@@ -1703,40 +1740,16 @@ namespace rsx
 				return;
 			}
 
-			std::vector<u8> temp1, temp2, temp3, sw_temp, tile_temp;
-			bool src_sync = false, dst_sync = false;
+			std::vector<u8> mirror_tmp;
+			bool src_is_temp = false;
 
 			// Flip source if needed
 			if (dst.scale_y < 0 || dst.scale_x < 0)
 			{
-				const u32 packed_pitch = src.width * src.bpp;
-				temp1.resize(packed_pitch * src.height);
-
-				const s32 stride_y = (dst.scale_y < 0 ? -1 : 1) * static_cast<s32>(src.pitch);
-
-				for (u32 y = 0; y < src.height; ++y)
-				{
-					u8 *dst_pixels = temp1.data() + (packed_pitch * y);
-					u8 *src_pixels = src.pixels + (static_cast<s32>(y) * stride_y);
-
-					if (dst.scale_x < 0)
-					{
-						if (src.bpp == 4) [[ likely ]]
-						{
-							rsx::memcpy_r<u32>(dst_pixels, src_pixels, src.width);
-							continue;
-						}
-
-						rsx::memcpy_r<u16>(dst_pixels, src_pixels, src.width);
-						continue;
-					}
-
-					std::memcpy(dst_pixels, src_pixels, packed_pitch);
-				}
-
-				src.pixels = temp1.data();
-				src.pitch = packed_pitch;
-				src_sync = true;
+				mirror_tmp = _mirror_transform(src, dst.scale_x < 0, dst.scale_y < 0);
+				src.pixels = mirror_tmp.data();
+				src.pitch = src.width * src.bpp;
+				src_is_temp = true;
 			}
 
 			const AVPixelFormat in_format = (src.format == rsx::blit_engine::transfer_source_format::r5g6b5) ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_ARGB;
@@ -1752,16 +1765,43 @@ namespace rsx
 			const u32 slice_h = static_cast<u32>(std::ceil(static_cast<f32>(dst.clip_height + dst.clip_y) / dst.scale_y));
 			const bool interpolate = in_inter == blit_engine::transfer_interpolator::foh;
 
-			if (method_registers.blit_engine_context_surface() != blit_engine::context_surface::swizzle2d)
+			auto real_dst = dst.pixels;
+			const auto tiled_region = rsx->get_tiled_memory_region(utils::address_range::start_length(dst.rsx_address, dst.pitch * dst.clip_height));
+			std::vector<u8> tmp;
+
+			if (tiled_region)
 			{
-				_linear_copy(dst, src, out_w, out_h, slice_h, in_format, out_format, need_convert, need_clip, src_sync, interpolate);
-				return;
+				tmp.resize(tiled_region.tile->size);
+				real_dst = dst.pixels;
+				dst.pixels = tmp.data();
 			}
 
-			const auto swz_temp = _swizzled_copy_1(dst, src, out_w, out_h, slice_h, in_format, out_format, need_convert, need_clip, src_sync, interpolate);
-			auto pixels_src = swz_temp.empty() ? dst.pixels : swz_temp.data();
+			if (method_registers.blit_engine_context_surface() != blit_engine::context_surface::swizzle2d)
+			{
+				_linear_copy(dst, src, out_w, out_h, slice_h, in_format, out_format, need_convert, need_clip, src_is_temp, interpolate);
+			}
+			else
+			{
+				const auto swz_temp = _swizzled_copy_1(dst, src, out_w, out_h, slice_h, in_format, out_format, need_convert, need_clip, src_is_temp, interpolate);
+				auto pixels_src = swz_temp.empty() ? dst.pixels : swz_temp.data();
 
-			_swizzled_copy_2(const_cast<u8*>(pixels_src), dst.pixels, src.pitch, out_w, out_h, dst.bpp);
+				_swizzled_copy_2(const_cast<u8*>(pixels_src), dst.pixels, src.pitch, out_w, out_h, dst.bpp);
+			}
+
+			if (tiled_region)
+			{
+				rsx::tile_texel_data<u32, false>(
+					real_dst,
+					dst.pixels,
+					tiled_region.base_address,
+					dst.rsx_address - tiled_region.base_address,
+					tiled_region.tile->size,
+					tiled_region.tile->bank,
+					tiled_region.tile->pitch,
+					dst.clip_width,
+					dst.clip_height
+				);
+			}
 		}
 	}
 
