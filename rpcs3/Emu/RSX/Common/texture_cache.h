@@ -2467,10 +2467,12 @@ namespace rsx
 
 		// FIXME: This function is way too large and needs an urgent refactor.
 		template <typename surface_store_type, typename blitter_type, typename ...Args>
-		blit_op_result upload_scaled_image(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate, commandbuffer_type& cmd, surface_store_type& m_rtts, blitter_type& blitter, Args&&... extras)
+		blit_op_result upload_scaled_image(const rsx::blit_src_info& src_info, const rsx::blit_dst_info& dst_info, bool interpolate, commandbuffer_type& cmd, surface_store_type& m_rtts, blitter_type& blitter, Args&&... extras)
 		{
-			// Since we will have dst in vram, we can 'safely' ignore the swizzle flag
-			// TODO: Verify correct behavior
+			// Local working copy. We may modify the descriptors for optimization purposes
+			auto src = src_info;
+			auto dst = dst_info;
+
 			bool src_is_render_target = false;
 			bool dst_is_render_target = false;
 			const bool dst_is_argb8 = (dst.format == rsx::blit_engine::transfer_destination_format::a8r8g8b8);

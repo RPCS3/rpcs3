@@ -1452,7 +1452,7 @@ namespace vk
 		return result;
 	}
 
-	bool texture_cache::blit(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate, vk::surface_cache& m_rtts, vk::command_buffer& cmd)
+	bool texture_cache::blit(const rsx::blit_src_info& src, const rsx::blit_dst_info& dst, bool interpolate, vk::surface_cache& m_rtts, vk::command_buffer& cmd)
 	{
 		blitter helper;
 		auto reply = upload_scaled_image(src, dst, interpolate, cmd, m_rtts, helper);

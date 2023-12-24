@@ -1089,7 +1089,7 @@ gl::work_item& GLGSRender::post_flush_request(u32 address, gl::texture_cache::th
 	return result;
 }
 
-bool GLGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate)
+bool GLGSRender::scaled_image_from_memory(const rsx::blit_src_info& src, const rsx::blit_dst_info& dst, bool interpolate)
 {
 	gl::command_context cmd{ gl_state };
 	if (m_gl_texture_cache.blit(cmd, src, dst, interpolate, m_rtts))
