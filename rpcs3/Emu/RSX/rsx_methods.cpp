@@ -1163,8 +1163,11 @@ namespace rsx
 
 	namespace nv3089
 	{
-		void image_in(thread* rsx, u32 /*reg*/, u32 /*arg*/)
+		std::tuple<bool, blit_src_info, blit_dst_info> _decode_transfer_registers(thread* rsx)
 		{
+			blit_src_info src_info = {};
+			blit_dst_info dst_info = {};
+
 			const rsx::blit_engine::transfer_operation operation = method_registers.blit_engine_operation();
 
 			const u16 out_x = method_registers.blit_engine_output_x();
@@ -1176,7 +1179,6 @@ namespace rsx
 			const u16 in_h = method_registers.blit_engine_input_height();
 
 			const blit_engine::transfer_origin in_origin = method_registers.blit_engine_input_origin();
-			const blit_engine::transfer_interpolator in_inter = method_registers.blit_engine_input_inter();
 			auto src_color_format = method_registers.blit_engine_src_color_format();
 
 			const f32 scale_x = method_registers.blit_engine_ds_dx();
@@ -1191,7 +1193,7 @@ namespace rsx
 			if (clip_w == 0 || clip_h == 0)
 			{
 				rsx_log.warning("NV3089_IMAGE_IN: Operation NOPed out due to empty regions");
-				return;
+				return { false, src_info, dst_info };
 			}
 
 			if (in_w == 0 || in_h == 0)
@@ -1222,14 +1224,14 @@ namespace rsx
 			{
 				rsx_log.error("NV3089_IMAGE_IN_SIZE: unknown operation (0x%x)", method_registers.registers[NV3089_SET_OPERATION]);
 				rsx->recover_fifo();
-				return;
+				return { false, src_info, dst_info };
 			}
 
 			if (!src_color_format)
 			{
 				rsx_log.error("NV3089_IMAGE_IN_SIZE: unknown src color format (0x%x)", method_registers.registers[NV3089_SET_COLOR_FORMAT]);
 				rsx->recover_fifo();
-				return;
+				return { false, src_info, dst_info };
 			}
 
 			const u32 src_offset = method_registers.blit_engine_input_offset();
@@ -1256,7 +1258,7 @@ namespace rsx
 				{
 					rsx_log.error("NV3089_IMAGE_IN_SIZE: unknown NV3062 dst color format (0x%x)", method_registers.registers[NV3062_SET_COLOR_FORMAT]);
 					rsx->recover_fifo();
-					return;
+					return { false, src_info, dst_info };
 				}
 				else
 				{
@@ -1274,7 +1276,7 @@ namespace rsx
 				{
 					rsx_log.error("NV3089_IMAGE_IN_SIZE: unknown NV309E dst color format (0x%x)", method_registers.registers[NV309E_SET_FORMAT]);
 					rsx->recover_fifo();
-					return;
+					return { false, src_info, dst_info };
 				}
 				else
 				{
@@ -1285,7 +1287,7 @@ namespace rsx
 			}
 			default:
 				rsx_log.error("NV3089_IMAGE_IN_SIZE: unknown m_context_surface (0x%x)", static_cast<u8>(method_registers.blit_engine_context_surface()));
-				return;
+				return { false, src_info, dst_info };
 			}
 
 			const u32 in_bpp = (src_color_format == rsx::blit_engine::transfer_source_format::r5g6b5) ? 2 : 4; // bytes per pixel
@@ -1351,7 +1353,7 @@ namespace rsx
 					!src_address || !dst_address)
 				{
 					rsx->recover_fifo();
-					return;
+					return { false, src_info, dst_info };
 				}
 
 				rsx->invalidate_fragment_program(dst_dma, dst_offset, data_length);
@@ -1362,7 +1364,7 @@ namespace rsx
 					if (rsx->copy_zcull_stats(src_address, data_length, dst_address) == data_length)
 					{
 						// All writes deferred
-						return;
+						return { false, src_info, dst_info };
 					}
 				}
 			}
@@ -1375,7 +1377,7 @@ namespace rsx
 					!src_address || !dst_address)
 				{
 					rsx->recover_fifo();
-					return;
+					return { false, src_info, dst_info };
 				}
 
 				rsx->invalidate_fragment_program(dst_dma, dst_offset, data_length);
@@ -1389,7 +1391,7 @@ namespace rsx
 			{
 				// NULL operation
 				rsx_log.warning("NV3089_IMAGE_IN: Operation writes memory onto itself with no modification (move-to-self). Will ignore.");
-				return;
+				return { false, src_info, dst_info };
 			}
 
 			u8* pixels_src = vm::_ptr<u8>(src_address + in_offset);
@@ -1423,271 +1425,343 @@ namespace rsx
 			{
 				rsx_log.error("NV3089_IMAGE_IN: Invalid dimensions or scaling factor. Request ignored (ds_dx=%f, dt_dy=%f)",
 					method_registers.blit_engine_ds_dx(), method_registers.blit_engine_dt_dy());
+				return { false, src_info, dst_info };
+			}
+
+			src_info.format = src_color_format;
+			src_info.origin = in_origin;
+			src_info.width = in_w;
+			src_info.height = in_h;
+			src_info.pitch = in_pitch;
+			src_info.bpp = in_bpp;
+			src_info.offset_x = in_x;
+			src_info.offset_y = in_y;
+			src_info.dma = src_dma;
+			src_info.rsx_address = src_address;
+			src_info.pixels = pixels_src;
+
+			dst_info.format = dst_color_format;
+			dst_info.width = convert_w;
+			dst_info.height = convert_h;
+			dst_info.clip_x = clip_x;
+			dst_info.clip_y = clip_y;
+			dst_info.clip_width = clip_w;
+			dst_info.clip_height = clip_h;
+			dst_info.offset_x = out_x;
+			dst_info.offset_y = out_y;
+			dst_info.pitch = out_pitch;
+			dst_info.bpp = out_bpp;
+			dst_info.scale_x = scale_x;
+			dst_info.scale_y = scale_y;
+			dst_info.dma = dst_dma;
+			dst_info.rsx_address = dst_address;
+			dst_info.pixels = pixels_dst;
+			dst_info.swizzled = (method_registers.blit_engine_context_surface() == blit_engine::context_surface::swizzle2d);
+
+			return { true, src_info, dst_info };
+		}
+
+		void _linear_copy(
+			const blit_dst_info& dst,
+			const blit_src_info& src,
+			u16 out_w,
+			u16 out_h,
+			u32 slice_h,
+			AVPixelFormat ffmpeg_src_format,
+			AVPixelFormat ffmpeg_dst_format,
+			bool need_convert,
+			bool need_clip,
+			bool src_is_modified,
+			bool interpolate)
+		{
+			std::vector<u8> temp2;
+
+			if (!need_convert) [[ likely ]]
+			{
+				const bool is_overlapping = !src_is_modified && dst.dma == src.dma && [&]() -> bool
+				{
+					const auto src_range = utils::address_range::start_length(src.rsx_address, src.pitch * (src.height - 1) + (src.bpp * src.width));
+					const auto dst_range = utils::address_range::start_length(dst.rsx_address, dst.pitch * (dst.clip_height - 1) + (dst.bpp * dst.clip_width));
+					return src_range.overlaps(dst_range);
+				}();
+
+				if (is_overlapping) [[ unlikely ]]
+				{
+					if (need_clip)
+					{
+						temp2.resize(dst.pitch * dst.clip_height);
+						clip_image_may_overlap(dst.pixels, src.pixels, dst.clip_x, dst.clip_y, dst.clip_width, dst.clip_height, dst.bpp, src.pitch, dst.pitch, temp2.data());
+						return;
+					}
+
+					if (dst.pitch != src.pitch || dst.pitch != dst.bpp * out_w)
+					{
+						const u32 buffer_pitch = dst.bpp * out_w;
+						temp2.resize(buffer_pitch * out_h);
+						std::add_pointer_t<u8> buf = temp2.data(), pixels = src.pixels;
+
+						// Read the whole buffer from source
+						for (u32 y = 0; y < out_h; ++y)
+						{
+							std::memcpy(buf, pixels, buffer_pitch);
+							pixels += src.pitch;
+							buf += buffer_pitch;
+						}
+
+						buf = temp2.data(), pixels = dst.pixels;
+
+						// Write to destination
+						for (u32 y = 0; y < out_h; ++y)
+						{
+							std::memcpy(pixels, buf, buffer_pitch);
+							pixels += dst.pitch;
+							buf += buffer_pitch;
+						}
+
+						return;
+					}
+
+					std::memmove(dst.pixels, src.pixels, dst.pitch * out_h);
+					return;
+				}
+
+				if (need_clip) [[ unlikely ]]
+				{
+					clip_image(dst.pixels, src.pixels, dst.clip_x, dst.clip_y, dst.clip_width, dst.clip_height, dst.bpp, src.pitch, dst.pitch);
+					return;
+				}
+
+				if (dst.pitch != src.pitch || dst.pitch != dst.bpp * out_w) [[ unlikely ]]
+				{
+					u8 *dst_pixels = dst.pixels, *src_pixels = src.pixels;
+
+					for (u32 y = 0; y < out_h; ++y)
+					{
+						std::memcpy(dst_pixels, src_pixels, out_w * dst.bpp);
+						dst_pixels += dst.pitch;
+						src_pixels += src.pitch;
+					}
+
+					return;
+				}
+
+				std::memcpy(dst.pixels, src.pixels, dst.pitch * out_h);
 				return;
 			}
 
-			// Lock here. RSX cannot execute any locking operations from this point, including ZCULL read barriers
-			auto res = ::rsx::reservation_lock<true>(dst_address, out_pitch * out_h, src_address, in_pitch * in_h);
-
-			if (!g_cfg.video.force_cpu_blit_processing && (dst_dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER || src_dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER))
+			if (need_clip) [[ unlikely ]]
 			{
-				blit_src_info src_info = {};
-				blit_dst_info dst_info = {};
+				temp2.resize(dst.pitch * std::max<u32>(dst.height, dst.clip_height));
 
-				src_info.format = src_color_format;
-				src_info.origin = in_origin;
-				src_info.width = in_w;
-				src_info.height = in_h;
-				src_info.pitch = in_pitch;
-				src_info.offset_x = in_x;
-				src_info.offset_y = in_y;
-				src_info.rsx_address = src_address;
-				src_info.pixels = pixels_src;
+				convert_scale_image(temp2.data(), ffmpeg_dst_format, dst.width, dst.height, dst.pitch,
+					src.pixels, ffmpeg_src_format, src.width, src.height, src.pitch, slice_h, interpolate);
 
-				dst_info.format = dst_color_format;
-				dst_info.width = convert_w;
-				dst_info.height = convert_h;
-				dst_info.clip_x = clip_x;
-				dst_info.clip_y = clip_y;
-				dst_info.clip_width = clip_w;
-				dst_info.clip_height = clip_h;
-				dst_info.offset_x = out_x;
-				dst_info.offset_y = out_y;
-				dst_info.pitch = out_pitch;
-				dst_info.scale_x = scale_x;
-				dst_info.scale_y = scale_y;
-				dst_info.rsx_address = dst_address;
-				dst_info.pixels = pixels_dst;
-				dst_info.swizzled = (method_registers.blit_engine_context_surface() == blit_engine::context_surface::swizzle2d);
-
-				if (rsx->scaled_image_from_memory(src_info, dst_info, in_inter == blit_engine::transfer_interpolator::foh))
-					return;
+				clip_image(dst.pixels, temp2.data(), dst.clip_x, dst.clip_y, dst.clip_width, dst.clip_height, dst.bpp, dst.pitch, dst.pitch);
+				return;
 			}
 
-			std::vector<u8> temp1, temp2, temp3, sw_temp;
+			convert_scale_image(dst.pixels, ffmpeg_dst_format, out_w, out_h, dst.pitch,
+				src.pixels, ffmpeg_src_format, src.width, src.height, src.pitch, slice_h,
+				interpolate);
+		}
 
-			if (scale_y < 0 || scale_x < 0)
+		std::vector<u8> _swizzled_copy_1(
+			const blit_dst_info& dst,
+			const blit_src_info& src,
+			u16 out_w,
+			u16 out_h,
+			u32 slice_h,
+			AVPixelFormat ffmpeg_src_format,
+			AVPixelFormat ffmpeg_dst_format,
+			bool need_convert,
+			bool need_clip,
+			bool src_is_modified,
+			bool interpolate)
+		{
+			std::vector<u8> temp2, temp3;
+
+			if (need_clip)
 			{
-				const u32 packed_pitch = in_w * in_bpp;
-				temp1.resize(packed_pitch * in_h);
+				temp3.resize(dst.pitch * dst.clip_height);
 
-				const s32 stride_y = (scale_y < 0 ? -1 : 1) * s32{in_pitch};
-
-				for (u32 y = 0; y < in_h; ++y)
+				if (need_convert)
 				{
-					u8 *dst = temp1.data() + (packed_pitch * y);
-					u8 *src = pixels_src + (static_cast<s32>(y) * stride_y);
+					temp2.resize(dst.pitch * std::max<u32>(dst.height, dst.clip_height));
 
-					if (scale_x < 0)
-					{
-						if (in_bpp == 2)
-						{
-							rsx::memcpy_r<u16>(dst, src, in_w);
-						}
-						else
-						{
-							rsx::memcpy_r<u32>(dst, src, in_w);
-						}
-					}
-					else
-					{
-						std::memcpy(dst, src, packed_pitch);
-					}
+					convert_scale_image(temp2.data(), ffmpeg_dst_format, dst.width, dst.height, dst.pitch,
+						src.pixels, ffmpeg_src_format, src.width, src.height, src.pitch, slice_h,
+						interpolate);
+
+					clip_image(temp3.data(), temp2.data(), dst.clip_x, dst.clip_y, dst.clip_width, dst.clip_height, dst.bpp, dst.pitch, dst.pitch);
+					return temp3;
 				}
 
-				pixels_src = temp1.data();
-				in_pitch = packed_pitch;
+				clip_image(temp3.data(), src.pixels, dst.clip_x, dst.clip_y, dst.clip_width, dst.clip_height, dst.bpp, src.pitch, dst.pitch);
+				return temp3;
 			}
 
-			const AVPixelFormat in_format = (src_color_format == rsx::blit_engine::transfer_source_format::r5g6b5) ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_ARGB;
-			const AVPixelFormat out_format = (dst_color_format == rsx::blit_engine::transfer_destination_format::r5g6b5) ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_ARGB;
-
-			const bool need_clip =
-				clip_w != in_w ||
-				clip_h != in_h ||
-				clip_x > 0 || clip_y > 0 ||
-				convert_w != out_w || convert_h != out_h;
-
-			const bool need_convert = out_format != in_format || !rsx::fcmp(fabsf(scale_x), 1.f) || !rsx::fcmp(fabsf(scale_y), 1.f);
-			const u32 slice_h = static_cast<u32>(std::ceil(static_cast<f32>(clip_h + clip_y) / scale_y));
-
-			if (method_registers.blit_engine_context_surface() != blit_engine::context_surface::swizzle2d)
+			if (need_convert)
 			{
-				if (!need_convert)
-				{
-					const bool is_overlapping = scale_x > 0 && scale_y > 0 && dst_dma == src_dma && [&]() -> bool
-					{
-						const u32 src_max = src_offset + in_pitch * (in_h - 1) + (in_bpp * in_w);
-						const u32 dst_max = dst_offset + out_pitch * (out_h - 1) + (out_bpp * out_w);
-						return (src_offset >= dst_offset && src_offset < dst_max) ||
-						 (dst_offset >= src_offset && dst_offset < src_max);
-					}();
+				temp3.resize(dst.pitch * out_h);
 
-					if (is_overlapping)
-					{
-						if (need_clip)
-						{
-							temp2.resize(out_pitch * clip_h);
+				convert_scale_image(temp3.data(), ffmpeg_dst_format, out_w, out_h, dst.pitch,
+					src.pixels, ffmpeg_src_format, src.width, src.height, src.pitch, slice_h,
+					interpolate);
 
-							clip_image_may_overlap(pixels_dst, pixels_src, clip_x, clip_y, clip_w, clip_h, out_bpp, in_pitch, out_pitch, temp2.data());
-						}
-						else if (out_pitch != in_pitch || out_pitch != out_bpp * out_w)
-						{
-							const u32 buffer_pitch = out_bpp * out_w;
-							temp2.resize(buffer_pitch * out_h);
-							std::add_pointer_t<u8> buf = temp2.data(), pixels = pixels_src;
-
-							// Read the whole buffer from source
-							for (u32 y = 0; y < out_h; ++y)
-							{
-								std::memcpy(buf, pixels, buffer_pitch);
-								pixels += in_pitch;
-								buf += buffer_pitch;
-							}
-
-							buf = temp2.data(), pixels = pixels_dst;
-
-							// Write to destination
-							for (u32 y = 0; y < out_h; ++y)
-							{
-								std::memcpy(pixels, buf, buffer_pitch);
-								pixels += out_pitch;
-								buf += buffer_pitch;
-							}
-						}
-						else
-						{
-							std::memmove(pixels_dst, pixels_src, out_pitch * out_h);
-						}
-					}
-					else
-					{
-						if (need_clip)
-						{
-							clip_image(pixels_dst, pixels_src, clip_x, clip_y, clip_w, clip_h, out_bpp, in_pitch, out_pitch);
-						}
-						else if (out_pitch != in_pitch || out_pitch != out_bpp * out_w)
-						{
-							u8 *dst = pixels_dst, *src = pixels_src;
-
-							for (u32 y = 0; y < out_h; ++y)
-							{
-								std::memcpy(dst, src, out_w * out_bpp);
-								dst += out_pitch;
-								src += in_pitch;
-							}
-						}
-						else
-						{
-							std::memcpy(pixels_dst, pixels_src, out_pitch * out_h);
-						}
-					}
-				}
-				else
-				{
-					if (need_clip)
-					{
-						temp2.resize(out_pitch * std::max<u32>(convert_h, clip_h));
-
-						convert_scale_image(temp2.data(), out_format, convert_w, convert_h, out_pitch,
-							pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter == blit_engine::transfer_interpolator::foh);
-
-						clip_image(pixels_dst, temp2.data(), clip_x, clip_y, clip_w, clip_h, out_bpp, out_pitch, out_pitch);
-					}
-					else
-					{
-						convert_scale_image(pixels_dst, out_format, out_w, out_h, out_pitch,
-							pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter == blit_engine::transfer_interpolator::foh);
-					}
-				}
+				return temp3;
 			}
-			else
+
+			return {};
+		}
+
+		void _swizzled_copy_2(
+			u8* linear_pixels,
+			u8* swizzled_pixels,
+			u32 linear_pitch,
+			u16 out_w,
+			u16 out_h,
+			u8 out_bpp)
+		{
+			// TODO: Validate these claims. Are the registers always correctly initialized? Should we trust them at all?
+			// It looks like rsx may ignore the requested swizzle size and just always
+			// round up to nearest power of 2
+			/*
+			u8 sw_width_log2 = method_registers.nv309e_sw_width_log2();
+			u8 sw_height_log2 = method_registers.nv309e_sw_height_log2();
+
+			// 0 indicates height of 1 pixel
+			sw_height_log2 = sw_height_log2 == 0 ? 1 : sw_height_log2;
+
+			// swizzle based on destination size
+			u16 sw_width = 1 << sw_width_log2;
+			u16 sw_height = 1 << sw_height_log2;
+			*/
+
+			std::vector<u8> sw_temp;
+
+			u32 sw_width = next_pow2(out_w);
+			u32 sw_height = next_pow2(out_h);
+
+			// Check and pad texture out if we are given non power of 2 output
+			if (sw_width != out_w || sw_height != out_h)
 			{
-				if (need_convert || need_clip)
-				{
-					if (need_clip)
-					{
-						temp3.resize(out_pitch * clip_h);
-
-						if (need_convert)
-						{
-							temp2.resize(out_pitch * std::max<u32>(convert_h, clip_h));
-
-							convert_scale_image(temp2.data(), out_format, convert_w, convert_h, out_pitch,
-								pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter == blit_engine::transfer_interpolator::foh);
-
-							clip_image(temp3.data(), temp2.data(), clip_x, clip_y, clip_w, clip_h, out_bpp, out_pitch, out_pitch);
-						}
-						else
-						{
-							clip_image(temp3.data(), pixels_src, clip_x, clip_y, clip_w, clip_h, out_bpp, in_pitch, out_pitch);
-						}
-					}
-					else
-					{
-						temp3.resize(out_pitch * out_h);
-
-						convert_scale_image(temp3.data(), out_format, out_w, out_h, out_pitch,
-							pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter == blit_engine::transfer_interpolator::foh);
-					}
-
-					pixels_src = temp3.data();
-					in_pitch = out_pitch;
-				}
-
-				// It looks like rsx may ignore the requested swizzle size and just always
-				// round up to nearest power of 2
-				/*u8 sw_width_log2 = method_registers.nv309e_sw_width_log2();
-				u8 sw_height_log2 = method_registers.nv309e_sw_height_log2();
-
-				// 0 indicates height of 1 pixel
-				sw_height_log2 = sw_height_log2 == 0 ? 1 : sw_height_log2;
-
-				// swizzle based on destination size
-				u16 sw_width = 1 << sw_width_log2;
-				u16 sw_height = 1 << sw_height_log2;
-				*/
-
-				u32 sw_width = next_pow2(out_w);
-				u32 sw_height = next_pow2(out_h);
-
-				u8* linear_pixels = pixels_src;
-				u8* swizzled_pixels = pixels_dst;
-
-				// Check and pad texture out if we are given non power of 2 output
-				if (sw_width != out_w || sw_height != out_h)
-				{
-					sw_temp.resize(out_bpp * sw_width * sw_height);
-
-					switch (out_bpp)
-					{
-					case 1:
-						pad_texture<u8>(linear_pixels, sw_temp.data(), out_w, out_h, sw_width, sw_height);
-						break;
-					case 2:
-						pad_texture<u16>(linear_pixels, sw_temp.data(), out_w, out_h, sw_width, sw_height);
-						break;
-					case 4:
-						pad_texture<u32>(linear_pixels, sw_temp.data(), out_w, out_h, sw_width, sw_height);
-						break;
-					}
-
-					linear_pixels = sw_temp.data();
-				}
+				sw_temp.resize(out_bpp * sw_width * sw_height);
 
 				switch (out_bpp)
 				{
 				case 1:
-					convert_linear_swizzle<u8, false>(linear_pixels, swizzled_pixels, sw_width, sw_height, in_pitch);
+					pad_texture<u8>(linear_pixels, sw_temp.data(), out_w, out_h, sw_width, sw_height);
 					break;
 				case 2:
-					convert_linear_swizzle<u16, false>(linear_pixels, swizzled_pixels, sw_width, sw_height, in_pitch);
+					pad_texture<u16>(linear_pixels, sw_temp.data(), out_w, out_h, sw_width, sw_height);
 					break;
 				case 4:
-					convert_linear_swizzle<u32, false>(linear_pixels, swizzled_pixels, sw_width, sw_height, in_pitch);
+					pad_texture<u32>(linear_pixels, sw_temp.data(), out_w, out_h, sw_width, sw_height);
 					break;
 				}
+
+				linear_pixels = sw_temp.data();
 			}
+
+			switch (out_bpp)
+			{
+			case 1:
+				convert_linear_swizzle<u8, false>(linear_pixels, swizzled_pixels, sw_width, sw_height, linear_pitch);
+				break;
+			case 2:
+				convert_linear_swizzle<u16, false>(linear_pixels, swizzled_pixels, sw_width, sw_height, linear_pitch);
+				break;
+			case 4:
+				convert_linear_swizzle<u32, false>(linear_pixels, swizzled_pixels, sw_width, sw_height, linear_pitch);
+				break;
+			}
+		}
+
+		void image_in(thread* rsx, u32 /*reg*/, u32 /*arg*/)
+		{
+			auto [success, src, dst] = _decode_transfer_registers(rsx);
+			if (!success)
+			{
+				return;
+			}
+
+			// Decode extra params before locking
+			const blit_engine::transfer_interpolator in_inter = method_registers.blit_engine_input_inter();
+			const u16 out_w = method_registers.blit_engine_output_width();
+			const u16 out_h = method_registers.blit_engine_output_height();
+
+			// Lock here. RSX cannot execute any locking operations from this point, including ZCULL read barriers
+			auto res = ::rsx::reservation_lock<true>(
+				dst.rsx_address, dst.pitch * dst.clip_height,
+				src.rsx_address, src.pitch * src.height);
+
+			if (!g_cfg.video.force_cpu_blit_processing &&
+				(dst.dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER || src.dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER) &&
+				rsx->scaled_image_from_memory(src, dst, in_inter == blit_engine::transfer_interpolator::foh))
+			{
+				// HW-accelerated blit
+				return;
+			}
+
+			std::vector<u8> temp1, temp2, temp3, sw_temp, tile_temp;
+			bool src_sync = false, dst_sync = false;
+
+			// Flip source if needed
+			if (dst.scale_y < 0 || dst.scale_x < 0)
+			{
+				const u32 packed_pitch = src.width * src.bpp;
+				temp1.resize(packed_pitch * src.height);
+
+				const s32 stride_y = (dst.scale_y < 0 ? -1 : 1) * static_cast<s32>(src.pitch);
+
+				for (u32 y = 0; y < src.height; ++y)
+				{
+					u8 *dst_pixels = temp1.data() + (packed_pitch * y);
+					u8 *src_pixels = src.pixels + (static_cast<s32>(y) * stride_y);
+
+					if (dst.scale_x < 0)
+					{
+						if (src.bpp == 4) [[ likely ]]
+						{
+							rsx::memcpy_r<u32>(dst_pixels, src_pixels, src.width);
+							continue;
+						}
+
+						rsx::memcpy_r<u16>(dst_pixels, src_pixels, src.width);
+						continue;
+					}
+
+					std::memcpy(dst_pixels, src_pixels, packed_pitch);
+				}
+
+				src.pixels = temp1.data();
+				src.pitch = packed_pitch;
+				src_sync = true;
+			}
+
+			const AVPixelFormat in_format = (src.format == rsx::blit_engine::transfer_source_format::r5g6b5) ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_ARGB;
+			const AVPixelFormat out_format = (dst.format == rsx::blit_engine::transfer_destination_format::r5g6b5) ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_ARGB;
+
+			const bool need_clip =
+				dst.clip_width != src.width ||
+				dst.clip_height != src.height ||
+				dst.clip_x > 0 || dst.clip_y > 0 ||
+				dst.width != out_w || dst.height != out_h;
+
+			const bool need_convert = out_format != in_format || !rsx::fcmp(fabsf(dst.scale_x), 1.f) || !rsx::fcmp(fabsf(dst.scale_y), 1.f);
+			const u32 slice_h = static_cast<u32>(std::ceil(static_cast<f32>(dst.clip_height + dst.clip_y) / dst.scale_y));
+			const bool interpolate = in_inter == blit_engine::transfer_interpolator::foh;
+
+			if (method_registers.blit_engine_context_surface() != blit_engine::context_surface::swizzle2d)
+			{
+				_linear_copy(dst, src, out_w, out_h, slice_h, in_format, out_format, need_convert, need_clip, src_sync, interpolate);
+				return;
+			}
+
+			const auto swz_temp = _swizzled_copy_1(dst, src, out_w, out_h, slice_h, in_format, out_format, need_convert, need_clip, src_sync, interpolate);
+			auto pixels_src = swz_temp.empty() ? dst.pixels : swz_temp.data();
+
+			_swizzled_copy_2(const_cast<u8*>(pixels_src), dst.pixels, src.pitch, out_w, out_h, dst.bpp);
 		}
 	}
 

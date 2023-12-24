@@ -188,8 +188,10 @@ namespace rsx
 		u16 width;
 		u16 height;
 		u32 pitch;
+		u8  bpp;
+		u32 dma;
 		u32 rsx_address;
-		void *pixels;
+		u8 *pixels;
 	};
 
 	struct blit_dst_info
@@ -206,8 +208,10 @@ namespace rsx
 		f32 scale_x;
 		f32 scale_y;
 		u32 pitch;
+		u8  bpp;
+		u32 dma;
 		u32 rsx_address;
-		void *pixels;
+		u8 *pixels;
 		bool swizzled;
 	};
 
