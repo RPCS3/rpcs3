@@ -2641,9 +2641,10 @@ void thread_base::exec()
 
 	sig_log.fatal("Thread terminated due to fatal error: %s", reason);
 
+	logs::listener::sync_all();
+
 	if (IsDebuggerPresent())
 	{
-		logs::listener::sync_all();
 		utils::trap();
 	}
 
