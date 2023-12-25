@@ -296,14 +296,37 @@ bool load_and_check_reserved(utils::serial& ar, usz size)
 
 namespace stx
 {
-	extern void serial_breathe(utils::serial& ar)
+	extern u16 serial_breathe_and_tag(utils::serial& ar, std::string_view name, bool tag_bit)
 	{
+		thread_local std::string_view s_tls_object_name = "none";
+
+		constexpr u16 data_mask = 0x7fff;
+
+		if (ar.m_file_handler && ar.m_file_handler->is_null())
+		{
+			return (tag_bit ? data_mask + 1 : 0);
+		}
+
+		u16 tag = static_cast<u16>((static_cast<u16>(ar.pos / 2) & data_mask) | (tag_bit ? data_mask + 1 : 0));
+		u16 saved = tag;
+		ar(saved);
+
+		sys_log.trace("serial_breathe_and_tag(): %s, object: '%s', next-object: '%s', expected/tag: 0x%x == 0x%x", ar, s_tls_object_name, name, tag, saved);
+
+		if ((saved ^ tag) & data_mask)
+		{
+			ensure(!ar.is_writing());
+			fmt::throw_exception("serial_breathe_and_tag(): %s, object: '%s', next-object: '%s', expected/tag: 0x%x != 0x%x,", ar, s_tls_object_name, name, tag, saved);
+		}
+
+		s_tls_object_name = name;
 		ar.breathe();
+		return saved;
 	}
 }
 
 // MSVC bug workaround, see above similar case
-extern void serial_breathe(utils::serial& ar)
+extern u16 serial_breathe_and_tag(utils::serial& ar, std::string_view name, bool tag_bit)
 {
-	::stx::serial_breathe(ar);
+	return ::stx::serial_breathe_and_tag(ar, name, tag_bit);
 }
