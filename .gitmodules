@@ -4,8 +4,8 @@
 	ignore = dirty
 [submodule "asmjit"]
 	path = 3rdparty/asmjit/asmjit
-	url = ../../RPCS3/asmjit.git
-	branch = aarch64
+	url = ../../asmjit/asmjit.git
+	branch = master
 	ignore = dirty
 [submodule "3rdparty/llvm/llvm"]
 	path = 3rdparty/llvm/llvm
