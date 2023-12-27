@@ -160,7 +160,7 @@ bool lv2_fs_mount_info_map::remove(std::string_view path)
 	return false;
 }
 
-const lv2_fs_mount_info& lv2_fs_mount_info_map::lookup(std::string_view path, bool no_cell_fs_path) const
+const lv2_fs_mount_info& lv2_fs_mount_info_map::lookup(std::string_view path, bool no_cell_fs_path, std::string* mount_path) const
 {
 	if (path.starts_with("/"sv))
 	{
@@ -177,7 +177,9 @@ const lv2_fs_mount_info& lv2_fs_mount_info_map::lookup(std::string_view path, bo
 				if (iterator->second == &g_mp_sys_dev_root && parent_level > 1)
 					break;
 				if (no_cell_fs_path && iterator->second.device.starts_with(cell_fs_path))
-					return lookup(iterator->second.device.substr(cell_fs_path.size()), no_cell_fs_path); // Recursively look up the parent mount info
+					return lookup(iterator->second.device.substr(cell_fs_path.size()), no_cell_fs_path, mount_path); // Recursively look up the parent mount info
+				if (mount_path)
+					*mount_path = iterator->first;
 				return iterator->second;
 			}
 		} while (parent_dir.length() > 1); // Exit the loop when parent_dir == "/" or empty
@@ -295,8 +297,6 @@ lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename, std::string
 	{
 		for (auto mp = &g_mp_sys_dev_root; mp; mp = mp->next)
 		{
-			const auto pos = mp->root.find_first_not_of('/');
-			const auto mp_root = pos != umax ? mp->root.substr(pos) : mp->root;
 			const auto& device_alias_check = !is_path && (
 				(mp == &g_mp_sys_dev_hdd0 && mp_name == "CELL_FS_IOS:PATA0_HDD_DRIVE"sv) ||
 				(mp == &g_mp_sys_dev_hdd1 && mp_name == "CELL_FS_IOS:PATA1_HDD_DRIVE"sv) ||
@@ -304,20 +304,17 @@ lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename, std::string
 
 			if (mp == &g_mp_sys_dev_usb)
 			{
-				for (int i = 0; i < 8; i++)
+				if (mp_name.starts_with(is_path ? mp->root : mp->device))
 				{
-					if (fmt::format("%s%03d", is_path ? mp_root : mp->device, i) == mp_name)
-					{
-						if (!is_path)
-							mp_name = fmt::format("%s%03d", mp_root, i);
-						return mp;
-					}
+					if (!is_path)
+						mp_name = fmt::format("%s%s", mp->root, mp_name.substr(mp->device.size()));
+					return mp;
 				}
 			}
-			else if ((is_path ? mp_root : mp->device) == mp_name || device_alias_check)
+			else if ((is_path ? mp->root : mp->device) == mp_name || device_alias_check)
 			{
 				if (!is_path)
-					mp_name = mp_root;
+					mp_name = mp->root;
 				return mp;
 			}
 		}
@@ -335,7 +332,7 @@ lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename, std::string
 		else if (result == &g_mp_sys_dev_hdd1)
 			*vfs_path = g_cfg_vfs.get(g_cfg_vfs.dev_hdd1, rpcs3::utils::get_emu_dir());
 		else if (result == &g_mp_sys_dev_usb)
-			*vfs_path = g_cfg_vfs.get_device(g_cfg_vfs.dev_usb, fmt::format("/%s", mp_name), rpcs3::utils::get_emu_dir()).path;
+			*vfs_path = g_cfg_vfs.get_device(g_cfg_vfs.dev_usb, mp_name, rpcs3::utils::get_emu_dir()).path;
 		else if (result == &g_mp_sys_dev_bdvd)
 			*vfs_path = g_cfg_vfs.get(g_cfg_vfs.dev_bdvd, rpcs3::utils::get_emu_dir());
 		else if (result == &g_mp_sys_dev_dvd)
@@ -354,7 +351,7 @@ lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename, std::string
 			*vfs_path = {};
 
 		if (is_path && !is_cell_fs_path && !vfs_path->empty())
-			vfs_path->append(filename.substr(mp_name.size() + 1)); // substr: remove leading "/mp_name"
+			vfs_path->append(filename.substr(mp_name.size()));
 	}
 
 	return result;
@@ -1481,7 +1478,9 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 
 	if (local_path.empty())
 	{
-		return {CELL_ENOTMOUNTED, path};
+		// This syscall can be used by games and VSH to test the presence of dev_usb000 ~ dev_usb127
+		// Thus there is no need to fuss about CELL_ENOTMOUNTED in this case
+		return {sys_fs.warning, CELL_ENOTMOUNTED, path};
 	}
 
 	std::unique_lock lock(mp->mutex);
@@ -1796,7 +1795,8 @@ error_code sys_fs_unlink(ppu_thread& ppu, vm::cptr<char> path)
 
 	const std::string local_path = vfs::get(vpath);
 
-	const auto& mp = g_fxo->get<lv2_fs_mount_info_map>().lookup(vpath);
+	std::string mount_path = fs::get_parent_dir(vpath); // Use its parent directory as fallback
+	const auto& mp = g_fxo->get<lv2_fs_mount_info_map>().lookup(vpath, true, &mount_path);
 
 	if (mp == &g_mp_sys_dev_root)
 	{
@@ -1820,8 +1820,7 @@ error_code sys_fs_unlink(ppu_thread& ppu, vm::cptr<char> path)
 
 	std::lock_guard lock(mp->mutex);
 
-	// Provide default mp root or use parent directory if not available (such as host_root)
-	if (!vfs::host::unlink(local_path, vfs::get(mp->root.empty() ? vpath.substr(0, vpath.find_last_of('/')) : mp->root)))
+	if (!vfs::host::unlink(local_path, vfs::get(mount_path)))
 	{
 		switch (auto error = fs::g_tls_error)
 		{
