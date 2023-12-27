@@ -213,7 +213,7 @@ public:
 		return map.try_emplace(std::forward<Args>(args)...).second;
 	}
 	bool remove(std::string_view path);
-	const lv2_fs_mount_info& lookup(std::string_view path, bool no_cell_fs_path = false) const;
+	const lv2_fs_mount_info& lookup(std::string_view path, bool no_cell_fs_path = false, std::string* mount_path = nullptr) const;
 	u64 get_all(CellFsMountInfo* info = nullptr, u64 len = 0) const;
 
 	static bool vfs_unmount(std::string_view vpath, bool remove_from_map = true);
