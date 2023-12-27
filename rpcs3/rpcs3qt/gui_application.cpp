@@ -168,6 +168,7 @@ bool gui_application::Init()
 
 #ifdef WITH_DISCORD_RPC
 	// Discord Rich Presence Integration
+	gui_log.notice("RPCS3 built with Discord RPC");
 	if (m_gui_settings->GetValue(gui::m_richPresence).toBool())
 	{
 		discord::initialize();
