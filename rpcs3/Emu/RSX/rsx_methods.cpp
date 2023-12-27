@@ -1783,7 +1783,7 @@ namespace rsx
 			else
 			{
 				const auto swz_temp = _swizzled_copy_1(dst, src, out_w, out_h, slice_h, in_format, out_format, need_convert, need_clip, src_is_temp, interpolate);
-				auto pixels_src = swz_temp.empty() ? dst.pixels : swz_temp.data();
+				auto pixels_src = swz_temp.empty() ? src.pixels : swz_temp.data();
 
 				_swizzled_copy_2(const_cast<u8*>(pixels_src), dst.pixels, src.pitch, out_w, out_h, dst.bpp);
 			}
