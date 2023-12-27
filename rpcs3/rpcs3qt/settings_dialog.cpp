@@ -207,17 +207,17 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		{
 			if (m_use_discord)
 			{
-				discord::initialize();
-				discord::update_presence(sstr(m_discord_state));
+				discord_sdk::initialize();
+				discord_sdk::update_presence(sstr(m_discord_state));
 			}
 			else
 			{
-				discord::shutdown();
+				discord_sdk::shutdown();
 			}
 		}
 		else if (m_discord_state != discord_state_old && Emu.IsStopped())
 		{
-			discord::update_presence(sstr(m_discord_state), "Idle", false);
+			discord_sdk::update_presence(sstr(m_discord_state), "Idle", false);
 		}
 #endif
 

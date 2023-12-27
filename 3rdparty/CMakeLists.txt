@@ -129,7 +129,7 @@ target_include_directories(3rdparty_stblib INTERFACE stblib/include)
 
 
 # DiscordRPC
-add_subdirectory(discord-rpc)
+add_subdirectory(discord-game-sdk)
 
 # Cubeb
 add_subdirectory(cubeb EXCLUDE_FROM_ALL)
@@ -365,7 +365,7 @@ add_library(3rdparty::hidapi ALIAS 3rdparty_hidapi)
 add_library(3rdparty::libpng ALIAS ${LIBPNG_TARGET})
 add_library(3rdparty::opengl ALIAS 3rdparty_opengl)
 add_library(3rdparty::stblib ALIAS 3rdparty_stblib)
-add_library(3rdparty::discordRPC ALIAS 3rdparty_discordRPC)
+add_library(3rdparty::discordGameSDK ALIAS 3rdparty_discordGameSDK)
 add_library(3rdparty::faudio ALIAS ${FAUDIO_TARGET})
 add_library(3rdparty::libevdev ALIAS ${LIBEVDEV_TARGET})
 add_library(3rdparty::vulkan ALIAS ${VULKAN_TARGET})

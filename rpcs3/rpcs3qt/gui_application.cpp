@@ -59,7 +59,7 @@ gui_application::gui_application(int& argc, char** argv) : QApplication(argc, ar
 gui_application::~gui_application()
 {
 #ifdef WITH_DISCORD_RPC
-	discord::shutdown();
+	discord_sdk::shutdown();
 #endif
 }
 
@@ -171,7 +171,7 @@ bool gui_application::Init()
 	gui_log.notice("RPCS3 built with Discord RPC");
 	if (m_gui_settings->GetValue(gui::m_richPresence).toBool())
 	{
-		discord::initialize();
+		discord_sdk::initialize();
 	}
 #endif
 
@@ -305,7 +305,7 @@ void gui_application::InitializeConnects()
 		// Discord Rich Presence Integration
 		if (m_gui_settings->GetValue(gui::m_richPresence).toBool())
 		{
-			discord::update_presence(Emu.GetTitleID(), Emu.GetTitle());
+			discord_sdk::update_presence(Emu.GetTitleID(), Emu.GetTitle());
 		}
 	});
 	connect(this, &gui_application::OnEmulatorStop, [this]()
@@ -313,9 +313,16 @@ void gui_application::InitializeConnects()
 		// Discord Rich Presence Integration
 		if (m_gui_settings->GetValue(gui::m_richPresence).toBool())
 		{
-			discord::update_presence(m_gui_settings->GetValue(gui::m_discordState).toString().toStdString());
+			discord_sdk::update_presence(m_gui_settings->GetValue(gui::m_discordState).toString().toStdString());
 		}
 	});
+
+	QTimer* discord_timer = new QTimer(this);
+	connect(discord_timer, &QTimer::timeout, this, []()
+	{
+		discord_sdk::run_callbacks();
+	});
+	discord_timer->start(1s);
 #endif
 
 	qRegisterMetaType<std::function<void()>>("std::function<void()>");
