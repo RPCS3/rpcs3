@@ -1306,9 +1306,6 @@ namespace audio
 
 rsxaudio_backend_thread::rsxaudio_backend_thread()
 {
-	// Initialize dependencies
-	g_fxo->need<audio_out_configuration>();
-
 	new_emu_cfg = get_emu_cfg();
 
 	const u64 new_vol = g_cfg.audio.volume;
