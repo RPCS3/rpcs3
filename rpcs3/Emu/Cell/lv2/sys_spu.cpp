@@ -227,8 +227,8 @@ lv2_spu_group::lv2_spu_group(utils::serial& ar) noexcept
 		if (ar.pop<bool>())
 		{
 			ar(id_manager::g_id);
-			thread = std::make_shared<named_thread<spu_thread>>(ar, this);
-			idm::import_existing<named_thread<spu_thread>>(thread, idm::last_id());
+			thread = std::make_shared<named_thread<spu_thread>>(stx::launch_retainer{}, ar, this);
+			ensure(idm::import_existing<named_thread<spu_thread>>(thread, idm::last_id()));
 			running += !thread->stop_flag_removal_protection;
 		}
 	}

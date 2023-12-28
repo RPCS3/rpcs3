@@ -102,13 +102,26 @@ namespace id_manager
 	template <typename T, typename = void>
 	struct id_traits_load_func
 	{
-		static constexpr std::shared_ptr<void>(*load)(utils::serial&) = [](utils::serial& ar) -> std::shared_ptr<void> { return std::make_shared<T>(stx::exact_t<utils::serial&>(ar)); };
+		static constexpr std::shared_ptr<void>(*load)(utils::serial&) = [](utils::serial& ar) -> std::shared_ptr<void>
+		{
+			if constexpr (std::is_constructible_v<T, stx::exact_t<const stx::launch_retainer&>, stx::exact_t<utils::serial&>>)
+			{
+				return std::make_shared<T>(stx::launch_retainer{}, stx::exact_t<utils::serial&>(ar));
+			}
+			else
+			{
+				return std::make_shared<T>(stx::exact_t<utils::serial&>(ar));
+			}
+		};
 	};
 
 	template <typename T>
 	struct id_traits_load_func<T, std::void_t<decltype(&T::load)>>
 	{
-		static constexpr std::shared_ptr<void>(*load)(utils::serial&) = [](utils::serial& ar) -> std::shared_ptr<void> { return T::load(stx::exact_t<utils::serial&>(ar)); };
+		static constexpr std::shared_ptr<void>(*load)(utils::serial&) = [](utils::serial& ar) -> std::shared_ptr<void>
+		{
+			return T::load(stx::exact_t<utils::serial&>(ar));
+		};
 	};
 
 	template <typename T, typename = void>
@@ -354,10 +367,10 @@ namespace id_manager
 
 		id_map& operator=(thread_state state) noexcept requires (std::is_assignable_v<T&, thread_state>)
 		{
-			if (private_copy.size() != vec.size())
-			{
-				private_copy.clear();
+			private_copy.clear();
 
+			if (!vec.empty() || !private_copy.empty())
+			{
 				reader_lock lock(g_mutex);
 
 				// Save all entries
