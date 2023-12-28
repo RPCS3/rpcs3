@@ -36,6 +36,8 @@
 #include "Loader/ELF.h"
 #include "Loader/disc.h"
 
+#include "rpcs3_version.h"
+
 #include "Utilities/StrUtil.h"
 
 #include "../Crypto/unself.h"
@@ -964,6 +966,10 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 		const bool from_dev_flash  = IsPathInsideDir(m_path, g_cfg_vfs.get_dev_flash());
 
+		std::string savestate_build_version;
+		std::string savestate_creation_date;
+		std::string savestate_app_title;
+
 		if (m_ar)
 		{
 			struct file_header
@@ -991,13 +997,15 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 			g_cfg.savestate.state_inspection_mode.set(header.state_inspection_support);
 
+			bool is_incompatible = false;
+
 			if (header.flag_versions_is_following_data)
 			{
 				ensure(header.offset == m_ar->pos);
 
 				if (!is_savestate_version_compatible(m_ar->pop<std::vector<version_entry>>(), true))
 				{
-					return game_boot_result::savestate_version_unsupported;
+					is_incompatible = true;
 				}
 			}
 			else
@@ -1010,14 +1018,35 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 				if (!is_savestate_version_compatible(ar_temp.pop<std::vector<version_entry>>(), true))
 				{
-					return game_boot_result::savestate_version_unsupported;
+					is_incompatible = true;
 				}
 
 				// Restore file handler
 				ar_temp.swap_handler(*m_ar);
 			}
 
-			if (!load_and_check_reserved(*m_ar, header.flag_versions_is_following_data ? 32 : 31))
+			const bool contains_version = m_ar->pop<b8>();
+
+			if (contains_version)
+			{
+				savestate_build_version = m_ar->pop<std::string>();
+				savestate_creation_date = m_ar->pop<std::string>();
+				savestate_app_title = m_ar->pop<std::string>();
+				m_ar->pop<std::string>(); // User note (unused)
+
+				(is_incompatible ? sys_log.error : sys_log.success)("Savestate information: creation time: %s, RPCS3 build: \"%s\"\nGame/Title: \"%s\"", savestate_creation_date, savestate_build_version, savestate_app_title);
+			}
+
+			if (is_incompatible)
+			{
+				return game_boot_result::savestate_version_unsupported;
+			}
+
+			usz reserved_count = 32;
+			reserved_count -= (header.flag_versions_is_following_data ? 0 : 1);
+			reserved_count -= (contains_version ? 0 : 1);
+
+			if (!load_and_check_reserved(*m_ar, reserved_count))
 			{
 				return game_boot_result::savestate_version_unsupported;
 			}
@@ -3080,6 +3109,12 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 					ar(u8{1});
 					ar(read_used_savestate_versions());
 				}
+
+				ar(u8{1});
+				ar(rpcs3::get_verbose_version());
+				ar(fmt::format("%s", std::chrono::system_clock::now()));
+				ar(GetTitleAndTitleID());
+				ar(std::string{}); // Possible user note
 
 				ar(std::array<u8, 32>{}); // Reserved for future use
 
