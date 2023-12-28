@@ -85,12 +85,13 @@ namespace stx
 					if constexpr (std::is_constructible_v<T, exact_t<manual_typemap&>, exact_t<utils::serial&>>)
 					{
 						g_tls_serialize_name = name;
-						new (ptr) T(_this, exact_t<utils::serial&>(*ar));
+						new (ptr) T(exact_t<manual_typemap&>(_this), exact_t<utils::serial&>(*ar));
 						return true;
 					}
 
 					if constexpr (std::is_constructible_v<T, exact_t<const launch_retainer&>, exact_t<utils::serial&>>)
 					{
+						g_tls_serialize_name = name;
 						new (ptr) T(exact_t<const launch_retainer&>(launch_retainer{}), exact_t<utils::serial&>(*ar));
 						return true;
 					}
@@ -106,7 +107,7 @@ namespace stx
 				// Allow passing reference to "this"
 				if constexpr (std::is_constructible_v<T, exact_t<manual_typemap&>>)
 				{
-					new (ptr) T(_this);
+					new (ptr) T(exact_t<manual_typemap&>(_this));
 					return true;
 				}
 
@@ -400,14 +401,14 @@ namespace stx
 		}
 
 		// Check if object is not initialized but shall be initialized first (to use in initializing other objects)
-		template <typename T> requires (std::is_constructible_v<T, manual_typemap&> || std::is_default_constructible_v<T>)
+		template <typename T> requires (!std::is_constructible_v<T, exact_t<utils::serial&>> && (std::is_constructible_v<T, exact_t<manual_typemap&>> || std::is_default_constructible_v<T>))
 		void need() noexcept
 		{
 			if (!m_init[stx::typeindex<typeinfo, std::decay_t<T>>()])
 			{
-				if constexpr (std::is_constructible_v<T, manual_typemap&>)
+				if constexpr (std::is_constructible_v<T, exact_t<manual_typemap&>>)
 				{
-					init<T>(*this);
+					init<T>(exact_t<manual_typemap&>(*this));
 					return;
 				}
 
