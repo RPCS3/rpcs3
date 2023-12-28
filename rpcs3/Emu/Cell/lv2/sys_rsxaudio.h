@@ -463,6 +463,8 @@ public:
 
 	static constexpr auto thread_name = "RsxAudio Backend Thread"sv;
 
+	SAVESTATE_INIT_POS(8.91); // Depends on audio_out_configuration
+
 private:
 
 	struct emu_audio_cfg
