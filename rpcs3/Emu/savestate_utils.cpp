@@ -41,7 +41,7 @@ static std::array<serial_ver_t, 26> s_serial_versions;
 		return ::s_serial_versions[identifier].current_version;\
 	}
 
-SERIALIZATION_VER(global_version, 0,                            15) // For stuff not listed here
+SERIALIZATION_VER(global_version, 0,                            16) // For stuff not listed here
 SERIALIZATION_VER(ppu, 1,                                       1)
 SERIALIZATION_VER(spu, 2,                                       1)
 SERIALIZATION_VER(lv2_sync, 3,                                  1)
