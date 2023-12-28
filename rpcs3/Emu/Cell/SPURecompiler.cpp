@@ -6080,7 +6080,7 @@ public:
 						llvm::SetVector<llvm::BasicBlock*> work_list;
 						std::unordered_map<llvm::BasicBlock*, bool> worked_on;
 
-						if (std::count(killers.begin(), killers.end(), common_pdom) == 0)
+						if (!common_pdom || std::count(killers.begin(), killers.end(), common_pdom) == 0)
 						{
 							if (common_pdom)
 							{
@@ -6099,6 +6099,7 @@ public:
 							}
 						}
 
+						// bool flag indicates the presence of a memory barrier before the killer store
 						std::vector<std::pair<llvm::BasicBlock*, bool>> work2_list;
 
 						for (usz wi = 0; wi < work_list.size(); wi++)
@@ -6137,6 +6138,9 @@ public:
 							worked_on[work2_list[wi].first] = true;
 						}
 
+						// Need to treat tails differently: do not require checking barrier (checked before in a suitable manner)
+						const usz work_list_tail_blocks_max_index = work2_list.size();
+
 						for (usz wi = 0; wi < work2_list.size(); wi++)
 						{
 							auto [cur, found_user] = work2_list[wi];
@@ -6153,9 +6157,15 @@ public:
 								continue;
 							}
 
-							if (!found_user && bb_to_info[cur] && bb_to_info[cur]->store_context_last_id[i])
+							if (!found_user && wi >= work_list_tail_blocks_max_index)
 							{
-								found_user = true;
+								if (auto info = bb_to_info[cur])
+								{
+									if (info->store_context_ctr[i] != 1)
+									{
+										found_user = true;
+									}
+								}
 							}
 
 							for (auto* p : llvm::predecessors(cur))
