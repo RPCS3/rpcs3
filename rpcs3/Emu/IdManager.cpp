@@ -35,10 +35,13 @@ std::vector<std::pair<u128, id_manager::typeinfo>>& id_manager::get_typeinfo_map
 
 idm::map_data* idm::allocate_id(std::vector<map_data>& vec, u32 type_id, u32 dst_id, u32 base, u32 step, u32 count, bool uses_lowest_id, std::pair<u32, u32> invl_range)
 {
-	if (const u32 index = id_manager::get_index(dst_id, base, step, count, invl_range); index < count)
+	if (dst_id != (base ? 0 : u32{umax}))
 	{
 		// Fixed position construction
-		ensure(index < vec.size());
+		const u32 index = id_manager::get_index(dst_id, base, step, count, invl_range);
+		ensure(index < count);
+
+		vec.resize(std::max<usz>(vec.size(), index + 1));
 
 		if (vec[index].second)
 		{
