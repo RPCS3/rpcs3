@@ -3019,7 +3019,7 @@ std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_ex
 
 	if (!ar && !virtual_load)
 	{
-		idm::import_existing<lv2_obj, lv2_overlay>(ovlm);
+		ensure(idm::import_existing<lv2_obj, lv2_overlay>(ovlm));
 		try_spawn_ppu_if_exclusive_program(*ovlm);
 	}
 
