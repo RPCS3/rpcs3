@@ -2761,6 +2761,12 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 				if (!try_lock_spu_threads_in_a_state_compatible_with_savestates())
 				{
 					sys_log.error("Failed to savestate: failed to lock SPU threads execution.");
+
+					if (!g_cfg.savestate.compatible_mode)
+					{
+						sys_log.error("Enabling SPU Savestates-Compatible Mode in Advanced tab may fix this.");
+					}
+
 					m_savestate_pending = false;
 
 					CallFromMainThread([pause = std::move(pause_thread)]()
