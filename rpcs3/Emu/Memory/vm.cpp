@@ -1624,19 +1624,22 @@ namespace vm
 	{
 		ensure((size % 4096) == 0);
 
-		for (usz iter_count = 0; size; iter_count++, ptr += 128 * 8)
+		constexpr usz byte_of_pages = 128 * 8;
+
+		std::vector<u8> bit_array(size / byte_of_pages);
+
+		if (ar.is_writing())
 		{
-			const usz process_size = std::min<usz>(size, 128 * 8);
-			size -= process_size;
+			auto data_ptr = ptr;
 
-			u8 bitmap = 0;
-
-			if (ar.is_writing())
+			for (usz iter_count = 0; iter_count < bit_array.size(); iter_count++, data_ptr += byte_of_pages)
 			{
-				for (usz i = 0; i < process_size; i += 128 * 2)
+				u8 bitmap = 0;
+
+				for (usz i = 0; i < byte_of_pages; i += 128 * 2)
 				{
-					const u64 sample64_1 = read_from_ptr<u64>(ptr, i);
-					const u64 sample64_2 = read_from_ptr<u64>(ptr, i + 128);
+					const u64 sample64_1 = read_from_ptr<u64>(data_ptr, i);
+					const u64 sample64_2 = read_from_ptr<u64>(data_ptr, i + 128);
 
 					// Speed up testing in scenarios where it is likely non-zero data
 					if (sample64_1 && sample64_2)
@@ -1645,15 +1648,30 @@ namespace vm
 						continue;
 					}
 
-					bitmap |= (check_cache_line_zero(ptr + i + 0) ? 0 : 1) << (i / 128);
-					bitmap |= (check_cache_line_zero(ptr + i + 128) ? 0 : 2) << (i / 128);
+					bitmap |= (check_cache_line_zero(data_ptr + i + 0) ? 0 : 1) << (i / 128);
+					bitmap |= (check_cache_line_zero(data_ptr + i + 128) ? 0 : 2) << (i / 128);
 				}
+
+				// bitmap of 1024 bytes (bit is 128-byte)
+				ar(bitmap);
+				bit_array[iter_count] = bitmap;
 			}
+		}
+		else
+		{
+			// Load bitmap
+			ar(std::span<u8>(bit_array.data(), bit_array.size()));
+		}
 
-			// bitmap of 1024 bytes (bit is 128-byte)
-			ar(bitmap);
+		ar.breathe();
 
-			for (usz i = 0; i < process_size;)
+		for (usz iter_count = 0; size; iter_count++, ptr += byte_of_pages)
+		{
+			size -= byte_of_pages;
+
+			const u8 bitmap = bit_array[iter_count];
+
+			for (usz i = 0; i < byte_of_pages;)
 			{
 				usz block_count = 0;
 
