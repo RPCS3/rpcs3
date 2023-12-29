@@ -413,7 +413,7 @@ namespace vk
 		std::lock_guard lock(g_dma_mutex);
 
 		const u32 start = (local_address & s_dma_block_mask);
-		const u32 end = utils::align(local_address + length, s_dma_block_length);
+		const u32 end = utils::align(local_address + length, static_cast<u32>(s_dma_block_length));
 
 		for (u32 block = start; block < end;)
 		{

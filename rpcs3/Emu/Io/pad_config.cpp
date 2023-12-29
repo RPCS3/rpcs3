@@ -103,9 +103,7 @@ void cfg_input::save(const std::string& title_id, const std::string& config_file
 		input_log.fatal("Failed to create path: %s (%s)", cfg_name, fs::g_tls_error);
 	}
 
-	fs::pending_file cfg_file(cfg_name);
-
-	if (!cfg_file.file || (cfg_file.file.write(to_string()), !cfg_file.commit()))
+	if (!cfg::node::save(cfg_name))
 	{
 		input_log.error("Failed to save pad config to '%s' (error=%s)", cfg_name, fs::g_tls_error);
 	}
@@ -131,9 +129,7 @@ void cfg_input_configurations::save() const
 {
 	input_log.notice("Saving input configurations config to '%s'", path);
 
-	fs::pending_file cfg_file(path);
-
-	if (!cfg_file.file || (cfg_file.file.write(to_string()), !cfg_file.commit()))
+	if (!cfg::node::save(path))
 	{
 		input_log.error("Failed to save input configurations config to '%s' (error=%s)", path, fs::g_tls_error);
 	}

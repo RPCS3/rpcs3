@@ -463,7 +463,7 @@ public:
 					// Rely on previous sh_offset value!
 					if (hdr.p_offset <= shdr.sh_offset && shdr.sh_offset + shdr.sh_size - 1 <= hdr.p_offset + hdr.p_filesz - 1)
 					{
-						out.sh_offset = data_base + shdr.sh_offset - hdr.p_offset;
+						out.sh_offset = ::narrow<sz_t>(data_base + static_cast<usz>(shdr.sh_offset - hdr.p_offset));
 						result = true;
 						break;
 					}

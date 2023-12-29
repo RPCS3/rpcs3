@@ -12,7 +12,7 @@ namespace np
 {
 	struct userinfo_cache
 	{
-		SceNpId npId;
+		SceNpId npId{};
 		std::optional<SceNpOnlineName> onlineName;
 		std::optional<SceNpAvatarUrl> avatarUrl;
 	};

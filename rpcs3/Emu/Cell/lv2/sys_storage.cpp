@@ -77,7 +77,7 @@ error_code sys_storage_read(u32 fd, u32 mode, u32 start_sector, u32 num_sectors,
 		handle->file.seek(start_sector * 0x200ull);
 		const u64 size = num_sectors * 0x200ull;
 		const u64 result = lv2_file::op_read(handle->file, bounce_buf, size);
-		num_sectors = result / 0x200;
+		num_sectors = ::narrow<u32>(result / 0x200ull);
 	}
 
 	*sectors_read = num_sectors;

@@ -264,14 +264,14 @@ void signaling_handler::process_incoming_messages()
 			si->last_rtts[(si->rtt_counters % 6)] = rtt;
 			si->rtt_counters++;
 
-			std::size_t num_rtts = std::min(static_cast<std::size_t>(6), si->rtt_counters);
+			usz num_rtts = std::min(static_cast<std::size_t>(6), si->rtt_counters);
 			u64 sum = 0;
-			for (std::size_t index = 0; index < num_rtts; index++)
+			for (usz index = 0; index < num_rtts; index++)
 			{
 				sum += si->last_rtts[index];
 			}
 
-			si->rtt = (sum / num_rtts);
+			si->rtt = ::narrow<u32>(sum / num_rtts);
 		};
 
 		switch (sp->command)

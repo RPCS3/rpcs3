@@ -147,12 +147,12 @@ namespace gui
 		// Convert an arbitrary count of bytes to a readable format using global units (KB, MB...)
 		QString format_byte_size(usz size);
 
-		static Qt::ColorScheme color_scheme()
+		static inline Qt::ColorScheme color_scheme()
 		{
 			return QGuiApplication::styleHints()->colorScheme();
 		}
 
-		static bool dark_mode_active()
+		static inline bool dark_mode_active()
 		{
 			return color_scheme() == Qt::ColorScheme::Dark;
 		}

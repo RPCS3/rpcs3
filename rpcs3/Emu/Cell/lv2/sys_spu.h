@@ -316,7 +316,7 @@ struct lv2_spu_group
 		, run_state(SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED)
 		, exit_status(0)
 		, join_state(0)
-		// TODO: args()
+		, args({})
 	{
 		threads_map.fill(-1);
 		prio.raw().prio = _prio;

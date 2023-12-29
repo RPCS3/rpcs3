@@ -19,9 +19,9 @@ struct system_sw_version
 	system_sw_version()
 	{
 		f64 version_f = 0;
-		if (!try_to_float(&version_f, utils::get_firmware_version(), 0, 99.9999))
+		if (!try_to_float(&version_f, utils::get_firmware_version(), 0.0f, 99.9999f))
 			sys_game.error("Error parsing firmware version");
-		version = version_f * 10000;
+		version = static_cast<usz>(version_f * 10000);
 	}
 
 	system_sw_version(const system_sw_version&) = delete;

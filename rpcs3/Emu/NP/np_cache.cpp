@@ -129,14 +129,14 @@ namespace np
 
 		const auto& room = rooms[room_id];
 
-		SceNpMatching2RoomSlotInfo slots;
+		SceNpMatching2RoomSlotInfo slots{};
 
 		slots.roomId = room_id;
 
 		SceNpMatching2RoomJoinedSlotMask join_mask = 0;
 		for (const auto& member : room.members)
 		{
-			join_mask |= (1 << ((member.first >> 4) - 1));
+			join_mask |= (1ull << ((member.first >> 4) - 1));
 		}
 		slots.joinedSlotMask   = join_mask;
 		slots.passwordSlotMask = room.mask_password;
@@ -253,7 +253,7 @@ namespace np
 		{
 			if (member.bins.contains(binattrs_list[i]))
 			{
-				needed_data_size += (sizeof(SceNpMatching2RoomMemberBinAttrInternal) + ::at32(member.bins, binattrs_list[i]).data.size());
+				needed_data_size += ::narrow<u32>(sizeof(SceNpMatching2RoomMemberBinAttrInternal) + ::at32(member.bins, binattrs_list[i]).data.size());
 			}
 		}
 
@@ -311,9 +311,9 @@ namespace np
 					const auto& bin = ::at32(member.bins, binattrs_list[i]);
 					bin_ptr[actual_cnt].updateDate.tick = bin.updateDate.tick;
 					bin_ptr[actual_cnt].data.id         = bin.id;
-					bin_ptr[actual_cnt].data.size       = bin.data.size();
-					bin_ptr[actual_cnt].data.ptr.set(mem.allocate(bin.data.size()));
-					memcpy(bin_ptr[actual_cnt].data.ptr.get_ptr(), bin.data.data(), bin.data.size());
+					bin_ptr[actual_cnt].data.size       = ::size32(bin.data);
+					bin_ptr[actual_cnt].data.ptr.set(mem.allocate(::size32(bin.data)));
+					std::memcpy(bin_ptr[actual_cnt].data.ptr.get_ptr(), bin.data.data(), bin.data.size());
 					actual_cnt++;
 				}
 			}

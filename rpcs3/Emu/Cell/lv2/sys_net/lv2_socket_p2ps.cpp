@@ -129,7 +129,7 @@ public:
 						ensure(sock.get_type() == SYS_NET_SOCK_STREAM_P2P);
 						auto& sock_p2ps = reinterpret_cast<lv2_socket_p2ps&>(sock);
 
-						if (::sendto(sock_p2ps.get_socket(), reinterpret_cast<const char*>(msg.data.data()), msg.data.size(), 0, reinterpret_cast<const sockaddr*>(&msg.dst_addr), sizeof(msg.dst_addr)) == -1)
+						if (::sendto(sock_p2ps.get_socket(), reinterpret_cast<const char*>(msg.data.data()), ::size32(msg.data), 0, reinterpret_cast<const sockaddr*>(&msg.dst_addr), sizeof(msg.dst_addr)) == -1)
 						{
 							sys_net.error("[P2PS] Resending the packet failed(%s), closing the socket", get_last_error(false));
 
@@ -284,7 +284,7 @@ bool lv2_socket_p2ps::handle_connected(p2ps_encapsulated_tcp* tcp_header, u8* da
 
 	nt_p2p_port::dump_packet(tcp_header);
 
-	if (tcp_header->flags == p2ps_tcp_flags::ACK)
+	if (tcp_header->flags == static_cast<u8>(p2ps_tcp_flags::ACK))
 	{
 		auto& tcpm = g_fxo->get<named_thread<tcp_timeout_monitor>>();
 		tcpm.confirm_data_received(lv2_id, tcp_header->ack);
@@ -400,7 +400,7 @@ bool lv2_socket_p2ps::handle_listening(p2ps_encapsulated_tcp* tcp_header, [[mayb
 	}
 
 	// Only valid packet
-	if (tcp_header->flags == p2ps_tcp_flags::SYN)
+	if (tcp_header->flags == static_cast<u8>(p2ps_tcp_flags::SYN))
 	{
 		if (backlog.size() >= max_backlog)
 		{
@@ -475,12 +475,12 @@ bool lv2_socket_p2ps::handle_listening(p2ps_encapsulated_tcp* tcp_header, [[mayb
 	return true;
 }
 
-void lv2_socket_p2ps::send_u2s_packet(std::vector<u8> data, const ::sockaddr_in* dst, u32 seq, bool require_ack)
+void lv2_socket_p2ps::send_u2s_packet(std::vector<u8> data, const ::sockaddr_in* dst, u64 seq, bool require_ack)
 {
 	char ip_str[16];
 	inet_ntop(AF_INET, &dst->sin_addr, ip_str, sizeof(ip_str));
 	sys_net.trace("[P2PS] Sending U2S packet on socket %d(id:%d): data(%d, seq %d, require_ack %d) to %s:%d", socket, lv2_id, data.size(), seq, require_ack, ip_str, std::bit_cast<u16, be_t<u16>>(dst->sin_port));
-	if (::sendto(socket, reinterpret_cast<char*>(data.data()), data.size(), 0, reinterpret_cast<const sockaddr*>(dst), sizeof(sockaddr_in)) == -1)
+	if (::sendto(socket, reinterpret_cast<char*>(data.data()), ::size32(data), 0, reinterpret_cast<const sockaddr*>(dst), sizeof(sockaddr_in)) == -1)
 	{
 		sys_net.error("[P2PS] Attempting to send a u2s packet failed(%s), closing socket!", get_last_error(false));
 		status = p2ps_stream_status::stream_closed;
@@ -753,7 +753,7 @@ std::optional<std::tuple<s32, std::vector<u8>, sys_net_sockaddr>> lv2_socket_p2p
 		return std::nullopt;
 	}
 
-	const u32 to_give = std::min<u32>(data_available, len);
+	const u32 to_give = static_cast<u32>(std::min<u64>(data_available, len));
 	sys_net_sockaddr addr{};
 	std::vector<u8> dest_buf(to_give);
 
@@ -819,7 +819,7 @@ std::optional<s32> lv2_socket_p2ps::sendto([[maybe_unused]] s32 flags, const std
 	tcp_header.dst_port = op_vport;
 	// chop it up
 	std::vector<std::vector<u8>> stream_packets;
-	u32 cur_total_len = buf.size();
+	u32 cur_total_len = ::size32(buf);
 	while (cur_total_len > 0)
 	{
 		u32 cur_data_len = std::min(cur_total_len, max_data_len);
@@ -834,7 +834,7 @@ std::optional<s32> lv2_socket_p2ps::sendto([[maybe_unused]] s32 flags, const std
 		cur_seq += cur_data_len;
 	}
 
-	return {buf.size()};
+	return {::size32(buf)};
 }
 
 std::optional<s32> lv2_socket_p2ps::sendmsg([[maybe_unused]] s32 flags, [[maybe_unused]] const sys_net_msghdr& msg, [[maybe_unused]] bool is_lock)

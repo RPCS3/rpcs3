@@ -331,7 +331,7 @@ namespace utils
 		}
 		else
 		{
-			percent = (sys.QuadPart - m_sys_cpu) + (usr.QuadPart - m_usr_cpu);
+			percent = static_cast<double>((sys.QuadPart - m_sys_cpu) + (usr.QuadPart - m_usr_cpu));
 			percent /= (now.QuadPart - m_last_cpu);
 			percent /= utils::get_thread_count(); // Let's assume this is at least 1
 			percent *= 100;

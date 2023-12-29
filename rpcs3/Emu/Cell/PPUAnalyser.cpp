@@ -141,7 +141,7 @@ static u32 ppu_test(const be_t<u32>* ptr, const void* fend, ppu_pattern_array pa
 		cur++;
 	}
 
-	return (cur - ptr) * sizeof(*ptr);
+	return ::narrow<u32>((cur - ptr) * sizeof(*ptr));
 }
 
 static u32 ppu_test(const be_t<u32>* ptr, const void* fend, ppu_pattern_matrix pats)
@@ -2041,7 +2041,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 
 	if (per_instruction_bytes)
 	{
-		const bool error = per_instruction_bytes >= 200 && per_instruction_bytes / 4 >= utils::aligned_div<u32>(funcs.size(), 128);
+		const bool error = per_instruction_bytes >= 200 && per_instruction_bytes / 4 >= utils::aligned_div<u32>(::size32(funcs), 128);
 		(error ? ppu_log.error : ppu_log.notice)("%d instructions will be compiled on per-instruction basis in total", per_instruction_bytes / 4);
 	}
 

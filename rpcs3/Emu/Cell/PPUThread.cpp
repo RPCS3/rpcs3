@@ -1342,12 +1342,12 @@ void ppu_thread::dump_regs(std::string& ret, std::any& custom_data) const
 					}
 				}
 			}
-			else if (is_exec_code(reg))
+			else if (is_exec_code(static_cast<u32>(reg)))
 			{
 				is_function = true;
 			}
 
-			const auto gpr_buf = vm::get_super_ptr<u8>(reg);
+			const auto gpr_buf = vm::get_super_ptr<u8>(static_cast<u32>(reg));
 
 			std::string buf_tmp(gpr_buf, gpr_buf + max_str_len);
 
@@ -1361,7 +1361,7 @@ void ppu_thread::dump_regs(std::string& ret, std::any& custom_data) const
 				}
 				else
 				{
-					dis_asm.disasm(reg);
+					dis_asm.disasm(static_cast<u32>(reg));
 					fmt::append(ret, " -> %s", dis_asm.last_opcode);
 				}
 			}

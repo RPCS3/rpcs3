@@ -172,7 +172,7 @@ int aes_crypt_ctr( aes_context *ctx,
                        const unsigned char *input,
                        unsigned char *output );
 
-void aes_cmac(aes_context *ctx, int length, unsigned char *input, unsigned char *output);
+void aes_cmac(aes_context *ctx, size_t length, unsigned char *input, unsigned char *output);
 
 #ifdef __cplusplus
 }

@@ -125,9 +125,11 @@ private:
 	f32 m_r_stick_lerp_factor = 1.0f;
 	u32 m_l_stick_multiplier = 100;
 	u32 m_r_stick_multiplier = 100;
-	std::array<u8, 4> m_stick_min{ 0, 0, 0, 0 };
-	std::array<u8, 4> m_stick_max{ 128, 128, 128, 128 };
-	std::array<u8, 4> m_stick_val{ 128, 128, 128, 128 };
+
+	static constexpr usz max_sticks = 4;
+	std::array<u8, max_sticks> m_stick_min{ 0, 0, 0, 0 };
+	std::array<u8, max_sticks> m_stick_max{ 128, 128, 128, 128 };
+	std::array<u8, max_sticks> m_stick_val{ 128, 128, 128, 128 };
 
 	// Mouse Movements
 	steady_clock::time_point m_last_mouse_move_left;

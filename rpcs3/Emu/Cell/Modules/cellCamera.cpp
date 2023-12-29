@@ -7,6 +7,8 @@
 #include "Emu/Cell/lv2/sys_event.h"
 #include "Emu/IdManager.h"
 
+#include <cmath>
+
 LOG_CHANNEL(cellCamera);
 
 template <>
@@ -326,7 +328,7 @@ u32 get_buffer_size_by_format(s32 format, s32 width, s32 height)
 		break;
 	}
 
-	return width * height * bytes_per_pixel;
+	return ::narrow<u32>(static_cast<u64>(std::ceil(width * height * bytes_per_pixel)));
 }
 
 

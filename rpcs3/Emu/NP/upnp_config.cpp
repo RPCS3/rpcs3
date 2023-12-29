@@ -31,11 +31,11 @@ void cfg_upnp::save() const
 	}
 #endif
 
-	fs::pending_file cfg_file(cfg_upnp::get_path());
+	const std::string path = cfg_upnp::get_path();
 
-	if (!cfg_file.file || (cfg_file.file.write(to_string()), !cfg_file.commit()))
+	if (!cfg::node::save(path))
 	{
-		upnp_cfg_log.error("Could not save config: %s (error=%s)", cfg_upnp::get_path(), fs::g_tls_error);
+		upnp_cfg_log.error("Could not save config: %s (error=%s)", path, fs::g_tls_error);
 	}
 }
 
