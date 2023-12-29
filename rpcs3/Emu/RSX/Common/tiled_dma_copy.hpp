@@ -102,10 +102,11 @@ namespace rsx
 		tile_address ^= ((tile_address >> 11) & 1) << 10;
 
 		// Calculate relative addresses and sample
-		uint32_t linear_image_offset = (row * conf.image_pitch) + (col * conf.image_bpp);
-		uint32_t tile_data_offset = tile_address - (conf.tile_base_address + conf.tile_offset);
+		const uint32_t linear_image_offset = (row * conf.image_pitch) + (col * conf.image_bpp);
+		const uint32_t tile_base_offset = tile_address - conf.tile_base_address; // Distance from tile base address
+		const uint32_t tile_data_offset = tile_base_offset - conf.tile_offset;   // Distance from data base address
 
-		if (tile_data_offset >= conf.tile_size)
+		if (tile_base_offset >= conf.tile_size)
 		{
 			// Do not touch anything out of bounds
 			return;
@@ -122,7 +123,7 @@ namespace rsx
 	}
 
 	// Entry point. In GPU code this is handled by dispatch + main
-	template <typename T, bool Reverse = false>
+	template <typename T, bool Decode = false>
 	void tile_texel_data(void* dst, const void* src, uint32_t base_address, uint32_t base_offset, uint32_t tile_size, uint8_t bank_sense, uint16_t row_pitch_in_bytes, uint16_t image_width, uint16_t image_height)
 	{
 		// Some constants
@@ -148,7 +149,7 @@ namespace rsx
 
 		const auto [prime, factor] = get_prime_factor(row_pitch_in_bytes);
 		const uint32_t tiles_per_row = prime * factor;
-		constexpr int op = Reverse ? RSX_DMA_OP_DECODE_TILE : RSX_DMA_OP_ENCODE_TILE;
+		constexpr int op = Decode ? RSX_DMA_OP_DECODE_TILE : RSX_DMA_OP_ENCODE_TILE;
 
 		auto src2 = static_cast<char*>(const_cast<void*>(src));
 		auto dst2 = static_cast<char*>(dst);
@@ -183,6 +184,11 @@ namespace rsx
 			}
 		}
 	}
+
+	static auto tile_texel_data16 = tile_texel_data<u16, false>;
+	static auto tile_texel_data32 = tile_texel_data<u32, false>;
+	static auto detile_texel_data16 = tile_texel_data<u16, true>;
+	static auto detile_texel_data32 = tile_texel_data<u32, true>;
 
 #undef RSX_TILE_WIDTH
 #undef RSX_TILE_HEIGHT
