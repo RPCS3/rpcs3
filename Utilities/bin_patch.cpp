@@ -1031,12 +1031,12 @@ static usz apply_modification(std::basic_string<u32>& applied, patch_engine::pat
 		}
 		case patch_type::utf8:
 		{
-			memory_size = p.original_value.size();
+			memory_size = ::size32(p.original_value);
 			break;
 		}
 		case patch_type::c_utf8:
 		{
-			memory_size = utils::add_saturate<u32>(p.original_value.size(), 1);
+			memory_size = utils::add_saturate<u32>(::size32(p.original_value), 1);
 			break;
 		}
 		case patch_type::move_file:

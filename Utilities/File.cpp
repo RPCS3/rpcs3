@@ -227,10 +227,17 @@ namespace fs
 	{
 	}
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4646)
+#endif
 	[[noreturn]] stat_t file_base::get_stat()
 	{
 		fmt::throw_exception("fs::file::get_stat() not supported.");
 	}
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 	void file_base::sync()
 	{

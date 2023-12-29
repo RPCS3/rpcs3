@@ -385,7 +385,7 @@ error_code cellFsGetFreeSize(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u32> 
 		}
 
 		*block_count = *avail / *_block_size;
-		*block_size = *_block_size;
+		*block_size = ::narrow<u32>(*_block_size);
 	}
 
 	return CELL_OK;

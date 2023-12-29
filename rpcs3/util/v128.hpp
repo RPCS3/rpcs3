@@ -163,11 +163,16 @@ union alignas(16) v128
 #if defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wuninitialized"
+#elif _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 6001)
 #endif
 		v128 ret;
 		return ret;
 #if defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic pop
+#elif _MSC_VER
+#pragma warning(pop)
 #endif
 	}
 

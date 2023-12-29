@@ -33,7 +33,7 @@ struct signaling_info
 
 	// Stats
 	u64 last_rtts[6] = {};
-	std::size_t rtt_counters = 0;
+	usz rtt_counters = 0;
 	u32 rtt = 0;
 	u32 pings_sent = 1, lost_pings = 0;
 	u32 packet_loss = 0;

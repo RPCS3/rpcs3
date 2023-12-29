@@ -178,7 +178,7 @@ protected:
 				return std::forward_as_tuple(__null_vertex_program, false);
 			}
 
-			rsx_log.notice("VP not found in buffer!");
+			rsx_log.trace("VP not found in buffer!");
 
 			lock.upgrade();
 			auto [it, inserted] = m_vertex_shader_cache.try_emplace(rsx_vp);
@@ -215,7 +215,7 @@ protected:
 				return std::forward_as_tuple(__null_fragment_program, false);
 			}
 
-			rsx_log.notice("FP not found in buffer!");
+			rsx_log.trace("FP not found in buffer!");
 
 			lock.upgrade();
 			std::tie(it, recompile) = m_fragment_shader_cache.try_emplace(rsx_fp);

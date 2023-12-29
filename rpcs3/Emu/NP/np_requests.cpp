@@ -138,11 +138,11 @@ namespace np
 
 		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_GetWorldInfoList, sizeof(SceNpMatching2GetWorldInfoListResponse));
 		auto* world_info = reinterpret_cast<SceNpMatching2GetWorldInfoListResponse*>(edata.data());
-		world_info->worldNum = world_list.size();
+		world_info->worldNum = ::size32(world_list);
 
 		if (!world_list.empty())
 		{
-			auto* worlds = edata.allocate<SceNpMatching2World>(sizeof(SceNpMatching2World) * world_list.size(), world_info->world);
+			auto* worlds = edata.allocate<SceNpMatching2World>(::narrow<u32>(sizeof(SceNpMatching2World) * world_list.size()), world_info->world);
 			for (usz i = 0; i < world_list.size(); i++)
 			{
 				worlds[i].worldId = world_list[i];
@@ -736,13 +736,13 @@ namespace np
 		if (reply.is_error())
 			return error_and_disconnect("Malformed reply to GetBoardInfos command");
 
-		SceNpScoreBoardInfo board_info;
-
-		board_info.rankLimit = resp->rankLimit();
-		board_info.updateMode = resp->updateMode();
-		board_info.sortMode = resp->sortMode();
-		board_info.uploadNumLimit = resp->uploadNumLimit();
-		board_info.uploadSizeLimit = resp->uploadSizeLimit();
+		const SceNpScoreBoardInfo board_info{
+			.rankLimit = resp->rankLimit(),
+			.updateMode = resp->updateMode(),
+			.sortMode = resp->sortMode(),
+			.uploadNumLimit = resp->uploadNumLimit(),
+			.uploadSizeLimit = resp->uploadSizeLimit()
+		};
 
 		std::lock_guard lock_trans(mutex_async_transactions);
 		if (!async_transactions.count(req_id))
@@ -962,7 +962,7 @@ namespace np
 			return false;
 		}
 
-		tdata->game_data_size = tdata->game_data.size();
+		tdata->game_data_size = ::size32(tdata->game_data);
 
 		usz to_copy = std::min(tdata->game_data.size(), static_cast<usz>(tdata->recvSize));
 		std::memcpy(tdata->score_data.get_ptr(), tdata->game_data.data(), to_copy);
@@ -1396,7 +1396,7 @@ namespace np
 			cur_status->lastChangedDate.tick = cur_fb_status->lastChangedDate();
 			string_to_npid(cur_fb_status->lastChangedAuthorId()->string_view(), cur_status->lastChangedAuthorId);
 			cur_status->info.infoSize = cur_fb_status->info() ? cur_fb_status->info()->size() : 0;
-			for (usz i = 0; i < static_cast<usz>(cur_status->info.infoSize); i++)
+			for (flatbuffers::uoffset_t i = 0; i < cur_status->info.infoSize; i++)
 			{
 				cur_status->info.data[i] = cur_fb_status->info()->Get(i);
 			}
@@ -1631,14 +1631,13 @@ namespace np
 
 		const auto* fb_status = fb_data->status();
 		ensure(fb_status && fb_status->ownerId());
+		if (!fb_status) return false; // Sanity check to make compiler happy
 
 		auto* data_status = tdata->dataStatus.get_ptr();
 		auto* data = static_cast<u8 *>(tdata->data.get_ptr());
 
 		memset(data_status, 0, sizeof(SceNpTusDataStatus));
 		string_to_npid(fb_status->ownerId()->string_view(), data_status->ownerId);
-
-		usz to_copy = 0;
 
 		if (fb_status->hasData())
 		{
@@ -1649,19 +1648,19 @@ namespace np
 			data_status->dataSize = fb_data->data() ? fb_data->data()->size() : 0;
 			data_status->info.infoSize = fb_status->info() ? fb_status->info()->size() : 0;
 			
-			to_copy = std::min(static_cast<usz>(data_status->dataSize), static_cast<usz>(tdata->recvSize));
-			for (usz i = 0; i < to_copy; i++)
+			const u32 to_copy = std::min<u32>(data_status->dataSize, tdata->recvSize);
+			for (flatbuffers::uoffset_t i = 0; i < to_copy; i++)
 			{
 				data[i] = fb_data->data()->Get(i);
 			}
-			const usz bytes_left = data_status->dataSize - to_copy;
+			const u32 bytes_left = data_status->dataSize - to_copy;
 			tdata->tus_data.reserve(bytes_left);
-			for (usz i = to_copy; i < bytes_left; i++)
+			for (flatbuffers::uoffset_t i = to_copy; i < bytes_left; i++)
 			{
 				tdata->tus_data.push_back(fb_data->data()->Get(i));
 			}
 
-			for (usz i = 0; i < data_status->info.infoSize; i++)
+			for (flatbuffers::uoffset_t i = 0; i < data_status->info.infoSize; i++)
 			{
 				fb_status->info()->Get(i);
 			}

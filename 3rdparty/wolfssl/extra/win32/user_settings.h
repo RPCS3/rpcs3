@@ -25,9 +25,13 @@
 #define HAVE_ONE_TIME_AUTH
 #define HAVE_CHACHA
 #define HAVE_HASHDRBG
+#ifndef HAVE_SNI
 #define HAVE_SNI
+#endif
 #define HAVE_ENCRYPT_THEN_MAC
+#ifndef NO_MD4
 #define NO_MD4
+#endif
 #define WC_NO_ASYNC_THREADING
 #define WC_NO_HARDEN
 #define HAVE_WRITE_DUP

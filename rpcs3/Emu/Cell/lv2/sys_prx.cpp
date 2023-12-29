@@ -756,7 +756,7 @@ void lv2_prx::restore_exports()
 
 	std::basic_string<bool> loaded_flags_empty;
 
-	for (usz start = exports_start, i = 0; start < exports_end; i++, start += vm::read8(start) ? vm::read8(start) : sizeof_export_data)
+	for (u32 start = exports_start, i = 0; start < exports_end; i++, start += vm::read8(start) ? vm::read8(start) : sizeof_export_data)
 	{
 		if (::at32(m_external_loaded_flags, i) || (!m_loaded_flags.empty() && ::at32(m_loaded_flags, i)))
 		{

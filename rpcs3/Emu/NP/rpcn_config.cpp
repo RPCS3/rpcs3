@@ -41,11 +41,11 @@ void cfg_rpcn::save() const
 	}
 #endif
 
-	fs::pending_file cfg_file(cfg_rpcn::get_path());
+	const std::string path = cfg_rpcn::get_path();
 
-	if (!cfg_file.file || (cfg_file.file.write(to_string()), !cfg_file.commit()))
+	if (!cfg::node::save(path))
 	{
-		rpcn_log.error("Could not save config: %s (error=%s)", cfg_rpcn::get_path(), fs::g_tls_error);
+		rpcn_log.error("Could not save config: %s (error=%s)", path, fs::g_tls_error);
 	}
 }
 

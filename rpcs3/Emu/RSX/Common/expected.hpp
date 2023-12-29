@@ -69,11 +69,18 @@ namespace rsx
             : value(value_)
         {}
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 26495) // disable warning for uninitialized value member (performance reasons)
+#endif
         [[ nodiscard ]] expected(const E& error_)
             : error(error_)
         {
             ensure(!error.empty());
         }
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
         operator T() const
         {

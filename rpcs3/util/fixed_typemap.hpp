@@ -130,7 +130,8 @@ namespace stx
 			template <typename T>
 			static void call_dtor(void* ptr) noexcept
 			{
-				std::launder(static_cast<T*>(ptr))->~T();
+				auto* obj = std::launder(static_cast<T*>(ptr));
+				obj->~T();
 				std::memset(ptr, 0xCC, sizeof(T)); // Set to trap values
 			}
 

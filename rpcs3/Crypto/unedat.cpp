@@ -66,7 +66,7 @@ void generate_hash(int hash_mode, int version, unsigned char *hash_final, unsign
 	};
 }
 
-bool decrypt(int hash_mode, int crypto_mode, int version, unsigned char *in, unsigned char *out, int length, unsigned char *key, unsigned char *iv, unsigned char *hash, unsigned char *test_hash)
+bool decrypt(int hash_mode, int crypto_mode, int version, unsigned char *in, unsigned char *out, usz length, unsigned char *key, unsigned char *iv, unsigned char *hash, unsigned char *test_hash)
 {
 	// Setup buffers for key, iv and hash.
 	unsigned char key_final[0x10] = {};

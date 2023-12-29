@@ -513,7 +513,7 @@ enum FPSCR_EX
 class SPU_FPSCR
 {
 public:
-	u32 _u32[4];
+	u32 _u32[4]{};
 
 	SPU_FPSCR() {}
 
@@ -526,6 +526,7 @@ public:
 	{
 		memset(this, 0, sizeof(*this));
 	}
+
 	//slice -> 0 - 1 (double-precision slice index)
 	//NOTE: slices follow v128 indexing, i.e. slice 0 is RIGHT end of register!
 	//roundTo -> FPSCR_RN_*
@@ -535,6 +536,7 @@ public:
 		//rounding is located in the left end of the FPSCR
 		this->_u32[3] = (this->_u32[3] & ~(3 << shift)) | (roundTo << shift);
 	}
+
 	//Slice 0 or 1
 	u8 checkSliceRounding(u8 slice) const
 	{
@@ -571,11 +573,11 @@ public:
 	//exception: FPSCR_D* bitmask
 	void setDoublePrecisionExceptionFlags(u8 slice, u32 exceptions)
 	{
-		_u32[1+slice] |= exceptions;
+		_u32[1 + slice] |= exceptions;
 	}
 
 	// Write the FPSCR
-	void Write(const v128 & r)
+	void Write(const v128& r)
 	{
 		_u32[3] = r._u32[3] & 0x00000F07;
 		_u32[2] = r._u32[2] & 0x00003F07;
@@ -584,7 +586,7 @@ public:
 	}
 
 	// Read the FPSCR
-	void Read(v128 & r)
+	void Read(v128& r) const
 	{
 		r._u32[3] = _u32[3];
 		r._u32[2] = _u32[2];
@@ -823,7 +825,7 @@ public:
 	u32 get_mfc_completed() const;
 
 	bool process_mfc_cmd();
-	ch_events_t get_events(u32 mask_hint = -1, bool waiting = false, bool reading = false);
+	ch_events_t get_events(u64 mask_hint = umax, bool waiting = false, bool reading = false);
 	void set_events(u32 bits);
 	void set_interrupt_status(bool enable);
 	bool check_mfc_interrupts(u32 next_pc);

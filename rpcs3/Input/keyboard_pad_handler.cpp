@@ -260,6 +260,11 @@ void keyboard_pad_handler::release_all_keys()
 
 		for (usz i = 0; i < pad.m_sticks.size(); i++)
 		{
+			if (i >= max_sticks)
+			{
+				input_log.fatal("Too many sticks (%d vs %d)", pad.m_sticks.size(), max_sticks);
+				break;
+			}
 			m_stick_min[i] = 0;
 			m_stick_max[i] = 128;
 			m_stick_val[i] = 128;

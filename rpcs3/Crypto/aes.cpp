@@ -942,10 +942,9 @@ void generate_subkey(aes_context *ctx, unsigned char *K1, unsigned char *K2)
     }
 }
 
-void padding (unsigned char *lastb, unsigned char *pad, int length)
+void padding(unsigned char *lastb, unsigned char *pad, size_t length)
 {
-	int i;
-	for (i = 0; i < 16; i++)
+	for (unsigned int i = 0; i < 16; i++)
 	{
 		if (i < length)
 			pad[i] = lastb[i];
@@ -956,14 +955,14 @@ void padding (unsigned char *lastb, unsigned char *pad, int length)
 	}
 }
 
-void aes_cmac(aes_context *ctx, int length, unsigned char *input, unsigned char *output)
+void aes_cmac(aes_context *ctx, size_t length, unsigned char *input, unsigned char *output)
 {
     unsigned char X[16], Y[16], M_last[16], padded[16];
     unsigned char K1[16], K2[16];
-    int n, i, flag;
+    int i, flag;
     generate_subkey(ctx, K1, K2);
 
-    n = (length + 15) / 16;
+    size_t n = (length + 15) / 16;
     if (n == 0)
 	{
         n = 1;
@@ -984,7 +983,7 @@ void aes_cmac(aes_context *ctx, int length, unsigned char *input, unsigned char 
     }
 
     for (i = 0; i < 16; i++) X[i] = 0;
-    for (i = 0; i < n - 1; i++)
+    for (size_t i = 0; i < n - 1; i++)
     {
         xor_128(X, &input[16*i], Y);
 		aes_crypt_ecb(ctx, AES_ENCRYPT, Y, X);

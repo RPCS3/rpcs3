@@ -496,7 +496,7 @@ namespace rpcn
 			if (terminate)
 				return recvn_result::recvn_terminate;
 
-			int res = wolfSSL_read(read_wssl, reinterpret_cast<char*>(buf) + n_recv, n - n_recv);
+			int res = wolfSSL_read(read_wssl, reinterpret_cast<char*>(buf) + n_recv, ::narrow<s32>(n - n_recv));
 			if (res <= 0)
 			{
 				if (wolfSSL_want_read(read_wssl))
@@ -577,7 +577,7 @@ namespace rpcn
 			if (!connected)
 				return false;
 
-			int res = wolfSSL_write(write_wssl, reinterpret_cast<const char*>(packet.data() + n_sent), packet.size() - n_sent);
+			int res = wolfSSL_write(write_wssl, reinterpret_cast<const char*>(packet.data() + n_sent), ::narrow<s32>(packet.size() - n_sent));
 			if (res <= 0)
 			{
 				if (wolfSSL_want_write(write_wssl))
@@ -713,7 +713,7 @@ namespace rpcn
 
 		if (splithost.size() == 2)
 		{
-			port = std::stoul(splithost[1]);
+			port = ::narrow<u16>(std::stoul(splithost[1]));
 			if (port == 0)
 			{
 				rpcn_log.error("connect: RPCN port is invalid!");
@@ -759,7 +759,14 @@ namespace rpcn
 			addr_rpcn.sin_port   = std::bit_cast<u16, be_t<u16>>(port); // htons
 			addr_rpcn.sin_family = AF_INET;
 
+#ifdef WIN32
+#pragma warning(push)
+#pragma warning(disable : 4996)
+#endif
 			hostent* host_addr = gethostbyname(splithost[0].c_str());
+#ifdef WIN32
+#pragma warning(pop)
+#endif
 			if (!host_addr)
 			{
 				rpcn_log.error("connect: Failed to resolve %s", host);
@@ -810,7 +817,7 @@ namespace rpcn
 			update_local_addr(client_addr.sin_addr.s_addr);
 			// rpcn_log.notice("Updated local address to %s", np::ip_to_string(std::bit_cast<u32, be_t<u32>>(local_addr_sig.load())));
 
-			if (wolfSSL_set_fd(read_wssl, sockfd) != WOLFSSL_SUCCESS)
+			if (wolfSSL_set_fd(read_wssl, ::narrow<int>(sockfd)) != WOLFSSL_SUCCESS)
 			{
 				rpcn_log.error("connect: Failed to associate wolfssl to the socket");
 				state = rpcn_state::failure_wolfssl;
@@ -1797,7 +1804,7 @@ namespace rpcn
 		std::vector<u8> data;
 		std::copy(service_id.begin(), service_id.end(), std::back_inserter(data));
 		data.push_back(0);
-		const le_t<u32> size = cookie.size();
+		const le_t<u32> size = ::size32(cookie);
 		std::copy(reinterpret_cast<const u8*>(&size), reinterpret_cast<const u8*>(&size) + sizeof(le_t<u32>), std::back_inserter(data));
 		std::copy(cookie.begin(), cookie.end(), std::back_inserter(data));
 
@@ -2280,12 +2287,12 @@ namespace rpcn
 
 	std::vector<u8> rpcn_client::forge_request(u16 command, u64 packet_id, const std::vector<u8>& data) const
 	{
-		u32 packet_size = data.size() + RPCN_HEADER_SIZE;
+		const usz packet_size = data.size() + RPCN_HEADER_SIZE;
 
 		std::vector<u8> packet(packet_size);
 		packet[0]                               = PacketType::Request;
 		reinterpret_cast<le_t<u16>&>(packet[1]) = command;
-		reinterpret_cast<le_t<u32>&>(packet[3]) = packet_size;
+		reinterpret_cast<le_t<u32>&>(packet[3]) = ::narrow<u32>(packet_size);
 		reinterpret_cast<le_t<u64>&>(packet[7]) = packet_id;
 
 		memcpy(packet.data() + RPCN_HEADER_SIZE, data.data(), data.size());
@@ -2572,14 +2579,14 @@ namespace rpcn
 	{
 		std::lock_guard lock(mutex_friends);
 
-		return friend_infos.friends.size();
+		return ::size32(friend_infos.friends);
 	}
 
 	u32 rpcn_client::get_num_blocks()
 	{
 		std::lock_guard lock(mutex_friends);
 
-		return friend_infos.blocked.size();
+		return ::size32(friend_infos.blocked);
 	}
 
 	std::optional<std::string> rpcn_client::get_friend_by_index(u32 index)

@@ -185,10 +185,10 @@ namespace rsx
 		}
 	}
 
-	static auto tile_texel_data16 = tile_texel_data<u16, false>;
-	static auto tile_texel_data32 = tile_texel_data<u32, false>;
-	static auto detile_texel_data16 = tile_texel_data<u16, true>;
-	static auto detile_texel_data32 = tile_texel_data<u32, true>;
+	[[maybe_unused]] static auto tile_texel_data16 = tile_texel_data<u16, false>;
+	[[maybe_unused]] static auto tile_texel_data32 = tile_texel_data<u32, false>;
+	[[maybe_unused]] static auto detile_texel_data16 = tile_texel_data<u16, true>;
+	[[maybe_unused]] static auto detile_texel_data32 = tile_texel_data<u32, true>;
 
 #undef RSX_TILE_WIDTH
 #undef RSX_TILE_HEIGHT
