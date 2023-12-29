@@ -56,7 +56,8 @@ target_sources(rpcs3_emu PRIVATE
     ../../Utilities/cond.cpp
     ../../Utilities/Config.cpp
     ../../Utilities/File.cpp
-    ../../Utilities/JIT.cpp
+    ../../Utilities/JITASM.cpp
+    ../../Utilities/JITLLVM.cpp
     ../../Utilities/LUrlParser.cpp
     ../../Utilities/mutex.cpp
     ../../Utilities/rXml.cpp
@@ -199,7 +200,8 @@ target_sources(rpcs3_emu PRIVATE
     Cell/SPUASMJITRecompiler.cpp
     Cell/SPUDisAsm.cpp
     Cell/SPUInterpreter.cpp
-    Cell/SPURecompiler.cpp
+    Cell/SPUCommonRecompiler.cpp
+    Cell/SPULLVMRecompiler.cpp
     Cell/SPUThread.cpp
     Cell/lv2/lv2.cpp
     Cell/lv2/sys_bdemu.cpp
