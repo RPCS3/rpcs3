@@ -696,7 +696,11 @@ namespace vk
 #if DEBUG_DMA_TILING
 			auto real_data = vm::get_super_ptr<u8>(range.start);
 			ext_data.resize(tiled_region.tile->size);
-			rsx::tile_texel_data<u32, true>(
+			auto detile_func = get_bpp() == 4
+				? rsx::detile_texel_data32
+				: rsx::detile_texel_data16;
+
+			detile_func(
 				ext_data.data(),
 				real_data,
 				tiled_region.base_address,
@@ -706,7 +710,7 @@ namespace vk
 				tiled_region.tile->pitch,
 				subres.width_in_block,
 				subres.height_in_block
-				);
+			);
 			subres.data = std::span(ext_data);
 #else
 			const auto [scratch_buf, linear_data_scratch_offset] = vk::detile_memory_block(cmd, tiled_region, range, subres.width_in_block, subres.height_in_block, get_bpp());
