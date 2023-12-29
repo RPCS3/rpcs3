@@ -4521,6 +4521,18 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		std::array<usz, s_reg_max> store_context_last_id = fill_array<usz>(0); // Protects against illegal forward ordering
 		std::array<usz, s_reg_max> store_context_first_id = fill_array<usz>(usz{umax}); // Protects against illegal past store elimination (backwards ordering is not implemented)
 		std::array<usz, s_reg_max> store_context_ctr = fill_array<usz>(1); // Store barrier cointer
+
+		bool does_gpr_barrier_proceed_last_store(u32 i) const noexcept
+		{
+			const usz counter = store_context_ctr[i];
+			return counter != 1 && counter > store_context_last_id[i];
+		}
+
+		bool does_gpr_barrier_preceed_first_store(u32 i) const noexcept
+		{
+			const usz counter = store_context_ctr[i];
+			return counter != 1 && counter < store_context_first_id[i];
+		}
 	};
 
 	struct function_info
@@ -6019,7 +6031,7 @@ public:
 				for (u32 i = 0; i < 128; i++)
 				{
 					// Check if the store is beyond the last barrier
-					if (auto& bs = bqbi->store[i]; bs && bqbi->store_context_last_id[i] == bqbi->store_context_ctr[i])
+					if (auto& bs = bqbi->store[i]; bs && !bqbi->does_gpr_barrier_proceed_last_store(i))
 					{
 						for (auto& [a, b] : m_blocks)
 						{
@@ -6080,7 +6092,7 @@ public:
 						llvm::SetVector<llvm::BasicBlock*> work_list;
 						std::unordered_map<llvm::BasicBlock*, bool> worked_on;
 
-						if (std::count(killers.begin(), killers.end(), common_pdom) == 0)
+						if (!common_pdom || std::count(killers.begin(), killers.end(), common_pdom) == 0)
 						{
 							if (common_pdom)
 							{
@@ -6099,6 +6111,7 @@ public:
 							}
 						}
 
+						// bool flag indicates the presence of a memory barrier before the killer store
 						std::vector<std::pair<llvm::BasicBlock*, bool>> work2_list;
 
 						for (usz wi = 0; wi < work_list.size(); wi++)
@@ -6106,7 +6119,7 @@ public:
 							auto* cur = work_list[wi];
 							if (std::count(killers.begin(), killers.end(), cur))
 							{
-								work2_list.emplace_back(cur, bb_to_info[cur] && bb_to_info[cur]->store_context_first_id[i] > 1);
+								work2_list.emplace_back(cur, bb_to_info[cur] && bb_to_info[cur]->does_gpr_barrier_preceed_first_store(i));
 								continue;
 							}
 
@@ -6137,29 +6150,40 @@ public:
 							worked_on[work2_list[wi].first] = true;
 						}
 
+						// Need to treat tails differently: do not require checking barrier (checked before in a suitable manner)
+						const usz work_list_tail_blocks_max_index = work2_list.size();
+
 						for (usz wi = 0; wi < work2_list.size(); wi++)
 						{
 							auto [cur, found_user] = work2_list[wi];
 
-							if (cur == bs->getParent())
+							ensure(cur != bs->getParent());
+
+							if (!found_user && wi >= work_list_tail_blocks_max_index)
 							{
-								if (found_user)
+								if (auto info = bb_to_info[cur])
 								{
-									// Reset: store is being used and preserved by ensure_gpr_stores()
-									killers.clear();
-									break;
+									if (info->store_context_ctr[i] != 1)
+									{
+										found_user = true;
+									}
 								}
-
-								continue;
-							}
-
-							if (!found_user && bb_to_info[cur] && bb_to_info[cur]->store_context_last_id[i])
-							{
-								found_user = true;
 							}
 
 							for (auto* p : llvm::predecessors(cur))
 							{
+								if (p == bs->getParent())
+								{
+									if (found_user)
+									{
+										// Reset: store is being used and preserved by ensure_gpr_stores()
+										killers.clear();
+										break;
+									}
+
+									continue;
+								}
+
 								if (!worked_on[p])
 								{
 									worked_on[p] = true;
@@ -6170,6 +6194,11 @@ public:
 								{
 									work2_list.push_back(std::make_pair(p, true));
 								}
+							}
+
+							if (killers.empty())
+							{
+								break;
 							}
 						}
 
@@ -6197,7 +6226,7 @@ public:
 				for (u32 i = 0; i < 128; i++)
 				{
 					// If store isn't erased, try to sink it
-					if (auto& bs = block_q[bi]->store[i]; bs && block_q[bi]->bb->targets.size() > 1 && block_q[bi]->store_context_last_id[i] == block_q[bi]->store_context_ctr[i])
+					if (auto& bs = block_q[bi]->store[i]; bs && block_q[bi]->bb->targets.size() > 1 && !block_q[bi]->does_gpr_barrier_proceed_last_store(i))
 					{
 						std::map<u32, block_info*, std::greater<>> sucs;
 

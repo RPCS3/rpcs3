@@ -36,6 +36,8 @@
 #include "Loader/ELF.h"
 #include "Loader/disc.h"
 
+#include "rpcs3_version.h"
+
 #include "Utilities/StrUtil.h"
 
 #include "../Crypto/unself.h"
@@ -964,6 +966,10 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 		const bool from_dev_flash  = IsPathInsideDir(m_path, g_cfg_vfs.get_dev_flash());
 
+		std::string savestate_build_version;
+		std::string savestate_creation_date;
+		std::string savestate_app_title;
+
 		if (m_ar)
 		{
 			struct file_header
@@ -991,13 +997,15 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 			g_cfg.savestate.state_inspection_mode.set(header.state_inspection_support);
 
+			bool is_incompatible = false;
+
 			if (header.flag_versions_is_following_data)
 			{
 				ensure(header.offset == m_ar->pos);
 
 				if (!is_savestate_version_compatible(m_ar->pop<std::vector<version_entry>>(), true))
 				{
-					return game_boot_result::savestate_version_unsupported;
+					is_incompatible = true;
 				}
 			}
 			else
@@ -1010,14 +1018,35 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 				if (!is_savestate_version_compatible(ar_temp.pop<std::vector<version_entry>>(), true))
 				{
-					return game_boot_result::savestate_version_unsupported;
+					is_incompatible = true;
 				}
 
 				// Restore file handler
 				ar_temp.swap_handler(*m_ar);
 			}
 
-			if (!load_and_check_reserved(*m_ar, header.flag_versions_is_following_data ? 32 : 31))
+			const bool contains_version = m_ar->pop<b8>();
+
+			if (contains_version)
+			{
+				savestate_build_version = m_ar->pop<std::string>();
+				savestate_creation_date = m_ar->pop<std::string>();
+				savestate_app_title = m_ar->pop<std::string>();
+				m_ar->pop<std::string>(); // User note (unused)
+
+				(is_incompatible ? sys_log.error : sys_log.success)("Savestate information: creation time: %s, RPCS3 build: \"%s\"\nGame/Title: \"%s\"", savestate_creation_date, savestate_build_version, savestate_app_title);
+			}
+
+			if (is_incompatible)
+			{
+				return game_boot_result::savestate_version_unsupported;
+			}
+
+			usz reserved_count = 32;
+			reserved_count -= (header.flag_versions_is_following_data ? 0 : 1);
+			reserved_count -= (contains_version ? 0 : 1);
+
+			if (!load_and_check_reserved(*m_ar, reserved_count))
 			{
 				return game_boot_result::savestate_version_unsupported;
 			}
@@ -1496,7 +1525,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			// Fake arg (workaround)
 			argv.resize(1);
 			argv[0] = "/dev_bdvd/PS3_GAME/USRDIR/EBOOT.BIN";
-			m_dir = "/dev_bdvd/PS3_GAME";
+			m_dir = "/dev_bdvd/PS3_GAME/";
 
 			std::string path;
 			std::vector<std::string> dir_queue;
@@ -2084,14 +2113,19 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 				if (from_hdd0_game && m_cat == "DG")
 				{
-					argv[0] = "/dev_bdvd/PS3_GAME/" + unescape(resolved_path.substr(resolved_hdd0.size() + 10));
-					m_dir = "/dev_hdd0/game/" + resolved_path.substr(resolved_hdd0.size(), 10);
+					const std::string tail = resolved_path.substr(resolved_hdd0.size());
+					const std::string tail_usrdir = tail.substr(tail.find_first_of(fs::delim) + 1);
+					const std::string dirname = tail.substr(0, tail.find_first_of(fs::delim));
+					argv[0] = "/dev_bdvd/PS3_GAME/" + unescape(tail_usrdir);
+					m_dir = "/dev_hdd0/game/" + dirname + "/";
 					sys_log.notice("Disc path: %s", m_dir);
 				}
 				else if (from_hdd0_game)
 				{
-					argv[0] = "/dev_hdd0/game/" + unescape(resolved_path.substr(resolved_hdd0.size()));
-					m_dir = "/dev_hdd0/game/" + resolved_path.substr(resolved_hdd0.size(), 10);
+					const std::string tail = resolved_path.substr(resolved_hdd0.size());
+					const std::string dirname = tail.substr(0, tail.find_first_of(fs::delim));
+					argv[0] = "/dev_hdd0/game/" + unescape(tail);
+					m_dir = "/dev_hdd0/game/" + dirname + "/";
 					sys_log.notice("Boot path: %s", m_dir);
 				}
 				else if (!bdvd_dir.empty() && fs::is_dir(bdvd_dir))
@@ -2117,7 +2151,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 						game_dir = game_dir.substr(0, game_dir.size() - 4);
 					}
 
-					m_dir = "/dev_hdd0/game/" + m_title_id + '/';
+					const std::string dir = fmt::trim(game_dir.substr(fs::get_parent_dir_view(game_dir).size() + 1), fs::delim);
+
+					m_dir = "/dev_hdd0/game/" + dir + '/';
 					argv[0] = m_dir + unescape(resolved_path.substr(GetCallbacks().resolve_path(game_dir).size()));
 					sys_log.notice("Boot path: %s", m_dir);
 				}
@@ -2761,6 +2797,12 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 				if (!try_lock_spu_threads_in_a_state_compatible_with_savestates())
 				{
 					sys_log.error("Failed to savestate: failed to lock SPU threads execution.");
+
+					if (!g_cfg.savestate.compatible_mode)
+					{
+						sys_log.error("Enabling SPU Savestates-Compatible Mode in Advanced tab may fix this.");
+					}
+
 					m_savestate_pending = false;
 
 					CallFromMainThread([pause = std::move(pause_thread)]()
@@ -3074,6 +3116,12 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 					ar(u8{1});
 					ar(read_used_savestate_versions());
 				}
+
+				ar(u8{1});
+				ar(rpcs3::get_verbose_version());
+				ar(fmt::format("%s", std::chrono::system_clock::now()));
+				ar(GetTitleAndTitleID());
+				ar(std::string{}); // Possible user note
 
 				ar(std::array<u8, 32>{}); // Reserved for future use
 

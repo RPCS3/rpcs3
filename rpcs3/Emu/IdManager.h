@@ -17,6 +17,8 @@ constexpr auto* g_fxo = &g_fixed_typemap;
 
 enum class thread_state : u32;
 
+extern u16 serial_breathe_and_tag(utils::serial& ar, std::string_view name, bool tag_bit);
+
 // Helper namespace
 namespace id_manager
 {
@@ -100,13 +102,26 @@ namespace id_manager
 	template <typename T, typename = void>
 	struct id_traits_load_func
 	{
-		static constexpr std::shared_ptr<void>(*load)(utils::serial&) = [](utils::serial& ar) -> std::shared_ptr<void> { return std::make_shared<T>(stx::exact_t<utils::serial&>(ar)); };
+		static constexpr std::shared_ptr<void>(*load)(utils::serial&) = [](utils::serial& ar) -> std::shared_ptr<void>
+		{
+			if constexpr (std::is_constructible_v<T, stx::exact_t<const stx::launch_retainer&>, stx::exact_t<utils::serial&>>)
+			{
+				return std::make_shared<T>(stx::launch_retainer{}, stx::exact_t<utils::serial&>(ar));
+			}
+			else
+			{
+				return std::make_shared<T>(stx::exact_t<utils::serial&>(ar));
+			}
+		};
 	};
 
 	template <typename T>
 	struct id_traits_load_func<T, std::void_t<decltype(&T::load)>>
 	{
-		static constexpr std::shared_ptr<void>(*load)(utils::serial&) = [](utils::serial& ar) -> std::shared_ptr<void> { return T::load(stx::exact_t<utils::serial&>(ar)); };
+		static constexpr std::shared_ptr<void>(*load)(utils::serial&) = [](utils::serial& ar) -> std::shared_ptr<void>
+		{
+			return T::load(stx::exact_t<utils::serial&>(ar));
+		};
 	};
 
 	template <typename T, typename = void>
@@ -270,16 +285,22 @@ namespace id_manager
 		{
 			vec.resize(T::id_count);
 
-			u32 i = ar.pop<u32>();
+			usz highest = 0;
 
-			ensure(i <= T::id_count);
-
-			while (--i != umax)
+			while (true)
 			{
-				// ID, type hash
-				const u32 id = ar;
+				const u16 tag = serial_breathe_and_tag(ar, g_fxo->get_name<id_map<T>>(), false);
 
-				const u128 type_init_pos = u128{u32{ar}} << 64 | std::bit_cast<u64>(T::savestate_init_pos);
+				if (tag >> 15)
+				{
+					// End
+					break;
+				}
+
+				// ID, type hash
+				const u32 id = ar.pop<u32>();
+
+				const u128 type_init_pos = u128{ar.pop<u32>()} << 64 | std::bit_cast<u64>(T::savestate_init_pos);
 				const typeinfo* info = nullptr;
 
 				// Search load functions for the one of this type (see make_typeinfo() for explenation about key composition reasoning)
@@ -298,22 +319,21 @@ namespace id_manager
 				// Simulate construction semantics (idm::last_id() value)
 				g_id = id;
 
-				auto& obj = vec[get_index(id, info->base, info->step, info->count, info->invl_range)];
+				const usz object_index = get_index(id, info->base, info->step, info->count, info->invl_range);
+				auto& obj = ::at32(vec, object_index);
 				ensure(!obj.second);
+
+				highest = std::max<usz>(highest, object_index + 1);
 
 				obj.first = id_key(id, static_cast<u32>(static_cast<u64>(type_init_pos >> 64)));
 				obj.second = info->load(ar);
 			}
+
+			vec.resize(highest);
 		}
 
 		void save(utils::serial& ar) requires IdmSavable<T>
 		{
-			u32 obj_count = 0;
-			usz obj_count_offs = ar.pos;
-
-			// To be patched at the end of the function
-			ar(obj_count);
-
 			for (const auto& p : vec)
 			{
 				if (!p.second) continue;
@@ -333,19 +353,23 @@ namespace id_manager
 				// Save each object with needed information
 				if (info && info->savable(p.second.get()))
 				{
+					// Create a tag for each object
+					serial_breathe_and_tag(ar, g_fxo->get_name<id_map<T>>(), false);
+
 					ar(p.first.value(), p.first.type());
 					info->save(ar, p.second.get());
-					obj_count++;
 				}
 			}
 
-			// Patch object count
-			ar.patch_raw_data(obj_count_offs, &obj_count, sizeof(obj_count));
+			// End sequence with tag bit set
+			serial_breathe_and_tag(ar, g_fxo->get_name<id_map<T>>(), true);
 		}
 
 		id_map& operator=(thread_state state) noexcept requires (std::is_assignable_v<T&, thread_state>)
 		{
-			if (private_copy.empty())
+			private_copy.clear();
+
+			if (!vec.empty() || !private_copy.empty())
 			{
 				reader_lock lock(g_mutex);
 

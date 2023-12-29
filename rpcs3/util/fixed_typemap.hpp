@@ -13,9 +13,16 @@ enum class thread_state : u32;
 
 extern thread_local std::string_view g_tls_serialize_name;
 
+namespace utils
+{
+	struct serial;
+}
+
 namespace stx
 {
 	struct launch_retainer{};
+
+	extern u16 serial_breathe_and_tag(utils::serial& ar, std::string_view name, bool tag_bit);
 
 	// Simplified typemap with exactly one object of each used type, non-moveable. Initialized on init(). Destroyed on clear().
 	template <typename Tag /*Tag should be unique*/, u32 Size = 0, u32 Align = (Size ? 64 : __STDCPP_DEFAULT_NEW_ALIGNMENT__)>
@@ -67,6 +74,7 @@ namespace stx
 			void(*thread_op)(void* ptr, thread_state) noexcept = nullptr;
 			void(*save)(void* ptr, utils::serial&) noexcept = nullptr;
 			void(*destroy)(void* ptr) noexcept = nullptr;
+			bool is_trivial_and_nonsavable = false;
 			std::string_view name;
 
 			template <typename T>
@@ -77,12 +85,13 @@ namespace stx
 					if constexpr (std::is_constructible_v<T, exact_t<manual_typemap&>, exact_t<utils::serial&>>)
 					{
 						g_tls_serialize_name = name;
-						new (ptr) T(_this, exact_t<utils::serial&>(*ar));
+						new (ptr) T(exact_t<manual_typemap&>(_this), exact_t<utils::serial&>(*ar));
 						return true;
 					}
 
 					if constexpr (std::is_constructible_v<T, exact_t<const launch_retainer&>, exact_t<utils::serial&>>)
 					{
+						g_tls_serialize_name = name;
 						new (ptr) T(exact_t<const launch_retainer&>(launch_retainer{}), exact_t<utils::serial&>(*ar));
 						return true;
 					}
@@ -98,7 +107,7 @@ namespace stx
 				// Allow passing reference to "this"
 				if constexpr (std::is_constructible_v<T, exact_t<manual_typemap&>>)
 				{
-					new (ptr) T(_this);
+					new (ptr) T(exact_t<manual_typemap&>(_this));
 					return true;
 				}
 
@@ -143,7 +152,7 @@ namespace stx
 			{
 				static_assert(!std::is_copy_assignable_v<T> && !std::is_copy_constructible_v<T>, "Please make sure the object cannot be accidentally copied.");
 
-				typeinfo r;
+				typeinfo r{};
 				r.create = &call_ctor<T>;
 				r.destroy = &call_dtor<T>;
 
@@ -156,6 +165,9 @@ namespace stx
 				{
 					r.save = &call_save<T>;
 				}
+
+				r.is_trivial_and_nonsavable = std::is_trivially_default_constructible_v<T> && !r.save;
+
 #ifdef _MSC_VER
 				constexpr std::string_view name = parse_type(__FUNCSIG__);
 #else
@@ -237,7 +249,8 @@ namespace stx
 			}
 
 			// Use unique_ptr to reduce header dependencies in this commonly used header
-			const auto order = std::make_unique<std::pair<double, const type_info<typeinfo>*>[]>(stx::typelist<typeinfo>().count());
+			const usz type_count = stx::typelist<typeinfo>().count();
+			const auto order = std::make_unique<std::pair<double, const type_info<typeinfo>*>[]>(type_count);
 
 			usz pos = 0;
 			for (const auto& type : stx::typelist<typeinfo>())
@@ -245,14 +258,19 @@ namespace stx
 				order[pos++] = {type.init_pos(), std::addressof(type)};
 			}
 
-			std::stable_sort(order.get(), order.get() + stx::typelist<typeinfo>().count(), [](auto a, auto b)
+			std::stable_sort(order.get(), order.get() + type_count, [](auto& a, auto& b)
 			{
+				if (a.second->is_trivial_and_nonsavable && !b.second->is_trivial_and_nonsavable)
+				{
+					return true;
+				}
+
 				return a.first < b.first;
 			});
 
 			const auto info_before = m_info;
 
-			for (pos = 0; pos < stx::typelist<typeinfo>().count(); pos++)
+			for (pos = 0; pos < type_count; pos++)
 			{
 				const auto& type = *order[pos].second;
 
@@ -271,10 +289,9 @@ namespace stx
 					*m_info++ = &type;
 					m_init[id] = true;
 
-					if (ar)
+					if (ar && type.save)
 					{
-						extern void serial_breathe(utils::serial& ar);
-						serial_breathe(*ar);
+						serial_breathe_and_tag(*ar, type.name, false);
 					}
 				}
 			}
@@ -372,23 +389,26 @@ namespace stx
 			// Save data in forward order
 			for (u32 i = _max; i; i--)
 			{
-				if (auto save = (*std::prev(m_info, i))->save)
+				const auto info = (*std::prev(m_info, i));
+
+				if (auto save = info->save)
 				{
 					save(*std::prev(m_order, i), ar);
-					ar.breathe();
+
+					serial_breathe_and_tag(ar, info->name, false);
 				}
 			}
 		}
 
 		// Check if object is not initialized but shall be initialized first (to use in initializing other objects)
-		template <typename T> requires (std::is_constructible_v<T, manual_typemap&> || std::is_default_constructible_v<T>)
+		template <typename T> requires (!std::is_constructible_v<T, exact_t<utils::serial&>> && (std::is_constructible_v<T, exact_t<manual_typemap&>> || std::is_default_constructible_v<T>))
 		void need() noexcept
 		{
 			if (!m_init[stx::typeindex<typeinfo, std::decay_t<T>>()])
 			{
-				if constexpr (std::is_constructible_v<T, manual_typemap&>)
+				if constexpr (std::is_constructible_v<T, exact_t<manual_typemap&>>)
 				{
-					init<T>(*this);
+					init<T>(exact_t<manual_typemap&>(*this));
 					return;
 				}
 
@@ -414,6 +434,8 @@ namespace stx
 
 			As* obj = nullptr;
 
+			const auto type_info = &stx::typedata<typeinfo, std::decay_t<T>, std::decay_t<As>>();
+
 			g_tls_serialize_name = get_name<T, As>();
 
 			if constexpr (Size != 0)
@@ -425,10 +447,16 @@ namespace stx
 				obj = new (m_list + stx::typeoffset<typeinfo, std::decay_t<T>>()) std::decay_t<As>(std::forward<Args>(args)...);
 			}
 
+			if constexpr ((std::is_same_v<std::remove_cvref_t<Args>, utils::serial> || ...))
+			{
+				ensure(type_info->save);
+				serial_breathe_and_tag(std::get<0>(std::tie(args...)), get_name<T, As>(), false);
+			}
+
 			g_tls_serialize_name = {};
 
 			*m_order++ = obj;
-			*m_info++ = &stx::typedata<typeinfo, std::decay_t<T>, std::decay_t<As>>();
+			*m_info++ = type_info;
 			return obj;
 		}
 

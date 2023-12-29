@@ -335,10 +335,7 @@ void keyboard_pad_handler::processKeyEvent(QKeyEvent* event, bool pressed)
 		if (list.isEmpty())
 			return;
 
-		const bool is_num_key = list.contains("Num");
-		if (is_num_key)
-			list.removeAll("Num");
-
+		const bool is_num_key = list.removeAll("Num") > 0;
 		const QString name = QString::fromStdString(GetKeyName(event));
 
 		// TODO: Edge case: switching numlock keeps numpad keys pressed due to now different modifier
@@ -840,8 +837,40 @@ int keyboard_pad_handler::native_scan_code_from_string([[maybe_unused]] const st
 		return 29;
 	if (key == "Ctrl Right")
 		return 285;
+	if (key == "Num+0" || key == "Num+Ins")
+		return 82;
+	if (key == "Num+1" || key == "Num+End")
+		return 79;
+	if (key == "Num+2" || key == "Num+Down")
+		return 80;
+	if (key == "Num+3" || key == "Num+PgDown")
+		return 81;
+	if (key == "Num+4" || key == "Num+Left")
+		return 75;
+	if (key == "Num+5" || key == "Num+Clear")
+		return 76;
+	if (key == "Num+6" || key == "Num+Right")
+		return 77;
+	if (key == "Num+7" || key == "Num+Home")
+		return 71;
+	if (key == "Num+8" || key == "Num+Up")
+		return 72;
+	if (key == "Num+9" || key == "Num+PgUp")
+		return 73;
+	if (key == "Num+," || key == "Num+Del")
+		return 83;
+	if (key == "Num+/")
+		return 309;
+	if (key == "Num+*")
+		return 55;
+	if (key == "Num+-")
+		return 74;
+	if (key == "Num++")
+		return 78;
+	if (key == "Num+Enter")
+		return 284;
 #else
-		// TODO
+	// TODO
 #endif
 	return -1;
 }
@@ -861,6 +890,38 @@ std::string keyboard_pad_handler::native_scan_code_to_string(int native_scan_cod
 		return "Ctrl Left";
 	case 285:
 		return "Ctrl Right";
+	case 82:
+		return "Num+0"; // Also "Num+Ins" depending on numlock
+	case 79:
+		return "Num+1"; // Also "Num+End" depending on numlock
+	case 80:
+		return "Num+2"; // Also "Num+Down" depending on numlock
+	case 81:
+		return "Num+3"; // Also "Num+PgDown" depending on numlock
+	case 75:
+		return "Num+4"; // Also "Num+Left" depending on numlock
+	case 76:
+		return "Num+5"; // Also "Num+Clear" depending on numlock
+	case 77:
+		return "Num+6"; // Also "Num+Right" depending on numlock
+	case 71:
+		return "Num+7"; // Also "Num+Home" depending on numlock
+	case 72:
+		return "Num+8"; // Also "Num+Up" depending on numlock
+	case 73:
+		return "Num+9"; // Also "Num+PgUp" depending on numlock
+	case 83:
+		return "Num+,"; // Also "Num+Del" depending on numlock
+	case 309:
+		return "Num+/";
+	case 55:
+		return "Num+*";
+	case 74:
+		return "Num+-";
+	case 78:
+		return "Num++";
+	case 284:
+		return "Num+Enter";
 #else
 	// TODO
 	// NOTE for MacOs: nativeScanCode may not work

@@ -678,9 +678,10 @@ void cell_audio_thread::reset_counters()
 
 cell_audio_thread::cell_audio_thread()
 {
-	// Initialize dependencies
-	g_fxo->need<audio_out_configuration>();
+}
 
+void cell_audio_thread::operator()()
+{
 	// Initialize loop variables (regardless of provider in order to initialize timestamps)
 	reset_counters();
 
@@ -694,14 +695,6 @@ cell_audio_thread::cell_audio_thread()
 
 	// Allocate ringbuffer
 	ringbuffer.reset(new audio_ringbuffer(cfg));
-}
-
-void cell_audio_thread::operator()()
-{
-	if (cfg.raw.provider != audio_provider::cell_audio)
-	{
-		return;
-	}
 
 	thread_ctrl::scoped_priority high_prio(+1);
 

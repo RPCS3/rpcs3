@@ -219,6 +219,8 @@ class b8
 public:
 	b8() = default;
 
+	using enable_bitcopy = std::true_type;
+
 	constexpr b8(bool value) noexcept
 		: m_value(value)
 	{
