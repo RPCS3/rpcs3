@@ -1288,7 +1288,7 @@ struct SceNpCommerceProductCategory
 {
 	be_t<u32> version;
 	vm::bcptr<void> data;
-	be_t<u64> dataSize;
+	be_t<u32> dataSize;
 	be_t<u32> dval;
 	u8 reserved[16];
 };
@@ -1370,7 +1370,7 @@ struct SceNpMatchingAttr
 		struct
 		{
 			vm::bptr<void> ptr;
-			be_t<u64> size;
+			be_t<u32> size;
 		} data;
 	} value;
 };

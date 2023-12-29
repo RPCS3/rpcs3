@@ -357,7 +357,7 @@ error_code sceNpTusSetMultiSlotVariableVUserAsync(s32 transId, vm::cptr<SceNpTus
 }
 
 template<typename T>
-error_code scenp_tus_get_multislot_variable(s32 transId, T targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusVariable> variableArray, u64 variableArraySize, s32 arrayNum, vm::ptr<void> option, bool vuser, bool async)
+error_code scenp_tus_get_multislot_variable(s32 transId, T targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusVariable> variableArray, u32 variableArraySize, s32 arrayNum, vm::ptr<void> option, bool vuser, bool async)
 {
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -408,32 +408,32 @@ error_code scenp_tus_get_multislot_variable(s32 transId, T targetNpId, vm::cptr<
 	return *trans_ctx->result;
 }
 
-error_code sceNpTusGetMultiSlotVariable(s32 transId, vm::cptr<SceNpId> targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusVariable> variableArray, u64 variableArraySize, s32 arrayNum, vm::ptr<void> option)
+error_code sceNpTusGetMultiSlotVariable(s32 transId, vm::cptr<SceNpId> targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusVariable> variableArray, u32 variableArraySize, s32 arrayNum, vm::ptr<void> option)
 {
 	sceNpTus.warning("sceNpTusGetMultiSlotVariable(transId=%d, targetNpId=*0x%x, slotIdArray=*0x%x, variableArray=*0x%x, variableArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetNpId, slotIdArray, variableArray, variableArraySize, arrayNum, option);
 	return scenp_tus_get_multislot_variable(transId, targetNpId, slotIdArray, variableArray, variableArraySize, arrayNum, option, false, false);
 }
 
-error_code sceNpTusGetMultiSlotVariableVUser(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusVariable> variableArray, u64 variableArraySize, s32 arrayNum, vm::ptr<void> option)
+error_code sceNpTusGetMultiSlotVariableVUser(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusVariable> variableArray, u32 variableArraySize, s32 arrayNum, vm::ptr<void> option)
 {
 	sceNpTus.warning("sceNpTusGetMultiSlotVariableVUser(transId=%d, targetVirtualUserId=*0x%x, slotIdArray=*0x%x, variableArray=*0x%x, variableArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetVirtualUserId, slotIdArray, variableArray, variableArraySize, arrayNum, option);
 	return scenp_tus_get_multislot_variable(transId, targetVirtualUserId, slotIdArray, variableArray, variableArraySize, arrayNum, option, true, false);
 }
 
-error_code sceNpTusGetMultiSlotVariableAsync(s32 transId, vm::cptr<SceNpId> targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusVariable> variableArray, u64 variableArraySize, s32 arrayNum, vm::ptr<void> option)
+error_code sceNpTusGetMultiSlotVariableAsync(s32 transId, vm::cptr<SceNpId> targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusVariable> variableArray, u32 variableArraySize, s32 arrayNum, vm::ptr<void> option)
 {
 	sceNpTus.warning("sceNpTusGetMultiSlotVariableAsync(transId=%d, targetNpId=*0x%x, slotIdArray=*0x%x, variableArray=*0x%x, variableArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetNpId, slotIdArray, variableArray, variableArraySize, arrayNum, option);
 	return scenp_tus_get_multislot_variable(transId, targetNpId, slotIdArray, variableArray, variableArraySize, arrayNum, option, false, true);
 }
 
-error_code sceNpTusGetMultiSlotVariableVUserAsync(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusVariable> variableArray, u64 variableArraySize, s32 arrayNum, vm::ptr<void> option)
+error_code sceNpTusGetMultiSlotVariableVUserAsync(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusVariable> variableArray, u32 variableArraySize, s32 arrayNum, vm::ptr<void> option)
 {
 	sceNpTus.warning("sceNpTusGetMultiSlotVariableVUserAsync(transId=%d, targetVirtualUserId=*0x%x, slotIdArray=*0x%x, variableArray=*0x%x, variableArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetVirtualUserId, slotIdArray, variableArray, variableArraySize, arrayNum, option);
 	return scenp_tus_get_multislot_variable(transId, targetVirtualUserId, slotIdArray, variableArray, variableArraySize, arrayNum, option, true, true);
 }
 
 template<typename T>
-error_code scenp_tus_get_multiuser_variable(s32 transId, T targetNpIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusVariable> variableArray, u64 variableArraySize, s32 arrayNum, vm::ptr<void> option, bool vuser, bool async)
+error_code scenp_tus_get_multiuser_variable(s32 transId, T targetNpIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusVariable> variableArray, u32 variableArraySize, s32 arrayNum, vm::ptr<void> option, bool vuser, bool async)
 {
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -490,31 +490,31 @@ error_code scenp_tus_get_multiuser_variable(s32 transId, T targetNpIdArray, SceN
 	return *trans_ctx->result;
 }
 
-error_code sceNpTusGetMultiUserVariable(s32 transId, vm::cptr<SceNpId> targetNpIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusVariable> variableArray, u64 variableArraySize, s32 arrayNum, vm::ptr<void> option)
+error_code sceNpTusGetMultiUserVariable(s32 transId, vm::cptr<SceNpId> targetNpIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusVariable> variableArray, u32 variableArraySize, s32 arrayNum, vm::ptr<void> option)
 {
 	sceNpTus.warning("sceNpTusGetMultiUserVariable(transId=%d, targetNpIdArray=*0x%x, slotId=%d, variableArray=*0x%x, variableArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetNpIdArray, slotId, variableArray, variableArraySize, arrayNum, option);
 	return scenp_tus_get_multiuser_variable(transId, targetNpIdArray, slotId, variableArray, variableArraySize, arrayNum, option, false, false);
 }
 
-error_code sceNpTusGetMultiUserVariableVUser(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusVariable> variableArray, u64 variableArraySize, s32 arrayNum, vm::ptr<void> option)
+error_code sceNpTusGetMultiUserVariableVUser(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusVariable> variableArray, u32 variableArraySize, s32 arrayNum, vm::ptr<void> option)
 {
 	sceNpTus.warning("sceNpTusGetMultiUserVariableVUser(transId=%d, targetVirtualUserIdArray=*0x%x, slotId=%d, variableArray=*0x%x, variableArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetVirtualUserIdArray, slotId, variableArray, variableArraySize, arrayNum, option);
 	return scenp_tus_get_multiuser_variable(transId, targetVirtualUserIdArray, slotId, variableArray, variableArraySize, arrayNum, option, true, false);
 }
 
-error_code sceNpTusGetMultiUserVariableAsync(s32 transId, vm::cptr<SceNpId> targetNpIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusVariable> variableArray, u64 variableArraySize, s32 arrayNum, vm::ptr<void> option)
+error_code sceNpTusGetMultiUserVariableAsync(s32 transId, vm::cptr<SceNpId> targetNpIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusVariable> variableArray, u32 variableArraySize, s32 arrayNum, vm::ptr<void> option)
 {
 	sceNpTus.warning("sceNpTusGetMultiUserVariableAsync(transId=%d, targetNpIdArray=*0x%x, slotId=%d, variableArray=*0x%x, variableArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetNpIdArray, slotId, variableArray, variableArraySize, arrayNum, option);
 	return scenp_tus_get_multiuser_variable(transId, targetNpIdArray, slotId, variableArray, variableArraySize, arrayNum, option, false, true);
 }
 
-error_code sceNpTusGetMultiUserVariableVUserAsync(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusVariable> variableArray, u64 variableArraySize, s32 arrayNum, vm::ptr<void> option)
+error_code sceNpTusGetMultiUserVariableVUserAsync(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusVariable> variableArray, u32 variableArraySize, s32 arrayNum, vm::ptr<void> option)
 {
 	sceNpTus.warning("sceNpTusGetMultiUserVariableVUserAsync(transId=%d, targetVirtualUserIdArray=*0x%x, slotId=%d, variableArray=*0x%x, variableArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetVirtualUserIdArray, slotId, variableArray, variableArraySize, arrayNum, option);
 	return scenp_tus_get_multiuser_variable(transId, targetVirtualUserIdArray, slotId, variableArray, variableArraySize, arrayNum, option, true, true);
 }
 
-error_code scenp_tus_get_friends_variable(s32 transId, SceNpTusSlotId slotId, s32 includeSelf, s32 sortType, vm::ptr<SceNpTusVariable> variableArray, u64 variableArraySize, s32 arrayNum, vm::ptr<void> option, bool async)
+error_code scenp_tus_get_friends_variable(s32 transId, SceNpTusSlotId slotId, s32 includeSelf, s32 sortType, vm::ptr<SceNpTusVariable> variableArray, u32 variableArraySize, s32 arrayNum, vm::ptr<void> option, bool async)
 {
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -565,20 +565,20 @@ error_code scenp_tus_get_friends_variable(s32 transId, SceNpTusSlotId slotId, s3
 	return *trans_ctx->result;
 }
 
-error_code sceNpTusGetFriendsVariable(s32 transId, SceNpTusSlotId slotId, s32 includeSelf, s32 sortType, vm::ptr<SceNpTusVariable> variableArray, u64 variableArraySize, s32 arrayNum, vm::ptr<void> option)
+error_code sceNpTusGetFriendsVariable(s32 transId, SceNpTusSlotId slotId, s32 includeSelf, s32 sortType, vm::ptr<SceNpTusVariable> variableArray, u32 variableArraySize, s32 arrayNum, vm::ptr<void> option)
 {
 	sceNpTus.warning("sceNpTusGetFriendsVariable(transId=%d, slotId=%d, includeSelf=%d, sortType=%d, variableArray=*0x%x, variableArraySize=%d, arrayNum=%d, option=*0x%x)", transId, slotId, includeSelf, sortType, variableArray, variableArraySize, arrayNum, option);
 	return scenp_tus_get_friends_variable(transId, slotId, includeSelf, sortType, variableArray, variableArraySize, arrayNum, option, false);
 }
 
-error_code sceNpTusGetFriendsVariableAsync(s32 transId, SceNpTusSlotId slotId, s32 includeSelf, s32 sortType, vm::ptr<SceNpTusVariable> variableArray, u64 variableArraySize, s32 arrayNum, vm::ptr<void> option)
+error_code sceNpTusGetFriendsVariableAsync(s32 transId, SceNpTusSlotId slotId, s32 includeSelf, s32 sortType, vm::ptr<SceNpTusVariable> variableArray, u32 variableArraySize, s32 arrayNum, vm::ptr<void> option)
 {
 	sceNpTus.warning("sceNpTusGetFriendsVariableAsync(transId=%d, slotId=%d, includeSelf=%d, sortType=%d, variableArray=*0x%x, variableArraySize=%d, arrayNum=%d, option=*0x%x)", transId, slotId, includeSelf, sortType, variableArray, variableArraySize, arrayNum, option);
 	return scenp_tus_get_friends_variable(transId, slotId, includeSelf, sortType, variableArray, variableArraySize, arrayNum, option, true);
 }
 
 template<typename T>
-error_code scenp_tus_add_and_get_variable(s32 transId, T targetNpId, SceNpTusSlotId slotId, s64 inVariable, vm::ptr<SceNpTusVariable> outVariable, u64 outVariableSize, vm::ptr<SceNpTusAddAndGetVariableOptParam> option, bool vuser, bool async)
+error_code scenp_tus_add_and_get_variable(s32 transId, T targetNpId, SceNpTusSlotId slotId, s64 inVariable, vm::ptr<SceNpTusVariable> outVariable, u32 outVariableSize, vm::ptr<SceNpTusAddAndGetVariableOptParam> option, bool vuser, bool async)
 {
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -624,32 +624,32 @@ error_code scenp_tus_add_and_get_variable(s32 transId, T targetNpId, SceNpTusSlo
 	return *trans_ctx->result;
 }
 
-error_code sceNpTusAddAndGetVariable(s32 transId, vm::cptr<SceNpId> targetNpId, SceNpTusSlotId slotId, s64 inVariable, vm::ptr<SceNpTusVariable> outVariable, u64 outVariableSize, vm::ptr<SceNpTusAddAndGetVariableOptParam> option)
+error_code sceNpTusAddAndGetVariable(s32 transId, vm::cptr<SceNpId> targetNpId, SceNpTusSlotId slotId, s64 inVariable, vm::ptr<SceNpTusVariable> outVariable, u32 outVariableSize, vm::ptr<SceNpTusAddAndGetVariableOptParam> option)
 {
 	sceNpTus.warning("sceNpTusAddAndGetVariable(transId=%d, targetNpId=*0x%x, slotId=%d, inVariable=%d, outVariable=*0x%x, outVariableSize=%d, option=*0x%x)", transId, targetNpId, slotId, inVariable, outVariable, outVariableSize, option);
 	return scenp_tus_add_and_get_variable(transId, targetNpId, slotId, inVariable, outVariable, outVariableSize, option, false, false);
 }
 
-error_code sceNpTusAddAndGetVariableVUser(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, SceNpTusSlotId slotId, s64 inVariable, vm::ptr<SceNpTusVariable> outVariable, u64 outVariableSize, vm::ptr<SceNpTusAddAndGetVariableOptParam> option)
+error_code sceNpTusAddAndGetVariableVUser(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, SceNpTusSlotId slotId, s64 inVariable, vm::ptr<SceNpTusVariable> outVariable, u32 outVariableSize, vm::ptr<SceNpTusAddAndGetVariableOptParam> option)
 {
 	sceNpTus.warning("sceNpTusAddAndGetVariableVUser(transId=%d, targetVirtualUserId=*0x%x, slotId=%d, inVariable=%d, outVariable=*0x%x, outVariableSize=%d, option=*0x%x)", transId, targetVirtualUserId, slotId, inVariable, outVariable, outVariableSize, option);
 	return scenp_tus_add_and_get_variable(transId, targetVirtualUserId, slotId, inVariable, outVariable, outVariableSize, option, true, false);
 }
 
-error_code sceNpTusAddAndGetVariableAsync(s32 transId, vm::cptr<SceNpId> targetNpId, SceNpTusSlotId slotId, s64 inVariable, vm::ptr<SceNpTusVariable> outVariable, u64 outVariableSize, vm::ptr<SceNpTusAddAndGetVariableOptParam> option)
+error_code sceNpTusAddAndGetVariableAsync(s32 transId, vm::cptr<SceNpId> targetNpId, SceNpTusSlotId slotId, s64 inVariable, vm::ptr<SceNpTusVariable> outVariable, u32 outVariableSize, vm::ptr<SceNpTusAddAndGetVariableOptParam> option)
 {
 	sceNpTus.warning("sceNpTusAddAndGetVariableAsync(transId=%d, targetNpId=*0x%x, slotId=%d, inVariable=%d, outVariable=*0x%x, outVariableSize=%d, option=*0x%x)", transId, targetNpId, slotId, inVariable, outVariable, outVariableSize, option);
 	return scenp_tus_add_and_get_variable(transId, targetNpId, slotId, inVariable, outVariable, outVariableSize, option, false, true);
 }
 
-error_code sceNpTusAddAndGetVariableVUserAsync(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, SceNpTusSlotId slotId, s64 inVariable, vm::ptr<SceNpTusVariable> outVariable, u64 outVariableSize, vm::ptr<SceNpTusAddAndGetVariableOptParam> option)
+error_code sceNpTusAddAndGetVariableVUserAsync(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, SceNpTusSlotId slotId, s64 inVariable, vm::ptr<SceNpTusVariable> outVariable, u32 outVariableSize, vm::ptr<SceNpTusAddAndGetVariableOptParam> option)
 {
 	sceNpTus.warning("sceNpTusAddAndGetVariableVUserAsync(transId=%d, targetVirtualUserId=*0x%x, slotId=%d, inVariable=%d, outVariable=*0x%x, outVariableSize=%d, option=*0x%x)", transId, targetVirtualUserId, slotId, inVariable, outVariable, outVariableSize, option);
 	return scenp_tus_add_and_get_variable(transId, targetVirtualUserId, slotId, inVariable, outVariable, outVariableSize, option, true, true);
 }
 
 template<typename T>
-error_code scenp_tus_try_and_set_variable(s32 transId, T targetNpId, SceNpTusSlotId slotId, s32 opeType, s64 variable, vm::ptr<SceNpTusVariable> resultVariable, u64 resultVariableSize, vm::ptr<SceNpTusTryAndSetVariableOptParam> option, bool vuser, bool async)
+error_code scenp_tus_try_and_set_variable(s32 transId, T targetNpId, SceNpTusSlotId slotId, s32 opeType, s64 variable, vm::ptr<SceNpTusVariable> resultVariable, u32 resultVariableSize, vm::ptr<SceNpTusTryAndSetVariableOptParam> option, bool vuser, bool async)
 {
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -695,25 +695,25 @@ error_code scenp_tus_try_and_set_variable(s32 transId, T targetNpId, SceNpTusSlo
 	return *trans_ctx->result;
 }
 
-error_code sceNpTusTryAndSetVariable(s32 transId, vm::cptr<SceNpId> targetNpId, SceNpTusSlotId slotId, s32 opeType, s64 variable, vm::ptr<SceNpTusVariable> resultVariable, u64 resultVariableSize, vm::ptr<SceNpTusTryAndSetVariableOptParam> option)
+error_code sceNpTusTryAndSetVariable(s32 transId, vm::cptr<SceNpId> targetNpId, SceNpTusSlotId slotId, s32 opeType, s64 variable, vm::ptr<SceNpTusVariable> resultVariable, u32 resultVariableSize, vm::ptr<SceNpTusTryAndSetVariableOptParam> option)
 {
 	sceNpTus.warning("sceNpTusTryAndSetVariable(transId=%d, targetNpId=*0x%x, slotId=%d, opeType=%d, variable=%d, resultVariable=*0x%x, resultVariableSize=%d, option=*0x%x)", transId, targetNpId, slotId, opeType, variable, resultVariable, resultVariableSize, option);
 	return scenp_tus_try_and_set_variable(transId, targetNpId, slotId, opeType, variable, resultVariable, resultVariableSize, option, false, false);
 }
 
-error_code sceNpTusTryAndSetVariableVUser(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, SceNpTusSlotId slotId, s32 opeType, s64 variable, vm::ptr<SceNpTusVariable> resultVariable, u64 resultVariableSize, vm::ptr<SceNpTusTryAndSetVariableOptParam> option)
+error_code sceNpTusTryAndSetVariableVUser(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, SceNpTusSlotId slotId, s32 opeType, s64 variable, vm::ptr<SceNpTusVariable> resultVariable, u32 resultVariableSize, vm::ptr<SceNpTusTryAndSetVariableOptParam> option)
 {
 	sceNpTus.warning("sceNpTusTryAndSetVariableVUser(transId=%d, targetVirtualUserId=*0x%x, slotId=%d, opeType=%d, variable=%d, resultVariable=*0x%x, resultVariableSize=%d, option=*0x%x)", transId, targetVirtualUserId, slotId, opeType, variable, resultVariable, resultVariableSize, option);
 	return scenp_tus_try_and_set_variable(transId, targetVirtualUserId, slotId, opeType, variable, resultVariable, resultVariableSize, option, true, false);
 }
 
-error_code sceNpTusTryAndSetVariableAsync(s32 transId, vm::cptr<SceNpId> targetNpId, SceNpTusSlotId slotId, s32 opeType, s64 variable, vm::ptr<SceNpTusVariable> resultVariable, u64 resultVariableSize, vm::ptr<SceNpTusTryAndSetVariableOptParam> option)
+error_code sceNpTusTryAndSetVariableAsync(s32 transId, vm::cptr<SceNpId> targetNpId, SceNpTusSlotId slotId, s32 opeType, s64 variable, vm::ptr<SceNpTusVariable> resultVariable, u32 resultVariableSize, vm::ptr<SceNpTusTryAndSetVariableOptParam> option)
 {
 	sceNpTus.warning("sceNpTusTryAndSetVariableAsync(transId=%d, targetNpId=*0x%x, slotId=%d, opeType=%d, variable=%d, resultVariable=*0x%x, resultVariableSize=%d, option=*0x%x)", transId, targetNpId, slotId, opeType, variable, resultVariable, resultVariableSize, option);
 	return scenp_tus_try_and_set_variable(transId, targetNpId, slotId, opeType, variable, resultVariable, resultVariableSize, option, false, true);
 }
 
-error_code sceNpTusTryAndSetVariableVUserAsync(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, SceNpTusSlotId slotId, s32 opeType, s64 variable, vm::ptr<SceNpTusVariable> resultVariable, u64 resultVariableSize, vm::ptr<SceNpTusTryAndSetVariableOptParam> option)
+error_code sceNpTusTryAndSetVariableVUserAsync(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, SceNpTusSlotId slotId, s32 opeType, s64 variable, vm::ptr<SceNpTusVariable> resultVariable, u32 resultVariableSize, vm::ptr<SceNpTusTryAndSetVariableOptParam> option)
 {
 	sceNpTus.warning("sceNpTusTryAndSetVariableVUserAsync(transId=%d, targetVirtualUserId=*0x%x, slotId=%d, opeType=%d, variable=%d, resultVariable=*0x%x, resultVariableSize=%d, option=*0x%x)", transId, targetVirtualUserId, slotId, opeType, variable, resultVariable, resultVariableSize, option);
 	return scenp_tus_try_and_set_variable(transId, targetVirtualUserId, slotId, opeType, variable, resultVariable, resultVariableSize, option, true, true);
@@ -791,7 +791,7 @@ error_code sceNpTusDeleteMultiSlotVariableVUserAsync(s32 transId, vm::cptr<SceNp
 }
 
 template<typename T>
-error_code scenp_tus_set_data(s32 transId, T targetNpId, SceNpTusSlotId slotId, u32 totalSize, u32 sendSize, vm::cptr<void> data, vm::cptr<SceNpTusDataInfo> info, u64 infoStructSize, vm::ptr<SceNpTusSetDataOptParam> option, bool vuser, bool async)
+error_code scenp_tus_set_data(s32 transId, T targetNpId, SceNpTusSlotId slotId, u32 totalSize, u32 sendSize, vm::cptr<void> data, vm::cptr<SceNpTusDataInfo> info, u32 infoStructSize, vm::ptr<SceNpTusSetDataOptParam> option, bool vuser, bool async)
 {
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -832,25 +832,25 @@ error_code scenp_tus_set_data(s32 transId, T targetNpId, SceNpTusSlotId slotId, 
 	return *trans_ctx->result;
 }
 
-error_code sceNpTusSetData(s32 transId, vm::cptr<SceNpId> targetNpId, SceNpTusSlotId slotId, u32 totalSize, u32 sendSize, vm::cptr<void> data, vm::cptr<SceNpTusDataInfo> info, u64 infoStructSize, vm::ptr<SceNpTusSetDataOptParam> option)
+error_code sceNpTusSetData(s32 transId, vm::cptr<SceNpId> targetNpId, SceNpTusSlotId slotId, u32 totalSize, u32 sendSize, vm::cptr<void> data, vm::cptr<SceNpTusDataInfo> info, u32 infoStructSize, vm::ptr<SceNpTusSetDataOptParam> option)
 {
 	sceNpTus.warning("sceNpTusSetData(transId=%d, targetNpId=*0x%x, slotId=%d, totalSize=%d, sendSize=%d, data=*0x%x, info=*0x%x, infoStructSize=%d, option=*0x%x)", transId, targetNpId, slotId, totalSize, sendSize, data, info, infoStructSize, option);
 	return scenp_tus_set_data(transId, targetNpId, slotId, totalSize, sendSize, data, info, infoStructSize, option, false, false);
 }
 
-error_code sceNpTusSetDataVUser(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, SceNpTusSlotId slotId, u32 totalSize, u32 sendSize, vm::cptr<void> data, vm::cptr<SceNpTusDataInfo> info, u64 infoStructSize, vm::ptr<SceNpTusSetDataOptParam> option)
+error_code sceNpTusSetDataVUser(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, SceNpTusSlotId slotId, u32 totalSize, u32 sendSize, vm::cptr<void> data, vm::cptr<SceNpTusDataInfo> info, u32 infoStructSize, vm::ptr<SceNpTusSetDataOptParam> option)
 {
 	sceNpTus.warning("sceNpTusSetDataVUser(transId=%d, targetVirtualUserId=*0x%x, slotId=%d, totalSize=%d, sendSize=%d, data=*0x%x, info=*0x%x, infoStructSize=%d, option=*0x%x)", transId, targetVirtualUserId, slotId, totalSize, sendSize, data, info, infoStructSize, option);
 	return scenp_tus_set_data(transId, targetVirtualUserId, slotId, totalSize, sendSize, data, info, infoStructSize, option, true, false);
 }
 
-error_code sceNpTusSetDataAsync(s32 transId, vm::cptr<SceNpId> targetNpId, SceNpTusSlotId slotId, u32 totalSize, u32 sendSize, vm::cptr<void> data, vm::cptr<SceNpTusDataInfo> info, u64 infoStructSize, vm::ptr<SceNpTusSetDataOptParam> option)
+error_code sceNpTusSetDataAsync(s32 transId, vm::cptr<SceNpId> targetNpId, SceNpTusSlotId slotId, u32 totalSize, u32 sendSize, vm::cptr<void> data, vm::cptr<SceNpTusDataInfo> info, u32 infoStructSize, vm::ptr<SceNpTusSetDataOptParam> option)
 {
 	sceNpTus.warning("sceNpTusSetDataAsync(transId=%d, targetNpId=*0x%x, slotId=%d, totalSize=%d, sendSize=%d, data=*0x%x, info=*0x%x, infoStructSize=%d, option=*0x%x)", transId, targetNpId, slotId, totalSize, sendSize, data, info, infoStructSize, option);
 	return scenp_tus_set_data(transId, targetNpId, slotId, totalSize, sendSize, data, info, infoStructSize, option, false, true);
 }
 
-error_code sceNpTusSetDataVUserAsync(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, SceNpTusSlotId slotId, u32 totalSize, u32 sendSize, vm::cptr<void> data, vm::cptr<SceNpTusDataInfo> info, u64 infoStructSize, vm::ptr<SceNpTusSetDataOptParam> option)
+error_code sceNpTusSetDataVUserAsync(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, SceNpTusSlotId slotId, u32 totalSize, u32 sendSize, vm::cptr<void> data, vm::cptr<SceNpTusDataInfo> info, u32 infoStructSize, vm::ptr<SceNpTusSetDataOptParam> option)
 {
 	sceNpTus.warning("sceNpTusSetDataVUserAsync(transId=%d, targetVirtualUserId=*0x%x, slotId=%d, totalSize=%d, sendSize=%d, data=*0x%x, info=*0x%x, infoStructSize=%d, option=*0x%x)", transId, targetVirtualUserId, slotId, totalSize, sendSize, data, info, infoStructSize, option);
 	return scenp_tus_set_data(transId, targetVirtualUserId, slotId, totalSize, sendSize, data, info, infoStructSize, option, true, true);
@@ -923,7 +923,7 @@ error_code sceNpTusGetDataVUserAsync(s32 transId, vm::cptr<SceNpTusVirtualUserId
 }
 
 template<typename T>
-error_code scenp_tus_get_multislot_data_status(s32 transId, T targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusDataStatus> statusArray, u64 statusArraySize, s32 arrayNum, vm::ptr<void> option, bool vuser, bool async)
+error_code scenp_tus_get_multislot_data_status(s32 transId, T targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusDataStatus> statusArray, u32 statusArraySize, s32 arrayNum, vm::ptr<void> option, bool vuser, bool async)
 {
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -969,32 +969,32 @@ error_code scenp_tus_get_multislot_data_status(s32 transId, T targetNpId, vm::cp
 	return *trans_ctx->result;
 }
 
-error_code sceNpTusGetMultiSlotDataStatus(s32 transId, vm::cptr<SceNpId> targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusDataStatus> statusArray, u64 statusArraySize, s32 arrayNum, vm::ptr<void> option)
+error_code sceNpTusGetMultiSlotDataStatus(s32 transId, vm::cptr<SceNpId> targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusDataStatus> statusArray, u32 statusArraySize, s32 arrayNum, vm::ptr<void> option)
 {
 	sceNpTus.warning("sceNpTusGetMultiSlotDataStatus(transId=%d, targetNpId=*0x%x, slotIdArray=*0x%x, statusArray=*0x%x, statusArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetNpId, slotIdArray, statusArray, statusArraySize, arrayNum, option);
 	return scenp_tus_get_multislot_data_status(transId, targetNpId, slotIdArray, statusArray, statusArraySize, arrayNum, option, false, false);
 }
 
-error_code sceNpTusGetMultiSlotDataStatusVUser(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusDataStatus> statusArray, u64 statusArraySize, s32 arrayNum, vm::ptr<void> option)
+error_code sceNpTusGetMultiSlotDataStatusVUser(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusDataStatus> statusArray, u32 statusArraySize, s32 arrayNum, vm::ptr<void> option)
 {
 	sceNpTus.warning("sceNpTusGetMultiSlotDataStatusVUser(transId=%d, targetVirtualUserId=*0x%x, slotIdArray=*0x%x, statusArray=*0x%x, statusArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetVirtualUserId, slotIdArray, statusArray, statusArraySize, arrayNum, option);
 	return scenp_tus_get_multislot_data_status(transId, targetVirtualUserId, slotIdArray, statusArray, statusArraySize, arrayNum, option, true, false);
 }
 
-error_code sceNpTusGetMultiSlotDataStatusAsync(s32 transId, vm::cptr<SceNpId> targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusDataStatus> statusArray, u64 statusArraySize, s32 arrayNum, vm::ptr<void> option)
+error_code sceNpTusGetMultiSlotDataStatusAsync(s32 transId, vm::cptr<SceNpId> targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusDataStatus> statusArray, u32 statusArraySize, s32 arrayNum, vm::ptr<void> option)
 {
 	sceNpTus.warning("sceNpTusGetMultiSlotDataStatusAsync(transId=%d, targetNpId=*0x%x, slotIdArray=*0x%x, statusArray=*0x%x, statusArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetNpId, slotIdArray, statusArray, statusArraySize, arrayNum, option);
 	return scenp_tus_get_multislot_data_status(transId, targetNpId, slotIdArray, statusArray, statusArraySize, arrayNum, option, false, true);
 }
 
-error_code sceNpTusGetMultiSlotDataStatusVUserAsync(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusDataStatus> statusArray, u64 statusArraySize, s32 arrayNum, vm::ptr<void> option)
+error_code sceNpTusGetMultiSlotDataStatusVUserAsync(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusDataStatus> statusArray, u32 statusArraySize, s32 arrayNum, vm::ptr<void> option)
 {
 	sceNpTus.warning("sceNpTusGetMultiSlotDataStatusVUserAsync(transId=%d, targetVirtualUserId=*0x%x, slotIdArray=*0x%x, statusArray=*0x%x, statusArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetVirtualUserId, slotIdArray, statusArray, statusArraySize, arrayNum, option);
 	return scenp_tus_get_multislot_data_status(transId, targetVirtualUserId, slotIdArray, statusArray, statusArraySize, arrayNum, option, true, true);
 }
 
 template<typename T>
-error_code scenp_tus_get_multiuser_data_status(s32 transId, T targetNpIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusDataStatus> statusArray, u64 statusArraySize, s32 arrayNum, vm::ptr<void> option, bool vuser, bool async)
+error_code scenp_tus_get_multiuser_data_status(s32 transId, T targetNpIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusDataStatus> statusArray, u32 statusArraySize, s32 arrayNum, vm::ptr<void> option, bool vuser, bool async)
 {
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -1046,31 +1046,31 @@ error_code scenp_tus_get_multiuser_data_status(s32 transId, T targetNpIdArray, S
 	return *trans_ctx->result;
 }
 
-error_code sceNpTusGetMultiUserDataStatus(s32 transId, vm::cptr<SceNpId> targetNpIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusDataStatus> statusArray, u64 statusArraySize, s32 arrayNum, vm::ptr<void> option)
+error_code sceNpTusGetMultiUserDataStatus(s32 transId, vm::cptr<SceNpId> targetNpIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusDataStatus> statusArray, u32 statusArraySize, s32 arrayNum, vm::ptr<void> option)
 {
 	sceNpTus.warning("sceNpTusGetMultiUserDataStatus(transId=%d, targetNpIdArray=*0x%x, slotId=%d, statusArray=*0x%x, statusArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetNpIdArray, slotId, statusArray, statusArraySize, arrayNum, option);
 	return scenp_tus_get_multiuser_data_status(transId, targetNpIdArray, slotId, statusArray, statusArraySize, arrayNum, option, false, false);
 }
 
-error_code sceNpTusGetMultiUserDataStatusVUser(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusDataStatus> statusArray, u64 statusArraySize, s32 arrayNum, vm::ptr<void> option)
+error_code sceNpTusGetMultiUserDataStatusVUser(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusDataStatus> statusArray, u32 statusArraySize, s32 arrayNum, vm::ptr<void> option)
 {
 	sceNpTus.warning("sceNpTusGetMultiUserDataStatusVUser(transId=%d, targetVirtualUserIdArray=*0x%x, slotId=%d, statusArray=*0x%x, statusArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetVirtualUserIdArray, slotId, statusArray, statusArraySize, arrayNum, option);
 	return scenp_tus_get_multiuser_data_status(transId, targetVirtualUserIdArray, slotId, statusArray, statusArraySize, arrayNum, option, true, false);
 }
 
-error_code sceNpTusGetMultiUserDataStatusAsync(s32 transId, vm::cptr<SceNpId> targetNpIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusDataStatus> statusArray, u64 statusArraySize, s32 arrayNum, vm::ptr<void> option)
+error_code sceNpTusGetMultiUserDataStatusAsync(s32 transId, vm::cptr<SceNpId> targetNpIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusDataStatus> statusArray, u32 statusArraySize, s32 arrayNum, vm::ptr<void> option)
 {
 	sceNpTus.warning("sceNpTusGetMultiUserDataStatusAsync(transId=%d, targetNpIdArray=*0x%x, slotId=%d, statusArray=*0x%x, statusArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetNpIdArray, slotId, statusArray, statusArraySize, arrayNum, option);
 	return scenp_tus_get_multiuser_data_status(transId, targetNpIdArray, slotId, statusArray, statusArraySize, arrayNum, option, false, true);
 }
 
-error_code sceNpTusGetMultiUserDataStatusVUserAsync(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusDataStatus> statusArray, u64 statusArraySize, s32 arrayNum, vm::ptr<void> option)
+error_code sceNpTusGetMultiUserDataStatusVUserAsync(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusDataStatus> statusArray, u32 statusArraySize, s32 arrayNum, vm::ptr<void> option)
 {
 	sceNpTus.warning("sceNpTusGetMultiUserDataStatusVUserAsync(transId=%d, targetVirtualUserIdArray=*0x%x, slotId=%d, statusArray=*0x%x, statusArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetVirtualUserIdArray, slotId, statusArray, statusArraySize, arrayNum, option);
 	return scenp_tus_get_multiuser_data_status(transId, targetVirtualUserIdArray, slotId, statusArray, statusArraySize, arrayNum, option, true, true);
 }
 
-error_code scenp_tus_get_friends_data_status(s32 transId, SceNpTusSlotId slotId, s32 includeSelf, s32 sortType, vm::ptr<SceNpTusDataStatus> statusArray, u64 statusArraySize, s32 arrayNum, vm::ptr<void> option, bool async)
+error_code scenp_tus_get_friends_data_status(s32 transId, SceNpTusSlotId slotId, s32 includeSelf, s32 sortType, vm::ptr<SceNpTusDataStatus> statusArray, u32 statusArraySize, s32 arrayNum, vm::ptr<void> option, bool async)
 {
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -1116,13 +1116,13 @@ error_code scenp_tus_get_friends_data_status(s32 transId, SceNpTusSlotId slotId,
 	return *trans_ctx->result;
 }
 
-error_code sceNpTusGetFriendsDataStatus(s32 transId, SceNpTusSlotId slotId, s32 includeSelf, s32 sortType, vm::ptr<SceNpTusDataStatus> statusArray, u64 statusArraySize, s32 arrayNum, vm::ptr<void> option)
+error_code sceNpTusGetFriendsDataStatus(s32 transId, SceNpTusSlotId slotId, s32 includeSelf, s32 sortType, vm::ptr<SceNpTusDataStatus> statusArray, u32 statusArraySize, s32 arrayNum, vm::ptr<void> option)
 {
 	sceNpTus.warning("sceNpTusGetFriendsDataStatus(transId=%d, slotId=%d, includeSelf=%d, sortType=%d, statusArray=*0x%x, statusArraySize=%d, arrayNum=%d, option=*0x%x)", transId, slotId, includeSelf, sortType, statusArray, statusArraySize, arrayNum, option);
 	return scenp_tus_get_friends_data_status(transId, slotId, includeSelf, sortType, statusArray, statusArraySize, arrayNum, option, false);
 }
 
-error_code sceNpTusGetFriendsDataStatusAsync(s32 transId, SceNpTusSlotId slotId, s32 includeSelf, s32 sortType, vm::ptr<SceNpTusDataStatus> statusArray, u64 statusArraySize, s32 arrayNum, vm::ptr<void> option)
+error_code sceNpTusGetFriendsDataStatusAsync(s32 transId, SceNpTusSlotId slotId, s32 includeSelf, s32 sortType, vm::ptr<SceNpTusDataStatus> statusArray, u32 statusArraySize, s32 arrayNum, vm::ptr<void> option)
 {
 	sceNpTus.warning("sceNpTusGetFriendsDataStatusAsync(transId=%d, slotId=%d, includeSelf=%d, sortType=%d, statusArray=*0x%x, statusArraySize=%d, arrayNum=%d, option=*0x%x)", transId, slotId, includeSelf, sortType, statusArray, statusArraySize, arrayNum, option);
 	return scenp_tus_get_friends_data_status(transId, slotId, includeSelf, sortType, statusArray, statusArraySize, arrayNum, option, true);

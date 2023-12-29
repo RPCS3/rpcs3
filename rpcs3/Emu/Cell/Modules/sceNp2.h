@@ -1619,7 +1619,7 @@ struct SceNpAuthorizationCode
 
 struct SceNpAuthGetAuthorizationCodeParameter
 {
-	be_t<u64> size;
+	be_t<u32> size;
 	vm::bcptr<SceNpClientId> pClientId;
 	vm::bcptr<char> pScope;
 };
