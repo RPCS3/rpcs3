@@ -11790,7 +11790,7 @@ std::unique_ptr<spu_recompiler_base> spu_recompiler_base::make_llvm_recompiler(u
 	fmt::throw_exception("LLVM is not available in this build.");
 }
 
-#endif
+#endif // LLVM_AVAILABLE
 
 struct spu_llvm_worker
 {
