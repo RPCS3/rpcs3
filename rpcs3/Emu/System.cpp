@@ -1525,7 +1525,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			// Fake arg (workaround)
 			argv.resize(1);
 			argv[0] = "/dev_bdvd/PS3_GAME/USRDIR/EBOOT.BIN";
-			m_dir = "/dev_bdvd/PS3_GAME";
+			m_dir = "/dev_bdvd/PS3_GAME/";
 
 			std::string path;
 			std::vector<std::string> dir_queue;
@@ -2113,14 +2113,19 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 				if (from_hdd0_game && m_cat == "DG")
 				{
-					argv[0] = "/dev_bdvd/PS3_GAME/" + unescape(resolved_path.substr(resolved_hdd0.size() + 10));
-					m_dir = "/dev_hdd0/game/" + resolved_path.substr(resolved_hdd0.size(), 10);
+					const std::string tail = resolved_path.substr(resolved_hdd0.size());
+					const std::string tail_usrdir = tail.substr(tail.find_first_of(fs::delim) + 1);
+					const std::string dirname = tail.substr(0, tail.find_first_of(fs::delim));
+					argv[0] = "/dev_bdvd/PS3_GAME/" + unescape(tail_usrdir);
+					m_dir = "/dev_hdd0/game/" + dirname + "/";
 					sys_log.notice("Disc path: %s", m_dir);
 				}
 				else if (from_hdd0_game)
 				{
-					argv[0] = "/dev_hdd0/game/" + unescape(resolved_path.substr(resolved_hdd0.size()));
-					m_dir = "/dev_hdd0/game/" + resolved_path.substr(resolved_hdd0.size(), 10);
+					const std::string tail = resolved_path.substr(resolved_hdd0.size());
+					const std::string dirname = tail.substr(0, tail.find_first_of(fs::delim));
+					argv[0] = "/dev_hdd0/game/" + unescape(tail);
+					m_dir = "/dev_hdd0/game/" + dirname + "/";
 					sys_log.notice("Boot path: %s", m_dir);
 				}
 				else if (!bdvd_dir.empty() && fs::is_dir(bdvd_dir))
@@ -2146,7 +2151,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 						game_dir = game_dir.substr(0, game_dir.size() - 4);
 					}
 
-					m_dir = "/dev_hdd0/game/" + m_title_id + '/';
+					const std::string dir = fmt::trim(game_dir.substr(fs::get_parent_dir_view(game_dir).size() + 1), fs::delim);
+
+					m_dir = "/dev_hdd0/game/" + dir + '/';
 					argv[0] = m_dir + unescape(resolved_path.substr(GetCallbacks().resolve_path(game_dir).size()));
 					sys_log.notice("Boot path: %s", m_dir);
 				}
