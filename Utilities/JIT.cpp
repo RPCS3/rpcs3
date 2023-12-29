@@ -1489,4 +1489,4 @@ u64 jit_compiler::get(const std::string& name)
 	return m_engine->getGlobalValueAddress(name);
 }
 
-#endif
+#endif // LLVM_AVAILABLE
