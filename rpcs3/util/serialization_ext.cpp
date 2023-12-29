@@ -289,7 +289,7 @@ bool compressed_serialization_file_handler::handle_file_op(utils::serial& ar, us
 			while (true)
 			{
 				// Avoid flooding RAM, wait if there is too much pending memory
-				const usz new_value = m_pending_bytes.atomic_op([&](usz v)
+				const usz new_value = m_pending_bytes.atomic_op([&](usz& v)
 				{
 					v &= ~pending_data_wait_bit;
 
@@ -647,7 +647,7 @@ void compressed_serialization_file_handler::stream_data_prepare_thread_op()
 
 				if (m_zs.avail_out == 0)
 				{
-					m_stream_data.resize(m_stream_data.size() + (m_zs.avail_in + 3ull) / 4);
+					m_stream_data.resize(m_stream_data.size() + (m_zs.avail_in / 4) + (m_stream_data.size() / 16) + 1);
 				}
 			}
 			while (m_zs.avail_out == 0 || m_zs.avail_in != 0);
