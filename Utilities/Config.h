@@ -101,6 +101,8 @@ namespace cfg
 
 		// Set multiple values. Implementation-specific, optional.
 		virtual bool from_list(std::vector<std::string>&&);
+
+		bool save(std::string_view cfg_name) const;
 	};
 
 	// Config tree node which contains another nodes

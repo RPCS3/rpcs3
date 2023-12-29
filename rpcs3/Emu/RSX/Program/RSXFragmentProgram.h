@@ -248,7 +248,7 @@ struct RSXFragmentProgram
 			this->operator=(other);
 		}
 
-		data_storage_helper(data_storage_helper&& other)
+		data_storage_helper(data_storage_helper&& other) noexcept
 			: data_ptr(other.data_ptr)
 			, local_storage(std::move(other.local_storage))
 		{
@@ -273,7 +273,7 @@ struct RSXFragmentProgram
 			return *this;
 		}
 
-		data_storage_helper& operator=(data_storage_helper&& other)
+		data_storage_helper& operator=(data_storage_helper&& other) noexcept
 		{
 			if (this == &other) return *this;
 

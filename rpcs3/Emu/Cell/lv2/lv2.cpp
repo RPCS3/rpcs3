@@ -1536,7 +1536,7 @@ bool lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
 			});
 		};
 
-		const s32 old_prio = static_cast<ppu_thread*>(cpu)->prio.load().prio;
+		const s64 old_prio = static_cast<ppu_thread*>(cpu)->prio.load().prio;
 
 		// If priority is the same, push ONPROC/RUNNABLE thread to the back of the priority list if it is not the current thread
 		if (old_prio == prio && cpu == cpu_thread::get_current())
@@ -2067,7 +2067,7 @@ bool lv2_obj::wait_timeout(u64 usec, ppu_thread* cpu, bool scale, bool is_usleep
 #if defined(ARCH_X64)
 			else if (utils::has_appropriate_um_wait())
 			{
-				u32 us_in_tsc_clocks = remaining * (utils::get_tsc_freq() / 1000000);
+				const u32 us_in_tsc_clocks = ::narrow<u32>(remaining * (utils::get_tsc_freq() / 1000000ULL));
 
 				if (utils::has_waitpkg())
 				{

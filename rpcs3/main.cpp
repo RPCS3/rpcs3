@@ -1049,7 +1049,7 @@ int main(int argc, char** argv)
 		}
 
 		// Check nonsensical archive locations
-		for (const std::string& expr : { "/Rar$" })
+		for (const std::string_view& expr : { "/Rar$"sv })
 		{
 			if (emu_dir.find(expr) != umax)
 			{

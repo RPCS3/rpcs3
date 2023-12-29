@@ -315,7 +315,7 @@ namespace np
 		if (update_info->optData())
 		{
 			sce_update_info->optData.length = update_info->optData()->data()->size();
-			for (usz i = 0; i < 16; i++)
+			for (flatbuffers::uoffset_t i = 0; i < 16; i++)
 			{
 				sce_update_info->optData.data[i] = update_info->optData()->data()->Get(i);
 			}
@@ -338,7 +338,7 @@ namespace np
 		if (update_info->optData())
 		{
 			sce_update_info->optData.length = update_info->optData()->data()->size();
-			for (usz i = 0; i < 16; i++)
+			for (flatbuffers::uoffset_t i = 0; i < 16; i++)
 			{
 				sce_update_info->optData.data[i] = update_info->optData()->data()->Get(i);
 			}
@@ -477,7 +477,7 @@ namespace np
 			}
 			break;
 		}
-		case SCE_NP_MATCHING2_CASTTYPE_MULTICAST_TEAM: sce_mi->dst->multicastTargetTeamId = mi->dst()->Get(0); break;
+		case SCE_NP_MATCHING2_CASTTYPE_MULTICAST_TEAM: sce_mi->dst->multicastTargetTeamId = ::narrow<SceNpMatching2TeamId>(mi->dst()->Get(0)); break;
 		default: ensure(false);
 		}
 

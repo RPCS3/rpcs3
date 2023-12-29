@@ -404,7 +404,7 @@ void spu_load_rel_exec(const spu_rel_object& elf)
 	ensure(vm::get(vm::spu)->falloc(spu->vm_offset(), SPU_LS_SIZE, &spu->shm, vm::page_size_64k));
 	spu->map_ls(*spu->shm, spu->ls);
 
-	u64 total_memsize = 0;
+	u32 total_memsize = 0;
 
 	// Compute executable data size
 	for (const auto& shdr : elf.shdrs)

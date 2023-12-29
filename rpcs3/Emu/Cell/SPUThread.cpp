@@ -3481,7 +3481,7 @@ bool spu_thread::do_list_transfer(spu_mfc_cmd& args)
 			ch_stall_stat.set_value(utils::rol32(1, args.tag) | ch_stall_stat.get_value());
 
 			args.tag |= 0x80; // Set stalled status
-			args.eal = reinterpret_cast<const u8*>(item_ptr) - this->ls;
+			args.eal = ::narrow<u32>(reinterpret_cast<const u8*>(item_ptr) - this->ls);
 			args.lsa = arg_lsa;
 			args.size = arg_size;
 			return false;
@@ -4750,7 +4750,7 @@ std::pair<u32, u32> spu_thread::read_dec() const
 	return {static_cast<u32>(res), static_cast<u32>(res >> 32)};
 }
 
-spu_thread::ch_events_t spu_thread::get_events(u32 mask_hint, bool waiting, bool reading)
+spu_thread::ch_events_t spu_thread::get_events(u64 mask_hint, bool waiting, bool reading)
 {
 	if (auto mask1 = ch_events.load().mask; mask1 & ~SPU_EVENT_IMPLEMENTED)
 	{

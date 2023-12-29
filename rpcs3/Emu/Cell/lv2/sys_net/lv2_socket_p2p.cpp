@@ -222,7 +222,7 @@ s32 lv2_socket_p2p::setsockopt(s32 level, s32 optname, const std::vector<u8>& op
 	const u64 key = (static_cast<u64>(level) << 32) | static_cast<u64>(optname);
 	sockopt_cache cache{};
 	memcpy(&cache.data._int, optval.data(), optval.size());
-	cache.len = optval.size();
+	cache.len = ::size32(optval);
 
 	sockopts[key] = std::move(cache);
 
@@ -296,7 +296,7 @@ std::optional<s32> lv2_socket_p2p::sendto(s32 flags, const std::vector<u8>& buf,
 		native_flags |= MSG_WAITALL;
 	}
 
-	auto native_result = ::sendto(socket, reinterpret_cast<const char*>(p2p_data.data()), p2p_data.size(), native_flags, reinterpret_cast<struct sockaddr*>(&native_addr), sizeof(native_addr));
+	auto native_result = ::sendto(socket, reinterpret_cast<const char*>(p2p_data.data()), ::size32(p2p_data), native_flags, reinterpret_cast<struct sockaddr*>(&native_addr), sizeof(native_addr));
 
 	if (native_result >= 0)
 	{

@@ -495,7 +495,8 @@ namespace fs
 		{
 			std::basic_string<T> result;
 			result.resize(size() / sizeof(T));
-			if (seek(0), !read(result, result.size(), file, func, line, col)) xfail({line, col, file, func});
+			seek(0);
+			if (!read(result, result.size(), file, func, line, col)) xfail({line, col, file, func});
 			return result;
 		}
 
@@ -509,7 +510,8 @@ namespace fs
 		{
 			std::vector<T> result;
 			result.resize(size() / sizeof(T));
-			if (seek(0), !read(result, result.size(), file, func, line, col)) xfail({line, col, file, func});
+			seek(0);
+			if (!read(result, result.size(), file, func, line, col)) xfail({line, col, file, func});
 			return result;
 		}
 

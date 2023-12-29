@@ -707,7 +707,7 @@ void spu_cache::initialize(bool build_existing_cache)
 	auto data_list = g_fxo->get<spu_cache>().precompile_funcs.pop_all();
 	g_fxo->get<spu_cache>().collect_funcs_to_precompile = false;
 
-	u32 total_precompile = 0;
+	usz total_precompile = 0;
 
 	for (auto& sec : data_list)
 	{
@@ -763,14 +763,14 @@ void spu_cache::initialize(bool build_existing_cache)
 
 	if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit || g_cfg.core.spu_decoder == spu_decoder_type::llvm)
 	{
-		const u32 add_count = ::size32(func_list) + total_precompile;
+		const usz add_count = func_list.size() + total_precompile;
 
 		if (add_count)
 		{
-			total_funcs = build_existing_cache ? add_count : 0;
+			total_funcs = build_existing_cache ? ::narrow<u32>(add_count) : 0;
 		}
 
-		worker_count = std::min<u32>(rpcs3::utils::get_max_threads(), add_count);
+		worker_count = std::min<u32>(rpcs3::utils::get_max_threads(), ::narrow<u32>(add_count));
 	}
 
 	atomic_t<u32> pending_progress = 0;
@@ -898,7 +898,7 @@ void spu_cache::initialize(bool build_existing_cache)
 
 		for (func_i = data_indexer++;; func_i = data_indexer++, (showing_progress ? g_progr_pdone : pending_progress) += build_existing_cache ? 1 : 0)
 		{
-			u32 passed_count = 0;
+			usz passed_count = 0;
 			u32 func_addr = 0;
 			u32 next_func = 0;
 			u32 sec_addr = umax;
@@ -910,11 +910,11 @@ void spu_cache::initialize(bool build_existing_cache)
 			{
 				if (func_i < passed_count + sec.funcs.size())
 				{
-					const u32 func_idx = func_i - passed_count;
+					const usz func_idx = func_i - passed_count;
 					sec_addr = sec.vaddr;
 					func_addr = ::at32(sec.funcs, func_idx);
 					inst_data = sec.inst_data;
-					next_func = sec.funcs.size() >= func_idx ? sec_addr + inst_data.size() * 4 : sec.funcs[func_idx];
+					next_func = sec.funcs.size() >= func_idx ? ::narrow<u32>(sec_addr + inst_data.size() * 4) : sec.funcs[func_idx];
 					break;
 				}
 
@@ -961,7 +961,7 @@ void spu_cache::initialize(bool build_existing_cache)
 			while (!func2.data.empty())
 			{
 				const u32 last_inst = std::bit_cast<be_t<u32>>(func2.data.back());
-				const u32 prog_size = func2.data.size();
+				const u32 prog_size = ::size32(func2.data);
 
 				if (!compiler->compile(std::move(func2)))
 				{
@@ -2247,7 +2247,7 @@ std::vector<u32> spu_thread::discover_functions(u32 base_addr, std::span<const u
 	// TODO: Does not detect jumptables or fixed-addr indirect calls
 	const v128 brasl_mask = is_known_addr ? v128::from32p(0x62u << 23) : v128::from32p(umax);
 
-	for (u32 i = utils::align<u32>(base_addr, 0x10); i < std::min<u32>(base_addr + ls.size(), 0x3FFF0); i += 0x10)
+	for (u32 i = utils::align<u32>(base_addr, 0x10); i < std::min<u32>(base_addr + ::size32(ls), 0x3FFF0); i += 0x10)
 	{
 		// Search for BRSL LR and BRASL LR or BR
 		// TODO: BISL
@@ -2323,7 +2323,7 @@ std::vector<u32> spu_thread::discover_functions(u32 base_addr, std::span<const u
 		// Search for AI R1, +x or OR R3/4, Rx, 0
 		// Reasoning: AI R1, +x means stack pointer restoration, branch after that is likely a tail call
 		// R3 and R4 are common function arguments because they are the first two
-		for (u32 back = addr - 4, it = 10; it && back >= base_addr && back < std::min<u32>(base_addr + ls.size(), 0x3FFF0); it--, back -= 4)
+		for (u32 back = addr - 4, it = 10; it && back >= base_addr && back < std::min<u32>(base_addr + ::size32(ls), 0x3FFF0); it--, back -= 4)
 		{
 			const spu_opcode_t test_op{read_from_ptr<be_t<u32>>(ls, back - base_addr)};
 			const auto type = g_spu_itype.decode(test_op.opcode);

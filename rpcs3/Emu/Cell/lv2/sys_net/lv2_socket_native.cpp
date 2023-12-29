@@ -968,7 +968,7 @@ std::optional<s32> lv2_socket_native::sendto(s32 flags, const std::vector<u8>& b
 
 	if (dnshook.is_dns(lv2_id))
 	{
-		const s32 ret_analyzer = dnshook.analyze_dns_packet(lv2_id, reinterpret_cast<const u8*>(buf.data()), buf.size());
+		const s32 ret_analyzer = dnshook.analyze_dns_packet(lv2_id, reinterpret_cast<const u8*>(buf.data()), ::size32(buf));
 
 		// Check if the packet is intercepted
 		if (ret_analyzer >= 0)
@@ -977,7 +977,7 @@ std::optional<s32> lv2_socket_native::sendto(s32 flags, const std::vector<u8>& b
 		}
 	}
 
-	native_result = ::sendto(socket, reinterpret_cast<const char*>(buf.data()), buf.size(), native_flags, native_addr ? reinterpret_cast<struct sockaddr*>(&native_addr.value()) : nullptr, native_addr ? sizeof(sockaddr_in) : 0);
+	native_result = ::sendto(socket, reinterpret_cast<const char*>(buf.data()), ::narrow<int>(buf.size()), native_flags, native_addr ? reinterpret_cast<struct sockaddr*>(&native_addr.value()) : nullptr, native_addr ? sizeof(sockaddr_in) : 0);
 
 	if (native_result >= 0)
 	{
@@ -1025,7 +1025,7 @@ std::optional<s32> lv2_socket_native::sendmsg(s32 flags, const sys_net_msghdr& m
 		const u32 len = msg.msg_iov[i].iov_len;
 		const std::vector<u8> buf_copy(vm::_ptr<const char>(iov_base.addr()), vm::_ptr<const char>(iov_base.addr()) + len);
 
-		native_result = ::send(socket, reinterpret_cast<const char*>(buf_copy.data()), buf_copy.size(), native_flags);
+		native_result = ::send(socket, reinterpret_cast<const char*>(buf_copy.data()), ::narrow<int>(buf_copy.size()), native_flags);
 
 		if (native_result >= 0)
 		{

@@ -469,7 +469,7 @@ namespace rsx
 			return *this;
 		}
 
-		rsx_state& operator=(rsx_state&& in)
+		rsx_state& operator=(rsx_state&& in) noexcept
 		{
 			registers = std::move(in.registers);
 			transform_program = std::move(in.transform_program);
@@ -528,7 +528,7 @@ namespace rsx
 			this->operator=(other);
 		}
 
-		rsx_state(rsx_state&& other)
+		rsx_state(rsx_state&& other) noexcept
 			: rsx_state()
 		{
 			this->operator=(std::move(other));

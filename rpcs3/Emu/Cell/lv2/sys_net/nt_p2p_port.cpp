@@ -134,9 +134,9 @@ bool nt_p2p_port::handle_listening(s32 sock_id, p2ps_encapsulated_tcp* tcp_heade
 
 bool nt_p2p_port::recv_data()
 {
-	::sockaddr_storage native_addr;
+	::sockaddr_storage native_addr{};
 	::socklen_t native_addrlen = sizeof(native_addr);
-	const auto recv_res        = ::recvfrom(p2p_socket, reinterpret_cast<char*>(p2p_recv_data.data()), p2p_recv_data.size(), 0, reinterpret_cast<struct sockaddr*>(&native_addr), &native_addrlen);
+	const auto recv_res        = ::recvfrom(p2p_socket, reinterpret_cast<char*>(p2p_recv_data.data()), ::size32(p2p_recv_data), 0, reinterpret_cast<struct sockaddr*>(&native_addr), &native_addrlen);
 
 	if (recv_res == -1)
 	{

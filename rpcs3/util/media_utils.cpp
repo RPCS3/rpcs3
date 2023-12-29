@@ -33,7 +33,7 @@ LOG_CHANNEL(media_log, "Media");
 namespace utils
 {
 	template <typename T>
-	static inline void write_byteswapped(const u8* src, u8* dst)
+	static inline void write_byteswapped(const void* src, void* dst)
 	{
 		*reinterpret_cast<T*>(dst) = *reinterpret_cast<const be_t<T>*>(src);
 	}
