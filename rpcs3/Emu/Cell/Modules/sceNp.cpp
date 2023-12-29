@@ -2080,7 +2080,7 @@ error_code sceNpCommerceDestroyCtx(u32 ctx_id)
 	return CELL_OK;
 }
 
-error_code sceNpCommerceInitProductCategory(vm::ptr<SceNpCommerceProductCategory> pc, vm::cptr<void> data, u64 data_size)
+error_code sceNpCommerceInitProductCategory(vm::ptr<SceNpCommerceProductCategory> pc, vm::cptr<void> data, u32 data_size)
 {
 	sceNp.todo("sceNpCommerceInitProductCategory(pc=*0x%x, data=*0x%x, data_size=%d)", pc, data, data_size);
 	return CELL_OK;
@@ -2103,7 +2103,7 @@ error_code sceNpCommerceGetProductCategoryFinish(u32 req_id)
 	return CELL_OK;
 }
 
-error_code sceNpCommerceGetProductCategoryResult(u32 req_id, vm::ptr<void> buf, u64 buf_size, vm::ptr<u64> fill_size)
+error_code sceNpCommerceGetProductCategoryResult(u32 req_id, vm::ptr<void> buf, u32 buf_size, vm::ptr<u32> fill_size)
 {
 	sceNp.todo("sceNpCommerceGetProductCategoryResult(req_id=%d, buf=*0x%x, buf_size=%d, fill_size=*0x%x)", req_id, buf, buf_size, fill_size);
 	return CELL_OK;
@@ -2778,7 +2778,7 @@ error_code sceNpLookupUserProfileAsync(s32 transId, vm::cptr<SceNpId> npId, vm::
 }
 
 error_code sceNpLookupUserProfileWithAvatarSize(s32 transId, s32 avatarSizeType, vm::cptr<SceNpId> npId, vm::ptr<SceNpUserInfo> userInfo, vm::ptr<SceNpAboutMe> aboutMe,
-    vm::ptr<SceNpMyLanguages> languages, vm::ptr<SceNpCountryCode> countryCode, vm::ptr<void> avatarImageData, u64 avatarImageDataMaxSize, vm::ptr<u64> avatarImageDataSize, vm::ptr<void> option)
+    vm::ptr<SceNpMyLanguages> languages, vm::ptr<SceNpCountryCode> countryCode, vm::ptr<void> avatarImageData, u32 avatarImageDataMaxSize, vm::ptr<u32> avatarImageDataSize, vm::ptr<void> option)
 {
 	sceNp.todo("sceNpLookupUserProfileWithAvatarSize(transId=%d, avatarSizeType=%d, npId=*0x%x, userInfo=*0x%x, aboutMe=*0x%x, languages=*0x%x, countryCode=*0x%x, avatarImageData=*0x%x, "
 	           "avatarImageDataMaxSize=%d, avatarImageDataSize=*0x%x, option=*0x%x)",
@@ -2810,7 +2810,7 @@ error_code sceNpLookupUserProfileWithAvatarSize(s32 transId, s32 avatarSizeType,
 }
 
 error_code sceNpLookupUserProfileWithAvatarSizeAsync(s32 transId, s32 avatarSizeType, vm::cptr<SceNpId> npId, vm::ptr<SceNpUserInfo> userInfo, vm::ptr<SceNpAboutMe> aboutMe,
-    vm::ptr<SceNpMyLanguages> languages, vm::ptr<SceNpCountryCode> countryCode, vm::ptr<void> avatarImageData, u64 avatarImageDataMaxSize, vm::ptr<u64> avatarImageDataSize, s32 prio,
+    vm::ptr<SceNpMyLanguages> languages, vm::ptr<SceNpCountryCode> countryCode, vm::ptr<void> avatarImageData, u32 avatarImageDataMaxSize, vm::ptr<u32> avatarImageDataSize, s32 prio,
     vm::ptr<void> option)
 {
 	sceNp.todo("sceNpLookupUserProfileWithAvatarSizeAsync(transId=%d, avatarSizeType=%d, npId=*0x%x, userInfo=*0x%x, aboutMe=*0x%x, languages=*0x%x, countryCode=*0x%x, avatarImageData=*0x%x, "
@@ -2928,7 +2928,7 @@ error_code sceNpLookupTitleStorageAsync()
 	return CELL_OK;
 }
 
-error_code sceNpLookupTitleSmallStorage(s32 transId, vm::ptr<void> data, u64 maxSize, vm::ptr<u64> contentLength, vm::ptr<void> option)
+error_code sceNpLookupTitleSmallStorage(s32 transId, vm::ptr<void> data, u32 maxSize, vm::ptr<u32> contentLength, vm::ptr<void> option)
 {
 	sceNp.todo("sceNpLookupTitleSmallStorage(transId=%d, data=*0x%x, maxSize=%d, contentLength=*0x%x, option=*0x%x)", transId, data, maxSize, contentLength, option);
 
@@ -2962,7 +2962,7 @@ error_code sceNpLookupTitleSmallStorage(s32 transId, vm::ptr<void> data, u64 max
 	return CELL_OK;
 }
 
-error_code sceNpLookupTitleSmallStorageAsync(s32 transId, vm::ptr<void> data, u64 maxSize, vm::ptr<u64> contentLength, s32 prio, vm::ptr<void> option)
+error_code sceNpLookupTitleSmallStorageAsync(s32 transId, vm::ptr<void> data, u32 maxSize, vm::ptr<u32> contentLength, s32 prio, vm::ptr<void> option)
 {
 	sceNp.todo("sceNpLookupTitleSmallStorageAsync(transId=%d, data=*0x%x, maxSize=%d, contentLength=*0x%x, prio=%d, option=*0x%x)", transId, data, maxSize, contentLength, prio, option);
 
@@ -2983,7 +2983,7 @@ error_code sceNpLookupTitleSmallStorageAsync(s32 transId, vm::ptr<void> data, u6
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
 	}
 
-	//	if (something > maxSize)
+	//if (something > maxSize)
 	//{
 	//	return SCE_NP_COMMUNITY_ERROR_BODY_TOO_LARGE;
 	//}
@@ -3631,14 +3631,14 @@ error_code sceNpMatchingDestroyCtx(u32 ctx_id)
 	return CELL_OK;
 }
 
-error_code sceNpMatchingGetResult(u32 ctx_id, u32 req_id, vm::ptr<void> buf, vm::ptr<u64> size, vm::ptr<s32> event)
+error_code sceNpMatchingGetResult(u32 ctx_id, u32 req_id, vm::ptr<void> buf, vm::ptr<u32> size, vm::ptr<s32> event)
 {
 	sceNp.todo("sceNpMatchingGetResult(ctx_id=%d, req_id=%d, buf=*0x%x, size=*0x%x, event=*0x%x)", ctx_id, req_id, buf, size, event);
 
 	return CELL_OK;
 }
 
-error_code sceNpMatchingGetResultGUI(vm::ptr<void> buf, vm::ptr<u64> size, vm::ptr<s32> event)
+error_code sceNpMatchingGetResultGUI(vm::ptr<void> buf, vm::ptr<u32> size, vm::ptr<s32> event)
 {
 	sceNp.todo("sceNpMatchingGetResultGUI(buf=*0x%x, size=*0x%x, event=*0x%x)", buf, size, event);
 
@@ -3687,7 +3687,7 @@ error_code sceNpMatchingGetRoomSearchFlag(u32 ctx_id, vm::ptr<SceNpLobbyId> lobb
 	return CELL_OK;
 }
 
-error_code sceNpMatchingGetRoomMemberListLocal(u32 ctx_id, vm::ptr<SceNpRoomId> room_id, vm::ptr<u64> buflen, vm::ptr<void> buf)
+error_code sceNpMatchingGetRoomMemberListLocal(u32 ctx_id, vm::ptr<SceNpRoomId> room_id, vm::ptr<u32> buflen, vm::ptr<void> buf)
 {
 	sceNp.todo("sceNpMatchingGetRoomMemberListLocal(ctx_id=%d, room_id=*0x%x, buflen=*0x%x, buf=*0x%x)", ctx_id, room_id, buflen, buf);
 

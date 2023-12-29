@@ -199,13 +199,13 @@ error_code sceNpCommerce2GetCategoryContentsStart(u32 req_id, vm::cptr<char> cat
 	return CELL_OK;
 }
 
-error_code sceNpCommerce2GetCategoryContentsGetResult(u32 req_id, vm::ptr<void> buf, u64 buf_size, vm::ptr<u64> fill_size) // TODO: correct size types?
+error_code sceNpCommerce2GetCategoryContentsGetResult(u32 req_id, vm::ptr<void> buf, u32 buf_size, vm::ptr<u32> fill_size)
 {
 	sceNpCommerce2.todo("sceNpCommerce2GetCategoryContentsGetResult(req_id=%d, buf=*0x%x, buf_size=%d, fill_size=*0x%x)", req_id, buf, buf_size, fill_size);
 	return CELL_OK;
 }
 
-error_code sceNpCommerce2InitGetCategoryContentsResult(vm::ptr<SceNpCommerce2GetCategoryContentsResult> result, vm::ptr<void> data, u64 data_size) // TODO: correct size types?
+error_code sceNpCommerce2InitGetCategoryContentsResult(vm::ptr<SceNpCommerce2GetCategoryContentsResult> result, vm::ptr<void> data, u32 data_size)
 {
 	sceNpCommerce2.todo("sceNpCommerce2InitGetCategoryContentsResult(result=*0x%x, data=*0x%x, data_size=%d)", result, data, data_size);
 	return CELL_OK;
@@ -253,13 +253,13 @@ error_code sceNpCommerce2GetProductInfoStart(u32 req_id, vm::cptr<char> category
 	return CELL_OK;
 }
 
-error_code sceNpCommerce2GetProductInfoGetResult(u32 req_id, vm::ptr<void> buf, u64 buf_size, vm::ptr<u64> fill_size) // TODO: correct size types?
+error_code sceNpCommerce2GetProductInfoGetResult(u32 req_id, vm::ptr<void> buf, u32 buf_size, vm::ptr<u32> fill_size)
 {
 	sceNpCommerce2.todo("sceNpCommerce2GetProductInfoGetResult(req_id=%d, buf=*0x%x, buf_size=%d, fill_size=*0x%x)", req_id, buf, buf_size, fill_size);
 	return CELL_OK;
 }
 
-error_code sceNpCommerce2InitGetProductInfoResult(vm::ptr<SceNpCommerce2GetProductInfoResult> result, vm::ptr<void> data, u64 data_size) // TODO: correct size types?
+error_code sceNpCommerce2InitGetProductInfoResult(vm::ptr<SceNpCommerce2GetProductInfoResult> result, vm::ptr<void> data, u32 data_size)
 {
 	sceNpCommerce2.todo("sceNpCommerce2InitGetProductInfoResult(result=*0x%x, data=*0x%x, data_size=%d)", result, data, data_size);
 	return CELL_OK;
@@ -289,13 +289,13 @@ error_code sceNpCommerce2GetProductInfoListStart(u32 req_id, vm::cptr<char[]> pr
 	return CELL_OK;
 }
 
-error_code sceNpCommerce2GetProductInfoListGetResult(u32 req_id, vm::ptr<void> buf, u64 buf_size, vm::ptr<u64> fill_size) // TODO: correct size types?
+error_code sceNpCommerce2GetProductInfoListGetResult(u32 req_id, vm::ptr<void> buf, u32 buf_size, vm::ptr<u32> fill_size)
 {
 	sceNpCommerce2.todo("sceNpCommerce2GetProductInfoListGetResult(req_id=%d, buf=*0x%x, buf_size=%d, fill_size=*0x%x)", req_id, buf, buf_size, fill_size);
 	return CELL_OK;
 }
 
-error_code sceNpCommerce2InitGetProductInfoListResult(vm::ptr<SceNpCommerce2GetProductInfoListResult> result, vm::ptr<void> data, u64 data_size) // TODO: correct size types?
+error_code sceNpCommerce2InitGetProductInfoListResult(vm::ptr<SceNpCommerce2GetProductInfoListResult> result, vm::ptr<void> data, u32 data_size)
 {
 	sceNpCommerce2.todo("sceNpCommerce2InitGetProductInfoListResult(result=*0x%x, data=*0x%x, data_size=%d)", result, data, data_size);
 	return CELL_OK;
@@ -337,7 +337,7 @@ error_code sceNpCommerce2GetGameSkuInfoFromGameProductInfo(vm::cptr<SceNpCommerc
 	return CELL_OK;
 }
 
-error_code sceNpCommerce2GetPrice(u32 ctx_id, vm::ptr<char> buf, u64 buflen, u32 price) // TODO: correct size types?
+error_code sceNpCommerce2GetPrice(u32 ctx_id, vm::ptr<char> buf, u32 buflen, u32 price)
 {
 	sceNpCommerce2.todo("sceNpCommerce2GetPrice(ctx_id=%d, buf=*0x%x, buflen=%d, price=%d)", ctx_id, buf, buflen, price);
 	return CELL_OK;

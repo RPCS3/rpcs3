@@ -175,7 +175,7 @@ void fmt_class_string<SceNpOauthError>::format(std::string& out, u64 arg)
 	});
 }
 
-error_code sceNpMatching2Init2(u64 stackSize, s32 priority, vm::ptr<SceNpMatching2UtilityInitParam> param);
+error_code sceNpMatching2Init2(u32 stackSize, s32 priority, vm::ptr<SceNpMatching2UtilityInitParam> param);
 error_code sceNpMatching2Term(ppu_thread& ppu);
 error_code sceNpMatching2Term2();
 
@@ -236,7 +236,7 @@ error_code sceNpMatching2Init(u32 stackSize, s32 priority)
 	return sceNpMatching2Init2(stackSize, priority, vm::null); // > SDK 2.4.0
 }
 
-error_code sceNpMatching2Init2(u64 stackSize, s32 priority, vm::ptr<SceNpMatching2UtilityInitParam> param)
+error_code sceNpMatching2Init2(u32 stackSize, s32 priority, vm::ptr<SceNpMatching2UtilityInitParam> param)
 {
 	sceNp2.warning("sceNpMatching2Init2(stackSize=0x%x, priority=%d, param=*0x%x)", stackSize, priority, param);
 
@@ -794,7 +794,7 @@ error_code sceNpMatching2GetServerInfo(
 	return CELL_OK;
 }
 
-error_code sceNpMatching2GetEventData(SceNpMatching2ContextId ctxId, SceNpMatching2EventKey eventKey, vm::ptr<void> buf, u64 bufLen)
+error_code sceNpMatching2GetEventData(SceNpMatching2ContextId ctxId, SceNpMatching2EventKey eventKey, vm::ptr<void> buf, u32 bufLen)
 {
 	sceNp2.notice("sceNpMatching2GetEventData(ctxId=%d, eventKey=%d, buf=*0x%x, bufLen=%d)", ctxId, eventKey, buf, bufLen);
 
@@ -944,7 +944,7 @@ error_code sceNpMatching2JoinRoom(
 }
 
 error_code sceNpMatching2GetRoomMemberDataInternalLocal(SceNpMatching2ContextId ctxId, SceNpMatching2RoomId roomId, SceNpMatching2RoomMemberId memberId, vm::cptr<SceNpMatching2AttributeId> attrId,
-	u32 attrIdNum, vm::ptr<SceNpMatching2RoomMemberDataInternal> member, vm::ptr<char> buf, u64 bufLen)
+	u32 attrIdNum, vm::ptr<SceNpMatching2RoomMemberDataInternal> member, vm::ptr<char> buf, u32 bufLen)
 {
 	sceNp2.warning("sceNpMatching2GetRoomMemberDataInternalLocal(ctxId=%d, roomId=%d, memberId=%d, attrId=*0x%x, attrIdNum=%d, member=*0x%x, buf=*0x%x, bufLen=%d)", ctxId, roomId, memberId, attrId,
 		attrIdNum, member, buf, bufLen);
@@ -1182,7 +1182,7 @@ error_code sceNpMatching2GetServerIdListLocal(SceNpMatching2ContextId ctxId, vm:
 	return not_an_error(static_cast<s32>(slist.size()));
 }
 
-error_code sceNpUtilBuildCdnUrl(vm::cptr<char> url, vm::ptr<char> buf, u64 bufSize, vm::ptr<u64> required, vm::ptr<void> option)
+error_code sceNpUtilBuildCdnUrl(vm::cptr<char> url, vm::ptr<char> buf, u32 bufSize, vm::ptr<u32> required, vm::ptr<void> option)
 {
 	sceNp2.todo("sceNpUtilBuildCdnUrl(url=%s, buf=*0x%x, bufSize=%d, required=*0x%x, option=*0x%x)", url, buf, bufSize, required, option);
 
@@ -1192,7 +1192,7 @@ error_code sceNpUtilBuildCdnUrl(vm::cptr<char> url, vm::ptr<char> buf, u64 bufSi
 		return SCE_NP_UTIL_ERROR_INVALID_ARGUMENT;
 	}
 
-	//	if (offline)
+	//if (offline)
 	//{
 	//	return SCE_NP_ERROR_OFFLINE;
 	//}
