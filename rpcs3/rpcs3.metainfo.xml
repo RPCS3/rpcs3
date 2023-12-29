@@ -28,6 +28,7 @@
 
     <screenshots>
         <screenshot type="default">
+            <caption>RPCS3 running a game using the Vulkan backend</caption>
             <image>https://rpcs3.net/blog/wp-content/uploads/2017/05/progress/vklinux.jpg</image>
         </screenshot>
     </screenshots>
@@ -48,7 +49,8 @@
 
     <recommends>
         <control>gamepad</control>
-        <display_length compare="ge">small</display_length>
+        <!-- 768 logical pixels is given as the value for small screens in the AppStream spec -->
+        <display_length compare="ge">768</display_length>
     </recommends>
 
     <content_rating type="oars-1.0">
