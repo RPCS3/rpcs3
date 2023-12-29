@@ -4531,7 +4531,8 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		bool does_gpr_barrier_preceed_first_store(u32 i) const noexcept
 		{
 			const usz counter = store_context_ctr[i];
-			return counter != 1 && counter < store_context_first_id[i];
+			const usz first_id = store_context_first_id[i];
+			return counter != 1 && first_id != umax && counter < first_id;
 		}
 	};
 
