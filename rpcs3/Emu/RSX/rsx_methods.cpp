@@ -1790,7 +1790,11 @@ namespace rsx
 
 			if (tiled_region)
 			{
-				rsx::tile_texel_data<u32, false>(
+				const auto tile_func = dst.bpp == 4
+					? rsx::tile_texel_data32
+					: rsx::tile_texel_data16;
+
+				tile_func(
 					real_dst,
 					dst.pixels,
 					tiled_region.base_address,
