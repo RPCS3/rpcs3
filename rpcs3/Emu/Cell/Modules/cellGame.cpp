@@ -746,7 +746,7 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 		*attributes = 0; // TODO
 
 		sfo = psf::load_object(vfs::get(Emu.GetDir() + "PARAM.SFO"));
-		dir = Emu.GetTitleID();
+		dir = fmt::trim(Emu.GetDir().substr(fs::get_parent_dir_view(Emu.GetDir()).size() + 1), fs::delim);
 	}
 
 	*type = _type;
@@ -763,7 +763,8 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 
 	if (_type == u32{CELL_GAME_GAMETYPE_HDD} && dirName)
 	{
-		strcpy_trunc(*dirName, Emu.GetTitleID());
+		ensure(dir.size() < CELL_GAME_DIRNAME_SIZE);
+		strcpy_trunc(*dirName, dir);
 	}
 
 	perm.dir = std::move(dir);
