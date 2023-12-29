@@ -2022,6 +2022,20 @@ spu_thread::spu_thread(utils::serial& ar, lv2_spu_group* group)
 
 	serialize_common(ar);
 
+	raddr = ::narrow<u32>(ar.pop<u64>());
+
+	if (raddr)
+	{
+		// Acquire reservation
+		if (!vm::check_addr(raddr))
+		{
+			fmt::throw_exception("SPU Serialization: Reservation address is not accessible! (addr=0x%x)", raddr);
+		}
+
+		rtime = vm::reservation_acquire(raddr);
+		mov_rdata(rdata, *vm::get_super_ptr<spu_rdata_t>(raddr));
+	}
+
 	status_npc.raw().npc = pc | u8{interrupts_enabled};
 
 	if (get_type() == spu_type::threaded)
@@ -2058,8 +2072,8 @@ void spu_thread::save(utils::serial& ar)
 
 	if (raddr)
 	{
-		// Lose reservation at savestate load with an event if one existed at savestate save
-		set_events(SPU_EVENT_LR);
+		// Last check for reservation-lost event
+		get_events(SPU_EVENT_LR);
 	}
 
 	ar(index);
@@ -2072,6 +2086,9 @@ void spu_thread::save(utils::serial& ar)
 	ar(option, lv2_id, *spu_tname.load());
 
 	serialize_common(ar);
+
+	// Let's save it as u64 for future proofing
+	ar(u64{raddr});
 
 	if (get_type() == spu_type::threaded)
 	{
