@@ -12,8 +12,8 @@
     <project_license>GPL-2.0-only</project_license>
     <description>
         <p>RPCS3 is an experimental open-source Sony PlayStation 3 emulator and debugger written in C++ for Windows and Linux. RPCS3 started development in May of 2011 by its founders DH and Hykem.
-The emulator is currently capable of running over 1800 commercial titles powered by Vulkan and OpenGL.</p>
-        <p xml:lang="de">RPCS3 ist ein experimenteller, quelloffener Emulator und Debugger für die Sony PlayStation 3, der in C++ für Windows und Linux entwickelt wurde. Die Entwicklung von RPCS3 begann im Mai 2011 durch seine Gründer DH und Hykem. Der Emulator ist derzeit in der Lage, über 1800 kommerzielle Titel mit Vulkan und OpenGL auszuführen.</p>
+The emulator is currently capable of running over 2500 commercial titles powered by Vulkan and OpenGL.</p>
+        <p xml:lang="de">RPCS3 ist ein experimenteller, quelloffener Emulator und Debugger für die Sony PlayStation 3, der in C++ für Windows und Linux entwickelt wurde. Die Entwicklung von RPCS3 begann im Mai 2011 durch seine Gründer DH und Hykem. Der Emulator ist derzeit in der Lage, über 2500 kommerzielle Titel mit Vulkan und OpenGL auszuführen.</p>
         <p>The goal of this project is to experiment, research, and educate on the topic of PlayStation 3 emulation that can be performed on compatible devices and operating systems.
 All information was obtained legally by purchasing PlayStation 3 hardware and software. Additional information was obtained from various sources on the internet that include but is not limited to system hardware and software documentation.
 Most of this information can be found on the PlayStation 3 Developer Wiki.</p>
