@@ -455,8 +455,9 @@ void tar_object::save_directory(const std::string& target_path, utils::serial& a
 					const usz read_size = std::min<usz>(transfer_block_size, file_stat.size - read_index);
 
 					// Read file data
-					ar.data.resize(ar.data.size() + read_size);
-					ensure(fd.read_at(read_index, ar.data.data() + old_size, read_size) == read_size);
+					const usz buffer_tail = ar.data.size();
+					ar.data.resize(buffer_tail + read_size);
+					ensure(fd.read_at(read_index, ar.data.data() + buffer_tail, read_size) == read_size);
 
 					// Set position to the end of data, so breathe() would work correctly
 					ar.seek_end();
