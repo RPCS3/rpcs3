@@ -266,7 +266,7 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 		if (!m_ir->GetInsertBlock()->getTerminator())
 		{
 			FlushRegisters();
-			CallFunction(m_addr);
+			CallFunction(m_addr, nullptr, m_ir->GetInsertBlock());
 		}
 	}
 
@@ -354,7 +354,7 @@ Value* PPUTranslator::RotateLeft(Value* arg, Value* n)
 	return m_ir->CreateOr(m_ir->CreateShl(arg, m_ir->CreateAnd(n, mask)), m_ir->CreateLShr(arg, m_ir->CreateAnd(m_ir->CreateNeg(n), mask)));
 }
 
-void PPUTranslator::CallFunction(u64 target, Value* indirect)
+void PPUTranslator::CallFunction(u64 target, Value* indirect, BasicBlock* prev_block)
 {
 	const auto type = m_function->getFunctionType();
 	const auto block = m_ir->GetInsertBlock();
@@ -372,13 +372,19 @@ void PPUTranslator::CallFunction(u64 target, Value* indirect)
 
 		if (_target >= caddr && _target <= cend)
 		{
-			std::unordered_set<u64> passed_targets{_target};
+			std::unordered_set<u64> passed_targets;
 
 			u32 target_last = _target;
 
 			// Try to follow unconditional branches as long as there is no infinite loop
-			while (target_last != _target)
+			while (target_last != m_addr + base)
 			{
+				if (passed_targets.empty())
+				{
+					passed_targets.emplace(_target);
+					passed_targets.emplace(m_addr + base);
+				}
+
 				const ppu_opcode_t op{*ensure(m_info.get_ptr<u32>(target_last))};
 				const ppu_itype::type itype = g_ppu_itype.decode(op.opcode);
 
@@ -386,7 +392,7 @@ void PPUTranslator::CallFunction(u64 target, Value* indirect)
 				{
 					const u32 new_target = (op.aa ? 0 : target_last) + (itype == ppu_itype::B ? +op.bt24 : +op.bt14);
 
-					if (target_last >= caddr && target_last <= cend)
+					if (new_target >= caddr && new_target <= cend)
 					{
 						if (passed_targets.emplace(new_target).second)
 						{
@@ -401,11 +407,21 @@ void PPUTranslator::CallFunction(u64 target, Value* indirect)
 
 					// Odd destination
 				}
-				else if (itype == ppu_itype::BCLR && (op.bo & 0x14) == 0x14 && !op.lk)
+				else if (itype == ppu_itype::BCLR && (op.bo & 0x14) == 0x14 && !op.lk && (prev_block || m_lr))
 				{
 					// Special case: empty function
 					// In this case the branch can be treated as BCLR because previous CIA does not matter
-					indirect = RegLoad(m_lr);
+					indirect = m_lr;
+
+					if (!indirect)
+					{
+						// Emit register load in the beginning of the common block
+						m_ir->SetInsertPoint(prev_block, prev_block->getFirstInsertionPt());
+						indirect = RegLoad(m_lr);
+
+						// Restore current insert point
+						m_ir->SetInsertPoint(block);
+					}
 				}
 
 				break;
@@ -629,7 +645,7 @@ Value* PPUTranslator::Trunc(Value* value, Type* type)
 	return type != value->getType() ? m_ir->CreateTrunc(value, type) : value;
 }
 
-void PPUTranslator::UseCondition(MDNode* hint, Value* cond)
+void PPUTranslator::UseCondition(MDNode* hint, Value* cond, BasicBlock* prev_block)
 {
 	FlushRegisters();
 
@@ -639,7 +655,7 @@ void PPUTranslator::UseCondition(MDNode* hint, Value* cond)
 		const auto next = BasicBlock::Create(m_context, "__next", m_function);
 		m_ir->CreateCondBr(cond, local, next, hint);
 		m_ir->SetInsertPoint(next);
-		CallFunction(m_addr + 4);
+		CallFunction(m_addr + 4, nullptr, prev_block);
 		m_ir->SetInsertPoint(local);
 	}
 }
@@ -2024,6 +2040,8 @@ void PPUTranslator::BC(ppu_opcode_t op)
 	const s32 bt14 = op.bt14; // Workaround for VS 16.5
 	const u64 target = (op.aa ? 0 : m_addr) + bt14;
 
+	const auto block = m_ir->GetInsertBlock();
+
 	if (op.aa && m_reloc)
 	{
 		CompilationError("Branch with absolute address");
@@ -2031,12 +2049,13 @@ void PPUTranslator::BC(ppu_opcode_t op)
 
 	if (op.lk)
 	{
-		m_ir->CreateStore(GetAddr(+4), m_ir->CreateStructGEP(m_thread_type, m_thread, static_cast<uint>(&m_lr - m_locals)));
+		m_lr = GetAddr(+4);
+		m_ir->CreateStore(m_lr, m_ir->CreateStructGEP(m_thread_type, m_thread, static_cast<uint>(&m_lr - m_locals)));
 	}
 
-	UseCondition(CheckBranchProbability(op.bo), CheckBranchCondition(op.bo, op.bi));
+	UseCondition(CheckBranchProbability(op.bo), CheckBranchCondition(op.bo, op.bi), block);
 
-	CallFunction(target);
+	CallFunction(target, nullptr, block);
 }
 
 void PPUTranslator::SC(ppu_opcode_t op)
@@ -2074,6 +2093,8 @@ void PPUTranslator::B(ppu_opcode_t op)
 	const s32 bt24 = op.bt24; // Workaround for VS 16.5
 	const u64 target = (op.aa ? 0 : m_addr) + bt24;
 
+	const auto block = m_ir->GetInsertBlock();
+
 	if (op.aa && m_reloc)
 	{
 		CompilationError("Branch with absolute address");
@@ -2085,7 +2106,7 @@ void PPUTranslator::B(ppu_opcode_t op)
 	}
 
 	FlushRegisters();
-	CallFunction(target);
+	CallFunction(target, nullptr, block);
 }
 
 void PPUTranslator::MCRF(ppu_opcode_t op)
@@ -2103,7 +2124,8 @@ void PPUTranslator::BCLR(ppu_opcode_t op)
 
 	if (op.lk)
 	{
-		m_ir->CreateStore(GetAddr(+4), m_ir->CreateStructGEP(m_thread_type, m_thread, static_cast<uint>(&m_lr - m_locals)));
+		m_lr = GetAddr(+4);
+		m_ir->CreateStore(m_lr, m_ir->CreateStructGEP(m_thread_type, m_thread, static_cast<uint>(&m_lr - m_locals)));
 	}
 
 	UseCondition(CheckBranchProbability(op.bo), CheckBranchCondition(op.bo, op.bi));
@@ -2166,7 +2188,8 @@ void PPUTranslator::BCCTR(ppu_opcode_t op)
 
 	if (op.lk)
 	{
-		m_ir->CreateStore(GetAddr(+4), m_ir->CreateStructGEP(m_thread_type, m_thread, static_cast<uint>(&m_lr - m_locals)));
+		m_lr = GetAddr(+4);
+		m_ir->CreateStore(m_lr, m_ir->CreateStructGEP(m_thread_type, m_thread, static_cast<uint>(&m_lr - m_locals)));
 	}
 
 	UseCondition(CheckBranchProbability(op.bo | 0x4), CheckBranchCondition(op.bo | 0x4, op.bi));
