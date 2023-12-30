@@ -79,7 +79,7 @@ SERIALIZATION_VER(cellGcm, 19,                                  1)
 SERIALIZATION_VER(sysPrxForUser, 20,                            1)
 SERIALIZATION_VER(cellSaveData, 21,                             1)
 SERIALIZATION_VER(cellAudioOut, 22,                             1)
-SERIALIZATION_VER(sys_io, 23,                                   1)
+SERIALIZATION_VER(sys_io, 23,                                   2)
 
 // Misc versions for HLE/LLE not included so main version would not invalidated
 SERIALIZATION_VER(LLE, 24,                                      1)
