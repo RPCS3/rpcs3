@@ -60,6 +60,7 @@ pad_info::pad_info(utils::serial& ar)
 	, port_setting(ar)
 	, reported_info(ar)
 {
+	reported_info = {};
 	sys_io_serialize(ar);
 }
 
@@ -159,7 +160,7 @@ void cellPad_NotifyStateChange(usz index, u64 /*state*/)
 
 extern void pad_state_notify_state_change(usz index, u32 state)
 {
-	cellPad_NotifyStateChange(index, state);
+	send_sys_io_connect_event(index, state);
 }
 
 error_code cellPadInit(ppu_thread& ppu, u32 max_connect)
