@@ -3046,7 +3046,7 @@ error_code sceNpManagerGetStatus(vm::ptr<s32> status)
 
 	if (!nph.is_NP_init)
 	{
-		//return SCE_NP_ERROR_NOT_INITIALIZED;
+		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
 
 	if (!status)
@@ -3067,7 +3067,7 @@ error_code sceNpManagerGetNetworkTime(vm::ptr<CellRtcTick> pTick)
 
 	if (!nph.is_NP_init)
 	{
-		//return SCE_NP_ERROR_NOT_INITIALIZED;
+		return not_an_error(SCE_NP_ERROR_NOT_INITIALIZED);
 	}
 
 	if (!pTick)
@@ -3098,7 +3098,7 @@ error_code sceNpManagerGetOnlineId(vm::ptr<SceNpOnlineId> onlineId)
 
 	if (!nph.is_NP_init)
 	{
-		//return SCE_NP_ERROR_NOT_INITIALIZED;
+		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
 
 	if (!onlineId)
@@ -3127,10 +3127,10 @@ error_code sceNpManagerGetNpId(ppu_thread&, vm::ptr<SceNpId> npId)
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
-	// if (!nph.is_NP_init)
-	// {
-	// 	return SCE_NP_ERROR_NOT_INITIALIZED;
-	// }
+	if (!nph.is_NP_init)
+	{
+		return SCE_NP_ERROR_NOT_INITIALIZED;
+	}
 
 	if (!npId)
 	{
