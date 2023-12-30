@@ -59,7 +59,7 @@ using namespace std::literals;
 #if defined(_DEBUG) || defined(_AUDIT)
 #define AUDIT(...) (static_cast<void>(ensure(__VA_ARGS__)))
 #else
-#define AUDIT(...) (static_cast<void>(0))
+#define AUDIT(...) (static_cast<void>((__VA_ARGS__))
 #endif
 
 namespace utils
