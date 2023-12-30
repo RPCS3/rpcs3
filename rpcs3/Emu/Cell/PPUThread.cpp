@@ -1624,7 +1624,7 @@ std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 
 						inst_neg.resize(new_size);
 
-						if (!vm::try_access(inst_bound, &inst_neg[old_size], (new_size - old_size) * sizeof(be_t<u32>), false))
+						if (!vm::try_access(inst_bound, &inst_neg[old_size], ::narrow<u32>((new_size - old_size) * sizeof(be_t<u32>)), false))
 						{
 							// Failure (this would be detected as failure by zeroes)
 						}
@@ -1657,7 +1657,7 @@ std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 
 					inst_pos.resize(new_size);
 
-					if (!vm::try_access(pos, &inst_pos[old_size], (new_size - old_size) * sizeof(be_t<u32>), false))
+					if (!vm::try_access(pos, &inst_pos[old_size], ::narrow<u32>((new_size - old_size) * sizeof(be_t<u32>)), false))
 					{
 						// Failure (this would be detected as failure by zeroes)
 					}
@@ -3830,7 +3830,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 		}
 	}
 
-	g_progr_ftotal += file_queue.size();
+	g_progr_ftotal += ::size32(file_queue);
 
 	u64 total_files_size = 0;
 
@@ -3856,8 +3856,9 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 #endif
 		// Set low priority
 		thread_ctrl::scoped_priority low_prio(-1);
+		u32 inc_fdone = 1;
 
-		for (usz func_i = fnext++, inc_fdone = 1; func_i < file_queue.size(); func_i = fnext++, g_progr_fdone += std::exchange(inc_fdone, 1))
+		for (usz func_i = fnext++; func_i < file_queue.size(); func_i = fnext++, g_progr_fdone += std::exchange(inc_fdone, 1))
 		{
 			if (Emu.IsStopped())
 			{
@@ -4838,8 +4839,8 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 		jit->fin();
 	}
 
-	usz index = 0;
-	usz max_count = 0;
+	u32 index = 0;
+	u32 max_count = 0;
 
 	for (const auto& func : info.funcs)
 	{
@@ -4849,7 +4850,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 		}
 	}
 
-	usz pending_progress = umax;
+	u32 pending_progress = umax;
 
 	bool early_exit = false;
 

@@ -492,7 +492,7 @@ namespace vm
 
 				const auto diff = range_lock - g_range_lock_set;
 
-				if (bits != umax && !bits.bit_test_set(diff))
+				if (bits != umax && !bits.bit_test_set(::narrow<u32>(diff)))
 				{
 					break;
 				}
@@ -557,7 +557,7 @@ namespace vm
 					for (u64 hi = addr2 >> 16, max = (addr2 + size2 - 1) >> 16; hi <= max; hi++)
 					{
 						u64 addr3 = addr2;
-						u32 size3 = std::min<u64>(addr2 + size2, utils::align(addr2, 0x10000)) - addr2;
+						u64 size3 = std::min<u64>(addr2 + size2, utils::align(addr2, 0x10000)) - addr2;
 
 						if (u64 is_shared = g_shmem[hi]) [[unlikely]]
 						{
@@ -2405,8 +2405,10 @@ void fmt_class_string<vm::_ptr_base<const char, u32>>::format(std::string& out, 
 		return;
 	}
 
+	const u32 addr = ::narrow<u32>(arg);
+
 	// Filter certainly invalid addresses
-	if (!vm::check_addr(arg, vm::page_readable))
+	if (!vm::check_addr(addr, vm::page_readable))
 	{
 		out += reinterpret_cast<const char*>(u8"«INVALID_ADDRESS:");
 		fmt_class_string<u32>::format(out, arg);
@@ -2418,7 +2420,7 @@ void fmt_class_string<vm::_ptr_base<const char, u32>>::format(std::string& out, 
 
 	out += reinterpret_cast<const char*>(u8"“");
 
-	if (!vm::read_string(arg, umax, out, true))
+	if (!vm::read_string(addr, umax, out, true))
 	{
 		// Revert changes
 		out.resize(start);

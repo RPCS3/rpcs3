@@ -3182,7 +3182,7 @@ namespace rsx
 
 			if (count < 0)
 			{
-				const u32 found_cmds_count = std::min<u32>(-count, ::size32(pcs_of_valid_cmds) - 1 - index_of_get);
+				const u32 found_cmds_count = static_cast<u32>(std::min<s64>(-count, pcs_of_valid_cmds.size() - 1LL - index_of_get));
 
 				return {found_cmds_count, pcs_of_valid_cmds[index_of_get + found_cmds_count]};
 			}
