@@ -6193,7 +6193,7 @@ spu_exec_object spu_thread::capture_memory_as_elf(std::span<spu_memory_segment_d
 
 		if (auto [vm_addr, ok] = vm::try_get_addr(seg.src_addr); ok)
 		{
-			if (!vm::try_access(vm_addr, data.data(), ::size32(data), false))
+			if (!vm::try_access(vm_addr, data.data(), seg.segment_size, false))
 			{
 				spu_log.error("capture_memory_as_elf(): Failed to read {0x%x..0x%x}, aborting capture.", +vm_addr, vm_addr + seg.segment_size - 1);
 				spu_exec.set_error(elf_error::stream_data);

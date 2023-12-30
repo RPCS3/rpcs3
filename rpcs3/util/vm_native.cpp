@@ -464,7 +464,8 @@ namespace utils
 		, m_size(utils::align(size, 0x10000))
 	{
 #ifdef _WIN32
-		m_handle = ensure(::CreateFileMappingW(INVALID_HANDLE_VALUE, nullptr, PAGE_EXECUTE_READWRITE, 0, ::narrow<DWORD>(m_size), nullptr));
+		const ULARGE_INTEGER max_size{ .QuadPart = m_size };
+		m_handle = ensure(::CreateFileMappingW(INVALID_HANDLE_VALUE, nullptr, PAGE_EXECUTE_READWRITE, max_size.HighPart, max_size.LowPart, nullptr));
 #elif defined(__linux__) || defined(__FreeBSD__)
 		m_file = -1;
 
