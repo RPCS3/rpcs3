@@ -80,29 +80,15 @@ target_link_libraries(rpcs3_emu
     PUBLIC
         3rdparty::pugixml)
 
-if(MSVC)
-    set_source_files_properties("../../Utilities/JIT.cpp" PROPERTIES
-        COMPILE_FLAGS /GR-
-        SKIP_PRECOMPILE_HEADERS ON
-    )
-else()
-    set_source_files_properties("../../Utilities/JIT.cpp" PROPERTIES
-        COMPILE_FLAGS -fno-rtti
-        SKIP_PRECOMPILE_HEADERS ON
-    )
-endif()
+set_source_files_properties("../../Utilities/JITLLVM.cpp" "../../Utilities/JITASM.cpp" PROPERTIES
+    COMPILE_FLAGS "$<IF:$<CXX_COMPILER_ID:MSVC>,/GR-,-fno-rtti>"
+    SKIP_PRECOMPILE_HEADERS ON
+)
 
-if(MSVC)
-    set_source_files_properties("../util/yaml.cpp" PROPERTIES
-        COMPILE_FLAGS /EHsc
-        SKIP_PRECOMPILE_HEADERS ON
-    )
-else()
-    set_source_files_properties("../util/yaml.cpp" PROPERTIES
-        COMPILE_FLAGS -fexceptions
-        SKIP_PRECOMPILE_HEADERS ON
-    )
-endif()
+set_source_files_properties("../util/yaml.cpp" PROPERTIES
+    COMPILE_FLAGS "$<IF:$<CXX_COMPILER_ID:MSVC>,/EHsc,-fexceptions>"
+    SKIP_PRECOMPILE_HEADERS ON
+)
 
 # Crypto
 target_sources(rpcs3_emu PRIVATE

@@ -186,7 +186,10 @@
     <ClCompile Include="util\vm_native.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\Cell\SPURecompiler.cpp">
+    <ClCompile Include="Emu\Cell\SPUCommonRecompiler.cpp">
+      <Filter>Emu\Cell</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Cell\SPULLVMRecompiler.cpp">
       <Filter>Emu\Cell</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\SPUAnalyser.cpp">
@@ -726,7 +729,10 @@
     <ClCompile Include="util\dyn_lib.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
-    <ClCompile Include="..\Utilities\JIT.cpp">
+    <ClCompile Include="..\Utilities\JITASM.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Utilities\JITLLVM.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\PPUAnalyser.cpp">
