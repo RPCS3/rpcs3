@@ -1694,7 +1694,7 @@ public:
 		atomic_wait::info ext[2]{};
 		ext[0].data = reinterpret_cast<const char*>(&m_data) + 4;
 		ext[0].old = std::bit_cast<u64>(old_value) >> 32;
-		atomic_wait_engine::wait(&m_data, ::narrow<u32>(std::bit_cast<u64>(old_value)), static_cast<u64>(timeout), ext);
+		atomic_wait_engine::wait(&m_data, static_cast<u32>(std::bit_cast<u64>(old_value)), static_cast<u64>(timeout), ext);
 	}
 
 	void notify_one()
