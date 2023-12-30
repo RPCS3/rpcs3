@@ -125,7 +125,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <AdditionalIncludeDirectories>..\3rdparty\SoundTouch\soundtouch\include;..\3rdparty\cubeb\extra;..\3rdparty\cubeb\cubeb\include\;..\3rdparty\flatbuffers\include;..\3rdparty\wolfssl\wolfssl;..\3rdparty\curl\curl\include;..\3rdparty\rtmidi\rtmidi;..\3rdparty\libusb\libusb\libusb;$(VULKAN_SDK)\Include;..\3rdparty\XAudio2Redist\include;$(QTDIR)\include;$(QTDIR)\include\QtCore;$(QTDIR)\include\QtCore5Compat;$(QTDIR)\include\QtConcurrent;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtSvg;$(QTDIR)\include\QtSvgWidgets;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtMultimedia;$(QTDIR)\mkspecs\win32-msvc;.\debug;.\QTGeneratedFiles\$(ConfigurationName);.\QTGeneratedFiles;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalOptions>-Zc:strictStrings -Zc:throwingNew- -w34100 -w34189 -w44996 -w44456 -w44457 -w44458 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/Zc:__cplusplus -Zc:strictStrings -Zc:throwingNew- -w34100 -w34189 -w44996 -w44456 -w44457 -w44458 %(AdditionalOptions)</AdditionalOptions>
       <AssemblerListingLocation>debug\</AssemblerListingLocation>
       <BrowseInformation>false</BrowseInformation>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
