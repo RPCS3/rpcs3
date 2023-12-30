@@ -36,7 +36,7 @@ extern void sys_io_serialize(utils::serial& ar)
 	g_fxo->get<libio_sys_config>().save_or_load(ar);
 }
 
-extern void cellPad_NotifyStateChange(usz index, u32 state);
+extern void cellPad_NotifyStateChange(usz index, u64 state);
 
 void config_event_entry(ppu_thread& ppu)
 {

@@ -152,9 +152,9 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 	// Don't emit check in small blocks without terminator
 	bool need_check = info.size >= 16;
 
-	for (u32 addr = m_addr; addr < m_addr + info.size; addr += 4)
+	for (u64 addr = m_addr; addr < m_addr + info.size; addr += 4)
 	{
-		const u32 op = *ensure(m_info.get_ptr<u32>(addr + base));
+		const u32 op = *ensure(m_info.get_ptr<u32>(::narrow<u32>(addr + base)));
 
 		switch (g_ppu_itype.decode(op))
 		{
@@ -250,7 +250,7 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 			// Reset MMIO hint
 			m_may_be_mmio = true;
 
-			const u32 op = *ensure(m_info.get_ptr<u32>(m_addr + base));
+			const u32 op = *ensure(m_info.get_ptr<u32>(::narrow<u32>(m_addr + base)));
 
 			(this->*(s_ppu_decoder.decode(op)))({op});
 
@@ -368,11 +368,11 @@ void PPUTranslator::CallFunction(u64 target, Value* indirect)
 		const u64 base = m_reloc ? m_reloc->addr : 0;
 		const u32 caddr = m_info.segs[0].addr;
 		const u32 cend = caddr + m_info.segs[0].size - 1;
-		const u64 _target = target + base;
+		const u32 _target = ::narrow<u32>(target + base);
 
 		if (_target >= caddr && _target <= cend)
 		{
-			std::unordered_set<u64> passed_targets{_target};
+			std::unordered_set<u32> passed_targets{_target};
 
 			u32 target_last = _target;
 
@@ -663,7 +663,7 @@ Value* PPUTranslator::ReadMemory(Value* addr, Type* type, bool is_be, u32 align)
 
 		m_may_be_mmio = false;
 
-		if (auto ptr = m_info.get_ptr<instructions_to_test>(std::max<u32>(m_info.segs[0].addr, (m_reloc ? m_reloc->addr : 0) + utils::sub_saturate<u32>(m_addr, sizeof(instructions_to_test) / 2))))
+		if (auto ptr = m_info.get_ptr<instructions_to_test>(std::max<u32>(m_info.segs[0].addr, (m_reloc ? m_reloc->addr : 0) + utils::sub_saturate<u32>(::narrow<u32>(m_addr), sizeof(instructions_to_test) / 2))))
 		{
 			if (ppu_test_address_may_be_mmio(std::span(ptr->insts)))
 			{
@@ -726,11 +726,11 @@ void PPUTranslator::WriteMemory(Value* addr, Value* value, bool is_be, u32 align
 			be_t<u32> insts[128];
 		};
 
-		if (auto ptr = m_info.get_ptr<instructions_to_test>(std::max<u32>(m_info.segs[0].addr, (m_reloc ? m_reloc->addr : 0) + utils::sub_saturate<u32>(m_addr, sizeof(instructions_to_test) / 2))))
+		if (auto ptr = m_info.get_ptr<instructions_to_test>(std::max<u32>(m_info.segs[0].addr, (m_reloc ? m_reloc->addr : 0) + utils::sub_saturate<u32>(::narrow<u32>(m_addr), sizeof(instructions_to_test) / 2))))
 		{
 			if (ppu_test_address_may_be_mmio(std::span(ptr->insts)))
 			{
-				ppu_log.notice("LLVM: Detected potential MMIO32 write at [0x%08x]", m_addr + (m_reloc ? m_reloc->addr : 0));
+				ppu_log.notice("LLVM: Detected potential MMIO32 write at [0x%08x]", m_addr + m_reloc ? m_reloc->addr : 0);
 				Call(GetType<void>(), "__write_maybe_mmio32", m_base, addr, value);
 				return;
 			}
@@ -1056,7 +1056,7 @@ void PPUTranslator::VMADDFP(ppu_opcode_t op)
 	auto [a, b, c] = get_vrs<f32[4]>(op.va, op.vb, op.vc);
 
 	// Optimization: Emit only a floating multiply if the addend is zero
-	if (auto [ok, data] = get_const_vector(b.value, m_addr); ok)
+	if (auto [ok, data] = get_const_vector(b.value, ::narrow<u32>(m_addr)); ok)
 	{
 		if (data == v128::from32p(1u << 31))
 		{
@@ -1348,7 +1348,7 @@ void PPUTranslator::VNMSUBFP(ppu_opcode_t op)
 	auto [a, b, c] = get_vrs<f32[4]>(op.va, op.vb, op.vc);
 
 	// Optimization: Emit only a floating multiply if the addend is zero
-	if (const auto [ok, data] = get_const_vector(b.value, m_addr); ok)
+	if (const auto [ok, data] = get_const_vector(b.value, ::narrow<u32>(m_addr)); ok)
 	{
 		if (data == v128{})
 		{
@@ -1552,7 +1552,7 @@ void PPUTranslator::VSEL(ppu_opcode_t op)
 	const auto c = get_vr<u32[4]>(op.vc);
 
 	// Check if the constant mask doesn't require bit granularity
-	if (auto [ok, mask] = get_const_vector(c.value, m_addr); ok)
+	if (auto [ok, mask] = get_const_vector(c.value, ::narrow<u32>(m_addr)); ok)
 	{
 		bool sel_32 = true;
 		for (u32 i = 0; i < 4; i++)
@@ -3671,7 +3671,7 @@ void PPUTranslator::LWZ(ppu_opcode_t op)
 		};
 
 		// Quick invalidation: expect exact MMIO address, so if the register is being reused with different offset than it's likely not MMIO
-		if (auto ptr = m_info.get_ptr<instructions_data>(m_addr + 4 + (m_reloc ? m_reloc->addr : 0)))
+		if (auto ptr = m_info.get_ptr<instructions_data>(::narrow<u32>(m_addr + 4 + (m_reloc ? m_reloc->addr : 0))))
 		{
 			for (u32 inst : ptr->insts)
 			{
@@ -3774,7 +3774,7 @@ void PPUTranslator::STW(ppu_opcode_t op)
 		};
 
 		// Quick invalidation: expect exact MMIO address, so if the register is being reused with different offset than it's likely not MMIO
-		if (auto ptr = m_info.get_ptr<instructions_data>(m_addr + 4 + (m_reloc ? m_reloc->addr : 0)))
+		if (auto ptr = m_info.get_ptr<instructions_data>(::narrow<u32>(m_addr + 4 + (m_reloc ? m_reloc->addr : 0))))
 		{
 			for (u32 inst : ptr->insts)
 			{
