@@ -58,6 +58,7 @@ extern void sys_io_serialize(utils::serial& ar);
 pad_info::pad_info(utils::serial& ar)
 	: max_connect(ar)
 	, port_setting(ar)
+	, reported_info(ar)
 {
 	sys_io_serialize(ar);
 }
@@ -66,7 +67,7 @@ void pad_info::save(utils::serial& ar)
 {
 	USING_SERIALIZATION_VERSION(sys_io);
 
-	ar(max_connect, port_setting);
+	ar(max_connect, port_setting, reported_info);
 
 	sys_io_serialize(ar);
 }
