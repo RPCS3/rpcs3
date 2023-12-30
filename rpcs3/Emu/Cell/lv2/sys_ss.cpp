@@ -308,9 +308,9 @@ error_code sys_ss_secure_rtc(u64 cmd, u64 a2, u64 a3, u64 a4)
 			return 0x80010500; // bad packet id
 
 		// a3 is actual output, not 100% sure, but best guess is its tb val
-		vm::write64(a3, get_timebased_time());
+		vm::write64(::narrow<u32>(a3), get_timebased_time());
 		// a4 is a pointer to status, non 0 on error
-		vm::write64(a4, 0);
+		vm::write64(::narrow<u32>(a4), 0);
 		return CELL_OK;
 	}
 	else if (cmd == 0x3003)

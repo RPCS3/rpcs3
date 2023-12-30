@@ -73,7 +73,7 @@ void pad_info::save(utils::serial& ar)
 
 extern void send_sys_io_connect_event(usz index, u32 state);
 
-void cellPad_NotifyStateChange(usz index, u32 /*state*/)
+void cellPad_NotifyStateChange(usz index, u64 /*state*/)
 {
 	auto info = g_fxo->try_get<pad_info>();
 
