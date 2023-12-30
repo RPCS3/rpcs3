@@ -295,8 +295,8 @@ namespace
 			r = upload_untouched_naive(src.data(), dst.data(), count);
 #endif
 
-			min_index = ::narrow<T>(r);
-			max_index = ::narrow<T>(r >> 32);
+			min_index = static_cast<T>(r);
+			max_index = static_cast<T>(r >> 32);
 
 			return std::make_tuple(min_index, max_index, count);
 		}
@@ -401,8 +401,8 @@ namespace
 			r = upload_untouched_naive(src.data(), dst.data(), count, restart_index);
 #endif
 
-			min_index = ::narrow<T>(r);
-			max_index = ::narrow<T>(r >> 32);
+			min_index = static_cast<T>(r);
+			max_index = static_cast<T>(r >> 32);
 
 			return std::make_tuple(min_index, max_index, count);
 		}

@@ -730,7 +730,7 @@ void PPUTranslator::WriteMemory(Value* addr, Value* value, bool is_be, u32 align
 		{
 			if (ppu_test_address_may_be_mmio(std::span(ptr->insts)))
 			{
-				ppu_log.notice("LLVM: Detected potential MMIO32 write at [0x%08x]", m_addr + m_reloc ? m_reloc->addr : 0);
+				ppu_log.notice("LLVM: Detected potential MMIO32 write at [0x%08x]", m_addr + (m_reloc ? m_reloc->addr : 0));
 				Call(GetType<void>(), "__write_maybe_mmio32", m_base, addr, value);
 				return;
 			}

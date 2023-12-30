@@ -492,7 +492,7 @@ namespace vm
 
 				const auto diff = range_lock - g_range_lock_set;
 
-				if (bits != umax && !bits.bit_test_set(::narrow<u32>(diff)))
+				if (bits != umax && !bits.bit_test_set(static_cast<u32>(diff)))
 				{
 					break;
 				}
