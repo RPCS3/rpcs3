@@ -1146,9 +1146,9 @@ static void ppu_check_patch_spu_images(const ppu_module& mod, const ppu_segment&
 			// Bound to a bit less than LS size
 			ls_segment = ls_segment.substr(0, 0x38000);
 
-			for (usz addr_last = 0, valid_count = 0, invalid_count = 0;;)
+			for (u32 addr_last = 0, valid_count = 0, invalid_count = 0;;)
 			{
-				const usz instruction = ls_segment.find("\x24\0\x40\x80"sv, addr_last);
+				const u32 instruction = static_cast<u32>(ls_segment.find("\x24\0\x40\x80"sv, addr_last));
 
 				if (instruction != umax)
 				{
@@ -1161,7 +1161,7 @@ static void ppu_check_patch_spu_images(const ppu_module& mod, const ppu_segment&
 
 					// FIXME: This seems to terminate SPU code prematurely in some cases
 					// Likely due to absolute branches
-					if (spu_thread::is_exec_code(::narrow<u32>(instruction), {reinterpret_cast<const u8*>(ls_segment.data()), ls_segment.size()}, 0))
+					if (spu_thread::is_exec_code(instruction, {reinterpret_cast<const u8*>(ls_segment.data()), ls_segment.size()}, 0))
 					{
 						addr_last = instruction + 4;
 						valid_count++;
@@ -1183,7 +1183,7 @@ static void ppu_check_patch_spu_images(const ppu_module& mod, const ppu_segment&
 				if (addr_last >= 0x80 && valid_count >= 2)
 				{
 					const u32 begin = i & -128;
-					u32 end = std::min<u32>(seg.size, utils::align<u32>(::narrow<u32>(i + addr_last + 256), 128));
+					u32 end = std::min<u32>(seg.size, utils::align<u32>(i + addr_last + 256, 128));
 
 					u32 guessed_ls_addr = 0;
 
