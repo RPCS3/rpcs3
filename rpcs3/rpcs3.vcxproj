@@ -155,6 +155,7 @@
       </IgnoreSpecificDefaultLibraries>
       <BaseAddress>0x10000</BaseAddress>
       <DelayLoadDLLs>xaudio2_9redist.dll</DelayLoadDLLs>
+      <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
     </Link>
     <Midl>
       <DefaultCharType>Unsigned</DefaultCharType>
