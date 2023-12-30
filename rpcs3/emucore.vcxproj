@@ -157,7 +157,10 @@
     <ClCompile Include="util\dyn_lib.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="..\Utilities\JIT.cpp">
+    <ClCompile Include="..\Utilities\JITASM.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\Utilities\JITLLVM.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="util\logs.cpp">
@@ -458,7 +461,8 @@
     <ClCompile Include="Emu\Cell\MFC.cpp" />
     <ClCompile Include="Emu\Cell\PPUThread.cpp" />
     <ClCompile Include="Emu\Cell\RawSPUThread.cpp" />
-    <ClCompile Include="Emu\Cell\SPURecompiler.cpp" />
+    <ClCompile Include="Emu\Cell\SPUCommonRecompiler.cpp" />
+    <ClCompile Include="Emu\Cell\SPULLVMRecompiler.cpp" />
     <ClCompile Include="Emu\Cell\SPUThread.cpp" />
     <ClCompile Include="Emu\CPU\CPUThread.cpp" />
     <ClCompile Include="Emu\VFS.cpp" />
