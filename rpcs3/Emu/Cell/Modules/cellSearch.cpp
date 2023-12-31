@@ -65,7 +65,12 @@ struct search_info
 	atomic_t<search_state> state = search_state::not_initialized;
 
 	shared_mutex links_mutex;
-	std::unordered_map<std::string, std::string> content_links;
+	struct link_data
+	{
+		std::string path;
+		bool is_dir = false;
+	};
+	std::unordered_map<std::string, link_data> content_links;
 };
 
 struct search_content_t
@@ -617,7 +622,7 @@ error_code cellSearchStartListSearch(CellSearchListSearchType type, CellSearchSo
 						// strcpy_trunc(curr_find->infoPath.contentPath, link);
 
 						// std::lock_guard lock(search.links_mutex);
-						// search.content_links.emplace(std::move(link), item_path);
+						// search.content_links.emplace(std::move(link), search_info::link_data{ .path = item_path, .is_dir = true });
 					}
 					else
 					{
@@ -857,7 +862,7 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 						strcpy_trunc(curr_find->infoPath.contentPath, link);
 
 						std::lock_guard lock(search.links_mutex);
-						search.content_links.emplace(std::move(link), item_path);
+						search.content_links.emplace(std::move(link), search_info::link_data{ .path = item_path, .is_dir = false });
 					}
 					else
 					{
@@ -1098,7 +1103,7 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 						strcpy_trunc(curr_find->infoPath.contentPath, link);
 
 						std::lock_guard lock(search.links_mutex);
-						search.content_links.emplace(std::move(link), item_path);
+						search.content_links.emplace(std::move(link), search_info::link_data{ .path = item_path, .is_dir = false });
 					}
 					else
 					{
@@ -1772,7 +1777,7 @@ error_code cellSearchGetMusicSelectionContext(CellSearchId searchId, vm::cptr<Ce
 	{
 		if (auto found = search.content_links.find(track); found != search.content_links.end())
 		{
-			track = found->second;
+			track = found->second.path;
 		}
 	}
 
@@ -1831,7 +1836,7 @@ error_code cellSearchGetMusicSelectionContextOfSingleTrack(vm::cptr<CellSearchCo
 	{
 		if (auto found = search.content_links.find(track); found != search.content_links.end())
 		{
-			track = found->second;
+			track = found->second.path;
 		}
 	}
 
@@ -1942,7 +1947,7 @@ error_code cellSearchPrepareFile(vm::cptr<char> path)
 	auto found = search.content_links.find(path.get_ptr());
 	if (found != search.content_links.end())
 	{
-		vfs::mount(found->first, vfs::get(found->second));
+		vfs::mount(found->first, vfs::get(found->second.path), found->second.is_dir);
 	}
 
 	return CELL_OK;
@@ -2192,7 +2197,7 @@ error_code music_selection_context::find_content_id(vm::ptr<CellSearchContentId>
 					strcpy_trunc(curr_find->infoPath.contentPath, link);
 
 					std::lock_guard lock(search.links_mutex);
-					search.content_links.emplace(std::move(link), dir_path);
+					search.content_links.emplace(std::move(link), search_info::link_data{ .path = dir_path, .is_dir = true });
 				}
 				else
 				{
@@ -2249,7 +2254,7 @@ error_code music_selection_context::find_content_id(vm::ptr<CellSearchContentId>
 					strcpy_trunc(curr_find->infoPath.contentPath, link);
 
 					std::lock_guard lock(search.links_mutex);
-					search.content_links.emplace(std::move(link), file_path);
+					search.content_links.emplace(std::move(link), search_info::link_data{ .path = file_path, .is_dir = false });
 				}
 				else
 				{
