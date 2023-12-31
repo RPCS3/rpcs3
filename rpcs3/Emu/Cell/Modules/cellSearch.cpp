@@ -116,6 +116,8 @@ struct search_object_t
 	std::vector<content_id_type> content_ids;
 };
 
+static const std::string link_base = "/dev_hdd0/.tmp/"; // WipEout HD does not like it if we return a path starting with "/.tmp", so let's use "/dev_hdd0"
+
 error_code check_search_state(search_state state, search_state action)
 {
 	switch (action)
@@ -618,7 +620,7 @@ error_code cellSearchStartListSearch(CellSearchListSearchType type, CellSearchSo
 						cellSearch.warning("cellSearchStartListSearch(): Directory-Path \"%s\" is too long and will be omitted: %i", item_path, item_path.length());
 						continue;
 						// const size_t ext_offset = item.name.find_last_of('.');
-						// std::string link = "/.tmp/" + std::to_string(hash) + item.name.substr(ext_offset);
+						// std::string link = link_base + std::to_string(hash) + item.name.substr(ext_offset);
 						// strcpy_trunc(curr_find->infoPath.contentPath, link);
 
 						// std::lock_guard lock(search.links_mutex);
@@ -858,7 +860,7 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 					{
 						// Create mapping which will be resolved to an actual hard link in VFS by cellSearchPrepareFile
 						const size_t ext_offset = item.name.find_last_of('.');
-						std::string link = "/.tmp/" + std::to_string(hash) + item.name.substr(ext_offset);
+						std::string link = link_base + std::to_string(hash) + item.name.substr(ext_offset);
 						strcpy_trunc(curr_find->infoPath.contentPath, link);
 
 						std::lock_guard lock(search.links_mutex);
@@ -1099,7 +1101,7 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 					{
 						// Create mapping which will be resolved to an actual hard link in VFS by cellSearchPrepareFile
 						const size_t ext_offset = item.name.find_last_of('.');
-						std::string link = "/.tmp/" + std::to_string(hash) + item.name.substr(ext_offset);
+						std::string link = link_base + std::to_string(hash) + item.name.substr(ext_offset);
 						strcpy_trunc(curr_find->infoPath.contentPath, link);
 
 						std::lock_guard lock(search.links_mutex);
@@ -2193,7 +2195,7 @@ error_code music_selection_context::find_content_id(vm::ptr<CellSearchContentId>
 				if (dir_path.length() > CELL_SEARCH_PATH_LEN_MAX)
 				{
 					// Create mapping which will be resolved to an actual hard link in VFS by cellSearchPrepareFile
-					std::string link = "/.tmp/" + std::to_string(hash) + entry.name;
+					std::string link = link_base + std::to_string(hash) + entry.name;
 					strcpy_trunc(curr_find->infoPath.contentPath, link);
 
 					std::lock_guard lock(search.links_mutex);
@@ -2250,7 +2252,7 @@ error_code music_selection_context::find_content_id(vm::ptr<CellSearchContentId>
 				{
 					// Create mapping which will be resolved to an actual hard link in VFS by cellSearchPrepareFile
 					const size_t ext_offset = item.name.find_last_of('.');
-					std::string link = "/.tmp/" + std::to_string(hash) + item.name.substr(ext_offset);
+					std::string link = link_base + std::to_string(hash) + item.name.substr(ext_offset);
 					strcpy_trunc(curr_find->infoPath.contentPath, link);
 
 					std::lock_guard lock(search.links_mutex);
