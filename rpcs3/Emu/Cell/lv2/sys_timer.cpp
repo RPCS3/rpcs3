@@ -25,7 +25,7 @@ struct lv2_timer_thread
 	lv2_timer_thread();
 	void operator()();
 
-	SAVESTATE_INIT_POS(46); // Dependency on LV2 objects (lv2_timer)
+	//SAVESTATE_INIT_POS(46); // FREE SAVESTATE_INIT_POS number
 
 	static constexpr auto thread_name = "Timer Thread"sv;
 };
@@ -105,9 +105,12 @@ u64 lv2_timer::check_unlocked(u64 _now) noexcept
 
 lv2_timer_thread::lv2_timer_thread()
 {
-	idm::select<lv2_obj, lv2_timer>([&](u32 id, lv2_timer&)
+	Emu.DeferDeserialization([this]()
 	{
-		timers.emplace_back(idm::get_unlocked<lv2_obj, lv2_timer>(id));
+		idm::select<lv2_obj, lv2_timer>([&](u32 id, lv2_timer&)
+		{
+			timers.emplace_back(idm::get_unlocked<lv2_obj, lv2_timer>(id));
+		});
 	});
 }
 
