@@ -299,6 +299,15 @@ namespace stx
 	extern u16 serial_breathe_and_tag(utils::serial& ar, std::string_view name, bool tag_bit)
 	{
 		thread_local std::string_view s_tls_object_name = "none";
+		thread_local u64 s_tls_call_count = 1, s_tls_current_pos = 0;
+
+		if (s_tls_current_pos >= ar.pos)
+		{
+			// Reset, probably a new utils::serial object
+			s_tls_call_count = 1;
+		}
+
+		s_tls_current_pos = ar.pos;
 
 		constexpr u16 data_mask = 0x7fff;
 
@@ -311,15 +320,16 @@ namespace stx
 		u16 saved = tag;
 		ar(saved);
 
-		sys_log.warning("serial_breathe_and_tag(): %s, object: '%s', next-object: '%s', expected/tag: 0x%x == 0x%x", ar, s_tls_object_name, name, tag, saved);
+		sys_log.trace("serial_breathe_and_tag(%u): %s, object: '%s', next-object: '%s', expected/tag: 0x%x == 0x%x", s_tls_call_count, ar, s_tls_object_name, name, tag, saved);
 
 		if ((saved ^ tag) & data_mask)
 		{
 			ensure(!ar.is_writing());
-			fmt::throw_exception("serial_breathe_and_tag(): %s, object: '%s', next-object: '%s', expected/tag: 0x%x != 0x%x,", ar, s_tls_object_name, name, tag, saved);
+			fmt::throw_exception("serial_breathe_and_tag(%u): %s, object: '%s', next-object: '%s', expected/tag: 0x%x != 0x%x,", s_tls_call_count, ar, s_tls_object_name, name, tag, saved);
 		}
 
 		s_tls_object_name = name;
+		s_tls_call_count++;
 		ar.breathe();
 		return saved;
 	}
