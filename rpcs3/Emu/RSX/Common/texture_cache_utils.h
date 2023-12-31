@@ -1171,7 +1171,14 @@ namespace rsx
 			notify_range_valid();
 		}
 
+		void create_dma_only(u16 width, u16 height, u32 pitch)
+		{
+			this->width = width;
+			this->height = height;
+			this->rsx_pitch = pitch;
 
+			set_context(rsx::texture_upload_context::dma);
+		}
 
 		/**
 		 * Destroyed Flag

@@ -984,14 +984,18 @@ namespace vk
 		return &region;
 	}
 
-	cached_texture_section* texture_cache::create_nul_section(vk::command_buffer& /*cmd*/, const utils::address_range& rsx_range, bool memory_load)
+	cached_texture_section* texture_cache::create_nul_section(
+		vk::command_buffer& /*cmd*/,
+		const utils::address_range& rsx_range,
+		const rsx::image_section_attributes_t& attrs,
+		bool memory_load)
 	{
 		auto& region = *find_cached_texture(rsx_range, { .gcm_format = RSX_GCM_FORMAT_IGNORED }, true, false, false);
 		ensure(!region.is_locked());
 
 		// Prepare section
 		region.reset(rsx_range);
-		region.set_context(rsx::texture_upload_context::dma);
+		region.create_dma_only(attrs.width, attrs.height, attrs.pitch);
 		region.set_dirty(false);
 		region.set_unpack_swap_bytes(true);
 
