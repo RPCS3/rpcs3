@@ -3287,8 +3287,6 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 		{
 			cpu_thread::cleanup();
 
-			initialize_timebased_time(0, true);
-
 			lv2_obj::cleanup();
 
 			g_fxo->reset();
@@ -3341,6 +3339,8 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 			read_used_savestate_versions();
 			m_savestate_extension_flags1 = {};
 			m_savestate_pending = false;
+
+			initialize_timebased_time(0, true);
 
 			// Complete the operation
 			m_state = system_state::stopped;

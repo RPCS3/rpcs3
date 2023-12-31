@@ -311,7 +311,7 @@ namespace stx
 		u16 saved = tag;
 		ar(saved);
 
-		sys_log.trace("serial_breathe_and_tag(): %s, object: '%s', next-object: '%s', expected/tag: 0x%x == 0x%x", ar, s_tls_object_name, name, tag, saved);
+		sys_log.warning("serial_breathe_and_tag(): %s, object: '%s', next-object: '%s', expected/tag: 0x%x == 0x%x", ar, s_tls_object_name, name, tag, saved);
 
 		if ((saved ^ tag) & data_mask)
 		{
