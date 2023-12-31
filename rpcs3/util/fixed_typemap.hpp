@@ -242,7 +242,7 @@ namespace stx
 			*m_info++ = nullptr;
 		}
 
-		void init(bool reset = true, utils::serial* ar = nullptr)
+		void init(bool reset = true, utils::serial* ar = nullptr, std::function<void()> func = {})
 		{
 			if (reset)
 			{
@@ -295,6 +295,11 @@ namespace stx
 						serial_breathe_and_tag(*ar, type.name, false);
 					}
 				}
+			}
+
+			if (func)
+			{
+				func();
 			}
 
 			// Launch threads

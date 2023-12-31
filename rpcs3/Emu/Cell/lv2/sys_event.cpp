@@ -77,7 +77,7 @@ std::shared_ptr<lv2_event_queue> lv2_event_queue::load_ptr(utils::serial& ar, st
 		fmt::throw_exception("Failed in event queue pointer deserialization (invalid ID): location: %s, id=0x%x", msg, id);
 	}
 
-	Emu.DeferDeserialization([id, &queue, msg_str = std::string{msg}]()
+	Emu.PostponeInitCode([id, &queue, msg_str = std::string{msg}]()
 	{
 		// Defer resolving
 		queue = idm::get_unlocked<lv2_obj, lv2_event_queue>(id);
