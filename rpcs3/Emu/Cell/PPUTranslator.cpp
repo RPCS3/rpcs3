@@ -368,13 +368,19 @@ void PPUTranslator::CallFunction(u64 target, Value* indirect)
 		const u64 base = m_reloc ? m_reloc->addr : 0;
 		const u32 caddr = m_info.segs[0].addr;
 		const u32 cend = caddr + m_info.segs[0].size - 1;
-		const u32 _target = ::narrow<u32>(target + base);
+		const u64 _target = target + base;
 
-		if (_target >= caddr && _target <= cend)
+		if (_target >= u32{umax})
 		{
-			std::unordered_set<u32> passed_targets{_target};
+			Call(GetType<void>(), "__error", m_thread, GetAddr(), m_ir->getInt32(*ensure(m_info.get_ptr<u32>(::narrow<u32>(m_addr + base)))));
+			m_ir->CreateRetVoid();
+			return;
+		}
+		else if (_target >= caddr && _target <= cend)
+		{
+			u32 target_last = static_cast<u32>(_target);
 
-			u32 target_last = _target;
+			std::unordered_set<u32> passed_targets{target_last};
 
 			// Try to follow unconditional branches as long as there is no infinite loop
 			while (target_last != _target)
@@ -396,7 +402,7 @@ void PPUTranslator::CallFunction(u64 target, Value* indirect)
 						}
 
 						// Infinite loop detected
-						target_last = _target;
+						target_last = static_cast<u32>(_target);
 					}
 
 					// Odd destination
