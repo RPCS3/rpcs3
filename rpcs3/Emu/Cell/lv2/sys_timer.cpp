@@ -149,6 +149,11 @@ void lv2_timer_thread::operator()()
 		{
 			while (lv2_obj::check(timer))
 			{
+				if (thread_ctrl::state() == thread_state::aborting)
+				{
+					break;
+				}
+
 				if (const u64 advised_sleep_time = timer->check(_now))
 				{
 					if (sleep_time > advised_sleep_time)
