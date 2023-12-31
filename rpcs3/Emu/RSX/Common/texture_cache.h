@@ -475,7 +475,7 @@ namespace rsx
 			rsx::texture_upload_context context, rsx::texture_dimension_extended type, bool swizzled, component_order swizzle_flags, rsx::flags32_t flags) = 0;
 		virtual section_storage_type* upload_image_from_cpu(commandbuffer_type&, const address_range &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u32 pitch, u32 gcm_format, texture_upload_context context,
 			const std::vector<rsx::subresource_layout>& subresource_layout, rsx::texture_dimension_extended type, bool swizzled) = 0;
-		virtual section_storage_type* create_nul_section(commandbuffer_type&, const address_range &rsx_range, bool memory_load) = 0;
+		virtual section_storage_type* create_nul_section(commandbuffer_type&, const address_range &rsx_range, const image_section_attributes_t& attrs, bool memory_load) = 0;
 		virtual void set_component_order(section_storage_type& section, u32 gcm_format, component_order expected) = 0;
 		virtual void insert_texture_barrier(commandbuffer_type&, image_storage_type* tex, bool strong_ordering = true) = 0;
 		virtual image_view_type generate_cubemap_from_images(commandbuffer_type&, u32 gcm_format, u16 size, const std::vector<copy_region_descriptor>& sources, const texture_channel_remap_t& remap_vector) = 0;
@@ -2684,7 +2684,7 @@ namespace rsx
 			else
 			{
 				// Surface exists in local memory.
-				use_null_region = (is_copy_op && !is_format_convert && !src_is_tiled);
+				use_null_region = (is_copy_op && !is_format_convert);
 
 				// Invalidate surfaces in range. Sample tests should catch overlaps in theory.
 				m_rtts.invalidate_range(utils::address_range::start_length(dst_address, dst.pitch* dst_h));
@@ -3215,7 +3215,13 @@ namespace rsx
 						force_dma_load = true;
 					}
 
-					cached_dest = create_nul_section(cmd, rsx_range, force_dma_load);
+					const image_section_attributes_t attrs =
+					{
+						.pitch = dst.pitch,
+						.width = static_cast<u16>(dst_dimensions.width),
+						.height = static_cast<u16>(dst_dimensions.height)
+					};
+					cached_dest = create_nul_section(cmd, rsx_range, attrs, force_dma_load);
 				}
 				else
 				{
