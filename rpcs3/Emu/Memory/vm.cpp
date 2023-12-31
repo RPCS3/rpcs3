@@ -570,7 +570,7 @@ namespace vm
 						}
 
 						addr2 += size3;
-						size2 -= size3;
+						size2 -= static_cast<u32>(size3);
 					}
 
 					return 0;
