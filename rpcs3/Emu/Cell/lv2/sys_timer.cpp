@@ -105,7 +105,7 @@ u64 lv2_timer::check_unlocked(u64 _now) noexcept
 
 lv2_timer_thread::lv2_timer_thread()
 {
-	Emu.DeferDeserialization([this]()
+	Emu.PostponeInitCode([this]()
 	{
 		idm::select<lv2_obj, lv2_timer>([&](u32 id, lv2_timer&)
 		{

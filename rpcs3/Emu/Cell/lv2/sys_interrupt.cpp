@@ -28,7 +28,7 @@ lv2_int_tag::lv2_int_tag(utils::serial& ar) noexcept
 
 		if (!ptr && id)
 		{
-			Emu.DeferDeserialization([id, &handler = this->handler]()
+			Emu.PostponeInitCode([id, &handler = this->handler]()
 			{
 				handler = ensure(idm::get_unlocked<lv2_obj, lv2_int_serv>(id));
 			});

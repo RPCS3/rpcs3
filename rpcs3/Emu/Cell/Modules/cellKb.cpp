@@ -46,7 +46,7 @@ KeyboardHandlerBase::KeyboardHandlerBase(utils::serial* ar)
 
 	if (m_info.max_connect)
 	{
-		Emu.DeferDeserialization([this]()
+		Emu.PostponeInitCode([this]()
 		{
 			Init(m_info.max_connect);
 			auto lk = init.init();

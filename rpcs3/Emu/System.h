@@ -145,11 +145,11 @@ class Emulator final
 
 	std::vector<std::shared_ptr<atomic_t<u32>>> m_pause_msgs_refs;
 
-	std::vector<std::function<void()>> deferred_deserialization;
+	std::vector<std::function<void()>> m_postponed_init_code;
 
-	void ExecDeserializationRemnants()
+	void ExecPostponedInitCode()
 	{
-		for (auto&& func : ::as_rvalue(std::move(deferred_deserialization)))
+		for (auto&& func : ::as_rvalue(std::move(m_postponed_init_code)))
 		{
 			func();
 		}
@@ -200,9 +200,9 @@ public:
 		CallFromMainThread(std::move(func), nullptr, true, static_cast<u64>(counter));
 	}
 
-	void DeferDeserialization(std::function<void()>&& func)
+	void PostponeInitCode(std::function<void()>&& func)
 	{
-		deferred_deserialization.emplace_back(std::move(func));
+		m_postponed_init_code.emplace_back(std::move(func));
 	}
 
 	/** Set emulator mode to running unconditionnaly.
