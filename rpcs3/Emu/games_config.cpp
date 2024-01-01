@@ -97,7 +97,7 @@ bool games_config::save_nl()
 
 	fs::pending_file temp(fs::get_config_dir() + "/games.yml");
 
-	if (temp.file && temp.file.write(out.c_str(), out.size()), temp.commit())
+	if (temp.file && temp.file.write(out.c_str(), out.size()) >= out.size() && temp.commit())
 	{
 		m_dirty = false;
 		return true;
