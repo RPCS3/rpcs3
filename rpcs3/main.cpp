@@ -86,7 +86,8 @@ static semaphore<> s_qt_init;
 
 static atomic_t<bool> s_headless = false;
 static atomic_t<bool> s_no_gui = false;
-static atomic_t<char*> s_argv0;
+static atomic_t<char*> s_argv0 = nullptr;
+static bool s_is_error_launch = false;
 
 std::string g_input_config_override;
 
@@ -105,25 +106,30 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 #ifdef __linux__
 	extern void jit_announce(uptr, usz, std::string_view);
 #endif
-	std::string buf(_text);
+	std::string buf;
 
-	// Check if thread id is in string
-	if (_text.find("\nThread id = "sv) == umax && !thread_ctrl::is_main())
+	if (!s_is_error_launch)
 	{
-		// Append thread id if it isn't already, except on main thread
-		fmt::append(buf, "\n\nThread id = %u.", thread_ctrl::get_tid());
+		buf = std::string(_text);
+
+		// Check if thread id is in string
+		if (_text.find("\nThread id = "sv) == umax && !thread_ctrl::is_main())
+		{
+			// Append thread id if it isn't already, except on main thread
+			fmt::append(buf, "\n\nThread id = %u.", thread_ctrl::get_tid());
+		}
+
+		if (!g_tls_serialize_name.empty())
+		{
+			fmt::append(buf, "\nSerialized Object: %s", g_tls_serialize_name);
+		}
+
+		fmt::append(buf, "\nTitle: \"%s\" (emulation is %s)", Emu.GetTitleAndTitleID(), Emu.IsStopped() ? "stopped" : "running");
+		fmt::append(buf, "\nBuild: \"%s\"", rpcs3::get_verbose_version());
+		fmt::append(buf, "\nDate: \"%s\"", std::chrono::system_clock::now());
 	}
 
-	if (!g_tls_serialize_name.empty())
-	{
-		fmt::append(buf, "\nSerialized Object: %s", g_tls_serialize_name);
-	}
-
-	fmt::append(buf, "\nTitle: \"%s\" (emulation is %s)", Emu.GetTitleAndTitleID(), Emu.IsStopped() ? "stopped" : "running");
-	fmt::append(buf, "\nBuild: \"%s\"", rpcs3::get_verbose_version());
-	fmt::append(buf, "\nDate: \"%s\"", std::chrono::system_clock::now());
-
-	std::string_view text = buf;
+	std::string_view text = s_is_error_launch ? _text : buf;
 
 	if (s_headless)
 	{
@@ -457,6 +463,7 @@ int main(int argc, char** argv)
 			error += argv[i];
 		}
 
+		s_is_error_launch = true;
 		report_fatal_error(error);
 	}
 
