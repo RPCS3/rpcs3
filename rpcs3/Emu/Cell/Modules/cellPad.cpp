@@ -75,7 +75,7 @@ void pad_info::save(utils::serial& ar)
 
 extern void send_sys_io_connect_event(usz index, u32 state);
 
-void cellPad_NotifyStateChange(usz index, u64 /*state*/)
+void cellPad_NotifyStateChange(usz index, u64 /*state*/, bool locked)
 {
 	auto info = g_fxo->try_get<pad_info>();
 
@@ -84,7 +84,12 @@ void cellPad_NotifyStateChange(usz index, u64 /*state*/)
 		return;
 	}
 
-	std::lock_guard lock(pad::g_pad_mutex);
+	std::unique_lock lock(pad::g_pad_mutex, std::defer_lock);
+
+	if (locked)
+	{
+		lock.lock();
+	}
 
 	if (index >= info->get_max_connect())
 	{
@@ -1158,6 +1163,8 @@ error_code cellPadLddDataInsert(s32 handle, vm::ptr<CellPadData> data)
 
 	pads[handle]->ldd_data = *data;
 
+	cellPad_NotifyStateChange(handle, CELL_PAD_STATUS_CONNECTED, false);
+
 	return CELL_OK;
 }
 
@@ -1206,6 +1213,7 @@ error_code cellPadLddUnregisterController(s32 handle)
 		return CELL_PAD_ERROR_NO_DEVICE;
 
 	handler->UnregisterLddPad(handle);
+	cellPad_NotifyStateChange(handle, CELL_PAD_STATUS_DISCONNECTED, false);
 
 	return CELL_OK;
 }
