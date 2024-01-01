@@ -33,14 +33,14 @@ struct libio_sys_config
 extern void sys_io_serialize(utils::serial& ar)
 {
 	// Do not assign a serialization tag for now, call it from cellPad serialization
-	g_fxo->get<libio_sys_config>().save_or_load(ar);
+	ensure(g_fxo->try_get<libio_sys_config>())->save_or_load(ar);
 }
 
-extern void cellPad_NotifyStateChange(usz index, u64 state);
+extern void cellPad_NotifyStateChange(usz index, u64 state, bool lock = true);
 
 void config_event_entry(ppu_thread& ppu)
 {
-	auto& cfg = g_fxo->get<libio_sys_config>();
+	auto& cfg = *ensure(g_fxo->try_get<libio_sys_config>());
 
 	if (!ppu.loaded_from_savestate)
 	{
@@ -106,6 +106,12 @@ std::unique_lock<shared_mutex> lock_lv2_mutex_alike(shared_mutex& mtx, ppu_threa
 
 extern void send_sys_io_connect_event(usz index, u32 state)
 {
+	if (Emu.IsStarting() || Emu.IsReady())
+	{
+		cellPad_NotifyStateChange(index, state);
+		return;
+	}
+
 	auto& cfg = g_fxo->get<libio_sys_config>();
 
 	auto lock = lock_lv2_mutex_alike(cfg.mtx, cpu_thread::get_current<ppu_thread>());

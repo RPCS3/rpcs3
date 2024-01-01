@@ -45,7 +45,7 @@ CellError lv2_cond::on_id_create()
 
 	ensure(!!Emu.DeserialManager());
 
-	Emu.DeferDeserialization([this]()
+	Emu.PostponeInitCode([this]()
 	{
 		if (!mutex)
 		{

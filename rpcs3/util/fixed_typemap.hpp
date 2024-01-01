@@ -242,7 +242,7 @@ namespace stx
 			*m_info++ = nullptr;
 		}
 
-		void init(bool reset = true, utils::serial* ar = nullptr)
+		void init(bool reset = true, utils::serial* ar = nullptr, std::function<void()> func = {})
 		{
 			if (reset)
 			{
@@ -295,6 +295,11 @@ namespace stx
 						serial_breathe_and_tag(*ar, type.name, false);
 					}
 				}
+			}
+
+			if (func)
+			{
+				func();
 			}
 
 			// Launch threads
@@ -451,7 +456,20 @@ namespace stx
 			if constexpr ((std::is_same_v<std::remove_cvref_t<Args>, utils::serial> || ...))
 			{
 				ensure(type_info->save);
+
 				serial_breathe_and_tag(std::get<0>(std::tie(args...)), get_name<T, As>(), false);
+			}
+
+			if constexpr ((std::is_same_v<std::remove_cvref_t<Args>, utils::serial*> || ...))
+			{
+				ensure(type_info->save);
+
+				utils::serial* ar = std::get<0>(std::tie(args...));
+
+				if (ar)
+				{
+					serial_breathe_and_tag(*ar, get_name<T, As>(), false);
+				}
 			}
 
 			g_tls_serialize_name = {};
