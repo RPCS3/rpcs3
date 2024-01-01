@@ -18,7 +18,6 @@ mkdir "rpcs3.app/Contents/lib/"
 cp "/usr/local/opt/llvm@16/lib/c++/libc++abi.1.0.dylib" "rpcs3.app/Contents/lib/libc++abi.1.dylib"
 cp "$(realpath /usr/local/lib/libsharpyuv.0.dylib)" "rpcs3.app/Contents/lib/libsharpyuv.0.dylib"
 cp "$(realpath /usr/local/lib/libintl.8.dylib)" "rpcs3.app/Contents/lib/libintl.8.dylib"
-cp "$(realpath /usr/local/lib/libjxl_cms.0.9.dylib)" "rpcs3.app/Contents/lib/libjxl_cms.0.9.dylib"
 
 rm -rf "rpcs3.app/Contents/Frameworks/QtPdf.framework" \
 "rpcs3.app/Contents/Frameworks/QtQml.framework" \
