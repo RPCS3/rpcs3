@@ -1138,6 +1138,8 @@ error_code cellPadLddRegisterController()
 
 	config.port_setting[handle] = 0;
 
+	cellPad_NotifyStateChange(handle, CELL_PAD_STATUS_CONNECTED, false);
+
 	return not_an_error(handle);
 }
 
@@ -1162,8 +1164,6 @@ error_code cellPadLddDataInsert(s32 handle, vm::ptr<CellPadData> data)
 		return CELL_PAD_ERROR_NO_DEVICE;
 
 	pads[handle]->ldd_data = *data;
-
-	cellPad_NotifyStateChange(handle, CELL_PAD_STATUS_CONNECTED, false);
 
 	return CELL_OK;
 }
