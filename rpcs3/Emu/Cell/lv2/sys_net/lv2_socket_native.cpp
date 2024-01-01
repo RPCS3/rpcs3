@@ -182,7 +182,18 @@ s32 lv2_socket_native::bind(const sys_net_sockaddr& addr)
 		last_bound_addr = addr;
 		return CELL_OK;
 	}
-	return -get_last_error(false);
+
+	auto error = get_last_error(false);
+
+#ifdef __linux__
+	if (error == SYS_NET_EACCES && std::bit_cast<be_t<u16>, u16>(native_addr.sin_port) < 1024)
+	{
+		sys_net.error("The game tried to bind a port < 1024 which is privileged on Linux\n"
+					  "Consider setting rpcs3 privileges for it with: setcap 'cap_net_bind_service=+ep' /path/to/rpcs3");
+	}
+#endif
+
+	return -error;
 }
 
 std::optional<s32> lv2_socket_native::connect(const sys_net_sockaddr& addr)
