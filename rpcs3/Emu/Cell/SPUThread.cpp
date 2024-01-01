@@ -1603,6 +1603,7 @@ void spu_thread::cpu_return()
 
 		if (ensure(group->running)-- == 1)
 		{
+			u32 last_stop = 0;
 			{
 				lv2_obj::notify_all_t notify;
 				std::lock_guard lock(group->mutex);
@@ -1632,7 +1633,17 @@ void spu_thread::cpu_return()
 					exit_status.set_value(last_exit_status);
 				}
 
-				group->stop_count++;
+				last_stop = group->stop_count;
+
+				if (last_stop == umax)
+				{
+					// Restart with some high count to preserve some meaning
+					group->stop_count = 1000;
+				}
+				else
+				{
+					group->stop_count++;
+				}
 
 				if (const auto ppu = std::exchange(group->waiter, nullptr))
 				{
@@ -1646,6 +1657,12 @@ void spu_thread::cpu_return()
 
 			// Notify on last thread stopped
 			group->stop_count.notify_all();
+
+			// Wait for terminators manually if needed (ensuring they quit before value-wrapping)
+			while (last_stop == umax && group->wait_term_count)
+			{
+				std::this_thread::yield();
+			}
 		}
 		else if (status_npc.load().status >> 16 == SYS_SPU_THREAD_STOP_THREAD_EXIT)
 		{

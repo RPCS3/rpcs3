@@ -1352,7 +1352,8 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 	if (group->set_terminate)
 	{
 		// Wait for termination, only then return error code
-		const u64 last_stop = group->stop_count;
+		const u32 last_stop = group->stop_count;
+		group->wait_term_count++;
 		lock.unlock();
 		short_sleep(ppu);
 
@@ -1361,6 +1362,7 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 			group->stop_count.wait(last_stop);
 		}
 
+		group->wait_term_count--;
 		return CELL_ESTAT;
 	}
 
@@ -1414,7 +1416,8 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 	group->join_state = SYS_SPU_THREAD_GROUP_JOIN_TERMINATED;
 
 	// Wait until the threads are actually stopped
-	const u64 last_stop = group->stop_count;
+	const u32 last_stop = group->stop_count;
+	group->wait_term_count++;
 	lock.unlock();
 	short_sleep(ppu);
 
@@ -1423,6 +1426,7 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 		group->stop_count.wait(last_stop);
 	}
 
+	group->wait_term_count--;
 	return CELL_OK;
 }
 
