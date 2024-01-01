@@ -60,7 +60,7 @@ pad_info::pad_info(utils::serial& ar)
 	, port_setting(ar)
 	, reported_info(ar)
 {
-	reported_info = {};
+	//reported_info = {};
 	sys_io_serialize(ar);
 }
 
