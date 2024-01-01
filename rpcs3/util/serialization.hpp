@@ -109,11 +109,7 @@ public:
 		// Reserve memory for serialization
 		void reserve(usz size)
 		{
-			// Is a NO-OP for deserialization in order to allow usage from serialization specializations regardless
-			if (is_writing())
-			{
-				data.reserve(data.size() + size);
-			}
+			data.reserve(data.size() + size);
 		}
 
 		template <typename Func> requires (std::is_convertible_v<std::invoke_result_t<Func>, const void*>)
@@ -136,9 +132,9 @@ public:
 
 			if (is_writing())
 			{
-				ensure(pos >= data_offset);
+				ensure(pos == data_offset + data.size());
 				const auto ptr = reinterpret_cast<const u8*>(memory_provider());
-				data.insert(data.begin() + (pos - data_offset), ptr, ptr + size);
+				data.insert(data.end(), ptr, ptr + size);
 				pos += size;
 				return true;
 			}
