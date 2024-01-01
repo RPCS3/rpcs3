@@ -1269,14 +1269,14 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 				if (argv[0].starts_with(game0_path) && !fs::is_file(vfs::get(argv[0])))
 				{
-					std::string title_id = argv[0].substr(game0_path.size());
-					title_id = title_id.substr(0, title_id.find_first_of('/'));
+					std::string dirname = argv[0].substr(game0_path.size());
+					dirname = dirname.substr(0, dirname.find_first_of('/'));
 
 					// Try to load game directory from list if available
 					if (std::string game_path = m_games_config.get_path(m_title_id); !game_path.empty())
 					{
 						disc = std::move(game_path);
-						m_path = disc + argv[0].substr(game0_path.size() + title_id.size());
+						m_path = disc + argv[0].substr(game0_path.size() + dirname.size());
 					}
 				}
 			}
@@ -1761,7 +1761,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			// PS1 Classic located in dev_hdd0/game
 			sys_log.notice("PS1 Game: %s, %s", m_title_id, m_title);
 
-			const std::string game_path = "/dev_hdd0/game/" + m_path.substr(hdd0_game.size(), 9);
+			const std::string tail = m_path.substr(hdd0_game.size());
+			const std::string dirname = fmt::trim_front(tail, fs::delim).substr(0, tail.find_first_of(fs::delim));
+			const std::string game_path = "/dev_hdd0/game/" + dirname;
 
 			argv.resize(9);
 			argv[0] = "/dev_flash/ps1emu/ps1_newemu.self";
@@ -1787,7 +1789,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			// PSP Remaster located in dev_hdd0/game
 			sys_log.notice("PSP Remaster Game: %s, %s", m_title_id, m_title);
 
-			const std::string game_path = "/dev_hdd0/game/" + m_path.substr(hdd0_game.size(), 9);
+			const std::string tail = m_path.substr(hdd0_game.size());
+			const std::string dirname = fmt::trim_front(tail, fs::delim).substr(0, tail.find_first_of(fs::delim));
+			const std::string game_path = "/dev_hdd0/game/" + dirname;
 
 			argv.resize(2);
 			argv[0] = "/dev_flash/pspemu/psp_emulator.self";
@@ -1804,7 +1808,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				// Add HG games not in HDD0 to games.yml
 				[[maybe_unused]] const bool res = m_games_config.add_external_hdd_game(m_title_id, game_dir);
 
-				vfs::mount("/dev_hdd0/game/" + m_title_id, game_dir + '/');
+				const std::string dir = fmt::trim(game_dir.substr(fs::get_parent_dir_view(game_dir).size() + 1), fs::delim);
+				vfs::mount("/dev_hdd0/game/" + dir, game_dir + '/');
 			}
 		}
 		else if (!inherited_ps3_game_path.empty() || (from_hdd0_game && m_cat == "DG" && disc.empty()))
