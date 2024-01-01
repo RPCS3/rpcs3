@@ -570,7 +570,7 @@ namespace vm
 						}
 
 						addr2 += size3;
-						size2 -= size3;
+						size2 -= static_cast<u32>(size3);
 					}
 
 					return 0;
@@ -1665,13 +1665,13 @@ namespace vm
 
 		ar.breathe();
 
-		for (usz iter_count = 0; size; iter_count++, ptr += byte_of_pages)
+		for (usz iter_count = 0; size; iter_count += sizeof(u32), ptr += byte_of_pages * sizeof(u32))
 		{
-			size -= byte_of_pages;
+			const u32 bitmap = read_from_ptr<le_t<u32>>(bit_array, iter_count);
 
-			const u8 bitmap = bit_array[iter_count];
+			size -= byte_of_pages * sizeof(bitmap);
 
-			for (usz i = 0; i < byte_of_pages;)
+			for (usz i = 0; i < byte_of_pages * sizeof(bitmap);)
 			{
 				usz block_count = 0;
 

@@ -339,10 +339,12 @@ namespace rsx
 						max_result_by_division = std::max<u32>(max_result_by_division, max);
 
 						// Discard lower frequencies because it has been proven that there are indices higher than them
-						freq_count -= frequencies + freq_count - std::remove_if(frequencies, frequencies + freq_count, [&max_result_by_division](u32 freq)
+						const usz discard_cnt = frequencies + freq_count - std::remove_if(frequencies, frequencies + freq_count, [&max_result_by_division](u32 freq)
 						{
 							return freq <= max_result_by_division;
 						});
+
+						freq_count -= static_cast<u32>(discard_cnt);
 					}
 				}
 			}

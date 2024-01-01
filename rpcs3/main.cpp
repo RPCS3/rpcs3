@@ -105,31 +105,25 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 #ifdef __linux__
 	extern void jit_announce(uptr, usz, std::string_view);
 #endif
-
-	std::string buf;
+	std::string buf(_text);
 
 	// Check if thread id is in string
 	if (_text.find("\nThread id = "sv) == umax && !thread_ctrl::is_main())
 	{
-		// Copy only when needed
-		buf = std::string(_text);
-
 		// Append thread id if it isn't already, except on main thread
 		fmt::append(buf, "\n\nThread id = %u.", thread_ctrl::get_tid());
 	}
 
 	if (!g_tls_serialize_name.empty())
 	{
-		// Copy only when needed
-		if (!buf.empty())
-		{
-			buf = std::string(_text);
-		}
-
 		fmt::append(buf, "\nSerialized Object: %s", g_tls_serialize_name);
 	}
 
-	std::string_view text = buf.empty() ? _text : buf;
+	fmt::append(buf, "\nTitle: \"%s\" (emulation is %s)", Emu.GetTitleAndTitleID(), Emu.IsStopped() ? "stopped" : "running");
+	fmt::append(buf, "\nBuild: \"%s\"", rpcs3::get_verbose_version());
+	fmt::append(buf, "\nDate: \"%s\"", std::chrono::system_clock::now());
+
+	std::string_view text = buf;
 
 	if (s_headless)
 	{

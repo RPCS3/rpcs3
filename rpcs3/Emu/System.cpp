@@ -202,22 +202,36 @@ void init_fxo_for_exec(utils::serial* ar, bool full = false)
 
 	Emu.ConfigurePPUCache();
 
-	g_fxo->init(false, ar);
+	g_fxo->init(false, ar, [](){ Emu.ExecPostponedInitCode(); });
 
 	Emu.GetCallbacks().init_gs_render(ar);
 	Emu.GetCallbacks().init_pad_handler(Emu.GetTitleID());
 	Emu.GetCallbacks().init_kb_handler();
 	Emu.GetCallbacks().init_mouse_handler();
 
+	usz pos = 0;
+
 	if (ar)
 	{
-		Emu.ExecDeserializationRemnants();
+		pos = ar->pos;
+	}
 
-		[[maybe_unused]] auto flags = (*ar)(Emu.m_savestate_extension_flags1);
+	// TODO: Remove second call when possible
+	Emu.ExecPostponedInitCode();
+
+	if (ar)
+	{
+		ensure(pos == ar->pos);
+
+		(*ar)(Emu.m_savestate_extension_flags1);
 
 		const usz advance = (Emu.m_savestate_extension_flags1 & Emulator::SaveStateExtentionFlags1::SupportsMenuOpenResume ? 32 : 31);
 
-		load_and_check_reserved(*ar, advance); // Reserved area
+		// Reserved area
+		if (!load_and_check_reserved(*ar, advance))
+		{
+			sys_log.error("Potential failure to load savestate: padding buyes are not 0. %s", *ar);
+		}
 	}
 }
 
@@ -3287,8 +3301,6 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 		{
 			cpu_thread::cleanup();
 
-			initialize_timebased_time(0, true);
-
 			lv2_obj::cleanup();
 
 			g_fxo->reset();
@@ -3341,6 +3353,8 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 			read_used_savestate_versions();
 			m_savestate_extension_flags1 = {};
 			m_savestate_pending = false;
+
+			initialize_timebased_time(0, true);
 
 			// Complete the operation
 			m_state = system_state::stopped;
