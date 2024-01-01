@@ -742,30 +742,20 @@ std::string keyboard_pad_handler::GetKeyName(const QKeyEvent* keyEvent)
 
 	switch (keyEvent->key())
 	{
-	case Qt::Key_Alt:
-		return "Alt";
-	case Qt::Key_AltGr:
-		return "AltGr";
-	case Qt::Key_Shift:
-		return "Shift";
-	case Qt::Key_Control:
-		return "Ctrl";
-	case Qt::Key_Meta:
-		return "Meta";
-	case Qt::Key_NumLock:
-		return QKeySequence(keyEvent->key()).toString(QKeySequence::NativeText).toStdString();
+	case Qt::Key_Alt: return "Alt";
+	case Qt::Key_AltGr: return "AltGr";
+	case Qt::Key_Shift: return "Shift";
+	case Qt::Key_Control: return "Ctrl";
+	case Qt::Key_Meta: return "Meta";
+	case Qt::Key_NumLock: return QKeySequence(keyEvent->key()).toString(QKeySequence::NativeText).toStdString();
 #ifdef __APPLE__
 	// On macOS, the arrow keys are considered to be part of the keypad;
 	// since most Mac keyboards lack a keypad to begin with,
 	// we change them to regular arrows to avoid confusion
-	case Qt::Key_Left:
-		return "←";
-	case Qt::Key_Up:
-		return "↑";
-	case Qt::Key_Right:
-		return "→";
-	case Qt::Key_Down:
-		return "↓";
+	case Qt::Key_Left: return "←";
+	case Qt::Key_Up: return "↑";
+	case Qt::Key_Right: return "→";
+	case Qt::Key_Down: return "↓";
 #endif
 	default:
 		break;
@@ -793,30 +783,20 @@ std::set<u32> keyboard_pad_handler::GetKeyCodes(const cfg::string& cfg_string)
 
 u32 keyboard_pad_handler::GetKeyCode(const QString& keyName)
 {
-	if (keyName.isEmpty())
-		return Qt::NoButton;
+	if (keyName.isEmpty()) return Qt::NoButton;
 	if (const int native_scan_code = native_scan_code_from_string(keyName.toStdString()); native_scan_code >= 0)
 		return Qt::Key_unknown + native_scan_code; // Special cases that can't be expressed with Qt::Key
-	if (keyName == "Alt")
-		return Qt::Key_Alt;
-	if (keyName == "AltGr")
-		return Qt::Key_AltGr;
-	if (keyName == "Shift")
-		return Qt::Key_Shift;
-	if (keyName == "Ctrl")
-		return Qt::Key_Control;
-	if (keyName == "Meta")
-		return Qt::Key_Meta;
+	if (keyName == "Alt") return Qt::Key_Alt;
+	if (keyName == "AltGr") return Qt::Key_AltGr;
+	if (keyName == "Shift") return Qt::Key_Shift;
+	if (keyName == "Ctrl") return Qt::Key_Control;
+	if (keyName == "Meta") return Qt::Key_Meta;
 #ifdef __APPLE__
 	// QKeySequence doesn't work properly for the arrow keys on macOS
-	if (keyName == "Num←")
-		return Qt::Key_Left;
-	if (keyName == "Num↑")
-		return Qt::Key_Up;
-	if (keyName == "Num→")
-		return Qt::Key_Right;
-	if (keyName == "Num↓")
-		return Qt::Key_Down;
+	if (keyName == "Num←") return Qt::Key_Left;
+	if (keyName == "Num↑") return Qt::Key_Up;
+	if (keyName == "Num→") return Qt::Key_Right;
+	if (keyName == "Num↓") return Qt::Key_Down;
 #endif
 
 	const QKeySequence seq(keyName);
@@ -834,46 +814,26 @@ int keyboard_pad_handler::native_scan_code_from_string([[maybe_unused]] const st
 {
 	// NOTE: Qt throws a Ctrl key at us when using Alt Gr, so there is no point in distinguishing left and right Alt at the moment
 #ifdef _WIN32
-	if (key == "Shift Left")
-		return 42;
-	if (key == "Shift Right")
-		return 54;
-	if (key == "Ctrl Left")
-		return 29;
-	if (key == "Ctrl Right")
-		return 285;
-	if (key == "Num+0" || key == "Num+Ins")
-		return 82;
-	if (key == "Num+1" || key == "Num+End")
-		return 79;
-	if (key == "Num+2" || key == "Num+Down")
-		return 80;
-	if (key == "Num+3" || key == "Num+PgDown")
-		return 81;
-	if (key == "Num+4" || key == "Num+Left")
-		return 75;
-	if (key == "Num+5" || key == "Num+Clear")
-		return 76;
-	if (key == "Num+6" || key == "Num+Right")
-		return 77;
-	if (key == "Num+7" || key == "Num+Home")
-		return 71;
-	if (key == "Num+8" || key == "Num+Up")
-		return 72;
-	if (key == "Num+9" || key == "Num+PgUp")
-		return 73;
-	if (key == "Num+," || key == "Num+Del")
-		return 83;
-	if (key == "Num+/")
-		return 309;
-	if (key == "Num+*")
-		return 55;
-	if (key == "Num+-")
-		return 74;
-	if (key == "Num++")
-		return 78;
-	if (key == "Num+Enter")
-		return 284;
+	if (key == "Shift Left") return 42;
+	if (key == "Shift Right") return 54;
+	if (key == "Ctrl Left") return 29;
+	if (key == "Ctrl Right") return 285;
+	if (key == "Num+0" || key == "Num+Ins") return 82;
+	if (key == "Num+1" || key == "Num+End") return 79;
+	if (key == "Num+2" || key == "Num+Down") return 80;
+	if (key == "Num+3" || key == "Num+PgDown") return 81;
+	if (key == "Num+4" || key == "Num+Left") return 75;
+	if (key == "Num+5" || key == "Num+Clear") return 76;
+	if (key == "Num+6" || key == "Num+Right") return 77;
+	if (key == "Num+7" || key == "Num+Home") return 71;
+	if (key == "Num+8" || key == "Num+Up") return 72;
+	if (key == "Num+9" || key == "Num+PgUp") return 73;
+	if (key == "Num+," || key == "Num+Del") return 83;
+	if (key == "Num+/") return 309;
+	if (key == "Num+*") return 55;
+	if (key == "Num+-") return 74;
+	if (key == "Num++") return 78;
+	if (key == "Num+Enter") return 284;
 #else
 	// TODO
 #endif
@@ -887,52 +847,31 @@ std::string keyboard_pad_handler::native_scan_code_to_string(int native_scan_cod
 #ifdef _WIN32
 	// NOTE: the other Qt function "nativeVirtualKey" does not distinguish between VK_SHIFT and VK_RSHIFT key in Qt at the moment
 	// NOTE: Qt throws a Ctrl key at us when using Alt Gr, so there is no point in distinguishing left and right Alt at the moment
-	case 42:
-		return "Shift Left";
-	case 54:
-		return "Shift Right";
-	case 29:
-		return "Ctrl Left";
-	case 285:
-		return "Ctrl Right";
-	case 82:
-		return "Num+0"; // Also "Num+Ins" depending on numlock
-	case 79:
-		return "Num+1"; // Also "Num+End" depending on numlock
-	case 80:
-		return "Num+2"; // Also "Num+Down" depending on numlock
-	case 81:
-		return "Num+3"; // Also "Num+PgDown" depending on numlock
-	case 75:
-		return "Num+4"; // Also "Num+Left" depending on numlock
-	case 76:
-		return "Num+5"; // Also "Num+Clear" depending on numlock
-	case 77:
-		return "Num+6"; // Also "Num+Right" depending on numlock
-	case 71:
-		return "Num+7"; // Also "Num+Home" depending on numlock
-	case 72:
-		return "Num+8"; // Also "Num+Up" depending on numlock
-	case 73:
-		return "Num+9"; // Also "Num+PgUp" depending on numlock
-	case 83:
-		return "Num+,"; // Also "Num+Del" depending on numlock
-	case 309:
-		return "Num+/";
-	case 55:
-		return "Num+*";
-	case 74:
-		return "Num+-";
-	case 78:
-		return "Num++";
-	case 284:
-		return "Num+Enter";
+	case 42: return "Shift Left";
+	case 54: return "Shift Right";
+	case 29: return "Ctrl Left";
+	case 285: return "Ctrl Right";
+	case 82: return "Num+0"; // Also "Num+Ins" depending on numlock
+	case 79: return "Num+1"; // Also "Num+End" depending on numlock
+	case 80: return "Num+2"; // Also "Num+Down" depending on numlock
+	case 81: return "Num+3"; // Also "Num+PgDown" depending on numlock
+	case 75: return "Num+4"; // Also "Num+Left" depending on numlock
+	case 76: return "Num+5"; // Also "Num+Clear" depending on numlock
+	case 77: return "Num+6"; // Also "Num+Right" depending on numlock
+	case 71: return "Num+7"; // Also "Num+Home" depending on numlock
+	case 72: return "Num+8"; // Also "Num+Up" depending on numlock
+	case 73: return "Num+9"; // Also "Num+PgUp" depending on numlock
+	case 83: return "Num+,"; // Also "Num+Del" depending on numlock
+	case 309: return "Num+/";
+	case 55: return "Num+*";
+	case 74: return "Num+-";
+	case 78: return "Num++";
+	case 284: return "Num+Enter";
 #else
 	// TODO
 	// NOTE for MacOs: nativeScanCode may not work
 #endif
-	default:
-		return "";
+	default: return "";
 	}
 }
 
