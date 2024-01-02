@@ -3848,9 +3848,11 @@ void Emulator::GetBdvdDir(std::string& bdvd_dir, std::string& sfb_dir, std::stri
 	std::string main_dir;
 	std::string_view main_dir_name;
 
-	for (std::string search_dir = elf_dir;;)
+	std::string parent_dir;
+
+	for (std::string search_dir = elf_dir.substr(0, elf_dir.find_last_not_of(fs::delim) + 1);; search_dir = std::move(parent_dir))
 	{
-		std::string parent_dir = fs::get_parent_dir(search_dir);
+		parent_dir = fs::get_parent_dir(search_dir);
 
 		if (parent_dir.size() == search_dir.size())
 		{
@@ -3858,20 +3860,24 @@ void Emulator::GetBdvdDir(std::string& bdvd_dir, std::string& sfb_dir, std::stri
 			break;
 		}
 
-		if (IsValidSfb(parent_dir + "/PS3_DISC.SFB"))
-		{
-			main_dir_name = std::string_view{search_dir}.substr(search_dir.find_last_of(fs::delim) + 1);
+		std::string_view dir_name = std::string_view{search_dir}.substr(search_dir.find_last_of(fs::delim) + 1);
 
-			if (main_dir_name == "PS3_GAME" || std::regex_match(main_dir_name.begin(), main_dir_name.end(), std::regex("^PS3_GM[[:digit:]]{2}$")))
+		if (dir_name.size() != ("PS3_GAME"sv).size())
+		{
+			continue;
+		}
+
+		if (dir_name == "PS3_GAME"sv || std::regex_match(dir_name.begin(), dir_name.end(), std::regex("^PS3_GM[[:digit:]]{2}$")))
+		{
+			if (IsValidSfb(parent_dir + "/PS3_DISC.SFB"))
 			{
 				// Remember valid disc directory
+				main_dir_name = {}; // Remove old string reference
 				main_dir = search_dir;
 				sfb_dir = parent_dir;
 				main_dir_name = std::string_view{main_dir}.substr(main_dir.find_last_of(fs::delim) + 1);
 			}
 		}
-
-		search_dir = std::move(parent_dir);
 	}
 
 	if (!sfb_dir.empty())
@@ -4005,7 +4011,19 @@ bool Emulator::IsVsh()
 bool Emulator::IsValidSfb(const std::string& path)
 {
 	fs::file sfb_file{path, fs::read + fs::isfile};
-	return sfb_file && sfb_file.size() >= 4 && sfb_file.read<u32>() == ".SFB"_u32;
+
+	if (sfb_file)
+	{
+		if (sfb_file.size() < 4 || sfb_file.read<u32>() != ".SFB"_u32)
+		{
+			sys_log.error("PS3_DISC.SFB file may be truncated or corrupted. (path='%s')", path);
+			return false;
+		}
+
+		return true;
+	}
+
+	return false;
 }
 
 void Emulator::SaveSettings(const std::string& settings, const std::string& title_id)
