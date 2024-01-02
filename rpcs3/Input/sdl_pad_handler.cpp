@@ -237,6 +237,18 @@ bool sdl_pad_handler::Init()
 		}
 	}
 
+	SDL_version version{};
+	SDL_GetVersion(&version);
+
+	if (const char* revision = SDL_GetRevision(); revision && strlen(revision) > 0)
+	{
+		sdl_log.notice("Using version: %d.%d.%d (revision='%s')", version.major, version.minor, version.patch, revision);
+	}
+	else
+	{
+		sdl_log.notice("Using version: %d.%d.%d", version.major, version.minor, version.patch);
+	}
+
 	m_is_init = true;
 	enumerate_devices();
 
