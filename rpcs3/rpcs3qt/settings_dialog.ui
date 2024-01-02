@@ -2658,6 +2658,13 @@
                 </widget>
                </item>
                <item>
+                <widget class="QCheckBox" name="forceHwMSAAResolve">
+                 <property name="text">
+                  <string>Force Hardware MSAA Resolve</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QCheckBox" name="disableMslFastMath">
                  <property name="text">
                   <string>Disable MSL Fast Math</string>

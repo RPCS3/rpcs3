@@ -102,6 +102,7 @@ enum class emu_settings_type
 	AllowHostGPULabels,
 	DisableMSLFastMath,
 	OutputScalingMode,
+	ForceHwMSAAResolve,
 
 	// Performance Overlay
 	PerfOverlayEnabled,
@@ -282,6 +283,7 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::AllowHostGPULabels,         { "Video", "Allow Host GPU Labels"}},
 	{ emu_settings_type::DisableMSLFastMath,         { "Video", "Disable MSL Fast Math"}},
 	{ emu_settings_type::OutputScalingMode,          { "Video", "Output Scaling Mode"}},
+	{ emu_settings_type::ForceHwMSAAResolve,         { "Video", "Force Hardware MSAA Resolve"}},
 
 	// Vulkan
 	{ emu_settings_type::VulkanAsyncTextureUploads,           { "Video", "Vulkan", "Asynchronous Texture Streaming 2"}},
