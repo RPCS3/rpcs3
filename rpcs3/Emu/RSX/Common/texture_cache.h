@@ -2155,7 +2155,7 @@ namespace rsx
 				 * 3. Surface is swapped back in. Surface cache resets layout to optimal rasterization layout
 				 * 4. During bind, the surface is converted to shader layout because it is not in GENERAL layout
 				 */
-				if (!g_cfg.video.strict_rendering_mode)
+				if (!texture_cache_helpers::force_strict_fbo_sampling(result.second->samples()))
 				{
 					insert_texture_barrier(cmd, result.second, false);
 				}
