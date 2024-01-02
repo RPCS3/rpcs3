@@ -96,6 +96,24 @@ namespace rsx
 
 	namespace texture_cache_helpers
 	{
+		static inline bool force_strict_fbo_sampling(u8 samples)
+		{
+			if (g_cfg.video.strict_rendering_mode)
+			{
+				// Strict mode. All access is strict.
+				return true;
+			}
+
+			if (g_cfg.video.antialiasing_level == msaa_level::none)
+			{
+				// MSAA disabled. All access is fast.
+				return false;
+			}
+
+			// Strict access if MSAA only.
+			return samples > 1 && !!g_cfg.video.force_hw_MSAA_resolve;
+		}
+
 		static inline bool is_gcm_depth_format(u32 format)
 		{
 			switch (format)
@@ -665,7 +683,7 @@ namespace rsx
 					}
 				}
 
-				if (surface_is_rop_target && g_cfg.video.strict_rendering_mode)
+				if (surface_is_rop_target && texture_cache_helpers::force_strict_fbo_sampling(texptr->samples()))
 				{
 					// Framebuffer feedback avoidance. For MSAA, we do not need to make copies; just use the resolve target
 					if (texptr->samples() == 1)
