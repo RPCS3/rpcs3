@@ -962,7 +962,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		const std::string selected_device = m_emu_settings->GetSetting(emu_settings_type::AudioDevice);
 		int device_index = 0;
 
-		for (auto& dev : dev_array)
+		for (const audio_device_enumerator::audio_device& dev : dev_array)
 		{
 			const QString cur_item = qstr(dev.id);
 			ui->audioDeviceBox->addItem(qstr(dev.name), cur_item);
