@@ -504,6 +504,13 @@ namespace vk
 
 		void destroy() override;
 
+		std::unique_ptr<vk::viewable_image> create_temporary_subresource_storage(
+			rsx::format_class format_class, VkFormat format,
+			u16 width, u16 height, u16 depth, u16 layers, u8 mips,
+			VkImageType image_type, VkFlags image_flags, VkFlags usage_flags);
+
+		void dispose_reusable_image(std::unique_ptr<vk::viewable_image>& tex);
+
 		bool is_depth_texture(u32 rsx_address, u32 rsx_size) override;
 
 		void on_frame_end() override;
