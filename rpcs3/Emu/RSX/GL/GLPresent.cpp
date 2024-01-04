@@ -24,11 +24,28 @@ namespace gl
 			glCopyImageSubData(visual->id(), target, 0, 0, 0, 0, g_vis_texture->id(), target, 0, 0, 0, 0, visual->width(), visual->height(), 1);
 		}
 	}
+
+	GLenum RSX_display_format_to_gl_format(u8 format)
+	{
+		switch (format)
+		{
+		default:
+			rsx_log.error("Unhandled video output format 0x%x", static_cast<s32>(format));
+			[[fallthrough]];
+		case CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8:
+			return GL_BGRA8;
+		case CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8B8G8R8:
+			return GL_RGBA8;
+		}
+	}
 }
 
 gl::texture* GLGSRender::get_present_source(gl::present_surface_info* info, const rsx::avconf& avconfig)
 {
 	gl::texture* image = nullptr;
+
+	// @FIXME: This implementation needs to merge into the texture cache's upload_texture routine.
+	// See notes on the vulkan implementation on what needs to happen before that is viable.
 
 	// Check the surface store first
 	gl::command_context cmd = { gl_state };
@@ -83,6 +100,17 @@ gl::texture* GLGSRender::get_present_source(gl::present_surface_info* info, cons
 		if (const auto tex = surface->get_raw_texture(); tex) image = tex;
 	}
 
+	const GLenum expected_format = gl::RSX_display_format_to_gl_format(avconfig.format);
+	std::unique_ptr<gl::texture>& flip_image = m_flip_tex_color[info->eye];
+
+	auto initialize_scratch_image = [&]()
+	{
+		if (!flip_image || flip_image->size2D() != sizeu{ info->width, info->height })
+		{
+			flip_image = std::make_unique<gl::texture>(GL_TEXTURE_2D, info->width, info->height, 1, 1, expected_format);
+		}
+	};
+
 	if (!image)
 	{
 		rsx_log.warning("Flip texture was not found in cache. Uploading surface from CPU");
@@ -90,31 +118,32 @@ gl::texture* GLGSRender::get_present_source(gl::present_surface_info* info, cons
 		gl::pixel_unpack_settings unpack_settings;
 		unpack_settings.alignment(1).row_length(info->pitch / 4);
 
-		if (!m_flip_tex_color || m_flip_tex_color->size2D() != sizeu{info->width, info->height})
-		{
-			m_flip_tex_color = std::make_unique<gl::texture>(GL_TEXTURE_2D, info->width, info->height, 1, 1, GL_RGBA8);
-		}
+		initialize_scratch_image();
 
 		gl::command_context cmd{ gl_state };
 		const auto range = utils::address_range::start_length(info->address, info->pitch * info->height);
 		m_gl_texture_cache.invalidate_range(cmd, range, rsx::invalidation_cause::read);
 
-		gl::texture::format fmt;
-		switch (avconfig.format)
+		flip_image->copy_from(vm::base(info->address), static_cast<gl::texture::format>(expected_format), gl::texture::type::uint_8_8_8_8, unpack_settings);
+		image = flip_image.get();
+	}
+	else if (image->get_internal_format() != static_cast<gl::texture::internal_format>(expected_format))
+	{
+		initialize_scratch_image();
+
+		// Copy
+		if (gl::formats_are_bitcast_compatible(flip_image.get(), image))
 		{
-		default:
-			rsx_log.error("Unhandled video output format 0x%x", avconfig.format);
-			[[fallthrough]];
-		case CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8:
-			fmt = gl::texture::format::bgra;
-			break;
-		case CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8B8G8R8:
-			fmt = gl::texture::format::rgba;
-			break;
+			const position3u offset{};
+			gl::g_hw_blitter->copy_image(cmd, image, flip_image.get(), 0, 0, offset, offset, { info->width, info->height, 1 });
+		}
+		else
+		{
+			const coord3u region = { {/* offsets */}, { info->width, info->height, 1 } };
+			gl::copy_typeless(cmd, flip_image.get(), image, region, region);
 		}
 
-		m_flip_tex_color->copy_from(vm::base(info->address), fmt, gl::texture::type::uint_8_8_8_8, unpack_settings);
-		image = m_flip_tex_color.get();
+		image = flip_image.get();
 	}
 
 	return image;
@@ -172,12 +201,15 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 	if (info.buffer < display_buffers_count && buffer_width && buffer_height)
 	{
 		// Find the source image
-		gl::present_surface_info present_info;
-		present_info.width = buffer_width;
-		present_info.height = buffer_height;
-		present_info.pitch = buffer_pitch;
-		present_info.format = av_format;
-		present_info.address = rsx::get_address(display_buffers[info.buffer].offset, CELL_GCM_LOCATION_LOCAL);
+		gl::present_surface_info present_info
+		{
+			.address = rsx::get_address(display_buffers[info.buffer].offset, CELL_GCM_LOCATION_LOCAL),
+			.format = av_format,
+			.width = buffer_width,
+			.height = buffer_height,
+			.pitch = buffer_pitch,
+			.eye = 0
+		};
 
 		const auto image_to_flip_ = get_present_source(&present_info, avconfig);
 		image_to_flip = image_to_flip_->id();
@@ -192,6 +224,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 				present_info.width = buffer_width;
 				present_info.height = buffer_height;
 				present_info.address = rsx::get_address(image_offset, CELL_GCM_LOCATION_LOCAL);
+				present_info.eye = 1;
 
 				image_to_flip2 = get_present_source(&present_info, avconfig)->id();
 			}
