@@ -28,6 +28,10 @@ vm::gvar<CellHddGameStatSet> g_stat_set;
 vm::gvar<CellHddGameSystemFileParam> g_file_param;
 vm::gvar<CellHddGameCBResult> g_cb_result;
 
+stx::init_lock acquire_lock(stx::init_mutex& mtx, ppu_thread* ppu = nullptr);
+stx::access_lock acquire_access_lock(stx::init_mutex& mtx, ppu_thread* ppu = nullptr);
+stx::reset_lock acquire_reset_lock(stx::init_mutex& mtx, ppu_thread* ppu = nullptr);
+
 template<>
 void fmt_class_string<CellGameError>::format(std::string& out, u64 arg)
 {
@@ -705,7 +709,7 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 
 	lv2_sleep(500);
 
-	const auto init = perm.init.init();
+	const auto init = acquire_lock(perm.init);
 
 	if (!init)
 	{
@@ -789,7 +793,7 @@ error_code cellGamePatchCheck(vm::ptr<CellGameContentSize> size, vm::ptr<void> r
 
 	auto& perm = g_fxo->get<content_permission>();
 
-	const auto init = perm.init.init();
+	const auto init = acquire_lock(perm.init);
 
 	if (!init)
 	{
@@ -836,7 +840,7 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 
 	auto& perm = g_fxo->get<content_permission>();
 
-	auto init = perm.init.init();
+	auto init = acquire_lock(perm.init);
 
 	if (!init)
 	{
@@ -904,7 +908,7 @@ error_code cellGameContentPermit(ppu_thread& ppu, vm::ptr<char[CELL_GAME_PATH_MA
 
 	auto& perm = g_fxo->get<content_permission>();
 
-	const auto init = perm.init.reset();
+	const auto init = acquire_reset_lock(perm.init);
 
 	if (!init)
 	{
@@ -1204,7 +1208,7 @@ error_code cellGameCreateGameData(vm::ptr<CellGameSetInitParams> init, vm::ptr<c
 
 	auto& perm = g_fxo->get<content_permission>();
 
-	const auto _init = perm.init.access();
+	const auto _init = acquire_access_lock(perm.init);
 
 	lv2_sleep(2000);
 
@@ -1319,7 +1323,7 @@ error_code cellGameDeleteGameData(vm::cptr<char> dirName)
 		if (!_init)
 		{
 			// Or access it
-			if (auto access = perm.init.access(); access)
+			if (auto access = acquire_access_lock(perm.init); access)
 			{
 				// Cannot remove it when it is accessed by cellGameDataCheck
 				// If it is HG data then resort to remove_gd for ERROR_BROKEN
@@ -1356,7 +1360,7 @@ error_code cellGameGetParamInt(s32 id, vm::ptr<s32> value)
 
 	auto& perm = g_fxo->get<content_permission>();
 
-	const auto init = perm.init.access();
+	const auto init = acquire_access_lock(perm.init);
 
 	if (!init)
 	{
@@ -1484,7 +1488,7 @@ error_code cellGameGetParamString(s32 id, vm::ptr<char> buf, u32 bufsize)
 
 	lv2_sleep(2000);
 
-	const auto init = perm.init.access();
+	const auto init = acquire_access_lock(perm.init);
 
 	if (!init || perm.mode == content_permission::check_mode::not_set)
 	{
@@ -1530,7 +1534,7 @@ error_code cellGameSetParamString(s32 id, vm::cptr<char> buf)
 
 	auto& perm = g_fxo->get<content_permission>();
 
-	const auto init = perm.init.access();
+	const auto init = acquire_access_lock(perm.init);
 
 	if (!init || perm.mode == content_permission::check_mode::not_set)
 	{
@@ -1569,7 +1573,7 @@ error_code cellGameGetSizeKB(ppu_thread& ppu, vm::ptr<s32> size)
 
 	auto& perm = g_fxo->get<content_permission>();
 
-	const auto init = perm.init.access();
+	const auto init = acquire_access_lock(perm.init);
 
 	if (!init)
 	{
