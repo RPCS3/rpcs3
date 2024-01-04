@@ -804,19 +804,16 @@ namespace np
 			basic_handler_registered = true;
 
 			presence_self.pr_com_id = *context;
-			presence_self.pr_title = Emu.GetTitle();
-			if (presence_self.pr_title.size() >= SCE_NP_BASIC_PRESENCE_TITLE_SIZE_MAX)
-			{
-				presence_self.pr_title.resize(SCE_NP_BASIC_PRESENCE_TITLE_SIZE_MAX - 1);
-			}
+			presence_self.pr_title = fmt::truncate(Emu.GetTitle(), SCE_NP_BASIC_PRESENCE_TITLE_SIZE_MAX - 1);
 		}
 
-		if (g_cfg.net.psn_status != np_psn_status::psn_rpcn || !is_psn_active || !rpcn)
+		if (g_cfg.net.psn_status != np_psn_status::psn_rpcn || !is_psn_active)
 		{
 			return;
 		}
 
 		std::lock_guard lock(mutex_rpcn);
+
 		if (!rpcn)
 		{
 			return;
@@ -1263,9 +1260,10 @@ namespace np
 			}
 		}
 
-		if (send_update && is_psn_active && rpcn)
+		if (send_update && is_psn_active)
 		{
 			std::lock_guard lock(mutex_rpcn);
+
 			if (!rpcn)
 			{
 				return;
@@ -1278,12 +1276,13 @@ namespace np
 	template <typename T>
 	error_code np_handler::get_friend_presence_by_index(u32 index, SceNpUserInfo* user, T* pres)
 	{
-		if (!is_psn_active || g_cfg.net.psn_status != psn_rpcn || !rpcn)
+		if (!is_psn_active || g_cfg.net.psn_status != np_psn_status::psn_rpcn)
 		{
 			return SCE_NP_BASIC_ERROR_NOT_CONNECTED;
 		}
 
 		std::lock_guard lock(mutex_rpcn);
+
 		if (!rpcn)
 		{
 			return SCE_NP_BASIC_ERROR_NOT_CONNECTED;
@@ -1308,12 +1307,13 @@ namespace np
 	template <typename T>
 	error_code np_handler::get_friend_presence_by_npid(const SceNpId& npid, T* pres)
 	{
-		if (!is_psn_active || g_cfg.net.psn_status != psn_rpcn || !rpcn)
+		if (!is_psn_active || g_cfg.net.psn_status != np_psn_status::psn_rpcn)
 		{
 			return SCE_NP_BASIC_ERROR_NOT_CONNECTED;
 		}
 
 		std::lock_guard lock(mutex_rpcn);
+		
 		if (!rpcn)
 		{
 			return SCE_NP_BASIC_ERROR_NOT_CONNECTED;

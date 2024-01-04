@@ -52,7 +52,7 @@ public:
 		return error;
 	}
 
-	void dump();
+	void dump() const;
 
 	// Getters
 

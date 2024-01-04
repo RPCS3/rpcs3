@@ -845,7 +845,8 @@ error_code sceNpBasicSetPresence(vm::cptr<u8> data, u32 size)
 		return SCE_NP_BASIC_ERROR_EXCEEDS_MAX;
 	}
 
-	// data is not checked
+	// Not checked by API
+	ensure(data);
 
 	std::vector pr_data(data.get_ptr(), data.get_ptr() + size);
 	nph.set_presence(std::nullopt, pr_data);
@@ -874,12 +875,13 @@ error_code sceNpBasicSetPresenceDetails(vm::cptr<SceNpBasicPresenceDetails> pres
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
 
+	// Not checked by API
+	ensure(pres);
+
 	if (pres->size > SCE_NP_BASIC_MAX_PRESENCE_SIZE)
 	{
 		return SCE_NP_BASIC_ERROR_EXCEEDS_MAX;
 	}
-
-	// pres is not checked
 
 	std::optional<std::string> pr_status;
 	if (options & SCE_NP_BASIC_PRESENCE_OPTIONS_SET_STATUS)
@@ -920,12 +922,13 @@ error_code sceNpBasicSetPresenceDetails2(vm::cptr<SceNpBasicPresenceDetails2> pr
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
 
+	// Not checked by API
+	ensure(pres);
+
 	if (pres->size > SCE_NP_BASIC_MAX_PRESENCE_SIZE)
 	{
 		return SCE_NP_BASIC_ERROR_EXCEEDS_MAX;
 	}
-
-	// pres is not checked
 
 	std::optional<std::string> pr_status;
 	if (options & SCE_NP_BASIC_PRESENCE_OPTIONS_SET_STATUS)

@@ -47,7 +47,7 @@ LOG_CHANNEL(rpcn_log, "rpcn");
 
 int get_native_error();
 
-void vec_stream::dump()
+void vec_stream::dump() const
 {
 	rpcn_log.error("vec_stream dump:\n%s", fmt::buf_to_hexstring(vec.data(), vec.size()));
 }
@@ -297,11 +297,10 @@ namespace rpcn
 					{
 						if (msg.size() == 6)
 						{
-							u32 new_addr_sig = read_from_ptr<le_t<u32>>(&msg[0]);
-							u32 new_port_sig = read_from_ptr<be_t<u16>>(&msg[4]);
-
-							u32 old_addr_sig = addr_sig;
-							u32 old_port_sig = port_sig;
+							const u32 new_addr_sig = read_from_ptr<le_t<u32>>(&msg[0]);
+							const u32 new_port_sig = read_from_ptr<be_t<u16>>(&msg[4]);
+							const u32 old_addr_sig = addr_sig;
+							const u32 old_port_sig = port_sig;
 
 							if (new_addr_sig != old_addr_sig)
 							{
@@ -953,21 +952,10 @@ namespace rpcn
 				std::string friend_name = stream.get_string(false);
 				bool online = !!(stream.get<u8>());
 
-				auto truncate_string = [](std::string& str, usz max_size)
-				{
-					if (str.size() >= max_size)
-					{
-						str.resize(max_size - 1);
-					}
-				};
-
 				SceNpCommunicationId pr_com_id = stream.get_com_id();
-				std::string pr_title = stream.get_string(true);
-				truncate_string(pr_title, SCE_NP_BASIC_PRESENCE_TITLE_SIZE_MAX);
-				std::string pr_status = stream.get_string(true);
-				truncate_string(pr_status, SCE_NP_BASIC_PRESENCE_EXTENDED_STATUS_SIZE_MAX);
-				std::string pr_comment = stream.get_string(true);
-				truncate_string(pr_comment, SCE_NP_BASIC_PRESENCE_COMMENT_SIZE_MAX);
+				std::string pr_title = fmt::truncate(stream.get_string(true), SCE_NP_BASIC_PRESENCE_TITLE_SIZE_MAX - 1);
+				std::string pr_status = fmt::truncate(stream.get_string(true), SCE_NP_BASIC_PRESENCE_EXTENDED_STATUS_SIZE_MAX - 1);
+				std::string pr_comment = fmt::truncate(stream.get_string(true), SCE_NP_BASIC_PRESENCE_COMMENT_SIZE_MAX - 1);
 				std::vector<u8> pr_data = stream.get_rawdata();
 
 				if (pr_data.size() > SCE_NP_BASIC_MAX_PRESENCE_SIZE)
@@ -1267,12 +1255,9 @@ namespace rpcn
 	std::vector<u64> rpcn_client::get_new_messages()
 	{
 		std::vector<u64> ret_new_messages;
-		{
-			std::lock_guard lock(mutex_messages);
-			ret_new_messages = std::move(new_messages);
-			new_messages.clear();
-		}
-
+		std::lock_guard lock(mutex_messages);
+		ret_new_messages = std::move(new_messages);
+		new_messages.clear();
 		return ret_new_messages;
 	}
 
@@ -2343,22 +2328,11 @@ namespace rpcn
 		}
 		case NotificationType::FriendPresenceChanged:
 		{
-			auto truncate_string = [](std::string& str, usz max_size)
-			{
-				if (str.size() >= max_size)
-				{
-					str.resize(max_size - 1);
-				}
-			};
-
 			std::string npid = vdata.get_string(true);
 			SceNpCommunicationId pr_com_id = vdata.get_com_id();
-			std::string pr_title = vdata.get_string(true);
-			truncate_string(pr_title, SCE_NP_BASIC_PRESENCE_TITLE_SIZE_MAX);
-			std::string pr_status = vdata.get_string(true);
-			truncate_string(pr_status, SCE_NP_BASIC_PRESENCE_EXTENDED_STATUS_SIZE_MAX);
-			std::string pr_comment = vdata.get_string(true);
-			truncate_string(pr_comment, SCE_NP_BASIC_PRESENCE_COMMENT_SIZE_MAX);
+			std::string pr_title = fmt::truncate(vdata.get_string(true), SCE_NP_BASIC_PRESENCE_TITLE_SIZE_MAX - 1);
+			std::string pr_status = fmt::truncate(vdata.get_string(true), SCE_NP_BASIC_PRESENCE_EXTENDED_STATUS_SIZE_MAX - 1);
+			std::string pr_comment = fmt::truncate(vdata.get_string(true), SCE_NP_BASIC_PRESENCE_COMMENT_SIZE_MAX - 1);
 			std::vector<u8> pr_data = vdata.get_rawdata();
 			if (pr_data.size() > SCE_NP_BASIC_MAX_PRESENCE_SIZE)
 			{
@@ -2537,14 +2511,14 @@ namespace rpcn
 	{
 		std::lock_guard lock(mutex_friends);
 
-		auto it = friend_infos.friends.begin();
-		while (it != friend_infos.friends.end() && index != 0)
+		if (index >= friend_infos.friends.size())
 		{
-			it++;
-			index--;
+			return std::nullopt;
 		}
 
-		return it == friend_infos.friends.end() ? std::nullopt : std::optional(*it);
+		auto it = friend_infos.friends.begin();
+		std::advance(it, index);
+		return std::optional(*it);
 	}
 
 	std::optional<std::pair<std::string, friend_online_data>> rpcn_client::get_friend_presence_by_npid(const std::string& npid)
