@@ -1209,40 +1209,25 @@ namespace rpcn
 
 	std::vector<std::pair<u16, std::vector<u8>>> rpcn_client::get_notifications()
 	{
-		std::vector<std::pair<u16, std::vector<u8>>> notifs;
-
-		{
-			std::lock_guard lock(mutex_notifs);
-			notifs = std::move(notifications);
-			notifications.clear();
-		}
-
+		std::lock_guard lock(mutex_notifs);
+		std::vector<std::pair<u16, std::vector<u8>>> notifs = std::move(notifications);
+		notifications.clear();
 		return notifs;
 	}
 
 	std::unordered_map<u32, std::pair<u16, std::vector<u8>>> rpcn_client::get_replies()
 	{
-		std::unordered_map<u32, std::pair<u16, std::vector<u8>>> ret_replies;
-
-		{
-			std::lock_guard lock(mutex_replies);
-			ret_replies = std::move(replies);
-			replies.clear();
-		}
-
+		std::lock_guard lock(mutex_replies);
+		std::unordered_map<u32, std::pair<u16, std::vector<u8>>> ret_replies = std::move(replies);
+		replies.clear();
 		return ret_replies;
 	}
 
 	std::unordered_map<std::string, friend_online_data> rpcn_client::get_presence_updates()
 	{
-		std::unordered_map<std::string, friend_online_data> ret_updates;
-
-		{
-			std::lock_guard lock(mutex_presence_updates);
-			ret_updates = std::move(presence_updates);
-			presence_updates.clear();
-		}
-
+		std::lock_guard lock(mutex_presence_updates);
+		std::unordered_map<std::string, friend_online_data> ret_updates = std::move(presence_updates);
+		presence_updates.clear();
 		return ret_updates;
 	}
 
@@ -1254,9 +1239,8 @@ namespace rpcn
 
 	std::vector<u64> rpcn_client::get_new_messages()
 	{
-		std::vector<u64> ret_new_messages;
 		std::lock_guard lock(mutex_messages);
-		ret_new_messages = std::move(new_messages);
+		std::vector<u64> ret_new_messages = std::move(new_messages);
 		new_messages.clear();
 		return ret_new_messages;
 	}
