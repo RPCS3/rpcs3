@@ -64,6 +64,7 @@ namespace gl
 		u32 width;
 		u32 height;
 		u32 pitch;
+		u8  eye;
 	};
 }
 
@@ -125,7 +126,7 @@ class GLGSRender : public GSRender, public ::rsx::reports::ZCULL_control
 	gl::fbo* m_draw_fbo = nullptr;
 	std::list<gl::framebuffer_holder> m_framebuffer_cache;
 	gl::fbo m_flip_fbo;
-	std::unique_ptr<gl::texture> m_flip_tex_color;
+	std::unique_ptr<gl::texture> m_flip_tex_color[2];
 
 	//vaos are mandatory for core profile
 	gl::vao m_vao;
