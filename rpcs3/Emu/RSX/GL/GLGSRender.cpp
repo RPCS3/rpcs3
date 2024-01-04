@@ -416,9 +416,9 @@ void GLGSRender::on_exit()
 		m_flip_fbo.remove();
 	}
 
-	if (m_flip_tex_color)
+	for (auto& flip_tex_image : m_flip_tex_color)
 	{
-		m_flip_tex_color.reset();
+		flip_tex_image.reset();
 	}
 
 	if (m_vao)
