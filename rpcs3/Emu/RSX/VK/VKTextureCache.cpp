@@ -576,6 +576,38 @@ namespace vk
 		return {};
 	}
 
+	std::unique_ptr<vk::viewable_image> texture_cache::create_temporary_subresource_storage(
+		rsx::format_class format_class, VkFormat format,
+		u16 width, u16 height, u16 depth, u16 layers, u8 mips,
+		VkImageType image_type, VkFlags image_flags, VkFlags usage_flags)
+	{
+		auto image = find_cached_image(format, width, height, depth, mips, image_type, image_flags, usage_flags, VK_SHARING_MODE_EXCLUSIVE);
+
+		if (!image)
+		{
+			image = std::make_unique<vk::viewable_image>(*vk::get_current_renderer(), m_memory_types.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+				image_type,
+				format,
+				width, height, depth, mips, layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, image_flags | VK_IMAGE_CREATE_ALLOW_NULL_RPCS3,
+				VMM_ALLOCATION_POOL_TEXTURE_CACHE, format_class);
+
+			if (!image->value)
+			{
+				// OOM, bail
+				return nullptr;
+			}
+		}
+
+		return image;
+	}
+
+	void texture_cache::dispose_reusable_image(std::unique_ptr<vk::viewable_image>& image)
+	{
+		auto disposable = vk::disposable_t::make(new cached_image_reference_t(this, image));
+		vk::get_resource_manager()->dispose(disposable);
+	}
+
 	vk::image_view* texture_cache::create_temporary_subresource_view_impl(vk::command_buffer& cmd, vk::image* source, VkImageType image_type, VkImageViewType view_type,
 		u32 gcm_format, u16 x, u16 y, u16 w, u16 h, u16 d, u8 mips, const rsx::texture_channel_remap_t& remap_vector, bool copy)
 	{
@@ -584,22 +616,13 @@ namespace vk
 		const VkFormat dst_format = vk::get_compatible_sampler_format(m_formats_support, gcm_format);
 		const u16 layers = (view_type == VK_IMAGE_VIEW_TYPE_CUBE) ? 6 : 1;
 
-		auto image = find_cached_image(dst_format, w, h, d, mips, image_type, image_flags, usage_flags, VK_SHARING_MODE_EXCLUSIVE);
+		// Provision
+		auto image = create_temporary_subresource_storage(rsx::classify_format(gcm_format), dst_format, w, h, d, layers, mips, image_type, image_flags, usage_flags);
 
+		// OOM?
 		if (!image)
 		{
-			image = std::make_unique<vk::viewable_image>(*vk::get_current_renderer(), m_memory_types.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-				image_type,
-				dst_format,
-				w, h, d, mips, layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, image_flags | VK_IMAGE_CREATE_ALLOW_NULL_RPCS3,
-				VMM_ALLOCATION_POOL_TEXTURE_CACHE, rsx::classify_format(gcm_format));
-
-			if (!image->value)
-			{
-				// OOM, bail
-				return nullptr;
-			}
+			return nullptr;
 		}
 
 		// This method is almost exclusively used to work on framebuffer resources
@@ -1449,9 +1472,9 @@ namespace vk
 
 		vk::change_image_layout(cmd, image.get(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
+		// Fully dispose immediately. These immages aren't really reusable right now.
 		auto result = image.get();
-		auto disposable = vk::disposable_t::make(new cached_image_reference_t(this, image));
-		vk::get_resource_manager()->dispose(disposable);
+		vk::get_resource_manager()->dispose(image);
 
 		return result;
 	}

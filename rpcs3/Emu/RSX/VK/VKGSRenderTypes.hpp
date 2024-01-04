@@ -304,6 +304,7 @@ namespace vk
 		u32 width;
 		u32 height;
 		u32 pitch;
+		u8  eye;
 	};
 
 	struct draw_call_t
