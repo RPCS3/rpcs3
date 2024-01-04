@@ -55,6 +55,7 @@
 #include <deque>
 #include "util/tsc.hpp"
 #include "util/sysinfo.hpp"
+#include "util/init_mutex.hpp"
 
 #if defined(ARCH_X64)
 #ifdef _MSC_VER
@@ -1106,6 +1107,61 @@ void fmt_class_string<CellError>::format(std::string& out, u64 arg)
 
 		return unknown;
 	});
+}
+
+stx::init_lock acquire_lock(stx::init_mutex& mtx, ppu_thread* ppu)
+{
+	if (!ppu)
+	{
+		ppu = ensure(cpu_thread::get_current<ppu_thread>());
+	}
+
+	return mtx.init([](int invoke_count, const stx::init_lock&, ppu_thread* ppu)
+	{
+		if (!invoke_count)
+		{
+			// Sleep before waiting on lock
+			lv2_obj::sleep(*ppu);
+		}
+		else
+		{
+			// Wake up after acquistion or failure to acquire
+			ppu->check_state();
+		}
+	}, ppu);
+}
+
+stx::access_lock acquire_access_lock(stx::init_mutex& mtx, ppu_thread* ppu)
+{
+	if (!ppu)
+	{
+		ppu = ensure(cpu_thread::get_current<ppu_thread>());
+	}
+
+	// TODO: Check if needs to wait
+	return mtx.access();
+}
+
+stx::reset_lock acquire_reset_lock(stx::init_mutex& mtx, ppu_thread* ppu)
+{
+	if (!ppu)
+	{
+		ppu = ensure(cpu_thread::get_current<ppu_thread>());
+	}
+
+	return mtx.reset([](int invoke_count, const stx::init_lock&, ppu_thread* ppu)
+	{
+		if (!invoke_count)
+		{
+			// Sleep before waiting on lock
+			lv2_obj::sleep(*ppu);
+		}
+		else
+		{
+			// Wake up after acquistion or failure to acquire
+			ppu->check_state();
+		}
+	}, ppu);
 }
 
 class ppu_syscall_usage
