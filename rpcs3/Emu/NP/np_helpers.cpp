@@ -38,7 +38,7 @@ namespace np
 		strcpy_trunc(details.title, data.pr_title);
 		strcpy_trunc(details.status, data.pr_status);
 		strcpy_trunc(details.comment, data.pr_comment);
-		details.size = std::min<u32>(data.pr_data.size(), SCE_NP_BASIC_MAX_PRESENCE_SIZE);
+		details.size = std::min<u32>(::size32(data.pr_data), SCE_NP_BASIC_MAX_PRESENCE_SIZE);
 		std::memcpy(details.data, data.pr_data.data(), details.size);
 
 		if constexpr (std::is_same_v<T, SceNpBasicPresenceDetails2>)
