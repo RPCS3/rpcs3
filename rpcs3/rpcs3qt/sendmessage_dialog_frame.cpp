@@ -82,7 +82,7 @@ bool sendmessage_dialog_frame::Exec(message_data& msg_data, std::set<std::string
 	for (const auto& fr : data.friends)
 	{
 		// Only add online friends to the list
-		if (fr.second.first)
+		if (fr.second.online)
 		{
 			add_friend(m_lst_friends, QString::fromStdString(fr.first));
 		}

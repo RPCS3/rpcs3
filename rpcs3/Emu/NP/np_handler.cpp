@@ -793,10 +793,79 @@ namespace np
 		return size_copied;
 	}
 
+	void np_handler::register_basic_handler(vm::cptr<SceNpCommunicationId> context, vm::ptr<SceNpBasicEventHandler> handler, vm::ptr<void> arg, bool context_sensitive)
+	{
+		{
+			std::lock_guard lock(basic_handler.mutex);
+			memcpy(&basic_handler.context, context.get_ptr(), sizeof(basic_handler.context));
+			basic_handler.handler_func = handler;
+			basic_handler.handler_arg = arg;
+			basic_handler.context_sensitive = context_sensitive;
+			basic_handler_registered = true;
+
+			presence_self.pr_com_id = *context;
+			presence_self.pr_title = fmt::truncate(Emu.GetTitle(), SCE_NP_BASIC_PRESENCE_TITLE_SIZE_MAX - 1);
+		}
+
+		if (g_cfg.net.psn_status != np_psn_status::psn_rpcn || !is_psn_active)
+		{
+			return;
+		}
+
+		std::lock_guard lock(mutex_rpcn);
+
+		if (!rpcn)
+		{
+			return;
+		}
+
+		auto current_presences = rpcn->get_presence_states();
+
+		for (auto& [npid, pr_info] : current_presences)
+		{
+			// Only communicates info about online users with presence
+			if (!pr_info.online || pr_info.pr_com_id.data[0] == 0)
+			{
+				continue;
+			}
+
+			basic_event to_add{};
+			strcpy_trunc(to_add.from.userId.handle.data, npid);
+			strcpy_trunc(to_add.from.name.data, npid);
+			if (std::memcmp(pr_info.pr_com_id.data, basic_handler.context.data, sizeof(pr_info.pr_com_id.data)) == 0)
+			{
+				to_add.event = SCE_NP_BASIC_EVENT_PRESENCE;
+				to_add.data = std::move(pr_info.pr_data);
+			}
+			else
+			{
+				if (basic_handler.context_sensitive)
+				{
+					to_add.event = SCE_NP_BASIC_EVENT_OUT_OF_CONTEXT;
+				}
+				else
+				{
+					to_add.event = SCE_NP_BASIC_EVENT_OFFLINE;
+				}
+			}
+
+			queue_basic_event(to_add);
+			send_basic_event(to_add.event, 0, 0);
+		}
+	}
+
+	SceNpCommunicationId np_handler::get_basic_handler_context()
+	{
+		std::lock_guard lock(basic_handler.mutex);
+		return basic_handler.context;
+	}
+
 	bool np_handler::send_basic_event(s32 event, s32 retCode, u32 reqId)
 	{
-		if (basic_handler.registered)
+		if (basic_handler_registered)
 		{
+			std::lock_guard lock(basic_handler.mutex);
+
 			sysutil_register_cb([handler_func = this->basic_handler.handler_func, handler_arg = this->basic_handler.handler_arg, event, retCode, reqId](ppu_thread& cb_ppu) -> s32
 				{
 					handler_func(cb_ppu, event, retCode, reqId, handler_arg);
@@ -983,8 +1052,39 @@ namespace np
 					}
 				}
 
+				auto presence_updates = rpcn->get_presence_updates();
+				if (basic_handler_registered)
+				{
+					for (auto& [npid, pr_info] : presence_updates)
+					{
+						basic_event to_add{};
+						strcpy_trunc(to_add.from.userId.handle.data, npid);
+						strcpy_trunc(to_add.from.name.data, npid);
+
+						if (std::memcmp(pr_info.pr_com_id.data, basic_handler.context.data, sizeof(pr_info.pr_com_id.data)) == 0)
+						{
+							to_add.event = SCE_NP_BASIC_EVENT_PRESENCE;
+							to_add.data = std::move(pr_info.pr_data);
+						}
+						else
+						{
+							if (basic_handler.context_sensitive && !pr_info.pr_com_id.data[0] == 0)
+							{
+								to_add.event = SCE_NP_BASIC_EVENT_OUT_OF_CONTEXT;
+							}
+							else
+							{
+								to_add.event = SCE_NP_BASIC_EVENT_OFFLINE;
+							}
+						}
+
+						queue_basic_event(to_add);
+						send_basic_event(to_add.event, 0, 0);
+					}
+				}
+
 				auto messages = rpcn->get_new_messages();
-				if (basic_handler.registered)
+				if (basic_handler_registered)
 				{
 					for (const auto msg_id : messages)
 					{
@@ -1027,7 +1127,7 @@ namespace np
 					}
 				}
 
-				if (!replies.empty() || !notifications.empty())
+				if (!replies.empty() || !notifications.empty() || !presence_updates.empty())
 				{
 					sleep = false;
 				}
@@ -1109,16 +1209,7 @@ namespace np
 	u32 np_handler::add_players_to_history(vm::cptr<SceNpId> /*npids*/, u32 /*count*/)
 	{
 		const u32 req_id = get_req_id(REQUEST_ID_HIGH::MISC);
-
-		if (basic_handler.handler_func)
-		{
-			sysutil_register_cb([req_id, cb = basic_handler.handler_func, cb_arg = basic_handler.handler_arg](ppu_thread& cb_ppu) -> s32
-			{
-				cb(cb_ppu, SCE_NP_BASIC_EVENT_ADD_PLAYERS_HISTORY_RESULT, 0, req_id, cb_arg);
-				return 0;
-			});
-		}
-
+		send_basic_event(SCE_NP_BASIC_EVENT_ADD_PLAYERS_HISTORY_RESULT, 0, req_id);
 		return req_id;
 	}
 
@@ -1146,6 +1237,102 @@ namespace np
 
 		return {CELL_OK, npid_friend};
 	}
+
+	void np_handler::set_presence(std::optional<std::string> status, std::optional<std::vector<u8>> data)
+	{
+		bool send_update = false;
+
+		if (status)
+		{
+			if (status != presence_self.pr_status)
+			{
+				presence_self.pr_status = *status;
+				send_update = true;
+			}
+		}
+
+		if (data)
+		{
+			if (data != presence_self.pr_data)
+			{
+				presence_self.pr_data = *data;
+				send_update = true;
+			}
+		}
+
+		if (send_update && is_psn_active)
+		{
+			std::lock_guard lock(mutex_rpcn);
+
+			if (!rpcn)
+			{
+				return;
+			}
+
+			rpcn->send_presence(presence_self.pr_com_id, presence_self.pr_title, presence_self.pr_status, presence_self.pr_comment, presence_self.pr_data);
+		}
+	}
+
+	template <typename T>
+	error_code np_handler::get_friend_presence_by_index(u32 index, SceNpUserInfo* user, T* pres)
+	{
+		if (!is_psn_active || g_cfg.net.psn_status != np_psn_status::psn_rpcn)
+		{
+			return SCE_NP_BASIC_ERROR_NOT_CONNECTED;
+		}
+
+		std::lock_guard lock(mutex_rpcn);
+
+		if (!rpcn)
+		{
+			return SCE_NP_BASIC_ERROR_NOT_CONNECTED;
+		}
+
+		auto friend_infos = rpcn->get_friend_presence_by_index(index);
+		if (!friend_infos)
+		{
+			return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+		}
+
+		const bool same_context = (std::memcmp(friend_infos->second.pr_com_id.data, basic_handler.context.data, sizeof(friend_infos->second.pr_com_id.data)) == 0);
+		strings_to_userinfo(friend_infos->first, friend_infos->first, "", *user);
+		onlinedata_to_presencedetails(friend_infos->second, same_context, *pres);
+
+		return CELL_OK;
+	}
+
+	template error_code np_handler::get_friend_presence_by_index<SceNpBasicPresenceDetails>(u32 index, SceNpUserInfo* user, SceNpBasicPresenceDetails* pres);
+	template error_code np_handler::get_friend_presence_by_index<SceNpBasicPresenceDetails2>(u32 index, SceNpUserInfo* user, SceNpBasicPresenceDetails2* pres);
+
+	template <typename T>
+	error_code np_handler::get_friend_presence_by_npid(const SceNpId& npid, T* pres)
+	{
+		if (!is_psn_active || g_cfg.net.psn_status != np_psn_status::psn_rpcn)
+		{
+			return SCE_NP_BASIC_ERROR_NOT_CONNECTED;
+		}
+
+		std::lock_guard lock(mutex_rpcn);
+		
+		if (!rpcn)
+		{
+			return SCE_NP_BASIC_ERROR_NOT_CONNECTED;
+		}
+
+		auto friend_infos = rpcn->get_friend_presence_by_npid(std::string(reinterpret_cast<const char*>(&npid.handle.data[0])));
+		if (!friend_infos)
+		{
+			return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+		}
+
+		const bool same_context = (std::memcmp(friend_infos->second.pr_com_id.data, basic_handler.context.data, sizeof(friend_infos->second.pr_com_id.data)) == 0);
+		onlinedata_to_presencedetails(friend_infos->second, same_context, *pres);
+
+		return CELL_OK;
+	}
+
+	template error_code np_handler::get_friend_presence_by_npid<SceNpBasicPresenceDetails>(const SceNpId& npid, SceNpBasicPresenceDetails* pres);
+	template error_code np_handler::get_friend_presence_by_npid<SceNpBasicPresenceDetails2>(const SceNpId& npid, SceNpBasicPresenceDetails2* pres);
 
 	std::pair<error_code, std::optional<SceNpId>> np_handler::local_get_npid(u64 room_id, u16 member_id)
 	{
