@@ -288,21 +288,14 @@ error_code sceNpTusPollAsync(s32 transId, vm::ptr<s32> result)
 template<typename T>
 error_code scenp_tus_set_multislot_variable(s32 transId, T targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::cptr<s64> variableArray, s32 arrayNum, vm::ptr<void> option, bool vuser, bool async)
 {
-	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
-
-	if (!nph.is_NP_TUS_init)
-	{
-		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
-	}
-
-	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
-	}
-
-	if (!targetNpId || !slotIdArray || !variableArray || arrayNum <= 0)
+	if (!slotIdArray || !variableArray)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
+	}
+
+	if (arrayNum == 0 || option)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
 	}
 
 	if (arrayNum > SCE_NP_TUS_MAX_SLOT_NUM_PER_TRANS)
@@ -310,9 +303,27 @@ error_code scenp_tus_set_multislot_variable(s32 transId, T targetNpId, vm::cptr<
 		return SCE_NP_COMMUNITY_ERROR_TOO_MANY_SLOTID;
 	}
 
-	if (option || !is_slot_array_valid(slotIdArray, arrayNum))
+	if (!is_slot_array_valid(slotIdArray, arrayNum))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+	}
+
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_TUS_init)
+	{
+		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!targetNpId)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
+	}
+
+	// Probable vsh behaviour
+	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
 	auto trans_ctx = idm::get<tus_transaction_ctx>(transId);
@@ -359,29 +370,12 @@ error_code sceNpTusSetMultiSlotVariableVUserAsync(s32 transId, vm::cptr<SceNpTus
 template<typename T>
 error_code scenp_tus_get_multislot_variable(s32 transId, T targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusVariable> variableArray, u32 variableArraySize, s32 arrayNum, vm::ptr<void> option, bool vuser, bool async)
 {
-	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
-
-	if (!nph.is_NP_TUS_init)
-	{
-		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
-	}
-
-	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
-	}
-
-	if (!targetNpId || !slotIdArray || !variableArray || arrayNum <= 0)
+	if (!slotIdArray || !variableArray)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
 	}
 
-	if (arrayNum > SCE_NP_TUS_MAX_SLOT_NUM_PER_TRANS)
-	{
-		return SCE_NP_COMMUNITY_ERROR_TOO_MANY_SLOTID;
-	}
-
-	if (option || !is_slot_array_valid(slotIdArray, arrayNum))
+	if (arrayNum == 0 || option)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
 	}
@@ -389,6 +383,34 @@ error_code scenp_tus_get_multislot_variable(s32 transId, T targetNpId, vm::cptr<
 	if (variableArraySize != arrayNum * sizeof(SceNpTusVariable))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
+	}
+
+	if (arrayNum > SCE_NP_TUS_MAX_SLOT_NUM_PER_TRANS)
+	{
+		return SCE_NP_COMMUNITY_ERROR_TOO_MANY_SLOTID;
+	}
+
+	if (!is_slot_array_valid(slotIdArray, arrayNum))
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+	}
+
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_TUS_init)
+	{
+		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!targetNpId)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
+	}
+
+	// Probable vsh behaviour
+	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
 	auto trans_ctx = idm::get<tus_transaction_ctx>(transId);
@@ -435,6 +457,31 @@ error_code sceNpTusGetMultiSlotVariableVUserAsync(s32 transId, vm::cptr<SceNpTus
 template<typename T>
 error_code scenp_tus_get_multiuser_variable(s32 transId, T targetNpIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusVariable> variableArray, u32 variableArraySize, s32 arrayNum, vm::ptr<void> option, bool vuser, bool async)
 {
+	if (!variableArray)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
+	}
+
+	if (arrayNum == 0 || option)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+	}
+
+	if (arrayNum > SCE_NP_SCORE_MAX_NPID_NUM_PER_TRANS)
+	{
+		return SCE_NP_COMMUNITY_ERROR_TOO_MANY_NPID;
+	}
+
+	if (variableArraySize != arrayNum * sizeof(SceNpTusVariable))
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
+	}
+
+	if (slotId < 0)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+	}
+
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_TUS_init)
@@ -442,29 +489,15 @@ error_code scenp_tus_get_multiuser_variable(s32 transId, T targetNpIdArray, SceN
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
-	}
-
-	if (!targetNpIdArray || !variableArray || arrayNum <= 0)
+	if (!targetNpIdArray)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
 	}
 
-	if (arrayNum > SCE_NP_TUS_MAX_SLOT_NUM_PER_TRANS)
+	// Probable vsh behaviour
+	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
 	{
-		return SCE_NP_COMMUNITY_ERROR_TOO_MANY_SLOTID;
-	}
-
-	if (option || slotId < 0)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
-	}
-
-	if (variableArraySize != arrayNum * sizeof(SceNpTusVariable))
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
 	auto trans_ctx = idm::get<tus_transaction_ctx>(transId);
@@ -516,6 +549,43 @@ error_code sceNpTusGetMultiUserVariableVUserAsync(s32 transId, vm::cptr<SceNpTus
 
 error_code scenp_tus_get_friends_variable(s32 transId, SceNpTusSlotId slotId, s32 includeSelf, s32 sortType, vm::ptr<SceNpTusVariable> variableArray, u32 variableArraySize, s32 arrayNum, vm::ptr<void> option, bool async)
 {
+	if (!variableArray)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
+	}
+
+	if (arrayNum == 0)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+	}
+
+	// Undocumented behaviour and structure unknown
+	// Also checks a u32* at offset 4 of the struct for nullptr in which case it behaves like option == nullptr
+	if (option && *static_cast<u32*>(option.get_ptr()) != 0xC)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+	}
+
+	if (sortType < SCE_NP_TUS_VARIABLE_SORTTYPE_DESCENDING_DATE || sortType > SCE_NP_TUS_VARIABLE_SORTTYPE_ASCENDING_VALUE)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+	}
+
+	if (arrayNum > SCE_NP_SCORE_MAX_SELECTED_FRIENDS_NUM)
+	{
+		return SCE_NP_COMMUNITY_ERROR_TOO_MANY_NPID;
+	}
+
+	if (variableArraySize != arrayNum * sizeof(SceNpTusVariable))
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
+	}
+
+	if (slotId < 0)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+	}
+
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_TUS_init)
@@ -523,29 +593,10 @@ error_code scenp_tus_get_friends_variable(s32 transId, SceNpTusSlotId slotId, s3
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
+	// Probable vsh behaviour
 	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
-	}
-
-	if (!variableArray)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
-	}
-
-	if (arrayNum > SCE_NP_TUS_MAX_SLOT_NUM_PER_TRANS)
-	{
-		return SCE_NP_COMMUNITY_ERROR_TOO_MANY_SLOTID;
-	}
-
-	if (option || arrayNum <= 0 || slotId < 0)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
-	}
-
-	if (variableArraySize != arrayNum * sizeof(SceNpTusVariable))
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
 	}
 
 	auto trans_ctx = idm::get<tus_transaction_ctx>(transId);
@@ -587,9 +638,14 @@ error_code scenp_tus_add_and_get_variable(s32 transId, T targetNpId, SceNpTusSlo
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
+	if (slotId < 0)
 	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+	}
+
+	if ((option && option->size != sizeof(SceNpTusAddAndGetVariableOptParam)) || outVariableSize != sizeof(SceNpTusVariable))
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
 	}
 
 	if (!targetNpId)
@@ -597,14 +653,10 @@ error_code scenp_tus_add_and_get_variable(s32 transId, T targetNpId, SceNpTusSlo
 		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
 	}
 
-	if (slotId < 0)
+	// Probable vsh behaviour
+	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
 	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
-	}
-
-	if (outVariableSize != sizeof(SceNpTusVariable))
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
 	auto trans_ctx = idm::get<tus_transaction_ctx>(transId);
@@ -658,12 +710,7 @@ error_code scenp_tus_try_and_set_variable(s32 transId, T targetNpId, SceNpTusSlo
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
-	}
-
-	if (!targetNpId || !resultVariable)
+	if (!resultVariable)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
 	}
@@ -673,9 +720,20 @@ error_code scenp_tus_try_and_set_variable(s32 transId, T targetNpId, SceNpTusSlo
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
 	}
 
-	if (resultVariableSize != sizeof(SceNpTusVariable))
+	if ((option && option->size != sizeof(SceNpTusTryAndSetVariableOptParam)) || resultVariableSize != sizeof(SceNpTusVariable))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
+	}
+
+	if (!targetNpId)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
+	}
+
+	// Probable vsh behaviour
+	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
 	auto trans_ctx = idm::get<tus_transaction_ctx>(transId);
@@ -722,21 +780,14 @@ error_code sceNpTusTryAndSetVariableVUserAsync(s32 transId, vm::cptr<SceNpTusVir
 template<typename T>
 error_code scenp_tus_delete_multislot_variable(s32 transId, T targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, s32 arrayNum, vm::ptr<void> option, bool vuser, bool async)
 {
-	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
-
-	if (!nph.is_NP_TUS_init)
-	{
-		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
-	}
-
-	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
-	}
-
-	if (!targetNpId || !slotIdArray || arrayNum <= 0)
+	if (!slotIdArray)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
+	}
+
+	if (arrayNum == 0 || option)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
 	}
 
 	if (arrayNum > SCE_NP_TUS_MAX_SLOT_NUM_PER_TRANS)
@@ -744,9 +795,22 @@ error_code scenp_tus_delete_multislot_variable(s32 transId, T targetNpId, vm::cp
 		return SCE_NP_COMMUNITY_ERROR_TOO_MANY_SLOTID;
 	}
 
-	if (option || !is_slot_array_valid(slotIdArray, arrayNum))
+	if (!is_slot_array_valid(slotIdArray, arrayNum))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+	}
+
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_TUS_init)
+	{
+		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
+
+	// Probable vsh behaviour
+	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
 	auto trans_ctx = idm::get<tus_transaction_ctx>(transId);
@@ -793,6 +857,16 @@ error_code sceNpTusDeleteMultiSlotVariableVUserAsync(s32 transId, vm::cptr<SceNp
 template<typename T>
 error_code scenp_tus_set_data(s32 transId, T targetNpId, SceNpTusSlotId slotId, u32 totalSize, u32 sendSize, vm::cptr<void> data, vm::cptr<SceNpTusDataInfo> info, u32 infoStructSize, vm::ptr<SceNpTusSetDataOptParam> option, bool vuser, bool async)
 {
+	if (slotId < 0 || !data || !totalSize)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
+	}
+
+	if ((option && option->size != sizeof(SceNpTusSetDataOptParam)) || (info && infoStructSize != sizeof(SceNpTusDataInfo)))
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
+	}
+
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_TUS_init)
@@ -800,19 +874,15 @@ error_code scenp_tus_set_data(s32 transId, T targetNpId, SceNpTusSlotId slotId, 
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
-	}
-
-	if (!targetNpId || !data || totalSize == 0)
+	if (!targetNpId)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
 	}
 
-	if (slotId < 0)
+	// Probable vsh behaviour
+	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
 	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
 	auto trans_ctx = idm::get<tus_transaction_ctx>(transId);
@@ -859,18 +929,6 @@ error_code sceNpTusSetDataVUserAsync(s32 transId, vm::cptr<SceNpTusVirtualUserId
 template<typename T>
 error_code scenp_tus_get_data(s32 transId, T targetNpId, SceNpTusSlotId slotId, vm::ptr<SceNpTusDataStatus> dataStatus, u32 dataStatusSize, vm::ptr<void> data, u32 recvSize, vm::ptr<void> option, bool vuser, bool async)
 {
-	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
-
-	if (!nph.is_NP_TUS_init)
-	{
-		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
-	}
-
-	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
-	}
-
 	if (!targetNpId)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
@@ -879,6 +937,24 @@ error_code scenp_tus_get_data(s32 transId, T targetNpId, SceNpTusSlotId slotId, 
 	if (option || slotId < 0)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+	}
+
+	if (dataStatusSize != sizeof(SceNpTusDataStatus))
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
+	}
+
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_TUS_init)
+	{
+		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
+
+	// Probable vsh behaviour
+	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
 	auto trans_ctx = idm::get<tus_transaction_ctx>(transId);
@@ -925,6 +1001,31 @@ error_code sceNpTusGetDataVUserAsync(s32 transId, vm::cptr<SceNpTusVirtualUserId
 template<typename T>
 error_code scenp_tus_get_multislot_data_status(s32 transId, T targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusDataStatus> statusArray, u32 statusArraySize, s32 arrayNum, vm::ptr<void> option, bool vuser, bool async)
 {
+	if (!slotIdArray || !statusArray)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
+	}
+
+	if (arrayNum == 0 || option)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+	}
+
+	if (statusArraySize != arrayNum * sizeof(SceNpTusDataStatus))
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
+	}
+
+	if (arrayNum > SCE_NP_TUS_MAX_SLOT_NUM_PER_TRANS)
+	{
+		return SCE_NP_COMMUNITY_ERROR_TOO_MANY_SLOTID;
+	}
+
+	if (!is_slot_array_valid(slotIdArray, arrayNum))
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+	}
+
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_TUS_init)
@@ -932,24 +1033,15 @@ error_code scenp_tus_get_multislot_data_status(s32 transId, T targetNpId, vm::cp
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
-	}
-
-	if (!targetNpId || !statusArray || arrayNum <= 0)
+	if (!targetNpId)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
 	}
 
-	if (option || !is_slot_array_valid(slotIdArray, arrayNum))
+	// Probable vsh behaviour
+	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
 	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
-	}
-
-	if (arrayNum > SCE_NP_TUS_MAX_SLOT_NUM_PER_TRANS)
-	{
-		return SCE_NP_COMMUNITY_ERROR_TOO_MANY_SLOTID;
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
 	auto trans_ctx = idm::get<tus_transaction_ctx>(transId);
@@ -996,6 +1088,31 @@ error_code sceNpTusGetMultiSlotDataStatusVUserAsync(s32 transId, vm::cptr<SceNpT
 template<typename T>
 error_code scenp_tus_get_multiuser_data_status(s32 transId, T targetNpIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusDataStatus> statusArray, u32 statusArraySize, s32 arrayNum, vm::ptr<void> option, bool vuser, bool async)
 {
+	if (!statusArray)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
+	}
+
+	if (arrayNum == 0 || option)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+	}
+
+	if (arrayNum > SCE_NP_SCORE_MAX_NPID_NUM_PER_TRANS)
+	{
+		return SCE_NP_COMMUNITY_ERROR_TOO_MANY_NPID;
+	}
+
+	if (statusArraySize != arrayNum * sizeof(SceNpTusDataStatus))
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
+	}
+
+	if (slotId < 0)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+	}
+
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_TUS_init)
@@ -1003,24 +1120,15 @@ error_code scenp_tus_get_multiuser_data_status(s32 transId, T targetNpIdArray, S
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
-	}
-
-	if (!targetNpIdArray || !statusArray || arrayNum <= 0)
+	if (!targetNpIdArray)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
 	}
 
-	if (option || slotId < 0)
+	// Probable vsh behaviour
+	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
 	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
-	}
-
-	if (arrayNum > SCE_NP_TUS_MAX_USER_NUM_PER_TRANS)
-	{
-		return SCE_NP_COMMUNITY_ERROR_TOO_MANY_NPID;
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
 	auto trans_ctx = idm::get<tus_transaction_ctx>(transId);
@@ -1072,6 +1180,43 @@ error_code sceNpTusGetMultiUserDataStatusVUserAsync(s32 transId, vm::cptr<SceNpT
 
 error_code scenp_tus_get_friends_data_status(s32 transId, SceNpTusSlotId slotId, s32 includeSelf, s32 sortType, vm::ptr<SceNpTusDataStatus> statusArray, u32 statusArraySize, s32 arrayNum, vm::ptr<void> option, bool async)
 {
+	if (!statusArray)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
+	}
+
+	if (arrayNum == 0)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+	}
+
+	// Undocumented behaviour and structure unknown
+	// Also checks a u32* at offset 4 of the struct for nullptr in which case it behaves like option == nullptr
+	if (option && *static_cast<u32*>(option.get_ptr()) != 0xC)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+	}
+
+	if (sortType != SCE_NP_TUS_DATASTATUS_SORTTYPE_DESCENDING_DATE && sortType != SCE_NP_TUS_DATASTATUS_SORTTYPE_ASCENDING_DATE)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+	}
+
+	if (arrayNum > SCE_NP_SCORE_MAX_SELECTED_FRIENDS_NUM)
+	{
+		return SCE_NP_COMMUNITY_ERROR_TOO_MANY_NPID;
+	}
+
+	if (statusArraySize != arrayNum * sizeof(SceNpTusDataStatus))
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
+	}
+
+	if (slotId < 0)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+	}
+
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_TUS_init)
@@ -1079,24 +1224,10 @@ error_code scenp_tus_get_friends_data_status(s32 transId, SceNpTusSlotId slotId,
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
+	// Probable vsh behaviour
 	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
-	}
-
-	if (!statusArray)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
-	}
-
-	if (option || arrayNum < 0 || slotId < 0)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
-	}
-
-	if (arrayNum > SCE_NP_TUS_MAX_SELECTED_FRIENDS_NUM)
-	{
-		return SCE_NP_COMMUNITY_ERROR_TOO_MANY_NPID;
 	}
 
 	auto trans_ctx = idm::get<tus_transaction_ctx>(transId);
@@ -1131,24 +1262,12 @@ error_code sceNpTusGetFriendsDataStatusAsync(s32 transId, SceNpTusSlotId slotId,
 template<typename T>
 error_code scenp_tus_delete_multislot_data(s32 transId, T targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, s32 arrayNum, vm::ptr<void> option, bool vuser, bool async)
 {
-	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
-
-	if (!nph.is_NP_TUS_init)
-	{
-		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
-	}
-
-	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
-	}
-
-	if (!targetNpId || !slotIdArray || arrayNum < 0)
+	if (!slotIdArray)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
 	}
 
-	if (option || !is_slot_array_valid(slotIdArray, arrayNum))
+	if (arrayNum == 0 || option)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
 	}
@@ -1156,6 +1275,24 @@ error_code scenp_tus_delete_multislot_data(s32 transId, T targetNpId, vm::cptr<S
 	if (arrayNum > SCE_NP_TUS_MAX_SLOT_NUM_PER_TRANS)
 	{
 		return SCE_NP_COMMUNITY_ERROR_TOO_MANY_SLOTID;
+	}
+
+	if (!is_slot_array_valid(slotIdArray, arrayNum))
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+	}
+
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_TUS_init)
+	{
+		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
+
+	// Probable vsh behaviour
+	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
 	auto trans_ctx = idm::get<tus_transaction_ctx>(transId);

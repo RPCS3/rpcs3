@@ -652,6 +652,11 @@ std::string fmt::to_lower(std::string_view string)
 	return result;
 }
 
+std::string fmt::truncate(std::string_view src, usz length)
+{
+	return std::string(src.begin(), src.begin() + std::min(src.size(), length));
+}
+
 bool fmt::match(const std::string& source, const std::string& mask)
 {
 	usz source_position = 0, mask_position = 0;
