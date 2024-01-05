@@ -178,6 +178,8 @@ namespace fmt
 	std::string to_upper(std::string_view string);
 	std::string to_lower(std::string_view string);
 
+	std::string truncate(std::string_view src, usz length);
+
 	bool match(const std::string& source, const std::string& mask);
 
 	struct buf_to_hexstring

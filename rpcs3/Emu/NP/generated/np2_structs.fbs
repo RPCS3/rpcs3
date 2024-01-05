@@ -466,3 +466,9 @@ table TusDeleteMultiSlotDataRequest {
 	slotIdArray:[int32];
 }
 
+table SetPresenceRequest {
+	title:string;
+	status:string;
+	comment:string;
+	data:[uint8];
+}
