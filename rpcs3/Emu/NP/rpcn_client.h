@@ -464,7 +464,7 @@ namespace rpcn
 		bool send_room_message(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SendRoomMessageRequest* req);
 		bool req_sign_infos(u32 req_id, const std::string& npid);
 		bool req_ticket(u32 req_id, const std::string& service_id, const std::vector<u8>& cookie);
-		bool sendmessage(const message_data& msg_data, const std::set<std::string>& npids);
+		bool send_message(const message_data& msg_data, const std::set<std::string>& npids);
 		bool get_board_infos(u32 req_id, const SceNpCommunicationId& communication_id, SceNpScoreBoardId board_id);
 		bool record_score(u32 req_id, const SceNpCommunicationId& communication_id, SceNpScoreBoardId board_id, SceNpScorePcId char_id, SceNpScoreValue score, const std::optional<std::string> comment, const std::optional<std::vector<u8>> score_data);
 		bool get_score_range(u32 req_id, const SceNpCommunicationId& communication_id, SceNpScoreBoardId board_id, u32 start_rank, u32 num_rank, bool with_comment, bool with_gameinfo);

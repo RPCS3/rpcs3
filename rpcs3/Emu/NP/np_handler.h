@@ -133,6 +133,7 @@ namespace np
 		void set_message_selected(SceNpBasicAttachmentDataId id, u64 msg_id);
 		std::optional<std::shared_ptr<std::pair<std::string, message_data>>> get_message_selected(SceNpBasicAttachmentDataId id);
 		void clear_message_selected(SceNpBasicAttachmentDataId id);
+		void send_message(const message_data& msg_data, const std::set<std::string>& npids);
 
 		// Those should probably be under match2 ctx
 		vm::ptr<SceNpMatching2RoomEventCallback> room_event_cb{}; // Room events

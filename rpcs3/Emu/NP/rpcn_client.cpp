@@ -1772,7 +1772,7 @@ namespace rpcn
 		return forge_send(CommandType::RequestTicket, req_id, data);
 	}
 
-	bool rpcn_client::sendmessage(const message_data& msg_data, const std::set<std::string>& npids)
+	bool rpcn_client::send_message(const message_data& msg_data, const std::set<std::string>& npids)
 	{
 		flatbuffers::FlatBufferBuilder builder(1024);
 
