@@ -970,6 +970,11 @@ namespace np
 		}
 	}
 
+	void np_handler::send_message(const message_data& msg_data, const std::set<std::string>& npids)
+	{
+		get_rpcn()->send_message(msg_data, npids);
+	}
+
 	void np_handler::operator()()
 	{
 		if (g_cfg.net.psn_status != np_psn_status::psn_rpcn)
@@ -1100,6 +1105,7 @@ namespace np
 							switch (msg->second.mainType)
 							{
 							case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_DATA_ATTACHMENT:
+							case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_URL_ATTACHMENT:
 								event = SCE_NP_BASIC_EVENT_INCOMING_ATTACHMENT;
 								break;
 							case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE:
@@ -1109,15 +1115,16 @@ namespace np
 								event = (msg->second.msgFeatures & SCE_NP_BASIC_MESSAGE_FEATURES_BOOTABLE) ? SCE_NP_BASIC_EVENT_INCOMING_BOOTABLE_CUSTOM_DATA_MESSAGE : SCE_NP_BASIC_EVENT_INCOMING_CUSTOM_DATA_MESSAGE;
 								break;
 							case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_GENERAL:
-							case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_ADD_FRIEND:
-							case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_URL_ATTACHMENT:
 								event = SCE_NP_BASIC_EVENT_MESSAGE;
+								break;
+							case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_ADD_FRIEND:
 							default:
 								continue;
 							}
 
 							basic_event to_add{};
 							to_add.event = event;
+							to_add.data = std::move(msg->second.data);
 							strcpy_trunc(to_add.from.userId.handle.data, msg->first);
 							strcpy_trunc(to_add.from.name.data, msg->first);
 
@@ -1319,7 +1326,7 @@ namespace np
 			return SCE_NP_BASIC_ERROR_NOT_CONNECTED;
 		}
 
-		auto friend_infos = rpcn->get_friend_presence_by_npid(std::string(reinterpret_cast<const char*>(&npid.handle.data[0])));
+		auto friend_infos = rpcn->get_friend_presence_by_npid(std::string(npid.handle.data));
 		if (!friend_infos)
 		{
 			return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
