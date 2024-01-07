@@ -1124,7 +1124,7 @@ namespace np
 
 							basic_event to_add{};
 							to_add.event = event;
-							to_add.data = std::move(msg->second.data);
+							to_add.data = msg->second.data;
 							strcpy_trunc(to_add.from.userId.handle.data, msg->first);
 							strcpy_trunc(to_add.from.name.data, msg->first);
 
