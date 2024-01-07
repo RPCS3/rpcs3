@@ -193,36 +193,28 @@ u64 lv2_fs_mount_info_map::get_all(CellFsMountInfo* info, u64 len) const
 	if (!info)
 		return map.size();
 
-	struct mount_info
-	{
-		const std::string_view path, filesystem, dev_name;
-		const be_t<u32> unk1 = 0, unk2 = 0, unk3 = 0, unk4 = 0, unk5 = 0;
-	};
-
 	u64 count = 0;
 
-	auto push_info = [&](mount_info&& data)
+	for (const auto& [path, mount_info] : map)
 	{
 		if (count >= len)
-			return;
+			break;
 
-		strcpy_trunc(info->mount_path, data.path);
-		strcpy_trunc(info->filesystem, data.filesystem);
-		strcpy_trunc(info->dev_name, data.dev_name);
-		std::memcpy(&info->unk1, &data.unk1, sizeof(be_t<u32>) * 5);
+		strcpy_trunc(info[count].mount_path, path);
+		strcpy_trunc(info[count].filesystem, mount_info.file_system);
+		strcpy_trunc(info[count].dev_name, mount_info.device);
+		if (mount_info.read_only)
+			info[count].unk[4] |= 0x10000000;
 
-		info++, count++;
-	};
-
-	for (const auto& [path, mi] : map)
-	{
-		if (mi == &g_mp_sys_dev_root || mi == &g_mp_sys_dev_flash)
-			push_info(mount_info{.path = path, .filesystem = mi.file_system, .dev_name = mi.device, .unk5 = 0x10000000});
-		else
-			push_info(mount_info{.path = path, .filesystem = mi.file_system, .dev_name = mi.device});
+		count++;
 	}
 
 	return count;
+}
+
+bool lv2_fs_mount_info_map::is_device_mounted(std::string_view device_name) const
+{
+	return std::any_of(map.begin(), map.end(), [&](const decltype(map)::value_type& info) { return info.second.device == device_name; });
 }
 
 bool lv2_fs_mount_info_map::vfs_unmount(std::string_view vpath, bool remove_from_map)
@@ -3151,7 +3143,7 @@ error_code sys_fs_newfs(ppu_thread& ppu, vm::cptr<char> dev_name, vm::cptr<char>
 	if (mp == &g_mp_sys_no_device)
 		return {CELL_ENXIO, device_name};
 
-	if (mp == &g_mp_sys_dev_root || !lock.try_lock())
+	if (g_fxo->get<lv2_fs_mount_info_map>().is_device_mounted(device_name) || !lock.try_lock())
 		return {CELL_EBUSY, device_name};
 
 	if (vfs_path.empty())
@@ -3215,7 +3207,7 @@ error_code sys_fs_mount(ppu_thread& ppu, vm::cptr<char> dev_name, vm::cptr<char>
 	if (mp == &g_mp_sys_no_device)
 		return {CELL_ENXIO, device_name};
 
-	if (mp == &g_mp_sys_dev_root || !lock.try_lock())
+	if (g_fxo->get<lv2_fs_mount_info_map>().is_device_mounted(device_name) || !lock.try_lock())
 		return {CELL_EBUSY, device_name};
 
 	if (vfs_path.empty())
@@ -3279,11 +3271,11 @@ error_code sys_fs_mount(ppu_thread& ppu, vm::cptr<char> dev_name, vm::cptr<char>
 	return CELL_OK;
 }
 
-error_code sys_fs_unmount(ppu_thread& ppu, vm::cptr<char> path, s32 unk1, s32 unk2)
+error_code sys_fs_unmount(ppu_thread& ppu, vm::cptr<char> path, s32 unk1, s32 force)
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_fs.warning("sys_fs_unmount(path=%s, unk1=0x%x, unk2=0x%x)", path, unk1, unk2);
+	sys_fs.warning("sys_fs_unmount(path=%s, unk1=0x%x, force=%d)", path, unk1, force);
 
 	const auto [path_error, vpath] = translate_to_str(path);
 
@@ -3301,7 +3293,7 @@ error_code sys_fs_unmount(ppu_thread& ppu, vm::cptr<char> path, s32 unk1, s32 un
 	if (mp == &g_mp_sys_no_device)
 		return {CELL_EINVAL, vpath};
 
-	if (mp == &g_mp_sys_dev_root || !lock.try_lock())
+	if (mp == &g_mp_sys_dev_root || (!lock.try_lock() && !force))
 		return {CELL_EBUSY, vpath};
 
 	if (!lv2_fs_mount_info_map::vfs_unmount(vpath))
