@@ -989,6 +989,22 @@ error_code sceNpBasicSendMessage(vm::cptr<SceNpId> to, vm::cptr<void> data, u32 
 		return SCE_NP_BASIC_ERROR_EXCEEDS_MAX;
 	}
 
+	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return not_an_error(SCE_NP_BASIC_ERROR_NOT_CONNECTED);
+	}
+
+	message_data msg_data = {
+		.commId = nph.get_basic_handler_context(),
+		.msgId = 0,
+		.mainType = SCE_NP_BASIC_MESSAGE_MAIN_TYPE_GENERAL,
+		.subType = SCE_NP_BASIC_MESSAGE_GENERAL_SUBTYPE_NONE,
+		.msgFeatures = {}};
+	std::set<std::string> npids;
+	npids.insert(std::string(to->handle.data));
+
+	nph.send_message(msg_data, npids);
+
 	return CELL_OK;
 }
 
