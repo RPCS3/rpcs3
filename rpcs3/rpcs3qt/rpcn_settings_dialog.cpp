@@ -800,6 +800,7 @@ void rpcn_account_edit_dialog::change_password()
 
 			QMessageBox::information(this, tr("Password Reset Token Sent!"), tr("The reset password token has successfully been sent!"), QMessageBox::Ok);
 		}
+		[[fallthrough]];
 	}
 	case QMessageBox::Yes:
 	{
@@ -844,6 +845,7 @@ void rpcn_account_edit_dialog::change_password()
 
 			QMessageBox::information(this, tr("Password Successfully Changed!"), tr("Your password has been successfully changed!"), QMessageBox::Ok);
 		}
+		break;
 	}
 	default:
 		return;

@@ -1238,6 +1238,7 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		default:
 			break;
 		}
+		break;
 	case emu_settings_type::KeyboardType:
 		switch (static_cast<CellKbMappingType>(index))
 		{
