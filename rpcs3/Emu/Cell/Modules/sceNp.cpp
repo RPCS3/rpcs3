@@ -965,7 +965,7 @@ error_code sceNpBasicSetPresenceDetails2(vm::cptr<SceNpBasicPresenceDetails2> pr
 
 error_code sceNpBasicSendMessage(vm::cptr<SceNpId> to, vm::cptr<void> data, u32 size)
 {
-	sceNp.todo("sceNpBasicSendMessage(to=*0x%x, data=*0x%x, size=%d)", to, data, size);
+	sceNp.warning("sceNpBasicSendMessage(to=*0x%x, data=*0x%x, size=%d)", to, data, size);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -2742,10 +2742,14 @@ error_code sceNpLookupNpId(s32 transId, vm::cptr<SceNpOnlineId> onlineId, vm::pt
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
+	// Hack - better than nothing for now
+	memset(npId.get_ptr(), 0, sizeof(SceNpId));
+	memcpy(npId->handle.data, onlineId->data, sizeof(npId->handle.data) - 1);
+
 	return CELL_OK;
 }
 
-error_code sceNpLookupNpIdAsync(s32 transId, vm::ptr<SceNpOnlineId> onlineId, vm::ptr<SceNpId> npId, s32 prio, vm::ptr<void> option)
+error_code sceNpLookupNpIdAsync(s32 transId, vm::cptr<SceNpOnlineId> onlineId, vm::ptr<SceNpId> npId, s32 prio, vm::ptr<void> option)
 {
 	sceNp.todo("sceNpLookupNpIdAsync(transId=%d, onlineId=*0x%x, npId=*0x%x, prio=%d, option=*0x%x)", transId, onlineId, npId, prio, option);
 
@@ -2770,6 +2774,10 @@ error_code sceNpLookupNpIdAsync(s32 transId, vm::ptr<SceNpOnlineId> onlineId, vm
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
+
+	// Hack - better than nothing for now
+	memset(npId.get_ptr(), 0, sizeof(SceNpId));
+	memcpy(npId->handle.data, onlineId->data, sizeof(npId->handle.data) - 1);
 
 	return CELL_OK;
 }
