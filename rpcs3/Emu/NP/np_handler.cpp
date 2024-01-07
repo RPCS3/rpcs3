@@ -823,8 +823,8 @@ namespace np
 
 		for (auto& [npid, pr_info] : current_presences)
 		{
-			// Only communicates info about online users with presence
-			if (!pr_info.online || pr_info.pr_com_id.data[0] == 0)
+			// Only communicates info about online users
+			if (!pr_info.online)
 			{
 				continue;
 			}

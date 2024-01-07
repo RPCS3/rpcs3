@@ -861,7 +861,7 @@ error_code sceNpBasicSetPresence(vm::cptr<u8> data, u32 size)
 	}
 
 	// Not checked by API
-	ensure(data);
+	ensure(data || !size, "Access violation");
 
 	std::vector pr_data(data.get_ptr(), data.get_ptr() + size);
 	nph.set_presence(std::nullopt, pr_data);
@@ -891,7 +891,7 @@ error_code sceNpBasicSetPresenceDetails(vm::cptr<SceNpBasicPresenceDetails> pres
 	}
 
 	// Not checked by API
-	ensure(pres);
+	ensure(pres, "Access violation");
 
 	if (pres->size > SCE_NP_BASIC_MAX_PRESENCE_SIZE)
 	{
@@ -938,7 +938,7 @@ error_code sceNpBasicSetPresenceDetails2(vm::cptr<SceNpBasicPresenceDetails2> pr
 	}
 
 	// Not checked by API
-	ensure(pres);
+	ensure(pres, "Access violation");
 
 	if (pres->size > SCE_NP_BASIC_MAX_PRESENCE_SIZE)
 	{
