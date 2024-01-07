@@ -964,7 +964,7 @@ namespace rpcn
 				}
 
 				friend_online_data infos(online, std::move(pr_com_id), std::move(pr_title), std::move(pr_status), std::move(pr_comment), std::move(pr_data));
-				friends.insert(std::make_pair(std::move(friend_name), std::move(infos)));
+				friends.insert_or_assign(std::move(friend_name), std::move(infos));
 			}
 		};
 
@@ -2262,7 +2262,7 @@ namespace rpcn
 
 			friend_infos.requests_received.erase(username);
 			friend_infos.requests_sent.erase(username);
-			friend_infos.friends.insert(std::make_pair(username, friend_online_data(online, 0)));
+			friend_infos.friends.insert_or_assign(username, friend_online_data(online, 0));
 			call_callbacks(ntype, username, online);
 
 			break;
