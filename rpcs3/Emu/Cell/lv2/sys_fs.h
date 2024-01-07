@@ -250,7 +250,7 @@ public:
 	static std::string get_normalized_path(std::string_view path);
 
 	// Get the device's root path (e.g. "/dev_hdd0") from a given path
-	static std::string_view get_device_root(std::string_view path);
+	static std::string get_device_root(std::string_view filename);
 
 	// Filename can be either a path starting with '/' or a CELL_FS device name
 	// This should be used only when handling devices that are not mounted
