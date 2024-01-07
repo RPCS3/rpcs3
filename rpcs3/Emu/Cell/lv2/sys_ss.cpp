@@ -266,6 +266,7 @@ error_code sys_ss_appliance_info_manager(u32 code, vm::ptr<u8> buffer)
 	case 0x19006:
 	{
 		// qa values (dex only) ??
+		[[fallthrough]];
 	}
 	default: sys_ss.todo("sys_ss_appliance_info_manager(code=0x%x, buffer=*0x%x)", code, buffer);
 	}
