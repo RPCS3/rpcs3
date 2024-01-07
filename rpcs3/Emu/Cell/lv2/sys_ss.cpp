@@ -498,7 +498,7 @@ error_code sys_ss_update_manager(u64 pkg_id, u64 a1, u64 a2, u64 a3, u64 a4, u64
 		if (!addr_ptr)
 			return CELL_EFAULT;
 
-		vm::write64(addr_ptr, 0x340ULL << 40); // 3.40
+		vm::write64(addr_ptr, 0x30040ULL << 32); // 3.40
 
 		break;
 	}
