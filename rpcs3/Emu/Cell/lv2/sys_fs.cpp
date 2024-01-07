@@ -258,13 +258,15 @@ std::string lv2_fs_object::get_normalized_path(std::string_view path)
 	return normalized_path.empty() ? "/" : normalized_path;
 }
 
-std::string_view lv2_fs_object::get_device_root(std::string_view path)
+std::string lv2_fs_object::get_device_root(std::string_view filename)
 {
+	std::string path = get_normalized_path(filename); // Prevent getting fooled by ".." trick such as "/dev_usb000/../dev_flash"
+
 	if (const auto first = path.find_first_not_of("/"sv); first != umax)
 	{
 		if (const auto pos = path.substr(first).find_first_of("/"sv); pos != umax)
 			path = path.substr(0, first + pos);
-		path.remove_prefix(std::max<usz>(0, first - 1)); // Remove duplicate leading '/' while keeping only one
+		path = path.substr(std::max<std::make_signed_t<usz>>(0, first - 1)); // Remove duplicate leading '/' while keeping only one
 	}
 	else
 	{
@@ -283,7 +285,7 @@ lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename, std::string
 		filename.remove_prefix(cell_fs_path.size());
 
 	const bool is_path = filename.starts_with("/"sv);
-	std::string mp_name = std::string(is_path ? get_device_root(filename) : filename);
+	std::string mp_name = is_path ? get_device_root(filename) : std::string(filename);
 
 	const auto check_mp = [&]()
 	{
@@ -2033,6 +2035,16 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 		arg->out_block_size = mp->block_size;
 		arg->out_block_count = (40ull * 1024 * 1024 * 1024 - 1) / mp->block_size; // Read explanation in cellHddGameCheck
 		return CELL_OK;
+	}
+
+	case 0xc0000003: // cellFsUtilitySetFakeSize
+	{
+		break;
+	}
+
+	case 0xc0000004: // cellFsUtilityGetFakeSize
+	{
+		break;
 	}
 
 	case 0xc0000006: // Unknown
