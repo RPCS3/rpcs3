@@ -545,6 +545,13 @@ namespace utils
 			}
 
 			AVPacket* packet = av_packet_alloc();
+			if (!packet)
+			{
+				media_log.error("audio_decoder: Error allocating the packet");
+				has_error = true;
+				return;
+			}
+
 			std::unique_ptr<AVPacket, decltype([](AVPacket* p){av_packet_unref(p);})> packet_(packet);
 
 			// Iterate through frames
