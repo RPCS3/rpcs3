@@ -1413,6 +1413,13 @@ namespace rpcn
 			std::vector<flatbuffers::Offset<flatbuffers::String>> davec;
 			for (u32 i = 0; i < req->allowedUserNum; i++)
 			{
+				// Some games just give us garbage, make sure npid is valid before passing
+				// Ex: Aquapazza (gives uninitialized buffer on the stack and allowedUserNum is hardcoded to 100)
+				if (!np::is_valid_npid(req->allowedUser[i]))
+				{
+					continue;
+				}
+
 				auto bin = builder.CreateString(req->allowedUser[i].handle.data);
 				davec.push_back(bin);
 			}
@@ -1424,6 +1431,11 @@ namespace rpcn
 			std::vector<flatbuffers::Offset<flatbuffers::String>> davec;
 			for (u32 i = 0; i < req->blockedUserNum; i++)
 			{
+				if (!np::is_valid_npid(req->blockedUser[i]))
+				{
+					continue;
+				}
+
 				auto bin = builder.CreateString(req->blockedUser[i].handle.data);
 				davec.push_back(bin);
 			}
