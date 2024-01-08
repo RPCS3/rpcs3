@@ -113,7 +113,9 @@ bool check_movie_path(const std::string& file_path)
 
 std::string get_available_movie_path(const std::string& filename)
 {
-	const std::string movie_dir = "/dev_hdd0/movie/";
+	// TODO: Find out how to build this path properly. Apparently real hardware doesn't add a suffix,
+	//       but just randomly puts each video into a separate 2-Letter subdirectory like /video/hd/ or /video/ee/
+	const std::string movie_dir = "/dev_hdd0/video/";
 	std::string dst_path = vfs::get(movie_dir + filename);
 
 	// Do not overwrite existing files. Add a suffix instead.
