@@ -22,6 +22,7 @@ extern "C" {
 #include "libswresample/swresample.h"
 }
 constexpr int averror_eof = AVERROR_EOF; // workaround for old-style-cast error
+constexpr int averror_invalid_data = AVERROR_INVALIDDATA; // workaround for old-style-cast error
 #ifdef _MSC_VER
 #pragma warning(pop)
 #else
@@ -595,6 +596,18 @@ namespace utils
 			{
 				if (int err = avcodec_send_packet(av.audio.context, packet); err < 0)
 				{
+					if (is_first_error)
+					{
+						is_first_error = false;
+
+						if (err == averror_invalid_data)
+						{
+							// Some mp3s contain some invalid data at the beginning of the stream. They work fine if we just ignore them.
+							// So let's skip the first invalid data error. Maybe there is a better way, but let's just roll with it for now.
+							media_log.warning("audio_decoder: Ignoring first error: %d='%s'", err, av_error_to_string(err));
+							continue;
+						}
+					}
 					media_log.error("audio_decoder: Queuing error: %d='%s'", err, av_error_to_string(err));
 					has_error = true;
 					return;
