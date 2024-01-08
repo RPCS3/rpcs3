@@ -451,7 +451,11 @@ public:
 				}
 
 				AVPacket* packet = av_packet_alloc();
-				std::unique_ptr<AVPacket, decltype([](AVPacket* p){av_packet_unref(p);})> packet_(packet);
+				std::unique_ptr<AVPacket, decltype([](AVPacket* p)
+				{
+					av_packet_unref(p);
+					av_packet_free(&p);
+				})> packet_(packet);
 
 				if (just_started && just_finished)
 				{

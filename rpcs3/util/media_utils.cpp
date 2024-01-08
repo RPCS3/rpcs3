@@ -54,6 +54,15 @@ namespace utils
 		}
 	}
 
+	const auto free_packet = [](AVPacket* p)
+	{
+		if (p)
+		{
+			av_packet_unref(p);
+			av_packet_free(&p);
+		}
+	};
+
 	template <>
 	std::string media_info::get_metadata(const std::string& key, const std::string& def) const
 	{
@@ -256,16 +265,8 @@ namespace utils
 				av_frame_unref(video.frame);
 				av_frame_free(&video.frame);
 			}
-			if (audio.packet)
-			{
-				av_packet_unref(audio.packet);
-				av_packet_free(&audio.packet);
-			}
-			if (video.packet)
-			{
-				av_packet_unref(video.packet);
-				av_packet_free(&video.packet);
-			}
+			free_packet(audio.packet);
+			free_packet(video.packet);
 			if (swr)
 				swr_free(&swr);
 			if (sws)
@@ -552,7 +553,7 @@ namespace utils
 				return;
 			}
 
-			std::unique_ptr<AVPacket, decltype([](AVPacket* p){av_packet_unref(p);})> packet_(packet);
+			std::unique_ptr<AVPacket, decltype(free_packet)> packet_(packet);
 
 			// Iterate through frames
 			while (thread_ctrl::state() != thread_state::aborting && av_read_frame(av.format_context, packet) >= 0)
