@@ -1073,7 +1073,7 @@ namespace np
 						}
 						else
 						{
-							if (basic_handler.context_sensitive && !pr_info.pr_com_id.data[0] == 0)
+							if (basic_handler.context_sensitive && pr_info.online)
 							{
 								to_add.event = SCE_NP_BASIC_EVENT_OUT_OF_CONTEXT;
 							}
