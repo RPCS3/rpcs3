@@ -63,6 +63,34 @@ namespace utils
 		}
 	};
 
+	const auto av_log_callback = [](void* avcl, int level, const char* fmt, va_list vl) -> void
+	{
+		if (level > av_log_get_level())
+		{
+			return;
+		}
+
+		constexpr int line_size = 1024;
+		char line[line_size]{};
+		int print_prefix = 1;
+
+		if (int err = av_log_format_line2(avcl, level, fmt, vl, line, line_size, &print_prefix); err < 0)
+		{
+			media_log.error("av_log: av_log_format_line2 failed. Error: %d='%s'", err, av_error_to_string(err));
+			return;
+		}
+
+		std::string msg = line;
+		fmt::trim_back(msg, "\n\r\t ");
+
+		if (level <= AV_LOG_ERROR)
+			media_log.error("av_log: %s", msg);
+		else if (level <= AV_LOG_WARNING)
+			media_log.warning("av_log: %s", msg);
+		else
+			media_log.notice("av_log: %s", msg);
+	};
+
 	template <>
 	std::string media_info::get_metadata(const std::string& key, const std::string& def) const
 	{
@@ -138,6 +166,7 @@ namespace utils
 		}
 
 		// Only print FFMPEG errors, fatals and panics
+		av_log_set_callback(av_log_callback);
 		av_log_set_level(AV_LOG_ERROR);
 
 		AVDictionary* av_dict_opts = nullptr;
@@ -440,6 +469,11 @@ namespace utils
 		const auto decode_track = [this](const std::string& path)
 		{
 			media_log.notice("audio_decoder: decoding %s", path);
+
+			// Only print FFMPEG errors, fatals and panics
+			av_log_set_callback(av_log_callback);
+			av_log_set_level(AV_LOG_ERROR);
+
 			scoped_av av;
 
 			// Get format from audio file
@@ -554,6 +588,7 @@ namespace utils
 			}
 
 			std::unique_ptr<AVPacket, decltype(free_packet)> packet_(packet);
+			bool is_first_error = true;
 
 			// Iterate through frames
 			while (thread_ctrl::state() != thread_state::aborting && av_read_frame(av.format_context, packet) >= 0)
@@ -834,33 +869,8 @@ namespace utils
 		{
 			m_running = true;
 
-			av_log_set_callback([](void* avcl, int level, const char* fmt, va_list vl) -> void
-			{
-				if (level > av_log_get_level())
-				{
-					return;
-				}
-
-				constexpr int line_size = 1024;
-				char line[line_size]{};
-				int print_prefix = 1;
-
-				if (int err = av_log_format_line2(avcl, level, fmt, vl, line, line_size, &print_prefix); err < 0)
-				{
-					media_log.error("av_log: av_log_format_line2 failed. Error: %d='%s'", err, av_error_to_string(err));
-					return;
-				}
-
-				std::string msg = line;
-				fmt::trim_back(msg, "\n\r\t ");
-
-				if (level <= AV_LOG_ERROR)
-					media_log.error("av_log: %s", msg);
-				else if (level <= AV_LOG_WARNING)
-					media_log.warning("av_log: %s", msg);
-				else
-					media_log.notice("av_log: %s", msg);
-			});
+			// Only print FFMPEG errors, fatals and panics
+			av_log_set_callback(av_log_callback);
 			av_log_set_level(AV_LOG_ERROR);
 
 			// Reset variables at all costs
