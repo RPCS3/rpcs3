@@ -879,7 +879,7 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 					{
 						curr_find->type = CELL_SEARCH_CONTENTTYPE_MUSIC;
 
-						const std::string path = vfs::get(vpath) + "/" + item.name;
+						const std::string path = vfs::get(item_path);
 						const auto [success, mi] = utils::get_media_info(path, 1); // AVMEDIA_TYPE_AUDIO
 						if (!success)
 						{
@@ -900,7 +900,7 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 					{
 						curr_find->type = CELL_SEARCH_CONTENTTYPE_VIDEO;
 
-						const std::string path = vfs::get(vpath) + "/" + item.name;
+						const std::string path = vfs::get(item_path);
 						const auto [success, mi] = utils::get_media_info(path, 0); // AVMEDIA_TYPE_VIDEO
 						if (!success)
 						{
@@ -1120,7 +1120,7 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 					{
 						curr_find->type = CELL_SEARCH_CONTENTTYPE_MUSIC;
 
-						const std::string path = vfs::get(vpath) + "/" + item.name;
+						const std::string path = vfs::get(item_path);
 						const auto [success, mi] = utils::get_media_info(path, 1); // AVMEDIA_TYPE_AUDIO
 						if (!success)
 						{
@@ -1141,7 +1141,7 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 					{
 						curr_find->type = CELL_SEARCH_CONTENTTYPE_VIDEO;
 
-						const std::string path = vfs::get(vpath) + "/" + item.name;
+						const std::string path = vfs::get(item_path);
 						const auto [success, mi] = utils::get_media_info(path, 0); // AVMEDIA_TYPE_VIDEO
 						if (!success)
 						{
