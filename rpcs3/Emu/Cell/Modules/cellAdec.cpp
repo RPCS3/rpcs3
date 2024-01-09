@@ -278,7 +278,7 @@ public:
 #endif
 	AVCodecContext* ctx = nullptr;
 	AVFormatContext* fmt = nullptr;
-	u8* io_buf;
+	u8* io_buf = nullptr;
 
 	struct AudioReader
 	{
@@ -372,15 +372,16 @@ public:
 		if (ctx)
 		{
 			avcodec_close(ctx);
-			avformat_close_input(&fmt);
+			avcodec_free_context(&ctx);
+		}
+		if (io_buf)
+		{
+			av_freep(&io_buf);
 		}
 		if (fmt)
 		{
-			if (io_buf)
-			{
-				av_free(io_buf);
-			}
-			if (fmt->pb) av_free(fmt->pb);
+			if (fmt->pb) av_freep(&fmt->pb);
+			avformat_close_input(&fmt);
 			avformat_free_context(fmt);
 		}
 	}
