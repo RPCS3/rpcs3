@@ -1465,12 +1465,12 @@ error_code sceNpMatching2GetRoomPasswordLocal(SceNpMatching2ContextId ctxId, Sce
 
 	if (password)
 	{
-		*withPassword = true;
+		if (withPassword) *withPassword = true;
 		memcpy(roomPassword.get_ptr(), &*password, sizeof(SceNpMatching2SessionPassword));
 	}
 	else
 	{
-		*withPassword = false;
+		if (withPassword) *withPassword = false;
 	}
 
 	return CELL_OK;
