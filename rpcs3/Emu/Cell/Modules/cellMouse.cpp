@@ -259,7 +259,7 @@ error_code cellMouseGetData(u32 port_no, vm::ptr<CellMouseData> data)
 
 error_code cellMouseGetDataList(u32 port_no, vm::ptr<CellMouseDataList> data)
 {
-	sys_io.notice("cellMouseGetDataList(port_no=%d, data=0x%x)", port_no, data);
+	sys_io.trace("cellMouseGetDataList(port_no=%d, data=0x%x)", port_no, data);
 
 	auto& handler = g_fxo->get<MouseHandlerBase>();
 
@@ -406,7 +406,7 @@ error_code cellMouseGetTabletDataList(u32 port_no, vm::ptr<CellMouseTabletDataLi
 
 error_code cellMouseGetRawData(u32 port_no, vm::ptr<CellMouseRawData> data)
 {
-	sys_io.notice("cellMouseGetRawData(port_no=%d, data=*0x%x)", port_no, data);
+	sys_io.trace("cellMouseGetRawData(port_no=%d, data=*0x%x)", port_no, data);
 
 	auto& handler = g_fxo->get<MouseHandlerBase>();
 
