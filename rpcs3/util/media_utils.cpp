@@ -302,13 +302,22 @@ namespace utils
 			if (sws)
 				sws_freeContext(sws);
 			if (audio.context)
+			{
 				avcodec_close(audio.context);
+				avcodec_free_context(&audio.context);
+			}
 			if (video.context)
+			{
 				avcodec_close(video.context);
+				avcodec_free_context(&video.context);
+			}
 			// AVCodec is managed by libavformat, no need to free it
 			// see: https://stackoverflow.com/a/18047320
 			if (format_context)
+			{
+				avformat_close_input(&format_context);
 				avformat_free_context(format_context);
+			}
 			//if (stream)
 			//	av_free(stream);
 			if (kill_callback)
@@ -626,7 +635,7 @@ namespace utils
 					}
 
 					// Resample frames
-					u8* buffer;
+					u8* buffer = nullptr;
 					const int align = 1;
 					const int buffer_size = av_samples_alloc(&buffer, nullptr, dst_channels, av.audio.frame->nb_samples, dst_format, align);
 					if (buffer_size < 0)
@@ -642,7 +651,7 @@ namespace utils
 						media_log.error("audio_decoder: Error converting frame: %d='%s'", frame_count, av_error_to_string(frame_count));
 						has_error = true;
 						if (buffer)
-							av_free(buffer);
+							av_freep(&buffer);
 						return;
 					}
 
@@ -660,7 +669,7 @@ namespace utils
 					}
 
 					if (buffer)
-						av_free(buffer);
+						av_freep(&buffer);
 
 					media_log.notice("audio_decoder: decoded frame_count=%d buffer_size=%d timestamp_us=%d", frame_count, buffer_size, av.audio.frame->best_effort_timestamp);
 				}
