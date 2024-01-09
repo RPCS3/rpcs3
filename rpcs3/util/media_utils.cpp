@@ -162,7 +162,7 @@ namespace utils
 		if (av_media_type == AVMEDIA_TYPE_UNKNOWN) // Let's use this for image info
 		{
 			const bool success = Emu.GetCallbacks().get_image_info(path, info.sub_type, info.width, info.height, info.orientation);
-			if (!success) media_log.error("get_image_info: failed to get image info for '%s'", path);
+			if (!success) media_log.error("get_media_info: failed to get image info for '%s'", path);
 			return { success, std::move(info) };
 		}
 
@@ -173,7 +173,7 @@ namespace utils
 		AVDictionary* av_dict_opts = nullptr;
 		if (int err = av_dict_set(&av_dict_opts, "probesize", "96", 0); err < 0)
 		{
-			media_log.error("av_dict_set: returned with error=%d='%s'", err, av_error_to_string(err));
+			media_log.error("get_media_info: av_dict_set: returned with error=%d='%s'", err, av_error_to_string(err));
 			return { false, std::move(info) };
 		}
 
@@ -185,7 +185,7 @@ namespace utils
 			// Failed to open file
 			av_dict_free(&av_dict_opts);
 			avformat_free_context(av_format_ctx);
-			media_log.notice("avformat_open_input: could not open file. error=%d='%s' file='%s'", err, av_error_to_string(err), path);
+			media_log.notice("get_media_info: avformat_open_input: could not open file. error=%d='%s' file='%s'", err, av_error_to_string(err), path);
 			return { false, std::move(info) };
 		}
 		av_dict_free(&av_dict_opts);
@@ -196,7 +196,7 @@ namespace utils
 			// Failed to load stream information
 			avformat_close_input(&av_format_ctx);
 			avformat_free_context(av_format_ctx);
-			media_log.notice("avformat_find_stream_info: could not load stream information. error=%d='%s' file='%s'", err, av_error_to_string(err), path);
+			media_log.notice("get_media_info: avformat_find_stream_info: could not load stream information. error=%d='%s' file='%s'", err, av_error_to_string(err), path);
 			return { false, std::move(info) };
 		}
 
@@ -228,7 +228,7 @@ namespace utils
 			// Failed to find a stream
 			avformat_close_input(&av_format_ctx);
 			avformat_free_context(av_format_ctx);
-			media_log.notice("Failed to match stream of type %d in file='%s'", av_media_type, path);
+			media_log.notice("get_media_info: Failed to match stream of type %d in file='%s'", av_media_type, path);
 			return { false, std::move(info) };
 		}
 
