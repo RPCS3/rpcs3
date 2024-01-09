@@ -824,6 +824,11 @@ error_code sceNpMatching2GetRoomSlotInfoLocal(SceNpMatching2ContextId ctxId, con
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
 
+	if (!roomSlotInfo)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_ARGUMENT;
+	}
+
 	if (!ctxId)
 	{
 		return SCE_NP_MATCHING2_ERROR_INVALID_CONTEXT_ID;
