@@ -309,6 +309,8 @@ namespace rpcn
 		friend_online_data(bool online, u64 timestamp)
 			: online(online), timestamp(timestamp) {}
 
+		void dump() const;
+
 		bool online = false;
 		u64 timestamp = 0;
 		SceNpCommunicationId pr_com_id{};

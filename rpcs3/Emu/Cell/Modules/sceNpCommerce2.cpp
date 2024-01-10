@@ -214,7 +214,9 @@ error_code sceNpCommerce2InitGetCategoryContentsResult(vm::ptr<SceNpCommerce2Get
 error_code sceNpCommerce2GetCategoryInfo(vm::cptr<SceNpCommerce2GetCategoryContentsResult> result, vm::ptr<SceNpCommerce2CategoryInfo> categoryInfo)
 {
 	sceNpCommerce2.todo("sceNpCommerce2GetCategoryInfo(result=*0x%x, categoryInfo=*0x%x)", result, categoryInfo);
-	return CELL_OK;
+
+	// Hack to stop crashes in some games
+	return SCE_NP_COMMERCE2_ERROR_SERVER_MAINTENANCE;
 }
 
 error_code sceNpCommerce2GetContentInfo(vm::cptr<SceNpCommerce2GetCategoryContentsResult> result, u32 index, vm::ptr<SceNpCommerce2ContentInfo> contentInfo)
