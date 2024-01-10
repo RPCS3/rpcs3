@@ -79,6 +79,11 @@ namespace rpcn
 		return get_localized_string(rpcn_state_to_localized_string_id(state));
 	}
 
+	void friend_online_data::dump() const
+	{
+		rpcn_log.notice("online: %s, pr_com_id: %s, pr_title: %s, pr_status: %s, pr_comment: %s, pr_data: %s", online ? "true" : "false", pr_com_id.data, pr_title, pr_status, pr_comment, fmt::buf_to_hexstring(pr_data.data(), pr_data.size()));
+	}
+
 	constexpr u32 RPCN_PROTOCOL_VERSION = 21;
 	constexpr usz RPCN_HEADER_SIZE      = 15;
 

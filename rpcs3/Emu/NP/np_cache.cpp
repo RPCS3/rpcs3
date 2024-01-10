@@ -11,7 +11,7 @@ namespace np
 {
 	memberbin_cache::memberbin_cache(const SceNpMatching2RoomMemberBinAttrInternal* sce_memberbin)
 	{
-		ensure(sce_memberbin && (sce_memberbin->data.ptr.get_ptr() || !sce_memberbin->data.size));
+		ensure(sce_memberbin && (sce_memberbin->data.ptr || !sce_memberbin->data.size));
 
 		id = sce_memberbin->data.id;
 		updateDate.tick = sce_memberbin->updateDate.tick;

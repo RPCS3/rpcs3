@@ -852,6 +852,8 @@ namespace np
 			queue_basic_event(to_add);
 			send_basic_event(to_add.event, 0, 0);
 		}
+
+		send_basic_event(SCE_NP_BASIC_EVENT_END_OF_INITIAL_PRESENCE, 0, 0);
 	}
 
 	SceNpCommunicationId np_handler::get_basic_handler_context()
