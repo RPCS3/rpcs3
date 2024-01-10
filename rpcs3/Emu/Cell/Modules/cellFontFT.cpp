@@ -5,30 +5,67 @@
 
 LOG_CHANNEL(cellFontFT);
 
-error_code cellFontInitLibraryFreeType()
-{
-	UNIMPLEMENTED_FUNC(cellFontFT);
-	return CELL_OK;
-}
-
 error_code cellFontInitLibraryFreeTypeWithRevision(u64 revisionFlags, vm::ptr<CellFontLibraryConfigFT> config, vm::pptr<CellFontLibrary> lib)
 {
-	cellFontFT.warning("cellFontInitLibraryFreeTypeWithRevision(revisionFlags=0x%llx, config=*0x%x, lib=**0x%x)", revisionFlags, config, lib);
+	cellFontFT.todo("cellFontInitLibraryFreeTypeWithRevision(revisionFlags=0x%llx, config=*0x%x, lib=**0x%x)", revisionFlags, config, lib);
+
+	if (!lib)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	*lib = {};
+
+	if (!config)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (false) // TODO
+	{
+		return CELL_FONT_ERROR_UNINITIALIZED;
+	}
 
 	lib->set(vm::alloc(sizeof(CellFontLibrary), vm::main));
 
 	return CELL_OK;
 }
 
-error_code cellFontFTGetRevisionFlags()
+error_code cellFontInitLibraryFreeType(vm::ptr<CellFontLibraryConfigFT> config, vm::pptr<CellFontLibrary> lib)
 {
-	UNIMPLEMENTED_FUNC(cellFontFT);
-	return CELL_OK;
+	cellFontFT.todo("cellFontInitLibraryFreeType(config=*0x%x, lib=**0x%x)", config, lib);
+
+	uint64_t revisionFlags = 0LL;
+	//cellFontFTGetStubRevisionFlags(&revisionFlags);
+	return cellFontInitLibraryFreeTypeWithRevision(revisionFlags, config, lib);
 }
 
-error_code cellFontFTGetInitializedRevisionFlags()
+void cellFontFTGetRevisionFlags(vm::ptr<u64> revisionFlags)
 {
-	UNIMPLEMENTED_FUNC(cellFontFT);
+	cellFontFT.notice("cellFontFTGetRevisionFlags(revisionFlags=*0x%x)", revisionFlags);
+
+	if (revisionFlags)
+	{
+		*revisionFlags = 0x43;
+	}
+}
+
+error_code cellFontFTGetInitializedRevisionFlags(vm::ptr<u64> revisionFlags)
+{
+	cellFontFT.notice("cellFontFTGetInitializedRevisionFlags(revisionFlags=*0x%x)", revisionFlags);
+
+	if (!revisionFlags)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (false) // TODO
+	{
+		return CELL_FONT_ERROR_UNINITIALIZED;
+	}
+
+	//*revisionFlags = something; // TODO
+
 	return CELL_OK;
 }
 
