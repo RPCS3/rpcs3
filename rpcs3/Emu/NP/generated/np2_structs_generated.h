@@ -85,8 +85,14 @@ struct SetRoomDataExternalRequestBuilder;
 struct SetRoomDataInternalRequest;
 struct SetRoomDataInternalRequestBuilder;
 
+struct GetRoomMemberDataInternalRequest;
+struct GetRoomMemberDataInternalRequestBuilder;
+
 struct SetRoomMemberDataInternalRequest;
 struct SetRoomMemberDataInternalRequestBuilder;
+
+struct SetUserInfo;
+struct SetUserInfoBuilder;
 
 struct GetRoomDataInternalRequest;
 struct GetRoomDataInternalRequestBuilder;
@@ -2609,6 +2615,81 @@ inline ::flatbuffers::Offset<SetRoomDataInternalRequest> CreateSetRoomDataIntern
       ownerPrivilegeRank__);
 }
 
+struct GetRoomMemberDataInternalRequest FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef GetRoomMemberDataInternalRequestBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_ROOMID = 4,
+    VT_MEMBERID = 6,
+    VT_ATTRID = 8
+  };
+  uint64_t roomId() const {
+    return GetField<uint64_t>(VT_ROOMID, 0);
+  }
+  uint16_t memberId() const {
+    return GetField<uint16_t>(VT_MEMBERID, 0);
+  }
+  const ::flatbuffers::Vector<uint16_t> *attrId() const {
+    return GetPointer<const ::flatbuffers::Vector<uint16_t> *>(VT_ATTRID);
+  }
+  bool Verify(::flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<uint64_t>(verifier, VT_ROOMID, 8) &&
+           VerifyField<uint16_t>(verifier, VT_MEMBERID, 2) &&
+           VerifyOffset(verifier, VT_ATTRID) &&
+           verifier.VerifyVector(attrId()) &&
+           verifier.EndTable();
+  }
+};
+
+struct GetRoomMemberDataInternalRequestBuilder {
+  typedef GetRoomMemberDataInternalRequest Table;
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_roomId(uint64_t roomId) {
+    fbb_.AddElement<uint64_t>(GetRoomMemberDataInternalRequest::VT_ROOMID, roomId, 0);
+  }
+  void add_memberId(uint16_t memberId) {
+    fbb_.AddElement<uint16_t>(GetRoomMemberDataInternalRequest::VT_MEMBERID, memberId, 0);
+  }
+  void add_attrId(::flatbuffers::Offset<::flatbuffers::Vector<uint16_t>> attrId) {
+    fbb_.AddOffset(GetRoomMemberDataInternalRequest::VT_ATTRID, attrId);
+  }
+  explicit GetRoomMemberDataInternalRequestBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  ::flatbuffers::Offset<GetRoomMemberDataInternalRequest> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = ::flatbuffers::Offset<GetRoomMemberDataInternalRequest>(end);
+    return o;
+  }
+};
+
+inline ::flatbuffers::Offset<GetRoomMemberDataInternalRequest> CreateGetRoomMemberDataInternalRequest(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    uint64_t roomId = 0,
+    uint16_t memberId = 0,
+    ::flatbuffers::Offset<::flatbuffers::Vector<uint16_t>> attrId = 0) {
+  GetRoomMemberDataInternalRequestBuilder builder_(_fbb);
+  builder_.add_roomId(roomId);
+  builder_.add_attrId(attrId);
+  builder_.add_memberId(memberId);
+  return builder_.Finish();
+}
+
+inline ::flatbuffers::Offset<GetRoomMemberDataInternalRequest> CreateGetRoomMemberDataInternalRequestDirect(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    uint64_t roomId = 0,
+    uint16_t memberId = 0,
+    const std::vector<uint16_t> *attrId = nullptr) {
+  auto attrId__ = attrId ? _fbb.CreateVector<uint16_t>(*attrId) : 0;
+  return CreateGetRoomMemberDataInternalRequest(
+      _fbb,
+      roomId,
+      memberId,
+      attrId__);
+}
+
 struct SetRoomMemberDataInternalRequest FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   typedef SetRoomMemberDataInternalRequestBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
@@ -2695,6 +2776,70 @@ inline ::flatbuffers::Offset<SetRoomMemberDataInternalRequest> CreateSetRoomMemb
       memberId,
       teamId,
       roomMemberBinAttrInternal__);
+}
+
+struct SetUserInfo FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef SetUserInfoBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_SERVERID = 4,
+    VT_USERBINATTR = 6
+  };
+  uint16_t serverId() const {
+    return GetField<uint16_t>(VT_SERVERID, 0);
+  }
+  const ::flatbuffers::Vector<::flatbuffers::Offset<BinAttr>> *userBinAttr() const {
+    return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<BinAttr>> *>(VT_USERBINATTR);
+  }
+  bool Verify(::flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<uint16_t>(verifier, VT_SERVERID, 2) &&
+           VerifyOffset(verifier, VT_USERBINATTR) &&
+           verifier.VerifyVector(userBinAttr()) &&
+           verifier.VerifyVectorOfTables(userBinAttr()) &&
+           verifier.EndTable();
+  }
+};
+
+struct SetUserInfoBuilder {
+  typedef SetUserInfo Table;
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_serverId(uint16_t serverId) {
+    fbb_.AddElement<uint16_t>(SetUserInfo::VT_SERVERID, serverId, 0);
+  }
+  void add_userBinAttr(::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<BinAttr>>> userBinAttr) {
+    fbb_.AddOffset(SetUserInfo::VT_USERBINATTR, userBinAttr);
+  }
+  explicit SetUserInfoBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  ::flatbuffers::Offset<SetUserInfo> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = ::flatbuffers::Offset<SetUserInfo>(end);
+    return o;
+  }
+};
+
+inline ::flatbuffers::Offset<SetUserInfo> CreateSetUserInfo(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    uint16_t serverId = 0,
+    ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<BinAttr>>> userBinAttr = 0) {
+  SetUserInfoBuilder builder_(_fbb);
+  builder_.add_userBinAttr(userBinAttr);
+  builder_.add_serverId(serverId);
+  return builder_.Finish();
+}
+
+inline ::flatbuffers::Offset<SetUserInfo> CreateSetUserInfoDirect(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    uint16_t serverId = 0,
+    const std::vector<::flatbuffers::Offset<BinAttr>> *userBinAttr = nullptr) {
+  auto userBinAttr__ = userBinAttr ? _fbb.CreateVector<::flatbuffers::Offset<BinAttr>>(*userBinAttr) : 0;
+  return CreateSetUserInfo(
+      _fbb,
+      serverId,
+      userBinAttr__);
 }
 
 struct GetRoomDataInternalRequest FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {

@@ -460,8 +460,6 @@ namespace np
 	{
 		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SetRoomDataInternal);
 
-		// TODO: extra_nps::print_set_roomdata_req(req);
-
 		extra_nps::print_set_roomdata_int_req(req);
 
 		if (!get_rpcn()->set_roomdata_internal(req_id, get_match2_context(ctx_id)->communicationId, req))
@@ -482,6 +480,61 @@ namespace np
 
 		cb_info_opt->queue_callback(req_id, 0, 0, 0);
 
+		return true;
+	}
+
+	u32 np_handler::get_roommemberdata_internal(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2GetRoomMemberDataInternalRequest* req)
+	{
+		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetRoomMemberDataInternal);
+		extra_nps::print_get_roommemberdata_int_req(req);
+
+		if (!get_rpcn()->get_roommemberdata_internal(req_id, get_match2_context(ctx_id)->communicationId, req))
+		{
+			rpcn_log.error("Disconnecting from RPCN!");
+			is_psn_active = false;
+		}
+
+		return req_id;
+	}
+
+	bool np_handler::reply_get_roommemberdata_internal(u32 req_id, std::vector<u8>& reply_data)
+	{
+		auto cb_info_opt = take_pending_request(req_id);
+
+		if (!cb_info_opt)
+			return true;
+
+		if (rpcn::is_error(static_cast<rpcn::ErrorType>(reply_data[0])))
+		{
+			switch (reply_data[0])
+			{
+			case rpcn::ErrorType::NotFound:
+			{
+				rpcn_log.error("GetRoomMemberDataInternal: Room or User wasn't found");
+				cb_info_opt->queue_callback(req_id, 0, -1, 0);
+				return true;
+			}
+			default:
+				return error_and_disconnect(fmt::format("GetRoomMemberDataInternal failed with unknown error(%d)!", reply_data[0]));
+			}
+		}
+
+		vec_stream reply(reply_data, 1);
+
+		auto* resp = reply.get_flatbuffer<RoomMemberDataInternal>();
+
+		if (reply.is_error())
+			return error_and_disconnect("Malformed reply to GetRoomMemberDataInternal command");
+
+		u32 event_key = get_event_key();
+
+		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_GetRoomMemberDataInternal, sizeof(SceNpMatching2GetRoomMemberDataInternalResponse));
+		auto* mdata_resp = reinterpret_cast<SceNpMatching2GetRoomMemberDataInternalResponse*>(edata.data());
+		auto* mdata_info = edata.allocate<SceNpMatching2RoomMemberDataInternal>(sizeof(SceNpMatching2RoomMemberDataInternal), mdata_resp->roomMemberDataInternal);
+		RoomMemberDataInternal_to_SceNpMatching2RoomMemberDataInternal(edata, resp, nullptr, mdata_info);
+		np_memory.shrink_allocation(edata.addr(), edata.size());
+
+		cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());
 		return true;
 	}
 
@@ -506,6 +559,40 @@ namespace np
 
 		if (!cb_info_opt)
 			return true;
+
+		cb_info_opt->queue_callback(req_id, 0, 0, 0);
+
+		return true;
+	}
+
+	u32 np_handler::set_userinfo(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SetUserInfoRequest* req)
+	{
+		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SetUserInfo);
+
+		if (!get_rpcn()->set_userinfo(req_id, get_match2_context(ctx_id)->communicationId, req))
+		{
+			rpcn_log.error("Disconnecting from RPCN!");
+			is_psn_active = false;
+		}
+
+		return req_id;
+	}
+
+	bool np_handler::reply_set_userinfo(u32 req_id, std::vector<u8>& reply_data)
+	{
+		auto cb_info_opt = take_pending_request(req_id);
+
+		if (!cb_info_opt)
+			return true;
+
+		if (rpcn::is_error(static_cast<rpcn::ErrorType>(reply_data[0])))
+		{
+			switch (reply_data[0])
+			{
+			default:
+				return error_and_disconnect(fmt::format("SetUserInfo failed with unknown error(%d)!", reply_data[0]));
+			}
+		}
 
 		cb_info_opt->queue_callback(req_id, 0, 0, 0);
 

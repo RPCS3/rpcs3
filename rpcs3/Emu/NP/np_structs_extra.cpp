@@ -332,6 +332,18 @@ namespace extra_nps
 		sceNp2.warning("ownerPrivilegeRankNum: %d", req->ownerPrivilegeRankNum);
 	}
 
+	void print_get_roommemberdata_int_req(const SceNpMatching2GetRoomMemberDataInternalRequest* req)
+	{
+		sceNp2.warning("SceNpMatching2GetRoomMemberDataInternalRequest:");
+		sceNp2.warning("roomId: %d", req->roomId);
+		sceNp2.warning("memberId: %d", req->memberId);
+		sceNp2.warning("attrIdNum: %d", req->attrIdNum);
+		for (u32 i = 0; i < req->attrIdNum; i++)
+		{
+			sceNp2.warning("attrId[%d] = %d", i, req->attrId[i]);
+		}
+	}
+
 	void print_set_roommemberdata_int_req(const SceNpMatching2SetRoomMemberDataInternalRequest* req)
 	{
 		sceNp2.warning("SceNpMatching2SetRoomMemberDataInternalRequest:");

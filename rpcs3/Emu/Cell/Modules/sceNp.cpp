@@ -3813,6 +3813,11 @@ error_code sceNpMatchingCreateRoomGUI(u32 ctx_id, vm::cptr<SceNpCommunicationId>
 {
 	sceNp.todo("sceNpMatchingCreateRoomGUI(ctx_id=%d, communicationId=*0x%x, attr=*0x%x, handler=*0x%x, arg=*0x%x)", ctx_id, communicationId, attr, handler, arg);
 
+	if (!communicationId || !handler)
+	{
+		return SCE_NP_MATCHING_ERROR_INVALID_ARG;
+	}
+
 	return CELL_OK;
 }
 

@@ -20,6 +20,7 @@ namespace extra_nps
 	void print_search_room_resp(const SceNpMatching2SearchRoomResponse* resp);
 	void print_set_roomdata_ext_req(const SceNpMatching2SetRoomDataExternalRequest* req);
 	void print_set_roomdata_int_req(const SceNpMatching2SetRoomDataInternalRequest* req);
+	void print_get_roommemberdata_int_req(const SceNpMatching2GetRoomMemberDataInternalRequest* req);
 	void print_set_roommemberdata_int_req(const SceNpMatching2SetRoomMemberDataInternalRequest* req);
 	void print_get_roomdata_external_list_req(const SceNpMatching2GetRoomDataExternalListRequest* req);
 	void print_get_roomdata_external_list_resp(const SceNpMatching2GetRoomDataExternalListResponse* resp);

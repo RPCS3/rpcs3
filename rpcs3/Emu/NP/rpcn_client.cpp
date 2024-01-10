@@ -84,7 +84,7 @@ namespace rpcn
 		rpcn_log.notice("online: %s, pr_com_id: %s, pr_title: %s, pr_status: %s, pr_comment: %s, pr_data: %s", online ? "true" : "false", pr_com_id.data, pr_title, pr_status, pr_comment, fmt::buf_to_hexstring(pr_data.data(), pr_data.size()));
 	}
 
-	constexpr u32 RPCN_PROTOCOL_VERSION = 21;
+	constexpr u32 RPCN_PROTOCOL_VERSION = 22;
 	constexpr usz RPCN_HEADER_SIZE      = 15;
 
 	bool is_error(ErrorType err)
@@ -1705,6 +1705,26 @@ namespace rpcn
 		return forge_request_with_com_id(builder, communication_id, CommandType::SetRoomDataInternal, req_id);
 	}
 
+	bool rpcn_client::get_roommemberdata_internal(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2GetRoomMemberDataInternalRequest* req)
+	{
+		flatbuffers::FlatBufferBuilder builder(1024);
+		flatbuffers::Offset<flatbuffers::Vector<u16>> final_attrid_vec;
+		if (req->attrIdNum)
+		{
+			std::vector<u16> attrid_vec;
+			for (u32 i = 0; i < req->attrIdNum; i++)
+			{
+				attrid_vec.push_back(req->attrId[i]);
+			}
+			final_attrid_vec = builder.CreateVector(attrid_vec);
+		}
+
+		auto req_finished = CreateGetRoomMemberDataInternalRequest(builder, req->roomId, req->memberId, final_attrid_vec);
+		builder.Finish(req_finished);
+
+		return forge_request_with_com_id(builder, communication_id, CommandType::GetRoomMemberDataInternal, req_id);
+	}
+
 	bool rpcn_client::set_roommemberdata_internal(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SetRoomMemberDataInternalRequest* req)
 	{
 		flatbuffers::FlatBufferBuilder builder(1024);
@@ -1724,6 +1744,27 @@ namespace rpcn
 		builder.Finish(req_finished);
 
 		return forge_request_with_com_id(builder, communication_id, CommandType::SetRoomMemberDataInternal, req_id);
+	}
+
+	bool rpcn_client::set_userinfo(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SetUserInfoRequest* req)
+	{
+		flatbuffers::FlatBufferBuilder builder(1024);
+		flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<BinAttr>>> final_memberbinattr_vec;
+		if (req->userBinAttrNum)
+		{
+			std::vector<flatbuffers::Offset<BinAttr>> davec;
+			for (u32 i = 0; i < req->userBinAttrNum; i++)
+			{
+				auto bin = CreateBinAttr(builder, req->userBinAttr[i].id, builder.CreateVector(req->userBinAttr[i].ptr.get_ptr(), req->userBinAttr[i].size));
+				davec.push_back(bin);
+			}
+			final_memberbinattr_vec = builder.CreateVector(davec);
+		}
+
+		auto req_finished = CreateSetUserInfo(builder, req->serverId, final_memberbinattr_vec);
+		builder.Finish(req_finished);
+
+		return forge_request_with_com_id(builder, communication_id, CommandType::SetUserInfo, req_id);
 	}
 
 	bool rpcn_client::ping_room_owner(u32 req_id, const SceNpCommunicationId& communication_id, u64 room_id)
