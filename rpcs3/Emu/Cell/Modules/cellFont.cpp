@@ -49,7 +49,7 @@ void fmt_class_string<CellFontError>::format(std::string& out, u64 arg)
 // Functions
 error_code cellFontInitializeWithRevision(u64 revisionFlags, vm::ptr<CellFontConfig> config)
 {
-	cellFont.warning("cellFontInitializeWithRevision(revisionFlags=0x%llx, config=*0x%x)", revisionFlags, config);
+	cellFont.todo("cellFontInitializeWithRevision(revisionFlags=0x%llx, config=*0x%x)", revisionFlags, config);
 
 	if (config->fc_size < 24)
 	{
@@ -61,37 +61,86 @@ error_code cellFontInitializeWithRevision(u64 revisionFlags, vm::ptr<CellFontCon
 		cellFont.error("cellFontInitializeWithRevision: Unknown flags (0x%x)", config->flags);
 	}
 
+	// TODO
+
 	return CELL_OK;
 }
 
-error_code cellFontGetRevisionFlags(vm::ptr<u64> revisionFlags)
+void cellFontGetRevisionFlags(vm::ptr<u64> revisionFlags)
 {
-	cellFont.todo("cellFontGetRevisionFlags(*0x%x)", revisionFlags);
+	cellFont.notice("cellFontGetRevisionFlags(*0x%x)", revisionFlags);
 
-	return CELL_OK;
+	if (revisionFlags)
+	{
+		*revisionFlags = 100;
+	}
 }
 
 error_code cellFontEnd()
 {
-	cellFont.warning("cellFontEnd()");
+	cellFont.todo("cellFontEnd()");
+
+	if (false) // TODO
+	{
+		return CELL_FONT_ERROR_UNINITIALIZED;
+	}
 
 	return CELL_OK;
 }
 
-error_code cellFontSetFontsetOpenMode(u32 openMode)
+error_code cellFontSetFontsetOpenMode(vm::cptr<CellFontLibrary> library, u32 openMode)
 {
-	cellFont.todo("cellFontSetFontsetOpenMode(openMode=0x%x)", openMode);
+	cellFont.todo("cellFontSetFontsetOpenMode(library=*0x%x, openMode=0x%x)", library, openMode);
+
+	if (false) // TODO
+	{
+		return CELL_FONT_ERROR_UNINITIALIZED;
+	}
+
+	if (!library)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	// TODO: set openMode
+
 	return CELL_OK;
 }
 
 error_code cellFontOpenFontMemory(vm::ptr<CellFontLibrary> library, u32 fontAddr, u32 fontSize, u32 subNum, u32 uniqueId, vm::ptr<CellFont> font)
 {
-	cellFont.warning("cellFontOpenFontMemory(library=*0x%x, fontAddr=0x%x, fontSize=%d, subNum=%d, uniqueId=%d, font=*0x%x)", library, fontAddr, fontSize, subNum, uniqueId, font);
+	cellFont.todo("cellFontOpenFontMemory(library=*0x%x, fontAddr=0x%x, fontSize=%d, subNum=%d, uniqueId=%d, font=*0x%x)", library, fontAddr, fontSize, subNum, uniqueId, font);
+
+	if (!font)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	// TODO: reset some font fields here
+
+	if (!library)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (false) // TODO
+	{
+		return CELL_FONT_ERROR_UNINITIALIZED;
+	}
+
+	if (!fontAddr || uniqueId < 0)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	// TODO
 
 	font->stbfont = vm::_ptr<stbtt_fontinfo>(font.addr() + font.size()); // hack: use next bytes of the struct
 
 	if (!stbtt_InitFont(font->stbfont, vm::_ptr<unsigned char>(fontAddr), 0))
+	{
 		return CELL_FONT_ERROR_FONT_OPEN_FAILED;
+	}
 
 	font->renderer_addr = 0;
 	font->fontdata_addr = fontAddr;
@@ -102,7 +151,31 @@ error_code cellFontOpenFontMemory(vm::ptr<CellFontLibrary> library, u32 fontAddr
 
 error_code cellFontOpenFontFile(vm::ptr<CellFontLibrary> library, vm::cptr<char> fontPath, u32 subNum, s32 uniqueId, vm::ptr<CellFont> font)
 {
-	cellFont.warning("cellFontOpenFontFile(library=*0x%x, fontPath=%s, subNum=%d, uniqueId=%d, font=*0x%x)", library, fontPath, subNum, uniqueId, font);
+	cellFont.todo("cellFontOpenFontFile(library=*0x%x, fontPath=%s, subNum=%d, uniqueId=%d, font=*0x%x)", library, fontPath, subNum, uniqueId, font);
+
+	if (!font)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	// TODO: reset some font fields here
+
+	if (!library)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (false) // TODO
+	{
+		return CELL_FONT_ERROR_UNINITIALIZED;
+	}
+
+	if (!fontPath || uniqueId < 0)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	// TODO
 
 	fs::file f(vfs::get(fontPath.get_ptr()));
 	if (!f)
@@ -122,6 +195,25 @@ error_code cellFontOpenFontFile(vm::ptr<CellFontLibrary> library, vm::cptr<char>
 error_code cellFontOpenFontset(vm::ptr<CellFontLibrary> library, vm::ptr<CellFontType> fontType, vm::ptr<CellFont> font)
 {
 	cellFont.warning("cellFontOpenFontset(library=*0x%x, fontType=*0x%x, font=*0x%x)", library, fontType, font);
+
+	if (!font)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	// TODO: reset some font fields here
+
+	if (!library || !fontType)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (false) // TODO
+	{
+		return CELL_FONT_ERROR_UNINITIALIZED;
+	}
+
+	// TODO
 
 	if (fontType->map != CELL_FONT_MAP_UNICODE)
 	{
@@ -201,7 +293,31 @@ error_code cellFontOpenFontset(vm::ptr<CellFontLibrary> library, vm::ptr<CellFon
 
 error_code cellFontOpenFontInstance(vm::ptr<CellFont> openedFont, vm::ptr<CellFont> font)
 {
-	cellFont.warning("cellFontOpenFontInstance(openedFont=*0x%x, font=*0x%x)", openedFont, font);
+	cellFont.todo("cellFontOpenFontInstance(openedFont=*0x%x, font=*0x%x)", openedFont, font);
+
+	if (!font)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	// TODO: reset some font fields
+
+	if (false) // TODO
+	{
+		return CELL_FONT_ERROR_UNINITIALIZED;
+	}
+
+	if (!openedFont)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (false) // TODO: check field 0x10
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	// TODO
 
 	font->renderer_addr = openedFont->renderer_addr;
 	font->scale_x = openedFont->scale_x;
@@ -213,58 +329,228 @@ error_code cellFontOpenFontInstance(vm::ptr<CellFont> openedFont, vm::ptr<CellFo
 	return CELL_OK;
 }
 
-error_code cellFontSetFontOpenMode(u32 openMode)
+error_code cellFontSetFontOpenMode(vm::cptr<CellFontLibrary> library, u32 openMode)
 {
-	cellFont.todo("cellFontSetFontOpenMode(openMode=0x%x)", openMode);
+	cellFont.todo("cellFontSetFontOpenMode(library=*0x%x, openMode=0x%x)", library, openMode);
+
+	if (false) // TODO
+	{
+		return CELL_FONT_ERROR_UNINITIALIZED;
+	}
+
+	if (!library)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	// TODO: set openMode
+
 	return CELL_OK;
 }
 
-error_code cellFontCreateRenderer(vm::ptr<CellFontLibrary> library, vm::ptr<CellFontRendererConfig> config, vm::ptr<CellFontRenderer> Renderer)
+error_code cellFontCreateRenderer(vm::cptr<CellFontLibrary> library, vm::ptr<CellFontRendererConfig> config, vm::ptr<CellFontRenderer> renderer)
 {
-	cellFont.todo("cellFontCreateRenderer(library=*0x%x, config=*0x%x, Renderer=*0x%x)", library, config, Renderer);
+	cellFont.todo("cellFontCreateRenderer(library=*0x%x, config=*0x%x, Renderer=*0x%x)", library, config, renderer);
 
 	// Write data in Renderer
+
+	if (!library || !config || !renderer)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (false) // TODO: check lib_func
+	{
+		return CELL_FONT_ERROR_NO_SUPPORT_FUNCTION;
+	}
 
 	return CELL_OK;
 }
 
 void cellFontRenderSurfaceInit(vm::ptr<CellFontRenderSurface> surface, vm::ptr<void> buffer, s32 bufferWidthByte, s32 pixelSizeByte, s32 w, s32 h)
 {
-	cellFont.warning("cellFontRenderSurfaceInit(surface=*0x%x, buffer=*0x%x, bufferWidthByte=%d, pixelSizeByte=%d, w=%d, h=%d)", surface, buffer, bufferWidthByte, pixelSizeByte, w, h);
+	cellFont.notice("cellFontRenderSurfaceInit(surface=*0x%x, buffer=*0x%x, bufferWidthByte=%d, pixelSizeByte=%d, w=%d, h=%d)", surface, buffer, bufferWidthByte, pixelSizeByte, w, h);
 
-	surface->buffer         = buffer;
-	surface->widthByte      = bufferWidthByte;
-	surface->pixelSizeByte  = pixelSizeByte;
-	surface->width          = w;
-	surface->height         = h;
+	if (!surface)
+	{
+		return;
+	}
+
+	const u32 width = w & ~w >> 0x1f;
+	const u32 height = h & ~h >> 0x1f;
+
+	surface->buffer        = buffer;
+	surface->widthByte     = bufferWidthByte;
+	surface->pixelSizeByte = pixelSizeByte;
+	surface->width         = width;
+	surface->height        = height;
+	surface->sc_x0         = 0;
+	surface->sc_y0         = 0;
+	surface->sc_x1         = width;
+	surface->sc_y1         = height;
 }
 
-void cellFontRenderSurfaceSetScissor(vm::ptr<CellFontRenderSurface> surface, s32 x0, s32 y0, s32 w, s32 h)
+void cellFontRenderSurfaceSetScissor(vm::ptr<CellFontRenderSurface> surface, s32 x0, s32 y0, u32 w, u32 h)
 {
 	cellFont.warning("cellFontRenderSurfaceSetScissor(surface=*0x%x, x0=%d, y0=%d, w=%d, h=%d)", surface, x0, y0, w, h);
 
-	surface->sc_x0 = x0;
-	surface->sc_y0 = y0;
-	surface->sc_x1 = w;
-	surface->sc_y1 = h;
+	if (!surface)
+	{
+		return;
+	}
+
+	// TODO: sdk check ?
+	if (true)
+	{
+		if (surface->width != 0)
+		{
+			u32 sc_x0 = 0;
+			u32 sc_x1 = 0;
+
+			if (x0 < 0)
+			{
+				if (static_cast<u32>(-x0) < w)
+				{
+					sc_x1 = surface->width;
+
+					if (x0 + w < sc_x1)
+					{
+						sc_x1 = x0 + w;
+					}
+				}
+			}
+			else
+			{
+				const u32 width = surface->width;
+
+				sc_x0 = width;
+				sc_x1 = width;
+
+				if (static_cast<u32>(x0) <= sc_x0)
+				{
+					sc_x0 = x0;
+
+					const u32 w_min = std::min(w, width);
+
+					if (x0 + w_min <= width)
+					{
+						sc_x1 = x0 + w_min;
+					}
+				}
+			}
+
+			surface->sc_x0 = sc_x0;
+			surface->sc_x1 = sc_x1;
+		}
+
+		if (surface->height != 0)
+		{
+			u32 sc_y0 = 0;
+			u32 sc_y1 = 0;
+
+			if (y0 < 0)
+			{
+				if (static_cast<u32>(-y0) < h)
+				{
+					sc_y1 = surface->height;
+
+					if (y0 + h < sc_y1)
+					{
+						sc_y1 = y0 + h;
+					}
+				}
+			}
+			else
+			{
+				const u32 height = surface->height;
+
+				sc_y0 = height;
+				sc_y1 = height;
+
+				if (static_cast<u32>(y0) <= sc_y0)
+				{
+					sc_y0 = y0;
+
+					const u32 h_min = std::min(h, height);
+
+					if (y0 + h_min <= sc_y1)
+					{
+						sc_y1 = y0 + h_min;
+					}
+				}
+			}
+
+			surface->sc_y0 = sc_y0;
+			surface->sc_y1 = sc_y1;
+		}
+	}
+	else
+	{
+		if (surface->width != 0)
+		{
+			if (static_cast<s32>(surface->sc_x0) < x0)
+			{
+				surface->sc_x0 = x0;
+			}
+
+			if (static_cast<s32>(w + x0) < static_cast<s32>(surface->sc_x1))
+			{
+				surface->sc_x1 = w + x0;
+			}
+		}
+
+		if (surface->height != 0)
+		{
+			if (static_cast<s32>(surface->sc_y0) < y0)
+			{
+				surface->sc_y0 = y0;
+			}
+
+			if (static_cast<s32>(h + y0) < static_cast<s32>(surface->sc_y1))
+			{
+				surface->sc_y1 = h + y0;
+			}
+		}
+	}
 }
 
-error_code cellFontSetScalePixel(vm::ptr<CellFont> font, float w, float h)
+error_code cellFontSetScalePixel(vm::ptr<CellFont> font, f32 w, f32 h)
 {
-	cellFont.trace("cellFontSetScalePixel(font=*0x%x, w=%f, h=%f)", font, w, h);
+	cellFont.todo("cellFontSetScalePixel(font=*0x%x, w=%f, h=%f)", font, w, h);
+
+	if (!font)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
 
 	font->scale_x = w;
 	font->scale_y = h;
+
+	// TODO:
+	//font->scalePointH = (h * something) / font->resolutionDpiV;
+	//font->scalePointW = (w * something) / font->resolutionDpiH;
 
 	return CELL_OK;
 }
 
 error_code cellFontGetHorizontalLayout(vm::ptr<CellFont> font, vm::ptr<CellFontHorizontalLayout> layout)
 {
-	cellFont.trace("cellFontGetHorizontalLayout(font=*0x%x, layout=*0x%x)", font, layout);
+	cellFont.todo("cellFontGetHorizontalLayout(font=*0x%x, layout=*0x%x)", font, layout);
+
+	if (!layout)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	*layout = {};
+
+	if (!font)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
 
 	s32 ascent, descent, lineGap;
-	float scale = stbtt_ScaleForPixelHeight(font->stbfont, font->scale_y);
+	const f32 scale = stbtt_ScaleForPixelHeight(font->stbfont, font->scale_y);
 	stbtt_GetFontVMetrics(font->stbfont, &ascent, &descent, &lineGap);
 
 	layout->baseLineY = ascent * scale;
@@ -278,10 +564,25 @@ error_code cellFontBindRenderer(vm::ptr<CellFont> font, vm::ptr<CellFontRenderer
 {
 	cellFont.warning("cellFontBindRenderer(font=*0x%x, renderer=*0x%x)", font, renderer);
 
+	if (!font || !renderer || !renderer->systemReserved[0x10])
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
 	if (font->renderer_addr)
 	{
 		return CELL_FONT_ERROR_RENDERER_ALREADY_BIND;
 	}
+
+	// TODO
+	//renderer->systemReserved[2] = (void *)font->resolutionDpiH;
+	//renderer->systemReserved[3] = (void *)font->resolutionDpiV;
+	//renderer->systemReserved[4] = (void *)font->scalePointW;
+	//renderer->systemReserved[5] = (void *)font->scalePointH;
+	//renderer->systemReserved[6] = (void *)font->scalePixelW;
+	//renderer->systemReserved[7] = (void *)font->scalePixelH;
+	//renderer->systemReserved[8] = *(void **)&font->font_weight;
+	//renderer->systemReserved[9] = *(void **)&font->field_0x5c;
 
 	font->renderer_addr = renderer.addr();
 
@@ -291,6 +592,11 @@ error_code cellFontBindRenderer(vm::ptr<CellFont> font, vm::ptr<CellFontRenderer
 error_code cellFontUnbindRenderer(vm::ptr<CellFont> font)
 {
 	cellFont.warning("cellFontBindRenderer(font=*0x%x)", font);
+
+	if (!font)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
 
 	if (!font->renderer_addr)
 	{
@@ -302,22 +608,65 @@ error_code cellFontUnbindRenderer(vm::ptr<CellFont> font)
 	return CELL_OK;
 }
 
-error_code cellFontDestroyRenderer()
+error_code cellFontDestroyRenderer(vm::ptr<CellFontRenderer> renderer)
 {
-	UNIMPLEMENTED_FUNC(cellFont);
+	cellFont.todo("cellFontDestroyRenderer(renderer=*0x%x)", renderer);
+
+	if (!renderer || !renderer->systemReserved[0x10])
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (false) // TODO: check func
+	{
+		return CELL_FONT_ERROR_NO_SUPPORT_FUNCTION;
+	}
+
+	if (false) // TODO: call func
+	{
+		renderer->systemReserved[0x10] = vm::null;
+	}
+
 	return CELL_OK;
 }
 
-error_code cellFontSetupRenderScalePixel(vm::ptr<CellFont> font, float w, float h)
+error_code cellFontSetupRenderScalePixel(vm::ptr<CellFont> font, f32 w, f32 h)
 {
 	cellFont.todo("cellFontSetupRenderScalePixel(font=*0x%x, w=%f, h=%f)", font, w, h);
+
+	if (!font)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (false) // TODO (!font->field_0xc || !font->library)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
 
 	if (!font->renderer_addr)
 	{
 		return CELL_FONT_ERROR_RENDERER_UNBIND;
 	}
 
-	// TODO: ?
+	// TODO:
+
+	//if (w == something)
+	//{
+	//	w = font->scalePixelW;
+	//}
+
+	//if (h == something)
+	//{
+	//	h = font->scalePixelH;
+	//}
+
+	//font->field_0x14 + 0x10 = (w * something) / font->resolutionDpiH;
+	//font->field_0x14 + 0x14 = (h * something) / font->resolutionDpiV;
+	//font->field_0x14 + 0x18 = w;
+	//font->field_0x14 + 0x1c = h;
+	//font->field_0x78 = 0;
+
 	return CELL_OK;
 }
 
@@ -325,18 +674,33 @@ error_code cellFontGetRenderCharGlyphMetrics(vm::ptr<CellFont> font, u32 code, v
 {
 	cellFont.todo("cellFontGetRenderCharGlyphMetrics(font=*0x%x, code=0x%x, metrics=*0x%x)", font, code, metrics);
 
+	if (!font)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (false) // TODO (!font->field_0xc || !font->library)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
 	if (!font->renderer_addr)
 	{
 		return CELL_FONT_ERROR_RENDERER_UNBIND;
+	}
+
+	if (!metrics)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
 	}
 
 	// TODO: ?
 	return CELL_OK;
 }
 
-error_code cellFontRenderCharGlyphImage(vm::ptr<CellFont> font, u32 code, vm::ptr<CellFontRenderSurface> surface, float x, float y, vm::ptr<CellFontGlyphMetrics> metrics, vm::ptr<CellFontImageTransInfo> transInfo)
+error_code cellFontRenderCharGlyphImage(vm::ptr<CellFont> font, u32 code, vm::ptr<CellFontRenderSurface> surface, f32 x, f32 y, vm::ptr<CellFontGlyphMetrics> metrics, vm::ptr<CellFontImageTransInfo> transInfo)
 {
-	cellFont.notice("cellFontRenderCharGlyphImage(font=*0x%x, code=0x%x, surface=*0x%x, x=%f, y=%f, metrics=*0x%x, trans=*0x%x)", font, code, surface, x, y, metrics, transInfo);
+	cellFont.notice("cellFontRenderCharGlyphImage(font=*0x%x, code=0x%x, surface=*0x%x, x=%f, y=%f, metrics=*0x%x, transInfo=*0x%x)", font, code, surface, x, y, metrics, transInfo);
 
 	if (!font->renderer_addr)
 	{
@@ -345,7 +709,7 @@ error_code cellFontRenderCharGlyphImage(vm::ptr<CellFont> font, u32 code, vm::pt
 
 	// Render the character
 	s32 width, height, xoff, yoff;
-	float scale = stbtt_ScaleForPixelHeight(font->stbfont, font->scale_y);
+	const f32 scale = stbtt_ScaleForPixelHeight(font->stbfont, font->scale_y);
 	unsigned char* box = stbtt_GetCodepointBitmap(font->stbfont, scale, scale, code, &width, &height, &xoff, &yoff);
 
 	if (!box)
@@ -378,16 +742,28 @@ error_code cellFontRenderCharGlyphImage(vm::ptr<CellFont> font, u32 code, vm::pt
 	return CELL_OK;
 }
 
-error_code cellFontEndLibrary()
+error_code cellFontEndLibrary(vm::cptr<CellFontLibrary> library)
 {
-	UNIMPLEMENTED_FUNC(cellFont);
+	cellFont.todo("cellFontEndLibrary(library=*0x%x)", library);
+
+	if (false) // TODO
+	{
+		return CELL_FONT_ERROR_UNINITIALIZED;
+	}
+
 	return CELL_OK;
 }
 
-error_code cellFontSetEffectSlant(vm::ptr<CellFont> font, float slantParam)
+error_code cellFontSetEffectSlant(vm::ptr<CellFont> font, f32 slantParam)
 {
 	cellFont.trace("cellFontSetEffectSlant(font=*0x%x, slantParam=%f)", font, slantParam);
 
+	if (!font)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	// TODO: I think this clamps instead of returning an error
 	if (slantParam < -1.0f || slantParam > 1.0f)
 	{
 		return CELL_FONT_ERROR_INVALID_PARAMETER;
@@ -398,9 +774,14 @@ error_code cellFontSetEffectSlant(vm::ptr<CellFont> font, float slantParam)
 	return CELL_OK;
 }
 
-error_code cellFontGetEffectSlant(vm::ptr<CellFont> font, vm::ptr<float> slantParam)
+error_code cellFontGetEffectSlant(vm::ptr<CellFont> font, vm::ptr<f32> slantParam)
 {
-	cellFont.warning("cellFontSetEffectSlant(font=*0x%x, slantParam=*0x%x)", font, slantParam);
+	cellFont.trace("cellFontSetEffectSlant(font=*0x%x, slantParam=*0x%x)", font, slantParam);
+
+	if (!font || !slantParam)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
 
 	*slantParam = font->slant;
 
@@ -410,14 +791,69 @@ error_code cellFontGetEffectSlant(vm::ptr<CellFont> font, vm::ptr<float> slantPa
 error_code cellFontGetFontIdCode(vm::ptr<CellFont> font, u32 code, vm::ptr<u32> fontId, vm::ptr<u32> fontCode)
 {
 	cellFont.todo("cellFontGetFontIdCode(font=*0x%x, code=%d, fontId=*0x%x, fontCode=*0x%x)", font, code, fontId, fontCode);
+	
+	if (fontId)
+	{
+		*fontId = 0;
+	}
 
-	// TODO: ?
+	if (fontCode)
+	{
+		*fontCode = 0;
+	}
+
+	if (!font) // TODO || !font->library)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	// TODO: some other code goes here
+
+	if (false) // TODO (!font->field_0x2)
+	{
+		if (false) // TODO (font->field_0x60 != code)
+		{
+			if (false) // TODO
+			{
+				return CELL_FONT_ERROR_NO_SUPPORT_CODE;
+			}
+			// TODO: some other stuff
+
+			return CELL_OK;
+		}
+
+		if (fontId)
+		{
+			//*fontId = font->field_0x64; // TODO
+		}
+		if (fontCode)
+		{
+			//*fontCode = font->field_0x68; // TODO
+		}
+	}
+	else
+	{
+		if (fontId)
+		{
+			//*fontId = font->field_0x8 & 0x7fffffff; // TODO
+		}
+		if (fontCode)
+		{
+			*fontCode = code;
+		}
+	}
+
 	return CELL_OK;
 }
 
 error_code cellFontCloseFont(vm::ptr<CellFont> font)
 {
-	cellFont.warning("cellFontCloseFont(font=*0x%x)", font);
+	cellFont.todo("cellFontCloseFont(font=*0x%x)", font);
+
+	if (!font)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
 
 	if (font->origin == CELL_FONT_OPEN_FONTSET ||
 		font->origin == CELL_FONT_OPEN_FONT_FILE ||
@@ -431,11 +867,26 @@ error_code cellFontCloseFont(vm::ptr<CellFont> font)
 
 error_code cellFontGetCharGlyphMetrics(vm::ptr<CellFont> font, u32 code, vm::ptr<CellFontGlyphMetrics> metrics)
 {
-	cellFont.warning("cellFontGetCharGlyphMetrics(font=*0x%x, code=0x%x, metrics=*0x%x)", font, code, metrics);
+	cellFont.todo("cellFontGetCharGlyphMetrics(font=*0x%x, code=0x%x, metrics=*0x%x)", font, code, metrics);
+
+	if (!font || !metrics)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (false) // TODO (!font->field_0xc || !font->library)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (false) // TODO
+	{
+		return CELL_FONT_ERROR_NO_SUPPORT_CODE;
+	}
 
 	s32 x0, y0, x1, y1;
 	s32 advanceWidth, leftSideBearing;
-	float scale = stbtt_ScaleForPixelHeight(font->stbfont, font->scale_y);
+	const f32 scale = stbtt_ScaleForPixelHeight(font->stbfont, font->scale_y);
 	stbtt_GetCodepointBox(font->stbfont, code, &x0, &y0, &x1, &y1);
 	stbtt_GetCodepointHMetrics(font->stbfont, code, &advanceWidth, &leftSideBearing);
 
@@ -452,15 +903,44 @@ error_code cellFontGetCharGlyphMetrics(vm::ptr<CellFont> font, u32 code, vm::ptr
 	return CELL_OK;
 }
 
-error_code cellFontGraphicsSetFontRGBA()
+error_code cellFontGraphicsSetFontRGBA(vm::ptr<CellFontGraphicsDrawContext> context, vm::ptr<f32> fontRGBA)
 {
-	UNIMPLEMENTED_FUNC(cellFont);
+	cellFont.todo("cellFontGraphicsSetFontRGBA(context=*0x%x, fontRGBA=*0x%x)", context, fontRGBA);
+
+	if (!context || !fontRGBA) // TODO || (context->magic != 0xcf50))
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	// TODO
+	//context->field_0x70 = fontRGBA[0];
+	//context->field_0x74 = fontRGBA[1];
+	//context->field_0x78 = fontRGBA[2];
+	//context->field_0x7c = fontRGBA[3];
+
 	return CELL_OK;
 }
 
 error_code cellFontOpenFontsetOnMemory(vm::ptr<CellFontLibrary> library, vm::ptr<CellFontType> fontType, vm::ptr<CellFont> font)
 {
 	cellFont.todo("cellFontOpenFontsetOnMemory(library=*0x%x, fontType=*0x%x, font=*0x%x)", library, fontType, font);
+
+	if (!font)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	// TODO: reset some font fields here
+
+	if (!library || !fontType)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (false) // TODO
+	{
+		return CELL_FONT_ERROR_UNINITIALIZED;
+	}
 
 	if (fontType->map != CELL_FONT_MAP_UNICODE)
 	{
@@ -470,105 +950,414 @@ error_code cellFontOpenFontsetOnMemory(vm::ptr<CellFontLibrary> library, vm::ptr
 	return CELL_OK;
 }
 
-error_code cellFontGraphicsSetScalePixel()
+error_code cellFontGraphicsSetScalePixel(vm::ptr<CellFontGraphicsDrawContext> context, f32 w, f32 h)
 {
-	UNIMPLEMENTED_FUNC(cellFont);
+	cellFont.todo("cellFontGraphicsSetScalePixel(context=*0x%x, w=%f, h=%f)", context, w, h);
+
+	if (!context) // TODO || (context->magic != 0xcf50))
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	// TODO
+	//context->field_0x10 = (w * something) / context->field_0x8;
+	//context->field_0x14 = (h * something) / context->field_0xc;
+	//context->field_0x18 = w;
+	//context->field_0x1c = h;
+
 	return CELL_OK;
 }
 
-error_code cellFontGraphicsGetScalePixel()
+error_code cellFontGraphicsGetScalePixel(vm::ptr<CellFontGraphicsDrawContext> context, vm::ptr<f32> w, vm::ptr<f32> h)
 {
-	UNIMPLEMENTED_FUNC(cellFont);
+	cellFont.todo("cellFontGraphicsGetScalePixel(context=*0x%x, w=*0x%x, h=*0x%x)", context, w, h);
+
+	if (w)
+	{
+		*w = 0.0;
+	}
+
+	if (h)
+	{
+		*h = 0.0;
+	}
+
+	if (!context) // TODO || context->magic != 0xcf50)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (w)
+	{
+		//*w = context->field_0x18; // TODO
+	}
+	if (h)
+	{
+		//*h = context->field_0x1c; // TODO
+	}
+
 	return CELL_OK;
 }
 
-error_code cellFontSetEffectWeight()
+error_code cellFontSetEffectWeight(vm::ptr<CellFont> font, f32 effectWeight)
 {
-	UNIMPLEMENTED_FUNC(cellFont);
+	cellFont.warning("cellFontSetEffectWeight(font=*0x%x, effectWeight=%f)", font, effectWeight);
+
+	if (!font)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	// TODO: set effect weight (probably clamped)
+
 	return CELL_OK;
 }
 
-error_code cellFontGlyphSetupVertexesGlyph()
+error_code cellFontGlyphSetupVertexesGlyph(vm::ptr<CellFontGlyph> glyph, f32 controlDistance, vm::ptr<u32> mappedBuf, u32 mappedBufSize, vm::ptr<CellFontVertexesGlyph> vGlyph, vm::ptr<u32> dataSize)
 {
-	UNIMPLEMENTED_FUNC(cellFont);
+	cellFont.todo("cellFontGlyphSetupVertexesGlyph(glyph=*0x%x, controlDistance=%f, mappedBuf=*0x%x, mappedBufSize=0x%x, vGlyph=*0x%x, dataSize=*0x%x)", glyph, controlDistance, mappedBuf, mappedBufSize, vGlyph, dataSize);
+
+	//if (in_r8)
+	//{
+	//	*in_r8 = 0; // ???
+	//}
+
+	if (!dataSize)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	dataSize[0] = 0;
+	dataSize[1] = 0;
+
+	if (mappedBufSize == 0)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	// TODO
+
 	return CELL_OK;
 }
 
-error_code cellFontGetVerticalLayout()
+error_code cellFontGetVerticalLayout(vm::ptr<CellFont> font, vm::ptr<CellFontVerticalLayout> layout)
 {
-	UNIMPLEMENTED_FUNC(cellFont);
+	cellFont.todo("cellFontGetVerticalLayout(font=*0x%x, layout=*0x%x)", font, layout);
+	
+	if (!layout)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	*layout = {};
+
+	if (!font)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	// TODO
+
 	return CELL_OK;
 }
 
-error_code cellFontGetRenderCharGlyphMetricsVertical()
+error_code cellFontGetRenderCharGlyphMetricsVertical(vm::ptr<CellFont> font, u32 code, vm::ptr<CellFontGlyphMetrics> metrics)
 {
-	UNIMPLEMENTED_FUNC(cellFont);
+	cellFont.todo("cellFontGetRenderCharGlyphMetricsVertical(font=*0x%x, code=0x%x, metrics=*0x%x)", font, code, metrics);
+
+	if (!font)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (false) // TODO (!font->field_0xc || !font->library)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (false) // TODO (!font->field_0x14)
+	{
+		return CELL_FONT_ERROR_RENDERER_UNBIND;
+	}
+
+	// TODO
+
 	return CELL_OK;
 }
 
-error_code cellFontSetScalePoint()
+error_code cellFontSetScalePoint(vm::ptr<CellFont> font, f32 w, f32 h)
 {
-	UNIMPLEMENTED_FUNC(cellFont);
+	cellFont.todo("cellFontSetScalePoint(font=*0x%x, w=%f, h=%f)", font, w, h);
+
+	if (!font)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	// TODO
+	//font->scalePointW = w;
+	//font->scalePointH = h;
+	//font->scalePixelW = (w * font->resolutionDpiH) / something;
+	//font->scalePixelH = (h * font->resolutionDpiV) / something;
+
 	return CELL_OK;
 }
 
-error_code cellFontSetupRenderEffectSlant()
+error_code cellFontSetupRenderEffectSlant(vm::ptr<CellFont> font, f32 effectSlant)
 {
-	UNIMPLEMENTED_FUNC(cellFont);
+	cellFont.todo("cellFontSetupRenderEffectSlant(font=*0x%x, effectSlant=%f)", font, effectSlant);
+
+	if (!font)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (false) // TODO (!font->field_0xc || !font->library)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (false) // TODO (!font->field_0x14)
+	{
+		return CELL_FONT_ERROR_RENDERER_UNBIND;
+	}
+
+	// TODO:
+	//font->effectSlant = effectSlant; // TODO: probably clamped
+	//font->field_0x78 = 0;
+
 	return CELL_OK;
 }
 
-error_code cellFontGraphicsSetLineRGBA()
+error_code cellFontGraphicsSetLineRGBA(vm::ptr<CellFontGraphicsDrawContext> context, vm::ptr<f32> lineRGBA)
 {
-	UNIMPLEMENTED_FUNC(cellFont);
+	cellFont.todo("cellFontGraphicsSetLineRGBA(context=*0x%x, lineRGBA=*0x%x)", context, lineRGBA);
+
+	if (!context || !lineRGBA) // TODO || (context->magic != 0xcf50))
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	// TODO
+	//context->lineColorR = lineRGBA[0];
+	//context->lineColorG = lineRGBA[1];
+	//context->lineColorB = lineRGBA[2];
+	//context->lineColorA = lineRGBA[3];
+
 	return CELL_OK;
 }
 
-error_code cellFontGraphicsSetDrawType()
+error_code cellFontGraphicsSetDrawType(vm::ptr<CellFontGraphicsDrawContext> context, u32 type)
 {
-	UNIMPLEMENTED_FUNC(cellFont);
+	cellFont.todo("cellFontGraphicsSetDrawType(context=*0x%x, type=0x%x)", context, type);
+
+	if (!context) // TODO || (context->magic != 0xcf50))
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+    //context->field_0x42 = type; // TODO
+
 	return CELL_OK;
 }
 
-error_code cellFontEndGraphics()
+error_code cellFontEndGraphics(vm::cptr<CellFontGraphics> graphics)
 {
-	UNIMPLEMENTED_FUNC(cellFont);
+	cellFont.todo("cellFontEndGraphics(graphics=*0x%x)", graphics);
+
+	if (!graphics)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (false) // TODO
+	{
+		return CELL_FONT_ERROR_UNINITIALIZED;
+	}
+
 	return CELL_OK;
 }
 
-error_code cellFontGraphicsSetupDrawContext()
+error_code cellFontGraphicsSetupDrawContext(vm::cptr<CellFontGraphics> graphics, vm::ptr<CellFontGraphicsDrawContext> context)
 {
-	UNIMPLEMENTED_FUNC(cellFont);
+	cellFont.todo("cellFontGraphicsSetupDrawContext(graphics=*0x%x, context=*0x%x)", graphics, context);
+
+	if (!graphics && !context)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	// TODO
+	//context->magic = 0xcf50;
+	//context->field_0x50 = something;
+	//context->field_0x54 = something;
+	//context->field_0x58 = something;
+	//context->field_0x5c = something;
+	//context->field_0x2 = 0;
+	//context->field_0x8 = 72;
+	//context->field_0x42 = 1;
+	//context->field_0x4c = 0;
+	//context->field_0x4 = 0;
+	//context->field_0xc = 72;
+	//context->field_0x14 = 0;
+	//context->field_0x10 = 0;
+	//context->field_0x1c = 0;
+	//context->field_0x18 = 0;
+	//context->field_0x20 = 0;
+	//context->field_0x24 = 0;
+	//context->field_0x28 = 0;
+	//context->field_0x2c = 0;
+	//context->field_0x30 = 0;
+	//context->field_0x34 = 0;
+	//context->field_0x38 = 0;
+	//context->field_0x3c = 0;
+	//context->field_0x40 = 0;
+	//context->field_0x44 = 0;
+	//context->field_0x48 = 0;
+	//context->field_0x7c = something;
+	//context->field_0x78 = something;
+	//context->field_0x74 = something;
+	//context->field_0x70 = something;
+	//context->lineColorB = 0.0;
+	//context->lineColorG = 0.0;
+	//context->lineColorR = 0.0;
+	//context->lineColorA = something;
+	//context->field_0xc0 = 0;
+	//context->field_0x80 = something;
+	//context->field_0xbc = something;
+	//context->field_0xa8 = something;
+	//context->field_0x94 = something;
+	//context->field_0xb8 = 0;
+	//context->field_0xb4 = 0;
+	//context->field_0xb0 = 0;
+	//context->field_0xac = 0;
+	//context->field_0xa4 = 0;
+	//context->field_0xa0 = 0;
+	//context->field_0x9c = 0;
+	//context->field_0x98 = 0;
+	//context->field_0x90 = 0;
+	//context->field_0x8c = 0;
+	//context->field_0x88 = 0;
+	//context->field_0x84 = 0;
+	//context->field_0xfc = 0;
+	//context->field_0xf8 = 0;
+	//context->field_0xf4 = 0;
+	//context->field_0xf0 = 0;
+	//context->field_0xec = 0;
+	//context->field_0xe8 = 0;
+	//context->field_0xe4 = 0;
+	//context->field_0xe0 = 0;
+	//context->field_0xdc = 0;
+	//context->field_0xd8 = 0;
+	//context->field_0xd4 = 0;
+	//context->field_0xd0 = 0;
+	//context->field_0xcc = 0;
+	//context->field_0xc8 = 0;
+	//context->field_0xc4 = 0;
+
 	return CELL_OK;
 }
 
-error_code cellFontSetupRenderEffectWeight()
+error_code cellFontSetupRenderEffectWeight(vm::ptr<CellFont> font, f32 additionalWeight)
 {
-	UNIMPLEMENTED_FUNC(cellFont);
+	cellFont.todo("cellFontSetupRenderEffectWeight(font=*0x%x, additionalWeight=%f)", font, additionalWeight);
+
+	if (!font)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (false) // TODO (!font->field_0xc || !font->library)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (false) // TODO (!font->field_0x14)
+	{
+		return CELL_FONT_ERROR_RENDERER_UNBIND;
+	}
+
+	// TODO: set weight
+
 	return CELL_OK;
 }
 
-error_code cellFontGlyphGetOutlineControlDistance()
+error_code cellFontGlyphGetOutlineControlDistance(vm::ptr<CellFontGlyph> glyph, f32 maxScale, f32 baseControlDistance, vm::ptr<f32> controlDistance)
 {
-	UNIMPLEMENTED_FUNC(cellFont);
+	cellFont.todo("cellFontGlyphGetOutlineControlDistance(glyph=*0x%x, maxScale=%f, baseControlDistance=%f, controlDistance=*0x%x)", glyph, maxScale, baseControlDistance, controlDistance);
+
+	if (!glyph || !controlDistance || maxScale <= 0.0f)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	// TODO
+	//*controlDistance = (something / maxScale) * baseControlDistance;
+
 	return CELL_OK;
 }
 
-error_code cellFontGlyphGetVertexesGlyphSize()
+error_code cellFontGlyphGetVertexesGlyphSize(vm::ptr<CellFontGlyph> glyph, f32 controlDistance, vm::ptr<u32> useSize)
 {
-	UNIMPLEMENTED_FUNC(cellFont);
+	cellFont.todo("cellFontGlyphGetVertexesGlyphSize(glyph=*0x%x, controlDistance=%f, useSize=*0x%x)", glyph, controlDistance, useSize);
+
+	if (false) // TODO (!in_r5)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	//*in_r5 = 0; // TODO
+
+	if (!glyph)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	// TODO
+
 	return CELL_OK;
 }
 
-error_code cellFontGenerateCharGlyph()
+error_code cellFontGenerateCharGlyph(vm::ptr<CellFont> font, u32 code, vm::pptr<CellFontGlyph> glyph)
 {
-	UNIMPLEMENTED_FUNC(cellFont);
+	cellFont.todo("cellFontGenerateCharGlyph(font=*0x%x, code=0x%x, glyph=*0x%x)", font, code, glyph);
+
+	if (false) // TODO
+	{
+		return CELL_FONT_ERROR_NO_SUPPORT_FUNCTION;
+	}
+
+	if (!font)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	// TODO
+
 	return CELL_OK;
 }
 
-error_code cellFontDeleteGlyph()
+error_code cellFontDeleteGlyph(vm::ptr<CellFont> font, vm::ptr<CellFontGlyph> glyph)
 {
-	UNIMPLEMENTED_FUNC(cellFont);
+	cellFont.todo("cellFontDeleteGlyph(font=*0x%x, glyph=*0x%x)", font, glyph);
+
+	if (false) // TODO
+	{
+		return CELL_FONT_ERROR_NO_SUPPORT_FUNCTION;
+	}
+
+	if (!font)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (false && !glyph) // TODO
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	// TODO
+
 	return CELL_OK;
 }
 
@@ -577,7 +1366,7 @@ error_code cellFontExtend(u32 a1, u32 a2, u32 a3)
 	cellFont.todo("cellFontExtend(a1=0x%x, a2=0x%x, a3=0x%x)", a1, a2, a3);
 	//In a test I did: a1=0xcfe00000, a2=0x0, a3=(pointer to something)
 	if (a1 == 0xcfe00000)
-		{
+	{
 		if (a2 != 0 || a3 == 0)
 		{
 			//Something happens
@@ -592,81 +1381,304 @@ error_code cellFontExtend(u32 a1, u32 a2, u32 a3)
 	return CELL_OK;
 }
 
-error_code cellFontRenderCharGlyphImageVertical()
+error_code cellFontRenderCharGlyphImageVertical(vm::ptr<CellFont> font, u32 code, vm::ptr<CellFontRenderSurface> surface, f32 x, f32 y, vm::ptr<CellFontGlyphMetrics> metrics, vm::ptr<CellFontImageTransInfo> transInfo)
 {
-	UNIMPLEMENTED_FUNC(cellFont);
+	cellFont.todo("cellFontRenderCharGlyphImageVertical(font=*0x%x, code=0x%x, surface=*0x%x, x=%f, y=%f, metrics=*0x%x, transInfo=*0x%x)", font, code, surface, x, y, metrics, transInfo);
 	return CELL_OK;
 }
 
-error_code cellFontSetResolutionDpi()
+error_code cellFontSetResolutionDpi(vm::ptr<CellFont> font, u32 hDpi, u32 vDpi)
 {
-	UNIMPLEMENTED_FUNC(cellFont);
+	cellFont.todo("cellFontSetResolutionDpi(font=*0x%x, hDpi=0x%x, vDpi=0x%x)", font, hDpi, vDpi);
+
+	if (!font)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	// TODO
+	// font->resolutionDpiH = hDpi == 0 ? 72 : hDpi;
+	// font->resolutionDpiV = vDpi == 0 ? 72 : vDpi;
+
 	return CELL_OK;
 }
 
-error_code cellFontGetCharGlyphMetricsVertical()
+error_code cellFontGetCharGlyphMetricsVertical(vm::ptr<CellFont> font, u32 code, vm::ptr<CellFontGlyphMetrics> metrics)
 {
-	UNIMPLEMENTED_FUNC(cellFont);
+	cellFont.todo("cellFontGetCharGlyphMetricsVertical(font=*0x%x, code=0x%x, metrics=*0x%x)", font, code, metrics);
+
+	if (!font || !metrics)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (false) // TODO (!font->field_0xc || !font->library)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (false) // TODO
+	{
+		return CELL_FONT_ERROR_NO_SUPPORT_CODE;
+	}
+
+	// TODO
+
 	return CELL_OK;
 }
 
-error_code cellFontGetRenderEffectWeight()
+error_code cellFontGetRenderEffectWeight(vm::ptr<CellFont> font, vm::ptr<f32> effectWeight)
 {
-	cellFont.todo("cellFontGetRenderEffectWeight()");
+	cellFont.todo("cellFontGetRenderEffectWeight(font=*0x%x, effectWeight=*0x%x)", font, effectWeight);
+
+	if (!font)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (false) // TODO (!font->field_0xc || !font->library)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (false) // TODO (!font->field_0x14)
+	{
+		return CELL_FONT_ERROR_RENDERER_UNBIND;
+	}
+
+	if (effectWeight) // Technically unchecked in firmware
+	{
+		// TODO
+		//*effectWeight = font->field_0x14 + 0x20;
+	}
+
 	return CELL_OK;
 }
 
-error_code cellFontGraphicsGetDrawType()
+error_code cellFontGraphicsGetDrawType(vm::ptr<CellFontGraphicsDrawContext> context, vm::ptr<u32> type)
 {
-	cellFont.todo("cellFontGraphicsGetDrawType()");
+	cellFont.todo("cellFontGraphicsGetDrawType(context=*0x%x, type=*0x%x)", context, type);
+
+	if (!context || !type)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (false) // TODO (context->magic != 0xcf50)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	//*type = context->field_0x42; // TODO
+
 	return CELL_OK;
 }
 
-error_code cellFontGetKerning()
+error_code cellFontGetKerning(vm::ptr<CellFont> font, u32 preCode, u32 code, vm::ptr<CellFontKerning> kerning)
 {
-	cellFont.todo("cellFontGetKerning()");
+	cellFont.todo("cellFontGetKerning(font=*0x%x, preCode=0x%x, code=0x%x, kerning=*0x%x)", font, preCode, code, kerning);
+
+	if (!kerning)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	*kerning = {};
+
+	if (!font)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (false) // TODO (!font->field_0xc || !font->library)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (preCode == 0 || code == 0)
+	{
+		return CELL_OK;
+	}
+
+	// TODO
+
 	return CELL_OK;
 }
 
-error_code cellFontGetRenderScaledKerning()
+error_code cellFontGetRenderScaledKerning(vm::ptr<CellFont> font, u32 preCode, u32 code, vm::ptr<CellFontKerning> kerning)
 {
-	cellFont.todo("cellFontGetRenderScaledKerning()");
+	cellFont.todo("cellFontGetRenderScaledKerning(font=*0x%x, preCode=0x%x, code=0x%x, kerning=*0x%x)", font, preCode, code, kerning);
+
+	if (!kerning)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	*kerning = {};
+
+	if (!font)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (false) // TODO: !font->field_0x14
+	{
+		return CELL_FONT_ERROR_RENDERER_UNBIND;
+	}
+
+	if (false) // TODO (!font->field_0xc || !font->library)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (preCode == 0 || code == 0)
+	{
+		return CELL_OK;
+	}
+
+	// TODO
+
 	return CELL_OK;
 }
 
-error_code cellFontGetRenderScalePixel()
+error_code cellFontGetRenderScalePixel(vm::ptr<CellFont> font, vm::ptr<f32> w, vm::ptr<f32> h)
 {
-	cellFont.todo("cellFontGetRenderScalePixel()");
+	cellFont.todo("cellFontGetRenderScalePixel(font=*0x%x, w=*0x%x, h=*0x%x)", font, w, h);
+
+	if (!font)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (false) // TODO (!font->field_0xc || !font->library)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (false) // TODO: !font->field_0x14
+	{
+		return CELL_FONT_ERROR_RENDERER_UNBIND;
+	}
+
+	if (w)
+	{
+		//*w = font->field_0x14 + 0x18; // TODO
+	}
+
+	if (h)
+	{
+		//*h = font->field_0x14 + 0x1c; // TODO
+	}
+
 	return CELL_OK;
 }
 
-error_code cellFontGlyphGetScalePixel()
+error_code cellFontGlyphGetScalePixel(vm::ptr<CellFontGlyph> glyph, vm::ptr<f32> w, vm::ptr<f32> h)
 {
-	cellFont.todo("cellFontGlyphGetScalePixel()");
+	cellFont.todo("cellFontGlyphGetScalePixel(glyph=*0x%x, w=*0x%x, h=*0x%x)", glyph, w, h);
+
+	if (!glyph)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (w)
+	{
+		*w = 0.0f;
+	}
+
+	if (h)
+	{
+		*h = 0.0f;
+	}
+
+	if (!glyph->Outline.generateEnv)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (w)
+	{
+		//*w = glyph->Outline.generateEnv[0]; // TODO
+	}
+
+	if (h)
+	{
+		//*h = glyph->Outline.generateEnv[1]; // TODO
+	}
+
 	return CELL_OK;
 }
 
-error_code cellFontGlyphGetHorizontalShift()
+error_code cellFontGlyphGetHorizontalShift(vm::ptr<CellFontGlyph> glyph, vm::ptr<f32> shiftX, vm::ptr<f32> shiftY)
 {
-	cellFont.todo("cellFontGlyphGetHorizontalShift()");
+	cellFont.todo("cellFontGlyphGetHorizontalShift(glyph=*0x%x, shiftX=*0x%x, shiftY=*0x%x)", glyph, shiftX, shiftY);
+
+	if (false) // TODO
+	{
+		return CELL_FONT_ERROR_NO_SUPPORT_FUNCTION;
+	}
+
+	if (!glyph)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (glyph->Outline.generateEnv)
+	{
+		if (shiftX)
+		{
+			*shiftX = 0.0;
+		}
+
+		if (shiftY)
+		{
+			//*shiftY = glyph->Outline.generateEnv + 0x48; // TODO
+		}
+	}
+
 	return CELL_OK;
 }
 
-error_code cellFontRenderCharGlyphImageHorizontal()
+error_code cellFontRenderCharGlyphImageHorizontal(vm::ptr<CellFont> font, u32 code, vm::ptr<CellFontRenderSurface> surface, f32 x, f32 y, vm::ptr<CellFontGlyphMetrics> metrics, vm::ptr<CellFontImageTransInfo> transInfo)
 {
-	cellFont.todo("cellFontRenderCharGlyphImageHorizontal()");
+	cellFont.todo("cellFontRenderCharGlyphImageHorizontal(font=*0x%x, code=0x%x, surface=*0x%x, x=%f, y=%f, metrics=*0x%x, transInfo=*0x%x)", font, code, surface, x, y, metrics, transInfo);
 	return CELL_OK;
 }
 
-error_code cellFontGetEffectWeight()
+error_code cellFontGetEffectWeight(vm::ptr<CellFont> font, vm::ptr<f32> effectWeight)
 {
-	cellFont.todo("cellFontGetEffectWeight()");
+	cellFont.todo("cellFontGetEffectWeight(font=*0x%x, effectWeight=*0x%x)", font, effectWeight);
+
+	if (!font || !effectWeight)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	//*effectWeight = font->weight * something; // TODO
+
 	return CELL_OK;
 }
 
-error_code cellFontGetScalePixel()
+error_code cellFontGetScalePixel(vm::ptr<CellFont> font, vm::ptr<f32> w, vm::ptr<f32> h)
 {
-	cellFont.todo("cellFontGetScalePixel()");
+	cellFont.todo("cellFontGetScalePixel(font=*0x%x, w=*0x%x, h=*0x%x)", font, w, h);
+
+	if (!font)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (w)
+	{
+		//*w = font->scalePixelW; // TODO
+	}
+
+	if (h)
+	{
+		//*h = font->scalePixelH; // TODO
+	}
+
 	return CELL_OK;
 }
 
@@ -676,135 +1688,531 @@ error_code cellFontClearFileCache()
 	return CELL_OK;
 }
 
-error_code cellFontAdjustFontScaling()
+error_code cellFontAdjustFontScaling(vm::ptr<CellFont> font, f32 fontScale)
 {
-	cellFont.todo("cellFontAdjustFontScaling()");
+	cellFont.todo("cellFontAdjustFontScaling(font=*0x%x, fontScale=%f)", font, fontScale);
+
+	if (!font)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (false) // TODO (!font->field_0x2)
+	{
+		return CELL_FONT_ERROR_NO_SUPPORT_FUNCTION;
+	}
+
+	// TODO: set font scale (probably clamped)
+
 	return CELL_OK;
 }
 
-error_code cellFontSetupRenderScalePoint()
+error_code cellFontSetupRenderScalePoint(vm::ptr<CellFont> font, f32 w, f32 h)
 {
-	cellFont.todo("cellFontSetupRenderScalePoint()");
+	cellFont.todo("cellFontSetupRenderScalePoint(font=*0x%x, w=%f, h=%f)", font, w, h);
+
+	if (!font)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (false) // TODO (!font->field_0xc || !font->library)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (!font->renderer_addr)
+	{
+		return CELL_FONT_ERROR_RENDERER_UNBIND;
+	}
+
+	// TODO:
+
+	//if (w == something)
+	//{
+	//	w = font->scalePointW;
+	//}
+
+	//if (h == something)
+	//{
+	//	h = font->scalePointH;
+	//}
+
+	//font->field_0x14 + 0x10 = w;
+	//font->field_0x14 + 0x14 = h;
+	//font->field_0x14 + 0x18 = (w * font->resolutionDpiH / something;
+	//font->field_0x14 + 0x1c = (h * font->resolutionDpiV / something;
+	//font->field_0x78 = 0;
+
 	return CELL_OK;
 }
 
-error_code cellFontGlyphGetVerticalShift()
+error_code cellFontGlyphGetVerticalShift(vm::ptr<CellFontGlyph> glyph, vm::ptr<f32> shiftX, vm::ptr<f32> shiftY)
 {
-	cellFont.todo("cellFontGlyphGetVerticalShift()");
+	cellFont.todo("cellFontGlyphGetVerticalShift(glyph=*0x%x, shiftX=*0x%x, shiftY=*0x%x)", glyph, shiftX, shiftY);
+
+	if (false) // TODO
+	{
+		return CELL_FONT_ERROR_NO_SUPPORT_FUNCTION;
+	}
+
+	if (!glyph || !glyph->Outline.generateEnv)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	// TODO
+
+	//fVar1 = glyph->Outline.generateEnv + 0x4c;
+	//fVar2 = glyph->Outline.generateEnv + 0x48;
+
+	//if (fVar1 == something)
+	//{
+	//	fVar1 = (glyph->Outline.generateEnv + 0x4) / (glyph->Outline.generateEnv + 0x14) * (glyph->Outline.generateEnv + 0x18);
+	//}
+
+	//if (shiftX)
+	//{
+	//	*shiftX = glyph->Outline.generateEnv + 0x38;
+	//}
+
+	//if (shiftY)
+	//{
+	//	*shiftY = -fVar2 + fVar1 + (glyph->Outline.generateEnv + 0x3c);
+	//}
+
 	return CELL_OK;
 }
 
-error_code cellFontGetGlyphExpandBufferInfo()
+error_code cellFontGetGlyphExpandBufferInfo(vm::ptr<CellFont> font, vm::ptr<s32> pointN, vm::ptr<s32> contourN)
 {
-	cellFont.todo("cellFontGetGlyphExpandBufferInfo()");
+	cellFont.todo("cellFontGetGlyphExpandBufferInfo(font=*0x%x, pointN=*0x%x, contourN=*0x%x)", font, pointN, contourN);
+
+	if (pointN)
+	{
+		*pointN = 0;
+	}
+
+	if (contourN)
+	{
+		*contourN = 0;
+	}
+
+	if (!font)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (false) // TODO (!something || !font->library)
+	{
+		return CELL_FONT_ERROR_UNINITIALIZED;
+	}
+
+	if (false) // TODO (!font->field_0xc)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	// TODO
+
 	return CELL_OK;
 }
 
-error_code cellFontGetLibrary()
+error_code cellFontGetLibrary(vm::ptr<CellFont> font, vm::cpptr<CellFontLibrary> library, vm::ptr<u32> type)
 {
-	cellFont.todo("cellFontGetLibrary()");
+	cellFont.todo("cellFontGetLibrary(font=*0x%x, library=*0x%x, type=*0x%x)", font, library, type);
+
+	if (!font || !library)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	// TODO
+	//**library = font->library;
+
+	if (!(*library))
+	{
+		return CELL_FONT_ERROR_UNINITIALIZED;
+	}
+
+	if (type)
+	{
+		*type = (*library)->libraryType;
+	}
+
 	return CELL_OK;
 }
 
-error_code cellFontVertexesGlyphRelocate()
+error_code cellFontVertexesGlyphRelocate(vm::ptr<CellFontVertexesGlyph> vGlyph, vm::ptr<CellFontVertexesGlyph> vGlyph2, vm::ptr<CellFontVertexesGlyphSubHeader> subHeader, vm::ptr<u32> localBuf, u32 copySize)
 {
-	cellFont.todo("cellFontVertexesGlyphRelocate()");
+	cellFont.todo("cellFontVertexesGlyphRelocate(vGlyph=*0x%x, vGlyph2=*0x%x, subHeader=*0x%x, localBuf=*0x%x, copySize=0x%x)", vGlyph, vGlyph2, subHeader, localBuf, copySize);
+
+	if (!vGlyph2)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (vGlyph2 != vGlyph)
+	{
+		vGlyph2->subHeader = vm::null;
+		vGlyph2->data = vm::null;
+	}
+
+	if (!vGlyph || !subHeader)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
 	return CELL_OK;
 }
 
-error_code cellFontGetInitializedRevisionFlags()
+error_code cellFontGetInitializedRevisionFlags(vm::ptr<u64> revisionFlags)
 {
-	cellFont.todo("cellFontGetInitializedRevisionFlags()");
+	cellFont.todo("cellFontGetInitializedRevisionFlags(revisionFlags=*0x%x)", revisionFlags);
+
+	if (revisionFlags)
+	{
+		*revisionFlags = 0;
+	}
+
+	if (false) // TODO
+	{
+		return CELL_FONT_ERROR_UNINITIALIZED;
+	}
+
+	if (revisionFlags)
+	{
+		//*revisionFlags = something; // TODO
+	}
+
 	return CELL_OK;
 }
 
-error_code cellFontGetResolutionDpi()
+error_code cellFontGetResolutionDpi(vm::ptr<CellFont> font, vm::ptr<u32> hDpi, vm::ptr<u32> vDpi)
 {
-	cellFont.todo("cellFontGetResolutionDpi()");
+	cellFont.todo("cellFontGetResolutionDpi(font=*0x%x, hDpi=*0x%x, vDpi=*0x%x)", font, hDpi, vDpi);
+
+	if (!font)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (hDpi)
+	{
+		//*hDpi = font->resolutionDpiH; // TODO
+	}
+
+	if (vDpi)
+	{
+		//*vDpi = font->resolutionDpiV; // TODO
+	}
+
 	return CELL_OK;
 }
 
-error_code cellFontGlyphRenderImageVertical()
+error_code cellFontGlyphRenderImageVertical(vm::ptr<CellFontGlyph> font, vm::ptr<CellFontGlyphStyle> style, vm::ptr<CellFontRenderer> renderer, vm::ptr<CellFontRenderSurface> surf, f32 x, f32 y, vm::ptr<CellFontGlyphMetrics> metrics, vm::ptr<CellFontImageTransInfo> transInfo)
 {
-	cellFont.todo("cellFontGlyphRenderImageVertical()");
+	cellFont.todo("cellFontGlyphRenderImageVertical(font=*0x%x, style=*0x%x, renderer=*0x%x, surf=*0x%x, x=%f, y=%f, metrics=*0x%x, transInfo=*0x%x)", font, style, renderer, surf, x, y, metrics, transInfo);
+
+	if (false) // TODO
+	{
+		return CELL_FONT_ERROR_NO_SUPPORT_FUNCTION;
+	}
+
+	if (!font || !renderer || !renderer->systemReserved[0x10])
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	// TODO
+
 	return CELL_OK;
 }
 
-error_code cellFontGlyphRenderImageHorizontal()
+error_code cellFontGlyphRenderImageHorizontal(vm::ptr<CellFontGlyph> font, vm::ptr<CellFontGlyphStyle> style, vm::ptr<CellFontRenderer> renderer, vm::ptr<CellFontRenderSurface> surf, f32 x, f32 y, vm::ptr<CellFontGlyphMetrics> metrics, vm::ptr<CellFontImageTransInfo> transInfo)
 {
-	cellFont.todo("cellFontGlyphRenderImageHorizontal()");
+	cellFont.todo("cellFontGlyphRenderImageHorizontal(font=*0x%x, style=*0x%x, renderer=*0x%x, surf=*0x%x, x=%f, y=%f, metrics=*0x%x, transInfo=*0x%x)", font, style, renderer, surf, x, y, metrics, transInfo);
+
+	if (false) // TODO
+	{
+		return CELL_FONT_ERROR_NO_SUPPORT_FUNCTION;
+	}
+
+	if (!font || !renderer || !renderer->systemReserved[0x10])
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	// TODO
+
 	return CELL_OK;
 }
 
-error_code cellFontAdjustGlyphExpandBuffer()
+error_code cellFontAdjustGlyphExpandBuffer(vm::ptr<CellFont> font, s32 pointN, s32 contourN)
 {
-	cellFont.todo("cellFontAdjustGlyphExpandBuffer()");
+	cellFont.todo("cellFontAdjustGlyphExpandBuffer(font=*0x%x, pointN=%d, contourN=%d)", font, pointN, contourN);
+
+	if (!font)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (false) // TODO (!something || !font->library)
+	{
+		return CELL_FONT_ERROR_UNINITIALIZED;
+	}
+
+	if (false) // TODO (!font->field_0xc)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
 	return CELL_OK;
 }
 
-error_code cellFontGetRenderScalePoint()
+error_code cellFontGetRenderScalePoint(vm::ptr<CellFont> font, vm::ptr<f32> w, vm::ptr<f32> h)
 {
-	cellFont.todo("cellFontGetRenderScalePoint()");
+	cellFont.todo("cellFontGetRenderScalePoint(font=*0x%x, w=*0x%x, h=*0x%x)", font, w, h);
+
+	if (!font)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (false) // TODO (!font->field_0xc || !font->library)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (false) // TODO: !font->field_0x14
+	{
+		return CELL_FONT_ERROR_RENDERER_UNBIND;
+	}
+
+	if (w)
+	{
+		//*w = font->field_0x14 + 0x10; // TODO
+	}
+
+	if (h)
+	{
+		//*h = font->field_0x14 + 0x14; // TODO
+	}
+
 	return CELL_OK;
 }
 
-error_code cellFontGraphicsGetFontRGBA()
+error_code cellFontGraphicsGetFontRGBA(vm::ptr<CellFontGraphicsDrawContext> context, vm::ptr<f32> fontRGBA)
 {
-	cellFont.todo("cellFontGraphicsGetFontRGBA()");
+	cellFont.todo("cellFontGraphicsGetFontRGBA(context=*0x%x, fontRGBA=*0x%x)", context, fontRGBA);
+
+	if (!context || !fontRGBA)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (false) // TODO: (context->magic != 0xcf50)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	// TODO
+	//fontRGBA[0] = context->field_0x70;
+	//fontRGBA[1] = context->field_0x74;
+	//fontRGBA[2] = context->field_0x78;
+	//fontRGBA[3] = context->field_0x7c;
+
 	return CELL_OK;
 }
 
-error_code cellFontGlyphGetOutlineVertexes()
+error_code cellFontGlyphGetOutlineVertexes(vm::ptr<CellFontGlyph> glyph, f32 controlDistance, vm::ptr<CellFontGetOutlineVertexesIF> getIF, vm::ptr<CellFontGlyphBoundingBox> bbox, vm::ptr<u32> vcount)
 {
-	cellFont.todo("cellFontGlyphGetOutlineVertexes()");
+	cellFont.todo("cellFontGlyphGetOutlineVertexes(glyph=*0x%x, controlDistance=%f, getIF=*0x%x, bbox=*0x%x, vcount=*0x%x)", glyph, controlDistance, getIF, bbox, vcount);
+
+	if (!glyph)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (!bbox)
+	{
+		//bbox = something; // TODO
+	}
+
+	if (glyph->Outline.contoursCount == 0)
+	{
+		if (vcount)
+		{
+			vcount[0] = 0;
+			vcount[1] = 0;
+			vcount[2] = 0;
+			vcount[3] = 0;
+		}
+
+		//if (in_r7)
+		//{
+		//	*in_r7 = 0; // ???
+		//}
+
+		return CELL_OK;
+	}
+
+	// TODO
+
 	return CELL_OK;
 }
 
-error_code cellFontDelete()
+error_code cellFontDelete(vm::cptr<CellFontLibrary> library, vm::ptr<void> p)
 {
-	cellFont.todo("cellFontDelete()");
+	cellFont.todo("cellFontDelete(library=*0x%x, p=*0x%x)", library, p);
+
+	if (!library || !p)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	// TODO
+
 	return CELL_OK;
 }
 
-error_code cellFontPatchWorks()
+error_code cellFontPatchWorks(s32 param_1, u64 param_2)
 {
-	cellFont.todo("cellFontPatchWorks()");
+	cellFont.todo("cellFontPatchWorks(param_1=0x%x, param_2=0x%x)", param_1, param_2);
 	return CELL_OK;
 }
 
-error_code cellFontGlyphRenderImage()
+error_code cellFontGlyphRenderImage(vm::ptr<CellFontGlyph> font, vm::ptr<CellFontGlyphStyle> style, vm::ptr<CellFontRenderer> renderer, vm::ptr<CellFontRenderSurface> surf, f32 x, f32 y, vm::ptr<CellFontGlyphMetrics> metrics, vm::ptr<CellFontImageTransInfo> transInfo)
 {
-	cellFont.todo("cellFontGlyphRenderImage()");
+	cellFont.todo("cellFontGlyphRenderImage(font=*0x%x, style=*0x%x, renderer=*0x%x, surf=*0x%x, x=%f, y=%f, metrics=*0x%x, transInfo=*0x%x)", font, style, renderer, surf, x, y, metrics, transInfo);
+
+	if (false) // TODO
+	{
+		return CELL_FONT_ERROR_NO_SUPPORT_FUNCTION;
+	}
+
+	if (!font || !renderer || !renderer->systemReserved[0x10])
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	// TODO
+
 	return CELL_OK;
 }
 
-error_code cellFontGetBindingRenderer()
+error_code cellFontGetBindingRenderer(vm::ptr<CellFont> font, vm::pptr<CellFontRenderer> renderer)
 {
-	cellFont.todo("cellFontGetBindingRenderer()");
+	cellFont.todo("cellFontGetBindingRenderer(font=*0x%x, renderer=*0x%x)", font, renderer);
+
+	if (!renderer)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (font)
+	{
+		// TODO: may return CELL_FONT_ERROR_RENDERER_UNBIND
+		//*renderer = font->field_0x14;
+	}
+	else
+	{
+		*renderer = vm::null;
+	}
+
 	return CELL_OK;
 }
 
-error_code cellFontGenerateCharGlyphVertical()
+error_code cellFontGenerateCharGlyphVertical(vm::ptr<CellFont> font, u32 code, vm::pptr<CellFontGlyph> glyph)
 {
-	cellFont.todo("cellFontGenerateCharGlyphVertical()");
+	cellFont.todo("cellFontGenerateCharGlyphVertical(font=*0x%x, code=0x%x, glyph=*0x%x)", font, code, glyph);
+
+	if (false) // TODO
+	{
+		return CELL_FONT_ERROR_NO_SUPPORT_FUNCTION;
+	}
+
+	if (!font)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	// TODO
+
 	return CELL_OK;
 }
 
-error_code cellFontGetRenderEffectSlant()
+error_code cellFontGetRenderEffectSlant(vm::ptr<CellFont> font, vm::ptr<f32> effectSlant)
 {
-	cellFont.todo("cellFontGetRenderEffectSlant()");
+	cellFont.todo("cellFontGetRenderEffectSlant(font=*0x%x, effectSlant=*0x%x)", font, effectSlant);
+
+	if (!font)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (false) // TODO (!font->field_0xc || !font->library)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (false) // TODO (!font->field_0x14)
+	{
+		return CELL_FONT_ERROR_RENDERER_UNBIND;
+	}
+
+	if (effectSlant) // Technically unchecked in firmware
+	{
+		// TODO
+		//*effectSlant = font->field_0x14 + 0x24;
+	}
+
 	return CELL_OK;
 }
 
-error_code cellFontGetScalePoint()
+
+error_code cellFontGetScalePoint(vm::ptr<CellFont> font, vm::ptr<f32> w, vm::ptr<f32> h)
 {
-	cellFont.todo("cellFontGetScalePoint()");
+	cellFont.todo("cellFontGetScalePoint(font=*0x%x, w=*0x%x, h=*0x%x)", font, w, h);
+
+	if (!font)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (w)
+	{
+		//*w = font->scalePointW; // TODO
+	}
+
+	if (h)
+	{
+		//*h = font->scalePointH; // TODO
+	}
+
 	return CELL_OK;
 }
 
-error_code cellFontGraphicsGetLineRGBA()
+
+error_code cellFontGraphicsGetLineRGBA(vm::ptr<CellFontGraphicsDrawContext> context, vm::ptr<f32> lineRGBA)
 {
-	cellFont.todo("cellFontGraphicsGetLineRGBA()");
+	cellFont.todo("cellFontGraphicsGetLineRGBA(context=*0x%x, lineRGBA=*0x%x)", context, lineRGBA);
+
+	if (!context || !lineRGBA)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (false) // TODO: (context->magic != 0xcf50)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	// TODO
+	//lineRGBA[0] = context->lineColorR;
+	//lineRGBA[1] = context->lineColorG;
+	//lineRGBA[2] = context->lineColorB;
+	//lineRGBA[3] = context->lineColorA;
+
 	return CELL_OK;
 }
 
