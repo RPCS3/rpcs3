@@ -5008,7 +5008,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		const auto s = m_ir->CreateAnd(m_ir->CreateLShr(d, 32), 0x80000000);
 		const auto m = m_ir->CreateXor(m_ir->CreateLShr(d, 29), 0x40000000);
 		const auto r = m_ir->CreateOr(m_ir->CreateAnd(m, 0x7fffffff), s);
-		return m_ir->CreateTrunc(m_ir->CreateSelect(m_ir->CreateIsNotNull(d), r, splat<u64[4]>(0).eval(m_ir)), get_type<u32[4]>());
+		return m_ir->CreateTrunc(m_ir->CreateSelect(m_ir->CreateIsNotNull(m_ir->CreateShl(d, 1)), r, s), get_type<u32[4]>());
 	}
 
 	llvm::Value* xfloat_to_double(llvm::Value* val)
