@@ -922,9 +922,9 @@ std::string vfs::unescape(std::string_view name)
 	return result;
 }
 
-std::string vfs::host::hash_path(const std::string& path, const std::string& dev_root)
+std::string vfs::host::hash_path(const std::string& path, const std::string& dev_root, std::string_view prefix)
 {
-	return fmt::format(u8"%s/＄%s%s", dev_root, fmt::base57(std::hash<std::string>()(path)), fmt::base57(utils::get_unique_tsc()));
+	return fmt::format(u8"%s/＄%s%s%s", dev_root, fmt::base57(std::hash<std::string>()(path)), prefix, fmt::base57(utils::get_unique_tsc()));
 }
 
 bool vfs::host::rename(const std::string& from, const std::string& to, const lv2_fs_mount_point* mp, bool overwrite, bool lock)
@@ -1032,11 +1032,21 @@ bool vfs::host::unlink(const std::string& path, [[maybe_unused]] const std::stri
 	else
 	{
 		// Rename to special dummy name which will be ignored by VFS (but opened file handles can still read or write it)
-		const std::string dummy = hash_path(path, dev_root);
+		std::string dummy = hash_path(path, dev_root, "file");
 
-		if (!fs::rename(path, dummy, true))
+		while (true)
 		{
-			return false;
+			if (fs::rename(path, dummy, false))
+			{
+				break;
+			}
+
+			if (fs::g_tls_error != fs::error::exist)
+			{
+				return false;
+			}
+
+			dummy = hash_path(path, dev_root, "file");
 		}
 
 		if (fs::file f{dummy, fs::read + fs::write})
@@ -1056,17 +1066,33 @@ bool vfs::host::unlink(const std::string& path, [[maybe_unused]] const std::stri
 #endif
 }
 
-bool vfs::host::remove_all(const std::string& path, [[maybe_unused]] const std::string& dev_root, [[maybe_unused]] const lv2_fs_mount_point* mp, bool remove_root, [[maybe_unused]] bool lock)
+bool vfs::host::remove_all(const std::string& path, [[maybe_unused]] const std::string& dev_root, [[maybe_unused]] const lv2_fs_mount_point* mp, [[maybe_unused]] bool remove_root, [[maybe_unused]] bool lock, [[maybe_unused]] bool force_atomic)
 {
-#ifdef _WIN32
+#ifndef _WIN32
+	if (!force_atomic)
+	{
+		return fs::remove_all(path, remove_root);
+	}
+#endif
+
 	if (remove_root)
 	{
 		// Rename to special dummy folder which will be ignored by VFS (but opened file handles can still read or write it)
-		const std::string dummy = hash_path(path, dev_root);
+		std::string dummy = hash_path(path, dev_root, "dir");
 
-		if (!vfs::host::rename(path, dummy, mp, false, lock))
+		while (true)
 		{
-			return false;
+			if (vfs::host::rename(path, dummy, mp, false, lock))
+			{
+				break;
+			}
+
+			if (fs::g_tls_error != fs::error::exist)
+			{
+				return false;
+			}
+
+			dummy = hash_path(path, dev_root, "dir");
 		}
 
 		if (!vfs::host::remove_all(dummy, dev_root, mp, false, lock))
@@ -1113,7 +1139,4 @@ bool vfs::host::remove_all(const std::string& path, [[maybe_unused]] const std::
 	}
 
 	return true;
-#else
-	return fs::remove_all(path, remove_root);
-#endif
 }
