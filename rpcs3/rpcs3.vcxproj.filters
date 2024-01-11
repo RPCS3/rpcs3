@@ -828,13 +828,10 @@
     <ClCompile Include="rpcs3qt\qt_camera_video_sink.cpp">
       <Filter>Io\camera</Filter>
     </ClCompile>
-    <ClCompile Include="rpcs3qt\qt_camera_error_handler.cpp">
-      <Filter>Io\camera</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug\moc_qt_camera_error_handler.cpp">
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_qt_camera_handler.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release\moc_qt_camera_error_handler.cpp">
+    <ClCompile Include="QTGeneratedFiles\Release\moc_qt_camera_handler.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\camera_settings_dialog.cpp">
@@ -1199,9 +1196,6 @@
     <ClInclude Include="rpcs3qt\qt_camera_video_sink.h">
       <Filter>Io\camera</Filter>
     </ClInclude>
-    <ClInclude Include="rpcs3qt\qt_camera_handler.h">
-      <Filter>Io\camera</Filter>
-    </ClInclude>
     <ClInclude Include="QTGeneratedFiles\ui_camera_settings_dialog.h">
       <Filter>Generated Files</Filter>
     </ClInclude>
@@ -1483,7 +1477,7 @@
     <CustomBuild Include="rpcs3qt\recvmessage_dialog_frame.h">
       <Filter>Gui\message dialog</Filter>
     </CustomBuild>
-    <CustomBuild Include="rpcs3qt\qt_camera_error_handler.h">
+    <CustomBuild Include="rpcs3qt\qt_camera_handler.h">
       <Filter>Io\camera</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\camera_settings_dialog.ui">

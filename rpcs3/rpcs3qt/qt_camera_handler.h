@@ -2,14 +2,17 @@
 
 #include "Emu/Io/camera_handler_base.h"
 #include "qt_camera_video_sink.h"
-#include "qt_camera_error_handler.h"
+#include "util/types.hpp"
 
 #include <QCamera>
 #include <QMediaCaptureSession>
+#include <QObject>
 #include <QVideoSink>
 
-class qt_camera_handler final : public camera_handler_base
+class qt_camera_handler final : public QObject, public camera_handler_base
 {
+	Q_OBJECT
+
 public:
 	qt_camera_handler();
 	virtual ~qt_camera_handler();
@@ -35,5 +38,8 @@ private:
 	std::shared_ptr<QCamera> m_camera;
 	std::unique_ptr<QMediaCaptureSession> m_media_capture_session;
 	std::unique_ptr<qt_camera_video_sink> m_video_sink;
-	std::unique_ptr<qt_camera_error_handler> m_error_handler;
+
+private Q_SLOTS:
+	void handle_camera_active(bool is_active);
+	void handle_camera_error(QCamera::Error error, const QString& errorString);
 };
