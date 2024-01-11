@@ -63,7 +63,6 @@ add_library(rpcs3_ui STATIC
     pkg_install_dialog.cpp
     progress_dialog.cpp
     progress_indicator.cpp
-    qt_camera_error_handler.cpp
     qt_camera_handler.cpp
     qt_camera_video_sink.cpp
     qt_music_error_handler.cpp

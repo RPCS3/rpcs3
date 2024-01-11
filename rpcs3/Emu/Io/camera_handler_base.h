@@ -1,7 +1,9 @@
 #pragma once
 
+#include "util/atomic.hpp"
+#include "util/types.hpp"
+
 #include <mutex>
-#include <vector>
 
 class camera_handler_base
 {
