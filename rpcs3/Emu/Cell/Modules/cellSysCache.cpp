@@ -31,6 +31,8 @@ void fmt_class_string<CellSysCacheError>::format(std::string& out, u64 arg)
 
 extern lv2_fs_mount_point g_mp_sys_dev_hdd1;
 
+extern std::string get_syscache_state_corruption_indicator_file_path(std::string_view dir_path);
+
 struct syscache_info
 {
 	const std::string cache_root = rpcs3::utils::get_hdd1_dir() + "/caches/";
@@ -38,6 +40,8 @@ struct syscache_info
 	stx::init_mutex init;
 
 	std::string cache_id;
+
+	bool retain_caches = false;
 
 	syscache_info() noexcept
 	{
@@ -63,6 +67,12 @@ struct syscache_info
 		{
 			if (entry.is_directory && entry.name.starts_with(prefix))
 			{
+				if (fs::is_file(get_syscache_state_corruption_indicator_file_path(cache_root + '/' + entry.name)))
+				{
+					// State is not complete
+					break;
+				}
+
 				cache_id = std::move(entry.name);
 				break;
 			}
@@ -89,7 +99,49 @@ struct syscache_info
 			});
 		}
 	}
+
+	~syscache_info() noexcept
+	{
+		if (cache_id.empty())
+		{
+			return;
+		}
+
+		if (!retain_caches)
+		{
+			vfs::host::remove_all(cache_root + cache_id, cache_root, &g_mp_sys_dev_hdd1, true, false, true);
+			return;
+		}
+
+		idm::select<lv2_fs_object, lv2_file>([](u32 /*id*/, lv2_file& file)
+		{
+			if (file.file && file.mp->flags & lv2_mp_flag::cache && file.flags & CELL_FS_O_ACCMODE)
+			{
+				file.file.sync();
+			}
+		});
+
+		fs::remove_file(get_syscache_state_corruption_indicator_file_path(cache_root + cache_id));
+	}
 };
+
+extern std::string get_syscache_state_corruption_indicator_file_path(std::string_view dir_path)
+{
+	constexpr std::u8string_view append_path = u8"/＄hdd0_temp_state_indicator";
+	const std::string_view filename = reinterpret_cast<const char*>(append_path.data());
+
+	if (dir_path.empty())
+	{
+		return rpcs3::utils::get_hdd1_dir() + "/caches/" + ensure(g_fxo->try_get<syscache_info>())->cache_id + "/" + filename.data();
+	}
+
+	return std::string{dir_path} + filename.data();
+}
+
+extern void signal_system_cache_can_stay()
+{
+	ensure(g_fxo->try_get<syscache_info>())->retain_caches = true;
+}
 
 error_code cellSysCacheClear()
 {
@@ -116,7 +168,7 @@ error_code cellSysCacheClear()
 
 error_code cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
 {
-	cellSysutil.notice("cellSysCacheMount(param=*0x%x)", param);
+	cellSysutil.notice("cellSysCacheMount(param=*0x%x ('%s'))", param, param.ptr(&CellSysCacheParam::cacheId));
 
 	auto& cache = g_fxo->get<syscache_info>();
 
@@ -141,8 +193,8 @@ error_code cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
 
 	std::lock_guard lock0(g_mp_sys_dev_hdd1.mutex);
 
-	// Check if can reuse existing cache (won't if cache id is an empty string)
-	if (param->cacheId[0] && cache_id == cache.cache_id)
+	// Check if can reuse existing cache (won't if cache id is an empty string or cache is damaged/incomplete)
+	if (param->cacheId[0] && cache_id == cache.cache_id && !fs::is_file(get_syscache_state_corruption_indicator_file_path(cache.cache_root + cache_id)))
 	{
 		// Isn't mounted yet on first call to cellSysCacheMount
 		if (vfs::mount("/dev_hdd1", new_path))
@@ -152,15 +204,33 @@ error_code cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
 		return not_an_error(CELL_SYSCACHE_RET_OK_RELAYED);
 	}
 
-	// Clear existing cache
+	const bool can_create = cache.cache_id != cache_id;
+
 	if (!cache.cache_id.empty())
 	{
+		// Clear previous cache
 		cache.clear(true);
 	}
 
 	// Set new cache id
 	cache.cache_id = std::move(cache_id);
-	fs::create_dir(new_path);
+
+	if (can_create)
+	{
+		const bool created = fs::create_dir(new_path);
+
+		if (!created)
+		{
+			if (fs::g_tls_error != fs::error::exist)
+			{
+				fmt::throw_exception("Failed to create HDD1 cache! (path='%s', reason='%s')", new_path, fs::g_tls_error);
+			}
+
+			// Clear new cache
+			cache.clear(false);
+		}
+	}
+
 	if (vfs::mount("/dev_hdd1", new_path))
 		g_fxo->get<lv2_fs_mount_info_map>().add("/dev_hdd1", &g_mp_sys_dev_hdd1);
 

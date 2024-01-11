@@ -340,6 +340,8 @@ error_code sys_process_detach_child(u64 unk)
 	return CELL_OK;
 }
 
+extern void signal_system_cache_can_stay();
+
 void _sys_process_exit(ppu_thread& ppu, s32 status, u32 arg2, u32 arg3)
 {
 	ppu.state += cpu_flag::wait;
@@ -349,6 +351,7 @@ void _sys_process_exit(ppu_thread& ppu, s32 status, u32 arg2, u32 arg3)
 	Emu.CallFromMainThread([]()
 	{
 		sys_process.success("Process finished");
+		signal_system_cache_can_stay();
 		Emu.Kill();
 	});
 
@@ -481,6 +484,7 @@ void lv2_exitspawn(ppu_thread& ppu, std::vector<std::string>& argv, std::vector<
 			}
 		};
 
+		signal_system_cache_can_stay();
 		Emu.Kill(false);
 	});
 

@@ -452,3 +452,15 @@ struct fmt_class_string<vm::_ptr_base<char, u32>, void> : fmt_class_string<vm::_
 {
 	// Classify char* as const char*
 };
+
+template <usz Size>
+struct fmt_class_string<vm::_ptr_base<const char[Size], u32>, void> : fmt_class_string<vm::_ptr_base<const char, u32>>
+{
+	// Classify const char[] as const char*
+};
+
+template <usz Size>
+struct fmt_class_string<vm::_ptr_base<char[Size], u32>, void> : fmt_class_string<vm::_ptr_base<const char, u32>>
+{
+	// Classify char[] as const char*
+};
