@@ -280,7 +280,6 @@ struct vdec_context final
 
 	~vdec_context()
 	{
-		avcodec_close(ctx);
 		avcodec_free_context(&ctx);
 		sws_freeContext(sws);
 	}

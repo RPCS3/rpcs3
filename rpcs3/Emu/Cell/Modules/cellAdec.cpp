@@ -371,7 +371,6 @@ public:
 		}
 		if (ctx)
 		{
-			avcodec_close(ctx);
 			avcodec_free_context(&ctx);
 		}
 		if (io_buf)
@@ -382,7 +381,6 @@ public:
 		{
 			if (fmt->pb) av_freep(&fmt->pb);
 			avformat_close_input(&fmt);
-			avformat_free_context(fmt);
 		}
 	}
 

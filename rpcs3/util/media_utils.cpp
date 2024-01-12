@@ -195,7 +195,6 @@ namespace utils
 		{
 			// Failed to load stream information
 			avformat_close_input(&av_format_ctx);
-			avformat_free_context(av_format_ctx);
 			media_log.notice("get_media_info: avformat_find_stream_info: could not load stream information. error=%d='%s' file='%s'", err, av_error_to_string(err), path);
 			return { false, std::move(info) };
 		}
@@ -227,7 +226,6 @@ namespace utils
 		{
 			// Failed to find a stream
 			avformat_close_input(&av_format_ctx);
-			avformat_free_context(av_format_ctx);
 			media_log.notice("get_media_info: Failed to match stream of type %d in file='%s'", av_media_type, path);
 			return { false, std::move(info) };
 		}
@@ -258,7 +256,6 @@ namespace utils
 		}
 
 		avformat_close_input(&av_format_ctx);
-		avformat_free_context(av_format_ctx);
 
 		return { true, std::move(info) };
 	}
@@ -302,22 +299,13 @@ namespace utils
 			if (sws)
 				sws_freeContext(sws);
 			if (audio.context)
-			{
-				avcodec_close(audio.context);
 				avcodec_free_context(&audio.context);
-			}
 			if (video.context)
-			{
-				avcodec_close(video.context);
 				avcodec_free_context(&video.context);
-			}
 			// AVCodec is managed by libavformat, no need to free it
 			// see: https://stackoverflow.com/a/18047320
 			if (format_context)
-			{
 				avformat_close_input(&format_context);
-				avformat_free_context(format_context);
-			}
 			//if (stream)
 			//	av_free(stream);
 			if (kill_callback)
@@ -1266,9 +1254,9 @@ namespace utils
 			{
 				media_log.error("video_encoder: avformat_write_header failed. Error: %d='%s'", err, av_error_to_string(err));
 
-				if (int err = avio_close(av.format_context->pb); err != 0)
+				if (int err = avio_closep(&av.format_context->pb); err != 0)
 				{
-					media_log.error("video_encoder: avio_close failed. Error: %d='%s'", err, av_error_to_string(err));
+					media_log.error("video_encoder: avio_closep failed. Error: %d='%s'", err, av_error_to_string(err));
 				}
 
 				has_error = true;
@@ -1645,9 +1633,9 @@ namespace utils
 				media_log.error("video_encoder: av_write_trailer failed. Error: %d='%s'", err, av_error_to_string(err));
 			}
 
-			if (int err = avio_close(av.format_context->pb); err != 0)
+			if (int err = avio_closep(&av.format_context->pb); err != 0)
 			{
-				media_log.error("video_encoder: avio_close failed. Error: %d='%s'", err, av_error_to_string(err));
+				media_log.error("video_encoder: avio_closep failed. Error: %d='%s'", err, av_error_to_string(err));
 			}
 		});
 	}
