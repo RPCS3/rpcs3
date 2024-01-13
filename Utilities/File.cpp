@@ -1,6 +1,7 @@
 #include "File.h"
 #include "mutex.h"
 #include "StrFmt.h"
+#include "StrUtil.h"
 #include "Crypto/sha1.h"
 
 #include <unordered_map>
@@ -47,23 +48,6 @@ static std::unique_ptr<wchar_t[]> to_wchar(const std::string& source)
 	ensure(GetFullPathNameW(buffer.get() + 32768, 32768, buffer.get(), nullptr) - 1 < 32768 - 1); // "to_wchar"
 
 	return buffer;
-}
-
-static void to_utf8(std::string& out, const wchar_t* source)
-{
-	// String size
-	const usz length = std::wcslen(source);
-
-	// Safe buffer size for max possible output length (including null terminator)
-	const int buf_size = narrow<int>(length * 3 + 1);
-
-	// Resize buffer
-	out.resize(buf_size - 1);
-
-	const int result = WideCharToMultiByte(CP_UTF8, 0, source, static_cast<int>(length) + 1, &out.front(), buf_size, nullptr, nullptr);
-
-	// Fix the size
-	out.resize(ensure(result) - 1);
 }
 
 static time_t to_time(const ULARGE_INTEGER& ft)
@@ -1789,7 +1773,7 @@ bool fs::dir::open(const std::string& path)
 		{
 			dir_entry info;
 
-			to_utf8(info.name, found.cFileName);
+			info.name = wchar_to_utf8(found.cFileName);
 			info.is_directory = (found.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
 			info.is_writable = (found.dwFileAttributes & FILE_ATTRIBUTE_READONLY) == 0;
 			info.size = (static_cast<u64>(found.nFileSizeHigh) << 32) | static_cast<u64>(found.nFileSizeLow);
@@ -1933,7 +1917,7 @@ const std::string& fs::get_config_dir()
 			return dir; // empty
 		}
 
-		to_utf8(dir, buf); // Convert to UTF-8
+		dir = wchar_to_utf8(buf);
 
 		std::replace(dir.begin(), dir.end(), '\\', '/');
 
@@ -2018,7 +2002,7 @@ const std::string& fs::get_temp_dir()
 			return dir; // empty
 		}
 
-		to_utf8(dir, buf);
+		dir = wchar_to_utf8(buf);
 #else
 		// TODO
 		dir = get_cache_dir();
