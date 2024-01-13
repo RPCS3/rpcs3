@@ -1445,6 +1445,7 @@ void pad_settings_dialog::ChangeHandler()
 	{
 #ifdef _WIN32
 	case pad_handler::xinput:
+	case pad_handler::mm:
 #endif
 	case pad_handler::ds3:
 	case pad_handler::ds4:
