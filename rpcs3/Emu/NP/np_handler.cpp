@@ -1016,6 +1016,7 @@ namespace np
 					case rpcn::CommandType::SetRoomDataInternal: reply_set_roomdata_internal(req_id, data); break;
 					case rpcn::CommandType::GetRoomMemberDataInternal: reply_get_roommemberdata_internal(req_id, data); break;
 					case rpcn::CommandType::SetRoomMemberDataInternal: reply_set_roommemberdata_internal(req_id, data); break;
+					case rpcn::CommandType::SetUserInfo: reply_set_userinfo(req_id, data); break;
 					case rpcn::CommandType::PingRoomOwner: reply_get_ping_info(req_id, data); break;
 					case rpcn::CommandType::SendRoomMessage: reply_send_room_message(req_id, data); break;
 					case rpcn::CommandType::RequestSignalingInfos: reply_req_sign_infos(req_id, data); break;

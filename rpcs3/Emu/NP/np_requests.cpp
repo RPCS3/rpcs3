@@ -587,11 +587,7 @@ namespace np
 
 		if (rpcn::is_error(static_cast<rpcn::ErrorType>(reply_data[0])))
 		{
-			switch (reply_data[0])
-			{
-			default:
-				return error_and_disconnect(fmt::format("SetUserInfo failed with unknown error(%d)!", reply_data[0]));
-			}
+			return error_and_disconnect(fmt::format("SetUserInfo failed with unknown error(%d)!", reply_data[0]));
 		}
 
 		cb_info_opt->queue_callback(req_id, 0, 0, 0);
