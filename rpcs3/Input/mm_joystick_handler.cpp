@@ -385,7 +385,7 @@ PadHandlerBase::connection mm_joystick_handler::get_next_button_press(const std:
 		return connection::connected;
 	}
 	default:
-		break;
+		return connection::disconnected;
 	}
 
 	return connection::no_data;
