@@ -9595,6 +9595,24 @@ public:
 		{
 			return true;
 		}
+	}
+
+	bool is_input_float_result(value_t<f32[4]> v)
+	{		
+		static const auto MT = match<f32[4]>();
+
+		if (std::get<0>(match_expr(v, fm(MT, MT))) ||
+			std::get<0>(match_expr(v, fma(MT, MT, MT))) ||
+			std::get<0>(match_expr(v, fms(MT, MT, MT))) ||
+			std::get<0>(match_expr(v, fnms(MT, MT, MT)))
+			//std::get<0>(match_expr(v, fa(MT, MT))) ||
+			//std::get<0>(match_expr(v, fs(MT, MT))) ||
+			//std::get<0>(match_expr(v, spu_re(MT))) ||
+			//std::get<0>(match_expr(v, spu_rsqrte(MT)))
+			)
+		{
+			return true;
+		}
 
 		return false;
 	}
@@ -9617,6 +9635,14 @@ public:
 
 	value_t<f32[4]> clamp_smax(value_t<f32[4]> v)
 	{
+		if (g_cfg.core.spu_approx_xfloat)
+		{
+			if (is_input_float_result(v))
+			{
+				return v;
+			} 
+		}
+
 		if (m_use_avx512)
 		{
 			if (is_input_positive(v))
@@ -9975,7 +10001,10 @@ public:
 
 				const auto ma = sext<s32[4]>(fcmp_uno(a != fsplat<f32[4]>(0.)));
 				const auto mb = sext<s32[4]>(fcmp_uno(b != fsplat<f32[4]>(0.)));
-				return eval(bitcast<f32[4]>(bitcast<s32[4]>(a * b) & ma & mb));
+				const auto mul = eval(bitcast<s32[4]>(a * b));
+				const auto after_a = is_input_float_result(a) ? mul : eval(ma & mul);
+				const auto after_b = is_input_float_result(b) ? after_a : eval(mb & after_a);
+				return eval(bitcast<f32[4]>(after_b));
 			}
 			else
 			{
@@ -10301,7 +10330,7 @@ public:
 
 			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate || g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::relaxed)
 			{
-				return fma32x4(eval(-clamp_smax(a)), clamp_smax(b), c);
+				return fma32x4(eval(-clamp_smax(a)), clamp_smax(b), clamp_smax(c));
 			}
 			else
 			{
@@ -10338,9 +10367,9 @@ public:
 			{
 				const auto ma = sext<s32[4]>(fcmp_uno(a != fsplat<f32[4]>(0.)));
 				const auto mb = sext<s32[4]>(fcmp_uno(b != fsplat<f32[4]>(0.)));
-				const auto ca = bitcast<f32[4]>(bitcast<s32[4]>(a) & mb);
-				const auto cb = bitcast<f32[4]>(bitcast<s32[4]>(b) & ma);
-				return fma32x4(eval(ca), eval(cb), c);
+				const auto ca = is_input_float_result(b) ? a : eval(bitcast<f32[4]>(bitcast<s32[4]>(a) & mb));
+				const auto cb = is_input_float_result(a) ? b : eval(bitcast<f32[4]>(bitcast<s32[4]>(b) & ma));
+				return fma32x4(eval(ca), eval(cb), clamp_smax(c));
 			}
 			else
 			{
@@ -10410,7 +10439,7 @@ public:
 
 			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
 			{
-				return fma32x4(clamp_smax(a), clamp_smax(b), eval(-c));
+				return fma32x4(clamp_smax(a), clamp_smax(b), eval(-clamp_smax(c)));
 			}
 			else
 			{
