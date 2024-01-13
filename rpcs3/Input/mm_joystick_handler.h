@@ -100,11 +100,12 @@ class mm_joystick_handler final : public PadHandlerBase
 
 	struct MMJOYDevice : public PadDevice
 	{
-		u32 device_id{ 0 };
+		u32 device_id{ umax };
 		std::string device_name;
 		JOYINFOEX device_info{};
 		JOYCAPS device_caps{};
 		MMRESULT device_status = JOYERR_UNPLUGGED;
+		steady_clock::time_point last_update{};
 	};
 
 public:
@@ -118,13 +119,15 @@ public:
 
 private:
 	std::unordered_map<u64, u16> GetButtonValues(const JOYINFOEX& js_info, const JOYCAPS& js_caps);
-	int GetIDByName(const std::string& name);
+	std::shared_ptr<MMJOYDevice> get_device_by_name(const std::string& name);
+	std::shared_ptr<MMJOYDevice> create_device_by_name(const std::string& name);
 	bool GetMMJOYDevice(int index, MMJOYDevice* dev) const;
+	void enumerate_devices();
 
 	bool m_is_init = false;
 
 	std::set<u64> m_blacklist;
-	std::unordered_map<int, MMJOYDevice> m_devices;
+	std::map<std::string, std::shared_ptr<MMJOYDevice>> m_devices;
 
 	template <typename T>
 	std::set<T> find_keys(const std::vector<std::string>& names) const;
