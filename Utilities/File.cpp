@@ -515,7 +515,7 @@ bool fs::get_stat(const std::string& path, stat_t& info)
 	// Handle drives specially
 	if (epath.find_first_of(delim) == umax && epath.ends_with(':'))
 	{
-		WIN32_FILE_ATTRIBUTE_DATA attrs;
+		WIN32_FILE_ATTRIBUTE_DATA attrs{};
 
 		// Must end with a delimiter
 		if (!GetFileAttributesExW(to_wchar(std::string(epath) + '/').get(), GetFileExInfoStandard, &attrs))
@@ -537,14 +537,14 @@ bool fs::get_stat(const std::string& path, stat_t& info)
 		return true;
 	}
 
-	WIN32_FIND_DATA attrs;
-
 	// Allowed by FindFirstFileExW but we should not allow it
 	if (epath.ends_with("*"))
 	{
 		g_tls_error = fs::error::noent;
 		return false;
 	}
+
+	WIN32_FIND_DATA attrs{};
 
 	const auto wchar_ptr = to_wchar(std::string(epath));
 	const std::wstring_view wpath_view = wchar_ptr.get();
@@ -781,17 +781,15 @@ bool fs::remove_dir(const std::string& path)
 		g_tls_error = to_error(GetLastError());
 		return false;
 	}
-
-	return true;
 #else
 	if (::rmdir(path.c_str()) != 0)
 	{
 		g_tls_error = to_error(errno);
 		return false;
 	}
+#endif
 
 	return true;
-#endif
 }
 
 bool fs::rename(const std::string& from, const std::string& to, bool overwrite)
@@ -1908,16 +1906,44 @@ const std::string& fs::get_config_dir()
 		std::string dir;
 
 #ifdef _WIN32
-		wchar_t buf[32768];
-		constexpr DWORD size = static_cast<DWORD>(std::size(buf));
-		if (GetEnvironmentVariable(L"RPCS3_CONFIG_DIR", buf, size) - 1 >= size - 1 &&
-			GetModuleFileName(nullptr, buf, size) - 1 >= size - 1)
+		std::vector<wchar_t> buf;
+
+		// Check if RPCS3_CONFIG_DIR is set and get the required buffer size
+		DWORD size = GetEnvironmentVariable(L"RPCS3_CONFIG_DIR", nullptr, 0);
+		if (size > 0)
 		{
-			MessageBoxA(nullptr, fmt::format("GetModuleFileName() failed: error: %s", fmt::win_error{GetLastError(), nullptr}).c_str(), "fs::get_config_dir()", MB_ICONERROR);
-			return dir; // empty
+			// Resize buffer and fetch RPCS3_CONFIG_DIR
+			buf.resize(size);
+
+			if (GetEnvironmentVariable(L"RPCS3_CONFIG_DIR", buf.data(), size) != (size - 1))
+			{
+				// Clear buffer on failure and notify user
+				MessageBoxA(nullptr, fmt::format("GetEnvironmentVariable(RPCS3_CONFIG_DIR) failed: error: %s", fmt::win_error{GetLastError(), nullptr}).c_str(), "fs::get_config_dir()", MB_ICONERROR);
+				buf.clear();
+			}
 		}
 
-		dir = wchar_to_utf8(buf);
+		// Fallback to executable path if needed
+		for (DWORD buf_size = MAX_PATH; size == 0; buf_size += MAX_PATH)
+		{
+			buf.resize(buf_size);
+			size = GetModuleFileName(nullptr, buf.data(), buf_size);
+
+			if (size == 0)
+			{
+				MessageBoxA(nullptr, fmt::format("GetModuleFileName() failed: error: %s", fmt::win_error{GetLastError(), nullptr}).c_str(), "fs::get_config_dir()", MB_ICONERROR);
+				return dir; // empty
+			}
+
+			if (GetLastError() == ERROR_INSUFFICIENT_BUFFER)
+			{
+				// Try again with increased buffer size
+				size = 0;
+				continue;
+			}
+		}
+
+		dir = wchar_to_utf8(buf.data());
 
 		std::replace(dir.begin(), dir.end(), '\\', '/');
 
