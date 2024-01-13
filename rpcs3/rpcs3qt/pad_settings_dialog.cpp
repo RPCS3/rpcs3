@@ -1519,7 +1519,8 @@ void pad_settings_dialog::ChangeHandler()
 			ui->chooseDevice->setPlaceholderText(tr("No Device Detected"));
 		}
 
-		m_device_name.clear();
+		// Keep the configured device name
+		m_device_name = GetDeviceName();
 	}
 
 	// Handle running timers
@@ -1611,11 +1612,7 @@ void pad_settings_dialog::ChangeDevice(int index)
 	}
 
 	const pad_device_info info = user_data.value<pad_device_info>();
-	m_device_name = info.name;
-	if (!g_cfg_input.player[GetPlayerIndex()]->device.from_string(m_device_name))
-	{
-		cfg_log.error("Failed to convert device string: %s", m_device_name);
-	}
+	SetDeviceName(info.name);
 }
 
 void pad_settings_dialog::HandleDeviceClassChange(u32 class_id) const
@@ -1947,6 +1944,21 @@ u32 pad_settings_dialog::GetPlayerIndex() const
 cfg_pad& pad_settings_dialog::GetPlayerConfig() const
 {
 	return g_cfg_input.player[GetPlayerIndex()]->config;
+}
+
+std::string pad_settings_dialog::GetDeviceName() const
+{
+	return g_cfg_input.player[GetPlayerIndex()]->device.to_string();
+}
+
+void pad_settings_dialog::SetDeviceName(const std::string& name)
+{
+	m_device_name = name;
+
+	if (!g_cfg_input.player[GetPlayerIndex()]->device.from_string(m_device_name))
+	{
+		cfg_log.error("Failed to convert device string: %s", m_device_name);
+	}
 }
 
 void pad_settings_dialog::ResizeDialog()

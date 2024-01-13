@@ -218,6 +218,12 @@ private:
 	/** Returns the current player config */
 	cfg_pad& GetPlayerConfig() const;
 
+	/** Sets the device name (member and config) */
+	void SetDeviceName(const std::string& name);
+
+	/** Gets the device name from config */
+	std::string GetDeviceName() const;
+
 	/** Resizes the dialog. We need to do this because the main scroll area can't determine the size on its own. */
 	void ResizeDialog();
 
