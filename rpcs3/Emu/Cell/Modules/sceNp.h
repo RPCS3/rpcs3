@@ -1023,7 +1023,7 @@ enum
 	SCE_NP_UTIL_NPID_VERSION                 = 1,
 	SCE_NP_UTIL_NPLOBBYID_VERSION            = 1,
 	SCE_NP_UTIL_NPROOMID_VERSION             = 1,
-	SCE_NP_COMMERCE_VERSION                  = 1, // TODO: is there a real name?
+	SCE_NP_COMMERCE_VERSION                  = 1,
 };
 
 // Languages
