@@ -2733,7 +2733,7 @@ error_code sceNpCommerceDoCheckoutStartAsync(u32 ctx_id, vm::cpptr<char> sku_ids
 	if (false) // TODO
 		return SCE_NP_COMMERCE_ERROR_NOT_INITIALIZED;
 
-	if (!sku_num || sku_num > 16) // TODO
+	if (!sku_num || sku_num > 16)
 		return SCE_NP_COMMERCE_ERROR_INVALID_SKU_NUM;
 
 	if (false) // TODO
@@ -6857,13 +6857,14 @@ error_code sceNpUtilCanonicalizeNpIdForPs3(vm::ptr<SceNpId> npId)
 	if (!npId)
 		return SCE_NP_UTIL_ERROR_INVALID_ARGUMENT;
 
-	if (npId->reserved[0] != 1)
-		return SCE_NP_UTIL_ERROR_INVALID_NP_ID;
+	// TODO: These checks are commented out for compatibility with RPCN for now
+	//if (npId->reserved[0] != 1)
+	//	return SCE_NP_UTIL_ERROR_INVALID_NP_ID;
 
-	if (!npId->unk1[1])
-	{
-		npId->unk1[1] = "ps3\0"_u32;
-	}
+	//if (!npId->unk1[1])
+	//{
+	//	npId->unk1[1] = "ps3\0"_u32;
+	//}
 
 	return CELL_OK;
 }
@@ -6875,13 +6876,14 @@ error_code sceNpUtilCanonicalizeNpIdForPsp(vm::ptr<SceNpId> npId)
 	if (!npId)
 		return SCE_NP_UTIL_ERROR_INVALID_ARGUMENT;
 
-	if (npId->reserved[0] != 1)
-		return SCE_NP_UTIL_ERROR_INVALID_NP_ID;
+	// TODO: These checks are commented out for compatibility with RPCN for now
+	//if (npId->reserved[0] != 1)
+	//	return SCE_NP_UTIL_ERROR_INVALID_NP_ID;
 
-	if (!npId->unk1[1])
-	{
-		npId->unk1[1] = "psp\0"_u32; // TODO: confirm
-	}
+	//if (!npId->unk1[1])
+	//{
+	//	npId->unk1[1] = "psp\0"_u32; // TODO: confirm
+	//}
 
 	return CELL_OK;
 }
