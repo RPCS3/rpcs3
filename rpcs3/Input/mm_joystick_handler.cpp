@@ -73,27 +73,57 @@ bool mm_joystick_handler::Init()
 
 	m_devices.clear();
 
-	const u32 supported_joysticks = joyGetNumDevs();
-	if (supported_joysticks <= 0)
+	m_max_devices = joyGetNumDevs();
+	if (m_max_devices <= 0)
 	{
 		input_log.error("mmjoy: Driver doesn't support Joysticks");
 		return false;
 	}
 
-	input_log.notice("mmjoy: Driver supports %u joysticks", supported_joysticks);
+	input_log.notice("mmjoy: Driver supports %u joysticks", m_max_devices);
 
-	for (u32 i = 0; i < supported_joysticks; i++)
+	enumerate_devices();
+
+	m_is_init = true;
+	return true;
+}
+
+void mm_joystick_handler::enumerate_devices()
+{
+	// Mark all known devices as unplugged
+	for (auto& [name, device] : m_devices)
+	{
+		if (!device) continue;
+		device->device_status = JOYERR_UNPLUGGED;
+	}
+
+	for (int i = 0; i < static_cast<int>(m_max_devices); i++)
 	{
 		MMJOYDevice dev;
 
 		if (GetMMJOYDevice(i, &dev) == false)
 			continue;
 
-		m_devices.emplace(i, dev);
-	}
+		auto it = m_devices.find(dev.device_name);
+		if (it == m_devices.end())
+		{
+			// Create a new device
+			m_devices.emplace(dev.device_name, std::make_shared<MMJOYDevice>(dev));
+			continue;
+		}
 
-	m_is_init = true;
-	return true;
+		auto& device = it->second;
+
+		if (!device)
+			continue;
+
+		// Update the device (don't update the base class members)
+		device->device_id = dev.device_id;
+		device->device_name = dev.device_name;
+		device->device_info = dev.device_info;
+		device->device_caps = dev.device_caps;
+		device->device_status = dev.device_status;
+	}
 }
 
 std::vector<pad_list_entry> mm_joystick_handler::list_devices()
@@ -103,9 +133,12 @@ std::vector<pad_list_entry> mm_joystick_handler::list_devices()
 	if (!Init())
 		return devices;
 
-	for (const auto& dev : m_devices)
+	enumerate_devices();
+
+	for (const auto& [name, dev] : m_devices)
 	{
-		devices.emplace_back(dev.second.device_name, false);
+		if (!dev) continue;
+		devices.emplace_back(name, false);
 	}
 
 	return devices;
@@ -204,7 +237,8 @@ PadHandlerBase::connection mm_joystick_handler::get_next_button_press(const std:
 	if (cur_pad != padId)
 	{
 		cur_pad = padId;
-		id = GetIDByName(padId);
+		const auto dev = get_device_by_name(padId);
+		id = dev ? static_cast<int>(dev->device_id) : -1;
 		if (id < 0)
 		{
 			input_log.error("MMJOY get_next_button_press for device [%s] failed with id = %d", padId, id);
@@ -214,13 +248,14 @@ PadHandlerBase::connection mm_joystick_handler::get_next_button_press(const std:
 		}
 	}
 
-	JOYINFOEX js_info;
-	JOYCAPS js_caps;
+	JOYINFOEX js_info{};
+	JOYCAPS js_caps{};
 	js_info.dwSize = sizeof(js_info);
 	js_info.dwFlags = JOY_RETURNALL;
-	joyGetDevCaps(id, &js_caps, sizeof(js_caps));
+	MMRESULT status = joyGetDevCaps(id, &js_caps, sizeof(js_caps));
 
-	const MMRESULT status = joyGetPosEx(id, &js_info);
+	if (status == JOYERR_NOERROR)
+		status = joyGetPosEx(id, &js_info);
 
 	switch (status)
 	{
@@ -350,7 +385,7 @@ PadHandlerBase::connection mm_joystick_handler::get_next_button_press(const std:
 		return connection::connected;
 	}
 	default:
-		break;
+		return connection::disconnected;
 	}
 
 	return connection::no_data;
@@ -460,14 +495,40 @@ std::unordered_map<u64, u16> mm_joystick_handler::get_button_values(const std::s
 	return GetButtonValues(dev->device_info, dev->device_caps);
 }
 
-int mm_joystick_handler::GetIDByName(const std::string& name)
+std::shared_ptr<mm_joystick_handler::MMJOYDevice> mm_joystick_handler::get_device_by_name(const std::string& name)
 {
-	for (const auto& dev : m_devices)
+	// Try to find a device with valid name and index
+	if (auto it = m_devices.find(name); it != m_devices.end())
 	{
-		if (dev.second.device_name == name)
-			return dev.first;
+		if (it->second && it->second->device_id != umax)
+			return it->second;
 	}
-	return -1;
+
+	// Make sure we have a device pointer (marked as invalid and unplugged)
+	std::shared_ptr<MMJOYDevice> dev = create_device_by_name(name);
+	m_devices.emplace(name, dev);
+
+	return dev;
+}
+
+std::shared_ptr<mm_joystick_handler::MMJOYDevice> mm_joystick_handler::create_device_by_name(const std::string& name)
+{
+	std::shared_ptr<MMJOYDevice> dev = std::make_shared<MMJOYDevice>();
+	dev->device_name = name;
+
+	// Assign the proper index if possible
+	if (name.size() > m_name_string.size() && m_max_devices > 0)
+	{
+		u64 index = 0;
+		std::string_view suffix(name.begin() + m_name_string.size(), name.end());
+
+		if (try_to_uint64(&index, suffix, 1, m_max_devices))
+		{
+			dev->device_id = ::narrow<u32>(index - 1);
+		}
+	}
+
+	return dev;
 }
 
 bool mm_joystick_handler::GetMMJOYDevice(int index, MMJOYDevice* dev) const
@@ -475,18 +536,21 @@ bool mm_joystick_handler::GetMMJOYDevice(int index, MMJOYDevice* dev) const
 	if (!dev)
 		return false;
 
-	JOYINFOEX js_info;
-	JOYCAPS js_caps;
+	JOYINFOEX js_info{};
+	JOYCAPS js_caps{};
 	js_info.dwSize = sizeof(js_info);
 	js_info.dwFlags = JOY_RETURNALL;
-	joyGetDevCaps(index, &js_caps, sizeof(js_caps));
+
+	dev->device_status = joyGetDevCaps(index, &js_caps, sizeof(js_caps));
+	if (dev->device_status != JOYERR_NOERROR)
+		return false;
 
 	dev->device_status = joyGetPosEx(index, &js_info);
 	if (dev->device_status != JOYERR_NOERROR)
 		return false;
 
-	char drv[32];
-	wcstombs(drv, js_caps.szPname, 31);
+	char drv[MAXPNAMELEN]{};
+	wcstombs(drv, js_caps.szPname, MAXPNAMELEN - 1);
 
 	input_log.notice("Joystick nr.%d found. Driver: %s", index, drv);
 
@@ -503,12 +567,7 @@ std::shared_ptr<PadDevice> mm_joystick_handler::get_device(const std::string& de
 	if (!Init())
 		return nullptr;
 
-	const int id = GetIDByName(device);
-	if (id < 0)
-		return nullptr;
-
-	std::shared_ptr<MMJOYDevice> joy_device = std::make_shared<MMJOYDevice>(::at32(m_devices, id));
-	return joy_device;
+	return get_device_by_name(device);
 }
 
 bool mm_joystick_handler::get_is_left_trigger(const std::shared_ptr<PadDevice>& device, u64 keyCode)
@@ -538,16 +597,34 @@ bool mm_joystick_handler::get_is_right_stick(const std::shared_ptr<PadDevice>& d
 PadHandlerBase::connection mm_joystick_handler::update_connection(const std::shared_ptr<PadDevice>& device)
 {
 	MMJOYDevice* dev = static_cast<MMJOYDevice*>(device.get());
-	if (!dev)
+	if (!dev || dev->device_id == umax)
 		return connection::disconnected;
 
+	// Quickly check if the device is connected and fetch the button values
 	const auto old_status = dev->device_status;
 	dev->device_status    = joyGetPosEx(dev->device_id, &dev->device_info);
 
-	if (dev->device_status == JOYERR_NOERROR && (old_status == JOYERR_NOERROR || GetMMJOYDevice(dev->device_id, dev)))
-	{
+	// The device is connected and was connected
+	if (dev->device_status == JOYERR_NOERROR && old_status == JOYERR_NOERROR)
 		return connection::connected;
+
+	// The device is not connected or was not connected
+	if (dev->device_status != JOYERR_NOERROR)
+	{
+		// Only try to reconnect once every now and then.
+		const steady_clock::time_point now = steady_clock::now();
+		const s64 elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - dev->last_update).count();
+
+		if (elapsed_ms < 1000)
+			return connection::disconnected;
+
+		dev->last_update = now;
 	}
+
+	// Try to connect properly again
+	if (GetMMJOYDevice(dev->device_id, dev))
+		return connection::connected;
+
 	return connection::disconnected;
 }
 
