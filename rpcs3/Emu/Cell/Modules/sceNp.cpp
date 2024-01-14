@@ -2563,6 +2563,13 @@ error_code sceNpFriendlist(vm::ptr<SceNpFriendlistResultHandler> resultHandler, 
 		return SCE_NP_FRIENDLIST_ERROR_INVALID_ARGUMENT;
 	}
 
+	vm::var<SceNpId> id;
+	error_code err = sceNpManagerGetNpId(id);
+	if (err != CELL_OK)
+		return err;
+
+	// TODO: handler
+
 	return CELL_OK;
 }
 
@@ -2583,6 +2590,13 @@ error_code sceNpFriendlistCustom(SceNpFriendlistCustomOptions options, vm::ptr<S
 	{
 		return SCE_NP_FRIENDLIST_ERROR_INVALID_ARGUMENT;
 	}
+
+	vm::var<SceNpId> id;
+	error_code err = sceNpManagerGetNpId(id);
+	if (err != CELL_OK)
+		return err;
+
+	// TODO: handler
 
 	return CELL_OK;
 }
@@ -3254,7 +3268,7 @@ error_code sceNpManagerGetOnlineId(vm::ptr<SceNpOnlineId> onlineId)
 	return CELL_OK;
 }
 
-error_code sceNpManagerGetNpId(ppu_thread&, vm::ptr<SceNpId> npId)
+error_code sceNpManagerGetNpId(vm::ptr<SceNpId> npId)
 {
 	sceNp.trace("sceNpManagerGetNpId(npId=*0x%x)", npId);
 
