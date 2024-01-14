@@ -26,6 +26,9 @@
 
 LOG_CHANNEL(sceNp);
 
+error_code sceNpManagerGetNpId(vm::ptr<SceNpId> npId);
+error_code sceNpCommerceGetCurrencyInfo(vm::ptr<SceNpCommerceProductCategory> pc, vm::ptr<SceNpCommerceCurrencyInfo> info);
+
 template <>
 void fmt_class_string<SceNpError>::format(std::string& out, u64 arg)
 {
@@ -2268,214 +2271,492 @@ error_code sceNpBasicGetEvent(vm::ptr<s32> event, vm::ptr<SceNpUserInfo> from, v
 error_code sceNpCommerceCreateCtx(u32 version, vm::ptr<SceNpId> npId, vm::ptr<SceNpCommerceHandler> handler, vm::ptr<void> arg, vm::ptr<u32> ctx_id)
 {
 	sceNp.todo("sceNpCommerceCreateCtx(version=%d, event=*0x%x, from=*0x%x, arg=*0x%x, ctx_id=*0x%x)", version, npId, handler, arg, ctx_id);
+
+	if (false) // TODO
+		return SCE_NP_COMMERCE_ERROR_NOT_INITIALIZED;
+
+	if (version != SCE_NP_COMMERCE_VERSION)
+		return SCE_NP_COMMERCE_ERROR_UNSUPPORTED_VERSION;
+
+	if (false) // TODO
+		return SCE_NP_COMMERCE_ERROR_CTX_MAX;
+
 	return CELL_OK;
 }
 
 error_code sceNpCommerceDestroyCtx(u32 ctx_id)
 {
 	sceNp.todo("sceNpCommerceDestroyCtx(ctx_id=%d)", ctx_id);
+
+	if (false) // TODO
+		return SCE_NP_COMMERCE_ERROR_NOT_INITIALIZED;
+
+	if (false) // TODO
+		return SCE_NP_COMMERCE_ERROR_CTX_NOT_FOUND;
+
 	return CELL_OK;
 }
 
 error_code sceNpCommerceInitProductCategory(vm::ptr<SceNpCommerceProductCategory> pc, vm::cptr<void> data, u32 data_size)
 {
 	sceNp.todo("sceNpCommerceInitProductCategory(pc=*0x%x, data=*0x%x, data_size=%d)", pc, data, data_size);
+
+	if (!pc) // Not really checked
+		return SCE_NP_COMMERCE_ERROR_PARSE_PRODUCT_CATEGORY;
+
+	pc->data = data;
+	pc->dataSize = data_size;
+
+	if (data_size < 4)
+		return SCE_NP_COMMERCE_ERROR_PARSE_PRODUCT_CATEGORY;
+
+	const u32 version = SCE_NP_COMMERCE_VERSION; // TODO: *data
+	pc->version = version;
+
+	if (pc->version != SCE_NP_COMMERCE_VERSION)
+		return SCE_NP_COMMERCE_ERROR_INVALID_GPC_PROTOCOL_VERSION;
+
+	if (data_size < 8)
+		return SCE_NP_COMMERCE_ERROR_PARSE_PRODUCT_CATEGORY;
+
+	//const u32 unk = data + 4;
+	//if (unk != 0)
+	//{
+	//	if (unk < 256)
+	//		return unk | SCE_NP_COMMERCE_BROWSE_SERVER_ERROR_UNKNOWN;
+
+	//	return SCE_NP_COMMERCE_BROWSE_SERVER_ERROR_UNKNOWN;
+	//}
+
+	vm::var<SceNpCommerceCurrencyInfo> info;
+	error_code err = sceNpCommerceGetCurrencyInfo(pc, info);
+	if (err != CELL_OK)
+		return SCE_NP_COMMERCE_ERROR_PARSE_PRODUCT_CATEGORY;
+
+	if (false) // TODO
+	{
+		pc->dval = 10;
+
+		while (false) // TODO
+		{
+			pc->dval *= 10;
+		}
+	}
+	else
+	{
+		pc->dval = 0;
+	}
+
 	return CELL_OK;
 }
 
 void sceNpCommerceDestroyProductCategory(vm::ptr<SceNpCommerceProductCategory> pc)
 {
 	sceNp.todo("sceNpCommerceDestroyProductCategory(pc=*0x%x)", pc);
+
+	if (pc)
+	{
+		pc->dataSize = 0;
+		pc->data = vm::null;
+	}
 }
 
 error_code sceNpCommerceGetProductCategoryStart(u32 ctx_id, vm::cptr<char> category_id, s32 lang_code, vm::ptr<u32> req_id)
 {
 	sceNp.todo("sceNpCommerceGetProductCategoryStart(ctx_id=%d, category_id=%s, lang_code=%d, req_id=*0x%x)", ctx_id, category_id, lang_code, req_id);
+
+	if (false) // TODO
+		return SCE_NP_COMMERCE_ERROR_NOT_INITIALIZED;
+
+	if (false) // TODO
+		return SCE_NP_COMMERCE_ERROR_CTX_NOT_FOUND;
+
 	return CELL_OK;
 }
 
 error_code sceNpCommerceGetProductCategoryFinish(u32 req_id)
 {
 	sceNp.todo("sceNpCommerceGetProductCategoryFinish(req_id=%d)", req_id);
+
+	if (false) // TODO
+		return SCE_NP_COMMERCE_ERROR_NOT_INITIALIZED;
+
 	return CELL_OK;
 }
 
 error_code sceNpCommerceGetProductCategoryResult(u32 req_id, vm::ptr<void> buf, u32 buf_size, vm::ptr<u32> fill_size)
 {
 	sceNp.todo("sceNpCommerceGetProductCategoryResult(req_id=%d, buf=*0x%x, buf_size=%d, fill_size=*0x%x)", req_id, buf, buf_size, fill_size);
+
+	if (false) // TODO
+		return SCE_NP_COMMERCE_ERROR_NOT_INITIALIZED;
+
+	if (buf_size == 0)
+		return SCE_NP_COMMERCE_ERROR_INSUFFICIENT_BUFFER;
+
+	if (!fill_size) // Not really checked afaict
+		return SCE_NP_COMMERCE_ERROR_INSUFFICIENT_BUFFER;
+
+	*fill_size = 0;
+
 	return CELL_OK;
 }
 
 error_code sceNpCommerceGetProductCategoryAbort(u32 req_id)
 {
 	sceNp.todo("sceNpCommerceGetProductCategoryAbort(req_id=%d)", req_id);
+
+	if (false) // TODO
+		return SCE_NP_COMMERCE_ERROR_NOT_INITIALIZED;
+
 	return CELL_OK;
 }
 
 vm::cptr<char> sceNpCommerceGetProductId(vm::ptr<SceNpCommerceProductSkuInfo> info)
 {
 	sceNp.todo("sceNpCommerceGetProductId(info=*0x%x)", info);
+	// if (info) return info->data + 0x38;
 	return vm::null;
 }
 
 vm::cptr<char> sceNpCommerceGetProductName(vm::ptr<SceNpCommerceProductSkuInfo> info)
 {
 	sceNp.todo("sceNpCommerceGetProductName(info=*0x%x)", info);
+	// if (info) return info->data + 0x68;
 	return vm::null;
 }
 
 vm::cptr<char> sceNpCommerceGetCategoryDescription(vm::ptr<SceNpCommerceCategoryInfo> info)
 {
 	sceNp.todo("sceNpCommerceGetCategoryDescription(info=*0x%x)", info);
+	// if (info) return info->data + 0xf8;
 	return vm::null;
 }
 
 vm::cptr<char> sceNpCommerceGetCategoryId(vm::ptr<SceNpCommerceCategoryInfo> info)
 {
 	sceNp.todo("sceNpCommerceGetCategoryId(info=*0x%x)", info);
+	// if (info) return info->data;
 	return vm::null;
 }
 
 vm::cptr<char> sceNpCommerceGetCategoryImageURL(vm::ptr<SceNpCommerceCategoryInfo> info)
 {
 	sceNp.todo("sceNpCommerceGetCategoryImageURL(info=*0x%x)", info);
+	// if (info) return info->data + 0x278;
 	return vm::null;
 }
 
 error_code sceNpCommerceGetCategoryInfo(vm::ptr<SceNpCommerceProductCategory> pc, vm::ptr<SceNpCommerceCategoryInfo> info)
 {
 	sceNp.todo("sceNpCommerceGetCategoryInfo(pc=*0x%x, info=*0x%x)", pc, info);
+
+	if (!pc || pc->dataSize < 776)
+		return SCE_NP_COMMERCE_ERROR_CATEGORY_INFO_NOT_FOUND;
+
+	if (info)
+	{
+		info->pc = pc;
+
+		// TODO
+		//info->data = pc->data + 16;
+		//pc->data + 0x307 = 0;
+		//pc->data + 0x47 = 0;
+		//pc->data + 0x107 = 0;
+		//pc->data + 0x287 = 0;
+	}
+
 	return CELL_OK;
 }
 
 vm::cptr<char> sceNpCommerceGetCategoryName(vm::ptr<SceNpCommerceCategoryInfo> info)
 {
 	sceNp.todo("sceNpCommerceGetCategoryName(info=*0x%x)", info);
+	// if (info) return info->data + 0x38;
 	return vm::null;
 }
 
 vm::cptr<char> sceNpCommerceGetCurrencyCode(vm::ptr<SceNpCommerceCurrencyInfo> info)
 {
 	sceNp.todo("sceNpCommerceGetCurrencyCode(info=*0x%x)", info);
+	//if (info) return info->data;
 	return vm::null;
 }
 
 u32 sceNpCommerceGetCurrencyDecimals(vm::ptr<SceNpCommerceCurrencyInfo> info)
 {
 	sceNp.todo("sceNpCommerceGetCurrencyDecimals(info=*0x%x)", info);
+
+	if (info)
+	{
+		//return (info->data + 7) |
+		//       (info->data + 6) << 8 |
+		//       (info->data + 5) << 0x10 |
+		//       (info->data + 4) << 0x18;
+	}
+
 	return 0;
 }
 
 error_code sceNpCommerceGetCurrencyInfo(vm::ptr<SceNpCommerceProductCategory> pc, vm::ptr<SceNpCommerceCurrencyInfo> info)
 {
 	sceNp.todo("sceNpCommerceGetCurrencyInfo(pc=*0x%x, info=*0x%x)", pc, info);
+
+	if (!pc || pc->dataSize < 16)
+		return SCE_NP_COMMERCE_ERROR_CURRENCY_INFO_NOT_FOUND;
+
+	if (info)
+	{
+		info->pc = pc;
+
+		// TODO
+		//info->data = pc->data + 8;
+		//pc->data + 0xb = 0;
+	}
+
 	return CELL_OK;
 }
 
 error_code sceNpCommerceGetNumOfChildCategory(vm::ptr<SceNpCommerceProductCategory> pc, vm::ptr<u32> num)
 {
 	sceNp.todo("sceNpCommerceGetNumOfChildCategory(pc=*0x%x, num=*0x%x)", pc, num);
+
+	if (!pc || pc->dataSize < 780)
+		return SCE_NP_COMMERCE_ERROR_CHILD_CATEGORY_COUNT_NOT_FOUND;
+
+	//if (num) *num = pc->data + 0x308;
+
 	return CELL_OK;
 }
 
 error_code sceNpCommerceGetNumOfChildProductSku(vm::ptr<SceNpCommerceProductCategory> pc, vm::ptr<u32> num)
 {
 	sceNp.todo("sceNpCommerceGetNumOfChildProductSku(pc=*0x%x, num=*0x%x)", pc, num);
+
+	if (!pc || pc->dataSize < 780) // TODO: some other check
+		return SCE_NP_COMMERCE_ERROR_SKU_COUNT_NOT_FOUND;
+
+	//if (num) *num = something;
+
 	return CELL_OK;
 }
 
 vm::cptr<char> sceNpCommerceGetSkuDescription(vm::ptr<SceNpCommerceProductSkuInfo> info)
 {
 	sceNp.todo("sceNpCommerceGetSkuDescription(info=*0x%x)", info);
+	//if (info) return info->data + 0x168;
 	return vm::null;
 }
 
 vm::cptr<char> sceNpCommerceGetSkuId(vm::ptr<SceNpCommerceProductSkuInfo> info)
 {
 	sceNp.todo("sceNpCommerceGetSkuId(info=*0x%x)", info);
+	//if (info) return info->data;
 	return vm::null;
 }
 
 vm::cptr<char> sceNpCommerceGetSkuImageURL(vm::ptr<SceNpCommerceProductSkuInfo> info)
 {
 	sceNp.todo("sceNpCommerceGetSkuImageURL(info=*0x%x)", info);
+	//if (info) return info->data + 0x2e8;
 	return vm::null;
 }
 
 vm::cptr<char> sceNpCommerceGetSkuName(vm::ptr<SceNpCommerceProductSkuInfo> info)
 {
 	sceNp.todo("sceNpCommerceGetSkuName(info=*0x%x)", info);
+	//if (info) return info->data + 0x128;
 	return vm::null;
 }
 
 void sceNpCommerceGetSkuPrice(vm::ptr<SceNpCommerceProductSkuInfo> info, vm::ptr<SceNpCommercePrice> price)
 {
 	sceNp.todo("sceNpCommerceGetSkuPrice(info=*0x%x, price=*0x%x)", info, price);
+
+	if (!price)
+		return;
+
+	if (info && info->pc && info->pc->dval)
+	{
+		// TODO
+		//price->integer = something / info->pc->dval;
+		//price->fractional = something - static_cast<int>(price->integer) * info->pc->dval;
+		return;
+	}
+
+	// TODO
+	//price->integer = something;
+	price->fractional = 0;
 }
 
 vm::cptr<char> sceNpCommerceGetSkuUserData(vm::ptr<SceNpCommerceProductSkuInfo> info)
 {
 	sceNp.todo("sceNpCommerceGetSkuUserData(info=*0x%x)", info);
+	//if (info) return info->data + 0x368;
 	return vm::null;
 }
 
-error_code sceNpCommerceSetDataFlagStart()
+error_code sceNpCommerceSetDataFlagStart(u32 arg1, u32 arg2, u32 arg3, u32 arg4, u32 arg5)
 {
-	UNIMPLEMENTED_FUNC(sceNp);
+	sceNp.todo("sceNpCommerceSetDataFlagStart(arg1=0x%x, arg2=0x%x, arg3=0x%x, arg4=0x%x, arg5=0x%x)", arg1, arg2, arg3, arg4, arg5);
+
+	if (false) // TODO
+		return SCE_NP_COMMERCE_ERROR_NOT_INITIALIZED;
+
+	if (arg4 == 0 || arg4 > 16)
+		return SCE_NP_COMMERCE_ERROR_INVALID_DATA_FLAG_NUM;
+
+	if (false) // TODO
+		return SCE_NP_COMMERCE_ERROR_CTX_NOT_FOUND;
+
 	return CELL_OK;
 }
 
-error_code sceNpCommerceGetDataFlagStart()
+error_code sceNpCommerceGetDataFlagStart(u32 arg1, u32 arg2, u32 arg3, u32 arg4, u32 arg5)
 {
-	UNIMPLEMENTED_FUNC(sceNp);
+	sceNp.todo("sceNpCommerceGetDataFlagStart(arg1=0x%x, arg2=0x%x, arg3=0x%x, arg4=0x%x, arg5=0x%x)", arg1, arg2, arg3, arg4, arg5);
+
+	if (false) // TODO
+		return SCE_NP_COMMERCE_ERROR_NOT_INITIALIZED;
+
+	if (arg4 == 0 || arg4 > 16)
+		return SCE_NP_COMMERCE_ERROR_INVALID_DATA_FLAG_NUM;
+
+	if (false) // TODO
+		return SCE_NP_COMMERCE_ERROR_CTX_NOT_FOUND;
+
 	return CELL_OK;
 }
 
 error_code sceNpCommerceSetDataFlagFinish()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
+
+	if (false) // TODO
+		return SCE_NP_COMMERCE_ERROR_NOT_INITIALIZED;
+
 	return CELL_OK;
 }
 
 error_code sceNpCommerceGetDataFlagFinish()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
+
+	if (false) // TODO
+		return SCE_NP_COMMERCE_ERROR_NOT_INITIALIZED;
+
 	return CELL_OK;
 }
 
-error_code sceNpCommerceGetDataFlagState()
+error_code sceNpCommerceGetDataFlagState(u32 arg1, u32 arg2, u32 arg3)
 {
-	UNIMPLEMENTED_FUNC(sceNp);
+	sceNp.todo("sceNpCommerceGetDataFlagState(arg1=0x%x, arg2=0x%x, arg3=0x%x)", arg1, arg2, arg3);
+
+	if (false) // TODO
+		return SCE_NP_COMMERCE_ERROR_NOT_INITIALIZED;
+
+	if (arg3 == 0 || arg3 > 16)
+		return SCE_NP_COMMERCE_ERROR_INVALID_DATA_FLAG_NUM;
+
 	return CELL_OK;
 }
 
 error_code sceNpCommerceGetDataFlagAbort()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
+
+	if (false) // TODO
+		return SCE_NP_COMMERCE_ERROR_NOT_INITIALIZED;
+
 	return CELL_OK;
 }
 
 error_code sceNpCommerceGetChildCategoryInfo(vm::ptr<SceNpCommerceProductCategory> pc, u32 child_index, vm::ptr<SceNpCommerceCategoryInfo> info)
 {
 	sceNp.todo("sceNpCommerceGetChildCategoryInfo(pc=*0x%x, child_index=%d, info=*0x%x)", pc, child_index, info);
+	
+	if (!pc || !info) // Not really checked I think
+		return SCE_NP_COMMERCE_ERROR_CHILD_CATEGORY_INFO_NOT_FOUND;
+
+	const u32 offset = child_index * 760;
+
+	if (offset + 1540 > pc->dataSize)
+		return SCE_NP_COMMERCE_ERROR_CHILD_CATEGORY_INFO_NOT_FOUND;
+
+	// TODO
+	//auto child = pc->data + offset + 780;
+	//info->pc = pc;
+	//info->data = child + 780;
+	//child + 0x603 = 0;
+	//child + 0x343 = 0;
+	//child + 0x403 = 0;
+	//child + 0x583 = 0;
+
 	return CELL_OK;
 }
 
 error_code sceNpCommerceGetChildProductSkuInfo(vm::ptr<SceNpCommerceProductCategory> pc, u32 child_index, vm::ptr<SceNpCommerceProductSkuInfo> info)
 {
 	sceNp.todo("sceNpCommerceGetChildProductSkuInfo(pc=*0x%x, child_index=%d, info=*0x%x)", pc, child_index, info);
+	
+	if (!pc || !info) // Not really checked I think
+		return SCE_NP_COMMERCE_ERROR_SKU_INFO_NOT_FOUND;
+
+	if (pc->dataSize > 780)
+		return SCE_NP_COMMERCE_ERROR_SKU_INFO_NOT_FOUND;
+
+	// TODO
+	//const u32 child_offset = child_index * 1004;
+	//const u32 offset = (pc->data + 776) * 760 + offset;
+
+	//if (offset + 788 > pc->dataSize)
+	//	return SCE_NP_COMMERCE_ERROR_SKU_INFO_NOT_FOUND;
+
+	//auto child = pc->data + offset;
+	//info->pc = pc;
+	//info->data = child + 784;
+	//child + 0x6f7 = 0;
+	//child + 0x347 = 0;
+	//child + 0x377 = 0;
+	//child + 0x437 = 0;
+	//child + 0x477 = 0;
+	//child + 0x5f7 = 0;
+	//child + 0x677 = 0;
+
 	return CELL_OK;
 }
 
 error_code sceNpCommerceDoCheckoutStartAsync(u32 ctx_id, vm::cpptr<char> sku_ids, u32 sku_num, sys_memory_container_t container, vm::ptr<u32> req_id)
 {
 	sceNp.todo("sceNpCommerceDoCheckoutStartAsync(ctx_id=%d, sku_ids=*0x%x, sku_num=%d, container=%d, req_id=*0x%x)", ctx_id, sku_ids, sku_num, container, req_id);
+
+	if (false) // TODO
+		return SCE_NP_COMMERCE_ERROR_NOT_INITIALIZED;
+
+	if (!sku_num || sku_num > 16) // TODO
+		return SCE_NP_COMMERCE_ERROR_INVALID_SKU_NUM;
+
+	if (false) // TODO
+		return SCE_NP_COMMERCE_ERROR_CTX_NOT_FOUND;
+
+	if (false) // TODO
+		return SCE_NP_COMMERCE_ERROR_INVALID_MEMORY_CONTAINER;
+
+	if (false) // TODO
+		return SCE_NP_COMMERCE_ERROR_INSUFFICIENT_MEMORY_CONTAINER;
+
+	// TODO: get sku_ids
+
 	return CELL_OK;
 }
 
 error_code sceNpCommerceDoCheckoutFinishAsync(u32 req_id)
 {
 	sceNp.todo("sceNpCommerceDoCheckoutFinishAsync(req_id=%d)", req_id);
+
+	if (false) // TODO
+		return SCE_NP_COMMERCE_ERROR_NOT_INITIALIZED;
+
 	return CELL_OK;
 }
 
@@ -3796,9 +4077,24 @@ error_code sceNpManagerGetEntitlementById(vm::cptr<char> entId, vm::ptr<SceNpEnt
 	return CELL_OK;
 }
 
-error_code sceNpManagerGetSigninId()
+error_code sceNpManagerGetSigninId(vm::ptr<void> signInId)
 {
-	UNIMPLEMENTED_FUNC(sceNp);
+	sceNp.todo("sceNpManagerGetSigninId(signInId==*0x%x)", signInId);
+	
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_init)
+	{
+		return SCE_NP_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!signInId)
+	{
+		return SCE_NP_ERROR_INVALID_ARGUMENT;
+	}
+
+	std::memset(signInId.get_ptr(), 0, 64); // signInId seems to be a 64 byte thing
+
 	return CELL_OK;
 }
 
@@ -3818,7 +4114,15 @@ error_code sceNpManagerSubSignin(CellSysutilUserId userId, vm::ptr<SceNpManagerS
 
 error_code sceNpManagerSubSigninAbortGui()
 {
-	UNIMPLEMENTED_FUNC(sceNp);
+	sceNp.todo("sceNpManagerSubSigninAbortGui()");
+
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_init)
+	{
+		return SCE_NP_ERROR_NOT_INITIALIZED;
+	}
+
 	return CELL_OK;
 }
 
@@ -4003,7 +4307,7 @@ error_code sceNpMatchingGetResult(u32 ctx_id, u32 req_id, vm::ptr<void> buf, vm:
 		return SCE_NP_MATCHING_ERROR_CTX_NOT_FOUND;
 
 	const u64 id_check = static_cast<s64>(static_cast<s32>(req_id)) >> 0x17 & 0x3f;
-	if (id_check > 32 || (1 << id_check & 0x1f89ad040U) == 0)
+	if (id_check > 32 || (1ULL << id_check & 0x1f89ad040U) == 0)
 		return SCE_NP_MATCHING_ERROR_INVALID_REQ_ID;
 
 	if (buf)
@@ -4740,10 +5044,17 @@ error_code sceNpProfileCallGui(vm::cptr<SceNpId> npid, vm::ptr<SceNpProfileResul
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
 
+	// TODO: SCE_NP_PROFILE_ERROR_BUSY
+
 	if (!handler)
 	{
 		return SCE_NP_PROFILE_ERROR_INVALID_ARGUMENT;
 	}
+
+	vm::var<SceNpId> id;
+	error_code err = sceNpManagerGetNpId(id);
+	if (err != CELL_OK)
+		return err;
 
 	return CELL_OK;
 }
@@ -6539,15 +6850,39 @@ error_code sceNpSignalingGetPeerNetInfoResult(u32 ctx_id, u32 req_id, vm::ptr<Sc
 	return CELL_OK;
 }
 
-error_code sceNpUtilCanonicalizeNpIdForPs3()
+error_code sceNpUtilCanonicalizeNpIdForPs3(vm::ptr<SceNpId> npId)
 {
-	UNIMPLEMENTED_FUNC(sceNp);
+	sceNp.warning("sceNpUtilCanonicalizeNpIdForPs3(npId=*0x%x)", npId);
+
+	if (!npId)
+		return SCE_NP_UTIL_ERROR_INVALID_ARGUMENT;
+
+	if (npId->reserved[0] != 1)
+		return SCE_NP_UTIL_ERROR_INVALID_NP_ID;
+
+	if (!npId->unk1[1])
+	{
+		npId->unk1[1] = "ps3\0"_u32;
+	}
+
 	return CELL_OK;
 }
 
-error_code sceNpUtilCanonicalizeNpIdForPsp()
+error_code sceNpUtilCanonicalizeNpIdForPsp(vm::ptr<SceNpId> npId)
 {
-	UNIMPLEMENTED_FUNC(sceNp);
+	sceNp.warning("sceNpUtilCanonicalizeNpIdForPsp(npId=*0x%x)", npId);
+
+	if (!npId)
+		return SCE_NP_UTIL_ERROR_INVALID_ARGUMENT;
+
+	if (npId->reserved[0] != 1)
+		return SCE_NP_UTIL_ERROR_INVALID_NP_ID;
+
+	if (!npId->unk1[1])
+	{
+		npId->unk1[1] = "psp\0"_u32; // TODO: confirm
+	}
+
 	return CELL_OK;
 }
 
