@@ -1193,9 +1193,36 @@ error_code cellGemEnableMagnetometer(u32 gem_num, u32 enable)
 	return CELL_OK;
 }
 
-error_code cellGemEnableMagnetometer2()
+error_code cellGemEnableMagnetometer2(u32 gem_num, u32 enable)
 {
-	UNIMPLEMENTED_FUNC(cellGem);
+	cellGem.trace("cellGemEnableMagnetometer2(gem_num=%d, enable=0x%x)", gem_num, enable);
+
+	auto& gem = g_fxo->get<gem_config>();
+
+	std::scoped_lock lock(gem.mtx);
+
+	if (!gem.state)
+	{
+		return CELL_GEM_ERROR_UNINITIALIZED;
+	}
+
+	if (!check_gem_num(gem_num))
+	{
+		return CELL_GEM_ERROR_INVALID_PARAMETER;
+	}
+
+	if (!gem.is_controller_ready(gem_num))
+	{
+		return CELL_GEM_NOT_CONNECTED;
+	}
+
+	if (!gem.controllers[gem_num].calibrated_magnetometer)
+	{
+		return CELL_GEM_NOT_CALIBRATED;
+	}
+
+	gem.controllers[gem_num].enabled_magnetometer = !!enable;
+
 	return CELL_OK;
 }
 
@@ -1290,6 +1317,10 @@ error_code cellGemGetAccelerometerPositionInDevice(u32 gem_num, vm::ptr<f32> pos
 	}
 
 	// TODO
+	pos[0] = 0.f;
+	pos[1] = 0.f;
+	pos[2] = 0.f;
+	pos[3] = 0.f;
 
 	return CELL_OK;
 }
@@ -1384,6 +1415,8 @@ error_code cellGemGetHuePixels(vm::cptr<void> camera_frame, u32 hue, vm::ptr<u8>
 	{
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
+
+	std::memset(pixels.get_ptr(), 0, 640 * 480 * sizeof(u8));
 
 	// TODO
 
@@ -1823,9 +1856,9 @@ error_code cellGemHSVtoRGB(f32 h, f32 s, f32 v, vm::ptr<f32> r, vm::ptr<f32> g, 
 	const f32 x = c * (1.0f - fabs(fmod(h / 60.0f, 2.0f) - 1.0f));
 	const f32 m = v - c;
 
-	f32 r_tmp{0.0};
-	f32 g_tmp{0.0};
-	f32 b_tmp{0.0};
+	f32 r_tmp{};
+	f32 g_tmp{};
+	f32 b_tmp{};
 
 	if (h < 60.0f)
 	{
@@ -1961,7 +1994,7 @@ s32 cellGemIsTrackableHue(u32 hue)
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
-	return 1;
+	return 1; // potentially true if less than 20 pixels have the hue
 }
 
 error_code cellGemPrepareCamera(s32 max_exposure, f32 image_quality)
