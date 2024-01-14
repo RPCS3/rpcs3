@@ -159,7 +159,9 @@ namespace np
 		u32 set_roomdata_external(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SetRoomDataExternalRequest* req);
 		u32 get_roomdata_internal(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2GetRoomDataInternalRequest* req);
 		u32 set_roomdata_internal(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SetRoomDataInternalRequest* req);
+		u32 get_roommemberdata_internal(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2GetRoomMemberDataInternalRequest* req);
 		u32 set_roommemberdata_internal(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SetRoomMemberDataInternalRequest* req);
+		u32 set_userinfo(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SetUserInfoRequest* req);
 		u32 get_ping_info(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SignalingGetPingInfoRequest* req);
 		u32 send_room_message(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SendRoomMessageRequest* req);
 
@@ -268,6 +270,8 @@ namespace np
 		bool reply_get_roomdata_internal(u32 req_id, std::vector<u8>& reply_data);
 		bool reply_set_roomdata_internal(u32 req_id, std::vector<u8>& reply_data);
 		bool reply_set_roommemberdata_internal(u32 req_id, std::vector<u8>& reply_data);
+		bool reply_get_roommemberdata_internal(u32 req_id, std::vector<u8>& reply_data);
+		bool reply_set_userinfo(u32 req_id, std::vector<u8>& reply_data);
 		bool reply_get_ping_info(u32 req_id, std::vector<u8>& reply_data);
 		bool reply_send_room_message(u32 req_id, std::vector<u8>& reply_data);
 		bool reply_req_sign_infos(u32 req_id, std::vector<u8>& reply_data);
