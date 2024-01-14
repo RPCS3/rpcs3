@@ -1657,9 +1657,8 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			//CELL_SAVEDATA_RECREATE_NO = overwrite and let the user know, not data is corrupt.
 			//cellSaveData.error("Savedata %s considered broken", save_entry.dirName);
 			//TODO: if this is a save, and it's not auto, then show a dialog
-			// fallthrough
+			[[fallthrough]];
 		}
-
 		case CELL_SAVEDATA_RECREATE_NO_NOBROKEN:
 		{
 			break;

@@ -9,12 +9,13 @@ LOG_CHANNEL(np_cache);
 
 namespace np
 {
-	memberbin_cache::memberbin_cache(SceNpMatching2RoomMemberBinAttrInternal* sce_memberbin)
+	memberbin_cache::memberbin_cache(const SceNpMatching2RoomMemberBinAttrInternal* sce_memberbin)
 	{
-		id              = sce_memberbin->data.id;
+		ensure(sce_memberbin && (sce_memberbin->data.ptr || !sce_memberbin->data.size));
+
+		id = sce_memberbin->data.id;
 		updateDate.tick = sce_memberbin->updateDate.tick;
-		data.resize(sce_memberbin->data.size);
-		memcpy(data.data(), sce_memberbin->data.ptr.get_ptr(), sce_memberbin->data.size);
+		data = std::vector<u8>(sce_memberbin->data.ptr.get_ptr(), sce_memberbin->data.ptr.get_ptr() + sce_memberbin->data.size);
 	}
 
 	member_cache::member_cache(const SceNpMatching2RoomMemberDataInternal* sce_member)

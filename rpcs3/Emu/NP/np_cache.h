@@ -19,7 +19,7 @@ namespace np
 
 	struct memberbin_cache
 	{
-		memberbin_cache(SceNpMatching2RoomMemberBinAttrInternal* sce_memberbin);
+		memberbin_cache(const SceNpMatching2RoomMemberBinAttrInternal* sce_memberbin);
 
 		SceNpMatching2AttributeId id;
 		CellRtcTick updateDate;

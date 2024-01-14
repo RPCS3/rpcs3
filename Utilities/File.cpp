@@ -1,6 +1,7 @@
 #include "File.h"
 #include "mutex.h"
 #include "StrFmt.h"
+#include "StrUtil.h"
 #include "Crypto/sha1.h"
 
 #include <unordered_map>
@@ -47,23 +48,6 @@ static std::unique_ptr<wchar_t[]> to_wchar(const std::string& source)
 	ensure(GetFullPathNameW(buffer.get() + 32768, 32768, buffer.get(), nullptr) - 1 < 32768 - 1); // "to_wchar"
 
 	return buffer;
-}
-
-static void to_utf8(std::string& out, const wchar_t* source)
-{
-	// String size
-	const usz length = std::wcslen(source);
-
-	// Safe buffer size for max possible output length (including null terminator)
-	const int buf_size = narrow<int>(length * 3 + 1);
-
-	// Resize buffer
-	out.resize(buf_size - 1);
-
-	const int result = WideCharToMultiByte(CP_UTF8, 0, source, static_cast<int>(length) + 1, &out.front(), buf_size, nullptr, nullptr);
-
-	// Fix the size
-	out.resize(ensure(result) - 1);
 }
 
 static time_t to_time(const ULARGE_INTEGER& ft)
@@ -531,7 +515,7 @@ bool fs::get_stat(const std::string& path, stat_t& info)
 	// Handle drives specially
 	if (epath.find_first_of(delim) == umax && epath.ends_with(':'))
 	{
-		WIN32_FILE_ATTRIBUTE_DATA attrs;
+		WIN32_FILE_ATTRIBUTE_DATA attrs{};
 
 		// Must end with a delimiter
 		if (!GetFileAttributesExW(to_wchar(std::string(epath) + '/').get(), GetFileExInfoStandard, &attrs))
@@ -553,14 +537,14 @@ bool fs::get_stat(const std::string& path, stat_t& info)
 		return true;
 	}
 
-	WIN32_FIND_DATA attrs;
-
 	// Allowed by FindFirstFileExW but we should not allow it
 	if (epath.ends_with("*"))
 	{
 		g_tls_error = fs::error::noent;
 		return false;
 	}
+
+	WIN32_FIND_DATA attrs{};
 
 	const auto wchar_ptr = to_wchar(std::string(epath));
 	const std::wstring_view wpath_view = wchar_ptr.get();
@@ -797,17 +781,15 @@ bool fs::remove_dir(const std::string& path)
 		g_tls_error = to_error(GetLastError());
 		return false;
 	}
-
-	return true;
 #else
 	if (::rmdir(path.c_str()) != 0)
 	{
 		g_tls_error = to_error(errno);
 		return false;
 	}
+#endif
 
 	return true;
-#endif
 }
 
 bool fs::rename(const std::string& from, const std::string& to, bool overwrite)
@@ -1789,7 +1771,7 @@ bool fs::dir::open(const std::string& path)
 		{
 			dir_entry info;
 
-			to_utf8(info.name, found.cFileName);
+			info.name = wchar_to_utf8(found.cFileName);
 			info.is_directory = (found.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
 			info.is_writable = (found.dwFileAttributes & FILE_ATTRIBUTE_READONLY) == 0;
 			info.size = (static_cast<u64>(found.nFileSizeHigh) << 32) | static_cast<u64>(found.nFileSizeLow);
@@ -1924,16 +1906,44 @@ const std::string& fs::get_config_dir()
 		std::string dir;
 
 #ifdef _WIN32
-		wchar_t buf[32768];
-		constexpr DWORD size = static_cast<DWORD>(std::size(buf));
-		if (GetEnvironmentVariable(L"RPCS3_CONFIG_DIR", buf, size) - 1 >= size - 1 &&
-			GetModuleFileName(nullptr, buf, size) - 1 >= size - 1)
+		std::vector<wchar_t> buf;
+
+		// Check if RPCS3_CONFIG_DIR is set and get the required buffer size
+		DWORD size = GetEnvironmentVariable(L"RPCS3_CONFIG_DIR", nullptr, 0);
+		if (size > 0)
 		{
-			MessageBoxA(nullptr, fmt::format("GetModuleFileName() failed: error: %s", fmt::win_error{GetLastError(), nullptr}).c_str(), "fs::get_config_dir()", MB_ICONERROR);
-			return dir; // empty
+			// Resize buffer and fetch RPCS3_CONFIG_DIR
+			buf.resize(size);
+
+			if (GetEnvironmentVariable(L"RPCS3_CONFIG_DIR", buf.data(), size) != (size - 1))
+			{
+				// Clear buffer on failure and notify user
+				MessageBoxA(nullptr, fmt::format("GetEnvironmentVariable(RPCS3_CONFIG_DIR) failed: error: %s", fmt::win_error{GetLastError(), nullptr}).c_str(), "fs::get_config_dir()", MB_ICONERROR);
+				buf.clear();
+			}
 		}
 
-		to_utf8(dir, buf); // Convert to UTF-8
+		// Fallback to executable path if needed
+		for (DWORD buf_size = MAX_PATH; size == 0; buf_size += MAX_PATH)
+		{
+			buf.resize(buf_size);
+			size = GetModuleFileName(nullptr, buf.data(), buf_size);
+
+			if (size == 0)
+			{
+				MessageBoxA(nullptr, fmt::format("GetModuleFileName() failed: error: %s", fmt::win_error{GetLastError(), nullptr}).c_str(), "fs::get_config_dir()", MB_ICONERROR);
+				return dir; // empty
+			}
+
+			if (GetLastError() == ERROR_INSUFFICIENT_BUFFER)
+			{
+				// Try again with increased buffer size
+				size = 0;
+				continue;
+			}
+		}
+
+		dir = wchar_to_utf8(buf.data());
 
 		std::replace(dir.begin(), dir.end(), '\\', '/');
 
@@ -2018,7 +2028,7 @@ const std::string& fs::get_temp_dir()
 			return dir; // empty
 		}
 
-		to_utf8(dir, buf);
+		dir = wchar_to_utf8(buf);
 #else
 		// TODO
 		dir = get_cache_dir();

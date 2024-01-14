@@ -396,12 +396,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 	const std::string exe_dir = rpcs3::utils::get_exe_dir();
 	const std::string orig_path = exe_dir + "rpcs3.exe";
 	const std::wstring wchar_orig_path = utf8_to_wchar(orig_path);
-
-	wchar_t wide_temp_path[MAX_PATH + 1]{};
-	GetTempPathW(sizeof(wide_temp_path), wide_temp_path);
-
-	std::string tmpfile_path = wchar_to_utf8(wide_temp_path);
-	tmpfile_path += "\\rpcs3_update.7z";
+	const std::string tmpfile_path = fs::get_temp_dir() + "\\rpcs3_update.7z";
 
 	fs::file tmpfile(tmpfile_path, fs::read + fs::write + fs::create + fs::trunc);
 	if (!tmpfile)

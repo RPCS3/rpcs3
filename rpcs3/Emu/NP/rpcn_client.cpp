@@ -47,6 +47,11 @@ LOG_CHANNEL(rpcn_log, "rpcn");
 
 int get_native_error();
 
+void vec_stream::dump() const
+{
+	rpcn_log.error("vec_stream dump:\n%s", fmt::buf_to_hexstring(vec.data(), vec.size()));
+}
+
 namespace rpcn
 {
 	localized_string_id rpcn_state_to_localized_string_id(rpcn::rpcn_state state)
@@ -74,9 +79,13 @@ namespace rpcn
 		return get_localized_string(rpcn_state_to_localized_string_id(state));
 	}
 
-	constexpr u32 RPCN_PROTOCOL_VERSION = 20;
+	void friend_online_data::dump() const
+	{
+		rpcn_log.notice("online: %s, pr_com_id: %s, pr_title: %s, pr_status: %s, pr_comment: %s, pr_data: %s", online ? "true" : "false", pr_com_id.data, pr_title, pr_status, pr_comment, fmt::buf_to_hexstring(pr_data.data(), pr_data.size()));
+	}
+
+	constexpr u32 RPCN_PROTOCOL_VERSION = 22;
 	constexpr usz RPCN_HEADER_SIZE      = 15;
-	constexpr usz COMMUNICATION_ID_SIZE = 9;
 
 	bool is_error(ErrorType err)
 	{
@@ -293,8 +302,28 @@ namespace rpcn
 					{
 						if (msg.size() == 6)
 						{
-							addr_sig = read_from_ptr<le_t<u32>>(&msg[0]);
-							port_sig = read_from_ptr<be_t<u16>>(&msg[4]);
+							const u32 new_addr_sig = read_from_ptr<le_t<u32>>(&msg[0]);
+							const u32 new_port_sig = read_from_ptr<be_t<u16>>(&msg[4]);
+							const u32 old_addr_sig = addr_sig;
+							const u32 old_port_sig = port_sig;
+
+							if (new_addr_sig != old_addr_sig)
+							{
+								addr_sig = new_addr_sig;
+								if (old_addr_sig == 0)
+								{
+									addr_sig.notify_one();
+								}
+							}
+
+							if (new_port_sig != old_port_sig)
+							{
+								port_sig = new_port_sig;
+								if (old_port_sig == 0)
+								{
+									port_sig.notify_one();
+								}
+							}
 
 							last_pong_time = now;
 						}
@@ -351,7 +380,7 @@ namespace rpcn
 		case recvn_result::recvn_timeout: return error_and_disconnect("Failed to read a packet header on socket");
 		case recvn_result::recvn_nodata: return true;
 		case recvn_result::recvn_success: break;
-		case recvn_result::recvn_terminate: return error_and_disconnect("Recvn was forcefully aborted");
+		case recvn_result::recvn_terminate: return error_and_disconnect_notice("Recvn was forcefully aborted");
 		}
 
 		const u8 packet_type  = header[0];
@@ -384,7 +413,8 @@ namespace rpcn
 				command == CommandType::AddFriend || command == CommandType::RemoveFriend ||
 				command == CommandType::AddBlock || command == CommandType::RemoveBlock ||
 				command == CommandType::SendMessage || command == CommandType::SendToken ||
-				command == CommandType::SendResetToken || command == CommandType::ResetPassword || command == CommandType::GetNetworkTime)
+				command == CommandType::SendResetToken || command == CommandType::ResetPassword ||
+				command == CommandType::GetNetworkTime || command == CommandType::SetPresence)
 			{
 				std::lock_guard lock(mutex_replies_sync);
 				replies_sync.insert(std::make_pair(packet_id, std::make_pair(command, std::move(data))));
@@ -412,6 +442,7 @@ namespace rpcn
 			case NotificationType::FriendLost:
 			case NotificationType::FriendQuery:
 			case NotificationType::FriendStatus:
+			case NotificationType::FriendPresenceChanged:
 			{
 				handle_friend_notification(command, std::move(data));
 				break;
@@ -918,14 +949,27 @@ namespace rpcn
 		avatar_url  = reply.get_string(false);
 		user_id     = reply.get<s64>();
 
-		auto get_usernames_and_status = [](vec_stream& stream, std::map<std::string, std::pair<bool, u64>>& friends)
+		auto get_usernames_and_status = [](vec_stream& stream, std::map<std::string, friend_online_data>& friends)
 		{
 			u32 num_friends = stream.get<u32>();
 			for (u32 i = 0; i < num_friends; i++)
 			{
 				std::string friend_name = stream.get_string(false);
-				bool online             = !!(stream.get<u8>());
-				friends.insert(std::make_pair(std::move(friend_name), std::make_pair(online, 0)));
+				bool online = !!(stream.get<u8>());
+
+				SceNpCommunicationId pr_com_id = stream.get_com_id();
+				std::string pr_title = fmt::truncate(stream.get_string(true), SCE_NP_BASIC_PRESENCE_TITLE_SIZE_MAX - 1);
+				std::string pr_status = fmt::truncate(stream.get_string(true), SCE_NP_BASIC_PRESENCE_EXTENDED_STATUS_SIZE_MAX - 1);
+				std::string pr_comment = fmt::truncate(stream.get_string(true), SCE_NP_BASIC_PRESENCE_COMMENT_SIZE_MAX - 1);
+				std::vector<u8> pr_data = stream.get_rawdata();
+
+				if (pr_data.size() > SCE_NP_BASIC_MAX_PRESENCE_SIZE)
+				{
+					pr_data.resize(SCE_NP_BASIC_MAX_PRESENCE_SIZE);
+				}
+
+				friend_online_data infos(online, std::move(pr_com_id), std::move(pr_title), std::move(pr_status), std::move(pr_comment), std::move(pr_data));
+				friends.insert_or_assign(std::move(friend_name), std::move(infos));
 			}
 		};
 
@@ -1170,39 +1214,39 @@ namespace rpcn
 
 	std::vector<std::pair<u16, std::vector<u8>>> rpcn_client::get_notifications()
 	{
-		std::vector<std::pair<u16, std::vector<u8>>> notifs;
-
-		{
-			std::lock_guard lock(mutex_notifs);
-			notifs = std::move(notifications);
-			notifications.clear();
-		}
-
+		std::lock_guard lock(mutex_notifs);
+		std::vector<std::pair<u16, std::vector<u8>>> notifs = std::move(notifications);
+		notifications.clear();
 		return notifs;
 	}
 
 	std::unordered_map<u32, std::pair<u16, std::vector<u8>>> rpcn_client::get_replies()
 	{
-		std::unordered_map<u32, std::pair<u16, std::vector<u8>>> ret_replies;
-
-		{
-			std::lock_guard lock(mutex_replies);
-			ret_replies = std::move(replies);
-			replies.clear();
-		}
-
+		std::lock_guard lock(mutex_replies);
+		std::unordered_map<u32, std::pair<u16, std::vector<u8>>> ret_replies = std::move(replies);
+		replies.clear();
 		return ret_replies;
+	}
+
+	std::unordered_map<std::string, friend_online_data> rpcn_client::get_presence_updates()
+	{
+		std::lock_guard lock(mutex_presence_updates);
+		std::unordered_map<std::string, friend_online_data> ret_updates = std::move(presence_updates);
+		presence_updates.clear();
+		return ret_updates;
+	}
+
+	std::map<std::string, friend_online_data> rpcn_client::get_presence_states()
+	{
+		std::lock_guard lock(mutex_friends);
+		return friend_infos.friends;
 	}
 
 	std::vector<u64> rpcn_client::get_new_messages()
 	{
-		std::vector<u64> ret_new_messages;
-		{
-			std::lock_guard lock(mutex_messages);
-			ret_new_messages = std::move(new_messages);
-			new_messages.clear();
-		}
-
+		std::lock_guard lock(mutex_messages);
+		std::vector<u64> ret_new_messages = std::move(new_messages);
+		new_messages.clear();
 		return ret_new_messages;
 	}
 
@@ -1374,6 +1418,13 @@ namespace rpcn
 			std::vector<flatbuffers::Offset<flatbuffers::String>> davec;
 			for (u32 i = 0; i < req->allowedUserNum; i++)
 			{
+				// Some games just give us garbage, make sure npid is valid before passing
+				// Ex: Aquapazza (gives uninitialized buffer on the stack and allowedUserNum is hardcoded to 100)
+				if (!np::is_valid_npid(req->allowedUser[i]))
+				{
+					continue;
+				}
+
 				auto bin = builder.CreateString(req->allowedUser[i].handle.data);
 				davec.push_back(bin);
 			}
@@ -1385,6 +1436,11 @@ namespace rpcn
 			std::vector<flatbuffers::Offset<flatbuffers::String>> davec;
 			for (u32 i = 0; i < req->blockedUserNum; i++)
 			{
+				if (!np::is_valid_npid(req->blockedUser[i]))
+				{
+					continue;
+				}
+
 				auto bin = builder.CreateString(req->blockedUser[i].handle.data);
 				davec.push_back(bin);
 			}
@@ -1415,17 +1471,9 @@ namespace rpcn
 		auto req_finished = CreateCreateJoinRoomRequest(builder, req->worldId, req->lobbyId, req->maxSlot, req->flagAttr, final_binattrinternal_vec, final_searchintattrexternal_vec,
 			final_searchbinattrexternal_vec, final_binattrexternal_vec, final_roompassword, final_groupconfigs_vec, final_passwordSlotMask, final_allowedusers_vec, final_blockedusers_vec, final_grouplabel,
 			final_memberbinattrinternal_vec, req->teamId, final_optparam);
-
 		builder.Finish(req_finished);
-		const u8* buf     = builder.GetBufferPointer();
-		const usz bufsize = builder.GetSize();
-		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
 
-		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
-		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
-		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
-
-		return forge_send(CommandType::CreateRoom, req_id, data);
+		return forge_request_with_com_id(builder, communication_id, CommandType::CreateRoom, req_id);
 	}
 
 	bool rpcn_client::join_room(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2JoinRoomRequest* req)
@@ -1452,17 +1500,9 @@ namespace rpcn
 		flatbuffers::Offset<PresenceOptionData> final_optdata = CreatePresenceOptionData(builder, builder.CreateVector(req->optData.data, 16), req->optData.length);
 
 		auto req_finished = CreateJoinRoomRequest(builder, req->roomId, final_roompassword, final_grouplabel, final_memberbinattrinternal_vec, final_optdata, req->teamId);
-
 		builder.Finish(req_finished);
-		const u8* buf     = builder.GetBufferPointer();
-		const usz bufsize = builder.GetSize();
-		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
 
-		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
-		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
-		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
-
-		return forge_send(CommandType::JoinRoom, req_id, data);
+		return forge_request_with_com_id(builder, communication_id, CommandType::JoinRoom, req_id);
 	}
 
 	bool rpcn_client::leave_room(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2LeaveRoomRequest* req)
@@ -1471,15 +1511,8 @@ namespace rpcn
 		flatbuffers::Offset<PresenceOptionData> final_optdata = CreatePresenceOptionData(builder, builder.CreateVector(req->optData.data, 16), req->optData.length);
 		auto req_finished                                     = CreateLeaveRoomRequest(builder, req->roomId, final_optdata);
 		builder.Finish(req_finished);
-		const u8* buf     = builder.GetBufferPointer();
-		const usz bufsize = builder.GetSize();
-		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
 
-		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
-		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
-		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
-
-		return forge_send(CommandType::LeaveRoom, req_id, data);
+		return forge_request_with_com_id(builder, communication_id, CommandType::LeaveRoom, req_id);
 	}
 
 	bool rpcn_client::search_room(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SearchRoomRequest* req)
@@ -1538,15 +1571,8 @@ namespace rpcn
 
 		auto req_finished = s_req.Finish();
 		builder.Finish(req_finished);
-		const u8* buf     = builder.GetBufferPointer();
-		const usz bufsize = builder.GetSize();
-		std::vector<u8> data(COMMUNICATION_ID_SIZE + bufsize + sizeof(u32));
 
-		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
-		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
-		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
-
-		return forge_send(CommandType::SearchRoom, req_id, data);
+		return forge_request_with_com_id(builder, communication_id, CommandType::SearchRoom, req_id);
 	}
 
 	bool rpcn_client::get_roomdata_external_list(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2GetRoomDataExternalListRequest* req)
@@ -1564,17 +1590,9 @@ namespace rpcn
 		}
 
 		auto req_finished = CreateGetRoomDataExternalListRequestDirect(builder, &roomIds, &attrIds);
-
 		builder.Finish(req_finished);
-		const u8* buf     = builder.GetBufferPointer();
-		const usz bufsize = builder.GetSize();
-		std::vector<u8> data(COMMUNICATION_ID_SIZE + bufsize + sizeof(u32));
 
-		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
-		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
-		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
-
-		return forge_send(CommandType::GetRoomDataExternalList, req_id, data);
+		return forge_request_with_com_id(builder, communication_id, CommandType::GetRoomDataExternalList, req_id);
 	}
 
 	bool rpcn_client::set_roomdata_external(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SetRoomDataExternalRequest* req)
@@ -1614,17 +1632,9 @@ namespace rpcn
 			final_binattrexternal_vec = builder.CreateVector(davec);
 		}
 		auto req_finished = CreateSetRoomDataExternalRequest(builder, req->roomId, final_searchintattrexternal_vec, final_searchbinattrexternal_vec, final_binattrexternal_vec);
-
 		builder.Finish(req_finished);
-		const u8* buf     = builder.GetBufferPointer();
-		const usz bufsize = builder.GetSize();
-		std::vector<u8> data(COMMUNICATION_ID_SIZE + bufsize + sizeof(u32));
 
-		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
-		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
-		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
-
-		return forge_send(CommandType::SetRoomDataExternal, req_id, data);
+		return forge_request_with_com_id(builder, communication_id, CommandType::SetRoomDataExternal, req_id);
 	}
 
 	bool rpcn_client::get_roomdata_internal(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2GetRoomDataInternalRequest* req)
@@ -1643,17 +1653,9 @@ namespace rpcn
 		}
 
 		auto req_finished = CreateGetRoomDataInternalRequest(builder, req->roomId, final_attr_ids_vec);
-
 		builder.Finish(req_finished);
-		const u8* buf     = builder.GetBufferPointer();
-		const usz bufsize = builder.GetSize();
-		std::vector<u8> data(COMMUNICATION_ID_SIZE + bufsize + sizeof(u32));
 
-		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
-		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
-		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
-
-		return forge_send(CommandType::GetRoomDataInternal, req_id, data);
+		return forge_request_with_com_id(builder, communication_id, CommandType::GetRoomDataInternal, req_id);
 	}
 
 	bool rpcn_client::set_roomdata_internal(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SetRoomDataInternalRequest* req)
@@ -1698,17 +1700,29 @@ namespace rpcn
 
 		auto req_finished =
 			CreateSetRoomDataInternalRequest(builder, req->roomId, req->flagFilter, req->flagAttr, final_binattrinternal_vec, final_grouppasswordconfig_vec, final_passwordSlotMask, final_ownerprivilege_vec);
-
 		builder.Finish(req_finished);
-		const u8* buf     = builder.GetBufferPointer();
-		const usz bufsize = builder.GetSize();
-		std::vector<u8> data(COMMUNICATION_ID_SIZE + bufsize + sizeof(u32));
 
-		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
-		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
-		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
+		return forge_request_with_com_id(builder, communication_id, CommandType::SetRoomDataInternal, req_id);
+	}
 
-		return forge_send(CommandType::SetRoomDataInternal, req_id, data);
+	bool rpcn_client::get_roommemberdata_internal(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2GetRoomMemberDataInternalRequest* req)
+	{
+		flatbuffers::FlatBufferBuilder builder(1024);
+		flatbuffers::Offset<flatbuffers::Vector<u16>> final_attrid_vec;
+		if (req->attrIdNum)
+		{
+			std::vector<u16> attrid_vec;
+			for (u32 i = 0; i < req->attrIdNum; i++)
+			{
+				attrid_vec.push_back(req->attrId[i]);
+			}
+			final_attrid_vec = builder.CreateVector(attrid_vec);
+		}
+
+		auto req_finished = CreateGetRoomMemberDataInternalRequest(builder, req->roomId, req->memberId, final_attrid_vec);
+		builder.Finish(req_finished);
+
+		return forge_request_with_com_id(builder, communication_id, CommandType::GetRoomMemberDataInternal, req_id);
 	}
 
 	bool rpcn_client::set_roommemberdata_internal(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SetRoomMemberDataInternalRequest* req)
@@ -1727,17 +1741,30 @@ namespace rpcn
 		}
 
 		auto req_finished = CreateSetRoomMemberDataInternalRequest(builder, req->roomId, req->memberId, req->teamId, final_binattrinternal_vec);
-
 		builder.Finish(req_finished);
-		const u8* buf     = builder.GetBufferPointer();
-		const usz bufsize = builder.GetSize();
-		std::vector<u8> data(COMMUNICATION_ID_SIZE + bufsize + sizeof(u32));
 
-		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
-		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
-		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
+		return forge_request_with_com_id(builder, communication_id, CommandType::SetRoomMemberDataInternal, req_id);
+	}
 
-		return forge_send(CommandType::SetRoomMemberDataInternal, req_id, data);
+	bool rpcn_client::set_userinfo(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SetUserInfoRequest* req)
+	{
+		flatbuffers::FlatBufferBuilder builder(1024);
+		flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<BinAttr>>> final_memberbinattr_vec;
+		if (req->userBinAttrNum)
+		{
+			std::vector<flatbuffers::Offset<BinAttr>> davec;
+			for (u32 i = 0; i < req->userBinAttrNum; i++)
+			{
+				auto bin = CreateBinAttr(builder, req->userBinAttr[i].id, builder.CreateVector(req->userBinAttr[i].ptr.get_ptr(), req->userBinAttr[i].size));
+				davec.push_back(bin);
+			}
+			final_memberbinattr_vec = builder.CreateVector(davec);
+		}
+
+		auto req_finished = CreateSetUserInfo(builder, req->serverId, final_memberbinattr_vec);
+		builder.Finish(req_finished);
+
+		return forge_request_with_com_id(builder, communication_id, CommandType::SetUserInfo, req_id);
 	}
 
 	bool rpcn_client::ping_room_owner(u32 req_id, const SceNpCommunicationId& communication_id, u64 room_id)
@@ -1777,17 +1804,9 @@ namespace rpcn
 		}
 
 		auto req_finished = CreateSendRoomMessageRequest(builder, req->roomId, req->castType, builder.CreateVector(dst.data(), dst.size()), builder.CreateVector(reinterpret_cast<const u8*>(req->msg.get_ptr()), req->msgLen), req->option);
-
 		builder.Finish(req_finished);
-		const u8* buf     = builder.GetBufferPointer();
-		const usz bufsize = builder.GetSize();
-		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
 
-		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
-		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
-		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
-
-		return forge_send(CommandType::SendRoomMessage, req_id, data);
+		return forge_request_with_com_id(builder, communication_id, CommandType::SendRoomMessage, req_id);
 	}
 
 	bool rpcn_client::req_sign_infos(u32 req_id, const std::string& npid)
@@ -1811,7 +1830,7 @@ namespace rpcn
 		return forge_send(CommandType::RequestTicket, req_id, data);
 	}
 
-	bool rpcn_client::sendmessage(const message_data& msg_data, const std::set<std::string>& npids)
+	bool rpcn_client::send_message(const message_data& msg_data, const std::set<std::string>& npids)
 	{
 		flatbuffers::FlatBufferBuilder builder(1024);
 
@@ -1840,9 +1859,7 @@ namespace rpcn
 		reinterpret_cast<le_t<u32>&>(data[0]) = static_cast<u32>(bufsize);
 		memcpy(data.data() + sizeof(u32), buf, bufsize);
 
-		u64 req_id = rpcn_request_counter.fetch_add(1);
-
-		return forge_send(CommandType::SendMessage, req_id, data);
+		return forge_send(CommandType::SendMessage, rpcn_request_counter.fetch_add(1), data);
 	}
 
 	bool rpcn_client::get_board_infos(u32 req_id, const SceNpCommunicationId& communication_id, SceNpScoreBoardId board_id)
@@ -1859,34 +1876,18 @@ namespace rpcn
 		flatbuffers::FlatBufferBuilder builder(1024);
 
 		auto req_finished = CreateRecordScoreRequestDirect(builder, board_id, char_id, score, comment ? (*comment).c_str() : nullptr, score_data ? &*score_data : nullptr);
-
 		builder.Finish(req_finished);
-		const u8* buf     = builder.GetBufferPointer();
-		const usz bufsize = builder.GetSize();
-		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
 
-		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
-		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
-		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
-
-		return forge_send(CommandType::RecordScore, req_id, data);
+		return forge_request_with_com_id(builder, communication_id, CommandType::RecordScore, req_id);
 	}
 
 	bool rpcn_client::get_score_range(u32 req_id, const SceNpCommunicationId& communication_id, SceNpScoreBoardId board_id, u32 start_rank, u32 num_rank, bool with_comment, bool with_gameinfo)
 	{
 		flatbuffers::FlatBufferBuilder builder(1024);
 		auto req_finished = CreateGetScoreRangeRequest(builder, board_id, start_rank, num_rank, with_comment, with_gameinfo);
-
 		builder.Finish(req_finished);
-		const u8* buf     = builder.GetBufferPointer();
-		const usz bufsize = builder.GetSize();
-		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
 
-		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
-		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
-		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
-
-		return forge_send(CommandType::GetScoreRange, req_id, data);
+		return forge_request_with_com_id(builder, communication_id, CommandType::GetScoreRange, req_id);
 	}
 
 	bool rpcn_client::get_score_npid(u32 req_id, const SceNpCommunicationId& communication_id, SceNpScoreBoardId board_id, const std::vector<std::pair<SceNpId, s32>>& npids, bool with_comment, bool with_gameinfo)
@@ -1903,15 +1904,8 @@ namespace rpcn
 		auto req_finished = CreateGetScoreNpIdRequest(builder, board_id, builder.CreateVector(davec), with_comment, with_gameinfo);
 
 		builder.Finish(req_finished);
-		const u8* buf     = builder.GetBufferPointer();
-		const usz bufsize = builder.GetSize();
-		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
 
-		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
-		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
-		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
-
-		return forge_send(CommandType::GetScoreNpid, req_id, data);
+		return forge_request_with_com_id(builder, communication_id, CommandType::GetScoreNpid, req_id);
 	}
 
 	bool rpcn_client::get_score_friend(u32 req_id, const SceNpCommunicationId& communication_id, SceNpScoreBoardId board_id, bool include_self, bool with_comment, bool with_gameinfo, u32 max_entries)
@@ -1920,15 +1914,7 @@ namespace rpcn
 		auto req_finished = CreateGetScoreFriendsRequest(builder, board_id, include_self, max_entries, with_comment, with_gameinfo);
 		builder.Finish(req_finished);
 
-		const u8* buf     = builder.GetBufferPointer();
-		const usz bufsize = builder.GetSize();
-		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
-
-		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
-		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
-		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
-
-		return forge_send(CommandType::GetScoreFriends, req_id, data);
+		return forge_request_with_com_id(builder, communication_id, CommandType::GetScoreFriends, req_id);
 	}
 
 	bool rpcn_client::record_score_data(u32 req_id, const SceNpCommunicationId& communication_id, SceNpScorePcId pc_id, SceNpScoreBoardId board_id, s64 score, const std::vector<u8>& score_data)
@@ -1956,15 +1942,7 @@ namespace rpcn
 		auto req_finished = CreateGetScoreGameDataRequest(builder, board_id, builder.CreateString(reinterpret_cast<const char*>(npid.handle.data)), pc_id);
 		builder.Finish(req_finished);
 
-		const u8* buf     = builder.GetBufferPointer();
-		const usz bufsize = builder.GetSize();
-		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
-
-		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
-		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
-		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
-
-		return forge_send(CommandType::GetScoreData, req_id, data);
+		return forge_request_with_com_id(builder, communication_id, CommandType::GetScoreData, req_id);
 	}
 
 	bool rpcn_client::tus_set_multislot_variable(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::cptr<s64> variableArray, s32 arrayNum, bool vuser)
@@ -1976,15 +1954,7 @@ namespace rpcn
 		auto req_finished = CreateTusSetMultiSlotVariableRequest(builder, CreateTusUser(builder, vuser, builder.CreateString(targetNpId.data)), builder.CreateVector(slotid_array), builder.CreateVector(variable_array));
 		builder.Finish(req_finished);
 
-		const u8* buf     = builder.GetBufferPointer();
-		const usz bufsize = builder.GetSize();
-		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
-
-		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
-		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
-		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
-
-		return forge_send(CommandType::TusSetMultiSlotVariable, req_id, data);
+		return forge_request_with_com_id(builder, communication_id, CommandType::TusSetMultiSlotVariable, req_id);
 	}
 
 	bool rpcn_client::tus_get_multislot_variable(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, s32 arrayNum, bool vuser)
@@ -1995,15 +1965,7 @@ namespace rpcn
 		auto req_finished = CreateTusGetMultiSlotVariableRequest(builder, CreateTusUser(builder, vuser, builder.CreateString(targetNpId.data)), builder.CreateVector(slotid_array));
 		builder.Finish(req_finished);
 
-		const u8* buf     = builder.GetBufferPointer();
-		const usz bufsize = builder.GetSize();
-		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
-
-		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
-		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
-		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
-
-		return forge_send(CommandType::TusGetMultiSlotVariable, req_id, data);
+		return forge_request_with_com_id(builder, communication_id, CommandType::TusGetMultiSlotVariable, req_id);
 	}
 
 	bool rpcn_client::tus_get_multiuser_variable(u32 req_id, const SceNpCommunicationId& communication_id, const std::vector<SceNpOnlineId>& targetNpIdArray, SceNpTusSlotId slotId, s32 arrayNum, bool vuser)
@@ -2019,15 +1981,7 @@ namespace rpcn
 		auto req_finished = CreateTusGetMultiUserVariableRequest(builder, builder.CreateVector(davec), slotId);
 		builder.Finish(req_finished);
 
-		const u8* buf     = builder.GetBufferPointer();
-		const usz bufsize = builder.GetSize();
-		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
-
-		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
-		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
-		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
-
-		return forge_send(CommandType::TusGetMultiUserVariable, req_id, data);
+		return forge_request_with_com_id(builder, communication_id, CommandType::TusGetMultiUserVariable, req_id);
 	}
 
 	bool rpcn_client::tus_get_friends_variable(u32 req_id, const SceNpCommunicationId& communication_id, SceNpTusSlotId slotId, bool includeSelf, s32 sortType, s32 arrayNum)
@@ -2036,15 +1990,7 @@ namespace rpcn
 		auto req_finished = CreateTusGetFriendsVariableRequest(builder, slotId, includeSelf, sortType, arrayNum);
 		builder.Finish(req_finished);
 
-		const u8* buf     = builder.GetBufferPointer();
-		const usz bufsize = builder.GetSize();
-		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
-
-		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
-		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
-		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
-
-		return forge_send(CommandType::TusGetFriendsVariable, req_id, data);
+		return forge_request_with_com_id(builder, communication_id, CommandType::TusGetFriendsVariable, req_id);
 	}
 
 	bool rpcn_client::tus_add_and_get_variable(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, SceNpTusSlotId slotId, s64 inVariable, vm::ptr<SceNpTusAddAndGetVariableOptParam> option, bool vuser)
@@ -2072,15 +2018,7 @@ namespace rpcn
 		auto req_finished = CreateTusAddAndGetVariableRequest(builder, CreateTusUser(builder, vuser, builder.CreateString(targetNpId.data)), slotId, inVariable, isLastChangedDate, isLastChangedAuthorId);
 		builder.Finish(req_finished);
 
-		const u8* buf     = builder.GetBufferPointer();
-		const usz bufsize = builder.GetSize();
-		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
-
-		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
-		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
-		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
-
-		return forge_send(CommandType::TusAddAndGetVariable, req_id, data);
+		return forge_request_with_com_id(builder, communication_id, CommandType::TusAddAndGetVariable, req_id);
 	}
 
 	bool rpcn_client::tus_try_and_set_variable(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, SceNpTusSlotId slotId, s32 opeType, s64 variable, vm::ptr<SceNpTusTryAndSetVariableOptParam> option, bool vuser)
@@ -2116,15 +2054,7 @@ namespace rpcn
 		auto req_finished = CreateTusTryAndSetVariableRequest(builder, CreateTusUser(builder, vuser, builder.CreateString(targetNpId.data)), slotId, opeType, variable, isLastChangedDate, isLastChangedAuthorId, compareValue);
 		builder.Finish(req_finished);
 
-		const u8* buf     = builder.GetBufferPointer();
-		const usz bufsize = builder.GetSize();
-		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
-
-		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
-		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
-		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
-
-		return forge_send(CommandType::TusTryAndSetVariable, req_id, data);
+		return forge_request_with_com_id(builder, communication_id, CommandType::TusTryAndSetVariable, req_id);
 	}
 
 	bool rpcn_client::tus_delete_multislot_variable(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, s32 arrayNum, bool vuser)
@@ -2135,15 +2065,7 @@ namespace rpcn
 		auto req_finished = CreateTusDeleteMultiSlotVariableRequest(builder, CreateTusUser(builder, vuser, builder.CreateString(targetNpId.data)), builder.CreateVector(slotid_array));
 		builder.Finish(req_finished);
 
-		const u8* buf     = builder.GetBufferPointer();
-		const usz bufsize = builder.GetSize();
-		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
-
-		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
-		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
-		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
-
-		return forge_send(CommandType::TusDeleteMultiSlotVariable, req_id, data);
+		return forge_request_with_com_id(builder, communication_id, CommandType::TusDeleteMultiSlotVariable, req_id);
 	}
 
 	bool rpcn_client::tus_set_data(u32 req_id, SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, SceNpTusSlotId slotId, const std::vector<u8>& tus_data, vm::cptr<SceNpTusDataInfo> info, vm::ptr<SceNpTusSetDataOptParam> option, bool vuser)
@@ -2178,15 +2100,7 @@ namespace rpcn
 		auto req_finished = CreateTusSetDataRequest(builder, CreateTusUser(builder, vuser, builder.CreateString(targetNpId.data)), slotId, builder.CreateVector(tus_data), fb_info, isLastChangedDate, isLastChangedAuthorId);
 		builder.Finish(req_finished);
 
-		const u8* buf     = builder.GetBufferPointer();
-		const usz bufsize = builder.GetSize();
-		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
-
-		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
-		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
-		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
-
-		return forge_send(CommandType::TusSetData, req_id, data);
+		return forge_request_with_com_id(builder, communication_id, CommandType::TusSetData, req_id);
 	}
 
 	bool rpcn_client::tus_get_data(u32 req_id, SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, SceNpTusSlotId slotId, bool vuser)
@@ -2195,15 +2109,7 @@ namespace rpcn
 		auto req_finished = CreateTusGetDataRequest(builder, CreateTusUser(builder, vuser, builder.CreateString(targetNpId.data)), slotId);
 		builder.Finish(req_finished);
 
-		const u8* buf     = builder.GetBufferPointer();
-		const usz bufsize = builder.GetSize();
-		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
-
-		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
-		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
-		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
-
-		return forge_send(CommandType::TusGetData, req_id, data);
+		return forge_request_with_com_id(builder, communication_id, CommandType::TusGetData, req_id);
 	}
 
 	bool rpcn_client::tus_get_multislot_data_status(u32 req_id, SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, s32 arrayNum, bool vuser)
@@ -2214,15 +2120,7 @@ namespace rpcn
 		auto req_finished = CreateTusGetMultiSlotDataStatusRequest(builder, CreateTusUser(builder, vuser, builder.CreateString(targetNpId.data)), builder.CreateVector(slotid_array));
 		builder.Finish(req_finished);
 
-		const u8* buf     = builder.GetBufferPointer();
-		const usz bufsize = builder.GetSize();
-		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
-
-		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
-		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
-		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
-
-		return forge_send(CommandType::TusGetMultiSlotDataStatus, req_id, data);
+		return forge_request_with_com_id(builder, communication_id, CommandType::TusGetMultiSlotDataStatus, req_id);
 	}
 
 	bool rpcn_client::tus_get_multiuser_data_status(u32 req_id, SceNpCommunicationId& communication_id, const std::vector<SceNpOnlineId>& targetNpIdArray, SceNpTusSlotId slotId, s32 arrayNum, bool vuser)
@@ -2238,15 +2136,7 @@ namespace rpcn
 		auto req_finished = CreateTusGetMultiUserDataStatusRequest(builder, builder.CreateVector(davec), slotId);
 		builder.Finish(req_finished);
 
-		const u8* buf     = builder.GetBufferPointer();
-		const usz bufsize = builder.GetSize();
-		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
-
-		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
-		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
-		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
-
-		return forge_send(CommandType::TusGetMultiUserDataStatus, req_id, data);
+		return forge_request_with_com_id(builder, communication_id, CommandType::TusGetMultiUserDataStatus, req_id);
 	}
 
 	bool rpcn_client::tus_get_friends_data_status(u32 req_id, SceNpCommunicationId& communication_id, SceNpTusSlotId slotId, bool includeSelf, s32 sortType, s32 arrayNum)
@@ -2255,15 +2145,7 @@ namespace rpcn
 		auto req_finished = CreateTusGetFriendsDataStatusRequest(builder, slotId, includeSelf, sortType, arrayNum);
 		builder.Finish(req_finished);
 
-		const u8* buf     = builder.GetBufferPointer();
-		const usz bufsize = builder.GetSize();
-		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
-
-		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
-		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
-		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
-
-		return forge_send(CommandType::TusGetFriendsDataStatus, req_id, data);
+		return forge_request_with_com_id(builder, communication_id, CommandType::TusGetFriendsDataStatus, req_id);
 	}
 
 	bool rpcn_client::tus_delete_multislot_data(u32 req_id, SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, s32 arrayNum, bool vuser)
@@ -2274,15 +2156,29 @@ namespace rpcn
 		auto req_finished = CreateTusDeleteMultiSlotDataRequest(builder, CreateTusUser(builder, vuser, builder.CreateString(targetNpId.data)), builder.CreateVector(slotid_array));
 		builder.Finish(req_finished);
 
+		return forge_request_with_com_id(builder, communication_id, CommandType::TusDeleteMultiSlotData, req_id);
+	}
+
+	bool rpcn_client::send_presence(const SceNpCommunicationId& pr_com_id, const std::string& pr_title, const std::string& pr_status, const std::string& pr_comment, const std::vector<u8>& pr_data)
+	{
+		flatbuffers::FlatBufferBuilder builder(1024);
+		auto req_finished = CreateSetPresenceRequest(builder, builder.CreateString(pr_title), builder.CreateString(pr_status), builder.CreateString(pr_comment), builder.CreateVector(pr_data));
+		builder.Finish(req_finished);
+
+		return forge_request_with_com_id(builder, pr_com_id, CommandType::SetPresence, rpcn_request_counter.fetch_add(1));
+	}
+
+	bool rpcn_client::forge_request_with_com_id(const flatbuffers::FlatBufferBuilder& builder, const SceNpCommunicationId& com_id, CommandType command, u64 packet_id)
+	{
 		const u8* buf     = builder.GetBufferPointer();
 		const usz bufsize = builder.GetSize();
 		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
 
-		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
+		memcpy(data.data(), com_id.data, COMMUNICATION_ID_SIZE);
 		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
 		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
 
-		return forge_send(CommandType::TusDeleteMultiSlotData, req_id, data);
+		return forge_send(command, packet_id, data);
 	}
 
 	std::vector<u8> rpcn_client::forge_request(u16 command, u64 packet_id, const std::vector<u8>& data) const
@@ -2303,6 +2199,13 @@ namespace rpcn
 	{
 		connected = false;
 		rpcn_log.error("%s", error_msg);
+		return false;
+	}
+
+	bool rpcn_client::error_and_disconnect_notice(const std::string& error_msg)
+	{
+		connected = false;
+		rpcn_log.notice("%s", error_msg);
 		return false;
 	}
 
@@ -2402,12 +2305,12 @@ namespace rpcn
 			}
 
 			friend_infos.requests_received.insert(username);
-			call_callbacks(ntype, username, 0);
+			call_callbacks(ntype, username, false);
 			break;
 		}
 		case NotificationType::FriendNew: // Add a friend to the friendlist(either accepted a friend request or friend accepted it)
 		{
-			bool status          = !!vdata.get<u8>();
+			bool online = !!vdata.get<u8>();
 			std::string username = vdata.get_string(false);
 			if (vdata.is_error())
 			{
@@ -2417,8 +2320,8 @@ namespace rpcn
 
 			friend_infos.requests_received.erase(username);
 			friend_infos.requests_sent.erase(username);
-			friend_infos.friends.insert(std::make_pair(username, std::make_pair(status, 0)));
-			call_callbacks(ntype, username, status);
+			friend_infos.friends.insert_or_assign(username, friend_online_data(online, 0));
+			call_callbacks(ntype, username, online);
 
 			break;
 		}
@@ -2432,12 +2335,12 @@ namespace rpcn
 			}
 
 			friend_infos.friends.erase(username);
-			call_callbacks(ntype, username, 0);
+			call_callbacks(ntype, username, false);
 			break;
 		}
 		case NotificationType::FriendStatus: // Set status of friend to Offline or Online
 		{
-			bool status          = !!vdata.get<u8>();
+			bool online = !!vdata.get<u8>();
 			u64 timestamp        = vdata.get<u64>();
 			std::string username = vdata.get_string(false);
 			if (vdata.is_error())
@@ -2448,15 +2351,54 @@ namespace rpcn
 
 			if (auto u = friend_infos.friends.find(username); u != friend_infos.friends.end())
 			{
-				if (timestamp < u->second.second)
+				if (timestamp < u->second.timestamp)
 				{
 					break;
 				}
 
-				u->second.second = timestamp;
-				u->second.first  = status;
-				call_callbacks(ntype, username, status);
+				// clear presence data on online/offline
+				u->second = friend_online_data(online, timestamp);
+
+				{
+					std::lock_guard lock(mutex_presence_updates);
+					presence_updates.insert_or_assign(username, u->second);
+				}
+
+				call_callbacks(ntype, username, online);
 			}
+			break;
+		}
+		case NotificationType::FriendPresenceChanged:
+		{
+			std::string npid = vdata.get_string(true);
+			SceNpCommunicationId pr_com_id = vdata.get_com_id();
+			std::string pr_title = fmt::truncate(vdata.get_string(true), SCE_NP_BASIC_PRESENCE_TITLE_SIZE_MAX - 1);
+			std::string pr_status = fmt::truncate(vdata.get_string(true), SCE_NP_BASIC_PRESENCE_EXTENDED_STATUS_SIZE_MAX - 1);
+			std::string pr_comment = fmt::truncate(vdata.get_string(true), SCE_NP_BASIC_PRESENCE_COMMENT_SIZE_MAX - 1);
+			std::vector<u8> pr_data = vdata.get_rawdata();
+			if (pr_data.size() > SCE_NP_BASIC_MAX_PRESENCE_SIZE)
+			{
+				pr_data.resize(SCE_NP_BASIC_MAX_PRESENCE_SIZE);
+			}
+
+			if (vdata.is_error())
+			{
+				rpcn_log.error("Error parsing FriendPresenceChanged notification");
+				break;
+			}
+
+			if (auto u = friend_infos.friends.find(npid); u != friend_infos.friends.end())
+			{
+				u->second.pr_com_id = std::move(pr_com_id);
+				u->second.pr_title = std::move(pr_title);
+				u->second.pr_status = std::move(pr_status);
+				u->second.pr_comment = std::move(pr_comment);
+				u->second.pr_data = std::move(pr_data);
+
+				std::lock_guard lock(mutex_presence_updates);
+				presence_updates.insert_or_assign(std::move(npid), u->second);
+			}
+
 			break;
 		}
 		default:
@@ -2605,6 +2547,27 @@ namespace rpcn
 		}
 
 		return it->first;
+	}
+
+	std::optional<std::pair<std::string, friend_online_data>> rpcn_client::get_friend_presence_by_index(u32 index)
+	{
+		std::lock_guard lock(mutex_friends);
+
+		if (index >= friend_infos.friends.size())
+		{
+			return std::nullopt;
+		}
+
+		auto it = friend_infos.friends.begin();
+		std::advance(it, index);
+		return std::optional(*it);
+	}
+
+	std::optional<std::pair<std::string, friend_online_data>> rpcn_client::get_friend_presence_by_npid(const std::string& npid)
+	{
+		std::lock_guard lock(mutex_friends);
+		const auto it = friend_infos.friends.find(npid);
+		return it == friend_infos.friends.end() ? std::nullopt : std::optional(*it);
 	}
 
 } // namespace rpcn

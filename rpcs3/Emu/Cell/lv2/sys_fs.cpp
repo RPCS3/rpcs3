@@ -160,7 +160,7 @@ bool lv2_fs_mount_info_map::remove(std::string_view path)
 	return false;
 }
 
-const lv2_fs_mount_info& lv2_fs_mount_info_map::lookup(std::string_view path, bool no_cell_fs_path) const
+const lv2_fs_mount_info& lv2_fs_mount_info_map::lookup(std::string_view path, bool no_cell_fs_path, std::string* mount_path) const
 {
 	if (path.starts_with("/"sv))
 	{
@@ -177,7 +177,9 @@ const lv2_fs_mount_info& lv2_fs_mount_info_map::lookup(std::string_view path, bo
 				if (iterator->second == &g_mp_sys_dev_root && parent_level > 1)
 					break;
 				if (no_cell_fs_path && iterator->second.device.starts_with(cell_fs_path))
-					return lookup(iterator->second.device.substr(cell_fs_path.size()), no_cell_fs_path); // Recursively look up the parent mount info
+					return lookup(iterator->second.device.substr(cell_fs_path.size()), no_cell_fs_path, mount_path); // Recursively look up the parent mount info
+				if (mount_path)
+					*mount_path = iterator->first;
 				return iterator->second;
 			}
 		} while (parent_dir.length() > 1); // Exit the loop when parent_dir == "/" or empty
@@ -191,36 +193,28 @@ u64 lv2_fs_mount_info_map::get_all(CellFsMountInfo* info, u64 len) const
 	if (!info)
 		return map.size();
 
-	struct mount_info
-	{
-		const std::string_view path, filesystem, dev_name;
-		const be_t<u32> unk1 = 0, unk2 = 0, unk3 = 0, unk4 = 0, unk5 = 0;
-	};
-
 	u64 count = 0;
 
-	auto push_info = [&](mount_info&& data)
+	for (const auto& [path, mount_info] : map)
 	{
 		if (count >= len)
-			return;
+			break;
 
-		strcpy_trunc(info->mount_path, data.path);
-		strcpy_trunc(info->filesystem, data.filesystem);
-		strcpy_trunc(info->dev_name, data.dev_name);
-		std::memcpy(&info->unk1, &data.unk1, sizeof(be_t<u32>) * 5);
+		strcpy_trunc(info[count].mount_path, path);
+		strcpy_trunc(info[count].filesystem, mount_info.file_system);
+		strcpy_trunc(info[count].dev_name, mount_info.device);
+		if (mount_info.read_only)
+			info[count].unk[4] |= 0x10000000;
 
-		info++, count++;
-	};
-
-	for (const auto& [path, mi] : map)
-	{
-		if (mi == &g_mp_sys_dev_root || mi == &g_mp_sys_dev_flash)
-			push_info(mount_info{.path = path, .filesystem = mi.file_system, .dev_name = mi.device, .unk5 = 0x10000000});
-		else
-			push_info(mount_info{.path = path, .filesystem = mi.file_system, .dev_name = mi.device});
+		count++;
 	}
 
 	return count;
+}
+
+bool lv2_fs_mount_info_map::is_device_mounted(std::string_view device_name) const
+{
+	return std::any_of(map.begin(), map.end(), [&](const decltype(map)::value_type& info) { return info.second.device == device_name; });
 }
 
 bool lv2_fs_mount_info_map::vfs_unmount(std::string_view vpath, bool remove_from_map)
@@ -264,13 +258,15 @@ std::string lv2_fs_object::get_normalized_path(std::string_view path)
 	return normalized_path.empty() ? "/" : normalized_path;
 }
 
-std::string_view lv2_fs_object::get_device_root(std::string_view path)
+std::string lv2_fs_object::get_device_root(std::string_view filename)
 {
+	std::string path = get_normalized_path(filename); // Prevent getting fooled by ".." trick such as "/dev_usb000/../dev_flash"
+
 	if (const auto first = path.find_first_not_of("/"sv); first != umax)
 	{
 		if (const auto pos = path.substr(first).find_first_of("/"sv); pos != umax)
 			path = path.substr(0, first + pos);
-		path.remove_prefix(std::max<usz>(0, first - 1)); // Remove duplicate leading '/' while keeping only one
+		path = path.substr(std::max<std::make_signed_t<usz>>(0, first - 1)); // Remove duplicate leading '/' while keeping only one
 	}
 	else
 	{
@@ -289,14 +285,12 @@ lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename, std::string
 		filename.remove_prefix(cell_fs_path.size());
 
 	const bool is_path = filename.starts_with("/"sv);
-	std::string mp_name = std::string(is_path ? get_device_root(filename) : filename);
+	std::string mp_name = is_path ? get_device_root(filename) : std::string(filename);
 
 	const auto check_mp = [&]()
 	{
 		for (auto mp = &g_mp_sys_dev_root; mp; mp = mp->next)
 		{
-			const auto pos = mp->root.find_first_not_of('/');
-			const auto mp_root = pos != umax ? mp->root.substr(pos) : mp->root;
 			const auto& device_alias_check = !is_path && (
 				(mp == &g_mp_sys_dev_hdd0 && mp_name == "CELL_FS_IOS:PATA0_HDD_DRIVE"sv) ||
 				(mp == &g_mp_sys_dev_hdd1 && mp_name == "CELL_FS_IOS:PATA1_HDD_DRIVE"sv) ||
@@ -304,20 +298,17 @@ lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename, std::string
 
 			if (mp == &g_mp_sys_dev_usb)
 			{
-				for (int i = 0; i < 8; i++)
+				if (mp_name.starts_with(is_path ? mp->root : mp->device))
 				{
-					if (fmt::format("%s%03d", is_path ? mp_root : mp->device, i) == mp_name)
-					{
-						if (!is_path)
-							mp_name = fmt::format("%s%03d", mp_root, i);
-						return mp;
-					}
+					if (!is_path)
+						mp_name = fmt::format("%s%s", mp->root, mp_name.substr(mp->device.size()));
+					return mp;
 				}
 			}
-			else if ((is_path ? mp_root : mp->device) == mp_name || device_alias_check)
+			else if ((is_path ? mp->root : mp->device) == mp_name || device_alias_check)
 			{
 				if (!is_path)
-					mp_name = mp_root;
+					mp_name = mp->root;
 				return mp;
 			}
 		}
@@ -335,7 +326,7 @@ lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename, std::string
 		else if (result == &g_mp_sys_dev_hdd1)
 			*vfs_path = g_cfg_vfs.get(g_cfg_vfs.dev_hdd1, rpcs3::utils::get_emu_dir());
 		else if (result == &g_mp_sys_dev_usb)
-			*vfs_path = g_cfg_vfs.get_device(g_cfg_vfs.dev_usb, fmt::format("/%s", mp_name), rpcs3::utils::get_emu_dir()).path;
+			*vfs_path = g_cfg_vfs.get_device(g_cfg_vfs.dev_usb, mp_name, rpcs3::utils::get_emu_dir()).path;
 		else if (result == &g_mp_sys_dev_bdvd)
 			*vfs_path = g_cfg_vfs.get(g_cfg_vfs.dev_bdvd, rpcs3::utils::get_emu_dir());
 		else if (result == &g_mp_sys_dev_dvd)
@@ -354,7 +345,7 @@ lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename, std::string
 			*vfs_path = {};
 
 		if (is_path && !is_cell_fs_path && !vfs_path->empty())
-			vfs_path->append(filename.substr(mp_name.size() + 1)); // substr: remove leading "/mp_name"
+			vfs_path->append(filename.substr(mp_name.size()));
 	}
 
 	return result;
@@ -1481,7 +1472,9 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 
 	if (local_path.empty())
 	{
-		return {CELL_ENOTMOUNTED, path};
+		// This syscall can be used by games and VSH to test the presence of dev_usb000 ~ dev_usb127
+		// Thus there is no need to fuss about CELL_ENOTMOUNTED in this case
+		return {sys_fs.warning, CELL_ENOTMOUNTED, path};
 	}
 
 	std::unique_lock lock(mp->mutex);
@@ -1796,7 +1789,8 @@ error_code sys_fs_unlink(ppu_thread& ppu, vm::cptr<char> path)
 
 	const std::string local_path = vfs::get(vpath);
 
-	const auto& mp = g_fxo->get<lv2_fs_mount_info_map>().lookup(vpath);
+	std::string mount_path = fs::get_parent_dir(vpath); // Use its parent directory as fallback
+	const auto& mp = g_fxo->get<lv2_fs_mount_info_map>().lookup(vpath, true, &mount_path);
 
 	if (mp == &g_mp_sys_dev_root)
 	{
@@ -1820,8 +1814,7 @@ error_code sys_fs_unlink(ppu_thread& ppu, vm::cptr<char> path)
 
 	std::lock_guard lock(mp->mutex);
 
-	// Provide default mp root or use parent directory if not available (such as host_root)
-	if (!vfs::host::unlink(local_path, vfs::get(mp->root.empty() ? vpath.substr(0, vpath.find_last_of('/')) : mp->root)))
+	if (!vfs::host::unlink(local_path, vfs::get(mount_path)))
 	{
 		switch (auto error = fs::g_tls_error)
 		{
@@ -2042,6 +2035,16 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 		arg->out_block_size = mp->block_size;
 		arg->out_block_count = (40ull * 1024 * 1024 * 1024 - 1) / mp->block_size; // Read explanation in cellHddGameCheck
 		return CELL_OK;
+	}
+
+	case 0xc0000003: // cellFsUtilitySetFakeSize
+	{
+		break;
+	}
+
+	case 0xc0000004: // cellFsUtilityGetFakeSize
+	{
+		break;
 	}
 
 	case 0xc0000006: // Unknown
@@ -3152,7 +3155,7 @@ error_code sys_fs_newfs(ppu_thread& ppu, vm::cptr<char> dev_name, vm::cptr<char>
 	if (mp == &g_mp_sys_no_device)
 		return {CELL_ENXIO, device_name};
 
-	if (mp == &g_mp_sys_dev_root || !lock.try_lock())
+	if (g_fxo->get<lv2_fs_mount_info_map>().is_device_mounted(device_name) || !lock.try_lock())
 		return {CELL_EBUSY, device_name};
 
 	if (vfs_path.empty())
@@ -3216,7 +3219,7 @@ error_code sys_fs_mount(ppu_thread& ppu, vm::cptr<char> dev_name, vm::cptr<char>
 	if (mp == &g_mp_sys_no_device)
 		return {CELL_ENXIO, device_name};
 
-	if (mp == &g_mp_sys_dev_root || !lock.try_lock())
+	if (g_fxo->get<lv2_fs_mount_info_map>().is_device_mounted(device_name) || !lock.try_lock())
 		return {CELL_EBUSY, device_name};
 
 	if (vfs_path.empty())
@@ -3280,11 +3283,11 @@ error_code sys_fs_mount(ppu_thread& ppu, vm::cptr<char> dev_name, vm::cptr<char>
 	return CELL_OK;
 }
 
-error_code sys_fs_unmount(ppu_thread& ppu, vm::cptr<char> path, s32 unk1, s32 unk2)
+error_code sys_fs_unmount(ppu_thread& ppu, vm::cptr<char> path, s32 unk1, s32 force)
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_fs.warning("sys_fs_unmount(path=%s, unk1=0x%x, unk2=0x%x)", path, unk1, unk2);
+	sys_fs.warning("sys_fs_unmount(path=%s, unk1=0x%x, force=%d)", path, unk1, force);
 
 	const auto [path_error, vpath] = translate_to_str(path);
 
@@ -3302,7 +3305,7 @@ error_code sys_fs_unmount(ppu_thread& ppu, vm::cptr<char> path, s32 unk1, s32 un
 	if (mp == &g_mp_sys_no_device)
 		return {CELL_EINVAL, vpath};
 
-	if (mp == &g_mp_sys_dev_root || !lock.try_lock())
+	if (mp == &g_mp_sys_dev_root || (!lock.try_lock() && !force))
 		return {CELL_EBUSY, vpath};
 
 	if (!lv2_fs_mount_info_map::vfs_unmount(vpath))

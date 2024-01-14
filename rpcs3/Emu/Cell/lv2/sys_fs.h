@@ -213,8 +213,9 @@ public:
 		return map.try_emplace(std::forward<Args>(args)...).second;
 	}
 	bool remove(std::string_view path);
-	const lv2_fs_mount_info& lookup(std::string_view path, bool no_cell_fs_path = false) const;
+	const lv2_fs_mount_info& lookup(std::string_view path, bool no_cell_fs_path = false, std::string* mount_path = nullptr) const;
 	u64 get_all(CellFsMountInfo* info = nullptr, u64 len = 0) const;
+	bool is_device_mounted(std::string_view device_name) const;
 
 	static bool vfs_unmount(std::string_view vpath, bool remove_from_map = true);
 
@@ -249,7 +250,7 @@ public:
 	static std::string get_normalized_path(std::string_view path);
 
 	// Get the device's root path (e.g. "/dev_hdd0") from a given path
-	static std::string_view get_device_root(std::string_view path);
+	static std::string get_device_root(std::string_view filename);
 
 	// Filename can be either a path starting with '/' or a CELL_FS device name
 	// This should be used only when handling devices that are not mounted
@@ -620,11 +621,7 @@ struct CellFsMountInfo
 	char mount_path[0x20]; // 0x0
 	char filesystem[0x20]; // 0x20
 	char dev_name[0x40];   // 0x40
-	be_t<u32> unk1;        // 0x80
-	be_t<u32> unk2;        // 0x84
-	be_t<u32> unk3;        // 0x88
-	be_t<u32> unk4;        // 0x8C
-	be_t<u32> unk5;        // 0x90
+	be_t<u32> unk[5];      // 0x80, probably attributes
 };
 
 CHECK_SIZE(CellFsMountInfo, 0x94);
@@ -682,6 +679,6 @@ error_code sys_fs_mapped_free(ppu_thread& ppu, u32 fd, vm::ptr<void> ptr);
 error_code sys_fs_truncate2(ppu_thread& ppu, u32 fd, u64 size);
 error_code sys_fs_newfs(ppu_thread& ppu, vm::cptr<char> dev_name, vm::cptr<char> file_system, s32 unk1, vm::cptr<char> str1);
 error_code sys_fs_mount(ppu_thread& ppu, vm::cptr<char> dev_name, vm::cptr<char> file_system, vm::cptr<char> path, s32 unk1, s32 prot, s32 unk3, vm::cptr<char> str1, u32 str_len);
-error_code sys_fs_unmount(ppu_thread& ppu, vm::cptr<char> path, s32 unk1, s32 unk2);
+error_code sys_fs_unmount(ppu_thread& ppu, vm::cptr<char> path, s32 unk1, s32 force);
 error_code sys_fs_get_mount_info_size(ppu_thread& ppu, vm::ptr<u64> len);
 error_code sys_fs_get_mount_info(ppu_thread& ppu, vm::ptr<CellFsMountInfo> info, u64 len, vm::ptr<u64> out_len);

@@ -800,6 +800,7 @@ void rpcn_account_edit_dialog::change_password()
 
 			QMessageBox::information(this, tr("Password Reset Token Sent!"), tr("The reset password token has successfully been sent!"), QMessageBox::Ok);
 		}
+		[[fallthrough]];
 	}
 	case QMessageBox::Yes:
 	{
@@ -844,6 +845,7 @@ void rpcn_account_edit_dialog::change_password()
 
 			QMessageBox::information(this, tr("Password Successfully Changed!"), tr("Your password has been successfully changed!"), QMessageBox::Ok);
 		}
+		break;
 	}
 	default:
 		return;
@@ -925,7 +927,7 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 
 	for (const auto& fr : data.friends)
 	{
-		add_update_list(m_lst_friends, QString::fromStdString(fr.first), fr.second.first ? m_green_icon : m_red_icon, fr.second.first);
+		add_update_list(m_lst_friends, QString::fromStdString(fr.first), fr.second.online ? m_green_icon : m_red_icon, fr.second.online);
 	}
 
 	for (const auto& fr_req : data.requests_sent)

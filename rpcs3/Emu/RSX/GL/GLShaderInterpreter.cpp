@@ -20,6 +20,7 @@ namespace gl
 			{
 			default:
 				rsx_log.fatal("Unexpected program domain %d", static_cast<int>(domain));
+				[[fallthrough]];
 			case ::glsl::program_domain::glsl_vertex_program:
 				pname = GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS; break;
 			case ::glsl::program_domain::glsl_fragment_program:

@@ -193,11 +193,22 @@ table SetRoomDataInternalRequest {
 	ownerPrivilegeRank:[uint16];
 }
 
+table GetRoomMemberDataInternalRequest {
+	roomId:uint64;
+	memberId:uint16;
+	attrId:[uint16];
+}
+
 table SetRoomMemberDataInternalRequest {
 	roomId:uint64;
 	memberId:uint16;
 	teamId:uint8;
 	roomMemberBinAttrInternal:[BinAttr];
+}
+
+table SetUserInfo {
+	serverId:uint16;
+	userBinAttr:[BinAttr];
 }
 
 table GetRoomDataInternalRequest {
@@ -466,3 +477,9 @@ table TusDeleteMultiSlotDataRequest {
 	slotIdArray:[int32];
 }
 
+table SetPresenceRequest {
+	title:string;
+	status:string;
+	comment:string;
+	data:[uint8];
+}

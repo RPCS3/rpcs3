@@ -87,6 +87,8 @@ extern bool ppu_load_rel_exec(const ppu_rel_object&);
 
 extern void send_close_home_menu_cmds();
 
+extern void signal_system_cache_can_stay();
+
 fs::file make_file_view(const fs::file& file, u64 offset, u64 size);
 
 fs::file g_tty;
@@ -3033,6 +3035,8 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 			to_ar = std::make_unique<utils::serial>();
 			to_ar->m_file_handler = make_compressed_serialization_file_handler(file.file);
+
+			signal_system_cache_can_stay();
 			break;
 		}
 

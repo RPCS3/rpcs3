@@ -398,6 +398,85 @@ void fmt_class_string<SceNpError>::format(std::string& out, u64 arg)
 			STR_CASE(SCE_NP_CUSTOM_MENU_ERROR_NOT_REGISTERED);
 			STR_CASE(SCE_NP_CUSTOM_MENU_ERROR_EXCEEDS_MAX);
 			STR_CASE(SCE_NP_CUSTOM_MENU_ERROR_INVALID_CHARACTER);
+			STR_CASE(SCE_NP_EULA_ERROR_UNKNOWN);
+			STR_CASE(SCE_NP_EULA_ERROR_INVALID_ARGUMENT);
+			STR_CASE(SCE_NP_EULA_ERROR_NOT_INITIALIZED);
+			STR_CASE(SCE_NP_EULA_ERROR_ALREADY_INITIALIZED);
+			STR_CASE(SCE_NP_EULA_ERROR_OUT_OF_MEMORY);
+			STR_CASE(SCE_NP_EULA_ERROR_BUSY);
+			STR_CASE(SCE_NP_EULA_ERROR_EULA_NOT_FOUND);
+			STR_CASE(SCE_NP_EULA_ERROR_NET_OUT_OF_MEMORY);
+			STR_CASE(SCE_NP_EULA_ERROR_CONF_FORMAT);
+			STR_CASE(SCE_NP_EULA_ERROR_CONF_INVALID_FILENAME);
+			STR_CASE(SCE_NP_EULA_ERROR_CONF_TOO_MANY_EULA_FILES);
+			STR_CASE(SCE_NP_EULA_ERROR_CONF_INVALID_LANGUAGE);
+			STR_CASE(SCE_NP_EULA_ERROR_CONF_INVALID_COUNTRY);
+			STR_CASE(SCE_NP_EULA_ERROR_CONF_INVALID_NPCOMMID);
+			STR_CASE(SCE_NP_EULA_ERROR_CONF_INVALID_EULA_VERSION);
+			STR_CASE(SCE_NP_MATCHING_ERROR_NOT_INITIALIZED);
+			STR_CASE(SCE_NP_MATCHING_ERROR_ALREADY_INITIALIZED);
+			STR_CASE(SCE_NP_MATCHING_ERROR_INVALID_ARG);
+			STR_CASE(SCE_NP_MATCHING_ERROR_TERMINATED);
+			STR_CASE(SCE_NP_MATCHING_ERROR_TIMEOUT);
+			STR_CASE(SCE_NP_MATCHING_ERROR_OUT_OF_MEMORY);
+			STR_CASE(SCE_NP_MATCHING_ERROR_CTXID_NOT_AVAIL);
+			STR_CASE(SCE_NP_MATCHING_ERROR_CTX_ALREADY_EXIST);
+			STR_CASE(SCE_NP_MATCHING_ERROR_CTX_NOT_FOUND);
+			STR_CASE(SCE_NP_MATCHING_ERROR_LOBBY_NOT_FOUND);
+			STR_CASE(SCE_NP_MATCHING_ERROR_ROOM_NOT_FOUND);
+			STR_CASE(SCE_NP_MATCHING_ERROR_MEMBER_NOT_FOUND);
+			STR_CASE(SCE_NP_MATCHING_ERROR_TOO_BIG_VALUE);
+			STR_CASE(SCE_NP_MATCHING_ERROR_IVALID_ATTR_TYPE);
+			STR_CASE(SCE_NP_MATCHING_ERROR_INVALID_ATTR_ID);
+			STR_CASE(SCE_NP_MATCHING_ERROR_ALREADY_REQUESTED);
+			STR_CASE(SCE_NP_MATCHING_ERROR_LIMITTED_SEATING);
+			STR_CASE(SCE_NP_MATCHING_ERROR_LOCKED);
+			STR_CASE(SCE_NP_MATCHING_ERROR_CTX_STILL_RUNNING);
+			STR_CASE(SCE_NP_MATCHING_ERROR_INSUFFICIENT_BUFFER);
+			STR_CASE(SCE_NP_MATCHING_ERROR_REQUEST_NOT_ALLOWED);
+			STR_CASE(SCE_NP_MATCHING_ERROR_CTX_MAX);
+			STR_CASE(SCE_NP_MATCHING_ERROR_INVALID_REQ_ID);
+			STR_CASE(SCE_NP_MATCHING_ERROR_RESULT_NOT_FOUND);
+			STR_CASE(SCE_NP_MATCHING_ERROR_BUSY);
+			STR_CASE(SCE_NP_MATCHING_ERROR_ALREADY_JOINED_ROOM);
+			STR_CASE(SCE_NP_MATCHING_ERROR_ROOM_MAX);
+			STR_CASE(SCE_NP_MATCHING_ERROR_QUICK_MATCH_PLAYER_NOT_FOUND);
+			STR_CASE(SCE_NP_MATCHING_ERROR_COND_MAX);
+			STR_CASE(SCE_NP_MATCHING_ERROR_INVALID_COND);
+			STR_CASE(SCE_NP_MATCHING_ERROR_INVALID_ATTR);
+			STR_CASE(SCE_NP_MATCHING_ERROR_COMP_OP_INEQUALITY_MAX);
+			STR_CASE(SCE_NP_MATCHING_ERROR_RESULT_OVERFLOWED);
+			STR_CASE(SCE_NP_MATCHING_ERROR_HTTPXML_TIMEOUT);
+			STR_CASE(SCE_NP_MATCHING_ERROR_CANCELED);
+			STR_CASE(SCE_NP_MATCHING_ERROR_SEARCH_JOIN_ROOM_NOT_FOUND);
+			STR_CASE(SCE_NP_MATCHING_ERROR_INVALID_COMP_OP);
+			STR_CASE(SCE_NP_MATCHING_ERROR_INVALID_COMP_TYPE);
+			STR_CASE(SCE_NP_MATCHING_ERROR_REQUEST_NOT_FOUND);
+			STR_CASE(SCE_NP_MATCHING_ERROR_INTERNAL_ERROR);
+			STR_CASE(SCE_NP_MATCHING_ERROR_INVALID_PROTOCOL_ID);
+			STR_CASE(SCE_NP_MATCHING_ERROR_ATTR_NOT_SPECIFIED);
+			STR_CASE(SCE_NP_MATCHING_ERROR_SYSUTIL_INVALID_RESULT);
+			STR_CASE(SCE_NP_MATCHING_ERROR_PLUGIN_LOAD_FAILURE);
+			STR_CASE(SCE_NP_MATCHING_ERROR_INVALID_ATTR_VALUE);
+			STR_CASE(SCE_NP_MATCHING_ERROR_DUPLICATE);
+			STR_CASE(SCE_NP_MATCHING_ERROR_INVALID_MEMORY_CONTAINER);
+			STR_CASE(SCE_NP_MATCHING_ERROR_SHUTDOWN);
+			STR_CASE(SCE_NP_MATCHING_ERROR_SYSUTIL_SERVER_BUSY);
+			STR_CASE(SCE_NP_MATCHING_ERROR_SEND_INVITATION_PARTIALLY_FAILED);
+			STR_CASE(SCE_NP_MATCHING_SERVER_ERROR_OUT_OF_SERVICE);
+			STR_CASE(SCE_NP_MATCHING_SERVER_ERROR_MAINTENANCE);
+			STR_CASE(SCE_NP_MATCHING_SERVER_ERROR_SERVER_BUSY);
+			STR_CASE(SCE_NP_MATCHING_SERVER_ERROR_ACCESS_FORBIDDEN);
+			STR_CASE(SCE_NP_MATCHING_SERVER_ERROR_NO_SUCH_SERVER);
+			STR_CASE(SCE_NP_MATCHING_SERVER_ERROR_NO_SUCH_LOBBY);
+			STR_CASE(SCE_NP_MATCHING_SERVER_ERROR_NO_SUCH_ROOM);
+			STR_CASE(SCE_NP_MATCHING_SERVER_ERROR_NO_SUCH_USER);
+			STR_CASE(SCE_NP_MATCHING_SERVER_ERROR_NOT_ALLOWED);
+			STR_CASE(SCE_NP_MATCHING_SERVER_ERROR_UNKNOWN);
+			STR_CASE(SCE_NP_MATCHING_SERVER_ERROR_BAD_REQUEST_STANZA);
+			STR_CASE(SCE_NP_MATCHING_SERVER_ERROR_REQUEST_FORBIDDEN);
+			STR_CASE(SCE_NP_MATCHING_SERVER_ERROR_INTERNAL_ERROR);
+			STR_CASE(SCE_NP_MATCHING_SERVER_ERROR_ROOM_OVER);
 		}
 
 		return unknown;
@@ -762,7 +841,7 @@ error_code sceNpBasicRegisterHandler(vm::cptr<SceNpCommunicationId> context, vm:
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (nph.basic_handler.registered)
+	if (nph.basic_handler_registered)
 	{
 		return SCE_NP_BASIC_ERROR_EXCEEDS_MAX;
 	}
@@ -772,11 +851,7 @@ error_code sceNpBasicRegisterHandler(vm::cptr<SceNpCommunicationId> context, vm:
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
 
-	memcpy(&nph.basic_handler.context, context.get_ptr(), sizeof(nph.basic_handler.context));
-	nph.basic_handler.handler_func = handler;
-	nph.basic_handler.handler_arg = arg;
-	nph.basic_handler.registered = true;
-	nph.basic_handler.context_sensitive = false;
+	nph.register_basic_handler(context, handler, arg, false);
 
 	return CELL_OK;
 }
@@ -792,7 +867,7 @@ error_code sceNpBasicRegisterContextSensitiveHandler(vm::cptr<SceNpCommunication
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (nph.basic_handler.registered)
+	if (nph.basic_handler_registered)
 	{
 		return SCE_NP_BASIC_ERROR_EXCEEDS_MAX;
 	}
@@ -802,11 +877,7 @@ error_code sceNpBasicRegisterContextSensitiveHandler(vm::cptr<SceNpCommunication
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
 
-	memcpy(&nph.basic_handler.context, context.get_ptr(), sizeof(nph.basic_handler.context));
-	nph.basic_handler.handler_func = handler;
-	nph.basic_handler.handler_arg = arg;
-	nph.basic_handler.registered = true;
-	nph.basic_handler.context_sensitive = true;
+	nph.register_basic_handler(context, handler, arg, true);
 
 	return CELL_OK;
 }
@@ -822,19 +893,19 @@ error_code sceNpBasicUnregisterHandler()
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!nph.basic_handler.registered)
+	if (!nph.basic_handler_registered)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
 
-	nph.basic_handler.registered = false;
+	nph.basic_handler_registered = false;
 
 	return CELL_OK;
 }
 
 error_code sceNpBasicSetPresence(vm::cptr<u8> data, u32 size)
 {
-	sceNp.todo("sceNpBasicSetPresence(data=*0x%x, size=%d)", data, size);
+	sceNp.warning("sceNpBasicSetPresence(data=*0x%x, size=%d)", data, size);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -843,28 +914,28 @@ error_code sceNpBasicSetPresence(vm::cptr<u8> data, u32 size)
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!nph.basic_handler.registered)
+	if (!nph.basic_handler_registered)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
-
-	// TODO: Correct but causes issues atm(breaks bomberman ultra)
-	// if (!data || !data[0])
-	// {
-	// 	return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
-	// }
 
 	if (size > SCE_NP_BASIC_MAX_PRESENCE_SIZE)
 	{
 		return SCE_NP_BASIC_ERROR_EXCEEDS_MAX;
 	}
 
+	// Not checked by API
+	ensure(data || !size, "Access violation");
+
+	std::vector pr_data(data.get_ptr(), data.get_ptr() + size);
+	nph.set_presence(std::nullopt, pr_data);
+
 	return CELL_OK;
 }
 
 error_code sceNpBasicSetPresenceDetails(vm::cptr<SceNpBasicPresenceDetails> pres, u32 options)
 {
-	sceNp.todo("sceNpBasicSetPresenceDetails(pres=*0x%x, options=0x%x)", pres, options);
+	sceNp.warning("sceNpBasicSetPresenceDetails(pres=*0x%x, options=0x%x)", pres, options);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -873,27 +944,45 @@ error_code sceNpBasicSetPresenceDetails(vm::cptr<SceNpBasicPresenceDetails> pres
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!nph.basic_handler.registered)
+	if (!nph.basic_handler_registered)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
 
-	if (!pres || options > SCE_NP_BASIC_PRESENCE_OPTIONS_ALL_OPTIONS)
+	if (options < SCE_NP_BASIC_PRESENCE_OPTIONS_SET_DATA || options > SCE_NP_BASIC_PRESENCE_OPTIONS_ALL_OPTIONS)
 	{
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
+
+	// Not checked by API
+	ensure(pres, "Access violation");
 
 	if (pres->size > SCE_NP_BASIC_MAX_PRESENCE_SIZE)
 	{
 		return SCE_NP_BASIC_ERROR_EXCEEDS_MAX;
 	}
+
+	std::optional<std::string> pr_status;
+	if (options & SCE_NP_BASIC_PRESENCE_OPTIONS_SET_STATUS)
+	{
+		pr_status = std::optional(std::string(reinterpret_cast<const char*>(&pres->status[0])));
+	}
+
+	std::optional<std::vector<u8>> pr_data;
+	if (options & SCE_NP_BASIC_PRESENCE_OPTIONS_SET_DATA)
+	{
+		const u8* ptr = &pres->data[0];
+		pr_data = std::vector(ptr, ptr + pres->size);
+	}
+
+	nph.set_presence(pr_status, pr_data);
 
 	return CELL_OK;
 }
 
 error_code sceNpBasicSetPresenceDetails2(vm::cptr<SceNpBasicPresenceDetails2> pres, u32 options)
 {
-	sceNp.todo("sceNpBasicSetPresenceDetails2(pres=*0x%x, options=0x%x)", pres, options);
+	sceNp.warning("sceNpBasicSetPresenceDetails2(pres=*0x%x, options=0x%x)", pres, options);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -902,27 +991,45 @@ error_code sceNpBasicSetPresenceDetails2(vm::cptr<SceNpBasicPresenceDetails2> pr
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!nph.basic_handler.registered)
+	if (!nph.basic_handler_registered)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
 
-	if (!pres || options > SCE_NP_BASIC_PRESENCE_OPTIONS_ALL_OPTIONS)
+	if (options < SCE_NP_BASIC_PRESENCE_OPTIONS_SET_DATA || options > SCE_NP_BASIC_PRESENCE_OPTIONS_ALL_OPTIONS || pres->struct_size != sizeof(SceNpBasicPresenceDetails2))
 	{
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
+
+	// Not checked by API
+	ensure(pres, "Access violation");
 
 	if (pres->size > SCE_NP_BASIC_MAX_PRESENCE_SIZE)
 	{
 		return SCE_NP_BASIC_ERROR_EXCEEDS_MAX;
 	}
 
+	std::optional<std::string> pr_status;
+	if (options & SCE_NP_BASIC_PRESENCE_OPTIONS_SET_STATUS)
+	{
+		pr_status = std::optional(std::string(reinterpret_cast<const char*>(&pres->status[0])));
+	}
+
+	std::optional<std::vector<u8>> pr_data;
+	if (options & SCE_NP_BASIC_PRESENCE_OPTIONS_SET_DATA)
+	{
+		const u8* ptr = &pres->data[0];
+		pr_data = std::vector(ptr, ptr + pres->size);
+	}
+
+	nph.set_presence(pr_status, pr_data);
+
 	return CELL_OK;
 }
 
 error_code sceNpBasicSendMessage(vm::cptr<SceNpId> to, vm::cptr<void> data, u32 size)
 {
-	sceNp.todo("sceNpBasicSendMessage(to=*0x%x, data=*0x%x, size=%d)", to, data, size);
+	sceNp.warning("sceNpBasicSendMessage(to=*0x%x, data=*0x%x, size=%d)", to, data, size);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -931,7 +1038,7 @@ error_code sceNpBasicSendMessage(vm::cptr<SceNpId> to, vm::cptr<void> data, u32 
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!nph.basic_handler.registered)
+	if (!nph.basic_handler_registered)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
@@ -945,6 +1052,22 @@ error_code sceNpBasicSendMessage(vm::cptr<SceNpId> to, vm::cptr<void> data, u32 
 	{
 		return SCE_NP_BASIC_ERROR_EXCEEDS_MAX;
 	}
+
+	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return not_an_error(SCE_NP_BASIC_ERROR_NOT_CONNECTED);
+	}
+
+	message_data msg_data = {
+		.commId = nph.get_basic_handler_context(),
+		.msgId = 0,
+		.mainType = SCE_NP_BASIC_MESSAGE_MAIN_TYPE_GENERAL,
+		.subType = SCE_NP_BASIC_MESSAGE_GENERAL_SUBTYPE_NONE,
+		.msgFeatures = {}};
+	std::set<std::string> npids;
+	npids.insert(std::string(to->handle.data));
+
+	nph.send_message(msg_data, npids);
 
 	return CELL_OK;
 }
@@ -971,7 +1094,7 @@ error_code sceNpBasicSendMessageGui(vm::cptr<SceNpBasicMessageDetails> msg, sys_
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!nph.basic_handler.registered)
+	if (!nph.basic_handler_registered)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
@@ -996,10 +1119,10 @@ error_code sceNpBasicSendMessageGui(vm::cptr<SceNpBasicMessageDetails> msg, sys_
 
 	// Prepare message data
 	message_data msg_data = {
-		.commId      = nph.basic_handler.context,
-		.msgId       = msg->msgId,
-		.mainType    = msg->mainType,
-		.subType     = msg->subType,
+		.commId = nph.get_basic_handler_context(),
+		.msgId = msg->msgId,
+		.mainType = msg->mainType,
+		.subType = msg->subType,
 		.msgFeatures = msg->msgFeatures};
 	std::set<std::string> npids;
 
@@ -1078,7 +1201,7 @@ error_code sceNpBasicSendMessageAttachment(vm::cptr<SceNpId> to, vm::cptr<char> 
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!nph.basic_handler.registered)
+	if (!nph.basic_handler_registered)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
@@ -1114,7 +1237,7 @@ error_code sceNpBasicRecvMessageAttachment(sys_memory_container_t containerId)
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!nph.basic_handler.registered)
+	if (!nph.basic_handler_registered)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
@@ -1133,7 +1256,7 @@ error_code sceNpBasicRecvMessageAttachmentLoad(SceNpBasicAttachmentDataId id, vm
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!nph.basic_handler.registered)
+	if (!nph.basic_handler_registered)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
@@ -1186,7 +1309,7 @@ error_code sceNpBasicRecvMessageCustom(u16 mainType, u32 recvOptions, sys_memory
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!nph.basic_handler.registered)
+	if (!nph.basic_handler_registered)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
@@ -1259,7 +1382,7 @@ error_code sceNpBasicMarkMessageAsUsed(SceNpBasicMessageId msgId)
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!nph.basic_handler.registered)
+	if (!nph.basic_handler_registered)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
@@ -1283,7 +1406,7 @@ error_code sceNpBasicAbortGui()
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!nph.basic_handler.registered)
+	if (!nph.basic_handler_registered)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
@@ -1304,7 +1427,7 @@ error_code sceNpBasicAddFriend(vm::cptr<SceNpId> contact, vm::cptr<char> body, s
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!nph.basic_handler.registered)
+	if (!nph.basic_handler_registered)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
@@ -1392,7 +1515,7 @@ error_code sceNpBasicGetFriendListEntry(u32 index, vm::ptr<SceNpId> npid)
 
 error_code sceNpBasicGetFriendPresenceByIndex(u32 index, vm::ptr<SceNpUserInfo> user, vm::ptr<SceNpBasicPresenceDetails> pres, u32 options)
 {
-	sceNp.todo("sceNpBasicGetFriendPresenceByIndex(index=%d, user=*0x%x, pres=*0x%x, options=%d)", index, user, pres, options);
+	sceNp.warning("sceNpBasicGetFriendPresenceByIndex(index=%d, user=*0x%x, pres=*0x%x, options=%d)", index, user, pres, options);
 
 	if (!pres)
 	{
@@ -1412,12 +1535,12 @@ error_code sceNpBasicGetFriendPresenceByIndex(u32 index, vm::ptr<SceNpUserInfo> 
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
 
-	return CELL_OK;
+	return nph.get_friend_presence_by_index(index, user.get_ptr(), pres.get_ptr());
 }
 
 error_code sceNpBasicGetFriendPresenceByIndex2(u32 index, vm::ptr<SceNpUserInfo> user, vm::ptr<SceNpBasicPresenceDetails2> pres, u32 options)
 {
-	sceNp.todo("sceNpBasicGetFriendPresenceByIndex2(index=%d, user=*0x%x, pres=*0x%x, options=%d)", index, user, pres, options);
+	sceNp.warning("sceNpBasicGetFriendPresenceByIndex2(index=%d, user=*0x%x, pres=*0x%x, options=%d)", index, user, pres, options);
 
 	if (!pres)
 	{
@@ -1437,19 +1560,19 @@ error_code sceNpBasicGetFriendPresenceByIndex2(u32 index, vm::ptr<SceNpUserInfo>
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
 
-	return CELL_OK;
+	return nph.get_friend_presence_by_index(index, user.get_ptr(), pres.get_ptr());
 }
 
 error_code sceNpBasicGetFriendPresenceByNpId(vm::cptr<SceNpId> npid, vm::ptr<SceNpBasicPresenceDetails> pres, u32 options)
 {
-	sceNp.todo("sceNpBasicGetFriendPresenceByNpId(npid=*0x%x, pres=*0x%x, options=%d)", npid, pres, options);
-
-	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+	sceNp.warning("sceNpBasicGetFriendPresenceByNpId(npid=*0x%x, pres=*0x%x, options=%d)", npid, pres, options);
 
 	if (!pres)
 	{
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
+
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -1462,19 +1585,19 @@ error_code sceNpBasicGetFriendPresenceByNpId(vm::cptr<SceNpId> npid, vm::ptr<Sce
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
 
-	return CELL_OK;
+	return nph.get_friend_presence_by_npid(*npid, pres.get_ptr());
 }
 
 error_code sceNpBasicGetFriendPresenceByNpId2(vm::cptr<SceNpId> npid, vm::ptr<SceNpBasicPresenceDetails2> pres, u32 options)
 {
-	sceNp.todo("sceNpBasicGetFriendPresenceByNpId2(npid=*0x%x, pres=*0x%x, options=%d)", npid, pres, options);
-
-	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+	sceNp.warning("sceNpBasicGetFriendPresenceByNpId2(npid=*0x%x, pres=*0x%x, options=%d)", npid, pres, options);
 
 	if (!pres)
 	{
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
+
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -1487,7 +1610,7 @@ error_code sceNpBasicGetFriendPresenceByNpId2(vm::cptr<SceNpId> npid, vm::ptr<Sc
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
 
-	return CELL_OK;
+	return nph.get_friend_presence_by_npid(*npid, pres.get_ptr());
 }
 
 error_code sceNpBasicAddPlayersHistory(vm::cptr<SceNpId> npid, vm::ptr<char> description)
@@ -1579,7 +1702,7 @@ error_code sceNpBasicGetPlayersHistoryEntryCount(u32 options, vm::ptr<u32> count
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!nph.basic_handler.registered)
+	if (!nph.basic_handler_registered)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
@@ -1617,7 +1740,7 @@ error_code sceNpBasicGetPlayersHistoryEntry(u32 options, u32 index, vm::ptr<SceN
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!nph.basic_handler.registered)
+	if (!nph.basic_handler_registered)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
@@ -1648,7 +1771,7 @@ error_code sceNpBasicAddBlockListEntry(vm::cptr<SceNpId> npid)
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!nph.basic_handler.registered)
+	if (!nph.basic_handler_registered)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
@@ -1731,7 +1854,7 @@ error_code sceNpBasicGetMessageAttachmentEntryCount(vm::ptr<u32> count)
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!nph.basic_handler.registered)
+	if (!nph.basic_handler_registered)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
@@ -1764,7 +1887,7 @@ error_code sceNpBasicGetMessageAttachmentEntry(u32 index, vm::ptr<SceNpUserInfo>
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!nph.basic_handler.registered)
+	if (!nph.basic_handler_registered)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
@@ -1795,7 +1918,7 @@ error_code sceNpBasicGetCustomInvitationEntryCount(vm::ptr<u32> count)
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!nph.basic_handler.registered)
+	if (!nph.basic_handler_registered)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
@@ -1828,7 +1951,7 @@ error_code sceNpBasicGetCustomInvitationEntry(u32 index, vm::ptr<SceNpUserInfo> 
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!nph.basic_handler.registered)
+	if (!nph.basic_handler_registered)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
@@ -1859,7 +1982,7 @@ error_code sceNpBasicGetMatchingInvitationEntryCount(vm::ptr<u32> count)
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!nph.basic_handler.registered)
+	if (!nph.basic_handler_registered)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
@@ -1892,7 +2015,7 @@ error_code sceNpBasicGetMatchingInvitationEntry(u32 index, vm::ptr<SceNpUserInfo
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!nph.basic_handler.registered)
+	if (!nph.basic_handler_registered)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
@@ -1923,7 +2046,7 @@ error_code sceNpBasicGetClanMessageEntryCount(vm::ptr<u32> count)
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!nph.basic_handler.registered)
+	if (!nph.basic_handler_registered)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
@@ -1956,7 +2079,7 @@ error_code sceNpBasicGetClanMessageEntry(u32 index, vm::ptr<SceNpUserInfo> from)
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!nph.basic_handler.registered)
+	if (!nph.basic_handler_registered)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
@@ -2053,7 +2176,7 @@ error_code sceNpBasicGetEvent(vm::ptr<s32> event, vm::ptr<SceNpUserInfo> from, v
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!nph.basic_handler.registered)
+	if (!nph.basic_handler_registered)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
@@ -2683,10 +2806,14 @@ error_code sceNpLookupNpId(s32 transId, vm::cptr<SceNpOnlineId> onlineId, vm::pt
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
+	// Hack - better than nothing for now
+	memset(npId.get_ptr(), 0, sizeof(SceNpId));
+	memcpy(npId->handle.data, onlineId->data, sizeof(npId->handle.data) - 1);
+
 	return CELL_OK;
 }
 
-error_code sceNpLookupNpIdAsync(s32 transId, vm::ptr<SceNpOnlineId> onlineId, vm::ptr<SceNpId> npId, s32 prio, vm::ptr<void> option)
+error_code sceNpLookupNpIdAsync(s32 transId, vm::cptr<SceNpOnlineId> onlineId, vm::ptr<SceNpId> npId, s32 prio, vm::ptr<void> option)
 {
 	sceNp.todo("sceNpLookupNpIdAsync(transId=%d, onlineId=*0x%x, npId=*0x%x, prio=%d, option=*0x%x)", transId, onlineId, npId, prio, option);
 
@@ -2711,6 +2838,10 @@ error_code sceNpLookupNpIdAsync(s32 transId, vm::ptr<SceNpOnlineId> onlineId, vm
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
+
+	// Hack - better than nothing for now
+	memset(npId.get_ptr(), 0, sizeof(SceNpId));
+	memcpy(npId->handle.data, onlineId->data, sizeof(npId->handle.data) - 1);
 
 	return CELL_OK;
 }
@@ -3273,7 +3404,7 @@ error_code sceNpManagerGetAccountRegion(vm::ptr<SceNpCountryCode> countryCode, v
 		return SCE_NP_ERROR_INVALID_STATE;
 	}
 
-	memset(countryCode.get_ptr(), 0, sizeof(countryCode));
+	memset(countryCode.get_ptr(), 0, sizeof(SceNpCountryCode));
 	countryCode->data[0] = 'u';
 	countryCode->data[1] = 's';
 
@@ -3745,6 +3876,11 @@ error_code sceNpMatchingAcceptInvitationGUI(u32 ctx_id, vm::cptr<SceNpCommunicat
 error_code sceNpMatchingCreateRoomGUI(u32 ctx_id, vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpMatchingAttr> attr, vm::ptr<SceNpMatchingGUIHandler> handler, vm::ptr<void> arg)
 {
 	sceNp.todo("sceNpMatchingCreateRoomGUI(ctx_id=%d, communicationId=*0x%x, attr=*0x%x, handler=*0x%x, arg=*0x%x)", ctx_id, communicationId, attr, handler, arg);
+
+	if (!communicationId || !handler)
+	{
+		return SCE_NP_MATCHING_ERROR_INVALID_ARG;
+	}
 
 	return CELL_OK;
 }
@@ -5634,7 +5770,7 @@ error_code sceNpUtilCmpNpIdInOrder(vm::cptr<SceNpId> id1, vm::cptr<SceNpId> id2,
 		return CELL_OK;
 	}
 
-	if (s32 res = memcmp(id1->unk1, id2->unk1, 4))
+	if (s32 res = std::memcmp(id1->unk1, id2->unk1, 4))
 	{
 		*order = std::clamp<s32>(res, -1, 1);
 		return CELL_OK;
@@ -5651,12 +5787,12 @@ error_code sceNpUtilCmpNpIdInOrder(vm::cptr<SceNpId> id1, vm::cptr<SceNpId> id2,
 
 	if (opt14 != 0 && opt24 != 0)
 	{
-		s32 res = memcmp(id1->unk1 + 1, id2->unk1 + 1, 4);
+		s32 res = std::memcmp(id1->unk1 + 1, id2->unk1 + 1, 4);
 		*order = std::clamp<s32>(res, -1, 1);
 		return CELL_OK;
 	}
 
-	s32 res = memcmp((opt14 != 0 ? id1 : id2)->unk1 + 1, "ps3", 4);
+	s32 res = std::memcmp((opt14 != 0 ? id1 : id2)->unk1 + 1, "ps3", 4);
 	*order = std::clamp<s32>(res, -1, 1);
 	return CELL_OK;
 }

@@ -70,7 +70,7 @@ bool sendmessage_dialog_frame::Exec(message_data& msg_data, std::set<std::string
 			npids.insert(selected[0]->text().toStdString());
 
 			// Send the message
-			result = m_rpcn->sendmessage(msg_data, npids);
+			result = m_rpcn->send_message(msg_data, npids);
 			m_dialog->close();
 		});
 
@@ -82,7 +82,7 @@ bool sendmessage_dialog_frame::Exec(message_data& msg_data, std::set<std::string
 	for (const auto& fr : data.friends)
 	{
 		// Only add online friends to the list
-		if (fr.second.first)
+		if (fr.second.online)
 		{
 			add_friend(m_lst_friends, QString::fromStdString(fr.first));
 		}

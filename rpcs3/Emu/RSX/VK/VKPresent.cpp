@@ -15,6 +15,23 @@
 extern atomic_t<bool> g_user_asked_for_screenshot;
 extern atomic_t<recording_mode> g_recording_mode;
 
+namespace
+{
+	VkFormat RSX_display_format_to_vk_format(u8 format)
+	{
+		switch (format)
+		{
+		default:
+			rsx_log.error("Unhandled video output format 0x%x", static_cast<s32>(format));
+			[[fallthrough]];
+		case CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8:
+			return VK_FORMAT_B8G8R8A8_UNORM;
+		case CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8B8G8R8:
+			return VK_FORMAT_R8G8B8A8_UNORM;
+		}
+	}
+}
+
 void VKGSRender::reinitialize_swapchain()
 {
 	m_swapchain_dims.width = m_frame->client_width();
@@ -277,9 +294,12 @@ void VKGSRender::frame_context_cleanup(vk::frame_context_t *ctx)
 	vk::advance_completed_frame_counter();
 }
 
-vk::viewable_image* VKGSRender::get_present_source(vk::present_surface_info* info, const rsx::avconf& avconfig)
+vk::viewable_image* VKGSRender::get_present_source(/* inout */ vk::present_surface_info* info, const rsx::avconf& avconfig)
 {
 	vk::viewable_image* image_to_flip = nullptr;
+
+	// @FIXME: This entire function needs to be rewritten to go through the texture cache's "upload_texture" routine.
+	// That method is not a 1:1 replacement due to handling of insets that is done differently here.
 
 	// Check the surface store first
 	const auto format_bpp = rsx::get_format_block_size_in_bytes(info->format);
@@ -333,7 +353,12 @@ vk::viewable_image* VKGSRender::get_present_source(vk::present_surface_info* inf
 		image_to_flip = dynamic_cast<vk::viewable_image*>(surface->get_raw_texture());
 	}
 
-	if (!image_to_flip)
+	// The correct output format is determined by the AV configuration set in CellVideoOutConfigure by the game.
+	// 99.9% of the time, this will match the backbuffer fbo format used in rendering/compositing the output.
+	// But in some cases, let's just say some devs are creative.
+	const auto expected_format = RSX_display_format_to_vk_format(avconfig.format);
+
+	if (!image_to_flip) [[ unlikely ]]
 	{
 		// Read from cell
 		const auto range = utils::address_range::start_length(info->address, info->pitch * info->height);
@@ -354,22 +379,35 @@ vk::viewable_image* VKGSRender::get_present_source(vk::present_surface_info* inf
 			flush_command_queue();
 		}
 
-		VkFormat format;
-		switch (avconfig.format)
-		{
-		default:
-			rsx_log.error("Unhandled video output format 0x%x", avconfig.format);
-			[[fallthrough]];
-		case CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8:
-			format = VK_FORMAT_B8G8R8A8_UNORM;
-			break;
-		case CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8B8G8R8:
-			format = VK_FORMAT_R8G8B8A8_UNORM;
-			break;
-		}
-
 		m_texture_cache.invalidate_range(*m_current_command_buffer, range, rsx::invalidation_cause::read);
-		image_to_flip = m_texture_cache.upload_image_simple(*m_current_command_buffer, format, info->address, info->width, info->height, info->pitch);
+		image_to_flip = m_texture_cache.upload_image_simple(*m_current_command_buffer, expected_format, info->address, info->width, info->height, info->pitch);
+	}
+	else if (image_to_flip->format() != expected_format)
+	{
+		// Devs are being creative. Force-cast this to the proper pixel layout.
+		auto dst_img = m_texture_cache.create_temporary_subresource_storage(
+			RSX_FORMAT_CLASS_COLOR, expected_format, info->width, info->height, 1, 1, 1,
+			VK_IMAGE_TYPE_2D, 0, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
+
+		if (dst_img)
+		{
+			const areai src_rect = { 0, 0, static_cast<int>(info->width), static_cast<int>(info->height) };
+			const areai dst_rect = src_rect;
+
+			dst_img->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+			if (vk::formats_are_bitcast_compatible(dst_img.get(), image_to_flip))
+			{
+				vk::copy_image(*m_current_command_buffer, image_to_flip, dst_img.get(), src_rect, dst_rect, 1);
+			}
+			else
+			{
+				vk::copy_image_typeless(*m_current_command_buffer, image_to_flip, dst_img.get(), src_rect, dst_rect, 1);
+			}
+
+			image_to_flip = dst_img.get();
+			m_texture_cache.dispose_reusable_image(dst_img);
+		}
 	}
 
 	return image_to_flip;
@@ -471,13 +509,15 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	vk::viewable_image *image_to_flip = nullptr, *image_to_flip2 = nullptr;
 	if (info.buffer < display_buffers_count && buffer_width && buffer_height)
 	{
-		vk::present_surface_info present_info;
-		present_info.width = buffer_width;
-		present_info.height = buffer_height;
-		present_info.pitch = buffer_pitch;
-		present_info.format = av_format;
-		present_info.address = rsx::get_address(display_buffers[info.buffer].offset, CELL_GCM_LOCATION_LOCAL);
-
+		vk::present_surface_info present_info
+		{
+			.address = rsx::get_address(display_buffers[info.buffer].offset, CELL_GCM_LOCATION_LOCAL),
+			.format = av_format,
+			.width = buffer_width,
+			.height = buffer_height,
+			.pitch = buffer_pitch,
+			.eye = 0
+		};
 		image_to_flip = get_present_source(&present_info, avconfig);
 
 		if (avconfig.stereo_mode != stereo_render_mode_options::disabled) [[unlikely]]
@@ -490,6 +530,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 				present_info.width = buffer_width;
 				present_info.height = buffer_height;
 				present_info.address = rsx::get_address(image_offset, CELL_GCM_LOCATION_LOCAL);
+				present_info.eye = 1;
 
 				image_to_flip2 = get_present_source(&present_info, avconfig);
 			}
