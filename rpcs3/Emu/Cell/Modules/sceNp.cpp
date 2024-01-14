@@ -3751,7 +3751,7 @@ error_code sceNpManagerSubSignout(vm::ptr<SceNpId> npId)
 }
 
 // FUN_000146fc
-error_code check_attr_id(const SceNpMatchingAttr* attr)
+error_code check_attr_id(vm::cptr<SceNpMatchingAttr> attr)
 {
 	ensure(!!attr);
 	if (!attr) return SCE_NP_MATCHING_ERROR_INVALID_ATTR_ID; // Satisfy compiler
@@ -3788,18 +3788,13 @@ error_code check_duplicate_attr(vm::cptr<SceNpMatchingAttr> attribute)
 {
 	std::set<s32> attr_type_id;
 
-	for (const SceNpMatchingAttr* attr = attribute.get_ptr(); attribute && attr;)
+	for (auto attr = attribute; !!attr; attr = attr->next)
 	{
 		// There are 4 types times 16 ids
 		const s32 type_id = (attr->type - 1) * 16 + attr->id - 1;
 
 		if (!attr_type_id.insert(type_id).second)
 			return SCE_NP_MATCHING_ERROR_DUPLICATE;
-
-		if (attr->next)
-			attr = attr->next.get_ptr();
-		else
-			break;
 	}
 
 	return CELL_OK;
@@ -3808,16 +3803,11 @@ error_code check_duplicate_attr(vm::cptr<SceNpMatchingAttr> attribute)
 // FUN_00011718
 error_code check_attr_id_and_duplicate(vm::cptr<SceNpMatchingAttr> attribute)
 {
-	for (const SceNpMatchingAttr* attr = attribute.get_ptr(); attribute && attr;)
+	for (auto attr = attribute; !!attr; attr = attr->next)
 	{
 		error_code err = check_attr_id(attr);
 		if (err != CELL_OK)
 			return err;
-
-		if (attr->next)
-			attr = attr->next.get_ptr();
-		else
-			break;
 	}
 
 	return check_duplicate_attr(attribute);
@@ -4167,7 +4157,7 @@ error_code check_room_list_params([[maybe_unused]] u32 ctx_id, vm::ptr<SceNpComm
 		max_count = 9;
 	}
 
-	for (const SceNpMatchingSearchCondition* con = cond.get_ptr(); cond && con;)
+	for (auto con = cond; !!con; con = con->next)
 	{
 		if (++total_count > max_count)
 			return SCE_NP_MATCHING_ERROR_COND_MAX;
@@ -4213,11 +4203,6 @@ error_code check_room_list_params([[maybe_unused]] u32 ctx_id, vm::ptr<SceNpComm
 		default:
 			break;
 		}
-
-		if (con->next)
-			con = con->next.get_ptr();
-		else
-			break;
 	}
 
 	return check_attr_id_and_duplicate(attribute);
@@ -4312,7 +4297,7 @@ error_code sceNpMatchingQuickMatchGUI(u32 ctx_id, vm::cptr<SceNpCommunicationId>
 	u32 total_count = 0;
 	constexpr u32 max_count = 9;
 
-	for (const SceNpMatchingSearchCondition* con = cond.get_ptr(); cond && con;)
+	for (auto con = cond; !!con; con = con->next)
 	{
 		if (++total_count > max_count)
 			return SCE_NP_MATCHING_ERROR_COND_MAX;
@@ -4341,11 +4326,6 @@ error_code sceNpMatchingQuickMatchGUI(u32 ctx_id, vm::cptr<SceNpCommunicationId>
 		default:
 			break;
 		}
-
-		if (con->next)
-			con = con->next.get_ptr();
-		else
-			break;
 	}
 
 	// TODO: set callback: handler + arg
@@ -4432,7 +4412,7 @@ error_code sceNpMatchingAcceptInvitationGUI(u32 ctx_id, vm::cptr<SceNpCommunicat
 // FUN_00014d90
 error_code check_attr_create_room(vm::cptr<SceNpMatchingAttr> attribute)
 {
-	for (const SceNpMatchingAttr* attr = attribute.get_ptr(); attribute && attr;)
+	for (auto attr = attribute; !!attr; attr = attr->next)
 	{
 		error_code err = check_attr_id(attr);
 		if (err != CELL_OK)
@@ -4455,11 +4435,6 @@ error_code check_attr_create_room(vm::cptr<SceNpMatchingAttr> attribute)
 			if (attr->value.data.size > max_size)
 				return SCE_NP_MATCHING_ERROR_INVALID_ATTR;
 		}
-
-		if (attr->next)
-			attr = attr->next.get_ptr();
-		else
-			break;
 	}
 
 	error_code err = check_duplicate_attr(attribute);
@@ -4471,7 +4446,7 @@ error_code check_attr_create_room(vm::cptr<SceNpMatchingAttr> attribute)
 	u32 total_slots = 0;
 	u32 private_slots = 0;
 
-	for (const SceNpMatchingAttr* attr = attribute.get_ptr(); attribute && attr;)
+	for (auto attr = attribute; !!attr; attr = attr->next)
 	{
 		if (attr->type == SCE_NP_MATCHING_ATTR_TYPE_BASIC_NUM)
 		{
@@ -4498,11 +4473,6 @@ error_code check_attr_create_room(vm::cptr<SceNpMatchingAttr> attribute)
 				return SCE_NP_MATCHING_ERROR_INVALID_ARG;
 			}
 		}
-
-		if (attr->next)
-			attr = attr->next.get_ptr();
-		else
-			break;
 	}
 
 	return SCE_NP_MATCHING_ERROR_ATTR_NOT_SPECIFIED;
@@ -4595,7 +4565,7 @@ error_code sceNpMatchingSearchJoinRoomGUI(u32 ctx_id, vm::cptr<SceNpCommunicatio
 	u32 inequality_count = 0;
 	constexpr u32 max_count = 9;
 
-	for (const SceNpMatchingSearchCondition* con = cond.get_ptr(); cond && con;)
+	for (auto con = cond; !!con; con = con->next)
 	{
 		if (++total_count > max_count)
 			return SCE_NP_MATCHING_ERROR_COND_MAX;
@@ -4631,11 +4601,6 @@ error_code sceNpMatchingSearchJoinRoomGUI(u32 ctx_id, vm::cptr<SceNpCommunicatio
 		default:
 			break;
 		}
-
-		if (con->next)
-			con = con->next.get_ptr();
-		else
-			break;
 	}
 
 	error_code err = check_attr_id_and_duplicate(attribute);
