@@ -91,6 +91,8 @@ extern void signal_system_cache_can_stay();
 
 fs::file make_file_view(const fs::file& file, u64 offset, u64 size);
 
+extern std::string get_syscache_state_corruption_indicator_file_path(std::string_view dir_path);
+
 fs::file g_tty;
 atomic_t<s64> g_tty_size{0};
 std::array<std::deque<std::string>, 16> g_tty_input;
@@ -1103,7 +1105,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				}
 			}
 
-			auto load_tar = [&](const std::string& path)
+			auto load_tar = [&](const std::string& path, const std::string& special_file)
 			{
 				const usz size = m_ar->pop<usz>();
 				const usz max_data_size = m_ar->get_size(utils::add_saturate<usz>(size, m_ar->pos));
@@ -1114,6 +1116,11 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				}
 
 				fs::remove_all(path, size == 0);
+
+				if (!special_file.empty())
+				{
+					fs::write_file<true>(special_file, fs::write_new);
+				}
 
 				if (size)
 				{
@@ -1134,7 +1141,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			if (!hdd1.empty())
 			{
 				hdd1 = rpcs3::utils::get_hdd1_dir() + "caches/" + hdd1 + "/";
-				load_tar(hdd1);
+				load_tar(hdd1, get_syscache_state_corruption_indicator_file_path(hdd1));
 			}
 
 			for (const std::string hdd0_game = rpcs3::utils::get_hdd0_dir() + "game/";;)
@@ -1152,7 +1159,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 					fmt::throw_exception("HDD0 deserialization failed: Invalid directory name: %s, ar=%s", dirname.substr(0, CELL_GAME_DIRNAME_SIZE + 1), *m_ar);
 				}
 
-				load_tar(hdd0_game + game_data);
+				load_tar(hdd0_game + game_data, "");
 			}
 
 			// Reserved area
