@@ -35,6 +35,9 @@ std::string wchar_to_utf8(std::wstring_view src)
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 4996)
+#elif defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #else
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -52,6 +55,8 @@ std::u16string utf8_to_utf16(std::string_view src)
 }
 #ifdef _MSC_VER
 #pragma warning(pop)
+#elif defined(__clang__)
+#pragma clang diagnostic pop
 #else
 #pragma GCC diagnostic pop
 #endif
