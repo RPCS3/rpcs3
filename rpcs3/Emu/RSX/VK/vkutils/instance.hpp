@@ -6,6 +6,11 @@
 #include <algorithm>
 #include <vector>
 
+#ifdef __APPLE__
+#include <MoltenVK/mvk_vulkan.h>
+#include <MoltenVK/mvk_private_api.h>
+#endif
+
 namespace vk
 {
 	class supported_extensions
@@ -133,6 +138,16 @@ namespace vk
 
 			std::vector<const char*> extensions;
 			std::vector<const char*> layers;
+			const void* next_info = nullptr;
+
+#ifdef __APPLE__
+			// Declare MVK variables here to ensure the lifetime within the entire scope
+			const VkBool32 setting_true = VK_TRUE;
+			const int32_t setting_fast_math = g_cfg.video.disable_msl_fast_math.get() ? MVK_CONFIG_FAST_MATH_NEVER : MVK_CONFIG_FAST_MATH_ON_DEMAND;
+
+			std::vector<VkLayerSettingEXT> mvk_settings;
+			VkLayerSettingsCreateInfoEXT mvk_layer_settings_create_info{};
+#endif
 
 			if (!fast)
 			{
@@ -151,10 +166,20 @@ namespace vk
 				}
 
 #ifdef __APPLE__
-				#define VK_MVK_MOLTENVK_EXTENSION_NAME "VK_MVK_moltenvk"
-				if (support.is_supported(VK_MVK_MOLTENVK_EXTENSION_NAME))
+				if (support.is_supported(VK_EXT_LAYER_SETTINGS_EXTENSION_NAME))
 				{
-					extensions.push_back(VK_MVK_MOLTENVK_EXTENSION_NAME);
+					extensions.push_back(VK_EXT_LAYER_SETTINGS_EXTENSION_NAME);
+					layers.push_back(kMVKMoltenVKDriverLayerName);
+
+					mvk_settings.push_back(VkLayerSettingEXT{ kMVKMoltenVKDriverLayerName, "MVK_CONFIG_RESUME_LOST_DEVICE", VK_LAYER_SETTING_TYPE_BOOL32_EXT, 1, &setting_true });
+					mvk_settings.push_back(VkLayerSettingEXT{ kMVKMoltenVKDriverLayerName, "MVK_CONFIG_FAST_MATH_ENABLED", VK_LAYER_SETTING_TYPE_INT32_EXT, 1, &setting_fast_math });
+
+					mvk_layer_settings_create_info.sType = VK_STRUCTURE_TYPE_LAYER_SETTINGS_CREATE_INFO_EXT;
+					mvk_layer_settings_create_info.pNext = next_info;
+					mvk_layer_settings_create_info.settingCount = static_cast<uint32_t>(mvk_settings.size());
+					mvk_layer_settings_create_info.pSettings = mvk_settings.data();
+
+					next_info = &mvk_layer_settings_create_info;
 				}
 #endif
 
@@ -210,6 +235,7 @@ namespace vk
 			instance_info.ppEnabledLayerNames = layers.data();
 			instance_info.enabledExtensionCount = fast ? 0 : static_cast<u32>(extensions.size());
 			instance_info.ppEnabledExtensionNames = fast ? nullptr : extensions.data();
+			instance_info.pNext = next_info;
 
 			if (VkResult result = vkCreateInstance(&instance_info, nullptr, &m_instance); result != VK_SUCCESS)
 			{
