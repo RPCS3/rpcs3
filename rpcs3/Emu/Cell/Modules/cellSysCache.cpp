@@ -51,10 +51,15 @@ struct syscache_info
 			const auto lock = init.init();
 
 			// Extract cache id from path
-			cache_id = Emu.hdd1;
-			if (cache_id.back() == '/')
-				cache_id.resize(cache_id.size() - 1);
-			cache_id = cache_id.substr(cache_id.find_last_of('/') + 1);
+			std::string_view id = Emu.hdd1;
+			id = id.substr(0, id.find_last_not_of(fs::delim) + 1);
+			id = id.substr(id.find_last_of(fs::delim) + 1);
+			cache_id = std::string{id};
+
+			if (!Emu.DeserialManager() && !fs::write_file<true>(get_syscache_state_corruption_indicator_file_path(Emu.hdd1), fs::write_new))
+			{
+				fmt::throw_exception("Failed to create HDD1 corruption indicator file! (path='%s', reason='%s')", Emu.hdd1, fs::g_tls_error);
+			}
 
 			cellSysutil.success("Retained cache from parent process: %s", Emu.hdd1);
 			return;
@@ -67,13 +72,17 @@ struct syscache_info
 		{
 			if (entry.is_directory && entry.name.starts_with(prefix))
 			{
-				if (fs::is_file(get_syscache_state_corruption_indicator_file_path(cache_root + '/' + entry.name)))
+				cache_id = vfs::unescape(entry.name);
+
+				if (fs::is_file(get_syscache_state_corruption_indicator_file_path(cache_root + '/' + cache_id)))
 				{
 					// State is not complete
-					break;
+					clear(true);
+					cache_id.clear();
+					continue;
 				}
 
-				cache_id = std::move(entry.name);
+				cellSysutil.notice("Retained cache from past data: %s", cache_root + '/' + cache_id);
 				break;
 			}
 		}
@@ -172,13 +181,22 @@ error_code cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
 
 	auto& cache = g_fxo->get<syscache_info>();
 
-	if (!param || (param->cacheId[0] && sysutil_check_name_string(param->cacheId, 1, CELL_SYSCACHE_ID_SIZE) != 0))
+	if (!param)
+	{
+		return CELL_SYSCACHE_ERROR_PARAM;
+	}
+
+	std::string cache_name;
+
+	ensure(vm::read_string(param.ptr(&CellSysCacheParam::cacheId).addr(), sizeof(param->cacheId), cache_name), "Access violation");
+
+	if (!cache_name.empty() && sysutil_check_name_string(cache_name.data(), 1, CELL_SYSCACHE_ID_SIZE) != 0)
 	{
 		return CELL_SYSCACHE_ERROR_PARAM;
 	}
 
 	// Full virtualized cache id (with title id included)
-	std::string cache_id = vfs::escape(Emu.GetTitleID() + '_' + param->cacheId);
+	std::string cache_id = vfs::escape(Emu.GetTitleID() + '_' + cache_name);
 
 	// Full path to virtual cache root (/dev_hdd1)
 	std::string new_path = cache.cache_root + cache_id + '/';
@@ -194,7 +212,7 @@ error_code cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
 	std::lock_guard lock0(g_mp_sys_dev_hdd1.mutex);
 
 	// Check if can reuse existing cache (won't if cache id is an empty string or cache is damaged/incomplete)
-	if (param->cacheId[0] && cache_id == cache.cache_id && !fs::is_file(get_syscache_state_corruption_indicator_file_path(cache.cache_root + cache_id)))
+	if (!cache_name.empty() && cache_id == cache.cache_id)
 	{
 		// Isn't mounted yet on first call to cellSysCacheMount
 		if (vfs::mount("/dev_hdd1", new_path))
@@ -204,7 +222,7 @@ error_code cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
 		return not_an_error(CELL_SYSCACHE_RET_OK_RELAYED);
 	}
 
-	const bool can_create = cache.cache_id != cache_id;
+	const bool can_create = cache.cache_id != cache_id || !cache.cache_id.empty();
 
 	if (!cache.cache_id.empty())
 	{
@@ -229,6 +247,11 @@ error_code cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
 			// Clear new cache
 			cache.clear(false);
 		}
+	}
+
+	if (!fs::write_file<true>(get_syscache_state_corruption_indicator_file_path(new_path), fs::write_new))
+	{
+		fmt::throw_exception("Failed to create HDD1 corruption indicator file! (path='%s', reason='%s')", new_path, fs::g_tls_error);
 	}
 
 	if (vfs::mount("/dev_hdd1", new_path))
