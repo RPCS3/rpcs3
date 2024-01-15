@@ -3,10 +3,6 @@
 #include "util/logs.hpp"
 #include "Emu/system_config.h"
 
-#ifdef __APPLE__
-#include <MoltenVK/mvk_config.h>
-#endif
-
 namespace vk
 {
 	// Global shared render device
@@ -155,33 +151,6 @@ namespace vk
 
 			_vkGetPhysicalDeviceProperties2KHR(dev, &properties2);
 			props = properties2.properties;
-
-#ifdef __APPLE__
-		if (instance_extensions.is_supported(VK_MVK_MOLTENVK_EXTENSION_NAME))
-		{
-			MVKConfiguration mvk_config = {};
-			size_t mvk_config_size = sizeof(MVKConfiguration);
-
-			PFN_vkGetMoltenVKConfigurationMVK _vkGetMoltenVKConfigurationMVK = nullptr;
-			_vkGetMoltenVKConfigurationMVK = reinterpret_cast<PFN_vkGetMoltenVKConfigurationMVK>(vkGetInstanceProcAddr(parent, "vkGetMoltenVKConfigurationMVK"));
-			ensure(_vkGetMoltenVKConfigurationMVK);
-
-			PFN_vkSetMoltenVKConfigurationMVK _vkSetMoltenVKConfigurationMVK = nullptr;
-			_vkSetMoltenVKConfigurationMVK = reinterpret_cast<PFN_vkSetMoltenVKConfigurationMVK>(vkGetInstanceProcAddr(parent, "vkSetMoltenVKConfigurationMVK"));
-			ensure(_vkSetMoltenVKConfigurationMVK);
-
-			CHECK_RESULT_EX(_vkGetMoltenVKConfigurationMVK(VK_NULL_HANDLE, &mvk_config, &mvk_config_size), std::string("Could not get MoltenVK configuration."));
-
-			mvk_config.resumeLostDevice = true;
-			mvk_config.fastMathEnabled = g_cfg.video.disable_msl_fast_math.get() ? MVK_CONFIG_FAST_MATH_NEVER : MVK_CONFIG_FAST_MATH_ON_DEMAND;
-
-			CHECK_RESULT_EX(_vkSetMoltenVKConfigurationMVK(VK_NULL_HANDLE, &mvk_config, &mvk_config_size), std::string("Could not set MoltenVK configuration."));
-		}
-		else
-		{
-			rsx_log.error("Cannot set the MoltenVK configuration because VK_MVK_moltenvk is not supported.\nIf you're using MoltenVK through libvulkan, please manually set the appropriate environment variables instead.");
-		}
-#endif
 
 			if (descriptor_indexing_support)
 			{
