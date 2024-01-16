@@ -201,7 +201,7 @@ void progress_dialog_server::operator()()
 					if (pdone < ptotal && g_cfg.misc.show_ppu_compilation_hint)
 					{
 						const u64 passed_usec = (get_system_time() - start_time);
-						const u64 remaining_usec = pdone ? utils::rational_mul<u64>(passed_usec, pdone, static_cast<u64>(ptotal) - pdone) : (passed_usec * ptotal);
+						const u64 remaining_usec = pdone ? utils::rational_mul<u64>(passed_usec, static_cast<u64>(ptotal) - pdone, pdone) : (passed_usec * ptotal);
 
 						// Only show compile notification if we estimate at least 100ms
 						if (remaining_usec >= 100'000ULL)
