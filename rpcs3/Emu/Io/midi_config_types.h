@@ -9,6 +9,7 @@ enum class midi_device_type
 	keyboard,
 	guitar,
 	guitar_22fret,
+	drums,
 };
 
 struct midi_device

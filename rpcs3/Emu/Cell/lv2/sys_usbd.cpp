@@ -25,6 +25,7 @@
 #include "Emu/Io/turntable_config.h"
 #include "Emu/Io/RB3MidiKeyboard.h"
 #include "Emu/Io/RB3MidiGuitar.h"
+#include "Emu/Io/RB3MidiDrums.h"
 #include "Emu/Io/usio.h"
 #include "Emu/Io/usio_config.h"
 #include "Emu/Io/midi_config_types.h"
@@ -389,6 +390,8 @@ usb_handler_thread::usb_handler_thread()
 		case midi_device_type::keyboard:
 			usb_devices.push_back(std::make_shared<usb_device_rb3_midi_keyboard>(get_new_location(), device.name));
 			break;
+		case midi_device_type::drums:
+			usb_devices.push_back(std::make_shared<usb_device_rb3_midi_drums>(get_new_location(), device.name));
 		}
 	}
 

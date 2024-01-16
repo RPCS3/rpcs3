@@ -1303,6 +1303,7 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case midi_device_type::guitar: return tr("Guitar (17 frets)", "Midi Device Type");
 		case midi_device_type::guitar_22fret: return tr("Guitar (22 frets)", "Midi Device Type");
 		case midi_device_type::keyboard: return tr("Keyboard", "Midi Device Type");
+		case midi_device_type::drums: return tr("Drums", "Midi Device Type");
 		}
 		break;
 	case emu_settings_type::XFloatAccuracy:

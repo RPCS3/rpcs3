@@ -279,7 +279,8 @@ struct cfg_root : cfg::node
 		cfg::_bool background_input_enabled{this, "Background input enabled", true, true};
 		cfg::_bool show_move_cursor{this, "Show move cursor", false, true};
 		cfg::_bool lock_overlay_input_to_player_one{this, "Lock overlay input to player one", false, true};
-		cfg::string midi_devices{ this, "Emulated Midi devices", "ßßß@@@ßßß@@@ßßß@@@" };
+		cfg::string midi_devices{this, "Emulated Midi devices", "ßßß@@@ßßß@@@ßßß@@@"};
+		cfg::uint<1, 100> midi_drums_pulse_ms{this, "Midi drums pulse width ms", 30};
 		cfg::_bool load_sdl_mappings{ this, "Load SDL GameController Mappings", true };
 	} io{ this };
 

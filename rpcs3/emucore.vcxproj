@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
@@ -72,6 +72,7 @@
     <ClCompile Include="Emu\Io\camera_config.cpp" />
     <ClCompile Include="Emu\Io\midi_config_types.cpp" />
     <ClCompile Include="Emu\Io\pad_types.cpp" />
+    <ClCompile Include="Emu\Io\RB3MidiDrums.cpp" />
     <ClCompile Include="Emu\Io\RB3MidiGuitar.cpp" />
     <ClCompile Include="Emu\Io\RB3MidiKeyboard.cpp" />
     <ClCompile Include="Emu\Io\recording_config.cpp" />
@@ -528,6 +529,7 @@
     <ClInclude Include="Emu\Io\music_handler_base.h" />
     <ClInclude Include="Emu\Io\Null\null_camera_handler.h" />
     <ClInclude Include="Emu\Io\Null\null_music_handler.h" />
+    <ClInclude Include="Emu\Io\RB3MidiDrums.h" />
     <ClInclude Include="Emu\Io\RB3MidiGuitar.h" />
     <ClInclude Include="Emu\Io\RB3MidiKeyboard.h" />
     <ClInclude Include="Emu\Io\recording_config.h" />
