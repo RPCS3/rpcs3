@@ -3721,7 +3721,7 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 
 		if (!vm::check_addr(addr, vm::page_writable))
 		{
-			vm::_ref<atomic_t<u8>>(addr) += 0; // Access violate
+			utils::trigger_write_page_fault(vm::base(addr));
 		}
 
 		raddr = 0;
@@ -3823,7 +3823,7 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 		else if (!g_use_rtm)
 		{
 			// Provoke page fault
-			vm::_ref<atomic_t<u32>>(addr) += 0;
+			utils::trigger_write_page_fault(vm::base(addr));
 
 			// Hard lock
 			auto spu = cpu ? cpu->try_get<spu_thread>() : nullptr;

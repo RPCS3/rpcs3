@@ -237,7 +237,7 @@ namespace vm
 
 					// Try triggering a page fault (write)
 					// TODO: Read memory if needed
-					vm::_ref<atomic_t<u8>>(test / 4096 == begin / 4096 ? begin : test) += 0;
+					utils::trigger_write_page_fault(vm::base(test / 4096 == begin / 4096 ? begin : test));
 					continue;
 				}
 			}
