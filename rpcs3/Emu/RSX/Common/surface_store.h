@@ -452,7 +452,7 @@ namespace rsx
 				{
 					if (!pitch_compatible)
 					{
-						Traits::invalidate_surface_contents(command_list, Traits::get(surface), address, pitch);
+						Traits::invalidate_surface_contents(command_list, Traits::get(surface), format, address, pitch);
 					}
 
 					Traits::notify_surface_persist(surface);
@@ -512,7 +512,7 @@ namespace rsx
 						}
 
 						new_surface = Traits::get(new_surface_storage);
-						Traits::invalidate_surface_contents(command_list, new_surface, address, pitch);
+						Traits::invalidate_surface_contents(command_list, new_surface, format, address, pitch);
 						Traits::prepare_surface_for_drawing(command_list, new_surface);
 						allocate_rsx_memory(new_surface);
 						break;
