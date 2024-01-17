@@ -365,6 +365,12 @@ lv2_fs_object::lv2_fs_object(utils::serial& ar, bool)
 
 u64 lv2_file::op_read(const fs::file& file, vm::ptr<void> buf, u64 size, u64 opt_pos)
 {
+	if (u64 region = buf.addr() >> 28, region_end = (buf.addr() & 0xfff'ffff) + (size & 0xfff'ffff); region == region_end && ((region >> 28) == 0 || region >= 0xC))
+	{
+		// Optimize reads from safe memory
+		return (opt_pos == umax ? file.read(buf.get_ptr(), size) : file.read_at(opt_pos, buf.get_ptr(), size));
+	}
+
 	// Copy data from intermediate buffer (avoid passing vm pointer to a native API)
 	std::vector<uchar> local_buf(std::min<u64>(size, 65536));
 
