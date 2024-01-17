@@ -271,7 +271,7 @@ struct gl_render_target_traits
 	}
 
 	static
-	void invalidate_surface_contents(gl::command_context&, gl::render_target *surface, u32 address, usz pitch)
+	void int_invalidate_surface_contents(gl::command_context&, gl::render_target *surface, u32 address, usz pitch)
 	{
 		surface->set_rsx_pitch(static_cast<u32>(pitch));
 		surface->queue_tag(address);
@@ -279,6 +279,34 @@ struct gl_render_target_traits
 		surface->stencil_init_flags = 0;
 		surface->memory_usage_flags = rsx::surface_usage_flags::unknown;
 		surface->raster_type = rsx::surface_raster_type::linear;
+	}
+
+	static
+	void invalidate_surface_contents(
+		gl::command_context& cmd,
+		gl::render_target* surface,
+		rsx::surface_color_format format,
+		u32 address,
+		usz pitch)
+	{
+		auto fmt = rsx::internals::surface_color_format_to_gl(format);
+		std::array<GLenum, 4> native_layout = { static_cast<GLenum>(fmt.swizzle.a), static_cast<GLenum>(fmt.swizzle.r), static_cast<GLenum>(fmt.swizzle.g), static_cast<GLenum>(fmt.swizzle.b) };
+		surface->set_native_component_layout(native_layout);
+		surface->set_format(format);
+
+		int_invalidate_surface_contents(cmd, surface, address, pitch);
+	}
+
+	static
+	void invalidate_surface_contents(
+		gl::command_context& cmd,
+		gl::render_target* surface,
+		rsx::surface_depth_format2 format,
+		u32 address,
+		usz pitch)
+	{
+		surface->set_format(format);
+		int_invalidate_surface_contents(cmd, surface, address, pitch);
 	}
 
 	static
