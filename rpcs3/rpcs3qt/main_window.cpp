@@ -1388,10 +1388,27 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 
 	fs::file update_files_f = pup.get_file(0x300);
 
-	if (!update_files_f)
+	const usz update_files_size = update_files_f ? update_files_f.size() : 0;
+
+	if (!update_files_size)
 	{
 		gui_log.error("Error while installing firmware: Couldn't find installation packages database.");
 		critical(tr("Firmware installation failed: The provided file's contents are corrupted."));
+		return;
+	}
+
+	fs::device_stat dev_stat{};
+	if (!fs::statfs(g_cfg_vfs.get_dev_flash(), dev_stat))
+	{
+		gui_log.error("Error while installing firmware: Couldn't retrieve available disk space. ('%s')", g_cfg_vfs.get_dev_flash());
+		critical(tr("Firmware installation failed: Couldn't retrieve available disk space."));
+		return;
+	}
+
+	if (dev_stat.avail_free < update_files_size)
+	{
+		gui_log.error("Error while installing firmware: Out of disk space. ('%s', needed: %d bytes)", g_cfg_vfs.get_dev_flash(), update_files_size - dev_stat.avail_free);
+		critical(tr("Firmware installation failed: Out of disk space."));
 		return;
 	}
 
