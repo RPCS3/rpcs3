@@ -24,6 +24,12 @@ namespace utils
 	class shm;
 }
 
+// LUTs for SPU
+extern const u32 spu_frest_fraction_lut[32];
+extern const u32 spu_frest_exponent_lut[256];
+extern const u32 spu_frsqest_fraction_lut[64];
+extern const u32 spu_frsqest_exponent_lut[256];
+
 // JIT Block
 using spu_function_t = void(*)(spu_thread&, void*, u8*);
 
