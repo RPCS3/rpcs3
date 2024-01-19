@@ -8,15 +8,12 @@
 #include <algorithm>
 #include <cstring>
 #include <map>
-#include <filesystem>
+#include <iostream>
 
 #include "util/asm.hpp"
 #include "util/coro.hpp"
-#include "util/logs.hpp"
 
 using namespace std::literals::string_literals;
-
-LOG_CHANNEL(sys_log, "SYS");
 
 #ifdef _WIN32
 
@@ -1906,39 +1903,40 @@ bool fs::file::strict_read_check(u64 _size, u64 type_size) const
 std::string fs::get_executable_path()
 {
 #if defined(_WIN32)
-	wchar_t buffer[32767];
-	GetModuleFileNameW(nullptr, buffer, sizeof(buffer) / 2);
-	return wchar_to_utf8(buffer);
+	std::vector<wchar_t> buffer(32767);
+	GetModuleFileNameW(nullptr, buffer.data(), buffer.size());
+	return wchar_to_utf8(buffer.data());
 #elif defined(__APPLE__)
 	char bin_path[PATH_MAX];
 	uint32_t bin_path_size = sizeof(bin_path);
 	if (_NSGetExecutablePath(bin_path, &bin_path_size) != 0)
 	{
-		sys_log.error("Failed to find app binary path");
+		std::cerr << "Failed to find app binary path" << std::endl;
 		return {};
 	}
 
-	return std::filesystem::path(bin_path).parent_path().parent_path().parent_path().string();
+	// App bundle directory is three levels up from the binary.
+	return get_parent_dir(get_parent_dir(get_parent_dir(bin_path)));
 #else
 	if (const char* appimage_path = ::getenv("APPIMAGE"))
 	{
-		sys_log.notice("Found AppImage path: %s", appimage_path);
+		std::cout << "Found AppImage path: " << appimage_path << std::endl;
 		return std::string(appimage_path);
 	}
 
-	sys_log.warning("Failed to find AppImage path");
+	std::cout << "Failed to find AppImage path" << std::endl;
 
 	char exe_path[PATH_MAX];
 	const ssize_t len = ::readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
 
 	if (len == -1)
 	{
-		sys_log.error("Failed to find executable path");
+		std::cerr << "Failed to find executable path" << std::endl;
 		return {};
 	}
 
 	exe_path[len] = '\0';
-	sys_log.trace("Found exec path: %s", exe_path);
+	std::cout << "Found exec path: " << exe_path << std::endl;
 
 	return std::string(exe_path);
 #endif
@@ -1952,7 +1950,7 @@ std::string fs::get_executable_dir()
 		return exe_path;
 	}
 
-	return std::filesystem::path(exe_path).parent_path().string();
+	return get_parent_dir(exe_path);
 }
 
 const std::string& fs::get_config_dir()
@@ -1963,10 +1961,10 @@ const std::string& fs::get_config_dir()
 		std::string dir;
 
 		// Check if a portable directory exists.
-		std::filesystem::path portable_dir = std::filesystem::path(get_executable_dir()) / "portable" / "";
-		if (std::filesystem::is_directory(portable_dir))
+		std::string portable_dir = get_executable_dir() + delim + "portable" + delim;
+		if (is_dir(portable_dir))
 		{
-			return portable_dir.string();
+			return portable_dir;
 		}
 
 #ifdef _WIN32
