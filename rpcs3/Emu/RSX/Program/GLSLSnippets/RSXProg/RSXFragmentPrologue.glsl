@@ -1,10 +1,19 @@
 R"(
-#ifdef _32_BIT_OUTPUT
+
+#if defined(_ENABLE_ROP_OUTPUT_ROUNDING) || defined(_ENABLE_PROGRAMMABLE_BLENDING)
 // Default. Used when we're not utilizing native fp16
-#define round_to_8bit(v4) (floor(fma(v4, vec4(255.), vec4(0.5))) / vec4(255.))
-#else
-// FP16 version
-#define round_to_8bit(v4) (floor(fma(v4, f16vec4(255.), f16vec4(0.5))) / f16vec4(255.))
+vec4 round_to_8bit(const in vec4 v4)
+{
+	uvec4 raw = uvec4(floor(fma(v4, vec4(255.), vec4(0.5))));
+	return vec4(raw) / vec4(255.);
+}
+#if !defined(_32_BIT_OUTPUT)
+f16vec4 round_to_8bit(const in f16vec4 v4)
+{
+	uvec4 raw = uvec4(floor(fma(v4, f16vec4(255.), f16vec4(0.5))));
+	return f16vec4(raw) / f16vec4(255.);
+}
+#endif
 #endif
 
 #ifdef _DISABLE_EARLY_DISCARD
