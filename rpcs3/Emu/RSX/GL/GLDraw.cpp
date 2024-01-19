@@ -188,6 +188,7 @@ void GLGSRender::update_draw_state()
 	if (m_rtts.get_color_surface_count())
 	{
 		// Color buffer is active
+		const auto host_write_mask = rsx::get_write_output_mask(rsx::method_registers.surface_color());
 		for (int index = 0; index < m_rtts.get_color_surface_count(); ++index)
 		{
 			bool color_mask_b = rsx::method_registers.color_mask_b(index);
@@ -207,7 +208,12 @@ void GLGSRender::update_draw_state()
 				break;
 			}
 
-			gl_state.color_maski(index, color_mask_r, color_mask_g, color_mask_b, color_mask_a);
+			gl_state.color_maski(
+				index,
+				color_mask_r && host_write_mask[0],
+				color_mask_g && host_write_mask[1],
+				color_mask_b && host_write_mask[2],
+				color_mask_a && host_write_mask[3]);
 		}
 
 		// LogicOp and Blend are mutually exclusive. If both are enabled, LogicOp takes precedence.
