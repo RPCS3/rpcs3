@@ -1902,55 +1902,67 @@ bool fs::file::strict_read_check(u64 _size, u64 type_size) const
 
 std::string fs::get_executable_path()
 {
+	// Use magic static
+	static const std::string s_exe_path = []
+	{
 #if defined(_WIN32)
-	std::vector<wchar_t> buffer(32767);
-	GetModuleFileNameW(nullptr, buffer.data(), buffer.size());
-	return wchar_to_utf8(buffer.data());
+		std::vector<wchar_t> buffer(32767);
+		GetModuleFileNameW(nullptr, buffer.data(), buffer.size());
+		return wchar_to_utf8(buffer.data());
 #elif defined(__APPLE__)
-	char bin_path[PATH_MAX];
-	uint32_t bin_path_size = sizeof(bin_path);
-	if (_NSGetExecutablePath(bin_path, &bin_path_size) != 0)
-	{
-		std::cerr << "Failed to find app binary path" << std::endl;
-		return {};
-	}
+		char bin_path[PATH_MAX];
+		uint32_t bin_path_size = sizeof(bin_path);
+		if (_NSGetExecutablePath(bin_path, &bin_path_size) != 0)
+		{
+			std::cerr << "Failed to find app binary path" << std::endl;
+			return std::string{};
+		}
 
-	// App bundle directory is three levels up from the binary.
-	return get_parent_dir(get_parent_dir(get_parent_dir(bin_path)));
+		// App bundle directory is three levels up from the binary.
+		return get_parent_dir(bin_path, 3);
 #else
-	if (const char* appimage_path = ::getenv("APPIMAGE"))
-	{
-		std::cout << "Found AppImage path: " << appimage_path << std::endl;
-		return std::string(appimage_path);
-	}
+		if (const char* appimage_path = ::getenv("APPIMAGE"))
+		{
+			std::cout << "Found AppImage path: " << appimage_path << std::endl;
+			return std::string(appimage_path);
+		}
 
-	std::cout << "Failed to find AppImage path" << std::endl;
+		std::cout << "No AppImage path found, checking for executable" << std::endl;
 
-	char exe_path[PATH_MAX];
-	const ssize_t len = ::readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
+		char exe_path[PATH_MAX];
+		const ssize_t len = ::readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
 
-	if (len == -1)
-	{
-		std::cerr << "Failed to find executable path" << std::endl;
-		return {};
-	}
+		if (len == -1)
+		{
+			std::cerr << "Failed to find executable path" << std::endl;
+			return std::string{};
+		}
 
-	exe_path[len] = '\0';
-	std::cout << "Found exec path: " << exe_path << std::endl;
+		exe_path[len] = '\0';
+		std::cout << "Found exec path: " << exe_path << std::endl;
 
-	return std::string(exe_path);
+		return std::string(exe_path);
 #endif
+	}();
+
+	return s_exe_path;
 }
 
 std::string fs::get_executable_dir()
 {
-	std::string exe_path = get_executable_path();
-	if (exe_path.empty())
+	// Use magic static
+	static const std::string s_exe_dir = []
 	{
-		return exe_path;
-	}
+		std::string exe_path = get_executable_path();
+		if (exe_path.empty())
+		{
+			return exe_path;
+		}
 
-	return get_parent_dir(exe_path);
+		return get_parent_dir(exe_path);
+	}();
+
+	return s_exe_dir;
 }
 
 const std::string& fs::get_config_dir()
@@ -1961,7 +1973,7 @@ const std::string& fs::get_config_dir()
 		std::string dir;
 
 		// Check if a portable directory exists.
-		std::string portable_dir = get_executable_dir() + delim + "portable" + delim;
+		std::string portable_dir = get_executable_dir() + "/portable/";
 		if (is_dir(portable_dir))
 		{
 			return portable_dir;
