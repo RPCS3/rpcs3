@@ -4,6 +4,7 @@
 #include "Emu/system_utils.hpp"
 #include "Emu/VFS.h"
 #include "Emu/vfs_config.h"
+#include "Utilities/File.h"
 #include "Utilities/StrUtil.h"
 
 #ifdef _WIN32
@@ -154,7 +155,7 @@ namespace gui::utils
 		if (FAILED(res))
 			return cleanup(false, "CoCreateInstance failed");
 
-		const std::string working_dir{ rpcs3::utils::get_exe_dir() };
+		const std::string working_dir{ fs::get_executable_dir() };
 		const std::string rpcs3_path{ working_dir + "rpcs3.exe" };
 
 		const std::wstring w_target_file = utf8_to_wchar(rpcs3_path);
@@ -219,7 +220,7 @@ namespace gui::utils
 
 #elif defined(__APPLE__)
 
-		const std::string app_bundle_path = rpcs3::utils::get_app_bundle_path();
+		const std::string app_bundle_path = fs::get_executable_path();
 		if (app_bundle_path.empty())
 		{
 			sys_log.error("Failed to create shortcut. App bundle path empty.");
@@ -307,7 +308,7 @@ namespace gui::utils
 
 #else
 
-		const std::string exe_path = rpcs3::utils::get_executable_path();
+		const std::string exe_path = fs::get_executable_path();
 		if (exe_path.empty())
 		{
 			sys_log.error("Failed to create shortcut. Executable path empty.");

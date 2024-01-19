@@ -8,11 +8,15 @@
 #include <algorithm>
 #include <cstring>
 #include <map>
+#include <filesystem>
 
 #include "util/asm.hpp"
 #include "util/coro.hpp"
+#include "util/logs.hpp"
 
 using namespace std::literals::string_literals;
+
+LOG_CHANNEL(sys_log, "SYS");
 
 #ifdef _WIN32
 
@@ -137,6 +141,7 @@ static fs::error to_error(DWORD e)
 #if defined(__APPLE__)
 #include <copyfile.h>
 #include <mach-o/dyld.h>
+#include <limits.h>
 #elif defined(__linux__) || defined(__sun)
 #include <sys/sendfile.h>
 #include <sys/syscall.h>
@@ -1898,12 +1903,71 @@ bool fs::file::strict_read_check(u64 _size, u64 type_size) const
 	return true;
 }
 
+std::string fs::get_executable_path()
+{
+#if defined(_WIN32)
+	wchar_t buffer[32767];
+	GetModuleFileNameW(nullptr, buffer, sizeof(buffer) / 2);
+	return wchar_to_utf8(buffer);
+#elif defined(__APPLE__)
+	char bin_path[PATH_MAX];
+	uint32_t bin_path_size = sizeof(bin_path);
+	if (_NSGetExecutablePath(bin_path, &bin_path_size) != 0)
+	{
+		sys_log.error("Failed to find app binary path");
+		return {};
+	}
+
+	return std::filesystem::path(bin_path).parent_path().parent_path().parent_path().string();
+#else
+	if (const char* appimage_path = ::getenv("APPIMAGE"))
+	{
+		sys_log.notice("Found AppImage path: %s", appimage_path);
+		return std::string(appimage_path);
+	}
+
+	sys_log.warning("Failed to find AppImage path");
+
+	char exe_path[PATH_MAX];
+	const ssize_t len = ::readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
+
+	if (len == -1)
+	{
+		sys_log.error("Failed to find executable path");
+		return {};
+	}
+
+	exe_path[len] = '\0';
+	sys_log.trace("Found exec path: %s", exe_path);
+
+	return std::string(exe_path);
+#endif
+}
+
+std::string fs::get_executable_dir()
+{
+	std::string exe_path = get_executable_path();
+	if (exe_path.empty())
+	{
+		return exe_path;
+	}
+
+	return std::filesystem::path(exe_path).parent_path().string();
+}
+
 const std::string& fs::get_config_dir()
 {
 	// Use magic static
 	static const std::string s_dir = []
 	{
 		std::string dir;
+
+		// Check if a portable directory exists.
+		std::filesystem::path portable_dir = std::filesystem::path(get_executable_dir()) / "portable" / "";
+		if (std::filesystem::is_directory(portable_dir))
+		{
+			return portable_dir.string();
+		}
 
 #ifdef _WIN32
 		std::vector<wchar_t> buf;

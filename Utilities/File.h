@@ -660,6 +660,12 @@ namespace fs
 		}
 	};
 
+	// Get executable path
+	std::string get_executable_path();
+
+	// Get executable containing directory
+	std::string get_executable_dir();
+
 	// Get configuration directory
 	const std::string& get_config_dir();
 
