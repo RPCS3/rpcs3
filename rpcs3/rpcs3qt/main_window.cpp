@@ -57,6 +57,7 @@
 #include "Emu/vfs_config.h"
 #include "Emu/System.h"
 #include "Emu/system_utils.hpp"
+#include "Emu/system_config.h"
 
 #include "Crypto/unpkg.h"
 #include "Crypto/unself.h"
@@ -2395,6 +2396,21 @@ void main_window::CreateConnects()
 	connect(ui->actionCreate_Savestate, &QAction::triggered, this, []()
 	{
 		gui_log.notice("User triggered savestate creation from utilities.");
+
+		if (!g_cfg.savestate.suspend_emu)
+		{
+			Emu.after_kill_callback = []()
+			{
+				Emu.Restart();
+			};
+		}
+
+		Emu.Kill(false, true);
+	});
+
+	connect(ui->actionCreate_Savestate_And_Exit, &QAction::triggered, this, []()
+	{
+		gui_log.notice("User triggered savestate creation and emulation stop from utilities.");
 		Emu.Kill(false, true);
 	});
 
