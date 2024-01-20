@@ -179,7 +179,7 @@ void Emulator::CallFromMainThread(std::function<void()>&& func, atomic_t<u32>* w
 	m_cb.call_from_main_thread(std::move(final_func), wake_up);
 }
 
-void Emulator::BlockingCallFromMainThread(std::function<void()>&& func) const
+void Emulator::BlockingCallFromMainThread(std::function<void()>&& func, u32 line, u32 col, const char* file, const char* fun) const
 {
 	atomic_t<u32> wake_up = 0;
 
@@ -187,7 +187,10 @@ void Emulator::BlockingCallFromMainThread(std::function<void()>&& func) const
 
 	while (!wake_up)
 	{
-		ensure(thread_ctrl::get_current());
+		if (!thread_ctrl::get_current())
+		{
+			fmt::throw_exception("Current thread null while calling BlockingCallFromMainThread from %s", src_loc{line, col, file, fun});
+		}
 		wake_up.wait(0);
 	}
 }
