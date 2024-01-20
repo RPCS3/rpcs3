@@ -383,6 +383,14 @@ void gs_frame::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKey
 	{
 		if (!m_disable_kb_hotkeys)
 		{
+			if (!g_cfg.savestate.suspend_emu)
+			{
+				Emu.after_kill_callback = []()
+				{
+					Emu.Restart();
+				};
+			}
+
 			Emu.Kill(false, true);
 			return;
 		}
