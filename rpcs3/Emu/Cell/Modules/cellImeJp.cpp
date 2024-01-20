@@ -126,7 +126,7 @@ void ime_jp_manager::moveCursorEnd(s8 amount)
 	}
 }
 
-error_code cellImeJpOpen(sys_memory_container_t container_id, vm::ptr<CellImeJpHandle> hImeJpHandle, vm::cptr<CellImeJpAddDic> addDicPath)
+static error_code cellImeJpOpen(sys_memory_container_t container_id, vm::ptr<CellImeJpHandle> hImeJpHandle, vm::cptr<CellImeJpAddDic> addDicPath)
 {
 	cellImeJp.todo("cellImeJpOpen(container_id=*0x%x, hImeJpHandle=*0x%x, addDicPath=*0x%x)", container_id, hImeJpHandle, addDicPath);
 
@@ -156,7 +156,7 @@ error_code cellImeJpOpen(sys_memory_container_t container_id, vm::ptr<CellImeJpH
 	return CELL_OK;
 }
 
-error_code cellImeJpOpen2(sys_memory_container_t container_id, vm::ptr<CellImeJpHandle> hImeJpHandle, vm::cptr<CellImeJpAddDic> addDicPath)
+static error_code cellImeJpOpen2(sys_memory_container_t container_id, vm::ptr<CellImeJpHandle> hImeJpHandle, vm::cptr<CellImeJpAddDic> addDicPath)
 {
 	cellImeJp.todo("cellImeJpOpen2(container_id=*0x%x, hImeJpHandle=*0x%x, addDicPath=*0x%x)", container_id, hImeJpHandle, addDicPath);
 
@@ -187,7 +187,7 @@ error_code cellImeJpOpen2(sys_memory_container_t container_id, vm::ptr<CellImeJp
 	return CELL_OK;
 }
 
-error_code cellImeJpOpen3(sys_memory_container_t container_id, vm::ptr<CellImeJpHandle> hImeJpHandle, vm::cpptr<CellImeJpAddDic> addDicPath)
+static error_code cellImeJpOpen3(sys_memory_container_t container_id, vm::ptr<CellImeJpHandle> hImeJpHandle, vm::cpptr<CellImeJpAddDic> addDicPath)
 {
 	cellImeJp.todo("cellImeJpOpen3(container_id=*0x%x, hImeJpHandle=*0x%x, addDicPath=*0x%x)", container_id, hImeJpHandle, addDicPath);
 
@@ -224,13 +224,13 @@ error_code cellImeJpOpen3(sys_memory_container_t container_id, vm::ptr<CellImeJp
 	return CELL_OK;
 }
 
-error_code cellImeJpOpenExt()
+static error_code cellImeJpOpenExt()
 {
 	cellImeJp.todo("cellImeJpOpenExt()");
 	return CELL_OK;
 }
 
-error_code cellImeJpClose(CellImeJpHandle hImeJpHandle)
+static error_code cellImeJpClose(CellImeJpHandle hImeJpHandle)
 {
 	cellImeJp.todo("cellImeJpClose(hImeJpHandle=*0x%x)", hImeJpHandle);
 
@@ -253,7 +253,7 @@ error_code cellImeJpClose(CellImeJpHandle hImeJpHandle)
 	return CELL_OK;
 }
 
-error_code cellImeJpSetKanaInputMode(CellImeJpHandle hImeJpHandle, s16 inputOption)
+static error_code cellImeJpSetKanaInputMode(CellImeJpHandle hImeJpHandle, s16 inputOption)
 {
 	cellImeJp.todo("cellImeJpSetKanaInputMode(hImeJpHandle=*0x%x, inputOption=%d)", hImeJpHandle, inputOption);
 
@@ -275,7 +275,7 @@ error_code cellImeJpSetKanaInputMode(CellImeJpHandle hImeJpHandle, s16 inputOpti
 	return CELL_OK;
 }
 
-error_code cellImeJpSetInputCharType(CellImeJpHandle hImeJpHandle, s16 charTypeOption)
+static error_code cellImeJpSetInputCharType(CellImeJpHandle hImeJpHandle, s16 charTypeOption)
 {
 	cellImeJp.todo("cellImeJpSetInputCharType(hImeJpHandle=*0x%x, charTypeOption=%d)", hImeJpHandle, charTypeOption);
 
@@ -292,7 +292,7 @@ error_code cellImeJpSetInputCharType(CellImeJpHandle hImeJpHandle, s16 charTypeO
 	return CELL_OK;
 }
 
-error_code cellImeJpSetFixInputMode(CellImeJpHandle hImeJpHandle, s16 fixInputMode)
+static error_code cellImeJpSetFixInputMode(CellImeJpHandle hImeJpHandle, s16 fixInputMode)
 {
 	cellImeJp.todo("cellImeJpSetFixInputMode(hImeJpHandle=*0x%x, fixInputMode=%d)", hImeJpHandle, fixInputMode);
 
@@ -309,7 +309,7 @@ error_code cellImeJpSetFixInputMode(CellImeJpHandle hImeJpHandle, s16 fixInputMo
 	return CELL_OK;
 }
 
-error_code cellImeJpAllowExtensionCharacters(CellImeJpHandle hImeJpHandle, s16 extensionCharacters)
+static error_code cellImeJpAllowExtensionCharacters(CellImeJpHandle hImeJpHandle, s16 extensionCharacters)
 {
 	cellImeJp.todo("cellImeJpSetFixInputMode(hImeJpHandle=*0x%x, extensionCharacters=%d)", hImeJpHandle, extensionCharacters);
 
@@ -331,7 +331,7 @@ error_code cellImeJpAllowExtensionCharacters(CellImeJpHandle hImeJpHandle, s16 e
 	return CELL_OK;
 }
 
-error_code cellImeJpReset(CellImeJpHandle hImeJpHandle)
+static error_code cellImeJpReset(CellImeJpHandle hImeJpHandle)
 {
 	cellImeJp.todo("cellImeJpReset(hImeJpHandle=*0x%x)", hImeJpHandle);
 
@@ -353,7 +353,7 @@ error_code cellImeJpReset(CellImeJpHandle hImeJpHandle)
 	return CELL_OK;
 }
 
-error_code cellImeJpGetStatus(CellImeJpHandle hImeJpHandle, vm::ptr<s16> pInputStatus)
+static error_code cellImeJpGetStatus(CellImeJpHandle hImeJpHandle, vm::ptr<s16> pInputStatus)
 {
 	cellImeJp.warning("cellImeJpGetStatus(hImeJpHandle=*0x%x, pInputStatus=%d)", hImeJpHandle, pInputStatus);
 
@@ -375,7 +375,7 @@ error_code cellImeJpGetStatus(CellImeJpHandle hImeJpHandle, vm::ptr<s16> pInputS
 	return CELL_OK;
 }
 
-error_code cellImeJpEnterChar(CellImeJpHandle hImeJpHandle, u16 inputChar, vm::ptr<s16> pOutputStatus)
+static error_code cellImeJpEnterChar(CellImeJpHandle hImeJpHandle, u16 inputChar, vm::ptr<s16> pOutputStatus)
 {
 	cellImeJp.todo("cellImeJpEnterChar(hImeJpHandle=*0x%x, inputChar=%d, pOutputStatus=%d)", hImeJpHandle, inputChar, pOutputStatus);
 
@@ -404,13 +404,13 @@ error_code cellImeJpEnterChar(CellImeJpHandle hImeJpHandle, u16 inputChar, vm::p
 	return CELL_OK;
 }
 
-error_code cellImeJpEnterCharExt(CellImeJpHandle hImeJpHandle, u16 inputChar, vm::ptr<s16> pOutputStatus)
+static error_code cellImeJpEnterCharExt(CellImeJpHandle hImeJpHandle, u16 inputChar, vm::ptr<s16> pOutputStatus)
 {
 	cellImeJp.todo("cellImeJpEnterCharExt(hImeJpHandle=*0x%x, inputChar=%d, pOutputStatus=%d", hImeJpHandle, inputChar, pOutputStatus);
 	return cellImeJpEnterChar(hImeJpHandle, inputChar, pOutputStatus);
 }
 
-error_code cellImeJpEnterString(CellImeJpHandle hImeJpHandle, vm::cptr<u16> pInputString, vm::ptr<s16> pOutputStatus)
+static error_code cellImeJpEnterString(CellImeJpHandle hImeJpHandle, vm::cptr<u16> pInputString, vm::ptr<s16> pOutputStatus)
 {
 	cellImeJp.todo("cellImeJpEnterString(hImeJpHandle=*0x%x, pInputString=*0x%x, pOutputStatus=%d", hImeJpHandle, pInputString, pOutputStatus);
 
@@ -439,13 +439,13 @@ error_code cellImeJpEnterString(CellImeJpHandle hImeJpHandle, vm::cptr<u16> pInp
 	return CELL_OK;
 }
 
-error_code cellImeJpEnterStringExt(CellImeJpHandle hImeJpHandle, vm::cptr<u16> pInputString, vm::ptr<s16> pOutputStatus)
+static error_code cellImeJpEnterStringExt(CellImeJpHandle hImeJpHandle, vm::cptr<u16> pInputString, vm::ptr<s16> pOutputStatus)
 {
 	cellImeJp.todo("cellImeJpEnterStringExt(hImeJpHandle=*0x%x, pInputString=*0x%x, pOutputStatus=%d", hImeJpHandle, pInputString, pOutputStatus);
 	return cellImeJpEnterString(hImeJpHandle, pInputString, pOutputStatus);
 }
 
-error_code cellImeJpModeCaretRight(CellImeJpHandle hImeJpHandle)
+static error_code cellImeJpModeCaretRight(CellImeJpHandle hImeJpHandle)
 {
 	cellImeJp.todo("cellImeJpModeCaretRight(hImeJpHandle=*0x%x)", hImeJpHandle);
 
@@ -467,7 +467,7 @@ error_code cellImeJpModeCaretRight(CellImeJpHandle hImeJpHandle)
 	return CELL_OK;
 }
 
-error_code cellImeJpModeCaretLeft(CellImeJpHandle hImeJpHandle)
+static error_code cellImeJpModeCaretLeft(CellImeJpHandle hImeJpHandle)
 {
 	cellImeJp.todo("cellImeJpModeCaretLeft(hImeJpHandle=*0x%x)", hImeJpHandle);
 
@@ -489,7 +489,7 @@ error_code cellImeJpModeCaretLeft(CellImeJpHandle hImeJpHandle)
 	return CELL_OK;
 }
 
-error_code cellImeJpBackspaceWord(CellImeJpHandle hImeJpHandle)
+static error_code cellImeJpBackspaceWord(CellImeJpHandle hImeJpHandle)
 {
 	cellImeJp.todo("cellImeJpBackspaceWord(hImeJpHandle=*0x%x)", hImeJpHandle);
 
@@ -511,7 +511,7 @@ error_code cellImeJpBackspaceWord(CellImeJpHandle hImeJpHandle)
 	return CELL_OK;
 }
 
-error_code cellImeJpDeleteWord(CellImeJpHandle hImeJpHandle)
+static error_code cellImeJpDeleteWord(CellImeJpHandle hImeJpHandle)
 {
 	cellImeJp.todo("cellImeJpDeleteWord(hImeJpHandle=*0x%x)", hImeJpHandle);
 
@@ -533,7 +533,7 @@ error_code cellImeJpDeleteWord(CellImeJpHandle hImeJpHandle)
 	return CELL_OK;
 }
 
-error_code cellImeJpAllDeleteConvertString(CellImeJpHandle hImeJpHandle)
+static error_code cellImeJpAllDeleteConvertString(CellImeJpHandle hImeJpHandle)
 {
 	cellImeJp.todo("cellImeJpAllDeleteConvertString(hImeJpHandle=*0x%x)", hImeJpHandle);
 
@@ -559,7 +559,7 @@ error_code cellImeJpAllDeleteConvertString(CellImeJpHandle hImeJpHandle)
 	return CELL_OK;
 }
 
-error_code cellImeJpConvertForward(CellImeJpHandle hImeJpHandle)
+static error_code cellImeJpConvertForward(CellImeJpHandle hImeJpHandle)
 {
 	cellImeJp.todo("cellImeJpConvertForward(hImeJpHandle=*0x%x)", hImeJpHandle);
 
@@ -581,7 +581,7 @@ error_code cellImeJpConvertForward(CellImeJpHandle hImeJpHandle)
 	return CELL_OK;
 }
 
-error_code cellImeJpConvertBackward(CellImeJpHandle hImeJpHandle)
+static error_code cellImeJpConvertBackward(CellImeJpHandle hImeJpHandle)
 {
 	cellImeJp.todo("cellImeJpConvertBackward(hImeJpHandle=*0x%x)", hImeJpHandle);
 
@@ -603,7 +603,7 @@ error_code cellImeJpConvertBackward(CellImeJpHandle hImeJpHandle)
 	return CELL_OK;
 }
 
-error_code cellImeJpCurrentPartConfirm(CellImeJpHandle hImeJpHandle, s16 listItem)
+static error_code cellImeJpCurrentPartConfirm(CellImeJpHandle hImeJpHandle, s16 listItem)
 {
 	cellImeJp.todo("cellImeJpCurrentPartConfirm(hImeJpHandle=*0x%x, listItem=%d)", hImeJpHandle, listItem);
 
@@ -623,7 +623,7 @@ error_code cellImeJpCurrentPartConfirm(CellImeJpHandle hImeJpHandle, s16 listIte
 	return CELL_OK;
 }
 
-error_code cellImeJpAllConfirm(CellImeJpHandle hImeJpHandle)
+static error_code cellImeJpAllConfirm(CellImeJpHandle hImeJpHandle)
 {
 	cellImeJp.todo("cellImeJpAllConfirm(hImeJpHandle=*0x%x)", hImeJpHandle);
 
@@ -651,7 +651,7 @@ error_code cellImeJpAllConfirm(CellImeJpHandle hImeJpHandle)
 	return CELL_OK;
 }
 
-error_code cellImeJpAllConvertCancel(CellImeJpHandle hImeJpHandle)
+static error_code cellImeJpAllConvertCancel(CellImeJpHandle hImeJpHandle)
 {
 	cellImeJp.todo("cellImeJpAllConvertCancel(hImeJpHandle=*0x%x)", hImeJpHandle);
 
@@ -674,7 +674,7 @@ error_code cellImeJpAllConvertCancel(CellImeJpHandle hImeJpHandle)
 	return CELL_OK;
 }
 
-error_code cellImeJpConvertCancel(CellImeJpHandle hImeJpHandle)
+static error_code cellImeJpConvertCancel(CellImeJpHandle hImeJpHandle)
 {
 	cellImeJp.todo("cellImeJpConvertCancel(hImeJpHandle=*0x%x)", hImeJpHandle);
 
@@ -695,7 +695,7 @@ error_code cellImeJpConvertCancel(CellImeJpHandle hImeJpHandle)
 	return cellImeJpAllConvertCancel(hImeJpHandle);
 }
 
-error_code cellImeJpExtendConvertArea(CellImeJpHandle hImeJpHandle)
+static error_code cellImeJpExtendConvertArea(CellImeJpHandle hImeJpHandle)
 {
 	cellImeJp.todo("cellImeJpExtendConvertArea(hImeJpHandle=*0x%x)", hImeJpHandle);
 
@@ -717,7 +717,7 @@ error_code cellImeJpExtendConvertArea(CellImeJpHandle hImeJpHandle)
 	return CELL_OK;
 }
 
-error_code cellImeJpShortenConvertArea(CellImeJpHandle hImeJpHandle)
+static error_code cellImeJpShortenConvertArea(CellImeJpHandle hImeJpHandle)
 {
 	cellImeJp.todo("cellImeJpShortenConvertArea(hImeJpHandle=*0x%x)", hImeJpHandle);
 
@@ -739,7 +739,7 @@ error_code cellImeJpShortenConvertArea(CellImeJpHandle hImeJpHandle)
 	return CELL_OK;
 }
 
-error_code cellImeJpTemporalConfirm(CellImeJpHandle hImeJpHandle, s16 selectIndex)
+static error_code cellImeJpTemporalConfirm(CellImeJpHandle hImeJpHandle, s16 selectIndex)
 {
 	cellImeJp.todo("cellImeJpTemporalConfirm(hImeJpHandle=*0x%x, selectIndex=%d)", hImeJpHandle, selectIndex);
 
@@ -759,7 +759,7 @@ error_code cellImeJpTemporalConfirm(CellImeJpHandle hImeJpHandle, s16 selectInde
 	return CELL_OK;
 }
 
-error_code cellImeJpPostConvert(CellImeJpHandle hImeJpHandle, s16 postType)
+static error_code cellImeJpPostConvert(CellImeJpHandle hImeJpHandle, s16 postType)
 {
 	cellImeJp.todo("cellImeJpPostConvert(hImeJpHandle=*0x%x, postType=%d)", hImeJpHandle, postType);
 
@@ -779,7 +779,7 @@ error_code cellImeJpPostConvert(CellImeJpHandle hImeJpHandle, s16 postType)
 	return CELL_OK;
 }
 
-error_code cellImeJpMoveFocusClause(CellImeJpHandle hImeJpHandle, s16 moveType)
+static error_code cellImeJpMoveFocusClause(CellImeJpHandle hImeJpHandle, s16 moveType)
 {
 	cellImeJp.todo("cellImeJpMoveFocusClause(hImeJpHandle=*0x%x, moveType=%d)", hImeJpHandle, moveType);
 
@@ -820,7 +820,7 @@ error_code cellImeJpMoveFocusClause(CellImeJpHandle hImeJpHandle, s16 moveType)
 	return CELL_OK;
 }
 
-error_code cellImeJpGetFocusTop(CellImeJpHandle hImeJpHandle, vm::ptr<s16> pFocusTop)
+static error_code cellImeJpGetFocusTop(CellImeJpHandle hImeJpHandle, vm::ptr<s16> pFocusTop)
 {
 	cellImeJp.todo("cellImeJpGetFocusTop(hImeJpHandle=*0x%x, pFocusTop=*0x%x)", hImeJpHandle, pFocusTop);
 
@@ -842,7 +842,7 @@ error_code cellImeJpGetFocusTop(CellImeJpHandle hImeJpHandle, vm::ptr<s16> pFocu
 	return CELL_OK;
 }
 
-error_code cellImeJpGetFocusLength(CellImeJpHandle hImeJpHandle, vm::ptr<s16> pFocusLength)
+static error_code cellImeJpGetFocusLength(CellImeJpHandle hImeJpHandle, vm::ptr<s16> pFocusLength)
 {
 	cellImeJp.todo("cellImeJpGetFocusLength(hImeJpHandle=*0x%x, pFocusLength=*0x%x)", hImeJpHandle, pFocusLength);
 
@@ -871,7 +871,7 @@ error_code cellImeJpGetFocusLength(CellImeJpHandle hImeJpHandle, vm::ptr<s16> pF
 	return CELL_OK;
 }
 
-error_code cellImeJpGetConfirmYomiString(CellImeJpHandle hImeJpHandle, vm::ptr<u16> pYomiString)
+static error_code cellImeJpGetConfirmYomiString(CellImeJpHandle hImeJpHandle, vm::ptr<u16> pYomiString)
 {
 	cellImeJp.todo("cellImeJpGetConfirmYomiString(hImeJpHandle=*0x%x, pYomiString=*0x%x)", hImeJpHandle, pYomiString);
 
@@ -903,7 +903,7 @@ error_code cellImeJpGetConfirmYomiString(CellImeJpHandle hImeJpHandle, vm::ptr<u
 	return CELL_OK;
 }
 
-error_code cellImeJpGetConfirmString(CellImeJpHandle hImeJpHandle, vm::ptr<u16> pConfirmString)
+static error_code cellImeJpGetConfirmString(CellImeJpHandle hImeJpHandle, vm::ptr<u16> pConfirmString)
 {
 	cellImeJp.todo("cellImeJpGetConfirmString(hImeJpHandle=*0x%x, pConfirmString=*0x%x)", hImeJpHandle, pConfirmString);
 
@@ -935,7 +935,7 @@ error_code cellImeJpGetConfirmString(CellImeJpHandle hImeJpHandle, vm::ptr<u16> 
 	return CELL_OK;
 }
 
-error_code cellImeJpGetConvertYomiString(CellImeJpHandle hImeJpHandle, vm::ptr<u16> pYomiString)
+static error_code cellImeJpGetConvertYomiString(CellImeJpHandle hImeJpHandle, vm::ptr<u16> pYomiString)
 {
 	cellImeJp.todo("cellImeJpGetConvertYomiString(hImeJpHandle=*0x%x, pYomiString=*0x%x)", hImeJpHandle, pYomiString);
 
@@ -967,7 +967,7 @@ error_code cellImeJpGetConvertYomiString(CellImeJpHandle hImeJpHandle, vm::ptr<u
 	return CELL_OK;
 }
 
-error_code cellImeJpGetConvertString(CellImeJpHandle hImeJpHandle, vm::ptr<u16> pConvertString)
+static error_code cellImeJpGetConvertString(CellImeJpHandle hImeJpHandle, vm::ptr<u16> pConvertString)
 {
 	cellImeJp.warning("cellImeJpGetConvertString(hImeJpHandle=*0x%x, pConvertString=*0x%x)", hImeJpHandle, pConvertString);
 
@@ -999,7 +999,7 @@ error_code cellImeJpGetConvertString(CellImeJpHandle hImeJpHandle, vm::ptr<u16> 
 	return CELL_OK;
 }
 
-error_code cellImeJpGetCandidateListSize(CellImeJpHandle hImeJpHandle, vm::ptr<s16> pListSize)
+static error_code cellImeJpGetCandidateListSize(CellImeJpHandle hImeJpHandle, vm::ptr<s16> pListSize)
 {
 	cellImeJp.todo("cellImeJpGetCandidateListSize(hImeJpHandle=*0x%x, pListSize=*0x%x)", hImeJpHandle, pListSize);
 
@@ -1026,7 +1026,7 @@ error_code cellImeJpGetCandidateListSize(CellImeJpHandle hImeJpHandle, vm::ptr<s
 	return CELL_OK;
 }
 
-error_code cellImeJpGetCandidateList(CellImeJpHandle hImeJpHandle, vm::ptr<s16> plistNum, vm::ptr<u16> pCandidateString)
+static error_code cellImeJpGetCandidateList(CellImeJpHandle hImeJpHandle, vm::ptr<s16> plistNum, vm::ptr<u16> pCandidateString)
 {
 	cellImeJp.todo("cellImeJpGetCandidateList(hImeJpHandle=*0x%x, plistNum=*0x%x, pCandidateString=*0x%x)", hImeJpHandle, plistNum, pCandidateString);
 
@@ -1053,7 +1053,7 @@ error_code cellImeJpGetCandidateList(CellImeJpHandle hImeJpHandle, vm::ptr<s16> 
 	return CELL_OK;
 }
 
-error_code cellImeJpGetCandidateSelect(CellImeJpHandle hImeJpHandle, vm::ptr<s16> pIndex)
+static error_code cellImeJpGetCandidateSelect(CellImeJpHandle hImeJpHandle, vm::ptr<s16> pIndex)
 {
 	cellImeJp.todo("cellImeJpGetCandidateSelect(hImeJpHandle=*0x%x, pIndex=*0x%x)", hImeJpHandle, pIndex);
 
@@ -1080,7 +1080,7 @@ error_code cellImeJpGetCandidateSelect(CellImeJpHandle hImeJpHandle, vm::ptr<s16
 	return CELL_OK;
 }
 
-error_code cellImeJpGetPredictList(CellImeJpHandle hImeJpHandle, vm::ptr<s16> pYomiString, s32 itemNum, vm::ptr<s32> plistCount, vm::ptr<CellImeJpPredictItem> pPredictItem)
+static error_code cellImeJpGetPredictList(CellImeJpHandle hImeJpHandle, vm::ptr<s16> pYomiString, s32 itemNum, vm::ptr<s32> plistCount, vm::ptr<CellImeJpPredictItem> pPredictItem)
 {
 	cellImeJp.todo("cellImeJpGetPredictList(hImeJpHandle=*0x%x, pYomiString=*0x%x, itemNum=%d, plistCount=*0x%x, pPredictItem=*0x%x)", hImeJpHandle, pYomiString, itemNum, plistCount, pPredictItem);
 
@@ -1102,7 +1102,7 @@ error_code cellImeJpGetPredictList(CellImeJpHandle hImeJpHandle, vm::ptr<s16> pY
 	return CELL_OK;
 }
 
-error_code cellImeJpConfirmPrediction(CellImeJpHandle hImeJpHandle, vm::ptr<CellImeJpPredictItem> pPredictItem)
+static error_code cellImeJpConfirmPrediction(CellImeJpHandle hImeJpHandle, vm::ptr<CellImeJpPredictItem> pPredictItem)
 {
 	cellImeJp.todo("cellImeJpConfirmPrediction(hImeJpHandle=*0x%x, pPredictItem=*0x%x)", hImeJpHandle, pPredictItem);
 
