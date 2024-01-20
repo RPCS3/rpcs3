@@ -132,6 +132,7 @@ struct ime_jp_manager
 	bool addString(vm::cptr<u16> str);
 	bool backspaceWord();
 	bool deleteWord();
+	bool remove_character(bool forward);
 	void clear_input();
 	void move_cursor(s8 amount);                      // s8 because CELL_IMEJP_STRING_MAXLENGTH is 128
 	void move_focus(s8 amount);                       // s8 because CELL_IMEJP_STRING_MAXLENGTH is 128
