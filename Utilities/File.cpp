@@ -1960,7 +1960,7 @@ std::string fs::get_executable_dir()
 			return exe_path;
 		}
 
-		return get_parent_dir(exe_path);
+		return get_parent_dir(exe_path) + "/";
 	}();
 
 	return s_exe_dir;
