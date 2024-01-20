@@ -758,8 +758,10 @@ static error_code cellImeJpConvertCancel(CellImeJpHandle hImeJpHandle)
 		return CELL_IMEJP_ERROR_ERR;
 	}
 
-	// TODO: only cancel all if cursor is at 0
-	return cellImeJpAllConvertCancel(hImeJpHandle);
+	manager.converted_string.clear();
+	manager.input_state = CELL_IMEJP_BEFORE_CONVERT;
+
+	return CELL_OK;
 }
 
 static error_code cellImeJpExtendConvertArea(CellImeJpHandle hImeJpHandle)
