@@ -118,6 +118,7 @@ struct ime_jp_manager
 	std::u16string confirmed_string; // Confirmed part of the string (first part of the entire string)
 	std::u16string converted_string; // Converted part of the unconfirmed input string
 	std::u16string input_string;     // Unconfirmed part of the string (second part of the entire string)
+	usz cursor = 0;       // The cursor. Can move across the entire input string.
 	usz focus_begin = 0;  // Begin of the focus string
 	usz focus_length = 0; // Length of the focus string
 	s16 fix_input_mode = CELL_IMEJP_FIXINMODE_OFF;
@@ -131,6 +132,8 @@ struct ime_jp_manager
 	bool addString(vm::cptr<u16> str);
 	bool backspaceWord();
 	bool deleteWord();
+	void clear_input();
+	void move_cursor(s8 amount);                      // s8 because CELL_IMEJP_STRING_MAXLENGTH is 128
 	void move_focus(s8 amount);                       // s8 because CELL_IMEJP_STRING_MAXLENGTH is 128
 	void move_focus_end(s8 amount, bool wrap_around); // s8 because CELL_IMEJP_STRING_MAXLENGTH is 128
 };
