@@ -187,10 +187,11 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 		}
 
 #ifdef _WIN32
-		wchar_t buffer[32767];
-		GetModuleFileNameW(nullptr, buffer, sizeof(buffer) / 2);
+		constexpr DWORD size = 32767;
+		std::vector<wchar_t> buffer(size);
+		GetModuleFileNameW(nullptr, buffer.data(), size);
 		const std::wstring arg(text.cbegin(), text.cend()); // ignore unicode for now
-		_wspawnl(_P_WAIT, buffer, buffer, L"--error", arg.c_str(), nullptr);
+		_wspawnl(_P_WAIT, buffer.data(), buffer.data(), L"--error", arg.c_str(), nullptr);
 #else
 		pid_t pid;
 		std::vector<char> data(text.data(), text.data() + text.size() + 1);
