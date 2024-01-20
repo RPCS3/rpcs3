@@ -92,34 +92,52 @@ bool ime_jp_manager::addString(vm::cptr<u16> str)
 
 bool ime_jp_manager::backspaceWord()
 {
-	if (!focus_begin || focus_begin > CELL_IMEJP_STRING_MAXLENGTH || focus_begin > input_string.length())
-		return false;
-
-	// Delete the character in front of the cursor
-	input_string.erase(focus_begin, 1);
-
-	// Move cursors
-	move_focus(-1);
-
-	if (input_string.empty())
-		input_state = CELL_IMEJP_BEFORE_INPUT;
-
-	return true;
+	return remove_character(false);
 }
 
 bool ime_jp_manager::deleteWord()
 {
-	if (focus_begin >= (CELL_IMEJP_STRING_MAXLENGTH - 1ULL) || focus_begin > (input_string.length() - 1))
+	return remove_character(true);
+}
+
+bool ime_jp_manager::remove_character(bool forward)
+{
+	if (!forward && !cursor)
+	{
 		return false;
+	}
 
-	// Delete the character at the cursor
-	input_string.erase(focus_begin, 1);
+	const usz pos = forward ? cursor : (cursor - 1);
 
-	// Sanitize cursors
-	move_focus(0);
+	if (pos >= (CELL_IMEJP_STRING_MAXLENGTH - 1ULL) || pos >= input_string.length())
+	{
+		return false;
+	}
+
+	// Delete the character at the position
+	input_string.erase(pos, 1);
+
+	// Move cursor and focus
+	const bool deleted_part_of_focus = pos > focus_begin && pos <= (focus_begin + focus_length);
+
+	if (!forward)
+	{
+		move_cursor(-1);
+	}
+
+	if (deleted_part_of_focus)
+	{
+		move_focus_end(-1, false);
+	}
+	else if (focus_begin > pos)
+	{
+		move_focus(-1);
+	}
 
 	if (input_string.empty())
+	{
 		input_state = CELL_IMEJP_BEFORE_INPUT;
+	}
 
 	return true;
 }
@@ -781,7 +799,7 @@ static error_code cellImeJpExtendConvertArea(CellImeJpHandle hImeJpHandle)
 		return CELL_IMEJP_ERROR_ERR;
 	}
 
-	// Move end of cursor by one. Wrap around if the cursor end is already at the end of the input string.
+	// Move end of the focus by one. Wrap around if the focus end is already at the end of the input string.
 	manager.move_focus_end(1, true);
 
 	return CELL_OK;
@@ -804,7 +822,7 @@ static error_code cellImeJpShortenConvertArea(CellImeJpHandle hImeJpHandle)
 		return CELL_IMEJP_ERROR_ERR;
 	}
 
-	// Move end of cursor by one. Wrap around if the cursor end is already at the beginning of the input string.
+	// Move end of focus by one. Wrap around if the focus end is already at the beginning of the input string.
 	manager.move_focus_end(-1, true);
 
 	return CELL_OK;
