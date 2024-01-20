@@ -10,13 +10,13 @@ lv2_socket_raw::lv2_socket_raw(lv2_socket_family family, lv2_socket_type type, l
 }
 
 lv2_socket_raw::lv2_socket_raw(utils::serial& ar, lv2_socket_type type)
-	: lv2_socket(ar, type)
+	: lv2_socket(stx::make_exact(ar), type)
 {
 }
 
 void lv2_socket_raw::save(utils::serial& ar)
 {
-	static_cast<lv2_socket*>(this)->save(ar, true);
+	lv2_socket::save(ar, true);
 }
 
 std::tuple<bool, s32, std::shared_ptr<lv2_socket>, sys_net_sockaddr> lv2_socket_raw::accept([[maybe_unused]] bool is_lock)
