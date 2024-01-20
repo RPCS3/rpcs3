@@ -393,7 +393,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 #ifdef _WIN32
 
 	// Get executable path
-	const std::string exe_dir = rpcs3::utils::get_exe_dir();
+	const std::string exe_dir = fs::get_executable_dir();
 	const std::string orig_path = exe_dir + "rpcs3.exe";
 	const std::wstring wchar_orig_path = utf8_to_wchar(orig_path);
 	const std::string tmpfile_path = fs::get_temp_dir() + "\\rpcs3_update.7z";
@@ -583,7 +583,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 
 #else
 
-	std::string replace_path = rpcs3::utils::get_executable_path();
+	std::string replace_path = fs::get_executable_path();
 	if (replace_path.empty())
 	{
 		return false;
