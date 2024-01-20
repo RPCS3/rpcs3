@@ -40,7 +40,7 @@ ime_jp_manager::ime_jp_manager()
 
 bool ime_jp_manager::addChar(u16 c)
 {
-	if (!c || cursor >= (CELL_IMEJP_STRING_MAXLENGTH - 1) || cursor > input_string.length())
+	if (!c || focus_begin >= (CELL_IMEJP_STRING_MAXLENGTH - 1ULL) || focus_begin > input_string.length())
 		return false;
 
 	std::u16string tmp;
@@ -49,11 +49,13 @@ bool ime_jp_manager::addChar(u16 c)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wrestrict"
 #endif
-	input_string.insert(cursor++, tmp);
+	input_string.insert(focus_begin, tmp);
 #if defined(__GNUG__) && !defined(__clang__)
 #pragma GCC diagnostic pop
 #endif
-	cursor_end = cursor;
+
+	move_focus(1); // TODO: The split into normal cursor and focus cursor
+
 	input_state = CELL_IMEJP_BEFORE_CONVERT;
 	return true;
 }
@@ -74,11 +76,14 @@ bool ime_jp_manager::addString(vm::cptr<u16> str)
 
 bool ime_jp_manager::backspaceWord()
 {
-	if (!cursor || cursor > CELL_IMEJP_STRING_MAXLENGTH || cursor > input_string.length())
+	if (!focus_begin || focus_begin > CELL_IMEJP_STRING_MAXLENGTH || focus_begin > input_string.length())
 		return false;
 
-	input_string.erase(--cursor);
-	cursor_end = cursor;
+	// Delete the character in front of the cursor
+	input_string.erase(focus_begin, 1);
+
+	// Move cursors
+	move_focus(-1);
 
 	if (input_string.empty())
 		input_state = CELL_IMEJP_BEFORE_INPUT;
@@ -88,11 +93,14 @@ bool ime_jp_manager::backspaceWord()
 
 bool ime_jp_manager::deleteWord()
 {
-	if (cursor >= (CELL_IMEJP_STRING_MAXLENGTH - 1) || cursor > (input_string.length() - 1))
+	if (focus_begin >= (CELL_IMEJP_STRING_MAXLENGTH - 1ULL) || focus_begin > (input_string.length() - 1))
 		return false;
 
-	input_string.erase(cursor);
-	cursor_end = cursor;
+	// Delete the character at the cursor
+	input_string.erase(focus_begin, 1);
+
+	// Sanitize cursors
+	move_focus(0);
 
 	if (input_string.empty())
 		input_state = CELL_IMEJP_BEFORE_INPUT;
@@ -100,30 +108,47 @@ bool ime_jp_manager::deleteWord()
 	return true;
 }
 
-void ime_jp_manager::moveCursor(s8 amount)
+void ime_jp_manager::move_focus(s8 amount)
 {
-	if (amount > 0)
-	{
-		cursor = std::min(cursor + amount, input_string.length() - 1);
-		cursor_end = std::min(cursor_end + amount, input_string.length() - 1);
-	}
-	else if (amount < 0)
-	{
-		cursor = std::max(0, static_cast<s32>(cursor) + amount);
-		cursor_end = std::max(static_cast<s32>(cursor), static_cast<s32>(cursor_end) + amount);
-	}
+	focus_begin = std::max(0, std::min(static_cast<s32>(focus_begin) + amount, ::narrow<s32>(input_string.length())));
+	move_focus_end(amount, false);
 }
 
-void ime_jp_manager::moveCursorEnd(s8 amount)
+void ime_jp_manager::move_focus_end(s8 amount, bool wrap_around)
 {
+	if (focus_begin >= input_string.length())
+	{
+		focus_length = 0;
+		return;
+	}
+
+	constexpr usz min_length = 1;
+	const usz max_length = input_string.length() - focus_begin;
+
 	if (amount > 0)
 	{
-		cursor_end = std::max(static_cast<s32>(cursor), std::min<s32>(static_cast<s32>(cursor_end) + amount, ::narrow<s32>(input_string.length()) - 1));
+		if (wrap_around && focus_length >= max_length)
+		{
+			focus_length = min_length;
+		}
+		else
+		{
+			focus_length += static_cast<usz>(amount);
+		}
 	}
 	else if (amount < 0)
 	{
-		cursor_end = std::max(static_cast<s32>(cursor), static_cast<s32>(cursor_end) + amount);
+		if (wrap_around && focus_length <= min_length)
+		{
+			focus_length = max_length;
+		}
+		else
+		{
+			focus_length = std::max(0, static_cast<s32>(focus_length) + amount);
+		}
 	}
+
+	focus_length = std::max(min_length, std::min(max_length, focus_length));
 }
 
 static error_code cellImeJpOpen(sys_memory_container_t container_id, vm::ptr<CellImeJpHandle> hImeJpHandle, vm::cptr<CellImeJpAddDic> addDicPath)
@@ -246,8 +271,8 @@ static error_code cellImeJpClose(CellImeJpHandle hImeJpHandle)
 	manager.input_string.clear();
 	manager.converted_string.clear();
 	manager.confirmed_string.clear();
-	manager.cursor = 0;
-	manager.cursor_end = 0;
+	manager.focus_begin = 0;
+	manager.focus_length = 0;
 	manager.is_initialized = false;
 
 	return CELL_OK;
@@ -347,8 +372,8 @@ static error_code cellImeJpReset(CellImeJpHandle hImeJpHandle)
 	manager.input_string.clear();
 	manager.converted_string.clear();
 	manager.confirmed_string.clear();
-	manager.cursor = 0;
-	manager.cursor_end = 0;
+	manager.focus_begin = 0;
+	manager.focus_length = 0;
 
 	return CELL_OK;
 }
@@ -462,7 +487,7 @@ static error_code cellImeJpModeCaretRight(CellImeJpHandle hImeJpHandle)
 		return CELL_IMEJP_ERROR_ERR;
 	}
 
-	manager.moveCursor(1);
+	manager.move_focus(1);
 
 	return CELL_OK;
 }
@@ -484,7 +509,7 @@ static error_code cellImeJpModeCaretLeft(CellImeJpHandle hImeJpHandle)
 		return CELL_IMEJP_ERROR_ERR;
 	}
 
-	manager.moveCursor(-1);
+	manager.move_focus(-1);
 
 	return CELL_OK;
 }
@@ -550,8 +575,8 @@ static error_code cellImeJpAllDeleteConvertString(CellImeJpHandle hImeJpHandle)
 		return CELL_IMEJP_ERROR_ERR;
 	}
 
-	manager.cursor = 0;
-	manager.cursor_end = 0;
+	manager.focus_begin = 0;
+	manager.focus_length = 0;
 	manager.input_string.clear();
 	manager.converted_string.clear();
 	manager.input_state = CELL_IMEJP_BEFORE_INPUT;
@@ -642,8 +667,8 @@ static error_code cellImeJpAllConfirm(CellImeJpHandle hImeJpHandle)
 
 	// Use input_string for now
 	manager.confirmed_string = manager.input_string;
-	manager.cursor = 0;
-	manager.cursor_end = 0;
+	manager.focus_begin = 0;
+	manager.focus_length = 0;
 	manager.input_string.clear();
 	manager.converted_string.clear();
 	manager.input_state = CELL_IMEJP_BEFORE_INPUT;
@@ -712,7 +737,8 @@ static error_code cellImeJpExtendConvertArea(CellImeJpHandle hImeJpHandle)
 		return CELL_IMEJP_ERROR_ERR;
 	}
 
-	manager.moveCursorEnd(1);
+	// Move end of cursor by one. Wrap around if the cursor end is already at the end of the input string.
+	manager.move_focus_end(1, true);
 
 	return CELL_OK;
 }
@@ -734,7 +760,8 @@ static error_code cellImeJpShortenConvertArea(CellImeJpHandle hImeJpHandle)
 		return CELL_IMEJP_ERROR_ERR;
 	}
 
-	manager.moveCursorEnd(-1);
+	// Move end of cursor by one. Wrap around if the cursor end is already at the beginning of the input string.
+	manager.move_focus_end(-1, true);
 
 	return CELL_OK;
 }
@@ -799,17 +826,17 @@ static error_code cellImeJpMoveFocusClause(CellImeJpHandle hImeJpHandle, s16 mov
 	switch (moveType)
 	{
 	case CELL_IMEJP_FOCUS_NEXT:
-		manager.moveCursor(1);
+		manager.move_focus(1);
 		break;
 	case CELL_IMEJP_FOCUS_BEFORE:
-		manager.moveCursor(-1);
+		manager.move_focus(-1);
 		break;
 	case CELL_IMEJP_FOCUS_TOP:
-		manager.moveCursor(-1 * ::narrow<s8>(manager.input_string.length()));
+		manager.move_focus(-1 * ::narrow<s8>(manager.input_string.length()));
 		break;
 	case CELL_IMEJP_FOCUS_END:
-		manager.moveCursor(::narrow<s8>(manager.input_string.length()));
-		manager.moveCursor(-1);
+		manager.move_focus(::narrow<s8>(manager.input_string.length()));
+		manager.move_focus(-1);
 		break;
 	default:
 		break;
@@ -837,7 +864,7 @@ static error_code cellImeJpGetFocusTop(CellImeJpHandle hImeJpHandle, vm::ptr<s16
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	*pFocusTop = static_cast<u16>(manager.cursor * 2); // offset in bytes
+	*pFocusTop = static_cast<u16>(manager.focus_begin * 2); // offset in bytes
 
 	return CELL_OK;
 }
@@ -859,14 +886,7 @@ static error_code cellImeJpGetFocusLength(CellImeJpHandle hImeJpHandle, vm::ptr<
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager.cursor >= (CELL_IMEJP_STRING_MAXLENGTH - 1))
-	{
-		*pFocusLength = 0;
-	}
-	else
-	{
-		*pFocusLength = static_cast<u16>((manager.cursor_end - manager.cursor + 1) * 2); // offset in bytes
-	}
+	*pFocusLength = ::narrow<s16>(manager.focus_length) * 2; // offset in bytes
 
 	return CELL_OK;
 }
@@ -888,16 +908,16 @@ static error_code cellImeJpGetConfirmYomiString(CellImeJpHandle hImeJpHandle, vm
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	for (u32 i = 0; i < CELL_IMEJP_STRING_MAXLENGTH; i++)
-	{
-		pYomiString[i] = 0;
-	}
-
-	const usz max_len = std::min<usz>(CELL_IMEJP_STRING_MAXLENGTH - 1, manager.confirmed_string.length());
+	const usz max_len = std::min<usz>(CELL_IMEJP_STRING_MAXLENGTH - 1ULL, manager.confirmed_string.length());
 
 	for (u32 i = 0; i < max_len; i++)
 	{
 		pYomiString[i] = manager.confirmed_string[i];
+	}
+
+	for (u32 i = static_cast<u32>(max_len); i < CELL_IMEJP_STRING_MAXLENGTH; i++)
+	{
+		pYomiString[i] = 0;
 	}
 
 	return CELL_OK;
@@ -920,16 +940,16 @@ static error_code cellImeJpGetConfirmString(CellImeJpHandle hImeJpHandle, vm::pt
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	for (u32 i = 0; i < CELL_IMEJP_STRING_MAXLENGTH; i++)
-	{
-		pConfirmString[i] = 0;
-	}
-
-	const usz max_len = std::min<usz>(CELL_IMEJP_STRING_MAXLENGTH - 1, manager.confirmed_string.length());
+	const usz max_len = std::min<usz>(CELL_IMEJP_STRING_MAXLENGTH - 1ULL, manager.confirmed_string.length());
 
 	for (u32 i = 0; i < max_len; i++)
 	{
 		pConfirmString[i] = manager.confirmed_string[i];
+	}
+
+	for (u32 i = static_cast<u32>(max_len); i < CELL_IMEJP_STRING_MAXLENGTH; i++)
+	{
+		pConfirmString[i] = 0;
 	}
 
 	return CELL_OK;
@@ -952,16 +972,16 @@ static error_code cellImeJpGetConvertYomiString(CellImeJpHandle hImeJpHandle, vm
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	for (u32 i = 0; i < CELL_IMEJP_STRING_MAXLENGTH; i++)
-	{
-		pYomiString[i] = 0;
-	}
-
-	const usz max_len = std::min<usz>(CELL_IMEJP_STRING_MAXLENGTH - 1, manager.input_string.length());
+	const usz max_len = std::min<usz>(CELL_IMEJP_STRING_MAXLENGTH - 1ULL, manager.input_string.length());
 
 	for (u32 i = 0; i < max_len; i++)
 	{
 		pYomiString[i] = manager.input_string[i];
+	}
+
+	for (u32 i = static_cast<u32>(max_len); i < CELL_IMEJP_STRING_MAXLENGTH; i++)
+	{
+		pYomiString[i] = 0;
 	}
 
 	return CELL_OK;
@@ -984,16 +1004,16 @@ static error_code cellImeJpGetConvertString(CellImeJpHandle hImeJpHandle, vm::pt
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	for (u32 i = 0; i < CELL_IMEJP_STRING_MAXLENGTH; i++)
-	{
-		pConvertString[i] = 0;
-	}
-
-	const usz max_len = std::min<usz>(CELL_IMEJP_STRING_MAXLENGTH - 1, manager.input_string.length());
+	const usz max_len = std::min<usz>(CELL_IMEJP_STRING_MAXLENGTH - 1ULL, manager.input_string.length());
 
 	for (u32 i = 0; i < max_len; i++)
 	{
 		pConvertString[i] = manager.input_string[i];
+	}
+
+	for (u32 i = static_cast<u32>(max_len); i < CELL_IMEJP_STRING_MAXLENGTH; i++)
+	{
+		pConvertString[i] = 0;
 	}
 
 	return CELL_OK;
