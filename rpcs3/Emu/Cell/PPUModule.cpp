@@ -1339,6 +1339,11 @@ static void ppu_check_patch_spu_images(const ppu_module& mod, const ppu_segment&
 		// Try to patch each segment, will only succeed if the address exists in SPU local storage
 		for (const auto& prog : obj.progs)
 		{
+			if (Emu.DeserialManager())
+			{
+				break;
+			}
+
 			// Apply the patch
 			applied += g_fxo->get<patch_engine>().apply(hash, [&](u32 addr, u32 /*size*/) { return addr + elf_header + prog.p_offset; }, prog.p_filesz, prog.p_vaddr);
 
@@ -1807,7 +1812,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, bool virtual_lo
 
 	std::basic_string<u32> applied;
 
-	for (usz i = 0; i < prx->segs.size(); i++)
+	for (usz i = Emu.DeserialManager() ? prx->segs.size() : 0; i < prx->segs.size(); i++)
 	{
 		const auto& seg = prx->segs[i];
 
@@ -2856,9 +2861,9 @@ std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_ex
 	}
 
 	// Apply the patch
-	auto applied = g_fxo->get<patch_engine>().apply(hash, [ovlm](u32 addr, u32 size) { return ovlm->get_ptr<u8>(addr, size); });
+	auto applied = g_fxo->get<patch_engine>().apply(!Emu.DeserialManager() ? std::string{} : hash, [ovlm](u32 addr, u32 size) { return ovlm->get_ptr<u8>(addr, size); });
 
-	if (!Emu.GetTitleID().empty())
+	if (!Emu.DeserialManager() && !Emu.GetTitleID().empty())
 	{
 		// Alternative patch
 		applied += g_fxo->get<patch_engine>().apply(Emu.GetTitleID() + '-' + hash, [ovlm](u32 addr, u32 size) { return ovlm->get_ptr<u8>(addr, size); });
