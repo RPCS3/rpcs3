@@ -962,7 +962,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		const std::string selected_device = m_emu_settings->GetSetting(emu_settings_type::AudioDevice);
 		int device_index = 0;
 
-		for (auto& dev : dev_array)
+		for (const audio_device_enumerator::audio_device& dev : dev_array)
 		{
 			const QString cur_item = qstr(dev.id);
 			ui->audioDeviceBox->addItem(qstr(dev.name), cur_item);
@@ -2307,6 +2307,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceCheckBox(ui->disableVertexCache, emu_settings_type::DisableVertexCache);
 	SubscribeTooltip(ui->disableVertexCache, tooltips.settings.disable_vertex_cache);
+
+	m_emu_settings->EnhanceCheckBox(ui->forceHwMSAAResolve, emu_settings_type::ForceHwMSAAResolve);
+	SubscribeTooltip(ui->forceHwMSAAResolve, tooltips.settings.force_hw_MSAA);
 
 	// Checkboxes: core debug options
 	m_emu_settings->EnhanceCheckBox(ui->alwaysStart, emu_settings_type::StartOnBoot);
