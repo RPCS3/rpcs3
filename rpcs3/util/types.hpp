@@ -1203,6 +1203,12 @@ namespace stx
 		template <typename U> requires (std::is_same_v<U, T> && std::is_copy_constructible_v<T>)
 		operator U() const noexcept { return obj; };
 	};
+
+	template <typename T>
+	stx::exact_t<T&> make_exact(T&& obj) noexcept
+	{
+		return stx::exact_t<T&>(static_cast<T&>(obj));
+	}
 }
 
 // Read object of type T from raw pointer, array, string, vector, or any contiguous container

@@ -20,7 +20,7 @@ lv2_socket_native::lv2_socket_native(lv2_socket_family family, lv2_socket_type t
 }
 
 lv2_socket_native::lv2_socket_native(utils::serial& ar, lv2_socket_type type)
-	: lv2_socket(ar, type)
+	: lv2_socket(stx::make_exact(ar), type)
 {
 #ifdef _WIN32
 	ar(so_reuseaddr, so_reuseport);
@@ -37,7 +37,7 @@ lv2_socket_native::lv2_socket_native(utils::serial& ar, lv2_socket_type type)
 
 void lv2_socket_native::save(utils::serial& ar)
 {
-	static_cast<lv2_socket*>(this)->save(ar, true);
+	lv2_socket::save(ar, true);
 #ifdef _WIN32
 	ar(so_reuseaddr, so_reuseport);
 #else

@@ -12,30 +12,28 @@ lv2_socket_p2p::lv2_socket_p2p(lv2_socket_family family, lv2_socket_type type, l
 }
 
 lv2_socket_p2p::lv2_socket_p2p(utils::serial& ar, lv2_socket_type type)
-	: lv2_socket(ar, type)
+	: lv2_socket(stx::make_exact(ar), type)
 {
 	ar(port, vport, bound_addr);
 
-	std::deque<std::pair<sys_net_sockaddr_in_p2p, std::vector<u8>>> data_dequeue{ar};
+	auto data_dequeue = ar.pop<std::deque<std::pair<sys_net_sockaddr_in_p2p, std::vector<u8>>>>();
 
 	for (; !data_dequeue.empty(); data_dequeue.pop_front())
 	{
-		data.push(data_dequeue.front());
+		data.push(std::move(data_dequeue.front()));
 	}
-
-	ar(data_dequeue);
 }
 
 void lv2_socket_p2p::save(utils::serial& ar)
 {
-	static_cast<lv2_socket*>(this)->save(ar, true);
+	lv2_socket::save(ar, true);
 	ar(port, vport, bound_addr);
 
 	std::deque<std::pair<sys_net_sockaddr_in_p2p, std::vector<u8>>> data_dequeue;
 
-	for (; !data.empty(); data.pop())
+	for (auto save_data = ::as_rvalue(data); !save_data.empty(); save_data.pop())
 	{
-		data_dequeue.push_back(data.front());
+		data_dequeue.push_back(std::move(save_data.front()));
 	}
 
 	ar(data_dequeue);
