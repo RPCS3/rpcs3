@@ -124,7 +124,8 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 			fmt::append(buf, "\nSerialized Object: %s", g_tls_serialize_name);
 		}
 
-		fmt::append(buf, "\nTitle: \"%s\" (emulation is %s)", Emu.GetTitleAndTitleID(), Emu.IsStopped() ? "stopped" : "running");
+		const system_state state = Emu.GetStatus(false);
+		fmt::append(buf, "\nTitle: \"%s\" (emulation is %s)", state == system_state::stopped ? "N/A" : Emu.GetTitleAndTitleID(), state <= system_state::stopping ? "stopped" : "running");
 		fmt::append(buf, "\nBuild: \"%s\"", rpcs3::get_verbose_version());
 		fmt::append(buf, "\nDate: \"%s\"", std::chrono::system_clock::now());
 	}
