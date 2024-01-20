@@ -136,4 +136,12 @@ struct ime_jp_manager
 	void move_cursor(s8 amount);                      // s8 because CELL_IMEJP_STRING_MAXLENGTH is 128
 	void move_focus(s8 amount);                       // s8 because CELL_IMEJP_STRING_MAXLENGTH is 128
 	void move_focus_end(s8 amount, bool wrap_around); // s8 because CELL_IMEJP_STRING_MAXLENGTH is 128
+
+	struct candidate
+	{
+		std::u16string text; // Actual text of the candidate
+		u16 offset = 0;      // The offset of the next character after the candidate replaced part of the current focus.
+	};
+	std::vector<candidate> get_candidate_list() const;
+	std::u16string get_focus_string() const;
 };

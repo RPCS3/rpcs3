@@ -181,6 +181,30 @@ void ime_jp_manager::move_focus_end(s8 amount, bool wrap_around)
 	focus_length = std::max(min_length, std::min(max_length, focus_length));
 }
 
+std::vector<ime_jp_manager::candidate> ime_jp_manager::get_candidate_list() const
+{
+	std::vector<candidate> candidates;
+	if (input_string.empty() || focus_length == 0 || focus_begin >= input_string.length())
+		return candidates;
+
+	// TODO: we just fake this with one candidate for now
+	candidates.push_back(candidate{
+		.text = get_focus_string(),
+		.offset = 0
+	});
+
+	return candidates;
+}
+
+std::u16string ime_jp_manager::get_focus_string() const
+{
+	if (input_string.empty() || focus_length == 0 || focus_begin >= input_string.length())
+		return {};
+
+	return input_string.substr(focus_begin, focus_length);
+}
+
+
 static error_code cellImeJpOpen(sys_memory_container_t container_id, vm::ptr<CellImeJpHandle> hImeJpHandle, vm::cptr<CellImeJpAddDic> addDicPath)
 {
 	cellImeJp.todo("cellImeJpOpen(container_id=*0x%x, hImeJpHandle=*0x%x, addDicPath=*0x%x)", container_id, hImeJpHandle, addDicPath);
@@ -904,7 +928,7 @@ static error_code cellImeJpGetFocusLength(CellImeJpHandle hImeJpHandle, vm::ptr<
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	*pFocusLength = ::narrow<s16>(manager.focus_length) * 2; // offset in bytes
+	*pFocusLength = ::narrow<s16>(manager.focus_length * 2); // offset in bytes
 
 	return CELL_OK;
 }
@@ -1059,7 +1083,18 @@ static error_code cellImeJpGetCandidateListSize(CellImeJpHandle hImeJpHandle, vm
 		return CELL_IMEJP_ERROR_ERR;
 	}
 
-	*pListSize = 0;
+	// Add focus string size, including null terminator
+	const std::u16string focus_string = manager.get_focus_string();
+	usz size = sizeof(u16) * (focus_string.length() + 1);
+
+	// Add candidates, including null terminators and offsets
+	for (const ime_jp_manager::candidate& can : manager.get_candidate_list())
+	{
+		constexpr usz offset_size = sizeof(u16);
+		size += offset_size + (can.text.size() + 1) * sizeof(u16);
+	}
+
+	*pListSize = ::narrow<s16>(size);
 
 	return CELL_OK;
 }
@@ -1086,7 +1121,37 @@ static error_code cellImeJpGetCandidateList(CellImeJpHandle hImeJpHandle, vm::pt
 		return CELL_IMEJP_ERROR_ERR;
 	}
 
-	*plistNum = 0;
+	// First, copy the focus string
+	u32 pos = 0;
+	const std::u16string focus_string = manager.get_focus_string();
+	for (u32 i = pos; i < focus_string.length(); i++)
+	{
+		pCandidateString[i] = focus_string[i];
+	}
+	pos += ::narrow<u32>(focus_string.length());
+
+	// Add null terminator
+	pCandidateString[pos++] = 0;
+
+	// Add list of candidates
+	const std::vector<ime_jp_manager::candidate> list = manager.get_candidate_list();
+	for (const ime_jp_manager::candidate& can : list)
+	{
+		// Copy the candidate
+		for (u32 i = pos; i < can.text.length(); i++)
+		{
+			pCandidateString[i] = can.text[i];
+		}
+		pos += ::narrow<u32>(can.text.length());
+
+		// Add null terminator
+		pCandidateString[pos++] = 0;
+
+		// Add offset
+		pCandidateString[pos++] = can.offset;
+	}
+
+	*plistNum = ::narrow<s16>(list.size());
 
 	return CELL_OK;
 }
