@@ -185,7 +185,11 @@ public:
 	void CallFromMainThread(std::function<void()>&& func, atomic_t<u32>* wake_up = nullptr, bool track_emu_state = true, u64 stop_ctr = umax) const;
 
 	// Blocking call from the GUI thread
-	void BlockingCallFromMainThread(std::function<void()>&& func) const;
+	void BlockingCallFromMainThread(std::function<void()>&& func,
+		u32 line = __builtin_LINE(),
+		u32 col = __builtin_COLUMN(),
+		const char* file = __builtin_FILE(),
+		const char* fun = __builtin_FUNCTION()) const;
 
 	enum class stop_counter_t : u64{};
 
