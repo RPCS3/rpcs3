@@ -10,10 +10,10 @@ R"(
 #ifdef _ENABLE_FRAMEBUFFER_SRGB
 	if (_test_bit(rop_control, SRGB_FRAMEBUFFER_BIT))
 	{
-		col0.rgb = linear_to_srgb(col0).rgb;
-		col1.rgb = linear_to_srgb(col1).rgb;
-		col2.rgb = linear_to_srgb(col2).rgb;
-		col3.rgb = linear_to_srgb(col3).rgb;
+		col0.rgb = _mrt_color_t(linear_to_srgb(col0)).rgb;
+		col1.rgb = _mrt_color_t(linear_to_srgb(col1)).rgb;
+		col2.rgb = _mrt_color_t(linear_to_srgb(col2)).rgb;
+		col3.rgb = _mrt_color_t(linear_to_srgb(col3)).rgb;
 	}
 #endif
 
