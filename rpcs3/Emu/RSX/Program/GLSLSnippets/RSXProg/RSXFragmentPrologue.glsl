@@ -6,11 +6,6 @@ R"(
 #else
 // Mixed types. We have fp16 outputs
 #define _mrt_color_t f16vec4
-f16vec4 round_to_8bit(const in f16vec4 v4)
-{
-	uvec4 raw = uvec4(floor(fma(v4, f16vec4(255.), f16vec4(0.5))));
-	return f16vec4(raw) / f16vec4(255.);
-}
 #endif
 
 #if defined(_ENABLE_ROP_OUTPUT_ROUNDING) || defined(_ENABLE_PROGRAMMABLE_BLENDING)
@@ -20,6 +15,13 @@ vec4 round_to_8bit(const in vec4 v4)
 	uvec4 raw = uvec4(floor(fma(v4, vec4(255.), vec4(0.5))));
 	return vec4(raw) / vec4(255.);
 }
+#ifndef _32_BIT_OUTPUT
+f16vec4 round_to_8bit(const in f16vec4 v4)
+{
+	uvec4 raw = uvec4(floor(fma(v4, f16vec4(255.), f16vec4(0.5))));
+	return f16vec4(raw) / f16vec4(255.);
+}
+#endif
 #endif
 
 #ifdef _DISABLE_EARLY_DISCARD
