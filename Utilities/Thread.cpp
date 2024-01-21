@@ -46,6 +46,7 @@ DYNAMIC_IMPORT_RENAME("Kernel32.dll", SetThreadDescriptionImport, "SetThreadDesc
 #include <time.h>
 #endif
 #ifdef __linux__
+#include <sys/syscall.h>
 #include <sys/timerfd.h>
 #include <unistd.h>
 #endif

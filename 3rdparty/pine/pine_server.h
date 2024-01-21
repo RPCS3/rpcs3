@@ -27,9 +27,7 @@
 #include <sys/un.h>
 #include <arpa/inet.h>
 #include <poll.h>
-#if defined(__DragonFly__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__APPLE__)
 #include <unistd.h>
-#endif
 #endif
 
 #ifdef _WIN32
