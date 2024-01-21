@@ -870,6 +870,38 @@ namespace rsx
 		return result;
 	}
 
+	static inline const std::array<bool, 4> get_write_output_mask(rsx::surface_color_format format)
+	{
+		constexpr std::array<bool, 4> rgba = { true, true, true, true };
+		constexpr std::array<bool, 4> rgb = { true, true, true, false };
+		constexpr std::array<bool, 4> rg = { true, true, false, false };
+		constexpr std::array<bool, 4> r = { true, false, false, false };
+
+		switch (format)
+		{
+		case rsx::surface_color_format::a8r8g8b8:
+		case rsx::surface_color_format::a8b8g8r8:
+		case rsx::surface_color_format::w16z16y16x16:
+		case rsx::surface_color_format::w32z32y32x32:
+			return rgba;
+		case rsx::surface_color_format::x1r5g5b5_z1r5g5b5:
+		case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
+		case rsx::surface_color_format::r5g6b5:
+		case rsx::surface_color_format::x8r8g8b8_z8r8g8b8:
+		case rsx::surface_color_format::x8r8g8b8_o8r8g8b8:
+		case rsx::surface_color_format::x8b8g8r8_z8b8g8r8:
+		case rsx::surface_color_format::x8b8g8r8_o8b8g8r8:
+			return rgb;
+		case rsx::surface_color_format::g8b8:
+			return rg;
+		case rsx::surface_color_format::b8:
+		case rsx::surface_color_format::x32:
+			return r;
+		default:
+			fmt::throw_exception("Unknown surface format 0x%x", static_cast<int>(format));
+		}
+	}
+
 	template <uint integer, uint frac, bool sign = true, typename To = f32>
 	static inline To decode_fxp(u32 bits)
 	{

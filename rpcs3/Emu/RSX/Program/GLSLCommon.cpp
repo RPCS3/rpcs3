@@ -14,7 +14,14 @@ namespace program_common
 	{
 		for (const auto& e : enums)
 		{
-			OS << "#define " << e.first << " " << static_cast<int>(e.second) << "\n";
+			if constexpr (std::is_enum_v<T> || std::is_integral_v<T>)
+			{
+				OS << "#define " << e.first << " " << static_cast<int>(e.second) << "\n";
+			}
+			else
+			{
+				OS << "#define " << e.first << " " << e.second << "\n";
+			}
 		}
 
 		OS << "\n";
@@ -137,99 +144,25 @@ namespace glsl
 		;
 	}
 
+	void insert_blend_prologue(std::ostream& OS)
+	{
+		OS <<
+			#include "GLSLSnippets/RSXProg/RSXProgrammableBlendPrologue.glsl"
+			;
+	}
+
 	void insert_rop_init(std::ostream& OS)
 	{
 		OS <<
-		"	if (_test_bit(rop_control, POLYGON_STIPPLE_ENABLE_BIT))\n"
-		"	{\n"
-		"		// Convert x,y to linear address\n"
-		"		const uvec2 stipple_coord = uvec2(gl_FragCoord.xy) % uvec2(32, 32);\n"
-		"		const uint address = stipple_coord.y * 32u + stipple_coord.x;\n"
-		"		const uint bit_offset = (address & 31u);\n"
-		"		const uint word_index = _get_bits(address, 7, 3);\n"
-		"		const uint sub_index = _get_bits(address, 5, 2);\n\n"
-
-		"		if (!_test_bit(stipple_pattern[word_index][sub_index], int(bit_offset)))\n"
-		"		{\n"
-		"			_kill();\n"
-		"		}\n"
-		"	}\n\n";
+			#include "GLSLSnippets/RSXProg/RSXROPPrologue.glsl"
+			;
 	}
 
 	void insert_rop(std::ostream& OS, const shader_properties& props)
 	{
-		const std::string reg0 = props.fp32_outputs ? "r0" : "h0";
-		const std::string reg1 = props.fp32_outputs ? "r2" : "h4";
-		const std::string reg2 = props.fp32_outputs ? "r3" : "h6";
-		const std::string reg3 = props.fp32_outputs ? "r4" : "h8";
-
-		if (props.disable_early_discard)
-		{
-			OS <<
-			"	if (_fragment_discard)\n"
-			"	{\n"
-			"		discard;\n"
-			"	}\n\n";
-		}
-
-		// Pre-output stages
-		if (!props.fp32_outputs)
-		{
-			// Tested using NPUB90375; some shaders (32-bit output only?) do not obey srgb flags
-			const auto vtype = (props.fp32_outputs || !props.supports_native_fp16) ? "vec4" : "f16vec4";
-			OS <<
-			"	if (_test_bit(rop_control, SRGB_FRAMEBUFFER_BIT))\n"
-			"	{\n"
-			"		" << reg0 << " = " << vtype << "(linear_to_srgb(" << reg0 << ").rgb, " << reg0 << ".a);\n"
-			"		" << reg1 << " = " << vtype << "(linear_to_srgb(" << reg1 << ").rgb, " << reg1 << ".a);\n"
-			"		" << reg2 << " = " << vtype << "(linear_to_srgb(" << reg2 << ").rgb, " << reg2 << ".a);\n"
-			"		" << reg3 << " = " << vtype << "(linear_to_srgb(" << reg3 << ").rgb, " << reg3 << ".a);\n"
-			"	}\n\n";
-		}
-
-		// Output conversion
-		if (props.ROP_output_rounding)
-		{
-			OS <<
-			"	if (_test_bit(rop_control, INT_FRAMEBUFFER_BIT))\n"
-			"	{\n"
-			"		" << reg0 << " = round_to_8bit(" << reg0 << ");\n"
-			"		" << reg1 << " = round_to_8bit(" << reg1 << ");\n"
-			"		" << reg2 << " = round_to_8bit(" << reg2 << ");\n"
-			"		" << reg3 << " = round_to_8bit(" << reg3 << ");\n"
-			"	}\n\n";
-		}
-
-		// Post-output stages
-		// TODO: Implement all ROP options like CSAA and ALPHA_TO_ONE here
 		OS <<
-		// Alpha Testing
-		"	if (_test_bit(rop_control, ALPHA_TEST_ENABLE_BIT))\n"
-		"	{\n"
-		"		const uint alpha_func = _get_bits(rop_control, ALPHA_TEST_FUNC_OFFSET, ALPHA_TEST_FUNC_LENGTH);\n"
-		"		if (!comparison_passes(" << reg0 << ".a, alpha_ref, alpha_func)) discard;\n"
-		"	}\n\n";
-
-		// ALPHA_TO_COVERAGE
-		if (props.emulate_coverage_tests)
-		{
-			OS <<
-			"	if (_test_bit(rop_control, ALPHA_TO_COVERAGE_ENABLE_BIT))\n"
-			"	{\n"
-			"		if (!_test_bit(rop_control, MSAA_WRITE_ENABLE_BIT) ||\n"
-			"			!coverage_test_passes(" << reg0 << "))\n"
-			"		{\n"
-			"			discard;\n"
-			"		}\n"
-			"	}\n\n";
-		}
-
-		// Commit
-		OS <<
-		"	ocol0 = " << reg0 << ";\n"
-		"	ocol1 = " << reg1 << ";\n"
-		"	ocol2 = " << reg2 << ";\n"
-		"	ocol3 = " << reg3 << ";\n\n";
+			#include "GLSLSnippets//RSXProg/RSXROPEpilogue.glsl"
+			;
 	}
 
 	void insert_glsl_legacy_function(std::ostream& OS, const shader_properties& props)
@@ -271,15 +204,35 @@ namespace glsl
 				{ "ROP_CMD_MASK                ", rsx::ROP_control_bits::ROP_CMD_MASK }
 			});
 
+			program_common::define_glsl_constants<const char*>(OS,
+			{
+				{ "col0", props.fp32_outputs ? "r0" : "h0" },
+				{ "col1", props.fp32_outputs ? "r2" : "h4" },
+				{ "col2", props.fp32_outputs ? "r3" : "h6" },
+				{ "col3", props.fp32_outputs ? "r4" : "h8" }
+			});
+
 			if (props.fp32_outputs || !props.supports_native_fp16)
 			{
 				enabled_options.push_back("_32_BIT_OUTPUT");
+			}
+
+			if (!props.fp32_outputs)
+			{
+				enabled_options.push_back("_ENABLE_FRAMEBUFFER_SRGB");
 			}
 
 			if (props.disable_early_discard)
 			{
 				enabled_options.push_back("_DISABLE_EARLY_DISCARD");
 			}
+
+			if (props.ROP_output_rounding)
+			{
+				enabled_options.push_back("_ENABLE_ROP_OUTPUT_ROUNDING");
+			}
+
+			enabled_options.push_back("_ENABLE_POLYGON_STIPPLE");
 		}
 
 		// Import common header

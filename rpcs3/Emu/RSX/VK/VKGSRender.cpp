@@ -265,8 +265,11 @@ namespace vk
 		}
 
 		if (rsx::method_registers.cull_face_enabled())
+		{
 			properties.state.enable_cull_face(vk::get_cull_face(rsx::method_registers.cull_face_mode()));
+		}
 
+		const auto host_write_mask = rsx::get_write_output_mask(rsx::method_registers.surface_color());
 		for (uint index = 0; index < num_draw_buffers; ++index)
 		{
 			bool color_mask_b = rsx::method_registers.color_mask_b(index);
@@ -286,7 +289,12 @@ namespace vk
 				break;
 			}
 
-			properties.state.set_color_mask(index, color_mask_r, color_mask_g, color_mask_b, color_mask_a);
+			properties.state.set_color_mask(
+				index,
+				color_mask_r && host_write_mask[0],
+				color_mask_g && host_write_mask[1],
+				color_mask_b && host_write_mask[2],
+				color_mask_a && host_write_mask[3]);
 		}
 
 		// LogicOp and Blend are mutually exclusive. If both are enabled, LogicOp takes precedence.
@@ -1482,7 +1490,10 @@ void VKGSRender::clear_surface(u32 mask)
 	if (mask & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK) ctx |= rsx::framebuffer_creation_context::context_clear_depth;
 	init_buffers(rsx::framebuffer_creation_context{ctx});
 
-	if (!m_graphics_state.test(rsx::rtt_config_valid)) return;
+	if (!m_graphics_state.test(rsx::rtt_config_valid))
+	{
+		return;
+	}
 
 	//float depth_clear = 1.f;
 	u32   stencil_clear = 0;
