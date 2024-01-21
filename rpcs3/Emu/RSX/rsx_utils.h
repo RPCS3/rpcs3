@@ -872,10 +872,10 @@ namespace rsx
 
 	static inline const std::array<bool, 4> get_write_output_mask(rsx::surface_color_format format)
 	{
-		const std::array<bool, 4> rgba = { true, true, true, true };
-		const std::array<bool, 4> rgb = { true, true, true, false };
-		const std::array<bool, 4> rg = { true, true, false, false };
-		const std::array<bool, 4> r = { true, false, false, false };
+		constexpr std::array<bool, 4> rgba = { true, true, true, true };
+		constexpr std::array<bool, 4> rgb = { true, true, true, false };
+		constexpr std::array<bool, 4> rg = { true, true, false, false };
+		constexpr std::array<bool, 4> r = { true, false, false, false };
 
 		switch (format)
 		{

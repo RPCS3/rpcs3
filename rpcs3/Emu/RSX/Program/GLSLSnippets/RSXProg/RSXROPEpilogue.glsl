@@ -21,7 +21,7 @@ R"(
 	if (_test_bit(rop_control, INT_FRAMEBUFFER_BIT))
 	{
 		col0 = round_to_8bit(col0);
-		col1  = round_to_8bit(col1);
+		col1 = round_to_8bit(col1);
 		col2 = round_to_8bit(col2);
 		col3 = round_to_8bit(col3);
 	}
@@ -49,10 +49,21 @@ R"(
 #endif
 
 #ifdef _ENABLE_PROGRAMMABLE_BLENDING
-	col0 = do_blend(col0, mrt_color[0]);
-	if (framebufferCount > 1) col1 = do_blend(col1, mrt_color[1]);
-	if (framebufferCount > 2) col2 = do_blend(col2, mrt_color[2]);
-	if (framebufferCount > 3) col3 = do_blend(col3, mrt_color[3]);
+	switch (framebufferCount)
+	{
+		case 4:
+			col3 = do_blend(col3, mrt_color[3]);
+			// Fallthrough
+		case 3:
+			col2 = do_blend(col2, mrt_color[2]);
+			// Fallthrough
+		case 2:
+			col1 = do_blend(col1, mrt_color[1]);
+			// Fallthrough
+		default:
+			col0 = do_blend(col0, mrt_color[0]);
+			break;
+	}
 #endif
 
 	// Commit
