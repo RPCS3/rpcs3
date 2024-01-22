@@ -137,6 +137,7 @@ void fmt_class_string<game_boot_result>::format(std::string& out, u64 arg)
 		case game_boot_result::savestate_corrupted: return "Savestate data is corrupted or it's not an RPCS3 savestate";
 		case game_boot_result::savestate_version_unsupported: return "Savestate versioning data differs from your RPCS3 build.\nTry to use an older or newer RPCS3 build.\nEspecially if you know the build that created the savestate.";
 		case game_boot_result::still_running: return "Game is still running";
+		case game_boot_result::already_added: return "Game was already added";
 		}
 		return unknown;
 	});
@@ -1758,11 +1759,11 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				}
 
 				// Store /dev_bdvd/ location
-				if (m_games_config.add_game(m_title_id, bdvd_dir))
+				if (games_config::result res = m_games_config.add_game(m_title_id, bdvd_dir); res == games_config::result::success)
 				{
 					sys_log.notice("Registered BDVD game directory for title '%s': %s", m_title_id, bdvd_dir);
 				}
-				else
+				else if (res == games_config::result::failure)
 				{
 					sys_log.error("Failed to save BDVD location of title '%s' (error=%s)", m_title_id, fs::g_tls_error);
 				}
@@ -1818,7 +1819,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				std::string game_dir = m_sfo_dir;
 
 				// Add HG games not in HDD0 to games.yml
-				[[maybe_unused]] const bool res = m_games_config.add_external_hdd_game(m_title_id, game_dir);
+				[[maybe_unused]] const games_config::result res = m_games_config.add_external_hdd_game(m_title_id, game_dir);
 
 				const std::string dir = fmt::trim(game_dir.substr(fs::get_parent_dir_view(game_dir).size() + 1), fs::delim);
 				vfs::mount("/dev_hdd0/game/" + dir, game_dir + '/');
@@ -1844,11 +1845,11 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			sys_log.notice("Game: %s", new_ps3_game);
 
 			// Store /dev_bdvd/PS3_GAME location
-			if (m_games_config.add_game(m_title_id, new_ps3_game + "/./"))
+			if (games_config::result res = m_games_config.add_game(m_title_id, new_ps3_game + "/./"); res == games_config::result::success)
 			{
 				sys_log.notice("Registered BDVD/PS3_GAME game directory for title '%s': %s", m_title_id, new_ps3_game);
 			}
-			else
+			else if (res == games_config::result::failure)
 			{
 				sys_log.error("Failed to save BDVD/PS3_GAME location of title '%s' (error=%s)", m_title_id, fs::g_tls_error);
 			}
@@ -3626,14 +3627,16 @@ std::set<std::string> Emulator::GetGameDirs() const
 	return dirs;
 }
 
-void Emulator::AddGamesFromDir(const std::string& path)
+u32 Emulator::AddGamesFromDir(const std::string& path)
 {
+	u32 games_added = 0;
+
 	m_games_config.set_save_on_dirty(false);
 
 	// search dropped path first or else the direct parent to an elf is wrongly skipped
-	if (const auto error = AddGame(path); error == game_boot_result::no_errors)
+	if (const game_boot_result error = AddGame(path); error == game_boot_result::no_errors)
 	{
-		// Nothing to do
+		games_added++;
 	}
 
 	process_qt_events();
@@ -3648,9 +3651,9 @@ void Emulator::AddGamesFromDir(const std::string& path)
 
 		const std::string dir_path = path + '/' + dir_entry.name;
 
-		if (const auto error = AddGame(dir_path); error == game_boot_result::no_errors)
+		if (const game_boot_result error = AddGame(dir_path); error == game_boot_result::no_errors)
 		{
-			// Nothing to do
+			games_added++;
 		}
 
 		process_qt_events();
@@ -3662,6 +3665,8 @@ void Emulator::AddGamesFromDir(const std::string& path)
 	{
 		sys_log.error("Failed to save games.yml after adding games");
 	}
+
+	return games_added;
 }
 
 game_boot_result Emulator::AddGame(const std::string& path)
@@ -3673,12 +3678,14 @@ game_boot_result Emulator::AddGame(const std::string& path)
 	}
 
 	game_boot_result result = game_boot_result::nothing_to_boot;
+	bool result_set = false;
 
 	std::string elf;
 	if (const game_boot_result res = GetElfPathFromDir(elf, path); res == game_boot_result::no_errors)
 	{
 		ensure(!elf.empty());
 		result = AddGameToYml(elf);
+		result_set = true;
 	}
 
 	for (auto&& entry : fs::dir{ path })
@@ -3696,7 +3703,11 @@ game_boot_result Emulator::AddGame(const std::string& path)
 			{
 				if (const auto err = AddGameToYml(elf); err != game_boot_result::no_errors)
 				{
-					result = err;
+					if (err != game_boot_result::already_added || !result_set)
+					{
+						result = err;
+						result_set = true;
+					}
 				}
 			}
 		}
@@ -3769,9 +3780,11 @@ game_boot_result Emulator::AddGameToYml(const std::string& path)
 		// Add HG games not in HDD0 to games.yml
 		if (cat == "HG")
 		{
-			if (m_games_config.add_external_hdd_game(title_id, sfo_dir))
+			switch (m_games_config.add_external_hdd_game(title_id, sfo_dir))
 			{
-				return game_boot_result::no_errors;
+			case games_config::result::failure: return game_boot_result::generic_error;
+			case games_config::result::success: return game_boot_result::no_errors;
+			case games_config::result::exists: return game_boot_result::already_added;
 			}
 
 			return game_boot_result::generic_error;
@@ -3786,13 +3799,24 @@ game_boot_result Emulator::AddGameToYml(const std::string& path)
 		}
 
 		// Store /dev_bdvd/ location
-		if (m_games_config.add_game(title_id, bdvd_dir))
+		switch (m_games_config.add_game(title_id, bdvd_dir))
+		{
+		case games_config::result::failure:
+		{
+			sys_log.error("Failed to save BDVD location of title '%s' (error=%s)", title_id, fs::g_tls_error);
+			return game_boot_result::generic_error;
+		}
+		case games_config::result::success:
 		{
 			sys_log.notice("Registered BDVD game directory for title '%s': %s", title_id, bdvd_dir);
 			return game_boot_result::no_errors;
 		}
+		case games_config::result::exists:
+		{
+			return game_boot_result::already_added;
+		}
+		}
 
-		sys_log.error("Failed to save BDVD location of title '%s' (error=%s)", title_id, fs::g_tls_error);
 		return game_boot_result::generic_error;
 	}
 
