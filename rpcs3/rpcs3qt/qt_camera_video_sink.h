@@ -1,5 +1,7 @@
 #pragma once
 
+#include "util/atomic.hpp"
+#include "util/types.hpp"
 #include <QVideoFrame>
 #include <QVideoSink>
 #include <QImage>

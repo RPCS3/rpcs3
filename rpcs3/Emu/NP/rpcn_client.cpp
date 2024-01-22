@@ -798,12 +798,12 @@ namespace rpcn
 			addr_rpcn.sin_port   = std::bit_cast<u16, be_t<u16>>(port); // htons
 			addr_rpcn.sin_family = AF_INET;
 
-#ifdef WIN32
+#ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 4996)
 #endif
 			hostent* host_addr = gethostbyname(splithost[0].c_str());
-#ifdef WIN32
+#ifdef _MSC_VER
 #pragma warning(pop)
 #endif
 			if (!host_addr)
