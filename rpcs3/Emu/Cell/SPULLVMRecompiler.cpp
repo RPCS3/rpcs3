@@ -6073,24 +6073,6 @@ public:
 
 	void FI(spu_opcode_t op)
 	{
-		// TODO
-		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate)
-		{
-			set_vr(op.rt, get_vr<f64[4]>(op.rb));
-			// const auto [a, b] = get_vrs<f64[4]>(op.ra, op.rb);
-
-			// const auto mask_se = splat<s64[4]>(0xfff0000000000000ull);
-			// const auto mask_bf = splat<s64[4]>(0x000fff8000000000ull);
-			// const auto mask_sf = splat<s64[4]>(0x0000007fe0000000ull);
-			// const auto mask_yf = splat<s64[4]>(0x0000ffffe0000000ull);
-
-			// const auto base = bitcast<f64[4]>((bitcast<s64[4]>(b) & mask_bf) | 0x3ff0000000000000ull);
-			// const auto step = fpcast<f64[4]>(bitcast<s64[4]>(b) & mask_sf) * fsplat<f64[4]>(std::exp2(-13.f));
-			// const auto yval = fpcast<f64[4]>(bitcast<s64[4]>(a) & mask_yf) * fsplat<f64[4]>(std::exp2(-19.f));
-			// set_vr(op.rt, bitcast<f64[4]>((bitcast<s64[4]>(b) & mask_se) | (bitcast<s64[4]>(base - step * yval) & ~mask_se)));
-			return;
-		}
-
 		register_intrinsic("spu_fi", [&](llvm::CallInst* ci)
 		{
 			const auto a = bitcast<u32[4]>(value<f32[4]>(ci->getOperand(0)));
@@ -6101,6 +6083,15 @@ public:
 			const auto bnew = bitcast<s32[4]>((base - ymul) >> 9) + (sext<s32[4]>(ymul <= base) & (1 << 23)); // Subtract and correct invisible fraction bit
 			return bitcast<f32[4]>((b & 0xff800000u) | (bitcast<u32[4]>(fpcast<f32[4]>(bnew)) & ~0xff800000u)); // Inject old sign and exponent
 		});
+
+		const auto [a, b] = get_vrs<f32[4]>(op.ra, op.rb);
+
+		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate)
+		{
+			const auto r = eval(fi(a, b));
+			set_vr(op.rt, r);
+			return;
+		}
 
 		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
 		{
@@ -6135,8 +6126,6 @@ public:
 				return frsqe(a);
 			});
 		}
-
-		const auto [a, b] = get_vrs<f32[4]>(op.ra, op.rb);
 
 		if (const auto [ok, mb] = match_expr(b, frest(match<f32[4]>())); ok && mb.eq(a))
 		{
