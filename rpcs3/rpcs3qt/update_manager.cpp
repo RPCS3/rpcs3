@@ -20,16 +20,19 @@
 #include <QJsonDocument>
 #include <QThread>
 
+#if defined(_WIN32) || defined(__APPLE__)
+#include <7z.h>
+#include <7zAlloc.h>
+#include <7zCrc.h>
+#include <7zFile.h>
+#endif
+
 #if defined(_WIN32)
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
 #include <windows.h>
 #include <CpuArch.h>
-#include <7z.h>
-#include <7zAlloc.h>
-#include <7zCrc.h>
-#include <7zFile.h>
 
 #ifndef PATH_MAX
 #define PATH_MAX MAX_PATH
@@ -143,6 +146,8 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 	os = "windows";
 #elif defined(__linux__)
 	os = "linux";
+#elif defined(__APPLE__)
+	os = "mac";
 #else
 	update_log.error("Your OS isn't currently supported by the auto-updater");
 	return false;
@@ -370,13 +375,6 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 {
 	m_downloader->update_progress_dialog(tr("Updating RPCS3"));
 
-#ifdef __APPLE__
-	Q_UNUSED(data);
-	Q_UNUSED(auto_accept);
-	update_log.error("Unsupported operating system.");
-	return false;
-#else
-
 	if (m_expected_size != static_cast<u64>(data.size()))
 	{
 		update_log.error("Download size mismatch: %d expected: %d", data.size(), m_expected_size);
@@ -390,13 +388,17 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 		return false;
 	}
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__APPLE__)
 
 	// Get executable path
 	const std::string exe_dir = fs::get_executable_dir();
-	const std::string orig_path = exe_dir + "rpcs3.exe";
+	const std::string orig_path = fs::get_executable_path();
+#ifdef _WIN32
 	const std::wstring wchar_orig_path = utf8_to_wchar(orig_path);
 	const std::string tmpfile_path = fs::get_temp_dir() + "\\rpcs3_update.7z";
+#else
+	const std::string tmpfile_path = fs::get_temp_dir() + "rpcs3_update.7z";
+#endif
 
 	fs::file tmpfile(tmpfile_path, fs::read + fs::write + fs::create + fs::trunc);
 	if (!tmpfile)
@@ -482,16 +484,31 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 	Byte* outBuffer   = nullptr;
 	usz outBufferSize = 0;
 
-	// Creates temp folder for moving active files
+#ifdef _WIN32
+	// Create temp folder for moving active files
 	const std::string tmp_folder = exe_dir + "rpcs3_old/";
+#else
+	// Create temp folder for extracting the new app
+	const std::string tmp_folder = fs::get_temp_dir() + "rpcs3_new/";
+#endif
 	fs::create_dir(tmp_folder);
 
 	for (UInt32 i = 0; i < db.NumFiles; i++)
 	{
 		usz offset           = 0;
 		usz outSizeProcessed = 0;
-		const bool isDir = SzArEx_IsDir(&db, i);
-		const usz len    = SzArEx_GetFileNameUtf16(&db, i, nullptr);
+		const bool isDir     = SzArEx_IsDir(&db, i);
+		const DWORD attribs  = SzBitWithVals_Check(&db.Attribs, i) ? db.Attribs.Vals[i] : 0;
+#ifdef _WIN32
+		// This is commented out for now as we shouldn't need it and symlinks
+		// aren't well supported on Windows. Left in case it is needed in the future.
+		// const bool is_symlink = (attribs & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
+		const bool is_symlink = false;
+#else
+		const DWORD permissions = (attribs >> 16) & (S_IRWXU | S_IRWXG | S_IRWXO);
+		const bool is_symlink = (attribs & FILE_ATTRIBUTE_UNIX_EXTENSION) != 0 && S_ISLNK(attribs >> 16);
+#endif
+		const usz len        = SzArEx_GetFileNameUtf16(&db, i, nullptr);
 
 		if (len >= PATH_MAX)
 		{
@@ -515,7 +532,12 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 			temp_u8[index] = static_cast<u8>(temp_u16[index]);
 		}
 		temp_u8[len] = 0;
-		const std::string name = exe_dir + std::string(reinterpret_cast<char*>(temp_u8));
+		const std::string archived_name = std::string(reinterpret_cast<char*>(temp_u8));
+#ifdef __APPLE__
+		const std::string name = tmp_folder + archived_name;
+#else
+		const std::string name = exe_dir + archived_name;
+#endif
 
 		if (!isDir)
 		{
@@ -534,6 +556,14 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 		{
 			update_log.trace("Creating dir: %s", name);
 			fs::create_dir(name);
+			continue;
+		}
+
+		if (is_symlink)
+		{
+			const std::string link_target(reinterpret_cast<const char*>(outBuffer + offset), outSizeProcessed);
+			update_log.trace("Creating symbolic link: %s -> %s", name, link_target);
+			fs::create_symlink(name, link_target);
 			continue;
 		}
 
@@ -575,6 +605,11 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 			break;
 		}
 		outfile.close();
+
+#ifndef _WIN32
+		// Apply correct file permissions.
+		chmod(name.c_str(), permissions);
+#endif
 	}
 
 	error_free7z();
@@ -644,6 +679,12 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 
 #ifdef _WIN32
 	const int ret = _wexecl(wchar_orig_path.data(), wchar_orig_path.data(), L"--updating", nullptr);
+#elif defined(__APPLE__)
+	// Execute helper script to replace the app and relaunch
+	const std::string helper_script = fmt::format("%s/Contents/Resources/update_helper.sh", orig_path);
+	const std::string extracted_app = fmt::format("%s/RPCS3.app", tmp_folder);
+	update_log.notice("Executing update helper script: '%s %s %s'", helper_script, extracted_app, orig_path);
+	const int ret = execl(helper_script.c_str(), helper_script.c_str(), extracted_app.c_str(), orig_path.c_str(), nullptr);
 #else
 	// execv is used for compatibility with checkrt
 	const char * const params[3] = { replace_path.c_str(), "--updating", nullptr };
@@ -656,5 +697,4 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 	}
 
 	return true;
-#endif //def __APPLE__
 }

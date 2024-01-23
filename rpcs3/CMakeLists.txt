@@ -45,7 +45,8 @@ if(WIN32)
     target_compile_definitions(rpcs3 PRIVATE UNICODE _UNICODE)
 elseif(APPLE)
     add_executable(rpcs3 MACOSX_BUNDLE)
-    target_sources(rpcs3 PRIVATE rpcs3.icns)
+    target_sources(rpcs3 PRIVATE rpcs3.icns update_helper.sh)
+    set_source_files_properties(update_helper.sh PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
     set_target_properties(rpcs3
         PROPERTIES
             MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/rpcs3.plist.in")

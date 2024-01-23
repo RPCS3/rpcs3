@@ -66,6 +66,7 @@ namespace fs
 	struct stat_t
 	{
 		bool is_directory;
+		bool is_symlink;
 		bool is_writable;
 		u64 size;
 		s64 atime;
@@ -155,6 +156,7 @@ namespace fs
 		virtual bool statfs(const std::string& path, device_stat& info) = 0;
 		virtual bool remove_dir(const std::string& path);
 		virtual bool create_dir(const std::string& path);
+		virtual bool create_symlink(const std::string& path);
 		virtual bool rename(const std::string& from, const std::string& to);
 		virtual bool remove(const std::string& path);
 		virtual bool trunc(const std::string& path, u64 length);
@@ -197,6 +199,9 @@ namespace fs
 	// Check whether the directory exists and is NOT a file
 	bool is_dir(const std::string& path);
 
+	// Check whether the path points to an existing symlink
+	bool is_symlink(const std::string& path);
+
 	// Get filesystem information
 	bool statfs(const std::string& path, device_stat& info);
 
@@ -208,6 +213,9 @@ namespace fs
 
 	// Create directories
 	bool create_path(const std::string& path);
+
+	// Create symbolic link
+	bool create_symlink(const std::string& path, const std::string& target);
 
 	// Rename (move) file or directory
 	bool rename(const std::string& from, const std::string& to, bool overwrite);
