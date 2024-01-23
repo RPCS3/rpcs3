@@ -166,6 +166,30 @@ usb_handler_thread::usb_handler_thread()
 		return;
 	}
 
+	// Set LIBUSB_DEBUG env variable to receive log messages
+	libusb_set_log_cb(ctx, [](libusb_context* ctx, libusb_log_level level, const char* str)
+	{
+		if (!str) return;
+
+		const std::string msg = fmt::trim(str, " \t\n");
+
+		switch (level)
+		{
+		case LIBUSB_LOG_LEVEL_ERROR:
+			sys_usbd.error("libusb log: %s", msg);
+			break;
+		case LIBUSB_LOG_LEVEL_WARNING:
+			sys_usbd.warning("libusb log: %s", msg);
+			break;
+		case LIBUSB_LOG_LEVEL_INFO:
+			sys_usbd.notice("libusb log: %s", msg);
+			break;
+		case LIBUSB_LOG_LEVEL_DEBUG:
+			sys_usbd.trace("libusb log: %s", msg);
+			break;
+		}
+	}, LIBUSB_LOG_CB_CONTEXT);
+
 	for (u32 index = 0; index < MAX_SYS_USBD_TRANSFERS; index++)
 	{
 		transfers[index].transfer    = libusb_alloc_transfer(8);
