@@ -357,6 +357,12 @@ namespace fs
 		return false;
 	}
 
+	bool device_base::create_symlink(const std::string&)
+	{
+		g_tls_error = error::readonly;
+		return false;
+	}
+
 	bool device_base::rename(const std::string&, const std::string&)
 	{
 		g_tls_error = error::readonly;
@@ -581,6 +587,7 @@ bool fs::get_stat(const std::string& path, stat_t& info)
 	}
 
 	info.is_directory = (attrs.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+	info.is_symlink = (attrs.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
 	info.is_writable = (attrs.dwFileAttributes & FILE_ATTRIBUTE_READONLY) == 0;
 	info.size = attrs.nFileSizeLow | (u64{attrs.nFileSizeHigh} << 32);
 	info.atime = to_time(attrs.ftLastAccessTime);
@@ -595,6 +602,7 @@ bool fs::get_stat(const std::string& path, stat_t& info)
 	}
 
 	info.is_directory = S_ISDIR(file_info.st_mode);
+	info.is_symlink = S_ISLNK(file_info.st_mode);
 	info.is_writable = file_info.st_mode & 0200; // HACK: approximation
 	info.size = file_info.st_size;
 	info.atime = file_info.st_atime;
@@ -640,6 +648,23 @@ bool fs::is_dir(const std::string& path)
 	}
 
 	if (!info.is_directory)
+	{
+		g_tls_error = error::exist;
+		return false;
+	}
+
+	return true;
+}
+
+bool fs::is_symlink(const std::string& path)
+{
+	fs::stat_t info{};
+	if (!fs::get_stat(path, info))
+	{
+		return false;
+	}
+
+	if (!info.is_symlink)
 	{
 		g_tls_error = error::exist;
 		return false;
@@ -792,6 +817,33 @@ bool fs::remove_dir(const std::string& path)
 #endif
 
 	return true;
+}
+
+bool fs::create_symlink(const std::string& path, const std::string& target)
+{
+	if (auto device = get_virtual_device(path))
+	{
+		return device->create_symlink(path);
+	}
+
+#ifdef _WIN32
+	const DWORD flags = is_dir(target) ? SYMBOLIC_LINK_FLAG_DIRECTORY : 0;
+	if (!CreateSymbolicLinkW(to_wchar(path).get(), to_wchar(target).get(), flags))
+	{
+		g_tls_error = to_error(GetLastError());
+		return false;
+	}
+
+	return true;
+#else
+	if (::symlink(target.c_str(), path.c_str()) != 0)
+	{
+		g_tls_error = to_error(errno);
+		return false;
+	}
+
+	return true;
+#endif
 }
 
 bool fs::rename(const std::string& from, const std::string& to, bool overwrite)
@@ -2105,8 +2157,21 @@ const std::string& fs::get_temp_dir()
 
 		dir = wchar_to_utf8(buf);
 #else
-		// TODO
-		dir = get_cache_dir();
+		const char* tmp_dir = getenv("TMPDIR");
+		if (tmp_dir == nullptr || tmp_dir[0] == '\0')
+		{
+			// Fall back to cache directory
+			dir = get_cache_dir();
+		}
+		else
+		{
+			dir = tmp_dir;
+			if (!dir.ends_with("/"))
+			{
+				// Ensure path ends with a separator
+				dir += "/";
+			}
+		}
 #endif
 
 		return dir;
