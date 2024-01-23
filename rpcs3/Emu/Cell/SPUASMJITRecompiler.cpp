@@ -3983,7 +3983,35 @@ void spu_recompiler::CEQB(spu_opcode_t op)
 void spu_recompiler::FI(spu_opcode_t op)
 {
 	// Floating Interpolate
+	const XmmLink& va = XmmGet(op.ra, XmmType::Float);
 	const XmmLink& vb = XmmGet(op.rb, XmmType::Float);
+	const XmmLink& vb_base = XmmAlloc();
+	const XmmLink& ymul = XmmAlloc();
+	const XmmLink& temp_reg = XmmAlloc();
+
+	c->movdqa(vb_base, vb);
+	c->movdqa(ymul, vb);
+	c->movdqa(temp_reg, va);
+
+	c->pand(vb_base, XmmConst(v128::from32p(0x007ffc00u)));
+	c->pslld(vb_base, 9);
+
+	c->pand(temp_reg, XmmConst(v128::from32p(0x7ffff))); // va_fraction
+	c->pand(ymul, XmmConst(v128::from32p(0x3ff)));
+	c->pmulld(ymul, temp_reg);
+
+	c->movdqa(temp_reg, vb_base);
+	c->psubd(temp_reg, ymul);
+	c->psrld(temp_reg, 9);
+
+	c->pcmpgtd(vb_base, ymul);
+	c->pand(vb_base, XmmConst(v128::from32p(1 << 23)));
+	c->paddd(temp_reg, vb_base);
+
+	c->pand(vb, XmmConst(v128::from32p(0xff800000u)));
+	c->pand(temp_reg, XmmConst(v128::from32p(~0xff800000u)));
+	c->por(vb, temp_reg);
+
 	c->movaps(SPU_OFF_128(gpr, op.rt), vb);
 }
 
