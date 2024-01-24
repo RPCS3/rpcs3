@@ -241,7 +241,7 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 		}
 	});
 
-#if defined(_WIN32) || defined(__linux__)
+#if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
 	if (const auto update_value = m_gui_settings->GetValue(gui::m_check_upd_start).toString(); update_value != gui::update_off)
 	{
 		const bool in_background = with_cli_boot || update_value == gui::update_bkg;
@@ -456,6 +456,7 @@ void main_window::show_boot_error(game_boot_result status)
 		message = tr("A game or PS3 application is still running or has yet to be fully stopped.");
 		break;
 	case game_boot_result::firmware_missing: // Handled elsewhere
+	case game_boot_result::already_added: // Handled elsewhere
 	case game_boot_result::no_errors:
 		return;
 	case game_boot_result::generic_error:
@@ -3027,7 +3028,7 @@ void main_window::CreateConnects()
 
 	connect(ui->updateAct, &QAction::triggered, this, [this]()
 	{
-#if !defined(_WIN32) && !defined(__linux__)
+#if !defined(_WIN32) && !defined(__linux__) && !defined(__APPLE__)
 		QMessageBox::warning(this, tr("Auto-updater"), tr("The auto-updater isn't available for your OS currently."));
 		return;
 #endif
@@ -3546,9 +3547,16 @@ void main_window::AddGamesFromDirs(QStringList&& paths)
 		}
 	}
 
+	u32 games_added = 0;
+
 	for (const QString& path : paths)
 	{
-		Emu.AddGamesFromDir(sstr(path));
+		games_added += Emu.AddGamesFromDir(sstr(path));
+	}
+
+	if (games_added)
+	{
+		gui_log.notice("AddGamesFromDirs added %d new entries", games_added);
 	}
 
 	m_game_list_frame->AddRefreshedSlot([this, paths = std::move(paths), existing = std::move(existing)](std::set<std::string>& claimed_paths)
@@ -3580,7 +3588,11 @@ void main_window::AddGamesFromDirs(QStringList&& paths)
 			}
 		}
 
-		if (!paths_added.empty())
+		if (paths_added.empty())
+		{
+			QMessageBox::information(this, tr("Nothing to add!"), tr("Could not find any new software."));
+		}
+		else
 		{
 			ShowOptionalGamePreparations(tr("Success!"), tr("Successfully added software to game list from path(s)!"), paths_added);
 		}

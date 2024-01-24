@@ -742,7 +742,12 @@ void emu_settings::EnhanceLineEdit(QLineEdit* edit, emu_settings_type type)
 
 	connect(edit, &QLineEdit::textChanged, this, [type, this](const QString &text)
 	{
-		SetSetting(type, sstr(text));
+		const QString trimmed = text.trimmed();
+		if (trimmed.size() != text.size())
+		{
+			cfg_log.warning("EnhanceLineEdit '%s' input was trimmed", cfg_adapter::get_setting_name(type));
+		}
+		SetSetting(type, sstr(trimmed));
 	});
 
 	connect(this, &emu_settings::RestoreDefaultsSignal, edit, [this, edit, type]()
