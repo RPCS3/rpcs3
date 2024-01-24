@@ -10,6 +10,7 @@
 #include "util/simd.hpp"
 
 #ifdef __linux__
+#include <unistd.h>
 #define CAN_OVERCOMMIT
 #endif
 
