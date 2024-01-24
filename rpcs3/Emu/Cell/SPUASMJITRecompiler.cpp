@@ -3988,6 +3988,7 @@ void spu_recompiler::FI(spu_opcode_t op)
 	const XmmLink& vb_base = XmmAlloc();
 	const XmmLink& ymul = XmmAlloc();
 	const XmmLink& temp_reg = XmmAlloc();
+	const XmmLink& temp_reg2 = XmmAlloc();
 
 	c->movdqa(vb_base, vb);
 	c->movdqa(ymul, vb);
@@ -4002,15 +4003,28 @@ void spu_recompiler::FI(spu_opcode_t op)
 
 	c->movdqa(temp_reg, vb_base);
 	c->psubd(temp_reg, ymul);
-	c->psrld(temp_reg, 9);
 
-	c->pcmpgtd(vb_base, ymul);
-	c->pand(vb_base, XmmConst(v128::from32p(1 << 23)));
-	c->paddd(temp_reg, vb_base);
+	// Makes signed comparison unsigned and determines if we need to adjust exponent
+	auto xor_const = XmmConst(v128::from32p(0x80000000));
+	c->pxor(ymul, xor_const);
+	c->pxor(vb_base, xor_const);
+	c->pcmpgtd(ymul, vb_base);
+	c->movdqa(vb_base, ymul);
+
+	c->movdqa(temp_reg2, temp_reg);
+	c->pand(temp_reg2, vb_base);
+	c->psrld(temp_reg2, 8); // only shift right by 8 if exponent is adjusted
+	c->xorps(vb_base, XmmConst(v128::from32p(0xFFFFFFFF))); // Invert the mask
+	c->pand(temp_reg, vb_base);
+	c->psrld(temp_reg, 9); // shift right by 9 if not adjusted
+	c->por(temp_reg, temp_reg2);
 
 	c->pand(vb, XmmConst(v128::from32p(0xff800000u)));
 	c->pand(temp_reg, XmmConst(v128::from32p(~0xff800000u)));
 	c->por(vb, temp_reg);
+
+	c->pand(ymul, XmmConst(v128::from32p(1 << 23)));
+	c->psubd(vb, ymul);
 
 	c->movaps(SPU_OFF_128(gpr, op.rt), vb);
 }
