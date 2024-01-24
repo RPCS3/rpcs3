@@ -45,6 +45,7 @@ enum class game_boot_result : u32
 	savestate_corrupted,
 	savestate_version_unsupported,
 	still_running,
+	already_added,
 };
 
 constexpr bool is_error(game_boot_result res)
@@ -369,7 +370,7 @@ public:
 	void ConfigurePPUCache(bool with_title_id = true) const;
 
 	std::set<std::string> GetGameDirs() const;
-	void AddGamesFromDir(const std::string& path);
+	u32 AddGamesFromDir(const std::string& path);
 	game_boot_result AddGame(const std::string& path);
 	game_boot_result AddGameToYml(const std::string& path);
 

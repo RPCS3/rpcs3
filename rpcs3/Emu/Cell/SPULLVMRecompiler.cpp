@@ -107,6 +107,12 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	// Global variable (function table)
 	llvm::GlobalVariable* m_function_table{};
 
+	// Global LUTs
+	llvm::GlobalVariable* m_spu_frest_fraction_lut{};
+	llvm::GlobalVariable* m_spu_frest_exponent_lut{};
+	llvm::GlobalVariable* m_spu_frsqest_fraction_lut{};
+	llvm::GlobalVariable* m_spu_frsqest_exponent_lut{};
+
 	// Helpers (interpreter)
 	llvm::GlobalVariable* m_scale_float_to{};
 	llvm::GlobalVariable* m_scale_to_float{};
@@ -1091,6 +1097,15 @@ public:
 		}
 	}
 
+	void init_luts()
+	{
+		// LUTs for some instructions
+		m_spu_frest_fraction_lut = new llvm::GlobalVariable(*m_module, llvm::ArrayType::get(GetType<u32>(), 32), true, llvm::GlobalValue::PrivateLinkage, llvm::ConstantDataArray::get(m_context, spu_frest_fraction_lut));
+		m_spu_frest_exponent_lut = new llvm::GlobalVariable(*m_module, llvm::ArrayType::get(GetType<u32>(), 256), true, llvm::GlobalValue::PrivateLinkage, llvm::ConstantDataArray::get(m_context, spu_frest_exponent_lut));
+		m_spu_frsqest_fraction_lut = new llvm::GlobalVariable(*m_module, llvm::ArrayType::get(GetType<u32>(), 64), true, llvm::GlobalValue::PrivateLinkage, llvm::ConstantDataArray::get(m_context, spu_frsqest_fraction_lut));
+		m_spu_frsqest_exponent_lut = new llvm::GlobalVariable(*m_module, llvm::ArrayType::get(GetType<u32>(), 256), true, llvm::GlobalValue::PrivateLinkage, llvm::ConstantDataArray::get(m_context, spu_frsqest_exponent_lut));
+	}
+
 	virtual spu_function_t compile(spu_program&& _func) override
 	{
 		if (_func.data.empty() && m_interp_magn)
@@ -1178,6 +1193,8 @@ public:
 		const auto main_arg2 = main_func->getArg(2);
 		main_func->setCallingConv(CallingConv::GHC);
 		set_function(main_func);
+
+		init_luts();
 
 		// Start compilation
 		const auto label_test = BasicBlock::Create(m_context, "", m_function);
@@ -2157,6 +2174,8 @@ public:
 		// Create interpreter table
 		const auto if_type = get_ftype<void, u8*, u8*, u32, u32, u8*, u32, u8*>();
 		m_function_table = new GlobalVariable(*m_module, ArrayType::get(if_type->getPointerTo(), 1ull << m_interp_magn), true, GlobalValue::InternalLinkage, nullptr);
+
+		init_luts();
 
 		// Add return function
 		const auto ret_func = cast<Function>(_module->getOrInsertFunction("spu_ret", if_type).getCallee());
@@ -5297,36 +5316,29 @@ public:
 
 	void FREST(spu_opcode_t op)
 	{
-		// TODO
-		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate)
+		register_intrinsic("spu_frest", [&](llvm::CallInst* ci)
 		{
-			const auto a = get_vr<f32[4]>(op.ra);
-			const auto mask_ov = sext<s32[4]>(bitcast<s32[4]>(fabs(a)) > splat<s32[4]>(0x7e7fffff));
-			const auto mask_de = eval(noncast<u32[4]>(sext<s32[4]>(fcmp_ord(a == fsplat<f32[4]>(0.)))) >> 1);
-			set_vr(op.rt, (bitcast<s32[4]>(fsplat<f32[4]>(1.0) / a) & ~mask_ov) | noncast<s32[4]>(mask_de));
-			return;
-		}
+			const auto a = bitcast<u32[4]>(value<f32[4]>(ci->getOperand(0)));
 
-		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
-		{
-			register_intrinsic("spu_frest", [&](llvm::CallInst* ci)
+			const auto a_fraction = (a >> splat<u32[4]>(18)) & splat<u32[4]>(0x1F);
+			const auto a_exponent = (a >> splat<u32[4]>(23)) & splat<u32[4]>(0xFF);
+			const auto a_sign = (a & splat<u32[4]>(0x80000000));
+			value_t<u32[4]> final_result = eval(splat<u32[4]>(0));
+
+			for (u32 i = 0; i < 4; i++)
 			{
-				const auto a = value<f32[4]>(ci->getOperand(0));
-				// Gives accuracy penalty, frest result is within one newton-raphson iteration for accuracy
-				const auto approx_result = fsplat<f32[4]>(0.999875069f) / a;
-				// Zeroes the last 11 bytes of the mantissa so FI calculations end up correct if needed
-				return bitcast<f32[4]>(bitcast<u32[4]>(approx_result) & splat<u32[4]>(0xFFFFF800));
-			});
-		}
-		else
-		{
-			register_intrinsic("spu_frest", [&](llvm::CallInst* ci)
-			{
-				const auto a = value<f32[4]>(ci->getOperand(0));
-				// Fast but this makes the result vary per cpu
-				return fre(a);
-			});
-		}
+				const auto eval_fraction = eval(extract(a_fraction, i));
+				const auto eval_exponent = eval(extract(a_exponent, i));
+				const auto eval_sign = eval(extract(a_sign, i));
+
+				value_t<u32> r_fraction = load_const<u32>(m_spu_frest_fraction_lut, eval_fraction);
+				value_t<u32> r_exponent = load_const<u32>(m_spu_frest_exponent_lut, eval_exponent);
+
+				final_result = eval(insert(final_result, i, eval(r_fraction | eval_sign | r_exponent)));
+			}
+
+			return bitcast<f32[4]>(final_result);
+		});
 
 		set_vr(op.rt, frest(get_vr<f32[4]>(op.ra)));
 	}
@@ -5339,33 +5351,27 @@ public:
 
 	void FRSQEST(spu_opcode_t op)
 	{
-		// TODO
-		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate)
+		register_intrinsic("spu_frsqest", [&](llvm::CallInst* ci)
 		{
-			set_vr(op.rt, fsplat<f64[4]>(1.0) / fsqrt(fabs(get_vr<f64[4]>(op.ra))));
-			return;
-		}
+			const auto a = bitcast<u32[4]>(value<f32[4]>(ci->getOperand(0)));
 
-		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
-		{
-			register_intrinsic("spu_frsqest", [&](llvm::CallInst* ci)
+			const auto a_fraction = (a >> splat<u32[4]>(18)) & splat<u32[4]>(0x3F);
+			const auto a_exponent = (a >> splat<u32[4]>(23)) & splat<u32[4]>(0xFF);
+			value_t<u32[4]> final_result = eval(splat<u32[4]>(0));
+
+			for (u32 i = 0; i < 4; i++)
 			{
-				const auto a = value<f32[4]>(ci->getOperand(0));
-				// Gives accuracy penalty, frsqest result is within one newton-raphson iteration for accuracy
-				const auto approx_result = fsplat<f32[4]>(0.999763668f) / fsqrt(fabs(a));
-				// Zeroes the last 11 bytes of the mantissa so FI calculations end up correct if needed
-				return bitcast<f32[4]>(bitcast<u32[4]>(approx_result) & splat<u32[4]>(0xFFFFF800));
-			});
-		}
-		else
-		{
-			register_intrinsic("spu_frsqest", [&](llvm::CallInst* ci)
-			{
-				const auto a = value<f32[4]>(ci->getOperand(0));
-				// Fast but this makes the result vary per cpu
-				return frsqe(fabs(a));
-			});
-		}
+				const auto eval_fraction = eval(extract(a_fraction, i));
+				const auto eval_exponent = eval(extract(a_exponent, i));
+
+				value_t<u32> r_fraction = load_const<u32>(m_spu_frsqest_fraction_lut, eval_fraction);
+				value_t<u32> r_exponent = load_const<u32>(m_spu_frsqest_exponent_lut, eval_exponent);
+
+				final_result = eval(insert(final_result, i, eval(r_fraction | r_exponent)));
+			}
+
+			return bitcast<f32[4]>(final_result);
+		});
 
 		set_vr(op.rt, frsqest(get_vr<f32[4]>(op.ra)));
 	}
@@ -6067,24 +6073,6 @@ public:
 
 	void FI(spu_opcode_t op)
 	{
-		// TODO
-		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate)
-		{
-			set_vr(op.rt, get_vr<f64[4]>(op.rb));
-			// const auto [a, b] = get_vrs<f64[4]>(op.ra, op.rb);
-
-			// const auto mask_se = splat<s64[4]>(0xfff0000000000000ull);
-			// const auto mask_bf = splat<s64[4]>(0x000fff8000000000ull);
-			// const auto mask_sf = splat<s64[4]>(0x0000007fe0000000ull);
-			// const auto mask_yf = splat<s64[4]>(0x0000ffffe0000000ull);
-
-			// const auto base = bitcast<f64[4]>((bitcast<s64[4]>(b) & mask_bf) | 0x3ff0000000000000ull);
-			// const auto step = fpcast<f64[4]>(bitcast<s64[4]>(b) & mask_sf) * fsplat<f64[4]>(std::exp2(-13.f));
-			// const auto yval = fpcast<f64[4]>(bitcast<s64[4]>(a) & mask_yf) * fsplat<f64[4]>(std::exp2(-19.f));
-			// set_vr(op.rt, bitcast<f64[4]>((bitcast<s64[4]>(b) & mask_se) | (bitcast<s64[4]>(base - step * yval) & ~mask_se)));
-			return;
-		}
-
 		register_intrinsic("spu_fi", [&](llvm::CallInst* ci)
 		{
 			const auto a = bitcast<u32[4]>(value<f32[4]>(ci->getOperand(0)));
@@ -6095,6 +6083,15 @@ public:
 			const auto bnew = bitcast<s32[4]>((base - ymul) >> 9) + (sext<s32[4]>(ymul <= base) & (1 << 23)); // Subtract and correct invisible fraction bit
 			return bitcast<f32[4]>((b & 0xff800000u) | (bitcast<u32[4]>(fpcast<f32[4]>(bnew)) & ~0xff800000u)); // Inject old sign and exponent
 		});
+
+		const auto [a, b] = get_vrs<f32[4]>(op.ra, op.rb);
+
+		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate)
+		{
+			const auto r = eval(fi(a, b));
+			set_vr(op.rt, r);
+			return;
+		}
 
 		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
 		{
@@ -6129,8 +6126,6 @@ public:
 				return frsqe(a);
 			});
 		}
-
-		const auto [a, b] = get_vrs<f32[4]>(op.ra, op.rb);
 
 		if (const auto [ok, mb] = match_expr(b, frest(match<f32[4]>())); ok && mb.eq(a))
 		{

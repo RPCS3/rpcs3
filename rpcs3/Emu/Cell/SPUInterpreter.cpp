@@ -689,15 +689,48 @@ bool FSMB(spu_thread& spu, spu_opcode_t op)
 template <spu_exec_bit... Flags>
 bool FREST(spu_thread& spu, spu_opcode_t op)
 {
-	spu.gpr[op.rt] = _mm_rcp_ps(spu.gpr[op.ra]);
+	v128 fraction_index = v128(_mm_srli_epi32(spu.gpr[op.ra], 18)) & v128(_mm_set1_epi32(0x1F));
+	v128 exponent_index = v128(_mm_srli_epi32(spu.gpr[op.ra], 23)) & v128(_mm_set1_epi32(0xFF));
+	v128 sign = spu.gpr[op.ra] & _mm_set1_epi32(0x80000000);
+
+	// AVX2
+	// v128 fraction = _mm_i32gather_epi32(spu_frest_fraction_lut, fraction_index, 4);
+	// v128 exponent = _mm_i32gather_epi32(spu_frest_exponent_lut, exponent_index, 4);
+
+	v128 result;
+
+	for (u32 index = 0; index < 4; index++)
+	{
+		u32 r = spu_frest_fraction_lut[fraction_index._u32[index]];
+		r |= spu_frest_exponent_lut[exponent_index._u32[index]];
+		r |= sign._u32[index];
+		result._u32[index] = r;
+	}
+
+	spu.gpr[op.rt] = result;
 	return true;
 }
 
 template <spu_exec_bit... Flags>
 bool FRSQEST(spu_thread& spu, spu_opcode_t op)
 {
-	const auto mask = _mm_castsi128_ps(_mm_set1_epi32(0x7fffffff));
-	spu.gpr[op.rt] = _mm_rsqrt_ps(_mm_and_ps(spu.gpr[op.ra], mask));
+	v128 fraction_index = v128(_mm_srli_epi32(spu.gpr[op.ra], 18)) & v128(_mm_set1_epi32(0x3F));
+	v128 exponent_index = v128(_mm_srli_epi32(spu.gpr[op.ra], 23)) & v128(_mm_set1_epi32(0xFF));
+
+	// AVX2
+	// v128 fraction = _mm_i32gather_epi32(spu_frsqest_fraction_lut, fraction_index, 4);
+	// v128 exponent = _mm_i32gather_epi32(spu_frsqest_exponent_lut, exponent_index, 4);
+
+	v128 result;
+
+	for (u32 index = 0; index < 4; index++)
+	{
+		u32 r = spu_frsqest_fraction_lut[fraction_index._u32[index]];
+		r |= spu_frsqest_exponent_lut[exponent_index._u32[index]];
+		result._u32[index] = r;
+	}
+
+	spu.gpr[op.rt] = result;
 	return true;
 }
 
