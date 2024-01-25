@@ -1337,9 +1337,16 @@ error_code sceNpTusDeleteMultiSlotDataVUserAsync(s32 transId, vm::cptr<SceNpTusV
 	return scenp_tus_delete_multislot_data(transId, targetVirtualUserId, slotIdArray, arrayNum, option, true, true);
 }
 
+void scenp_tss_no_file(const std::shared_ptr<tus_transaction_ctx>& trans, vm::ptr<SceNpTssDataStatus> dataStatus)
+{
+	// TSS are files stored on PSN by developers, no dumps available atm
+	std::memset(dataStatus.get_ptr(), 0, sizeof(SceNpTssDataStatus));
+	trans->result = not_an_error(0);
+}
+
 error_code sceNpTssGetData(s32 transId, SceNpTssSlotId slotId, vm::ptr<SceNpTssDataStatus> dataStatus, u32 dataStatusSize, vm::ptr<void> data, u32 recvSize, vm::ptr<SceNpTssGetDataOptParam> option)
 {
-	sceNpTus.todo("sceNpTssGetData(transId=%d, slotId=%d, dataStatus=*0x%x, dataStatusSize=%d, data=*0x%x, recvSize=%d, option=*0x%x)", transId, slotId, dataStatus, dataStatusSize, data, recvSize, option);
+	sceNpTus.warning("sceNpTssGetData(transId=%d, slotId=%d, dataStatus=*0x%x, dataStatusSize=%d, data=*0x%x, recvSize=%d, option=*0x%x)", transId, slotId, dataStatus, dataStatusSize, data, recvSize, option);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -1364,13 +1371,15 @@ error_code sceNpTssGetData(s32 transId, SceNpTssSlotId slotId, vm::ptr<SceNpTssD
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
+
+	scenp_tss_no_file(trans_ctx, dataStatus);
 
 	return CELL_OK;
 }
 
 error_code sceNpTssGetDataAsync(s32 transId, SceNpTssSlotId slotId, vm::ptr<SceNpTssDataStatus> dataStatus, u32 dataStatusSize, vm::ptr<void> data, u32 recvSize, vm::ptr<SceNpTssGetDataOptParam> option)
 {
-	sceNpTus.todo("sceNpTssGetDataAsync(transId=%d, slotId=%d, dataStatus=*0x%x, dataStatusSize=%d, data=*0x%x, recvSize=%d, option=*0x%x)", transId, slotId, dataStatus, dataStatusSize, data, recvSize, option);
+	sceNpTus.warning("sceNpTssGetDataAsync(transId=%d, slotId=%d, dataStatus=*0x%x, dataStatusSize=%d, data=*0x%x, recvSize=%d, option=*0x%x)", transId, slotId, dataStatus, dataStatusSize, data, recvSize, option);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -1395,6 +1404,8 @@ error_code sceNpTssGetDataAsync(s32 transId, SceNpTssSlotId slotId, vm::ptr<SceN
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
+
+	scenp_tss_no_file(trans_ctx, dataStatus);
 
 	return CELL_OK;
 }
