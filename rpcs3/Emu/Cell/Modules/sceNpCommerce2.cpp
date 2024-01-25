@@ -83,6 +83,13 @@ error_code sceNpCommerce2Init()
 {
 	sceNpCommerce2.warning("sceNpCommerce2Init()");
 
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_init)
+	{
+		return SCE_NP_ERROR_NOT_INITIALIZED;
+	}
+
 	return CELL_OK;
 }
 
