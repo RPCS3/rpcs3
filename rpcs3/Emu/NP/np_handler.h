@@ -113,7 +113,8 @@ namespace np
 		atomic_t<bool> is_NP2_init        = false;
 		atomic_t<bool> is_NP2_Match2_init = false;
 		atomic_t<bool> is_NP_Auth_init    = false;
-		atomic_t<bool> is_NP_TUS_init     = false;
+		atomic_t<bool> is_NP_TUS_init     = false; // TODO: savestate
+		atomic_t<bool> is_NP_Com2_init    = false; // TODO: savestate
 
 		// NP Handlers/Callbacks
 		// Seems to be global

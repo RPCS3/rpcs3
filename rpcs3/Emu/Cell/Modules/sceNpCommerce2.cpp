@@ -94,7 +94,9 @@ error_code sceNpCommerce2ExecuteStoreBrowse(s32 targetType, vm::cptr<char> targe
 {
 	sceNpCommerce2.todo("sceNpCommerce2ExecuteStoreBrowse(targetType=%d, targetId=%s, userdata=%d)", targetType, targetId, userdata);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	if (targetType < SCE_NP_COMMERCE2_STORE_BROWSE_TYPE_CATEGORY || targetType > SCE_NP_COMMERCE2_STORE_BROWSE_TYPE_PRODUCT_CODE)
@@ -110,7 +112,9 @@ error_code sceNpCommerce2GetStoreBrowseUserdata(vm::ptr<s32> userdata)
 {
 	sceNpCommerce2.todo("sceNpCommerce2GetStoreBrowseUserdata(userdata=*0x%x)", userdata);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	if (!userdata)
@@ -125,15 +129,13 @@ error_code sceNpCommerce2Init()
 {
 	sceNpCommerce2.warning("sceNpCommerce2Init()");
 
-	if (false) // TODO
-		return SCE_NP_COMMERCE2_ERROR_ALREADY_INITIALIZED;
-
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
+	if (nph.is_NP_Com2_init)
+		return SCE_NP_COMMERCE2_ERROR_ALREADY_INITIALIZED;
+
 	if (!nph.is_NP_init)
-	{
 		return SCE_NP_ERROR_NOT_INITIALIZED;
-	}
 
 	return CELL_OK;
 }
@@ -149,7 +151,9 @@ error_code sceNpCommerce2CreateCtx(u32 version, vm::cptr<SceNpId> npId, vm::ptr<
 {
 	sceNpCommerce2.warning("sceNpCommerce2CreateCtx(version=%d, npId=*0x%x, handler=*0x%x, arg=*0x%x, ctx_id=*0x%x)", version, npId, handler, arg, ctx_id);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	if (version > SCE_NP_COMMERCE2_VERSION)
@@ -173,7 +177,9 @@ s32 sceNpCommerce2DestroyCtx(u32 ctx_id)
 {
 	sceNpCommerce2.warning("sceNpCommerce2DestroyCtx(ctx_id=%d)", ctx_id);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	if (!destroy_commerce2_context(ctx_id))
@@ -188,7 +194,9 @@ error_code sceNpCommerce2EmptyStoreCheckStart(u32 ctx_id, s32 store_check_type, 
 {
 	sceNpCommerce2.warning("sceNpCommerce2EmptyStoreCheckStart(ctx_id=%d, store_check_type=%d, target_id=*0x%x(%s))", ctx_id, store_check_type, target_id, target_id);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	if (!target_id || !target_id[0])
@@ -220,7 +228,9 @@ error_code sceNpCommerce2EmptyStoreCheckAbort(u32 ctx_id)
 {
 	sceNpCommerce2.todo("sceNpCommerce2EmptyStoreCheckAbort(ctx_id=%d)", ctx_id);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	return CELL_OK;
@@ -230,7 +240,9 @@ error_code sceNpCommerce2EmptyStoreCheckFinish(u32 ctx_id, vm::ptr<s32> is_empty
 {
 	sceNpCommerce2.warning("sceNpCommerce2EmptyStoreCheckFinish(ctx_id=%d, is_empty=*0x%x)", ctx_id, is_empty);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	if (!is_empty)
@@ -244,7 +256,9 @@ error_code sceNpCommerce2CreateSessionStart(u32 ctx_id)
 {
 	sceNpCommerce2.warning("sceNpCommerce2CreateSessionStart(ctx_id=%d)", ctx_id);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	const auto ctx = get_commerce2_context(ctx_id);
@@ -270,7 +284,9 @@ error_code sceNpCommerce2CreateSessionAbort(u32 ctx_id)
 {
 	sceNpCommerce2.todo("sceNpCommerce2CreateSessionAbort(ctx_id=%d)", ctx_id);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	
 	const auto ctx = get_commerce2_context(ctx_id);
@@ -284,7 +300,9 @@ s32 sceNpCommerce2CreateSessionFinish(u32 ctx_id, vm::ptr<SceNpCommerce2SessionI
 {
 	sceNpCommerce2.warning("sceNpCommerce2CreateSessionFinish(ctx_id=%d, sessionInfo=*0x%x)", ctx_id, sessionInfo);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	const auto ctx = get_commerce2_context(ctx_id);
@@ -335,7 +353,9 @@ error_code sceNpCommerce2GetCategoryContentsCreateReq(u32 ctx_id, vm::ptr<u32> r
 {
 	sceNpCommerce2.todo("sceNpCommerce2GetCategoryContentsCreateReq(ctx_id=%d, req_id=*0x%x)", ctx_id, req_id);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	if (!req_id)
@@ -348,7 +368,9 @@ error_code sceNpCommerce2GetCategoryContentsStart(u32 req_id, vm::cptr<char> cat
 {
 	sceNpCommerce2.todo("sceNpCommerce2GetCategoryContentsStart(req_id=%d, categoryId=%s, startPosition=%d, maxCountOfResults=%d)", req_id, categoryId, startPosition, maxCountOfResults);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	if (!categoryId || maxCountOfResults > SCE_NP_COMMERCE2_GETCAT_MAX_COUNT)
@@ -371,7 +393,9 @@ error_code sceNpCommerce2GetCategoryContentsGetResult(u32 req_id, vm::ptr<void> 
 {
 	sceNpCommerce2.todo("sceNpCommerce2GetCategoryContentsGetResult(req_id=%d, buf=*0x%x, buf_size=%d, fill_size=*0x%x)", req_id, buf, buf_size, fill_size);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	if (buf_size < SCE_NP_COMMERCE2_RECV_BUF_SIZE)
@@ -384,7 +408,9 @@ error_code sceNpCommerce2InitGetCategoryContentsResult(vm::ptr<SceNpCommerce2Get
 {
 	sceNpCommerce2.todo("sceNpCommerce2InitGetCategoryContentsResult(result=*0x%x, data=*0x%x, data_size=%d)", result, data, data_size);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	if (!result || !data || !data_size)
@@ -405,7 +431,9 @@ error_code sceNpCommerce2GetCategoryInfo(vm::cptr<SceNpCommerce2GetCategoryConte
 {
 	sceNpCommerce2.todo("sceNpCommerce2GetCategoryInfo(result=*0x%x, categoryInfo=*0x%x)", result, categoryInfo);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	if (!result || !categoryInfo)
@@ -419,7 +447,9 @@ error_code sceNpCommerce2GetContentInfo(vm::cptr<SceNpCommerce2GetCategoryConten
 {
 	sceNpCommerce2.todo("sceNpCommerce2GetContentInfo(result=*0x%x, index=%d, contentInfo=*0x%x)", result, index, contentInfo);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	if (!result || !contentInfo)
@@ -432,7 +462,9 @@ error_code sceNpCommerce2GetCategoryInfoFromContentInfo(vm::cptr<SceNpCommerce2C
 {
 	sceNpCommerce2.todo("sceNpCommerce2GetCategoryInfoFromContentInfo(contentInfo=*0x%x, categoryInfo=*0x%x)", contentInfo, categoryInfo);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	if (!contentInfo || !categoryInfo)
@@ -445,7 +477,9 @@ error_code sceNpCommerce2GetGameProductInfoFromContentInfo(vm::cptr<SceNpCommerc
 {
 	sceNpCommerce2.todo("sceNpCommerce2GetGameProductInfoFromContentInfo(contentInfo=*0x%x, gameProductInfo=*0x%x)", contentInfo, gameProductInfo);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	if (!contentInfo || !gameProductInfo)
@@ -464,7 +498,9 @@ error_code sceNpCommerce2GetProductInfoCreateReq(u32 ctx_id, vm::ptr<u32> req_id
 {
 	sceNpCommerce2.todo("sceNpCommerce2GetProductInfoCreateReq(ctx_id=%d, req_id=*0x%x)", ctx_id, req_id);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	if (!req_id)
@@ -481,7 +517,9 @@ error_code sceNpCommerce2GetProductInfoStart(u32 req_id, vm::cptr<char> category
 {
 	sceNpCommerce2.todo("sceNpCommerce2GetProductInfoStart(req_id=%d, categoryId=%s, productId=%s)", req_id, categoryId, productId);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	if (!productId)
@@ -494,7 +532,9 @@ error_code sceNpCommerce2GetProductInfoGetResult(u32 req_id, vm::ptr<void> buf, 
 {
 	sceNpCommerce2.todo("sceNpCommerce2GetProductInfoGetResult(req_id=%d, buf=*0x%x, buf_size=%d, fill_size=*0x%x)", req_id, buf, buf_size, fill_size);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	if (buf_size < SCE_NP_COMMERCE2_RECV_BUF_SIZE)
@@ -507,7 +547,9 @@ error_code sceNpCommerce2InitGetProductInfoResult(vm::ptr<SceNpCommerce2GetProdu
 {
 	sceNpCommerce2.todo("sceNpCommerce2InitGetProductInfoResult(result=*0x%x, data=*0x%x, data_size=%d)", result, data, data_size);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	if (!result || !data || !data_size)
@@ -528,7 +570,9 @@ error_code sceNpCommerce2GetGameProductInfo(vm::cptr<SceNpCommerce2GetProductInf
 {
 	sceNpCommerce2.todo("sceNpCommerce2GetGameProductInfo(result=*0x%x, gameProductInfo=*0x%x)", result, gameProductInfo);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	if (!result || !gameProductInfo)
@@ -547,7 +591,9 @@ error_code sceNpCommerce2GetProductInfoListCreateReq(u32 ctx_id, vm::ptr<u32> re
 {
 	sceNpCommerce2.todo("sceNpCommerce2GetProductInfoListCreateReq(ctx_id=%d, req_id=*0x%x)", ctx_id, req_id);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	if (!req_id)
@@ -564,7 +610,9 @@ error_code sceNpCommerce2GetProductInfoListStart(u32 req_id, vm::cpptr<char> pro
 {
 	sceNpCommerce2.todo("sceNpCommerce2GetProductInfoListStart(req_id=%d, productIds=*0x%x, productNum=%d)", req_id, productIds, productNum);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	if (!productIds || !productNum || productNum > SCE_NP_COMMERCE2_GETPRODLIST_MAX_COUNT)
@@ -577,7 +625,9 @@ error_code sceNpCommerce2GetProductInfoListGetResult(u32 req_id, vm::ptr<void> b
 {
 	sceNpCommerce2.todo("sceNpCommerce2GetProductInfoListGetResult(req_id=%d, buf=*0x%x, buf_size=%d, fill_size=*0x%x)", req_id, buf, buf_size, fill_size);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	if (buf_size < SCE_NP_COMMERCE2_RECV_BUF_SIZE)
@@ -590,7 +640,9 @@ error_code sceNpCommerce2InitGetProductInfoListResult(vm::ptr<SceNpCommerce2GetP
 {
 	sceNpCommerce2.todo("sceNpCommerce2InitGetProductInfoListResult(result=*0x%x, data=*0x%x, data_size=%d)", result, data, data_size);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	if (!result || !data || !data_size)
@@ -611,7 +663,9 @@ error_code sceNpCommerce2GetGameProductInfoFromGetProductInfoListResult(vm::cptr
 {
 	sceNpCommerce2.todo("sceNpCommerce2GetGameProductInfoFromGetProductInfoListResult(result=*0x%x, index=%d, data=*0x%x)", result, index, gameProductInfo);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	if (!result || !gameProductInfo)
@@ -630,7 +684,9 @@ error_code sceNpCommerce2GetContentRatingInfoFromGameProductInfo(vm::cptr<SceNpC
 {
 	sceNpCommerce2.todo("sceNpCommerce2GetContentRatingInfoFromGameProductInfo(gameProductInfo=*0x%x, contentRatingInfo=*0x%x)", gameProductInfo, contentRatingInfo);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	if (!gameProductInfo || !contentRatingInfo)
@@ -643,7 +699,9 @@ error_code sceNpCommerce2GetContentRatingInfoFromCategoryInfo(vm::cptr<SceNpComm
 {
 	sceNpCommerce2.todo("sceNpCommerce2GetContentRatingInfoFromCategoryInfo(categoryInfo=*0x%x, contentRatingInfo=*0x%x)", categoryInfo, contentRatingInfo);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	if (!categoryInfo || !contentRatingInfo)
@@ -656,7 +714,9 @@ error_code sceNpCommerce2GetContentRatingDescriptor(vm::cptr<SceNpCommerce2Conte
 {
 	sceNpCommerce2.todo("sceNpCommerce2GetContentRatingDescriptor(contentRatingInfo=*0x%x, index=%d, contentRatingDescriptor=*0x%x)", contentRatingInfo, index, contentRatingDescriptor);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	if (!contentRatingInfo || !contentRatingDescriptor)
@@ -669,7 +729,9 @@ error_code sceNpCommerce2GetGameSkuInfoFromGameProductInfo(vm::cptr<SceNpCommerc
 {
 	sceNpCommerce2.todo("sceNpCommerce2GetGameSkuInfoFromGameProductInfo(gameProductInfo=*0x%x, index=%d, gameSkuInfo=*0x%x)", gameProductInfo, index, gameSkuInfo);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	if (!gameProductInfo || !gameSkuInfo)
@@ -682,7 +744,9 @@ error_code sceNpCommerce2GetPrice(u32 ctx_id, vm::ptr<char> buf, u32 buflen, u32
 {
 	sceNpCommerce2.todo("sceNpCommerce2GetPrice(ctx_id=%d, buf=*0x%x, buflen=%d, price=%d)", ctx_id, buf, buflen, price);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	const auto ctx = get_commerce2_context(ctx_id);
@@ -696,7 +760,9 @@ error_code sceNpCommerce2DoCheckoutStartAsync(u32 ctx_id, vm::cpptr<char> sku_id
 {
 	sceNpCommerce2.todo("sceNpCommerce2DoCheckoutStartAsync(ctx_id=%d, sku_ids=*0x%x, sku_num=%d, container=%d)", ctx_id, sku_ids, sku_num, container);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	if (sku_num > SCE_NP_COMMERCE2_SKU_CHECKOUT_MAX)
@@ -727,7 +793,9 @@ error_code sceNpCommerce2DoCheckoutFinishAsync(u32 ctx_id)
 {
 	sceNpCommerce2.todo("sceNpCommerce2DoCheckoutFinishAsync(ctx_id=%d)", ctx_id);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	const auto ctx = get_commerce2_context(ctx_id);
@@ -741,7 +809,9 @@ error_code sceNpCommerce2DoProductBrowseStartAsync(u32 ctx_id, vm::cptr<char> pr
 {
 	sceNpCommerce2.todo("sceNpCommerce2DoProductBrowseStartAsync(ctx_id=%d, product_id=%s, container=%d, param=*0x%x)", ctx_id, product_id, container, param);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	if (!product_id || !product_id[0])
@@ -767,7 +837,9 @@ error_code sceNpCommerce2DoProductBrowseFinishAsync(u32 ctx_id)
 {
 	sceNpCommerce2.todo("sceNpCommerce2DoProductBrowseFinishAsync(ctx_id=%d)", ctx_id);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	const auto ctx = get_commerce2_context(ctx_id);
@@ -781,7 +853,9 @@ error_code sceNpCommerce2DoDlListStartAsync(u32 ctx_id, vm::cptr<char> service_i
 {
 	sceNpCommerce2.todo("sceNpCommerce2DoDlListStartAsync(ctx_id=%d, service_id=%s, sku_ids=*0x%x, sku_num=%d, container=%d)", ctx_id, service_id, sku_ids, sku_num, container);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	if (sku_num > SCE_NP_COMMERCE2_SKU_CHECKOUT_MAX)
@@ -818,7 +892,9 @@ error_code sceNpCommerce2DoDlListFinishAsync(u32 ctx_id)
 {
 	sceNpCommerce2.todo("sceNpCommerce2DoDlListFinishAsync(ctx_id=%d)", ctx_id);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	const auto ctx = get_commerce2_context(ctx_id);
@@ -832,7 +908,9 @@ error_code sceNpCommerce2DoProductCodeStartAsync(u32 ctx_id, u32 container, vm::
 {
 	sceNpCommerce2.todo("sceNpCommerce2DoProductCodeStartAsync(ctx_id=%d, container=%d, param=*0x%x)", ctx_id, container, param);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	if (!param)
@@ -873,7 +951,9 @@ error_code sceNpCommerce2DoProductCodeFinishAsync(u32 ctx_id)
 {
 	sceNpCommerce2.todo("sceNpCommerce2DoProductCodeFinishAsync(ctx_id=%d)", ctx_id);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	const auto ctx = get_commerce2_context(ctx_id);
@@ -887,7 +967,9 @@ error_code sceNpCommerce2GetBGDLAvailability(vm::ptr<b8> bgdlAvailability)
 {
 	sceNpCommerce2.todo("sceNpCommerce2GetBGDLAvailability(bgdlAvailability=*0x%x)", bgdlAvailability);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	if (!bgdlAvailability)
@@ -902,7 +984,9 @@ error_code sceNpCommerce2SetBGDLAvailability(b8 bgdlAvailability)
 {
 	sceNpCommerce2.todo("sceNpCommerce2SetBGDLAvailability(bgdlAvailability=%d)", bgdlAvailability);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	return CELL_OK;
@@ -912,7 +996,9 @@ error_code sceNpCommerce2AbortReq(u32 req_id)
 {
 	sceNpCommerce2.todo("sceNpCommerce2AbortReq(req_id=%d)", req_id);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	return CELL_OK;
@@ -922,7 +1008,9 @@ error_code sceNpCommerce2DestroyReq(u32 req_id)
 {
 	sceNpCommerce2.todo("sceNpCommerce2DestroyReq(req_id=%d)", req_id);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	return CELL_OK;
@@ -932,7 +1020,9 @@ error_code sceNpCommerce2DoServiceListStartAsync(u32 ctx_id, vm::ptr<char> servi
 {
 	sceNpCommerce2.todo("sceNpCommerce2DoServiceListStartAsync(ctx_id=%d, serviceId=*0x%x, container=%d, param=*0x%x)", ctx_id, serviceId, container, param);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	if (!param || !serviceId)
@@ -961,7 +1051,9 @@ error_code sceNpCommerce2DoServiceListFinishAsync(u32 ctx_id)
 {
 	sceNpCommerce2.todo("sceNpCommerce2DoServiceListFinishAsync(ctx_id=%d)", ctx_id);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
 	const auto ctx = get_commerce2_context(ctx_id);
