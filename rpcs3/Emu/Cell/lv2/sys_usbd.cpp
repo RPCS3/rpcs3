@@ -166,10 +166,12 @@ usb_handler_thread::usb_handler_thread()
 		return;
 	}
 
+#if LIBUSB_API_VERSION >= 0x01000107
 	// Set LIBUSB_DEBUG env variable to receive log messages
-	libusb_set_log_cb(ctx, [](libusb_context* ctx, libusb_log_level level, const char* str)
+	libusb_set_log_cb(ctx, [](libusb_context* /* ctx */, libusb_log_level level, const char* str)
 	{
-		if (!str) return;
+		if (!str)
+			return;
 
 		const std::string msg = fmt::trim(str, " \t\n");
 
@@ -187,8 +189,11 @@ usb_handler_thread::usb_handler_thread()
 		case LIBUSB_LOG_LEVEL_DEBUG:
 			sys_usbd.trace("libusb log: %s", msg);
 			break;
+		default:
+			break;
 		}
 	}, LIBUSB_LOG_CB_CONTEXT);
+#endif
 
 	for (u32 index = 0; index < MAX_SYS_USBD_TRANSFERS; index++)
 	{
