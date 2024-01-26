@@ -265,6 +265,7 @@ struct SceNpCommerce2GameProductInfo
 struct SceNpCommerce2GetProductInfoListResult
 {
 	SceNpCommerce2CommonData commonData;
+	be_t<u32> countOfProductInfo;
 };
 
 // Structure for rating information
@@ -316,7 +317,7 @@ struct SceNpCommerce2ProductBrowseParam
 struct SceNpCommerce2ProductCodeParam
 {
 	be_t<u32> size;
-	be_t<u32> inputMode; // Unsigned ints go into be_t<u32>, right?
+	be_t<u32> inputMode;
 	s8 code1[SCE_NP_COMMERCE2_PRODUCT_CODE_BLOCK_LEN + 1];
 	s8 padding1[3];
 	s8 code2[SCE_NP_COMMERCE2_PRODUCT_CODE_BLOCK_LEN + 1];
