@@ -440,6 +440,9 @@ namespace utils
 	{
 #if defined(ARCH_X64) && !defined(_MSC_VER)
 		__asm__ volatile("lock orl $0, 0(%0)" :: "r" (ptr));
+#elif defined(ARCH_ARM64)
+		u32 value = 0;
+		__asm__ volatile ("ldset %w0, %w0, %1" : "+r"(value), "=Q"(*ptr) : "r"(value));
 #else
 		*static_cast<atomic_t<u32> *>(ptr) += 0;
 #endif
