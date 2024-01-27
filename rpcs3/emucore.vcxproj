@@ -99,6 +99,7 @@
     <ClCompile Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_main_menu.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_page.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_settings.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\Network\overlay_recvmessage_dialog.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_animated_icon.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_controls.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_cursor.cpp" />
@@ -583,6 +584,7 @@
     <ClInclude Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_main_menu.h" />
     <ClInclude Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_page.h" />
     <ClInclude Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_settings.h" />
+    <ClInclude Include="Emu\RSX\Overlays\Network\overlay_recvmessage_dialog.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_animated_icon.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_cursor.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_debug_overlay.h" />

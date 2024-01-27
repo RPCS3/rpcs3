@@ -6,7 +6,7 @@ namespace rsx
 {
 	namespace overlays
 	{
-		list_view::list_view(u16 width, u16 height, bool use_separators)
+		list_view::list_view(u16 width, u16 height, bool use_separators, bool can_deny)
 			: m_use_separators(use_separators)
 		{
 			w = width;
@@ -39,7 +39,22 @@ namespace rsx
 
 			m_scroll_indicator_bottom->set_pos(0, height - 40);
 			m_accept_btn->set_pos(30, height + 20);
-			m_cancel_btn->set_pos(180, height + 20);
+
+			if (can_deny)
+			{
+				m_deny_btn = std::make_unique<image_button>(120, 20);
+				m_deny_btn->set_size(120, 30);
+				m_deny_btn->set_image_resource(resource_config::standard_image_resource::triangle);
+				m_deny_btn->set_pos(180, height + 20);
+				m_deny_btn->set_text(localized_string_id::RSX_OVERLAYS_LIST_DENY);
+				m_deny_btn->set_font("Arial", 16);
+
+				m_cancel_btn->set_pos(330, height + 20);
+			}
+			else
+			{
+				m_cancel_btn->set_pos(180, height + 20);
+			}
 
 			m_accept_btn->set_text(localized_string_id::RSX_OVERLAYS_LIST_SELECT);
 			m_cancel_btn->set_text(localized_string_id::RSX_OVERLAYS_LIST_CANCEL);
@@ -173,11 +188,18 @@ namespace rsx
 		{
 			if (cancel_only)
 				m_cancel_btn->set_pos(x + 30, y + h + 20);
+			else if (m_deny_btn)
+				m_cancel_btn->set_pos(x + 330, y + h + 20);
 			else
 				m_cancel_btn->set_pos(x + 180, y + h + 20);
 
 			m_cancel_only = cancel_only;
 			is_compiled   = false;
+		}
+
+		bool list_view::get_cancel_only() const
+		{
+			return m_cancel_only;
 		}
 
 		void list_view::translate(s16 _x, s16 _y)
@@ -187,6 +209,11 @@ namespace rsx
 			m_scroll_indicator_bottom->translate(_x, _y);
 			m_accept_btn->translate(_x, _y);
 			m_cancel_btn->translate(_x, _y);
+
+			if (m_deny_btn)
+			{
+				m_deny_btn->translate(_x, _y);
+			}
 		}
 
 		compiled_resource& list_view::get_compiled()
@@ -200,7 +227,14 @@ namespace rsx
 				compiled.add(m_cancel_btn->get_compiled());
 
 				if (!m_cancel_only)
+				{
 					compiled.add(m_accept_btn->get_compiled());
+
+					if (m_deny_btn)
+					{
+						compiled.add(m_deny_btn->get_compiled());
+					}
+				}
 
 				compiled_resources = compiled;
 			}

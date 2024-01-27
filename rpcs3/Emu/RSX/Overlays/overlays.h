@@ -57,7 +57,8 @@ namespace rsx
 				new_save = -1,
 				canceled = -2,
 				error = -3,
-				interrupted = -4
+				interrupted = -4,
+				no = -5
 			};
 
 			static constexpr u64 m_auto_repeat_ms_interval_default = 200;

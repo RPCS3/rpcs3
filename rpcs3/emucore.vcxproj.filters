@@ -88,6 +88,9 @@
     <Filter Include="Emu\GPU\RSX\Program\Snippets\RSXProg">
       <UniqueIdentifier>{f990b0be-adbd-4a1c-b8c7-d6f963d5b629}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Emu\GPU\RSX\Overlays\Network">
+      <UniqueIdentifier>{d7a60dc0-ac4e-4983-97d3-ce1328af49a7}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Crypto\aes.cpp">
@@ -1185,6 +1188,9 @@
     </ClCompile>
     <ClCompile Include="Emu\RSX\Overlays\overlay_debug_overlay.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Overlays\Network\overlay_recvmessage_dialog.cpp">
+      <Filter>Emu\GPU\RSX\Overlays\Network</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -2406,6 +2412,9 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\Overlays\overlay_debug_overlay.h">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\Network\overlay_recvmessage_dialog.h">
+      <Filter>Emu\GPU\RSX\Overlays\Network</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
