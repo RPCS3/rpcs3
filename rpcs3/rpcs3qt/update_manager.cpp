@@ -498,7 +498,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 		usz offset           = 0;
 		usz outSizeProcessed = 0;
 		const bool isDir     = SzArEx_IsDir(&db, i);
-		const DWORD attribs  = SzBitWithVals_Check(&db.Attribs, i) ? db.Attribs.Vals[i] : 0;
+		[[maybe_unused]] const DWORD attribs = SzBitWithVals_Check(&db.Attribs, i) ? db.Attribs.Vals[i] : 0;
 #ifdef _WIN32
 		// This is commented out for now as we shouldn't need it and symlinks
 		// aren't well supported on Windows. Left in case it is needed in the future.

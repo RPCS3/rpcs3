@@ -24,6 +24,9 @@
 #include "Emu/NP/np_structs_extra.h"
 #include "Emu/system_config.h"
 
+#include "Emu/RSX/Overlays/overlay_manager.h"
+#include "Emu/RSX/Overlays/Network/overlay_recvmessage_dialog.h"
+
 LOG_CHANNEL(sceNp);
 
 error_code sceNpManagerGetNpId(vm::ptr<SceNpId> npId);
@@ -1398,27 +1401,43 @@ error_code sceNpBasicRecvMessageCustom(u16 mainType, u32 recvOptions, sys_memory
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
 
-	bool result = false;
-
-	input::SetIntercepted(true);
+	error_code result = CELL_CANCEL;
 
 	SceNpBasicMessageRecvAction recv_result{};
 	u64 chosen_msg_id{};
 
-	Emu.BlockingCallFromMainThread([=, &result, &recv_result, &chosen_msg_id]()
+	if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
 	{
-		auto recv_dlg = Emu.GetCallbacks().get_recvmessage_dialog();
+		auto recv_dlg = manager->create<rsx::overlays::recvmessage_dialog>();
 		result = recv_dlg->Exec(static_cast<SceNpBasicMessageMainType>(mainType), static_cast<SceNpBasicMessageRecvOptions>(recvOptions), recv_result, chosen_msg_id);
-	});
+	}
+	else
+	{
+		input::SetIntercepted(true);
 
-	input::SetIntercepted(false);
+		Emu.BlockingCallFromMainThread([=, &result, &recv_result, &chosen_msg_id]()
+		{
+			auto recv_dlg = Emu.GetCallbacks().get_recvmessage_dialog();
+			result = recv_dlg->Exec(static_cast<SceNpBasicMessageMainType>(mainType), static_cast<SceNpBasicMessageRecvOptions>(recvOptions), recv_result, chosen_msg_id);
+		});
 
-	if (!result)
+		input::SetIntercepted(false);
+	}
+
+	if (result != CELL_OK)
 	{
 		return SCE_NP_BASIC_ERROR_CANCEL;
 	}
 
-	const auto msg_pair = nph.get_message(chosen_msg_id).value();
+	const auto opt_msg = nph.get_message(chosen_msg_id);
+
+	if (!opt_msg)
+	{
+		sceNp.fatal("sceNpBasicRecvMessageCustom: message is invalid: chosen_msg_id=%d", chosen_msg_id);
+		return SCE_NP_BASIC_ERROR_CANCEL;
+	}
+
+	const auto msg_pair = opt_msg.value();
 	const auto& msg     = msg_pair->second;
 
 	const u32 event_to_send = (mainType == SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE) ? SCE_NP_BASIC_EVENT_RECV_INVITATION_RESULT : SCE_NP_BASIC_EVENT_RECV_CUSTOM_DATA_RESULT;

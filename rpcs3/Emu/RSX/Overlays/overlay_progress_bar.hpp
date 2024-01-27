@@ -1,3 +1,5 @@
+#pragma once
+
 #include "overlay_controls.h"
 
 namespace rsx
