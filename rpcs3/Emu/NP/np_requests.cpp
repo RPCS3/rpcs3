@@ -764,6 +764,8 @@ namespace np
 	{
 		auto worker_function = [trans_ctx = trans_ctx, req_id, this](std::unique_lock<shared_mutex> lock)
 		{
+			thread_base::set_name("NP Trans Worker");
+
 			auto res = trans_ctx->wake_cond.wait_for(lock, std::chrono::microseconds(trans_ctx->timeout));
 			{
 				std::lock_guard lock_threads(this->mutex_async_transactions);

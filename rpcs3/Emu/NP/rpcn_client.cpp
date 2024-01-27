@@ -135,7 +135,8 @@ namespace rpcn
 
 	rpcn_client::rpcn_client()
 		: sem_connected(0), sem_authentified(0), sem_reader(0), sem_writer(0), sem_rpcn(0),
-		  thread_rpcn(std::thread(&rpcn_client::rpcn_thread, this)), thread_rpcn_reader(std::thread(&rpcn_client::rpcn_reader_thread, this)),
+		  thread_rpcn(std::thread(&rpcn_client::rpcn_thread, this)),
+		  thread_rpcn_reader(std::thread(&rpcn_client::rpcn_reader_thread, this)),
 		  thread_rpcn_writer(std::thread(&rpcn_client::rpcn_writer_thread, this))
 	{
 		g_cfg_rpcn.load();
@@ -152,9 +153,12 @@ namespace rpcn
 		sem_reader.release();
 		sem_writer.release();
 
-		thread_rpcn.join();
-		thread_rpcn_reader.join();
-		thread_rpcn_writer.join();
+		if (thread_rpcn.joinable())
+			thread_rpcn.join();
+		if (thread_rpcn_reader.joinable())
+			thread_rpcn_reader.join();
+		if (thread_rpcn_writer.joinable())
+			thread_rpcn_writer.join();
 
 		disconnect();
 
@@ -196,6 +200,8 @@ namespace rpcn
 	// RPCN thread
 	void rpcn_client::rpcn_reader_thread()
 	{
+		thread_base::set_name("RPCN Reader");
+
 		while (true)
 		{
 			sem_reader.acquire();
@@ -219,6 +225,8 @@ namespace rpcn
 
 	void rpcn_client::rpcn_writer_thread()
 	{
+		thread_base::set_name("RPCN Writer");
+
 		while (true)
 		{
 			sem_writer.acquire();
@@ -241,6 +249,8 @@ namespace rpcn
 
 	void rpcn_client::rpcn_thread()
 	{
+		thread_base::set_name("RPCN Client");
+
 		while (true)
 		{
 			sem_rpcn.acquire();
