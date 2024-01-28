@@ -1192,6 +1192,9 @@
     <ClCompile Include="Emu\RSX\Overlays\Network\overlay_recvmessage_dialog.cpp">
       <Filter>Emu\GPU\RSX\Overlays\Network</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\Overlays\Network\overlay_sendmessage_dialog.cpp">
+      <Filter>Emu\GPU\RSX\Overlays\Network</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -2414,6 +2417,9 @@
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Overlays\Network\overlay_recvmessage_dialog.h">
+      <Filter>Emu\GPU\RSX\Overlays\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\Network\overlay_sendmessage_dialog.h">
       <Filter>Emu\GPU\RSX\Overlays\Network</Filter>
     </ClInclude>
   </ItemGroup>
