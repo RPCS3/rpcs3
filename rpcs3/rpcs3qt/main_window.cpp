@@ -2424,10 +2424,15 @@ void main_window::CreateConnects()
 			return;
 		}
 
-		QStringList paths;
-
 		// Only select one folder for now
-		paths << QFileDialog::getExistingDirectory(this, tr("Select a folder containing one or more games"), qstr(fs::get_config_dir()), QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+		QString dir = QFileDialog::getExistingDirectory(this, tr("Select a folder containing one or more games"), qstr(fs::get_config_dir()), QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+		if (dir.isEmpty())
+		{
+			return;
+		}
+
+		QStringList paths;
+		paths << dir;
 		AddGamesFromDirs(std::move(paths));
 	});
 
