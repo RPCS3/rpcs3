@@ -37,8 +37,6 @@ namespace rsx
 			int get_selected_index() const;
 			bool get_cancel_only() const;
 
-			std::u32string get_selected_item();
-
 			void set_cancel_only(bool cancel_only);
 			void translate(s16 _x, s16 _y) override;
 

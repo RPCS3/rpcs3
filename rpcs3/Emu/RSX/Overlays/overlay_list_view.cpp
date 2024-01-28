@@ -176,14 +176,6 @@ namespace rsx
 			return m_selected_entry;
 		}
 
-		std::u32string list_view::get_selected_item()
-		{
-			if (m_selected_entry < 0)
-				return {};
-
-			return m_items[m_selected_entry]->text;
-		}
-
 		void list_view::set_cancel_only(bool cancel_only)
 		{
 			if (cancel_only)

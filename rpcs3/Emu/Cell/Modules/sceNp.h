@@ -1712,7 +1712,11 @@ class SendMessageDialogBase
 public:
 	virtual ~SendMessageDialogBase() = default;
 
-	virtual bool Exec(message_data& msg_data, std::set<std::string>& npids) = 0;
+	virtual error_code Exec(message_data& msg_data, std::set<std::string>& npids) = 0;
+	virtual void callback_handler(u16 ntype, const std::string& username, bool status) = 0;
+
+protected:
+	std::shared_ptr<rpcn::rpcn_client> m_rpcn;
 };
 
 class RecvMessageDialogBase

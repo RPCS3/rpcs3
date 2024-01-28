@@ -26,6 +26,7 @@
 
 #include "Emu/RSX/Overlays/overlay_manager.h"
 #include "Emu/RSX/Overlays/Network/overlay_recvmessage_dialog.h"
+#include "Emu/RSX/Overlays/Network/overlay_sendmessage_dialog.h"
 
 LOG_CHANNEL(sceNp);
 
@@ -1228,19 +1229,27 @@ error_code sceNpBasicSendMessageGui(vm::cptr<SceNpBasicMessageDetails> msg, sys_
 
 	sceNp.trace("Message Data:\n%s", fmt::buf_to_hexstring(msg->data.get_ptr(), msg->size));
 
-	bool result = false;
+	error_code result = CELL_CANCEL;
 
-	input::SetIntercepted(true);
-
-	Emu.BlockingCallFromMainThread([=, &result, msg_data = std::move(msg_data), npids = std::move(npids)]() mutable
+	if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
 	{
-		auto send_dlg = Emu.GetCallbacks().get_sendmessage_dialog();
-		result = send_dlg->Exec(msg_data, npids);
-	});
+		auto recv_dlg = manager->create<rsx::overlays::sendmessage_dialog>();
+		result = recv_dlg->Exec(msg_data, npids);
+	}
+	else
+	{
+		input::SetIntercepted(true);
 
-	input::SetIntercepted(false);
+		Emu.BlockingCallFromMainThread([=, &result, msg_data = std::move(msg_data), npids = std::move(npids)]() mutable
+		{
+			auto send_dlg = Emu.GetCallbacks().get_sendmessage_dialog();
+			result = send_dlg->Exec(msg_data, npids);
+		});
 
-	s32 callback_result = result ? 0 : -1;
+		input::SetIntercepted(false);
+	}
+
+	s32 callback_result = result == CELL_OK ? 0 : -1;
 	s32 event           = 0;
 
 	switch (msg->mainType)
