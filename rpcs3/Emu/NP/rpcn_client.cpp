@@ -145,6 +145,7 @@ namespace rpcn
 
 	rpcn_client::~rpcn_client()
 	{
+		terminate_connection();
 		std::lock_guard lock(inst_mutex);
 		terminate = true;
 		sem_rpcn.release();
@@ -414,7 +415,7 @@ namespace rpcn
 				command == CommandType::AddBlock || command == CommandType::RemoveBlock ||
 				command == CommandType::SendMessage || command == CommandType::SendToken ||
 				command == CommandType::SendResetToken || command == CommandType::ResetPassword ||
-				command == CommandType::GetNetworkTime || command == CommandType::SetPresence)
+				command == CommandType::GetNetworkTime || command == CommandType::SetPresence || command == CommandType::Terminate)
 			{
 				std::lock_guard lock(mutex_replies_sync);
 				replies_sync.insert(std::make_pair(packet_id, std::make_pair(command, std::move(data))));
@@ -574,23 +575,20 @@ namespace rpcn
 					if (res == 0)
 					{
 						// Remote closed connection
-						rpcn_log.error("recv failed: connection reset by server");
+						rpcn_log.notice("recv failed: connection reset by server");
 						return recvn_result::recvn_noconn;
 					}
 
 					rpcn_log.error("recvn failed with error: %d:%s(native: %d)", res, get_wolfssl_error(read_wssl, res), get_native_error());
 					return recvn_result::recvn_fatal;
 				}
-
-				res = 0;
 			}
 			else
 			{
 				// Reset timeout each time something is received
 				num_timeouts = 0;
+				n_recv += res;
 			}
-
-			n_recv += res;
 		}
 
 		return recvn_result::recvn_success;
@@ -1013,6 +1011,21 @@ namespace rpcn
 
 		rpcn_log.success("You are now logged in RPCN(%s | %s)!", npid, online_name);
 		authentified = true;
+
+		return true;
+	}
+
+	bool rpcn_client::terminate_connection()
+	{
+		u64 req_id = rpcn_request_counter.fetch_add(1);
+
+		std::vector<u8> packet_data;
+		std::vector<u8> data;
+
+		if (!forge_send_reply(CommandType::Terminate, req_id, data, packet_data))
+		{
+			return false;
+		}
 
 		return true;
 	}
