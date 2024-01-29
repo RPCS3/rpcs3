@@ -267,7 +267,7 @@ namespace rsx
 				status_flags |= status_bits::invalidate_image_cache;
 			}
 			
-			m_list = std::make_unique<list_view>(virtual_width - 2 * 20, 540);
+			m_list = std::make_unique<list_view>(virtual_width - 2 * 20, 540, false);
 			m_list->set_pos(20, 85);
 
 			for (const std::string& name : m_entry_names)

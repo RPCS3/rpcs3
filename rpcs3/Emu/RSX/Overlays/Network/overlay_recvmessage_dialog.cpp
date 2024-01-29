@@ -44,7 +44,7 @@ namespace rsx
 			m_dim_background->set_size(virtual_width, virtual_height);
 			m_dim_background->back_color.a = 0.5f;
 
-			m_list = std::make_unique<list_view>(virtual_width - 2 * 20, 540, true, true);
+			m_list = std::make_unique<list_view>(virtual_width - 2 * 20, 540, false, true);
 			m_list->set_pos(20, 85);
 
 			m_description = std::make_unique<label>();
