@@ -2496,5 +2496,8 @@
     <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXROPPrologue.glsl">
       <Filter>Emu\GPU\RSX\Program\Snippets\RSXProg</Filter>
     </None>
+    <None Include="Emu\RSX\Program\GLSLSnippets\VideoOutCalibrationPass.glsl">
+      <Filter>Emu\GPU\RSX\Program\Snippets</Filter>
+    </None>
   </ItemGroup>
 </Project>
