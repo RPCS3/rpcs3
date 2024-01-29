@@ -938,6 +938,7 @@
     <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXVertexFetch.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXVertexPrologue.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\ShuffleBytes.glsl" />
+    <None Include="Emu\RSX\Program\GLSLSnippets\VideoOutCalibrationPass.glsl" />
   </ItemGroup>
   <PropertyGroup Label="UserMacros" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
