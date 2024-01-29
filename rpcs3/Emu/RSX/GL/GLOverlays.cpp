@@ -523,6 +523,7 @@ namespace gl
 			"				return texture(fs0,tc0);\n"
 			"		}\n"
 			"	}\n"
+			"	else\n"
 			"	{\n"
 			"		vec2 coord_left = tc0 * vec2(1.f, 0.4898f);\n"
 			"		vec2 coord_right = coord_left + vec2(0.f, 0.510204f);\n"
