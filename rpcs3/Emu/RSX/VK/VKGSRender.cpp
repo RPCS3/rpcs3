@@ -1968,7 +1968,8 @@ void VKGSRender::do_local_task(rsx::FIFO::state state)
 
 	if (m_overlay_manager)
 	{
-		if (!in_begin_end && async_flip_requested & flip_request::native_ui && !is_stopped())
+		const auto should_ignore = in_begin_end && state != rsx::FIFO::state::empty;
+		if ((async_flip_requested & flip_request::native_ui) && !should_ignore && !is_stopped())
 		{
 			flush_command_queue(true);
 			rsx::display_flip_info_t info{};
