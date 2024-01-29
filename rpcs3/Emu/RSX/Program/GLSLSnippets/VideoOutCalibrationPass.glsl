@@ -13,9 +13,13 @@ layout(location=0) in vec2 tc0;
 layout(location=0) out vec4 ocol;
 
 #define STEREO_MODE_DISABLED 0
-#define STEREO_MODE_ANAGLYPH 1
-#define STEREO_MODE_SIDE_BY_SIDE 2
-#define STEREO_MODE_OVER_UNDER 3
+#define STEREO_MODE_SIDE_BY_SIDE 1
+#define STEREO_MODE_OVER_UNDER 2
+#define STEREO_MODE_ANAGLYPH_RED_GREEN 3
+#define STEREO_MODE_ANAGLYPH_RED_BLUE 4
+#define STEREO_MODE_ANAGLYPH_RED_CYAN 5
+#define STEREO_MODE_ANAGLYPH_MAGENTA_CYAN 6
+#define STEREO_MODE_ANAGLYPH_TRIOSCOPIC 7
 
 vec2 sbs_single_matrix = vec2(2.0,0.4898f);
 vec2 sbs_multi_matrix =  vec2(2.0,1.0);
@@ -46,10 +50,26 @@ vec4 read_source()
 	{
 		switch (stereo_display_mode)
 		{
-			case STEREO_MODE_ANAGLYPH:
+			case STEREO_MODE_ANAGLYPH_RED_GREEN:
+				left = texture(fs0, tc0 * vec2(1.f, 0.4898f));
+				right = texture(fs0, (tc0 * vec2(1.f, 0.4898f)) + vec2(0.f, 0.510204f));
+				return vec4(left.r, right.g, 0.f, 1.f);
+			case STEREO_MODE_ANAGLYPH_RED_BLUE:
+				left = texture(fs0, tc0 * vec2(1.f, 0.4898f));
+				right = texture(fs0, (tc0 * vec2(1.f, 0.4898f)) + vec2(0.f, 0.510204f));
+				return vec4(left.r, 0.f, right.b, 1.f);
+			case STEREO_MODE_ANAGLYPH_RED_CYAN:
 				left = texture(fs0, tc0 * vec2(1.f, 0.4898f));
 				right = texture(fs0, (tc0 * vec2(1.f, 0.4898f)) + vec2(0.f, 0.510204f));
 				return vec4(left.r, right.g, right.b, 1.f);
+			case STEREO_MODE_ANAGLYPH_MAGENTA_CYAN:
+				left = texture(fs0, tc0 * vec2(1.f, 0.4898f));
+				right = texture(fs0, (tc0 * vec2(1.f, 0.4898f)) + vec2(0.f, 0.510204f));
+				return vec4(left.r, right.g, (left.b + right.b) / 2.f, 1.f);
+			case STEREO_MODE_ANAGLYPH_TRIOSCOPIC:
+				left = texture(fs0, tc0 * vec2(1.f, 0.4898f));
+				right = texture(fs0, (tc0 * vec2(1.f, 0.4898f)) + vec2(0.f, 0.510204f));
+				return vec4(right.r, left.g, right.b, 1.f);
 			case STEREO_MODE_SIDE_BY_SIDE:
 				if (tc0.x < 0.5) return texture(fs0, tc0* sbs_single_matrix);
 				else             return texture(fs0, (tc0* sbs_single_matrix) + vec2(-1.f, 0.510204f));
@@ -64,10 +84,26 @@ vec4 read_source()
 	{
 		switch (stereo_display_mode)
 		{
-			case STEREO_MODE_ANAGLYPH:
+			case STEREO_MODE_ANAGLYPH_RED_GREEN:
+				left = texture(fs0, tc0);
+				right = texture(fs1, tc0);
+				return vec4(left.r, right.g, 0.f, 1.f);
+			case STEREO_MODE_ANAGLYPH_RED_BLUE:
+				left = texture(fs0, tc0);
+				right = texture(fs1, tc0);
+				return vec4(left.r, 0.f, right.b, 1.f);
+			case STEREO_MODE_ANAGLYPH_RED_CYAN:
 				left = texture(fs0, tc0);
 				right = texture(fs1, tc0);
 				return vec4(left.r, right.g, right.b, 1.f);
+			case STEREO_MODE_ANAGLYPH_MAGENTA_CYAN:
+				left = texture(fs0, tc0);
+				right = texture(fs1, tc0);
+				return vec4(left.r, right.g, (left.b + right.b) / 2.f, 1.f);
+			case STEREO_MODE_ANAGLYPH_TRIOSCOPIC:
+				left = texture(fs0, tc0);
+				right = texture(fs1, tc0);
+				return vec4(right.r, left.g, right.b, 1.f);
 			case STEREO_MODE_SIDE_BY_SIDE:
 				if (tc0.x < 0.5) return texture(fs0,(tc0 * sbs_multi_matrix));
 				else             return texture(fs1,(tc0 * sbs_multi_matrix) + vec2(-1.f,0.f));
