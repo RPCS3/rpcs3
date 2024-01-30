@@ -11,6 +11,12 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="SDL\src\joystick\hidapi\SDL_hidapi_steamdeck.c" />
+    <ClCompile Include="SDL\src\joystick\SDL_steam_virtual_gamepad.c" />
+    <ClCompile Include="SDL\src\joystick\steam\SDL_steamcontroller.c" />
+    <ClCompile Include="SDL\src\video\yuv2rgb\yuv_rgb_lsx.c" />
+    <ClCompile Include="SDL\src\video\yuv2rgb\yuv_rgb_sse.c" />
+    <ClCompile Include="SDL\src\video\yuv2rgb\yuv_rgb_std.c" />
     <ClInclude Include="SDL\include\begin_code.h" />
     <ClInclude Include="SDL\include\close_code.h" />
     <ClInclude Include="SDL\include\SDL.h" />
@@ -133,7 +139,9 @@
     <ClInclude Include="SDL\src\joystick\hidapi\SDL_hidapi_rumble.h" />
     <ClInclude Include="SDL\src\joystick\SDL_gamecontrollerdb.h" />
     <ClInclude Include="SDL\src\joystick\SDL_joystick_c.h" />
+    <ClInclude Include="SDL\src\joystick\SDL_steam_virtual_gamepad.h" />
     <ClInclude Include="SDL\src\joystick\SDL_sysjoystick.h" />
+    <ClInclude Include="SDL\src\joystick\steam\SDL_steamcontroller.h" />
     <ClInclude Include="SDL\src\joystick\usb_ids.h" />
     <ClInclude Include="SDL\src\joystick\virtual\SDL_virtualjoystick_c.h" />
     <ClInclude Include="SDL\src\joystick\windows\SDL_dinputjoystick_c.h" />
@@ -188,6 +196,13 @@
     <ClInclude Include="SDL\src\video\dummy\SDL_nullevents_c.h" />
     <ClInclude Include="SDL\src\video\dummy\SDL_nullframebuffer_c.h" />
     <ClInclude Include="SDL\src\video\dummy\SDL_nullvideo.h" />
+    <ClInclude Include="SDL\src\video\khronos\vk_video\vulkan_video_codecs_common.h" />
+    <ClInclude Include="SDL\src\video\khronos\vk_video\vulkan_video_codec_h264std.h" />
+    <ClInclude Include="SDL\src\video\khronos\vk_video\vulkan_video_codec_h264std_decode.h" />
+    <ClInclude Include="SDL\src\video\khronos\vk_video\vulkan_video_codec_h264std_encode.h" />
+    <ClInclude Include="SDL\src\video\khronos\vk_video\vulkan_video_codec_h265std.h" />
+    <ClInclude Include="SDL\src\video\khronos\vk_video\vulkan_video_codec_h265std_decode.h" />
+    <ClInclude Include="SDL\src\video\khronos\vk_video\vulkan_video_codec_h265std_encode.h" />
     <ClInclude Include="SDL\src\video\khronos\vulkan\vk_icd.h" />
     <ClInclude Include="SDL\src\video\khronos\vulkan\vk_layer.h" />
     <ClInclude Include="SDL\src\video\khronos\vulkan\vk_platform.h" />
@@ -238,7 +253,13 @@
     <ClInclude Include="SDL\src\video\windows\SDL_windowswindow.h" />
     <ClInclude Include="SDL\src\video\windows\wmmsg.h" />
     <ClInclude Include="SDL\src\video\yuv2rgb\yuv_rgb.h" />
+    <ClInclude Include="SDL\src\video\yuv2rgb\yuv_rgb_common.h" />
+    <ClInclude Include="SDL\src\video\yuv2rgb\yuv_rgb_internal.h" />
+    <ClInclude Include="SDL\src\video\yuv2rgb\yuv_rgb_lsx.h" />
+    <ClInclude Include="SDL\src\video\yuv2rgb\yuv_rgb_lsx_func.h" />
+    <ClInclude Include="SDL\src\video\yuv2rgb\yuv_rgb_sse.h" />
     <ClInclude Include="SDL\src\video\yuv2rgb\yuv_rgb_sse_func.h" />
+    <ClInclude Include="SDL\src\video\yuv2rgb\yuv_rgb_std.h" />
     <ClInclude Include="SDL\src\video\yuv2rgb\yuv_rgb_std_func.h" />
   </ItemGroup>
   <ItemGroup>
@@ -418,7 +439,6 @@
     <ClCompile Include="SDL\src\video\windows\SDL_windowsvideo.c" />
     <ClCompile Include="SDL\src\video\windows\SDL_windowsvulkan.c" />
     <ClCompile Include="SDL\src\video\windows\SDL_windowswindow.c" />
-    <ClCompile Include="SDL\src\video\yuv2rgb\yuv_rgb.c" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{8DC244EE-A0BD-4038-BAF7-CFAFA5EB2BAA}</ProjectGuid>
