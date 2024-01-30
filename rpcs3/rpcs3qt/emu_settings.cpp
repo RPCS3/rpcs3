@@ -1288,6 +1288,7 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case stereo_render_mode_options::disabled: return tr("Disabled", "3D Display Mode");
 		case stereo_render_mode_options::side_by_side: return tr("Side-by-side", "3D Display Mode");
 		case stereo_render_mode_options::over_under: return tr("Over-under", "3D Display Mode");
+		case stereo_render_mode_options::interlaced: return tr("Interlaced", "3D Display Mode");
 		case stereo_render_mode_options::anaglyph_red_green: return tr("Anaglyph Red-Green", "3D Display Mode");
 		case stereo_render_mode_options::anaglyph_red_blue: return tr("Anaglyph Red-Blue", "3D Display Mode");
 		case stereo_render_mode_options::anaglyph_red_cyan: return tr("Anaglyph Red-Cyan", "3D Display Mode");
