@@ -23,11 +23,11 @@ namespace rsx
 		struct animation_base
 		{
 		protected:
-			u64 frame_start = 0;
-			u64 frame_end = 0;
+			u64 timestamp_start_us = 0;
+			u64 timestamp_end_us = 0;
 
-			void begin_animation(u64 frame);
-			f32 get_progress_ratio(u64 frame) const;
+			void begin_animation(u64 timestamp_us);
+			f32 get_progress_ratio(u64 timestamp_us) const;
 
 			template<typename T>
 			static T lerp(const T& a, const T& b, f32 t)
@@ -38,16 +38,16 @@ namespace rsx
 		public:
 			bool active = false;
 			animation_type type { animation_type::linear };
-			f32 duration = 1.f; // in seconds
+			f32 duration_sec = 1.f; // in seconds
 
 			std::function<void()> on_finish;
 
-			u64 get_duration_in_frames() const;
-			u64 get_remaining_frames(u64 frame) const;
+			u64 get_total_duration_us() const;
+			u64 get_remaining_duration_us(u64 timestamp_us) const;
 
 			virtual void apply(compiled_resource&) = 0;
-			virtual void reset(u64 start_frame) = 0;
-			virtual void update(u64 frame) = 0;
+			virtual void reset(u64 start_timestamp_us) = 0;
+			virtual void update(u64 timestamp_us) = 0;
 		};
 
 		struct animation_translate : animation_base
@@ -61,8 +61,8 @@ namespace rsx
 			vector3f end{};
 
 			void apply(compiled_resource& data) override;
-			void reset(u64 start_frame = 0) override;
-			void update(u64 frame) override;
+			void reset(u64 start_timestamp_us = 0) override;
+			void update(u64 timestamp_us) override;
 			void finish();
 		};
 
@@ -76,8 +76,8 @@ namespace rsx
 			color4f end{};
 
 			void apply(compiled_resource& data) override;
-			void reset(u64 start_frame = 0) override;
-			void update(u64 frame) override;
+			void reset(u64 start_timestamp_us = 0) override;
+			void update(u64 timestamp_us) override;
 			void finish();
 		};
 	}

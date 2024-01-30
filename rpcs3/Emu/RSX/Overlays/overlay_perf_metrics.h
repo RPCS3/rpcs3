@@ -102,7 +102,7 @@ namespace rsx
 			void set_title_colors(std::string color, std::string background);
 			void force_next_update();
 
-			void update() override;
+			void update(u64 timestamp_us) override;
 
 			compiled_resource get_compiled() override;
 		};

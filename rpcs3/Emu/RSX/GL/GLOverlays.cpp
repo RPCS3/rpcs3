@@ -451,7 +451,7 @@ namespace gl
 			overlay_pass::run(cmd_, viewport, target, gl::image_aspect::color, true);
 		}
 
-		ui.update();
+		ui.update(get_system_time());
 	}
 
 	video_out_calibration_pass::video_out_calibration_pass()

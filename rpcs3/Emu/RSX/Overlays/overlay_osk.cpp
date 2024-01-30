@@ -48,7 +48,7 @@ namespace rsx
 
 			fade_animation.current = color4f(1.f);
 			fade_animation.end = color4f(0.f);
-			fade_animation.duration = 0.5f;
+			fade_animation.duration_sec = 0.5f;
 
 			fade_animation.on_finish = [this, status]
 			{
@@ -532,7 +532,7 @@ namespace rsx
 
 			fade_animation.current = color4f(0.f);
 			fade_animation.end = color4f(1.f);
-			fade_animation.duration = 0.5f;
+			fade_animation.duration_sec = 0.5f;
 			fade_animation.active = true;
 		}
 
@@ -1151,11 +1151,11 @@ namespace rsx
 			return get_localized_u32string(id);
 		}
 
-		void osk_dialog::update()
+		void osk_dialog::update(u64 timestamp_us)
 		{
 			if (fade_animation.active)
 			{
-				fade_animation.update(rsx::get_current_renderer()->vblank_count);
+				fade_animation.update(timestamp_us);
 				m_update = true;
 			}
 

@@ -33,28 +33,16 @@ namespace rsx
 			m_time_display.set_pos(virtual_width - (20 + m_time_display.w), (m_description.y + m_description.h) - m_time_display.h);
 			m_time_display.back_color.a = 0.f;
 
-			fade_animation.duration = 0.15f;
+			fade_animation.duration_sec = 0.15f;
 
 			return_code = selection_code::canceled;
 		}
 
-		void home_menu_dialog::update()
+		void home_menu_dialog::update(u64 timestamp_us)
 		{
-			static u64 frame = 0;
-
-			if (Emu.IsPaused())
-			{
-				// Let's keep updating the animation anyway
-				frame++;
-			}
-			else
-			{
-				frame = rsx::get_current_renderer()->vblank_count;
-			}
-
 			if (fade_animation.active)
 			{
-				fade_animation.update(frame);
+				fade_animation.update(timestamp_us);
 			}
 
 			static std::string last_time;
