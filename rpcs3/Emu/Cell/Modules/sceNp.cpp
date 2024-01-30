@@ -33,6 +33,8 @@ LOG_CHANNEL(sceNp);
 error_code sceNpManagerGetNpId(vm::ptr<SceNpId> npId);
 error_code sceNpCommerceGetCurrencyInfo(vm::ptr<SceNpCommerceProductCategory> pc, vm::ptr<SceNpCommerceCurrencyInfo> info);
 
+error_code check_text(vm::cptr<char> text);
+
 template <>
 void fmt_class_string<SceNpError>::format(std::string& out, u64 arg)
 {
@@ -1186,8 +1188,135 @@ error_code sceNpBasicSendMessageGui(vm::cptr<SceNpBasicMessageDetails> msg, sys_
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
 
-	// TODO: SCE_NP_BASIC_ERROR_NOT_SUPPORTED, might be in between argument checks
+	if (!(msg->msgFeatures & SCE_NP_BASIC_MESSAGE_FEATURES_BOOTABLE))
+	{
+		switch (msg->mainType)
+		{
+		case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_DATA_ATTACHMENT:
+			if (msg->subType != SCE_NP_BASIC_MESSAGE_DATA_ATTACHMENT_SUBTYPE_ACTION_USE)
+				return SCE_NP_BASIC_ERROR_NOT_SUPPORTED;
+			break;
+		case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_CUSTOM_DATA:
+			if (msg->subType != SCE_NP_BASIC_MESSAGE_CUSTOM_DATA_SUBTYPE_ACTION_USE)
+				return SCE_NP_BASIC_ERROR_NOT_SUPPORTED;
+			break;
+		case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_URL_ATTACHMENT:
+			if (msg->subType != SCE_NP_BASIC_MESSAGE_URL_ATTACHMENT_SUBTYPE_ACTION_USE)
+				return SCE_NP_BASIC_ERROR_NOT_SUPPORTED;
+			break;
+		case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_GENERAL:
+		case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_ADD_FRIEND:
+			if (msg->subType != 0) // SCE_NP_BASIC_MESSAGE_GENERAL_SUBTYPE_NONE, SCE_NP_BASIC_MESSAGE_ADD_FRIEND_SUBTYPE_NONE
+				return SCE_NP_BASIC_ERROR_NOT_SUPPORTED;
+			if (msg->data)
+				return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+			break;
+		case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE:
+			if (msg->subType > SCE_NP_BASIC_MESSAGE_INVITE_SUBTYPE_ACTION_ACCEPT)
+				return SCE_NP_BASIC_ERROR_NOT_SUPPORTED;
+			break;
+		default:
+			return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+		}
+	}
+	else if (msg->mainType == SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE)
+	{
+		if (msg->subType != SCE_NP_BASIC_MESSAGE_INVITE_SUBTYPE_ACTION_ACCEPT)
+			return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+	}
+	else if (msg->mainType == SCE_NP_BASIC_MESSAGE_MAIN_TYPE_CUSTOM_DATA)
+	{
+		if (msg->subType != SCE_NP_BASIC_MESSAGE_CUSTOM_DATA_SUBTYPE_ACTION_USE)
+			return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+	}
+	else
+	{
+		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+	}
 
+	if (!msg->data && msg->mainType != SCE_NP_BASIC_MESSAGE_MAIN_TYPE_ADD_FRIEND)
+		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+
+	if (!msg->size)
+		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+
+	if (msg->count > SCE_NP_BASIC_SEND_MESSAGE_MAX_RECIPIENTS)
+		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+
+	if (msg->mainType == SCE_NP_BASIC_MESSAGE_MAIN_TYPE_ADD_FRIEND && msg->count != 1u)
+		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+
+	if (msg->npids)
+	{
+		for (u32 i = 0; i < msg->count; i++)
+		{
+			if (!msg->npids[i].handle.data[0])
+				return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+		}
+	}
+
+	u32 length_subject = 0;
+	u32 length_body = 0;
+
+	if (msg->subject)
+	{
+		if (msg->mainType == SCE_NP_BASIC_MESSAGE_MAIN_TYPE_ADD_FRIEND)
+			return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+
+		error_code err = check_text(msg->subject);
+		if (err < 0)
+			return err;
+
+		length_subject = static_cast<u32>(err);
+
+		if (length_subject > SCE_NP_BASIC_SUBJECT_CHARACTER_MAX)
+			return SCE_NP_BASIC_ERROR_EXCEEDS_MAX;
+	}
+
+	if (msg->body)
+	{
+		error_code err = check_text(msg->body);
+		if (err < 0)
+			return err;
+
+		length_body = static_cast<u32>(err);
+
+		if (length_body > SCE_NP_BASIC_BODY_CHARACTER_MAX)
+			return SCE_NP_BASIC_ERROR_EXCEEDS_MAX;
+	}
+
+	switch (msg->mainType)
+	{
+	case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_DATA_ATTACHMENT:
+	case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_CUSTOM_DATA:
+		if (msg->size > SCE_NP_BASIC_MAX_MESSAGE_ATTACHMENT_SIZE)
+			return SCE_NP_BASIC_ERROR_EXCEEDS_MAX;
+		break;
+	case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE:
+		if (msg->size > SCE_NP_BASIC_MAX_INVITATION_DATA_SIZE)
+			return SCE_NP_BASIC_ERROR_EXCEEDS_MAX;
+		break;
+	case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_URL_ATTACHMENT:
+		if (msg->size > SCE_NP_BASIC_MAX_URL_ATTACHMENT_SIZE)
+			return SCE_NP_BASIC_ERROR_EXCEEDS_MAX;
+		break;
+	default:
+		break;
+	}
+
+	if (msg->msgFeatures & SCE_NP_BASIC_MESSAGE_FEATURES_ASSUME_SEND)
+	{
+		if (msg->mainType > SCE_NP_BASIC_MESSAGE_MAIN_TYPE_CUSTOM_DATA)
+			return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+
+		if (!msg->count || !length_body)
+			return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+
+		if (msg->mainType != SCE_NP_BASIC_MESSAGE_MAIN_TYPE_ADD_FRIEND && !length_subject)
+			return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+	}
+
+	// TODO: where does this come from? It clashes with the checks above...
 	if (msg->size > SCE_NP_BASIC_MAX_MESSAGE_SIZE)
 	{
 		return SCE_NP_BASIC_ERROR_EXCEEDS_MAX;
@@ -1403,7 +1532,10 @@ error_code sceNpBasicRecvMessageCustom(u16 mainType, u32 recvOptions, sys_memory
 		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
 
-	// TODO: SCE_NP_BASIC_ERROR_NOT_SUPPORTED
+	if (mainType != SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE && mainType != SCE_NP_BASIC_MESSAGE_MAIN_TYPE_CUSTOM_DATA)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_SUPPORTED;
+	}
 
 	if ((recvOptions & ~SCE_NP_BASIC_RECV_MESSAGE_OPTIONS_ALL_OPTIONS))
 	{
