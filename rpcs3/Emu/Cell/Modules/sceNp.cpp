@@ -1316,12 +1316,6 @@ error_code sceNpBasicSendMessageGui(ppu_thread& ppu, vm::cptr<SceNpBasicMessageD
 			return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
 
-	// TODO: where does this come from? It clashes with the checks above...
-	if (msg->size > SCE_NP_BASIC_MAX_MESSAGE_SIZE)
-	{
-		return SCE_NP_BASIC_ERROR_EXCEEDS_MAX;
-	}
-
 	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
 	{
 		return not_an_error(SCE_NP_BASIC_ERROR_NOT_CONNECTED);
@@ -1410,40 +1404,23 @@ error_code sceNpBasicSendMessageGui(ppu_thread& ppu, vm::cptr<SceNpBasicMessageD
 	return CELL_OK;
 }
 
-error_code sceNpBasicSendMessageAttachment(vm::cptr<SceNpId> to, vm::cptr<char> subject, vm::cptr<char> body, vm::cptr<char> data, u32 size, sys_memory_container_t containerId)
+error_code sceNpBasicSendMessageAttachment(ppu_thread& ppu, vm::cptr<SceNpId> to, vm::cptr<char> subject, vm::cptr<char> body, vm::cptr<void> data, u32 size, sys_memory_container_t containerId)
 {
 	sceNp.todo("sceNpBasicSendMessageAttachment(to=*0x%x, subject=%s, body=%s, data=%s, size=%d, containerId=%d)", to, subject, body, data, size, containerId);
 
-	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+	vm::var<SceNpBasicMessageDetails> msg;
+	msg->msgId = 0;
+	msg->mainType = SCE_NP_BASIC_MESSAGE_MAIN_TYPE_DATA_ATTACHMENT;
+	msg->subType = SCE_NP_BASIC_MESSAGE_DATA_ATTACHMENT_SUBTYPE_ACTION_USE;
+	msg->msgFeatures = 0;
+	msg->npids = vm::const_ptr_cast<SceNpId>(to);
+	msg->count = 1;
+	msg->subject = vm::const_ptr_cast<char>(subject);
+	msg->body = vm::const_ptr_cast<char>(body);
+	msg->data = vm::static_ptr_cast<u8>(vm::const_ptr_cast<void>(data));
+	msg->size = size;
 
-	if (!nph.is_NP_init)
-	{
-		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
-	}
-
-	if (!nph.basic_handler_registered)
-	{
-		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
-	}
-
-	if (!to || to->handle.data[0] == '\0' || !data || !size)
-	{
-		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
-	}
-
-	// TODO: SCE_NP_BASIC_ERROR_NOT_SUPPORTED, might be in between argument checks
-
-	if (strlen(subject.get_ptr()) > SCE_NP_BASIC_SUBJECT_CHARACTER_MAX || strlen(body.get_ptr()) > SCE_NP_BASIC_BODY_CHARACTER_MAX)
-	{
-		return SCE_NP_BASIC_ERROR_EXCEEDS_MAX;
-	}
-
-	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
-	{
-		return not_an_error(SCE_NP_BASIC_ERROR_NOT_CONNECTED);
-	}
-
-	return CELL_OK;
+	return sceNpBasicSendMessageGui(ppu, msg, containerId);
 }
 
 error_code sceNpBasicRecvMessageAttachment(sys_memory_container_t containerId)
@@ -1657,40 +1634,23 @@ error_code sceNpBasicAbortGui()
 	return CELL_OK;
 }
 
-error_code sceNpBasicAddFriend(vm::cptr<SceNpId> contact, vm::cptr<char> body, sys_memory_container_t containerId)
+error_code sceNpBasicAddFriend(ppu_thread& ppu, vm::cptr<SceNpId> contact, vm::cptr<char> body, sys_memory_container_t containerId)
 {
 	sceNp.todo("sceNpBasicAddFriend(contact=*0x%x, body=%s, containerId=%d)", contact, body, containerId);
 
-	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+	vm::var<SceNpBasicMessageDetails> msg;
+	msg->msgId = 0;
+	msg->mainType = SCE_NP_BASIC_MESSAGE_MAIN_TYPE_ADD_FRIEND;
+	msg->subType = SCE_NP_BASIC_MESSAGE_ADD_FRIEND_SUBTYPE_NONE;
+	msg->msgFeatures = 0;
+	msg->npids = vm::const_ptr_cast<SceNpId>(contact);
+	msg->count = 1;
+	msg->subject = vm::null;
+	msg->body = vm::const_ptr_cast<char>(body);
+	msg->data = vm::null;
+	msg->size = 0;
 
-	if (!nph.is_NP_init)
-	{
-		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
-	}
-
-	if (!nph.basic_handler_registered)
-	{
-		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
-	}
-
-	if (!contact || contact->handle.data[0] == '\0')
-	{
-		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
-	}
-
-	// TODO: SCE_NP_BASIC_ERROR_NOT_SUPPORTED, might be in between argument checks
-
-	if (strlen(body.get_ptr()) > SCE_NP_BASIC_BODY_CHARACTER_MAX)
-	{
-		return SCE_NP_BASIC_ERROR_EXCEEDS_MAX;
-	}
-
-	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
-	{
-		return not_an_error(SCE_NP_BASIC_ERROR_NOT_CONNECTED);
-	}
-
-	return CELL_OK;
+	return sceNpBasicSendMessageGui(ppu, msg, containerId);
 }
 
 error_code sceNpBasicGetFriendListEntryCount(vm::ptr<u32> count)
