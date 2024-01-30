@@ -178,10 +178,15 @@
     <ClCompile Include="SDL\src\video\windows\SDL_windowsvideo.c" />
     <ClCompile Include="SDL\src\video\windows\SDL_windowsvulkan.c" />
     <ClCompile Include="SDL\src\video\windows\SDL_windowswindow.c" />
-    <ClCompile Include="SDL\src\video\yuv2rgb\yuv_rgb.c" />
     <ClCompile Include="SDL\src\joystick\hidapi\SDL_hidapi_ps3.c" />
     <ClCompile Include="SDL\src\joystick\hidapi\SDL_hidapi_steam.c" />
     <ClCompile Include="SDL\src\joystick\hidapi\SDL_hidapi_wii.c" />
+    <ClCompile Include="SDL\src\joystick\steam\SDL_steamcontroller.c" />
+    <ClCompile Include="SDL\src\video\yuv2rgb\yuv_rgb_lsx.c" />
+    <ClCompile Include="SDL\src\video\yuv2rgb\yuv_rgb_sse.c" />
+    <ClCompile Include="SDL\src\video\yuv2rgb\yuv_rgb_std.c" />
+    <ClCompile Include="SDL\src\joystick\hidapi\SDL_hidapi_steamdeck.c" />
+    <ClCompile Include="SDL\src\joystick\SDL_steam_virtual_gamepad.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SDL\include\begin_code.h" />
@@ -409,5 +414,20 @@
     <ClInclude Include="SDL\src\video\yuv2rgb\yuv_rgb_sse_func.h" />
     <ClInclude Include="SDL\src\video\yuv2rgb\yuv_rgb_std_func.h" />
     <ClInclude Include="SDL\src\joystick\hidapi\SDL_hidapi_nintendo.h" />
+    <ClInclude Include="SDL\src\video\yuv2rgb\yuv_rgb_common.h" />
+    <ClInclude Include="SDL\src\video\yuv2rgb\yuv_rgb_internal.h" />
+    <ClInclude Include="SDL\src\video\yuv2rgb\yuv_rgb_lsx.h" />
+    <ClInclude Include="SDL\src\video\yuv2rgb\yuv_rgb_lsx_func.h" />
+    <ClInclude Include="SDL\src\video\yuv2rgb\yuv_rgb_sse.h" />
+    <ClInclude Include="SDL\src\video\yuv2rgb\yuv_rgb_std.h" />
+    <ClInclude Include="SDL\src\joystick\steam\SDL_steamcontroller.h" />
+    <ClInclude Include="SDL\src\video\khronos\vk_video\vulkan_video_codec_h264std.h" />
+    <ClInclude Include="SDL\src\video\khronos\vk_video\vulkan_video_codec_h264std_decode.h" />
+    <ClInclude Include="SDL\src\video\khronos\vk_video\vulkan_video_codec_h264std_encode.h" />
+    <ClInclude Include="SDL\src\video\khronos\vk_video\vulkan_video_codec_h265std.h" />
+    <ClInclude Include="SDL\src\video\khronos\vk_video\vulkan_video_codec_h265std_decode.h" />
+    <ClInclude Include="SDL\src\video\khronos\vk_video\vulkan_video_codec_h265std_encode.h" />
+    <ClInclude Include="SDL\src\video\khronos\vk_video\vulkan_video_codecs_common.h" />
+    <ClInclude Include="SDL\src\joystick\SDL_steam_virtual_gamepad.h" />
   </ItemGroup>
 </Project>
