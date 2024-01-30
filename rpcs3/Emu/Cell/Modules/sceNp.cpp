@@ -1155,7 +1155,7 @@ error_code sceNpBasicSendMessage(vm::cptr<SceNpId> to, vm::cptr<void> data, u32 
 	return CELL_OK;
 }
 
-error_code sceNpBasicSendMessageGui(vm::cptr<SceNpBasicMessageDetails> msg, sys_memory_container_t containerId)
+error_code sceNpBasicSendMessageGui(ppu_thread& ppu, vm::cptr<SceNpBasicMessageDetails> msg, sys_memory_container_t containerId)
 {
 	sceNp.warning("sceNpBasicSendMessageGui(msg=*0x%x, containerId=%d)", msg, containerId);
 
@@ -1360,6 +1360,8 @@ error_code sceNpBasicSendMessageGui(vm::cptr<SceNpBasicMessageDetails> msg, sys_
 
 	error_code result = CELL_CANCEL;
 
+	ppu.state += cpu_flag::wait;
+
 	if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
 	{
 		auto recv_dlg = manager->create<rsx::overlays::sendmessage_dialog>();
@@ -1516,7 +1518,7 @@ error_code sceNpBasicRecvMessageAttachmentLoad(SceNpBasicAttachmentDataId id, vm
 	return CELL_OK;
 }
 
-error_code sceNpBasicRecvMessageCustom(u16 mainType, u32 recvOptions, sys_memory_container_t containerId)
+error_code sceNpBasicRecvMessageCustom(ppu_thread& ppu, u16 mainType, u32 recvOptions, sys_memory_container_t containerId)
 {
 	sceNp.warning("sceNpBasicRecvMessageCustom(mainType=%d, recvOptions=%d, containerId=%d)", mainType, recvOptions, containerId);
 
@@ -1546,6 +1548,8 @@ error_code sceNpBasicRecvMessageCustom(u16 mainType, u32 recvOptions, sys_memory
 
 	SceNpBasicMessageRecvAction recv_result{};
 	u64 chosen_msg_id{};
+
+	ppu.state += cpu_flag::wait;
 
 	if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
 	{
