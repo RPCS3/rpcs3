@@ -242,6 +242,9 @@ namespace rsx
 				}
 				break;
 			}
+			case selection_code::canceled:
+				rsx_log.notice("sendmessage dialog was canceled");
+				break;
 			default:
 				rsx_log.error("sendmessage dialog exited with error: %d", return_code);
 				break;
