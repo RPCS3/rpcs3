@@ -1571,7 +1571,7 @@ error_code sceNpBasicRecvMessageCustom(ppu_thread& ppu, u16 mainType, u32 recvOp
 
 	if (result != CELL_OK)
 	{
-		return SCE_NP_BASIC_ERROR_CANCEL;
+		return not_an_error(SCE_NP_BASIC_ERROR_CANCEL);
 	}
 
 	const auto opt_msg = nph.get_message(chosen_msg_id);

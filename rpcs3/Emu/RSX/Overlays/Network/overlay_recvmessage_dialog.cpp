@@ -262,6 +262,9 @@ namespace rsx
 			case selection_code::no:
 				accept_or_deny(SCE_NP_BASIC_MESSAGE_ACTION_DENY);
 				break;
+			case selection_code::canceled:
+				rsx_log.notice("recvmessage dialog was canceled");
+				break;
 			default:
 				rsx_log.error("recvmessage dialog exited with error: %d", return_code);
 				break;
