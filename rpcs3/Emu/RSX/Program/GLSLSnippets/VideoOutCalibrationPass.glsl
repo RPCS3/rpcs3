@@ -15,16 +15,17 @@ layout(location=0) out vec4 ocol;
 #define STEREO_MODE_DISABLED 0
 #define STEREO_MODE_SIDE_BY_SIDE 1
 #define STEREO_MODE_OVER_UNDER 2
-#define STEREO_MODE_ANAGLYPH_RED_GREEN 3
-#define STEREO_MODE_ANAGLYPH_RED_BLUE 4
-#define STEREO_MODE_ANAGLYPH_RED_CYAN 5
-#define STEREO_MODE_ANAGLYPH_MAGENTA_CYAN 6
-#define STEREO_MODE_ANAGLYPH_TRIOSCOPIC 7
+#define STEREO_MODE_INTERLACED 3
+#define STEREO_MODE_ANAGLYPH_RED_GREEN 4
+#define STEREO_MODE_ANAGLYPH_RED_BLUE 5
+#define STEREO_MODE_ANAGLYPH_RED_CYAN 6
+#define STEREO_MODE_ANAGLYPH_MAGENTA_CYAN 7
+#define STEREO_MODE_ANAGLYPH_TRIOSCOPIC 8
 
-vec2 sbs_single_matrix = vec2(2.0,0.4898f);
-vec2 sbs_multi_matrix =  vec2(2.0,1.0);
-vec2 ou_single_matrix =  vec2(1.0,0.9796f);
-vec2 ou_multi_matrix =   vec2(1.0,2.0);
+vec2 sbs_single_matrix = vec2(2.0, 0.4898f);
+vec2 sbs_multi_matrix  = vec2(2.0, 1.0);
+vec2 ou_single_matrix  = vec2(1.0, 0.9796f);
+vec2 ou_multi_matrix   = vec2(1.0, 2.0);
 
 #ifdef VULKAN
 layout(push_constant) uniform static_data
@@ -33,12 +34,14 @@ layout(push_constant) uniform static_data
 	int limit_range;
 	int stereo_display_mode;
 	int stereo_image_count;
+	int height;
 };
 #else
 uniform float gamma;
 uniform int limit_range;
 uniform int stereo_display_mode;
 uniform int stereo_image_count;
+uniform int height;
 #endif
 
 vec4 read_source()
@@ -76,6 +79,9 @@ vec4 read_source()
 			case STEREO_MODE_OVER_UNDER:
 				if (tc0.y < 0.5) return texture(fs0, tc0* ou_single_matrix);
 				else             return texture(fs0, (tc0* ou_single_matrix) + vec2(0.f, 0.020408f) );
+			case STEREO_MODE_INTERLACED:
+				if (mod(height * tc0.y, 2.f) < 1.f) return texture(fs0, tc0 * vec2(1.f, 0.4898f));
+				else                                return texture(fs0, (tc0 * vec2(1.f, 0.4898f)) + vec2(0.f, 0.510204f));
 			default: // undefined behavior
 				return texture(fs0,tc0);
 		}
@@ -110,6 +116,9 @@ vec4 read_source()
 			case STEREO_MODE_OVER_UNDER:
 				if (tc0.y < 0.5) return texture(fs0,(tc0 * ou_multi_matrix));
 				else             return texture(fs1,(tc0 * ou_multi_matrix) + vec2(0.f,-1.f));
+			case STEREO_MODE_INTERLACED:
+				if (mod(height * tc0.y, 2.f) < 1.f) return texture(fs0, tc0);
+				else                                return texture(fs1, tc0);
 			default: // undefined behavior
 				return texture(fs0,tc0);
 		}

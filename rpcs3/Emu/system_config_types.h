@@ -318,6 +318,7 @@ enum class stereo_render_mode_options
 	disabled,
 	side_by_side,
 	over_under,
+	interlaced,
 	anaglyph_red_green,
 	anaglyph_red_blue,
 	anaglyph_red_cyan,
