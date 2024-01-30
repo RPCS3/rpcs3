@@ -40,7 +40,7 @@ namespace rsx
 
 			virtual ~overlay() = default;
 
-			virtual void update() {}
+			virtual void update(u64 /*timestamp_us*/) {}
 			virtual compiled_resource get_compiled() = 0;
 
 			void refresh() const;
@@ -123,7 +123,7 @@ namespace rsx
 			bool is_detached() const { return m_input_thread_detached; }
 			void detach_input() { m_input_thread_detached.store(true); }
 
-			void update() override {}
+			void update(u64 /*timestamp_us*/) override {}
 
 			compiled_resource get_compiled() override = 0;
 

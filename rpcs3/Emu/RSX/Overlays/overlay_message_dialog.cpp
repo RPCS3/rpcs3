@@ -58,7 +58,7 @@ namespace rsx
 				btn_cancel.set_image_resource(resource_config::standard_image_resource::circle);
 			}
 
-			fade_animation.duration = 0.15f;
+			fade_animation.duration_sec = 0.15f;
 
 			update_custom_background();
 
@@ -196,10 +196,10 @@ namespace rsx
 			user_interface::close(use_callback, stop_pad_interception);
 		}
 
-		void message_dialog::update()
+		void message_dialog::update(u64 timestamp_us)
 		{
 			if (fade_animation.active)
-				fade_animation.update(rsx::get_current_renderer()->vblank_count);
+				fade_animation.update(timestamp_us);
 		}
 
 		error_code message_dialog::show(bool is_blocking, const std::string& text, const MsgDialogType& type, std::function<void(s32 status)> on_close)

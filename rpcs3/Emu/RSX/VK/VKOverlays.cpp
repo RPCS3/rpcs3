@@ -695,7 +695,7 @@ namespace vk
 			overlay_pass::run(cmd, viewport, target, image_views, render_pass);
 		}
 
-		ui.update();
+		ui.update(get_system_time());
 	}
 
 	attachment_clear_pass::attachment_clear_pass()

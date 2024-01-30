@@ -83,16 +83,16 @@ namespace rsx
 			m_description->auto_resize();
 			m_description->back_color.a = 0.f;
 
-			fade_animation.duration = 0.15f;
+			fade_animation.duration_sec = 0.15f;
 
 			return_code = selection_code::canceled;
 		}
 
-		void user_list_dialog::update()
+		void user_list_dialog::update(u64 timestamp_us)
 		{
 			if (fade_animation.active)
 			{
-				fade_animation.update(rsx::get_current_renderer()->vblank_count);
+				fade_animation.update(timestamp_us);
 			}
 		}
 

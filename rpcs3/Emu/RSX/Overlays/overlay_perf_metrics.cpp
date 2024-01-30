@@ -260,7 +260,7 @@ namespace rsx
 				m_frametime_timer.Start();
 			}
 
-			update();
+			update(get_system_time());
 
 			// The text might have changed during the update. Recalculate positions.
 			reset_transforms();
@@ -432,7 +432,7 @@ namespace rsx
 			m_force_update = true;
 		}
 
-		void perf_metrics_overlay::update()
+		void perf_metrics_overlay::update(u64 /*timestamp_us*/)
 		{
 			const auto elapsed_update = m_update_timer.GetElapsedTimeInMilliSec();
 			const bool do_update = m_force_update || elapsed_update >= m_update_interval;
