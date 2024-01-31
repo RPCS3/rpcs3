@@ -69,7 +69,20 @@ std::string derive_password(std::string_view user_password)
 rpcn_settings_dialog::rpcn_settings_dialog(QWidget* parent)
 	: QDialog(parent)
 {
-	setWindowTitle(tr("RPCN"));
+	g_cfg_rpcn.load();
+
+	const auto set_title = [this]()
+	{
+		if (const std::string npid = g_cfg_rpcn.get_npid(); !npid.empty())
+		{
+			setWindowTitle(tr("RPCN - %0").arg(QString::fromStdString(npid)));
+			return;
+		}
+
+		setWindowTitle(tr("RPCN"));
+	};
+
+	set_title();
 	setObjectName("rpcn_settings_dialog");
 	setMinimumSize(QSize(400, 100));
 
@@ -88,7 +101,7 @@ rpcn_settings_dialog::rpcn_settings_dialog(QWidget* parent)
 	vbox_global->addWidget(group_btns);
 	setLayout(vbox_global);
 
-	connect(btn_account, &QPushButton::clicked, this, [this]()
+	connect(btn_account, &QPushButton::clicked, this, [this, set_title]()
 		{
 			if (!Emu.IsStopped())
 			{
@@ -97,6 +110,7 @@ rpcn_settings_dialog::rpcn_settings_dialog(QWidget* parent)
 			}
 			rpcn_account_dialog dlg(this);
 			dlg.exec();
+			set_title();
 		});
 
 	connect(btn_friends, &QPushButton::clicked, this, [this]()
@@ -140,12 +154,21 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 	grp_server->setLayout(vbox_server);
 	vbox_global->addWidget(grp_server);
 
-	QGroupBox* grp_buttons    = new QGroupBox();
+	QGroupBox* grp_buttons    = new QGroupBox(tr("Account:"));
 	QVBoxLayout* vbox_buttons = new QVBoxLayout();
 	QPushButton* btn_create   = new QPushButton(tr("Create Account"));
 	QPushButton* btn_edit     = new QPushButton(tr("Edit Account"));
 	QPushButton* btn_test     = new QPushButton(tr("Test Account"));
+	QLabel* label_npid        = new QLabel();
 
+	const auto update_npid_label = [label_npid]()
+	{
+		const std::string npid = g_cfg_rpcn.get_npid();
+		label_npid->setText(tr("Current ID: %0").arg(npid.empty() ? "-" : QString::fromStdString(npid)));
+	};
+	update_npid_label();
+
+	vbox_buttons->addWidget(label_npid);
 	vbox_buttons->addSpacing(10);
 	vbox_buttons->addWidget(btn_create);
 	vbox_buttons->addSpacing(10);
@@ -206,7 +229,7 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 			refresh_combobox();
 		});
 
-	connect(btn_create, &QAbstractButton::clicked, this, [this]()
+	connect(btn_create, &QAbstractButton::clicked, this, [this, update_npid_label]()
 		{
 			rpcn_ask_username_dialog dlg_username(this, tr("Please enter your username.\n\n"
 			                                               "Note that these restrictions apply:\n"
@@ -281,12 +304,15 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 
 			g_cfg_rpcn.set_token(*token);
 			g_cfg_rpcn.save();
+
+			update_npid_label();
 		});
 
-	connect(btn_edit, &QAbstractButton::clicked, this, [this]()
+	connect(btn_edit, &QAbstractButton::clicked, this, [this, update_npid_label]()
 		{
 			rpcn_account_edit_dialog dlg_edit(this);
 			dlg_edit.exec();
+			update_npid_label();
 		});
 
 	connect(btn_test, &QAbstractButton::clicked, this, [this]()
@@ -866,7 +892,24 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 	  m_orange_icon(gui::utils::circle_pixmap(QColorConstants::Svg::orange, devicePixelRatioF() * 2)),
 	  m_black_icon(gui::utils::circle_pixmap(QColorConstants::Svg::black, devicePixelRatioF() * 2))
 {
-	setWindowTitle(tr("RPCN: Friends"));
+	const auto set_title = [this]()
+	{
+		if (const std::string npid = g_cfg_rpcn.get_npid(); !npid.empty())
+		{
+			if (m_rpcn && m_rpcn->is_connected() && m_rpcn->is_authentified())
+			{
+				setWindowTitle(tr("RPCN: Friends - Logged in as %0").arg(QString::fromStdString(npid)));
+				return;
+			}
+
+			setWindowTitle(tr("RPCN: Friends - %0 (Not logged in)").arg(QString::fromStdString(npid)));
+			return;
+		}
+
+		setWindowTitle(tr("RPCN: Friends"));
+	};
+
+	set_title();
 	setObjectName("rpcn_friends_dialog");
 	setMinimumSize(QSize(400, 100));
 
@@ -920,6 +963,8 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 		QMessageBox::warning(parent, tr("Error authentifying to RPCN!"), error_msg, QMessageBox::Ok);
 		return;
 	}
+
+	set_title();
 
 	// Get friends, setup callback and setup comboboxes
 	rpcn::friend_data data;
