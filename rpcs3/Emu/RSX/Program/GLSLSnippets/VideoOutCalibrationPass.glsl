@@ -99,7 +99,7 @@ vec4 read_source()
 					? texture(fs0, tc0 * ou_single_matrix)
 					: texture(fs0, (tc0 * ou_single_matrix) + vec2(0.f, 0.020408f));
 			case STEREO_MODE_INTERLACED:
-				return (mod(textureSize(fs0, 0).y * tc0.y, 2.f) < 1.f)
+				return ((int(gl_FragCoord.y) & 1) > 0)
 					? texture(fs0, tc0 * left_single_matrix)
 					: texture(fs0, (tc0 * left_single_matrix) + right_single_matrix);
 			default: // undefined behavior
@@ -122,11 +122,11 @@ vec4 read_source()
 					? texture(fs0, (tc0 * sbs_multi_matrix))
 					: texture(fs1, (tc0 * sbs_multi_matrix) + vec2(-1.f, 0.f));
 			case STEREO_MODE_OVER_UNDER:
-				return (tc0.y < 0.5) 
+				return (tc0.y < 0.5)
 					? texture(fs0, (tc0 * ou_multi_matrix))
 					: texture(fs1, (tc0 * ou_multi_matrix) + vec2(0.f, -1.f));
 			case STEREO_MODE_INTERLACED:
-				return (mod(textureSize(fs0, 0).y * tc0.y, 2.f) < 1.f)
+				return ((int(gl_FragCoord.y) & 1) > 0)
 					? texture(fs0, tc0)
 					: texture(fs1, tc0);
 			default: // undefined behavior
