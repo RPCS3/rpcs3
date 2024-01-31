@@ -22,10 +22,12 @@ layout(location=0) out vec4 ocol;
 #define STEREO_MODE_ANAGLYPH_MAGENTA_CYAN 7
 #define STEREO_MODE_ANAGLYPH_TRIOSCOPIC 8
 
-vec2 sbs_single_matrix = vec2(2.0, 0.4898f);
-vec2 sbs_multi_matrix  = vec2(2.0, 1.0);
-vec2 ou_single_matrix  = vec2(1.0, 0.9796f);
-vec2 ou_multi_matrix   = vec2(1.0, 2.0);
+vec2 left_single_matrix  = vec2(1.f, 0.4898f);
+vec2 right_single_matrix = vec2(0.f, 0.510204f);
+vec2 sbs_single_matrix   = vec2(2.0, 0.4898f);
+vec2 sbs_multi_matrix    = vec2(2.0, 1.0);
+vec2 ou_single_matrix    = vec2(1.0, 0.9796f);
+vec2 ou_multi_matrix     = vec2(1.0, 2.0);
 
 #ifdef VULKAN
 layout(push_constant) uniform static_data
@@ -54,36 +56,39 @@ vec4 read_source()
 		switch (stereo_display_mode)
 		{
 			case STEREO_MODE_ANAGLYPH_RED_GREEN:
-				left = texture(fs0, tc0 * vec2(1.f, 0.4898f));
-				right = texture(fs0, (tc0 * vec2(1.f, 0.4898f)) + vec2(0.f, 0.510204f));
+				left = texture(fs0, tc0 * left_single_matrix);
+				right = texture(fs0, (tc0 * left_single_matrix) + right_single_matrix);
 				return vec4(left.r, right.g, 0.f, 1.f);
 			case STEREO_MODE_ANAGLYPH_RED_BLUE:
-				left = texture(fs0, tc0 * vec2(1.f, 0.4898f));
-				right = texture(fs0, (tc0 * vec2(1.f, 0.4898f)) + vec2(0.f, 0.510204f));
+				left = texture(fs0, tc0 * left_single_matrix);
+				right = texture(fs0, (tc0 * left_single_matrix) + right_single_matrix);
 				return vec4(left.r, 0.f, right.b, 1.f);
 			case STEREO_MODE_ANAGLYPH_RED_CYAN:
-				left = texture(fs0, tc0 * vec2(1.f, 0.4898f));
-				right = texture(fs0, (tc0 * vec2(1.f, 0.4898f)) + vec2(0.f, 0.510204f));
+				left = texture(fs0, tc0 * left_single_matrix);
+				right = texture(fs0, (tc0 * left_single_matrix) + right_single_matrix);
 				return vec4(left.r, right.g, right.b, 1.f);
 			case STEREO_MODE_ANAGLYPH_MAGENTA_CYAN:
-				left = texture(fs0, tc0 * vec2(1.f, 0.4898f));
-				right = texture(fs0, (tc0 * vec2(1.f, 0.4898f)) + vec2(0.f, 0.510204f));
+				left = texture(fs0, tc0 * left_single_matrix);
+				right = texture(fs0, (tc0 * left_single_matrix) + right_single_matrix);
 				return vec4(left.r, right.g, (left.b + right.b) / 2.f, 1.f);
 			case STEREO_MODE_ANAGLYPH_TRIOSCOPIC:
-				left = texture(fs0, tc0 * vec2(1.f, 0.4898f));
-				right = texture(fs0, (tc0 * vec2(1.f, 0.4898f)) + vec2(0.f, 0.510204f));
+				left = texture(fs0, tc0 * left_single_matrix);
+				right = texture(fs0, (tc0 * left_single_matrix) + right_single_matrix);
 				return vec4(right.r, left.g, right.b, 1.f);
 			case STEREO_MODE_SIDE_BY_SIDE:
-				if (tc0.x < 0.5) return texture(fs0, tc0* sbs_single_matrix);
-				else             return texture(fs0, (tc0* sbs_single_matrix) + vec2(-1.f, 0.510204f));
+				return (tc0.x < 0.5)
+					? texture(fs0, tc0 * sbs_single_matrix)
+					: texture(fs0, (tc0 * sbs_single_matrix) + vec2(-1.f, 0.510204f));
 			case STEREO_MODE_OVER_UNDER:
-				if (tc0.y < 0.5) return texture(fs0, tc0* ou_single_matrix);
-				else             return texture(fs0, (tc0* ou_single_matrix) + vec2(0.f, 0.020408f) );
+				return (tc0.y < 0.5)
+					? texture(fs0, tc0 * ou_single_matrix)
+					: texture(fs0, (tc0 * ou_single_matrix) + vec2(0.f, 0.020408f));
 			case STEREO_MODE_INTERLACED:
-				if (mod(height * tc0.y, 2.f) < 1.f) return texture(fs0, tc0 * vec2(1.f, 0.4898f));
-				else                                return texture(fs0, (tc0 * vec2(1.f, 0.4898f)) + vec2(0.f, 0.510204f));
+				return (mod(height * tc0.y, 2.f) < 1.f)
+					? texture(fs0, tc0 * left_single_matrix)
+					: texture(fs0, (tc0 * left_single_matrix) + right_single_matrix);
 			default: // undefined behavior
-				return texture(fs0,tc0);
+				return texture(fs0, tc0);
 		}
 	}
 	else if (stereo_image_count == 2)
@@ -111,22 +116,25 @@ vec4 read_source()
 				right = texture(fs1, tc0);
 				return vec4(right.r, left.g, right.b, 1.f);
 			case STEREO_MODE_SIDE_BY_SIDE:
-				if (tc0.x < 0.5) return texture(fs0,(tc0 * sbs_multi_matrix));
-				else             return texture(fs1,(tc0 * sbs_multi_matrix) + vec2(-1.f,0.f));
+				return (tc0.x < 0.5)
+					? texture(fs0, (tc0 * sbs_multi_matrix))
+					: texture(fs1, (tc0 * sbs_multi_matrix) + vec2(-1.f, 0.f));
 			case STEREO_MODE_OVER_UNDER:
-				if (tc0.y < 0.5) return texture(fs0,(tc0 * ou_multi_matrix));
-				else             return texture(fs1,(tc0 * ou_multi_matrix) + vec2(0.f,-1.f));
+				return (tc0.y < 0.5) 
+					? texture(fs0, (tc0 * ou_multi_matrix))
+					: texture(fs1, (tc0 * ou_multi_matrix) + vec2(0.f, -1.f));
 			case STEREO_MODE_INTERLACED:
-				if (mod(height * tc0.y, 2.f) < 1.f) return texture(fs0, tc0);
-				else                                return texture(fs1, tc0);
+				return (mod(height * tc0.y, 2.f) < 1.f)
+					? texture(fs0, tc0)
+					: texture(fs1, tc0);
 			default: // undefined behavior
-				return texture(fs0,tc0);
+				return texture(fs0, tc0);
 		}
 	}
 	else
 	{
-		vec2 coord_left = tc0 * vec2(1.f, 0.4898f);
-		vec2 coord_right = coord_left + vec2(0.f, 0.510204f);
+		vec2 coord_left = tc0 * left_single_matrix;
+		vec2 coord_right = coord_left + right_single_matrix;
 		left = texture(fs0, coord_left);
 		right = texture(fs0, coord_right);
 		return vec4(left.r, right.g, right.b, 1.);
