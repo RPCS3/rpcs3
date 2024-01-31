@@ -1294,6 +1294,7 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case stereo_render_mode_options::anaglyph_red_cyan: return tr("Anaglyph Red-Cyan", "3D Display Mode");
 		case stereo_render_mode_options::anaglyph_magenta_cyan: return tr("Anaglyph Magenta-Cyan", "3D Display Mode");
 		case stereo_render_mode_options::anaglyph_trioscopic: return tr("Anaglyph Green-Magenta (Trioscopic)", "3D Display Mode");
+		case stereo_render_mode_options::anaglyph_amber_blue: return tr("Anaglyph Amber-Blue (ColorCode 3D)", "3D Display Mode");
 		}
 		break;
 	case emu_settings_type::MidiDevices:
