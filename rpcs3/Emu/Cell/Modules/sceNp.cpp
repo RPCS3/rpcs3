@@ -1860,7 +1860,7 @@ error_code sceNpBasicGetFriendPresenceByNpId2(vm::cptr<SceNpId> npid, vm::ptr<Sc
 
 error_code sceNpBasicAddPlayersHistory(vm::cptr<SceNpId> npid, vm::cptr<char> description)
 {
-	sceNp.todo("sceNpBasicAddPlayersHistory(npid=*0x%x, description=*0x%x)", npid, description);
+	sceNp.warning("sceNpBasicAddPlayersHistory(npid=*0x%x, description=*0x%x)", npid, description);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -1886,7 +1886,7 @@ error_code sceNpBasicAddPlayersHistory(vm::cptr<SceNpId> npid, vm::cptr<char> de
 
 error_code sceNpBasicAddPlayersHistoryAsync(vm::cptr<SceNpId> npids, u32 count, vm::cptr<char> description, vm::ptr<u32> reqId)
 {
-	sceNp.todo("sceNpBasicAddPlayersHistoryAsync(npids=*0x%x, count=%d, description=*0x%x, reqId=*0x%x)", npids, count, description, reqId);
+	sceNp.warning("sceNpBasicAddPlayersHistoryAsync(npids=*0x%x, count=%d, description=*0x%x, reqId=*0x%x)", npids, count, description, reqId);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -6749,7 +6749,7 @@ error_code sceNpSignalingActivateConnection(u32 ctx_id, vm::ptr<SceNpId> npId, v
 
 error_code sceNpSignalingDeactivateConnection(u32 ctx_id, u32 conn_id)
 {
-	sceNp.todo("sceNpSignalingDeactivateConnection(ctx_id=%d, conn_id=%d)", ctx_id, conn_id);
+	sceNp.warning("sceNpSignalingDeactivateConnection(ctx_id=%d, conn_id=%d)", ctx_id, conn_id);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -6757,6 +6757,10 @@ error_code sceNpSignalingDeactivateConnection(u32 ctx_id, u32 conn_id)
 	{
 		return SCE_NP_SIGNALING_ERROR_NOT_INITIALIZED;
 	}
+
+	auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
+
+	sigh.stop_sig(conn_id, true);
 
 	return CELL_OK;
 }
@@ -6774,7 +6778,7 @@ error_code sceNpSignalingTerminateConnection(u32 ctx_id, u32 conn_id)
 
 	auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
 
-	sigh.stop_sig(conn_id);
+	sigh.stop_sig(conn_id, false);
 
 	return CELL_OK;
 }

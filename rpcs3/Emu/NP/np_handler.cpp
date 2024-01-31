@@ -1122,6 +1122,7 @@ namespace np
 					case rpcn::NotificationType::UpdatedRoomMemberDataInternal: notif_updated_room_member_data_internal(notif.second); break;
 					case rpcn::NotificationType::SignalP2PConnect: notif_p2p_connect(notif.second); break;
 					case rpcn::NotificationType::RoomMessageReceived: notif_room_message_received(notif.second); break;
+					case rpcn::NotificationType::SignalingInfo: notif_signaling_info(notif.second); break;
 					default: rpcn_log.error("Unknown notification(%d) received!", notif.first); break;
 					}
 				}
@@ -1240,7 +1241,7 @@ namespace np
 		ret.cb     = (optParam && optParam->cbFunc) ? optParam->cbFunc : ctx->default_match2_optparam.cbFunc;
 		ret.event_type = event_type;
 
-		nph_log.warning("Callback used is 0x%x", ret.cb);
+		nph_log.trace("Callback used is 0x%x with req_id %d", ret.cb, req_id);
 
 		{
 			std::lock_guard lock(mutex_pending_requests);
