@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "overlay_message.h"
-#include "Emu/RSX/RSXThread.h"
+#include "Emu/RSX/Common/time.hpp"
 
 namespace rsx
 {

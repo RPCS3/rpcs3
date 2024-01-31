@@ -2,7 +2,6 @@
 #include "overlay_save_dialog.h"
 #include "Utilities/date_time.h"
 #include "Emu/System.h"
-#include "Emu/RSX/RSXThread.h"
 
 namespace rsx
 {

@@ -6,7 +6,6 @@
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/IdManager.h"
 #include "Utilities/Thread.h"
-#include "Emu/RSX/RSXThread.h"
 
 #include <thread>
 
