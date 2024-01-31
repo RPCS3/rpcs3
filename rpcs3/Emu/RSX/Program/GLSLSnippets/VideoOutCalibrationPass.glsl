@@ -47,39 +47,51 @@ uniform int stereo_image_count;
 uniform int height;
 #endif
 
+vec4 anaglyph(vec4 left, vec4 right)
+{
+	switch (stereo_display_mode)
+	{
+	case STEREO_MODE_ANAGLYPH_RED_GREEN:    return vec4(left.r, right.g, 0.f, 1.f);
+	case STEREO_MODE_ANAGLYPH_RED_BLUE:     return vec4(left.r, 0.f, right.b, 1.f);
+	case STEREO_MODE_ANAGLYPH_RED_CYAN:     return vec4(left.r, right.g, right.b, 1.f);
+	case STEREO_MODE_ANAGLYPH_MAGENTA_CYAN: return vec4(left.r, right.g, (left.b + right.b) / 2.f, 1.f);
+	case STEREO_MODE_ANAGLYPH_TRIOSCOPIC:   return vec4(right.r, left.g, right.b, 1.f);
+	case STEREO_MODE_ANAGLYPH_AMBER_BLUE:   return vec4(left.r, left.g, (right.r + right.g + right.b) / 3.f, 1.f);
+	default:                                return texture(fs0, tc0);
+	}
+}
+
+vec4 anaglyph_single_image()
+{
+	vec4 left  = texture(fs0, tc0 * left_single_matrix);
+	vec4 right = texture(fs0, (tc0 * left_single_matrix) + right_single_matrix);
+
+	return anaglyph(left, right);
+}
+
+vec4 anaglyph_stereo_image()
+{
+	vec4 left = texture(fs0, tc0);
+	vec4 right = texture(fs1, tc0);
+	
+	return anaglyph(left, right);
+}
+
 vec4 read_source()
 {
 	if (stereo_display_mode == STEREO_MODE_DISABLED) return texture(fs0, tc0);
 
-	vec4 left, right;
 	if (stereo_image_count == 1)
 	{
 		switch (stereo_display_mode)
 		{
 			case STEREO_MODE_ANAGLYPH_RED_GREEN:
-				left = texture(fs0, tc0 * left_single_matrix);
-				right = texture(fs0, (tc0 * left_single_matrix) + right_single_matrix);
-				return vec4(left.r, right.g, 0.f, 1.f);
 			case STEREO_MODE_ANAGLYPH_RED_BLUE:
-				left = texture(fs0, tc0 * left_single_matrix);
-				right = texture(fs0, (tc0 * left_single_matrix) + right_single_matrix);
-				return vec4(left.r, 0.f, right.b, 1.f);
 			case STEREO_MODE_ANAGLYPH_RED_CYAN:
-				left = texture(fs0, tc0 * left_single_matrix);
-				right = texture(fs0, (tc0 * left_single_matrix) + right_single_matrix);
-				return vec4(left.r, right.g, right.b, 1.f);
 			case STEREO_MODE_ANAGLYPH_MAGENTA_CYAN:
-				left = texture(fs0, tc0 * left_single_matrix);
-				right = texture(fs0, (tc0 * left_single_matrix) + right_single_matrix);
-				return vec4(left.r, right.g, (left.b + right.b) / 2.f, 1.f);
 			case STEREO_MODE_ANAGLYPH_TRIOSCOPIC:
-				left = texture(fs0, tc0 * left_single_matrix);
-				right = texture(fs0, (tc0 * left_single_matrix) + right_single_matrix);
-				return vec4(right.r, left.g, right.b, 1.f);
 			case STEREO_MODE_ANAGLYPH_AMBER_BLUE:
-				left = texture(fs0, tc0 * left_single_matrix);
-				right = texture(fs0, (tc0 * left_single_matrix) + right_single_matrix);
-				return vec4(left.r, left.g, (right.r + right.g + right.b) / 3.f, 1.f);
+				return anaglyph_single_image();
 			case STEREO_MODE_SIDE_BY_SIDE:
 				return (tc0.x < 0.5)
 					? texture(fs0, tc0 * sbs_single_matrix)
@@ -101,29 +113,12 @@ vec4 read_source()
 		switch (stereo_display_mode)
 		{
 			case STEREO_MODE_ANAGLYPH_RED_GREEN:
-				left = texture(fs0, tc0);
-				right = texture(fs1, tc0);
-				return vec4(left.r, right.g, 0.f, 1.f);
 			case STEREO_MODE_ANAGLYPH_RED_BLUE:
-				left = texture(fs0, tc0);
-				right = texture(fs1, tc0);
-				return vec4(left.r, 0.f, right.b, 1.f);
 			case STEREO_MODE_ANAGLYPH_RED_CYAN:
-				left = texture(fs0, tc0);
-				right = texture(fs1, tc0);
-				return vec4(left.r, right.g, right.b, 1.f);
 			case STEREO_MODE_ANAGLYPH_MAGENTA_CYAN:
-				left = texture(fs0, tc0);
-				right = texture(fs1, tc0);
-				return vec4(left.r, right.g, (left.b + right.b) / 2.f, 1.f);
 			case STEREO_MODE_ANAGLYPH_TRIOSCOPIC:
-				left = texture(fs0, tc0);
-				right = texture(fs1, tc0);
-				return vec4(right.r, left.g, right.b, 1.f);
 			case STEREO_MODE_ANAGLYPH_AMBER_BLUE:
-				left = texture(fs0, tc0);
-				right = texture(fs1, tc0);
-				return vec4(left.r, left.g, (right.r + right.g + right.b) / 3.f, 1.f);
+				return anaglyph_stereo_image();
 			case STEREO_MODE_SIDE_BY_SIDE:
 				return (tc0.x < 0.5)
 					? texture(fs0, (tc0 * sbs_multi_matrix))
@@ -144,8 +139,8 @@ vec4 read_source()
 	{
 		vec2 coord_left = tc0 * left_single_matrix;
 		vec2 coord_right = coord_left + right_single_matrix;
-		left = texture(fs0, coord_left);
-		right = texture(fs0, coord_right);
+		vec4 left = texture(fs0, coord_left);
+		vec4 right = texture(fs0, coord_right);
 		return vec4(left.r, right.g, right.b, 1.);
 	}
 }
