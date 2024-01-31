@@ -212,7 +212,6 @@ namespace vk
 				int   limit_range;
 				int   stereo_display_mode;
 				int   stereo_image_count;
-				int   height;
 			};
 
 			float data[4];

@@ -902,7 +902,6 @@ namespace vk
 		config.limit_range = limited_rgb? 1 : 0;
 		config.stereo_display_mode = static_cast<u8>(stereo_mode);
 		config.stereo_image_count = std::min(::size32(src), 2u);
-		config.height = src.empty() ? 720 : src.front()->height();
 
 		std::vector<vk::image_view*> views;
 		views.reserve(2);
