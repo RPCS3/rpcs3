@@ -1406,7 +1406,7 @@ error_code sceNpBasicSendMessageGui(ppu_thread& ppu, vm::cptr<SceNpBasicMessageD
 
 error_code sceNpBasicSendMessageAttachment(ppu_thread& ppu, vm::cptr<SceNpId> to, vm::cptr<char> subject, vm::cptr<char> body, vm::cptr<void> data, u32 size, sys_memory_container_t containerId)
 {
-	sceNp.todo("sceNpBasicSendMessageAttachment(to=*0x%x, subject=%s, body=%s, data=%s, size=%d, containerId=%d)", to, subject, body, data, size, containerId);
+	sceNp.warning("sceNpBasicSendMessageAttachment(to=*0x%x, subject=%s, body=%s, data=%s, size=%d, containerId=%d)", to, subject, body, data, size, containerId);
 
 	vm::var<SceNpBasicMessageDetails> msg;
 	msg->msgId = 0;
@@ -1636,7 +1636,7 @@ error_code sceNpBasicAbortGui()
 
 error_code sceNpBasicAddFriend(ppu_thread& ppu, vm::cptr<SceNpId> contact, vm::cptr<char> body, sys_memory_container_t containerId)
 {
-	sceNp.todo("sceNpBasicAddFriend(contact=*0x%x, body=%s, containerId=%d)", contact, body, containerId);
+	sceNp.warning("sceNpBasicAddFriend(contact=*0x%x, body=%s, containerId=%d)", contact, body, containerId);
 
 	vm::var<SceNpBasicMessageDetails> msg;
 	msg->msgId = 0;
