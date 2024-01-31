@@ -479,7 +479,6 @@ namespace gl
 		program_handle.uniforms["limit_range"] = limited_rgb + 0;
 		program_handle.uniforms["stereo_display_mode"] = static_cast<u8>(stereo_mode);
 		program_handle.uniforms["stereo_image_count"] = (source[1] == GL_NONE? 1 : 2);
-		program_handle.uniforms["height"] = viewport.height();
 
 		saved_sampler_state saved(31, m_sampler);
 		cmd->bind_texture(31, GL_TEXTURE_2D, source[0]);

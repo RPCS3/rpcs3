@@ -37,14 +37,12 @@ layout(push_constant) uniform static_data
 	int limit_range;
 	int stereo_display_mode;
 	int stereo_image_count;
-	int height;
 };
 #else
 uniform float gamma;
 uniform int limit_range;
 uniform int stereo_display_mode;
 uniform int stereo_image_count;
-uniform int height;
 #endif
 
 vec4 anaglyph(const in vec4 left, const in vec4 right)
@@ -101,7 +99,7 @@ vec4 read_source()
 					? texture(fs0, tc0 * ou_single_matrix)
 					: texture(fs0, (tc0 * ou_single_matrix) + vec2(0.f, 0.020408f));
 			case STEREO_MODE_INTERLACED:
-				return (mod(height * tc0.y, 2.f) < 1.f)
+				return (mod(textureSize(fs0, 0).y * tc0.y, 2.f) < 1.f)
 					? texture(fs0, tc0 * left_single_matrix)
 					: texture(fs0, (tc0 * left_single_matrix) + right_single_matrix);
 			default: // undefined behavior
@@ -128,7 +126,7 @@ vec4 read_source()
 					? texture(fs0, (tc0 * ou_multi_matrix))
 					: texture(fs1, (tc0 * ou_multi_matrix) + vec2(0.f, -1.f));
 			case STEREO_MODE_INTERLACED:
-				return (mod(height * tc0.y, 2.f) < 1.f)
+				return (mod(textureSize(fs0, 0).y * tc0.y, 2.f) < 1.f)
 					? texture(fs0, tc0)
 					: texture(fs1, tc0);
 			default: // undefined behavior
