@@ -36,9 +36,9 @@ struct cfg_gem final : public emulated_pad_config<gem_btn>
 	cfg_pad_btn<gem_btn> y_axis{ this, "Y-Axis", gem_btn::y_axis, pad_button::ls_y };
 };
 
-struct cfg_gems final : public emulated_pads_config<cfg_gem, 7>
+struct cfg_gems final : public emulated_pads_config<cfg_gem, 4>
 {
-	cfg_gems() : emulated_pads_config<cfg_gem, 7>("gem") {};
+	cfg_gems() : emulated_pads_config<cfg_gem, 4>("gem") {};
 };
 
 extern cfg_gems g_cfg_gem;
