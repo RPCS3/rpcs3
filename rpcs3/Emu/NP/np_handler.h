@@ -268,6 +268,7 @@ namespace np
 		void notif_updated_room_data_internal(std::vector<u8>& data);
 		void notif_updated_room_member_data_internal(std::vector<u8>& data);
 		void notif_p2p_connect(std::vector<u8>& data);
+		void notif_signaling_info(std::vector<u8>& data);
 		void notif_room_message_received(std::vector<u8>& data);
 
 		// Reply handlers

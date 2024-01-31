@@ -241,6 +241,7 @@ namespace rpcn
 		RoomMessageReceived,
 		MessageReceived,
 		FriendPresenceChanged,
+		SignalingInfo,
 	};
 
 	enum class rpcn_state

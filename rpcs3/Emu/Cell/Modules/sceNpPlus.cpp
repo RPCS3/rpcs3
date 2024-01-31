@@ -8,7 +8,7 @@ error_code sceNpManagerIsSP()
 {
 	sceNpPlus.warning("sceNpManagerIsSP()");
 	// TODO seems to be cut to 1 byte by pshome likely a bool but may be more.
-	return CELL_OK;
+	return not_an_error(1);
 }
 
 DECLARE(ppu_module_manager::sceNpPlus)("sceNpPlus", []()
