@@ -47,7 +47,7 @@ uniform int stereo_image_count;
 uniform int height;
 #endif
 
-vec4 anaglyph(vec4 left, vec4 right)
+vec4 anaglyph(const in vec4 left, const in vec4 right)
 {
 	switch (stereo_display_mode)
 	{
