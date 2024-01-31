@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "../overlay_manager.h"
 #include "overlay_recvmessage_dialog.h"
-#include "Emu/RSX/RSXThread.h"
+#include "Emu/System.h"
 #include "Emu/NP/rpcn_client.h"
 #include "Utilities/Thread.h"
 

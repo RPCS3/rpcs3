@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "overlay_home_menu.h"
 #include "../overlay_manager.h"
-#include "Emu/RSX/RSXThread.h"
+#include "Emu/system_config.h"
 #include "Utilities/date_time.h"
 
 namespace rsx
