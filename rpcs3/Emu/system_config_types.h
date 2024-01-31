@@ -324,6 +324,7 @@ enum class stereo_render_mode_options
 	anaglyph_red_cyan,
 	anaglyph_magenta_cyan,
 	anaglyph_trioscopic,
+	anaglyph_amber_blue,
 };
 
 enum class xfloat_accuracy
