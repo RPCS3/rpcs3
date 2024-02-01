@@ -464,6 +464,13 @@ namespace gl
 		#include "../Program/GLSLSnippets/VideoOutCalibrationPass.glsl"
 		;
 
+		std::pair<std::string_view, std::string> repl_list[] =
+		{
+			{ "%sampler_binding", fmt::format("(%d - x)", GL_TEMP_IMAGE_SLOT(0)) },
+			{ "%set_decorator, ", "" },
+		};
+		fs_src = fmt::replace_all(fs_src, repl_list);
+
 		m_input_filter = gl::filter::linear;
 	}
 
@@ -480,11 +487,11 @@ namespace gl
 		program_handle.uniforms["stereo_display_mode"] = static_cast<u8>(stereo_mode);
 		program_handle.uniforms["stereo_image_count"] = (source[1] == GL_NONE? 1 : 2);
 
-		saved_sampler_state saved(31, m_sampler);
-		cmd->bind_texture(31, GL_TEXTURE_2D, source[0]);
+		saved_sampler_state saved(GL_TEMP_IMAGE_SLOT(0), m_sampler);
+		cmd->bind_texture(GL_TEMP_IMAGE_SLOT(0), GL_TEXTURE_2D, source[0]);
 
-		saved_sampler_state saved2(30, m_sampler);
-		cmd->bind_texture(30, GL_TEXTURE_2D, source[1]);
+		saved_sampler_state saved2(GL_TEMP_IMAGE_SLOT(1), m_sampler);
+		cmd->bind_texture(GL_TEMP_IMAGE_SLOT(1), GL_TEXTURE_2D, source[1]);
 
 		overlay_pass::run(cmd, viewport, GL_NONE, gl::image_aspect::color, false);
 	}

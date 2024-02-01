@@ -857,21 +857,19 @@ namespace vk
 	video_out_calibration_pass::video_out_calibration_pass()
 	{
 		vs_src =
-			"#version 450\n\n"
-			"layout(location=0) out vec2 tc0;\n"
-			"\n"
-			"void main()\n"
-			"{\n"
-			"	vec2 positions[] = {vec2(-1., -1.), vec2(1., -1.), vec2(-1., 1.), vec2(1., 1.)};\n"
-			"	vec2 coords[] = {vec2(0., 0.), vec2(1., 0.), vec2(0., 1.), vec2(1., 1.)};\n"
-			"	tc0 = coords[gl_VertexIndex % 4];\n"
-			"	vec2 pos = positions[gl_VertexIndex % 4];\n"
-			"	gl_Position = vec4(pos, 0., 1.);\n"
-			"}\n";
+		#include "../Program/GLSLSnippets/GenericVSPassthrough.glsl"
+		;
 
 		fs_src =
 		#include "../Program/GLSLSnippets/VideoOutCalibrationPass.glsl"
 		;
+
+		std::pair<std::string_view, std::string> repl_list[] =
+		{
+			{ "%sampler_binding", fmt::format("(%d + x)", sampler_location(0)) },
+			{ "%set_decorator", "set=0" },
+		};
+		fs_src = fmt::replace_all(fs_src, repl_list);
 
 		renderpass_config.set_depth_mask(false);
 		renderpass_config.set_color_mask(0, true, true, true, true);
