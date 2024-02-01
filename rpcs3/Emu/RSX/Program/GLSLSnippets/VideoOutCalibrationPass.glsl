@@ -1,13 +1,10 @@
 R"(
-#version 420
+#version 440
 
-#ifdef VULKAN
-layout(set=0, binding=1) uniform sampler2D fs0;
-layout(set=0, binding=2) uniform sampler2D fs1;
-#else
-layout(binding=31) uniform sampler2D fs0;
-layout(binding=30) uniform sampler2D fs1;
-#endif
+#define SAMPLER_BINDING(x) %sampler_binding
+
+layout(%set_decorator, binding=SAMPLER_BINDING(0)) uniform sampler2D fs0;
+layout(%set_decorator, binding=SAMPLER_BINDING(1)) uniform sampler2D fs1;
 
 layout(location=0) in vec2 tc0;
 layout(location=0) out vec4 ocol;
@@ -77,7 +74,10 @@ vec4 anaglyph_stereo_image()
 
 vec4 read_source()
 {
-	if (stereo_display_mode == STEREO_MODE_DISABLED) return texture(fs0, tc0);
+	if (stereo_display_mode == STEREO_MODE_DISABLED)
+	{
+		return texture(fs0, tc0);
+	}
 
 	if (stereo_image_count == 1)
 	{
@@ -106,7 +106,8 @@ vec4 read_source()
 				return texture(fs0, tc0);
 		}
 	}
-	else if (stereo_image_count == 2)
+
+	if (stereo_image_count == 2)
 	{
 		switch (stereo_display_mode)
 		{
@@ -133,23 +134,17 @@ vec4 read_source()
 				return texture(fs0, tc0);
 		}
 	}
-	else
-	{
-		vec2 coord_left = tc0 * left_single_matrix;
-		vec2 coord_right = coord_left + right_single_matrix;
-		vec4 left = texture(fs0, coord_left);
-		vec4 right = texture(fs0, coord_right);
-		return vec4(left.r, right.g, right.b, 1.);
-	}
+
+	// Unreachable. Return debug color fill
+	return vec4(1., 0., 0., 1.);
 }
 
 void main()
 {
 	vec4 color = read_source();
 	color.rgb = pow(color.rgb, vec3(gamma));
-	if (limit_range > 0)
-		ocol = ((color * 220.) + 16.) / 255.;
-	else
-		ocol = color;
+	ocol = (limit_range == 0)
+		? ocol = color
+		: ((color * 220.) + 16.) / 255.;
 }
 )"
