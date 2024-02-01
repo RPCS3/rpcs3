@@ -889,7 +889,7 @@ namespace np
 {
 	struct player_history
 	{
-		u64 timestamp;
+		u64 timestamp{};
 		std::set<std::string> communication_ids;
 		std::string description;
 	};
@@ -1012,17 +1012,23 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 	}
 
 	auto history = np::load_players_history();
-	std::map<u64, std::string, std::greater<u64>> sorted_history;
+	std::map<u64, std::pair<std::string, std::string>, std::greater<u64>> sorted_history;
 
 	for (const auto& [username, user_info] : history)
 	{
 		if (!data.friends.contains(username) && !data.requests_sent.contains(username) && !data.requests_received.contains(username))
-			sorted_history.insert(std::make_pair(user_info.timestamp, std::move(username)));
+			sorted_history.insert(std::make_pair(user_info.timestamp, std::make_pair(std::move(username), std::move(user_info.description))));
 	}
 
-	for (const auto& [_, username] : sorted_history)
+	for (const auto& [_, username_and_description] : sorted_history)
 	{
-		m_lst_history->addItem(new QListWidgetItem(QString::fromStdString(username)));
+		const auto& [username, description] = username_and_description;
+		auto* item = new QListWidgetItem(QString::fromStdString(username));
+
+		if (!description.empty())
+			item->setToolTip(QString::fromStdString(description));
+
+		m_lst_history->addItem(item);
 	}
 
 	connect(this, &rpcn_friends_dialog::signal_add_update_friend, this, &rpcn_friends_dialog::add_update_friend);
@@ -1113,13 +1119,12 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 					if (!m_rpcn->add_friend(str_sel_friend))
 					{
 						QMessageBox::critical(this, tr("Error sending a friend request!"), tr("An error occurred while trying to send a friend request!"), QMessageBox::Ok);
+						return;
 					}
-					else
-					{
-						QString qstr_friend = QString::fromStdString(str_sel_friend);
-						add_update_list(m_lst_requests, qstr_friend, m_orange_icon, QVariant(false));
-						remove_list(m_lst_history, qstr_friend);
-					}
+
+					QString qstr_friend = QString::fromStdString(str_sel_friend);
+					add_update_list(m_lst_requests, qstr_friend, m_orange_icon, QVariant(false));
+					remove_list(m_lst_history, qstr_friend);
 				});
 
 			context_menu->exec(m_lst_history->viewport()->mapToGlobal(pos));

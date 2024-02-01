@@ -1358,17 +1358,10 @@ namespace np
 		}
 
 		const std::string communication_id_str = std::string(basic_handler.context.data);
-		u32 count = 0;
-
-		for (auto it = players_history.begin(); it != players_history.end(); it++)
-		{
-			if (it->second.communication_ids.contains(communication_id_str))
+		return std::count_if(players_history.begin(), players_history.end(), [&](const auto& entry)
 			{
-				count++;
-			}
-		}
-
-		return count;
+				return entry.second.communication_ids.contains(communication_id_str);
+			});
 	}
 
 	bool np_handler::get_player_history_entry(u32 options, u32 index, SceNpId* npid)
@@ -1392,6 +1385,7 @@ namespace np
 		{
 			const std::string communication_id_str = std::string(basic_handler.context.data);
 
+			// Get the nth element that contains the current communication_id
 			for (auto it = players_history.begin(); it != players_history.end(); it++)
 			{
 				if (it->second.communication_ids.contains(communication_id_str))
