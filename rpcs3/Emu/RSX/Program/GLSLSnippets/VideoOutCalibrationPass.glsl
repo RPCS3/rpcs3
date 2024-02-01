@@ -20,6 +20,9 @@ layout(location=0) out vec4 ocol;
 #define STEREO_MODE_ANAGLYPH_TRIOSCOPIC 8
 #define STEREO_MODE_ANAGLYPH_AMBER_BLUE 9
 
+#define TRUE 1
+#define FALSE 0
+
 vec2 left_single_matrix  = vec2(1.f, 0.4898f);
 vec2 right_single_matrix = vec2(0.f, 0.510204f);
 vec2 sbs_single_matrix   = vec2(2.0, 0.4898f);
@@ -143,8 +146,8 @@ void main()
 {
 	vec4 color = read_source();
 	color.rgb = pow(color.rgb, vec3(gamma));
-	ocol = (limit_range == 0)
-		? ocol = color
+	ocol = (limit_range == FALSE)
+		? color
 		: ((color * 220.) + 16.) / 255.;
 }
 )"
