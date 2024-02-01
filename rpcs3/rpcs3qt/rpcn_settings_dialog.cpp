@@ -884,6 +884,19 @@ void friend_callback(void* param, rpcn::NotificationType ntype, const std::strin
 	dlg->callback_handler(ntype, username, status);
 }
 
+// Avoid including np_handler.h
+namespace np
+{
+	struct player_history
+	{
+		u64 timestamp;
+		std::set<std::string> communication_ids;
+		std::string description;
+	};
+
+	std::map<std::string, player_history> load_players_history();
+}
+
 rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 	: QDialog(parent),
 	  m_green_icon(gui::utils::circle_pixmap(QColorConstants::Svg::green, devicePixelRatioF() * 2)),
@@ -944,6 +957,14 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 	grp_list_blocks->setLayout(vbox_lst_blocks);
 	hbox_groupboxes->addWidget(grp_list_blocks);
 
+	QGroupBox* grp_list_history   = new QGroupBox(tr("Recent Players"));
+	QVBoxLayout* vbox_lst_history = new QVBoxLayout();
+	m_lst_history                 = new QListWidget(this);
+	m_lst_history->setContextMenuPolicy(Qt::CustomContextMenu);
+	vbox_lst_history->addWidget(m_lst_history);
+	grp_list_history->setLayout(vbox_lst_history);
+	hbox_groupboxes->addWidget(grp_list_history);
+
 	vbox_global->addLayout(hbox_groupboxes);
 
 	setLayout(vbox_global);
@@ -988,6 +1009,20 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 	for (const auto& blck : data.blocked)
 	{
 		add_update_list(m_lst_blocks, QString::fromStdString(blck), m_red_icon, QVariant(false));
+	}
+
+	auto history = np::load_players_history();
+	std::map<u64, std::string, std::greater<u64>> sorted_history;
+
+	for (const auto& [username, user_info] : history)
+	{
+		if (!data.friends.contains(username) && !data.requests_sent.contains(username) && !data.requests_received.contains(username))
+			sorted_history.insert(std::make_pair(user_info.timestamp, std::move(username)));
+	}
+
+	for (const auto& [_, username] : sorted_history)
+	{
+		m_lst_history->addItem(new QListWidgetItem(QString::fromStdString(username)));
 	}
 
 	connect(this, &rpcn_friends_dialog::signal_add_update_friend, this, &rpcn_friends_dialog::add_update_friend);
@@ -1041,9 +1076,9 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 			std::string str_sel_friend = selected_item->text().toStdString();
 
 			QMenu* context_menu           = new QMenu();
-			QAction* remove_friend_action = context_menu->addAction(tr("&Accept Request"));
+			QAction* accept_request_action = context_menu->addAction(tr("&Accept Request"));
 
-			connect(remove_friend_action, &QAction::triggered, this, [this, str_sel_friend]()
+			connect(accept_request_action, &QAction::triggered, this, [this, str_sel_friend]()
 				{
 					if (!m_rpcn->add_friend(str_sel_friend))
 					{
@@ -1056,6 +1091,38 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 				});
 
 			context_menu->exec(m_lst_requests->viewport()->mapToGlobal(pos));
+			context_menu->deleteLater();
+		});
+
+	connect(m_lst_history, &QListWidget::customContextMenuRequested, this, [this](const QPoint& pos)
+		{
+			if (!m_lst_history->itemAt(pos) || m_lst_history->selectedItems().count() != 1)
+			{
+				return;
+			}
+
+			QListWidgetItem* selected_item = m_lst_history->selectedItems().first();
+
+			std::string str_sel_friend = selected_item->text().toStdString();
+
+			QMenu* context_menu = new QMenu();
+			QAction* send_friend_request_action = context_menu->addAction(tr("&Send Friend Request"));
+
+			connect(send_friend_request_action, &QAction::triggered, this, [this, str_sel_friend]()
+				{
+					if (!m_rpcn->add_friend(str_sel_friend))
+					{
+						QMessageBox::critical(this, tr("Error sending a friend request!"), tr("An error occurred while trying to send a friend request!"), QMessageBox::Ok);
+					}
+					else
+					{
+						QString qstr_friend = QString::fromStdString(str_sel_friend);
+						add_update_list(m_lst_requests, qstr_friend, m_orange_icon, QVariant(false));
+						remove_list(m_lst_history, qstr_friend);
+					}
+				});
+
+			context_menu->exec(m_lst_history->viewport()->mapToGlobal(pos));
 			context_menu->deleteLater();
 		});
 
@@ -1146,6 +1213,7 @@ void rpcn_friends_dialog::remove_friend(QString name)
 void rpcn_friends_dialog::add_query(QString name)
 {
 	add_update_list(m_lst_requests, name, m_yellow_icon, QVariant(true));
+	remove_list(m_lst_history, name);
 }
 
 void rpcn_friends_dialog::callback_handler(rpcn::NotificationType ntype, std::string username, bool status)

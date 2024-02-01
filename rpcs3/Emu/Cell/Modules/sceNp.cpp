@@ -1814,7 +1814,7 @@ error_code sceNpBasicGetFriendPresenceByNpId2(vm::cptr<SceNpId> npid, vm::ptr<Sc
 	return nph.get_friend_presence_by_npid(*npid, pres.get_ptr());
 }
 
-error_code sceNpBasicAddPlayersHistory(vm::cptr<SceNpId> npid, vm::ptr<char> description)
+error_code sceNpBasicAddPlayersHistory(vm::cptr<SceNpId> npid, vm::cptr<char> description)
 {
 	sceNp.todo("sceNpBasicAddPlayersHistory(npid=*0x%x, description=*0x%x)", npid, description);
 
@@ -1835,10 +1835,12 @@ error_code sceNpBasicAddPlayersHistory(vm::cptr<SceNpId> npid, vm::ptr<char> des
 		return SCE_NP_BASIC_ERROR_EXCEEDS_MAX;
 	}
 
+	nph.add_player_to_history(npid.get_ptr(), description ? description.get_ptr() : nullptr);
+
 	return CELL_OK;
 }
 
-error_code sceNpBasicAddPlayersHistoryAsync(vm::cptr<SceNpId> npids, u32 count, vm::ptr<char> description, vm::ptr<u32> reqId)
+error_code sceNpBasicAddPlayersHistoryAsync(vm::cptr<SceNpId> npids, u32 count, vm::cptr<char> description, vm::ptr<u32> reqId)
 {
 	sceNp.todo("sceNpBasicAddPlayersHistoryAsync(npids=*0x%x, count=%d, description=*0x%x, reqId=*0x%x)", npids, count, description, reqId);
 
@@ -1877,7 +1879,7 @@ error_code sceNpBasicAddPlayersHistoryAsync(vm::cptr<SceNpId> npids, u32 count, 
 		return SCE_NP_BASIC_ERROR_EXCEEDS_MAX;
 	}
 
-	auto req_id = nph.add_players_to_history(npids, count);
+	auto req_id = nph.add_players_to_history(npids.get_ptr(), description ? description.get_ptr() : nullptr, count);
 
 	if (reqId)
 	{
@@ -1919,8 +1921,7 @@ error_code sceNpBasicGetPlayersHistoryEntryCount(u32 options, vm::ptr<u32> count
 		return SCE_NP_ERROR_ID_NOT_FOUND;
 	}
 
-	// TODO: Check if there are players histories
-	*count = 0;
+	*count = nph.get_players_history_count(options);
 
 	return CELL_OK;
 }
@@ -1954,6 +1955,11 @@ error_code sceNpBasicGetPlayersHistoryEntry(u32 options, u32 index, vm::ptr<SceN
 
 	// TODO: Find the correct test which returns SCE_NP_ERROR_ID_NOT_FOUND
 	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_ERROR_ID_NOT_FOUND;
+	}
+
+	if (!nph.get_player_history_entry(options, index, npid.get_ptr()))
 	{
 		return SCE_NP_ERROR_ID_NOT_FOUND;
 	}
