@@ -24,7 +24,7 @@ namespace gl
 		glGenTextures(1, &m_id);
 
 		// Must bind to initialize the new texture
-		gl::get_command_context()->bind_texture(GL_TEMP_IMAGE_SLOT, target, m_id, GL_TRUE);
+		gl::get_command_context()->bind_texture(GL_TEMP_IMAGE_SLOT(0), target, m_id, GL_TRUE);
 
 		const GLenum storage_fmt = sizedfmt_to_ifmt(sized_format);
 		switch (target)
