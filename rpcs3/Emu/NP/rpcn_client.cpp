@@ -1200,7 +1200,7 @@ namespace rpcn
 		vec_stream reply(packet_data);
 		auto error = static_cast<ErrorType>(reply.get<u8>());
 
-		if (error == ErrorType::NotFound)
+		if (is_error(error))
 		{
 			return false;
 		}

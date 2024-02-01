@@ -42,7 +42,7 @@ namespace np
 
 	struct player_history
 	{
-		u64 timestamp;
+		u64 timestamp{};
 		std::set<std::string> communication_ids;
 		std::string description;
 	};
