@@ -215,6 +215,7 @@ namespace rsx
 			compiled_resource& get_compiled() override;
 
 			virtual u16 get_scroll_offset_px() = 0;
+			void add_spacer();
 		};
 
 		struct vertical_layout : public layout_container
