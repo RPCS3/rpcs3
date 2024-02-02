@@ -439,6 +439,8 @@ lv2_file::lv2_file(utils::serial& ar)
 	, flags(ar)
 	, type(ar)
 {
+	[[maybe_unused]] const s32 version = GET_SERIALIZATION_VERSION(lv2_fs);
+
 	ar(lock);
 
 	be_t<u64> arg = 0;
@@ -451,13 +453,19 @@ lv2_file::lv2_file(utils::serial& ar)
 	case lv2_file_type::edata: arg = 0x2, size = 8; break;
 	}
 
-	const std::string retrieve_real = ar;
+	const std::string retrieve_real = ar.pop<std::string>();
+
+	if (type == lv2_file_type::edata && version >= 2)
+	{
+		ar(g_fxo->get<loaded_npdrm_keys>().one_time_key);
+	}
 
 	open_result_t res = lv2_file::open(retrieve_real, flags & CELL_FS_O_ACCMODE, mode, size ? &arg : nullptr, size);
 	file = std::move(res.file);
 	real_path = std::move(res.real_path);
 
 	g_fxo->get<loaded_npdrm_keys>().npdrm_fds.raw() += type != lv2_file_type::regular;
+	g_fxo->get<loaded_npdrm_keys>().one_time_key = {};
 
 	if (ar.pop<bool>()) // see lv2_file::save in_mem
 	{
@@ -488,6 +496,13 @@ void lv2_file::save(utils::serial& ar)
 {
 	USING_SERIALIZATION_VERSION(lv2_fs);
 	ar(name, mode, flags, type, lock, ensure(vfs::retrieve(real_path), FN(!x.empty())));
+
+	if (type == lv2_file_type::edata)
+	{
+		auto file_ptr = file.release();
+		ar(static_cast<EDATADecrypter*>(file_ptr.get())->get_key());
+		file.reset(std::move(file_ptr));
+	}
 
 	if (!mp.read_only && flags & CELL_FS_O_ACCMODE)
 	{
@@ -918,6 +933,21 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 				const u64 init_pos = edatkeys.dec_keys_pos;
 				const auto& dec_keys = edatkeys.dec_keys;
 				const u64 max_i = std::min<u64>(std::size(dec_keys), init_pos);
+
+				if (edatkeys.one_time_key)
+				{
+					auto edata_file = std::make_unique<EDATADecrypter>(std::move(file), edatkeys.one_time_key);
+					edatkeys.one_time_key = {};
+
+					if (!edata_file->ReadHeader())
+					{
+						// Read failure
+						return {CELL_EFSSPECIFIC};
+					}
+
+					file.reset(std::move(edata_file));
+					break;
+				}
 
 				for (u64 i = 0;; i++)
 				{
