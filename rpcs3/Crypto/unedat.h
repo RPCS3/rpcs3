@@ -79,9 +79,6 @@ struct EDATADecrypter final : fs::file_base
 	NPD_HEADER npdHeader{};
 	EDAT_HEADER edatHeader{};
 
-	// Internal data buffers.
-	std::vector<u8> data_buf{};
-
 	u128 dec_key{};
 
 public:
