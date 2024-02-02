@@ -15,7 +15,7 @@ namespace rsx
 			struct list_entry : horizontal_layout
 			{
 			public:
-				list_entry(const std::string& msg);
+				list_entry(const std::string& name, const std::string& subj, const std::string& body);
 			};
 
 			shared_mutex m_mutex;

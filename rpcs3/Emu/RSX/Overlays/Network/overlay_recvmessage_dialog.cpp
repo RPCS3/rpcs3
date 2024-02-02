@@ -15,26 +15,64 @@ namespace rsx
 			dlg->callback_handler(std::move(new_msg), msg_id);
 		}
 
-		recvmessage_dialog::list_entry::list_entry(const std::string& msg)
+		recvmessage_dialog::list_entry::list_entry(const std::string& name, const std::string& subj, const std::string& body)
 		{
-			std::unique_ptr<overlay_element> text_stack  = std::make_unique<vertical_layout>();
-			std::unique_ptr<overlay_element> padding     = std::make_unique<spacer>();
-			std::unique_ptr<overlay_element> text_label  = std::make_unique<label>(msg);
+			std::unique_ptr<overlay_element> prefix_stack = std::make_unique<vertical_layout>();
+			std::unique_ptr<overlay_element> text_stack = std::make_unique<vertical_layout>();
+			std::unique_ptr<overlay_element> name_label = std::make_unique<label>(name);
+			std::unique_ptr<overlay_element> subj_label = std::make_unique<label>(subj);
+			std::unique_ptr<overlay_element> body_label = std::make_unique<label>(body);
+			std::unique_ptr<overlay_element> name_prefix_label = std::make_unique<label>(get_localized_string(localized_string_id::CELL_NP_RECVMESSAGE_DIALOG_FROM));
+			std::unique_ptr<overlay_element> subj_prefix_label = std::make_unique<label>(get_localized_string(localized_string_id::CELL_NP_RECVMESSAGE_DIALOG_SUBJECT));
 
-			padding->set_size(1, 1);
-			text_label->set_size(800, 40);
-			text_label->set_font("Arial", 16);
-			text_label->set_wrap_text(true);
+			name_prefix_label->set_size(0, 40);
+			name_prefix_label->set_font("Arial", 16);
+			name_prefix_label->set_wrap_text(false);
+			static_cast<label*>(name_prefix_label.get())->auto_resize(true);
+
+			subj_prefix_label->set_size(0, 40);
+			subj_prefix_label->set_font("Arial", 16);
+			subj_prefix_label->set_wrap_text(false);
+			static_cast<label*>(subj_prefix_label.get())->auto_resize(true);
+
+			name_label->set_size(200, 40);
+			name_label->set_font("Arial", 16);
+			name_label->set_wrap_text(false);
+
+			subj_label->set_size(600, 40);
+			subj_label->set_font("Arial", 16);
+			subj_label->set_wrap_text(false);
+
+			body_label->set_size(800, 0);
+			body_label->set_font("Arial", 16);
+			body_label->set_wrap_text(true);
+			static_cast<label*>(body_label.get())->auto_resize(true);
 
 			// Make back color transparent for text
-			text_label->back_color.a = 0.f;
+			name_label->back_color.a = 0.f;
+			subj_label->back_color.a = 0.f;
+			body_label->back_color.a = 0.f;
+			name_prefix_label->back_color.a = 0.f;
+			subj_prefix_label->back_color.a = 0.f;
+
+			static_cast<vertical_layout*>(prefix_stack.get())->pack_padding = 5;
+			static_cast<vertical_layout*>(prefix_stack.get())->add_spacer();
+			static_cast<vertical_layout*>(prefix_stack.get())->add_element(name_prefix_label);
+			static_cast<vertical_layout*>(prefix_stack.get())->add_element(subj_prefix_label);
 
 			static_cast<vertical_layout*>(text_stack.get())->pack_padding = 5;
-			static_cast<vertical_layout*>(text_stack.get())->add_element(padding);
-			static_cast<vertical_layout*>(text_stack.get())->add_element(text_label);
+			static_cast<vertical_layout*>(text_stack.get())->add_spacer();
+			static_cast<vertical_layout*>(text_stack.get())->add_element(name_label);
+			static_cast<vertical_layout*>(text_stack.get())->add_element(subj_label);
+			static_cast<vertical_layout*>(text_stack.get())->add_element(body_label);
+
+			// Add spacer to make the thing look a bit nicer at the bottom... should ideally not be necessary
+			static_cast<vertical_layout*>(text_stack.get())->pack_padding = 25;
+			static_cast<vertical_layout*>(text_stack.get())->add_spacer();
 
 			// Pack
 			pack_padding = 15;
+			add_element(prefix_stack);
 			add_element(text_stack);
 		}
 
@@ -44,7 +82,7 @@ namespace rsx
 			m_dim_background->set_size(virtual_width, virtual_height);
 			m_dim_background->back_color.a = 0.5f;
 
-			m_list = std::make_unique<list_view>(virtual_width - 2 * 20, 540, false, true);
+			m_list = std::make_unique<list_view>(virtual_width - 2 * 20, 540, true, true);
 			m_list->set_pos(20, 85);
 
 			m_description = std::make_unique<label>();
@@ -186,7 +224,7 @@ namespace rsx
 				for (const auto& [id, message] : messages)
 				{
 					ensure(message);
-					std::unique_ptr<overlay_element> entry = std::make_unique<list_entry>(message->first);
+					std::unique_ptr<overlay_element> entry = std::make_unique<list_entry>(message->first, message->second.subject, message->second.body);
 					m_entries.emplace_back(std::move(entry));
 					m_entry_ids.push_back(id);
 				}
@@ -279,7 +317,7 @@ namespace rsx
 
 			std::lock_guard lock(m_mutex);
 
-			std::unique_ptr<overlay_element> entry = std::make_unique<list_entry>(new_msg->first);
+			std::unique_ptr<overlay_element> entry = std::make_unique<list_entry>(new_msg->first, new_msg->second.subject, new_msg->second.body);
 			m_entries.emplace_back(std::move(entry));
 			m_entry_ids.push_back(msg_id);
 			m_list->add_entry(m_entries.back());
