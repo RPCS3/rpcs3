@@ -71,7 +71,10 @@ u128 GetEdatRifKeyFromRapFile(const fs::file& rap_file);
 struct EDATADecrypter final : fs::file_base
 {
 	// file stream
-	fs::file edata_file;
+	fs::file m_edata_file;
+	const fs::file& edata_file;
+	std::string m_file_name;
+	bool m_is_key_final = true;
 	u64 file_size{0};
 	u32 total_blocks{0};
 	u64 pos{0};
@@ -82,8 +85,20 @@ struct EDATADecrypter final : fs::file_base
 	u128 dec_key{};
 
 public:
-	EDATADecrypter(fs::file&& input, u128 dec_key = {})
-		: edata_file(std::move(input))
+	EDATADecrypter(fs::file&& input, u128 dec_key = {}, std::string file_name = {}, bool is_key_final = true) noexcept
+		: m_edata_file(std::move(input))
+		, edata_file(m_edata_file)
+		, m_file_name(std::move(file_name))
+		, m_is_key_final(is_key_final)
+		, dec_key(dec_key)
+	{
+	}
+
+	EDATADecrypter(const fs::file& input, u128 dec_key = {}, std::string file_name = {}, bool is_key_final = true) noexcept
+		: m_edata_file(fs::file{})
+		, edata_file(input)
+		, m_file_name(std::move(file_name))
+		, m_is_key_final(is_key_final)
 		, dec_key(dec_key)
 	{
 	}

@@ -139,7 +139,16 @@ usz decrypt_binaries_t::decrypt(std::string klic_input)
 
 				if (fs::file new_file{new_path, fs::rewrite})
 				{
-					new_file.write(elf_file.to_string());
+					// 16MB buffer
+					std::vector<u8> buffer(std::min<usz>(elf_file.size(), 1u << 24));
+
+					elf_file.seek(0);
+
+					while (usz read_size = elf_file.read(buffer.data(), buffer.size()))
+					{
+						new_file.write(buffer.data(), read_size);
+					}
+
 					dec_log.success("Decrypted %s -> %s", old_path, new_path);
 					std::cout << "Decrypted " << old_path << " -> " << new_path << std::endl; // For CLI
 					m_index++;
