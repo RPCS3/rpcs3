@@ -179,7 +179,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		if (!buffer_pitch)
 			buffer_pitch = buffer_width * avconfig.get_bpp();
 
-		const u32 video_frame_height = (avconfig.stereo_mode == stereo_render_mode_options::disabled? avconfig.resolution_y : ((avconfig.resolution_y - 30) / 2));
+		const u32 video_frame_height = (avconfig.stereo_mode == stereo_render_mode_options::disabled ? avconfig.resolution_y : ((avconfig.resolution_y - 30) / 2));
 		buffer_width = std::min(buffer_width, avconfig.resolution_x);
 		buffer_height = std::min(buffer_height, video_frame_height);
 	}

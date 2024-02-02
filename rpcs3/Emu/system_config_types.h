@@ -316,9 +316,15 @@ enum class output_scaling_mode
 enum class stereo_render_mode_options
 {
 	disabled,
-	anaglyph,
 	side_by_side,
-	over_under
+	over_under,
+	interlaced,
+	anaglyph_red_green,
+	anaglyph_red_blue,
+	anaglyph_red_cyan,
+	anaglyph_magenta_cyan,
+	anaglyph_trioscopic,
+	anaglyph_amber_blue,
 };
 
 enum class xfloat_accuracy

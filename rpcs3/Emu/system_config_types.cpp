@@ -640,9 +640,15 @@ void fmt_class_string<stereo_render_mode_options>::format(std::string& out, u64 
 			switch (value)
 			{
 			case stereo_render_mode_options::disabled: return "Disabled";
-			case stereo_render_mode_options::anaglyph: return "Anaglyph";
 			case stereo_render_mode_options::side_by_side: return "Side-by-Side";
 			case stereo_render_mode_options::over_under: return "Over-Under";
+			case stereo_render_mode_options::interlaced: return "Interlaced";
+			case stereo_render_mode_options::anaglyph_red_green: return "Anaglyph Red-Green";
+			case stereo_render_mode_options::anaglyph_red_blue: return "Anaglyph Red-Blue";
+			case stereo_render_mode_options::anaglyph_red_cyan: return "Anaglyph Red-Cyan";
+			case stereo_render_mode_options::anaglyph_magenta_cyan: return "Anaglyph Magenta-Cyan";
+			case stereo_render_mode_options::anaglyph_trioscopic: return "Anaglyph Trioscopic";
+			case stereo_render_mode_options::anaglyph_amber_blue: return "Anaglyph Amber-Blue";
 			}
 
 			return unknown;

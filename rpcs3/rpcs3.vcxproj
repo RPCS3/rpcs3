@@ -1920,6 +1920,7 @@
     <None Include="..\bin\GuiConfigs\Skyline.qss" />
     <None Include="..\bin\GuiConfigs\YoRHa by Ani.qss" />
     <None Include="..\Utilities\git-version-gen.cmd" />
+    <None Include="update_helper.sh" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
