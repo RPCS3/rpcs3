@@ -163,8 +163,6 @@ s64 decrypt_block(const fs::file* in, u8* out, EDAT_HEADER *edat, NPD_HEADER *np
 	const int metadata_section_size = ((edat->flags & EDAT_COMPRESSED_FLAG) != 0 || (edat->flags & EDAT_FLAG_0x20) != 0) ? 0x20 : 0x10;
 	const int metadata_offset = 0x100;
 
-	std::unique_ptr<u8[]> enc_data;
-	std::unique_ptr<u8[]> dec_data;
 	u8 hash[0x10] = { 0 };
 	u8 key_result[0x10] = { 0 };
 	u8 hash_result[0x14] = { 0 };
@@ -175,19 +173,14 @@ s64 decrypt_block(const fs::file* in, u8* out, EDAT_HEADER *edat, NPD_HEADER *np
 	s32 compression_end = 0;
 	unsigned char empty_iv[0x10] = {};
 
-	const u64 file_offset = in->pos();
-	memset(hash_result, 0, 0x14);
-
 	// Decrypt the metadata.
 	if ((edat->flags & EDAT_COMPRESSED_FLAG) != 0)
 	{
 		metadata_sec_offset = metadata_offset + u64{block_num} * metadata_section_size;
 
-		in->seek(file_offset + metadata_sec_offset);
+		u8 metadata[0x20]{};
 
-		unsigned char metadata[0x20];
-		memset(metadata, 0, 0x20);
-		in->read(metadata, 0x20);
+		in->read_at(metadata_sec_offset, metadata, 0x20);
 
 		// If the data is compressed, decrypt the metadata.
 		// NOTE: For NPD version 1 the metadata is not encrypted.
@@ -202,18 +195,17 @@ s64 decrypt_block(const fs::file* in, u8* out, EDAT_HEADER *edat, NPD_HEADER *np
 			std::tie(offset, length, compression_end) = dec_section(metadata);
 		}
 
-		memcpy(hash_result, metadata, 0x10);
+		std::memcpy(hash_result, metadata, 0x10);
 	}
 	else if ((edat->flags & EDAT_FLAG_0x20) != 0)
 	{
 		// If FLAG 0x20, the metadata precedes each data block.
 		metadata_sec_offset = metadata_offset + u64{block_num} * (metadata_section_size + edat->block_size);
-		in->seek(file_offset + metadata_sec_offset);
 
-		unsigned char metadata[0x20];
-		memset(metadata, 0, 0x20);
-		in->read(metadata, 0x20);
-		memcpy(hash_result, metadata, 0x14);
+		u8 metadata[0x20]{};
+		in->read_at(metadata_sec_offset, metadata, 0x20);
+
+		std::memcpy(hash_result, metadata, 0x14);
 
 		// If FLAG 0x20 is set, apply custom xor.
 		for (int j = 0; j < 0x10; j++)
@@ -228,9 +220,9 @@ s64 decrypt_block(const fs::file* in, u8* out, EDAT_HEADER *edat, NPD_HEADER *np
 	else
 	{
 		metadata_sec_offset = metadata_offset + u64{block_num} * metadata_section_size;
-		in->seek(file_offset + metadata_sec_offset);
 
-		in->read(hash_result, 0x10);
+		in->read_at(metadata_sec_offset, hash_result, 0x10);
+
 		offset = metadata_offset + u64{block_num} * edat->block_size + total_blocks * metadata_section_size;
 		length = edat->block_size;
 
@@ -239,59 +231,82 @@ s64 decrypt_block(const fs::file* in, u8* out, EDAT_HEADER *edat, NPD_HEADER *np
 	}
 
 	// Locate the real data.
-	const int pad_length = length;
-	length = (pad_length + 0xF) & 0xFFFFFFF0;
+	const usz pad_length = length;
+	length = utils::align<usz>(pad_length, 0x10);
 
 	// Setup buffers for decryption and read the data.
-	enc_data.reset(new u8[length]{ 0 });
-	dec_data.reset(new u8[length]{ 0 });
-	memset(hash, 0, 0x10);
-	memset(key_result, 0, 0x10);
+	std::vector<u8> enc_data_buf(length == pad_length ? 0 : length);
+	std::vector<u8> dec_data_buf(length);
 
-	in->seek(file_offset + offset);
-	in->read(enc_data.get(), length);
+	// Try to use out buffer for file reads if no padding is needed instead of a new buffer
+	u8* enc_data = length == pad_length ? out : enc_data_buf.data();
+
+	// Variable to avoid copies when possible
+	u8* dec_data = dec_data_buf.data();
+
+	std::memset(hash, 0, 0x10);
+	std::memset(key_result, 0, 0x10);
+
+	in->read_at(offset, enc_data, length);
 
 	// Generate a key for the current block.
 	auto b_key = get_block_key(block_num, npd);
 
 	// Encrypt the block key with the crypto key.
 	aesecb128_encrypt(crypt_key, reinterpret_cast<uchar*>(&b_key), key_result);
+
 	if ((edat->flags & EDAT_FLAG_0x10) != 0)
+	{
 		aesecb128_encrypt(crypt_key, key_result, hash);  // If FLAG 0x10 is set, encrypt again to get the final hash.
+	}
 	else
-		memcpy(hash, key_result, 0x10);
+	{
+		std::memcpy(hash, key_result, 0x10);
+	}
 
 	// Setup the crypto and hashing mode based on the extra flags.
 	int crypto_mode = ((edat->flags & EDAT_FLAG_0x02) == 0) ? 0x2 : 0x1;
 	int hash_mode;
 
-	if ((edat->flags  & EDAT_FLAG_0x10) == 0)
+	if ((edat->flags & EDAT_FLAG_0x10) == 0)
 		hash_mode = 0x02;
 	else if ((edat->flags & EDAT_FLAG_0x20) == 0)
 		hash_mode = 0x04;
 	else
 		hash_mode = 0x01;
 
-	if ((edat->flags  & EDAT_ENCRYPTED_KEY_FLAG) != 0)
+	if ((edat->flags & EDAT_ENCRYPTED_KEY_FLAG) != 0)
 	{
 		crypto_mode |= 0x10000000;
 		hash_mode |= 0x10000000;
 	}
 
-	if ((edat->flags  & EDAT_DEBUG_DATA_FLAG) != 0)
+	const bool should_decompress = ((edat->flags & EDAT_COMPRESSED_FLAG) != 0) && compression_end;
+
+	if ((edat->flags & EDAT_DEBUG_DATA_FLAG) != 0)
 	{
 		// Reset the flags.
 		crypto_mode |= 0x01000000;
 		hash_mode |= 0x01000000;
+
 		// Simply copy the data without the header or the footer.
-		memcpy(dec_data.get(), enc_data.get(), length);
+		if (should_decompress)
+		{
+			std::memcpy(dec_data, enc_data, length);
+		}
+		else
+		{
+			// Optimize when decompression is not needed by avoiding 2 copies
+			dec_data = enc_data;
+		}
 	}
 	else
 	{
 		// IV is null if NPD version is 1 or 0.
 		u8* iv = (npd->version <= 1) ? empty_iv : npd->digest;
+
 		// Call main crypto routine on this data block.
-		if (!decrypt(hash_mode, crypto_mode, (npd->version == 4), enc_data.get(), dec_data.get(), length, key_result, iv, hash, hash_result))
+		if (!decrypt(hash_mode, crypto_mode, (npd->version == 4), enc_data, dec_data, length, key_result, iv, hash, hash_result))
 		{
 			edat_log.error("Block at offset 0x%llx has invalid hash!", offset);
 			return -1;
@@ -299,9 +314,9 @@ s64 decrypt_block(const fs::file* in, u8* out, EDAT_HEADER *edat, NPD_HEADER *np
 	}
 
 	// Apply additional de-compression if needed and write the decrypted data.
-	if (((edat->flags & EDAT_COMPRESSED_FLAG) != 0) && compression_end)
+	if (should_decompress)
 	{
-		const int res = decompress(out, dec_data.get(), edat->block_size);
+		const int res = decompress(out, dec_data, edat->block_size);
 
 		size_left -= res;
 
@@ -313,35 +328,40 @@ s64 decrypt_block(const fs::file* in, u8* out, EDAT_HEADER *edat, NPD_HEADER *np
 				return -1;
 			}
 		}
+
 		return res;
 	}
-	else
+
+	if (dec_data != out)
 	{
-		memcpy(out, dec_data.get(), pad_length);
-		return pad_length;
+		std::memcpy(out, dec_data, pad_length);
 	}
+
+	return pad_length;
 }
 
 // EDAT/SDAT decryption.
 // reset file to beginning of data before calling
 int decrypt_data(const fs::file* in, const fs::file* out, EDAT_HEADER *edat, NPD_HEADER *npd, unsigned char* crypt_key, bool /*verbose*/)
 {
-	const int total_blocks = static_cast<int>((edat->file_size + edat->block_size - 1) / edat->block_size);
+	const u32 total_blocks = ::narrow<u32>((edat->file_size + edat->block_size - 1) / edat->block_size);
 	u64 size_left = edat->file_size;
-	std::unique_ptr<u8[]> data(new u8[edat->block_size]);
+
+	std::vector<u8> data(edat->block_size);
 
 	for (int i = 0; i < total_blocks; i++)
 	{
-		in->seek(0);
-		memset(data.get(), 0, edat->block_size);
-		u64 res = decrypt_block(in, data.get(), edat, npd, crypt_key, i, total_blocks, size_left);
+		std::memset(data.data(), 0, edat->block_size);
+
+		u64 res = decrypt_block(in, data.data(), edat, npd, crypt_key, i, total_blocks, size_left);
 		if (res == umax)
 		{
 			edat_log.error("Decrypt Block failed!");
 			return 1;
 		}
+
 		size_left -= res;
-		out->write(data.get(), res);
+		out->write(data.data(), res);
 	}
 
 	return 0;
@@ -455,10 +475,10 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 	while (bytes_read < metadata_size)
 	{
 		// Locate the metadata blocks.
-		f->seek(file_offset + metadata_section_offset);
+		const usz offset = file_offset + metadata_section_offset;
 
 		// Read in the metadata.
-		f->read(metadata.get() + bytes_read, metadata_section_size);
+		f->read_at(offset, metadata.get() + bytes_read, metadata_section_size);
 
 		// Adjust sizes.
 		bytes_read += metadata_section_size;
@@ -492,15 +512,17 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 		ecdsa_set_pub(VSH_PUB);
 
 		// Read in the metadata and header signatures.
-		f->seek(file_offset + 0xB0);
+		f->seek(0xB0);
 		f->read(metadata_signature, 0x28);
 		f->read(header_signature, 0x28);
 
 		// Checking metadata signature.
 		// Setup signature r and s.
-		memcpy(signature_r + 01, metadata_signature, 0x14);
-		memcpy(signature_s + 01, metadata_signature + 0x14, 0x14);
-		if ((!memcmp(signature_r, zero_buf, 0x15)) || (!memcmp(signature_s, zero_buf, 0x15)))
+		signature_r[0] = 0;
+		signature_s[0] = 0;
+		std::memcpy(signature_r + 1, metadata_signature, 0x14);
+		std::memcpy(signature_s + 1, metadata_signature + 0x14, 0x14);
+		if ((!std::memcmp(signature_r, zero_buf, 0x15)) || (!std::memcmp(signature_s, zero_buf, 0x15)))
 		{
 			edat_log.warning("Metadata signature is invalid!");
 		}
@@ -510,10 +532,12 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 			if ((edat->flags & EDAT_FLAG_0x20) != 0) //Sony failed again, they used buffer from 0x100 with half size of real metadata.
 			{
 				const usz metadata_buf_size = block_num * 0x10;
-				std::unique_ptr<u8[]> metadata_buf(new u8[metadata_buf_size]);
-				f->seek(file_offset + metadata_offset);
-				f->read(metadata_buf.get(), metadata_buf_size);
-				sha1(metadata_buf.get(), metadata_buf_size, signature_hash);
+
+				std::vector<u8> metadata_buf(metadata_buf_size);
+
+				f->read_at(file_offset + metadata_offset, metadata_buf.data(), metadata_buf_size);
+
+				sha1(metadata_buf.data(), metadata_buf_size, signature_hash);
 			}
 			else
 				sha1(metadata.get(), metadata_size, signature_hash);
@@ -528,22 +552,23 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 
 		// Checking header signature.
 		// Setup header signature r and s.
-		memset(signature_r, 0, 0x15);
-		memset(signature_s, 0, 0x15);
-		memcpy(signature_r + 01, header_signature, 0x14);
-		memcpy(signature_s + 01, header_signature + 0x14, 0x14);
+		signature_r[0] = 0;
+		signature_s[0] = 0;
+		std::memcpy(signature_r + 1, header_signature, 0x14);
+		std::memcpy(signature_s + 1, header_signature + 0x14, 0x14);
 
-		if ((!memcmp(signature_r, zero_buf, 0x15)) || (!memcmp(signature_s, zero_buf, 0x15)))
+		if ((!std::memcmp(signature_r, zero_buf, 0x15)) || (!std::memcmp(signature_s, zero_buf, 0x15)))
 		{
 			edat_log.warning("Header signature is invalid!");
 		}
 		else
 		{
 			// Setup header signature hash.
-			memset(signature_hash, 0, 20);
-			u8 header_buf[0xD8];
-			f->seek(file_offset);
-			f->read(header_buf, 0xD8);
+			std::memset(signature_hash, 0, 20);
+
+			u8 header_buf[0xD8]{};
+
+			f->read_at(file_offset, header_buf, 0xD8);
 			sha1(header_buf, 0xD8, signature_hash);
 
 			if (!ecdsa_verify(signature_hash, signature_r, signature_s))
