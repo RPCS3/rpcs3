@@ -992,28 +992,33 @@ u64 EDATADecrypter::ReadData(u64 pos, u8* data, u64 size)
 	const u64 startOffset = pos % edatHeader.block_size;
 
 	const u64 num_blocks = utils::aligned_div(startOffset + size, edatHeader.block_size);
-	data_buf.resize(num_blocks * edatHeader.block_size);
 
 	// Find and decrypt block range covering pos + size
 	const u32 starting_block = ::narrow<u32>(pos / edatHeader.block_size);
 	const u32 ending_block = ::narrow<u32>(std::min<u64>(starting_block + num_blocks, total_blocks));
+
 	u64 writeOffset = 0;
 
-	for (u32 i = starting_block; i < ending_block; ++i)
+	std::vector<u8> data_buf(edatHeader.block_size);
+
+	for (u32 i = starting_block; i < ending_block; i++)
 	{
-		edata_file.seek(0);
-		u64 res = decrypt_block(&edata_file, &data_buf[writeOffset], &edatHeader, &npdHeader, reinterpret_cast<uchar*>(&dec_key), i, total_blocks, edatHeader.file_size);
+		u64 res = decrypt_block(&edata_file, data_buf.data(), &edatHeader, &npdHeader, reinterpret_cast<uchar*>(&dec_key), i, total_blocks, edatHeader.file_size);
 		if (res == umax)
 		{
 			edat_log.error("Error Decrypting data");
 			return 0;
 		}
 
-		writeOffset += res;
+		const usz skip_start = (i == starting_block ? startOffset : 0);
+		const usz end_block = (i != total_blocks - 1 ? edatHeader.block_size : edatHeader.file_size % edatHeader.block_size);
+		const usz skip_end = (i == ending_block - 1 ? (end_block - (startOffset + size)) % edatHeader.block_size : 0);
+
+		std::memcpy(data + writeOffset, data_buf.data() + skip_start, res - skip_start - skip_end);
+		std::memset(data_buf.data(), 0, res - skip_start - skip_end);
+
+		writeOffset += res - skip_start - skip_end;
 	}
 
-	const u64 bytesWrote = std::min<u64>(writeOffset - startOffset, size);
-
-	memcpy(data, &data_buf[startOffset], bytesWrote);
-	return bytesWrote;
+	return writeOffset;
 }
