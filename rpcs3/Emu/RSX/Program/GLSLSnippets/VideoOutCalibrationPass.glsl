@@ -23,12 +23,12 @@ layout(location=0) out vec4 ocol;
 #define TRUE 1
 #define FALSE 0
 
-vec2 left_single_matrix  = vec2(1.f, 0.4898f);
-vec2 right_single_matrix = vec2(0.f, 0.510204f);
-vec2 sbs_single_matrix   = vec2(2.0, 0.4898f);
-vec2 sbs_multi_matrix    = vec2(2.0, 1.0);
-vec2 ou_single_matrix    = vec2(1.0, 0.9796f);
-vec2 ou_multi_matrix     = vec2(1.0, 2.0);
+const vec2 left_single_matrix  = vec2(1.f, 0.4898f);
+const vec2 right_single_matrix = vec2(0.f, 0.510204f);
+const vec2 sbs_single_matrix   = vec2(2.0, 0.4898f);
+const vec2 sbs_multi_matrix    = vec2(2.0, 1.0);
+const vec2 ou_single_matrix    = vec2(1.0, 0.9796f);
+const vec2 ou_multi_matrix     = vec2(1.0, 2.0);
 
 #ifdef VULKAN
 layout(push_constant) uniform static_data
@@ -61,16 +61,16 @@ vec4 anaglyph(const in vec4 left, const in vec4 right)
 
 vec4 anaglyph_single_image()
 {
-	vec4 left  = texture(fs0, tc0 * left_single_matrix);
-	vec4 right = texture(fs0, (tc0 * left_single_matrix) + right_single_matrix);
+	const vec4 left  = texture(fs0, tc0 * left_single_matrix);
+	const vec4 right = texture(fs0, (tc0 * left_single_matrix) + right_single_matrix);
 
 	return anaglyph(left, right);
 }
 
 vec4 anaglyph_stereo_image()
 {
-	vec4 left = texture(fs0, tc0);
-	vec4 right = texture(fs1, tc0);
+	const vec4 left = texture(fs0, tc0);
+	const vec4 right = texture(fs1, tc0);
 	
 	return anaglyph(left, right);
 }
