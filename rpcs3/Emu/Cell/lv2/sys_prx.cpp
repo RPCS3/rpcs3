@@ -96,7 +96,7 @@ extern const std::map<std::string_view, int> g_prx_list
 	{ "libmvcdec.sprx", 0 },
 	{ "libnet.sprx", 0 },
 	{ "libnetctl.sprx", 1 },
-	{ "libpamf.sprx", 0 },
+	{ "libpamf.sprx", 1 },
 	{ "libpngdec.sprx", 0 },
 	{ "libpngenc.sprx", 0 },
 	{ "libresc.sprx", 0 },

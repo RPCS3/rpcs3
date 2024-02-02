@@ -2,6 +2,7 @@
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
+#include <bitset>
 #include "cellPamf.h"
 
 const std::function<bool()> SQUEUE_ALWAYS_EXIT = []() { return true; };
@@ -35,404 +36,996 @@ void fmt_class_string<CellPamfError>::format(std::string& out, u64 arg)
 	});
 }
 
-error_code pamfStreamTypeToEsFilterId(u8 type, u8 ch, CellCodecEsFilterId& pEsFilterId)
+error_code pamfVerifyMagicAndVersion(vm::cptr<PamfHeader> pAddr, vm::ptr<CellPamfReader> pSelf)
 {
-	// convert type and ch to EsFilterId
+	if (pAddr->magic != std::bit_cast<be_t<u32>>("PAMF"_u32))
+	{
+		return CELL_PAMF_ERROR_UNKNOWN_TYPE;
+	}
+
+	if (pSelf)
+	{
+		pSelf->isPsmf = false;
+	}
+
+	be_t<u16> version;
+
+	if (pAddr->version == std::bit_cast<be_t<u32>>("0040"_u32))
+	{
+		version = 40;
+	}
+	else if (pAddr->version == std::bit_cast<be_t<u32>>("0041"_u32))
+	{
+		version = 41;
+	}
+	else
+	{
+		return CELL_PAMF_ERROR_UNSUPPORTED_VERSION;
+	}
+
+	if (pSelf)
+	{
+		pSelf->version = version;
+	}
+
+	return CELL_OK;
+}
+
+error_code pamfGetHeaderAndDataSize(vm::cptr<PamfHeader> pAddr, u64 fileSize, vm::ptr<u64> headerSize, vm::ptr<u64> dataSize)
+{
+	if (error_code ret = pamfVerifyMagicAndVersion(pAddr, vm::null); ret != CELL_OK)
+	{
+		return ret;
+	}
+
+	const u64 header_size = pAddr->header_size * 0x800ull;
+	const u64 data_size = pAddr->data_size * 0x800ull;
+
+	if (header_size == 0 || (fileSize != 0 && header_size + data_size != fileSize))
+	{
+		return CELL_PAMF_ERROR_INVALID_PAMF;
+	}
+
+	if (headerSize)
+	{
+		*headerSize = header_size;
+	}
+
+	if (dataSize)
+	{
+		*dataSize = data_size;
+	}
+
+	return CELL_OK;
+}
+
+error_code pamfTypeChannelToStream(u8 type, u8 ch, u8* stream_coding_type, u8* stream_id, u8* private_stream_id)
+{
+	// This function breaks if ch is greater than 15, LLE doesn't check for this
 	ensure(ch < 16);
-	pEsFilterId.supplementalInfo1 = type == CELL_PAMF_STREAM_TYPE_AVC;
-	pEsFilterId.supplementalInfo2 = 0;
+
+	u8 _stream_coding_type;
+	u8 _stream_id;
+	u8 _private_stream_id;
 
 	switch (type)
 	{
 	case CELL_PAMF_STREAM_TYPE_AVC:
 	{
-		// code = 0x1b
-		pEsFilterId.filterIdMajor = 0xe0 | ch;
-		pEsFilterId.filterIdMinor = 0;
+		_stream_coding_type = PAMF_STREAM_CODING_TYPE_AVC;
+		_stream_id = 0xe0 | ch;
+		_private_stream_id = 0;
 		break;
 	}
 
 	case CELL_PAMF_STREAM_TYPE_M2V:
 	{
-		// code = 0x02
-		pEsFilterId.filterIdMajor = 0xe0 | ch;
-		pEsFilterId.filterIdMinor = 0;
+		_stream_coding_type = PAMF_STREAM_CODING_TYPE_M2V;
+		_stream_id = 0xe0 | ch;
+		_private_stream_id = 0;
 		break;
 	}
 
 	case CELL_PAMF_STREAM_TYPE_ATRAC3PLUS:
 	{
-		// code = 0xdc
-		pEsFilterId.filterIdMajor = 0xbd;
-		pEsFilterId.filterIdMinor = ch;
+		_stream_coding_type = PAMF_STREAM_CODING_TYPE_ATRAC3PLUS;
+		_stream_id = 0xbd;
+		_private_stream_id = ch;
 		break;
 	}
 
 	case CELL_PAMF_STREAM_TYPE_PAMF_LPCM:
 	{
-		// code = 0x80
-		pEsFilterId.filterIdMajor = 0xbd;
-		pEsFilterId.filterIdMinor = 0x40 | ch;
+		_stream_coding_type = PAMF_STREAM_CODING_TYPE_PAMF_LPCM;
+		_stream_id = 0xbd;
+		_private_stream_id = 0x40 | ch;
 		break;
 	}
 
 	case CELL_PAMF_STREAM_TYPE_AC3:
 	{
-		// code = 0x81
-		pEsFilterId.filterIdMajor = 0xbd;
-		pEsFilterId.filterIdMinor = 0x30 | ch;
+		_stream_coding_type = PAMF_STREAM_CODING_TYPE_AC3;
+		_stream_id = 0xbd;
+		_private_stream_id = 0x30 | ch;
 		break;
 	}
 
 	case CELL_PAMF_STREAM_TYPE_USER_DATA:
 	{
-		// code = 0xdd
-		pEsFilterId.filterIdMajor = 0xbd;
-		pEsFilterId.filterIdMinor = 0x20 | ch;
+		_stream_coding_type = PAMF_STREAM_CODING_TYPE_USER_DATA;
+		_stream_id = 0xbd;
+		_private_stream_id = 0x20 | ch;
 		break;
 	}
 
-	case 6:
+	case CELL_PAMF_STREAM_TYPE_PSMF_AVC:
 	{
-		// code = 0xff
-		pEsFilterId.filterIdMajor = 0xe0 | ch;
-		pEsFilterId.filterIdMinor = 0;
+		_stream_coding_type = PAMF_STREAM_CODING_TYPE_PSMF;
+		_stream_id = 0xe0 | ch;
+		_private_stream_id = 0;
 		break;
 	}
 
-	case 7:
+	case CELL_PAMF_STREAM_TYPE_PSMF_ATRAC3PLUS:
 	{
-		// code = 0xff
-		pEsFilterId.filterIdMajor = 0xbd;
-		pEsFilterId.filterIdMinor = ch;
+		_stream_coding_type = PAMF_STREAM_CODING_TYPE_PSMF;
+		_stream_id = 0xbd;
+		_private_stream_id = ch;
 		break;
 	}
 
-	case 8:
+	case CELL_PAMF_STREAM_TYPE_PSMF_LPCM:
 	{
-		// code = 0xff
-		pEsFilterId.filterIdMajor = 0xbd;
-		pEsFilterId.filterIdMinor = 0x10 | ch;
+		_stream_coding_type = PAMF_STREAM_CODING_TYPE_PSMF;
+		_stream_id = 0xbd;
+		_private_stream_id = 0x10 | ch;
 		break;
 	}
 
-	case 9:
+	case CELL_PAMF_STREAM_TYPE_PSMF_USER_DATA:
 	{
-		// code = 0xff
-		pEsFilterId.filterIdMajor = 0xbd;
-		pEsFilterId.filterIdMinor = 0x20 | ch;
+		_stream_coding_type = PAMF_STREAM_CODING_TYPE_PSMF;
+		_stream_id = 0xbd;
+		_private_stream_id = 0x20 | ch;
 		break;
 	}
 
 	default:
 	{
-		cellPamf.fatal("pamfStreamTypeToEsFilterId(): unknown type (%d, ch=%d)", type, ch);
+		cellPamf.error("pamfTypeChannelToStream(): unknown type %d", type);
 		return CELL_PAMF_ERROR_INVALID_ARG;
 	}
 	}
 
+	if (stream_coding_type)
+	{
+		*stream_coding_type = _stream_coding_type;
+	}
+
+	if (stream_id)
+	{
+		*stream_id = _stream_id;
+	}
+
+	if (private_stream_id)
+	{
+		*private_stream_id = _private_stream_id;
+	}
+
 	return CELL_OK;
 }
 
-u8 pamfGetStreamType(vm::ptr<CellPamfReader> pSelf, u32 stream)
+error_code pamfStreamToTypeChannel(u8 stream_coding_type, u8 stream_id, u8 private_stream_id, vm::ptr<u8> type, vm::ptr<u8> ch)
 {
-	// TODO: get stream type correctly
-	ensure(stream < pSelf->pAddr->stream_count);
-	auto& header = pSelf->pAddr->stream_headers[stream];
+	u8 _type;
+	u8 _ch;
 
-	switch (header.type)
+	switch (stream_coding_type)
 	{
-	case 0x1b: return CELL_PAMF_STREAM_TYPE_AVC;
-	case 0x02: return CELL_PAMF_STREAM_TYPE_M2V;
-	case 0xdc: return CELL_PAMF_STREAM_TYPE_ATRAC3PLUS;
-	case 0x80: return CELL_PAMF_STREAM_TYPE_PAMF_LPCM;
-	case 0x81: return CELL_PAMF_STREAM_TYPE_AC3;
-	case 0xdd: return CELL_PAMF_STREAM_TYPE_USER_DATA;
-	default: break;
+	case PAMF_STREAM_CODING_TYPE_AVC:
+		_type = CELL_PAMF_STREAM_TYPE_AVC;
+		_ch = stream_id & 0x0f;
+		break;
+
+	case PAMF_STREAM_CODING_TYPE_M2V:
+		_type = CELL_PAMF_STREAM_TYPE_M2V;
+		_ch = stream_id & 0x0f;
+		break;
+
+	case PAMF_STREAM_CODING_TYPE_ATRAC3PLUS:
+		_type = CELL_PAMF_STREAM_TYPE_ATRAC3PLUS;
+		_ch = private_stream_id & 0x0f;
+		break;
+
+	case PAMF_STREAM_CODING_TYPE_PAMF_LPCM:
+		_type = CELL_PAMF_STREAM_TYPE_PAMF_LPCM;
+		_ch = private_stream_id & 0x0f;
+		break;
+
+	case PAMF_STREAM_CODING_TYPE_AC3:
+		_type = CELL_PAMF_STREAM_TYPE_AC3;
+		_ch = private_stream_id & 0x0f;
+		break;
+
+	case PAMF_STREAM_CODING_TYPE_USER_DATA:
+		_type = CELL_PAMF_STREAM_TYPE_USER_DATA;
+		_ch = private_stream_id & 0x0f;
+		break;
+
+	case PAMF_STREAM_CODING_TYPE_PSMF:
+		if ((stream_id & 0xf0) == 0xe0)
+		{
+			_type = CELL_PAMF_STREAM_TYPE_PSMF_AVC;
+			_ch = stream_id & 0x0f;
+
+			if (private_stream_id != 0)
+			{
+				return CELL_PAMF_ERROR_STREAM_NOT_FOUND;
+			}
+		}
+		else if (stream_id == 0xbd)
+		{
+			_ch = private_stream_id & 0x0f;
+
+			switch (private_stream_id & 0xf0)
+			{
+			case 0x00: _type = CELL_PAMF_STREAM_TYPE_PSMF_ATRAC3PLUS; break;
+			case 0x10: _type = CELL_PAMF_STREAM_TYPE_PSMF_LPCM; break;
+			case 0x20: _type = CELL_PAMF_STREAM_TYPE_PSMF_LPCM; break; // LLE doesn't use CELL_PAMF_STREAM_TYPE_PSMF_USER_DATA for some reason
+			default: return CELL_PAMF_ERROR_STREAM_NOT_FOUND;
+			}
+		}
+		else
+		{
+			return CELL_PAMF_ERROR_STREAM_NOT_FOUND;
+		}
+		break;
+
+	default:
+		cellPamf.error("pamfStreamToTypeChannel(): unknown stream_coding_type 0x%02x", stream_coding_type);
+		return CELL_PAMF_ERROR_STREAM_NOT_FOUND;
 	}
 
-	cellPamf.fatal("pamfGetStreamType(): unsupported stream type found(0x%x)", header.type);
-	return 0xff;
+	if (type)
+	{
+		*type = _type;
+	}
+
+	if (ch)
+	{
+		*ch = _ch;
+	}
+
+	return CELL_OK;
 }
 
-u8 pamfGetStreamChannel(vm::ptr<CellPamfReader> pSelf, u32 stream)
+void pamfEpUnpack(vm::cptr<PamfEpHeader> ep_packed, vm::ptr<CellPamfEp> ep)
 {
-	// TODO: get stream channel correctly
-	ensure(stream < pSelf->pAddr->stream_count);
-	auto& header = pSelf->pAddr->stream_headers[stream];
+	ep->indexN = (ep_packed->value0 >> 14) + 1;
+	ep->nThRefPictureOffset = ((ep_packed->value0 & 0x1fff) * 0x800) + 0x800;
+	ep->pts.upper = ep_packed->pts_high;
+	ep->pts.lower = ep_packed->pts_low;
+	ep->rpnOffset = ep_packed->rpnOffset * 0x800ull;
+}
 
-	switch (header.type)
-	{
-	case 0x1b: // AVC
-	case 0x02: // M2V
-	{
-		ensure((header.fid_major & 0xf0) == 0xe0);
-		ensure(!header.fid_minor);
-		return header.fid_major % 16;
-	}
+void psmfEpUnpack(vm::cptr<PsmfEpHeader> ep_packed, vm::ptr<CellPamfEp> ep)
+{
+	ep->indexN = (ep_packed->value0 >> 14) + 1;
+	ep->nThRefPictureOffset = ((ep_packed->value0 & 0xffe) * 0x400) + 0x800;
+	ep->pts.upper = ep_packed->value0 & 1;
+	ep->pts.lower = ep_packed->pts_low;
+	ep->rpnOffset = ep_packed->rpnOffset * 0x800ull;
+}
 
-	case 0xdc: // ATRAC3PLUS
+bool pamfIsSameStreamType(u8 type, u8 requested_type)
+{
+	switch (requested_type)
 	{
-		ensure((header.fid_major == 0xbd));
-		ensure((header.fid_minor & 0xf0) == 0);
-		return header.fid_minor % 16;
+	case CELL_PAMF_STREAM_TYPE_VIDEO: return type == CELL_PAMF_STREAM_TYPE_AVC || type == CELL_PAMF_STREAM_TYPE_M2V;
+	case CELL_PAMF_STREAM_TYPE_AUDIO: return type == CELL_PAMF_STREAM_TYPE_ATRAC3PLUS || type == CELL_PAMF_STREAM_TYPE_AC3 || type == CELL_PAMF_STREAM_TYPE_PAMF_LPCM;
+	case CELL_PAMF_STREAM_TYPE_UNK:   return type == CELL_PAMF_STREAM_TYPE_PAMF_LPCM || type == CELL_PAMF_STREAM_TYPE_PSMF_ATRAC3PLUS; // ??? no idea what this is for
+	default:                          return requested_type == type;
 	}
+}
 
-	case 0x80: // LPCM
+error_code pamfVerify(vm::cptr<PamfHeader> pAddr, u64 fileSize, vm::ptr<CellPamfReader> pSelf, u32 attribute)
+{
+	if (error_code ret = pamfVerifyMagicAndVersion(pAddr, pSelf); ret != CELL_OK)
 	{
-		ensure((header.fid_major == 0xbd));
-		ensure((header.fid_minor & 0xf0) == 0x40);
-		return header.fid_minor % 16;
-	}
-	case 0x81: // AC3
-	{
-		ensure((header.fid_major == 0xbd));
-		ensure((header.fid_minor & 0xf0) == 0x30);
-		return header.fid_minor % 16;
-	}
-	case 0xdd:
-	{
-		ensure((header.fid_major == 0xbd));
-		ensure((header.fid_minor & 0xf0) == 0x20);
-		return header.fid_minor % 16;
-	}
-	default: break;
+		return ret;
 	}
 
-	cellPamf.fatal("pamfGetStreamChannel(): unsupported stream type found(0x%x)", header.type);
-	return 0xff;
+	const u64 header_size = pAddr->header_size * 0x800ull;
+	const u64 data_size = pAddr->data_size * 0x800ull;
+
+	// Header size
+	if (header_size == 0)
+	{
+		cellPamf.error("pamfVerify() failed: invalid header_size");
+		return CELL_PAMF_ERROR_INVALID_PAMF;
+	}
+
+	if (pSelf)
+	{
+		pSelf->headerSize = header_size;
+		pSelf->dataSize = data_size;
+	}
+
+	// Data size
+	if (fileSize != 0 && header_size + data_size != fileSize)
+	{
+		cellPamf.error("pamfVerify() failed: fileSize isn't equal header_size + data_size");
+		return CELL_PAMF_ERROR_INVALID_PAMF;
+	}
+
+	const u32 psmf_marks_offset = pAddr->psmf_marks_offset;
+	const u32 psmf_marks_size = pAddr->psmf_marks_size;
+	const u32 unk_offset = pAddr->unk_offset;
+	const u32 unk_size = pAddr->unk_size;
+
+	// PsmfMarks
+	if (psmf_marks_offset == 0)
+	{
+		if (psmf_marks_size != 0)
+		{
+			cellPamf.error("pamfVerify() failed: psmf_marks_offset is zero but psmf_marks_size is not zero");
+			return CELL_PAMF_ERROR_INVALID_PAMF;
+		}
+	}
+	else
+	{
+		if (psmf_marks_size == 0)
+		{
+			cellPamf.error("pamfVerify() failed: psmf_marks_offset is set but psmf_marks_size is zero");
+			return CELL_PAMF_ERROR_INVALID_PAMF;
+		}
+
+		if (header_size < static_cast<u64>(psmf_marks_offset) + psmf_marks_size)
+		{
+			cellPamf.error("pamfVerify() failed: header_size is less than psmf_marks_offset + psmf_marks_size");
+			return CELL_PAMF_ERROR_INVALID_PAMF;
+		}
+	}
+
+	if (unk_offset == 0)
+	{
+		if (unk_size != 0)
+		{
+			cellPamf.error("pamfVerify() failed: unk_offset is zero but unk_size is not zero");
+			return CELL_PAMF_ERROR_INVALID_PAMF;
+		}
+	}
+	else
+	{
+		if (unk_size == 0)
+		{
+			cellPamf.error("pamfVerify() failed: unk_offset is set but unk_size is zero");
+			return CELL_PAMF_ERROR_INVALID_PAMF;
+		}
+
+		if (header_size < static_cast<u64>(unk_offset) + unk_size)
+		{
+			cellPamf.error("pamfVerify() failed: header_size is less than unk_offset + unk_size");
+			return CELL_PAMF_ERROR_INVALID_PAMF;
+		}
+	}
+
+	if (unk_offset < static_cast<u64>(psmf_marks_offset) + psmf_marks_size)
+	{
+		cellPamf.error("pamfVerify() failed: unk_offset is less than psmf_marks_offset + psmf_marks_size");
+		return CELL_PAMF_ERROR_INVALID_PAMF;
+	}
+
+
+	// Sequence Info
+
+	const u32 seq_info_size = pAddr->seq_info.size;
+
+	// Sequence info size
+	if (offsetof(PamfHeader, seq_info) + sizeof(u32) + seq_info_size > header_size)
+	{
+		cellPamf.error("pamfVerify() failed: invalid seq_info_size");
+		return CELL_PAMF_ERROR_INVALID_PAMF;
+	}
+
+	const u64 start_pts = static_cast<u64>(pAddr->seq_info.start_pts_high) << 32 | pAddr->seq_info.start_pts_low;
+	const u64 end_pts = static_cast<u64>(pAddr->seq_info.end_pts_high) << 32 | pAddr->seq_info.end_pts_low;
+
+	// Start and end presentation time stamps
+	if (end_pts > CODEC_TS_INVALID)
+	{
+		cellPamf.error("pamfVerify() failed: invalid end_pts");
+		return CELL_PAMF_ERROR_INVALID_PAMF;
+	}
+
+	if (start_pts >= end_pts)
+	{
+		cellPamf.error("pamfVerify() failed: invalid start_pts");
+		return CELL_PAMF_ERROR_INVALID_PAMF;
+	}
+
+	// Grouping period count
+	if (pAddr->seq_info.grouping_period_num != 1)
+	{
+		cellPamf.error("pamfVerify() failed: invalid grouping_period_num");
+		return CELL_PAMF_ERROR_INVALID_PAMF;
+	}
+
+
+	// Grouping Period
+
+	const u32 grouping_period_size = pAddr->seq_info.grouping_periods.size;
+
+	// Grouping period size
+	if (offsetof(PamfHeader, seq_info.grouping_periods) + sizeof(u32) + grouping_period_size > header_size)
+	{
+		cellPamf.error("pamfVerify() failed: invalid grouping_period_size");
+		return CELL_PAMF_ERROR_INVALID_PAMF;
+	}
+
+	const u64 grp_period_start_pts = static_cast<u64>(pAddr->seq_info.grouping_periods.start_pts_high) << 32 | pAddr->seq_info.grouping_periods.start_pts_low;
+	const u64 grp_period_end_pts = static_cast<u64>(pAddr->seq_info.grouping_periods.start_pts_high) << 32 | pAddr->seq_info.grouping_periods.end_pts_low; // LLE uses start_pts_high due to a bug
+
+	// Start and end presentation time stamps
+	if (grp_period_end_pts > CODEC_TS_INVALID)
+	{
+		cellPamf.error("pamfVerify() failed: invalid grp_period_end_pts");
+		return CELL_PAMF_ERROR_INVALID_PAMF;
+	}
+
+	if (grp_period_start_pts >= grp_period_end_pts)
+	{
+		cellPamf.error("pamfVerify() failed: invalid grp_period_start_pts");
+		return CELL_PAMF_ERROR_INVALID_PAMF;
+	}
+
+	if (grp_period_start_pts != start_pts)
+	{
+		cellPamf.error("pamfVerify() failed: grp_period_start_pts not equal start_pts");
+		return CELL_PAMF_ERROR_INVALID_PAMF;
+	}
+
+	// Group count
+	if (pAddr->seq_info.grouping_periods.group_num != 1)
+	{
+		cellPamf.error("pamfVerify() failed: invalid group_num");
+		return CELL_PAMF_ERROR_INVALID_PAMF;
+	}
+
+
+	// Group
+
+	const u32 group_size = pAddr->seq_info.grouping_periods.groups.size;
+
+	// StreamGroup size
+	if (offsetof(PamfHeader, seq_info.grouping_periods.groups) + sizeof(u32) + group_size > header_size)
+	{
+		cellPamf.error("pamfVerify() failed: invalid group_size");
+		return CELL_PAMF_ERROR_INVALID_PAMF;
+	}
+
+	const u8 stream_num = pAddr->seq_info.grouping_periods.groups.stream_num;
+
+	// Stream count
+	if (stream_num == 0)
+	{
+		cellPamf.error("pamfVerify() failed: invalid stream_num");
+		return CELL_PAMF_ERROR_INVALID_PAMF;
+	}
+
+
+	// Streams
+
+	const auto streams = &pAddr->seq_info.grouping_periods.groups.streams;
+
+	std::bitset<16> channels_used[6]{};
+
+	u32 end_of_streams_addr = 0;
+	u32 next_ep_table_addr = 0;
+
+	for (u8 stream_idx = 0; stream_idx < stream_num; stream_idx++)
+	{
+		vm::var<u8> type;
+		vm::var<u8> ch;
+
+		// Stream coding type and IDs
+		if (pamfStreamToTypeChannel(streams[stream_idx].stream_coding_type, streams[stream_idx].stream_id, streams[stream_idx].private_stream_id, type, ch) != CELL_OK)
+		{
+			return CELL_PAMF_ERROR_UNKNOWN_STREAM;
+		}
+
+		// Every channel may only be used once per type
+		if (channels_used[*type].test(*ch))
+		{
+			cellPamf.error("pamfVerify() failed: invalid channel");
+			return CELL_PAMF_ERROR_INVALID_PAMF;
+		}
+
+		// Mark channel as used
+		channels_used[*type].set(*ch);
+
+		const u32 ep_offset = streams[stream_idx].ep_offset;
+		const u32 ep_num = streams[stream_idx].ep_num;
+
+		// Entry point offset and number
+		if (ep_num == 0)
+		{
+			if (ep_offset != 0)
+			{
+				cellPamf.error("pamfVerify() failed: ep_num is zero but ep_offset is not zero");
+				return CELL_PAMF_ERROR_INVALID_PAMF;
+			}
+		}
+		else
+		{
+			if (ep_offset == 0)
+			{
+				cellPamf.error("pamfVerify() failed: invalid ep_offset");
+				return CELL_PAMF_ERROR_INVALID_PAMF;
+			}
+
+			if (ep_offset + ep_num * sizeof(PamfEpHeader) > header_size)
+			{
+				cellPamf.error("pamfVerify() failed: invalid ep_num");
+				return CELL_PAMF_ERROR_INVALID_PAMF;
+			}
+		}
+
+
+		// Entry points
+
+		// Skip if there are no entry points or if the minimum header attribute is set
+		if (ep_offset == 0 || attribute & CELL_PAMF_ATTRIBUTE_MINIMUM_HEADER)
+		{
+			continue;
+		}
+
+		const auto eps = vm::cptr<PamfEpHeader>::make(pAddr.addr() + ep_offset);
+
+		// Entry point tables must be sorted by the stream index to which they belong
+		// and there mustn't be any gaps between them
+		if (end_of_streams_addr == 0)
+		{
+			end_of_streams_addr = eps.addr();
+			next_ep_table_addr = end_of_streams_addr;
+		}
+		else if (next_ep_table_addr != eps.addr())
+		{
+			cellPamf.error("pamfVerify() failed: invalid ep table address");
+			return CELL_PAMF_ERROR_INVALID_PAMF;
+		}
+
+		u64 previous_rpn_offset = 0;
+		for (u32 ep_idx = 0; ep_idx < ep_num; ep_idx++)
+		{
+			const u64 pts = static_cast<u64>(eps[ep_idx].pts_high) << 32 | eps[ep_idx].pts_low;
+
+			// Entry point time stamp
+			if (pts > CODEC_TS_INVALID)
+			{
+				cellPamf.error("pamfVerify() failed: invalid ep pts");
+				return CELL_PAMF_ERROR_INVALID_PAMF;
+			}
+
+			const u64 rpn_offset = eps[ep_idx].rpnOffset * 0x800ull;
+
+			// Entry point rpnOffset
+			if (rpn_offset > data_size || rpn_offset < previous_rpn_offset)
+			{
+				cellPamf.error("pamfVerify() failed: invalid rpn_offset");
+				return CELL_PAMF_ERROR_INVALID_PAMF;
+			}
+
+			previous_rpn_offset = rpn_offset;
+		}
+
+		next_ep_table_addr += ep_num * sizeof(PamfEpHeader);
+	}
+
+	// This can overflow on LLE, the +4 is necessary on both sides and the left operand needs to be u32
+	if (group_size + 4 > grouping_period_size - offsetof(PamfGroupingPeriod, groups) + sizeof(u32)
+		|| grouping_period_size + 4 > seq_info_size - offsetof(PamfSequenceInfo, grouping_periods) + sizeof(u32))
+	{
+		cellPamf.error("pamfVerify() failed: size mismatch");
+		return CELL_PAMF_ERROR_INVALID_PAMF;
+	}
+
+	// Since multiple grouping periods/groups was never implemented, number of streams in SequenceInfo must be equal stream_num in Group
+	if (pAddr->seq_info.total_stream_num != stream_num)
+	{
+		cellPamf.error("pamfVerify() failed: number of streams mismatch");
+		return CELL_PAMF_ERROR_INVALID_PAMF;
+	}
+
+
+	// PsmfMarks
+	// This is probably useless since the official PAMF tools don't support PsmfMarks
+
+	if (end_of_streams_addr == 0)
+	{
+		if (psmf_marks_offset != 0)
+		{
+			end_of_streams_addr = pAddr.addr() + psmf_marks_offset;
+		}
+		else if (unk_offset != 0)
+		{
+			end_of_streams_addr = pAddr.addr() + unk_offset;
+		}
+	}
+
+	if (end_of_streams_addr != 0 && pAddr.addr() + offsetof(PamfHeader, seq_info.grouping_periods) + sizeof(u32) + grouping_period_size != end_of_streams_addr)
+	{
+		cellPamf.error("pamfVerify() failed: invalid offset of ep tables or psmf marks");
+		return CELL_PAMF_ERROR_INVALID_PAMF;
+	}
+
+	if (next_ep_table_addr != 0 && psmf_marks_offset == 0)
+	{
+		if (unk_offset != 0 && pAddr.addr() + unk_offset != next_ep_table_addr)
+		{
+			cellPamf.error("pamfVerify() failed: invalid unk_offset");
+			return CELL_PAMF_ERROR_INVALID_PAMF;
+		}
+	}
+	else if (next_ep_table_addr != 0 && pAddr.addr() + psmf_marks_offset != next_ep_table_addr)
+	{
+		cellPamf.error("pamfVerify() failed: invalid psmf_marks_offset");
+		return CELL_PAMF_ERROR_INVALID_PAMF;
+	}
+	else if (psmf_marks_offset != 0 && !(attribute & CELL_PAMF_ATTRIBUTE_MINIMUM_HEADER))
+	{
+		const u32 size = vm::read32(pAddr.addr() + psmf_marks_offset);
+
+		if (size + sizeof(u32) != psmf_marks_size)
+		{
+			cellPamf.error("pamfVerify() failed: invalid psmf_marks_size");
+			return CELL_PAMF_ERROR_INVALID_PAMF;
+		}
+
+		const u16 marks_num = vm::read16(pAddr.addr() + psmf_marks_offset + 6); // LLE uses the wrong offset (6 instead of 4)
+
+		if (sizeof(u16) + marks_num * 0x28 /*sizeof PsmfMark*/ != size)
+		{
+			cellPamf.error("pamfVerify() failed: invalid marks_num");
+			return CELL_PAMF_ERROR_INVALID_PAMF;
+		}
+
+		// There are more checks in LLE but due to the bug above these would never be executed
+	}
+
+	return CELL_OK;
 }
 
 error_code cellPamfGetHeaderSize(vm::ptr<PamfHeader> pAddr, u64 fileSize, vm::ptr<u64> pSize)
 {
-	cellPamf.warning("cellPamfGetHeaderSize(pAddr=*0x%x, fileSize=0x%llx, pSize=*0x%x)", pAddr, fileSize, pSize);
+	cellPamf.notice("cellPamfGetHeaderSize(pAddr=*0x%x, fileSize=0x%llx, pSize=*0x%x)", pAddr, fileSize, pSize);
 
-	//if ((u32)pAddr->magic != 0x464d4150) return CELL_PAMF_ERROR_UNKNOWN_TYPE;
-
-	const u64 offset = u64{pAddr->data_offset} << 11;
-	*pSize = offset;
-	return CELL_OK;
+	return pamfGetHeaderAndDataSize(pAddr, fileSize, pSize, vm::null);
 }
 
 error_code cellPamfGetHeaderSize2(vm::ptr<PamfHeader> pAddr, u64 fileSize, u32 attribute, vm::ptr<u64> pSize)
 {
-	cellPamf.warning("cellPamfGetHeaderSize2(pAddr=*0x%x, fileSize=0x%llx, attribute=0x%x, pSize=*0x%x)", pAddr, fileSize, attribute, pSize);
+	cellPamf.notice("cellPamfGetHeaderSize2(pAddr=*0x%x, fileSize=0x%llx, attribute=0x%x, pSize=*0x%x)", pAddr, fileSize, attribute, pSize);
 
-	//if ((u32)pAddr->magic != 0x464d4150) return CELL_PAMF_ERROR_UNKNOWN_TYPE;
+	const vm::var<u64> header_size;
 
-	const u64 offset = u64{pAddr->data_offset} << 11;
-	*pSize = offset;
+	if (error_code ret = pamfGetHeaderAndDataSize(pAddr, fileSize, header_size, vm::null); ret != CELL_OK)
+	{
+		return ret;
+	}
+
+	if (attribute & CELL_PAMF_ATTRIBUTE_MINIMUM_HEADER)
+	{
+		const u64 min_header_size = offsetof(PamfHeader, seq_info) + sizeof(u32) + pAddr->seq_info.size; // Size without EP tables
+
+		if (min_header_size > *header_size)
+		{
+			return CELL_PAMF_ERROR_INVALID_PAMF;
+		}
+
+		*header_size = min_header_size;
+	}
+
+	if (pSize)
+	{
+		*pSize = *header_size;
+	}
+
 	return CELL_OK;
 }
 
 error_code cellPamfGetStreamOffsetAndSize(vm::ptr<PamfHeader> pAddr, u64 fileSize, vm::ptr<u64> pOffset, vm::ptr<u64> pSize)
 {
-	cellPamf.warning("cellPamfGetStreamOffsetAndSize(pAddr=*0x%x, fileSize=0x%llx, pOffset=*0x%x, pSize=*0x%x)", pAddr, fileSize, pOffset, pSize);
+	cellPamf.notice("cellPamfGetStreamOffsetAndSize(pAddr=*0x%x, fileSize=0x%llx, pOffset=*0x%x, pSize=*0x%x)", pAddr, fileSize, pOffset, pSize);
 
-	//if ((u32)pAddr->magic != 0x464d4150) return CELL_PAMF_ERROR_UNKNOWN_TYPE;
-
-	const u64 offset = u64{pAddr->data_offset} << 11;
-	*pOffset = offset;
-	const u64 size = u64{pAddr->data_size} << 11;
-	*pSize = size;
-	return CELL_OK;
+	return pamfGetHeaderAndDataSize(pAddr, fileSize, pOffset, pSize);
 }
 
 error_code cellPamfVerify(vm::cptr<PamfHeader> pAddr, u64 fileSize)
 {
-	cellPamf.todo("cellPamfVerify(pAddr=*0x%x, fileSize=0x%llx)", pAddr, fileSize);
+	cellPamf.notice("cellPamfVerify(pAddr=*0x%x, fileSize=0x%llx)", pAddr, fileSize);
 
-	// TODO
-	return CELL_OK;
+	return pamfVerify(pAddr, fileSize, vm::null, CELL_PAMF_ATTRIBUTE_VERIFY_ON);
 }
 
 error_code cellPamfReaderInitialize(vm::ptr<CellPamfReader> pSelf, vm::cptr<PamfHeader> pAddr, u64 fileSize, u32 attribute)
 {
-	cellPamf.warning("cellPamfReaderInitialize(pSelf=*0x%x, pAddr=*0x%x, fileSize=0x%llx, attribute=0x%x)", pSelf, pAddr, fileSize, attribute);
+	cellPamf.notice("cellPamfReaderInitialize(pSelf=*0x%x, pAddr=*0x%x, fileSize=0x%llx, attribute=0x%x)", pSelf, pAddr, fileSize, attribute);
 
-	if (fileSize)
-	{
-		pSelf->fileSize = fileSize;
-	}
-	else // if fileSize is unknown
-	{
-		pSelf->fileSize = (u64{pAddr->data_offset} << 11) + (u64{pAddr->data_size} << 11);
-	}
-	pSelf->pAddr = pAddr;
+	std::memset(pSelf.get_ptr(), 0, sizeof(CellPamfReader));
+
+	pSelf->attribute = attribute;
 
 	if (attribute & CELL_PAMF_ATTRIBUTE_VERIFY_ON)
 	{
-		// TODO
-		cellPamf.todo("cellPamfReaderInitialize(): verification");
+		if (error_code ret = pamfVerify(pAddr, fileSize, pSelf, attribute); ret != CELL_OK)
+		{
+			return ret;
+		}
 	}
 
-	pSelf->stream = 0; // currently set stream
+	pSelf->header = pAddr;
+	pSelf->sequenceInfo = pAddr.ptr(&PamfHeader::seq_info);
+
+	pSelf->currentGroupingPeriodIndex = -1;
+	pSelf->currentGroupIndex = -1;
+	pSelf->currentStreamIndex = -1;
+
+	if (pAddr->seq_info.grouping_period_num == 0)
+	{
+		return CELL_PAMF_ERROR_INVALID_PAMF;
+	}
+
+	pSelf->currentGroupingPeriodIndex = 0;
+	pSelf->currentGroupingPeriod = pSelf->sequenceInfo.ptr(&PamfSequenceInfo::grouping_periods);
+
+	if (pAddr->seq_info.grouping_periods.group_num != 0)
+	{
+		pSelf->currentGroupIndex = 0;
+		pSelf->currentGroup = pSelf->currentGroupingPeriod.ptr(&PamfGroupingPeriod::groups);
+
+		if (vm::static_ptr_cast<const PamfGroup>(pSelf->currentGroup)->stream_num != 0)
+		{
+			pSelf->currentStreamIndex = 0;
+			pSelf->currentStream = pSelf->currentGroup.ptr(&PamfGroup::streams);
+		}
+	}
+
 	return CELL_OK;
 }
 
 error_code cellPamfReaderGetPresentationStartTime(vm::ptr<CellPamfReader> pSelf, vm::ptr<CellCodecTimeStamp> pTimeStamp)
 {
-	cellPamf.warning("cellPamfReaderGetPresentationStartTime(pSelf=*0x%x, pTimeStamp=*0x%x)", pSelf, pTimeStamp);
+	cellPamf.notice("cellPamfReaderGetPresentationStartTime(pSelf=*0x%x, pTimeStamp=*0x%x)", pSelf, pTimeStamp);
 
 	// always returns CELL_OK
 
-	pTimeStamp->upper = pSelf->pAddr->start_pts_high;
-	pTimeStamp->lower = pSelf->pAddr->start_pts_low;
+	if (pSelf->isPsmf)
+	{
+		pTimeStamp->upper = vm::static_ptr_cast<const PsmfSequenceInfo>(pSelf->sequenceInfo)->start_pts_high;
+		pTimeStamp->lower = vm::static_ptr_cast<const PsmfSequenceInfo>(pSelf->sequenceInfo)->start_pts_low;
+	}
+	else
+	{
+		pTimeStamp->upper = vm::static_ptr_cast<const PamfSequenceInfo>(pSelf->sequenceInfo)->start_pts_high;
+		pTimeStamp->lower = vm::static_ptr_cast<const PamfSequenceInfo>(pSelf->sequenceInfo)->start_pts_low;
+	}
+
 	return CELL_OK;
 }
 
 error_code cellPamfReaderGetPresentationEndTime(vm::ptr<CellPamfReader> pSelf, vm::ptr<CellCodecTimeStamp> pTimeStamp)
 {
-	cellPamf.warning("cellPamfReaderGetPresentationEndTime(pSelf=*0x%x, pTimeStamp=*0x%x)", pSelf, pTimeStamp);
+	cellPamf.notice("cellPamfReaderGetPresentationEndTime(pSelf=*0x%x, pTimeStamp=*0x%x)", pSelf, pTimeStamp);
 
 	// always returns CELL_OK
 
-	pTimeStamp->upper = pSelf->pAddr->end_pts_high;
-	pTimeStamp->lower = pSelf->pAddr->end_pts_low;
+	if (pSelf->isPsmf)
+	{
+		pTimeStamp->upper = vm::static_ptr_cast<const PsmfSequenceInfo>(pSelf->sequenceInfo)->end_pts_high;
+		pTimeStamp->lower = vm::static_ptr_cast<const PsmfSequenceInfo>(pSelf->sequenceInfo)->end_pts_low;
+	}
+	else
+	{
+		pTimeStamp->upper = vm::static_ptr_cast<const PamfSequenceInfo>(pSelf->sequenceInfo)->end_pts_high;
+		pTimeStamp->lower = vm::static_ptr_cast<const PamfSequenceInfo>(pSelf->sequenceInfo)->end_pts_low;
+	}
+
 	return CELL_OK;
 }
 
 u32 cellPamfReaderGetMuxRateBound(vm::ptr<CellPamfReader> pSelf)
 {
-	cellPamf.warning("cellPamfReaderGetMuxRateBound(pSelf=*0x%x)", pSelf);
+	cellPamf.notice("cellPamfReaderGetMuxRateBound(pSelf=*0x%x)", pSelf);
 
-	// cannot return error code
-	return pSelf->pAddr->mux_rate_max;
+	return 0x003fffff & (pSelf->isPsmf ? vm::static_ptr_cast<const PsmfSequenceInfo>(pSelf->sequenceInfo)->mux_rate_bound : vm::static_ptr_cast<const PamfSequenceInfo>(pSelf->sequenceInfo)->mux_rate_bound);
 }
 
 u8 cellPamfReaderGetNumberOfStreams(vm::ptr<CellPamfReader> pSelf)
 {
-	cellPamf.warning("cellPamfReaderGetNumberOfStreams(pSelf=*0x%x)", pSelf);
+	cellPamf.notice("cellPamfReaderGetNumberOfStreams(pSelf=*0x%x)", pSelf);
 
-	// cannot return error code
-	return pSelf->pAddr->stream_count;
+	return vm::static_ptr_cast<const PamfGroup>(pSelf->currentGroup)->stream_num;
 }
 
 u8 cellPamfReaderGetNumberOfSpecificStreams(vm::ptr<CellPamfReader> pSelf, u8 streamType)
 {
-	cellPamf.warning("cellPamfReaderGetNumberOfSpecificStreams(pSelf=*0x%x, streamType=%d)", pSelf, streamType);
+	cellPamf.notice("cellPamfReaderGetNumberOfSpecificStreams(pSelf=*0x%x, streamType=%d)", pSelf, streamType);
 
-	// cannot return error code
+	const vm::var<u8> type;
+	u8 found = 0;
 
-	u8 counts[256] = {};
-
-	for (u8 i = 0; i < pSelf->pAddr->stream_count; i++)
+	if (pSelf->isPsmf)
 	{
-		counts[pamfGetStreamType(pSelf, i)]++;
+		const auto streams = pSelf->currentGroup.ptr(&PsmfGroup::streams);
+
+		for (u8 i = 0; i < vm::static_ptr_cast<const PsmfGroup>(pSelf->currentGroup)->stream_num; i++)
+		{
+			if (pamfStreamToTypeChannel(PAMF_STREAM_CODING_TYPE_PSMF, streams[i].stream_id, streams[i].private_stream_id, type, vm::null) == CELL_OK)
+			{
+				found += pamfIsSameStreamType(*type, streamType);
+			}
+		}
+	}
+	else
+	{
+		const auto streams = pSelf->currentGroup.ptr(&PamfGroup::streams);
+
+		for (u8 i = 0; i < vm::static_ptr_cast<const PamfGroup>(pSelf->currentGroup)->stream_num; i++)
+		{
+			if (pamfStreamToTypeChannel(streams[i].stream_coding_type, streams[i].stream_id, streams[i].private_stream_id, type, vm::null) == CELL_OK)
+			{
+				found += pamfIsSameStreamType(*type, streamType);
+			}
+		}
 	}
 
-	switch (streamType)
-	{
-	case CELL_PAMF_STREAM_TYPE_AVC:
-	case CELL_PAMF_STREAM_TYPE_M2V:
-	case CELL_PAMF_STREAM_TYPE_ATRAC3PLUS:
-	case CELL_PAMF_STREAM_TYPE_PAMF_LPCM:
-	case CELL_PAMF_STREAM_TYPE_AC3:
-	case CELL_PAMF_STREAM_TYPE_USER_DATA:
-	{
-		return counts[streamType];
-	}
-
-	case CELL_PAMF_STREAM_TYPE_VIDEO:
-	{
-		return counts[CELL_PAMF_STREAM_TYPE_AVC] + counts[CELL_PAMF_STREAM_TYPE_M2V];
-	}
-
-	case CELL_PAMF_STREAM_TYPE_AUDIO:
-	{
-		return counts[CELL_PAMF_STREAM_TYPE_ATRAC3PLUS] + counts[CELL_PAMF_STREAM_TYPE_PAMF_LPCM] + counts[CELL_PAMF_STREAM_TYPE_AC3];
-	}
-	}
-
-	cellPamf.fatal("cellPamfReaderGetNumberOfSpecificStreams(): unsupported stream type (0x%x)", streamType);
-	return 0;
+	return found;
 }
 
 error_code cellPamfReaderSetStreamWithIndex(vm::ptr<CellPamfReader> pSelf, u8 streamIndex)
 {
-	cellPamf.warning("cellPamfReaderSetStreamWithIndex(pSelf=*0x%x, streamIndex=%d)", pSelf, streamIndex);
+	cellPamf.notice("cellPamfReaderSetStreamWithIndex(pSelf=*0x%x, streamIndex=%d)", pSelf, streamIndex);
 
-	if (streamIndex >= pSelf->pAddr->stream_count)
+	if (streamIndex >= vm::static_ptr_cast<const PamfGroup>(pSelf->currentGroup)->stream_num)
 	{
 		return CELL_PAMF_ERROR_INVALID_ARG;
 	}
 
-	pSelf->stream = streamIndex;
+	pSelf->currentStreamIndex = streamIndex;
+
+	if (pSelf->isPsmf)
+	{
+		pSelf->currentStream = pSelf->currentGroup.ptr(&PsmfGroup::streams) + streamIndex;
+	}
+	else
+	{
+		pSelf->currentStream = pSelf->currentGroup.ptr(&PamfGroup::streams) + streamIndex;
+	}
+
 	return CELL_OK;
 }
 
 error_code cellPamfReaderSetStreamWithTypeAndChannel(vm::ptr<CellPamfReader> pSelf, u8 streamType, u8 ch)
 {
-	cellPamf.warning("cellPamfReaderSetStreamWithTypeAndChannel(pSelf=*0x%x, streamType=%d, ch=%d)", pSelf, streamType, ch);
+	cellPamf.notice("cellPamfReaderSetStreamWithTypeAndChannel(pSelf=*0x%x, streamType=%d, ch=%d)", pSelf, streamType, ch);
 
-	// TODO: it probably doesn't support "any audio" or "any video" argument
-	if (streamType > 5 || ch >= 16)
+	// This function is broken on LLE
+
+	u8 stream_coding_type;
+	u8 stream_id;
+	u8 private_stream_id;
+
+	if (pamfTypeChannelToStream(streamType, ch, &stream_coding_type, &stream_id, &private_stream_id) != CELL_OK)
 	{
 		return CELL_PAMF_ERROR_INVALID_ARG;
 	}
 
-	for (u8 i = 0; i < pSelf->pAddr->stream_count; i++)
+	const u8 stream_num = vm::static_ptr_cast<const PamfGroup>(pSelf->currentGroup)->stream_num;
+	u32 i = 0;
+
+	if (pSelf->isPsmf)
 	{
-		if (pamfGetStreamType(pSelf, i) == streamType)
+		const auto streams = pSelf->currentGroup.ptr(&PsmfGroup::streams);
+
+		for (; i < stream_num; i++)
 		{
-			if (pamfGetStreamChannel(pSelf, i) == ch)
+			// LLE increments the index by 12 instead of 1
+			if (stream_coding_type == PAMF_STREAM_CODING_TYPE_PSMF && streams[i * 12].stream_id == stream_id && streams[i * 12].private_stream_id == private_stream_id)
 			{
-				pSelf->stream = i;
-				return i;
+				break;
+			}
+		}
+	}
+	else
+	{
+		const auto streams = pSelf->currentGroup.ptr(&PamfGroup::streams);
+
+		for (; i < stream_num; i++)
+		{
+			// LLE increments the index by 0x10 instead of 1
+			if (streams[i * 0x10].stream_coding_type == stream_coding_type && streams[i * 0x10].stream_id == stream_id && streams[i * 0x10].private_stream_id == private_stream_id)
+			{
+				break;
 			}
 		}
 	}
 
-	return CELL_PAMF_ERROR_STREAM_NOT_FOUND;
+	if (i == stream_num)
+	{
+		i = CELL_PAMF_ERROR_STREAM_NOT_FOUND; // LLE writes the error code to the index
+	}
+
+	if (pSelf->currentStreamIndex != i)
+	{
+		pSelf->currentStream = pSelf->currentGroup.ptr(&PamfGroup::streams); // LLE always sets this to the first stream
+		pSelf->currentStreamIndex = i;
+	}
+
+	if (i == CELL_PAMF_ERROR_STREAM_NOT_FOUND)
+	{
+		return CELL_PAMF_ERROR_STREAM_NOT_FOUND;
+	}
+	else
+	{
+		return not_an_error(i);
+	}
 }
 
 error_code cellPamfReaderSetStreamWithTypeAndIndex(vm::ptr<CellPamfReader> pSelf, u8 streamType, u8 streamIndex)
 {
-	cellPamf.warning("cellPamfReaderSetStreamWithTypeAndIndex(pSelf=*0x%x, streamType=%d, streamIndex=%d)", pSelf, streamType, streamIndex);
+	cellPamf.notice("cellPamfReaderSetStreamWithTypeAndIndex(pSelf=*0x%x, streamType=%d, streamIndex=%d)", pSelf, streamType, streamIndex);
 
+	const u8 stream_num = vm::static_ptr_cast<const PamfGroup>(pSelf->currentGroup)->stream_num;
+
+	if (streamIndex >= stream_num)
+	{
+		return CELL_PAMF_ERROR_INVALID_ARG;
+	}
+
+	const vm::var<u8> type;
 	u32 found = 0;
 
-	for (u8 i = 0; i < pSelf->pAddr->stream_count; i++)
+	if (pSelf->isPsmf)
 	{
-		const u8 type = pamfGetStreamType(pSelf, i);
+		const auto streams = pSelf->currentGroup.ptr(&PsmfGroup::streams);
 
-		if (type == streamType)
+		for (u8 i = 0; i < stream_num; i++)
 		{
-			found++;
-		}
-		else switch(streamType)
-		{
-		case CELL_PAMF_STREAM_TYPE_VIDEO:
-		{
-			if (type == CELL_PAMF_STREAM_TYPE_AVC || type == CELL_PAMF_STREAM_TYPE_M2V)
+			if (pamfStreamToTypeChannel(PAMF_STREAM_CODING_TYPE_PSMF, streams[i].stream_id, streams[i].private_stream_id, type, vm::null) != CELL_OK)
 			{
-				found++;
+				continue;
 			}
-			break;
-		}
 
-		case CELL_PAMF_STREAM_TYPE_AUDIO:
-		{
-			if (type == CELL_PAMF_STREAM_TYPE_ATRAC3PLUS || type == CELL_PAMF_STREAM_TYPE_AC3 || type == CELL_PAMF_STREAM_TYPE_PAMF_LPCM)
-			{
-				found++;
-			}
-			break;
-		}
+			found += *type == streamType;
 
-		default:
-		{
-			if (streamType > 5)
+			if (found > streamIndex)
 			{
-				return CELL_PAMF_ERROR_INVALID_ARG;
+				pSelf->currentStreamIndex = streamIndex; // LLE sets this to the index counting only streams of the requested type instead of the overall index
+				pSelf->currentStream = streams; // LLE always sets this to the first stream
+				return not_an_error(i);
 			}
 		}
-		}
+	}
+	else
+	{
+		const auto streams = pSelf->currentGroup.ptr(&PamfGroup::streams);
 
-		if (found > streamIndex)
+		for (u8 i = 0; i < stream_num; i++)
 		{
-			pSelf->stream = i;
-			return i;
+			if (pamfStreamToTypeChannel(streams[i].stream_coding_type, streams[i].stream_id, streams[i].private_stream_id, type, vm::null) != CELL_OK)
+			{
+				continue;
+			}
+
+			found += pamfIsSameStreamType(*type, streamType);
+
+			if (found > streamIndex)
+			{
+				pSelf->currentStreamIndex = i;
+				pSelf->currentStream = streams + i;
+				return not_an_error(i);
+			}
 		}
 	}
 
@@ -441,60 +1034,99 @@ error_code cellPamfReaderSetStreamWithTypeAndIndex(vm::ptr<CellPamfReader> pSelf
 
 error_code cellPamfStreamTypeToEsFilterId(u8 type, u8 ch, vm::ptr<CellCodecEsFilterId> pEsFilterId)
 {
-	cellPamf.warning("cellPamfStreamTypeToEsFilterId(type=%d, ch=%d, pEsFilterId=*0x%x)", type, ch, pEsFilterId);
+	cellPamf.notice("cellPamfStreamTypeToEsFilterId(type=%d, ch=%d, pEsFilterId=*0x%x)", type, ch, pEsFilterId);
 
 	if (!pEsFilterId)
 	{
 		return CELL_PAMF_ERROR_INVALID_ARG;
 	}
 
-	return pamfStreamTypeToEsFilterId(type, ch, *pEsFilterId);
+	u8 stream_id = 0;
+	u8 private_stream_id = 0;
+
+	if (pamfTypeChannelToStream(type, ch, nullptr, &stream_id, &private_stream_id) != CELL_OK)
+	{
+		return CELL_PAMF_ERROR_INVALID_ARG;
+	}
+
+	pEsFilterId->filterIdMajor = stream_id;
+	pEsFilterId->filterIdMinor = private_stream_id;
+	pEsFilterId->supplementalInfo1 = type == CELL_PAMF_STREAM_TYPE_AVC;
+	pEsFilterId->supplementalInfo2 = 0;
+
+	return CELL_OK;
 }
 
 s32 cellPamfReaderGetStreamIndex(vm::ptr<CellPamfReader> pSelf)
 {
-	cellPamf.trace("cellPamfReaderGetStreamIndex(pSelf=*0x%x)", pSelf);
+	cellPamf.notice("cellPamfReaderGetStreamIndex(pSelf=*0x%x)", pSelf);
 
-	// seems that CELL_PAMF_ERROR_INVALID_PAMF must be already written in pSelf->stream if it's the case
-	return pSelf->stream;
+	return pSelf->currentStreamIndex;
 }
 
 error_code cellPamfReaderGetStreamTypeAndChannel(vm::ptr<CellPamfReader> pSelf, vm::ptr<u8> pType, vm::ptr<u8> pCh)
 {
-	cellPamf.warning("cellPamfReaderGetStreamTypeAndChannel(pSelf=*0x%x, pType=*0x%x, pCh=*0x%x", pSelf, pType, pCh);
+	cellPamf.notice("cellPamfReaderGetStreamTypeAndChannel(pSelf=*0x%x, pType=*0x%x, pCh=*0x%x", pSelf, pType, pCh);
 
-	// unclear
-
-	*pType = pamfGetStreamType(pSelf, pSelf->stream);
-	*pCh = pamfGetStreamChannel(pSelf, pSelf->stream);
-	return CELL_OK;
+	if (pSelf->isPsmf)
+	{
+		const auto stream = vm::static_ptr_cast<const PsmfStreamHeader>(pSelf->currentStream);
+		return pamfStreamToTypeChannel(PAMF_STREAM_CODING_TYPE_PSMF, stream->stream_id, stream->private_stream_id, pType, pCh);
+	}
+	else
+	{
+		const auto stream = vm::static_ptr_cast<const PamfStreamHeader>(pSelf->currentStream);
+		return pamfStreamToTypeChannel(stream->stream_coding_type, stream->stream_id, stream->private_stream_id, pType, pCh);
+	}
 }
 
 error_code cellPamfReaderGetEsFilterId(vm::ptr<CellPamfReader> pSelf, vm::ptr<CellCodecEsFilterId> pEsFilterId)
 {
-	cellPamf.warning("cellPamfReaderGetEsFilterId(pSelf=*0x%x, pEsFilterId=*0x%x)", pSelf, pEsFilterId);
+	cellPamf.notice("cellPamfReaderGetEsFilterId(pSelf=*0x%x, pEsFilterId=*0x%x)", pSelf, pEsFilterId);
 
 	// always returns CELL_OK
 
-	ensure(static_cast<u32>(pSelf->stream) < pSelf->pAddr->stream_count);
-	auto& header = pSelf->pAddr->stream_headers[pSelf->stream];
-	pEsFilterId->filterIdMajor = header.fid_major;
-	pEsFilterId->filterIdMinor = header.fid_minor;
-	pEsFilterId->supplementalInfo1 = header.type == 0x1b ? 1 : 0;
+	if (pSelf->isPsmf)
+	{
+		pEsFilterId->filterIdMajor = vm::static_ptr_cast<const PsmfStreamHeader>(pSelf->currentStream)->stream_id;
+		pEsFilterId->filterIdMinor = vm::static_ptr_cast<const PsmfStreamHeader>(pSelf->currentStream)->private_stream_id;
+		pEsFilterId->supplementalInfo1 = 0;
+	}
+	else
+	{
+		pEsFilterId->filterIdMajor = vm::static_ptr_cast<const PamfStreamHeader>(pSelf->currentStream)->stream_id;
+		pEsFilterId->filterIdMinor = vm::static_ptr_cast<const PamfStreamHeader>(pSelf->currentStream)->private_stream_id;
+		pEsFilterId->supplementalInfo1 = vm::static_ptr_cast<const PamfStreamHeader>(pSelf->currentStream)->stream_coding_type == PAMF_STREAM_CODING_TYPE_AVC;
+	}
+
 	pEsFilterId->supplementalInfo2 = 0;
 	return CELL_OK;
 }
 
 error_code cellPamfReaderGetStreamInfo(vm::ptr<CellPamfReader> pSelf, vm::ptr<void> pInfo, u32 size)
 {
-	cellPamf.warning("cellPamfReaderGetStreamInfo(pSelf=*0x%x, pInfo=*0x%x, size=%d)", pSelf, pInfo, size);
+	cellPamf.notice("cellPamfReaderGetStreamInfo(pSelf=*0x%x, pInfo=*0x%x, size=%d)", pSelf, pInfo, size);
 
-	ensure(static_cast<u32>(pSelf->stream) < pSelf->pAddr->stream_count);
-	auto& header = pSelf->pAddr->stream_headers[pSelf->stream];
-	const u8 type = pamfGetStreamType(pSelf, pSelf->stream);
-	const u8 ch = pamfGetStreamChannel(pSelf, pSelf->stream);
+	const auto& header = *vm::static_ptr_cast<const PamfStreamHeader>(pSelf->currentStream);
+	const auto& psmf_header = *vm::static_ptr_cast<const PsmfStreamHeader>(pSelf->currentStream);
+	const vm::var<u8> type;
+	error_code ret;
 
-	switch (type)
+	if (pSelf->isPsmf)
+	{
+		ret = pamfStreamToTypeChannel(PAMF_STREAM_CODING_TYPE_PSMF, psmf_header.stream_id, psmf_header.private_stream_id, type, vm::null);
+	}
+	else
+	{
+		ret = pamfStreamToTypeChannel(header.stream_coding_type, header.stream_id, header.private_stream_id, type, vm::null);
+	}
+
+	if (ret != CELL_OK)
+	{
+		return CELL_PAMF_ERROR_INVALID_PAMF;
+	}
+
+	switch (*type)
 	{
 	case CELL_PAMF_STREAM_TYPE_AVC:
 	{
@@ -514,8 +1146,8 @@ error_code cellPamfReaderGetStreamInfo(vm::ptr<CellPamfReader> pSelf, vm::ptr<vo
 
 		if (header.AVC.aspectRatioIdc == 0xff)
 		{
-			info->sarWidth = header.AVC.sarInfo.width;
-			info->sarHeight = header.AVC.sarInfo.height;
+			info->sarWidth = header.AVC.sarWidth;
+			info->sarHeight = header.AVC.sarHeight;
 		}
 		else
 		{
@@ -665,54 +1297,45 @@ error_code cellPamfReaderGetStreamInfo(vm::ptr<CellPamfReader> pSelf, vm::ptr<vo
 	}
 
 	case CELL_PAMF_STREAM_TYPE_USER_DATA:
+	case CELL_PAMF_STREAM_TYPE_PSMF_USER_DATA:
 	{
 		cellPamf.error("cellPamfReaderGetStreamInfo(): invalid type CELL_PAMF_STREAM_TYPE_USER_DATA");
 		return CELL_PAMF_ERROR_INVALID_ARG;
 	}
 
-	case 6:
+	case CELL_PAMF_STREAM_TYPE_PSMF_AVC:
 	{
 		if (size < 4)
 		{
 			return CELL_PAMF_ERROR_INVALID_ARG;
 		}
 
-		cellPamf.todo("cellPamfReaderGetStreamInfo(): type 6");
+		vm::static_ptr_cast<u16>(pInfo)[0] = psmf_header.video.horizontalSize * 0x10;
+		vm::static_ptr_cast<u16>(pInfo)[1] = psmf_header.video.verticalSize * 0x10;
+
+		cellPamf.notice("cellPamfReaderGetStreamInfo(): CELL_PAMF_STREAM_TYPE_PSMF_AVC");
 		break;
 	}
 
-	case 7:
+	case CELL_PAMF_STREAM_TYPE_PSMF_ATRAC3PLUS:
+	case CELL_PAMF_STREAM_TYPE_PSMF_LPCM:
 	{
 		if (size < 2)
 		{
 			return CELL_PAMF_ERROR_INVALID_ARG;
 		}
 
-		cellPamf.todo("cellPamfReaderGetStreamInfo(): type 7");
+		vm::static_ptr_cast<u8>(pInfo)[0] = psmf_header.audio.channelConfiguration;
+		vm::static_ptr_cast<u8>(pInfo)[1] = psmf_header.audio.samplingFrequency & 0x0f;
+
+		cellPamf.notice("cellPamfReaderGetStreamInfo(): PSMF audio");
 		break;
-	}
-
-	case 8:
-	{
-		if (size < 2)
-		{
-			return CELL_PAMF_ERROR_INVALID_ARG;
-		}
-
-		cellPamf.todo("cellPamfReaderGetStreamInfo(): type 8");
-		break;
-	}
-
-	case 9:
-	{
-		cellPamf.error("cellPamfReaderGetStreamInfo(): invalid type 9");
-		return CELL_PAMF_ERROR_INVALID_ARG;
 	}
 
 	default:
 	{
 		// invalid type or getting type/ch failed
-		cellPamf.error("cellPamfReaderGetStreamInfo(): invalid type %d (ch=%d)", type, ch);
+		cellPamf.error("cellPamfReaderGetStreamInfo(): invalid type %d", *type);
 		return CELL_PAMF_ERROR_INVALID_PAMF;
 	}
 	}
@@ -722,44 +1345,274 @@ error_code cellPamfReaderGetStreamInfo(vm::ptr<CellPamfReader> pSelf, vm::ptr<vo
 
 u32 cellPamfReaderGetNumberOfEp(vm::ptr<CellPamfReader> pSelf)
 {
-	cellPamf.todo("cellPamfReaderGetNumberOfEp(pSelf=*0x%x)", pSelf);
+	cellPamf.notice("cellPamfReaderGetNumberOfEp(pSelf=*0x%x)", pSelf);
 
-	// cannot return error code
-	return 0; //pSelf->pAddr->stream_headers[pSelf->stream].ep_num;
+	return pSelf->isPsmf ? vm::static_ptr_cast<const PsmfStreamHeader>(pSelf->currentStream)->ep_num : vm::static_ptr_cast<const PamfStreamHeader>(pSelf->currentStream)->ep_num;
 }
 
 error_code cellPamfReaderGetEpIteratorWithIndex(vm::ptr<CellPamfReader> pSelf, u32 epIndex, vm::ptr<CellPamfEpIterator> pIt)
 {
-	cellPamf.todo("cellPamfReaderGetEpIteratorWithIndex(pSelf=*0x%x, epIndex=%d, pIt=*0x%x)", pSelf, epIndex, pIt);
+	cellPamf.notice("cellPamfReaderGetEpIteratorWithIndex(pSelf=*0x%x, epIndex=%d, pIt=*0x%x)", pSelf, epIndex, pIt);
 
-	// TODO
+	const u32 ep_num = pSelf->isPsmf ? vm::static_ptr_cast<const PsmfStreamHeader>(pSelf->currentStream)->ep_num : vm::static_ptr_cast<const PamfStreamHeader>(pSelf->currentStream)->ep_num;
+
+	if (epIndex >= ep_num)
+	{
+		return CELL_PAMF_ERROR_INVALID_ARG;
+	}
+
+	if (pSelf->attribute & CELL_PAMF_ATTRIBUTE_MINIMUM_HEADER)
+	{
+		return CELL_PAMF_ERROR_NOT_AVAILABLE;
+	}
+
+	pIt->isPamf = !pSelf->isPsmf;
+	pIt->index = epIndex;
+	pIt->num = ep_num;
+	pIt->pCur.set(pSelf->isPsmf ? pSelf->header.addr() + vm::static_ptr_cast<const PsmfStreamHeader>(pSelf->currentStream)->ep_offset + epIndex * sizeof(PsmfEpHeader)
+		: pSelf->header.addr() + vm::static_ptr_cast<const PamfStreamHeader>(pSelf->currentStream)->ep_offset + epIndex * sizeof(PamfEpHeader));
+
 	return CELL_OK;
 }
 
 error_code cellPamfReaderGetEpIteratorWithTimeStamp(vm::ptr<CellPamfReader> pSelf, vm::ptr<CellCodecTimeStamp> pTimeStamp, vm::ptr<CellPamfEpIterator> pIt)
 {
-	cellPamf.todo("cellPamfReaderGetEpIteratorWithTimeStamp(pSelf=*0x%x, pTimeStamp=*0x%x, pIt=*0x%x)", pSelf, pTimeStamp, pIt);
+	cellPamf.notice("cellPamfReaderGetEpIteratorWithTimeStamp(pSelf=*0x%x, pTimeStamp=*0x%x, pIt=*0x%x)", pSelf, pTimeStamp, pIt);
 
-	// TODO
+	if (pSelf->attribute & CELL_PAMF_ATTRIBUTE_MINIMUM_HEADER)
+	{
+		return CELL_PAMF_ERROR_NOT_AVAILABLE;
+	}
+
+	const u32 ep_num = pSelf->isPsmf ? vm::static_ptr_cast<const PsmfStreamHeader>(pSelf->currentStream)->ep_num : vm::static_ptr_cast<const PamfStreamHeader>(pSelf->currentStream)->ep_num;
+
+	pIt->num = ep_num;
+	pIt->isPamf = !pSelf->isPsmf;
+
+	if (ep_num == 0)
+	{
+		return CELL_PAMF_ERROR_EP_NOT_FOUND;
+	}
+
+	u32 i = ep_num - 1;
+	const u64 requested_time_stamp = std::bit_cast<be_t<u64>>(*pTimeStamp);
+
+	if (pSelf->isPsmf)
+	{
+		const auto eps = vm::cptr<PsmfEpHeader>::make(pSelf->header.addr() + vm::static_ptr_cast<const PsmfStreamHeader>(pSelf->currentStream)->ep_offset);
+
+		for (; i >= 1; i--) // always output eps[0] if no other suitable ep is found
+		{
+			const u64 time_stamp = (static_cast<u64>(eps[i].value0 & 1) << 32) | eps[i].pts_low;
+
+			if (time_stamp <= requested_time_stamp)
+			{
+				break;
+			}
+		}
+
+		pIt->pCur = eps + i;
+	}
+	else
+	{
+		const auto eps = vm::cptr<PamfEpHeader>::make(pSelf->header.addr() + vm::static_ptr_cast<const PamfStreamHeader>(pSelf->currentStream)->ep_offset);
+
+		for (; i >= 1; i--) // always output eps[0] if no other suitable ep is found
+		{
+			const u64 time_stamp = (static_cast<u64>(eps[i].pts_high) << 32) | eps[i].pts_low;
+
+			if (time_stamp <= requested_time_stamp)
+			{
+				break;
+			}
+		}
+
+		pIt->pCur = eps + i;
+	}
+
+	pIt->index = i;
+
 	return CELL_OK;
 }
 
 error_code cellPamfEpIteratorGetEp(vm::ptr<CellPamfEpIterator> pIt, vm::ptr<CellPamfEp> pEp)
 {
-	cellPamf.todo("cellPamfEpIteratorGetEp(pIt=*0x%x, pEp=*0x%x)", pIt, pEp);
+	cellPamf.notice("cellPamfEpIteratorGetEp(pIt=*0x%x, pEp=*0x%x)", pIt, pEp);
 
 	// always returns CELL_OK
-	// TODO
+
+	if (pIt->isPamf)
+	{
+		pamfEpUnpack(vm::static_ptr_cast<const PamfEpHeader>(pIt->pCur), pEp);
+	}
+	else
+	{
+		psmfEpUnpack(vm::static_ptr_cast<const PsmfEpHeader>(pIt->pCur), pEp);
+	}
+
 	return CELL_OK;
 }
 
 s32 cellPamfEpIteratorMove(vm::ptr<CellPamfEpIterator> pIt, s32 steps, vm::ptr<CellPamfEp> pEp)
 {
-	cellPamf.todo("cellPamfEpIteratorMove(pIt=*0x%x, steps=%d, pEp=*0x%x)", pIt, steps, pEp);
+	cellPamf.notice("cellPamfEpIteratorMove(pIt=*0x%x, steps=%d, pEp=*0x%x)", pIt, steps, pEp);
 
-	// cannot return error code
-	// TODO
-	return 0;
+	u32 new_index = pIt->index + steps;
+
+	if (static_cast<s32>(new_index) < 0)
+	{
+		steps = -static_cast<s32>(pIt->index);
+		new_index = 0;
+	}
+	else if (new_index >= pIt->num)
+	{
+		steps = pIt->num - 1 - pIt->index;
+		new_index = pIt->num - 1;
+	}
+
+	pIt->index = new_index;
+
+	if (pIt->isPamf)
+	{
+		pIt->pCur = vm::static_ptr_cast<const PamfEpHeader>(pIt->pCur) + steps;
+
+		if (pEp)
+		{
+			pamfEpUnpack(vm::static_ptr_cast<const PamfEpHeader>(pIt->pCur), pEp);
+		}
+	}
+	else
+	{
+		pIt->pCur = vm::static_ptr_cast<const PsmfEpHeader>(pIt->pCur) + steps;
+
+		if (pEp)
+		{
+			psmfEpUnpack(vm::static_ptr_cast<const PsmfEpHeader>(pIt->pCur), pEp);
+		}
+	}
+
+	return steps;
+}
+
+error_code cellPamfReaderGetEpWithTimeStamp(vm::ptr<CellPamfReader> pSelf, vm::ptr<CellCodecTimeStamp> pTimeStamp, vm::ptr<CellPamfEp> pEp, u32 unk)
+{
+	cellPamf.notice("cellPamfReaderGetEpWithTimeStamp(pSelf=*0x%x, pTimeStamp=*0x%x, pEp=*0x%x, unk=0x%x)", pSelf, pTimeStamp, pEp, unk);
+
+	// This function is broken on LLE
+
+	if (pSelf->attribute & CELL_PAMF_ATTRIBUTE_MINIMUM_HEADER)
+	{
+		return CELL_PAMF_ERROR_NOT_AVAILABLE;
+	}
+
+	const u32 ep_num = pSelf->isPsmf ? vm::static_ptr_cast<const PsmfStreamHeader>(pSelf->currentStream)->ep_num : vm::static_ptr_cast<const PamfStreamHeader>(pSelf->currentStream)->ep_num;
+	u64 next_rpn_offset = pSelf->dataSize;
+
+	if (ep_num == 0)
+	{
+		return CELL_PAMF_ERROR_EP_NOT_FOUND;
+	}
+
+	u32 i = ep_num - 1;
+	const u64 requested_time_stamp = std::bit_cast<be_t<u64>>(*pTimeStamp);
+
+	if (pSelf->isPsmf)
+	{
+		const auto eps = vm::cptr<PsmfEpHeader>::make(pSelf->header.addr() + vm::static_ptr_cast<const PsmfStreamHeader>(pSelf->currentStream)->ep_offset);
+
+		for (; i >= 1; i--) // always output eps[0] if no other suitable ep is found
+		{
+			const u64 time_stamp = (static_cast<u64>(eps[i].value0 & 1) << 32) | eps[i].pts_low;
+
+			if (time_stamp <= requested_time_stamp)
+			{
+				break;
+			}
+		}
+
+		// LLE doesn't write the result to pEp
+
+		if (i < ep_num - 1)
+		{
+			next_rpn_offset = eps[i + 1].rpnOffset;
+		}
+	}
+	else
+	{
+		const auto eps = vm::cptr<PamfEpHeader>::make(pSelf->header.addr() + vm::static_ptr_cast<const PamfStreamHeader>(pSelf->currentStream)->ep_offset);
+
+		for (; i >= 1; i--) // always output eps[0] if no other suitable ep is found
+		{
+			const u64 time_stamp = (static_cast<u64>(eps[i].pts_high) << 32) | eps[i].pts_low;
+
+			if (time_stamp <= requested_time_stamp)
+			{
+				break;
+			}
+		}
+
+		// LLE doesn't write the result to pEp
+
+		if (i < ep_num - 1)
+		{
+			next_rpn_offset = eps[i + 1].rpnOffset;
+		}
+	}
+
+	if (unk == 0x20) // sizeof(CellPamfEp) with added undocumented field
+	{
+		pEp->nextRpnOffset = next_rpn_offset;
+	}
+
+	return CELL_OK;
+}
+
+error_code cellPamfReaderGetEpWithIndex(vm::ptr<CellPamfReader> pSelf, u32 epIndex, vm::ptr<CellPamfEp> pEp, u32 unk)
+{
+	cellPamf.notice("cellPamfReaderGetEpWithIndex(pSelf=*0x%x, epIndex=%d, pEp=*0x%x, unk=0x%x)", pSelf, epIndex, pEp, unk);
+
+	const u32 ep_num = pSelf->isPsmf ? vm::static_ptr_cast<const PsmfStreamHeader>(pSelf->currentStream)->ep_num : vm::static_ptr_cast<const PamfStreamHeader>(pSelf->currentStream)->ep_num;
+	u64 next_rpn_offset = pSelf->dataSize;
+
+	if (epIndex >= ep_num)
+	{
+		return CELL_PAMF_ERROR_INVALID_ARG;
+	}
+
+	if (pSelf->attribute & CELL_PAMF_ATTRIBUTE_MINIMUM_HEADER)
+	{
+		return CELL_PAMF_ERROR_NOT_AVAILABLE;
+	}
+
+	if (pSelf->isPsmf)
+	{
+		const auto ep = vm::cptr<PsmfEpHeader>::make(pSelf->header.addr() + (vm::static_ptr_cast<const PsmfStreamHeader>(pSelf->currentStream)->ep_offset + epIndex * sizeof(PsmfEpHeader)));
+
+		psmfEpUnpack(ep, pEp);
+
+		if (epIndex < ep_num - 1)
+		{
+			next_rpn_offset = ep[1].rpnOffset * 0x800ull;
+		}
+	}
+	else
+	{
+		const auto ep = vm::cptr<PamfEpHeader>::make(pSelf->header.addr() + (vm::static_ptr_cast<const PamfStreamHeader>(pSelf->currentStream)->ep_offset + epIndex * sizeof(PamfEpHeader)));
+
+		pamfEpUnpack(ep, pEp);
+
+		if (epIndex < ep_num - 1)
+		{
+			next_rpn_offset = ep[1].rpnOffset * 0x800ull;
+		}
+	}
+
+	if (unk == 0x20) // sizeof(CellPamfEp) with added undocumented field
+	{
+		pEp->nextRpnOffset = next_rpn_offset;
+	}
+
+	return CELL_OK;
 }
 
 DECLARE(ppu_module_manager::cellPamf)("cellPamf", []()
@@ -787,4 +1640,6 @@ DECLARE(ppu_module_manager::cellPamf)("cellPamf", []()
 	REG_FUNC(cellPamf, cellPamfReaderGetEpIteratorWithTimeStamp);
 	REG_FUNC(cellPamf, cellPamfEpIteratorGetEp);
 	REG_FUNC(cellPamf, cellPamfEpIteratorMove);
+	REG_FUNC(cellPamf, cellPamfReaderGetEpWithTimeStamp);
+	REG_FUNC(cellPamf, cellPamfReaderGetEpWithIndex);
 });
