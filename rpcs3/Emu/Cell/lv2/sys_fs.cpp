@@ -915,7 +915,7 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 					if (!edata_file->ReadHeader())
 					{
 						// Prepare file for the next iteration
-						file = std::move(edata_file->edata_file);
+						file = std::move(edata_file->m_edata_file);
 						continue;
 					}
 

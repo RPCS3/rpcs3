@@ -866,6 +866,8 @@ fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, 
 
 void package_reader::extract_worker(thread_key thread_data_key)
 {
+	std::vector<u8> read_cache;
+
 	while (m_num_failures == 0 && !m_aborted)
 	{
 		// Make sure m_entry_indexer does not exceed m_install_entries
@@ -941,11 +943,18 @@ void package_reader::extract_worker(thread_key thread_data_key)
 				pkg_log.warning("NPDRM EDAT!");
 			}
 
-			if (fs::file out = is_buffered ? fs::make_stream<std::vector<u8>>() : fs::file{ path, did_overwrite ? fs::rewrite : fs::write_new })
+			if (fs::file out{ path, did_overwrite ? fs::rewrite : fs::write_new })
 			{
 				bool extract_success = true;
-				for (u64 pos = 0; pos < entry.file_size; pos += BUF_SIZE)
+
+				auto read_op = [&](usz pos, usz size) -> std::span<const char>
 				{
+					if (pos >= entry.file_size)
+					{
+						return {};
+					}
+
+					// Because that is the length of the buffer at the moment
 					const u64 block_size = std::min<u64>(BUF_SIZE, entry.file_size - pos);
 
 					const std::span<const char> data_span = decrypt(entry.file_offset + pos, block_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data(), thread_data_key);
@@ -954,29 +963,196 @@ void package_reader::extract_worker(thread_key thread_data_key)
 					{
 						extract_success = false;
 						pkg_log.error("Failed to extract file %s (data_span.size=%d, block_size=%d)", path, data_span.size(), block_size);
-						break;
 					}
 
-					if (out.write(data_span.data(), block_size) != block_size)
+					return data_span;
+				};
+
+				struct pkg_file_reader : fs::file_base
+				{
+					const std::function<u64(u64, void*, u64)> m_read_func;
+					const install_entry& m_entry;
+					usz m_pos;
+
+					explicit pkg_file_reader(std::function<u64(u64, void* buffer, u64)> read_func, const install_entry& entry) noexcept
+						: m_read_func(std::move(read_func))
+						, m_entry(entry)
+						, m_pos(0)
 					{
-						extract_success = false;
-						pkg_log.error("Failed to write file %s (error=%s)", path, fs::g_tls_error);
-						break;
 					}
 
-					m_written_bytes += block_size;
-				}
+					fs::stat_t get_stat() override
+					{
+						fs::stat_t stat{};
+						stat.size = m_entry.file_size;
+						return stat;
+					}
+
+					bool trunc(u64) override
+					{
+						return false;
+					}
+
+					u64 read(void* buffer, u64 size) override
+					{
+						const u64 result = pkg_file_reader::read_at(m_pos, buffer, size);
+						m_pos += result;
+						return result;
+					}
+
+					u64 read_at(u64 offset, void* buffer, u64 size) override
+					{
+						return m_read_func(offset, buffer, size);
+					}
+
+					u64 write(const void*, u64) override
+					{
+						return 0;
+					}
+
+					u64 seek(s64 offset, fs::seek_mode whence) override
+					{
+						const s64 new_pos =
+							whence == fs::seek_set ? offset :
+							whence == fs::seek_cur ? offset + m_pos :
+							whence == fs::seek_end ? offset + size() : -1;
+
+						if (new_pos < 0)
+						{
+							fs::g_tls_error = fs::error::inval;
+							return -1;
+						}
+
+						m_pos = new_pos;
+						return m_pos;
+					}
+
+					u64 size() override
+					{
+						return m_entry.file_size;
+					}
+
+					fs::file_id get_id() override
+					{
+						fs::file_id id{};
+
+						id.type.insert(0, "pkg_file_reader: "sv);
+						return id;
+					}
+				};
+
+				read_cache.clear();
+
+				auto reader = std::make_unique<pkg_file_reader>([&, cache_off = u64{umax}](usz pos, void* ptr, usz size) mutable -> u64
+				{
+					if (pos >= entry.file_size || !size)
+					{
+						return 0;
+					}
+
+					size = std::min<u64>(entry.file_size - pos, size);
+
+					u64 size_cache_end = 0;
+					u64 read_size = 0;
+
+					// Check if exists in cache
+					if (!read_cache.empty() && cache_off <= pos && pos < cache_off + read_cache.size())
+					{
+						read_size = std::min<u64>(pos + size, cache_off + read_cache.size()) - pos;
+
+						std::memcpy(ptr, read_cache.data() + (pos - cache_off), read_size);
+						pos += read_size;
+					}
+					else if (!read_cache.empty() && cache_off < pos + size && cache_off + read_cache.size() >= pos + size)
+					{
+						size_cache_end = size - (std::max<u64>(cache_off, pos) - pos);
+
+						std::memcpy(static_cast<u8*>(ptr) + (cache_off - pos), read_cache.data(), size_cache_end);
+						size -= size_cache_end;
+					}
+
+					if (pos >= entry.file_size || !size)
+					{
+						return read_size + size_cache_end;
+					}
+
+					// Try to cache for later
+					if (size <= BUF_SIZE && !size_cache_end && !read_size)
+					{
+						const u64 block_size = std::min<u64>({BUF_SIZE, std::max<u64>(size * 5 / 3, 65536), entry.file_size - pos});
+
+						read_cache.resize(block_size);
+						cache_off = pos;
+
+						const std::span<const char> data_span = decrypt(entry.file_offset + pos, block_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data(), thread_data_key);
+
+						if (data_span.empty())
+						{
+							cache_off = umax;
+							read_cache.clear();
+							return 0;
+						}
+
+						read_cache.resize(data_span.size());
+						std::memcpy(read_cache.data(), data_span.data(), data_span.size());
+
+						size = std::min<usz>(data_span.size(), size);
+						std::memcpy(ptr, data_span.data(), size);
+						return size;
+					}
+
+					while (read_size < size)
+					{
+						const u64 block_size = std::min<u64>(BUF_SIZE, size - read_size);
+
+						const std::span<const char> data_span = decrypt(entry.file_offset + pos, block_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data(), thread_data_key);
+
+						if (data_span.empty())
+						{
+							break;
+						}
+
+						std::memcpy(static_cast<u8*>(ptr) + read_size, data_span.data(), data_span.size());
+
+						read_size += data_span.size();
+						pos += data_span.size();
+					}
+
+					return read_size + size_cache_end;
+				}, entry);
+
+				fs::file in_data;
+				in_data.reset(std::move(reader));
+
+				fs::file final_data;
 
 				if (is_buffered)
 				{
-					out = DecryptEDAT(out, name, 1, reinterpret_cast<u8*>(&m_header.klicensee), true);
-					if (!out || !fs::write_file(path, fs::rewrite, static_cast<fs::container_stream<std::vector<u8>>*>(out.release().get())->obj))
-					{
-						m_num_failures++;
-						pkg_log.error("Failed to create file %s (error=%s)", path, fs::g_tls_error);
-						break;
-					}
+					final_data = DecryptEDAT(in_data, name, 1, reinterpret_cast<u8*>(&m_header.klicensee), true);
 				}
+				else
+				{
+					final_data = std::move(in_data);
+				}
+
+				if (!final_data)
+				{
+					m_num_failures++;
+					pkg_log.error("Failed to decrypt EDAT file %s (error=%s)", path, fs::g_tls_error);
+					break;
+				}
+
+				// 16MB buffer
+				std::vector<u8> buffer(std::min<usz>(entry.file_size, 1u << 24));
+
+				while (usz read_size = final_data.read(buffer.data(), buffer.size()))
+				{
+					out.write(buffer.data(), read_size);
+					m_written_bytes += read_size;
+				}
+
+				final_data.close();
+				out.close();
 
 				if (extract_success)
 				{
