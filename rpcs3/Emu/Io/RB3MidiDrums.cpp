@@ -137,8 +137,10 @@ KitState select_state()
 namespace midi
 {
 
-// Minimum midi velocity required to be considered a real hit. Out of 127 max.
-constexpr u8 MIN_VELOCITY = 10;
+u8 min_velocity()
+{
+	return g_cfg.io.midi_drums_minimum_velocity;
+}
 
 enum class Note : u8
 {
@@ -226,7 +228,7 @@ void set_flag(u8* buf, [[maybe_unused]] std::string_view name, const controller:
 
 void set_flag_if_any(u8* buf, std::string_view name, const controller::FlagByIndex& fbi, const std::vector<u8> velocities)
 {
-	if (std::none_of(velocities.begin(), velocities.end(), [](u8 velocity){ return velocity >= midi::MIN_VELOCITY; }))
+	if (std::none_of(velocities.begin(), velocities.end(), [](u8 velocity){ return velocity >= midi::min_velocity(); }))
 	{
 		return;
 	}
@@ -500,7 +502,7 @@ KitState usb_device_rb3_midi_drums::parse_midi_message(u8* msg, usz size)
 		return KitState{};
 	}
 
-	if (velocity < midi::MIN_VELOCITY)
+	if (velocity < midi::min_velocity())
 	{
 		// Must check here so we don't overwrite good values.
 		return KitState{};
@@ -557,7 +559,14 @@ KitState usb_device_rb3_midi_drums::parse_midi_message(u8* msg, usz size)
 			break;
 
 		case midi::Note::HihatWithPedalUp:
-			kit_state.hihat_up = velocity;
+			if (g_cfg.io.midi_drums_hihat_up_is_ride)
+			{
+				kit_state.hihat_up = velocity;
+			}
+			else
+			{
+				kit_state.hihat_down = velocity;
+			}
 			break;
 
 		case midi::Note::Crash0:
@@ -596,11 +605,11 @@ void usb_device_rb3_midi_drums::write_state(u8* buf, const KitState& kit_state)
 	set_flag_if_any(buf, "green", drum::GREEN, {kit_state.tom3, kit_state.ride});
 
 	// Additionally, Yellow (hihat) and Blue (ride) cymbals add dpad up or down, respectively. This allows rockband to disambiguate between tom+cymbals hit at the same time.
-	if (kit_state.hihat_down >= midi::MIN_VELOCITY)
+	if (kit_state.hihat_down >= midi::min_velocity())
 	{
 		buf[controller::DPAD_INDEX] |= (u8)controller::DPad::Up;
 	}
-	if (kit_state.crash >= midi::MIN_VELOCITY)
+	if (kit_state.crash >= midi::min_velocity())
 	{
 		buf[controller::DPAD_INDEX] |= (u8)controller::DPad::Down;
 	}
@@ -632,12 +641,12 @@ void usb_device_rb3_midi_drums::write_state(u8* buf, const KitState& kit_state)
 
 bool KitState::is_cymbal() const
 {
-	return std::max({hihat_up, hihat_down, crash, ride}) >= midi::MIN_VELOCITY;
+	return std::max({hihat_up, hihat_down, crash, ride}) >= midi::min_velocity();
 }
 
 bool KitState::is_drum() const
 {
-	return std::max({snare, tom1, tom2, tom3}) >= midi::MIN_VELOCITY;
+	return std::max({snare, tom1, tom2, tom3}) >= midi::min_velocity();
 }
 
 void usb_device_rb3_midi_drums::ComboTracker::add(u8 note)
