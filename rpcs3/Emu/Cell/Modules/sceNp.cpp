@@ -1647,7 +1647,7 @@ error_code sceNpBasicMarkMessageAsUsed(SceNpBasicMessageId msgId)
 
 error_code sceNpBasicAbortGui()
 {
-	sceNp.todo("sceNpBasicAbortGui()");
+	sceNp.warning("sceNpBasicAbortGui()");
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -1661,7 +1661,7 @@ error_code sceNpBasicAbortGui()
 		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
 
-	// TODO: abort GUI interaction
+	g_fxo->get<np_state>().abort_gui_flag = true;
 
 	return CELL_OK;
 }

@@ -205,6 +205,7 @@ namespace rsx
 
 			const auto notify = std::make_shared<atomic_t<u32>>(0);
 			auto& overlayman = g_fxo->get<display_manager>();
+			auto& nps = g_fxo->get<np_state>();
 
 			// Block until the user exits the dialog
 			overlayman.attach_thread_input(
@@ -212,7 +213,7 @@ namespace rsx
 				[notify](s32) { *notify = true; notify->notify_one(); }
 			);
 
-			while (!Emu.IsStopped() && !*notify)
+			while (!Emu.IsStopped() && !*notify && !nps.abort_gui_flag)
 			{
 				notify->wait(0, atomic_wait_timeout{1'000'000});
 			}
@@ -220,6 +221,13 @@ namespace rsx
 			m_rpcn->remove_friend_cb(sendmessage_friend_callback, this);
 
 			error_code result = CELL_CANCEL;
+
+			if (nps.abort_gui_flag.exchange(false))
+			{
+				rsx_log.warning("Sendmessage dialog aborted by sceNp!");
+				close(false, true);
+				return result;
+			}
 
 			switch (return_code)
 			{

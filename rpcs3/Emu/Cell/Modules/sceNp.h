@@ -1702,6 +1702,11 @@ struct message_data
 	void print() const;
 };
 
+struct np_state
+{
+	std::atomic<bool> abort_gui_flag = false;
+};
+
 namespace rpcn
 {
 	class rpcn_client;
