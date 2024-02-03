@@ -1423,9 +1423,11 @@ error_code sceNpBasicSendMessageAttachment(ppu_thread& ppu, vm::cptr<SceNpId> to
 	return sceNpBasicSendMessageGui(ppu, msg, containerId);
 }
 
-error_code sceNpBasicRecvMessageAttachment(sys_memory_container_t containerId)
+error_code recv_message_gui(ppu_thread& ppu, u16 mainType, u32 recvOptions);
+
+error_code sceNpBasicRecvMessageAttachment(ppu_thread& ppu, sys_memory_container_t containerId)
 {
-	sceNp.todo("sceNpBasicRecvMessageAttachment(containerId=%d)", containerId);
+	sceNp.warning("sceNpBasicRecvMessageAttachment(containerId=%d)", containerId);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -1439,7 +1441,10 @@ error_code sceNpBasicRecvMessageAttachment(sys_memory_container_t containerId)
 		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
 
-	return CELL_OK;
+	const u16 main_type = SCE_NP_BASIC_MESSAGE_MAIN_TYPE_DATA_ATTACHMENT;
+	const u32 options = SCE_NP_BASIC_RECV_MESSAGE_OPTIONS_PRESERVE;
+
+	return recv_message_gui(ppu, main_type, options);
 }
 
 error_code sceNpBasicRecvMessageAttachmentLoad(SceNpBasicAttachmentDataId id, vm::ptr<void> buffer, vm::ptr<u32> size)
@@ -1521,6 +1526,13 @@ error_code sceNpBasicRecvMessageCustom(ppu_thread& ppu, u16 mainType, u32 recvOp
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
 
+	return recv_message_gui(ppu, mainType, recvOptions);
+}
+
+error_code recv_message_gui(ppu_thread& ppu, u16 mainType, u32 recvOptions)
+{
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
 	error_code result = CELL_CANCEL;
 
 	SceNpBasicMessageRecvAction recv_result{};
@@ -1562,7 +1574,27 @@ error_code sceNpBasicRecvMessageCustom(ppu_thread& ppu, u16 mainType, u32 recvOp
 	const auto msg_pair = opt_msg.value();
 	const auto& msg     = msg_pair->second;
 
-	const u32 event_to_send = (mainType == SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE) ? SCE_NP_BASIC_EVENT_RECV_INVITATION_RESULT : SCE_NP_BASIC_EVENT_RECV_CUSTOM_DATA_RESULT;
+	u32 event_to_send;
+	SceNpBasicAttachmentDataId data_id;
+
+	switch (mainType)
+	{
+	case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_DATA_ATTACHMENT:
+		event_to_send = SCE_NP_BASIC_EVENT_RECV_ATTACHMENT_RESULT;
+		data_id = SCE_NP_BASIC_SELECTED_MESSAGE_DATA;
+		break;
+	case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE:
+		event_to_send = SCE_NP_BASIC_EVENT_RECV_INVITATION_RESULT;
+		data_id = SCE_NP_BASIC_SELECTED_INVITATION_DATA;
+		break;
+	case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_CUSTOM_DATA:
+		event_to_send = SCE_NP_BASIC_EVENT_RECV_CUSTOM_DATA_RESULT;
+		data_id = SCE_NP_BASIC_SELECTED_MESSAGE_DATA;
+		break;
+	default:
+		fmt::throw_exception("recv_message_gui: Unexpected main type %d", mainType);
+	}
+
 	np::basic_event to_add{};
 	to_add.event = event_to_send;
 	strcpy_trunc(to_add.from.userId.handle.data, msg_pair->first);
@@ -1571,7 +1603,7 @@ error_code sceNpBasicRecvMessageCustom(ppu_thread& ppu, u16 mainType, u32 recvOp
 	SceNpBasicExtendedAttachmentData* att_data = reinterpret_cast<SceNpBasicExtendedAttachmentData*>(to_add.data.data());
 	att_data->flags                            = 0; // ?
 	att_data->msgId                            = chosen_msg_id;
-	att_data->data.id = (mainType == SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE) ? SCE_NP_BASIC_SELECTED_INVITATION_DATA : SCE_NP_BASIC_SELECTED_MESSAGE_DATA;
+	att_data->data.id                          = data_id;
 	att_data->data.size                        = static_cast<u32>(msg.data.size());
 	att_data->userAction                       = recv_result;
 	att_data->markedAsUsed                     = (recvOptions & SCE_NP_BASIC_RECV_MESSAGE_OPTIONS_PRESERVE) ? 0 : 1;
