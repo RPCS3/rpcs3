@@ -391,6 +391,13 @@ namespace extra_nps
 		}
 	}
 
+	void print_SceNpBasicAttachmentData(const SceNpBasicAttachmentData* data)
+	{
+		sceNp.warning("SceNpBasicAttachmentData:");
+		sceNp.warning("id: 0x%x", data->id);
+		sceNp.warning("size: %d", data->size);
+	}
+
 	void print_SceNpBasicExtendedAttachmentData(const SceNpBasicExtendedAttachmentData* data)
 	{
 		sceNp.warning("SceNpBasicExtendedAttachmentData:");
