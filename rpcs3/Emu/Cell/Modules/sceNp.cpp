@@ -1442,7 +1442,7 @@ error_code sceNpBasicRecvMessageAttachment(ppu_thread& ppu, sys_memory_container
 	}
 
 	const u16 main_type = SCE_NP_BASIC_MESSAGE_MAIN_TYPE_DATA_ATTACHMENT;
-	const u32 options = SCE_NP_BASIC_RECV_MESSAGE_OPTIONS_PRESERVE;
+	const u32 options = 0;
 
 	return recv_message_gui(ppu, main_type, options);
 }
