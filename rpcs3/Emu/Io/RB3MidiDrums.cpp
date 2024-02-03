@@ -17,8 +17,8 @@ namespace controller
 
 // Bit flags by byte index.
 
-const usz FLAG = 0;
-const usz INDEX = 1;
+constexpr usz FLAG = 0;
+constexpr usz INDEX = 1;
 
 using FlagByIndex = std::array<u8, 2>;
 
@@ -37,44 +37,42 @@ constexpr FlagByIndex BUTTON_11 = {0x04, 1};
 constexpr FlagByIndex BUTTON_12 = {0x08, 1};
 constexpr FlagByIndex BUTTON_13 = {0x10, 1};
 
-const u8 HIHAT_UP		= 0x00;
-const u8 HIHAT_RIGHT	= 0x02;
-const u8 HIHAT_DOWN		= 0x04;
-const u8 HIHAT_LEFT		= 0x06;
-const u8 HIHAT_CENTER	= 0x08;
-const u8 AXIS_CENTER	= 0x7F;
+constexpr u8 HIHAT_UP     = 0x00;
+constexpr u8 HIHAT_RIGHT  = 0x02;
+constexpr u8 HIHAT_DOWN   = 0x04;
+constexpr u8 HIHAT_LEFT   = 0x06;
+constexpr u8 HIHAT_CENTER = 0x08;
+constexpr u8 AXIS_CENTER  = 0x7F;
 
-std::array<u8, 27> default_state() {
-	std::array<u8, 27> bytes;
-	bytes[0] = 0x00;                     // buttons 1 to 8
-	bytes[1] = 0x00;                     // buttons 9 to 13
-	bytes[2] = controller::HIHAT_CENTER; // hihat position
-	bytes[3] = controller::AXIS_CENTER;  // x axis
-	bytes[4] = controller::AXIS_CENTER;  // y axis
-	bytes[5] = controller::AXIS_CENTER;  // z axis
-	bytes[6] = controller::AXIS_CENTER;  // w axis
-	bytes[7] = 0x00;
-	bytes[8] = 0x00;
-	bytes[9] = 0x00;
-	bytes[10] = 0x00;
-	bytes[11] = 0x00; // yellow drum/cymbal velocity
-	bytes[12] = 0x00; // red drum/cymbal velocity
-	bytes[13] = 0x00; // green drum/cymbal velocity
-	bytes[14] = 0x00; // blue drum/cymbal velocity
-	bytes[15] = 0x00;
-	bytes[16] = 0x00;
-	bytes[17] = 0x00;
-	bytes[18] = 0x00;
-	bytes[19] = 0x02;
-	bytes[20] = 0x00;
-	bytes[21] = 0x02;
-	bytes[22] = 0x00;
-	bytes[23] = 0x02;
-	bytes[24] = 0x00;
-	bytes[25] = 0x02;
-	bytes[26] = 0x00;
-	return bytes;
-}
+constexpr std::array<u8, 27> default_state = {
+	0x00,                     // buttons 1 to 8
+	0x00,                     // buttons 9 to 13
+	controller::HIHAT_CENTER, // hihat position
+	controller::AXIS_CENTER,  // x axis
+	controller::AXIS_CENTER,  // y axis
+	controller::AXIS_CENTER,  // z axis
+	controller::AXIS_CENTER, // w axis
+	0x00,
+	0x00,
+	0x00,
+	0x00,
+	0x00, // yellow drum/cymbal velocity
+	0x00, // red drum/cymbal velocity
+	0x00, // green drum/cymbal velocity
+	0x00, // blue drum/cymbal velocity
+	0x00,
+	0x00,
+	0x00,
+	0x00,
+	0x02,
+	0x00,
+	0x02,
+	0x00,
+	0x02,
+	0x00,
+	0x02,
+	0x00
+};
 
 } // namespace controller
 
@@ -93,22 +91,22 @@ u8 scale_velocity(u8 value)
 	return (0xFF - (2 * value));
 }
 
-const usz FLAG = controller::FLAG;
-const usz INDEX = controller::INDEX;
+constexpr usz FLAG = controller::FLAG;
+constexpr usz INDEX = controller::INDEX;
 
 using FlagByIndex = controller::FlagByIndex;
 
-constexpr FlagByIndex GREEN			= controller::BUTTON_2;
-constexpr FlagByIndex RED			= controller::BUTTON_3;
-constexpr FlagByIndex YELLOW		= controller::BUTTON_4;
-constexpr FlagByIndex BLUE			= controller::BUTTON_1;
-constexpr FlagByIndex KICK_PEDAL	= controller::BUTTON_5;
-constexpr FlagByIndex HIHAT_PEDAL	= controller::BUTTON_6;
+constexpr FlagByIndex GREEN         = controller::BUTTON_2;
+constexpr FlagByIndex RED           = controller::BUTTON_3;
+constexpr FlagByIndex YELLOW        = controller::BUTTON_4;
+constexpr FlagByIndex BLUE          = controller::BUTTON_1;
+constexpr FlagByIndex KICK_PEDAL    = controller::BUTTON_5;
+constexpr FlagByIndex HIHAT_PEDAL   = controller::BUTTON_6;
 
-constexpr FlagByIndex IS_DRUM		= controller::BUTTON_11;
+constexpr FlagByIndex IS_DRUM       = controller::BUTTON_11;
 constexpr FlagByIndex IS_CYMBAL	    = controller::BUTTON_12;
 
-constexpr FlagByIndex BACK_BUTTON	= controller::BUTTON_3;
+constexpr FlagByIndex BACK_BUTTON   = controller::BUTTON_3;
 constexpr FlagByIndex START_BUTTON  = controller::BUTTON_10;
 constexpr FlagByIndex SYSTEM_BUTTON = controller::BUTTON_13;
 constexpr FlagByIndex SELECT_BUTTON = controller::BUTTON_9;
@@ -135,27 +133,27 @@ namespace midi
 {
 
 // Minimum midi velocity required to be considered a real hit.
-const u8 MIN_VELOCITY = 10;
+constexpr u8 MIN_VELOCITY = 10;
 
 // These are from alesis nitro mesh max. ymmv.
 
-const u8 KICK			= 0x24;
-const u8 HIHAT_CONTROL	= 0x2c;
-const u8 SNARE			= 0x26;
-const u8 SNARE_RIM		= 0x28;
-const u8 TOM_1			= 0x30;
-const u8 TOM_2			= 0x2d;
-const u8 TOM_3			= 0x2b;
-const u8 HIHAT_UP		= 0x2e; // i.e. w/ pedal up
-const u8 HIHAT_DOWN		= 0x2a; // i.e. w/ pedal down
-const u8 HIHAT_ALMOST_DOWN = 0x17; // If pedal is not 100% down, this will be sent instead of above.
-const u8 CRASH			= 0x31;
-const u8 RIDE			= 0x33;
+constexpr u8 KICK              = 0x24;
+constexpr u8 HIHAT_CONTROL     = 0x2c;
+constexpr u8 SNARE             = 0x26;
+constexpr u8 SNARE_RIM         = 0x28;
+constexpr u8 TOM_1             = 0x30;
+constexpr u8 TOM_2             = 0x2d;
+constexpr u8 TOM_3             = 0x2b;
+constexpr u8 HIHAT_UP          = 0x2e; // i.e. w/ pedal up
+constexpr u8 HIHAT_DOWN        = 0x2a; // i.e. w/ pedal down
+constexpr u8 HIHAT_ALMOST_DOWN = 0x17; // If pedal is not 100% down, this will be sent instead of above.
+constexpr u8 CRASH             = 0x31;
+constexpr u8 RIDE              = 0x33;
 
 namespace combo
 {
 
-const std::chrono::milliseconds MAX_DURATION = 2000ms;
+constexpr std::chrono::milliseconds MAX_DURATION = 2000ms;
 
 struct ComboDef
 {
@@ -199,7 +197,7 @@ std::string buf_to_string(u8* buf, usz size)
 	return s;
 }
 
-void set_flag(u8* buf, std::string_view name, const controller::FlagByIndex& fbi)
+void set_flag(u8* buf, [[maybe_unused]] std::string_view name, const controller::FlagByIndex& fbi)
 {
 	auto i = fbi[drum::INDEX];
 	auto flag = fbi[drum::FLAG];
@@ -209,15 +207,7 @@ void set_flag(u8* buf, std::string_view name, const controller::FlagByIndex& fbi
 
 void set_flag_if_any(u8* buf, std::string_view name, const controller::FlagByIndex& fbi, const std::vector<u8> velocities)
 {
-	bool any = false;
-	for (const auto& velocity : velocities)
-	{
-		if (velocity >= midi::MIN_VELOCITY)
-		{
-			any = true;
-		}
-	}
-	if (!any)
+	if (std::none_of(velocities.begin(), velocities.end(), [](u8 velocity){ return velocity >= midi::MIN_VELOCITY; }))
 	{
 		return;
 	}
@@ -428,7 +418,7 @@ void usb_device_rb3_midi_drums::interrupt_transfer(u32 buf_size, u8* buf, u32 /*
 	// no reason we can't make it faster
 	transfer->expected_time = get_timestamp() + 1'000;
 
-	auto bytes = controller::default_state();
+	constexpr auto bytes = controller::default_state();
 	if (buf_size < bytes.size())
 	{
 		rb3_midi_drums_log.warning("buffer size < %x, bailing out early (buf_size=0x%x)", bytes.size(), buf_size);
@@ -539,18 +529,18 @@ KitState usb_device_rb3_midi_drums::parse_midi_message(u8* msg, usz size)
 	kit_state.expiry = std::chrono::steady_clock::now() + drum::hit_duration();
 	switch (id)
 	{
-		case midi::KICK:			kit_state.kick_pedal		= velocity; break;
-		case midi::HIHAT_CONTROL:	kit_state.hihat_control		= velocity; break;
-		case midi::SNARE:			kit_state.snare				= velocity; break;
-		case midi::SNARE_RIM:		kit_state.snare_rim			= velocity; break;
-		case midi::TOM_1:			kit_state.tom1				= velocity; break;
-		case midi::TOM_2:			kit_state.tom2				= velocity; break;
-		case midi::TOM_3:			kit_state.tom3				= velocity; break;
-		case midi::HIHAT_UP:		kit_state.hihat_up			= velocity; break;
-		case midi::HIHAT_DOWN:		kit_state.hihat_down		= velocity; break;
-		case midi::HIHAT_ALMOST_DOWN:kit_state.hihat_down		= velocity; break;
-		case midi::CRASH:			kit_state.crash				= velocity; break;
-		case midi::RIDE:			kit_state.ride				= velocity; break;
+		case midi::KICK:              kit_state.kick_pedal    = velocity; break;
+		case midi::HIHAT_CONTROL:     kit_state.hihat_control = velocity; break;
+		case midi::SNARE:             kit_state.snare         = velocity; break;
+		case midi::SNARE_RIM:         kit_state.snare_rim     = velocity; break;
+		case midi::TOM_1:             kit_state.tom1          = velocity; break;
+		case midi::TOM_2:             kit_state.tom2          = velocity; break;
+		case midi::TOM_3:             kit_state.tom3          = velocity; break;
+		case midi::HIHAT_UP:          kit_state.hihat_up      = velocity; break;
+		case midi::HIHAT_DOWN:        kit_state.hihat_down    = velocity; break;
+		case midi::HIHAT_ALMOST_DOWN: kit_state.hihat_down    = velocity; break;
+		case midi::CRASH:             kit_state.crash         = velocity; break;
+		case midi::RIDE:              kit_state.ride          = velocity; break;
 		default:
 			// Ignored note.
 			rb3_midi_drums_log.error("IGNORED NOTE: id = %x or %d", id, id);
@@ -607,7 +597,7 @@ bool KitState::is_drum() const
 
 void usb_device_rb3_midi_drums::ComboTracker::add(u8 note)
 {
-	if (midi_notes.size() > 0 && std::chrono::steady_clock::now() >= expiry)
+	if (!midi_notes.empty() && std::chrono::steady_clock::now() >= expiry)
 	{
 		// Combo expired.
 		reset();
