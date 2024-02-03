@@ -1575,21 +1575,22 @@ error_code recv_message_gui(ppu_thread& ppu, u16 mainType, u32 recvOptions)
 	const auto& msg     = msg_pair->second;
 
 	u32 event_to_send;
-	SceNpBasicAttachmentDataId data_id;
+	SceNpBasicAttachmentData data{};
+	data.size = static_cast<u32>(msg.data.size());
 
 	switch (mainType)
 	{
 	case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_DATA_ATTACHMENT:
 		event_to_send = SCE_NP_BASIC_EVENT_RECV_ATTACHMENT_RESULT;
-		data_id = SCE_NP_BASIC_SELECTED_MESSAGE_DATA;
+		data.id = SCE_NP_BASIC_SELECTED_MESSAGE_DATA;
 		break;
 	case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE:
 		event_to_send = SCE_NP_BASIC_EVENT_RECV_INVITATION_RESULT;
-		data_id = SCE_NP_BASIC_SELECTED_INVITATION_DATA;
+		data.id = SCE_NP_BASIC_SELECTED_INVITATION_DATA;
 		break;
 	case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_CUSTOM_DATA:
 		event_to_send = SCE_NP_BASIC_EVENT_RECV_CUSTOM_DATA_RESULT;
-		data_id = SCE_NP_BASIC_SELECTED_MESSAGE_DATA;
+		data.id = SCE_NP_BASIC_SELECTED_MESSAGE_DATA;
 		break;
 	default:
 		fmt::throw_exception("recv_message_gui: Unexpected main type %d", mainType);
@@ -1599,18 +1600,29 @@ error_code recv_message_gui(ppu_thread& ppu, u16 mainType, u32 recvOptions)
 	to_add.event = event_to_send;
 	strcpy_trunc(to_add.from.userId.handle.data, msg_pair->first);
 	strcpy_trunc(to_add.from.name.data, msg_pair->first);
-	to_add.data.resize(sizeof(SceNpBasicExtendedAttachmentData));
-	SceNpBasicExtendedAttachmentData* att_data = reinterpret_cast<SceNpBasicExtendedAttachmentData*>(to_add.data.data());
-	att_data->flags                            = 0; // ?
-	att_data->msgId                            = chosen_msg_id;
-	att_data->data.id                          = data_id;
-	att_data->data.size                        = static_cast<u32>(msg.data.size());
-	att_data->userAction                       = recv_result;
-	att_data->markedAsUsed                     = (recvOptions & SCE_NP_BASIC_RECV_MESSAGE_OPTIONS_PRESERVE) ? 0 : 1;
 
-	extra_nps::print_SceNpBasicExtendedAttachmentData(att_data);
+	if (mainType == SCE_NP_BASIC_MESSAGE_MAIN_TYPE_DATA_ATTACHMENT)
+	{
+		to_add.data.resize(sizeof(SceNpBasicAttachmentData));
+		SceNpBasicAttachmentData* att_data = reinterpret_cast<SceNpBasicAttachmentData*>(to_add.data.data());
+		*att_data = data;
 
-	nph.set_message_selected(att_data->data.id, chosen_msg_id);
+		extra_nps::print_SceNpBasicAttachmentData(att_data);
+	}
+	else
+	{
+		to_add.data.resize(sizeof(SceNpBasicExtendedAttachmentData));
+		SceNpBasicExtendedAttachmentData* att_data = reinterpret_cast<SceNpBasicExtendedAttachmentData*>(to_add.data.data());
+		att_data->flags                            = 0; // ?
+		att_data->msgId                            = chosen_msg_id;
+		att_data->data                             = data;
+		att_data->userAction                       = recv_result;
+		att_data->markedAsUsed                     = (recvOptions & SCE_NP_BASIC_RECV_MESSAGE_OPTIONS_PRESERVE) ? 0 : 1;
+
+		extra_nps::print_SceNpBasicExtendedAttachmentData(att_data);
+	}
+
+	nph.set_message_selected(data.id, chosen_msg_id);
 
 	// Is this sent if used from home menu but not from sceNpBasicRecvMessageCustom, not sure
 	// sysutil_send_system_cmd(CELL_SYSUTIL_NP_INVITATION_SELECTED, 0);
