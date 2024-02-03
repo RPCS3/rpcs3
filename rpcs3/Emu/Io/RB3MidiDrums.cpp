@@ -37,7 +37,8 @@ constexpr FlagByIndex BUTTON_11 = {0x04, 1};
 constexpr FlagByIndex BUTTON_12 = {0x08, 1};
 constexpr FlagByIndex BUTTON_13 = {0x10, 1};
 
-enum class HiHat : u8
+constexpr usz DPAD_INDEX = 2;
+enum class DPad : u8
 {
 	Up     = 0x00,
 	Right  = 0x02,
@@ -51,7 +52,7 @@ constexpr u8 AXIS_CENTER = 0x7F;
 constexpr std::array<u8, 27> default_state = {
 	0x00,                     // buttons 1 to 8
 	0x00,                     // buttons 9 to 13
-	(u8)controller::HiHat::Center, // hihat position
+	(u8)controller::DPad::Center,
 	controller::AXIS_CENTER,  // x axis
 	controller::AXIS_CENTER,  // y axis
 	controller::AXIS_CENTER,  // z axis
@@ -136,23 +137,48 @@ KitState select_state()
 namespace midi
 {
 
-// Minimum midi velocity required to be considered a real hit.
+// Minimum midi velocity required to be considered a real hit. Out of 127 max.
 constexpr u8 MIN_VELOCITY = 10;
 
-// These are from alesis nitro mesh max. ymmv.
+enum class Note : u8
+{
+	// Each 'note' can be triggered by multiple different numbers.
+	// Keeping them flattened in an enum for simplicity / switch statement usage.
 
-constexpr u8 KICK              = 0x24;
-constexpr u8 HIHAT_CONTROL     = 0x2c;
-constexpr u8 SNARE             = 0x26;
-constexpr u8 SNARE_RIM         = 0x28;
-constexpr u8 TOM_1             = 0x30;
-constexpr u8 TOM_2             = 0x2d;
-constexpr u8 TOM_3             = 0x2b;
-constexpr u8 HIHAT_UP          = 0x2e; // i.e. w/ pedal up
-constexpr u8 HIHAT_DOWN        = 0x2a; // i.e. w/ pedal down
-constexpr u8 HIHAT_ALMOST_DOWN = 0x17; // If pedal is not 100% down, this will be sent instead of above.
-constexpr u8 CRASH             = 0x31;
-constexpr u8 RIDE              = 0x33;
+	// These follow the rockband 3 midi pro adapter support.
+	Snare0 = 38,
+	Snare1 = 31,
+	Snare2 = 34,
+	Snare3 = 37,
+	Snare4 = 39,
+	HiTom0 = 48,
+	HiTom1 = 50,
+	LowTom0 = 45,
+	LowTom1 = 47,
+	FloorTom0 = 41,
+	FloorTom1 = 43,
+	Hihat0 = 22,
+	Hihat1 = 26,
+	Hihat2 = 42,
+	Hihat3 = 54,
+	Ride0 = 51,
+	Ride1 = 53,
+	Ride2 = 56,
+	Ride3 = 59,
+	Crash0 = 49,
+	Crash1 = 52,
+	Crash2 = 55,
+	Crash3 = 57,
+	Kick0 = 33,
+	Kick1 = 35,
+	Kick2 = 36,
+	HihatPedal = 44,
+
+	// These are from alesis nitro mesh max. ymmv.
+	SnareRim = 40, // midi pro adapter counts this as snare.
+	HihatWithPedalUp = 46, // The midi pro adapter considers this a normal hihat hit.
+	HihatAlmostDown = 23, // If pedal is not 100% down, this will be sent instead of a normal hihat hit.
+};
 
 namespace combo
 {
@@ -166,16 +192,16 @@ struct ComboDef
 	KitState state;
 };
 
-// note: hihat_control 3x in a row without other notes is very unlikely, so it makes for a good combo start.
+// note: hihat pedal 3x in a row without other notes is very unlikely, so it makes for a good combo start.
 
 std::vector<u8> start()
 {
-	return {HIHAT_CONTROL, HIHAT_CONTROL, HIHAT_CONTROL, SNARE_RIM};
+	return {(u8)Note::HihatPedal, (u8)Note::HihatPedal, (u8)Note::HihatPedal, (u8)Note::SnareRim};
 }
 
 std::vector<u8> select()
 {
-	return {HIHAT_CONTROL, HIHAT_CONTROL, HIHAT_CONTROL, KICK};
+	return {(u8)Note::HihatPedal, (u8)Note::HihatPedal, (u8)Note::HihatPedal, (u8)Note::Kick0};
 }
 
 std::vector<ComboDef> definitions()
@@ -450,43 +476,9 @@ void usb_device_rb3_midi_drums::interrupt_transfer(u32 buf_size, u8* buf, u32 /*
 	}), std::end(kit_states));
 
 	// Apply states to buf.
-	bool cymbal = false;
-	bool drum = false;
-	size_t i = 0;
-	for (; i < kit_states.size(); ++i)
+	for (size_t i; i < kit_states.size(); ++i)
 	{
-		const auto& kit_state = kit_states[i];
-
-		// Drums & cymbals use the same inputs, and flip flags to indicate if its a drum or cymbal hit.
-		// This causes problems when hitting a drum and cymbal at the exact same time: the game will
-		// only register one or the other flag, and all hits will be counted as that type.
-		//
-		// My solution is to queue up all hits and apply additively to the current state as long as their
-		// cymbal/drum flags don't collide. Once they do, buffer states until the current set expires,
-		// then continue with the new states. Effectively this staggers drum/cymbal hits by drum::hit_duration()
-		// which should be small enough to be imperceptible, but long enough that each will register properly
-		// with the game.
-		//
-		// drum::hit_duration() should be in tens of milliseconds, which even at high BPM is going to be like
-		// 1/64th notes. If you're jamming that hard... idk man join a real band.
-		if (cymbal && kit_state.is_drum())
-		{
-			break;
-		}
-		if (drum && kit_state.is_cymbal())
-		{
-			break;
-		}
-		drum = kit_state.is_drum();
-		cymbal = kit_state.is_cymbal();
-		// Additively write non-mutually-exclusive states into buf.
-		write_state(buf, kit_state);
-	}
-
-	// Extend expiry on buffered states since they are not active.
-	for (; i < kit_states.size(); ++i)
-	{
-		kit_states[i].expiry = now + drum::hit_duration();
+		write_state(buf, kit_states[i]);
 	}
 }
 
@@ -516,20 +508,72 @@ KitState usb_device_rb3_midi_drums::parse_midi_message(u8* msg, usz size)
 
 	KitState kit_state{};
 	kit_state.expiry = std::chrono::steady_clock::now() + drum::hit_duration();
-	switch (id)
+
+	switch ((midi::Note)id)
 	{
-		case midi::KICK:              kit_state.kick_pedal    = velocity; break;
-		case midi::HIHAT_CONTROL:     kit_state.hihat_control = velocity; break;
-		case midi::SNARE:             kit_state.snare         = velocity; break;
-		case midi::SNARE_RIM:         kit_state.snare_rim     = velocity; break;
-		case midi::TOM_1:             kit_state.tom1          = velocity; break;
-		case midi::TOM_2:             kit_state.tom2          = velocity; break;
-		case midi::TOM_3:             kit_state.tom3          = velocity; break;
-		case midi::HIHAT_UP:          kit_state.hihat_up      = velocity; break;
-		case midi::HIHAT_DOWN:        kit_state.hihat_down    = velocity; break;
-		case midi::HIHAT_ALMOST_DOWN: kit_state.hihat_down    = velocity; break;
-		case midi::CRASH:             kit_state.crash         = velocity; break;
-		case midi::RIDE:              kit_state.ride          = velocity; break;
+		case midi::Note::Kick0:
+		case midi::Note::Kick1:
+		case midi::Note::Kick2:
+			kit_state.kick_pedal = velocity;
+			break;
+
+		case midi::Note::HihatPedal:
+			kit_state.hihat_control = velocity;
+			break;
+
+		case midi::Note::Snare0:
+		case midi::Note::Snare1:
+		case midi::Note::Snare2:
+		case midi::Note::Snare3:
+		case midi::Note::Snare4:
+			kit_state.snare = velocity;
+			break;
+
+		case midi::Note::SnareRim:
+			kit_state.snare_rim = velocity;
+			break;
+
+		case midi::Note::HiTom0:
+		case midi::Note::HiTom1:
+			kit_state.tom1 = velocity;
+			break;
+
+		case midi::Note::LowTom0:
+		case midi::Note::LowTom1:
+			kit_state.tom2 = velocity;
+			break;
+
+		case midi::Note::FloorTom0:
+		case midi::Note::FloorTom1:
+			kit_state.tom3 = velocity;
+			break;
+
+		case midi::Note::Hihat0:
+		case midi::Note::Hihat1:
+		case midi::Note::Hihat2:
+		case midi::Note::Hihat3:
+		case midi::Note::HihatAlmostDown:
+			kit_state.hihat_down = velocity;
+			break;
+
+		case midi::Note::HihatWithPedalUp:
+			kit_state.hihat_up = velocity;
+			break;
+
+		case midi::Note::Crash0:
+		case midi::Note::Crash1:
+		case midi::Note::Crash2:
+		case midi::Note::Crash3:
+			kit_state.crash = velocity;
+			break;
+
+		case midi::Note::Ride0:
+		case midi::Note::Ride1:
+		case midi::Note::Ride2:
+		case midi::Note::Ride3:
+			kit_state.ride = velocity;
+			break;
+
 		default:
 			// Ignored note.
 			rb3_midi_drums_log.error("IGNORED NOTE: id = %x or %d", id, id);
@@ -542,12 +586,24 @@ KitState usb_device_rb3_midi_drums::parse_midi_message(u8* msg, usz size)
 
 void usb_device_rb3_midi_drums::write_state(u8* buf, const KitState& kit_state)
 {
+	// See: https://github.com/TheNathannator/PlasticBand/blob/main/Docs/Instruments/4-Lane%20Drums/PS3%20and%20Wii.md#input-info
+
 	// Interestingly, because cymbals use the same visual track as drums, a hit on that color can only be a drum OR a cymbal.
-	// rockband handles this by taking a flag to indicate if the hit is a drum vs cymbal. idk what happens if you do both.
+	// rockband handles this by taking a flag to indicate if the hit is a drum vs cymbal.
 	set_flag_if_any(buf, "red", drum::RED, {kit_state.snare});
 	set_flag_if_any(buf, "yellow", drum::YELLOW, {kit_state.tom1, kit_state.hihat_down});
 	set_flag_if_any(buf, "blue", drum::BLUE, {kit_state.tom2, kit_state.crash, kit_state.hihat_up}); // Rock band uses blue cymbal for both hihat open and crash.
 	set_flag_if_any(buf, "green", drum::GREEN, {kit_state.tom3, kit_state.ride});
+
+	// Additionally, Yellow (hihat) and Blue (ride) cymbals add dpad up or down, respectively. This allows rockband to disambiguate between tom+cymbals hit at the same time.
+	if (kit_state.hihat_down >= midi::MIN_VELOCITY)
+	{
+		buf[controller::DPAD_INDEX] |= (u8)controller::DPad::Up;
+	}
+	if (kit_state.crash >= midi::MIN_VELOCITY)
+	{
+		buf[controller::DPAD_INDEX] |= (u8)controller::DPad::Down;
+	}
 
 	set_flag_if_any(buf, "is_drum", drum::IS_DRUM, {kit_state.snare, kit_state.tom1, kit_state.tom2, kit_state.tom3});
 	set_flag_if_any(buf, "is_cymbal", drum::IS_CYMBAL, {kit_state.hihat_up, kit_state.hihat_down, kit_state.crash, kit_state.ride});
