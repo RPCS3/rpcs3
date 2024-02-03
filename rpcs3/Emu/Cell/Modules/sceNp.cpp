@@ -1423,9 +1423,11 @@ error_code sceNpBasicSendMessageAttachment(ppu_thread& ppu, vm::cptr<SceNpId> to
 	return sceNpBasicSendMessageGui(ppu, msg, containerId);
 }
 
-error_code sceNpBasicRecvMessageAttachment(sys_memory_container_t containerId)
+error_code recv_message_gui(ppu_thread& ppu, u16 mainType, u32 recvOptions);
+
+error_code sceNpBasicRecvMessageAttachment(ppu_thread& ppu, sys_memory_container_t containerId)
 {
-	sceNp.todo("sceNpBasicRecvMessageAttachment(containerId=%d)", containerId);
+	sceNp.warning("sceNpBasicRecvMessageAttachment(containerId=%d)", containerId);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -1439,7 +1441,10 @@ error_code sceNpBasicRecvMessageAttachment(sys_memory_container_t containerId)
 		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
 
-	return CELL_OK;
+	const u16 main_type = SCE_NP_BASIC_MESSAGE_MAIN_TYPE_DATA_ATTACHMENT;
+	const u32 options = 0;
+
+	return recv_message_gui(ppu, main_type, options);
 }
 
 error_code sceNpBasicRecvMessageAttachmentLoad(SceNpBasicAttachmentDataId id, vm::ptr<void> buffer, vm::ptr<u32> size)
@@ -1521,6 +1526,13 @@ error_code sceNpBasicRecvMessageCustom(ppu_thread& ppu, u16 mainType, u32 recvOp
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
 
+	return recv_message_gui(ppu, mainType, recvOptions);
+}
+
+error_code recv_message_gui(ppu_thread& ppu, u16 mainType, u32 recvOptions)
+{
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
 	error_code result = CELL_CANCEL;
 
 	SceNpBasicMessageRecvAction recv_result{};
@@ -1562,23 +1574,55 @@ error_code sceNpBasicRecvMessageCustom(ppu_thread& ppu, u16 mainType, u32 recvOp
 	const auto msg_pair = opt_msg.value();
 	const auto& msg     = msg_pair->second;
 
-	const u32 event_to_send = (mainType == SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE) ? SCE_NP_BASIC_EVENT_RECV_INVITATION_RESULT : SCE_NP_BASIC_EVENT_RECV_CUSTOM_DATA_RESULT;
+	u32 event_to_send;
+	SceNpBasicAttachmentData data{};
+	data.size = static_cast<u32>(msg.data.size());
+
+	switch (mainType)
+	{
+	case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_DATA_ATTACHMENT:
+		event_to_send = SCE_NP_BASIC_EVENT_RECV_ATTACHMENT_RESULT;
+		data.id = SCE_NP_BASIC_SELECTED_MESSAGE_DATA;
+		break;
+	case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE:
+		event_to_send = SCE_NP_BASIC_EVENT_RECV_INVITATION_RESULT;
+		data.id = SCE_NP_BASIC_SELECTED_INVITATION_DATA;
+		break;
+	case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_CUSTOM_DATA:
+		event_to_send = SCE_NP_BASIC_EVENT_RECV_CUSTOM_DATA_RESULT;
+		data.id = SCE_NP_BASIC_SELECTED_MESSAGE_DATA;
+		break;
+	default:
+		fmt::throw_exception("recv_message_gui: Unexpected main type %d", mainType);
+	}
+
 	np::basic_event to_add{};
 	to_add.event = event_to_send;
 	strcpy_trunc(to_add.from.userId.handle.data, msg_pair->first);
 	strcpy_trunc(to_add.from.name.data, msg_pair->first);
-	to_add.data.resize(sizeof(SceNpBasicExtendedAttachmentData));
-	SceNpBasicExtendedAttachmentData* att_data = reinterpret_cast<SceNpBasicExtendedAttachmentData*>(to_add.data.data());
-	att_data->flags                            = 0; // ?
-	att_data->msgId                            = chosen_msg_id;
-	att_data->data.id = (mainType == SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE) ? SCE_NP_BASIC_SELECTED_INVITATION_DATA : SCE_NP_BASIC_SELECTED_MESSAGE_DATA;
-	att_data->data.size                        = static_cast<u32>(msg.data.size());
-	att_data->userAction                       = recv_result;
-	att_data->markedAsUsed                     = (recvOptions & SCE_NP_BASIC_RECV_MESSAGE_OPTIONS_PRESERVE) ? 0 : 1;
 
-	extra_nps::print_SceNpBasicExtendedAttachmentData(att_data);
+	if (mainType == SCE_NP_BASIC_MESSAGE_MAIN_TYPE_DATA_ATTACHMENT)
+	{
+		to_add.data.resize(sizeof(SceNpBasicAttachmentData));
+		SceNpBasicAttachmentData* att_data = reinterpret_cast<SceNpBasicAttachmentData*>(to_add.data.data());
+		*att_data = data;
 
-	nph.set_message_selected(att_data->data.id, chosen_msg_id);
+		extra_nps::print_SceNpBasicAttachmentData(att_data);
+	}
+	else
+	{
+		to_add.data.resize(sizeof(SceNpBasicExtendedAttachmentData));
+		SceNpBasicExtendedAttachmentData* att_data = reinterpret_cast<SceNpBasicExtendedAttachmentData*>(to_add.data.data());
+		att_data->flags                            = 0; // ?
+		att_data->msgId                            = chosen_msg_id;
+		att_data->data                             = data;
+		att_data->userAction                       = recv_result;
+		att_data->markedAsUsed                     = (recvOptions & SCE_NP_BASIC_RECV_MESSAGE_OPTIONS_PRESERVE) ? 0 : 1;
+
+		extra_nps::print_SceNpBasicExtendedAttachmentData(att_data);
+	}
+
+	nph.set_message_selected(data.id, chosen_msg_id);
 
 	// Is this sent if used from home menu but not from sceNpBasicRecvMessageCustom, not sure
 	// sysutil_send_system_cmd(CELL_SYSUTIL_NP_INVITATION_SELECTED, 0);
@@ -1615,7 +1659,7 @@ error_code sceNpBasicMarkMessageAsUsed(SceNpBasicMessageId msgId)
 
 error_code sceNpBasicAbortGui()
 {
-	sceNp.todo("sceNpBasicAbortGui()");
+	sceNp.warning("sceNpBasicAbortGui()");
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -1629,7 +1673,7 @@ error_code sceNpBasicAbortGui()
 		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
 
-	// TODO: abort GUI interaction
+	g_fxo->get<np_state>().abort_gui_flag = true;
 
 	return CELL_OK;
 }
@@ -1814,7 +1858,7 @@ error_code sceNpBasicGetFriendPresenceByNpId2(vm::cptr<SceNpId> npid, vm::ptr<Sc
 	return nph.get_friend_presence_by_npid(*npid, pres.get_ptr());
 }
 
-error_code sceNpBasicAddPlayersHistory(vm::cptr<SceNpId> npid, vm::ptr<char> description)
+error_code sceNpBasicAddPlayersHistory(vm::cptr<SceNpId> npid, vm::cptr<char> description)
 {
 	sceNp.todo("sceNpBasicAddPlayersHistory(npid=*0x%x, description=*0x%x)", npid, description);
 
@@ -1835,10 +1879,12 @@ error_code sceNpBasicAddPlayersHistory(vm::cptr<SceNpId> npid, vm::ptr<char> des
 		return SCE_NP_BASIC_ERROR_EXCEEDS_MAX;
 	}
 
+	nph.add_player_to_history(npid.get_ptr(), description ? description.get_ptr() : nullptr);
+
 	return CELL_OK;
 }
 
-error_code sceNpBasicAddPlayersHistoryAsync(vm::cptr<SceNpId> npids, u32 count, vm::ptr<char> description, vm::ptr<u32> reqId)
+error_code sceNpBasicAddPlayersHistoryAsync(vm::cptr<SceNpId> npids, u32 count, vm::cptr<char> description, vm::ptr<u32> reqId)
 {
 	sceNp.todo("sceNpBasicAddPlayersHistoryAsync(npids=*0x%x, count=%d, description=*0x%x, reqId=*0x%x)", npids, count, description, reqId);
 
@@ -1877,7 +1923,7 @@ error_code sceNpBasicAddPlayersHistoryAsync(vm::cptr<SceNpId> npids, u32 count, 
 		return SCE_NP_BASIC_ERROR_EXCEEDS_MAX;
 	}
 
-	auto req_id = nph.add_players_to_history(npids, count);
+	auto req_id = nph.add_players_to_history(npids.get_ptr(), description ? description.get_ptr() : nullptr, count);
 
 	if (reqId)
 	{
@@ -1919,8 +1965,7 @@ error_code sceNpBasicGetPlayersHistoryEntryCount(u32 options, vm::ptr<u32> count
 		return SCE_NP_ERROR_ID_NOT_FOUND;
 	}
 
-	// TODO: Check if there are players histories
-	*count = 0;
+	*count = nph.get_players_history_count(options);
 
 	return CELL_OK;
 }
@@ -1954,6 +1999,11 @@ error_code sceNpBasicGetPlayersHistoryEntry(u32 options, u32 index, vm::ptr<SceN
 
 	// TODO: Find the correct test which returns SCE_NP_ERROR_ID_NOT_FOUND
 	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_ERROR_ID_NOT_FOUND;
+	}
+
+	if (!nph.get_player_history_entry(options, index, npid.get_ptr()))
 	{
 		return SCE_NP_ERROR_ID_NOT_FOUND;
 	}

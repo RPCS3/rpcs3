@@ -2,7 +2,11 @@
 #include <QHBoxLayout>
 #include <QPushButton>
 #include <QMessageBox>
+#include <QTimer>
+
 #include "recvmessage_dialog_frame.h"
+#include "Emu/IdManager.h"
+#include "Emu/System.h"
 
 #include "util/logs.hpp"
 
@@ -95,6 +99,31 @@ error_code recvmessage_dialog_frame::Exec(SceNpBasicMessageMainType type, SceNpB
 	{
 		add_message(message, id);
 	}
+
+	auto& nps = g_fxo->get<np_state>();
+
+	QTimer timer;
+	connect(&timer, &QTimer::timeout, this, [this, &nps, &timer]()
+	{
+		bool abort = Emu.IsStopped();
+
+		if (!abort && nps.abort_gui_flag.exchange(false))
+		{
+			recvmessage_dlg_log.warning("Aborted by sceNp!");
+			abort = true;
+		}
+
+		if (abort)
+		{
+			if (m_dialog)
+			{
+				m_dialog->close();
+			}
+
+			timer.stop();
+		}
+	});
+	timer.start(10ms);
 
 	m_dialog->exec();
 

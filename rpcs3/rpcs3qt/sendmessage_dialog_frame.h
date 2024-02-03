@@ -22,7 +22,7 @@ private:
 	void remove_friend(QListWidget* list, const QString& name);
 
 private:
-	custom_dialog* m_dialog  = nullptr;
+	custom_dialog* m_dialog = nullptr;
 	QListWidget* m_lst_friends = nullptr;
 
 Q_SIGNALS:
