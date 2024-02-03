@@ -3,6 +3,10 @@
 #include "overlay_sendmessage_dialog.h"
 #include "Emu/System.h"
 #include "Emu/NP/rpcn_client.h"
+#include "Emu/Cell/Modules/cellMsgDialog.h"
+#include "Emu/Cell/PPUThread.h" // for vm_var
+#include "Emu/Memory/vm_var.h"
+#include "Emu/Io/interception.h"
 #include "Utilities/Thread.h"
 
 namespace rsx
@@ -67,6 +71,7 @@ namespace rsx
 		void sendmessage_dialog::on_button_pressed(pad_button button_press, bool is_auto_repeat)
 		{
 			if (fade_animation.active) return;
+			if (m_confirmation_dialog_open) return; // Ignore input while the confirmation dialog is open
 
 			bool close_dialog = false;
 
@@ -75,18 +80,19 @@ namespace rsx
 			switch (button_press)
 			{
 			case pad_button::cross:
-				if (m_list->m_items.empty())
+				if (m_list->m_items.empty() || is_auto_repeat)
 					break;
+
+				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_decide.wav");
 
 				if (!get_current_selection().empty())
 				{
-					return_code = selection_code::ok;
+					m_open_confirmation_dialog = true;
+					m_confirmation_dialog_open = true; // Ignore input while the confirmation dialog is open. Set this here due to avoid a race condition.
+					break;
 				}
-				else
-				{
-					return_code = selection_code::error;
-				}
-				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_decide.wav");
+
+				return_code = selection_code::error;
 				close_dialog = true;
 				break;
 			case pad_button::circle:
@@ -213,14 +219,69 @@ namespace rsx
 				[notify](s32) { *notify = true; notify->notify_one(); }
 			);
 
+			bool confirmation_error = false;
+
 			while (!Emu.IsStopped() && !*notify && !nps.abort_gui_flag)
 			{
+				if (m_open_confirmation_dialog.exchange(false))
+				{
+					// Get user confirmation by opening a blocking dialog
+					const std::string npid = get_current_selection();
+					if (npid.empty())
+					{
+						rsx_log.fatal("sendmessage dialog can't open confirmation dialog with empty npid");
+						confirmation_error = true;
+						break;
+					}
+
+					rsx_log.notice("sendmessage dialog about to open confirmation dialog");
+
+					const std::string confirmation_msg = fmt::format("Send message to %s ?\n\nSubject: %s\n\n%s", npid, msg_data.subject, msg_data.body);
+					s32 confirmation_code = CELL_MSGDIALOG_BUTTON_NO;
+
+					// Hide list
+					visible = false;
+
+					error_code res = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO, vm::make_str(confirmation_msg), vm::null, vm::null, vm::null, &confirmation_code);
+					if (res != CELL_OK)
+					{
+						rsx_log.fatal("sendmessage dialog failed to open confirmation dialog (error=%d)", +res);
+						confirmation_error = true;
+						break;
+					}
+
+					rsx_log.notice("sendmessage dialog received confirmation dialog result %d", confirmation_code);
+
+					if (confirmation_code == CELL_MSGDIALOG_BUTTON_YES)
+					{
+						return_code = selection_code::ok;
+						close(false, true);
+						break;
+					}
+
+					// Show list again
+					visible = true;
+
+					// Allow input again
+					m_confirmation_dialog_open = false;
+
+					// Intercept pads again (Only needed because we currently don't have an interception stack and the confirmation dialog disables it on close)
+					input::SetIntercepted(true);
+				}
+
 				notify->wait(0, atomic_wait_timeout{1'000'000});
 			}
 
 			m_rpcn->remove_friend_cb(sendmessage_friend_callback, this);
 
 			error_code result = CELL_CANCEL;
+
+			if (confirmation_error)
+			{
+				rsx_log.error("Sendmessage dialog aborted internally!");
+				close(false, true);
+				return result;
+			}
 
 			if (nps.abort_gui_flag.exchange(false))
 			{
