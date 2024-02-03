@@ -1704,7 +1704,7 @@ struct message_data
 
 struct np_state
 {
-	std::atomic<bool> abort_gui_flag = false;
+	atomic_t<bool> abort_gui_flag = false;
 };
 
 namespace rpcn
