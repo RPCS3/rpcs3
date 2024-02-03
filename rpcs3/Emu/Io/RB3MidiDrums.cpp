@@ -37,21 +37,25 @@ constexpr FlagByIndex BUTTON_11 = {0x04, 1};
 constexpr FlagByIndex BUTTON_12 = {0x08, 1};
 constexpr FlagByIndex BUTTON_13 = {0x10, 1};
 
-constexpr u8 HIHAT_UP     = 0x00;
-constexpr u8 HIHAT_RIGHT  = 0x02;
-constexpr u8 HIHAT_DOWN   = 0x04;
-constexpr u8 HIHAT_LEFT   = 0x06;
-constexpr u8 HIHAT_CENTER = 0x08;
-constexpr u8 AXIS_CENTER  = 0x7F;
+enum class HiHat : u8
+{
+	Up     = 0x00,
+	Right  = 0x02,
+	Down   = 0x04,
+	Left   = 0x06,
+	Center = 0x08,
+};
+
+constexpr u8 AXIS_CENTER = 0x7F;
 
 constexpr std::array<u8, 27> default_state = {
 	0x00,                     // buttons 1 to 8
 	0x00,                     // buttons 9 to 13
-	controller::HIHAT_CENTER, // hihat position
+	(u8)controller::HiHat::Center, // hihat position
 	controller::AXIS_CENTER,  // x axis
 	controller::AXIS_CENTER,  // y axis
 	controller::AXIS_CENTER,  // z axis
-	controller::AXIS_CENTER, // w axis
+	controller::AXIS_CENTER,  // w axis
 	0x00,
 	0x00,
 	0x00,
@@ -185,17 +189,6 @@ std::vector<ComboDef> definitions()
 }
 
 } // namespace midi
-
-std::string buf_to_string(u8* buf, usz size)
-{
-	std::string s;
-	for (usz i = 0; i < size; ++i)
-	{
-		u8* elem = (buf + i);
-		s.append(fmt::format("%x ", *elem));
-	}
-	return s;
-}
 
 void set_flag(u8* buf, [[maybe_unused]] std::string_view name, const controller::FlagByIndex& fbi)
 {
@@ -340,8 +333,6 @@ void usb_device_rb3_midi_drums::control_transfer(u8 bmRequestType, u8 bRequest, 
 	// wants to enable midi data or disable it
 	if (bmRequestType == 0x21 && bRequest == 0x9 && wLength == 40)
 	{
-		//rb3_midi_drums_log.success("[control_transfer] config 0x21 0x9 length 40");
-
 		if (buf_size < 3)
 		{
 			rb3_midi_drums_log.warning("buffer size < 3, bailing out early (buf_size=0x%x)", buf_size);
@@ -418,7 +409,7 @@ void usb_device_rb3_midi_drums::interrupt_transfer(u32 buf_size, u8* buf, u32 /*
 	// no reason we can't make it faster
 	transfer->expected_time = get_timestamp() + 1'000;
 
-	constexpr auto bytes = controller::default_state();
+	const auto& bytes = controller::default_state;
 	if (buf_size < bytes.size())
 	{
 		rb3_midi_drums_log.warning("buffer size < %x, bailing out early (buf_size=0x%x)", bytes.size(), buf_size);
@@ -501,8 +492,6 @@ void usb_device_rb3_midi_drums::interrupt_transfer(u32 buf_size, u8* buf, u32 /*
 
 KitState usb_device_rb3_midi_drums::parse_midi_message(u8* msg, usz size)
 {
-	//rb3_midi_drums_log.success("parse_midi_message: %s", buf_to_string(msg, size));
-
 	if (size < 3)
 	{
 		rb3_midi_drums_log.warning("parse_midi_message: encountered message with size less than 3 bytes");

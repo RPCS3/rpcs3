@@ -392,6 +392,7 @@ usb_handler_thread::usb_handler_thread()
 			break;
 		case midi_device_type::drums:
 			usb_devices.push_back(std::make_shared<usb_device_rb3_midi_drums>(get_new_location(), device.name));
+			break;
 		}
 	}
 
