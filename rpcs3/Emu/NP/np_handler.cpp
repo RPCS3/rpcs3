@@ -1358,10 +1358,10 @@ namespace np
 		}
 
 		const std::string communication_id_str = std::string(basic_handler.context.data);
-		return std::count_if(players_history.begin(), players_history.end(), [&](const auto& entry)
+		return static_cast<u32>(std::count_if(players_history.begin(), players_history.end(), [&](const auto& entry)
 			{
 				return entry.second.communication_ids.contains(communication_id_str);
-			});
+			}));
 	}
 
 	bool np_handler::get_player_history_entry(u32 options, u32 index, SceNpId* npid)
