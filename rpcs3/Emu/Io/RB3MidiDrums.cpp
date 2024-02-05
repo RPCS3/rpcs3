@@ -87,7 +87,7 @@ namespace drum
 // Hold each hit for a period of time. Rock band doesn't pick up a single tick.
 std::chrono::milliseconds hit_duration()
 {
-	return std::chrono::milliseconds(g_cfg.io.midi_drums_pulse_ms);
+	return std::chrono::milliseconds(g_cfg.io.rb3drums.pulse_ms);
 }
 
 // Scale velocity from midi to what rock band expects.
@@ -116,19 +116,35 @@ constexpr FlagByIndex START_BUTTON  = controller::BUTTON_10;
 constexpr FlagByIndex SYSTEM_BUTTON = controller::BUTTON_13;
 constexpr FlagByIndex SELECT_BUTTON = controller::BUTTON_9;
 
-KitState start_state()
+rb3drums::KitState start_state()
 {
-	KitState s{};
+	rb3drums::KitState s{};
 	s.expiry = std::chrono::steady_clock::now() + drum::hit_duration();
 	s.start = true;
 	return s;
 }
 
-KitState select_state()
+rb3drums::KitState select_state()
 {
-	KitState s{};
+	rb3drums::KitState s{};
 	s.expiry = std::chrono::steady_clock::now() + drum::hit_duration();
 	s.select = true;
+	return s;
+}
+
+rb3drums::KitState toggle_hold_kick_state()
+{
+	rb3drums::KitState s{};
+	s.expiry = std::chrono::steady_clock::now() + drum::hit_duration();
+	s.toggle_hold_kick = true;
+	return s;
+}
+
+rb3drums::KitState kick_state()
+{
+	rb3drums::KitState s{};
+	s.expiry = std::chrono::steady_clock::now() + drum::hit_duration();
+	s.kick_pedal = 127;
 	return s;
 }
 
@@ -139,12 +155,12 @@ namespace midi
 
 u8 min_velocity()
 {
-	return g_cfg.io.midi_drums_minimum_velocity;
+	return g_cfg.io.rb3drums.minimum_velocity;
 }
 
-enum class Note : u8
+enum class Id : u8
 {
-	// Each 'note' can be triggered by multiple different numbers.
+	// Each 'Note' can be triggered by multiple different numbers.
 	// Keeping them flattened in an enum for simplicity / switch statement usage.
 
 	// These follow the rockband 3 midi pro adapter support.
@@ -179,39 +195,178 @@ enum class Note : u8
 	// These are from alesis nitro mesh max. ymmv.
 	SnareRim = 40, // midi pro adapter counts this as snare.
 	HihatWithPedalUp = 46, // The midi pro adapter considers this a normal hihat hit.
-	HihatAlmostDown = 23, // If pedal is not 100% down, this will be sent instead of a normal hihat hit.
+	HihatPedalPartial = 23, // If pedal is not 100% down, this will be sent instead of a normal hihat hit.
 };
+
+// Intermediate mapping regardless of which midi ids triggered it.
+enum class Note : u8
+{
+	Invalid,
+	Kick,
+	HihatPedal,
+	Snare,
+	SnareRim,
+	HiTom,
+	LowTom,
+	FloorTom,
+	HihatWithPedalUp,
+	Hihat,
+	Ride,
+	Crash,
+};
+
+Note str_to_note(const std::string_view name)
+{
+	static const std::unordered_map<std::string_view, Note> mapping{
+		{"Invalid", Note::Invalid},
+		{"Kick", Note::Kick},
+		{"HihatPedal", Note::HihatPedal},
+		{"Snare", Note::Snare},
+		{"SnareRim", Note::SnareRim},
+		{"HiTom", Note::HiTom},
+		{"LowTom", Note::LowTom},
+		{"FloorTom", Note::FloorTom},
+		{"HihatWithPedalUp", Note::HihatWithPedalUp},
+		{"Hihat", Note::Hihat},
+		{"Ride", Note::Ride},
+		{"Crash", Note::Crash},
+	};
+	auto it = mapping.find(name);
+	return it != std::end(mapping) ? it->second : Note::Invalid;
+}
+
+std::optional<std::pair<Id, Note>> parse_midi_override(const std::string_view config)
+{
+	auto split = fmt::split(config, {"="});
+	if (split.size() != 2)
+	{
+		return {};
+	}
+	uint64_t id_int = 0;
+	if (!try_to_uint64(&id_int, split[0], 0, 255))
+	{
+		rb3_midi_drums_log.warning("midi override: %s is not a valid midi id", split[0]);
+		return {};
+	}
+	auto id = static_cast<Id>(id_int);
+	auto note = str_to_note(split[1]);
+	if (note == Note::Invalid)
+	{
+		rb3_midi_drums_log.warning("midi override: %s is not a valid note", split[1]);
+		return {};
+	}
+	rb3_midi_drums_log.success("found valid midi override: %s", config);
+	return {{id, note}};
+}
+
+std::unordered_map<Id, Note> create_id_to_note_mapping()
+{
+	std::unordered_map<Id, Note> mapping{
+		{Id::Kick0,             Note::Kick},
+		{Id::Kick1,             Note::Kick},
+		{Id::Kick2,             Note::Kick},
+		{Id::HihatPedal,        Note::HihatPedal},
+		{Id::HihatPedalPartial, Note::HihatPedal},
+		{Id::Snare0,            Note::Snare},
+		{Id::Snare1,            Note::Snare},
+		{Id::Snare2,            Note::Snare},
+		{Id::Snare3,            Note::Snare},
+		{Id::Snare4,            Note::Snare},
+		{Id::SnareRim,          Note::SnareRim},
+		{Id::HiTom0,            Note::HiTom},
+		{Id::HiTom1,            Note::HiTom},
+		{Id::LowTom0,           Note::LowTom},
+		{Id::LowTom1,           Note::LowTom},
+		{Id::FloorTom0,         Note::FloorTom},
+		{Id::FloorTom1,         Note::FloorTom},
+		{Id::Hihat0,            Note::Hihat},
+		{Id::Hihat1,            Note::Hihat},
+		{Id::Hihat2,            Note::Hihat},
+		{Id::Hihat3,            Note::Hihat},
+		{Id::HihatWithPedalUp,  Note::Ride},
+		{Id::Ride0,             Note::Ride},
+		{Id::Ride1,             Note::Ride},
+		{Id::Ride2,             Note::Ride},
+		{Id::Ride3,             Note::Ride},
+		{Id::Crash0,            Note::Crash},
+		{Id::Crash1,            Note::Crash},
+		{Id::Crash2,            Note::Crash},
+		{Id::Crash3,            Note::Crash},
+	};
+	// Apply configured overrides.
+	auto split = fmt::split(g_cfg.io.rb3drums.midi_overrides.to_string(), {","});
+	for (const auto& segment : split)
+	{
+		if (auto midi_override = parse_midi_override(segment))
+		{
+			auto id = midi_override->first;
+			auto note = midi_override->second;
+			mapping[id] = note;
+		}
+	}
+	return mapping;
+}
+
+Note id_to_note(Id id)
+{
+	static auto mapping = create_id_to_note_mapping();
+	auto it = mapping.find(id);
+	return it != std::end(mapping) ? it->second : Note::Invalid;
+}
 
 namespace combo
 {
 
-constexpr std::chrono::milliseconds MAX_DURATION = 2000ms;
+std::vector<u8> parse_combo(const std::string_view name, const std::string_view csv)
+{
+	if (csv.empty())
+	{
+		return {};
+	}
+	std::vector<u8> notes;
+	const auto& note_names = fmt::split(csv, {","});
+	for (const auto& note_name : note_names)
+	{
+		const auto note = str_to_note(note_name);
+		if (note != midi::Note::Invalid)
+		{
+			notes.push_back(static_cast<u8>(note));
+		}
+		else
+		{
+			rb3_midi_drums_log.warning("invalid note '%s' in configured combo '%s'", note_name, name);
+		}
+	}
+	return notes;
+}
 
-struct ComboDef
+struct Definition
 {
 	std::string name;
 	std::vector<u8> notes;
-	KitState state;
+	std::function<rb3drums::KitState()> create_state;
+
+	Definition(std::string name, const std::string_view csv, const std::function<rb3drums::KitState()> create_state)
+		: name{std::move(name)}
+		, notes{parse_combo(this->name, csv)}
+		, create_state{create_state}
+	{}
 };
 
-// note: hihat pedal 3x in a row without other notes is very unlikely, so it makes for a good combo start.
-
-std::vector<u8> start()
+std::chrono::milliseconds window()
 {
-	return {(u8)Note::HihatPedal, (u8)Note::HihatPedal, (u8)Note::HihatPedal, (u8)Note::SnareRim};
+	return std::chrono::milliseconds{g_cfg.io.rb3drums.combo_window_ms};
 }
 
-std::vector<u8> select()
+const std::vector<Definition>& definitions()
 {
-	return {(u8)Note::HihatPedal, (u8)Note::HihatPedal, (u8)Note::HihatPedal, (u8)Note::Kick0};
-}
-
-std::vector<ComboDef> definitions()
-{
-	return {
-		{"start", start(), drum::start_state()},
-		{"select", select(), drum::select_state()}
+	// Only parse once and cache.
+	static const std::vector<Definition> defs{
+		{"start",     g_cfg.io.rb3drums.combo_start.to_string(),            []{ return drum::start_state(); }},
+		{"select",    g_cfg.io.rb3drums.combo_select.to_string(),           []{ return drum::select_state(); }},
+		{"hold kick", g_cfg.io.rb3drums.combo_toggle_hold_kick.to_string(), []{ return drum::toggle_hold_kick_state(); }}
 	};
+	return defs;
 }
 
 }
@@ -464,32 +619,57 @@ void usb_device_rb3_midi_drums::interrupt_transfer(u32 buf_size, u8* buf, u32 /*
 		}
 
 		auto kit_state = parse_midi_message(midi_msg, size);
-		kit_states.push_back(std::move(kit_state));
 		if (auto combo_state = combo.take_state())
 		{
-			kit_states.push_back(std::move(combo_state.value()));
+			if (combo_state->toggle_hold_kick)
+			{
+				hold_kick = !hold_kick;
+			}
+			else
+			{
+				kit_states.push_back(std::move(combo_state.value()));
+			}
+		}
+		else
+		{
+			bool is_cancel = kit_state.snare >= midi::min_velocity();
+			bool is_accept = kit_state.floor_tom >= midi::min_velocity();
+			if (hold_kick && (is_cancel || is_accept))
+			{
+				// Hold kick brings up the song category selector menu, which can be dismissed using accept/cancel buttons.
+				hold_kick = false;
+			}
+			else
+			{
+				kit_states.push_back(std::move(kit_state));
+			}
 		}
 	}
 
 	// Clean expired states.
 	auto now = std::chrono::steady_clock::now();
-	kit_states.erase(std::remove_if(std::begin(kit_states), std::end(kit_states), [&now](const KitState& kit_state) {
+	kit_states.erase(std::remove_if(std::begin(kit_states), std::end(kit_states), [&now](const rb3drums::KitState& kit_state) {
 		return now >= kit_state.expiry;
 	}), std::end(kit_states));
 
 	// Apply states to buf.
-	for (size_t i; i < kit_states.size(); ++i)
+	for (size_t i = 0; i < kit_states.size(); ++i)
 	{
 		write_state(buf, kit_states[i]);
 	}
+
+	if (hold_kick)
+	{
+		write_state(buf, drum::kick_state());
+	}
 }
 
-KitState usb_device_rb3_midi_drums::parse_midi_message(u8* msg, usz size)
+rb3drums::KitState usb_device_rb3_midi_drums::parse_midi_message(u8* msg, usz size)
 {
 	if (size < 3)
 	{
 		rb3_midi_drums_log.warning("parse_midi_message: encountered message with size less than 3 bytes");
-		return KitState{};
+		return rb3drums::KitState{};
 	}
 
 	auto status = msg[0];
@@ -499,131 +679,71 @@ KitState usb_device_rb3_midi_drums::parse_midi_message(u8* msg, usz size)
 	if (status != 0x99)
 	{
 		// Ignore non-"note on" midi status messages.
-		return KitState{};
+		return rb3drums::KitState{};
 	}
 
 	if (velocity < midi::min_velocity())
 	{
 		// Must check here so we don't overwrite good values.
-		return KitState{};
+		return rb3drums::KitState{};
 	}
 
-	KitState kit_state{};
+	rb3drums::KitState kit_state{};
 	kit_state.expiry = std::chrono::steady_clock::now() + drum::hit_duration();
-
-	switch ((midi::Note)id)
+	auto note = midi::id_to_note(static_cast<midi::Id>(id));
+	switch (note)
 	{
-		case midi::Note::Kick0:
-		case midi::Note::Kick1:
-		case midi::Note::Kick2:
-			kit_state.kick_pedal = velocity;
-			break;
-
-		case midi::Note::HihatPedal:
-			kit_state.hihat_control = velocity;
-			break;
-
-		case midi::Note::Snare0:
-		case midi::Note::Snare1:
-		case midi::Note::Snare2:
-		case midi::Note::Snare3:
-		case midi::Note::Snare4:
-			kit_state.snare = velocity;
-			break;
-
-		case midi::Note::SnareRim:
-			kit_state.snare_rim = velocity;
-			break;
-
-		case midi::Note::HiTom0:
-		case midi::Note::HiTom1:
-			kit_state.tom1 = velocity;
-			break;
-
-		case midi::Note::LowTom0:
-		case midi::Note::LowTom1:
-			kit_state.tom2 = velocity;
-			break;
-
-		case midi::Note::FloorTom0:
-		case midi::Note::FloorTom1:
-			kit_state.tom3 = velocity;
-			break;
-
-		case midi::Note::Hihat0:
-		case midi::Note::Hihat1:
-		case midi::Note::Hihat2:
-		case midi::Note::Hihat3:
-		case midi::Note::HihatAlmostDown:
-			kit_state.hihat_down = velocity;
-			break;
-
-		case midi::Note::HihatWithPedalUp:
-			if (g_cfg.io.midi_drums_hihat_up_is_ride)
-			{
-				kit_state.hihat_up = velocity;
-			}
-			else
-			{
-				kit_state.hihat_down = velocity;
-			}
-			break;
-
-		case midi::Note::Crash0:
-		case midi::Note::Crash1:
-		case midi::Note::Crash2:
-		case midi::Note::Crash3:
-			kit_state.crash = velocity;
-			break;
-
-		case midi::Note::Ride0:
-		case midi::Note::Ride1:
-		case midi::Note::Ride2:
-		case midi::Note::Ride3:
-			kit_state.ride = velocity;
-			break;
-
+		case midi::Note::Kick:              kit_state.kick_pedal    = velocity; break;
+		case midi::Note::HihatPedal:        kit_state.hihat_pedal   = velocity; break;
+		case midi::Note::Snare:             kit_state.snare         = velocity; break;
+		case midi::Note::SnareRim:          kit_state.snare_rim     = velocity; break;
+		case midi::Note::HiTom:             kit_state.hi_tom        = velocity; break;
+		case midi::Note::LowTom:            kit_state.low_tom       = velocity; break;
+		case midi::Note::FloorTom:          kit_state.floor_tom     = velocity; break;
+		case midi::Note::Hihat:             kit_state.hihat         = velocity; break;
+		case midi::Note::Ride:              kit_state.ride          = velocity; break;
+		case midi::Note::Crash:             kit_state.crash         = velocity; break;
 		default:
 			// Ignored note.
 			rb3_midi_drums_log.error("IGNORED NOTE: id = %x or %d", id, id);
-			return KitState{};
+			return rb3drums::KitState{};
 	}
 
-	combo.add(id);
+	combo.add((u8)note);
 	return kit_state;
 }
 
-void usb_device_rb3_midi_drums::write_state(u8* buf, const KitState& kit_state)
+void usb_device_rb3_midi_drums::write_state(u8* buf, const rb3drums::KitState& kit_state)
 {
 	// See: https://github.com/TheNathannator/PlasticBand/blob/main/Docs/Instruments/4-Lane%20Drums/PS3%20and%20Wii.md#input-info
 
 	// Interestingly, because cymbals use the same visual track as drums, a hit on that color can only be a drum OR a cymbal.
 	// rockband handles this by taking a flag to indicate if the hit is a drum vs cymbal.
 	set_flag_if_any(buf, "red", drum::RED, {kit_state.snare});
-	set_flag_if_any(buf, "yellow", drum::YELLOW, {kit_state.tom1, kit_state.hihat_down});
-	set_flag_if_any(buf, "blue", drum::BLUE, {kit_state.tom2, kit_state.crash, kit_state.hihat_up}); // Rock band uses blue cymbal for both hihat open and crash.
-	set_flag_if_any(buf, "green", drum::GREEN, {kit_state.tom3, kit_state.ride});
+	set_flag_if_any(buf, "yellow", drum::YELLOW, {kit_state.hi_tom, kit_state.hihat});
+	set_flag_if_any(buf, "blue", drum::BLUE, {kit_state.low_tom, kit_state.ride}); // Rock band charts blue cymbal for both hihat open and ride sometimes.
+	set_flag_if_any(buf, "green", drum::GREEN, {kit_state.floor_tom, kit_state.crash});
 
 	// Additionally, Yellow (hihat) and Blue (ride) cymbals add dpad up or down, respectively. This allows rockband to disambiguate between tom+cymbals hit at the same time.
-	if (kit_state.hihat_down >= midi::min_velocity())
+	if (kit_state.hihat >= midi::min_velocity())
 	{
-		buf[controller::DPAD_INDEX] |= (u8)controller::DPad::Up;
+		buf[controller::DPAD_INDEX] = (u8)controller::DPad::Up;
 	}
-	if (kit_state.crash >= midi::min_velocity())
+	if (kit_state.ride >= midi::min_velocity())
 	{
-		buf[controller::DPAD_INDEX] |= (u8)controller::DPad::Down;
+		buf[controller::DPAD_INDEX] = (u8)controller::DPad::Down;
 	}
 
-	set_flag_if_any(buf, "is_drum", drum::IS_DRUM, {kit_state.snare, kit_state.tom1, kit_state.tom2, kit_state.tom3});
-	set_flag_if_any(buf, "is_cymbal", drum::IS_CYMBAL, {kit_state.hihat_up, kit_state.hihat_down, kit_state.crash, kit_state.ride});
+	set_flag_if_any(buf, "is_drum", drum::IS_DRUM, {kit_state.snare, kit_state.hi_tom, kit_state.low_tom, kit_state.floor_tom});
+	set_flag_if_any(buf, "is_cymbal", drum::IS_CYMBAL, {kit_state.hihat, kit_state.ride, kit_state.crash});
 
 	set_flag_if_any(buf, "kick_pedal", drum::KICK_PEDAL, {kit_state.kick_pedal});
-	set_flag_if_any(buf, "hihat_pedal", drum::HIHAT_PEDAL, {kit_state.hihat_control});
+	set_flag_if_any(buf, "hihat_pedal", drum::HIHAT_PEDAL, {kit_state.hihat_pedal});
 
-	buf[11] = drum::scale_velocity(std::max(kit_state.tom1, kit_state.hihat_down));
+	buf[11] = drum::scale_velocity(std::max(kit_state.hi_tom, kit_state.hihat));
 	buf[12] = drum::scale_velocity(kit_state.snare);
-	buf[13] = drum::scale_velocity(std::max(kit_state.tom3, kit_state.ride));
-	buf[14] = drum::scale_velocity(std::max({kit_state.tom2, kit_state.crash, kit_state.hihat_up}));
+	buf[13] = drum::scale_velocity(std::max(kit_state.floor_tom, kit_state.crash));
+	buf[14] = drum::scale_velocity(std::max({kit_state.low_tom, kit_state.ride}));
 
 	if (kit_state.start)
 	{
@@ -639,14 +759,14 @@ void usb_device_rb3_midi_drums::write_state(u8* buf, const KitState& kit_state)
 	// set_flag_if_any(buf, drum::BACK_BUTTON, );
 }
 
-bool KitState::is_cymbal() const
+bool rb3drums::KitState::is_cymbal() const
 {
-	return std::max({hihat_up, hihat_down, crash, ride}) >= midi::min_velocity();
+	return std::max({hihat, ride, crash}) >= midi::min_velocity();
 }
 
-bool KitState::is_drum() const
+bool rb3drums::KitState::is_drum() const
 {
-	return std::max({snare, tom1, tom2, tom3}) >= midi::min_velocity();
+	return std::max({snare, hi_tom, low_tom, floor_tom}) >= midi::min_velocity();
 }
 
 void usb_device_rb3_midi_drums::ComboTracker::add(u8 note)
@@ -679,7 +799,7 @@ void usb_device_rb3_midi_drums::ComboTracker::add(u8 note)
 	if (midi_notes.size() == 1)
 	{
 		// New combo.
-		expiry = std::chrono::steady_clock::now() + midi::combo::MAX_DURATION;
+		expiry = std::chrono::steady_clock::now() + midi::combo::window();
 	}
 }
 
@@ -688,15 +808,19 @@ void usb_device_rb3_midi_drums::ComboTracker::reset()
 	midi_notes.clear();
 }
 
-std::optional<KitState> usb_device_rb3_midi_drums::ComboTracker::take_state()
+std::optional<rb3drums::KitState> usb_device_rb3_midi_drums::ComboTracker::take_state()
 {
+	if (midi_notes.empty())
+	{
+		return {};
+	}
 	for (const auto& combo : midi::combo::definitions())
 	{
 		if (midi_notes == combo.notes)
 		{
 			rb3_midi_drums_log.success("hit combo: %s", combo.name);
 			reset();
-			return combo.state;
+			return combo.create_state();
 		}
 	}
 	return {};

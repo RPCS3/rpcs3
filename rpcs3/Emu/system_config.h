@@ -280,10 +280,21 @@ struct cfg_root : cfg::node
 		cfg::_bool show_move_cursor{this, "Show move cursor", false, true};
 		cfg::_bool lock_overlay_input_to_player_one{this, "Lock overlay input to player one", false, true};
 		cfg::string midi_devices{this, "Emulated Midi devices", "ßßß@@@ßßß@@@ßßß@@@"};
-		cfg::uint<1, 100> midi_drums_pulse_ms{this, "Midi drums pulse width ms", 30};
-		cfg::uint<1, 127> midi_drums_minimum_velocity{this, "Midi drums minimum velocity", 10};
-		cfg::_bool midi_drums_hihat_up_is_ride{this, "Midi drums hihat up is blue/ride cymbal", true};
 		cfg::_bool load_sdl_mappings{ this, "Load SDL GameController Mappings", true };
+
+		struct node_rb3drums : cfg::node
+		{
+			node_rb3drums(cfg::node* _this) : cfg::node(_this, "Rockband 3 Midi Drums") {}
+
+			cfg::uint<1, 100> pulse_ms{this, "Pulse width ms", 30, true};
+			cfg::uint<1, 127> minimum_velocity{this, "Minimum velocity", 10, true};
+			cfg::uint<1, 5000> combo_window_ms{this, "Combo window in milliseconds", 2000, true};
+			cfg::string midi_overrides{this, "Midi id to note override", ""};
+			cfg::string combo_start{this, "Combo Start", "HihatPedal,HihatPedal,HihatPedal,Snare"};
+			cfg::string combo_select{this, "Combo Select", "HihatPedal,HihatPedal,HihatPedal,SnareRim"};
+			cfg::string combo_toggle_hold_kick{this, "Combo Toggle Hold Kick", "HihatPedal,HihatPedal,HihatPedal,Kick"};
+		} rb3drums{ this };
+
 	} io{ this };
 
 	struct node_sys : cfg::node
