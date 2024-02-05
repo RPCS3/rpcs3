@@ -4,11 +4,9 @@ if (NOT USE_SYSTEM_LIBPNG)
 	# We use libpng's static library and don't need to build the shared library and run the tests
 	set(PNG_SHARED OFF CACHE BOOL "Build shared lib")
 	set(PNG_TESTS OFF CACHE BOOL "Build libpng tests")
-	set(PNG_BUILD_ZLIB ON CACHE BOOL "ZLIB is already build or package is found")
 	set(SKIP_INSTALL_ALL ON)
 	add_subdirectory(libpng EXCLUDE_FROM_ALL)
 	target_include_directories(png_static INTERFACE "${libpng_BINARY_DIR}" "${libpng_SOURCE_DIR}")
-	target_link_libraries(png_static 3rdparty::zlib)
 
 	set(LIBPNG_TARGET png_static PARENT_SCOPE)
 else()
