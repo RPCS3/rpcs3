@@ -34,7 +34,7 @@ namespace rsx
 
 	static inline void tiled_dma_copy(const uint32_t row, const uint32_t col, const detiler_config& conf, char* tiled_data, char* linear_data, int direction)
 	{
-		const uint32_t row_offset = (row * conf.tile_pitch) + conf.tile_base_address + conf.tile_offset;
+		const uint32_t row_offset = (row * conf.tile_pitch) + conf.tile_base_address + conf.tile_address_offset;
 		const uint32_t this_address = row_offset + (col * conf.image_bpp);
 
 		// 1. Calculate row_addr
@@ -104,8 +104,8 @@ namespace rsx
 
 		// Calculate relative addresses and sample
 		const uint32_t linear_image_offset = (row * conf.image_pitch) + (col * conf.image_bpp);
-		const uint32_t tile_base_offset = tile_address - conf.tile_base_address; // Distance from tile base address
-		const uint32_t tile_data_offset = tile_base_offset - conf.tile_offset;   // Distance from data base address
+		const uint32_t tile_base_offset = tile_address - conf.tile_base_address;  // Distance from tile base address
+		const uint32_t tile_data_offset = tile_base_offset - conf.tile_rw_offset; // Distance from data base address
 
 		if (tile_base_offset >= conf.tile_size)
 		{
@@ -161,7 +161,8 @@ namespace rsx
 			.num_tiles_per_row = tiles_per_row,
 			.tile_base_address = base_address,
 			.tile_size = tile_size,
-			.tile_offset = base_offset,
+			.tile_address_offset = base_offset,
+			.tile_rw_offset = base_offset,
 			.tile_pitch = row_pitch_in_bytes,
 			.tile_bank = bank_sense,
 			.image_width = image_width,
