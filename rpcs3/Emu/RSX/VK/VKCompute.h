@@ -512,6 +512,7 @@ namespace vk
 	{
 		u32 tile_base_address;
 		u32 tile_base_offset;
+		u32 tile_rw_offset;
 		u32 tile_size;
 		u32 tile_pitch;
 		u32 bank;
@@ -643,8 +644,9 @@ namespace vk
 			params.factor = factor;
 			params.num_tiles_per_row = tiles_per_row;
 			params.tile_base_address = config.tile_base_address;
+			params.tile_rw_offset = config.tile_rw_offset;
 			params.tile_size = config.tile_size;
-			params.tile_offset = config.tile_base_offset;
+			params.tile_address_offset = config.tile_base_offset;
 			params.tile_pitch = config.tile_pitch;
 			params.tile_bank = config.bank;
 			params.image_width = config.image_width;

@@ -475,7 +475,7 @@ namespace rsx
 			rsx::texture_upload_context context, rsx::texture_dimension_extended type, bool swizzled, component_order swizzle_flags, rsx::flags32_t flags) = 0;
 		virtual section_storage_type* upload_image_from_cpu(commandbuffer_type&, const address_range &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u32 pitch, u32 gcm_format, texture_upload_context context,
 			const std::vector<rsx::subresource_layout>& subresource_layout, rsx::texture_dimension_extended type, bool swizzled) = 0;
-		virtual section_storage_type* create_nul_section(commandbuffer_type&, const address_range &rsx_range, const image_section_attributes_t& attrs, bool memory_load) = 0;
+		virtual section_storage_type* create_nul_section(commandbuffer_type&, const address_range &rsx_range, const image_section_attributes_t& attrs, const GCM_tile_reference& tile, bool memory_load) = 0;
 		virtual void set_component_order(section_storage_type& section, u32 gcm_format, component_order expected) = 0;
 		virtual void insert_texture_barrier(commandbuffer_type&, image_storage_type* tex, bool strong_ordering = true) = 0;
 		virtual image_view_type generate_cubemap_from_images(commandbuffer_type&, u32 gcm_format, u16 size, const std::vector<copy_region_descriptor>& sources, const texture_channel_remap_t& remap_vector) = 0;
@@ -2551,11 +2551,10 @@ namespace rsx
 				src_address += (src.width - src_w) * src_bpp;
 			}
 
-			const auto is_tiled_mem = [&](const utils::address_range& range)
+			const auto get_tiled_region = [&](const utils::address_range& range)
 			{
 				auto rsxthr = rsx::get_current_renderer();
-				auto region = rsxthr->get_tiled_memory_region(range);
-				return region.tile != nullptr;
+				return rsxthr->get_tiled_memory_region(range);
 			};
 
 			auto rtt_lookup = [&m_rtts, &cmd, &scale_x, &scale_y, this](u32 address, u32 width, u32 height, u32 pitch, u8 bpp, rsx::flags32_t access, bool allow_clipped) -> typename surface_store_type::surface_overlap_info
@@ -2662,8 +2661,10 @@ namespace rsx
 			};
 
 			// Check tiled mem
-			const auto dst_is_tiled = is_tiled_mem(utils::address_range::start_length(dst_address, dst.pitch * dst.clip_height));
-			const auto src_is_tiled = is_tiled_mem(utils::address_range::start_length(src_address, src.pitch * src.height));
+			const auto dst_tile = get_tiled_region(utils::address_range::start_length(dst_address, dst.pitch * dst.clip_height));
+			const auto src_tile = get_tiled_region(utils::address_range::start_length(src_address, src.pitch * src.height));
+			const auto dst_is_tiled = !!dst_tile;
+			const auto src_is_tiled = !!src_tile;
 
 			// Check if src/dst are parts of render targets
 			typename surface_store_type::surface_overlap_info dst_subres;
@@ -3219,9 +3220,10 @@ namespace rsx
 					{
 						.pitch = dst.pitch,
 						.width = static_cast<u16>(dst_dimensions.width),
-						.height = static_cast<u16>(dst_dimensions.height)
+						.height = static_cast<u16>(dst_dimensions.height),
+						.bpp = dst_bpp
 					};
-					cached_dest = create_nul_section(cmd, rsx_range, attrs, force_dma_load);
+					cached_dest = create_nul_section(cmd, rsx_range, attrs, dst_tile, force_dma_load);
 				}
 				else
 				{
