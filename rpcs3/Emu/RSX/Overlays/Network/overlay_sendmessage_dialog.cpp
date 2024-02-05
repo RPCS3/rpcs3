@@ -162,15 +162,19 @@ namespace rsx
 		{
 			visible = false;
 
+			localized_string_id confirmation_loc_id = localized_string_id::CELL_NP_SENDMESSAGE_DIALOG_CONFIRMATION;
+
 			switch (msg_data.mainType)
 			{
 			case SceNpBasicMessageMainType::SCE_NP_BASIC_MESSAGE_MAIN_TYPE_ADD_FRIEND:
 				m_description->set_text(get_localized_string(localized_string_id::CELL_NP_SENDMESSAGE_DIALOG_TITLE_ADD_FRIEND));
 				m_description->auto_resize();
+				confirmation_loc_id = localized_string_id::CELL_NP_SENDMESSAGE_DIALOG_CONFIRMATION_ADD_FRIEND;
 				break;
 			case SceNpBasicMessageMainType::SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE:
 				m_description->set_text(get_localized_string(localized_string_id::CELL_NP_SENDMESSAGE_DIALOG_TITLE_INVITE));
 				m_description->auto_resize();
+				confirmation_loc_id = localized_string_id::CELL_NP_SENDMESSAGE_DIALOG_CONFIRMATION_INVITE;
 				break;
 			case SceNpBasicMessageMainType::SCE_NP_BASIC_MESSAGE_MAIN_TYPE_DATA_ATTACHMENT:
 			case SceNpBasicMessageMainType::SCE_NP_BASIC_MESSAGE_MAIN_TYPE_GENERAL:
@@ -236,7 +240,8 @@ namespace rsx
 
 					rsx_log.notice("sendmessage dialog about to open confirmation dialog");
 
-					const std::string confirmation_msg = fmt::format("Send message to %s ?\n\nSubject: %s\n\n%s", npid, msg_data.subject, msg_data.body);
+					const std::string loc_msg = get_localized_string(confirmation_loc_id, npid.c_str());
+					const std::string confirmation_msg = fmt::format("%s %s\n\n%s", loc_msg, msg_data.subject, msg_data.body);
 					s32 confirmation_code = CELL_MSGDIALOG_BUTTON_NO;
 
 					// Hide list
