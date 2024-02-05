@@ -538,7 +538,8 @@ namespace vk
 			u32 num_tiles_per_row;
 			u32 tile_base_address;
 			u32 tile_size;
-			u32 tile_offset;
+			u32 tile_address_offset;
+			u32 tile_rw_offset;
 			u32 tile_pitch;
 			u32 tile_bank;
 			u32 image_width;
@@ -559,7 +560,7 @@ namespace vk
 		{
 			ssbo_count = 2;
 			use_push_constants = true;
-			push_constants_size = 48;
+			push_constants_size = sizeof(params);
 
 			create();
 

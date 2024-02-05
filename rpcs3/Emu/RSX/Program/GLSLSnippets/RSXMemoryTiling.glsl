@@ -29,35 +29,37 @@ layout(%set, binding=SSBO_LOCATION(1), std430) LINEAR_DATA_MODIFIER restrict buf
 #ifdef VULKAN
 layout(%push_block) uniform Configuration
 {
-	uint prime;
-	uint factor;
-	uint num_tiles_per_row;
-	uint tile_base_address;
-	uint tile_size;
-	uint tile_offset;
-	uint tile_pitch;
-	uint tile_bank;
-	uint image_width;
-	uint image_height;
-	uint image_pitch;
-	uint image_bpp;
+	uint prime;                       /* Prime factor derived from the number of tiles per row */
+	uint factor;                      /* Counterpart to the prime value. prime * factor = tiles per row. */
+	uint num_tiles_per_row;           /* Pitch / tile-width. Each "tile" is 256 bytes long */
+	uint tile_base_address;           /* Base address for this tile. */
+	uint tile_size;                   /* Size of the whole tile. */
+	uint tile_address_offset;         /* Address offset where the texture region sits. */
+	uint tile_rw_offset;              /* Access offset. If we load the entire tile then this is 0, but can be a multiple of pitch if we skip some rows for performance reasons. */
+	uint tile_pitch;                  /* Row length in bytes for every line in the tile and consequently the image. */
+	uint tile_bank;                   /* Bank sense offset. Acts as a memory-subsystem bias so that different FBOS can make use of different parts of the circuitry */
+	uint image_width;                 /* Width of the linear 2D region we're encoding/decoding */
+	uint image_height;                /* Height of the linear 2D region to encode/decode */
+	uint image_pitch;                 /* Image pitch. The incoming data may be from a GPU operation with packed pixels which can have a different pitch than the tile we're writing from/to */
+	uint image_bpp;                   /* Texel width of the image format. */
 };
 #else
-	uniform uint prime;
-	uniform uint factor;
-	uniform uint num_tiles_per_row;
-	uniform uint tile_base_address;
-	uniform uint tile_size;
-	uniform uint tile_offset;
-	uniform uint tile_pitch;
-	uniform uint tile_bank;
-	uniform uint image_width;
-	uniform uint image_height;
-	uniform uint image_pitch;
-	uniform uint image_bpp;
+	uniform uint prime;               /* Prime factor derived from the number of tiles per row */
+	uniform uint factor;              /* Counterpart to the prime value. prime * factor = tiles per row. */
+	uniform uint num_tiles_per_row;   /* Pitch / tile-width. Each "tile" is 256 bytes long */
+	uniform uint tile_base_address;   /* Base address for this tile. */
+	uniform uint tile_size;           /* Size of the whole tile. */
+	uniform uint tile_address_offset; /* Address offset where the texture region sits. */
+	uniform uint tile_rw_offset;      /* Access offset. If we load the entire tile then this is 0, but can be a multiple of pitch if we skip some rows for performance reasons. */
+	uniform uint tile_pitch;          /* Row length in bytes for every line in the tile and consequently the image. */
+	uniform uint tile_bank;           /* Bank sense offset. Acts as a memory-subsystem bias so that different FBOS can make use of different parts of the circuitry */
+	uniform uint image_width;         /* Width of the linear 2D region we're encoding/decoding */
+	uniform uint image_height;        /* Height of the linear 2D region to encode/decode */
+	uniform uint image_pitch;         /* Image pitch. The incoming data may be from a GPU operation with packed pixels which can have a different pitch than the tile we're writing from/to */
+	uniform uint image_bpp;           /* Texel width of the image format. */
 #endif
 
-// Constants
+// Hard constants, set by hardware
 #define RSX_TILE_WIDTH  256
 #define RSX_TILE_HEIGHT 64
 
@@ -239,7 +241,7 @@ void write_linear(const in uint offset, const in uvec4 value)
 
 void do_memory_op(const in uint row, const in uint col)
 {
-	const uint row_offset = (row * tile_pitch) + tile_base_address + tile_offset;
+	const uint row_offset = (row * tile_pitch) + tile_base_address + tile_address_offset;
 	const uint this_address = row_offset + (col * image_bpp);
 
 	// 1. Calculate row_addr
@@ -309,8 +311,8 @@ void do_memory_op(const in uint row, const in uint col)
 
 	// Calculate relative addresses and sample
 	uint linear_image_offset = (row * image_pitch) + (col * image_bpp);
-	uint tile_base_offset = tile_address - tile_base_address; // Distance from tile base address
-	uint tile_data_offset = tile_base_offset - tile_offset;   // Distance from data base address
+	uint tile_base_offset = tile_address - tile_base_address;  // Distance from tile base address
+	uint tile_data_offset = tile_base_offset - tile_rw_offset; // Distance from data base address
 
 	if (tile_base_offset >= tile_size)
 	{

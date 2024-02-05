@@ -17,7 +17,8 @@ namespace rsx
 		uint32_t num_tiles_per_row;
 		uint32_t tile_base_address;
 		uint32_t tile_size;
-		uint32_t tile_offset;
+		uint32_t tile_address_offset;
+		uint32_t tile_rw_offset;
 		uint32_t tile_pitch;
 		uint32_t tile_bank;
 		uint32_t image_width;
