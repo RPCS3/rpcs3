@@ -174,7 +174,7 @@ namespace vk
 		// NOTE: Do not unmap. This can be extremely slow on some platforms.
 	}
 
-	std::pair<u32, buffer*> dma_block::get(const utils::address_range& range)
+	dma_mapping_handle dma_block::get(const utils::address_range& range)
 	{
 		if (inheritance_info.parent)
 		{
@@ -331,7 +331,7 @@ namespace vk
 		block->init(*g_render_device, base_address, expected_length);
 	}
 
-	std::pair<u32, vk::buffer*> map_dma(u32 local_address, u32 length)
+	dma_mapping_handle map_dma(u32 local_address, u32 length)
 	{
 		// Not much contention expected here, avoid searching twice
 		std::lock_guard lock(g_dma_mutex);

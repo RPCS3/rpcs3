@@ -1274,6 +1274,7 @@ namespace vk
 		{
 			.tile_base_address = tiled_region.base_address,
 			.tile_base_offset = range.start - tiled_region.base_address,
+			.tile_rw_offset = range.start - tiled_region.base_address,   // TODO
 			.tile_size = tiled_region.tile->size,
 			.tile_pitch = tiled_region.tile->pitch,
 			.bank = tiled_region.tile->bank,
