@@ -601,20 +601,20 @@ namespace vk
 			this->in_offset = config.src_offset;
 			this->out_offset = config.dst_offset;
 
-			const auto tiled_height = std::min(
+			const auto tile_aligned_height = std::min(
 				utils::align<u32>(config.image_height, 64),
 				utils::aligned_div(config.tile_size - config.tile_base_offset, config.tile_pitch)
 			);
 
 			if constexpr (Op == RSX_detiler_op::decode)
 			{
-				this->in_block_length = tiled_height * config.tile_pitch;
+				this->in_block_length = tile_aligned_height * config.tile_pitch;
 				this->out_block_length = config.image_height * config.image_pitch;
 			}
 			else
 			{
 				this->in_block_length = config.image_height * config.image_pitch;
-				this->out_block_length = tiled_height* config.tile_pitch;
+				this->out_block_length = tile_aligned_height * config.tile_pitch;
 			}
 
 			auto get_prime_factor = [](u32 pitch) -> std::pair<u32, u32>
@@ -650,7 +650,7 @@ namespace vk
 			params.tile_pitch = config.tile_pitch;
 			params.tile_bank = config.bank;
 			params.image_width = config.image_width;
-			params.image_height = tiled_height;
+			params.image_height = (Op == RSX_detiler_op::decode) ? tile_aligned_height : config.image_height;
 			params.image_pitch = config.image_pitch;
 			params.image_bpp = config.image_bpp;
 			set_parameters(cmd);

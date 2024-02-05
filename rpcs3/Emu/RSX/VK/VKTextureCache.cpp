@@ -115,7 +115,6 @@ namespace vk
 
 		if (require_gpu_transform)
 		{
-			auto section_length = valid_range.length();
 			const auto transfer_pitch = real_pitch;
 			const auto task_length = transfer_pitch * src_area.height();
 			auto working_buffer_length = calculate_working_buffer_size(task_length, src->aspect());
@@ -251,25 +250,28 @@ namespace vk
 				real_pitch = tiled_region.tile->pitch; // We're always copying the full image. In case of partials we're "filling in" blocks, not doing partial 2D copies.
 				require_rw_barrier = true;
 
-#if 0
-				vk::insert_buffer_memory_barrier(cmd, working_buffer->value, result_offset, working_buffer_length,
-					VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-					VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
+#if VISUALIZE_GPU_TILING
+				if (g_cfg.video.renderdoc_compatiblity)
+				{
+					vk::insert_buffer_memory_barrier(cmd, working_buffer->value, result_offset, working_buffer_length,
+						VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+						VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
 
-				// Debug write
-				auto scratch_img = vk::get_typeless_helper(VK_FORMAT_B8G8R8A8_UNORM, RSX_FORMAT_CLASS_COLOR, tiled_region.tile->pitch / 4, 768);
-				scratch_img->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+					// Debug write
+					auto scratch_img = vk::get_typeless_helper(VK_FORMAT_B8G8R8A8_UNORM, RSX_FORMAT_CLASS_COLOR, tiled_region.tile->pitch / 4, 768);
+					scratch_img->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-				VkBufferImageCopy dbg_copy{};
-				dbg_copy.bufferOffset = config.dst_offset;
-				dbg_copy.imageExtent.width = width;
-				dbg_copy.imageExtent.height = height;
-				dbg_copy.imageExtent.depth = 1;
-				dbg_copy.bufferRowLength = tiled_region.tile->pitch / 4;
-				dbg_copy.imageSubresource = { .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = 0, .layerCount = 1 };
-				vk::copy_buffer_to_image(cmd, working_buffer, scratch_img, dbg_copy);
+					VkBufferImageCopy dbg_copy{};
+					dbg_copy.bufferOffset = config.dst_offset;
+					dbg_copy.imageExtent.width = width;
+					dbg_copy.imageExtent.height = height;
+					dbg_copy.imageExtent.depth = 1;
+					dbg_copy.bufferRowLength = tiled_region.tile->pitch / 4;
+					dbg_copy.imageSubresource = { .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = 0, .layerCount = 1 };
+					vk::copy_buffer_to_image(cmd, working_buffer, scratch_img, dbg_copy);
 
-				scratch_img->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+					scratch_img->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+				}
 #endif
 
 #endif
@@ -277,7 +279,7 @@ namespace vk
 
 			if (require_rw_barrier)
 			{
-				vk::insert_buffer_memory_barrier(cmd, working_buffer->value, result_offset, working_buffer_length,
+				vk::insert_buffer_memory_barrier(cmd, working_buffer->value, result_offset, dma_sync_region.length(),
 					VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
 					VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
 			}
@@ -289,7 +291,7 @@ namespace vk
 				VkBufferCopy copy = {};
 				copy.srcOffset = result_offset;
 				copy.dstOffset = dma_mapping.first;
-				copy.size = section_length;
+				copy.size = dma_sync_region.length();
 				vkCmdCopyBuffer(cmd, working_buffer->value, dma_mapping.second->value, 1, &copy);
 			}
 			else
