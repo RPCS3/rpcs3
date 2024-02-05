@@ -317,10 +317,16 @@ public:
 			break;
 		}
 		case move_handler::mouse:
+		case move_handler::raw_mouse:
 		{
-			connected_controllers = 1;
+			auto& handler = g_fxo->get<MouseHandlerBase>();
 
-			if (gem_num == 0)
+			// Make sure that the mouse handler is initialized
+			handler.Init(std::min<u32>(attribute.max_connect, CELL_GEM_MAX_NUM));
+
+			const MouseInfo& info = handler.GetInfo();
+			connected_controllers = std::min<u32>({ info.now_connect, attribute.max_connect, CELL_GEM_MAX_NUM });
+			if (gem_num < connected_controllers)
 			{
 				is_connected = true;
 			}
@@ -1417,6 +1423,7 @@ error_code cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> gem_imag
 			ds3_pos_to_gem_state(gem_num, gem.controllers[gem_num], gem_image_state);
 			break;
 		case move_handler::mouse:
+		case move_handler::raw_mouse:
 			mouse_pos_to_gem_state(gem_num, gem.controllers[gem_num], gem_image_state);
 			break;
 #ifdef HAVE_LIBEVDEV
@@ -1471,6 +1478,7 @@ error_code cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, v
 			ds3_input_to_pad(gem_num, inertial_state->pad.digitalbuttons, inertial_state->pad.analog_T);
 			break;
 		case move_handler::mouse:
+		case move_handler::raw_mouse:
 			mouse_input_to_pad(gem_num, inertial_state->pad.digitalbuttons, inertial_state->pad.analog_T);
 			break;
 #ifdef HAVE_LIBEVDEV
@@ -1675,6 +1683,7 @@ error_code cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<Ce
 			ds3_pos_to_gem_state(gem_num, gem.controllers[gem_num], gem_state);
 			break;
 		case move_handler::mouse:
+		case move_handler::raw_mouse:
 			mouse_input_to_pad(gem_num, gem_state->pad.digitalbuttons, gem_state->pad.analog_T);
 			mouse_pos_to_gem_state(gem_num, gem.controllers[gem_num], gem_state);
 			break;

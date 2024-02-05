@@ -20,6 +20,7 @@
 #include "Emu/Io/Null/null_camera_handler.h"
 #include "Emu/Io/Null/null_music_handler.h"
 #include "Emu/vfs_config.h"
+#include "Input/raw_mouse_handler.h"
 #include "trophy_notification_helper.h"
 #include "save_data_dialog.h"
 #include "msg_dialog_frame.h"
@@ -172,6 +173,11 @@ bool gui_application::Init()
 	{
 		discord::initialize();
 	}
+#endif
+
+	// Install native event filter
+#ifdef _WIN32 // Currently only needed for raw mouse input on windows
+	installNativeEventFilter(&m_native_event_filter);
 #endif
 
 	return true;
@@ -973,4 +979,27 @@ void gui_application::OnAppStateChanged(Qt::ApplicationState state)
 
 	// Delay pause so it won't immediately pause the emulated application
 	QTimer::singleShot(1000, this, pause_callback);
+}
+
+bool gui_application::native_event_filter::nativeEventFilter([[maybe_unused]] const QByteArray& eventType, [[maybe_unused]] void* message, [[maybe_unused]] qintptr* result)
+{
+#ifdef _WIN32
+	if (!Emu.IsRunning())
+	{
+		return false;
+	}
+
+	if (eventType == "windows_generic_MSG")
+	{
+		if (MSG* msg = static_cast<MSG*>(message); msg && msg->message == WM_INPUT)
+		{
+			if (auto* handler = g_fxo->try_get<MouseHandlerBase>(); handler && handler->type == mouse_handler::raw)
+			{
+				static_cast<raw_mouse_handler*>(handler)->handle_native_event(*msg);
+			}
+		}
+	}
+#endif
+
+	return false;
 }

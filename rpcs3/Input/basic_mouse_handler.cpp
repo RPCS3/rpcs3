@@ -33,12 +33,14 @@ void basic_mouse_handler::Init(const u32 max_connect)
 	m_info.status[0] = CELL_MOUSE_STATUS_CONNECTED; // (TODO: Support for more mice)
 	m_info.vendor_id[0] = 0x1234;
 	m_info.product_id[0] = 0x1234;
+
+	type = mouse_handler::basic;
 }
 
 /* Sets the target window for the event handler, and also installs an event filter on the target. */
 void basic_mouse_handler::SetTargetWindow(QWindow* target)
 {
-	if (target != nullptr)
+	if (target)
 	{
 		m_target = target;
 		target->installEventFilter(this);
@@ -86,33 +88,33 @@ bool basic_mouse_handler::eventFilter(QObject* target, QEvent* ev)
 
 void basic_mouse_handler::MouseButtonDown(QMouseEvent* event)
 {
-	if (event->button() == Qt::LeftButton)        MouseHandlerBase::Button(CELL_MOUSE_BUTTON_1, true);
-	else if (event->button() == Qt::RightButton)  MouseHandlerBase::Button(CELL_MOUSE_BUTTON_2, true);
-	else if (event->button() == Qt::MiddleButton) MouseHandlerBase::Button(CELL_MOUSE_BUTTON_3, true);
+	if (event->button() == Qt::LeftButton)        MouseHandlerBase::Button(0, CELL_MOUSE_BUTTON_1, true);
+	else if (event->button() == Qt::RightButton)  MouseHandlerBase::Button(0, CELL_MOUSE_BUTTON_2, true);
+	else if (event->button() == Qt::MiddleButton) MouseHandlerBase::Button(0, CELL_MOUSE_BUTTON_3, true);
 	// TODO: verify these
-	else if (event->button() == Qt::ExtraButton1) MouseHandlerBase::Button(CELL_MOUSE_BUTTON_4, true);
-	else if (event->button() == Qt::ExtraButton2) MouseHandlerBase::Button(CELL_MOUSE_BUTTON_5, true);
-	else if (event->button() == Qt::ExtraButton3) MouseHandlerBase::Button(CELL_MOUSE_BUTTON_6, true);
-	else if (event->button() == Qt::ExtraButton4) MouseHandlerBase::Button(CELL_MOUSE_BUTTON_7, true);
-	else if (event->button() == Qt::ExtraButton5) MouseHandlerBase::Button(CELL_MOUSE_BUTTON_8, true);
+	else if (event->button() == Qt::ExtraButton1) MouseHandlerBase::Button(0, CELL_MOUSE_BUTTON_4, true);
+	else if (event->button() == Qt::ExtraButton2) MouseHandlerBase::Button(0, CELL_MOUSE_BUTTON_5, true);
+	else if (event->button() == Qt::ExtraButton3) MouseHandlerBase::Button(0, CELL_MOUSE_BUTTON_6, true);
+	else if (event->button() == Qt::ExtraButton4) MouseHandlerBase::Button(0, CELL_MOUSE_BUTTON_7, true);
+	else if (event->button() == Qt::ExtraButton5) MouseHandlerBase::Button(0, CELL_MOUSE_BUTTON_8, true);
 }
 
 void basic_mouse_handler::MouseButtonUp(QMouseEvent* event)
 {
-	if (event->button() == Qt::LeftButton)        MouseHandlerBase::Button(CELL_MOUSE_BUTTON_1, false);
-	else if (event->button() == Qt::RightButton)  MouseHandlerBase::Button(CELL_MOUSE_BUTTON_2, false);
-	else if (event->button() == Qt::MiddleButton) MouseHandlerBase::Button(CELL_MOUSE_BUTTON_3, false);
+	if (event->button() == Qt::LeftButton)        MouseHandlerBase::Button(0, CELL_MOUSE_BUTTON_1, false);
+	else if (event->button() == Qt::RightButton)  MouseHandlerBase::Button(0, CELL_MOUSE_BUTTON_2, false);
+	else if (event->button() == Qt::MiddleButton) MouseHandlerBase::Button(0, CELL_MOUSE_BUTTON_3, false);
 	// TODO: verify these
-	else if (event->button() == Qt::ExtraButton1) MouseHandlerBase::Button(CELL_MOUSE_BUTTON_4, false);
-	else if (event->button() == Qt::ExtraButton2) MouseHandlerBase::Button(CELL_MOUSE_BUTTON_5, false);
-	else if (event->button() == Qt::ExtraButton3) MouseHandlerBase::Button(CELL_MOUSE_BUTTON_6, false);
-	else if (event->button() == Qt::ExtraButton4) MouseHandlerBase::Button(CELL_MOUSE_BUTTON_7, false);
-	else if (event->button() == Qt::ExtraButton5) MouseHandlerBase::Button(CELL_MOUSE_BUTTON_8, false);
+	else if (event->button() == Qt::ExtraButton1) MouseHandlerBase::Button(0, CELL_MOUSE_BUTTON_4, false);
+	else if (event->button() == Qt::ExtraButton2) MouseHandlerBase::Button(0, CELL_MOUSE_BUTTON_5, false);
+	else if (event->button() == Qt::ExtraButton3) MouseHandlerBase::Button(0, CELL_MOUSE_BUTTON_6, false);
+	else if (event->button() == Qt::ExtraButton4) MouseHandlerBase::Button(0, CELL_MOUSE_BUTTON_7, false);
+	else if (event->button() == Qt::ExtraButton5) MouseHandlerBase::Button(0, CELL_MOUSE_BUTTON_8, false);
 }
 
 void basic_mouse_handler::MouseScroll(QWheelEvent* event)
 {
-	MouseHandlerBase::Scroll(event->angleDelta().y());
+	MouseHandlerBase::Scroll(0, event->angleDelta().y());
 }
 
 bool basic_mouse_handler::get_mouse_lock_state() const
@@ -152,11 +154,12 @@ void basic_mouse_handler::MouseMove(QMouseEvent* event)
 			p_real.setY(std::clamp(p_real.y() + p_delta.y(), 0, screen.height()));
 
 			// pass the 'real' position and the current delta to the screen center
-			MouseHandlerBase::Move(p_real.x(), p_real.y(), screen.width(), screen.height(), true, p_delta.x(), p_delta.y());
+			MouseHandlerBase::Move(0, p_real.x(), p_real.y(), screen.width(), screen.height(), true, p_delta.x(), p_delta.y());
 		}
 		else
 		{
-			MouseHandlerBase::Move(e_pos.x(), e_pos.y(), screen.width(), screen.height());
+			// pass the absolute position
+			MouseHandlerBase::Move(0, e_pos.x(), e_pos.y(), screen.width(), screen.height());
 		}
 	}
 }

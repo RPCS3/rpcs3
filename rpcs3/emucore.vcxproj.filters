@@ -2434,6 +2434,9 @@
     <ClInclude Include="Emu\Io\rb3drums_config.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
+    <ClInclude Include="Input\raw_mouse_config.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Emu\RSX\Program\GLSLSnippets\GPUDeswizzle.glsl">
