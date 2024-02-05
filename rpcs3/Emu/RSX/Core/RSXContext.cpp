@@ -38,4 +38,13 @@ namespace rsx
 
 		return {};
 	}
+
+	utils::address_range GCM_tile_reference::tile_align(const utils::address_range& range) const
+	{
+		const auto alignment = 64 * tile->pitch;
+		const u32 start_offset = rsx::align_down2(range.start - base_address, alignment);
+		const u32 end_offset = rsx::align2(range.end - base_address + 1, alignment);
+
+		return utils::address_range::start_length(start_offset + base_address, end_offset - start_offset);
+	}
 }
