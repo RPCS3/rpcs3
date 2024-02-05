@@ -52,7 +52,7 @@ constexpr u8 AXIS_CENTER = 0x7F;
 constexpr std::array<u8, 27> default_state = {
 	0x00,                     // buttons 1 to 8
 	0x00,                     // buttons 9 to 13
-	(u8)controller::DPad::Center,
+	static_cast<u8>(controller::DPad::Center),
 	controller::AXIS_CENTER,  // x axis
 	controller::AXIS_CENTER,  // y axis
 	controller::AXIS_CENTER,  // z axis
@@ -709,7 +709,7 @@ rb3drums::KitState usb_device_rb3_midi_drums::parse_midi_message(u8* msg, usz si
 			return rb3drums::KitState{};
 	}
 
-	combo.add((u8)note);
+	combo.add(static_cast<u8>(note));
 	return kit_state;
 }
 
@@ -727,11 +727,11 @@ void usb_device_rb3_midi_drums::write_state(u8* buf, const rb3drums::KitState& k
 	// Additionally, Yellow (hihat) and Blue (ride) cymbals add dpad up or down, respectively. This allows rockband to disambiguate between tom+cymbals hit at the same time.
 	if (kit_state.hihat >= midi::min_velocity())
 	{
-		buf[controller::DPAD_INDEX] = (u8)controller::DPad::Up;
+		buf[controller::DPAD_INDEX] = static_cast<u8>(controller::DPad::Up);
 	}
 	if (kit_state.ride >= midi::min_velocity())
 	{
-		buf[controller::DPAD_INDEX] = (u8)controller::DPad::Down;
+		buf[controller::DPAD_INDEX] = static_cast<u8>(controller::DPad::Down);
 	}
 
 	set_flag_if_any(buf, "is_drum", drum::IS_DRUM, {kit_state.snare, kit_state.hi_tom, kit_state.low_tom, kit_state.floor_tom});
