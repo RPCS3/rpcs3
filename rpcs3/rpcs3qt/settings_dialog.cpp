@@ -1234,6 +1234,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	ui->loadSdlMappings->setVisible(false);
 #endif
 
+#ifndef _WIN32
+	// Remove raw mouse handler
+	remove_item(ui->mouseHandlerBox, static_cast<int>(mouse_handler::raw), static_cast<int>(g_cfg.io.mouse.def));
+	remove_item(ui->moveBox, static_cast<int>(move_handler::raw_mouse), static_cast<int>(g_cfg.io.move.def));
+#endif
+
 	// Midi
 	const QString midi_none = m_emu_settings->m_midi_creator.get_none();
 	const midi_device def_midi_device{ .type = midi_device_type::keyboard, .name = midi_none.toStdString() };
