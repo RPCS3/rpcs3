@@ -5582,7 +5582,7 @@ public:
 	template <typename T, typename U>
 	static llvm_calli<f32[4], T, U> fm(T&& a, U&& b)
 	{
-		return {"spu_fm", {std::forward<T>(a), std::forward<U>(b)}};
+		return llvm_calli<f32[4], T, U>{"spu_fm", {std::forward<T>(a), std::forward<U>(b)}}.set_order_equality_hint(1, 1);
 	}
 
 	void FM(spu_opcode_t op)
@@ -5912,7 +5912,7 @@ public:
 	template <typename T, typename U, typename V>
 	static llvm_calli<f32[4], T, U, V> fnms(T&& a, U&& b, V&& c)
 	{
-		return {"spu_fnms", {std::forward<T>(a), std::forward<U>(b), std::forward<V>(c)}};
+		return llvm_calli<f32[4], T, U, V>{"spu_fnms", {std::forward<T>(a), std::forward<U>(b), std::forward<V>(c)}}.set_order_equality_hint(1, 1, 0);
 	}
 
 	void FNMS(spu_opcode_t op)
@@ -5947,7 +5947,7 @@ public:
 	template <typename T, typename U, typename V>
 	static llvm_calli<f32[4], T, U, V> fma(T&& a, U&& b, V&& c)
 	{
-		return {"spu_fma", {std::forward<T>(a), std::forward<U>(b), std::forward<V>(c)}};
+		return llvm_calli<f32[4], T, U, V>{"spu_fma", {std::forward<T>(a), std::forward<U>(b), std::forward<V>(c)}}.set_order_equality_hint(1, 1, 0);
 	}
 
 	void FMA(spu_opcode_t op)
@@ -6021,7 +6021,7 @@ public:
 	template <typename T, typename U, typename V>
 	static llvm_calli<f32[4], T, U, V> fms(T&& a, U&& b, V&& c)
 	{
-		return {"spu_fms", {std::forward<T>(a), std::forward<U>(b), std::forward<V>(c)}};
+		return llvm_calli<f32[4], T, U, V>{"spu_fms", {std::forward<T>(a), std::forward<U>(b), std::forward<V>(c)}}.set_order_equality_hint(1, 1, 0);
 	}
 
 	void FMS(spu_opcode_t op)
