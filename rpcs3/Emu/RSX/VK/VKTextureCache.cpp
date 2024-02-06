@@ -189,12 +189,15 @@ namespace vk
 				// Compute -> Compute barrier
 				vk::insert_buffer_memory_barrier(cmd, working_buffer->value, 0, task_length,
 					VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-					VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
+					VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
 
 				// We don't need to calibrate write if two conditions are met:
 				// 1. The start offset of our 2D region is a multiple of 64 lines
 				// 2. We use the whole pitch.
 				// If these conditions are not met, we need to upload the entire tile (or at least the affected tiles wholly)
+
+				// FIXME: There is a 3rd condition - write onto already-persisted range. e.g One transfer copies half the image then the other half is copied later.
+				// We don't need to load again for the second copy in that scenario.
 
 				if (valid_range.start != dma_sync_region.start || real_pitch != tiled_region.tile->pitch)
 				{
