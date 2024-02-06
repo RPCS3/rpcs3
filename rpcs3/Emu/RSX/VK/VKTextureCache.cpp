@@ -238,8 +238,8 @@ namespace vk
 					.src_offset = 0,
 
 					// TODO: Check interaction with anti-aliasing
-					.image_width = (u16)transfer_width,
-					.image_height = (u16)transfer_height,
+					.image_width = static_cast<u16>(transfer_width),
+					.image_height = static_cast<u16>(transfer_height),
 					.image_pitch = real_pitch,
 					.image_bpp = context == rsx::texture_upload_context::dma ? internal_bpp : rsx::get_format_block_size_in_bytes(gcm_format)
 				};
