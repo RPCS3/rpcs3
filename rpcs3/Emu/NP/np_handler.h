@@ -40,6 +40,13 @@ namespace np
 		} data;
 	};
 
+	struct player_history
+	{
+		u64 timestamp{};
+		std::set<std::string> communication_ids;
+		std::string description;
+	};
+
 	class ticket
 	{
 	public:
@@ -215,7 +222,10 @@ namespace np
 		// Misc stuff
 		void req_ticket(u32 version, const SceNpId* npid, const char* service_id, const u8* cookie, u32 cookie_size, const char* entitlement_id, u32 consumed_count);
 		const ticket& get_ticket() const;
-		u32 add_players_to_history(vm::cptr<SceNpId> npids, u32 count);
+		void add_player_to_history(const SceNpId* npid, const char* description);
+		u32 add_players_to_history(const SceNpId* npids, const char* description, u32 count);
+		u32 get_players_history_count(u32 options);
+		bool get_player_history_entry(u32 options, u32 index, SceNpId* npid);
 		bool abort_request(u32 req_id);
 
 		// For signaling
@@ -258,6 +268,7 @@ namespace np
 		void notif_updated_room_data_internal(std::vector<u8>& data);
 		void notif_updated_room_member_data_internal(std::vector<u8>& data);
 		void notif_p2p_connect(std::vector<u8>& data);
+		void notif_signaling_info(std::vector<u8>& data);
 		void notif_room_message_received(std::vector<u8>& data);
 
 		// Reply handlers
@@ -346,6 +357,7 @@ namespace np
 		u32 generate_callback_info(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, SceNpMatching2Event event_type);
 		std::optional<callback_info> take_pending_request(u32 req_id);
 
+	private:
 		shared_mutex mutex_pending_requests;
 		std::unordered_map<u32, callback_info> pending_requests;
 		shared_mutex mutex_pending_sign_infos_requests;
@@ -356,7 +368,6 @@ namespace np
 
 		bool m_inited_np_handler_dependencies = false;
 
-	private:
 		// Basic event handler;
 		struct
 		{
@@ -441,5 +452,11 @@ namespace np
 			std::string pr_comment;
 			std::vector<u8> pr_data;
 		} presence_self;
+
+		player_history& get_player_and_set_timestamp(const SceNpId& npid, u64 timestamp);
+		void save_players_history();
+
+		shared_mutex mutex_history;
+		std::map<std::string, player_history> players_history; // npid / history
 	};
 } // namespace np

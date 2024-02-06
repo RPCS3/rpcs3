@@ -84,7 +84,7 @@ namespace rpcn
 		rpcn_log.notice("online: %s, pr_com_id: %s, pr_title: %s, pr_status: %s, pr_comment: %s, pr_data: %s", online ? "true" : "false", pr_com_id.data, pr_title, pr_status, pr_comment, fmt::buf_to_hexstring(pr_data.data(), pr_data.size()));
 	}
 
-	constexpr u32 RPCN_PROTOCOL_VERSION = 22;
+	constexpr u32 RPCN_PROTOCOL_VERSION = 23;
 	constexpr usz RPCN_HEADER_SIZE      = 15;
 
 	bool is_error(ErrorType err)
@@ -135,7 +135,8 @@ namespace rpcn
 
 	rpcn_client::rpcn_client()
 		: sem_connected(0), sem_authentified(0), sem_reader(0), sem_writer(0), sem_rpcn(0),
-		  thread_rpcn(std::thread(&rpcn_client::rpcn_thread, this)), thread_rpcn_reader(std::thread(&rpcn_client::rpcn_reader_thread, this)),
+		  thread_rpcn(std::thread(&rpcn_client::rpcn_thread, this)),
+		  thread_rpcn_reader(std::thread(&rpcn_client::rpcn_reader_thread, this)),
 		  thread_rpcn_writer(std::thread(&rpcn_client::rpcn_writer_thread, this))
 	{
 		g_cfg_rpcn.load();
@@ -145,15 +146,19 @@ namespace rpcn
 
 	rpcn_client::~rpcn_client()
 	{
+		terminate_connection();
 		std::lock_guard lock(inst_mutex);
 		terminate = true;
 		sem_rpcn.release();
 		sem_reader.release();
 		sem_writer.release();
 
-		thread_rpcn.join();
-		thread_rpcn_reader.join();
-		thread_rpcn_writer.join();
+		if (thread_rpcn.joinable())
+			thread_rpcn.join();
+		if (thread_rpcn_reader.joinable())
+			thread_rpcn_reader.join();
+		if (thread_rpcn_writer.joinable())
+			thread_rpcn_writer.join();
 
 		disconnect();
 
@@ -195,6 +200,8 @@ namespace rpcn
 	// RPCN thread
 	void rpcn_client::rpcn_reader_thread()
 	{
+		thread_base::set_name("RPCN Reader");
+
 		while (true)
 		{
 			sem_reader.acquire();
@@ -218,6 +225,8 @@ namespace rpcn
 
 	void rpcn_client::rpcn_writer_thread()
 	{
+		thread_base::set_name("RPCN Writer");
+
 		while (true)
 		{
 			sem_writer.acquire();
@@ -240,6 +249,8 @@ namespace rpcn
 
 	void rpcn_client::rpcn_thread()
 	{
+		thread_base::set_name("RPCN Client");
+
 		while (true)
 		{
 			sem_rpcn.acquire();
@@ -414,7 +425,7 @@ namespace rpcn
 				command == CommandType::AddBlock || command == CommandType::RemoveBlock ||
 				command == CommandType::SendMessage || command == CommandType::SendToken ||
 				command == CommandType::SendResetToken || command == CommandType::ResetPassword ||
-				command == CommandType::GetNetworkTime || command == CommandType::SetPresence)
+				command == CommandType::GetNetworkTime || command == CommandType::SetPresence || command == CommandType::Terminate)
 			{
 				std::lock_guard lock(mutex_replies_sync);
 				replies_sync.insert(std::make_pair(packet_id, std::make_pair(command, std::move(data))));
@@ -574,23 +585,20 @@ namespace rpcn
 					if (res == 0)
 					{
 						// Remote closed connection
-						rpcn_log.error("recv failed: connection reset by server");
+						rpcn_log.notice("recv failed: connection reset by server");
 						return recvn_result::recvn_noconn;
 					}
 
 					rpcn_log.error("recvn failed with error: %d:%s(native: %d)", res, get_wolfssl_error(read_wssl, res), get_native_error());
 					return recvn_result::recvn_fatal;
 				}
-
-				res = 0;
 			}
 			else
 			{
 				// Reset timeout each time something is received
 				num_timeouts = 0;
+				n_recv += res;
 			}
-
-			n_recv += res;
 		}
 
 		return recvn_result::recvn_success;
@@ -1017,6 +1025,21 @@ namespace rpcn
 		return true;
 	}
 
+	bool rpcn_client::terminate_connection()
+	{
+		u64 req_id = rpcn_request_counter.fetch_add(1);
+
+		std::vector<u8> packet_data;
+		std::vector<u8> data;
+
+		if (!forge_send_reply(CommandType::Terminate, req_id, data, packet_data))
+		{
+			return false;
+		}
+
+		return true;
+	}
+
 	ErrorType rpcn_client::create_user(std::string_view npid, std::string_view password, std::string_view online_name, std::string_view avatar_url, std::string_view email)
 	{
 		std::vector<u8> data;
@@ -1177,7 +1200,7 @@ namespace rpcn
 		vec_stream reply(packet_data);
 		auto error = static_cast<ErrorType>(reply.get<u8>());
 
-		if (error == ErrorType::NotFound)
+		if (is_error(error))
 		{
 			return false;
 		}

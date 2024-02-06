@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "overlay_trophy_notification.h"
 #include "Emu/Cell/ErrorCodes.h"
-#include "Emu/RSX/RSXThread.h"
+#include "Emu/System.h"
 
 namespace rsx
 {
@@ -51,14 +51,14 @@ namespace rsx
 			text_view.align_text(overlay_element::text_align::center);
 			text_view.back_color.a = 0.f;
 
-			sliding_animation.duration = 1.5f;
+			sliding_animation.duration_sec = 1.5f;
 			sliding_animation.type = animation_type::ease_in_out_cubic;
 
 			// Make the fade animation a bit shorter to see the trophy better.
-			fade_animation.duration = 1.0f;
+			fade_animation.duration_sec = 1.0f;
 		}
 
-		void trophy_notification::update()
+		void trophy_notification::update(u64 timestamp_us)
 		{
 			if (!s_trophy_semaphore.try_acquire(display_sched_id))
 			{
@@ -66,19 +66,18 @@ namespace rsx
 				return;
 			}
 
-			const u64 t = get_system_time();
-			if (!creation_time)
+			if (!creation_time_us)
 			{
 				// First tick
-				creation_time = t;
+				creation_time_us = timestamp_us;
 				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_trophy.wav");
 				return;
 			}
 
-			const u64 time_since_creation = ((t - creation_time) / 1000);
-			u64 end_animation_begin = 5000;
+			const u64 time_since_creation_us = timestamp_us - creation_time_us;
+			u64 end_animation_begin_us = 5'000'000;
 
-			if (time_since_creation > end_animation_begin)
+			if (time_since_creation_us > end_animation_begin_us)
 			{
 				if (!sliding_animation.active)
 				{
@@ -94,12 +93,12 @@ namespace rsx
 			}
 
 			// Match both animation ends based on their durations
-			if (sliding_animation.duration > fade_animation.duration)
+			if (sliding_animation.duration_sec > fade_animation.duration_sec)
 			{
-				end_animation_begin += static_cast<u64>((sliding_animation.duration - fade_animation.duration) * 1000);
+				end_animation_begin_us += static_cast<u64>((sliding_animation.duration_sec - fade_animation.duration_sec) * 1'000'000);
 			}
 
-			if (time_since_creation > end_animation_begin)
+			if (time_since_creation_us > end_animation_begin_us)
 			{
 				if (!fade_animation.active)
 				{
@@ -112,18 +111,18 @@ namespace rsx
 
 			if (sliding_animation.active)
 			{
-				sliding_animation.update(rsx::get_current_renderer()->vblank_count);
+				sliding_animation.update(timestamp_us);
 			}
 
 			if (fade_animation.active)
 			{
-				fade_animation.update(rsx::get_current_renderer()->vblank_count);
+				fade_animation.update(timestamp_us);
 			}
 		}
 
 		compiled_resource trophy_notification::get_compiled()
 		{
-			if (!creation_time || !visible)
+			if (!creation_time_us || !visible)
 			{
 				return {};
 			}

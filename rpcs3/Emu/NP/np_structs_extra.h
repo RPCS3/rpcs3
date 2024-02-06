@@ -25,5 +25,6 @@ namespace extra_nps
 	void print_get_roomdata_external_list_req(const SceNpMatching2GetRoomDataExternalListRequest* req);
 	void print_get_roomdata_external_list_resp(const SceNpMatching2GetRoomDataExternalListResponse* resp);
 
+	void print_SceNpBasicAttachmentData(const SceNpBasicAttachmentData* data);
 	void print_SceNpBasicExtendedAttachmentData(const SceNpBasicExtendedAttachmentData* data);
 } // namespace extra_nps

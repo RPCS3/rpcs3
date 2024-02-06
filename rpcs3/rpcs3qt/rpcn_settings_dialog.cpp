@@ -69,7 +69,20 @@ std::string derive_password(std::string_view user_password)
 rpcn_settings_dialog::rpcn_settings_dialog(QWidget* parent)
 	: QDialog(parent)
 {
-	setWindowTitle(tr("RPCN"));
+	g_cfg_rpcn.load();
+
+	const auto set_title = [this]()
+	{
+		if (const std::string npid = g_cfg_rpcn.get_npid(); !npid.empty())
+		{
+			setWindowTitle(tr("RPCN - %0").arg(QString::fromStdString(npid)));
+			return;
+		}
+
+		setWindowTitle(tr("RPCN"));
+	};
+
+	set_title();
 	setObjectName("rpcn_settings_dialog");
 	setMinimumSize(QSize(400, 100));
 
@@ -88,7 +101,7 @@ rpcn_settings_dialog::rpcn_settings_dialog(QWidget* parent)
 	vbox_global->addWidget(group_btns);
 	setLayout(vbox_global);
 
-	connect(btn_account, &QPushButton::clicked, this, [this]()
+	connect(btn_account, &QPushButton::clicked, this, [this, set_title]()
 		{
 			if (!Emu.IsStopped())
 			{
@@ -97,6 +110,7 @@ rpcn_settings_dialog::rpcn_settings_dialog(QWidget* parent)
 			}
 			rpcn_account_dialog dlg(this);
 			dlg.exec();
+			set_title();
 		});
 
 	connect(btn_friends, &QPushButton::clicked, this, [this]()
@@ -140,12 +154,21 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 	grp_server->setLayout(vbox_server);
 	vbox_global->addWidget(grp_server);
 
-	QGroupBox* grp_buttons    = new QGroupBox();
+	QGroupBox* grp_buttons    = new QGroupBox(tr("Account:"));
 	QVBoxLayout* vbox_buttons = new QVBoxLayout();
 	QPushButton* btn_create   = new QPushButton(tr("Create Account"));
 	QPushButton* btn_edit     = new QPushButton(tr("Edit Account"));
 	QPushButton* btn_test     = new QPushButton(tr("Test Account"));
+	QLabel* label_npid        = new QLabel();
 
+	const auto update_npid_label = [label_npid]()
+	{
+		const std::string npid = g_cfg_rpcn.get_npid();
+		label_npid->setText(tr("Current ID: %0").arg(npid.empty() ? "-" : QString::fromStdString(npid)));
+	};
+	update_npid_label();
+
+	vbox_buttons->addWidget(label_npid);
 	vbox_buttons->addSpacing(10);
 	vbox_buttons->addWidget(btn_create);
 	vbox_buttons->addSpacing(10);
@@ -206,7 +229,7 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 			refresh_combobox();
 		});
 
-	connect(btn_create, &QAbstractButton::clicked, this, [this]()
+	connect(btn_create, &QAbstractButton::clicked, this, [this, update_npid_label]()
 		{
 			rpcn_ask_username_dialog dlg_username(this, tr("Please enter your username.\n\n"
 			                                               "Note that these restrictions apply:\n"
@@ -281,12 +304,15 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 
 			g_cfg_rpcn.set_token(*token);
 			g_cfg_rpcn.save();
+
+			update_npid_label();
 		});
 
-	connect(btn_edit, &QAbstractButton::clicked, this, [this]()
+	connect(btn_edit, &QAbstractButton::clicked, this, [this, update_npid_label]()
 		{
 			rpcn_account_edit_dialog dlg_edit(this);
 			dlg_edit.exec();
+			update_npid_label();
 		});
 
 	connect(btn_test, &QAbstractButton::clicked, this, [this]()
@@ -858,6 +884,19 @@ void friend_callback(void* param, rpcn::NotificationType ntype, const std::strin
 	dlg->callback_handler(ntype, username, status);
 }
 
+// Avoid including np_handler.h
+namespace np
+{
+	struct player_history
+	{
+		u64 timestamp{};
+		std::set<std::string> communication_ids;
+		std::string description;
+	};
+
+	std::map<std::string, player_history> load_players_history();
+}
+
 rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 	: QDialog(parent),
 	  m_green_icon(gui::utils::circle_pixmap(QColorConstants::Svg::green, devicePixelRatioF() * 2)),
@@ -866,7 +905,24 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 	  m_orange_icon(gui::utils::circle_pixmap(QColorConstants::Svg::orange, devicePixelRatioF() * 2)),
 	  m_black_icon(gui::utils::circle_pixmap(QColorConstants::Svg::black, devicePixelRatioF() * 2))
 {
-	setWindowTitle(tr("RPCN: Friends"));
+	const auto set_title = [this]()
+	{
+		if (const std::string npid = g_cfg_rpcn.get_npid(); !npid.empty())
+		{
+			if (m_rpcn && m_rpcn->is_connected() && m_rpcn->is_authentified())
+			{
+				setWindowTitle(tr("RPCN: Friends - Logged in as %0").arg(QString::fromStdString(npid)));
+				return;
+			}
+
+			setWindowTitle(tr("RPCN: Friends - %0 (Not logged in)").arg(QString::fromStdString(npid)));
+			return;
+		}
+
+		setWindowTitle(tr("RPCN: Friends"));
+	};
+
+	set_title();
 	setObjectName("rpcn_friends_dialog");
 	setMinimumSize(QSize(400, 100));
 
@@ -901,6 +957,14 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 	grp_list_blocks->setLayout(vbox_lst_blocks);
 	hbox_groupboxes->addWidget(grp_list_blocks);
 
+	QGroupBox* grp_list_history   = new QGroupBox(tr("Recent Players"));
+	QVBoxLayout* vbox_lst_history = new QVBoxLayout();
+	m_lst_history                 = new QListWidget(this);
+	m_lst_history->setContextMenuPolicy(Qt::CustomContextMenu);
+	vbox_lst_history->addWidget(m_lst_history);
+	grp_list_history->setLayout(vbox_lst_history);
+	hbox_groupboxes->addWidget(grp_list_history);
+
 	vbox_global->addLayout(hbox_groupboxes);
 
 	setLayout(vbox_global);
@@ -920,6 +984,8 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 		QMessageBox::warning(parent, tr("Error authentifying to RPCN!"), error_msg, QMessageBox::Ok);
 		return;
 	}
+
+	set_title();
 
 	// Get friends, setup callback and setup comboboxes
 	rpcn::friend_data data;
@@ -943,6 +1009,26 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 	for (const auto& blck : data.blocked)
 	{
 		add_update_list(m_lst_blocks, QString::fromStdString(blck), m_red_icon, QVariant(false));
+	}
+
+	auto history = np::load_players_history();
+	std::map<u64, std::pair<std::string, std::string>, std::greater<u64>> sorted_history;
+
+	for (const auto& [username, user_info] : history)
+	{
+		if (!data.friends.contains(username) && !data.requests_sent.contains(username) && !data.requests_received.contains(username))
+			sorted_history.insert(std::make_pair(user_info.timestamp, std::make_pair(std::move(username), std::move(user_info.description))));
+	}
+
+	for (const auto& [_, username_and_description] : sorted_history)
+	{
+		const auto& [username, description] = username_and_description;
+		auto* item = new QListWidgetItem(QString::fromStdString(username));
+
+		if (!description.empty())
+			item->setToolTip(QString::fromStdString(description));
+
+		m_lst_history->addItem(item);
 	}
 
 	connect(this, &rpcn_friends_dialog::signal_add_update_friend, this, &rpcn_friends_dialog::add_update_friend);
@@ -996,9 +1082,9 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 			std::string str_sel_friend = selected_item->text().toStdString();
 
 			QMenu* context_menu           = new QMenu();
-			QAction* remove_friend_action = context_menu->addAction(tr("&Accept Request"));
+			QAction* accept_request_action = context_menu->addAction(tr("&Accept Request"));
 
-			connect(remove_friend_action, &QAction::triggered, this, [this, str_sel_friend]()
+			connect(accept_request_action, &QAction::triggered, this, [this, str_sel_friend]()
 				{
 					if (!m_rpcn->add_friend(str_sel_friend))
 					{
@@ -1011,6 +1097,37 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 				});
 
 			context_menu->exec(m_lst_requests->viewport()->mapToGlobal(pos));
+			context_menu->deleteLater();
+		});
+
+	connect(m_lst_history, &QListWidget::customContextMenuRequested, this, [this](const QPoint& pos)
+		{
+			if (!m_lst_history->itemAt(pos) || m_lst_history->selectedItems().count() != 1)
+			{
+				return;
+			}
+
+			QListWidgetItem* selected_item = m_lst_history->selectedItems().first();
+
+			std::string str_sel_friend = selected_item->text().toStdString();
+
+			QMenu* context_menu = new QMenu();
+			QAction* send_friend_request_action = context_menu->addAction(tr("&Send Friend Request"));
+
+			connect(send_friend_request_action, &QAction::triggered, this, [this, str_sel_friend]()
+				{
+					if (!m_rpcn->add_friend(str_sel_friend))
+					{
+						QMessageBox::critical(this, tr("Error sending a friend request!"), tr("An error occurred while trying to send a friend request!"), QMessageBox::Ok);
+						return;
+					}
+
+					QString qstr_friend = QString::fromStdString(str_sel_friend);
+					add_update_list(m_lst_requests, qstr_friend, m_orange_icon, QVariant(false));
+					remove_list(m_lst_history, qstr_friend);
+				});
+
+			context_menu->exec(m_lst_history->viewport()->mapToGlobal(pos));
 			context_menu->deleteLater();
 		});
 
@@ -1101,6 +1218,7 @@ void rpcn_friends_dialog::remove_friend(QString name)
 void rpcn_friends_dialog::add_query(QString name)
 {
 	add_update_list(m_lst_requests, name, m_yellow_icon, QVariant(true));
+	remove_list(m_lst_history, name);
 }
 
 void rpcn_friends_dialog::callback_handler(rpcn::NotificationType ntype, std::string username, bool status)

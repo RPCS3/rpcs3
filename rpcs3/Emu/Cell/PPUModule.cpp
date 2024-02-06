@@ -279,6 +279,7 @@ static void ppu_initialize_modules(ppu_linkage_info* link, utils::serial* ar = n
 		&ppu_module_manager::sceNpClans,
 		&ppu_module_manager::sceNpCommerce2,
 		&ppu_module_manager::sceNpMatchingInt,
+		&ppu_module_manager::sceNpPlus,
 		&ppu_module_manager::sceNpSns,
 		&ppu_module_manager::sceNpTrophy,
 		&ppu_module_manager::sceNpTus,

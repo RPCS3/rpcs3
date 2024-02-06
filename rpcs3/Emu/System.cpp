@@ -2494,6 +2494,8 @@ void Emulator::FinalizeRunRequest()
 	{
 		std::thread([this, info = GetEmulationIdentifier()]()
 		{
+			thread_base::set_name("Close Home Menu");
+
 			std::this_thread::sleep_for(2s);
 
 			CallFromMainThread([this]()

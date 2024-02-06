@@ -668,6 +668,12 @@ namespace rsx
 			return compiled_resources;
 		}
 
+		void layout_container::add_spacer()
+		{
+			std::unique_ptr<overlay_element> spacer_element = std::make_unique<spacer>();
+			add_element(spacer_element);
+		}
+
 		overlay_element* vertical_layout::add_element(std::unique_ptr<overlay_element>& item, int offset)
 		{
 			if (auto_resize)

@@ -15,7 +15,7 @@ namespace rsx
 			label text_view;
 
 			u64 display_sched_id = 0;
-			u64 creation_time = 0;
+			u64 creation_time_us = 0;
 			std::unique_ptr<image_info> icon_info;
 
 			animation_translate sliding_animation;
@@ -24,7 +24,7 @@ namespace rsx
 		public:
 			trophy_notification();
 
-			void update() override;
+			void update(u64 timestamp_us) override;
 
 			compiled_resource get_compiled() override;
 

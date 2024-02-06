@@ -1614,5 +1614,8 @@
     <None Include="..\.ci\install-freebsd.sh">
       <Filter>CI</Filter>
     </None>
+    <None Include="update_helper.sh">
+      <Filter>Scripts</Filter>
+    </None>
   </ItemGroup>
 </Project>

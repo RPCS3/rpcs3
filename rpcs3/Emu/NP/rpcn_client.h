@@ -241,6 +241,7 @@ namespace rpcn
 		RoomMessageReceived,
 		MessageReceived,
 		FriendPresenceChanged,
+		SignalingInfo,
 	};
 
 	enum class rpcn_state
@@ -407,6 +408,7 @@ namespace rpcn
 		static std::shared_ptr<rpcn_client> get_instance(bool check_config = false);
 		rpcn_state wait_for_connection();
 		rpcn_state wait_for_authentified();
+		bool terminate_connection();
 
 		void get_friends_and_register_cb(friend_data& friend_infos, friend_cb_func cb_func, void* cb_param);
 		void remove_friend_cb(friend_cb_func, void* cb_param);

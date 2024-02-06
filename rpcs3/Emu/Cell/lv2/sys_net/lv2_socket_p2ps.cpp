@@ -243,6 +243,11 @@ std::vector<u8> generate_u2s_packet(const p2ps_encapsulated_tcp& header, const u
 lv2_socket_p2ps::lv2_socket_p2ps(lv2_socket_family family, lv2_socket_type type, lv2_ip_protocol protocol)
 	: lv2_socket_p2p(family, type, protocol)
 {
+	sockopt_cache cache_type;
+	cache_type.data._int = SYS_NET_SOCK_STREAM_P2P;
+	cache_type.len = 4;
+
+	sockopts[(static_cast<u64>(SYS_NET_SOL_SOCKET) << 32ull) | SYS_NET_SO_TYPE] = cache_type;
 }
 
 lv2_socket_p2ps::lv2_socket_p2ps(socket_type socket, u16 port, u16 vport, u32 op_addr, u16 op_port, u16 op_vport, u64 cur_seq, u64 data_beg_seq, s32 so_nbio)

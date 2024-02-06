@@ -42,6 +42,7 @@
 #endif
 
 #include "util/asm.hpp"
+#include "util/yaml.hpp"
 
 #include <span>
 
@@ -55,6 +56,63 @@ LOG_CHANNEL(ticket_log, "Ticket");
 
 namespace np
 {
+	std::string get_players_history_path()
+	{
+#ifdef _WIN32
+		return fs::get_config_dir() + "config/players_history.yml";
+#else
+		return fs::get_config_dir() + "players_history.yml";
+#endif
+	}
+
+	std::map<std::string, player_history> load_players_history()
+	{
+		const auto parsing_error = [](std::string_view error) -> std::map<std::string, player_history>
+		{
+			nph_log.error("Error parsing %s: %s", get_players_history_path(), error);
+			return {};
+		};
+
+		std::map<std::string, player_history> history;
+
+		if (fs::file history_file{get_players_history_path(), fs::read + fs::create})
+		{
+			auto [yml_players_history, error] = yaml_load(history_file.to_string());
+
+			if (!error.empty())
+				return parsing_error(error);
+
+			for (const auto& player : yml_players_history)
+			{
+				std::string username = player.first.Scalar();
+				const auto& seq = player.second;
+
+				if (!seq.IsSequence() || seq.size() != 3)
+					return parsing_error("Player history is not a proper sequence!");
+
+				const u64 timestamp = get_yaml_node_value<u64>(seq[0], error);
+				if (!error.empty())
+					return parsing_error(error);
+
+				std::string description = seq[1].Scalar();
+
+				if (!seq[2].IsSequence())
+					return parsing_error("Expected communication ids sequence");
+
+				std::set<std::string> com_ids;
+
+				for (usz i = 0; i < seq[2].size(); i++)
+				{
+					com_ids.insert(seq[2][i].Scalar());
+				}
+
+				history.insert(std::make_pair(std::move(username), player_history{.timestamp = timestamp, .communication_ids = std::move(com_ids), .description = std::move(description)}));
+			}
+		}
+
+		return history;
+	}
+
 	ticket::ticket(std::vector<u8>&& raw_data)
 		: raw_data(raw_data)
 	{
@@ -363,6 +421,13 @@ namespace np
 
 	np_handler::np_handler()
 	{
+		{
+			auto history = load_players_history();
+
+			std::lock_guard lock(mutex_history);
+			players_history = std::move(history);
+		}
+
 		g_fxo->need<named_thread<signaling_handler>>();
 
 		is_connected  = (g_cfg.net.net_active == np_internet_status::enabled);
@@ -1057,6 +1122,7 @@ namespace np
 					case rpcn::NotificationType::UpdatedRoomMemberDataInternal: notif_updated_room_member_data_internal(notif.second); break;
 					case rpcn::NotificationType::SignalP2PConnect: notif_p2p_connect(notif.second); break;
 					case rpcn::NotificationType::RoomMessageReceived: notif_room_message_received(notif.second); break;
+					case rpcn::NotificationType::SignalingInfo: notif_signaling_info(notif.second); break;
 					default: rpcn_log.error("Unknown notification(%d) received!", notif.first); break;
 					}
 				}
@@ -1175,7 +1241,7 @@ namespace np
 		ret.cb     = (optParam && optParam->cbFunc) ? optParam->cbFunc : ctx->default_match2_optparam.cbFunc;
 		ret.event_type = event_type;
 
-		nph_log.warning("Callback used is 0x%x", ret.cb);
+		nph_log.trace("Callback used is 0x%x with req_id %d", ret.cb, req_id);
 
 		{
 			std::lock_guard lock(mutex_pending_requests);
@@ -1217,11 +1283,161 @@ namespace np
 		return ::at32(match2_req_results, event_key);
 	}
 
-	u32 np_handler::add_players_to_history(vm::cptr<SceNpId> /*npids*/, u32 /*count*/)
+	player_history& np_handler::get_player_and_set_timestamp(const SceNpId& npid, u64 timestamp)
 	{
+		std::string npid_str = std::string(npid.handle.data);
+
+		if (!players_history.contains(npid_str))
+		{
+			auto [it, success] = players_history.insert(std::make_pair(std::move(npid_str), player_history{.timestamp = timestamp}));
+			ensure(success);
+			return it->second;
+		}
+
+		auto& history = ::at32(players_history, npid_str);
+		history.timestamp = timestamp;
+		return history;
+	}
+
+	constexpr usz MAX_HISTORY_ENTRIES = 200;
+
+	void np_handler::add_player_to_history(const SceNpId* npid, const char* description)
+	{
+		std::lock_guard lock(mutex_history);
+		auto& history = get_player_and_set_timestamp(*npid, get_system_time());
+
+		if (description)
+			history.description = description;
+
+		while (players_history.size() > MAX_HISTORY_ENTRIES)
+		{
+			auto it = std::min_element(players_history.begin(), players_history.end(), [](const auto& a, const auto& b) { return a.second.timestamp < b.second.timestamp; } );
+			players_history.erase(it);
+		}
+
+		save_players_history();
+	}
+
+	u32 np_handler::add_players_to_history(const SceNpId* npids, const char* description, u32 count)
+	{
+		std::lock_guard lock(mutex_history);
+
+		const std::string communication_id_str = std::string(basic_handler.context.data);
+
+		for (u32 i = 0; i < count; i++)
+		{
+			auto& history = get_player_and_set_timestamp(npids[i], get_system_time());
+
+			if (description)
+				history.description = description;
+
+			history.communication_ids.insert(communication_id_str);
+		}
+
+		while (players_history.size() > MAX_HISTORY_ENTRIES)
+		{
+			auto it = std::min_element(players_history.begin(), players_history.end(), [](const auto& a, const auto& b) { return a.second.timestamp < b.second.timestamp; } );
+			players_history.erase(it);
+		}
+
+		save_players_history();
+
 		const u32 req_id = get_req_id(REQUEST_ID_HIGH::MISC);
 		send_basic_event(SCE_NP_BASIC_EVENT_ADD_PLAYERS_HISTORY_RESULT, 0, req_id);
 		return req_id;
+	}
+
+	u32 np_handler::get_players_history_count(u32 options)
+	{
+		const bool all_history = (options == SCE_NP_BASIC_PLAYERS_HISTORY_OPTIONS_ALL);
+
+		std::lock_guard lock(mutex_history);
+
+		if (all_history)
+		{
+			return ::size32(players_history);
+		}
+
+		const std::string communication_id_str = std::string(basic_handler.context.data);
+		return static_cast<u32>(std::count_if(players_history.begin(), players_history.end(), [&](const auto& entry)
+			{
+				return entry.second.communication_ids.contains(communication_id_str);
+			}));
+	}
+
+	bool np_handler::get_player_history_entry(u32 options, u32 index, SceNpId* npid)
+	{
+		const bool all_history = (options == SCE_NP_BASIC_PLAYERS_HISTORY_OPTIONS_ALL);
+
+		std::lock_guard lock(mutex_history);
+
+		if (all_history)
+		{
+			auto it = players_history.begin();
+			std::advance(it, index);
+
+			if (it != players_history.end())
+			{
+				string_to_npid(it->first, *npid);
+				return true;
+			}
+		}
+		else
+		{
+			const std::string communication_id_str = std::string(basic_handler.context.data);
+
+			// Get the nth element that contains the current communication_id
+			for (auto it = players_history.begin(); it != players_history.end(); it++)
+			{
+				if (it->second.communication_ids.contains(communication_id_str))
+				{
+					if (index == 0)
+					{
+						string_to_npid(it->first, *npid);
+						return true;
+					}
+
+					index--;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	void np_handler::save_players_history()
+	{
+#ifdef _WIN32
+		const std::string path_to_cfg = fs::get_config_dir() + "config/";
+		if (!fs::create_path(path_to_cfg))
+		{
+			nph_log.error("Could not create path: %s", path_to_cfg);
+		}
+#endif
+		fs::file history_file(get_players_history_path(), fs::rewrite);
+		if (!history_file)
+			return;
+
+		YAML::Emitter out;
+
+		out << YAML::BeginMap;
+		for (const auto& [player_npid, player_info] : players_history)
+		{
+			out << player_npid;
+			out << YAML::BeginSeq;
+			out << player_info.timestamp;
+			out << player_info.description;
+			out << YAML::BeginSeq;
+			for (const auto& com_id : player_info.communication_ids)
+			{
+				out << com_id;
+			}
+			out << YAML::EndSeq;
+			out << YAML::EndSeq;
+		}
+		out << YAML::EndMap;
+
+		history_file.write(out.c_str(), out.size());
 	}
 
 	u32 np_handler::get_num_friends()

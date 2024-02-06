@@ -822,6 +822,8 @@ void gs_frame::take_screenshot(std::vector<u8> data, u32 sshot_width, u32 sshot_
 	std::thread(
 		[sshot_width, sshot_height, is_bgra](std::vector<u8> sshot_data)
 		{
+			thread_base::set_name("Screenshot");
+
 			screenshot_log.notice("Taking screenshot (%dx%d)", sshot_width, sshot_height);
 
 			const std::string& id = Emu.GetTitleID();

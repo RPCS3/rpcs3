@@ -137,12 +137,18 @@ error_code sceNpCommerce2Init()
 	if (!nph.is_NP_init)
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 
+	nph.is_NP_Com2_init = true;
+
 	return CELL_OK;
 }
 
 error_code sceNpCommerce2Term()
 {
 	sceNpCommerce2.warning("sceNpCommerce2Term()");
+
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	nph.is_NP_Com2_init = false;
 
 	return CELL_OK;
 }
@@ -379,7 +385,7 @@ error_code sceNpCommerce2GetCategoryContentsStart(u32 req_id, vm::cptr<char> cat
 	return CELL_OK;
 }
 
-error_code get_result(u32 req_id, vm::ptr<void> buf, u32 buf_size, vm::ptr<u32> fill_size)
+error_code get_result(u32 /* req_id */, vm::ptr<void> buf, u32 buf_size, vm::ptr<u32> fill_size)
 {
 	if (!buf || !buf_size || ! fill_size)
 		return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
@@ -767,8 +773,6 @@ error_code sceNpCommerce2DoCheckoutStartAsync(u32 ctx_id, vm::cpptr<char> sku_id
 
 	if (sku_num > SCE_NP_COMMERCE2_SKU_CHECKOUT_MAX)
 		return SCE_NP_COMMERCE2_ERROR_INVALID_SKU_NUM;
-
-	u32 uvar5 = sku_num;
 
 	for (u32 i = 0; i < sku_num; i++)
 	{

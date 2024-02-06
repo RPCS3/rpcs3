@@ -2,8 +2,6 @@
 #include "overlay_cursor.h"
 #include "overlay_manager.h"
 
-#include "Emu/RSX/RSXThread.h"
-
 namespace rsx
 {
 	namespace overlays
@@ -76,7 +74,7 @@ namespace rsx
 			return cr;
 		}
 
-		void cursor_manager::update()
+		void cursor_manager::update(u64 timestamp_us)
 		{
 			if (!visible)
 			{
@@ -85,12 +83,11 @@ namespace rsx
 
 			std::lock_guard lock(m_mutex);
 
-			const u64 cur_time = get_system_time();
 			bool any_cursor_visible = false;
 
 			for (auto& entry : m_cursors)
 			{
-				any_cursor_visible |= entry.second.update_visibility(cur_time);
+				any_cursor_visible |= entry.second.update_visibility(timestamp_us);
 			}
 
 			if (!any_cursor_visible)

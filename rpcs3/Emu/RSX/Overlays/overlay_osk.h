@@ -116,7 +116,7 @@ namespace rsx
 			void step_panel(bool next_panel);
 			void update_panel();
 			void update_layout();
-			void update() override;
+			void update(u64 timestamp_us) override;
 
 			void update_controls();
 			void update_selection_by_index(u32 index);

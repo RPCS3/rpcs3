@@ -40,7 +40,7 @@ namespace rsx
 
 			compiled_resource get_compiled() override;
 
-			void update() override;
+			void update(u64 timestamp_us) override;
 			void on_button_pressed(pad_button button_press, bool is_auto_repeat) override;
 			void close(bool use_callback, bool stop_pad_interception) override;
 

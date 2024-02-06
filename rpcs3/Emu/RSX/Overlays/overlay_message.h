@@ -20,7 +20,7 @@ namespace rsx
 		public:
 			template <typename T>
 			message_item(T msg_id, u64 expiration, std::shared_ptr<atomic_t<u32>> refs, std::shared_ptr<overlay_element> icon = {});
-			void update(usz index, u64 time, u16 y_offset);
+			void update(usz index, u64 timestamp_us, u16 y_offset);
 			void set_pos(u16 _x, u16 _y) override;
 
 			void reset_expiration();
@@ -46,7 +46,7 @@ namespace rsx
 		class message final : public overlay
 		{
 		public:
-			void update() override;
+			void update(u64 timestamp_us) override;
 			compiled_resource get_compiled() override;
 
 			template <typename T>

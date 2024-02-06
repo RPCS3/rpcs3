@@ -241,4 +241,24 @@ namespace np
 		const u32 conn_id = sigh.init_sig2(*npid, room_id, member_id);
 		sigh.start_sig(conn_id, addr_p2p, port_p2p);
 	}
+
+	void np_handler::notif_signaling_info(std::vector<u8>& data)
+	{
+		vec_stream noti(data);
+		const u32 addr_p2p = noti.get<u32>();
+		const u32 port_p2p = noti.get<u16>();
+		const std::string str_npid = noti.get_string(false);
+
+		if (noti.is_error())
+		{
+			rpcn_log.error("Received faulty SignalingInfo notification");
+			return;
+		}
+
+		SceNpId npid_p2p;
+		string_to_npid(str_npid, npid_p2p);
+
+		auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
+		sigh.send_information_packets(addr_p2p, port_p2p, npid_p2p);
+	}
 } // namespace np

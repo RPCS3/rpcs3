@@ -39,7 +39,7 @@ namespace rsx
 		class cursor_manager final : public overlay
 		{
 		public:
-			void update() override;
+			void update(u64 timestamp_us) override;
 			compiled_resource get_compiled() override;
 
 			void update_cursor(u32 id, u16 x, u16 y, const color4f& color, u64 duration_us, bool force_update);
