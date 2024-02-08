@@ -90,6 +90,23 @@ void fmt_class_string<lv2_dir>::format(std::string& out, u64 arg)
 	fmt::append(out, u8"Directory, “%s”, Entries: %u/%u", dir.name.data(), std::min<u64>(dir.pos, dir.entries.size()), dir.entries.size());
 }
 
+bool has_fs_write_rights(std::string_view vpath)
+{
+	// VSH has access to everything
+	if (g_ps3_process_info.has_root_perm())
+		return true;
+
+	const auto norm_vpath = lv2_fs_object::get_normalized_path(vpath);
+	const auto parent_dir = fs::get_parent_dir_view(norm_vpath);
+
+	// This is not exhaustive, PS3 has a unix filesystem with rights for each directory and files
+	// This is mostly meant to protect against games doing insane things(ie NPUB30003 => NPUB30008)
+	if (parent_dir == "/dev_hdd0" || parent_dir == "/dev_hdd0/game")
+		return false;
+
+	return true;
+}
+
 bool verify_mself(const fs::file& mself_file)
 {
 	FsMselfHeader mself_header;
@@ -956,6 +973,11 @@ lv2_file::open_result_t lv2_file::open(std::string_view vpath, s32 flags, s32 mo
 		return {CELL_ENOTMOUNTED, path};
 	}
 
+	if (flags & CELL_FS_O_CREAT && !has_fs_write_rights(vpath) && !fs::is_dir(local_path))
+	{
+		return {CELL_EACCES};
+	}
+
 	lv2_file_type type = lv2_file_type::regular;
 
 	if (size == 8)
@@ -1638,6 +1660,11 @@ error_code sys_fs_mkdir(ppu_thread& ppu, vm::cptr<char> path, s32 mode)
 		return {CELL_EROFS, path};
 	}
 
+	if (!fs::exists(local_path) && !has_fs_write_rights(path.get_ptr()))
+	{
+		return {CELL_EACCES, path};
+	}
+
 	std::lock_guard lock(mp->mutex);
 
 	if (!fs::create_dir(local_path))
@@ -1759,6 +1786,11 @@ error_code sys_fs_rmdir(ppu_thread& ppu, vm::cptr<char> path)
 	if (mp.read_only)
 	{
 		return {CELL_EROFS, path};
+	}
+
+	if (fs::is_dir(local_path) && !has_fs_write_rights(path.get_ptr()))
+	{
+		return {CELL_EACCES};
 	}
 
 	std::lock_guard lock(mp->mutex);
