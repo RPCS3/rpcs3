@@ -60,6 +60,12 @@ enum
 
 enum ppu_thread_status : u32;
 
+struct ppu_non_sleeping_count_t
+{
+	bool has_running; // no actual count for optimization sake
+	u32 onproc_count;
+};
+
 namespace vm
 {
 	extern u8 g_reservations[65536 / 128 * 64];
@@ -280,7 +286,12 @@ public:
 	static bool is_scheduler_ready();
 
 	// Must be called under IDM lock
-	static bool has_ppus_in_running_state();
+	static ppu_non_sleeping_count_t count_non_sleeping_threads();
+
+	static inline bool has_ppus_in_running_state() noexcept
+	{
+		return count_non_sleeping_threads().has_running != 0;
+	}
 
 	static void set_yield_frequency(u64 freq, u64 max_allowed_tsx);
 
