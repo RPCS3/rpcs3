@@ -1424,12 +1424,12 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 		}
 	}
 
-	std::memcpy(fds.get_ptr(), fds_buf.data(), nfds * sizeof(fds[0]));
-
 	if (!has_timedout && !signaled)
 	{
 		return -SYS_NET_EINTR;
 	}
+
+	std::memcpy(fds.get_ptr(), fds_buf.data(), nfds * sizeof(fds[0]));
 
 	return not_an_error(signaled);
 }
@@ -1664,17 +1664,17 @@ error_code sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set
 		}
 	}
 
+	if (!has_timedout && !signaled)
+	{
+		return -SYS_NET_EINTR;
+	}
+
 	if (readfds)
 		*readfds = rread;
 	if (writefds)
 		*writefds = rwrite;
 	if (exceptfds)
 		*exceptfds = rexcept;
-
-	if (!has_timedout && !signaled)
-	{
-		return -SYS_NET_EINTR;
-	}
 
 	return not_an_error(signaled);
 }
