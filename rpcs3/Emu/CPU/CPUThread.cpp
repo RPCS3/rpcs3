@@ -964,6 +964,14 @@ bool cpu_thread::check_state() noexcept
 				}
 				else if (auto ppu = try_get<ppu_thread>())
 				{
+					if (u32 usec = ppu->hw_sleep_time)
+					{
+						thread_ctrl::wait_for_accurate(usec);
+						ppu->hw_sleep_time = 0;
+						ppu->raddr = 0; // Also lose reservation if there is any (reservation is unsaved on hw thread switch)
+						continue;
+					}
+
 					if (ppu->raddr && ppu->rtime == vm::reservation_acquire(ppu->raddr))
 					{
 						// Same
