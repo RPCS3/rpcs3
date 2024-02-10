@@ -42,11 +42,12 @@ struct KitState
 class usb_device_rb3_midi_drums : public usb_device_emulated
 {
 private:
-	usz response_pos = 0;
-	bool buttons_enabled = false;
+	usz response_pos{};
+	bool buttons_enabled{};
 	RtMidiInPtr midi_in{};
 	std::vector<rb3drums::KitState> kit_states;
 	bool hold_kick{};
+	bool midi_cc_triggered{};
 
 	class ComboTracker
 	{
@@ -62,6 +63,8 @@ private:
 	ComboTracker combo;
 
 	rb3drums::KitState parse_midi_message(u8* msg, usz size);
+	rb3drums::KitState parse_midi_note(u8 id, u8 velocity);
+	bool is_midi_cc(u8 id, u8 value);
 	void write_state(u8* buf, const rb3drums::KitState&);
 
 public:

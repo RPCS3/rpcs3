@@ -16,6 +16,10 @@ struct cfg_rb3drums final : cfg::node
 	cfg::string combo_start{this, "Combo Start", "HihatPedal,HihatPedal,HihatPedal,Snare"};
 	cfg::string combo_select{this, "Combo Select", "HihatPedal,HihatPedal,HihatPedal,SnareRim"};
 	cfg::string combo_toggle_hold_kick{this, "Combo Toggle Hold Kick", "HihatPedal,HihatPedal,HihatPedal,Kick"};
+	cfg::uint<0, 255> midi_cc_status{this, "Midi CC status", 0xB0, true};
+	cfg::uint<0, 127> midi_cc_number{this, "Midi CC control number", 4, true};
+	cfg::uint<0, 127> midi_cc_threshold{this, "Midi CC threshold", 64, true};
+	cfg::_bool midi_cc_invert_threshold{this, "Midi CC invert threshold", false, true};
 
 	const std::string path;
 };

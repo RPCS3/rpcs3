@@ -196,6 +196,10 @@ enum class Id : u8
 	SnareRim = 40, // midi pro adapter counts this as snare.
 	HihatWithPedalUp = 46, // The midi pro adapter considers this a normal hihat hit.
 	HihatPedalPartial = 23, // If pedal is not 100% down, this will be sent instead of a normal hihat hit.
+
+	// Internal value used for converting midi CC.
+	// Values past 127 are not used in midi notes.
+	MidiCC = 255,
 };
 
 // Intermediate mapping regardless of which midi ids triggered it.
@@ -262,6 +266,7 @@ std::optional<std::pair<Id, Note>> parse_midi_override(const std::string_view co
 std::unordered_map<Id, Note> create_id_to_note_mapping()
 {
 	std::unordered_map<Id, Note> mapping{
+		{Id::MidiCC,            Note::Kick},
 		{Id::Kick0,             Note::Kick},
 		{Id::Kick1,             Note::Kick},
 		{Id::Kick2,             Note::Kick},
@@ -692,17 +697,28 @@ rb3drums::KitState usb_device_rb3_midi_drums::parse_midi_message(u8* msg, usz si
 
 	auto status = msg[0];
 	auto id = msg[1];
-	auto velocity = msg[2];
+	auto value = msg[2];
 
-	if (status != 0x99)
+	if (status == 0x99)
 	{
-		// Ignore non-"note on" midi status messages.
-		return rb3drums::KitState{};
+		return parse_midi_note(id, value);
 	}
+	if (status == g_cfg_rb3drums.midi_cc_status)
+	{
+		if (is_midi_cc(id, value))
+		{
+			return parse_midi_note(static_cast<u8>(midi::Id::MidiCC), 127);
+		}
+	}
+	// Ignore non-"note on" midi status messages.
+	return rb3drums::KitState{};
+}
 
+rb3drums::KitState usb_device_rb3_midi_drums::parse_midi_note(const u8 id, const u8 velocity)
+{
 	if (velocity < midi::min_velocity())
 	{
-		// Must check here so we don't overwrite good values.
+		// Must check here so we don't overwrite good values when applying states.
 		return rb3drums::KitState{};
 	}
 
@@ -729,6 +745,39 @@ rb3drums::KitState usb_device_rb3_midi_drums::parse_midi_message(u8* msg, usz si
 
 	combo.add(static_cast<u8>(note));
 	return kit_state;
+}
+
+bool usb_device_rb3_midi_drums::is_midi_cc(const u8 id, const u8 value)
+{
+	if (id != g_cfg_rb3drums.midi_cc_number)
+	{
+		return false;
+	}
+	auto is_past_threshold = [](u8 value)
+	{
+		const u8 threshold = g_cfg_rb3drums.midi_cc_threshold;
+		return g_cfg_rb3drums.midi_cc_invert_threshold
+			? value < threshold
+			: value > threshold;
+	};
+
+	if (midi_cc_triggered)
+	{
+		if (!is_past_threshold(value))
+		{
+			// Reset triggered state when we fall back past threshold.
+			midi_cc_triggered = false;
+		}
+	}
+	else
+	{
+		if (is_past_threshold(value))
+		{
+			midi_cc_triggered = true;
+			return true;
+		}
+	}
+	return false;
 }
 
 void usb_device_rb3_midi_drums::write_state(u8* buf, const rb3drums::KitState& kit_state)
