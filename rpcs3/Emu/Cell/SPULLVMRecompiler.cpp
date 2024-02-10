@@ -2806,6 +2806,7 @@ public:
 		}
 		case SPU_RdDec:
 		{
+#if defined(ARCH_X64)
 			if (utils::get_tsc_freq() && !(g_cfg.core.spu_loop_detection) && (g_cfg.core.clocks_scale == 100))
 			{
 				const auto timestamp = m_ir->CreateLoad(get_type<u64>(), spu_ptr<u64>(&spu_thread::ch_dec_start_timestamp));
@@ -2823,7 +2824,7 @@ public:
 				res.value = m_ir->CreateSub(dec_value, deltax);
 				break;
 			}
-
+#endif
 			res.value = call("spu_read_decrementer", &exec_read_dec, m_thread);
 			break;
 		}
@@ -3511,6 +3512,7 @@ public:
 		{
 			call("spu_get_events", &exec_get_events, m_thread, m_ir->getInt32(SPU_EVENT_TM));
 
+#if defined(ARCH_X64)
 			if (utils::get_tsc_freq() && !(g_cfg.core.spu_loop_detection) && (g_cfg.core.clocks_scale == 100))
 			{
 				const auto tsc = m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::x86_rdtsc));
@@ -3520,6 +3522,7 @@ public:
 				m_ir->CreateStore(tsctb, spu_ptr<u64>(&spu_thread::ch_dec_start_timestamp));
 			}
 			else
+#endif
 			{
 				m_ir->CreateStore(call("get_timebased_time", &get_timebased_time), spu_ptr<u64>(&spu_thread::ch_dec_start_timestamp));
 			}
