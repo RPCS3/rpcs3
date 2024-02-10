@@ -3836,6 +3836,29 @@
              </widget>
             </item>
             <item>
+             <widget class="QGroupBox" name="gb_gui_pad_input">
+              <property name="title">
+               <string>Pad Input</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_gui_pad_input_layout">
+               <item>
+                <widget class="QCheckBox" name="cb_pad_navigation">
+                 <property name="text">
+                  <string>Enable Pad Navigation</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="cb_global_pad_navigation">
+                 <property name="text">
+                  <string>Allow Global Pad Navigation</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
              <spacer name="guiTabSpacerMiddle">
               <property name="orientation">
                <enum>Qt::Vertical</enum>
