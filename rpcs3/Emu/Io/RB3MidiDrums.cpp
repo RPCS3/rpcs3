@@ -777,10 +777,10 @@ void usb_device_rb3_midi_drums::ComboTracker::add(u8 note)
 		reset();
 	}
 
-	auto i = midi_notes.size();
-	auto defs = midi::combo::definitions();
+	const usz i = midi_notes.size();
+	const auto& defs = midi::combo::definitions();
 	bool is_in_combo = false;
-	for (auto def : defs)
+	for (const auto& def : defs)
 	{
 		if (i < def.notes.size() && note == def.notes[i])
 		{
