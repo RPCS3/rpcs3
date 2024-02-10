@@ -652,15 +652,33 @@ void usb_device_rb3_midi_drums::interrupt_transfer(u32 buf_size, u8* buf, u32 /*
 		return now >= kit_state.expiry;
 	}), std::end(kit_states));
 
-	// Apply states to buf.
-	for (const auto& kit_state : kit_states)
+	bool cymbal_hit = false;
+	usz i = 0;
+	for (; i < kit_states.size(); ++i)
 	{
+		const auto& kit_state = kit_states[i];
+
+		// Rockband sometimes has trouble registering both hits when two cymbals are hit at once.
+		// To solve for this, we stagger cymbal hits so that they occur one after another instead of at the same time.
+		// Note that this is staggering by pulse_ms (30ms default) so a human is unlikely to notice it in practice.
+		if (g_cfg_rb3drums.stagger_cymbals && cymbal_hit && kit_state.is_cymbal())
+		{
+			// Already have a cymbal applied, buffer other inputs.
+			break;
+		}
+		cymbal_hit = kit_state.is_cymbal();
 		write_state(buf, kit_state);
 	}
 
 	if (hold_kick)
 	{
 		write_state(buf, drum::kick_state());
+	}
+
+	// Extend expiry on buffered states since they are not active.
+	for (; i < kit_states.size(); ++i)
+	{
+		kit_states[i].expiry = now + drum::hit_duration();
 	}
 }
 
