@@ -107,6 +107,7 @@ namespace gui
 	const QString config       = "Config";
 	const QString log_viewer   = "LogViewer";
 	const QString sc           = "Shortcuts";
+	const QString navigation   = "PadNavigation";
 
 	const QString update_on   = "true";
 	const QString update_off  = "false";
@@ -270,6 +271,9 @@ namespace gui
 	const gui_save lv_log_levels      = gui_save(log_viewer, "log_levels",      0b11111111u);
 
 	const gui_save sc_shortcuts = gui_save(sc, "shortcuts", QVariantMap());
+
+	const gui_save nav_enabled = gui_save(navigation, "pad_input_enabled",      false);
+	const gui_save nav_global  = gui_save(navigation, "allow_global_pad_input", false);
 }
 
 /** Class for GUI settings..

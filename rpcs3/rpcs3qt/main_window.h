@@ -27,6 +27,7 @@ class emu_settings;
 class persistent_settings;
 class kernel_explorer;
 class system_cmd_dialog;
+class gui_pad_thread;
 
 struct gui_game_info;
 
@@ -100,7 +101,7 @@ Q_SIGNALS:
 
 public Q_SLOTS:
 	void OnEmuStop();
-	void OnEmuRun(bool start_playtime) const;
+	void OnEmuRun(bool start_playtime);
 	void OnEmuResume() const;
 	void OnEmuPause() const;
 	void OnEmuReady() const;
@@ -132,6 +133,7 @@ private Q_SLOTS:
 	void CreateFirmwareCache();
 
 	void handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKeySequence& key_sequence);
+	void update_gui_pad_thread();
 
 protected:
 	void closeEvent(QCloseEvent *event) override;
@@ -201,4 +203,6 @@ private:
 	QAction* m_download_menu_action = nullptr;
 
 	shortcut_handler* m_shortcut_handler = nullptr;
+
+	std::unique_ptr<gui_pad_thread> m_gui_pad_thread;
 };

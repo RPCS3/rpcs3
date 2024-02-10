@@ -179,6 +179,7 @@
     <ClCompile Include="display_sleep_control.cpp" />
     <ClCompile Include="Input\dualsense_pad_handler.cpp" />
     <ClCompile Include="Input\evdev_gun_handler.cpp" />
+    <ClCompile Include="Input\gui_pad_thread.cpp" />
     <ClCompile Include="Input\hid_pad_handler.cpp" />
     <ClCompile Include="Input\raw_mouse_handler.cpp" />
     <ClCompile Include="Input\sdl_pad_handler.cpp" />
@@ -839,6 +840,7 @@
     <ClInclude Include="Input\dualsense_pad_handler.h" />
     <ClInclude Include="Input\evdev_gun_handler.h" />
     <ClInclude Include="Input\evdev_joystick_handler.h" />
+    <ClInclude Include="Input\gui_pad_thread.h" />
     <ClInclude Include="Input\hid_pad_handler.h" />
     <ClInclude Include="Input\keyboard_pad_handler.h" />
     <CustomBuild Include="rpcs3qt\gs_frame.h">
