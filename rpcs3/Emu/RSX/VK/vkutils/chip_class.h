@@ -36,7 +36,9 @@ namespace vk
 		RADV,
 		INTEL,
 		ANV,
-		MVK
+		MVK,
+		DOZEN,
+		LAVAPIPE
 	};
 
 	driver_vendor get_driver_vendor();
