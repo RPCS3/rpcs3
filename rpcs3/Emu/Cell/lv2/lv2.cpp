@@ -1763,9 +1763,13 @@ void lv2_obj::schedule_all(u64 current_time)
 			if (target->state & cpu_flag::suspend)
 			{
 				ppu_log.trace("schedule(): %s", target->id);
+
+				// Remove yield if it was sleeping until now
+				const bs_t<cpu_flag> remove_yield = target->start_time == 0 ? +cpu_flag::suspend : (cpu_flag::yield + cpu_flag::preempt);
+
 				target->start_time = 0;
 
-				if ((target->state.fetch_op(FN(x += cpu_flag::signal, x -= cpu_flag::suspend, void())) & (cpu_flag::wait + cpu_flag::signal)) != cpu_flag::wait)
+				if ((target->state.fetch_op(FN(x += cpu_flag::signal, x -= cpu_flag::suspend, x-= remove_yield, void())) & (cpu_flag::wait + cpu_flag::signal)) != cpu_flag::wait)
 				{
 					continue;
 				}
