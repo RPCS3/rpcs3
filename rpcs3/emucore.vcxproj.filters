@@ -1198,6 +1198,9 @@
     <ClCompile Include="Emu\Io\RB3MidiDrums.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Io\rb3drums_config.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -2426,6 +2429,9 @@
       <Filter>Emu\GPU\RSX\Overlays\Network</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Io\RB3MidiDrums.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\rb3drums_config.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
   </ItemGroup>

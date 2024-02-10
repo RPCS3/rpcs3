@@ -282,19 +282,6 @@ struct cfg_root : cfg::node
 		cfg::string midi_devices{this, "Emulated Midi devices", "ßßß@@@ßßß@@@ßßß@@@"};
 		cfg::_bool load_sdl_mappings{ this, "Load SDL GameController Mappings", true };
 
-		struct node_rb3drums : cfg::node
-		{
-			node_rb3drums(cfg::node* _this) : cfg::node(_this, "Rockband 3 Midi Drums") {}
-
-			cfg::uint<1, 100> pulse_ms{this, "Pulse width ms", 30, true};
-			cfg::uint<1, 127> minimum_velocity{this, "Minimum velocity", 10, true};
-			cfg::uint<1, 5000> combo_window_ms{this, "Combo window in milliseconds", 2000, true};
-			cfg::string midi_overrides{this, "Midi id to note override", ""};
-			cfg::string combo_start{this, "Combo Start", "HihatPedal,HihatPedal,HihatPedal,Snare"};
-			cfg::string combo_select{this, "Combo Select", "HihatPedal,HihatPedal,HihatPedal,SnareRim"};
-			cfg::string combo_toggle_hold_kick{this, "Combo Toggle Hold Kick", "HihatPedal,HihatPedal,HihatPedal,Kick"};
-		} rb3drums{ this };
-
 	} io{ this };
 
 	struct node_sys : cfg::node

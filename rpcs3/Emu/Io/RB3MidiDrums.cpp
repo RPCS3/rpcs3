@@ -3,7 +3,7 @@
 #include "stdafx.h"
 #include "RB3MidiDrums.h"
 #include "Emu/Cell/lv2/sys_usbd.h"
-#include "Emu/system_config.h"
+#include "Emu/Io/rb3drums_config.h"
 
 using namespace std::chrono_literals;
 
@@ -87,7 +87,7 @@ namespace drum
 // Hold each hit for a period of time. Rock band doesn't pick up a single tick.
 std::chrono::milliseconds hit_duration()
 {
-	return std::chrono::milliseconds(g_cfg.io.rb3drums.pulse_ms);
+	return std::chrono::milliseconds(g_cfg_rb3drums.pulse_ms);
 }
 
 // Scale velocity from midi to what rock band expects.
@@ -155,7 +155,7 @@ namespace midi
 
 u8 min_velocity()
 {
-	return g_cfg.io.rb3drums.minimum_velocity;
+	return g_cfg_rb3drums.minimum_velocity;
 }
 
 enum class Id : u8
@@ -294,7 +294,7 @@ std::unordered_map<Id, Note> create_id_to_note_mapping()
 		{Id::Crash3,            Note::Crash},
 	};
 	// Apply configured overrides.
-	auto split = fmt::split(g_cfg.io.rb3drums.midi_overrides.to_string(), {","});
+	auto split = fmt::split(g_cfg_rb3drums.midi_overrides.to_string(), {","});
 	for (const auto& segment : split)
 	{
 		if (auto midi_override = parse_midi_override(segment))
@@ -355,16 +355,16 @@ struct Definition
 
 std::chrono::milliseconds window()
 {
-	return std::chrono::milliseconds{g_cfg.io.rb3drums.combo_window_ms};
+	return std::chrono::milliseconds{g_cfg_rb3drums.combo_window_ms};
 }
 
 const std::vector<Definition>& definitions()
 {
 	// Only parse once and cache.
 	static const std::vector<Definition> defs{
-		{"start",     g_cfg.io.rb3drums.combo_start.to_string(),            []{ return drum::start_state(); }},
-		{"select",    g_cfg.io.rb3drums.combo_select.to_string(),           []{ return drum::select_state(); }},
-		{"hold kick", g_cfg.io.rb3drums.combo_toggle_hold_kick.to_string(), []{ return drum::toggle_hold_kick_state(); }}
+		{"start",     g_cfg_rb3drums.combo_start.to_string(),            []{ return drum::start_state(); }},
+		{"select",    g_cfg_rb3drums.combo_select.to_string(),           []{ return drum::select_state(); }},
+		{"hold kick", g_cfg_rb3drums.combo_toggle_hold_kick.to_string(), []{ return drum::toggle_hold_kick_state(); }}
 	};
 	return defs;
 }
@@ -395,7 +395,7 @@ void set_flag_if_any(u8* buf, std::string_view name, const controller::FlagByInd
 usb_device_rb3_midi_drums::usb_device_rb3_midi_drums(const std::array<u8, 7>& location, const std::string& device_name)
 	: usb_device_emulated(location)
 {
-	rb3_midi_drums_log.success("using pulse ms: %d", drum::hit_duration().count());
+	g_cfg_rb3drums.load();
 
 	UsbDeviceDescriptor descriptor{};
 	descriptor.bcdDevice = 0x0200;
@@ -653,9 +653,9 @@ void usb_device_rb3_midi_drums::interrupt_transfer(u32 buf_size, u8* buf, u32 /*
 	}), std::end(kit_states));
 
 	// Apply states to buf.
-	for (size_t i = 0; i < kit_states.size(); ++i)
+	for (const auto& kit_state : kit_states)
 	{
-		write_state(buf, kit_states[i]);
+		write_state(buf, kit_state);
 	}
 
 	if (hold_kick)

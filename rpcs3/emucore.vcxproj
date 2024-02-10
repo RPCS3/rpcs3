@@ -72,6 +72,7 @@
     <ClCompile Include="Emu\Io\camera_config.cpp" />
     <ClCompile Include="Emu\Io\midi_config_types.cpp" />
     <ClCompile Include="Emu\Io\pad_types.cpp" />
+    <ClCompile Include="Emu\Io\rb3drums_config.cpp" />
     <ClCompile Include="Emu\Io\RB3MidiDrums.cpp" />
     <ClCompile Include="Emu\Io\RB3MidiGuitar.cpp" />
     <ClCompile Include="Emu\Io\RB3MidiKeyboard.cpp" />
@@ -529,6 +530,7 @@
     <ClInclude Include="Emu\Io\music_handler_base.h" />
     <ClInclude Include="Emu\Io\Null\null_camera_handler.h" />
     <ClInclude Include="Emu\Io\Null\null_music_handler.h" />
+    <ClInclude Include="Emu\Io\rb3drums_config.h" />
     <ClInclude Include="Emu\Io\RB3MidiDrums.h" />
     <ClInclude Include="Emu\Io\RB3MidiGuitar.h" />
     <ClInclude Include="Emu\Io\RB3MidiKeyboard.h" />

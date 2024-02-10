@@ -26,6 +26,7 @@
 #include "Emu/Io/RB3MidiKeyboard.h"
 #include "Emu/Io/RB3MidiGuitar.h"
 #include "Emu/Io/RB3MidiDrums.h"
+#include "Emu/Io/rb3drums_config.h"
 #include "Emu/Io/usio.h"
 #include "Emu/Io/usio_config.h"
 #include "Emu/Io/midi_config_types.h"
@@ -372,6 +373,7 @@ usb_handler_thread::usb_handler_thread()
 	}
 
 	const std::vector<std::string> devices_list = fmt::split(g_cfg.io.midi_devices.to_string(), { "@@@" });
+	g_cfg_rb3drums.load();
 	for (usz index = 0; index < std::min(max_midi_devices, devices_list.size()); index++)
 	{
 		const midi_device device = midi_device::from_string(::at32(devices_list, index));
