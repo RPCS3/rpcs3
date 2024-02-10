@@ -34,12 +34,15 @@ else()
 	add_compile_options(-fstack-protector)
 
 	if (COMPILER_ARM)
+		# This section needs a review. Apple claims armv8.5-a on M-series but doesn't support SVE.
+		# Note that compared to the rest of the 8.x family, 8.1 is very restrictive and we'll have to bump the requirement in future to get anything meaningful.
 		if (APPLE)
 			add_compile_options(-march=armv8.4-a)
 		else()
 			add_compile_options(-march=armv8.1-a)
 		endif()
-	else()
+	elseif(COMPILER_X86)
+		# Some compilers will set both X86 and ARM, so check explicitly for ARM first
 		add_compile_options(-msse -msse2 -mcx16)
 	endif()
 
