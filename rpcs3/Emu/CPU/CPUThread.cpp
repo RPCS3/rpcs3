@@ -952,7 +952,7 @@ bool cpu_thread::check_state() noexcept
 				continue;
 			}
 
-			if (state0 & cpu_flag::yield && cpu_flag::wait - state0 && cpu_can_stop)
+			if (state0 & cpu_flag::yield && cpu_can_stop)
 			{
 				if (auto spu = try_get<spu_thread>())
 				{
