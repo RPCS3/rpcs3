@@ -33,16 +33,14 @@ else()
 	add_compile_options(-fno-exceptions)
 	add_compile_options(-fstack-protector)
 
-	if (COMPILER_X86)
-		add_compile_options(-msse -msse2 -mcx16)
-	endif()
-
 	if (COMPILER_ARM)
 		if (APPLE)
 			add_compile_options(-march=armv8.4-a)
 		else()
 			add_compile_options(-march=armv8.1-a)
 		endif()
+	else()
+		add_compile_options(-msse -msse2 -mcx16)
 	endif()
 
 	add_compile_options(-Werror=old-style-cast)
