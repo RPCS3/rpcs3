@@ -224,6 +224,11 @@ namespace vk
 		{
 			const auto gpu_name = get_name();
 
+			if (gpu_name.find("Microsoft Direct3D12") != umax)
+			{
+				return driver_vendor::DOZEN;
+			}
+
 			if (gpu_name.find("RADV") != umax)
 			{
 				return driver_vendor::RADV;
@@ -248,6 +253,11 @@ namespace vk
 #endif
 			}
 
+			if (gpu_name.find("llvmpipe") != umax)
+			{
+				return driver_vendor::LAVAPIPE;
+			}
+
 			return driver_vendor::unknown;
 		}
 		else
@@ -265,6 +275,10 @@ namespace vk
 				return driver_vendor::INTEL;
 			case VK_DRIVER_ID_INTEL_OPEN_SOURCE_MESA_KHR:
 				return driver_vendor::ANV;
+			case VK_DRIVER_ID_MESA_DOZEN:
+				return driver_vendor::DOZEN;
+			case VK_DRIVER_ID_MESA_LLVMPIPE:
+				return driver_vendor::LAVAPIPE;
 			default:
 				// Mobile?
 				return driver_vendor::unknown;
