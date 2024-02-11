@@ -186,6 +186,8 @@ namespace vk
 			case driver_vendor::NVIDIA:
 			case driver_vendor::INTEL:
 			case driver_vendor::MVK:
+			case driver_vendor::DOZEN:
+			case driver_vendor::LAVAPIPE:
 				break;
 			}
 
