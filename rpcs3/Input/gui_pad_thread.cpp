@@ -14,7 +14,6 @@
 #include "sdl_pad_handler.h"
 #endif
 #include "Emu/Io/PadHandler.h"
-#include "Emu/Io/pad_config.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Utilities/Thread.h"
@@ -26,6 +25,7 @@
 #define CHECK_IOCTRL_RET(res) if (res == -1) { gui_log.error("gui_pad_thread: ioctl failed (errno=%d=%s)", res, strerror(errno)); }
 #elif defined(__APPLE__)
 #include <ApplicationServices/ApplicationServices.h>
+#include <Carbon/Carbon.h>
 #endif
 
 #include <QApplication>
@@ -416,7 +416,7 @@ void gui_pad_thread::process_input()
 		last_state = pressed;
 	};
 
-	for (const Button& button : m_pad->m_buttons)
+	for (const auto& button : m_pad->m_buttons)
 	{
 		pad_button button_id = pad_button::pad_button_max_enum;
 		if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL1)
@@ -720,7 +720,7 @@ void gui_pad_thread::send_mouse_wheel_event(mouse_wheel wheel, int delta)
 	}
 
 	constexpr u32 wheel_count = 2;
-	CGEventRef ev = CGEventCreateScrollWheelEvent(NULL, CGScrollEventUnit::pixel, wheel_count, v_delta, h_delta);
+	CGEventRef ev = CGEventCreateScrollWheelEvent(NULL, kCGScrollEventUnitPixel, wheel_count, v_delta, h_delta);
 	if (!ev)
 	{
 		gui_log.error("gui_pad_thread: CGEventCreateScrollWheelEvent() failed");
