@@ -24,7 +24,7 @@ public:
 	static void InitPadConfig(cfg_pad& cfg, pad_handler type, std::shared_ptr<PadHandlerBase>& handler);
 
 protected:
-	void Init();
+	bool init();
 	void run();
 
 	void process_input();
@@ -44,10 +44,15 @@ protected:
 		horizontal
 	};
 
-	static void send_key_event(u32 key, bool pressed);
-	static void send_mouse_button_event(mouse_button btn, bool pressed);
-	static void send_mouse_wheel_event(mouse_wheel wheel, float delta);
-	static void send_mouse_move_event(float delta_x, float delta_y);
+	void send_key_event(u32 key, bool pressed);
+	void send_mouse_button_event(mouse_button btn, bool pressed);
+	void send_mouse_wheel_event(mouse_wheel wheel, int delta);
+	void send_mouse_move_event(int delta_x, int delta_y);
+
+#ifdef __linux__
+	int m_uinput_fd = -1;
+	void emit_event(int type, int code, int val);
+#endif
 
 	std::shared_ptr<PadHandlerBase> m_handler;
 	std::shared_ptr<Pad> m_pad;
