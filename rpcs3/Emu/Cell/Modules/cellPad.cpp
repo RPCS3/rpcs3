@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "Emu/IdManager.h"
 #include "Emu/system_config.h"
-#include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/Cell/lv2/sys_sync.h"
@@ -166,11 +165,7 @@ void cellPad_NotifyStateChange(usz index, u64 /*state*/, bool locked)
 
 extern void pad_state_notify_state_change(usz index, u32 state)
 {
-	// Prevents accidental calls from pad handlers while the emulation is not running.
-	if (Emu.IsRunning())
-	{
-		send_sys_io_connect_event(index, state);
-	}
+	send_sys_io_connect_event(index, state);
 }
 
 error_code cellPadInit(ppu_thread& ppu, u32 max_connect)

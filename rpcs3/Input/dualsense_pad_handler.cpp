@@ -96,8 +96,8 @@ namespace
 	static_assert(sizeof(struct output_report_usb) == DUALSENSE_USB_REPORT_SIZE);
 }
 
-dualsense_pad_handler::dualsense_pad_handler()
-    : hid_pad_handler<DualSenseDevice>(pad_handler::dualsense, {SONY_DUALSENSE_ID_0, SONY_DUALSENSE_ID_1})
+dualsense_pad_handler::dualsense_pad_handler(bool emulation)
+    : hid_pad_handler<DualSenseDevice>(pad_handler::dualsense, emulation, {SONY_DUALSENSE_ID_0, SONY_DUALSENSE_ID_1})
 {
 	// Unique names for the config files and our pad settings dialog
 	button_list =

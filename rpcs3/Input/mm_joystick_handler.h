@@ -109,7 +109,7 @@ class mm_joystick_handler final : public PadHandlerBase
 	};
 
 public:
-	mm_joystick_handler();
+	mm_joystick_handler(bool emulation);
 
 	bool Init() override;
 

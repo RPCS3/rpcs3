@@ -115,45 +115,12 @@ bool gui_pad_thread::init()
 	for (u32 i = 0; i < CELL_PAD_MAX_PORT_NUM; i++) // max 7 pads
 	{
 		cfg_player* cfg = g_cfg_input.player[i];
-		std::shared_ptr<PadHandlerBase> cur_pad_handler;
 
 		const pad_handler handler_type = cfg->handler.get();
+		std::shared_ptr<PadHandlerBase> cur_pad_handler = GetHandler(handler_type);
 
-		switch (handler_type)
+		if (!cur_pad_handler)
 		{
-		case pad_handler::ds3:
-			cur_pad_handler = std::make_shared<ds3_pad_handler>();
-			break;
-		case pad_handler::ds4:
-			cur_pad_handler = std::make_shared<ds4_pad_handler>();
-			break;
-		case pad_handler::dualsense:
-			cur_pad_handler = std::make_shared<dualsense_pad_handler>();
-			break;
-		case pad_handler::skateboard:
-			cur_pad_handler = std::make_shared<skateboard_pad_handler>();
-			break;
-#ifdef _WIN32
-		case pad_handler::xinput:
-			cur_pad_handler = std::make_shared<xinput_pad_handler>();
-			break;
-		case pad_handler::mm:
-			cur_pad_handler = std::make_shared<mm_joystick_handler>();
-			break;
-#endif
-#ifdef HAVE_SDL2
-		case pad_handler::sdl:
-			cur_pad_handler = std::make_shared<sdl_pad_handler>();
-			break;
-#endif
-#ifdef HAVE_LIBEVDEV
-		case pad_handler::evdev:
-			cur_pad_handler = std::make_shared<evdev_joystick_handler>();
-			break;
-#endif
-		case pad_handler::keyboard:
-		case pad_handler::null:
-			// Makes no sense to use this if we are in the GUI anyway
 			continue;
 		}
 
@@ -230,26 +197,26 @@ std::shared_ptr<PadHandlerBase> gui_pad_thread::GetHandler(pad_handler type)
 		// Makes no sense to use this if we are in the GUI anyway
 		return nullptr;
 	case pad_handler::ds3:
-		return std::make_unique<ds3_pad_handler>();
+		return std::make_shared<ds3_pad_handler>(false);
 	case pad_handler::ds4:
-		return std::make_unique<ds4_pad_handler>();
+		return std::make_shared<ds4_pad_handler>(false);
 	case pad_handler::dualsense:
-		return std::make_unique<dualsense_pad_handler>();
+		return std::make_shared<dualsense_pad_handler>(false);
 	case pad_handler::skateboard:
-		return std::make_unique<skateboard_pad_handler>();
+		return std::make_shared<skateboard_pad_handler>(false);
 #ifdef _WIN32
 	case pad_handler::xinput:
-		return std::make_unique<xinput_pad_handler>();
+		return std::make_shared<xinput_pad_handler>(false);
 	case pad_handler::mm:
-		return std::make_unique<mm_joystick_handler>();
+		return std::make_shared<mm_joystick_handler>(false);
 #endif
 #ifdef HAVE_SDL2
 	case pad_handler::sdl:
-		return std::make_unique<sdl_pad_handler>();
+		return std::make_shared<sdl_pad_handler>(false);
 #endif
 #ifdef HAVE_LIBEVDEV
 	case pad_handler::evdev:
-		return std::make_unique<evdev_joystick_handler>();
+		return std::make_shared<evdev_joystick_handler>(false);
 #endif
 	}
 
