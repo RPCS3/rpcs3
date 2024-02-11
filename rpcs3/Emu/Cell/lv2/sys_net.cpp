@@ -1236,18 +1236,25 @@ error_code sys_net_bnet_close(ppu_thread& ppu, s32 s)
 		return -SYS_NET_EBADF;
 	}
 
-	if (sock->get_queue_size())
+	sys_net.warning("Aborting the socket!");
+
+	if (auto size = sock->get_queue_size(); size != 0)
 	{
+		sys_net.warning("Aboring %d queues!", size);
 		sock->abort_socket(0);
 	}
 
+	sys_net.warning("Closing the socket!");
 	sock->close();
 
+	sys_net.warning("Clearing lingering socket!");
 	{
 		// Ensures the socket has no lingering copy from the network thread
 		std::lock_guard nw_lock(g_fxo->get<network_context>().s_nw_mutex);
 		sock.reset();
 	}
+
+	sys_net.warning("Close finished!");
 
 	return CELL_OK;
 }
@@ -1713,6 +1720,8 @@ error_code _sys_net_write_dump(ppu_thread& ppu, s32 id, vm::cptr<void> buf, s32 
 
 error_code lv2_socket::abort_socket(s32 flags)
 {
+	sys_net.warning("Grabbing queue!");
+
 	decltype(queue) qcopy;
 	{
 		std::lock_guard lock(mutex);
@@ -1733,6 +1742,8 @@ error_code lv2_socket::abort_socket(s32 flags)
 		events.store({});
 	}
 
+	sys_net.warning("Grabbed queue!");
+
 	for (auto& [ppu, _] : qcopy)
 	{
 		if (!ppu)
@@ -1743,7 +1754,10 @@ error_code lv2_socket::abort_socket(s32 flags)
 		lv2_obj::append(ppu.get());
 	}
 
+	sys_net.warning("awake all!");
 	lv2_obj::awake_all();
+	sys_net.warning("Awaken all!");
+
 	return CELL_OK;
 }
 

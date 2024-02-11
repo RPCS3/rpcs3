@@ -1057,6 +1057,9 @@ std::optional<s32> lv2_socket_native::sendmsg(s32 flags, const sys_net_msghdr& m
 void lv2_socket_native::close()
 {
 	std::lock_guard lock(mutex);
+
+	sys_net.warning("Closing the actual socket!");
+
 	if (socket)
 	{
 #ifdef _WIN32
@@ -1067,11 +1070,14 @@ void lv2_socket_native::close()
 		socket = {};
 	}
 
+	sys_net.warning("Removing dns hook!");
+
 	auto& dnshook = g_fxo->get<np::dnshook>();
 	dnshook.remove_dns_spy(lv2_id);
 
 	if (bound_port)
 	{
+		sys_net.warning("Removing UPNP bind!");
 		auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 		nph.upnp_remove_port_mapping(bound_port, type == SYS_NET_SOCK_STREAM ? "TCP" : "UDP");
 		bound_port = 0;
