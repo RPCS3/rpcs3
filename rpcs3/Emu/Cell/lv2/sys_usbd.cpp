@@ -399,9 +399,12 @@ usb_handler_thread::usb_handler_thread()
 		}
 	}
 
-	if (!g_cfg_rb3drums.load())
+	if (found_rb3drums)
 	{
-		sys_usbd.notice("Could not load rb3drums config. Using defaults.");
+		if (!g_cfg_rb3drums.load())
+		{
+			sys_usbd.notice("Could not load rb3drums config. Using defaults.");
+		}
 	}
 
 	if (g_cfg.io.ghltar == ghltar_handler::one_controller || g_cfg.io.ghltar == ghltar_handler::two_controllers)
