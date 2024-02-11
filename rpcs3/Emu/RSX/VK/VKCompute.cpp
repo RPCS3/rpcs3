@@ -76,6 +76,10 @@ namespace vk
 				optimal_kernel_size = 1;
 				optimal_group_size = 128;
 				break;
+			case vk::driver_vendor::LAVAPIPE:
+				// TODO: Actually bench this. Using 32 for now to match other common configurations.
+			case vk::driver_vendor::DOZEN:
+				// Actual optimal size depends on the D3D device. Use 32 since it should work well on both AMD and NVIDIA
 			case vk::driver_vendor::NVIDIA:
 				// Warps are multiples of 32. Increasing kernel depth seems to hurt performance (Nier, Big Duck sample)
 				unroll_loops = true;
@@ -84,7 +88,7 @@ namespace vk
 				break;
 			case vk::driver_vendor::AMD:
 			case vk::driver_vendor::RADV:
-				// Wavefronts are multiples of 64
+				// Wavefronts are multiples of 64. (RDNA also supports wave32)
 				unroll_loops = false;
 				optimal_kernel_size = 1;
 				optimal_group_size = 64;
