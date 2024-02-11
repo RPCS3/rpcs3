@@ -272,7 +272,7 @@ void main_window::update_gui_pad_thread()
 
 	if (enabled && Emu.IsStopped())
 	{
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__linux__)
 		if (!m_gui_pad_thread)
 		{
 			m_gui_pad_thread = std::make_unique<gui_pad_thread>();

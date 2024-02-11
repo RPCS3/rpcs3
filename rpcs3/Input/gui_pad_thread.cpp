@@ -20,6 +20,12 @@
 #include "Utilities/Thread.h"
 #include "rpcs3qt/gui_settings.h"
 
+#ifdef __linux__
+#include <linux/uinput.h>
+#include <fcntl.h>
+#define CHECK_IOCTRL_RET(res) if (res == -1) { gui_log.error("gui_pad_thread: ioctl failed (errno=%d=%s)", res, strerror(errno)); }
+#endif
+
 #include <QApplication>
 
 LOG_CHANNEL(gui_log, "GUI");
@@ -38,6 +44,20 @@ gui_pad_thread::~gui_pad_thread()
 		m_thread->join();
 		m_thread.reset();
 	}
+
+#ifdef __linux__
+	if (m_uinput_fd != 1)
+	{
+		gui_log.notice("gui_pad_thread: closing /dev/uinput");
+		CHECK_IOCTRL_RET(ioctl(m_uinput_fd, UI_DEV_DESTROY));
+		int res = close(m_uinput_fd);
+		if (res == -1)
+		{
+			gui_log.error("gui_pad_thread: Failed to close /dev/uinput (errno=%d=%s)", res, strerror(errno));
+		}
+		m_uinput_fd = -1;
+	}
+#endif
 }
 
 void gui_pad_thread::update_settings(const std::shared_ptr<gui_settings>& settings)
@@ -47,7 +67,7 @@ void gui_pad_thread::update_settings(const std::shared_ptr<gui_settings>& settin
 	m_allow_global_input = settings->GetValue(gui::nav_global).toBool();
 }
 
-void gui_pad_thread::Init()
+bool gui_pad_thread::init()
 {
 	m_handler.reset();
 	m_pad.reset();
@@ -151,6 +171,52 @@ void gui_pad_thread::Init()
 		// We only use one pad
 		break;
 	}
+
+	if (!m_handler || !m_pad)
+	{
+		gui_log.notice("gui_pad_thread: No devices configured.");
+		return false;
+	}
+
+#ifdef __linux__
+	gui_log.notice("gui_pad_thread: opening /dev/uinput");
+
+	m_uinput_fd = open("/dev/uinput", O_WRONLY | O_NONBLOCK);
+	if (m_uinput_fd == -1)
+	{
+		gui_log.error("gui_pad_thread: Failed to open /dev/uinput (errno=%d=%s)", m_uinput_fd, strerror(errno));
+		return false;
+	}
+
+	struct uinput_setup usetup{};
+	usetup.id.bustype = BUS_USB;
+	usetup.id.vendor = 0x1234;
+	usetup.id.product = 0x1234;
+	std::strcpy(usetup.name, "RPCS3 GUI Input Device");
+
+	// The ioctls below will enable the device that is about to be created to pass events.
+	CHECK_IOCTRL_RET(ioctl(m_uinput_fd, UI_SET_EVBIT, EV_KEY));
+	CHECK_IOCTRL_RET(ioctl(m_uinput_fd, UI_SET_KEYBIT, KEY_ESC));
+	CHECK_IOCTRL_RET(ioctl(m_uinput_fd, UI_SET_KEYBIT, KEY_ENTER));
+	CHECK_IOCTRL_RET(ioctl(m_uinput_fd, UI_SET_KEYBIT, KEY_BACKSPACE));
+	CHECK_IOCTRL_RET(ioctl(m_uinput_fd, UI_SET_KEYBIT, KEY_TAB));
+	CHECK_IOCTRL_RET(ioctl(m_uinput_fd, UI_SET_KEYBIT, KEY_LEFT));
+	CHECK_IOCTRL_RET(ioctl(m_uinput_fd, UI_SET_KEYBIT, KEY_RIGHT));
+	CHECK_IOCTRL_RET(ioctl(m_uinput_fd, UI_SET_KEYBIT, KEY_UP));
+	CHECK_IOCTRL_RET(ioctl(m_uinput_fd, UI_SET_KEYBIT, KEY_DOWN));
+	CHECK_IOCTRL_RET(ioctl(m_uinput_fd, UI_SET_KEYBIT, BTN_LEFT));
+	CHECK_IOCTRL_RET(ioctl(m_uinput_fd, UI_SET_KEYBIT, BTN_RIGHT));
+	CHECK_IOCTRL_RET(ioctl(m_uinput_fd, UI_SET_KEYBIT, BTN_MIDDLE));
+	CHECK_IOCTRL_RET(ioctl(m_uinput_fd, UI_SET_EVBIT, EV_REL));
+	CHECK_IOCTRL_RET(ioctl(m_uinput_fd, UI_SET_RELBIT, REL_X));
+	CHECK_IOCTRL_RET(ioctl(m_uinput_fd, UI_SET_RELBIT, REL_Y));
+	CHECK_IOCTRL_RET(ioctl(m_uinput_fd, UI_SET_RELBIT, REL_WHEEL));
+	CHECK_IOCTRL_RET(ioctl(m_uinput_fd, UI_SET_RELBIT, REL_HWHEEL));
+	CHECK_IOCTRL_RET(ioctl(m_uinput_fd, UI_DEV_SETUP, &usetup));
+	CHECK_IOCTRL_RET(ioctl(m_uinput_fd, UI_DEV_CREATE));
+#endif
+
+	return true;
 }
 
 std::shared_ptr<PadHandlerBase> gui_pad_thread::GetHandler(pad_handler type)
@@ -207,7 +273,11 @@ void gui_pad_thread::run()
 
 	gui_log.notice("gui_pad_thread: Pad thread started");
 
-	Init();
+	if (!init())
+	{
+		gui_log.warning("gui_pad_thread: Pad thread stopped (init failed)");
+		return;
+	}
 
 	while (!m_terminate)
 	{
@@ -270,6 +340,15 @@ void gui_pad_thread::process_input()
 		case pad_button::cross: key = VK_RETURN; break;
 		case pad_button::square: key = VK_BACK; break;
 		case pad_button::triangle: key = VK_TAB; break;
+#elif defined(__linux__)
+		case pad_button::dpad_up: key = KEY_UP; break;
+		case pad_button::dpad_down: key = KEY_DOWN; break;
+		case pad_button::dpad_left: key = KEY_LEFT; break;
+		case pad_button::dpad_right: key = KEY_RIGHT; break;
+		case pad_button::circle: key = KEY_ESC; break;
+		case pad_button::cross: key = KEY_ENTER; break;
+		case pad_button::square: key = KEY_BACKSPACE; break;
+		case pad_button::triangle: key = KEY_TAB; break;
 #endif
 		case pad_button::L1: btn = mouse_button::left; break;
 		case pad_button::R1: btn = mouse_button::right; break;
@@ -498,6 +577,22 @@ void gui_pad_thread::process_input()
 	}
 }
 
+#ifdef __linux__
+void gui_pad_thread::emit_event(int type, int code, int val)
+{
+	struct input_event ie{};
+	ie.type = type;
+	ie.code = code;
+	ie.value = val;
+
+	int res = write(m_uinput_fd, &ie, sizeof(ie));
+	if (res == -1)
+	{
+		gui_log.error("gui_pad_thread::emit_event: write failed (errno=%d=%s)", res, strerror(errno));
+	}
+}
+#endif
+
 void gui_pad_thread::send_key_event(u32 key, bool pressed)
 {
 	gui_log.trace("gui_pad_thread::send_key_event: key=%d, pressed=%d", key, pressed);
@@ -516,6 +611,9 @@ void gui_pad_thread::send_key_event(u32 key, bool pressed)
 	{
 		gui_log.error("gui_pad_thread: SendInput() failed: %s", fmt::win_error{GetLastError(), nullptr});
 	}
+#elif defined(__linux__)
+	emit_event(EV_KEY, key, pressed ? 1 : 0);
+	emit_event(EV_SYN, SYN_REPORT, 0);
 #endif
 }
 
@@ -529,29 +627,40 @@ void gui_pad_thread::send_mouse_button_event(mouse_button btn, bool pressed)
 
 	switch (btn)
 	{
-	case mouse_button::none:
-		return;
-	case mouse_button::left:
-		input.mi.dwFlags = pressed ? MOUSEEVENTF_LEFTDOWN : MOUSEEVENTF_LEFTUP;
-		break;
-	case mouse_button::right:
-		input.mi.dwFlags = pressed ? MOUSEEVENTF_RIGHTDOWN : MOUSEEVENTF_RIGHTUP;
-		break;
-	case mouse_button::middle:
-		input.mi.dwFlags = pressed ? MOUSEEVENTF_MIDDLEDOWN : MOUSEEVENTF_MIDDLEUP;
-		break;
+	case mouse_button::none: return;
+	case mouse_button::left: input.mi.dwFlags = pressed ? MOUSEEVENTF_LEFTDOWN : MOUSEEVENTF_LEFTUP; break;
+	case mouse_button::right: input.mi.dwFlags = pressed ? MOUSEEVENTF_RIGHTDOWN : MOUSEEVENTF_RIGHTUP; break;
+	case mouse_button::middle: input.mi.dwFlags = pressed ? MOUSEEVENTF_MIDDLEDOWN : MOUSEEVENTF_MIDDLEUP; break;
 	}
 
 	if (SendInput(1, &input, sizeof(INPUT)) != 1)
 	{
 		gui_log.error("gui_pad_thread: SendInput() failed: %s", fmt::win_error{GetLastError(), nullptr});
 	}
+#elif defined(__linux__)
+	int key = 0;
+
+	switch (btn)
+	{
+	case mouse_button::none: return;
+	case mouse_button::left: key = BTN_LEFT; break;
+	case mouse_button::right: key = BTN_RIGHT; break;
+	case mouse_button::middle: key = BTN_MIDDLE; break;
+	}
+
+	emit_event(EV_KEY, key, pressed ? 1 : 0);
+	emit_event(EV_SYN, SYN_REPORT, 0);
 #endif
 }
 
-void gui_pad_thread::send_mouse_wheel_event(mouse_wheel wheel, float delta)
+void gui_pad_thread::send_mouse_wheel_event(mouse_wheel wheel, int delta)
 {
 	gui_log.trace("gui_pad_thread::send_mouse_wheel_event: wheel=%d, delta=%f", static_cast<int>(wheel), delta);
+
+	if (!delta)
+	{
+		return;
+	}
 
 #ifdef _WIN32
 	INPUT input{};
@@ -560,26 +669,38 @@ void gui_pad_thread::send_mouse_wheel_event(mouse_wheel wheel, float delta)
 
 	switch (wheel)
 	{
-	case mouse_wheel::none:
-		return;
-	case mouse_wheel::vertical:
-		input.mi.dwFlags = MOUSEEVENTF_WHEEL;
-		break;
-	case mouse_wheel::horizontal:
-		input.mi.dwFlags = MOUSEEVENTF_HWHEEL;
-		break;
+	case mouse_wheel::none: return;
+	case mouse_wheel::vertical: input.mi.dwFlags = MOUSEEVENTF_WHEEL; break;
+	case mouse_wheel::horizontal: input.mi.dwFlags = MOUSEEVENTF_HWHEEL; break;
 	}
 
 	if (SendInput(1, &input, sizeof(INPUT)) != 1)
 	{
 		gui_log.error("gui_pad_thread: SendInput() failed: %s", fmt::win_error{GetLastError(), nullptr});
 	}
+#elif defined(__linux__)
+	int axis = 0;
+
+	switch (wheel)
+	{
+	case mouse_wheel::none: return;
+	case mouse_wheel::vertical: axis = REL_WHEEL; break;
+	case mouse_wheel::horizontal: axis = REL_HWHEEL; break;
+	}
+
+	emit_event(EV_REL, axis, delta);
+	emit_event(EV_SYN, SYN_REPORT, 0);
 #endif
 }
 
-void gui_pad_thread::send_mouse_move_event(float delta_x, float delta_y)
+void gui_pad_thread::send_mouse_move_event(int delta_x, int delta_y)
 {
 	gui_log.trace("gui_pad_thread::send_mouse_move_event: delta_x=%f, delta_y=%f", delta_x, delta_y);
+
+	if (!delta_x && !delta_y)
+	{
+		return;
+	}
 
 #ifdef _WIN32
 	INPUT input{};
@@ -592,5 +713,9 @@ void gui_pad_thread::send_mouse_move_event(float delta_x, float delta_y)
 	{
 		gui_log.error("gui_pad_thread: SendInput() failed: %s", fmt::win_error{GetLastError(), nullptr});
 	}
+#elif defined(__linux__)
+	if (delta_x) emit_event(EV_REL, REL_X, delta_x);
+	if (delta_y) emit_event(EV_REL, REL_Y, delta_y);
+	emit_event(EV_SYN, SYN_REPORT, 0);
 #endif
 }
