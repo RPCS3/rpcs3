@@ -10,7 +10,7 @@ LOG_CHANNEL(sdl_log, "SDL");
 constexpr u32 rumble_duration_ms = 500; // Some high number to keep rumble updates at a minimum.
 constexpr u32 rumble_refresh_ms = rumble_duration_ms - 100; // We need to keep updating the rumble. Choose a refresh timeout that is unlikely to run into missed rumble updates.
 
-sdl_pad_handler::sdl_pad_handler() : PadHandlerBase(pad_handler::sdl)
+sdl_pad_handler::sdl_pad_handler(bool emulation) : PadHandlerBase(pad_handler::sdl, emulation)
 {
 	button_list =
 	{

@@ -16,9 +16,9 @@ bool keyboard_pad_handler::Init()
 	return true;
 }
 
-keyboard_pad_handler::keyboard_pad_handler()
+keyboard_pad_handler::keyboard_pad_handler(bool emulation)
 	: QObject()
-	, PadHandlerBase(pad_handler::keyboard)
+	, PadHandlerBase(pad_handler::keyboard, emulation)
 {
 	init_configs();
 
