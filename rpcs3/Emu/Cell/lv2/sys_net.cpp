@@ -1238,21 +1238,17 @@ error_code sys_net_bnet_close(ppu_thread& ppu, s32 s)
 
 	sys_net.warning("Aborting the socket!");
 
-	if (auto size = sock->get_queue_size(); size != 0)
 	{
-		sys_net.warning("Aboring %d queues!", size);
-		sock->abort_socket(0);
+		std::lock_guard nw_lock(g_fxo->get<network_context>().s_nw_mutex);
+		if (auto size = sock->get_queue_size(); size != 0)
+		{
+			sys_net.warning("Aborting %d queues!", size);
+			sock->abort_socket(0);
+		}
 	}
 
 	sys_net.warning("Closing the socket!");
 	sock->close();
-
-	sys_net.warning("Clearing lingering socket!");
-	{
-		// Ensures the socket has no lingering copy from the network thread
-		std::lock_guard nw_lock(g_fxo->get<network_context>().s_nw_mutex);
-		sock.reset();
-	}
 
 	sys_net.warning("Close finished!");
 
@@ -1739,6 +1735,7 @@ error_code lv2_socket::abort_socket(s32 flags)
 		}
 
 		qcopy = std::move(queue);
+		queue.clear();
 		events.store({});
 	}
 

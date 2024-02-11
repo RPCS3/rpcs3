@@ -19,7 +19,7 @@ public:
 	bool is_active() const;
 
 private:
-	void remove_port_redir_external(u16 external_port, std::string_view protocol, bool verbose = true);
+	void remove_port_redir_external(u16 external_port, const std::string& protocol, bool verbose = true);
 
 private:
 	atomic_t<bool> m_active = false;
