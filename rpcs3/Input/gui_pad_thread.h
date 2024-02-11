@@ -91,4 +91,8 @@ protected:
 	bool m_boost_mouse = false;
 	float m_mouse_delta_x = 0.0f;
 	float m_mouse_delta_y = 0.0f;
+#ifdef __APPLE__
+	float m_mouse_abs_x = 0.0f;
+	float m_mouse_abs_y = 0.0f;
+#endif
 };
