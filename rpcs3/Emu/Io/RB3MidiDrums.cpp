@@ -288,7 +288,7 @@ std::unordered_map<Id, Note> create_id_to_note_mapping()
 		{Id::Hihat1,            Note::Hihat},
 		{Id::Hihat2,            Note::Hihat},
 		{Id::Hihat3,            Note::Hihat},
-		{Id::HihatWithPedalUp,  Note::Ride},
+		{Id::HihatWithPedalUp,  Note::Hihat},
 		{Id::Ride0,             Note::Ride},
 		{Id::Ride1,             Note::Ride},
 		{Id::Ride2,             Note::Ride},
