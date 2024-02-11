@@ -400,8 +400,6 @@ void set_flag_if_any(u8* buf, std::string_view name, const controller::FlagByInd
 usb_device_rb3_midi_drums::usb_device_rb3_midi_drums(const std::array<u8, 7>& location, const std::string& device_name)
 	: usb_device_emulated(location)
 {
-	g_cfg_rb3drums.load();
-
 	UsbDeviceDescriptor descriptor{};
 	descriptor.bcdDevice = 0x0200;
 	descriptor.bDeviceClass = 0x00;

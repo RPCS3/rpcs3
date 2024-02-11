@@ -224,6 +224,7 @@ usb_handler_thread::usb_handler_thread()
 	bool found_skylander = false;
 	bool found_infinity  = false;
 	bool found_usj       = false;
+	bool found_rb3drums  = false;
 
 	for (ssize_t index = 0; index < ndev; index++)
 	{
@@ -373,7 +374,6 @@ usb_handler_thread::usb_handler_thread()
 	}
 
 	const std::vector<std::string> devices_list = fmt::split(g_cfg.io.midi_devices.to_string(), { "@@@" });
-	g_cfg_rb3drums.load();
 	for (usz index = 0; index < std::min(max_midi_devices, devices_list.size()); index++)
 	{
 		const midi_device device = midi_device::from_string(::at32(devices_list, index));
@@ -393,9 +393,15 @@ usb_handler_thread::usb_handler_thread()
 			usb_devices.push_back(std::make_shared<usb_device_rb3_midi_keyboard>(get_new_location(), device.name));
 			break;
 		case midi_device_type::drums:
+			found_rb3drums = true;
 			usb_devices.push_back(std::make_shared<usb_device_rb3_midi_drums>(get_new_location(), device.name));
 			break;
 		}
+	}
+
+	if (!g_cfg_rb3drums.load())
+	{
+		sys_usbd.notice("Could not load rb3drums config. Using defaults.");
 	}
 
 	if (g_cfg.io.ghltar == ghltar_handler::one_controller || g_cfg.io.ghltar == ghltar_handler::two_controllers)

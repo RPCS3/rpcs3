@@ -414,6 +414,7 @@ target_sources(rpcs3_emu PRIVATE
     Io/RB3MidiKeyboard.cpp
     Io/RB3MidiGuitar.cpp
     Io/RB3MidiDrums.cpp
+    Io/rb3drums_config.cpp
     Io/Buzz.cpp
     Io/Turntable.cpp
     Io/usio.cpp
