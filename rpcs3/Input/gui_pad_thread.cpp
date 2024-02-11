@@ -24,6 +24,8 @@
 #include <linux/uinput.h>
 #include <fcntl.h>
 #define CHECK_IOCTRL_RET(res) if (res == -1) { gui_log.error("gui_pad_thread: ioctl failed (errno=%d=%s)", res, strerror(errno)); }
+#elif defined(__APPLE__)
+#include <ApplicationServices/ApplicationServices.h>
 #endif
 
 #include <QApplication>
@@ -349,6 +351,15 @@ void gui_pad_thread::process_input()
 		case pad_button::cross: key = KEY_ENTER; break;
 		case pad_button::square: key = KEY_BACKSPACE; break;
 		case pad_button::triangle: key = KEY_TAB; break;
+#elif defined (__APPLE__)
+		case pad_button::dpad_up: key = kVK_UpArrow; break;
+		case pad_button::dpad_down: key = kVK_DownArrow; break;
+		case pad_button::dpad_left: key = kVK_LeftArrow; break;
+		case pad_button::dpad_right: key = kVK_RightArrow; break;
+		case pad_button::circle: key = kVK_Escape; break;
+		case pad_button::cross: key = kVK_Return; break;
+		case pad_button::square: key = kVK_Delete; break;
+		case pad_button::triangle: key = kVK_Tab; break;
 #endif
 		case pad_button::L1: btn = mouse_button::left; break;
 		case pad_button::R1: btn = mouse_button::right; break;
@@ -614,6 +625,16 @@ void gui_pad_thread::send_key_event(u32 key, bool pressed)
 #elif defined(__linux__)
 	emit_event(EV_KEY, key, pressed ? 1 : 0);
 	emit_event(EV_SYN, SYN_REPORT, 0);
+#elif defined(__APPLE__)
+	CGEventRef ev = CGEventCreateKeyboardEvent(NULL, static_cast<CGKeyCode>(key), pressed);
+	if (!ev)
+	{
+		gui_log.error("gui_pad_thread: CGEventCreateKeyboardEvent() failed");
+		return;
+	}
+
+	CGEventPost(kCGHIDEventTap, ev);
+	CFRelease(ev);
 #endif
 }
 
@@ -650,6 +671,36 @@ void gui_pad_thread::send_mouse_button_event(mouse_button btn, bool pressed)
 
 	emit_event(EV_KEY, key, pressed ? 1 : 0);
 	emit_event(EV_SYN, SYN_REPORT, 0);
+#elif defined(__APPLE__)
+	CGEventType type{};
+	CGMouseButton mouse_btn{};
+
+	switch (btn)
+	{
+	case mouse_button::none: return;
+	case mouse_button::left:
+		type = pressed ? kCGEventLeftMouseDown : kCGEventLeftMouseUp;
+		mouse_btn = kCGMouseButtonLeft;
+		break;
+	case mouse_button::right:
+		type = pressed ? kCGEventRightMouseDown : kCGEventRightMouseUp;
+		mouse_btn = kCGMouseButtonRight;
+		break;
+	case mouse_button::middle:
+		type = pressed ? kCGEventOtherMouseDown : kCGEventOtherMouseUp;
+		mouse_btn = kCGMouseButtonCenter;
+		break;
+	}
+
+	CGEventRef ev = CGEventCreateMouseEvent(NULL, type, CGPointMake(m_mouse_abs_x, m_mouse_abs_y), mouse_btn);
+	if (!ev)
+	{
+		gui_log.error("gui_pad_thread: CGEventCreateMouseEvent() failed");
+		return;
+	}
+
+	CGEventPost(kCGHIDEventTap, ev);
+	CFRelease(ev);
 #endif
 }
 
@@ -690,6 +741,27 @@ void gui_pad_thread::send_mouse_wheel_event(mouse_wheel wheel, int delta)
 
 	emit_event(EV_REL, axis, delta);
 	emit_event(EV_SYN, SYN_REPORT, 0);
+#elif defined(__APPLE__)
+	int v_delta = 0;
+	int h_delta = 0;
+
+	switch (wheel)
+	{
+	case mouse_wheel::none: return;
+	case mouse_wheel::vertical: v_delta = delta; break;
+	case mouse_wheel::horizontal: h_delta = delta; break;
+	}
+
+	constexpr u32 wheel_count = 2;
+	CGEventRef ev = CGEventCreateScrollWheelEvent(NULL, CGScrollEventUnit::pixel, wheel_count, v_delta, h_delta);
+	if (!ev)
+	{
+		gui_log.error("gui_pad_thread: CGEventCreateScrollWheelEvent() failed");
+		return;
+	}
+
+	CGEventPost(kCGHIDEventTap, ev);
+	CFRelease(ev);
 #endif
 }
 
@@ -717,5 +789,29 @@ void gui_pad_thread::send_mouse_move_event(int delta_x, int delta_y)
 	if (delta_x) emit_event(EV_REL, REL_X, delta_x);
 	if (delta_y) emit_event(EV_REL, REL_Y, delta_y);
 	emit_event(EV_SYN, SYN_REPORT, 0);
+#elif defined(__APPLE__)
+	CGDirectDisplayID display = CGMainDisplayID();
+	const usz width = CGDisplayPixelsWide(display);
+	const usz height = CGDisplayPixelsHigh(display);
+	const float mouse_abs_x = std::clamp(m_mouse_abs_x + delta_x, 0.0f, width - 1.0f);
+	const float mouse_abs_y = std::clamp(m_mouse_abs_y + delta_y, 0.0f, height - 1.0f);
+
+	if (m_mouse_abs_x == mouse_abs_x && m_mouse_abs_y == mouse_abs_y)
+	{
+		return;
+	}
+
+	m_mouse_abs_x = mouse_abs_x;
+	m_mouse_abs_y = mouse_abs_y;
+
+	CGEventRef ev = CGEventCreateMouseEvent(NULL, kCGEventMouseMoved, CGPointMake(m_mouse_abs_x, m_mouse_abs_y), {});
+	if (!ev)
+	{
+		gui_log.error("gui_pad_thread: CGEventCreateMouseEvent() failed");
+		return;
+	}
+
+	CGEventPost(kCGHIDEventTap, ev);
+	CFRelease(ev);
 #endif
 }
