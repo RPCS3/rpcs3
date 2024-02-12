@@ -1075,7 +1075,11 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 			m_flush_requests.producer_wait();
 		}
 
-		m_texture_cache.flush_all(*m_secondary_cb_list.next(), result);
+		m_texture_cache.flush_all(*m_secondary_cb_list.next(), result, [&]()
+		{
+			m_flush_requests.remove_one();
+			has_queue_ref = false;
+		});
 
 		if (has_queue_ref)
 		{
