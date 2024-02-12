@@ -5434,23 +5434,16 @@ public:
 				return eval(sext<s32[4]>(bitcast<s32[4]>(a) > bitcast<s32[4]>(b)));
 			}
 
-			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate || g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::relaxed)
-			{
-				const auto ai = eval(bitcast<s32[4]>(a));
-				const auto bi = eval(bitcast<s32[4]>(b));
+			const auto ai = eval(bitcast<s32[4]>(a));
+			const auto bi = eval(bitcast<s32[4]>(b));
 
-				if (!safe_nonzero_compare.any())
-				{
-					return eval(sext<s32[4]>(fcmp_uno(a != b) & select((ai & bi) >= 0, ai > bi, ai < bi)));
-				}
-				else
-				{
-					return eval(sext<s32[4]>(select((ai & bi) >= 0, ai > bi, ai < bi)));
-				}
+			if (!safe_nonzero_compare.any())
+			{
+				return eval(sext<s32[4]>(fcmp_uno(a != b) & select((ai & bi) >= 0, ai > bi, ai < bi)));
 			}
 			else
 			{
-				return eval(sext<s32[4]>(fcmp_ord(a > b)));
+				return eval(sext<s32[4]>(select((ai & bi) >= 0, ai > bi, ai < bi)));
 			}
 		});
 
@@ -5631,17 +5624,17 @@ public:
 		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::relaxed)
 		{
 			// FM(a, re_accurate(div))
-			if (const auto [ok_re_acc, div] = match_expr(b, re_accurate(match<f32[4]>())); ok_re_acc)
+			if (const auto [ok_re_acc, div, one] = match_expr(b, re_accurate(match<f32[4]>(), match<f32[4]>())); ok_re_acc)
 			{
-				erase_stores(b);
+				erase_stores(one, b);
 				set_vr(op.rt, a / div);
 				return;
 			}
 
 			// FM(re_accurate(div), b)
-			if (const auto [ok_re_acc, div] = match_expr(a, re_accurate(match<f32[4]>())); ok_re_acc)
+			if (const auto [ok_re_acc, div, one] = match_expr(a, re_accurate(match<f32[4]>(), match<f32[4]>())); ok_re_acc)
 			{
-				erase_stores(a);
+				erase_stores(one, a);
 				set_vr(op.rt, b / div);
 				return;
 			}
@@ -5955,14 +5948,7 @@ public:
 			const auto b = value<f32[4]>(ci->getOperand(1));
 			const auto c = value<f32[4]>(ci->getOperand(2));
 
-			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate || g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::relaxed)
-			{
-				return fma32x4(eval(-clamp_smax(a)), clamp_smax(b), c);
-			}
-			else
-			{
-				return fma32x4(eval(-a), b, c);
-			}
+			return fma32x4(eval(-clamp_smax(a)), clamp_smax(b), c);
 		});
 
 		set_vr(op.rt4, fnms(get_vr<f32[4]>(op.ra), get_vr<f32[4]>(op.rb), get_vr<f32[4]>(op.rc)));
@@ -5974,10 +5960,10 @@ public:
 		return llvm_calli<f32[4], T, U, V>{"spu_fma", {std::forward<T>(a), std::forward<U>(b), std::forward<V>(c)}}.set_order_equality_hint(1, 1, 0);
 	}
 
-	template <typename T>
-	static llvm_calli<f32[4], T> re_accurate(T&& a)
+	template <typename T, typename U>
+	static llvm_calli<f32[4], T, U> re_accurate(T&& a, U&& b)
 	{
-		return {"spu_re_acc", {std::forward<T>(a)}};
+		return {"spu_re_acc", {std::forward<T>(a), std::forward<U>(b)}};
 	}
 
 	void FMA(spu_opcode_t op)
@@ -6013,7 +5999,19 @@ public:
 		register_intrinsic("spu_re_acc", [&](llvm::CallInst* ci)
 		{
 			const auto div = value<f32[4]>(ci->getOperand(0));
-			return fsplat<f32[4]>(1.0f) / div;
+			const auto the_one = value<f32[4]>(ci->getOperand(1));
+
+			const auto div_result = the_one / div;
+
+			// from ps3 hardware testing: Inf => NaN and NaN => Zero
+			const auto result_and = bitcast<u32[4]>(div_result) & 0x7fffffffu;
+			const auto result_cmp_inf = sext<s32[4]>(result_and == splat<u32[4]>(0x7F800000u));
+			const auto result_cmp_nan = sext<s32[4]>(result_and <= splat<u32[4]>(0x7F800000u));
+			
+			const auto and_mask = bitcast<u32[4]>(result_cmp_nan) & splat<u32[4]>(0xFFFFFFFFu);
+			const auto or_mask = bitcast<u32[4]>(result_cmp_inf) & splat<u32[4]>(0xFFFFFFFu);
+			
+			return bitcast<f32[4]>((bitcast<u32[4]>(div_result) & and_mask) | or_mask);
 		});
 
 		const auto [a, b, c] = get_vrs<f32[4]>(op.ra, op.rb, op.rc);
@@ -6113,8 +6111,8 @@ public:
 			{
 				if (auto [ok_re] = match_expr(b, spu_re(div)); ok_re)
 				{
-					erase_stores(b);
-					set_vr(op.rt4, re_accurate(div));
+					erase_stores(a, b, c);
+					set_vr(op.rt4, re_accurate(div, fsplat<f32[4]>(float_value)));
 					return true;
 				}
 			}
@@ -6124,30 +6122,30 @@ public:
 			{
 				if (auto [ok_re] = match_expr(b, spu_re(div)); ok_re)
 				{
-					erase_stores(b);
-					set_vr(op.rt4, re_accurate(div));
+					erase_stores(a, b, c);
+					set_vr(op.rt4, re_accurate(div, fsplat<f32[4]>(float_value)));
 					return true;
 				}
 			}
 
 			// FMA(spu_re(div), FNMS(div, spu_re(div), float_value), spu_re(div))
-			if (auto [ok_fnms, div] = match_expr(a, fnms(MT, a, fsplat<f32[4]>(float_value))); ok_fnms && op.ra == op.rc)
+			if (auto [ok_fnms, div] = match_expr(b, fnms(MT, a, fsplat<f32[4]>(float_value))); ok_fnms && op.ra == op.rc)
 			{
 				if (auto [ok_re] = match_expr(a, spu_re(div)); ok_re)
 				{
-					erase_stores(a);
-					set_vr(op.rt4, re_accurate(div));
+					erase_stores(a, b, c);
+					set_vr(op.rt4, re_accurate(div, fsplat<f32[4]>(float_value)));
 					return true;
 				}
 			}
 
 			// FMA(spu_re(div), FNMS(spu_re(div), div, float_value), spu_re(div))
-			if (auto [ok_fnms, div] = match_expr(a, fnms(a, MT, fsplat<f32[4]>(float_value))); ok_fnms && op.ra == op.rc)
+			if (auto [ok_fnms, div] = match_expr(b, fnms(a, MT, fsplat<f32[4]>(float_value))); ok_fnms && op.ra == op.rc)
 			{
 				if (auto [ok_re] = match_expr(a, spu_re(div)); ok_re)
 				{
-					erase_stores(a);
-					set_vr(op.rt4, re_accurate(div));
+					erase_stores(a, b, c);
+					set_vr(op.rt4, re_accurate(div, fsplat<f32[4]>(float_value)));
 					return true;
 				}
 			}
