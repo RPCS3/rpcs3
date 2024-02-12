@@ -5620,24 +5620,32 @@ public:
 
 		const auto [a, b] = get_vrs<f32[4]>(op.ra, op.rb);
 
-		// Resistance 2 doesn't like this
-		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::relaxed)
+		auto full_fm_accurate = [&](const auto& a, const auto& div)
 		{
-			// FM(a, re_accurate(div))
-			if (const auto [ok_re_acc, div, one] = match_expr(b, re_accurate(match<f32[4]>(), match<f32[4]>())); ok_re_acc)
-			{
-				erase_stores(one, b);
-				set_vr(op.rt, a / div);
-				return;
-			}
+			const auto div_result = a / div;
+			const auto result_and = bitcast<u32[4]>(div_result) & 0x7fffffffu;
+			const auto result_cmp_inf = sext<s32[4]>(result_and == splat<u32[4]>(0x7F800000u));
+			const auto result_cmp_nan = sext<s32[4]>(result_and <= splat<u32[4]>(0x7F800000u));
 
-			// FM(re_accurate(div), b)
-			if (const auto [ok_re_acc, div, one] = match_expr(a, re_accurate(match<f32[4]>(), match<f32[4]>())); ok_re_acc)
-			{
-				erase_stores(one, a);
-				set_vr(op.rt, b / div);
-				return;
-			}
+			const auto and_mask = bitcast<u32[4]>(result_cmp_nan) & splat<u32[4]>(0xFFFFFFFFu);
+			const auto or_mask = bitcast<u32[4]>(result_cmp_inf) & splat<u32[4]>(0xFFFFFFFu);
+			set_vr(op.rt, bitcast<f32[4]>((bitcast<u32[4]>(div_result) & and_mask) | or_mask));
+		};
+
+		// FM(a, re_accurate(div))
+		if (const auto [ok_re_acc, div, one] = match_expr(b, re_accurate(match<f32[4]>(), match<f32[4]>())); ok_re_acc)
+		{
+			full_fm_accurate(a, div);
+			erase_stores(one, b);
+			return;
+		}
+
+		// FM(re_accurate(div), b)
+		if (const auto [ok_re_acc, div, one] = match_expr(a, re_accurate(match<f32[4]>(), match<f32[4]>())); ok_re_acc)
+		{
+			full_fm_accurate(b, div);
+			erase_stores(one, a);
+			return;
 		}
 
 		set_vr(op.rt, fm(a, b));
@@ -6007,10 +6015,10 @@ public:
 			const auto result_and = bitcast<u32[4]>(div_result) & 0x7fffffffu;
 			const auto result_cmp_inf = sext<s32[4]>(result_and == splat<u32[4]>(0x7F800000u));
 			const auto result_cmp_nan = sext<s32[4]>(result_and <= splat<u32[4]>(0x7F800000u));
-			
+
 			const auto and_mask = bitcast<u32[4]>(result_cmp_nan) & splat<u32[4]>(0xFFFFFFFFu);
 			const auto or_mask = bitcast<u32[4]>(result_cmp_inf) & splat<u32[4]>(0xFFFFFFFu);
-			
+
 			return bitcast<f32[4]>((bitcast<u32[4]>(div_result) & and_mask) | or_mask);
 		});
 
