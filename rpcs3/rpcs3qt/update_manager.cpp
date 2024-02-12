@@ -55,13 +55,17 @@ void update_manager::check_for_updates(bool automatic, bool check_only, bool aut
 	m_update_message.clear();
 	m_changelog.clear();
 
-#ifdef __linux__
-	if (automatic && !::getenv("APPIMAGE"))
+	if (automatic)
 	{
+		// Don't check for updates on local builds
+		if (rpcs3::is_local_build())
+			return;
+#ifdef __linux__
 		// Don't check for updates on startup if RPCS3 is not running from an AppImage.
-		return;
-	}
+		if (!::getenv("APPIMAGE"))
+			return;
 #endif
+	}
 
 	m_parent     = parent;
 	m_downloader = new downloader(parent);
