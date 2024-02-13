@@ -673,7 +673,7 @@ void gui_pad_thread::send_mouse_button_event(mouse_button btn, bool pressed)
 
 void gui_pad_thread::send_mouse_wheel_event(mouse_wheel wheel, int delta)
 {
-	gui_log.trace("gui_pad_thread::send_mouse_wheel_event: wheel=%d, delta=%f", static_cast<int>(wheel), delta);
+	gui_log.trace("gui_pad_thread::send_mouse_wheel_event: wheel=%d, delta=%d", static_cast<int>(wheel), delta);
 
 	if (!delta)
 	{
@@ -734,7 +734,7 @@ void gui_pad_thread::send_mouse_wheel_event(mouse_wheel wheel, int delta)
 
 void gui_pad_thread::send_mouse_move_event(int delta_x, int delta_y)
 {
-	gui_log.trace("gui_pad_thread::send_mouse_move_event: delta_x=%f, delta_y=%f", delta_x, delta_y);
+	gui_log.trace("gui_pad_thread::send_mouse_move_event: delta_x=%d, delta_y=%d", delta_x, delta_y);
 
 	if (!delta_x && !delta_y)
 	{
