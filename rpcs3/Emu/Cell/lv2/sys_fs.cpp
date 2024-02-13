@@ -2054,21 +2054,23 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 
 		if (!file)
 		{
-			return CELL_EBADF;
+			return {CELL_EBADF, "fd=%u", fd};
 		}
+
+		sys_fs.warning("sys_fs_fcntl(0x80000009): fd=%d, arg->offset=0x%x, size=0x%x (file: %s)", fd, arg->offset, _size, *file);
 
 		std::lock_guard lock(file->mp->mutex);
 
 		if (!file->file)
 		{
-			return CELL_EBADF;
+			return {CELL_EBADF, "fd=%u", fd};
 		}
 
 		auto sdata_file = std::make_unique<EDATADecrypter>(lv2_file::make_view(file, arg->offset));
 
 		if (!sdata_file->ReadHeader())
 		{
-			return CELL_EFSSPECIFIC;
+			return {CELL_EFSSPECIFIC, "fd=%u", fd};
 		}
 
 		fs::file stream;
