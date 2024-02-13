@@ -349,14 +349,14 @@ namespace rsx
 
 			// Calculate initial position and analog movement range.
 			constexpr f32 margin = 50.0f; // Let's add a minimal margin on all sides
-			const u16 x_min = static_cast<u16>(margin);
-			const u16 x_max = static_cast<u16>(static_cast<f32>(virtual_width - total_w) - margin);
-			const u16 y_min = static_cast<u16>(margin);
-			const u16 y_max = static_cast<u16>(static_cast<f32>(virtual_height - total_h) - margin);
-			u16 input_x = 0;
-			u16 input_y = 0;
-			u16 panel_x = 0;
-			u16 panel_y = 0;
+			const s16 x_min = static_cast<s16>(margin);
+			const s16 x_max = static_cast<s16>(static_cast<f32>(virtual_width - total_w) - margin);
+			const s16 y_min = static_cast<s16>(margin);
+			const s16 y_max = static_cast<s16>(static_cast<f32>(virtual_height - total_h) - margin);
+			s16 input_x = 0;
+			s16 input_y = 0;
+			s16 panel_x = 0;
+			s16 panel_y = 0;
 
 			// x pos should only be 0 the first time, because we always add a margin
 			if (m_x_input_pos == 0)
@@ -397,15 +397,15 @@ namespace rsx
 
 				if (m_use_separate_windows)
 				{
-					input_x = m_x_input_pos = static_cast<u16>(std::clamp<f32>(get_x(m_input_layout, input_w), x_min, x_max));
-					input_y = m_y_input_pos = static_cast<u16>(std::clamp<f32>(get_y(m_input_layout, input_h), y_min, y_max));
-					panel_x = m_x_panel_pos = static_cast<u16>(std::clamp<f32>(get_x(m_panel_layout, panel_w), x_min, x_max));
-					panel_y = m_y_panel_pos = static_cast<u16>(std::clamp<f32>(get_y(m_panel_layout, panel_h), static_cast<f32>(y_min + input_h), static_cast<f32>(y_max + input_h)));
+					input_x = m_x_input_pos = static_cast<s16>(std::clamp<f32>(get_x(m_input_layout, input_w), x_min, x_max));
+					input_y = m_y_input_pos = static_cast<s16>(std::clamp<f32>(get_y(m_input_layout, input_h), y_min, y_max));
+					panel_x = m_x_panel_pos = static_cast<s16>(std::clamp<f32>(get_x(m_panel_layout, panel_w), x_min, x_max));
+					panel_y = m_y_panel_pos = static_cast<s16>(std::clamp<f32>(get_y(m_panel_layout, panel_h), static_cast<f32>(y_min + input_h), static_cast<f32>(y_max + input_h)));
 				}
 				else
 				{
 					input_x = panel_x = m_x_input_pos = m_x_panel_pos = static_cast<u16>(std::clamp<f32>(get_x(m_layout, total_w), x_min, x_max));
-					input_y = m_y_input_pos = static_cast<u16>(std::clamp<f32>(get_y(m_layout, total_h), y_min, y_max));
+					input_y = m_y_input_pos = static_cast<s16>(std::clamp<f32>(get_y(m_layout, total_h), y_min, y_max));
 					panel_y = m_y_panel_pos = input_y + input_h;
 				}
 			}
@@ -414,7 +414,7 @@ namespace rsx
 				input_x = m_x_input_pos = std::clamp(m_x_input_pos, x_min, x_max);
 				input_y = m_y_input_pos = std::clamp(m_y_input_pos, y_min, y_max);
 				panel_x = m_x_panel_pos = std::clamp(m_x_panel_pos, x_min, x_max);
-				panel_y = m_y_panel_pos = std::clamp<u16>(m_y_panel_pos, y_min + input_h, y_max + input_h);
+				panel_y = m_y_panel_pos = std::clamp<s16>(m_y_panel_pos, y_min + input_h, y_max + input_h);
 			}
 			else
 			{
@@ -437,7 +437,7 @@ namespace rsx
 			m_preview.set_size(input_w, preview_height);
 			m_preview.set_padding(get_scaled(15), 0, get_scaled(10), 0);
 
-			const u16 button_y = panel_y + panel_h + button_margin;
+			const s16 button_y = panel_y + panel_h + button_margin;
 
 			m_btn_cancel.set_pos(panel_x, button_y);
 			m_btn_cancel.set_size(get_scaled(140), button_height);
@@ -1169,7 +1169,7 @@ namespace rsx
 				m_update = true;
 			}
 
-			if (m_pointer.visible() && m_pointer.set_position(static_cast<u16>(info.pointer_x), static_cast<u16>(info.pointer_y)))
+			if (m_pointer.visible() && m_pointer.set_position(static_cast<s16>(info.pointer_x), static_cast<s16>(info.pointer_y)))
 			{
 				m_update = true;
 			}
@@ -1245,8 +1245,8 @@ namespace rsx
 
 				for (const auto& c : m_grid)
 				{
-					u16 x = static_cast<u16>(c.pos.x);
-					u16 y = static_cast<u16>(c.pos.y);
+					s16 x = static_cast<s16>(c.pos.x);
+					s16 y = static_cast<s16>(c.pos.y);
 					u16 w = cell_size_x;
 					u16 h = cell_size_y;
 
@@ -1270,7 +1270,7 @@ namespace rsx
 
 						if (output_count)
 						{
-							const u16 offset_x = static_cast<u16>(buffered_cell_count * cell_size_x);
+							const s16 offset_x = static_cast<s16>(buffered_cell_count * cell_size_x);
 							const u16 full_width = static_cast<u16>(offset_x + cell_size_x);
 
 							label.set_pos(x - offset_x, y);
