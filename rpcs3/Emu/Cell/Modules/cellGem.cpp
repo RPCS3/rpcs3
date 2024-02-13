@@ -586,8 +586,8 @@ static bool check_gem_num(const u32 gem_num)
 
 static inline void draw_overlay_cursor(u32 gem_num, const gem_config::gem_controller&, s32 x_pos, s32 y_pos, s32 x_max, s32 y_max)
 {
-	const u16 x = static_cast<u16>(x_pos / (x_max / static_cast<f32>(rsx::overlays::overlay::virtual_width)));
-	const u16 y = static_cast<u16>(y_pos / (y_max / static_cast<f32>(rsx::overlays::overlay::virtual_height)));
+	const s16 x = static_cast<s16>(x_pos / (x_max / static_cast<f32>(rsx::overlays::overlay::virtual_width)));
+	const s16 y = static_cast<s16>(y_pos / (y_max / static_cast<f32>(rsx::overlays::overlay::virtual_height)));
 
 	// Note: We shouldn't use sphere_rgb here. The game will set it to black in many cases.
 	const gem_config_data::gem_color& rgb = gem_config_data::gem_color::get_default_color(gem_num);

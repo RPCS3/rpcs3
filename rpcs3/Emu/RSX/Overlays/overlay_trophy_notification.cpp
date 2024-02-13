@@ -163,8 +163,8 @@ namespace rsx
 			text_view.auto_resize();
 
 			// Resize background to cover the text
-			u16 margin_sz = 9;
-			frame.w       = margin_sz * 3 + image.w + text_view.w;
+			constexpr u16 margin_sz = 9;
+			frame.w = margin_sz * 3 + image.w + text_view.w;
 
 			sliding_animation.current = { -f32(frame.x + frame.w), 0, 0 };
 			sliding_animation.end = { 0, 0, 0 };

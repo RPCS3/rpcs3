@@ -135,8 +135,8 @@ namespace rsx
 				right
 			};
 
-			u16 x = 0;
-			u16 y = 0;
+			s16 x = 0;
+			s16 y = 0;
 			u16 w = 0;
 			u16 h = 0;
 
@@ -178,7 +178,7 @@ namespace rsx
 			virtual void refresh();
 			virtual void translate(s16 _x, s16 _y);
 			virtual void scale(f32 _x, f32 _y, bool origin_scaling);
-			virtual void set_pos(u16 _x, u16 _y);
+			virtual void set_pos(s16 _x, s16 _y);
 			virtual void set_size(u16 _w, u16 _h);
 			virtual void set_padding(u16 left, u16 right, u16 top, u16 bottom);
 			virtual void set_padding(u16 padding);
@@ -210,7 +210,7 @@ namespace rsx
 			layout_container();
 
 			void translate(s16 _x, s16 _y) override;
-			void set_pos(u16 _x, u16 _y) override;
+			void set_pos(s16 _x, s16 _y) override;
 
 			compiled_resource& get_compiled() override;
 
@@ -315,7 +315,7 @@ namespace rsx
 
 		public:
 			graph();
-			void set_pos(u16 _x, u16 _y) override;
+			void set_pos(s16 _x, s16 _y) override;
 			void set_size(u16 _w, u16 _h) override;
 			void set_title(const char* title);
 			void set_font(const char* font_name, u16 font_size) override;

@@ -7,7 +7,7 @@ namespace rsx
 {
 	namespace overlays
 	{
-		home_menu_message_box::home_menu_message_box(u16 x, u16 y, u16 width, u16 height)
+		home_menu_message_box::home_menu_message_box(s16 x, s16 y, u16 width, u16 height)
 			: overlay_element()
 			, m_accept_btn(120, 30)
 			, m_cancel_btn(120, 30)

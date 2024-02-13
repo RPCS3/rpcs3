@@ -183,11 +183,11 @@ namespace rsx
 				// Position the graphs within the body
 				const u16 graphs_width = m_body.w;
 				const u16 body_left = m_body.x;
-				u16 y_offset = m_body.y;
+				s16 y_offset = m_body.y;
 
 				if (m_body.h > 0)
 				{
-					y_offset += m_body.h + m_padding;
+					y_offset += static_cast<s16>(m_body.h + m_padding);
 				}
 
 				if (m_framerate_graph_enabled)
@@ -646,7 +646,7 @@ namespace rsx
 			back_color = { 0.f, 0.f, 0.f, 0.5f };
 		}
 
-		void graph::set_pos(u16 _x, u16 _y)
+		void graph::set_pos(s16 _x, s16 _y)
 		{
 			m_label.set_pos(_x, _y);
 			overlay_element::set_pos(_x, _y + m_label.h);
