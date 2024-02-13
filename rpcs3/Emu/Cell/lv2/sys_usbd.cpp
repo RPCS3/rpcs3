@@ -160,7 +160,7 @@ void LIBUSB_CALL callback_transfer(struct libusb_transfer* transfer)
 	usbh.transfer_complete(transfer);
 }
 
-static void LIBUSB_CALL log_cb(libusb_context *ctx, enum libusb_log_level level, const char *str)
+static void LIBUSB_CALL log_cb(libusb_context* /*ctx*/, enum libusb_log_level level, const char* str)
 {
 	if (!str)
 		return;
