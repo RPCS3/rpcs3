@@ -2427,7 +2427,7 @@ void thread_ctrl::wait_for_accurate(u64 usec)
 			break;
 		}
 
-		usec = (until - current).count();
+		usec = std::chrono::duration_cast<std::chrono::microseconds>(until - current).count();
 	}
 #endif
 }

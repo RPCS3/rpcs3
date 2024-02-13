@@ -95,29 +95,40 @@ namespace vk
 		const auto tiled_region = rsx::get_current_renderer()->get_tiled_memory_region(valid_range);
 		const bool require_tiling = !!tiled_region;
 		const bool require_gpu_transform = require_format_conversion || pack_unpack_swap_bytes || require_tiling;
-		auto dma_mapping = vk::map_dma(valid_range.start, valid_range.length());
+
+		auto dma_sync_region = valid_range;
+		dma_mapping_handle dma_mapping = { 0, nullptr };
+
+		auto dma_sync = [&dma_sync_region, &dma_mapping](bool load, bool force = false)
+		{
+			if (dma_mapping.second && !force)
+			{
+				return;
+			}
+
+			dma_mapping = vk::map_dma(dma_sync_region.start, dma_sync_region.length());
+			if (load)
+			{
+				vk::load_dma(dma_sync_region.start, dma_sync_region.length());
+			}
+		};
 
 		if (require_gpu_transform)
 		{
-			auto section_length = valid_range.length();
 			const auto transfer_pitch = real_pitch;
 			const auto task_length = transfer_pitch * src_area.height();
 			auto working_buffer_length = calculate_working_buffer_size(task_length, src->aspect());
 
+#if !DEBUG_DMA_TILING
 			if (require_tiling)
 			{
+				// Safety padding
 				working_buffer_length += tiled_region.tile->size;
 
-				// Calculate actual section length
-				const auto available_tile_size = tiled_region.tile->size - (valid_range.start - tiled_region.base_address);
-				const auto max_content_size = tiled_region.tile->pitch * utils::align(height, 64);
-				section_length = std::min(max_content_size, available_tile_size);
-
-				if (section_length > valid_range.length()) [[ likely ]]
-				{
-					dma_mapping = vk::map_dma(valid_range.start, section_length);
-				}
+				// Calculate actual working section for the memory op
+				dma_sync_region = tiled_region.tile_align(dma_sync_region);
 			}
+#endif
 
 			auto working_buffer = vk::get_scratch_buffer(cmd, working_buffer_length);
 			u32 result_offset = 0;
@@ -177,14 +188,46 @@ namespace vk
 #if !DEBUG_DMA_TILING
 				// Compute -> Compute barrier
 				vk::insert_buffer_memory_barrier(cmd, working_buffer->value, 0, task_length,
-					VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-					VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_ACCESS_SHADER_READ_BIT);
+					VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+					VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
+
+				// We don't need to calibrate write if two conditions are met:
+				// 1. The start offset of our 2D region is a multiple of 64 lines
+				// 2. We use the whole pitch.
+				// If these conditions are not met, we need to upload the entire tile (or at least the affected tiles wholly)
+
+				// FIXME: There is a 3rd condition - write onto already-persisted range. e.g One transfer copies half the image then the other half is copied later.
+				// We don't need to load again for the second copy in that scenario.
+
+				if (valid_range.start != dma_sync_region.start || real_pitch != tiled_region.tile->pitch)
+				{
+					// Tile indices run to the end of the row (full pitch).
+					// Tiles address outside their 64x64 area too, so we need to actually load the whole thing and "fill in" missing blocks.
+					// Visualizing "hot" pixels when doing a partial copy is very revealing, there's lots of data from the padding areas to be filled in.
+
+					dma_sync(true);
+					ensure(dma_mapping.second);
+
+					// Upload memory to the working buffer
+					const auto dst_offset = task_length; // Append to the end of the input
+					VkBufferCopy mem_load{};
+					mem_load.srcOffset = dma_mapping.first;
+					mem_load.dstOffset = dst_offset;
+					mem_load.size = dma_sync_region.length();
+					vkCmdCopyBuffer(cmd, dma_mapping.second->value, working_buffer->value, 1, &mem_load);
+
+					// Transfer -> Compute barrier
+					vk::insert_buffer_memory_barrier(cmd, working_buffer->value, dst_offset, dma_sync_region.length(),
+						VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+						VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_WRITE_BIT);
+				}
 
 				// Prepare payload
 				const RSX_detiler_config config =
 				{
 					.tile_base_address = tiled_region.base_address,
 					.tile_base_offset = valid_range.start - tiled_region.base_address,
+					.tile_rw_offset = dma_sync_region.start - tiled_region.base_address,
 					.tile_size = tiled_region.tile->size,
 					.tile_pitch = tiled_region.tile->pitch,
 					.bank = tiled_region.tile->bank,
@@ -195,8 +238,8 @@ namespace vk
 					.src_offset = 0,
 
 					// TODO: Check interaction with anti-aliasing
-					.image_width = width,
-					.image_height = height,
+					.image_width = static_cast<u16>(transfer_width),
+					.image_height = static_cast<u16>(transfer_height),
 					.image_pitch = real_pitch,
 					.image_bpp = context == rsx::texture_upload_context::dma ? internal_bpp : rsx::get_format_block_size_in_bytes(gcm_format)
 				};
@@ -207,35 +250,56 @@ namespace vk
 
 				// Update internal variables
 				result_offset = task_length;
-				real_pitch = tiled_region.tile->pitch;
+				real_pitch = tiled_region.tile->pitch; // We're always copying the full image. In case of partials we're "filling in" blocks, not doing partial 2D copies.
 				require_rw_barrier = true;
+
+#if VISUALIZE_GPU_TILING
+				if (g_cfg.video.renderdoc_compatiblity)
+				{
+					vk::insert_buffer_memory_barrier(cmd, working_buffer->value, result_offset, working_buffer_length,
+						VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+						VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
+
+					// Debug write
+					auto scratch_img = vk::get_typeless_helper(VK_FORMAT_B8G8R8A8_UNORM, RSX_FORMAT_CLASS_COLOR, tiled_region.tile->pitch / 4, 768);
+					scratch_img->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+					VkBufferImageCopy dbg_copy{};
+					dbg_copy.bufferOffset = config.dst_offset;
+					dbg_copy.imageExtent.width = width;
+					dbg_copy.imageExtent.height = height;
+					dbg_copy.imageExtent.depth = 1;
+					dbg_copy.bufferRowLength = tiled_region.tile->pitch / 4;
+					dbg_copy.imageSubresource = { .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = 0, .layerCount = 1 };
+					vk::copy_buffer_to_image(cmd, working_buffer, scratch_img, dbg_copy);
+
+					scratch_img->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+				}
+#endif
+
 #endif
 			}
 
 			if (require_rw_barrier)
 			{
-				vk::insert_buffer_memory_barrier(cmd, working_buffer->value, result_offset, working_buffer_length,
+				vk::insert_buffer_memory_barrier(cmd, working_buffer->value, result_offset, dma_sync_region.length(),
 					VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
 					VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
 			}
 
 			if (rsx_pitch == real_pitch) [[likely]]
 			{
+				dma_sync(false);
+
 				VkBufferCopy copy = {};
 				copy.srcOffset = result_offset;
 				copy.dstOffset = dma_mapping.first;
-				copy.size = section_length;
+				copy.size = dma_sync_region.length();
 				vkCmdCopyBuffer(cmd, working_buffer->value, dma_mapping.second->value, 1, &copy);
 			}
 			else
 			{
-				if (context != rsx::texture_upload_context::dma)
-				{
-					// Partial load for the bits outside the existing image
-					// NOTE: A true DMA section would have been prepped beforehand
-					// TODO: Parial range load/flush
-					vk::load_dma(valid_range.start, section_length);
-				}
+				dma_sync(true);
 
 				std::vector<VkBufferCopy> copy;
 				copy.reserve(transfer_height);
@@ -255,6 +319,8 @@ namespace vk
 		}
 		else
 		{
+			dma_sync(false);
+
 			VkBufferImageCopy region = {};
 			region.bufferRowLength = (rsx_pitch / internal_bpp);
 			region.imageSubresource = { src->aspect(), 0, 0, 1 };
@@ -1011,6 +1077,7 @@ namespace vk
 		vk::command_buffer& /*cmd*/,
 		const utils::address_range& rsx_range,
 		const rsx::image_section_attributes_t& attrs,
+		const rsx::GCM_tile_reference& tile,
 		bool memory_load)
 	{
 		auto& region = *find_cached_texture(rsx_range, { .gcm_format = RSX_GCM_FORMAT_IGNORED }, true, false, false);
@@ -1022,7 +1089,7 @@ namespace vk
 		region.set_dirty(false);
 		region.set_unpack_swap_bytes(true);
 
-		if (memory_load)
+		if (memory_load && !tile) // Memory load on DMA tiles will always happen during the actual copy command
 		{
 			vk::map_dma(rsx_range.start, rsx_range.length());
 			vk::load_dma(rsx_range.start, rsx_range.length());

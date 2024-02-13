@@ -9,6 +9,11 @@ LOG_CHANNEL(sys_net);
 lv2_socket_p2p::lv2_socket_p2p(lv2_socket_family family, lv2_socket_type type, lv2_ip_protocol protocol)
 	: lv2_socket(family, type, protocol)
 {
+	sockopt_cache cache_type;
+	cache_type.data._int = SYS_NET_SOCK_DGRAM_P2P;
+	cache_type.len = 4;
+
+	sockopts[(static_cast<u64>(SYS_NET_SOL_SOCKET) << 32ull) | SYS_NET_SO_TYPE] = cache_type;
 }
 
 lv2_socket_p2p::lv2_socket_p2p(utils::serial& ar, lv2_socket_type type)

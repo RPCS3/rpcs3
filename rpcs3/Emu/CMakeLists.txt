@@ -347,6 +347,7 @@ target_sources(rpcs3_emu PRIVATE
     Cell/Modules/sceNpCommerce2.cpp
     Cell/Modules/sceNp.cpp
     Cell/Modules/sceNpMatchingInt.cpp
+    Cell/Modules/sceNpPlus.cpp
     Cell/Modules/sceNpSns.cpp
     Cell/Modules/sceNpTrophy.cpp
     Cell/Modules/sceNpTus.cpp

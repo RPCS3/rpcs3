@@ -43,6 +43,9 @@
 #include <functional>
 #include <unordered_map>
 
+// Helper function
+llvm::Value* peek_through_bitcasts(llvm::Value*);
+
 enum class i2 : char
 {
 };
@@ -147,7 +150,7 @@ struct llvm_value_t
 
 	std::tuple<> match(llvm::Value*& value, llvm::Module*) const
 	{
-		if (value != this->value)
+		if (peek_through_bitcasts(value) != peek_through_bitcasts(this->value))
 		{
 			value = nullptr;
 		}
@@ -503,9 +506,6 @@ using llvm_common_t = std::enable_if_t<(is_llvm_expr_of<T, Types>::ok && ...), t
 template <typename... Args>
 using llvm_match_tuple = decltype(std::tuple_cat(std::declval<llvm_expr_t<Args>&>().match(std::declval<llvm::Value*&>(), nullptr)...));
 
-// Helper function
-llvm::Value* peek_through_bitcasts(llvm::Value*);
-
 template <typename T, typename U = llvm_common_t<llvm_value_t<T>>>
 struct llvm_match_t
 {
@@ -532,7 +532,7 @@ struct llvm_match_t
 
 	std::tuple<> match(llvm::Value*& value, llvm::Module*) const
 	{
-		if (value != this->value)
+		if (peek_through_bitcasts(value) != peek_through_bitcasts(this->value))
 		{
 			value = nullptr;
 		}
@@ -681,6 +681,18 @@ struct llvm_add
 			if (auto r1 = a1.match(v1, _m); v1)
 			{
 				if (auto r2 = a2.match(v2, _m); v2)
+				{
+					return std::tuple_cat(r1, r2);
+				}
+			}
+
+			v1 = i->getOperand(0);
+			v2 = i->getOperand(1);
+
+			// Argument order does not matter here, try when swapped
+			if (auto r1 = a1.match(v2, _m); v2)
+			{
+				if (auto r2 = a2.match(v1, _m); v1)
 				{
 					return std::tuple_cat(r1, r2);
 				}
@@ -854,6 +866,18 @@ struct llvm_mul
 			if (auto r1 = a1.match(v1, _m); v1)
 			{
 				if (auto r2 = a2.match(v2, _m); v2)
+				{
+					return std::tuple_cat(r1, r2);
+				}
+			}
+
+			v1 = i->getOperand(0);
+			v2 = i->getOperand(1);
+
+			// Argument order does not matter here, try when swapped
+			if (auto r1 = a1.match(v2, _m); v2)
+			{
+				if (auto r2 = a2.match(v1, _m); v1)
 				{
 					return std::tuple_cat(r1, r2);
 				}
@@ -2239,6 +2263,18 @@ struct llvm_add_sat
 					return std::tuple_cat(r1, r2);
 				}
 			}
+
+			v1 = i->getOperand(0);
+			v2 = i->getOperand(1);
+
+			// Argument order does not matter here, try when swapped
+			if (auto r1 = a1.match(v2, _m); v2)
+			{
+				if (auto r2 = a2.match(v1, _m); v1)
+				{
+					return std::tuple_cat(r1, r2);
+				}
+			}
 		}
 
 		value = nullptr;
@@ -2868,6 +2904,22 @@ struct llvm_fmuladd
 					}
 				}
 			}
+
+			v1 = i->getOperand(0);
+			v2 = i->getOperand(1);
+			v3 = i->getOperand(2);
+
+			// With multiplication args swapped
+			if (auto r1 = a1.match(v2, _m); v2)
+			{
+				if (auto r2 = a2.match(v1, _m); v1)
+				{
+					if (auto r3 = a3.match(v3, _m); v3)
+					{
+						return std::tuple_cat(r1, r2, r3);
+					}
+				}
+			}
 		}
 
 		value = nullptr;
@@ -2883,6 +2935,18 @@ struct llvm_calli
 	llvm::StringRef iname;
 
 	std::tuple<llvm_expr_t<A>...> a;
+
+	std::array<usz, sizeof...(A)> order_equality_hint = []()
+	{
+		std::array<usz, sizeof...(A)> r{};
+
+		for (usz i = 0; i < r.size(); i++)
+		{
+			r[i] = i;
+		}
+
+		return r;
+	}();
 
 	llvm::Value*(*c)(llvm::Value**, llvm::IRBuilder<>*){};
 
@@ -2917,6 +2981,13 @@ struct llvm_calli
 		return *this;
 	}
 
+	template <typename... Args> requires (sizeof...(Args) == sizeof...(A))
+	llvm_calli& set_order_equality_hint(Args... args)
+	{
+		order_equality_hint = {static_cast<usz>(args)...};
+		return *this;
+	}
+
 	llvm_match_tuple<A...> match(llvm::Value*& value, llvm::Module* _m) const
 	{
 		return match(value, _m, std::make_index_sequence<sizeof...(A)>());
@@ -2938,6 +3009,20 @@ struct llvm_calli
 				if (((std::get<I>(r) = std::get<I>(a).match(v[I], _m), v[I]) && ...))
 				{
 					return std::tuple_cat(std::get<I>(r)...);
+				}
+
+				if constexpr (sizeof...(A) >= 2)
+				{
+					if (order_equality_hint[0] == order_equality_hint[1])
+					{
+						// Test if it works with the first pair swapped
+						((v[I <= 1 ? I ^ 1 : I] = i->getOperand(I)), ...);
+
+						if (((std::get<I>(r) = std::get<I>(a).match(v[I], _m), v[I]) && ...))
+						{
+							return std::tuple_cat(std::get<I>(r)...);
+						}	
+					}
 				}
 			}
 		}

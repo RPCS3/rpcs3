@@ -7,7 +7,7 @@ Other instructions may be found [here](https://wiki.rpcs3.net/index.php?title=Bu
 
 ### Windows 7 or later
 
-* [CMake 3.16.9+](https://www.cmake.org/download/) (add to PATH)
+* [CMake 3.28.0+](https://www.cmake.org/download/) (add to PATH)
 * [Python 3.6+](https://www.python.org/downloads/) (add to PATH)
 * [Qt 6.6.1](https://www.qt.io/download-qt-installer)
 * [Visual Studio 2022](https://visualstudio.microsoft.com/thank-you-downloading-visual-studio/?sku=Community) (or at least Visual Studio 2019 16.11.xx+ as C++20 is not included in previous versions)
@@ -20,7 +20,7 @@ Other instructions may be found [here](https://wiki.rpcs3.net/index.php?title=Bu
 These are the essentials tools to build RPCS3 on Linux. Some of them can be installed through your favorite package manager.
 
 * Clang 12+ or GCC 11+
-* [CMake 3.16.9+](https://www.cmake.org/download/)
+* [CMake 3.28.0+](https://www.cmake.org/download/)
 * [Qt 6.6.1](https://www.qt.io/download-qt-installer)
 * [Vulkan SDK 1.3.268.0](https://vulkan.lunarg.com/sdk/home) (See "Install the SDK" [here](https://vulkan.lunarg.com/doc/sdk/latest/linux/getting_started.html)) for now future SDKs don't work. You need precisely 1.3.268.0.
 * [SDL2](https://github.com/libsdl-org/SDL/releases) (for the FAudio backend)

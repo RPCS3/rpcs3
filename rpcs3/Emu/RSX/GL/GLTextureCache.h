@@ -712,6 +712,7 @@ namespace gl
 			gl::command_context& /*cmd*/,
 			const utils::address_range& rsx_range,
 			const rsx::image_section_attributes_t& attrs,
+			const rsx::GCM_tile_reference& /*tile*/,
 			bool /*memory_load*/) override
 		{
 			auto& cached = *find_cached_texture(rsx_range, { .gcm_format = RSX_GCM_FORMAT_IGNORED }, true, false, false);

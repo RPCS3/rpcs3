@@ -1664,7 +1664,7 @@ error_code sceNpMatching2SendLobbyInvitation(
 
 error_code sceNpMatching2ContextStop(SceNpMatching2ContextId ctxId)
 {
-	sceNp2.todo("sceNpMatching2ContextStop(ctxId=%d)", ctxId);
+	sceNp2.warning("sceNpMatching2ContextStop(ctxId=%d)", ctxId);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 

@@ -19,6 +19,9 @@ s32 send_packet_from_p2p_port(const std::vector<u8>& data, const sockaddr_in& ad
 		{
 			auto& def_port = ::at32(nc.list_p2p_ports, SCE_NP_PORT);
 			res            = ::sendto(def_port.p2p_socket, reinterpret_cast<const char*>(data.data()), ::size32(data), 0, reinterpret_cast<const sockaddr*>(&addr), sizeof(sockaddr_in));
+
+			if (res == -1)
+				sys_net.error("Failed to send signaling packet: %s", get_last_error(false, false));
 		}
 		else
 		{

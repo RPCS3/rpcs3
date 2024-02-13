@@ -224,6 +224,11 @@ namespace vk
 		{
 			const auto gpu_name = get_name();
 
+			if (gpu_name.find("Microsoft Direct3D12") != umax)
+			{
+				return driver_vendor::DOZEN;
+			}
+
 			if (gpu_name.find("RADV") != umax)
 			{
 				return driver_vendor::RADV;
@@ -248,6 +253,11 @@ namespace vk
 #endif
 			}
 
+			if (gpu_name.find("llvmpipe") != umax)
+			{
+				return driver_vendor::LAVAPIPE;
+			}
+
 			return driver_vendor::unknown;
 		}
 		else
@@ -265,6 +275,10 @@ namespace vk
 				return driver_vendor::INTEL;
 			case VK_DRIVER_ID_INTEL_OPEN_SOURCE_MESA_KHR:
 				return driver_vendor::ANV;
+			case VK_DRIVER_ID_MESA_DOZEN:
+				return driver_vendor::DOZEN;
+			case VK_DRIVER_ID_MESA_LLVMPIPE:
+				return driver_vendor::LAVAPIPE;
 			default:
 				// Mobile?
 				return driver_vendor::unknown;
@@ -495,6 +509,13 @@ namespace vk
 		enabled_features.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
 
 		// Optionally disable unsupported stuff
+		if (!pgpu->features.fullDrawIndexUint32)
+		{
+			// There's really nothing we can do about PS3 draw indices, just pray your GPU doesn't crash.
+			rsx_log.error("Your GPU driver does not fully support 32-bit vertex indices. This may result in graphical corruption or crashes in some cases.");
+			enabled_features.fullDrawIndexUint32 = VK_FALSE;
+		}
+
 		if (!pgpu->features.shaderStorageImageMultisample || !pgpu->features.shaderStorageImageWriteWithoutFormat)
 		{
 			// Disable MSAA if any of these two features are unsupported
@@ -540,6 +561,12 @@ namespace vk
 			enabled_features.depthBounds = VK_FALSE;
 		}
 
+		if (!pgpu->features.largePoints)
+		{
+			rsx_log.error("Your GPU does not support large points. Graphics may not render correctly.");
+			enabled_features.largePoints = VK_FALSE;
+		}
+
 		if (!pgpu->features.wideLines)
 		{
 			rsx_log.error("Your GPU does not support wide lines. Graphics may not render correctly.");
@@ -565,13 +592,11 @@ namespace vk
 			enabled_features.occlusionQueryPrecise = VK_FALSE;
 		}
 
-#ifdef __APPLE__
 		if (!pgpu->features.logicOp)
 		{
 			rsx_log.error("Your GPU does not support framebuffer logical operations. Graphics may not render correctly.");
 			enabled_features.logicOp = VK_FALSE;
 		}
-#endif
 
 		VkDeviceCreateInfo device = {};
 		device.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;

@@ -1662,12 +1662,16 @@ bool lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
 	// Yield changed the queue before
 	bool changed_queue = prio == yield_cmd;
 
+	s32 lowest_new_priority = smax;
+	const bool has_free_hw_thread_space = count_non_sleeping_threads().onproc_count < g_cfg.core.ppu_threads + 0u;
+
 	if (cpu && prio != yield_cmd)
 	{
 		// Emplace current thread
 		if (emplace_thread(cpu))
 		{
 			changed_queue = true;
+			lowest_new_priority = std::min<s32>(static_cast<ppu_thread*>(cpu)->prio.load().prio, lowest_new_priority);
 		}
 	}
 	else for (const auto _cpu : g_to_awake)
@@ -1676,13 +1680,15 @@ bool lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
 		if (emplace_thread(_cpu))
 		{
 			changed_queue = true;
+			lowest_new_priority = std::min<s32>(static_cast<ppu_thread*>(_cpu)->prio.load().prio, lowest_new_priority);
 		}
 	}
 
 	auto target = +g_ppu;
+	usz i = 0;
 
 	// Suspend threads if necessary
-	for (usz i = 0, thread_count = g_cfg.core.ppu_threads; target; target = target->next_ppu, i++)
+	for (usz thread_count = g_cfg.core.ppu_threads; target; target = target->next_ppu, i++)
 	{
 		if (i >= thread_count && cpu_flag::suspend - target->state)
 		{
@@ -1706,6 +1712,31 @@ bool lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
 		if (std::exchange(current_ppu->ack_suspend, false))
 		{
 			ensure(g_pending)--;
+		}
+	}
+
+	// In real PS3 (it seems), when a thread with a higher priority than the caller is signaled and -
+	// - that there is available space on the running queue for the other hardware thread to start
+	// It prioritizes signaled thread - caller's hardware thread switches instantly to the new thread code
+	// While signaling to the other hardware thread to execute the caller's code.
+	// Resulting in a delay to the caller after such thread is signaled
+
+	if (current_ppu && changed_queue && has_free_hw_thread_space)
+	{
+		if (current_ppu->prio.load().prio > lowest_new_priority)
+		{
+			// When not being set to All timers - activate only for sys_ppu_thread_start
+			if (current_ppu->gpr[11] == 0x35 || g_cfg.core.sleep_timers_accuracy == sleep_timers_accuracy_level::_all_timers)
+			{
+				if (!current_ppu->state.test_and_set(cpu_flag::yield) || current_ppu->hw_sleep_time != 0)
+				{
+					current_ppu->hw_sleep_time += 35; // Seems like 35us after extensive testing
+				}
+				else
+				{
+					current_ppu->hw_sleep_time = 30000; // In addition to another flag's use (TODO: Refactor and clean this)
+				}
+			}
 		}
 	}
 
@@ -1736,9 +1767,13 @@ void lv2_obj::schedule_all(u64 current_time)
 			if (target->state & cpu_flag::suspend)
 			{
 				ppu_log.trace("schedule(): %s", target->id);
+
+				// Remove yield if it was sleeping until now
+				const bs_t<cpu_flag> remove_yield = target->start_time == 0 ? +cpu_flag::suspend : (cpu_flag::yield + cpu_flag::preempt);
+
 				target->start_time = 0;
 
-				if ((target->state.fetch_op(FN(x += cpu_flag::signal, x -= cpu_flag::suspend, void())) & (cpu_flag::wait + cpu_flag::signal)) != cpu_flag::wait)
+				if ((target->state.fetch_op(FN(x += cpu_flag::signal, x -= cpu_flag::suspend, x-= remove_yield, void())) & (cpu_flag::wait + cpu_flag::signal)) != cpu_flag::wait)
 				{
 					continue;
 				}
@@ -1920,19 +1955,24 @@ bool lv2_obj::is_scheduler_ready()
 	return g_to_sleep.empty();
 }
 
-bool lv2_obj::has_ppus_in_running_state()
+ppu_non_sleeping_count_t lv2_obj::count_non_sleeping_threads()
 {
+	ppu_non_sleeping_count_t total{};
+
 	auto target = atomic_storage<ppu_thread*>::load(g_ppu);
 
-	for (usz i = 0, thread_count = g_cfg.core.ppu_threads; target; target = atomic_storage<ppu_thread*>::load(target->next_ppu), i++)
+	for (usz thread_count = g_cfg.core.ppu_threads; target; target = atomic_storage<ppu_thread*>::load(target->next_ppu))
 	{
-		if (i >= thread_count)
+		if (total.onproc_count == thread_count)
 		{
-			return true;
+			total.has_running = true;
+			break;
 		}
+
+		total.onproc_count++;
 	}
 
-	return false;
+	return total;
 }
 
 void lv2_obj::set_yield_frequency(u64 freq, u64 max_allowed_tsc)

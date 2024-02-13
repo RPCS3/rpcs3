@@ -25,6 +25,8 @@ namespace rsx
 		{
 			return !!tile;
 		}
+
+		utils::address_range tile_align(const rsx::address_range& range) const;
 	};
 
 	struct GCM_context
