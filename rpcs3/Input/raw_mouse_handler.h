@@ -19,6 +19,8 @@ public:
 	void update_window_handle();
 	display_handle_t window_handle() const { return m_window_handle; }
 
+	void center_cursor();
+
 #ifdef _WIN32
 	void update_values(const RAWMOUSE& state);
 #endif
