@@ -15,8 +15,8 @@
 #include "Emu/RSX/Overlays/overlay_cursor.h"
 static inline void draw_overlay_cursor(u32 index, s32 x_pos, s32 y_pos, s32 x_max, s32 y_max)
 {
-	const u16 x = static_cast<u16>(x_pos / (x_max / static_cast<f32>(rsx::overlays::overlay::virtual_width)));
-	const u16 y = static_cast<u16>(y_pos / (y_max / static_cast<f32>(rsx::overlays::overlay::virtual_height)));
+	const s16 x = static_cast<s16>(x_pos / (x_max / static_cast<f32>(rsx::overlays::overlay::virtual_width)));
+	const s16 y = static_cast<s16>(y_pos / (y_max / static_cast<f32>(rsx::overlays::overlay::virtual_height)));
 
 	const color4f color = { 1.0f, 0.0f, 0.0f, 1.0f };
 
