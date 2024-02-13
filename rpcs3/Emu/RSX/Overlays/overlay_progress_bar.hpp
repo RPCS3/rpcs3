@@ -21,7 +21,7 @@ namespace rsx
 			void dec(f32 value);
 			void set_limit(f32 limit);
 			void set_value(f32 value);
-			void set_pos(u16 _x, u16 _y) override;
+			void set_pos(s16 _x, s16 _y) override;
 			void set_size(u16 _w, u16 _h) override;
 			void translate(s16 dx, s16 dy) override;
 			void set_text(const std::string& str) override;
