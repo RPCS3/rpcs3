@@ -69,6 +69,12 @@ void raw_mouse::update_window_handle()
 	m_window_height = 0;
 }
 
+void raw_mouse::center_cursor()
+{
+	m_pos_x = m_window_width / 2;
+	m_pos_y = m_window_height / 2;
+}
+
 #ifdef _WIN32
 void raw_mouse::update_values(const RAWMOUSE& state)
 {
@@ -226,9 +232,15 @@ void raw_mouse_handler::Init(const u32 max_connect)
 #ifdef _WIN32
 	if (max_connect && !m_raw_mice.empty())
 	{
+		// Initialize and center all mice
+		for (auto& [handle, mouse] : m_raw_mice)
+		{
+			mouse.update_window_handle();
+			mouse.center_cursor();
+		}
+
 		// Get the window handle of the first mouse
 		raw_mouse& mouse = m_raw_mice.begin()->second;
-		mouse.update_window_handle();
 
 		std::vector<RAWINPUTDEVICE> raw_input_devices;
 		raw_input_devices.push_back(RAWINPUTDEVICE {
