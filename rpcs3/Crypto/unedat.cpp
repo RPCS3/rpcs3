@@ -644,8 +644,8 @@ void read_npd_edat_header(const fs::file* input, NPD_HEADER& NPD, EDAT_HEADER& E
 	char npd_header[0x80]{};
 	char edat_header[0x10]{};
 
-	usz pos = 0;
-	pos = input->read_at(pos, npd_header, sizeof(npd_header));
+	usz pos = input->pos();
+	pos += input->read_at(pos, npd_header, sizeof(npd_header));
 	input->read_at(pos, edat_header, sizeof(edat_header));
 
 	std::memcpy(&NPD.magic, npd_header, 4);
@@ -789,11 +789,14 @@ fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, 
 
 bool EDATADecrypter::ReadHeader()
 {
+	edata_file.seek(0);
+
 	// Read in the NPD and EDAT/SDAT headers.
 	read_npd_edat_header(&edata_file, npdHeader, edatHeader);
 
 	if (npdHeader.magic != "NPD\0"_u32)
 	{
+		edat_log.error("Not an NPDRM file");
 		return false;
 	}
 
@@ -853,6 +856,7 @@ bool EDATADecrypter::ReadHeader()
 
 	if (false && !check_data(reinterpret_cast<u8*>(&dec_key), &edatHeader, &npdHeader, &edata_file, false))
 	{
+		edat_log.error("NPDRM check_data() failed!");
 		return false;
 	}
 
@@ -864,6 +868,7 @@ bool EDATADecrypter::ReadHeader()
 
 	if (file_size && !ReadData(0, data_sample, 1))
 	{
+		edat_log.error("NPDRM ReadData() failed!");
 		return false;
 	}
 
