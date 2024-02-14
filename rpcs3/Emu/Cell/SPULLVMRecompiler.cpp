@@ -6016,15 +6016,17 @@ public:
 
 			const auto div_result = the_one / div;
 
-			// from ps3 hardware testing: Inf => NaN and NaN => Zero
+			// From ps3 hardware testing: Inf => NaN and NaN => Zero, Signed Zero => Zero
+			// This results in full accuracy within 1ulp(Currently x86 seems to be rounding up?)
 			const auto result_and = bitcast<u32[4]>(div_result) & 0x7fffffffu;
 			const auto result_cmp_inf = sext<s32[4]>(result_and == splat<u32[4]>(0x7F800000u));
 			const auto result_cmp_nan = sext<s32[4]>(result_and <= splat<u32[4]>(0x7F800000u));
 
+			const auto and_mask_zero = bitcast<u32[4]>(sext<s32[4]>(result_and != splat<u32[4]>(0u)));
 			const auto and_mask = bitcast<u32[4]>(result_cmp_nan) & splat<u32[4]>(0xFFFFFFFFu);
 			const auto or_mask = bitcast<u32[4]>(result_cmp_inf) & splat<u32[4]>(0xFFFFFFFu);
 
-			return bitcast<f32[4]>((bitcast<u32[4]>(div_result) & and_mask) | or_mask);
+			return bitcast<f32[4]>(((bitcast<u32[4]>(div_result) & and_mask) & and_mask_zero) | or_mask);
 		});
 
 		const auto [a, b, c] = get_vrs<f32[4]>(op.ra, op.rb, op.rc);
