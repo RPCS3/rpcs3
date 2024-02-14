@@ -5,6 +5,7 @@
 #include <vector>
 #include "Utilities/mutex.h"
 #include "util/init_mutex.hpp"
+#include "Emu/system_config_types.h"
 
 // TODO: HLE info (constants, structs, etc.) should not be available here
 
@@ -131,23 +132,25 @@ public:
 
 	SAVESTATE_INIT_POS(18);
 
+	MouseHandlerBase(){};
 	MouseHandlerBase(const MouseHandlerBase&) = delete;
 	MouseHandlerBase(utils::serial* ar);
 	MouseHandlerBase(utils::serial& ar) : MouseHandlerBase(&ar) {}
 	void save(utils::serial& ar);
 
-	void Button(u8 button, bool pressed)
+	void Button(u32 index, u8 button, bool pressed)
 	{
 		std::lock_guard lock(mutex);
 
-		for (u32 p = 0; p < m_mice.size(); ++p)
+		if (index < m_mice.size())
 		{
-			if (m_info.status[p] != CELL_MOUSE_STATUS_CONNECTED)
+			if (m_info.status[index] != CELL_MOUSE_STATUS_CONNECTED)
 			{
-				continue;
+				return;
 			}
 
-			MouseDataList& datalist = GetDataList(p);
+			Mouse& mouse = m_mice[index];
+			MouseDataList& datalist = GetDataList(index);
 
 			if (datalist.size() > MOUSE_MAX_DATA_LIST_NUM)
 			{
@@ -155,30 +158,31 @@ public:
 			}
 
 			if (pressed)
-				m_mice[p].buttons |= button;
+				mouse.buttons |= button;
 			else
-				m_mice[p].buttons &= ~button;
+				mouse.buttons &= ~button;
 
 			MouseData new_data;
 			new_data.update = CELL_MOUSE_DATA_UPDATE;
-			new_data.buttons = m_mice[p].buttons;
+			new_data.buttons = mouse.buttons;
 
 			datalist.push_back(new_data);
 		}
 	}
 
-	void Scroll(const s8 rotation)
+	void Scroll(u32 index, s32 rotation)
 	{
 		std::lock_guard lock(mutex);
 
-		for (u32 p = 0; p < m_mice.size(); ++p)
+		if (index < m_mice.size())
 		{
-			if (m_info.status[p] != CELL_MOUSE_STATUS_CONNECTED)
+			if (m_info.status[index] != CELL_MOUSE_STATUS_CONNECTED)
 			{
-				continue;
+				return;
 			}
 
-			MouseDataList& datalist = GetDataList(p);
+			Mouse& mouse = m_mice[index];
+			MouseDataList& datalist = GetDataList(index);
 
 			if (datalist.size() > MOUSE_MAX_DATA_LIST_NUM)
 			{
@@ -187,25 +191,26 @@ public:
 
 			MouseData new_data;
 			new_data.update = CELL_MOUSE_DATA_UPDATE;
-			new_data.wheel = rotation / 120; //120=event.GetWheelDelta()
-			new_data.buttons = m_mice[p].buttons;
+			new_data.wheel = std::clamp(rotation / 120, -128, 127); //120=event.GetWheelDelta()
+			new_data.buttons = mouse.buttons;
 
 			datalist.push_back(new_data);
 		}
 	}
 
-	void Move(s32 x_pos_new, s32 y_pos_new, s32 x_max, s32 y_max, const bool is_qt_fullscreen = false, s32 x_delta = 0, s32 y_delta = 0)
+	void Move(u32 index, s32 x_pos_new, s32 y_pos_new, s32 x_max, s32 y_max, const bool is_relative = false, s32 x_delta = 0, s32 y_delta = 0)
 	{
 		std::lock_guard lock(mutex);
 
-		for (u32 p = 0; p < m_mice.size(); ++p)
+		if (index < m_mice.size())
 		{
-			if (m_info.status[p] != CELL_MOUSE_STATUS_CONNECTED)
+			if (m_info.status[index] != CELL_MOUSE_STATUS_CONNECTED)
 			{
-				continue;
+				return;
 			}
 
-			MouseDataList& datalist = GetDataList(p);
+			Mouse& mouse = m_mice[index];
+			MouseDataList& datalist = GetDataList(index);
 
 			if (datalist.size() > MOUSE_MAX_DATA_LIST_NUM)
 			{
@@ -214,21 +219,22 @@ public:
 
 			MouseData new_data;
 			new_data.update = CELL_MOUSE_DATA_UPDATE;
-			new_data.buttons = m_mice[p].buttons;
+			new_data.buttons = mouse.buttons;
 
-			if (!is_qt_fullscreen)
+			if (!is_relative)
 			{
-				x_delta = x_pos_new - m_mice[p].x_pos;
-				y_delta = y_pos_new - m_mice[p].y_pos;
+				// The PS3 expects relative mouse movement, so we have to calculate it with the last absolute position.
+				x_delta = x_pos_new - mouse.x_pos;
+				y_delta = y_pos_new - mouse.y_pos;
 			}
 
 			new_data.x_axis = static_cast<s8>(std::clamp(x_delta, -127, 128));
 			new_data.y_axis = static_cast<s8>(std::clamp(y_delta, -127, 128));
 
-			m_mice[p].x_max = x_max;
-			m_mice[p].y_max = y_max;
-			m_mice[p].x_pos = x_pos_new;
-			m_mice[p].y_pos = y_pos_new;
+			mouse.x_max = x_max;
+			mouse.y_max = y_max;
+			mouse.x_pos = x_pos_new;
+			mouse.y_pos = y_pos_new;
 
 			/*CellMouseRawData& rawdata = GetRawData(p);
 			rawdata.data[rawdata.len % CELL_MOUSE_MAX_CODES] = 0; // (TODO)
@@ -260,4 +266,6 @@ public:
 	MouseRawData& GetRawData(const u32 mouse) { return m_mice[mouse].m_rawdata; }
 
 	stx::init_mutex init;
+
+	mouse_handler type = mouse_handler::null;
 };

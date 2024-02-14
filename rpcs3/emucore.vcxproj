@@ -631,6 +631,7 @@
     <ClInclude Include="Emu\system_config.h" />
     <ClInclude Include="Emu\system_config_types.h" />
     <ClInclude Include="Emu\vfs_config.h" />
+    <ClInclude Include="Input\raw_mouse_config.h" />
     <ClInclude Include="Loader\disc.h" />
     <ClInclude Include="Loader\mself.hpp" />
     <ClInclude Include="util\atomic.hpp" />

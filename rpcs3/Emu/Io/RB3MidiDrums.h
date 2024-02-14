@@ -5,6 +5,7 @@
 #include <rtmidi_c.h>
 #include <chrono>
 #include <vector>
+#include <optional>
 
 namespace rb3drums
 {

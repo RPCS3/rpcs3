@@ -180,6 +180,7 @@
     <ClCompile Include="Input\dualsense_pad_handler.cpp" />
     <ClCompile Include="Input\evdev_gun_handler.cpp" />
     <ClCompile Include="Input\hid_pad_handler.cpp" />
+    <ClCompile Include="Input\raw_mouse_handler.cpp" />
     <ClCompile Include="Input\sdl_pad_handler.cpp" />
     <ClCompile Include="Input\skateboard_pad_handler.cpp" />
     <ClCompile Include="main.cpp" />
@@ -924,6 +925,7 @@
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(QTDIR)\bin\moc.exe;%(FullPath);$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(QTDIR)\bin\moc.exe;%(FullPath);$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
     </CustomBuild>
+    <ClInclude Include="Input\raw_mouse_handler.h" />
     <ClInclude Include="Input\sdl_pad_handler.h" />
     <ClInclude Include="Input\skateboard_pad_handler.h" />
     <ClInclude Include="main_application.h" />

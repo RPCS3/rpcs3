@@ -38,6 +38,7 @@ enum class mouse_handler
 {
 	null,
 	basic,
+	raw
 };
 
 enum class video_renderer
@@ -127,6 +128,7 @@ enum class move_handler
 	null,
 	fake,
 	mouse,
+	raw_mouse,
 #ifdef HAVE_LIBEVDEV
 	gun
 #endif

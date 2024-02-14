@@ -157,7 +157,7 @@ u128 get_block_key(int block, NPD_HEADER *npd)
 // for out data, allocate a buffer the size of 'edat->block_size'
 // Also, set 'in file' to the beginning of the encrypted data, which may be offset if inside another file, but normally just reset to beginning of file
 // returns number of bytes written, -1 for error
-s64 decrypt_block(const fs::file* in, u8* out, EDAT_HEADER *edat, NPD_HEADER *npd, u8* crypt_key, u32 block_num, u32 total_blocks, u64 size_left)
+s64 decrypt_block(const fs::file* in, u8* out, EDAT_HEADER *edat, NPD_HEADER *npd, u8* crypt_key, u32 block_num, u32 total_blocks, u64 size_left, bool is_out_buffer_aligned = false)
 {
 	// Get metadata info and setup buffers.
 	const int metadata_section_size = ((edat->flags & EDAT_COMPRESSED_FLAG) != 0 || (edat->flags & EDAT_FLAG_0x20) != 0) ? 0x20 : 0x10;
@@ -235,11 +235,11 @@ s64 decrypt_block(const fs::file* in, u8* out, EDAT_HEADER *edat, NPD_HEADER *np
 	length = utils::align<usz>(pad_length, 0x10);
 
 	// Setup buffers for decryption and read the data.
-	std::vector<u8> enc_data_buf(length == pad_length ? 0 : length);
+	std::vector<u8> enc_data_buf(is_out_buffer_aligned || length == pad_length ? 0 : length);
 	std::vector<u8> dec_data_buf(length);
 
 	// Try to use out buffer for file reads if no padding is needed instead of a new buffer
-	u8* enc_data = length == pad_length ? out : enc_data_buf.data();
+	u8* enc_data = enc_data_buf.empty() ? out : enc_data_buf.data();
 
 	// Variable to avoid copies when possible
 	u8* dec_data = dec_data_buf.data();
@@ -644,8 +644,8 @@ void read_npd_edat_header(const fs::file* input, NPD_HEADER& NPD, EDAT_HEADER& E
 	char npd_header[0x80]{};
 	char edat_header[0x10]{};
 
-	usz pos = 0;
-	pos = input->read_at(pos, npd_header, sizeof(npd_header));
+	usz pos = input->pos();
+	pos += input->read_at(pos, npd_header, sizeof(npd_header));
 	input->read_at(pos, edat_header, sizeof(edat_header));
 
 	std::memcpy(&NPD.magic, npd_header, 4);
@@ -789,11 +789,14 @@ fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, 
 
 bool EDATADecrypter::ReadHeader()
 {
+	edata_file.seek(0);
+
 	// Read in the NPD and EDAT/SDAT headers.
 	read_npd_edat_header(&edata_file, npdHeader, edatHeader);
 
 	if (npdHeader.magic != "NPD\0"_u32)
 	{
+		edat_log.error("Not an NPDRM file");
 		return false;
 	}
 
@@ -853,6 +856,7 @@ bool EDATADecrypter::ReadHeader()
 
 	if (false && !check_data(reinterpret_cast<u8*>(&dec_key), &edatHeader, &npdHeader, &edata_file, false))
 	{
+		edat_log.error("NPDRM check_data() failed!");
 		return false;
 	}
 
@@ -864,6 +868,7 @@ bool EDATADecrypter::ReadHeader()
 
 	if (file_size && !ReadData(0, data_sample, 1))
 	{
+		edat_log.error("NPDRM ReadData() failed!");
 		return false;
 	}
 
@@ -890,11 +895,12 @@ u64 EDATADecrypter::ReadData(u64 pos, u8* data, u64 size)
 
 	u64 writeOffset = 0;
 
-	std::vector<u8> data_buf(edatHeader.block_size);
+	std::vector<u8> data_buf(edatHeader.block_size + 16);
 
 	for (u32 i = starting_block; i < ending_block; i++)
 	{
-		u64 res = decrypt_block(&edata_file, data_buf.data(), &edatHeader, &npdHeader, reinterpret_cast<uchar*>(&dec_key), i, total_blocks, edatHeader.file_size);
+		u64 res = decrypt_block(&edata_file, data_buf.data(), &edatHeader, &npdHeader, reinterpret_cast<uchar*>(&dec_key), i, total_blocks, edatHeader.file_size, true);
+
 		if (res == umax)
 		{
 			edat_log.error("Error Decrypting data");
@@ -902,13 +908,19 @@ u64 EDATADecrypter::ReadData(u64 pos, u8* data, u64 size)
 		}
 
 		const usz skip_start = (i == starting_block ? startOffset : 0);
-		const usz end_block = (i != total_blocks - 1 ? edatHeader.block_size : edatHeader.file_size % edatHeader.block_size);
-		const usz skip_end = (i == ending_block - 1 ? (end_block - (startOffset + size)) % edatHeader.block_size : 0);
 
-		std::memcpy(data + writeOffset, data_buf.data() + skip_start, res - skip_start - skip_end);
-		std::memset(data_buf.data(), 0, res - skip_start - skip_end);
+		if (skip_start >= res)
+		{
+			break;
+		}
 
-		writeOffset += res - skip_start - skip_end;
+		const usz end_pos = (i != total_blocks - 1 ? edatHeader.block_size : (edatHeader.file_size - 1) % edatHeader.block_size + 1);
+		const usz read_end = std::min<usz>(res, i == ending_block - 1 ? std::min<usz>(end_pos, (startOffset + size - 1) % edatHeader.block_size + 1) : end_pos);
+
+		std::memcpy(data + writeOffset, data_buf.data() + skip_start, read_end - skip_start);
+		std::memset(data_buf.data(), 0, read_end - skip_start);
+
+		writeOffset += read_end - skip_start;
 	}
 
 	return writeOffset;

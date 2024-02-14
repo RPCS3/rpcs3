@@ -71,7 +71,7 @@ namespace rsx
 			return m_text.text == text;
 		}
 
-		void message_item::set_pos(u16 _x, u16 _y)
+		void message_item::set_pos(s16 _x, s16 _y)
 		{
 			rounded_rect::set_pos(_x, _y);
 			m_text.set_pos(_x + m_margin, y + m_margin);
@@ -108,7 +108,7 @@ namespace rsx
 			return compiled_resources;
 		}
 
-		void message_item::update(usz index, u64 timestamp_us, u16 y_offset)
+		void message_item::update(usz index, u64 timestamp_us, s16 y_offset)
 		{
 			if (m_cur_pos != index)
 			{
@@ -186,7 +186,8 @@ namespace rsx
 
 			// Render reversed list. Oldest entries are furthest from the border
 			constexpr u16 spacing = 4;
-			u16 y_offset = 8, index = 0;
+			s16 y_offset = 8;
+			usz index = 0;
 			for (auto it = vis_set.rbegin(); it != vis_set.rend(); ++it, ++index)
 			{
 				if (origin == message_pin_location::top) [[ likely ]]

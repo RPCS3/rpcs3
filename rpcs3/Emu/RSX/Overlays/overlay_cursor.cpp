@@ -12,7 +12,7 @@ namespace rsx
 			m_cross_v.set_size(1, 15);
 		}
 
-		bool cursor_item::set_position(u16 x, u16 y)
+		bool cursor_item::set_position(s16 x, s16 y)
 		{
 			if (m_x == x && m_y == y)
 			{
@@ -115,7 +115,7 @@ namespace rsx
 			return cr;
 		}
 
-		void cursor_manager::update_cursor(u32 id, u16 x, u16 y, const color4f& color, u64 duration_us, bool force_update)
+		void cursor_manager::update_cursor(u32 id, s16 x, s16 y, const color4f& color, u64 duration_us, bool force_update)
 		{
 			std::lock_guard lock(m_mutex);
 
@@ -136,7 +136,7 @@ namespace rsx
 			}
 		}
 
-		void set_cursor(u32 id, u16 x, u16 y, const color4f& color, u64 duration_us, bool force_update)
+		void set_cursor(u32 id, s16 x, s16 y, const color4f& color, u64 duration_us, bool force_update)
 		{
 			if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
 			{

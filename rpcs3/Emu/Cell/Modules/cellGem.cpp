@@ -317,10 +317,16 @@ public:
 			break;
 		}
 		case move_handler::mouse:
+		case move_handler::raw_mouse:
 		{
-			connected_controllers = 1;
+			auto& handler = g_fxo->get<MouseHandlerBase>();
 
-			if (gem_num == 0)
+			// Make sure that the mouse handler is initialized
+			handler.Init(std::min<u32>(attribute.max_connect, CELL_GEM_MAX_NUM));
+
+			const MouseInfo& info = handler.GetInfo();
+			connected_controllers = std::min<u32>({ info.now_connect, attribute.max_connect, CELL_GEM_MAX_NUM });
+			if (gem_num < connected_controllers)
 			{
 				is_connected = true;
 			}
@@ -586,8 +592,8 @@ static bool check_gem_num(const u32 gem_num)
 
 static inline void draw_overlay_cursor(u32 gem_num, const gem_config::gem_controller&, s32 x_pos, s32 y_pos, s32 x_max, s32 y_max)
 {
-	const u16 x = static_cast<u16>(x_pos / (x_max / static_cast<f32>(rsx::overlays::overlay::virtual_width)));
-	const u16 y = static_cast<u16>(y_pos / (y_max / static_cast<f32>(rsx::overlays::overlay::virtual_height)));
+	const s16 x = static_cast<s16>(x_pos / (x_max / static_cast<f32>(rsx::overlays::overlay::virtual_width)));
+	const s16 y = static_cast<s16>(y_pos / (y_max / static_cast<f32>(rsx::overlays::overlay::virtual_height)));
 
 	// Note: We shouldn't use sphere_rgb here. The game will set it to black in many cases.
 	const gem_config_data::gem_color& rgb = gem_config_data::gem_color::get_default_color(gem_num);
@@ -1417,6 +1423,7 @@ error_code cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> gem_imag
 			ds3_pos_to_gem_state(gem_num, gem.controllers[gem_num], gem_image_state);
 			break;
 		case move_handler::mouse:
+		case move_handler::raw_mouse:
 			mouse_pos_to_gem_state(gem_num, gem.controllers[gem_num], gem_image_state);
 			break;
 #ifdef HAVE_LIBEVDEV
@@ -1471,6 +1478,7 @@ error_code cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, v
 			ds3_input_to_pad(gem_num, inertial_state->pad.digitalbuttons, inertial_state->pad.analog_T);
 			break;
 		case move_handler::mouse:
+		case move_handler::raw_mouse:
 			mouse_input_to_pad(gem_num, inertial_state->pad.digitalbuttons, inertial_state->pad.analog_T);
 			break;
 #ifdef HAVE_LIBEVDEV
@@ -1675,6 +1683,7 @@ error_code cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<Ce
 			ds3_pos_to_gem_state(gem_num, gem.controllers[gem_num], gem_state);
 			break;
 		case move_handler::mouse:
+		case move_handler::raw_mouse:
 			mouse_input_to_pad(gem_num, gem_state->pad.digitalbuttons, gem_state->pad.analog_T);
 			mouse_pos_to_gem_state(gem_num, gem.controllers[gem_num], gem_state);
 			break;

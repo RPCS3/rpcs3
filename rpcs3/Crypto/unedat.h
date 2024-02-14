@@ -18,6 +18,7 @@ struct loaded_npdrm_keys
 {
 	atomic_t<u128> dec_keys[16]{};
 	atomic_t<u64> dec_keys_pos = 0;
+	u128 one_time_key{}; // For savestates
 	atomic_t<u32> npdrm_fds{0};
 
 	void install_decryption_key(u128 key)
@@ -161,5 +162,10 @@ public:
 		fs::file_id id = edata_file.get_id();
 		id.type.insert(0, "EDATADecrypter: "sv);
 		return id;
+	}
+
+	u128 get_key() const
+	{
+		return dec_key;
 	}
 };
