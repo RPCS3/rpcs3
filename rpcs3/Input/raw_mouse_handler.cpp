@@ -23,7 +23,7 @@ static inline void draw_overlay_cursor(u32 index, s32 x_pos, s32 y_pos, s32 x_ma
 	rsx::overlays::set_cursor(rsx::overlays::cursor_offset::last + index, x, y, color, 2'000'000, false);
 }
 #else
-static inline void draw_overlay_cursor(u32, s32, s32, s32, s32) {}
+[[maybe_unused]] static inline void draw_overlay_cursor(u32, s32, s32, s32, s32) {}
 #endif
 
 LOG_CHANNEL(input_log, "Input");

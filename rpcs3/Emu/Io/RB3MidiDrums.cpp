@@ -28,14 +28,14 @@ constexpr FlagByIndex BUTTON_3 = {0x04, 0};
 constexpr FlagByIndex BUTTON_4 = {0x08, 0};
 constexpr FlagByIndex BUTTON_5 = {0x10, 0};
 constexpr FlagByIndex BUTTON_6 = {0x20, 0};
-constexpr FlagByIndex BUTTON_7 = {0x40, 0};
-constexpr FlagByIndex BUTTON_8 = {0x80, 0};
+// constexpr FlagByIndex BUTTON_7 = {0x40, 0};
+// constexpr FlagByIndex BUTTON_8 = {0x80, 0};
 
 constexpr FlagByIndex BUTTON_9  = {0x01, 1};
 constexpr FlagByIndex BUTTON_10 = {0x02, 1};
 constexpr FlagByIndex BUTTON_11 = {0x04, 1};
 constexpr FlagByIndex BUTTON_12 = {0x08, 1};
-constexpr FlagByIndex BUTTON_13 = {0x10, 1};
+// constexpr FlagByIndex BUTTON_13 = {0x10, 1};
 
 constexpr usz DPAD_INDEX = 2;
 enum class DPad : u8
@@ -111,9 +111,9 @@ constexpr FlagByIndex HIHAT_PEDAL   = controller::BUTTON_6;
 constexpr FlagByIndex IS_DRUM       = controller::BUTTON_11;
 constexpr FlagByIndex IS_CYMBAL	    = controller::BUTTON_12;
 
-constexpr FlagByIndex BACK_BUTTON   = controller::BUTTON_3;
+// constexpr FlagByIndex BACK_BUTTON   = controller::BUTTON_3;
 constexpr FlagByIndex START_BUTTON  = controller::BUTTON_10;
-constexpr FlagByIndex SYSTEM_BUTTON = controller::BUTTON_13;
+// constexpr FlagByIndex SYSTEM_BUTTON = controller::BUTTON_13;
 constexpr FlagByIndex SELECT_BUTTON = controller::BUTTON_9;
 
 rb3drums::KitState start_state()
