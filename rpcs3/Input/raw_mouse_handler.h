@@ -32,6 +32,8 @@ private:
 	display_handle_t m_window_handle{};
 	int m_window_width{};
 	int m_window_height{};
+	int m_window_width_old{};
+	int m_window_height_old{};
 	int m_pos_x{};
 	int m_pos_y{};
 	float m_mouse_acceleration = 1.0f;

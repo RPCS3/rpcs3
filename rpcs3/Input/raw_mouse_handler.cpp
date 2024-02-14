@@ -159,6 +159,16 @@ void raw_mouse::update_values(const RAWMOUSE& state)
 			const int delta_x = static_cast<int>(state.lLastX * m_mouse_acceleration);
 			const int delta_y = static_cast<int>(state.lLastY * m_mouse_acceleration);
 
+			// Adjust mouse position if the window size changed
+			if (m_window_width_old != m_window_width || m_window_height_old != m_window_height)
+			{
+				m_pos_x = static_cast<int>(std::round((m_pos_x / static_cast<f32>(m_window_width_old)) * m_window_width));
+				m_pos_y = static_cast<int>(std::round((m_pos_y / static_cast<f32>(m_window_height_old)) * m_window_height));
+
+				m_window_width_old = m_window_width;
+				m_window_height_old = m_window_height;
+			}
+
 			// Calculate new position
 			m_pos_x = std::max(0, std::min(m_pos_x + delta_x, m_window_width - 1));
 			m_pos_y = std::max(0, std::min(m_pos_y + delta_y, m_window_height - 1));
