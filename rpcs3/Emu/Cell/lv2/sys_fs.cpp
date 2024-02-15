@@ -632,7 +632,13 @@ struct lv2_file::file_view : fs::file_base
 
 	fs::stat_t get_stat() override
 	{
-		return m_file->file.get_stat();
+		fs::stat_t stat = m_file->file.get_stat();
+
+		// TODO: Check this on realhw
+		//stat.size = utils::sub_saturate<u64>(stat.size, m_off);
+
+		stat.is_writable = false;
+		return stat;
 	}
 
 	bool trunc(u64) override
@@ -677,7 +683,7 @@ struct lv2_file::file_view : fs::file_base
 
 	u64 size() override
 	{
-		return m_file->file.size();
+		return utils::sub_saturate<u64>(m_file->file.size(), m_off);
 	}
 
 	fs::file_id get_id() override
