@@ -507,7 +507,7 @@ error_code _sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, vm::p
 	// Try to obtain "physical memory" from the default container
 	if (!dct.take(stack_size))
 	{
-		return CELL_ENOMEM;
+		return {CELL_ENOMEM, dct.size - dct.used};
 	}
 
 	const vm::addr_t stack_base{vm::alloc(stack_size, vm::stack, 4096)};
