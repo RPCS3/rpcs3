@@ -2622,7 +2622,7 @@ error_code sys_fs_lseek(ppu_thread& ppu, u32 fd, s64 offset, s32 whence, vm::ptr
 	{
 		switch (auto error = fs::g_tls_error)
 		{
-		case fs::error::inval: return CELL_EINVAL;
+		case fs::error::inval: return {CELL_EINVAL, "fd=%u, offset=0x%x, whence=%d", fd, offset, whence};
 		default: sys_fs.error("sys_fs_lseek(): unknown error %s", error);
 		}
 
