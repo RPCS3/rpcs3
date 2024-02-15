@@ -5624,9 +5624,9 @@ public:
 		// Presumably 1/x might result in Zero/NaN when a/x doesn't
 		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::relaxed)
 		{
-			auto full_fm_accurate = [&](const auto& a, const auto& div)
+			auto full_fm_accurate = [&](const auto& num, const auto& div)
 			{
-				const auto div_result = a / div;
+				const auto div_result = num / div;
 				const auto result_and = bitcast<u32[4]>(div_result) & 0x7fffffffu;
 				const auto result_cmp_inf = sext<s32[4]>(result_and == splat<u32[4]>(0x7F800000u));
 				const auto result_cmp_nan = sext<s32[4]>(result_and <= splat<u32[4]>(0x7F800000u));
@@ -6034,78 +6034,39 @@ public:
 
 		auto check_sqrt_pattern_for_float = [&](f32 float_value) -> bool
 		{
-			auto match_fnms = [&](f32 float_value)
+			auto match_fnms = [&](f32 float_value, const auto& eval_sqrt)
 			{
-				auto res = match_expr(a, fnms(MT, MT, fsplat<f32[4]>(float_value)));
+				const auto res = match_expr(a, fnms(eval_sqrt, spu_rsqrte(MT), fsplat<f32[4]>(float_value)));
 				if (std::get<0>(res))
 					return res;
 
-				return match_expr(b, fnms(MT, MT, fsplat<f32[4]>(float_value)));
+				return match_expr(b, fnms(eval_sqrt, spu_rsqrte(MT), fsplat<f32[4]>(float_value)));
 			};
 
-			auto match_fm_half = [&]()
+			auto match_fm_half = [&](const auto& eval_sqrt)
 			{
-				auto res = match_expr(a, fm(MT, fsplat<f32[4]>(0.5)));
+				const auto res = match_expr(a, fm(fsplat<f32[4]>(0.5f), eval_sqrt));
 				if (std::get<0>(res))
 					return res;
 
-				res = match_expr(a, fm(fsplat<f32[4]>(0.5), MT));
-				if (std::get<0>(res))
-					return res;
-
-				res = match_expr(b, fm(MT, fsplat<f32[4]>(0.5)));
-				if (std::get<0>(res))
-					return res;
-
-				return match_expr(b, fm(fsplat<f32[4]>(0.5), MT));
+				return match_expr(b, fm(fsplat<f32[4]>(0.5f), eval_sqrt));
 			};
 
-
-			if (auto [ok_fnma, a1, b1] = match_fnms(float_value); ok_fnma)
+			// eval_sqrt = x * spu_resqrt(x)
+			// eval_sqrt + (1 - (spu_resqrt(x) * eval_sqrt)) * (0.5 * eval_sqrt)
+			// FMA(FNMS(spu_resqrt(x) <*> eval_sqrt, float_value) <*> FM(0.5f, eval_sqrt), eval_sqrt)
+			if (auto [ok_fm_c, x, maybe_x] = match_expr(c, fm(MT, spu_rsqrte(MT))); ok_fm_c && x.eq(maybe_x))
 			{
-				if (auto [ok_fm2, fm_half_mul] = match_fm_half(); ok_fm2 && fm_half_mul.eq(b1))
+				if (auto [ok_fnms, maybe_x_2] = match_fnms(float_value, c); ok_fnms && x.eq(maybe_x_2))
 				{
-					if (fm_half_mul.eq(b1))
+					if (auto [ok_fm] = match_fm_half(c); ok_fm)
 					{
-						if (auto [ok_fm1, a3, b3] = match_expr(c, fm(MT, MT)); ok_fm1 && a3.eq(a1))
-						{
-							if (auto [ok_sqrte, src] = match_expr(a3, spu_rsqrte(MT)); ok_sqrte && src.eq(b3))
-							{
-								erase_stores(a, b, c, a3);
-								set_vr(op.rt4, fsqrt(fabs(src)));
-								return true;
-							}	
-						}
-						else if (auto [ok_fm1, a3, b3] = match_expr(c, fm(MT, MT)); ok_fm1 && b3.eq(a1))
-						{
-							if (auto [ok_sqrte, src] = match_expr(b3, spu_rsqrte(MT)); ok_sqrte && src.eq(a3))
-							{
-								erase_stores(a, b, c, b3);
-								set_vr(op.rt4, fsqrt(fabs(src)));
-								return true;
-							}	
-						}
-					}
-					else if (fm_half_mul.eq(a1))
-					{
-						if (auto [ok_fm1, a3, b3] = match_expr(c, fm(MT, MT)); ok_fm1 && a3.eq(b1))
-						{
-							if (auto [ok_sqrte, src] = match_expr(a3, spu_rsqrte(MT)); ok_sqrte && src.eq(b3))
-							{
-								erase_stores(a, b, c, a3);
-								set_vr(op.rt4, fsqrt(fabs(src)));
-								return true;
-							}	
-						}
-						else if (auto [ok_fm1, a3, b3] = match_expr(c, fm(MT, MT)); ok_fm1 && b3.eq(b1))
-						{
-							if (auto [ok_sqrte, src] = match_expr(b3, spu_rsqrte(MT)); ok_sqrte && src.eq(a3))
-							{
-								erase_stores(a, b, c, b3);
-								set_vr(op.rt4, fsqrt(fabs(src)));
-								return true;
-							}	
-						}
+						// Try to delete spu_rsqrte as it's expensive
+						auto [ok_final_fm, to_del] = match_expr(c, fm(x, MT));
+						ensure(ok_final_fm);
+						erase_stores(a, b, c, to_del);
+						set_vr(op.rt4, fsqrt(fabs(x)));
+						return true;
 					}
 				}
 			}
@@ -6121,7 +6082,7 @@ public:
 
 		auto check_accurate_reciprocal_pattern_for_float = [&](f32 float_value) -> bool
 		{
-			// FMA(FNMS(div, spu_re(div), float_value), spu_re(div), spu_re(div))
+			// FMA(FNMS(div <*> spu_re(div), float_value), spu_re(div), spu_re(div))
 			if (auto [ok_fnms, div] = match_expr(a, fnms(MT, b, fsplat<f32[4]>(float_value))); ok_fnms && op.rb == op.rc)
 			{
 				if (auto [ok_re] = match_expr(b, spu_re(div)); ok_re)
@@ -6132,30 +6093,8 @@ public:
 				}
 			}
 
-			// FMA(FNMS(spu_re(div), div, float_value), spu_re(div), spu_re(div))
-			if (auto [ok_fnms, div] = match_expr(a, fnms(b, MT, fsplat<f32[4]>(float_value))); ok_fnms && op.rb == op.rc)
-			{
-				if (auto [ok_re] = match_expr(b, spu_re(div)); ok_re)
-				{
-					erase_stores(a, b, c);
-					set_vr(op.rt4, re_accurate(div, fsplat<f32[4]>(float_value)));
-					return true;
-				}
-			}
-
-			// FMA(spu_re(div), FNMS(div, spu_re(div), float_value), spu_re(div))
+			// FMA(spu_re(div), FNMS(div <*> spu_re(div), float_value), spu_re(div))
 			if (auto [ok_fnms, div] = match_expr(b, fnms(MT, a, fsplat<f32[4]>(float_value))); ok_fnms && op.ra == op.rc)
-			{
-				if (auto [ok_re] = match_expr(a, spu_re(div)); ok_re)
-				{
-					erase_stores(a, b, c);
-					set_vr(op.rt4, re_accurate(div, fsplat<f32[4]>(float_value)));
-					return true;
-				}
-			}
-
-			// FMA(spu_re(div), FNMS(spu_re(div), div, float_value), spu_re(div))
-			if (auto [ok_fnms, div] = match_expr(b, fnms(a, MT, fsplat<f32[4]>(float_value))); ok_fnms && op.ra == op.rc)
 			{
 				if (auto [ok_re] = match_expr(a, spu_re(div)); ok_re)
 				{
@@ -6216,13 +6155,23 @@ public:
 		{
 			spu_log.todo("[%s:0x%05x] Unmatched spu_re(a) found in FMA", m_hash, m_pos);
 		}
-
-		if (auto [ok_re, mystery] = match_expr(b, spu_re(MT)); ok_re)
+		else if (auto [ok_re, mystery] = match_expr(b, spu_re(MT)); ok_re)
 		{
 			spu_log.todo("[%s:0x%05x] Unmatched spu_re(b) found in FMA", m_hash, m_pos);
 		}
-
-		if (auto [ok_resq, mystery] = match_expr(c, spu_rsqrte(MT)); ok_resq)
+		else if (auto [ok_re, mystery] = match_expr(c, spu_re(MT)); ok_re)
+		{
+			spu_log.todo("[%s:0x%05x] Unmatched spu_re(c) found in FMA", m_hash, m_pos);
+		}
+		else if (auto [ok_resq, mystery] = match_expr(a, spu_rsqrte(MT)); ok_resq)
+		{
+			spu_log.todo("[%s:0x%05x] Unmatched spu_rsqrte(a) found in FMA", m_hash, m_pos);
+		}
+		else if (auto [ok_resq, mystery] = match_expr(b, spu_rsqrte(MT)); ok_resq)
+		{
+			spu_log.todo("[%s:0x%05x] Unmatched spu_rsqrte(b) found in FMA", m_hash, m_pos);
+		}
+		else if (auto [ok_resq, mystery] = match_expr(c, spu_rsqrte(MT)); ok_resq)
 		{
 			spu_log.todo("[%s:0x%05x] Unmatched spu_rsqrte(c) found in FMA", m_hash, m_pos);
 		}
