@@ -6018,7 +6018,7 @@ public:
 
 			// From ps3 hardware testing: Inf => NaN and NaN => Zero, Signed Zero => Zero
 			// This results in full accuracy within 1ulp(Currently x86 seems to be rounding up?)
-			const auto result_and = bitcast<u32[4]>(div_result) & 0x7fffffffu;
+			const auto result_and = bitcast<u32[4]>(div_result) & 0x7FFFFFFFu;
 			const auto result_cmp_inf = sext<s32[4]>(result_and == splat<u32[4]>(0x7F800000u));
 			const auto result_cmp_nan = sext<s32[4]>(result_and <= splat<u32[4]>(0x7F800000u));
 
@@ -6111,6 +6111,27 @@ public:
 			return;
 
 		if (check_accurate_reciprocal_pattern_for_float(std::bit_cast<f32>(std::bit_cast<u32>(1.0f) + 1)))
+			return;
+
+		// GOW 3(uses 1.0f * spu_re(div) instead of just spu_re(div) in the pattern)
+		auto check_alternative_reciprocal_pattern_for_float = [&](f32 float_value) -> bool
+		{
+			if (auto [ok_fm, div] = match_expr(c, fm(spu_re(MT), fsplat<f32[4]>(1.0f))); ok_fm)
+			{
+				if (auto [ok_fnms] = match_expr(a, fnms(c, div, fsplat<f32[4]>(1.0f))); ok_fnms)
+				{
+					if (auto [ok_spure] = match_expr(b, spu_re(div)); ok_spure)
+					{
+						erase_stores(a, b, c);
+						set_vr(op.rt4, re_accurate(div, fsplat<f32[4]>(float_value)));
+						return true;
+					}
+				}
+			}
+			return false;
+		};
+
+		if (check_alternative_reciprocal_pattern_for_float())
 			return;
 
 		// NFS Most Wanted doesn't like this
