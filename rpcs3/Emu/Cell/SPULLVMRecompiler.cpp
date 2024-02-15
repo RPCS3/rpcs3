@@ -6034,40 +6034,19 @@ public:
 
 		auto check_sqrt_pattern_for_float = [&](f32 float_value) -> bool
 		{
-			auto match_fnms = [&](f32 float_value, const auto& eval_sqrt)
-			{
-				const auto res = match_expr(a, fnms(eval_sqrt, spu_rsqrte(MT), fsplat<f32[4]>(float_value)));
-				if (std::get<0>(res))
-					return res;
-
-				return match_expr(b, fnms(eval_sqrt, spu_rsqrte(MT), fsplat<f32[4]>(float_value)));
-			};
-
-			auto match_fm_half = [&](const auto& eval_sqrt)
-			{
-				const auto res = match_expr(a, fm(fsplat<f32[4]>(0.5f), eval_sqrt));
-				if (std::get<0>(res))
-					return res;
-
-				return match_expr(b, fm(fsplat<f32[4]>(0.5f), eval_sqrt));
-			};
-
 			// eval_sqrt = x * spu_resqrt(x)
 			// eval_sqrt + (1 - (spu_resqrt(x) * eval_sqrt)) * (0.5 * eval_sqrt)
 			// FMA(FNMS(spu_resqrt(x) <*> eval_sqrt, float_value) <*> FM(0.5f, eval_sqrt), eval_sqrt)
 			if (auto [ok_fm_c, x, maybe_x] = match_expr(c, fm(MT, spu_rsqrte(MT))); ok_fm_c && x.eq(maybe_x))
 			{
-				if (auto [ok_fnms, maybe_x_2] = match_fnms(float_value, c); ok_fnms && x.eq(maybe_x_2))
+				const auto full_expr = fma(a, b, c);
+				if (auto [ok_fma] = match_expr(full_expr, fma(fnms(spu_rsqrte(x), c, fsplat<f32[4]>(float_value)), fm(fsplat<f32[4]>(0.5f), c), c)); ok_fma)
 				{
-					if (auto [ok_fm] = match_fm_half(c); ok_fm)
-					{
-						// Try to delete spu_rsqrte as it's expensive
-						auto [ok_final_fm, to_del] = match_expr(c, fm(x, MT));
-						ensure(ok_final_fm);
-						erase_stores(a, b, c, to_del);
-						set_vr(op.rt4, fsqrt(fabs(x)));
-						return true;
-					}
+					auto [ok_final_fm, to_del] = match_expr(c, fm(x, MT));
+					ensure(ok_final_fm);
+					erase_stores(a, b, c, to_del);
+					set_vr(op.rt4, fsqrt(fabs(x)));
+					return true;
 				}
 			}
 
@@ -6082,21 +6061,11 @@ public:
 
 		auto check_accurate_reciprocal_pattern_for_float = [&](f32 float_value) -> bool
 		{
-			// FMA(FNMS(div <*> spu_re(div), float_value), spu_re(div), spu_re(div))
-			if (auto [ok_fnms, div] = match_expr(a, fnms(MT, b, fsplat<f32[4]>(float_value))); ok_fnms && op.rb == op.rc)
+			// FMA(FNMS(div <*> spu_re(div), float_value) <*> spu_re(div), spu_re(div))
+			if (auto [ok_c, div] = match_expr(c, spu_re(MT)); ok_c)
 			{
-				if (auto [ok_re] = match_expr(b, spu_re(div)); ok_re)
-				{
-					erase_stores(a, b, c);
-					set_vr(op.rt4, re_accurate(div, fsplat<f32[4]>(float_value)));
-					return true;
-				}
-			}
-
-			// FMA(spu_re(div), FNMS(div <*> spu_re(div), float_value), spu_re(div))
-			if (auto [ok_fnms, div] = match_expr(b, fnms(MT, a, fsplat<f32[4]>(float_value))); ok_fnms && op.ra == op.rc)
-			{
-				if (auto [ok_re] = match_expr(a, spu_re(div)); ok_re)
+				const auto full_expr = fma(a, b, c);
+				if (auto [ok_fma] = match_expr(full_expr, fma(fnms(div, c, fsplat<f32[4]>(float_value)), c, c)); ok_fma)
 				{
 					erase_stores(a, b, c);
 					set_vr(op.rt4, re_accurate(div, fsplat<f32[4]>(float_value)));
@@ -6114,25 +6083,16 @@ public:
 			return;
 
 		// GOW 3(uses 1.0f * spu_re(div) instead of just spu_re(div) in the pattern)
-		auto check_alternative_reciprocal_pattern_for_float = [&](f32 float_value) -> bool
+		if (auto [ok_fm, div] = match_expr(c, fm(spu_re(MT), fsplat<f32[4]>(1.0f))); ok_fm)
 		{
-			if (auto [ok_fm, div] = match_expr(c, fm(spu_re(MT), fsplat<f32[4]>(1.0f))); ok_fm)
+			const auto full_expr = fma(a, b, c);
+			if (auto [ok_fma] = match_expr(full_expr, fma(fnms(c, div, fsplat<f32[4]>(1.0f)), spu_re(div), c)); ok_fma)
 			{
-				if (auto [ok_fnms] = match_expr(a, fnms(c, div, fsplat<f32[4]>(1.0f))); ok_fnms)
-				{
-					if (auto [ok_spure] = match_expr(b, spu_re(div)); ok_spure)
-					{
-						erase_stores(a, b, c);
-						set_vr(op.rt4, re_accurate(div, fsplat<f32[4]>(float_value)));
-						return true;
-					}
-				}
+				erase_stores(a, b, c);
+				set_vr(op.rt4, re_accurate(div, fsplat<f32[4]>(1.0f)));
+				return;
 			}
-			return false;
-		};
-
-		if (check_alternative_reciprocal_pattern_for_float())
-			return;
+		}
 
 		// NFS Most Wanted doesn't like this
 		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::relaxed)
