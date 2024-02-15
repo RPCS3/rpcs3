@@ -648,7 +648,7 @@ struct lv2_file::file_view : fs::file_base
 
 	u64 read(void* buffer, u64 size) override
 	{
-		const u64 result = m_file->file.read_at(m_pos, buffer, size);
+		const u64 result = file_view::read_at(m_pos, buffer, size);
 
 		m_pos += result;
 		return result;
