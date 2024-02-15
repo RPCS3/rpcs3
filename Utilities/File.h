@@ -314,7 +314,7 @@ namespace fs
 		}
 
 		// Check if the handle is capable of reading (size * type_size) of bytes at the time of calling
-		bool strict_read_check(u64 size, u64 type_size = 1) const;
+		bool strict_read_check(u64 offset, u64 size, u64 type_size) const;
 
 		// Read the data from the file and return the amount of data written in buffer
 		u64 read(void* buffer, u64 count,
@@ -432,7 +432,7 @@ namespace fs
 			if (_size != umax)
 			{
 				// If _size arg is too high std::bad_alloc may happen during resize and then we cannot error check
-				if ((_size >= 0x10'0000 / sizeof(T)) && !strict_read_check(_size, sizeof(T)))
+				if ((_size >= 0x10'0000 / sizeof(T)) && !strict_read_check(pos(), _size, sizeof(T)))
 				{
 					return false;
 				}
@@ -457,7 +457,7 @@ namespace fs
 
 		// Read POD std::vector
 		template <typename T> requires (std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>)
-		bool read(std::vector<T>& vec, usz _size = umax,
+		bool read(std::vector<T>& vec, usz _size = umax, bool use_offs = false, usz offset = umax,
 			const char* file = __builtin_FILE(),
 			const char* func = __builtin_FUNCTION(),
 			u32 line = __builtin_LINE(),
@@ -468,12 +468,17 @@ namespace fs
 			if (_size != umax)
 			{
 				// If _size arg is too high std::bad_alloc may happen during resize and then we cannot error check
-				if ((_size >= 0x10'0000 / sizeof(T)) && !strict_read_check(_size, sizeof(T)))
+				if ((_size >= 0x10'0000 / sizeof(T)) && !strict_read_check(use_offs ? offset : pos(), _size, sizeof(T)))
 				{
 					return false;
 				}
 
 				vec.resize(_size);
+			}
+
+			if (use_offs)
+			{
+				return read_at(offset, vec.data(), sizeof(T) * vec.size(), line, col, file, func) == sizeof(T) * vec.size();
 			}
 
 			return read(vec.data(), sizeof(T) * vec.size(), line, col, file, func) == sizeof(T) * vec.size();
@@ -518,8 +523,7 @@ namespace fs
 		{
 			std::vector<T> result;
 			result.resize(size() / sizeof(T));
-			seek(0);
-			if (!read(result, result.size(), file, func, line, col)) xfail({line, col, file, func});
+			if (!read(result, result.size(), true, 0, file, func, line, col)) xfail({line, col, file, func});
 			return result;
 		}
 

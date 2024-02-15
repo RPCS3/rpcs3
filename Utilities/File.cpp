@@ -1941,9 +1941,9 @@ bool fs::dir::open(const std::string& path)
 	return true;
 }
 
-bool fs::file::strict_read_check(u64 _size, u64 type_size) const
+bool fs::file::strict_read_check(u64 offset, u64 _size, u64 type_size) const
 {
-	if (usz pos0 = pos(), size0 = size(); (pos0 >= size0 ? 0 : (size0 - pos0)) / type_size < _size)
+	if (usz pos0 = offset, size0 = size(); (pos0 >= size0 ? 0 : (size0 - pos0)) / type_size < _size)
 	{
 		fs::g_tls_error = fs::error::inval;
 		return false;

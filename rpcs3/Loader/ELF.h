@@ -279,8 +279,8 @@ public:
 			return set_error(elf_error::stream);
 
 		// Read ELF header
-		stream.seek(offset);
-		if (!stream.read(header))
+		highest_offset = sizeof(header);
+		if (sizeof(header) != stream.read_at(offset, &header, sizeof(header)))
 			return set_error(elf_error::stream_header);
 
 		// Check magic
@@ -321,20 +321,24 @@ public:
 		std::vector<phdr_t> _phdrs;
 		std::vector<shdr_t> _shdrs;
 
+		u64 seek_pos = 0;
+
 		if (!(opts & elf_opt::no_programs))
 		{
-			stream.seek(offset + header.e_phoff);
-			if (!stream.read(_phdrs, header.e_phnum))
+			seek_pos = offset + header.e_phoff;
+			highest_offset = std::max<usz>(highest_offset, seek_pos);
+
+			if (!stream.read(_phdrs, header.e_phnum, true, seek_pos))
 				return set_error(elf_error::stream_phdrs);
-			highest_offset = std::max<usz>(highest_offset, stream.pos());
 		}
 
 		if (!(opts & elf_opt::no_sections))
 		{
-			stream.seek(offset + header.e_shoff);
-			if (!stream.read(_shdrs, header.e_shnum))
+			seek_pos = offset + header.e_shoff;
+			highest_offset = std::max<usz>(highest_offset, seek_pos);
+
+			if (!stream.read(_shdrs, header.e_shnum, true, seek_pos))
 				return set_error(elf_error::stream_shdrs);
-			highest_offset = std::max<usz>(highest_offset, stream.pos());
 		}
 
 		progs.clear();
@@ -345,10 +349,11 @@ public:
 
 			if (!(opts & elf_opt::no_data))
 			{
-				stream.seek(offset + hdr.p_offset);
-				if (!stream.read(progs.back().bin, hdr.p_filesz))
+				seek_pos = offset + hdr.p_offset;
+				highest_offset = std::max<usz>(highest_offset, seek_pos);
+
+				if (!stream.read(progs.back().bin, hdr.p_filesz, true, seek_pos))
 					return set_error(elf_error::stream_data);
-				highest_offset = std::max<usz>(highest_offset, stream.pos());
 			}
 		}
 
@@ -380,8 +385,10 @@ public:
 					continue;
 				}
 
-				stream.seek(offset + shdr.sh_offset);
-				if (!stream.read(shdrs.back().bin, shdr.sh_size))
+				seek_pos = offset + shdr.sh_offset;
+				highest_offset = std::max<usz>(highest_offset, seek_pos);
+
+				if (!stream.read(shdrs.back().bin, shdr.sh_size, true, seek_pos))
 					return set_error(elf_error::stream_data);
 			}
 		}
