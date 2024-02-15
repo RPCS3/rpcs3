@@ -3800,7 +3800,11 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 
 							if (mself.read(rec) && rec.get_pos(mself.size()))
 							{
-								std::string name = rec.name;
+								// Read characters safely
+								std::string name(sizeof(rec.name), '\0');
+
+								std::memcpy(name.data(), rec.name, name.size());
+								name = std::string(name.c_str());
 
 								upper = fmt::to_upper(name);
 
@@ -3881,7 +3885,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 			if (u64 off = offset)
 			{
 				// Adjust offset for MSELF
-				src = make_file_view(std::move(src), offset);
+				src = make_file_view(std::move(src), offset, file_size);
 
 				// Adjust path for MSELF too
 				fmt::append(path, "_x%x", off);
