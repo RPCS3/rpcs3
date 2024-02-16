@@ -3821,14 +3821,14 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 
 								upper = fmt::to_upper(name);
 
-								if (upper.ends_with(".SPRX"))
+								if (upper.find(".SPRX") != umax || upper.find(".PRX") != umax)
 								{
 									// .sprx inside .mself found
 									file_queue.emplace_back(dir_queue[i] + entry.name, rec.off, rec.size);
 									continue;
 								}
 
-								if (upper.ends_with(".SELF"))
+								if (upper.find(".SELF") != umax || upper.find(".ELF") != umax)
 								{
 									// .self inside .mself found
 									file_queue.emplace_back(dir_queue[i] + entry.name, rec.off, rec.size);
