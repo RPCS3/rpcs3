@@ -6031,6 +6031,7 @@ public:
 
 		const auto [a, b, c] = get_vrs<f32[4]>(op.ra, op.rb, op.rc);
 		static const auto MT = match<f32[4]>();
+		const auto full_expr = fma(a, b, c);
 
 		auto check_sqrt_pattern_for_float = [&](f32 float_value) -> bool
 		{
@@ -6039,7 +6040,6 @@ public:
 			// FMA(FNMS(spu_resqrt(x) <*> eval_sqrt, float_value) <*> FM(0.5f, eval_sqrt), eval_sqrt)
 			if (auto [ok_fm_c, x, maybe_x] = match_expr(c, fm(MT, spu_rsqrte(MT))); ok_fm_c && x.eq(maybe_x))
 			{
-				const auto full_expr = fma(a, b, c);
 				if (auto [ok_fma] = match_expr(full_expr, fma(fnms(spu_rsqrte(x), c, fsplat<f32[4]>(float_value)), fm(fsplat<f32[4]>(0.5f), c), c)); ok_fma)
 				{
 					auto [ok_final_fm, to_del] = match_expr(c, fm(x, MT));
@@ -6064,7 +6064,6 @@ public:
 			// FMA(FNMS(div <*> spu_re(div), float_value) <*> spu_re(div), spu_re(div))
 			if (auto [ok_c, div] = match_expr(c, spu_re(MT)); ok_c)
 			{
-				const auto full_expr = fma(a, b, c);
 				if (auto [ok_fma] = match_expr(full_expr, fma(fnms(div, c, fsplat<f32[4]>(float_value)), c, c)); ok_fma)
 				{
 					erase_stores(a, b, c);
@@ -6085,7 +6084,6 @@ public:
 		// GOW 3(uses 1.0f * spu_re(div) instead of just spu_re(div) in the pattern)
 		if (auto [ok_fm, div] = match_expr(c, fm(spu_re(MT), fsplat<f32[4]>(1.0f))); ok_fm)
 		{
-			const auto full_expr = fma(a, b, c);
 			if (auto [ok_fma] = match_expr(full_expr, fma(fnms(c, div, fsplat<f32[4]>(1.0f)), spu_re(div), c)); ok_fma)
 			{
 				erase_stores(a, b, c);
@@ -6157,7 +6155,7 @@ public:
 			spu_log.todo("[%s:0x%05x] Unmatched spu_rsqrte(c) found in FMA", m_hash, m_pos);
 		}
 
-		set_vr(op.rt4, fma(a, b, c));
+		set_vr(op.rt4, full_expr);
 	}
 
 	template <typename T, typename U, typename V>
