@@ -3569,6 +3569,13 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		}
 	}
 
+	if (!m_bbs.count(entry_point))
+	{
+		// Invalid code
+		spu_log.error("[0x%x] Invalid code", entry_point);
+		return {};
+	}
+
 	// Fill entry map
 	while (true)
 	{
