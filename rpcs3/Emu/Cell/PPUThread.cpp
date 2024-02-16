@@ -3798,8 +3798,21 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 						{
 							mself_record rec{};
 
+							std::set<u64> offs;
+
 							if (mself.read(rec) && rec.get_pos(mself.size()))
 							{
+								if (rec.size <= 0x20)
+								{
+									continue;
+								}
+
+								if (!offs.emplace(rec.off).second)
+								{
+									// Duplicate
+									continue;
+								}
+
 								// Read characters safely
 								std::string name(sizeof(rec.name), '\0');
 
