@@ -910,7 +910,7 @@ error_code cellAdecDecodeAu(u32 handle, vm::ptr<CellAdecAuInfo> auInfo)
 
 	AdecTask task(adecDecodeAu);
 	task.au.auInfo_addr = auInfo.addr();
-	task.au.addr = auInfo->startAddr;
+	task.au.addr = auInfo->startAddr.addr();
 	task.au.size = auInfo->size;
 	task.au.pts = (u64{auInfo->pts.upper} << 32) | u64{auInfo->pts.lower};
 	task.au.userdata = auInfo->userData;
@@ -1072,7 +1072,7 @@ error_code cellAdecGetPcmItem(u32 handle, vm::pptr<CellAdecPcmItem> pcmItem)
 	pcm->auInfo.pts.lower = static_cast<u32>(af.pts);
 	pcm->auInfo.pts.upper = static_cast<u32>(af.pts >> 32);
 	pcm->auInfo.size = af.auSize;
-	pcm->auInfo.startAddr = af.auAddr;
+	pcm->auInfo.startAddr.set(af.auAddr);
 	pcm->auInfo.userData = af.userdata;
 
 	if (adecIsAtracX(adec->type))

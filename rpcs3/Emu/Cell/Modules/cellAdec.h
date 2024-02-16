@@ -250,38 +250,38 @@ enum CellAdecError : u32
 // Audio Codec Type
 enum AudioCodecType : s32
 {
-	CELL_ADEC_TYPE_RESERVED1,
+	CELL_ADEC_TYPE_INVALID1,
 	CELL_ADEC_TYPE_LPCM_PAMF,
 	CELL_ADEC_TYPE_AC3,
 	CELL_ADEC_TYPE_ATRACX,
 	CELL_ADEC_TYPE_MP3,
 	CELL_ADEC_TYPE_ATRAC3,
 	CELL_ADEC_TYPE_MPEG_L2,
-	CELL_ADEC_TYPE_RESERVED5,
-	CELL_ADEC_TYPE_RESERVED6,
-	CELL_ADEC_TYPE_RESERVED7,
-	CELL_ADEC_TYPE_RESERVED8,
+	CELL_ADEC_TYPE_M2AAC,
+	CELL_ADEC_TYPE_EAC3,
+	CELL_ADEC_TYPE_TRUEHD,
+	CELL_ADEC_TYPE_DTS, // Removed in firmware 4.00, integrated into DTSHD
 	CELL_ADEC_TYPE_CELP,
-	CELL_ADEC_TYPE_RESERVED10,
+	CELL_ADEC_TYPE_LPCM_BLURAY,
 	CELL_ADEC_TYPE_ATRACX_2CH,
 	CELL_ADEC_TYPE_ATRACX_6CH,
 	CELL_ADEC_TYPE_ATRACX_8CH,
 	CELL_ADEC_TYPE_M4AAC,
-	CELL_ADEC_TYPE_RESERVED12,
-	CELL_ADEC_TYPE_RESERVED13,
-	CELL_ADEC_TYPE_RESERVED14,
-	CELL_ADEC_TYPE_RESERVED15,
-	CELL_ADEC_TYPE_RESERVED16,
-	CELL_ADEC_TYPE_RESERVED17,
-	CELL_ADEC_TYPE_RESERVED18,
-	CELL_ADEC_TYPE_RESERVED19,
+	CELL_ADEC_TYPE_LPCM_DVD,
+	CELL_ADEC_TYPE_WMA,
+	CELL_ADEC_TYPE_DTSLBR,
+	CELL_ADEC_TYPE_M4AAC_2CH,
+	CELL_ADEC_TYPE_DTSHD,
+	CELL_ADEC_TYPE_MPEG_L1,
+	CELL_ADEC_TYPE_MP3S,
+	CELL_ADEC_TYPE_M4AAC_2CH_MOD,
 	CELL_ADEC_TYPE_CELP8,
-	CELL_ADEC_TYPE_RESERVED20,
-	CELL_ADEC_TYPE_RESERVED21,
-	CELL_ADEC_TYPE_RESERVED22,
-	CELL_ADEC_TYPE_RESERVED23,
-	CELL_ADEC_TYPE_RESERVED24,
-	CELL_ADEC_TYPE_RESERVED25,
+	CELL_ADEC_TYPE_INVALID2,
+	CELL_ADEC_TYPE_INVALID3,
+	CELL_ADEC_TYPE_RESERVED22, // Either WMA Pro or WMA Lossless, was never released
+	CELL_ADEC_TYPE_RESERVED23, // Either WMA Pro or WMA Lossless, was never released
+	CELL_ADEC_TYPE_DTSHDCORE, // Removed in firmware 4.00, integrated into DTSHD
+	CELL_ADEC_TYPE_ATRAC3MULTI,
 };
 
 inline bool adecIsAtracX(s32 type)
@@ -313,10 +313,12 @@ enum CellAdecChannel : s32
 // Sampling Rate
 enum CellAdecSampleRate : s32
 {
-	CELL_ADEC_FS_RESERVED1 = 0,
-	CELL_ADEC_FS_48kHz = 1,
-	CELL_ADEC_FS_16kHz = 2,
-	CELL_ADEC_FS_8kHz = 5,
+	CELL_ADEC_FS_RESERVED1,
+	CELL_ADEC_FS_48kHz,
+	CELL_ADEC_FS_16kHz,
+	CELL_ADEC_FS_96kHz,
+	CELL_ADEC_FS_192kHz,
+	CELL_ADEC_FS_8kHz,
 };
 
 enum CellAdecBitLength : s32
@@ -359,6 +361,13 @@ struct CellAdecResourceEx
 	be_t<u32> maxContention;
 };
 
+struct CellAdecResourceSpurs
+{
+	be_t<u32> spurs_addr; // CellSpurs*
+	u8 priority[8];
+	be_t<u32> maxContention;
+};
+
 // Callback Messages
 enum CellAdecMsgType : s32
 {
@@ -370,16 +379,20 @@ enum CellAdecMsgType : s32
 
 using CellAdecCbMsg = s32(u32 handle, CellAdecMsgType msgType, s32 msgData, u32 cbArg);
 
-struct CellAdecCb
+// Used for internal callbacks as well
+template <typename F>
+struct AdecCb
 {
-	vm::bptr<CellAdecCbMsg> cbFunc;
-	be_t<u32> cbArg;
+	vm::bptr<F> cbFunc;
+	vm::bptr<void> cbArg;
 };
+
+typedef AdecCb<CellAdecCbMsg> CellAdecCb;
 
 // AU Info
 struct CellAdecAuInfo
 {
-	be_t<u32> startAddr;
+	vm::bcptr<u8> startAddr;
 	be_t<u32> size;
 	CellCodecTimeStamp pts;
 	be_t<u64> userData;
@@ -399,6 +412,125 @@ struct CellAdecPcmItem
 	be_t<u32> size;
 	CellAdecPcmAttr	pcmAttr;
 	CellAdecAuInfo auInfo;
+};
+
+// Controls how much is added to the presentation time stamp of the previous frame if the game didn't set a pts itself in CellAdecAuInfo when calling cellAdecDecodeAu()
+enum AdecCorrectPtsValueType : s8
+{
+	ADEC_CORRECT_PTS_VALUE_TYPE_UNSPECIFIED = -1,
+
+	// Adds a fixed amount
+	ADEC_CORRECT_PTS_VALUE_TYPE_LPCM = 0,
+	// 1
+	ADEC_CORRECT_PTS_VALUE_TYPE_ATRACX_48000Hz = 2,
+	ADEC_CORRECT_PTS_VALUE_TYPE_ATRACX_44100Hz = 3,
+	ADEC_CORRECT_PTS_VALUE_TYPE_ATRACX_32000Hz = 4,
+	// 5: Dolby Digital
+	// 6: ATRAC3
+	// 7: MP3
+	// 8: MP3
+	// 9: MP3
+	// 39: ATRAC3 multi-track
+
+	// Calls a decoder function (_SceAdecCorrectPtsValue_codec())
+	// 17: Dolby Digital Plus
+	// 18
+	// 19
+	// 20
+	// 21: DTS HD
+	// 22
+	// 23
+	// 24: CELP
+	// 25: MPEG-2 AAC
+	// 26: MPEG-2 BC
+	// 27: Dolby TrueHD
+	// 28: DTS
+	// 29: MPEG-4 AAC
+	// 30: Windows Media Audio
+	// 31: DTS Express
+	// 32: MP1
+	// 33: MP3 Surround
+	// 34: CELP8
+	// 35: Windows Media Audio Professional
+	// 36: Windows Media Audio Lossless
+	// 37: DTS HD Core
+	// 38: DTS HD Core
+};
+
+// Internal callbacks
+using AdecNotifyAuDone = error_code(s32 pcmHandle, vm::ptr<void> cbArg);
+using AdecNotifyPcmOut = error_code(s32 pcmHandle, vm::ptr<void> pcmAddr, u32 pcmSize, vm::ptr<void> cbArg, vm::cpptr<void> bsiInfo, AdecCorrectPtsValueType correctPtsValueType, s32 errorCode);
+using AdecNotifyError = error_code(s32 errorCode, vm::ptr<void> cbArg);
+using AdecNotifySeqDone = error_code(vm::ptr<void> cbArg);
+
+// Decoder functions
+using CellAdecCoreOpGetMemSize = error_code(vm::ptr<CellAdecAttr> attr);
+using CellAdecCoreOpOpen = error_code(vm::ptr<void> coreHandle, vm::ptr<AdecNotifyAuDone> cbFuncAuDone, vm::ptr<void> cbArgAuDone, vm::ptr<AdecNotifyPcmOut> cbFuncPcmOut, vm::ptr<void> cbArgPcmOut,
+	vm::ptr<AdecNotifyError> cbFuncError, vm::ptr<void> cbArgError, vm::ptr<AdecNotifySeqDone> cbFuncSeqDone, vm::ptr<void> cbArgSeqDone, vm::cptr<CellAdecResource> res);
+using CellAdecCoreOpClose = error_code(vm::ptr<void> coreHandle);
+using CellAdecCoreOpStartSeq = error_code(vm::ptr<void> coreHandle, vm::cptr<void> param);
+using CellAdecCoreOpEndSeq = error_code(vm::ptr<void> coreHandle);
+using CellAdecCoreOpDecodeAu = error_code(vm::ptr<void> coreHandle, s32 pcmHandle, vm::cptr<CellAdecAuInfo> auInfo);
+using CellAdecCoreOpGetVersion = void(vm::ptr<std::array<u8, 4>> version);
+using CellAdecCoreOpRealign = error_code(vm::ptr<void> coreHandle, vm::ptr<void> outBuffer, vm::cptr<void> pcmStartAddr);
+using CellAdecCoreOpReleasePcm = error_code(vm::ptr<void> coreHandle, s32 pcmHandle, vm::cptr<void> outBuffer);
+using CellAdecCoreOpGetPcmHandleNum = s32();
+using CellAdecCoreOpGetBsiInfoSize = u32();
+using CellAdecCoreOpOpenExt = error_code(vm::ptr<void> coreHandle, vm::ptr<AdecNotifyAuDone> cbFuncAuDone, vm::ptr<void> cbArgAuDone, vm::ptr<AdecNotifyPcmOut> cbFuncPcmOut, vm::ptr<void> cbArgPcmOut,
+	vm::ptr<AdecNotifyError> cbFuncError, vm::ptr<void> cbArgError, vm::ptr<AdecNotifySeqDone> cbFuncSeqDone, vm::ptr<void> cbArgSeqDone, vm::cptr<CellAdecResource> res, vm::cptr<CellAdecResourceSpurs> spursRes);
+
+// Decoders export a pointer to this struct
+struct CellAdecCoreOps
+{
+	vm::bptr<CellAdecCoreOpGetMemSize> getMemSize;
+	vm::bptr<CellAdecCoreOpOpen> open;
+	vm::bptr<CellAdecCoreOpClose> close;
+	vm::bptr<CellAdecCoreOpStartSeq> startSeq;
+	vm::bptr<CellAdecCoreOpEndSeq> endSeq;
+	vm::bptr<CellAdecCoreOpDecodeAu> decodeAu;
+	vm::bptr<CellAdecCoreOpGetVersion> getVersion;
+	vm::bptr<CellAdecCoreOpRealign> realign;
+	vm::bptr<CellAdecCoreOpReleasePcm> releasePcm;
+	vm::bptr<CellAdecCoreOpGetPcmHandleNum> getPcmHandleNum;
+	vm::bptr<CellAdecCoreOpGetBsiInfoSize> getBsiInfoSize;
+	vm::bptr<CellAdecCoreOpOpenExt> openExt;
+};
+
+// Used by several decoders as command queue
+template <typename T>
+struct AdecCmdQueue
+{
+	T elements[4];
+
+	be_t<s32> front = 0;
+	be_t<s32> back = 0;
+	be_t<s32> size = 0;
+
+	template <bool is_peek = false>
+	void pop(T& cmd)
+	{
+		// LLE returns uninitialized stack memory if the queue is empty
+		cmd = elements[front];
+
+		if constexpr (!is_peek)
+		{
+			elements[front].pcm_handle = 0xff;
+			front = (front + 1) & 3;
+			size--;
+		}
+	}
+
+	void emplace(auto&&... args)
+	{
+		new (&elements[back]) T(std::forward<decltype(args)>(args)...);
+
+		back = (back + 1) & 3;
+		size++;
+	}
+
+	void peek(T& cmd) const { return pop<true>(cmd); }
+	bool empty() const { return size == 0; }
+	bool full() const { return size >= 4; }
 };
 
 struct CellAdecParamLpcm
