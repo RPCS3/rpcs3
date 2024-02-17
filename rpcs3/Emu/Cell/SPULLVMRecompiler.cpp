@@ -6051,12 +6051,41 @@ public:
 			if (check_sqrt_pattern_for_float(ONEISH))
 				return;
 			
-			// Generate dynamic pattern for when float is unknown because of scope
-			if (auto [ok_fma, cursed_float] = match_expr(full_expr, fma(fnms(spu_rsqrte(x), c, MT), fm(fsplat<f32[4]>(0.5f), c), c)); ok_fma)
+			// Generate dynamic pattern for when floats are unknown because of scope
+			if (auto [ok_fma, fnms_float, fm_float] = match_expr(full_expr, fma(fnms(spu_rsqrte(x), c, MT), fm(MT, c), c)); ok_fma)
 			{
 				erase_stores(a, b, c);
-				const auto bitcast_float = bitcast<u32[4]>(cursed_float);
-				set_vr(op.rt4, select(bitcast_float == splat<u32[4]>(0x3F800000) | bitcast_float == splat<u32[4]>(0x3F800001), fsqrt(fabs(x)), fma(fnms(spu_rsqrte(x), c, cursed_float), fm(fsplat<f32[4]>(0.5f), fm(x, spu_rsqrte(x))), fm(x, spu_rsqrte(x)))));
+				const auto bitcast_float = bitcast<u32[4]>(fnms_float);
+				set_vr(op.rt4, select(fcmp_uno(fm_float == fsplat<f32[4]>(0.5f)) & (bitcast_float == splat<u32[4]>(0x3F800000) | bitcast_float == splat<u32[4]>(0x3F800001)), fsqrt(fabs(x)), fma(fnms(spu_rsqrte(x), c, fnms_float), fm(fm_float, fm(x, spu_rsqrte(x))), fm(x, spu_rsqrte(x)))));
+				return;
+			}
+		}
+
+		if (auto [ok_c, x] = match_expr(c, spu_rsqrte(MT)); ok_c)
+		{
+			auto check_accurate_resqrt_for_float = [&](f32 float_value) -> bool
+			{
+				if (auto [ok_fma] = match_expr(full_expr, fma(fnms(fm(c, c), x, fsplat<f32[4]>(float_value)), fm(fsplat<f32[4]>(0.5f), c), c)); ok_fma)
+				{
+					erase_stores(a, b, c);
+					set_vr(op.rt4, fsplat<f32[4]>(1.0f)/fsqrt(fabs(x)));
+					return true;
+				}
+				return false;
+			};
+
+			if (check_accurate_resqrt_for_float(1.0f))
+				return;
+
+			if (check_accurate_resqrt_for_float(ONEISH))
+				return;
+
+			// Generate dynamic pattern for when floats are unknown because of scope
+			if (auto [ok_fma, fnms_float, fm_float] = match_expr(full_expr, fma(fnms(fm(c, c), x, MT), fm(MT, c),c)); ok_fma)
+			{
+				erase_stores(a, b, c);
+				const auto bitcast_float = bitcast<u32[4]>(fnms_float);
+				set_vr(op.rt4, select(fcmp_uno(fm_float == fsplat<f32[4]>(0.5f)) & (bitcast_float == splat<u32[4]>(0x3F800000) | bitcast_float == splat<u32[4]>(0x3F800001)), fsplat<f32[4]>(1.0f)/fsqrt(fabs(x)), fma(fnms(fm(spu_rsqrte(x), spu_rsqrte(x)), x, fnms_float), fm(fm_float, spu_rsqrte(x)), spu_rsqrte(x))));
 				return;
 			}
 		}
@@ -6082,12 +6111,12 @@ public:
 			if (check_accurate_reciprocal_pattern_for_float(ONEISH))
 				return;
 
-			// Generate dynamic pattern for when float is unknown because of scope
-			if (auto [ok_fma, cursed_float] = match_expr(full_expr, fma(fnms(div, c, MT), c, c)); ok_fma)
+			// Generate dynamic pattern for when floats are unknown because of scope
+			if (auto [ok_fma, fnms_float] = match_expr(full_expr, fma(fnms(div, c, MT), c, c)); ok_fma)
 			{
 				erase_stores(a, b, c);
-				const auto bitcast_float = bitcast<u32[4]>(cursed_float);
-				set_vr(op.rt4, select(bitcast_float == splat<u32[4]>(0x3F800000) | bitcast_float == splat<u32[4]>(0x3F800001), re_accurate(div), fma(fnms(spu_re(div), div, cursed_float), spu_re(div), spu_re(div))));
+				const auto bitcast_float = bitcast<u32[4]>(fnms_float);
+				set_vr(op.rt4, select(bitcast_float == splat<u32[4]>(0x3F800000) | bitcast_float == splat<u32[4]>(0x3F800001), re_accurate(div), fma(fnms(spu_re(div), div, fnms_float), spu_re(div), spu_re(div))));
 				return;
 			}
 		}
