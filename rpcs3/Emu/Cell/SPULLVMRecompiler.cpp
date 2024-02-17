@@ -6027,12 +6027,12 @@ public:
 		static const auto MT = match<f32[4]>();
 		const auto full_expr = fma(a, b, c);
 
-		auto check_sqrt_pattern_for_float = [&](f32 float_value) -> bool
+		// eval_sqrt = x * spu_resqrt(x)
+		// eval_sqrt + (1 - (spu_resqrt(x) * eval_sqrt)) * (0.5 * eval_sqrt)
+		// FMA(FNMS(spu_resqrt(x) <*> eval_sqrt, float_value) <*> FM(0.5f, eval_sqrt), eval_sqrt)
+		if (auto [ok_fm_c, x, maybe_x] = match_expr(c, fm(MT, spu_rsqrte(MT))); ok_fm_c && x.eq(maybe_x))
 		{
-			// eval_sqrt = x * spu_resqrt(x)
-			// eval_sqrt + (1 - (spu_resqrt(x) * eval_sqrt)) * (0.5 * eval_sqrt)
-			// FMA(FNMS(spu_resqrt(x) <*> eval_sqrt, float_value) <*> FM(0.5f, eval_sqrt), eval_sqrt)
-			if (auto [ok_fm_c, x, maybe_x] = match_expr(c, fm(MT, spu_rsqrte(MT))); ok_fm_c && x.eq(maybe_x))
+			auto check_sqrt_pattern_for_float = [&](f32 float_value) -> bool
 			{
 				if (auto [ok_fma] = match_expr(full_expr, fma(fnms(spu_rsqrte(x), c, fsplat<f32[4]>(float_value)), fm(fsplat<f32[4]>(0.5f), c), c)); ok_fma)
 				{
@@ -6042,16 +6042,24 @@ public:
 					set_vr(op.rt4, fsqrt(fabs(x)));
 					return true;
 				}
+				return false;
+			};
+
+			if (check_sqrt_pattern_for_float(1.0f))
+				return;
+
+			if (check_sqrt_pattern_for_float(ONEISH))
+				return;
+			
+			// Generate dynamic pattern for when float is unknown because of scope
+			if (auto [ok_fma, cursed_float] = match_expr(full_expr, fma(fnms(spu_rsqrte(x), c, MT), fm(fsplat<f32[4]>(0.5f), c), c)); ok_fma)
+			{
+				erase_stores(a, b, c);
+				const auto bitcast_float = bitcast<u32[4]>(cursed_float);
+				set_vr(op.rt4, select(bitcast_float == splat<u32[4]>(0x3F800000) | bitcast_float == splat<u32[4]>(0x3F800001), fsqrt(fabs(x)), fma(fnms(spu_rsqrte(x), c, cursed_float), fm(fsplat<f32[4]>(0.5f), fm(x, spu_rsqrte(x))), fm(x, spu_rsqrte(x)))));
+				return;
 			}
-
-			return false;
-		};
-
-		if (check_sqrt_pattern_for_float(1.0f))
-			return;
-
-		if (check_sqrt_pattern_for_float(ONEISH))
-			return;
+		}
 
 		// Full reciprocal patterns
 		// FMA(FNMS(div <*> spu_re(div), float_value) <*> spu_re(div), spu_re(div))
