@@ -8,6 +8,8 @@
 
 class midi_creator : public QObject
 {
+	Q_OBJECT
+
 public:
 	midi_creator();
 	QString get_none();
