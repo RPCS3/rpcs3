@@ -208,6 +208,7 @@ private:
 	void RepaintPreviewLabel(QLabel* l, int deadzone, int desired_width, int x, int y, int squircle, double multiplier) const;
 
 	QString GetLocalizedPadHandler(const QString& original, pad_handler handler);
+	QString GetLocalizedPadName(pad_handler handler, const QString& original, usz index);
 
 	/** Checks if the port at the given index is already reserved by the application as custom controller (ldd pad) */
 	bool GetIsLddPad(u32 index) const;

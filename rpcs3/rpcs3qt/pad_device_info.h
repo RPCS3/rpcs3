@@ -6,6 +6,7 @@
 struct pad_device_info
 {
 	std::string name;
+	QString localized_name;
 	bool is_connected{false};
 };
 
