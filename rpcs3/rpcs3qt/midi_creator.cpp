@@ -10,6 +10,7 @@ LOG_CHANNEL(cfg_log, "CFG");
 
 midi_creator::midi_creator()
 {
+	setObjectName("midi_creator");
 }
 
 // We need to recreate the localized string because the midi creator is currently only created once.

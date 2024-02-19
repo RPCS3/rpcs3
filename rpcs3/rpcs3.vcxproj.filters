@@ -720,6 +720,12 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_microphone_creator.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_midi_creator.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_midi_creator.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
     <ClCompile Include="rpcs3qt\render_creator.cpp">
       <Filter>Gui\settings</Filter>
     </ClCompile>
