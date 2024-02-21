@@ -7,6 +7,7 @@
 
 #include "Utilities/mutex.h"
 
+#include "Emu/IdManager.h"
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/Cell/Modules/sceNp.h"
 #include "Emu/Cell/Modules/sceNp2.h"
@@ -190,6 +191,8 @@ struct match2_ctx
 	static const u32 id_count = 255; // TODO: constant here?
 	SAVESTATE_INIT_POS(27);
 
+	shared_mutex mutex;
+
 	SceNpCommunicationId communicationId{};
 	SceNpCommunicationPassphrase passphrase{};
 
@@ -197,6 +200,9 @@ struct match2_ctx
 	vm::ptr<void> context_callback_param{};
 
 	SceNpMatching2RequestOptParam default_match2_optparam{};
+
+	vm::ptr<SceNpMatching2SignalingCallback> signaling_cb{};
+	vm::ptr<void> signaling_cb_arg{};
 };
 u16 create_match2_context(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpCommunicationPassphrase> passphrase);
 bool check_match2_context(u16 ctx_id);
@@ -259,9 +265,32 @@ struct signaling_ctx
 	static const u32 id_count = SCE_NP_SIGNALING_CTX_MAX;
 	SAVESTATE_INIT_POS(31);
 
+	shared_mutex mutex;
+
 	SceNpId npid{};
 	vm::ptr<SceNpSignalingHandler> handler{};
 	vm::ptr<void> arg{};
+	vm::ptr<SceNpSignalingHandler> ext_handler{};
+	vm::ptr<void> ext_arg{};
 };
 s32 create_signaling_context(vm::ptr<SceNpId> npid, vm::ptr<SceNpSignalingHandler> handler, vm::ptr<void> arg);
+std::shared_ptr<signaling_ctx> get_signaling_context(u32 ctx_id);
 bool destroy_signaling_context(s32 ctx_id);
+
+template <typename T>
+usz destroy_all_contexts()
+{
+	std::set<u32> list_ctx;
+
+	idm::select<T>([&](u32 id, [[maybe_unused]] T& s)
+		{
+			list_ctx.insert(id);
+		});
+
+	for (const auto id : list_ctx)
+	{
+		idm::remove<T>(id);
+	}
+
+	return list_ctx.size();
+}

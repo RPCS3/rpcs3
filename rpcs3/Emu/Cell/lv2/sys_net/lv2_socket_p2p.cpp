@@ -241,7 +241,8 @@ std::optional<std::tuple<s32, std::vector<u8>, sys_net_sockaddr>> lv2_socket_p2p
 		lock.lock();
 	}
 
-	sys_net.trace("[P2P] p2p_data for vport %d contains %d elements", vport, data.size());
+	if (!data.empty())
+		sys_net.trace("[P2P] p2p_data for vport %d contains %d elements", vport, data.size());
 
 	if (data.empty())
 	{
@@ -288,9 +289,11 @@ std::optional<s32> lv2_socket_p2p::sendto(s32 flags, const std::vector<u8>& buf,
 
 	std::vector<u8> p2p_data(buf.size() + VPORT_P2P_HEADER_SIZE);
 	const le_t<u16> p2p_vport_le = p2p_vport;
+	const le_t<u16> src_vport_le = vport;
 	const le_t<u16> p2p_flags_le = P2P_FLAG_P2P;
 	memcpy(p2p_data.data(), &p2p_vport_le, sizeof(u16));
-	memcpy(p2p_data.data() + sizeof(u16), &p2p_flags_le, sizeof(u16));
+	memcpy(p2p_data.data() + sizeof(u16), &src_vport_le, sizeof(u16));
+	memcpy(p2p_data.data() + sizeof(u16) + sizeof(u16), &p2p_flags_le, sizeof(u16));
 	memcpy(p2p_data.data() + VPORT_P2P_HEADER_SIZE, buf.data(), buf.size());
 
 	int native_flags = 0;
@@ -367,7 +370,9 @@ s32 lv2_socket_p2p::poll(sys_net_pollfd& sn_pfd, [[maybe_unused]] pollfd& native
 	// Check if it's a bound P2P socket
 	if ((sn_pfd.events & SYS_NET_POLLIN) && !data.empty())
 	{
-		sys_net.trace("[P2P] p2p_data for vport %d contains %d elements", vport, data.size());
+		if (data.size())
+			sys_net.trace("[P2P] p2p_data for vport %d contains %d elements", vport, data.size());
+
 		sn_pfd.revents |= SYS_NET_POLLIN;
 	}
 
@@ -390,13 +395,17 @@ std::tuple<bool, bool, bool> lv2_socket_p2p::select(bs_t<lv2_socket::poll_t> sel
 	// Check if it's a bound P2P socket
 	if ((selected & lv2_socket::poll_t::read) && vport && !data.empty())
 	{
-		sys_net.trace("[P2P] p2p_data for vport %d contains %d elements", vport, data.size());
+		if (!data.empty())
+			sys_net.trace("[P2P] p2p_data for vport %d contains %d elements", vport, data.size());
+
 		read_set = true;
 	}
 
 	if (selected & lv2_socket::poll_t::write)
 	{
-		sys_net.trace("[P2P] p2p_data for vport %d contains %d elements", vport, data.size());
+		if (!data.empty())
+			sys_net.trace("[P2P] p2p_data for vport %d contains %d elements", vport, data.size());
+
 		write_set = true;
 	}
 
