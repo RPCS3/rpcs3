@@ -482,6 +482,7 @@ namespace gl
 			m_sampler.set_parameteri(GL_TEXTURE_MIN_FILTER, static_cast<GLenum>(m_input_filter));
 			m_sampler.set_parameteri(GL_TEXTURE_MAG_FILTER, static_cast<GLenum>(m_input_filter));
 		}
+
 		program_handle.uniforms["gamma"] = gamma;
 		program_handle.uniforms["limit_range"] = limited_rgb + 0;
 		program_handle.uniforms["stereo_display_mode"] = static_cast<u8>(stereo_mode);
