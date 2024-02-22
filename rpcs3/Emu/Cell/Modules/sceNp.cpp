@@ -1146,7 +1146,8 @@ error_code sceNpBasicSendMessage(vm::cptr<SceNpId> to, vm::cptr<void> data, u32 
 		.msgId = 0,
 		.mainType = SCE_NP_BASIC_MESSAGE_MAIN_TYPE_GENERAL,
 		.subType = SCE_NP_BASIC_MESSAGE_GENERAL_SUBTYPE_NONE,
-		.msgFeatures = {}};
+		.msgFeatures = {},
+		.data = std::vector<u8>(static_cast<const u8*>(data.get_ptr()), static_cast<const u8*>(data.get_ptr()) + size)};
 	std::set<std::string> npids;
 	npids.insert(std::string(to->handle.data));
 
