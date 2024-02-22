@@ -35,16 +35,16 @@ namespace vk
 		{
 			// Just use AMD-provided source with minimal modification
 			const char* shader_core =
-				#include "fsr_ubershader.glsl"
+				#include "Emu/RSX/Program/Upscalers/FSR1/fsr_ubershader.glsl"
 			;
 
 			// Replacements
 			const char* ffx_a_contents =
-				#include "fsr_ffx_a_flattened.inc"
+				#include "Emu/RSX/Program/Upscalers/FSR1/fsr_ffx_a_flattened.inc"
 			;
 
 			const char* ffx_fsr_contents =
-				#include "fsr_ffx_fsr1_flattened.inc"
+				#include "Emu/RSX/Program/Upscalers/FSR1/fsr_ffx_fsr1_flattened.inc"
 			;
 
 			m_src = shader_core;

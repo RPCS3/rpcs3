@@ -79,6 +79,10 @@
     <ClInclude Include="Emu\RSX\GL\GLTextureCache.h" />
     <ClInclude Include="Emu\RSX\GL\OpenGL.h" />
     <ClInclude Include="Emu\RSX\GL\GLTexture.h" />
+    <ClInclude Include="Emu\RSX\GL\upscalers\bilinear_pass.hpp" />
+    <ClInclude Include="Emu\RSX\GL\upscalers\nearest_pass.hpp" />
+    <ClInclude Include="Emu\RSX\GL\upscalers\static_pass.hpp" />
+    <ClInclude Include="Emu\RSX\GL\upscalers\upscaling.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Emu\RSX\GL\GLCommonDecompiler.cpp" />
@@ -106,6 +110,7 @@
     <ClCompile Include="Emu\RSX\GL\GLTexture.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLVertexBuffers.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLTextureCache.cpp" />
+    <ClCompile Include="Emu\RSX\GL\upscalers\fsr1\fsr_pass.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
