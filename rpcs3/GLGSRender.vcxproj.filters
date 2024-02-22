@@ -44,6 +44,9 @@
     <ClCompile Include="Emu\RSX\GL\glutils\capabilities.cpp">
       <Filter>glutils</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\GL\upscalers\fsr1\fsr_pass.cpp">
+      <Filter>upscalers\fsr1</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Emu\RSX\GL\GLTexture.h" />
@@ -100,10 +103,28 @@
     <ClInclude Include="Emu\RSX\GL\glutils\sampler.h">
       <Filter>glutils</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\upscalers\upscaling.h">
+      <Filter>upscalers</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\upscalers\bilinear_pass.hpp">
+      <Filter>upscalers</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\upscalers\static_pass.hpp">
+      <Filter>upscalers</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\upscalers\nearest_pass.hpp">
+      <Filter>upscalers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="glutils">
       <UniqueIdentifier>{ed9ef6b7-efbb-4a8e-88a4-583b6655c141}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="upscalers">
+      <UniqueIdentifier>{4ce10cbf-4595-433a-a21a-035bf40bb4e5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="upscalers\fsr1">
+      <UniqueIdentifier>{d5626eff-1471-4810-9e57-0f8987f86d67}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>
