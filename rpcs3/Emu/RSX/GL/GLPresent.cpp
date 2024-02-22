@@ -1,8 +1,12 @@
 #include "stdafx.h"
 #include "GLGSRender.h"
+#include "upscalers/bilinear_pass.hpp"
+#include "upscalers/nearest_pass.hpp"
+
 #include "Emu/Cell/Modules/cellVideoOut.h"
 #include "Emu/RSX/Overlays/overlay_manager.h"
 #include "Emu/RSX/Overlays/overlay_debug_overlay.h"
+
 #include "util/video_provider.h"
 
 LOG_CHANNEL(screenshot_log, "SCREENSHOT");
@@ -298,27 +302,40 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		}
 
 		const areai screen_area = coordi({}, { static_cast<int>(buffer_width), static_cast<int>(buffer_height) });
-
 		const bool use_full_rgb_range_output = g_cfg.video.full_rgb_range_output.get();
-		// TODO: Implement FSR for OpenGL and remove this fallback to bilinear
-		const gl::filter filter = g_cfg.video.output_scaling == output_scaling_mode::nearest ? gl::filter::nearest : gl::filter::linear;
+
+		if (!m_upscaler || m_output_scaling != g_cfg.video.output_scaling)
+		{
+			m_output_scaling = g_cfg.video.output_scaling;
+
+			switch (m_output_scaling)
+			{
+			case output_scaling_mode::nearest:
+				m_upscaler = std::make_unique<gl::nearest_upscale_pass>();
+				break;
+			case output_scaling_mode::fsr:
+				// Unimplemented
+				[[ fallthrough ]];
+			case output_scaling_mode::bilinear:
+			default:
+				m_upscaler = std::make_unique<gl::bilinear_upscale_pass>();
+			}
+		}
 
 		if (use_full_rgb_range_output && rsx::fcmp(avconfig.gamma, 1.f) && avconfig.stereo_mode == stereo_render_mode_options::disabled)
 		{
 			// Blit source image to the screen
-			m_flip_fbo.recreate();
-			m_flip_fbo.bind();
-			m_flip_fbo.color = image_to_flip;
-			m_flip_fbo.read_buffer(m_flip_fbo.color);
-			m_flip_fbo.draw_buffer(m_flip_fbo.color);
-			m_flip_fbo.blit(gl::screen, screen_area, aspect_ratio.flipped_vertical(), gl::buffers::color, filter);
+			m_upscaler->scale_output(cmd, image_to_flip, gl::screen, screen_area, aspect_ratio.flipped_vertical(), gl::UPSCALE_AND_COMMIT);
 		}
 		else
 		{
 			const f32 gamma = avconfig.gamma;
 			const bool limited_range = !use_full_rgb_range_output;
 			const rsx::simple_array<GLuint> images{ image_to_flip, image_to_flip2 };
+			const auto filter = m_output_scaling == output_scaling_mode::nearest ? gl::filter::nearest : gl::filter::linear;
 
+			// FIXME: Upscaling should optionally happen before this step.
+			// With linear and nearest scaling, it really doesn't matter here, but for FSR we cannot just bind the images and use a hardware filter.
 			gl::screen.bind();
 			m_video_output_pass.run(cmd, areau(aspect_ratio), images, gamma, limited_range, avconfig.stereo_mode, filter);
 		}

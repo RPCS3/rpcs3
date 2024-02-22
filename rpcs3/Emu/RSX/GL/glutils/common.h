@@ -49,6 +49,9 @@
 
 namespace gl
 {
+	using flags32_t = u32;
+	using handle32_t = u32;
+
 	template<typename Type, uint BindId, uint GetStateId>
 	class save_binding_state_base
 	{

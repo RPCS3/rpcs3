@@ -12,6 +12,7 @@
 #include <unordered_map>
 
 #include "glutils/ring_buffer.h"
+#include "upscalers/upscaling.h"
 
 #ifdef _MSC_VER
 #pragma comment(lib, "opengl32.lib")
@@ -125,8 +126,11 @@ class GLGSRender : public GSRender, public ::rsx::reports::ZCULL_control
 	//buffer
 	gl::fbo* m_draw_fbo = nullptr;
 	std::list<gl::framebuffer_holder> m_framebuffer_cache;
-	gl::fbo m_flip_fbo;
 	std::unique_ptr<gl::texture> m_flip_tex_color[2];
+
+	// Present
+	std::unique_ptr<gl::upscaler> m_upscaler;
+	output_scaling_mode m_output_scaling = output_scaling_mode::bilinear;
 
 	//vaos are mandatory for core profile
 	gl::vao m_vao;

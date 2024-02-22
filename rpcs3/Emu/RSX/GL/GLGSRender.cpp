@@ -411,10 +411,7 @@ void GLGSRender::on_exit()
 
 	m_framebuffer_cache.clear();
 
-	if (m_flip_fbo)
-	{
-		m_flip_fbo.remove();
-	}
+	m_upscaler.reset();
 
 	for (auto& flip_tex_image : m_flip_tex_color)
 	{
