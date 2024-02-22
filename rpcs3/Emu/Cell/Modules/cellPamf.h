@@ -24,19 +24,18 @@ enum
 
 enum CellPamfStreamType
 {
-	CELL_PAMF_STREAM_TYPE_AVC        = 0,
-	CELL_PAMF_STREAM_TYPE_M2V        = 1,
-	CELL_PAMF_STREAM_TYPE_ATRAC3PLUS = 2,
-	CELL_PAMF_STREAM_TYPE_PAMF_LPCM  = 3,
-	CELL_PAMF_STREAM_TYPE_AC3        = 4,
-	CELL_PAMF_STREAM_TYPE_USER_DATA  = 5,
-	CELL_PAMF_STREAM_TYPE_VIDEO      = 20,
-	CELL_PAMF_STREAM_TYPE_AUDIO      = 21,
-
+	CELL_PAMF_STREAM_TYPE_AVC             = 0,
+	CELL_PAMF_STREAM_TYPE_M2V             = 1,
+	CELL_PAMF_STREAM_TYPE_ATRAC3PLUS      = 2,
+	CELL_PAMF_STREAM_TYPE_PAMF_LPCM       = 3,
+	CELL_PAMF_STREAM_TYPE_AC3             = 4,
+	CELL_PAMF_STREAM_TYPE_USER_DATA       = 5,
 	CELL_PAMF_STREAM_TYPE_PSMF_AVC        = 6,
 	CELL_PAMF_STREAM_TYPE_PSMF_ATRAC3PLUS = 7,
 	CELL_PAMF_STREAM_TYPE_PSMF_LPCM       = 8,
 	CELL_PAMF_STREAM_TYPE_PSMF_USER_DATA  = 9,
+	CELL_PAMF_STREAM_TYPE_VIDEO           = 20,
+	CELL_PAMF_STREAM_TYPE_AUDIO           = 21,
 	CELL_PAMF_STREAM_TYPE_UNK             = 22,
 };
 
@@ -170,8 +169,15 @@ struct CellPamfEp
 	be_t<u32> nThRefPictureOffset;
 	CellCodecTimeStamp pts;
 	be_t<u64> rpnOffset;
-	be_t<u64> nextRpnOffset; // Only used in two undocumented functions
 };
+
+struct CellPamfEpUnk // Speculative name, only used in two undocumented functions
+{
+	CellPamfEp ep;
+	be_t<u64> nextRpnOffset;
+};
+
+CHECK_SIZE(CellPamfEpUnk, 0x20);
 
 // Entry point iterator
 struct CellPamfEpIterator
@@ -558,11 +564,30 @@ struct CellPamfReader
 	be_t<u32> currentGroupingPeriodIndex;
 	be_t<u32> currentGroupIndex;
 	be_t<u32> currentStreamIndex;
-	vm::bcptr<void> header;
-	vm::bcptr<void> sequenceInfo;
-	vm::bcptr<void> currentGroupingPeriod;
-	vm::bcptr<void> currentGroup;
-	vm::bcptr<void> currentStream;
+
+	union
+	{
+		struct
+		{
+			vm::bcptr<PamfHeader> header;
+			vm::bcptr<PamfSequenceInfo> sequenceInfo;
+			vm::bcptr<PamfGroupingPeriod> currentGroupingPeriod;
+			vm::bcptr<PamfGroup> currentGroup;
+			vm::bcptr<PamfStreamHeader> currentStream;
+		}
+		pamf;
+
+		struct
+		{
+			vm::bcptr<PsmfHeader> header;
+			vm::bcptr<PsmfSequenceInfo> sequenceInfo;
+			vm::bcptr<PsmfGroupingPeriod> currentGroupingPeriod;
+			vm::bcptr<PsmfGroup> currentGroup;
+			vm::bcptr<PsmfStreamHeader> currentStream;
+		}
+		psmf;
+	};
+
 	u32 reserved[18];
 };
 
