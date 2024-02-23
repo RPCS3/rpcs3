@@ -313,9 +313,7 @@ error_code sceNpMatching2Term2()
 		nph.is_NP2_Match2_init = false;
 	}
 
-	const usz num_match2_ctx = destroy_all_contexts<match2_ctx>();
-	if (num_match2_ctx)
-		sceNp2.warning("Destroyed %d active SceNpMatching2Contexts", num_match2_ctx);
+	idm::clear<match2_ctx>();
 
 	auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
 	sigh.clear_match2_ctx();

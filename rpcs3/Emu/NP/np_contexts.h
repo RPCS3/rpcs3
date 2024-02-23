@@ -276,21 +276,3 @@ struct signaling_ctx
 s32 create_signaling_context(vm::ptr<SceNpId> npid, vm::ptr<SceNpSignalingHandler> handler, vm::ptr<void> arg);
 std::shared_ptr<signaling_ctx> get_signaling_context(u32 ctx_id);
 bool destroy_signaling_context(s32 ctx_id);
-
-template <typename T>
-usz destroy_all_contexts()
-{
-	std::set<u32> list_ctx;
-
-	idm::select<T>([&](u32 id, [[maybe_unused]] T& s)
-		{
-			list_ctx.insert(id);
-		});
-
-	for (const auto id : list_ctx)
-	{
-		idm::remove<T>(id);
-	}
-
-	return list_ctx.size();
-}

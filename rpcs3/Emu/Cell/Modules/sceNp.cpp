@@ -618,9 +618,7 @@ error_code sceNpTerm()
 	nph.terminate_NP();
 	nph.is_NP_init = false;
 
-	const usz num_signaling_ctx = destroy_all_contexts<signaling_ctx>();
-	if (num_signaling_ctx)
-		sceNp.warning("Destroyed %d active sceNpSignalingCtxs", num_signaling_ctx);
+	idm::clear<signaling_ctx>();
 
 	auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
 	sigh.clear_sig_ctx();

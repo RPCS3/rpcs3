@@ -241,9 +241,6 @@ std::optional<std::tuple<s32, std::vector<u8>, sys_net_sockaddr>> lv2_socket_p2p
 		lock.lock();
 	}
 
-	if (!data.empty())
-		sys_net.trace("[P2P] p2p_data for vport %d contains %d elements", vport, data.size());
-
 	if (data.empty())
 	{
 		if (so_nbio || (flags & SYS_NET_MSG_DONTWAIT))
@@ -251,6 +248,8 @@ std::optional<std::tuple<s32, std::vector<u8>, sys_net_sockaddr>> lv2_socket_p2p
 
 		return std::nullopt;
 	}
+
+	sys_net.trace("[P2P] p2p_data for vport %d contains %d elements", vport, data.size());
 
 	std::vector<u8> res_buf(len);
 
@@ -366,13 +365,11 @@ s32 lv2_socket_p2p::poll(sys_net_pollfd& sn_pfd, [[maybe_unused]] pollfd& native
 {
 	std::lock_guard lock(mutex);
 	ensure(vport);
-	sys_net.trace("[P2P] poll checking for 0x%X", sn_pfd.events);
+
 	// Check if it's a bound P2P socket
 	if ((sn_pfd.events & SYS_NET_POLLIN) && !data.empty())
 	{
-		if (data.size())
-			sys_net.trace("[P2P] p2p_data for vport %d contains %d elements", vport, data.size());
-
+		sys_net.trace("[P2P] p2p_data for vport %d contains %d elements", vport, data.size());
 		sn_pfd.revents |= SYS_NET_POLLIN;
 	}
 
@@ -395,17 +392,12 @@ std::tuple<bool, bool, bool> lv2_socket_p2p::select(bs_t<lv2_socket::poll_t> sel
 	// Check if it's a bound P2P socket
 	if ((selected & lv2_socket::poll_t::read) && vport && !data.empty())
 	{
-		if (!data.empty())
-			sys_net.trace("[P2P] p2p_data for vport %d contains %d elements", vport, data.size());
-
+		sys_net.trace("[P2P] p2p_data for vport %d contains %d elements", vport, data.size());
 		read_set = true;
 	}
 
 	if (selected & lv2_socket::poll_t::write)
 	{
-		if (!data.empty())
-			sys_net.trace("[P2P] p2p_data for vport %d contains %d elements", vport, data.size());
-
 		write_set = true;
 	}
 
