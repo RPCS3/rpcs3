@@ -839,6 +839,8 @@ u8 cellPamfReaderGetNumberOfStreams(vm::ptr<CellPamfReader> pSelf)
 {
 	cellPamf.notice("cellPamfReaderGetNumberOfStreams(pSelf=*0x%x)", pSelf);
 
+	ensure(!!pSelf); // Not checked on LLE
+
 	return pSelf->pamf.currentGroup->stream_num;
 }
 
@@ -1512,7 +1514,7 @@ s32 cellPamfEpIteratorMove(vm::ptr<CellPamfEpIterator> pIt, s32 steps, vm::ptr<C
 	return steps;
 }
 
-error_code cellPamfReaderGetEpWithTimeStamp(vm::ptr<CellPamfReader> pSelf, vm::ptr<CellCodecTimeStamp> pTimeStamp, vm::ptr<CellPamfEp> pEp, u32 unk)
+error_code cellPamfReaderGetEpWithTimeStamp(vm::ptr<CellPamfReader> pSelf, vm::ptr<CellCodecTimeStamp> pTimeStamp, vm::ptr<CellPamfEpUnk> pEp, u32 unk)
 {
 	cellPamf.notice("cellPamfReaderGetEpWithTimeStamp(pSelf=*0x%x, pTimeStamp=*0x%x, pEp=*0x%x, unk=0x%x)", pSelf, pTimeStamp, pEp, unk);
 
@@ -1581,13 +1583,13 @@ error_code cellPamfReaderGetEpWithTimeStamp(vm::ptr<CellPamfReader> pSelf, vm::p
 
 	if (unk == sizeof(CellPamfEpUnk))
 	{
-		vm::unsafe_ptr_cast<CellPamfEpUnk>(pEp)->nextRpnOffset = next_rpn_offset;
+		pEp->nextRpnOffset = next_rpn_offset;
 	}
 
 	return CELL_OK;
 }
 
-error_code cellPamfReaderGetEpWithIndex(vm::ptr<CellPamfReader> pSelf, u32 epIndex, vm::ptr<CellPamfEp> pEp, u32 unk)
+error_code cellPamfReaderGetEpWithIndex(vm::ptr<CellPamfReader> pSelf, u32 epIndex, vm::ptr<CellPamfEpUnk> pEp, u32 unk)
 {
 	cellPamf.notice("cellPamfReaderGetEpWithIndex(pSelf=*0x%x, epIndex=%d, pEp=*0x%x, unk=0x%x)", pSelf, epIndex, pEp, unk);
 
@@ -1610,7 +1612,7 @@ error_code cellPamfReaderGetEpWithIndex(vm::ptr<CellPamfReader> pSelf, u32 epInd
 	{
 		const auto ep = vm::cptr<PsmfEpHeader>::make(pSelf->psmf.header.addr() + pSelf->psmf.currentStream->ep_offset + epIndex * sizeof(PsmfEpHeader));
 
-		psmfEpUnpack(ep, pEp);
+		psmfEpUnpack(ep, pEp.ptr(&CellPamfEpUnk::ep));
 
 		if (epIndex < ep_num - 1)
 		{
@@ -1621,7 +1623,7 @@ error_code cellPamfReaderGetEpWithIndex(vm::ptr<CellPamfReader> pSelf, u32 epInd
 	{
 		const auto ep = vm::cptr<PamfEpHeader>::make(pSelf->pamf.header.addr() + pSelf->pamf.currentStream->ep_offset + epIndex * sizeof(PamfEpHeader));
 
-		pamfEpUnpack(ep, pEp);
+		pamfEpUnpack(ep, pEp.ptr(&CellPamfEpUnk::ep));
 
 		if (epIndex < ep_num - 1)
 		{
@@ -1631,7 +1633,7 @@ error_code cellPamfReaderGetEpWithIndex(vm::ptr<CellPamfReader> pSelf, u32 epInd
 
 	if (unk == sizeof(CellPamfEpUnk))
 	{
-		vm::unsafe_ptr_cast<CellPamfEpUnk>(pEp)->nextRpnOffset = next_rpn_offset;
+		pEp->nextRpnOffset = next_rpn_offset;
 	}
 
 	return CELL_OK;
