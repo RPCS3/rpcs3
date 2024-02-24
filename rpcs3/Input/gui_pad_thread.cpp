@@ -24,8 +24,11 @@
 #include <fcntl.h>
 #define CHECK_IOCTRL_RET(res) if (res == -1) { gui_log.error("gui_pad_thread: ioctl failed (errno=%d=%s)", res, strerror(errno)); }
 #elif defined(__APPLE__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
 #include <ApplicationServices/ApplicationServices.h>
 #include <Carbon/Carbon.h>
+#pragma GCC diagnostic pop
 #endif
 
 #include <QApplication>

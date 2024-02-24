@@ -1,4 +1,7 @@
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
 #import <Foundation/Foundation.h>
+#pragma GCC diagnostic pop
 
 namespace Darwin_Version
 {
