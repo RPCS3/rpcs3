@@ -527,7 +527,7 @@ int main(int argc, char** argv)
 #endif
 
 #ifdef __APPLE__
-	if ((Darwin_Version::getNSmajorVersion() == 14 && Darwin_Version::getNSminorVersion() < 3) && utils::get_cpu_brand() == "VirtualApple")
+	if ((Darwin_Version::getNSmajorVersion() == 14 && Darwin_Version::getNSminorVersion() < 3) && (utils::get_cpu_brand().rfind("VirtualApple", 0) == 0))
 	{
 		report_fatal_error("Unsupported Rosetta version.\nPlease update macOS to a supported version.");
 	}
