@@ -19,9 +19,9 @@ namespace gl
 			}
 		}
 
-		gl::handle32_t scale_output(
+		gl::texture* scale_output(
 			gl::command_context& /*cmd*/,           // State
-			gl::handle32_t src,                     // Source input
+			gl::texture*   src,                     // Source input
 			const areai& src_region,                // Scaling request information
 			const areai& dst_region,                // Ditto
 			gl::flags32_t mode                      // Mode
@@ -31,11 +31,11 @@ namespace gl
 			{
 				m_flip_fbo.recreate();
 				m_flip_fbo.bind();
-				m_flip_fbo.color = src;
+				m_flip_fbo.color = src->id();
 				m_flip_fbo.read_buffer(m_flip_fbo.color);
 				m_flip_fbo.draw_buffer(m_flip_fbo.color);
 				m_flip_fbo.blit(gl::screen, src_region, dst_region, gl::buffers::color, Filter);
-				return 0;
+				return nullptr;
 			}
 
 			// Upscaling source only is unsupported
