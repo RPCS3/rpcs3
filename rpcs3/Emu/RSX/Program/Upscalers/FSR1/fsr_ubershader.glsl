@@ -7,7 +7,7 @@ R"(
 %FFX_DEFINITIONS%
 
 #if defined(SAMPLE_EASU) || defined(SAMPLE_RCAS)
-	layout(push_constant) uniform const_buffer
+	layout(%push_block%) uniform const_buffer
 	{
 		uvec4 Const0;
 		#if SAMPLE_EASU
