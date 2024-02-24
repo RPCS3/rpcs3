@@ -200,7 +200,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 	// Enable drawing to window backbuffer
 	gl::screen.bind();
 
-	GLuint image_to_flip = GL_NONE, image_to_flip2 = GL_NONE;
+	gl::texture *image_to_flip = nullptr, *image_to_flip2 = nullptr;
 
 	if (info.buffer < display_buffers_count && buffer_width && buffer_height)
 	{
@@ -215,13 +215,12 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			.eye = 0
 		};
 
-		const auto image_to_flip_ = get_present_source(&present_info, avconfig);
-		image_to_flip = image_to_flip_->id();
+		image_to_flip = get_present_source(&present_info, avconfig);
 
 		if (avconfig.stereo_mode != stereo_render_mode_options::disabled) [[unlikely]]
 		{
 			const auto [unused, min_expected_height] = rsx::apply_resolution_scale<true>(RSX_SURFACE_DIMENSION_IGNORED, buffer_height + 30);
-			if (image_to_flip_->height() < min_expected_height)
+			if (image_to_flip->height() < min_expected_height)
 			{
 				// Get image for second eye
 				const u32 image_offset = (buffer_height + 30) * buffer_pitch + display_buffers[info.buffer].offset;
@@ -230,13 +229,13 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 				present_info.address = rsx::get_address(image_offset, CELL_GCM_LOCATION_LOCAL);
 				present_info.eye = 1;
 
-				image_to_flip2 = get_present_source(&present_info, avconfig)->id();
+				image_to_flip2 = get_present_source(&present_info, avconfig);
 			}
 			else
 			{
 				// Account for possible insets
 				const auto [unused2, scaled_buffer_height] = rsx::apply_resolution_scale<true>(RSX_SURFACE_DIMENSION_IGNORED, buffer_height);
-				buffer_height = std::min<u32>(image_to_flip_->height() - min_expected_height, scaled_buffer_height);
+				buffer_height = std::min<u32>(image_to_flip->height() - min_expected_height, scaled_buffer_height);
 			}
 		}
 
@@ -278,14 +277,10 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		if (g_user_asked_for_screenshot || (g_recording_mode != recording_mode::stopped && m_frame->can_consume_frame()))
 		{
 			std::vector<u8> sshot_frame(buffer_height * buffer_width * 4);
+			glGetError();
 
 			gl::pixel_pack_settings pack_settings{};
-			pack_settings.apply();
-
-			if (gl::get_driver_caps().ARB_dsa_supported)
-				glGetTextureImage(image_to_flip, 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer_height * buffer_width * 4, sshot_frame.data());
-			else
-				glGetTextureImageEXT(image_to_flip, GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, sshot_frame.data());
+			image_to_flip->copy_to(sshot_frame.data(), gl::texture::format::rgba, gl::texture::type::ubyte, pack_settings);
 
 			if (GLenum err = glGetError(); err != GL_NO_ERROR)
 			{
@@ -325,13 +320,13 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		if (use_full_rgb_range_output && rsx::fcmp(avconfig.gamma, 1.f) && avconfig.stereo_mode == stereo_render_mode_options::disabled)
 		{
 			// Blit source image to the screen
-			m_upscaler->scale_output(cmd, image_to_flip, gl::screen, screen_area, aspect_ratio.flipped_vertical(), gl::UPSCALE_AND_COMMIT);
+			m_upscaler->scale_output(cmd, image_to_flip->id(), screen_area, aspect_ratio.flipped_vertical(), gl::UPSCALE_AND_COMMIT);
 		}
 		else
 		{
 			const f32 gamma = avconfig.gamma;
 			const bool limited_range = !use_full_rgb_range_output;
-			const rsx::simple_array<GLuint> images{ image_to_flip, image_to_flip2 };
+			const rsx::simple_array<GLuint> images{ image_to_flip->id(), image_to_flip2->id() };
 			const auto filter = m_output_scaling == output_scaling_mode::nearest ? gl::filter::nearest : gl::filter::linear;
 
 			// FIXME: Upscaling should optionally happen before this step.
