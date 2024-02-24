@@ -60,6 +60,13 @@ DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResoluti
 
 #if defined(__APPLE__)
 #include <dispatch/dispatch.h>
+// sysinfo_darwin.mm
+namespace Darwin_Version
+{
+	extern int getNSmajorVersion();
+	extern int getNSminorVersion();
+	extern int getNSpatchVersion();
+}
 #endif
 
 #include "Utilities/Config.h"
@@ -516,6 +523,13 @@ int main(int argc, char** argv)
 	if (const int res = WSAStartup(MAKEWORD(2, 2), &wsa_data); res != 0)
 	{
 		report_fatal_error(fmt::format("WSAStartup failed (error=%s)", fmt::win_error{static_cast<unsigned long>(res), nullptr}));
+	}
+#endif
+
+#ifdef __APPLE__
+	if ((Darwin_Version::getNSmajorVersion() == 14 && Darwin_Version::getNSminorVersion() < 3) && utils::get_cpu_brand() == "VirtualApple")
+	{
+		report_fatal_error("Unsupported Rosetta version.\nPlease update macOS to a supported version.");
 	}
 #endif
 
