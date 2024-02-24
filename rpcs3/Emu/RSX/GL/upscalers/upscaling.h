@@ -26,9 +26,8 @@ namespace gl
 		virtual ~upscaler() {}
 
 		virtual gl::handle32_t scale_output(
-			const gl::command_context& cmd,         // State
+			gl::command_context& cmd,               // State
 			gl::handle32_t src,                     // Source input
-			const gl::fbo& screen,                  // Present target. May be VK_NULL_HANDLE for some passes
 			const areai& src_region,                // Scaling request information
 			const areai& dst_region,                // Ditto
 			gl::flags32_t mode                      // Mode

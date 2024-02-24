@@ -20,9 +20,8 @@ namespace gl
 		}
 
 		gl::handle32_t scale_output(
-			const gl::command_context& /*cmd*/,     // State
+			gl::command_context& /*cmd*/,           // State
 			gl::handle32_t src,                     // Source input
-			const gl::fbo& screen,                  // Present target. May be VK_NULL_HANDLE for some passes
 			const areai& src_region,                // Scaling request information
 			const areai& dst_region,                // Ditto
 			gl::flags32_t mode                      // Mode
@@ -35,7 +34,7 @@ namespace gl
 				m_flip_fbo.color = src;
 				m_flip_fbo.read_buffer(m_flip_fbo.color);
 				m_flip_fbo.draw_buffer(m_flip_fbo.color);
-				m_flip_fbo.blit(screen, src_region, dst_region, gl::buffers::color, Filter);
+				m_flip_fbo.blit(gl::screen, src_region, dst_region, gl::buffers::color, Filter);
 				return 0;
 			}
 
