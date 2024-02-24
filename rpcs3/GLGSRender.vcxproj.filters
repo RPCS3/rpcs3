@@ -115,6 +115,9 @@
     <ClInclude Include="Emu\RSX\GL\upscalers\nearest_pass.hpp">
       <Filter>upscalers</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\upscalers\fsr_pass.h">
+      <Filter>upscalers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="glutils">

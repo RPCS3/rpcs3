@@ -80,6 +80,7 @@
     <ClInclude Include="Emu\RSX\GL\OpenGL.h" />
     <ClInclude Include="Emu\RSX\GL\GLTexture.h" />
     <ClInclude Include="Emu\RSX\GL\upscalers\bilinear_pass.hpp" />
+    <ClInclude Include="Emu\RSX\GL\upscalers\fsr_pass.h" />
     <ClInclude Include="Emu\RSX\GL\upscalers\nearest_pass.hpp" />
     <ClInclude Include="Emu\RSX\GL\upscalers\static_pass.hpp" />
     <ClInclude Include="Emu\RSX\GL\upscalers\upscaling.h" />

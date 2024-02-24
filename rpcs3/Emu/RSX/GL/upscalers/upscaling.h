@@ -25,9 +25,9 @@ namespace gl
 	{
 		virtual ~upscaler() {}
 
-		virtual gl::handle32_t scale_output(
+		virtual gl::texture* scale_output(
 			gl::command_context& cmd,               // State
-			gl::handle32_t src,                     // Source input
+			gl::texture* src,                       // Source input
 			const areai& src_region,                // Scaling request information
 			const areai& dst_region,                // Ditto
 			gl::flags32_t mode                      // Mode
