@@ -46,69 +46,112 @@ signaling_handler::signaling_handler()
 //// SIGNALING CALLBACKS ////
 /////////////////////////////
 
-void signaling_handler::set_sig_cb(u32 sig_cb_ctx, vm::ptr<SceNpSignalingHandler> sig_cb, vm::ptr<void> sig_cb_arg)
+void signaling_handler::add_sig_ctx(u32 ctx_id)
 {
 	std::lock_guard lock(data_mutex);
-	this->sig_cb_ctx = sig_cb_ctx;
-	this->sig_cb = sig_cb;
-	this->sig_cb_arg = sig_cb_arg;
+	sig_ctx_lst.insert(ctx_id);
 }
 
-void signaling_handler::set_ext_sig_cb(u32 sig_ext_cb_ctx, vm::ptr<SceNpSignalingHandler> sig_ext_cb, vm::ptr<void> sig_ext_cb_arg)
+void signaling_handler::remove_sig_ctx(u32 ctx_id)
 {
 	std::lock_guard lock(data_mutex);
-	this->sig_ext_cb_ctx = sig_ext_cb_ctx;
-	this->sig_ext_cb = sig_ext_cb;
-	this->sig_ext_cb_arg = sig_ext_cb_arg;
+	sig_ctx_lst.erase(ctx_id);
 }
 
-void signaling_handler::set_sig2_cb(u16 sig2_cb_ctx, vm::ptr<SceNpMatching2SignalingCallback> sig2_cb, vm::ptr<void> sig2_cb_arg)
+void signaling_handler::clear_sig_ctx()
 {
 	std::lock_guard lock(data_mutex);
-	this->sig2_cb_ctx = sig2_cb_ctx;
-	this->sig2_cb = sig2_cb;
-	this->sig2_cb_arg = sig2_cb_arg;
+	sig_ctx_lst.clear();
 }
 
-void signaling_handler::signal_sig_callback(u32 conn_id, int event, int error_code)
+void signaling_handler::add_match2_ctx(u16 ctx_id)
 {
-	if (sig_cb)
+	std::lock_guard lock(data_mutex);
+	match2_ctx_lst.insert(ctx_id);
+}
+
+void signaling_handler::remove_match2_ctx(u16 ctx_id)
+{
+	std::lock_guard lock(data_mutex);
+	match2_ctx_lst.erase(ctx_id);
+}
+
+void signaling_handler::clear_match2_ctx()
+{
+	std::lock_guard lock(data_mutex);
+	match2_ctx_lst.clear();
+}
+
+void signaling_handler::signal_sig_callback(u32 conn_id, s32 event, s32 error_code)
+{
+	for (const auto& ctx_id : sig_ctx_lst)
 	{
-		sysutil_register_cb([sig_cb = this->sig_cb, sig_cb_ctx = this->sig_cb_ctx, conn_id, event, error_code, sig_cb_arg = this->sig_cb_arg](ppu_thread& cb_ppu) -> s32
-			{
-				sig_cb(cb_ppu, sig_cb_ctx, conn_id, event, error_code, sig_cb_arg);
-				return 0;
-			});
-		sign_log.notice("Called sig CB: 0x%x (conn_id: %d)", event, conn_id);
+		const auto ctx = get_signaling_context(ctx_id);
+
+		if (!ctx)
+			continue;
+
+		std::lock_guard lock(ctx->mutex);
+
+		if (ctx->handler)
+		{
+			sysutil_register_cb([sig_cb = ctx->handler, sig_cb_ctx = ctx_id, conn_id, event, error_code, sig_cb_arg = ctx->arg](ppu_thread& cb_ppu) -> s32
+				{
+					sig_cb(cb_ppu, sig_cb_ctx, conn_id, event, error_code, sig_cb_arg);
+					return 0;
+				});
+			sign_log.notice("Called sig CB: 0x%x (conn_id: %d)", event, conn_id);
+		}
 	}
 
 	// extended callback also receives normal events
 	signal_ext_sig_callback(conn_id, event, error_code);
 }
 
-void signaling_handler::signal_ext_sig_callback(u32 conn_id, int event, int error_code) const
+void signaling_handler::signal_ext_sig_callback(u32 conn_id, s32 event, s32 error_code) const
 {
-	if (sig_ext_cb)
+	for (const auto ctx_id : sig_ctx_lst)
 	{
-		sysutil_register_cb([sig_ext_cb = this->sig_ext_cb, sig_ext_cb_ctx = this->sig_ext_cb_ctx, conn_id, event, error_code, sig_ext_cb_arg = this->sig_ext_cb_arg](ppu_thread& cb_ppu) -> s32
-			{
-				sig_ext_cb(cb_ppu, sig_ext_cb_ctx, conn_id, event, error_code, sig_ext_cb_arg);
-				return 0;
-			});
-		sign_log.notice("Called EXT sig CB: 0x%x (conn_id: %d)", event, conn_id);
+		const auto ctx = get_signaling_context(ctx_id);
+
+		if (!ctx)
+			continue;
+
+		std::lock_guard lock(ctx->mutex);
+
+		if (ctx->ext_handler)
+		{
+			sysutil_register_cb([sig_ext_cb = ctx->ext_handler, sig_ext_cb_ctx = ctx_id, conn_id, event, error_code, sig_ext_cb_arg = ctx->ext_arg](ppu_thread& cb_ppu) -> s32
+				{
+					sig_ext_cb(cb_ppu, sig_ext_cb_ctx, conn_id, event, error_code, sig_ext_cb_arg);
+					return 0;
+				});
+			sign_log.notice("Called EXT sig CB: 0x%x (conn_id: %d)", event, conn_id);
+		}
 	}
 }
 
-void signaling_handler::signal_sig2_callback(u64 room_id, u16 member_id, SceNpMatching2Event event, int error_code) const
+void signaling_handler::signal_sig2_callback(u64 room_id, u16 member_id, SceNpMatching2Event event, s32 error_code) const
 {
-	if (room_id && sig2_cb)
+	if (room_id)
 	{
-		sysutil_register_cb([sig2_cb = this->sig2_cb, sig2_cb_ctx = this->sig2_cb_ctx, room_id, member_id, event, error_code, sig2_cb_arg = this->sig2_cb_arg](ppu_thread& cb_ppu) -> s32
+		for (const auto ctx_id : match2_ctx_lst)
+		{
+			const auto ctx = get_match2_context(ctx_id);
+
+			if (!ctx)
+				continue;
+
+			if (ctx->signaling_cb)
 			{
-				sig2_cb(cb_ppu, sig2_cb_ctx, room_id, member_id, event, error_code, sig2_cb_arg);
-				return 0;
-			});
-		sign_log.notice("Called sig2 CB: 0x%x (room_id: %d, member_id: %d)", event, room_id, member_id);
+				sysutil_register_cb([sig2_cb = ctx->signaling_cb, sig2_cb_ctx = ctx_id, room_id, member_id, event, error_code, sig2_cb_arg = ctx->signaling_cb_arg](ppu_thread& cb_ppu) -> s32
+					{
+						sig2_cb(cb_ppu, sig2_cb_ctx, room_id, member_id, event, error_code, sig2_cb_arg);
+						return 0;
+					});
+				sign_log.notice("Called sig2 CB: 0x%x (room_id: %d, member_id: %d)", event, room_id, member_id);
+			}
+		}
 	}
 }
 
@@ -524,7 +567,7 @@ void signaling_handler::update_si_mapped_addr(std::shared_ptr<signaling_info>& s
 	}
 }
 
-void signaling_handler::update_si_status(std::shared_ptr<signaling_info>& si, s32 new_status, int error_code)
+void signaling_handler::update_si_status(std::shared_ptr<signaling_info>& si, s32 new_status, s32 error_code)
 {
 	if (!si)
 		return;
@@ -666,7 +709,10 @@ void signaling_handler::stop_sig_nl(u32 conn_id, bool forceful)
 
 	// If forceful we don't go through any transition and don't call any CB
 	if (forceful)
+	{
 		si->conn_status = SCE_NP_SIGNALING_CONN_STATUS_INACTIVE;
+		si->op_activated = false;
+	}
 
 	// Do not queue packets for an already dead connection
 	if (si->conn_status == SCE_NP_SIGNALING_CONN_STATUS_INACTIVE)

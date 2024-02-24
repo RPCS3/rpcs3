@@ -221,3 +221,7 @@ bool destroy_signaling_context(s32 ctx_id)
 {
 	return idm::remove<signaling_ctx>(static_cast<u32>(ctx_id));
 }
+std::shared_ptr<signaling_ctx> get_signaling_context(u32 ctx_id)
+{
+	return idm::get_unlocked<signaling_ctx>(ctx_id);
+}

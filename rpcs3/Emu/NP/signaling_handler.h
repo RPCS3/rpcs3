@@ -68,9 +68,12 @@ public:
 	std::optional<u32> get_conn_id_from_npid(const SceNpId& npid);
 	std::optional<u32> get_conn_id_from_addr(u32 addr, u16 port);
 
-	void set_sig_cb(u32 sig_cb_ctx, vm::ptr<SceNpSignalingHandler> sig_cb, vm::ptr<void> sig_cb_arg);
-	void set_ext_sig_cb(u32 sig_ext_cb_ctx, vm::ptr<SceNpSignalingHandler> sig_ext_cb, vm::ptr<void> sig_ext_cb_arg);
-	void set_sig2_cb(u16 sig2_cb_ctx, vm::ptr<SceNpMatching2SignalingCallback> sig2_cb, vm::ptr<void> sig2_cb_arg);
+	void add_sig_ctx(u32 ctx_id);
+	void remove_sig_ctx(u32 ctx_id);
+	void clear_sig_ctx();
+	void add_match2_ctx(u16 ctx_id);
+	void remove_match2_ctx(u16 ctx_id);
+	void clear_match2_ctx();
 
 	void start_sig(u32 conn_id, u32 addr, u16 port);
 	void stop_sig(u32 conn_id, bool forceful);
@@ -106,28 +109,19 @@ private:
 		std::shared_ptr<signaling_info> sig_info;
 	};
 
-	u32 sig_cb_ctx = 0;
-	vm::ptr<SceNpSignalingHandler> sig_cb{};
-	vm::ptr<void> sig_cb_arg{};
-
-	u32 sig_ext_cb_ctx = 0;
-	vm::ptr<SceNpSignalingHandler> sig_ext_cb{};
-	vm::ptr<void> sig_ext_cb_arg{};
-
-	u16 sig2_cb_ctx = 0;
-	vm::ptr<SceNpMatching2SignalingCallback> sig2_cb{};
-	vm::ptr<void> sig2_cb_arg{};
+	std::set<u32> sig_ctx_lst;
+	std::set<u16> match2_ctx_lst;
 
 	static u64 get_micro_timestamp(const std::chrono::steady_clock::time_point& time_point);
 
 	u32 get_always_conn_id(const SceNpId& npid);
 	static void update_si_addr(std::shared_ptr<signaling_info>& si, u32 new_addr, u16 new_port);
 	static void update_si_mapped_addr(std::shared_ptr<signaling_info>& si, u32 new_addr, u16 new_port);
-	void update_si_status(std::shared_ptr<signaling_info>& si, s32 new_status, int error_code);
+	void update_si_status(std::shared_ptr<signaling_info>& si, s32 new_status, s32 error_code);
 	void update_ext_si_status(std::shared_ptr<signaling_info>& si, bool op_activated);
-	void signal_sig_callback(u32 conn_id, int event, int error_code);
-	void signal_ext_sig_callback(u32 conn_id, int event, int error_code) const;
-	void signal_sig2_callback(u64 room_id, u16 member_id, SceNpMatching2Event event, int error_code) const;
+	void signal_sig_callback(u32 conn_id, s32 event, s32 error_code);
+	void signal_ext_sig_callback(u32 conn_id, s32 event, s32 error_code) const;
+	void signal_sig2_callback(u64 room_id, u16 member_id, SceNpMatching2Event event, s32 error_code) const;
 
 	static bool validate_signaling_packet(const signaling_packet* sp);
 	void reschedule_packet(std::shared_ptr<signaling_info>& si, SignalingCommand cmd, steady_clock::time_point new_timepoint);

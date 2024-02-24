@@ -225,10 +225,12 @@ std::vector<u8> generate_u2s_packet(const p2ps_encapsulated_tcp& header, const u
 	std::vector<u8> packet(packet_size);
 	u8* packet_data        = packet.data();
 	le_t<u16> dst_port_le  = +header.dst_port;
+	le_t<u16> src_port_le  = +header.src_port;
 	le_t<u16> p2p_flags_le = P2P_FLAG_P2PS;
 
 	memcpy(packet_data, &dst_port_le, sizeof(u16));
-	memcpy(packet_data + sizeof(u16), &p2p_flags_le, sizeof(u16));
+	memcpy(packet_data + sizeof(u16), &src_port_le, sizeof(u16));
+	memcpy(packet_data + sizeof(u16) + sizeof(u16), &p2p_flags_le, sizeof(u16));
 	memcpy(packet_data + VPORT_P2P_HEADER_SIZE, &header, sizeof(p2ps_encapsulated_tcp));
 	if (datasize)
 		memcpy(packet_data + VPORT_P2P_HEADER_SIZE + sizeof(p2ps_encapsulated_tcp), data, datasize);
