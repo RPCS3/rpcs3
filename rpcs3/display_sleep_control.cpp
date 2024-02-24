@@ -4,7 +4,10 @@
 #include <windows.h>
 
 #elif defined(__APPLE__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
 #include <IOKit/pwr_mgt/IOPMLib.h>
+#pragma GCC diagnostic pop
 
 static IOPMAssertionID s_pm_assertion = kIOPMNullAssertionID;
 
@@ -78,7 +81,11 @@ void disable_display_sleep()
 #ifdef _WIN32
 	SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED);
 #elif defined(__APPLE__)
+#pragma GCC diagnostic push
+// Necessary as some of those values are macro using old casts
+#pragma GCC diagnostic ignored "-Wold-style-cast"
 	IOPMAssertionCreateWithName(kIOPMAssertionTypePreventUserIdleDisplaySleep, kIOPMAssertionLevelOn, CFSTR("Game running"), &s_pm_assertion);
+#pragma GCC diagnostic pop
 #elif defined(HAVE_QTDBUS)
 	for (const char* service : { "org.freedesktop.ScreenSaver", "org.mate.ScreenSaver" })
 	{
