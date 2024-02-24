@@ -329,9 +329,14 @@ void lv2_socket::save(utils::serial& ar, bool save_only_this_class)
 	}
 }
 
-void sys_net_dump_data(std::string_view desc, const u8* data, s32 len)
+void sys_net_dump_data(std::string_view desc, const u8* data, s32 len, const void* addr)
 {
-	sys_net_dump.trace("%s:%s", desc, fmt::buf_to_hexstring(data, len));
+	const sys_net_sockaddr_in_p2p* p2p_addr = reinterpret_cast<const sys_net_sockaddr_in_p2p*>(addr);
+
+	if (p2p_addr)
+		sys_net_dump.trace("%s(%s:%d:%d): %s", desc, np::ip_to_string(std::bit_cast<u32>(p2p_addr->sin_addr)), p2p_addr->sin_port, p2p_addr->sin_vport, fmt::buf_to_hexstring(data, len));
+	else
+		sys_net_dump.trace("%s: %s", desc, fmt::buf_to_hexstring(data, len));
 }
 
 error_code sys_net_bnet_accept(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr> addr, vm::ptr<u32> paddrlen)
@@ -797,7 +802,7 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 				{
 					sn_addr = res_addr;
 					std::memcpy(buf.get_ptr(), vec.data(), res);
-					sys_net_dump_data("recvfrom", vec.data(), res);
+					sys_net_dump_data("recvfrom", vec.data(), res, &res_addr);
 				}
 
 				result = res;
@@ -819,7 +824,7 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 							{
 								sn_addr = res_addr;
 								std::memcpy(buf.get_ptr(), vec.data(), res);
-								sys_net_dump_data("recvfrom", vec.data(), res);
+								sys_net_dump_data("recvfrom", vec.data(), res, &res_addr);
 							}
 							result = res;
 							lv2_obj::awake(&ppu);
@@ -1003,7 +1008,7 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 		return -SYS_NET_EAFNOSUPPORT;
 	}
 
-	sys_net_dump_data("sendto", static_cast<const u8 *>(buf.get_ptr()), len);
+	sys_net_dump_data("sendto", static_cast<const u8*>(buf.get_ptr()), len, addr ? addr.get_ptr() : nullptr);
 
 	const std::optional<sys_net_sockaddr> sn_addr = addr ? std::optional<sys_net_sockaddr>(*addr) : std::nullopt;
 	const std::vector<u8> buf_copy(vm::_ptr<const char>(buf.addr()), vm::_ptr<const char>(buf.addr()) + len);

@@ -618,6 +618,13 @@ error_code sceNpTerm()
 	nph.terminate_NP();
 	nph.is_NP_init = false;
 
+	idm::clear<signaling_ctx>();
+
+	auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
+	sigh.clear_sig_ctx();
+
+	// TODO: Other contexts(special handling for transaction contexts?)
+
 	return CELL_OK;
 }
 
@@ -6636,15 +6643,17 @@ error_code sceNpSignalingCreateCtx(vm::ptr<SceNpId> npId, vm::ptr<SceNpSignaling
 		return SCE_NP_SIGNALING_ERROR_INVALID_ARGUMENT;
 	}
 
-	//	if (current_contexts > SCE_NP_SIGNALING_CTX_MAX)
-	//{
-	//	return SCE_NP_SIGNALING_ERROR_CTX_MAX;
-	//}
+	u32 id = create_signaling_context(npId, handler, arg);
 
-	*ctx_id = create_signaling_context(npId, handler, arg);
+	if (!id)
+	{
+		return SCE_NP_SIGNALING_ERROR_CTX_MAX;
+	}
+
+	*ctx_id = id;
 
 	auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
-	sigh.set_sig_cb(*ctx_id, handler, arg);
+	sigh.add_sig_ctx(id);
 
 	return CELL_OK;
 }
@@ -6665,6 +6674,9 @@ error_code sceNpSignalingDestroyCtx(u32 ctx_id)
 		return SCE_NP_SIGNALING_ERROR_CTX_NOT_FOUND;
 	}
 
+	auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
+	sigh.remove_sig_ctx(ctx_id);
+
 	return CELL_OK;
 }
 
@@ -6679,8 +6691,16 @@ error_code sceNpSignalingAddExtendedHandler(u32 ctx_id, vm::ptr<SceNpSignalingHa
 		return SCE_NP_SIGNALING_ERROR_NOT_INITIALIZED;
 	}
 
-	auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
-	sigh.set_ext_sig_cb(ctx_id, handler, arg);
+	auto ctx = get_signaling_context(ctx_id);
+
+	if (!ctx)
+	{
+		return SCE_NP_SIGNALING_ERROR_CTX_NOT_FOUND;
+	}
+
+	std::lock_guard lock(ctx->mutex);
+	ctx->ext_handler = handler;
+	ctx->ext_arg = arg;
 
 	return CELL_OK;
 }
@@ -6701,6 +6721,15 @@ error_code sceNpSignalingSetCtxOpt(u32 ctx_id, s32 optname, s32 optval)
 		return SCE_NP_SIGNALING_ERROR_INVALID_ARGUMENT;
 	}
 
+	auto ctx = get_signaling_context(ctx_id);
+
+	if (!ctx)
+	{
+		return SCE_NP_SIGNALING_ERROR_CTX_NOT_FOUND;
+	}
+
+	// TODO
+
 	return CELL_OK;
 }
 
@@ -6719,6 +6748,15 @@ error_code sceNpSignalingGetCtxOpt(u32 ctx_id, s32 optname, vm::ptr<s32> optval)
 	{
 		return SCE_NP_SIGNALING_ERROR_INVALID_ARGUMENT;
 	}
+
+	auto ctx = get_signaling_context(ctx_id);
+
+	if (!ctx)
+	{
+		return SCE_NP_SIGNALING_ERROR_CTX_NOT_FOUND;
+	}
+
+	// TODO
 
 	return CELL_OK;
 }
