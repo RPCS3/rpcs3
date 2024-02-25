@@ -18,6 +18,8 @@
 #pragma comment(lib, "opengl32.lib")
 #endif
 
+using namespace gl::upscaling_flags_;
+
 namespace gl
 {
 	using vertex_cache = rsx::vertex_cache::default_vertex_cache<rsx::vertex_cache::uploaded_range>;
