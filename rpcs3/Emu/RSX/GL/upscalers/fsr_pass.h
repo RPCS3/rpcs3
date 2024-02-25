@@ -15,10 +15,12 @@ namespace gl
 		protected:
 			gl::texture* m_input_image = nullptr;
 			gl::texture* m_output_image = nullptr;
-			gl::buffer m_ubo;
 			size2u m_input_size;
 			size2u m_output_size;
+
 			std::vector<u32> m_constants_buf;
+			gl::sampler_state m_sampler;
+			gl::buffer m_ubo;
 
 			void bind_resources() override;
 			virtual void configure(const gl::command_context& cmd) = 0;
