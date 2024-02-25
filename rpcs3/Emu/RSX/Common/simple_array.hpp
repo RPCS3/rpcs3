@@ -17,10 +17,10 @@ namespace rsx
 
 	private:
 		static constexpr u32 _local_capacity = std::max<u32>(64u / sizeof(Ty), 1u);
-		Ty _local_storage[_local_capacity];
+		char _local_storage[_local_capacity * sizeof(Ty)];
 
 		u32 _capacity = _local_capacity;
-		Ty* _data = _local_capacity ? _local_storage : nullptr;
+		Ty* _data = _local_capacity ? reinterpret_cast<Ty*>(_local_storage) : nullptr;
 		u32 _size = 0;
 
 		inline u64 offset(const_iterator pos)
@@ -30,7 +30,7 @@ namespace rsx
 
 		bool is_local_storage() const
 		{
-			return _data == _local_storage;
+			return _data == reinterpret_cast<const Ty*>(_local_storage);
 		}
 
 	public:
@@ -157,9 +157,9 @@ namespace rsx
 
 			// Use memcpy to allow compiler optimizations
 			Ty _stack_alloc[_local_capacity];
-			std::memcpy(_stack_alloc, that._local_storage, that.size_bytes());
-			std::memcpy(that._local_storage, _local_storage, size_bytes());
-			std::memcpy(_local_storage, _stack_alloc, that.size_bytes());
+			std::memcpy(_stack_alloc, that._data, that.size_bytes());
+			std::memcpy(that._data, _data, size_bytes());
+			std::memcpy(_data, _stack_alloc, that.size_bytes());
 			std::swap(_size, that._size);
 		}
 
