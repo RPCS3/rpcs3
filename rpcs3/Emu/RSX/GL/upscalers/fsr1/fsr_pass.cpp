@@ -61,22 +61,32 @@ namespace gl
 			m_constants_buf.resize(utils::rounded_div(push_constants_size, 4), 0);
 
 			create();
+
+			m_sampler.create();
+			m_sampler.apply_defaults(GL_LINEAR);
 		}
 
 		fsr_pass::~fsr_pass()
 		{
 			m_ubo.remove();
+			m_sampler.remove();
 		}
 
 		void fsr_pass::bind_resources()
 		{
 			// Bind relevant stuff
+			const u32 push_buffer_size = ::size32(m_constants_buf) * sizeof(m_constants_buf[0]);
+
 			if (!m_ubo)
 			{
-				m_ubo.create(gl::buffer::target::uniform, 32, nullptr, gl::buffer::memory_type::host_visible);
+				ensure(compiled);
+				m_ubo.create(gl::buffer::target::uniform, push_buffer_size, nullptr, gl::buffer::memory_type::local, GL_DYNAMIC_COPY);
+
+				// Statically bind the image sources
+				m_program.uniforms["InputTexture"] = GL_TEMP_IMAGE_SLOT(0);
+				m_program.uniforms["OutputTexture"] = GL_COMPUTE_IMAGE_SLOT(0);
 			}
 
-			const auto push_buffer_size = m_constants_buf.size() * sizeof(m_constants_buf[0]);
 			m_ubo.sub_data(0, push_buffer_size, m_constants_buf.data());
 			m_ubo.bind_range(GL_COMPUTE_BUFFER_SLOT(0), 0, push_buffer_size);
 		}
@@ -89,6 +99,11 @@ namespace gl
 			m_output_size = output_size;
 
 			configure(cmd);
+
+			saved_sampler_state saved(GL_TEMP_IMAGE_SLOT(0), m_sampler);
+			cmd->bind_texture(GL_TEMP_IMAGE_SLOT(0), GL_TEXTURE_2D, src->id());
+
+			glBindImageTexture(GL_COMPUTE_IMAGE_SLOT(0), dst->id(), 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA8);
 
 			constexpr auto wg_size = 16;
 			const auto invocations_x = utils::aligned_div(output_size.width, wg_size);
@@ -193,6 +208,7 @@ namespace gl
 		output_size.height = dst_region.height();
 
 		auto src_image = src;
+		auto input_region = src_region;
 
 		if (input_size.width < output_size.width && input_size.height < output_size.height)
 		{
@@ -220,6 +236,11 @@ namespace gl
 
 				// Swap input for FSR target
 				src_image = m_output_data.get();
+
+				input_region.x1 = 0;
+				input_region.x2 = src_image->width();
+				input_region.y1 = 0;
+				input_region.y2 = src_image->height();
 			}
 		}
 
@@ -227,10 +248,10 @@ namespace gl
 		{
 			m_flip_fbo.recreate();
 			m_flip_fbo.bind();
-			m_flip_fbo.color = src->id();
+			m_flip_fbo.color = src_image->id();
 			m_flip_fbo.read_buffer(m_flip_fbo.color);
 			m_flip_fbo.draw_buffer(m_flip_fbo.color);
-			m_flip_fbo.blit(gl::screen, src_region, dst_region, gl::buffers::color, gl::filter::linear);
+			m_flip_fbo.blit(gl::screen, input_region, dst_region, gl::buffers::color, gl::filter::linear);
 			return 0;
 		}
 
