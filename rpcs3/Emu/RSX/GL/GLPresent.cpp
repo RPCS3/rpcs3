@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "GLGSRender.h"
+
 #include "upscalers/bilinear_pass.hpp"
+#include "upscalers/fsr_pass.h"
 #include "upscalers/nearest_pass.hpp"
 
 #include "Emu/Cell/Modules/cellVideoOut.h"
@@ -309,8 +311,8 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 				m_upscaler = std::make_unique<gl::nearest_upscale_pass>();
 				break;
 			case output_scaling_mode::fsr:
-				// Unimplemented
-				[[ fallthrough ]];
+				m_upscaler = std::make_unique<gl::fsr_upscale_pass>();
+				break;
 			case output_scaling_mode::bilinear:
 			default:
 				m_upscaler = std::make_unique<gl::bilinear_upscale_pass>();
@@ -320,19 +322,26 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		if (use_full_rgb_range_output && rsx::fcmp(avconfig.gamma, 1.f) && avconfig.stereo_mode == stereo_render_mode_options::disabled)
 		{
 			// Blit source image to the screen
-			m_upscaler->scale_output(cmd, image_to_flip, screen_area, aspect_ratio.flipped_vertical(), gl::UPSCALE_AND_COMMIT);
+			m_upscaler->scale_output(cmd, image_to_flip, screen_area, aspect_ratio.flipped_vertical(), UPSCALE_AND_COMMIT | UPSCALE_DEFAULT_VIEW);
 		}
 		else
 		{
 			const f32 gamma = avconfig.gamma;
 			const bool limited_range = !use_full_rgb_range_output;
-			const rsx::simple_array<GLuint> images{ image_to_flip->id(), image_to_flip2->id() };
 			const auto filter = m_output_scaling == output_scaling_mode::nearest ? gl::filter::nearest : gl::filter::linear;
+			rsx::simple_array<gl::texture*> images{ image_to_flip, image_to_flip2 };
 
-			// FIXME: Upscaling should optionally happen before this step.
-			// With linear and nearest scaling, it really doesn't matter here, but for FSR we cannot just bind the images and use a hardware filter.
+			if (m_output_scaling == output_scaling_mode::fsr && avconfig.stereo_mode == stereo_render_mode_options::disabled) // 3D will be implemented later
+			{
+				for (unsigned i = 0; i < 2 && images[i]; ++i)
+				{
+					const rsx::flags32_t mode = (i == 0) ? UPSCALE_LEFT_VIEW : UPSCALE_RIGHT_VIEW;
+					images[i] = m_upscaler->scale_output(cmd, image_to_flip, screen_area, aspect_ratio.flipped_vertical(), mode);
+				}
+			}
+
 			gl::screen.bind();
-			m_video_output_pass.run(cmd, areau(aspect_ratio), images, gamma, limited_range, avconfig.stereo_mode, filter);
+			m_video_output_pass.run(cmd, areau(aspect_ratio), images.map(FN(x->id())), gamma, limited_range, avconfig.stereo_mode, filter);
 		}
 	}
 

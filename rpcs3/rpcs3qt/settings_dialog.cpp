@@ -865,11 +865,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	const auto apply_fsr_specific_options = [r_creator, this]()
 	{
-		const bool is_vulkan = (ui->renderBox->currentText() == r_creator->Vulkan.name);
 		const auto [text, value] = get_data(ui->outputScalingMode, ui->outputScalingMode->currentIndex());
 		const bool fsr_selected = static_cast<output_scaling_mode>(value) == output_scaling_mode::fsr;
-		ui->fsrSharpeningStrength->setEnabled(is_vulkan && fsr_selected);
-		ui->fsrSharpeningStrengthReset->setEnabled(is_vulkan && fsr_selected);
+		ui->fsrSharpeningStrength->setEnabled(fsr_selected);
+		ui->fsrSharpeningStrengthReset->setEnabled(fsr_selected);
 	};
 
 	// Handle connects to disable specific checkboxes that depend on GUI state.
