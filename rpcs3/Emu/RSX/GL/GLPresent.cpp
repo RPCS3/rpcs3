@@ -316,6 +316,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			case output_scaling_mode::bilinear:
 			default:
 				m_upscaler = std::make_unique<gl::bilinear_upscale_pass>();
+				break;
 			}
 		}
 
