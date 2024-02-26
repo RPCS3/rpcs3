@@ -35,6 +35,30 @@ void fmt_class_string<CellSysutilAvc2Error>::format(std::string& out, u64 arg)
 	});
 }
 
+template<>
+void fmt_class_string<CellSysutilAvc2AttributeId>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](CellSysutilAvc2AttributeId value)
+	{
+		switch (value)
+		{
+			STR_CASE(CELL_SYSUTIL_AVC2_ATTRIBUTE_VOICE_DETECT_EVENT_TYPE);
+			STR_CASE(CELL_SYSUTIL_AVC2_ATTRIBUTE_VOICE_DETECT_INTERVAL_TIME);
+			STR_CASE(CELL_SYSUTIL_AVC2_ATTRIBUTE_VOICE_DETECT_SIGNAL_LEVEL);
+			STR_CASE(CELL_SYSUTIL_AVC2_ATTRIBUTE_VOICE_MAX_BITRATE);
+			STR_CASE(CELL_SYSUTIL_AVC2_ATTRIBUTE_VOICE_DATA_FEC);
+			STR_CASE(CELL_SYSUTIL_AVC2_ATTRIBUTE_VOICE_PACKET_CONTENTION);
+			STR_CASE(CELL_SYSUTIL_AVC2_ATTRIBUTE_VOICE_DTX_MODE);
+			STR_CASE(CELL_SYSUTIL_AVC2_ATTRIBUTE_MIC_STATUS_DETECTION);
+			STR_CASE(CELL_SYSUTIL_AVC2_ATTRIBUTE_MIC_SETTING_NOTIFICATION);
+			STR_CASE(CELL_SYSUTIL_AVC2_ATTRIBUTE_VOICE_MUTING_NOTIFICATION);
+			STR_CASE(CELL_SYSUTIL_AVC2_ATTRIBUTE_CAMERA_STATUS_DETECTION);
+		}
+
+		return unknown;
+	});
+}
+
 vm::ptr<CellSysutilAvc2Callback> avc2_cb{};
 vm::ptr<void> avc2_cb_arg{};
 
@@ -655,10 +679,13 @@ error_code cellSysutilAvc2Load(SceNpMatching2ContextId ctx_id, u32 container, vm
 
 error_code cellSysutilAvc2SetAttribute(vm::cptr<CellSysutilAvc2Attribute> attr)
 {
-	cellSysutilAvc2.todo("cellSysutilAvc2SetAttribute(attr=*0x%x)", attr);
-
 	if (!attr)
+	{
+		cellSysutilAvc2.todo("cellSysutilAvc2SetAttribute(attr=*0x%x)", attr);
 		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+	}
+
+	cellSysutilAvc2.todo("cellSysutilAvc2SetAttribute(%s=%d)", attr->attr_id, attr->attr_param.int_param);
 
 	switch (attr->attr_id)
 	{
