@@ -2426,7 +2426,7 @@ error_code sceNpBasicGetMessageEntry(u32 type, u32 index, vm::ptr<SceNpUserInfo>
 
 error_code sceNpBasicGetEvent(vm::ptr<s32> event, vm::ptr<SceNpUserInfo> from, vm::ptr<u8> data, vm::ptr<u32> size)
 {
-	sceNp.warning("sceNpBasicGetEvent(event=*0x%x, from=*0x%x, data=*0x%x, size=*0x%x)", event, from, data, size);
+	sceNp.trace("sceNpBasicGetEvent(event=*0x%x, from=*0x%x, data=*0x%x, size=*0x%x)", event, from, data, size);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -2444,8 +2444,6 @@ error_code sceNpBasicGetEvent(vm::ptr<s32> event, vm::ptr<SceNpUserInfo> from, v
 	{
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
-
-	//*event = SCE_NP_BASIC_EVENT_OFFLINE; // This event only indicates a contact is offline, not the current status of the connection
 
 	return nph.get_basic_event(event, from, data, size);
 }
@@ -3997,7 +3995,7 @@ error_code sceNpManagerGetAccountAge(vm::ptr<s32> age)
 
 error_code sceNpManagerGetContentRatingFlag(vm::ptr<s32> isRestricted, vm::ptr<s32> age)
 {
-	sceNp.warning("sceNpManagerGetContentRatingFlag(isRestricted=*0x%x, age=*0x%x)", isRestricted, age);
+	sceNp.trace("sceNpManagerGetContentRatingFlag(isRestricted=*0x%x, age=*0x%x)", isRestricted, age);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -5524,6 +5522,33 @@ error_code sceNpScorePollAsync(s32 transId, vm::ptr<s32> result)
 	return CELL_OK;
 }
 
+std::pair<std::optional<error_code>, std::shared_ptr<score_transaction_ctx>> get_score_transaction_context(s32 transId)
+{
+	auto trans_ctx = idm::get<score_transaction_ctx>(transId);
+
+	if (!trans_ctx)
+	{
+		return {SCE_NP_COMMUNITY_ERROR_INVALID_ID, {}};
+	}
+
+	{
+		// Check for games reusing score transaction context
+		// Unsure about the actual behaviour, only one game does this afaik(Marvel vs Capcom Origins)
+		// For now we just clean the context and pretend it's a new one
+		std::lock_guard lock(trans_ctx->mutex);
+		if (trans_ctx->result)
+		{
+			if (trans_ctx->thread.joinable())
+				trans_ctx->thread.join();
+			
+			trans_ctx->result = {};
+			trans_ctx->tdata = {};
+		}
+	}
+
+	return {{}, trans_ctx};
+}
+
 error_code scenp_score_get_board_info(s32 transId, SceNpScoreBoardId boardId, vm::ptr<SceNpScoreBoardInfo> boardInfo, vm::ptr<void> option, bool async)
 {
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
@@ -5548,12 +5573,9 @@ error_code scenp_score_get_board_info(s32 transId, SceNpScoreBoardId boardId, vm
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
-	auto trans_ctx = idm::get<score_transaction_ctx>(transId);
-
-	if (!trans_ctx)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
-	}
+	auto [res, trans_ctx] = get_score_transaction_context(transId);
+	if (res)
+		return *res;
 
 	nph.get_board_infos(trans_ctx, boardId, boardInfo, async);
 
@@ -5594,12 +5616,9 @@ error_code scenp_score_record_score(s32 transId, SceNpScoreBoardId boardId, SceN
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
-	auto trans_ctx = idm::get<score_transaction_ctx>(transId);
-
-	if (!trans_ctx)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
-	}
+	auto [res, trans_ctx] = get_score_transaction_context(transId);
+	if (res)
+		return *res;
 
 	const u8* data = nullptr;
 	u32 data_size = 0;
@@ -5674,17 +5693,9 @@ error_code scenp_score_record_game_data(s32 transId, SceNpScoreBoardId boardId, 
 		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
 	}
 
-	if (!transId)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
-	}
-
-	auto trans_ctx = idm::get<score_transaction_ctx>(transId);
-
-	if (!trans_ctx)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
-	}
+	auto [res, trans_ctx] = get_score_transaction_context(transId);
+	if (res)
+		return *res;
 
 	if (!nph.is_NP_init)
 	{
@@ -5734,12 +5745,9 @@ error_code scenp_score_get_game_data(s32 transId, SceNpScoreBoardId boardId, vm:
 		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
 	}
 
-	auto trans_ctx = idm::get<score_transaction_ctx>(transId);
-
-	if (!trans_ctx)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
-	}
+	auto [res, trans_ctx] = get_score_transaction_context(transId);
+	if (res)
+		return *res;
 
 	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
 	{
@@ -5798,11 +5806,9 @@ error_code scenp_score_get_ranking_by_npid(s32 transId, SceNpScoreBoardId boardI
 		return SCE_NP_COMMUNITY_ERROR_TOO_MANY_NPID;
 	}
 
-	auto trans_ctx = idm::get<score_transaction_ctx>(transId);
-	if (!trans_ctx)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
-	}
+	auto [res, trans_ctx] = get_score_transaction_context(transId);
+	if (res)
+		return *res;
 
 	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
 	{
@@ -5901,11 +5907,9 @@ error_code scenp_score_get_ranking_by_range(s32 transId, SceNpScoreBoardId board
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	auto trans_ctx = idm::get<score_transaction_ctx>(transId);
-	if (!trans_ctx)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
-	}
+	auto [res, trans_ctx] = get_score_transaction_context(transId);
+	if (res)
+		return *res;
 
 	if (option)
 	{
@@ -6004,11 +6008,9 @@ error_code scenp_score_get_friends_ranking(s32 transId, SceNpScoreBoardId boardI
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	auto trans_ctx = idm::get<score_transaction_ctx>(transId);
-	if (!trans_ctx)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
-	}
+	auto [res, trans_ctx] = get_score_transaction_context(transId);
+	if (res)
+		return *res;
 
 	if (!rankArray || !totalRecord || !lastSortDate)
 	{
@@ -6098,12 +6100,9 @@ error_code scenp_score_censor_comment(s32 transId, vm::cptr<char> comment, vm::p
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
-	auto trans_ctx = idm::get<score_transaction_ctx>(transId);
-
-	if (!trans_ctx)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
-	}
+	auto [res, trans_ctx] = get_score_transaction_context(transId);
+	if (res)
+		return *res;
 
 	// TODO: actual implementation of this
 	trans_ctx->result = CELL_OK;
@@ -6156,12 +6155,9 @@ error_code scenp_score_sanitize_comment(s32 transId, vm::cptr<char> comment, vm:
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
 	}
 
-	auto trans_ctx = idm::get<score_transaction_ctx>(transId);
-
-	if (!trans_ctx)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
-	}
+	auto [res, trans_ctx] = get_score_transaction_context(transId);
+	if (res)
+		return *res;
 
 	// TODO: actual implementation of this
 	memcpy(sanitizedComment.get_ptr(), comment.get_ptr(), comment_len + 1);
