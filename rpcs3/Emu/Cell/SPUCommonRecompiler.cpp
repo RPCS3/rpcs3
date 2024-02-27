@@ -4589,8 +4589,7 @@ struct spu_llvm
 				const auto lock = prof_mutex.init_always([&]{});
 
 				// Register new blocks to collect samples
-				// If the sample count is the same, prefer the last block that was pushed
-				samples.emplace(pair.first ? pair.first * 65536 + (add_count-- % 65536) : pair.first * 65536, 0);
+				samples.emplace(pair.first, 0);
 			}
 
 			if (enqueued.empty())
