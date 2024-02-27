@@ -4601,7 +4601,7 @@ struct spu_llvm
 					{
 						if (notify_compile[i])
 						{
-							(workers.begin() + (worker_index % worker_count))->registered.notify();
+							(workers.begin() + (i % worker_count))->registered.notify();
 						}
 					}
 				}
