@@ -4652,7 +4652,7 @@ struct spu_llvm
 			if (notify && !notify_compile[worker_index % worker_count])
 			{
 				notify_compile[worker_index % worker_count] = 1;
-				notify_compile_cout++;
+				notify_compile_count++;
 
 				if (notify_compile_count == notify_compile.size())
 				{
