@@ -718,7 +718,7 @@ bool VerifyEDATHeaderWithKLicense(const fs::file& input, const std::string& inpu
 }
 
 // Decrypts full file
-fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, int mode, u8 *custom_klic, bool verbose)
+fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, int mode, u8 *custom_klic)
 {
 	if (!input)
 	{
@@ -853,12 +853,11 @@ bool EDATADecrypter::ReadHeader()
 
 	// k the ecdsa_verify function in this check_data function takes a ridiculous amount of time
 	// like it slows down load time by a factor of x20, at least, so its ignored for now
-
-	if (false && !check_data(reinterpret_cast<u8*>(&dec_key), &edatHeader, &npdHeader, &edata_file, false))
-	{
-		edat_log.error("NPDRM check_data() failed!");
-		return false;
-	}
+	//if (!check_data(reinterpret_cast<u8*>(&dec_key), &edatHeader, &npdHeader, &edata_file, false))
+	//{
+	//	edat_log.error("NPDRM check_data() failed!");
+	//	return false;
+	//}
 
 	file_size = edatHeader.file_size;
 	total_blocks = ::narrow<u32>(utils::aligned_div(edatHeader.file_size, edatHeader.block_size));

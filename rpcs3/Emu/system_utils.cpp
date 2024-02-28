@@ -200,7 +200,7 @@ namespace rpcs3::utils
 		}
 
 		// Decrypt EDAT and verify its contents
-		fs::file dec_file = DecryptEDAT(enc_file, edat_path, 8, reinterpret_cast<u8*>(&k_licensee), false);
+		fs::file dec_file = DecryptEDAT(enc_file, edat_path, 8, reinterpret_cast<u8*>(&k_licensee));
 		if (!dec_file)
 		{
 			sys_log.error("verify_c00_unlock_edat(): Failed to decrypt '%s'", edat_path);
