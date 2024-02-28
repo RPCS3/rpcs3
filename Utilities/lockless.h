@@ -379,8 +379,8 @@ public:
 		return m_head != 0;
 	}
 
-	template <typename... Args>
-	void push(Args&&... args)
+	template <bool Notify = true, typename... Args>
+	bool push(Args&&... args)
 	{
 		auto oldv = m_head.load();
 		auto item = new lf_queue_item<T>(load(oldv), std::forward<Args>(args)...);
@@ -390,9 +390,19 @@ public:
 			item->m_link = load(oldv);
 		}
 
-		if (!oldv)
+		if (!oldv && Notify)
 		{
 			// Notify only if queue was empty
+			notify(true);
+		}
+
+		return !oldv;
+	}
+
+	void notify(bool force = false)
+	{
+		if (force || operator bool())
+		{
 			utils::bless<atomic_t<u32>>(&m_head)[1].notify_one();
 		}
 	}
