@@ -23,7 +23,7 @@ namespace gl
 			gl::buffer m_ubo;
 
 			void bind_resources() override;
-			virtual void configure(const gl::command_context& cmd) = 0;
+			virtual void configure() = 0;
 
 		public:
 			fsr_pass(const std::string& config_definitions, u32 push_constants_size);
@@ -34,7 +34,7 @@ namespace gl
 
 		class easu_pass : public fsr_pass
 		{
-			void configure(const gl::command_context& cmd) override;
+			void configure() override;
 
 		public:
 			easu_pass();
@@ -42,7 +42,7 @@ namespace gl
 
 		class rcas_pass : public fsr_pass
 		{
-			void configure(const gl::command_context& cmd) override;
+			void configure() override;
 
 		public:
 			rcas_pass();
