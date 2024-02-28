@@ -888,30 +888,32 @@ namespace np
 
 		for (auto& [npid, pr_info] : current_presences)
 		{
-			// Only communicates info about online users
-			if (!pr_info.online)
-			{
-				continue;
-			}
-
 			basic_event to_add{};
 			strcpy_trunc(to_add.from.userId.handle.data, npid);
 			strcpy_trunc(to_add.from.name.data, npid);
-			if (std::memcmp(pr_info.pr_com_id.data, basic_handler.context.data, sizeof(pr_info.pr_com_id.data)) == 0)
+
+			if (pr_info.online)
 			{
-				to_add.event = SCE_NP_BASIC_EVENT_PRESENCE;
-				to_add.data = std::move(pr_info.pr_data);
-			}
-			else
-			{
-				if (basic_handler.context_sensitive)
+				if (std::memcmp(pr_info.pr_com_id.data, basic_handler.context.data, sizeof(pr_info.pr_com_id.data)) == 0)
 				{
-					to_add.event = SCE_NP_BASIC_EVENT_OUT_OF_CONTEXT;
+					to_add.event = SCE_NP_BASIC_EVENT_PRESENCE;
+					to_add.data = std::move(pr_info.pr_data);
 				}
 				else
 				{
-					to_add.event = SCE_NP_BASIC_EVENT_OFFLINE;
+					if (basic_handler.context_sensitive)
+					{
+						to_add.event = SCE_NP_BASIC_EVENT_OUT_OF_CONTEXT;
+					}
+					else
+					{
+						to_add.event = SCE_NP_BASIC_EVENT_OFFLINE;
+					}
 				}
+			}
+			else
+			{
+				to_add.event = SCE_NP_BASIC_EVENT_OFFLINE;
 			}
 
 			queue_basic_event(to_add);

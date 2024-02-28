@@ -1261,7 +1261,8 @@ namespace rpcn
 
 	std::map<std::string, friend_online_data> rpcn_client::get_presence_states()
 	{
-		std::lock_guard lock(mutex_friends);
+		std::scoped_lock lock(mutex_friends, mutex_presence_updates);
+		presence_updates.clear();
 		return friend_infos.friends;
 	}
 
