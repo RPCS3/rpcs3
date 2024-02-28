@@ -106,7 +106,7 @@ usz decrypt_binaries_t::decrypt(std::string klic_input)
 				case "NPD\0"_u32:
 				{
 					// EDAT / SDAT
-					elf_file = DecryptEDAT(elf_file, old_path, key_it != 0 ? 8 : 1, reinterpret_cast<u8*>(&m_klics[key_it]), true);
+					elf_file = DecryptEDAT(elf_file, old_path, key_it != 0 ? 8 : 1, reinterpret_cast<u8*>(&m_klics[key_it]));
 
 					if (!elf_file)
 					{

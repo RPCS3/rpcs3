@@ -862,7 +862,7 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 	return true;
 }
 
-fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, int mode, u8 *custom_klic, bool verbose = false);
+fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, int mode, u8 *custom_klic);
 
 void package_reader::extract_worker(thread_key thread_data_key)
 {
@@ -946,27 +946,6 @@ void package_reader::extract_worker(thread_key thread_data_key)
 			if (fs::file out{ path, did_overwrite ? fs::rewrite : fs::write_new })
 			{
 				bool extract_success = true;
-
-				auto read_op = [&](usz pos, usz size) -> std::span<const char>
-				{
-					if (pos >= entry.file_size)
-					{
-						return {};
-					}
-
-					// Because that is the length of the buffer at the moment
-					const u64 block_size = std::min<u64>(BUF_SIZE, entry.file_size - pos);
-
-					const std::span<const char> data_span = decrypt(entry.file_offset + pos, block_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data(), thread_data_key);
-
-					if (data_span.size() != block_size)
-					{
-						extract_success = false;
-						pkg_log.error("Failed to extract file %s (data_span.size=%d, block_size=%d)", path, data_span.size(), block_size);
-					}
-
-					return data_span;
-				};
 
 				struct pkg_file_reader : fs::file_base
 				{
@@ -1128,7 +1107,7 @@ void package_reader::extract_worker(thread_key thread_data_key)
 
 				if (is_buffered)
 				{
-					final_data = DecryptEDAT(in_data, name, 1, reinterpret_cast<u8*>(&m_header.klicensee), true);
+					final_data = DecryptEDAT(in_data, name, 1, reinterpret_cast<u8*>(&m_header.klicensee));
 				}
 				else
 				{
