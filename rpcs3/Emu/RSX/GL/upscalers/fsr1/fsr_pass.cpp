@@ -98,7 +98,7 @@ namespace gl
 			m_input_size = input_size;
 			m_output_size = output_size;
 
-			configure(cmd);
+			configure();
 
 			saved_sampler_state saved(GL_TEMP_IMAGE_SLOT(0), m_sampler);
 			cmd->bind_texture(GL_TEMP_IMAGE_SLOT(0), GL_TEXTURE_2D, src->id());
@@ -124,7 +124,7 @@ namespace gl
 			)
 		{}
 
-		void easu_pass::configure(const gl::command_context& cmd)
+		void easu_pass::configure()
 		{
 			// NOTE: Configuration vector 4 is unused as we do not support HDR natively
 			auto con0 = &m_constants_buf[0];
@@ -148,7 +148,7 @@ namespace gl
 			)
 		{}
 
-		void rcas_pass::configure(const gl::command_context& cmd)
+		void rcas_pass::configure()
 		{
 			// 0 is actually the sharpest with 2 being the chosen limit. Each progressive unit 'halves' the sharpening intensity.
 			auto cas_attenuation = 2.f - (g_cfg.video.vk.rcas_sharpening_intensity / 50.f);
