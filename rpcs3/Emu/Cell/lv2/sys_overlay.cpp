@@ -36,7 +36,15 @@ static error_code overlay_load_module(vm::ptr<u32> ovlmid, const std::string& vp
 
 	u128 klic = g_fxo->get<loaded_npdrm_keys>().last_key();
 
-	ppu_exec_object obj = decrypt_self(std::move(src), reinterpret_cast<u8*>(&klic), nullptr, true);
+	src = decrypt_self(std::move(src), reinterpret_cast<u8*>(&klic), nullptr, true);
+
+	if (!src)
+	{
+		return {CELL_ENOEXEC, +"Failed to decrypt file"};
+	}
+
+	ppu_exec_object obj = std::move(src);
+	src.close();
 
 	if (obj != elf_error::ok)
 	{

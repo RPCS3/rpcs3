@@ -862,7 +862,7 @@ enum
 enum : SceNpBasicAttachmentDataId
 {
 	SCE_NP_BASIC_INVALID_ATTACHMENT_DATA_ID = 0,
-	SCE_NP_BASIC_INVALID_MESSAGE_ID			= 0,
+	SCE_NP_BASIC_INVALID_MESSAGE_ID         = 0,
 	SCE_NP_BASIC_SELECTED_INVITATION_DATA   = 1,
 	SCE_NP_BASIC_SELECTED_MESSAGE_DATA      = 2,
 };
@@ -1700,6 +1700,11 @@ struct message_data
 	std::string body;
 	std::vector<u8> data;
 	void print() const;
+};
+
+struct np_state
+{
+	atomic_t<bool> abort_gui_flag = false;
 };
 
 namespace rpcn

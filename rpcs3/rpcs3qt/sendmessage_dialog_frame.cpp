@@ -2,7 +2,11 @@
 #include <QHBoxLayout>
 #include <QPushButton>
 #include <QMessageBox>
+#include <QTimer>
+
 #include "sendmessage_dialog_frame.h"
+#include "Emu/IdManager.h"
+#include "Emu/System.h"
 
 #include "util/logs.hpp"
 
@@ -90,6 +94,31 @@ error_code sendmessage_dialog_frame::Exec(message_data& msg_data, std::set<std::
 			add_friend(m_lst_friends, QString::fromStdString(fr.first));
 		}
 	}
+
+	auto& nps = g_fxo->get<np_state>();
+
+	QTimer timer;
+	connect(&timer, &QTimer::timeout, this, [this, &nps, &timer]()
+	{
+		bool abort = Emu.IsStopped();
+
+		if (!abort && nps.abort_gui_flag.exchange(false))
+		{
+			sendmessage_dlg_log.warning("Aborted by sceNp!");
+			abort = true;
+		}
+
+		if (abort)
+		{
+			if (m_dialog)
+			{
+				m_dialog->close();
+			}
+
+			timer.stop();
+		}
+	});
+	timer.start(10ms);
 
 	m_dialog->exec();
 

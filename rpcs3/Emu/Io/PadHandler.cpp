@@ -9,7 +9,7 @@ cfg_input g_cfg_input;
 
 extern void pad_state_notify_state_change(usz index, u32 state);
 
-PadHandlerBase::PadHandlerBase(pad_handler type) : m_type(type)
+PadHandlerBase::PadHandlerBase(pad_handler type, bool emulation) : m_type(type), m_emulation(emulation)
 {
 }
 
@@ -747,7 +747,11 @@ void PadHandlerBase::process()
 				input_log.success("%s device %d connected", m_type, i);
 
 				pad->m_port_status |= CELL_PAD_STATUS_CONNECTED + CELL_PAD_STATUS_ASSIGN_CHANGES;
-				pad_state_notify_state_change(i, CELL_PAD_STATUS_CONNECTED);
+
+				if (m_emulation)
+				{
+					pad_state_notify_state_change(i, CELL_PAD_STATUS_CONNECTED);
+				}
 
 				last_connection_status[i] = true;
 				connected_devices++;
@@ -771,7 +775,11 @@ void PadHandlerBase::process()
 					input_log.success("%s device %d connected by force", m_type, i);
 
 					pad->m_port_status |= CELL_PAD_STATUS_CONNECTED + CELL_PAD_STATUS_ASSIGN_CHANGES;
-					pad_state_notify_state_change(i, CELL_PAD_STATUS_CONNECTED);
+
+					if (m_emulation)
+					{
+						pad_state_notify_state_change(i, CELL_PAD_STATUS_CONNECTED);
+					}
 
 					last_connection_status[i] = true;
 					connected_devices++;
@@ -786,7 +794,10 @@ void PadHandlerBase::process()
 				pad->m_port_status &= ~CELL_PAD_STATUS_CONNECTED;
 				pad->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
 
-				pad_state_notify_state_change(i, CELL_PAD_STATUS_DISCONNECTED);
+				if (m_emulation)
+				{
+					pad_state_notify_state_change(i, CELL_PAD_STATUS_DISCONNECTED);
+				}
 
 				last_connection_status[i] = false;
 				connected_devices--;

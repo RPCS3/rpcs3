@@ -1047,6 +1047,8 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 		}
 
 		bool has_queue_ref = false;
+		std::function<void()> data_transfer_completed_callback{};
+
 		if (!is_current_thread()) [[likely]]
 		{
 			// Always submit primary cb to ensure state consistency (flush pending changes such as image transitions)
@@ -1073,13 +1075,19 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 		{
 			// Wait for the RSX thread to process request if it hasn't already
 			m_flush_requests.producer_wait();
+
+			data_transfer_completed_callback = [&]()
+			{
+				m_flush_requests.remove_one();
+				has_queue_ref = false;
+			};
 		}
 
-		m_texture_cache.flush_all(*m_secondary_cb_list.next(), result);
+		m_texture_cache.flush_all(*m_secondary_cb_list.next(), result, data_transfer_completed_callback);
 
 		if (has_queue_ref)
 		{
-			// Release RSX thread
+			// Release RSX thread if it's still locked
 			m_flush_requests.remove_one();
 		}
 	}

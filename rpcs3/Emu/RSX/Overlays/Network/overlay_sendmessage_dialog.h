@@ -23,6 +23,8 @@ namespace rsx
 			std::unique_ptr<overlay_element> m_dim_background;
 			std::unique_ptr<list_view> m_list;
 			std::unique_ptr<label> m_description;
+			atomic_t<bool> m_open_confirmation_dialog = false;
+			atomic_t<bool> m_confirmation_dialog_open = false;
 
 			animation_color_interpolate fade_animation;
 

@@ -5,7 +5,7 @@
 class NullPadHandler final : public PadHandlerBase
 {
 public:
-	NullPadHandler() : PadHandlerBase(pad_handler::null)
+	NullPadHandler(bool emulation) : PadHandlerBase(pad_handler::null, emulation)
 	{
 		b_has_pressure_intensity_button = false;
 	}

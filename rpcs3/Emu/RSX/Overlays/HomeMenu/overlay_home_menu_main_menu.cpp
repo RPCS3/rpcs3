@@ -12,7 +12,7 @@ namespace rsx
 {
 	namespace overlays
 	{
-		home_menu_main_menu::home_menu_main_menu(u16 x, u16 y, u16 width, u16 height, bool use_separators, home_menu_page* parent)
+		home_menu_main_menu::home_menu_main_menu(s16 x, s16 y, u16 width, u16 height, bool use_separators, home_menu_page* parent)
 			: home_menu_page(x, y, width, height, use_separators, parent, get_localized_string(localized_string_id::HOME_MENU_TITLE))
 		{
 			is_current_page = true;

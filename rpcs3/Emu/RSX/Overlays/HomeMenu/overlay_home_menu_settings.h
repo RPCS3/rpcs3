@@ -11,7 +11,7 @@ namespace rsx
 		struct home_menu_settings : public home_menu_page
 		{
 		public:
-			home_menu_settings(u16 x, u16 y, u16 width, u16 height, bool use_separators, home_menu_page* parent);
+			home_menu_settings(s16 x, s16 y, u16 width, u16 height, bool use_separators, home_menu_page* parent);
 
 		private:
 			std::vector<std::shared_ptr<home_menu_page>> m_settings_pages;
@@ -207,37 +207,37 @@ namespace rsx
 
 		struct home_menu_settings_audio : public home_menu_settings_page
 		{
-			home_menu_settings_audio(u16 x, u16 y, u16 width, u16 height, bool use_separators, home_menu_page* parent);
+			home_menu_settings_audio(s16 x, s16 y, u16 width, u16 height, bool use_separators, home_menu_page* parent);
 		};
 
 		struct home_menu_settings_video : public home_menu_settings_page
 		{
-			home_menu_settings_video(u16 x, u16 y, u16 width, u16 height, bool use_separators, home_menu_page* parent);
+			home_menu_settings_video(s16 x, s16 y, u16 width, u16 height, bool use_separators, home_menu_page* parent);
 		};
 
 		struct home_menu_settings_advanced : public home_menu_settings_page
 		{
-			home_menu_settings_advanced(u16 x, u16 y, u16 width, u16 height, bool use_separators, home_menu_page* parent);
+			home_menu_settings_advanced(s16 x, s16 y, u16 width, u16 height, bool use_separators, home_menu_page* parent);
 		};
 
 		struct home_menu_settings_input : public home_menu_settings_page
 		{
-			home_menu_settings_input(u16 x, u16 y, u16 width, u16 height, bool use_separators, home_menu_page* parent);
+			home_menu_settings_input(s16 x, s16 y, u16 width, u16 height, bool use_separators, home_menu_page* parent);
 		};
 
 		struct home_menu_settings_overlays : public home_menu_settings_page
 		{
-			home_menu_settings_overlays(u16 x, u16 y, u16 width, u16 height, bool use_separators, home_menu_page* parent);
+			home_menu_settings_overlays(s16 x, s16 y, u16 width, u16 height, bool use_separators, home_menu_page* parent);
 		};
 
 		struct home_menu_settings_performance_overlay : public home_menu_settings_page
 		{
-			home_menu_settings_performance_overlay(u16 x, u16 y, u16 width, u16 height, bool use_separators, home_menu_page* parent);
+			home_menu_settings_performance_overlay(s16 x, s16 y, u16 width, u16 height, bool use_separators, home_menu_page* parent);
 		};
 
 		struct home_menu_settings_debug : public home_menu_settings_page
 		{
-			home_menu_settings_debug(u16 x, u16 y, u16 width, u16 height, bool use_separators, home_menu_page* parent);
+			home_menu_settings_debug(s16 x, s16 y, u16 width, u16 height, bool use_separators, home_menu_page* parent);
 		};
 	}
 }

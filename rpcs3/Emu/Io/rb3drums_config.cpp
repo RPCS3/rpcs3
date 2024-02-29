@@ -1,0 +1,44 @@
+#include "stdafx.h"
+#include "rb3drums_config.h"
+#include <charconv>
+
+LOG_CHANNEL(cfg_log, "CFG");
+
+cfg_rb3drums g_cfg_rb3drums;
+
+cfg_rb3drums::cfg_rb3drums()
+	: cfg::node()
+#ifdef _WIN32
+	  ,
+	  path(fs::get_config_dir() + "config/rb3drums.yml")
+#else
+	  ,
+	  path(fs::get_config_dir() + "rb3drums.yml")
+#endif
+{
+}
+
+bool cfg_rb3drums::load()
+{
+	cfg_log.notice("Loading rb3drums config from '%s'", path);
+
+	if (fs::file cfg_file{path, fs::read})
+	{
+		return from_string(cfg_file.to_string());
+	}
+
+	cfg_log.notice("No rb3drums config found. Using default settings. Path: %s", path);
+	from_default();
+	save();
+	return false;
+}
+
+void cfg_rb3drums::save() const
+{
+	cfg_log.notice("Saving rb3drums config to '%s'", path);
+
+	if (!cfg::node::save(path))
+	{
+		cfg_log.error("Failed to save rb3drums config to '%s' (error=%s)", path, fs::g_tls_error);
+	}
+}

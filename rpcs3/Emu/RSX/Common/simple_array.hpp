@@ -6,7 +6,8 @@
 
 namespace rsx
 {
-	template <typename Ty> requires std::is_trivially_destructible_v<Ty>
+	template <typename Ty>
+		requires std::is_trivially_destructible_v<Ty>
 	struct simple_array
 	{
 	public:
@@ -15,13 +16,21 @@ namespace rsx
 		using value_type = Ty;
 
 	private:
-		u32 _capacity = 0;
+		static constexpr u32 _local_capacity = std::max<u32>(64u / sizeof(Ty), 1u);
+		char _local_storage[_local_capacity * sizeof(Ty)];
+
+		u32 _capacity = _local_capacity;
+		Ty* _data = _local_capacity ? reinterpret_cast<Ty*>(_local_storage) : nullptr;
 		u32 _size = 0;
-		Ty* _data = nullptr;
 
 		inline u64 offset(const_iterator pos)
 		{
 			return (_data) ? u64(pos - _data) : 0ull;
+		}
+
+		bool is_local_storage() const
+		{
+			return _data == reinterpret_cast<const Ty*>(_local_storage);
 		}
 
 	public:
@@ -56,12 +65,12 @@ namespace rsx
 
 		simple_array(const simple_array& other)
 		{
-			_capacity = other._capacity;
-			_size = other._size;
+			resize(other._size);
 
-			const auto size_bytes = sizeof(Ty) * _capacity;
-			_data = static_cast<Ty*>(malloc(size_bytes));
-			std::memcpy(_data, other._data, size_bytes);
+			if (_size)
+			{
+				std::memcpy(_data, other._data, size_bytes());
+			}
 		}
 
 		simple_array(simple_array&& other) noexcept
@@ -73,7 +82,12 @@ namespace rsx
 		{
 			if (&other != this)
 			{
-				simple_array{ other }.swap(*this);
+				resize(other._size);
+
+				if (_size)
+				{
+					std::memcpy(_data, other._data, size_bytes());
+				}
 			}
 
 			return *this;
@@ -89,25 +103,85 @@ namespace rsx
 		{
 			if (_data)
 			{
-				free(_data);
+				if (!is_local_storage())
+				{
+					free(_data);
+				}
+
 				_data = nullptr;
 				_size = _capacity = 0;
 			}
 		}
 
-		void swap(simple_array<Ty>& other) noexcept
+		void swap(simple_array<Ty>& that) noexcept
 		{
-			std::swap(_capacity, other._capacity);
-			std::swap(_size, other._size);
-			std::swap(_data, other._data);
+			if (!_size && !that._size)
+			{
+				// NOP. Surprisingly common
+				return;
+			}
+
+			const auto _this_is_local = is_local_storage();
+			const auto _that_is_local = that.is_local_storage();
+
+			if (!_this_is_local && !_that_is_local)
+			{
+				std::swap(_capacity, that._capacity);
+				std::swap(_size, that._size);
+				std::swap(_data, that._data);
+				return;
+			}
+
+			if (!_size)
+			{
+				*this = that;
+				that.clear();
+				return;
+			}
+
+			if (!that._size)
+			{
+				that = *this;
+				clear();
+				return;
+			}
+
+			if (_this_is_local != _that_is_local)
+			{
+				// Mismatched usage of the stack storage.
+				rsx::simple_array<Ty> tmp{ *this };
+				*this = that;
+				that = tmp;
+				return;
+			}
+
+			// Use memcpy to allow compiler optimizations
+			Ty _stack_alloc[_local_capacity];
+			std::memcpy(_stack_alloc, that._data, that.size_bytes());
+			std::memcpy(that._data, _data, size_bytes());
+			std::memcpy(_data, _stack_alloc, that.size_bytes());
+			std::swap(_size, that._size);
 		}
 
 		void reserve(u32 size)
 		{
 			if (_capacity >= size)
+			{
 				return;
+			}
 
-			ensure(_data = static_cast<Ty*>(std::realloc(_data, sizeof(Ty) * size))); // "realloc() failed!"
+			if (is_local_storage())
+			{
+				// Switch to heap storage
+				_data = static_cast<Ty*>(std::malloc(sizeof(Ty) * size));
+				std::memcpy(_data, _local_storage, size_bytes());
+			}
+			else
+			{
+				// Extend heap storage
+				ensure(_data = static_cast<Ty*>(std::realloc(_data, sizeof(Ty) * size))); // "realloc() failed!"
+			}
+
 			_capacity = size;
 		}
 
@@ -334,6 +408,18 @@ namespace rsx
 			}
 
 			std::sort(begin(), end(), predicate);
+		}
+
+		template <typename F, typename U = std::invoke_result<F, const Ty&>::type>
+			requires std::is_invocable_v<F, const Ty&>
+		simple_array<U> map(F&& xform) const
+		{
+			simple_array<U> result(size());
+			for (auto it = begin(); it != end(); ++it)
+			{
+				result.push_back(xform(*it));
+			}
+			return result;
 		}
 	};
 }

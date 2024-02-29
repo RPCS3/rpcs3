@@ -208,7 +208,7 @@ namespace rsx
 			num_progress_bars = type.progress_bar_count;
 			if (num_progress_bars)
 			{
-				u16 offset = 58;
+				s16 offset = 58;
 				::at32(progress_bars, 0).set_pos(240, 412);
 
 				if (num_progress_bars > 1)

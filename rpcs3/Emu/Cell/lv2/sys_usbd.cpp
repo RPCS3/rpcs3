@@ -25,6 +25,8 @@
 #include "Emu/Io/turntable_config.h"
 #include "Emu/Io/RB3MidiKeyboard.h"
 #include "Emu/Io/RB3MidiGuitar.h"
+#include "Emu/Io/RB3MidiDrums.h"
+#include "Emu/Io/rb3drums_config.h"
 #include "Emu/Io/usio.h"
 #include "Emu/Io/usio_config.h"
 #include "Emu/Io/midi_config_types.h"
@@ -158,42 +160,56 @@ void LIBUSB_CALL callback_transfer(struct libusb_transfer* transfer)
 	usbh.transfer_complete(transfer);
 }
 
+static void LIBUSB_CALL log_cb(libusb_context* /*ctx*/, enum libusb_log_level level, const char* str)
+{
+	if (!str)
+		return;
+
+	const std::string msg = fmt::trim(str, " \t\n");
+
+	switch (level)
+	{
+	case LIBUSB_LOG_LEVEL_ERROR:
+		sys_usbd.error("libusb log: %s", msg);
+		break;
+	case LIBUSB_LOG_LEVEL_WARNING:
+		sys_usbd.warning("libusb log: %s", msg);
+		break;
+	case LIBUSB_LOG_LEVEL_INFO:
+		sys_usbd.notice("libusb log: %s", msg);
+		break;
+	case LIBUSB_LOG_LEVEL_DEBUG:
+		sys_usbd.trace("libusb log: %s", msg);
+		break;
+	default:
+		break;
+	}
+}
+
 usb_handler_thread::usb_handler_thread()
 {
+#if LIBUSB_API_VERSION >= 0x0100010A
+	libusb_init_option log_lv_opt{};
+	log_lv_opt.option = LIBUSB_OPTION_LOG_LEVEL;
+	log_lv_opt.value.ival = LIBUSB_LOG_LEVEL_WARNING;// You can also set the LIBUSB_DEBUG env variable instead
+
+	libusb_init_option log_cb_opt{};
+	log_cb_opt.option = LIBUSB_OPTION_LOG_CB;
+	log_cb_opt.value.log_cbval = &log_cb;
+
+	std::vector<libusb_init_option> options = {
+		std::move(log_lv_opt),
+		std::move(log_cb_opt)
+	};
+
+	if (int res = libusb_init_context(&ctx, options.data(), static_cast<int>(options.size())); res < 0)
+#else
 	if (int res = libusb_init(&ctx); res < 0)
+#endif
 	{
 		sys_usbd.error("Failed to initialize sys_usbd: %s", libusb_error_name(res));
 		return;
 	}
-
-#if LIBUSB_API_VERSION >= 0x01000107
-	// Set LIBUSB_DEBUG env variable to receive log messages
-	libusb_set_log_cb(ctx, [](libusb_context* /* ctx */, libusb_log_level level, const char* str)
-	{
-		if (!str)
-			return;
-
-		const std::string msg = fmt::trim(str, " \t\n");
-
-		switch (level)
-		{
-		case LIBUSB_LOG_LEVEL_ERROR:
-			sys_usbd.error("libusb log: %s", msg);
-			break;
-		case LIBUSB_LOG_LEVEL_WARNING:
-			sys_usbd.warning("libusb log: %s", msg);
-			break;
-		case LIBUSB_LOG_LEVEL_INFO:
-			sys_usbd.notice("libusb log: %s", msg);
-			break;
-		case LIBUSB_LOG_LEVEL_DEBUG:
-			sys_usbd.trace("libusb log: %s", msg);
-			break;
-		default:
-			break;
-		}
-	}, LIBUSB_LOG_CB_CONTEXT);
-#endif
 
 	for (u32 index = 0; index < MAX_SYS_USBD_TRANSFERS; index++)
 	{
@@ -222,6 +238,7 @@ usb_handler_thread::usb_handler_thread()
 	bool found_skylander = false;
 	bool found_infinity  = false;
 	bool found_usj       = false;
+	bool found_rb3drums  = false;
 
 	for (ssize_t index = 0; index < ndev; index++)
 	{
@@ -389,6 +406,18 @@ usb_handler_thread::usb_handler_thread()
 		case midi_device_type::keyboard:
 			usb_devices.push_back(std::make_shared<usb_device_rb3_midi_keyboard>(get_new_location(), device.name));
 			break;
+		case midi_device_type::drums:
+			found_rb3drums = true;
+			usb_devices.push_back(std::make_shared<usb_device_rb3_midi_drums>(get_new_location(), device.name));
+			break;
+		}
+	}
+
+	if (found_rb3drums)
+	{
+		if (!g_cfg_rb3drums.load())
+		{
+			sys_usbd.notice("Could not load rb3drums config. Using defaults.");
 		}
 	}
 

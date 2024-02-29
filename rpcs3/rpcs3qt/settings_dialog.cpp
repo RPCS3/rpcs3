@@ -865,11 +865,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	const auto apply_fsr_specific_options = [r_creator, this]()
 	{
-		const bool is_vulkan = (ui->renderBox->currentText() == r_creator->Vulkan.name);
 		const auto [text, value] = get_data(ui->outputScalingMode, ui->outputScalingMode->currentIndex());
 		const bool fsr_selected = static_cast<output_scaling_mode>(value) == output_scaling_mode::fsr;
-		ui->fsrSharpeningStrength->setEnabled(is_vulkan && fsr_selected);
-		ui->fsrSharpeningStrengthReset->setEnabled(is_vulkan && fsr_selected);
+		ui->fsrSharpeningStrength->setEnabled(fsr_selected);
+		ui->fsrSharpeningStrengthReset->setEnabled(fsr_selected);
 	};
 
 	// Handle connects to disable specific checkboxes that depend on GUI state.
@@ -1232,6 +1231,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	SubscribeTooltip(ui->loadSdlMappings, tooltips.settings.sdl_mappings);
 #else
 	ui->loadSdlMappings->setVisible(false);
+#endif
+
+#ifndef _WIN32
+	// Remove raw mouse handler
+	remove_item(ui->mouseHandlerBox, static_cast<int>(mouse_handler::raw), static_cast<int>(g_cfg.io.mouse.def));
+	remove_item(ui->moveBox, static_cast<int>(move_handler::raw_mouse), static_cast<int>(g_cfg.io.move.def));
 #endif
 
 	// Midi
@@ -2069,6 +2074,24 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		SubscribeTooltip(ui->cb_show_restart_hint, tooltips.settings.show_restart_hint);
 		SubscribeTooltip(ui->gb_updates, tooltips.settings.check_update_start);
 		SubscribeTooltip(ui->gb_uuid, tooltips.settings.uuid);
+
+		// Pad navigation
+		SubscribeTooltip(ui->cb_pad_navigation, tooltips.settings.pad_navigation);
+		SubscribeTooltip(ui->cb_global_pad_navigation, tooltips.settings.global_navigation);
+		ui->cb_pad_navigation->setChecked(m_gui_settings->GetValue(gui::nav_enabled).toBool());
+		ui->cb_global_pad_navigation->setChecked(m_gui_settings->GetValue(gui::nav_global).toBool());
+#if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
+		connect(ui->cb_pad_navigation, &QCheckBox::toggled, [this](bool checked)
+		{
+			m_gui_settings->SetValue(gui::nav_enabled, checked);
+		});
+		connect(ui->cb_global_pad_navigation, &QCheckBox::toggled, [this](bool checked)
+		{
+			m_gui_settings->SetValue(gui::nav_global, checked);
+		});
+#else
+		ui->gb_gui_pad_input->setEnabled(false);
+#endif
 
 		// Discord:
 		SubscribeTooltip(ui->useRichPresence, tooltips.settings.use_rich_presence);

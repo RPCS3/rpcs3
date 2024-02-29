@@ -185,15 +185,4 @@
       <UniqueIdentifier>{8387b0fc-178f-4c9c-9cf2-03df99ce4df2}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
-  <ItemGroup>
-    <None Include="Emu\RSX\VK\upscalers\fsr1\fsr_ffx_a_flattened.inc">
-      <Filter>upscalers\fsr1</Filter>
-    </None>
-    <None Include="Emu\RSX\VK\upscalers\fsr1\fsr_ffx_fsr1_flattened.inc">
-      <Filter>upscalers\fsr1</Filter>
-    </None>
-    <None Include="Emu\RSX\VK\upscalers\fsr1\fsr_ubershader.glsl">
-      <Filter>upscalers\fsr1</Filter>
-    </None>
-  </ItemGroup>
 </Project>

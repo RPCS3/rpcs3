@@ -169,6 +169,9 @@
     <Filter Include="Io\Skateboard">
       <UniqueIdentifier>{bd1fd182-dc0d-45cb-bb9e-f68b2282d7eb}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Io\raw">
+      <UniqueIdentifier>{f44f5837-8651-456a-8584-5a2005ac613e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -717,6 +720,12 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_microphone_creator.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_midi_creator.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_midi_creator.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
     <ClCompile Include="rpcs3qt\render_creator.cpp">
       <Filter>Gui\settings</Filter>
     </ClCompile>
@@ -1050,6 +1059,12 @@
     <ClCompile Include="Input\skateboard_pad_handler.cpp">
       <Filter>Io\Skateboard</Filter>
     </ClCompile>
+    <ClCompile Include="Input\raw_mouse_handler.cpp">
+      <Filter>Io\raw</Filter>
+    </ClCompile>
+    <ClCompile Include="Input\gui_pad_thread.cpp">
+      <Filter>Io</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -1231,6 +1246,12 @@
     </ClInclude>
     <ClInclude Include="Input\skateboard_pad_handler.h">
       <Filter>Io\Skateboard</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\raw_mouse_handler.h">
+      <Filter>Io\raw</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\gui_pad_thread.h">
+      <Filter>Io</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

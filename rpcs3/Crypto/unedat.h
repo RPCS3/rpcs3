@@ -18,6 +18,7 @@ struct loaded_npdrm_keys
 {
 	atomic_t<u128> dec_keys[16]{};
 	atomic_t<u64> dec_keys_pos = 0;
+	u128 one_time_key{}; // For savestates
 	atomic_t<u32> npdrm_fds{0};
 
 	void install_decryption_key(u128 key)
@@ -61,7 +62,7 @@ struct EDAT_HEADER
 };
 
 // Decrypts full file, or null/empty file
-extern fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, int mode, u8 *custom_klic, bool verbose);
+extern fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, int mode, u8 *custom_klic);
 
 extern void read_npd_edat_header(const fs::file* input, NPD_HEADER& NPD, EDAT_HEADER& EDAT);
 extern bool VerifyEDATHeaderWithKLicense(const fs::file& input, const std::string& input_file_name, const u8* custom_klic, NPD_HEADER *npd_out = nullptr);
@@ -71,7 +72,10 @@ u128 GetEdatRifKeyFromRapFile(const fs::file& rap_file);
 struct EDATADecrypter final : fs::file_base
 {
 	// file stream
-	fs::file edata_file;
+	fs::file m_edata_file;
+	const fs::file& edata_file;
+	std::string m_file_name;
+	bool m_is_key_final = true;
 	u64 file_size{0};
 	u32 total_blocks{0};
 	u64 pos{0};
@@ -79,14 +83,23 @@ struct EDATADecrypter final : fs::file_base
 	NPD_HEADER npdHeader{};
 	EDAT_HEADER edatHeader{};
 
-	// Internal data buffers.
-	std::vector<u8> data_buf{};
-
 	u128 dec_key{};
 
 public:
-	EDATADecrypter(fs::file&& input, u128 dec_key = {})
-		: edata_file(std::move(input))
+	EDATADecrypter(fs::file&& input, u128 dec_key = {}, std::string file_name = {}, bool is_key_final = true) noexcept
+		: m_edata_file(std::move(input))
+		, edata_file(m_edata_file)
+		, m_file_name(std::move(file_name))
+		, m_is_key_final(is_key_final)
+		, dec_key(dec_key)
+	{
+	}
+
+	EDATADecrypter(const fs::file& input, u128 dec_key = {}, std::string file_name = {}, bool is_key_final = true) noexcept
+		: m_edata_file(fs::file{})
+		, edata_file(input)
+		, m_file_name(std::move(file_name))
+		, m_is_key_final(is_key_final)
 		, dec_key(dec_key)
 	{
 	}
@@ -149,5 +162,10 @@ public:
 		fs::file_id id = edata_file.get_id();
 		id.type.insert(0, "EDATADecrypter: "sv);
 		return id;
+	}
+
+	u128 get_key() const
+	{
+		return dec_key;
 	}
 };

@@ -618,6 +618,13 @@ error_code sceNpTerm()
 	nph.terminate_NP();
 	nph.is_NP_init = false;
 
+	idm::clear<signaling_ctx>();
+
+	auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
+	sigh.clear_sig_ctx();
+
+	// TODO: Other contexts(special handling for transaction contexts?)
+
 	return CELL_OK;
 }
 
@@ -1146,7 +1153,8 @@ error_code sceNpBasicSendMessage(vm::cptr<SceNpId> to, vm::cptr<void> data, u32 
 		.msgId = 0,
 		.mainType = SCE_NP_BASIC_MESSAGE_MAIN_TYPE_GENERAL,
 		.subType = SCE_NP_BASIC_MESSAGE_GENERAL_SUBTYPE_NONE,
-		.msgFeatures = {}};
+		.msgFeatures = {},
+		.data = std::vector<u8>(static_cast<const u8*>(data.get_ptr()), static_cast<const u8*>(data.get_ptr()) + size)};
 	std::set<std::string> npids;
 	npids.insert(std::string(to->handle.data));
 
@@ -1423,9 +1431,11 @@ error_code sceNpBasicSendMessageAttachment(ppu_thread& ppu, vm::cptr<SceNpId> to
 	return sceNpBasicSendMessageGui(ppu, msg, containerId);
 }
 
-error_code sceNpBasicRecvMessageAttachment(sys_memory_container_t containerId)
+error_code recv_message_gui(ppu_thread& ppu, u16 mainType, u32 recvOptions);
+
+error_code sceNpBasicRecvMessageAttachment(ppu_thread& ppu, sys_memory_container_t containerId)
 {
-	sceNp.todo("sceNpBasicRecvMessageAttachment(containerId=%d)", containerId);
+	sceNp.warning("sceNpBasicRecvMessageAttachment(containerId=%d)", containerId);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -1439,7 +1449,10 @@ error_code sceNpBasicRecvMessageAttachment(sys_memory_container_t containerId)
 		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
 
-	return CELL_OK;
+	const u16 main_type = SCE_NP_BASIC_MESSAGE_MAIN_TYPE_DATA_ATTACHMENT;
+	const u32 options = 0;
+
+	return recv_message_gui(ppu, main_type, options);
 }
 
 error_code sceNpBasicRecvMessageAttachmentLoad(SceNpBasicAttachmentDataId id, vm::ptr<void> buffer, vm::ptr<u32> size)
@@ -1521,6 +1534,13 @@ error_code sceNpBasicRecvMessageCustom(ppu_thread& ppu, u16 mainType, u32 recvOp
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
 
+	return recv_message_gui(ppu, mainType, recvOptions);
+}
+
+error_code recv_message_gui(ppu_thread& ppu, u16 mainType, u32 recvOptions)
+{
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
 	error_code result = CELL_CANCEL;
 
 	SceNpBasicMessageRecvAction recv_result{};
@@ -1562,23 +1582,55 @@ error_code sceNpBasicRecvMessageCustom(ppu_thread& ppu, u16 mainType, u32 recvOp
 	const auto msg_pair = opt_msg.value();
 	const auto& msg     = msg_pair->second;
 
-	const u32 event_to_send = (mainType == SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE) ? SCE_NP_BASIC_EVENT_RECV_INVITATION_RESULT : SCE_NP_BASIC_EVENT_RECV_CUSTOM_DATA_RESULT;
+	u32 event_to_send;
+	SceNpBasicAttachmentData data{};
+	data.size = static_cast<u32>(msg.data.size());
+
+	switch (mainType)
+	{
+	case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_DATA_ATTACHMENT:
+		event_to_send = SCE_NP_BASIC_EVENT_RECV_ATTACHMENT_RESULT;
+		data.id = SCE_NP_BASIC_SELECTED_MESSAGE_DATA;
+		break;
+	case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE:
+		event_to_send = SCE_NP_BASIC_EVENT_RECV_INVITATION_RESULT;
+		data.id = SCE_NP_BASIC_SELECTED_INVITATION_DATA;
+		break;
+	case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_CUSTOM_DATA:
+		event_to_send = SCE_NP_BASIC_EVENT_RECV_CUSTOM_DATA_RESULT;
+		data.id = SCE_NP_BASIC_SELECTED_MESSAGE_DATA;
+		break;
+	default:
+		fmt::throw_exception("recv_message_gui: Unexpected main type %d", mainType);
+	}
+
 	np::basic_event to_add{};
 	to_add.event = event_to_send;
 	strcpy_trunc(to_add.from.userId.handle.data, msg_pair->first);
 	strcpy_trunc(to_add.from.name.data, msg_pair->first);
-	to_add.data.resize(sizeof(SceNpBasicExtendedAttachmentData));
-	SceNpBasicExtendedAttachmentData* att_data = reinterpret_cast<SceNpBasicExtendedAttachmentData*>(to_add.data.data());
-	att_data->flags                            = 0; // ?
-	att_data->msgId                            = chosen_msg_id;
-	att_data->data.id = (mainType == SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE) ? SCE_NP_BASIC_SELECTED_INVITATION_DATA : SCE_NP_BASIC_SELECTED_MESSAGE_DATA;
-	att_data->data.size                        = static_cast<u32>(msg.data.size());
-	att_data->userAction                       = recv_result;
-	att_data->markedAsUsed                     = (recvOptions & SCE_NP_BASIC_RECV_MESSAGE_OPTIONS_PRESERVE) ? 0 : 1;
 
-	extra_nps::print_SceNpBasicExtendedAttachmentData(att_data);
+	if (mainType == SCE_NP_BASIC_MESSAGE_MAIN_TYPE_DATA_ATTACHMENT)
+	{
+		to_add.data.resize(sizeof(SceNpBasicAttachmentData));
+		SceNpBasicAttachmentData* att_data = reinterpret_cast<SceNpBasicAttachmentData*>(to_add.data.data());
+		*att_data = data;
 
-	nph.set_message_selected(att_data->data.id, chosen_msg_id);
+		extra_nps::print_SceNpBasicAttachmentData(att_data);
+	}
+	else
+	{
+		to_add.data.resize(sizeof(SceNpBasicExtendedAttachmentData));
+		SceNpBasicExtendedAttachmentData* att_data = reinterpret_cast<SceNpBasicExtendedAttachmentData*>(to_add.data.data());
+		att_data->flags                            = 0; // ?
+		att_data->msgId                            = chosen_msg_id;
+		att_data->data                             = data;
+		att_data->userAction                       = recv_result;
+		att_data->markedAsUsed                     = (recvOptions & SCE_NP_BASIC_RECV_MESSAGE_OPTIONS_PRESERVE) ? 0 : 1;
+
+		extra_nps::print_SceNpBasicExtendedAttachmentData(att_data);
+	}
+
+	nph.set_message_selected(data.id, chosen_msg_id);
 
 	// Is this sent if used from home menu but not from sceNpBasicRecvMessageCustom, not sure
 	// sysutil_send_system_cmd(CELL_SYSUTIL_NP_INVITATION_SELECTED, 0);
@@ -1615,7 +1667,7 @@ error_code sceNpBasicMarkMessageAsUsed(SceNpBasicMessageId msgId)
 
 error_code sceNpBasicAbortGui()
 {
-	sceNp.todo("sceNpBasicAbortGui()");
+	sceNp.warning("sceNpBasicAbortGui()");
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -1629,7 +1681,7 @@ error_code sceNpBasicAbortGui()
 		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
 
-	// TODO: abort GUI interaction
+	g_fxo->get<np_state>().abort_gui_flag = true;
 
 	return CELL_OK;
 }
@@ -1816,7 +1868,7 @@ error_code sceNpBasicGetFriendPresenceByNpId2(vm::cptr<SceNpId> npid, vm::ptr<Sc
 
 error_code sceNpBasicAddPlayersHistory(vm::cptr<SceNpId> npid, vm::cptr<char> description)
 {
-	sceNp.todo("sceNpBasicAddPlayersHistory(npid=*0x%x, description=*0x%x)", npid, description);
+	sceNp.warning("sceNpBasicAddPlayersHistory(npid=*0x%x, description=*0x%x)", npid, description);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -1842,7 +1894,7 @@ error_code sceNpBasicAddPlayersHistory(vm::cptr<SceNpId> npid, vm::cptr<char> de
 
 error_code sceNpBasicAddPlayersHistoryAsync(vm::cptr<SceNpId> npids, u32 count, vm::cptr<char> description, vm::ptr<u32> reqId)
 {
-	sceNp.todo("sceNpBasicAddPlayersHistoryAsync(npids=*0x%x, count=%d, description=*0x%x, reqId=*0x%x)", npids, count, description, reqId);
+	sceNp.warning("sceNpBasicAddPlayersHistoryAsync(npids=*0x%x, count=%d, description=*0x%x, reqId=*0x%x)", npids, count, description, reqId);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -2374,7 +2426,7 @@ error_code sceNpBasicGetMessageEntry(u32 type, u32 index, vm::ptr<SceNpUserInfo>
 
 error_code sceNpBasicGetEvent(vm::ptr<s32> event, vm::ptr<SceNpUserInfo> from, vm::ptr<u8> data, vm::ptr<u32> size)
 {
-	sceNp.warning("sceNpBasicGetEvent(event=*0x%x, from=*0x%x, data=*0x%x, size=*0x%x)", event, from, data, size);
+	sceNp.trace("sceNpBasicGetEvent(event=*0x%x, from=*0x%x, data=*0x%x, size=*0x%x)", event, from, data, size);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -2392,8 +2444,6 @@ error_code sceNpBasicGetEvent(vm::ptr<s32> event, vm::ptr<SceNpUserInfo> from, v
 	{
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
-
-	//*event = SCE_NP_BASIC_EVENT_OFFLINE; // This event only indicates a contact is offline, not the current status of the connection
 
 	return nph.get_basic_event(event, from, data, size);
 }
@@ -3945,7 +3995,7 @@ error_code sceNpManagerGetAccountAge(vm::ptr<s32> age)
 
 error_code sceNpManagerGetContentRatingFlag(vm::ptr<s32> isRestricted, vm::ptr<s32> age)
 {
-	sceNp.warning("sceNpManagerGetContentRatingFlag(isRestricted=*0x%x, age=*0x%x)", isRestricted, age);
+	sceNp.trace("sceNpManagerGetContentRatingFlag(isRestricted=*0x%x, age=*0x%x)", isRestricted, age);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -5472,6 +5522,34 @@ error_code sceNpScorePollAsync(s32 transId, vm::ptr<s32> result)
 	return CELL_OK;
 }
 
+std::pair<std::optional<error_code>, std::shared_ptr<score_transaction_ctx>> get_score_transaction_context(s32 transId, bool reset_transaction = true)
+{
+	auto trans_ctx = idm::get<score_transaction_ctx>(transId);
+
+	if (!trans_ctx)
+	{
+		return {SCE_NP_COMMUNITY_ERROR_INVALID_ID, {}};
+	}
+
+	if (reset_transaction)
+	{
+		// Check for games reusing score transaction context
+		// Unsure about the actual behaviour, only one game does this afaik(Marvel vs Capcom Origins)
+		// For now we just clean the context and pretend it's a new one
+		std::lock_guard lock(trans_ctx->mutex);
+		if (trans_ctx->result)
+		{
+			if (trans_ctx->thread.joinable())
+				trans_ctx->thread.join();
+			
+			trans_ctx->result = {};
+			trans_ctx->tdata = {};
+		}
+	}
+
+	return {{}, trans_ctx};
+}
+
 error_code scenp_score_get_board_info(s32 transId, SceNpScoreBoardId boardId, vm::ptr<SceNpScoreBoardInfo> boardInfo, vm::ptr<void> option, bool async)
 {
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
@@ -5496,12 +5574,9 @@ error_code scenp_score_get_board_info(s32 transId, SceNpScoreBoardId boardId, vm
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
-	auto trans_ctx = idm::get<score_transaction_ctx>(transId);
-
-	if (!trans_ctx)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
-	}
+	auto [res, trans_ctx] = get_score_transaction_context(transId);
+	if (res)
+		return *res;
 
 	nph.get_board_infos(trans_ctx, boardId, boardInfo, async);
 
@@ -5542,12 +5617,9 @@ error_code scenp_score_record_score(s32 transId, SceNpScoreBoardId boardId, SceN
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
-	auto trans_ctx = idm::get<score_transaction_ctx>(transId);
-
-	if (!trans_ctx)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
-	}
+	auto [res, trans_ctx] = get_score_transaction_context(transId);
+	if (res)
+		return *res;
 
 	const u8* data = nullptr;
 	u32 data_size = 0;
@@ -5622,17 +5694,9 @@ error_code scenp_score_record_game_data(s32 transId, SceNpScoreBoardId boardId, 
 		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
 	}
 
-	if (!transId)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
-	}
-
-	auto trans_ctx = idm::get<score_transaction_ctx>(transId);
-
-	if (!trans_ctx)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
-	}
+	auto [res, trans_ctx] = get_score_transaction_context(transId);
+	if (res)
+		return *res;
 
 	if (!nph.is_NP_init)
 	{
@@ -5682,12 +5746,9 @@ error_code scenp_score_get_game_data(s32 transId, SceNpScoreBoardId boardId, vm:
 		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
 	}
 
-	auto trans_ctx = idm::get<score_transaction_ctx>(transId);
-
-	if (!trans_ctx)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
-	}
+	auto [res, trans_ctx] = get_score_transaction_context(transId, false);
+	if (res)
+		return *res;
 
 	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
 	{
@@ -5746,11 +5807,9 @@ error_code scenp_score_get_ranking_by_npid(s32 transId, SceNpScoreBoardId boardI
 		return SCE_NP_COMMUNITY_ERROR_TOO_MANY_NPID;
 	}
 
-	auto trans_ctx = idm::get<score_transaction_ctx>(transId);
-	if (!trans_ctx)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
-	}
+	auto [res, trans_ctx] = get_score_transaction_context(transId);
+	if (res)
+		return *res;
 
 	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
 	{
@@ -5849,11 +5908,9 @@ error_code scenp_score_get_ranking_by_range(s32 transId, SceNpScoreBoardId board
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	auto trans_ctx = idm::get<score_transaction_ctx>(transId);
-	if (!trans_ctx)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
-	}
+	auto [res, trans_ctx] = get_score_transaction_context(transId);
+	if (res)
+		return *res;
 
 	if (option)
 	{
@@ -5952,11 +6009,9 @@ error_code scenp_score_get_friends_ranking(s32 transId, SceNpScoreBoardId boardI
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	auto trans_ctx = idm::get<score_transaction_ctx>(transId);
-	if (!trans_ctx)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
-	}
+	auto [res, trans_ctx] = get_score_transaction_context(transId);
+	if (res)
+		return *res;
 
 	if (!rankArray || !totalRecord || !lastSortDate)
 	{
@@ -6046,12 +6101,9 @@ error_code scenp_score_censor_comment(s32 transId, vm::cptr<char> comment, vm::p
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
-	auto trans_ctx = idm::get<score_transaction_ctx>(transId);
-
-	if (!trans_ctx)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
-	}
+	auto [res, trans_ctx] = get_score_transaction_context(transId);
+	if (res)
+		return *res;
 
 	// TODO: actual implementation of this
 	trans_ctx->result = CELL_OK;
@@ -6104,12 +6156,9 @@ error_code scenp_score_sanitize_comment(s32 transId, vm::cptr<char> comment, vm:
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
 	}
 
-	auto trans_ctx = idm::get<score_transaction_ctx>(transId);
-
-	if (!trans_ctx)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
-	}
+	auto [res, trans_ctx] = get_score_transaction_context(transId);
+	if (res)
+		return *res;
 
 	// TODO: actual implementation of this
 	memcpy(sanitizedComment.get_ptr(), comment.get_ptr(), comment_len + 1);
@@ -6591,15 +6640,17 @@ error_code sceNpSignalingCreateCtx(vm::ptr<SceNpId> npId, vm::ptr<SceNpSignaling
 		return SCE_NP_SIGNALING_ERROR_INVALID_ARGUMENT;
 	}
 
-	//	if (current_contexts > SCE_NP_SIGNALING_CTX_MAX)
-	//{
-	//	return SCE_NP_SIGNALING_ERROR_CTX_MAX;
-	//}
+	u32 id = create_signaling_context(npId, handler, arg);
 
-	*ctx_id = create_signaling_context(npId, handler, arg);
+	if (!id)
+	{
+		return SCE_NP_SIGNALING_ERROR_CTX_MAX;
+	}
+
+	*ctx_id = id;
 
 	auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
-	sigh.set_sig_cb(*ctx_id, handler, arg);
+	sigh.add_sig_ctx(id);
 
 	return CELL_OK;
 }
@@ -6620,6 +6671,9 @@ error_code sceNpSignalingDestroyCtx(u32 ctx_id)
 		return SCE_NP_SIGNALING_ERROR_CTX_NOT_FOUND;
 	}
 
+	auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
+	sigh.remove_sig_ctx(ctx_id);
+
 	return CELL_OK;
 }
 
@@ -6634,8 +6688,16 @@ error_code sceNpSignalingAddExtendedHandler(u32 ctx_id, vm::ptr<SceNpSignalingHa
 		return SCE_NP_SIGNALING_ERROR_NOT_INITIALIZED;
 	}
 
-	auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
-	sigh.set_ext_sig_cb(ctx_id, handler, arg);
+	auto ctx = get_signaling_context(ctx_id);
+
+	if (!ctx)
+	{
+		return SCE_NP_SIGNALING_ERROR_CTX_NOT_FOUND;
+	}
+
+	std::lock_guard lock(ctx->mutex);
+	ctx->ext_handler = handler;
+	ctx->ext_arg = arg;
 
 	return CELL_OK;
 }
@@ -6656,6 +6718,15 @@ error_code sceNpSignalingSetCtxOpt(u32 ctx_id, s32 optname, s32 optval)
 		return SCE_NP_SIGNALING_ERROR_INVALID_ARGUMENT;
 	}
 
+	auto ctx = get_signaling_context(ctx_id);
+
+	if (!ctx)
+	{
+		return SCE_NP_SIGNALING_ERROR_CTX_NOT_FOUND;
+	}
+
+	// TODO
+
 	return CELL_OK;
 }
 
@@ -6674,6 +6745,15 @@ error_code sceNpSignalingGetCtxOpt(u32 ctx_id, s32 optname, vm::ptr<s32> optval)
 	{
 		return SCE_NP_SIGNALING_ERROR_INVALID_ARGUMENT;
 	}
+
+	auto ctx = get_signaling_context(ctx_id);
+
+	if (!ctx)
+	{
+		return SCE_NP_SIGNALING_ERROR_CTX_NOT_FOUND;
+	}
+
+	// TODO
 
 	return CELL_OK;
 }
@@ -6705,7 +6785,7 @@ error_code sceNpSignalingActivateConnection(u32 ctx_id, vm::ptr<SceNpId> npId, v
 
 error_code sceNpSignalingDeactivateConnection(u32 ctx_id, u32 conn_id)
 {
-	sceNp.todo("sceNpSignalingDeactivateConnection(ctx_id=%d, conn_id=%d)", ctx_id, conn_id);
+	sceNp.warning("sceNpSignalingDeactivateConnection(ctx_id=%d, conn_id=%d)", ctx_id, conn_id);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -6713,6 +6793,10 @@ error_code sceNpSignalingDeactivateConnection(u32 ctx_id, u32 conn_id)
 	{
 		return SCE_NP_SIGNALING_ERROR_NOT_INITIALIZED;
 	}
+
+	auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
+
+	sigh.stop_sig(conn_id, true);
 
 	return CELL_OK;
 }
@@ -6730,7 +6814,7 @@ error_code sceNpSignalingTerminateConnection(u32 ctx_id, u32 conn_id)
 
 	auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
 
-	sigh.stop_sig(conn_id);
+	sigh.stop_sig(conn_id, false);
 
 	return CELL_OK;
 }

@@ -17,7 +17,6 @@
 
 LOG_CHANNEL(sign_log, "Signaling");
 
-
 template <>
 void fmt_class_string<SignalingCommand>::format(std::string& out, u64 arg)
 {
@@ -32,6 +31,7 @@ void fmt_class_string<SignalingCommand>::format(std::string& out, u64 arg)
 			case signal_confirm: return "CONFIRM";
 			case signal_finished: return "FINISHED";
 			case signal_finished_ack: return "FINISHED_ACK";
+			case signal_info: return "INFO";
 			}
 
 			return unknown;
@@ -46,69 +46,112 @@ signaling_handler::signaling_handler()
 //// SIGNALING CALLBACKS ////
 /////////////////////////////
 
-void signaling_handler::set_sig_cb(u32 sig_cb_ctx, vm::ptr<SceNpSignalingHandler> sig_cb, vm::ptr<void> sig_cb_arg)
+void signaling_handler::add_sig_ctx(u32 ctx_id)
 {
 	std::lock_guard lock(data_mutex);
-	this->sig_cb_ctx = sig_cb_ctx;
-	this->sig_cb = sig_cb;
-	this->sig_cb_arg = sig_cb_arg;
+	sig_ctx_lst.insert(ctx_id);
 }
 
-void signaling_handler::set_ext_sig_cb(u32 sig_ext_cb_ctx, vm::ptr<SceNpSignalingHandler> sig_ext_cb, vm::ptr<void> sig_ext_cb_arg)
+void signaling_handler::remove_sig_ctx(u32 ctx_id)
 {
 	std::lock_guard lock(data_mutex);
-	this->sig_ext_cb_ctx = sig_ext_cb_ctx;
-	this->sig_ext_cb = sig_ext_cb;
-	this->sig_ext_cb_arg = sig_ext_cb_arg;
+	sig_ctx_lst.erase(ctx_id);
 }
 
-void signaling_handler::set_sig2_cb(u16 sig2_cb_ctx, vm::ptr<SceNpMatching2SignalingCallback> sig2_cb, vm::ptr<void> sig2_cb_arg)
+void signaling_handler::clear_sig_ctx()
 {
 	std::lock_guard lock(data_mutex);
-	this->sig2_cb_ctx = sig2_cb_ctx;
-	this->sig2_cb = sig2_cb;
-	this->sig2_cb_arg = sig2_cb_arg;
+	sig_ctx_lst.clear();
 }
 
-void signaling_handler::signal_sig_callback(u32 conn_id, int event)
+void signaling_handler::add_match2_ctx(u16 ctx_id)
 {
-	if (sig_cb)
+	std::lock_guard lock(data_mutex);
+	match2_ctx_lst.insert(ctx_id);
+}
+
+void signaling_handler::remove_match2_ctx(u16 ctx_id)
+{
+	std::lock_guard lock(data_mutex);
+	match2_ctx_lst.erase(ctx_id);
+}
+
+void signaling_handler::clear_match2_ctx()
+{
+	std::lock_guard lock(data_mutex);
+	match2_ctx_lst.clear();
+}
+
+void signaling_handler::signal_sig_callback(u32 conn_id, s32 event, s32 error_code)
+{
+	for (const auto& ctx_id : sig_ctx_lst)
 	{
-		sysutil_register_cb([sig_cb = this->sig_cb, sig_cb_ctx = this->sig_cb_ctx, conn_id, event, sig_cb_arg = this->sig_cb_arg](ppu_thread& cb_ppu) -> s32
-			{
-				sig_cb(cb_ppu, sig_cb_ctx, conn_id, event, 0, sig_cb_arg);
-				return 0;
-			});
-		sign_log.notice("Called sig CB: 0x%x (conn_id: %d)", event, conn_id);
+		const auto ctx = get_signaling_context(ctx_id);
+
+		if (!ctx)
+			continue;
+
+		std::lock_guard lock(ctx->mutex);
+
+		if (ctx->handler)
+		{
+			sysutil_register_cb([sig_cb = ctx->handler, sig_cb_ctx = ctx_id, conn_id, event, error_code, sig_cb_arg = ctx->arg](ppu_thread& cb_ppu) -> s32
+				{
+					sig_cb(cb_ppu, sig_cb_ctx, conn_id, event, error_code, sig_cb_arg);
+					return 0;
+				});
+			sign_log.notice("Called sig CB: 0x%x (conn_id: %d)", event, conn_id);
+		}
 	}
 
 	// extended callback also receives normal events
-	signal_ext_sig_callback(conn_id, event);
+	signal_ext_sig_callback(conn_id, event, error_code);
 }
 
-void signaling_handler::signal_ext_sig_callback(u32 conn_id, int event) const
+void signaling_handler::signal_ext_sig_callback(u32 conn_id, s32 event, s32 error_code) const
 {
-	if (sig_ext_cb)
+	for (const auto ctx_id : sig_ctx_lst)
 	{
-		sysutil_register_cb([sig_ext_cb = this->sig_ext_cb, sig_ext_cb_ctx = this->sig_ext_cb_ctx, conn_id, event, sig_ext_cb_arg = this->sig_ext_cb_arg](ppu_thread& cb_ppu) -> s32
-			{
-				sig_ext_cb(cb_ppu, sig_ext_cb_ctx, conn_id, event, 0, sig_ext_cb_arg);
-				return 0;
-			});
-		sign_log.notice("Called EXT sig CB: 0x%x (conn_id: %d)", event, conn_id);
+		const auto ctx = get_signaling_context(ctx_id);
+
+		if (!ctx)
+			continue;
+
+		std::lock_guard lock(ctx->mutex);
+
+		if (ctx->ext_handler)
+		{
+			sysutil_register_cb([sig_ext_cb = ctx->ext_handler, sig_ext_cb_ctx = ctx_id, conn_id, event, error_code, sig_ext_cb_arg = ctx->ext_arg](ppu_thread& cb_ppu) -> s32
+				{
+					sig_ext_cb(cb_ppu, sig_ext_cb_ctx, conn_id, event, error_code, sig_ext_cb_arg);
+					return 0;
+				});
+			sign_log.notice("Called EXT sig CB: 0x%x (conn_id: %d)", event, conn_id);
+		}
 	}
 }
 
-void signaling_handler::signal_sig2_callback(u64 room_id, u16 member_id, SceNpMatching2Event event) const
+void signaling_handler::signal_sig2_callback(u64 room_id, u16 member_id, SceNpMatching2Event event, s32 error_code) const
 {
-	if (room_id && sig2_cb)
+	if (room_id)
 	{
-		sysutil_register_cb([sig2_cb = this->sig2_cb, sig2_cb_ctx = this->sig2_cb_ctx, room_id, member_id, event, sig2_cb_arg = this->sig2_cb_arg](ppu_thread& cb_ppu) -> s32
+		for (const auto ctx_id : match2_ctx_lst)
+		{
+			const auto ctx = get_match2_context(ctx_id);
+
+			if (!ctx)
+				continue;
+
+			if (ctx->signaling_cb)
 			{
-				sig2_cb(cb_ppu, sig2_cb_ctx, room_id, member_id, event, 0, sig2_cb_arg);
-				return 0;
-			});
-		sign_log.notice("Called sig2 CB: 0x%x (room_id: %d, member_id: %d)", event, room_id, member_id);
+				sysutil_register_cb([sig2_cb = ctx->signaling_cb, sig2_cb_ctx = ctx_id, room_id, member_id, event, error_code, sig2_cb_arg = ctx->signaling_cb_arg](ppu_thread& cb_ppu) -> s32
+					{
+						sig2_cb(cb_ppu, sig2_cb_ctx, room_id, member_id, event, error_code, sig2_cb_arg);
+						return 0;
+					});
+				sign_log.notice("Called sig2 CB: 0x%x (room_id: %d, member_id: %d)", event, room_id, member_id);
+			}
+		}
 	}
 }
 
@@ -223,7 +266,7 @@ void signaling_handler::process_incoming_messages()
 		// Get signaling info for user to know if we should even bother looking further
 		auto si = get_signaling_ptr(sp);
 
-		if (!si && sp->command == signal_connect)
+		if (!si && (sp->command == signal_connect || sp->command == signal_info))
 		{
 			// Connection can be remotely established and not mutual
 			const u32 conn_id = get_always_conn_id(sp->npid);
@@ -288,6 +331,11 @@ void signaling_handler::process_incoming_messages()
 			schedule_repeat = false;
 			reschedule_packet(si, signal_ping, now + 10s);
 			break;
+		case signal_info:
+			update_si_addr(si, op_addr, op_port);
+			reply = false;
+			schedule_repeat = false;
+			break;
 		case signal_connect:
 			reply = true;
 			schedule_repeat = true;
@@ -306,7 +354,7 @@ void signaling_handler::process_incoming_messages()
 			retire_packet(si, signal_connect);
 			update_si_addr(si, op_addr, op_port);
 			update_si_mapped_addr(si, sp->sent_addr, sp->sent_port);
-			update_si_status(si, SCE_NP_SIGNALING_CONN_STATUS_ACTIVE);
+			update_si_status(si, SCE_NP_SIGNALING_CONN_STATUS_ACTIVE, CELL_OK);
 			break;
 		case signal_confirm:
 			update_rtt(sp->timestamp_receiver);
@@ -327,7 +375,7 @@ void signaling_handler::process_incoming_messages()
 		case signal_finished_ack:
 			reply = false;
 			schedule_repeat = false;
-			update_si_status(si, SCE_NP_SIGNALING_CONN_STATUS_INACTIVE);
+			update_si_status(si, SCE_NP_SIGNALING_CONN_STATUS_INACTIVE, SCE_NP_SIGNALING_ERROR_TERMINATED_BY_MYSELF);
 			retire_packet(si, signal_finished);
 			break;
 		default: sign_log.error("Invalid signaling command received"); continue;
@@ -371,12 +419,15 @@ void signaling_handler::operator()()
 			if (timestamp > now)
 				break;
 
-			if (sig.sig_info->time_last_msg_recvd < now - 60s)
+			SignalingCommand cmd = sig.packet.command;
+
+			if (sig.sig_info->time_last_msg_recvd < now - 60s && cmd != signal_info)
 			{
 				// We had no connection to opponent for 60 seconds, consider the connection dead
 				sign_log.notice("Timeout disconnection");
-				update_si_status(sig.sig_info, SCE_NP_SIGNALING_CONN_STATUS_INACTIVE);
-				break; // qpackets will be emptied of all packets for this user so we're requeuing
+				update_si_status(sig.sig_info, SCE_NP_SIGNALING_CONN_STATUS_INACTIVE, SCE_NP_SIGNALING_ERROR_TIMEOUT);
+				retire_packet(sig.sig_info, signal_ping); // Retire ping packet if necessary
+				break; // qpackets has been emptied of all packets for this user so we're requeuing
 			}
 
 			// Update the timestamp if necessary
@@ -397,7 +448,6 @@ void signaling_handler::operator()()
 			send_signaling_packet(sig.packet, sig.sig_info->addr, sig.sig_info->port);
 
 			// Reschedule another packet
-			SignalingCommand cmd = sig.packet.command;
 			auto& si = sig.sig_info;
 
 			std::chrono::milliseconds delay(500);
@@ -416,9 +466,21 @@ void signaling_handler::operator()()
 			case signal_finished_ack:
 				delay = REPEAT_FINISHED_DELAY;
 				break;
+			case signal_info:
+				// Don't reschedule
+				if (si->info_counter == 0)
+				{
+					it = qpackets.erase(it);
+					continue;
+				}
+
+				delay = REPEAT_INFO_DELAY;
+				si->info_counter--;
+				break;
 			}
 
 			it++;
+
 			reschedule_packet(si, cmd, now + delay);
 		}
 
@@ -505,7 +567,7 @@ void signaling_handler::update_si_mapped_addr(std::shared_ptr<signaling_info>& s
 	}
 }
 
-void signaling_handler::update_si_status(std::shared_ptr<signaling_info>& si, s32 new_status)
+void signaling_handler::update_si_status(std::shared_ptr<signaling_info>& si, s32 new_status, s32 error_code)
 {
 	if (!si)
 		return;
@@ -514,17 +576,17 @@ void signaling_handler::update_si_status(std::shared_ptr<signaling_info>& si, s3
 	{
 		si->conn_status = SCE_NP_SIGNALING_CONN_STATUS_ACTIVE;
 
-		signal_sig_callback(si->conn_id, SCE_NP_SIGNALING_EVENT_ESTABLISHED);
-		signal_sig2_callback(si->room_id, si->member_id, SCE_NP_MATCHING2_SIGNALING_EVENT_Established);
+		signal_sig_callback(si->conn_id, SCE_NP_SIGNALING_EVENT_ESTABLISHED, error_code);
+		signal_sig2_callback(si->room_id, si->member_id, SCE_NP_MATCHING2_SIGNALING_EVENT_Established, error_code);
 
 		if (si->op_activated)
-			signal_ext_sig_callback(si->conn_id, SCE_NP_SIGNALING_EVENT_EXT_MUTUAL_ACTIVATED);
+			signal_ext_sig_callback(si->conn_id, SCE_NP_SIGNALING_EVENT_EXT_MUTUAL_ACTIVATED, CELL_OK);
 	}
 	else if ((si->conn_status == SCE_NP_SIGNALING_CONN_STATUS_PENDING || si->conn_status == SCE_NP_SIGNALING_CONN_STATUS_ACTIVE) && new_status == SCE_NP_SIGNALING_CONN_STATUS_INACTIVE)
 	{
 		si->conn_status = SCE_NP_SIGNALING_CONN_STATUS_INACTIVE;
-		signal_sig_callback(si->conn_id, SCE_NP_SIGNALING_EVENT_DEAD);
-		signal_sig2_callback(si->room_id, si->member_id, SCE_NP_MATCHING2_SIGNALING_EVENT_Dead);
+		signal_sig_callback(si->conn_id, SCE_NP_SIGNALING_EVENT_DEAD, error_code);
+		signal_sig2_callback(si->room_id, si->member_id, SCE_NP_MATCHING2_SIGNALING_EVENT_Dead, error_code);
 		retire_all_packets(si);
 	}
 }
@@ -536,15 +598,15 @@ void signaling_handler::update_ext_si_status(std::shared_ptr<signaling_info>& si
 		si->op_activated = true;
 
 		if (si->conn_status != SCE_NP_SIGNALING_CONN_STATUS_ACTIVE)
-			signal_ext_sig_callback(si->conn_id, SCE_NP_SIGNALING_EVENT_EXT_PEER_ACTIVATED);
+			signal_ext_sig_callback(si->conn_id, SCE_NP_SIGNALING_EVENT_EXT_PEER_ACTIVATED, CELL_OK);
 		else
-			signal_ext_sig_callback(si->conn_id, SCE_NP_SIGNALING_EVENT_EXT_MUTUAL_ACTIVATED);
+			signal_ext_sig_callback(si->conn_id, SCE_NP_SIGNALING_EVENT_EXT_MUTUAL_ACTIVATED, CELL_OK);
 	}
 	else if (!op_activated && si->op_activated)
 	{
 		si->op_activated = false;
 
-		signal_ext_sig_callback(si->conn_id, SCE_NP_SIGNALING_EVENT_EXT_PEER_DEACTIVATED);
+		signal_ext_sig_callback(si->conn_id, SCE_NP_SIGNALING_EVENT_EXT_PEER_DEACTIVATED, CELL_OK);
 	}
 }
 
@@ -620,20 +682,37 @@ void signaling_handler::start_sig(u32 conn_id, u32 addr, u16 port)
 	ensure(sig_peers.contains(conn_id));
 	std::shared_ptr<signaling_info> si = ::at32(sig_peers, conn_id);
 
-	si->addr = addr;
-	si->port = port;
+	const auto now = steady_clock::now();
+
+	si->time_last_msg_recvd = now;
+
+	// Only update if those haven't been set before(possible we received a signal_info before)
+	if (si->addr == 0 || si->port == 0)
+	{
+		si->addr = addr;
+		si->port = port;
+	}
 
 	send_signaling_packet(sent_packet, si->addr, si->port);
-	queue_signaling_packet(sent_packet, si, steady_clock::now() + REPEAT_CONNECT_DELAY);
+	queue_signaling_packet(sent_packet, si, now + REPEAT_CONNECT_DELAY);
 	wake_up();
 }
 
-void signaling_handler::stop_sig_nl(u32 conn_id)
+void signaling_handler::stop_sig_nl(u32 conn_id, bool forceful)
 {
 	if (!sig_peers.contains(conn_id))
 		return;
 
 	std::shared_ptr<signaling_info> si = ::at32(sig_peers, conn_id);
+
+	retire_all_packets(si);
+
+	// If forceful we don't go through any transition and don't call any CB
+	if (forceful)
+	{
+		si->conn_status = SCE_NP_SIGNALING_CONN_STATUS_INACTIVE;
+		si->op_activated = false;
+	}
 
 	// Do not queue packets for an already dead connection
 	if (si->conn_status == SCE_NP_SIGNALING_CONN_STATUS_INACTIVE)
@@ -644,13 +723,13 @@ void signaling_handler::stop_sig_nl(u32 conn_id)
 
 	send_signaling_packet(sent_packet, si->addr, si->port);
 	queue_signaling_packet(sent_packet, std::move(si), steady_clock::now() + REPEAT_FINISHED_DELAY);
+	wake_up();
 }
 
-void signaling_handler::stop_sig(u32 conn_id)
+void signaling_handler::stop_sig(u32 conn_id, bool forceful)
 {
 	std::lock_guard lock(data_mutex);
-
-	stop_sig_nl(conn_id);
+	stop_sig_nl(conn_id, forceful);
 }
 
 void signaling_handler::disconnect_sig2_users(u64 room_id)
@@ -661,9 +740,27 @@ void signaling_handler::disconnect_sig2_users(u64 room_id)
 	{
 		if (si->room_id == room_id)
 		{
-			stop_sig_nl(conn_id);
+			stop_sig_nl(conn_id, false);
 		}
 	}
+}
+
+void signaling_handler::send_information_packets(u32 addr, u16 port, const SceNpId& npid)
+{
+	std::lock_guard lock(data_mutex);
+
+	const u32 conn_id = get_always_conn_id(npid);
+	std::shared_ptr<signaling_info> si = ::at32(sig_peers, conn_id);
+	si->addr = addr;
+	si->port = port;
+	si->info_counter = 10;
+
+	auto& sent_packet = sig_packet;
+	sent_packet.command = signal_info;
+
+	send_signaling_packet(sent_packet, addr, port);
+	queue_signaling_packet(sent_packet, si, steady_clock::now() + REPEAT_INFO_DELAY);
+	wake_up();
 }
 
 u32 signaling_handler::get_always_conn_id(const SceNpId& npid)
@@ -709,7 +806,12 @@ u32 signaling_handler::init_sig2(const SceNpId& npid, u64 room_id, u16 member_id
 	auto& si = ::at32(sig_peers, conn_id);
 	si->room_id = room_id;
 	si->member_id = member_id;
-	si->conn_status = SCE_NP_SIGNALING_CONN_STATUS_PENDING;
+
+	// If connection exists from prior state notify
+	if (si->conn_status == SCE_NP_SIGNALING_CONN_STATUS_ACTIVE)
+		signal_sig2_callback(si->room_id, si->member_id, SCE_NP_MATCHING2_SIGNALING_EVENT_Established, CELL_OK);
+	else
+		si->conn_status = SCE_NP_SIGNALING_CONN_STATUS_PENDING;
 
 	return conn_id;
 }

@@ -475,7 +475,7 @@ namespace rsx
 			rsx::texture_upload_context context, rsx::texture_dimension_extended type, bool swizzled, component_order swizzle_flags, rsx::flags32_t flags) = 0;
 		virtual section_storage_type* upload_image_from_cpu(commandbuffer_type&, const address_range &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u32 pitch, u32 gcm_format, texture_upload_context context,
 			const std::vector<rsx::subresource_layout>& subresource_layout, rsx::texture_dimension_extended type, bool swizzled) = 0;
-		virtual section_storage_type* create_nul_section(commandbuffer_type&, const address_range &rsx_range, const image_section_attributes_t& attrs, bool memory_load) = 0;
+		virtual section_storage_type* create_nul_section(commandbuffer_type&, const address_range &rsx_range, const image_section_attributes_t& attrs, const GCM_tile_reference& tile, bool memory_load) = 0;
 		virtual void set_component_order(section_storage_type& section, u32 gcm_format, component_order expected) = 0;
 		virtual void insert_texture_barrier(commandbuffer_type&, image_storage_type* tex, bool strong_ordering = true) = 0;
 		virtual image_view_type generate_cubemap_from_images(commandbuffer_type&, u32 gcm_format, u16 size, const std::vector<copy_region_descriptor>& sources, const texture_channel_remap_t& remap_vector) = 0;
@@ -566,7 +566,7 @@ namespace rsx
 		 */
 	private:
 		template <typename ...Args>
-		void flush_set(commandbuffer_type& cmd, thrashed_set& data, Args&&... extras)
+		void flush_set(commandbuffer_type& cmd, thrashed_set& data, std::function<void()> on_data_transfer_completed, Args&&... extras)
 		{
 			AUDIT(!data.flushed);
 
@@ -606,6 +606,11 @@ namespace rsx
 				}
 
 				cleanup_after_dma_transfers(cmd);
+			}
+
+			if (on_data_transfer_completed)
+			{
+				on_data_transfer_completed();
 			}
 
 			for (auto &surface : data.sections_to_flush)
@@ -900,7 +905,12 @@ namespace rsx
 
 		//Invalidate range base implementation
 		template <typename ...Args>
-		thrashed_set invalidate_range_impl_base(commandbuffer_type& cmd, const address_range &fault_range_in, invalidation_cause cause, Args&&... extras)
+		thrashed_set invalidate_range_impl_base(
+			commandbuffer_type& cmd,
+			const address_range &fault_range_in,
+			invalidation_cause cause,
+			std::function<void()> on_data_transfer_completed = {},
+			Args&&... extras)
 		{
 #ifdef TEXTURE_CACHE_DEBUG
 			// Check that the cache has the correct protections
@@ -1091,7 +1101,7 @@ namespace rsx
 					// or there is nothing to flush but we have something to unprotect
 					if (has_flushables && !cause.skip_flush())
 					{
-						flush_set(cmd, result, std::forward<Args>(extras)...);
+						flush_set(cmd, result, on_data_transfer_completed, std::forward<Args>(extras)...);
 					}
 
 					unprotect_set(result);
@@ -1386,7 +1396,7 @@ namespace rsx
 				return;
 
 			std::lock_guard lock(m_cache_mutex);
-			invalidate_range_impl_base(cmd, rsx_range, invalidation_cause::committed_as_fbo, std::forward<Args>(extras)...);
+			invalidate_range_impl_base(cmd, rsx_range, invalidation_cause::committed_as_fbo, {}, std::forward<Args>(extras)...);
 		}
 
 		template <typename ...Args>
@@ -1474,30 +1484,40 @@ namespace rsx
 	public:
 
 		template <typename ...Args>
-		thrashed_set invalidate_address(commandbuffer_type& cmd, u32 address, invalidation_cause cause, Args&&... extras)
+		thrashed_set invalidate_address(
+			commandbuffer_type& cmd,
+			u32 address,
+			invalidation_cause cause,
+			std::function<void()> on_data_transfer_completed = {},
+			Args&&... extras)
 		{
-			//Test before trying to acquire the lock
+			// Test before trying to acquire the lock
 			const auto range = page_for(address);
 			if (!region_intersects_cache(range, !cause.is_read()))
 				return{};
 
 			std::lock_guard lock(m_cache_mutex);
-			return invalidate_range_impl_base(cmd, range, cause, std::forward<Args>(extras)...);
+			return invalidate_range_impl_base(cmd, range, cause, on_data_transfer_completed, std::forward<Args>(extras)...);
 		}
 
 		template <typename ...Args>
-		thrashed_set invalidate_range(commandbuffer_type& cmd, const address_range &range, invalidation_cause cause, Args&&... extras)
+		thrashed_set invalidate_range(
+			commandbuffer_type& cmd,
+			const address_range &range,
+			invalidation_cause cause,
+			std::function<void()> on_data_transfer_completed = {},
+			Args&&... extras)
 		{
-			//Test before trying to acquire the lock
+			// Test before trying to acquire the lock
 			if (!region_intersects_cache(range, !cause.is_read()))
 				return {};
 
 			std::lock_guard lock(m_cache_mutex);
-			return invalidate_range_impl_base(cmd, range, cause, std::forward<Args>(extras)...);
+			return invalidate_range_impl_base(cmd, range, cause, on_data_transfer_completed, std::forward<Args>(extras)...);
 		}
 
 		template <typename ...Args>
-		bool flush_all(commandbuffer_type& cmd, thrashed_set& data, Args&&... extras)
+		bool flush_all(commandbuffer_type& cmd, thrashed_set& data, std::function<void()> on_data_transfer_completed = {}, Args&&... extras)
 		{
 			std::lock_guard lock(m_cache_mutex);
 
@@ -1507,7 +1527,7 @@ namespace rsx
 			if (m_cache_update_tag.load() == data.cache_tag)
 			{
 				//1. Write memory to cpu side
-				flush_set(cmd, data, std::forward<Args>(extras)...);
+				flush_set(cmd, data, on_data_transfer_completed, std::forward<Args>(extras)...);
 
 				//2. Release all obsolete sections
 				unprotect_set(data);
@@ -1515,7 +1535,7 @@ namespace rsx
 			else
 			{
 				// The cache contents have changed between the two readings. This means the data held is useless
-				invalidate_range_impl_base(cmd, data.fault_range, data.cause.undefer(), std::forward<Args>(extras)...);
+				invalidate_range_impl_base(cmd, data.fault_range, data.cause.undefer(), on_data_transfer_completed, std::forward<Args>(extras)...);
 			}
 
 			return true;
@@ -2455,7 +2475,7 @@ namespace rsx
 
 			// Invalidate
 			const address_range tex_range = address_range::start_length(attributes.address, tex_size);
-			invalidate_range_impl_base(cmd, tex_range, invalidation_cause::read, std::forward<Args>(extras)...);
+			invalidate_range_impl_base(cmd, tex_range, invalidation_cause::read, {}, std::forward<Args>(extras)...);
 
 			// Upload from CPU. Note that sRGB conversion is handled in the FS
 			auto uploaded = upload_image_from_cpu(cmd, tex_range, attributes.width, attributes.height, attributes.depth, tex.get_exact_mipmap_count(), attributes.pitch, attributes.gcm_format,
@@ -2551,11 +2571,10 @@ namespace rsx
 				src_address += (src.width - src_w) * src_bpp;
 			}
 
-			const auto is_tiled_mem = [&](const utils::address_range& range)
+			const auto get_tiled_region = [&](const utils::address_range& range)
 			{
 				auto rsxthr = rsx::get_current_renderer();
-				auto region = rsxthr->get_tiled_memory_region(range);
-				return region.tile != nullptr;
+				return rsxthr->get_tiled_memory_region(range);
 			};
 
 			auto rtt_lookup = [&m_rtts, &cmd, &scale_x, &scale_y, this](u32 address, u32 width, u32 height, u32 pitch, u8 bpp, rsx::flags32_t access, bool allow_clipped) -> typename surface_store_type::surface_overlap_info
@@ -2662,8 +2681,10 @@ namespace rsx
 			};
 
 			// Check tiled mem
-			const auto dst_is_tiled = is_tiled_mem(utils::address_range::start_length(dst_address, dst.pitch * dst.clip_height));
-			const auto src_is_tiled = is_tiled_mem(utils::address_range::start_length(src_address, src.pitch * src.height));
+			const auto dst_tile = get_tiled_region(utils::address_range::start_length(dst_address, dst.pitch * dst.clip_height));
+			const auto src_tile = get_tiled_region(utils::address_range::start_length(src_address, src.pitch * src.height));
+			const auto dst_is_tiled = !!dst_tile;
+			const auto src_is_tiled = !!src_tile;
 
 			// Check if src/dst are parts of render targets
 			typename surface_store_type::surface_overlap_info dst_subres;
@@ -3124,7 +3145,7 @@ namespace rsx
 
 					lock.upgrade();
 
-					invalidate_range_impl_base(cmd, rsx_range, invalidation_cause::read, std::forward<Args>(extras)...);
+					invalidate_range_impl_base(cmd, rsx_range, invalidation_cause::read, {}, std::forward<Args>(extras)...);
 
 					cached_src = upload_image_from_cpu(cmd, rsx_range, image_width, image_height, 1, 1, src.pitch, gcm_format, texture_upload_context::blit_engine_src,
 						subresource_layout, rsx::texture_dimension_extended::texture_dimension_2d, dst.swizzled);
@@ -3201,7 +3222,7 @@ namespace rsx
 
 				// NOTE: Write flag set to remove all other overlapping regions (e.g shader_read or blit_src)
 				// NOTE: This step can potentially invalidate the newly created src image as well.
-				invalidate_range_impl_base(cmd, rsx_range, invalidation_cause::write, std::forward<Args>(extras)...);
+				invalidate_range_impl_base(cmd, rsx_range, invalidation_cause::write, {}, std::forward<Args>(extras)...);
 
 				if (use_null_region) [[likely]]
 				{
@@ -3219,9 +3240,10 @@ namespace rsx
 					{
 						.pitch = dst.pitch,
 						.width = static_cast<u16>(dst_dimensions.width),
-						.height = static_cast<u16>(dst_dimensions.height)
+						.height = static_cast<u16>(dst_dimensions.height),
+						.bpp = dst_bpp
 					};
-					cached_dest = create_nul_section(cmd, rsx_range, attrs, force_dma_load);
+					cached_dest = create_nul_section(cmd, rsx_range, attrs, dst_tile, force_dma_load);
 				}
 				else
 				{

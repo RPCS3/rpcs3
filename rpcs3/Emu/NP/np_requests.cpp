@@ -779,14 +779,13 @@ namespace np
 			}
 
 			// Only 2 cases should be timeout or caller setting result
-			ensure(trans_ctx->result);
-
+			ensure(trans_ctx->result, "transaction_async_handler: trans_ctx->result is no set");
 			trans_ctx->completion_cond.notify_one();
 		};
 
 		{
 			std::lock_guard lock_score(mutex_async_transactions);
-			ensure(async_transactions.insert({req_id, trans_ctx}).second);
+			ensure(async_transactions.insert({req_id, trans_ctx}).second, "transaction_async_handler: async_transactions insert failed");
 		}
 
 		if (async)

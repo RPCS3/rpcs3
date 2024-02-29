@@ -19,6 +19,7 @@
 #include "Emu/Io/MouseHandler.h"
 #include "Input/basic_keyboard_handler.h"
 #include "Input/basic_mouse_handler.h"
+#include "Input/raw_mouse_handler.h"
 
 #include "Emu/Audio/AudioBackend.h"
 #include "Emu/Audio/Null/NullAudioBackend.h"
@@ -141,15 +142,25 @@ EmuCallbacks main_application::CreateCallbacks()
 		{
 		case mouse_handler::null:
 		{
-			if (g_cfg.io.move == move_handler::mouse)
+			switch (g_cfg.io.move)
+			{
+			case move_handler::mouse:
 			{
 				basic_mouse_handler* ret = g_fxo->init<MouseHandlerBase, basic_mouse_handler>(Emu.DeserialManager());
 				ret->moveToThread(get_thread());
 				ret->SetTargetWindow(m_game_window);
+				break;
 			}
-			else
+			case move_handler::raw_mouse:
+			{
+				g_fxo->init<MouseHandlerBase, raw_mouse_handler>(Emu.DeserialManager());
+				break;
+			}
+			default:
 			{
 				g_fxo->init<MouseHandlerBase, NullMouseHandler>(Emu.DeserialManager());
+				break;
+			}
 			}
 
 			break;
@@ -159,6 +170,11 @@ EmuCallbacks main_application::CreateCallbacks()
 			basic_mouse_handler* ret = g_fxo->init<MouseHandlerBase, basic_mouse_handler>(Emu.DeserialManager());
 			ret->moveToThread(get_thread());
 			ret->SetTargetWindow(m_game_window);
+			break;
+		}
+		case mouse_handler::raw:
+		{
+			g_fxo->init<MouseHandlerBase, raw_mouse_handler>(Emu.DeserialManager());
 			break;
 		}
 		}

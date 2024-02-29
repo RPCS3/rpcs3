@@ -3798,20 +3798,37 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 						{
 							mself_record rec{};
 
+							std::set<u64> offs;
+
 							if (mself.read(rec) && rec.get_pos(mself.size()))
 							{
-								std::string name = rec.name;
+								if (rec.size <= 0x20)
+								{
+									continue;
+								}
+
+								if (!offs.emplace(rec.off).second)
+								{
+									// Duplicate
+									continue;
+								}
+
+								// Read characters safely
+								std::string name(sizeof(rec.name), '\0');
+
+								std::memcpy(name.data(), rec.name, name.size());
+								name = std::string(name.c_str());
 
 								upper = fmt::to_upper(name);
 
-								if (upper.ends_with(".SPRX"))
+								if (upper.find(".SPRX") != umax || upper.find(".PRX") != umax)
 								{
 									// .sprx inside .mself found
 									file_queue.emplace_back(dir_queue[i] + entry.name, rec.off, rec.size);
 									continue;
 								}
 
-								if (upper.ends_with(".SELF"))
+								if (upper.find(".SELF") != umax || upper.find(".ELF") != umax)
 								{
 									// .self inside .mself found
 									file_queue.emplace_back(dir_queue[i] + entry.name, rec.off, rec.size);
@@ -3881,7 +3898,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 			if (u64 off = offset)
 			{
 				// Adjust offset for MSELF
-				src = make_file_view(std::move(src), offset);
+				src = make_file_view(std::move(src), offset, file_size);
 
 				// Adjust path for MSELF too
 				fmt::append(path, "_x%x", off);

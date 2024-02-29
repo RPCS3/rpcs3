@@ -313,7 +313,10 @@ error_code sceNpMatching2Term2()
 		nph.is_NP2_Match2_init = false;
 	}
 
-	// TODO: for all contexts: sceNpMatching2DestroyContext
+	idm::clear<match2_ctx>();
+
+	auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
+	sigh.clear_match2_ctx();
 
 	return CELL_OK;
 }
@@ -331,6 +334,9 @@ error_code sceNpMatching2DestroyContext(SceNpMatching2ContextId ctxId)
 
 	if (!destroy_match2_context(ctxId))
 		return SCE_NP_MATCHING2_ERROR_CONTEXT_NOT_FOUND;
+
+	auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
+	sigh.remove_match2_ctx(ctxId);
 
 	return CELL_OK;
 }
@@ -439,7 +445,7 @@ error_code sceNpMatching2SearchRoom(
 }
 
 error_code sceNpMatching2SignalingGetConnectionStatus(
-    SceNpMatching2ContextId ctxId, SceNpMatching2RoomId roomId, SceNpMatching2RoomMemberId memberId, vm::ptr<int> connStatus, vm::ptr<np_in_addr> peerAddr, vm::ptr<np_in_port_t> peerPort)
+    SceNpMatching2ContextId ctxId, SceNpMatching2RoomId roomId, SceNpMatching2RoomMemberId memberId, vm::ptr<s32> connStatus, vm::ptr<np_in_addr> peerAddr, vm::ptr<np_in_port_t> peerPort)
 {
 	sceNp2.warning("sceNpMatching2SignalingGetConnectionStatus(ctxId=%d, roomId=%d, memberId=%d, connStatus=*0x%x, peerAddr=*0x%x, peerPort=*0x%x)", ctxId, roomId, memberId, connStatus, peerAddr, peerPort);
 
@@ -1333,8 +1339,19 @@ error_code sceNpMatching2RegisterSignalingCallback(SceNpMatching2ContextId ctxId
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
 
+	auto ctx = get_match2_context(ctxId);
+
+	if (!ctx)
+	{
+		return SCE_NP_MATCHING2_ERROR_CONTEXT_NOT_FOUND;
+	}
+
+	std::lock_guard lock(ctx->mutex);
+	ctx->signaling_cb = cbFunc;
+	ctx->signaling_cb_arg = cbFuncArg;
+
 	auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
-	sigh.set_sig2_cb(ctxId, cbFunc, cbFuncArg);
+	sigh.add_match2_ctx(ctxId);
 
 	return CELL_OK;
 }
@@ -1664,7 +1681,7 @@ error_code sceNpMatching2SendLobbyInvitation(
 
 error_code sceNpMatching2ContextStop(SceNpMatching2ContextId ctxId)
 {
-	sceNp2.todo("sceNpMatching2ContextStop(ctxId=%d)", ctxId);
+	sceNp2.warning("sceNpMatching2ContextStop(ctxId=%d)", ctxId);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 

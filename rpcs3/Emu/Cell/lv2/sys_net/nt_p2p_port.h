@@ -20,7 +20,8 @@
 #endif
 #endif
 
-constexpr s32 VPORT_P2P_HEADER_SIZE = sizeof(u16) + sizeof(u16);
+// dst_vport src_vport flags
+constexpr s32 VPORT_P2P_HEADER_SIZE = sizeof(u16) + sizeof(u16) + sizeof(u16);
 
 enum VPORT_P2P_FLAGS
 {

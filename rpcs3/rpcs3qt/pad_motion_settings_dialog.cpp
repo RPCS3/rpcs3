@@ -52,7 +52,7 @@ pad_motion_settings_dialog::pad_motion_settings_dialog(QDialog* parent, std::sha
 			if (device.is_buddy_only)
 			{
 				const QString device_name = QString::fromStdString(device.name);
-				const QVariant user_data = QVariant::fromValue(pad_device_info{ device.name, true });
+				const QVariant user_data = QVariant::fromValue(pad_device_info{ device.name, device_name, true });
 
 				ui->cb_choose_device->addItem(device_name, user_data);
 			}

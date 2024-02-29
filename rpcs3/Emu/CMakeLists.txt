@@ -141,12 +141,8 @@ if(USE_FAUDIO)
 endif()
 
 if(WIN32)
-    target_include_directories(rpcs3_emu PUBLIC "${PROJECT_SOURCE_DIR}/3rdparty/XAudio2Redist/include")
-    if(MSVC)
-        target_link_libraries(rpcs3_emu PRIVATE "${PROJECT_SOURCE_DIR}/3rdparty/XAudio2Redist/libs/xaudio2_9redist.lib")
-        target_link_options(rpcs3_emu PRIVATE /DELAYLOAD:xaudio2_9redist.dll)
-    else()
-        target_link_libraries(rpcs3_emu PRIVATE xaudio2_8)
+    if(NOT MSVC)
+        target_link_libraries(rpcs3_emu PRIVATE xaudio2_9)
     endif()
     target_sources(rpcs3_emu PRIVATE
         Audio/XAudio2/XAudio2Backend.cpp
@@ -347,6 +343,7 @@ target_sources(rpcs3_emu PRIVATE
     Cell/Modules/sceNpCommerce2.cpp
     Cell/Modules/sceNp.cpp
     Cell/Modules/sceNpMatchingInt.cpp
+    Cell/Modules/sceNpPlus.cpp
     Cell/Modules/sceNpSns.cpp
     Cell/Modules/sceNpTrophy.cpp
     Cell/Modules/sceNpTus.cpp
@@ -413,6 +410,8 @@ target_sources(rpcs3_emu PRIVATE
     Io/midi_config_types.cpp
     Io/RB3MidiKeyboard.cpp
     Io/RB3MidiGuitar.cpp
+    Io/RB3MidiDrums.cpp
+    Io/rb3drums_config.cpp
     Io/Buzz.cpp
     Io/Turntable.cpp
     Io/usio.cpp
@@ -515,6 +514,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/GL/glutils/program.cpp
     RSX/GL/glutils/ring_buffer.cpp
     RSX/GL/glutils/sampler.cpp
+    RSX/GL/upscalers/fsr1/fsr_pass.cpp
     RSX/GL/GLCommonDecompiler.cpp
     RSX/GL/GLCompute.cpp
     RSX/GL/GLDraw.cpp

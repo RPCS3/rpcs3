@@ -4,6 +4,7 @@
 #include "util/atomic.hpp"
 
 #include <QApplication>
+#include <QAbstractNativeEventFilter>
 #include <QElapsedTimer>
 #include <QTimer>
 #include <QTranslator>
@@ -80,6 +81,13 @@ private:
 	void StartPlaytime(bool start_playtime);
 	void UpdatePlaytime();
 	void StopPlaytime();
+
+	class native_event_filter : public QAbstractNativeEventFilter
+	{
+	public:
+		bool nativeEventFilter(const QByteArray& eventType, void* message, qintptr* result) override;
+
+	} m_native_event_filter;
 
 	QTranslator m_translator;
 	QTranslator m_translator_qt;

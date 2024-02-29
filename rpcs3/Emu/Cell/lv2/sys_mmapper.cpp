@@ -74,6 +74,7 @@ CellError lv2_memory::on_id_create()
 {
 	if (!exists && !ct->take(size))
 	{
+		sys_mmapper.error("lv2_memory::on_id_create(): Cannot allocate 0x%x bytes (0x%x available)", size, ct->size - ct->used);
 		return CELL_ENOMEM;
 	}
 

@@ -91,6 +91,12 @@
     <Filter Include="Emu\GPU\RSX\Overlays\Network">
       <UniqueIdentifier>{d7a60dc0-ac4e-4983-97d3-ce1328af49a7}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Emu\GPU\RSX\Program\Upscalers">
+      <UniqueIdentifier>{646a5689-94cc-43f3-82fb-213e21c7a31f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\GPU\RSX\Program\Upscalers\FSR1">
+      <UniqueIdentifier>{cab197c1-581c-49db-9d8b-670335b44cb2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Crypto\aes.cpp">
@@ -1194,6 +1200,12 @@
     </ClCompile>
     <ClCompile Include="Emu\RSX\Overlays\Network\overlay_sendmessage_dialog.cpp">
       <Filter>Emu\GPU\RSX\Overlays\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\RB3MidiDrums.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\rb3drums_config.cpp">
+      <Filter>Emu\Io</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -2422,6 +2434,15 @@
     <ClInclude Include="Emu\RSX\Overlays\Network\overlay_sendmessage_dialog.h">
       <Filter>Emu\GPU\RSX\Overlays\Network</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Io\RB3MidiDrums.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\rb3drums_config.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\raw_mouse_config.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Emu\RSX\Program\GLSLSnippets\GPUDeswizzle.glsl">
@@ -2498,6 +2519,15 @@
     </None>
     <None Include="Emu\RSX\Program\GLSLSnippets\VideoOutCalibrationPass.glsl">
       <Filter>Emu\GPU\RSX\Program\Snippets</Filter>
+    </None>
+    <None Include="Emu\RSX\Program\Upscalers\FSR1\fsr_ffx_a_flattened.inc">
+      <Filter>Emu\GPU\RSX\Program\Upscalers\FSR1</Filter>
+    </None>
+    <None Include="Emu\RSX\Program\Upscalers\FSR1\fsr_ffx_fsr1_flattened.inc">
+      <Filter>Emu\GPU\RSX\Program\Upscalers\FSR1</Filter>
+    </None>
+    <None Include="Emu\RSX\Program\Upscalers\FSR1\fsr_ubershader.glsl">
+      <Filter>Emu\GPU\RSX\Program\Upscalers\FSR1</Filter>
     </None>
   </ItemGroup>
 </Project>

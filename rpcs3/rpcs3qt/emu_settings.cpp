@@ -1009,6 +1009,7 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		{
 		case mouse_handler::null: return tr("Null", "Mouse handler");
 		case mouse_handler::basic: return tr("Basic", "Mouse handler");
+		case mouse_handler::raw: return tr("Raw", "Mouse handler");
 		}
 		break;
 	case emu_settings_type::CameraType:
@@ -1057,6 +1058,7 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case move_handler::null: return tr("Null", "Move handler");
 		case move_handler::fake: return tr("Fake", "Move handler");
 		case move_handler::mouse: return tr("Mouse", "Move handler");
+		case move_handler::raw_mouse: return tr("Raw Mouse", "Move handler");
 #ifdef HAVE_LIBEVDEV
 		case move_handler::gun: return tr("Gun", "Gun handler");
 #endif
@@ -1303,6 +1305,7 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case midi_device_type::guitar: return tr("Guitar (17 frets)", "Midi Device Type");
 		case midi_device_type::guitar_22fret: return tr("Guitar (22 frets)", "Midi Device Type");
 		case midi_device_type::keyboard: return tr("Keyboard", "Midi Device Type");
+		case midi_device_type::drums: return tr("Drums", "Midi Device Type");
 		}
 		break;
 	case emu_settings_type::XFloatAccuracy:

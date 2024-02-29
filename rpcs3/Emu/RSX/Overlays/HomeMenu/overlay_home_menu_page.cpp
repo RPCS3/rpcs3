@@ -7,7 +7,7 @@ namespace rsx
 {
 	namespace overlays
 	{
-		home_menu_page::home_menu_page(u16 x, u16 y, u16 width, u16 height, bool use_separators, home_menu_page* parent, const std::string& title)
+		home_menu_page::home_menu_page(s16 x, s16 y, u16 width, u16 height, bool use_separators, home_menu_page* parent, const std::string& title)
 			: list_view(width, height, use_separators)
 			, parent(parent)
 			, title(title)

@@ -3569,6 +3569,13 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		}
 	}
 
+	if (!m_bbs.count(entry_point))
+	{
+		// Invalid code
+		spu_log.error("[0x%x] Invalid code", entry_point);
+		return {};
+	}
+
 	// Fill entry map
 	while (true)
 	{
@@ -4563,10 +4570,14 @@ struct spu_llvm
 		}
 
 		u32 worker_index = 0;
+		u32 notify_compile_count = 0;
+		std::vector<u8> notify_compile(worker_count);
 
 		m_workers = make_single<named_thread_group<spu_llvm_worker>>("SPUW.", worker_count);
 		auto workers_ptr = m_workers.load();
 		auto& workers = *workers_ptr;
+
+		usz add_count = 65535;
 
 		while (thread_ctrl::state() != thread_state::aborting)
 		{
@@ -4583,9 +4594,24 @@ struct spu_llvm
 
 			if (enqueued.empty())
 			{
+				// Send pending notifications
+				if (notify_compile_count)
+				{
+					for (usz i = 0; i < worker_count; i++)
+					{
+						if (notify_compile[i])
+						{
+							(workers.begin() + (i % worker_count))->registered.notify();
+						}
+					}
+				}
+
 				// Interrupt profiler thread and put it to sleep
 				static_cast<void>(prof_mutex.reset());
 				thread_ctrl::wait_on(utils::bless<atomic_t<u32>>(&registered)[1], 0);
+				add_count = 65535; // Reset count
+				std::fill(notify_compile.begin(), notify_compile.end(), 0); // Reset notification flags
+				notify_compile_count = 0;
 				continue;
 			}
 
@@ -4613,8 +4639,34 @@ struct spu_llvm
 			// Remove item from the queue
 			enqueued.erase(found_it);
 
+			// Prefer using an inactive thread
+			for (usz i = 0; i < worker_count && !!(workers.begin() + (worker_index % worker_count))->registered; i++)
+			{
+				worker_index++;
+			}
+
 			// Push the workload
-			(workers.begin() + (worker_index++ % worker_count))->registered.push(reinterpret_cast<u64>(_old), &func);
+			const bool notify = (workers.begin() + (worker_index % worker_count))->registered.template push<false>(reinterpret_cast<u64>(_old), &func);
+
+			if (notify && !notify_compile[worker_index % worker_count])
+			{
+				notify_compile[worker_index % worker_count] = 1;
+				notify_compile_count++;
+
+				if (notify_compile_count == notify_compile.size())
+				{
+					// Notify all
+					for (usz i = 0; i < worker_count; i++)
+					{
+						(workers.begin() + (i % worker_count))->registered.notify();
+					}
+
+					std::fill(notify_compile.begin(), notify_compile.end(), 0); // Reset notification flags
+					notify_compile_count = 0;
+				}
+			}
+
+			worker_index++;
 		}
 
 		static_cast<void>(prof_mutex.init_always([&]{ samples.clear(); }));

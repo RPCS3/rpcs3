@@ -5,12 +5,17 @@
 #include "Emu/system_utils.hpp"
 #include "Emu/system_config.h"
 
+#include <mutex>
+
 LOG_CHANNEL(sdl_log, "SDL");
+
+std::mutex g_sdl_mutex;
+u32 g_sdl_handler_count = 0;
 
 constexpr u32 rumble_duration_ms = 500; // Some high number to keep rumble updates at a minimum.
 constexpr u32 rumble_refresh_ms = rumble_duration_ms - 100; // We need to keep updating the rumble. Choose a refresh timeout that is unlikely to run into missed rumble updates.
 
-sdl_pad_handler::sdl_pad_handler() : PadHandlerBase(pad_handler::sdl)
+sdl_pad_handler::sdl_pad_handler(bool emulation) : PadHandlerBase(pad_handler::sdl, emulation)
 {
 	button_list =
 	{
@@ -83,7 +88,13 @@ sdl_pad_handler::~sdl_pad_handler()
 		}
 	}
 
-	SDL_Quit();
+	// Only quit SDL if this is the last instance of the handler. SDL uses a global state internally...
+	std::lock_guard lock(g_sdl_mutex);
+	if (g_sdl_handler_count > 0 && --g_sdl_handler_count == 0)
+	{
+		sdl_log.notice("Quitting SDL ...");
+		SDL_Quit();
+	}
 }
 
 void sdl_pad_handler::init_config(cfg_pad* cfg)
@@ -146,78 +157,86 @@ bool sdl_pad_handler::Init()
 	if (m_is_init)
 		return true;
 
-	// Set non-dynamic hints before SDL_Init
-	if (!SDL_SetHint(SDL_HINT_JOYSTICK_THREAD, "1"))
-	{
-		sdl_log.error("Could not set SDL_HINT_JOYSTICK_THREAD: %s", SDL_GetError());
-	}
+	std::lock_guard lock(g_sdl_mutex);
 
-	if (SDL_Init(SDL_INIT_JOYSTICK | SDL_INIT_HAPTIC | SDL_INIT_GAMECONTROLLER) < 0)
+	// Only init SDL if this is the first instance of the handler. SDL uses a global state internally...
+	if (g_sdl_handler_count++ == 0)
 	{
-		sdl_log.error("Could not initialize! SDL Error: %s", SDL_GetError());
-		return false;
-	}
+		sdl_log.notice("Initializing SDL ...");
 
-	SDL_LogSetAllPriority(SDL_LOG_PRIORITY_VERBOSE);
-	SDL_LogSetOutputFunction([](void*, int category, SDL_LogPriority priority, const char* message)
-	{
-		std::string category_name;
-		switch (category)
+		// Set non-dynamic hints before SDL_Init
+		if (!SDL_SetHint(SDL_HINT_JOYSTICK_THREAD, "1"))
 		{
-		case SDL_LOG_CATEGORY_APPLICATION:
-			category_name = "app";
-			break;
-		case SDL_LOG_CATEGORY_ERROR:
-			category_name = "error";
-			break;
-		case SDL_LOG_CATEGORY_ASSERT:
-			category_name = "assert";
-			break;
-		case SDL_LOG_CATEGORY_SYSTEM:
-			category_name = "system";
-			break;
-		case SDL_LOG_CATEGORY_AUDIO:
-			category_name = "audio";
-			break;
-		case SDL_LOG_CATEGORY_VIDEO:
-			category_name = "video";
-			break;
-		case SDL_LOG_CATEGORY_RENDER:
-			category_name = "render";
-			break;
-		case SDL_LOG_CATEGORY_INPUT:
-			category_name = "input";
-			break;
-		case SDL_LOG_CATEGORY_TEST:
-			category_name = "test";
-			break;
-		default:
-			category_name = fmt::format("unknown(%d)", category);
-			break;
+			sdl_log.error("Could not set SDL_HINT_JOYSTICK_THREAD: %s", SDL_GetError());
 		}
 
-		switch (priority)
+		if (SDL_Init(SDL_INIT_JOYSTICK | SDL_INIT_HAPTIC | SDL_INIT_GAMECONTROLLER) < 0)
 		{
-		case SDL_LOG_PRIORITY_VERBOSE:
-		case SDL_LOG_PRIORITY_DEBUG:
-			sdl_log.trace("%s: %s", category_name, message);
-			break;
-		case SDL_LOG_PRIORITY_INFO:
-			sdl_log.notice("%s: %s", category_name, message);
-			break;
-		case SDL_LOG_PRIORITY_WARN:
-			sdl_log.warning("%s: %s", category_name, message);
-			break;
-		case SDL_LOG_PRIORITY_ERROR:
-			sdl_log.error("%s: %s", category_name, message);
-			break;
-		case SDL_LOG_PRIORITY_CRITICAL:
-			sdl_log.error("%s: %s", category_name, message);
-			break;
-		default:
-			break;
+			sdl_log.error("Could not initialize! SDL Error: %s", SDL_GetError());
+			return false;
 		}
-	}, nullptr);
+
+		SDL_LogSetAllPriority(SDL_LOG_PRIORITY_VERBOSE);
+		SDL_LogSetOutputFunction([](void*, int category, SDL_LogPriority priority, const char* message)
+		{
+			std::string category_name;
+			switch (category)
+			{
+			case SDL_LOG_CATEGORY_APPLICATION:
+				category_name = "app";
+				break;
+			case SDL_LOG_CATEGORY_ERROR:
+				category_name = "error";
+				break;
+			case SDL_LOG_CATEGORY_ASSERT:
+				category_name = "assert";
+				break;
+			case SDL_LOG_CATEGORY_SYSTEM:
+				category_name = "system";
+				break;
+			case SDL_LOG_CATEGORY_AUDIO:
+				category_name = "audio";
+				break;
+			case SDL_LOG_CATEGORY_VIDEO:
+				category_name = "video";
+				break;
+			case SDL_LOG_CATEGORY_RENDER:
+				category_name = "render";
+				break;
+			case SDL_LOG_CATEGORY_INPUT:
+				category_name = "input";
+				break;
+			case SDL_LOG_CATEGORY_TEST:
+				category_name = "test";
+				break;
+			default:
+				category_name = fmt::format("unknown(%d)", category);
+				break;
+			}
+
+			switch (priority)
+			{
+			case SDL_LOG_PRIORITY_VERBOSE:
+			case SDL_LOG_PRIORITY_DEBUG:
+				sdl_log.trace("%s: %s", category_name, message);
+				break;
+			case SDL_LOG_PRIORITY_INFO:
+				sdl_log.notice("%s: %s", category_name, message);
+				break;
+			case SDL_LOG_PRIORITY_WARN:
+				sdl_log.warning("%s: %s", category_name, message);
+				break;
+			case SDL_LOG_PRIORITY_ERROR:
+				sdl_log.error("%s: %s", category_name, message);
+				break;
+			case SDL_LOG_PRIORITY_CRITICAL:
+				sdl_log.error("%s: %s", category_name, message);
+				break;
+			default:
+				break;
+			}
+		}, nullptr);
+	}
 
 	if (g_cfg.io.load_sdl_mappings)
 	{

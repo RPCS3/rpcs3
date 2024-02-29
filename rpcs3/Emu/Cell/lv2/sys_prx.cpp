@@ -263,11 +263,19 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 
 	u128 klic = g_fxo->get<loaded_npdrm_keys>().last_key();
 
-	ppu_prx_object obj = decrypt_self(std::move(src), reinterpret_cast<u8*>(&klic), nullptr, true);
+	src = decrypt_self(std::move(src), reinterpret_cast<u8*>(&klic), nullptr, true);
+
+	if (!src)
+	{
+		return {CELL_PRX_ERROR_UNSUPPORTED_PRX_TYPE, +"Failed to decrypt file"};
+	}
+
+	ppu_prx_object obj = std::move(src);
+	src.close();
 
 	if (obj != elf_error::ok)
 	{
-		return CELL_PRX_ERROR_UNSUPPORTED_PRX_TYPE;
+		return {CELL_PRX_ERROR_UNSUPPORTED_PRX_TYPE, obj.get_error()};
 	}
 
 	const auto prx = ppu_load_prx(obj, false, path, file_offset);

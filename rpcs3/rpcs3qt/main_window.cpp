@@ -73,6 +73,8 @@
 #include "util/sysinfo.hpp"
 #include "util/serialization_ext.hpp"
 
+#include "Input/gui_pad_thread.h"
+
 #include "ui_main_window.h"
 
 LOG_CHANNEL(gui_log, "GUI");
@@ -241,7 +243,7 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 		}
 	});
 
-#if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
+#if !defined(ARCH_ARM64) && (defined(_WIN32) || defined(__linux__) || defined(__APPLE__))
 	if (const auto update_value = m_gui_settings->GetValue(gui::m_check_upd_start).toString(); update_value != gui::update_off)
 	{
 		const bool in_background = with_cli_boot || update_value == gui::update_bkg;
@@ -259,7 +261,30 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 	// Refresh gamelist last
 	m_game_list_frame->Refresh(true);
 
+	update_gui_pad_thread();
+
 	return true;
+}
+
+void main_window::update_gui_pad_thread()
+{
+	const bool enabled = m_gui_settings->GetValue(gui::nav_enabled).toBool();
+
+	if (enabled && Emu.IsStopped())
+	{
+#if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
+		if (!m_gui_pad_thread)
+		{
+			m_gui_pad_thread = std::make_unique<gui_pad_thread>();
+		}
+
+		m_gui_pad_thread->update_settings(m_gui_settings);
+#endif
+	}
+	else
+	{
+		m_gui_pad_thread.reset();
+	}
 }
 
 QString main_window::GetCurrentTitle()
@@ -1453,7 +1478,7 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 		return;
 	}
 
-	static constexpr std::string_view cur_version = "4.90";
+	static constexpr std::string_view cur_version = "4.91";
 
 	std::string version_string;
 
@@ -1804,7 +1829,7 @@ void main_window::RepaintToolBarIcons()
 	ui->mw_searchbar->setFixedWidth(tool_bar_height * 5);
 }
 
-void main_window::OnEmuRun(bool /*start_playtime*/) const
+void main_window::OnEmuRun(bool /*start_playtime*/)
 {
 	const QString title = GetCurrentTitle();
 	const QString restart_tooltip = tr("Restart %0").arg(title);
@@ -1827,6 +1852,8 @@ void main_window::OnEmuRun(bool /*start_playtime*/) const
 	ui->toolbar_stop->setToolTip(stop_tooltip);
 
 	EnableMenus(true);
+
+	update_gui_pad_thread();
 }
 
 void main_window::OnEmuResume() const
@@ -1932,6 +1959,8 @@ void main_window::OnEmuStop()
 	{
 		m_system_cmd_dialog->close();
 	}
+
+	update_gui_pad_thread();
 }
 
 void main_window::OnEmuReady() const
@@ -2662,6 +2691,7 @@ void main_window::CreateConnects()
 		connect(&dlg, &settings_dialog::GuiStylesheetRequest, this, &main_window::RequestGlobalStylesheetChange);
 		connect(&dlg, &settings_dialog::GuiRepaintRequest, this, &main_window::RepaintGui);
 		connect(&dlg, &settings_dialog::EmuSettingsApplied, this, &main_window::NotifyEmuSettingsChange);
+		connect(&dlg, &settings_dialog::EmuSettingsApplied, this, &main_window::update_gui_pad_thread);
 		connect(&dlg, &settings_dialog::EmuSettingsApplied, m_log_frame, &log_frame::LoadSettings);
 		dlg.exec();
 	};
@@ -3033,7 +3063,7 @@ void main_window::CreateConnects()
 
 	connect(ui->updateAct, &QAction::triggered, this, [this]()
 	{
-#if !defined(_WIN32) && !defined(__linux__) && !defined(__APPLE__)
+#if (!defined(_WIN32) && !defined(__linux__) && !defined(__APPLE__)) || defined(ARCH_ARM64)
 		QMessageBox::warning(this, tr("Auto-updater"), tr("The auto-updater isn't available for your OS currently."));
 		return;
 #endif

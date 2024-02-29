@@ -648,7 +648,7 @@ void pad_settings_dialog::switch_pad_info(int index, pad_device_info info, bool 
 		info.is_connected = is_connected;
 
 		ui->chooseDevice->setItemData(index, QVariant::fromValue(info));
-		ui->chooseDevice->setItemText(index, is_connected ? qstr(info.name) : (qstr(info.name) + Disconnected_suffix));
+		ui->chooseDevice->setItemText(index, is_connected ? info.localized_name : (info.localized_name + Disconnected_suffix));
 	}
 
 	if (!is_connected && m_remap_timer.isActive() && ui->chooseDevice->currentIndex() == index)
@@ -1456,7 +1456,8 @@ void pad_settings_dialog::ChangeHandler()
 		for (usz i = 1; i <= m_handler->max_devices(); i++) // Controllers 1-n in GUI
 		{
 			const QString device_name = name_string + QString::number(i);
-			ui->chooseDevice->addItem(device_name, QVariant::fromValue(pad_device_info{ sstr(device_name), true }));
+			const QString device_name_localized = GetLocalizedPadName(m_handler->m_type, device_name, i);
+			ui->chooseDevice->addItem(device_name_localized, QVariant::fromValue(pad_device_info{ sstr(device_name), device_name_localized, true }));
 		}
 		force_enable = true;
 		break;
@@ -1472,14 +1473,16 @@ void pad_settings_dialog::ChangeHandler()
 	}
 	default:
 	{
-		for (const pad_list_entry& device : device_list)
+		for (usz i = 0; i < device_list.size(); i++)
 		{
+			const pad_list_entry& device = ::at32(device_list, i);
+
 			if (!device.is_buddy_only)
 			{
-				const QString device_name = QString::fromStdString(device.name);
-				const QVariant user_data = QVariant::fromValue(pad_device_info{ device.name, true });
+				const QString device_name_localized = GetLocalizedPadName(m_handler->m_type, QString::fromStdString(device.name), i);
+				const QVariant user_data = QVariant::fromValue(pad_device_info{ device.name, device_name_localized, true });
 
-				ui->chooseDevice->addItem(device_name, user_data);
+				ui->chooseDevice->addItem(device_name_localized, user_data);
 			}
 		}
 		break;
@@ -1909,6 +1912,30 @@ QString pad_settings_dialog::GetLocalizedPadHandler(const QString& original, pad
 #endif
 #ifdef HAVE_LIBEVDEV
 		case pad_handler::evdev: return tr("Evdev");
+#endif
+	}
+	return original;
+}
+
+QString pad_settings_dialog::GetLocalizedPadName(pad_handler handler, const QString& original, usz index)
+{
+	switch (handler)
+	{
+		case pad_handler::null: return tr("Default Null Device");
+		case pad_handler::keyboard: return tr("Keyboard");
+		case pad_handler::ds3: return tr("DS3 Pad #%0").arg(index);
+		case pad_handler::ds4: return tr("DS4 Pad #%0").arg(index);
+		case pad_handler::dualsense: return tr("DualSense Pad #%0").arg(index);
+		case pad_handler::skateboard: return tr("Skateboard #%0").arg(index);
+#ifdef _WIN32
+		case pad_handler::xinput: return tr("XInput Pad #%0").arg(index);
+		case pad_handler::mm: return tr("Joystick #%0").arg(index);
+#endif
+#ifdef HAVE_SDL2
+		case pad_handler::sdl: break; // Localization not feasible. Names differ for each device.
+#endif
+#ifdef HAVE_LIBEVDEV
+		case pad_handler::evdev: break; // Localization not feasible. Names differ for each device.
 #endif
 	}
 	return original;
