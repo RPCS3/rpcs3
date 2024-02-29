@@ -527,8 +527,8 @@ int main(int argc, char** argv)
 #endif
 
 #ifdef __APPLE__
-    int osx_ver_major = Darwin_Version::getNSmajorVersion();
-    int osx_ver_minor = Darwin_Version::getNSminorVersion();
+	const int osx_ver_major = Darwin_Version::getNSmajorVersion();
+	const int osx_ver_minor = Darwin_Version::getNSminorVersion();
 	if ((osx_ver_major == 14 && osx_ver_minor < 3) && (utils::get_cpu_brand().rfind("VirtualApple", 0) == 0))
 	{
     	int osx_ver_patch = Darwin_Version::getNSpatchVersion();
