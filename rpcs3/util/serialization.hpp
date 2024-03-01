@@ -134,7 +134,7 @@ public:
 			{
 				ensure(pos <= data_offset + data.size());
 
-				const auto ptr = reinterpret_cast<conxst u8*>(memory_provider());
+				const auto ptr = reinterpret_cast<const u8*>(memory_provider());
 
 				if (pos != data_offset + data.size())
 				{
