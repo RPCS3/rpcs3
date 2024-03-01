@@ -5522,7 +5522,7 @@ error_code sceNpScorePollAsync(s32 transId, vm::ptr<s32> result)
 	return CELL_OK;
 }
 
-std::pair<std::optional<error_code>, std::shared_ptr<score_transaction_ctx>> get_score_transaction_context(s32 transId)
+std::pair<std::optional<error_code>, std::shared_ptr<score_transaction_ctx>> get_score_transaction_context(s32 transId, bool reset_transaction = true)
 {
 	auto trans_ctx = idm::get<score_transaction_ctx>(transId);
 
@@ -5531,6 +5531,7 @@ std::pair<std::optional<error_code>, std::shared_ptr<score_transaction_ctx>> get
 		return {SCE_NP_COMMUNITY_ERROR_INVALID_ID, {}};
 	}
 
+	if (reset_transaction)
 	{
 		// Check for games reusing score transaction context
 		// Unsure about the actual behaviour, only one game does this afaik(Marvel vs Capcom Origins)
@@ -5745,7 +5746,7 @@ error_code scenp_score_get_game_data(s32 transId, SceNpScoreBoardId boardId, vm:
 		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
 	}
 
-	auto [res, trans_ctx] = get_score_transaction_context(transId);
+	auto [res, trans_ctx] = get_score_transaction_context(transId, false);
 	if (res)
 		return *res;
 

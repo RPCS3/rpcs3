@@ -132,8 +132,18 @@ public:
 
 			if (is_writing())
 			{
-				ensure(pos == data_offset + data.size());
+				ensure(pos <= data_offset + data.size());
+
 				const auto ptr = reinterpret_cast<const u8*>(memory_provider());
+
+				if (pos != data_offset + data.size())
+				{
+					data.insert(data.begin() + pos - data_offset, ptr, ptr + size);
+					pos += size;
+					return true;
+				}
+
+				// Seems to be much faster than data.begin() + pos on MSVC
 				data.insert(data.end(), ptr, ptr + size);
 				pos += size;
 				return true;
@@ -521,7 +531,7 @@ public:
 		usz get_size(usz recommended = umax) const
 		{
 			recommended = std::min<usz>(recommended, m_max_data);
-			return std::min<usz>(m_max_data, m_file_handler ? m_file_handler->get_size(*this, recommended) : data_offset + data.size());
+			return std::min<usz>(m_max_data, m_file_handler ? m_file_handler->get_size(*this, recommended) : (data.empty() ? 0 : data_offset + data.size()));
 		}
 
 		template <typename T> requires (Bitcopy<T>)
