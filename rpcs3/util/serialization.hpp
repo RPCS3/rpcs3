@@ -140,7 +140,7 @@ public:
 				{
 					data.insert(data.begin() + pos - data_offset, ptr, ptr + size);
 					pos += size;
-					return true;-
+					return true;
 				}
 
 				// Seems to be much faster than data.begin() + pos on MSVC
