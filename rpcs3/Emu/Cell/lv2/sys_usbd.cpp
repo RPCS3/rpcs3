@@ -293,6 +293,14 @@ usb_handler_thread::usb_handler_thread()
 		check_device(0x12BA, 0x2430, 0x243F, "Harmonix Button Guitar");
 		check_device(0x12BA, 0x2530, 0x253F, "Harmonix Real Guitar");
 
+		check_device(0x1BAD, 0x0004, 0x0004, "Harmonix RB1 Guitar - Wii");
+		check_device(0x1BAD, 0x0005, 0x0005, "Harmonix RB1 Drums - Wii");
+		check_device(0x1BAD, 0x3010, 0x301F, "Harmonix RB2 Guitar - Wii");
+		check_device(0x1BAD, 0x3110, 0x313F, "Harmonix RB2 Drums - Wii");
+		check_device(0x1BAD, 0x3330, 0x333F, "Harmonix Keyboard - Wii");
+		check_device(0x1BAD, 0x3430, 0x343F, "Harmonix Button Guitar - Wii");
+		check_device(0x1BAD, 0x3530, 0x353F, "Harmonix Real Guitar - Wii");
+
 		if (desc.idVendor == 0x1209 && desc.idProduct == 0x2882)
 		{
 			sys_usbd.success("Found device: Santroller");
