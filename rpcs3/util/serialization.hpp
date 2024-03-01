@@ -567,7 +567,7 @@ public:
 		}
 
 		template <typename T> requires (std::is_copy_constructible_v<T> && std::is_constructible_v<T> && Bitcopy<T>)
-6		std::pair<bool, T> try_read()
+		std::pair<bool, T> try_read()
 		{
 			if (is_writing())
 			{
