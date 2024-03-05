@@ -270,6 +270,7 @@ namespace rsx
 
 		atomic_t<bool> requested_vsync{true};
 		atomic_t<bool> enable_second_vhandler{false};
+		std::array<atomic_t<u32>, 2> display_frequency{};
 
 		bool send_event(u64, u64, u64);
 

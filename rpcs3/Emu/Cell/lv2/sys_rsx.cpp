@@ -650,24 +650,20 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 	case 0x106: // ? (Used by cellGcmInitPerfMon)
 		break;
 
-	case 0x108: // cellGcmSetVBlankFrequency, cellGcmSetSecondVFrequency
+	case 0x108: // cellGcmSetSecondVFrequency, cellGcmSetVBlankFrequency
 		// a4 == 3, CELL_GCM_DISPLAY_FREQUENCY_59_94HZ
 		// a4 == 2, CELL_GCM_DISPLAY_FREQUENCY_SCANOUT
 		// a4 == 4, CELL_GCM_DISPLAY_FREQUENCY_DISABLE
+		// Note: Scanout/59_94 is ignored currently as we report refresh rate of 59_94hz as it is, so the difference doesnt matter
+		ensure(a5 == 1u || a5 == 2u);
 
-		if (a5 == 1u)
+		if ((a5 != 2u && a4 != GCM_DISPLAY_FREQUENCY_DISABLE) && a4 != GCM_DISPLAY_FREQUENCY_SCANOUT && a4 != GCM_DISPLAY_FREQUENCY_59_94HZ)
 		{
-			// This function resets vsync state to enabled
-			render->requested_vsync = true;
-
-			// TODO: Set vblank frequency
-		}
-		else if (ensure(a5 == 2u))
-		{
-			// TODO: Implement its frequency as well
-			render->enable_second_vhandler.store(a4 != 4);
+			// Default to SCANOUT
+			a4 = GCM_DISPLAY_FREQUENCY_SCANOUT;
 		}
 
+		render->display_frequency[a5 - 1].store(a4);
 		break;
 
 	case 0x10a: // ? Involved in managing flip status through cellGcmResetFlipStatus
@@ -886,23 +882,37 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 			time = a4;
 		});
 
+		vm::_ref<u32>(render->device_addr + 0x30) = 1;
+
 		// Time point is supplied in argument 4 (todo: convert it to MFTB rate and use it)
 		const u64 current_time = rsx_timeStamp();
-
 
 		// Note: not atomic
 		driverInfo.head[a3].lastVTimeLow = static_cast<u32>(current_time);
 		driverInfo.head[a3].lastVTimeHigh = static_cast<u32>(current_time >> 32);
 
-		driverInfo.head[a3].vBlankCount++;
+		driverInfo.head[a3].vBlankCount =  ++render->vblank_count;
 
-		u64 event_flags = SYS_RSX_EVENT_VBLANK;
-
-		if (render->enable_second_vhandler)
-			event_flags |= SYS_RSX_EVENT_SECOND_VBLANK_BASE << a3; // second vhandler
-
-		render->send_event(0, event_flags, 0);
+		render->send_event(0, SYS_RSX_EVENT_VBLANK, 0);
 		break;
+	}
+
+	case 0xFEE: // hack: second vblank command
+	{
+		if (get_current_cpu_thread())
+		{
+			// VBLANK thread only
+			return CELL_EINVAL;
+		}
+
+		// NOTE: There currently seem to only be 2 active heads on PS3
+		ensure(a3 < 2);
+
+		// Time point is supplied in argument 4
+		const u64 current_time = a4;
+
+		driverInfo.head[a3].lastSecondVTime = current_time;
+		render->send_event(0, SYS_RSX_EVENT_SECOND_VBLANK_BASE << a3, 0);
 	}
 
 	case 0xFEF: // hack: user command
