@@ -17,6 +17,9 @@ if [ "$DEPLOY_APPIMAGE" = "true" ]; then
     # Remove libwayland-client because it has platform-dependent exports and breaks other OSes
     rm -f ./AppDir/usr/lib/libwayland-client.so*
 
+    # Remove libvulkan because it causes issues with gamescope
+    rm -f ./AppDir/usr/lib/libvulkan.so*
+
     # Remove git directory containing local commit history file
     rm -rf ./AppDir/usr/share/rpcs3/git
 
