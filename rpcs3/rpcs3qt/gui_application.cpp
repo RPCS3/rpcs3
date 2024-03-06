@@ -685,9 +685,9 @@ void gui_application::InitializeCallbacks()
 		});
 	};
 
-	callbacks.on_save_state_progress = [this](std::shared_ptr<atomic_t<bool>> closed_successfully, stx::shared_ptr<utils::serial> ar_ptr, std::shared_ptr<void> init_mtx)
+	callbacks.on_save_state_progress = [this](std::shared_ptr<atomic_t<bool>> closed_successfully, stx::shared_ptr<utils::serial> ar_ptr, stx::atomic_ptr<std::string>* code_location, std::shared_ptr<void> init_mtx)
 	{
-		Emu.CallFromMainThread([this, closed_successfully, ar_ptr, init_mtx]
+		Emu.CallFromMainThread([this, closed_successfully, ar_ptr, code_location, init_mtx]
 		{
 			const auto half_seconds = std::make_shared<int>(1);
 
@@ -696,30 +696,72 @@ void gui_application::InitializeCallbacks()
 			pdlg->setAutoClose(true);
 			pdlg->show();
 
-			QString text_base = tr("Waiting for %0 second(s), %1 written");
+			QString text_base = tr("%0 written, %1 second(s) passed%2");
 
-			pdlg->setLabelText(text_base.arg(0).arg("0B"));
+			pdlg->setLabelText(text_base.arg("0B").arg(1).arg(""));
 			pdlg->setAttribute(Qt::WA_DeleteOnClose);
 
 			QTimer* update_timer = new QTimer(pdlg);
 
-			connect(update_timer, &QTimer::timeout, [pdlg, ar_ptr, half_seconds, text_base, closed_successfully, init_mtx]()
+			connect(update_timer, &QTimer::timeout, [pdlg, ar_ptr, half_seconds, text_base, closed_successfully
+				, code_location, init_mtx, old_written = usz{0}, repeat_count = u32{0}]() mutable
 			{
-				auto init = static_cast<stx::init_mutex*>(init_mtx.get())->access();
+				std::string verbose_message;
+				usz bytes_written = 0;
 
-				if (!init)
 				{
-					pdlg->reject();
-					return;
+					auto init = static_cast<stx::init_mutex*>(init_mtx.get())->access();
+
+					if (!init)
+					{
+						pdlg->reject();
+						return;
+					}
+
+					if (auto str_ptr = code_location->load())
+					{
+						verbose_message = "\n" + *str_ptr;
+					}
+
+					*half_seconds += 1;
+
+					bytes_written = ar_ptr->get_size();
 				}
 
-				*half_seconds += 1;
+				if (old_written == bytes_written)
+				{
+					if (repeat_count == 60)
+					{
+						if (verbose_message.empty())
+						{
+							verbose_message += "\n";
+						}
+						else
+						{
+							verbose_message += ". ";
+						}
 
-				const usz bytes_written = ar_ptr->get_size();
-				pdlg->setLabelText(text_base.arg(*half_seconds / 2).arg(gui::utils::format_byte_size(bytes_written)));
+						verbose_message += "If Stuck, Report To Developers";
+					}
+					else
+					{
+						repeat_count++;
+					}
+				}
+				else
+				{
+					repeat_count = 0;
+				}
+
+				old_written = bytes_written;
+
+				pdlg->setLabelText(text_base.arg(gui::utils::format_byte_size(bytes_written)).arg(*half_seconds / 2).arg(qstr(verbose_message)));
 
 				// 300MB -> 50%, 600MB -> 75%, 1200MB -> 87.5% etc
-				pdlg->setValue(std::clamp(static_cast<int>(100. - 100. / std::pow(2., std::fmax(0.01, bytes_written * 1. / (300 * 1024 * 1024)))), 2, 100));
+				const int percent = std::clamp(static_cast<int>(100. - 100. / std::pow(2., std::fmax(0.01, bytes_written * 1. / (300 * 1024 * 1024)))), 2, 100);
+
+				// Add a third of the remaining progress when the keyword is found
+				pdlg->setValue(verbose_message.find("Finalizing") != umax ? 100 - ((100 - percent) * 2 / 3) : percent);
 
 				if (*closed_successfully)
 				{
