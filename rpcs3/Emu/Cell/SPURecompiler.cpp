@@ -1,1240 +1,4 @@
-#include "stdafx.h"
-#include "SPURecompiler.h"
 
-#include "Emu/System.h"
-#include "Emu/system_config.h"
-#include "Emu/IdManager.h"
-#include "Emu/Cell/timers.hpp"
-#include "Emu/Memory/vm_reservation.h"
-#include "Crypto/sha1.h"
-#include "Utilities/JIT.h"
-
-#include "SPUThread.h"
-#include "SPUAnalyser.h"
-#include "SPUInterpreter.h"
-#include "SPUDisAsm.h"
-#include <algorithm>
-#include <thread>
-#include <unordered_set>
-
-#include "util/v128.hpp"
-#include "util/simd.hpp"
-#include "util/sysinfo.hpp"
-
-const extern spu_decoder<spu_itype> g_spu_itype;
-const extern spu_decoder<spu_iname> g_spu_iname;
-const extern spu_decoder<spu_iflag> g_spu_iflag;
-
-#ifdef LLVM_AVAILABLE
-
-#include "Emu/CPU/CPUTranslator.h"
-
-#ifdef _MSC_VER
-#pragma warning(push, 0)
-#else
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wold-style-cast"
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#pragma GCC diagnostic ignored "-Wmissing-noreturn"
-#endif
-#include <llvm/ADT/PostOrderIterator.h>
-#include <llvm/Analysis/PostDominators.h>
-#include <llvm/IR/InlineAsm.h>
-#include <llvm/IR/Verifier.h>
-#include <llvm/TargetParser/Host.h>
-#include <llvm/Transforms/Utils/BasicBlockUtils.h>
-#if LLVM_VERSION_MAJOR < 17
-#include <llvm/IR/LegacyPassManager.h>
-#include <llvm/Transforms/Scalar.h>
-#include <llvm/Analysis/AliasAnalysis.h>
-#else
-#include <llvm/Analysis/CGSCCPassManager.h>
-#include <llvm/Analysis/LoopAnalysisManager.h>
-#include <llvm/IR/PassManager.h>
-#include <llvm/Passes/PassBuilder.h>
-#include <llvm/Transforms/Scalar/ADCE.h>
-#include <llvm/Transforms/Scalar/DeadStoreElimination.h>
-#include <llvm/Transforms/Scalar/EarlyCSE.h>
-#include <llvm/Transforms/Scalar/LICM.h>
-#include <llvm/Transforms/Scalar/LoopPassManager.h>
-#include <llvm/Transforms/Scalar/SimplifyCFG.h>
-#endif
-#ifdef _MSC_VER
-#pragma warning(pop)
-#else
-#pragma GCC diagnostic pop
-#endif
-
-class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
-{
-	// JIT Instance
-	jit_compiler m_jit{{}, jit_compiler::cpu(g_cfg.core.llvm_cpu)};
-
-	// Interpreter table size power
-	const u8 m_interp_magn;
-
-	// Constant opcode bits
-	u32 m_op_const_mask = -1;
-
-	// Current function chunk entry point
-	u32 m_entry;
-
-	// Main entry point offset
-	u32 m_base;
-
-	// Module name
-	std::string m_hash;
-
-	// Patchpoint unique id
-	u32 m_pp_id = 0;
-
-	// Next opcode
-	u32 m_next_op = 0;
-
-	// Current function (chunk)
-	llvm::Function* m_function;
-
-	llvm::Value* m_thread;
-	llvm::Value* m_lsptr;
-	llvm::Value* m_interp_op;
-	llvm::Value* m_interp_pc;
-	llvm::Value* m_interp_table;
-	llvm::Value* m_interp_7f0;
-	llvm::Value* m_interp_regs;
-
-	// Helpers
-	llvm::Value* m_base_pc;
-	llvm::Value* m_interp_pc_next;
-	llvm::BasicBlock* m_interp_bblock;
-
-	// i8*, contains constant vm::g_base_addr value
-	llvm::Value* m_memptr;
-
-	// Pointers to registers in the thread context
-	std::array<llvm::Value*, s_reg_max> m_reg_addr;
-
-	// Global variable (function table)
-	llvm::GlobalVariable* m_function_table{};
-
-	// Global LUTs
-	llvm::GlobalVariable* m_spu_frest_fraction_lut{};
-	llvm::GlobalVariable* m_spu_frest_exponent_lut{};
-	llvm::GlobalVariable* m_spu_frsqest_fraction_lut{};
-	llvm::GlobalVariable* m_spu_frsqest_exponent_lut{};
-
-	// Helpers (interpreter)
-	llvm::GlobalVariable* m_scale_float_to{};
-	llvm::GlobalVariable* m_scale_to_float{};
-
-	// Function for check_state execution
-	llvm::Function* m_test_state{};
-
-	// Chunk for external tail call (dispatch)
-	llvm::Function* m_dispatch{};
-
-	llvm::MDNode* m_md_unlikely;
-	llvm::MDNode* m_md_likely;
-
-	struct block_info
-	{
-		// Pointer to the analyser
-		spu_recompiler_base::block_info* bb{};
-
-		// Current block's entry block
-		llvm::BasicBlock* block;
-
-		// Final block (for PHI nodes, set after completion)
-		llvm::BasicBlock* block_end{};
-
-		// Additional blocks for sinking instructions after block_end:
-		std::unordered_map<u32, llvm::BasicBlock*, value_hash<u32, 2>> block_edges;
-
-		// Current register values
-		std::array<llvm::Value*, s_reg_max> reg{};
-
-		// PHI nodes created for this block (if any)
-		std::array<llvm::PHINode*, s_reg_max> phi{};
-
-		// Store instructions
-		std::array<llvm::StoreInst*, s_reg_max> store{};
-
-		// Store reordering/elimination protection
-		std::array<usz, s_reg_max> store_context_last_id = fill_array<usz>(0); // Protects against illegal forward ordering
-		std::array<usz, s_reg_max> store_context_first_id = fill_array<usz>(usz{umax}); // Protects against illegal past store elimination (backwards ordering is not implemented)
-		std::array<usz, s_reg_max> store_context_ctr = fill_array<usz>(1); // Store barrier counter
-		bool has_gpr_memory_barriers = false; // Summarizes whether GPR barriers exist this block (as if checking all store_context_ctr entries)
-
-		bool does_gpr_barrier_proceed_last_store(u32 i) const noexcept
-		{
-			const usz counter = store_context_ctr[i];
-			return counter != 1 && counter > store_context_last_id[i];
-		}
-
-		bool does_gpr_barrier_preceed_first_store(u32 i) const noexcept
-		{
-			const usz counter = store_context_ctr[i];
-			const usz first_id = store_context_first_id[i];
-			return counter != 1 && first_id != umax && counter < first_id;
-		}
-	};
-
-	struct function_info
-	{
-		// Standard callable chunk
-		llvm::Function* chunk{};
-
-		// Callable function
-		llvm::Function* fn{};
-
-		// Registers possibly loaded in the entry block
-		std::array<llvm::Value*, s_reg_max> load{};
-	};
-
-	// Current block
-	block_info* m_block;
-
-	// Current function or chunk
-	function_info* m_finfo;
-
-	// All blocks in the current function chunk
-	std::unordered_map<u32, block_info, value_hash<u32, 2>> m_blocks;
-
-	// Block list for processing
-	std::vector<u32> m_block_queue;
-
-	// All function chunks in current SPU compile unit
-	std::unordered_map<u32, function_info, value_hash<u32, 2>> m_functions;
-
-	// Function chunk list for processing
-	std::vector<u32> m_function_queue;
-
-	// Add or get the function chunk
-	function_info* add_function(u32 addr)
-	{
-		// Enqueue if necessary
-		const auto empl = m_functions.try_emplace(addr);
-
-		if (!empl.second)
-		{
-			return &empl.first->second;
-		}
-
-		// Chunk function type
-		// 0. Result (tail call target)
-		// 1. Thread context
-		// 2. Local storage pointer
-		// 3.
-#if 0
-		const auto chunk_type = get_ftype<u8*, u8*, u8*, u32>();
-#else
-		const auto chunk_type = get_ftype<void, u8*, u8*, u32>();
-#endif
-
-		// Get function chunk name
-		const std::string name = fmt::format("__spu-cx%05x-%s", addr, fmt::base57(be_t<u64>{m_hash_start}));
-		llvm::Function* result = llvm::cast<llvm::Function>(m_module->getOrInsertFunction(name, chunk_type).getCallee());
-
-		// Set parameters
-		result->setLinkage(llvm::GlobalValue::InternalLinkage);
-		result->addParamAttr(0, llvm::Attribute::NoAlias);
-		result->addParamAttr(1, llvm::Attribute::NoAlias);
-#if 1
-		result->setCallingConv(llvm::CallingConv::GHC);
-#endif
-
-		empl.first->second.chunk = result;
-
-		if (g_cfg.core.spu_block_size == spu_block_size_type::giga)
-		{
-			// Find good real function
-			const auto ffound = m_funcs.find(addr);
-
-			if (ffound != m_funcs.end() && ffound->second.good)
-			{
-				// Real function type (not equal to chunk type)
-				// 4. $SP
-				// 5. $3
-				const auto func_type = get_ftype<u32[4], u8*, u8*, u32, u32[4], u32[4]>();
-
-				const std::string fname = fmt::format("__spu-fx%05x-%s", addr, fmt::base57(be_t<u64>{m_hash_start}));
-				llvm::Function* fn = llvm::cast<llvm::Function>(m_module->getOrInsertFunction(fname, func_type).getCallee());
-
-				fn->setLinkage(llvm::GlobalValue::InternalLinkage);
-				fn->addParamAttr(0, llvm::Attribute::NoAlias);
-				fn->addParamAttr(1, llvm::Attribute::NoAlias);
-#if 1
-				fn->setCallingConv(llvm::CallingConv::GHC);
-#endif
-				empl.first->second.fn = fn;
-			}
-		}
-
-		// Enqueue
-		m_function_queue.push_back(addr);
-
-		return &empl.first->second;
-	}
-
-	// Create tail call to the function chunk (non-tail calls are just out of question)
-	void tail_chunk(llvm::FunctionCallee callee, llvm::Value* base_pc = nullptr)
-	{
-		if (!callee && !g_cfg.core.spu_verification)
-		{
-			// Disable patchpoints if verification is disabled
-			callee = m_dispatch;
-		}
-		else if (!callee)
-		{
-			// Create branch patchpoint if chunk == nullptr
-			ensure(m_finfo && (!m_finfo->fn || m_function == m_finfo->chunk));
-
-			// Register under a unique linkable name
-			const std::string ppname = fmt::format("%s-pp-%u", m_hash, m_pp_id++);
-			m_engine->updateGlobalMapping(ppname, reinterpret_cast<u64>(m_spurt->make_branch_patchpoint()));
-
-			// Create function with not exactly correct type
-			const auto ppfunc = llvm::cast<llvm::Function>(m_module->getOrInsertFunction(ppname, m_finfo->chunk->getFunctionType()).getCallee());
-			ppfunc->setCallingConv(m_finfo->chunk->getCallingConv());
-
-			if (m_finfo->chunk->getReturnType() != get_type<void>())
-			{
-				m_ir->CreateRet(ppfunc);
-				return;
-			}
-
-			callee = ppfunc;
-			base_pc = m_ir->getInt32(0);
-		}
-
-		ensure(callee);
-		auto call = m_ir->CreateCall(callee, {m_thread, m_lsptr, base_pc ? base_pc : m_base_pc});
-		auto func = m_finfo ? m_finfo->chunk : llvm::dyn_cast<llvm::Function>(callee.getCallee());
-		call->setCallingConv(func->getCallingConv());
-		call->setTailCall();
-
-		if (func->getReturnType() == get_type<void>())
-		{
-			m_ir->CreateRetVoid();
-		}
-		else
-		{
-			m_ir->CreateRet(call);
-		}
-	}
-
-	// Call the real function
-	void call_function(llvm::Function* fn, bool tail = false)
-	{
-		llvm::Value* lr{};
-		llvm::Value* sp{};
-		llvm::Value* r3{};
-
-		if (!m_finfo->fn && !m_block)
-		{
-			lr = m_ir->CreateLoad(get_type<u32>(), spu_ptr<u32>(&spu_thread::gpr, +s_reg_lr, &v128::_u32, 3));
-			sp = m_ir->CreateLoad(get_type<u32[4]>(), spu_ptr<u32[4]>(&spu_thread::gpr, +s_reg_sp));
-			r3 = m_ir->CreateLoad(get_type<u32[4]>(), spu_ptr<u32[4]>(&spu_thread::gpr, 3));
-		}
-		else
-		{
-			lr = m_ir->CreateExtractElement(get_reg_fixed<u32[4]>(s_reg_lr).value, 3);
-			sp = get_reg_fixed<u32[4]>(s_reg_sp).value;
-			r3 = get_reg_fixed<u32[4]>(3).value;
-		}
-
-		const auto _call = m_ir->CreateCall(ensure(fn), {m_thread, m_lsptr, m_base_pc, sp, r3});
-
-		_call->setCallingConv(fn->getCallingConv());
-
-		// Tail call using loaded LR value (gateway from a chunk)
-		if (!m_finfo->fn)
-		{
-			lr = m_ir->CreateAnd(lr, 0x3fffc);
-			m_ir->CreateStore(lr, spu_ptr<u32>(&spu_thread::pc));
-			m_ir->CreateStore(_call, spu_ptr<u32[4]>(&spu_thread::gpr, 3));
-			m_ir->CreateBr(add_block_indirect({}, value<u32>(lr)));
-		}
-		else if (tail)
-		{
-			_call->setTailCall();
-			m_ir->CreateRet(_call);
-		}
-		else
-		{
-			// TODO: initialize $LR with a constant
-			for (u32 i = 0; i < s_reg_max; i++)
-			{
-				if (i != s_reg_lr && i != s_reg_sp && (i < s_reg_80 || i > s_reg_127))
-				{
-					m_block->reg[i] = m_ir->CreateLoad(get_reg_type(i), init_reg_fixed(i));
-				}
-			}
-
-			// Set result
-			m_block->reg[3] = _call;
-		}
-	}
-
-	// Emit return from the real function
-	void ret_function()
-	{
-		m_ir->CreateRet(get_reg_fixed<u32[4]>(3).value);
-	}
-
-	void set_function(llvm::Function* func)
-	{
-		m_function = func;
-		m_thread = func->getArg(0);
-		m_lsptr = func->getArg(1);
-		m_base_pc = func->getArg(2);
-
-		m_reg_addr.fill(nullptr);
-		m_block = nullptr;
-		m_finfo = nullptr;
-		m_blocks.clear();
-		m_block_queue.clear();
-		m_ir->SetInsertPoint(llvm::BasicBlock::Create(m_context, "", m_function));
-		m_memptr = m_ir->CreateLoad(get_type<u8*>(), spu_ptr<u8*>(&spu_thread::memory_base_addr));
-	}
-
-	// Add block with current block as a predecessor
-	llvm::BasicBlock* add_block(u32 target, bool absolute = false)
-	{
-		// Check the predecessor
-		const bool pred_found = m_block_info[target / 4] && m_preds[target].find_first_of(m_pos) + 1;
-
-		if (m_blocks.empty())
-		{
-			// Special case: first block, proceed normally
-			if (auto fn = std::exchange(m_finfo->fn, nullptr))
-			{
-				// Create a gateway
-				call_function(fn, true);
-
-				m_finfo->fn = fn;
-				m_function = fn;
-				m_thread = fn->getArg(0);
-				m_lsptr = fn->getArg(1);
-				m_base_pc = fn->getArg(2);
-				m_ir->SetInsertPoint(llvm::BasicBlock::Create(m_context, "", fn));
-				m_memptr = m_ir->CreateLoad(get_type<u8*>(), spu_ptr<u8*>(&spu_thread::memory_base_addr));
-
-				// Load registers at the entry chunk
-				for (u32 i = 0; i < s_reg_max; i++)
-				{
-					if (i >= s_reg_80 && i <= s_reg_127)
-					{
-						// TODO
-						//m_finfo->load[i] = llvm::UndefValue::get(get_reg_type(i));
-					}
-
-					m_finfo->load[i] = m_ir->CreateLoad(get_reg_type(i), init_reg_fixed(i));
-				}
-
-				// Load $SP
-				m_finfo->load[s_reg_sp] = fn->getArg(3);
-
-				// Load first args
-				m_finfo->load[3] = fn->getArg(4);
-			}
-		}
-		else if (m_block_info[target / 4] && m_entry_info[target / 4] && !(pred_found && m_entry == target) && (!m_finfo->fn || !m_ret_info[target / 4]))
-		{
-			// Generate a tail call to the function chunk
-			const auto cblock = m_ir->GetInsertBlock();
-			const auto result = llvm::BasicBlock::Create(m_context, "", m_function);
-			m_ir->SetInsertPoint(result);
-			const auto pfinfo = add_function(target);
-
-			if (absolute)
-			{
-				ensure(!m_finfo->fn);
-
-				const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
-				const auto fail = llvm::BasicBlock::Create(m_context, "", m_function);
-				m_ir->CreateCondBr(m_ir->CreateICmpEQ(m_base_pc, m_ir->getInt32(m_base)), next, fail);
-				m_ir->SetInsertPoint(fail);
-				m_ir->CreateStore(m_ir->getInt32(target), spu_ptr<u32>(&spu_thread::pc));
-				tail_chunk(nullptr);
-				m_ir->SetInsertPoint(next);
-			}
-
-			if (pfinfo->fn)
-			{
-				// Tail call to the real function
-				call_function(pfinfo->fn, true);
-
-				if (!result->getTerminator())
-					ret_function();
-			}
-			else
-			{
-				// Just a boring tail call to another chunk
-				update_pc(target);
-				tail_chunk(pfinfo->chunk);
-			}
-
-			m_ir->SetInsertPoint(cblock);
-			return result;
-		}
-		else if (!pred_found || !m_block_info[target / 4])
-		{
-			if (m_block_info[target / 4])
-			{
-				spu_log.error("[%s] [0x%x] Predecessor not found for target 0x%x (chunk=0x%x, entry=0x%x, size=%u)", m_hash, m_pos, target, m_entry, m_function_queue[0], m_size / 4);
-			}
-
-			const auto cblock = m_ir->GetInsertBlock();
-			const auto result = llvm::BasicBlock::Create(m_context, "", m_function);
-			m_ir->SetInsertPoint(result);
-
-			if (absolute)
-			{
-				ensure(!m_finfo->fn);
-
-				m_ir->CreateStore(m_ir->getInt32(target), spu_ptr<u32>(&spu_thread::pc));
-			}
-			else
-			{
-				update_pc(target);
-			}
-
-			tail_chunk(nullptr);
-			m_ir->SetInsertPoint(cblock);
-			return result;
-		}
-
-		auto& result = m_blocks[target].block;
-
-		if (!result)
-		{
-			result = llvm::BasicBlock::Create(m_context, fmt::format("b-0x%x", target), m_function);
-
-			// Add the block to the queue
-			m_block_queue.push_back(target);
-		}
-		else if (m_block && m_blocks[target].block_end)
-		{
-			// Connect PHI nodes if necessary
-			for (u32 i = 0; i < s_reg_max; i++)
-			{
-				if (const auto phi = m_blocks[target].phi[i])
-				{
-					const auto typ = phi->getType() == get_type<f64[4]>() ? get_type<f64[4]>() : get_reg_type(i);
-					phi->addIncoming(get_reg_fixed(i, typ), m_block->block_end);
-				}
-			}
-		}
-
-		return result;
-	}
-
-	template <typename T = u8>
-	llvm::Value* _ptr(llvm::Value* base, u32 offset)
-	{
-		return m_ir->CreateGEP(get_type<u8>(), base, m_ir->getInt64(offset));
-	}
-
-	template <typename T = u8>
-	llvm::Value* _ptr(llvm::Value* base, llvm::Value* offset)
-	{
-		const auto off = m_ir->CreateGEP(get_type<u8>(), base, offset);
-		const auto ptr = m_ir->CreateBitCast(off, get_type<T*>());
-		return ptr;
-	}
-
-	template <typename T, typename... Args>
-	llvm::Value* spu_ptr(Args... offset_args)
-	{
-		return _ptr<T>(m_thread, ::offset32(offset_args...));
-	}
-
-	template <typename T, typename... Args>
-	llvm::Value* spu_ptr(value_t<u64> add, Args... offset_args)
-	{
-		const auto off = m_ir->CreateGEP(get_type<u8>(), m_thread, m_ir->getInt64(::offset32(offset_args...)));
-		return m_ir->CreateAdd(off, add.value);
-	}
-
-	// Return default register type
-	llvm::Type* get_reg_type(u32 index)
-	{
-		if (index < 128)
-		{
-			return get_type<u32[4]>();
-		}
-
-		switch (index)
-		{
-		case s_reg_mfc_eal:
-		case s_reg_mfc_lsa:
-			return get_type<u32>();
-		case s_reg_mfc_tag:
-			return get_type<u8>();
-		case s_reg_mfc_size:
-			return get_type<u16>();
-		default:
-			fmt::throw_exception("get_reg_type(%u): invalid register index", index);
-		}
-	}
-
-	u32 get_reg_offset(u32 index)
-	{
-		if (index < 128)
-		{
-			return ::offset32(&spu_thread::gpr, index);
-		}
-
-		switch (index)
-		{
-		case s_reg_mfc_eal: return ::offset32(&spu_thread::ch_mfc_cmd, &spu_mfc_cmd::eal);
-		case s_reg_mfc_lsa: return ::offset32(&spu_thread::ch_mfc_cmd, &spu_mfc_cmd::lsa);
-		case s_reg_mfc_tag: return ::offset32(&spu_thread::ch_mfc_cmd, &spu_mfc_cmd::tag);
-		case s_reg_mfc_size: return ::offset32(&spu_thread::ch_mfc_cmd, &spu_mfc_cmd::size);
-		default:
-			fmt::throw_exception("get_reg_offset(%u): invalid register index", index);
-		}
-	}
-
-	llvm::Value* init_reg_fixed(u32 index)
-	{
-		if (!m_block)
-		{
-			return _ptr<u8>(m_thread, get_reg_offset(index));
-		}
-
-		auto& ptr = ::at32(m_reg_addr, index);
-
-		if (!ptr)
-		{
-			// Save and restore current insert point if necessary
-			const auto block_cur = m_ir->GetInsertBlock();
-
-			// Emit register pointer at the beginning of the function chunk
-			m_ir->SetInsertPoint(m_function->getEntryBlock().getTerminator());
-			ptr = _ptr<u8>(m_thread, get_reg_offset(index));
-			m_ir->SetInsertPoint(block_cur);
-		}
-
-		return ptr;
-	}
-
-	// Get pointer to the vector register (interpreter only)
-	template <typename T, uint I>
-	llvm::Value* init_vr(const bf_t<u32, I, 7>&)
-	{
-		if (!m_interp_magn)
-		{
-			m_interp_7f0 = m_ir->getInt32(0x7f0);
-			m_interp_regs = _ptr(m_thread, get_reg_offset(0));
-		}
-
-		// Extract reg index
-		const auto isl = I >= 4 ? m_interp_op : m_ir->CreateShl(m_interp_op, u64{4 - I});
-		const auto isr = I <= 4 ? m_interp_op : m_ir->CreateLShr(m_interp_op, u64{I - 4});
-		const auto idx = m_ir->CreateAnd(I > 4 ? isr : isl, m_interp_7f0);
-
-		// Pointer to the register
-		return m_ir->CreateGEP(get_type<u8>(), m_interp_regs, m_ir->CreateZExt(idx, get_type<u64>()));
-	}
-
-	llvm::Value* double_as_uint64(llvm::Value* val)
-	{
-		return bitcast<u64[4]>(val);
-	}
-
-	llvm::Value* uint64_as_double(llvm::Value* val)
-	{
-		return bitcast<f64[4]>(val);
-	}
-
-	llvm::Value* double_to_xfloat(llvm::Value* val)
-	{
-		ensure(val && val->getType() == get_type<f64[4]>());
-
-		const auto d = double_as_uint64(val);
-		const auto s = m_ir->CreateAnd(m_ir->CreateLShr(d, 32), 0x80000000);
-		const auto m = m_ir->CreateXor(m_ir->CreateLShr(d, 29), 0x40000000);
-		const auto r = m_ir->CreateOr(m_ir->CreateAnd(m, 0x7fffffff), s);
-		return m_ir->CreateTrunc(m_ir->CreateSelect(m_ir->CreateIsNotNull(d), r, splat<u64[4]>(0).eval(m_ir)), get_type<u32[4]>());
-	}
-
-	llvm::Value* xfloat_to_double(llvm::Value* val)
-	{
-		ensure(val && val->getType() == get_type<u32[4]>());
-
-		const auto x = m_ir->CreateZExt(val, get_type<u64[4]>());
-		const auto s = m_ir->CreateShl(m_ir->CreateAnd(x, 0x80000000), 32);
-		const auto a = m_ir->CreateAnd(x, 0x7fffffff);
-		const auto m = m_ir->CreateShl(m_ir->CreateAdd(a, splat<u64[4]>(0x1c0000000).eval(m_ir)), 29);
-		const auto r = m_ir->CreateSelect(m_ir->CreateICmpSGT(a, splat<u64[4]>(0x7fffff).eval(m_ir)), m, splat<u64[4]>(0).eval(m_ir));
-		const auto f = m_ir->CreateOr(s, r);
-		return uint64_as_double(f);
-	}
-
-	// Clamp double values to ±Smax, flush values smaller than ±Smin to positive zero
-	llvm::Value* xfloat_in_double(llvm::Value* val)
-	{
-		ensure(val && val->getType() == get_type<f64[4]>());
-
-		const auto smax = uint64_as_double(splat<u64[4]>(0x47ffffffe0000000).eval(m_ir));
-		const auto smin = uint64_as_double(splat<u64[4]>(0x3810000000000000).eval(m_ir));
-
-		const auto d = double_as_uint64(val);
-		const auto s = m_ir->CreateAnd(d, 0x8000000000000000);
-		const auto a = uint64_as_double(m_ir->CreateAnd(d, 0x7fffffffe0000000));
-		const auto n = m_ir->CreateFCmpOLT(a, smax);
-		const auto z = m_ir->CreateFCmpOLT(a, smin);
-		const auto c = double_as_uint64(m_ir->CreateSelect(n, a, smax));
-		return m_ir->CreateSelect(z, fsplat<f64[4]>(0.).eval(m_ir), uint64_as_double(m_ir->CreateOr(c, s)));
-	}
-
-	// Expand 32-bit mask for xfloat values to 64-bit, 29 least significant bits are always zero
-	llvm::Value* conv_xfloat_mask(llvm::Value* val)
-	{
-		const auto d = m_ir->CreateZExt(val, get_type<u64[4]>());
-		const auto s = m_ir->CreateShl(m_ir->CreateAnd(d, 0x80000000), 32);
-		const auto e = m_ir->CreateLShr(m_ir->CreateAShr(m_ir->CreateShl(d, 33), 4), 1);
-		return m_ir->CreateOr(s, e);
-	}
-
-	llvm::Value* get_reg_raw(u32 index)
-	{
-		if (!m_block || index >= m_block->reg.size())
-		{
-			return nullptr;
-		}
-
-		return m_block->reg[index];
-	}
-
-	llvm::Value* get_reg_fixed(u32 index, llvm::Type* type)
-	{
-		llvm::Value* dummy{};
-
-		auto& reg = *(m_block ? &::at32(m_block->reg, index) : &dummy);
-
-		if (!reg)
-		{
-			// Load register value if necessary
-			reg = m_finfo && m_finfo->load[index] ? m_finfo->load[index] : m_ir->CreateLoad(get_reg_type(index), init_reg_fixed(index));
-		}
-
-		if (reg->getType() == get_type<f64[4]>())
-		{
-			if (type == reg->getType())
-			{
-				return reg;
-			}
-
-			return bitcast(double_to_xfloat(reg), type);
-		}
-
-		if (type == get_type<f64[4]>())
-		{
-			return xfloat_to_double(bitcast<u32[4]>(reg));
-		}
-
-		return bitcast(reg, type);
-	}
-
-	template <typename T = u32[4]>
-	value_t<T> get_reg_fixed(u32 index)
-	{
-		value_t<T> r;
-		r.value = get_reg_fixed(index, get_type<T>());
-		return r;
-	}
-
-	template <typename T = u32[4], uint I>
-	value_t<T> get_vr(const bf_t<u32, I, 7>& index)
-	{
-		value_t<T> r;
-
-		if ((m_op_const_mask & index.data_mask()) != index.data_mask())
-		{
-			// Update const mask if necessary
-			if (I >= (32u - m_interp_magn))
-			{
-				m_op_const_mask |= index.data_mask();
-			}
-
-			// Load reg
-			if (get_type<T>() == get_type<f64[4]>())
-			{
-				r.value = xfloat_to_double(m_ir->CreateLoad(get_type<u32[4]>(), init_vr<u32[4]>(index)));
-			}
-			else
-			{
-				r.value = m_ir->CreateLoad(get_type<T>(), init_vr<T>(index));
-			}
-		}
-		else
-		{
-			r.value = get_reg_fixed(index, get_type<T>());
-		}
-
-		return r;
-	}
-
-	template <typename U, uint I>
-	auto get_vr_as(U&&, const bf_t<u32, I, 7>& index)
-	{
-		return get_vr<typename llvm_expr_t<U>::type>(index);
-	}
-
-	template <typename T = u32[4], typename... Args>
-	std::tuple<std::conditional_t<false, Args, value_t<T>>...> get_vrs(const Args&... args)
-	{
-		return {get_vr<T>(args)...};
-	}
-
-	template <typename T = u32[4], uint I>
-	llvm_match_t<T> match_vr(const bf_t<u32, I, 7>& index)
-	{
-		llvm_match_t<T> r;
-
-		if (m_block)
-		{
-			auto v = ::at32(m_block->reg, index);
-
-			if (v && v->getType() == get_type<T>())
-			{
-				r.value = v;
-				return r;
-			}
-		}
-
-		return r;
-	}
-
-	template <typename U, uint I>
-	auto match_vr_as(U&&, const bf_t<u32, I, 7>& index)
-	{
-		return match_vr<typename llvm_expr_t<U>::type>(index);
-	}
-
-	template <typename... Types, uint I, typename F>
-	bool match_vr(const bf_t<u32, I, 7>& index, F&& pred)
-	{
-		return (( match_vr<Types>(index) ? pred(match_vr<Types>(index), match<Types>()) : false ) || ...);
-	}
-
-	template <typename T = u32[4], typename... Args>
-	std::tuple<std::conditional_t<false, Args, llvm_match_t<T>>...> match_vrs(const Args&... args)
-	{
-		return {match_vr<T>(args)...};
-	}
-
-	// Extract scalar value from the preferred slot
-	template <typename T>
-	auto get_scalar(value_t<T> value)
-	{
-		using e_type = std::remove_extent_t<T>;
-
-		static_assert(sizeof(T) == 16 || std::is_same_v<f64[4], T>, "Unknown vector type");
-
-		if (auto [ok, v] = match_expr(value, vsplat<T>(match<e_type>())); ok)
-		{
-			return eval(v);
-		}
-
-		if constexpr (sizeof(e_type) == 1)
-		{
-			return eval(extract(value, 12));
-		}
-		else if constexpr (sizeof(e_type) == 2)
-		{
-			return eval(extract(value, 6));
-		}
-		else if constexpr (sizeof(e_type) == 4 || sizeof(T) == 32)
-		{
-			return eval(extract(value, 3));
-		}
-		else
-		{
-			return eval(extract(value, 1));
-		}
-	}
-
-	// Splat scalar value from the preferred slot
-	template <typename T>
-	auto splat_scalar(T&& arg)
-	{
-		using VT = std::remove_extent_t<typename std::decay_t<T>::type>;
-
-		if constexpr (sizeof(VT) == 1)
-		{
-			return zshuffle(std::forward<T>(arg), 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12);
-		}
-		else if constexpr (sizeof(VT) == 2)
-		{
-			return zshuffle(std::forward<T>(arg), 6, 6, 6, 6, 6, 6, 6, 6);
-		}
-		else if constexpr (sizeof(VT) == 4)
-		{
-			return zshuffle(std::forward<T>(arg), 3, 3, 3, 3);
-		}
-		else if constexpr (sizeof(VT) == 8)
-		{
-			return zshuffle(std::forward<T>(arg), 1, 1);
-		}
-		else
-		{
-			static_assert(sizeof(VT) == 16);
-			return std::forward<T>(arg);
-		}
-	}
-
-	void set_reg_fixed(u32 index, llvm::Value* value, bool fixup = true)
-	{
-		llvm::StoreInst* dummy{};
-
-		// Check
-		ensure(!m_block || m_regmod[m_pos / 4] == index);
-
-		// Test for special case
-		const bool is_xfloat = value->getType() == get_type<f64[4]>();
-
-		// Clamp value if necessary
-		const auto saved_value = is_xfloat && fixup ? xfloat_in_double(value) : value;
-
-		// Set register value
-		if (m_block)
-		{
-#ifndef _WIN32
-			if (g_cfg.core.spu_debug)
-				value->setName(fmt::format("result_0x%05x", m_pos));
-#endif
-
-			::at32(m_block->reg, index) = saved_value;
-		}
-
-		// Get register location
-		const auto addr = init_reg_fixed(index);
-
-		auto& _store = *(m_block ? &m_block->store[index] : &dummy);
-
-		// Erase previous dead store instruction if necessary
-		if (_store)
-		{
-			if (m_block->store_context_last_id[index] == m_block->store_context_ctr[index])
-			{
-				// Erase store of it is not preserved by ensure_gpr_stores()
-				_store->eraseFromParent();
-			}
-		}
-
-		if (m_block)
-		{
-			// Keep the store's location in history of gpr preservaions
-			m_block->store_context_last_id[index] = m_block->store_context_ctr[index];
-			m_block->store_context_first_id[index] = std::min<usz>(m_block->store_context_first_id[index], m_block->store_context_ctr[index]);
-		}
-
-		if (m_finfo && m_finfo->fn)
-		{
-			if (index <= 3 || (index >= s_reg_80 && index <= s_reg_127))
-			{
-				// Don't save some registers in true functions
-				return;
-			}
-		}
-
-		// Write register to the context
-		_store = m_ir->CreateStore(is_xfloat ? double_to_xfloat(saved_value) : m_ir->CreateBitCast(value, get_reg_type(index)), addr);
-	}
-
-	template <typename T, uint I>
-	void set_vr(const bf_t<u32, I, 7>& index, T expr, std::function<llvm::KnownBits()> vr_assume = nullptr, bool fixup = true)
-	{
-		// Process expression
-		const auto value = expr.eval(m_ir);
-
-		// Test for special case
-		const bool is_xfloat = value->getType() == get_type<f64[4]>();
-
-		if ((m_op_const_mask & index.data_mask()) != index.data_mask())
-		{
-			// Update const mask if necessary
-			if (I >= (32u - m_interp_magn))
-			{
-				m_op_const_mask |= index.data_mask();
-			}
-
-			// Clamp value if necessary
-			const auto saved_value = is_xfloat && fixup ? xfloat_in_double(value) : value;
-
-			// Store value
-			m_ir->CreateStore(is_xfloat ? double_to_xfloat(saved_value) : m_ir->CreateBitCast(value, get_type<u32[4]>()), init_vr<u32[4]>(index));
-			return;
-		}
-
-		if (vr_assume)
-		{
-		}
-
-		set_reg_fixed(index, value, fixup);
-	}
-
-	template <typename T = u32[4], uint I, uint N>
-	value_t<T> get_imm(const bf_t<u32, I, N>& imm, bool mask = true)
-	{
-		if ((m_op_const_mask & imm.data_mask()) != imm.data_mask())
-		{
-			// Update const mask if necessary
-			if (I >= (32u - m_interp_magn))
-			{
-				m_op_const_mask |= imm.data_mask();
-			}
-
-			// Extract unsigned immediate (skip AND if mask == false or truncated anyway)
-			value_t<T> r;
-			r.value = m_interp_op;
-			r.value = I == 0 ? r.value : m_ir->CreateLShr(r.value, u64{I});
-			r.value = !mask || N >= r.esize ? r.value : m_ir->CreateAnd(r.value, imm.data_mask() >> I);
-
-			if constexpr (r.esize != 32)
-			{
-				r.value = m_ir->CreateZExtOrTrunc(r.value, get_type<T>()->getScalarType());
-			}
-
-			if (r.is_vector)
-			{
-				r.value = m_ir->CreateVectorSplat(r.is_vector, r.value);
-			}
-
-			return r;
-		}
-
-		return eval(splat<T>(imm));
-	}
-
-	template <typename T = u32[4], uint I, uint N>
-	value_t<T> get_imm(const bf_t<s32, I, N>& imm)
-	{
-		if ((m_op_const_mask & imm.data_mask()) != imm.data_mask())
-		{
-			// Update const mask if necessary
-			if (I >= (32u - m_interp_magn))
-			{
-				m_op_const_mask |= imm.data_mask();
-			}
-
-			// Extract signed immediate (skip sign ext if truncated anyway)
-			value_t<T> r;
-			r.value = m_interp_op;
-			r.value = I + N == 32 || N >= r.esize ? r.value : m_ir->CreateShl(r.value, u64{32u - I - N});
-			r.value = N == 32 || N >= r.esize ? r.value : m_ir->CreateAShr(r.value, u64{32u - N});
-			r.value = I == 0 || N < r.esize ? r.value : m_ir->CreateLShr(r.value, u64{I});
-
-			if constexpr (r.esize != 32)
-			{
-				r.value = m_ir->CreateSExtOrTrunc(r.value, get_type<T>()->getScalarType());
-			}
-
-			if (r.is_vector)
-			{
-				r.value = m_ir->CreateVectorSplat(r.is_vector, r.value);
-			}
-
-			return r;
-		}
-
-		return eval(splat<T>(imm));
-	}
-
-	// Get PC for given instruction address
-	llvm::Value* get_pc(u32 addr)
-	{
-		return m_ir->CreateAdd(m_base_pc, m_ir->getInt32(addr - m_base));
-	}
-
-	// Update PC for current or explicitly specified instruction address
-	void update_pc(u32 target = -1)
-	{
-		m_ir->CreateStore(m_ir->CreateAnd(get_pc(target + 1 ? target : m_pos), 0x3fffc), spu_ptr<u32>(&spu_thread::pc))->setVolatile(true);
-	}
-
-	// Call cpu_thread::check_state if necessary and return or continue (full check)
-	void check_state(u32 addr, bool may_be_unsafe_for_savestate = true)
-	{
-		const auto pstate = spu_ptr<u32>(&spu_thread::state);
-		const auto _body = llvm::BasicBlock::Create(m_context, "", m_function);
-		const auto check = llvm::BasicBlock::Create(m_context, "", m_function);
-		m_ir->CreateCondBr(m_ir->CreateICmpEQ(m_ir->CreateLoad(get_type<u32>(), pstate, true), m_ir->getInt32(0)), _body, check, m_md_likely);
-		m_ir->SetInsertPoint(check);
-		update_pc(addr);
-
-		if (may_be_unsafe_for_savestate && m_block && m_block->bb->preds.empty())
-		{
-			may_be_unsafe_for_savestate = false;
-		}
-
-		if (may_be_unsafe_for_savestate)
-		{
-			m_ir->CreateStore(m_ir->getInt8(1), spu_ptr<u8>(&spu_thread::unsavable))->setVolatile(true);
-		}
-
-		m_ir->CreateCall(m_test_state, {m_thread});
-
-		if (may_be_unsafe_for_savestate)
-		{
-			m_ir->CreateStore(m_ir->getInt8(0), spu_ptr<u8>(&spu_thread::unsavable))->setVolatile(true);
-		}
-
-		m_ir->CreateBr(_body);
-		m_ir->SetInsertPoint(_body);
-	}
-
-	void putllc16_pattern(const spu_program& prog, utils::address_range range)
-	{
-		static const auto on_fail = [](spu_thread* _spu, u32 addr)
-		{
-			if (const u32 raddr = _spu->raddr)
-			{
-				// Last check for event before we clear the reservation
-				if (raddr == addr || _spu->rtime != (vm::reservation_acquire(raddr) & -128) || std::memcmp(&_spu->rdata, vm::_ptr<decltype(_spu->rdata)>(raddr), 128))
-				{
-					_spu->set_events(SPU_EVENT_LR);
-				}
-			}
-		};
-
-		union putllc16_info
-		{
-			u32 data;
-			bf_t<u32, 31, 1> is_const;
-			bf_t<u32, 30, 1> is_pc_rel;
-			bf_t<u32, 29, 1> runtime16_select;
-			bf_t<u32, 0, 8> reg;
-			bf_t<u32, 8, 18> offs;
-		} info;
-
-		const auto _next = llvm::BasicBlock::Create(m_context, "", m_function);
-		const auto _next0 = llvm::BasicBlock::Create(m_context, "", m_function);
-		const auto _next1 = llvm::BasicBlock::Create(m_context, "", m_function);
-		const auto _next2 = llvm::BasicBlock::Create(m_context, "", m_function);
-		const auto _fail = llvm::BasicBlock::Create(m_context, "", m_function);
-		const auto _fail0 = llvm::BasicBlock::Create(m_context, "", m_function);
-		const auto _final = llvm::BasicBlock::Create(m_context, "", m_function);
-		info.data = range.end;
-
-		const auto _eal = (get_reg_fixed<u32>(s_reg_mfc_eal) & -128).eval(m_ir);
-
-		m_ir->CreateCondBr(m_ir->CreateICmpEQ(_eal, m_ir->CreateLoad(get_type<u32>(), spu_ptr<u32>(&spu_thread::raddr))), _next, _fail, m_md_likely);
-		m_ir->SetInsertPoint(_next);
-
-		value_t<u32> eal_val;
-		eal_val.value = _eal;
-
-		const auto rptr = _ptr<u64>(m_ir->CreateLoad(get_type<u8*>(), spu_ptr<u8*>(&spu_thread::reserv_base_addr)), ((eal_val & 0xff80) >> 1).eval(m_ir));
-		const auto rval = m_ir->CreateLoad(get_type<u64>(), spu_ptr<u64>(&spu_thread::rtime));
-		m_ir->CreateCondBr(
-			m_ir->CreateExtractValue(m_ir->CreateAtomicCmpXchg(rptr, rval, m_ir->CreateOr(rval, 0x7f), llvm::MaybeAlign{16}, llvm::AtomicOrdering::SequentiallyConsistent, llvm::AtomicOrdering::SequentiallyConsistent), 1)
-			, _next0
-			, _fail);
-
-		m_ir->SetInsertPoint(_next0);
-
-		const auto _lsa = (get_reg_fixed<u32>(s_reg_mfc_lsa) & 0x3ff80).eval(m_ir);
-		const auto _dest = info.is_pc_rel ? get_pc(info.offs) :
-			!info.is_const ? (extract(get_reg_fixed(info.reg), 3) + splat<u32>(info.offs)).eval(m_ir) : splat<u32>(info.offs & 0x3fff0).eval(m_ir);
-		const auto dest = info.is_const ? _dest : m_ir->CreateAnd(_dest, m_ir->getInt32(0x3fff0));
-
-		const auto diff = m_ir->CreateZExt(m_ir->CreateSub(dest, _lsa), get_type<u64>());
-
-		if (info.runtime16_select)
-		{
-			m_ir->CreateCondBr(m_ir->CreateICmpULT(diff, m_ir->getInt64(128)), _next1, _next2);
-		}
-		else
-		{
-			m_ir->CreateBr(_next1);
-		}
-
-		m_ir->SetInsertPoint(_next1);
-		const auto _new = m_ir->CreateAlignedLoad(get_type<u128>(), _ptr<u128>(m_lsptr, dest), llvm::MaybeAlign{16});
-		const auto _rdata = m_ir->CreateAlignedLoad(get_type<u128>(), _ptr<u128>(spu_ptr<u8>(&spu_thread::rdata), diff), llvm::MaybeAlign{16});
-
-		m_ir->CreateCondBr(
-			m_ir->CreateExtractValue(m_ir->CreateAtomicCmpXchg(_ptr<u128>(_ptr<u8>(m_memptr, _eal), diff), _rdata, _new, llvm::MaybeAlign{16}, llvm::AtomicOrdering::SequentiallyConsistent, llvm::AtomicOrdering::SequentiallyConsistent), 1)
-			, _next2
-			, _fail0);
-
-		m_ir->SetInsertPoint(_next2);
-		m_ir->CreateAlignedStore(m_ir->CreateAdd(rval, m_ir->getInt64(128)), rptr, llvm::MaybeAlign{8});
-		call("atomic_wait_engine::notify_all", static_cast<void(*)(const void*)>(atomic_wait_engine::notify_all), rptr);
-		m_ir->CreateStore(m_ir->getInt64(spu_channel::bit_count | MFC_PUTLLC_SUCCESS), spu_ptr<u64>(&spu_thread::ch_atomic_stat));
-		m_ir->CreateBr(_final);
-
-		m_ir->SetInsertPoint(_fail0);
-		m_ir->CreateStore(rval, rptr);
-		m_ir->CreateBr(_fail);
-		m_ir->SetInsertPoint(_fail);
-		call("PUTLLC16_fail", +on_fail, m_thread, _eal);
-		m_ir->CreateStore(m_ir->getInt64(spu_channel::bit_count | MFC_PUTLLC_FAILURE), spu_ptr<u64>(&spu_thread::ch_atomic_stat));
-		m_ir->CreateBr(_final);
-
-		m_ir->SetInsertPoint(_final);
-		m_ir->CreateStore(m_ir->getInt32(0), spu_ptr<u32>(&spu_thread::raddr));
-	}
-
-	void putllc0_pattern(const spu_program& prog, utils::address_range range)
-	{
-		static const auto on_fail = [](spu_thread* _spu, u32 addr)
-		{
-			if (const u32 raddr = _spu->raddr)
-			{
-				// Last check for event before we clear the reservation
-				if (raddr == addr || _spu->rtime != (vm::reservation_acquire(raddr) & -128) || std::memcmp(&_spu->rdata, vm::_ptr<decltype(_spu->rdata)>(raddr), 128))
-				{
-					_spu->set_events(SPU_EVENT_LR);
-				}
-			}
-		};
-
-		const auto _next = llvm::BasicBlock::Create(m_context, "", m_function);
-		const auto _next0 = llvm::BasicBlock::Create(m_context, "", m_function);
-		const auto _fail = llvm::BasicBlock::Create(m_context, "", m_function);
-		const auto _final = llvm::BasicBlock::Create(m_context, "", m_function);
-
-		const auto _eal = (get_reg_fixed<u32>(s_reg_mfc_eal) & -128).eval(m_ir);
-
-		m_ir->CreateCondBr(m_ir->CreateICmpEQ(_eal, m_ir->CreateLoad(get_type<u32>(), spu_ptr<u32>(&spu_thread::raddr))), _next, _fail, m_md_likely);
-		m_ir->SetInsertPoint(_next);
-
-		value_t<u32> eal_val;
-		eal_val.value = _eal;
-
-		const auto rptr = _ptr<u64>(m_ir->CreateLoad(get_type<u8*>(), spu_ptr<u8*>(&spu_thread::reserv_base_addr)), ((eal_val & 0xff80) >> 1).eval(m_ir));
-		const auto rval = m_ir->CreateLoad(get_type<u64>(), spu_ptr<u64>(&spu_thread::rtime));
-		m_ir->CreateCondBr(
-			m_ir->CreateExtractValue(m_ir->CreateAtomicCmpXchg(rptr, rval, m_ir->CreateAdd(rval, m_ir->getInt64(128)), llvm::MaybeAlign{16}, llvm::AtomicOrdering::SequentiallyConsistent, llvm::AtomicOrdering::SequentiallyConsistent), 1)
-			, _next0
-			, g_cfg.core.spu_accurate_reservations ? _fail : _next0); // Succeed unconditionally
-
-		m_ir->SetInsertPoint(_next0);
-		call("atomic_wait_engine::notify_all", static_cast<void(*)(const void*)>(atomic_wait_engine::notify_all), rptr);
-		m_ir->CreateStore(m_ir->getInt64(spu_channel::bit_count | MFC_PUTLLC_SUCCESS), spu_ptr<u64>(&spu_thread::ch_atomic_stat));
-		m_ir->CreateBr(_final);
-
-		m_ir->SetInsertPoint(_fail);
-		call("PUTLLC0_fail", +on_fail, m_thread, _eal);
-		m_ir->CreateStore(m_ir->getInt64(spu_channel::bit_count | MFC_PUTLLC_FAILURE), spu_ptr<u64>(&spu_thread::ch_atomic_stat));
-		m_ir->CreateBr(_final);
-
-		m_ir->SetInsertPoint(_final);
-		m_ir->CreateStore(m_ir->getInt32(0), spu_ptr<u32>(&spu_thread::raddr));
-	}
-
-public:
-	spu_llvm_recompiler(u8 interp_magn = 0)
-		: spu_recompiler_base()
-		, cpu_translator(nullptr, false)
-		, m_interp_magn(interp_magn)
-	{
-	}
 
 	virtual void init() override
 	{
@@ -1254,15 +18,6 @@ public:
 		}
 	}
 
-	void init_luts()
-	{
-		// LUTs for some instructions
-		m_spu_frest_fraction_lut = new llvm::GlobalVariable(*m_module, llvm::ArrayType::get(GetType<u32>(), 32), true, llvm::GlobalValue::PrivateLinkage, llvm::ConstantDataArray::get(m_context, spu_frest_fraction_lut));
-		m_spu_frest_exponent_lut = new llvm::GlobalVariable(*m_module, llvm::ArrayType::get(GetType<u32>(), 256), true, llvm::GlobalValue::PrivateLinkage, llvm::ConstantDataArray::get(m_context, spu_frest_exponent_lut));
-		m_spu_frsqest_fraction_lut = new llvm::GlobalVariable(*m_module, llvm::ArrayType::get(GetType<u32>(), 64), true, llvm::GlobalValue::PrivateLinkage, llvm::ConstantDataArray::get(m_context, spu_frsqest_fraction_lut));
-		m_spu_frsqest_exponent_lut = new llvm::GlobalVariable(*m_module, llvm::ArrayType::get(GetType<u32>(), 256), true, llvm::GlobalValue::PrivateLinkage, llvm::ConstantDataArray::get(m_context, spu_frsqest_exponent_lut));
-	}
-
 	virtual spu_function_t compile(spu_program&& _func) override
 	{
 		if (_func.data.empty() && m_interp_magn)
@@ -1271,7 +26,6 @@ public:
 		}
 
 		const u32 start0 = _func.entry_point;
-		const usz func_size = _func.data.size();
 
 		const auto add_loc = m_spurt->add_empty(std::move(_func));
 
@@ -1295,11 +49,9 @@ public:
 
 		std::string log;
 
-		bool add_to_file = false;
-
 		if (auto& cache = g_fxo->get<spu_cache>(); cache && g_cfg.core.spu_cache && !add_loc->cached.exchange(1))
 		{
-			add_to_file = true;
+			cache.add(func);
 		}
 
 		{
@@ -1353,8 +105,6 @@ public:
 		const auto main_arg2 = main_func->getArg(2);
 		main_func->setCallingConv(CallingConv::GHC);
 		set_function(main_func);
-
-		init_luts();
 
 		// Start compilation
 		const auto label_test = BasicBlock::Create(m_context, "", m_function);
@@ -1841,14 +591,10 @@ public:
 
 			std::vector<block_info*> block_q;
 			block_q.reserve(m_blocks.size());
-
-			bool has_gpr_memory_barriers = false;
-
 			for (auto& [a, b] : m_blocks)
 			{
 				block_q.emplace_back(&b);
 				bb_to_info[b.block] = &b;
-				has_gpr_memory_barriers |= b.has_gpr_memory_barriers;
 			}
 
 			for (usz bi = 0; bi < block_q.size();)
@@ -1856,7 +602,7 @@ public:
 				auto bqbi = block_q[bi++];
 
 				// TODO: process all registers up to s_reg_max
-				for (u32 i = 0; i <= s_reg_127; i++)
+				for (u32 i = 0; i < 128; i++)
 				{
 					// Check if the store is beyond the last barrier
 					if (auto& bs = bqbi->store[i]; bs && !bqbi->does_gpr_barrier_proceed_last_store(i))
@@ -1905,28 +651,16 @@ public:
 
 						// Find nearest common post-dominator
 						llvm::BasicBlock* common_pdom = killers[0];
-
-						if (has_gpr_memory_barriers)
-						{
-							// Cannot optimize block walk-through, need to inspect all possible memory barriers in the way
-							common_pdom = nullptr;
-						}
-
 						for (auto* bbb : llvm::drop_begin(killers))
 						{
 							if (!common_pdom)
-							{
 								break;
-							}
-
 							common_pdom = pdt.findNearestCommonDominator(common_pdom, bbb);
 						}
 
 						// Shortcut
-						if (common_pdom && !pdt.dominates(common_pdom, bs->getParent()))
-						{
+						if (!pdt.dominates(common_pdom, bs->getParent()))
 							common_pdom = nullptr;
-						}
 
 						// Look for possibly-dead store in CFG starting from the exit nodes
 						llvm::SetVector<llvm::BasicBlock*> work_list;
@@ -2063,7 +797,7 @@ public:
 
 			for (usz bi = 0; bi < block_q.size(); bi++)
 			{
-				for (u32 i = 0; i <= s_reg_127; i++)
+				for (u32 i = 0; i < 128; i++)
 				{
 					// If store isn't erased, try to sink it
 					if (auto& bs = block_q[bi]->store[i]; bs && block_q[bi]->bb->targets.size() > 1 && !block_q[bi]->does_gpr_barrier_proceed_last_store(i))
@@ -2097,10 +831,8 @@ public:
 									auto si = llvm::cast<StoreInst>(m_ir->Insert(bs->clone()));
 									if (b2->store[i] == nullptr)
 									{
-										// Protect against backwards ordering now
 										b2->store[i] = si;
 										b2->store_context_last_id[i] = 0;
-										b2->store_context_first_id[i] = b2->store_context_ctr[i] + 1;
 
 										if (!std::count(block_q.begin() + bi, block_q.end(), b2))
 										{
@@ -2210,7 +942,6 @@ public:
 			m_function_table->eraseFromParent();
 		}
 
-#if LLVM_VERSION_MAJOR < 17
 		// Initialize pass manager
 		legacy::FunctionPassManager pm(_module.get());
 
@@ -2218,42 +949,16 @@ public:
 		pm.add(createEarlyCSEPass());
 		pm.add(createCFGSimplificationPass());
 		//pm.add(createNewGVNPass());
+#if LLVM_VERSION_MAJOR < 17
 		pm.add(createDeadStoreEliminationPass());
-		pm.add(createLICMPass());
-		pm.add(createAggressiveDCEPass());
-		pm.add(createDeadCodeEliminationPass());
-		//pm.add(createLintPass()); // Check
-#else
-
-		// Create the analysis managers.
-		// These must be declared in this order so that they are destroyed in the
-		// correct order due to inter-analysis-manager references.
-		LoopAnalysisManager lam;
-		FunctionAnalysisManager fam;
-		CGSCCAnalysisManager cgam;
-		ModuleAnalysisManager mam;
-
-		// Create the new pass manager builder.
-		// Take a look at the PassBuilder constructor parameters for more
-		// customization, e.g. specifying a TargetMachine or various debugging
-		// options.
-		PassBuilder pb;
-
-		// Register all the basic analyses with the managers.
-		pb.registerModuleAnalyses(mam);
-		pb.registerCGSCCAnalyses(cgam);
-		pb.registerFunctionAnalyses(fam);
-		pb.registerLoopAnalyses(lam);
-		pb.crossRegisterProxies(lam, fam, cgam, mam);
-
-		FunctionPassManager fpm;
-		// Basic optimizations
-		fpm.addPass(EarlyCSEPass(true));
-		fpm.addPass(SimplifyCFGPass());
-		fpm.addPass(DSEPass());
-		fpm.addPass(createFunctionToLoopPassAdaptor(LICMPass(LICMOptions()), true));
-		fpm.addPass(ADCEPass());
 #endif
+		pm.add(createLICMPass());
+#if LLVM_VERSION_MAJOR < 17
+		pm.add(createAggressiveDCEPass());
+#else
+		pm.add(createDeadCodeEliminationPass());
+#endif
+		//pm.add(createLintPass()); // Check
 
 		for (auto& f : *m_module)
 		{
@@ -2263,11 +968,7 @@ public:
 		for (const auto& func : m_functions)
 		{
 			const auto f = func.second.fn ? func.second.fn : func.second.chunk;
-#if LLVM_VERSION_MAJOR < 17
 			pm.run(*f);
-#else
-			fpm.run(*f, fam);
-#endif
 		}
 
 		// Clear context (TODO)
@@ -2324,14 +1025,6 @@ public:
 		// Rebuild trampoline if necessary
 		if (!m_spurt->rebuild_ubertrampoline(func.data[0]))
 		{
-			if (auto& cache = g_fxo->get<spu_cache>())
-			{
-				if (add_to_file)
-				{
-					cache.add(func);
-				}
-			}
-
 			return nullptr;
 		}
 
@@ -2352,447 +1045,12 @@ public:
 		asm("DSB ISH");
 #endif
 
-		if (auto& cache = g_fxo->get<spu_cache>())
+		if (g_fxo->get<spu_cache>().operator bool())
 		{
-			if (add_to_file)
-			{
-				cache.add(func);
-			}
-
-			spu_log.success("New SPU block compiled successfully (size=%u)", func_size);
+			spu_log.success("New block compiled successfully");
 		}
 
 		return fn;
-	}
-
-	static void interp_check(spu_thread* _spu, bool after)
-	{
-		static thread_local std::array<v128, 128> s_gpr;
-
-		if (!after)
-		{
-			// Preserve reg state
-			s_gpr = _spu->gpr;
-
-			// Execute interpreter instruction
-			const u32 op = *reinterpret_cast<const be_t<u32>*>(_spu->_ptr<u8>(0) + _spu->pc);
-			if (!g_fxo->get<spu_interpreter_rt>().decode(op)(*_spu, {op}))
-				spu_log.fatal("Bad instruction");
-
-			// Swap state
-			for (u32 i = 0; i < s_gpr.size(); ++i)
-				std::swap(_spu->gpr[i], s_gpr[i]);
-		}
-		else
-		{
-			// Check saved state
-			for (u32 i = 0; i < s_gpr.size(); ++i)
-			{
-				if (_spu->gpr[i] != s_gpr[i])
-				{
-					spu_log.fatal("Register mismatch: $%u\n%s\n%s", i, _spu->gpr[i], s_gpr[i]);
-					_spu->state += cpu_flag::dbg_pause;
-				}
-			}
-		}
-	}
-
-	spu_function_t compile_interpreter()
-	{
-		using namespace llvm;
-
-		m_engine->clearAllGlobalMappings();
-
-		// Create LLVM module
-		std::unique_ptr<Module> _module = std::make_unique<Module>("spu_interpreter.obj", m_context);
-		_module->setTargetTriple(jit_compiler::triple2());
-		_module->setDataLayout(m_jit.get_engine().getTargetMachine()->createDataLayout());
-		m_module = _module.get();
-
-		// Initialize IR Builder
-		IRBuilder<> irb(m_context);
-		m_ir = &irb;
-
-		// Create interpreter table
-		const auto if_type = get_ftype<void, u8*, u8*, u32, u32, u8*, u32, u8*>();
-		m_function_table = new GlobalVariable(*m_module, ArrayType::get(if_type->getPointerTo(), 1ull << m_interp_magn), true, GlobalValue::InternalLinkage, nullptr);
-
-		init_luts();
-
-		// Add return function
-		const auto ret_func = cast<Function>(_module->getOrInsertFunction("spu_ret", if_type).getCallee());
-		ret_func->setCallingConv(CallingConv::GHC);
-		ret_func->setLinkage(GlobalValue::InternalLinkage);
-		m_ir->SetInsertPoint(BasicBlock::Create(m_context, "", ret_func));
-		m_thread = ret_func->getArg(1);
-		m_interp_pc = ret_func->getArg(2);
-		m_ir->CreateRetVoid();
-
-		// Add entry function, serves as a trampoline
-		const auto main_func = llvm::cast<Function>(m_module->getOrInsertFunction("spu_interpreter", get_ftype<void, u8*, u8*, u8*>()).getCallee());
-#ifdef _WIN32
-		main_func->setCallingConv(CallingConv::Win64);
-#endif
-		set_function(main_func);
-
-		// Load pc and opcode
-		m_interp_pc = m_ir->CreateLoad(get_type<u32>(), spu_ptr<u32>(&spu_thread::pc));
-		m_interp_op = m_ir->CreateLoad(get_type<u32>(), m_ir->CreateGEP(get_type<u8>(), m_lsptr, m_ir->CreateZExt(m_interp_pc, get_type<u64>())));
-		m_interp_op = m_ir->CreateCall(get_intrinsic<u32>(Intrinsic::bswap), {m_interp_op});
-
-		// Pinned constant, address of interpreter table
-		m_interp_table = m_ir->CreateGEP(m_function_table->getValueType(), m_function_table, {m_ir->getInt64(0), m_ir->getInt64(0)});
-
-		// Pinned constant, mask for shifted register index
-		m_interp_7f0 = m_ir->getInt32(0x7f0);
-
-		// Pinned constant, address of first register
-		m_interp_regs = _ptr(m_thread, get_reg_offset(0));
-
-		// Save host thread's stack pointer
-		const auto native_sp = spu_ptr<u64>(&spu_thread::saved_native_sp);
-#if defined(ARCH_X64)
-		const auto rsp_name = MetadataAsValue::get(m_context, MDNode::get(m_context, {MDString::get(m_context, "rsp")}));
-#elif defined(ARCH_ARM64)
-		const auto rsp_name = MetadataAsValue::get(m_context, MDNode::get(m_context, {MDString::get(m_context, "sp")}));
-#endif
-		m_ir->CreateStore(m_ir->CreateCall(get_intrinsic<u64>(Intrinsic::read_register), {rsp_name}), native_sp);
-
-		// Decode (shift) and load function pointer
-		const auto first = m_ir->CreateLoad(if_type->getPointerTo(), m_ir->CreateGEP(if_type->getPointerTo(), m_interp_table, m_ir->CreateLShr(m_interp_op, 32u - m_interp_magn)));
-		const auto call0 = m_ir->CreateCall(if_type, first, {m_lsptr, m_thread, m_interp_pc, m_interp_op, m_interp_table, m_interp_7f0, m_interp_regs});
-		call0->setCallingConv(CallingConv::GHC);
-		m_ir->CreateRetVoid();
-
-		// Create helper globals
-		{
-			std::vector<llvm::Constant*> float_to;
-			std::vector<llvm::Constant*> to_float;
-			float_to.reserve(256);
-			to_float.reserve(256);
-
-			for (int i = 0; i < 256; ++i)
-			{
-				float_to.push_back(ConstantFP::get(get_type<f32>(), std::exp2(173 - i)));
-				to_float.push_back(ConstantFP::get(get_type<f32>(), std::exp2(i - 155)));
-			}
-
-			const auto atype = ArrayType::get(get_type<f32>(), 256);
-			m_scale_float_to = new GlobalVariable(*m_module, atype, true, GlobalValue::InternalLinkage, ConstantArray::get(atype, float_to));
-			m_scale_to_float = new GlobalVariable(*m_module, atype, true, GlobalValue::InternalLinkage, ConstantArray::get(atype, to_float));
-		}
-
-		// Fill interpreter table
-		std::array<llvm::Function*, 256> ifuncs{};
-		std::vector<llvm::Constant*> iptrs;
-		iptrs.reserve(1ull << m_interp_magn);
-
-		m_block = nullptr;
-
-		auto last_itype = spu_itype::type{255};
-
-		for (u32 i = 0; i < 1u << m_interp_magn;)
-		{
-			// Fake opcode
-			const u32 op = i << (32u - m_interp_magn);
-
-			// Instruction type
-			const auto itype = g_spu_itype.decode(op);
-
-			// Function name
-			std::string fname = fmt::format("spu_%s", g_spu_iname.decode(op));
-
-			if (last_itype != itype)
-			{
-				// Trigger automatic information collection (probing)
-				m_op_const_mask = 0;
-			}
-			else
-			{
-				// Inject const mask into function name
-				fmt::append(fname, "_%X", (i & (m_op_const_mask >> (32u - m_interp_magn))) | (1u << m_interp_magn));
-			}
-
-			// Decode instruction name, access function
-			const auto f = cast<Function>(_module->getOrInsertFunction(fname, if_type).getCallee());
-
-			// Build if necessary
-			if (f->empty())
-			{
-				if (last_itype != itype)
-				{
-					ifuncs[static_cast<usz>(itype)] = f;
-				}
-
-				f->setCallingConv(CallingConv::GHC);
-
-				m_function = f;
-				m_lsptr  = f->getArg(0);
-				m_thread = f->getArg(1);
-				m_interp_pc = f->getArg(2);
-				m_interp_op = f->getArg(3);
-				m_interp_table = f->getArg(4);
-				m_interp_7f0 = f->getArg(5);
-				m_interp_regs = f->getArg(6);
-
-				m_ir->SetInsertPoint(BasicBlock::Create(m_context, "", f));
-				m_memptr = m_ir->CreateLoad(get_type<u8*>(), spu_ptr<u8*>(&spu_thread::memory_base_addr));
-
-				switch (itype)
-				{
-				case spu_itype::UNK:
-				case spu_itype::DFCEQ:
-				case spu_itype::DFCMEQ:
-				case spu_itype::DFCGT:
-				case spu_itype::DFCMGT:
-				case spu_itype::DFTSV:
-				case spu_itype::STOP:
-				case spu_itype::STOPD:
-				case spu_itype::RDCH:
-				case spu_itype::WRCH:
-				{
-					// Invalid or abortable instruction. Save current address.
-					m_ir->CreateStore(m_interp_pc, spu_ptr<u32>(&spu_thread::pc));
-					[[fallthrough]];
-				}
-				default:
-				{
-					break;
-				}
-				}
-
-				{
-					m_interp_bblock = nullptr;
-
-					// Next instruction (no wraparound at the end of LS)
-					m_interp_pc_next = m_ir->CreateAdd(m_interp_pc, m_ir->getInt32(4));
-
-					bool check = false;
-
-					if (itype == spu_itype::WRCH ||
-						itype == spu_itype::RDCH ||
-						itype == spu_itype::RCHCNT ||
-						itype == spu_itype::STOP ||
-						itype == spu_itype::STOPD ||
-						itype & spu_itype::floating ||
-						itype & spu_itype::branch)
-					{
-						check = false;
-					}
-
-					if (itype & spu_itype::branch)
-					{
-						// Instruction changes pc - change order.
-						(this->*decode(op))({op});
-
-						if (m_interp_bblock)
-						{
-							m_ir->SetInsertPoint(m_interp_bblock);
-							m_interp_bblock = nullptr;
-						}
-					}
-
-					if (!m_ir->GetInsertBlock()->getTerminator())
-					{
-						if (check)
-						{
-							m_ir->CreateStore(m_interp_pc, spu_ptr<u32>(&spu_thread::pc));
-						}
-
-						// Decode next instruction.
-						const auto next_pc = itype & spu_itype::branch ? m_interp_pc : m_interp_pc_next;
-						const auto be32_op = m_ir->CreateLoad(get_type<u32>(), m_ir->CreateGEP(get_type<u8>(), m_lsptr, m_ir->CreateZExt(next_pc, get_type<u64>())));
-						const auto next_op = m_ir->CreateCall(get_intrinsic<u32>(Intrinsic::bswap), {be32_op});
-						const auto next_if = m_ir->CreateLoad(if_type->getPointerTo(), m_ir->CreateGEP(if_type->getPointerTo(), m_interp_table, m_ir->CreateLShr(next_op, 32u - m_interp_magn)));
-						llvm::cast<LoadInst>(next_if)->setVolatile(true);
-
-						if (!(itype & spu_itype::branch))
-						{
-							if (check)
-							{
-								call("spu_interp_check", &interp_check, m_thread, m_ir->getFalse());
-							}
-
-							// Normal instruction.
-							(this->*decode(op))({op});
-
-							if (check && !m_ir->GetInsertBlock()->getTerminator())
-							{
-								call("spu_interp_check", &interp_check, m_thread, m_ir->getTrue());
-							}
-
-							m_interp_pc = m_interp_pc_next;
-						}
-
-						if (last_itype != itype)
-						{
-							// Reset to discard dead code
-							llvm::cast<LoadInst>(next_if)->setVolatile(false);
-
-							if (itype & spu_itype::branch)
-							{
-								const auto _stop = BasicBlock::Create(m_context, "", f);
-								const auto _next = BasicBlock::Create(m_context, "", f);
-								m_ir->CreateCondBr(m_ir->CreateIsNotNull(m_ir->CreateLoad(get_type<u32>(), spu_ptr<u32>(&spu_thread::state))), _stop, _next, m_md_unlikely);
-								m_ir->SetInsertPoint(_stop);
-								m_ir->CreateStore(m_interp_pc, spu_ptr<u32>(&spu_thread::pc));
-
-								const auto escape_yes = BasicBlock::Create(m_context, "", f);
-								const auto escape_no = BasicBlock::Create(m_context, "", f);
-								m_ir->CreateCondBr(call("spu_exec_check_state", &exec_check_state, m_thread), escape_yes, escape_no);
-								m_ir->SetInsertPoint(escape_yes);
-								call("spu_escape", spu_runtime::g_escape, m_thread);
-								m_ir->CreateBr(_next);
-								m_ir->SetInsertPoint(escape_no);
-								m_ir->CreateBr(_next);
-								m_ir->SetInsertPoint(_next);
-							}
-
-							llvm::Value* fret = m_interp_table;
-
-							if (itype == spu_itype::WRCH ||
-								itype == spu_itype::RDCH ||
-								itype == spu_itype::RCHCNT ||
-								itype == spu_itype::STOP ||
-								itype == spu_itype::STOPD ||
-								itype == spu_itype::UNK ||
-								itype == spu_itype::DFCMEQ ||
-								itype == spu_itype::DFCMGT ||
-								itype == spu_itype::DFCGT ||
-								itype == spu_itype::DFCEQ ||
-								itype == spu_itype::DFTSV)
-							{
-								m_interp_7f0  = m_ir->getInt32(0x7f0);
-								m_interp_regs = _ptr(m_thread, get_reg_offset(0));
-								fret = ret_func;
-							}
-							else if (!(itype & spu_itype::branch))
-							{
-								// Hack: inline ret instruction before final jmp; this is not reliable.
-#ifdef ARCH_X64
-								m_ir->CreateCall(InlineAsm::get(get_ftype<void>(), "ret", "", true, false, InlineAsm::AD_Intel));
-#else
-								m_ir->CreateCall(InlineAsm::get(get_ftype<void>(), "ret", "", true, false));
-#endif
-								fret = ret_func;
-							}
-
-							const auto arg3 = UndefValue::get(get_type<u32>());
-							const auto _ret = m_ir->CreateCall(if_type, fret, {m_lsptr, m_thread, m_interp_pc, arg3, m_interp_table, m_interp_7f0, m_interp_regs});
-							_ret->setCallingConv(CallingConv::GHC);
-							_ret->setTailCall();
-							m_ir->CreateRetVoid();
-						}
-
-						if (!m_ir->GetInsertBlock()->getTerminator())
-						{
-							// Call next instruction.
-							const auto _stop = BasicBlock::Create(m_context, "", f);
-							const auto _next = BasicBlock::Create(m_context, "", f);
-							m_ir->CreateCondBr(m_ir->CreateIsNotNull(m_ir->CreateLoad(get_type<u32>(), spu_ptr<u32>(&spu_thread::state))), _stop, _next, m_md_unlikely);
-							m_ir->SetInsertPoint(_next);
-
-							if (itype == spu_itype::WRCH ||
-								itype == spu_itype::RDCH ||
-								itype == spu_itype::RCHCNT ||
-								itype == spu_itype::STOP ||
-								itype == spu_itype::STOPD)
-							{
-								m_interp_7f0  = m_ir->getInt32(0x7f0);
-								m_interp_regs = _ptr(m_thread, get_reg_offset(0));
-							}
-
-							const auto ncall = m_ir->CreateCall(if_type, next_if, {m_lsptr, m_thread, m_interp_pc, next_op, m_interp_table, m_interp_7f0, m_interp_regs});
-							ncall->setCallingConv(CallingConv::GHC);
-							ncall->setTailCall();
-							m_ir->CreateRetVoid();
-							m_ir->SetInsertPoint(_stop);
-							m_ir->CreateStore(m_interp_pc, spu_ptr<u32>(&spu_thread::pc));
-							call("spu_escape", spu_runtime::g_escape, m_thread)->setTailCall();
-							m_ir->CreateRetVoid();
-						}
-					}
-				}
-			}
-
-			if (last_itype != itype && g_cfg.core.spu_decoder != spu_decoder_type::llvm)
-			{
-				// Repeat after probing
-				last_itype = itype;
-			}
-			else
-			{
-				// Add to the table
-				iptrs.push_back(f);
-				i++;
-			}
-		}
-
-		m_function_table->setInitializer(ConstantArray::get(ArrayType::get(if_type->getPointerTo(), 1ull << m_interp_magn), iptrs));
-		m_function_table = nullptr;
-
-		for (auto& f : *_module)
-		{
-			replace_intrinsics(f);
-		}
-
-		std::string log;
-
-		raw_string_ostream out(log);
-
-		if (g_cfg.core.spu_debug)
-		{
-			fmt::append(log, "LLVM IR (interpreter):\n");
-			out << *_module; // print IR
-			out << "\n\n";
-		}
-
-		if (verifyModule(*_module, &out))
-		{
-			out.flush();
-			spu_log.error("LLVM: Verification failed:\n%s", log);
-
-			if (g_cfg.core.spu_debug)
-			{
-				fs::write_file(m_spurt->get_cache_path() + "spu-ir.log", fs::create + fs::write + fs::append, log);
-			}
-
-			fmt::throw_exception("Compilation failed");
-		}
-
-		if (g_cfg.core.spu_debug)
-		{
-			// Testing only
-			m_jit.add(std::move(_module), m_spurt->get_cache_path() + "llvm/");
-		}
-		else
-		{
-			m_jit.add(std::move(_module));
-		}
-
-		m_jit.fin();
-
-		// Register interpreter entry point
-		spu_runtime::g_interpreter = reinterpret_cast<spu_function_t>(m_jit.get_engine().getPointerToFunction(main_func));
-
-		for (u32 i = 0; i < spu_runtime::g_interpreter_table.size(); i++)
-		{
-			// Fill exported interpreter table
-			spu_runtime::g_interpreter_table[i] = ifuncs[i] ? reinterpret_cast<u64>(m_jit.get_engine().getPointerToFunction(ifuncs[i])) : 0;
-		}
-
-		if (!spu_runtime::g_interpreter)
-		{
-			return nullptr;
-		}
-
-		if (g_cfg.core.spu_debug)
-		{
-			out.flush();
-			fs::write_file(m_spurt->get_cache_path() + "spu-ir.log", fs::create + fs::write + fs::append, log);
-		}
-
-		return spu_runtime::g_interpreter;
 	}
 
 	static bool exec_check_state(spu_thread* _spu)
@@ -2866,13 +1124,13 @@ public:
 		}
 
 		update_pc();
-		ensure_gpr_stores();
 		call("spu_syscall", &exec_stop, m_thread, m_ir->getInt32(op.opcode & 0x3fff));
 
 		if (g_cfg.core.spu_block_size == spu_block_size_type::safe)
 		{
 			m_block->block_end = m_ir->GetInsertBlock();
 			update_pc(m_pos + 4);
+			ensure_gpr_stores();
 			tail_chunk(m_dispatch);
 			return;
 		}
@@ -2934,7 +1192,6 @@ public:
 		{
 			// Make previous stores not able to be reordered beyond this point or be deleted
 			std::for_each(m_block->store_context_ctr.begin(), m_block->store_context_ctr.end(), FN(x++));
-			m_block->has_gpr_memory_barriers = true;
 		}
 	}
 
@@ -3034,7 +1291,6 @@ public:
 		}
 		case SPU_RdDec:
 		{
-#if defined(ARCH_X64)
 			if (utils::get_tsc_freq() && !(g_cfg.core.spu_loop_detection) && (g_cfg.core.clocks_scale == 100))
 			{
 				const auto timestamp = m_ir->CreateLoad(get_type<u64>(), spu_ptr<u64>(&spu_thread::ch_dec_start_timestamp));
@@ -3052,7 +1308,7 @@ public:
 				res.value = m_ir->CreateSub(dec_value, deltax);
 				break;
 			}
-#endif
+
 			res.value = call("spu_read_decrementer", &exec_read_dec, m_thread);
 			break;
 		}
@@ -3131,40 +1387,6 @@ public:
 			res.value = call("spu_read_channel_count", &exec_rchcnt, m_thread, get_imm<u32>(op.ra).value);
 			set_vr(op.rt, insert(splat<u32[4]>(0), 3, res));
 			return;
-		}
-
-		switch (op.ra)
-		{
-		case SPU_WrOutMbox:
-		case SPU_WrOutIntrMbox:
-		case SPU_RdSigNotify1:
-		case SPU_RdSigNotify2:
-		case SPU_RdInMbox:
-		case SPU_RdEventStat:
-		{
-			bool loop_is_likely = op.ra == SPU_RdSigNotify1 || op.ra == SPU_RdSigNotify2;
-
-			for (u32 block_start : m_block->bb->preds)
-			{
-				if (block_start >= m_pos)
-				{
-					loop_is_likely = true;
-					break;
-				}
-			}
-
-			if (loop_is_likely || g_cfg.savestate.compatible_mode)
-			{
-				ensure_gpr_stores();
-				check_state(m_pos, false);
-			}
-
-			break;
-		}
-		default:
-		{
-			break;
-		}
 		}
 
 		switch (op.ra)
@@ -3289,25 +1511,14 @@ public:
 		_spu->do_mfc();
 	}
 
-	template <bool Saveable>
 	static void exec_mfc_cmd(spu_thread* _spu)
 	{
-		if constexpr (!Saveable)
-		{
-			_spu->unsavable = true;
-		}
-
 		if (!_spu->process_mfc_cmd() || _spu->state & cpu_flag::again)
 		{
-			fmt::throw_exception("exec_mfc_cmd(): Should not abort!");
+			spu_runtime::g_escape(_spu);
 		}
 
 		static_cast<void>(_spu->test_stopped());
-
-		if constexpr (!Saveable)
-		{
-			_spu->unsavable = false;
-		}
 	}
 
 	void WRCH(spu_opcode_t op) //
@@ -3486,17 +1697,8 @@ public:
 				case MFC_GETLB_CMD:
 				case MFC_GETLF_CMD:
 				{
-					m_ir->CreateBr(next);
-					m_ir->SetInsertPoint(exec);
-					m_ir->CreateUnreachable();
-					m_ir->SetInsertPoint(fail);
-					m_ir->CreateUnreachable();
-					m_ir->SetInsertPoint(next);
-					m_ir->CreateStore(ci, spu_ptr<u8>(&spu_thread::ch_mfc_cmd, &spu_mfc_cmd::cmd));
-					update_pc();
 					ensure_gpr_stores();
-					call("spu_exec_mfc_cmd_saveable", &exec_mfc_cmd<true>, m_thread);
-					return;
+					[[fallthrough]];
 				}
 				case MFC_SDCRZ_CMD:
 				case MFC_GETLLAR_CMD:
@@ -3513,7 +1715,7 @@ public:
 					m_ir->SetInsertPoint(next);
 					m_ir->CreateStore(ci, spu_ptr<u8>(&spu_thread::ch_mfc_cmd, &spu_mfc_cmd::cmd));
 					update_pc();
-					call("spu_exec_mfc_cmd", &exec_mfc_cmd<false>, m_thread);
+					call("spu_exec_mfc_cmd", &exec_mfc_cmd, m_thread);
 					return;
 				}
 				case MFC_SNDSIG_CMD:
@@ -3572,7 +1774,7 @@ public:
 					}
 
 					m_ir->CreateStore(ci, spu_ptr<u8>(&spu_thread::ch_mfc_cmd, &spu_mfc_cmd::cmd));
-					call("spu_exec_mfc_cmd", &exec_mfc_cmd<false>, m_thread);
+					call("spu_exec_mfc_cmd", &exec_mfc_cmd, m_thread);
 					m_ir->CreateBr(next);
 					m_ir->SetInsertPoint(copy);
 
@@ -3794,7 +1996,6 @@ public:
 		{
 			call("spu_get_events", &exec_get_events, m_thread, m_ir->getInt32(SPU_EVENT_TM));
 
-#if defined(ARCH_X64)
 			if (utils::get_tsc_freq() && !(g_cfg.core.spu_loop_detection) && (g_cfg.core.clocks_scale == 100))
 			{
 				const auto tsc = m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::x86_rdtsc));
@@ -3804,7 +2005,6 @@ public:
 				m_ir->CreateStore(tsctb, spu_ptr<u64>(&spu_thread::ch_dec_start_timestamp));
 			}
 			else
-#endif
 			{
 				m_ir->CreateStore(call("get_timebased_time", &get_timebased_time), spu_ptr<u64>(&spu_thread::ch_dec_start_timestamp));
 			}
@@ -5601,29 +3801,36 @@ public:
 
 	void FREST(spu_opcode_t op)
 	{
-		register_intrinsic("spu_frest", [&](llvm::CallInst* ci)
+		// TODO
+		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate)
 		{
-			const auto a = bitcast<u32[4]>(value<f32[4]>(ci->getOperand(0)));
+			const auto a = get_vr<f32[4]>(op.ra);
+			const auto mask_ov = sext<s32[4]>(bitcast<s32[4]>(fabs(a)) > splat<s32[4]>(0x7e7fffff));
+			const auto mask_de = eval(noncast<u32[4]>(sext<s32[4]>(fcmp_ord(a == fsplat<f32[4]>(0.)))) >> 1);
+			set_vr(op.rt, (bitcast<s32[4]>(fsplat<f32[4]>(1.0) / a) & ~mask_ov) | noncast<s32[4]>(mask_de));
+			return;
+		}
 
-			const auto a_fraction = (a >> splat<u32[4]>(18)) & splat<u32[4]>(0x1F);
-			const auto a_exponent = (a >> splat<u32[4]>(23)) & splat<u32[4]>(0xFF);
-			const auto a_sign = (a & splat<u32[4]>(0x80000000));
-			value_t<u32[4]> final_result = eval(splat<u32[4]>(0));
-
-			for (u32 i = 0; i < 4; i++)
+		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
+		{
+			register_intrinsic("spu_frest", [&](llvm::CallInst* ci)
 			{
-				const auto eval_fraction = eval(extract(a_fraction, i));
-				const auto eval_exponent = eval(extract(a_exponent, i));
-				const auto eval_sign = eval(extract(a_sign, i));
-
-				value_t<u32> r_fraction = load_const<u32>(m_spu_frest_fraction_lut, eval_fraction);
-				value_t<u32> r_exponent = load_const<u32>(m_spu_frest_exponent_lut, eval_exponent);
-
-				final_result = eval(insert(final_result, i, eval(r_fraction | eval_sign | r_exponent)));
-			}
-
-			return bitcast<f32[4]>(final_result);
-		});
+				const auto a = value<f32[4]>(ci->getOperand(0));
+				// Gives accuracy penalty, frest result is within one newton-raphson iteration for accuracy
+				const auto approx_result = fsplat<f32[4]>(0.999875069f) / a;
+				// Zeroes the last 11 bytes of the mantissa so FI calculations end up correct if needed
+				return bitcast<f32[4]>(bitcast<u32[4]>(approx_result) & splat<u32[4]>(0xFFFFF800));
+			});
+		}
+		else
+		{
+			register_intrinsic("spu_frest", [&](llvm::CallInst* ci)
+			{
+				const auto a = value<f32[4]>(ci->getOperand(0));
+				// Fast but this makes the result vary per cpu
+				return fre(a);
+			});
+		}
 
 		set_vr(op.rt, frest(get_vr<f32[4]>(op.ra)));
 	}
@@ -5636,27 +3843,33 @@ public:
 
 	void FRSQEST(spu_opcode_t op)
 	{
-		register_intrinsic("spu_frsqest", [&](llvm::CallInst* ci)
+		// TODO
+		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate)
 		{
-			const auto a = bitcast<u32[4]>(value<f32[4]>(ci->getOperand(0)));
+			set_vr(op.rt, fsplat<f64[4]>(1.0) / fsqrt(fabs(get_vr<f64[4]>(op.ra))));
+			return;
+		}
 
-			const auto a_fraction = (a >> splat<u32[4]>(18)) & splat<u32[4]>(0x3F);
-			const auto a_exponent = (a >> splat<u32[4]>(23)) & splat<u32[4]>(0xFF);
-			value_t<u32[4]> final_result = eval(splat<u32[4]>(0));
-
-			for (u32 i = 0; i < 4; i++)
+		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
+		{
+			register_intrinsic("spu_frsqest", [&](llvm::CallInst* ci)
 			{
-				const auto eval_fraction = eval(extract(a_fraction, i));
-				const auto eval_exponent = eval(extract(a_exponent, i));
-
-				value_t<u32> r_fraction = load_const<u32>(m_spu_frsqest_fraction_lut, eval_fraction);
-				value_t<u32> r_exponent = load_const<u32>(m_spu_frsqest_exponent_lut, eval_exponent);
-
-				final_result = eval(insert(final_result, i, eval(r_fraction | r_exponent)));
-			}
-
-			return bitcast<f32[4]>(final_result);
-		});
+				const auto a = value<f32[4]>(ci->getOperand(0));
+				// Gives accuracy penalty, frsqest result is within one newton-raphson iteration for accuracy
+				const auto approx_result = fsplat<f32[4]>(0.999763668f) / fsqrt(fabs(a));
+				// Zeroes the last 11 bytes of the mantissa so FI calculations end up correct if needed
+				return bitcast<f32[4]>(bitcast<u32[4]>(approx_result) & splat<u32[4]>(0xFFFFF800));
+			});
+		}
+		else
+		{
+			register_intrinsic("spu_frsqest", [&](llvm::CallInst* ci)
+			{
+				const auto a = value<f32[4]>(ci->getOperand(0));
+				// Fast but this makes the result vary per cpu
+				return frsqe(fabs(a));
+			});
+		}
 
 		set_vr(op.rt, frsqest(get_vr<f32[4]>(op.ra)));
 	}
@@ -5716,16 +3929,23 @@ public:
 				return eval(sext<s32[4]>(bitcast<s32[4]>(a) > bitcast<s32[4]>(b)));
 			}
 
-			const auto ai = eval(bitcast<s32[4]>(a));
-			const auto bi = eval(bitcast<s32[4]>(b));
-
-			if (!safe_nonzero_compare.any())
+			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate || g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::relaxed)
 			{
-				return eval(sext<s32[4]>(fcmp_uno(a != b) & select((ai & bi) >= 0, ai > bi, ai < bi)));
+				const auto ai = eval(bitcast<s32[4]>(a));
+				const auto bi = eval(bitcast<s32[4]>(b));
+
+				if (!safe_nonzero_compare.any())
+				{
+					return eval(sext<s32[4]>(fcmp_uno(a != b) & select((ai & bi) >= 0, ai > bi, ai < bi)));
+				}
+				else
+				{
+					return eval(sext<s32[4]>(select((ai & bi) >= 0, ai > bi, ai < bi)));
+				}
 			}
 			else
 			{
-				return eval(sext<s32[4]>(select((ai & bi) >= 0, ai > bi, ai < bi)));
+				return eval(sext<s32[4]>(fcmp_ord(a > b)));
 			}
 		});
 
@@ -5860,7 +4080,7 @@ public:
 	template <typename T, typename U>
 	static llvm_calli<f32[4], T, U> fm(T&& a, U&& b)
 	{
-		return llvm_calli<f32[4], T, U>{"spu_fm", {std::forward<T>(a), std::forward<U>(b)}}.set_order_equality_hint(1, 1);
+		return {"spu_fm", {std::forward<T>(a), std::forward<U>(b)}};
 	}
 
 	void FM(spu_opcode_t op)
@@ -5893,46 +4113,12 @@ public:
 			}
 		});
 
-		if (op.ra == op.rb && !m_interp_magn)
-		{
-			const auto a = get_vr<f32[4]>(op.ra);
-			set_vr(op.rt, fm(a, a));
-			return;
-		}
-
 		const auto [a, b] = get_vrs<f32[4]>(op.ra, op.rb);
 
-		// This causes issues in LBP 1(first platform on first temple level doesn't come down when grabbed)
-		// Presumably 1/x might result in Zero/NaN when a/x doesn't
-		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::relaxed)
+		if (op.ra == op.rb && !m_interp_magn)
 		{
-			auto full_fm_accurate = [&](const auto& a, const auto& div)
-			{
-				const auto div_result = a / div;
-				const auto result_and = bitcast<u32[4]>(div_result) & 0x7fffffffu;
-				const auto result_cmp_inf = sext<s32[4]>(result_and == splat<u32[4]>(0x7F800000u));
-				const auto result_cmp_nan = sext<s32[4]>(result_and <= splat<u32[4]>(0x7F800000u));
-
-				const auto and_mask = bitcast<u32[4]>(result_cmp_nan) & splat<u32[4]>(0xFFFFFFFFu);
-				const auto or_mask = bitcast<u32[4]>(result_cmp_inf) & splat<u32[4]>(0xFFFFFFFu);
-				set_vr(op.rt, bitcast<f32[4]>((bitcast<u32[4]>(div_result) & and_mask) | or_mask));
-			};
-
-			// FM(a, re_accurate(div))
-			if (const auto [ok_re_acc, div, one] = match_expr(b, re_accurate(match<f32[4]>(), match<f32[4]>())); ok_re_acc)
-			{
-				full_fm_accurate(a, div);
-				erase_stores(one, b);
-				return;
-			}
-
-			// FM(re_accurate(div), b)
-			if (const auto [ok_re_acc, div, one] = match_expr(a, re_accurate(match<f32[4]>(), match<f32[4]>())); ok_re_acc)
-			{
-				full_fm_accurate(b, div);
-				erase_stores(one, a);
-				return;
-			}
+			set_vr(op.rt, fm(a, a));
+			return;
 		}
 
 		set_vr(op.rt, fm(a, b));
@@ -6224,7 +4410,7 @@ public:
 	template <typename T, typename U, typename V>
 	static llvm_calli<f32[4], T, U, V> fnms(T&& a, U&& b, V&& c)
 	{
-		return llvm_calli<f32[4], T, U, V>{"spu_fnms", {std::forward<T>(a), std::forward<U>(b), std::forward<V>(c)}}.set_order_equality_hint(1, 1, 0);
+		return {"spu_fnms", {std::forward<T>(a), std::forward<U>(b), std::forward<V>(c)}};
 	}
 
 	void FNMS(spu_opcode_t op)
@@ -6243,7 +4429,14 @@ public:
 			const auto b = value<f32[4]>(ci->getOperand(1));
 			const auto c = value<f32[4]>(ci->getOperand(2));
 
-			return fma32x4(eval(-clamp_smax(a)), clamp_smax(b), c);
+			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate || g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::relaxed)
+			{
+				return fma32x4(eval(-clamp_smax(a)), clamp_smax(b), c);
+			}
+			else
+			{
+				return fma32x4(eval(-a), b, c);
+			}
 		});
 
 		set_vr(op.rt4, fnms(get_vr<f32[4]>(op.ra), get_vr<f32[4]>(op.rb), get_vr<f32[4]>(op.rc)));
@@ -6252,13 +4445,7 @@ public:
 	template <typename T, typename U, typename V>
 	static llvm_calli<f32[4], T, U, V> fma(T&& a, U&& b, V&& c)
 	{
-		return llvm_calli<f32[4], T, U, V>{"spu_fma", {std::forward<T>(a), std::forward<U>(b), std::forward<V>(c)}}.set_order_equality_hint(1, 1, 0);
-	}
-
-	template <typename T, typename U>
-	static llvm_calli<f32[4], T, U> re_accurate(T&& a, U&& b)
-	{
-		return {"spu_re_acc", {std::forward<T>(a), std::forward<U>(b)}};
+		return {"spu_fma", {std::forward<T>(a), std::forward<U>(b), std::forward<V>(c)}};
 	}
 
 	void FMA(spu_opcode_t op)
@@ -6291,220 +4478,39 @@ public:
 			}
 		});
 
-		register_intrinsic("spu_re_acc", [&](llvm::CallInst* ci)
-		{
-			const auto div = value<f32[4]>(ci->getOperand(0));
-			const auto the_one = value<f32[4]>(ci->getOperand(1));
-
-			const auto div_result = the_one / div;
-
-			// from ps3 hardware testing: Inf => NaN and NaN => Zero
-			const auto result_and = bitcast<u32[4]>(div_result) & 0x7fffffffu;
-			const auto result_cmp_inf = sext<s32[4]>(result_and == splat<u32[4]>(0x7F800000u));
-			const auto result_cmp_nan = sext<s32[4]>(result_and <= splat<u32[4]>(0x7F800000u));
-
-			const auto and_mask = bitcast<u32[4]>(result_cmp_nan) & splat<u32[4]>(0xFFFFFFFFu);
-			const auto or_mask = bitcast<u32[4]>(result_cmp_inf) & splat<u32[4]>(0xFFFFFFFu);
-
-			return bitcast<f32[4]>((bitcast<u32[4]>(div_result) & and_mask) | or_mask);
-		});
-
 		const auto [a, b, c] = get_vrs<f32[4]>(op.ra, op.rb, op.rc);
+
 		static const auto MT = match<f32[4]>();
 
-		auto check_sqrt_pattern_for_float = [&](f32 float_value) -> bool
+		// Match sqrt
+		if (auto [ok_fnma, a1, b1] = match_expr(a, fnms(MT, MT, fsplat<f32[4]>(1.00000011920928955078125))); ok_fnma)
 		{
-			auto match_fnms = [&](f32 float_value)
+			if (auto [ok_fm2, a2] = match_expr(b, fm(MT, fsplat<f32[4]>(0.5))); ok_fm2 && a2.eq(b1))
 			{
-				auto res = match_expr(a, fnms(MT, MT, fsplat<f32[4]>(float_value)));
-				if (std::get<0>(res))
-					return res;
-
-				return match_expr(b, fnms(MT, MT, fsplat<f32[4]>(float_value)));
-			};
-
-			auto match_fm_half = [&]()
-			{
-				auto res = match_expr(a, fm(MT, fsplat<f32[4]>(0.5)));
-				if (std::get<0>(res))
-					return res;
-
-				res = match_expr(a, fm(fsplat<f32[4]>(0.5), MT));
-				if (std::get<0>(res))
-					return res;
-
-				res = match_expr(b, fm(MT, fsplat<f32[4]>(0.5)));
-				if (std::get<0>(res))
-					return res;
-
-				return match_expr(b, fm(fsplat<f32[4]>(0.5), MT));
-			};
-
-
-			if (auto [ok_fnma, a1, b1] = match_fnms(float_value); ok_fnma)
-			{
-				if (auto [ok_fm2, fm_half_mul] = match_fm_half(); ok_fm2 && fm_half_mul.eq(b1))
+				if (auto [ok_fm1, a3, b3] = match_expr(c, fm(MT, MT)); ok_fm1 && a3.eq(a1))
 				{
-					if (fm_half_mul.eq(b1))
+					if (auto [ok_sqrte, src] = match_expr(a3, spu_rsqrte(MT)); ok_sqrte && src.eq(b3))
 					{
-						if (auto [ok_fm1, a3, b3] = match_expr(c, fm(MT, MT)); ok_fm1 && a3.eq(a1))
-						{
-							if (auto [ok_sqrte, src] = match_expr(a3, spu_rsqrte(MT)); ok_sqrte && src.eq(b3))
-							{
-								erase_stores(a, b, c, a3);
-								set_vr(op.rt4, fsqrt(fabs(src)));
-								return true;
-							}	
-						}
-						else if (auto [ok_fm1, a3, b3] = match_expr(c, fm(MT, MT)); ok_fm1 && b3.eq(a1))
-						{
-							if (auto [ok_sqrte, src] = match_expr(b3, spu_rsqrte(MT)); ok_sqrte && src.eq(a3))
-							{
-								erase_stores(a, b, c, b3);
-								set_vr(op.rt4, fsqrt(fabs(src)));
-								return true;
-							}	
-						}
-					}
-					else if (fm_half_mul.eq(a1))
-					{
-						if (auto [ok_fm1, a3, b3] = match_expr(c, fm(MT, MT)); ok_fm1 && a3.eq(b1))
-						{
-							if (auto [ok_sqrte, src] = match_expr(a3, spu_rsqrte(MT)); ok_sqrte && src.eq(b3))
-							{
-								erase_stores(a, b, c, a3);
-								set_vr(op.rt4, fsqrt(fabs(src)));
-								return true;
-							}	
-						}
-						else if (auto [ok_fm1, a3, b3] = match_expr(c, fm(MT, MT)); ok_fm1 && b3.eq(b1))
-						{
-							if (auto [ok_sqrte, src] = match_expr(b3, spu_rsqrte(MT)); ok_sqrte && src.eq(a3))
-							{
-								erase_stores(a, b, c, b3);
-								set_vr(op.rt4, fsqrt(fabs(src)));
-								return true;
-							}	
-						}
-					}
-				}
-			}
-
-			return false;
-		};
-
-		if (check_sqrt_pattern_for_float(1.0f))
-			return;
-
-		if (check_sqrt_pattern_for_float(std::bit_cast<f32>(std::bit_cast<u32>(1.0f) + 1)))
-			return;
-
-		auto check_accurate_reciprocal_pattern_for_float = [&](f32 float_value) -> bool
-		{
-			// FMA(FNMS(div, spu_re(div), float_value), spu_re(div), spu_re(div))
-			if (auto [ok_fnms, div] = match_expr(a, fnms(MT, b, fsplat<f32[4]>(float_value))); ok_fnms && op.rb == op.rc)
-			{
-				if (auto [ok_re] = match_expr(b, spu_re(div)); ok_re)
-				{
-					erase_stores(a, b, c);
-					set_vr(op.rt4, re_accurate(div, fsplat<f32[4]>(float_value)));
-					return true;
-				}
-			}
-
-			// FMA(FNMS(spu_re(div), div, float_value), spu_re(div), spu_re(div))
-			if (auto [ok_fnms, div] = match_expr(a, fnms(b, MT, fsplat<f32[4]>(float_value))); ok_fnms && op.rb == op.rc)
-			{
-				if (auto [ok_re] = match_expr(b, spu_re(div)); ok_re)
-				{
-					erase_stores(a, b, c);
-					set_vr(op.rt4, re_accurate(div, fsplat<f32[4]>(float_value)));
-					return true;
-				}
-			}
-
-			// FMA(spu_re(div), FNMS(div, spu_re(div), float_value), spu_re(div))
-			if (auto [ok_fnms, div] = match_expr(b, fnms(MT, a, fsplat<f32[4]>(float_value))); ok_fnms && op.ra == op.rc)
-			{
-				if (auto [ok_re] = match_expr(a, spu_re(div)); ok_re)
-				{
-					erase_stores(a, b, c);
-					set_vr(op.rt4, re_accurate(div, fsplat<f32[4]>(float_value)));
-					return true;
-				}
-			}
-
-			// FMA(spu_re(div), FNMS(spu_re(div), div, float_value), spu_re(div))
-			if (auto [ok_fnms, div] = match_expr(b, fnms(a, MT, fsplat<f32[4]>(float_value))); ok_fnms && op.ra == op.rc)
-			{
-				if (auto [ok_re] = match_expr(a, spu_re(div)); ok_re)
-				{
-					erase_stores(a, b, c);
-					set_vr(op.rt4, re_accurate(div, fsplat<f32[4]>(float_value)));
-					return true;
-				}
-			}
-
-			return false;
-		};
-
-		if (check_accurate_reciprocal_pattern_for_float(1.0f))
-			return;
-
-		if (check_accurate_reciprocal_pattern_for_float(std::bit_cast<f32>(std::bit_cast<u32>(1.0f) + 1)))
-			return;
-
-		// NFS Most Wanted doesn't like this
-		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::relaxed)
-		{
-			// Those patterns are not safe vs non optimization as inaccuracy from spu_re will spread with early fm before the accuracy is improved
-
-			// Match division (fast)
-			// FMA(FNMS(fm(diva<*> spu_re(divb)), divb, diva), spu_re(divb), fm(diva<*> spu_re(divb)))
-			if (auto [ok_fnma, divb, diva] = match_expr(a, fnms(c, MT, MT)); ok_fnma)
-			{
-				if (auto [ok_fm, fm1, fm2] = match_expr(c, fm(MT, MT)); ok_fm && ((fm1.eq(diva) && fm2.eq(b)) || (fm1.eq(b) && fm2.eq(diva))))
-				{
-					if (auto [ok_re] = match_expr(b, spu_re(divb)); ok_re)
-					{
-						erase_stores(b, c);
-						set_vr(op.rt4, diva / divb);
-						return;
-					}
-				}
-			}
-
-			// FMA(spu_re(divb), FNMS(fm(diva <*> spu_re(divb)), divb, diva), fm(diva <*> spu_re(divb)))
-			if (auto [ok_fnma, divb, diva] = match_expr(b, fnms(c, MT, MT)); ok_fnma)
-			{
-				if (auto [ok_fm, fm1, fm2] = match_expr(c, fm(MT, MT)); ok_fm && ((fm1.eq(diva) && fm2.eq(a)) || (fm1.eq(a) && fm2.eq(diva))))
-				{
-					if (auto [ok_re] = match_expr(a, spu_re(divb)); ok_re)
-					{
-						erase_stores(a, c);
-						set_vr(op.rt4, diva / divb);
+						erase_stores(a, b, c, a3);
+						set_vr(op.rt4, fsqrt(fabs(src)));
 						return;
 					}
 				}
 			}
 		}
 
-		// Not all patterns can be simplified because of block scope
-		// Those todos don't necessarily imply a missing pattern
-
-		if (auto [ok_re, mystery] = match_expr(a, spu_re(MT)); ok_re)
+		// Match division (fast)
+		if (auto [ok_fnma, divb, diva] = match_expr(a, fnms(c, MT, MT)); ok_fnma)
 		{
-			spu_log.todo("[%s:0x%05x] Unmatched spu_re(a) found in FMA", m_hash, m_pos);
-		}
-
-		if (auto [ok_re, mystery] = match_expr(b, spu_re(MT)); ok_re)
-		{
-			spu_log.todo("[%s:0x%05x] Unmatched spu_re(b) found in FMA", m_hash, m_pos);
-		}
-
-		if (auto [ok_resq, mystery] = match_expr(c, spu_rsqrte(MT)); ok_resq)
-		{
-			spu_log.todo("[%s:0x%05x] Unmatched spu_rsqrte(c) found in FMA", m_hash, m_pos);
+			if (auto [ok_fm] = match_expr(c, fm(diva, b)); ok_fm)
+			{
+				if (auto [ok_re] = match_expr(b, spu_re(divb)); ok_re)
+				{
+					erase_stores(b, c);
+					set_vr(op.rt4, diva / divb);
+					return;
+				}
+			}
 		}
 
 		set_vr(op.rt4, fma(a, b, c));
@@ -6513,7 +4519,7 @@ public:
 	template <typename T, typename U, typename V>
 	static llvm_calli<f32[4], T, U, V> fms(T&& a, U&& b, V&& c)
 	{
-		return llvm_calli<f32[4], T, U, V>{"spu_fms", {std::forward<T>(a), std::forward<U>(b), std::forward<V>(c)}}.set_order_equality_hint(1, 1, 0);
+		return {"spu_fms", {std::forward<T>(a), std::forward<U>(b), std::forward<V>(c)}};
 	}
 
 	void FMS(spu_opcode_t op)
@@ -6565,86 +4571,56 @@ public:
 
 	void FI(spu_opcode_t op)
 	{
+		// TODO
+		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate)
+		{
+			set_vr(op.rt, get_vr<f64[4]>(op.rb));
+			// const auto [a, b] = get_vrs<f64[4]>(op.ra, op.rb);
+
+			// const auto mask_se = splat<s64[4]>(0xfff0000000000000ull);
+			// const auto mask_bf = splat<s64[4]>(0x000fff8000000000ull);
+			// const auto mask_sf = splat<s64[4]>(0x0000007fe0000000ull);
+			// const auto mask_yf = splat<s64[4]>(0x0000ffffe0000000ull);
+
+			// const auto base = bitcast<f64[4]>((bitcast<s64[4]>(b) & mask_bf) | 0x3ff0000000000000ull);
+			// const auto step = fpcast<f64[4]>(bitcast<s64[4]>(b) & mask_sf) * fsplat<f64[4]>(std::exp2(-13.f));
+			// const auto yval = fpcast<f64[4]>(bitcast<s64[4]>(a) & mask_yf) * fsplat<f64[4]>(std::exp2(-19.f));
+			// set_vr(op.rt, bitcast<f64[4]>((bitcast<s64[4]>(b) & mask_se) | (bitcast<s64[4]>(base - step * yval) & ~mask_se)));
+			return;
+		}
+
 		register_intrinsic("spu_fi", [&](llvm::CallInst* ci)
 		{
-			// TODO: adjustment for denormals(for accurate xfloat only?)
 			const auto a = bitcast<u32[4]>(value<f32[4]>(ci->getOperand(0)));
 			const auto b = bitcast<u32[4]>(value<f32[4]>(ci->getOperand(1)));
 
 			const auto base = (b & 0x007ffc00u) << 9; // Base fraction
 			const auto ymul = (b & 0x3ff) * (a & 0x7ffff); // Step fraction * Y fraction (fixed point at 2^-32)
-			const auto comparison = (ymul > base); // Should exponent be adjusted?
-			const auto bnew = (base - ymul) >> (zext<u32[4]>(comparison) ^ 9); // Shift one less bit if exponent is adjusted
-			const auto base_result = (b & 0xff800000u) | (bnew & ~0xff800000u); // Inject old sign and exponent
-			const auto adjustment = bitcast<u32[4]>(sext<s32[4]>(comparison)) & (1 << 23); // exponent adjustement for negative bnew
-			return bitcast<f32[4]>(base_result - adjustment);
+			const auto bnew = bitcast<s32[4]>((base - ymul) >> 9) + (sext<s32[4]>(ymul <= base) & (1 << 23)); // Subtract and correct invisible fraction bit
+			return bitcast<f32[4]>((b & 0xff800000u) | (bitcast<u32[4]>(fpcast<f32[4]>(bnew)) & ~0xff800000u)); // Inject old sign and exponent
 		});
 
-		const auto [a, b] = get_vrs<f32[4]>(op.ra, op.rb);
-
-		switch (g_cfg.core.spu_xfloat_accuracy)
+		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
 		{
-		case xfloat_accuracy::approximate:
-		{
-			// For approximate, create a pattern but do not optimize yet
 			register_intrinsic("spu_re", [&](llvm::CallInst* ci)
 			{
-				const auto a = bitcast<u32[4]>(value<f32[4]>(ci->getOperand(0)));
-				const auto a_fraction = (a >> splat<u32[4]>(18)) & splat<u32[4]>(0x1F);
-				const auto a_exponent = (a >> splat<u32[4]>(23)) & splat<u32[4]>(0xFF);
-				const auto a_sign = (a & splat<u32[4]>(0x80000000));
-				value_t<u32[4]> b = eval(splat<u32[4]>(0));
-
-				for (u32 i = 0; i < 4; i++)
-				{
-					const auto eval_fraction = eval(extract(a_fraction, i));
-					const auto eval_exponent = eval(extract(a_exponent, i));
-					const auto eval_sign = eval(extract(a_sign, i));
-					value_t<u32> r_fraction = load_const<u32>(m_spu_frest_fraction_lut, eval_fraction);
-					value_t<u32> r_exponent = load_const<u32>(m_spu_frest_exponent_lut, eval_exponent);
-					b = eval(insert(b, i, eval(r_fraction | eval_sign | r_exponent)));
-				}
-
-				const auto base = (b & 0x007ffc00u) << 9; // Base fraction
-				const auto ymul = (b & 0x3ff) * (a & 0x7ffff); // Step fraction * Y fraction (fixed point at 2^-32)
-				const auto comparison = (ymul > base); // Should exponent be adjusted?
-				const auto bnew = (base - ymul) >> (zext<u32[4]>(comparison) ^ 9); // Shift one less bit if exponent is adjusted
-				const auto base_result = (b & 0xff800000u) | (bnew & ~0xff800000u); // Inject old sign and exponent
-				const auto adjustment = bitcast<u32[4]>(sext<s32[4]>(comparison)) & (1 << 23); // exponent adjustement for negative bnew
-				return bitcast<f32[4]>(base_result - adjustment);
+				const auto a = value<f32[4]>(ci->getOperand(0));
+				// Gives accuracy penalty, frest result is within one newton-raphson iteration for accuracy
+				const auto approx_result = fsplat<f32[4]>(0.999875069f) / a;
+				return approx_result;
 			});
 
 			register_intrinsic("spu_rsqrte", [&](llvm::CallInst* ci)
 			{
-				const auto a = bitcast<u32[4]>(value<f32[4]>(ci->getOperand(0)));
-				const auto a_fraction = (a >> splat<u32[4]>(18)) & splat<u32[4]>(0x3F);
-				const auto a_exponent = (a >> splat<u32[4]>(23)) & splat<u32[4]>(0xFF);
-				value_t<u32[4]> b = eval(splat<u32[4]>(0));
-
-				for (u32 i = 0; i < 4; i++)
-				{
-					const auto eval_fraction = eval(extract(a_fraction, i));
-					const auto eval_exponent = eval(extract(a_exponent, i));
-
-					value_t<u32> r_fraction = load_const<u32>(m_spu_frsqest_fraction_lut, eval_fraction);
-					value_t<u32> r_exponent = load_const<u32>(m_spu_frsqest_exponent_lut, eval_exponent);
-
-					b = eval(insert(b, i, eval(r_fraction | r_exponent)));
-				}
-
-				const auto base = (b & 0x007ffc00u) << 9; // Base fraction
-				const auto ymul = (b & 0x3ff) * (a & 0x7ffff); // Step fraction * Y fraction (fixed point at 2^-32)
-				const auto comparison = (ymul > base); // Should exponent be adjusted?
-				const auto bnew = (base - ymul) >> (zext<u32[4]>(comparison) ^ 9); // Shift one less bit if exponent is adjusted
-				const auto base_result = (b & 0xff800000u) | (bnew & ~0xff800000u); // Inject old sign and exponent
-				const auto adjustment = bitcast<u32[4]>(sext<s32[4]>(comparison)) & (1 << 23); // exponent adjustement for negative bnew
-				return bitcast<f32[4]>(base_result - adjustment);
+				const auto a = value<f32[4]>(ci->getOperand(0));
+				// Gives accuracy penalty, frsqest result is within one newton-raphson iteration for accuracy
+				const auto approx_result = fsplat<f32[4]>(0.999763668f) / fsqrt(fabs(a));
+				return approx_result;
 			});
-			break;
 		}
-		case xfloat_accuracy::relaxed:
+		else
 		{
-			// For relaxed, agressively optimize and use intrinsics, those make the results vary per cpu
+			// For relaxed use intrinsics, those make the results vary per cpu
 			register_intrinsic("spu_re", [&](llvm::CallInst* ci)
 			{
 				const auto a = value<f32[4]>(ci->getOperand(0));
@@ -6656,32 +4632,26 @@ public:
 				const auto a = value<f32[4]>(ci->getOperand(0));
 				return frsqe(a);
 			});
-			break;
-		}
-		default:
-			break;
 		}
 
-		// Do not pattern match for accurate
-		if(g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate || g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::relaxed)
+		const auto [a, b] = get_vrs<f32[4]>(op.ra, op.rb);
+
+		if (const auto [ok, mb] = match_expr(b, frest(match<f32[4]>())); ok && mb.eq(a))
 		{
-			if (const auto [ok, mb] = match_expr(b, frest(match<f32[4]>())); ok && mb.eq(a))
-			{
-				erase_stores(b);
-				set_vr(op.rt, spu_re(a));
-				return;
-			}
+			erase_stores(b);
+			set_vr(op.rt, spu_re(a));
+			return;
+		}
 
-			if (const auto [ok, mb] = match_expr(b, frsqest(match<f32[4]>())); ok && mb.eq(a))
-			{
-				erase_stores(b);
-				set_vr(op.rt, spu_rsqrte(a));
-				return;
-			}
+		if (const auto [ok, mb] = match_expr(b, frsqest(match<f32[4]>())); ok && mb.eq(a))
+		{
+			erase_stores(b);
+			set_vr(op.rt, spu_rsqrte(a));
+			return;
 		}
 
 		const auto r = eval(fi(a, b));
-		if (!m_interp_magn && g_cfg.core.spu_xfloat_accuracy != xfloat_accuracy::accurate)
+		if (!m_interp_magn)
 			spu_log.todo("[%s:0x%05x] Unmatched spu_fi found", m_hash, m_pos);
 
 		set_vr(op.rt, r);
@@ -7829,14 +5799,10 @@ public:
 			return;
 		}
 
-		const auto compiled_pos = m_ir->getInt32(m_pos);
 		const u32 target = spu_branch_target(0, op.i16);
 
 		m_block->block_end = m_ir->GetInsertBlock();
-		const auto real_pos = get_pc(m_pos);
-		value_t<u32> target_val;
-		target_val.value = m_ir->getInt32(target);
-		m_ir->CreateCondBr(m_ir->CreateICmpEQ(real_pos, compiled_pos), add_block(target, true), add_block_indirect({}, target_val));
+		m_ir->CreateBr(add_block(target, true));
 	}
 
 	void BRASL(spu_opcode_t op) //
@@ -7929,29 +5895,3 @@ public:
 
 	static decltype(&spu_llvm_recompiler::UNK) decode(u32 op);
 };
-
-std::unique_ptr<spu_recompiler_base> spu_recompiler_base::make_llvm_recompiler(u8 magn)
-{
-	return std::make_unique<spu_llvm_recompiler>(magn);
-}
-
-const spu_decoder<spu_llvm_recompiler> s_spu_llvm_decoder;
-
-decltype(&spu_llvm_recompiler::UNK) spu_llvm_recompiler::decode(u32 op)
-{
-	return s_spu_llvm_decoder.decode(op);
-}
-
-#else
-
-std::unique_ptr<spu_recompiler_base> spu_recompiler_base::make_llvm_recompiler(u8 magn)
-{
-	if (magn)
-	{
-		return nullptr;
-	}
-
-	fmt::throw_exception("LLVM is not available in this build.");
-}
-
-#endif // LLVM_AVAILABLE

@@ -2,6 +2,7 @@
 
 #include "Utilities/File.h"
 #include "Utilities/lockless.h"
+#include "Utilities/address_range.h"
 #include "SPUThread.h"
 #include <vector>
 #include <bitset>
@@ -58,6 +59,27 @@ struct spu_program
 
 	// Program data with intentionally wrong endianness (on LE platform opcode values are swapped)
 	std::vector<u32> data;
+
+	// TODO: Add patterns
+	// Not a bitset to allow more possibilities
+	enum class inst_attr : u8
+	{
+		none,
+		omit,
+		putllc16,
+		putllc0,
+	};
+
+	std::vector<inst_attr> inst_attrs;
+
+	struct pattern_info
+	{
+		utils::address_range range;
+	};
+
+	std::unordered_map<u32, pattern_info> patterns;
+
+	void add_pattern(bool fill_all, inst_attr attr, u32 start, u32 end = -1);
 
 	bool operator==(const spu_program& rhs) const noexcept;
 
@@ -211,6 +233,9 @@ protected:
 
 	// List of block predecessors
 	std::unordered_map<u32, std::basic_string<u32>, value_hash<u32, 2>> m_preds;
+
+	// List of loop connectors (destinatiuon -> branches)
+	std::unordered_map<u32, std::basic_string<u32>, value_hash<u32, 2>> m_loops;
 
 	// List of function entry points and return points (set after BRSL, BRASL, BISL, BISLED)
 	std::bitset<0x10000> m_entry_info;
