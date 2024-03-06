@@ -58,20 +58,14 @@ namespace stx
 					if (val == 0)
 					{
 						// Success: obtained "init lock"
-
-						if constexpr (sizeof...(FAndArgs))
-						{
-							if (invoked_func)
-							{
-								invoke_callback(1, std::forward<FAndArgs>(args)...);
-							}
-						}
-
 						break;
 					}
 
 					if (val & c_init_bit)
 					{
+						// Failure
+						_this = nullptr;
+
 						if constexpr (Forced()())
 						{
 							// Forced reset
@@ -82,19 +76,6 @@ namespace stx
 								// Wait for other users to finish their work
 								_this->m_state.wait(val);
 								val = _this->m_state;
-							}
-
-							break;
-						}
-
-						// Failure
-						_this = nullptr;
-
-						if constexpr (sizeof...(FAndArgs))
-						{
-							if (invoked_func)
-							{
-								invoke_callback(1, std::forward<FAndArgs>(args)...);
 							}
 						}
 
@@ -111,6 +92,15 @@ namespace stx
 					}
 
 					_this->m_state.wait(val);
+				}
+
+				// Finalization of wait callback
+				if constexpr (sizeof...(FAndArgs))
+				{
+					if (invoked_func)
+					{
+						invoke_callback(1, std::forward<FAndArgs>(args)...);
+					}
 				}
 			}
 
