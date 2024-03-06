@@ -1,6 +1,7 @@
 #!/bin/sh -ex
 
 export HOMEBREW_NO_AUTO_UPDATE=1
+export HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1
 brew install -f --overwrite nasm ninja git p7zip ccache pipenv #create-dmg
 
 #/usr/sbin/softwareupdate --install-rosetta --agree-to-license
