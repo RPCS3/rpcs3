@@ -2,6 +2,7 @@
 
 #include "Utilities/File.h"
 #include "Utilities/lockless.h"
+#include "Utilities/address_range.h"
 #include "SPUThread.h"
 #include <vector>
 #include <bitset>
@@ -189,6 +190,72 @@ public:
 		interrupt_call,
 	};
 
+	// Value flags (TODO: only is_const is implemented)
+	enum class vf : u32
+	{
+		is_const,
+		is_mask,
+		is_rel,
+		is_null,
+
+		__bitset_enum_max
+	};
+
+	struct reg_state_t
+	{
+		bs_t<vf> flag{+vf::is_null};
+		u32 value{};
+		u32 tag = umax;
+		u32 known_ones{};
+		u32 known_zeroes{};
+
+		bool is_const() const;
+
+		bool operator&(vf to_test) const;
+
+		bool is_less_than(u32 imm) const;
+		bool operator==(const reg_state_t& r) const;
+		bool operator==(u32 imm) const;
+
+		// Compare equality but try to ignore changes in unmasked bits
+		bool compare_with_mask_indifference(const reg_state_t& r, u32 mask_bits) const;
+		bool compare_with_mask_indifference(u32 imm, u32 mask_bits) const;
+		bool unequal_with_mask_indifference(const reg_state_t& r, u32 mask_bits) const;
+
+		reg_state_t downgrade() const;
+		reg_state_t merge(const reg_state_t& rhs) const;
+		reg_state_t build_on_top_of(const reg_state_t& rhs) const;
+
+		u32 get_known_zeroes() const;
+		u32 get_known_ones() const;
+
+		template <usz Count = 1>
+		static std::conditional_t<Count == 1, reg_state_t, std::array<reg_state_t, Count>> make_unknown() noexcept
+		{
+			if constexpr (Count == 1)
+			{
+				reg_state_t v{};
+				v.tag = alloc_tag();
+				v.flag = {};
+				return v;
+			}
+			else
+			{
+				std::array<reg_state_t, Count> result{};
+
+				for (reg_state_t& state : result)
+				{
+					state = make_unknown<1>();
+				}
+
+				return result;
+			}
+		}
+
+		static reg_state_t from_value(u32 value) noexcept;
+		static u32 alloc_tag(bool reset = false) noexcept;
+	};
+
 protected:
 	spu_runtime* m_spurt{};
 
@@ -297,6 +364,27 @@ protected:
 
 	// Sorted function info
 	std::map<u32, func_info> m_funcs;
+
+	// TODO: Add patterns
+	// Not a bitset to allow more possibilities
+	enum class inst_attr : u8
+	{
+		none,
+		omit,
+		putllc16,
+		putllc0,
+	};
+
+	std::vector<inst_attr> m_inst_attrs;
+
+	struct pattern_info
+	{
+		utils::address_range range;
+	};
+
+	std::unordered_map<u32, pattern_info> m_patterns;
+
+	void add_pattern(bool fill_all, inst_attr attr, u32 start, u32 end = -1);
 
 private:
 	// For private use
