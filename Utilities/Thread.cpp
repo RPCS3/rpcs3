@@ -2640,6 +2640,21 @@ void thread_base::exec()
 		sys_log.notice("\n%s", info);
 	}
 
+	std::string reason_buf;
+
+	if (auto ppu = cpu_thread::get_current<ppu_thread>())
+	{
+		if (auto func = ppu->current_function)
+		{
+			fmt::append(reason_buf, "%s (PPU: %s)", reason, func);
+		}
+	}
+
+	if (!reason_buf.empty())
+	{
+		reason = reason_buf;
+	}
+
 	sig_log.fatal("Thread terminated due to fatal error: %s", reason);
 
 	logs::listener::sync_all();

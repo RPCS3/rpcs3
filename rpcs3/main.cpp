@@ -132,7 +132,17 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 		}
 
 		const system_state state = Emu.GetStatus(false);
-		fmt::append(buf, "\nTitle: \"%s\" (emulation is %s)", state == system_state::stopped ? "N/A" : Emu.GetTitleAndTitleID(), state <= system_state::stopping ? "stopped" : "running");
+
+		if (state == system_state::stopped)
+		{
+			fmt::append(buf, "\nEmulation is stopped");
+		}
+		else
+		{
+			const std::string& name = Emu.GetTitleAndTitleID();
+			fmt::append(buf, "\nTitle: \"%s\" (emulation is %s)", name.empty() ? "N/A" : name.data(), state == system_state::stopping ? "stopping" : "running");
+		}
+
 		fmt::append(buf, "\nBuild: \"%s\"", rpcs3::get_verbose_version());
 		fmt::append(buf, "\nDate: \"%s\"", std::chrono::system_clock::now());
 	}
