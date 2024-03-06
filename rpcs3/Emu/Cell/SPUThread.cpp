@@ -3778,13 +3778,16 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 		if (raddr)
 		{
 			// Last check for event before we clear the reservation
-			if (raddr == addr)
+			if (~ch_events.load().events & SPU_EVENT_LR)
 			{
-				set_events(SPU_EVENT_LR);
-			}
-			else
-			{
-				get_events(SPU_EVENT_LR);
+				if (raddr == addr)
+				{
+					set_events(SPU_EVENT_LR);
+				}
+				else
+				{
+					get_events(SPU_EVENT_LR);
+				}
 			}
 		}
 

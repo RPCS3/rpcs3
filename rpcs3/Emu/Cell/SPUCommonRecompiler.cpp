@@ -29,6 +29,8 @@ const extern spu_decoder<spu_itype> g_spu_itype;
 const extern spu_decoder<spu_iname> g_spu_iname;
 const extern spu_decoder<spu_iflag> g_spu_iflag;
 
+constexpr u32 s_reg_max = spu_recompiler_base::s_reg_max;
+
 // Move 4 args for calling native function from a GHC calling convention function
 #if defined(ARCH_X64)
 static u8* move_args_ghc_to_native(u8* raw)
@@ -1270,11 +1272,13 @@ spu_runtime::spu_runtime()
 		return;
 	}
 
-	fs::create_dir(m_cache_path + "llvm/");
-	fs::remove_all(m_cache_path + "llvm/", false);
-
 	if (g_cfg.core.spu_debug)
 	{
+		if (!fs::create_dir(m_cache_path + "llvm/"))
+		{
+			fs::remove_all(m_cache_path + "llvm/", false);
+		}
+
 		fs::file(m_cache_path + "spu.log", fs::rewrite);
 		fs::file(m_cache_path + "spu-ir.log", fs::rewrite);
 	}
@@ -2479,6 +2483,329 @@ std::vector<u32> spu_thread::discover_functions(u32 base_addr, std::span<const u
 	return addrs;
 }
 
+using reg_state_t = spu_recompiler_base::reg_state_t;
+using vf = spu_recompiler_base::vf;
+
+bool reg_state_t::is_const() const
+{
+	return !!(flag & vf::is_const);
+}
+
+bool reg_state_t::operator&(vf to_test) const
+{
+	return this->flag.all_of(to_test);
+}
+
+bool reg_state_t::is_less_than(u32 imm) const
+{
+	if (flag & vf::is_const && value < imm)
+	{
+		return true;
+	}
+
+	if (flag & vf::is_mask && ~known_zeroes < imm)
+	{
+		return true;
+	}
+
+	return false;
+}
+
+bool reg_state_t::operator==(const reg_state_t& r) const
+{
+	if ((flag ^ r.flag) - (vf::is_null + vf::is_mask))
+	{
+		return false;
+	}
+
+	return (flag & vf::is_const ? value == r.value : (tag == r.tag && known_ones == r.known_ones && known_zeroes == r.known_zeroes));
+}
+
+bool reg_state_t::operator==(u32 imm) const
+{
+	return flag == vf::is_const && value == imm;
+}
+
+// Compare equality but try to ignore changes in unmasked bits
+bool reg_state_t::compare_with_mask_indifference(const reg_state_t& r, u32 mask_bits) const
+{
+	if (!mask_bits)
+	{
+		return true;
+	}
+
+	if ((r.flag & flag) & vf::is_const)
+	{
+		// Simplified path for consts
+		if (((value ^ r.value) & mask_bits) == 0)
+		{
+			return true;
+		}
+
+		return false;
+	}
+
+	const bool is_equal = *this == r;
+
+	if (is_equal)
+	{
+		return true;
+	}
+
+	const auto _this = this->downgrade();
+	const auto _r = r.downgrade();
+
+	const bool is_mask_equal = (_this.tag == _r.tag && _this.flag == _r.flag && !((_this.known_ones ^ _r.known_ones) & mask_bits) && !((_this.known_zeroes ^ _r.known_zeroes) & mask_bits));
+
+	return is_mask_equal;
+}
+
+bool reg_state_t::compare_with_mask_indifference(u32 imm, u32 mask_bits) const
+{
+	if (!mask_bits)
+	{
+		return true;
+	}
+
+	if (flag & vf::is_const)
+	{
+		if (((value ^ imm) & mask_bits) == 0)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+// Ensure unequality but try to ignore changes in unmasked bits
+bool reg_state_t::unequal_with_mask_indifference(const reg_state_t& r, u32 mask_bits) const
+{
+	if (!mask_bits)
+	{
+		return true;
+	}
+
+	if ((r.flag & flag) & vf::is_const)
+	{
+		// Simplified path for consts
+		if ((value ^ r.value) & mask_bits)
+		{
+			return true;
+		}
+
+		return false;
+	}
+
+	const bool is_equal = *this == r;
+
+	if (is_equal)
+	{
+		return false;
+	}
+
+	// Full path
+	const auto _this = this->downgrade();
+	const auto _r = r.downgrade();
+
+	const bool is_base_value_equal = (_this.tag == _r.tag && _this.flag == _r.flag);
+
+	if (!is_base_value_equal)
+	{
+		// Cannot ascertain unequality if the value origin is different
+		return false;
+	}
+
+	// Find at least one bit that is known to be X state at value 'r', and known to be X^1 state at the objects' value
+	return (((_this.known_ones ^ _r.known_ones) & mask_bits) & ((_this.known_zeroes ^ _r.known_zeroes) & mask_bits)) != 0;
+}
+
+reg_state_t reg_state_t::downgrade() const
+{
+	if (flag & vf::is_const)
+	{
+		return reg_state_t{vf::is_mask, 0, umax, this->value, ~this->value};
+	}
+
+	if (!(flag - vf::is_null))
+	{
+		return reg_state_t{vf::is_mask, 0, this->tag, 0, 0};
+	}
+
+	return *this;
+}
+
+reg_state_t reg_state_t::merge(const reg_state_t& rhs) const
+{
+	if (rhs == *this)
+	{
+		// Perfect state: no conflicts
+		return rhs;
+	}
+
+	if ((rhs.flag + flag).all_of(vf::is_const + vf::is_mask))
+	{
+		// Try to downgrade to a known-bits type value
+		const reg_state_t _rhs = rhs.downgrade();
+		const reg_state_t _this = this->downgrade();
+
+		if ((_rhs.flag & _this.flag) & vf::is_mask)
+		{
+			// Now it is possible to merge the two values
+			reg_state_t res{vf::is_mask, 0, 0, _rhs.known_ones & _this.known_ones, _rhs.known_zeroes & _this.known_zeroes};
+
+			if (res.known_zeroes | res.known_ones)
+			{
+				// Success
+				res.tag = reg_state_t::alloc_tag();
+				return res;
+			}
+		}
+	}
+
+	return make_unknown();
+}
+
+reg_state_t reg_state_t::build_on_top_of(const reg_state_t& rhs) const
+{
+	if (flag & vf::is_null)
+	{
+		// Value unmodified
+		return rhs;
+	}
+
+	if (rhs == *this)
+	{
+		// Perfect state: no conflicts
+		return rhs;
+	}
+
+	return *this;
+}
+
+u32 reg_state_t::get_known_zeroes() const
+{
+	if (flag & vf::is_const)
+	{
+		return ~value;
+	}
+
+	return known_zeroes;
+}
+
+
+u32 reg_state_t::get_known_ones() const
+{
+	if (flag & vf::is_const)
+	{
+		return value;
+	}
+
+	return known_ones;
+}
+
+reg_state_t reg_state_t::from_value(u32 value) noexcept
+{
+	reg_state_t v{};
+	v.value = value;
+	v.flag = vf::is_const;
+	return v;
+}
+
+u32 reg_state_t::alloc_tag(bool reset) noexcept
+{
+	static thread_local u32 g_tls_tag = 0;
+
+	if (reset)
+	{
+		g_tls_tag = 0;
+		return 0;
+	}
+
+	return ++g_tls_tag;
+}
+
+// Converge 2 register states to the same flow in execution
+template <usz N>
+static void merge(std::array<reg_state_t, N>& result, const std::array<reg_state_t, N>& lhs, const std::array<reg_state_t, N>& rhs)
+{
+	usz index = umax;
+
+	for (reg_state_t& state : result)
+	{
+		index++;
+
+		state = lhs[index].merge(rhs[index]);
+	}
+}
+
+// Override RHS state with the newer LHS state
+template <usz N>
+static void build_on_top_of(std::array<reg_state_t, N>& result, const std::array<reg_state_t, N>& lhs, const std::array<reg_state_t, N>& rhs)
+{
+	usz index = umax;
+
+	for (reg_state_t& state : result)
+	{
+		index++;
+
+		state = lhs[index].build_on_top_of(rhs[index]);
+	}
+}
+
+struct block_reg_info
+{
+	u32 pc = SPU_LS_SIZE; // Address
+	std::array<reg_state_t, s_reg_max> local_state{};
+	bool has_true_state = false;
+	std::array<reg_state_t, s_reg_max> start_reg_state{};
+	std::array<reg_state_t, s_reg_max> end_reg_state{};
+	std::array<reg_state_t, s_reg_max> addend_reg_state{};
+	std::array<reg_state_t, s_reg_max> walkby_state{}; // State that is made by merging state_predecessor and iterating over instructions for final instrucion walk
+
+	usz next_nodes_count = 0;
+
+	struct node_t
+	{
+		u32 prev_pc = umax;
+	};
+
+	std::vector<node_t> prev_nodes;
+
+	static std::unique_ptr<block_reg_info> create(u32 pc) noexcept
+	{
+		auto ptr = new block_reg_info{ pc, reg_state_t::make_unknown<s_reg_max>() };
+
+		for (reg_state_t& f : ptr->local_state)
+		{
+			f.flag += vf::is_null;
+		}
+
+		ptr->start_reg_state = ptr->local_state;
+		return std::unique_ptr<block_reg_info>(ptr);
+	}
+
+	// Evaluate registers state
+	std::array<reg_state_t, s_reg_max>& evaluate_start_state(const std::map<u32, std::unique_ptr<block_reg_info>>& map);
+
+	// This function creates new node if not found and links the proceeding node to the old node
+	// In a manner in which no duplicate paths are formed
+	static void create_node(u32 pc_rhs, u32 parent_pc, std::map<u32, std::unique_ptr<block_reg_info>>& map)
+	{
+		//ensure(parent_node != pc_rhs);
+		ensure(map[parent_pc]);
+
+		if (!map[pc_rhs])
+		{
+			map[pc_rhs] = create(pc_rhs);
+		}
+
+		node_t prev_node{parent_pc};
+		map[parent_pc]->next_nodes_count++;
+		map[pc_rhs]->prev_nodes.emplace_back(prev_node);
+	}
+};
+
 spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, std::map<u32, std::basic_string<u32>>* out_target_list)
 {
 	// Result: addr + raw instruction data
@@ -2508,22 +2835,8 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 	m_bbs.clear();
 	m_chunks.clear();
 	m_funcs.clear();
-
-	// Value flags (TODO: only is_const is implemented)
-	enum class vf : u32
-	{
-		is_const,
-		is_mask,
-		is_rel,
-
-		__bitset_enum_max
-	};
-
-	// Weak constant propagation context (for guessing branch targets)
-	std::array<bs_t<vf>, 128> vflags{};
-
-	// Associated constant values for 32-bit preferred slot
-	std::array<u32, 128> values;
+	m_inst_attrs.clear();
+	m_patterns.clear();
 
 	// SYNC instruction found
 	bool sync = false;
@@ -2538,6 +2851,12 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 	if (g_cfg.core.spu_block_size == spu_block_size_type::giga)
 	{
 	}
+
+	// Weak constant propagation context (for guessing branch targets)
+	std::array<bs_t<vf>, 128> vflags{};
+
+	// Associated constant values for 32-bit preferred slot
+	std::array<u32, 128> values;
 
 	for (u32 wi = 0, wa = workload[0]; wi < workload.size();)
 	{
@@ -2613,7 +2932,6 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		case spu_itype::DFCMGT:
 		case spu_itype::DFTSV:
 		{
-			// Stop before invalid instructions (TODO)
 			next_block();
 			continue;
 		}
@@ -3344,6 +3662,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 	}
 
 	limit = std::min<u32>(limit, lsa + ::size32(result.data) * 4);
+	m_inst_attrs.resize(result.data.size());
 
 	// Cleanup block info
 	for (u32 i = 0; i < workload.size(); i++)
@@ -3442,6 +3761,1655 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			{
 				nnop++;
 			}
+		}
+	}
+
+	struct putllc16_statistics_t
+	{
+		atomic_t<u64> all = 0;
+		atomic_t<u64> single = 0;
+		atomic_t<u64> nowrite = 0;
+		std::array<atomic_t<u64>, 128> breaking_reason{};
+
+		std::vector<std::pair<u32, u64>> get_reasons()
+		{
+			std::vector<std::pair<u32, u64>> map;
+			for (usz i = 0; i < breaking_reason.size(); i++)
+			{
+				if (u64 v = breaking_reason[i])
+				{
+					map.emplace_back(i, v);
+				}
+			}
+
+			std::stable_sort(map.begin(), map.end(), FN(x.second > y.second));
+			return map;
+		}
+	};
+
+	struct atomic16_t
+	{
+		bool active = false; // GETLLAR happened
+		u32 lsa_pc = SPU_LS_SIZE; // PC of first LSA write
+		u32 lsa_last_pc = SPU_LS_SIZE; // PC of first LSA write
+		u32 put_pc = SPU_LS_SIZE; // PC of PUTLLC
+		reg_state_t ls{}; // state of LS load/store address register
+		reg_state_t ls_offs = reg_state_t::from_value(0); // Added value to ls
+		reg_state_t lsa{}; // state of LSA register on GETLLAR
+		reg_state_t ls_reg[8]{}; // stores/loads using register bundles with offset
+		reg_state_t ls_abs[8]{}; // stores/loads using absolute address
+		u32 reg = s_reg_max; // Source of address register of LS load/store
+		u32 reg2 = s_reg_max; // Source 2 of address register of LS load/store (STQX/LQX)
+		//u32 ls_offs[8]{}; // LS offset from register (0 if const)
+		bool ls_pc_rel = false; // For STQR/LQR
+		bool ls_access = false; // LS accessed
+		bool ls_write = false; // LS written
+		bool ls_invalid = false; // From this point and on, any store will cancel the optimization
+		bool select_16_or_0_at_runtime = false;
+		bool put_active = false; // PUTLLC happened
+		bool get_rdatomic = false; // True if MFC_RdAtomicStat was read after GETLLAR
+		u32 mem_count = 0;
+
+		// Return old state for error reporting
+		atomic16_t discard()
+		{
+			const u32 pc = lsa_pc;
+			const u32 last_pc = lsa_last_pc;
+
+			const atomic16_t old = *this;
+			*this = atomic16_t{};
+
+			// Keep some members
+			lsa_pc = pc;
+			lsa_last_pc = last_pc;
+			return old;
+		}
+
+		// Conditional breakage (break if a full 128-byte reservation is needed)
+		atomic16_t set_invalid_ls(bool write)
+		{
+			ls_invalid = true;
+			ls_write |= write;
+
+			if (ls_write)
+			{
+				return discard();
+			}
+
+			return atomic16_t{};
+		}
+	};
+
+	// Reset tags
+	reg_state_t::alloc_tag(true);
+
+	std::map<u32, std::unique_ptr<block_reg_info>> infos;
+	infos.emplace(entry_point, block_reg_info::create(entry_point));
+
+	struct block_reg_state_iterator
+	{
+		u32 pc{};
+		usz parent_iterator_index = umax;
+
+		// PUTLLC16 optimization analysis tracker
+		atomic16_t atomic16{};
+
+		block_reg_state_iterator(u32 _pc, usz _parent_iterator_index = umax) noexcept
+			: pc(_pc)
+			, parent_iterator_index(_parent_iterator_index)
+		{
+		}
+	};
+
+	std::vector<std::unique_ptr<block_reg_state_iterator>> reg_state_it;
+
+	std::map<u32, atomic16_t> atomic16_all; // RdAtomicStat location -> atomic loop optimization state
+	std::map<u32, bool> getllar_starts; // True for failed loops
+	std::map<u32, bool> run_on_block;
+
+	std::array<reg_state_t, s_reg_max>* true_state_walkby = nullptr;
+
+	atomic16_t dummy16{};
+
+	bool likely_putllc_loop = false;
+
+	for (u32 i = 0, count = 0; i < result.data.size(); i++)
+	{
+		const u32 inst = std::bit_cast<be_t<u32>>(result.data[i]);
+
+		if (spu_opcode_t{inst}.ra == MFC_RdAtomicStat && g_spu_itype.decode(inst) == spu_itype::RDCH)
+		{
+			count++;
+
+			if (count == 2)
+			{
+				likely_putllc_loop = true;
+				break;
+			}
+		}
+	}
+
+	usz target_count = 0;
+
+	for (auto& [pc, loc] : m_targets)
+	{
+		target_count += loc.size();
+	}
+
+	const bool should_search_patterns = likely_putllc_loop && target_count < 100;
+
+	// Treat start of function as an unknown value with tag (because it is)
+	const reg_state_t start_program_count = reg_state_t::make_unknown();
+
+	// Initialize
+	reg_state_it.emplace_back(std::make_unique<block_reg_state_iterator>(entry_point));
+	run_on_block[entry_point / 4] = true;
+
+	enum spu_addr_mask_t : u32
+	{
+		SPU_LS_MASK_128 = (SPU_LS_SIZE - 1) & -128,
+		SPU_LS_MASK_16  = (SPU_LS_SIZE - 1) & -16,
+		SPU_LS_MASK_4   = (SPU_LS_SIZE - 1) & -4,
+		SPU_LS_MASK_1   = (SPU_LS_SIZE - 1),
+	};
+
+	for (u32 wf = 0, wi = 0, wa = entry_point, bpc = wa; wf <= 1;)
+	{
+		const bool is_form_block = wf == 0;
+		const bool is_pattern_match = wf == 1;
+
+		dummy16.active = false;
+
+		if (!is_form_block && wa == bpc)
+		{
+			if (!should_search_patterns)
+			{
+				// TODO: Enable constant search for all
+				break;
+			}
+
+			if (wi == 0)
+			{
+				for (auto& [addr, block] : infos)
+				{
+					// Evaluate state for all blocks
+					block->evaluate_start_state(infos);
+				}
+			}
+
+			true_state_walkby = &infos[bpc]->evaluate_start_state(infos);
+
+			for (reg_state_t& f : *true_state_walkby)
+			{
+				if (f.flag & vf::is_null)
+				{
+					// Evaluate locally
+					//f.tag = reg_state_t::alloc_tag();
+					f.flag -= vf::is_null;
+				}
+			}
+		}
+
+		auto& vregs = is_form_block ? infos[bpc]->local_state : *true_state_walkby;
+		auto& atomic16 = is_pattern_match ? ::at32(reg_state_it, wi)->atomic16 : dummy16;
+
+		const u32 pos = wa;
+
+		wa += 4;
+
+		const auto break_putllc16 = [&](u32 cause, atomic16_t previous)
+		{
+			if (previous.active && likely_putllc_loop && getllar_starts.contains(previous.lsa_pc))
+			{
+				const bool is_first = !std::exchange(getllar_starts[previous.lsa_pc], true);
+
+				if (!is_first)
+				{
+					return;
+				}
+
+				g_fxo->get<putllc16_statistics_t>().breaking_reason[cause]++;
+
+				if (!spu_log.notice)
+				{
+					return;
+				}
+
+				std::string break_error = fmt::format("PUTLLC pattern breakage [%x cause=%u] (lsa_pc=0x%x)", pos, cause, previous.lsa_pc);
+
+				const auto values = g_fxo->get<putllc16_statistics_t>().get_reasons();
+
+				std::string tracing = "Top Breaking Reasons:";
+
+				usz i = 0;
+				usz fail_count = 0;
+				bool switched_to_minimal = false;
+
+				for (auto it = values.begin(); it != values.end(); i++, it++)
+				{
+					fail_count += it->second;
+
+					if (i >= 12)
+					{
+						continue;
+					}
+
+					if (i < 8 && it->second > 1)
+					{
+						fmt::append(tracing, " [cause=%u, n=%d]", it->first, it->second);
+					}
+					else
+					{
+						if (!std::exchange(switched_to_minimal, true))
+						{
+							fmt::append(tracing, "; More:");
+						}
+
+						fmt::append(tracing, " %u", it->first);
+					}
+				}
+
+				fmt::append(tracing, " of %d failures", fail_count);
+				spu_log.notice("%s\n%s", break_error, tracing);
+
+				if (cause == 17 || cause == 20)
+				{
+
+				}
+			}
+		};
+
+		const auto calculate_absolute_ls_difference = [](u32 addr1, u32 addr2)
+		{
+			addr1 &= SPU_LS_MASK_1;
+			addr2 &= SPU_LS_MASK_1;
+
+			const u32 abs_diff = (addr1 >= addr2 ? addr1 - addr2 : addr2 - addr1);
+
+			// Because memory is wrapping-around, take the gap that is smaller
+			return abs_diff >= SPU_LS_SIZE / 2 ? SPU_LS_SIZE - abs_diff : abs_diff;
+		};
+
+		const auto next_block = [&]()
+		{
+			// Reset value information
+			wi++;
+
+			if (wf == 0)
+			{
+				auto& block = infos[bpc];
+
+				if (g_cfg.core.spu_block_size != spu_block_size_type::safe && (m_ret_info[bpc / 4] || m_entry_info[bpc / 4] || pos == entry_point))
+				{
+					// Do not allow value passthrough
+					for (reg_state_t& f : block->start_reg_state)
+					{
+						f.flag -= vf::is_null;
+					}
+
+					for (reg_state_t& f : block->local_state)
+					{
+						f.flag -= vf::is_null;
+					}
+
+					// Block has an external origin, discard all previous information
+					block->end_reg_state = block->local_state;
+					block->has_true_state = true;
+				}
+
+				block->addend_reg_state = block->local_state;
+			}
+
+			if (wi >= reg_state_it.size())
+			{
+				wf++;
+				wi = 0;
+
+				if (wf == 1)
+				{
+					reg_state_it.clear();
+
+					if (!infos.empty())
+					{
+						reg_state_it.emplace_back(std::make_unique<block_reg_state_iterator>(infos.begin()->second->pc));
+					}
+				}
+			}
+
+			if (wi < reg_state_it.size())
+			{
+				wa = ::at32(reg_state_it, wi)->pc;
+				bpc = wa;
+			}
+		};
+
+		const auto get_reg = [&](u32 reg) -> const reg_state_t&
+		{
+			return vregs[reg];
+		};
+
+		const auto move_reg = [&](u32 dst, u32 src)
+		{
+			if (dst == src || vregs[src] == vregs[dst])
+			{
+				return;
+			}
+
+			vregs[dst] = vregs[src];
+
+			// Register storage has changed
+			vregs[dst].flag -= vf::is_null;
+		};
+
+		const auto set_const_value = [&](u32 reg, u32 value)
+		{
+			vregs[reg] = reg_state_t::from_value(value);
+		};
+
+		const auto inherit_const_value = [&](u32 reg, bs_t<vf> flag, u32 value)
+		{
+			flag -= vf::is_null;
+			vregs[reg] = reg_state_t{flag, value, flag & vf::is_const ? u32{umax} : reg_state_t::alloc_tag()};
+		};
+
+		const auto inherit_const_mask_value = [&](u32 reg, reg_state_t state, u32 mask_ones, u32 mask_zeroes)
+		{
+			if ((mask_ones | mask_zeroes) == 0)
+			{
+				state.flag -= vf::is_null;
+				vregs[reg] = state;
+				return;
+			}
+
+			if (state.flag & vf::is_const)
+			{
+				vregs[reg] = reg_state_t::from_value((state.value | mask_ones) & ~mask_zeroes);
+				return;
+			}
+
+			const u32 ones = (state.known_ones | mask_ones) & ~mask_zeroes;
+			const u32 zeroes = (state.known_zeroes | mask_zeroes) & ~mask_ones;
+
+			if ((ones ^ zeroes) == umax)
+			{
+				// Special case: create a constant from full masks
+				vregs[reg] = reg_state_t::from_value(ones);
+				return;
+			}
+
+			ensure(state.tag != umax);
+			vregs[reg] = reg_state_t{vf::is_mask, 0, state.tag, ones, zeroes};
+		};
+
+		const auto unconst = [&](u32 reg)
+		{
+			vregs[reg] = {{}, {}, reg_state_t::alloc_tag()};
+		};
+
+		const auto add_block = [&](u32 target)
+		{
+			// Validate new target (TODO)
+			if (target >= lsa && (target & -4) < limit)
+			{
+				if (!infos[target])
+				{
+					infos[target] = block_reg_info::create(target);
+				}
+
+				if (is_form_block)
+				{
+					block_reg_info::create_node(target, bpc, infos);
+
+					if (!run_on_block[target / 4])
+					{
+						reg_state_it.emplace_back(std::make_unique<block_reg_state_iterator>(target));
+						run_on_block[target / 4] = true;
+					}
+
+					return;
+				}
+
+				// Check block duplication (terminating infinite loops)
+				// Even if duplicated, this still has impact by registering the end of the possible code path outcome
+				std::set<u32> positions;
+
+				for (usz i = wi;;)
+				{
+					auto& entry = ::at32(reg_state_it, i);
+					AUDIT(positions.emplace(entry->pc).second);
+
+					if (entry->pc == target)
+					{
+						return;
+					}
+
+					const usz parent = entry->parent_iterator_index;
+
+					if (parent == umax)
+					{
+						break;
+					}
+
+					ensure(i != parent);
+					i = parent;
+				}
+
+				auto& next = reg_state_it.emplace_back(std::make_unique<block_reg_state_iterator>(target, wi));
+				next->atomic16 = ::at32(reg_state_it, wi)->atomic16;
+			}
+		};
+
+		if (pos < lsa || pos >= limit)
+		{
+			// Don't analyse if already beyond the limit
+			next_block();
+			continue;
+		}
+
+		if (bpc != pos && m_preds.count(pos))
+		{
+			// End of block reached
+			next_block();
+			continue;
+		}
+
+		if (g_cfg.core.spu_block_size != spu_block_size_type::safe && (m_ret_info[pos / 4] || m_entry_info[pos / 4] || pos == entry_point))
+		{
+			ensure(bpc == pos);
+
+			// Block has an external origin, discard all previous information
+			// TODO: Make the optimizations conditional at runtime instead
+			if (!is_form_block)
+			{
+				// Call for external code
+				break_putllc16(25, atomic16.discard());
+			}
+		}
+
+		const u32 data = std::bit_cast<be_t<u32>>(::at32(result.data, (pos - lsa) / 4));
+		const auto op = spu_opcode_t{data};
+		const auto type = g_spu_itype.decode(data);
+
+		// For debugging
+		if (false && likely_putllc_loop && is_pattern_match)
+		{
+			SPUDisAsm dis_asm(cpu_disasm_mode::dump, reinterpret_cast<const u8*>(result.data.data()), result.lower_bound);
+			dis_asm.disasm(pos);
+
+			std::string consts;
+
+			for (auto _use : std::initializer_list<std::pair<u32, bool>>{{op.ra, m_use_ra.test(pos / 4)}
+				, {op.rb, m_use_rb.test(pos / 4)}, {op.rc, m_use_rc.test(pos / 4)}})
+			{
+				if (!_use.second)
+				{
+					continue;
+				}
+
+				if (!consts.empty())
+				{
+					consts += ',';
+				}
+
+				const u32 reg_file = _use.first;
+				const auto& reg = get_reg(reg_file);
+				if (reg.is_const())
+				{
+					fmt::append(consts, " r%d=0x%x", reg_file, reg.value);
+				}
+				else
+				{
+					if (u32 mask = reg.known_zeroes | reg.known_ones)
+					{
+						fmt::append(consts, " r%d=#%d-&|0x%x", reg_file, reg.tag, mask);
+					}
+					else
+					{
+						fmt::append(consts, " r%d=#%d", reg_file, reg.tag);
+					}
+				}
+			}
+
+			if (!consts.empty())
+			{
+				consts = " {" + consts + " }";
+			}
+
+			if (dis_asm.last_opcode.ends_with('\n'))
+			{
+				dis_asm.last_opcode.pop_back();
+			}
+
+			spu_log.always()("[SPU=0%x, wi=%d] %s%s", pos, wi, dis_asm.last_opcode, consts);
+		}
+
+		// Analyse instruction
+		switch (type)
+		{
+		case spu_itype::UNK:
+		case spu_itype::DFCEQ:
+		case spu_itype::DFCMEQ:
+		case spu_itype::DFCGT:
+		case spu_itype::DFCMGT:
+		case spu_itype::DFTSV:
+		{
+			// Stop before invalid instructions (TODO)
+			next_block();
+			continue;
+		}
+
+		case spu_itype::SYNC:
+		case spu_itype::STOP:
+		case spu_itype::STOPD:
+		{
+			if (data == 0)
+			{
+				// Stop before null data
+				next_block();
+				continue;
+			}
+
+			if (g_cfg.core.spu_block_size == spu_block_size_type::safe)
+			{
+				// Stop on special instructions (TODO)
+				next_block();
+				break;
+			}
+
+			if (type == spu_itype::SYNC)
+			{
+				// Remember
+				sync = true;
+			}
+
+			break;
+		}
+
+		case spu_itype::IRET:
+		{
+			next_block();
+			break;
+		}
+
+		case spu_itype::BI:
+		case spu_itype::BISL:
+		case spu_itype::BISLED:
+		case spu_itype::BIZ:
+		case spu_itype::BINZ:
+		case spu_itype::BIHZ:
+		case spu_itype::BIHNZ:
+		{
+			if (op.e)
+			{
+				break_putllc16(27, atomic16.discard());
+			}
+
+			break;
+		}
+
+		case spu_itype::BRSL:
+		case spu_itype::BRASL:
+		{
+			break;
+		}
+
+		case spu_itype::BRA:
+		{
+			break;
+		}
+
+		case spu_itype::BR:
+		case spu_itype::BRZ:
+		case spu_itype::BRNZ:
+		case spu_itype::BRHZ:
+		case spu_itype::BRHNZ:
+		{
+			break;
+		}
+
+		case spu_itype::DSYNC:
+		case spu_itype::HEQ:
+		case spu_itype::HEQI:
+		case spu_itype::HGT:
+		case spu_itype::HGTI:
+		case spu_itype::HLGT:
+		case spu_itype::HLGTI:
+		case spu_itype::LNOP:
+		case spu_itype::NOP:
+		case spu_itype::MTSPR:
+		case spu_itype::FSCRWR:
+		{
+			// Do nothing
+			break;
+		}
+
+		case spu_itype::WRCH:
+		{
+			switch (op.ra)
+			{
+			case MFC_EAL:
+			{
+				move_reg(s_reg_mfc_eal, op.rt);
+				break;
+			}
+			case MFC_LSA:
+			{
+				auto rt = get_reg(op.rt);
+				inherit_const_mask_value(s_reg_mfc_lsa, rt, 0, ~SPU_LS_MASK_1);
+
+				if (is_pattern_match)
+				{
+					atomic16.lsa_last_pc = pos;
+				}
+
+				break;
+			}
+			case MFC_TagID:
+			{
+				break;
+			}
+			case MFC_Size:
+			{
+				break;
+			}
+			case MFC_Cmd:
+			{
+				const auto [af, av, atagg, _3, _5] = get_reg(op.rt);
+
+				if (!is_pattern_match)
+				{
+					//
+				}
+				else if (af & vf::is_const)
+				{
+					switch (av)
+					{
+					case MFC_GETLLAR_CMD:
+					{
+						break_putllc16(30, atomic16.discard());
+
+						// If LSA write has not happened, use block start
+						atomic16.lsa_pc = atomic16.lsa_last_pc == SPU_LS_SIZE ? bpc : atomic16.lsa_last_pc;
+						atomic16.active = true;
+
+						const auto lsa = get_reg(s_reg_mfc_lsa);
+						inherit_const_mask_value(s_reg_mfc_lsa, lsa, 0, ~SPU_LS_MASK_128);
+						atomic16.lsa = get_reg(s_reg_mfc_lsa);
+
+						if (likely_putllc_loop)
+						{
+							// Register loop entry
+							if (getllar_starts.emplace(atomic16.lsa_pc, false).second)
+							{
+								g_fxo->get<putllc16_statistics_t>().all++;
+								spu_log.notice("[0x%05x] GETLLAR pattern entry point", pos);
+							}
+						}
+
+						break;
+					}
+					case MFC_PUTLLC_CMD:
+					{
+						if (atomic16.active)
+						{
+							const auto _lsa = get_reg(s_reg_mfc_lsa);
+
+							// Search the value of LS address stoire/load in latest register file
+							if (atomic16.ls_access && atomic16.ls_write && !atomic16.ls_pc_rel && !atomic16.ls.is_const())
+							{
+								usz reg_it = umax;
+								u32 regs[2]{s_reg_max, s_reg_max};
+
+								for (auto val : {&atomic16.ls, &atomic16.ls_offs})
+								{
+									reg_it++;
+
+									if (val->is_const())
+									{
+										regs[reg_it] = 0;
+										continue;
+									}
+
+									if (vregs[s_reg_mfc_lsa].compare_with_mask_indifference(*val, SPU_LS_MASK_1))
+									{
+										regs[reg_it] = s_reg_mfc_lsa;
+										continue;
+									}
+
+									for (u32 i = 0; i <= s_reg_127; i++)
+									{
+										const auto& _reg = vregs[i];
+
+										if (_reg == *val)
+										{
+											regs[reg_it] = i;
+											break;
+										}
+									}
+								}
+
+								if (regs[0] == s_reg_max || regs[1] == s_reg_max)
+								{
+									break_putllc16(3, atomic16.discard());
+									break;
+								}
+
+								atomic16.reg = regs[0];
+
+								if (!atomic16.ls_offs.is_const())
+								{
+									atomic16.reg2 = regs[1];
+								}
+							}
+
+							if (atomic16.ls_access && atomic16.ls_write && !atomic16.lsa.compare_with_mask_indifference(_lsa, SPU_LS_MASK_128))
+							{
+								// LSA latest value mismatches with the one written with GETLLAR
+
+								if (atomic16.lsa.flag != _lsa.flag)
+								{
+									break_putllc16(1, atomic16.discard());
+								}
+								else
+								{
+									break_putllc16(2, atomic16.discard());
+								}
+
+								break;
+							}
+
+							if (atomic16.ls_access && atomic16.ls_write)
+							{
+								atomic16.select_16_or_0_at_runtime = false;
+
+								bool ok = false;
+
+								if (atomic16.ls_pc_rel || !atomic16.ls_offs.is_const())
+								{
+									//
+								}
+								else if (atomic16.lsa.is_const())
+								{
+									if (atomic16.ls.is_const())
+									{
+										if (atomic16.ls_offs != 0)
+										{
+											// Rebase constant so we can get rid of ls_offs
+											atomic16.ls.value = spu_ls_target(atomic16.ls_offs.value + atomic16.ls.value);
+											atomic16.ls_offs = reg_state_t::from_value(0);
+										}
+
+										if (atomic16.ls.value >= (atomic16.lsa.value & -128) && atomic16.ls.value < utils::align<u32>(atomic16.lsa.value + 1, 128))
+										{
+											ok = true;
+										}
+									}
+									else if (atomic16.ls_offs.value >= (atomic16.lsa.value & -128) && atomic16.ls_offs.value < utils::align<u32>(atomic16.lsa.value + 1, 128) && atomic16.ls.is_less_than(128 - (atomic16.lsa.value & 127)))
+									{
+										ok = true;
+									}
+								}
+								else if (!atomic16.lsa.is_const() && atomic16.lsa.compare_with_mask_indifference(atomic16.ls, SPU_LS_MASK_128) && atomic16.ls_offs == 0)
+								{
+									// Unknown value with known offset of less than 128 bytes
+									ok = true;
+								}
+
+								if (!ok)
+								{
+									// This is quite common.. let's try to select between putllc16 and putllc0 at runtime!
+									// break_putllc16(100);
+									// atomic16.discard();
+									// break;
+									atomic16.select_16_or_0_at_runtime = true;
+								}
+							}
+
+							if (!atomic16.get_rdatomic)
+							{
+								// MFC_RdAtomicStat must have been read, otherwise GETLLAR may not be executed (according to HW tests)
+								break_putllc16(21, atomic16.discard());
+							}
+
+							atomic16.put_pc = pos;
+							atomic16.put_active = true;
+						}
+
+						break;
+					}
+					default:
+					{
+						break_putllc16(4, atomic16.discard());
+						break;
+					}
+					}
+				}
+				else
+				{
+					break_putllc16(5, atomic16.discard());
+				}
+
+				if (!atomic16.active)
+				{
+					// Propagate failure
+					for (auto& atm : atomic16_all)
+					{
+						if (atm.second.active && atm.second.put_pc == pos)
+						{
+							break_putllc16(31, atm.second.discard());
+						}
+					}
+				}
+
+				break;
+			}
+			case MFC_EAH:
+			case SPU_WrDec:
+			case SPU_WrSRR0:
+			case SPU_WrEventAck:
+			case SPU_Set_Bkmk_Tag:
+			case SPU_PM_Start_Ev:
+			case SPU_PM_Stop_Ev:
+			case MFC_WrTagMask:
+			//case MFC_WrTagUpdate: // Technically correct to ignore but risky
+				break;
+			default:
+			{
+				break_putllc16(6, atomic16.discard());
+				break;
+			}
+			}
+
+			break;
+		}
+
+		case spu_itype::RCHCNT:
+		case spu_itype::RDCH:
+		{
+			const bool is_read = type == spu_itype::RDCH;
+			bool invalidate = is_read;
+
+			switch (op.ra)
+			{
+			case MFC_RdAtomicStat:
+			{
+				if (!is_read)
+				{
+					break;
+				}
+
+				if (atomic16.active)
+				{
+					if (atomic16.put_active)
+					{
+						if (getllar_starts.contains(atomic16.lsa_pc) && getllar_starts[atomic16.lsa_pc])
+						{
+							break_putllc16(24, atomic16.discard());
+							break;
+						}
+
+						const auto it = atomic16_all.find(pos);
+
+						if (it == atomic16_all.end())
+						{
+							// Fresh new pattern detected in a single code path
+							atomic16_all.emplace(pos, atomic16);
+						}
+						else if (it->second.active)
+						{
+							// Merge pattern attributes between different code paths, may cause detection of failures
+							atomic16_t& existing = it->second;
+
+							if (existing.lsa_pc != atomic16.lsa_pc || existing.put_pc != atomic16.put_pc || existing.lsa != atomic16.lsa)
+							{
+								// Register twice
+								break_putllc16(22, atomic16.discard());
+								break_putllc16(22, existing.discard());
+							}
+
+							if (existing.active && existing.ls_access && atomic16.ls_access && (!existing.ls.compare_with_mask_indifference(atomic16.ls, SPU_LS_MASK_1) || existing.ls_offs != atomic16.ls_offs))
+							{
+								// Conflicting loads with stores in more than one code path
+								break_putllc16(27, atomic16.set_invalid_ls(existing.ls_write || atomic16.ls_write));
+
+								if (!atomic16.active)
+								{
+									existing.active = false;
+								}
+							}
+
+							if (existing.active && (existing.ls_write || atomic16.ls_write) && (existing.ls_invalid || atomic16.ls_invalid))
+							{
+								// Conflicting loads with stores in more than one code path
+								break_putllc16(33, atomic16.discard());
+								existing.active = false;
+								existing.ls_invalid = true;
+							}
+
+							if (existing.active && !existing.ls_access && atomic16.ls_access)
+							{
+								// Propagate LS access
+								existing.ls = atomic16.ls;
+								existing.ls_offs = atomic16.ls_offs;
+							}
+
+							existing.ls_write |= atomic16.ls_write;
+							existing.ls_invalid |= atomic16.ls_invalid;
+							existing.ls_access |= atomic16.ls_access;
+							existing.mem_count = std::max<u32>(existing.mem_count, atomic16.mem_count);
+							existing.select_16_or_0_at_runtime |= atomic16.select_16_or_0_at_runtime;
+						}
+
+						atomic16.discard();
+					}
+					else if (!atomic16.get_rdatomic)
+					{
+						atomic16.get_rdatomic = true;
+
+						// Go above and beyond and also set the constant for it
+						set_const_value(op.rt, MFC_GETLLAR_SUCCESS);
+						invalidate = false;
+					}
+				}
+
+				break;
+			}
+			// Let's be safe here and no not allow multi-threaded communications
+			case SPU_WrOutMbox:
+			case SPU_WrOutIntrMbox:
+			case SPU_RdSigNotify1:
+			case SPU_RdSigNotify2:
+			case SPU_RdInMbox:
+			//case SPU_RdEventStat:
+			{
+				if (is_read)
+				{
+					break_putllc16(28, atomic16.discard());
+				}
+				else
+				{
+					break_putllc16(29, atomic16.discard());
+				}
+
+				break;
+			}
+			default:
+			{
+				break;
+			}
+			}
+
+			if (invalidate)
+			{
+				unconst(op.rt);
+			}
+
+			break;
+		}
+		case spu_itype::STQR:
+		case spu_itype::LQR:
+		{
+			const bool is_store = type == spu_itype::STQR;
+
+			if (atomic16.active)
+			{
+				atomic16.mem_count++;
+
+				// Do not clear lower 16 bytes addressing because the program can move on 4-byte basis 
+				const u32 offs = spu_branch_target(pos - result.lower_bound, op.si16);
+
+				if (atomic16.lsa.is_const() && [&]()
+				{
+					bool hack = false;
+
+					if (offs % 16 == 0 && (pos - result.lower_bound + op.si16 * 4) == offs)
+					{
+						const u32 reservation_bound = utils::align<u32>(atomic16.lsa.value + 1, 128);
+						const u32 min_offs = offs;
+
+						// Hack: assume there is no overflow in relative instruction offset
+						// Thus, use instruction position + offset as a lower bound for reservation access
+						if (min_offs >= reservation_bound)
+						{
+							spu_log.success("STQR/LQR Atomic Loop Hack: abs_pos=0x%x, abs=0x%x, i16*4=0x%x, ls_bound=0x%x", offs, pos + op.si16 * 4, op.si16 * 4, reservation_bound);
+							hack = true;
+						}
+					}
+
+					return hack;
+				}())
+				{
+					// Ignore memory access in this case
+				}
+				else if (atomic16.ls_invalid && is_store)
+				{
+					break_putllc16(35, atomic16.set_invalid_ls(is_store));
+				}
+				else if (atomic16.ls_access && atomic16.ls != start_program_count)
+				{
+					break_putllc16(7, atomic16.set_invalid_ls(is_store));
+				}
+				else if (atomic16.ls_access && offs != atomic16.ls_offs)
+				{
+					if (atomic16.ls_offs.compare_with_mask_indifference(offs, SPU_LS_MASK_1))
+					{
+						atomic16.ls_write |= is_store;
+					}
+					else
+					{
+						// Sad
+						break_putllc16(8, atomic16.set_invalid_ls(is_store));
+					}
+				}
+				else
+				{
+					atomic16.ls = start_program_count;
+					atomic16.ls_offs = reg_state_t::from_value(offs);
+					atomic16.ls_pc_rel = true;
+					atomic16.ls_write |= is_store;
+					atomic16.ls_access = true;
+				}
+
+				// atomic16.ls_reg[offs % 128 / 16] = start_program_count;
+				// atomic16.ls_offs[offs % 128 / 16] = offs;
+			}
+
+			if (is_store)
+			{
+				break;
+			}
+
+			// Unconst
+			unconst(op.rt);
+			break;
+		}
+
+		case spu_itype::STQX:
+		case spu_itype::LQX:
+		{
+			const bool is_store = type == spu_itype::STQX;
+
+			if (atomic16.active)
+			{
+				atomic16.mem_count++;
+
+				auto ra = get_reg(op.ra);
+				ra.value &= SPU_LS_MASK_1;
+				auto rb = get_reg(op.rb);
+				rb.value &= SPU_LS_MASK_1;
+
+				const u32 const_flags = u32{ra.is_const()} + u32{rb.is_const()};
+
+				switch (const_flags)
+				{
+				case 2:
+				{
+					auto add_res = ra;
+					add_res.value += rb.value;
+					add_res.value &= SPU_LS_MASK_16;
+					add_res.tag = umax;
+
+					if (atomic16.lsa.unequal_with_mask_indifference(add_res, SPU_LS_MASK_128))
+					{
+						// Unrelated, ignore
+					}
+					else if (atomic16.ls_invalid && is_store)
+					{
+						break_putllc16(20, atomic16.set_invalid_ls(is_store));
+					}
+					else if (atomic16.ls_access && add_res != atomic16.ls)
+					{
+						if (atomic16.ls.unequal_with_mask_indifference(add_res, SPU_LS_MASK_128) && atomic16.ls_offs == 0)
+						{
+							// Ok
+						}
+						else if (atomic16.ls_pc_rel)
+						{
+							break_putllc16(8, atomic16.set_invalid_ls(is_store));
+						}
+						else
+						{
+							// Sad
+							break_putllc16(9, atomic16.set_invalid_ls(is_store));
+						}
+					}
+					else
+					{
+						atomic16.ls = reg_state_t::from_value(add_res.value);
+						atomic16.ls_offs = reg_state_t::from_value(0);
+						atomic16.ls_pc_rel = false;
+						atomic16.ls_write |= is_store;
+						atomic16.ls_access = true;
+					}
+
+					break;
+				}
+				case 1:
+				{
+					const auto& state = ra.is_const() ? rb : ra;
+					const auto& _lsa = atomic16.lsa;
+					const u32 offs = (ra.is_const() ? ra.value : rb.value) & SPU_LS_MASK_1;
+					const u32 abs_diff = calculate_absolute_ls_difference(offs, 0);
+
+					if ((_lsa.unequal_with_mask_indifference(state, SPU_LS_MASK_128) && offs == 0) ||
+						(_lsa.compare_with_mask_indifference(state, SPU_LS_MASK_1) && abs_diff >= 128u) ||
+						(_lsa.compare_with_mask_indifference(state, SPU_LS_MASK_128) && abs_diff >= 256u)
+						)
+					{
+						// We already know it's an unrelated load/store
+						// The reason for SPU_LS_SIZE - 128 check is that in case LSA is not aligned, it detects the possible wraparound
+					}
+					else if (atomic16.ls_invalid && is_store)
+					{
+						break_putllc16(23, atomic16.set_invalid_ls(is_store));
+					}
+					else if (atomic16.ls_access && atomic16.ls != state)
+					{
+						if (atomic16.ls.unequal_with_mask_indifference(state, SPU_LS_MASK_128) && offs == 0)
+						{
+							// Ok
+						}
+						else if (atomic16.ls_pc_rel)
+						{
+							break_putllc16(36, atomic16.set_invalid_ls(is_store));
+						}
+						else
+						{
+							// Sad
+							break_putllc16(11, atomic16.set_invalid_ls(is_store));
+						}
+					}
+					else if (atomic16.ls_access)
+					{
+						ensure(!atomic16.ls.is_const());
+
+						if (atomic16.ls_offs.compare_with_mask_indifference(offs, SPU_LS_MASK_1))
+						{
+							// Ok
+							atomic16.ls_write |= is_store;
+						}
+						else if (atomic16.ls_offs.is_const() && atomic16.ls_offs.value / 16 == offs / 16 && state.get_known_zeroes() % 16 >= std::max<u32>(offs % 16, atomic16.ls_offs.value % 16))
+						{
+							// For special case observed in games (offset cannot cause the address to roll over the next 16 bytes)
+							atomic16.ls_write |= is_store;
+						}
+						else
+						{
+							break_putllc16(12, atomic16.set_invalid_ls(is_store));
+						}
+					}
+					else
+					{
+						atomic16.ls = state;
+						atomic16.ls_offs = reg_state_t::from_value(offs);
+						atomic16.ls_pc_rel = false;
+						atomic16.ls_write |= is_store;
+						atomic16.ls_access = true;
+					}
+
+					break;
+				}
+				case 0:
+				{
+					const bool is_ra_first = atomic16.ls_access ? ra == atomic16.ls : op.ra <= op.rb;
+
+					const auto& state1 = is_ra_first ? ra : rb;
+					const auto& state2 = is_ra_first ? rb : ra;
+
+					if (atomic16.ls_access && (atomic16.ls != state1 || atomic16.ls_offs != state2))
+					{
+						if (atomic16.ls_pc_rel)
+						{
+							break_putllc16(32, atomic16.set_invalid_ls(is_store));
+						}
+						else
+						{
+							// Sad
+							break_putllc16(13, atomic16.set_invalid_ls(is_store));
+						}
+					}
+					else
+					{
+						atomic16.ls = state1;
+						atomic16.ls_offs = state2;
+						atomic16.ls_pc_rel = false;
+						atomic16.ls_write |= is_store;
+						atomic16.ls_access = true;
+					}
+
+					break;
+				}
+				default: fmt::throw_exception("Unreachable!");
+				}
+			}
+
+			if (is_store)
+			{
+				break;
+			}
+
+			// Unconst
+			unconst(op.rt);
+			break;
+		}
+		case spu_itype::STQA:
+		case spu_itype::LQA:
+		{
+			const bool is_store = type == spu_itype::STQA;
+
+			if (atomic16.active)
+			{
+				atomic16.mem_count++;
+
+				const reg_state_t ca = reg_state_t::from_value(spu_ls_target(0, op.i16));
+
+				if (atomic16.lsa.unequal_with_mask_indifference(ca, SPU_LS_MASK_128))
+				{
+					// We already know it's an unrelated load/store
+				}
+				else if (atomic16.ls_invalid && is_store)
+				{
+					break_putllc16(37, atomic16.set_invalid_ls(is_store));
+				}
+				else if (atomic16.ls_access && ca != atomic16.ls)
+				{
+					if (atomic16.ls.unequal_with_mask_indifference(ca, SPU_LS_MASK_128) && atomic16.ls_offs == 0)
+					{
+						// Ok
+					}
+					else if (atomic16.ls_pc_rel)
+					{
+						break_putllc16(14, atomic16.set_invalid_ls(is_store));
+					}
+					else
+					{
+						// Sad
+						break_putllc16(15, atomic16.set_invalid_ls(is_store));
+					}
+				}
+				else
+				{
+					atomic16.ls = ca;
+					atomic16.ls_offs = reg_state_t::from_value(0);
+					atomic16.ls_pc_rel = false;
+					atomic16.ls_write |= is_store;
+					atomic16.ls_access = true;
+				}
+			}
+
+			if (is_store)
+			{
+				break;
+			}
+
+			// Unconst
+			unconst(op.rt);
+			break;
+		}
+
+		case spu_itype::STQD:
+		case spu_itype::LQD:
+		{
+			const bool is_store = type == spu_itype::STQD;
+
+			if (atomic16.active)
+			{
+				atomic16.mem_count++;
+
+				auto ra = get_reg(op.ra);
+				const auto& _lsa = atomic16.lsa;
+
+				ra.value = ra.is_const() ? spu_ls_target(ra.value, op.si10 * 4) : 0;
+				const u32 offs = ra.is_const() ? 0 : spu_ls_target(0, op.si10 * 4);
+				const u32 abs_diff = calculate_absolute_ls_difference(offs, 0);
+				const u32 const_flags = u32{ra.is_const()} + u32{atomic16.ls.is_const()};
+				const u32 const_lsa_flags = u32{ra.is_const()} + u32{_lsa.is_const()};
+
+				if ((_lsa.unequal_with_mask_indifference(ra, SPU_LS_MASK_128) && offs == 0) ||
+					(_lsa.compare_with_mask_indifference(ra, SPU_LS_MASK_1) && abs_diff >= 128u) ||
+					(_lsa.compare_with_mask_indifference(ra, SPU_LS_MASK_128) && abs_diff >= 256u)
+					)
+				{
+					// We already know it's an unrelated load/store
+					// The reason for SPU_LS_SIZE - 128 check is that in case LSA is not aligned, it detects the possible wraparound
+				}
+				else if (atomic16.ls_invalid && is_store)
+				{
+					break_putllc16(34, atomic16.set_invalid_ls(is_store));
+				}
+				else if (atomic16.ls_access && atomic16.ls != ra)
+				{
+					if (atomic16.ls.unequal_with_mask_indifference(ra, SPU_LS_MASK_128) && (offs == 0 && atomic16.ls_offs == 0))
+					{
+						// Ok
+					}
+					else if (atomic16.ls_pc_rel)
+					{
+						break_putllc16(16, atomic16.set_invalid_ls(is_store));
+					}
+					else
+					{
+						// Sad
+						break_putllc16(17, atomic16.set_invalid_ls(is_store));
+					}
+				}
+				else if (atomic16.ls_access)
+				{
+					if (atomic16.ls_offs.compare_with_mask_indifference(offs, SPU_LS_MASK_1))
+					{
+						atomic16.ls_write |= is_store;
+					}
+					else if (atomic16.ls_offs.is_const() && atomic16.ls_offs.value / 16 == offs / 16 && ra.get_known_zeroes() % 16 >= std::max<u32>(offs % 16, atomic16.ls_offs.value % 16))
+					{
+						// For special case observed in games (offset cannot cause the address to roll over the next 16 bytes)
+						atomic16.ls_write |= is_store;
+					}
+					else
+					{
+						break_putllc16(18, atomic16.set_invalid_ls(is_store));
+					}
+				}
+				else
+				{
+					atomic16.ls = ra;
+					atomic16.ls_offs = reg_state_t::from_value(offs);
+					atomic16.ls_pc_rel = false;
+					atomic16.ls_write |= is_store;
+					atomic16.ls_access = true;
+				}
+			}
+
+			if (type == spu_itype::STQD)
+			{
+				break;
+			}
+
+			// Unconst
+			unconst(op.rt);
+			break;
+		}
+
+		case spu_itype::HBR:
+		{
+			hbr_loc = spu_branch_target(pos, op.roh << 7 | op.rt);
+			const auto [af, av, at, ao, az] = get_reg(op.ra);
+			hbr_tg  = af & vf::is_const && !op.c ? av & 0x3fffc : -1;
+			break;
+		}
+
+		case spu_itype::HBRA:
+		{
+			hbr_loc = spu_branch_target(pos, op.r0h << 7 | op.rt);
+			hbr_tg  = spu_branch_target(0x0, op.i16);
+			break;
+		}
+
+		case spu_itype::HBRR:
+		{
+			hbr_loc = spu_branch_target(pos, op.r0h << 7 | op.rt);
+			hbr_tg  = spu_branch_target(pos, op.i16);
+			break;
+		}
+
+		case spu_itype::IL:
+		{
+			set_const_value(op.rt, op.si16);
+			break;
+		}
+		case spu_itype::ILA:
+		{
+			set_const_value(op.rt, op.i18);
+			break;
+		}
+		case spu_itype::ILH:
+		{
+			set_const_value(op.rt, op.i16 << 16 | op.i16);
+			break;
+		}
+		case spu_itype::ILHU:
+		{
+			set_const_value(op.rt, op.i16 << 16);
+			break;
+		}
+		case spu_itype::IOHL:
+		{
+			const auto rt = get_reg(op.rt);
+			inherit_const_mask_value(op.rt, rt, op.i16, 0);
+			break;
+		}
+		case spu_itype::ORI:
+		{
+			if (!op.si10)
+			{
+				move_reg(op.rt, op.ra);
+				break;
+			}
+
+			const auto ra = get_reg(op.ra);
+			inherit_const_mask_value(op.rt, ra, op.si10, 0);
+			break;
+		}
+		case spu_itype::OR:
+		{
+			if (op.ra == op.rb)
+			{
+				move_reg(op.rt, op.ra);
+				break;
+			}
+
+			const auto [af, av, at, ao, az] = get_reg(op.ra);
+			const auto [bf, bv, _2, _4, _6] = get_reg(op.rb);
+			inherit_const_value(op.rt, af & bf, bv | av);
+			break;
+		}
+		case spu_itype::XORI:
+		{
+			if (!op.si10)
+			{
+				move_reg(op.rt, op.ra);
+				break;
+			}
+
+			const auto [af, av, at, ao, az] = get_reg(op.ra);
+			inherit_const_value(op.rt, af, av ^ op.si10);
+			break;
+		}
+		case spu_itype::XOR:
+		{
+			if (op.ra == op.rb)
+			{
+				set_const_value(op.rt, 0);
+				break;
+			}
+
+			const auto [af, av, at, ao, az] = get_reg(op.ra);
+			const auto [bf, bv, _2, _4, _6] = get_reg(op.rb);
+			inherit_const_value(op.rt, af & bf, bv ^ av);
+			break;
+		}
+		case spu_itype::NOR:
+		{
+			const auto [af, av, at, ao, az] = get_reg(op.ra);
+			const auto [bf, bv, _2, _4, _6] = get_reg(op.rb);
+			inherit_const_value(op.rt, af & bf, ~(bv | av));
+			break;
+		}
+		case spu_itype::ANDI:
+		{
+			const auto ra = get_reg(op.ra);
+			inherit_const_mask_value(op.rt, ra, 0, ~op.si10);
+			break;
+		}
+		case spu_itype::AND:
+		{
+			if (op.ra == op.rb)
+			{
+				move_reg(op.rt, op.ra);
+				break;
+			}
+
+			const auto [af, av, at, ao, az] = get_reg(op.ra);
+			const auto [bf, bv, _2, _4, _6] = get_reg(op.rb);
+			inherit_const_value(op.rt, af & bf, bv & av);
+			break;
+		}
+		case spu_itype::AI:
+		{
+			if (!op.si10)
+			{
+				move_reg(op.rt, op.ra);
+				break;
+			}
+
+			const auto ra = get_reg(op.ra);
+			const auto [af, av, at, ao, az] = ra;
+
+			inherit_const_value(op.rt, af, av + op.si10);
+
+			if (u32 mask = ra.get_known_zeroes() & ~op.si10; mask & 1)
+			{
+				// Added zeroes are always zeroes which comes in handy later
+				inherit_const_mask_value(op.rt, vregs[op.rt], 0, (1u << std::countr_one(mask)) - 1);
+			}
+
+			break;
+		}
+		case spu_itype::A:
+		{
+			const auto ra = get_reg(op.ra);
+			const auto rb = get_reg(op.rb);
+
+			const auto [af, av, at, ao, az] = ra;
+			const auto [bf, bv, bt, bo, bz] = rb;
+
+			inherit_const_value(op.rt, af & bf, bv + av);
+
+			if (u32 mask = ra.get_known_zeroes() & rb.get_known_zeroes(); mask & 1)
+			{
+				// Added zeroes are always zeroes which comes in handy later
+				inherit_const_mask_value(op.rt, vregs[op.rt], 0, (1u << std::countr_one(mask)) - 1);
+			}
+
+			break;
+		}
+		case spu_itype::SFI:
+		{
+			const auto [af, av, at, ao, az] = get_reg(op.ra);
+			inherit_const_value(op.rt, af, op.si10 - av);
+			break;
+		}
+		case spu_itype::SF:
+		{
+			const auto ra = get_reg(op.ra);
+			const auto rb = get_reg(op.rb);
+
+			const auto [af, av, at, ao, az] = ra;
+			const auto [bf, bv, bt, bo, bz] = rb;
+
+			inherit_const_value(op.rt, af & bf, bv - av);
+
+			if (u32 mask = ra.get_known_zeroes() & rb.get_known_zeroes(); mask & 1)
+			{
+				// Subtracted zeroes are always zeroes which comes in handy later
+				inherit_const_mask_value(op.rt, vregs[op.rt], 0, (1u << std::countr_one(mask)) - 1);
+			}
+
+			break;
+		}
+		case spu_itype::FSMBI:
+		{
+			const u32 mask = (op.i16 >> 12);
+
+			const u32 value = (mask & 1 ? 0xff : 0) |
+				(mask & 2 ? 0xff00 : 0) |
+				(mask & 4 ? 0xff0000 : 0) |
+				(mask & 8 ? 0xff000000u : 0);
+
+			set_const_value(op.rt, value);
+			break;
+		}
+		case spu_itype::ROTMI:
+		{
+			if ((0 - op.i7) & 0x20)
+			{
+				set_const_value(op.rt, 0);
+				break;
+			}
+
+			if (!op.i7)
+			{
+				move_reg(op.rt, op.ra);
+				break;
+			}
+
+			const auto [af, av, at, ao, az] = get_reg(op.ra);
+			inherit_const_value(op.rt, af, av >> ((0 - op.i7) & 0x1f));
+			break;
+		}
+		case spu_itype::SHLI:
+		{
+			if (op.i7 & 0x20)
+			{
+				set_const_value(op.rt, 0);
+				break;
+			}
+
+			if (!op.i7)
+			{
+				move_reg(op.rt, op.ra);
+				break;
+			}
+
+			const auto [af, av, at, ao, az] = get_reg(op.ra);
+			inherit_const_value(op.rt, af, av << (op.i7 & 0x1f));
+			break;
+		}
+		case spu_itype::SELB:
+		{
+			const auto ra = get_reg(op.ra);
+			const auto rb = get_reg(op.rb);
+
+			// Ignore RC, perform a value merge which also respect bitwise information
+			vregs[op.rt4] = ra.merge(rb);
+			break;
+		}
+		case spu_itype::SHLQBYI:
+		{
+			if (op.i7 & 0x10)
+			{
+				set_const_value(op.rt, 0);
+				break;
+			}
+
+			if (!op.i7)
+			{
+				move_reg(op.rt, op.ra);
+				break;
+			}
+
+			[[fallthrough]];
+		}
+		default:
+		{
+			// Make unknown value
+			if (!(type & spu_itype::zregmod))
+			{
+				const u32 op_rt = type & spu_itype::_quadrop ? +op.rt4 : +op.rt;
+				unconst(op_rt);
+			}
+
+			break;
+		}
+		}
+
+		if (m_targets.count(pos))
+		{
+			for (u32 next_target : ::at32(m_targets, pos))
+			{
+				add_block(next_target);
+			}
+
+			next_block();
 		}
 	}
 
@@ -4414,6 +6382,96 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		}
 	}
 
+	std::string func_hash;
+	if (!result.data.empty())
+	{
+		sha1_context ctx;
+		u8 output[20]{};
+
+		sha1_starts(&ctx);
+		sha1_update(&ctx, reinterpret_cast<const u8*>(result.data.data()), result.data.size() * 4);
+		sha1_finish(&ctx, output);
+		fmt::append(func_hash, "%s", fmt::base57(output));
+	}
+
+	for (const auto& [pc_commited, pattern] : atomic16_all)
+	{
+		if (!pattern.active)
+		{
+			continue;
+		}
+
+		if (getllar_starts.contains(pattern.lsa_pc) && getllar_starts[pattern.lsa_pc])
+		{
+			continue;
+		}
+
+		auto& stats = g_fxo->get<putllc16_statistics_t>();
+
+		if (!pattern.ls_write)
+		{
+			spu_log.success("PUTLLC0 Pattern Detected! (put_pc=0x%x, %s) (putllc0=%d, putllc16+0=%d, all=%d)", pattern.put_pc, func_hash, ++stats.nowrite, ++stats.single, +stats.all);
+			add_pattern(false, inst_attr::putllc0, pattern.put_pc - lsa);
+			continue;
+		}
+
+		ensure(!pattern.ls_invalid);
+
+		union putllc16_info
+		{
+			u32 data;
+			bf_t<u32, 30, 2> type;
+			bf_t<u32, 29, 1> runtime16_select;
+			bf_t<u32, 18, 8> reg;
+			bf_t<u32, 0, 18> off18;
+			bf_t<u32, 0, 8> reg2;
+		} value{};
+
+		enum : u32
+		{
+			v_const = 0,
+			v_relative = 1,
+			v_reg_offs = 2,
+			v_reg2 = 3,
+		};
+
+		value.runtime16_select = pattern.select_16_or_0_at_runtime;
+		value.reg = s_reg_max;
+
+		if (pattern.ls.is_const())
+		{
+			ensure(pattern.reg == s_reg_max && pattern.reg2 == s_reg_max && pattern.ls_offs.is_const(), "Unexpected register usage");
+			value.type = v_const;
+			value.off18 = pattern.ls.value & SPU_LS_MASK_1;
+		}
+		else if (pattern.ls == start_program_count)
+		{
+			ensure(pattern.ls_offs.is_const(), "Unexpected register2 usage");
+			value.type = v_relative;
+			value.off18 = pattern.ls_offs.value & SPU_LS_MASK_1;
+		}
+		else if (pattern.ls_offs.is_const())
+		{
+			ensure(pattern.reg != s_reg_max, "Not found register usage");
+			value.type = v_reg_offs;
+			value.reg = pattern.reg;
+			value.off18 = pattern.ls_offs.value;
+		}
+		else
+		{
+			ensure(pattern.reg != s_reg_max, "Not found register usage");
+			ensure(pattern.reg2 != s_reg_max, "Not found register2 usage");
+			value.type = v_reg2;
+			value.reg = pattern.reg;
+			value.reg2 = pattern.reg2;
+		}
+
+		add_pattern(false, inst_attr::putllc16, pattern.put_pc - result.entry_point, value.data);
+
+		spu_log.success("PUTLLC16 Pattern Detected! (mem_count=%d, put_pc=0x%x, pc_rel=%d, offset=0x%x, const=%u, two_regs=%d, reg=%u, runtime=%d, 0x%x-%s) (putllc0=%d, putllc16+0=%d, all=%d)"
+			, pattern.mem_count, pattern.put_pc, value.type == v_relative, value.off18, value.type == v_const, value.type == v_reg2, value.reg, value.runtime16_select, entry_point, func_hash, +stats.nowrite, ++stats.single, +stats.all);
+	}
+
 	if (result.data.empty())
 	{
 		// Blocks starting from 0x0 or invalid instruction won't be compiled, may need special interpreter fallback
@@ -5210,6 +7268,275 @@ struct spu_fast : public spu_recompiler_base
 std::unique_ptr<spu_recompiler_base> spu_recompiler_base::make_fast_llvm_recompiler()
 {
 	return std::make_unique<spu_fast>();
+}
+
+std::array<reg_state_t, s_reg_max>& block_reg_info::evaluate_start_state(const std::map<u32, std::unique_ptr<block_reg_info>>& map)
+{
+	if (!has_true_state)
+	{
+		std::basic_string<u32> been_there;
+
+		struct iterator_info
+		{
+			u32 block_pc = SPU_LS_SIZE;
+
+			struct state_t
+			{
+				u32 block_pc = SPU_LS_SIZE;
+				std::array<reg_state_t, s_reg_max> reg_state;
+				bool disconnected = false;
+				bool state_written = false;
+			};
+
+			std::vector<state_t> state_prev;
+			usz completed = 0;
+			usz parent_iterator_index = umax;
+		};
+
+		std::vector<iterator_info> info_queue;
+
+		iterator_info first_entry{pc, {}, 0, umax};
+		info_queue.emplace_back(std::move(first_entry));
+
+		// info_queue may grow
+		for (usz qi = 0; qi < info_queue.size();)
+		{
+			const auto it = std::addressof(info_queue[qi]);
+			ensure(qi == info_queue.size() - 1);
+
+			auto& cur_node = ::at32(map, it->block_pc);
+
+			ensure(it->parent_iterator_index == qi - 1);
+
+			if (cur_node->has_true_state)
+			{
+				// Evaluted somewhen before
+				if (qi != 0)
+				{
+					ensure(!been_there.empty());
+					been_there.pop_back();
+					info_queue.pop_back();
+					qi--;
+					continue;
+				}
+				else
+				{
+					break;
+				}
+			}
+
+			if (it->state_prev.empty())
+			{
+				// Build the list here to avoid code duplication
+				const usz real_size = cur_node->prev_nodes.size();
+
+				if (real_size)
+				{
+					it->state_prev.resize(real_size);
+
+					for (usz i = 0; i < real_size; i++)
+					{
+						it->state_prev[i].block_pc = cur_node->prev_nodes[i].prev_pc;
+					}
+				}
+			}
+
+			const usz next_entry_idx = it->completed;
+
+			if (next_entry_idx == it->state_prev.size())
+			{
+				// Result merge from all predecessors
+
+				// Flag to mark the state as resolved
+				bool is_all_resolved = true;
+				bool has_past_state = false;
+
+				for (usz bi = 0; bi < it->state_prev.size(); bi++)
+				{
+					if (it->state_prev[bi].disconnected)
+					{
+						is_all_resolved = false;
+						continue;
+					}
+
+					has_past_state = true;
+
+					const u32 node_pc = it->state_prev[bi].block_pc;
+					const auto& node = ::at32(map, node_pc);
+
+					// Check if the node is resolved
+					if (!node->has_true_state)
+					{
+						// Assume this block cannot be resolved at the moment 
+						is_all_resolved = false;
+						break;
+					}
+				}
+
+				std::array<reg_state_t, s_reg_max> temp;
+
+				if (qi == 0)
+				{
+					// TODO: First block is always resolved here, but this logic can be improved to detect more cases of opportunistic resolving
+					is_all_resolved = true;
+				}
+
+				auto& res_state = is_all_resolved ? cur_node->start_reg_state : temp;
+
+				for (usz bi = 0; bi < it->state_prev.size(); bi++)
+				{
+					if (it->state_prev[bi].disconnected)
+					{
+						// Loop state, even if not ignored for a million times the result would still be the same
+						// So ignore it
+						continue;
+					}
+
+					std::array<reg_state_t, s_reg_max>* arg_state{};
+					const auto& node = ::at32(map, it->state_prev[bi].block_pc);
+
+					if (node->has_true_state)
+					{
+						// State is resolved, use the entry's state
+						arg_state = std::addressof(node->end_reg_state);
+					}
+					else
+					{
+						// Use accumulated state from one path of code history
+						arg_state = std::addressof(it->state_prev[bi].reg_state);
+						ensure(it->state_prev[bi].state_written);
+					}
+
+					if (bi == 0)
+					{
+						res_state = *arg_state;
+					}
+					else
+					{
+						merge(res_state, res_state, *arg_state);
+					}
+				}
+
+				std::array<reg_state_t, s_reg_max>* result_storage{};
+
+				if (is_all_resolved)
+				{
+					// Complete state of this block
+					result_storage = std::addressof(cur_node->end_reg_state);
+					cur_node->has_true_state = true;
+				}
+				else
+				{
+					// Patch incomplete state into saved state entry of parent block
+					ensure(it->parent_iterator_index != qi);
+					ensure(it->parent_iterator_index != umax);
+
+					auto& state = ::at32(info_queue, it->parent_iterator_index).state_prev;
+
+					for (usz i = 0;; i++)
+					{
+						ensure(i < state.size());
+
+						if (state[i].block_pc == it->block_pc)
+						{
+							result_storage = std::addressof(state[i].reg_state);
+							state[i].state_written = true;
+							break;
+						}
+					}
+				}
+
+				// Stack the newer state on top of the old (if exists)
+				if (has_past_state)
+				{
+					build_on_top_of(*result_storage, cur_node->addend_reg_state, res_state);
+				}
+				else
+				{
+					*result_storage = cur_node->addend_reg_state;
+				}
+
+				if (qi != 0)
+				{
+					ensure(!been_there.empty());
+					been_there.pop_back();
+					info_queue.pop_back();
+					qi--;
+				}
+				else
+				{
+					ensure(cur_node->has_true_state);
+					break;
+				}
+			}
+			else
+			{
+				const u32 prev_pc = cur_node->prev_nodes[it->completed++].prev_pc;
+				const auto& prev_node = ::at32(map, prev_pc);
+
+				// Queue for resolving if needed
+				if (!prev_node->has_true_state)
+				{
+					const bool loop_detected = been_there.find_first_of(prev_pc) != umax;
+					const bool avoid_extensive_analysis = qi >= 500;
+
+					if (!loop_detected && !avoid_extensive_analysis)
+					{
+						info_queue.emplace_back(iterator_info{prev_pc, {}, 0, qi});
+						been_there.push_back(prev_pc);
+						qi++;
+					}
+					else
+					{
+						auto& state = it->state_prev;
+
+						for (usz i = 0;; i++)
+						{
+							ensure(i < state.size());
+
+							if (state[i].block_pc == prev_pc)
+							{
+								// Loop state, even if not ignored for a million times the result would be the same
+								// This is similar to multiplying zero a million times
+								// This is true at least for now, that any register difference is considered an unknown state change
+								// So ignore it
+								state[i].disconnected = true;
+								break;
+							}
+						}
+
+						// Repeat
+						// qi += 0;
+					}
+				}
+				else
+				{
+					// Repeat
+					// qi += 0;
+				}
+			}
+		}
+
+		ensure(has_true_state);
+	}
+
+	walkby_state = start_reg_state;
+	return walkby_state;
+}
+
+void spu_recompiler_base::add_pattern(bool fill_all, inst_attr attr, u32 start, u32 end)
+{
+	if (end == umax)
+	{
+		end = start;
+	}
+
+	m_patterns[start] = pattern_info{utils::address_range::start_end(start, end)};
+
+	for (u32 i = start; i <= (fill_all ? end : start); i += 4)
+	{
+		m_inst_attrs[i / 4] = attr;
+	}
 }
 
 extern std::string format_spu_func_info(u32 addr, cpu_thread* spu)

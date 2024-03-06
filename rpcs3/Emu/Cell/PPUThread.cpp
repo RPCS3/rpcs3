@@ -2246,6 +2246,19 @@ void ppu_thread::cpu_on_stop()
 		dump_all(ret);
 		ppu_log.notice("thread context: %s", ret);
 	}
+
+	if (is_stopped())
+	{
+		if (last_succ == 0 && last_fail == 0 && exec_bytes == 0)
+		{
+			perf_log.notice("PPU thread perf stats are not available.");
+		}
+		else
+		{
+			perf_log.notice("Perf stats for STCX reload: success %u, failure %u", last_succ, last_fail);
+			perf_log.notice("Perf stats for instructions: total %u", exec_bytes / 4);
+		}
+	}
 }
 
 void ppu_thread::exec_task()
@@ -2287,8 +2300,6 @@ void ppu_thread::exec_task()
 
 ppu_thread::~ppu_thread()
 {
-	perf_log.notice("Perf stats for STCX reload: success %u, failure %u", last_succ, last_fail);
-	perf_log.notice("Perf stats for instructions: total %u", exec_bytes / 4);
 }
 
 ppu_thread::ppu_thread(const ppu_thread_params& param, std::string_view name, u32 _prio, int detached)
