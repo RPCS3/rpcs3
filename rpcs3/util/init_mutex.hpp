@@ -63,9 +63,6 @@ namespace stx
 
 					if (val & c_init_bit)
 					{
-						// Failure
-						_this = nullptr;
-
 						if constexpr (Forced()())
 						{
 							// Forced reset
@@ -73,12 +70,23 @@ namespace stx
 
 							while (val != 1)
 							{
+								if constexpr (sizeof...(FAndArgs))
+								{
+									if (!invoked_func)
+									{
+										invoke_callback(0, std::forward<FAndArgs>(args)...);
+										invoked_func = true;
+									}
+								}
+
 								// Wait for other users to finish their work
 								_this->m_state.wait(val);
 								val = _this->m_state;
 							}
 						}
 
+						// Failure
+						_this = nullptr;
 						break;
 					}
 
