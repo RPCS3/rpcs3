@@ -1114,6 +1114,7 @@ public:
 		}
 
 		const u32 start0 = _func.entry_point;
+		const usz func_size = _func.data.size();
 
 		const auto add_loc = m_spurt->add_empty(std::move(_func));
 
@@ -2117,7 +2118,7 @@ public:
 
 		if (g_fxo->get<spu_cache>().operator bool())
 		{
-			spu_log.success("New block compiled successfully");
+			spu_log.success("New SPU block compiled successfully (size=%u)", func_size);
 		}
 
 		return fn;
