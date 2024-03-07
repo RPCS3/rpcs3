@@ -4241,6 +4241,13 @@ bool spu_thread::is_exec_code(u32 addr, std::span<const u8> ls_ptr, u32 base_add
 						return false;
 					}
 
+					if (type == spu_itype::BRSL)
+					{
+						// Insert a virtual return-to-next, because it is usually a call
+						results[1] = addr + 4;
+						std::swap(results[1], results[0]);
+					}
+
 					break;
 				}
 				default:
