@@ -1024,7 +1024,7 @@ void spu_cache::initialize(bool build_existing_cache)
 					}
 				}
 
-				if (new_entry != umax && !spu_thread::is_exec_code(new_entry, { reinterpret_cast<const u8*>(ls.data()), SPU_LS_SIZE }))
+				if (new_entry != umax && !spu_thread::is_exec_code(new_entry, { reinterpret_cast<const u8*>(ls.data()), SPU_LS_SIZE }, 0, true))
 				{
 					new_entry = umax;
 				}
@@ -1033,7 +1033,7 @@ void spu_cache::initialize(bool build_existing_cache)
 				{
 					new_entry = start_new;
 
-					while (new_entry < next_func && (ls[start_new / 4] < 0x3fffc || !spu_thread::is_exec_code(new_entry, { reinterpret_cast<const u8*>(ls.data()), SPU_LS_SIZE })))
+					while (new_entry < next_func && (ls[start_new / 4] < 0x3fffc || !spu_thread::is_exec_code(new_entry, { reinterpret_cast<const u8*>(ls.data()), SPU_LS_SIZE }, 0, true)))
 					{
 						new_entry += 4;
 					}
@@ -2281,13 +2281,13 @@ std::vector<u32> spu_thread::discover_functions(u32 base_addr, std::span<const u
 	calls.erase(std::remove_if(calls.begin(), calls.end(), [&](u32 caller)
 	{
 		// Check the validity of both the callee code and the following caller code
-		return !is_exec_code(caller, ls, base_addr) || !is_exec_code(caller + 4, ls, base_addr);
+		return !is_exec_code(caller, ls, base_addr, true) || !is_exec_code(caller + 4, ls, base_addr, true);
 	}), calls.end());
 
 	branches.erase(std::remove_if(branches.begin(), branches.end(), [&](u32 caller)
 	{
 		// Check the validity of the callee code
-		return !is_exec_code(caller, ls, base_addr);
+		return !is_exec_code(caller, ls, base_addr, true);
 	}), branches.end());
 
 	std::vector<u32> addrs;
