@@ -2304,6 +2304,49 @@ std::vector<u32> spu_thread::discover_functions(u32 base_addr, std::span<const u
 		}
 
 		addrs.push_back(func);
+
+		// Detect an "arguments passing" block, possible queue another function
+		for (u32 next = func, it = 10; it && next >= base_addr && next < std::min<u32>(base_addr + ::size32(ls), 0x3FFF0); it--, next += 4)
+		{
+			const spu_opcode_t test_op{read_from_ptr<be_t<u32>>(ls, next - base_addr)};
+			const auto type = g_spu_itype.decode(test_op.opcode);
+
+			if (type & spu_itype::branch && type != spu_itype::BR)
+			{
+				break;
+			}
+
+			if (type == spu_itype::UNK || !test_op.opcode)
+			{
+				break;
+			}
+
+			if (type != spu_itype::BR)
+			{
+				continue;
+			}
+
+			const u32 target = op_branch_targets(next, op)[0];
+
+			if (target == umax || addr + 4 == target || target == addr || std::count(addrs.begin(), addrs.end(), target))
+			{
+				break;
+			}
+
+			// Detect backwards branch to the block in examination
+			if (target >= func && target <= next)
+			{
+				break;
+			}
+
+			if (!is_exec_code(target, ls, base_addr, true))
+			{
+				break;
+			}
+
+			addrs.push_back(target);
+			break;
+		}
 	}
 
 	for (u32 addr : branches)
@@ -2325,6 +2368,11 @@ std::vector<u32> spu_thread::discover_functions(u32 base_addr, std::span<const u
 			const auto type = g_spu_itype.decode(test_op.opcode);
 
 			if (type & spu_itype::branch)
+			{
+				break;
+			}
+
+			if (type == spu_itype::UNK || !test_op.opcode)
 			{
 				break;
 			}
