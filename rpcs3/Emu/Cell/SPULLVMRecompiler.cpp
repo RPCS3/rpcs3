@@ -1138,9 +1138,11 @@ public:
 
 		std::string log;
 
+		bool add_to_file = false;
+
 		if (auto& cache = g_fxo->get<spu_cache>(); cache && g_cfg.core.spu_cache && !add_loc->cached.exchange(1))
 		{
-			cache.add(func);
+			add_to_file = true;
 		}
 
 		{
@@ -2096,6 +2098,14 @@ public:
 		// Rebuild trampoline if necessary
 		if (!m_spurt->rebuild_ubertrampoline(func.data[0]))
 		{
+			if (auto& cache = g_fxo->get<spu_cache>())
+			{
+				if (add_to_file)
+				{
+					cache.add(func);
+				}
+			}
+
 			return nullptr;
 		}
 
@@ -2116,8 +2126,13 @@ public:
 		asm("DSB ISH");
 #endif
 
-		if (g_fxo->get<spu_cache>().operator bool())
+		if (auto& cache = g_fxo->get<spu_cache>())
 		{
+			if (add_to_file)
+			{
+				cache.add(func);
+			}
+
 			spu_log.success("New SPU block compiled successfully (size=%u)", func_size);
 		}
 
