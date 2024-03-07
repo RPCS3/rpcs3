@@ -5253,10 +5253,12 @@ s64 spu_thread::get_ch_value(u32 ch)
 			}
 		}
 
+		const bool seed = (utils::get_tsc() >> 8) % 100;
+
 #ifdef __linux__
 		const bool reservation_busy_waiting = false;
 #else
-		const bool reservation_busy_waiting = ((utils::get_tsc() >> 8) % 100 + ((raddr == spurs_addr) ? 50 : 0)) < g_cfg.core.spu_reservation_busy_waiting_percentage;
+		const bool reservation_busy_waiting = (seed + ((raddr == spurs_addr) ? 50 : 0)) < g_cfg.core.spu_reservation_busy_waiting_percentage;
 #endif
 
 		for (; !events.count; events = get_events(mask1 & ~SPU_EVENT_LR, true, true))
@@ -5281,6 +5283,23 @@ s64 spu_thread::get_ch_value(u32 ch)
 				// Don't busy-wait with TSX - memory is sensitive
 				if (g_use_rtm || !reservation_busy_waiting)
 				{
+					if (u32 work_count = g_spu_work_count)
+					{
+						const u32 true_free = utils::sub_saturate<u32>(utils::get_thread_count(), 10);
+
+						if (work_count > true_free)
+						{
+							// SPU thread count estimation
+							const u32 thread_count = (group ? g_raw_spu_ctr + group->max_num : g_raw_spu_ctr + 3);
+
+							if (thread_count && seed % thread_count < work_count - true_free)
+							{
+								// Make the SPU wait longer for other threads to do the work
+								thread_ctrl::wait_for(200);
+								continue;
+							}
+						}
+					}
 #ifdef __linux__
 					vm::reservation_notifier(raddr).wait(rtime, atomic_wait_timeout{50'000});
 #else
@@ -6795,3 +6814,4 @@ void fmt_class_string<spu_channel_4_t>::format(std::string& out, u64 arg)
 
 DECLARE(spu_thread::g_raw_spu_ctr){};
 DECLARE(spu_thread::g_raw_spu_id){};
+DECLARE(spu_thread::g_spu_work_count){};
