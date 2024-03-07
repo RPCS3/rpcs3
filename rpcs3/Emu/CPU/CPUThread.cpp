@@ -1072,17 +1072,31 @@ void cpu_thread::add_remove_flags(bs_t<cpu_flag> to_add, bs_t<cpu_flag> to_remov
 std::string cpu_thread::get_name() const
 {
 	// Downcast to correct type
-	if (id_type() == 1)
+	switch (id_type())
+	{
+	case 1:
 	{
 		return thread_ctrl::get_name(*static_cast<const named_thread<ppu_thread>*>(this));
 	}
-
-	if (id_type() == 2)
+	case 2:
 	{
 		return thread_ctrl::get_name(*static_cast<const named_thread<spu_thread>*>(this));
 	}
+	default:
+	{
+		if (cpu_thread::get_current() == this && thread_ctrl::get_current())
+		{
+			return thread_ctrl::get_name();
+		}
 
-	fmt::throw_exception("Invalid cpu_thread type");
+		if (id_type() == 0x55)
+		{
+			return fmt::format("rsx::thread");
+		}
+
+		return fmt::format("Invalid cpu_thread type (0x%x)", id_type());
+	}
+	}
 }
 
 u32 cpu_thread::get_pc() const
