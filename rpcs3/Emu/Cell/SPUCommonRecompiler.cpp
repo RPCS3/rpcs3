@@ -4501,6 +4501,8 @@ struct spu_llvm_worker
 		// Fake LS
 		std::vector<be_t<u32>> ls(0x10000);
 
+		bool set_relax_flag = false;
+
 		for (auto slice = registered.pop_all();; [&]
 		{
 			if (slice)
@@ -4511,6 +4513,12 @@ struct spu_llvm_worker
 			if (slice || thread_ctrl::state() == thread_state::aborting)
 			{
 				return;
+			}
+
+			if (set_relax_flag)
+			{
+				spu_thread::g_spu_work_count--;
+				set_relax_flag = false;
 			}
 
 			thread_ctrl::wait_on(utils::bless<atomic_t<u32>>(&registered)[1], 0);
@@ -4532,6 +4540,12 @@ struct spu_llvm_worker
 			if (!prog->second)
 			{
 				break;
+			}
+
+			if (!set_relax_flag)
+			{
+				spu_thread::g_spu_work_count++;
+				set_relax_flag = true;
 			}
 
 			const auto& func = *prog->second;
@@ -4575,11 +4589,17 @@ struct spu_llvm_worker
 			else
 			{
 				spu_log.fatal("[0x%05x] Compilation failed.", func.entry_point);
-				return;
+				break;
 			}
 
 			// Clear fake LS
 			std::memset(ls.data() + start / 4, 0, 4 * (size0 - 1));
+		}
+
+		if (set_relax_flag)
+		{
+			spu_thread::g_spu_work_count--;
+			set_relax_flag = false;
 		}
 	}
 };
@@ -4654,7 +4674,11 @@ struct spu_llvm
 
 		if (uint hc = utils::get_thread_count(); hc >= 12)
 		{
-			worker_count = hc - 10;
+			worker_count = hc - 12 + 3;
+		}
+		else if (hc >= 6)
+		{
+			worker_count = 2;
 		}
 
 		u32 worker_index = 0;
