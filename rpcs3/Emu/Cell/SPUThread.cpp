@@ -4119,9 +4119,11 @@ bool spu_thread::check_mfc_interrupts(u32 next_pc)
 	return false;
 }
 
-bool spu_thread::is_exec_code(u32 addr, std::span<const u8> ls_ptr, u32 base_addr)
+bool spu_thread::is_exec_code(u32 addr, std::span<const u8> ls_ptr, u32 base_addr, bool avoid_dead_code)
 {
-	for (u32 i = 0; i < 30; i++)
+	bool had_conditional = false;
+
+	for (u32 i = 0; i < 40; i++)
 	{
 		if (addr & ~0x3FFFC)
 		{
@@ -4179,6 +4181,51 @@ bool spu_thread::is_exec_code(u32 addr, std::span<const u8> ls_ptr, u32 base_add
 					break;
 				}
 			}
+			else
+			{
+				switch (type)
+				{
+				case spu_itype::BR:
+				case spu_itype::BRNZ:
+				case spu_itype::BRZ:
+				case spu_itype::BRHNZ:
+				case spu_itype::BRHZ:
+				case spu_itype::BRSL:
+				{
+					const s32 rel = bf_t<s32, 0, 18>::extract(static_cast<s32>(u32{op.i16} << 2));
+
+					if (rel == 0 && !had_conditional && avoid_dead_code)
+					{
+						// Infinite loop 100%, detect that as invalid code
+						return false;
+					}
+
+					// Detect "invalid" relative branches
+					// Branch offsets that, although are the only way to get X code address using relative address
+					// Rely on overflow/underflow of SPU memory bounds
+					// Thus they would behave differently if SPU LS memory size was to increase (evolving the CELL architecture was the original plan) 
+					// Making them highly unlikely to be valid code
+
+					if (rel < 0)
+					{
+						if (addr < 0u - rel)
+						{
+							return false;
+						}
+					}
+					else if (SPU_LS_SIZE - addr <= rel + 0u)
+					{
+						return false;
+					}
+
+					break;
+				}
+				default:
+				{
+					break;
+				}
+				}
+			}
 
 			for (usz res_i = 1; res_i < results.size(); res_i++)
 			{
@@ -4203,6 +4250,8 @@ bool spu_thread::is_exec_code(u32 addr, std::span<const u8> ls_ptr, u32 base_add
 				{
 					return false;
 				}
+
+				had_conditional = true;
 			}
 
 			addr = spu_branch_target(results[0]);
