@@ -4144,9 +4144,32 @@ bool spu_thread::is_exec_code(u32 addr, std::span<const u8> ls_ptr, u32 base_add
 			return false;
 		}
 
-		if (type == spu_itype::STOP && op.rb)
+		if (type == spu_itype::STOP)
 		{
-			return false;
+			if (op.rb)
+			{
+				return false;
+			}
+
+			if (avoid_dead_code)
+			{
+				switch (op.opcode)
+				{
+				case SYS_SPU_THREAD_STOP_YIELD:
+				case SYS_SPU_THREAD_STOP_GROUP_EXIT:
+				case SYS_SPU_THREAD_STOP_THREAD_EXIT:
+				case SYS_SPU_THREAD_STOP_RECEIVE_EVENT:
+				case SYS_SPU_THREAD_STOP_TRY_RECEIVE_EVENT:
+				case SYS_SPU_THREAD_STOP_SWITCH_SYSTEM_MODULE:
+				{
+					break;
+				}
+				default:
+				{
+					return false;
+				}
+				}
+			}
 		}
 
 		if (type & spu_itype::branch)
@@ -6102,6 +6125,12 @@ bool spu_thread::stop_and_signal(u32 code)
 		const auto data3 = static_cast<u32>(std::get<3>(event));
 		ch_in_mbox.set_values(4, CELL_OK, data1, data2, data3);
 		queue->events.pop_front();
+		return true;
+	}
+
+	case SYS_SPU_THREAD_STOP_SWITCH_SYSTEM_MODULE:
+	{
+		fmt::throw_exception("SYS_SPU_THREAD_STOP_SWITCH_SYSTEM_MODULE (op=0x%x, Out_MBox=%s)", code, _ref<u32>(pc), ch_out_mbox);
 		return true;
 	}
 
