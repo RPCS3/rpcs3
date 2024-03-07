@@ -2317,7 +2317,47 @@ std::vector<u32> spu_thread::discover_functions(u32 base_addr, std::span<const u
 			continue;
 		}
 
-		// Search for AI R1, +x or OR R3/4, Rx, 0
+		// Search for AI R1, -x in the called code
+		// Reasoning: AI R1, -x means stack frame creation, this is likely be a function
+		for (u32 next = func, it = 10; it && next >= base_addr && next < std::min<u32>(base_addr + ::size32(ls), 0x3FFF0); it--, next += 4)
+		{
+			const spu_opcode_t test_op{read_from_ptr<be_t<u32>>(ls, next - base_addr)};
+			const auto type = g_spu_itype.decode(test_op.opcode);
+
+			if (type & spu_itype::branch)
+			{
+				break;
+			}
+
+			bool is_func = false;
+
+			if (type == spu_itype::AI && test_op.rt == 1u && test_op.ra == 1u)
+			{
+				if (test_op.si10 >= 0)
+				{
+					break;
+				}
+
+				is_func = true;
+			}
+
+			if (!is_func)
+			{
+				continue;
+			}
+
+			addr = SPU_LS_SIZE + 4; // Terminate the next condition, no further checks needed
+
+			if (std::count(addrs.begin(), addrs.end(), func))
+			{
+				break;
+			}
+
+			addrs.push_back(func);
+			break;
+		}
+
+		// Search for AI R1, +x or OR R3/4, Rx, 0 before the branch
 		// Reasoning: AI R1, +x means stack pointer restoration, branch after that is likely a tail call
 		// R3 and R4 are common function arguments because they are the first two
 		for (u32 back = addr - 4, it = 10; it && back >= base_addr && back < std::min<u32>(base_addr + ::size32(ls), 0x3FFF0); it--, back -= 4)
