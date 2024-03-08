@@ -4683,6 +4683,7 @@ struct spu_llvm
 
 		u32 worker_index = 0;
 		u32 notify_compile_count = 0;
+		u32 compile_pending = 0;
 		std::vector<u8> notify_compile(worker_count);
 
 		m_workers = make_single<named_thread_group<spu_llvm_worker>>("SPUW.", worker_count);
@@ -4713,7 +4714,7 @@ struct spu_llvm
 					{
 						if (notify_compile[i])
 						{
-							(workers.begin() + (i % worker_count))->registered.notify();
+							(workers.begin() + i)->registered.notify();
 						}
 					}
 				}
@@ -4724,6 +4725,7 @@ struct spu_llvm
 				add_count = 65535; // Reset count
 				std::fill(notify_compile.begin(), notify_compile.end(), 0); // Reset notification flags
 				notify_compile_count = 0;
+				compile_pending = 0;
 				continue;
 			}
 
@@ -4764,18 +4766,26 @@ struct spu_llvm
 			{
 				notify_compile[worker_index % worker_count] = 1;
 				notify_compile_count++;
+			}
 
-				if (notify_compile_count == notify_compile.size())
+			compile_pending++;
+
+			// Notify all before queue runs out if there is considerable excess
+			// Optimized that: if there are many workers, it acts soon
+			// If there are only a few workers, it postpones notifications until there is some more workload
+			if (notify_compile_count && std::min<u32>(7, utils::aligned_div<u32>(worker_count * 2, 3) + 2) <= compile_pending)
+			{
+				for (usz i = 0; i < worker_count; i++)
 				{
-					// Notify all
-					for (usz i = 0; i < worker_count; i++)
+					if (notify_compile[i])
 					{
-						(workers.begin() + (i % worker_count))->registered.notify();
+						(workers.begin() + i)->registered.notify();
 					}
-
-					std::fill(notify_compile.begin(), notify_compile.end(), 0); // Reset notification flags
-					notify_compile_count = 0;
 				}
+
+				std::fill(notify_compile.begin(), notify_compile.end(), 0); // Reset notification flags
+				notify_compile_count = 0;
+				compile_pending = 0;
 			}
 
 			worker_index++;
