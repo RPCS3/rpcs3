@@ -18,7 +18,7 @@ usz curl_write_cb_compat(char* ptr, usz /*size*/, usz nmemb, void* userdata)
 downloader::downloader(QWidget* parent)
 	: QObject(parent)
 	, m_parent(parent)
-	, m_curl(new rpcs3::curl::curl_handle(this))
+	, m_curl(new rpcs3::curl::curl_handle())
 {
 }
 
@@ -85,10 +85,9 @@ void downloader::start(const std::string& url, bool follow_location, bool show_p
 			return;
 		}
 
-		if (m_progress_dialog && (!m_keep_progress_dialog_open || !m_curl_success))
+		if (!m_keep_progress_dialog_open || !m_curl_success)
 		{
-			m_progress_dialog->close();
-			m_progress_dialog = nullptr;
+			close_progress_dialog();
 		}
 
 		if (m_curl_success)
@@ -126,7 +125,7 @@ void downloader::start(const std::string& url, bool follow_location, bool show_p
 				close_progress_dialog();
 				Q_EMIT signal_download_canceled();
 			});
-			connect(m_progress_dialog, &QProgressDialog::finished, m_progress_dialog, &QProgressDialog::deleteLater);
+			connect(m_progress_dialog, &QProgressDialog::finished, this, &downloader::close_progress_dialog);
 		}
 	}
 
