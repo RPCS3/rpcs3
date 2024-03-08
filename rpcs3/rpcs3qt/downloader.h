@@ -25,9 +25,11 @@ public:
 	usz update_buffer(char* data, usz size);
 
 	void update_progress_dialog(const QString& title) const;
-	void close_progress_dialog();
 
 	progress_dialog* get_progress_dialog() const;
+
+public Q_SLOTS:
+	void close_progress_dialog();
 
 private Q_SLOTS:
 	void handle_buffer_update(int size, int max) const;
@@ -41,7 +43,7 @@ Q_SIGNALS:
 private:
 	QWidget* m_parent = nullptr;
 
-	rpcs3::curl::curl_handle* m_curl = nullptr;
+	std::unique_ptr<rpcs3::curl::curl_handle> m_curl;
 	QByteArray m_curl_buf;
 	atomic_t<bool> m_curl_abort = false;
 	atomic_t<bool> m_curl_success = false;

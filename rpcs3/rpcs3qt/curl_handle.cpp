@@ -1,3 +1,4 @@
+#include "stdafx.h"
 #include "curl_handle.h"
 #include "Emu/system_utils.hpp"
 #include "util/logs.hpp"
@@ -11,7 +12,7 @@ LOG_CHANNEL(network_log, "NET");
 namespace rpcs3::curl
 {
 
-curl_handle::curl_handle(QObject* parent) : QObject(parent)
+curl_handle::curl_handle()
 {
 	reset_error_buffer();
 
@@ -48,7 +49,7 @@ void curl_handle::reset_error_buffer()
 	m_error_buffer[0] = 0;
 }
 
-std::string curl_handle::get_verbose_error(CURLcode code)
+std::string curl_handle::get_verbose_error(CURLcode code) const
 {
 	if (m_uses_error_buffer)
 	{
