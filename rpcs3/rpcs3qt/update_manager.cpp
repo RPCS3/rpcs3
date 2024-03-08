@@ -307,7 +307,9 @@ void update_manager::update(bool auto_accept)
 	{
 		if (m_update_message.isEmpty())
 		{
+			// This can happen if we abort the check_for_updates download. Just check again in this case.
 			m_downloader->close_progress_dialog();
+			check_for_updates(false, false, false, m_parent);
 			return;
 		}
 
