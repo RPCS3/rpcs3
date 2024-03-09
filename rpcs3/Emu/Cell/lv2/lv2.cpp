@@ -1788,7 +1788,7 @@ bool lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
 			{
 				if (!current_ppu->state.test_and_set(cpu_flag::yield) || current_ppu->hw_sleep_time != 0)
 				{
-					current_ppu->hw_sleep_time += (is_create_thread ? 1900 : 35); // For thread creation the delay is much longer, perhaps the thread context is also filled by the thread
+					current_ppu->hw_sleep_time += 51; // Delay seems to bo around 51us
 				}
 				else
 				{
