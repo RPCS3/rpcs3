@@ -3351,7 +3351,7 @@ void main_window::ConfigureGuiFromSettings()
 	m_mw->restoreState(m_gui_settings->GetValue(gui::mw_mwState).toByteArray());
 
 	ui->freezeRecentAct->setChecked(m_gui_settings->GetValue(gui::rg_freeze).toBool());
-	m_rg_entries = m_gui_settings->Var2List(m_gui_settings->GetValue(gui::rg_entries));
+	m_rg_entries = gui_settings::Var2List(m_gui_settings->GetValue(gui::rg_entries));
 
 	// clear recent games menu of actions
 	for (QAction* act : m_recent_game_acts)
