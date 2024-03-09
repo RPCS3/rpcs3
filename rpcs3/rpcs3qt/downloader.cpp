@@ -122,10 +122,13 @@ void downloader::start(const std::string& url, bool follow_location, bool show_p
 			connect(m_progress_dialog, &QProgressDialog::canceled, this, [this]()
 			{
 				m_curl_abort = true;
-				close_progress_dialog();
+				m_progress_dialog = nullptr; // The progress dialog deletes itself on close
 				Q_EMIT signal_download_canceled();
 			});
-			connect(m_progress_dialog, &QProgressDialog::finished, this, &downloader::close_progress_dialog);
+			connect(m_progress_dialog, &QProgressDialog::finished, this, [this]()
+			{
+				m_progress_dialog = nullptr; // The progress dialog deletes itself on close
+			});
 		}
 	}
 
