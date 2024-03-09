@@ -52,8 +52,6 @@ extern atomic_t<bool> g_system_progress_canceled;
 
 std::string get_savestate_file(std::string_view title_id, std::string_view boot_pat, s64 abs_id, s64 rel_id);
 
-inline std::string sstr(const QString& _in) { return _in.toStdString(); }
-
 game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, std::shared_ptr<persistent_settings> persistent_settings, QWidget* parent)
 	: custom_dock_widget(tr("Game List"), parent)
 	, m_gui_settings(std::move(gui_settings))
@@ -481,7 +479,7 @@ void game_list_frame::OnParsingFinished()
 
 	const std::string game_icon_path = fs::get_config_dir() + "/Icons/game_icons/";
 
-	const auto add_game = [this, dev_flash, cat_unknown_localized = sstr(localized.category.unknown), cat_unknown = sstr(cat::cat_unknown), game_icon_path, _hdd, play_hover_movies = m_play_hover_movies, show_custom_icons = m_show_custom_icons](const std::string& dir_or_elf)
+	const auto add_game = [this, dev_flash, cat_unknown_localized = localized.category.unknown.toStdString(), cat_unknown = cat::cat_unknown.toStdString(), game_icon_path, _hdd, play_hover_movies = m_play_hover_movies, show_custom_icons = m_show_custom_icons](const std::string& dir_or_elf)
 	{
 		GameInfo game{};
 		game.path = dir_or_elf;
@@ -739,7 +737,7 @@ void game_list_frame::OnRefreshFinished()
 	}
 
 	const Localized localized;
-	const std::string cat_unknown_localized = sstr(localized.category.unknown);
+	const std::string cat_unknown_localized = localized.category.unknown.toStdString();
 
 	// Try to update the app version for disc games if there is a patch
 	for (const auto& entry : m_game_data)
@@ -1092,7 +1090,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 
 		connect(boot_manual, &QAction::triggered, [this, gameinfo]
 		{
-			if (std::string file_path = sstr(QFileDialog::getOpenFileName(this, "Select Config File", "", tr("Config Files (*.yml);;All files (*.*)"))); !file_path.empty())
+			if (std::string file_path = QFileDialog::getOpenFileName(this, "Select Config File", "", tr("Config Files (*.yml);;All files (*.*)")).toStdString(); !file_path.empty())
 			{
 				sys_log.notice("Booting from gamelist per context menu...");
 				Q_EMIT RequestBoot(gameinfo, cfg_mode::custom_selection, file_path);
