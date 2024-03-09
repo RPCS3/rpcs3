@@ -301,8 +301,8 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 
 	if (m_progress_dialog)
 	{
+		m_progress_dialog->SetValue(m_progress_dialog->maximum());
 		m_progress_dialog->accept();
-		m_progress_dialog->deleteLater();
 		m_progress_dialog = nullptr;
 	}
 
@@ -331,6 +331,27 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 				m_progress_dialog->SetValue(value);
 			}
 		}, Qt::QueuedConnection);
+		connect(&m_refresh_watcher, &QFutureWatcher<void>::finished, this, [this]()
+		{
+			if (m_progress_dialog)
+			{
+				m_progress_dialog->SetValue(m_progress_dialog->maximum());
+				m_progress_dialog->accept();
+				m_progress_dialog = nullptr;
+			}
+		}, Qt::QueuedConnection);
+		connect(&m_refresh_watcher, &QFutureWatcher<void>::canceled, this, [this]()
+		{
+			if (m_progress_dialog)
+			{
+				m_progress_dialog->accept();
+				m_progress_dialog = nullptr;
+			}
+		}, Qt::QueuedConnection);
+		connect(m_progress_dialog, &QProgressDialog::finished, this, [this]()
+		{
+			m_progress_dialog = nullptr;
+		});
 		connect(m_progress_dialog, &QProgressDialog::canceled, this, [this]()
 		{
 			gui::utils::stop_future_watcher(m_parsing_watcher, true);
@@ -348,7 +369,6 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 				m_progress_dialog_timer->stop();
 			}
 
-			m_progress_dialog->deleteLater();
 			m_progress_dialog = nullptr;
 		});
 
@@ -826,8 +846,8 @@ void game_list_frame::OnRefreshFinished()
 
 	if (m_progress_dialog)
 	{
+		m_progress_dialog->SetValue(m_progress_dialog->maximum());
 		m_progress_dialog->accept();
-		m_progress_dialog->deleteLater();
 		m_progress_dialog = nullptr;
 	}
 
