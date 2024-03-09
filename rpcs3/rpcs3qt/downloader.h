@@ -25,11 +25,9 @@ public:
 	usz update_buffer(char* data, usz size);
 
 	void update_progress_dialog(const QString& title) const;
+	void close_progress_dialog();
 
 	progress_dialog* get_progress_dialog() const;
-
-public Q_SLOTS:
-	void close_progress_dialog();
 
 private Q_SLOTS:
 	void handle_buffer_update(int size, int max) const;
