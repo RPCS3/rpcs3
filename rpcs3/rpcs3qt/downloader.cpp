@@ -149,7 +149,7 @@ void downloader::close_progress_dialog()
 {
 	if (m_progress_dialog)
 	{
-		m_progress_dialog->close();
+		m_progress_dialog->accept();
 		m_progress_dialog = nullptr;
 	}
 }

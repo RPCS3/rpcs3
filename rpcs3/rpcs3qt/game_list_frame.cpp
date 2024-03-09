@@ -52,8 +52,6 @@ extern atomic_t<bool> g_system_progress_canceled;
 
 std::string get_savestate_file(std::string_view title_id, std::string_view boot_pat, s64 abs_id, s64 rel_id);
 
-inline std::string sstr(const QString& _in) { return _in.toStdString(); }
-
 game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, std::shared_ptr<persistent_settings> persistent_settings, QWidget* parent)
 	: custom_dock_widget(tr("Game List"), parent)
 	, m_gui_settings(std::move(gui_settings))
@@ -303,8 +301,8 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 
 	if (m_progress_dialog)
 	{
+		m_progress_dialog->SetValue(m_progress_dialog->maximum());
 		m_progress_dialog->accept();
-		m_progress_dialog->deleteLater();
 		m_progress_dialog = nullptr;
 	}
 
@@ -318,8 +316,42 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 		m_games.pop_all();
 
 		m_progress_dialog = new progress_dialog(tr("Loading games"), tr("Loading games, please wait..."), tr("Cancel"), 0, 0, true, this, Qt::Dialog | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
-		connect(&m_refresh_watcher, &QFutureWatcher<void>::progressRangeChanged, m_progress_dialog, &QProgressDialog::setRange);
-		connect(&m_refresh_watcher, &QFutureWatcher<void>::progressValueChanged, m_progress_dialog, &QProgressDialog::setValue);
+
+		connect(&m_refresh_watcher, &QFutureWatcher<void>::progressRangeChanged, this, [this](int minimum, int maximum)
+		{
+			if (m_progress_dialog)
+			{
+				m_progress_dialog->SetRange(minimum, maximum);
+			}
+		}, Qt::QueuedConnection);
+		connect(&m_refresh_watcher, &QFutureWatcher<void>::progressValueChanged, this, [this](int value)
+		{
+			if (m_progress_dialog)
+			{
+				m_progress_dialog->SetValue(value);
+			}
+		}, Qt::QueuedConnection);
+		connect(&m_refresh_watcher, &QFutureWatcher<void>::finished, this, [this]()
+		{
+			if (m_progress_dialog)
+			{
+				m_progress_dialog->SetValue(m_progress_dialog->maximum());
+				m_progress_dialog->accept();
+				m_progress_dialog = nullptr;
+			}
+		}, Qt::QueuedConnection);
+		connect(&m_refresh_watcher, &QFutureWatcher<void>::canceled, this, [this]()
+		{
+			if (m_progress_dialog)
+			{
+				m_progress_dialog->accept();
+				m_progress_dialog = nullptr;
+			}
+		}, Qt::QueuedConnection);
+		connect(m_progress_dialog, &QProgressDialog::finished, this, [this]()
+		{
+			m_progress_dialog = nullptr;
+		});
 		connect(m_progress_dialog, &QProgressDialog::canceled, this, [this]()
 		{
 			gui::utils::stop_future_watcher(m_parsing_watcher, true);
@@ -337,7 +369,6 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 				m_progress_dialog_timer->stop();
 			}
 
-			m_progress_dialog->deleteLater();
 			m_progress_dialog = nullptr;
 		});
 
@@ -481,7 +512,7 @@ void game_list_frame::OnParsingFinished()
 
 	const std::string game_icon_path = fs::get_config_dir() + "/Icons/game_icons/";
 
-	const auto add_game = [this, dev_flash, cat_unknown_localized = sstr(localized.category.unknown), cat_unknown = sstr(cat::cat_unknown), game_icon_path, _hdd, play_hover_movies = m_play_hover_movies, show_custom_icons = m_show_custom_icons](const std::string& dir_or_elf)
+	const auto add_game = [this, dev_flash, cat_unknown_localized = localized.category.unknown.toStdString(), cat_unknown = cat::cat_unknown.toStdString(), game_icon_path, _hdd, play_hover_movies = m_play_hover_movies, show_custom_icons = m_show_custom_icons](const std::string& dir_or_elf)
 	{
 		GameInfo game{};
 		game.path = dir_or_elf;
@@ -739,7 +770,7 @@ void game_list_frame::OnRefreshFinished()
 	}
 
 	const Localized localized;
-	const std::string cat_unknown_localized = sstr(localized.category.unknown);
+	const std::string cat_unknown_localized = localized.category.unknown.toStdString();
 
 	// Try to update the app version for disc games if there is a patch
 	for (const auto& entry : m_game_data)
@@ -815,8 +846,8 @@ void game_list_frame::OnRefreshFinished()
 
 	if (m_progress_dialog)
 	{
+		m_progress_dialog->SetValue(m_progress_dialog->maximum());
 		m_progress_dialog->accept();
-		m_progress_dialog->deleteLater();
 		m_progress_dialog = nullptr;
 	}
 
@@ -1092,7 +1123,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 
 		connect(boot_manual, &QAction::triggered, [this, gameinfo]
 		{
-			if (std::string file_path = sstr(QFileDialog::getOpenFileName(this, "Select Config File", "", tr("Config Files (*.yml);;All files (*.*)"))); !file_path.empty())
+			if (std::string file_path = QFileDialog::getOpenFileName(this, "Select Config File", "", tr("Config Files (*.yml);;All files (*.*)")).toStdString(); !file_path.empty())
 			{
 				sys_log.notice("Booting from gamelist per context menu...");
 				Q_EMIT RequestBoot(gameinfo, cfg_mode::custom_selection, file_path);
