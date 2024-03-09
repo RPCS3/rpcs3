@@ -1781,12 +1781,14 @@ bool lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
 	{
 		if (current_ppu->prio.load().prio > lowest_new_priority)
 		{
+			const bool is_create_thread = current_ppu->gpr[11] == 0x35;
+
 			// When not being set to All timers - activate only for sys_ppu_thread_start
-			if (current_ppu->gpr[11] == 0x35 || g_cfg.core.sleep_timers_accuracy == sleep_timers_accuracy_level::_all_timers)
+			if (is_create_thread || g_cfg.core.sleep_timers_accuracy == sleep_timers_accuracy_level::_all_timers)
 			{
 				if (!current_ppu->state.test_and_set(cpu_flag::yield) || current_ppu->hw_sleep_time != 0)
 				{
-					current_ppu->hw_sleep_time += 35; // Seems like 35us after extensive testing
+					current_ppu->hw_sleep_time += (is_create_thread ? 1900 : 35); // For thread creation the delay is much longer, perhaps the thread context is also filled by the thread
 				}
 				else
 				{
