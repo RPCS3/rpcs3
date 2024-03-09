@@ -51,7 +51,8 @@ void progress_dialog::SetValue(int progress)
 
 void progress_dialog::SetDeleteOnClose()
 {
-	connect(this, &QProgressDialog::canceled, this, &QProgressDialog::deleteLater);
+	setAttribute(Qt::WA_DeleteOnClose);
+	connect(this, &QProgressDialog::canceled, this, &QProgressDialog::close, Qt::UniqueConnection);
 }
 
 void progress_dialog::SignalFailure() const
