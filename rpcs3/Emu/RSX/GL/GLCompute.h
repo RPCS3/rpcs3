@@ -23,6 +23,7 @@ namespace gl
 		u32 optimal_kernel_size = 1;
 		u32 max_invocations_x = 65535;
 
+		virtual ~compute_task() = default;
 		void initialize();
 		void create();
 		virtual void destroy();
@@ -43,6 +44,7 @@ namespace gl
 		std::string uniforms, variables, work_kernel, loop_advance, suffix, method_declarations;
 
 		cs_shuffle_base();
+		virtual ~cs_shuffle_base() = default;
 
 		void build(const char* function_name, u32 _kernel_size = 0);
 
@@ -51,7 +53,7 @@ namespace gl
 		void run(gl::command_context& cmd, const gl::buffer* data, u32 data_length, u32 data_offset = 0);
 	};
 
-	struct cs_shuffle_16 : cs_shuffle_base
+	struct cs_shuffle_16 final : cs_shuffle_base
 	{
 		// byteswap ushort
 		cs_shuffle_16()
@@ -60,7 +62,7 @@ namespace gl
 		}
 	};
 
-	struct cs_shuffle_32 : cs_shuffle_base
+	struct cs_shuffle_32 final : cs_shuffle_base
 	{
 		// byteswap_ulong
 		cs_shuffle_32()
@@ -69,7 +71,7 @@ namespace gl
 		}
 	};
 
-	struct cs_shuffle_32_16 : cs_shuffle_base
+	struct cs_shuffle_32_16 final : cs_shuffle_base
 	{
 		// byteswap_ulong + byteswap_ushort
 		cs_shuffle_32_16()
@@ -79,7 +81,7 @@ namespace gl
 	};
 
 	template <bool SwapBytes>
-	struct cs_shuffle_d32fx8_to_x8d24f : cs_shuffle_base
+	struct cs_shuffle_d32fx8_to_x8d24f final : cs_shuffle_base
 	{
 		u32 m_ssbo_length = 0;
 
@@ -91,7 +93,7 @@ namespace gl
 	};
 
 	template <bool SwapBytes>
-	struct cs_shuffle_x8d24f_to_d32fx8 : cs_shuffle_base
+	struct cs_shuffle_x8d24f_to_d32fx8 final : cs_shuffle_base
 	{
 		u32 m_ssbo_length = 0;
 
@@ -102,9 +104,8 @@ namespace gl
 		void run(gl::command_context& cmd, const gl::buffer* data, u32 src_offset, u32 dst_offset, u32 num_texels);
 	};
 
-
-	template<typename From, typename To, bool _SwapSrc = false, bool _SwapDst = false>
-	struct cs_fconvert_task : cs_shuffle_base
+	template <typename From, typename To, bool _SwapSrc = false, bool _SwapDst = false>
+	struct cs_fconvert_task final : cs_shuffle_base
 	{
 		u32 m_ssbo_length = 0;
 
@@ -233,7 +234,7 @@ namespace gl
 
 	// Reverse morton-order block arrangement
 	template <typename _BlockType, typename _BaseType, bool _SwapBytes>
-	struct cs_deswizzle_3d : compute_task
+	struct cs_deswizzle_3d final : compute_task
 	{
 		union params_t
 		{
@@ -355,19 +356,19 @@ namespace gl
 		virtual void run(gl::command_context& cmd, gl::viewable_image* src, const gl::buffer* dst, u32 out_offset, const coordu& region, const gl::pixel_buffer_layout& layout) = 0;
 	};
 
-	struct cs_d24x8_to_ssbo : cs_image_to_ssbo
+	struct cs_d24x8_to_ssbo final : cs_image_to_ssbo
 	{
 		cs_d24x8_to_ssbo();
 		void run(gl::command_context& cmd, gl::viewable_image* src, const gl::buffer* dst, u32 out_offset, const coordu& region, const gl::pixel_buffer_layout& layout) override;
 	};
 
-	struct cs_rgba8_to_ssbo : cs_image_to_ssbo
+	struct cs_rgba8_to_ssbo final : cs_image_to_ssbo
 	{
 		cs_rgba8_to_ssbo();
 		void run(gl::command_context& cmd, gl::viewable_image* src, const gl::buffer* dst, u32 out_offset, const coordu& region, const gl::pixel_buffer_layout& layout) override;
 	};
 
-	struct cs_ssbo_to_color_image : compute_task
+	struct cs_ssbo_to_color_image final : compute_task
 	{
 		cs_ssbo_to_color_image();
 		void run(gl::command_context& cmd, const buffer* src, const texture_view* dst, const u32 src_offset, const coordu& dst_region, const pixel_buffer_layout& layout);

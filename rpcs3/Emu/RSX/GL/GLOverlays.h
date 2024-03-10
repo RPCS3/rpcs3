@@ -40,6 +40,8 @@ namespace gl
 		bool enable_depth_writes = false;
 		bool enable_stencil_writes = false;
 
+		virtual ~overlay_pass() = default;
+
 		void create();
 		void destroy();
 
@@ -60,7 +62,7 @@ namespace gl
 		void run(gl::command_context& cmd, const areau& region, GLuint target_texture, GLuint image_aspect_bits, bool enable_blending = false);
 	};
 
-	struct ui_overlay_renderer : public overlay_pass
+	struct ui_overlay_renderer final : public overlay_pass
 	{
 		u32 num_elements = 0;
 		std::vector<std::unique_ptr<gl::texture>> resources;
@@ -90,14 +92,14 @@ namespace gl
 		void run(gl::command_context& cmd, const areau& viewport, GLuint target, rsx::overlays::overlay& ui);
 	};
 
-	struct video_out_calibration_pass : public overlay_pass
+	struct video_out_calibration_pass final : public overlay_pass
 	{
 		video_out_calibration_pass();
 
 		void run(gl::command_context& cmd, const areau& viewport, const rsx::simple_array<GLuint>& source, f32 gamma, bool limited_rgb, stereo_render_mode_options stereo_mode, gl::filter input_filter);
 	};
 
-	struct rp_ssbo_to_generic_texture : public overlay_pass
+	struct rp_ssbo_to_generic_texture final : public overlay_pass
 	{
 		rp_ssbo_to_generic_texture();
 		void run(gl::command_context& cmd, const buffer* src, texture* dst, const u32 src_offset, const coordu& dst_region, const pixel_buffer_layout& layout);

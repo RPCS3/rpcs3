@@ -13,6 +13,7 @@ namespace utils
 	{
 	public:
 		video_sink() = default;
+		virtual ~video_sink() = default;
 
 		virtual void stop(bool flush = true) = 0;
 		virtual void pause(bool flush = true) = 0;

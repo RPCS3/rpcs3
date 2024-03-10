@@ -159,7 +159,7 @@ struct rec_param
 static constexpr u32 rec_framerate = 30; // Always 30 fps
 static constexpr u32 rec_channels = 2; // Always 2 channels
 
-class rec_video_sink : public utils::video_sink
+class rec_video_sink final : public utils::video_sink
 {
 public:
 	rec_video_sink() : utils::video_sink()
