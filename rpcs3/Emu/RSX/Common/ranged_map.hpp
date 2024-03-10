@@ -128,7 +128,7 @@ namespace rsx
 		public:
 			bool operator == (const iterator& other) const
 			{
-				return m_it == other.m_it;
+				return m_current == other.m_current && m_it == other.m_it;
 			}
 
 			auto* operator -> ()
@@ -183,10 +183,10 @@ namespace rsx
 			m_data[block_for(range.start)].insert_or_assign(range.start, std::forward<T>(value));
 		}
 
-		usz count(const u32 key)
+		usz count(const u32 key) const
 		{
-			auto& block = m_data[block_for(key)];
-			if (auto found = block.find(key);
+			const auto& block = m_data[block_for(key)];
+			if (const auto found = block.find(key);
 				found != block.end())
 			{
 				return 1;
