@@ -1510,7 +1510,7 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 	{
 		gui_log.warning("Reinstalling firmware: old=%s, new=%s", installed, version_string);
 
-		if (QMessageBox::question(this, tr("RPCS3 Firmware Installer"), tr("Firmware of version %1 has already been installed.\nOverwrite current installation with version %2?").arg(qstr(installed), qstr(version_string)),
+		if (QMessageBox::question(this, tr("RPCS3 Firmware Installer"), tr("Firmware of version %1 has already been installed.\nOverwrite current installation with version %2?\nNote that this will empty its directory first!").arg(qstr(installed), qstr(version_string)),
 			QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) == QMessageBox::No)
 		{
 			gui_log.warning("Reinstallation of firmware aborted.");
@@ -1526,6 +1526,9 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 
 	// Used by tar_object::extract() as destination directory
 	vfs::mount("/dev_flash", g_cfg_vfs.get_dev_flash());
+
+	// Empty directory for clean installation
+	fs::remove_all(g_cfg.vfs.get_dev_flash(), false);
 
 	// Synchronization variable
 	atomic_t<uint> progress(0);
