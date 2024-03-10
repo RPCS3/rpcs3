@@ -21,6 +21,7 @@
 #include "PPUDisAsm.h"
 #include "SPURecompiler.h"
 #include "timers.hpp"
+#include "Emu/Cell/Modules/cellSysutil.h"
 #include "lv2/sys_sync.h"
 #include "lv2/sys_prx.h"
 #include "lv2/sys_overlay.h"
@@ -3675,13 +3676,15 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 	struct file_info
 	{
 		std::string path;
+		std::string rec_name;
 		u64 offset;
 		u64 file_size;
 
 		file_info() noexcept = default;
 
-		file_info(std::string _path, u64 offs, u64 size) noexcept
+		file_info(std::string _path, std::string _rec, u64 offs, u64 size) noexcept
 			: path(std::move(_path))
+			, rec_name(std::move(_rec))
 			, offset(offs)
 			, file_size(size)
 		{
@@ -3701,6 +3704,8 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 		}
 
 		ppu_log.notice("Scanning directory: %s", dir_queue[i]);
+
+		const usz old_size = file_queue.size();
 
 		for (auto&& entry : fs::dir(dir_queue[i]))
 		{
@@ -3773,7 +3778,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 				}
 
 				// Get full path
-				file_queue.emplace_back(dir_queue[i] + entry.name, 0, entry.size);
+				file_queue.emplace_back(dir_queue[i] + entry.name, std::string{}, 0, entry.size);
 				continue;
 			}
 
@@ -3781,7 +3786,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 			if ((upper.ends_with(".ELF") || upper.ends_with(".SELF")) && Emu.GetBoot() != dir_queue[i] + entry.name)
 			{
 				// Get full path
-				file_queue.emplace_back(dir_queue[i] + entry.name, 0, entry.size);
+				file_queue.emplace_back(dir_queue[i] + entry.name, std::string{}, 0, entry.size);
 				continue;
 			}
 
@@ -3824,14 +3829,14 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 								if (upper.find(".SPRX") != umax || upper.find(".PRX") != umax)
 								{
 									// .sprx inside .mself found
-									file_queue.emplace_back(dir_queue[i] + entry.name, rec.off, rec.size);
+									file_queue.emplace_back(dir_queue[i] + entry.name, std::move(name), rec.off, rec.size);
 									continue;
 								}
 
 								if (upper.find(".SELF") != umax || upper.find(".ELF") != umax)
 								{
 									// .self inside .mself found
-									file_queue.emplace_back(dir_queue[i] + entry.name, rec.off, rec.size);
+									file_queue.emplace_back(dir_queue[i] + entry.name, std::move(name), rec.off, rec.size);
 									continue;
 								}
 							}
@@ -3845,6 +3850,151 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 				}
 			}
 		}
+
+		if (file_queue.size() > old_size + 1)
+		{
+			// Metal Gear Solid 4 has multiple executables for different languages, and they are massive each!
+			// The difference between them is two letters, abbrevation of the language
+			// sp.self, us.self, fr.self, gr.self, it.self and jp.self
+
+			std::string prev_fname;
+			usz diff_pos = umax;
+			bool has_used_file = false;
+
+			static const std::unordered_map<std::string_view, s32> s_ch_to_lang =
+			{
+				{"sp"sv, CELL_SYSUTIL_LANG_SPANISH},
+				{"us"sv, CELL_SYSUTIL_LANG_ENGLISH_US},
+				{"fr"sv, CELL_SYSUTIL_LANG_FRENCH},
+				{"gr"sv, CELL_SYSUTIL_LANG_GERMAN},
+				{"it"sv, CELL_SYSUTIL_LANG_ITALIAN},
+				{"jp"sv, CELL_SYSUTIL_LANG_JAPANESE},
+			};
+
+			std::string_view chosen_lang;
+
+			for (auto& [name, key] : s_ch_to_lang)
+			{
+				if (key == g_cfg.sys.language)
+				{
+					chosen_lang = name;
+					break;
+				}
+			}
+
+			if (g_cfg.sys.language == CELL_SYSUTIL_LANG_ENGLISH_GB)
+			{
+				// Fallback
+				chosen_lang = "us"sv;
+			}
+
+			if (chosen_lang.empty())
+			{
+				// Disable optimization if other langues are selected
+				continue;
+			}
+
+			for (usz i = old_size; i < file_queue.size(); i++)
+			{
+				const std::string_view path = file_queue[i].path;
+				std::string fname = fmt::to_lower(path.substr(path.find_last_of(fs::delim) + 1));
+
+				if (fname.size() >= 7 && fname.ends_with(".self"))
+				{
+					if (prev_fname.empty())
+					{
+						prev_fname = std::move(fname);
+					}
+					else if (!prev_fname.empty() && prev_fname.size() == fname.size())
+					{
+						usz j = 0;
+
+						for (; j < fname.size() - 7; j++)
+						{
+							if (prev_fname[j] != fname[j])
+							{
+								break;
+							}
+						}
+
+						if (diff_pos != umax && j != diff_pos)
+						{
+							continue;
+						}
+
+						const std::string_view plang = std::string_view(prev_fname).substr(j, 2);
+						const std::string_view flang = std::string_view(fname).substr(j, 2);
+
+						if (plang != flang && s_ch_to_lang.contains(plang) && s_ch_to_lang.contains(flang))
+						{
+							if (diff_pos == umax)
+							{
+								diff_pos = j;
+							}
+
+							if (flang == chosen_lang)
+							{
+								has_used_file = true;
+							}
+						}
+						else
+						{
+							chosen_lang = {};
+							break;
+						}
+					}
+				}
+			}
+
+			if (chosen_lang.empty() || diff_pos == umax || !has_used_file)
+			{
+				// Failure
+				continue;
+			}
+
+			for (usz i = old_size, delete_at = umax; i < file_queue.size();)
+			{
+				if (delete_at != umax)
+				{
+					// Delete here to avoid UB
+					file_queue.erase(file_queue.begin() + delete_at);
+					delete_at = umax;
+					continue;
+				}
+
+				const std::string_view path = file_queue[i].path;
+				std::string fname = fmt::to_lower(path.substr(path.find_last_of(fs::delim) + 1));
+
+				if (prev_fname.size() == fname.size() && fname.ends_with(".self"))
+				{
+					usz j = 0;
+
+					for (; j < fname.size() - 7; j++)
+					{
+						if (prev_fname[j] != fname[j])
+						{
+							break;
+						}
+					}
+
+					if (j != diff_pos)
+					{
+						continue;
+					}
+
+					const std::string_view flang = std::string_view(fname).substr(j, 2);
+
+					if (s_ch_to_lang.contains(flang) && chosen_lang != flang)
+					{
+						// Not the file of the selected language, do not recompile it
+						delete_at = i;
+						continue;
+					}
+				}
+
+				i++;
+			}
+		}
 	}
 
 	g_progr_ftotal += ::size32(file_queue);
@@ -3854,6 +4004,15 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 	for (const file_info& info : file_queue)
 	{
 		total_files_size += info.file_size;
+
+		if (!info.rec_name.empty())
+		{
+			ppu_log.notice("File to compile: '%s' of MSELF '%s' (size=0x%x)", info.rec_name, info.path, info.file_size);
+		}
+		else
+		{
+			ppu_log.notice("File to compile: '%s' (size=0x%x)", info.path, info.file_size);
+		}
 	}
 
 	g_progr_ftotal_bits += total_files_size;
@@ -3882,9 +4041,16 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 				continue;
 			}
 
-			auto& [path, offset, file_size] = file_queue[func_i];
+			auto& [path, rec_name, offset, file_size] = file_queue[func_i];
 
-			ppu_log.notice("Trying to load: %s", path);
+			if (rec_name.empty())
+			{
+				ppu_log.notice("Trying to load: '%s'", path);
+			}
+			else
+			{
+				ppu_log.notice("Trying to load: '%s' ('%s')", path, rec_name);
+			}
 
 			// Load MSELF, SPRX or SELF
 			fs::file src{path};
@@ -4012,7 +4178,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 				continue;
 			}
 
-			const auto& [path, _, file_size] = *slice;
+			const auto& [path, _x, _x2, file_size] = *slice;
 
 			ppu_log.notice("Trying to load as executable: %s", path);
 
