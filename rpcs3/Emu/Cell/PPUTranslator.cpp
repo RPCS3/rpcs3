@@ -148,6 +148,7 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 	const u64 base = m_reloc ? m_reloc->addr : 0;
 	m_addr = info.addr - base;
 	m_attr = info.attr;
+	m_func_base = m_addr;
 
 	// Don't emit check in small blocks without terminator
 	bool need_check = info.size >= 16;
@@ -304,13 +305,29 @@ Value* PPUTranslator::VecHandleResult(Value* val)
 
 Value* PPUTranslator::GetAddr(u64 _add)
 {
-	if (m_reloc)
+	const auto old_cia = std::exchange(m_cia, nullptr);
+
+	const bool is_duplicate = m_info.duplicate_map.contains(m_func_base);
+	const auto cia_add = is_duplicate ? ZExt(RegLoad(m_cia)) : nullptr;
+	const u32 inst_diff = is_duplicate ? m_addr - m_func_base : m_addr;
+
+	// Restore value
+	m_cia = old_cia;
+
+	Value* addr = nullptr;
+
+	if (is_duplicate)
+	{
+		// Add to current CIA
+		return m_ir->CreateAdd(m_ir->getInt64(inst_diff + _add), cia_add);
+	}
+	else if (m_reloc)
 	{
 		// Load segment address from global variable, compute actual instruction address
-		return m_ir->CreateAdd(m_ir->getInt64(m_addr + _add), m_seg0);
+		return m_ir->CreateAdd(m_ir->getInt64(inst_diff + _add), m_seg0);
 	}
 
-	return m_ir->getInt64(m_addr + _add);
+	return m_ir->getInt64(inst_diff + _add);
 }
 
 Type* PPUTranslator::ScaleType(Type* type, s32 pow2)
@@ -419,7 +436,15 @@ void PPUTranslator::CallFunction(u64 target, Value* indirect)
 
 			if (!indirect)
 			{
-				callee = m_module->getOrInsertFunction(fmt::format("__0x%x", target_last - base), type);
+				const auto it = m_info.duplicate_map.find(target_last);
+				const u32 first_func = it == m_info.duplicate_map.end() ? target_last : it->second;
+
+				if (base)
+				{
+					ensure(first_func >= base && target_last >= base);
+				}
+
+				callee = m_module->getOrInsertFunction(fmt::format("__0x%x", first_func - base), type);
 				cast<Function>(callee.getCallee())->setCallingConv(CallingConv::GHC);
 			}
 		}

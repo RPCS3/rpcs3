@@ -4146,7 +4146,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 			}
 
 			ppu_log.notice("Failed to precompile '%s' (prx: %s, ovl: %s): Attempting tratment as executable file", path, prx_err, ovl_err);
-			possible_exec_file_paths.push(path, offset, file_size);
+			possible_exec_file_paths.push(file_queue[func_i]);
 			inc_fdone = 0;
 		}
 	});
@@ -4643,8 +4643,15 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 			// Copy block or function entry
 			ppu_function& entry = part.funcs.emplace_back(func);
 
+			u32 og_func = entry.addr;
+
+			if (auto it = info.duplicate_map.find(entry.addr); it != info.duplicate_map.end())
+			{
+				og_func = it->second;
+			}
+
 			// Fixup some information
-			entry.name = fmt::format("__0x%x", entry.addr - reloc);
+			entry.name = fmt::format("__0x%x", og_func - reloc);
 
 			if (has_mfvscr && g_cfg.core.ppu_set_sat_bit)
 			{
@@ -4808,7 +4815,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 				settings += ppu_settings::accurate_nj_mode, settings -= ppu_settings::fixup_nj_denormals, fmt::throw_exception("NJ Not implemented");
 
 			// Write version, hash, CPU, settings
-			fmt::append(obj_name, "v6-kusa-%s-%s-%s.obj", fmt::base57(output, 16), fmt::base57(settings), jit_compiler::cpu(g_cfg.core.llvm_cpu));
+			fmt::append(obj_name, "v7-kusa-%s-%s-%s.obj", fmt::base57(output, 16), fmt::base57(settings), jit_compiler::cpu(g_cfg.core.llvm_cpu));
 		}
 
 		if (cpu ? cpu->state.all_of(cpu_flag::exit) : Emu.IsStopped())
@@ -5037,6 +5044,8 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 
 	bool early_exit = false;
 
+	std::map<std::string, ppu_intrp_func_t> func_ptr_map;
+
 	// Get and install function addresses
 	for (const auto& func : info.funcs)
 	{
@@ -5054,12 +5063,29 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 			break;
 		}
 
-		const auto name = fmt::format("__0x%x", func.addr - reloc);
+		u32 og_func = func.addr;
+
+		if (auto it = info.duplicate_map.find(func.addr); it != info.duplicate_map.end())
+		{
+			og_func = it->second;
+		}
+
+		const auto name = fmt::format("__0x%x", og_func - reloc);
+
+		ppu_intrp_func_t dummy{};
+		ppu_intrp_func_t& func_ptr = is_first ? func_ptr_map[name] : dummy;
 
 		// Try to locate existing function if it is not the first time
-		const auto addr = is_first ? ensure(reinterpret_cast<ppu_intrp_func_t>(jit->get(name)))
-			: reinterpret_cast<ppu_intrp_func_t>(ensure(jit_mod.funcs[index]));
+		const auto addr = is_first ? (func_ptr ? func_ptr : (reinterpret_cast<ppu_intrp_func_t>(jit->get(name))))
+			: reinterpret_cast<ppu_intrp_func_t>(jit_mod.funcs[index]);
 
+		if (!addr)
+		{
+			ppu_log.fatal("Failed to retrieve symbol address at 0x%x (duplicate=0x%x)", func.addr, info.duplicate_map.contains(func.addr) ? og_func : 0);
+			ensure(addr);
+		}
+
+		func_ptr = addr;
 		jit_mod.funcs.emplace_back(addr);
 
 		if (func.size == 4 && !BLR_func && *info.get_ptr<u32>(func.addr) == ppu_instructions::BLR())
@@ -5148,6 +5174,11 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 	{
 		if (func.size)
 		{
+			if (auto it = module_part.duplicate_map.find(func.addr); it != module_part.duplicate_map.end() && it->second != it->first)
+			{
+				continue;
+			}
+
 			const auto f = cast<Function>(_module->getOrInsertFunction(func.name, _func).getCallee());
 			f->setCallingConv(CallingConv::GHC);
 			f->addParamAttr(1, llvm::Attribute::NoAlias);
@@ -5194,6 +5225,15 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 
 			if (module_part.funcs[fi].size)
 			{
+				const u32 faddr = module_part.funcs[fi].addr;
+				auto it = module_part.duplicate_map.find(faddr);
+
+				if (it != module_part.duplicate_map.end() && it->second != faddr)
+				{
+					ppu_log.trace("LLVM: Function 0x%x was skipped (duplicate)", faddr);
+					continue;
+				}
+
 				// Translate
 				if (const auto func = translator.Translate(module_part.funcs[fi]))
 				{
