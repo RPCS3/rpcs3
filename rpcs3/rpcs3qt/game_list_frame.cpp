@@ -839,18 +839,6 @@ void game_list_frame::OnRefreshFinished()
 		m_game_list->restore_layout(m_gui_settings->GetValue(gui::gl_state).toByteArray());
 	}
 
-	if (m_progress_dialog_timer)
-	{
-		m_progress_dialog_timer->stop();
-	}
-
-	if (m_progress_dialog)
-	{
-		m_progress_dialog->SetValue(m_progress_dialog->maximum());
-		m_progress_dialog->accept();
-		m_progress_dialog = nullptr;
-	}
-
 	// Emit signal and remove slots
 	Q_EMIT Refreshed();
 	m_refresh_funcs_manage_type.reset();
