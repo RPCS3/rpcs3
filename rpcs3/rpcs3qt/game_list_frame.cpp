@@ -162,7 +162,27 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 		m_game_data.clear();
 		m_serials.clear();
 		m_games.pop_all();
+
+		if (m_progress_dialog)
+		{
+			m_progress_dialog->accept();
+			m_progress_dialog = nullptr;
+		}
 	});
+	connect(&m_refresh_watcher, &QFutureWatcher<void>::progressRangeChanged, this, [this](int minimum, int maximum)
+	{
+		if (m_progress_dialog)
+		{
+			m_progress_dialog->SetRange(minimum, maximum);
+		}
+	}, Qt::QueuedConnection);
+	connect(&m_refresh_watcher, &QFutureWatcher<void>::progressValueChanged, this, [this](int value)
+	{
+		if (m_progress_dialog)
+		{
+			m_progress_dialog->SetValue(value);
+		}
+	}, Qt::QueuedConnection);
 
 	connect(m_game_list, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
 	connect(m_game_list, &QTableWidget::itemSelectionChanged, this, &game_list_frame::ItemSelectionChangedSlot);
@@ -317,37 +337,6 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 
 		m_progress_dialog = new progress_dialog(tr("Loading games"), tr("Loading games, please wait..."), tr("Cancel"), 0, 0, true, this, Qt::Dialog | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
 
-		connect(&m_refresh_watcher, &QFutureWatcher<void>::progressRangeChanged, this, [this](int minimum, int maximum)
-		{
-			if (m_progress_dialog)
-			{
-				m_progress_dialog->SetRange(minimum, maximum);
-			}
-		}, Qt::QueuedConnection);
-		connect(&m_refresh_watcher, &QFutureWatcher<void>::progressValueChanged, this, [this](int value)
-		{
-			if (m_progress_dialog)
-			{
-				m_progress_dialog->SetValue(value);
-			}
-		}, Qt::QueuedConnection);
-		connect(&m_refresh_watcher, &QFutureWatcher<void>::finished, this, [this]()
-		{
-			if (m_progress_dialog)
-			{
-				m_progress_dialog->SetValue(m_progress_dialog->maximum());
-				m_progress_dialog->accept();
-				m_progress_dialog = nullptr;
-			}
-		}, Qt::QueuedConnection);
-		connect(&m_refresh_watcher, &QFutureWatcher<void>::canceled, this, [this]()
-		{
-			if (m_progress_dialog)
-			{
-				m_progress_dialog->accept();
-				m_progress_dialog = nullptr;
-			}
-		}, Qt::QueuedConnection);
 		connect(m_progress_dialog, &QProgressDialog::finished, this, [this]()
 		{
 			m_progress_dialog = nullptr;
