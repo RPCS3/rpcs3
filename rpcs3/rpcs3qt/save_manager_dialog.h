@@ -30,6 +30,7 @@ private Q_SLOTS:
 	void OnSort(int logicalIndex);
 	void SetIconSize(int size);
 	void UpdateDetails();
+	void text_changed(const QString& text);
 
 Q_SIGNALS:
 	void IconReady(int index, const QPixmap& new_icon);
