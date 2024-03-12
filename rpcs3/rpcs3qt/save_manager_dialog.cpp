@@ -15,6 +15,7 @@
 #include <QDateTime>
 #include <QHBoxLayout>
 #include <QHeaderView>
+#include <QLineEdit>
 #include <QMenu>
 #include <QMessageBox>
 #include <QGuiApplication>
@@ -99,6 +100,8 @@ void save_manager_dialog::Init()
 	slider_icon_size->setMinimum(60);
 	slider_icon_size->setMaximum(225);
 	slider_icon_size->setValue(icon_size);
+	QLabel* label_search_bar = new QLabel(tr("Search:"), this);
+	QLineEdit* search_bar = new QLineEdit(this);
 	QPushButton* push_close = new QPushButton(tr("&Close"), this);
 	push_close->setAutoDefault(true);
 
@@ -141,6 +144,8 @@ void save_manager_dialog::Init()
 
 	// Items below list
 	QHBoxLayout* hbox_buttons = new QHBoxLayout();
+	hbox_buttons->addWidget(label_search_bar);
+	hbox_buttons->addWidget(search_bar);
 	hbox_buttons->addWidget(label_icon_size);
 	hbox_buttons->addWidget(slider_icon_size);
 	hbox_buttons->addStretch();
@@ -204,6 +209,7 @@ void save_manager_dialog::Init()
 			icon_item->setData(Qt::DecorationRole, pixmap);
 		}
 	});
+	connect(search_bar, &QLineEdit::textChanged, this, &save_manager_dialog::text_changed);
 }
 
 /**
@@ -657,5 +663,44 @@ void save_manager_dialog::WaitForRepaintThreads(bool abort)
 		{
 			item->wait_for_icon_loading(abort);
 		}
+	}
+}
+
+void save_manager_dialog::text_changed(const QString& text)
+{
+	const auto check_text = [&](int row)
+	{
+		if (text.isEmpty())
+			return true;
+
+		for (int col = SaveColumns::Name; col < SaveColumns::Count; col++)
+		{
+			const QTableWidgetItem* item = m_list->item(row, col);
+
+			if (item && item->text().contains(text, Qt::CaseInsensitive))
+				return true;
+		}
+
+		return false;
+	};
+
+	bool new_row_visible = false;
+
+	for (int i = 0; i < m_list->rowCount(); i++)
+	{
+		// only show items filtered for search text
+		const bool is_hidden = m_list->isRowHidden(i);
+		const bool hide = !check_text(i);
+
+		if (is_hidden != hide)
+		{
+			m_list->setRowHidden(i, hide);
+			new_row_visible = !hide;
+		}
+	}
+
+	if (new_row_visible)
+	{
+		UpdateIcons();
 	}
 }
