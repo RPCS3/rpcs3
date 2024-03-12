@@ -37,7 +37,7 @@ void progress_dialog::SetRange(int min, int max)
 {
 	m_progress_indicator->set_range(min, max);
 
-	QProgressDialog::setRange(min, max);
+	setRange(min, max);
 }
 
 void progress_dialog::SetValue(int progress)
@@ -46,7 +46,7 @@ void progress_dialog::SetValue(int progress)
 
 	m_progress_indicator->set_value(value);
 
-	QProgressDialog::setValue(value);
+	setValue(value);
 }
 
 void progress_dialog::SetDeleteOnClose()

@@ -75,14 +75,23 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	m_gui_settings->SetValue(gui::gl_textFactor, m_text_factor);
 
 	// Only show the progress dialog after some time has passed
-	m_progress_dialog_timer = new QTimer(this);
-	m_progress_dialog_timer->setSingleShot(true);
-	m_progress_dialog_timer->setInterval(200);
-	connect(m_progress_dialog_timer, &QTimer::timeout, this, [this]()
+	m_progress_dialog_timer.setSingleShot(true);
+	m_progress_dialog_timer.setInterval(200);
+	connect(&m_progress_dialog_timer, &QTimer::timeout, this, [this]()
 	{
 		if (m_progress_dialog)
 		{
 			m_progress_dialog->show();
+			m_progress_dialog_update_timer.start();
+		}
+	});
+
+	m_progress_dialog_update_timer.setInterval(16);
+	connect(&m_progress_dialog_update_timer, &QTimer::timeout, this, [this]()
+	{
+		if (m_progress_dialog)
+		{
+			m_progress_dialog->SetValue(m_progress_dialog_value);
 		}
 	});
 
@@ -163,10 +172,12 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 		m_serials.clear();
 		m_games.pop_all();
 
-		if (m_progress_dialog)
+		m_progress_dialog_update_timer.stop();
+
+		if (progress_dialog* dlg = m_progress_dialog)
 		{
-			m_progress_dialog->accept();
-			m_progress_dialog = nullptr;
+			m_progress_dialog = nullptr; // Clear first to avoid further slots
+			dlg->accept();
 		}
 	});
 	connect(&m_refresh_watcher, &QFutureWatcher<void>::progressRangeChanged, this, [this](int minimum, int maximum)
@@ -175,14 +186,11 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 		{
 			m_progress_dialog->SetRange(minimum, maximum);
 		}
-	}, Qt::QueuedConnection);
+	});
 	connect(&m_refresh_watcher, &QFutureWatcher<void>::progressValueChanged, this, [this](int value)
 	{
-		if (m_progress_dialog)
-		{
-			m_progress_dialog->SetValue(value);
-		}
-	}, Qt::QueuedConnection);
+		m_progress_dialog_value = value;
+	});
 
 	connect(m_game_list, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
 	connect(m_game_list, &QTableWidget::itemSelectionChanged, this, &game_list_frame::ItemSelectionChangedSlot);
@@ -314,16 +322,14 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 	gui::utils::stop_future_watcher(m_parsing_watcher, from_drive);
 	gui::utils::stop_future_watcher(m_refresh_watcher, from_drive);
 
-	if (m_progress_dialog_timer)
-	{
-		m_progress_dialog_timer->stop();
-	}
+	m_progress_dialog_update_timer.stop();
+	m_progress_dialog_timer.stop();
 
-	if (m_progress_dialog)
+	if (progress_dialog* dlg = m_progress_dialog)
 	{
-		m_progress_dialog->SetValue(m_progress_dialog->maximum());
-		m_progress_dialog->accept();
-		m_progress_dialog = nullptr;
+		m_progress_dialog = nullptr; // Clear first to avoid further slots
+		dlg->SetValue(dlg->maximum());
+		dlg->accept();
 	}
 
 	if (from_drive)
@@ -339,7 +345,10 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 
 		connect(m_progress_dialog, &QProgressDialog::finished, this, [this]()
 		{
-			m_progress_dialog = nullptr;
+			if (m_progress_dialog == QObject::sender())
+			{
+				m_progress_dialog = nullptr;
+			}
 		});
 		connect(m_progress_dialog, &QProgressDialog::canceled, this, [this]()
 		{
@@ -353,18 +362,15 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 			m_notes.clear();
 			m_games.pop_all();
 
-			if (m_progress_dialog_timer)
-			{
-				m_progress_dialog_timer->stop();
-			}
+			m_progress_dialog_timer.stop();
 
-			m_progress_dialog = nullptr;
+			if (m_progress_dialog == QObject::sender())
+			{
+				m_progress_dialog = nullptr;
+			}
 		});
 
-		if (m_progress_dialog_timer)
-		{
-			m_progress_dialog_timer->start();
-		}
+		m_progress_dialog_timer.start();
 
 		const std::string games_dir = g_cfg_vfs.get(g_cfg_vfs.games_dir, rpcs3::utils::get_emu_dir());
 		const u32 games_added = Emu.AddGamesFromDir(games_dir);
@@ -674,6 +680,8 @@ void game_list_frame::OnParsingFinished()
 			}
 		}
 	};
+
+	m_progress_dialog_value = 0;
 
 	m_refresh_watcher.setFuture(QtConcurrent::map(m_path_entries, [this, _hdd, add_disc_dir, add_game](const path_entry& entry)
 	{
