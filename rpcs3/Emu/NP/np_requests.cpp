@@ -1080,7 +1080,7 @@ namespace np
 		transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
 	}
 
-	bool np_handler::handle_GetScoreResponse(u32 req_id, std::vector<u8>& reply_data)
+	bool np_handler::handle_GetScoreResponse(u32 req_id, std::vector<u8>& reply_data, bool simple_result)
 	{
 		std::lock_guard lock_trans(mutex_async_transactions);
 		if (!async_transactions.count(req_id))
@@ -1195,7 +1195,7 @@ namespace np
 		*tdata->totalRecord = resp->totalRecord();
 
 		if (fb_rankarray->size())
-			score_trans->result = not_an_error(fb_rankarray->size());
+			score_trans->result = simple_result ? CELL_OK : not_an_error(fb_rankarray->size());
 		else
 			score_trans->result = SCE_NP_COMMUNITY_SERVER_ERROR_GAME_RANKING_NOT_FOUND;
 
@@ -1259,7 +1259,7 @@ namespace np
 	}
 	bool np_handler::reply_get_score_npid(u32 req_id, std::vector<u8>& reply_data)
 	{
-		return handle_GetScoreResponse(req_id, reply_data);
+		return handle_GetScoreResponse(req_id, reply_data, true);
 	}
 
 	bool np_handler::handle_tus_no_data(u32 req_id, std::vector<u8>& reply_data)

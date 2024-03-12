@@ -328,7 +328,7 @@ namespace np
 		void RoomMessageInfo_to_SceNpMatching2RoomMessageInfo(event_data& edata, const RoomMessageInfo* mi, SceNpMatching2RoomMessageInfo* sce_mi);
 		void RoomDataInternalUpdateInfo_to_SceNpMatching2RoomDataInternalUpdateInfo(event_data& edata, const RoomDataInternalUpdateInfo* update_info, SceNpMatching2RoomDataInternalUpdateInfo* sce_update_info, const SceNpId& npid);
 		void RoomMemberDataInternalUpdateInfo_to_SceNpMatching2RoomMemberDataInternalUpdateInfo(event_data& edata, const RoomMemberDataInternalUpdateInfo* update_info, SceNpMatching2RoomMemberDataInternalUpdateInfo* sce_update_info);
-		bool handle_GetScoreResponse(u32 req_id, std::vector<u8>& reply_data);
+		bool handle_GetScoreResponse(u32 req_id, std::vector<u8>& reply_data, bool simple_result = false);
 		bool handle_tus_no_data(u32 req_id, std::vector<u8>& reply_data);
 		bool handle_TusVarResponse(u32 req_id, std::vector<u8>& reply_data);
 		bool handle_TusVariable(u32 req_id, std::vector<u8>& reply_data);
