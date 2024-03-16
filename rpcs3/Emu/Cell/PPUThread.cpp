@@ -4861,7 +4861,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 
 	for (const auto& func : info.funcs)
 	{
-		if (func.size)
+		if (func.size && ppu_attr::known_callers - func.attr)
 		{
 			max_count++;
 		}
@@ -4874,7 +4874,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 	// Get and install function addresses
 	for (const auto& func : info.funcs)
 	{
-		if (!func.size)
+		if (!func.size || func.attr & ppu_attr::known_callers)
 		{
 			continue;
 		}

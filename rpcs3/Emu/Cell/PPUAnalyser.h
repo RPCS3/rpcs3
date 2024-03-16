@@ -17,6 +17,7 @@ enum class ppu_attr : u32
 {
 	known_addr,
 	known_size,
+	known_callers,
 	no_return,
 	no_size,
 	has_mfvscr,

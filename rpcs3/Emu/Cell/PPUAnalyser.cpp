@@ -550,6 +550,9 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 	std::map<u32, ppu_function> fmap;
 	std::set<u32> known_functions;
 
+	// Jumptable targets
+	std::set<u32> jumptable_refs;
+
 	// Function analysis workload
 	std::vector<std::reference_wrapper<ppu_function>> func_queue;
 
@@ -782,7 +785,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 			ppu_log.trace("OPD: [0x%x] 0x%x (TOC=0x%x)", _ptr, addr, toc);
 
 			TOCs.emplace(toc);
-			auto& func = add_func(addr, addr_heap.count(_ptr.addr()) ? toc : 0, 0);
+			auto& func = add_func(addr, addr_heap.contains(_ptr.addr()) ? toc : 0, 0);
 			func.attr += ppu_attr::known_addr;
 			known_functions.emplace(addr);
 		}
@@ -1389,6 +1392,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 							}
 
 							add_block(addr);
+							jumptable_refs.emplace(addr);
 						}
 
 						if (jt_addr != jt_end && _ptr.addr() == jt_addr)
@@ -1679,6 +1683,20 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 				continue;
 			}
 
+			// Check if it is not a function or an indirect branch target
+			if (!addr_heap.contains(addr) && !jumptable_refs.contains(addr))
+			{
+				const ppu_opcode_t op{get_ref<u32>(addr - 4)};
+				const auto itype = s_ppu_itype.decode(op.opcode);
+
+				// The code at the return from a function call is a target for multiple indirect returns of the callee
+				// Simply avoid optimizing for it
+				if (itype != ppu_itype::SC && (!op.lk || !(itype & ppu_itype::branch)))
+				{
+					block.attr += ppu_attr::known_callers;
+				}
+			}
+
 			block.addr = addr;
 			block.size = size;
 			block.toc  = func.toc;
@@ -1747,7 +1765,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 	// Add entries from patches (on per-instruction basis)
 	for (u32 addr : applied)
 	{
-		if (addr % 4 == 0 && addr >= start && addr < segs[0].addr + segs[0].size && !block_set.count(addr))
+		if (addr % 4 == 0 && addr >= start && addr < segs[0].addr + segs[0].size && !block_set.contains(addr))
 		{
 			block_queue.emplace_back(addr, addr + 4);
 			block_set.emplace(addr);
@@ -1897,7 +1915,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 
 						if (target != i_pos && !fmap.contains(target))
 						{
-							if (block_set.count(target) == 0)
+							if (!block_set.contains(target))
 							{
 								ppu_log.trace("Block target found: 0x%x (i_pos=0x%x)", target, i_pos);
 								block_queue.emplace_back(target, 0);
