@@ -3,17 +3,28 @@
 #include "Emu/system_utils.hpp"
 #include "util/logs.hpp"
 
+#include <wolfssl/ssl.h>
+
 #ifdef _WIN32
 #include "Utilities/StrUtil.h"
 #endif
 
 LOG_CHANNEL(network_log, "NET");
 
+void wolfssl_logging_func(const int logLevel, const char *const logMessage)
+{
+	network_log.error("WOLFSSL: %d : %s", logLevel, logMessage);
+}
+
 namespace rpcs3::curl
 {
 
 curl_handle::curl_handle()
 {
+	network_log.error("DAMMIT!");
+	wolfSSL_Debugging_ON();
+	wolfSSL_SetLoggingCb(wolfssl_logging_func);
+
 	reset_error_buffer();
 
 	m_curl = curl_easy_init();
