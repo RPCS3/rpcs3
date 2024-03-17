@@ -644,7 +644,7 @@ error_code _sys_prx_stop_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys_
 
 			prx->unload_exports();
 
-			ensure(prx->state.compare_and_swap_test(PRX_STATE_STOPPING, PRX_STATE_STOPPED));
+			ensure(prx->state.compare_and_swap_test(PRX_STATE_STOPPING, PRX_STATE_STOPPED) || prx->state.compare_and_swap_test(PRX_STATE_STARTING, PRX_STATE_STOPPED));
 			return CELL_OK;
 		}
 		case 1:

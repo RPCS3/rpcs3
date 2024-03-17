@@ -21,6 +21,7 @@
 #include "PPUDisAsm.h"
 #include "SPURecompiler.h"
 #include "timers.hpp"
+#include "Emu/Cell/Modules/cellSysutil.h"
 #include "lv2/sys_sync.h"
 #include "lv2/sys_prx.h"
 #include "lv2/sys_overlay.h"
@@ -3675,13 +3676,15 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 	struct file_info
 	{
 		std::string path;
+		std::string rec_name;
 		u64 offset;
 		u64 file_size;
 
 		file_info() noexcept = default;
 
-		file_info(std::string _path, u64 offs, u64 size) noexcept
+		file_info(std::string _path, std::string _rec, u64 offs, u64 size) noexcept
 			: path(std::move(_path))
+			, rec_name(std::move(_rec))
 			, offset(offs)
 			, file_size(size)
 		{
@@ -3701,6 +3704,8 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 		}
 
 		ppu_log.notice("Scanning directory: %s", dir_queue[i]);
+
+		const usz old_size = file_queue.size();
 
 		for (auto&& entry : fs::dir(dir_queue[i]))
 		{
@@ -3773,7 +3778,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 				}
 
 				// Get full path
-				file_queue.emplace_back(dir_queue[i] + entry.name, 0, entry.size);
+				file_queue.emplace_back(dir_queue[i] + entry.name, std::string{}, 0, entry.size);
 				continue;
 			}
 
@@ -3781,7 +3786,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 			if ((upper.ends_with(".ELF") || upper.ends_with(".SELF")) && Emu.GetBoot() != dir_queue[i] + entry.name)
 			{
 				// Get full path
-				file_queue.emplace_back(dir_queue[i] + entry.name, 0, entry.size);
+				file_queue.emplace_back(dir_queue[i] + entry.name, std::string{}, 0, entry.size);
 				continue;
 			}
 
@@ -3793,12 +3798,12 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 					mself_header hdr{};
 
 					if (mself.read(hdr) && hdr.get_count(mself.size()))
-					{
+					{						
+						std::set<u64> offs;
+
 						for (u32 j = 0; j < hdr.count; j++)
 						{
 							mself_record rec{};
-
-							std::set<u64> offs;
 
 							if (mself.read(rec) && rec.get_pos(mself.size()))
 							{
@@ -3824,14 +3829,14 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 								if (upper.find(".SPRX") != umax || upper.find(".PRX") != umax)
 								{
 									// .sprx inside .mself found
-									file_queue.emplace_back(dir_queue[i] + entry.name, rec.off, rec.size);
+									file_queue.emplace_back(dir_queue[i] + entry.name, std::move(name), rec.off, rec.size);
 									continue;
 								}
 
 								if (upper.find(".SELF") != umax || upper.find(".ELF") != umax)
 								{
 									// .self inside .mself found
-									file_queue.emplace_back(dir_queue[i] + entry.name, rec.off, rec.size);
+									file_queue.emplace_back(dir_queue[i] + entry.name, std::move(name), rec.off, rec.size);
 									continue;
 								}
 							}
@@ -3845,6 +3850,151 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 				}
 			}
 		}
+
+		if (file_queue.size() > old_size + 1)
+		{
+			// Metal Gear Solid 4 has multiple executables for different languages, and they are massive each!
+			// The difference between them is two letters, abbrevation of the language
+			// sp.self, us.self, fr.self, gr.self, it.self and jp.self
+
+			std::string prev_fname;
+			usz diff_pos = umax;
+			bool has_used_file = false;
+
+			static const std::unordered_map<std::string_view, s32> s_ch_to_lang =
+			{
+				{"sp"sv, CELL_SYSUTIL_LANG_SPANISH},
+				{"us"sv, CELL_SYSUTIL_LANG_ENGLISH_US},
+				{"fr"sv, CELL_SYSUTIL_LANG_FRENCH},
+				{"gr"sv, CELL_SYSUTIL_LANG_GERMAN},
+				{"it"sv, CELL_SYSUTIL_LANG_ITALIAN},
+				{"jp"sv, CELL_SYSUTIL_LANG_JAPANESE},
+			};
+
+			std::string_view chosen_lang;
+
+			for (auto& [name, key] : s_ch_to_lang)
+			{
+				if (key == g_cfg.sys.language)
+				{
+					chosen_lang = name;
+					break;
+				}
+			}
+
+			if (g_cfg.sys.language == CELL_SYSUTIL_LANG_ENGLISH_GB)
+			{
+				// Fallback
+				chosen_lang = "us"sv;
+			}
+
+			if (chosen_lang.empty())
+			{
+				// Disable optimization if other langues are selected
+				continue;
+			}
+
+			for (usz i = old_size; i < file_queue.size(); i++)
+			{
+				const std::string_view path = file_queue[i].path;
+				std::string fname = fmt::to_lower(path.substr(path.find_last_of(fs::delim) + 1));
+
+				if (fname.size() >= 7 && fname.ends_with(".self"))
+				{
+					if (prev_fname.empty())
+					{
+						prev_fname = std::move(fname);
+					}
+					else if (!prev_fname.empty() && prev_fname.size() == fname.size())
+					{
+						usz j = 0;
+
+						for (; j < fname.size() - 7; j++)
+						{
+							if (prev_fname[j] != fname[j])
+							{
+								break;
+							}
+						}
+
+						if (diff_pos != umax && j != diff_pos)
+						{
+							continue;
+						}
+
+						const std::string_view plang = std::string_view(prev_fname).substr(j, 2);
+						const std::string_view flang = std::string_view(fname).substr(j, 2);
+
+						if (plang != flang && s_ch_to_lang.contains(plang) && s_ch_to_lang.contains(flang))
+						{
+							if (diff_pos == umax)
+							{
+								diff_pos = j;
+							}
+
+							if (flang == chosen_lang)
+							{
+								has_used_file = true;
+							}
+						}
+						else
+						{
+							chosen_lang = {};
+							break;
+						}
+					}
+				}
+			}
+
+			if (chosen_lang.empty() || diff_pos == umax || !has_used_file)
+			{
+				// Failure
+				continue;
+			}
+
+			for (usz i = old_size, delete_at = umax; i < file_queue.size();)
+			{
+				if (delete_at != umax)
+				{
+					// Delete here to avoid UB
+					file_queue.erase(file_queue.begin() + delete_at);
+					delete_at = umax;
+					continue;
+				}
+
+				const std::string_view path = file_queue[i].path;
+				std::string fname = fmt::to_lower(path.substr(path.find_last_of(fs::delim) + 1));
+
+				if (prev_fname.size() == fname.size() && fname.ends_with(".self"))
+				{
+					usz j = 0;
+
+					for (; j < fname.size() - 7; j++)
+					{
+						if (prev_fname[j] != fname[j])
+						{
+							break;
+						}
+					}
+
+					if (j != diff_pos)
+					{
+						continue;
+					}
+
+					const std::string_view flang = std::string_view(fname).substr(j, 2);
+
+					if (s_ch_to_lang.contains(flang) && chosen_lang != flang)
+					{
+						// Not the file of the selected language, do not recompile it
+						delete_at = i;
+						continue;
+					}
+				}
+
+				i++;
+			}
+		}
 	}
 
 	g_progr_ftotal += ::size32(file_queue);
@@ -3854,6 +4004,15 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 	for (const file_info& info : file_queue)
 	{
 		total_files_size += info.file_size;
+
+		if (!info.rec_name.empty())
+		{
+			ppu_log.notice("File to compile: '%s' of MSELF '%s' (size=0x%x)", info.rec_name, info.path, info.file_size);
+		}
+		else
+		{
+			ppu_log.notice("File to compile: '%s' (size=0x%x)", info.path, info.file_size);
+		}
 	}
 
 	g_progr_ftotal_bits += total_files_size;
@@ -3882,9 +4041,16 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 				continue;
 			}
 
-			auto& [path, offset, file_size] = file_queue[func_i];
+			auto& [path, rec_name, offset, file_size] = file_queue[func_i];
 
-			ppu_log.notice("Trying to load: %s", path);
+			if (rec_name.empty())
+			{
+				ppu_log.notice("Trying to load: '%s'", path);
+			}
+			else
+			{
+				ppu_log.notice("Trying to load: '%s' ('%s')", path, rec_name);
+			}
 
 			// Load MSELF, SPRX or SELF
 			fs::file src{path};
@@ -3980,7 +4146,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 			}
 
 			ppu_log.notice("Failed to precompile '%s' (prx: %s, ovl: %s): Attempting tratment as executable file", path, prx_err, ovl_err);
-			possible_exec_file_paths.push(path, offset, file_size);
+			possible_exec_file_paths.push(file_queue[func_i]);
 			inc_fdone = 0;
 		}
 	});
@@ -4012,7 +4178,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 				continue;
 			}
 
-			const auto& [path, _, file_size] = *slice;
+			const auto& [path, _x, _x2, file_size] = *slice;
 
 			ppu_log.notice("Trying to load as executable: %s", path);
 
@@ -4477,8 +4643,15 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 			// Copy block or function entry
 			ppu_function& entry = part.funcs.emplace_back(func);
 
+			u32 og_func = entry.addr;
+
+			if (auto it = info.duplicate_map.find(entry.addr); it != info.duplicate_map.end())
+			{
+				og_func = it->second;
+			}
+
 			// Fixup some information
-			entry.name = fmt::format("__0x%x", entry.addr - reloc);
+			entry.name = fmt::format("__0x%x", og_func - reloc);
 
 			if (has_mfvscr && g_cfg.core.ppu_set_sat_bit)
 			{
@@ -4642,7 +4815,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 				settings += ppu_settings::accurate_nj_mode, settings -= ppu_settings::fixup_nj_denormals, fmt::throw_exception("NJ Not implemented");
 
 			// Write version, hash, CPU, settings
-			fmt::append(obj_name, "v6-kusa-%s-%s-%s.obj", fmt::base57(output, 16), fmt::base57(settings), jit_compiler::cpu(g_cfg.core.llvm_cpu));
+			fmt::append(obj_name, "v7-kusa-%s-%s-%s.obj", fmt::base57(output, 16), fmt::base57(settings), jit_compiler::cpu(g_cfg.core.llvm_cpu));
 		}
 
 		if (cpu ? cpu->state.all_of(cpu_flag::exit) : Emu.IsStopped())
@@ -4871,6 +5044,8 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 
 	bool early_exit = false;
 
+	std::map<std::string, ppu_intrp_func_t> func_ptr_map;
+
 	// Get and install function addresses
 	for (const auto& func : info.funcs)
 	{
@@ -4888,12 +5063,29 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 			break;
 		}
 
-		const auto name = fmt::format("__0x%x", func.addr - reloc);
+		u32 og_func = func.addr;
+
+		if (auto it = info.duplicate_map.find(func.addr); it != info.duplicate_map.end())
+		{
+			og_func = it->second;
+		}
+
+		const auto name = fmt::format("__0x%x", og_func - reloc);
+
+		ppu_intrp_func_t dummy{};
+		ppu_intrp_func_t& func_ptr = is_first ? func_ptr_map[name] : dummy;
 
 		// Try to locate existing function if it is not the first time
-		const auto addr = is_first ? ensure(reinterpret_cast<ppu_intrp_func_t>(jit->get(name)))
-			: reinterpret_cast<ppu_intrp_func_t>(ensure(jit_mod.funcs[index]));
+		const auto addr = is_first ? (func_ptr ? func_ptr : (reinterpret_cast<ppu_intrp_func_t>(jit->get(name))))
+			: reinterpret_cast<ppu_intrp_func_t>(jit_mod.funcs[index]);
 
+		if (!addr)
+		{
+			ppu_log.fatal("Failed to retrieve symbol address at 0x%x (duplicate=0x%x)", func.addr, info.duplicate_map.contains(func.addr) ? og_func : 0);
+			ensure(addr);
+		}
+
+		func_ptr = addr;
 		jit_mod.funcs.emplace_back(addr);
 
 		if (func.size == 4 && !BLR_func && *info.get_ptr<u32>(func.addr) == ppu_instructions::BLR())
@@ -4982,6 +5174,11 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 	{
 		if (func.size)
 		{
+			if (auto it = module_part.duplicate_map.find(func.addr); it != module_part.duplicate_map.end() && it->second != it->first)
+			{
+				continue;
+			}
+
 			const auto f = cast<Function>(_module->getOrInsertFunction(func.name, _func).getCallee());
 			f->setCallingConv(CallingConv::GHC);
 			f->addParamAttr(1, llvm::Attribute::NoAlias);
@@ -5028,6 +5225,15 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 
 			if (module_part.funcs[fi].size)
 			{
+				const u32 faddr = module_part.funcs[fi].addr;
+				auto it = module_part.duplicate_map.find(faddr);
+
+				if (it != module_part.duplicate_map.end() && it->second != faddr)
+				{
+					ppu_log.trace("LLVM: Function 0x%x was skipped (duplicate)", faddr);
+					continue;
+				}
+
 				// Translate
 				if (const auto func = translator.Translate(module_part.funcs[fi]))
 				{
