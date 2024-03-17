@@ -51,6 +51,9 @@
 #define ECC_TIMING_RESISTANT
 #define USE_FAST_MATH
 #define FP_MAX_BITS 8192
+#ifndef WOLFSSL_ALT_CERT_CHAINS
+#define WOLFSSL_ALT_CERT_CHAINS
+#endif
 
 /* UTF-8 aware filesystem functions for Windows */
 #define WOLFSSL_USER_FILESYSTEM
