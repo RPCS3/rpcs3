@@ -18,6 +18,7 @@ else()
 	set(WOLFSSL_SNI ON CACHE STRING "Enable SNI (default: disabled)")
 	set(WOLFSSL_OPENSSLEXTRA ON CACHE STRING "Enable extra OpenSSL API, size+ (default: disabled)")
 	set(WOLFSSL_HARDEN OFF CACHE STRING "Enable Hardened build, Enables Timing Resistance and Blinding (default: enabled)")
+	set(WOLFSSL_ERROR_QUEUE ON CACHE STRING "Enables adding nodes to error queue when compiled with OPENSSL_EXTRA (default: enabled)")
 
 	add_subdirectory(wolfssl EXCLUDE_FROM_ALL)
 

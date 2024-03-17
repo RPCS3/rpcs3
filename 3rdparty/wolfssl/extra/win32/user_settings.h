@@ -51,6 +51,7 @@
 #define ECC_TIMING_RESISTANT
 #define USE_FAST_MATH
 #define FP_MAX_BITS 8192
+#define WOLFSSL_HAVE_ERROR_QUEUE
 
 /* UTF-8 aware filesystem functions for Windows */
 #define WOLFSSL_USER_FILESYSTEM
