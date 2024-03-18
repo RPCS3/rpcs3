@@ -3703,18 +3703,29 @@ public:
 		return result;
 	}
 
+	llvm::Value* load_const(llvm::GlobalVariable* g, llvm::Value* i, llvm::Type* type = nullptr)
+	{
+		return m_ir->CreateLoad(type ? type : g->getValueType(), m_ir->CreateGEP(g->getValueType(), g, {m_ir->getInt64(0), m_ir->CreateZExtOrTrunc(i, get_type<u64>())}));
+	}
+
 	template <typename T>
 	llvm::Value* load_const(llvm::GlobalVariable* g, llvm::Value* i)
 	{
-		return m_ir->CreateLoad(get_type<T>(), m_ir->CreateGEP(g->getValueType(), g, {m_ir->getInt64(0), m_ir->CreateZExtOrTrunc(i, get_type<u64>())}));
+		return load_const(g, i, get_type<T>());
 	}
 
-	template <typename T, typename I>
+	template <typename T, typename I> requires requires () { std::declval<I>().eval(std::declval<llvm::IRBuilder<>*>()); }
 	value_t<T> load_const(llvm::GlobalVariable* g, I i)
 	{
 		value_t<T> result;
 		result.value = load_const<T>(g, i.eval(m_ir));
 		return result;
+	}
+
+	template <typename T>
+	llvm::GlobalVariable* make_local_variable(T initializing_value)
+	{
+		return new llvm::GlobalVariable(*m_module, get_type<T>(), false, llvm::GlobalVariable::PrivateLinkage, llvm::ConstantInt::get(get_type<T>(), initializing_value));
 	}
 
 	template <typename R = v128>

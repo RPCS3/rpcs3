@@ -336,6 +336,7 @@ public:
 
 	// Parses PPU opcodes and translate them into LLVM IR
 	llvm::Function* Translate(const ppu_function& info);
+	llvm::Function* GetSymbolResolver(const ppu_module& info);
 
 	void MFVSCR(ppu_opcode_t op);
 	void MTVSCR(ppu_opcode_t op);

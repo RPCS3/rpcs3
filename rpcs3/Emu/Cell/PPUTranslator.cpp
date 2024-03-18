@@ -274,6 +274,125 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 	return m_function;
 }
 
+Function* PPUTranslator::GetSymbolResolver(const ppu_module& info)
+{
+	m_function = cast<Function>(m_module->getOrInsertFunction("__resolve_symbols", FunctionType::get(get_type<void>(), { get_type<u8*>(), get_type<u64>() }, false)).getCallee());
+
+	IRBuilder<> irb(BasicBlock::Create(m_context, "__entry", m_function));
+	m_ir = &irb;
+
+	// Instruction address is (m_addr + base)
+	const u64 base = m_reloc ? m_reloc->addr : 0;
+
+	m_exec = m_function->getArg(0);
+	m_seg0 = m_function->getArg(1);
+
+	const auto ftype = FunctionType::get(get_type<void>(), {
+		get_type<u8*>(), // Exec base
+		GetContextType()->getPointerTo(), // PPU context
+		get_type<u64>(), // Segment address (for PRX)
+		get_type<u8*>(), // Memory base
+		get_type<u64>(), // r0
+		get_type<u64>(), // r1
+		get_type<u64>(), // r2
+		}, false);
+
+	// Store function addresses in PPU jumptable using internal resolving instead of patching it externally.
+	// Because, LLVM processed it extremely slow. (regression)
+	// This is made in loop instead of inlined because it took tremendous amount of time to compile.
+
+	std::vector<u32> vec_addrs;
+	vec_addrs.reserve(info.funcs.size());
+
+	// Create an array of function pointers
+	std::vector<Function*> functions;
+
+	for (const auto& f : info.funcs)
+	{
+		if (!f.size)
+		{
+			continue;
+		}
+
+		vec_addrs.push_back(f.addr - base);
+		functions.push_back(cast<Function>(m_module->getOrInsertFunction(fmt::format("__0x%x", f.addr - base), ftype).getCallee()));
+	}
+
+	if (vec_addrs.empty())
+	{
+		// Possible special case for no functions (allowing the do-while optimization)
+		m_ir->CreateRetVoid();
+		replace_intrinsics(*m_function);
+		return m_function;
+	}
+
+	const auto addr_array_type = ArrayType::get(get_type<u32>(), vec_addrs.size());
+	const auto addr_array = new GlobalVariable(*m_module, addr_array_type, false, GlobalValue::PrivateLinkage, ConstantDataArray::get(m_context, vec_addrs));
+
+	// Initialize the function table with the function pointers
+	std::vector<llvm::Constant*> init_vals;
+
+	for (llvm::Function* func : functions)
+	{
+		llvm::Constant* func_ptr = llvm::ConstantExpr::getBitCast(func, ftype->getPointerTo());
+		init_vals.push_back(func);
+	}
+
+	// Create an array of function pointers
+	const auto func_table_type = ArrayType::get(ftype->getPointerTo(), info.funcs.size());
+	const auto init_func_table = ConstantArray::get(func_table_type,  init_vals);
+	const auto func_table = new GlobalVariable(*m_module, func_table_type, false, GlobalVariable::PrivateLinkage, init_func_table);
+
+	const auto loop_block = BasicBlock::Create(m_context, "__loop", m_function);
+	const auto after_loop = BasicBlock::Create(m_context, "__after_loop", m_function);
+
+	m_ir->CreateBr(loop_block);
+	m_ir->SetInsertPoint(loop_block);
+
+	const auto init_index_value = m_ir->getInt64(0);
+
+	// Loop body
+	const auto body_block = BasicBlock::Create(m_context, "__body", m_function);
+
+	m_ir->CreateBr(body_block); // As do-while because vec_addrs is known to be more than 0
+	m_ir->SetInsertPoint(body_block);
+
+	const auto index_value = m_ir->CreatePHI(get_type<u64>(), 2);
+	index_value->addIncoming(init_index_value, loop_block);
+
+	auto ptr_inst = dyn_cast<GetElementPtrInst>(m_ir->CreateGEP(addr_array->getValueType(), addr_array, {m_ir->getInt64(0), index_value}));
+	assert(ptr_inst->getResultElementType() == get_type<u32>());
+
+	const auto func_pc = ZExt(m_ir->CreateLoad(ptr_inst->getResultElementType(), ptr_inst), get_type<u64>());
+
+	ptr_inst = dyn_cast<GetElementPtrInst>(m_ir->CreateGEP(func_table->getValueType(), func_table, {m_ir->getInt64(0), index_value}));
+	assert(ptr_inst->getResultElementType() == ftype->getPointerTo());
+
+	const auto faddr = m_ir->CreateLoad(ptr_inst->getResultElementType(), ptr_inst);
+	const auto faddr_int = m_ir->CreatePtrToInt(faddr, get_type<uptr>());
+	const auto fval = m_ir->CreateOr(m_ir->CreateShl(m_seg0, 32 + 3), faddr_int);
+	const auto pos = m_ir->CreateShl(m_reloc ? m_ir->CreateAdd(func_pc, m_seg0) : func_pc, 1);
+	const auto ptr = dyn_cast<GetElementPtrInst>(m_ir->CreateGEP(get_type<u8>(), m_exec, pos));
+
+	// Store to jumptable
+	m_ir->CreateStore(fval, ptr);
+
+	// Increment index and branch back to loop
+	const auto post_add = m_ir->CreateAdd(index_value, m_ir->getInt64(1));
+	index_value->addIncoming(post_add, body_block);
+
+	Value* index_check = m_ir->CreateICmpULT(post_add, m_ir->getInt64(vec_addrs.size()));
+	m_ir->CreateCondBr(index_check, body_block, after_loop);
+
+	// Set insertion point to afterloop_block
+	m_ir->SetInsertPoint(after_loop);
+
+	m_ir->CreateRetVoid();
+
+	replace_intrinsics(*m_function);
+	return m_function;
+}
+
 Value* PPUTranslator::VecHandleNan(Value* val)
 {
 	const auto is_nan = m_ir->CreateFCmpUNO(val, val);
