@@ -175,7 +175,7 @@ bool serialize<ppu_thread::cr_bits>(utils::serial& ar, typename ppu_thread::cr_b
 extern void ppu_initialize();
 extern void ppu_finalize(const ppu_module& info);
 extern bool ppu_initialize(const ppu_module& info, bool check_only = false, u64 file_size = 0);
-static void ppu_initialize2(class jit_compiler& jit, const ppu_module& module_part, const std::string& cache_path, const std::string& obj_name);
+static void ppu_initialize2(class jit_compiler& jit, const ppu_module& module_part, const std::string& cache_path, const std::string& obj_name, const ppu_module& whole_module);
 extern bool ppu_load_exec(const ppu_exec_object&, bool virtual_load, const std::string&, utils::serial* = nullptr);
 extern std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object&, bool virtual_load, const std::string& path, s64 file_offset, utils::serial* = nullptr);
 extern void ppu_unload_prx(const lv2_prx&);
@@ -3460,7 +3460,7 @@ namespace
 	// Compiled PPU module info
 	struct jit_module
 	{
-		std::vector<ppu_intrp_func_t> funcs;
+		void(*symbol_resolver)(u8*, u64) = nullptr;
 		std::shared_ptr<jit_compiler> pjit;
 		bool init = false;
 	};
@@ -3502,7 +3502,6 @@ namespace
 				return;
 			}
 
-			to_destroy.funcs = std::move(found->second.funcs);
 			to_destroy.pjit = std::move(found->second.pjit);
 
 			bucket.map.erase(found);
@@ -4611,6 +4610,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 				accurate_fpcc,
 				accurate_vnan,
 				accurate_nj_mode,
+				contains_symbol_resolver,
 
 				__bitset_enum_max
 			};
@@ -4640,6 +4640,8 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 				settings += ppu_settings::accurate_vnan, settings -= ppu_settings::fixup_vnan, fmt::throw_exception("VNAN Not implemented");
 			if (g_cfg.core.ppu_use_nj_bit)
 				settings += ppu_settings::accurate_nj_mode, settings -= ppu_settings::fixup_nj_denormals, fmt::throw_exception("NJ Not implemented");
+			if (fpos >= info.funcs.size())
+				settings += ppu_settings::contains_symbol_resolver; // Avoid invalidating all modules for this purpose
 
 			// Write version, hash, CPU, settings
 			fmt::append(obj_name, "v6-kusa-%s-%s-%s.obj", fmt::base57(output, 16), fmt::base57(settings), jit_compiler::cpu(g_cfg.core.llvm_cpu));
@@ -4724,16 +4726,18 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 		{
 			atomic_t<u32>& work_cv;
 			std::vector<std::pair<std::string, ppu_module>>& workload;
+			const ppu_module& main_module;
 			const std::string& cache_path;
 			const cpu_thread* cpu;
 
 			std::unique_lock<decltype(jit_core_allocator::sem)> core_lock;
 
 			thread_op(atomic_t<u32>& work_cv, std::vector<std::pair<std::string, ppu_module>>& workload
-				, const cpu_thread* cpu, const std::string& cache_path, decltype(jit_core_allocator::sem)& sem) noexcept
+				, const cpu_thread* cpu, const ppu_module& main_module, const std::string& cache_path, decltype(jit_core_allocator::sem)& sem) noexcept
 
 				: work_cv(work_cv)
 				, workload(workload)
+				, main_module(main_module)
 				, cache_path(cache_path)
 				, cpu(cpu)
 			{
@@ -4744,6 +4748,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 			thread_op(const thread_op& other) noexcept
 				: work_cv(other.work_cv)
 				, workload(other.workload)
+				, main_module(other.main_module)
 				, cache_path(other.cache_path)
 				, cpu(other.cpu)
 			{
@@ -4778,7 +4783,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 
 					// Use another JIT instance
 					jit_compiler jit2({}, g_cfg.core.llvm_cpu, 0x1);
-					ppu_initialize2(jit2, part, cache_path, obj_name);
+					ppu_initialize2(jit2, part, cache_path, obj_name, i == workload.size() - 1 ? main_module : part);
 
 					ppu_log.success("LLVM: Compiled module %s", obj_name);
 				}
@@ -4791,7 +4796,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 		g_watchdog_hold_ctr++;
 
 		named_thread_group threads(fmt::format("PPUW.%u.", ++g_fxo->get<thread_index_allocator>().index), thread_count
-			, thread_op(work_cv, workload, cpu, cache_path, g_fxo->get<jit_core_allocator>().sem)
+			, thread_op(work_cv, workload, cpu, info, cache_path, g_fxo->get<jit_core_allocator>().sem)
 			, [&](u32 /*thread_index*/, thread_op& op)
 		{
 			// Allocate "core"
@@ -4835,8 +4840,6 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 		}
 	}
 
-	progr.reset();
-
 	if (!is_being_used_in_emulation || (cpu ? cpu->state.all_of(cpu_flag::exit) : Emu.IsStopped()))
 	{
 		return compiled_new;
@@ -4851,83 +4854,39 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 
 	const bool is_first = jit && !jit_mod.init;
 
+	const bool showing_only_apply_stage = !g_progr.load() && !g_progr_ptotal && !g_progr_ftotal && g_progr_ptotal.compare_and_swap_test(0, 1);
+
+	progr.emplace("Applying PPU Code...");
+
 	if (is_first)
 	{
 		jit->fin();
 	}
 
-	u32 index = 0;
-	u32 max_count = 0;
-
-	for (const auto& func : info.funcs)
+	if (is_first)
 	{
-		if (func.size)
-		{
-			max_count++;
-		}
+		jit_mod.symbol_resolver = reinterpret_cast<void(*)(u8*, u64)>(jit->get("__resolve_symbols"));
+	}
+	else
+	{
+		ensure(jit_mod.symbol_resolver);
 	}
 
-	u32 pending_progress = umax;
+	jit_mod.symbol_resolver(vm::g_exec_addr, info.segs[0].addr);
 
-	bool early_exit = false;
-
-	// Get and install function addresses
+	// Find a BLR-only function in order to copy it to all BLRs (some games need it)
 	for (const auto& func : info.funcs)
 	{
-		if (!func.size)
+		if (func.size == 4 && *info.get_ptr<u32>(func.addr) == ppu_instructions::BLR())
 		{
-			continue;
-		}
+			const auto name = fmt::format("__0x%x", func.addr - reloc);
 
-		if (cpu ? cpu->state.all_of(cpu_flag::exit) : Emu.IsStopped())
-		{
-			// Revert partially commited changes
-			jit_mod.funcs.clear();
-			BLR_func = nullptr;
-			early_exit = true;
+			BLR_func = reinterpret_cast<ppu_intrp_func_t>(jit->get(name));
 			break;
 		}
-
-		const auto name = fmt::format("__0x%x", func.addr - reloc);
-
-		// Try to locate existing function if it is not the first time
-		const auto addr = is_first ? ensure(reinterpret_cast<ppu_intrp_func_t>(jit->get(name)))
-			: reinterpret_cast<ppu_intrp_func_t>(ensure(jit_mod.funcs[index]));
-
-		jit_mod.funcs.emplace_back(addr);
-
-		if (func.size == 4 && !BLR_func && *info.get_ptr<u32>(func.addr) == ppu_instructions::BLR())
-		{
-			BLR_func = addr;
-		}
-
-		ppu_register_function_at(func.addr, 4, addr);
-
-		if (g_cfg.core.ppu_debug)
-			ppu_log.trace("Installing function %s at 0x%x: %p (reloc = 0x%x)", name, func.addr, ppu_ref(func.addr), reloc);
-
-		index++;
-
-		if (pending_progress != umax)
-		{
-			pending_progress++;
-
-			if (pending_progress == 1024)
-			{
-				pending_progress = 0;
-				g_progr_pdone++;
-			}
-		}
-		else if (!g_progr.load() && !g_progr_ptotal && !g_progr_ftotal)
-		{
-			g_progr_pdone += index / 1024;
-			g_progr_ptotal += max_count / 1024;
-			pending_progress = index % 1024;
-			progr.emplace("Applying PPU Code...");
-		}
 	}
 
-	if (is_first && !early_exit)
+	if (is_first)
 	{
 		jit_mod.init = true;
 	}
@@ -4945,13 +4904,19 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 		}
 	}
 
+	if (showing_only_apply_stage)
+	{
+		// Done
+		g_progr_pdone++;
+	}
+
 	return compiled_new;
 #else
 	fmt::throw_exception("LLVM is not available in this build.");
 #endif
 }
 
-static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, const std::string& cache_path, const std::string& obj_name)
+static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, const std::string& cache_path, const std::string& obj_name, const ppu_module& whole_module)
 {
 #ifdef LLVM_AVAILABLE
 	using namespace llvm;
@@ -5039,6 +5004,21 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 					Emu.Pause();
 					return;
 				}
+			}
+		}
+
+		// Run this only in one module for all functions
+		if (&whole_module != &module_part)
+		{
+			if (const auto func = translator.GetSymbolResolver(whole_module))
+			{
+				// Run optimization passes
+				pm.run(*func);
+			}
+			else
+			{
+				Emu.Pause();
+				return;
 			}
 		}
 
