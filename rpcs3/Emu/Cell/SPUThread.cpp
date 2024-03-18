@@ -5253,7 +5253,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 #ifdef __linux__
 		const bool reservation_busy_waiting = false;
 #else
-		const bool reservation_busy_waiting = (seed + ((raddr == spurs_addr) ? 50 : 0)) < g_cfg.core.spu_reservation_busy_waiting_percentage;
+		const bool reservation_busy_waiting = (seed + ((raddr == spurs_addr) ? 50u : 0u)) < g_cfg.core.spu_reservation_busy_waiting_percentage;
 #endif
 
 		for (; !events.count; events = get_events(mask1 & ~SPU_EVENT_LR, true, true))
