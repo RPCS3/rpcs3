@@ -241,28 +241,32 @@ protected:
 	{
 		fmt::append(last_opcode, "%-*s cr%d,cr%d", PadOp(), op, cr0, cr1);
 	}
-	void DisAsm_INT3(std::string_view op, const int i0, const int i1, const int i2)
+	void DisAsm_INT3(std::string_view op, s32 i0, s32 i1, s32 i2)
 	{
 		fmt::append(last_opcode, "%-*s %d,%d,%d", PadOp(), op, i0, i1, i2);
 	}
-	void DisAsm_INT1(std::string_view op, const int i0)
+	void DisAsm_INT1(std::string_view op, s32 i0)
 	{
 		fmt::append(last_opcode, "%-*s %d", PadOp(), op, i0);
 	}
-	void DisAsm_BRANCH(std::string_view op, const int pc)
+	void DisAsm_BRANCH(std::string_view op, s32 pc)
 	{
 		fmt::append(last_opcode, "%-*s 0x%x", PadOp(), op, DisAsmBranchTarget(pc));
 	}
-	void DisAsm_BRANCH_A(std::string_view op, const int pc)
+	void DisAsm_BRANCH_A(std::string_view op, s32 pc)
 	{
 		fmt::append(last_opcode, "%-*s 0x%x", PadOp(), op, pc);
 	}
-	void DisAsm_B2_BRANCH(std::string_view op, u32 b0, u32 b1, const int pc)
+	void DisAsm_B2_BRANCH(std::string_view op, u32 b0, u32 b1, s32 pc)
 	{
 		fmt::append(last_opcode, "%-*s %d,%d,0x%x ", PadOp(), op, b0, b1, DisAsmBranchTarget(pc));
 	}
-	void DisAsm_CR_BRANCH(std::string_view op, u32 cr, const int pc)
+	void DisAsm_CR_BRANCH(std::string_view op, u32 cr, s32 pc)
 	{
 		fmt::append(last_opcode, "%-*s cr%d,0x%x ", PadOp(), op, cr, DisAsmBranchTarget(pc));
+	}
+	void DisAsm_CR_BRANCH_HINT(std::string_view op, u32 cr, u32 bh)
+	{
+		fmt::append(last_opcode, "%-*s cr%d,0x%x ", PadOp(), op, cr, bh);
 	}
 };
