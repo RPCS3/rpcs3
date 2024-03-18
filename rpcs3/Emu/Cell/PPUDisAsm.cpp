@@ -1488,7 +1488,7 @@ void PPUDisAsm::BCLR(ppu_opcode_t op)
 		return;
 	}
 
-	DisAsm_CR_BRANCH(final, bi / 4, bh);
+	DisAsm_CR_BRANCH_HINT(final, bi / 4, bh);
 }
 
 void PPUDisAsm::CRNOR(ppu_opcode_t op)
@@ -1586,7 +1586,7 @@ void PPUDisAsm::BCCTR(ppu_opcode_t op)
 	final += lk ? "ctrl"sv : "ctr"sv;
 	if (sign) final += sign;
 
-	DisAsm_CR_BRANCH(final, bi / 4, bh);
+	DisAsm_CR_BRANCH_HINT(final, bi / 4, bh);
 }
 
 void PPUDisAsm::RLWIMI(ppu_opcode_t op)
