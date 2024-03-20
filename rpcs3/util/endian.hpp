@@ -148,7 +148,7 @@ namespace stx
 	template <typename T, bool Swap, usz Align = alignof(T)>
 	class alignas(Align) se_t
 	{
-		using type = typename std::remove_cv<T>::type;
+		using type = std::remove_cv_t<T>;
 		using stype = typename se_storage<type, Align>::type;
 		using storage = se_storage<type, Align>;
 

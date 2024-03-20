@@ -410,7 +410,7 @@ namespace rsx
 			std::sort(begin(), end(), predicate);
 		}
 
-		template <typename F, typename U = std::invoke_result<F, const Ty&>::type>
+		template <typename F, typename U = std::invoke_result_t<F, const Ty&>>
 			requires std::is_invocable_v<F, const Ty&>
 		simple_array<U> map(F&& xform) const
 		{
