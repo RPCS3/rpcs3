@@ -1057,7 +1057,7 @@ template <typename CT> requires requires (const CT& x) { std::size(x); }
 	}
 	else
 	{
-		return narrow<u32>(std::size(container), line, col, file, func);
+		return narrow<u32>(container.size(), line, col, file, func);
 	}
 }
 
