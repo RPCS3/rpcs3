@@ -149,7 +149,7 @@ namespace rsx
 
 		rsx::address_range memory_range;
 
-		std::unique_ptr<typename std::remove_pointer<image_storage_type>::type> resolve_surface;
+		std::unique_ptr<typename std::remove_pointer_t<image_storage_type>> resolve_surface;
 		surface_sample_layout sample_layout = surface_sample_layout::null;
 		surface_raster_type raster_type = surface_raster_type::linear;
 

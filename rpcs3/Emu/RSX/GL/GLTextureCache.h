@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Emu/RSX/GL/GLTexture.h"
 #include "GLRenderTargets.h"
 #include "glutils/blitter.h"
 #include "glutils/sync.hpp"

@@ -13,7 +13,7 @@ struct bf_base
 {
 	using type = T;
 	using vtype = std::common_type_t<type>;
-	using utype = typename std::make_unsigned<vtype>::type;
+	using utype = std::make_unsigned_t<vtype>;
 
 	static constexpr bool can_be_packed = N < (sizeof(int) * 8 + (std::is_unsigned_v<vtype> ? 1 : 0)) && sizeof(vtype) > sizeof(int);
 	using compact_type = std::conditional_t<can_be_packed, std::conditional_t<std::is_unsigned_v<vtype>, uint, int>, vtype>;

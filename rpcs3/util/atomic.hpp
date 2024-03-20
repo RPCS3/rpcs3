@@ -1167,7 +1167,7 @@ template <typename T, usz Align = sizeof(T)>
 class atomic_t
 {
 protected:
-	using type = typename std::remove_cv<T>::type;
+	using type = std::remove_cv_t<T>;
 
 	using ptr_rt = std::conditional_t<std::is_pointer_v<type>, ullong, type>;
 
