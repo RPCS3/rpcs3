@@ -27,8 +27,8 @@ namespace ppu_cb_detail
 	struct _func_arg
 	{
 		static_assert(type == ARG_GENERAL, "Unknown callback argument type");
-		static_assert(!std::is_pointer<T>::value, "Invalid callback argument type (pointer)");
-		static_assert(!std::is_reference<T>::value, "Invalid callback argument type (reference)");
+		static_assert(!std::is_pointer_v<T>, "Invalid callback argument type (pointer)");
+		static_assert(!std::is_reference_v<T>, "Invalid callback argument type (reference)");
 		static_assert(sizeof(T) <= 8, "Invalid callback argument type for ARG_GENERAL");
 
 		static inline void set_value(ppu_thread& CPU, const T& arg)
@@ -51,7 +51,7 @@ namespace ppu_cb_detail
 	template<typename T, u32 g_count, u32 f_count, u32 v_count>
 	struct _func_arg<T, ARG_VECTOR, g_count, f_count, v_count>
 	{
-		static_assert(std::is_same<std::decay_t<T>, v128>::value, "Invalid callback argument type for ARG_VECTOR");
+		static_assert(std::is_same_v<std::decay_t<T>, v128>, "Invalid callback argument type for ARG_VECTOR");
 
 		static inline void set_value(ppu_thread& CPU, const T& arg)
 		{
@@ -75,7 +75,7 @@ namespace ppu_cb_detail
 	template<typename T, u32 g_count, u32 f_count, u32 v_count>
 	struct _func_arg<T, ARG_CONTEXT, g_count, f_count, v_count>
 	{
-		static_assert(std::is_same<std::decay_t<T>, ppu_thread>::value, "Invalid callback argument type for ARG_CONTEXT");
+		static_assert(std::is_same_v<std::decay_t<T>, ppu_thread>, "Invalid callback argument type for ARG_CONTEXT");
 
 		FORCE_INLINE static void set_value(ppu_thread&, const T&)
 		{
@@ -92,9 +92,9 @@ namespace ppu_cb_detail
 	template<u32 g_count, u32 f_count, u32 v_count, typename T1, typename... T>
 	FORCE_INLINE static bool _bind_func_args(ppu_thread& CPU, T1 arg1, T... args)
 	{
-		const bool is_float = std::is_floating_point<T1>::value;
-		const bool is_vector = std::is_same<std::decay_t<T1>, v128>::value;
-		const bool is_context = std::is_same<std::decay_t<T1>, ppu_thread>::value;
+		const bool is_float = std::is_floating_point_v<T1>;
+		const bool is_vector = std::is_same_v<std::decay_t<T1>, v128>;
+		const bool is_context = std::is_same_v<std::decay_t<T1>, ppu_thread>;
 		const bool is_general = !is_float && !is_vector && !is_context;
 
 		const _func_arg_type t =
@@ -140,7 +140,7 @@ namespace ppu_cb_detail
 	template<typename T>
 	struct _func_res<T, ARG_VECTOR>
 	{
-		static_assert(std::is_same<std::decay_t<T>, v128>::value, "Invalid callback result type for ARG_VECTOR");
+		static_assert(std::is_same_v<std::decay_t<T>, v128>, "Invalid callback result type for ARG_VECTOR");
 
 		FORCE_INLINE static T get_value(const ppu_thread& CPU)
 		{
@@ -155,10 +155,10 @@ namespace ppu_cb_detail
 		{
 			_func_caller<void, T...>::call(CPU, pc, rtoc, args...);
 
-			static_assert(!std::is_pointer<RT>::value, "Invalid callback result type (pointer)");
-			static_assert(!std::is_reference<RT>::value, "Invalid callback result type (reference)");
-			const bool is_float = std::is_floating_point<RT>::value;
-			const bool is_vector = std::is_same<std::decay_t<RT>, v128>::value;
+			static_assert(!std::is_pointer_v<RT>, "Invalid callback result type (pointer)");
+			static_assert(!std::is_reference_v<RT>, "Invalid callback result type (reference)");
+			const bool is_float = std::is_floating_point_v<RT>;
+			const bool is_vector = std::is_same_v<std::decay_t<RT>, v128>;
 			const _func_arg_type t = is_float ? ARG_FLOAT : (is_vector ? ARG_VECTOR : ARG_GENERAL);
 
 			return _func_res<RT, t>::get_value(CPU);

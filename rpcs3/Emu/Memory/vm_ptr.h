@@ -22,8 +22,8 @@ namespace vm
 	{
 		AT m_addr;
 
-		static_assert(!std::is_pointer<T>::value, "vm::_ptr_base<> error: invalid type (pointer)");
-		static_assert(!std::is_reference<T>::value, "vm::_ptr_base<> error: invalid type (reference)");
+		static_assert(!std::is_pointer_v<T>, "vm::_ptr_base<> error: invalid type (pointer)");
+		static_assert(!std::is_reference_v<T>, "vm::_ptr_base<> error: invalid type (reference)");
 
 	public:
 		using type = T;

@@ -157,7 +157,7 @@ namespace rsx
 							return;
 						}
 
-						if constexpr (std::is_floating_point<T>::value)
+						if constexpr (std::is_floating_point_v<T>)
 						{
 							m_value_label.set_text(fmt::format("%.2f%s", this->m_last_value, m_suffix));
 						}
