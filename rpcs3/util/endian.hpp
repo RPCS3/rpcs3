@@ -154,9 +154,9 @@ namespace stx
 
 		stype m_data;
 
-		static_assert(!std::is_pointer<type>::value, "se_t<> error: invalid type (pointer)");
-		static_assert(!std::is_reference<type>::value, "se_t<> error: invalid type (reference)");
-		static_assert(!std::is_array<type>::value, "se_t<> error: invalid type (array)");
+		static_assert(!std::is_pointer_v<type>, "se_t<> error: invalid type (pointer)");
+		static_assert(!std::is_reference_v<type>, "se_t<> error: invalid type (reference)");
+		static_assert(!std::is_array_v<type>, "se_t<> error: invalid type (array)");
 		static_assert(sizeof(type) == alignof(type), "se_t<> error: unexpected alignment");
 
 		static constexpr stype to_data(type value) noexcept

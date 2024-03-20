@@ -752,7 +752,7 @@ inline u32 offset32(T T2::*const mptr)
 template <typename T>
 struct offset32_array
 {
-	static_assert(std::is_array<T>::value, "Invalid pointer-to-member type (array expected)");
+	static_assert(std::is_array_v<T>, "Invalid pointer-to-member type (array expected)");
 
 	template <typename Arg>
 	static inline u32 index32(const Arg& arg)
@@ -956,7 +956,7 @@ template <typename From, typename To = void, typename = void>
 struct narrow_impl
 {
 	// Temporarily (diagnostic)
-	static_assert(std::is_void<To>::value, "narrow_impl<> specialization not found");
+	static_assert(std::is_void_v<To>, "narrow_impl<> specialization not found");
 
 	// Returns true if value cannot be represented in type To
 	static constexpr bool test(const From&)
@@ -968,7 +968,7 @@ struct narrow_impl
 
 // Unsigned to unsigned narrowing
 template <typename From, typename To>
-struct narrow_impl<From, To, std::enable_if_t<std::is_unsigned<From>::value && std::is_unsigned<To>::value>>
+struct narrow_impl<From, To, std::enable_if_t<std::is_unsigned_v<From> && std::is_unsigned_v<To>>>
 {
 	static constexpr bool test(const From& value)
 	{
@@ -978,7 +978,7 @@ struct narrow_impl<From, To, std::enable_if_t<std::is_unsigned<From>::value && s
 
 // Signed to signed narrowing
 template <typename From, typename To>
-struct narrow_impl<From, To, std::enable_if_t<std::is_signed<From>::value && std::is_signed<To>::value>>
+struct narrow_impl<From, To, std::enable_if_t<std::is_signed_v<From> && std::is_signed_v<To>>>
 {
 	static constexpr bool test(const From& value)
 	{
@@ -988,7 +988,7 @@ struct narrow_impl<From, To, std::enable_if_t<std::is_signed<From>::value && std
 
 // Unsigned to signed narrowing
 template <typename From, typename To>
-struct narrow_impl<From, To, std::enable_if_t<std::is_unsigned<From>::value && std::is_signed<To>::value>>
+struct narrow_impl<From, To, std::enable_if_t<std::is_unsigned_v<From> && std::is_signed_v<To>>>
 {
 	static constexpr bool test(const From& value)
 	{
@@ -998,7 +998,7 @@ struct narrow_impl<From, To, std::enable_if_t<std::is_unsigned<From>::value && s
 
 // Signed to unsigned narrowing (I)
 template <typename From, typename To>
-struct narrow_impl<From, To, std::enable_if_t<std::is_signed<From>::value && std::is_unsigned<To>::value && sizeof(To) >= sizeof(From)>>
+struct narrow_impl<From, To, std::enable_if_t<std::is_signed_v<From> && std::is_unsigned_v<To> && sizeof(To) >= sizeof(From)>>
 {
 	static constexpr bool test(const From& value)
 	{
@@ -1008,7 +1008,7 @@ struct narrow_impl<From, To, std::enable_if_t<std::is_signed<From>::value && std
 
 // Signed to unsigned narrowing (II)
 template <typename From, typename To>
-struct narrow_impl<From, To, std::enable_if_t<std::is_signed<From>::value && std::is_unsigned<To>::value && sizeof(To) < sizeof(From)>>
+struct narrow_impl<From, To, std::enable_if_t<std::is_signed_v<From> && std::is_unsigned_v<To> && sizeof(To) < sizeof(From)>>
 {
 	static constexpr bool test(const From& value)
 	{

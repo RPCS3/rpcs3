@@ -125,7 +125,7 @@ using get_int_vt = typename get_int_bits<Bits>::utype;
 template <typename T = void>
 struct llvm_value_t
 {
-	static_assert(std::is_same<T, void>::value, "llvm_value_t<> error: unknown type");
+	static_assert(std::is_same_v<T, void>, "llvm_value_t<> error: unknown type");
 
 	using type = void;
 	using base = llvm_value_t;
@@ -417,7 +417,7 @@ struct llvm_value_t<f64> : llvm_value_t<void>
 template <typename T>
 struct llvm_value_t<T*> : llvm_value_t<T>
 {
-	static_assert(!std::is_void<T>::value, "llvm_value_t<> error: invalid pointer to void type");
+	static_assert(!std::is_void_v<T>, "llvm_value_t<> error: invalid pointer to void type");
 
 	using type = T*;
 	using base = llvm_value_t<T>;
