@@ -413,14 +413,14 @@ const auto ppu_recompiler_fallback_ghc = &ppu_recompiler_fallback;
 #endif
 
 // Get pointer to executable cache
-static ppu_intrp_func_t* ppu_ptr(u32 addr)
+static inline u8* ppu_ptr(u32 addr)
 {
-	return reinterpret_cast<ppu_intrp_func_t*>(vm::g_exec_addr + u64{addr} * 2);
+	return vm::g_exec_addr + u64{addr} * 2;
 }
 
-static ppu_intrp_func_t& ppu_ref(u32 addr)
+static inline ppu_intrp_func_t ppu_read(u32 addr)
 {
-	return *ppu_ptr(addr);
+	return read_from_ptr<ppu_intrp_func_t>(ppu_ptr(addr));
 }
 
 // Get interpreter cache value
@@ -445,7 +445,7 @@ static void ppu_fallback(ppu_thread& ppu, ppu_opcode_t op, be_t<u32>* this_op, p
 {
 	const auto _pc = vm::get_addr(this_op);
 	const auto _fn = ppu_cache(_pc);
-	ppu_ref(_pc) = _fn;
+	write_to_ptr<ppu_intrp_func_t>(ppu_ptr(_pc), _fn);
 	return _fn(ppu, op, this_op, next_fn);
 }
 
@@ -463,7 +463,7 @@ void ppu_recompiler_fallback(ppu_thread& ppu)
 
 	while (true)
 	{
-		if (uptr func = uptr(ppu_ref(ppu.cia)); (func << 16 >> 16) != reinterpret_cast<uptr>(ppu_recompiler_fallback_ghc))
+		if (uptr func = uptr(ppu_read(ppu.cia)); (func << 16 >> 16) != reinterpret_cast<uptr>(ppu_recompiler_fallback_ghc))
 		{
 			// We found a recompiler function at cia, return
 			break;
@@ -730,11 +730,12 @@ extern void ppu_register_range(u32 addr, u32 size)
 		if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
 		{
 			// Assume addr is the start of first segment of PRX
-			ppu_ref(addr) = reinterpret_cast<ppu_intrp_func_t>(reinterpret_cast<uptr>(ppu_recompiler_fallback_ghc) | (seg_base << (32 + 3)));
+			const uptr entry_value = reinterpret_cast<uptr>(ppu_recompiler_fallback_ghc) | (seg_base << (32 + 3));
+			write_to_ptr<uptr>(ppu_ptr(addr), entry_value);
 		}
 		else
 		{
-			ppu_ref(addr) = ppu_fallback;
+			write_to_ptr<ppu_intrp_func_t>(ppu_ptr(addr), ppu_fallback);
 		}
 
 		addr += 4;
@@ -749,7 +750,7 @@ extern void ppu_register_function_at(u32 addr, u32 size, ppu_intrp_func_t ptr = 
 	// Initialize specific function
 	if (ptr)
 	{
-		ppu_ref(addr) = reinterpret_cast<ppu_intrp_func_t>((reinterpret_cast<uptr>(ptr) & 0xffff'ffff'ffffu) | (uptr(ppu_ref(addr)) & ~0xffff'ffff'ffffu));
+		write_to_ptr<uptr>(ppu_ptr(addr), (reinterpret_cast<uptr>(ptr) & 0xffff'ffff'ffffu) | (uptr(ppu_read(addr)) & ~0xffff'ffff'ffffu));
 		return;
 	}
 
@@ -771,9 +772,9 @@ extern void ppu_register_function_at(u32 addr, u32 size, ppu_intrp_func_t ptr = 
 	// Initialize interpreter cache
 	while (size)
 	{
-		if (ppu_ref(addr) != ppu_break && ppu_ref(addr) != ppu_far_jump)
+		if (auto old = ppu_read(addr); old != ppu_break && old != ppu_far_jump)
 		{
-			ppu_ref(addr) = ppu_cache(addr);
+			write_to_ptr<ppu_intrp_func_t>(ppu_ptr(addr), ppu_cache(addr));
 		}
 
 		addr += 4;
@@ -1132,8 +1133,8 @@ extern bool ppu_breakpoint(u32 addr, bool is_adding)
 	}
 
 	// Remove breakpoint parameters
-	ppu_intrp_func_t to_set = 0;
-	ppu_intrp_func_t expected = &ppu_break;
+	ppu_intrp_func_t func_original = 0;
+	ppu_intrp_func_t breakpoint = &ppu_break;
 
 	if (u32 hle_addr{}; g_fxo->is_init<ppu_function_manager>() && (hle_addr = g_fxo->get<ppu_function_manager>().addr))
 	{
@@ -1143,31 +1144,40 @@ extern bool ppu_breakpoint(u32 addr, bool is_adding)
 		if (addr % 8 == 4 && index < ppu_function_manager::get().size())
 		{
 			// HLE function placement
-			to_set = ppu_function_manager::get()[index];
+			func_original = ppu_function_manager::get()[index];
 		}
 	}
 
-	if (!to_set)
+	if (!func_original)
 	{
 		// If not an HLE function use regular instruction function
-		to_set = ppu_cache(addr);
+		func_original = ppu_cache(addr);
 	}
-
-	ppu_intrp_func_t& _ref = ppu_ref(addr);
 
 	if (is_adding)
 	{
-		// Swap if adding
-		std::swap(to_set, expected);
-
-		if (_ref == &ppu_fallback)
+		if (ppu_read(addr) == ppu_fallback)
 		{
 			ppu_log.error("Unregistered instruction replaced with a breakpoint at 0x%08x", addr);
-			expected = ppu_fallback;
+			func_original = ppu_fallback;
 		}
+
+		if (ppu_read(addr) != func_original)
+		{
+			return false;
+		}
+
+		write_to_ptr<ppu_intrp_func_t>(ppu_ptr(addr), breakpoint);
+		return true;
 	}
 
-	return atomic_storage<ppu_intrp_func_t>::compare_exchange(_ref, expected, to_set);
+	if (ppu_read(addr) != breakpoint)
+	{
+		return false;
+	}
+
+	write_to_ptr<ppu_intrp_func_t>(ppu_ptr(addr), func_original);
+	return true;
 }
 
 extern bool ppu_patch(u32 addr, u32 value)
@@ -1199,9 +1209,9 @@ extern bool ppu_patch(u32 addr, u32 value)
 
 	if (is_exec)
 	{
-		if (ppu_ref(addr) != ppu_break && ppu_ref(addr) != ppu_fallback)
+		if (auto old = ppu_read(addr); old != ppu_break && old != ppu_fallback)
 		{
-			ppu_ref(addr) = ppu_cache(addr);
+			write_to_ptr<ppu_intrp_func_t>(ppu_ptr(addr), ppu_cache(addr));
 		}
 	}
 
@@ -4249,8 +4259,18 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 
 		for (const auto& func : info.funcs)
 		{
+			if (func.size && func.blocks.empty())
+			{
+				ppu_register_function_at(func.addr, func.size);
+			}
+
 			for (auto& block : func.blocks)
 			{
+				if (!block.second)
+				{
+					continue;
+				}
+
 				if (g_fxo->is_init<ppu_far_jumps_t>() && !g_fxo->get<ppu_far_jumps_t>().get_targets(block.first, block.second).empty())
 				{
 					// Replace the block with ppu_far_jump
@@ -4263,7 +4283,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 			if (g_cfg.core.ppu_debug && func.size && func.toc != umax && !ppu_get_far_jump(func.addr))
 			{
 				ppu_toc[func.addr] = func.toc;
-				ppu_ref(func.addr) = &ppu_check_toc;
+				write_to_ptr<ppu_intrp_func_t>(ppu_ptr(func.addr), &ppu_check_toc);
 			}
 		}
 
@@ -4856,7 +4876,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 
 	const bool showing_only_apply_stage = !g_progr.load() && !g_progr_ptotal && !g_progr_ftotal && g_progr_ptotal.compare_and_swap_test(0, 1);
 
-	progr.emplace("Applying PPU Code...");
+	progr = "Applying PPU Code...";
 
 	if (is_first)
 	{
@@ -4879,9 +4899,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 	{
 		if (func.size == 4 && *info.get_ptr<u32>(func.addr) == ppu_instructions::BLR())
 		{
-			const auto name = fmt::format("__0x%x", func.addr - reloc);
-
-			BLR_func = reinterpret_cast<ppu_intrp_func_t>(jit->get(name));
+			BLR_func = ppu_read(func.addr);
 			break;
 		}
 	}
@@ -4897,9 +4915,9 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 
 		for (u32 addr = info.segs[0].addr; addr < info.segs[0].addr + info.segs[0].size; addr += 4, inst_ptr++)
 		{
-			if (*inst_ptr == ppu_instructions::BLR() && (reinterpret_cast<uptr>(ppu_ref(addr)) << 16 >> 16) == reinterpret_cast<uptr>(ppu_recompiler_fallback_ghc))
+			if (*inst_ptr == ppu_instructions::BLR() && (reinterpret_cast<uptr>(ppu_read(addr)) << 16 >> 16) == reinterpret_cast<uptr>(ppu_recompiler_fallback_ghc))
 			{
-				ppu_register_function_at(addr, 4, BLR_func);
+				write_to_ptr<ppu_intrp_func_t>(ppu_ptr(addr), BLR_func);
 			}
 		}
 	}
