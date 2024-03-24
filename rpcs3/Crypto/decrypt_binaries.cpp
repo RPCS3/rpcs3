@@ -74,6 +74,7 @@ usz decrypt_binaries_t::decrypt(std::string klic_input)
 		const std::string old_path = _module;
 
 		fs::file elf_file;
+		fs::file internal_file;
 
 		bool invalid = false;
 		usz key_it = 0;
@@ -83,6 +84,8 @@ usz decrypt_binaries_t::decrypt(std::string klic_input)
 		{
 			for (; key_it < m_klics.size(); key_it++)
 			{
+				internal_file.close();
+
 				if (!elf_file.open(old_path) || !elf_file.read(file_magic))
 				{
 					file_magic = 0;
@@ -106,7 +109,8 @@ usz decrypt_binaries_t::decrypt(std::string klic_input)
 				case "NPD\0"_u32:
 				{
 					// EDAT / SDAT
-					elf_file = DecryptEDAT(elf_file, old_path, key_it != 0 ? 8 : 1, reinterpret_cast<u8*>(&m_klics[key_it]));
+					internal_file = std::move(elf_file);
+					elf_file = DecryptEDAT(internal_file, old_path, key_it != 0 ? 8 : 1, reinterpret_cast<u8*>(&m_klics[key_it]));
 
 					if (!elf_file)
 					{
