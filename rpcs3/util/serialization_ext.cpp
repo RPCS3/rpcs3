@@ -420,7 +420,15 @@ bool compressed_serialization_file_handler::handle_file_op(utils::serial& ar, us
 		const usz old_size = ar.data.size();
 
 		// Try to prefetch data by reading more than requested
-		ar.data.resize(std::min<usz>(read_limit, std::max<usz>({ ar.data.capacity(), ar.data.size() + read_past_buffer * 3 / 2, ar.expect_little_data() ? usz{4096} : usz{0x10'0000} })));
+		const usz new_size = std::min<usz>(read_limit, std::max<usz>({ ar.data.capacity(), ar.data.size() + read_past_buffer * 3 / 2, ar.expect_little_data() ? usz{4096} : usz{0x10'0000} }));
+
+		if (new_size < old_size)
+		{
+			// Read limit forbids further reads at this point
+			return true;
+		}
+
+		ar.data.resize(new_size);
 		ar.data.resize(this->read_at(ar, old_size + ar.data_offset, data ? const_cast<void*>(data) : ar.data.data() + old_size, ar.data.size() - old_size) + old_size);
 	}
 
@@ -652,9 +660,18 @@ void compressed_serialization_file_handler::stream_data_prepare_thread_op()
 			}
 			while (m_zs.avail_out == 0 || m_zs.avail_in != 0);
 
+			if (m_errored)
+			{
+				return;
+			}
+
+			if (!buffer_offset)
+			{
+				continue;
+			}
+
 			// Forward for file write
 			const usz queued_size = data.size();
-			ensure(buffer_offset);
 
 			const usz size_diff = buffer_offset - queued_size;
 			const usz new_val = m_pending_bytes.add_fetch(size_diff);
