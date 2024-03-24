@@ -218,6 +218,11 @@ public:
 	// Get current thread name
 	static std::string get_name()
 	{
+		if (!g_tls_this_thread)
+		{
+			return "not named_thread";
+		}
+
 		return *g_tls_this_thread->m_tname.load();
 	}
 

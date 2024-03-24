@@ -5253,7 +5253,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 			}
 		}
 
-		const bool seed = (utils::get_tsc() >> 8) % 100;
+		const usz seed = (utils::get_tsc() >> 8) % 100;
 
 #ifdef __linux__
 		const bool reservation_busy_waiting = false;
