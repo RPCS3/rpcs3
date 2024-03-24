@@ -2,6 +2,7 @@
 
 #include "util/types.hpp"
 #include "util/atomic.hpp"
+#include "util/shared_ptr.hpp"
 #include "Utilities/bit_set.h"
 #include "config_mode.h"
 #include "games_config.h"
@@ -63,6 +64,7 @@ struct EmuCallbacks
 	std::function<void()> on_ready;
 	std::function<bool()> on_missing_fw;
 	std::function<void(std::shared_ptr<atomic_t<bool>>, int)> on_emulation_stop_no_response;
+	std::function<void(std::shared_ptr<atomic_t<bool>>, stx::shared_ptr<utils::serial>)> on_save_state_progress;
 	std::function<void(bool enabled)> enable_disc_eject;
 	std::function<void(bool enabled)> enable_disc_insert;
 	std::function<bool(bool, std::function<void()>)> try_to_quit; // (force_quit, on_exit) Try to close RPCS3

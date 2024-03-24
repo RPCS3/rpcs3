@@ -83,11 +83,7 @@ public:
 		usz m_max_data = umax;
 		std::unique_ptr<serialization_file_handler> m_file_handler;
 
-		serial(bool expect_little_data = false) noexcept
-			: m_expect_little_data(expect_little_data)
-		{
-		}
-
+		serial() noexcept = default;
 		serial(const serial&) = delete;
 		serial& operator=(const serial&) = delete;
 		explicit serial(serial&&) noexcept = default;
@@ -98,6 +94,11 @@ public:
 		bool is_writing() const
 		{
 			return m_is_writing;
+		}
+
+		void set_expect_little_data(bool value)
+		{
+			m_expect_little_data = value;
 		}
 
 		// Return true if small amounts of both input and output memory are expected (performance hint)  
