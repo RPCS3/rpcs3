@@ -3874,45 +3874,46 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 	struct block_reg_info
 	{
 		u32 pc = SPU_LS_SIZE; // Address
-		std::vector<std::array<reg_state_t, s_reg_max>> state_predecessor; // Collection of direct state predecessors
-		std::array<reg_state_t, s_reg_max> true_state{};
-		bool has_true_state =  false;
+		bool has_true_state = false;
+		std::array<reg_state_t, s_reg_max> end_state{};
 		std::array<reg_state_t, s_reg_max> walkby_state{}; // State that is made by merging state_predecessor abd iterating over instructions for final instrucion walk
 		std::array<reg_state_t, s_reg_max> local_state{};
 
+		usz next_nodes_count = 0;
+		bool is_tail_block = false; // True if this block is a possible end to the function
+
 		struct node_t
 		{
-			u32 next_pc = umax;
-			u32 next_block = umax;
 			u32 prev_pc = umax;
-			u32 prev_block = umax;
 		};
 
-		std::vector<node_t> nodes;
+		std::vector<node_t> prev_nodes;
 
 		static std::unique_ptr<block_reg_info> create(u32 pc) noexcept
 		{
 			return std::unique_ptr<workload_onfo>(new block_reg_info{pc, reg_state_t::make_unknown<s_reg_max>()});
 		}
 
-		auto& evaluate_true_state()
+		template <typename T>
+		auto& evalaute_true_state(T&& map)
 		{
 			if (!has_true_state)
 			{
-				if (state_predecessor.empty())
+				struct iterator_info
 				{
-					has_true_state = true;
-					return true_state;
-				}
+					std::array<reg_state_t, s_reg_max> state_prev = reg_state_t::make_unknown<s_reg_max>();
 
+				};
+
+				std::vector<
 				auto new_state = reg_state_t::make_unknown<s_reg_max>();
 			}
 
-			return true_state;
+			return end_state;
 		}
 
 		template <typename T>
-		void create_node(u32 pc_rhs, T&& map)
+		void create_node(u32 pc_rhs, usz parent_node, T&& map)
 		{
 			ensure(pc != pc_rhs);
 
@@ -3921,11 +3922,12 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				map[pc_rhs] = create(pc_rhs);
 			}
 
-			node_t new_node{}, prev_node{};
-			prev_node.prev_pc = new_node.next_pc = pc;
-			prev_node.prev_block = nodes.size(); 
-			new_node.next_block = map[pc_rhs].nodes.size();
-			this->nodes.emplace_back(next_node);
+			node_t prev_node{pc};
+
+			{
+				
+			}
+			this->nodes.next_nodes_count++;
 			map[pc_rhs].nodes.emplace_back(prev_node);
 		}
 	};
@@ -3935,8 +3937,11 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 	struct block_reg_state_iterator
 	{
 		u32 pc;
-		std::basic_string<u32> passed_blocks;
-		std::array<reg_state_t, s_reg_max> state;
+
+		block_reg_state_iterator(u32 _pc) noexcept
+			: pc(_pc)
+		{
+		}
 	};
 
 	auto find_info = [&](u32 pc)
@@ -3945,13 +3950,25 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 	};
 
 	std::vector<std::unique_ptr<block_reg_state_iterator>> reg_state_it{std::make_unique<block_reg_state_iterator>(entry_point)};
-	std::map<u32, bool> been_there;
 
-	for (u32 wf = 1, wi = 0, wa = infos[0].first; wf <= 2;)
+	for (u32 wf = 1, wi = 0, wa = infos[0].first; wf <= 4;)
 	{
-		const bool is_form_block = wf & 1;
-		const bool is_putllc_match = wf & 2;
-		auto& vregs = infos[wi].vstate;
+		const bool is_form_block = wf == 0;
+		const bool is_value_match = wf == 1;
+		const bool is_putllc_match = wf == 2;
+
+		if (is_value_match)
+		{
+			reg_state_it.clear();
+
+			// First things first, first block already have an infinite amount of predecessors
+			// So constants cannot be gathered there
+			// So there is no need to evaluate local ones
+			infos.begin().nodes.clear();
+
+			for ( : infos)
+		}
+		auto& vregs = is_form_block ? reg_state_it[wi]->local_state : reg_state_it[wi]->walkby_state;
 
 		const u32 pos = wa;
 
@@ -4063,15 +4080,15 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				infos[target];
 				reg_state_it.emplace_back(std::make_unique<block_reg_state_iterator>());
 				reg_state_it.back()->pc = target;
-				reg_state_it.back()->state = reg_state_it[wi].state;
-				reg_state_it.back()->passed_blocks = reg_state_it[wi].passed_blocks; // TODO: std::move on last add_block
 
 				if (!is_form_block)
 				{
 					return;
 				}
 
-				// Check redundancy
+				reg_state_it[wi];
+				// Check block duplocation (terminating infinite loops)
+				// Even if duplicated, this still has impact by registering the end of the possible code path outcome
 				for (u32 i = 0; i < infos.size(); i++)
 				{
 					if (infos[i]->pc == target)
