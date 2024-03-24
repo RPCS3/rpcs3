@@ -688,7 +688,7 @@ void gui_application::InitializeCallbacks()
 			{
 				*half_seconds += 1;
 
-				const usz bytes_written = atomic_storage<usz>::load(ar_ptr->pos);
+				const usz bytes_written = ar_ptr->get_size();
 				pdlg->setLabelText(text_base.arg(*half_seconds / 2).arg(gui::utils::format_byte_size(bytes_written)));
 
 				// 300MB -> 50%, 600MB -> 75%, 1200MB -> 87.5% etc
