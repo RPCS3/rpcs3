@@ -20,6 +20,7 @@
 #include "Emu/Io/Null/null_camera_handler.h"
 #include "Emu/Io/Null/null_music_handler.h"
 #include "Emu/vfs_config.h"
+#include "util/init_mutex.hpp"
 #include "Input/raw_mouse_handler.h"
 #include "trophy_notification_helper.h"
 #include "save_data_dialog.h"
@@ -666,9 +667,9 @@ void gui_application::InitializeCallbacks()
 		});
 	};
 
-	callbacks.on_save_state_progress = [this](std::shared_ptr<atomic_t<bool>> closed_successfully, stx::shared_ptr<utils::serial> ar_ptr)
+	callbacks.on_save_state_progress = [this](std::shared_ptr<atomic_t<bool>> closed_successfully, stx::shared_ptr<utils::serial> ar_ptr, std::shared_ptr<void> init_mtx)
 	{
-		Emu.CallFromMainThread([this, closed_successfully, ar_ptr]
+		Emu.CallFromMainThread([this, closed_successfully, ar_ptr, init_mtx]
 		{
 			const auto half_seconds = std::make_shared<int>(1);
 
@@ -684,8 +685,16 @@ void gui_application::InitializeCallbacks()
 
 			QTimer* update_timer = new QTimer(pdlg);
 
-			connect(update_timer, &QTimer::timeout, [pdlg, ar_ptr, half_seconds, text_base, closed_successfully]()
+			connect(update_timer, &QTimer::timeout, [pdlg, ar_ptr, half_seconds, text_base, closed_successfully, init_mtx]()
 			{
+				auto init = static_cast<stx::init_mutex*>(init_mtx.get())->access();
+
+				if (!init)
+				{
+					pdlg->reject();
+					return;
+				}
+
 				*half_seconds += 1;
 
 				const usz bytes_written = ar_ptr->get_size();

@@ -43,6 +43,7 @@
 #include "../Crypto/unself.h"
 #include "../Crypto/unzip.h"
 #include "util/logs.hpp"
+#include "util/init_mutex.hpp"
 
 #include <fstream>
 #include <memory>
@@ -2970,10 +2971,12 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 	*join_thread = make_ptr(new named_thread("Emulation Join Thread"sv, [join_thread, savestate, allow_autoexit, this]() mutable
 	{
+		fs::pending_file file;
+		std::shared_ptr<stx::init_mutex> init_mtx = std::make_shared<stx::init_mutex>();
 		std::shared_ptr<bool> join_ended = std::make_shared<bool>(false);
 		atomic_ptr<utils::serial> to_ar;
 
-		named_thread stop_watchdog("Stop Watchdog"sv, [&to_ar, join_ended, this]()
+		named_thread stop_watchdog("Stop Watchdog"sv, [&to_ar, init_mtx, join_ended, this]()
 		{
 			const auto closed_sucessfully = std::make_shared<atomic_t<bool>>(false);
 
@@ -3008,7 +3011,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 				if (auto ar_ptr = to_ar.load())
 				{
 					// Total amount of waiting: about 10s
-					GetCallbacks().on_save_state_progress(closed_sucessfully, ar_ptr);
+					GetCallbacks().on_save_state_progress(closed_sucessfully, ar_ptr, init_mtx);
 
 					while (thread_ctrl::state() != thread_state::aborting)
 					{
@@ -3040,8 +3043,9 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 		sys_log.notice("All threads have been stopped.");
 
-		fs::pending_file file;
 		std::string path;
+
+		static_cast<void>(init_mtx->init());
 
 		while (savestate)
 		{
@@ -3068,8 +3072,9 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 				break;
 			}
 
-			to_ar = stx::make_single<utils::serial>();
-			to_ar.load()->m_file_handler = make_compressed_serialization_file_handler(file.file);
+			auto serial_ptr = stx::make_single<utils::serial>();
+			serial_ptr->m_file_handler = make_compressed_serialization_file_handler(file.file);
+			to_ar = std::move(serial_ptr);
 
 			signal_system_cache_can_stay();
 			break;
@@ -3235,6 +3240,9 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 			}
 		}
 
+		stop_watchdog = thread_state::finished;
+		static_cast<void>(init_mtx->reset());
+
 		if (savestate)
 		{
 			auto& ar = *to_ar.load();
@@ -3273,11 +3281,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 					m_path = path;
 				}
 			}
-
-			ar.set_reading_state();
 		}
-
-		stop_watchdog = thread_state::aborting;
 
 		// Log additional debug information - do not do it on the main thread due to the concern of halting UI events
 
