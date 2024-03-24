@@ -209,7 +209,7 @@ void compressed_serialization_file_handler::initialize(utils::serial& ar)
 		}
 
 		m_zs = {};
-		ensure(deflateInit2(&m_zs, 9, Z_DEFLATED, 16 + 15, 9, Z_DEFAULT_STRATEGY) == Z_OK);
+		ensure(deflateInit2(&m_zs, ar.expect_little_data() ? 9 : 8, Z_DEFLATED, 16 + 15, 9, Z_DEFAULT_STRATEGY) == Z_OK);
 #ifndef _MSC_VER
 #pragma GCC diagnostic pop
 #endif
