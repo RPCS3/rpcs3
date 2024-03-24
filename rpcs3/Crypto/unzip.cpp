@@ -139,7 +139,8 @@ bool zip(const void* src, usz size, fs::file& out, bool multi_thread_it)
 		return false;
 	}
 
-	utils::serial compressor(!multi_thread_it || size < 0x40'0000);
+	utils::serial compressor;
+	compressor.set_expect_little_data(!multi_thread_it || size < 0x40'0000);
 	compressor.m_file_handler = make_compressed_serialization_file_handler(out);
 
 	std::string_view buffer_view{static_cast<const char*>(src), size};

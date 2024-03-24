@@ -2970,13 +2970,16 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 	*join_thread = make_ptr(new named_thread("Emulation Join Thread"sv, [join_thread, savestate, allow_autoexit, this]() mutable
 	{
-		named_thread stop_watchdog("Stop Watchdog"sv, [this]()
+		std::shared_ptr<bool> join_ended = std::make_shared<bool>(false);
+		atomic_ptr<utils::serial> to_ar;
+
+		named_thread stop_watchdog("Stop Watchdog"sv, [&to_ar, join_ended, this]()
 		{
 			const auto closed_sucessfully = std::make_shared<atomic_t<bool>>(false);
 
 			bool is_being_held_longer = false;
 
-			for (int i = 0; thread_ctrl::state() != thread_state::aborting;)
+			for (int i = 0; !*join_ended && thread_ctrl::state() != thread_state::aborting;)
 			{
 				if (g_watchdog_hold_ctr)
 				{
@@ -3000,6 +3003,25 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 				thread_ctrl::wait_for(5'000);
 			}
 
+			for (int i = 0; thread_ctrl::state() != thread_state::aborting;)
+			{
+				if (auto ar_ptr = to_ar.load())
+				{
+					// Total amount of waiting: about 10s
+					GetCallbacks().on_save_state_progress(closed_sucessfully, ar_ptr);
+
+					while (thread_ctrl::state() != thread_state::aborting)
+					{
+						thread_ctrl::wait_for(5'000);
+					}
+
+					break;
+				}
+
+				thread_ctrl::wait_for(5'000);
+			}
+
+
 			*closed_sucessfully = true;
 		});
 
@@ -3017,8 +3039,6 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 		const u64 start_time = get_system_time();
 
 		sys_log.notice("All threads have been stopped.");
-
-		std::unique_ptr<utils::serial> to_ar;
 
 		fs::pending_file file;
 		std::string path;
@@ -3048,12 +3068,14 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 				break;
 			}
 
-			to_ar = std::make_unique<utils::serial>();
-			to_ar->m_file_handler = make_compressed_serialization_file_handler(file.file);
+			to_ar = stx::make_single<utils::serial>();
+			to_ar.load()->m_file_handler = make_compressed_serialization_file_handler(file.file);
 
 			signal_system_cache_can_stay();
 			break;
 		}
+
+		*join_ended = true;
 
 		if (savestate)
 		{
@@ -3065,7 +3087,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 					return fmt::format("Emu State Capture Thread: '%s'", g_tls_serialize_name);
 				};
 
-				auto& ar = *to_ar;
+				auto& ar = *to_ar.load();
 
 				read_used_savestate_versions(); // Reset version data
 				USING_SERIALIZATION_VERSION(global_version);
@@ -3196,6 +3218,10 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 				ar(std::array<u8, 32>{}); // Reserved for future use
 				ar(timestamp);
+
+				// Final file write, the file is ready to be committed
+				ar.seek_end();
+				ar.m_file_handler->finalize(ar);
 			});
 
 			// Join it
@@ -3209,15 +3235,9 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 			}
 		}
 
-		stop_watchdog = thread_state::aborting;
-
 		if (savestate)
 		{
-			auto& ar = *to_ar;
-
-			// Final file write, the file is ready to be committed
-			ar.seek_end();
-			ar.m_file_handler->finalize(ar);
+			auto& ar = *to_ar.load();
 
 			fs::stat_t file_stat{};
 
@@ -3256,6 +3276,8 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 			ar.set_reading_state();
 		}
+
+		stop_watchdog = thread_state::aborting;
 
 		// Log additional debug information - do not do it on the main thread due to the concern of halting UI events
 
