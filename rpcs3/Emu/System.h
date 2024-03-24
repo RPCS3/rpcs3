@@ -183,7 +183,11 @@ public:
 	}
 
 	// Call from the GUI thread
-	void CallFromMainThread(std::function<void()>&& func, atomic_t<u32>* wake_up = nullptr, bool track_emu_state = true, u64 stop_ctr = umax) const;
+	void CallFromMainThread(std::function<void()>&& func, atomic_t<u32>* wake_up = nullptr, bool track_emu_state = true, u64 stop_ctr = umax,
+		u32 line = __builtin_LINE(),
+		u32 col = __builtin_COLUMN(),
+		const char* file = __builtin_FILE(),
+		const char* fun = __builtin_FUNCTION()) const;
 
 	// Blocking call from the GUI thread
 	void BlockingCallFromMainThread(std::function<void()>&& func,
@@ -200,9 +204,13 @@ public:
 		return stop_counter_t{+m_stop_ctr};
 	}
 
-	void CallFromMainThread(std::function<void()>&& func, stop_counter_t counter) const
+	void CallFromMainThread(std::function<void()>&& func, stop_counter_t counter,
+		u32 line = __builtin_LINE(),
+		u32 col = __builtin_COLUMN(),
+		const char* file = __builtin_FILE(),
+		const char* fun = __builtin_FUNCTION()) const
 	{
-		CallFromMainThread(std::move(func), nullptr, true, static_cast<u64>(counter));
+		CallFromMainThread(std::move(func), nullptr, true, static_cast<u64>(counter), line, col, file, fun);
 	}
 
 	void PostponeInitCode(std::function<void()>&& func)

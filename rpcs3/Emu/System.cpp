@@ -161,17 +161,16 @@ void fmt_class_string<cfg_mode>::format(std::string& out, u64 arg)
 	});
 }
 
-void Emulator::CallFromMainThread(std::function<void()>&& func, atomic_t<u32>* wake_up, bool track_emu_state, u64 stop_ctr) const
+void Emulator::CallFromMainThread(std::function<void()>&& func, atomic_t<u32>* wake_up, bool track_emu_state, u64 stop_ctr, u32 line, u32 col, const char* file, const char* fun) const
 {
-	if (!track_emu_state)
+	std::function<void()> final_func = [this, before = IsStopped(), track_emu_state, thread_name = thread_ctrl::get_name(), src = src_loc{line, col, file, fun}
+		, count = (stop_ctr == umax ? +m_stop_ctr : stop_ctr), func = std::move(func)]
 	{
-		m_cb.call_from_main_thread(std::move(func), wake_up);
-		return;
-	}
+		const bool call_it = (!track_emu_state || (count == m_stop_ctr && before == IsStopped()));
 
-	std::function<void()> final_func = [this, before = IsStopped(), count = (stop_ctr == umax ? +m_stop_ctr : stop_ctr), func = std::move(func)]
-	{
-		if (count == m_stop_ctr && before == IsStopped())
+		sys_log.trace("Callback from thread '%s' at [%s] is %s", thread_name, src, call_it ? "called" : "skipped");
+
+		if (call_it)
 		{
 			func();
 		}
@@ -184,14 +183,17 @@ void Emulator::BlockingCallFromMainThread(std::function<void()>&& func, u32 line
 {
 	atomic_t<u32> wake_up = 0;
 
-	CallFromMainThread(std::move(func), &wake_up);
+	sys_log.trace("Blocking Callback from thread '%s' at [%s] is queued", thread_ctrl::get_name(), src_loc{line, col, file, fun});
+
+	CallFromMainThread(std::move(func), &wake_up, true, umax, line, col, file, fun);
 
 	while (!wake_up)
 	{
 		if (!thread_ctrl::get_current())
 		{
-			fmt::throw_exception("Current thread null while calling BlockingCallFromMainThread from %s", src_loc{line, col, file, fun});
+			fmt::throw_exception("Calling thread of BlockingCallFromMainThread is not of named_thread<>, calling from %s", src_loc{line, col, file, fun});
 		}
+
 		wake_up.wait(0);
 	}
 }
