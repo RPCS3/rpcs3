@@ -150,12 +150,12 @@ usz uncompressed_serialization_file_handler::get_size(const utils::serial& ar, u
 {
 	if (ar.is_writing())
 	{
-		return m_file->size();
+		return *m_file ? m_file->size() : 0;
 	}
 
 	const usz memory_available = ar.data_offset + ar.data.size();
 
-	if (memory_available >= recommended)
+	if (memory_available >= recommended || !*m_file)
 	{
 		// Avoid calling size() if possible
 		return memory_available;
@@ -756,12 +756,12 @@ usz compressed_serialization_file_handler::get_size(const utils::serial& ar, usz
 {
 	if (ar.is_writing())
 	{
-		return m_file->size();
+		return *m_file ? m_file->size() : 0;
 	}
 
 	const usz memory_available = ar.data_offset + ar.data.size();
 
-	if (memory_available >= recommended)
+	if (memory_available >= recommended || !*m_file)
 	{
 		// Avoid calling size() if possible
 		return memory_available;
