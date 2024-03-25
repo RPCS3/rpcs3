@@ -2367,7 +2367,7 @@ void ppu_thread::serialize_common(utils::serial& ar)
 
 	ar(gpr, fpr, cr, fpscr.bits, lr, ctr, vrsave, cia, xer, sat, nj, prio.raw().all);
 
-	if (cia % 4 || !vm::check_addr(cia))
+	if (cia % 4 || (cia >> 28) >= 0xCu)
 	{
 		fmt::throw_exception("Failed to serialize PPU thread ID=0x%x (cia=0x%x, ar=%s)", this->id, cia, ar);
 	}
