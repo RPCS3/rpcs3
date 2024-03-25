@@ -2971,6 +2971,12 @@ public:
 		}
 		case SPU_RdInMbox:
 		{
+			if (g_cfg.savestate.compatible_mode)
+			{
+				ensure_gpr_stores();
+				check_state(m_pos, false);
+			}
+
 			const auto value = m_ir->CreateLoad(get_type<u32>(), spu_ptr<u32>(&spu_thread::ch_in_mbox));
 			value->setAtomic(llvm::AtomicOrdering::Acquire);
 			res.value = value;
@@ -2980,6 +2986,12 @@ public:
 		}
 		case SPU_RdEventStat:
 		{
+			if (g_cfg.savestate.compatible_mode)
+			{
+				ensure_gpr_stores();
+				check_state(m_pos, false);
+			}
+
 			const auto mask = m_ir->CreateTrunc(m_ir->CreateLShr(m_ir->CreateLoad(get_type<u64>(), spu_ptr<u64>(&spu_thread::ch_events)), 32), get_type<u32>());
 			res.value = call("spu_get_events", &exec_get_events, m_thread, mask);
 			break;
