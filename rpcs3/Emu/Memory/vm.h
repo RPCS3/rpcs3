@@ -9,6 +9,15 @@
 
 #include "util/to_endian.hpp"
 
+#include "rpcs3qt/breakpoint_handler.h"
+#include "util/logs.hpp"
+
+LOG_CHANNEL(debugbp_log, "DebugBP");
+
+class ppu_thread;
+
+void ppubreak(ppu_thread& ppu);
+
 namespace utils
 {
 	class shm;
@@ -247,9 +256,15 @@ namespace vm
 		return g_base_addr[addr];
 	}
 
-	inline void write8(u32 addr, u8 value)
+	inline void write8(u32 addr, u8 value, ppu_thread *ppu = nullptr)
 	{
 		g_base_addr[addr] = value;
+
+		if (ppu && g_breakpoint_handler.HasBreakpoint(addr, breakpoint_types::bp_write))
+		{
+			debugbp_log.success("BPMW: breakpoint writing(1) 0x%x at 0x%x", value, addr);
+			ppubreak(*ppu);
+		}
 	}
 
 	// Read or write virtual memory in a safe manner, returns false on failure
@@ -281,9 +296,15 @@ namespace vm
 			return _ref<u16>(addr);
 		}
 
-		inline void write16(u32 addr, be_t<u16> value)
+		inline void write16(u32 addr, be_t<u16> value, ppu_thread *ppu = nullptr)
 		{
 			_ref<u16>(addr) = value;
+
+			if (ppu && g_breakpoint_handler.HasBreakpoint(addr, breakpoint_types::bp_write))
+			{
+				debugbp_log.success("BPMW: breakpoint writing(1) 0x%x at 0x%x", value, addr);
+				ppubreak(*ppu);
+			}
 		}
 
 		inline const be_t<u32>& read32(u32 addr)
@@ -291,9 +312,15 @@ namespace vm
 			return _ref<u32>(addr);
 		}
 
-		inline void write32(u32 addr, be_t<u32> value)
+		inline void write32(u32 addr, be_t<u32> value, ppu_thread *ppu = nullptr)
 		{
 			_ref<u32>(addr) = value;
+
+			if (ppu && g_breakpoint_handler.HasBreakpoint(addr, breakpoint_types::bp_write))
+			{
+				debugbp_log.success("BPMW: breakpoint writing(1) 0x%x at 0x%x", value, addr);
+				ppubreak(*ppu);
+			}
 		}
 
 		inline const be_t<u64>& read64(u32 addr)
@@ -301,9 +328,15 @@ namespace vm
 			return _ref<u64>(addr);
 		}
 
-		inline void write64(u32 addr, be_t<u64> value)
+		inline void write64(u32 addr, be_t<u64> value, ppu_thread *ppu = nullptr)
 		{
 			_ref<u64>(addr) = value;
+
+			if (ppu && g_breakpoint_handler.HasBreakpoint(addr, breakpoint_types::bp_write))
+			{
+				debugbp_log.success("BPMW: breakpoint writing(1) 0x%x at 0x%x", value, addr);
+				ppubreak(*ppu);
+			}
 		}
 
 		void init();

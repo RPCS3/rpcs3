@@ -68,9 +68,9 @@ class debugger_frame : public custom_dock_widget
 	std::shared_ptr<cpu_thread> m_cpu;
 	rsx::thread* m_rsx = nullptr;
 
-	breakpoint_list* m_breakpoint_list;
-	breakpoint_handler* m_ppu_breakpoint_handler;
-	call_stack_list* m_call_stack_list;
+	breakpoint_list* m_breakpoint_list = nullptr;
+	breakpoint_handler* m_ppu_breakpoint_handler = nullptr;
+	call_stack_list* m_call_stack_list = nullptr;
 	instruction_editor_dialog* m_inst_editor = nullptr;
 	register_editor_dialog* m_reg_editor = nullptr;
 	QDialog* m_goto_dialog = nullptr;

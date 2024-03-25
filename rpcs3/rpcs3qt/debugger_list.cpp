@@ -142,7 +142,7 @@ void debugger_list::ShowAddress(u32 addr, bool select_addr, bool direct)
 	{
 		switch (m_cpu ? m_cpu->id_type() : 0)
 		{
-		case 1: return m_ppu_breakpoint_handler->HasBreakpoint(pc);
+		case 1: return m_ppu_breakpoint_handler->HasBreakpoint(pc, breakpoint_types::bp_exec);
 		case 2: return (*spu_bps_list)[pc / 4].load();
 		default: return false;
 		}

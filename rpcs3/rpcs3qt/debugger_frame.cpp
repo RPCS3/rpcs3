@@ -42,6 +42,7 @@ constexpr auto s_pause_flags = cpu_flag::dbg_pause + cpu_flag::dbg_global_pause;
 extern atomic_t<bool> g_debugger_pause_all_threads_on_bp;
 
 extern const ppu_decoder<ppu_itype> g_ppu_itype;
+breakpoint_handler g_breakpoint_handler = breakpoint_handler();
 
 extern bool is_using_interpreter(u32 id_type)
 {
@@ -83,7 +84,7 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidg
 	QHBoxLayout* hbox_b_main = new QHBoxLayout();
 	hbox_b_main->setContentsMargins(0, 0, 0, 0);
 
-	m_ppu_breakpoint_handler = new breakpoint_handler();
+	m_ppu_breakpoint_handler = &g_breakpoint_handler;
 	m_breakpoint_list = new breakpoint_list(this, m_ppu_breakpoint_handler);
 
 	m_debugger_list = new debugger_list(this, m_gui_settings, m_ppu_breakpoint_handler);
@@ -1392,7 +1393,7 @@ void debugger_frame::DoStep(bool step_over)
 
 				// Set breakpoint on next instruction
 				const u32 next_instruction_pc = current_instruction_pc + 4;
-				m_ppu_breakpoint_handler->AddBreakpoint(next_instruction_pc);
+				m_ppu_breakpoint_handler->AddBreakpoint(next_instruction_pc, breakpoint_types::bp_exec);
 
 				// Undefine previous step over breakpoint if it hasn't been already
 				// This can happen when the user steps over a branch that doesn't return to itself
