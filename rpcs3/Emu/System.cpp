@@ -3006,7 +3006,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 				thread_ctrl::wait_for(5'000);
 			}
 
-			for (int i = 0; thread_ctrl::state() != thread_state::aborting;)
+			while (thread_ctrl::state() != thread_state::aborting)
 			{
 				if (auto ar_ptr = to_ar.load())
 				{
@@ -3245,8 +3245,6 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 		if (savestate)
 		{
-			auto& ar = *to_ar.load();
-
 			fs::stat_t file_stat{};
 
 			if (!file.commit() || !fs::get_stat(path, file_stat))
