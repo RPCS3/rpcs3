@@ -134,24 +134,31 @@ error_code cellScreenShotSetOverlayImage(vm::cptr<char> srcDir, vm::cptr<char> s
 
 error_code cellScreenShotEnable()
 {
-	cellScreenshot.warning("cellScreenShotEnable()");
+	cellScreenshot.trace("cellScreenShotEnable()");
 
 	auto& manager = g_fxo->get<screenshot_manager>();
 	std::lock_guard lock(manager.mutex);
 
-	manager.is_enabled = true;
+	if (!std::exchange(manager.is_enabled, true))
+	{
+		cellScreenshot.warning("cellScreenShotEnable(): Enabled");
+	}
 
 	return CELL_OK;
 }
 
 error_code cellScreenShotDisable()
 {
-	cellScreenshot.warning("cellScreenShotDisable()");
+	cellScreenshot.trace("cellScreenShotDisable()");
 
 	auto& manager = g_fxo->get<screenshot_manager>();
 	std::lock_guard lock(manager.mutex);
 
-	manager.is_enabled = false;
+	if (std::exchange(manager.is_enabled, false))
+	{
+		cellScreenshot.warning("cellScreenShotDisable(): Disabled");
+	}
+
 
 	return CELL_OK;
 }
