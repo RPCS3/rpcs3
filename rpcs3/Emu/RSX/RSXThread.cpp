@@ -615,6 +615,11 @@ namespace rsx
 		ar(display_buffers, display_buffers_count, current_display_buffer);
 		ar(unsent_gcm_events, rsx::method_registers.current_draw_clause);
 
+		if (in_begin_end)
+		{
+			rsx_log.error("Savestate created in draw call scope. Report to developers if there are issues with it.");
+		}
+
 		if (ar.is_writing())
 		{
 			if (fifo_ctrl && state & cpu_flag::again)
