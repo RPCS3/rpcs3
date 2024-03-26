@@ -107,7 +107,7 @@ void cellPad_NotifyStateChange(usz index, u64 /*state*/, bool locked)
 	// NOTE 1: The state's CONNECTED bit should currently be identical to the current
 	//         m_port_status CONNECTED bit when called from our pad handlers.
 	// NOTE 2: Make sure to propagate all other status bits to the reported status.
-	const u32 new_status = pads[index]->m_port_status;
+	const u32 new_status = pad->m_port_status;
 
 	if (~(old_status ^ new_status) & CELL_PAD_STATUS_CONNECTED)
 	{
@@ -188,16 +188,11 @@ error_code cellPadInit(ppu_thread& ppu, u32 max_connect)
 	config.port_setting.fill(CELL_PAD_SETTING_PRESS_OFF | CELL_PAD_SETTING_SENSOR_OFF);
 	config.reported_info = {};
 
-	std::array<s32, CELL_MAX_PADS> statuses{};
-
 	const auto handler = pad::get_current_handler();
 	const auto& pads = handler->GetPads();
 
-	for (usz i = 0; i < statuses.size(); ++i)
+	for (usz i = 0; i < config.get_max_connect(); ++i)
 	{
-		if (i >= config.get_max_connect())
-			break;
-
 		if (pads[i]->m_port_status & CELL_PAD_STATUS_CONNECTED)
 		{
 			send_sys_io_connect_event(i, CELL_PAD_STATUS_CONNECTED);
@@ -656,11 +651,8 @@ error_code cellPadPeriphGetInfo(vm::ptr<CellPadPeriphInfo> info)
 
 	u32 now_connect = 0;
 
-	for (u32 i = 0; i < CELL_PAD_MAX_PORT_NUM; ++i)
+	for (u32 i = 0; i < config.get_max_connect(); ++i)
 	{
-		if (i >= config.get_max_connect())
-			break;
-
 		pad_data_internal& reported_info = config.reported_info[i];
 
 		info->port_status[i] = reported_info.port_status;
@@ -839,11 +831,8 @@ error_code cellPadGetInfo(vm::ptr<CellPadInfo> info)
 
 	u32 now_connect = 0;
 
-	for (u32 i = 0; i < CELL_MAX_PADS; ++i)
+	for (u32 i = 0; i < config.get_max_connect(); ++i)
 	{
-		if (i >= config.get_max_connect())
-			break;
-
 		pad_data_internal& reported_info = config.reported_info[i];
 		reported_info.port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES; // TODO: should ASSIGN flags be cleared here?
 
@@ -889,11 +878,8 @@ error_code cellPadGetInfo2(vm::ptr<CellPadInfo2> info)
 
 	const auto& pads = handler->GetPads();
 
-	for (u32 i = 0; i < CELL_PAD_MAX_PORT_NUM; ++i)
+	for (u32 i = 0; i < config.get_max_connect(); ++i)
 	{
-		if (i >= config.get_max_connect())
-			break;
-
 		pad_data_internal& reported_info = config.reported_info[i];
 
 		info->port_status[i] = reported_info.port_status;
