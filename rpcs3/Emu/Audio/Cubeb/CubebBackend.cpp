@@ -138,6 +138,8 @@ bool CubebBackend::Open(std::string_view dev_id, AudioFreq freq, AudioSampleSize
 		device.ch_cnt = 2;
 	}
 
+	Cubeb.notice("Channel count is %d", device.ch_cnt);
+
 	if (use_default_device)
 	{
 		std::lock_guard lock{m_state_cb_mutex};
