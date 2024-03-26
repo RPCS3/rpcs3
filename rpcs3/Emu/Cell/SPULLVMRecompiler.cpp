@@ -2655,13 +2655,13 @@ public:
 		}
 
 		update_pc();
+		ensure_gpr_stores();
 		call("spu_syscall", &exec_stop, m_thread, m_ir->getInt32(op.opcode & 0x3fff));
 
 		if (g_cfg.core.spu_block_size == spu_block_size_type::safe)
 		{
 			m_block->block_end = m_ir->GetInsertBlock();
 			update_pc(m_pos + 4);
-			ensure_gpr_stores();
 			tail_chunk(m_dispatch);
 			return;
 		}
