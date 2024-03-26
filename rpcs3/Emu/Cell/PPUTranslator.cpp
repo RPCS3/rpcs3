@@ -305,7 +305,7 @@ Function* PPUTranslator::GetSymbolResolver(const ppu_module& info)
 	vec_addrs.reserve(info.funcs.size());
 
 	// Create an array of function pointers
-	std::vector<Function*> functions;
+	std::vector<llvm::Constant*> functions;
 
 	for (const auto& f : info.funcs)
 	{
@@ -329,18 +329,9 @@ Function* PPUTranslator::GetSymbolResolver(const ppu_module& info)
 	const auto addr_array_type = ArrayType::get(get_type<u32>(), vec_addrs.size());
 	const auto addr_array = new GlobalVariable(*m_module, addr_array_type, false, GlobalValue::PrivateLinkage, ConstantDataArray::get(m_context, vec_addrs));
 
-	// Initialize the function table with the function pointers
-	std::vector<llvm::Constant*> init_vals;
-
-	for (llvm::Function* func : functions)
-	{
-		llvm::Constant* func_ptr = llvm::ConstantExpr::getBitCast(func, ftype->getPointerTo());
-		init_vals.push_back(func);
-	}
-
 	// Create an array of function pointers
 	const auto func_table_type = ArrayType::get(ftype->getPointerTo(), info.funcs.size());
-	const auto init_func_table = ConstantArray::get(func_table_type,  init_vals);
+	const auto init_func_table = ConstantArray::get(func_table_type, functions);
 	const auto func_table = new GlobalVariable(*m_module, func_table_type, false, GlobalVariable::PrivateLinkage, init_func_table);
 
 	const auto loop_block = BasicBlock::Create(m_context, "__loop", m_function);
