@@ -1946,7 +1946,7 @@ void lv2_obj::make_scheduler_ready()
 	lv2_obj::awake_all();
 }
 
-ppu_thread_status lv2_obj::ppu_state(ppu_thread* ppu, bool lock_idm, bool lock_lv2)
+std::pair<ppu_thread_status, u32> lv2_obj::ppu_state(ppu_thread* ppu, bool lock_idm, bool lock_lv2)
 {
 	std::optional<reader_lock> opt_lock[2];
 
@@ -1957,13 +1957,13 @@ ppu_thread_status lv2_obj::ppu_state(ppu_thread* ppu, bool lock_idm, bool lock_l
 
 	if (!Emu.IsReady() ? ppu->state.all_of(cpu_flag::stop) : ppu->stop_flag_removal_protection)
 	{
-		return PPU_THREAD_STATUS_IDLE;
+		return { PPU_THREAD_STATUS_IDLE, 0};
 	}
 
 	switch (ppu->joiner)
 	{
-	case ppu_join_status::zombie: return PPU_THREAD_STATUS_ZOMBIE;
-	case ppu_join_status::exited: return PPU_THREAD_STATUS_DELETED;
+	case ppu_join_status::zombie: return { PPU_THREAD_STATUS_ZOMBIE, 0};
+	case ppu_join_status::exited: return { PPU_THREAD_STATUS_DELETED, 0};
 	default: break;
 	}
 
@@ -1988,18 +1988,18 @@ ppu_thread_status lv2_obj::ppu_state(ppu_thread* ppu, bool lock_idm, bool lock_l
 	{
 		if (!ppu->interrupt_thread_executing)
 		{
-			return PPU_THREAD_STATUS_STOP;
+			return { PPU_THREAD_STATUS_STOP, 0};
 		}
 
-		return PPU_THREAD_STATUS_SLEEP;
+		return { PPU_THREAD_STATUS_SLEEP, 0 };
 	}
 
 	if (pos >= g_cfg.core.ppu_threads + 0u)
 	{
-		return PPU_THREAD_STATUS_RUNNABLE;
+		return { PPU_THREAD_STATUS_RUNNABLE, pos };
 	}
 
-	return PPU_THREAD_STATUS_ONPROC;
+	return { PPU_THREAD_STATUS_ONPROC, pos};
 }
 
 void lv2_obj::set_future_sleep(cpu_thread* cpu)
