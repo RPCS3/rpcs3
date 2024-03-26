@@ -1425,7 +1425,7 @@ u32 CPUDisAsm::DisAsmBranchTarget(s32 /*imm*/)
 
 extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool revert_lock)
 {
-	auto get_spus = [old_counter = u64{umax}, spu_list = std::vector<std::shared_ptr<named_thread<spu_thread>>>()](bool can_collect) mutable
+	auto get_spus = [old_counter = u64{umax}, spu_list = std::vector<std::shared_ptr<named_thread<spu_thread>>>()](bool can_collect, bool force_collect) mutable
 	{
 		const u64 new_counter = cpu_thread::g_threads_created + cpu_thread::g_threads_deleted;
 
@@ -1436,13 +1436,33 @@ extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool reve
 				return decltype(&spu_list){};
 			}
 
+			const u64 current = get_system_time();
+
 			// Fetch SPU contexts
 			spu_list.clear();
 
-			idm::select<named_thread<spu_thread>>([&](u32 id, spu_thread&)
+			bool give_up = false;
+
+			idm::select<named_thread<spu_thread>>([&](u32 id, spu_thread& spu)
 			{
 				spu_list.emplace_back(ensure(idm::get_unlocked<named_thread<spu_thread>>(id)));
+
+				if (spu.current_func && spu.unsavable)
+				{
+					const u64 start = spu.start_time;
+
+					// Automatically give up if it is asleep 15 seconds or more
+					if (start && current > start && current - start >= 15'000'000)
+					{
+						give_up = true;
+					}
+				}
 			});
+
+			if (!force_collect && give_up)
+			{
+				return decltype(&spu_list){};
+			}
 
 			old_counter = new_counter;
 		}
@@ -1451,7 +1471,7 @@ extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool reve
 	};
 
 	// Attempt to lock for a second, if somehow takes longer abort it
-	for (u64 start = 0, passed_count = 0; passed_count < 10;)
+	for (u64 start = 0, passed_count = 0; passed_count < 15;)
 	{
 		if (revert_lock)
 		{
@@ -1463,7 +1483,7 @@ extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool reve
 		{
 			start = get_system_time();
 		}
-		else if (get_system_time() - start >= 100'000)
+		else if (get_system_time() - start >= 150'000)
 		{
 			passed_count++;
 			start = 0;
@@ -1471,7 +1491,16 @@ extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool reve
 		}
 
 		// Try to fetch SPUs out of critical section
-		const auto spu_list = get_spus(true);
+		const auto spu_list = get_spus(true, false);
+
+		if (!spu_list)
+		{
+			// Give up for now
+			std::this_thread::sleep_for(10ms);
+			passed_count++;
+			start = 0;
+			continue;
+		}
 
 		// Avoid using suspend_all when more than 2 threads known to be unsavable
 		u32 unsavable_threads = 0;
@@ -1500,7 +1529,7 @@ extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool reve
 
 		if (cpu_thread::suspend_all(nullptr, {}, [&]()
 		{
-			if (!get_spus(false))
+			if (!get_spus(false, true))
 			{
 				// Avoid locking IDM here because this is a critical section
 				return true;
@@ -1572,7 +1601,7 @@ extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool reve
 		return true;
 	}
 
-	for (auto& spu : *get_spus(true))
+	for (auto& spu : *get_spus(true, true))
 	{
 		if (spu->state.test_and_reset(cpu_flag::dbg_global_pause))
 		{
