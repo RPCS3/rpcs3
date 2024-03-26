@@ -268,7 +268,8 @@ public:
 	{
 		u64 all;
 		bf_t<s64, 0, 13> prio; // Thread priority (0..3071) (firs 12-bits)
-		bf_t<s64, 13, 51> order; // Thread enqueue order (last 52-bits)
+		bf_t<s64, 13, 50> order; // Thread enqueue order (last 52-bits)
+		bf_t<u64, 63, 1> preserve_bit; // Preserve value for savestates
 	};
 
 	atomic_t<ppu_prio_t> prio{};

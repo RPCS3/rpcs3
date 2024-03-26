@@ -2390,6 +2390,12 @@ void ppu_thread::serialize_common(utils::serial& ar)
 	}
 }
 
+struct save_lv2_tag
+{
+	atomic_t<bool> saved = false;
+	atomic_t<bool> loaded = false;
+};
+
 ppu_thread::ppu_thread(utils::serial& ar)
 	: cpu_thread(idm::last_id()) // last_id() is showed to constructor on serialization
 	, stack_size(ar)
@@ -2398,6 +2404,8 @@ ppu_thread::ppu_thread(utils::serial& ar)
 	, entry_func(std::bit_cast<ppu_func_opd_t, u64>(ar))
 	, is_interrupt_thread(ar)
 {
+	[[maybe_unused]] const s32 version = GET_SERIALIZATION_VERSION(ppu);
+
 	struct init_pushed
 	{
 		bool pushed = false;
@@ -2407,6 +2415,11 @@ ppu_thread::ppu_thread(utils::serial& ar)
 	call_history.data.resize(g_cfg.core.ppu_call_history ? call_history_max_size : 1);
 	syscall_history.data.resize(g_cfg.core.ppu_call_history ? syscall_history_max_size : 1);
 	syscall_history.count_debug_arguments = static_cast<u32>(g_cfg.core.ppu_call_history ? std::size(syscall_history.data[0].args) : 0);
+
+	if (version >= 2 && !g_fxo->get<save_lv2_tag>().loaded.exchange(true))
+	{
+		ar(lv2_obj::g_priority_order_tag);
+	}
 
 	serialize_common(ar);
 
@@ -2437,7 +2450,41 @@ ppu_thread::ppu_thread(utils::serial& ar)
 	case PPU_THREAD_STATUS_RUNNABLE:
 	case PPU_THREAD_STATUS_ONPROC:
 	{
-		lv2_obj::awake(this);
+		if (version >= 2)
+		{
+			const u32 order = ar.pop<u32>();
+
+			struct awake_pushed
+			{
+				bool pushed = false;
+				shared_mutex dummy;
+				std::map<u32, ppu_thread*> awake_ppus;
+			};
+
+			g_fxo->get<awake_pushed>().awake_ppus[order] = this;
+
+			if (!std::exchange(g_fxo->get<awake_pushed>().pushed, true))
+			{
+				Emu.PostponeInitCode([this]()
+				{
+					u32 prev = umax;
+
+					for (auto ppu : g_fxo->get<awake_pushed>().awake_ppus)
+					{
+						ensure(prev + 1 == ppu.first);
+						prev = ppu.first;
+						lv2_obj::awake(ppu.second);
+					}
+
+					g_fxo->get<awake_pushed>().awake_ppus.clear();
+				});
+			}
+		}
+		else
+		{
+			lv2_obj::awake(this);
+		}
+
 		[[fallthrough]];
 	}
 	case PPU_THREAD_STATUS_SLEEP:
@@ -2485,6 +2532,7 @@ ppu_thread::ppu_thread(utils::serial& ar)
 					const u32 op = vm::read32(ppu.cia);
 					const auto& table = g_fxo->get<ppu_interpreter_rt>();
 					ppu.loaded_from_savestate = true;
+					ppu.prio.raw().preserve_bit = 1;
 					table.decode(op)(ppu, {op}, vm::_ptr<u32>(ppu.cia), &ppu_ret);
 
 					ppu.optional_savestate_state->clear(); // Reset to writing state
@@ -2539,9 +2587,17 @@ void ppu_thread::save(utils::serial& ar)
 	}
 
 	ar(stack_size, stack_addr, _joiner, entry, is_interrupt_thread);
+
+	const bool is_null = ar.m_file_handler && ar.m_file_handler->is_null();
+
+	if (!is_null && !g_fxo->get<save_lv2_tag>().saved.exchange(true))
+	{
+		ar(lv2_obj::g_priority_order_tag);
+	}
+
 	serialize_common(ar);
 
-	ppu_thread_status status = lv2_obj::ppu_state(this, false);
+	auto [status, order] = lv2_obj::ppu_state(this, false);
 
 	if (status == PPU_THREAD_STATUS_SLEEP && cpu_flag::again - state)
 	{
@@ -2550,6 +2606,11 @@ void ppu_thread::save(utils::serial& ar)
 	}
 
 	ar(status);
+
+	if (status == PPU_THREAD_STATUS_RUNNABLE || status == PPU_THREAD_STATUS_ONPROC)
+	{
+		ar(order);
+	}
 
 	ar(*ppu_tname.load());
 }

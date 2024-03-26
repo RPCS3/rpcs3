@@ -239,6 +239,16 @@ public:
 
 		object->prio.atomic_op([order = ++g_priority_order_tag](std::common_type_t<decltype(std::declval<T>()->prio.load())>& prio)
 		{
+			if constexpr (requires { +std::declval<decltype(prio)>().preserve_bit; } )
+			{
+				if (prio.preserve_bit)
+				{
+					// Restoring state on load
+					prio.preserve_bit = 0;
+					return;
+				}
+			}
+
 			prio.order = order;
 		});
 	}
@@ -274,7 +284,7 @@ public:
 
 	static void make_scheduler_ready();
 
-	static ppu_thread_status ppu_state(ppu_thread* ppu, bool lock_idm = true, bool lock_lv2 = true);
+	static std::pair<ppu_thread_status, u32> ppu_state(ppu_thread* ppu, bool lock_idm = true, bool lock_lv2 = true);
 
 	static inline void append(cpu_thread* const thread)
 	{
