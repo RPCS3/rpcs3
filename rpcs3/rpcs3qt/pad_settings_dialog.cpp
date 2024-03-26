@@ -174,13 +174,13 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 	// Refresh Button
 	connect(ui->b_refresh, &QPushButton::clicked, this, &pad_settings_dialog::RefreshHandlers);
 
-	ui->chooseClass->addItem(tr("Standard (Pad)"), u32{CELL_PAD_PCLASS_TYPE_STANDARD});
-	ui->chooseClass->addItem(tr("Guitar"),         u32{CELL_PAD_PCLASS_TYPE_GUITAR});
-	ui->chooseClass->addItem(tr("Drum"),           u32{CELL_PAD_PCLASS_TYPE_DRUM});
-	ui->chooseClass->addItem(tr("DJ"),             u32{CELL_PAD_PCLASS_TYPE_DJ});
-	ui->chooseClass->addItem(tr("Dance Mat"),      u32{CELL_PAD_PCLASS_TYPE_DANCEMAT});
-	ui->chooseClass->addItem(tr("Navigation"),     u32{CELL_PAD_PCLASS_TYPE_NAVIGATION});
-	ui->chooseClass->addItem(tr("Skateboard"),     u32{CELL_PAD_PCLASS_TYPE_SKATEBOARD});
+	ui->chooseClass->addItem(tr("Standard (Pad)"),     u32{CELL_PAD_PCLASS_TYPE_STANDARD});
+	ui->chooseClass->addItem(tr("Guitar"),             u32{CELL_PAD_PCLASS_TYPE_GUITAR});
+	ui->chooseClass->addItem(tr("Drum"),               u32{CELL_PAD_PCLASS_TYPE_DRUM});
+	ui->chooseClass->addItem(tr("DJ"),                 u32{CELL_PAD_PCLASS_TYPE_DJ});
+	ui->chooseClass->addItem(tr("Dance Mat"),          u32{CELL_PAD_PCLASS_TYPE_DANCEMAT});
+	ui->chooseClass->addItem(tr("PS Move Navigation"), u32{CELL_PAD_PCLASS_TYPE_NAVIGATION});
+	ui->chooseClass->addItem(tr("Skateboard"),         u32{CELL_PAD_PCLASS_TYPE_SKATEBOARD});
 
 	connect(ui->chooseClass, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
 	{
