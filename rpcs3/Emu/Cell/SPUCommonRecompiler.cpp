@@ -4690,8 +4690,6 @@ struct spu_llvm
 		auto workers_ptr = m_workers.load();
 		auto& workers = *workers_ptr;
 
-		usz add_count = 65535;
-
 		while (thread_ctrl::state() != thread_state::aborting)
 		{
 			for (const auto& pair : registered.pop_all())
@@ -4722,7 +4720,6 @@ struct spu_llvm
 				// Interrupt profiler thread and put it to sleep
 				static_cast<void>(prof_mutex.reset());
 				thread_ctrl::wait_on(utils::bless<atomic_t<u32>>(&registered)[1], 0);
-				add_count = 65535; // Reset count
 				std::fill(notify_compile.begin(), notify_compile.end(), 0); // Reset notification flags
 				notify_compile_count = 0;
 				compile_pending = 0;
