@@ -157,9 +157,8 @@ struct CellMicInputStream
 
 struct CellMicInputDefinition
 {
-	// TODO: Data types
-	volatile u32   uiDevId;
-	CellMicInputStream  data;
+	be_t<u32> uiDevId;
+	CellMicInputStream data;
 	CellMicInputFormatI aux_format;
 	CellMicInputFormatI raw_format;
 	CellMicInputFormatI sig_format;
@@ -182,13 +181,13 @@ struct CellMicStatus
 // --- End of cell definitions ---
 
 
-template <usz S>
+template <usz Size>
 class simple_ringbuf
 {
 public:
 	simple_ringbuf()
 	{
-		m_container.resize(S);
+		m_container.resize(Size);
 	}
 
 	bool has_data() const
@@ -200,19 +199,19 @@ public:
 	{
 		ensure(buf);
 
-		u32 to_read = size > m_used ? m_used : size;
+		const u32 to_read = size > m_used ? m_used : size;
 		if (!to_read)
 			return 0;
 
-		u8* data     = m_container.data();
-		u32 new_tail = m_tail + to_read;
+		u8* data = m_container.data();
+		const u32 new_tail = m_tail + to_read;
 
-		if (new_tail >= S)
+		if (new_tail >= Size)
 		{
-			u32 first_chunk_size = S - m_tail;
+			const u32 first_chunk_size = Size - m_tail;
 			std::memcpy(buf, data + m_tail, first_chunk_size);
 			std::memcpy(buf + first_chunk_size, data, to_read - first_chunk_size);
-			m_tail = (new_tail - S);
+			m_tail = (new_tail - Size);
 		}
 		else
 		{
@@ -227,30 +226,32 @@ public:
 
 	void write_bytes(const u8* buf, const u32 size)
 	{
-		ensure(size <= S);
+		ensure(size <= Size);
 
-		if (u32 over_size = m_used + size; over_size > S)
+		const u32 over_size = m_used + size;
+
+		if (over_size > Size)
 		{
-			m_tail += (over_size - S);
-			if (m_tail > S)
-				m_tail -= S;
+			m_tail += (over_size - Size);
+			if (m_tail > Size)
+				m_tail -= Size;
 
-			m_used = S;
+			m_used = Size;
 		}
 		else
 		{
 			m_used = over_size;
 		}
 
-		u8* data     = m_container.data();
-		u32 new_head = m_head + size;
+		u8* data = m_container.data();
+		const u32 new_head = m_head + size;
 
-		if (new_head >= S)
+		if (new_head >= Size)
 		{
-			u32 first_chunk_size = S - m_head;
+			const u32 first_chunk_size = Size - m_head;
 			std::memcpy(data + m_head, buf, first_chunk_size);
 			std::memcpy(data, buf + first_chunk_size, size - first_chunk_size);
-			m_head = (new_head - S);
+			m_head = (new_head - Size);
 		}
 		else
 		{

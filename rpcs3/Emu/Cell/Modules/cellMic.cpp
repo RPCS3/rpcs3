@@ -1144,8 +1144,6 @@ error_code cellMicRemoveNotifyEventQueue(u64 key)
 
 error_code cell_mic_read(s32 dev_num, vm::ptr<void> data, s32 max_bytes, /*CellMicSignalType*/u32 type)
 {
-	// TODO: CELL_MICIN_ERROR_PARAM
-
 	auto& mic_thr = g_fxo->get<mic_thread>();
 	const std::lock_guard lock(mic_thr.mutex);
 	if (!mic_thr.init)
@@ -1159,16 +1157,19 @@ error_code cell_mic_read(s32 dev_num, vm::ptr<void> data, s32 max_bytes, /*CellM
 	if (!device.is_opened() || !(device.get_signal_types() & type))
 		return CELL_MICIN_ERROR_NOT_OPEN;
 
+	if (!data)
+		return not_an_error(0);
+
 	switch (type)
 	{
 	case CELLMIC_SIGTYPE_DSP: return not_an_error(device.read_dsp(vm::_ptr<u8>(data.addr()), max_bytes));
-	case CELLMIC_SIGTYPE_AUX: return CELL_OK; // TODO
+	case CELLMIC_SIGTYPE_AUX: return not_an_error(0); // TODO
 	case CELLMIC_SIGTYPE_RAW: return not_an_error(device.read_raw(vm::_ptr<u8>(data.addr()), max_bytes));
 	default:
 		fmt::throw_exception("Invalid CELLMIC_SIGTYPE %d", type);
 	}
 
-	return CELL_OK;
+	return not_an_error(0);
 }
 
 error_code cellMicReadRaw(s32 dev_num, vm::ptr<void> data, s32 max_bytes)
