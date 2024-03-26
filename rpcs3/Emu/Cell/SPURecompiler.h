@@ -40,7 +40,7 @@ public:
 	struct precompile_data_t
 	{
 		u32 vaddr;
-		std::basic_string<u32> inst_data;
+		std::vector<u32> inst_data;
 		std::vector<u32> funcs;
 	};
 
@@ -291,10 +291,10 @@ protected:
 	std::bitset<0x10000> m_use_rc;
 
 	// List of possible targets for the instruction (entry shouldn't exist for simple instructions)
-	std::unordered_map<u32, std::basic_string<u32>, value_hash<u32, 2>> m_targets;
+	std::unordered_map<u32, std::vector<u32>, value_hash<u32, 2>> m_targets;
 
 	// List of block predecessors
-	std::unordered_map<u32, std::basic_string<u32>, value_hash<u32, 2>> m_preds;
+	std::unordered_map<u32, std::vector<u32>, value_hash<u32, 2>> m_preds;
 
 	// List of function entry points and return points (set after BRSL, BRASL, BISL, BISLED)
 	std::bitset<0x10000> m_entry_info;
@@ -351,17 +351,17 @@ protected:
 		std::array<u32, s_reg_max> reg_origin, reg_origin_abs;
 
 		// All possible successor blocks
-		std::basic_string<u32> targets;
+		std::vector<u32> targets;
 
 		// All predeccessor blocks
-		std::basic_string<u32> preds;
+		std::vector<u32> preds;
 	};
 
 	// Sorted basic block info
 	std::map<u32, block_info> m_bbs;
 
 	// Sorted advanced block (chunk) list
-	std::basic_string<u32> m_chunks;
+	std::vector<u32> m_chunks;
 
 	// Function information
 	struct func_info
@@ -373,7 +373,7 @@ protected:
 		bool good = false;
 
 		// Call targets
-		std::basic_string<u32> calls;
+		std::vector<u32> calls;
 
 		// Register save info (stack offset)
 		std::array<u32, s_reg_max> reg_save_off{};
@@ -432,7 +432,7 @@ public:
 	static void old_interpreter(spu_thread&, void* ls, u8*);
 
 	// Get the function data at specified address
-	spu_program analyse(const be_t<u32>* ls, u32 entry_point, std::map<u32, std::basic_string<u32>>* out_target_list = nullptr);
+	spu_program analyse(const be_t<u32>* ls, u32 entry_point, std::map<u32, std::vector<u32>>* out_target_list = nullptr);
 
 	// Print analyser internal state
 	void dump(const spu_program& result, std::string& out);

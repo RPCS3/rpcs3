@@ -2,8 +2,7 @@
 #include "PPUAnalyser.h"
 
 #include "PPUOpcodes.h"
-#include "PPUModule.h"
-#include "Emu/system_config.h"
+#include "PPUThread.h"
 
 #include <unordered_set>
 #include "util/yaml.hpp"
@@ -530,7 +529,7 @@ namespace ppu_patterns
 	};
 }
 
-bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::basic_string<u32>& applied, const std::vector<u32>& exported_funcs, std::function<bool()> check_aborted)
+bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::vector<u32>& applied, const std::vector<u32>& exported_funcs, std::function<bool()> check_aborted)
 {
 	if (segs.empty())
 	{

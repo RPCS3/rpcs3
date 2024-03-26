@@ -8,7 +8,7 @@
 #include "Crypto/unself.h"
 #include "Loader/ELF.h"
 
-#include "Emu/Cell/PPUModule.h"
+#include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "Crypto/unedat.h"
 #include "Utilities/StrUtil.h"
@@ -23,7 +23,7 @@ extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, bool virtual
 extern void ppu_unload_prx(const lv2_prx& prx);
 extern bool ppu_initialize(const ppu_module&, bool check_only = false, u64 file_size = 0);
 extern void ppu_finalize(const ppu_module& info, bool force_mem_release = false);
-extern void ppu_manual_load_imports_exports(u32 imports_start, u32 imports_size, u32 exports_start, u32 exports_size, std::basic_string<bool>& loaded_flags);
+extern void ppu_manual_load_imports_exports(u32 imports_start, u32 imports_size, u32 exports_start, u32 exports_size, std::basic_string<char>& loaded_flags);
 
 LOG_CHANNEL(sys_prx);
 
@@ -327,7 +327,7 @@ std::shared_ptr<void> lv2_prx::load(utils::serial& ar)
 
 	if (seg_count)
 	{
-		std::basic_string<bool> loaded_flags, external_flags;
+		std::basic_string<char> loaded_flags, external_flags;
 
 		ar(loaded_flags, external_flags);
 
@@ -771,7 +771,7 @@ void lv2_prx::restore_exports()
 {
 	constexpr usz sizeof_export_data = 0x1C;
 
-	std::basic_string<bool> loaded_flags_empty;
+	std::basic_string<char> loaded_flags_empty;
 
 	for (u32 start = exports_start, i = 0; start < exports_end; i++, start += vm::read8(start) ? vm::read8(start) : sizeof_export_data)
 	{
@@ -791,7 +791,7 @@ void lv2_prx::unload_exports()
 		return;
 	}
 
-	std::basic_string<bool> merged = m_loaded_flags;
+	std::basic_string<char> merged = m_loaded_flags;
 
 	for (usz i = 0; i < merged.size(); i++)
 	{
@@ -848,7 +848,7 @@ error_code _sys_prx_register_module(ppu_thread& ppu, vm::cptr<char> name, vm::pt
 	{
 		if (Emu.IsVsh())
 		{
-			ppu_manual_load_imports_exports(info.lib_stub_ea.addr(), info.lib_stub_size, info.lib_entries_ea.addr(), info.lib_entries_size, *std::make_unique<std::basic_string<bool>>());
+			ppu_manual_load_imports_exports(info.lib_stub_ea.addr(), info.lib_stub_size, info.lib_entries_ea.addr(), info.lib_entries_size, *std::make_unique<std::basic_string<char>>());
 		}
 		else
 		{
@@ -884,7 +884,7 @@ error_code _sys_prx_register_library(ppu_thread& ppu, vm::ptr<void> library)
 	std::array<char, sizeof_lib> mem_copy{};
 	std::memcpy(mem_copy.data(), library.get_ptr(), sizeof_lib);
 
-	std::basic_string<bool> flags;
+	std::basic_string<char> flags;
 	ppu_manual_load_imports_exports(0, 0, library.addr(), sizeof_lib, flags);
 
 	if (flags.front())
@@ -897,7 +897,7 @@ error_code _sys_prx_register_library(ppu_thread& ppu, vm::ptr<void> library)
 				{
 					if (std::memcpy(vm::base(lib_addr), mem_copy.data(), sizeof_lib) == 0)
 					{
-						atomic_storage<bool>::release(prx.m_external_loaded_flags[index], true);
+						atomic_storage<char>::release(prx.m_external_loaded_flags[index], true);
 						return true;
 					}
 				}
