@@ -477,6 +477,7 @@ private:
 		bool enable_time_stretching = false;
 		bool dump_to_file = false;
 		AudioChannelCnt channels = AudioChannelCnt::STEREO;
+		audio_channel_layout channel_layout = audio_channel_layout::automatic;
 		audio_renderer renderer = audio_renderer::null;
 		audio_provider provider = audio_provider::none;
 		RsxaudioAvportIdx avport = RsxaudioAvportIdx::HDMI_0;
@@ -503,8 +504,8 @@ private:
 		RsxaudioAvportIdx avport_idx = RsxaudioAvportIdx::HDMI_0;
 		u8 mute_state : SYS_RSXAUDIO_AVPORT_CNT = 0b11111;
 
-		u8 input_ch_cnt : 4      = 2;
-		u8 output_ch_cnt : 4     = 2;
+		u8 input_ch_cnt          : 4 = 2;
+		u8 output_channel_layout : 4 = static_cast<u8>(audio_channel_layout::stereo);
 
 		bool ready : 1           = false;
 		bool convert_to_s16 : 1  = false;

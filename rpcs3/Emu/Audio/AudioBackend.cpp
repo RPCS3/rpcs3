@@ -33,7 +33,12 @@ u32 AudioBackend::get_sample_size() const
 
 u32 AudioBackend::get_channels() const
 {
-	return static_cast<std::underlying_type_t<decltype(m_channels)>>(m_channels);
+	return m_channels;
+}
+
+audio_channel_layout AudioBackend::get_channel_layout() const
+{
+	return m_layout;
 }
 
 bool AudioBackend::get_convert_to_s16() const
@@ -141,23 +146,63 @@ AudioChannelCnt AudioBackend::get_max_channel_count(u32 device_index)
 	return count;
 }
 
-AudioChannelCnt AudioBackend::convert_channel_count(u64 raw)
+u32 AudioBackend::default_layout_channel_count(audio_channel_layout layout)
 {
-	switch (raw)
+	switch (layout)
 	{
-	default:
-	case 8:
-		return AudioChannelCnt::SURROUND_7_1;
-	case 7:
-	case 6:
-		return AudioChannelCnt::SURROUND_5_1;
-	case 5:
-	case 4:
-	case 3:
-	case 2:
-	case 1:
-		return AudioChannelCnt::STEREO;
-	case 0:
+	case audio_channel_layout::mono: return 1;
+	case audio_channel_layout::stereo: return 2;
+	case audio_channel_layout::stereo_lfe: return 3;
+	case audio_channel_layout::quadraphonic: return 4;
+	case audio_channel_layout::quadraphonic_lfe: return 5;
+	case audio_channel_layout::surround_5_1: return 6;
+	case audio_channel_layout::surround_7_1: return 8;
+	default: fmt::throw_exception("Unsupported layout %d", static_cast<u32>(layout));
+	}
+}
+
+u32 AudioBackend::layout_channel_count(u32 channels, audio_channel_layout layout)
+{
+	if (channels == 0)
+	{
 		fmt::throw_exception("Unsupported channel count");
 	}
+
+	return std::min(channels, default_layout_channel_count(layout));
+}
+
+audio_channel_layout AudioBackend::default_layout(u32 channels)
+{
+	switch (channels)
+	{
+	case 1: return audio_channel_layout::mono;
+	case 2: return audio_channel_layout::stereo;
+	case 3: return audio_channel_layout::stereo_lfe;
+	case 4: return audio_channel_layout::quadraphonic;
+	case 5: return audio_channel_layout::quadraphonic_lfe;
+	case 6: return audio_channel_layout::surround_5_1;
+	case 7: return audio_channel_layout::surround_5_1;
+	case 8: return audio_channel_layout::surround_7_1;
+	default: return audio_channel_layout::stereo;
+	}
+}
+
+void AudioBackend::setup_channel_layout(u32 input_channel_count, u32 output_channel_count, audio_channel_layout layout, logs::channel& log)
+{
+	const u32 channels = std::min(input_channel_count, output_channel_count);
+
+	if (layout != audio_channel_layout::automatic && output_channel_count > input_channel_count)
+	{
+		log.warning("Mixing from %d to %d channels is not implemented. Falling back to automatic layout.", input_channel_count, output_channel_count);
+		layout = audio_channel_layout::automatic;
+	}
+
+	if (layout != audio_channel_layout::automatic && channels < default_layout_channel_count(layout))
+	{
+		log.warning("Can't use layout %s with %d channels. Falling back to automatic layout.", layout, channels);
+		layout = audio_channel_layout::automatic;
+	}
+
+	m_layout = layout == audio_channel_layout::automatic ? default_layout(channels) : layout;
+	m_channels = layout_channel_count(channels, m_layout);
 }
