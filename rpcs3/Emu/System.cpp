@@ -2759,6 +2759,11 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 
 	auto perform_kill = [read_counter, allow_autoexit, this, info = GetEmulationIdentifier()]()
 	{
+		if (m_emu_state_close_pending.exchange(true))
+		{
+			return;
+		}
+
 		bool read_sysutil_signal = false;
 
 		for (u32 i = 100; i < 140; i++)
@@ -2781,6 +2786,7 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 
 			if (static_cast<u64>(info) != m_stop_ctr)
 			{
+				m_emu_state_close_pending = false;
 				return;
 			}
 		}
@@ -2788,6 +2794,7 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 		// An inevitable attempt to terminate the *current* emulation course will be issued after 7s
 		CallFromMainThread([allow_autoexit, this]()
 		{
+			m_emu_state_close_pending = false;
 			Kill(allow_autoexit);
 		}, info);
 	};
@@ -2822,7 +2829,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 	{
 		if (!save_stage || !save_stage->prepared)
 		{
-			if (m_savestate_pending.exchange(true))
+			if (m_emu_state_close_pending.exchange(true))
 			{
 				return;
 			}
@@ -2840,7 +2847,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 						sys_log.error("Enabling SPU Savestates-Compatible Mode in Advanced tab may fix this.");
 					}
 
-					m_savestate_pending = false;
+					m_emu_state_close_pending = false;
 
 					CallFromMainThread([pause = std::move(pause_thread)]()
 					{
@@ -2859,7 +2866,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 						"\nYou need to close the game for it to take effect."
 						"\nIf you cannot close the game due to losing important progress, your best chance is to skip the current cutscenes if any are played and retry.");
 
-					m_savestate_pending = false;
+					m_emu_state_close_pending = false;
 
 					CallFromMainThread([pause = std::move(pause_thread)]()
 					{
@@ -2890,6 +2897,15 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 	{
 		return std::string();
 	};
+
+	if (save_stage && save_stage->prepared)
+	{
+		//
+	}
+	else if (m_emu_state_close_pending.exchange(true))
+	{
+		return;
+	}
 
 	if (system_state old_state = m_state.fetch_op([](system_state& state)
 	{
@@ -2922,7 +2938,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 		m_config_mode = cfg_mode::custom;
 		read_used_savestate_versions();
 		m_savestate_extension_flags1 = {};
-		m_savestate_pending = false;
+		m_emu_state_close_pending = false;
 
 		// Enable logging
 		rpcs3::utils::configure_logs(true);
@@ -3400,7 +3416,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 			m_ar.reset();
 			read_used_savestate_versions();
 			m_savestate_extension_flags1 = {};
-			m_savestate_pending = false;
+			m_emu_state_close_pending = false;
 
 			initialize_timebased_time(0, true);
 
