@@ -24,7 +24,7 @@ public:
 	bool Initialized() override;
 	bool Operational() override;
 
-	bool Open(std::string_view dev_id, AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt) override;
+	bool Open(std::string_view dev_id, AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt, audio_channel_layout layout) override;
 	void Close() override;
 
 	f64 GetCallbackFrameLen() override;

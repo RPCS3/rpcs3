@@ -96,7 +96,7 @@ bool CubebBackend::DefaultDeviceChanged()
 	return !device.handle || device.id != m_default_device;
 }
 
-bool CubebBackend::Open(std::string_view dev_id, AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt)
+bool CubebBackend::Open(std::string_view dev_id, AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt, audio_channel_layout layout)
 {
 	if (!Initialized())
 	{
@@ -118,7 +118,7 @@ bool CubebBackend::Open(std::string_view dev_id, AudioFreq freq, AudioSampleSize
 	{
 		if (use_default_device)
 		{
-			device = GetDefaultDeviceAlt(freq, sample_size, ch_cnt);
+			device = GetDefaultDeviceAlt(freq, sample_size, static_cast<u32>(ch_cnt));
 
 			if (!device.handle)
 			{
@@ -148,7 +148,9 @@ bool CubebBackend::Open(std::string_view dev_id, AudioFreq freq, AudioSampleSize
 
 	m_sampling_rate = freq;
 	m_sample_size = sample_size;
-	m_channels = static_cast<AudioChannelCnt>(std::min(static_cast<u32>(convert_channel_count(device.ch_cnt)), static_cast<u32>(ch_cnt)));
+
+	setup_channel_layout(static_cast<u32>(ch_cnt), device.ch_cnt, layout, Cubeb);
+
 	full_sample_size = get_channels() * get_sample_size();
 
 	cubeb_stream_params stream_param{};
@@ -157,14 +159,19 @@ bool CubebBackend::Open(std::string_view dev_id, AudioFreq freq, AudioSampleSize
 	stream_param.channels = get_channels();
 	stream_param.layout = [&]()
 	{
-		switch (m_channels)
+		switch (m_layout)
 		{
-		case AudioChannelCnt::STEREO:       return CUBEB_LAYOUT_STEREO;
-		case AudioChannelCnt::SURROUND_5_1: return CUBEB_LAYOUT_3F2_LFE;
-		case AudioChannelCnt::SURROUND_7_1: return CUBEB_LAYOUT_3F4_LFE;
-		default:
-			fmt::throw_exception("Invalid audio channel count");
+		case audio_channel_layout::automatic:        break;
+		case audio_channel_layout::mono:             return CUBEB_LAYOUT_MONO;
+		case audio_channel_layout::stereo:           return CUBEB_LAYOUT_STEREO;
+		case audio_channel_layout::stereo_lfe:       return CUBEB_LAYOUT_STEREO_LFE;
+		case audio_channel_layout::quadraphonic:     return CUBEB_LAYOUT_QUAD;
+		case audio_channel_layout::quadraphonic_lfe: return CUBEB_LAYOUT_QUAD_LFE;
+		case audio_channel_layout::surround_5_1:     return CUBEB_LAYOUT_3F2_LFE;
+		case audio_channel_layout::surround_7_1:     return CUBEB_LAYOUT_3F4_LFE;
 		}
+
+		fmt::throw_exception("Invalid audio layout %d", static_cast<u32>(m_layout));
 	}();
 	stream_param.prefs = m_dev_collection_cb_enabled && device.handle ? CUBEB_STREAM_PREF_DISABLE_DEVICE_SWITCHING : CUBEB_STREAM_PREF_NONE;
 
@@ -348,7 +355,7 @@ CubebBackend::device_handle CubebBackend::GetDevice(std::string_view dev_id)
 	return result;
 };
 
-CubebBackend::device_handle CubebBackend::GetDefaultDeviceAlt(AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt)
+CubebBackend::device_handle CubebBackend::GetDefaultDeviceAlt(AudioFreq freq, AudioSampleSize sample_size, u32 ch_cnt)
 {
 	Cubeb.notice("Starting alternative search for default device with freq=%d, sample_size=%d and ch_cnt=%d", static_cast<u32>(freq), static_cast<u32>(sample_size), static_cast<u32>(ch_cnt));
 

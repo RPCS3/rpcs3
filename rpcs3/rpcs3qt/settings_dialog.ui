@@ -1162,6 +1162,18 @@
              </widget>
             </item>
             <item>
+             <widget class="QGroupBox" name="gb_audio_channel_layout">
+              <property name="title">
+               <string>Audio Output Format</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_audio_channel_layout_layout">
+               <item>
+                <widget class="QComboBox" name="combo_audio_channel_layout"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
              <widget class="QGroupBox" name="gb_audio_provider">
               <property name="title">
                <string>Audio Provider</string>
