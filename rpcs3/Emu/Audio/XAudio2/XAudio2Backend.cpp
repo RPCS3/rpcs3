@@ -254,6 +254,8 @@ bool XAudio2Backend::Open(std::string_view dev_id, AudioFreq freq, AudioSampleSi
 		return false;
 	}
 
+	XAudio.notice("Channel count is %d", vd.InputChannels);
+
 	m_sampling_rate = freq;
 	m_sample_size = sample_size;
 	m_channels = static_cast<AudioChannelCnt>(std::min(static_cast<u32>(convert_channel_count(vd.InputChannels)), static_cast<u32>(ch_cnt)));

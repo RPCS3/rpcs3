@@ -81,6 +81,7 @@ void cell_audio_config::reset(bool backend_changed)
 	{
 		cb_frame_len = backend->GetCallbackFrameLen();
 		ch_cnt = backend->get_channels();
+		cellAudio.notice("Opened audio backend (sampling_rate=%d, sample_size=%d, channels=%d)", backend->get_sampling_rate(), backend->get_sample_size(), backend->get_channels());
 	}
 	else
 	{
