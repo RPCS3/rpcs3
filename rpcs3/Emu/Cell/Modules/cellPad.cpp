@@ -191,7 +191,6 @@ error_code cellPadInit(ppu_thread& ppu, u32 max_connect)
 	std::array<s32, CELL_MAX_PADS> statuses{};
 
 	const auto handler = pad::get_current_handler();
-
 	const auto& pads = handler->GetPads();
 
 	for (usz i = 0; i < statuses.size(); ++i)
@@ -255,16 +254,14 @@ error_code cellPadClearBuf(u32 port_no)
 	if (!config.max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
-	const auto handler = pad::get_current_handler();
-
 	if (port_no >= CELL_MAX_PADS)
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
-
-	const auto& pads = handler->GetPads();
 
 	if (port_no >= config.get_max_connect())
 		return CELL_PAD_ERROR_NO_DEVICE;
 
+	const auto handler = pad::get_current_handler();
+	const auto& pads = handler->GetPads();
 	const auto& pad = pads[port_no];
 
 	if (!config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
@@ -618,16 +615,14 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 	if (!config.max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
-	const auto handler = pad::get_current_handler();
-
 	if (port_no >= CELL_MAX_PADS || !data)
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
-
-	const auto& pads = handler->GetPads();
 
 	if (port_no >= config.get_max_connect())
 		return CELL_PAD_ERROR_NO_DEVICE;
 
+	const auto handler = pad::get_current_handler();
+	const auto& pads = handler->GetPads();
 	const auto& pad = pads[port_no];
 
 	if (!config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
@@ -648,11 +643,10 @@ error_code cellPadPeriphGetInfo(vm::ptr<CellPadPeriphInfo> info)
 	if (!config.max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
-	const auto handler = pad::get_current_handler();
-
 	if (!info)
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
+	const auto handler = pad::get_current_handler();
 	const PadInfo& rinfo = handler->GetInfo();
 
 	std::memset(info.get_ptr(), 0, sizeof(CellPadPeriphInfo));
@@ -703,17 +697,15 @@ error_code cellPadPeriphGetData(u32 port_no, vm::ptr<CellPadPeriphData> data)
 	if (!config.max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
-	const auto handler = pad::get_current_handler();
-
 	// port_no can only be 0-6 in this function
 	if (port_no >= CELL_PAD_MAX_PORT_NUM || !data)
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
-	const auto& pads = handler->GetPads();
-
 	if (port_no >= config.get_max_connect())
 		return CELL_PAD_ERROR_NO_DEVICE;
 
+	const auto handler = pad::get_current_handler();
+	const auto& pads = handler->GetPads();
 	const auto& pad = pads[port_no];
 
 	if (!config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
@@ -738,16 +730,14 @@ error_code cellPadGetRawData(u32 port_no, vm::ptr<CellPadData> data)
 	if (!config.max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
-	const auto handler = pad::get_current_handler();
-
 	if (port_no >= CELL_MAX_PADS || !data)
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
-
-	const auto& pads = handler->GetPads();
 
 	if (port_no >= config.get_max_connect())
 		return CELL_PAD_ERROR_NO_DEVICE;
 
+	const auto handler = pad::get_current_handler();
+	const auto& pads = handler->GetPads();
 	const auto& pad = pads[port_no];
 
 	if (!config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
@@ -793,8 +783,6 @@ error_code cellPadSetActDirect(u32 port_no, vm::ptr<CellPadActParam> param)
 	if (!config.max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
-	const auto handler = pad::get_current_handler();
-
 	if (port_no >= CELL_MAX_PADS || !param)
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
@@ -809,11 +797,11 @@ error_code cellPadSetActDirect(u32 port_no, vm::ptr<CellPadActParam> param)
 		}
 	}
 
-	const auto& pads = handler->GetPads();
-
 	if (port_no >= config.get_max_connect())
 		return CELL_PAD_ERROR_NO_DEVICE;
 
+	const auto handler = pad::get_current_handler();
+	const auto& pads = handler->GetPads();
 	const auto& pad = pads[port_no];
 
 	if (!config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
@@ -839,13 +827,12 @@ error_code cellPadGetInfo(vm::ptr<CellPadInfo> info)
 	if (!config.max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
-	const auto handler = pad::get_current_handler();
-
 	if (!info)
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
 	std::memset(info.get_ptr(), 0, sizeof(CellPadInfo));
 
+	const auto handler = pad::get_current_handler();
 	const PadInfo& rinfo = handler->GetInfo();
 	info->max_connect = config.max_connect;
 	info->system_info = rinfo.system_info;
@@ -888,13 +875,12 @@ error_code cellPadGetInfo2(vm::ptr<CellPadInfo2> info)
 	if (!config.max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
-	const auto handler = pad::get_current_handler();
-
 	if (!info)
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
 	std::memset(info.get_ptr(), 0, sizeof(CellPadInfo2));
 
+	const auto handler = pad::get_current_handler();
 	const PadInfo& rinfo = handler->GetInfo();
 	info->max_connect = config.get_max_connect(); // Here it is forcibly clamped
 	info->system_info = rinfo.system_info;
@@ -941,16 +927,14 @@ error_code cellPadGetCapabilityInfo(u32 port_no, vm::ptr<CellPadCapabilityInfo> 
 	if (!config.max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
-	const auto handler = pad::get_current_handler();
-
 	if (port_no >= CELL_MAX_PADS || !info)
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
-
-	const auto& pads = handler->GetPads();
 
 	if (port_no >= config.get_max_connect())
 		return CELL_PAD_ERROR_NO_DEVICE;
 
+	const auto handler = pad::get_current_handler();
+	const auto& pads = handler->GetPads();
 	const auto& pad = pads[port_no];
 
 	if (!config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
@@ -999,16 +983,14 @@ error_code cellPadInfoPressMode(u32 port_no)
 	if (!config.max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
-	const auto handler = pad::get_current_handler();
-
 	if (port_no >= CELL_MAX_PADS)
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
-
-	const auto& pads = handler->GetPads();
 
 	if (port_no >= config.get_max_connect())
 		return CELL_PAD_ERROR_NO_DEVICE;
 
+	const auto handler = pad::get_current_handler();
+	const auto& pads = handler->GetPads();
 	const auto& pad = pads[port_no];
 
 	if (!config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
@@ -1028,16 +1010,14 @@ error_code cellPadInfoSensorMode(u32 port_no)
 	if (!config.max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
-	const auto handler = pad::get_current_handler();
-
 	if (port_no >= CELL_MAX_PADS)
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
-
-	const auto& pads = handler->GetPads();
 
 	if (port_no >= config.get_max_connect())
 		return CELL_PAD_ERROR_NO_DEVICE;
 
+	const auto handler = pad::get_current_handler();
+	const auto& pads = handler->GetPads();
 	const auto& pad = pads[port_no];
 
 	if (!config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
@@ -1057,17 +1037,15 @@ error_code cellPadSetPressMode(u32 port_no, u32 mode)
 	if (!config.max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
-	const auto handler = pad::get_current_handler();
-
 	if (port_no >= CELL_PAD_MAX_PORT_NUM)
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
-
-	const auto& pads = handler->GetPads();
 
 	// CELL_PAD_ERROR_NO_DEVICE is not returned in this case.
 	if (port_no >= CELL_PAD_MAX_PORT_NUM)
 		return CELL_OK;
 
+	const auto handler = pad::get_current_handler();
+	const auto& pads = handler->GetPads();
 	const auto& pad = pads[port_no];
 
 	// TODO: find out if this is checked here or later or at all
@@ -1093,17 +1071,15 @@ error_code cellPadSetSensorMode(u32 port_no, u32 mode)
 	if (!config.max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
-	const auto handler = pad::get_current_handler();
-
 	if (port_no >= CELL_MAX_PADS)
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
-
-	const auto& pads = handler->GetPads();
 
 	// CELL_PAD_ERROR_NO_DEVICE is not returned in this case.
 	if (port_no >= CELL_PAD_MAX_PORT_NUM)
 		return CELL_OK;
 
+	const auto handler = pad::get_current_handler();
+	const auto& pads = handler->GetPads();
 	const auto& pad = pads[port_no];
 
 	// TODO: find out if this is checked here or later or at all
