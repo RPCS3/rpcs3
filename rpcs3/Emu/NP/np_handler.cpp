@@ -26,6 +26,7 @@
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #endif
 #include <sys/socket.h>
+#include <sys/ioctl.h>
 #include <netinet/in.h>
 #include <net/if.h>
 #include <arpa/inet.h>
