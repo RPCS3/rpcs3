@@ -100,6 +100,11 @@ void cellPad_NotifyStateChange(usz index, u64 /*state*/, bool locked)
 	const auto& pads = handler->GetPads();
 	const auto& pad = pads[index];
 
+	if (pad->is_fake_move)
+	{
+		return;
+	}
+
 	pad_data_internal& reported_info = info->reported_info[index];
 	const u32 old_status = reported_info.port_status;
 
@@ -193,7 +198,7 @@ error_code cellPadInit(ppu_thread& ppu, u32 max_connect)
 
 	for (usz i = 0; i < config.get_max_connect(); ++i)
 	{
-		if (pads[i]->m_port_status & CELL_PAD_STATUS_CONNECTED)
+		if (!pads[i]->is_fake_move && (pads[i]->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		{
 			send_sys_io_connect_event(i, CELL_PAD_STATUS_CONNECTED);
 		}
@@ -259,7 +264,7 @@ error_code cellPadClearBuf(u32 port_no)
 	const auto& pads = handler->GetPads();
 	const auto& pad = pads[port_no];
 
-	if (!config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (pad->is_fake_move || !config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	clear_pad_buffer(pad);
@@ -620,7 +625,7 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 	const auto& pads = handler->GetPads();
 	const auto& pad = pads[port_no];
 
-	if (!config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (pad->is_fake_move || !config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	pad_get_data(port_no, data.get_ptr());
@@ -700,7 +705,7 @@ error_code cellPadPeriphGetData(u32 port_no, vm::ptr<CellPadPeriphData> data)
 	const auto& pads = handler->GetPads();
 	const auto& pad = pads[port_no];
 
-	if (!config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (pad->is_fake_move || !config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	pad_get_data(port_no, &data->cellpad_data, true);
@@ -732,7 +737,7 @@ error_code cellPadGetRawData(u32 port_no, vm::ptr<CellPadData> data)
 	const auto& pads = handler->GetPads();
 	const auto& pad = pads[port_no];
 
-	if (!config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (pad->is_fake_move || !config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	// ?
@@ -796,7 +801,7 @@ error_code cellPadSetActDirect(u32 port_no, vm::ptr<CellPadActParam> param)
 	const auto& pads = handler->GetPads();
 	const auto& pad = pads[port_no];
 
-	if (!config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (pad->is_fake_move || !config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	// TODO: find out if this is checked here or later or at all
@@ -923,7 +928,7 @@ error_code cellPadGetCapabilityInfo(u32 port_no, vm::ptr<CellPadCapabilityInfo> 
 	const auto& pads = handler->GetPads();
 	const auto& pad = pads[port_no];
 
-	if (!config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (pad->is_fake_move || !config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	// Should return the same as device capability mask, psl1ght has it backwards in pad->h
@@ -979,7 +984,7 @@ error_code cellPadInfoPressMode(u32 port_no)
 	const auto& pads = handler->GetPads();
 	const auto& pad = pads[port_no];
 
-	if (!config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (pad->is_fake_move || !config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	return not_an_error((pad->m_device_capability & CELL_PAD_CAPABILITY_PRESS_MODE) ? 1 : 0);
@@ -1006,7 +1011,7 @@ error_code cellPadInfoSensorMode(u32 port_no)
 	const auto& pads = handler->GetPads();
 	const auto& pad = pads[port_no];
 
-	if (!config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (pad->is_fake_move || !config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	return not_an_error((pad->m_device_capability & CELL_PAD_CAPABILITY_SENSOR_MODE) ? 1 : 0);
