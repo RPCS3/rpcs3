@@ -619,11 +619,6 @@ void compressed_serialization_file_handler::stream_data_prepare_thread_op()
 			if (data.empty())
 			{
 				// Abort is requested, flush data and exit
-				if (!m_stream_data.empty())
-				{
-					stream.m_queued_data_to_write.push(std::move(m_stream_data));
-				}
-
 				stream.m_queued_data_to_write.push(std::vector<u8>());
 				return;
 			}
@@ -665,11 +660,6 @@ void compressed_serialization_file_handler::stream_data_prepare_thread_op()
 				return;
 			}
 
-			if (!buffer_offset)
-			{
-				continue;
-			}
-
 			// Forward for file write
 			const usz queued_size = data.size();
 
@@ -685,6 +675,16 @@ void compressed_serialization_file_handler::stream_data_prepare_thread_op()
 
 			// Ensure wait bit state has not changed by the update
 			ensure(~((new_val - size_diff) ^ new_val) & pending_data_wait_bit);
+
+			if (!buffer_offset)
+			{
+				if (m_pending_signal)
+				{
+					m_pending_bytes.notify_all();
+				}
+
+				continue;
+			}
 
 			m_stream_data.resize(buffer_offset);
 			stream.m_queued_data_to_write.push(std::move(m_stream_data));

@@ -21,7 +21,7 @@ struct hle_locks_t
 		finalized = -2,
 	};
 
-	void lock();
+	[[noreturn]] void lock();
 	bool try_lock();
 	void unlock();
 	bool try_finalize(std::function<bool()> test);
