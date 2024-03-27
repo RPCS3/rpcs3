@@ -45,18 +45,27 @@ namespace rsx
 
 		void display_manager::lock()
 		{
-			m_list_mutex.lock_shared();
+			m_list_mutex.lock();
 		}
 
 		void display_manager::unlock()
 		{
-			m_list_mutex.unlock_shared();
-
 			if (m_pending_removals_count > 0)
 			{
-				std::lock_guard lock(m_list_mutex);
 				cleanup_internal();
 			}
+
+			m_list_mutex.unlock();
+		}
+
+		void display_manager::lock_shared()
+		{
+			m_list_mutex.lock_shared();
+		}
+
+		void display_manager::unlock_shared()
+		{
+			m_list_mutex.unlock_shared();
 		}
 
 		std::shared_ptr<overlay> display_manager::get(u32 uid)
