@@ -342,7 +342,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			}
 
 			gl::screen.bind();
-			m_video_output_pass.run(cmd, areau(aspect_ratio), images.map(FN(x->id())), gamma, limited_range, avconfig.stereo_mode, filter);
+			m_video_output_pass.run(cmd, areau(aspect_ratio), images.map(FN(x ? x->id() : GL_NONE)), gamma, limited_range, avconfig.stereo_mode, filter);
 		}
 	}
 
