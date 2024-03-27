@@ -1638,7 +1638,7 @@ error_code cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<Ce
 
 	if (!gem.is_controller_ready(gem_num))
 	{
-		return CELL_GEM_NOT_CONNECTED;
+		return not_an_error(CELL_GEM_NOT_CONNECTED);
 	}
 
 	// TODO: Get the gem state at the specified time
