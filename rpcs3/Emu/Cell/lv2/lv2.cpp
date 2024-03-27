@@ -1446,16 +1446,28 @@ bool lv2_obj::sleep_unlocked(cpu_thread& thread, u64 timeout, u64 current_time)
 
 	auto on_to_sleep_update = [&]()
 	{
-		std::string out = fmt::format("Threads (%d):", g_to_sleep.size());
-		for (auto thread : g_to_sleep)
+		if (g_to_sleep.size() > 5u)
 		{
-			fmt::append(out, " 0x%x,", thread->id);
+			ppu_log.warning("Threads (%d)", g_to_sleep.size());
 		}
-
-		ppu_log.warning("%s", out);
-
-		if (g_to_sleep.empty())
+		else if (!g_to_sleep.empty())
 		{
+			// In case there is a deadlock (PPU threads not sleeping)
+			// Print-out their IDs for further inspection (focus at 5 at max for now to avoid log spam)
+			std::string out = fmt::format("Threads (%d):", g_to_sleep.size());
+			for (auto thread : g_to_sleep)
+			{
+				fmt::append(out, " 0x%x,", thread->id);
+			}
+
+			out.resize(out.size() - 1);
+
+			ppu_log.warning("%s", out);
+		}
+		else
+		{
+			ppu_log.warning("Final Thread");
+
 			// All threads are ready, wake threads
 			Emu.CallFromMainThread([]
 			{
