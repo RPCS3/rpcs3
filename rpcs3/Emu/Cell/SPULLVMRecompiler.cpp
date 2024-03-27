@@ -1050,7 +1050,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		m_ir->SetInsertPoint(check);
 		update_pc(addr);
 
-		if (may_be_unsafe_for_savestate && std::none_of(std::begin(m_block->phi), std::end(m_block->phi), FN(!!x)))
+		if (may_be_unsafe_for_savestate && m_block && m_block->bb->preds.empty())
 		{
 			may_be_unsafe_for_savestate = false;
 		}
@@ -1904,8 +1904,10 @@ public:
 									auto si = llvm::cast<StoreInst>(m_ir->Insert(bs->clone()));
 									if (b2->store[i] == nullptr)
 									{
+										// Protect against backwards ordering now
 										b2->store[i] = si;
 										b2->store_context_last_id[i] = 0;
+										b2->store_context_first_id[i] = b2->store_context_ctr[i] + 1;
 
 										if (!std::count(block_q.begin() + bi, block_q.end(), b2))
 										{
