@@ -171,7 +171,7 @@ void cpu_translator::initialize(llvm::LLVMContext& context, llvm::ExecutionEngin
 		cpu == "tigerlake" ||
 		cpu == "rocketlake" ||
 		cpu == "sapphirerapids" ||
-		(cpu.startswith("znver") && cpu != "znver1" && cpu != "znver2" && cpu != "znver3"))
+		(cpu.starts_with("znver") && cpu != "znver1" && cpu != "znver2" && cpu != "znver3"))
 	{
 		m_use_avx = true;
 		m_use_fma = true;

@@ -148,7 +148,7 @@ if(WIN32)
         Audio/XAudio2/XAudio2Backend.cpp
         Audio/XAudio2/xaudio2_enumerator.cpp
     )
-    target_compile_definitions(rpcs3_emu PRIVATE UNICODE _UNICODE _WIN32_WINNT=0x0602)
+    target_compile_definitions(rpcs3_emu PRIVATE UNICODE _UNICODE _WIN32_WINNT=0x0A00)
 endif()
 
 target_link_libraries(rpcs3_emu

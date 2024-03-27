@@ -15,5 +15,7 @@ else()
 	target_include_directories(3rdparty_zlib INTERFACE zlib ${CMAKE_CURRENT_BINARY_DIR}/zlib)
 	target_compile_definitions(3rdparty_zlib INTERFACE -DZLIB_CONST=1)
 
-	set(ZLIB_ROOT ${CMAKE_CURRENT_BINARY_DIR}/zlib PARENT_SCOPE)
+	if(NOT MSVC)
+		set(ZLIB_ROOT ${CMAKE_CURRENT_BINARY_DIR}/zlib PARENT_SCOPE)
+	endif()
 endif()
