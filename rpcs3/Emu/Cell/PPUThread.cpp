@@ -3376,25 +3376,29 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 			//auto& cline_data = vm::_ref<spu_rdata_t>(addr);
 
 			data += 0;
-			rsx::reservation_lock rsx_lock(addr, 128);
-
-			auto& super_data = *vm::get_super_ptr<spu_rdata_t>(addr);
-			const bool success = [&]()
+			auto range_lock = vm::alloc_range_lock();
 			{
-				// Full lock (heavyweight)
-				// TODO: vm::check_addr
-				vm::writer_lock lock(addr);
+				rsx::reservation_lock rsx_lock(addr, 128);
 
-				if (cmp_rdata(ppu.rdata, super_data))
+				auto& super_data = *vm::get_super_ptr<spu_rdata_t>(addr);
+				const bool success = [&]()
 				{
-					data.release(new_data);
-					res += 64;
-					return true;
-				}
+					// Full lock (heavyweight)
+					// TODO: vm::check_addr
+					vm::writer_lock lock(addr, range_lock);
 
-				res -= 64;
-				return false;
-			}();
+					if (cmp_rdata(ppu.rdata, super_data))
+					{
+						data.release(new_data);
+						res += 64;
+						return true;
+					}
+
+					res -= 64;
+					return false;
+				}();
+			}
+			vm::free_range_lock(range_lock);
 
 			return success;
 		}
