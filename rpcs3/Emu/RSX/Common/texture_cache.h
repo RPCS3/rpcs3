@@ -61,6 +61,7 @@ namespace rsx
 			std::vector<section_storage_type*> sections_to_exclude; // These sections are do be excluded from protection manipulation (subtracted from other sections)
 			u32 num_flushable = 0;
 			u32 num_excluded = 0;  // Sections-to-exclude + sections that would have been excluded but are false positives
+			u32 num_discarded = 0;
 			u64 cache_tag = 0;
 
 			address_range fault_range;
@@ -951,6 +952,7 @@ namespace rsx
 							// Discard - this section won't be needed any more
 							tex.discard(/* set_dirty */ true);
 							result.invalidate_samplers = true;
+							result.num_discarded++;
 						}
 						else if (g_cfg.video.strict_texture_flushing && tex.is_flushable())
 						{
@@ -987,6 +989,7 @@ namespace rsx
 #endif
 					return result;
 				}
+
 				AUDIT(fault_range.inside(invalidate_range));
 			}
 
@@ -1068,6 +1071,7 @@ namespace rsx
 							// No need to waste resources on hashed section, just discard immediately
 							tex.discard(true);
 							result.invalidate_samplers = true;
+							result.num_discarded++;
 						}
 
 						continue;
@@ -1075,7 +1079,6 @@ namespace rsx
 
 					fmt::throw_exception("Unreachable");
 				}
-
 
 				result.violation_handled = true;
 #ifdef TEXTURE_CACHE_DEBUG
@@ -1112,7 +1115,8 @@ namespace rsx
 				else
 				{
 					// This is a read and all overlapping sections were RO and were excluded (except for cause == superseded_by_fbo)
-					AUDIT(cause.skip_fbos() || (cause.is_read() && result.num_excluded > 0));
+					// Can also happen when we have hash strat in use, since we "unlock" sections by just discarding
+					AUDIT(cause.skip_fbos() || (cause.is_read() && result.num_excluded > 0) || result.num_discarded > 0);
 
 					// We did not handle this violation
 					result.clear_sections();
