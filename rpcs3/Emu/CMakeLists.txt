@@ -502,6 +502,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Program/GLSLCommon.cpp
     RSX/Program/program_util.cpp
     RSX/Program/ProgramStateCache.cpp
+    RSX/Program/SPIRVCommon.cpp
     RSX/Program/VertexProgramDecompiler.cpp
     RSX/Capture/rsx_capture.cpp
     RSX/Capture/rsx_replay.cpp
