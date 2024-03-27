@@ -150,11 +150,17 @@ namespace rsx
 				return {};
 			}
 
-			// Lock for read-only access (BasicLockable)
+			// Lock for exclusive access (BasicLockable)
 			void lock();
 
-			// Release read-only lock (BasicLockable). May perform internal cleanup before returning
+			// Release lock (BasicLockable). May perform internal cleanup before returning
 			void unlock();
+
+			// Lock for shared access (reader-lock)
+			void lock_shared();
+
+			// Unlock for shared access (reader-lock)
+			void unlock_shared();
 
 			// Enable input thread attach to the specified interface
 			void attach_thread_input(
