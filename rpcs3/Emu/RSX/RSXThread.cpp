@@ -3532,15 +3532,18 @@ namespace rsx
 	// NOTE: m_mtx_task lock must be acquired before calling this method
 	void thread::handle_invalidated_memory_range()
 	{
+		AUDIT(!m_mtx_task.is_free());
 		m_eng_interrupt_mask.clear(rsx::memory_config_interrupt);
 
 		if (!m_invalidated_memory_range.valid())
+		{
 			return;
+		}
 
 		if (is_stopped())
 		{
+			// We only need to commit host-resident memory to the guest in case of savestates or captures.
 			on_invalidate_memory_range(m_invalidated_memory_range, rsx::invalidation_cause::read);
-			on_invalidate_memory_range(m_invalidated_memory_range, rsx::invalidation_cause::write);
 		}
 
 		on_invalidate_memory_range(m_invalidated_memory_range, rsx::invalidation_cause::unmap);
