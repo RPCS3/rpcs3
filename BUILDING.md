@@ -15,6 +15,8 @@ Other instructions may be found [here](https://wiki.rpcs3.net/index.php?title=Bu
 
 **Either add the** `QTDIR` **environment variable, e.g.** `<QtInstallFolder>\6.6.3\msvc2019_64\` **, or use the [Visual Studio Qt Plugin](https://marketplace.visualstudio.com/items?itemName=TheQtCompany.QtVisualStudioTools2019)**
 
+**NOTE: If you have issues with the Qt plugin, you may want to uninstall the Qt Plugin and install the [Legacy Qt Plugin](https://marketplace.visualstudio.com/items?itemName=TheQtCompany.LEGACYQtVisualStudioTools2019) instead.**
+
 ### Linux
 
 These are the essentials tools to build RPCS3 on Linux. Some of them can be installed through your favorite package manager.
@@ -97,8 +99,8 @@ git submodule update --init
 
 1) Go to `Extensions->Qt VS Tools->Qt Versions`.
 2) Add the path to your Qt installation with compiler e.g. `<QtInstallFolder>\6.6.3\msvc2019_64`, version will fill in automatically.
-3) Go to `Extensions->Qt VS Tools->Options->Legacy Project Format`.
-4) Set `Build: Run pre-build setup` to `true`.
+3) Go to `Extensions->Qt VS Tools->Options->Legacy Project Format`. (Only available in the legacy Qt plugin)
+4) Set `Build: Run pre-build setup` to `true`. (Only available in the legacy Qt plugin)
 
 #### Building the projects
 
