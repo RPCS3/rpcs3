@@ -2421,6 +2421,14 @@ ppu_thread::ppu_thread(utils::serial& ar)
 		ar(lv2_obj::g_priority_order_tag);
 	}
 
+	if (version >= 3)
+	{
+		// Function and module for HLE function relocation
+		// TODO: Use it
+		ar.pop<std::string>();
+		ar.pop<std::string>();
+	}
+
 	serialize_common(ar);
 
 	// Restore jm_mask
@@ -2593,6 +2601,17 @@ void ppu_thread::save(utils::serial& ar)
 	if (!is_null && !g_fxo->get<save_lv2_tag>().saved.exchange(true))
 	{
 		ar(lv2_obj::g_priority_order_tag);
+	}
+
+	if (current_module && current_module[0])
+	{
+		ar(std::string{current_module});
+		ar(std::string{last_function});
+	}
+	else
+	{
+		ar(std::string{});
+		ar(std::string{});
 	}
 
 	serialize_common(ar);
