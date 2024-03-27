@@ -910,6 +910,7 @@ namespace rsx
 				}
 				else if (perf_overlay)
 				{
+					std::lock_guard lock(*manager); // Force lock. remove does not guarantee an internal lock
 					manager->remove<rsx::overlays::perf_metrics_overlay>();
 				}
 			}

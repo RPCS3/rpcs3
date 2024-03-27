@@ -59,6 +59,7 @@ namespace rsx
 				}
 				else if (overlay)
 				{
+					std::lock_guard lock(*manager); // Force lock. remove does not guarantee an internal lock
 					manager->remove<rsx::overlays::debug_overlay>();
 				}
 			}
