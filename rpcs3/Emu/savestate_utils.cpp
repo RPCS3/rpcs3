@@ -42,7 +42,7 @@ static std::array<serial_ver_t, 26> s_serial_versions;
 	}
 
 SERIALIZATION_VER(global_version, 0,                            16) // For stuff not listed here
-SERIALIZATION_VER(ppu, 1,                                       1, 2/*PPU sleep order*/)
+SERIALIZATION_VER(ppu, 1,                                       1, 2/*PPU sleep order*/, 3/*PPU FNID and module*/)
 SERIALIZATION_VER(spu, 2,                                       1)
 SERIALIZATION_VER(lv2_sync, 3,                                  1)
 SERIALIZATION_VER(lv2_vm, 4,                                    1)
@@ -340,3 +340,74 @@ extern u16 serial_breathe_and_tag(utils::serial& ar, std::string_view name, bool
 {
 	return ::stx::serial_breathe_and_tag(ar, name, tag_bit);
 }
+
+[[noreturn]] void hle_locks_t::lock()
+{
+	// Unreachable
+	ensure(false);
+}
+
+bool hle_locks_t::try_lock()
+{
+	while (true)
+	{
+		auto [old, success] = lock_val.fetch_op([](s64& value)
+		{
+			if (value >= 0)
+			{
+				value++;
+				return true;
+			}
+
+			return false;
+		});
+
+		if (success)
+		{
+			return true;
+		}
+
+		if (old == finalized)
+		{
+			break;
+		}
+
+		lock_val.wait(old);
+	}
+
+	return false;
+}
+
+void hle_locks_t::unlock()
+{
+	lock_val--;
+}
+
+bool hle_locks_t::try_finalize(std::function<bool()> test)
+{
+	if (!test())
+	{
+		return false;
+	}
+
+	if (!lock_val.compare_and_swap_test(0, waiting_for_evaluation))
+	{
+		return false;
+	}
+
+	if (!test())
+	{
+		// Failed
+		ensure(lock_val.compare_and_swap_test(waiting_for_evaluation, 0));
+		return false;
+	}
+
+	ensure(lock_val.compare_and_swap_test(waiting_for_evaluation, finalized));
+
+	// Sanity check when debugging (the result is not expected to change after finalization)
+	//ensure(test());
+
+	lock_val.notify_all();
+	return true;
+}
+

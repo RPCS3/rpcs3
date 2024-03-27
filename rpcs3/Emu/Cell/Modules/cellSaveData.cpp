@@ -3,6 +3,7 @@
 #include "Emu/VFS.h"
 #include "Emu/IdManager.h"
 #include "Emu/localized_string.h"
+#include "Emu/savestate_utils.hpp"
 #include "Emu/Cell/lv2/sys_fs.h"
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/lv2/sys_process.h"
@@ -272,6 +273,14 @@ static std::vector<SaveDataEntry> get_save_entries(const std::string& base_dir, 
 
 static error_code select_and_delete(ppu_thread& ppu)
 {
+	std::unique_lock hle_lock(g_fxo->get<hle_locks_t>(), std::try_to_lock);
+
+	if (!hle_lock)
+	{
+		ppu.state += cpu_flag::again;
+		return {};
+	}
+
 	std::unique_lock lock(g_fxo->get<savedata_manager>().mutex, std::try_to_lock);
 
 	if (!lock)
@@ -697,6 +706,14 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		funcFile, container, unk_op_flags, userdata, userId, funcDone))
 	{
 		return {CELL_SAVEDATA_ERROR_PARAM, " (error %d)", ecode};
+	}
+
+	std::unique_lock hle_lock(g_fxo->get<hle_locks_t>(), std::try_to_lock);
+
+	if (!hle_lock)
+	{
+		ppu.state += cpu_flag::again;
+		return {};
 	}
 
 	std::unique_lock lock(g_fxo->get<savedata_manager>().mutex, std::try_to_lock);

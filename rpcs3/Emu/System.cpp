@@ -2819,7 +2819,7 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 	}
 }
 
-extern bool try_lock_vdec_context_creation();
+extern bool check_if_vdec_contexts_exist();
 extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool revert_lock = false);
 
 void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_stage)
@@ -2861,14 +2861,35 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 					return;
 				}
 
-				if (!IsStopped() && !try_lock_vdec_context_creation())
+				bool savedata_error = false;
+				bool vdec_error = false;
+
+				if (!g_fxo->get<hle_locks_t>().try_finalize([&]()
 				{
+					// List of conditions required for emulation to save properly
+					vdec_error = check_if_vdec_contexts_exist();
+					return !vdec_error;
+				}))
+				{
+					// Unlock SPUs
 					try_lock_spu_threads_in_a_state_compatible_with_savestates(true);
 
-					sys_log.error("Failed to savestate: HLE VDEC (video decoder) context(s) exist."
-						"\nLLE libvdec.sprx by selecting it in Advanced tab -> Firmware Libraries."
-						"\nYou need to close the game for it to take effect."
-						"\nIf you cannot close the game due to losing important progress, your best chance is to skip the current cutscenes if any are played and retry.");
+					savedata_error = !vdec_error; // For now it is implied a savedata error
+
+					if (vdec_error)
+					{
+						sys_log.error("Failed to savestate: HLE VDEC (video decoder) context(s) exist."
+							"\nLLE libvdec.sprx by selecting it in Advanced tab -> Firmware Libraries."
+							"\nYou need to close the game for it to take effect."
+							"\nIf you cannot close the game due to losing important progress, your best chance is to skip the current cutscenes if any are played and retry.");
+					}
+
+					if (savedata_error)
+					{
+						sys_log.error("Failed to savestate: Savedata operation is active."
+							"\nYour best chance is to wait for the current game saving operation to finish and retry."
+							"\nThe game is probably displaying a saving cicrle or other gesture to indicate that it is saving.");
+					}
 
 					m_emu_state_close_pending = false;
 
