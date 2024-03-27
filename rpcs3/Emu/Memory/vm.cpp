@@ -473,13 +473,13 @@ namespace vm
 			}
 		}
 
-		bool to_prepare_memory = addr >= 0x10000;
+		bool to_prepare_memory = true;
 
 		for (u64 i = 0;; i++)
 		{
 			auto& bits = get_range_lock_bits(true);
 
-			if (!range_lock || addr < 0x10000)
+			if (!range_lock)
 			{
 				if (!bits && bits.compare_and_swap_test(0, u64{umax}))
 				{
@@ -521,7 +521,7 @@ namespace vm
 			}
 		}
 
-		if (addr >= 0x10000)
+		if (range_lock)
 		{
 			perf_meter<"SUSPEND"_u64> perf0;
 
