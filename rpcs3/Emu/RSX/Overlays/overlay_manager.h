@@ -24,8 +24,9 @@ namespace rsx
 			std::vector<std::shared_ptr<overlay>> m_dirty_list;
 
 			shared_mutex m_list_mutex;
-			std::vector<u32> m_uids_to_remove;
-			std::vector<u32> m_type_ids_to_remove;
+			lf_queue<u32> m_uids_to_remove;
+			lf_queue<u32> m_type_ids_to_remove;
+			atomic_t<u32> m_pending_removals_count = 0;
 
 			bool remove_type(u32 type_id);
 
@@ -92,11 +93,12 @@ namespace rsx
 				{
 					remove_type(type_id);
 					m_list_mutex.unlock();
+					return;
 				}
-				else
-				{
-					m_type_ids_to_remove.push_back(type_id);
-				}
+
+				// Enqueue
+				m_type_ids_to_remove.push(type_id);
+				m_pending_removals_count++;
 			}
 
 			// True if any visible elements to draw exist

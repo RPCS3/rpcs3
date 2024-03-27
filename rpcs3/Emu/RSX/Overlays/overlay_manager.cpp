@@ -52,7 +52,7 @@ namespace rsx
 		{
 			m_list_mutex.unlock_shared();
 
-			if (!m_uids_to_remove.empty() || !m_type_ids_to_remove.empty())
+			if (m_pending_removals_count > 0)
 			{
 				std::lock_guard lock(m_list_mutex);
 				cleanup_internal();
@@ -78,18 +78,19 @@ namespace rsx
 			{
 				remove_uid(uid);
 				m_list_mutex.unlock();
+				return;
 			}
-			else
-			{
-				m_uids_to_remove.push_back(uid);
-			}
+
+			// Enqueue
+			m_uids_to_remove.push(uid);
+			m_pending_removals_count++;
 		}
 
 		void display_manager::dispose(const std::vector<u32>& uids)
 		{
 			std::lock_guard lock(m_list_mutex);
 
-			if (!m_uids_to_remove.empty() || !m_type_ids_to_remove.empty())
+			if (m_pending_removals_count > 0)
 			{
 				cleanup_internal();
 			}
@@ -144,18 +145,17 @@ namespace rsx
 
 		void display_manager::cleanup_internal()
 		{
-			for (const auto& uid : m_uids_to_remove)
+			for (auto&& uid : m_uids_to_remove.pop_all())
 			{
 				remove_uid(uid);
+				m_pending_removals_count--;
 			}
 
-			for (const auto& type_id : m_type_ids_to_remove)
+			for (auto&& type_id : m_type_ids_to_remove.pop_all())
 			{
 				remove_type(type_id);
+				m_pending_removals_count--;
 			}
-
-			m_uids_to_remove.clear();
-			m_type_ids_to_remove.clear();
 		}
 
 		void display_manager::on_overlay_activated(const std::shared_ptr<overlay>& /*item*/)
