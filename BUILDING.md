@@ -5,7 +5,7 @@ Other instructions may be found [here](https://wiki.rpcs3.net/index.php?title=Bu
 
 ## Setup your environment
 
-### Windows 7 or later
+### Windows 10 or later
 
 * [CMake 3.28.0+](https://www.cmake.org/download/) (add to PATH)
 * [Python 3.6+](https://www.python.org/downloads/) (add to PATH)
