@@ -3070,7 +3070,7 @@ public:
 	{
 		if (!_spu->process_mfc_cmd() || _spu->state & cpu_flag::again)
 		{
-			spu_runtime::g_escape(_spu);
+			fmt::throw_exception("exec_mfc_cmd(): Should not abort!");
 		}
 
 		static_cast<void>(_spu->test_stopped());
