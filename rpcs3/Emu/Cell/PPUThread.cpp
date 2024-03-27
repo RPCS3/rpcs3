@@ -3377,11 +3377,12 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 
 			data += 0;
 			auto range_lock = vm::alloc_range_lock();
+			bool success = false;
 			{
 				rsx::reservation_lock rsx_lock(addr, 128);
 
 				auto& super_data = *vm::get_super_ptr<spu_rdata_t>(addr);
-				const bool success = [&]()
+				success = [&]()
 				{
 					// Full lock (heavyweight)
 					// TODO: vm::check_addr

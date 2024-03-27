@@ -2736,6 +2736,17 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 		return;
 	}
 
+	if (!savestate && m_emu_state_close_pending)
+	{
+		while (!async_op && m_state != system_state::stopped)
+		{
+			process_qt_events();
+			std::this_thread::sleep_for(16ms);
+		}
+
+		return;
+	}
+
 	if (old_state == system_state::paused)
 	{
 		Resume();
@@ -2759,11 +2770,6 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 
 	auto perform_kill = [read_counter, allow_autoexit, this, info = GetEmulationIdentifier()]()
 	{
-		if (m_emu_state_close_pending.exchange(true))
-		{
-			return;
-		}
-
 		bool read_sysutil_signal = false;
 
 		for (u32 i = 100; i < 140; i++)
@@ -2786,7 +2792,6 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 
 			if (static_cast<u64>(info) != m_stop_ctr)
 			{
-				m_emu_state_close_pending = false;
 				return;
 			}
 		}
@@ -2794,7 +2799,6 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 		// An inevitable attempt to terminate the *current* emulation course will be issued after 7s
 		CallFromMainThread([allow_autoexit, this]()
 		{
-			m_emu_state_close_pending = false;
 			Kill(allow_autoexit);
 		}, info);
 	};
