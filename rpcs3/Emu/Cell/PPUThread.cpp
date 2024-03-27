@@ -2542,6 +2542,7 @@ ppu_thread::ppu_thread(utils::serial& ar)
 					ppu.loaded_from_savestate = true;
 					ppu.prio.raw().preserve_bit = 1;
 					table.decode(op)(ppu, {op}, vm::_ptr<u32>(ppu.cia), &ppu_ret);
+					ppu.prio.raw().preserve_bit = 0;
 
 					ppu.optional_savestate_state->clear(); // Reset to writing state
 					ppu.loaded_from_savestate = false;
