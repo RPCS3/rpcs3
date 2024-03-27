@@ -3098,3 +3098,17 @@ inline auto gv_shuffle_right(A&& a)
 {
 	FOR_X64(unary_op, kIdPsrldq, kIdVpsrldq, std::forward<A>(a), Count);
 }
+
+inline v128 gv_gather32(const s32* base, v128 indices)
+{
+#if defined(__AVX2__)
+	return _mm_i32gather_epi32(base, indices, 4);
+#elif defined(ARCH_X64)
+	v128 r;
+	for (u32 i = 0; i < 4; i++)
+		r._s32[i] = base[indices._s32[i]];
+	return r;
+#elif defined(ARCH_ARM64)
+
+#endif
+}
