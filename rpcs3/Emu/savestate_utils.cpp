@@ -54,7 +54,7 @@ SERIALIZATION_VER(lv2_config, 9,                                1)
 
 namespace rsx
 {
-	SERIALIZATION_VER(rsx, 10,                                  1)
+	SERIALIZATION_VER(rsx, 10,                                  1, 2/*Pending flip*/)
 }
 
 namespace np

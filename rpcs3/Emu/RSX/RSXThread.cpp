@@ -620,6 +620,32 @@ namespace rsx
 			rsx_log.error("Savestate created in draw call scope. Report to developers if there are issues with it.");
 		}
 
+		if (ar.is_writing() || version >= 2)
+		{
+			ar(vblank_count);
+
+			b8 flip_pending{};
+
+			if (ar.is_writing())
+			{
+				flip_pending = !!(async_flip_requested & flip_request::emu_requested);
+			}
+
+			ar(flip_pending);
+
+			if (flip_pending)
+			{
+				ar(vblank_at_flip);
+				ar(async_flip_buffer);
+
+				if (!ar.is_writing())
+				{
+					async_flip_requested |= flip_request::emu_requested;
+					flip_notification_count = 1;
+				}
+			}
+		}
+
 		if (ar.is_writing())
 		{
 			if (fifo_ctrl && state & cpu_flag::again)
