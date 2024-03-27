@@ -2642,18 +2642,29 @@ namespace rsx
 
 	bool thread::invalidate_fragment_program(u32 dst_dma, u32 dst_offset, u32 size)
 	{
-		const auto [shader_offset, shader_dma] = rsx::method_registers.shader_program_address();
-
-		if ((dst_dma & CELL_GCM_LOCATION_MAIN) == shader_dma &&
-		address_range::start_length(shader_offset, current_fragment_program.total_length).overlaps(
-			address_range::start_length(dst_offset, size))) [[unlikely]]
+		if (!current_fragment_program.total_length)
 		{
-			// Data overlaps
-			m_graphics_state |= rsx::pipeline_state::fragment_program_ucode_dirty;
-			return true;
+			// No shader loaded
+			return false;
 		}
 
-		return false;
+		const auto [shader_offset, shader_dma] = rsx::method_registers.shader_program_address();
+		if ((dst_dma & CELL_GCM_LOCATION_MAIN) != shader_dma)
+		{
+			// Shader not loaded in XDR memory
+			return false;
+		}
+
+		const auto current_fragment_shader_range = address_range::start_length(shader_offset, current_fragment_program.total_length);
+		if (!current_fragment_shader_range.overlaps(address_range::start_length(dst_offset, size)))
+		{
+			// No range overlap
+			return false;
+		}
+
+		// Data overlaps. Force ucode reload.
+		m_graphics_state |= rsx::pipeline_state::fragment_program_ucode_dirty;
+		return true;
 	}
 
 	void thread::reset()
