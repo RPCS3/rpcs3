@@ -44,7 +44,7 @@ namespace vk
 		"};\n\n";
 
 		::glsl::insert_glsl_legacy_function(builder, properties);
-		::glsl::insert_vertex_input_fetch(builder, ::glsl::glsl_rules::glsl_rules_spirv);
+		::glsl::insert_vertex_input_fetch(builder, ::glsl::glsl_rules::glsl_rules_vulkan);
 
 		builder << program_common::interpreter::get_vertex_interpreter();
 		const std::string s = builder.str();

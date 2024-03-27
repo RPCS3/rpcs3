@@ -12,7 +12,7 @@ namespace glsl
 	enum glsl_rules : unsigned char
 	{
 		glsl_rules_opengl4,
-		glsl_rules_spirv
+		glsl_rules_vulkan
 	};
 
 	struct shader_properties

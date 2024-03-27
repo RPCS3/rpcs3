@@ -211,7 +211,7 @@ void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 	properties2.require_explicit_invariance = (vk::get_driver_vendor() == vk::driver_vendor::NVIDIA && g_cfg.video.shader_precision != gpu_preset_level::low);
 
 	glsl::insert_glsl_legacy_function(OS, properties2);
-	glsl::insert_vertex_input_fetch(OS, glsl::glsl_rules_spirv);
+	glsl::insert_vertex_input_fetch(OS, glsl::glsl_rules_vulkan);
 
 	// Declare global registers with optional initialization
 	std::string registers;
