@@ -40,7 +40,7 @@ error_code sys_mutex_create(ppu_thread& ppu, vm::ptr<u32> mutex_id, vm::ptr<sys_
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_mutex.warning("sys_mutex_create(mutex_id=*0x%x, attr=*0x%x)", mutex_id, attr);
+	sys_mutex.trace("sys_mutex_create(mutex_id=*0x%x, attr=*0x%x)", mutex_id, attr);
 
 	if (!mutex_id || !attr)
 	{
@@ -48,6 +48,13 @@ error_code sys_mutex_create(ppu_thread& ppu, vm::ptr<u32> mutex_id, vm::ptr<sys_
 	}
 
 	const auto _attr = *attr;
+
+	const u64 ipc_key = lv2_obj::get_key(_attr);
+
+	if (ipc_key)
+	{
+		sys_mutex.warning("sys_mutex_create(mutex_id=*0x%x, attr=*0x%x): IPC=0x%016x", mutex_id, attr, ipc_key);
+	}
 
 	switch (_attr.protocol)
 	{
@@ -85,7 +92,7 @@ error_code sys_mutex_create(ppu_thread& ppu, vm::ptr<u32> mutex_id, vm::ptr<sys_
 			_attr.protocol,
 			_attr.recursive,
 			_attr.adaptive,
-			_attr.ipc_key,
+			ipc_key,
 			_attr.name_u64);
 	}))
 	{
@@ -101,7 +108,7 @@ error_code sys_mutex_destroy(ppu_thread& ppu, u32 mutex_id)
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_mutex.warning("sys_mutex_destroy(mutex_id=0x%x)", mutex_id);
+	sys_mutex.trace("sys_mutex_destroy(mutex_id=0x%x)", mutex_id);
 
 	const auto mutex = idm::withdraw<lv2_obj, lv2_mutex>(mutex_id, [](lv2_mutex& mutex) -> CellError
 	{
@@ -124,6 +131,11 @@ error_code sys_mutex_destroy(ppu_thread& ppu, u32 mutex_id)
 	if (!mutex)
 	{
 		return CELL_ESRCH;
+	}
+
+	if (mutex->key)
+	{
+		sys_mutex.warning("sys_mutex_destroy(mutex_id=0x%x): IPC=0x%016x", mutex_id, mutex->key);
 	}
 
 	if (mutex.ret)
