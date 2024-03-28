@@ -94,6 +94,18 @@ enum class audio_format_flag : unsigned
 	dts            = 0x00000008, // DTS 5.1 Ch.
 };
 
+enum class audio_channel_layout
+{
+	automatic,
+	mono,
+	stereo,
+	stereo_lfe,
+	quadraphonic,
+	quadraphonic_lfe,
+	surround_5_1,
+	surround_7_1,
+};
+
 enum class music_handler
 {
 	null,

@@ -212,6 +212,7 @@ struct cell_audio_config
 		s64 time_stretching_threshold = 0;
 		bool convert_to_s16 = false;
 		bool dump_to_file = false;
+		audio_channel_layout channel_layout = audio_channel_layout::automatic;
 		audio_renderer renderer = audio_renderer::null;
 		audio_provider provider = audio_provider::none;
 	};
@@ -222,7 +223,8 @@ struct cell_audio_config
 	std::shared_ptr<AudioBackend> backend = nullptr;
 
 	AudioChannelCnt audio_downmix = AudioChannelCnt::SURROUND_7_1;
-	AudioChannelCnt backend_ch_cnt = AudioChannelCnt::SURROUND_7_1;
+	audio_channel_layout backend_channel_layout = audio_channel_layout::surround_7_1;
+	u32 backend_ch_cnt = 8;
 	u32 audio_channels = 2;
 	u32 audio_sampling_rate = DEFAULT_AUDIO_SAMPLING_RATE;
 	u32 audio_block_period = 0;

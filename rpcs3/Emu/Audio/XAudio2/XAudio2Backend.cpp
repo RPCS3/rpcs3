@@ -198,7 +198,7 @@ void XAudio2Backend::Pause()
 	}
 }
 
-bool XAudio2Backend::Open(std::string_view dev_id, AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt)
+bool XAudio2Backend::Open(std::string_view dev_id, AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt, audio_channel_layout layout)
 {
 	if (!Initialized())
 	{
@@ -258,7 +258,8 @@ bool XAudio2Backend::Open(std::string_view dev_id, AudioFreq freq, AudioSampleSi
 
 	m_sampling_rate = freq;
 	m_sample_size = sample_size;
-	m_channels = static_cast<AudioChannelCnt>(std::min(static_cast<u32>(convert_channel_count(vd.InputChannels)), static_cast<u32>(ch_cnt)));
+
+	setup_channel_layout(static_cast<u32>(ch_cnt), vd.InputChannels, layout, XAudio);
 
 	WAVEFORMATEX waveformatex{};
 	waveformatex.wFormatTag = get_convert_to_s16() ? WAVE_FORMAT_PCM : WAVE_FORMAT_IEEE_FLOAT;

@@ -122,7 +122,7 @@ bool FAudioBackend::Operational()
 	return m_source_voice != nullptr && !m_reset_req.observe();
 }
 
-bool FAudioBackend::Open(std::string_view dev_id, AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt)
+bool FAudioBackend::Open(std::string_view dev_id, AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt, audio_channel_layout layout)
 {
 	if (!Initialized())
 	{
@@ -165,7 +165,8 @@ bool FAudioBackend::Open(std::string_view dev_id, AudioFreq freq, AudioSampleSiz
 
 	m_sampling_rate = freq;
 	m_sample_size = sample_size;
-	m_channels = static_cast<AudioChannelCnt>(std::min(static_cast<u32>(convert_channel_count(vd.InputChannels)), static_cast<u32>(ch_cnt)));;
+
+	setup_channel_layout(static_cast<u32>(ch_cnt), vd.InputChannels, layout, FAudio_);
 
 	FAudioWaveFormatEx waveformatex;
 	waveformatex.wFormatTag = get_convert_to_s16() ? FAUDIO_FORMAT_PCM : FAUDIO_FORMAT_IEEE_FLOAT;

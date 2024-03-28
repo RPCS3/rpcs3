@@ -22,7 +22,7 @@ public:
 	bool Operational() override;
 	bool DefaultDeviceChanged() override;
 
-	bool Open(std::string_view dev_id, AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt) override;
+	bool Open(std::string_view dev_id, AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt, audio_channel_layout layout) override;
 	void Close() override;
 
 	f64 GetCallbackFrameLen() override;
@@ -62,5 +62,5 @@ private:
 	};
 
 	device_handle GetDevice(std::string_view dev_id = "");
-	device_handle GetDefaultDeviceAlt(AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt);
+	device_handle GetDefaultDeviceAlt(AudioFreq freq, AudioSampleSize sample_size, u32 ch_cnt);
 };

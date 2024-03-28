@@ -1200,6 +1200,19 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case audio_avport::spdif_1: return tr("SPDIF 1", "Audio Avport");
 		}
 		break;
+	case emu_settings_type::AudioChannelLayout:
+		switch (static_cast<audio_channel_layout>(index))
+		{
+		case audio_channel_layout::automatic:        return tr("Auto", "Audio Channel Layout");
+		case audio_channel_layout::mono:             return tr("Mono", "Audio Channel Layout");
+		case audio_channel_layout::stereo:           return tr("Stereo", "Audio Channel Layout");
+		case audio_channel_layout::stereo_lfe:       return tr("Stereo LFE", "Audio Channel Layout");
+		case audio_channel_layout::quadraphonic:     return tr("Quadraphonic", "Audio Channel Layout");
+		case audio_channel_layout::quadraphonic_lfe: return tr("Quadraphonic LFE", "Audio Channel Layout");
+		case audio_channel_layout::surround_5_1:     return tr("Surround 5.1", "Audio Channel Layout");
+		case audio_channel_layout::surround_7_1:     return tr("Surround 7.1", "Audio Channel Layout");
+		}
+		break;
 	case emu_settings_type::LicenseArea:
 		switch (static_cast<CellSysutilLicenseArea>(index))
 		{

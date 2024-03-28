@@ -65,7 +65,8 @@ public:
 		const QString audio_device              = tr("Controls which device is used by audio backend.");
 		const QString audio_dump                = tr("Saves all audio as a raw wave file. If unsure, leave this unchecked.");
 		const QString convert                   = tr("Uses 16-bit audio samples instead of default 32-bit floating point.\nUse with buggy audio drivers if you have no sound or completely broken sound.");
-		const QString audio_format              = tr("Determines the sound format.\nConfigure this setting if you want to switch between stereo and surround sound.\nChanging these values requires a restart of the game.\nThe manual setting will use your selected formats while the automatic setting will let the game choose from all available formats.");
+		const QString audio_format              = tr("Determines the sound format of the emulation.\nConfigure this setting if you want to switch between stereo and surround sound.\nChanging these values requires a restart of the game.\nThe manual setting will use your selected formats while the automatic setting will let the game choose from all available formats.");
+		const QString audio_channel_layout      = tr("Determines the sound format of RPCS3.\nUse 'Auto' to let RPCS3 decide the best format based on the audio device and the emulated audio format.");
 		const QString master_volume             = tr("Controls the overall volume of the emulation.\nValues above 100% might reduce the audio quality.");
 		const QString enable_buffering          = tr("Enables audio buffering, which reduces crackle/stutter but increases audio latency.");
 		const QString audio_buffer_duration     = tr("Target buffer duration in milliseconds.\nHigher values make the buffering algorithm's job easier, but may introduce noticeable audio latency.");
