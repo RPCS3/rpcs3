@@ -220,7 +220,7 @@ void VKGSRender::frame_context_cleanup(vk::frame_context_t *ctx)
 		if (m_overlay_manager && m_overlay_manager->has_dirty())
 		{
 			auto ui_renderer = vk::get_overlay_pass<vk::ui_overlay_renderer>();
-			m_overlay_manager->lock();
+			m_overlay_manager->lock_shared();
 
 			std::vector<u32> uids_to_dispose;
 			uids_to_dispose.reserve(m_overlay_manager->get_dirty().size());
@@ -231,7 +231,7 @@ void VKGSRender::frame_context_cleanup(vk::frame_context_t *ctx)
 				uids_to_dispose.push_back(view->uid);
 			}
 
-			m_overlay_manager->unlock();
+			m_overlay_manager->unlock_shared();
 			m_overlay_manager->dispose(uids_to_dispose);
 		}
 

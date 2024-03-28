@@ -350,7 +350,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 	{
 		if (m_overlay_manager->has_dirty())
 		{
-			m_overlay_manager->lock();
+			m_overlay_manager->lock_shared();
 
 			std::vector<u32> uids_to_dispose;
 			uids_to_dispose.reserve(m_overlay_manager->get_dirty().size());
@@ -361,7 +361,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 				uids_to_dispose.push_back(view->uid);
 			}
 
-			m_overlay_manager->unlock();
+			m_overlay_manager->unlock_shared();
 			m_overlay_manager->dispose(uids_to_dispose);
 		}
 
