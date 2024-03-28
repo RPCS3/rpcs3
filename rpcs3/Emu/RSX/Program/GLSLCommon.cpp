@@ -161,7 +161,7 @@ namespace glsl
 	void insert_rop(std::ostream& OS, const shader_properties& /*props*/)
 	{
 		OS <<
-			#include "GLSLSnippets//RSXProg/RSXROPEpilogue.glsl"
+			#include "GLSLSnippets/RSXProg/RSXROPEpilogue.glsl"
 			;
 	}
 

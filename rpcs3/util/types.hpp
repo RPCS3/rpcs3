@@ -1047,7 +1047,7 @@ template <typename CT> requires requires (const CT& x) { std::size(x); }
 	const char* file = __builtin_FILE(),
 	const char* func = __builtin_FUNCTION())
 {
-	// TODO: Supoort std::array
+	// TODO: Support std::array
 	constexpr bool is_const = std::is_array_v<std::remove_cvref_t<CT>>;
 
 	if constexpr (is_const)
@@ -1057,7 +1057,7 @@ template <typename CT> requires requires (const CT& x) { std::size(x); }
 	}
 	else
 	{
-		return narrow<u32>(std::size(container), line, col, file, func);
+		return narrow<u32>(container.size(), line, col, file, func);
 	}
 }
 
