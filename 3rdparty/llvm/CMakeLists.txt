@@ -36,12 +36,7 @@ if(WITH_LLVM)
 
 		set(STATIC_LINK_LLVM ON CACHE BOOL "Link against LLVM statically. This will get set to ON if you build LLVM from the submodule." FORCE)
 
-		# now tries to find LLVM again
 		find_package(LLVM 16.0 CONFIG)
-		if(NOT LLVM_FOUND)
-			set(LLVM_DIR "${CMAKE_CURRENT_BINARY_DIR}/llvm_build/lib/cmake/llvm/")
-			find_package(LLVM 17.0 CONFIG)
-		endif()
 		if(NOT LLVM_FOUND)
 			message(FATAL_ERROR "Couldn't build LLVM from the submodule. You might need to run `git submodule update --init`")
 		endif()
@@ -53,18 +48,14 @@ if(WITH_LLVM)
 			set(LLVM_DIR ${CMAKE_SOURCE_DIR}/${LLVM_DIR})
 		endif()
 
-		find_package(LLVM 16.0 CONFIG)
-		if(NOT LLVM_FOUND)
-			find_package(LLVM 17.0 CONFIG)
-		endif()
+		find_package(LLVM CONFIG)
 
 		if (NOT LLVM_FOUND)
-			if (LLVM_VERSION AND LLVM_VERSION_MAJOR LESS 16)
-				message(FATAL_ERROR "Found LLVM version ${LLVM_VERSION}. Required versions 16...17. \
-														 Enable BUILD_LLVM option to build LLVM from included as a git submodule.")
-			endif()
-
 			message(FATAL_ERROR "Can't find LLVM libraries from the CMAKE_PREFIX_PATH path or LLVM_DIR. \
+													 Enable BUILD_LLVM option to build LLVM from included as a git submodule.")
+		endif()
+		if (LLVM_VERSION VERSION_LESS 16)
+			message(FATAL_ERROR "Found LLVM version ${LLVM_VERSION}. Required version 16 or above. \
 													 Enable BUILD_LLVM option to build LLVM from included as a git submodule.")
 		endif()
 	endif()
