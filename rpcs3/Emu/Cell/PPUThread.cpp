@@ -2225,7 +2225,7 @@ void ppu_thread::cpu_sleep()
 
 void ppu_thread::cpu_on_stop()
 {
-	if (current_function)
+	if (current_function && is_stopped())
 	{
 		if (start_time)
 		{
@@ -2235,9 +2235,9 @@ void ppu_thread::cpu_on_stop()
 		{
 			ppu_log.warning("'%s' aborted", current_function);
 		}
-
-		current_function = {};
 	}
+
+	current_function = {};
 
 	// TODO: More conditions
 	if (Emu.IsStopped() && g_cfg.core.ppu_debug)
