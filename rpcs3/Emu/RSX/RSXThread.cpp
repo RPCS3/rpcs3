@@ -620,6 +620,32 @@ namespace rsx
 			rsx_log.error("Savestate created in draw call scope. Report to developers if there are issues with it.");
 		}
 
+		if (ar.is_writing() || version >= 2)
+		{
+			ar(vblank_count);
+
+			b8 flip_pending{};
+
+			if (ar.is_writing())
+			{
+				flip_pending = !!(async_flip_requested & flip_request::emu_requested);
+			}
+
+			ar(flip_pending);
+
+			if (flip_pending)
+			{
+				ar(vblank_at_flip);
+				ar(async_flip_buffer);
+
+				if (!ar.is_writing())
+				{
+					async_flip_requested |= flip_request::emu_requested;
+					flip_notification_count = 1;
+				}
+			}
+		}
+
 		if (ar.is_writing())
 		{
 			if (fifo_ctrl && state & cpu_flag::again)
@@ -2616,18 +2642,29 @@ namespace rsx
 
 	bool thread::invalidate_fragment_program(u32 dst_dma, u32 dst_offset, u32 size)
 	{
-		const auto [shader_offset, shader_dma] = rsx::method_registers.shader_program_address();
-
-		if ((dst_dma & CELL_GCM_LOCATION_MAIN) == shader_dma &&
-		address_range::start_length(shader_offset, current_fragment_program.total_length).overlaps(
-			address_range::start_length(dst_offset, size))) [[unlikely]]
+		if (!current_fragment_program.total_length)
 		{
-			// Data overlaps
-			m_graphics_state |= rsx::pipeline_state::fragment_program_ucode_dirty;
-			return true;
+			// No shader loaded
+			return false;
 		}
 
-		return false;
+		const auto [shader_offset, shader_dma] = rsx::method_registers.shader_program_address();
+		if ((dst_dma & CELL_GCM_LOCATION_MAIN) != shader_dma)
+		{
+			// Shader not loaded in XDR memory
+			return false;
+		}
+
+		const auto current_fragment_shader_range = address_range::start_length(shader_offset, current_fragment_program.total_length);
+		if (!current_fragment_shader_range.overlaps(address_range::start_length(dst_offset, size)))
+		{
+			// No range overlap
+			return false;
+		}
+
+		// Data overlaps. Force ucode reload.
+		m_graphics_state |= rsx::pipeline_state::fragment_program_ucode_dirty;
+		return true;
 	}
 
 	void thread::reset()
@@ -3506,15 +3543,18 @@ namespace rsx
 	// NOTE: m_mtx_task lock must be acquired before calling this method
 	void thread::handle_invalidated_memory_range()
 	{
+		AUDIT(!m_mtx_task.is_free());
 		m_eng_interrupt_mask.clear(rsx::memory_config_interrupt);
 
 		if (!m_invalidated_memory_range.valid())
+		{
 			return;
+		}
 
 		if (is_stopped())
 		{
+			// We only need to commit host-resident memory to the guest in case of savestates or captures.
 			on_invalidate_memory_range(m_invalidated_memory_range, rsx::invalidation_cause::read);
-			on_invalidate_memory_range(m_invalidated_memory_range, rsx::invalidation_cause::write);
 		}
 
 		on_invalidate_memory_range(m_invalidated_memory_range, rsx::invalidation_cause::unmap);

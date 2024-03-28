@@ -5,9 +5,9 @@
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/lv2/sys_ppu_thread.h"
 #include "Emu/Cell/lv2/sys_process.h"
+#include "Emu/savestate_utils.hpp"
 #include "sysPrxForUser.h"
 #include "util/media_utils.h"
-#include "util/init_mutex.hpp"
 
 #ifdef _MSC_VER
 #pragma warning(push, 0)
@@ -625,38 +625,16 @@ struct vdec_context final
 	}
 };
 
-struct vdec_creation_lock
+extern bool check_if_vdec_contexts_exist()
 {
-	stx::init_mutex locked;
+	bool context_exists = false;
 
-	vdec_creation_lock()
+	idm::select<vdec_context>([&](u32, vdec_context&)
 	{
-		auto lk = locked.init();
-	}
-};
+		context_exists = true;
+	});
 
-extern bool try_lock_vdec_context_creation()
-{
-	auto& lock = g_fxo->get<vdec_creation_lock>();
-	auto reset = lock.locked.reset();
-
-	if (reset)
-	{
-		bool context_exists = false;
-
-		idm::select<vdec_context>([&](u32, vdec_context&)
-		{
-			context_exists = true;
-		});
-
-		if (context_exists)
-		{
-			reset.set_init();
-			return false;
-		}
-	}
-
-	return true;
+	return context_exists;
 }
 
 extern void vdecEntry(ppu_thread& ppu, u32 vid)
@@ -890,7 +868,7 @@ static error_code vdecOpen(ppu_thread& ppu, T type, U res, vm::cptr<CellVdecCb> 
 	// Create decoder context
 	std::shared_ptr<vdec_context> vdec;
 
-	if (auto access = g_fxo->get<vdec_creation_lock>().locked.access(); access)
+	if (std::unique_lock lock{g_fxo->get<hle_locks_t>(), std::try_to_lock})
 	{
 		vdec = idm::make_ptr<vdec_context>(type->codecType, type->profileLevel, res->memAddr, res->memSize, cb->cbFunc, cb->cbArg);
 	}
@@ -942,6 +920,14 @@ error_code cellVdecOpenEx(ppu_thread& ppu, vm::cptr<CellVdecTypeEx> type, vm::cp
 error_code cellVdecClose(ppu_thread& ppu, u32 handle)
 {
 	cellVdec.warning("cellVdecClose(handle=0x%x)", handle);
+
+	std::unique_lock lock_hle{g_fxo->get<hle_locks_t>(), std::try_to_lock};
+
+	if (!lock_hle)
+	{
+		ppu.state += cpu_flag::again;
+		return {};
+	}
 
 	auto vdec = idm::get<vdec_context>(handle);
 

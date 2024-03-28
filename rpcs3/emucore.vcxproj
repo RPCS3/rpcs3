@@ -117,6 +117,7 @@
     <ClCompile Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog_native.cpp" />
     <ClCompile Include="Emu\RSX\Program\ProgramStateCache.cpp" />
     <ClCompile Include="Emu\RSX\Program\program_util.cpp" />
+    <ClCompile Include="Emu\RSX\Program\SPIRVCommon.cpp" />
     <ClCompile Include="Emu\RSX\RSXDisAsm.cpp" />
     <ClCompile Include="Emu\RSX\RSXZCULL.cpp" />
     <ClCompile Include="Emu\RSX\rsx_vertex_data.cpp" />
@@ -622,6 +623,7 @@
     <ClInclude Include="Emu\RSX\Overlays\overlay_utils.h" />
     <ClInclude Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog.h" />
     <ClInclude Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog_native.h" />
+    <ClInclude Include="Emu\RSX\Program\SPIRVCommon.h" />
     <ClInclude Include="Emu\RSX\RSXDisAsm.h" />
     <ClInclude Include="Emu\RSX\RSXZCULL.h" />
     <ClInclude Include="Emu\savestate_utils.hpp" />

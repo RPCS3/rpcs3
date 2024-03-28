@@ -121,6 +121,27 @@ void fmt_class_string<audio_renderer>::format(std::string& out, u64 arg)
 }
 
 template <>
+void fmt_class_string<audio_channel_layout>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](audio_channel_layout value)
+	{
+		switch (value)
+		{
+		case audio_channel_layout::automatic: return "Automatic";
+		case audio_channel_layout::mono: return "Mono";
+		case audio_channel_layout::stereo: return "Stereo";
+		case audio_channel_layout::stereo_lfe: return "Stereo LFE";
+		case audio_channel_layout::quadraphonic: return "Quadraphonic";
+		case audio_channel_layout::quadraphonic_lfe: return "Quadraphonic LFE";
+		case audio_channel_layout::surround_5_1: return "Surround 5.1";
+		case audio_channel_layout::surround_7_1: return "Surround 7.1";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
 void fmt_class_string<detail_level>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](detail_level value)

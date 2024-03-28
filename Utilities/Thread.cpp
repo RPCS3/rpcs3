@@ -2193,7 +2193,10 @@ u64 thread_base::finalize(thread_state result_state) noexcept
 		return thread_ctrl::get_name_cached();
 	};
 
-	sig_log.notice("Thread time: %fs (%fGc); Faults: %u [rsx:%u, spu:%u]; [soft:%u hard:%u]; Switches:[vol:%u unvol:%u]; Wait:[%.3fs, spur:%u]",
+	const bool is_cpu_thread = !!cpu_thread::get_current();
+	auto& thread_log = (is_cpu_thread || g_tls_fault_all ? sig_log.notice : sig_log.trace);
+
+	thread_log("Thread time: %fs (%fGc); Faults: %u [rsx:%u, spu:%u]; [soft:%u hard:%u]; Switches:[vol:%u unvol:%u]; Wait:[%.3fs, spur:%u]",
 		time / 1000000000.,
 		cycles / 1000000000.,
 		g_tls_fault_all,

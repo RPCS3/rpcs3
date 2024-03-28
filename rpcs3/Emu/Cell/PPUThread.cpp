@@ -2421,6 +2421,14 @@ ppu_thread::ppu_thread(utils::serial& ar)
 		ar(lv2_obj::g_priority_order_tag);
 	}
 
+	if (version >= 3)
+	{
+		// Function and module for HLE function relocation
+		// TODO: Use it
+		ar.pop<std::string>();
+		ar.pop<std::string>();
+	}
+
 	serialize_common(ar);
 
 	// Restore jm_mask
@@ -2534,6 +2542,7 @@ ppu_thread::ppu_thread(utils::serial& ar)
 					ppu.loaded_from_savestate = true;
 					ppu.prio.raw().preserve_bit = 1;
 					table.decode(op)(ppu, {op}, vm::_ptr<u32>(ppu.cia), &ppu_ret);
+					ppu.prio.raw().preserve_bit = 0;
 
 					ppu.optional_savestate_state->clear(); // Reset to writing state
 					ppu.loaded_from_savestate = false;
@@ -2593,6 +2602,17 @@ void ppu_thread::save(utils::serial& ar)
 	if (!is_null && !g_fxo->get<save_lv2_tag>().saved.exchange(true))
 	{
 		ar(lv2_obj::g_priority_order_tag);
+	}
+
+	if (current_module && current_module[0])
+	{
+		ar(std::string{current_module});
+		ar(std::string{last_function});
+	}
+	else
+	{
+		ar(std::string{});
+		ar(std::string{});
 	}
 
 	serialize_common(ar);
@@ -3376,25 +3396,30 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 			//auto& cline_data = vm::_ref<spu_rdata_t>(addr);
 
 			data += 0;
-			rsx::reservation_lock rsx_lock(addr, 128);
-
-			auto& super_data = *vm::get_super_ptr<spu_rdata_t>(addr);
-			const bool success = [&]()
+			auto range_lock = vm::alloc_range_lock();
+			bool success = false;
 			{
-				// Full lock (heavyweight)
-				// TODO: vm::check_addr
-				vm::writer_lock lock(addr);
+				rsx::reservation_lock rsx_lock(addr, 128);
 
-				if (cmp_rdata(ppu.rdata, super_data))
+				auto& super_data = *vm::get_super_ptr<spu_rdata_t>(addr);
+				success = [&]()
 				{
-					data.release(new_data);
-					res += 64;
-					return true;
-				}
+					// Full lock (heavyweight)
+					// TODO: vm::check_addr
+					vm::writer_lock lock(addr, range_lock);
 
-				res -= 64;
-				return false;
-			}();
+					if (cmp_rdata(ppu.rdata, super_data))
+					{
+						data.release(new_data);
+						res += 64;
+						return true;
+					}
+
+					res -= 64;
+					return false;
+				}();
+			}
+			vm::free_range_lock(range_lock);
 
 			return success;
 		}

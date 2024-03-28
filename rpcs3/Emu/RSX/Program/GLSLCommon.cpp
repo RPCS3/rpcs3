@@ -118,7 +118,7 @@ namespace glsl
 
 	void insert_vertex_input_fetch(std::stringstream& OS, glsl_rules rules, bool glsl4_compliant)
 	{
-		std::string vertex_id_name = (rules != glsl_rules_spirv) ? "gl_VertexID" : "gl_VertexIndex";
+		std::string vertex_id_name = (rules != glsl_rules_vulkan) ? "gl_VertexID" : "gl_VertexIndex";
 
 		// Actually decode a vertex attribute from a raw byte stream
 		program_common::define_glsl_constants<int>(OS,

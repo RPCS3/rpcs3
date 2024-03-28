@@ -18,6 +18,7 @@
 #include "Emu/Memory/vm_locking.h"
 
 #include "../Program/program_state_cache2.hpp"
+#include "../Program/SPIRVCommon.h"
 
 #include "util/asm.hpp"
 
@@ -693,7 +694,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	null_buffer = std::make_unique<vk::buffer>(*m_device, 32, memory_map.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0, VMM_ALLOCATION_POOL_UNDEFINED);
 	null_buffer_view = std::make_unique<vk::buffer_view>(*m_device, null_buffer->value, VK_FORMAT_R8_UINT, 0, 32);
 
-	vk::initialize_compiler_context();
+	spirv::initialize_compiler_context();
 	vk::initialize_pipe_compiler(g_cfg.video.shader_compiler_threads_count);
 
 	m_prog_buffer = std::make_unique<vk::program_cache>
@@ -918,9 +919,9 @@ VKGSRender::~VKGSRender()
 	m_flush_requests.clear_pending_flag();
 
 	// Shaders
-	vk::destroy_pipe_compiler();      // Ensure no pending shaders being compiled
-	vk::finalize_compiler_context();  // Shut down the glslang compiler
-	m_prog_buffer->clear();           // Delete shader objects
+	vk::destroy_pipe_compiler();        // Ensure no pending shaders being compiled
+	spirv::finalize_compiler_context(); // Shut down the glslang compiler
+	m_prog_buffer->clear();             // Delete shader objects
 	m_shader_interpreter.destroy();
 
 	m_persistent_attribute_storage.reset();

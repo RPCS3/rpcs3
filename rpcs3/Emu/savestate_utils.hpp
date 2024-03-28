@@ -10,6 +10,23 @@ struct version_entry
 	ENABLE_BITWISE_SERIALIZATION;
 };
 
+
+struct hle_locks_t
+{
+	atomic_t<s64> lock_val{0};
+
+	enum states : s64
+	{
+		waiting_for_evaluation = -1,
+		finalized = -2,
+	};
+
+	[[noreturn]] void lock();
+	bool try_lock();
+	void unlock();
+	bool try_finalize(std::function<bool()> test);
+};
+
 bool load_and_check_reserved(utils::serial& ar, usz size);
 bool is_savestate_version_compatible(const std::vector<version_entry>& data, bool is_boot_check);
 std::vector<version_entry> get_savestate_versioning_data(fs::file&& file, std::string_view filepath);

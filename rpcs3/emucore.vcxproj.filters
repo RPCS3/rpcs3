@@ -1207,6 +1207,9 @@
     <ClCompile Include="Emu\Io\rb3drums_config.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\Program\SPIRVCommon.cpp">
+      <Filter>Emu\GPU\RSX\Program</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -2442,6 +2445,9 @@
     </ClInclude>
     <ClInclude Include="Input\raw_mouse_config.h">
       <Filter>Emu\Io</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Program\SPIRVCommon.h">
+      <Filter>Emu\GPU\RSX\Program</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

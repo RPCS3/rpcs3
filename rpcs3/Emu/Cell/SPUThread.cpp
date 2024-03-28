@@ -448,11 +448,6 @@ namespace vm
 	{
 		if (range_lock)
 		{
-			if (!*range_lock)
-			{
-				return;
-			}
-
 			g_range_lock_bits[1] &= ~(1ull << (range_lock - g_range_lock_set));
 			range_lock->release(0);
 			return;
