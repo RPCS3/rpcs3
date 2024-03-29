@@ -2932,7 +2932,18 @@ public:
 		case SPU_RdInMbox:
 		case SPU_RdEventStat:
 		{
-			if (g_cfg.savestate.compatible_mode)
+			bool loop_is_likely = op.ra == SPU_RdSigNotify1 || op.ra == SPU_RdSigNotify2;
+
+			for (u32 block_start : m_block->bb->preds)
+			{
+				if (block_start >= m_pos)
+				{
+					loop_is_likely = true;
+					break;
+				}
+			}
+
+			if (loop_is_likely || g_cfg.savestate.compatible_mode)
 			{
 				ensure_gpr_stores();
 				check_state(m_pos, false);
