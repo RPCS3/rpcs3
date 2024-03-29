@@ -209,6 +209,10 @@ private:
 		case localized_string_id::EMULATION_PAUSED_RESUME_WITH_START: return tr("Press and hold the START button to resume");
 		case localized_string_id::EMULATION_RESUMING: return tr("Resuming...!");
 		case localized_string_id::EMULATION_FROZEN: return tr("The PS3 application has likely crashed, you can close it.");
+		case localized_string_id::SAVESTATE_FAILED_DUE_TO_SAVEDATA: return tr("SaveState failed: Game saving is in progress, wait until finished.");
+		case localized_string_id::SAVESTATE_FAILED_DUE_TO_VDEC: return tr("SaveState failed: VDEC-base video/cutscenes are in order, wait for them to end or enable libvdec.sprx.");
+		case localized_string_id::SAVESTATE_FAILED_DUE_TO_MISSING_SPU_SETTING: return tr("SaveState failed: Failed to lock SPU state, enabling SPU-Compatible mode may fix it.");
+		case localized_string_id::SAVESTATE_FAILED_DUE_TO_SPU: return tr("SaveState failed: Failed to lock SPU state, using SPU ASMJIT will fix it.");
 		case localized_string_id::INVALID: return tr("Invalid");
 		default: return tr("Unknown");
 		}

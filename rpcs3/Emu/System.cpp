@@ -2848,7 +2848,12 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 					if (!g_cfg.savestate.compatible_mode)
 					{
+						rsx::overlays::queue_message(localized_string_id::SAVESTATE_FAILED_DUE_TO_MISSING_SPU_SETTING);
 						sys_log.error("Enabling SPU Savestates-Compatible Mode in Advanced tab may fix this.");
+					}
+					else
+					{
+						rsx::overlays::queue_message(localized_string_id::SAVESTATE_FAILED_DUE_TO_SPU);
 					}
 
 					m_emu_state_close_pending = false;
@@ -2878,6 +2883,8 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 					if (vdec_error)
 					{
+						rsx::overlays::queue_message(localized_string_id::SAVESTATE_FAILED_DUE_TO_VDEC);
+
 						sys_log.error("Failed to savestate: HLE VDEC (video decoder) context(s) exist."
 							"\nLLE libvdec.sprx by selecting it in Advanced tab -> Firmware Libraries."
 							"\nYou need to close the game for it to take effect."
@@ -2886,6 +2893,8 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 					if (savedata_error)
 					{
+						rsx::overlays::queue_message(localized_string_id::SAVESTATE_FAILED_DUE_TO_SAVEDATA);
+
 						sys_log.error("Failed to savestate: Savedata operation is active."
 							"\nYour best chance is to wait for the current game saving operation to finish and retry."
 							"\nThe game is probably displaying a saving cicrle or other gesture to indicate that it is saving.");
