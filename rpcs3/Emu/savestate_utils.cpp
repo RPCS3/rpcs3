@@ -216,7 +216,7 @@ bool boot_last_savestate(bool testing)
 {
 	if (!g_cfg.savestate.suspend_emu && !Emu.GetTitleID().empty() && (Emu.IsRunning() || Emu.GetStatus() == system_state::paused))
 	{
-		const std::string save_dir = fs::get_cache_dir() + "/savestates/";
+		const std::string save_dir = fs::get_cache_dir() + "/savestates/" + Emu.GetTitleID() + '/';
 
 		std::string savestate_path;
 		s64 mtime = smin;
