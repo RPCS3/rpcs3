@@ -615,11 +615,6 @@ namespace rsx
 		ar(display_buffers, display_buffers_count, current_display_buffer);
 		ar(unsent_gcm_events, rsx::method_registers.current_draw_clause);
 
-		if (in_begin_end)
-		{
-			rsx_log.error("Savestate created in draw call scope. Report to developers if there are issues with it.");
-		}
-
 		if (ar.is_writing() || version >= 2)
 		{
 			ar(vblank_count);
@@ -943,6 +938,14 @@ namespace rsx
 		{
 			g_fxo->get<rsx::dma_manager>().init();
 			on_init_thread();
+
+			if (in_begin_end)
+			{
+				// on_init_thread should have prepared the backend resources
+				// Run draw call warmup again if the savestate happened mid-draw
+				ensure(serialized);
+				begin();
+			}
 		}
 
 		is_initialized = true;
@@ -950,7 +953,7 @@ namespace rsx
 
 		if (!zcull_ctrl)
 		{
-			//Backend did not provide an implementation, provide NULL object
+			// Backend did not provide an implementation, provide NULL object
 			zcull_ctrl = std::make_unique<::rsx::reports::ZCULL_control>();
 		}
 
