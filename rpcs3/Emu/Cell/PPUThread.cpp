@@ -3968,7 +3968,13 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 
 	lf_queue<file_info> possible_exec_file_paths;
 
-	::semaphore<2> ovl_sema;
+	// Allow to allocate 2000 times the size of each file for the use of LLVM
+	// This works very nicely with Metal Gear Solid 4 for example:
+	// 2 7MB overlay files -> 14GB
+	// The growth in memory requirements of LLVM is not linear with file size of course
+	// But these estimates should hopefully protect RPCS3 in the coming years
+	// Especially when thread count is on the rise with each CPU generation 
+	atomic_t<u32> file_size_limit = static_cast<u32>(std::clamp<u64>(utils::aligned_div<u64>(utils::get_total_memory(), 2000), 65536, u32{umax}));
 
 	const u32 software_thread_limit = std::min<u32>(g_cfg.core.llvm_threads ? g_cfg.core.llvm_threads : u32{umax}, ::size32(file_queue));
 	const u32 cpu_thread_limit = utils::get_thread_count() > 8u ? std::max<u32>(utils::get_thread_count(), 2) - 1 : utils::get_thread_count(); // One LLVM thread less
@@ -3981,12 +3987,23 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 		// Set low priority
 		thread_ctrl::scoped_priority low_prio(-1);
 		u32 inc_fdone = 1;
+		u32 restore_mem = 0;
 
 		for (usz func_i = fnext++; func_i < file_queue.size(); func_i = fnext++, g_progr_fdone += std::exchange(inc_fdone, 1))
 		{
 			if (Emu.IsStopped())
 			{
 				continue;
+			}
+
+			if (restore_mem)
+			{
+				if (!file_size_limit.fetch_add(restore_mem))
+				{
+					file_size_limit.notify_all();
+				}
+
+				restore_mem = 0;
 			}
 
 			auto& [path, offset, file_size] = file_queue[func_i];
@@ -4020,10 +4037,48 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 				continue;
 			}
 
+			auto wait_for_memory = [&]() -> bool
+			{
+				// Try not to process too many files at once because it seems to reduce performance and cause RAM shortages
+				// Concurrently compiling more OVL or huge PRX files does not have much theoretical benefit
+				while (!file_size_limit.fetch_op([&](u32& value)
+				{
+					if (value)
+					{
+						// Allow at least one file, make 0 the "memory unavailable" sign value for atomic waiting efficiency 
+						const u32 new_val = static_cast<u32>(utils::sub_saturate<u64>(value, file_size));
+						restore_mem = value - new_val;
+						value = new_val;
+						return true;
+					}
+
+					// Resort to waiting
+					restore_mem = 0;
+					return false;
+				}).second)
+				{
+					// Wait until not 0
+					file_size_limit.wait(0);
+				}
+
+				if (Emu.IsStopped())
+				{
+					return false;
+				}
+
+				return true;
+			};
+
 			elf_error prx_err{}, ovl_err{};
 
 			if (ppu_prx_object obj = src; (prx_err = obj, obj == elf_error::ok))
 			{
+				if (!wait_for_memory())
+				{
+					// Emulation stopped
+					continue;
+				}
+
 				if (auto prx = ppu_load_prx(obj, true, path, offset))
 				{
 					obj.clear(), src.close(); // Clear decrypted file and elf object memory
@@ -4040,10 +4095,6 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 			{
 				while (ovl_err == elf_error::ok)
 				{
-					// Try not to process too many files at once because it seems to reduce performance
-					// Concurrently compiling more OVL files does not have much theoretical benefit
-					std::lock_guard lock(ovl_sema);
-
 					if (Emu.IsStopped())
 					{
 						break;
@@ -4061,6 +4112,12 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 
 						// Abort
 						ovl_err = elf_error::header_type;
+						break;
+					}
+
+					if (!wait_for_memory())
+					{
+						// Emulation stopped
 						break;
 					}
 
@@ -4086,9 +4143,17 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 				}
 			}
 
-			ppu_log.notice("Failed to precompile '%s' (prx: %s, ovl: %s): Attempting tratment as executable file", path, prx_err, ovl_err);
+			ppu_log.notice("Failed to precompile '%s' (prx: %s, ovl: %s): Attempting compilation as executable file", path, prx_err, ovl_err);
 			possible_exec_file_paths.push(path, offset, file_size);
 			inc_fdone = 0;
+		}
+
+		if (restore_mem)
+		{
+			if (!file_size_limit.fetch_add(restore_mem))
+			{
+				file_size_limit.notify_all();
+			}
 		}
 	});
 
