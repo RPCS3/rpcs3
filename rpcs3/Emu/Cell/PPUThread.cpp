@@ -172,7 +172,7 @@ bool serialize<ppu_thread::cr_bits>(utils::serial& ar, typename ppu_thread::cr_b
 }
 
 extern void ppu_initialize();
-extern void ppu_finalize(const ppu_module& info);
+extern void ppu_finalize(const ppu_module& info, bool force_mem_release = false);
 extern bool ppu_initialize(const ppu_module& info, bool check_only = false, u64 file_size = 0);
 static void ppu_initialize2(class jit_compiler& jit, const ppu_module& module_part, const std::string& cache_path, const std::string& obj_name, const ppu_module& whole_module);
 extern bool ppu_load_exec(const ppu_exec_object&, bool virtual_load, const std::string&, utils::serial* = nullptr);
@@ -3706,20 +3706,30 @@ extern fs::file make_file_view(fs::file&& _file, u64 offset, u64 max_size = umax
 	return file;
 }
 
-extern void ppu_finalize(const ppu_module& info)
+extern void ppu_finalize(const ppu_module& info, bool force_mem_release)
 {
-	if (info.name.empty())
+	if (!force_mem_release && info.name.empty())
 	{
 		// Don't remove main module from memory
 		return;
 	}
 
-	const std::string dev_flash = vfs::get("/dev_flash/sys/");
-
-	if (info.path.starts_with(dev_flash) || Emu.GetCat() == "1P")
+	if (!force_mem_release && Emu.GetCat() == "1P")
 	{
-		// Don't remove dev_flash prx from memory
 		return;
+	}
+
+	const bool may_be_elf = fmt::to_lower(info.path.substr(std::max<usz>(info.path.size(), 3) - 3)) != "prx";
+
+	if (!may_be_elf)
+	{
+		const std::string dev_flash = vfs::get("/dev_flash/sys/external");
+
+		if (!force_mem_release && info.path.starts_with(dev_flash))
+		{
+			// Don't remove dev_flash prx from memory
+			return;
+		}
 	}
 
 	// Get cache path for this executable
@@ -3960,7 +3970,10 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 
 	::semaphore<2> ovl_sema;
 
-	named_thread_group workers("SPRX Worker ", std::min<u32>(utils::get_thread_count(), ::size32(file_queue)), [&]
+	const u32 software_thread_limit = std::min<u32>(g_cfg.core.llvm_threads ? g_cfg.core.llvm_threads : u32{umax}, ::size32(file_queue));
+	const u32 cpu_thread_limit = utils::get_thread_count() > 8u ? std::max<u32>(utils::get_thread_count(), 2) - 1 : utils::get_thread_count(); // One LLVM thread less
+
+	named_thread_group workers("SPRX Worker ", std::min<u32>(software_thread_limit, cpu_thread_limit), [&]
 	{
 #ifdef __APPLE__
 		pthread_jit_write_protect_np(false);
@@ -4015,7 +4028,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 				{
 					obj.clear(), src.close(); // Clear decrypted file and elf object memory
 					ppu_initialize(*prx, false, file_size);
-					ppu_finalize(*prx);
+					ppu_finalize(*prx, true);
 					continue;
 				}
 
@@ -4063,7 +4076,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 
 					obj.clear(), src.close(); // Clear decrypted file and elf object memory
 					ppu_initialize(*ovlm, false, file_size);
-					ppu_finalize(*ovlm);
+					ppu_finalize(*ovlm, true);
 					break;
 				}
 
@@ -4164,7 +4177,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 					Emu.ConfigurePPUCache(!Emu.IsPathInsideDir(_main.path, g_cfg_vfs.get_dev_flash()));
 					ppu_initialize(_main, false, file_size);
 					spu_cache::initialize(false);
-					ppu_finalize(_main);
+					ppu_finalize(_main, true);
 					_main = {};
 					g_fxo->get<spu_cache>() = std::move(current_cache);
 					break;
