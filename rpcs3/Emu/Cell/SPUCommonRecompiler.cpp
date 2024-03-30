@@ -4495,11 +4495,10 @@ struct spu_llvm_worker
 	void operator()()
 	{
 		// SPU LLVM Recompiler instance
-		const auto compiler = spu_recompiler_base::make_llvm_recompiler();
-		compiler->init();
+		std::unique_ptr<spu_recompiler_base> compiler;
 
 		// Fake LS
-		std::vector<be_t<u32>> ls(0x10000);
+		std::vector<be_t<u32>> ls;
 
 		bool set_relax_flag = false;
 
@@ -4540,6 +4539,15 @@ struct spu_llvm_worker
 			if (!prog->second)
 			{
 				break;
+			}
+
+			if (!compiler)
+			{
+				// Postponed initialization
+				compiler = spu_recompiler_base::make_llvm_recompiler();
+				compiler->init();
+
+				ls.resize(SPU_LS_SIZE / sizeof(be_t<u32>));
 			}
 
 			if (!set_relax_flag)
@@ -4620,6 +4628,17 @@ struct spu_llvm
 	void operator()()
 	{
 		if (g_cfg.core.spu_decoder != spu_decoder_type::llvm)
+		{
+			return;
+		}
+
+		while (!registered && thread_ctrl::state() != thread_state::aborting)
+		{
+			// Wait for the first SPU block before launching any thread
+			thread_ctrl::wait_on(utils::bless<atomic_t<u32>>(&registered)[1], 0);
+		}
+
+		if (thread_ctrl::state() == thread_state::aborting)
 		{
 			return;
 		}
