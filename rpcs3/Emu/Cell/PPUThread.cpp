@@ -3594,6 +3594,15 @@ namespace
 			if (found == bucket.map.end()) [[unlikely]]
 			{
 				ppu_log.error("Failed to remove module %s", name);
+
+				for (auto& buck : buckets)
+				{
+					for (auto& mod : buck.map)
+					{
+						ppu_log.notice("But there is module %s", mod.first);
+					}
+				}
+
 				return;
 			}
 
@@ -3721,21 +3730,26 @@ extern void ppu_finalize(const ppu_module& info, bool force_mem_release)
 
 	const bool may_be_elf = fmt::to_lower(info.path.substr(std::max<usz>(info.path.size(), 3) - 3)) != "prx";
 
+	const std::string dev_flash = vfs::get("/dev_flash/");
+
 	if (!may_be_elf)
 	{
-		const std::string dev_flash = vfs::get("/dev_flash/sys/external");
-
-		if (!force_mem_release && info.path.starts_with(dev_flash))
+		if (!force_mem_release && info.path.starts_with(dev_flash + "sys/external/"))
 		{
 			// Don't remove dev_flash prx from memory
 			return;
 		}
 	}
 
+	if (g_cfg.core.ppu_decoder != ppu_decoder_type::llvm)
+	{
+		return;
+	}
+
 	// Get cache path for this executable
 	std::string cache_path = fs::get_cache_dir() + "cache/";
 
-	if (!Emu.GetTitleID().empty())
+	if (!info.path.starts_with(dev_flash) && !Emu.GetTitleID().empty() && Emu.GetCat() != "1P")
 	{
 		cache_path += Emu.GetTitleID();
 		cache_path += '/';
@@ -4366,7 +4380,7 @@ extern void ppu_initialize()
 			}
 		}
 
-		const std::string firmware_sprx_path = vfs::get(dev_flash_located ? "/dev_flash/"sv : "/dev_flash/sys/"sv);
+		const std::string firmware_sprx_path = vfs::get(dev_flash_located ? "/dev_flash/"sv : "/dev_flash/sys/external/"sv);
 		dir_queue.emplace_back(firmware_sprx_path);
 	}
 
