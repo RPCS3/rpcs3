@@ -3717,6 +3717,12 @@ extern fs::file make_file_view(fs::file&& _file, u64 offset, u64 max_size = umax
 
 extern void ppu_finalize(const ppu_module& info, bool force_mem_release)
 {
+	if (info.segs.empty())
+	{
+		// HLEd modules
+		return;
+	}
+
 	if (!force_mem_release && info.name.empty())
 	{
 		// Don't remove main module from memory
