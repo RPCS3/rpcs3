@@ -3121,14 +3121,25 @@ public:
 		_spu->do_mfc();
 	}
 
+	template <bool Saveable>
 	static void exec_mfc_cmd(spu_thread* _spu)
 	{
+		if constexpr (!Saveable)
+		{
+			_spu->unsavable = true;
+		}
+
 		if (!_spu->process_mfc_cmd() || _spu->state & cpu_flag::again)
 		{
 			fmt::throw_exception("exec_mfc_cmd(): Should not abort!");
 		}
 
 		static_cast<void>(_spu->test_stopped());
+
+		if constexpr (!Saveable)
+		{
+			_spu->unsavable = false;
+		}
 	}
 
 	void WRCH(spu_opcode_t op) //
@@ -3307,8 +3318,17 @@ public:
 				case MFC_GETLB_CMD:
 				case MFC_GETLF_CMD:
 				{
+					m_ir->CreateBr(next);
+					m_ir->SetInsertPoint(exec);
+					m_ir->CreateUnreachable();
+					m_ir->SetInsertPoint(fail);
+					m_ir->CreateUnreachable();
+					m_ir->SetInsertPoint(next);
+					m_ir->CreateStore(ci, spu_ptr<u8>(&spu_thread::ch_mfc_cmd, &spu_mfc_cmd::cmd));
+					update_pc();
 					ensure_gpr_stores();
-					[[fallthrough]];
+					call("spu_exec_mfc_cmd_saveable", &exec_mfc_cmd<true>, m_thread);
+					return;
 				}
 				case MFC_SDCRZ_CMD:
 				case MFC_GETLLAR_CMD:
@@ -3325,7 +3345,7 @@ public:
 					m_ir->SetInsertPoint(next);
 					m_ir->CreateStore(ci, spu_ptr<u8>(&spu_thread::ch_mfc_cmd, &spu_mfc_cmd::cmd));
 					update_pc();
-					call("spu_exec_mfc_cmd", &exec_mfc_cmd, m_thread);
+					call("spu_exec_mfc_cmd", &exec_mfc_cmd<false>, m_thread);
 					return;
 				}
 				case MFC_SNDSIG_CMD:
@@ -3384,7 +3404,7 @@ public:
 					}
 
 					m_ir->CreateStore(ci, spu_ptr<u8>(&spu_thread::ch_mfc_cmd, &spu_mfc_cmd::cmd));
-					call("spu_exec_mfc_cmd", &exec_mfc_cmd, m_thread);
+					call("spu_exec_mfc_cmd", &exec_mfc_cmd<false>, m_thread);
 					m_ir->CreateBr(next);
 					m_ir->SetInsertPoint(copy);
 
