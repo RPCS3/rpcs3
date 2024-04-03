@@ -227,7 +227,7 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 			.arg(localized.GetVerboseTimeByMs(std::abs(diff_msec), true));
 	}
 
-	m_update_message = m_update_message.arg("<br>You can empower our project at <a href=\"https://patreon.com/Nekotekina\">RPCS3 Patreon</a><br>");
+	m_update_message = m_update_message.arg("<br>You can empower our project at <a href=\"https://rpcs3.net/patreon\">RPCS3 Patreon</a>.<br>");
 
 	m_request_url   = latest[os]["download"].toString().toStdString();
 	m_expected_hash = latest[os]["checksum"].toString().toStdString();

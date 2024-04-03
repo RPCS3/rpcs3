@@ -3078,7 +3078,7 @@ void main_window::CreateConnects()
 
 	connect(ui->supportAct, &QAction::triggered, this, [this]
 	{
-		QDesktopServices::openUrl(QUrl("https://www.patreon.com/Nekotekina"));
+		QDesktopServices::openUrl(QUrl("https://rpcs3.net/patreon"));
 	});
 
 	connect(ui->aboutAct, &QAction::triggered, this, [this]
