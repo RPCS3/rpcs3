@@ -160,7 +160,8 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		// Store reordering/elimination protection
 		std::array<usz, s_reg_max> store_context_last_id = fill_array<usz>(0); // Protects against illegal forward ordering
 		std::array<usz, s_reg_max> store_context_first_id = fill_array<usz>(usz{umax}); // Protects against illegal past store elimination (backwards ordering is not implemented)
-		std::array<usz, s_reg_max> store_context_ctr = fill_array<usz>(1); // Store barrier cointer
+		std::array<usz, s_reg_max> store_context_ctr = fill_array<usz>(1); // Store barrier counter
+		bool has_gpr_memory_barriers = false; // Summarizes whether GPR barriers exist this block (as if checking all store_context_ctr entries)
 
 		bool does_gpr_barrier_proceed_last_store(u32 i) const noexcept
 		{
@@ -1672,10 +1673,14 @@ public:
 
 			std::vector<block_info*> block_q;
 			block_q.reserve(m_blocks.size());
+
+			bool has_gpr_memory_barriers = false;
+
 			for (auto& [a, b] : m_blocks)
 			{
 				block_q.emplace_back(&b);
 				bb_to_info[b.block] = &b;
+				has_gpr_memory_barriers |= b.has_gpr_memory_barriers;
 			}
 
 			for (usz bi = 0; bi < block_q.size();)
@@ -1683,7 +1688,7 @@ public:
 				auto bqbi = block_q[bi++];
 
 				// TODO: process all registers up to s_reg_max
-				for (u32 i = 0; i < 128; i++)
+				for (u32 i = 0; i <= s_reg_127; i++)
 				{
 					// Check if the store is beyond the last barrier
 					if (auto& bs = bqbi->store[i]; bs && !bqbi->does_gpr_barrier_proceed_last_store(i))
@@ -1732,16 +1737,28 @@ public:
 
 						// Find nearest common post-dominator
 						llvm::BasicBlock* common_pdom = killers[0];
+
+						if (has_gpr_memory_barriers)
+						{
+							// Cannot optimize block walk-through, need to inspect all possible memory barriers in the way
+							common_pdom = nullptr;
+						}
+
 						for (auto* bbb : llvm::drop_begin(killers))
 						{
 							if (!common_pdom)
+							{
 								break;
+							}
+
 							common_pdom = pdt.findNearestCommonDominator(common_pdom, bbb);
 						}
 
 						// Shortcut
-						if (!pdt.dominates(common_pdom, bs->getParent()))
+						if (common_pdom && !pdt.dominates(common_pdom, bs->getParent()))
+						{
 							common_pdom = nullptr;
+						}
 
 						// Look for possibly-dead store in CFG starting from the exit nodes
 						llvm::SetVector<llvm::BasicBlock*> work_list;
@@ -1878,7 +1895,7 @@ public:
 
 			for (usz bi = 0; bi < block_q.size(); bi++)
 			{
-				for (u32 i = 0; i < 128; i++)
+				for (u32 i = 0; i <= s_reg_127; i++)
 				{
 					// If store isn't erased, try to sink it
 					if (auto& bs = block_q[bi]->store[i]; bs && block_q[bi]->bb->targets.size() > 1 && !block_q[bi]->does_gpr_barrier_proceed_last_store(i))
@@ -2749,6 +2766,7 @@ public:
 		{
 			// Make previous stores not able to be reordered beyond this point or be deleted
 			std::for_each(m_block->store_context_ctr.begin(), m_block->store_context_ctr.end(), FN(x++));
+			m_block->has_gpr_memory_barriers = true;
 		}
 	}
 
