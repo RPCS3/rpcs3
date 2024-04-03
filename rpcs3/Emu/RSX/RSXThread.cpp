@@ -3383,7 +3383,7 @@ namespace rsx
 		return fifo_ctrl->last_cmd();
 	}
 
-	void invalid_method(thread*, u32, u32);
+	void invalid_method(context*, u32, u32);
 
 	void thread::dump_regs(std::string& result, std::any& /*custom_data*/) const
 	{
