@@ -375,7 +375,7 @@ namespace rsx
 		}
 	};
 
-	using rsx_method_t = void(*)(class thread*, u32 reg, u32 arg);
+	using rsx_method_t = void(*)(class context*, u32 reg, u32 arg);
 
 	//TODO
 	union alignas(4) method_registers_t
@@ -442,7 +442,7 @@ namespace rsx
 	{
 	public:
 		std::array<u32, 0x10000 / 4> registers{};
-		u32 register_previous_value{};
+		u32 latch{};
 
 		template<u32 opcode>
 		using decoded_type = typename registers_decoder<opcode>::decoded_type;

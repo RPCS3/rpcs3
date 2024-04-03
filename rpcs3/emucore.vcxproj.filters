@@ -97,6 +97,9 @@
     <Filter Include="Emu\GPU\RSX\Program\Upscalers\FSR1">
       <UniqueIdentifier>{cab197c1-581c-49db-9d8b-670335b44cb2}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Emu\GPU\RSX\NV47">
+      <UniqueIdentifier>{213387bd-09c5-4247-8fb0-b3cae06ba34b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Crypto\aes.cpp">
@@ -1209,6 +1212,21 @@
     </ClCompile>
     <ClCompile Include="Emu\RSX\Program\SPIRVCommon.cpp">
       <Filter>Emu\GPU\RSX\Program</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\NV47\nv4097.cpp">
+      <Filter>Emu\GPU\RSX\NV47</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\NV47\common.cpp">
+      <Filter>Emu\GPU\RSX\NV47</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\NV47\nv406e.cpp">
+      <Filter>Emu\GPU\RSX\NV47</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\NV47\nv308a.cpp">
+      <Filter>Emu\GPU\RSX\NV47</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\NV47\nv3089.cpp">
+      <Filter>Emu\GPU\RSX\NV47</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -2448,6 +2466,33 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\Program\SPIRVCommon.h">
       <Filter>Emu\GPU\RSX\Program</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\NV47\nv47.h">
+      <Filter>Emu\GPU\RSX\NV47</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\NV47\nv4097.h">
+      <Filter>Emu\GPU\RSX\NV47</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\NV47\nv406e.h">
+      <Filter>Emu\GPU\RSX\NV47</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\NV47\nv3089.h">
+      <Filter>Emu\GPU\RSX\NV47</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\NV47\nv308a.h">
+      <Filter>Emu\GPU\RSX\NV47</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\NV47\context.h">
+      <Filter>Emu\GPU\RSX\NV47</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\NV47\common.h">
+      <Filter>Emu\GPU\RSX\NV47</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\NV47\context_accessors.define.h">
+      <Filter>Emu\GPU\RSX\NV47</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\NV47\context_accessors.undef.h">
+      <Filter>Emu\GPU\RSX\NV47</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
