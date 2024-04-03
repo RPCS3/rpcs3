@@ -15,6 +15,8 @@ constexpr auto qstr = QString::fromStdString;
 
 extern bool ppu_patch(u32 addr, u32 value);
 
+extern std::string format_spu_func_info(u32 addr, cpu_thread* spu);
+
 instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, CPUDisAsm* _disasm, std::function<cpu_thread*()> func)
 	: QDialog(parent)
 	, m_pc(_pc)
@@ -57,6 +59,16 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, C
 	vbox_right_panel->addWidget(new QLabel(qstr(fmt::format("%08x", m_pc))));
 	vbox_right_panel->addWidget(m_instr);
 	vbox_right_panel->addWidget(m_preview);
+
+	if (cpu && cpu->id_type() == 2)
+	{
+		// Print block information as if this instruction is its beginning
+		vbox_left_panel->addWidget(new QLabel(tr("Block Info:  ")));
+		m_func_info = new QLabel("", this);
+		vbox_right_panel->addWidget(m_func_info);
+
+		m_func_info->setText(qstr(format_spu_func_info(m_pc, cpu)));
+	}
 
 	if (cpu && cpu->id_type() == 2)
 	{

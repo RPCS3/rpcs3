@@ -5199,3 +5199,25 @@ std::unique_ptr<spu_recompiler_base> spu_recompiler_base::make_fast_llvm_recompi
 {
 	return std::make_unique<spu_fast>();
 }
+
+extern std::string format_spu_func_info(u32 addr, cpu_thread* spu)
+{
+	spu_thread* _spu = static_cast<spu_thread*>(spu);
+
+	std::unique_ptr<spu_recompiler_base> compiler = spu_recompiler_base::make_asmjit_recompiler();
+	compiler->init();
+	auto func = compiler->analyse(reinterpret_cast<const be_t<u32>*>(_spu->ls), addr);
+
+	std::string info;
+	{
+		sha1_context ctx;
+		u8 output[20];
+
+		sha1_starts(&ctx);
+		sha1_update(&ctx, reinterpret_cast<const u8*>(func.data.data()), func.data.size() * 4);
+		sha1_finish(&ctx, output);
+		fmt::append(info, "size=%d, end=0x%x, hash=%s", func.data.size(), addr + func.data.size() * 4, fmt::base57(output));
+	}
+
+	return info;
+}
