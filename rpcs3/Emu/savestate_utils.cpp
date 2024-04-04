@@ -46,7 +46,7 @@ SERIALIZATION_VER(ppu, 1,                                       1, 2/*PPU sleep 
 SERIALIZATION_VER(spu, 2,                                       1)
 SERIALIZATION_VER(lv2_sync, 3,                                  1)
 SERIALIZATION_VER(lv2_vm, 4,                                    1)
-SERIALIZATION_VER(lv2_net, 5,                                   1)
+SERIALIZATION_VER(lv2_net, 5,                                   1, 2/*TCP Feign conection loss*/)
 SERIALIZATION_VER(lv2_fs, 6,                                    1, 2/*NPDRM key saving*/)
 SERIALIZATION_VER(lv2_prx_overlay, 7,                           1)
 SERIALIZATION_VER(lv2_memory, 8,                                1)
