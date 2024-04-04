@@ -239,8 +239,15 @@ error_code disc_change_manager::register_callbacks(vm::ptr<CellGameDiscEjectCall
 	eject_callback = func_eject;
 	insert_callback = func_insert;
 
-	Emu.GetCallbacks().enable_disc_eject(!!func_eject);
-	Emu.GetCallbacks().enable_disc_insert(false);
+	const bool is_disc_mounted = fs::is_dir(vfs::get("/dev_bdvd/PS3_GAME"));
+
+	if (state == eject_state::unknown)
+	{
+		state = is_disc_mounted ? eject_state::inserted : eject_state::ejected;
+	}
+
+	Emu.GetCallbacks().enable_disc_eject(!!func_eject && is_disc_mounted);
+	Emu.GetCallbacks().enable_disc_insert(!!func_insert && !is_disc_mounted);
 
 	return CELL_OK;
 }
@@ -300,7 +307,8 @@ void disc_change_manager::eject_disc()
 		ensure(vfs::unmount("/dev_ps2disc"));
 		dcm.state = eject_state::ejected;
 
-		Emu.GetCallbacks().enable_disc_insert(true);
+		// Re-enable disc insertion only if the callback is still registered
+		Emu.GetCallbacks().enable_disc_insert(!!dcm.insert_callback);
 
 		return CELL_OK;
 	});
