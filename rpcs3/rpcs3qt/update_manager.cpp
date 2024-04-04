@@ -336,10 +336,15 @@ void update_manager::update(bool auto_accept)
 
 			// Smartass hack to make the unresizeable message box wide enough for the changelog
 			const int changelog_width = QLabel(changelog_content).sizeHint().width();
-			while (QLabel(m_update_message).sizeHint().width() < changelog_width)
+			if (QLabel(m_update_message).sizeHint().width() < changelog_width)
 			{
-				m_update_message += "          ";
+				m_update_message += " &nbsp;";
+				while (QLabel(m_update_message).sizeHint().width() < changelog_width)
+				{
+					m_update_message += "&nbsp;";
+				}
 			}
+
 			mb.setText(m_update_message);
 		}
 
