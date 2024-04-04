@@ -338,11 +338,12 @@ struct disc_change_manager
 
 	enum class eject_state
 	{
+		unknown,
 		inserted,
 		ejected,
 		busy
 	};
-	atomic_t<eject_state> state = eject_state::inserted;
+	atomic_t<eject_state> state = eject_state::unknown;
 
 	error_code register_callbacks(vm::ptr<CellGameDiscEjectCallback> func_eject, vm::ptr<CellGameDiscInsertCallback> func_insert);
 	error_code unregister_callbacks();
