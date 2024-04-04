@@ -193,6 +193,7 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 	const Localized localized;
 
 	m_new_version = latest["version"].toString().toStdString();
+	const QString support_message = tr("<br>You can empower our project at <a href=\"https://rpcs3.net/patreon\">RPCS3 Patreon</a>.<br>");
 
 	if (hash_found)
 	{
@@ -205,16 +206,18 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 				.arg(current["version"].toString())
 				.arg(cur_str)
 				.arg(latest["version"].toString())
-				.arg(lts_str);
+				.arg(lts_str)
+				.arg(support_message);
 		}
 		else
 		{
-			m_update_message = tr("A new version of RPCS3 is available!<br><br>Current version: %0 (%1)<br>Latest version: %2 (%3)<br>Your version is %4 behind.<br>%4<br>Do you want to update?")
+			m_update_message = tr("A new version of RPCS3 is available!<br><br>Current version: %0 (%1)<br>Latest version: %2 (%3)<br>Your version is %4 behind.<br>%5<br>Do you want to update?")
 				.arg(current["version"].toString())
 				.arg(cur_str)
 				.arg(latest["version"].toString())
 				.arg(lts_str)
-				.arg(localized.GetVerboseTimeByMs(diff_msec, true));
+				.arg(localized.GetVerboseTimeByMs(diff_msec, true))
+				.arg(support_message);
 		}
 	}
 	else
@@ -224,10 +227,9 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 		m_update_message = tr("You're currently using a custom or PR build.<br><br>Latest version: %0 (%1)<br>The latest version is %2 old.<br>%3<br>Do you want to update to the latest official RPCS3 version?")
 			.arg(latest["version"].toString())
 			.arg(lts_str)
-			.arg(localized.GetVerboseTimeByMs(std::abs(diff_msec), true));
+			.arg(localized.GetVerboseTimeByMs(std::abs(diff_msec), true))
+			.arg(support_message);
 	}
-
-	m_update_message = m_update_message.arg("<br>You can empower our project at <a href=\"https://rpcs3.net/patreon\">RPCS3 Patreon</a>.<br>");
 
 	m_request_url   = latest[os]["download"].toString().toStdString();
 	m_expected_hash = latest[os]["checksum"].toString().toStdString();
