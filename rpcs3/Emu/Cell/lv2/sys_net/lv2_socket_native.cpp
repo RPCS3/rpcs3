@@ -120,7 +120,7 @@ std::tuple<bool, s32, std::shared_ptr<lv2_socket>, sys_net_sockaddr> lv2_socket_
 
 	if (feign_tcp_conn_failure)
 	{
-		sys_net.error("Calling socket::accpet() from a previously connected socket!");
+		sys_net.error("Calling socket::accept() from a previously connected socket!");
 	}
 
 	socket_type native_socket = ::accept(socket, reinterpret_cast<struct sockaddr*>(&native_addr), &native_addrlen);
