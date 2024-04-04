@@ -53,6 +53,8 @@ public:
 	s32 poll(sys_net_pollfd& sn_pfd, pollfd& native_pfd) override;
 	std::tuple<bool, bool, bool> select(bs_t<poll_t> selected, pollfd& native_pfd) override;
 
+	bool is_socket_connected();
+
 	s32 listen(s32 backlog) override;
 	void close() override;
 	s32 shutdown(s32 how) override;
@@ -69,4 +71,5 @@ private:
 	s32 so_reuseport = 0;
 #endif
 	u16 bound_port = 0;
+	bool feign_tcp_conn_failure = false; // Savestate load related
 };
