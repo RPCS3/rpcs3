@@ -488,16 +488,33 @@ error_code cellRtcFormatRfc3339LocalTime(vm::ptr<char> pszDateTime, vm::cptr<Cel
 	return cellRtcFormatRfc3339(pszDateTime, pUtc, *timezone + *summertime);
 }
 
+error_code cellRtcParseRfc3339(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDateTime);
+
 /*
  Takes a RFC2822 / RFC3339 / asctime String, and converts it to a CellRtcTick
 */
 error_code cellRtcParseDateTime(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDateTime)
 {
-	cellRtc.error("cellRtcParseDateTime(pUtc=*0x%x, pszDateTime=%s) -- Implement me", pUtc, pszDateTime);
+	cellRtc.todo("cellRtcParseDateTime(pUtc=*0x%x, pszDateTime=%s)", pUtc, pszDateTime);
 
 	if (!vm::check_addr(pUtc.addr()) || !vm::check_addr(pszDateTime.addr()))
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
+	}
+
+	u32 pos = 0;
+
+	while (pszDateTime[pos] == 32 || pszDateTime[pos] == 9)
+	{
+		pos++;
+	}
+
+	if (std::isdigit(pszDateTime[pos]) &&
+		std::isdigit(pszDateTime[pos + 1]) &&
+		std::isdigit(pszDateTime[pos + 2]) &&
+		std::isdigit(pszDateTime[pos + 3]))
+	{
+		return cellRtcParseRfc3339(pUtc, pszDateTime + pos);
 	}
 
 	// Below code kinda works
