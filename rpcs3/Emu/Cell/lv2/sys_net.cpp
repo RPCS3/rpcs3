@@ -1735,6 +1735,7 @@ error_code lv2_socket::abort_socket(s32 flags)
 		}
 
 		qcopy = std::move(queue);
+		queue = {};
 		events.store({});
 	}
 
