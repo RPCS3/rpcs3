@@ -219,6 +219,22 @@ void fmt_class_string<disc_change_manager::eject_state>::format(std::string& out
 	});
 }
 
+static bool check_system_ver(vm::cptr<char> systemVersion)
+{
+	// Only allow something like "04.8300".
+	// The disassembly shows that "04.83" would also be considered valid, but the initial strlen check makes this void.
+	return (
+		systemVersion &&
+		std::strlen(systemVersion.get_ptr()) == 7 &&
+		std::isdigit(systemVersion[0]) &&
+		std::isdigit(systemVersion[1]) &&
+		systemVersion[2] == '.' &&
+		std::isdigit(systemVersion[3]) &&
+		std::isdigit(systemVersion[4]) &&
+		std::isdigit(systemVersion[5]) &&
+		std::isdigit(systemVersion[6])
+	);
+}
 
 disc_change_manager::disc_change_manager()
 {
@@ -389,7 +405,7 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 {
 	cellGame.warning("cellHddGameCheck(version=%d, dirName=%s, errDialog=%d, funcStat=*0x%x, container=%d)", version, dirName, errDialog, funcStat, container);
 
-	if (!dirName || !funcStat || sysutil_check_name_string(dirName.get_ptr(), 1, CELL_GAME_DIRNAME_SIZE) != 0)
+	if (version != CELL_GAMEDATA_VERSION_CURRENT || !dirName || !funcStat || sysutil_check_name_string(dirName.get_ptr(), 1, CELL_GAME_DIRNAME_SIZE) != 0)
 	{
 		return CELL_HDDGAME_ERROR_PARAM;
 	}
@@ -597,6 +613,11 @@ error_code cellHddGameGetSizeKB(ppu_thread& ppu, vm::ptr<u32> size)
 
 	cellGame.warning("cellHddGameGetSizeKB(size=*0x%x)", size);
 
+	if (!size)
+	{
+		return CELL_HDDGAME_ERROR_PARAM;
+	}
+
 	lv2_obj::sleep(ppu);
 
 	const u64 start_sleep = ppu.start_time;
@@ -631,7 +652,7 @@ error_code cellHddGameSetSystemVer(vm::cptr<char> systemVersion)
 {
 	cellGame.todo("cellHddGameSetSystemVer(systemVersion=%s)", systemVersion);
 
-	if (!systemVersion)
+	if (!check_system_ver(systemVersion))
 	{
 		return CELL_HDDGAME_ERROR_PARAM;
 	}
@@ -690,7 +711,7 @@ error_code cellGameDataSetSystemVer(vm::cptr<char> systemVersion)
 {
 	cellGame.todo("cellGameDataSetSystemVer(systemVersion=%s)", systemVersion);
 
-	if (!systemVersion)
+	if (!check_system_ver(systemVersion))
 	{
 		return CELL_GAMEDATA_ERROR_PARAM;
 	}
@@ -1016,7 +1037,7 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 
 	//older sdk. it might not care about game type.
 
-	if (version != CELL_GAMEDATA_VERSION_CURRENT || errDialog > 1 || !funcStat || sysutil_check_name_string(dirName.get_ptr(), 1, CELL_GAME_DIRNAME_SIZE) != 0)
+	if (version != CELL_GAMEDATA_VERSION_CURRENT || !funcStat || !dirName || sysutil_check_name_string(dirName.get_ptr(), 1, CELL_GAME_DIRNAME_SIZE) != 0)
 	{
 		return CELL_GAMEDATA_ERROR_PARAM;
 	}
@@ -1170,7 +1191,7 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 		break;
 	}
 
-	if (errDialog == CELL_GAMEDATA_ERRDIALOG_ALWAYS) // Maybe != CELL_GAMEDATA_ERRDIALOG_NONE
+	if (errDialog == CELL_GAMEDATA_ERRDIALOG_ALWAYS)
 	{
 		// Yield before a blocking dialog is being spawned
 		lv2_obj::sleep(ppu);
