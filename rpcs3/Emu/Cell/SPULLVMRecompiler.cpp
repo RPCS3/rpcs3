@@ -503,8 +503,6 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 			return result;
 		}
 
-		ensure(!absolute);
-
 		auto& result = m_blocks[target].block;
 
 		if (!result)
@@ -7661,10 +7659,14 @@ public:
 			return;
 		}
 
+		const auto compiled_pos = m_ir->getInt32(m_pos);
 		const u32 target = spu_branch_target(0, op.i16);
 
 		m_block->block_end = m_ir->GetInsertBlock();
-		m_ir->CreateBr(add_block(target, true));
+		const auto real_pos = get_pc(m_pos);
+		value_t<u32> target_val;
+		target_val.value = m_ir->getInt32(target);
+		m_ir->CreateCondBr(m_ir->CreateICmpEQ(real_pos, compiled_pos), add_block(target, true), add_block_indirect({}, target_val));
 	}
 
 	void BRASL(spu_opcode_t op) //

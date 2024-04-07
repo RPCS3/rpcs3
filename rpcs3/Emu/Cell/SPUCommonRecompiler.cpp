@@ -2925,7 +2925,6 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			if (g_cfg.core.spu_block_size == spu_block_size_type::giga && !sync)
 			{
 				m_entry_info[target / 4] = true;
-				add_block(target);
 			}
 			else
 			{
@@ -2933,13 +2932,9 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				{
 					spu_log.notice("[0x%x] At 0x%x: ignoring fixed tail call to 0x%x (SYNC)", entry_point, pos, target);
 				}
-
-				if (target > entry_point)
-				{
-					limit = std::min<u32>(limit, target);
-				}
 			}
 
+			add_block(target);
 			next_block();
 			break;
 		}
@@ -3528,10 +3523,6 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					break;
 				case spu_itype::BRASL:
 					is_call = spu_branch_target(0, op.i16) != ia + 4;
-					break;
-				case spu_itype::BRA:
-					is_call = true;
-					is_tail = true;
 					break;
 				case spu_itype::BISL:
 				case spu_itype::BISLED:
