@@ -690,11 +690,9 @@ error_code cellRtcParseRfc3339(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDate
 	u32 pos = 19;
 	if (pszDateTime[pos] == '.')
 	{
-		pos++;
-
 		u32 mul = 100000;
 
-		for (char c = pszDateTime[pos++]; std::isdigit(c); c = pszDateTime[pos++])
+		for (char c = pszDateTime[++pos]; std::isdigit(c); c = pszDateTime[++pos])
 		{
 			date_time->microsecond += digit(c) * mul;
 			mul /= 10;
