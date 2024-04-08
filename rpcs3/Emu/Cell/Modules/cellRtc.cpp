@@ -504,7 +504,7 @@ error_code cellRtcParseDateTime(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDat
 
 	u32 pos = 0;
 
-	while (pszDateTime[pos] == 32 || pszDateTime[pos] == 9)
+	while (std::isblank(pszDateTime[pos]))
 	{
 		pos++;
 	}
@@ -580,7 +580,7 @@ error_code cellRtcParseDateTime(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDat
 // Rfc3339: 1995-12-03T13:23:00.00Z
 error_code cellRtcParseRfc3339(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDateTime)
 {
-	cellRtc.todo("cellRtcParseRfc3339(pUtc=*0x%x, pszDateTime=%s)", pUtc, pszDateTime);
+	cellRtc.notice("cellRtcParseRfc3339(pUtc=*0x%x, pszDateTime=%s)", pUtc, pszDateTime);
 
 	if (!vm::check_addr(pUtc.addr()))
 	{
@@ -596,7 +596,7 @@ error_code cellRtcParseRfc3339(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDate
 
 	const auto digit = [](char c) -> s32
 	{
-		return c - 48;
+		return c - '0';
 	};
 
 	// Year: XXXX-12-03T13:23:00.00Z
@@ -728,7 +728,7 @@ error_code cellRtcParseRfc3339(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDate
 
 		minutes_to_add = hours * 60 + minutes;
 
-		if (sign == '-')
+		if (sign == '+')
 		{
 			minutes_to_add = -minutes_to_add;
 		}
