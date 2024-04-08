@@ -488,12 +488,34 @@ error_code cellRtcFormatRfc3339LocalTime(vm::ptr<char> pszDateTime, vm::cptr<Cel
 	return cellRtcFormatRfc3339(pszDateTime, pUtc, *timezone + *summertime);
 }
 
+error_code cellRtcParseRfc3339(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDateTime);
+
 /*
  Takes a RFC2822 / RFC3339 / asctime String, and converts it to a CellRtcTick
 */
 error_code cellRtcParseDateTime(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDateTime)
 {
-	cellRtc.error("cellRtcParseDateTime(pUtc=*0x%x, pszDateTime=%s) -- Implement me", pUtc, pszDateTime);
+	cellRtc.todo("cellRtcParseDateTime(pUtc=*0x%x, pszDateTime=%s)", pUtc, pszDateTime);
+
+	if (!vm::check_addr(pUtc.addr()) || !vm::check_addr(pszDateTime.addr()))
+	{
+		return CELL_RTC_ERROR_INVALID_POINTER;
+	}
+
+	u32 pos = 0;
+
+	while (std::isblank(pszDateTime[pos]))
+	{
+		pos++;
+	}
+
+	if (std::isdigit(pszDateTime[pos]) &&
+		std::isdigit(pszDateTime[pos + 1]) &&
+		std::isdigit(pszDateTime[pos + 2]) &&
+		std::isdigit(pszDateTime[pos + 3]))
+	{
+		return cellRtcParseRfc3339(pUtc, pszDateTime + pos);
+	}
 
 	// Below code kinda works
 	/*
@@ -555,9 +577,10 @@ error_code cellRtcParseDateTime(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDat
 	return CELL_OK;
 }
 
+// Rfc3339: 1995-12-03T13:23:00.00Z
 error_code cellRtcParseRfc3339(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDateTime)
 {
-	cellRtc.todo("cellRtcParseRfc3339(pUtc=*0x%x, pszDateTime=%s)", pUtc, pszDateTime);
+	cellRtc.notice("cellRtcParseRfc3339(pUtc=*0x%x, pszDateTime=%s)", pUtc, pszDateTime);
 
 	if (!vm::check_addr(pUtc.addr()))
 	{
@@ -571,20 +594,15 @@ error_code cellRtcParseRfc3339(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDate
 
 	vm::var<CellRtcDateTime> date_time;
 
-	// TODO fix unholyness
-
-	s64 l_add;
-	u32 pc_var_5;
-	u32 u_var_7;
-	s32 i_var_6;
-	s32 i_var_8;
-
-	char char_1 = pszDateTime[1];
-	char char_2 = pszDateTime[2];
-	const char char_3 = pszDateTime[3];
-	if (((*pszDateTime - 0x30U) < 10) && ('/' < char_1) && (char_1 < ':') && ('/' < char_2) && (char_2 < ':') && ('/' < char_3) && (char_3 < ':'))
+	const auto digit = [](char c) -> s32
 	{
-		date_time->year = (char_2 << 1) + (char_2 << 3) + *pszDateTime * 1000 + char_1 * 100 + char_3 + 0x2fb0;
+		return c - '0';
+	};
+
+	// Year: XXXX-12-03T13:23:00.00Z
+	if (std::isdigit(pszDateTime[0]) && std::isdigit(pszDateTime[1]) && std::isdigit(pszDateTime[2]) && std::isdigit(pszDateTime[3]))
+	{
+		date_time->year = digit(pszDateTime[0]) * 1000 + digit(pszDateTime[1]) * 100 + digit(pszDateTime[2]) * 10 + digit(pszDateTime[3]);
 	}
 	else
 	{
@@ -596,9 +614,12 @@ error_code cellRtcParseRfc3339(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDate
 		return CELL_RTC_ERROR_INVALID_YEAR;
 	}
 
-	char_2 = pszDateTime[5];
-	char_1 = pszDateTime[6];
-	if (((9 < (char_2 - 0x30U)) || (char_1 < '0')) || (date_time->month = ((char_2 << 1) + (char_2 << 3) + char_1) - 0x210, '9' < char_1))
+	// Month: 1995-XX-03T13:23:00.00Z
+	if (std::isdigit(pszDateTime[5]) && std::isdigit(pszDateTime[6]))
+	{
+		date_time->month = digit(pszDateTime[5]) * 10 + digit(pszDateTime[6]);
+	}
+	else
 	{
 		date_time->month = 0xffff;
 	}
@@ -608,9 +629,12 @@ error_code cellRtcParseRfc3339(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDate
 		return CELL_RTC_ERROR_INVALID_MONTH;
 	}
 
-	char_2 = pszDateTime[8];
-	char_1 = pszDateTime[9];
-	if (((9 < (char_2 - 0x30U)) || (char_1 < '0')) || (date_time->day = ((char_2 << 1) + (char_2 << 3) + char_1) - 0x210, '9' < char_1))
+	// Day: 1995-12-XXT13:23:00.00Z
+	if (std::isdigit(pszDateTime[8]) && std::isdigit(pszDateTime[9]))
+	{
+		date_time->day = digit(pszDateTime[8]) * 10 + digit(pszDateTime[9]);
+	}
+	else
 	{
 		date_time->day = 0xffff;
 	}
@@ -620,124 +644,98 @@ error_code cellRtcParseRfc3339(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDate
 		return CELL_RTC_ERROR_INVALID_DAY;
 	}
 
-	char_2 = pszDateTime[0xb];
-	char_1 = pszDateTime[0xc];
-	if ((9 < (char_2 - 0x30U)) || ((char_1 < '0' || (date_time->hour = ((char_2 << 1) + (char_2 << 3) + char_1) - 0x210, '9' < char_1))))
+	// Hour: 1995-12-03TXX:23:00.00Z
+	if (std::isdigit(pszDateTime[11]) && std::isdigit(pszDateTime[12]))
+	{
+		date_time->hour = digit(pszDateTime[11]) * 10 + digit(pszDateTime[12]);
+	}
+	else
 	{
 		date_time->hour = 0xffff;
 	}
 
-	if (pszDateTime[0xd] != ':')
+	if (pszDateTime[13] != ':')
 	{
 		return CELL_RTC_ERROR_INVALID_HOUR;
 	}
 
-	char_2 = pszDateTime[0xe];
-	char_1 = pszDateTime[0xf];
-	if (((9 < (char_2 - 0x30U)) || (char_1 < '0')) || (date_time->minute = ((char_2 << 1) + (char_2 << 3) + char_1) - 0x210, '9' < char_1))
+	// Minute: 1995-12-03T13:XX:00.00Z
+	if (std::isdigit(pszDateTime[14]) && std::isdigit(pszDateTime[15]))
+	{
+		date_time->minute = digit(pszDateTime[14]) * 10 + digit(pszDateTime[15]);
+	}
+	else
 	{
 		date_time->minute = 0xffff;
 	}
 
-	if (pszDateTime[0x10] != ':')
+	if (pszDateTime[16] != ':')
 	{
 		return CELL_RTC_ERROR_INVALID_MINUTE;
 	}
 
-	char_2 = pszDateTime[0x11];
-	char_1 = pszDateTime[0x12];
-	if (((9 < (char_2 - 0x30U)) || (char_1 < '0')) || (date_time->second = ((char_2 << 1) + (char_2 << 3) + char_1) - 0x210, '9' < char_1))
+	// Second: 1995-12-03T13:23:XX.00Z
+	if (std::isdigit(pszDateTime[17]) && std::isdigit(pszDateTime[18]))
+	{
+		date_time->second = digit(pszDateTime[17]) * 10 + digit(pszDateTime[18]);
+	}
+	else
 	{
 		date_time->second = 0xffff;
 	}
 
-	pc_var_5 = 0x13;
-	if (pszDateTime[0x13] == '.')
+	// Microsecond: 1995-12-03T13:23:00.XXZ
+	date_time->microsecond = 0;
+
+	u32 pos = 19;
+	if (pszDateTime[pos] == '.')
 	{
-		date_time->microsecond = 0;
-		pc_var_5                 = 0x14;
-		if ((pszDateTime[0x14] - 0x30U) < 10)
+		u32 mul = 100000;
+
+		for (char c = pszDateTime[++pos]; std::isdigit(c); c = pszDateTime[++pos])
 		{
-			u_var_7                  = 10000;
-			date_time->microsecond = (pszDateTime[pc_var_5] + -0x30) * 100000;
-			while (true)
-			{
-				pc_var_5 = pc_var_5 + 1;
-				if (9 < (pszDateTime[pc_var_5] - 0x30U))
-					break;
-				date_time->microsecond += u_var_7 * (pszDateTime[pc_var_5] + -0x30);
-				if (u_var_7 == 100000)
-				{
-					u_var_7 = 10000;
-				}
-				else
-				{
-					if (u_var_7 == 10000)
-					{
-						u_var_7 = 1000;
-					}
-					else
-					{
-						if (u_var_7 == 1000)
-						{
-							u_var_7 = 100;
-						}
-						else
-						{
-							if (u_var_7 == 100)
-							{
-								u_var_7 = 10;
-							}
-							else
-							{
-								u_var_7 = ((u_var_7 ^ 10) - 1) >> 0x1f;
-							}
-						}
-					}
-				}
-			}
+			date_time->microsecond += digit(c) * mul;
+			mul /= 10;
 		}
-	}
-	else
-	{
-		date_time->microsecond = 0;
 	}
 
-	char_1 = pszDateTime[pc_var_5];
-	if ((char_1 == 'Z') || (char_1 == 'z'))
+	const char sign = pszDateTime[pos];
+
+	if (sign != 'Z' && sign != 'z' && sign != '+' && sign != '-')
 	{
-		l_add = 0;
+		return CELL_RTC_ERROR_BAD_PARSE;
 	}
-	else
+
+	s64 minutes_to_add = 0;
+
+	// Time offset: 1995-12-03T13:23:00.00+02:30
+	if (sign == '+' || sign == '-')
 	{
-		if ((char_1 != '+') && (char_1 != '-'))
+		if (!std::isdigit(pszDateTime[pos + 1]) ||
+			!std::isdigit(pszDateTime[pos + 2]) ||
+			pszDateTime[pos + 3] != ':' ||
+			!std::isdigit(pszDateTime[pos + 4]) ||
+			!std::isdigit(pszDateTime[pos + 5]))
 		{
 			return CELL_RTC_ERROR_BAD_PARSE;
 		}
-		char_2 = pszDateTime[pc_var_5 + 2];
-		if (((9 < (pszDateTime[pc_var_5 + 1] - 0x30U)) || (char_2 < '0')) || (i_var_6 = pszDateTime[pc_var_5 + 1] * 10 + char_2 + -0x210, '9' < char_2))
+
+		// Time offset (hours): 1995-12-03T13:23:00.00+XX:30
+		const s32 hours = digit(pszDateTime[pos + 1]) * 10 + digit(pszDateTime[pos + 2]);
+
+		// Time offset (minutes): 1995-12-03T13:23:00.00+02:XX
+		const s32 minutes = digit(pszDateTime[pos + 4]) * 10 + digit(pszDateTime[pos + 5]);
+
+		minutes_to_add = hours * 60 + minutes;
+
+		if (sign == '+')
 		{
-			i_var_6 = -1;
-		}
-		char_2 = pszDateTime[pc_var_5 + 5];
-		if (((9 < (pszDateTime[pc_var_5 + 4] - 0x30U)) || (char_2 < '0')) || (i_var_8 = pszDateTime[pc_var_5 + 4] * 10 + char_2 + -0x210, '9' < char_2))
-		{
-			i_var_8 = -1;
-		}
-		if (((i_var_6 < 0) || (pszDateTime[pc_var_5 + 3] != ':')) || (i_var_8 < 0))
-		{
-			return CELL_RTC_ERROR_BAD_PARSE;
-		}
-		i_var_8 += i_var_6 * 0x3c;
-		l_add = -i_var_8;
-		if (char_1 == '-')
-		{
-			l_add = i_var_8;
+			minutes_to_add = -minutes_to_add;
 		}
 	}
 
 	cellRtcGetTick(date_time, pUtc);
-	cellRtcTickAddMinutes(pUtc, pUtc, l_add);
+	cellRtcTickAddMinutes(pUtc, pUtc, minutes_to_add);
 
 	return CELL_OK;
 }
@@ -1066,7 +1064,7 @@ error_code cellRtcTickAddMonths(vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTic
 	u32 unk_3            = ::narrow<u32>(unk_2);
 	unk_1                = unk_3 & 0xffff;
 	u64 unk_4            = (total_months - ((u64{unk_3} << 4) - (unk_3 << 2))) + 1;
-	if (((unk_2 & 0xffff) == 0) || ((unk_3 = unk_4 & 0xffff, (unk_4 & 0xffff) == 0 || (0xc < unk_3))))
+	if (((unk_2 & 0xffff) == 0) || ((unk_3 = unk_4 & 0xffff, (unk_4 & 0xffff) == 0 || unk_3 > 12)))
 	{
 		return CELL_RTC_ERROR_INVALID_ARG;
 	}
@@ -1077,7 +1075,7 @@ error_code cellRtcTickAddMonths(vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTic
 	u32 month_idx;
 	if ((unk_1 == (uVar1 >> 7) * 400) || ((unk_1 != (uVar1 >> 5) * 100 && ((unk_2 & 3) == 0))))
 	{
-		month_idx = unk_3 + 0xb;
+		month_idx = unk_3 + 11;
 	}
 	else
 	{
@@ -1116,7 +1114,7 @@ error_code cellRtcTickAddYears(vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTick
 
 	u64 total_years = iAdd + date_time->year;
 	u32 unk_1       = total_years & 0xffff;
-	if (((total_years & 0xffff) == 0) || ((date_time->month == 0 || (0xc < date_time->month))))
+	if (unk_1 == 0 || date_time->month == 0 || date_time->month > 12)
 	{
 		return CELL_RTC_ERROR_INVALID_ARG;
 	}
@@ -1188,6 +1186,8 @@ error_code cellRtcGetCurrentSecureTick(vm::ptr<CellRtcTick> tick)
 	}
 
 	// TODO
+
+	tick->tick = 0xe01d003a63a000;
 
 	return CELL_OK;
 }
