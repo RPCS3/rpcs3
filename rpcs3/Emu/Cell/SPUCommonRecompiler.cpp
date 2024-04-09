@@ -805,6 +805,9 @@ void spu_cache::initialize(bool build_existing_cache)
 
 		compiler->init();
 
+		// Counter for error reporting
+		u32 logged_error = 0;
+
 		// How much every thread compiled
 		uint result = 0;
 
@@ -864,6 +867,14 @@ void spu_cache::initialize(bool build_existing_cache)
 			if (func2 != func)
 			{
 				spu_log.error("[0x%05x] SPU Analyser failed, %u vs %u", func2.entry_point, func2.data.size(), size0);
+
+				if (logged_error < 2)
+				{
+					std::string log;
+					compiler->dump(func, log);
+					spu_log.notice("[0x%05x] Function: %s", func.entry_point, log);
+					logged_error++;
+				}
 			}
 			else if (!compiler->compile(std::move(func2)))
 			{
