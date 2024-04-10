@@ -255,7 +255,7 @@ struct fatal_error_listener final : logs::listener
 
 	void log(u64 /*stamp*/, const logs::message& msg, const std::string& prefix, const std::string& text) override
 	{
-		if (msg == logs::level::fatal)
+		if (msg <= logs::level::fatal)
 		{
 			std::string _msg = "RPCS3: ";
 
@@ -289,8 +289,11 @@ struct fatal_error_listener final : logs::listener
 				OutputDebugStringA(_msg.c_str());
 			}
 #endif
-			// Pause emulation if fatal error encountered
-			Emu.Pause(true);
+			if (msg == logs::level::fatal)
+			{
+				// Pause emulation if fatal error encountered
+				Emu.Pause(true);
+			}
 		}
 	}
 };
