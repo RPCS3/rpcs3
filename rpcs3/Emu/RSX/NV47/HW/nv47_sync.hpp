@@ -1,24 +1,16 @@
 #pragma once
 
 #include <util/types.hpp>
-#include "context.h"
+#include "Emu/RSX/RSXThread.h"
+
 #include "context_accessors.define.h"
 
 namespace rsx
 {
-	enum command_barrier_type : u32;
-	enum vertex_base_type;
-
 	namespace util
 	{
-		u32 get_report_data_impl(rsx::context* ctx, u32 offset);
-
-		void push_vertex_data(rsx::context* ctx, u32 attrib_index, u32 channel_select, int count, rsx::vertex_base_type vtype, u32 value);
-
-		void push_draw_parameter_change(rsx::context* ctx, rsx::command_barrier_type type, u32 reg, u32 arg);
-
 		template <bool FlushDMA, bool FlushPipe>
-		void write_gcm_label(context* ctx, u32 address, u32 data)
+		static void write_gcm_label(context* ctx, u32 address, u32 data)
 		{
 			const bool is_flip_sema = (address == (RSX(ctx)->label_addr + 0x10) || address == (RSX(ctx)->device_addr + 0x30));
 			if (!is_flip_sema)
@@ -56,5 +48,5 @@ namespace rsx
 		}
 	}
 }
- 
+
 #include "context_accessors.undef.h"

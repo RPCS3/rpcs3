@@ -3,13 +3,22 @@
 
 #include "common.h"
 
+#include "Emu/RSX/gcm_enums.h"
+#include "Emu/RSX/NV47/FW/draw_call.inc.h"
+
 namespace rsx
 {
-	enum command_barrier_type;
-	enum vertex_base_type;
+	enum command_barrier_type : u32;
 
 	namespace nv4097
 	{
+		template<typename Type> struct vertex_data_type_from_element_type;
+		template<> struct vertex_data_type_from_element_type<float> { static const vertex_base_type type = vertex_base_type::f; };
+		template<> struct vertex_data_type_from_element_type<f16> { static const vertex_base_type type = vertex_base_type::sf; };
+		template<> struct vertex_data_type_from_element_type<u8> { static const vertex_base_type type = vertex_base_type::ub; };
+		template<> struct vertex_data_type_from_element_type<u16> { static const vertex_base_type type = vertex_base_type::s32k; };
+		template<> struct vertex_data_type_from_element_type<s16> { static const vertex_base_type type = vertex_base_type::s1; };
+
 		void clear(context* ctx, u32 reg, u32 arg);
 
 		void clear_zcull(context* ctx, u32 reg, u32 arg);
@@ -109,7 +118,7 @@ namespace rsx
 				arg = (be_data << 16) | (be_data >> 16);
 			}
 
-			util::push_vertex_data(attribute_index, vertex_subreg, count, vtype);
+			util::push_vertex_data(ctx, attribute_index, vertex_subreg, count, vtype, arg);
 		}
 
 		template<u32 index>
@@ -207,14 +216,9 @@ namespace rsx
 		template<u32 index>
 		struct set_texture_dirty_bit
 		{
-			static void impl(context* ctx, u32 reg, u32 arg)
+			static void impl(context* ctx, u32 /*reg*/, u32 /*arg*/)
 			{
-				RSX(ctx)->m_textures_dirty[index] = true;
-
-				if (RSX(ctx)->current_fp_metadata.referenced_textures_mask & (1 << index))
-				{
-					RSX(ctx)->m_graphics_state |= rsx::pipeline_state::fragment_program_state_dirty;
-				}
+				util::set_fragment_texture_dirty_bit(ctx, index);
 			}
 		};
 
@@ -223,12 +227,7 @@ namespace rsx
 		{
 			static void impl(context* ctx, u32 reg, u32 arg)
 			{
-				RSX(ctx)->m_vertex_textures_dirty[index] = true;
 
-				if (RSX(ctx)->current_vp_metadata.referenced_textures_mask & (1 << index))
-				{
-					RSX(ctx)->m_graphics_state |= rsx::pipeline_state::vertex_program_state_dirty;
-				}
 			}
 		};
 

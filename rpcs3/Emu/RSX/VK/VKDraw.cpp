@@ -707,7 +707,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 	m_profiler.start();
 
 	const rsx::flags32_t vertex_state_mask = rsx::vertex_base_changed | rsx::vertex_arrays_changed;
-	const rsx::flags32_t vertex_state = (sub_index == 0) ? rsx::vertex_arrays_changed : draw_call.execute_pipeline_dependencies() & vertex_state_mask;
+	const rsx::flags32_t vertex_state = (sub_index == 0) ? rsx::vertex_arrays_changed : draw_call.execute_pipeline_dependencies(m_ctx) & vertex_state_mask;
 
 	if (vertex_state & rsx::vertex_arrays_changed)
 	{
@@ -738,7 +738,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 		// Execute remainining pipeline barriers with NOP draw
 		do
 		{
-			draw_call.execute_pipeline_dependencies();
+			draw_call.execute_pipeline_dependencies(m_ctx);
 		}
 		while (draw_call.next());
 

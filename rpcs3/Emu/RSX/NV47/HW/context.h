@@ -5,6 +5,7 @@
 namespace rsx
 {
 	class thread;
+	struct rsx_state;
 
 #if 0
 	// TODO: Separate GRAPH context from RSX state

@@ -2,6 +2,7 @@
 #include "nv308a.h"
 
 #include "Emu/RSX/RSXThread.h"
+#include "Emu/RSX/Core/RSXReservationLock.hpp"
 
 #include "context_accessors.define.h"
 
