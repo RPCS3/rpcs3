@@ -62,5 +62,25 @@ namespace rsx
 
 			return vm::cast(get_address(offset, location));
 		}
+
+		void set_fragment_texture_dirty_bit(rsx::context* ctx, u32 index)
+		{
+			RSX(ctx)->m_textures_dirty[index] = true;
+
+			if (RSX(ctx)->current_fp_metadata.referenced_textures_mask & (1 << index))
+			{
+				RSX(ctx)->m_graphics_state |= rsx::pipeline_state::fragment_program_state_dirty;
+			}
+		}
+
+		void set_vertex_texture_dirty_bit(rsx::context* ctx, u32 index)
+		{
+			RSX(ctx)->m_vertex_textures_dirty[index] = true;
+
+			if (RSX(ctx)->current_vp_metadata.referenced_textures_mask & (1 << index))
+			{
+				RSX(ctx)->m_graphics_state |= rsx::pipeline_state::vertex_program_state_dirty;
+			}
+		}
 	}
 }

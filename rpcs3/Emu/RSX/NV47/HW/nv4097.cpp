@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "nv4097.h"
+#include "nv47_sync.hpp"
 
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/RSX/Common/BufferUtils.h"
@@ -10,13 +11,6 @@
 
 namespace rsx
 {
-	template<typename Type> struct vertex_data_type_from_element_type;
-	template<> struct vertex_data_type_from_element_type<float> { static const vertex_base_type type = vertex_base_type::f; };
-	template<> struct vertex_data_type_from_element_type<f16> { static const vertex_base_type type = vertex_base_type::sf; };
-	template<> struct vertex_data_type_from_element_type<u8> { static const vertex_base_type type = vertex_base_type::ub; };
-	template<> struct vertex_data_type_from_element_type<u16> { static const vertex_base_type type = vertex_base_type::s32k; };
-	template<> struct vertex_data_type_from_element_type<s16> { static const vertex_base_type type = vertex_base_type::s1; };
-
 	namespace nv4097
 	{
 		///// Program management

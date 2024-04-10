@@ -2,6 +2,8 @@
 #include "nv3089.h"
 
 #include "Emu/RSX/RSXThread.h"
+#include "Emu/RSX/Core/RSXReservationLock.hpp"
+#include "Emu/RSX/Common/tiled_dma_copy.hpp"
 
 #include "context_accessors.define.h"
 
