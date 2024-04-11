@@ -38,6 +38,13 @@ struct CellRtcDateTime
 	be_t<u32> microsecond; // 0 to 999999
 };
 
+constexpr u32 DAYS_IN_400_YEARS = 365 * 400 + 97;
+constexpr u16 DAYS_IN_100_YEARS = 365 * 100 + 24;
+constexpr u16 DAYS_IN_4_YEARS   = 365 *   4 +  1;
+
+constexpr std::array<u16, 13> MONTH_OFFSET      = { 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, umax };
+constexpr std::array<u16, 13> MONTH_OFFSET_LEAP = { 0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335, umax };
+
 error_code cellRtcTickAddYears(vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTick> pTick1, s32 iAdd);
 error_code cellRtcTickAddMonths(vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTick> pTick1, s32 lAdd);
 error_code cellRtcTickAddDays(vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTick> pTick1, s32 lAdd);

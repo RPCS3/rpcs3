@@ -742,7 +742,7 @@ error_code cellRtcParseRfc3339(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDate
 
 error_code cellRtcGetTick(vm::cptr<CellRtcDateTime> pTime, vm::ptr<CellRtcTick> pTick)
 {
-	cellRtc.todo("cellRtcGetTick(pTime=*0x%x, pTick=*0x%x)", pTime, pTick);
+	cellRtc.notice("cellRtcGetTick(pTime=*0x%x, pTick=*0x%x)", pTime, pTick);
 
 	if (!vm::check_addr(pTime.addr()))
 	{
@@ -759,74 +759,44 @@ error_code cellRtcGetTick(vm::cptr<CellRtcDateTime> pTime, vm::ptr<CellRtcTick> 
 		return CELL_RTC_ERROR_INVALID_VALUE;
 	}
 
-	if (!pTick)
-	{
-		return CELL_RTC_ERROR_INVALID_POINTER;
-	}
-
-	s64 days_in_years = ((((pTime->year * 365ULL) + ((pTime->year + 3) / 4)) - ((pTime->year + 99) / 100)) + ((pTime->year + 399) / 400) + -366);
-
-	// 1-12
-	if (1 < pTime->month)
-	{
-		u32 month_idx         = pTime->month - 1;
-		u32 monthIdx_adjusted = is_leap_year(pTime->year) * 12;
-		do
-		{
-			days_in_years += DAYS_IN_MONTH[monthIdx_adjusted];
-			month_idx -= 1;
-			monthIdx_adjusted += 1;
-		} while (month_idx != 0);
-	}
-
-	pTick->tick = ((((days_in_years + (pTime->day - 1)) * 0x18 + pTime->hour) * 0x3c + pTime->minute) * 0x3c + pTime->second) * cellRtcGetTickResolution() + pTime->microsecond;
+	pTick->tick = date_time_to_tick(*pTime);
 
 	return CELL_OK;
 }
 
 CellRtcDateTime tick_to_date_time(u64 tick)
 {
-	/*
-	u32 microseconds = round((pTick->tick % 1000000ULL));
-	u16 seconds      = round((pTick->tick / (1000000ULL)) % 60);
-	u16 minutes      = round((pTick->tick / (60ULL * 1000000ULL)) % 60);
-	u16 hours        = round((pTick->tick / (60ULL * 60ULL * 1000000ULL)) % 24);
-	u64 days_tmp     = round((pTick->tick / (24ULL * 60ULL * 60ULL * 1000000ULL)));*/
-
 	const u32 microseconds = (tick % 1000000ULL);
 	const u16 seconds      = (tick / (1000000ULL)) % 60;
 	const u16 minutes      = (tick / (60ULL * 1000000ULL)) % 60;
 	const u16 hours        = (tick / (60ULL * 60ULL * 1000000ULL)) % 24;
-	u64 days_tmp           = (tick / (24ULL * 60ULL * 60ULL * 1000000ULL));
+	u32 days_tmp           = static_cast<u32>(tick / (24ULL * 60ULL * 60ULL * 1000000ULL));
 
-	u16 months = 1;
-	u16 years  = 1;
+	const u32 year_400 = days_tmp / DAYS_IN_400_YEARS;
+	days_tmp -= year_400 * DAYS_IN_400_YEARS;
 
-	bool exit_while = false;
-	do
+	const u32 year_within_400_interval = (
+		days_tmp
+		- days_tmp / (DAYS_IN_4_YEARS - 1)
+		+ days_tmp / DAYS_IN_100_YEARS
+		- days_tmp / (DAYS_IN_400_YEARS - 1)
+		) / 365;
+
+	days_tmp -= year_within_400_interval * 365 + year_within_400_interval / 4 - year_within_400_interval / 100 + year_within_400_interval / 400;
+
+	const u16 years = year_400 * 400 + year_within_400_interval + 1;
+
+	const auto& month_offset = is_leap_year(years) ? MONTH_OFFSET_LEAP : MONTH_OFFSET;
+
+	u32 month_approx = days_tmp / 29;
+
+	if (month_offset[month_approx] > days_tmp)
 	{
-		const bool leap = is_leap_year(years);
-		for (u32 m = 0; m < 12; m++)
-		{
-			const u8 daysinmonth = DAYS_IN_MONTH[m + (leap * 12)];
-			if (days_tmp >= daysinmonth)
-			{
-				months++;
-				days_tmp -= daysinmonth;
-			}
-			else
-			{
-				exit_while = true;
-				break;
-			}
-			if (m == 11)
-			{
-				months = 1;
-				years++;
-			}
-		}
+		month_approx--;
+	}
 
-	} while (!exit_while);
+	const u16 months = month_approx + 1;
+	days_tmp = days_tmp - month_offset[month_approx];
 
 	CellRtcDateTime date_time{
 		.year        = years,
@@ -842,40 +812,28 @@ CellRtcDateTime tick_to_date_time(u64 tick)
 
 u64 date_time_to_tick(CellRtcDateTime date_time)
 {
-	const auto get_days_in_year = [](u16 year, u16 months) -> u64
-	{
-		const bool leap = is_leap_year(year);
-		u64 days = 0;
-		for (u16 m = 0; m < months; m++)
-		{
-			days += DAYS_IN_MONTH[m + (leap * 12)];
-		}
-		return days;
-	};
+	const u32 days_in_previous_years =
+		date_time.year * 365
+		+ (date_time.year + 3) / 4
+		- (date_time.year + 99) / 100
+		+ (date_time.year + 399) / 400
+		- 366;
 
-	u64 days = 0;
-
-	if (date_time.day > 1)
+	// Not checked on LLE
+	if (date_time.month == 0u)
 	{
-		// We only need the whole days before "this" day
-		days += date_time.day - 1ULL;
+		cellRtc.warning("date_time_to_tick(): month invalid, clamping to 1");
+		date_time.month = 1;
+	}
+	else if (date_time.month > 12u)
+	{
+		cellRtc.warning("date_time_to_tick(): month invalid, clamping to 12");
+		date_time.month = 12;
 	}
 
-	if (date_time.month > 1)
-	{
-		// We only need the whole months before "this" month
-		days += get_days_in_year(date_time.year, date_time.month - 1ULL);
-	}
+	const u16 days_in_previous_months = is_leap_year(date_time.year) ? MONTH_OFFSET_LEAP[date_time.month - 1] : MONTH_OFFSET[date_time.month - 1];
 
-	if (date_time.year > 1)
-	{
-		// We only need the whole years before "this" year
-		// NOTE: tick_to_date_time starts counting with year 1, so count [1,n[ instead of [0,n-1[
-		for (u16 year = 1; year < date_time.year; year++)
-		{
-			days += get_days_in_year(year, 12);
-		}
-	}
+	const u32 days = days_in_previous_years + days_in_previous_months + date_time.day - 1;
 
 	u64 tick = date_time.microsecond
 	         + u64{date_time.second} * 1000000ULL
@@ -888,7 +846,7 @@ u64 date_time_to_tick(CellRtcDateTime date_time)
 
 error_code cellRtcSetTick(vm::ptr<CellRtcDateTime> pTime, vm::cptr<CellRtcTick> pTick)
 {
-	cellRtc.todo("cellRtcSetTick(pTime=*0x%x, pTick=*0x%x)", pTime, pTick);
+	cellRtc.notice("cellRtcSetTick(pTime=*0x%x, pTick=*0x%x)", pTime, pTick);
 
 	if (!vm::check_addr(pTime.addr()))
 	{
