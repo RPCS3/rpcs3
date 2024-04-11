@@ -51,6 +51,10 @@
 #include "Emu/RSX/VK/VKGSRender.h"
 #endif
 
+#ifdef _WIN32
+#include "Windows.h"
+#endif
+
 LOG_CHANNEL(gui_log, "GUI");
 
 [[noreturn]] void report_fatal_error(std::string_view text, bool is_html = false, bool include_help_text = true);
@@ -110,6 +114,20 @@ bool gui_application::Init()
 	if (!m_emu_settings->Init())
 	{
 		return false;
+	}
+
+#ifdef _WIN32
+	if (m_gui_settings->GetValue(gui::m_attachCommandLine).toBool())
+	{
+		if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole())
+		{
+			[[maybe_unused]] const auto con_out = freopen("CONOUT$", "w", stderr);
+		}
+	}
+	else
+#endif
+	{
+		m_gui_settings->SetValue(gui::m_attachCommandLine, false);
 	}
 
 	// The user might be set by cli arg. If not, set another user.

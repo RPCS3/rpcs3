@@ -323,6 +323,8 @@ constexpr auto arg_timer        = "high-res-timer";
 constexpr auto arg_verbose_curl = "verbose-curl";
 constexpr auto arg_any_location = "allow-any-location";
 constexpr auto arg_codecs       = "codecs";
+constexpr auto arg_stdout       = "stdout";
+constexpr auto arg_stderr       = "stderr";
 
 int find_arg(std::string arg, int& argc, char* argv[])
 {
@@ -705,6 +707,12 @@ int main(int argc, char** argv)
 	parser.addOption(QCommandLineOption(arg_any_location, "Allow RPCS3 to be run from any location. Dangerous"));
 	const QCommandLineOption codec_option(arg_codecs, "List ffmpeg codecs");
 	parser.addOption(codec_option);
+
+#ifdef _WIN32
+	parser.addOption(QCommandLineOption(arg_stdout, "Attach the console window and listen to standard output stream. (STDOUT)"));
+	parser.addOption(QCommandLineOption(arg_stderr, "Attach the console window and listen to error output stream. (STDERR)"));
+#endif
+
 	parser.process(app->arguments());
 
 	// Don't start up the full rpcs3 gui if we just want the version or help.
@@ -732,6 +740,24 @@ int main(int argc, char** argv)
 		}
 		return 0;
 	}
+
+#ifdef _WIN32
+	if (parser.isSet(arg_stdout) || parser.isSet(arg_stderr))
+	{
+		if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole())
+		{
+			if (parser.isSet(arg_stdout))
+			{
+				[[maybe_unused]] const auto con_out = freopen("CONOUT$", "w", stdout);
+			}
+
+			if (parser.isSet(arg_stderr))
+			{
+				[[maybe_unused]] const auto con_err = freopen("CONOUT$", "w", stderr);
+			}
+		}
+	}
+#endif
 
 	// Set curl to verbose if needed
 	rpcs3::curl::g_curl_verbose = parser.isSet(arg_verbose_curl);
