@@ -759,11 +759,6 @@ error_code cellRtcGetTick(vm::cptr<CellRtcDateTime> pTime, vm::ptr<CellRtcTick> 
 		return CELL_RTC_ERROR_INVALID_VALUE;
 	}
 
-	if (!pTick)
-	{
-		return CELL_OK;
-	}
-
 	pTick->tick = date_time_to_tick(*pTime);
 
 	return CELL_OK;
@@ -775,7 +770,7 @@ CellRtcDateTime tick_to_date_time(u64 tick)
 	const u16 seconds      = (tick / (1000000ULL)) % 60;
 	const u16 minutes      = (tick / (60ULL * 1000000ULL)) % 60;
 	const u16 hours        = (tick / (60ULL * 60ULL * 1000000ULL)) % 24;
-	u64 days_tmp           = (tick / (24ULL * 60ULL * 60ULL * 1000000ULL));
+	u32 days_tmp           = static_cast<u32>(tick / (24ULL * 60ULL * 60ULL * 1000000ULL));
 
 	const u32 year_400 = days_tmp / DAYS_IN_400_YEARS;
 	days_tmp -= year_400 * DAYS_IN_400_YEARS;
@@ -824,7 +819,17 @@ u64 date_time_to_tick(CellRtcDateTime date_time)
 		+ (date_time.year + 399) / 400
 		- 366;
 
-	ensure(date_time.month - 1u < 12u); // Not checked on LLE
+	// Not checked on LLE
+	if (date_time.month == 0u)
+	{
+		cellRtc.warning("date_time_to_tick(): month invalid, clamping to 1");
+		date_time.month = 1;
+	}
+	else if (date_time.month > 12u)
+	{
+		cellRtc.warning("date_time_to_tick(): month invalid, clamping to 12");
+		date_time.month = 12;
+	}
 
 	const u16 days_in_previous_months = is_leap_year(date_time.year) ? MONTH_OFFSET_LEAP[date_time.month - 1] : MONTH_OFFSET[date_time.month - 1];
 
