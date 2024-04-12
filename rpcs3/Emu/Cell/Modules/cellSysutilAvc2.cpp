@@ -702,26 +702,7 @@ error_code cellSysutilAvc2Load_shared(SceNpMatching2ContextId ctx_id, u32 contai
 
 		u32 streaming_mode = init_param->direct_streaming_mode;
 
-		if (init_param->avc_init_param_version < 120)
-		{
-			if (init_param->avc_init_param_version >= 110)
-			{
-				switch (init_param->direct_streaming_mode)
-				{
-				case CELL_SYSUTIL_AVC2_STREAMING_MODE_NORMAL:
-				case CELL_SYSUTIL_AVC2_STREAMING_MODE_DIRECT_WAN:
-					break;
-				case CELL_SYSUTIL_AVC2_STREAMING_MODE_DIRECT_LAN:
-				default:
-					return CELL_AVC2_ERROR_INVALID_ARGUMENT;
-				}
-			}
-			else
-			{
-				streaming_mode = settings.streaming_mode;
-			}
-		}
-		else
+		if (init_param->avc_init_param_version >= 120)
 		{
 			switch (init_param->direct_streaming_mode)
 			{
@@ -740,6 +721,22 @@ error_code cellSysutilAvc2Load_shared(SceNpMatching2ContextId ctx_id, u32 contai
 			default:
 				return CELL_AVC2_ERROR_INVALID_ARGUMENT;
 			}
+		}
+		else if (init_param->avc_init_param_version >= 110)
+		{
+			switch (init_param->direct_streaming_mode)
+			{
+			case CELL_SYSUTIL_AVC2_STREAMING_MODE_NORMAL:
+			case CELL_SYSUTIL_AVC2_STREAMING_MODE_DIRECT_WAN:
+				break;
+			case CELL_SYSUTIL_AVC2_STREAMING_MODE_DIRECT_LAN:
+			default:
+				return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+			}
+		}
+		else
+		{
+			streaming_mode = settings.streaming_mode;
 		}
 
 		settings.streaming_mode = streaming_mode;
