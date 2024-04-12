@@ -67,6 +67,10 @@ struct avc2_settings
 
 	vm::ptr<CellSysutilAvc2Callback> avc2_cb{};
 	vm::ptr<void> avc2_cb_arg{};
+	u32 streaming_mode = CELL_SYSUTIL_AVC2_STREAMING_MODE_NORMAL;
+	u8 mic_out_stream_sharing = 0;
+	u8 video_stream_sharing = 0;
+	u32 unk = 0;
 };
 
 error_code cellSysutilAvc2GetPlayerInfo(vm::cptr<SceNpMatching2RoomMemberId> player_id, vm::ptr<CellSysutilAvc2PlayerInfo> player_info)
@@ -254,10 +258,11 @@ error_code cellSysutilAvc2LoadAsync(SceNpMatching2ContextId ctx_id, u32 containe
 {
 	cellSysutilAvc2.warning("cellSysutilAvc2LoadAsync(ctx_id=0x%x, container=0x%x, callback_func=*0x%x, user_data=*0x%x, init_param=*0x%x)", ctx_id, container, callback_func, user_data, init_param);
 
-	auto& settings = g_fxo->get<avc2_settings>();
+	error_code error = cellSysutilAvc2Load_shared(ctx_id, container, callback_func, user_data, init_param);
+	if (error != CELL_OK)
+		return error;
 
-	settings.avc2_cb = callback_func;
-	settings.avc2_cb_arg = user_data;
+	auto& settings = g_fxo->get<avc2_settings>();
 
 	if (settings.avc2_cb)
 	{
@@ -686,14 +691,192 @@ error_code cellSysutilAvc2SetSpeakerMuting(u8 muting)
 	return CELL_OK;
 }
 
+error_code cellSysutilAvc2Load_shared(SceNpMatching2ContextId ctx_id, u32 container, vm::ptr<CellSysutilAvc2Callback> callback_func, vm::ptr<void> user_data, vm::cptr<CellSysutilAvc2InitParam> init_param)
+{
+	if (!init_param || !init_param->avc_init_param_version ||
+	    !(init_param->avc_init_param_version == 100 ||
+	     init_param->avc_init_param_version == 110 ||
+	     init_param->avc_init_param_version == 120 ||
+	     init_param->avc_init_param_version == 130 ||
+	     init_param->avc_init_param_version == 140)
+	)
+	{
+		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+	}
+
+	auto& settings = g_fxo->get<avc2_settings>();
+
+	switch (init_param->media_type)
+	{
+	case CELL_SYSUTIL_AVC2_VOICE_CHAT:
+	{
+		if (init_param->max_players < 2 ||
+		    init_param->max_players > 64 ||
+		    init_param->spu_load_average > 100 ||
+		    init_param->voice_param.voice_quality != CELL_SYSUTIL_AVC2_VOICE_QUALITY_NORMAL ||
+		    init_param->voice_param.max_speakers == 0 ||
+		    init_param->voice_param.max_speakers > 16
+		)
+		{
+			return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+		}
+
+		uint32_t streaming_mode = init_param->direct_streaming_mode;
+
+		if (init_param->avc_init_param_version < 120)
+		{
+			if (init_param->avc_init_param_version >= 110)
+			{
+				switch (init_param->direct_streaming_mode)
+				{
+				case CELL_SYSUTIL_AVC2_STREAMING_MODE_NORMAL:
+				case CELL_SYSUTIL_AVC2_STREAMING_MODE_DIRECT_WAN:
+					break;
+				case CELL_SYSUTIL_AVC2_STREAMING_MODE_DIRECT_LAN:
+				default:
+					return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+				}
+			}
+			else
+			{
+				streaming_mode = settings.streaming_mode;
+			}
+		}
+		else
+		{
+			switch (init_param->direct_streaming_mode)
+			{
+			case CELL_SYSUTIL_AVC2_STREAMING_MODE_NORMAL:
+				streaming_mode = CELL_SYSUTIL_AVC2_STREAMING_MODE_NORMAL;
+				break;
+			case CELL_SYSUTIL_AVC2_STREAMING_MODE_DIRECT_WAN:
+				break;
+			case CELL_SYSUTIL_AVC2_STREAMING_MODE_DIRECT_LAN:
+				if (init_param->streaming_mode.mode == CELL_SYSUTIL_AVC2_STREAMING_MODE_NORMAL)
+				{
+					settings.streaming_mode = streaming_mode;
+					return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+				}
+				break;
+			default:
+				return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+			}
+		}
+
+		settings.streaming_mode = streaming_mode;
+		settings.mic_out_stream_sharing = init_param->voice_param.mic_out_stream_sharing;
+
+		if (!callback_func)
+		{
+			return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+		}
+
+		if (settings.avc2_cb)
+		{
+			return CELL_AVC2_ERROR_ALREADY_INITIALIZED;
+		}
+
+		settings.avc2_cb = callback_func;
+		settings.avc2_cb_arg = user_data;
+
+		// TODO
+		//return cellSysutilRegisterCallbackDispatcher(0x120, &PTR_LAB_0000552c);
+		break;
+	}
+	case CELL_SYSUTIL_AVC2_VIDEO_CHAT:
+	{
+		if (false) // TODO: syscall to check container
+		{
+			return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+		}
+
+		if (init_param->avc_init_param_version <= 140)
+		{
+			if (false) // TODO
+			{
+				return CELL_AVC2_ERROR_OUT_OF_MEMORY;
+			}
+		}
+
+		if (!callback_func)
+		{
+			return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+		}
+
+		bool is_invalid = false;
+
+		if (init_param->video_param.frame_mode == CELL_SYSUTIL_AVC2_FRAME_MODE_NORMAL)
+		{
+			if (init_param->video_param.max_video_windows == 0 || init_param->video_param.max_video_windows > 6)
+			{
+				return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+			}
+		}
+		else
+		{
+			if (init_param->video_param.max_video_windows == 0 || init_param->video_param.max_video_windows > 16)
+			{
+				return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+			}
+		}
+
+		if (init_param->video_param.max_video_bitrate < 1000 || init_param->video_param.max_video_bitrate > 512000)
+		{
+			return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+		}
+
+		if (init_param->video_param.max_video_framerate == 0 || init_param->video_param.max_video_framerate > 30)
+		{
+			return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+		}
+
+		s32 bitrate = 0;
+
+		switch (init_param->video_param.max_video_resolution)
+		{
+		case CELL_SYSUTIL_AVC2_VIDEO_RESOLUTION_QQVGA:
+			bitrate = 76800;
+			break;
+		case CELL_SYSUTIL_AVC2_VIDEO_RESOLUTION_QVGA:
+			bitrate = 307200;
+			break;
+		default:
+			break;
+		}
+
+		u32 unk = 0;
+
+		if (bitrate != 0)
+		{
+			u32 window_count = init_param->video_param.max_video_windows;
+
+			if (init_param->video_param.video_stream_sharing == CELL_SYSUTIL_AVC2_VIDEO_SHARING_MODE_2)
+			{
+				window_count++;
+			}
+
+			const u32 total_bitrate = window_count * bitrate;
+			unk = (((s32)total_bitrate >> 0x14) + (u32)(s32(total_bitrate) < 0 && (total_bitrate & 0xfffff) != 0)) * 0x100000 + 0x100000;
+		}
+
+		settings.video_stream_sharing = init_param->video_param.video_stream_sharing;
+		settings.unk = unk;
+		break;
+	}
+	default:
+		return CELL_AVC2_ERROR_NOT_SUPPORTED;
+	}
+
+	return CELL_OK;
+}
+
 error_code cellSysutilAvc2Load(SceNpMatching2ContextId ctx_id, u32 container, vm::ptr<CellSysutilAvc2Callback> callback_func, vm::ptr<void> user_data, vm::cptr<CellSysutilAvc2InitParam> init_param)
 {
 	cellSysutilAvc2.warning("cellSysutilAvc2Load(ctx_id=0x%x, container=0x%x, callback_func=*0x%x, user_data=*0x%x, init_param=*0x%x)", ctx_id, container, callback_func, user_data, init_param);
 
-	auto& settings = g_fxo->get<avc2_settings>();
-
-	settings.avc2_cb = callback_func;
-	settings.avc2_cb_arg = user_data;
+	error_code error = cellSysutilAvc2Load_shared(ctx_id, container, callback_func, user_data, init_param);
+	if (error != CELL_OK)
+		return error;
 
 	return CELL_OK;
 }
