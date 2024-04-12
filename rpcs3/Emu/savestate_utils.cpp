@@ -25,7 +25,7 @@ struct serial_ver_t
 	std::set<u16> compatible_versions;
 };
 
-static std::array<serial_ver_t, 26> s_serial_versions;
+static std::array<serial_ver_t, 27> s_serial_versions;
 
 #define SERIALIZATION_VER(name, identifier, ...) \
 \
@@ -85,6 +85,8 @@ SERIALIZATION_VER(sys_io, 23,                                   2)
 // Misc versions for HLE/LLE not included so main version would not invalidated
 SERIALIZATION_VER(LLE, 24,                                      1)
 SERIALIZATION_VER(HLE, 25,                                      1)
+
+SERIALIZATION_VER(cellSysutil, 26,                              1)
 
 template <>
 void fmt_class_string<std::remove_cvref_t<decltype(s_serial_versions)>>::format(std::string& out, u64 arg)

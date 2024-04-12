@@ -68,12 +68,33 @@ struct avc2_settings
 	avc2_settings(const avc2_settings&) = delete;
 	avc2_settings& operator=(const avc2_settings&) = delete;
 
+	SAVESTATE_INIT_POS(52);
+
 	vm::ptr<CellSysutilAvc2Callback> avc2_cb{};
 	vm::ptr<void> avc2_cb_arg{};
 	u32 streaming_mode = CELL_SYSUTIL_AVC2_STREAMING_MODE_NORMAL;
 	u8 mic_out_stream_sharing = 0;
 	u8 video_stream_sharing = 0;
 	u32 total_video_bitrate = 0;
+
+	avc2_settings(utils::serial& ar) noexcept
+	{
+		[[maybe_unused]] const s32 version = GET_SERIALIZATION_VERSION(cellSysutil);
+
+		if (version == 0)
+		{
+			return;
+		}
+
+		save(ar);
+	}
+
+	void save(utils::serial& ar)
+	{
+		GET_OR_USE_SERIALIZATION_VERSION(ar.is_writing(), cellSysutil);
+
+		ar(avc2_cb, avc2_cb_arg, streaming_mode, mic_out_stream_sharing, video_stream_sharing, total_video_bitrate);
+	}
 };
 
 error_code cellSysutilAvc2GetPlayerInfo(vm::cptr<SceNpMatching2RoomMemberId> player_id, vm::ptr<CellSysutilAvc2PlayerInfo> player_info)
