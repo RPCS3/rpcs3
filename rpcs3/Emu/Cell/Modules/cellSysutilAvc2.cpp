@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/IdManager.h"
+#include "util/asm.hpp"
 
 #include "sceNp.h"
 #include "sceNp2.h"
@@ -70,7 +71,7 @@ struct avc2_settings
 	u32 streaming_mode = CELL_SYSUTIL_AVC2_STREAMING_MODE_NORMAL;
 	u8 mic_out_stream_sharing = 0;
 	u8 video_stream_sharing = 0;
-	u32 unk = 0;
+	u32 total_video_bitrate = 0;
 };
 
 error_code cellSysutilAvc2GetPlayerInfo(vm::cptr<SceNpMatching2RoomMemberId> player_id, vm::ptr<CellSysutilAvc2PlayerInfo> player_info)
@@ -756,9 +757,6 @@ error_code cellSysutilAvc2Load_shared(SceNpMatching2ContextId ctx_id, u32 contai
 
 		settings.avc2_cb = callback_func;
 		settings.avc2_cb_arg = user_data;
-
-		// TODO
-		//return cellSysutilRegisterCallbackDispatcher(0x120, &PTR_LAB_0000552c);
 		break;
 	}
 	case CELL_SYSUTIL_AVC2_VIDEO_CHAT:
@@ -822,7 +820,7 @@ error_code cellSysutilAvc2Load_shared(SceNpMatching2ContextId ctx_id, u32 contai
 			break;
 		}
 
-		u32 unk = 0;
+		u32 total_bitrate = 0;
 
 		if (bitrate != 0)
 		{
@@ -833,12 +831,11 @@ error_code cellSysutilAvc2Load_shared(SceNpMatching2ContextId ctx_id, u32 contai
 				window_count++;
 			}
 
-			const u32 total_bitrate = window_count * bitrate;
-			unk = ((s32(total_bitrate) >> 0x14) + u32(s32(total_bitrate) < 0 && (total_bitrate & 0xfffff) != 0)) * 0x100000 + 0x100000;
+			total_bitrate = utils::align<u32>(window_count * bitrate, 0x100000) + 0x100000;
 		}
 
 		settings.video_stream_sharing = init_param->video_param.video_stream_sharing;
-		settings.unk = unk;
+		settings.total_video_bitrate = total_bitrate;
 		break;
 	}
 	default:
