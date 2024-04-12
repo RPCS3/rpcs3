@@ -816,7 +816,7 @@ public:
 	atomic_t<spu_debugger_mode> debugger_mode{};
 
 	// PC-based breakpoint list
-	std::array<atomic_t<bool>, SPU_LS_SIZE / 4> local_breakpoints{};
+	std::array<atomic_t<u8>, SPU_LS_SIZE / 4 / 8> local_breakpoints{};
 	atomic_t<bool> has_active_local_bps = false;
 	u32 current_bp_pc = umax;
 	bool stop_flag_removal_protection = false;
