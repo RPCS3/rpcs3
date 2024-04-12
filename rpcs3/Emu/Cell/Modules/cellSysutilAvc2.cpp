@@ -776,7 +776,7 @@ error_code cellSysutilAvc2Load_shared(SceNpMatching2ContextId ctx_id, u32 contai
 			}
 		}
 
-		if (!callback_func)
+		if (callback_func)
 		{
 			return CELL_AVC2_ERROR_INVALID_ARGUMENT;
 		}
