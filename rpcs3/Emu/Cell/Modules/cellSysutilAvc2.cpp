@@ -869,7 +869,7 @@ error_code cellSysutilAvc2LoadAsync(SceNpMatching2ContextId ctx_id, u32 containe
 
 	auto& settings = g_fxo->get<avc2_settings>();
 
-	if (settings.avc2_cb)
+	if (settings.avc2_cb && init_param && init_param->media_type == CELL_SYSUTIL_AVC2_VOICE_CHAT)
 	{
 		sysutil_register_cb([=, avc2_cb = settings.avc2_cb, avc2_cb_arg = settings.avc2_cb_arg](ppu_thread& cb_ppu) -> s32
 		{
