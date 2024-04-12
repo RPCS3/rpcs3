@@ -700,7 +700,7 @@ error_code cellSysutilAvc2Load_shared(SceNpMatching2ContextId ctx_id, u32 contai
 			return CELL_AVC2_ERROR_INVALID_ARGUMENT;
 		}
 
-		uint32_t streaming_mode = init_param->direct_streaming_mode;
+		u32 streaming_mode = init_param->direct_streaming_mode;
 
 		if (init_param->avc_init_param_version < 120)
 		{
@@ -778,8 +778,6 @@ error_code cellSysutilAvc2Load_shared(SceNpMatching2ContextId ctx_id, u32 contai
 		{
 			return CELL_AVC2_ERROR_INVALID_ARGUMENT;
 		}
-
-		bool is_invalid = false;
 
 		if (init_param->video_param.frame_mode == CELL_SYSUTIL_AVC2_FRAME_MODE_NORMAL)
 		{
