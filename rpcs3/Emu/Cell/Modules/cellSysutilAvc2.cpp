@@ -834,7 +834,7 @@ error_code cellSysutilAvc2Load_shared(SceNpMatching2ContextId ctx_id, u32 contai
 			}
 
 			const u32 total_bitrate = window_count * bitrate;
-			unk = (((s32)total_bitrate >> 0x14) + (u32)(s32(total_bitrate) < 0 && (total_bitrate & 0xfffff) != 0)) * 0x100000 + 0x100000;
+			unk = ((s32(total_bitrate) >> 0x14) + u32(s32(total_bitrate) < 0 && (total_bitrate & 0xfffff) != 0)) * 0x100000 + 0x100000;
 		}
 
 		settings.video_stream_sharing = init_param->video_param.video_stream_sharing;
