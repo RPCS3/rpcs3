@@ -776,19 +776,10 @@ error_code cellSysutilAvc2Load_shared(SceNpMatching2ContextId ctx_id, u32 contai
 			return CELL_AVC2_ERROR_INVALID_ARGUMENT;
 		}
 
-		if (init_param->video_param.frame_mode == CELL_SYSUTIL_AVC2_FRAME_MODE_NORMAL)
+		if (init_param->video_param.max_video_windows == 0 ||
+			init_param->video_param.max_video_windows > (init_param->video_param.frame_mode == CELL_SYSUTIL_AVC2_FRAME_MODE_NORMAL ? 6 : 16))
 		{
-			if (init_param->video_param.max_video_windows == 0 || init_param->video_param.max_video_windows > 6)
-			{
-				return CELL_AVC2_ERROR_INVALID_ARGUMENT;
-			}
-		}
-		else
-		{
-			if (init_param->video_param.max_video_windows == 0 || init_param->video_param.max_video_windows > 16)
-			{
-				return CELL_AVC2_ERROR_INVALID_ARGUMENT;
-			}
+			return CELL_AVC2_ERROR_INVALID_ARGUMENT;
 		}
 
 		if (init_param->video_param.max_video_bitrate < 1000 || init_param->video_param.max_video_bitrate > 512000)
