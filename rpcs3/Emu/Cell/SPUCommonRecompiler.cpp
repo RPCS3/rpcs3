@@ -2482,9 +2482,9 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 	workload.push_back(entry_point);
 
 	std::memset(m_regmod.data(), 0xff, sizeof(m_regmod));
-	std::memset(m_use_ra.data(), 0xff, sizeof(m_use_ra));
-	std::memset(m_use_rb.data(), 0xff, sizeof(m_use_rb));
-	std::memset(m_use_rc.data(), 0xff, sizeof(m_use_rc));
+	m_use_ra.reset();
+	m_use_rb.reset();
+	m_use_rc.reset();
 	m_targets.clear();
 	m_preds.clear();
 	m_preds[entry_point];
@@ -2579,11 +2579,11 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		if (auto iflags = g_spu_iflag.decode(data))
 		{
 			if (+iflags & +spu_iflag::use_ra)
-				m_use_ra[pos / 4] = op.ra;
+				m_use_ra.set(pos / 4);
 			if (+iflags & +spu_iflag::use_rb)
-				m_use_rb[pos / 4] = op.rb;
+				m_use_rb.set(pos / 4);
 			if (+iflags & +spu_iflag::use_rc)
-				m_use_rc[pos / 4] = op.rc;
+				m_use_rc.set(pos / 4);
 		}
 
 		// Analyse instruction
@@ -3008,11 +3008,6 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			case MFC_Size:
 			{
 				m_regmod[pos / 4] = s_reg_mfc_size;
-				break;
-			}
-			case MFC_Cmd:
-			{
-				m_use_rb[pos / 4] = s_reg_mfc_eal;
 				break;
 			}
 			default: break;
@@ -3461,10 +3456,13 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				reg_save = op.rt;
 			}
 
-			for (auto* _use : {&m_use_ra, &m_use_rb, &m_use_rc})
+			for (auto _use : std::initializer_list<std::pair<u32, bool>>{{op.ra, m_use_ra.test(ia / 4)}
+				, {op.rb, m_use_rb.test(ia / 4)}, {op.rc, m_use_rc.test(ia / 4)}})
 			{
-				if (u8 reg = (*_use)[ia / 4]; reg < s_reg_max)
+				if (_use.second)
 				{
+					const u32 reg = _use.first;
+
 					// Register reg use only if it happens before reg mod
 					if (!block.reg_mod[reg])
 					{
@@ -3479,7 +3477,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				}
 			}
 
-			if (m_use_rb[ia / 4] == s_reg_mfc_eal)
+			if (type == spu_itype::WRCH && op.ra == MFC_Cmd)
 			{
 				// Expand MFC_Cmd reg use
 				for (u8 reg : {s_reg_mfc_lsa, s_reg_mfc_tag, s_reg_mfc_size})
