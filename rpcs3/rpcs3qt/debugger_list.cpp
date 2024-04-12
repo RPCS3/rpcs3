@@ -151,7 +151,7 @@ void debugger_list::ShowAddress(u32 addr, bool select_addr, bool direct)
 			const u32 pos_at = pc / 4;
 			const u32 pos_bit = 1u << (pos_at % 8);
 
-			return !!((*spu_bps_list)[pos_at] & pos_bit);
+			return !!((*spu_bps_list)[pos_at / 8] & pos_bit);
 		}
 		default: return false;
 		}

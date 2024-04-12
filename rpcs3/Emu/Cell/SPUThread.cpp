@@ -1842,7 +1842,7 @@ void spu_thread::cpu_work()
 		const u32 pos_at = pc / 4;
 		const u32 pos_bit = 1u << (pos_at % 8);
 
-		if (local_breakpoints[pos_at] & pos_bit)
+		if (local_breakpoints[pos_at / 8] & pos_bit)
 		{
 			// Ignore repeatations until a different instruction is issued
 			if (pc != current_bp_pc)
