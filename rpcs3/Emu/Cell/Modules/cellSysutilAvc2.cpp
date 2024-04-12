@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/IdManager.h"
 
 #include "sceNp.h"
 #include "sceNp2.h"
@@ -59,8 +60,14 @@ void fmt_class_string<CellSysutilAvc2AttributeId>::format(std::string& out, u64 
 	});
 }
 
-vm::ptr<CellSysutilAvc2Callback> avc2_cb{};
-vm::ptr<void> avc2_cb_arg{};
+struct avc2_settings
+{
+	avc2_settings(const avc2_settings&) = delete;
+	avc2_settings& operator=(const avc2_settings&) = delete;
+
+	vm::ptr<CellSysutilAvc2Callback> avc2_cb{};
+	vm::ptr<void> avc2_cb_arg{};
+};
 
 error_code cellSysutilAvc2GetPlayerInfo(vm::cptr<SceNpMatching2RoomMemberId> player_id, vm::ptr<CellSysutilAvc2PlayerInfo> player_info)
 {
@@ -185,9 +192,11 @@ error_code cellSysutilAvc2UnloadAsync()
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2UnloadAsync()");
 
-	if (avc2_cb)
+	const auto& settings = g_fxo->get<avc2_settings>();
+
+	if (settings.avc2_cb)
 	{
-		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
+		sysutil_register_cb([=, avc2_cb = settings.avc2_cb, avc2_cb_arg = settings.avc2_cb_arg](ppu_thread& cb_ppu) -> s32
 		{
 			avc2_cb(cb_ppu, CELL_AVC2_EVENT_UNLOAD_SUCCEEDED, 0, avc2_cb_arg);
 			return 0;
@@ -245,12 +254,14 @@ error_code cellSysutilAvc2LoadAsync(SceNpMatching2ContextId ctx_id, u32 containe
 {
 	cellSysutilAvc2.warning("cellSysutilAvc2LoadAsync(ctx_id=0x%x, container=0x%x, callback_func=*0x%x, user_data=*0x%x, init_param=*0x%x)", ctx_id, container, callback_func, user_data, init_param);
 
-	avc2_cb = callback_func;
-	avc2_cb_arg = user_data;
+	auto& settings = g_fxo->get<avc2_settings>();
 
-	if (avc2_cb)
+	settings.avc2_cb = callback_func;
+	settings.avc2_cb_arg = user_data;
+
+	if (settings.avc2_cb)
 	{
-		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
+		sysutil_register_cb([=, avc2_cb = settings.avc2_cb, avc2_cb_arg = settings.avc2_cb_arg](ppu_thread& cb_ppu) -> s32
 		{
 			avc2_cb(cb_ppu, CELL_AVC2_EVENT_LOAD_SUCCEEDED, 0, avc2_cb_arg);
 			return 0;
@@ -467,9 +478,11 @@ error_code cellSysutilAvc2JoinChatRequest(vm::cptr<SceNpMatching2RoomId> room_id
 
 	// TODO: join chat
 
-	if (avc2_cb)
+	const auto& settings = g_fxo->get<avc2_settings>();
+
+	if (settings.avc2_cb)
 	{
-		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
+		sysutil_register_cb([=, avc2_cb = settings.avc2_cb, avc2_cb_arg = settings.avc2_cb_arg](ppu_thread& cb_ppu) -> s32
 		{
 			avc2_cb(cb_ppu, CELL_AVC2_EVENT_JOIN_SUCCEEDED, 0, avc2_cb_arg);
 			return 0;
@@ -572,9 +585,11 @@ error_code cellSysutilAvc2LeaveChatRequest()
 {
 	cellSysutilAvc2.notice("cellSysutilAvc2LeaveChatRequest()");
 
-	if (avc2_cb)
+	const auto& settings = g_fxo->get<avc2_settings>();
+
+	if (settings.avc2_cb)
 	{
-		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
+		sysutil_register_cb([=, avc2_cb = settings.avc2_cb, avc2_cb_arg = settings.avc2_cb_arg](ppu_thread& cb_ppu) -> s32
 		{
 			avc2_cb(cb_ppu, CELL_AVC2_EVENT_LEAVE_SUCCEEDED, 0, avc2_cb_arg);
 			return 0;
@@ -673,7 +688,13 @@ error_code cellSysutilAvc2SetSpeakerMuting(u8 muting)
 
 error_code cellSysutilAvc2Load(SceNpMatching2ContextId ctx_id, u32 container, vm::ptr<CellSysutilAvc2Callback> callback_func, vm::ptr<void> user_data, vm::cptr<CellSysutilAvc2InitParam> init_param)
 {
-	cellSysutilAvc2.todo("cellSysutilAvc2Load(ctx_id=0x%x, container=0x%x, callback_func=*0x%x, user_data=*0x%x, init_param=*0x%x)", ctx_id, container, callback_func, user_data, init_param);
+	cellSysutilAvc2.warning("cellSysutilAvc2Load(ctx_id=0x%x, container=0x%x, callback_func=*0x%x, user_data=*0x%x, init_param=*0x%x)", ctx_id, container, callback_func, user_data, init_param);
+
+	auto& settings = g_fxo->get<avc2_settings>();
+
+	settings.avc2_cb = callback_func;
+	settings.avc2_cb_arg = user_data;
+
 	return CELL_OK;
 }
 
