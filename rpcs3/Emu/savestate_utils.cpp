@@ -86,7 +86,7 @@ SERIALIZATION_VER(sys_io, 23,                                   2)
 SERIALIZATION_VER(LLE, 24,                                      1)
 SERIALIZATION_VER(HLE, 25,                                      1)
 
-SERIALIZATION_VER(cellSysutil, 26,                              1)
+SERIALIZATION_VER(cellSysutil, 26,                              1, 2/*AVC2 Muting,Volume*/)
 
 template <>
 void fmt_class_string<std::remove_cvref_t<decltype(s_serial_versions)>>::format(std::string& out, u64 arg)
