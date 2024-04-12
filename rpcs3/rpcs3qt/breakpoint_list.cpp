@@ -125,8 +125,10 @@ void breakpoint_list::HandleBreakpointRequest(u32 loc, bool only_add)
 
 		const auto spu = static_cast<spu_thread*>(m_cpu);
 		auto& list = spu->local_breakpoints;
+		const u32 pos_at = loc / 4;
+		const u32 pos_bit = 1u << (pos_at % 8);
 
-		if (list[loc / 4].test_and_invert())
+		if (list[pos_at / 8].fetch_xor(pos_bit) & pos_bit)
 		{
 			if (std::none_of(list.begin(), list.end(), [](auto& val){ return val.load(); }))
 			{

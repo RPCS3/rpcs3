@@ -142,8 +142,17 @@ void debugger_list::ShowAddress(u32 addr, bool select_addr, bool direct)
 	{
 		switch (m_cpu ? m_cpu->id_type() : 0)
 		{
-		case 1: return m_ppu_breakpoint_handler->HasBreakpoint(pc);
-		case 2: return (*spu_bps_list)[pc / 4].load();
+		case 1:
+		{
+			return m_ppu_breakpoint_handler->HasBreakpoint(pc);
+		}
+		case 2:
+		{
+			const u32 pos_at = pc / 4;
+			const u32 pos_bit = 1u << (pos_at % 8);
+
+			return !!((*spu_bps_list)[pos_at] & pos_bit);
+		}
 		default: return false;
 		}
 	};

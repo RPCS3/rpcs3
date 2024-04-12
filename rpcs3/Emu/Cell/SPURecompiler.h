@@ -202,9 +202,9 @@ protected:
 	// GPR modified by the instruction (-1 = not set)
 	std::array<u8, 0x10000> m_regmod;
 
-	std::array<u8, 0x10000> m_use_ra;
-	std::array<u8, 0x10000> m_use_rb;
-	std::array<u8, 0x10000> m_use_rc;
+	std::bitset<0x10000> m_use_ra;
+	std::bitset<0x10000> m_use_rb;
+	std::bitset<0x10000> m_use_rc;
 
 	// List of possible targets for the instruction (entry shouldn't exist for simple instructions)
 	std::unordered_map<u32, std::basic_string<u32>, value_hash<u32, 2>> m_targets;
