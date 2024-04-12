@@ -3896,7 +3896,7 @@ error_code sceNpManagerGetAvatarUrl(vm::ptr<SceNpAvatarUrl> avatarUrl)
 
 error_code sceNpManagerGetMyLanguages(vm::ptr<SceNpMyLanguages> myLanguages)
 {
-	sceNp.warning("sceNpManagerGetMyLanguages(myLanguages=*0x%x)", myLanguages);
+	sceNp.trace("sceNpManagerGetMyLanguages(myLanguages=*0x%x)", myLanguages);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
