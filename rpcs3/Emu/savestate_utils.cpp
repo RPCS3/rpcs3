@@ -196,9 +196,9 @@ bool is_savestate_version_compatible(const std::vector<version_entry>& data, boo
 		}
 		else
 		{
-			for (auto [identifier, _] : data)
+			for (auto& entry : s_serial_versions)
 			{
-				s_serial_versions[identifier].current_version = 0;
+				entry.current_version = 0;
 			}
 		}
 	}
