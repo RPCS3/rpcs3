@@ -3481,17 +3481,17 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 	{
 		extern atomic_t<u32> liblv2_begin, liblv2_end;
 
-		const u32 notify = ppu.res_notify;
-
-		if (notify)
-		{
-			vm::reservation_notifier(notify).notify_all();
-			ppu.res_notify = 0;
-		}
-
 		// Avoid notifications from lwmutex or sys_spinlock
-		if (ppu.cia < liblv2_begin || ppu.cia >= liblv2_end)
+		if (new_data != old_data && (ppu.cia < liblv2_begin || ppu.cia >= liblv2_end))
 		{
+			const u32 notify = ppu.res_notify;
+
+			if (notify)
+			{
+				vm::reservation_notifier(notify).notify_all();
+				ppu.res_notify = 0;
+			}
+
 			if (!notify)
 			{
 				// Try to postpone notification to when PPU is asleep or join notifications on the same address
