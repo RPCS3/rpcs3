@@ -233,8 +233,8 @@ struct CellSysutilAvc2InitParam
 		be_t<u16> direct_streaming_mode;
 		CellSysutilAvc2StreamingModeParam streaming_mode;
 	};
-	be_t<u32> media_type;
 	u8 reserved[18];
+	be_t<u32> media_type;
 	CellSysutilAvc2VoiceInitParam voice_param;
 	CellSysutilAvc2VideoInitParam video_param;
 	u8 reserved2[22];
