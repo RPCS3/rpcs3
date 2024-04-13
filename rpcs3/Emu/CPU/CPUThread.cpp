@@ -329,6 +329,13 @@ struct cpu_prof
 				continue;
 			}
 
+			if (!g_cfg.core.spu_debug)
+			{
+				// Reduce accuracy in favor of performance when enabled alone
+				thread_ctrl::wait_for(60, false);
+				continue;
+			}
+
 			// Wait, roughly for 20µs
 			thread_ctrl::wait_for(20, false);
 		}
