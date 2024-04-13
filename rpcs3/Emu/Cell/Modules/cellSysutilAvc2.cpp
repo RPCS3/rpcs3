@@ -63,6 +63,8 @@ void fmt_class_string<CellSysutilAvc2AttributeId>::format(std::string& out, u64 
 
 struct avc2_settings
 {
+	avc2_settings() = default;
+
 	avc2_settings(const avc2_settings&) = delete;
 	avc2_settings& operator=(const avc2_settings&) = delete;
 
