@@ -3022,11 +3022,14 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 	*join_thread = make_ptr(new named_thread("Emulation Join Thread"sv, [join_thread, savestate, allow_autoexit, this]() mutable
 	{
 		fs::pending_file file;
-		std::shared_ptr<stx::init_mutex> init_mtx = std::make_shared<stx::init_mutex>();
-		std::shared_ptr<bool> join_ended = std::make_shared<bool>(false);
-		atomic_ptr<utils::serial> to_ar;
 
-		named_thread stop_watchdog("Stop Watchdog"sv, [&to_ar, init_mtx, join_ended, this]()
+		auto verbose_message = std::make_shared<atomic_ptr<std::string>>();
+		auto init_mtx = std::make_shared<stx::init_mutex>();
+		auto join_ended = std::make_shared<bool>(false);
+		auto to_ar = std::make_shared<atomic_ptr<utils::serial>>();
+
+		auto stop_watchdog = make_ptr(new named_thread("Stop Watchdog"sv,
+			[to_ar, init_mtx, join_ended, verbose_message, this]()
 		{
 			const auto closed_sucessfully = std::make_shared<atomic_t<bool>>(false);
 
@@ -3058,10 +3061,10 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 			while (thread_ctrl::state() != thread_state::aborting)
 			{
-				if (auto ar_ptr = to_ar.load())
+				if (auto ar_ptr = to_ar->load())
 				{
 					// Total amount of waiting: about 10s
-					GetCallbacks().on_save_state_progress(closed_sucessfully, ar_ptr, init_mtx);
+					GetCallbacks().on_save_state_progress(closed_sucessfully, ar_ptr, verbose_message.get(), init_mtx);
 
 					while (thread_ctrl::state() != thread_state::aborting)
 					{
@@ -3076,7 +3079,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 
 			*closed_sucessfully = true;
-		});
+		}));
 
 		// Join threads
 		for (const auto& [type, data] : *g_fxo)
@@ -3097,8 +3100,15 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 		static_cast<void>(init_mtx->init());
 
+		auto set_progress_message = [&](std::string_view text)
+		{
+			*verbose_message = stx::make_single<std::string>(text);
+		};
+
 		while (savestate)
 		{
+			set_progress_message("Creating File");
+
 			path = get_savestate_file(m_title_id, m_path, 0, 0);
 
 			// The function is meant for reading files, so if there is no GZ file it would not return compressed file path
@@ -3124,7 +3134,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 			auto serial_ptr = stx::make_single<utils::serial>();
 			serial_ptr->m_file_handler = make_compressed_serialization_file_handler(file.file);
-			to_ar = std::move(serial_ptr);
+			*to_ar = std::move(serial_ptr);
 
 			signal_system_cache_can_stay();
 			break;
@@ -3142,7 +3152,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 					return fmt::format("Emu State Capture Thread: '%s'", g_tls_serialize_name);
 				};
 
-				auto& ar = *to_ar.load();
+				auto& ar = *to_ar->load();
 
 				read_used_savestate_versions(); // Reset version data
 				USING_SERIALIZATION_VERSION(global_version);
@@ -3217,6 +3227,8 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 					ar(std::string{});
 				};
 
+				set_progress_message("Creating Header");
+
 				ar("RPCS3SAV"_u64);
 				ar(std::endian::native == std::endian::little);
 				ar(g_cfg.savestate.state_inspection_mode.get());
@@ -3256,11 +3268,21 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 				ar(klic.empty() ? std::array<u8, 16>{} : std::bit_cast<std::array<u8, 16>>(klic[0]));
 				ar(m_game_dir);
+
+				set_progress_message("Saving HDD1");
 				save_hdd1();
+				set_progress_message("Saving HDD0");
 				save_hdd0();
+
 				ar(std::array<u8, 32>{}); // Reserved for future use
+
+				set_progress_message("Saving VMemory");
 				vm::save(ar);
+
+				set_progress_message("Saving FXO");
 				g_fxo->save(ar);
+
+				set_progress_message("Finalizing File");
 
 				bs_t<SaveStateExtentionFlags1> extension_flags{SaveStateExtentionFlags1::SupportsMenuOpenResume};
 
@@ -3285,17 +3307,16 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 			if (emu_state_cap_thread == thread_state::errored)
 			{
 				sys_log.error("Saving savestate failed due to fatal error!");
-				to_ar.reset();
+				to_ar->reset();
 				savestate = false;
 			}
 		}
 
-		stop_watchdog = thread_state::finished;
-		static_cast<void>(init_mtx->reset());
-
 		if (savestate)
 		{
 			fs::stat_t file_stat{};
+
+			set_progress_message("Commiting File");
 
 			if (!file.commit() || !fs::get_stat(path, file_stat))
 			{
@@ -3394,8 +3415,10 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 			}
 		}
 
+		set_progress_message("Resetting Objects");
+
 		// Final termination from main thread (move the last ownership of join thread in order to destroy it)
-		CallFromMainThread([join_thread = std::move(join_thread), allow_autoexit, this]() mutable
+		CallFromMainThread([join_thread = std::move(join_thread), verbose_message, stop_watchdog, init_mtx, allow_autoexit, this]()
 		{
 			cpu_thread::cleanup();
 
@@ -3406,6 +3429,9 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 			sys_log.notice("Objects cleared...");
 
 			vm::close();
+
+			*stop_watchdog = thread_state::finished;
+			static_cast<void>(init_mtx->reset());
 
 			jit_runtime::finalize();
 

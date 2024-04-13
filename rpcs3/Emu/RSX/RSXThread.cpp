@@ -27,6 +27,7 @@
 #include "Utilities/date_time.h"
 #include "Utilities/StrUtil.h"
 #include "Crypto/unzip.h"
+#include "NV47/HW/context.h"
 
 #include "util/asm.hpp"
 
@@ -121,6 +122,9 @@ bool serialize<rsx::rsx_iomap_table>(utils::serial& ar, rsx::rsx_iomap_table& o)
 namespace rsx
 {
 	std::function<bool(u32 addr, bool is_writing)> g_access_violation_handler;
+
+	// TODO: Proper context manager
+	static rsx::context s_ctx{ .rsxthr = nullptr, .register_state = &method_registers };
 
 	rsx_iomap_table::rsx_iomap_table() noexcept
 		: ea(fill_array(-1))
@@ -675,6 +679,10 @@ namespace rsx
 
 		g_user_asked_for_frame_capture = false;
 
+		// TODO: Proper context management in the driver
+		s_ctx.rsxthr = this;
+		m_ctx = &s_ctx;
+
 		if (g_cfg.misc.use_native_interface && (g_cfg.video.renderer == video_renderer::opengl || g_cfg.video.renderer == video_renderer::vulkan))
 		{
 			m_overlay_manager = g_fxo->init<rsx::overlays::display_manager>(0);
@@ -813,7 +821,7 @@ namespace rsx
 		in_begin_end = false;
 		m_frame_stats.draw_calls++;
 
-		method_registers.current_draw_clause.post_execute_cleanup();
+		method_registers.current_draw_clause.post_execute_cleanup(m_ctx);
 
 		m_graphics_state |= rsx::pipeline_state::framebuffer_reads_dirty;
 		m_eng_interrupt_mask |= rsx::backend_interrupt;
@@ -848,7 +856,7 @@ namespace rsx
 		method_registers.current_draw_clause.begin();
 		do
 		{
-			method_registers.current_draw_clause.execute_pipeline_dependencies();
+			method_registers.current_draw_clause.execute_pipeline_dependencies(m_ctx);
 		}
 		while (method_registers.current_draw_clause.next());
 	}
@@ -918,7 +926,7 @@ namespace rsx
 
 	namespace nv4097
 	{
-		void set_render_mode(thread* rsx, u32, u32 arg);
+		void set_render_mode(context* rsx, u32, u32 arg);
 	}
 
 	void thread::on_task()
@@ -958,7 +966,7 @@ namespace rsx
 		}
 
 		check_zcull_status(false);
-		nv4097::set_render_mode(this, 0, method_registers.registers[NV4097_SET_RENDER_ENABLE]);
+		nv4097::set_render_mode(m_ctx, 0, method_registers.registers[NV4097_SET_RENDER_ENABLE]);
 
 		performance_counters.state = FIFO::state::empty;
 
@@ -2674,7 +2682,7 @@ namespace rsx
 	{
 		rsx::method_registers.reset();
 		check_zcull_status(false);
-		nv4097::set_render_mode(this, 0, method_registers.registers[NV4097_SET_RENDER_ENABLE]);
+		nv4097::set_render_mode(m_ctx, 0, method_registers.registers[NV4097_SET_RENDER_ENABLE]);
 		m_graphics_state |= pipeline_state::all_dirty;
 	}
 
@@ -3383,7 +3391,7 @@ namespace rsx
 		return fifo_ctrl->last_cmd();
 	}
 
-	void invalid_method(thread*, u32, u32);
+	void invalid_method(context*, u32, u32);
 
 	void thread::dump_regs(std::string& result, std::any& /*custom_data*/) const
 	{

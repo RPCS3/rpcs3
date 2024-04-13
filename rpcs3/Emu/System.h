@@ -64,7 +64,7 @@ struct EmuCallbacks
 	std::function<void()> on_ready;
 	std::function<bool()> on_missing_fw;
 	std::function<void(std::shared_ptr<atomic_t<bool>>, int)> on_emulation_stop_no_response;
-	std::function<void(std::shared_ptr<atomic_t<bool>>, stx::shared_ptr<utils::serial>, std::shared_ptr<void>)> on_save_state_progress;
+	std::function<void(std::shared_ptr<atomic_t<bool>>, stx::shared_ptr<utils::serial>, stx::atomic_ptr<std::string>*, std::shared_ptr<void>)> on_save_state_progress;
 	std::function<void(bool enabled)> enable_disc_eject;
 	std::function<void(bool enabled)> enable_disc_insert;
 	std::function<bool(bool, std::function<void()>)> try_to_quit; // (force_quit, on_exit) Try to close RPCS3

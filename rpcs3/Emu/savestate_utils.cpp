@@ -19,16 +19,17 @@ LOG_CHANNEL(sys_log, "SYS");
 
 struct serial_ver_t
 {
+	std::string ver_name;
 	bool used = false;
 	u16 current_version = 0;
 	std::set<u16> compatible_versions;
 };
 
-static std::array<serial_ver_t, 26> s_serial_versions;
+static std::array<serial_ver_t, 27> s_serial_versions;
 
 #define SERIALIZATION_VER(name, identifier, ...) \
 \
-	const bool s_##name##_serialization_fill = []() { if (::s_serial_versions[identifier].compatible_versions.empty()) ::s_serial_versions[identifier].compatible_versions = {__VA_ARGS__}; return true; }();\
+	const bool s_##name##_serialization_fill = []() { auto& e = ::s_serial_versions[identifier]; if (e.compatible_versions.empty()) { e.compatible_versions = {__VA_ARGS__}; e.ver_name = #name; } return true; }();\
 \
 	extern void using_##name##_serialization()\
 	{\
@@ -85,6 +86,34 @@ SERIALIZATION_VER(sys_io, 23,                                   2)
 SERIALIZATION_VER(LLE, 24,                                      1)
 SERIALIZATION_VER(HLE, 25,                                      1)
 
+SERIALIZATION_VER(cellSysutil, 26,                              1)
+
+template <>
+void fmt_class_string<std::remove_cvref_t<decltype(s_serial_versions)>>::format(std::string& out, u64 arg)
+{
+	bool is_first = true;
+
+	const auto& serials = get_object(arg);
+
+	out += "{ ";
+
+	for (auto& entry : serials)
+	{
+		if (entry.current_version)
+		{
+			if (!is_first)
+			{
+				out += ", ";
+			}
+
+			is_first = false;
+			fmt::append(out, "%s=%d", entry.ver_name, entry.current_version);
+		}
+	}
+
+	out += " }";
+}
+
 std::vector<version_entry> get_savestate_versioning_data(fs::file&& file, std::string_view filepath)
 {
 	if (!file)
@@ -132,16 +161,27 @@ bool is_savestate_version_compatible(const std::vector<version_entry>& data, boo
 
 	bool ok = true;
 
+	if (is_boot_check)
+	{
+		for (auto& entry : s_serial_versions)
+		{
+			// Version 0 means that the entire constructor using the version should be skipped
+			entry.current_version = 0;
+		}
+	}
+
+	auto& channel = (is_boot_check ? sys_log.error : sys_log.trace);
+
 	for (auto [identifier, version] : data)
 	{
 		if (identifier >= s_serial_versions.size())
 		{
-			(is_boot_check ? sys_log.error : sys_log.trace)("Savestate version identifier is unknown! (category=%u, version=%u)", identifier, version);
+			channel("Savestate version identifier is unknown! (category=%u, version=%u)", identifier, version);
 			ok = false; // Log all mismatches
 		}
 		else if (!s_serial_versions[identifier].compatible_versions.count(version))
 		{
-			(is_boot_check ? sys_log.error : sys_log.trace)("Savestate version is not supported. (category=%u, version=%u)", identifier, version);
+			channel("Savestate version is not supported. (category=%u, version=%u)", identifier, version);
 			ok = false;
 		}
 		else if (is_boot_check)
@@ -150,11 +190,18 @@ bool is_savestate_version_compatible(const std::vector<version_entry>& data, boo
 		}
 	}
 
-	if (!ok && is_boot_check)
+	if (is_boot_check)
 	{
-		for (auto [identifier, _] : data)
+		if (ok)
 		{
-			s_serial_versions[identifier].current_version = 0;
+			sys_log.success("Savestate versions: %s", s_serial_versions);
+		}
+		else
+		{
+			for (auto& entry : s_serial_versions)
+			{
+				entry.current_version = 0;
+			}
 		}
 	}
 
