@@ -55,6 +55,7 @@ public:
 		const QString suspend_savestates           = tr("When this mode is on, emulation exits when saving and the savestate file is concealed after loading it, preventing reuse by RPCS3.\nThis mode is like hibernation of emulation: if you don't want to be able to cheat using savestates when playing the game, consider using this mode.\nDo note that the savestate file is not gone completely, just ignored by RPCS3. You can manually relaunch it if needed.");
 		const QString compatible_savestates        = tr("When this mode is on, SPU emulation prioritizes savestate compatibility, however, it may reduce performance slightly.\nWhen this mode is off, some games may not allow making a savestate and show an SPU pause error in the log.");
 		const QString paused_savestates            = tr("When this mode is on, savestates are loaded and paused on the first frame.\nThis allows players to prepare for gameplay without being thrown into the action immediately.");
+		const QString spu_profiler                 = tr("When enabled, SPU performance is measured at runtime.\nEnable only at a developr's request because when enabled it reduces performance a bit by itself.");
 
 		// audio
 
