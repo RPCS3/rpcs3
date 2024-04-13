@@ -77,6 +77,11 @@ struct avc2_settings
 	u8 video_stream_sharing = 0;
 	u32 total_video_bitrate = 0;
 
+	static bool saveable(bool is_writing) noexcept
+	{
+		return GET_SERIALIZATION_VERSION(cellSysutil) != 0;
+	}
+
 	avc2_settings(utils::serial& ar) noexcept
 	{
 		[[maybe_unused]] const s32 version = GET_SERIALIZATION_VERSION(cellSysutil);
