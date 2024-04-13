@@ -89,6 +89,9 @@ struct cpu_prof
 		// Total number of samples
 		u64 samples = 0, idle = 0;
 
+		// Total number of sample collected in reservation operation
+		u64 reservation_samples = 0;
+
 		// Avoid printing replicas or when not much changed
 		u64 new_samples = 0;
 
@@ -101,6 +104,7 @@ struct cpu_prof
 			samples = 0;
 			idle = 0;
 			new_samples = 0;
+			reservation_samples = 0;
 		}
 
 		static std::string format(const std::multimap<u64, u64, std::greater<u64>>& chart, u64 samples, u64 idle, bool extended_print = false)
@@ -140,7 +144,7 @@ struct cpu_prof
 			{
 				if (cpu_flag::exit - ptr->state)
 				{
-					profiler.notice("Thread \"%s\" [0x%08x]: %u samples, %u new (%.4f%% idle): Not enough new samples have been collected since the last print.", ptr->get_name(), ptr->id, samples, new_samples, 100. * idle / samples);
+					profiler.notice("Thread \"%s\" [0x%08x]: %u samples (%.4f%% idle), %u new, %u reservation (%.4f%%): Not enough new samples have been collected since the last print.", ptr->get_name(), ptr->id, samples, 100. * idle / samples, new_samples, reservation_samples, 100. * reservation_samples / samples);
 				}
 
 				return;
@@ -156,7 +160,7 @@ struct cpu_prof
 
 			// Print results
 			const std::string results = format(chart, samples, idle);
-			profiler.notice("Thread \"%s\" [0x%08x]: %u samples, %u new (%.4f%% idle):%s", ptr->get_name(), ptr->id, samples, new_samples, 100. * idle / samples, results);
+			profiler.notice("Thread \"%s\" [0x%08x]: %u samples (%.4f%% idle), %u new, %u reservation (%.4f%%):\n%s", ptr->get_name(), ptr->id, samples, 100. * idle / samples, new_samples, reservation_samples, 100. * reservation_samples / samples, results);
 
 			new_samples = 0;
 		}
@@ -177,6 +181,7 @@ struct cpu_prof
 			std::unordered_map<u64, u64, value_hash<u64>> freq;
 
 			u64 samples = 0, idle = 0;
+			u64 reservation = 0;
 
 			for (auto& [_, info] : threads)
 			{
@@ -188,6 +193,7 @@ struct cpu_prof
 
 				samples += info.samples;
 				idle += info.idle;
+				reservation += info.reservation_samples;
 			}
 
 			if (samples == idle)
@@ -197,7 +203,7 @@ struct cpu_prof
 
 			if (new_samples < min_print_all_samples && thread_ctrl::state() != thread_state::aborting)
 			{
-				profiler.notice("All Threads: %u samples, %u new (%.4f%% idle): Not enough new samples have been collected since the last print.", samples, new_samples, 100. * idle / samples);
+				profiler.notice("All Threads: %u samples (%.4f%% idle), %u new, %u reservation (%.4f%%): Not enough new samples have been collected since the last print.", samples, 100. * idle / samples, new_samples, reservation, 100. * reservation / samples);
 				return;
 			}
 
@@ -207,7 +213,7 @@ struct cpu_prof
 			}
 
 			const std::string results = format(chart, samples, idle, true);
-			profiler.notice("All Threads: %u samples, %u new (%.4f%% idle):%s", samples, new_samples, 100. * idle / samples, results);
+			profiler.notice("All Threads: %u samples (%.4f%% idle), %u new, %u reservation (%.4f%%):%s", samples, 100. * idle / samples, new_samples, reservation, 100. * reservation / samples, results);
 		}
 	};
 
@@ -280,6 +286,14 @@ struct cpu_prof
 					{
 						info.freq[name]++;
 						info.new_samples++;
+
+						if (auto spu = ptr->try_get<spu_thread>())
+						{
+							if (spu->raddr)
+							{
+								info.reservation_samples++;
+							}
+						}
 
 						// Append verification time to fixed common name 0000000...chunk-0x3fffc
 						if (name >> 16 && (name & 0xffff) == 0)
