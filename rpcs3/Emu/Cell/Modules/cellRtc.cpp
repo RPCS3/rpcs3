@@ -672,7 +672,7 @@ error_code cellRtcParseRfc3339(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDate
 */
 error_code cellRtcParseDateTime(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDateTime)
 {
-	cellRtc.notice("cellRtcParseDateTime(pUtc=*0x%x, pszDateTime=*0x%x)", pUtc, pszDateTime);
+	cellRtc.notice("cellRtcParseDateTime(pUtc=*0x%x, pszDateTime=%s)", pUtc, pszDateTime);
 
 	if (!vm::check_addr(pUtc.addr()) || !vm::check_addr(pszDateTime.addr()))
 	{
@@ -819,7 +819,7 @@ error_code cellRtcParseDateTime(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDat
 // Rfc3339: 1995-12-03T13:23:00.00Z
 error_code cellRtcParseRfc3339(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDateTime)
 {
-	cellRtc.notice("cellRtcParseRfc3339(pUtc=*0x%x, pszDateTime=*0x%x)", pUtc, pszDateTime);
+	cellRtc.notice("cellRtcParseRfc3339(pUtc=*0x%x, pszDateTime=%s)", pUtc, pszDateTime);
 
 	if (!vm::check_addr(pUtc.addr()))
 	{
