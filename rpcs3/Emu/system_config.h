@@ -287,6 +287,8 @@ struct cfg_root : cfg::node
 
 	struct node_sys : cfg::node
 	{
+		static std::string get_random_system_name();
+
 		node_sys(cfg::node* _this) : cfg::node(_this, "System") {}
 
 		cfg::_enum<CellSysutilLicenseArea> license_area{ this, "License Area", CellSysutilLicenseArea{1} }; // CELL_SYSUTIL_LICENSE_AREA_A
@@ -294,6 +296,7 @@ struct cfg_root : cfg::node
 		cfg::_enum<CellKbMappingType> keyboard_type{ this, "Keyboard Type", CellKbMappingType{0} }; // CELL_KB_MAPPING_101 = US
 		cfg::_enum<enter_button_assign> enter_button_assignment{ this, "Enter button assignment", enter_button_assign::cross };
 		cfg::_int<-60*60*24*365*100LL, 60*60*24*365*100LL> console_time_offset{ this, "Console time offset (s)", 0 }; // console time offset, limited to +/-100years
+		cfg::string system_name{this, "System Name", get_random_system_name()};
 		cfg::uint<0, umax> console_psid_high{this, "PSID high"};
 		cfg::uint<0, umax> console_psid_low{this, "PSID low"};
 		cfg::string hdd_model{this, "HDD Model Name", ""};
