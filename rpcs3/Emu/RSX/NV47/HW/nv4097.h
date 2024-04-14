@@ -225,9 +225,9 @@ namespace rsx
 		template<u32 index>
 		struct set_vertex_texture_dirty_bit
 		{
-			static void impl(context* ctx, u32 reg, u32 arg)
+			static void impl(context* ctx, u32 /*reg*/, u32 /*arg*/)
 			{
-
+				util::set_vertex_texture_dirty_bit(ctx, index);
 			}
 		};
 
