@@ -391,7 +391,7 @@ extern u16 serial_breathe_and_tag(utils::serial& ar, std::string_view name, bool
 [[noreturn]] void hle_locks_t::lock()
 {
 	// Unreachable
-	ensure(false);
+	fmt::throw_exception("Unreachable");
 }
 
 bool hle_locks_t::try_lock()

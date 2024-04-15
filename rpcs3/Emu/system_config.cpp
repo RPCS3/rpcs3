@@ -13,6 +13,6 @@ bool cfg_root::node_core::enable_tsx_by_default()
 
 std::string cfg_root::node_sys::get_random_system_name()
 {
-	std::srand(std::time(nullptr));
+	std::srand(static_cast<u32>(std::time(nullptr)));
 	return "RPCS3-" + std::to_string(100 + std::rand() % 899);
 }

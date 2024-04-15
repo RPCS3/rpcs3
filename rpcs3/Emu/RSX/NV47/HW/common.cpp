@@ -30,7 +30,7 @@ namespace rsx
 			REGS(ctx)->register_vertex_info[attrib_index].data[channel_select] = value;
 		}
 
-		void push_draw_parameter_change(rsx::context* ctx, rsx::command_barrier_type type, u32 reg, u32 arg)
+		void push_draw_parameter_change(rsx::context* ctx, rsx::command_barrier_type /*type*/, u32 reg, u32 arg)
 		{
 			if (REGS(ctx)->latch == arg ||
 				!RSX(ctx)->in_begin_end ||
@@ -46,7 +46,7 @@ namespace rsx
 			REGS(ctx)->current_draw_clause.insert_command_barrier(index_base_modifier_barrier, arg);
 		}
 
-		u32 get_report_data_impl(rsx::context* ctx, u32 offset)
+		u32 get_report_data_impl([[maybe_unused]] rsx::context* ctx, u32 offset)
 		{
 			u32 location = 0;
 			blit_engine::context_dma report_dma = REGS(ctx)->context_dma_report();

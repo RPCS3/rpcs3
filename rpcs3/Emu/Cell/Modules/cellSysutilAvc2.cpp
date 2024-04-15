@@ -77,7 +77,7 @@ struct avc2_settings
 	u8 video_stream_sharing = 0;
 	u32 total_video_bitrate = 0;
 
-	static bool saveable(bool is_writing) noexcept
+	static bool saveable(bool /*is_writing*/) noexcept
 	{
 		return GET_SERIALIZATION_VERSION(cellSysutil) != 0;
 	}
@@ -698,7 +698,7 @@ error_code cellSysutilAvc2SetSpeakerMuting(u8 muting)
 	return CELL_OK;
 }
 
-error_code cellSysutilAvc2Load_shared(SceNpMatching2ContextId ctx_id, u32 container, vm::ptr<CellSysutilAvc2Callback> callback_func, vm::ptr<void> user_data, vm::cptr<CellSysutilAvc2InitParam> init_param)
+error_code cellSysutilAvc2Load_shared(SceNpMatching2ContextId /*ctx_id*/, u32 /*container*/, vm::ptr<CellSysutilAvc2Callback> callback_func, vm::ptr<void> user_data, vm::cptr<CellSysutilAvc2InitParam> init_param)
 {
 	if (!init_param || !init_param->avc_init_param_version ||
 	    !(init_param->avc_init_param_version == 100 ||

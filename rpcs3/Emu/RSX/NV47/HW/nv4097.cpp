@@ -20,7 +20,7 @@ namespace rsx
 			RSX(ctx)->m_graphics_state |= rsx::pipeline_state::fragment_program_ucode_dirty;
 		}
 
-		void set_transform_constant::impl(context* ctx, u32 reg, u32 arg)
+		void set_transform_constant::impl(context* ctx, u32 reg, u32 /*arg*/)
 		{
 			const u32 index = reg - NV4097_SET_TRANSFORM_CONSTANT;
 			const u32 constant_id = index / 4;
@@ -77,7 +77,7 @@ namespace rsx
 			RSX(ctx)->fifo_ctrl->skip_methods(rcount - 1);
 		}
 
-		void set_transform_program::impl(context* ctx, u32 reg, u32 arg)
+		void set_transform_program::impl(context* ctx, u32 reg, u32 /*arg*/)
 		{
 			const u32 index = reg - NV4097_SET_TRANSFORM_PROGRAM;
 
