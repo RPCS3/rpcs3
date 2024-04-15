@@ -503,10 +503,8 @@ u8 rtcParseName(vm::cptr<char> pszDateTime, u32& pos, const std::array<std::stri
 	return size;
 }
 
-error_code rtcParseRfc2822(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDateTime)
+error_code rtcParseRfc2822(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDateTime, u32 pos)
 {
-	u32 pos = 0;
-
 	// Day: "X" or "XX"
 	const u16 day = rtcParseComponent(pszDateTime, pos, 0, "day");
 
@@ -717,8 +715,8 @@ error_code cellRtcParseDateTime(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDat
 
 	if (month > MONTH_NAMES.size()) // No match
 	{
-		// String uses RFC2822 format
-		return rtcParseRfc2822(pUtc, pszDateTime + pos);
+		cellRtc.notice("cellRtcParseDateTime(): string uses RFC 2822 format");
+		return rtcParseRfc2822(pUtc, pszDateTime, pos);
 	}
 
 	// Mandatory space
