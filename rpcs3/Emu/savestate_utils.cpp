@@ -172,21 +172,21 @@ bool is_savestate_version_compatible(const std::vector<version_entry>& data, boo
 
 	auto& channel = (is_boot_check ? sys_log.error : sys_log.trace);
 
-	for (auto [identifier, version] : data)
+	for (const auto& entry : data)
 	{
-		if (identifier >= s_serial_versions.size())
+		if (entry.type >= s_serial_versions.size())
 		{
-			channel("Savestate version identifier is unknown! (category=%u, version=%u)", identifier, version);
+			channel("Savestate version identifier is unknown! (category=%u, version=%u)", entry.type, entry.version);
 			ok = false; // Log all mismatches
 		}
-		else if (!s_serial_versions[identifier].compatible_versions.count(version))
+		else if (!s_serial_versions[entry.type].compatible_versions.count(entry.version))
 		{
-			channel("Savestate version is not supported. (category=%u, version=%u)", identifier, version);
+			channel("Savestate version is not supported. (category=%u, version=%u)", entry.type, entry.version);
 			ok = false;
 		}
 		else if (is_boot_check)
 		{
-			s_serial_versions[identifier].current_version = version;
+			s_serial_versions[entry.type].current_version = entry.version;
 		}
 	}
 
