@@ -2172,9 +2172,6 @@
     <ClInclude Include="Emu\system_progress.hpp">
       <Filter>Emu</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\savestate_utils.hpp">
-      <Filter>Utilities</Filter>
-    </ClInclude>
     <ClInclude Include="rpcs3_version.h">
       <Filter>Emu</Filter>
     </ClInclude>
@@ -2520,6 +2517,9 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\NV47\FW\draw_call.hpp">
       <Filter>Emu\GPU\RSX\NV47\FW</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\savestate_utils.hpp">
+      <Filter>Emu</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
