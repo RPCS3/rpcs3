@@ -217,7 +217,15 @@ error_code cellRtcFormatRfc2822(vm::ptr<char> pszDateTime, vm::cptr<CellRtcTick>
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
 
-	vm::var<CellRtcTick> rtc_tick{ *pUtc };
+	vm::var<CellRtcTick> rtc_tick;
+	if (!pUtc) // Should always evaluate to false, nullptr was already checked above
+	{
+		cellRtcGetCurrentTick(rtc_tick);
+	}
+	else
+	{
+		rtc_tick->tick = pUtc->tick;
+	}
 
 	vm::var<CellRtcDateTime> date_time;
 
@@ -333,7 +341,15 @@ error_code cellRtcFormatRfc3339(vm::ptr<char> pszDateTime, vm::cptr<CellRtcTick>
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
 
-	vm::var<CellRtcTick> rtc_tick{ *pUtc };
+	vm::var<CellRtcTick> rtc_tick;
+	if (!pUtc) // Should always evaluate to false, nullptr was already checked above
+	{
+		cellRtcGetCurrentTick(rtc_tick);
+	}
+	else
+	{
+		rtc_tick->tick = pUtc->tick;
+	}
 
 	vm::var<CellRtcDateTime> date_time;
 
@@ -378,7 +394,7 @@ error_code cellRtcFormatRfc3339(vm::ptr<char> pszDateTime, vm::cptr<CellRtcTick>
 	pszDateTime[0x12] = ascii(date_time->second % 10);
 	pszDateTime[0x13] = '.';
 
-	// Microseconds - 2020-04-13T10:56:31.XX+66:40
+	// Hundredths of a second - 2020-04-13T10:56:31.XX+66:40
 	pszDateTime[0x14] = ascii(date_time->microsecond / 100'000);
 	pszDateTime[0x15] = ascii(date_time->microsecond / 10'000 % 10);
 
