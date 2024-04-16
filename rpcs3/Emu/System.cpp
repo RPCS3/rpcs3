@@ -3362,7 +3362,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 			{
 				if (fs::file tty_read_fd{fs::get_cache_dir() + "TTY.log"})
 				{
-					// Enfore an arbitrary limit for now to avoid OOM in case the guest code has bombarded TTY
+					// Enforce an arbitrary limit for now to avoid OOM in case the guest code has bombarded TTY
 					// 3MB, this should be enough
 					constexpr usz c_max_tty_spill_size = 0x30'0000;
 
