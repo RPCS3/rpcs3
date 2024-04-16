@@ -149,94 +149,95 @@ void usb_device_gametablet::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endp
 		return;
 	}
 
-	std::lock_guard lock(pad::g_pad_mutex);
-	const auto gamepad_handler = pad::get_current_handler();
-	const auto& pads = gamepad_handler->GetPads();
-
-	bool up = false, right = false, down = false, left = false;
-
-	const int pad_index = 1; // Player2
-	const auto& pad = pads[pad_index];
-	if (pad->m_port_status & CELL_PAD_STATUS_CONNECTED)
 	{
-		for (Button& button : pad->m_buttons)
-		{
-			if (!button.m_pressed)
-			{
-				continue;
-			}
+		std::lock_guard lock(pad::g_pad_mutex);
+		const auto gamepad_handler = pad::get_current_handler();
+		const auto& pads = gamepad_handler->GetPads();
 
-			if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL1)
+		bool up = false, right = false, down = false, left = false;
+
+		const int pad_index = 1; // Player2
+		const auto& pad = ::at32(pads, pad_index);
+		if (pad->m_port_status & CELL_PAD_STATUS_CONNECTED)
+		{
+			for (Button& button : pad->m_buttons)
 			{
-				switch (button.m_outKeyCode)
+				if (!button.m_pressed)
 				{
-				case CELL_PAD_CTRL_SELECT:
-					buf[1] |= (1 << 0);
-					break;
-				case CELL_PAD_CTRL_START:
-					buf[1] |= (1 << 1);
-					break;
-				case CELL_PAD_CTRL_UP:
-					up = true;
-					break;
-				case CELL_PAD_CTRL_RIGHT:
-					right = true;
-					break;
-				case CELL_PAD_CTRL_DOWN:
-					down = true;
-					break;
-				case CELL_PAD_CTRL_LEFT:
-					left = true;
-					break;
-				default:
-					break;
+					continue;
 				}
-			}
-			else if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL2)
-			{
-				switch (button.m_outKeyCode)
+
+				if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL1)
 				{
-				case CELL_PAD_CTRL_SQUARE:
-					buf[0] |= (1 << 0);
-					break;
-				case CELL_PAD_CTRL_CROSS:
-					buf[0] |= (1 << 1);
-					break;
-				case CELL_PAD_CTRL_CIRCLE:
-					buf[0] |= (1 << 2);
-					break;
-				case CELL_PAD_CTRL_TRIANGLE:
-					buf[0] |= (1 << 3);
-					break;
-				case CELL_PAD_CTRL_PS:
-					buf[1] |= (1 << 4);
-					break;
-				default:
-					break;
+					switch (button.m_outKeyCode)
+					{
+					case CELL_PAD_CTRL_SELECT:
+						buf[1] |= (1 << 0);
+						break;
+					case CELL_PAD_CTRL_START:
+						buf[1] |= (1 << 1);
+						break;
+					case CELL_PAD_CTRL_UP:
+						up = true;
+						break;
+					case CELL_PAD_CTRL_RIGHT:
+						right = true;
+						break;
+					case CELL_PAD_CTRL_DOWN:
+						down = true;
+						break;
+					case CELL_PAD_CTRL_LEFT:
+						left = true;
+						break;
+					default:
+						break;
+					}
+				}
+				else if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL2)
+				{
+					switch (button.m_outKeyCode)
+					{
+					case CELL_PAD_CTRL_SQUARE:
+						buf[0] |= (1 << 0);
+						break;
+					case CELL_PAD_CTRL_CROSS:
+						buf[0] |= (1 << 1);
+						break;
+					case CELL_PAD_CTRL_CIRCLE:
+						buf[0] |= (1 << 2);
+						break;
+					case CELL_PAD_CTRL_TRIANGLE:
+						buf[0] |= (1 << 3);
+						break;
+					case CELL_PAD_CTRL_PS:
+						buf[1] |= (1 << 4);
+						break;
+					default:
+						break;
+					}
 				}
 			}
 		}
+
+		if (!up && !right && !down && !left)
+			buf[0x02] = 0x0f;
+		else if (up && !left && !right)
+			buf[0x02] = 0x00;
+		else if (up && right)
+			buf[0x02] = 0x01;
+		else if (right && !up && !down)
+			buf[0x02] = 0x02;
+		else if (down && right)
+			buf[0x02] = 0x03;
+		else if (down && !left && !right)
+			buf[0x02] = 0x04;
+		else if (down && left)
+			buf[0x02] = 0x05;
+		else if (left && !up && !down)
+			buf[0x02] = 0x06;
+		else if (up && left)
+			buf[0x02] = 0x07;
 	}
-
-	if (!up && !right && !down && !left)
-		buf[0x02] = 0x0f;
-	else if (up && !left && !right)
-		buf[0x02] = 0x00;
-	else if (up && right)
-		buf[0x02] = 0x01;
-	else if (right && !up && !down)
-		buf[0x02] = 0x02;
-	else if (down && right)
-		buf[0x02] = 0x03;
-	else if (down && !left && !right)
-		buf[0x02] = 0x04;
-	else if (down && left)
-		buf[0x02] = 0x05;
-	else if (left && !up && !down)
-		buf[0x02] = 0x06;
-	else if (up && left)
-		buf[0x02] = 0x07;
-
 
 	auto& mouse_handler = g_fxo->get<MouseHandlerBase>();
 	std::lock_guard mouse_lock(mouse_handler.mutex);
