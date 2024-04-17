@@ -2936,9 +2936,9 @@ struct llvm_calli
 
 	std::tuple<llvm_expr_t<A>...> a;
 
-	std::array<usz, sizeof...(A)> order_equality_hint = []()
+	std::array<usz, std::max<usz>(sizeof...(A), 1)> order_equality_hint = []()
 	{
-		std::array<usz, sizeof...(A)> r{};
+		std::array<usz, std::max<usz>(sizeof...(A), 1)> r{};
 
 		for (usz i = 0; i < r.size(); i++)
 		{
@@ -2958,7 +2958,7 @@ struct llvm_calli
 	template <usz... I>
 	llvm::Value* eval(llvm::IRBuilder<>* ir, std::index_sequence<I...>) const
 	{
-		llvm::Value* v[sizeof...(A)]{std::get<I>(a).eval(ir)...};
+		llvm::Value* v[std::max<usz>(sizeof...(A), 1)]{std::get<I>(a).eval(ir)...};
 
 		if (c && (llvm::isa<llvm::Constant>(v[I]) || ...))
 		{
