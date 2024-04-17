@@ -149,12 +149,12 @@ void usb_device_gametablet::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endp
 		return;
 	}
 
+	bool up = false, right = false, down = false, left = false;
+
 	{
 		std::lock_guard lock(pad::g_pad_mutex);
 		const auto gamepad_handler = pad::get_current_handler();
 		const auto& pads = gamepad_handler->GetPads();
-
-		bool up = false, right = false, down = false, left = false;
 
 		const int pad_index = 1; // Player2
 		const auto& pad = ::at32(pads, pad_index);
@@ -218,26 +218,26 @@ void usb_device_gametablet::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endp
 				}
 			}
 		}
-
-		if (!up && !right && !down && !left)
-			buf[0x02] = 0x0f;
-		else if (up && !left && !right)
-			buf[0x02] = 0x00;
-		else if (up && right)
-			buf[0x02] = 0x01;
-		else if (right && !up && !down)
-			buf[0x02] = 0x02;
-		else if (down && right)
-			buf[0x02] = 0x03;
-		else if (down && !left && !right)
-			buf[0x02] = 0x04;
-		else if (down && left)
-			buf[0x02] = 0x05;
-		else if (left && !up && !down)
-			buf[0x02] = 0x06;
-		else if (up && left)
-			buf[0x02] = 0x07;
 	}
+
+	if (!up && !right && !down && !left)
+		buf[0x02] = 0x0f;
+	else if (up && !left && !right)
+		buf[0x02] = 0x00;
+	else if (up && right)
+		buf[0x02] = 0x01;
+	else if (right && !up && !down)
+		buf[0x02] = 0x02;
+	else if (down && right)
+		buf[0x02] = 0x03;
+	else if (down && !left && !right)
+		buf[0x02] = 0x04;
+	else if (down && left)
+		buf[0x02] = 0x05;
+	else if (left && !up && !down)
+		buf[0x02] = 0x06;
+	else if (up && left)
+		buf[0x02] = 0x07;
 
 	auto& mouse_handler = g_fxo->get<MouseHandlerBase>();
 	std::lock_guard mouse_lock(mouse_handler.mutex);
