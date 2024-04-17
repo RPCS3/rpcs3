@@ -887,8 +887,17 @@ void gui_application::OnChangeStyleSheetRequest()
 	// Determine default style
 	if (m_default_style.isEmpty())
 	{
+#ifdef _WIN32
+		// On windows, the custom stylesheets don't seem to work properly unless we use the windowsvista style as default
+		if (QStyleFactory::keys().contains("windowsvista"))
+		{
+			m_default_style = "windowsvista";
+			gui_log.notice("Using '%s' as default style", m_default_style);
+		}
+#endif
+
 		// Use the initial style as default style
-		if (const QStyle* style = QApplication::style())
+		if (const QStyle* style = m_default_style.isEmpty() ? QApplication::style() : nullptr)
 		{
 			m_default_style = style->name();
 			gui_log.notice("Determined '%s' as default style", m_default_style);
