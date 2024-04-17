@@ -10,7 +10,7 @@ R"(
 
 #if defined(_ENABLE_ROP_OUTPUT_ROUNDING) || defined(_ENABLE_PROGRAMMABLE_BLENDING)
 // Truncate float by discarding lower 12-bits of the mantissa
-#define _fx12_truncate(x) uintBitsToFloat(floatBitsToUint(x) & 0xfffff000)
+#define _fx12_truncate(x) uintBitsToFloat(floatBitsToUint(x) & 0xfffff000u)
 
 // Default. Used when we're not utilizing native fp16
 vec4 round_to_8bit(const in vec4 v4)
