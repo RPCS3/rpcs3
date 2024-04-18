@@ -173,7 +173,7 @@ void basic_keyboard_handler::LoadSettings()
 		return;
 	}
 
-	std::vector<KbButton>& buttons = m_keyboards[0].m_buttons;
+	std::vector<KbButton> buttons;
 
 	// Meta Keys
 	//buttons.emplace_back(Qt::Key_Control, CELL_KB_MKEY_L_CTRL);
@@ -310,4 +310,12 @@ void basic_keyboard_handler::LoadSettings()
 	buttons.emplace_back(Qt::Key_ssharp, CELL_KEYC_SSHARP);
 	buttons.emplace_back(Qt::Key_QuoteLeft, CELL_KEYC_BACK_QUOTE);
 	buttons.emplace_back(Qt::Key_acute, CELL_KEYC_BACK_QUOTE);
+
+	// Fill our map
+	auto& keys = m_keyboards[0].m_keys;
+
+	for (const KbButton& button : buttons)
+	{
+		ensure(keys.try_emplace(button.m_keyCode, button).second);
+	}
 }
