@@ -58,14 +58,14 @@ constexpr std::array<std::string_view, 12> MONTH_NAMES     = { "january", "febru
 constexpr std::array<std::string_view, 70> TIME_ZONE_NAMES = { "gmt", "est", "edt", "cst", "cdt", "mst", "mdt", "pst", "pdt", "nzdt", "nzst", "idle", "nzt", "aesst", "acsst", "cadt", "sadt", "aest", "east", "gst", "ligt", "acst", "sast", "cast", "awsst", "jst", "kst", "wdt", "mt", "awst", "cct", "wadt", "wst", "jt", "wast", "it", "bt", "eetdst", "eet", "cetdst", "fwt", "ist", "mest", "metdst", "sst", "bst", "cet", "dnt", "fst", "met", "mewt", "mez", "nor", "set", "swt", "wetdst", "wet", "wat", "ndt", "adt", "nft", "nst", "ast", "ydt", "hdt", "yst", "ahst", "cat", "nt", "idlw" };
 constexpr std::array<s8, 70> TIME_ZONE_VALUES              = {     0,   -10,    -8,   -12,   -10,   -14,   -12,   -16,   -14,     26,     24,     24,    24,      22,      21,     21,     21,     20,     20,    20,     20,     19,     19,     19,      18,    18,    18,    18,   17,     16,    16,     16,    16,   15,     14,    7,    6,        6,     4,        4,     4,     4,      4,        4,     4,     2,     2,     2,     2,     2,      2,     2,     2,     2,     2,        2,     0,    -2,    -3,    -6,    -5,    -5,    -8,   -16,   -18,   -18,    -20,   -20,  -22,    -24 }; // In units of 30 minutes
 
-error_code cellRtcTickAddMinutes(vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTick> pTick1, s64 lAdd);
+error_code cellRtcTickAddMinutes(ppu_thread& ppu, vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTick> pTick1, s64 lAdd);
 
-error_code cellRtcSetTick(vm::ptr<CellRtcDateTime> pTime, vm::cptr<CellRtcTick> pTick);
+error_code cellRtcSetTick(ppu_thread& ppu, vm::ptr<CellRtcDateTime> pTime, vm::cptr<CellRtcTick> pTick);
 constexpr u32 cellRtcGetTickResolution();
 error_code cellRtcCheckValid(vm::cptr<CellRtcDateTime> pTime);
 s32 cellRtcGetDayOfWeek(s32 year, s32 month, s32 day);
-error_code cellRtcGetTick(vm::cptr<CellRtcDateTime> pTime, vm::ptr<CellRtcTick> pTick);
-error_code cellRtcGetCurrentTick(vm::ptr<CellRtcTick> pTick);
+error_code cellRtcGetTick(ppu_thread& ppu, vm::cptr<CellRtcDateTime> pTime, vm::ptr<CellRtcTick> pTick);
+error_code cellRtcGetCurrentTick(ppu_thread& ppu, vm::ptr<CellRtcTick> pTick);
 
 CellRtcDateTime tick_to_date_time(u64 tick);
 u64 date_time_to_tick(CellRtcDateTime date_time);
