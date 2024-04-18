@@ -51,11 +51,13 @@ static bool is_leap_year(u32 year)
 	return year % 4 == 0 && (year % 100 != 0 || year % 400 == 0);
 }
 
-error_code cellRtcGetCurrentTick(vm::ptr<CellRtcTick> pTick)
+error_code cellRtcGetCurrentTick(ppu_thread& ppu, vm::ptr<CellRtcTick> pTick)
 {
 	cellRtc.trace("cellRtcGetCurrentTick(pTick=*0x%x)", pTick);
 
-	if (!vm::check_addr(pTick.addr()))
+	const vm::var<sys_page_attr_t> page_attr;
+
+	if (sys_memory_get_page_attribute(ppu, pTick.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
@@ -74,17 +76,19 @@ error_code cellRtcGetCurrentTick(vm::ptr<CellRtcTick> pTick)
 	return CELL_OK;
 }
 
-error_code cellRtcGetCurrentClock(vm::ptr<CellRtcDateTime> pClock, s32 iTimeZone)
+error_code cellRtcGetCurrentClock(ppu_thread& ppu, vm::ptr<CellRtcDateTime> pClock, s32 iTimeZone)
 {
 	cellRtc.notice("cellRtcGetCurrentClock(pClock=*0x%x, iTimeZone=%d)", pClock, iTimeZone);
 
-	if (!vm::check_addr(pClock.addr()))
+	const vm::var<sys_page_attr_t> page_attr;
+
+	if (sys_memory_get_page_attribute(ppu, pClock.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
 
 	vm::var<CellRtcTick> tick;
-	if (!vm::check_addr(tick.addr()))
+	if (sys_memory_get_page_attribute(ppu, tick.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
@@ -100,17 +104,19 @@ error_code cellRtcGetCurrentClock(vm::ptr<CellRtcDateTime> pClock, s32 iTimeZone
 
 	tick->tick = *nsec / 1000 + *sec * cellRtcGetTickResolution() + RTC_MAGIC_OFFSET;
 
-	cellRtcTickAddMinutes(tick, tick, iTimeZone);
-	cellRtcSetTick(pClock, tick);
+	cellRtcTickAddMinutes(ppu, tick, tick, iTimeZone);
+	cellRtcSetTick(ppu, pClock, tick);
 
 	return CELL_OK;
 }
 
-error_code cellRtcGetCurrentClockLocalTime(vm::ptr<CellRtcDateTime> pClock)
+error_code cellRtcGetCurrentClockLocalTime(ppu_thread& ppu, vm::ptr<CellRtcDateTime> pClock)
 {
 	cellRtc.trace("cellRtcGetCurrentClockLocalTime(pClock=*0x%x)", pClock);
 
-	if (!vm::check_addr(pClock.addr()))
+	const vm::var<sys_page_attr_t> page_attr;
+
+	if (sys_memory_get_page_attribute(ppu, pClock.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
@@ -124,13 +130,13 @@ error_code cellRtcGetCurrentClockLocalTime(vm::ptr<CellRtcDateTime> pClock)
 		return ret;
 	}
 
-	if (!vm::check_addr(pClock.addr()))
+	if (sys_memory_get_page_attribute(ppu, pClock.addr(), page_attr) != CELL_OK) // Should always evaluate to false, already checked above
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
 
 	vm::var<CellRtcTick> tick;
-	if (!vm::check_addr(tick.addr()))
+	if (sys_memory_get_page_attribute(ppu, tick.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
@@ -146,22 +152,24 @@ error_code cellRtcGetCurrentClockLocalTime(vm::ptr<CellRtcDateTime> pClock)
 
 	tick->tick = *nsec / 1000 + *sec * cellRtcGetTickResolution() + RTC_MAGIC_OFFSET;
 
-	cellRtcTickAddMinutes(tick, tick, *timezone + *summertime);
-	cellRtcSetTick(pClock, tick);
+	cellRtcTickAddMinutes(ppu, tick, tick, *timezone + *summertime);
+	cellRtcSetTick(ppu, pClock, tick);
 
 	return CELL_OK;
 }
 
-error_code cellRtcFormatRfc2822(vm::ptr<char> pszDateTime, vm::cptr<CellRtcTick> pUtc, s32 iTimeZone)
+error_code cellRtcFormatRfc2822(ppu_thread& ppu, vm::ptr<char> pszDateTime, vm::cptr<CellRtcTick> pUtc, s32 iTimeZone)
 {
 	cellRtc.notice("cellRtcFormatRfc2822(pszDateTime=*0x%x, pUtc=*0x%x, iTimeZone=%d)", pszDateTime, pUtc, iTimeZone);
 
-	if (!vm::check_addr(pszDateTime.addr()))
+	const vm::var<sys_page_attr_t> page_attr;
+
+	if (sys_memory_get_page_attribute(ppu, pszDateTime.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
 
-	if (!vm::check_addr(pUtc.addr()))
+	if (sys_memory_get_page_attribute(ppu, pUtc.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
@@ -169,7 +177,7 @@ error_code cellRtcFormatRfc2822(vm::ptr<char> pszDateTime, vm::cptr<CellRtcTick>
 	vm::var<CellRtcTick> rtc_tick;
 	if (!pUtc) // Should always evaluate to false, nullptr was already checked above
 	{
-		cellRtcGetCurrentTick(rtc_tick);
+		cellRtcGetCurrentTick(ppu, rtc_tick);
 	}
 	else
 	{
@@ -178,8 +186,8 @@ error_code cellRtcFormatRfc2822(vm::ptr<char> pszDateTime, vm::cptr<CellRtcTick>
 
 	vm::var<CellRtcDateTime> date_time;
 
-	cellRtcTickAddMinutes(rtc_tick, rtc_tick, iTimeZone);
-	cellRtcSetTick(date_time, rtc_tick);
+	cellRtcTickAddMinutes(ppu, rtc_tick, rtc_tick, iTimeZone);
+	cellRtcSetTick(ppu, date_time, rtc_tick);
 
 	error_code ret = cellRtcCheckValid(date_time);
 	if (ret != CELL_OK)
@@ -250,16 +258,18 @@ error_code cellRtcFormatRfc2822(vm::ptr<char> pszDateTime, vm::cptr<CellRtcTick>
 	return CELL_OK;
 }
 
-error_code cellRtcFormatRfc2822LocalTime(vm::ptr<char> pszDateTime, vm::cptr<CellRtcTick> pUtc)
+error_code cellRtcFormatRfc2822LocalTime(ppu_thread& ppu, vm::ptr<char> pszDateTime, vm::cptr<CellRtcTick> pUtc)
 {
 	cellRtc.notice("cellRtcFormatRfc2822LocalTime(pszDateTime=*0x%x, pUtc=*0x%x)", pszDateTime, pUtc);
 
-	if (!vm::check_addr(pszDateTime.addr()))
+	const vm::var<sys_page_attr_t> page_attr;
+
+	if (sys_memory_get_page_attribute(ppu, pszDateTime.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
 
-	if (!vm::check_addr(pUtc.addr()))
+	if (sys_memory_get_page_attribute(ppu, pUtc.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
@@ -273,19 +283,21 @@ error_code cellRtcFormatRfc2822LocalTime(vm::ptr<char> pszDateTime, vm::cptr<Cel
 		return ret;
 	}
 
-	return cellRtcFormatRfc2822(pszDateTime, pUtc, *timezone + *summertime);
+	return cellRtcFormatRfc2822(ppu, pszDateTime, pUtc, *timezone + *summertime);
 }
 
-error_code cellRtcFormatRfc3339(vm::ptr<char> pszDateTime, vm::cptr<CellRtcTick> pUtc, s32 iTimeZone)
+error_code cellRtcFormatRfc3339(ppu_thread& ppu, vm::ptr<char> pszDateTime, vm::cptr<CellRtcTick> pUtc, s32 iTimeZone)
 {
 	cellRtc.notice("cellRtcFormatRfc3339(pszDateTime=*0x%x, pUtc=*0x%x, iTimeZone=%d)", pszDateTime, pUtc, iTimeZone);
 
-	if (!vm::check_addr(pszDateTime.addr()))
+	const vm::var<sys_page_attr_t> page_attr;
+
+	if (sys_memory_get_page_attribute(ppu, pszDateTime.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
 
-	if (!vm::check_addr(pUtc.addr()))
+	if (sys_memory_get_page_attribute(ppu, pUtc.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
@@ -293,7 +305,7 @@ error_code cellRtcFormatRfc3339(vm::ptr<char> pszDateTime, vm::cptr<CellRtcTick>
 	vm::var<CellRtcTick> rtc_tick;
 	if (!pUtc) // Should always evaluate to false, nullptr was already checked above
 	{
-		cellRtcGetCurrentTick(rtc_tick);
+		cellRtcGetCurrentTick(ppu, rtc_tick);
 	}
 	else
 	{
@@ -302,8 +314,8 @@ error_code cellRtcFormatRfc3339(vm::ptr<char> pszDateTime, vm::cptr<CellRtcTick>
 
 	vm::var<CellRtcDateTime> date_time;
 
-	cellRtcTickAddMinutes(rtc_tick, rtc_tick, iTimeZone);
-	cellRtcSetTick(date_time, rtc_tick);
+	cellRtcTickAddMinutes(ppu, rtc_tick, rtc_tick, iTimeZone);
+	cellRtcSetTick(ppu, date_time, rtc_tick);
 
 	error_code ret = cellRtcCheckValid(date_time);
 	if (ret != CELL_OK)
@@ -380,16 +392,18 @@ error_code cellRtcFormatRfc3339(vm::ptr<char> pszDateTime, vm::cptr<CellRtcTick>
 	return CELL_OK;
 }
 
-error_code cellRtcFormatRfc3339LocalTime(vm::ptr<char> pszDateTime, vm::cptr<CellRtcTick> pUtc)
+error_code cellRtcFormatRfc3339LocalTime(ppu_thread& ppu, vm::ptr<char> pszDateTime, vm::cptr<CellRtcTick> pUtc)
 {
 	cellRtc.notice("cellRtcFormatRfc3339LocalTime(pszDateTime=*0x%x, pUtc=*0x%x)", pszDateTime, pUtc);
 
-	if (!vm::check_addr(pszDateTime.addr()))
+	const vm::var<sys_page_attr_t> page_attr;
+
+	if (sys_memory_get_page_attribute(ppu, pszDateTime.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
 
-	if (!vm::check_addr(pUtc.addr()))
+	if (sys_memory_get_page_attribute(ppu, pUtc.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
@@ -403,7 +417,7 @@ error_code cellRtcFormatRfc3339LocalTime(vm::ptr<char> pszDateTime, vm::cptr<Cel
 		return ret;
 	}
 
-	return cellRtcFormatRfc3339(pszDateTime, pUtc, *timezone + *summertime);
+	return cellRtcFormatRfc3339(ppu, pszDateTime, pUtc, *timezone + *summertime);
 }
 
 u16 rtcParseComponent(vm::cptr<char> pszDateTime, u32& pos, char delimiter, const char* component_name)
@@ -469,7 +483,7 @@ u8 rtcParseName(vm::cptr<char> pszDateTime, u32& pos, const std::array<std::stri
 	return size;
 }
 
-error_code rtcParseRfc2822(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDateTime, u32 pos)
+error_code rtcParseRfc2822(ppu_thread& ppu, vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDateTime, u32 pos)
 {
 	// Day: "X" or "XX"
 	const u16 day = rtcParseComponent(pszDateTime, pos, 0, "day");
@@ -633,22 +647,24 @@ error_code rtcParseRfc2822(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDateTime
 
 	const vm::var<CellRtcDateTime> date_time{{ year, month, day, hour, minute, second, 0 }};
 
-	cellRtcGetTick(date_time, pUtc);
-	cellRtcTickAddMinutes(pUtc, pUtc, -time_zone); // The time zone value needs to be subtracted
+	cellRtcGetTick(ppu, date_time, pUtc);
+	cellRtcTickAddMinutes(ppu, pUtc, pUtc, -time_zone); // The time zone value needs to be subtracted
 
 	return CELL_OK;
 }
 
-error_code cellRtcParseRfc3339(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDateTime);
+error_code cellRtcParseRfc3339(ppu_thread& ppu, vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDateTime);
 
 /*
  Takes a RFC2822 / RFC3339 / asctime String, and converts it to a CellRtcTick
 */
-error_code cellRtcParseDateTime(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDateTime)
+error_code cellRtcParseDateTime(ppu_thread& ppu, vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDateTime)
 {
 	cellRtc.notice("cellRtcParseDateTime(pUtc=*0x%x, pszDateTime=%s)", pUtc, pszDateTime);
 
-	if (!vm::check_addr(pUtc.addr()) || !vm::check_addr(pszDateTime.addr()))
+	const vm::var<sys_page_attr_t> page_attr;
+
+	if (sys_memory_get_page_attribute(ppu, pUtc.addr(), page_attr) != CELL_OK || sys_memory_get_page_attribute(ppu, pszDateTime.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
@@ -665,7 +681,7 @@ error_code cellRtcParseDateTime(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDat
 		std::isdigit(pszDateTime[pos + 2]) &&
 		std::isdigit(pszDateTime[pos + 3]))
 	{
-		return cellRtcParseRfc3339(pUtc, pszDateTime + pos);
+		return cellRtcParseRfc3339(ppu, pUtc, pszDateTime + pos);
 	}
 
 	// Day of the week: at least the first three letters
@@ -692,7 +708,7 @@ error_code cellRtcParseDateTime(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDat
 	if (month > MONTH_NAMES.size()) // No match
 	{
 		cellRtc.notice("cellRtcParseDateTime(): string uses RFC 2822 format");
-		return rtcParseRfc2822(pUtc, pszDateTime, pos);
+		return rtcParseRfc2822(ppu, pUtc, pszDateTime, pos);
 	}
 
 	// Mandatory space
@@ -790,22 +806,24 @@ error_code cellRtcParseDateTime(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDat
 
 	const vm::var<CellRtcDateTime> date_time{{ year, month, day, hour, minute, second, 0 }};
 
-	cellRtcGetTick(date_time, pUtc);
+	cellRtcGetTick(ppu, date_time, pUtc);
 
 	return CELL_OK;
 }
 
 // Rfc3339: 1995-12-03T13:23:00.00Z
-error_code cellRtcParseRfc3339(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDateTime)
+error_code cellRtcParseRfc3339(ppu_thread& ppu, vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDateTime)
 {
 	cellRtc.notice("cellRtcParseRfc3339(pUtc=*0x%x, pszDateTime=%s)", pUtc, pszDateTime);
 
-	if (!vm::check_addr(pUtc.addr()))
+	const vm::var<sys_page_attr_t> page_attr;
+
+	if (sys_memory_get_page_attribute(ppu, pUtc.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
 
-	if (!vm::check_addr(pszDateTime.addr()))
+	if (sys_memory_get_page_attribute(ppu, pszDateTime.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
@@ -947,22 +965,24 @@ error_code cellRtcParseRfc3339(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDate
 		}
 	}
 
-	cellRtcGetTick(date_time, pUtc);
-	cellRtcTickAddMinutes(pUtc, pUtc, minutes_to_add);
+	cellRtcGetTick(ppu, date_time, pUtc);
+	cellRtcTickAddMinutes(ppu, pUtc, pUtc, minutes_to_add);
 
 	return CELL_OK;
 }
 
-error_code cellRtcGetTick(vm::cptr<CellRtcDateTime> pTime, vm::ptr<CellRtcTick> pTick)
+error_code cellRtcGetTick(ppu_thread& ppu, vm::cptr<CellRtcDateTime> pTime, vm::ptr<CellRtcTick> pTick)
 {
 	cellRtc.trace("cellRtcGetTick(pTime=*0x%x, pTick=*0x%x)", pTime, pTick);
 
-	if (!vm::check_addr(pTime.addr()))
+	const vm::var<sys_page_attr_t> page_attr;
+
+	if (sys_memory_get_page_attribute(ppu, pTime.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
 
-	if (!vm::check_addr(pTick.addr()))
+	if (sys_memory_get_page_attribute(ppu, pTick.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
@@ -1057,16 +1077,18 @@ u64 date_time_to_tick(CellRtcDateTime date_time)
 	return tick;
 }
 
-error_code cellRtcSetTick(vm::ptr<CellRtcDateTime> pTime, vm::cptr<CellRtcTick> pTick)
+error_code cellRtcSetTick(ppu_thread& ppu, vm::ptr<CellRtcDateTime> pTime, vm::cptr<CellRtcTick> pTick)
 {
 	cellRtc.trace("cellRtcSetTick(pTime=*0x%x, pTick=*0x%x)", pTime, pTick);
 
-	if (!vm::check_addr(pTime.addr()))
+	const vm::var<sys_page_attr_t> page_attr;
+
+	if (sys_memory_get_page_attribute(ppu, pTime.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
 
-	if (!vm::check_addr(pTick.addr()))
+	if (sys_memory_get_page_attribute(ppu, pTick.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
@@ -1076,16 +1098,18 @@ error_code cellRtcSetTick(vm::ptr<CellRtcDateTime> pTime, vm::cptr<CellRtcTick> 
 	return CELL_OK;
 }
 
-error_code cellRtcTickAddTicks(vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTick> pTick1, s64 lAdd)
+error_code cellRtcTickAddTicks(ppu_thread& ppu, vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTick> pTick1, s64 lAdd)
 {
 	cellRtc.trace("cellRtcTickAddTicks(pTick0=*0x%x, pTick1=*0x%x, lAdd=%lld)", pTick0, pTick1, lAdd);
 
-	if (!vm::check_addr(pTick0.addr()))
+	const vm::var<sys_page_attr_t> page_attr;
+
+	if (sys_memory_get_page_attribute(ppu, pTick0.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
 
-	if (!vm::check_addr(pTick1.addr()))
+	if (sys_memory_get_page_attribute(ppu, pTick1.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
@@ -1095,16 +1119,18 @@ error_code cellRtcTickAddTicks(vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTick
 	return CELL_OK;
 }
 
-error_code cellRtcTickAddMicroseconds(vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTick> pTick1, s64 lAdd)
+error_code cellRtcTickAddMicroseconds(ppu_thread& ppu, vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTick> pTick1, s64 lAdd)
 {
 	cellRtc.trace("cellRtcTickAddMicroseconds(pTick0=*0x%x, pTick1=*0x%x, lAdd=%lld)", pTick0, pTick1, lAdd);
 
-	if (!vm::check_addr(pTick0.addr()))
+	const vm::var<sys_page_attr_t> page_attr;
+
+	if (sys_memory_get_page_attribute(ppu, pTick0.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
 
-	if (!vm::check_addr(pTick1.addr()))
+	if (sys_memory_get_page_attribute(ppu, pTick1.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
@@ -1114,16 +1140,18 @@ error_code cellRtcTickAddMicroseconds(vm::ptr<CellRtcTick> pTick0, vm::cptr<Cell
 	return CELL_OK;
 }
 
-error_code cellRtcTickAddSeconds(vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTick> pTick1, s64 lAdd)
+error_code cellRtcTickAddSeconds(ppu_thread& ppu, vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTick> pTick1, s64 lAdd)
 {
 	cellRtc.trace("cellRtcTickAddSeconds(pTick0=*0x%x, pTick1=*0x%x, lAdd=%lld)", pTick0, pTick1, lAdd);
 
-	if (!vm::check_addr(pTick0.addr()))
+	const vm::var<sys_page_attr_t> page_attr;
+
+	if (sys_memory_get_page_attribute(ppu, pTick0.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
 
-	if (!vm::check_addr(pTick1.addr()))
+	if (sys_memory_get_page_attribute(ppu, pTick1.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
@@ -1133,16 +1161,18 @@ error_code cellRtcTickAddSeconds(vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTi
 	return CELL_OK;
 }
 
-error_code cellRtcTickAddMinutes(vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTick> pTick1, s64 lAdd)
+error_code cellRtcTickAddMinutes(ppu_thread& ppu, vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTick> pTick1, s64 lAdd)
 {
 	cellRtc.trace("cellRtcTickAddMinutes(pTick0=*0x%x, pTick1=*0x%x, lAdd=%lld)", pTick0, pTick1, lAdd);
 
-	if (!vm::check_addr(pTick0.addr()))
+	const vm::var<sys_page_attr_t> page_attr;
+
+	if (sys_memory_get_page_attribute(ppu, pTick0.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
 
-	if (!vm::check_addr(pTick1.addr()))
+	if (sys_memory_get_page_attribute(ppu, pTick1.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
@@ -1152,16 +1182,18 @@ error_code cellRtcTickAddMinutes(vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTi
 	return CELL_OK;
 }
 
-error_code cellRtcTickAddHours(vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTick> pTick1, s32 iAdd)
+error_code cellRtcTickAddHours(ppu_thread& ppu, vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTick> pTick1, s32 iAdd)
 {
 	cellRtc.trace("cellRtcTickAddHours(pTick0=*0x%x, pTick1=*0x%x, iAdd=%d)", pTick0, pTick1, iAdd);
 
-	if (!vm::check_addr(pTick0.addr()))
+	const vm::var<sys_page_attr_t> page_attr;
+
+	if (sys_memory_get_page_attribute(ppu, pTick0.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
 
-	if (!vm::check_addr(pTick1.addr()))
+	if (sys_memory_get_page_attribute(ppu, pTick1.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
@@ -1171,16 +1203,18 @@ error_code cellRtcTickAddHours(vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTick
 	return CELL_OK;
 }
 
-error_code cellRtcTickAddDays(vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTick> pTick1, s32 iAdd)
+error_code cellRtcTickAddDays(ppu_thread& ppu, vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTick> pTick1, s32 iAdd)
 {
 	cellRtc.trace("cellRtcTickAddDays(pTick0=*0x%x, pTick1=*0x%x, iAdd=%d)", pTick0, pTick1, iAdd);
 
-	if (!vm::check_addr(pTick0.addr()))
+	const vm::var<sys_page_attr_t> page_attr;
+
+	if (sys_memory_get_page_attribute(ppu, pTick0.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
 
-	if (!vm::check_addr(pTick1.addr()))
+	if (sys_memory_get_page_attribute(ppu, pTick1.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
@@ -1190,16 +1224,18 @@ error_code cellRtcTickAddDays(vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTick>
 	return CELL_OK;
 }
 
-error_code cellRtcTickAddWeeks(vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTick> pTick1, s32 iAdd)
+error_code cellRtcTickAddWeeks(ppu_thread& ppu, vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTick> pTick1, s32 iAdd)
 {
 	cellRtc.trace("cellRtcTickAddWeeks(pTick0=*0x%x, pTick1=*0x%x, iAdd=%d)", pTick0, pTick1, iAdd);
 
-	if (!vm::check_addr(pTick1.addr()))
+	const vm::var<sys_page_attr_t> page_attr;
+
+	if (sys_memory_get_page_attribute(ppu, pTick0.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
 
-	if (!vm::check_addr(pTick1.addr()))
+	if (sys_memory_get_page_attribute(ppu, pTick1.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
@@ -1209,22 +1245,24 @@ error_code cellRtcTickAddWeeks(vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTick
 	return CELL_OK;
 }
 
-error_code cellRtcTickAddMonths(vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTick> pTick1, s32 iAdd)
+error_code cellRtcTickAddMonths(ppu_thread& ppu, vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTick> pTick1, s32 iAdd)
 {
 	cellRtc.notice("cellRtcTickAddMonths(pTick0=*0x%x, pTick1=*0x%x, iAdd=%d)", pTick0, pTick1, iAdd);
 
-	if (!vm::check_addr(pTick0.addr()))
+	const vm::var<sys_page_attr_t> page_attr;
+
+	if (sys_memory_get_page_attribute(ppu, pTick0.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
 
-	if (!vm::check_addr(pTick1.addr()))
+	if (sys_memory_get_page_attribute(ppu, pTick1.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
 
 	vm::var<CellRtcDateTime> date_time;
-	cellRtcSetTick(date_time, pTick1);
+	cellRtcSetTick(ppu, date_time, pTick1);
 
 	const s32 total_months = date_time->year * 12 + date_time->month + iAdd - 1;
 	const u16 new_year = total_months / 12;
@@ -1248,27 +1286,29 @@ error_code cellRtcTickAddMonths(vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTic
 
 	date_time->month = new_month;
 	date_time->year = new_year;
-	cellRtcGetTick(date_time, pTick0);
+	cellRtcGetTick(ppu, date_time, pTick0);
 
 	return CELL_OK;
 }
 
-error_code cellRtcTickAddYears(vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTick> pTick1, s32 iAdd)
+error_code cellRtcTickAddYears(ppu_thread& ppu, vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTick> pTick1, s32 iAdd)
 {
 	cellRtc.notice("cellRtcTickAddYears(pTick0=*0x%x, pTick1=*0x%x, iAdd=%d)", pTick0, pTick1, iAdd);
 
-	if (!vm::check_addr(pTick0.addr()))
+	const vm::var<sys_page_attr_t> page_attr;
+
+	if (sys_memory_get_page_attribute(ppu, pTick0.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
 
-	if (!vm::check_addr(pTick1.addr()))
+	if (sys_memory_get_page_attribute(ppu, pTick1.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
 
 	vm::var<CellRtcDateTime> date_time;
-	cellRtcSetTick(date_time, pTick1);
+	cellRtcSetTick(ppu, date_time, pTick1);
 
 	const u16 month = date_time->month;
 	const u16 new_year = date_time->year + iAdd;
@@ -1290,12 +1330,12 @@ error_code cellRtcTickAddYears(vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTick
 	}
 
 	date_time->year = new_year;
-	cellRtcGetTick(date_time, pTick0);
+	cellRtcGetTick(ppu, date_time, pTick0);
 
 	return CELL_OK;
 }
 
-error_code cellRtcConvertUtcToLocalTime(vm::cptr<CellRtcTick> pUtc, vm::ptr<CellRtcTick> pLocalTime)
+error_code cellRtcConvertUtcToLocalTime(ppu_thread& ppu, vm::cptr<CellRtcTick> pUtc, vm::ptr<CellRtcTick> pLocalTime)
 {
 	cellRtc.trace("cellRtcConvertUtcToLocalTime(pUtc=*0x%x, pLocalTime=*0x%x)", pUtc, pLocalTime);
 
@@ -1305,13 +1345,13 @@ error_code cellRtcConvertUtcToLocalTime(vm::cptr<CellRtcTick> pUtc, vm::ptr<Cell
 	error_code ret = sys_time_get_timezone(timezone, summertime);
 	if (-1 < ret)
 	{
-		ret = cellRtcTickAddMinutes(pLocalTime, pUtc, *timezone + *summertime);
+		ret = cellRtcTickAddMinutes(ppu, pLocalTime, pUtc, *timezone + *summertime);
 	}
 
 	return ret;
 }
 
-error_code cellRtcConvertLocalTimeToUtc(vm::cptr<CellRtcTick> pLocalTime, vm::ptr<CellRtcTick> pUtc)
+error_code cellRtcConvertLocalTimeToUtc(ppu_thread& ppu, vm::cptr<CellRtcTick> pLocalTime, vm::ptr<CellRtcTick> pUtc)
 {
 	cellRtc.notice("cellRtcConvertLocalTimeToUtc(pLocalTime=*0x%x, pUtc=*0x%x)", pLocalTime, pUtc);
 
@@ -1321,17 +1361,19 @@ error_code cellRtcConvertLocalTimeToUtc(vm::cptr<CellRtcTick> pLocalTime, vm::pt
 	error_code ret = sys_time_get_timezone(timezone, summertime);
 	if (-1 < ret)
 	{
-		ret = cellRtcTickAddMinutes(pUtc, pLocalTime, -(*timezone + *summertime));
+		ret = cellRtcTickAddMinutes(ppu, pUtc, pLocalTime, -(*timezone + *summertime));
 	}
 
 	return ret;
 }
 
-error_code cellRtcGetCurrentSecureTick(vm::ptr<CellRtcTick> tick)
+error_code cellRtcGetCurrentSecureTick(ppu_thread& ppu, vm::ptr<CellRtcTick> tick)
 {
 	cellRtc.notice("cellRtcGetCurrentSecureTick(tick=*0x%x)", tick);
 
-	if (!vm::check_addr(tick.addr()))
+	const vm::var<sys_page_attr_t> page_attr;
+
+	if (sys_memory_get_page_attribute(ppu, tick.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
@@ -1361,16 +1403,18 @@ error_code cellRtcGetCurrentSecureTick(vm::ptr<CellRtcTick> tick)
 	return ret;
 }
 
-error_code cellRtcGetDosTime(vm::cptr<CellRtcDateTime> pDateTime, vm::ptr<u32> puiDosTime)
+error_code cellRtcGetDosTime(ppu_thread& ppu, vm::cptr<CellRtcDateTime> pDateTime, vm::ptr<u32> puiDosTime)
 {
 	cellRtc.notice("cellRtcGetDosTime(pDateTime=*0x%x, puiDosTime=*0x%x)", pDateTime, puiDosTime);
 
-	if (!vm::check_addr(pDateTime.addr()))
+	const vm::var<sys_page_attr_t> page_attr;
+
+	if (sys_memory_get_page_attribute(ppu, pDateTime.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
 
-	if (!vm::check_addr(puiDosTime.addr()))
+	if (sys_memory_get_page_attribute(ppu, puiDosTime.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
@@ -1411,22 +1455,24 @@ error_code cellRtcGetDosTime(vm::cptr<CellRtcDateTime> pDateTime, vm::ptr<u32> p
 	return CELL_OK;
 }
 
-error_code cellRtcGetSystemTime(vm::cptr<CellRtcDateTime> pDateTime, vm::ptr<s64> pTimeStamp)
+error_code cellRtcGetSystemTime(ppu_thread& ppu, vm::cptr<CellRtcDateTime> pDateTime, vm::ptr<s64> pTimeStamp)
 {
 	cellRtc.notice("cellRtcGetSystemTime(pDateTime=*0x%x, pTimeStamp=*0x%x)", pDateTime, pTimeStamp);
 
-	if (!vm::check_addr(pDateTime.addr()))
+	const vm::var<sys_page_attr_t> page_attr;
+
+	if (sys_memory_get_page_attribute(ppu, pDateTime.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
 
-	if (!vm::check_addr(pTimeStamp.addr()))
+	if (sys_memory_get_page_attribute(ppu, pTimeStamp.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
 
 	vm::var<CellRtcTick> tick;
-	cellRtcGetTick(pDateTime, tick);
+	cellRtcGetTick(ppu, pDateTime, tick);
 
 	if (tick->tick < RTC_SYSTEM_TIME_MIN)
 	{
@@ -1456,22 +1502,24 @@ error_code cellRtcGetSystemTime(vm::cptr<CellRtcDateTime> pDateTime, vm::ptr<s64
 	return CELL_OK;
 }
 
-error_code cellRtcGetTime_t(vm::cptr<CellRtcDateTime> pDateTime, vm::ptr<s64> piTime)
+error_code cellRtcGetTime_t(ppu_thread& ppu, vm::cptr<CellRtcDateTime> pDateTime, vm::ptr<s64> piTime)
 {
 	cellRtc.notice("cellRtcGetTime_t(pDateTime=*0x%x, piTime=*0x%x)", pDateTime, piTime);
 
-	if (!vm::check_addr(pDateTime.addr()))
+	const vm::var<sys_page_attr_t> page_attr;
+
+	if (sys_memory_get_page_attribute(ppu, pDateTime.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
 
-	if (!vm::check_addr(piTime.addr()))
+	if (sys_memory_get_page_attribute(ppu, piTime.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
 
 	vm::var<CellRtcTick> tick;
-	cellRtcGetTick(pDateTime, tick);
+	cellRtcGetTick(ppu, pDateTime, tick);
 
 	if (tick->tick < RTC_MAGIC_OFFSET)
 	{
@@ -1491,22 +1539,24 @@ error_code cellRtcGetTime_t(vm::cptr<CellRtcDateTime> pDateTime, vm::ptr<s64> pi
 	return CELL_OK;
 }
 
-error_code cellRtcGetWin32FileTime(vm::cptr<CellRtcDateTime> pDateTime, vm::ptr<u64> pulWin32FileTime)
+error_code cellRtcGetWin32FileTime(ppu_thread& ppu, vm::cptr<CellRtcDateTime> pDateTime, vm::ptr<u64> pulWin32FileTime)
 {
 	cellRtc.notice("cellRtcGetWin32FileTime(pDateTime=*0x%x, pulWin32FileTime=*0x%x)", pDateTime, pulWin32FileTime);
 
-	if (!vm::check_addr(pDateTime.addr()))
+	const vm::var<sys_page_attr_t> page_attr;
+
+	if (sys_memory_get_page_attribute(ppu, pDateTime.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
 
-	if (!vm::check_addr(pulWin32FileTime.addr()))
+	if (sys_memory_get_page_attribute(ppu, pulWin32FileTime.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
 
 	vm::var<CellRtcTick> tick;
-	cellRtcGetTick(pDateTime, tick);
+	cellRtcGetTick(ppu, pDateTime, tick);
 
 	if (tick->tick < RTC_FILETIME_OFFSET)
 	{
@@ -1572,11 +1622,13 @@ error_code cellRtcSetConf(s64 unk1, s64 unk2, u32 timezone, u32 summertime)
 	return sys_time_set_timezone(timezone, summertime);
 }
 
-error_code cellRtcSetDosTime(vm::ptr<CellRtcDateTime> pDateTime, u32 uiDosTime)
+error_code cellRtcSetDosTime(ppu_thread& ppu, vm::ptr<CellRtcDateTime> pDateTime, u32 uiDosTime)
 {
 	cellRtc.notice("cellRtcSetDosTime(pDateTime=*0x%x, uiDosTime=0x%x)", pDateTime, uiDosTime);
 
-	if (!vm::check_addr(pDateTime.addr()))
+	const vm::var<sys_page_attr_t> page_attr;
+
+	if (sys_memory_get_page_attribute(ppu, pDateTime.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
@@ -1601,11 +1653,13 @@ constexpr u32 cellRtcGetTickResolution()
 	return 1000000;
 }
 
-error_code cellRtcSetTime_t(vm::ptr<CellRtcDateTime> pDateTime, u64 iTime)
+error_code cellRtcSetTime_t(ppu_thread& ppu, vm::ptr<CellRtcDateTime> pDateTime, u64 iTime)
 {
 	cellRtc.notice("cellRtcSetTime_t(pDateTime=*0x%x, iTime=0x%llx)", pDateTime, iTime);
 
-	if (!vm::check_addr(pDateTime.addr()))
+	const vm::var<sys_page_attr_t> page_attr;
+
+	if (sys_memory_get_page_attribute(ppu, pDateTime.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
@@ -1613,16 +1667,18 @@ error_code cellRtcSetTime_t(vm::ptr<CellRtcDateTime> pDateTime, u64 iTime)
 	vm::var<CellRtcTick> tick;
 	tick->tick = iTime * cellRtcGetTickResolution() + RTC_MAGIC_OFFSET;
 
-	cellRtcSetTick(pDateTime, tick);
+	cellRtcSetTick(ppu, pDateTime, tick);
 
 	return CELL_OK;
 }
 
-error_code cellRtcSetSystemTime(vm::ptr<CellRtcDateTime> pDateTime, u64 iTime)
+error_code cellRtcSetSystemTime(ppu_thread& ppu, vm::ptr<CellRtcDateTime> pDateTime, u64 iTime)
 {
 	cellRtc.notice("cellRtcSetSystemTime(pDateTime=*0x%x, iTime=0x%llx)", pDateTime, iTime);
 
-	if (!vm::check_addr(pDateTime.addr()))
+	const vm::var<sys_page_attr_t> page_attr;
+
+	if (sys_memory_get_page_attribute(ppu, pDateTime.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
@@ -1630,16 +1686,18 @@ error_code cellRtcSetSystemTime(vm::ptr<CellRtcDateTime> pDateTime, u64 iTime)
 	vm::var<CellRtcTick> tick;
 	tick->tick = iTime * cellRtcGetTickResolution() + RTC_SYSTEM_TIME_MIN;
 
-	cellRtcSetTick(pDateTime, tick);
+	cellRtcSetTick(ppu, pDateTime, tick);
 
 	return CELL_OK;
 }
 
-error_code cellRtcSetWin32FileTime(vm::ptr<CellRtcDateTime> pDateTime, u64 ulWin32FileTime)
+error_code cellRtcSetWin32FileTime(ppu_thread& ppu, vm::ptr<CellRtcDateTime> pDateTime, u64 ulWin32FileTime)
 {
 	cellRtc.notice("cellRtcSetWin32FileTime(pDateTime=*0x%x, ulWin32FileTime=0x%llx)", pDateTime, ulWin32FileTime);
 
-	if (!vm::check_addr(pDateTime.addr()))
+	const vm::var<sys_page_attr_t> page_attr;
+
+	if (sys_memory_get_page_attribute(ppu, pDateTime.addr(), page_attr) != CELL_OK)
 	{
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
@@ -1647,7 +1705,7 @@ error_code cellRtcSetWin32FileTime(vm::ptr<CellRtcDateTime> pDateTime, u64 ulWin
 	vm::var<CellRtcTick> tick;
 	tick->tick = ulWin32FileTime / 10 + RTC_FILETIME_OFFSET;
 
-	return cellRtcSetTick(pDateTime, tick);
+	return cellRtcSetTick(ppu, pDateTime, tick);
 }
 
 error_code cellRtcIsLeapYear(s32 year)
