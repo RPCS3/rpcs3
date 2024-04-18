@@ -268,10 +268,10 @@ const std::array<std::pair<ppu_intrp_func_t, std::string_view>, 1024> g_ppu_sysc
 	BIND_SYSC(sys_event_port_connect_ipc),                  //140 (0x08C)
 	BIND_SYSC(sys_timer_usleep),                            //141 (0x08D)
 	BIND_SYSC(sys_timer_sleep),                             //142 (0x08E)
-	NULL_FUNC(sys_time_set_timezone),                       //143 (0x08F)  ROOT
+	BIND_SYSC(sys_time_set_timezone),                       //143 (0x08F)  ROOT
 	BIND_SYSC(sys_time_get_timezone),                       //144 (0x090)
 	BIND_SYSC(sys_time_get_current_time),                   //145 (0x091)
-	NULL_FUNC(sys_time_get_system_time),                    //146 (0x092)  ROOT
+	BIND_SYSC(sys_time_set_current_time),                   //146 (0x092)  ROOT
 	BIND_SYSC(sys_time_get_timebase_frequency),             //147 (0x093)
 	BIND_SYSC(_sys_rwlock_trywlock),                        //148 (0x094)
 	uns_func,                                               //149 (0x095)  UNS
