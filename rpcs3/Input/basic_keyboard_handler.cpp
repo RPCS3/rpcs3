@@ -22,7 +22,7 @@ void basic_keyboard_handler::Init(const u32 max_connect)
 
 		kb.m_config.arrange = g_cfg.sys.keyboard_type;
 
-		m_keyboards.emplace_back();
+		m_keyboards.emplace_back(kb);
 	}
 
 	LoadSettings();
