@@ -156,7 +156,7 @@ void usb_device_gametablet::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endp
 		const auto gamepad_handler = pad::get_current_handler();
 		const auto& pads = gamepad_handler->GetPads();
 
-		const int pad_index = 1; // Player2
+		constexpr s32 pad_index = 1; // Player2
 		const auto& pad = ::at32(pads, pad_index);
 		if (pad->m_port_status & CELL_PAD_STATUS_CONNECTED)
 		{
@@ -244,7 +244,7 @@ void usb_device_gametablet::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endp
 
 	mouse_handler.Init(1);
 
-	const uint8_t mouse_index = 0;
+	constexpr u8 mouse_index = 0;
 	if (mouse_index >= mouse_handler.GetMice().size())
 	{
 		return;
@@ -256,20 +256,20 @@ void usb_device_gametablet::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endp
 		return;
 	}
 
-	static uint8_t noise_x = 0; // Toggle the LSB to simulate a noisy signal, Instant Artist dislikes a pen held perfectly still
-	static uint8_t noise_y = 0;
-	const int tablet_max_x = 1920;
-	const int tablet_max_y = 1080;
+	static u8 noise_x = 0; // Toggle the LSB to simulate a noisy signal, Instant Artist dislikes a pen held perfectly still
+	static u8 noise_y = 0;
+	constexpr s32 tablet_max_x = 1920;
+	constexpr s32 tablet_max_y = 1080;
 
-	const long tablet_x_pos = (mouse_data.x_pos * tablet_max_x / mouse_data.x_max) ^ noise_x;
-	const long tablet_y_pos = (mouse_data.y_pos * tablet_max_y / mouse_data.y_max) ^ noise_y;
-	noise_x = !noise_x;
-	noise_y = !noise_y;
+	const s32 tablet_x_pos = (mouse_data.x_pos * tablet_max_x / mouse_data.x_max) ^ noise_x;
+	const s32 tablet_y_pos = (mouse_data.y_pos * tablet_max_y / mouse_data.y_max) ^ noise_y;
+	noise_x ^= 0x1;
+	noise_y ^= 0x1;
 
 	buf[0x0b] = 0x40; // pen
 	buf[0x0d] = mouse_data.buttons & CELL_MOUSE_BUTTON_1 ? 0xbb : 0x72; // pressure
-	buf[0x0f] = tablet_x_pos / 0x100;
-	buf[0x10] = tablet_y_pos / 0x100;
-	buf[0x11] = tablet_x_pos % 0x100;
-	buf[0x12] = tablet_y_pos % 0x100;
+	buf[0x0f] = static_cast<u8>(tablet_x_pos / 0x100);
+	buf[0x10] = static_cast<u8>(tablet_y_pos / 0x100);
+	buf[0x11] = static_cast<u8>(tablet_x_pos % 0x100);
+	buf[0x12] = static_cast<u8>(tablet_y_pos % 0x100);
 }
