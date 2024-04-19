@@ -173,6 +173,8 @@ void basic_keyboard_handler::LoadSettings()
 		return;
 	}
 
+	Keyboard& keyboard = m_keyboards[0];
+
 	std::vector<KbButton> buttons;
 
 	// Meta Keys
@@ -289,20 +291,28 @@ void basic_keyboard_handler::LoadSettings()
 	buttons.emplace_back(Qt::Key_Minus, CELL_KEYC_MINUS);
 	buttons.emplace_back(Qt::Key_Equal, CELL_KEYC_EQUAL_101);
 	buttons.emplace_back(Qt::Key_AsciiCircum, CELL_KEYC_ACCENT_CIRCONFLEX_106);
-	buttons.emplace_back(Qt::Key_BracketLeft, CELL_KEYC_LEFT_BRACKET_101);
 	buttons.emplace_back(Qt::Key_At, CELL_KEYC_ATMARK_106);
-	buttons.emplace_back(Qt::Key_BracketRight, CELL_KEYC_RIGHT_BRACKET_101);
-	buttons.emplace_back(Qt::Key_BracketLeft, CELL_KEYC_LEFT_BRACKET_106);
-	buttons.emplace_back(Qt::Key_Backslash, CELL_KEYC_BACKSLASH_101);
-	buttons.emplace_back(Qt::Key_BracketRight, CELL_KEYC_RIGHT_BRACKET_106);
 	buttons.emplace_back(Qt::Key_Semicolon, CELL_KEYC_SEMICOLON);
 	buttons.emplace_back(Qt::Key_Apostrophe, CELL_KEYC_QUOTATION_101);
 	buttons.emplace_back(Qt::Key_Colon, CELL_KEYC_COLON_106);
 	buttons.emplace_back(Qt::Key_Comma, CELL_KEYC_COMMA);
 	buttons.emplace_back(Qt::Key_Period, CELL_KEYC_PERIOD);
 	buttons.emplace_back(Qt::Key_Slash, CELL_KEYC_SLASH);
-	buttons.emplace_back(Qt::Key_Backslash, CELL_KEYC_BACKSLASH_106);
 	buttons.emplace_back(Qt::Key_yen, CELL_KEYC_YEN_106);
+
+	// Some buttons share the same key code on different layouts
+	if (keyboard.m_config.arrange == CELL_KB_MAPPING_106)
+	{
+		buttons.emplace_back(Qt::Key_Backslash, CELL_KEYC_BACKSLASH_106);
+		buttons.emplace_back(Qt::Key_BracketLeft, CELL_KEYC_LEFT_BRACKET_106);
+		buttons.emplace_back(Qt::Key_BracketRight, CELL_KEYC_RIGHT_BRACKET_106);
+	}
+	else
+	{
+		buttons.emplace_back(Qt::Key_Backslash, CELL_KEYC_BACKSLASH_101);
+		buttons.emplace_back(Qt::Key_BracketLeft, CELL_KEYC_LEFT_BRACKET_101);
+		buttons.emplace_back(Qt::Key_BracketRight, CELL_KEYC_RIGHT_BRACKET_101);
+	}
 
 	// Made up helper buttons
 	buttons.emplace_back(Qt::Key_Less, CELL_KEYC_LESS);
@@ -312,10 +322,11 @@ void basic_keyboard_handler::LoadSettings()
 	buttons.emplace_back(Qt::Key_acute, CELL_KEYC_BACK_QUOTE);
 
 	// Fill our map
-	auto& keys = m_keyboards[0].m_keys;
-
 	for (const KbButton& button : buttons)
 	{
-		ensure(keys.try_emplace(button.m_keyCode, button).second);
+		if (!keyboard.m_keys.try_emplace(button.m_keyCode, button).second)
+		{
+			input_log.error("basic_keyboard_handler failed to set key code %d", button.m_keyCode);
+		}
 	}
 }
