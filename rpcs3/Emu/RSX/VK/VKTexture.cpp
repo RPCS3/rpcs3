@@ -1014,7 +1014,7 @@ namespace vk
 				check_caps = false;
 			}
 
-			auto buf_allocator = [&]() -> std::tuple<void*, usz>
+			auto buf_allocator = [&](usz) -> std::tuple<void*, usz>
 			{
 				if (image_setup_flags & source_is_gpu_resident)
 				{
