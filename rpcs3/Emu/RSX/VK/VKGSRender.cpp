@@ -2138,22 +2138,24 @@ void VKGSRender::load_program_env()
 	if (update_transform_constants)
 	{
 		// Transform constants
-		const usz transform_constants_size = (!m_vertex_prog || m_vertex_prog->has_indexed_constants) ? 8192 : m_vertex_prog->constant_ids.size() * 16;
+		usz transform_constants_size = 0;
+		usz mem_offset = 0;
+
+		auto alloc_storage = [&](usz size) -> std::pair<void*, usz>
+		{
+			const auto alignment = m_device->gpu().get_limits().minUniformBufferOffsetAlignment;
+			mem_offset = m_transform_constants_ring_info.alloc<1>(utils::align(size, alignment));
+			transform_constants_size = size;
+			return std::make_pair(m_transform_constants_ring_info.map(mem_offset, transform_constants_size), size);
+		};
+
+		auto io_buf = rsx::io_buffer(alloc_storage);
+		upload_transform_constants(io_buf);
+
 		if (transform_constants_size)
 		{
-			check_heap_status(VK_HEAP_CHECK_TRANSFORM_CONSTANTS_STORAGE);
-
-			const auto alignment = m_device->gpu().get_limits().minUniformBufferOffsetAlignment;
-			auto mem = m_transform_constants_ring_info.alloc<1>(utils::align(transform_constants_size, alignment));
-			auto buf = m_transform_constants_ring_info.map(mem, transform_constants_size);
-
-			const auto constant_ids = (transform_constants_size == 8192)
-				? std::span<const u16>{}
-				: std::span<const u16>(m_vertex_prog->constant_ids);
-			fill_vertex_program_constants_data(buf, constant_ids);
-
 			m_transform_constants_ring_info.unmap();
-			m_vertex_constants_buffer_info = { m_transform_constants_ring_info.heap->value, mem, transform_constants_size };
+			m_vertex_constants_buffer_info = { m_transform_constants_ring_info.heap->value, mem_offset, transform_constants_size };
 		}
 	}
 
@@ -2288,6 +2290,23 @@ void VKGSRender::load_program_env()
 		rsx::pipeline_state::transform_constants_dirty |
 		rsx::pipeline_state::fragment_constants_dirty |
 		rsx::pipeline_state::fragment_texture_state_dirty);
+}
+
+void VKGSRender::upload_transform_constants(const rsx::io_buffer& buffer)
+{
+	const usz transform_constants_size = (!m_vertex_prog || m_vertex_prog->has_indexed_constants) ? 8192 : m_vertex_prog->constant_ids.size() * 16;
+	if (transform_constants_size)
+	{
+		check_heap_status(VK_HEAP_CHECK_TRANSFORM_CONSTANTS_STORAGE);
+
+		buffer.reserve(transform_constants_size);
+		auto buf = buffer.data();
+
+		const auto constant_ids = (transform_constants_size == 8192)
+			? std::span<const u16>{}
+		: std::span<const u16>(m_vertex_prog->constant_ids);
+		fill_vertex_program_constants_data(buf, constant_ids);
+	}
 }
 
 void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_info)
