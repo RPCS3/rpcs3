@@ -234,10 +234,12 @@ private:
 	VkDescriptorSet allocate_descriptor_set();
 
 	vk::vertex_upload_info upload_vertex_data();
+	rsx::simple_array<u8> vertex_scratchpad;
 
 	bool load_program();
 	void load_program_env();
 	void update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_info);
+	void upload_transform_constants(const rsx::io_buffer& buffer);
 
 	void load_texture_env();
 	bool bind_texture_env();
