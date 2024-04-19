@@ -523,10 +523,11 @@ error_code cellSysutilAvc2MicRead(vm::ptr<void> ptr, vm::ptr<u32> pSize)
 	// TODO: ringbuffer (holds 100ms of 16kHz single channel f32 samples)
 	std::vector<u8> buf{};
 
-	const u32 size_read = std::min<u32>(*pSize, ::size32(buf));
+	u32 size_read = 0;
 
-	if (size_read > 0)
+	if (u32 size_to_read = *pSize; size_to_read > 0 && !buf.empty())
 	{
+		size_read = std::min(size_to_read, ::size32(buf));
 		std::memcpy(ptr.get_ptr(), buf.data(), size_read);
 	}
 
