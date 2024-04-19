@@ -1246,6 +1246,9 @@
     <ClCompile Include="Emu\RSX\NV47\FW\reg_context.cpp">
       <Filter>Emu\GPU\RSX\NV47\FW</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\NV47\FW\draw_call.cpp">
+      <Filter>Emu\GPU\RSX\NV47\FW</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
