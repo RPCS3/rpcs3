@@ -486,6 +486,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/GL/upscalers/fsr1/fsr_pass.cpp
     RSX/GSRender.cpp
     RSX/Null/NullGSRender.cpp
+    RSX/NV47/FW/draw_call.cpp
     RSX/NV47/FW/reg_context.cpp
     RSX/NV47/HW/common.cpp
     RSX/NV47/HW/nv0039.cpp

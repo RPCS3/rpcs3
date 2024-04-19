@@ -97,6 +97,7 @@
     <ClCompile Include="Emu\perf_monitor.cpp" />
     <ClCompile Include="Emu\RSX\Common\texture_cache.cpp" />
     <ClCompile Include="Emu\RSX\Core\RSXContext.cpp" />
+    <ClCompile Include="Emu\RSX\NV47\FW\draw_call.cpp" />
     <ClCompile Include="Emu\RSX\NV47\FW\reg_context.cpp" />
     <ClCompile Include="Emu\RSX\NV47\HW\common.cpp" />
     <ClCompile Include="Emu\RSX\NV47\HW\nv0039.cpp" />

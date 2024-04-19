@@ -39,11 +39,6 @@ namespace rsx
 		rsx_log.trace("RSX method 0x%x (arg=0x%x)", reg << 2, arg);
 	}
 
-	namespace nv0039
-	{
-		
-	}
-
 	void flip_command(context* ctx, u32, u32 arg)
 	{
 		ensure(RSX(ctx)->isHLE);
@@ -1217,113 +1212,6 @@ namespace rsx
 		return registers[reg] == value;
 	}
 
-	void draw_clause::operator()(utils::serial& ar)
-	{
-		ar(draw_command_ranges, draw_command_barriers, current_range_index, primitive, command, is_immediate_draw, is_disjoint_primitive, primitive_barrier_enable, inline_vertex_array);
-	}
-
-	void draw_clause::insert_command_barrier(command_barrier_type type, u32 arg, u32 index)
-	{
-		ensure(!draw_command_ranges.empty());
-
-		auto _do_barrier_insert = [this](barrier_t&& val)
-		{
-			if (draw_command_barriers.empty() || draw_command_barriers.back() < val)
-			{
-				draw_command_barriers.push_back(val);
-				return;
-			}
-
-			for (auto it = draw_command_barriers.begin(); it != draw_command_barriers.end(); it++)
-			{
-				if (*it < val)
-				{
-					continue;
-				}
-
-				draw_command_barriers.insert(it, val);
-				break;
-			}
-		};
-
-		if (type == primitive_restart_barrier)
-		{
-			// Rasterization flow barrier
-			const auto& last = draw_command_ranges[current_range_index];
-			const auto address = last.first + last.count;
-
-			_do_barrier_insert({ current_range_index, 0, address, index, arg, 0, type });
-		}
-		else
-		{
-			// Execution dependency barrier. Requires breaking the current draw call sequence and start another.
-			if (draw_command_ranges.back().count > 0)
-			{
-				append_draw_command({});
-			}
-			else
-			{
-				// In case of back-to-back modifiers, do not add duplicates
-				current_range_index = draw_command_ranges.size() - 1;
-			}
-
-			_do_barrier_insert({ current_range_index, rsx::get_shared_tag(), ~0u, index, arg, 0, type });
-			last_execution_barrier_index = current_range_index;
-		}
-	}
-
-	void draw_clause::reset(primitive_type type)
-	{
-		current_range_index = ~0u;
-		last_execution_barrier_index = 0;
-
-		command = draw_command::none;
-		primitive = type;
-		primitive_barrier_enable = false;
-
-		draw_command_ranges.clear();
-		draw_command_barriers.clear();
-		inline_vertex_array.clear();
-
-		is_disjoint_primitive = is_primitive_disjointed(primitive);
-	}
-
-	u32 draw_clause::execute_pipeline_dependencies(context* ctx) const
-	{
-		u32 result = 0;
-
-		for (const auto &barrier : draw_command_barriers)
-		{
-			if (barrier.draw_id != current_range_index)
-				continue;
-
-			switch (barrier.type)
-			{
-			case primitive_restart_barrier:
-				break;
-			case index_base_modifier_barrier:
-				// Change index base offset
-				REGS(ctx)->decode(NV4097_SET_VERTEX_DATA_BASE_INDEX, barrier.arg);
-				result |= index_base_changed;
-				break;
-			case vertex_base_modifier_barrier:
-				// Change vertex base offset
-				REGS(ctx)->decode(NV4097_SET_VERTEX_DATA_BASE_OFFSET, barrier.arg);
-				result |= vertex_base_changed;
-				break;
-			case vertex_array_offset_modifier_barrier:
-				// Change vertex array offset
-				REGS(ctx)->decode(NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + barrier.index, barrier.arg);
-				result |= vertex_arrays_changed;
-				break;
-			default:
-				fmt::throw_exception("Unreachable");
-			}
-		}
-
-		return result;
-	}
-
 	namespace method_detail
 	{
 		template <u32 Id, u32 Step, u32 Count, template<u32> class T, u32 Index = 0>
@@ -1751,6 +1639,7 @@ namespace rsx
 		bind_range<NV4097_SET_VERTEX_DATA4F_M, 1, 64, nv4097::set_vertex_data4f_m>();
 		bind_range<NV4097_SET_VERTEX_DATA2S_M, 1, 16, nv4097::set_vertex_data2s_m>();
 		bind_range<NV4097_SET_VERTEX_DATA4S_M, 1, 32, nv4097::set_vertex_data4s_m>();
+		bind(NV4097_SET_TRANSFORM_CONSTANT_LOAD, nv4097::set_transform_constant_load);
 		bind_array(NV4097_SET_TRANSFORM_CONSTANT, 1, 32, nv4097::set_transform_constant::impl);
 		bind_array(NV4097_SET_TRANSFORM_PROGRAM, 1, 32, nv4097::set_transform_program::impl);
 		bind(NV4097_GET_REPORT, nv4097::get_report);

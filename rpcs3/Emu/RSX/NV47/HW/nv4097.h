@@ -83,6 +83,8 @@ namespace rsx
 
 		void set_blend_factor(context* ctx, u32 reg, u32 arg);
 
+		void set_transform_constant_load(context* ctx, u32 reg, u32 arg);
+
 #define RSX(ctx) ctx->rsxthr
 #define REGS(ctx) (&rsx::method_registers)
 
@@ -197,6 +199,8 @@ namespace rsx
 		struct set_transform_constant
 		{
 			static void impl(context* ctx, u32 reg, u32 arg);
+
+			static void decode_one(context* ctx, u32 reg, u32 arg);
 		};
 
 		struct set_transform_program
