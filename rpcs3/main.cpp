@@ -28,6 +28,7 @@
 #include "headless_application.h"
 #include "Utilities/sema.h"
 #include "Utilities/date_time.h"
+#include "util/console.h"
 #include "Crypto/decrypt_binaries.h"
 #ifdef _WIN32
 #include "module_verifier.hpp"
@@ -151,10 +152,8 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 
 	if (s_headless)
 	{
-#ifdef _WIN32
-		if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole())
-			[[maybe_unused]] const auto con_out = freopen("conout$", "w", stderr);
-#endif
+		utils::attach_console(utils::console_stream::std_err, true);
+
 		std::cerr << fmt::format("RPCS3: %s\n", text);
 #ifdef __linux__
 		jit_announce(0, 0, "");
@@ -274,11 +273,9 @@ struct fatal_error_listener final : logs::listener
 			_msg += text;
 			_msg += '\n';
 
-#ifdef _WIN32
 			// If launched from CMD
-			if (AttachConsole(ATTACH_PARENT_PROCESS))
-				[[maybe_unused]] const auto con_out = freopen("CONOUT$", "w", stderr);
-#endif
+			utils::attach_console(utils::console_stream::std_err, false);
+
 			// Output to error stream as is
 			std::cerr << _msg;
 
@@ -727,13 +724,8 @@ int main(int argc, char** argv)
 
 	if (parser.isSet(codec_option))
 	{
-#ifdef _WIN32
-		if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole())
-		{
-			[[maybe_unused]] const auto con_out = freopen("CONOUT$", "w", stdout);
-			[[maybe_unused]] const auto con_err = freopen("CONOUT$", "w", stderr);
-		}
-#endif
+		utils::attach_console(utils::console_stream::std_out | utils::console_stream::std_err, true);
+
 		for (const utils::ffmpeg_codec& codec : utils::list_ffmpeg_decoders())
 		{
 			fprintf(stdout, "Found ffmpeg decoder: %s (%d, %s)\n", codec.name.c_str(), codec.codec_id, codec.long_name.c_str());
@@ -750,18 +742,16 @@ int main(int argc, char** argv)
 #ifdef _WIN32
 	if (parser.isSet(arg_stdout) || parser.isSet(arg_stderr))
 	{
-		if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole())
+		int stream = 0;
+		if (parser.isSet(arg_stdout))
 		{
-			if (parser.isSet(arg_stdout))
-			{
-				[[maybe_unused]] const auto con_out = freopen("CONOUT$", "w", stdout);
-			}
-
-			if (parser.isSet(arg_stderr))
-			{
-				[[maybe_unused]] const auto con_err = freopen("CONOUT$", "w", stderr);
-			}
+			stream |= utils::console_stream::std_out;
 		}
+		if (parser.isSet(arg_stderr))
+		{
+			stream |= utils::console_stream::std_err;
+		}
+		utils::attach_console(stream, true);
 	}
 #endif
 
@@ -770,13 +760,7 @@ int main(int argc, char** argv)
 
 	if (rpcs3::curl::g_curl_verbose)
 	{
-#ifdef _WIN32
-		if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole())
-		{
-			[[maybe_unused]] const auto con_out = freopen("CONOUT$", "w", stdout);
-			[[maybe_unused]] const auto con_err = freopen("CONOUT$", "w", stderr);
-		}
-#endif
+		utils::attach_console(utils::console_stream::std_out | utils::console_stream::std_err, true);
 		fprintf(stdout, "Enabled Curl verbose logging.\n");
 		sys_log.always()("Enabled Curl verbose logging. Please look at your console output.");
 	}
@@ -784,13 +768,8 @@ int main(int argc, char** argv)
 	// Handle update of commit database
 	if (parser.isSet(arg_commit_db))
 	{
+		utils::attach_console(utils::console_stream::std_out | utils::console_stream::std_err, true);
 #ifdef _WIN32
-		if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole())
-		{
-			[[maybe_unused]] const auto con_out = freopen("CONOUT$", "w", stdout);
-			[[maybe_unused]] const auto con_err = freopen("CONOUT$", "w", stderr);
-		}
-
 		std::string path;
 #else
 		std::string path = "bin/git/commits.lst";
@@ -1010,10 +989,8 @@ int main(int argc, char** argv)
 
 	if (parser.isSet(arg_styles))
 	{
-#ifdef _WIN32
-		if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole())
-			[[maybe_unused]] const auto con_out = freopen("CONOUT$", "w", stdout);
-#endif
+		utils::attach_console(utils::console_stream::std_out, true);
+
 		for (const auto& style : QStyleFactory::keys())
 			std::cout << "\n" << style.toStdString();
 
@@ -1166,13 +1143,7 @@ int main(int argc, char** argv)
 
 	if (parser.isSet(arg_decrypt))
 	{
-#ifdef _WIN32
-		if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole())
-		{
-			[[maybe_unused]] const auto con_out = freopen("CONOUT$", "w", stdout);
-			[[maybe_unused]] const auto con_in = freopen("CONIN$", "r", stdin);
-		}
-#endif
+		utils::attach_console(utils::console_stream::std_out | utils::console_stream::std_in, true);
 
 		std::vector<std::string> vec_modules;
 		for (const QString& mod : parser.values(decrypt_option))
@@ -1400,11 +1371,9 @@ int main(int argc, char** argv)
 	}
 	else if (s_headless || s_no_gui)
 	{
-#ifdef _WIN32
 		// If launched from CMD
-		if (AttachConsole(ATTACH_PARENT_PROCESS))
-			[[maybe_unused]] const auto con_out = freopen("CONOUT$", "w", stderr);
-#endif
+		utils::attach_console(utils::console_stream::std_out | utils::console_stream::std_err, false);
+
 		sys_log.error("Cannot run %s mode without boot target. Terminating...", s_headless ? "headless" : "no-gui");
 		fprintf(stderr, "Cannot run %s mode without boot target. Terminating...\n", s_headless ? "headless" : "no-gui");
 

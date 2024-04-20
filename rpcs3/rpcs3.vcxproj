@@ -817,6 +817,7 @@
     <ClCompile Include="rpcs3qt\save_data_list_dialog.cpp" />
     <ClCompile Include="rpcs3qt\settings_dialog.cpp" />
     <ClCompile Include="Input\xinput_pad_handler.cpp" />
+    <ClCompile Include="util\console.cpp" />
     <ClCompile Include="\rpcs3qt\*.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -1736,6 +1737,7 @@
     <ClInclude Include="rpcs3qt\trophy_notification_helper.h" />
     <ClInclude Include="rpcs3qt\user_account.h" />
     <ClInclude Include="Input\xinput_pad_handler.h" />
+    <ClInclude Include="util\console.h" />
     <ClInclude Include="\rpcs3qt\*.h" />
   </ItemGroup>
   <ItemGroup>

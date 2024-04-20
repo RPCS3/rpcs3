@@ -1065,6 +1065,9 @@
     <ClCompile Include="Input\gui_pad_thread.cpp">
       <Filter>Io</Filter>
     </ClCompile>
+    <ClCompile Include="util\console.cpp">
+      <Filter>rpcs3</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -1241,9 +1244,6 @@
     <ClInclude Include="rpcs3qt\movie_item_base.h">
       <Filter>Gui\custom items</Filter>
     </ClInclude>
-    <ClInclude Include="rpcs3qt\midi_creator.h">
-      <Filter>Gui\settings</Filter>
-    </ClInclude>
     <ClInclude Include="Input\skateboard_pad_handler.h">
       <Filter>Io\Skateboard</Filter>
     </ClInclude>
@@ -1252,6 +1252,9 @@
     </ClInclude>
     <ClInclude Include="Input\gui_pad_thread.h">
       <Filter>Io</Filter>
+    </ClInclude>
+    <ClInclude Include="util\console.h">
+      <Filter>rpcs3</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1553,6 +1556,9 @@
       <Filter>Gui\dev tools</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\emulated_pad_settings_dialog.h">
+      <Filter>Gui\settings</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\midi_creator.h">
       <Filter>Gui\settings</Filter>
     </CustomBuild>
   </ItemGroup>
