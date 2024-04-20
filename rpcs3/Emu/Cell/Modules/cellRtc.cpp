@@ -774,14 +774,18 @@ error_code cellRtcParseDateTime(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDat
 		}
 
 		day = digit(pszDateTime[pos]);
+
+		pos++;
 	}
 	else if (std::isdigit(pszDateTime[pos]))
 	{
 		day = digit(pszDateTime[pos]);
 
-		if (std::isdigit(pszDateTime[pos + 1]))
+		pos++;
+
+		if (std::isdigit(pszDateTime[pos]))
 		{
-			day = day * 10 + digit(pszDateTime[pos + 1]);
+			day = day * 10 + digit(pszDateTime[pos]);
 
 			pos++;
 		}
@@ -790,8 +794,6 @@ error_code cellRtcParseDateTime(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDat
 	{
 		return { CELL_RTC_ERROR_BAD_PARSE, "cellRtcParseDateTime(): failed to parse day: ASCII value 0x%x at position %d is not a digit or space", pszDateTime[pos], pos };
 	}
-
-	pos++;
 
 	// Hour: " X" or " XX"
 	const u16 hour = rtcParseComponent(pszDateTime, pos, ' ', "hour");
