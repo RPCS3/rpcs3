@@ -323,8 +323,8 @@ bool boot_last_savestate(bool testing)
 bool load_and_check_reserved(utils::serial& ar, usz size)
 {
 	u8 bytes[4096];
+	ensure(size < std::size(bytes));
 	std::memset(&bytes[size & (0 - sizeof(v128))], 0, sizeof(v128));
-	ensure(size <= std::size(bytes));
 
 	const usz old_pos = ar.pos;
 	ar(std::span<u8>(bytes, size));

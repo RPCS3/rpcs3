@@ -606,11 +606,19 @@ void gui_application::InitializeCallbacks()
 		{
 			if (fs::is_file(path))
 			{
-				m_sound_effect.stop();
-				m_sound_effect.setSource(QUrl::fromLocalFile(qstr(path)));
-				m_sound_effect.setVolume(g_cfg.audio.volume * 0.01f);
-				m_sound_effect.setLoopCount(1);
-				m_sound_effect.play();
+				// Allow to play 3 sound effects at the same time
+				while (m_sound_effects.size() >= 3)
+				{
+					m_sound_effects.pop_front();
+				}
+
+				// Create a new sound effect. Re-using the same object seems to be broken for some users starting with Qt 6.6.3.
+				std::unique_ptr<QSoundEffect> sound_effect = std::make_unique<QSoundEffect>();
+				sound_effect->setSource(QUrl::fromLocalFile(qstr(path)));
+				sound_effect->setVolume(g_cfg.audio.volume * 0.01f);
+				sound_effect->play();
+
+				m_sound_effects.push_back(std::move(sound_effect));
 			}
 		});
 	};

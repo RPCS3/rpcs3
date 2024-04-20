@@ -35,6 +35,7 @@
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #pragma GCC diagnostic ignored "-Wmissing-noreturn"
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #endif
 #include <llvm/IR/Verifier.h>
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
@@ -5055,11 +5056,18 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 	// Try to patch all single and unregistered BLRs with the same function (TODO: Maybe generalize it into PIC code detection and patching)
 	ppu_intrp_func_t BLR_func = nullptr;
 
-	const bool is_first = jit && !jit_mod.init;
-
 	const bool showing_only_apply_stage = !g_progr.load() && !g_progr_ptotal && !g_progr_ftotal && g_progr_ptotal.compare_and_swap_test(0, 1);
 
 	progr = "Applying PPU Code...";
+
+	if (!jit)
+	{
+		// No functions - nothing to do
+		ensure(info.funcs.empty());
+		return compiled_new;
+	}
+
+	const bool is_first = !jit_mod.init;
 
 	if (is_first)
 	{
