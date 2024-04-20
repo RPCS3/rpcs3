@@ -314,7 +314,7 @@ Function* PPUTranslator::GetSymbolResolver(const ppu_module& info)
 			continue;
 		}
 
-		vec_addrs.push_back(f.addr - base);
+		vec_addrs.push_back(static_cast<u32>(f.addr - base));
 		functions.push_back(cast<Function>(m_module->getOrInsertFunction(fmt::format("__0x%x", f.addr - base), ftype).getCallee()));
 	}
 
