@@ -509,7 +509,8 @@ u8 rtcParseName(vm::cptr<char> pszDateTime, u32& pos, const std::array<std::stri
 			pos += name_length;
 			return name_idx;
 		}
-		else if (allow_short_name && ch_idx >= 3) // Short name matched
+
+		if (allow_short_name && ch_idx >= 3) // Short name matched
 		{
 			pos += 3; // Only increment by 3, even if more letters were matched
 			return name_idx;
@@ -553,19 +554,28 @@ error_code rtcParseRfc2822(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDateTime
 
 	pos++;
 
-	// Year: "XXXX"
+	// Year: "XX" or "XXXX"
+	u16 year = 0;
+
 	if (!std::isdigit(pszDateTime[pos]) ||
-		!std::isdigit(pszDateTime[pos + 1]) ||
-		!std::isdigit(pszDateTime[pos + 2]) ||
-		!std::isdigit(pszDateTime[pos + 3]))
+		!std::isdigit(pszDateTime[pos + 1]))
 	{
-		return { CELL_RTC_ERROR_BAD_PARSE, "rtcParseRfc2822(): failed to parse year: one of the ASCII values 0x%x, 0x%x, 0x%x, or 0x%x at position %d is not a digit",
-			pszDateTime[pos], pszDateTime[pos + 1], pszDateTime[pos + 2], pszDateTime[pos + 3], pos };
+		return { CELL_RTC_ERROR_BAD_PARSE, "rtcParseRfc2822(): failed to parse year: one of the first two ASCII values 0x%x, 0x%x at position %d is not a digit",
+			pszDateTime[pos], pszDateTime[pos + 1], pos };
 	}
 
-	const u16 year = digit(pszDateTime[pos]) * 1000 + digit(pszDateTime[pos + 1]) * 100 + digit(pszDateTime[pos + 2]) * 10 + digit(pszDateTime[pos + 3]);
-
-	pos += 4;
+	if (!std::isdigit(pszDateTime[pos + 2]) ||
+		!std::isdigit(pszDateTime[pos + 3]))
+	{
+		year = digit(pszDateTime[pos]) * 10 + digit(pszDateTime[pos + 1]);
+		year += (year < 50) ? 2000 : 1900;
+		pos += 2;
+	}
+	else
+	{
+		year = digit(pszDateTime[pos]) * 1000 + digit(pszDateTime[pos + 1]) * 100 + digit(pszDateTime[pos + 2]) * 10 + digit(pszDateTime[pos + 3]);
+		pos += 4;
+	}
 
 	// Hour: " X" or " XX"
 	const u16 hour = rtcParseComponent(pszDateTime, pos, ' ', "hour");
@@ -626,16 +636,16 @@ error_code rtcParseRfc2822(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDateTime
 				const s32 time_zone_hhmm = digit(pszDateTime[pos + 1]) * 1000 + digit(pszDateTime[pos + 2]) * 100 + digit(pszDateTime[pos + 3]) * 10 + digit(pszDateTime[pos + 4]);
 
 				time_zone = time_zone_hhmm / 100 * 60 + time_zone_hhmm % 60; // LLE uses % 60 instead of % 100
-
-				if (pszDateTime[pos] == '-')
-				{
-					time_zone = -time_zone;
-				}
 			}
 			else
 			{
 				// No error, LLE does this for some reason
-				time_zone = pszDateTime[pos] == '+' ? -1 : 1;
+				time_zone = -1;
+			}
+
+			if (pszDateTime[pos] == '-')
+			{
+				time_zone = -time_zone;
 			}
 		}
 		else if (pszDateTime[pos] != 'U' && pszDateTime[pos + 1] != 'T') // Case sensitive, should be || but LLE uses &&
@@ -650,6 +660,7 @@ error_code rtcParseRfc2822(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDateTime
 			}
 			else
 			{
+				// Military time zones
 				// "A", "B", "C", ..., not case sensitive
 				// These are all off by one ("A" should be UTC+01:00, "B" should be UTC+02:00, etc.)
 
@@ -749,15 +760,20 @@ error_code cellRtcParseDateTime(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDat
 
 	if (pszDateTime[pos] == ' ')
 	{
+		pos++;
+
 		// Due to using a signed type instead of unsigned, LLE doesn't check if the char is less than '0'
-		if (pszDateTime[pos + 1] > '9')
+		if (pszDateTime[pos] > '9')
 		{
-			return { CELL_RTC_ERROR_BAD_PARSE, "cellRtcParseDateTime(): failed to parse day: ASCII value 0x%x at position %d is not a digit", pszDateTime[pos + 1], pos + 1 };
+			return { CELL_RTC_ERROR_BAD_PARSE, "cellRtcParseDateTime(): failed to parse day: ASCII value 0x%x at position %d is not a digit", pszDateTime[pos], pos };
 		}
 
-		day = digit(pszDateTime[pos + 1]);
+		if (pszDateTime[pos] < '0')
+		{
+			cellRtc.warning("cellRtcParseDateTime(): ASCII value 0x%x at position %d is not a digit", pszDateTime[pos], pos);
+		}
 
-		pos += 2;
+		day = digit(pszDateTime[pos]);
 	}
 	else if (std::isdigit(pszDateTime[pos]))
 	{
@@ -765,12 +781,8 @@ error_code cellRtcParseDateTime(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDat
 
 		if (std::isdigit(pszDateTime[pos + 1]))
 		{
-			day = day * 10 + (digit(pszDateTime[pos + 1]));
+			day = day * 10 + digit(pszDateTime[pos + 1]);
 
-			pos += 2;
-		}
-		else
-		{
 			pos++;
 		}
 	}
@@ -778,6 +790,8 @@ error_code cellRtcParseDateTime(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDat
 	{
 		return { CELL_RTC_ERROR_BAD_PARSE, "cellRtcParseDateTime(): failed to parse day: ASCII value 0x%x at position %d is not a digit or space", pszDateTime[pos], pos };
 	}
+
+	pos++;
 
 	// Hour: " X" or " XX"
 	const u16 hour = rtcParseComponent(pszDateTime, pos, ' ', "hour");
