@@ -21,6 +21,7 @@
 #include "Emu/Io/Null/null_music_handler.h"
 #include "Emu/vfs_config.h"
 #include "util/init_mutex.hpp"
+#include "util/console.h"
 #include "Input/raw_mouse_handler.h"
 #include "trophy_notification_helper.h"
 #include "save_data_dialog.h"
@@ -116,16 +117,11 @@ bool gui_application::Init()
 		return false;
 	}
 
-#ifdef _WIN32
 	if (m_gui_settings->GetValue(gui::m_attachCommandLine).toBool())
 	{
-		if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole())
-		{
-			[[maybe_unused]] const auto con_out = freopen("CONOUT$", "w", stderr);
-		}
+		utils::attach_console(utils::console_stream::std_err, true);
 	}
 	else
-#endif
 	{
 		m_gui_settings->SetValue(gui::m_attachCommandLine, false);
 	}
