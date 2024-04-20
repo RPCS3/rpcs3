@@ -22,6 +22,11 @@
 
 LOG_CHANNEL(cellGem);
 
+static inline constexpr u32 rgba(u8 r, u8 g, u8 b, u8 a)
+{
+	return ((r & 0xffu) << 24) | ((g & 0xffu) << 16) | ((b & 0xffu) << 8) | (a & 0xffu);
+}
+
 template <>
 void fmt_class_string<gem_btn>::format(std::string& out, u64 arg)
 {
@@ -493,42 +498,39 @@ void gem_config_data::operator()()
 			{
 				constexpr u32 in_pitch = 640;
 				constexpr u32 out_pitch = 640 * 4;
+				u8* dst = vc_attribute.video_data_out.get_ptr();
 
 				for (u32 y = 0; y < 480 - 1; y += 2)
 				{
+					const u8* src = &video_data_in[y * in_pitch];
+					const u16* src0 = reinterpret_cast<const u16*>(src);
+					const u16* src1 = reinterpret_cast<const u16*>(src + in_pitch);
+
+					u8* dst_row = dst + y * out_pitch;
+					u32* dst0 = reinterpret_cast<u32*>(dst_row);
+					u32* dst1 = reinterpret_cast<u32*>(dst_row + out_pitch);
+
 					for (u32 x = 0; x < 640 - 1; x += 2)
 					{
-						const u32 in_offset  = 1 * (y * 640 + x);
-						const u32 out_offset = 4 * (y * 640 + x);
+						const u16 top = *src0++;
+						const u16 bottom = *src1++;
 
-						const u8 b  = video_data_in[in_offset + 0];
-						const u8 g0 = video_data_in[in_offset + 1];
-						const u8 g1 = video_data_in[in_offset + in_pitch + 0];
-						const u8 r  = video_data_in[in_offset + in_pitch + 1];
+						const u8 b  = (top & 0xFF);
+						const u8 g0 = ((top >> 8) & 0xFF);
+						const u8 g1 = (bottom & 0xFF);
+						const u8 r  = ((bottom >> 8) & 0xFF);
 
 						// Top-Left
-						vc_attribute.video_data_out[out_offset + 0] = r;   // R
-						vc_attribute.video_data_out[out_offset + 1] = g0;  // G
-						vc_attribute.video_data_out[out_offset + 2] = b;   // B
-						vc_attribute.video_data_out[out_offset + 3] = 255; // A
+						*dst0++ = rgba(r, g0, b, 255);
 
 						// Top-Right Pixel
-						vc_attribute.video_data_out[out_offset + 4] = r;   // R
-						vc_attribute.video_data_out[out_offset + 5] = g0;  // G
-						vc_attribute.video_data_out[out_offset + 6] = b;   // B
-						vc_attribute.video_data_out[out_offset + 7] = 255; // A
+						*dst0++ = rgba(r, g0, b, 255);
 
 						// Bottom-Left Pixel
-						vc_attribute.video_data_out[out_offset + out_pitch + 0] = r;   // R
-						vc_attribute.video_data_out[out_offset + out_pitch + 1] = g1;  // G
-						vc_attribute.video_data_out[out_offset + out_pitch + 2] = b;   // B
-						vc_attribute.video_data_out[out_offset + out_pitch + 3] = 255;  // A
+						*dst1++ = rgba(r, g1, b, 255);
 
 						// Bottom-Right Pixel
-						vc_attribute.video_data_out[out_offset + out_pitch + 4] = r;   // R
-						vc_attribute.video_data_out[out_offset + out_pitch + 5] = g1;  // G
-						vc_attribute.video_data_out[out_offset + out_pitch + 6] = b;   // B
-						vc_attribute.video_data_out[out_offset + out_pitch + 7] = 255; // A
+						*dst1++ = rgba(r, g1, b, 255);
 					}
 				}
 			}

@@ -98,6 +98,9 @@ bool qt_camera_video_sink::present(const QVideoFrame& frame)
 		// TODO: check if pixel format and bytes per pixel match and convert if necessary
 		// TODO: implement or improve more conversions
 
+		const u32 width = std::min<u32>(image_buffer.width, image.width());
+		const u32 height = std::min<u32>(image_buffer.height, image.height());
+
 		switch (m_format)
 		{
 		case CELL_CAMERA_JPG:
@@ -107,27 +110,46 @@ bool qt_camera_video_sink::present(const QVideoFrame& frame)
 		case CELL_CAMERA_RAW8: // The game seems to expect BGGR
 		{
 			// Let's use a very simple algorithm to convert the image to raw BGGR
-			const auto convert_to_bggr = [&image_buffer, &image](u32 y_begin, u32 y_end)
+			const auto convert_to_bggr = [&image_buffer, &image, width, height](u32 y_begin, u32 y_end)
 			{
-				for (u32 y = y_begin; y < std::min<u32>(image_buffer.height, image.height()) && y < y_end; y++)
-				{
-					for (u32 x = 0; x < std::min<u32>(image_buffer.width, image.width()); x++)
-					{
-						u8& pixel = image_buffer.data[image_buffer.width * y + x];
-						const bool is_left_pixel = (x % 2) == 0;
-						const bool is_top_pixel = (y % 2) == 0;
+				u8* dst = &image_buffer.data[image_buffer.width * y_begin];
 
-						if (is_left_pixel && is_top_pixel)
+				for (u32 y = y_begin; y < height && y < y_end; y++)
+				{
+					const QRgb* src = reinterpret_cast<const QRgb*>(image.constScanLine(y));
+					const bool is_top_pixel = (y % 2) == 0;
+
+					// Split loops (roughly twice the performance by removing one condition)
+					if (is_top_pixel)
+					{
+						for (u32 x = 0; x < width; x++, dst++, src++)
 						{
-							pixel = qBlue(image.pixel(x, y));
+							const bool is_left_pixel = (x % 2) == 0;
+
+							if (is_left_pixel)
+							{
+								*dst = qBlue(*src);
+							}
+							else
+							{
+								*dst = qGreen(*src);
+							}
 						}
-						else if (is_left_pixel || is_top_pixel)
+					}
+					else
+					{
+						for (u32 x = 0; x < width; x++, dst++, src++)
 						{
-							pixel = qGreen(image.pixel(x, y));
-						}
-						else
-						{
-							pixel = qRed(image.pixel(x, y));
+							const bool is_left_pixel = (x % 2) == 0;
+
+							if (is_left_pixel)
+							{
+								*dst = qGreen(*src);
+							}
+							else
+							{
+								*dst = qRed(*src);
+							}
 						}
 					}
 				}
@@ -154,7 +176,7 @@ bool qt_camera_video_sink::present(const QVideoFrame& frame)
 		case CELL_CAMERA_V_Y1_U_Y0:
 		{
 			// Simple RGB to Y0_U_Y1_V conversion from stackoverflow.
-			const auto convert_to_yuv422 = [&image_buffer, &image, format = m_format](u32 y_begin, u32 y_end)
+			const auto convert_to_yuv422 = [&image_buffer, &image, width, height, format = m_format](u32 y_begin, u32 y_end)
 			{
 				constexpr int yuv_bytes_per_pixel = 2;
 				const int yuv_pitch = image_buffer.width * yuv_bytes_per_pixel;
@@ -164,32 +186,33 @@ bool qt_camera_video_sink::present(const QVideoFrame& frame)
 				const int y1_offset = (format == CELL_CAMERA_Y0_U_Y1_V) ? 2 : 1;
 				const int v_offset  = (format == CELL_CAMERA_Y0_U_Y1_V) ? 3 : 0;
 
-				for (u32 y = y_begin; y < std::min<u32>(image_buffer.height, image.height()) && y < y_end; y++)
+				for (u32 y = y_begin; y < height && y < y_end; y++)
 				{
+					const QRgb* src = reinterpret_cast<const QRgb*>(image.constScanLine(y));
 					uint8_t* yuv_row_ptr = &image_buffer.data[y * yuv_pitch];
 
-					for (u32 x = 0; x < std::min<u32>(image_buffer.width, image.width()) - 1; x += 2)
+					for (u32 x = 0; x < width - 1; x += 2)
 					{
-						const QRgb pixel_1 = image.pixel(x, y);
-						const QRgb pixel_2 = image.pixel(x + 1, y);
+						const QRgb pixel_1 = *src++;
+						const QRgb pixel_2 = *src++;
 
-						const double r1 = qRed(pixel_1);
-						const double g1 = qGreen(pixel_1);
-						const double b1 = qBlue(pixel_1);
-						const double r2 = qRed(pixel_2);
-						const double g2 = qGreen(pixel_2);
-						const double b2 = qBlue(pixel_2);
+						const float r1 = qRed(pixel_1);
+						const float g1 = qGreen(pixel_1);
+						const float b1 = qBlue(pixel_1);
+						const float r2 = qRed(pixel_2);
+						const float g2 = qGreen(pixel_2);
+						const float b2 = qBlue(pixel_2);
 
-						const int y0 =  (0.257 * r1) + (0.504 * g1) + (0.098 * b1) +  16.0;
-						const int u  = -(0.148 * r1) - (0.291 * g1) + (0.439 * b1) + 128.0;
-						const int v  =  (0.439 * r1) - (0.368 * g1) - (0.071 * b1) + 128.0;
-						const int y1 =  (0.257 * r2) + (0.504 * g2) + (0.098 * b2) +  16.0;
+						const int y0 =  (0.257f * r1) + (0.504f * g1) + (0.098f * b1) +  16.0f;
+						const int u  = -(0.148f * r1) - (0.291f * g1) + (0.439f * b1) + 128.0f;
+						const int v  =  (0.439f * r1) - (0.368f * g1) - (0.071f * b1) + 128.0f;
+						const int y1 =  (0.257f * r2) + (0.504f * g2) + (0.098f * b2) +  16.0f;
 
 						const int yuv_index = x * yuv_bytes_per_pixel;
-						yuv_row_ptr[yuv_index + y0_offset] = std::max<u8>(0, std::min<u8>(y0, 255));
-						yuv_row_ptr[yuv_index + u_offset]  = std::max<u8>(0, std::min<u8>( u, 255));
-						yuv_row_ptr[yuv_index + y1_offset] = std::max<u8>(0, std::min<u8>(y1, 255));
-						yuv_row_ptr[yuv_index + v_offset]  = std::max<u8>(0, std::min<u8>( v, 255));
+						yuv_row_ptr[yuv_index + y0_offset] = static_cast<u8>(std::clamp(y0, 0, 255));
+						yuv_row_ptr[yuv_index + u_offset]  = static_cast<u8>(std::clamp( u, 0, 255));
+						yuv_row_ptr[yuv_index + y1_offset] = static_cast<u8>(std::clamp(y1, 0, 255));
+						yuv_row_ptr[yuv_index + v_offset]  = static_cast<u8>(std::clamp( v, 0, 255));
 					}
 				}
 			};
