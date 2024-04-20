@@ -927,25 +927,43 @@ namespace rsx
 
 			std::lock_guard lock(m_preview_mutex);
 
-			const bool use_key_string_fallback = !key.empty();
+			// The key should normally be empty unless the backend couldn't find a match.
+			const bool is_key_string_fallback = !key.empty();
 
-			osk.notice("osk_dialog::on_key_pressed(led=%d, mkey=%d, key_code=%d, out_key_code=%d, pressed=%d, use_key_string_fallback=%d)", led, mkey, key_code, out_key_code, pressed, use_key_string_fallback);
+			// Pure meta keys need to be treated with care, as their out key code contains the meta key code instead of the normal key code.
+			const bool is_meta_key = mkey != 0 && key_code == CELL_KEYC_NO_EVENT && key.empty();
 
-			if (!use_key_string_fallback)
-			{
-				// Get keyboard layout
-				const u32 kb_mapping = static_cast<u32>(g_cfg.sys.keyboard_type.get());
-
-				// Convert key to its u32string presentation
-				const u16 converted_out_key = cellKbCnvRawCode(kb_mapping, mkey, led, out_key_code);
-				std::u16string utf16_string;
-				utf16_string.push_back(converted_out_key);
-				key = utf16_to_u32string(utf16_string);
-			}
+			osk.notice("osk_dialog::on_key_pressed(led=%d, mkey=%d, key_code=%d, out_key_code=%d, pressed=%d, is_key_string_fallback=%d, is_meta_key=%d)", led, mkey, key_code, out_key_code, pressed, is_key_string_fallback, is_meta_key);
 
 			// Find matching key in the OSK
 			const auto find_key = [&]() -> bool
 			{
+				if (is_meta_key)
+				{
+					// We don't need to process meta keys in the grid at the moment.
+					// The key is valid either way, so we return true.
+					// Only on_osk_key_input_entered is called later.
+					return true;
+				}
+
+				// Get the string representation of this key (unless it's already set by the backend)
+				if (key.empty())
+				{
+					// Get keyboard layout
+					const u32 kb_mapping = static_cast<u32>(g_cfg.sys.keyboard_type.get());
+
+					// Convert key to its u32string presentation
+					const u16 converted_out_key = cellKbCnvRawCode(kb_mapping, mkey, led, out_key_code);
+					std::u16string utf16_string;
+					utf16_string.push_back(converted_out_key);
+					key = utf16_to_u32string(utf16_string);
+				}
+
+				if (key.empty())
+				{
+					return false;
+				}
+
 				for (const cell& current_cell : m_grid)
 				{
 					for (const auto& output : current_cell.outputs)
@@ -975,9 +993,9 @@ namespace rsx
 
 			const bool found_key = find_key();
 
-			if (use_key_string_fallback)
+			if (is_key_string_fallback)
 			{
-				// We don't have a keycode, so there we can't process any of the following code anyway
+				// We don't have a keycode, so we can't process any of the following code anyway
 				return;
 			}
 

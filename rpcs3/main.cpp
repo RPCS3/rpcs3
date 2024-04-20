@@ -326,8 +326,11 @@ constexpr auto arg_timer        = "high-res-timer";
 constexpr auto arg_verbose_curl = "verbose-curl";
 constexpr auto arg_any_location = "allow-any-location";
 constexpr auto arg_codecs       = "codecs";
+
+#ifdef _WIN32
 constexpr auto arg_stdout       = "stdout";
 constexpr auto arg_stderr       = "stderr";
+#endif
 
 int find_arg(std::string arg, int& argc, char* argv[])
 {

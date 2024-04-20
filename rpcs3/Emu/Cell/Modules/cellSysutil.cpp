@@ -469,6 +469,7 @@ error_code cellSysutilGetSystemParamString(CellSysutilParamId id, vm::ptr<char> 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_NICKNAME:
 	{
 		copy_size = CELL_SYSUTIL_SYSTEMPARAM_NICKNAME_SIZE;
+		param_str = g_cfg.sys.system_name.to_string();
 		break;
 	}
 

@@ -210,6 +210,7 @@ void fmt_class_string<disc_change_manager::eject_state>::format(std::string& out
 	{
 		switch (error)
 		{
+			STR_CASE(disc_change_manager::eject_state::unknown);
 			STR_CASE(disc_change_manager::eject_state::inserted);
 			STR_CASE(disc_change_manager::eject_state::ejected);
 			STR_CASE(disc_change_manager::eject_state::busy);

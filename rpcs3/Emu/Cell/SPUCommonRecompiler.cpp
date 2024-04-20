@@ -2314,6 +2314,12 @@ std::vector<u32> spu_thread::discover_functions(u32 base_addr, std::span<const u
 			continue;
 		}
 
+		if (std::count(calls.begin(), calls.end(), func))
+		{
+			// Cannot call another call instruction (link is overwritten)
+			continue;
+		}
+
 		addrs.push_back(func);
 
 		// Detect an "arguments passing" block, possible queue another function

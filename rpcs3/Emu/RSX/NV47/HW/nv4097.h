@@ -124,7 +124,7 @@ namespace rsx
 		template<u32 index>
 		struct set_vertex_data4ub_m
 		{
-			static void impl(context* ctx, u32 reg, u32 arg)
+			static void impl(context* ctx, u32 /*reg*/, u32 arg)
 			{
 				set_vertex_data_impl<NV4097_SET_VERTEX_DATA4UB_M, index, 4, 4, u8>(ctx, arg);
 			}
@@ -133,7 +133,7 @@ namespace rsx
 		template<u32 index>
 		struct set_vertex_data1f_m
 		{
-			static void impl(context* ctx, u32 reg, u32 arg)
+			static void impl(context* ctx, u32 /*reg*/, u32 arg)
 			{
 				set_vertex_data_impl<NV4097_SET_VERTEX_DATA1F_M, index, 1, 1, f32>(ctx, arg);
 			}
@@ -142,7 +142,7 @@ namespace rsx
 		template<u32 index>
 		struct set_vertex_data2f_m
 		{
-			static void impl(context* ctx, u32 reg, u32 arg)
+			static void impl(context* ctx, u32 /*reg*/, u32 arg)
 			{
 				set_vertex_data_impl<NV4097_SET_VERTEX_DATA2F_M, index, 2, 2, f32>(ctx, arg);
 			}
@@ -151,7 +151,7 @@ namespace rsx
 		template<u32 index>
 		struct set_vertex_data3f_m
 		{
-			static void impl(context* ctx, u32 reg, u32 arg)
+			static void impl(context* ctx, u32 /*reg*/, u32 arg)
 			{
 				//Register alignment is only 1, 2, or 4 (Rachet & Clank 2)
 				set_vertex_data_impl<NV4097_SET_VERTEX_DATA3F_M, index, 3, 4, f32>(ctx, arg);
@@ -161,7 +161,7 @@ namespace rsx
 		template<u32 index>
 		struct set_vertex_data4f_m
 		{
-			static void impl(context* ctx, u32 reg, u32 arg)
+			static void impl(context* ctx, u32 /*reg*/, u32 arg)
 			{
 				set_vertex_data_impl<NV4097_SET_VERTEX_DATA4F_M, index, 4, 4, f32>(ctx, arg);
 			}
@@ -170,7 +170,7 @@ namespace rsx
 		template<u32 index>
 		struct set_vertex_data2s_m
 		{
-			static void impl(context* ctx, u32 reg, u32 arg)
+			static void impl(context* ctx, u32 /*reg*/, u32 arg)
 			{
 				set_vertex_data_impl<NV4097_SET_VERTEX_DATA2S_M, index, 2, 2, u16>(ctx, arg);
 			}
@@ -179,7 +179,7 @@ namespace rsx
 		template<u32 index>
 		struct set_vertex_data4s_m
 		{
-			static void impl(context* ctx, u32 reg, u32 arg)
+			static void impl(context* ctx, u32 /*reg*/, u32 arg)
 			{
 				set_vertex_data_impl<NV4097_SET_VERTEX_DATA4S_M, index, 4, 4, u16>(ctx, arg);
 			}
@@ -188,7 +188,7 @@ namespace rsx
 		template<u32 index>
 		struct set_vertex_data_scaled4s_m
 		{
-			static void impl(context* ctx, u32 reg, u32 arg)
+			static void impl(context* ctx, u32 /*reg*/, u32 arg)
 			{
 				set_vertex_data_impl<NV4097_SET_VERTEX_DATA_SCALED4S_M, index, 4, 4, s16>(ctx, arg);
 			}
@@ -225,9 +225,9 @@ namespace rsx
 		template<u32 index>
 		struct set_vertex_texture_dirty_bit
 		{
-			static void impl(context* ctx, u32 reg, u32 arg)
+			static void impl(context* ctx, u32 /*reg*/, u32 /*arg*/)
 			{
-
+				util::set_vertex_texture_dirty_bit(ctx, index);
 			}
 		};
 

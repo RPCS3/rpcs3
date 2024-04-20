@@ -270,7 +270,7 @@ u32 usb_device_emulated::get_status(bool self_powered, bool remote_wakeup, u8* b
 	return expected_count;
 }
 
-void usb_device_emulated::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 /*wIndex*/, u16 /*wLength*/, u32 buf_size, u8* buf, UsbTransfer* transfer)
+void usb_device_emulated::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 /*wLength*/, u32 buf_size, u8* buf, UsbTransfer* transfer)
 {
 	transfer->fake            = true;
 	transfer->expected_count  = buf_size;
@@ -279,14 +279,21 @@ void usb_device_emulated::control_transfer(u8 bmRequestType, u8 bRequest, u16 wV
 
 	switch (bmRequestType)
 	{
-	case 0U /*silences warning*/ | LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_STANDARD | LIBUSB_RECIPIENT_DEVICE:
+	case 0U /*silences warning*/ | LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_STANDARD | LIBUSB_RECIPIENT_DEVICE: // 0x00
 		switch (bRequest)
 		{
 		case LIBUSB_REQUEST_SET_CONFIGURATION: usb_device::set_configuration(::narrow<u8>(wValue)); break;
 		default: sys_usbd.error("Unhandled control transfer(0x%02x): 0x%02x", bmRequestType, bRequest); break;
 		}
 		break;
-	case 0U /*silences warning*/ | LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_STANDARD | LIBUSB_RECIPIENT_DEVICE:
+	case 0U /*silences warning*/ | LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_STANDARD | LIBUSB_RECIPIENT_INTERFACE: // 0x01
+		switch (bRequest)
+		{
+		case LIBUSB_REQUEST_SET_INTERFACE: usb_device::set_interface(::narrow<u8>(wIndex)); break;
+		default: sys_usbd.error("Unhandled control transfer(0x%02x): 0x%02x", bmRequestType, bRequest); break;
+		}
+		break;
+	case 0U /*silences warning*/ | LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_STANDARD | LIBUSB_RECIPIENT_DEVICE: // 0x80
 		switch (bRequest)
 		{
 		case LIBUSB_REQUEST_GET_STATUS: transfer->expected_count = get_status(false, false, buf, buf_size); break;

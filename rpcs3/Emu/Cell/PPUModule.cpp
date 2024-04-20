@@ -2862,7 +2862,7 @@ std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_ex
 	}
 
 	// Apply the patch
-	auto applied = g_fxo->get<patch_engine>().apply(!Emu.DeserialManager() ? std::string{} : hash, [ovlm](u32 addr, u32 size) { return ovlm->get_ptr<u8>(addr, size); });
+	auto applied = g_fxo->get<patch_engine>().apply(!Emu.DeserialManager() ? hash : std::string{}, [ovlm](u32 addr, u32 size) { return ovlm->get_ptr<u8>(addr, size); });
 
 	if (!Emu.DeserialManager() && !Emu.GetTitleID().empty())
 	{

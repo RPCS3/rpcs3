@@ -5,6 +5,7 @@
 #include <mutex>
 #include <vector>
 #include <set>
+#include <unordered_map>
 
 #include "util/init_mutex.hpp"
 
@@ -71,7 +72,7 @@ struct Keyboard
 	KbData m_data{};
 	KbExtraData m_extra_data{};
 	KbConfig m_config{};
-	std::vector<KbButton> m_buttons;
+	std::unordered_map<u32, KbButton> m_keys;
 };
 
 class KeyboardHandlerBase
@@ -95,7 +96,6 @@ public:
 
 	KbInfo& GetInfo() { return m_info; }
 	std::vector<Keyboard>& GetKeyboards() { return m_keyboards; }
-	std::vector<KbButton>& GetButtons(const u32 keyboard) { return m_keyboards[keyboard].m_buttons; }
 	KbData& GetData(const u32 keyboard) { return m_keyboards[keyboard].m_data; }
 	KbExtraData& GetExtraData(const u32 keyboard) { return m_keyboards[keyboard].m_extra_data; }
 	KbConfig& GetConfig(const u32 keyboard) { return m_keyboards[keyboard].m_config; }

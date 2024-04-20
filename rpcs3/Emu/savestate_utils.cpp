@@ -86,7 +86,7 @@ SERIALIZATION_VER(sys_io, 23,                                   2)
 SERIALIZATION_VER(LLE, 24,                                      1)
 SERIALIZATION_VER(HLE, 25,                                      1)
 
-SERIALIZATION_VER(cellSysutil, 26,                              1)
+SERIALIZATION_VER(cellSysutil, 26,                              1, 2/*AVC2 Muting,Volume*/)
 
 template <>
 void fmt_class_string<std::remove_cvref_t<decltype(s_serial_versions)>>::format(std::string& out, u64 arg)
@@ -172,21 +172,21 @@ bool is_savestate_version_compatible(const std::vector<version_entry>& data, boo
 
 	auto& channel = (is_boot_check ? sys_log.error : sys_log.trace);
 
-	for (auto [identifier, version] : data)
+	for (const auto& entry : data)
 	{
-		if (identifier >= s_serial_versions.size())
+		if (entry.type >= s_serial_versions.size())
 		{
-			channel("Savestate version identifier is unknown! (category=%u, version=%u)", identifier, version);
+			channel("Savestate version identifier is unknown! (category=%u, version=%u)", entry.type, entry.version);
 			ok = false; // Log all mismatches
 		}
-		else if (!s_serial_versions[identifier].compatible_versions.count(version))
+		else if (!s_serial_versions[entry.type].compatible_versions.count(entry.version))
 		{
-			channel("Savestate version is not supported. (category=%u, version=%u)", identifier, version);
+			channel("Savestate version is not supported. (category=%u, version=%u)", entry.type, entry.version);
 			ok = false;
 		}
 		else if (is_boot_check)
 		{
-			s_serial_versions[identifier].current_version = version;
+			s_serial_versions[entry.type].current_version = entry.version;
 		}
 	}
 
@@ -323,8 +323,8 @@ bool boot_last_savestate(bool testing)
 bool load_and_check_reserved(utils::serial& ar, usz size)
 {
 	u8 bytes[4096];
+	ensure(size < std::size(bytes));
 	std::memset(&bytes[size & (0 - sizeof(v128))], 0, sizeof(v128));
-	ensure(size <= std::size(bytes));
 
 	const usz old_pos = ar.pos;
 	ar(std::span<u8>(bytes, size));
@@ -391,7 +391,7 @@ extern u16 serial_breathe_and_tag(utils::serial& ar, std::string_view name, bool
 [[noreturn]] void hle_locks_t::lock()
 {
 	// Unreachable
-	ensure(false);
+	fmt::throw_exception("Unreachable");
 }
 
 bool hle_locks_t::try_lock()

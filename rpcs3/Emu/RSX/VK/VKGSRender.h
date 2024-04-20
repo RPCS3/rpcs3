@@ -89,8 +89,8 @@ private:
 	std::unique_ptr<vk::buffer_view> m_volatile_attribute_storage;
 	std::unique_ptr<vk::buffer_view> m_vertex_layout_storage;
 
-	VkDependencyInfoKHR m_async_compute_dependency_info{};
-	VkMemoryBarrier2KHR m_async_compute_memory_barrier{};
+	VkDependencyInfoKHR m_async_compute_dependency_info {};
+	VkMemoryBarrier2KHR m_async_compute_memory_barrier {};
 
 public:
 	//vk::fbo draw_fbo;
@@ -122,8 +122,8 @@ private:
 	std::unique_ptr<vk::buffer> m_host_object_data;
 
 	vk::descriptor_pool m_descriptor_pool;
-	VkDescriptorSetLayout m_descriptor_layouts;
-	VkPipelineLayout m_pipeline_layout;
+	VkDescriptorSetLayout m_descriptor_layouts = VK_NULL_HANDLE;
+	VkPipelineLayout m_pipeline_layout = VK_NULL_HANDLE;
 
 	vk::framebuffer_holder* m_draw_fbo = nullptr;
 
@@ -148,16 +148,16 @@ private:
 	vk::data_heap m_fragment_instructions_buffer;
 	vk::data_heap m_vertex_instructions_buffer;
 
-	VkDescriptorBufferInfo m_vertex_env_buffer_info;
-	VkDescriptorBufferInfo m_fragment_env_buffer_info;
-	VkDescriptorBufferInfo m_vertex_layout_stream_info;
-	VkDescriptorBufferInfo m_vertex_constants_buffer_info;
-	VkDescriptorBufferInfo m_fragment_constants_buffer_info;
-	VkDescriptorBufferInfo m_fragment_texture_params_buffer_info;
-	VkDescriptorBufferInfo m_raster_env_buffer_info;
+	VkDescriptorBufferInfo m_vertex_env_buffer_info {};
+	VkDescriptorBufferInfo m_fragment_env_buffer_info {};
+	VkDescriptorBufferInfo m_vertex_layout_stream_info {};
+	VkDescriptorBufferInfo m_vertex_constants_buffer_info {};
+	VkDescriptorBufferInfo m_fragment_constants_buffer_info {};
+	VkDescriptorBufferInfo m_fragment_texture_params_buffer_info {};
+	VkDescriptorBufferInfo m_raster_env_buffer_info {};
 
-	VkDescriptorBufferInfo m_vertex_instructions_buffer_info;
-	VkDescriptorBufferInfo m_fragment_instructions_buffer_info;
+	VkDescriptorBufferInfo m_vertex_instructions_buffer_info {};
+	VkDescriptorBufferInfo m_fragment_instructions_buffer_info {};
 
 	std::array<vk::frame_context_t, VK_MAX_ASYNC_FRAMES> frame_context_storage;
 	//Temp frame context to use if the real frame queue is overburdened. Only used for storage
@@ -167,8 +167,8 @@ private:
 	vk::frame_context_t* m_current_frame = nullptr;
 	std::deque<vk::frame_context_t*> m_queued_frames;
 
-	VkViewport m_viewport{};
-	VkRect2D m_scissor{};
+	VkViewport m_viewport {};
+	VkRect2D m_scissor {};
 
 	std::vector<u8> m_draw_buffers;
 
@@ -182,7 +182,7 @@ private:
 	utils::address_range m_offloader_fault_range;
 	rsx::invalidation_cause m_offloader_fault_cause;
 
-	vk::draw_call_t m_current_draw = {};
+	vk::draw_call_t m_current_draw {};
 	u64 m_current_renderpass_key = 0;
 	VkRenderPass m_cached_renderpass = VK_NULL_HANDLE;
 	std::vector<vk::image*> m_fbo_images;

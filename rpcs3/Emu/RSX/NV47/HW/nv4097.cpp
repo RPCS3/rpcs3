@@ -20,7 +20,7 @@ namespace rsx
 			RSX(ctx)->m_graphics_state |= rsx::pipeline_state::fragment_program_ucode_dirty;
 		}
 
-		void set_transform_constant::impl(context* ctx, u32 reg, u32 arg)
+		void set_transform_constant::impl(context* ctx, u32 reg, u32 /*arg*/)
 		{
 			const u32 index = reg - NV4097_SET_TRANSFORM_CONSTANT;
 			const u32 constant_id = index / 4;
@@ -77,7 +77,7 @@ namespace rsx
 			RSX(ctx)->fifo_ctrl->skip_methods(rcount - 1);
 		}
 
-		void set_transform_program::impl(context* ctx, u32 reg, u32 arg)
+		void set_transform_program::impl(context* ctx, u32 reg, u32 /*arg*/)
 		{
 			const u32 index = reg - NV4097_SET_TRANSFORM_PROGRAM;
 
@@ -187,12 +187,12 @@ namespace rsx
 
 			if (REGS(ctx)->decode<NV4097_SET_COLOR_MASK>(arg).is_invalid()) [[ unlikely ]]
 			{
+				// Rollback
 				REGS(ctx)->decode(reg, REGS(ctx)->latch);
+				return;
 			}
-			else
-			{
-				set_surface_options_dirty_bit(ctx, reg, arg);
-			}
+
+			set_surface_options_dirty_bit(ctx, reg, arg);
 		}
 
 		void set_stencil_op(context* ctx, u32 reg, u32 arg)
@@ -202,15 +202,14 @@ namespace rsx
 				return;
 			}
 
-			const auto typed = to_stencil_op(arg);
-			if (typed) [[ likely ]]
+			if (to_stencil_op(arg)) [[ likely ]]
 			{
 				set_surface_options_dirty_bit(ctx, reg, arg);
+				return;
 			}
-			else
-			{
-				REGS(ctx)->decode(reg, REGS(ctx)->latch);
-			}
+
+			// Rollback
+			REGS(ctx)->decode(reg, REGS(ctx)->latch);
 		}
 
 		///// Draw call setup (vertex, etc)
@@ -378,7 +377,7 @@ namespace rsx
 
 		void set_face_property(context* ctx, u32 reg, u32 arg)
 		{
-			if (reg == REGS(ctx)->latch)
+			if (arg == REGS(ctx)->latch)
 			{
 				return;
 			}
@@ -406,7 +405,7 @@ namespace rsx
 
 		void set_blend_equation(context* ctx, u32 reg, u32 arg)
 		{
-			if (reg == REGS(ctx)->latch)
+			if (arg == REGS(ctx)->latch)
 			{
 				return;
 			}
@@ -415,16 +414,16 @@ namespace rsx
 				to_blend_equation((arg >> 16) & 0xFFFF)) [[ likely ]]
 			{
 				RSX(ctx)->m_graphics_state |= rsx::pipeline_config_dirty;
+				return;
 			}
-			else
-			{
-				REGS(ctx)->decode(reg, REGS(ctx)->latch);
-			}
+
+			// Rollback
+			REGS(ctx)->decode(reg, REGS(ctx)->latch);
 		}
 
 		void set_blend_factor(context* ctx, u32 reg, u32 arg)
 		{
-			if (reg == REGS(ctx)->latch)
+			if (arg == REGS(ctx)->latch)
 			{
 				return;
 			}
@@ -433,11 +432,11 @@ namespace rsx
 				to_blend_factor((arg >> 16) & 0xFFFF)) [[ likely ]]
 			{
 				RSX(ctx)->m_graphics_state |= rsx::pipeline_config_dirty;
+				return;
 			}
-			else
-			{
-				REGS(ctx)->decode(reg, REGS(ctx)->latch);
-			}
+
+			// Rollback
+			REGS(ctx)->decode(reg, REGS(ctx)->latch);
 		}
 
 		///// Reports
