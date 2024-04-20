@@ -45,6 +45,11 @@ constexpr u16 DAYS_IN_4_YEARS   = 365 *   4 +  1;
 constexpr std::array<u16, 13> MONTH_OFFSET      = { 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, umax };
 constexpr std::array<u16, 13> MONTH_OFFSET_LEAP = { 0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335, umax };
 
+constexpr std::array<std::string_view, 7>  WEEKDAY_NAMES   = { "sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday" };
+constexpr std::array<std::string_view, 12> MONTH_NAMES     = { "january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december" };
+constexpr std::array<std::string_view, 70> TIME_ZONE_NAMES = { "gmt", "est", "edt", "cst", "cdt", "mst", "mdt", "pst", "pdt", "nzdt", "nzst", "idle", "nzt", "aesst", "acsst", "cadt", "sadt", "aest", "east", "gst", "ligt", "acst", "sast", "cast", "awsst", "jst", "kst", "wdt", "mt", "awst", "cct", "wadt", "wst", "jt", "wast", "it", "bt", "eetdst", "eet", "cetdst", "fwt", "ist", "mest", "metdst", "sst", "bst", "cet", "dnt", "fst", "met", "mewt", "mez", "nor", "set", "swt", "wetdst", "wet", "wat", "ndt", "adt", "nft", "nst", "ast", "ydt", "hdt", "yst", "ahst", "cat", "nt", "idlw" };
+constexpr std::array<s8, 70> TIME_ZONE_VALUES              = {     0,   -10,    -8,   -12,   -10,   -14,   -12,   -16,   -14,     26,     24,     24,    24,      22,      21,     21,     21,     20,     20,    20,     20,     19,     19,     19,      18,    18,    18,    18,   17,     16,    16,     16,    16,   15,     14,    7,    6,        6,     4,        4,     4,     4,      4,        4,     4,     2,     2,     2,     2,     2,      2,     2,     2,     2,     2,        2,     0,    -2,    -3,    -6,    -5,    -5,    -8,   -16,   -18,   -18,    -20,   -20,  -22,    -24 }; // In units of 30 minutes
+
 error_code cellRtcTickAddYears(vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTick> pTick1, s32 iAdd);
 error_code cellRtcTickAddMonths(vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTick> pTick1, s32 lAdd);
 error_code cellRtcTickAddDays(vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTick> pTick1, s32 lAdd);

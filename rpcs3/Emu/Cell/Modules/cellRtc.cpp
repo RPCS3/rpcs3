@@ -48,8 +48,6 @@ constexpr u64 EPOCH_AS_FILETIME = 116444736000000000ULL;
 
 // Also stores leap year
 constexpr u8 DAYS_IN_MONTH[24] = {0x1F, 0x1C, 0x1F, 0x1E, 0x1F, 0x1E, 0x1F, 0x1F, 0x1E, 0x1F, 0x1E, 0x1F, 0x1F, 0x1D, 0x1F, 0x1E, 0x1F, 0x1E, 0x1F, 0x1F, 0x1E, 0x1F, 0x1E, 0x1F};
-constexpr char WEEKDAY_NAMES[7][4]  = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};                                    // 4 as terminator
-constexpr char MONTH_NAMES[12][4]   = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"}; // 4 as terminator
 
 s64 convertToUNIXTime(u16 seconds, u16 minutes, u16 hours, u16 days, s32 years)
 {
@@ -86,6 +84,16 @@ error_code get_secure_rtc_time(u64 unk1, u64 unk2, u64 unk3)
 // End of internal helper functions
 
 // Helper methods
+
+static inline char ascii(u8 num)
+{
+	return num + '0';
+}
+
+static inline s8 digit(char c)
+{
+	return c - '0';
+}
 
 static bool is_leap_year(u32 year)
 {
@@ -197,7 +205,7 @@ error_code cellRtcGetCurrentClockLocalTime(vm::ptr<CellRtcDateTime> pClock)
 
 error_code cellRtcFormatRfc2822(vm::ptr<char> pszDateTime, vm::cptr<CellRtcTick> pUtc, s32 iTimeZone)
 {
-	cellRtc.todo("cellRtcFormatRfc2822(pszDateTime=*0x%x, pUtc=*0x%x, time_zone=%d)", pszDateTime, pUtc, iTimeZone);
+	cellRtc.notice("cellRtcFormatRfc2822(pszDateTime=*0x%x, pUtc=*0x%x, iTimeZone=%d)", pszDateTime, pUtc, iTimeZone);
 
 	if (!vm::check_addr(pszDateTime.addr()))
 	{
@@ -210,7 +218,7 @@ error_code cellRtcFormatRfc2822(vm::ptr<char> pszDateTime, vm::cptr<CellRtcTick>
 	}
 
 	vm::var<CellRtcTick> rtc_tick;
-	if (pUtc->tick == 0ULL)
+	if (!pUtc) // Should always evaluate to false, nullptr was already checked above
 	{
 		cellRtcGetCurrentTick(rtc_tick);
 	}
@@ -230,68 +238,50 @@ error_code cellRtcFormatRfc2822(vm::ptr<char> pszDateTime, vm::cptr<CellRtcTick>
 		return ret;
 	}
 
-	s32 tzone = iTimeZone;
-
 	s32 weekdayIdx = cellRtcGetDayOfWeek(date_time->year, date_time->month, date_time->day);
 	// Day name
-	*pszDateTime   = WEEKDAY_NAMES[weekdayIdx][0];
+	pszDateTime[0] = std::toupper(WEEKDAY_NAMES[weekdayIdx][0]);
 	pszDateTime[1] = WEEKDAY_NAMES[weekdayIdx][1];
 	pszDateTime[2] = WEEKDAY_NAMES[weekdayIdx][2];
 	pszDateTime[3] = ',';
 	pszDateTime[4] = ' ';
 	// Day number
-	if (date_time->day < 10)
-	{
-		pszDateTime[5] = '0';
-		pszDateTime[6] = date_time->day + '0';
-	}
-	else
-	{
-		pszDateTime[5] = (date_time->day / 10) + '0';
-		pszDateTime[6] = (date_time->day - ((date_time->day / 10 << 1) + (date_time->day / 10 << 3))) + '0';
-	}
+	pszDateTime[5] = ascii(date_time->day / 10);
+	pszDateTime[6] = ascii(date_time->day % 10);
 	pszDateTime[7] = ' ';
 
 	// month name
-	pszDateTime[8]   = MONTH_NAMES[date_time->month - 1][0];
+	pszDateTime[8]   = std::toupper(MONTH_NAMES[date_time->month - 1][0]);
 	pszDateTime[9]   = MONTH_NAMES[date_time->month - 1][1];
 	pszDateTime[10]  = MONTH_NAMES[date_time->month - 1][2];
 	pszDateTime[0xb] = ' ';
 
 	// year
-	std::array<char, 5> yearDigits{};
-	snprintf(yearDigits.data(), yearDigits.size(), "%04hi", u16{date_time->year});
-	pszDateTime[0xc]  = yearDigits[0];
-	pszDateTime[0xd]  = yearDigits[1];
-	pszDateTime[0xe]  = yearDigits[2];
-	pszDateTime[0xf]  = yearDigits[3];
+	pszDateTime[0xc]  = ascii(date_time->year / 1000);
+	pszDateTime[0xd]  = ascii(date_time->year / 100 % 10);
+	pszDateTime[0xe]  = ascii(date_time->year / 10 % 10);
+	pszDateTime[0xf]  = ascii(date_time->year % 10);
 	pszDateTime[0x10] = ' ';
 
 	// Hours
-	std::array<char, 3> hourDigits{};
-	snprintf(hourDigits.data(), hourDigits.size(), "%02hi", u16{date_time->hour});
-	pszDateTime[0x11] = hourDigits[0];
-	pszDateTime[0x12] = hourDigits[1];
+	pszDateTime[0x11] = ascii(date_time->hour / 10);
+	pszDateTime[0x12] = ascii(date_time->hour % 10);
 	pszDateTime[0x13] = ':';
 
 	// Minutes
-	std::array<char, 3> minDigits{};
-	snprintf(minDigits.data(), minDigits.size(), "%02hi", u16{date_time->minute});
-	pszDateTime[0x14] = minDigits[0];
-	pszDateTime[0x15] = minDigits[1];
+	pszDateTime[0x14] = ascii(date_time->minute / 10);
+	pszDateTime[0x15] = ascii(date_time->minute % 10);
 	pszDateTime[0x16] = ':';
 
 	// Seconds
-	std::array<char, 3> secDigits{};
-	snprintf(secDigits.data(), secDigits.size(), "%02hi", u16{date_time->second});
-	pszDateTime[0x17] = secDigits[0];
-	pszDateTime[0x18] = secDigits[1];
+	pszDateTime[0x17] = ascii(date_time->second / 10);
+	pszDateTime[0x18] = ascii(date_time->second % 10);
 	pszDateTime[0x19] = ' ';
 
 	// Timezone -/+
 	if (iTimeZone < 0)
 	{
-		tzone             = -tzone;
+		iTimeZone = -iTimeZone;
 		pszDateTime[0x1a] = '-';
 	}
 	else
@@ -299,17 +289,13 @@ error_code cellRtcFormatRfc2822(vm::ptr<char> pszDateTime, vm::cptr<CellRtcTick>
 		pszDateTime[0x1a] = '+';
 	}
 
-	// Timezone - matches lle result.
-	u32 unk_1 = tzone >> 31;
-	u32 unk_2 = (tzone / 0x3c + unk_1) - unk_1;
-	tzone -= (unk_2 << 6) - (unk_2 << 2);
-	u32 unk_3 = (unk_2 / 10 + (unk_2 >> 0x1f)) - (unk_2 >> 31);
-	u32 unk_4 = (tzone / 10 + unk_1) - unk_1;
+	const u32 time_zone_hours = iTimeZone / 60 % 100;
+	const u32 time_zone_minutes = iTimeZone % 60;
 
-	pszDateTime[0x1b] = unk_3 + (unk_3 / 10) * -10 + '0';
-	pszDateTime[0x1c] = (unk_2 - ((unk_3 << 1) + (unk_3 << 3))) + '0';
-	pszDateTime[0x1d] = unk_4 + (unk_4 / 10) * -10 + '0';
-	pszDateTime[0x1e] = (tzone - ((unk_4 << 1) + (unk_4 << 3))) + '0';
+	pszDateTime[0x1b] = ascii(time_zone_hours / 10);
+	pszDateTime[0x1c] = ascii(time_zone_hours % 10);
+	pszDateTime[0x1d] = ascii(time_zone_minutes / 10);
+	pszDateTime[0x1e] = ascii(time_zone_minutes % 10);
 	pszDateTime[0x1f] = '\0';
 
 	return CELL_OK;
@@ -317,7 +303,7 @@ error_code cellRtcFormatRfc2822(vm::ptr<char> pszDateTime, vm::cptr<CellRtcTick>
 
 error_code cellRtcFormatRfc2822LocalTime(vm::ptr<char> pszDateTime, vm::cptr<CellRtcTick> pUtc)
 {
-	cellRtc.todo("cellRtcFormatRfc2822LocalTime(pszDateTime=*0x%x, pUtc=*0x%x)", pszDateTime, pUtc);
+	cellRtc.notice("cellRtcFormatRfc2822LocalTime(pszDateTime=*0x%x, pUtc=*0x%x)", pszDateTime, pUtc);
 
 	if (!vm::check_addr(pszDateTime.addr()))
 	{
@@ -343,7 +329,7 @@ error_code cellRtcFormatRfc2822LocalTime(vm::ptr<char> pszDateTime, vm::cptr<Cel
 
 error_code cellRtcFormatRfc3339(vm::ptr<char> pszDateTime, vm::cptr<CellRtcTick> pUtc, s32 iTimeZone)
 {
-	cellRtc.todo("cellRtcFormatRfc3339(pszDateTime=*0x%x, pUtc=*0x%x, iTimeZone=%d)", pszDateTime, pUtc, iTimeZone);
+	cellRtc.notice("cellRtcFormatRfc3339(pszDateTime=*0x%x, pUtc=*0x%x, iTimeZone=%d)", pszDateTime, pUtc, iTimeZone);
 
 	if (!vm::check_addr(pszDateTime.addr()))
 	{
@@ -356,7 +342,7 @@ error_code cellRtcFormatRfc3339(vm::ptr<char> pszDateTime, vm::cptr<CellRtcTick>
 	}
 
 	vm::var<CellRtcTick> rtc_tick;
-	if (pUtc->tick == 0ULL)
+	if (!pUtc) // Should always evaluate to false, nullptr was already checked above
 	{
 		cellRtcGetCurrentTick(rtc_tick);
 	}
@@ -376,86 +362,69 @@ error_code cellRtcFormatRfc3339(vm::ptr<char> pszDateTime, vm::cptr<CellRtcTick>
 		return ret;
 	}
 
-	s32 tzone = iTimeZone;
-
 	// Year - XXXX-04-13T10:56:31.35+66:40
-	std::array<char, 5> yearDigits{};
-	snprintf(yearDigits.data(), yearDigits.size(), "%04hi", u16{date_time->year});
-	pszDateTime[0x0] = yearDigits[0];
-	pszDateTime[0x1] = yearDigits[1];
-	pszDateTime[0x2] = yearDigits[2];
-	pszDateTime[0x3] = yearDigits[3];
+	pszDateTime[0x0] = ascii(date_time->year / 1000);
+	pszDateTime[0x1] = ascii(date_time->year / 100 % 10);
+	pszDateTime[0x2] = ascii(date_time->year / 10 % 10);
+	pszDateTime[0x3] = ascii(date_time->year % 10);
 	pszDateTime[0x4] = '-';
 
 	// Month - 2020-XX-13T10:56:31.35+66:40
-	std::array<char, 3> monthDigits{};
-	snprintf(monthDigits.data(), monthDigits.size(), "%02hi", u16{date_time->month});
-	pszDateTime[0x5] = monthDigits[0];
-	pszDateTime[0x6] = monthDigits[1];
+	pszDateTime[0x5] = ascii(date_time->month / 10);
+	pszDateTime[0x6] = ascii(date_time->month % 10);
 	pszDateTime[0x7] = '-';
 
 	// Day - 2020-04-XXT10:56:31.35+66:40
-	std::array<char, 3> dayDigits{};
-	snprintf(dayDigits.data(), dayDigits.size(), "%02hi", u16{date_time->day});
-	pszDateTime[0x8] = dayDigits[0];
-	pszDateTime[0x9] = dayDigits[1];
+	pszDateTime[0x8] = ascii(date_time->day / 10);
+	pszDateTime[0x9] = ascii(date_time->day % 10);
 	pszDateTime[0xa] = 'T';
 
 	// Hours - 2020-04-13TXX:56:31.35+66:40
-	std::array<char, 3> hourDigits{};
-	snprintf(hourDigits.data(), hourDigits.size(), "%02hi", u16{date_time->hour});
-	pszDateTime[0xb] = hourDigits[0];
-	pszDateTime[0xc] = hourDigits[1];
+	pszDateTime[0xb] = ascii(date_time->hour / 10);
+	pszDateTime[0xc] = ascii(date_time->hour % 10);
 	pszDateTime[0xd] = ':';
 
 	// Minutes - 2020-04-13T10:XX:31.35+66:40
-	std::array<char, 3> minDigits{};
-	snprintf(minDigits.data(), minDigits.size(), "%02hi", u16{date_time->minute});
-	pszDateTime[0xe]  = minDigits[0];
-	pszDateTime[0xf]  = minDigits[1];
+	pszDateTime[0xe]  = ascii(date_time->minute / 10);
+	pszDateTime[0xf]  = ascii(date_time->minute % 10);
 	pszDateTime[0x10] = ':';
 
 	// Seconds - 2020-04-13T10:56:XX.35+66:40
-	std::array<char, 3> secDigits{};
-	snprintf(secDigits.data(), secDigits.size(), "%02hi", u16{date_time->second});
-	pszDateTime[0x11] = secDigits[0];
-	pszDateTime[0x12] = secDigits[1];
+	pszDateTime[0x11] = ascii(date_time->second / 10);
+	pszDateTime[0x12] = ascii(date_time->second % 10);
 	pszDateTime[0x13] = '.';
 
-	// Microseconds - 2020-04-13T10:56:31.XX+66:40
-	std::array<char, 3> microDigits{};
-	snprintf(microDigits.data(), microDigits.size(), "%02u", u32{date_time->microsecond});
-	pszDateTime[0x14] = microDigits[0];
-	pszDateTime[0x15] = microDigits[1];
+	// Hundredths of a second - 2020-04-13T10:56:31.XX+66:40
+	pszDateTime[0x14] = ascii(date_time->microsecond / 100'000);
+	pszDateTime[0x15] = ascii(date_time->microsecond / 10'000 % 10);
 
+	// Time zone - 'Z' for UTC
 	if (iTimeZone == 0)
 	{
 		pszDateTime[0x16] = 'Z';
 		pszDateTime[0x17] = '\0';
 	}
+	// Time zone - ±hh:mm
 	else
 	{
 		if (iTimeZone < 0)
 		{
-			tzone             = -tzone;
+			iTimeZone = -iTimeZone;
 			pszDateTime[0x16] = '-';
 		}
 		else
 		{
 			pszDateTime[0x16] = '+';
 		}
-		u32 uVar1 = tzone >> 0x1f;
 
-		u32 lVar9 = (tzone / 0x3c + uVar1) - uVar1;
-		tzone -= (lVar9 << 6) - (lVar9 << 2);
-		uVar1             = tzone >> 0x1f;
-		u32 lVar11        = (lVar9 / 10 + (lVar9 >> 0x1f)) - (lVar9 >> 0x1f);
-		u32 lVar8         = (tzone / 10 + uVar1) - uVar1;
-		pszDateTime[0x17] = lVar11 + (lVar11 / 10) * -10 + '0';
-		pszDateTime[0x18] = (lVar9 - ((lVar11 << 1) + (lVar11 << 3))) + '0';
+		const u32 time_zone_hours = iTimeZone / 60 % 100;
+		const u32 time_zone_minutes = iTimeZone % 60;
+
+		pszDateTime[0x17] = ascii(time_zone_hours / 10);
+		pszDateTime[0x18] = ascii(time_zone_hours % 10);
 		pszDateTime[0x19] = ':';
-		pszDateTime[0x1a] = lVar8 + (lVar8 / 10) * -10 + '0';
-		pszDateTime[0x1b] = (tzone - ((lVar8 << 1) + (lVar8 << 3))) + '0';
+		pszDateTime[0x1a] = ascii(time_zone_minutes / 10);
+		pszDateTime[0x1b] = ascii(time_zone_minutes % 10);
 		pszDateTime[0x1c] = '\0';
 	}
 
@@ -464,7 +433,7 @@ error_code cellRtcFormatRfc3339(vm::ptr<char> pszDateTime, vm::cptr<CellRtcTick>
 
 error_code cellRtcFormatRfc3339LocalTime(vm::ptr<char> pszDateTime, vm::cptr<CellRtcTick> pUtc)
 {
-	cellRtc.todo("cellRtcFormatRfc3339LocalTime(pszDateTime=*0x%x, pUtc=*0x%x)", pszDateTime, pUtc);
+	cellRtc.notice("cellRtcFormatRfc3339LocalTime(pszDateTime=*0x%x, pUtc=*0x%x)", pszDateTime, pUtc);
 
 	if (!vm::check_addr(pszDateTime.addr()))
 	{
@@ -488,6 +457,239 @@ error_code cellRtcFormatRfc3339LocalTime(vm::ptr<char> pszDateTime, vm::cptr<Cel
 	return cellRtcFormatRfc3339(pszDateTime, pUtc, *timezone + *summertime);
 }
 
+u16 rtcParseComponent(vm::cptr<char> pszDateTime, u32& pos, char delimiter, const char* component_name)
+{
+	if (delimiter != 0)
+	{
+		if (pszDateTime[pos] != delimiter)
+		{
+			cellRtc.error("rtcParseComponent(): failed to parse %s: invalid or missing delimiter", component_name);
+			return umax;
+		}
+
+		pos++;
+	}
+
+	if (!std::isdigit(pszDateTime[pos]))
+	{
+		cellRtc.error("rtcParseComponent(): failed to parse %s: ASCII value 0x%x at position %d is not a digit", component_name, pszDateTime[pos + 1], pos);
+		return umax;
+	}
+
+	u16 ret = digit(pszDateTime[pos]);
+
+	pos++;
+
+	if (std::isdigit(pszDateTime[pos]))
+	{
+		ret = ret * 10 + digit(pszDateTime[pos]);
+
+		pos++;
+	}
+
+	return ret;
+}
+
+template<usz size>
+u8 rtcParseName(vm::cptr<char> pszDateTime, u32& pos, const std::array<std::string_view, size>& names, bool allow_short_name = true)
+{
+	for (u8 name_idx = 0; name_idx < names.size(); name_idx++)
+	{
+		const u32 name_length = static_cast<u32>(names[name_idx].length());
+
+		u32 ch_idx = 0;
+
+		while (ch_idx < name_length && std::tolower(pszDateTime[pos + ch_idx]) == names[name_idx][ch_idx]) // Not case sensitive
+		{
+			ch_idx++;
+		}
+
+		if (ch_idx == name_length) // Full name matched
+		{
+			pos += name_length;
+			return name_idx;
+		}
+
+		if (allow_short_name && ch_idx >= 3) // Short name matched
+		{
+			pos += 3; // Only increment by 3, even if more letters were matched
+			return name_idx;
+		}
+	}
+
+	return size;
+}
+
+error_code rtcParseRfc2822(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDateTime, u32 pos)
+{
+	// Day: "X" or "XX"
+	const u16 day = rtcParseComponent(pszDateTime, pos, 0, "day");
+
+	if (day == umax)
+	{
+		return CELL_RTC_ERROR_BAD_PARSE;
+	}
+
+	// Mandatory space or hyphen
+	if (pszDateTime[pos] != ' ' && pszDateTime[pos] != '-')
+	{
+		return { CELL_RTC_ERROR_BAD_PARSE, "rtcParseRfc2822(): invalid or missing delimiter after day" };
+	}
+
+	pos++;
+
+	// Month: at least the first three letters
+	const u16 month = rtcParseName(pszDateTime, pos, MONTH_NAMES) + 1;
+
+	if (month > MONTH_NAMES.size()) // No match
+	{
+		return { CELL_RTC_ERROR_BAD_PARSE, "rtcParseRfc2822(): failed to parse month: string at position %d doesn't match any name", pos };
+	}
+
+	// Mandatory space or hyphen
+	if (pszDateTime[pos] != ' ' && pszDateTime[pos] != '-')
+	{
+		return { CELL_RTC_ERROR_BAD_PARSE, "rtcParseRfc2822(): invalid or missing delimiter after month" };
+	}
+
+	pos++;
+
+	// Year: "XX" or "XXXX"
+	u16 year = 0;
+
+	if (!std::isdigit(pszDateTime[pos]) ||
+		!std::isdigit(pszDateTime[pos + 1]))
+	{
+		return { CELL_RTC_ERROR_BAD_PARSE, "rtcParseRfc2822(): failed to parse year: one of the first two ASCII values 0x%x, 0x%x at position %d is not a digit",
+			pszDateTime[pos], pszDateTime[pos + 1], pos };
+	}
+
+	if (!std::isdigit(pszDateTime[pos + 2]) ||
+		!std::isdigit(pszDateTime[pos + 3]))
+	{
+		year = digit(pszDateTime[pos]) * 10 + digit(pszDateTime[pos + 1]);
+		year += (year < 50) ? 2000 : 1900;
+		pos += 2;
+	}
+	else
+	{
+		year = digit(pszDateTime[pos]) * 1000 + digit(pszDateTime[pos + 1]) * 100 + digit(pszDateTime[pos + 2]) * 10 + digit(pszDateTime[pos + 3]);
+		pos += 4;
+	}
+
+	// Hour: " X" or " XX"
+	const u16 hour = rtcParseComponent(pszDateTime, pos, ' ', "hour");
+
+	if (hour == umax)
+	{
+		return CELL_RTC_ERROR_BAD_PARSE;
+	}
+
+	if (hour > 25) // LLE uses 25
+	{
+		return { CELL_RTC_ERROR_BAD_PARSE, "rtcParseRfc2822(): failed to parse hour: hour greater than 25" };
+	}
+
+	// Minute: ":X" or ":XX"
+	const u16 minute = rtcParseComponent(pszDateTime, pos, ':', "minute");
+
+	if (minute == umax)
+	{
+		return CELL_RTC_ERROR_BAD_PARSE;
+	}
+
+	// Second, optional: ":X" or ":XX"
+	// The string can't end with '\0' here, there must a space before it
+	u16 second = 0;
+
+	if (pszDateTime[pos] != ' ')
+	{
+		second = rtcParseComponent(pszDateTime, pos, ':', "second");
+
+		if (second == umax)
+		{
+			return CELL_RTC_ERROR_BAD_PARSE;
+		}
+	}
+	else
+	{
+		// If there are no seconds in the string, time zone requires two preceding spaces to be properly parsed
+		pos++;
+	}
+
+	// Time zone, optional, error if there is no valid time zone after the space
+	s32 time_zone = 0;
+
+	if (pszDateTime[pos] == ' ')
+	{
+		pos++;
+
+		if (pszDateTime[pos] == '+' || pszDateTime[pos] == '-')
+		{
+			// "±hhmm"
+
+			if (std::isdigit(pszDateTime[pos + 1]) &&
+				std::isdigit(pszDateTime[pos + 2]) &&
+				std::isdigit(pszDateTime[pos + 3]) &&
+				std::isdigit(pszDateTime[pos + 4]))
+			{
+				const s32 time_zone_hhmm = digit(pszDateTime[pos + 1]) * 1000 + digit(pszDateTime[pos + 2]) * 100 + digit(pszDateTime[pos + 3]) * 10 + digit(pszDateTime[pos + 4]);
+
+				time_zone = time_zone_hhmm / 100 * 60 + time_zone_hhmm % 60; // LLE uses % 60 instead of % 100
+			}
+			else
+			{
+				// No error, LLE does this for some reason
+				time_zone = -1;
+			}
+
+			if (pszDateTime[pos] == '-')
+			{
+				time_zone = -time_zone;
+			}
+		}
+		else if (pszDateTime[pos] != 'U' && pszDateTime[pos + 1] != 'T') // Case sensitive, should be || but LLE uses &&
+		{
+			// "GMT", "EST", "EDT", etc.
+
+			const u32 time_zone_idx = rtcParseName(pszDateTime, pos, TIME_ZONE_NAMES, false);
+
+			if (time_zone_idx < TIME_ZONE_NAMES.size())
+			{
+				time_zone = TIME_ZONE_VALUES[time_zone_idx] * 30;
+			}
+			else
+			{
+				// Military time zones
+				// "A", "B", "C", ..., not case sensitive
+				// These are all off by one ("A" should be UTC+01:00, "B" should be UTC+02:00, etc.)
+
+				const char letter = std::toupper(pszDateTime[pos]);
+
+				if (letter >= 'A' && letter <= 'M' && letter != 'J')
+				{
+					time_zone = (letter - 'A') * 60;
+				}
+				else if (letter >= 'N' && letter <= 'Y')
+				{
+					time_zone = ('N' - letter) * 60;
+				}
+				else if (letter != 'Z')
+				{
+					return { CELL_RTC_ERROR_BAD_PARSE, "rtcParseRfc2822(): failed to parse time zone" };
+				}
+			}
+		}
+	}
+
+	const vm::var<CellRtcDateTime> date_time{{ year, month, day, hour, minute, second, 0 }};
+
+	cellRtcGetTick(date_time, pUtc);
+	cellRtcTickAddMinutes(pUtc, pUtc, -time_zone); // The time zone value needs to be subtracted
+
+	return CELL_OK;
+}
+
 error_code cellRtcParseRfc3339(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDateTime);
 
 /*
@@ -495,7 +697,7 @@ error_code cellRtcParseRfc3339(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDate
 */
 error_code cellRtcParseDateTime(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDateTime)
 {
-	cellRtc.todo("cellRtcParseDateTime(pUtc=*0x%x, pszDateTime=%s)", pUtc, pszDateTime);
+	cellRtc.notice("cellRtcParseDateTime(pUtc=*0x%x, pszDateTime=%s)", pUtc, pszDateTime);
 
 	if (!vm::check_addr(pUtc.addr()) || !vm::check_addr(pszDateTime.addr()))
 	{
@@ -517,62 +719,129 @@ error_code cellRtcParseDateTime(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDat
 		return cellRtcParseRfc3339(pUtc, pszDateTime + pos);
 	}
 
-	// Below code kinda works
-	/*
-
-	std::tm t = {};
-	std::string tz;
-	vm::var<CellRtcDateTime> date_time;
-
-	// Not done like the library does it in the least..
-
-	s32 timezoneMins;
-	std::istringstream iss(std::string(pszDateTime.get_ptr(), strlen(pszDateTime.get_ptr())));
-	iss >> std::get_time(&t, "%a, %d %b %Y %H:%M:%S") >> tz; // rfc2822
-	if (!iss.fail())
+	// Day of the week: at least the first three letters
+	if (rtcParseName(pszDateTime, pos, WEEKDAY_NAMES) == WEEKDAY_NAMES.size()) // No match
 	{
-		// Looks wrong, works
-		if (tz[0] == '+')
+		return { CELL_RTC_ERROR_BAD_PARSE, "cellRtcParseDateTime(): failed to parse day of the week: string at position %d doesn't match any name", pos };
+	}
+
+	// Optional comma
+	if (pszDateTime[pos] == ',')
+	{
+		pos++;
+	}
+
+	// Skip spaces and tabs
+	while (std::isblank(pszDateTime[pos]))
+	{
+		pos++;
+	}
+
+	// Month: at least the first three letters
+	const u16 month = rtcParseName(pszDateTime, pos, MONTH_NAMES) + 1;
+
+	if (month > MONTH_NAMES.size()) // No match
+	{
+		cellRtc.notice("cellRtcParseDateTime(): string uses RFC 2822 format");
+		return rtcParseRfc2822(pUtc, pszDateTime, pos);
+	}
+
+	// Mandatory space
+	if (pszDateTime[pos] != ' ')
+	{
+		return { CELL_RTC_ERROR_BAD_PARSE, "cellRtcParseDateTime(): no space after month" };
+	}
+
+	pos++;
+
+	// Day: " X", "XX" or "X"
+	// There may be a second space before day
+	u16 day = 0;
+
+	if (pszDateTime[pos] == ' ')
+	{
+		pos++;
+
+		// Due to using a signed type instead of unsigned, LLE doesn't check if the char is less than '0'
+		if (pszDateTime[pos] > '9')
 		{
-			timezoneMins = -std::stoi(tz.substr(1));
+			return { CELL_RTC_ERROR_BAD_PARSE, "cellRtcParseDateTime(): failed to parse day: ASCII value 0x%x at position %d is not a digit", pszDateTime[pos], pos };
 		}
-		else
+
+		if (pszDateTime[pos] < '0')
 		{
-			timezoneMins = +std::stoi(tz.substr(1));
+			cellRtc.warning("cellRtcParseDateTime(): ASCII value 0x%x at position %d is not a digit", pszDateTime[pos], pos);
+		}
+
+		day = digit(pszDateTime[pos]);
+
+		pos++;
+	}
+	else if (std::isdigit(pszDateTime[pos]))
+	{
+		day = digit(pszDateTime[pos]);
+
+		pos++;
+
+		if (std::isdigit(pszDateTime[pos]))
+		{
+			day = day * 10 + digit(pszDateTime[pos]);
+
+			pos++;
 		}
 	}
 	else
 	{
-		iss >> std::get_time(&t, "%Y-%m-%dT%H:%M:%S") >> tz; // rfc3339 2020-04-03T13:23:30.30Z
-		if (!iss.fail())
-		{
-			// TODO timezone
-		}
-		else
-		{
-			// TODO asctime
-			iss >> std::get_time(&t, "%a %b  %d %H:%M:%S %Y");//Mon Apr  6 21:58:35 2020
-			if (!iss.fail())
-			{
-				// TODO timezone
-			}
-			else
-			{
-				return CELL_RTC_ERROR_BAD_PARSE;
-			}
-		}
+		return { CELL_RTC_ERROR_BAD_PARSE, "cellRtcParseDateTime(): failed to parse day: ASCII value 0x%x at position %d is not a digit or space", pszDateTime[pos], pos };
 	}
 
-	cellRtc.todo("heh year: %d, month: %d, day: %d, hour: %d, minute: %d, second: %d, tz: %s, tz_d: %d", t.tm_year + 1900, t.tm_mon + 1, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec, tz, timezoneMins);
-	date_time->year        = t.tm_year + 1900;
-	date_time->month       = t.tm_mon + 1;
-	date_time->day         = t.tm_mday;
-	date_time->hour        = t.tm_hour;
-	date_time->minute      = t.tm_min;
-	date_time->second      = t.tm_sec;
-	date_time->microsecond = 0;
+	// Hour: " X" or " XX"
+	const u16 hour = rtcParseComponent(pszDateTime, pos, ' ', "hour");
+
+	if (hour == umax)
+	{
+		return CELL_RTC_ERROR_BAD_PARSE;
+	}
+
+	// Minute: ":X" or ":XX"
+	const u16 minute = rtcParseComponent(pszDateTime, pos, ':', "minute");
+
+	if (minute == umax)
+	{
+		return CELL_RTC_ERROR_BAD_PARSE;
+	}
+
+	// Second: ":X" or ":XX"
+	const u16 second = rtcParseComponent(pszDateTime, pos, ':', "second");
+
+	if (second == umax)
+	{
+		return CELL_RTC_ERROR_BAD_PARSE;
+	}
+
+	// Mandatory space
+	if (pszDateTime[pos] != ' ')
+	{
+		return { CELL_RTC_ERROR_BAD_PARSE, "cellRtcParseDateTime(): no space after second" };
+	}
+
+	pos++;
+
+	// Year: XXXX
+	if (!std::isdigit(pszDateTime[pos]) ||
+		!std::isdigit(pszDateTime[pos + 1]) ||
+		!std::isdigit(pszDateTime[pos + 2]) ||
+		!std::isdigit(pszDateTime[pos + 3]))
+	{
+		return { CELL_RTC_ERROR_BAD_PARSE, "cellRtcParseDateTime(): failed to parse year: one of the ASCII values 0x%x, 0x%x, 0x%x, or 0x%x is not a digit",
+			pszDateTime[pos], pszDateTime[pos + 1], pszDateTime[pos + 2], pszDateTime[pos + 3] };
+	}
+
+	const u16 year = digit(pszDateTime[pos]) * 1000 + digit(pszDateTime[pos + 1]) * 100 + digit(pszDateTime[pos + 2]) * 10 + digit(pszDateTime[pos + 3]);
+
+	const vm::var<CellRtcDateTime> date_time{{ year, month, day, hour, minute, second, 0 }};
+
 	cellRtcGetTick(date_time, pUtc);
-	cellRtcTickAddMinutes(pUtc, pUtc, timezoneMins);*/
 
 	return CELL_OK;
 }
@@ -593,11 +862,6 @@ error_code cellRtcParseRfc3339(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDate
 	}
 
 	vm::var<CellRtcDateTime> date_time;
-
-	const auto digit = [](char c) -> s32
-	{
-		return c - '0';
-	};
 
 	// Year: XXXX-12-03T13:23:00.00Z
 	if (std::isdigit(pszDateTime[0]) && std::isdigit(pszDateTime[1]) && std::isdigit(pszDateTime[2]) && std::isdigit(pszDateTime[3]))
