@@ -727,7 +727,7 @@ namespace vk
 		}
 		else
 		{
-			m_allocator = std::make_unique<vk::mem_allocator_vma>(*this, pdev);
+			m_allocator = std::make_unique<vk::mem_allocator_vma>(*this, pdev, pdev);
 		}
 
 		// Useful for debugging different VRAM configurations
