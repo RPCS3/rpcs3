@@ -501,8 +501,8 @@ namespace rsx
 			return;
 		}
 
-		u32 offset_x = base % tile->pitch;
-		u32 offset_y = base / tile->pitch;
+		const u32 offset_x = base % tile->pitch;
+		const u32 offset_y = base / tile->pitch;
 
 		switch (tile->comp)
 		{
@@ -517,12 +517,15 @@ namespace rsx
 		case CELL_GCM_COMPMODE_C32_2X1:
 			for (u32 y = 0; y < height; ++y)
 			{
+				const u32* src_line = reinterpret_cast<const u32*>(static_cast<const u8*>(src) + pitch * y);
+				u32* dst_line = reinterpret_cast<u32*>(ptr + (offset_y + y) * tile->pitch + offset_x);
+
 				for (u32 x = 0; x < width; ++x)
 				{
-					u32 value = *(u32*)((u8*)src + pitch * y + x * sizeof(u32));
+					u32 value = src_line[x];
 
-					*(u32*)(ptr + (offset_y + y) * tile->pitch + offset_x + (x * 2 + 0) * sizeof(u32)) = value;
-					*(u32*)(ptr + (offset_y + y) * tile->pitch + offset_x + (x * 2 + 1) * sizeof(u32)) = value;
+					dst_line[x * 2 + 0] = value;
+					dst_line[x * 2 + 1] = value;
 				}
 			}
 			break;
@@ -530,14 +533,18 @@ namespace rsx
 		case CELL_GCM_COMPMODE_C32_2X2:
 			for (u32 y = 0; y < height; ++y)
 			{
+				const u32* src_line = reinterpret_cast<const u32*>(static_cast<const u8*>(src) + pitch * y);
+				u32* line_0 = reinterpret_cast<u32*>(ptr + (offset_y + y * 2 + 0) * tile->pitch + offset_x);
+				u32* line_1 = reinterpret_cast<u32*>(ptr + (offset_y + y * 2 + 1) * tile->pitch + offset_x);
+
 				for (u32 x = 0; x < width; ++x)
 				{
-					u32 value = *reinterpret_cast<const u32*>(static_cast<const u8*>(src) + pitch * y + x * sizeof(u32));
+					u32 value = src_line[x];
 
-					*reinterpret_cast<u32*>(ptr + (offset_y + y * 2 + 0) * tile->pitch + offset_x + (x * 2 + 0) * sizeof(u32)) = value;
-					*reinterpret_cast<u32*>(ptr + (offset_y + y * 2 + 0) * tile->pitch + offset_x + (x * 2 + 1) * sizeof(u32)) = value;
-					*reinterpret_cast<u32*>(ptr + (offset_y + y * 2 + 1) * tile->pitch + offset_x + (x * 2 + 0) * sizeof(u32)) = value;
-					*reinterpret_cast<u32*>(ptr + (offset_y + y * 2 + 1) * tile->pitch + offset_x + (x * 2 + 1) * sizeof(u32)) = value;
+					line_0[x * 2 + 0] = value;
+					line_0[x * 2 + 1] = value;
+					line_1[x * 2 + 0] = value;
+					line_1[x * 2 + 1] = value;
 				}
 			}
 			break;
@@ -570,11 +577,12 @@ namespace rsx
 		case CELL_GCM_COMPMODE_C32_2X1:
 			for (u32 y = 0; y < height; ++y)
 			{
+				const u32* src_line = reinterpret_cast<const u32*>(ptr + (offset_y + y) * tile->pitch + offset_x);
+				u32* dst_line = reinterpret_cast<u32*>(static_cast<u8*>(dst) + pitch * y);
+
 				for (u32 x = 0; x < width; ++x)
 				{
-					u32 value = *(u32*)(ptr + (offset_y + y) * tile->pitch + offset_x + (x * 2 + 0) * sizeof(u32));
-
-					*(u32*)((u8*)dst + pitch * y + x * sizeof(u32)) = value;
+					dst_line[x] = src_line[x * 2 + 0];
 				}
 			}
 			break;
@@ -582,11 +590,12 @@ namespace rsx
 		case CELL_GCM_COMPMODE_C32_2X2:
 			for (u32 y = 0; y < height; ++y)
 			{
+				const u32* src_line = reinterpret_cast<const u32*>(ptr + (offset_y + y * 2 + 0) * tile->pitch + offset_x);
+				u32* dst_line = reinterpret_cast<u32*>(static_cast<u8*>(dst) + pitch * y);
+
 				for (u32 x = 0; x < width; ++x)
 				{
-					u32 value = *reinterpret_cast<u32*>(ptr + (offset_y + y * 2 + 0) * tile->pitch + offset_x + (x * 2 + 0) * sizeof(u32));
-
-					*reinterpret_cast<u32*>(static_cast<u8*>(dst) + pitch * y + x * sizeof(u32)) = value;
+					dst_line[x] = src_line[x * 2 + 0];
 				}
 			}
 			break;
