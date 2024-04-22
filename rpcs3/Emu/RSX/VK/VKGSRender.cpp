@@ -2354,6 +2354,11 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 	m_vertex_layout_ring_info.unmap();
 }
 
+void VKGSRender::patch_transform_constants(rsx::context* ctx, u32 first_index, const std::span<u32>& data)
+{
+
+}
+
 void VKGSRender::init_buffers(rsx::framebuffer_creation_context context, bool)
 {
 	prepare_rtts(context);
