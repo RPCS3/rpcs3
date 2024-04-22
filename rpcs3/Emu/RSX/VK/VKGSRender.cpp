@@ -2305,7 +2305,7 @@ void VKGSRender::upload_transform_constants(const rsx::io_buffer& buffer)
 
 		const auto constant_ids = (transform_constants_size == 8192)
 			? std::span<const u16>{}
-		: std::span<const u16>(m_vertex_prog->constant_ids);
+			: std::span<const u16>(m_vertex_prog->constant_ids);
 		fill_vertex_program_constants_data(buf, constant_ids);
 	}
 }
