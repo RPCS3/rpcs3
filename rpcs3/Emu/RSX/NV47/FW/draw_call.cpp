@@ -3,6 +3,7 @@
 
 #include "Emu/RSX/rsx_methods.h" // FIXME
 #include "Emu/RSX/rsx_utils.h"
+#include "Emu/RSX/RSXThread.h"
 #include "Emu/RSX/Common/BufferUtils.h"
 #include "Emu/RSX/NV47/HW/context.h"
 #include "Emu/RSX/NV47/HW/nv4097.h"
@@ -115,33 +116,45 @@ namespace rsx
 			switch (barrier.type)
 			{
 			case primitive_restart_barrier:
+			{
 				break;
+			}
 			case index_base_modifier_barrier:
+			{
 				// Change index base offset
 				REGS(ctx)->decode(NV4097_SET_VERTEX_DATA_BASE_INDEX, barrier.arg0);
 				result |= index_base_changed;
 				break;
+			}
 			case vertex_base_modifier_barrier:
+			{
 				// Change vertex base offset
 				REGS(ctx)->decode(NV4097_SET_VERTEX_DATA_BASE_OFFSET, barrier.arg0);
 				result |= vertex_base_changed;
 				break;
+			}
 			case vertex_array_offset_modifier_barrier:
+			{
 				// Change vertex array offset
 				REGS(ctx)->decode(NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + barrier.index, barrier.arg0);
 				result |= vertex_arrays_changed;
 				break;
+			}
 			case transform_constant_load_modifier_barrier:
+			{
 				// Change the transform load target. Does not change result mask.
 				REGS(ctx)->decode(NV4097_SET_TRANSFORM_PROGRAM_LOAD, barrier.arg0);
 				break;
+			}
 			case transform_constant_update_barrier:
+			{
 				// Update transform constants
-				// REGS(ctx)->decode(NV4097_SET_TRANSFORM_CONSTANT + barrier.index, barrier.arg); // This statement technically does the right thing but has no consequence other than wasting perf.
-				// FIXME: Batching
-				nv4097::set_transform_constant::decode_one(ctx, NV4097_SET_TRANSFORM_CONSTANT + barrier.index, barrier.arg0);
+				auto ptr = RSX(ctx)->fifo_ctrl->translate_address(barrier.arg0);
+				auto buffer = std::span<const u32>(static_cast<const u32*>(vm::base(ptr)), barrier.arg1);
+				nv4097::set_transform_constant::batch_decode(ctx, NV4097_SET_TRANSFORM_CONSTANT + barrier.index, buffer);
 				result |= transform_constants_changed;
 				break;
+			}
 			default:
 				fmt::throw_exception("Unreachable");
 			}

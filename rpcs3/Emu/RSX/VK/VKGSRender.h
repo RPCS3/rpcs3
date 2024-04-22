@@ -234,7 +234,7 @@ private:
 	VkDescriptorSet allocate_descriptor_set();
 
 	vk::vertex_upload_info upload_vertex_data();
-	rsx::simple_array<u8> vertex_scratchpad;
+	rsx::simple_array<u8> scratchpad;
 
 	bool load_program();
 	void load_program_env();
@@ -277,7 +277,7 @@ public:
 	inline std::pair<volatile vk::host_data_t*, VkBuffer> map_host_object_data() { return { m_host_data_ptr, m_host_object_data->value }; }
 
 	// GRAPH backend
-	void patch_transform_constants(rsx::context* ctx, u32 first_index, const std::span<u32>& data) override;
+	void patch_transform_constants(rsx::context* ctx, u32 index, u32 count) override;
 
 protected:
 	void clear_surface(u32 mask) override;

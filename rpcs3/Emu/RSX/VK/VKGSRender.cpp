@@ -15,6 +15,7 @@
 #include "vkutils/scratch.h"
 
 #include "Emu/RSX/rsx_methods.h"
+#include "Emu/RSX/NV47/HW/context_accessors.define.h"
 #include "Emu/Memory/vm_locking.h"
 
 #include "../Program/program_state_cache2.hpp"
@@ -2354,9 +2355,60 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 	m_vertex_layout_ring_info.unmap();
 }
 
-void VKGSRender::patch_transform_constants(rsx::context* ctx, u32 first_index, const std::span<u32>& data)
+void VKGSRender::patch_transform_constants(rsx::context* ctx, u32 index, u32 count)
 {
+	// Hot-patching transform constants mid-draw (instanced draw)
+	utils::address_range data_range;
+	void* data_source = nullptr;
 
+	if (!m_vertex_prog || m_vertex_prog->has_indexed_constants)
+	{
+		// We're working with a full range. We can do a direct patch in this case since no index translation is required.
+		const auto byte_count = count * 16;
+		const auto byte_offset = index * 16;
+
+		data_range = utils::address_range::start_length(m_vertex_constants_buffer_info.offset + byte_offset, byte_count);
+		data_source = &REGS(ctx)->transform_constants[index];
+	}
+	else
+	{
+		// Indexed. This is a bit trickier. Use scratchpad to avoid UAF
+		auto allocate_mem = [&](usz size) -> std::pair<void*, usz>
+		{
+			scratchpad.resize(size);
+			return { scratchpad.data(), size };
+		};
+
+		rsx::io_buffer iobuf(allocate_mem);
+		upload_transform_constants(iobuf);
+
+		ensure(iobuf.size() >= m_vertex_constants_buffer_info.range);
+		data_range = utils::address_range::start_length(m_vertex_constants_buffer_info.offset, m_vertex_constants_buffer_info.range);
+		data_source = iobuf.data();
+	}
+
+	vk::insert_buffer_memory_barrier(
+		*m_current_command_buffer,
+		m_vertex_constants_buffer_info.buffer,
+		data_range.start,
+		data_range.length(),
+		VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+		VK_ACCESS_MEMORY_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT);
+
+	vkCmdUpdateBuffer(
+		*m_current_command_buffer,
+		m_vertex_constants_buffer_info.buffer,
+		data_range.start,
+		data_range.length(),
+		data_source);
+
+	vk::insert_buffer_memory_barrier(
+		*m_current_command_buffer,
+		m_vertex_constants_buffer_info.buffer,
+		data_range.start,
+		data_range.length(),
+		VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
+		VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT);
 }
 
 void VKGSRender::init_buffers(rsx::framebuffer_creation_context context, bool)
