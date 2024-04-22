@@ -598,6 +598,7 @@
     <ClInclude Include="Emu\RSX\Core\RSXVertexTypes.h" />
     <ClInclude Include="Emu\RSX\NV47\FW\draw_call.hpp" />
     <ClInclude Include="Emu\RSX\NV47\FW\draw_call.inc.h" />
+    <ClInclude Include="Emu\RSX\NV47\FW\GRAPH_backend.h" />
     <ClInclude Include="Emu\RSX\NV47\FW\reg_context.h" />
     <ClInclude Include="Emu\RSX\NV47\HW\context.h" />
     <ClInclude Include="Emu\RSX\NV47\HW\context_accessors.define.h" />

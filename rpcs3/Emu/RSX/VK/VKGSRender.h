@@ -276,6 +276,9 @@ public:
 	// Host sync object
 	inline std::pair<volatile vk::host_data_t*, VkBuffer> map_host_object_data() { return { m_host_data_ptr, m_host_object_data->value }; }
 
+	// GRAPH backend
+	void patch_transform_constants(rsx::context* ctx, u32 first_index, const std::span<u32>& data) override;
+
 protected:
 	void clear_surface(u32 mask) override;
 	void begin() override;

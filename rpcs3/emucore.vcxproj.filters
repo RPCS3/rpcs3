@@ -2536,6 +2536,9 @@
     <ClInclude Include="Emu\savestate_utils.hpp">
       <Filter>Emu</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\NV47\FW\GRAPH_backend.h">
+      <Filter>Emu\GPU\RSX\NV47\FW</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Emu\RSX\Program\GLSLSnippets\GPUDeswizzle.glsl">

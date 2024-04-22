@@ -33,6 +33,8 @@
 #include "Core/RSXIOMap.hpp"
 #include "Core/RSXVertexTypes.h"
 
+#include "NV47/FW/GRAPH_backend.h"
+
 extern atomic_t<bool> g_user_asked_for_frame_capture;
 extern atomic_t<bool> g_disable_frame_limit;
 extern rsx::frame_trace_data frame_debug;
@@ -150,7 +152,7 @@ namespace rsx
 	};
 
 	// TODO: This class is a mess, this needs to be broken into smaller chunks, like I did for RSXFIFO and RSXZCULL (kd)
-	class thread : public cpu_thread, public GCM_context
+	class thread : public cpu_thread, public GCM_context, public GRAPH_backend
 	{
 		u64 timestamp_ctrl = 0;
 		u64 timestamp_subvalue = 0;
