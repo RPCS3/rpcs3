@@ -38,6 +38,7 @@ namespace rsx
 				REGS(ctx)->current_draw_clause.insert_command_barrier(
 					rsx::transform_constant_update_barrier,
 					arg,
+					0,
 					reg - NV4097_SET_TRANSFORM_CONSTANT
 				);
 				return;

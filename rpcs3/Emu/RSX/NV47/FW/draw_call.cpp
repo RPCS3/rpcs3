@@ -19,7 +19,7 @@ namespace rsx
 		ar(draw_command_ranges, draw_command_barriers, current_range_index, primitive, command, is_immediate_draw, is_disjoint_primitive, primitive_barrier_enable, inline_vertex_array);
 	}
 
-	void draw_clause::insert_command_barrier(command_barrier_type type, u32 arg, u32 index)
+	void draw_clause::insert_command_barrier(command_barrier_type type, u32 arg0, u32 arg1, u32 index)
 	{
 		ensure(!draw_command_ranges.empty());
 
@@ -49,7 +49,16 @@ namespace rsx
 			const auto& last = draw_command_ranges[current_range_index];
 			const auto address = last.first + last.count;
 
-			_do_barrier_insert({ current_range_index, 0, address, index, arg, 0, type });
+			_do_barrier_insert({
+				.draw_id = current_range_index,
+				.timestamp = 0,
+				.address = address,
+				.index = index,
+				.arg0 = arg0,
+				.arg1 = arg1,
+				.flags = 0,
+				.type = type
+			});
 		}
 		else
 		{
@@ -64,7 +73,17 @@ namespace rsx
 				current_range_index = draw_command_ranges.size() - 1;
 			}
 
-			_do_barrier_insert({ current_range_index, rsx::get_shared_tag(), ~0u, index, arg, 0, type });
+			_do_barrier_insert({
+				.draw_id = current_range_index,
+				.timestamp = rsx::get_shared_tag(),
+				.address = ~0u,
+				.index = index,
+				.arg0 = arg0,
+				.arg1 = arg1,
+				.flags = 0,
+				.type = type
+			});
+
 			last_execution_barrier_index = current_range_index;
 		}
 	}
@@ -99,28 +118,28 @@ namespace rsx
 				break;
 			case index_base_modifier_barrier:
 				// Change index base offset
-				REGS(ctx)->decode(NV4097_SET_VERTEX_DATA_BASE_INDEX, barrier.arg);
+				REGS(ctx)->decode(NV4097_SET_VERTEX_DATA_BASE_INDEX, barrier.arg0);
 				result |= index_base_changed;
 				break;
 			case vertex_base_modifier_barrier:
 				// Change vertex base offset
-				REGS(ctx)->decode(NV4097_SET_VERTEX_DATA_BASE_OFFSET, barrier.arg);
+				REGS(ctx)->decode(NV4097_SET_VERTEX_DATA_BASE_OFFSET, barrier.arg0);
 				result |= vertex_base_changed;
 				break;
 			case vertex_array_offset_modifier_barrier:
 				// Change vertex array offset
-				REGS(ctx)->decode(NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + barrier.index, barrier.arg);
+				REGS(ctx)->decode(NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + barrier.index, barrier.arg0);
 				result |= vertex_arrays_changed;
 				break;
 			case transform_constant_load_modifier_barrier:
 				// Change the transform load target. Does not change result mask.
-				REGS(ctx)->decode(NV4097_SET_TRANSFORM_PROGRAM_LOAD, barrier.arg);
+				REGS(ctx)->decode(NV4097_SET_TRANSFORM_PROGRAM_LOAD, barrier.arg0);
 				break;
 			case transform_constant_update_barrier:
 				// Update transform constants
 				// REGS(ctx)->decode(NV4097_SET_TRANSFORM_CONSTANT + barrier.index, barrier.arg); // This statement technically does the right thing but has no consequence other than wasting perf.
 				// FIXME: Batching
-				nv4097::set_transform_constant::decode_one(ctx, NV4097_SET_TRANSFORM_CONSTANT + barrier.index, barrier.arg);
+				nv4097::set_transform_constant::decode_one(ctx, NV4097_SET_TRANSFORM_CONSTANT + barrier.index, barrier.arg0);
 				result |= transform_constants_changed;
 				break;
 			default:

@@ -43,7 +43,8 @@ namespace rsx
 
 		u32 address;
 		u32 index;
-		u32 arg;
+		u32 arg0;
+		u32 arg1;
 		u32 flags;
 		command_barrier_type type;
 
