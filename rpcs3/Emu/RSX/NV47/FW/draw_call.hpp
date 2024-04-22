@@ -64,7 +64,7 @@ namespace rsx
 
 		void operator()(utils::serial& ar);
 
-		void insert_command_barrier(command_barrier_type type, u32 arg, u32 register_index = 0);
+		void insert_command_barrier(command_barrier_type type, u32 arg0, u32 arg1 = 0, u32 register_index = 0);
 
 		/**
 		 * Optimize commands for rendering
