@@ -2358,7 +2358,7 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 void VKGSRender::patch_transform_constants(rsx::context* ctx, u32 index, u32 count)
 {
 	// Hot-patching transform constants mid-draw (instanced draw)
-	utils::address_range data_range;
+	std::pair<VkDeviceSize, VkDeviceSize> data_range;
 	void* data_source = nullptr;
 
 	if (!m_vertex_prog || m_vertex_prog->has_indexed_constants)
@@ -2367,7 +2367,7 @@ void VKGSRender::patch_transform_constants(rsx::context* ctx, u32 index, u32 cou
 		const auto byte_count = count * 16;
 		const auto byte_offset = index * 16;
 
-		data_range = utils::address_range::start_length(m_vertex_constants_buffer_info.offset + byte_offset, byte_count);
+		data_range = { m_vertex_constants_buffer_info.offset + byte_offset, byte_count };
 		data_source = &REGS(ctx)->transform_constants[index];
 	}
 	else
@@ -2383,30 +2383,30 @@ void VKGSRender::patch_transform_constants(rsx::context* ctx, u32 index, u32 cou
 		upload_transform_constants(iobuf);
 
 		ensure(iobuf.size() >= m_vertex_constants_buffer_info.range);
-		data_range = utils::address_range::start_length(m_vertex_constants_buffer_info.offset, m_vertex_constants_buffer_info.range);
+		data_range = { m_vertex_constants_buffer_info.offset, m_vertex_constants_buffer_info.range };
 		data_source = iobuf.data();
 	}
 
 	vk::insert_buffer_memory_barrier(
 		*m_current_command_buffer,
 		m_vertex_constants_buffer_info.buffer,
-		data_range.start,
-		data_range.length(),
+		data_range.first,
+		data_range.second,
 		VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
 		VK_ACCESS_MEMORY_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT);
 
 	vkCmdUpdateBuffer(
 		*m_current_command_buffer,
 		m_vertex_constants_buffer_info.buffer,
-		data_range.start,
-		data_range.length(),
+		data_range.first,
+		data_range.second,
 		data_source);
 
 	vk::insert_buffer_memory_barrier(
 		*m_current_command_buffer,
 		m_vertex_constants_buffer_info.buffer,
-		data_range.start,
-		data_range.length(),
+		data_range.first,
+		data_range.second,
 		VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
 		VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT);
 }
