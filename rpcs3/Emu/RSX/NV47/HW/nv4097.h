@@ -6,6 +6,8 @@
 #include "Emu/RSX/gcm_enums.h"
 #include "Emu/RSX/NV47/FW/draw_call.inc.h"
 
+#include <span>
+
 namespace rsx
 {
 	enum command_barrier_type : u32;
@@ -201,6 +203,8 @@ namespace rsx
 			static void impl(context* ctx, u32 reg, u32 arg);
 
 			static void decode_one(context* ctx, u32 reg, u32 arg);
+
+			static void batch_decode(context* ctx, u32 reg, const std::span<const u32>& args);
 		};
 
 		struct set_transform_program

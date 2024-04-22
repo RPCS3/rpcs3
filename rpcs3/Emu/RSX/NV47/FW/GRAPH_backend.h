@@ -15,7 +15,7 @@ namespace rsx
 		// virtual void begin() = 0;
 		// virtual void end() = 0;
 
-		// Patch transform constants
-		virtual void patch_transform_constants(context* ctx, u32 first_index, const std::span<u32>& data) {};
+		// Patch transform constants. Units are in 32x4 units
+		virtual void patch_transform_constants(context* /*ctx*/, u32 /*index*/, u32 /*count*/) {};
 	};
 }

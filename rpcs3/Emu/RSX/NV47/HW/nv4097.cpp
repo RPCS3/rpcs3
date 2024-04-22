@@ -30,20 +30,22 @@ namespace rsx
 			REGS(ctx)->transform_constants[load + constant_id][subreg] = arg;
 		}
 
+		void set_transform_constant::batch_decode(context* ctx, u32 reg, const std::span<const u32>& args)
+		{
+			const u32 index = reg - NV4097_SET_TRANSFORM_CONSTANT;
+			const u32 constant_id = index / 4;
+			const u8 subreg = index % 4;
+			const u32 load = REGS(ctx)->transform_constant_load();
+
+			auto dst = &REGS(ctx)->transform_constants[load + constant_id][subreg];
+			copy_data_swap_u32(dst, args.data(), ::size32(args));
+
+			const u32 last_constant_id = ((reg + ::size32(args) + 3) - NV4097_SET_TRANSFORM_CONSTANT) / 4; // Aligned div
+			RSX(ctx)->patch_transform_constants(ctx, load + constant_id, last_constant_id - constant_id);
+		}
+
 		void set_transform_constant::impl(context* ctx, u32 reg, u32 arg)
 		{
-			if (RSX(ctx)->in_begin_end && !REGS(ctx)->current_draw_clause.empty())
-			{
-				// Updating constants mid-draw is messy. Push attr barrier.
-				REGS(ctx)->current_draw_clause.insert_command_barrier(
-					rsx::transform_constant_update_barrier,
-					arg,
-					0,
-					reg - NV4097_SET_TRANSFORM_CONSTANT
-				);
-				return;
-			}
-
 			const u32 index = reg - NV4097_SET_TRANSFORM_CONSTANT;
 			const u32 constant_id = index / 4;
 			const u8 subreg = index % 4;
@@ -71,6 +73,20 @@ namespace rsx
 					rcount -= max - limit;
 				else
 					rcount = 0;
+			}
+
+			if (RSX(ctx)->in_begin_end && !REGS(ctx)->current_draw_clause.empty())
+			{
+				// Updating constants mid-draw is messy. Defer the writes
+				REGS(ctx)->current_draw_clause.insert_command_barrier(
+					rsx::transform_constant_update_barrier,
+					RSX(ctx)->fifo_ctrl->get_pos(),
+					rcount,
+					reg - NV4097_SET_TRANSFORM_CONSTANT
+				);
+
+				RSX(ctx)->fifo_ctrl->skip_methods(rcount - 1);
+				return;
 			}
 
 			const auto values = &REGS(ctx)->transform_constants[load + constant_id][subreg];

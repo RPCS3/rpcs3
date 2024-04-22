@@ -29,6 +29,11 @@ namespace rsx
 			m_iotable = &pctrl->iomap_table;
 		}
 
+		u32 FIFO_control::translate_address(u32 address) const
+		{
+			return m_iotable->get_addr(address);
+		}
+
 		void FIFO_control::sync_get() const
 		{
 			m_ctrl->get.release(m_internal_get);

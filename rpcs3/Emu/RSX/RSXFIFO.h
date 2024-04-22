@@ -151,6 +151,8 @@ namespace rsx
 			FIFO_control(rsx::thread* pctrl);
 			~FIFO_control() = default;
 
+			u32 translate_address(u32 addr) const;
+
 			std::pair<bool, u32> fetch_u32(u32 addr);
 			void invalidate_cache() { m_cache_size = 0; }
 
