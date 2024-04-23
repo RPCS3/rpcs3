@@ -74,6 +74,9 @@ namespace gl
 		target m_target = target::array;
 		memory_type m_memory_type = memory_type::undefined;
 
+		// Metadata
+		mutable std::pair<u32, u32> m_bound_range{};
+
 		void allocate(GLsizeiptr size, const void* data_, memory_type type, GLenum usage);
 
 	public:
@@ -109,6 +112,7 @@ namespace gl
 		uint id() const { return m_id; }
 		void set_id(uint id) { m_id = id; }
 		bool created() const { return m_id != GL_NONE; }
+		std::pair<u32, u32> bound_range() const { return m_bound_range; }
 
 		explicit operator bool() const { return created(); }
 	};

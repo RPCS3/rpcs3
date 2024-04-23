@@ -146,11 +146,13 @@ namespace gl
 
 	void buffer::bind_range(u32 index, u32 offset, u32 size) const
 	{
+		m_bound_range = { offset, size };
 		glBindBufferRange(static_cast<GLenum>(current_target()), index, id(), offset, size);
 	}
 
 	void buffer::bind_range(target target_, u32 index, u32 offset, u32 size) const
 	{
+		m_bound_range = { offset, size };
 		glBindBufferRange(static_cast<GLenum>(target_), index, id(), offset, size);
 	}
 
