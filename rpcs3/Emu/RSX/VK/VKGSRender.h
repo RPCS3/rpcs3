@@ -234,7 +234,7 @@ private:
 	VkDescriptorSet allocate_descriptor_set();
 
 	vk::vertex_upload_info upload_vertex_data();
-	rsx::simple_array<u8> scratchpad;
+	rsx::simple_array<u8> m_scratch_mem;
 
 	bool load_program();
 	void load_program_env();

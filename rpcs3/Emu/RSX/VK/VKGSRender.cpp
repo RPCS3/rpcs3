@@ -2139,24 +2139,21 @@ void VKGSRender::load_program_env()
 	if (update_transform_constants)
 	{
 		// Transform constants
-		usz transform_constants_size = 0;
 		usz mem_offset = 0;
-
 		auto alloc_storage = [&](usz size) -> std::pair<void*, usz>
 		{
 			const auto alignment = m_device->gpu().get_limits().minUniformBufferOffsetAlignment;
 			mem_offset = m_transform_constants_ring_info.alloc<1>(utils::align(size, alignment));
-			transform_constants_size = size;
-			return std::make_pair(m_transform_constants_ring_info.map(mem_offset, transform_constants_size), size);
+			return std::make_pair(m_transform_constants_ring_info.map(mem_offset, size), size);
 		};
 
 		auto io_buf = rsx::io_buffer(alloc_storage);
 		upload_transform_constants(io_buf);
 
-		if (transform_constants_size)
+		if (!io_buf.empty())
 		{
 			m_transform_constants_ring_info.unmap();
-			m_vertex_constants_buffer_info = { m_transform_constants_ring_info.heap->value, mem_offset, transform_constants_size };
+			m_vertex_constants_buffer_info = { m_transform_constants_ring_info.heap->value, mem_offset, io_buf.size() };
 		}
 	}
 
@@ -2375,8 +2372,8 @@ void VKGSRender::patch_transform_constants(rsx::context* ctx, u32 index, u32 cou
 		// Indexed. This is a bit trickier. Use scratchpad to avoid UAF
 		auto allocate_mem = [&](usz size) -> std::pair<void*, usz>
 		{
-			scratchpad.resize(size);
-			return { scratchpad.data(), size };
+			m_scratch_mem.resize(size);
+			return { m_scratch_mem.data(), size };
 		};
 
 		rsx::io_buffer iobuf(allocate_mem);
