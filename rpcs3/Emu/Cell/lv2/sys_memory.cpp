@@ -126,7 +126,7 @@ error_code sys_memory_allocate(cpu_thread& cpu, u32 size, u64 flags, vm::ptr<u32
 	// Try to get "physical memory"
 	if (!dct.take(size))
 	{
-		return CELL_ENOMEM;
+		return {CELL_ENOMEM, dct.size - dct.used};
 	}
 
 	if (const auto area = reserve_map(size, align))
@@ -200,7 +200,7 @@ error_code sys_memory_allocate_from_container(cpu_thread& cpu, u32 size, u32 cid
 
 	if (ct.ret)
 	{
-		return ct.ret;
+		return {ct.ret, ct->size - ct->used};
 	}
 
 	if (const auto area = reserve_map(size, align))

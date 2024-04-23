@@ -138,11 +138,11 @@ namespace np
 
 		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_GetWorldInfoList, sizeof(SceNpMatching2GetWorldInfoListResponse));
 		auto* world_info = reinterpret_cast<SceNpMatching2GetWorldInfoListResponse*>(edata.data());
-		world_info->worldNum = world_list.size();
+		world_info->worldNum = ::size32(world_list);
 
 		if (!world_list.empty())
 		{
-			auto* worlds = edata.allocate<SceNpMatching2World>(sizeof(SceNpMatching2World) * world_list.size(), world_info->world);
+			auto* worlds = edata.allocate<SceNpMatching2World>(::narrow<u32>(sizeof(SceNpMatching2World) * world_list.size()), world_info->world);
 			for (usz i = 0; i < world_list.size(); i++)
 			{
 				worlds[i].worldId = world_list[i];
@@ -460,8 +460,6 @@ namespace np
 	{
 		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SetRoomDataInternal);
 
-		// TODO: extra_nps::print_set_roomdata_req(req);
-
 		extra_nps::print_set_roomdata_int_req(req);
 
 		if (!get_rpcn()->set_roomdata_internal(req_id, get_match2_context(ctx_id)->communicationId, req))
@@ -482,6 +480,61 @@ namespace np
 
 		cb_info_opt->queue_callback(req_id, 0, 0, 0);
 
+		return true;
+	}
+
+	u32 np_handler::get_roommemberdata_internal(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2GetRoomMemberDataInternalRequest* req)
+	{
+		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetRoomMemberDataInternal);
+		extra_nps::print_get_roommemberdata_int_req(req);
+
+		if (!get_rpcn()->get_roommemberdata_internal(req_id, get_match2_context(ctx_id)->communicationId, req))
+		{
+			rpcn_log.error("Disconnecting from RPCN!");
+			is_psn_active = false;
+		}
+
+		return req_id;
+	}
+
+	bool np_handler::reply_get_roommemberdata_internal(u32 req_id, std::vector<u8>& reply_data)
+	{
+		auto cb_info_opt = take_pending_request(req_id);
+
+		if (!cb_info_opt)
+			return true;
+
+		if (rpcn::is_error(static_cast<rpcn::ErrorType>(reply_data[0])))
+		{
+			switch (reply_data[0])
+			{
+			case rpcn::ErrorType::NotFound:
+			{
+				rpcn_log.error("GetRoomMemberDataInternal: Room or User wasn't found");
+				cb_info_opt->queue_callback(req_id, 0, -1, 0);
+				return true;
+			}
+			default:
+				return error_and_disconnect(fmt::format("GetRoomMemberDataInternal failed with unknown error(%d)!", reply_data[0]));
+			}
+		}
+
+		vec_stream reply(reply_data, 1);
+
+		auto* resp = reply.get_flatbuffer<RoomMemberDataInternal>();
+
+		if (reply.is_error())
+			return error_and_disconnect("Malformed reply to GetRoomMemberDataInternal command");
+
+		u32 event_key = get_event_key();
+
+		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_GetRoomMemberDataInternal, sizeof(SceNpMatching2GetRoomMemberDataInternalResponse));
+		auto* mdata_resp = reinterpret_cast<SceNpMatching2GetRoomMemberDataInternalResponse*>(edata.data());
+		auto* mdata_info = edata.allocate<SceNpMatching2RoomMemberDataInternal>(sizeof(SceNpMatching2RoomMemberDataInternal), mdata_resp->roomMemberDataInternal);
+		RoomMemberDataInternal_to_SceNpMatching2RoomMemberDataInternal(edata, resp, nullptr, mdata_info);
+		np_memory.shrink_allocation(edata.addr(), edata.size());
+
+		cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());
 		return true;
 	}
 
@@ -506,6 +559,36 @@ namespace np
 
 		if (!cb_info_opt)
 			return true;
+
+		cb_info_opt->queue_callback(req_id, 0, 0, 0);
+
+		return true;
+	}
+
+	u32 np_handler::set_userinfo(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SetUserInfoRequest* req)
+	{
+		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SetUserInfo);
+
+		if (!get_rpcn()->set_userinfo(req_id, get_match2_context(ctx_id)->communicationId, req))
+		{
+			rpcn_log.error("Disconnecting from RPCN!");
+			is_psn_active = false;
+		}
+
+		return req_id;
+	}
+
+	bool np_handler::reply_set_userinfo(u32 req_id, std::vector<u8>& reply_data)
+	{
+		auto cb_info_opt = take_pending_request(req_id);
+
+		if (!cb_info_opt)
+			return true;
+
+		if (rpcn::is_error(static_cast<rpcn::ErrorType>(reply_data[0])))
+		{
+			return error_and_disconnect(fmt::format("SetUserInfo failed with unknown error(%d)!", reply_data[0]));
+		}
 
 		cb_info_opt->queue_callback(req_id, 0, 0, 0);
 
@@ -681,6 +764,8 @@ namespace np
 	{
 		auto worker_function = [trans_ctx = trans_ctx, req_id, this](std::unique_lock<shared_mutex> lock)
 		{
+			thread_base::set_name("NP Trans Worker");
+
 			auto res = trans_ctx->wake_cond.wait_for(lock, std::chrono::microseconds(trans_ctx->timeout));
 			{
 				std::lock_guard lock_threads(this->mutex_async_transactions);
@@ -694,14 +779,13 @@ namespace np
 			}
 
 			// Only 2 cases should be timeout or caller setting result
-			ensure(trans_ctx->result);
-
+			ensure(trans_ctx->result, "transaction_async_handler: trans_ctx->result is no set");
 			trans_ctx->completion_cond.notify_one();
 		};
 
 		{
 			std::lock_guard lock_score(mutex_async_transactions);
-			ensure(async_transactions.insert({req_id, trans_ctx}).second);
+			ensure(async_transactions.insert({req_id, trans_ctx}).second, "transaction_async_handler: async_transactions insert failed");
 		}
 
 		if (async)
@@ -736,13 +820,13 @@ namespace np
 		if (reply.is_error())
 			return error_and_disconnect("Malformed reply to GetBoardInfos command");
 
-		SceNpScoreBoardInfo board_info;
-
-		board_info.rankLimit = resp->rankLimit();
-		board_info.updateMode = resp->updateMode();
-		board_info.sortMode = resp->sortMode();
-		board_info.uploadNumLimit = resp->uploadNumLimit();
-		board_info.uploadSizeLimit = resp->uploadSizeLimit();
+		const SceNpScoreBoardInfo board_info{
+			.rankLimit = resp->rankLimit(),
+			.updateMode = resp->updateMode(),
+			.sortMode = resp->sortMode(),
+			.uploadNumLimit = resp->uploadNumLimit(),
+			.uploadSizeLimit = resp->uploadSizeLimit()
+		};
 
 		std::lock_guard lock_trans(mutex_async_transactions);
 		if (!async_transactions.count(req_id))
@@ -962,7 +1046,7 @@ namespace np
 			return false;
 		}
 
-		tdata->game_data_size = tdata->game_data.size();
+		tdata->game_data_size = ::size32(tdata->game_data);
 
 		usz to_copy = std::min(tdata->game_data.size(), static_cast<usz>(tdata->recvSize));
 		std::memcpy(tdata->score_data.get_ptr(), tdata->game_data.data(), to_copy);
@@ -996,7 +1080,7 @@ namespace np
 		transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
 	}
 
-	bool np_handler::handle_GetScoreResponse(u32 req_id, std::vector<u8>& reply_data)
+	bool np_handler::handle_GetScoreResponse(u32 req_id, std::vector<u8>& reply_data, bool simple_result)
 	{
 		std::lock_guard lock_trans(mutex_async_transactions);
 		if (!async_transactions.count(req_id))
@@ -1111,7 +1195,7 @@ namespace np
 		*tdata->totalRecord = resp->totalRecord();
 
 		if (fb_rankarray->size())
-			score_trans->result = not_an_error(fb_rankarray->size());
+			score_trans->result = simple_result ? CELL_OK : not_an_error(fb_rankarray->size());
 		else
 			score_trans->result = SCE_NP_COMMUNITY_SERVER_ERROR_GAME_RANKING_NOT_FOUND;
 
@@ -1175,7 +1259,7 @@ namespace np
 	}
 	bool np_handler::reply_get_score_npid(u32 req_id, std::vector<u8>& reply_data)
 	{
-		return handle_GetScoreResponse(req_id, reply_data);
+		return handle_GetScoreResponse(req_id, reply_data, true);
 	}
 
 	bool np_handler::handle_tus_no_data(u32 req_id, std::vector<u8>& reply_data)
@@ -1396,7 +1480,7 @@ namespace np
 			cur_status->lastChangedDate.tick = cur_fb_status->lastChangedDate();
 			string_to_npid(cur_fb_status->lastChangedAuthorId()->string_view(), cur_status->lastChangedAuthorId);
 			cur_status->info.infoSize = cur_fb_status->info() ? cur_fb_status->info()->size() : 0;
-			for (usz i = 0; i < static_cast<usz>(cur_status->info.infoSize); i++)
+			for (flatbuffers::uoffset_t i = 0; i < cur_status->info.infoSize; i++)
 			{
 				cur_status->info.data[i] = cur_fb_status->info()->Get(i);
 			}
@@ -1631,14 +1715,13 @@ namespace np
 
 		const auto* fb_status = fb_data->status();
 		ensure(fb_status && fb_status->ownerId());
+		if (!fb_status) return false; // Sanity check to make compiler happy
 
 		auto* data_status = tdata->dataStatus.get_ptr();
 		auto* data = static_cast<u8 *>(tdata->data.get_ptr());
 
 		memset(data_status, 0, sizeof(SceNpTusDataStatus));
 		string_to_npid(fb_status->ownerId()->string_view(), data_status->ownerId);
-
-		usz to_copy = 0;
 
 		if (fb_status->hasData())
 		{
@@ -1649,19 +1732,19 @@ namespace np
 			data_status->dataSize = fb_data->data() ? fb_data->data()->size() : 0;
 			data_status->info.infoSize = fb_status->info() ? fb_status->info()->size() : 0;
 			
-			to_copy = std::min(static_cast<usz>(data_status->dataSize), static_cast<usz>(tdata->recvSize));
-			for (usz i = 0; i < to_copy; i++)
+			const u32 to_copy = std::min<u32>(data_status->dataSize, tdata->recvSize);
+			for (flatbuffers::uoffset_t i = 0; i < to_copy; i++)
 			{
 				data[i] = fb_data->data()->Get(i);
 			}
-			const usz bytes_left = data_status->dataSize - to_copy;
+			const u32 bytes_left = data_status->dataSize - to_copy;
 			tdata->tus_data.reserve(bytes_left);
-			for (usz i = to_copy; i < bytes_left; i++)
+			for (flatbuffers::uoffset_t i = to_copy; i < bytes_left; i++)
 			{
 				tdata->tus_data.push_back(fb_data->data()->Get(i));
 			}
 
-			for (usz i = 0; i < data_status->info.infoSize; i++)
+			for (flatbuffers::uoffset_t i = 0; i < data_status->info.infoSize; i++)
 			{
 				fb_status->info()->Get(i);
 			}

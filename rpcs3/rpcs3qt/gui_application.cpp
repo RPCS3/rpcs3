@@ -20,6 +20,9 @@
 #include "Emu/Io/Null/null_camera_handler.h"
 #include "Emu/Io/Null/null_music_handler.h"
 #include "Emu/vfs_config.h"
+#include "util/init_mutex.hpp"
+#include "util/console.h"
+#include "Input/raw_mouse_handler.h"
 #include "trophy_notification_helper.h"
 #include "save_data_dialog.h"
 #include "msg_dialog_frame.h"
@@ -27,6 +30,7 @@
 #include "recvmessage_dialog_frame.h"
 #include "sendmessage_dialog_frame.h"
 #include "stylesheets.h"
+#include "progress_dialog.h"
 
 #include <QScreen>
 #include <QFontDatabase>
@@ -46,6 +50,10 @@
 
 #if defined(HAVE_VULKAN)
 #include "Emu/RSX/VK/VKGSRender.h"
+#endif
+
+#ifdef _WIN32
+#include "Windows.h"
 #endif
 
 LOG_CHANNEL(gui_log, "GUI");
@@ -107,6 +115,15 @@ bool gui_application::Init()
 	if (!m_emu_settings->Init())
 	{
 		return false;
+	}
+
+	if (m_gui_settings->GetValue(gui::m_attachCommandLine).toBool())
+	{
+		utils::attach_console(utils::console_stream::std_err, true);
+	}
+	else
+	{
+		m_gui_settings->SetValue(gui::m_attachCommandLine, false);
 	}
 
 	// The user might be set by cli arg. If not, set another user.
@@ -172,6 +189,11 @@ bool gui_application::Init()
 	{
 		discord::initialize();
 	}
+#endif
+
+	// Install native event filter
+#ifdef _WIN32 // Currently only needed for raw mouse input on windows
+	installNativeEventFilter(&m_native_event_filter);
 #endif
 
 	return true;
@@ -580,11 +602,19 @@ void gui_application::InitializeCallbacks()
 		{
 			if (fs::is_file(path))
 			{
-				m_sound_effect.stop();
-				m_sound_effect.setSource(QUrl::fromLocalFile(qstr(path)));
-				m_sound_effect.setVolume(g_cfg.audio.volume * 0.01f);
-				m_sound_effect.setLoopCount(1);
-				m_sound_effect.play();
+				// Allow to play 3 sound effects at the same time
+				while (m_sound_effects.size() >= 3)
+				{
+					m_sound_effects.pop_front();
+				}
+
+				// Create a new sound effect. Re-using the same object seems to be broken for some users starting with Qt 6.6.3.
+				std::unique_ptr<QSoundEffect> sound_effect = std::make_unique<QSoundEffect>();
+				sound_effect->setSource(QUrl::fromLocalFile(qstr(path)));
+				sound_effect->setVolume(g_cfg.audio.volume * 0.01f);
+				sound_effect->play();
+
+				m_sound_effects.push_back(std::move(sound_effect));
 			}
 		});
 	};
@@ -656,6 +686,95 @@ void gui_application::InitializeCallbacks()
 
 			mb->open();
 			update_timer->start(1000);
+		});
+	};
+
+	callbacks.on_save_state_progress = [this](std::shared_ptr<atomic_t<bool>> closed_successfully, stx::shared_ptr<utils::serial> ar_ptr, stx::atomic_ptr<std::string>* code_location, std::shared_ptr<void> init_mtx)
+	{
+		Emu.CallFromMainThread([this, closed_successfully, ar_ptr, code_location, init_mtx]
+		{
+			const auto half_seconds = std::make_shared<int>(1);
+
+			progress_dialog* pdlg = new progress_dialog(tr("Creating Save-State / Do Not Close RPCS3"), tr("Please wait..."), tr("Hide Progress"), 0, 100, true, m_main_window);
+			pdlg->setAutoReset(false);
+			pdlg->setAutoClose(true);
+			pdlg->show();
+
+			QString text_base = tr("%0 written, %1 second(s) passed%2");
+
+			pdlg->setLabelText(text_base.arg("0B").arg(1).arg(""));
+			pdlg->setAttribute(Qt::WA_DeleteOnClose);
+
+			QTimer* update_timer = new QTimer(pdlg);
+
+			connect(update_timer, &QTimer::timeout, [pdlg, ar_ptr, half_seconds, text_base, closed_successfully
+				, code_location, init_mtx, old_written = usz{0}, repeat_count = u32{0}]() mutable
+			{
+				std::string verbose_message;
+				usz bytes_written = 0;
+
+				{
+					auto init = static_cast<stx::init_mutex*>(init_mtx.get())->access();
+
+					if (!init)
+					{
+						pdlg->reject();
+						return;
+					}
+
+					if (auto str_ptr = code_location->load())
+					{
+						verbose_message = "\n" + *str_ptr;
+					}
+
+					*half_seconds += 1;
+
+					bytes_written = ar_ptr->get_size();
+				}
+
+				if (old_written == bytes_written)
+				{
+					if (repeat_count == 60)
+					{
+						if (verbose_message.empty())
+						{
+							verbose_message += "\n";
+						}
+						else
+						{
+							verbose_message += ". ";
+						}
+
+						verbose_message += "If Stuck, Report To Developers";
+					}
+					else
+					{
+						repeat_count++;
+					}
+				}
+				else
+				{
+					repeat_count = 0;
+				}
+
+				old_written = bytes_written;
+
+				pdlg->setLabelText(text_base.arg(gui::utils::format_byte_size(bytes_written)).arg(*half_seconds / 2).arg(qstr(verbose_message)));
+
+				// 300MB -> 50%, 600MB -> 75%, 1200MB -> 87.5% etc
+				const int percent = std::clamp(static_cast<int>(100. - 100. / std::pow(2., std::fmax(0.01, bytes_written * 1. / (300 * 1024 * 1024)))), 2, 100);
+
+				// Add a third of the remaining progress when the keyword is found
+				pdlg->setValue(verbose_message.find("Finalizing") != umax ? 100 - ((100 - percent) * 2 / 3) : percent);
+
+				if (*closed_successfully)
+				{
+					pdlg->reject();
+				}
+			});
+
+			pdlg->open();
+			update_timer->start(500);
 		});
 	};
 
@@ -973,4 +1092,27 @@ void gui_application::OnAppStateChanged(Qt::ApplicationState state)
 
 	// Delay pause so it won't immediately pause the emulated application
 	QTimer::singleShot(1000, this, pause_callback);
+}
+
+bool gui_application::native_event_filter::nativeEventFilter([[maybe_unused]] const QByteArray& eventType, [[maybe_unused]] void* message, [[maybe_unused]] qintptr* result)
+{
+#ifdef _WIN32
+	if (!Emu.IsRunning())
+	{
+		return false;
+	}
+
+	if (eventType == "windows_generic_MSG")
+	{
+		if (MSG* msg = static_cast<MSG*>(message); msg && msg->message == WM_INPUT)
+		{
+			if (auto* handler = g_fxo->try_get<MouseHandlerBase>(); handler && handler->type == mouse_handler::raw)
+			{
+				static_cast<raw_mouse_handler*>(handler)->handle_native_event(*msg);
+			}
+		}
+	}
+#endif
+
+	return false;
 }

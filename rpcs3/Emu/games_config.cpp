@@ -42,7 +42,7 @@ std::string games_config::get_path(const std::string& title_id) const
 	return {};
 }
 
-bool games_config::add_game(const std::string& key, const std::string& path)
+games_config::result games_config::add_game(const std::string& key, const std::string& path)
 {
 	std::lock_guard lock(m_mutex);
 
@@ -52,7 +52,7 @@ bool games_config::add_game(const std::string& key, const std::string& path)
 		if (it->second == path)
 		{
 			// Nothing to do
-			return true;
+			return result::exists;
 		}
 
 		it->second = path;
@@ -64,15 +64,15 @@ bool games_config::add_game(const std::string& key, const std::string& path)
 
 	m_dirty = true;
 
-	if (m_save_on_dirty)
+	if (m_save_on_dirty && !save_nl())
 	{
-		return save_nl();
+		return result::failure;
 	}
 
-	return true;
+	return result::success;
 }
 
-bool games_config::add_external_hdd_game(const std::string& key, std::string& path)
+games_config::result games_config::add_external_hdd_game(const std::string& key, std::string& path)
 {
 	// Don't use the C00 subdirectory in our game list
 	if (path.ends_with("/C00") || path.ends_with("\\C00"))
@@ -80,14 +80,21 @@ bool games_config::add_external_hdd_game(const std::string& key, std::string& pa
 		path = path.substr(0, path.size() - 4);
 	}
 
-	if (add_game(key, path))
+	const result res = add_game(key, path);
+
+	switch (res)
 	{
+	case result::failure:
+		cfg_log.error("Failed to save HG game location of title '%s' (error=%s)", key, fs::g_tls_error);
+		break;
+	case result::success:
 		cfg_log.notice("Registered HG game directory for title '%s': %s", key, path);
-		return true;
+		break;
+	case result::exists:
+		break;
 	}
 
-	cfg_log.error("Failed to save HG game location of title '%s' (error=%s)", key, fs::g_tls_error);
-	return false;
+	return res;
 }
 
 bool games_config::save_nl()
@@ -97,7 +104,7 @@ bool games_config::save_nl()
 
 	fs::pending_file temp(fs::get_config_dir() + "/games.yml");
 
-	if (temp.file && temp.file.write(out.c_str(), out.size()), temp.commit())
+	if (temp.file && temp.file.write(out.c_str(), out.size()) >= out.size() && temp.commit())
 	{
 		m_dirty = false;
 		return true;

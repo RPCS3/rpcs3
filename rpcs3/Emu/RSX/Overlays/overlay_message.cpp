@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "overlay_message.h"
-#include "Emu/RSX/RSXThread.h"
+#include "Emu/RSX/Common/time.hpp"
 
 namespace rsx
 {
@@ -30,12 +30,12 @@ namespace rsx
 
 			m_fade_in_animation.current = color4f(1.f, 1.f, 1.f, 0.f);
 			m_fade_in_animation.end = color4f(1.0f);
-			m_fade_in_animation.duration = 1.f;
+			m_fade_in_animation.duration_sec = 1.f;
 			m_fade_in_animation.active = true;
 
 			m_fade_out_animation.current = color4f(1.f);
 			m_fade_out_animation.end = color4f(1.f, 1.f, 1.f, 0.f);
-			m_fade_out_animation.duration = 1.f;
+			m_fade_out_animation.duration_sec = 1.f;
 			m_fade_out_animation.active = false;
 
 			back_color = color4f(0.25f, 0.25f, 0.25f, 0.85f);
@@ -71,7 +71,7 @@ namespace rsx
 			return m_text.text == text;
 		}
 
-		void message_item::set_pos(u16 _x, u16 _y)
+		void message_item::set_pos(s16 _x, s16 _y)
 		{
 			rounded_rect::set_pos(_x, _y);
 			m_text.set_pos(_x + m_margin, y + m_margin);
@@ -108,7 +108,7 @@ namespace rsx
 			return compiled_resources;
 		}
 
-		void message_item::update(usz index, u64 time, u16 y_offset)
+		void message_item::update(usz index, u64 timestamp_us, s16 y_offset)
 		{
 			if (m_cur_pos != index)
 			{
@@ -124,32 +124,31 @@ namespace rsx
 			if (m_fade_in_animation.active)
 			{
 				// We are fading in.
-				m_fade_in_animation.update(rsx::get_current_renderer()->vblank_count);
+				m_fade_in_animation.update(timestamp_us);
 			}
-			else if (time + u64(m_fade_out_animation.duration * 1'000'000) > get_expiration())
+			else if (timestamp_us + u64(m_fade_out_animation.duration_sec * 1'000'000) > get_expiration())
 			{
 				// We are fading out.
 
 				// Only activate the animation if the message hasn't expired yet (prevents glitches afterwards).
-				if (time <= get_expiration())
+				if (timestamp_us <= get_expiration())
 				{
 					m_fade_out_animation.active = true;
 				}
 
-				m_fade_out_animation.update(rsx::get_current_renderer()->vblank_count);
+				m_fade_out_animation.update(timestamp_us);
 			}
 			else if (m_fade_out_animation.active)
 			{
 				// We are fading out, but the expiration was extended.
 
 				// Reset the fade in animation to the state of the fade out animation to prevent opacity pop.
-				const usz current_frame = rsx::get_current_renderer()->vblank_count;
-				const f32 fade_out_progress = static_cast<f32>(m_fade_out_animation.get_remaining_frames(current_frame)) / static_cast<f32>(m_fade_out_animation.get_duration_in_frames());
-				const u64 fade_in_frames_done = u64(fade_out_progress * m_fade_in_animation.get_duration_in_frames());
+				const f32 fade_out_progress = static_cast<f32>(m_fade_out_animation.get_remaining_duration_us(timestamp_us)) / static_cast<f32>(m_fade_out_animation.get_total_duration_us());
+				const u64 fade_in_us_done = u64(fade_out_progress * m_fade_in_animation.get_total_duration_us());
 
-				m_fade_in_animation.reset(current_frame - fade_in_frames_done);
+				m_fade_in_animation.reset(timestamp_us - fade_in_us_done);
 				m_fade_in_animation.active = true;
-				m_fade_in_animation.update(current_frame);
+				m_fade_in_animation.update(timestamp_us);
 
 				// Reset the fade out animation.
 				m_fade_out_animation.reset();
@@ -187,7 +186,8 @@ namespace rsx
 
 			// Render reversed list. Oldest entries are furthest from the border
 			constexpr u16 spacing = 4;
-			u16 y_offset = 8, index = 0;
+			s16 y_offset = 8;
+			usz index = 0;
 			for (auto it = vis_set.rbegin(); it != vis_set.rend(); ++it, ++index)
 			{
 				if (origin == message_pin_location::top) [[ likely ]]
@@ -203,7 +203,7 @@ namespace rsx
 			}
 		}
 
-		void message::update()
+		void message::update(u64 /*timestamp_us*/)
 		{
 			if (!visible)
 			{

@@ -147,7 +147,7 @@ public:
 	{
 		using gvar = std::decay_t<decltype(*Var)>;
 
-		static_assert(std::is_same<u32, typename gvar::addr_type>::value, "Static variable registration: vm::gvar<T> expected");
+		static_assert(std::is_same_v<u32, typename gvar::addr_type>, "Static variable registration: vm::gvar<T> expected");
 
 		auto& info = access_static_variable(_module, vnid);
 
@@ -289,9 +289,9 @@ inline RT ppu_execute(ppu_thread& ppu, Args... args)
 	return func(ppu, args...);
 }
 
-#define BIND_FUNC_WITH_BLR(func) BIND_FUNC(func, if (cpu_flag::again - ppu.state) ppu.cia = static_cast<u32>(ppu.lr) & ~3)
+#define BIND_FUNC_WITH_BLR(func, _module) BIND_FUNC(func, if (cpu_flag::again - ppu.state) ppu.cia = static_cast<u32>(ppu.lr) & ~3; else ppu.current_module = _module)
 
-#define REG_FNID(_module, nid, func) ppu_module_manager::register_static_function<&func>(#_module, ppu_select_name(#func, nid), BIND_FUNC_WITH_BLR(func), ppu_generate_id(nid))
+#define REG_FNID(_module, nid, func) ppu_module_manager::register_static_function<&func>(#_module, ppu_select_name(#func, nid), BIND_FUNC_WITH_BLR(func, #_module), ppu_generate_id(nid))
 
 #define REG_FUNC(_module, func) REG_FNID(_module, #func, func)
 
@@ -299,7 +299,7 @@ inline RT ppu_execute(ppu_thread& ppu, Args... args)
 
 #define REG_VAR(_module, var) REG_VNID(_module, #var, var)
 
-#define REG_HIDDEN_FUNC(func) ppu_function_manager::register_function<decltype(&func), &func>(BIND_FUNC_WITH_BLR(func))
+#define REG_HIDDEN_FUNC(func) ppu_function_manager::register_function<decltype(&func), &func>(BIND_FUNC_WITH_BLR(func, ""))
 
 #define REG_HIDDEN_FUNC_PURE(func) ppu_function_manager::register_function<decltype(&func), &func>(func)
 

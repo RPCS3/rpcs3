@@ -268,7 +268,8 @@ public:
 	{
 		u64 all;
 		bf_t<s64, 0, 13> prio; // Thread priority (0..3071) (firs 12-bits)
-		bf_t<s64, 13, 51> order; // Thread enqueue order (last 52-bits)
+		bf_t<s64, 13, 50> order; // Thread enqueue order (last 52-bits)
+		bf_t<u64, 63, 1> preserve_bit; // Preserve value for savestates
 	};
 
 	atomic_t<ppu_prio_t> prio{};
@@ -276,6 +277,7 @@ public:
 	const u32 stack_addr; // Stack address
 
 	atomic_t<ppu_join_status> joiner; // Joining thread or status
+	u32 hw_sleep_time = 0; // Very specific delay for hardware threads switching, see lv2_obj::awake_unlocked for more details
 
 	lf_fifo<atomic_t<cmd64>, 127> cmd_queue; // Command queue for asynchronous operations.
 
@@ -293,6 +295,7 @@ public:
 	u64 syscall_args[8]{0}; // Last syscall arguments stored
 	const char* current_function{}; // Current function name for diagnosis, optimized for speed.
 	const char* last_function{}; // Sticky copy of current_function, is not cleared on function return
+	const char* current_module{}; // Current module name, for savestates.
 
 	const bool is_interrupt_thread; // True for interrupts-handler threads
 
@@ -382,10 +385,10 @@ struct ppu_gpr_cast_impl
 };
 
 template<typename T>
-struct ppu_gpr_cast_impl<T, std::enable_if_t<std::is_integral<T>::value || std::is_enum<T>::value>>
+struct ppu_gpr_cast_impl<T, std::enable_if_t<std::is_integral_v<T> || std::is_enum_v<T>>>
 {
 	static_assert(sizeof(T) <= 8, "Too big integral type for ppu_gpr_cast<>()");
-	static_assert(std::is_same<std::decay_t<T>, bool>::value == false, "bool type is deprecated in ppu_gpr_cast<>(), use b8 instead");
+	static_assert(std::is_same_v<std::decay_t<T>, bool> == false, "bool type is deprecated in ppu_gpr_cast<>(), use b8 instead");
 
 	static inline u64 to(const T& value)
 	{

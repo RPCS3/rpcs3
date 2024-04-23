@@ -156,6 +156,7 @@ error_code cellVoiceCreatePort(vm::ptr<u32> portId, vm::cptr<CellVoicePortParam>
 			return CELL_VOICE_ERROR_ARGUMENT_INVALID;
 		}
 		}
+		break;
 	}
 	case CELLVOICE_PORTTYPE_IN_MIC:
 	case CELLVOICE_PORTTYPE_OUT_SECONDARY:

@@ -1,6 +1,8 @@
 # DiscordRPC
 add_library(3rdparty_discordRPC INTERFACE)
 
+check_cxx_compiler_flag("-msse -msse2 -mcx16" COMPILER_X86)
+
 # We don't want Discord Rich Presence on the BSDs and other OSes
 if (USE_DISCORD_RPC AND (WIN32 OR CMAKE_SYSTEM MATCHES "Linux" OR APPLE) AND COMPILER_X86)
 	if (WIN32 AND NOT MSVC)

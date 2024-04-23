@@ -38,6 +38,7 @@ enum class mouse_handler
 {
 	null,
 	basic,
+	raw
 };
 
 enum class video_renderer
@@ -93,6 +94,18 @@ enum class audio_format_flag : unsigned
 	dts            = 0x00000008, // DTS 5.1 Ch.
 };
 
+enum class audio_channel_layout
+{
+	automatic,
+	mono,
+	stereo,
+	stereo_lfe,
+	quadraphonic,
+	quadraphonic_lfe,
+	surround_5_1,
+	surround_7_1,
+};
+
 enum class music_handler
 {
 	null,
@@ -127,6 +140,7 @@ enum class move_handler
 	null,
 	fake,
 	mouse,
+	raw_mouse,
 #ifdef HAVE_LIBEVDEV
 	gun
 #endif
@@ -151,6 +165,12 @@ enum class ghltar_handler
 	null,
 	one_controller,
 	two_controllers,
+};
+
+enum class gametablet_handler
+{
+	disabled,
+	enabled,
 };
 
 enum class microphone_handler
@@ -316,9 +336,15 @@ enum class output_scaling_mode
 enum class stereo_render_mode_options
 {
 	disabled,
-	anaglyph,
 	side_by_side,
-	over_under
+	over_under,
+	interlaced,
+	anaglyph_red_green,
+	anaglyph_red_blue,
+	anaglyph_red_cyan,
+	anaglyph_magenta_cyan,
+	anaglyph_trioscopic,
+	anaglyph_amber_blue,
 };
 
 enum class xfloat_accuracy

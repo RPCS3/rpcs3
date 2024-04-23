@@ -35,20 +35,28 @@ namespace vk
 		{
 			// Just use AMD-provided source with minimal modification
 			const char* shader_core =
-				#include "fsr_ubershader.glsl"
+				#include "Emu/RSX/Program/Upscalers/FSR1/fsr_ubershader.glsl"
 			;
 
 			// Replacements
 			const char* ffx_a_contents =
-				#include "fsr_ffx_a_flattened.inc"
+				#include "Emu/RSX/Program/Upscalers/FSR1/fsr_ffx_a_flattened.inc"
 			;
 
 			const char* ffx_fsr_contents =
-				#include "fsr_ffx_fsr1_flattened.inc"
+				#include "Emu/RSX/Program/Upscalers/FSR1/fsr_ffx_fsr1_flattened.inc"
 			;
 
+			const std::pair<std::string_view, std::string> replacement_table[] =
+			{
+				{ "%FFX_DEFINITIONS%", config_definitions },
+				{ "%FFX_A_IMPORT%", ffx_a_contents },
+				{ "%FFX_FSR_IMPORT%", ffx_fsr_contents },
+				{ "%push_block%", "push_constant" }
+			};
+
 			m_src = shader_core;
-			m_src = fmt::replace_all(m_src, { {"%FFX_DEFINITIONS%", config_definitions }, {"%FFX_A_IMPORT%", ffx_a_contents}, {"%FFX_FSR_IMPORT%", ffx_fsr_contents}});
+			m_src = fmt::replace_all(m_src, replacement_table);
 
 			// Fill with 0 to avoid sending incomplete/unused variables to the GPU
 			memset(m_constants_buf, 0, sizeof(m_constants_buf));

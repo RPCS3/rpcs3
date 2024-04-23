@@ -1007,7 +1007,7 @@ namespace vk
 			// Only do GPU-side conversion if occupancy is good
 			if (check_caps)
 			{
-				caps.supports_byteswap = (image_linear_size >= 1024);
+				caps.supports_byteswap = (image_linear_size >= 1024) || (image_setup_flags & source_is_gpu_resident);
 				caps.supports_hw_deswizzle = caps.supports_byteswap;
 				caps.supports_zero_copy = caps.supports_byteswap;
 				caps.supports_vtc_decoding = false;
@@ -1274,6 +1274,7 @@ namespace vk
 		{
 			.tile_base_address = tiled_region.base_address,
 			.tile_base_offset = range.start - tiled_region.base_address,
+			.tile_rw_offset = range.start - tiled_region.base_address,   // TODO
 			.tile_size = tiled_region.tile->size,
 			.tile_pitch = tiled_region.tile->pitch,
 			.bank = tiled_region.tile->bank,

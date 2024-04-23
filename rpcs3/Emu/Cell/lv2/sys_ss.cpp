@@ -266,6 +266,7 @@ error_code sys_ss_appliance_info_manager(u32 code, vm::ptr<u8> buffer)
 	case 0x19006:
 	{
 		// qa values (dex only) ??
+		[[fallthrough]];
 	}
 	default: sys_ss.todo("sys_ss_appliance_info_manager(code=0x%x, buffer=*0x%x)", code, buffer);
 	}
@@ -308,9 +309,9 @@ error_code sys_ss_secure_rtc(u64 cmd, u64 a2, u64 a3, u64 a4)
 			return 0x80010500; // bad packet id
 
 		// a3 is actual output, not 100% sure, but best guess is its tb val
-		vm::write64(a3, get_timebased_time());
+		vm::write64(::narrow<u32>(a3), get_timebased_time());
 		// a4 is a pointer to status, non 0 on error
-		vm::write64(a4, 0);
+		vm::write64(::narrow<u32>(a4), 0);
 		return CELL_OK;
 	}
 	else if (cmd == 0x3003)
@@ -497,7 +498,7 @@ error_code sys_ss_update_manager(u64 pkg_id, u64 a1, u64 a2, u64 a3, u64 a4, u64
 		if (!addr_ptr)
 			return CELL_EFAULT;
 
-		vm::write64(addr_ptr, 0x340ULL << 40); // 3.40
+		vm::write64(addr_ptr, 0x30040ULL << 32); // 3.40
 
 		break;
 	}

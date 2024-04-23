@@ -141,7 +141,7 @@ static u32 ppu_test(const be_t<u32>* ptr, const void* fend, ppu_pattern_array pa
 		cur++;
 	}
 
-	return (cur - ptr) * sizeof(*ptr);
+	return ::narrow<u32>((cur - ptr) * sizeof(*ptr));
 }
 
 static u32 ppu_test(const be_t<u32>* ptr, const void* fend, ppu_pattern_matrix pats)
@@ -696,7 +696,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 		const vm::cptr<void> seg_end = vm::cast(seg.addr + seg.size - 4);
 		auto ptr = get_ptr<u32>(_ptr);
 
-		for (vm::cptr<u32> _ptr = vm::cast(seg.addr); _ptr <= seg_end; advance(_ptr, ptr, 1))
+		for (; _ptr <= seg_end; advance(_ptr, ptr, 1))
 		{
 			const u32 value = *ptr;
 
@@ -925,6 +925,38 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 				//func.attr += ppu_attr::known_size;
 				//func.size = size;
 				//known_functions.emplace(func);
+			}
+		}
+	}
+
+	if (func_queue.empty() && segs[0].size >= 4u)
+	{
+		// Fallback, identify functions using callers (no jumptable detection, tail calls etc)
+		ppu_log.warning("Looking for PPU functions using callers. ('%s')", name);
+
+		vm::cptr<u32> _ptr = vm::cast(start);
+		const vm::cptr<void> seg_end = vm::cast(end - 4);
+
+		for (auto ptr = get_ptr<u32>(_ptr); _ptr <= seg_end; advance(_ptr, ptr, 1))
+		{
+			const u32 iaddr = _ptr.addr();
+
+			const ppu_opcode_t op{*ptr};
+			const ppu_itype::type type = s_ppu_itype.decode(op.opcode);
+
+			if (type == ppu_itype::B && op.lk && !op.aa)
+			{
+				const u32 target = iaddr + op.bt24;
+
+				if (target >= start && target < end && target != iaddr && target != iaddr + 4)
+				{
+					// TODO: Check full executability
+					if (s_ppu_itype.decode(get_ref<u32>(target)) != ppu_itype::UNK)
+					{
+						ppu_log.trace("Enqueued PPU function 0x%x using a caller at 0x%x", target, iaddr);
+						add_func(target, 0, 0);
+					}
+				}
 			}
 		}
 	}
@@ -1631,7 +1663,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 		}
 	}
 
-	ppu_log.notice("Function analysis: %zu functions (%zu enqueued)", fmap.size(), func_queue.size());
+	(fmap.empty() ? ppu_log.error : ppu_log.notice)("Function analysis: %zu functions (%zu enqueued)", fmap.size(), func_queue.size());
 
 	// Decompose functions to basic blocks
 	if (!entry && !sec_end)
@@ -2041,7 +2073,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 
 	if (per_instruction_bytes)
 	{
-		const bool error = per_instruction_bytes >= 200 && per_instruction_bytes / 4 >= utils::aligned_div<u32>(funcs.size(), 128);
+		const bool error = per_instruction_bytes >= 200 && per_instruction_bytes / 4 >= utils::aligned_div<u32>(::size32(funcs), 128);
 		(error ? ppu_log.error : ppu_log.notice)("%d instructions will be compiled on per-instruction basis in total", per_instruction_bytes / 4);
 	}
 

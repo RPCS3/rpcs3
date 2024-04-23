@@ -16,6 +16,7 @@ namespace gl
 		fence m_fence;
 
 	public:
+		virtual ~ring_buffer() = default;
 
 		virtual void bind() { buffer::bind(); }
 
@@ -36,7 +37,7 @@ namespace gl
 		virtual void notify();
 	};
 
-	class legacy_ring_buffer : public ring_buffer
+	class legacy_ring_buffer final : public ring_buffer
 	{
 		u32 m_mapped_bytes = 0;
 		u32 m_mapping_offset = 0;
@@ -62,7 +63,7 @@ namespace gl
 	// A non-persistent ring buffer
 	// Internally maps and unmaps data. Uses persistent storage just like the regular persistent variant
 	// Works around drivers that have issues using mapped data for specific sources (e.g AMD proprietary driver with index buffers)
-	class transient_ring_buffer : public ring_buffer
+	class transient_ring_buffer final : public ring_buffer
 	{
 		bool dirty = false;
 

@@ -167,14 +167,18 @@ void progress_dialog_server::operator()()
 		const char* text1 = nullptr;
 
 		const u64 start_time = get_system_time();
+		u64 wait_no_update_count = 0; 
 
 		// Update progress
 		while (!g_system_progress_stopping && thread_ctrl::state() != thread_state::aborting)
 		{
 			const auto& [text_new, ftotal_new, fdone_new, ftotal_bits_new, fknown_bits_new, ptotal_new, pdone_new] = get_state();
 
-			if (ftotal != ftotal_new || fdone != fdone_new || fknown_bits != fknown_bits_new || ftotal_bits != ftotal_bits_new || ptotal != ptotal_new || pdone != pdone_new || text_new != text1)
+			// Force-update every 20 seconds to update remaining time
+			if (wait_no_update_count == 100u * 20 || ftotal != ftotal_new || fdone != fdone_new || fknown_bits != fknown_bits_new
+				|| ftotal_bits != ftotal_bits_new || ptotal != ptotal_new || pdone != pdone_new || text_new != text1)
 			{
+				wait_no_update_count = 0;
 				ftotal = ftotal_new;
 				fdone  = fdone_new;
 				ftotal_bits = ftotal_bits_new;
@@ -201,7 +205,7 @@ void progress_dialog_server::operator()()
 					if (pdone < ptotal && g_cfg.misc.show_ppu_compilation_hint)
 					{
 						const u64 passed_usec = (get_system_time() - start_time);
-						const u64 remaining_usec = passed_usec * (pdone ? ((static_cast<u64>(ptotal) - pdone) / pdone) : ptotal);
+						const u64 remaining_usec = pdone ? utils::rational_mul<u64>(passed_usec, static_cast<u64>(ptotal) - pdone, pdone) : (passed_usec * ptotal);
 
 						// Only show compile notification if we estimate at least 100ms
 						if (remaining_usec >= 100'000ULL)
@@ -307,7 +311,8 @@ void progress_dialog_server::operator()()
 				break;
 			}
 
-			thread_ctrl::wait_for(10000);
+			thread_ctrl::wait_for(10'000);
+			wait_no_update_count++;
 		}
 
 		if (g_system_progress_stopping || thread_ctrl::state() == thread_state::aborting)

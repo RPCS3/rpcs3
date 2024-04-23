@@ -16,7 +16,7 @@
 extern std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object&, bool virtual_load, const std::string& path, s64 file_offset, utils::serial* ar = nullptr);
 
 extern bool ppu_initialize(const ppu_module&, bool check_only = false, u64 file_size = 0);
-extern void ppu_finalize(const ppu_module&);
+extern void ppu_finalize(const ppu_module& info, bool force_mem_release = false);
 
 LOG_CHANNEL(sys_overlay);
 
@@ -36,7 +36,15 @@ static error_code overlay_load_module(vm::ptr<u32> ovlmid, const std::string& vp
 
 	u128 klic = g_fxo->get<loaded_npdrm_keys>().last_key();
 
-	ppu_exec_object obj = decrypt_self(std::move(src), reinterpret_cast<u8*>(&klic), nullptr, true);
+	src = decrypt_self(std::move(src), reinterpret_cast<u8*>(&klic), nullptr, true);
+
+	if (!src)
+	{
+		return {CELL_ENOEXEC, +"Failed to decrypt file"};
+	}
+
+	ppu_exec_object obj = std::move(src);
+	src.close();
 
 	if (obj != elf_error::ok)
 	{
@@ -72,8 +80,11 @@ fs::file make_file_view(fs::file&& file, u64 offset, u64 size);
 
 std::shared_ptr<void> lv2_overlay::load(utils::serial& ar)
 {
-	const std::string path = vfs::get(ar.pop<std::string>());
-	const s64 offset = ar;
+	const std::string vpath = ar.pop<std::string>();
+	const std::string path = vfs::get(vpath);
+	const s64 offset = ar.pop<s64>();
+
+	sys_overlay.success("lv2_overlay::load(): vpath='%s', path='%s', offset=0x%x", vpath, path, offset);
 
 	std::shared_ptr<lv2_overlay> ovlm;
 
@@ -84,11 +95,19 @@ std::shared_ptr<void> lv2_overlay::load(utils::serial& ar)
 		u128 klic = g_fxo->get<loaded_npdrm_keys>().last_key();
 		file = make_file_view(std::move(file), offset, umax);
 		ovlm = ppu_load_overlay(ppu_exec_object{ decrypt_self(std::move(file), reinterpret_cast<u8*>(&klic)) }, false, path, 0, &ar).first;
-		ensure(ovlm);
+
+		if (!ovlm)
+		{
+			fmt::throw_exception("lv2_overlay::load(): ppu_load_overlay() failed. (vpath='%s', offset=0x%x)", vpath, offset);
+		}
+	}
+	else if (!g_cfg.savestate.state_inspection_mode.get())
+	{
+		fmt::throw_exception("lv2_overlay::load(): Failed to find file. (vpath='%s', offset=0x%x)", vpath, offset);
 	}
 	else
 	{
-		ensure(g_cfg.savestate.state_inspection_mode.get());
+		sys_overlay.error("lv2_overlay::load(): Failed to find file. (vpath='%s', offset=0x%x)", vpath, offset);
 	}
 
 	return ovlm;
@@ -97,7 +116,11 @@ std::shared_ptr<void> lv2_overlay::load(utils::serial& ar)
 void lv2_overlay::save(utils::serial& ar)
 {
 	USING_SERIALIZATION_VERSION(lv2_prx_overlay);
-	ar(vfs::retrieve(path), offset);
+
+	const std::string vpath = vfs::retrieve(path);
+	(vpath.empty() ? sys_overlay.error : sys_overlay.success)("lv2_overlay::save(): vpath='%s', offset=0x%x", vpath, offset);
+
+	ar(vpath, offset);
 }
 
 error_code sys_overlay_load_module(vm::ptr<u32> ovlmid, vm::cptr<char> path, u64 flags, vm::ptr<u32> entry)

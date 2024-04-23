@@ -250,9 +250,7 @@ struct emulated_pads_config : cfg::node
 			cfg_log.fatal("Failed to create path: %s (%s)", cfg_name, fs::g_tls_error);
 		}
 
-		fs::pending_file cfg_file(cfg_name);
-
-		if (!cfg_file.file || (cfg_file.file.write(to_string()), !cfg_file.commit()))
+		if (!cfg::node::save(cfg_name))
 		{
 			cfg_log.error("Failed to save %s config to '%s' (error=%s)", cfg_id, cfg_name, fs::g_tls_error);
 		}

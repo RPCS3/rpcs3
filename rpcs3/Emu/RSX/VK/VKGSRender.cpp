@@ -18,6 +18,7 @@
 #include "Emu/Memory/vm_locking.h"
 
 #include "../Program/program_state_cache2.hpp"
+#include "../Program/SPIRVCommon.h"
 
 #include "util/asm.hpp"
 
@@ -265,8 +266,11 @@ namespace vk
 		}
 
 		if (rsx::method_registers.cull_face_enabled())
+		{
 			properties.state.enable_cull_face(vk::get_cull_face(rsx::method_registers.cull_face_mode()));
+		}
 
+		const auto host_write_mask = rsx::get_write_output_mask(rsx::method_registers.surface_color());
 		for (uint index = 0; index < num_draw_buffers; ++index)
 		{
 			bool color_mask_b = rsx::method_registers.color_mask_b(index);
@@ -286,7 +290,12 @@ namespace vk
 				break;
 			}
 
-			properties.state.set_color_mask(index, color_mask_r, color_mask_g, color_mask_b, color_mask_a);
+			properties.state.set_color_mask(
+				index,
+				color_mask_r && host_write_mask[0],
+				color_mask_g && host_write_mask[1],
+				color_mask_b && host_write_mask[2],
+				color_mask_a && host_write_mask[3]);
 		}
 
 		// LogicOp and Blend are mutually exclusive. If both are enabled, LogicOp takes precedence.
@@ -685,7 +694,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	null_buffer = std::make_unique<vk::buffer>(*m_device, 32, memory_map.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0, VMM_ALLOCATION_POOL_UNDEFINED);
 	null_buffer_view = std::make_unique<vk::buffer_view>(*m_device, null_buffer->value, VK_FORMAT_R8_UINT, 0, 32);
 
-	vk::initialize_compiler_context();
+	spirv::initialize_compiler_context();
 	vk::initialize_pipe_compiler(g_cfg.video.shader_compiler_threads_count);
 
 	m_prog_buffer = std::make_unique<vk::program_cache>
@@ -910,9 +919,9 @@ VKGSRender::~VKGSRender()
 	m_flush_requests.clear_pending_flag();
 
 	// Shaders
-	vk::destroy_pipe_compiler();      // Ensure no pending shaders being compiled
-	vk::finalize_compiler_context();  // Shut down the glslang compiler
-	m_prog_buffer->clear();           // Delete shader objects
+	vk::destroy_pipe_compiler();        // Ensure no pending shaders being compiled
+	spirv::finalize_compiler_context(); // Shut down the glslang compiler
+	m_prog_buffer->clear();             // Delete shader objects
 	m_shader_interpreter.destroy();
 
 	m_persistent_attribute_storage.reset();
@@ -1039,6 +1048,8 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 		}
 
 		bool has_queue_ref = false;
+		std::function<void()> data_transfer_completed_callback{};
+
 		if (!is_current_thread()) [[likely]]
 		{
 			// Always submit primary cb to ensure state consistency (flush pending changes such as image transitions)
@@ -1065,13 +1076,19 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 		{
 			// Wait for the RSX thread to process request if it hasn't already
 			m_flush_requests.producer_wait();
+
+			data_transfer_completed_callback = [&]()
+			{
+				m_flush_requests.remove_one();
+				has_queue_ref = false;
+			};
 		}
 
-		m_texture_cache.flush_all(*m_secondary_cb_list.next(), result);
+		m_texture_cache.flush_all(*m_secondary_cb_list.next(), result, data_transfer_completed_callback);
 
 		if (has_queue_ref)
 		{
-			// Release RSX thread
+			// Release RSX thread if it's still locked
 			m_flush_requests.remove_one();
 		}
 	}
@@ -1482,7 +1499,10 @@ void VKGSRender::clear_surface(u32 mask)
 	if (mask & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK) ctx |= rsx::framebuffer_creation_context::context_clear_depth;
 	init_buffers(rsx::framebuffer_creation_context{ctx});
 
-	if (!m_graphics_state.test(rsx::rtt_config_valid)) return;
+	if (!m_graphics_state.test(rsx::rtt_config_valid))
+	{
+		return;
+	}
 
 	//float depth_clear = 1.f;
 	u32   stencil_clear = 0;
@@ -1957,7 +1977,8 @@ void VKGSRender::do_local_task(rsx::FIFO::state state)
 
 	if (m_overlay_manager)
 	{
-		if (!in_begin_end && async_flip_requested & flip_request::native_ui && !is_stopped())
+		const auto should_ignore = in_begin_end && state != rsx::FIFO::state::empty;
+		if ((async_flip_requested & flip_request::native_ui) && !should_ignore && !is_stopped())
 		{
 			flush_command_queue(true);
 			rsx::display_flip_info_t info{};

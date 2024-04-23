@@ -24,14 +24,30 @@ enum
 
 enum CellPamfStreamType
 {
-	CELL_PAMF_STREAM_TYPE_AVC        = 0,
-	CELL_PAMF_STREAM_TYPE_M2V        = 1,
-	CELL_PAMF_STREAM_TYPE_ATRAC3PLUS = 2,
-	CELL_PAMF_STREAM_TYPE_PAMF_LPCM  = 3,
-	CELL_PAMF_STREAM_TYPE_AC3        = 4,
-	CELL_PAMF_STREAM_TYPE_USER_DATA  = 5,
-	CELL_PAMF_STREAM_TYPE_VIDEO      = 20,
-	CELL_PAMF_STREAM_TYPE_AUDIO      = 21,
+	CELL_PAMF_STREAM_TYPE_AVC             = 0,
+	CELL_PAMF_STREAM_TYPE_M2V             = 1,
+	CELL_PAMF_STREAM_TYPE_ATRAC3PLUS      = 2,
+	CELL_PAMF_STREAM_TYPE_PAMF_LPCM       = 3,
+	CELL_PAMF_STREAM_TYPE_AC3             = 4,
+	CELL_PAMF_STREAM_TYPE_USER_DATA       = 5,
+	CELL_PAMF_STREAM_TYPE_PSMF_AVC        = 6,
+	CELL_PAMF_STREAM_TYPE_PSMF_ATRAC3PLUS = 7,
+	CELL_PAMF_STREAM_TYPE_PSMF_LPCM       = 8,
+	CELL_PAMF_STREAM_TYPE_PSMF_USER_DATA  = 9,
+	CELL_PAMF_STREAM_TYPE_VIDEO           = 20,
+	CELL_PAMF_STREAM_TYPE_AUDIO           = 21,
+	CELL_PAMF_STREAM_TYPE_UNK             = 22,
+};
+
+enum PamfStreamCodingType : u8
+{
+	PAMF_STREAM_CODING_TYPE_M2V        = 0x02,
+	PAMF_STREAM_CODING_TYPE_AVC        = 0x1b,
+	PAMF_STREAM_CODING_TYPE_PAMF_LPCM  = 0x80,
+	PAMF_STREAM_CODING_TYPE_AC3        = 0x81,
+	PAMF_STREAM_CODING_TYPE_ATRAC3PLUS = 0xdc,
+	PAMF_STREAM_CODING_TYPE_USER_DATA  = 0xdd,
+	PAMF_STREAM_CODING_TYPE_PSMF       = 0xff,
 };
 
 enum
@@ -144,7 +160,7 @@ struct CellCodecTimeStamp
 	be_t<u32> lower;
 };
 
-static const u64 CODEC_TS_INVALID = 0xffffffffffffffffull;
+constexpr u32 CODEC_TS_INVALID = umax;
 
 // Entry point information
 struct CellPamfEp
@@ -155,13 +171,21 @@ struct CellPamfEp
 	be_t<u64> rpnOffset;
 };
 
+struct CellPamfEpUnk // Speculative name, only used in two undocumented functions
+{
+	CellPamfEp ep;
+	be_t<u64> nextRpnOffset;
+};
+
+CHECK_SIZE(CellPamfEpUnk, 0x20);
+
 // Entry point iterator
 struct CellPamfEpIterator
 {
 	b8 isPamf;
 	be_t<u32> index;
 	be_t<u32> num;
-	be_t<u32> pCur_addr;
+	vm::bcptr<void> pCur;
 };
 
 struct CellCodecEsFilterId
@@ -252,18 +276,23 @@ struct CellPamfLpcmInfo
 	be_t<u16> bitsPerSample;
 };
 
+CHECK_SIZE(CellPamfLpcmInfo, 8);
 
+// PAMF file structs, everything here is not aligned (LLE uses exclusively u8 pointers)
 
 struct PamfStreamHeader
 {
-	u8 type;
-	u8 unknown[3];
-	u8 fid_major;
-	u8 fid_minor;
-	u8 unknown1;
-	u8 unknown2;
-	be_t<u32> ep_offset; // offset of EP section in header
-	be_t<u32> ep_num; // count of EPs
+	u8 stream_coding_type;
+
+	u8 reserved[3];
+
+	u8 stream_id;
+	u8 private_stream_id; // for streams multiplexed as private data streams (stream_id == 0xbd)
+
+	be_t<u16, 1> p_std_buffer; // 2 bits: unused ??? "00", 1 bit: P_STD_buffer_scale, 13 bits: P_STD_buffer_size
+
+	be_t<u32, 1> ep_offset; // offset of EP section in header
+	be_t<u32, 1> ep_num; // count of EPs
 
 	union
 	{
@@ -276,32 +305,20 @@ struct PamfStreamHeader
 			u8 levelIdc;
 			u8 x2; // contains frameMbsOnlyFlag, videoSignalInfoFlag, frameRateInfo
 			u8 aspectRatioIdc;
-			u32 x4; // 0 (not used)
-			be_t<u16> horizontalSize; // divided by 16
-			be_t<u16> verticalSize; // divided by 16
-			be_t<u16> frameCropLeftOffset;
-			be_t<u16> frameCropRightOffset;
-			be_t<u16> frameCropTopOffset;
-			be_t<u16> frameCropBottomOffset;
-
-			union
-			{
-				struct
-				{
-					be_t<u16> width;
-					be_t<u16> height;
-				}
-				sarInfo;
-
-				struct
-				{
-					u8 x14; // contains videoFormat and videoFullRangeFlag
-					u8 colourPrimaries;
-					u8 transferCharacteristics;
-					u8 matrixCoefficients;
-				};
-			};
-
+			be_t<u16, 1> sarWidth;
+			be_t<u16, 1> sarHeight;
+			u8 reserved1;
+			u8 horizontalSize; // divided by 16
+			u8 reserved2;
+			u8 verticalSize; // divided by 16
+			be_t<u16, 1> frameCropLeftOffset;
+			be_t<u16, 1> frameCropRightOffset;
+			be_t<u16, 1> frameCropTopOffset;
+			be_t<u16, 1> frameCropBottomOffset;
+			u8 x14; // contains videoFormat and videoFullRangeFlag
+			u8 colourPrimaries;
+			u8 transferCharacteristics;
+			u8 matrixCoefficients;
 			u8 x18; // contains entropyCodingModeFlag, deblockingFilterFlag, minNumSlicePerPictureIdc, nfwIdc
 			u8 maxMeanBitrate;
 		}
@@ -314,13 +331,15 @@ struct PamfStreamHeader
 			u8 x1; // not used
 			u8 x2; // contains progressiveSequence, videoSignalInfoFlag, frameRateInfo
 			u8 aspectRatioIdc;
-			be_t<u16> sarWidth;
-			be_t<u16> sarHeight;
-			be_t<u16> horizontalSize;
-			be_t<u16> verticalSize;
-			be_t<u16> horizontalSizeValue;
-			be_t<u16> verticalSizeValue;
-			u32 x10; // not used
+			be_t<u16, 1> sarWidth;
+			be_t<u16, 1> sarHeight;
+			u8 reserved1;
+			u8 horizontalSize; // in units of 16 pixels
+			u8 reserved2;
+			u8 verticalSize; // in units of 16 pixels
+			be_t<u16, 1> horizontalSizeValue;
+			be_t<u16, 1> verticalSizeValue;
+			be_t<u32, 1> x10; // not used
 			u8 x14; // contains videoFormat and videoFullRangeFlag
 			u8 colourPrimaries;
 			u8 transferCharacteristics;
@@ -331,7 +350,7 @@ struct PamfStreamHeader
 		// Audio specific information
 		struct
 		{
-			u16 unknown; // 0
+			be_t<u16, 1> unknown; // 0
 			u8 channels; // number of channels (1, 2, 6, 8)
 			u8 freq; // 1 (always 48000)
 			u8 bps; // LPCM only
@@ -340,59 +359,236 @@ struct PamfStreamHeader
 	};
 };
 
-CHECK_SIZE_ALIGN(PamfStreamHeader, 48, 4);
+CHECK_SIZE_ALIGN(PamfStreamHeader, 48, 1);
+
+struct PamfGroup
+{
+	be_t<u32, 1> size; // doesn't include this field
+
+	u8 reserved;
+
+	u8 stream_num; // same value as in PamfSequenceInfo
+	PamfStreamHeader streams;
+};
+
+CHECK_SIZE_ALIGN(PamfGroup, 6 + sizeof(PamfStreamHeader), 1);
+
+struct PamfGroupingPeriod
+{
+	be_t<u32, 1> size; // doesn't include this field
+
+	be_t<u16, 1> start_pts_high; // always 0, greatest valid pts is UINT32_MAX
+	be_t<u32, 1> start_pts_low;  // same value as in PamfSequenceInfo, since there is only one PamfGroupingPeriod
+	be_t<u16, 1> end_pts_high;   // unused due to bug
+	be_t<u32, 1> end_pts_low;    // same value as in PamfSequenceInfo, since there is only one PamfGroupingPeriod
+
+	u8 reserved;
+
+	u8 group_num; // always 1
+	PamfGroup groups;
+};
+
+CHECK_SIZE_ALIGN(PamfGroupingPeriod, 0x12 + sizeof(PamfGroup), 1);
+
+struct PamfSequenceInfo
+{
+	be_t<u32, 1> size; // doesn't include this field
+
+	be_t<u16, 1> reserved1;
+
+	be_t<u16, 1> start_pts_high; // always 0, greatest valid pts is UINT32_MAX
+	be_t<u32, 1> start_pts_low;  // Presentation Time Stamp (start)
+	be_t<u16, 1> end_pts_high;   // always 0, greatest valid pts is UINT32_MAX
+	be_t<u32, 1> end_pts_low;    // Presentation Time Stamp (end)
+
+	be_t<u32, 1> mux_rate_bound;  // multiplex bitrate in units of 50 bytes per second
+	be_t<u32, 1> std_delay_bound; // buffer delay in units of 1/90000 seconds
+
+	be_t<u32, 1> total_stream_num; // across all groups; since there is always only one group, this is equal stream_count in PamfGroup
+
+	u8 reserved2;
+
+	u8 grouping_period_num; // always 1
+	PamfGroupingPeriod grouping_periods;
+};
+
+CHECK_SIZE_ALIGN(PamfSequenceInfo, 0x20 + sizeof(PamfGroupingPeriod), 1);
 
 struct PamfHeader
 {
-	u32 magic; //"PAMF"
-	u32 version; //"0041" (is it const?)
-	be_t<u32> data_offset; //== 2048 >> 11, PAMF headers seem to be always 2048 bytes in size
-	be_t<u32> data_size; //== ((fileSize - 2048) >> 11)
-	u32 reserved[16];
-	be_t<u32> table_size; //== size of mapping-table
-	u16 reserved1;
-	be_t<u16> start_pts_high;
-	be_t<u32, 2> start_pts_low; //Presentation Time Stamp (start)
-	be_t<u16> end_pts_high;
-	be_t<u32, 2> end_pts_low; //Presentation Time Stamp (end)
-	be_t<u32, 2> mux_rate_max; //== 0x01D470 (400 bps per unit, == 48000000 bps)
-	be_t<u32, 2> mux_rate_min; //== 0x0107AC (?????)
-	u16 reserved2; // ?????
-	u8 reserved3;
-	u8 stream_count; //total stream count (reduced to 1 byte)
-	be_t<u16> unk1; //== 1 (?????)
-	be_t<u32, 2> table_data_size; //== table_size - 0x20 == 0x14 + (0x30 * total_stream_num) (?????)
-	//TODO: check relative offset of stream structs (could be from 0x0c to 0x14, currently 0x14)
-	be_t<u16> start_pts_high2; //????? (probably same values)
-	be_t<u32, 2> start_pts_low2; //?????
-	be_t<u16> end_pts_high2; //?????
-	be_t<u32, 2> end_pts_low2; //?????
-	be_t<u32> unk2; //== 0x10000 (?????)
-	be_t<u16> unk3; // ?????
-	be_t<u16> unk4; // == stream_count
-	//==========================
-	PamfStreamHeader stream_headers[256];
+	be_t<u32, 1> magic;       // "PAMF"
+	be_t<u32, 1> version;     // "0040" or "0041"
+	be_t<u32, 1> header_size; // in units of 2048 bytes
+	be_t<u32, 1> data_size;   // in units of 2048 bytes
+
+	be_t<u32, 1> psmf_marks_offset; // always 0
+	be_t<u32, 1> psmf_marks_size;   // always 0
+	be_t<u32, 1> unk_offset;        // always 0
+	be_t<u32, 1> unk_size;          // always 0
+
+	u8 reserved[0x30];
+
+	PamfSequenceInfo seq_info;
 };
 
-CHECK_SIZE_ALIGN(PamfHeader, 136 + sizeof(PamfHeader::stream_headers), 4);
+CHECK_SIZE_ALIGN(PamfHeader, 0x50 + sizeof(PamfSequenceInfo), 1);
 
 struct PamfEpHeader
 {
-	be_t<u16> value0; //mixed indexN (probably left 2 bits) and nThRefPictureOffset
-	be_t<u16> pts_high;
-	be_t<u32> pts_low;
-	be_t<u32> rpnOffset;
+	be_t<u16, 1> value0;    // 2 bits: indexN, 1 bit: unused, 13 bits: nThRefPictureOffset in units of 2048 bytes
+	be_t<u16, 1> pts_high;  // always 0, greatest valid pts is UINT32_MAX
+	be_t<u32, 1> pts_low;
+	be_t<u32, 1> rpnOffset; // in units of 2048 bytes
 };
 
-CHECK_SIZE_ALIGN(PamfEpHeader, 12, 4);
+CHECK_SIZE_ALIGN(PamfEpHeader, 12, 1);
 
-// not directly accessed by virtual CPU, fields are unknown
+// PSMF specific
+
+struct PsmfStreamHeader
+{
+	u8 stream_id;
+	u8 private_stream_id; // for streams multiplexed as private data streams (stream_id == 0xbd)
+
+	be_t<u16, 1> p_std_buffer; // 2 bits: unused ??? "00", 1 bit: P_STD_buffer_scale, 13 bits: P_STD_buffer_size
+
+	be_t<u32, 1> ep_offset; // offset of EP section in header
+	be_t<u32, 1> ep_num; // count of EPs
+
+	union
+	{
+		// Video specific information
+		struct
+		{
+			u8 horizontalSize; // in units of 16 pixels
+			u8 verticalSize;   // in units of 16 pixels
+		}
+		video;
+
+		// Audio specific information
+		struct
+		{
+			be_t<u16, 1> unknown;    // 0
+			u8 channelConfiguration; // 1 = mono, 2 = stereo
+			u8 samplingFrequency;    // 2 = 44.1kHz
+		}
+		audio;
+	};
+};
+
+CHECK_SIZE_ALIGN(PsmfStreamHeader, 0x10, 1);
+
+struct PsmfGroup
+{
+	be_t<u32, 1> size; // doesn't include this field
+
+	u8 reserved;
+
+	u8 stream_num; // same value as in PsmfSequenceInfo
+	PsmfStreamHeader streams;
+};
+
+CHECK_SIZE_ALIGN(PsmfGroup, 6 + sizeof(PsmfStreamHeader), 1);
+
+struct PsmfGroupingPeriod
+{
+	be_t<u32, 1> size; // doesn't include this field
+
+	be_t<u16, 1> start_pts_high; // always 0, greatest valid pts is UINT32_MAX
+	be_t<u32, 1> start_pts_low;  // same value as in PsmfSequenceInfo, since there is only one PsmfGroupingPeriod
+	be_t<u16, 1> end_pts_high;   // unused due to bug
+	be_t<u32, 1> end_pts_low;    // same value as in PsmfSequenceInfo, since there is only one PsmfGroupingPeriod
+
+	u8 reserved;
+
+	u8 group_num; // always 1
+	PsmfGroup groups;
+};
+
+CHECK_SIZE_ALIGN(PsmfGroupingPeriod, 0x12 + sizeof(PsmfGroup), 1);
+
+struct PsmfSequenceInfo
+{
+	be_t<u32, 1> size; // doesn't include this field
+
+	be_t<u16, 1> start_pts_high; // always 0, greatest valid pts is UINT32_MAX
+	be_t<u32, 1> start_pts_low;  // Presentation Time Stamp (start)
+	be_t<u16, 1> end_pts_high;   // always 0, greatest valid pts is UINT32_MAX
+	be_t<u32, 1> end_pts_low;    // Presentation Time Stamp (end)
+
+	be_t<u32, 1> mux_rate_bound;  // multiplex bitrate in units of 50 bytes per second
+	be_t<u32, 1> std_delay_bound; // buffer delay in units of 1/90000 seconds
+
+	u8 total_stream_num; // across all groups; since there is always only one group, this is equal stream_count in PsmfGroup
+
+	u8 grouping_period_num; // always 1
+	PsmfGroupingPeriod grouping_periods;
+};
+
+CHECK_SIZE_ALIGN(PsmfSequenceInfo, 0x1a + sizeof(PsmfGroupingPeriod), 1);
+
+struct PsmfHeader
+{
+	be_t<u32, 1> magic;       // "PSMF"
+	be_t<u32, 1> version;     // "0012", "0013", "0014" or "0015"
+	be_t<u32, 1> header_size; // not scaled, unlike PAMF
+	be_t<u32, 1> data_size;   // not scaled, unlike PAMF
+
+	be_t<u32, 1> psmf_marks_offset;
+	be_t<u32, 1> psmf_marks_size;
+	be_t<u32, 1> unk[2];
+
+	u8 reserved[0x30];
+
+	PsmfSequenceInfo seq_info;
+};
+
+CHECK_SIZE_ALIGN(PsmfHeader, 0x50 + sizeof(PsmfSequenceInfo), 1);
+
+struct PsmfEpHeader
+{
+	be_t<u16, 1> value0;    // 2 bits: indexN, 2 bits: unused, 11 bits: nThRefPictureOffset in units of 1024 bytes, 1 bit: pts_high
+	be_t<u32, 1> pts_low;
+	be_t<u32, 1> rpnOffset; // in units of 2048 bytes
+};
+
+CHECK_SIZE_ALIGN(PsmfEpHeader, 10, 1);
+
 struct CellPamfReader
 {
-	vm::cptr<PamfHeader> pAddr;
-	s32 stream;
-	u64 fileSize;
-	u32 internalData[28];
+	be_t<u64> headerSize;
+	be_t<u64> dataSize;
+	be_t<u32> attribute;
+	be_t<u16> isPsmf;
+	be_t<u16> version;
+	be_t<u32> currentGroupingPeriodIndex;
+	be_t<u32> currentGroupIndex;
+	be_t<u32> currentStreamIndex;
+
+	union
+	{
+		struct
+		{
+			vm::bcptr<PamfHeader> header;
+			vm::bcptr<PamfSequenceInfo> sequenceInfo;
+			vm::bcptr<PamfGroupingPeriod> currentGroupingPeriod;
+			vm::bcptr<PamfGroup> currentGroup;
+			vm::bcptr<PamfStreamHeader> currentStream;
+		}
+		pamf;
+
+		struct
+		{
+			vm::bcptr<PsmfHeader> header;
+			vm::bcptr<PsmfSequenceInfo> sequenceInfo;
+			vm::bcptr<PsmfGroupingPeriod> currentGroupingPeriod;
+			vm::bcptr<PsmfGroup> currentGroup;
+			vm::bcptr<PsmfStreamHeader> currentStream;
+		}
+		psmf;
+	};
+
+	u32 reserved[18];
 };
 
 CHECK_SIZE(CellPamfReader, 128);

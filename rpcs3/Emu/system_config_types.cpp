@@ -10,6 +10,7 @@ void fmt_class_string<mouse_handler>::format(std::string& out, u64 arg)
 		{
 		case mouse_handler::null: return "Null";
 		case mouse_handler::basic: return "Basic";
+		case mouse_handler::raw: return "Raw";
 		}
 
 		return unknown;
@@ -113,6 +114,27 @@ void fmt_class_string<audio_renderer>::format(std::string& out, u64 arg)
 #ifdef HAVE_FAUDIO
 		case audio_renderer::faudio: return "FAudio";
 #endif
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<audio_channel_layout>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](audio_channel_layout value)
+	{
+		switch (value)
+		{
+		case audio_channel_layout::automatic: return "Automatic";
+		case audio_channel_layout::mono: return "Mono";
+		case audio_channel_layout::stereo: return "Stereo";
+		case audio_channel_layout::stereo_lfe: return "Stereo LFE";
+		case audio_channel_layout::quadraphonic: return "Quadraphonic";
+		case audio_channel_layout::quadraphonic_lfe: return "Quadraphonic LFE";
+		case audio_channel_layout::surround_5_1: return "Surround 5.1";
+		case audio_channel_layout::surround_7_1: return "Surround 7.1";
 		}
 
 		return unknown;
@@ -412,6 +434,7 @@ void fmt_class_string<move_handler>::format(std::string& out, u64 arg)
 		case move_handler::null: return "Null";
 		case move_handler::fake: return "Fake";
 		case move_handler::mouse: return "Mouse";
+		case move_handler::raw_mouse: return "Raw Mouse";
 #ifdef HAVE_LIBEVDEV
 		case move_handler::gun: return "Gun";
 #endif
@@ -478,6 +501,21 @@ void fmt_class_string<ghltar_handler>::format(std::string& out, u64 arg)
 		case ghltar_handler::null: return "Null";
 		case ghltar_handler::one_controller: return "1 controller";
 		case ghltar_handler::two_controllers: return "2 controllers";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<gametablet_handler>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto value)
+	{
+		switch (value)
+		{
+		case gametablet_handler::disabled: return "Disabled";
+		case gametablet_handler::enabled: return "Enabled";
 		}
 
 		return unknown;
@@ -640,9 +678,15 @@ void fmt_class_string<stereo_render_mode_options>::format(std::string& out, u64 
 			switch (value)
 			{
 			case stereo_render_mode_options::disabled: return "Disabled";
-			case stereo_render_mode_options::anaglyph: return "Anaglyph";
 			case stereo_render_mode_options::side_by_side: return "Side-by-Side";
 			case stereo_render_mode_options::over_under: return "Over-Under";
+			case stereo_render_mode_options::interlaced: return "Interlaced";
+			case stereo_render_mode_options::anaglyph_red_green: return "Anaglyph Red-Green";
+			case stereo_render_mode_options::anaglyph_red_blue: return "Anaglyph Red-Blue";
+			case stereo_render_mode_options::anaglyph_red_cyan: return "Anaglyph Red-Cyan";
+			case stereo_render_mode_options::anaglyph_magenta_cyan: return "Anaglyph Magenta-Cyan";
+			case stereo_render_mode_options::anaglyph_trioscopic: return "Anaglyph Trioscopic";
+			case stereo_render_mode_options::anaglyph_amber_blue: return "Anaglyph Amber-Blue";
 			}
 
 			return unknown;

@@ -865,11 +865,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	const auto apply_fsr_specific_options = [r_creator, this]()
 	{
-		const bool is_vulkan = (ui->renderBox->currentText() == r_creator->Vulkan.name);
 		const auto [text, value] = get_data(ui->outputScalingMode, ui->outputScalingMode->currentIndex());
 		const bool fsr_selected = static_cast<output_scaling_mode>(value) == output_scaling_mode::fsr;
-		ui->fsrSharpeningStrength->setEnabled(is_vulkan && fsr_selected);
-		ui->fsrSharpeningStrengthReset->setEnabled(is_vulkan && fsr_selected);
+		ui->fsrSharpeningStrength->setEnabled(fsr_selected);
+		ui->fsrSharpeningStrengthReset->setEnabled(fsr_selected);
 	};
 
 	// Handle connects to disable specific checkboxes that depend on GUI state.
@@ -962,7 +961,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		const std::string selected_device = m_emu_settings->GetSetting(emu_settings_type::AudioDevice);
 		int device_index = 0;
 
-		for (auto& dev : dev_array)
+		for (const audio_device_enumerator::audio_device& dev : dev_array)
 		{
 			const QString cur_item = qstr(dev.id);
 			ui->audioDeviceBox->addItem(qstr(dev.name), cur_item);
@@ -1008,6 +1007,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		get_audio_output_devices(false);
 		change_audio_output_device(0); // Set device to 'Default'
 	});
+	
+	m_emu_settings->EnhanceComboBox(ui->combo_audio_channel_layout, emu_settings_type::AudioChannelLayout);
+	SubscribeTooltip(ui->gb_audio_channel_layout, tooltips.settings.audio_channel_layout);
 
 	connect(ui->combo_audio_format, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
 	{
@@ -1215,6 +1217,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceComboBox(ui->ghltarBox, emu_settings_type::GHLtar);
 	SubscribeTooltip(ui->gb_ghltar_emulated, tooltips.settings.ghltar);
 
+	m_emu_settings->EnhanceComboBox(ui->gameTabletBox, emu_settings_type::GameTablet);
+	SubscribeTooltip(ui->gametablet_emulated, tooltips.settings.gametablet);
+
 	m_emu_settings->EnhanceCheckBox(ui->backgroundInputBox, emu_settings_type::BackgroundInput);
 	SubscribeTooltip(ui->backgroundInputBox, tooltips.settings.background_input);
 
@@ -1232,6 +1237,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	SubscribeTooltip(ui->loadSdlMappings, tooltips.settings.sdl_mappings);
 #else
 	ui->loadSdlMappings->setVisible(false);
+#endif
+
+#ifndef _WIN32
+	// Remove raw mouse handler
+	remove_item(ui->mouseHandlerBox, static_cast<int>(mouse_handler::raw), static_cast<int>(g_cfg.io.mouse.def));
+	remove_item(ui->moveBox, static_cast<int>(move_handler::raw_mouse), static_cast<int>(g_cfg.io.move.def));
 #endif
 
 	// Midi
@@ -1468,6 +1479,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceCheckBox(ui->compatibleSavestates, emu_settings_type::CompatibleEmulationSavestateMode);
 	SubscribeTooltip(ui->compatibleSavestates, tooltips.settings.compatible_savestates);
+
+	m_emu_settings->EnhanceCheckBox(ui->spuProfiler, emu_settings_type::SPUProfiler);
+	SubscribeTooltip(ui->spuProfiler, tooltips.settings.spu_profiler);
 
 	m_emu_settings->EnhanceCheckBox(ui->silenceAllLogs, emu_settings_type::SilenceAllLogs);
 	SubscribeTooltip(ui->silenceAllLogs, tooltips.settings.silence_all_logs);
@@ -2070,6 +2084,24 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		SubscribeTooltip(ui->gb_updates, tooltips.settings.check_update_start);
 		SubscribeTooltip(ui->gb_uuid, tooltips.settings.uuid);
 
+		// Pad navigation
+		SubscribeTooltip(ui->cb_pad_navigation, tooltips.settings.pad_navigation);
+		SubscribeTooltip(ui->cb_global_pad_navigation, tooltips.settings.global_navigation);
+		ui->cb_pad_navigation->setChecked(m_gui_settings->GetValue(gui::nav_enabled).toBool());
+		ui->cb_global_pad_navigation->setChecked(m_gui_settings->GetValue(gui::nav_global).toBool());
+#if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
+		connect(ui->cb_pad_navigation, &QCheckBox::toggled, [this](bool checked)
+		{
+			m_gui_settings->SetValue(gui::nav_enabled, checked);
+		});
+		connect(ui->cb_global_pad_navigation, &QCheckBox::toggled, [this](bool checked)
+		{
+			m_gui_settings->SetValue(gui::nav_global, checked);
+		});
+#else
+		ui->gb_gui_pad_input->setEnabled(false);
+#endif
+
 		// Discord:
 		SubscribeTooltip(ui->useRichPresence, tooltips.settings.use_rich_presence);
 		SubscribeTooltip(ui->discordState, tooltips.settings.discord_state);
@@ -2307,6 +2339,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceCheckBox(ui->disableVertexCache, emu_settings_type::DisableVertexCache);
 	SubscribeTooltip(ui->disableVertexCache, tooltips.settings.disable_vertex_cache);
+
+	m_emu_settings->EnhanceCheckBox(ui->forceHwMSAAResolve, emu_settings_type::ForceHwMSAAResolve);
+	SubscribeTooltip(ui->forceHwMSAAResolve, tooltips.settings.force_hw_MSAA);
 
 	// Checkboxes: core debug options
 	m_emu_settings->EnhanceCheckBox(ui->alwaysStart, emu_settings_type::StartOnBoot);

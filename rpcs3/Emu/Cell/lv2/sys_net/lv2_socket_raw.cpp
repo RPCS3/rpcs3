@@ -10,13 +10,13 @@ lv2_socket_raw::lv2_socket_raw(lv2_socket_family family, lv2_socket_type type, l
 }
 
 lv2_socket_raw::lv2_socket_raw(utils::serial& ar, lv2_socket_type type)
-	: lv2_socket(ar, type)
+	: lv2_socket(stx::make_exact(ar), type)
 {
 }
 
 void lv2_socket_raw::save(utils::serial& ar)
 {
-	static_cast<lv2_socket*>(this)->save(ar, true);
+	lv2_socket::save(ar, true);
 }
 
 std::tuple<bool, s32, std::shared_ptr<lv2_socket>, sys_net_sockaddr> lv2_socket_raw::accept([[maybe_unused]] bool is_lock)
@@ -97,7 +97,7 @@ std::optional<std::tuple<s32, std::vector<u8>, sys_net_sockaddr>> lv2_socket_raw
 std::optional<s32> lv2_socket_raw::sendto([[maybe_unused]] s32 flags, [[maybe_unused]] const std::vector<u8>& buf, [[maybe_unused]] std::optional<sys_net_sockaddr> opt_sn_addr, [[maybe_unused]] bool is_lock)
 {
 	sys_net.todo("lv2_socket_raw::sendto");
-	return buf.size();
+	return ::size32(buf);
 }
 
 std::optional<s32> lv2_socket_raw::sendmsg([[maybe_unused]] s32 flags, [[maybe_unused]] const sys_net_msghdr& msg, [[maybe_unused]] bool is_lock)

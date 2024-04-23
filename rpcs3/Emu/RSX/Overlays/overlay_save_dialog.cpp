@@ -2,7 +2,6 @@
 #include "overlay_save_dialog.h"
 #include "Utilities/date_time.h"
 #include "Emu/System.h"
-#include "Emu/RSX/RSXThread.h"
 
 namespace rsx
 {
@@ -105,19 +104,19 @@ namespace rsx
 			m_description->back_color.a    = 0.f;
 			m_time_thingy->back_color.a    = 0.f;
 
-			fade_animation.duration = 0.15f;
+			fade_animation.duration_sec = 0.15f;
 
 			return_code = selection_code::canceled;
 		}
 
-		void save_dialog::update()
+		void save_dialog::update(u64 timestamp_us)
 		{
 			m_time_thingy->set_text(date_time::current_time());
 			m_time_thingy->auto_resize();
 
 			if (fade_animation.active)
 			{
-				fade_animation.update(rsx::get_current_renderer()->vblank_count);
+				fade_animation.update(timestamp_us);
 			}
 		}
 

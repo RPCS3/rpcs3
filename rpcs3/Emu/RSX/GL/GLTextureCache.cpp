@@ -98,7 +98,7 @@ namespace gl
 		{
 			// This format is completely worthless to CPU processing algorithms where cache lines on die are linear.
 			// If this is happening, usually it means it was not a planned readback (e.g shared pages situation)
-			rsx_log.warning("[Performance warning] CPU readback of swizzled data");
+			rsx_log.trace("[Performance warning] CPU readback of swizzled data");
 
 			// Read-modify-write to avoid corrupting already resident memory outside texture region
 			std::vector<u8> tmp_data(rsx_pitch * height);

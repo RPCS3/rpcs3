@@ -36,7 +36,7 @@ error_code sys_semaphore_create(ppu_thread& ppu, vm::ptr<u32> sem_id, vm::ptr<sy
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_semaphore.warning("sys_semaphore_create(sem_id=*0x%x, attr=*0x%x, initial_val=%d, max_val=%d)", sem_id, attr, initial_val, max_val);
+	sys_semaphore.trace("sys_semaphore_create(sem_id=*0x%x, attr=*0x%x, initial_val=%d, max_val=%d)", sem_id, attr, initial_val, max_val);
 
 	if (!sem_id || !attr)
 	{
@@ -61,6 +61,11 @@ error_code sys_semaphore_create(ppu_thread& ppu, vm::ptr<u32> sem_id, vm::ptr<sy
 
 	const u64 ipc_key = lv2_obj::get_key(_attr);
 
+	if (ipc_key)
+	{
+		sys_semaphore.warning("sys_semaphore_create(sem_id=*0x%x, attr=*0x%x, initial_val=%d, max_val=%d): IPC=0x%016x", sem_id, attr, initial_val, max_val, ipc_key);
+	}
+
 	if (auto error = lv2_obj::create<lv2_sema>(_attr.pshared, ipc_key, _attr.flags, [&]
 	{
 		return std::make_shared<lv2_sema>(protocol, ipc_key, _attr.name_u64, max_val, initial_val);
@@ -79,7 +84,7 @@ error_code sys_semaphore_destroy(ppu_thread& ppu, u32 sem_id)
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_semaphore.warning("sys_semaphore_destroy(sem_id=0x%x)", sem_id);
+	sys_semaphore.trace("sys_semaphore_destroy(sem_id=0x%x)", sem_id);
 
 	const auto sem = idm::withdraw<lv2_obj, lv2_sema>(sem_id, [](lv2_sema& sema) -> CellError
 	{
@@ -95,6 +100,11 @@ error_code sys_semaphore_destroy(ppu_thread& ppu, u32 sem_id)
 	if (!sem)
 	{
 		return CELL_ESRCH;
+	}
+
+	if (sem->key)
+	{
+		sys_semaphore.warning("sys_semaphore_destroy(sem_id=0x%x): IPC=0x%016x", sem_id, sem->key);
 	}
 
 	if (sem.ret)

@@ -49,6 +49,8 @@ struct pad_data_internal
 	u32 device_type;
 	u32 pclass_type;
 	u32 pclass_profile;
+
+	ENABLE_BITWISE_SERIALIZATION;
 };
 
 struct CellPadInfo

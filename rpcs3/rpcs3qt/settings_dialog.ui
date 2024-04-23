@@ -1162,6 +1162,18 @@
              </widget>
             </item>
             <item>
+             <widget class="QGroupBox" name="gb_audio_channel_layout">
+              <property name="title">
+               <string>Audio Output Format</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_audio_channel_layout_layout">
+               <item>
+                <widget class="QComboBox" name="combo_audio_channel_layout"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
              <widget class="QGroupBox" name="gb_audio_provider">
               <property name="title">
                <string>Audio Provider</string>
@@ -1719,6 +1731,18 @@
             </layout>
            </widget>
           </item>
+          <item row="4" column="1">
+           <widget class="QGroupBox" name="gametablet_emulated">
+            <property name="title">
+             <string>GameTablet</string>
+            </property>
+            <layout class="QVBoxLayout" name="gametablet_emulated_layout">
+             <item>
+              <widget class="QComboBox" name="gameTabletBox"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
           <item row="3" column="2">
            <widget class="QGroupBox" name="gb_midi_1">
             <property name="title">
@@ -1738,7 +1762,7 @@
             </layout>
            </widget>
           </item>
-          <item row="6" column="2">
+          <item row="5" column="2">
            <widget class="QGroupBox" name="gb_midi_3">
             <property name="title">
              <string>Emulated MIDI Device 3</string>
@@ -1757,7 +1781,7 @@
             </layout>
            </widget>
           </item>
-          <item row="5" column="2">
+          <item row="4" column="2">
            <widget class="QGroupBox" name="gb_midi_2">
             <property name="title">
              <string>Emulated MIDI Device 2</string>
@@ -1776,7 +1800,7 @@
             </layout>
            </widget>
           </item>
-          <item row="5" column="0" rowspan="2">
+          <item row="4" column="0" rowspan="2">
            <widget class="QGroupBox" name="gb_additional_io_settings">
             <property name="title">
              <string>Additional Settings</string>
@@ -2429,6 +2453,13 @@
                 </widget>
                </item>
                <item>
+                <widget class="QCheckBox" name="spuProfiler">
+                 <property name="text">
+                  <string>SPU Profiler</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QCheckBox" name="silenceAllLogs">
                  <property name="text">
                   <string>Silence All Logs</string>
@@ -2654,6 +2685,13 @@
                 <widget class="QCheckBox" name="allowHostGPULabels">
                  <property name="text">
                   <string>Allow Host GPU Labels (Experimental)</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="forceHwMSAAResolve">
+                 <property name="text">
+                  <string>Force Hardware MSAA Resolve</string>
                  </property>
                 </widget>
                </item>
@@ -3823,6 +3861,29 @@
                    </widget>
                   </item>
                  </layout>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="gb_gui_pad_input">
+              <property name="title">
+               <string>Pad Input</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_gui_pad_input_layout">
+               <item>
+                <widget class="QCheckBox" name="cb_pad_navigation">
+                 <property name="text">
+                  <string>Enable Pad Navigation</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="cb_global_pad_navigation">
+                 <property name="text">
+                  <string>Allow Global Pad Navigation</string>
+                 </property>
                 </widget>
                </item>
               </layout>

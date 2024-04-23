@@ -7,6 +7,8 @@
 #include "Emu/Cell/lv2/sys_event.h"
 #include "Emu/IdManager.h"
 
+#include <cmath>
+
 LOG_CHANNEL(cellCamera);
 
 template <>
@@ -326,7 +328,7 @@ u32 get_buffer_size_by_format(s32 format, s32 width, s32 height)
 		break;
 	}
 
-	return width * height * bytes_per_pixel;
+	return ::narrow<u32>(static_cast<u64>(std::ceil(width * height * bytes_per_pixel)));
 }
 
 
@@ -496,7 +498,7 @@ error_code cellCameraEnd()
 
 error_code cellCameraOpen(s32 dev_num, vm::ptr<CellCameraInfo> info)
 {
-	cellCamera.todo("cellCameraOpen(dev_num=%d, info=*0x%x)", dev_num, info);
+	cellCamera.notice("cellCameraOpen(dev_num=%d, info=*0x%x)", dev_num, info);
 
 	if (!info)
 	{
@@ -637,7 +639,7 @@ error_code cellCameraOpenPost()
 
 error_code cellCameraClose(s32 dev_num)
 {
-	cellCamera.todo("cellCameraClose(dev_num=%d)", dev_num);
+	cellCamera.notice("cellCameraClose(dev_num=%d)", dev_num);
 
 	if (error_code error = check_init_and_open(dev_num))
 	{
@@ -712,7 +714,7 @@ error_code cellCameraGetDeviceGUID(s32 dev_num, vm::ptr<u32> guid)
 
 error_code cellCameraGetType(s32 dev_num, vm::ptr<s32> type)
 {
-	cellCamera.todo("cellCameraGetType(dev_num=%d, type=*0x%x)", dev_num, type);
+	cellCamera.trace("cellCameraGetType(dev_num=%d, type=*0x%x)", dev_num, type);
 
 	auto& g_camera = g_fxo->get<camera_thread>();
 
@@ -778,7 +780,7 @@ s32 cellCameraIsAvailable(s32 dev_num)
 
 s32 cellCameraIsAttached(s32 dev_num)
 {
-	cellCamera.warning("cellCameraIsAttached(dev_num=%d)", dev_num);
+	cellCamera.trace("cellCameraIsAttached(dev_num=%d)", dev_num);
 
 	if (g_cfg.io.camera == camera_handler::null)
 	{
@@ -877,7 +879,7 @@ s32 cellCameraIsStarted(s32 dev_num)
 error_code cellCameraGetAttribute(s32 dev_num, s32 attrib, vm::ptr<u32> arg1, vm::ptr<u32> arg2)
 {
 	const auto attr_name = get_camera_attr_name(attrib);
-	cellCamera.todo("cellCameraGetAttribute(dev_num=%d, attrib=%d=%s, arg1=*0x%x, arg2=*0x%x)", dev_num, attrib, attr_name, arg1, arg2);
+	cellCamera.notice("cellCameraGetAttribute(dev_num=%d, attrib=%d=%s, arg1=*0x%x, arg2=*0x%x)", dev_num, attrib, attr_name, arg1, arg2);
 
 	auto& g_camera = g_fxo->get<camera_thread>();
 
@@ -989,7 +991,7 @@ error_code cellCameraResetAttribute()
 
 error_code cellCameraGetBufferSize(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
 {
-	cellCamera.todo("cellCameraGetBufferSize(dev_num=%d, info=*0x%x)", dev_num, info);
+	cellCamera.notice("cellCameraGetBufferSize(dev_num=%d, info=*0x%x)", dev_num, info);
 
 	auto& g_camera = g_fxo->get<camera_thread>();
 
@@ -1083,7 +1085,7 @@ error_code check_get_camera_info(s32 dev_num, bool is_valid_info_struct)
 
 error_code cellCameraGetBufferInfo(s32 dev_num, vm::ptr<CellCameraInfo> info)
 {
-	cellCamera.todo("cellCameraGetBufferInfo(dev_num=%d, info=0x%x)", dev_num, info);
+	cellCamera.notice("cellCameraGetBufferInfo(dev_num=%d, info=0x%x)", dev_num, info);
 
 	// called by cellCameraGetBufferInfoEx
 
@@ -1110,7 +1112,7 @@ error_code cellCameraGetBufferInfo(s32 dev_num, vm::ptr<CellCameraInfo> info)
 
 error_code cellCameraGetBufferInfoEx(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
 {
-	cellCamera.todo("cellCameraGetBufferInfoEx(dev_num=%d, info=0x%x)", dev_num, info);
+	cellCamera.notice("cellCameraGetBufferInfoEx(dev_num=%d, info=0x%x)", dev_num, info);
 
 	// calls cellCameraGetBufferInfo
 
@@ -1242,7 +1244,7 @@ error_code cellCameraResetPost()
 
 error_code cellCameraStart(s32 dev_num)
 {
-	cellCamera.todo("cellCameraStart(dev_num=%d)", dev_num);
+	cellCamera.notice("cellCameraStart(dev_num=%d)", dev_num);
 
 	if (error_code error = check_init_and_open(dev_num))
 	{
@@ -1289,7 +1291,7 @@ error_code cellCameraStartPost()
 
 error_code cellCameraRead(s32 dev_num, vm::ptr<u32> frame_num, vm::ptr<u32> bytes_read)
 {
-	cellCamera.notice("cellCameraRead(dev_num=%d, frame_num=*0x%x, bytes_read=*0x%x)", dev_num, frame_num, bytes_read);
+	cellCamera.trace("cellCameraRead(dev_num=%d, frame_num=*0x%x, bytes_read=*0x%x)", dev_num, frame_num, bytes_read);
 
 	vm::ptr<CellCameraReadEx> read_ex = vm::make_var<CellCameraReadEx>({});
 
@@ -1319,7 +1321,7 @@ error_code cellCameraRead2()
 
 error_code cellCameraReadEx(s32 dev_num, vm::ptr<CellCameraReadEx> read)
 {
-	cellCamera.notice("cellCameraReadEx(dev_num=%d, read=0x%x)", dev_num, read);
+	cellCamera.trace("cellCameraReadEx(dev_num=%d, read=0x%x)", dev_num, read);
 
 	auto& g_camera = g_fxo->get<camera_thread>();
 
@@ -1419,7 +1421,7 @@ error_code cellCameraReadComplete(s32 dev_num, u32 bufnum, u32 arg2)
 
 error_code cellCameraStop(s32 dev_num)
 {
-	cellCamera.todo("cellCameraStop(dev_num=%d)", dev_num);
+	cellCamera.notice("cellCameraStop(dev_num=%d)", dev_num);
 
 	if (error_code error = check_init_and_open(dev_num))
 	{
@@ -1464,7 +1466,7 @@ error_code cellCameraStopPost()
 
 error_code cellCameraSetNotifyEventQueue(u64 key)
 {
-	cellCamera.todo("cellCameraSetNotifyEventQueue(key=0x%x)", key);
+	cellCamera.notice("cellCameraSetNotifyEventQueue(key=0x%x)", key);
 
 	auto& g_camera = g_fxo->get<camera_thread>();
 
@@ -1490,7 +1492,7 @@ error_code cellCameraSetNotifyEventQueue(u64 key)
 
 error_code cellCameraRemoveNotifyEventQueue(u64 key)
 {
-	cellCamera.todo("cellCameraRemoveNotifyEventQueue(key=0x%x)", key);
+	cellCamera.notice("cellCameraRemoveNotifyEventQueue(key=0x%x)", key);
 
 	auto& g_camera = g_fxo->get<camera_thread>();
 
@@ -1516,7 +1518,7 @@ error_code cellCameraRemoveNotifyEventQueue(u64 key)
 
 error_code cellCameraSetNotifyEventQueue2(u64 key, u64 source, u64 flag)
 {
-	cellCamera.todo("cellCameraSetNotifyEventQueue2(key=0x%x, source=%d, flag=%d)", key, source, flag);
+	cellCamera.notice("cellCameraSetNotifyEventQueue2(key=0x%x, source=%d, flag=%d)", key, source, flag);
 
 	auto& g_camera = g_fxo->get<camera_thread>();
 
@@ -1542,7 +1544,7 @@ error_code cellCameraSetNotifyEventQueue2(u64 key, u64 source, u64 flag)
 
 error_code cellCameraRemoveNotifyEventQueue2(u64 key)
 {
-	cellCamera.todo("cellCameraRemoveNotifyEventQueue2(key=0x%x)", key);
+	cellCamera.notice("cellCameraRemoveNotifyEventQueue2(key=0x%x)", key);
 
 	return cellCameraRemoveNotifyEventQueue(key);
 }

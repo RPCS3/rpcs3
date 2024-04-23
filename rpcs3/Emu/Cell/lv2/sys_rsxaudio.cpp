@@ -1374,6 +1374,7 @@ rsxaudio_backend_thread::emu_audio_cfg rsxaudio_backend_thread::get_emu_cfg()
 		.enable_time_stretching = static_cast<bool>(g_cfg.audio.enable_time_stretching),
 		.dump_to_file = static_cast<bool>(g_cfg.audio.dump_to_file),
 		.channels = out_ch_cnt,
+		.channel_layout = g_cfg.audio.channel_layout,
 		.renderer = g_cfg.audio.renderer,
 		.provider = g_cfg.audio.provider,
 		.avport = convert_avport(g_cfg.audio.rsxaudio_port)
@@ -1730,11 +1731,13 @@ void rsxaudio_backend_thread::backend_init(const rsxaudio_state& ra_state, const
 	const AudioChannelCnt ch_cnt = static_cast<AudioChannelCnt>(std::min<u32>(static_cast<u32>(port_cfg.ch_cnt), static_cast<u32>(emu_cfg.channels)));
 
 	f64 cb_frame_len = 0.0;
-	u32 backend_ch_cnt = 2;
-	if (backend->Open(emu_cfg.audio_device, port_cfg.freq, sample_size, ch_cnt))
+	audio_channel_layout backend_channel_layout = audio_channel_layout::stereo;
+
+	if (backend->Open(emu_cfg.audio_device, port_cfg.freq, sample_size, ch_cnt, emu_cfg.channel_layout))
 	{
 		cb_frame_len = backend->GetCallbackFrameLen();
-		backend_ch_cnt = backend->get_channels();
+		backend_channel_layout = backend->get_channel_layout();
+		sys_rsxaudio.notice("Opened audio backend (sampling_rate=%d, sample_size=%d, channels=%d, layout=%s)", backend->get_sampling_rate(), backend->get_sample_size(), backend->get_channels(), backend->get_channel_layout());
 	}
 	else
 	{
@@ -1775,7 +1778,7 @@ void rsxaudio_backend_thread::backend_init(const rsxaudio_state& ra_state, const
 		{
 			val.freq = static_cast<u32>(port_cfg.freq);
 			val.input_ch_cnt = static_cast<u32>(port_cfg.ch_cnt);
-			val.output_ch_cnt = backend_ch_cnt;
+			val.output_channel_layout = static_cast<u8>(backend_channel_layout);
 			val.convert_to_s16 = emu_cfg.convert_to_s16;
 			val.avport_idx = emu_cfg.avport;
 			val.ready = true;
@@ -1834,14 +1837,16 @@ u32 rsxaudio_backend_thread::write_data_callback(u32 bytes, void* buf)
 
 	if (cb_cfg.ready && !mute_state[static_cast<u8>(cb_cfg.avport_idx)] && Emu.IsRunning())
 	{
-		const u32 bytes_ch_adjusted = bytes / cb_cfg.output_ch_cnt * cb_cfg.input_ch_cnt;
+		const audio_channel_layout output_channel_layout = static_cast<audio_channel_layout>(cb_cfg.output_channel_layout);
+		const u32 output_ch_cnt = AudioBackend::default_layout_channel_count(output_channel_layout);
+		const u32 bytes_ch_adjusted = bytes / output_ch_cnt * cb_cfg.input_ch_cnt;
 		const u32 bytes_from_rb = cb_cfg.convert_to_s16 ? bytes_ch_adjusted / static_cast<u32>(AudioSampleSize::S16) * static_cast<u32>(AudioSampleSize::FLOAT) : bytes_ch_adjusted;
 
 		ensure(callback_tmp_buf.size() * static_cast<u32>(AudioSampleSize::FLOAT) >= bytes_from_rb);
 
 		const u32 byte_cnt = static_cast<u32>(ringbuf.pop(callback_tmp_buf.data(), bytes_from_rb, true));
 		const u32 sample_cnt = byte_cnt / static_cast<u32>(AudioSampleSize::FLOAT);
-		const u32 sample_cnt_out = sample_cnt / cb_cfg.input_ch_cnt * cb_cfg.output_ch_cnt;
+		const u32 sample_cnt_out = sample_cnt / cb_cfg.input_ch_cnt * output_ch_cnt;
 
 		// Buffer is in weird state - drop acquired data
 		if (sample_cnt == 0 || sample_cnt % cb_cfg.input_ch_cnt != 0)
@@ -1858,7 +1863,7 @@ u32 rsxaudio_backend_thread::write_data_callback(u32 bytes, void* buf)
 		}
 
 		// Downmix if necessary
-		AudioBackend::downmix(sample_cnt, cb_cfg.input_ch_cnt, cb_cfg.output_ch_cnt, callback_tmp_buf.data(), callback_tmp_buf.data());
+		AudioBackend::downmix(sample_cnt, cb_cfg.input_ch_cnt, output_channel_layout, callback_tmp_buf.data(), callback_tmp_buf.data());
 
 		if (cb_cfg.target_volume != cb_cfg.current_volume)
 		{

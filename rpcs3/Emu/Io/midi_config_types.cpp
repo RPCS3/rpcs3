@@ -13,6 +13,7 @@ void fmt_class_string<midi_device_type>::format(std::string& out, u64 arg)
 		case midi_device_type::guitar: return "Guitar (17 frets)";
 		case midi_device_type::guitar_22fret: return "Guitar (22 frets)";
 		case midi_device_type::keyboard: return "Keyboard";
+		case midi_device_type::drums: return "Drums";
 		}
 
 		return unknown;

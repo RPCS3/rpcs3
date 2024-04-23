@@ -45,7 +45,7 @@ CellError lv2_cond::on_id_create()
 
 	ensure(!!Emu.DeserialManager());
 
-	Emu.DeferDeserialization([this]()
+	Emu.PostponeInitCode([this]()
 	{
 		if (!mutex)
 		{
@@ -74,7 +74,7 @@ error_code sys_cond_create(ppu_thread& ppu, vm::ptr<u32> cond_id, u32 mutex_id, 
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_cond.warning("sys_cond_create(cond_id=*0x%x, mutex_id=0x%x, attr=*0x%x)", cond_id, mutex_id, attr);
+	sys_cond.trace("sys_cond_create(cond_id=*0x%x, mutex_id=0x%x, attr=*0x%x)", cond_id, mutex_id, attr);
 
 	auto mutex = idm::get<lv2_obj, lv2_mutex>(mutex_id);
 
@@ -86,6 +86,11 @@ error_code sys_cond_create(ppu_thread& ppu, vm::ptr<u32> cond_id, u32 mutex_id, 
 	const auto _attr = *attr;
 
 	const u64 ipc_key = lv2_obj::get_key(_attr);
+
+	if (ipc_key)
+	{
+		sys_cond.warning("sys_cond_create(cond_id=*0x%x, attr=*0x%x): IPC=0x%016x", cond_id, attr, ipc_key);
+	}
 
 	if (const auto error = lv2_obj::create<lv2_cond>(_attr.pshared, ipc_key, _attr.flags, [&]
 	{
@@ -108,7 +113,7 @@ error_code sys_cond_destroy(ppu_thread& ppu, u32 cond_id)
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_cond.warning("sys_cond_destroy(cond_id=0x%x)", cond_id);
+	sys_cond.trace("sys_cond_destroy(cond_id=0x%x)", cond_id);
 
 	const auto cond = idm::withdraw<lv2_obj, lv2_cond>(cond_id, [&](lv2_cond& cond) -> CellError
 	{
@@ -127,6 +132,11 @@ error_code sys_cond_destroy(ppu_thread& ppu, u32 cond_id)
 	if (!cond)
 	{
 		return CELL_ESRCH;
+	}
+
+	if (cond->key)
+	{
+		sys_cond.warning("sys_cond_destroy(cond_id=0x%x): IPC=0x%016x", cond_id, cond->key);
 	}
 
 	if (cond.ret)

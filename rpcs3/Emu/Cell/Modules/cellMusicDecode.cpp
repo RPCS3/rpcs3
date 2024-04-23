@@ -227,6 +227,12 @@ error_code cell_music_decode_read(vm::ptr<void> buf, vm::ptr<u32> startTime, u64
 
 	std::memcpy(buf.get_ptr(), &dec.decoder.data[dec.read_pos], size_to_read);
 
+	if (size_to_read < reqSize)
+	{
+		// Set the rest of the buffer to zero to prevent loud pops at the end of the stream if the game ignores the readSize.
+		std::memset(vm::static_ptr_cast<u8>(buf).get_ptr() + size_to_read, 0, reqSize - size_to_read);
+	}
+
 	dec.read_pos += size_to_read;
 
 	s64 start_time_ms = 0;

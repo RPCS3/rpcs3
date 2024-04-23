@@ -12,7 +12,7 @@ namespace rsx
 		struct home_menu_page : public list_view
 		{
 		public:
-			home_menu_page(u16 x, u16 y, u16 width, u16 height, bool use_separators, home_menu_page* parent, const std::string& text);
+			home_menu_page(s16 x, s16 y, u16 width, u16 height, bool use_separators, home_menu_page* parent, const std::string& text);
 
 			void set_current_page(home_menu_page* page);
 			home_menu_page* get_current_page(bool include_this);

@@ -220,7 +220,7 @@ u64 get_guest_system_time(u64 time)
 // Functions
 error_code sys_time_get_timezone(vm::ptr<s32> timezone, vm::ptr<s32> summertime)
 {
-	sys_time.notice("sys_time_get_timezone(timezone=*0x%x, summertime=*0x%x)", timezone, summertime);
+	sys_time.trace("sys_time_get_timezone(timezone=*0x%x, summertime=*0x%x)", timezone, summertime);
 
 #ifdef _WIN32
 	TIME_ZONE_INFORMATION tz{};

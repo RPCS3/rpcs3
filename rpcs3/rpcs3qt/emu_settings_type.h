@@ -51,6 +51,7 @@ enum class emu_settings_type
 	AccuratePPUVNAN,
 	AccuratePPUFPCC,
 	MaxPreemptCount,
+	SPUProfiler,
 
 	// Graphics
 	Renderer,
@@ -102,6 +103,7 @@ enum class emu_settings_type
 	AllowHostGPULabels,
 	DisableMSLFastMath,
 	OutputScalingMode,
+	ForceHwMSAAResolve,
 
 	// Performance Overlay
 	PerfOverlayEnabled,
@@ -133,6 +135,7 @@ enum class emu_settings_type
 	AudioProvider,
 	AudioAvport,
 	AudioDevice,
+	AudioChannelLayout,
 	MasterVolume,
 	EnableBuffering,
 	AudioBufferDuration,
@@ -158,6 +161,7 @@ enum class emu_settings_type
 	Buzz,
 	Turntable,
 	GHLtar,
+	GameTablet,
 	MidiDevices,
 	SDLMappings,
 
@@ -235,6 +239,7 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::AccuratePPUVNAN,          { "Core", "PPU Accurate Vector NaN Values"}},
 	{ emu_settings_type::AccuratePPUFPCC,          { "Core", "PPU Set FPCC Bits"}},
 	{ emu_settings_type::MaxPreemptCount,          { "Core", "Max CPU Preempt Count"}},
+	{ emu_settings_type::SPUProfiler,              { "Core", "SPU Profiler"}},
 
 	// Graphics Tab
 	{ emu_settings_type::Renderer,                   { "Video", "Renderer"}},
@@ -282,6 +287,7 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::AllowHostGPULabels,         { "Video", "Allow Host GPU Labels"}},
 	{ emu_settings_type::DisableMSLFastMath,         { "Video", "Disable MSL Fast Math"}},
 	{ emu_settings_type::OutputScalingMode,          { "Video", "Output Scaling Mode"}},
+	{ emu_settings_type::ForceHwMSAAResolve,         { "Video", "Force Hardware MSAA Resolve"}},
 
 	// Vulkan
 	{ emu_settings_type::VulkanAsyncTextureUploads,           { "Video", "Vulkan", "Asynchronous Texture Streaming 2"}},
@@ -319,6 +325,7 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::AudioProvider,           { "Audio", "Audio Provider"}},
 	{ emu_settings_type::AudioAvport,             { "Audio", "RSXAudio Avport"}},
 	{ emu_settings_type::AudioDevice,             { "Audio", "Audio Device"}},
+	{ emu_settings_type::AudioChannelLayout,      { "Audio", "Audio Channel Layout"}},
 	{ emu_settings_type::MasterVolume,            { "Audio", "Master Volume"}},
 	{ emu_settings_type::EnableBuffering,         { "Audio", "Enable Buffering"}},
 	{ emu_settings_type::AudioBufferDuration,     { "Audio", "Desired Audio Buffer Duration"}},
@@ -344,6 +351,7 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::Buzz,            { "Input/Output", "Buzz emulated controller" }},
 	{ emu_settings_type::Turntable,       { "Input/Output", "Turntable emulated controller" }},
 	{ emu_settings_type::GHLtar,          { "Input/Output", "GHLtar emulated controller" }},
+	{ emu_settings_type::GameTablet,      { "Input/Output", "GameTablet emulated controller" }},
 	{ emu_settings_type::MidiDevices,     { "Input/Output", "Emulated Midi devices" }},
 	{ emu_settings_type::SDLMappings,     { "Input/Output", "Load SDL GameController Mappings" }},
 

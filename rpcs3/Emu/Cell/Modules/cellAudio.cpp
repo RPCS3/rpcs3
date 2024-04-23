@@ -76,11 +76,14 @@ void cell_audio_config::reset(bool backend_changed)
 	const auto& [req_ch_cnt, downmix] = AudioBackend::get_channel_count_and_downmixer(0); // CELL_AUDIO_OUT_PRIMARY
 	f64 cb_frame_len = 0.0;
 	u32 ch_cnt = 2;
+	audio_channel_layout ch_layout = audio_channel_layout::stereo;
 
-	if (backend->Open(raw.audio_device, freq, sample_size, req_ch_cnt))
+	if (backend->Open(raw.audio_device, freq, sample_size, req_ch_cnt, raw.channel_layout))
 	{
 		cb_frame_len = backend->GetCallbackFrameLen();
 		ch_cnt = backend->get_channels();
+		ch_layout = backend->get_channel_layout();
+		cellAudio.notice("Opened audio backend (sampling_rate=%d, sample_size=%d, channels=%d, layout=%s)", backend->get_sampling_rate(), backend->get_sample_size(), backend->get_channels(), backend->get_channel_layout());
 	}
 	else
 	{
@@ -88,7 +91,8 @@ void cell_audio_config::reset(bool backend_changed)
 	}
 
 	audio_downmix = downmix;
-	backend_ch_cnt = AudioChannelCnt{ch_cnt};
+	backend_ch_cnt = ch_cnt;
+	backend_channel_layout = ch_layout;
 	audio_channels = static_cast<u32>(req_ch_cnt);
 	audio_sampling_rate = static_cast<u32>(freq);
 	audio_block_period = AUDIO_BUFFER_SAMPLES * 1'000'000 / audio_sampling_rate;
@@ -162,7 +166,7 @@ audio_ringbuffer::audio_ringbuffer(cell_audio_config& _cfg)
 		return cfg.audio_min_buffer_duration;
 	}();
 
-	cb_ringbuf.set_buf_size(static_cast<u32>(static_cast<u32>(cfg.backend_ch_cnt) * cfg.audio_sampling_rate * cfg.audio_sample_size * buffer_dur_mult));
+	cb_ringbuf.set_buf_size(static_cast<u32>(cfg.backend_ch_cnt * cfg.audio_sampling_rate * cfg.audio_sample_size * buffer_dur_mult));
 	backend->SetWriteCallback(std::bind(&audio_ringbuffer::backend_write_callback, this, std::placeholders::_1, std::placeholders::_2));
 	backend->SetStateCallback(std::bind(&audio_ringbuffer::backend_state_callback, this, std::placeholders::_1));
 }
@@ -219,7 +223,7 @@ float* audio_ringbuffer::get_current_buffer() const
 u64 audio_ringbuffer::get_enqueued_samples() const
 {
 	AUDIT(cfg.buffering_enabled);
-	const u64 ringbuf_samples = cb_ringbuf.get_used_size() / (cfg.audio_sample_size * static_cast<u32>(cfg.backend_ch_cnt));
+	const u64 ringbuf_samples = cb_ringbuf.get_used_size() / (cfg.audio_sample_size * cfg.backend_ch_cnt);
 
 	if (cfg.time_stretching_enabled)
 	{
@@ -280,14 +284,14 @@ void audio_ringbuffer::process_resampled_data()
 {
 	if (!cfg.time_stretching_enabled) return;
 
-	const auto& [buffer, samples] = resampler.get_samples(static_cast<u32>(cb_ringbuf.get_free_size() / (cfg.audio_sample_size * static_cast<u32>(cfg.backend_ch_cnt))));
+	const auto& [buffer, samples] = resampler.get_samples(static_cast<u32>(cb_ringbuf.get_free_size() / (cfg.audio_sample_size * cfg.backend_ch_cnt)));
 	commit_data(buffer, samples);
 }
 
 void audio_ringbuffer::commit_data(f32* buf, u32 sample_cnt)
 {
 	const u32 sample_cnt_in = sample_cnt * cfg.audio_channels;
-	const u32 sample_cnt_out = sample_cnt * static_cast<u32>(cfg.backend_ch_cnt);
+	const u32 sample_cnt_out = sample_cnt * cfg.backend_ch_cnt;
 
 	// Dump audio if enabled
 	m_dump.WriteData(buf, sample_cnt_in * static_cast<u32>(AudioSampleSize::FLOAT));
@@ -300,7 +304,7 @@ void audio_ringbuffer::commit_data(f32* buf, u32 sample_cnt)
 	}
 
 	// Downmix if necessary
-	AudioBackend::downmix(sample_cnt_in, cfg.audio_channels, static_cast<u32>(cfg.backend_ch_cnt), buf, buf);
+	AudioBackend::downmix(sample_cnt_in, cfg.audio_channels, cfg.backend_channel_layout, buf, buf);
 
 	if (cfg.backend->get_convert_to_s16())
 	{
@@ -614,6 +618,7 @@ namespace audio
 			.time_stretching_threshold = g_cfg.audio.time_stretching_threshold,
 			.convert_to_s16 = static_cast<bool>(g_cfg.audio.convert_to_s16),
 			.dump_to_file = static_cast<bool>(g_cfg.audio.dump_to_file),
+			.channel_layout = g_cfg.audio.channel_layout,
 			.renderer = g_cfg.audio.renderer,
 			.provider = g_cfg.audio.provider
 		};

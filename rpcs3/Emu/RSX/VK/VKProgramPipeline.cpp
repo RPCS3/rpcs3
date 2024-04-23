@@ -2,7 +2,8 @@
 #include "VKProgramPipeline.h"
 #include "vkutils/descriptors.h"
 #include "vkutils/device.h"
-#include <string>
+
+#include "../Program/SPIRVCommon.h"
 
 namespace vk
 {
@@ -20,7 +21,7 @@ namespace vk
 		{
 			ensure(m_handle == VK_NULL_HANDLE);
 
-			if (!vk::compile_glsl_to_spv(m_source, type, m_compiled))
+			if (!spirv::compile_glsl_to_spv(m_compiled, m_source, type, ::glsl::glsl_rules_vulkan))
 			{
 				const std::string shader_type = type == ::glsl::program_domain::glsl_vertex_program ? "vertex" :
 					type == ::glsl::program_domain::glsl_fragment_program ? "fragment" : "compute";

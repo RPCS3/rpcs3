@@ -186,6 +186,8 @@ namespace vk
 			case driver_vendor::NVIDIA:
 			case driver_vendor::INTEL:
 			case driver_vendor::MVK:
+			case driver_vendor::DOZEN:
+			case driver_vendor::LAVAPIPE:
 				break;
 			}
 
@@ -243,7 +245,7 @@ namespace vk
 				VMM_ALLOCATION_POOL_SURFACE_CACHE,
 				RSX_FORMAT_CLASS_COLOR);
 
-			rtt->set_debug_name(fmt::format("RTV @0x%x", address));
+			rtt->set_debug_name(fmt::format("RTV @0x%x, fmt=0x%x", address, static_cast<int>(format)));
 			rtt->change_layout(cmd, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
 			rtt->set_format(format);
@@ -438,7 +440,11 @@ namespace vk
 			return surface->rsx_pitch == pitch;
 		}
 
-		static void invalidate_surface_contents(vk::command_buffer& /*cmd*/, vk::render_target* surface, u32 address, usz pitch)
+		static void int_invalidate_surface_contents(
+			vk::command_buffer& /*cmd*/,
+			vk::render_target* surface,
+			u32 address,
+			usz pitch)
 		{
 			surface->rsx_pitch = static_cast<u32>(pitch);
 			surface->queue_tag(address);
@@ -446,6 +452,34 @@ namespace vk
 			surface->stencil_init_flags = 0;
 			surface->memory_usage_flags = rsx::surface_usage_flags::unknown;
 			surface->raster_type = rsx::surface_raster_type::linear;
+		}
+
+		static void invalidate_surface_contents(
+			vk::command_buffer& cmd,
+			vk::render_target* surface,
+			rsx::surface_color_format format,
+			u32 address,
+			usz pitch)
+		{
+			const auto fmt = vk::get_compatible_surface_format(format);
+			surface->set_format(format);
+			surface->set_native_component_layout(fmt.second);
+			surface->set_debug_name(fmt::format("RTV @0x%x, fmt=0x%x", address, static_cast<int>(format)));
+
+			int_invalidate_surface_contents(cmd, surface, address, pitch);
+		}
+
+		static void invalidate_surface_contents(
+			vk::command_buffer& cmd,
+			vk::render_target* surface,
+			rsx::surface_depth_format2 format,
+			u32 address,
+			usz pitch)
+		{
+			surface->set_format(format);
+			surface->set_debug_name(fmt::format("DSV @0x%x", address));
+
+			int_invalidate_surface_contents(cmd, surface, address, pitch);
 		}
 
 		static void notify_surface_invalidated(const std::unique_ptr<vk::render_target>& surface)

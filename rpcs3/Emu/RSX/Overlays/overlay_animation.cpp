@@ -7,30 +7,30 @@ namespace rsx
 {
 	namespace overlays
 	{
-		void animation_base::begin_animation(u64 frame)
+		void animation_base::begin_animation(u64 timestamp_us)
 		{
-			frame_start = frame;
-			frame_end = frame + get_duration_in_frames();
+			timestamp_start_us = timestamp_us;
+			timestamp_end_us = timestamp_us + get_total_duration_us();
 		}
 
-		u64 animation_base::get_duration_in_frames() const
+		u64 animation_base::get_total_duration_us() const
 		{
-			return u64(duration * g_cfg.video.vblank_rate);
+			return u64(duration_sec * 1'000'000.f);
 		}
 
-		u64 animation_base::get_remaining_frames(u64 frame) const
+		u64 animation_base::get_remaining_duration_us(u64 timestamp_us) const
 		{
-			return frame >= frame_end ? 0 : (frame_end - frame);
+			return timestamp_us >= timestamp_end_us ? 0 : (timestamp_end_us - timestamp_us);
 		}
 
-		f32 animation_base::get_progress_ratio(u64 frame) const
+		f32 animation_base::get_progress_ratio(u64 timestamp_us) const
 		{
-			if (!frame_start)
+			if (!timestamp_start_us)
 			{
 				return 0.f;
 			}
 
-			f32 t = f32(frame - frame_start) / (frame_end - frame_start);
+			f32 t = f32(timestamp_us - timestamp_start_us) / (timestamp_end_us - timestamp_start_us);
 
 			switch (type) {
 			case animation_type::linear:
@@ -49,15 +49,15 @@ namespace rsx
 			return t;
 		}
 
-		void animation_translate::reset(u64 start_frame)
+		void animation_translate::reset(u64 start_timestamp_us)
 		{
 			active = false;
 			current = start;
-			frame_start = start_frame;
+			timestamp_start_us = start_timestamp_us;
 
-			if (frame_start > 0)
+			if (timestamp_start_us > 0)
 			{
-				frame_end = frame_start + get_duration_in_frames();
+				timestamp_end_us = timestamp_start_us + get_total_duration_us();
 			}
 		}
 
@@ -78,36 +78,36 @@ namespace rsx
 			}
 		}
 
-		void animation_translate::update(u64 frame)
+		void animation_translate::update(u64 timestamp_us)
 		{
 			if (!active)
 			{
 				return;
 			}
 
-			if (frame_start == 0)
+			if (timestamp_start_us == 0)
 			{
 				start = current;
-				begin_animation(frame);
+				begin_animation(timestamp_us);
 				return;
 			}
 
-			if (frame >= frame_end)
+			if (timestamp_us >= timestamp_end_us)
 			{
 				// Exit condition
 				finish();
 				return;
 			}
 
-			f32 t = get_progress_ratio(frame);
+			f32 t = get_progress_ratio(timestamp_us);
 			current = lerp(start, end, t);
 		}
 
 		void animation_translate::finish()
 		{
 			active = false;
-			frame_start = 0;
-			frame_end = 0;
+			timestamp_start_us = 0;
+			timestamp_end_us = 0;
 			current = end; // Snap current to limit in case we went over
 
 			if (on_finish)
@@ -116,15 +116,15 @@ namespace rsx
 			}
 		}
 
-		void animation_color_interpolate::reset(u64 start_frame)
+		void animation_color_interpolate::reset(u64 start_timestamp_us)
 		{
 			active = false;
 			current = start;
-			frame_start = start_frame;
+			timestamp_start_us = start_timestamp_us;
 
-			if (frame_start > 0)
+			if (timestamp_start_us > 0)
 			{
-				frame_end = frame_start + get_duration_in_frames();
+				timestamp_end_us = timestamp_start_us + get_total_duration_us();
 			}
 		}
 
@@ -141,35 +141,35 @@ namespace rsx
 			}
 		}
 
-		void animation_color_interpolate::update(u64 frame)
+		void animation_color_interpolate::update(u64 timestamp_us)
 		{
 			if (!active)
 			{
 				return;
 			}
 
-			if (frame_start == 0)
+			if (timestamp_start_us == 0)
 			{
 				start = current;
-				begin_animation(frame);
+				begin_animation(timestamp_us);
 				return;
 			}
 
-			if (frame >= frame_end)
+			if (timestamp_us >= timestamp_end_us)
 			{
 				finish();
 				return;
 			}
 
-			f32 t = get_progress_ratio(frame);
+			f32 t = get_progress_ratio(timestamp_us);
 			current = lerp(start, end, t);
 		}
 
 		void animation_color_interpolate::finish()
 		{
 			active = false;
-			frame_start = 0;
-			frame_end = 0;
+			timestamp_start_us = 0;
+			timestamp_end_us = 0;
 			current = end;
 
 			if (on_finish)

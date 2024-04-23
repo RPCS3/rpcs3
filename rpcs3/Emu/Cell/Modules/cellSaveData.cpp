@@ -3,6 +3,7 @@
 #include "Emu/VFS.h"
 #include "Emu/IdManager.h"
 #include "Emu/localized_string.h"
+#include "Emu/savestate_utils.hpp"
 #include "Emu/Cell/lv2/sys_fs.h"
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/lv2/sys_process.h"
@@ -272,6 +273,14 @@ static std::vector<SaveDataEntry> get_save_entries(const std::string& base_dir, 
 
 static error_code select_and_delete(ppu_thread& ppu)
 {
+	std::unique_lock hle_lock(g_fxo->get<hle_locks_t>(), std::try_to_lock);
+
+	if (!hle_lock)
+	{
+		ppu.state += cpu_flag::again;
+		return {};
+	}
+
 	std::unique_lock lock(g_fxo->get<savedata_manager>().mutex, std::try_to_lock);
 
 	if (!lock)
@@ -699,6 +708,14 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		return {CELL_SAVEDATA_ERROR_PARAM, " (error %d)", ecode};
 	}
 
+	std::unique_lock hle_lock(g_fxo->get<hle_locks_t>(), std::try_to_lock);
+
+	if (!hle_lock)
+	{
+		ppu.state += cpu_flag::again;
+		return {};
+	}
+
 	std::unique_lock lock(g_fxo->get<savedata_manager>().mutex, std::try_to_lock);
 
 	if (!lock)
@@ -1104,7 +1121,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		auto delete_save = [&]()
 		{
 			strcpy_trunc(doneGet->dirName, save_entries[selected].dirName);
-			doneGet->hddFreeSizeKB = 40 * 1024 * 1024 - 1; // Read explanation in cellHddGameCheck
+			doneGet->hddFreeSizeKB = 40 * 1024 * 1024 - 256; // Read explanation in cellHddGameCheck
 			doneGet->excResult     = CELL_OK;
 			std::memset(doneGet->reserved, 0, sizeof(doneGet->reserved));
 
@@ -1446,7 +1463,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			// funcStat is called even if the directory doesn't exist.
 		}
 
-		statGet->hddFreeSizeKB = 40 * 1024 * 1024 - 1; // Read explanation in cellHddGameCheck
+		statGet->hddFreeSizeKB = 40 * 1024 * 1024 - 256; // Read explanation in cellHddGameCheck
 		statGet->isNewData = save_entry.isNew = psf.empty();
 
 		statGet->dir.atime = save_entry.atime = dir_info.atime;
@@ -1657,9 +1674,8 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			//CELL_SAVEDATA_RECREATE_NO = overwrite and let the user know, not data is corrupt.
 			//cellSaveData.error("Savedata %s considered broken", save_entry.dirName);
 			//TODO: if this is a save, and it's not auto, then show a dialog
-			// fallthrough
+			[[fallthrough]];
 		}
-
 		case CELL_SAVEDATA_RECREATE_NO_NOBROKEN:
 		{
 			break;

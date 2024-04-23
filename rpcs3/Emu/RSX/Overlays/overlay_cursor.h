@@ -19,7 +19,7 @@ namespace rsx
 			cursor_item();
 
 			void set_expiration(u64 expiration_time);
-			bool set_position(u16 x, u16 y);
+			bool set_position(s16 x, s16 y);
 			bool set_color(color4f color);
 
 			bool update_visibility(u64 time);
@@ -32,24 +32,24 @@ namespace rsx
 			overlay_element m_cross_h{};
 			overlay_element m_cross_v{};
 			u64 m_expiration_time = 0;
-			u16 m_x = 0;
-			u16 m_y = 0;
+			s16 m_x = 0;
+			s16 m_y = 0;
 		};
 
 		class cursor_manager final : public overlay
 		{
 		public:
-			void update() override;
+			void update(u64 timestamp_us) override;
 			compiled_resource get_compiled() override;
 
-			void update_cursor(u32 id, u16 x, u16 y, const color4f& color, u64 duration_us, bool force_update);
+			void update_cursor(u32 id, s16 x, s16 y, const color4f& color, u64 duration_us, bool force_update);
 
 		private:
 			shared_mutex m_mutex;
 			std::map<u32, cursor_item> m_cursors;
 		};
 
-		void set_cursor(u32 id, u16 x, u16 y, const color4f& color, u64 duration_us, bool force_update);
+		void set_cursor(u32 id, s16 x, s16 y, const color4f& color, u64 duration_us, bool force_update);
 
 	} // namespace overlays
 } // namespace rsx

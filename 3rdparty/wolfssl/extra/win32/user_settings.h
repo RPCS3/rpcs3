@@ -25,9 +25,13 @@
 #define HAVE_ONE_TIME_AUTH
 #define HAVE_CHACHA
 #define HAVE_HASHDRBG
+#ifndef HAVE_SNI
 #define HAVE_SNI
+#endif
 #define HAVE_ENCRYPT_THEN_MAC
+#ifndef NO_MD4
 #define NO_MD4
+#endif
 #define WC_NO_ASYNC_THREADING
 #define WC_NO_HARDEN
 #define HAVE_WRITE_DUP
@@ -47,6 +51,9 @@
 #define ECC_TIMING_RESISTANT
 #define USE_FAST_MATH
 #define FP_MAX_BITS 8192
+#ifndef WOLFSSL_ALT_CERT_CHAINS
+#define WOLFSSL_ALT_CERT_CHAINS
+#endif
 
 /* UTF-8 aware filesystem functions for Windows */
 #define WOLFSSL_USER_FILESYSTEM

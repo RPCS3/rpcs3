@@ -108,14 +108,34 @@ error_code sys_tty_write([[maybe_unused]] ppu_thread& ppu, s32 ch, vm::cptr<char
 		}
 	}
 
-	if (msg.find("abort"sv) != umax || msg.find("error"sv) != umax || [&]()
+	auto find_word = [](std::string_view msg, std::string_view word) -> bool
 	{
-		static atomic_t<u64> last_write = 0;
+		// Match uppercase and lowercase starting words
+		const usz index = msg.find(word.substr(1));
+
+		if (index != umax && index >= 1u)
+		{
+			return std::tolower(static_cast<u8>(msg[index - 1])) == word[0];
+		}
+
+		return false;
+	};
+
+	std::string_view sample = std::string_view(msg).substr(0, 1024);
+
+	const bool warning = find_word(sample, "failed"sv) || find_word(sample, "abort"sv) || find_word(sample, "crash"sv)
+		|| find_word(sample, "error"sv) || find_word(sample, "unexpected"sv) || find_word(sample, "0x8001"sv);
+
+	sample = {}; // Remove reference to string
+
+	if (msg.size() >= 2u && ([&]()
+	{
+		static thread_local u64 last_write = 0;
 
 		// Dump thread about every period which TTY was not being touched for about half a second
 		const u64 current = get_system_time();
-		return current - last_write.exchange(current) >= 500'000;
-	}())
+		return current - std::exchange(last_write, current) >= 3'000'000;
+	}() || warning))
 	{
 		ppu_log.notice("\n%s", dump_useful_thread_info());
 	}
@@ -143,7 +163,24 @@ error_code sys_tty_write([[maybe_unused]] ppu_thread& ppu, s32 ch, vm::cptr<char
 	{
 		if (!msg.empty())
 		{
-			sys_tty.notice(u8"sys_tty_write(): “%s”", msg);
+			if (msg.ends_with("\n"))
+			{
+				// Avoid logging trailing newlines, log them verbosely instead
+				const std::string_view msg_clear = std::string_view(msg).substr(0, msg.find_last_not_of('\n') + 1);
+
+				if (msg.size() - 1 == msg_clear.size())
+				{
+					(warning ? sys_tty.warning : sys_tty.notice)(u8"sys_tty_write(): “%s“ << endl", msg_clear);
+				}
+				else
+				{
+					(warning ? sys_tty.warning : sys_tty.notice)(u8"sys_tty_write(): “%s” << endl(%u)", msg_clear, msg.size() - msg_clear.size());
+				}
+			}
+			else
+			{
+				(warning ? sys_tty.warning : sys_tty.notice)(u8"sys_tty_write(): “%s”", msg);
+			}
 
 			if (g_tty)
 			{

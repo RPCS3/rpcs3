@@ -12,14 +12,14 @@ namespace np
 {
 	struct userinfo_cache
 	{
-		SceNpId npId;
+		SceNpId npId{};
 		std::optional<SceNpOnlineName> onlineName;
 		std::optional<SceNpAvatarUrl> avatarUrl;
 	};
 
 	struct memberbin_cache
 	{
-		memberbin_cache(SceNpMatching2RoomMemberBinAttrInternal* sce_memberbin);
+		memberbin_cache(const SceNpMatching2RoomMemberBinAttrInternal* sce_memberbin);
 
 		SceNpMatching2AttributeId id;
 		CellRtcTick updateDate;

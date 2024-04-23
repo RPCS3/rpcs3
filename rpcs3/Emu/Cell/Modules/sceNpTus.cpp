@@ -288,21 +288,14 @@ error_code sceNpTusPollAsync(s32 transId, vm::ptr<s32> result)
 template<typename T>
 error_code scenp_tus_set_multislot_variable(s32 transId, T targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::cptr<s64> variableArray, s32 arrayNum, vm::ptr<void> option, bool vuser, bool async)
 {
-	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
-
-	if (!nph.is_NP_TUS_init)
-	{
-		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
-	}
-
-	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
-	}
-
-	if (!targetNpId || !slotIdArray || !variableArray || arrayNum <= 0)
+	if (!slotIdArray || !variableArray)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
+	}
+
+	if (arrayNum == 0 || option)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
 	}
 
 	if (arrayNum > SCE_NP_TUS_MAX_SLOT_NUM_PER_TRANS)
@@ -310,9 +303,27 @@ error_code scenp_tus_set_multislot_variable(s32 transId, T targetNpId, vm::cptr<
 		return SCE_NP_COMMUNITY_ERROR_TOO_MANY_SLOTID;
 	}
 
-	if (option || !is_slot_array_valid(slotIdArray, arrayNum))
+	if (!is_slot_array_valid(slotIdArray, arrayNum))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+	}
+
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_TUS_init)
+	{
+		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!targetNpId)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
+	}
+
+	// Probable vsh behaviour
+	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
 	auto trans_ctx = idm::get<tus_transaction_ctx>(transId);
@@ -357,31 +368,14 @@ error_code sceNpTusSetMultiSlotVariableVUserAsync(s32 transId, vm::cptr<SceNpTus
 }
 
 template<typename T>
-error_code scenp_tus_get_multislot_variable(s32 transId, T targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusVariable> variableArray, u64 variableArraySize, s32 arrayNum, vm::ptr<void> option, bool vuser, bool async)
+error_code scenp_tus_get_multislot_variable(s32 transId, T targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusVariable> variableArray, u32 variableArraySize, s32 arrayNum, vm::ptr<void> option, bool vuser, bool async)
 {
-	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
-
-	if (!nph.is_NP_TUS_init)
-	{
-		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
-	}
-
-	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
-	}
-
-	if (!targetNpId || !slotIdArray || !variableArray || arrayNum <= 0)
+	if (!slotIdArray || !variableArray)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
 	}
 
-	if (arrayNum > SCE_NP_TUS_MAX_SLOT_NUM_PER_TRANS)
-	{
-		return SCE_NP_COMMUNITY_ERROR_TOO_MANY_SLOTID;
-	}
-
-	if (option || !is_slot_array_valid(slotIdArray, arrayNum))
+	if (arrayNum == 0 || option)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
 	}
@@ -389,6 +383,34 @@ error_code scenp_tus_get_multislot_variable(s32 transId, T targetNpId, vm::cptr<
 	if (variableArraySize != arrayNum * sizeof(SceNpTusVariable))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
+	}
+
+	if (arrayNum > SCE_NP_TUS_MAX_SLOT_NUM_PER_TRANS)
+	{
+		return SCE_NP_COMMUNITY_ERROR_TOO_MANY_SLOTID;
+	}
+
+	if (!is_slot_array_valid(slotIdArray, arrayNum))
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+	}
+
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_TUS_init)
+	{
+		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!targetNpId)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
+	}
+
+	// Probable vsh behaviour
+	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
 	auto trans_ctx = idm::get<tus_transaction_ctx>(transId);
@@ -408,33 +430,58 @@ error_code scenp_tus_get_multislot_variable(s32 transId, T targetNpId, vm::cptr<
 	return *trans_ctx->result;
 }
 
-error_code sceNpTusGetMultiSlotVariable(s32 transId, vm::cptr<SceNpId> targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusVariable> variableArray, u64 variableArraySize, s32 arrayNum, vm::ptr<void> option)
+error_code sceNpTusGetMultiSlotVariable(s32 transId, vm::cptr<SceNpId> targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusVariable> variableArray, u32 variableArraySize, s32 arrayNum, vm::ptr<void> option)
 {
 	sceNpTus.warning("sceNpTusGetMultiSlotVariable(transId=%d, targetNpId=*0x%x, slotIdArray=*0x%x, variableArray=*0x%x, variableArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetNpId, slotIdArray, variableArray, variableArraySize, arrayNum, option);
 	return scenp_tus_get_multislot_variable(transId, targetNpId, slotIdArray, variableArray, variableArraySize, arrayNum, option, false, false);
 }
 
-error_code sceNpTusGetMultiSlotVariableVUser(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusVariable> variableArray, u64 variableArraySize, s32 arrayNum, vm::ptr<void> option)
+error_code sceNpTusGetMultiSlotVariableVUser(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusVariable> variableArray, u32 variableArraySize, s32 arrayNum, vm::ptr<void> option)
 {
 	sceNpTus.warning("sceNpTusGetMultiSlotVariableVUser(transId=%d, targetVirtualUserId=*0x%x, slotIdArray=*0x%x, variableArray=*0x%x, variableArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetVirtualUserId, slotIdArray, variableArray, variableArraySize, arrayNum, option);
 	return scenp_tus_get_multislot_variable(transId, targetVirtualUserId, slotIdArray, variableArray, variableArraySize, arrayNum, option, true, false);
 }
 
-error_code sceNpTusGetMultiSlotVariableAsync(s32 transId, vm::cptr<SceNpId> targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusVariable> variableArray, u64 variableArraySize, s32 arrayNum, vm::ptr<void> option)
+error_code sceNpTusGetMultiSlotVariableAsync(s32 transId, vm::cptr<SceNpId> targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusVariable> variableArray, u32 variableArraySize, s32 arrayNum, vm::ptr<void> option)
 {
 	sceNpTus.warning("sceNpTusGetMultiSlotVariableAsync(transId=%d, targetNpId=*0x%x, slotIdArray=*0x%x, variableArray=*0x%x, variableArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetNpId, slotIdArray, variableArray, variableArraySize, arrayNum, option);
 	return scenp_tus_get_multislot_variable(transId, targetNpId, slotIdArray, variableArray, variableArraySize, arrayNum, option, false, true);
 }
 
-error_code sceNpTusGetMultiSlotVariableVUserAsync(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusVariable> variableArray, u64 variableArraySize, s32 arrayNum, vm::ptr<void> option)
+error_code sceNpTusGetMultiSlotVariableVUserAsync(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusVariable> variableArray, u32 variableArraySize, s32 arrayNum, vm::ptr<void> option)
 {
 	sceNpTus.warning("sceNpTusGetMultiSlotVariableVUserAsync(transId=%d, targetVirtualUserId=*0x%x, slotIdArray=*0x%x, variableArray=*0x%x, variableArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetVirtualUserId, slotIdArray, variableArray, variableArraySize, arrayNum, option);
 	return scenp_tus_get_multislot_variable(transId, targetVirtualUserId, slotIdArray, variableArray, variableArraySize, arrayNum, option, true, true);
 }
 
 template<typename T>
-error_code scenp_tus_get_multiuser_variable(s32 transId, T targetNpIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusVariable> variableArray, u64 variableArraySize, s32 arrayNum, vm::ptr<void> option, bool vuser, bool async)
+error_code scenp_tus_get_multiuser_variable(s32 transId, T targetNpIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusVariable> variableArray, u32 variableArraySize, s32 arrayNum, vm::ptr<void> option, bool vuser, bool async)
 {
+	if (!variableArray)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
+	}
+
+	if (arrayNum == 0 || option)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+	}
+
+	if (arrayNum > SCE_NP_SCORE_MAX_NPID_NUM_PER_TRANS)
+	{
+		return SCE_NP_COMMUNITY_ERROR_TOO_MANY_NPID;
+	}
+
+	if (variableArraySize != arrayNum * sizeof(SceNpTusVariable))
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
+	}
+
+	if (slotId < 0)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+	}
+
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_TUS_init)
@@ -442,29 +489,15 @@ error_code scenp_tus_get_multiuser_variable(s32 transId, T targetNpIdArray, SceN
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
-	}
-
-	if (!targetNpIdArray || !variableArray || arrayNum <= 0)
+	if (!targetNpIdArray)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
 	}
 
-	if (arrayNum > SCE_NP_TUS_MAX_SLOT_NUM_PER_TRANS)
+	// Probable vsh behaviour
+	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
 	{
-		return SCE_NP_COMMUNITY_ERROR_TOO_MANY_SLOTID;
-	}
-
-	if (option || slotId < 0)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
-	}
-
-	if (variableArraySize != arrayNum * sizeof(SceNpTusVariable))
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
 	auto trans_ctx = idm::get<tus_transaction_ctx>(transId);
@@ -490,32 +523,69 @@ error_code scenp_tus_get_multiuser_variable(s32 transId, T targetNpIdArray, SceN
 	return *trans_ctx->result;
 }
 
-error_code sceNpTusGetMultiUserVariable(s32 transId, vm::cptr<SceNpId> targetNpIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusVariable> variableArray, u64 variableArraySize, s32 arrayNum, vm::ptr<void> option)
+error_code sceNpTusGetMultiUserVariable(s32 transId, vm::cptr<SceNpId> targetNpIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusVariable> variableArray, u32 variableArraySize, s32 arrayNum, vm::ptr<void> option)
 {
 	sceNpTus.warning("sceNpTusGetMultiUserVariable(transId=%d, targetNpIdArray=*0x%x, slotId=%d, variableArray=*0x%x, variableArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetNpIdArray, slotId, variableArray, variableArraySize, arrayNum, option);
 	return scenp_tus_get_multiuser_variable(transId, targetNpIdArray, slotId, variableArray, variableArraySize, arrayNum, option, false, false);
 }
 
-error_code sceNpTusGetMultiUserVariableVUser(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusVariable> variableArray, u64 variableArraySize, s32 arrayNum, vm::ptr<void> option)
+error_code sceNpTusGetMultiUserVariableVUser(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusVariable> variableArray, u32 variableArraySize, s32 arrayNum, vm::ptr<void> option)
 {
 	sceNpTus.warning("sceNpTusGetMultiUserVariableVUser(transId=%d, targetVirtualUserIdArray=*0x%x, slotId=%d, variableArray=*0x%x, variableArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetVirtualUserIdArray, slotId, variableArray, variableArraySize, arrayNum, option);
 	return scenp_tus_get_multiuser_variable(transId, targetVirtualUserIdArray, slotId, variableArray, variableArraySize, arrayNum, option, true, false);
 }
 
-error_code sceNpTusGetMultiUserVariableAsync(s32 transId, vm::cptr<SceNpId> targetNpIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusVariable> variableArray, u64 variableArraySize, s32 arrayNum, vm::ptr<void> option)
+error_code sceNpTusGetMultiUserVariableAsync(s32 transId, vm::cptr<SceNpId> targetNpIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusVariable> variableArray, u32 variableArraySize, s32 arrayNum, vm::ptr<void> option)
 {
 	sceNpTus.warning("sceNpTusGetMultiUserVariableAsync(transId=%d, targetNpIdArray=*0x%x, slotId=%d, variableArray=*0x%x, variableArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetNpIdArray, slotId, variableArray, variableArraySize, arrayNum, option);
 	return scenp_tus_get_multiuser_variable(transId, targetNpIdArray, slotId, variableArray, variableArraySize, arrayNum, option, false, true);
 }
 
-error_code sceNpTusGetMultiUserVariableVUserAsync(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusVariable> variableArray, u64 variableArraySize, s32 arrayNum, vm::ptr<void> option)
+error_code sceNpTusGetMultiUserVariableVUserAsync(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusVariable> variableArray, u32 variableArraySize, s32 arrayNum, vm::ptr<void> option)
 {
 	sceNpTus.warning("sceNpTusGetMultiUserVariableVUserAsync(transId=%d, targetVirtualUserIdArray=*0x%x, slotId=%d, variableArray=*0x%x, variableArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetVirtualUserIdArray, slotId, variableArray, variableArraySize, arrayNum, option);
 	return scenp_tus_get_multiuser_variable(transId, targetVirtualUserIdArray, slotId, variableArray, variableArraySize, arrayNum, option, true, true);
 }
 
-error_code scenp_tus_get_friends_variable(s32 transId, SceNpTusSlotId slotId, s32 includeSelf, s32 sortType, vm::ptr<SceNpTusVariable> variableArray, u64 variableArraySize, s32 arrayNum, vm::ptr<void> option, bool async)
+error_code scenp_tus_get_friends_variable(s32 transId, SceNpTusSlotId slotId, s32 includeSelf, s32 sortType, vm::ptr<SceNpTusVariable> variableArray, u32 variableArraySize, s32 arrayNum, vm::ptr<void> option, bool async)
 {
+	if (!variableArray)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
+	}
+
+	if (arrayNum == 0)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+	}
+
+	// Undocumented behaviour and structure unknown
+	// Also checks a u32* at offset 4 of the struct for nullptr in which case it behaves like option == nullptr
+	if (option && *static_cast<u32*>(option.get_ptr()) != 0xC)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+	}
+
+	if (sortType < SCE_NP_TUS_VARIABLE_SORTTYPE_DESCENDING_DATE || sortType > SCE_NP_TUS_VARIABLE_SORTTYPE_ASCENDING_VALUE)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+	}
+
+	if (arrayNum > SCE_NP_SCORE_MAX_SELECTED_FRIENDS_NUM)
+	{
+		return SCE_NP_COMMUNITY_ERROR_TOO_MANY_NPID;
+	}
+
+	if (variableArraySize != arrayNum * sizeof(SceNpTusVariable))
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
+	}
+
+	if (slotId < 0)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+	}
+
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_TUS_init)
@@ -523,29 +593,10 @@ error_code scenp_tus_get_friends_variable(s32 transId, SceNpTusSlotId slotId, s3
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
+	// Probable vsh behaviour
 	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
-	}
-
-	if (!variableArray)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
-	}
-
-	if (arrayNum > SCE_NP_TUS_MAX_SLOT_NUM_PER_TRANS)
-	{
-		return SCE_NP_COMMUNITY_ERROR_TOO_MANY_SLOTID;
-	}
-
-	if (option || arrayNum <= 0 || slotId < 0)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
-	}
-
-	if (variableArraySize != arrayNum * sizeof(SceNpTusVariable))
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
 	}
 
 	auto trans_ctx = idm::get<tus_transaction_ctx>(transId);
@@ -565,20 +616,20 @@ error_code scenp_tus_get_friends_variable(s32 transId, SceNpTusSlotId slotId, s3
 	return *trans_ctx->result;
 }
 
-error_code sceNpTusGetFriendsVariable(s32 transId, SceNpTusSlotId slotId, s32 includeSelf, s32 sortType, vm::ptr<SceNpTusVariable> variableArray, u64 variableArraySize, s32 arrayNum, vm::ptr<void> option)
+error_code sceNpTusGetFriendsVariable(s32 transId, SceNpTusSlotId slotId, s32 includeSelf, s32 sortType, vm::ptr<SceNpTusVariable> variableArray, u32 variableArraySize, s32 arrayNum, vm::ptr<void> option)
 {
 	sceNpTus.warning("sceNpTusGetFriendsVariable(transId=%d, slotId=%d, includeSelf=%d, sortType=%d, variableArray=*0x%x, variableArraySize=%d, arrayNum=%d, option=*0x%x)", transId, slotId, includeSelf, sortType, variableArray, variableArraySize, arrayNum, option);
 	return scenp_tus_get_friends_variable(transId, slotId, includeSelf, sortType, variableArray, variableArraySize, arrayNum, option, false);
 }
 
-error_code sceNpTusGetFriendsVariableAsync(s32 transId, SceNpTusSlotId slotId, s32 includeSelf, s32 sortType, vm::ptr<SceNpTusVariable> variableArray, u64 variableArraySize, s32 arrayNum, vm::ptr<void> option)
+error_code sceNpTusGetFriendsVariableAsync(s32 transId, SceNpTusSlotId slotId, s32 includeSelf, s32 sortType, vm::ptr<SceNpTusVariable> variableArray, u32 variableArraySize, s32 arrayNum, vm::ptr<void> option)
 {
 	sceNpTus.warning("sceNpTusGetFriendsVariableAsync(transId=%d, slotId=%d, includeSelf=%d, sortType=%d, variableArray=*0x%x, variableArraySize=%d, arrayNum=%d, option=*0x%x)", transId, slotId, includeSelf, sortType, variableArray, variableArraySize, arrayNum, option);
 	return scenp_tus_get_friends_variable(transId, slotId, includeSelf, sortType, variableArray, variableArraySize, arrayNum, option, true);
 }
 
 template<typename T>
-error_code scenp_tus_add_and_get_variable(s32 transId, T targetNpId, SceNpTusSlotId slotId, s64 inVariable, vm::ptr<SceNpTusVariable> outVariable, u64 outVariableSize, vm::ptr<SceNpTusAddAndGetVariableOptParam> option, bool vuser, bool async)
+error_code scenp_tus_add_and_get_variable(s32 transId, T targetNpId, SceNpTusSlotId slotId, s64 inVariable, vm::ptr<SceNpTusVariable> outVariable, u32 outVariableSize, vm::ptr<SceNpTusAddAndGetVariableOptParam> option, bool vuser, bool async)
 {
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -587,9 +638,14 @@ error_code scenp_tus_add_and_get_variable(s32 transId, T targetNpId, SceNpTusSlo
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
+	if (slotId < 0)
 	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+	}
+
+	if ((option && option->size != sizeof(SceNpTusAddAndGetVariableOptParam)) || outVariableSize != sizeof(SceNpTusVariable))
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
 	}
 
 	if (!targetNpId)
@@ -597,14 +653,10 @@ error_code scenp_tus_add_and_get_variable(s32 transId, T targetNpId, SceNpTusSlo
 		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
 	}
 
-	if (slotId < 0)
+	// Probable vsh behaviour
+	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
 	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
-	}
-
-	if (outVariableSize != sizeof(SceNpTusVariable))
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
 	auto trans_ctx = idm::get<tus_transaction_ctx>(transId);
@@ -624,32 +676,32 @@ error_code scenp_tus_add_and_get_variable(s32 transId, T targetNpId, SceNpTusSlo
 	return *trans_ctx->result;
 }
 
-error_code sceNpTusAddAndGetVariable(s32 transId, vm::cptr<SceNpId> targetNpId, SceNpTusSlotId slotId, s64 inVariable, vm::ptr<SceNpTusVariable> outVariable, u64 outVariableSize, vm::ptr<SceNpTusAddAndGetVariableOptParam> option)
+error_code sceNpTusAddAndGetVariable(s32 transId, vm::cptr<SceNpId> targetNpId, SceNpTusSlotId slotId, s64 inVariable, vm::ptr<SceNpTusVariable> outVariable, u32 outVariableSize, vm::ptr<SceNpTusAddAndGetVariableOptParam> option)
 {
 	sceNpTus.warning("sceNpTusAddAndGetVariable(transId=%d, targetNpId=*0x%x, slotId=%d, inVariable=%d, outVariable=*0x%x, outVariableSize=%d, option=*0x%x)", transId, targetNpId, slotId, inVariable, outVariable, outVariableSize, option);
 	return scenp_tus_add_and_get_variable(transId, targetNpId, slotId, inVariable, outVariable, outVariableSize, option, false, false);
 }
 
-error_code sceNpTusAddAndGetVariableVUser(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, SceNpTusSlotId slotId, s64 inVariable, vm::ptr<SceNpTusVariable> outVariable, u64 outVariableSize, vm::ptr<SceNpTusAddAndGetVariableOptParam> option)
+error_code sceNpTusAddAndGetVariableVUser(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, SceNpTusSlotId slotId, s64 inVariable, vm::ptr<SceNpTusVariable> outVariable, u32 outVariableSize, vm::ptr<SceNpTusAddAndGetVariableOptParam> option)
 {
 	sceNpTus.warning("sceNpTusAddAndGetVariableVUser(transId=%d, targetVirtualUserId=*0x%x, slotId=%d, inVariable=%d, outVariable=*0x%x, outVariableSize=%d, option=*0x%x)", transId, targetVirtualUserId, slotId, inVariable, outVariable, outVariableSize, option);
 	return scenp_tus_add_and_get_variable(transId, targetVirtualUserId, slotId, inVariable, outVariable, outVariableSize, option, true, false);
 }
 
-error_code sceNpTusAddAndGetVariableAsync(s32 transId, vm::cptr<SceNpId> targetNpId, SceNpTusSlotId slotId, s64 inVariable, vm::ptr<SceNpTusVariable> outVariable, u64 outVariableSize, vm::ptr<SceNpTusAddAndGetVariableOptParam> option)
+error_code sceNpTusAddAndGetVariableAsync(s32 transId, vm::cptr<SceNpId> targetNpId, SceNpTusSlotId slotId, s64 inVariable, vm::ptr<SceNpTusVariable> outVariable, u32 outVariableSize, vm::ptr<SceNpTusAddAndGetVariableOptParam> option)
 {
 	sceNpTus.warning("sceNpTusAddAndGetVariableAsync(transId=%d, targetNpId=*0x%x, slotId=%d, inVariable=%d, outVariable=*0x%x, outVariableSize=%d, option=*0x%x)", transId, targetNpId, slotId, inVariable, outVariable, outVariableSize, option);
 	return scenp_tus_add_and_get_variable(transId, targetNpId, slotId, inVariable, outVariable, outVariableSize, option, false, true);
 }
 
-error_code sceNpTusAddAndGetVariableVUserAsync(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, SceNpTusSlotId slotId, s64 inVariable, vm::ptr<SceNpTusVariable> outVariable, u64 outVariableSize, vm::ptr<SceNpTusAddAndGetVariableOptParam> option)
+error_code sceNpTusAddAndGetVariableVUserAsync(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, SceNpTusSlotId slotId, s64 inVariable, vm::ptr<SceNpTusVariable> outVariable, u32 outVariableSize, vm::ptr<SceNpTusAddAndGetVariableOptParam> option)
 {
 	sceNpTus.warning("sceNpTusAddAndGetVariableVUserAsync(transId=%d, targetVirtualUserId=*0x%x, slotId=%d, inVariable=%d, outVariable=*0x%x, outVariableSize=%d, option=*0x%x)", transId, targetVirtualUserId, slotId, inVariable, outVariable, outVariableSize, option);
 	return scenp_tus_add_and_get_variable(transId, targetVirtualUserId, slotId, inVariable, outVariable, outVariableSize, option, true, true);
 }
 
 template<typename T>
-error_code scenp_tus_try_and_set_variable(s32 transId, T targetNpId, SceNpTusSlotId slotId, s32 opeType, s64 variable, vm::ptr<SceNpTusVariable> resultVariable, u64 resultVariableSize, vm::ptr<SceNpTusTryAndSetVariableOptParam> option, bool vuser, bool async)
+error_code scenp_tus_try_and_set_variable(s32 transId, T targetNpId, SceNpTusSlotId slotId, s32 opeType, s64 variable, vm::ptr<SceNpTusVariable> resultVariable, u32 resultVariableSize, vm::ptr<SceNpTusTryAndSetVariableOptParam> option, bool vuser, bool async)
 {
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -658,12 +710,7 @@ error_code scenp_tus_try_and_set_variable(s32 transId, T targetNpId, SceNpTusSlo
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
-	}
-
-	if (!targetNpId || !resultVariable)
+	if (!resultVariable)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
 	}
@@ -673,9 +720,20 @@ error_code scenp_tus_try_and_set_variable(s32 transId, T targetNpId, SceNpTusSlo
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
 	}
 
-	if (resultVariableSize != sizeof(SceNpTusVariable))
+	if ((option && option->size != sizeof(SceNpTusTryAndSetVariableOptParam)) || resultVariableSize != sizeof(SceNpTusVariable))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
+	}
+
+	if (!targetNpId)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
+	}
+
+	// Probable vsh behaviour
+	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
 	auto trans_ctx = idm::get<tus_transaction_ctx>(transId);
@@ -695,25 +753,25 @@ error_code scenp_tus_try_and_set_variable(s32 transId, T targetNpId, SceNpTusSlo
 	return *trans_ctx->result;
 }
 
-error_code sceNpTusTryAndSetVariable(s32 transId, vm::cptr<SceNpId> targetNpId, SceNpTusSlotId slotId, s32 opeType, s64 variable, vm::ptr<SceNpTusVariable> resultVariable, u64 resultVariableSize, vm::ptr<SceNpTusTryAndSetVariableOptParam> option)
+error_code sceNpTusTryAndSetVariable(s32 transId, vm::cptr<SceNpId> targetNpId, SceNpTusSlotId slotId, s32 opeType, s64 variable, vm::ptr<SceNpTusVariable> resultVariable, u32 resultVariableSize, vm::ptr<SceNpTusTryAndSetVariableOptParam> option)
 {
 	sceNpTus.warning("sceNpTusTryAndSetVariable(transId=%d, targetNpId=*0x%x, slotId=%d, opeType=%d, variable=%d, resultVariable=*0x%x, resultVariableSize=%d, option=*0x%x)", transId, targetNpId, slotId, opeType, variable, resultVariable, resultVariableSize, option);
 	return scenp_tus_try_and_set_variable(transId, targetNpId, slotId, opeType, variable, resultVariable, resultVariableSize, option, false, false);
 }
 
-error_code sceNpTusTryAndSetVariableVUser(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, SceNpTusSlotId slotId, s32 opeType, s64 variable, vm::ptr<SceNpTusVariable> resultVariable, u64 resultVariableSize, vm::ptr<SceNpTusTryAndSetVariableOptParam> option)
+error_code sceNpTusTryAndSetVariableVUser(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, SceNpTusSlotId slotId, s32 opeType, s64 variable, vm::ptr<SceNpTusVariable> resultVariable, u32 resultVariableSize, vm::ptr<SceNpTusTryAndSetVariableOptParam> option)
 {
 	sceNpTus.warning("sceNpTusTryAndSetVariableVUser(transId=%d, targetVirtualUserId=*0x%x, slotId=%d, opeType=%d, variable=%d, resultVariable=*0x%x, resultVariableSize=%d, option=*0x%x)", transId, targetVirtualUserId, slotId, opeType, variable, resultVariable, resultVariableSize, option);
 	return scenp_tus_try_and_set_variable(transId, targetVirtualUserId, slotId, opeType, variable, resultVariable, resultVariableSize, option, true, false);
 }
 
-error_code sceNpTusTryAndSetVariableAsync(s32 transId, vm::cptr<SceNpId> targetNpId, SceNpTusSlotId slotId, s32 opeType, s64 variable, vm::ptr<SceNpTusVariable> resultVariable, u64 resultVariableSize, vm::ptr<SceNpTusTryAndSetVariableOptParam> option)
+error_code sceNpTusTryAndSetVariableAsync(s32 transId, vm::cptr<SceNpId> targetNpId, SceNpTusSlotId slotId, s32 opeType, s64 variable, vm::ptr<SceNpTusVariable> resultVariable, u32 resultVariableSize, vm::ptr<SceNpTusTryAndSetVariableOptParam> option)
 {
 	sceNpTus.warning("sceNpTusTryAndSetVariableAsync(transId=%d, targetNpId=*0x%x, slotId=%d, opeType=%d, variable=%d, resultVariable=*0x%x, resultVariableSize=%d, option=*0x%x)", transId, targetNpId, slotId, opeType, variable, resultVariable, resultVariableSize, option);
 	return scenp_tus_try_and_set_variable(transId, targetNpId, slotId, opeType, variable, resultVariable, resultVariableSize, option, false, true);
 }
 
-error_code sceNpTusTryAndSetVariableVUserAsync(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, SceNpTusSlotId slotId, s32 opeType, s64 variable, vm::ptr<SceNpTusVariable> resultVariable, u64 resultVariableSize, vm::ptr<SceNpTusTryAndSetVariableOptParam> option)
+error_code sceNpTusTryAndSetVariableVUserAsync(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, SceNpTusSlotId slotId, s32 opeType, s64 variable, vm::ptr<SceNpTusVariable> resultVariable, u32 resultVariableSize, vm::ptr<SceNpTusTryAndSetVariableOptParam> option)
 {
 	sceNpTus.warning("sceNpTusTryAndSetVariableVUserAsync(transId=%d, targetVirtualUserId=*0x%x, slotId=%d, opeType=%d, variable=%d, resultVariable=*0x%x, resultVariableSize=%d, option=*0x%x)", transId, targetVirtualUserId, slotId, opeType, variable, resultVariable, resultVariableSize, option);
 	return scenp_tus_try_and_set_variable(transId, targetVirtualUserId, slotId, opeType, variable, resultVariable, resultVariableSize, option, true, true);
@@ -722,21 +780,14 @@ error_code sceNpTusTryAndSetVariableVUserAsync(s32 transId, vm::cptr<SceNpTusVir
 template<typename T>
 error_code scenp_tus_delete_multislot_variable(s32 transId, T targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, s32 arrayNum, vm::ptr<void> option, bool vuser, bool async)
 {
-	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
-
-	if (!nph.is_NP_TUS_init)
-	{
-		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
-	}
-
-	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
-	}
-
-	if (!targetNpId || !slotIdArray || arrayNum <= 0)
+	if (!slotIdArray)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
+	}
+
+	if (arrayNum == 0 || option)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
 	}
 
 	if (arrayNum > SCE_NP_TUS_MAX_SLOT_NUM_PER_TRANS)
@@ -744,9 +795,22 @@ error_code scenp_tus_delete_multislot_variable(s32 transId, T targetNpId, vm::cp
 		return SCE_NP_COMMUNITY_ERROR_TOO_MANY_SLOTID;
 	}
 
-	if (option || !is_slot_array_valid(slotIdArray, arrayNum))
+	if (!is_slot_array_valid(slotIdArray, arrayNum))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+	}
+
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_TUS_init)
+	{
+		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
+
+	// Probable vsh behaviour
+	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
 	auto trans_ctx = idm::get<tus_transaction_ctx>(transId);
@@ -791,8 +855,18 @@ error_code sceNpTusDeleteMultiSlotVariableVUserAsync(s32 transId, vm::cptr<SceNp
 }
 
 template<typename T>
-error_code scenp_tus_set_data(s32 transId, T targetNpId, SceNpTusSlotId slotId, u32 totalSize, u32 sendSize, vm::cptr<void> data, vm::cptr<SceNpTusDataInfo> info, u64 infoStructSize, vm::ptr<SceNpTusSetDataOptParam> option, bool vuser, bool async)
+error_code scenp_tus_set_data(s32 transId, T targetNpId, SceNpTusSlotId slotId, u32 totalSize, u32 sendSize, vm::cptr<void> data, vm::cptr<SceNpTusDataInfo> info, u32 infoStructSize, vm::ptr<SceNpTusSetDataOptParam> option, bool vuser, bool async)
 {
+	if (slotId < 0 || !data || !totalSize)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
+	}
+
+	if ((option && option->size != sizeof(SceNpTusSetDataOptParam)) || (info && infoStructSize != sizeof(SceNpTusDataInfo)))
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
+	}
+
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_TUS_init)
@@ -800,19 +874,15 @@ error_code scenp_tus_set_data(s32 transId, T targetNpId, SceNpTusSlotId slotId, 
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
-	}
-
-	if (!targetNpId || !data || totalSize == 0)
+	if (!targetNpId)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
 	}
 
-	if (slotId < 0)
+	// Probable vsh behaviour
+	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
 	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
 	auto trans_ctx = idm::get<tus_transaction_ctx>(transId);
@@ -832,25 +902,25 @@ error_code scenp_tus_set_data(s32 transId, T targetNpId, SceNpTusSlotId slotId, 
 	return *trans_ctx->result;
 }
 
-error_code sceNpTusSetData(s32 transId, vm::cptr<SceNpId> targetNpId, SceNpTusSlotId slotId, u32 totalSize, u32 sendSize, vm::cptr<void> data, vm::cptr<SceNpTusDataInfo> info, u64 infoStructSize, vm::ptr<SceNpTusSetDataOptParam> option)
+error_code sceNpTusSetData(s32 transId, vm::cptr<SceNpId> targetNpId, SceNpTusSlotId slotId, u32 totalSize, u32 sendSize, vm::cptr<void> data, vm::cptr<SceNpTusDataInfo> info, u32 infoStructSize, vm::ptr<SceNpTusSetDataOptParam> option)
 {
 	sceNpTus.warning("sceNpTusSetData(transId=%d, targetNpId=*0x%x, slotId=%d, totalSize=%d, sendSize=%d, data=*0x%x, info=*0x%x, infoStructSize=%d, option=*0x%x)", transId, targetNpId, slotId, totalSize, sendSize, data, info, infoStructSize, option);
 	return scenp_tus_set_data(transId, targetNpId, slotId, totalSize, sendSize, data, info, infoStructSize, option, false, false);
 }
 
-error_code sceNpTusSetDataVUser(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, SceNpTusSlotId slotId, u32 totalSize, u32 sendSize, vm::cptr<void> data, vm::cptr<SceNpTusDataInfo> info, u64 infoStructSize, vm::ptr<SceNpTusSetDataOptParam> option)
+error_code sceNpTusSetDataVUser(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, SceNpTusSlotId slotId, u32 totalSize, u32 sendSize, vm::cptr<void> data, vm::cptr<SceNpTusDataInfo> info, u32 infoStructSize, vm::ptr<SceNpTusSetDataOptParam> option)
 {
 	sceNpTus.warning("sceNpTusSetDataVUser(transId=%d, targetVirtualUserId=*0x%x, slotId=%d, totalSize=%d, sendSize=%d, data=*0x%x, info=*0x%x, infoStructSize=%d, option=*0x%x)", transId, targetVirtualUserId, slotId, totalSize, sendSize, data, info, infoStructSize, option);
 	return scenp_tus_set_data(transId, targetVirtualUserId, slotId, totalSize, sendSize, data, info, infoStructSize, option, true, false);
 }
 
-error_code sceNpTusSetDataAsync(s32 transId, vm::cptr<SceNpId> targetNpId, SceNpTusSlotId slotId, u32 totalSize, u32 sendSize, vm::cptr<void> data, vm::cptr<SceNpTusDataInfo> info, u64 infoStructSize, vm::ptr<SceNpTusSetDataOptParam> option)
+error_code sceNpTusSetDataAsync(s32 transId, vm::cptr<SceNpId> targetNpId, SceNpTusSlotId slotId, u32 totalSize, u32 sendSize, vm::cptr<void> data, vm::cptr<SceNpTusDataInfo> info, u32 infoStructSize, vm::ptr<SceNpTusSetDataOptParam> option)
 {
 	sceNpTus.warning("sceNpTusSetDataAsync(transId=%d, targetNpId=*0x%x, slotId=%d, totalSize=%d, sendSize=%d, data=*0x%x, info=*0x%x, infoStructSize=%d, option=*0x%x)", transId, targetNpId, slotId, totalSize, sendSize, data, info, infoStructSize, option);
 	return scenp_tus_set_data(transId, targetNpId, slotId, totalSize, sendSize, data, info, infoStructSize, option, false, true);
 }
 
-error_code sceNpTusSetDataVUserAsync(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, SceNpTusSlotId slotId, u32 totalSize, u32 sendSize, vm::cptr<void> data, vm::cptr<SceNpTusDataInfo> info, u64 infoStructSize, vm::ptr<SceNpTusSetDataOptParam> option)
+error_code sceNpTusSetDataVUserAsync(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, SceNpTusSlotId slotId, u32 totalSize, u32 sendSize, vm::cptr<void> data, vm::cptr<SceNpTusDataInfo> info, u32 infoStructSize, vm::ptr<SceNpTusSetDataOptParam> option)
 {
 	sceNpTus.warning("sceNpTusSetDataVUserAsync(transId=%d, targetVirtualUserId=*0x%x, slotId=%d, totalSize=%d, sendSize=%d, data=*0x%x, info=*0x%x, infoStructSize=%d, option=*0x%x)", transId, targetVirtualUserId, slotId, totalSize, sendSize, data, info, infoStructSize, option);
 	return scenp_tus_set_data(transId, targetVirtualUserId, slotId, totalSize, sendSize, data, info, infoStructSize, option, true, true);
@@ -859,18 +929,6 @@ error_code sceNpTusSetDataVUserAsync(s32 transId, vm::cptr<SceNpTusVirtualUserId
 template<typename T>
 error_code scenp_tus_get_data(s32 transId, T targetNpId, SceNpTusSlotId slotId, vm::ptr<SceNpTusDataStatus> dataStatus, u32 dataStatusSize, vm::ptr<void> data, u32 recvSize, vm::ptr<void> option, bool vuser, bool async)
 {
-	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
-
-	if (!nph.is_NP_TUS_init)
-	{
-		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
-	}
-
-	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
-	}
-
 	if (!targetNpId)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
@@ -879,6 +937,24 @@ error_code scenp_tus_get_data(s32 transId, T targetNpId, SceNpTusSlotId slotId, 
 	if (option || slotId < 0)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+	}
+
+	if (dataStatusSize != sizeof(SceNpTusDataStatus))
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
+	}
+
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_TUS_init)
+	{
+		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
+
+	// Probable vsh behaviour
+	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
 	auto trans_ctx = idm::get<tus_transaction_ctx>(transId);
@@ -923,8 +999,33 @@ error_code sceNpTusGetDataVUserAsync(s32 transId, vm::cptr<SceNpTusVirtualUserId
 }
 
 template<typename T>
-error_code scenp_tus_get_multislot_data_status(s32 transId, T targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusDataStatus> statusArray, u64 statusArraySize, s32 arrayNum, vm::ptr<void> option, bool vuser, bool async)
+error_code scenp_tus_get_multislot_data_status(s32 transId, T targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusDataStatus> statusArray, u32 statusArraySize, s32 arrayNum, vm::ptr<void> option, bool vuser, bool async)
 {
+	if (!slotIdArray || !statusArray)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
+	}
+
+	if (arrayNum == 0 || option)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+	}
+
+	if (statusArraySize != arrayNum * sizeof(SceNpTusDataStatus))
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
+	}
+
+	if (arrayNum > SCE_NP_TUS_MAX_SLOT_NUM_PER_TRANS)
+	{
+		return SCE_NP_COMMUNITY_ERROR_TOO_MANY_SLOTID;
+	}
+
+	if (!is_slot_array_valid(slotIdArray, arrayNum))
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+	}
+
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_TUS_init)
@@ -932,24 +1033,15 @@ error_code scenp_tus_get_multislot_data_status(s32 transId, T targetNpId, vm::cp
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
-	}
-
-	if (!targetNpId || !statusArray || arrayNum <= 0)
+	if (!targetNpId)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
 	}
 
-	if (option || !is_slot_array_valid(slotIdArray, arrayNum))
+	// Probable vsh behaviour
+	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
 	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
-	}
-
-	if (arrayNum > SCE_NP_TUS_MAX_SLOT_NUM_PER_TRANS)
-	{
-		return SCE_NP_COMMUNITY_ERROR_TOO_MANY_SLOTID;
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
 	auto trans_ctx = idm::get<tus_transaction_ctx>(transId);
@@ -969,33 +1061,58 @@ error_code scenp_tus_get_multislot_data_status(s32 transId, T targetNpId, vm::cp
 	return *trans_ctx->result;
 }
 
-error_code sceNpTusGetMultiSlotDataStatus(s32 transId, vm::cptr<SceNpId> targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusDataStatus> statusArray, u64 statusArraySize, s32 arrayNum, vm::ptr<void> option)
+error_code sceNpTusGetMultiSlotDataStatus(s32 transId, vm::cptr<SceNpId> targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusDataStatus> statusArray, u32 statusArraySize, s32 arrayNum, vm::ptr<void> option)
 {
 	sceNpTus.warning("sceNpTusGetMultiSlotDataStatus(transId=%d, targetNpId=*0x%x, slotIdArray=*0x%x, statusArray=*0x%x, statusArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetNpId, slotIdArray, statusArray, statusArraySize, arrayNum, option);
 	return scenp_tus_get_multislot_data_status(transId, targetNpId, slotIdArray, statusArray, statusArraySize, arrayNum, option, false, false);
 }
 
-error_code sceNpTusGetMultiSlotDataStatusVUser(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusDataStatus> statusArray, u64 statusArraySize, s32 arrayNum, vm::ptr<void> option)
+error_code sceNpTusGetMultiSlotDataStatusVUser(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusDataStatus> statusArray, u32 statusArraySize, s32 arrayNum, vm::ptr<void> option)
 {
 	sceNpTus.warning("sceNpTusGetMultiSlotDataStatusVUser(transId=%d, targetVirtualUserId=*0x%x, slotIdArray=*0x%x, statusArray=*0x%x, statusArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetVirtualUserId, slotIdArray, statusArray, statusArraySize, arrayNum, option);
 	return scenp_tus_get_multislot_data_status(transId, targetVirtualUserId, slotIdArray, statusArray, statusArraySize, arrayNum, option, true, false);
 }
 
-error_code sceNpTusGetMultiSlotDataStatusAsync(s32 transId, vm::cptr<SceNpId> targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusDataStatus> statusArray, u64 statusArraySize, s32 arrayNum, vm::ptr<void> option)
+error_code sceNpTusGetMultiSlotDataStatusAsync(s32 transId, vm::cptr<SceNpId> targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusDataStatus> statusArray, u32 statusArraySize, s32 arrayNum, vm::ptr<void> option)
 {
 	sceNpTus.warning("sceNpTusGetMultiSlotDataStatusAsync(transId=%d, targetNpId=*0x%x, slotIdArray=*0x%x, statusArray=*0x%x, statusArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetNpId, slotIdArray, statusArray, statusArraySize, arrayNum, option);
 	return scenp_tus_get_multislot_data_status(transId, targetNpId, slotIdArray, statusArray, statusArraySize, arrayNum, option, false, true);
 }
 
-error_code sceNpTusGetMultiSlotDataStatusVUserAsync(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusDataStatus> statusArray, u64 statusArraySize, s32 arrayNum, vm::ptr<void> option)
+error_code sceNpTusGetMultiSlotDataStatusVUserAsync(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusDataStatus> statusArray, u32 statusArraySize, s32 arrayNum, vm::ptr<void> option)
 {
 	sceNpTus.warning("sceNpTusGetMultiSlotDataStatusVUserAsync(transId=%d, targetVirtualUserId=*0x%x, slotIdArray=*0x%x, statusArray=*0x%x, statusArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetVirtualUserId, slotIdArray, statusArray, statusArraySize, arrayNum, option);
 	return scenp_tus_get_multislot_data_status(transId, targetVirtualUserId, slotIdArray, statusArray, statusArraySize, arrayNum, option, true, true);
 }
 
 template<typename T>
-error_code scenp_tus_get_multiuser_data_status(s32 transId, T targetNpIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusDataStatus> statusArray, u64 statusArraySize, s32 arrayNum, vm::ptr<void> option, bool vuser, bool async)
+error_code scenp_tus_get_multiuser_data_status(s32 transId, T targetNpIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusDataStatus> statusArray, u32 statusArraySize, s32 arrayNum, vm::ptr<void> option, bool vuser, bool async)
 {
+	if (!statusArray)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
+	}
+
+	if (arrayNum == 0 || option)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+	}
+
+	if (arrayNum > SCE_NP_SCORE_MAX_NPID_NUM_PER_TRANS)
+	{
+		return SCE_NP_COMMUNITY_ERROR_TOO_MANY_NPID;
+	}
+
+	if (statusArraySize != arrayNum * sizeof(SceNpTusDataStatus))
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
+	}
+
+	if (slotId < 0)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+	}
+
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_TUS_init)
@@ -1003,24 +1120,15 @@ error_code scenp_tus_get_multiuser_data_status(s32 transId, T targetNpIdArray, S
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
-	}
-
-	if (!targetNpIdArray || !statusArray || arrayNum <= 0)
+	if (!targetNpIdArray)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
 	}
 
-	if (option || slotId < 0)
+	// Probable vsh behaviour
+	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
 	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
-	}
-
-	if (arrayNum > SCE_NP_TUS_MAX_USER_NUM_PER_TRANS)
-	{
-		return SCE_NP_COMMUNITY_ERROR_TOO_MANY_NPID;
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
 	auto trans_ctx = idm::get<tus_transaction_ctx>(transId);
@@ -1046,32 +1154,69 @@ error_code scenp_tus_get_multiuser_data_status(s32 transId, T targetNpIdArray, S
 	return *trans_ctx->result;
 }
 
-error_code sceNpTusGetMultiUserDataStatus(s32 transId, vm::cptr<SceNpId> targetNpIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusDataStatus> statusArray, u64 statusArraySize, s32 arrayNum, vm::ptr<void> option)
+error_code sceNpTusGetMultiUserDataStatus(s32 transId, vm::cptr<SceNpId> targetNpIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusDataStatus> statusArray, u32 statusArraySize, s32 arrayNum, vm::ptr<void> option)
 {
 	sceNpTus.warning("sceNpTusGetMultiUserDataStatus(transId=%d, targetNpIdArray=*0x%x, slotId=%d, statusArray=*0x%x, statusArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetNpIdArray, slotId, statusArray, statusArraySize, arrayNum, option);
 	return scenp_tus_get_multiuser_data_status(transId, targetNpIdArray, slotId, statusArray, statusArraySize, arrayNum, option, false, false);
 }
 
-error_code sceNpTusGetMultiUserDataStatusVUser(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusDataStatus> statusArray, u64 statusArraySize, s32 arrayNum, vm::ptr<void> option)
+error_code sceNpTusGetMultiUserDataStatusVUser(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusDataStatus> statusArray, u32 statusArraySize, s32 arrayNum, vm::ptr<void> option)
 {
 	sceNpTus.warning("sceNpTusGetMultiUserDataStatusVUser(transId=%d, targetVirtualUserIdArray=*0x%x, slotId=%d, statusArray=*0x%x, statusArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetVirtualUserIdArray, slotId, statusArray, statusArraySize, arrayNum, option);
 	return scenp_tus_get_multiuser_data_status(transId, targetVirtualUserIdArray, slotId, statusArray, statusArraySize, arrayNum, option, true, false);
 }
 
-error_code sceNpTusGetMultiUserDataStatusAsync(s32 transId, vm::cptr<SceNpId> targetNpIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusDataStatus> statusArray, u64 statusArraySize, s32 arrayNum, vm::ptr<void> option)
+error_code sceNpTusGetMultiUserDataStatusAsync(s32 transId, vm::cptr<SceNpId> targetNpIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusDataStatus> statusArray, u32 statusArraySize, s32 arrayNum, vm::ptr<void> option)
 {
 	sceNpTus.warning("sceNpTusGetMultiUserDataStatusAsync(transId=%d, targetNpIdArray=*0x%x, slotId=%d, statusArray=*0x%x, statusArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetNpIdArray, slotId, statusArray, statusArraySize, arrayNum, option);
 	return scenp_tus_get_multiuser_data_status(transId, targetNpIdArray, slotId, statusArray, statusArraySize, arrayNum, option, false, true);
 }
 
-error_code sceNpTusGetMultiUserDataStatusVUserAsync(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusDataStatus> statusArray, u64 statusArraySize, s32 arrayNum, vm::ptr<void> option)
+error_code sceNpTusGetMultiUserDataStatusVUserAsync(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusDataStatus> statusArray, u32 statusArraySize, s32 arrayNum, vm::ptr<void> option)
 {
 	sceNpTus.warning("sceNpTusGetMultiUserDataStatusVUserAsync(transId=%d, targetVirtualUserIdArray=*0x%x, slotId=%d, statusArray=*0x%x, statusArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetVirtualUserIdArray, slotId, statusArray, statusArraySize, arrayNum, option);
 	return scenp_tus_get_multiuser_data_status(transId, targetVirtualUserIdArray, slotId, statusArray, statusArraySize, arrayNum, option, true, true);
 }
 
-error_code scenp_tus_get_friends_data_status(s32 transId, SceNpTusSlotId slotId, s32 includeSelf, s32 sortType, vm::ptr<SceNpTusDataStatus> statusArray, u64 statusArraySize, s32 arrayNum, vm::ptr<void> option, bool async)
+error_code scenp_tus_get_friends_data_status(s32 transId, SceNpTusSlotId slotId, s32 includeSelf, s32 sortType, vm::ptr<SceNpTusDataStatus> statusArray, u32 statusArraySize, s32 arrayNum, vm::ptr<void> option, bool async)
 {
+	if (!statusArray)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
+	}
+
+	if (arrayNum == 0)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+	}
+
+	// Undocumented behaviour and structure unknown
+	// Also checks a u32* at offset 4 of the struct for nullptr in which case it behaves like option == nullptr
+	if (option && *static_cast<u32*>(option.get_ptr()) != 0xC)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+	}
+
+	if (sortType != SCE_NP_TUS_DATASTATUS_SORTTYPE_DESCENDING_DATE && sortType != SCE_NP_TUS_DATASTATUS_SORTTYPE_ASCENDING_DATE)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+	}
+
+	if (arrayNum > SCE_NP_SCORE_MAX_SELECTED_FRIENDS_NUM)
+	{
+		return SCE_NP_COMMUNITY_ERROR_TOO_MANY_NPID;
+	}
+
+	if (statusArraySize != arrayNum * sizeof(SceNpTusDataStatus))
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
+	}
+
+	if (slotId < 0)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+	}
+
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_TUS_init)
@@ -1079,24 +1224,10 @@ error_code scenp_tus_get_friends_data_status(s32 transId, SceNpTusSlotId slotId,
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
+	// Probable vsh behaviour
 	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
-	}
-
-	if (!statusArray)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
-	}
-
-	if (option || arrayNum < 0 || slotId < 0)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
-	}
-
-	if (arrayNum > SCE_NP_TUS_MAX_SELECTED_FRIENDS_NUM)
-	{
-		return SCE_NP_COMMUNITY_ERROR_TOO_MANY_NPID;
 	}
 
 	auto trans_ctx = idm::get<tus_transaction_ctx>(transId);
@@ -1116,13 +1247,13 @@ error_code scenp_tus_get_friends_data_status(s32 transId, SceNpTusSlotId slotId,
 	return *trans_ctx->result;
 }
 
-error_code sceNpTusGetFriendsDataStatus(s32 transId, SceNpTusSlotId slotId, s32 includeSelf, s32 sortType, vm::ptr<SceNpTusDataStatus> statusArray, u64 statusArraySize, s32 arrayNum, vm::ptr<void> option)
+error_code sceNpTusGetFriendsDataStatus(s32 transId, SceNpTusSlotId slotId, s32 includeSelf, s32 sortType, vm::ptr<SceNpTusDataStatus> statusArray, u32 statusArraySize, s32 arrayNum, vm::ptr<void> option)
 {
 	sceNpTus.warning("sceNpTusGetFriendsDataStatus(transId=%d, slotId=%d, includeSelf=%d, sortType=%d, statusArray=*0x%x, statusArraySize=%d, arrayNum=%d, option=*0x%x)", transId, slotId, includeSelf, sortType, statusArray, statusArraySize, arrayNum, option);
 	return scenp_tus_get_friends_data_status(transId, slotId, includeSelf, sortType, statusArray, statusArraySize, arrayNum, option, false);
 }
 
-error_code sceNpTusGetFriendsDataStatusAsync(s32 transId, SceNpTusSlotId slotId, s32 includeSelf, s32 sortType, vm::ptr<SceNpTusDataStatus> statusArray, u64 statusArraySize, s32 arrayNum, vm::ptr<void> option)
+error_code sceNpTusGetFriendsDataStatusAsync(s32 transId, SceNpTusSlotId slotId, s32 includeSelf, s32 sortType, vm::ptr<SceNpTusDataStatus> statusArray, u32 statusArraySize, s32 arrayNum, vm::ptr<void> option)
 {
 	sceNpTus.warning("sceNpTusGetFriendsDataStatusAsync(transId=%d, slotId=%d, includeSelf=%d, sortType=%d, statusArray=*0x%x, statusArraySize=%d, arrayNum=%d, option=*0x%x)", transId, slotId, includeSelf, sortType, statusArray, statusArraySize, arrayNum, option);
 	return scenp_tus_get_friends_data_status(transId, slotId, includeSelf, sortType, statusArray, statusArraySize, arrayNum, option, true);
@@ -1131,24 +1262,12 @@ error_code sceNpTusGetFriendsDataStatusAsync(s32 transId, SceNpTusSlotId slotId,
 template<typename T>
 error_code scenp_tus_delete_multislot_data(s32 transId, T targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, s32 arrayNum, vm::ptr<void> option, bool vuser, bool async)
 {
-	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
-
-	if (!nph.is_NP_TUS_init)
-	{
-		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
-	}
-
-	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
-	}
-
-	if (!targetNpId || !slotIdArray || arrayNum < 0)
+	if (!slotIdArray)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
 	}
 
-	if (option || !is_slot_array_valid(slotIdArray, arrayNum))
+	if (arrayNum == 0 || option)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
 	}
@@ -1156,6 +1275,24 @@ error_code scenp_tus_delete_multislot_data(s32 transId, T targetNpId, vm::cptr<S
 	if (arrayNum > SCE_NP_TUS_MAX_SLOT_NUM_PER_TRANS)
 	{
 		return SCE_NP_COMMUNITY_ERROR_TOO_MANY_SLOTID;
+	}
+
+	if (!is_slot_array_valid(slotIdArray, arrayNum))
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+	}
+
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_TUS_init)
+	{
+		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
+
+	// Probable vsh behaviour
+	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
 	auto trans_ctx = idm::get<tus_transaction_ctx>(transId);
@@ -1200,9 +1337,16 @@ error_code sceNpTusDeleteMultiSlotDataVUserAsync(s32 transId, vm::cptr<SceNpTusV
 	return scenp_tus_delete_multislot_data(transId, targetVirtualUserId, slotIdArray, arrayNum, option, true, true);
 }
 
+void scenp_tss_no_file(const std::shared_ptr<tus_transaction_ctx>& trans, vm::ptr<SceNpTssDataStatus> dataStatus)
+{
+	// TSS are files stored on PSN by developers, no dumps available atm
+	std::memset(dataStatus.get_ptr(), 0, sizeof(SceNpTssDataStatus));
+	trans->result = not_an_error(0);
+}
+
 error_code sceNpTssGetData(s32 transId, SceNpTssSlotId slotId, vm::ptr<SceNpTssDataStatus> dataStatus, u32 dataStatusSize, vm::ptr<void> data, u32 recvSize, vm::ptr<SceNpTssGetDataOptParam> option)
 {
-	sceNpTus.todo("sceNpTssGetData(transId=%d, slotId=%d, dataStatus=*0x%x, dataStatusSize=%d, data=*0x%x, recvSize=%d, option=*0x%x)", transId, slotId, dataStatus, dataStatusSize, data, recvSize, option);
+	sceNpTus.warning("sceNpTssGetData(transId=%d, slotId=%d, dataStatus=*0x%x, dataStatusSize=%d, data=*0x%x, recvSize=%d, option=*0x%x)", transId, slotId, dataStatus, dataStatusSize, data, recvSize, option);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -1227,13 +1371,15 @@ error_code sceNpTssGetData(s32 transId, SceNpTssSlotId slotId, vm::ptr<SceNpTssD
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
+
+	scenp_tss_no_file(trans_ctx, dataStatus);
 
 	return CELL_OK;
 }
 
 error_code sceNpTssGetDataAsync(s32 transId, SceNpTssSlotId slotId, vm::ptr<SceNpTssDataStatus> dataStatus, u32 dataStatusSize, vm::ptr<void> data, u32 recvSize, vm::ptr<SceNpTssGetDataOptParam> option)
 {
-	sceNpTus.todo("sceNpTssGetDataAsync(transId=%d, slotId=%d, dataStatus=*0x%x, dataStatusSize=%d, data=*0x%x, recvSize=%d, option=*0x%x)", transId, slotId, dataStatus, dataStatusSize, data, recvSize, option);
+	sceNpTus.warning("sceNpTssGetDataAsync(transId=%d, slotId=%d, dataStatus=*0x%x, dataStatusSize=%d, data=*0x%x, recvSize=%d, option=*0x%x)", transId, slotId, dataStatus, dataStatusSize, data, recvSize, option);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -1258,6 +1404,8 @@ error_code sceNpTssGetDataAsync(s32 transId, SceNpTssSlotId slotId, vm::ptr<SceN
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
+
+	scenp_tss_no_file(trans_ctx, dataStatus);
 
 	return CELL_OK;
 }

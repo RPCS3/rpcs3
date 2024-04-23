@@ -40,7 +40,7 @@ namespace rsx
 
 			virtual ~overlay() = default;
 
-			virtual void update() {}
+			virtual void update(u64 /*timestamp_us*/) {}
 			virtual compiled_resource get_compiled() = 0;
 
 			void refresh() const;
@@ -57,7 +57,8 @@ namespace rsx
 				new_save = -1,
 				canceled = -2,
 				error = -3,
-				interrupted = -4
+				interrupted = -4,
+				no = -5
 			};
 
 			static constexpr u64 m_auto_repeat_ms_interval_default = 200;
@@ -122,7 +123,7 @@ namespace rsx
 			bool is_detached() const { return m_input_thread_detached; }
 			void detach_input() { m_input_thread_detached.store(true); }
 
-			void update() override {}
+			void update(u64 /*timestamp_us*/) override {}
 
 			compiled_resource get_compiled() override = 0;
 

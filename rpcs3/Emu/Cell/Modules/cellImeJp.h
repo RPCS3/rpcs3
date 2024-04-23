@@ -115,11 +115,12 @@ struct ime_jp_manager
 
 	u32 input_state = CELL_IMEJP_BEFORE_INPUT;
 	std::vector<std::string> dictionary_paths;
-	std::u16string confirmed_string;
-	std::u16string converted_string;
-	std::u16string input_string;
-	usz cursor = 0;
-	usz cursor_end = 0;
+	std::u16string confirmed_string; // Confirmed part of the string (first part of the entire string)
+	std::u16string converted_string; // Converted part of the unconfirmed input string
+	std::u16string input_string;     // Unconfirmed part of the string (second part of the entire string)
+	usz cursor = 0;       // The cursor. Can move across the entire input string.
+	usz focus_begin = 0;  // Begin of the focus string
+	usz focus_length = 0; // Length of the focus string
 	s16 fix_input_mode = CELL_IMEJP_FIXINMODE_OFF;
 	s16 input_char_type = CELL_IMEJP_DSPCHAR_HIRA;
 	s16 kana_input_mode = CELL_IMEJP_ROMAN_INPUT;
@@ -131,6 +132,17 @@ struct ime_jp_manager
 	bool addString(vm::cptr<u16> str);
 	bool backspaceWord();
 	bool deleteWord();
-	void moveCursor(s8 amount);
-	void moveCursorEnd(s8 amount);
+	bool remove_character(bool forward);
+	void clear_input();
+	void move_cursor(s8 amount);                      // s8 because CELL_IMEJP_STRING_MAXLENGTH is 128
+	void move_focus(s8 amount);                       // s8 because CELL_IMEJP_STRING_MAXLENGTH is 128
+	void move_focus_end(s8 amount, bool wrap_around); // s8 because CELL_IMEJP_STRING_MAXLENGTH is 128
+
+	struct candidate
+	{
+		std::u16string text; // Actual text of the candidate
+		u16 offset = 0;      // The offset of the next character after the candidate replaced part of the current focus.
+	};
+	std::vector<candidate> get_candidate_list() const;
+	std::u16string get_focus_string() const;
 };

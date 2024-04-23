@@ -554,4 +554,4 @@ public:
 	static std::string triple2();
 };
 
-#endif
+#endif // LLVM_AVAILABLE

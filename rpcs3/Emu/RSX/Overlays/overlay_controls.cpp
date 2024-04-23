@@ -285,8 +285,8 @@ namespace rsx
 
 		void overlay_element::translate(s16 _x, s16 _y)
 		{
-			x = static_cast<u16>(x + _x);
-			y = static_cast<u16>(y + _y);
+			x += _x;
+			y += _y;
 
 			is_compiled = false;
 		}
@@ -295,8 +295,8 @@ namespace rsx
 		{
 			if (origin_scaling)
 			{
-				x = static_cast<u16>(_x * x);
-				y = static_cast<u16>(_y * y);
+				x = static_cast<s16>(_x * x);
+				y = static_cast<s16>(_y * y);
 			}
 
 			w = static_cast<u16>(_x * w);
@@ -305,7 +305,7 @@ namespace rsx
 			is_compiled = false;
 		}
 
-		void overlay_element::set_pos(u16 _x, u16 _y)
+		void overlay_element::set_pos(s16 _x, s16 _y)
 		{
 			x = _x;
 			y = _y;
@@ -646,10 +646,10 @@ namespace rsx
 				itm->translate(_x, _y);
 		}
 
-		void layout_container::set_pos(u16 _x, u16 _y)
+		void layout_container::set_pos(s16 _x, s16 _y)
 		{
-			s16 dx = static_cast<s16>(_x - x);
-			s16 dy = static_cast<s16>(_y - y);
+			s16 dx = _x - x;
+			s16 dy = _y - y;
 			translate(dx, dy);
 		}
 
@@ -666,6 +666,12 @@ namespace rsx
 			}
 
 			return compiled_resources;
+		}
+
+		void layout_container::add_spacer()
+		{
+			std::unique_ptr<overlay_element> spacer_element = std::make_unique<spacer>();
+			add_element(spacer_element);
 		}
 
 		overlay_element* vertical_layout::add_element(std::unique_ptr<overlay_element>& item, int offset)

@@ -451,7 +451,7 @@ namespace gl
 			overlay_pass::run(cmd_, viewport, target, gl::image_aspect::color, true);
 		}
 
-		ui.update();
+		ui.update(get_system_time());
 	}
 
 	video_out_calibration_pass::video_out_calibration_pass()
@@ -461,86 +461,15 @@ namespace gl
 		;
 
 		fs_src =
-			"#version 420\n\n"
-			"layout(binding=31) uniform sampler2D fs0;\n"
-			"layout(binding=30) uniform sampler2D fs1;\n"
-			"layout(location=0) in vec2 tc0;\n"
-			"layout(location=0) out vec4 ocol;\n"
-			"\n"
-			"#define STEREO_MODE_DISABLED 0\n"
-			"#define STEREO_MODE_ANAGLYPH 1\n"
-			"#define STEREO_MODE_SIDE_BY_SIDE 2\n"
-			"#define STEREO_MODE_OVER_UNDER 3\n"
-			"\n"
-			"vec2 sbs_single_matrix = vec2(2.0,0.4898f);\n"
-			"vec2 sbs_multi_matrix =  vec2(2.0,1.0);\n"
-			"vec2 ou_single_matrix =  vec2(1.0,0.9796f);\n"
-			"vec2 ou_multi_matrix =   vec2(1.0,2.0);\n"
-			"\n"
-			"uniform float gamma;\n"
-			"uniform int limit_range;\n"
-			"uniform int stereo_display_mode;\n"
-			"uniform int stereo_image_count;\n"
-			"\n"
-			"vec4 read_source()\n"
-			"{\n"
-			"	if (stereo_display_mode == STEREO_MODE_DISABLED) return texture(fs0, tc0);\n"
-			"\n"
-			"	vec4 left, right;\n"
-			"	if (stereo_image_count == 1)\n"
-			"	{\n"
-			"		switch (stereo_display_mode)\n"
-			"		{\n"
-			"			case STEREO_MODE_ANAGLYPH:\n"
-			"				left = texture(fs0, tc0 * vec2(1.f, 0.4898f));\n"
-			"				right = texture(fs0, (tc0 * vec2(1.f, 0.4898f)) + vec2(0.f, 0.510204f));\n"
-			"				return vec4(left.r, right.g, right.b, 1.f);\n"
-			"			case STEREO_MODE_SIDE_BY_SIDE:\n"
-			"				if (tc0.x < 0.5) return texture(fs0, tc0* sbs_single_matrix);\n"
-			"				else             return texture(fs0, (tc0* sbs_single_matrix) + vec2(-1.f, 0.510204f));\n"
-			"			case STEREO_MODE_OVER_UNDER:\n"
-			"				if (tc0.y < 0.5) return texture(fs0, tc0* ou_single_matrix);\n"
-			"				else             return texture(fs0, (tc0* ou_single_matrix) + vec2(0.f, 0.020408f) );\n"
-			"			default:\n" // undefined behavior
-			"				return texture(fs0,tc0);\n"
-			"		}\n"
-			"	}\n"
-			"	else if (stereo_image_count == 2)\n"
-			"	{\n"
-			"		switch (stereo_display_mode)\n"
-			"		{\n"
-			"			case STEREO_MODE_ANAGLYPH:\n"
-			"				left = texture(fs0, tc0);\n"
-			"				right = texture(fs1, tc0);\n"
-			"				return vec4(left.r, right.g, right.b, 1.f);\n"
-			"			case STEREO_MODE_SIDE_BY_SIDE:\n"
-			"				if (tc0.x < 0.5) return texture(fs0,(tc0 * sbs_multi_matrix));\n"
-			"				else             return texture(fs1,(tc0 * sbs_multi_matrix) + vec2(-1.f,0.f));\n"
-			"			case STEREO_MODE_OVER_UNDER:\n"
-			"				if (tc0.y < 0.5) return texture(fs0,(tc0 * ou_multi_matrix));\n"
-			"				else             return texture(fs1,(tc0 * ou_multi_matrix) + vec2(0.f,-1.f));\n"
-			"			default:\n" // undefined behavior
-			"				return texture(fs0,tc0);\n"
-			"		}\n"
-			"	}\n"
-			"	{\n"
-			"		vec2 coord_left = tc0 * vec2(1.f, 0.4898f);\n"
-			"		vec2 coord_right = coord_left + vec2(0.f, 0.510204f);\n"
-			"		left = texture(fs0, coord_left);\n"
-			"		right = texture(fs0, coord_right);\n"
-			"		return vec4(left.r, right.g, right.b, 1.);\n"
-			"	}\n"
-			"}\n"
-			"\n"
-			"void main()\n"
-			"{\n"
-			"	vec4 color = read_source();\n"
-			"	color.rgb = pow(color.rgb, vec3(gamma));\n"
-			"	if (limit_range > 0)\n"
-			"		ocol = ((color * 220.) + 16.) / 255.;\n"
-			"	else\n"
-			"		ocol = color;\n"
-			"}\n";
+		#include "../Program/GLSLSnippets/VideoOutCalibrationPass.glsl"
+		;
+
+		std::pair<std::string_view, std::string> repl_list[] =
+		{
+			{ "%sampler_binding", fmt::format("(%d - x)", GL_TEMP_IMAGE_SLOT(0)) },
+			{ "%set_decorator, ", "" },
+		};
+		fs_src = fmt::replace_all(fs_src, repl_list);
 
 		m_input_filter = gl::filter::linear;
 	}
@@ -553,16 +482,17 @@ namespace gl
 			m_sampler.set_parameteri(GL_TEXTURE_MIN_FILTER, static_cast<GLenum>(m_input_filter));
 			m_sampler.set_parameteri(GL_TEXTURE_MAG_FILTER, static_cast<GLenum>(m_input_filter));
 		}
+
 		program_handle.uniforms["gamma"] = gamma;
 		program_handle.uniforms["limit_range"] = limited_rgb + 0;
 		program_handle.uniforms["stereo_display_mode"] = static_cast<u8>(stereo_mode);
 		program_handle.uniforms["stereo_image_count"] = (source[1] == GL_NONE? 1 : 2);
 
-		saved_sampler_state saved(31, m_sampler);
-		cmd->bind_texture(31, GL_TEXTURE_2D, source[0]);
+		saved_sampler_state saved(GL_TEMP_IMAGE_SLOT(0), m_sampler);
+		cmd->bind_texture(GL_TEMP_IMAGE_SLOT(0), GL_TEXTURE_2D, source[0]);
 
-		saved_sampler_state saved2(30, m_sampler);
-		cmd->bind_texture(30, GL_TEXTURE_2D, source[1]);
+		saved_sampler_state saved2(GL_TEMP_IMAGE_SLOT(1), m_sampler);
+		cmd->bind_texture(GL_TEMP_IMAGE_SLOT(1), GL_TEXTURE_2D, source[1]);
 
 		overlay_pass::run(cmd, viewport, GL_NONE, gl::image_aspect::color, false);
 	}

@@ -237,7 +237,7 @@ namespace vm
 
 					// Try triggering a page fault (write)
 					// TODO: Read memory if needed
-					vm::_ref<atomic_t<u8>>(test / 4096 == begin / 4096 ? begin : test) += 0;
+					utils::trigger_write_page_fault(vm::base(test / 4096 == begin / 4096 ? begin : test));
 					continue;
 				}
 			}
@@ -473,13 +473,13 @@ namespace vm
 			}
 		}
 
-		bool to_prepare_memory = addr >= 0x10000;
+		bool to_prepare_memory = true;
 
 		for (u64 i = 0;; i++)
 		{
 			auto& bits = get_range_lock_bits(true);
 
-			if (!range_lock || addr < 0x10000)
+			if (!range_lock)
 			{
 				if (!bits && bits.compare_and_swap_test(0, u64{umax}))
 				{
@@ -492,7 +492,7 @@ namespace vm
 
 				const auto diff = range_lock - g_range_lock_set;
 
-				if (bits != umax && !bits.bit_test_set(diff))
+				if (bits != umax && !bits.bit_test_set(static_cast<u32>(diff)))
 				{
 					break;
 				}
@@ -521,7 +521,7 @@ namespace vm
 			}
 		}
 
-		if (addr >= 0x10000)
+		if (range_lock)
 		{
 			perf_meter<"SUSPEND"_u64> perf0;
 
@@ -557,7 +557,7 @@ namespace vm
 					for (u64 hi = addr2 >> 16, max = (addr2 + size2 - 1) >> 16; hi <= max; hi++)
 					{
 						u64 addr3 = addr2;
-						u32 size3 = std::min<u64>(addr2 + size2, utils::align(addr2, 0x10000)) - addr2;
+						u64 size3 = std::min<u64>(addr2 + size2, utils::align(addr2, 0x10000)) - addr2;
 
 						if (u64 is_shared = g_shmem[hi]) [[unlikely]]
 						{
@@ -570,7 +570,7 @@ namespace vm
 						}
 
 						addr2 += size3;
-						size2 -= size3;
+						size2 -= static_cast<u32>(size3);
 					}
 
 					return 0;
@@ -1665,13 +1665,13 @@ namespace vm
 
 		ar.breathe();
 
-		for (usz iter_count = 0; size; iter_count++, ptr += byte_of_pages)
+		for (usz iter_count = 0; size; iter_count += sizeof(u32), ptr += byte_of_pages * sizeof(u32))
 		{
-			size -= byte_of_pages;
+			const u32 bitmap = read_from_ptr<le_t<u32>>(bit_array, iter_count);
 
-			const u8 bitmap = bit_array[iter_count];
+			size -= byte_of_pages * sizeof(bitmap);
 
-			for (usz i = 0; i < byte_of_pages;)
+			for (usz i = 0; i < byte_of_pages * sizeof(bitmap);)
 			{
 				usz block_count = 0;
 
@@ -2405,8 +2405,10 @@ void fmt_class_string<vm::_ptr_base<const char, u32>>::format(std::string& out, 
 		return;
 	}
 
+	const u32 addr = ::narrow<u32>(arg);
+
 	// Filter certainly invalid addresses
-	if (!vm::check_addr(arg, vm::page_readable))
+	if (!vm::check_addr(addr, vm::page_readable))
 	{
 		out += reinterpret_cast<const char*>(u8"«INVALID_ADDRESS:");
 		fmt_class_string<u32>::format(out, arg);
@@ -2418,7 +2420,7 @@ void fmt_class_string<vm::_ptr_base<const char, u32>>::format(std::string& out, 
 
 	out += reinterpret_cast<const char*>(u8"“");
 
-	if (!vm::read_string(arg, umax, out, true))
+	if (!vm::read_string(addr, umax, out, true))
 	{
 		// Revert changes
 		out.resize(start);

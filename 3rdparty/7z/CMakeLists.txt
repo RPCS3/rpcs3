@@ -1,5 +1,5 @@
 # 7z sdk
-if(WIN32)
+if(WIN32 OR APPLE)
 	add_library(3rdparty_7z STATIC EXCLUDE_FROM_ALL
 		src/7zAlloc.c
 		src/7zArcIn.c

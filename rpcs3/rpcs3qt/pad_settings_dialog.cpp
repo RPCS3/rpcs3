@@ -174,13 +174,13 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 	// Refresh Button
 	connect(ui->b_refresh, &QPushButton::clicked, this, &pad_settings_dialog::RefreshHandlers);
 
-	ui->chooseClass->addItem(tr("Standard (Pad)"), u32{CELL_PAD_PCLASS_TYPE_STANDARD});
-	ui->chooseClass->addItem(tr("Guitar"),         u32{CELL_PAD_PCLASS_TYPE_GUITAR});
-	ui->chooseClass->addItem(tr("Drum"),           u32{CELL_PAD_PCLASS_TYPE_DRUM});
-	ui->chooseClass->addItem(tr("DJ"),             u32{CELL_PAD_PCLASS_TYPE_DJ});
-	ui->chooseClass->addItem(tr("Dance Mat"),      u32{CELL_PAD_PCLASS_TYPE_DANCEMAT});
-	ui->chooseClass->addItem(tr("Navigation"),     u32{CELL_PAD_PCLASS_TYPE_NAVIGATION});
-	ui->chooseClass->addItem(tr("Skateboard"),     u32{CELL_PAD_PCLASS_TYPE_SKATEBOARD});
+	ui->chooseClass->addItem(tr("Standard (Pad)"),     u32{CELL_PAD_PCLASS_TYPE_STANDARD});
+	ui->chooseClass->addItem(tr("Guitar"),             u32{CELL_PAD_PCLASS_TYPE_GUITAR});
+	ui->chooseClass->addItem(tr("Drum"),               u32{CELL_PAD_PCLASS_TYPE_DRUM});
+	ui->chooseClass->addItem(tr("DJ"),                 u32{CELL_PAD_PCLASS_TYPE_DJ});
+	ui->chooseClass->addItem(tr("Dance Mat"),          u32{CELL_PAD_PCLASS_TYPE_DANCEMAT});
+	ui->chooseClass->addItem(tr("PS Move Navigation"), u32{CELL_PAD_PCLASS_TYPE_NAVIGATION});
+	ui->chooseClass->addItem(tr("Skateboard"),         u32{CELL_PAD_PCLASS_TYPE_SKATEBOARD});
 
 	connect(ui->chooseClass, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
 	{
@@ -648,7 +648,7 @@ void pad_settings_dialog::switch_pad_info(int index, pad_device_info info, bool 
 		info.is_connected = is_connected;
 
 		ui->chooseDevice->setItemData(index, QVariant::fromValue(info));
-		ui->chooseDevice->setItemText(index, is_connected ? qstr(info.name) : (qstr(info.name) + Disconnected_suffix));
+		ui->chooseDevice->setItemText(index, is_connected ? info.localized_name : (info.localized_name + Disconnected_suffix));
 	}
 
 	if (!is_connected && m_remap_timer.isActive() && ui->chooseDevice->currentIndex() == index)
@@ -1445,6 +1445,7 @@ void pad_settings_dialog::ChangeHandler()
 	{
 #ifdef _WIN32
 	case pad_handler::xinput:
+	case pad_handler::mm:
 #endif
 	case pad_handler::ds3:
 	case pad_handler::ds4:
@@ -1455,7 +1456,8 @@ void pad_settings_dialog::ChangeHandler()
 		for (usz i = 1; i <= m_handler->max_devices(); i++) // Controllers 1-n in GUI
 		{
 			const QString device_name = name_string + QString::number(i);
-			ui->chooseDevice->addItem(device_name, QVariant::fromValue(pad_device_info{ sstr(device_name), true }));
+			const QString device_name_localized = GetLocalizedPadName(m_handler->m_type, device_name, i);
+			ui->chooseDevice->addItem(device_name_localized, QVariant::fromValue(pad_device_info{ sstr(device_name), device_name_localized, true }));
 		}
 		force_enable = true;
 		break;
@@ -1471,14 +1473,16 @@ void pad_settings_dialog::ChangeHandler()
 	}
 	default:
 	{
-		for (const pad_list_entry& device : device_list)
+		for (usz i = 0; i < device_list.size(); i++)
 		{
+			const pad_list_entry& device = ::at32(device_list, i);
+
 			if (!device.is_buddy_only)
 			{
-				const QString device_name = QString::fromStdString(device.name);
-				const QVariant user_data = QVariant::fromValue(pad_device_info{ device.name, true });
+				const QString device_name_localized = GetLocalizedPadName(m_handler->m_type, QString::fromStdString(device.name), i);
+				const QVariant user_data = QVariant::fromValue(pad_device_info{ device.name, device_name_localized, true });
 
-				ui->chooseDevice->addItem(device_name, user_data);
+				ui->chooseDevice->addItem(device_name_localized, user_data);
 			}
 		}
 		break;
@@ -1519,7 +1523,8 @@ void pad_settings_dialog::ChangeHandler()
 			ui->chooseDevice->setPlaceholderText(tr("No Device Detected"));
 		}
 
-		m_device_name.clear();
+		// Keep the configured device name
+		m_device_name = GetDeviceName();
 	}
 
 	// Handle running timers
@@ -1590,7 +1595,7 @@ void pad_settings_dialog::ChangeConfig(const QString& config_file)
 	}
 	else
 	{
-		cfg_log.fatal("Handler '%s' not found in handler dropdown.", handler);
+		cfg_log.error("Handler '%s' not found in handler dropdown.", handler);
 	}
 
 	// Force Refresh
@@ -1611,11 +1616,7 @@ void pad_settings_dialog::ChangeDevice(int index)
 	}
 
 	const pad_device_info info = user_data.value<pad_device_info>();
-	m_device_name = info.name;
-	if (!g_cfg_input.player[GetPlayerIndex()]->device.from_string(m_device_name))
-	{
-		cfg_log.error("Failed to convert device string: %s", m_device_name);
-	}
+	SetDeviceName(info.name);
 }
 
 void pad_settings_dialog::HandleDeviceClassChange(u32 class_id) const
@@ -1916,6 +1917,30 @@ QString pad_settings_dialog::GetLocalizedPadHandler(const QString& original, pad
 	return original;
 }
 
+QString pad_settings_dialog::GetLocalizedPadName(pad_handler handler, const QString& original, usz index)
+{
+	switch (handler)
+	{
+		case pad_handler::null: return tr("Default Null Device");
+		case pad_handler::keyboard: return tr("Keyboard");
+		case pad_handler::ds3: return tr("DS3 Pad #%0").arg(index);
+		case pad_handler::ds4: return tr("DS4 Pad #%0").arg(index);
+		case pad_handler::dualsense: return tr("DualSense Pad #%0").arg(index);
+		case pad_handler::skateboard: return tr("Skateboard #%0").arg(index);
+#ifdef _WIN32
+		case pad_handler::xinput: return tr("XInput Pad #%0").arg(index);
+		case pad_handler::mm: return tr("Joystick #%0").arg(index);
+#endif
+#ifdef HAVE_SDL2
+		case pad_handler::sdl: break; // Localization not feasible. Names differ for each device.
+#endif
+#ifdef HAVE_LIBEVDEV
+		case pad_handler::evdev: break; // Localization not feasible. Names differ for each device.
+#endif
+	}
+	return original;
+}
+
 bool pad_settings_dialog::GetIsLddPad(u32 index) const
 {
 	// We only check for ldd pads if the current dialog may affect the running application.
@@ -1947,6 +1972,21 @@ u32 pad_settings_dialog::GetPlayerIndex() const
 cfg_pad& pad_settings_dialog::GetPlayerConfig() const
 {
 	return g_cfg_input.player[GetPlayerIndex()]->config;
+}
+
+std::string pad_settings_dialog::GetDeviceName() const
+{
+	return g_cfg_input.player[GetPlayerIndex()]->device.to_string();
+}
+
+void pad_settings_dialog::SetDeviceName(const std::string& name)
+{
+	m_device_name = name;
+
+	if (!g_cfg_input.player[GetPlayerIndex()]->device.from_string(m_device_name))
+	{
+		cfg_log.error("Failed to convert device string: %s", m_device_name);
+	}
 }
 
 void pad_settings_dialog::ResizeDialog()

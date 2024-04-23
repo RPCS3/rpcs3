@@ -20,7 +20,7 @@
 extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, bool virtual_load, const std::string&, s64, utils::serial* = nullptr);
 extern void ppu_unload_prx(const lv2_prx& prx);
 extern bool ppu_initialize(const ppu_module&, bool check_only = false, u64 file_size = 0);
-extern void ppu_finalize(const ppu_module&);
+extern void ppu_finalize(const ppu_module& info, bool force_mem_release = false);
 extern void ppu_manual_load_imports_exports(u32 imports_start, u32 imports_size, u32 exports_start, u32 exports_size, std::basic_string<bool>& loaded_flags);
 
 LOG_CHANNEL(sys_prx);
@@ -96,7 +96,7 @@ extern const std::map<std::string_view, int> g_prx_list
 	{ "libmvcdec.sprx", 0 },
 	{ "libnet.sprx", 0 },
 	{ "libnetctl.sprx", 1 },
-	{ "libpamf.sprx", 0 },
+	{ "libpamf.sprx", 1 },
 	{ "libpngdec.sprx", 0 },
 	{ "libpngenc.sprx", 0 },
 	{ "libresc.sprx", 0 },
@@ -263,11 +263,19 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 
 	u128 klic = g_fxo->get<loaded_npdrm_keys>().last_key();
 
-	ppu_prx_object obj = decrypt_self(std::move(src), reinterpret_cast<u8*>(&klic), nullptr, true);
+	src = decrypt_self(std::move(src), reinterpret_cast<u8*>(&klic), nullptr, true);
+
+	if (!src)
+	{
+		return {CELL_PRX_ERROR_UNSUPPORTED_PRX_TYPE, +"Failed to decrypt file"};
+	}
+
+	ppu_prx_object obj = std::move(src);
+	src.close();
 
 	if (obj != elf_error::ok)
 	{
-		return CELL_PRX_ERROR_UNSUPPORTED_PRX_TYPE;
+		return {CELL_PRX_ERROR_UNSUPPORTED_PRX_TYPE, obj.get_error()};
 	}
 
 	const auto prx = ppu_load_prx(obj, false, path, file_offset);
@@ -756,7 +764,7 @@ void lv2_prx::restore_exports()
 
 	std::basic_string<bool> loaded_flags_empty;
 
-	for (usz start = exports_start, i = 0; start < exports_end; i++, start += vm::read8(start) ? vm::read8(start) : sizeof_export_data)
+	for (u32 start = exports_start, i = 0; start < exports_end; i++, start += vm::read8(start) ? vm::read8(start) : sizeof_export_data)
 	{
 		if (::at32(m_external_loaded_flags, i) || (!m_loaded_flags.empty() && ::at32(m_loaded_flags, i)))
 		{

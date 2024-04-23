@@ -28,6 +28,7 @@
 #include "headless_application.h"
 #include "Utilities/sema.h"
 #include "Utilities/date_time.h"
+#include "util/console.h"
 #include "Crypto/decrypt_binaries.h"
 #ifdef _WIN32
 #include "module_verifier.hpp"
@@ -60,6 +61,13 @@ DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResoluti
 
 #if defined(__APPLE__)
 #include <dispatch/dispatch.h>
+// sysinfo_darwin.mm
+namespace Darwin_Version
+{
+	extern int getNSmajorVersion();
+	extern int getNSminorVersion();
+	extern int getNSpatchVersion();
+}
 #endif
 
 #include "Utilities/Config.h"
@@ -86,7 +94,8 @@ static semaphore<> s_qt_init;
 
 static atomic_t<bool> s_headless = false;
 static atomic_t<bool> s_no_gui = false;
-static atomic_t<char*> s_argv0;
+static atomic_t<char*> s_argv0 = nullptr;
+static bool s_is_error_launch = false;
 
 std::string g_input_config_override;
 
@@ -105,38 +114,46 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 #ifdef __linux__
 	extern void jit_announce(uptr, usz, std::string_view);
 #endif
-
 	std::string buf;
 
-	// Check if thread id is in string
-	if (_text.find("\nThread id = "sv) == umax && !thread_ctrl::is_main())
+	if (!s_is_error_launch)
 	{
-		// Copy only when needed
 		buf = std::string(_text);
 
-		// Append thread id if it isn't already, except on main thread
-		fmt::append(buf, "\n\nThread id = %u.", thread_ctrl::get_tid());
-	}
-
-	if (!g_tls_serialize_name.empty())
-	{
-		// Copy only when needed
-		if (!buf.empty())
+		// Check if thread id is in string
+		if (_text.find("\nThread id = "sv) == umax && !thread_ctrl::is_main())
 		{
-			buf = std::string(_text);
+			// Append thread id if it isn't already, except on main thread
+			fmt::append(buf, "\n\nThread id = %u.", thread_ctrl::get_tid());
 		}
 
-		fmt::append(buf, "\nSerialized Object: %s", g_tls_serialize_name);
+		if (!g_tls_serialize_name.empty())
+		{
+			fmt::append(buf, "\nSerialized Object: %s", g_tls_serialize_name);
+		}
+
+		const system_state state = Emu.GetStatus(false);
+
+		if (state == system_state::stopped)
+		{
+			fmt::append(buf, "\nEmulation is stopped");
+		}
+		else
+		{
+			const std::string& name = Emu.GetTitleAndTitleID();
+			fmt::append(buf, "\nTitle: \"%s\" (emulation is %s)", name.empty() ? "N/A" : name.data(), state == system_state::stopping ? "stopping" : "running");
+		}
+
+		fmt::append(buf, "\nBuild: \"%s\"", rpcs3::get_verbose_version());
+		fmt::append(buf, "\nDate: \"%s\"", std::chrono::system_clock::now());
 	}
 
-	std::string_view text = buf.empty() ? _text : buf;
+	std::string_view text = s_is_error_launch ? _text : buf;
 
 	if (s_headless)
 	{
-#ifdef _WIN32
-		if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole())
-			[[maybe_unused]] const auto con_out = freopen("conout$", "w", stderr);
-#endif
+		utils::attach_console(utils::console_stream::std_err, true);
+
 		std::cerr << fmt::format("RPCS3: %s\n", text);
 #ifdef __linux__
 		jit_announce(0, 0, "");
@@ -186,10 +203,11 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 		}
 
 #ifdef _WIN32
-		wchar_t buffer[32767];
-		GetModuleFileNameW(nullptr, buffer, sizeof(buffer) / 2);
+		constexpr DWORD size = 32767;
+		std::vector<wchar_t> buffer(size);
+		GetModuleFileNameW(nullptr, buffer.data(), size);
 		const std::wstring arg(text.cbegin(), text.cend()); // ignore unicode for now
-		_wspawnl(_P_WAIT, buffer, buffer, L"--error", arg.c_str(), nullptr);
+		_wspawnl(_P_WAIT, buffer.data(), buffer.data(), L"--error", arg.c_str(), nullptr);
 #else
 		pid_t pid;
 		std::vector<char> data(text.data(), text.data() + text.size() + 1);
@@ -236,7 +254,7 @@ struct fatal_error_listener final : logs::listener
 
 	void log(u64 /*stamp*/, const logs::message& msg, const std::string& prefix, const std::string& text) override
 	{
-		if (msg == logs::level::fatal)
+		if (msg <= logs::level::fatal)
 		{
 			std::string _msg = "RPCS3: ";
 
@@ -255,11 +273,9 @@ struct fatal_error_listener final : logs::listener
 			_msg += text;
 			_msg += '\n';
 
-#ifdef _WIN32
 			// If launched from CMD
-			if (AttachConsole(ATTACH_PARENT_PROCESS))
-				[[maybe_unused]] const auto con_out = freopen("CONOUT$", "w", stderr);
-#endif
+			utils::attach_console(utils::console_stream::std_err, false);
+
 			// Output to error stream as is
 			std::cerr << _msg;
 
@@ -270,8 +286,11 @@ struct fatal_error_listener final : logs::listener
 				OutputDebugStringA(_msg.c_str());
 			}
 #endif
-			// Pause emulation if fatal error encountered
-			Emu.Pause(true);
+			if (msg == logs::level::fatal)
+			{
+				// Pause emulation if fatal error encountered
+				Emu.Pause(true);
+			}
 		}
 	}
 };
@@ -304,6 +323,11 @@ constexpr auto arg_timer        = "high-res-timer";
 constexpr auto arg_verbose_curl = "verbose-curl";
 constexpr auto arg_any_location = "allow-any-location";
 constexpr auto arg_codecs       = "codecs";
+
+#ifdef _WIN32
+constexpr auto arg_stdout       = "stdout";
+constexpr auto arg_stderr       = "stderr";
+#endif
 
 int find_arg(std::string arg, int& argc, char* argv[])
 {
@@ -463,6 +487,7 @@ int main(int argc, char** argv)
 			error += argv[i];
 		}
 
+		s_is_error_launch = true;
 		report_fatal_error(error);
 	}
 
@@ -513,6 +538,16 @@ int main(int argc, char** argv)
 	if (const int res = WSAStartup(MAKEWORD(2, 2), &wsa_data); res != 0)
 	{
 		report_fatal_error(fmt::format("WSAStartup failed (error=%s)", fmt::win_error{static_cast<unsigned long>(res), nullptr}));
+	}
+#endif
+
+#ifdef __APPLE__
+	const int osx_ver_major = Darwin_Version::getNSmajorVersion();
+	const int osx_ver_minor = Darwin_Version::getNSminorVersion();
+	if ((osx_ver_major == 14 && osx_ver_minor < 3) && (utils::get_cpu_brand().rfind("VirtualApple", 0) == 0))
+	{
+    	int osx_ver_patch = Darwin_Version::getNSpatchVersion();
+		report_fatal_error(fmt::format("RPCS3 requires macOS 14.3.0 or later.\nYou're currently using macOS %i.%i.%i.\nPlease update macOS from System Settings.\n\n", osx_ver_major, osx_ver_minor, osx_ver_patch));
 	}
 #endif
 
@@ -675,6 +710,12 @@ int main(int argc, char** argv)
 	parser.addOption(QCommandLineOption(arg_any_location, "Allow RPCS3 to be run from any location. Dangerous"));
 	const QCommandLineOption codec_option(arg_codecs, "List ffmpeg codecs");
 	parser.addOption(codec_option);
+
+#ifdef _WIN32
+	parser.addOption(QCommandLineOption(arg_stdout, "Attach the console window and listen to standard output stream. (STDOUT)"));
+	parser.addOption(QCommandLineOption(arg_stderr, "Attach the console window and listen to error output stream. (STDERR)"));
+#endif
+
 	parser.process(app->arguments());
 
 	// Don't start up the full rpcs3 gui if we just want the version or help.
@@ -683,13 +724,8 @@ int main(int argc, char** argv)
 
 	if (parser.isSet(codec_option))
 	{
-#ifdef _WIN32
-		if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole())
-		{
-			[[maybe_unused]] const auto con_out = freopen("CONOUT$", "w", stdout);
-			[[maybe_unused]] const auto con_err = freopen("CONOUT$", "w", stderr);
-		}
-#endif
+		utils::attach_console(utils::console_stream::std_out | utils::console_stream::std_err, true);
+
 		for (const utils::ffmpeg_codec& codec : utils::list_ffmpeg_decoders())
 		{
 			fprintf(stdout, "Found ffmpeg decoder: %s (%d, %s)\n", codec.name.c_str(), codec.codec_id, codec.long_name.c_str());
@@ -703,18 +739,28 @@ int main(int argc, char** argv)
 		return 0;
 	}
 
+#ifdef _WIN32
+	if (parser.isSet(arg_stdout) || parser.isSet(arg_stderr))
+	{
+		int stream = 0;
+		if (parser.isSet(arg_stdout))
+		{
+			stream |= utils::console_stream::std_out;
+		}
+		if (parser.isSet(arg_stderr))
+		{
+			stream |= utils::console_stream::std_err;
+		}
+		utils::attach_console(stream, true);
+	}
+#endif
+
 	// Set curl to verbose if needed
 	rpcs3::curl::g_curl_verbose = parser.isSet(arg_verbose_curl);
 
 	if (rpcs3::curl::g_curl_verbose)
 	{
-#ifdef _WIN32
-		if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole())
-		{
-			[[maybe_unused]] const auto con_out = freopen("CONOUT$", "w", stdout);
-			[[maybe_unused]] const auto con_err = freopen("CONOUT$", "w", stderr);
-		}
-#endif
+		utils::attach_console(utils::console_stream::std_out | utils::console_stream::std_err, true);
 		fprintf(stdout, "Enabled Curl verbose logging.\n");
 		sys_log.always()("Enabled Curl verbose logging. Please look at your console output.");
 	}
@@ -722,13 +768,8 @@ int main(int argc, char** argv)
 	// Handle update of commit database
 	if (parser.isSet(arg_commit_db))
 	{
+		utils::attach_console(utils::console_stream::std_out | utils::console_stream::std_err, true);
 #ifdef _WIN32
-		if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole())
-		{
-			[[maybe_unused]] const auto con_out = freopen("CONOUT$", "w", stdout);
-			[[maybe_unused]] const auto con_err = freopen("CONOUT$", "w", stderr);
-		}
-
 		std::string path;
 #else
 		std::string path = "bin/git/commits.lst";
@@ -948,10 +989,8 @@ int main(int argc, char** argv)
 
 	if (parser.isSet(arg_styles))
 	{
-#ifdef _WIN32
-		if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole())
-			[[maybe_unused]] const auto con_out = freopen("CONOUT$", "w", stdout);
-#endif
+		utils::attach_console(utils::console_stream::std_out, true);
+
 		for (const auto& style : QStyleFactory::keys())
 			std::cout << "\n" << style.toStdString();
 
@@ -1049,7 +1088,7 @@ int main(int argc, char** argv)
 		}
 
 		// Check nonsensical archive locations
-		for (const std::string& expr : { "/Rar$" })
+		for (const std::string_view& expr : { "/Rar$"sv })
 		{
 			if (emu_dir.find(expr) != umax)
 			{
@@ -1104,13 +1143,7 @@ int main(int argc, char** argv)
 
 	if (parser.isSet(arg_decrypt))
 	{
-#ifdef _WIN32
-		if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole())
-		{
-			[[maybe_unused]] const auto con_out = freopen("CONOUT$", "w", stdout);
-			[[maybe_unused]] const auto con_in = freopen("CONIN$", "r", stdin);
-		}
-#endif
+		utils::attach_console(utils::console_stream::std_out | utils::console_stream::std_in, true);
 
 		std::vector<std::string> vec_modules;
 		for (const QString& mod : parser.values(decrypt_option))
@@ -1338,11 +1371,9 @@ int main(int argc, char** argv)
 	}
 	else if (s_headless || s_no_gui)
 	{
-#ifdef _WIN32
 		// If launched from CMD
-		if (AttachConsole(ATTACH_PARENT_PROCESS))
-			[[maybe_unused]] const auto con_out = freopen("CONOUT$", "w", stderr);
-#endif
+		utils::attach_console(utils::console_stream::std_out | utils::console_stream::std_err, false);
+
 		sys_log.error("Cannot run %s mode without boot target. Terminating...", s_headless ? "headless" : "no-gui");
 		fprintf(stderr, "Cannot run %s mode without boot target. Terminating...\n", s_headless ? "headless" : "no-gui");
 
@@ -1358,56 +1389,3 @@ int main(int argc, char** argv)
 	// run event loop (maybe only needed for the gui application)
 	return app->exec();
 }
-
-// Temporarily, this is code from std for prebuilt LLVM. I don't understand why this is necessary.
-// From the same MSVC 19.27.29112.0, LLVM libs depend on these, but RPCS3 gets linker errors.
-#ifdef _WIN32
-extern "C"
-{
-	int __stdcall __std_init_once_begin_initialize(void** ppinit, ulong f, int* fp, void** lpc) noexcept
-	{
-		return InitOnceBeginInitialize(reinterpret_cast<LPINIT_ONCE>(ppinit), f, fp, lpc);
-	}
-
-	int __stdcall __std_init_once_complete(void** ppinit, ulong f, void* lpc) noexcept
-	{
-		return InitOnceComplete(reinterpret_cast<LPINIT_ONCE>(ppinit), f, lpc);
-	}
-
-	usz __stdcall __std_get_string_size_without_trailing_whitespace(const char* str, usz size) noexcept
-	{
-		while (size)
-		{
-			switch (str[size - 1])
-			{
-			case 0:
-			case ' ':
-			case '\n':
-			case '\r':
-			case '\t':
-			{
-				size--;
-				continue;
-			}
-			default: break;
-			}
-
-			break;
-		}
-
-		return size;
-	}
-
-	usz __stdcall __std_system_error_allocate_message(const unsigned long msg_id, char** ptr_str) noexcept
-	{
-		return __std_get_string_size_without_trailing_whitespace(*ptr_str, FormatMessageA(
-			FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-			nullptr, msg_id, 0, reinterpret_cast<char*>(ptr_str), 0, nullptr));
-	}
-
-	void __stdcall __std_system_error_deallocate_message(char* s) noexcept
-	{
-		LocalFree(s);
-	}
-}
-#endif

@@ -21,9 +21,10 @@ std::string wchar_to_utf8(std::wstring_view src)
 {
 #ifdef _WIN32
 	std::string utf8_string;
-	const auto tmp_size = WideCharToMultiByte(CP_UTF8, 0, src.data(), src.size(), nullptr, 0, nullptr, nullptr);
+	const int size = ::narrow<int>(src.size());
+	const auto tmp_size = WideCharToMultiByte(CP_UTF8, 0, src.data(), size, nullptr, 0, nullptr, nullptr);
 	utf8_string.resize(tmp_size);
-	WideCharToMultiByte(CP_UTF8, 0, src.data(), src.size(), utf8_string.data(), tmp_size, nullptr, nullptr);
+	WideCharToMultiByte(CP_UTF8, 0, src.data(), size, utf8_string.data(), tmp_size, nullptr, nullptr);
 	return utf8_string;
 #else
 	std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter{};
@@ -31,7 +32,13 @@ std::string wchar_to_utf8(std::wstring_view src)
 #endif
 }
 
-#ifndef _MSC_VER
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4996)
+#elif defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#else
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
@@ -46,7 +53,11 @@ std::u16string utf8_to_utf16(std::string_view src)
 	std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> converter{};
 	return converter.from_bytes(src.data());
 }
-#ifndef _MSC_VER
+#ifdef _MSC_VER
+#pragma warning(pop)
+#elif defined(__clang__)
+#pragma clang diagnostic pop
+#else
 #pragma GCC diagnostic pop
 #endif
 
@@ -54,9 +65,10 @@ std::wstring utf8_to_wchar(std::string_view src)
 {
 #ifdef _WIN32
 	std::wstring wchar_string;
-	const auto tmp_size = MultiByteToWideChar(CP_UTF8, 0, src.data(), src.size(), nullptr, 0);
+	const int size = ::narrow<int>(src.size());
+	const auto tmp_size = MultiByteToWideChar(CP_UTF8, 0, src.data(), size, nullptr, 0);
 	wchar_string.resize(tmp_size);
-	MultiByteToWideChar(CP_UTF8, 0, src.data(), src.size(), wchar_string.data(), tmp_size);
+	MultiByteToWideChar(CP_UTF8, 0, src.data(), size, wchar_string.data(), tmp_size);
 	return wchar_string;
 #else
 	std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t> converter{};
@@ -506,7 +518,7 @@ struct fmt::cfmt_src
 		TYPE(llong);
 		TYPE(schar);
 		TYPE(short);
-		if (std::is_signed<char>::value) TYPE(char);
+		if (std::is_signed_v<char>) TYPE(char);
 		TYPE(long);
 		TYPE(s128);
 
@@ -605,12 +617,22 @@ std::vector<std::string> fmt::split(std::string_view source, std::initializer_li
 
 std::string fmt::trim(const std::string& source, std::string_view values)
 {
-	usz begin = source.find_first_not_of(values);
+	const usz begin = source.find_first_not_of(values);
 
 	if (begin == source.npos)
 		return {};
 
 	return source.substr(begin, source.find_last_not_of(values) + 1);
+}
+
+std::string fmt::trim_front(const std::string& source, std::string_view values)
+{
+	const usz begin = source.find_first_not_of(values);
+
+	if (begin == source.npos)
+		return {};
+
+	return source.substr(begin);
 }
 
 void fmt::trim_back(std::string& source, std::string_view values)
@@ -633,6 +655,11 @@ std::string fmt::to_lower(std::string_view string)
 	result.resize(string.size());
 	std::transform(string.begin(), string.end(), result.begin(), ::tolower);
 	return result;
+}
+
+std::string fmt::truncate(std::string_view src, usz length)
+{
+	return std::string(src.begin(), src.begin() + std::min(src.size(), length));
 }
 
 bool fmt::match(const std::string& source, const std::string& mask)

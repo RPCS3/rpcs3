@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "np_handler.h"
+#include "Emu/Cell/lv2/sys_process.h"
 
 LOG_CHANNEL(rpcn_log, "rpcn");
 
@@ -87,15 +88,30 @@ namespace np
 	{
 		room_info->serverId           = room->serverId();
 		room_info->worldId            = room->worldId();
-		room_info->publicSlotNum      = room->publicSlotNum();
-		room_info->privateSlotNum     = room->privateSlotNum();
 		room_info->lobbyId            = room->lobbyId();
 		room_info->roomId             = room->roomId();
-		room_info->openPublicSlotNum  = room->openPublicSlotNum();
 		room_info->maxSlot            = room->maxSlot();
-		room_info->openPrivateSlotNum = room->openPrivateSlotNum();
 		room_info->curMemberNum       = room->curMemberNum();
 		room_info->passwordSlotMask   = room->passwordSlotMask();
+
+		s32 sdk_ver;
+		process_get_sdk_version(process_getpid(), sdk_ver);
+
+		// Structure changed in sdk 3.3.0
+		if (sdk_ver >= 0x330000)
+		{
+			room_info->publicSlotNum = room->publicSlotNum();
+			room_info->privateSlotNum = room->privateSlotNum();
+			room_info->openPublicSlotNum = room->openPublicSlotNum();
+			room_info->openPrivateSlotNum = room->openPrivateSlotNum();
+		}
+		else
+		{
+			room_info->publicSlotNum = 0;
+			room_info->privateSlotNum = 0;
+			room_info->openPublicSlotNum = 0;
+			room_info->openPrivateSlotNum = 0;
+		}
 
 		if (auto owner = room->owner())
 		{
@@ -315,7 +331,7 @@ namespace np
 		if (update_info->optData())
 		{
 			sce_update_info->optData.length = update_info->optData()->data()->size();
-			for (usz i = 0; i < 16; i++)
+			for (flatbuffers::uoffset_t i = 0; i < 16; i++)
 			{
 				sce_update_info->optData.data[i] = update_info->optData()->data()->Get(i);
 			}
@@ -338,7 +354,7 @@ namespace np
 		if (update_info->optData())
 		{
 			sce_update_info->optData.length = update_info->optData()->data()->size();
-			for (usz i = 0; i < 16; i++)
+			for (flatbuffers::uoffset_t i = 0; i < 16; i++)
 			{
 				sce_update_info->optData.data[i] = update_info->optData()->data()->Get(i);
 			}
@@ -477,7 +493,7 @@ namespace np
 			}
 			break;
 		}
-		case SCE_NP_MATCHING2_CASTTYPE_MULTICAST_TEAM: sce_mi->dst->multicastTargetTeamId = mi->dst()->Get(0); break;
+		case SCE_NP_MATCHING2_CASTTYPE_MULTICAST_TEAM: sce_mi->dst->multicastTargetTeamId = ::narrow<SceNpMatching2TeamId>(mi->dst()->Get(0)); break;
 		default: ensure(false);
 		}
 

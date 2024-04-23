@@ -232,6 +232,9 @@ bool tar_object::extract(std::string prefix_path, bool is_vfs)
 		const TARHeader& header = iter->second.second;
 		const std::string& name = iter->first;
 
+		// Backwards compatibility measure
+		const bool should_ignore = name.find(reinterpret_cast<const char*>(u8"＄")) != umax;
+
 		std::string result = name;
 
 		if (!prefix_path.empty())
@@ -291,7 +294,16 @@ bool tar_object::extract(std::string prefix_path, bool is_vfs)
 
 			std::unique_ptr<utils::serial> file_data = get_file(name);
 
-			fs::file file(result, fs::rewrite);
+			fs::file file;
+
+			if (should_ignore)
+			{
+				file = fs::make_stream<std::vector<u8>>();
+			}
+			else
+			{
+				file.open(result, fs::rewrite);
+			}
 
 			if (file && file_data)
 			{
@@ -301,7 +313,7 @@ bool tar_object::extract(std::string prefix_path, bool is_vfs)
 
 					if (unread_size == 0)
 					{
-						file.write(filedata_span.data(), filedata_span.size());
+						file.write(filedata_span.data(), should_ignore ? 0 : filedata_span.size());
 						continue;
 					}
 
@@ -310,13 +322,14 @@ bool tar_object::extract(std::string prefix_path, bool is_vfs)
 					if (usz read_size = filedata_span.size() - unread_size)
 					{
 						ensure(file_data->try_read(filedata_span.first(read_size)) == 0);
-						file.write(filedata_span.data(), read_size);
+						file.write(filedata_span.data(), should_ignore ? 0 : read_size);
 					}
 
 					break;
 				}
 
 				file.close();
+
 
 				file_data->seek_pos(m_ar_tar_start + largest_offset, true);
 
@@ -325,6 +338,11 @@ bool tar_object::extract(std::string prefix_path, bool is_vfs)
 					// Restore m_ar
 					*m_ar = std::move(*file_data);
 					m_ar->m_max_data = restore_limit;
+				}
+
+				if (should_ignore)
+				{
+					break;
 				}
 
 				if (mtime != umax && !fs::utime(result, atime, mtime))
@@ -351,6 +369,11 @@ bool tar_object::extract(std::string prefix_path, bool is_vfs)
 
 		case '5':
 		{
+			if (should_ignore)
+			{
+				break;
+			}
+
 			if (!fs::create_path(result))
 			{
 				tar_log.error("TAR Loader: failed to create directory %s (%s)", name, fs::g_tls_error);
@@ -455,8 +478,9 @@ void tar_object::save_directory(const std::string& target_path, utils::serial& a
 					const usz read_size = std::min<usz>(transfer_block_size, file_stat.size - read_index);
 
 					// Read file data
-					ar.data.resize(ar.data.size() + read_size);
-					ensure(fd.read_at(read_index, ar.data.data() + old_size, read_size) == read_size);
+					const usz buffer_tail = ar.data.size();
+					ar.data.resize(buffer_tail + read_size);
+					ensure(fd.read_at(read_index, ar.data.data() + buffer_tail, read_size) == read_size);
 
 					// Set position to the end of data, so breathe() would work correctly
 					ar.seek_end();
@@ -575,7 +599,7 @@ void tar_object::save_directory(const std::string& target_path, utils::serial& a
 			{
 				exists = true;
 
-				if (entry.name.find_first_not_of('.') == umax)
+				if (entry.name.find_first_not_of('.') == umax || entry.name.starts_with(reinterpret_cast<const char*>(u8"＄")))
 				{
 					continue;
 				}

@@ -279,6 +279,7 @@ static void ppu_initialize_modules(ppu_linkage_info* link, utils::serial* ar = n
 		&ppu_module_manager::sceNpClans,
 		&ppu_module_manager::sceNpCommerce2,
 		&ppu_module_manager::sceNpMatchingInt,
+		&ppu_module_manager::sceNpPlus,
 		&ppu_module_manager::sceNpSns,
 		&ppu_module_manager::sceNpTrophy,
 		&ppu_module_manager::sceNpTus,
@@ -1146,9 +1147,9 @@ static void ppu_check_patch_spu_images(const ppu_module& mod, const ppu_segment&
 			// Bound to a bit less than LS size
 			ls_segment = ls_segment.substr(0, 0x38000);
 
-			for (usz addr_last = 0, valid_count = 0, invalid_count = 0;;)
+			for (u32 addr_last = 0, valid_count = 0, invalid_count = 0;;)
 			{
-				usz instruction = ls_segment.find("\x24\0\x40\x80"sv, addr_last);
+				const u32 instruction = static_cast<u32>(ls_segment.find("\x24\0\x40\x80"sv, addr_last));
 
 				if (instruction != umax)
 				{
@@ -1339,6 +1340,11 @@ static void ppu_check_patch_spu_images(const ppu_module& mod, const ppu_segment&
 		// Try to patch each segment, will only succeed if the address exists in SPU local storage
 		for (const auto& prog : obj.progs)
 		{
+			if (Emu.DeserialManager())
+			{
+				break;
+			}
+
 			// Apply the patch
 			applied += g_fxo->get<patch_engine>().apply(hash, [&](u32 addr, u32 /*size*/) { return addr + elf_header + prog.p_offset; }, prog.p_filesz, prog.p_vaddr);
 
@@ -1640,7 +1646,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, bool virtual_lo
 
 				if (ar)
 				{
-					break;
+					continue;
 				}
 
 				switch (rtype)
@@ -1738,7 +1744,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, bool virtual_lo
 		};
 
 		// Access library information (TODO)
-		const auto lib_info = ensure(prx->get_ptr<const ppu_prx_library_info>(prx->segs[0].addr + elf.progs[0].p_paddr - elf.progs[0].p_offset));
+		const auto lib_info = ensure(prx->get_ptr<const ppu_prx_library_info>(::narrow<u32>(prx->segs[0].addr + elf.progs[0].p_paddr - elf.progs[0].p_offset)));
 		const std::string lib_name = lib_info->name;
 
 		strcpy_trunc(prx->module_info_name, lib_name);
@@ -1749,7 +1755,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, bool virtual_lo
 		prx->exports_start = lib_info->exports_start;
 		prx->exports_end = lib_info->exports_end;
 
-		for (usz start = prx->exports_start, size = 0;; size++)
+		for (u32 start = prx->exports_start, size = 0;; size++)
 		{
 			if (start >= prx->exports_end)
 			{
@@ -1807,7 +1813,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, bool virtual_lo
 
 	std::basic_string<u32> applied;
 
-	for (usz i = 0; i < prx->segs.size(); i++)
+	for (usz i = Emu.DeserialManager() ? prx->segs.size() : 0; i < prx->segs.size(); i++)
 	{
 		const auto& seg = prx->segs[i];
 
@@ -2612,7 +2618,7 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 
 	ensure(ppu->stack_size > stack_alloc_size);
 
-	vm::ptr<u64> args = vm::cast(static_cast<u32>(ppu->stack_addr + ppu->stack_size - stack_alloc_size - utils::align<u32>(Emu.data.size(), 0x10)));
+	vm::ptr<u64> args = vm::cast(static_cast<u32>(ppu->stack_addr + ppu->stack_size - stack_alloc_size - utils::align<u32>(::size32(Emu.data), 0x10)));
 	vm::ptr<u8> args_data = vm::cast(args.addr() + pointers_storage_size);
 
 	const vm::ptr<u64> argv = args;
@@ -2856,9 +2862,9 @@ std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_ex
 	}
 
 	// Apply the patch
-	auto applied = g_fxo->get<patch_engine>().apply(hash, [ovlm](u32 addr, u32 size) { return ovlm->get_ptr<u8>(addr, size); });
+	auto applied = g_fxo->get<patch_engine>().apply(!Emu.DeserialManager() ? hash : std::string{}, [ovlm](u32 addr, u32 size) { return ovlm->get_ptr<u8>(addr, size); });
 
-	if (!Emu.GetTitleID().empty())
+	if (!Emu.DeserialManager() && !Emu.GetTitleID().empty())
 	{
 		// Alternative patch
 		applied += g_fxo->get<patch_engine>().apply(Emu.GetTitleID() + '-' + hash, [ovlm](u32 addr, u32 size) { return ovlm->get_ptr<u8>(addr, size); });

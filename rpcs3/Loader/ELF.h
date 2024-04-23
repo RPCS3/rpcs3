@@ -279,8 +279,8 @@ public:
 			return set_error(elf_error::stream);
 
 		// Read ELF header
-		stream.seek(offset);
-		if (!stream.read(header))
+		highest_offset = sizeof(header);
+		if (sizeof(header) != stream.read_at(offset, &header, sizeof(header)))
 			return set_error(elf_error::stream_header);
 
 		// Check magic
@@ -288,11 +288,11 @@ public:
 			return set_error(elf_error::header_magic);
 
 		// Check class
-		if (header.e_class != (std::is_same<sz_t, u32>::value ? 1 : 2))
+		if (header.e_class != (std::is_same_v<sz_t, u32> ? 1 : 2))
 			return set_error(elf_error::header_class);
 
 		// Check endianness
-		if (header.e_data != (std::is_same<en_t<u32>, le_t<u32>>::value ? 1 : 2))
+		if (header.e_data != (std::is_same_v<en_t<u32>, le_t<u32>> ? 1 : 2))
 			return set_error(elf_error::header_endianness);
 
 		// Check machine
@@ -321,20 +321,24 @@ public:
 		std::vector<phdr_t> _phdrs;
 		std::vector<shdr_t> _shdrs;
 
+		u64 seek_pos = 0;
+
 		if (!(opts & elf_opt::no_programs))
 		{
-			stream.seek(offset + header.e_phoff);
-			if (!stream.read(_phdrs, header.e_phnum))
+			seek_pos = offset + header.e_phoff;
+			highest_offset = std::max<usz>(highest_offset, seek_pos);
+
+			if (!stream.read(_phdrs, header.e_phnum, true, seek_pos))
 				return set_error(elf_error::stream_phdrs);
-			highest_offset = std::max<usz>(highest_offset, stream.pos());
 		}
 
 		if (!(opts & elf_opt::no_sections))
 		{
-			stream.seek(offset + header.e_shoff);
-			if (!stream.read(_shdrs, header.e_shnum))
+			seek_pos = offset + header.e_shoff;
+			highest_offset = std::max<usz>(highest_offset, seek_pos);
+
+			if (!stream.read(_shdrs, header.e_shnum, true, seek_pos))
 				return set_error(elf_error::stream_shdrs);
-			highest_offset = std::max<usz>(highest_offset, stream.pos());
 		}
 
 		progs.clear();
@@ -345,10 +349,11 @@ public:
 
 			if (!(opts & elf_opt::no_data))
 			{
-				stream.seek(offset + hdr.p_offset);
-				if (!stream.read(progs.back().bin, hdr.p_filesz))
+				seek_pos = offset + hdr.p_offset;
+				highest_offset = std::max<usz>(highest_offset, seek_pos);
+
+				if (!stream.read(progs.back().bin, hdr.p_filesz, true, seek_pos))
 					return set_error(elf_error::stream_data);
-				highest_offset = std::max<usz>(highest_offset, stream.pos());
 			}
 		}
 
@@ -380,8 +385,10 @@ public:
 					continue;
 				}
 
-				stream.seek(offset + shdr.sh_offset);
-				if (!stream.read(shdrs.back().bin, shdr.sh_size))
+				seek_pos = offset + shdr.sh_offset;
+				highest_offset = std::max<usz>(highest_offset, seek_pos);
+
+				if (!stream.read(shdrs.back().bin, shdr.sh_size, true, seek_pos))
 					return set_error(elf_error::stream_data);
 			}
 		}
@@ -406,8 +413,8 @@ public:
 		// Write header
 		ehdr_t header{};
 		header.e_magic = "\177ELF"_u32;
-		header.e_class = std::is_same<sz_t, u32>::value ? 1 : 2;
-		header.e_data = std::is_same<en_t<u32>, le_t<u32>>::value ? 1 : 2;
+		header.e_class = std::is_same_v<sz_t, u32> ? 1 : 2;
+		header.e_data = std::is_same_v<en_t<u32>, le_t<u32>> ? 1 : 2;
 		header.e_curver = 1;
 		header.e_os_abi = OS != elf_os::none ? OS : this->header.e_os_abi;
 		header.e_abi_ver = this->header.e_abi_ver;
@@ -463,7 +470,7 @@ public:
 					// Rely on previous sh_offset value!
 					if (hdr.p_offset <= shdr.sh_offset && shdr.sh_offset + shdr.sh_size - 1 <= hdr.p_offset + hdr.p_filesz - 1)
 					{
-						out.sh_offset = data_base + shdr.sh_offset - hdr.p_offset;
+						out.sh_offset = ::narrow<sz_t>(data_base + static_cast<usz>(shdr.sh_offset - hdr.p_offset));
 						result = true;
 						break;
 					}

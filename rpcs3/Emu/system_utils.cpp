@@ -14,18 +14,6 @@
 #include <charconv>
 #include <thread>
 
-#ifdef _WIN32
-#include <windows.h>
-#else
-#include <unistd.h>
-#endif
-
-#ifdef __APPLE__
-#include <mach-o/dyld.h>
-#include <limits.h>
-#include <filesystem>
-#endif
-
 LOG_CHANNEL(sys_log, "SYS");
 
 namespace rpcs3::utils
@@ -111,56 +99,6 @@ namespace rpcs3::utils
 
 		return worker();
 	}
-
-#ifdef _WIN32
-	std::string get_exe_dir()
-	{
-		wchar_t buffer[32767];
-		GetModuleFileNameW(nullptr, buffer, sizeof(buffer) / 2);
-
-		const std::string path_to_exe = wchar_to_utf8(buffer);
-		const usz last = path_to_exe.find_last_of('\\');
-		return last == std::string::npos ? std::string("") : path_to_exe.substr(0, last + 1);
-	}
-#elif defined(__APPLE__)
-	std::string get_app_bundle_path()
-	{
-		char bin_path[PATH_MAX];
-		uint32_t bin_path_size = sizeof(bin_path);
-		if (_NSGetExecutablePath(bin_path, &bin_path_size) != 0)
-		{
-			sys_log.error("Failed to find app binary path");
-			return {};
-		}
-
-		return std::filesystem::path(bin_path).parent_path().parent_path().parent_path();
-	}
-#else
-	std::string get_executable_path()
-	{
-		if (const char* appimage_path = ::getenv("APPIMAGE"))
-		{
-			sys_log.notice("Found AppImage path: %s", appimage_path);
-			return std::string(appimage_path);
-		}
-
-		sys_log.warning("Failed to find AppImage path");
-
-		char exe_path[PATH_MAX];
-		const ssize_t len = ::readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
-
-		if (len == -1)
-		{
-			sys_log.error("Failed to find executable path");
-			return {};
-		}
-
-		exe_path[len] = '\0';
-		sys_log.trace("Found exec path: %s", exe_path);
-
-		return std::string(exe_path);
-	}
-#endif
 
 	std::string get_emu_dir()
 	{
@@ -262,7 +200,7 @@ namespace rpcs3::utils
 		}
 
 		// Decrypt EDAT and verify its contents
-		fs::file dec_file = DecryptEDAT(enc_file, edat_path, 8, reinterpret_cast<u8*>(&k_licensee), false);
+		fs::file dec_file = DecryptEDAT(enc_file, edat_path, 8, reinterpret_cast<u8*>(&k_licensee));
 		if (!dec_file)
 		{
 			sys_log.error("verify_c00_unlock_edat(): Failed to decrypt '%s'", edat_path);

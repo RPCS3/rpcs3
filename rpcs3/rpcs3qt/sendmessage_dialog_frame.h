@@ -14,18 +14,16 @@ class sendmessage_dialog_frame : public QObject, public SendMessageDialogBase
 public:
 	sendmessage_dialog_frame() = default;
 	~sendmessage_dialog_frame();
-	bool Exec(message_data& msg_data, std::set<std::string>& npids) override;
-	void callback_handler(rpcn::NotificationType ntype, const std::string& username, bool status);
+	error_code Exec(message_data& msg_data, std::set<std::string>& npids) override;
+	void callback_handler(u16 ntype, const std::string& username, bool status) override;
 
 private:
 	void add_friend(QListWidget* list, const QString& name);
 	void remove_friend(QListWidget* list, const QString& name);
 
 private:
-	custom_dialog* m_dialog  = nullptr;
+	custom_dialog* m_dialog = nullptr;
 	QListWidget* m_lst_friends = nullptr;
-
-	std::shared_ptr<rpcn::rpcn_client> m_rpcn;
 
 Q_SIGNALS:
 	void signal_add_friend(QString name);

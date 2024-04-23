@@ -83,11 +83,7 @@ public:
 		usz m_max_data = umax;
 		std::unique_ptr<serialization_file_handler> m_file_handler;
 
-		serial(bool expect_little_data = false) noexcept
-			: m_expect_little_data(expect_little_data)
-		{
-		}
-
+		serial() noexcept = default;
 		serial(const serial&) = delete;
 		serial& operator=(const serial&) = delete;
 		explicit serial(serial&&) noexcept = default;
@@ -100,6 +96,11 @@ public:
 			return m_is_writing;
 		}
 
+		void set_expect_little_data(bool value)
+		{
+			m_expect_little_data = value;
+		}
+
 		// Return true if small amounts of both input and output memory are expected (performance hint)  
 		bool expect_little_data() const
 		{
@@ -109,11 +110,7 @@ public:
 		// Reserve memory for serialization
 		void reserve(usz size)
 		{
-			// Is a NO-OP for deserialization in order to allow usage from serialization specializations regardless
-			if (is_writing())
-			{
-				data.reserve(data.size() + size);
-			}
+			data.reserve(data.size() + size);
 		}
 
 		template <typename Func> requires (std::is_convertible_v<std::invoke_result_t<Func>, const void*>)
@@ -136,9 +133,19 @@ public:
 
 			if (is_writing())
 			{
-				ensure(pos >= data_offset);
+				ensure(pos <= data_offset + data.size());
+
 				const auto ptr = reinterpret_cast<const u8*>(memory_provider());
-				data.insert(data.begin() + (pos - data_offset), ptr, ptr + size);
+
+				if (pos != data_offset + data.size())
+				{
+					data.insert(data.begin() + pos - data_offset, ptr, ptr + size);
+					pos += size;
+					return true;
+				}
+
+				// Seems to be much faster than data.begin() + pos on MSVC
+				data.insert(data.end(), ptr, ptr + size);
 				pos += size;
 				return true;
 			}
@@ -525,7 +532,7 @@ public:
 		usz get_size(usz recommended = umax) const
 		{
 			recommended = std::min<usz>(recommended, m_max_data);
-			return std::min<usz>(m_max_data, m_file_handler ? m_file_handler->get_size(*this, recommended) : data_offset + data.size());
+			return std::min<usz>(m_max_data, m_file_handler ? m_file_handler->get_size(*this, recommended) : (data.empty() ? 0 : data_offset + data.size()));
 		}
 
 		template <typename T> requires (Bitcopy<T>)

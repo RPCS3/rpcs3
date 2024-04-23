@@ -28,6 +28,10 @@ vm::gvar<CellHddGameStatSet> g_stat_set;
 vm::gvar<CellHddGameSystemFileParam> g_file_param;
 vm::gvar<CellHddGameCBResult> g_cb_result;
 
+stx::init_lock acquire_lock(stx::init_mutex& mtx, ppu_thread* ppu = nullptr);
+stx::access_lock acquire_access_lock(stx::init_mutex& mtx, ppu_thread* ppu = nullptr);
+stx::reset_lock acquire_reset_lock(stx::init_mutex& mtx, ppu_thread* ppu = nullptr);
+
 template<>
 void fmt_class_string<CellGameError>::format(std::string& out, u64 arg)
 {
@@ -206,6 +210,7 @@ void fmt_class_string<disc_change_manager::eject_state>::format(std::string& out
 	{
 		switch (error)
 		{
+			STR_CASE(disc_change_manager::eject_state::unknown);
 			STR_CASE(disc_change_manager::eject_state::inserted);
 			STR_CASE(disc_change_manager::eject_state::ejected);
 			STR_CASE(disc_change_manager::eject_state::busy);
@@ -215,6 +220,22 @@ void fmt_class_string<disc_change_manager::eject_state>::format(std::string& out
 	});
 }
 
+static bool check_system_ver(vm::cptr<char> systemVersion)
+{
+	// Only allow something like "04.8300".
+	// The disassembly shows that "04.83" would also be considered valid, but the initial strlen check makes this void.
+	return (
+		systemVersion &&
+		std::strlen(systemVersion.get_ptr()) == 7 &&
+		std::isdigit(systemVersion[0]) &&
+		std::isdigit(systemVersion[1]) &&
+		systemVersion[2] == '.' &&
+		std::isdigit(systemVersion[3]) &&
+		std::isdigit(systemVersion[4]) &&
+		std::isdigit(systemVersion[5]) &&
+		std::isdigit(systemVersion[6])
+	);
+}
 
 disc_change_manager::disc_change_manager()
 {
@@ -235,8 +256,15 @@ error_code disc_change_manager::register_callbacks(vm::ptr<CellGameDiscEjectCall
 	eject_callback = func_eject;
 	insert_callback = func_insert;
 
-	Emu.GetCallbacks().enable_disc_eject(!!func_eject);
-	Emu.GetCallbacks().enable_disc_insert(false);
+	const bool is_disc_mounted = fs::is_dir(vfs::get("/dev_bdvd/PS3_GAME"));
+
+	if (state == eject_state::unknown)
+	{
+		state = is_disc_mounted ? eject_state::inserted : eject_state::ejected;
+	}
+
+	Emu.GetCallbacks().enable_disc_eject(!!func_eject && is_disc_mounted);
+	Emu.GetCallbacks().enable_disc_insert(!!func_insert && !is_disc_mounted);
 
 	return CELL_OK;
 }
@@ -296,7 +324,8 @@ void disc_change_manager::eject_disc()
 		ensure(vfs::unmount("/dev_ps2disc"));
 		dcm.state = eject_state::ejected;
 
-		Emu.GetCallbacks().enable_disc_insert(true);
+		// Re-enable disc insertion only if the callback is still registered
+		Emu.GetCallbacks().enable_disc_insert(!!dcm.insert_callback);
 
 		return CELL_OK;
 	});
@@ -377,7 +406,7 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 {
 	cellGame.warning("cellHddGameCheck(version=%d, dirName=%s, errDialog=%d, funcStat=*0x%x, container=%d)", version, dirName, errDialog, funcStat, container);
 
-	if (!dirName || !funcStat || sysutil_check_name_string(dirName.get_ptr(), 1, CELL_GAME_DIRNAME_SIZE) != 0)
+	if (version != CELL_GAMEDATA_VERSION_CURRENT || !dirName || !funcStat || sysutil_check_name_string(dirName.get_ptr(), 1, CELL_GAME_DIRNAME_SIZE) != 0)
 	{
 		return CELL_HDDGAME_ERROR_PARAM;
 	}
@@ -414,10 +443,10 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 
 	const std::string local_dir = vfs::get(dir);
 
-	// 40 GB - 1 kilobyte. The reasoning is that many games take this number and multiply it by 1024, to get the amount of bytes. With 40GB exactly,
-	// this will result in an overflow, and the size would be 0, preventing the game from running. By reducing 1 kilobyte, we make sure that even
+	// 40 GB - 256 kilobytes. The reasoning is that many games take this number and multiply it by 1024, to get the amount of bytes. With 40GB exactly,
+	// this will result in an overflow, and the size would be 0, preventing the game from running. By reducing 256 kilobytes, we make sure that even
 	// after said overflow, the number would still be high enough to contain the game's data.
-	get->hddFreeSizeKB = 40 * 1024 * 1024 - 1;
+	get->hddFreeSizeKB = 40 * 1024 * 1024 - 256;
 	get->isNewData = CELL_HDDGAME_ISNEWDATA_EXIST;
 	get->sysSizeKB = 0; // TODO
 	get->st_atime_ = 0; // TODO
@@ -585,6 +614,11 @@ error_code cellHddGameGetSizeKB(ppu_thread& ppu, vm::ptr<u32> size)
 
 	cellGame.warning("cellHddGameGetSizeKB(size=*0x%x)", size);
 
+	if (!size)
+	{
+		return CELL_HDDGAME_ERROR_PARAM;
+	}
+
 	lv2_obj::sleep(ppu);
 
 	const u64 start_sleep = ppu.start_time;
@@ -619,7 +653,7 @@ error_code cellHddGameSetSystemVer(vm::cptr<char> systemVersion)
 {
 	cellGame.todo("cellHddGameSetSystemVer(systemVersion=%s)", systemVersion);
 
-	if (!systemVersion)
+	if (!check_system_ver(systemVersion))
 	{
 		return CELL_HDDGAME_ERROR_PARAM;
 	}
@@ -678,7 +712,7 @@ error_code cellGameDataSetSystemVer(vm::cptr<char> systemVersion)
 {
 	cellGame.todo("cellGameDataSetSystemVer(systemVersion=%s)", systemVersion);
 
-	if (!systemVersion)
+	if (!check_system_ver(systemVersion))
 	{
 		return CELL_GAMEDATA_ERROR_PARAM;
 	}
@@ -705,7 +739,7 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 
 	lv2_sleep(500);
 
-	const auto init = perm.init.init();
+	const auto init = acquire_lock(perm.init);
 
 	if (!init)
 	{
@@ -754,7 +788,7 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 	if (size)
 	{
 		// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
-		size->hddFreeSizeKB = 40 * 1024 * 1024 - 1; // Read explanation in cellHddGameCheck
+		size->hddFreeSizeKB = 40 * 1024 * 1024 - 256; // Read explanation in cellHddGameCheck
 
 		// TODO: Calculate data size for HG and DG games, if necessary.
 		size->sizeKB = CELL_GAME_SIZEKB_NOTCALC;
@@ -789,7 +823,7 @@ error_code cellGamePatchCheck(vm::ptr<CellGameContentSize> size, vm::ptr<void> r
 
 	auto& perm = g_fxo->get<content_permission>();
 
-	const auto init = perm.init.init();
+	const auto init = acquire_lock(perm.init);
 
 	if (!init)
 	{
@@ -799,7 +833,7 @@ error_code cellGamePatchCheck(vm::ptr<CellGameContentSize> size, vm::ptr<void> r
 	if (size)
 	{
 		// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
-		size->hddFreeSizeKB = 40 * 1024 * 1024 - 1; // Read explanation in cellHddGameCheck
+		size->hddFreeSizeKB = 40 * 1024 * 1024 - 256; // Read explanation in cellHddGameCheck
 
 		// TODO: Calculate data size for patch data, if necessary.
 		size->sizeKB = CELL_GAME_SIZEKB_NOTCALC;
@@ -836,7 +870,7 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 
 	auto& perm = g_fxo->get<content_permission>();
 
-	auto init = perm.init.init();
+	auto init = acquire_lock(perm.init);
 
 	if (!init)
 	{
@@ -871,7 +905,7 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 	if (size)
 	{
 		// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
-		size->hddFreeSizeKB = 40 * 1024 * 1024 - 1; // Read explanation in cellHddGameCheck
+		size->hddFreeSizeKB = 40 * 1024 * 1024 - 256; // Read explanation in cellHddGameCheck
 
 		// TODO: Calculate data size for game data, if necessary.
 		size->sizeKB = sfo.empty() ? 0 : CELL_GAME_SIZEKB_NOTCALC;
@@ -904,7 +938,7 @@ error_code cellGameContentPermit(ppu_thread& ppu, vm::ptr<char[CELL_GAME_PATH_MA
 
 	auto& perm = g_fxo->get<content_permission>();
 
-	const auto init = perm.init.reset();
+	const auto init = acquire_reset_lock(perm.init);
 
 	if (!init)
 	{
@@ -1004,7 +1038,7 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 
 	//older sdk. it might not care about game type.
 
-	if (version != CELL_GAMEDATA_VERSION_CURRENT || errDialog > 1 || !funcStat || sysutil_check_name_string(dirName.get_ptr(), 1, CELL_GAME_DIRNAME_SIZE) != 0)
+	if (version != CELL_GAMEDATA_VERSION_CURRENT || !funcStat || !dirName || sysutil_check_name_string(dirName.get_ptr(), 1, CELL_GAME_DIRNAME_SIZE) != 0)
 	{
 		return CELL_GAMEDATA_ERROR_PARAM;
 	}
@@ -1038,7 +1072,7 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 	cbGet->isNewData = new_data;
 
 	// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
-	cbGet->hddFreeSizeKB = 40 * 1024 * 1024 - 1; // Read explanation in cellHddGameCheck
+	cbGet->hddFreeSizeKB = 40 * 1024 * 1024 - 256; // Read explanation in cellHddGameCheck
 
 	strcpy_trunc(cbGet->contentInfoPath, dir);
 	strcpy_trunc(cbGet->gameDataPath, usrdir);
@@ -1158,7 +1192,7 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 		break;
 	}
 
-	if (errDialog == CELL_GAMEDATA_ERRDIALOG_ALWAYS) // Maybe != CELL_GAMEDATA_ERRDIALOG_NONE
+	if (errDialog == CELL_GAMEDATA_ERRDIALOG_ALWAYS)
 	{
 		// Yield before a blocking dialog is being spawned
 		lv2_obj::sleep(ppu);
@@ -1204,7 +1238,7 @@ error_code cellGameCreateGameData(vm::ptr<CellGameSetInitParams> init, vm::ptr<c
 
 	auto& perm = g_fxo->get<content_permission>();
 
-	const auto _init = perm.init.access();
+	const auto _init = acquire_access_lock(perm.init);
 
 	lv2_sleep(2000);
 
@@ -1319,7 +1353,7 @@ error_code cellGameDeleteGameData(vm::cptr<char> dirName)
 		if (!_init)
 		{
 			// Or access it
-			if (auto access = perm.init.access(); access)
+			if (auto access = acquire_access_lock(perm.init); access)
 			{
 				// Cannot remove it when it is accessed by cellGameDataCheck
 				// If it is HG data then resort to remove_gd for ERROR_BROKEN
@@ -1356,7 +1390,7 @@ error_code cellGameGetParamInt(s32 id, vm::ptr<s32> value)
 
 	auto& perm = g_fxo->get<content_permission>();
 
-	const auto init = perm.init.access();
+	const auto init = acquire_access_lock(perm.init);
 
 	if (!init)
 	{
@@ -1484,7 +1518,7 @@ error_code cellGameGetParamString(s32 id, vm::ptr<char> buf, u32 bufsize)
 
 	lv2_sleep(2000);
 
-	const auto init = perm.init.access();
+	const auto init = acquire_access_lock(perm.init);
 
 	if (!init || perm.mode == content_permission::check_mode::not_set)
 	{
@@ -1530,7 +1564,7 @@ error_code cellGameSetParamString(s32 id, vm::cptr<char> buf)
 
 	auto& perm = g_fxo->get<content_permission>();
 
-	const auto init = perm.init.access();
+	const auto init = acquire_access_lock(perm.init);
 
 	if (!init || perm.mode == content_permission::check_mode::not_set)
 	{
@@ -1569,7 +1603,7 @@ error_code cellGameGetSizeKB(ppu_thread& ppu, vm::ptr<s32> size)
 
 	auto& perm = g_fxo->get<content_permission>();
 
-	const auto init = perm.init.access();
+	const auto init = acquire_access_lock(perm.init);
 
 	if (!init)
 	{

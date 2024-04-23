@@ -176,7 +176,7 @@ inline struct ppu_frsqrte_lut_t
 
 			if (expv == 0) // ±INF on zero/denormal, not accurate
 			{
-				data[i] = 0x7ff0'0000 | (sign << 31);
+				data[i] = static_cast<u32>(0x7ff0'0000 | (sign << 31));
 			}
 			else if (expv == 0x7ff)
 			{
@@ -194,7 +194,7 @@ inline struct ppu_frsqrte_lut_t
 				// ((MAN_BITS(b) >> 49) & 7ull) + (!(EXP_BITS(b) & 1) << 3)
 				const u64 idx = 8 ^ (i & 0xf);
 
-				data[i] = ppu_frsqrte_mantissas[idx] | exp;
+				data[i] = static_cast<u32>(ppu_frsqrte_mantissas[idx] | exp);
 			}
 		}
 	}

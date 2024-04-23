@@ -60,6 +60,12 @@ enum
 
 enum ppu_thread_status : u32;
 
+struct ppu_non_sleeping_count_t
+{
+	bool has_running; // no actual count for optimization sake
+	u32 onproc_count;
+};
+
 namespace vm
 {
 	extern u8 g_reservations[65536 / 128 * 64];
@@ -233,6 +239,16 @@ public:
 
 		object->prio.atomic_op([order = ++g_priority_order_tag](std::common_type_t<decltype(std::declval<T>()->prio.load())>& prio)
 		{
+			if constexpr (requires { +std::declval<decltype(prio)>().preserve_bit; } )
+			{
+				if (prio.preserve_bit)
+				{
+					// Restoring state on load
+					prio.preserve_bit = 0;
+					return;
+				}
+			}
+
 			prio.order = order;
 		});
 	}
@@ -268,7 +284,7 @@ public:
 
 	static void make_scheduler_ready();
 
-	static ppu_thread_status ppu_state(ppu_thread* ppu, bool lock_idm = true, bool lock_lv2 = true);
+	static std::pair<ppu_thread_status, u32> ppu_state(ppu_thread* ppu, bool lock_idm = true, bool lock_lv2 = true);
 
 	static inline void append(cpu_thread* const thread)
 	{
@@ -280,7 +296,12 @@ public:
 	static bool is_scheduler_ready();
 
 	// Must be called under IDM lock
-	static bool has_ppus_in_running_state();
+	static ppu_non_sleeping_count_t count_non_sleeping_threads();
+
+	static inline bool has_ppus_in_running_state() noexcept
+	{
+		return count_non_sleeping_threads().has_running != 0;
+	}
 
 	static void set_yield_frequency(u64 freq, u64 max_allowed_tsx);
 

@@ -46,6 +46,7 @@ DYNAMIC_IMPORT_RENAME("Kernel32.dll", SetThreadDescriptionImport, "SetThreadDesc
 #include <time.h>
 #endif
 #ifdef __linux__
+#include <sys/syscall.h>
 #include <sys/timerfd.h>
 #include <unistd.h>
 #endif
@@ -2192,7 +2193,10 @@ u64 thread_base::finalize(thread_state result_state) noexcept
 		return thread_ctrl::get_name_cached();
 	};
 
-	sig_log.notice("Thread time: %fs (%fGc); Faults: %u [rsx:%u, spu:%u]; [soft:%u hard:%u]; Switches:[vol:%u unvol:%u]; Wait:[%.3fs, spur:%u]",
+	const bool is_cpu_thread = !!cpu_thread::get_current();
+	auto& thread_log = (is_cpu_thread || g_tls_fault_all ? sig_log.notice : sig_log.trace);
+
+	thread_log("Thread time: %fs (%fGc); Faults: %u [rsx:%u, spu:%u]; [soft:%u hard:%u]; Switches:[vol:%u unvol:%u]; Wait:[%.3fs, spur:%u]",
 		time / 1000000000.,
 		cycles / 1000000000.,
 		g_tls_fault_all,
@@ -2426,7 +2430,7 @@ void thread_ctrl::wait_for_accurate(u64 usec)
 			break;
 		}
 
-		usec = (until - current).count();
+		usec = std::chrono::duration_cast<std::chrono::microseconds>(until - current).count();
 	}
 #endif
 }
@@ -2637,6 +2641,21 @@ void thread_base::exec()
 	if (std::string info = dump_useful_thread_info(); !info.empty())
 	{
 		sys_log.notice("\n%s", info);
+	}
+
+	std::string reason_buf;
+
+	if (auto ppu = cpu_thread::get_current<ppu_thread>())
+	{
+		if (auto func = ppu->current_function)
+		{
+			fmt::append(reason_buf, "%s (PPU: %s)", reason, func);
+		}
+	}
+
+	if (!reason_buf.empty())
+	{
+		reason = reason_buf;
 	}
 
 	sig_log.fatal("Thread terminated due to fatal error: %s", reason);

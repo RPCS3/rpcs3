@@ -598,7 +598,7 @@ namespace stx
 		constexpr atomic_ptr() noexcept = default;
 
 		// Optimized value construct
-		template <typename... Args, typename = std::enable_if_t<std::is_constructible_v<T, Args...>>>
+		template <typename... Args> requires (!(sizeof...(Args) == 1 && (std::is_same_v<std::remove_cvref_t<Args>, shared_type> || ...)) && std::is_constructible_v<T, Args...>)
 		explicit atomic_ptr(Args&&... args) noexcept
 		{
 			shared_type r = make_single<T>(std::forward<Args>(args)...);
@@ -805,7 +805,9 @@ namespace stx
 			}
 		}
 
-		template <typename... Args, typename = std::enable_if_t<std::is_constructible_v<T, Args...>>>
+		// Create an object from variadic args
+		// If a type needs shared_type to be constructed, std::reference_wrapper can be used
+		template <typename... Args> requires (!(sizeof...(Args) == 1 && (std::is_same_v<std::remove_cvref_t<Args>, shared_type> || ...)) && std::is_constructible_v<T, Args...>)
 		void store(Args&&... args) noexcept
 		{
 			shared_type r = make_single<T>(std::forward<Args>(args)...);
@@ -827,7 +829,7 @@ namespace stx
 			old.m_val.raw() = m_val.exchange(reinterpret_cast<uptr>(std::exchange(value.m_ptr, nullptr)) << c_ref_size);
 		}
 
-		template <typename... Args, typename = std::enable_if_t<std::is_constructible_v<T, Args...>>>
+		template <typename... Args> requires (!(sizeof...(Args) == 1 && (std::is_same_v<std::remove_cvref_t<Args>, shared_type> || ...)) && std::is_constructible_v<T, Args...>)
 		[[nodiscard]] shared_type exchange(Args&&... args) noexcept
 		{
 			shared_type r = make_single<T>(std::forward<Args>(args)...);

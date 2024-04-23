@@ -2,6 +2,7 @@
 
 #include "util/types.hpp"
 #include "util/tsc.hpp"
+#include "util/atomic.hpp"
 #include <functional>
 
 extern bool g_use_rtm;
@@ -433,6 +434,19 @@ namespace utils
 	constexpr T mul_saturate(T factor1, T factor2)
 	{
 		return factor1 > 0 && T{umax} / factor1 < factor2 ? T{umax} : static_cast<T>(factor1 * factor2);
+	}
+
+	inline void trigger_write_page_fault(void* ptr)
+	{
+#if defined(ARCH_X64) && !defined(_MSC_VER)
+		__asm__ volatile("lock orl $0, 0(%0)" :: "r" (ptr));
+#elif defined(ARCH_ARM64)
+		u32 value = 0;
+		u32* u32_ptr = static_cast<u32*>(ptr);
+		__asm__ volatile("ldset %w0, %w0, %1" : "+r"(value), "=Q"(*u32_ptr) : "r"(value));
+#else
+		*static_cast<atomic_t<u32> *>(ptr) += 0;
+#endif
 	}
 
 	inline void trap()

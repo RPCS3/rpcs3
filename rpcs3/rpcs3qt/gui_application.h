@@ -4,6 +4,7 @@
 #include "util/atomic.hpp"
 
 #include <QApplication>
+#include <QAbstractNativeEventFilter>
 #include <QElapsedTimer>
 #include <QTimer>
 #include <QTranslator>
@@ -15,6 +16,7 @@
 
 #include <memory>
 #include <functional>
+#include <deque>
 
 class gs_frame;
 class main_window;
@@ -81,6 +83,13 @@ private:
 	void UpdatePlaytime();
 	void StopPlaytime();
 
+	class native_event_filter : public QAbstractNativeEventFilter
+	{
+	public:
+		bool nativeEventFilter(const QByteArray& eventType, void* message, qintptr* result) override;
+
+	} m_native_event_filter;
+
 	QTranslator m_translator;
 	QTranslator m_translator_qt;
 	QString m_language_code;
@@ -88,7 +97,7 @@ private:
 	QTimer m_timer;
 	QElapsedTimer m_timer_playtime;
 
-	QSoundEffect m_sound_effect{};
+	std::deque<std::unique_ptr<QSoundEffect>> m_sound_effects{};
 
 	std::shared_ptr<emu_settings> m_emu_settings;
 	std::shared_ptr<gui_settings> m_gui_settings;

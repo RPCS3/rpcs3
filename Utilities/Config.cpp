@@ -50,6 +50,17 @@ namespace cfg
 		return false;
 	}
 
+	bool _base::save(std::string_view cfg_name) const
+	{
+		if (fs::pending_file cfg_file(cfg_name); !!cfg_file.file)
+		{
+			cfg_file.file.write(to_string());
+			return cfg_file.commit();
+		}
+
+		return false;
+	}
+
 	// Emit YAML
 	static void encode(YAML::Emitter& out, const class _base& rhs);
 

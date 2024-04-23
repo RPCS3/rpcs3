@@ -1,12 +1,14 @@
 #include "File.h"
 #include "mutex.h"
 #include "StrFmt.h"
+#include "StrUtil.h"
 #include "Crypto/sha1.h"
 
 #include <unordered_map>
 #include <algorithm>
 #include <cstring>
 #include <map>
+#include <iostream>
 
 #include "util/asm.hpp"
 #include "util/coro.hpp"
@@ -47,23 +49,6 @@ static std::unique_ptr<wchar_t[]> to_wchar(const std::string& source)
 	ensure(GetFullPathNameW(buffer.get() + 32768, 32768, buffer.get(), nullptr) - 1 < 32768 - 1); // "to_wchar"
 
 	return buffer;
-}
-
-static void to_utf8(std::string& out, const wchar_t* source)
-{
-	// String size
-	const usz length = std::wcslen(source);
-
-	// Safe buffer size for max possible output length (including null terminator)
-	const int buf_size = narrow<int>(length * 3 + 1);
-
-	// Resize buffer
-	out.resize(buf_size - 1);
-
-	const int result = WideCharToMultiByte(CP_UTF8, 0, source, static_cast<int>(length) + 1, &out.front(), buf_size, nullptr, nullptr);
-
-	// Fix the size
-	out.resize(ensure(result) - 1);
 }
 
 static time_t to_time(const ULARGE_INTEGER& ft)
@@ -153,6 +138,7 @@ static fs::error to_error(DWORD e)
 #if defined(__APPLE__)
 #include <copyfile.h>
 #include <mach-o/dyld.h>
+#include <limits.h>
 #elif defined(__linux__) || defined(__sun)
 #include <sys/sendfile.h>
 #include <sys/syscall.h>
@@ -227,10 +213,17 @@ namespace fs
 	{
 	}
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4646)
+#endif
 	[[noreturn]] stat_t file_base::get_stat()
 	{
 		fmt::throw_exception("fs::file::get_stat() not supported.");
 	}
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 	void file_base::sync()
 	{
@@ -359,6 +352,12 @@ namespace fs
 	}
 
 	bool device_base::create_dir(const std::string&)
+	{
+		g_tls_error = error::readonly;
+		return false;
+	}
+
+	bool device_base::create_symlink(const std::string&)
 	{
 		g_tls_error = error::readonly;
 		return false;
@@ -524,7 +523,7 @@ bool fs::get_stat(const std::string& path, stat_t& info)
 	// Handle drives specially
 	if (epath.find_first_of(delim) == umax && epath.ends_with(':'))
 	{
-		WIN32_FILE_ATTRIBUTE_DATA attrs;
+		WIN32_FILE_ATTRIBUTE_DATA attrs{};
 
 		// Must end with a delimiter
 		if (!GetFileAttributesExW(to_wchar(std::string(epath) + '/').get(), GetFileExInfoStandard, &attrs))
@@ -546,14 +545,14 @@ bool fs::get_stat(const std::string& path, stat_t& info)
 		return true;
 	}
 
-	WIN32_FIND_DATA attrs;
-
 	// Allowed by FindFirstFileExW but we should not allow it
 	if (epath.ends_with("*"))
 	{
 		g_tls_error = fs::error::noent;
 		return false;
 	}
+
+	WIN32_FIND_DATA attrs{};
 
 	const auto wchar_ptr = to_wchar(std::string(epath));
 	const std::wstring_view wpath_view = wchar_ptr.get();
@@ -588,6 +587,7 @@ bool fs::get_stat(const std::string& path, stat_t& info)
 	}
 
 	info.is_directory = (attrs.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+	info.is_symlink = (attrs.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
 	info.is_writable = (attrs.dwFileAttributes & FILE_ATTRIBUTE_READONLY) == 0;
 	info.size = attrs.nFileSizeLow | (u64{attrs.nFileSizeHigh} << 32);
 	info.atime = to_time(attrs.ftLastAccessTime);
@@ -602,6 +602,7 @@ bool fs::get_stat(const std::string& path, stat_t& info)
 	}
 
 	info.is_directory = S_ISDIR(file_info.st_mode);
+	info.is_symlink = S_ISLNK(file_info.st_mode);
 	info.is_writable = file_info.st_mode & 0200; // HACK: approximation
 	info.size = file_info.st_size;
 	info.atime = file_info.st_atime;
@@ -647,6 +648,23 @@ bool fs::is_dir(const std::string& path)
 	}
 
 	if (!info.is_directory)
+	{
+		g_tls_error = error::exist;
+		return false;
+	}
+
+	return true;
+}
+
+bool fs::is_symlink(const std::string& path)
+{
+	fs::stat_t info{};
+	if (!fs::get_stat(path, info))
+	{
+		return false;
+	}
+
+	if (!info.is_symlink)
 	{
 		g_tls_error = error::exist;
 		return false;
@@ -754,7 +772,7 @@ bool fs::create_path(const std::string& path)
 
 #ifdef _WIN32
 	// Workaround: don't call is_dir with naked drive letter
-	if (parent.size() < path.size() && parent.back() != ':' && !is_dir(parent) && !create_path(parent))
+	if (parent.size() < path.size() && (parent.empty() || (parent.back() != ':' && !is_dir(parent) && !create_path(parent))))
 #else
 	if (parent.size() < path.size() && !is_dir(parent) && !create_path(parent))
 #endif
@@ -790,10 +808,35 @@ bool fs::remove_dir(const std::string& path)
 		g_tls_error = to_error(GetLastError());
 		return false;
 	}
+#else
+	if (::rmdir(path.c_str()) != 0)
+	{
+		g_tls_error = to_error(errno);
+		return false;
+	}
+#endif
+
+	return true;
+}
+
+bool fs::create_symlink(const std::string& path, const std::string& target)
+{
+	if (auto device = get_virtual_device(path))
+	{
+		return device->create_symlink(path);
+	}
+
+#ifdef _WIN32
+	const DWORD flags = is_dir(target) ? SYMBOLIC_LINK_FLAG_DIRECTORY : 0;
+	if (!CreateSymbolicLinkW(to_wchar(path).get(), to_wchar(target).get(), flags))
+	{
+		g_tls_error = to_error(GetLastError());
+		return false;
+	}
 
 	return true;
 #else
-	if (::rmdir(path.c_str()) != 0)
+	if (::symlink(target.c_str(), path.c_str()) != 0)
 	{
 		g_tls_error = to_error(errno);
 		return false;
@@ -1782,7 +1825,7 @@ bool fs::dir::open(const std::string& path)
 		{
 			dir_entry info;
 
-			to_utf8(info.name, found.cFileName);
+			info.name = wchar_to_utf8(found.cFileName);
 			info.is_directory = (found.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
 			info.is_writable = (found.dwFileAttributes & FILE_ATTRIBUTE_READONLY) == 0;
 			info.size = (static_cast<u64>(found.nFileSizeHigh) << 32) | static_cast<u64>(found.nFileSizeLow);
@@ -1898,15 +1941,81 @@ bool fs::dir::open(const std::string& path)
 	return true;
 }
 
-bool fs::file::strict_read_check(u64 _size, u64 type_size) const
+bool fs::file::strict_read_check(u64 offset, u64 _size, u64 type_size) const
 {
-	if (usz pos0 = pos(), size0 = size(); (pos0 >= size0 ? 0 : (size0 - pos0)) / type_size < _size)
+	if (usz pos0 = offset, size0 = size(); (pos0 >= size0 ? 0 : (size0 - pos0)) / type_size < _size)
 	{
 		fs::g_tls_error = fs::error::inval;
 		return false;
 	}
 
 	return true;
+}
+
+std::string fs::get_executable_path()
+{
+	// Use magic static
+	static const std::string s_exe_path = []
+	{
+#if defined(_WIN32)
+		constexpr DWORD size = 32767;
+		std::vector<wchar_t> buffer(size);
+		GetModuleFileNameW(nullptr, buffer.data(), size);
+		return wchar_to_utf8(buffer.data());
+#elif defined(__APPLE__)
+		char bin_path[PATH_MAX];
+		uint32_t bin_path_size = sizeof(bin_path);
+		if (_NSGetExecutablePath(bin_path, &bin_path_size) != 0)
+		{
+			std::cerr << "Failed to find app binary path" << std::endl;
+			return std::string{};
+		}
+
+		// App bundle directory is three levels up from the binary.
+		return get_parent_dir(bin_path, 3);
+#else
+		if (const char* appimage_path = ::getenv("APPIMAGE"))
+		{
+			std::cout << "Found AppImage path: " << appimage_path << std::endl;
+			return std::string(appimage_path);
+		}
+
+		std::cout << "No AppImage path found, checking for executable" << std::endl;
+
+		char exe_path[PATH_MAX];
+		const ssize_t len = ::readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
+
+		if (len == -1)
+		{
+			std::cerr << "Failed to find executable path" << std::endl;
+			return std::string{};
+		}
+
+		exe_path[len] = '\0';
+		std::cout << "Found exec path: " << exe_path << std::endl;
+
+		return std::string(exe_path);
+#endif
+	}();
+
+	return s_exe_path;
+}
+
+std::string fs::get_executable_dir()
+{
+	// Use magic static
+	static const std::string s_exe_dir = []
+	{
+		std::string exe_path = get_executable_path();
+		if (exe_path.empty())
+		{
+			return exe_path;
+		}
+
+		return get_parent_dir(exe_path) + "/";
+	}();
+
+	return s_exe_dir;
 }
 
 const std::string& fs::get_config_dir()
@@ -1916,17 +2025,52 @@ const std::string& fs::get_config_dir()
 	{
 		std::string dir;
 
-#ifdef _WIN32
-		wchar_t buf[32768];
-		constexpr DWORD size = static_cast<DWORD>(std::size(buf));
-		if (GetEnvironmentVariable(L"RPCS3_CONFIG_DIR", buf, size) - 1 >= size - 1 &&
-			GetModuleFileName(nullptr, buf, size) - 1 >= size - 1)
+		// Check if a portable directory exists.
+		std::string portable_dir = get_executable_dir() + "/portable/";
+		if (is_dir(portable_dir))
 		{
-			MessageBoxA(nullptr, fmt::format("GetModuleFileName() failed: error: %s", fmt::win_error{GetLastError(), nullptr}).c_str(), "fs::get_config_dir()", MB_ICONERROR);
-			return dir; // empty
+			return portable_dir;
 		}
 
-		to_utf8(dir, buf); // Convert to UTF-8
+#ifdef _WIN32
+		std::vector<wchar_t> buf;
+
+		// Check if RPCS3_CONFIG_DIR is set and get the required buffer size
+		DWORD size = GetEnvironmentVariable(L"RPCS3_CONFIG_DIR", nullptr, 0);
+		if (size > 0)
+		{
+			// Resize buffer and fetch RPCS3_CONFIG_DIR
+			buf.resize(size);
+
+			if (GetEnvironmentVariable(L"RPCS3_CONFIG_DIR", buf.data(), size) != (size - 1))
+			{
+				// Clear buffer on failure and notify user
+				MessageBoxA(nullptr, fmt::format("GetEnvironmentVariable(RPCS3_CONFIG_DIR) failed: error: %s", fmt::win_error{GetLastError(), nullptr}).c_str(), "fs::get_config_dir()", MB_ICONERROR);
+				buf.clear();
+			}
+		}
+
+		// Fallback to executable path if needed
+		for (DWORD buf_size = MAX_PATH; size == 0; buf_size += MAX_PATH)
+		{
+			buf.resize(buf_size);
+			size = GetModuleFileName(nullptr, buf.data(), buf_size);
+
+			if (size == 0)
+			{
+				MessageBoxA(nullptr, fmt::format("GetModuleFileName() failed: error: %s", fmt::win_error{GetLastError(), nullptr}).c_str(), "fs::get_config_dir()", MB_ICONERROR);
+				return dir; // empty
+			}
+
+			if (GetLastError() == ERROR_INSUFFICIENT_BUFFER)
+			{
+				// Try again with increased buffer size
+				size = 0;
+				continue;
+			}
+		}
+
+		dir = wchar_to_utf8(buf.data());
 
 		std::replace(dir.begin(), dir.end(), '\\', '/');
 
@@ -2011,10 +2155,23 @@ const std::string& fs::get_temp_dir()
 			return dir; // empty
 		}
 
-		to_utf8(dir, buf);
+		dir = wchar_to_utf8(buf);
 #else
-		// TODO
-		dir = get_cache_dir();
+		const char* tmp_dir = getenv("TMPDIR");
+		if (tmp_dir == nullptr || tmp_dir[0] == '\0')
+		{
+			// Fall back to cache directory
+			dir = get_cache_dir();
+		}
+		else
+		{
+			dir = tmp_dir;
+			if (!dir.ends_with("/"))
+			{
+				// Ensure path ends with a separator
+				dir += "/";
+			}
+		}
 #endif
 
 		return dir;

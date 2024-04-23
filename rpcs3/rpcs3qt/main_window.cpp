@@ -57,6 +57,7 @@
 #include "Emu/vfs_config.h"
 #include "Emu/System.h"
 #include "Emu/system_utils.hpp"
+#include "Emu/system_config.h"
 
 #include "Crypto/unpkg.h"
 #include "Crypto/unself.h"
@@ -71,6 +72,8 @@
 #include "Utilities/Thread.h"
 #include "util/sysinfo.hpp"
 #include "util/serialization_ext.hpp"
+
+#include "Input/gui_pad_thread.h"
 
 #include "ui_main_window.h"
 
@@ -240,7 +243,7 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 		}
 	});
 
-#if defined(_WIN32) || defined(__linux__)
+#if !defined(ARCH_ARM64) && (defined(_WIN32) || defined(__linux__) || defined(__APPLE__))
 	if (const auto update_value = m_gui_settings->GetValue(gui::m_check_upd_start).toString(); update_value != gui::update_off)
 	{
 		const bool in_background = with_cli_boot || update_value == gui::update_bkg;
@@ -258,7 +261,30 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 	// Refresh gamelist last
 	m_game_list_frame->Refresh(true);
 
+	update_gui_pad_thread();
+
 	return true;
+}
+
+void main_window::update_gui_pad_thread()
+{
+	const bool enabled = m_gui_settings->GetValue(gui::nav_enabled).toBool();
+
+	if (enabled && Emu.IsStopped())
+	{
+#if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
+		if (!m_gui_pad_thread)
+		{
+			m_gui_pad_thread = std::make_unique<gui_pad_thread>();
+		}
+
+		m_gui_pad_thread->update_settings(m_gui_settings);
+#endif
+	}
+	else
+	{
+		m_gui_pad_thread.reset();
+	}
 }
 
 QString main_window::GetCurrentTitle()
@@ -455,6 +481,7 @@ void main_window::show_boot_error(game_boot_result status)
 		message = tr("A game or PS3 application is still running or has yet to be fully stopped.");
 		break;
 	case game_boot_result::firmware_missing: // Handled elsewhere
+	case game_boot_result::already_added: // Handled elsewhere
 	case game_boot_result::no_errors:
 		return;
 	case game_boot_result::generic_error:
@@ -1388,10 +1415,27 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 
 	fs::file update_files_f = pup.get_file(0x300);
 
-	if (!update_files_f)
+	const usz update_files_size = update_files_f ? update_files_f.size() : 0;
+
+	if (!update_files_size)
 	{
 		gui_log.error("Error while installing firmware: Couldn't find installation packages database.");
 		critical(tr("Firmware installation failed: The provided file's contents are corrupted."));
+		return;
+	}
+
+	fs::device_stat dev_stat{};
+	if (!fs::statfs(g_cfg_vfs.get_dev_flash(), dev_stat))
+	{
+		gui_log.error("Error while installing firmware: Couldn't retrieve available disk space. ('%s')", g_cfg_vfs.get_dev_flash());
+		critical(tr("Firmware installation failed: Couldn't retrieve available disk space."));
+		return;
+	}
+
+	if (dev_stat.avail_free < update_files_size)
+	{
+		gui_log.error("Error while installing firmware: Out of disk space. ('%s', needed: %d bytes)", g_cfg_vfs.get_dev_flash(), update_files_size - dev_stat.avail_free);
+		critical(tr("Firmware installation failed: Out of disk space."));
 		return;
 	}
 
@@ -1434,7 +1478,7 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 		return;
 	}
 
-	static constexpr std::string_view cur_version = "4.90";
+	static constexpr std::string_view cur_version = "4.91";
 
 	std::string version_string;
 
@@ -1785,7 +1829,7 @@ void main_window::RepaintToolBarIcons()
 	ui->mw_searchbar->setFixedWidth(tool_bar_height * 5);
 }
 
-void main_window::OnEmuRun(bool /*start_playtime*/) const
+void main_window::OnEmuRun(bool /*start_playtime*/)
 {
 	const QString title = GetCurrentTitle();
 	const QString restart_tooltip = tr("Restart %0").arg(title);
@@ -1808,6 +1852,8 @@ void main_window::OnEmuRun(bool /*start_playtime*/) const
 	ui->toolbar_stop->setToolTip(stop_tooltip);
 
 	EnableMenus(true);
+
+	update_gui_pad_thread();
 }
 
 void main_window::OnEmuResume() const
@@ -1913,6 +1959,8 @@ void main_window::OnEmuStop()
 	{
 		m_system_cmd_dialog->close();
 	}
+
+	update_gui_pad_thread();
 }
 
 void main_window::OnEmuReady() const
@@ -2378,6 +2426,21 @@ void main_window::CreateConnects()
 	connect(ui->actionCreate_Savestate, &QAction::triggered, this, []()
 	{
 		gui_log.notice("User triggered savestate creation from utilities.");
+
+		if (!g_cfg.savestate.suspend_emu)
+		{
+			Emu.after_kill_callback = []()
+			{
+				Emu.Restart();
+			};
+		}
+
+		Emu.Kill(false, true);
+	});
+
+	connect(ui->actionCreate_Savestate_And_Exit, &QAction::triggered, this, []()
+	{
+		gui_log.notice("User triggered savestate creation and emulation stop from utilities.");
 		Emu.Kill(false, true);
 	});
 
@@ -2390,10 +2453,15 @@ void main_window::CreateConnects()
 			return;
 		}
 
-		QStringList paths;
-
 		// Only select one folder for now
-		paths << QFileDialog::getExistingDirectory(this, tr("Select a folder containing one or more games"), qstr(fs::get_config_dir()), QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+		QString dir = QFileDialog::getExistingDirectory(this, tr("Select a folder containing one or more games"), qstr(fs::get_config_dir()), QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+		if (dir.isEmpty())
+		{
+			return;
+		}
+
+		QStringList paths;
+		paths << dir;
 		AddGamesFromDirs(std::move(paths));
 	});
 
@@ -2623,6 +2691,7 @@ void main_window::CreateConnects()
 		connect(&dlg, &settings_dialog::GuiStylesheetRequest, this, &main_window::RequestGlobalStylesheetChange);
 		connect(&dlg, &settings_dialog::GuiRepaintRequest, this, &main_window::RepaintGui);
 		connect(&dlg, &settings_dialog::EmuSettingsApplied, this, &main_window::NotifyEmuSettingsChange);
+		connect(&dlg, &settings_dialog::EmuSettingsApplied, this, &main_window::update_gui_pad_thread);
 		connect(&dlg, &settings_dialog::EmuSettingsApplied, m_log_frame, &log_frame::LoadSettings);
 		dlg.exec();
 	};
@@ -2994,7 +3063,7 @@ void main_window::CreateConnects()
 
 	connect(ui->updateAct, &QAction::triggered, this, [this]()
 	{
-#if !defined(_WIN32) && !defined(__linux__)
+#if (!defined(_WIN32) && !defined(__linux__) && !defined(__APPLE__)) || defined(ARCH_ARM64)
 		QMessageBox::warning(this, tr("Auto-updater"), tr("The auto-updater isn't available for your OS currently."));
 		return;
 #endif
@@ -3009,7 +3078,7 @@ void main_window::CreateConnects()
 
 	connect(ui->supportAct, &QAction::triggered, this, [this]
 	{
-		QDesktopServices::openUrl(QUrl("https://www.patreon.com/Nekotekina"));
+		QDesktopServices::openUrl(QUrl("https://rpcs3.net/patreon"));
 	});
 
 	connect(ui->aboutAct, &QAction::triggered, this, [this]
@@ -3282,7 +3351,7 @@ void main_window::ConfigureGuiFromSettings()
 	m_mw->restoreState(m_gui_settings->GetValue(gui::mw_mwState).toByteArray());
 
 	ui->freezeRecentAct->setChecked(m_gui_settings->GetValue(gui::rg_freeze).toBool());
-	m_rg_entries = m_gui_settings->Var2List(m_gui_settings->GetValue(gui::rg_entries));
+	m_rg_entries = gui_settings::Var2List(m_gui_settings->GetValue(gui::rg_entries));
 
 	// clear recent games menu of actions
 	for (QAction* act : m_recent_game_acts)
@@ -3513,9 +3582,16 @@ void main_window::AddGamesFromDirs(QStringList&& paths)
 		}
 	}
 
+	u32 games_added = 0;
+
 	for (const QString& path : paths)
 	{
-		Emu.AddGamesFromDir(sstr(path));
+		games_added += Emu.AddGamesFromDir(sstr(path));
+	}
+
+	if (games_added)
+	{
+		gui_log.notice("AddGamesFromDirs added %d new entries", games_added);
 	}
 
 	m_game_list_frame->AddRefreshedSlot([this, paths = std::move(paths), existing = std::move(existing)](std::set<std::string>& claimed_paths)
@@ -3547,7 +3623,11 @@ void main_window::AddGamesFromDirs(QStringList&& paths)
 			}
 		}
 
-		if (!paths_added.empty())
+		if (paths_added.empty())
+		{
+			QMessageBox::information(this, tr("Nothing to add!"), tr("Could not find any new software."));
+		}
+		else
 		{
 			ShowOptionalGamePreparations(tr("Success!"), tr("Successfully added software to game list from path(s)!"), paths_added);
 		}

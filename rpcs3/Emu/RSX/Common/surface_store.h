@@ -353,7 +353,7 @@ namespace rsx
 
 					// If this surface has already been added via another descendant, just ignore it
 					bool ignore = false;
-					for (auto &slice : new_surface->old_contents)
+					for (const auto& slice : new_surface->old_contents)
 					{
 						if (slice.source == surface)
 						{
@@ -374,8 +374,8 @@ namespace rsx
 					surface == e.second)
 				{
 					// This has been 'swallowed' by the new surface and can be safely freed
-					auto &storage = surface->is_depth_surface() ? m_depth_stencil_storage : m_render_targets_storage;
-					auto &object = ::at32(storage, e.first);
+					auto& storage = surface->is_depth_surface() ? m_depth_stencil_storage : m_render_targets_storage;
+					auto& object = ::at32(storage, e.first);
 
 					ensure(object);
 
@@ -411,8 +411,9 @@ namespace rsx
 			// Workaround. Preserve new surface tag value because pitch convert is unimplemented
 			u64 new_content_tag = 0;
 
-			address_range *storage_bounds;
-			surface_ranged_map *primary_storage, *secondary_storage;
+			address_range* storage_bounds;
+			surface_ranged_map* primary_storage;
+			surface_ranged_map* secondary_storage;
 			if constexpr (depth)
 			{
 				primary_storage = &m_depth_stencil_storage;
@@ -430,7 +431,7 @@ namespace rsx
 			auto It = primary_storage->find(address);
 			if (It != primary_storage->end())
 			{
-				surface_storage_type &surface = It->second;
+				surface_storage_type& surface = It->second;
 				const bool pitch_compatible = Traits::surface_is_pitch_compatible(surface, pitch);
 
 				if (!pitch_compatible)
@@ -452,7 +453,7 @@ namespace rsx
 				{
 					if (!pitch_compatible)
 					{
-						Traits::invalidate_surface_contents(command_list, Traits::get(surface), address, pitch);
+						Traits::invalidate_surface_contents(command_list, Traits::get(surface), format, address, pitch);
 					}
 
 					Traits::notify_surface_persist(surface);
@@ -512,7 +513,7 @@ namespace rsx
 						}
 
 						new_surface = Traits::get(new_surface_storage);
-						Traits::invalidate_surface_contents(command_list, new_surface, address, pitch);
+						Traits::invalidate_surface_contents(command_list, new_surface, format, address, pitch);
 						Traits::prepare_surface_for_drawing(command_list, new_surface);
 						allocate_rsx_memory(new_surface);
 						break;

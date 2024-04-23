@@ -11,6 +11,7 @@ vfs_dialog_usb_input::vfs_dialog_usb_input(const QString& name, const cfg::devic
 	: QDialog(parent), m_gui_settings(std::move(_gui_settings)), m_gui_save(gui::fs_dev_usb_list)
 {
 	ensure(!!info);
+	ensure(!name.isEmpty());
 	ensure(name.back() >= '0' && name.back() <= '7');
 
 	setWindowTitle(tr("Edit %0").arg(name));

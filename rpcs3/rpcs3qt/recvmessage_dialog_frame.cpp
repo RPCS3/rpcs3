@@ -2,13 +2,17 @@
 #include <QHBoxLayout>
 #include <QPushButton>
 #include <QMessageBox>
+#include <QTimer>
+
 #include "recvmessage_dialog_frame.h"
+#include "Emu/IdManager.h"
+#include "Emu/System.h"
 
 #include "util/logs.hpp"
 
 LOG_CHANNEL(recvmessage_dlg_log, "recvmessage dlg");
 
-void recvmessage_callback(void* param, const std::shared_ptr<std::pair<std::string, message_data>> new_msg, u64 msg_id)
+void recvmessage_callback(void* param, std::shared_ptr<std::pair<std::string, message_data>> new_msg, u64 msg_id)
 {
 	auto* dlg = static_cast<recvmessage_dialog_frame*>(param);
 	dlg->callback_handler(std::move(new_msg), msg_id);
@@ -22,7 +26,7 @@ recvmessage_dialog_frame::~recvmessage_dialog_frame()
 	}
 }
 
-bool recvmessage_dialog_frame::Exec(SceNpBasicMessageMainType type, SceNpBasicMessageRecvOptions options, SceNpBasicMessageRecvAction& recv_result, u64& chosen_msg_id)
+error_code recvmessage_dialog_frame::Exec(SceNpBasicMessageMainType type, SceNpBasicMessageRecvOptions options, SceNpBasicMessageRecvAction& recv_result, u64& chosen_msg_id)
 {
 	qRegisterMetaType<recvmessage_signal_struct>();
 
@@ -56,7 +60,7 @@ bool recvmessage_dialog_frame::Exec(SceNpBasicMessageMainType type, SceNpBasicMe
 
 	m_dialog->setLayout(vbox_global);
 
-	bool result                 = false;
+	error_code result           = CELL_CANCEL;
 	const bool preserve         = options & SCE_NP_BASIC_RECV_MESSAGE_OPTIONS_PRESERVE;
 	const bool include_bootable = options & SCE_NP_BASIC_RECV_MESSAGE_OPTIONS_INCLUDE_BOOTABLE;
 
@@ -71,7 +75,7 @@ bool recvmessage_dialog_frame::Exec(SceNpBasicMessageMainType type, SceNpBasicMe
 
 		chosen_msg_id = selected[0]->data(Qt::UserRole).toULongLong();
 		recv_result   = result_from_action;
-		result        = true;
+		result        = CELL_OK;
 
 		if (!preserve)
 		{
@@ -91,10 +95,35 @@ bool recvmessage_dialog_frame::Exec(SceNpBasicMessageMainType type, SceNpBasicMe
 
 	// Get list of messages
 	const auto messages = m_rpcn->get_messages_and_register_cb(type, include_bootable, recvmessage_callback, this);
-	for (const auto& message : messages)
+	for (const auto& [id, message] : messages)
 	{
-		add_message(message.second, message.first);
+		add_message(message, id);
 	}
+
+	auto& nps = g_fxo->get<np_state>();
+
+	QTimer timer;
+	connect(&timer, &QTimer::timeout, this, [this, &nps, &timer]()
+	{
+		bool abort = Emu.IsStopped();
+
+		if (!abort && nps.abort_gui_flag.exchange(false))
+		{
+			recvmessage_dlg_log.warning("Aborted by sceNp!");
+			abort = true;
+		}
+
+		if (abort)
+		{
+			if (m_dialog)
+			{
+				m_dialog->close();
+			}
+
+			timer.stop();
+		}
+	});
+	timer.start(10ms);
 
 	m_dialog->exec();
 

@@ -48,7 +48,6 @@ enum SceNpCommerce2Error
 	SCE_NP_COMMERCE2_SERVER_ERROR_VOUCHER_ALREADY_CONSUMED      = 0x80023130,
 	SCE_NP_COMMERCE2_SERVER_ERROR_EXCEEDS_AGE_LIMIT_IN_BROWSING = 0x80023139,
 	SCE_NP_COMMERCE2_SYSTEM_UTIL_ERROR_INVALID_VOUCHER          = 0x80024002,
-	SCE_NP_COMMERCE_ERROR_REQ_BUSY                              = 0x8002940d,
 };
 
 // Event types
@@ -266,6 +265,7 @@ struct SceNpCommerce2GameProductInfo
 struct SceNpCommerce2GetProductInfoListResult
 {
 	SceNpCommerce2CommonData commonData;
+	be_t<u32> countOfProductInfo;
 };
 
 // Structure for rating information
@@ -317,7 +317,7 @@ struct SceNpCommerce2ProductBrowseParam
 struct SceNpCommerce2ProductCodeParam
 {
 	be_t<u32> size;
-	be_t<u32> inputMode; // Unsigned ints go into be_t<u32>, right?
+	be_t<u32> inputMode;
 	s8 code1[SCE_NP_COMMERCE2_PRODUCT_CODE_BLOCK_LEN + 1];
 	s8 padding1[3];
 	s8 code2[SCE_NP_COMMERCE2_PRODUCT_CODE_BLOCK_LEN + 1];

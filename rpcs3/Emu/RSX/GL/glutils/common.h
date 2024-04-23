@@ -6,7 +6,7 @@
 #define GL_VERTEX_TEXTURES_START   (GL_FRAGMENT_TEXTURES_START + 16)
 #define GL_STENCIL_MIRRORS_START   (GL_VERTEX_TEXTURES_START + 4)
 #define GL_STREAM_BUFFER_START     (GL_STENCIL_MIRRORS_START + 16)
-#define GL_TEMP_IMAGE_SLOT         31
+#define GL_TEMP_IMAGE_SLOT(x)      (31 - x)
 
 #define UBO_SLOT(x)  (x + 8)
 #define SSBO_SLOT(x) (x)
@@ -49,6 +49,9 @@
 
 namespace gl
 {
+	using flags32_t = u32;
+	using handle32_t = u32;
+
 	template<typename Type, uint BindId, uint GetStateId>
 	class save_binding_state_base
 	{

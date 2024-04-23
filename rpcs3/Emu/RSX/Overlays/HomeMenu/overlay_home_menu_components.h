@@ -147,7 +147,7 @@ namespace rsx
 				{
 					const f64 percentage = std::clamp((this->m_last_value - static_cast<T>(m_minimum)) / std::fabs(m_maximum - m_minimum), 0.0, 1.0);
 					m_slider.set_pos(m_slider.x, this->y + (this->h - m_slider.h) / 2);
-					m_handle.set_pos(m_slider.x + static_cast<u16>(percentage * (m_slider.w - m_handle.w)), this->y + (this->h - m_handle.h) / 2);
+					m_handle.set_pos(m_slider.x + static_cast<s16>(percentage * (m_slider.w - m_handle.w)), this->y + (this->h - m_handle.h) / 2);
 
 					const auto set_label_text = [this]() -> void
 					{
@@ -157,7 +157,7 @@ namespace rsx
 							return;
 						}
 
-						if constexpr (std::is_floating_point<T>::value)
+						if constexpr (std::is_floating_point_v<T>)
 						{
 							m_value_label.set_text(fmt::format("%.2f%s", this->m_last_value, m_suffix));
 						}

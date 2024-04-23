@@ -125,6 +125,7 @@ namespace fmt
 
 	std::vector<std::string> split(std::string_view source, std::initializer_list<std::string_view> separators, bool is_skip_empty = true);
 	std::string trim(const std::string& source, std::string_view values = " \t");
+	std::string trim_front(const std::string& source, std::string_view values = " \t");
 	void trim_back(std::string& source, std::string_view values = " \t");
 
 	template <typename T>
@@ -176,6 +177,8 @@ namespace fmt
 
 	std::string to_upper(std::string_view string);
 	std::string to_lower(std::string_view string);
+
+	std::string truncate(std::string_view src, usz length);
 
 	bool match(const std::string& source, const std::string& mask);
 

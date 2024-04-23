@@ -22,6 +22,34 @@ namespace np
 		return fmt::format("%02X:%02X:%02X:%02X:%02X:%02X", ether[0], ether[1], ether[2], ether[3], ether[4], ether[5]);
 	}
 
+	void strings_to_userinfo(std::string_view npid, std::string_view online_name, std::string_view avatar_url, SceNpUserInfo& user_info)
+	{
+		memset(&user_info, 0, sizeof(user_info));
+		strcpy_trunc(user_info.userId.handle.data, npid);
+		strcpy_trunc(user_info.name.data, online_name);
+		strcpy_trunc(user_info.icon.data, avatar_url);
+	}
+
+	template <typename T>
+	void onlinedata_to_presencedetails(const rpcn::friend_online_data& data, bool same_context, T& details)
+	{
+		memset(&details, 0, sizeof(T));
+		details.state = data.online ? (same_context ? SCE_NP_BASIC_PRESENCE_STATE_IN_CONTEXT : SCE_NP_BASIC_PRESENCE_STATE_OUT_OF_CONTEXT) : SCE_NP_BASIC_PRESENCE_STATE_OFFLINE;
+		strcpy_trunc(details.title, data.pr_title);
+		strcpy_trunc(details.status, data.pr_status);
+		strcpy_trunc(details.comment, data.pr_comment);
+		details.size = std::min<u32>(::size32(data.pr_data), SCE_NP_BASIC_MAX_PRESENCE_SIZE);
+		std::memcpy(details.data, data.pr_data.data(), details.size);
+
+		if constexpr (std::is_same_v<T, SceNpBasicPresenceDetails2>)
+		{
+			details.struct_size = sizeof(SceNpBasicPresenceDetails2);
+		}
+	}
+
+	template void onlinedata_to_presencedetails<SceNpBasicPresenceDetails>(const rpcn::friend_online_data& data, bool same_context, SceNpBasicPresenceDetails& details);
+	template void onlinedata_to_presencedetails<SceNpBasicPresenceDetails2>(const rpcn::friend_online_data& data, bool same_context, SceNpBasicPresenceDetails2& details);
+
 	void string_to_npid(std::string_view str, SceNpId& npid)
 	{
 		memset(&npid, 0, sizeof(npid));

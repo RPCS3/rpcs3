@@ -30,6 +30,7 @@ struct uncompressed_serialization_file_handler : utils::serialization_file_handl
 	}
 
 	uncompressed_serialization_file_handler(const uncompressed_serialization_file_handler&) = delete;
+	uncompressed_serialization_file_handler& operator=(const uncompressed_serialization_file_handler&) = delete;
 
 	// Handle file read and write requests
 	bool handle_file_op(utils::serial& ar, usz pos, usz size, const void* data) override;
@@ -68,6 +69,7 @@ struct compressed_serialization_file_handler : utils::serialization_file_handler
 	}
 
 	compressed_serialization_file_handler(const compressed_serialization_file_handler&) = delete;
+	compressed_serialization_file_handler& operator=(const compressed_serialization_file_handler&) = delete;
 
 	// Handle file read and write requests
 	bool handle_file_op(utils::serial& ar, usz pos, usz size, const void* data) override;
@@ -91,6 +93,7 @@ private:
 	usz m_stream_data_index = 0;
 	usz m_file_read_index = 0;
 	atomic_t<usz> m_pending_bytes = 0;
+	atomic_t<bool> m_pending_signal = false;
 	bool m_write_inited = false;
 	bool m_read_inited = false;
 	bool m_errored = false;

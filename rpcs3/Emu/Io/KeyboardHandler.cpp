@@ -46,17 +46,12 @@ void KeyboardHandlerBase::Key(u32 code, bool pressed, const std::u32string& key)
 
 	for (Keyboard& keyboard : m_keyboards)
 	{
-		bool found_key = false;
-
 		KbData& data = keyboard.m_data;
-		KbConfig& config = keyboard.m_config;
+		const KbConfig& config = keyboard.m_config;
 
-		for (const KbButton& button : keyboard.m_buttons)
+		if (auto it = keyboard.m_keys.find(code); it != keyboard.m_keys.end())
 		{
-			if (button.m_keyCode != code)
-				continue;
-
-			found_key = true;
+			KbButton& button = it->second;
 
 			u16 kcode = CELL_KEYC_NO_EVENT;
 			bool is_meta_key = IsMetaKey(code);
@@ -156,8 +151,7 @@ void KeyboardHandlerBase::Key(u32 code, bool pressed, const std::u32string& key)
 				}
 			}
 		}
-
-		if (!found_key && !key.empty())
+		else if (!key.empty())
 		{
 			if (pressed)
 			{
@@ -205,14 +199,14 @@ void KeyboardHandlerBase::ReleaseAllKeys()
 {
 	for (Keyboard& keyboard : m_keyboards)
 	{
-		for (const KbButton& button : keyboard.m_buttons)
+		for (const auto& [key_code, button] : keyboard.m_keys)
 		{
 			Key(button.m_keyCode, false, {});
 		}
 
 		for (const std::u32string& key : keyboard.m_extra_data.pressed_keys)
 		{
-			Key(0, false, key);
+			Key(CELL_KEYC_NO_EVENT, false, key);
 		}
 
 		keyboard.m_extra_data.pressed_keys.clear();

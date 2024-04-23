@@ -14,6 +14,20 @@ std::string cfg_vfs::get(const cfg::string& _cfg, std::string_view emu_dir) cons
 
 std::string cfg_vfs::get(const std::string& _cfg, const std::string& def, std::string_view emu_dir) const
 {
+	std::string path = _cfg;
+
+	// Fallback
+	if (path.empty())
+	{
+		if (def.empty())
+		{
+			vfs_log.notice("VFS config called with empty path and empty default");
+			return {};
+		}
+
+		path = def;
+	}
+
 	std::string _emu_dir; // Storage only
 
 	if (emu_dir.empty())
@@ -34,18 +48,14 @@ std::string cfg_vfs::get(const std::string& _cfg, const std::string& def, std::s
 		emu_dir = _emu_dir;
 	}
 
-	std::string path = _cfg;
-
-	if (path.empty())
-	{
-		// Fallback
-		path = def;
-	}
-
 	path = fmt::replace_all(path, "$(EmulatorDir)", emu_dir);
 
 	// Check if path does not end with a delimiter
-	if (path.back() != fs::delim[0] && path.back() != fs::delim[1])
+	if (path.empty())
+	{
+		vfs_log.error("VFS config path empty (_cfg='%s', def='%s', emu_dir='%s')", _cfg, def, emu_dir);
+	}
+	else if (path.back() != fs::delim[0] && path.back() != fs::delim[1])
 	{
 		path += '/';
 	}
@@ -72,6 +82,11 @@ cfg::device_info cfg_vfs::get_device_info(const cfg::device_entry& _cfg, std::st
 		if (auto def_it = def_map.find(key); def_it != def_map.cend())
 		{
 			def_path = def_it->second.path;
+		}
+
+		if (info.path.empty() && def_path.empty())
+		{
+			return info;
 		}
 
 		info.path = get(info.path, def_path, emu_dir);

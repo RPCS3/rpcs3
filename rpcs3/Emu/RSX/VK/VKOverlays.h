@@ -96,6 +96,9 @@ namespace vk
 			return {};
 		}
 
+		int sampler_location(int index) const { return 1 + index; }
+		int input_attachment_location(int index) const { return 1 + m_num_usable_samplers + index; }
+
 		template <typename T>
 		void upload_vertex_data(T* data, u32 count)
 		{
@@ -216,7 +219,7 @@ namespace vk
 
 			float data[4];
 		}
-		config;
+		config = {};
 
 		video_out_calibration_pass();
 

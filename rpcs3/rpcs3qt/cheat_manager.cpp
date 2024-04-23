@@ -889,7 +889,7 @@ T cheat_manager_dialog::convert_from_QString(const QString& str, bool& success)
 {
 	T result;
 
-	if constexpr (std::is_same<T, u8>::value)
+	if constexpr (std::is_same_v<T, u8>)
 	{
 		const u16 result_16 = str.toUShort(&success);
 
@@ -899,16 +899,16 @@ T cheat_manager_dialog::convert_from_QString(const QString& str, bool& success)
 		result = static_cast<T>(result_16);
 	}
 
-	if constexpr (std::is_same<T, u16>::value)
+	if constexpr (std::is_same_v<T, u16>)
 		result = str.toUShort(&success);
 
-	if constexpr (std::is_same<T, u32>::value)
+	if constexpr (std::is_same_v<T, u32>)
 		result = str.toUInt(&success);
 
-	if constexpr (std::is_same<T, u64>::value)
+	if constexpr (std::is_same_v<T, u64>)
 		result = str.toULongLong(&success);
 
-	if constexpr (std::is_same<T, s8>::value)
+	if constexpr (std::is_same_v<T, s8>)
 	{
 		const s16 result_16 = str.toShort(&success);
 		if (result_16 < -128 || result_16 > 127)
@@ -917,13 +917,13 @@ T cheat_manager_dialog::convert_from_QString(const QString& str, bool& success)
 		result = static_cast<T>(result_16);
 	}
 
-	if constexpr (std::is_same<T, s16>::value)
+	if constexpr (std::is_same_v<T, s16>)
 		result = str.toShort(&success);
 
-	if constexpr (std::is_same<T, s32>::value)
+	if constexpr (std::is_same_v<T, s32>)
 		result = str.toInt(&success);
 
-	if constexpr (std::is_same<T, s64>::value)
+	if constexpr (std::is_same_v<T, s64>)
 		result = str.toLongLong(&success);
 
 	return result;

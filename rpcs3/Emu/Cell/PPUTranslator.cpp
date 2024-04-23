@@ -152,9 +152,9 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 	// Don't emit check in small blocks without terminator
 	bool need_check = info.size >= 16;
 
-	for (u32 addr = m_addr; addr < m_addr + info.size; addr += 4)
+	for (u64 addr = m_addr; addr < m_addr + info.size; addr += 4)
 	{
-		const u32 op = *ensure(m_info.get_ptr<u32>(addr + base));
+		const u32 op = *ensure(m_info.get_ptr<u32>(::narrow<u32>(addr + base)));
 
 		switch (g_ppu_itype.decode(op))
 		{
@@ -250,7 +250,7 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 			// Reset MMIO hint
 			m_may_be_mmio = true;
 
-			const u32 op = *ensure(m_info.get_ptr<u32>(m_addr + base));
+			const u32 op = *ensure(m_info.get_ptr<u32>(::narrow<u32>(m_addr + base)));
 
 			(this->*(s_ppu_decoder.decode(op)))({op});
 
@@ -269,6 +269,116 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 			CallFunction(m_addr);
 		}
 	}
+
+	replace_intrinsics(*m_function);
+	return m_function;
+}
+
+Function* PPUTranslator::GetSymbolResolver(const ppu_module& info)
+{
+	m_function = cast<Function>(m_module->getOrInsertFunction("__resolve_symbols", FunctionType::get(get_type<void>(), { get_type<u8*>(), get_type<u64>() }, false)).getCallee());
+
+	IRBuilder<> irb(BasicBlock::Create(m_context, "__entry", m_function));
+	m_ir = &irb;
+
+	// Instruction address is (m_addr + base)
+	const u64 base = m_reloc ? m_reloc->addr : 0;
+
+	m_exec = m_function->getArg(0);
+	m_seg0 = m_function->getArg(1);
+
+	const auto ftype = FunctionType::get(get_type<void>(), {
+		get_type<u8*>(), // Exec base
+		GetContextType()->getPointerTo(), // PPU context
+		get_type<u64>(), // Segment address (for PRX)
+		get_type<u8*>(), // Memory base
+		get_type<u64>(), // r0
+		get_type<u64>(), // r1
+		get_type<u64>(), // r2
+		}, false);
+
+	// Store function addresses in PPU jumptable using internal resolving instead of patching it externally.
+	// Because, LLVM processed it extremely slow. (regression)
+	// This is made in loop instead of inlined because it took tremendous amount of time to compile.
+
+	std::vector<u32> vec_addrs;
+	vec_addrs.reserve(info.funcs.size());
+
+	// Create an array of function pointers
+	std::vector<llvm::Constant*> functions;
+
+	for (const auto& f : info.funcs)
+	{
+		if (!f.size)
+		{
+			continue;
+		}
+
+		vec_addrs.push_back(f.addr - base);
+		functions.push_back(cast<Function>(m_module->getOrInsertFunction(fmt::format("__0x%x", f.addr - base), ftype).getCallee()));
+	}
+
+	if (vec_addrs.empty())
+	{
+		// Possible special case for no functions (allowing the do-while optimization)
+		m_ir->CreateRetVoid();
+		replace_intrinsics(*m_function);
+		return m_function;
+	}
+
+	const auto addr_array_type = ArrayType::get(get_type<u32>(), vec_addrs.size());
+	const auto addr_array = new GlobalVariable(*m_module, addr_array_type, false, GlobalValue::PrivateLinkage, ConstantDataArray::get(m_context, vec_addrs));
+
+	// Create an array of function pointers
+	const auto func_table_type = ArrayType::get(ftype->getPointerTo(), info.funcs.size());
+	const auto init_func_table = ConstantArray::get(func_table_type, functions);
+	const auto func_table = new GlobalVariable(*m_module, func_table_type, false, GlobalVariable::PrivateLinkage, init_func_table);
+
+	const auto loop_block = BasicBlock::Create(m_context, "__loop", m_function);
+	const auto after_loop = BasicBlock::Create(m_context, "__after_loop", m_function);
+
+	m_ir->CreateBr(loop_block);
+	m_ir->SetInsertPoint(loop_block);
+
+	const auto init_index_value = m_ir->getInt64(0);
+
+	// Loop body
+	const auto body_block = BasicBlock::Create(m_context, "__body", m_function);
+
+	m_ir->CreateBr(body_block); // As do-while because vec_addrs is known to be more than 0
+	m_ir->SetInsertPoint(body_block);
+
+	const auto index_value = m_ir->CreatePHI(get_type<u64>(), 2);
+	index_value->addIncoming(init_index_value, loop_block);
+
+	auto ptr_inst = dyn_cast<GetElementPtrInst>(m_ir->CreateGEP(addr_array->getValueType(), addr_array, {m_ir->getInt64(0), index_value}));
+	assert(ptr_inst->getResultElementType() == get_type<u32>());
+
+	const auto func_pc = ZExt(m_ir->CreateLoad(ptr_inst->getResultElementType(), ptr_inst), get_type<u64>());
+
+	ptr_inst = dyn_cast<GetElementPtrInst>(m_ir->CreateGEP(func_table->getValueType(), func_table, {m_ir->getInt64(0), index_value}));
+	assert(ptr_inst->getResultElementType() == ftype->getPointerTo());
+
+	const auto faddr = m_ir->CreateLoad(ptr_inst->getResultElementType(), ptr_inst);
+	const auto faddr_int = m_ir->CreatePtrToInt(faddr, get_type<uptr>());
+	const auto fval = m_ir->CreateOr(m_ir->CreateShl(m_seg0, 32 + 3), faddr_int);
+	const auto pos = m_ir->CreateShl(m_reloc ? m_ir->CreateAdd(func_pc, m_seg0) : func_pc, 1);
+	const auto ptr = dyn_cast<GetElementPtrInst>(m_ir->CreateGEP(get_type<u8>(), m_exec, pos));
+
+	// Store to jumptable
+	m_ir->CreateStore(fval, ptr);
+
+	// Increment index and branch back to loop
+	const auto post_add = m_ir->CreateAdd(index_value, m_ir->getInt64(1));
+	index_value->addIncoming(post_add, body_block);
+
+	Value* index_check = m_ir->CreateICmpULT(post_add, m_ir->getInt64(vec_addrs.size()));
+	m_ir->CreateCondBr(index_check, body_block, after_loop);
+
+	// Set insertion point to afterloop_block
+	m_ir->SetInsertPoint(after_loop);
+
+	m_ir->CreateRetVoid();
 
 	replace_intrinsics(*m_function);
 	return m_function;
@@ -370,11 +480,17 @@ void PPUTranslator::CallFunction(u64 target, Value* indirect)
 		const u32 cend = caddr + m_info.segs[0].size - 1;
 		const u64 _target = target + base;
 
-		if (_target >= caddr && _target <= cend)
+		if (_target >= u32{umax})
 		{
-			std::unordered_set<u64> passed_targets{_target};
+			Call(GetType<void>(), "__error", m_thread, GetAddr(), m_ir->getInt32(*ensure(m_info.get_ptr<u32>(::narrow<u32>(m_addr + base)))));
+			m_ir->CreateRetVoid();
+			return;
+		}
+		else if (_target >= caddr && _target <= cend)
+		{
+			u32 target_last = static_cast<u32>(_target);
 
-			u32 target_last = _target;
+			std::unordered_set<u32> passed_targets{target_last};
 
 			// Try to follow unconditional branches as long as there is no infinite loop
 			while (target_last != _target)
@@ -396,7 +512,7 @@ void PPUTranslator::CallFunction(u64 target, Value* indirect)
 						}
 
 						// Infinite loop detected
-						target_last = _target;
+						target_last = static_cast<u32>(_target);
 					}
 
 					// Odd destination
@@ -663,7 +779,7 @@ Value* PPUTranslator::ReadMemory(Value* addr, Type* type, bool is_be, u32 align)
 
 		m_may_be_mmio = false;
 
-		if (auto ptr = m_info.get_ptr<instructions_to_test>(std::max<u32>(m_info.segs[0].addr, (m_reloc ? m_reloc->addr : 0) + utils::sub_saturate<u32>(m_addr, sizeof(instructions_to_test) / 2))))
+		if (auto ptr = m_info.get_ptr<instructions_to_test>(std::max<u32>(m_info.segs[0].addr, (m_reloc ? m_reloc->addr : 0) + utils::sub_saturate<u32>(::narrow<u32>(m_addr), sizeof(instructions_to_test) / 2))))
 		{
 			if (ppu_test_address_may_be_mmio(std::span(ptr->insts)))
 			{
@@ -726,7 +842,7 @@ void PPUTranslator::WriteMemory(Value* addr, Value* value, bool is_be, u32 align
 			be_t<u32> insts[128];
 		};
 
-		if (auto ptr = m_info.get_ptr<instructions_to_test>(std::max<u32>(m_info.segs[0].addr, (m_reloc ? m_reloc->addr : 0) + utils::sub_saturate<u32>(m_addr, sizeof(instructions_to_test) / 2))))
+		if (auto ptr = m_info.get_ptr<instructions_to_test>(std::max<u32>(m_info.segs[0].addr, (m_reloc ? m_reloc->addr : 0) + utils::sub_saturate<u32>(::narrow<u32>(m_addr), sizeof(instructions_to_test) / 2))))
 		{
 			if (ppu_test_address_may_be_mmio(std::span(ptr->insts)))
 			{
@@ -1056,7 +1172,7 @@ void PPUTranslator::VMADDFP(ppu_opcode_t op)
 	auto [a, b, c] = get_vrs<f32[4]>(op.va, op.vb, op.vc);
 
 	// Optimization: Emit only a floating multiply if the addend is zero
-	if (auto [ok, data] = get_const_vector(b.value, m_addr); ok)
+	if (auto [ok, data] = get_const_vector(b.value, ::narrow<u32>(m_addr)); ok)
 	{
 		if (data == v128::from32p(1u << 31))
 		{
@@ -1348,7 +1464,7 @@ void PPUTranslator::VNMSUBFP(ppu_opcode_t op)
 	auto [a, b, c] = get_vrs<f32[4]>(op.va, op.vb, op.vc);
 
 	// Optimization: Emit only a floating multiply if the addend is zero
-	if (const auto [ok, data] = get_const_vector(b.value, m_addr); ok)
+	if (const auto [ok, data] = get_const_vector(b.value, ::narrow<u32>(m_addr)); ok)
 	{
 		if (data == v128{})
 		{
@@ -1552,7 +1668,7 @@ void PPUTranslator::VSEL(ppu_opcode_t op)
 	const auto c = get_vr<u32[4]>(op.vc);
 
 	// Check if the constant mask doesn't require bit granularity
-	if (auto [ok, mask] = get_const_vector(c.value, m_addr); ok)
+	if (auto [ok, mask] = get_const_vector(c.value, ::narrow<u32>(m_addr)); ok)
 	{
 		bool sel_32 = true;
 		for (u32 i = 0; i < 4; i++)
@@ -3671,7 +3787,7 @@ void PPUTranslator::LWZ(ppu_opcode_t op)
 		};
 
 		// Quick invalidation: expect exact MMIO address, so if the register is being reused with different offset than it's likely not MMIO
-		if (auto ptr = m_info.get_ptr<instructions_data>(m_addr + 4 + (m_reloc ? m_reloc->addr : 0)))
+		if (auto ptr = m_info.get_ptr<instructions_data>(::narrow<u32>(m_addr + 4 + (m_reloc ? m_reloc->addr : 0))))
 		{
 			for (u32 inst : ptr->insts)
 			{
@@ -3774,7 +3890,7 @@ void PPUTranslator::STW(ppu_opcode_t op)
 		};
 
 		// Quick invalidation: expect exact MMIO address, so if the register is being reused with different offset than it's likely not MMIO
-		if (auto ptr = m_info.get_ptr<instructions_data>(m_addr + 4 + (m_reloc ? m_reloc->addr : 0)))
+		if (auto ptr = m_info.get_ptr<instructions_data>(::narrow<u32>(m_addr + 4 + (m_reloc ? m_reloc->addr : 0))))
 		{
 			for (u32 inst : ptr->insts)
 			{

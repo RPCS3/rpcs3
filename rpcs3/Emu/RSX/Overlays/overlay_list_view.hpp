@@ -1,3 +1,5 @@
+#pragma once
+
 #include "overlay_controls.h"
 
 namespace rsx
@@ -11,6 +13,7 @@ namespace rsx
 			std::unique_ptr<image_view> m_scroll_indicator_bottom;
 			std::unique_ptr<image_button> m_cancel_btn;
 			std::unique_ptr<image_button> m_accept_btn;
+			std::unique_ptr<image_button> m_deny_btn;
 			std::unique_ptr<overlay_element> m_highlight_box;
 
 			u16 m_elements_height = 0;
@@ -21,7 +24,7 @@ namespace rsx
 			bool m_cancel_only = false;
 
 		public:
-			list_view(u16 width, u16 height, bool use_separators = true);
+			list_view(u16 width, u16 height, bool use_separators = true, bool can_deny = false);
 
 			void update_selection();
 
@@ -32,8 +35,7 @@ namespace rsx
 			void add_entry(std::unique_ptr<overlay_element>& entry);
 
 			int get_selected_index() const;
-
-			std::u32string get_selected_item();
+			bool get_cancel_only() const;
 
 			void set_cancel_only(bool cancel_only);
 			void translate(s16 _x, s16 _y) override;

@@ -208,6 +208,7 @@ private:
 	void RepaintPreviewLabel(QLabel* l, int deadzone, int desired_width, int x, int y, int squircle, double multiplier) const;
 
 	QString GetLocalizedPadHandler(const QString& original, pad_handler handler);
+	QString GetLocalizedPadName(pad_handler handler, const QString& original, usz index);
 
 	/** Checks if the port at the given index is already reserved by the application as custom controller (ldd pad) */
 	bool GetIsLddPad(u32 index) const;
@@ -217,6 +218,12 @@ private:
 
 	/** Returns the current player config */
 	cfg_pad& GetPlayerConfig() const;
+
+	/** Sets the device name (member and config) */
+	void SetDeviceName(const std::string& name);
+
+	/** Gets the device name from config */
+	std::string GetDeviceName() const;
 
 	/** Resizes the dialog. We need to do this because the main scroll area can't determine the size on its own. */
 	void ResizeDialog();

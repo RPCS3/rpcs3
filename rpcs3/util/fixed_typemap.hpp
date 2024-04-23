@@ -73,6 +73,7 @@ namespace stx
 			bool(*create)(uchar* ptr, manual_typemap&, utils::serial*, std::string_view) noexcept = nullptr;
 			void(*thread_op)(void* ptr, thread_state) noexcept = nullptr;
 			void(*save)(void* ptr, utils::serial&) noexcept = nullptr;
+			bool(*saveable)(bool) noexcept = nullptr;
 			void(*destroy)(void* ptr) noexcept = nullptr;
 			bool is_trivial_and_nonsavable = false;
 			std::string_view name;
@@ -130,7 +131,8 @@ namespace stx
 			template <typename T>
 			static void call_dtor(void* ptr) noexcept
 			{
-				std::launder(static_cast<T*>(ptr))->~T();
+				auto* obj = std::launder(static_cast<T*>(ptr));
+				obj->~T();
 				std::memset(ptr, 0xCC, sizeof(T)); // Set to trap values
 			}
 
@@ -145,6 +147,12 @@ namespace stx
 			static void call_save(void* ptr, utils::serial& ar) noexcept
 			{
 				std::launder(static_cast<T*>(ptr))->save(stx::exact_t<utils::serial&>(ar));
+			}
+
+			template <typename T> requires requires (const T&) { T::saveable(true); }
+			static bool call_saveable(bool is_writing) noexcept
+			{
+				return T::saveable(is_writing);
 			}
 
 			template <typename T>
@@ -164,6 +172,11 @@ namespace stx
 				if constexpr (!!(requires (T& a) { a.save(std::declval<stx::exact_t<utils::serial&>>()); }))
 				{
 					r.save = &call_save<T>;
+				}
+
+				if constexpr (!!(requires (const T&) { T::saveable(true); }))
+				{
+					r.saveable = &call_saveable<T>;
 				}
 
 				r.is_trivial_and_nonsavable = std::is_trivially_default_constructible_v<T> && !r.save;
@@ -241,7 +254,7 @@ namespace stx
 			*m_info++ = nullptr;
 		}
 
-		void init(bool reset = true, utils::serial* ar = nullptr)
+		void init(bool reset = true, utils::serial* ar = nullptr, std::function<void()> func = {})
 		{
 			if (reset)
 			{
@@ -283,17 +296,24 @@ namespace stx
 					continue;
 				}
 
-				if (type.create(data, *this, ar, type.name))
+				const bool saveable = !type.saveable || type.saveable(false);
+
+				if (type.create(data, *this, saveable ? ar : nullptr, type.name))
 				{
 					*m_order++ = data;
 					*m_info++ = &type;
 					m_init[id] = true;
 
-					if (ar && type.save)
+					if (ar && saveable && type.save)
 					{
 						serial_breathe_and_tag(*ar, type.name, false);
 					}
 				}
+			}
+
+			if (func)
+			{
+				func();
 			}
 
 			// Launch threads
@@ -450,7 +470,20 @@ namespace stx
 			if constexpr ((std::is_same_v<std::remove_cvref_t<Args>, utils::serial> || ...))
 			{
 				ensure(type_info->save);
+
 				serial_breathe_and_tag(std::get<0>(std::tie(args...)), get_name<T, As>(), false);
+			}
+
+			if constexpr ((std::is_same_v<std::remove_cvref_t<Args>, utils::serial*> || ...))
+			{
+				ensure(type_info->save);
+
+				utils::serial* ar = std::get<0>(std::tie(args...));
+
+				if (ar)
+				{
+					serial_breathe_and_tag(*ar, get_name<T, As>(), false);
+				}
 			}
 
 			g_tls_serialize_name = {};

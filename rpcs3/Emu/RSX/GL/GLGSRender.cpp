@@ -126,9 +126,9 @@ void GLGSRender::on_init_thread()
 	if (g_cfg.video.debug_output)
 		gl::enable_debugging();
 
-	rsx_log.notice("GL RENDERER: %s (%s)", reinterpret_cast<const char*>(glGetString(GL_RENDERER)), reinterpret_cast<const char*>(glGetString(GL_VENDOR)));
-	rsx_log.notice("GL VERSION: %s", reinterpret_cast<const char*>(glGetString(GL_VERSION)));
-	rsx_log.notice("GLSL VERSION: %s", reinterpret_cast<const char*>(glGetString(GL_SHADING_LANGUAGE_VERSION)));
+	rsx_log.success("GL RENDERER: %s (%s)", reinterpret_cast<const char*>(glGetString(GL_RENDERER)), reinterpret_cast<const char*>(glGetString(GL_VENDOR)));
+	rsx_log.success("GL VERSION: %s", reinterpret_cast<const char*>(glGetString(GL_VERSION)));
+	rsx_log.success("GLSL VERSION: %s", reinterpret_cast<const char*>(glGetString(GL_SHADING_LANGUAGE_VERSION)));
 
 	auto& gl_caps = gl::get_driver_caps();
 
@@ -411,14 +411,11 @@ void GLGSRender::on_exit()
 
 	m_framebuffer_cache.clear();
 
-	if (m_flip_fbo)
-	{
-		m_flip_fbo.remove();
-	}
+	m_upscaler.reset();
 
-	if (m_flip_tex_color)
+	for (auto& flip_tex_image : m_flip_tex_color)
 	{
-		m_flip_tex_color.reset();
+		flip_tex_image.reset();
 	}
 
 	if (m_vao)
@@ -1070,7 +1067,8 @@ void GLGSRender::do_local_task(rsx::FIFO::state state)
 
 	if (m_overlay_manager)
 	{
-		if (!in_begin_end && async_flip_requested & flip_request::native_ui && !is_stopped())
+		const auto should_ignore = in_begin_end && state != rsx::FIFO::state::empty;
+		if ((async_flip_requested & flip_request::native_ui) && !should_ignore && !is_stopped())
 		{
 			rsx::display_flip_info_t info{};
 			info.buffer = current_display_buffer;

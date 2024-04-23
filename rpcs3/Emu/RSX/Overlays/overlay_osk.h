@@ -66,10 +66,10 @@ namespace rsx
 			cursor_item m_pointer{};
 
 			// Analog movement
-			u16 m_x_input_pos = 0;
-			u16 m_y_input_pos = 0;
-			u16 m_x_panel_pos = 0;
-			u16 m_y_panel_pos = 0;
+			s16 m_x_input_pos = 0;
+			s16 m_y_input_pos = 0;
+			s16 m_x_panel_pos = 0;
+			s16 m_y_panel_pos = 0;
 
 			// Grid
 			u16 cell_size_x = 0;
@@ -116,7 +116,7 @@ namespace rsx
 			void step_panel(bool next_panel);
 			void update_panel();
 			void update_layout();
-			void update() override;
+			void update(u64 timestamp_us) override;
 
 			void update_controls();
 			void update_selection_by_index(u32 index);
@@ -141,9 +141,9 @@ namespace rsx
 			std::pair<u32, u32> get_cell_geometry(u32 index);
 
 			template <typename T>
-			u16 get_scaled(T val)
+			s16 get_scaled(T val)
 			{
-				return static_cast<u16>(static_cast<f32>(val) * m_scaling);
+				return static_cast<s16>(static_cast<f32>(val) * m_scaling);
 			}
 
 			compiled_resource get_compiled() override;

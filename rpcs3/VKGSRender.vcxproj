@@ -109,11 +109,6 @@
       <Project>{c4a10229-4712-4bd2-b63e-50d93c67a038}</Project>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup>
-    <None Include="Emu\RSX\VK\upscalers\fsr1\fsr_ffx_a_flattened.inc" />
-    <None Include="Emu\RSX\VK\upscalers\fsr1\fsr_ffx_fsr1_flattened.inc" />
-    <None Include="Emu\RSX\VK\upscalers\fsr1\fsr_ubershader.glsl" />
-  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{3EE5F075-B546-42C4-B6A8-E3CCEF38B78D}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>

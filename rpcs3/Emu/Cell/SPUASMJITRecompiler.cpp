@@ -2756,16 +2756,77 @@ void spu_recompiler::FSMB(spu_opcode_t op)
 void spu_recompiler::FREST(spu_opcode_t op)
 {
 	const XmmLink& va = XmmGet(op.ra, XmmType::Float);
-	c->rcpps(va, va);
-	c->movaps(SPU_OFF_128(gpr, op.rt), va);
+	const XmmLink& v_fraction = XmmAlloc();
+	const XmmLink& v_exponent = XmmAlloc();
+	const XmmLink& v_sign = XmmAlloc();
+	c->movdqa(v_fraction, va);
+	c->movdqa(v_exponent, va);
+	c->movdqa(v_sign, va);
+
+	c->psrld(v_fraction, 18);
+	c->psrld(v_exponent, 23);
+
+	c->andps(v_fraction, XmmConst(v128::from32p(0x1F)));
+	c->andps(v_exponent, XmmConst(v128::from32p(0xFF)));
+	c->andps(v_sign, XmmConst(v128::from32p(0x80000000)));
+
+	const u64 fraction_lut_addr = reinterpret_cast<u64>(spu_frest_fraction_lut);
+	const u64 exponent_lut_addr = reinterpret_cast<u64>(spu_frest_exponent_lut);
+
+	for (u32 index = 0; index < 4; index++)
+	{
+		c->pextrd(*qw0, v_fraction, index);
+		c->mov(*qw1, asmjit::x86::dword_ptr(fraction_lut_addr, *qw0, 2));
+		c->pinsrd(v_fraction, *qw1, index);
+
+		c->pextrd(*qw0, v_exponent, index);
+		c->mov(*qw1, asmjit::x86::dword_ptr(exponent_lut_addr, *qw0, 2));
+		c->pinsrd(v_exponent, *qw1, index);
+	}
+
+	// AVX2(not working?)
+	// c->mov(qw1->r64(),spu_frest_fraction_lut);
+	// c->vpgatherdd(v_fraction, asmjit::x86::dword_ptr(*qw1));
+	// c->mov(qw0->r64(),spu_frest_exponent_lut);
+	// c->vpgatherdd(v_exponent, asmjit::x86::dword_ptr(*qw0));
+
+	c->orps(v_fraction, v_exponent);
+	c->orps(v_sign, v_fraction);
+
+	c->movaps(SPU_OFF_128(gpr, op.rt), v_sign);
 }
 
 void spu_recompiler::FRSQEST(spu_opcode_t op)
 {
 	const XmmLink& va = XmmGet(op.ra, XmmType::Float);
-	c->andps(va, XmmConst(v128::from32p(0x7fffffff))); // abs
-	c->rsqrtps(va, va);
-	c->movaps(SPU_OFF_128(gpr, op.rt), va);
+	const XmmLink& v_fraction = XmmAlloc();
+	const XmmLink& v_exponent = XmmAlloc();
+	c->movdqa(v_fraction, va);
+	c->movdqa(v_exponent, va);
+
+	c->psrld(v_fraction, 18);
+	c->psrld(v_exponent, 23);
+
+	c->andps(v_fraction, XmmConst(v128::from32p(0x3F)));
+	c->andps(v_exponent, XmmConst(v128::from32p(0xFF)));
+
+	const u64 fraction_lut_addr = reinterpret_cast<u64>(spu_frsqest_fraction_lut);
+	const u64 exponent_lut_addr = reinterpret_cast<u64>(spu_frsqest_exponent_lut);
+
+	for (u32 index = 0; index < 4; index++)
+	{
+		c->pextrd(*qw0, v_fraction, index);
+		c->mov(*qw1, asmjit::x86::dword_ptr(fraction_lut_addr, *qw0, 2));
+		c->pinsrd(v_fraction, *qw1, index);
+
+		c->pextrd(*qw0, v_exponent, index);
+		c->mov(*qw1, asmjit::x86::dword_ptr(exponent_lut_addr, *qw0, 2));
+		c->pinsrd(v_exponent, *qw1, index);
+	}
+
+	c->orps(v_fraction, v_exponent);
+
+	c->movaps(SPU_OFF_128(gpr, op.rt), v_fraction);
 }
 
 void spu_recompiler::LQX(spu_opcode_t op)
@@ -3922,7 +3983,49 @@ void spu_recompiler::CEQB(spu_opcode_t op)
 void spu_recompiler::FI(spu_opcode_t op)
 {
 	// Floating Interpolate
+	const XmmLink& va = XmmGet(op.ra, XmmType::Float);
 	const XmmLink& vb = XmmGet(op.rb, XmmType::Float);
+	const XmmLink& vb_base = XmmAlloc();
+	const XmmLink& ymul = XmmAlloc();
+	const XmmLink& temp_reg = XmmAlloc();
+	const XmmLink& temp_reg2 = XmmAlloc();
+
+	c->movdqa(vb_base, vb);
+	c->movdqa(ymul, vb);
+	c->movdqa(temp_reg, va);
+
+	c->pand(vb_base, XmmConst(v128::from32p(0x007ffc00u)));
+	c->pslld(vb_base, 9);
+
+	c->pand(temp_reg, XmmConst(v128::from32p(0x7ffff))); // va_fraction
+	c->pand(ymul, XmmConst(v128::from32p(0x3ff)));
+	c->pmulld(ymul, temp_reg);
+
+	c->movdqa(temp_reg, vb_base);
+	c->psubd(temp_reg, ymul);
+
+	// Makes signed comparison unsigned and determines if we need to adjust exponent
+	auto xor_const = XmmConst(v128::from32p(0x80000000));
+	c->pxor(ymul, xor_const);
+	c->pxor(vb_base, xor_const);
+	c->pcmpgtd(ymul, vb_base);
+	c->movdqa(vb_base, ymul);
+
+	c->movdqa(temp_reg2, temp_reg);
+	c->pand(temp_reg2, vb_base);
+	c->psrld(temp_reg2, 8); // only shift right by 8 if exponent is adjusted
+	c->xorps(vb_base, XmmConst(v128::from32p(0xFFFFFFFF))); // Invert the mask
+	c->pand(temp_reg, vb_base);
+	c->psrld(temp_reg, 9); // shift right by 9 if not adjusted
+	c->por(temp_reg, temp_reg2);
+
+	c->pand(vb, XmmConst(v128::from32p(0xff800000u)));
+	c->pand(temp_reg, XmmConst(v128::from32p(~0xff800000u)));
+	c->por(vb, temp_reg);
+
+	c->pand(ymul, XmmConst(v128::from32p(1 << 23)));
+	c->psubd(vb, ymul);
+
 	c->movaps(SPU_OFF_128(gpr, op.rt), vb);
 }
 

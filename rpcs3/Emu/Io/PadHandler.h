@@ -214,7 +214,7 @@ protected:
 	static f32 ScaledAxisInput(f32 raw_value, f32 minimum, f32 maximum, f32 deadzone, f32 range = 255.0f);
 
 	// Get normalized trigger value based on the range defined by a threshold
-	u16 NormalizeTriggerInput(u16 value, int threshold) const;
+	u16 NormalizeTriggerInput(u16 value, s32 threshold) const;
 
 	// normalizes a directed input, meaning it will correspond to a single "button" and not an axis with two directions
 	// the input values must lie in 0+
@@ -248,6 +248,7 @@ public:
 
 	pad_handler m_type;
 	bool m_is_init = false;
+	bool m_emulation = false;
 
 	std::string name_string() const;
 	usz max_devices() const;
@@ -261,11 +262,11 @@ public:
 	bool has_battery() const;
 	bool has_pressure_intensity_button() const;
 
-	u16 NormalizeStickInput(u16 raw_value, int threshold, int multiplier, bool ignore_threshold = false) const;
+	u16 NormalizeStickInput(u16 raw_value, s32 threshold, s32 multiplier, bool ignore_threshold = false) const;
 	void convert_stick_values(u16& x_out, u16& y_out, const s32& x_in, const s32& y_in, const s32& deadzone, const s32& padsquircling) const;
 
 	virtual bool Init() { return true; }
-	PadHandlerBase(pad_handler type = pad_handler::null);
+	PadHandlerBase(pad_handler type = pad_handler::null, bool emulation = false);
 	virtual ~PadHandlerBase() = default;
 	// Sets window to config the controller(optional)
 	virtual void SetPadData(const std::string& /*padId*/, u8 /*player_id*/, u8 /*large_motor*/, u8 /*small_motor*/, s32 /*r*/, s32 /*g*/, s32 /*b*/, bool /*player_led*/, bool /*battery_led*/, u32 /*battery_led_brightness*/) {}

@@ -35,7 +35,7 @@ namespace rsx
 			is_compiled = false;
 		}
 
-		void progress_bar::set_pos(u16 _x, u16 _y)
+		void progress_bar::set_pos(s16 _x, s16 _y)
 		{
 			u16 text_w, text_h;
 			text_view.measure_text(text_w, text_h);

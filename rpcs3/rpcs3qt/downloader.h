@@ -41,7 +41,7 @@ Q_SIGNALS:
 private:
 	QWidget* m_parent = nullptr;
 
-	rpcs3::curl::curl_handle* m_curl = nullptr;
+	std::unique_ptr<rpcs3::curl::curl_handle> m_curl;
 	QByteArray m_curl_buf;
 	atomic_t<bool> m_curl_abort = false;
 	atomic_t<bool> m_curl_success = false;

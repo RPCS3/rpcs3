@@ -121,6 +121,21 @@ namespace vk
 		case driver_vendor::MVK:
 			// Apple GPUs / moltenVK need more testing
 			break;
+		case driver_vendor::LAVAPIPE:
+			// This software device works well, with poor performance as the only downside
+			break;
+		case driver_vendor::DOZEN:
+			// This driver is often picked by mistake when the user meant to select something else. Complain loudly.
+#ifdef _WIN32
+			MessageBox(NULL,
+				L"You're attempting to run rpcs3 on Microsoft's Dozen driver that emulates vulkan on top of Direct3D12.\n"
+				"This driver is unsupported. You should use your vendor's vulkan driver whenever possible.",
+				L"Unsupported Driver",
+				MB_ICONWARNING | MB_OK);
+#else
+			rsx_log.error("Dozen is currently unsupported. How did you even get this to run outside windows?");
+#endif
+			break;
 		default:
 			rsx_log.warning("Unsupported device: %s", gpu_name);
 		}

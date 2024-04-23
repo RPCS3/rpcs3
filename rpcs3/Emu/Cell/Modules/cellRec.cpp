@@ -159,7 +159,7 @@ struct rec_param
 static constexpr u32 rec_framerate = 30; // Always 30 fps
 static constexpr u32 rec_channels = 2; // Always 2 channels
 
-class rec_video_sink : public utils::video_sink
+class rec_video_sink final : public utils::video_sink
 {
 public:
 	rec_video_sink() : utils::video_sink()
@@ -752,7 +752,7 @@ void rec_info::start_video_provider()
 							if (sample.channels > channels)
 							{
 								// Downmix channels
-								AudioBackend::downmix(CELL_REC_AUDIO_BLOCK_SAMPLES * sample.channels, sample.channels, channels, src, reinterpret_cast<f32*>(dst_buffer.block.data()));
+								AudioBackend::downmix(CELL_REC_AUDIO_BLOCK_SAMPLES * sample.channels, sample.channels, audio_channel_layout::stereo, src, reinterpret_cast<f32*>(dst_buffer.block.data()));
 							}
 							else
 							{

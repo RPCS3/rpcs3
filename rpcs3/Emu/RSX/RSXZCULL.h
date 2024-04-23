@@ -17,7 +17,7 @@ namespace rsx
 	static inline std::string_view location_tostring(u32 location)
 	{
 		ensure(location < 2);
-		const char* location_names[] = { "CELL_GCM_LOCATION_LOCAL", "CELL_GCM_LOCATION_MAIN" };
+		constexpr const char* location_names[2] = { "CELL_GCM_LOCATION_LOCAL", "CELL_GCM_LOCATION_MAIN" };
 		return location_names[location];
 	}
 

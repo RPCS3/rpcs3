@@ -131,6 +131,8 @@ private:
 	QListWidget* m_lst_requests = nullptr;
 	// list of people blocked by the user
 	QListWidget* m_lst_blocks = nullptr;
+	// list of players in history
+	QListWidget* m_lst_history = nullptr;
 
 	std::shared_ptr<rpcn::rpcn_client> m_rpcn;
 	bool m_rpcn_ok = false;

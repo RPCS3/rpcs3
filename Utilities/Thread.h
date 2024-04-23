@@ -130,6 +130,9 @@ public:
 
 	const native_entry entry_point;
 
+	// Set name for debugger
+	static void set_name(std::string);
+
 private:
 	// Thread handle (platform-specific)
 	atomic_t<u64> m_thread{0};
@@ -159,9 +162,6 @@ private:
 
 	// Cleanup after possibly deleting the thread instance
 	static native_entry finalize(u64 _self) noexcept;
-
-	// Set name for debugger
-	static void set_name(std::string);
 
 	// Make entry point
 	static native_entry make_trampoline(u64(*entry)(thread_base* _base));
@@ -218,6 +218,11 @@ public:
 	// Get current thread name
 	static std::string get_name()
 	{
+		if (!g_tls_this_thread)
+		{
+			return "not named_thread";
+		}
+
 		return *g_tls_this_thread->m_tname.load();
 	}
 

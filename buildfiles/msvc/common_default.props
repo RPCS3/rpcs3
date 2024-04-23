@@ -18,7 +18,7 @@
       <ExceptionHandling>false</ExceptionHandling>
       <AdditionalOptions>-d2FH4- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeLibrary Condition = "$(Configuration.Contains('Release'))">MultiThreaded</RuntimeLibrary>
-      <RuntimeLibrary Condition = "$(Configuration.Contains('Debug'))">MultiThreadedDebug</RuntimeLibrary>
+      <RuntimeLibrary Condition = "$(Configuration.Contains('Debug'))">MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <AdditionalOptions>-d2:-FH4- %(AdditionalOptions)</AdditionalOptions>

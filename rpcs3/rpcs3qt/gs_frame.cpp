@@ -383,6 +383,14 @@ void gs_frame::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKey
 	{
 		if (!m_disable_kb_hotkeys)
 		{
+			if (!g_cfg.savestate.suspend_emu)
+			{
+				Emu.after_kill_callback = []()
+				{
+					Emu.Restart();
+				};
+			}
+
 			Emu.Kill(false, true);
 			return;
 		}
@@ -814,6 +822,8 @@ void gs_frame::take_screenshot(std::vector<u8> data, u32 sshot_width, u32 sshot_
 	std::thread(
 		[sshot_width, sshot_height, is_bgra](std::vector<u8> sshot_data)
 		{
+			thread_base::set_name("Screenshot");
+
 			screenshot_log.notice("Taking screenshot (%dx%d)", sshot_width, sshot_height);
 
 			const std::string& id = Emu.GetTitleID();
@@ -1060,7 +1070,7 @@ void gs_frame::take_screenshot(std::vector<u8> data, u32 sshot_width, u32 sshot_
 
 void gs_frame::mouseDoubleClickEvent(QMouseEvent* ev)
 {
-	if (m_disable_mouse || g_cfg.io.move == move_handler::mouse) return;
+	if (m_disable_mouse || g_cfg.io.move == move_handler::mouse || g_cfg.io.gametablet == gametablet_handler::enabled) return;
 #ifdef HAVE_LIBEVDEV
 	if (g_cfg.io.move == move_handler::gun) return;
 #endif

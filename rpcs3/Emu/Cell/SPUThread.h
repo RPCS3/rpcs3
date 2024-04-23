@@ -24,6 +24,12 @@ namespace utils
 	class shm;
 }
 
+// LUTs for SPU
+extern const u32 spu_frest_fraction_lut[32];
+extern const u32 spu_frest_exponent_lut[256];
+extern const u32 spu_frsqest_fraction_lut[64];
+extern const u32 spu_frsqest_exponent_lut[256];
+
 // JIT Block
 using spu_function_t = void(*)(spu_thread&, void*, u8*);
 
@@ -513,7 +519,7 @@ enum FPSCR_EX
 class SPU_FPSCR
 {
 public:
-	u32 _u32[4];
+	u32 _u32[4]{};
 
 	SPU_FPSCR() {}
 
@@ -526,6 +532,7 @@ public:
 	{
 		memset(this, 0, sizeof(*this));
 	}
+
 	//slice -> 0 - 1 (double-precision slice index)
 	//NOTE: slices follow v128 indexing, i.e. slice 0 is RIGHT end of register!
 	//roundTo -> FPSCR_RN_*
@@ -535,6 +542,7 @@ public:
 		//rounding is located in the left end of the FPSCR
 		this->_u32[3] = (this->_u32[3] & ~(3 << shift)) | (roundTo << shift);
 	}
+
 	//Slice 0 or 1
 	u8 checkSliceRounding(u8 slice) const
 	{
@@ -571,11 +579,11 @@ public:
 	//exception: FPSCR_D* bitmask
 	void setDoublePrecisionExceptionFlags(u8 slice, u32 exceptions)
 	{
-		_u32[1+slice] |= exceptions;
+		_u32[1 + slice] |= exceptions;
 	}
 
 	// Write the FPSCR
-	void Write(const v128 & r)
+	void Write(const v128& r)
 	{
 		_u32[3] = r._u32[3] & 0x00000F07;
 		_u32[2] = r._u32[2] & 0x00003F07;
@@ -584,7 +592,7 @@ public:
 	}
 
 	// Read the FPSCR
-	void Read(v128 & r)
+	void Read(v128& r) const
 	{
 		r._u32[3] = _u32[3];
 		r._u32[2] = _u32[2];
@@ -808,7 +816,7 @@ public:
 	atomic_t<spu_debugger_mode> debugger_mode{};
 
 	// PC-based breakpoint list
-	std::array<atomic_t<bool>, SPU_LS_SIZE / 4> local_breakpoints{};
+	std::array<atomic_t<u8>, SPU_LS_SIZE / 4 / 8> local_breakpoints{};
 	atomic_t<bool> has_active_local_bps = false;
 	u32 current_bp_pc = umax;
 	bool stop_flag_removal_protection = false;
@@ -823,11 +831,11 @@ public:
 	u32 get_mfc_completed() const;
 
 	bool process_mfc_cmd();
-	ch_events_t get_events(u32 mask_hint = -1, bool waiting = false, bool reading = false);
+	ch_events_t get_events(u64 mask_hint = umax, bool waiting = false, bool reading = false);
 	void set_events(u32 bits);
 	void set_interrupt_status(bool enable);
 	bool check_mfc_interrupts(u32 next_pc);
-	static bool is_exec_code(u32 addr, std::span<const u8> ls_ptr, u32 base_addr = 0); // Only a hint, do not rely on it other than debugging purposes
+	static bool is_exec_code(u32 addr, std::span<const u8> ls_ptr, u32 base_addr = 0, bool avoid_dead_code = false); // Only a hint, do not rely on it other than debugging purposes
 	static std::vector<u32> discover_functions(u32 base_addr, std::span<const u8> ls, bool is_known_addr, u32 /*entry*/);
 	u32 get_ch_count(u32 ch);
 	s64 get_ch_value(u32 ch);
@@ -881,6 +889,7 @@ public:
 
 	static atomic_t<u32> g_raw_spu_ctr;
 	static atomic_t<u32> g_raw_spu_id[5];
+	static atomic_t<u32> g_spu_work_count;
 
 	static u32 find_raw_spu(u32 id)
 	{

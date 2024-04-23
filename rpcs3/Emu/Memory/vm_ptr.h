@@ -22,8 +22,8 @@ namespace vm
 	{
 		AT m_addr;
 
-		static_assert(!std::is_pointer<T>::value, "vm::_ptr_base<> error: invalid type (pointer)");
-		static_assert(!std::is_reference<T>::value, "vm::_ptr_base<> error: invalid type (reference)");
+		static_assert(!std::is_pointer_v<T>, "vm::_ptr_base<> error: invalid type (pointer)");
+		static_assert(!std::is_reference_v<T>, "vm::_ptr_base<> error: invalid type (reference)");
 
 	public:
 		using type = T;
@@ -451,4 +451,16 @@ template <>
 struct fmt_class_string<vm::_ptr_base<char, u32>, void> : fmt_class_string<vm::_ptr_base<const char, u32>>
 {
 	// Classify char* as const char*
+};
+
+template <usz Size>
+struct fmt_class_string<vm::_ptr_base<const char[Size], u32>, void> : fmt_class_string<vm::_ptr_base<const char, u32>>
+{
+	// Classify const char[] as const char*
+};
+
+template <usz Size>
+struct fmt_class_string<vm::_ptr_base<char[Size], u32>, void> : fmt_class_string<vm::_ptr_base<const char, u32>>
+{
+	// Classify char[] as const char*
 };

@@ -40,6 +40,13 @@ namespace np
 		} data;
 	};
 
+	struct player_history
+	{
+		u64 timestamp{};
+		std::set<std::string> communication_ids;
+		std::string description;
+	};
+
 	class ticket
 	{
 	public:
@@ -113,23 +120,18 @@ namespace np
 		atomic_t<bool> is_NP2_init        = false;
 		atomic_t<bool> is_NP2_Match2_init = false;
 		atomic_t<bool> is_NP_Auth_init    = false;
-		atomic_t<bool> is_NP_TUS_init     = false;
+		atomic_t<bool> is_NP_TUS_init     = false; // TODO: savestate
+		atomic_t<bool> is_NP_Com2_init    = false; // TODO: savestate
 
 		// NP Handlers/Callbacks
 		// Seems to be global
 		vm::ptr<SceNpManagerCallback> manager_cb{}; // Connection status and tickets
 		vm::ptr<void> manager_cb_arg{};
 
-		// Basic event handler;
-		struct
-		{
-			SceNpCommunicationId context{};
-			vm::ptr<SceNpBasicEventHandler> handler_func;
-			vm::ptr<void> handler_arg;
-			bool registered        = false;
-			bool context_sensitive = false;
-		} basic_handler;
+		atomic_t<bool> basic_handler_registered = false;
 
+		void register_basic_handler(vm::cptr<SceNpCommunicationId> context, vm::ptr<SceNpBasicEventHandler> handler, vm::ptr<void> arg, bool context_sensitive);
+		SceNpCommunicationId get_basic_handler_context();
 		void queue_basic_event(basic_event to_queue);
 		bool send_basic_event(s32 event, s32 retCode, u32 reqId);
 		error_code get_basic_event(vm::ptr<s32> event, vm::ptr<SceNpUserInfo> from, vm::ptr<u8> data, vm::ptr<u32> size);
@@ -139,6 +141,7 @@ namespace np
 		void set_message_selected(SceNpBasicAttachmentDataId id, u64 msg_id);
 		std::optional<std::shared_ptr<std::pair<std::string, message_data>>> get_message_selected(SceNpBasicAttachmentDataId id);
 		void clear_message_selected(SceNpBasicAttachmentDataId id);
+		void send_message(const message_data& msg_data, const std::set<std::string>& npids);
 
 		// Those should probably be under match2 ctx
 		vm::ptr<SceNpMatching2RoomEventCallback> room_event_cb{}; // Room events
@@ -164,7 +167,9 @@ namespace np
 		u32 set_roomdata_external(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SetRoomDataExternalRequest* req);
 		u32 get_roomdata_internal(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2GetRoomDataInternalRequest* req);
 		u32 set_roomdata_internal(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SetRoomDataInternalRequest* req);
+		u32 get_roommemberdata_internal(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2GetRoomMemberDataInternalRequest* req);
 		u32 set_roommemberdata_internal(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SetRoomMemberDataInternalRequest* req);
+		u32 set_userinfo(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SetUserInfoRequest* req);
 		u32 get_ping_info(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SignalingGetPingInfoRequest* req);
 		u32 send_room_message(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SendRoomMessageRequest* req);
 
@@ -206,11 +211,21 @@ namespace np
 		u32 get_num_friends();
 		u32 get_num_blocks();
 		std::pair<error_code, std::optional<SceNpId>> get_friend_by_index(u32 index);
+		void set_presence(std::optional<std::string> status, std::optional<std::vector<u8>> data);
+
+		template <typename T>
+		error_code get_friend_presence_by_index(u32 index, SceNpUserInfo* user, T* pres);
+
+		template <typename T>
+		error_code get_friend_presence_by_npid(const SceNpId& npid, T* pres);
 
 		// Misc stuff
 		void req_ticket(u32 version, const SceNpId* npid, const char* service_id, const u8* cookie, u32 cookie_size, const char* entitlement_id, u32 consumed_count);
 		const ticket& get_ticket() const;
-		u32 add_players_to_history(vm::cptr<SceNpId> npids, u32 count);
+		void add_player_to_history(const SceNpId* npid, const char* description);
+		u32 add_players_to_history(const SceNpId* npids, const char* description, u32 count);
+		u32 get_players_history_count(u32 options);
+		bool get_player_history_entry(u32 options, u32 index, SceNpId* npid);
 		bool abort_request(u32 req_id);
 
 		// For signaling
@@ -253,6 +268,7 @@ namespace np
 		void notif_updated_room_data_internal(std::vector<u8>& data);
 		void notif_updated_room_member_data_internal(std::vector<u8>& data);
 		void notif_p2p_connect(std::vector<u8>& data);
+		void notif_signaling_info(std::vector<u8>& data);
 		void notif_room_message_received(std::vector<u8>& data);
 
 		// Reply handlers
@@ -266,6 +282,8 @@ namespace np
 		bool reply_get_roomdata_internal(u32 req_id, std::vector<u8>& reply_data);
 		bool reply_set_roomdata_internal(u32 req_id, std::vector<u8>& reply_data);
 		bool reply_set_roommemberdata_internal(u32 req_id, std::vector<u8>& reply_data);
+		bool reply_get_roommemberdata_internal(u32 req_id, std::vector<u8>& reply_data);
+		bool reply_set_userinfo(u32 req_id, std::vector<u8>& reply_data);
 		bool reply_get_ping_info(u32 req_id, std::vector<u8>& reply_data);
 		bool reply_send_room_message(u32 req_id, std::vector<u8>& reply_data);
 		bool reply_req_sign_infos(u32 req_id, std::vector<u8>& reply_data);
@@ -310,7 +328,7 @@ namespace np
 		void RoomMessageInfo_to_SceNpMatching2RoomMessageInfo(event_data& edata, const RoomMessageInfo* mi, SceNpMatching2RoomMessageInfo* sce_mi);
 		void RoomDataInternalUpdateInfo_to_SceNpMatching2RoomDataInternalUpdateInfo(event_data& edata, const RoomDataInternalUpdateInfo* update_info, SceNpMatching2RoomDataInternalUpdateInfo* sce_update_info, const SceNpId& npid);
 		void RoomMemberDataInternalUpdateInfo_to_SceNpMatching2RoomMemberDataInternalUpdateInfo(event_data& edata, const RoomMemberDataInternalUpdateInfo* update_info, SceNpMatching2RoomMemberDataInternalUpdateInfo* sce_update_info);
-		bool handle_GetScoreResponse(u32 req_id, std::vector<u8>& reply_data);
+		bool handle_GetScoreResponse(u32 req_id, std::vector<u8>& reply_data, bool simple_result = false);
 		bool handle_tus_no_data(u32 req_id, std::vector<u8>& reply_data);
 		bool handle_TusVarResponse(u32 req_id, std::vector<u8>& reply_data);
 		bool handle_TusVariable(u32 req_id, std::vector<u8>& reply_data);
@@ -339,6 +357,7 @@ namespace np
 		u32 generate_callback_info(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, SceNpMatching2Event event_type);
 		std::optional<callback_info> take_pending_request(u32 req_id);
 
+	private:
 		shared_mutex mutex_pending_requests;
 		std::unordered_map<u32, callback_info> pending_requests;
 		shared_mutex mutex_pending_sign_infos_requests;
@@ -349,7 +368,16 @@ namespace np
 
 		bool m_inited_np_handler_dependencies = false;
 
-	private:
+		// Basic event handler;
+		struct
+		{
+			shared_mutex mutex;
+			SceNpCommunicationId context{};
+			vm::ptr<SceNpBasicEventHandler> handler_func;
+			vm::ptr<void> handler_arg;
+			bool context_sensitive = false;
+		} basic_handler;
+
 		bool is_connected  = false;
 		bool is_psn_active = false;
 
@@ -414,5 +442,21 @@ namespace np
 
 		// UPNP
 		upnp_handler upnp;
+
+		// Presence
+		struct
+		{
+			SceNpCommunicationId pr_com_id;
+			std::string pr_title;
+			std::string pr_status;
+			std::string pr_comment;
+			std::vector<u8> pr_data;
+		} presence_self;
+
+		player_history& get_player_and_set_timestamp(const SceNpId& npid, u64 timestamp);
+		void save_players_history();
+
+		shared_mutex mutex_history;
+		std::map<std::string, player_history> players_history; // npid / history
 	};
 } // namespace np

@@ -22,6 +22,7 @@ extern "C" {
 #include "libswresample/swresample.h"
 }
 constexpr int averror_eof = AVERROR_EOF; // workaround for old-style-cast error
+constexpr int averror_invalid_data = AVERROR_INVALIDDATA; // workaround for old-style-cast error
 #ifdef _MSC_VER
 #pragma warning(pop)
 #else
@@ -33,7 +34,7 @@ LOG_CHANNEL(media_log, "Media");
 namespace utils
 {
 	template <typename T>
-	static inline void write_byteswapped(const u8* src, u8* dst)
+	static inline void write_byteswapped(const void* src, void* dst)
 	{
 		*reinterpret_cast<T*>(dst) = *reinterpret_cast<const be_t<T>*>(src);
 	}
@@ -53,6 +54,43 @@ namespace utils
 			std::memcpy(dst, src, sample_count * sizeof(T));
 		}
 	}
+
+	const auto free_packet = [](AVPacket* p)
+	{
+		if (p)
+		{
+			av_packet_unref(p);
+			av_packet_free(&p);
+		}
+	};
+
+	const auto av_log_callback = [](void* avcl, int level, const char* fmt, va_list vl) -> void
+	{
+		if (level > av_log_get_level())
+		{
+			return;
+		}
+
+		constexpr int line_size = 1024;
+		char line[line_size]{};
+		int print_prefix = 1;
+
+		if (int err = av_log_format_line2(avcl, level, fmt, vl, line, line_size, &print_prefix); err < 0)
+		{
+			media_log.error("av_log: av_log_format_line2 failed. Error: %d='%s'", err, av_error_to_string(err));
+			return;
+		}
+
+		std::string msg = line;
+		fmt::trim_back(msg, "\n\r\t ");
+
+		if (level <= AV_LOG_ERROR)
+			media_log.error("av_log: %s", msg);
+		else if (level <= AV_LOG_WARNING)
+			media_log.warning("av_log: %s", msg);
+		else
+			media_log.notice("av_log: %s", msg);
+	};
 
 	template <>
 	std::string media_info::get_metadata(const std::string& key, const std::string& def) const
@@ -124,17 +162,18 @@ namespace utils
 		if (av_media_type == AVMEDIA_TYPE_UNKNOWN) // Let's use this for image info
 		{
 			const bool success = Emu.GetCallbacks().get_image_info(path, info.sub_type, info.width, info.height, info.orientation);
-			if (!success) media_log.error("get_image_info: failed to get image info for '%s'", path);
+			if (!success) media_log.error("get_media_info: failed to get image info for '%s'", path);
 			return { success, std::move(info) };
 		}
 
 		// Only print FFMPEG errors, fatals and panics
+		av_log_set_callback(av_log_callback);
 		av_log_set_level(AV_LOG_ERROR);
 
 		AVDictionary* av_dict_opts = nullptr;
 		if (int err = av_dict_set(&av_dict_opts, "probesize", "96", 0); err < 0)
 		{
-			media_log.error("av_dict_set: returned with error=%d='%s'", err, av_error_to_string(err));
+			media_log.error("get_media_info: av_dict_set: returned with error=%d='%s'", err, av_error_to_string(err));
 			return { false, std::move(info) };
 		}
 
@@ -146,7 +185,7 @@ namespace utils
 			// Failed to open file
 			av_dict_free(&av_dict_opts);
 			avformat_free_context(av_format_ctx);
-			media_log.notice("avformat_open_input: could not open file. error=%d='%s' file='%s'", err, av_error_to_string(err), path);
+			media_log.notice("get_media_info: avformat_open_input: could not open file. error=%d='%s' file='%s'", err, av_error_to_string(err), path);
 			return { false, std::move(info) };
 		}
 		av_dict_free(&av_dict_opts);
@@ -156,8 +195,7 @@ namespace utils
 		{
 			// Failed to load stream information
 			avformat_close_input(&av_format_ctx);
-			avformat_free_context(av_format_ctx);
-			media_log.notice("avformat_find_stream_info: could not load stream information. error=%d='%s' file='%s'", err, av_error_to_string(err), path);
+			media_log.notice("get_media_info: avformat_find_stream_info: could not load stream information. error=%d='%s' file='%s'", err, av_error_to_string(err), path);
 			return { false, std::move(info) };
 		}
 
@@ -188,8 +226,7 @@ namespace utils
 		{
 			// Failed to find a stream
 			avformat_close_input(&av_format_ctx);
-			avformat_free_context(av_format_ctx);
-			media_log.notice("Failed to match stream of type %d in file='%s'", av_media_type, path);
+			media_log.notice("get_media_info: Failed to match stream of type %d in file='%s'", av_media_type, path);
 			return { false, std::move(info) };
 		}
 
@@ -219,7 +256,6 @@ namespace utils
 		}
 
 		avformat_close_input(&av_format_ctx);
-		avformat_free_context(av_format_ctx);
 
 		return { true, std::move(info) };
 	}
@@ -256,28 +292,20 @@ namespace utils
 				av_frame_unref(video.frame);
 				av_frame_free(&video.frame);
 			}
-			if (audio.packet)
-			{
-				av_packet_unref(audio.packet);
-				av_packet_free(&audio.packet);
-			}
-			if (video.packet)
-			{
-				av_packet_unref(video.packet);
-				av_packet_free(&video.packet);
-			}
+			free_packet(audio.packet);
+			free_packet(video.packet);
 			if (swr)
 				swr_free(&swr);
 			if (sws)
 				sws_freeContext(sws);
 			if (audio.context)
-				avcodec_close(audio.context);
+				avcodec_free_context(&audio.context);
 			if (video.context)
-				avcodec_close(video.context);
+				avcodec_free_context(&video.context);
 			// AVCodec is managed by libavformat, no need to free it
 			// see: https://stackoverflow.com/a/18047320
 			if (format_context)
-				avformat_free_context(format_context);
+				avformat_close_input(&format_context);
 			//if (stream)
 			//	av_free(stream);
 			if (kill_callback)
@@ -439,6 +467,11 @@ namespace utils
 		const auto decode_track = [this](const std::string& path)
 		{
 			media_log.notice("audio_decoder: decoding %s", path);
+
+			// Only print FFMPEG errors, fatals and panics
+			av_log_set_callback(av_log_callback);
+			av_log_set_level(AV_LOG_ERROR);
+
 			scoped_av av;
 
 			// Get format from audio file
@@ -545,13 +578,33 @@ namespace utils
 			}
 
 			AVPacket* packet = av_packet_alloc();
-			std::unique_ptr<AVPacket, decltype([](AVPacket* p){av_packet_unref(p);})> packet_(packet);
+			if (!packet)
+			{
+				media_log.error("audio_decoder: Error allocating the packet");
+				has_error = true;
+				return;
+			}
+
+			std::unique_ptr<AVPacket, decltype(free_packet)> packet_(packet);
+			bool is_first_error = true;
 
 			// Iterate through frames
 			while (thread_ctrl::state() != thread_state::aborting && av_read_frame(av.format_context, packet) >= 0)
 			{
 				if (int err = avcodec_send_packet(av.audio.context, packet); err < 0)
 				{
+					if (is_first_error)
+					{
+						is_first_error = false;
+
+						if (err == averror_invalid_data)
+						{
+							// Some mp3s contain some invalid data at the beginning of the stream. They work fine if we just ignore them.
+							// So let's skip the first invalid data error. Maybe there is a better way, but let's just roll with it for now.
+							media_log.warning("audio_decoder: Ignoring first error: %d='%s'", err, av_error_to_string(err));
+							continue;
+						}
+					}
 					media_log.error("audio_decoder: Queuing error: %d='%s'", err, av_error_to_string(err));
 					has_error = true;
 					return;
@@ -570,7 +623,7 @@ namespace utils
 					}
 
 					// Resample frames
-					u8* buffer;
+					u8* buffer = nullptr;
 					const int align = 1;
 					const int buffer_size = av_samples_alloc(&buffer, nullptr, dst_channels, av.audio.frame->nb_samples, dst_format, align);
 					if (buffer_size < 0)
@@ -586,7 +639,7 @@ namespace utils
 						media_log.error("audio_decoder: Error converting frame: %d='%s'", frame_count, av_error_to_string(frame_count));
 						has_error = true;
 						if (buffer)
-							av_free(buffer);
+							av_freep(&buffer);
 						return;
 					}
 
@@ -604,7 +657,7 @@ namespace utils
 					}
 
 					if (buffer)
-						av_free(buffer);
+						av_freep(&buffer);
 
 					media_log.notice("audio_decoder: decoded frame_count=%d buffer_size=%d timestamp_us=%d", frame_count, buffer_size, av.audio.frame->best_effort_timestamp);
 				}
@@ -826,33 +879,8 @@ namespace utils
 		{
 			m_running = true;
 
-			av_log_set_callback([](void* avcl, int level, const char* fmt, va_list vl) -> void
-			{
-				if (level > av_log_get_level())
-				{
-					return;
-				}
-
-				constexpr int line_size = 1024;
-				char line[line_size]{};
-				int print_prefix = 1;
-
-				if (int err = av_log_format_line2(avcl, level, fmt, vl, line, line_size, &print_prefix); err < 0)
-				{
-					media_log.error("av_log: av_log_format_line2 failed. Error: %d='%s'", err, av_error_to_string(err));
-					return;
-				}
-
-				std::string msg = line;
-				fmt::trim_back(msg, "\n\r\t ");
-
-				if (level <= AV_LOG_ERROR)
-					media_log.error("av_log: %s", msg);
-				else if (level <= AV_LOG_WARNING)
-					media_log.warning("av_log: %s", msg);
-				else
-					media_log.notice("av_log: %s", msg);
-			});
+			// Only print FFMPEG errors, fatals and panics
+			av_log_set_callback(av_log_callback);
 			av_log_set_level(AV_LOG_ERROR);
 
 			// Reset variables at all costs
@@ -1226,9 +1254,9 @@ namespace utils
 			{
 				media_log.error("video_encoder: avformat_write_header failed. Error: %d='%s'", err, av_error_to_string(err));
 
-				if (int err = avio_close(av.format_context->pb); err != 0)
+				if (int err = avio_closep(&av.format_context->pb); err != 0)
 				{
-					media_log.error("video_encoder: avio_close failed. Error: %d='%s'", err, av_error_to_string(err));
+					media_log.error("video_encoder: avio_closep failed. Error: %d='%s'", err, av_error_to_string(err));
 				}
 
 				has_error = true;
@@ -1605,9 +1633,9 @@ namespace utils
 				media_log.error("video_encoder: av_write_trailer failed. Error: %d='%s'", err, av_error_to_string(err));
 			}
 
-			if (int err = avio_close(av.format_context->pb); err != 0)
+			if (int err = avio_closep(&av.format_context->pb); err != 0)
 			{
-				media_log.error("video_encoder: avio_close failed. Error: %d='%s'", err, av_error_to_string(err));
+				media_log.error("video_encoder: avio_closep failed. Error: %d='%s'", err, av_error_to_string(err));
 			}
 		});
 	}

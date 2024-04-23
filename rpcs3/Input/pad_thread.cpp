@@ -136,7 +136,7 @@ void pad_thread::Init()
 	std::shared_ptr<keyboard_pad_handler> keyptr;
 
 	// Always have a Null Pad Handler
-	std::shared_ptr<NullPadHandler> nullpad = std::make_shared<NullPadHandler>();
+	std::shared_ptr<NullPadHandler> nullpad = std::make_shared<NullPadHandler>(true);
 	handlers.emplace(pad_handler::null, nullpad);
 
 	for (u32 i = 0; i < CELL_PAD_MAX_PORT_NUM; i++) // max 7 pads
@@ -152,47 +152,18 @@ void pad_thread::Init()
 		}
 		else
 		{
-			switch (handler_type)
+			if (handler_type == pad_handler::keyboard)
 			{
-			case pad_handler::keyboard:
-				keyptr = std::make_shared<keyboard_pad_handler>();
+				keyptr = std::make_shared<keyboard_pad_handler>(true);
 				keyptr->moveToThread(static_cast<QThread*>(m_curthread));
 				keyptr->SetTargetWindow(static_cast<QWindow*>(m_curwindow));
 				cur_pad_handler = keyptr;
-				break;
-			case pad_handler::ds3:
-				cur_pad_handler = std::make_shared<ds3_pad_handler>();
-				break;
-			case pad_handler::ds4:
-				cur_pad_handler = std::make_shared<ds4_pad_handler>();
-				break;
-			case pad_handler::dualsense:
-				cur_pad_handler = std::make_shared<dualsense_pad_handler>();
-				break;
-			case pad_handler::skateboard:
-				cur_pad_handler = std::make_shared<skateboard_pad_handler>();
-				break;
-#ifdef _WIN32
-			case pad_handler::xinput:
-				cur_pad_handler = std::make_shared<xinput_pad_handler>();
-				break;
-			case pad_handler::mm:
-				cur_pad_handler = std::make_shared<mm_joystick_handler>();
-				break;
-#endif
-#ifdef HAVE_SDL2
-			case pad_handler::sdl:
-				cur_pad_handler = std::make_shared<sdl_pad_handler>();
-				break;
-#endif
-#ifdef HAVE_LIBEVDEV
-			case pad_handler::evdev:
-				cur_pad_handler = std::make_shared<evdev_joystick_handler>();
-				break;
-#endif
-			case pad_handler::null:
-				break;
 			}
+			else
+			{
+				cur_pad_handler = GetHandler(handler_type);
+			}
+
 			handlers.emplace(handler_type, cur_pad_handler);
 		}
 		cur_pad_handler->Init();
@@ -604,30 +575,30 @@ std::shared_ptr<PadHandlerBase> pad_thread::GetHandler(pad_handler type)
 	switch (type)
 	{
 	case pad_handler::null:
-		return std::make_unique<NullPadHandler>();
+		return std::make_shared<NullPadHandler>(true);
 	case pad_handler::keyboard:
-		return std::make_unique<keyboard_pad_handler>();
+		return std::make_shared<keyboard_pad_handler>(true);
 	case pad_handler::ds3:
-		return std::make_unique<ds3_pad_handler>();
+		return std::make_shared<ds3_pad_handler>(true);
 	case pad_handler::ds4:
-		return std::make_unique<ds4_pad_handler>();
+		return std::make_shared<ds4_pad_handler>(true);
 	case pad_handler::dualsense:
-		return std::make_unique<dualsense_pad_handler>();
+		return std::make_shared<dualsense_pad_handler>(true);
 	case pad_handler::skateboard:
-		return std::make_unique<skateboard_pad_handler>();
+		return std::make_shared<skateboard_pad_handler>(true);
 #ifdef _WIN32
 	case pad_handler::xinput:
-		return std::make_unique<xinput_pad_handler>();
+		return std::make_shared<xinput_pad_handler>(true);
 	case pad_handler::mm:
-		return std::make_unique<mm_joystick_handler>();
+		return std::make_shared<mm_joystick_handler>(true);
 #endif
 #ifdef HAVE_SDL2
 	case pad_handler::sdl:
-		return std::make_unique<sdl_pad_handler>();
+		return std::make_shared<sdl_pad_handler>(true);
 #endif
 #ifdef HAVE_LIBEVDEV
 	case pad_handler::evdev:
-		return std::make_unique<evdev_joystick_handler>();
+		return std::make_shared<evdev_joystick_handler>(true);
 #endif
 	}
 

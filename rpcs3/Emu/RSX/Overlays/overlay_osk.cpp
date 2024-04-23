@@ -1,10 +1,11 @@
 #include "stdafx.h"
 #include "overlay_manager.h"
 #include "overlay_osk.h"
-#include "Emu/RSX/RSXThread.h"
 #include "Emu/Cell/Modules/cellSysutil.h"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
 #include "Emu/Cell/Modules/cellKb.h"
+#include "Emu/System.h"
+#include "Emu/system_config.h"
 
 LOG_CHANNEL(osk, "OSK");
 
@@ -48,7 +49,7 @@ namespace rsx
 
 			fade_animation.current = color4f(1.f);
 			fade_animation.end = color4f(0.f);
-			fade_animation.duration = 0.5f;
+			fade_animation.duration_sec = 0.5f;
 
 			fade_animation.on_finish = [this, status]
 			{
@@ -348,14 +349,14 @@ namespace rsx
 
 			// Calculate initial position and analog movement range.
 			constexpr f32 margin = 50.0f; // Let's add a minimal margin on all sides
-			const u16 x_min = static_cast<u16>(margin);
-			const u16 x_max = static_cast<u16>(static_cast<f32>(virtual_width - total_w) - margin);
-			const u16 y_min = static_cast<u16>(margin);
-			const u16 y_max = static_cast<u16>(static_cast<f32>(virtual_height - total_h) - margin);
-			u16 input_x = 0;
-			u16 input_y = 0;
-			u16 panel_x = 0;
-			u16 panel_y = 0;
+			const s16 x_min = static_cast<s16>(margin);
+			const s16 x_max = static_cast<s16>(static_cast<f32>(virtual_width - total_w) - margin);
+			const s16 y_min = static_cast<s16>(margin);
+			const s16 y_max = static_cast<s16>(static_cast<f32>(virtual_height - total_h) - margin);
+			s16 input_x = 0;
+			s16 input_y = 0;
+			s16 panel_x = 0;
+			s16 panel_y = 0;
 
 			// x pos should only be 0 the first time, because we always add a margin
 			if (m_x_input_pos == 0)
@@ -396,15 +397,15 @@ namespace rsx
 
 				if (m_use_separate_windows)
 				{
-					input_x = m_x_input_pos = static_cast<u16>(std::clamp<f32>(get_x(m_input_layout, input_w), x_min, x_max));
-					input_y = m_y_input_pos = static_cast<u16>(std::clamp<f32>(get_y(m_input_layout, input_h), y_min, y_max));
-					panel_x = m_x_panel_pos = static_cast<u16>(std::clamp<f32>(get_x(m_panel_layout, panel_w), x_min, x_max));
-					panel_y = m_y_panel_pos = static_cast<u16>(std::clamp<f32>(get_y(m_panel_layout, panel_h), static_cast<f32>(y_min + input_h), static_cast<f32>(y_max + input_h)));
+					input_x = m_x_input_pos = static_cast<s16>(std::clamp<f32>(get_x(m_input_layout, input_w), x_min, x_max));
+					input_y = m_y_input_pos = static_cast<s16>(std::clamp<f32>(get_y(m_input_layout, input_h), y_min, y_max));
+					panel_x = m_x_panel_pos = static_cast<s16>(std::clamp<f32>(get_x(m_panel_layout, panel_w), x_min, x_max));
+					panel_y = m_y_panel_pos = static_cast<s16>(std::clamp<f32>(get_y(m_panel_layout, panel_h), static_cast<f32>(y_min + input_h), static_cast<f32>(y_max + input_h)));
 				}
 				else
 				{
 					input_x = panel_x = m_x_input_pos = m_x_panel_pos = static_cast<u16>(std::clamp<f32>(get_x(m_layout, total_w), x_min, x_max));
-					input_y = m_y_input_pos = static_cast<u16>(std::clamp<f32>(get_y(m_layout, total_h), y_min, y_max));
+					input_y = m_y_input_pos = static_cast<s16>(std::clamp<f32>(get_y(m_layout, total_h), y_min, y_max));
 					panel_y = m_y_panel_pos = input_y + input_h;
 				}
 			}
@@ -413,7 +414,7 @@ namespace rsx
 				input_x = m_x_input_pos = std::clamp(m_x_input_pos, x_min, x_max);
 				input_y = m_y_input_pos = std::clamp(m_y_input_pos, y_min, y_max);
 				panel_x = m_x_panel_pos = std::clamp(m_x_panel_pos, x_min, x_max);
-				panel_y = m_y_panel_pos = std::clamp<u16>(m_y_panel_pos, y_min + input_h, y_max + input_h);
+				panel_y = m_y_panel_pos = std::clamp<s16>(m_y_panel_pos, y_min + input_h, y_max + input_h);
 			}
 			else
 			{
@@ -436,7 +437,7 @@ namespace rsx
 			m_preview.set_size(input_w, preview_height);
 			m_preview.set_padding(get_scaled(15), 0, get_scaled(10), 0);
 
-			const u16 button_y = panel_y + panel_h + button_margin;
+			const s16 button_y = panel_y + panel_h + button_margin;
 
 			m_btn_cancel.set_pos(panel_x, button_y);
 			m_btn_cancel.set_size(get_scaled(140), button_height);
@@ -532,7 +533,7 @@ namespace rsx
 
 			fade_animation.current = color4f(0.f);
 			fade_animation.end = color4f(1.f);
-			fade_animation.duration = 0.5f;
+			fade_animation.duration_sec = 0.5f;
 			fade_animation.active = true;
 		}
 
@@ -926,25 +927,43 @@ namespace rsx
 
 			std::lock_guard lock(m_preview_mutex);
 
-			const bool use_key_string_fallback = !key.empty();
+			// The key should normally be empty unless the backend couldn't find a match.
+			const bool is_key_string_fallback = !key.empty();
 
-			osk.notice("osk_dialog::on_key_pressed(led=%d, mkey=%d, key_code=%d, out_key_code=%d, pressed=%d, use_key_string_fallback=%d)", led, mkey, key_code, out_key_code, pressed, use_key_string_fallback);
+			// Pure meta keys need to be treated with care, as their out key code contains the meta key code instead of the normal key code.
+			const bool is_meta_key = mkey != 0 && key_code == CELL_KEYC_NO_EVENT && key.empty();
 
-			if (!use_key_string_fallback)
-			{
-				// Get keyboard layout
-				const u32 kb_mapping = static_cast<u32>(g_cfg.sys.keyboard_type.get());
-
-				// Convert key to its u32string presentation
-				const u16 converted_out_key = cellKbCnvRawCode(kb_mapping, mkey, led, out_key_code);
-				std::u16string utf16_string;
-				utf16_string.push_back(converted_out_key);
-				key = utf16_to_u32string(utf16_string);
-			}
+			osk.notice("osk_dialog::on_key_pressed(led=%d, mkey=%d, key_code=%d, out_key_code=%d, pressed=%d, is_key_string_fallback=%d, is_meta_key=%d)", led, mkey, key_code, out_key_code, pressed, is_key_string_fallback, is_meta_key);
 
 			// Find matching key in the OSK
 			const auto find_key = [&]() -> bool
 			{
+				if (is_meta_key)
+				{
+					// We don't need to process meta keys in the grid at the moment.
+					// The key is valid either way, so we return true.
+					// Only on_osk_key_input_entered is called later.
+					return true;
+				}
+
+				// Get the string representation of this key (unless it's already set by the backend)
+				if (key.empty())
+				{
+					// Get keyboard layout
+					const u32 kb_mapping = static_cast<u32>(g_cfg.sys.keyboard_type.get());
+
+					// Convert key to its u32string presentation
+					const u16 converted_out_key = cellKbCnvRawCode(kb_mapping, mkey, led, out_key_code);
+					std::u16string utf16_string;
+					utf16_string.push_back(converted_out_key);
+					key = utf16_to_u32string(utf16_string);
+				}
+
+				if (key.empty())
+				{
+					return false;
+				}
+
 				for (const cell& current_cell : m_grid)
 				{
 					for (const auto& output : current_cell.outputs)
@@ -974,9 +993,9 @@ namespace rsx
 
 			const bool found_key = find_key();
 
-			if (use_key_string_fallback)
+			if (is_key_string_fallback)
 			{
-				// We don't have a keycode, so there we can't process any of the following code anyway
+				// We don't have a keycode, so we can't process any of the following code anyway
 				return;
 			}
 
@@ -1151,11 +1170,11 @@ namespace rsx
 			return get_localized_u32string(id);
 		}
 
-		void osk_dialog::update()
+		void osk_dialog::update(u64 timestamp_us)
 		{
 			if (fade_animation.active)
 			{
-				fade_animation.update(rsx::get_current_renderer()->vblank_count);
+				fade_animation.update(timestamp_us);
 				m_update = true;
 			}
 
@@ -1168,7 +1187,7 @@ namespace rsx
 				m_update = true;
 			}
 
-			if (m_pointer.visible() && m_pointer.set_position(static_cast<u16>(info.pointer_x), static_cast<u16>(info.pointer_y)))
+			if (m_pointer.visible() && m_pointer.set_position(static_cast<s16>(info.pointer_x), static_cast<s16>(info.pointer_y)))
 			{
 				m_update = true;
 			}
@@ -1244,8 +1263,8 @@ namespace rsx
 
 				for (const auto& c : m_grid)
 				{
-					u16 x = static_cast<u16>(c.pos.x);
-					u16 y = static_cast<u16>(c.pos.y);
+					s16 x = static_cast<s16>(c.pos.x);
+					s16 y = static_cast<s16>(c.pos.y);
 					u16 w = cell_size_x;
 					u16 h = cell_size_y;
 
@@ -1269,7 +1288,7 @@ namespace rsx
 
 						if (output_count)
 						{
-							const u16 offset_x = static_cast<u16>(buffered_cell_count * cell_size_x);
+							const s16 offset_x = static_cast<s16>(buffered_cell_count * cell_size_x);
 							const u16 full_width = static_cast<u16>(offset_x + cell_size_x);
 
 							label.set_pos(x - offset_x, y);
