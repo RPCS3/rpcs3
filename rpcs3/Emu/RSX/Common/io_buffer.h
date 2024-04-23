@@ -83,5 +83,10 @@ namespace rsx
 			auto bytes = data();
 			return { utils::bless<T>(bytes), m_size / sizeof(T) };
 		}
+
+		bool empty() const
+		{
+			return m_size == 0;
+		}
 	};
 }
