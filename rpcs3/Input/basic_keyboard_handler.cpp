@@ -194,7 +194,7 @@ void basic_keyboard_handler::LoadSettings()
 	//buttons.emplace_back(, CELL_KEYC_E_UNDEF);
 	buttons.emplace_back(Qt::Key_Escape, CELL_KEYC_ESCAPE);
 	buttons.emplace_back(Qt::Key_Kanji, CELL_KEYC_106_KANJI);
-	//buttons.emplace_back(Qt::Key_CapsLock, CELL_KEYC_CAPS_LOCK);
+	buttons.emplace_back(Qt::Key_CapsLock, CELL_KEYC_CAPS_LOCK);
 	buttons.emplace_back(Qt::Key_F1, CELL_KEYC_F1);
 	buttons.emplace_back(Qt::Key_F2, CELL_KEYC_F2);
 	buttons.emplace_back(Qt::Key_F3, CELL_KEYC_F3);
