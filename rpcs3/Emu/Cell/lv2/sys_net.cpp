@@ -1250,7 +1250,7 @@ error_code sys_net_bnet_close(ppu_thread& ppu, s32 s)
 
 	{
 		// Ensures the socket has no lingering copy from the network thread
-		std::lock_guard nw_lock(g_fxo->get<network_context>().s_nw_mutex);
+		std::lock_guard nw_lock(g_fxo->get<network_context>().mutex_thread_loop);
 		sock.reset();
 	}
 
@@ -1279,7 +1279,7 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 
 		lv2_obj::prepare_for_sleep(ppu);
 
-		std::unique_lock nw_lock(g_fxo->get<network_context>().s_nw_mutex);
+		std::unique_lock nw_lock(g_fxo->get<network_context>().mutex_thread_loop);
 		std::shared_lock lock(id_manager::g_mutex);
 
 		std::vector<::pollfd> _fds(nfds);
@@ -1375,7 +1375,7 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 								fds_buf[i].revents |= SYS_NET_POLLERR;
 
 							signaled++;
-							g_fxo->get<network_context>().s_to_awake.emplace_back(&ppu);
+							sock->queue_wake(&ppu);
 							return true;
 						}
 
@@ -1412,7 +1412,7 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 					return {};
 				}
 
-				std::lock_guard nw_lock(g_fxo->get<network_context>().s_nw_mutex);
+				std::lock_guard nw_lock(g_fxo->get<network_context>().mutex_thread_loop);
 
 				if (signaled)
 				{
@@ -1443,7 +1443,7 @@ error_code sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_net.trace("sys_net_bnet_select(nfds=%d, readfds=*0x%x, writefds=*0x%x, exceptfds=*0x%x, timeout=*0x%x)", nfds, readfds, writefds, exceptfds, _timeout);
+	sys_net.trace("sys_net_bnet_select(nfds=%d, readfds=*0x%x, writefds=*0x%x, exceptfds=*0x%x, timeout=*0x%x(%d:%d))", nfds, readfds, writefds, exceptfds, _timeout, _timeout ? _timeout->tv_sec.value() : 0, _timeout ? _timeout->tv_usec.value() : 0);
 
 	atomic_t<s32> signaled{0};
 
@@ -1474,8 +1474,7 @@ error_code sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set
 		if (exceptfds)
 			_exceptfds = *exceptfds;
 
-		std::lock_guard nw_lock(g_fxo->get<network_context>().s_nw_mutex);
-
+		std::lock_guard nw_lock(g_fxo->get<network_context>().mutex_thread_loop);
 		reader_lock lock(id_manager::g_mutex);
 
 		std::vector<::pollfd> _fds(nfds);
@@ -1607,7 +1606,7 @@ error_code sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set
 						    //	rexcept.set(i);
 
 							signaled++;
-							g_fxo->get<network_context>().s_to_awake.emplace_back(&ppu);
+							sock->queue_wake(&ppu);
 							return true;
 						}
 
@@ -1652,7 +1651,7 @@ error_code sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set
 					return {};
 				}
 
-				std::lock_guard nw_lock(g_fxo->get<network_context>().s_nw_mutex);
+				std::lock_guard nw_lock(g_fxo->get<network_context>().mutex_thread_loop);
 
 				if (signaled)
 				{
@@ -1749,6 +1748,14 @@ error_code lv2_socket::abort_socket(s32 flags)
 		lv2_obj::append(ppu.get());
 	}
 
+	const u32 num_waiters = qcopy.size();
+	if (num_waiters && (type == SYS_NET_SOCK_STREAM || type == SYS_NET_SOCK_DGRAM))
+	{
+		auto& nc = g_fxo->get<network_context>();
+		const u32 prev_value = nc.num_polls.fetch_sub(num_waiters);
+		ensure(prev_value >= num_waiters);
+	}
+
 	lv2_obj::awake_all();
 	return CELL_OK;
 }
@@ -1772,7 +1779,7 @@ error_code sys_net_abort(ppu_thread& ppu, s32 type, u64 arg, s32 flags)
 	{
 	case _socket:
 	{
-		std::lock_guard nw_lock(g_fxo->get<network_context>().s_nw_mutex);
+		std::lock_guard nw_lock(g_fxo->get<network_context>().mutex_thread_loop);
 
 		const auto sock = idm::get<lv2_socket>(static_cast<u32>(arg));
 
@@ -1813,7 +1820,7 @@ error_code sys_net_abort(ppu_thread& ppu, s32 type, u64 arg, s32 flags)
 		}
 
 		// Ensures the socket has no lingering copy from the network thread
-		g_fxo->get<network_context>().s_nw_mutex.lock_unlock();
+		g_fxo->get<network_context>().mutex_thread_loop.lock_unlock();
 
 		return not_an_error(::narrow<s32>(sockets.size()) - failed);
 	}
