@@ -671,6 +671,11 @@ std::optional<s32> lv2_socket_p2ps::connect(const sys_net_sockaddr& addr)
 {
 	std::lock_guard lock(mutex);
 
+	if (status != p2ps_stream_status::stream_closed)
+	{
+		return -SYS_NET_EALREADY;
+	}
+
 	p2ps_encapsulated_tcp send_hdr;
 	const auto psa_in_p2p = reinterpret_cast<const sys_net_sockaddr_in_p2p*>(&addr);
 	auto name             = sys_net_addr_to_native_addr(addr);
@@ -750,6 +755,11 @@ std::optional<std::tuple<s32, std::vector<u8>, sys_net_sockaddr>> lv2_socket_p2p
 
 	if (!data_available)
 	{
+		if (status == p2ps_stream_status::stream_closed)
+		{
+			return {{0, {}, {}}};
+		}
+
 		if (so_nbio || (flags & SYS_NET_MSG_DONTWAIT))
 		{
 			return {{-SYS_NET_EWOULDBLOCK, {}, {}}};
@@ -804,6 +814,11 @@ std::optional<s32> lv2_socket_p2ps::sendto([[maybe_unused]] s32 flags, const std
 	if (is_lock)
 	{
 		lock.lock();
+	}
+
+	if (status == p2ps_stream_status::stream_closed)
+	{
+		return -SYS_NET_ECONNRESET;
 	}
 
 	constexpr u32 max_data_len = (65535 - (VPORT_P2P_HEADER_SIZE + sizeof(p2ps_encapsulated_tcp)));
