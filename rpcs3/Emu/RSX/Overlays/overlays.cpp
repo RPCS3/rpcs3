@@ -161,11 +161,6 @@ namespace rsx
 					std::lock_guard<std::mutex> lock(handler.m_mutex);
 					std::vector<Keyboard>& keyboards = handler.GetKeyboards();
 
-					if (!keyboards.empty())
-					{
-						keyboards[0].m_key_repeat = false;
-					}
-
 					if (!keyboards.empty() && handler.GetInfo().status[0] == CELL_KB_STATUS_CONNECTED)
 					{
 						keyboards[0].m_key_repeat = true;
