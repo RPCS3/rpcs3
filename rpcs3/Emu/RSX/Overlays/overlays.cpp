@@ -157,9 +157,17 @@ namespace rsx
 				{
 					auto& handler = g_fxo->get<KeyboardHandlerBase>();
 					std::lock_guard<std::mutex> lock(handler.m_mutex);
+					std::vector<Keyboard>& keyboards = handler.GetKeyboards();
 
-					if (!handler.GetKeyboards().empty() && handler.GetInfo().status[0] == CELL_KB_STATUS_CONNECTED)
+					if (!keyboards.empty())
 					{
+						keyboards[0].m_key_repeat = false;
+					}
+
+					if (!keyboards.empty() && handler.GetInfo().status[0] == CELL_KB_STATUS_CONNECTED)
+					{
+						keyboards[0].m_key_repeat = true;
+
 						KbData& current_data = handler.GetData(0);
 						KbExtraData& extra_data = handler.GetExtraData(0);
 
@@ -191,7 +199,6 @@ namespace rsx
 						handler.Init(1);
 
 						// Enable key repeat
-						std::vector<Keyboard>& keyboards = handler.GetKeyboards();
 						ensure(!keyboards.empty());
 						::at32(keyboards, 0).m_key_repeat = true;
 					}
