@@ -151,6 +151,8 @@ namespace rsx
 					continue;
 				}
 
+				bool ignore_gamepad_input = false;
+
 				// Get keyboard input if supported by the overlay and activated by the game.
 				// Ignored if a keyboard pad handler is active in order to prevent double input.
 				if (m_keyboard_input_enabled && !m_keyboard_pad_handler_active && input::g_keyboards_intercepted)
@@ -211,12 +213,10 @@ namespace rsx
 
 				if (!rinfo.now_connect || !input::g_pads_intercepted)
 				{
-					m_keyboard_pad_handler_active = false;
-					refresh();
-					continue;
+					ignore_gamepad_input = true;
 				}
 
-				bool keyboard_pad_handler_active = false;
+				m_keyboard_pad_handler_active = false;
 
 				int pad_index = -1;
 				for (const auto& pad : handler->GetPads())
@@ -249,6 +249,11 @@ namespace rsx
 					if (pad->m_pad_handler == pad_handler::keyboard)
 					{
 						m_keyboard_pad_handler_active = true;
+					}
+
+					if (ignore_gamepad_input)
+					{
+						continue;
 					}
 
 					for (const Button& button : pad->m_buttons)
@@ -368,8 +373,6 @@ namespace rsx
 							break;
 					}
 				}
-
-				m_keyboard_pad_handler_active = keyboard_pad_handler_active;
 
 				refresh();
 			}
