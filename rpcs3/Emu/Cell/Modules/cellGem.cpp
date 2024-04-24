@@ -804,11 +804,11 @@ static void ds3_pos_to_gem_state(u32 gem_num, const gem_config::gem_controller& 
 	s32 ds3_pos_x, ds3_pos_y;
 	ds3_get_stick_values(gem_num, pad, ds3_pos_x, ds3_pos_y);
 
-	if constexpr (std::is_same<T, vm::ptr<CellGemState>>::value)
+	if constexpr (std::is_same_v<T, vm::ptr<CellGemState>>)
 	{
 		pos_to_gem_state(gem_num, controller, gem_state, ds3_pos_x, ds3_pos_y, ds3_max_x, ds3_max_y);
 	}
-	else if constexpr (std::is_same<T, vm::ptr<CellGemImageState>>::value)
+	else if constexpr (std::is_same_v<T, vm::ptr<CellGemImageState>>)
 	{
 		pos_to_gem_image_state(gem_num, controller, gem_state, ds3_pos_x, ds3_pos_y, ds3_max_x, ds3_max_y);
 	}
@@ -947,11 +947,11 @@ static void mouse_pos_to_gem_state(const u32 mouse_no, const gem_config::gem_con
 
 	const auto& mouse = ::at32(handler.GetMice(), mouse_no);
 
-	if constexpr (std::is_same<T, vm::ptr<CellGemState>>::value)
+	if constexpr (std::is_same_v<T, vm::ptr<CellGemState>>)
 	{
 		pos_to_gem_state(mouse_no, controller, gem_state, mouse.x_pos, mouse.y_pos, mouse.x_max, mouse.y_max);
 	}
-	else if constexpr (std::is_same<T, vm::ptr<CellGemImageState>>::value)
+	else if constexpr (std::is_same_v<T, vm::ptr<CellGemImageState>>)
 	{
 		pos_to_gem_image_state(mouse_no, controller, gem_state, mouse.x_pos, mouse.y_pos, mouse.x_max, mouse.y_max);
 	}
@@ -1015,11 +1015,11 @@ static void gun_pos_to_gem_state(const u32 gem_no, const gem_config::gem_control
 		y_max = gun.handler.get_axis_y_max(gem_no);
 	}
 
-	if constexpr (std::is_same<T, vm::ptr<CellGemState>>::value)
+	if constexpr (std::is_same_v<T, vm::ptr<CellGemState>>)
 	{
 		pos_to_gem_state(gem_no, controller, gem_state, x_pos, y_pos, x_max, y_max);
 	}
-	else if constexpr (std::is_same<T, vm::ptr<CellGemImageState>>::value)
+	else if constexpr (std::is_same_v<T, vm::ptr<CellGemImageState>>)
 	{
 		pos_to_gem_image_state(gem_no, controller, gem_state, x_pos, y_pos, x_max, y_max);
 	}

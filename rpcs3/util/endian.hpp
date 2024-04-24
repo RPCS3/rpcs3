@@ -148,15 +148,15 @@ namespace stx
 	template <typename T, bool Swap, usz Align = alignof(T)>
 	class alignas(Align) se_t
 	{
-		using type = typename std::remove_cv<T>::type;
+		using type = std::remove_cv_t<T>;
 		using stype = typename se_storage<type, Align>::type;
 		using storage = se_storage<type, Align>;
 
 		stype m_data;
 
-		static_assert(!std::is_pointer<type>::value, "se_t<> error: invalid type (pointer)");
-		static_assert(!std::is_reference<type>::value, "se_t<> error: invalid type (reference)");
-		static_assert(!std::is_array<type>::value, "se_t<> error: invalid type (array)");
+		static_assert(!std::is_pointer_v<type>, "se_t<> error: invalid type (pointer)");
+		static_assert(!std::is_reference_v<type>, "se_t<> error: invalid type (reference)");
+		static_assert(!std::is_array_v<type>, "se_t<> error: invalid type (array)");
 		static_assert(sizeof(type) == alignof(type), "se_t<> error: unexpected alignment");
 
 		static constexpr stype to_data(type value) noexcept

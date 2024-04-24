@@ -1,5 +1,8 @@
 #pragma once
 
+#include "Emu/RSX/Common/simple_array.hpp"
+#include "Emu/RSX/Core/RSXContext.h"
+#include "Emu/RSX/RSXThread.h"
 #include "texture_cache_utils.h"
 #include "texture_cache_predictor.h"
 #include "texture_cache_helpers.h"
@@ -35,7 +38,7 @@ namespace rsx
 		using copy_region_descriptor = copy_region_descriptor_base<typename traits::image_resource_type>;
 
 	private:
-		static_assert(std::is_base_of<rsx::cached_texture_section<section_storage_type, traits>, section_storage_type>::value, "section_storage_type must derive from rsx::cached_texture_section");
+		static_assert(std::is_base_of_v<rsx::cached_texture_section<section_storage_type, traits>, section_storage_type>, "section_storage_type must derive from rsx::cached_texture_section");
 
 		/**
 		 * Helper structs/enums

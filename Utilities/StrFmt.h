@@ -54,7 +54,7 @@ struct fmt_unveil
 };
 
 template <typename T>
-struct fmt_unveil<T, std::enable_if_t<std::is_integral<T>::value && sizeof(T) <= 8 && alignof(T) <= 8>>
+struct fmt_unveil<T, std::enable_if_t<std::is_integral_v<T> && sizeof(T) <= 8 && alignof(T) <= 8>>
 {
 	using type = T;
 
@@ -65,7 +65,7 @@ struct fmt_unveil<T, std::enable_if_t<std::is_integral<T>::value && sizeof(T) <=
 };
 
 template <typename T>
-struct fmt_unveil<T, std::enable_if_t<std::is_floating_point<T>::value && sizeof(T) <= 8 && alignof(T) <= 8>>
+struct fmt_unveil<T, std::enable_if_t<std::is_floating_point_v<T> && sizeof(T) <= 8 && alignof(T) <= 8>>
 {
 	using type = T;
 
@@ -77,7 +77,7 @@ struct fmt_unveil<T, std::enable_if_t<std::is_floating_point<T>::value && sizeof
 };
 
 template <typename T>
-struct fmt_unveil<T, std::enable_if_t<std::is_enum<T>::value>>
+struct fmt_unveil<T, std::enable_if_t<std::is_enum_v<T>>>
 {
 	using type = T;
 
