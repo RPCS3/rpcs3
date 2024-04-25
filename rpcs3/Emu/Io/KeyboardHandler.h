@@ -75,21 +75,20 @@ struct Keyboard
 	std::unordered_map<u32, KbButton> m_keys;
 };
 
-class KeyboardHandlerBase
+class keyboard_consumer
 {
 public:
-	std::mutex m_mutex;
+	enum class identifier
+	{
+		unknown,
+		overlays,
+		cellKb,
+	};
 
-	virtual void Init(const u32 max_connect) = 0;
+	keyboard_consumer() {}
+	keyboard_consumer(identifier id) : m_id(id) {}
 
-	virtual ~KeyboardHandlerBase() = default;
-	KeyboardHandlerBase(utils::serial* ar);
-	KeyboardHandlerBase(utils::serial& ar) : KeyboardHandlerBase(&ar) {}
-	void save(utils::serial& ar);
-
-	SAVESTATE_INIT_POS(19);
-
-	void Key(u32 code, bool pressed, const std::u32string& key);
+	bool ConsumeKey(u32 code, bool pressed, bool is_auto_repeat, const std::u32string& key);
 	void SetIntercepted(bool intercepted);
 
 	static bool IsMetaKey(u32 code);
@@ -99,12 +98,41 @@ public:
 	KbData& GetData(const u32 keyboard) { return m_keyboards[keyboard].m_data; }
 	KbExtraData& GetExtraData(const u32 keyboard) { return m_keyboards[keyboard].m_extra_data; }
 	KbConfig& GetConfig(const u32 keyboard) { return m_keyboards[keyboard].m_config; }
+	identifier id() const { return m_id; }
+
+	void ReleaseAllKeys();
+
+protected:
+	identifier m_id = identifier::unknown;
+	KbInfo m_info{};
+	std::vector<Keyboard> m_keyboards;
+};
+
+class KeyboardHandlerBase
+{
+public:
+	std::mutex m_mutex;
+
+	virtual void Init(keyboard_consumer& consumer, const u32 max_connect) = 0;
+
+	virtual ~KeyboardHandlerBase() = default;
+	KeyboardHandlerBase(utils::serial* ar);
+	KeyboardHandlerBase(utils::serial& ar) : KeyboardHandlerBase(&ar) {}
+	void save(utils::serial& ar);
+
+	SAVESTATE_INIT_POS(19);
+
+	keyboard_consumer& AddConsumer(keyboard_consumer::identifier id, u32 max_connect);
+	keyboard_consumer& GetConsumer(keyboard_consumer::identifier id);
+	void RemoveConsumer(keyboard_consumer::identifier id);
+
+	bool HandleKey(u32 code, bool pressed, bool is_auto_repeat, const std::u32string& key);
+	void SetIntercepted(bool intercepted);
 
 	stx::init_mutex init;
 
 protected:
 	void ReleaseAllKeys();
 
-	KbInfo m_info{};
-	std::vector<Keyboard> m_keyboards;
+	std::unordered_map<keyboard_consumer::identifier, keyboard_consumer> m_consumers;
 };
