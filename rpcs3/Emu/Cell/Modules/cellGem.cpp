@@ -1496,7 +1496,7 @@ error_code cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, v
 
 error_code cellGemGetInfo(vm::ptr<CellGemInfo> info)
 {
-	cellGem.warning("cellGemGetInfo(info=*0x%x)", info);
+	cellGem.trace("cellGemGetInfo(info=*0x%x)", info);
 
 	auto& gem = g_fxo->get<gem_config>();
 
