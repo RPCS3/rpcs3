@@ -130,6 +130,9 @@ yaml-cpp.pc
 # miniupnp
 /3rdparty/miniupnp/x64/*
 
+# opencv
+/3rdparty/opencv/*
+
 # llvm
 /3rdparty/llvm/llvm_build
 
