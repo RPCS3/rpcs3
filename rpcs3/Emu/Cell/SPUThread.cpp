@@ -4186,6 +4186,15 @@ bool spu_thread::is_exec_code(u32 addr, std::span<const u8> ls_ptr, u32 base_add
 			}
 		}
 
+		if (type == spu_itype::STOPD && !had_conditional)
+		{
+			return !avoid_dead_code;
+		}
+
+		if (i != 0 && type == spu_itype::STOPD)
+		{
+			return true;
+		}
 		if (type & spu_itype::branch)
 		{
 			if (type == spu_itype::BR && op.rt && op.rt != 127u)
