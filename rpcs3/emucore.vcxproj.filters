@@ -1038,6 +1038,9 @@
     <ClCompile Include="Emu\Cell\Modules\sys_crashdump.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Io\TopShotElite.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Io\Turntable.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
@@ -2181,6 +2184,9 @@
     <ClInclude Include="Emu\RSX\Common\texture_cache_types.h">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Io\TopShotElite.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\Io\Turntable.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
@@ -2459,6 +2465,9 @@
       <Filter>Emu\Io</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Io\guncon3_config.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\topshotelite_config.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Io\usio_config.h">

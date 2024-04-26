@@ -21,10 +21,12 @@
 #include "Emu/Io/GHLtar.h"
 #include "Emu/Io/ghltar_config.h"
 #include "Emu/Io/guncon3_config.h"
+#include "Emu/Io/topshotelite_config.h"
 #include "Emu/Io/Buzz.h"
 #include "Emu/Io/buzz_config.h"
 #include "Emu/Io/GameTablet.h"
 #include "Emu/Io/GunCon3.h"
+#include "Emu/Io/TopShotElite.h"
 #include "Emu/Io/Turntable.h"
 #include "Emu/Io/turntable_config.h"
 #include "Emu/Io/RB3MidiKeyboard.h"
@@ -44,6 +46,7 @@ cfg_ghltars g_cfg_ghltar;
 cfg_turntables g_cfg_turntable;
 cfg_usios g_cfg_usio;
 cfg_guncon3 g_cfg_guncon3;
+cfg_topshotelite g_cfg_topshotelite;
 
 template <>
 void fmt_class_string<libusb_transfer>::format(std::string& out, u64 arg)
@@ -873,6 +876,18 @@ void connect_usb_controller(u8 index, input::product_type type)
 
 			sys_usbd.success("Adding emulated GunCon3 (controller %d)", index);
 			std::shared_ptr<usb_device> dev = std::make_shared<usb_device_guncon3>(index, usbh->get_new_location());
+			usbh->connect_usb_device(dev, true);
+			usbh->pad_to_usb.emplace(index, std::pair(type, dev));
+		}
+		if (type == input::product_type::top_shot_elite)
+		{
+			if (!g_cfg_topshotelite.load())
+			{
+				sys_usbd.notice("Could not load Top Shot Elite config. Using defaults.");
+			}
+
+			sys_usbd.success("Adding emulated Top Shot Elite (controller %d)", index);
+			std::shared_ptr<usb_device> dev = std::make_shared<usb_device_topshotelite>(index, usbh->get_new_location());
 			usbh->connect_usb_device(dev, true);
 			usbh->pad_to_usb.emplace(index, std::pair(type, dev));
 		}
