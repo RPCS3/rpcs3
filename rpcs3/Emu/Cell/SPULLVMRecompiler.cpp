@@ -1122,6 +1122,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 			u32 data;
 			bf_t<u32, 30, 2> type;
 			bf_t<u32, 29, 1> runtime16_select;
+			bf_t<u32, 28, 1> no_notify;
 			bf_t<u32, 18, 8> reg;
 			bf_t<u32, 0, 18> off18;
 			bf_t<u32, 0, 8> reg2;
@@ -1244,7 +1245,12 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		// Unlock and notify
 		m_ir->SetInsertPoint(_success_and_unlock);
 		m_ir->CreateAlignedStore(m_ir->CreateAdd(rval, m_ir->getInt64(128)), rptr, llvm::MaybeAlign{8});
-		call("atomic_wait_engine::notify_all", static_cast<void(*)(const void*)>(atomic_wait_engine::notify_all), rptr);
+
+		if (!info.no_notify)
+		{
+			call("atomic_wait_engine::notify_all", static_cast<void(*)(const void*)>(atomic_wait_engine::notify_all), rptr);
+		}
+
 		m_ir->CreateBr(_success);
 
 		// Perform unlocked vm::reservation_update if no physical memory changes needed
