@@ -1220,6 +1220,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceComboBox(ui->gameTabletBox, emu_settings_type::GameTablet);
 	SubscribeTooltip(ui->gametablet_emulated, tooltips.settings.gametablet);
 
+	m_emu_settings->EnhanceComboBox(ui->gunCon3Box, emu_settings_type::GunCon3);
+	SubscribeTooltip(ui->guncon3_emulated, tooltips.settings.guncon3);
+
 	m_emu_settings->EnhanceCheckBox(ui->backgroundInputBox, emu_settings_type::BackgroundInput);
 	SubscribeTooltip(ui->backgroundInputBox, tooltips.settings.background_input);
 

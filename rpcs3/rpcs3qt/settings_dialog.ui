@@ -1743,6 +1743,18 @@
             </layout>
            </widget>
           </item>
+          <item row="5" column="1">
+           <widget class="QGroupBox" name="guncon3_emulated">
+            <property name="title">
+             <string>GunCon3</string>
+            </property>
+            <layout class="QVBoxLayout" name="guncon3_emulated_layout">
+             <item>
+              <widget class="QComboBox" name="gunCon3Box"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
           <item row="3" column="2">
            <widget class="QGroupBox" name="gb_midi_1">
             <property name="title">

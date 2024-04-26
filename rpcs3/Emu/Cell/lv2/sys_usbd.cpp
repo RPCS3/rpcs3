@@ -22,6 +22,7 @@
 #include "Emu/Io/Buzz.h"
 #include "Emu/Io/buzz_config.h"
 #include "Emu/Io/GameTablet.h"
+#include "Emu/Io/GunCon3.h"
 #include "Emu/Io/Turntable.h"
 #include "Emu/Io/turntable_config.h"
 #include "Emu/Io/RB3MidiKeyboard.h"
@@ -339,8 +340,8 @@ usb_handler_thread::usb_handler_thread()
 		check_device(0x054C, 0x0042, 0x0042, "buzzer2");
 		check_device(0x046D, 0xC220, 0xC220, "buzzer9");
 
-		// GCon3 Gun
-		check_device(0x0B9A, 0x0800, 0x0800, "guncon3");
+		// GunCon3 Gun
+		check_device(0x0B9A, 0x0800, 0x0800, "GunCon3");
 
 		// uDraw GameTablet
 		check_device(0x20D6, 0xCB17, 0xCB17, "uDraw GameTablet");
@@ -484,6 +485,17 @@ usb_handler_thread::usb_handler_thread()
 	{
 		sys_usbd.notice("Adding emulated uDraw GameTablet");
 		usb_devices.push_back(std::make_shared<usb_device_gametablet>(get_new_location()));
+	}
+
+	if (g_cfg.io.guncon3 != guncon3_handler::disabled)
+	{
+		sys_usbd.notice("Adding emulated GunCon3 (controller 1)");
+		usb_devices.push_back(std::make_shared<usb_device_guncon3>(0, get_new_location()));
+	}
+	if (g_cfg.io.guncon3 == guncon3_handler::two_controllers)
+	{
+		sys_usbd.notice("Adding emulated GunCon3 (controller 2)");
+		usb_devices.push_back(std::make_shared<usb_device_guncon3>(1, get_new_location()));
 	}
 }
 

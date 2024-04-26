@@ -173,6 +173,13 @@ enum class gametablet_handler
 	enabled,
 };
 
+enum class guncon3_handler
+{
+	disabled,
+	one_controller,
+	two_controllers,
+};
+
 enum class microphone_handler
 {
 	null,
