@@ -27,6 +27,8 @@
 #include "util/simd.hpp"
 #include "util/sysinfo.hpp"
 
+#pragma optimize("", off)
+
 const extern spu_decoder<spu_itype> g_spu_itype;
 const extern spu_decoder<spu_iname> g_spu_iname;
 const extern spu_decoder<spu_iflag> g_spu_iflag;
@@ -2658,7 +2660,7 @@ reg_state_t reg_state_t::merge(const reg_state_t& rhs) const
 
 			if (res.known_zeroes | res.known_ones)
 			{
-				// Success
+				// Success (create new value tag)
 				res.tag = reg_state_t::alloc_tag();
 				return res;
 			}
@@ -3766,6 +3768,975 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		}
 	}
 
+	// Fill block info
+	for (auto& pred : m_preds)
+	{
+		auto& block = m_bbs[pred.first];
+
+		// Copy predeccessors (wrong at this point, needs a fixup later)
+		block.preds = pred.second;
+
+		// Fill register usage info
+		for (u32 ia = pred.first; ia < limit; ia += 4)
+		{
+			block.size++;
+
+			// Decode instruction
+			const spu_opcode_t op{std::bit_cast<be_t<u32>>(result.data[(ia - lsa) / 4])};
+
+			const auto type = g_spu_itype.decode(op.opcode);
+
+			u8 reg_save = 255;
+
+			if (type == spu_itype::STQD && op.ra == s_reg_sp && !block.reg_mod[op.rt] && !block.reg_use[op.rt])
+			{
+				// Register saved onto the stack before use
+				block.reg_save_dom[op.rt] = true;
+
+				reg_save = op.rt;
+			}
+
+			for (auto _use : std::initializer_list<std::pair<u32, bool>>{{op.ra, m_use_ra.test(ia / 4)}
+				, {op.rb, m_use_rb.test(ia / 4)}, {op.rc, m_use_rc.test(ia / 4)}})
+			{
+				if (_use.second)
+				{
+					const u32 reg = _use.first;
+
+					// Register reg use only if it happens before reg mod
+					if (!block.reg_mod[reg])
+					{
+						block.reg_use.set(reg);
+
+						if (reg_save != reg && block.reg_save_dom[reg])
+						{
+							// Register is still used after saving; probably not eligible for optimization
+							block.reg_save_dom[reg] = false;
+						}
+					}
+				}
+			}
+
+			if (type == spu_itype::WRCH && op.ra == MFC_Cmd)
+			{
+				// Expand MFC_Cmd reg use
+				for (u8 reg : {s_reg_mfc_lsa, s_reg_mfc_tag, s_reg_mfc_size})
+				{
+					if (!block.reg_mod[reg])
+						block.reg_use.set(reg);
+				}
+			}
+
+			// Register reg modification
+			if (u8 reg = m_regmod[ia / 4]; reg < s_reg_max)
+			{
+				block.reg_mod.set(reg);
+				block.reg_mod_xf.set(reg, type & spu_itype::xfloat);
+
+				if (type == spu_itype::SELB && (block.reg_mod_xf[op.ra] || block.reg_mod_xf[op.rb]))
+					block.reg_mod_xf.set(reg);
+
+				// Possible post-dominating register load
+				if (type == spu_itype::LQD && op.ra == s_reg_sp)
+					block.reg_load_mod[reg] = ia + 1;
+				else
+					block.reg_load_mod[reg] = 0;
+			}
+
+			// Find targets (also means end of the block)
+			const auto tfound = m_targets.find(ia);
+
+			if (tfound != m_targets.end())
+			{
+				// Copy targets
+				block.targets = tfound->second;
+
+				// Assume that the call reads and modifies all volatile registers (TODO)
+				bool is_call = false;
+				bool is_tail = false;
+				switch (type)
+				{
+				case spu_itype::BRSL:
+					is_call = spu_branch_target(ia, op.i16) != ia + 4;
+					break;
+				case spu_itype::BRASL:
+					is_call = spu_branch_target(0, op.i16) != ia + 4;
+					break;
+				case spu_itype::BISL:
+				case spu_itype::BISLED:
+					is_call = true;
+					break;
+				default:
+					break;
+				}
+
+				if (is_call)
+				{
+					for (u32 i = 0; i < s_reg_max; ++i)
+					{
+						if (i == s_reg_lr || (i >= 2 && i < s_reg_80) || i > s_reg_127)
+						{
+							if (!block.reg_mod[i])
+								block.reg_use.set(i);
+
+							if (!is_tail)
+							{
+								block.reg_mod.set(i);
+								block.reg_mod_xf[i] = false;
+							}
+						}
+					}
+				}
+
+				break;
+			}
+		}
+	}
+
+	// Fixup block predeccessors to point to basic blocks, not last instructions
+	for (auto& bb : m_bbs)
+	{
+		const u32 addr = bb.first;
+
+		for (u32& pred : bb.second.preds)
+		{
+			pred = std::prev(m_bbs.upper_bound(pred))->first;
+		}
+
+		if (m_entry_info[addr / 4] && g_cfg.core.spu_block_size == spu_block_size_type::giga)
+		{
+			// Register empty chunk
+			m_chunks.push_back(addr);
+
+			// Register function if necessary
+			if (!m_ret_info[addr / 4])
+			{
+				m_funcs[addr];
+			}
+		}
+	}
+
+	// Ensure there is a function at the lowest address
+	if (g_cfg.core.spu_block_size == spu_block_size_type::giga)
+	{
+		if (auto emp = m_funcs.try_emplace(m_bbs.begin()->first); emp.second)
+		{
+			const u32 addr = emp.first->first;
+			spu_log.error("[0x%05x] Fixed first function at 0x%05x", entry_point, addr);
+			m_entry_info[addr / 4] = true;
+			m_ret_info[addr / 4] = false;
+		}
+	}
+
+	// Split functions
+	while (g_cfg.core.spu_block_size == spu_block_size_type::giga)
+	{
+		bool need_repeat = false;
+
+		u32 start = 0;
+		u32 limit = 0x40000;
+
+		// Walk block list in ascending order
+		for (auto& block : m_bbs)
+		{
+			const u32 addr = block.first;
+
+			if (m_entry_info[addr / 4] && !m_ret_info[addr / 4])
+			{
+				const auto upper = m_funcs.upper_bound(addr);
+				start = addr;
+				limit = upper == m_funcs.end() ? 0x40000 : upper->first;
+			}
+
+			// Find targets that exceed [start; limit) range and make new functions from them
+			for (u32 target : block.second.targets)
+			{
+				const auto tfound = m_bbs.find(target);
+
+				if (tfound == m_bbs.end())
+				{
+					continue;
+				}
+
+				if (target < start || target >= limit)
+				{
+					if (!m_entry_info[target / 4] || m_ret_info[target / 4])
+					{
+						// Create new function entry (likely a tail call)
+						m_entry_info[target / 4] = true;
+
+						m_ret_info[target / 4] = false;
+
+						m_funcs.try_emplace(target);
+
+						if (target < limit)
+						{
+							need_repeat = true;
+						}
+					}
+				}
+			}
+
+			block.second.func = start;
+		}
+
+		if (!need_repeat)
+		{
+			break;
+		}
+	}
+
+	if (!m_bbs.count(entry_point))
+	{
+		// Invalid code
+		spu_log.error("[0x%x] Invalid code", entry_point);
+		return {};
+	}
+
+	// Fill entry map
+	while (true)
+	{
+		workload.clear();
+		workload.push_back(entry_point);
+		ensure(m_bbs.count(entry_point));
+
+		std::basic_string<u32> new_entries;
+
+		for (u32 wi = 0; wi < workload.size(); wi++)
+		{
+			const u32 addr = workload[wi];
+			auto& block = ::at32(m_bbs, addr);
+			const u32 _new = block.chunk;
+
+			if (!m_entry_info[addr / 4])
+			{
+				// Check block predecessors
+				for (u32 pred : block.preds)
+				{
+					const u32 _old = ::at32(m_bbs, pred).chunk;
+
+					if (_old < 0x40000 && _old != _new)
+					{
+						// If block has multiple 'entry' points, it becomes an entry point itself
+						new_entries.push_back(addr);
+					}
+				}
+			}
+
+			// Update chunk address
+			block.chunk = m_entry_info[addr / 4] ? addr : _new;
+
+			// Process block targets
+			for (u32 target : block.targets)
+			{
+				const auto tfound = m_bbs.find(target);
+
+				if (tfound == m_bbs.end())
+				{
+					continue;
+				}
+
+				auto& tb = tfound->second;
+
+				const u32 value = m_entry_info[target / 4] ? target : block.chunk;
+
+				if (u32& tval = tb.chunk; tval < 0x40000)
+				{
+					// TODO: fix condition
+					if (tval != value && !m_entry_info[target / 4])
+					{
+						new_entries.push_back(target);
+					}
+				}
+				else
+				{
+					tval = value;
+					workload.emplace_back(target);
+				}
+			}
+		}
+
+		if (new_entries.empty())
+		{
+			break;
+		}
+
+		for (u32 entry : new_entries)
+		{
+			m_entry_info[entry / 4] = true;
+
+			// Acknowledge artificial (reversible) chunk entry point
+			m_ret_info[entry / 4] = true;
+		}
+
+		for (auto& bb : m_bbs)
+		{
+			// Reset chunk info
+			bb.second.chunk = 0x40000;
+		}
+	}
+
+	workload.clear();
+	workload.push_back(entry_point);
+
+	// Fill workload adding targets
+	for (u32 wi = 0; wi < workload.size(); wi++)
+	{
+		const u32 addr = workload[wi];
+		auto& block = ::at32(m_bbs, addr);
+		block.analysed = true;
+
+		for (u32 target : block.targets)
+		{
+			const auto tfound = m_bbs.find(target);
+
+			if (tfound == m_bbs.end())
+			{
+				continue;
+			}
+
+			auto& tb = tfound->second;
+
+			if (!tb.analysed)
+			{
+				workload.push_back(target);
+				tb.analysed = true;
+			}
+
+			// Limited xfloat hint propagation (possibly TODO)
+			if (tb.chunk == block.chunk)
+			{
+				tb.reg_maybe_xf &= block.reg_mod_xf;
+			}
+			else
+			{
+				tb.reg_maybe_xf.reset();
+			}
+		}
+
+		block.reg_origin.fill(0x80000000);
+		block.reg_origin_abs.fill(0x80000000);
+	}
+
+	// Fill register origin info
+	while (true)
+	{
+		bool must_repeat = false;
+
+		for (u32 wi = 0; wi < workload.size(); wi++)
+		{
+			const u32 addr = workload[wi];
+			auto& block = ::at32(m_bbs, addr);
+
+			// Initialize entry point with default value: unknown origin (requires load)
+			if (m_entry_info[addr / 4])
+			{
+				for (u32 i = 0; i < s_reg_max; i++)
+				{
+					if (block.reg_origin[i] == 0x80000000)
+						block.reg_origin[i] = 0x40000;
+				}
+			}
+
+			if (g_cfg.core.spu_block_size == spu_block_size_type::giga && m_entry_info[addr / 4] && !m_ret_info[addr / 4])
+			{
+				for (u32 i = 0; i < s_reg_max; i++)
+				{
+					if (block.reg_origin_abs[i] == 0x80000000)
+						block.reg_origin_abs[i] = 0x40000;
+					else if (block.reg_origin_abs[i] + 1 == 0)
+						block.reg_origin_abs[i] = -2;
+				}
+			}
+
+			for (u32 target : block.targets)
+			{
+				const auto tfound = m_bbs.find(target);
+
+				if (tfound == m_bbs.end())
+				{
+					continue;
+				}
+
+				auto& tb = tfound->second;
+
+				for (u32 i = 0; i < s_reg_max; i++)
+				{
+					if (tb.chunk == block.chunk && tb.reg_origin[i] + 1)
+					{
+						const u32 expected = block.reg_mod[i] ? addr : block.reg_origin[i];
+
+						if (tb.reg_origin[i] == 0x80000000)
+						{
+							tb.reg_origin[i] = expected;
+						}
+						else if (tb.reg_origin[i] != expected)
+						{
+							// Set -1 if multiple origins merged (requires PHI node)
+							tb.reg_origin[i] = -1;
+
+							must_repeat |= !tb.targets.empty();
+						}
+					}
+
+					if (g_cfg.core.spu_block_size == spu_block_size_type::giga && tb.func == block.func && tb.reg_origin_abs[i] + 2)
+					{
+						const u32 expected = block.reg_mod[i] ? addr : block.reg_origin_abs[i];
+
+						if (tb.reg_origin_abs[i] == 0x80000000)
+						{
+							tb.reg_origin_abs[i] = expected;
+						}
+						else if (tb.reg_origin_abs[i] != expected)
+						{
+							if (tb.reg_origin_abs[i] == 0x40000 || expected + 2 == 0 || expected == 0x40000)
+							{
+								// Set -2: sticky value indicating possible external reg origin (0x40000)
+								tb.reg_origin_abs[i] = -2;
+
+								must_repeat |= !tb.targets.empty();
+							}
+							else if (tb.reg_origin_abs[i] + 1)
+							{
+								tb.reg_origin_abs[i] = -1;
+
+								must_repeat |= !tb.targets.empty();
+							}
+						}
+					}
+				}
+			}
+		}
+
+		if (!must_repeat)
+		{
+			break;
+		}
+
+		for (u32 wi = 0; wi < workload.size(); wi++)
+		{
+			const u32 addr = workload[wi];
+			auto& block = ::at32(m_bbs, addr);
+
+			// Reset values for the next attempt (keep negative values)
+			for (u32 i = 0; i < s_reg_max; i++)
+			{
+				if (block.reg_origin[i] <= 0x40000)
+					block.reg_origin[i] = 0x80000000;
+				if (block.reg_origin_abs[i] <= 0x40000)
+					block.reg_origin_abs[i] = 0x80000000;
+			}
+		}
+	}
+
+	// Fill more block info
+	for (u32 wi = 0; wi < workload.size(); wi++)
+	{
+		if (g_cfg.core.spu_block_size != spu_block_size_type::giga)
+		{
+			break;
+		}
+
+		const u32 addr = workload[wi];
+		auto& bb = ::at32(m_bbs, addr);
+		auto& func = ::at32(m_funcs, bb.func);
+
+		// Update function size
+		func.size = std::max<u16>(func.size, bb.size + (addr - bb.func) / 4);
+
+		// Copy constants according to reg origin info
+		for (u32 i = 0; i < s_reg_max; i++)
+		{
+			const u32 orig = bb.reg_origin_abs[i];
+
+			if (orig < 0x40000)
+			{
+				auto& src = ::at32(m_bbs, orig);
+				bb.reg_const[i] = src.reg_const[i];
+				bb.reg_val32[i] = src.reg_val32[i];
+			}
+
+			if (!bb.reg_save_dom[i] && bb.reg_use[i] && (orig == 0x40000 || orig + 2 == 0))
+			{
+				// Destroy offset if external reg value is used
+				func.reg_save_off[i] = -1;
+			}
+		}
+
+		if (u32 orig = bb.reg_origin_abs[s_reg_sp]; orig < 0x40000)
+		{
+			auto& prologue = ::at32(m_bbs, orig);
+
+			// Copy stack offset (from the assumed prologue)
+			bb.stack_sub = prologue.stack_sub;
+		}
+		else if (orig > 0x40000)
+		{
+			// Unpredictable stack
+			bb.stack_sub = 0x80000000;
+		}
+
+		spu_opcode_t op{};
+
+		auto last_inst = spu_itype::UNK;
+
+		for (u32 ia = addr; ia < addr + bb.size * 4; ia += 4)
+		{
+			// Decode instruction again
+			op.opcode = std::bit_cast<be_t<u32>>(result.data[(ia - lsa) / 41]);
+			last_inst = g_spu_itype.decode(op.opcode);
+
+			// Propagate some constants
+			switch (last_inst)
+			{
+			case spu_itype::IL:
+			{
+				bb.reg_const[op.rt] = true;
+				bb.reg_val32[op.rt] = op.si16;
+				break;
+			}
+			case spu_itype::ILA:
+			{
+				bb.reg_const[op.rt] = true;
+				bb.reg_val32[op.rt] = op.i18;
+				break;
+			}
+			case spu_itype::ILHU:
+			{
+				bb.reg_const[op.rt] = true;
+				bb.reg_val32[op.rt] = op.i16 << 16;
+				break;
+			}
+			case spu_itype::ILH:
+			{
+				bb.reg_const[op.rt] = true;
+				bb.reg_val32[op.rt] = op.i16 << 16 | op.i16;
+				break;
+			}
+			case spu_itype::IOHL:
+			{
+				bb.reg_val32[op.rt] = bb.reg_val32[op.rt] | op.i16;
+				break;
+			}
+			case spu_itype::ORI:
+			{
+				bb.reg_const[op.rt] = bb.reg_const[op.ra];
+				bb.reg_val32[op.rt] = bb.reg_val32[op.ra] | op.si10;
+				break;
+			}
+			case spu_itype::OR:
+			{
+				bb.reg_const[op.rt] = bb.reg_const[op.ra] && bb.reg_const[op.rb];
+				bb.reg_val32[op.rt] = bb.reg_val32[op.ra] | bb.reg_val32[op.rb];
+				break;
+			}
+			case spu_itype::AI:
+			{
+				bb.reg_const[op.rt] = bb.reg_const[op.ra];
+				bb.reg_val32[op.rt] = bb.reg_val32[op.ra] + op.si10;
+				break;
+			}
+			case spu_itype::A:
+			{
+				bb.reg_const[op.rt] = bb.reg_const[op.ra] && bb.reg_const[op.rb];
+				bb.reg_val32[op.rt] = bb.reg_val32[op.ra] + bb.reg_val32[op.rb];
+				break;
+			}
+			case spu_itype::SFI:
+			{
+				bb.reg_const[op.rt] = bb.reg_const[op.ra];
+				bb.reg_val32[op.rt] = op.si10 - bb.reg_val32[op.ra];
+				break;
+			}
+			case spu_itype::SF:
+			{
+				bb.reg_const[op.rt] = bb.reg_const[op.ra] && bb.reg_const[op.rb];
+				bb.reg_val32[op.rt] = bb.reg_val32[op.rb] - bb.reg_val32[op.ra];
+				break;
+			}
+			case spu_itype::STQD:
+			{
+				if (op.ra == s_reg_sp && bb.stack_sub != 0x80000000 && bb.reg_save_dom[op.rt])
+				{
+					const u32 offset = 0x80000000 + op.si10 * 16 - bb.stack_sub;
+
+					if (func.reg_save_off[op.rt] == 0)
+					{
+						// Store reg save offset
+						func.reg_save_off[op.rt] = offset;
+					}
+					else if (func.reg_save_off[op.rt] != offset)
+					{
+						// Conflict of different offsets
+						func.reg_save_off[op.rt] = -1;
+					}
+				}
+
+				break;
+			}
+			case spu_itype::LQD:
+			{
+				if (op.ra == s_reg_sp && bb.stack_sub != 0x80000000 && bb.reg_load_mod[op.rt] == ia + 1)
+				{
+					// Adjust reg load offset
+					bb.reg_load_mod[op.rt] = 0x80000000 + op.si10 * 16 - bb.stack_sub;
+				}
+
+				// Clear const
+				bb.reg_const[op.rt] = false;
+				break;
+			}
+			default:
+			{
+				// Clear const if reg is modified here
+				if (u8 reg = m_regmod[ia / 4]; reg < s_reg_max)
+					bb.reg_const[reg] = false;
+				break;
+			}
+			}
+
+			// $SP is modified
+			if (m_regmod[ia / 4] == s_reg_sp)
+			{
+				if (bb.reg_const[s_reg_sp])
+				{
+					// Making $SP a constant is a funny thing too.
+					bb.stack_sub = 0x80000000;
+				}
+
+				if (bb.stack_sub != 0x80000000)
+				{
+					switch (last_inst)
+					{
+					case spu_itype::AI:
+					{
+						if (op.ra == s_reg_sp)
+							bb.stack_sub -= op.si10;
+						else
+							bb.stack_sub = 0x80000000;
+						break;
+					}
+					case spu_itype::A:
+					{
+						if (op.ra == s_reg_sp && bb.reg_const[op.rb])
+							bb.stack_sub -= bb.reg_val32[op.rb];
+						else if (op.rb == s_reg_sp && bb.reg_const[op.ra])
+							bb.stack_sub -= bb.reg_val32[op.ra];
+						else
+							bb.stack_sub = 0x80000000;
+						break;
+					}
+					case spu_itype::SF:
+					{
+						if (op.rb == s_reg_sp && bb.reg_const[op.ra])
+							bb.stack_sub += bb.reg_val32[op.ra];
+						else
+							bb.stack_sub = 0x80000000;
+						break;
+					}
+					default:
+					{
+						bb.stack_sub = 0x80000000;
+						break;
+					}
+					}
+				}
+
+				// Check for funny values.
+				if (bb.stack_sub >= 0x40000 || bb.stack_sub % 16)
+				{
+					bb.stack_sub = 0x80000000;
+				}
+			}
+		}
+
+		// Analyse terminator instruction
+		const u32 tia = addr + bb.size * 4 - 4;
+
+		switch (last_inst)
+		{
+		case spu_itype::BR:
+		case spu_itype::BRNZ:
+		case spu_itype::BRZ:
+		case spu_itype::BRHNZ:
+		case spu_itype::BRHZ:
+		case spu_itype::BRSL:
+		{
+			const u32 target = spu_branch_target(tia, op.i16);
+
+			if (target == tia + 4)
+			{
+				bb.terminator = term_type::fallthrough;
+			}
+			else if (last_inst != spu_itype::BRSL)
+			{
+				// No-op terminator or simple branch instruction
+				bb.terminator = term_type::br;
+
+				if (target == bb.func)
+				{
+					// Recursive tail call
+					bb.terminator = term_type::ret;
+				}
+			}
+			else if (op.rt == s_reg_lr)
+			{
+				bb.terminator = term_type::call;
+			}
+			else
+			{
+				bb.terminator = term_type::interrupt_call;
+			}
+
+			break;
+		}
+		case spu_itype::BRA:
+		case spu_itype::BRASL:
+		{
+			bb.terminator = term_type::indirect_call;
+			break;
+		}
+		case spu_itype::BI:
+		{
+			if (op.d || op.e || bb.targets.size() == 1)
+			{
+				bb.terminator = term_type::interrupt_call;
+			}
+			else if (bb.targets.size() > 1)
+			{
+				// Jump table
+				bb.terminator = term_type::br;
+			}
+			else if (op.ra == s_reg_lr)
+			{
+				// Return (TODO)
+				bb.terminator = term_type::ret;
+			}
+			else
+			{
+				// Indirect tail call (TODO)
+				bb.terminator = term_type::interrupt_call;
+			}
+
+			break;
+		}
+		case spu_itype::BISLED:
+		case spu_itype::IRET:
+		{
+			bb.terminator = term_type::interrupt_call;
+			break;
+		}
+		case spu_itype::BISL:
+		case spu_itype::BIZ:
+		case spu_itype::BINZ:
+		case spu_itype::BIHZ:
+		case spu_itype::BIHNZ:
+		{
+			if (op.d || op.e || bb.targets.size() != 1)
+			{
+				bb.terminator = term_type::interrupt_call;
+			}
+			else if (last_inst != spu_itype::BISL && bb.targets[0] == tia + 4 && op.ra == s_reg_lr)
+			{
+				// Conditional return (TODO)
+				bb.terminator = term_type::ret;
+			}
+			else if (last_inst == spu_itype::BISL)
+			{
+				// Indirect call
+				bb.terminator = term_type::indirect_call;
+			}
+			else
+			{
+				// TODO
+				bb.terminator = term_type::interrupt_call;
+			}
+
+			break;
+		}
+		default:
+		{
+			// Normal instruction
+			bb.terminator = term_type::fallthrough;
+			break;
+		}
+		}
+	}
+
+	// Check function blocks, verify and print some reasons
+	for (auto& f : m_funcs)
+	{
+		if (g_cfg.core.spu_block_size != spu_block_size_type::giga)
+		{
+			break;
+		}
+
+		bool is_ok = true;
+
+		u32 used_stack = 0;
+
+		for (auto it = m_bbs.lower_bound(f.first); it != m_bbs.end() && it->second.func == f.first; ++it)
+		{
+			auto& bb = it->second;
+			auto& func = ::at32(m_funcs, bb.func);
+			const u32 addr = it->first;
+			const u32 flim = bb.func + func.size * 4;
+
+			used_stack |= bb.stack_sub;
+
+			if (is_ok && bb.terminator >= term_type::indirect_call)
+			{
+				is_ok = false;
+			}
+
+			if (is_ok && bb.terminator == term_type::ret)
+			{
+				// Check $LR (alternative return registers are currently not supported)
+				if (u32 lr_orig = bb.reg_mod[s_reg_lr] ? addr : bb.reg_origin_abs[s_reg_lr]; lr_orig < 0x40000)
+				{
+					auto& src = ::at32(m_bbs, lr_orig);
+
+					if (src.reg_load_mod[s_reg_lr] != func.reg_save_off[s_reg_lr])
+					{
+						spu_log.error("Function 0x%05x: [0x%05x] $LR mismatch (src=0x%x; 0x%x vs 0x%x)", f.first, addr, lr_orig, src.reg_load_mod[0], func.reg_save_off[0]);
+						is_ok = false;
+					}
+					else if (src.reg_load_mod[s_reg_lr] == 0)
+					{
+						spu_log.error("Function 0x%05x: [0x%05x] $LR modified (src=0x%x)", f.first, addr, lr_orig);
+						is_ok = false;
+					}
+				}
+				else if (lr_orig > 0x40000)
+				{
+					spu_log.todo("Function 0x%05x: [0x%05x] $LR unpredictable (src=0x%x)", f.first, addr, lr_orig);
+					is_ok = false;
+				}
+
+				// Check $80..$127 (should be restored or unmodified)
+				for (u32 i = s_reg_80; is_ok && i <= s_reg_127; i++)
+				{
+					if (u32 orig = bb.reg_mod[i] ? addr : bb.reg_origin_abs[i]; orig < 0x40000)
+					{
+						auto& src = ::at32(m_bbs, orig);
+
+						if (src.reg_load_mod[i] != func.reg_save_off[i])
+						{
+							spu_log.error("Function 0x%05x: [0x%05x] $%u mismatch (src=0x%x; 0x%x vs 0x%x)", f.first, addr, i, orig, src.reg_load_mod[i], func.reg_save_off[i]);
+							is_ok = false;
+						}
+					}
+					else if (orig > 0x40000)
+					{
+						spu_log.todo("Function 0x%05x: [0x%05x] $%u unpredictable (src=0x%x)", f.first, addr, i, orig);
+						is_ok = false;
+					}
+
+					if (func.reg_save_off[i] + 1 == 0)
+					{
+						spu_log.error("Function 0x%05x: [0x%05x] $%u used incorrectly", f.first, addr, i);
+						is_ok = false;
+					}
+				}
+
+				// Check $SP (should be restored or unmodified)
+				if (bb.stack_sub != 0 && bb.stack_sub != 0x80000000)
+				{
+					spu_log.error("Function 0x%05x: [0x%05x] return with stack frame 0x%x", f.first, addr, bb.stack_sub);
+					is_ok = false;
+				}
+			}
+
+			if (is_ok && bb.terminator == term_type::call)
+			{
+				// Check call instruction (TODO)
+				if (bb.stack_sub == 0)
+				{
+					// Call without a stack frame
+					spu_log.error("Function 0x%05x: [0x%05x] frameless call", f.first, addr);
+					is_ok = false;
+				}
+			}
+
+			if (is_ok && bb.terminator == term_type::fallthrough)
+			{
+				// Can't just fall out of the function
+				if (bb.targets.size() != 1 || bb.targets[0] >= flim)
+				{
+					spu_log.error("Function 0x%05x: [0x%05x] bad fallthrough to 0x%x", f.first, addr, bb.targets[0]);
+					is_ok = false;
+				}
+			}
+
+			if (is_ok && bb.stack_sub == 0x80000000)
+			{
+				spu_log.error("Function 0x%05x: [0x%05x] bad stack frame", f.first, addr);
+				is_ok = false;
+			}
+
+			// Fill external function targets (calls, possibly tail calls)
+			for (u32 target : bb.targets)
+			{
+				if (target < bb.func || target >= flim || (bb.terminator == term_type::call && target == bb.func))
+				{
+					if (func.calls.find_first_of(target) + 1 == 0)
+					{
+						func.calls.push_back(target);
+					}
+				}
+			}
+		}
+
+		if (is_ok && used_stack && f.first == entry_point)
+		{
+			spu_log.error("Function 0x%05x: considered possible chunk", f.first);
+			is_ok = false;
+		}
+
+		// if (is_ok && f.first > 0x1d240 && f.first < 0x1e000)
+		// {
+		// 	spu_log.error("Function 0x%05x: manually disabled", f.first);
+		// 	is_ok = false;
+		// }
+
+		f.second.good = is_ok;
+	}
+
+	// Check function call graph
+	while (g_cfg.core.spu_block_size == spu_block_size_type::giga)
+	{
+		bool need_repeat = false;
+
+		for (auto& f : m_funcs)
+		{
+			if (!f.second.good)
+			{
+				continue;
+			}
+
+			for (u32 call : f.second.calls)
+			{
+				const auto ffound = std::as_const(m_funcs).find(call);
+
+				if (ffound == m_funcs.cend() || ffound->second.good == false)
+				{
+					need_repeat = true;
+
+					if (f.second.good)
+					{
+						spu_log.error("Function 0x%05x: calls bad function (0x%05x)", f.first, call);
+						f.second.good = false;
+					}
+				}
+			}
+		}
+
+		if (!need_repeat)
+		{
+			break;
+		}
+	}
+
 	struct putllc16_statistics_t
 	{
 		atomic_t<u64> all = 0;
@@ -3794,6 +4765,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		bool active = false; // GETLLAR happened
 		u32 lsa_pc = SPU_LS_SIZE; // PC of first LSA write
 		u32 lsa_last_pc = SPU_LS_SIZE; // PC of first LSA write
+		u32 get_pc = SPU_LS_SIZE; // PC of GETLLAR
 		u32 put_pc = SPU_LS_SIZE; // PC of PUTLLC
 		reg_state_t ls{}; // state of LS load/store address register
 		reg_state_t ls_offs = reg_state_t::from_value(0); // Added value to ls
@@ -3833,7 +4805,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			ls_invalid = true;
 			ls_write |= write;
 
-			if (ls_write)
+			if (write)
 			{
 				return discard();
 			}
@@ -3852,18 +4824,21 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 	{
 		u32 pc{};
 		usz parent_iterator_index = umax;
+		usz parent_target_index = 0;
+		usz iterator_id = 0;
 
 		// PUTLLC16 optimization analysis tracker
 		atomic16_t atomic16{};
 
-		block_reg_state_iterator(u32 _pc, usz _parent_iterator_index = umax) noexcept
+		block_reg_state_iterator(u32 _pc, usz _parent_iterator_index = umax, usz _parent_target_index = 0) noexcept
 			: pc(_pc)
 			, parent_iterator_index(_parent_iterator_index)
+			, parent_target_index(_parent_target_index)
 		{
 		}
 	};
 
-	std::vector<std::unique_ptr<block_reg_state_iterator>> reg_state_it;
+	std::vector<block_reg_state_iterator> reg_state_it;
 
 	std::map<u32, atomic16_t> atomic16_all; // RdAtomicStat location -> atomic loop optimization state
 	std::map<u32, bool> getllar_starts; // True for failed loops
@@ -3904,7 +4879,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 	const reg_state_t start_program_count = reg_state_t::make_unknown();
 
 	// Initialize
-	reg_state_it.emplace_back(std::make_unique<block_reg_state_iterator>(entry_point));
+	reg_state_it.emplace_back(entry_point);
 	run_on_block[entry_point / 4] = true;
 
 	enum spu_addr_mask_t : u32
@@ -3915,6 +4890,10 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		SPU_LS_MASK_1   = (SPU_LS_SIZE - 1),
 	};
 
+	const bool log_it = result.data.size() == 0x5b && entry_point == 0x9a28;
+
+	u32 iterator_id_alloc = 0;
+
 	for (u32 wf = 0, wi = 0, wa = entry_point, bpc = wa; wf <= 1;)
 	{
 		const bool is_form_block = wf == 0;
@@ -3924,12 +4903,6 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 		if (!is_form_block && wa == bpc)
 		{
-			if (!should_search_patterns)
-			{
-				// TODO: Enable constant search for all
-				break;
-			}
-
 			if (wi == 0)
 			{
 				for (auto& [addr, block] : infos)
@@ -3939,6 +4912,40 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				}
 			}
 
+			if (!should_search_patterns)
+			{
+				// TODO: Enable constant search for all
+				break;
+			}
+
+			if (!infos[bpc])
+			{
+				std::string out = fmt::format("Blocks:");
+
+				for (auto& [pc, _] : infos)
+				{
+					if (!_) continue;
+					fmt::append(out, " [0x%x]", pc);
+				}
+
+				out += '\n';
+				for (auto& [pc, bb] : m_bbs)
+				{
+					if (!m_block_info[pc / 4])
+					{
+						continue;
+					}
+
+					out += fmt::format("\nTargets 0x%x:", pc);
+
+					for (auto addr : bb.targets)
+					{
+						fmt::append(out, " [0x%x]", addr);
+					}
+				}
+
+				spu_log.always()("%s", out);
+			}
 			true_state_walkby = &infos[bpc]->evaluate_start_state(infos);
 
 			for (reg_state_t& f : *true_state_walkby)
@@ -3953,7 +4960,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		}
 
 		auto& vregs = is_form_block ? infos[bpc]->local_state : *true_state_walkby;
-		auto& atomic16 = is_pattern_match ? ::at32(reg_state_it, wi)->atomic16 : dummy16;
+		auto& atomic16 = is_pattern_match ? ::at32(reg_state_it, wi).atomic16 : dummy16;
 
 		const u32 pos = wa;
 
@@ -4032,13 +5039,22 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			return abs_diff >= SPU_LS_SIZE / 2 ? SPU_LS_SIZE - abs_diff : abs_diff;
 		};
 
+		bool called_next = false;
+
 		const auto next_block = [&]()
 		{
-			// Reset value information
-			wi++;
+			if (called_next)
+			{
+				// Guard multiple calles to next_block()
+				return;
+			}
+
+			called_next = true;
 
 			if (wf == 0)
 			{
+				wi++;
+
 				auto& block = infos[bpc];
 
 				if (g_cfg.core.spu_block_size != spu_block_size_type::safe && (m_ret_info[bpc / 4] || m_entry_info[bpc / 4] || pos == entry_point))
@@ -4061,11 +5077,197 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 				block->addend_reg_state = block->local_state;
 			}
+			else
+			{
+				std::vector<u32> to_pop;
+
+				usz stackframe_it = wi;
+				usz stackframe_pc = SPU_LS_SIZE;
+				usz entry_index = umax;
+
+				auto get_block_targets = [&](u32 pc) -> const std::basic_string<u32>&
+				{
+					if (m_block_info[pc / 4] && m_bbs.count(pc))
+					{
+						return m_bbs.at(pc).targets;
+					}
+
+					static const std::basic_string<u32> s_empty;
+					return s_empty;
+				};
+
+				u32 target_pc = SPU_LS_SIZE;
+				bool insert_entry = false;
+				bool is_code_backdoor = false;
+
+				while (true)
+				{
+					const auto state_it = &reg_state_it[stackframe_it];
+
+					stackframe_pc = state_it->pc;
+					entry_index = state_it->parent_target_index;
+
+					const auto& targets = get_block_targets(stackframe_pc);
+
+					const usz target_size = targets.size();
+
+					while (entry_index < target_size && (targets[entry_index] < lsa || targets[entry_index] >= limit || !m_block_info[targets[entry_index] / 4]))
+					{
+						state_it->parent_target_index++;
+						entry_index = state_it->parent_target_index;
+					}
+
+					if (entry_index == target_size)
+					{
+						const usz parent_index = state_it->parent_iterator_index;
+
+						if (parent_index != umax)
+						{
+							to_pop.emplace_back(stackframe_it);
+							stackframe_it = parent_index;
+						}
+						else
+						{
+							spu_log.success("Clearing");
+							reg_state_it.clear();
+							break;
+						}
+					}
+					else
+					{
+						target_pc = ::at32(targets, entry_index);
+
+						// Check block duplication (terminating infinite loops)
+						// Even if duplicated, this still has impact by registering the end of the possible code path outcome
+						std::set<u32> positions;
+
+						u32 dup_pc = SPU_LS_SIZE;
+						u32 occurence_count = 0;
+
+						// Virtual concept (there is no really such thing as loop connectors from the ccompiled-code level)
+						// But it helps to simplify this process
+						bool is_loop_connector_or_too_extensive = false;
+
+						// Hack to avoid extensive analysis of all code paths possible:
+						// Allow up to 4 occurences of the upper-most block
+						// Because, loop "connectors" are usually backward in direction
+						// The proper solution would be to add a precursry function analysis stage which identifies all loop "connectors" and allows duplicates based on it
+						for (usz i = stackframe_it, count = 0;; count++)
+						{
+							if (count >= 100)
+							{
+								is_loop_connector_or_too_extensive = true;
+								break;
+							}
+
+							auto& entry = ::at32(reg_state_it, i);
+
+							const u32 entry_pc = entry.pc;
+
+							if (entry_pc == target_pc)
+							{
+								if (dup_pc == entry_pc)
+								{
+									occurence_count++;
+
+									if (occurence_count == 4)
+									{
+										is_loop_connector_or_too_extensive = true;
+										break;
+									}
+								}
+								else if (dup_pc > entry_pc)
+								{
+									dup_pc = entry_pc;
+								}
+							}
+
+							const usz parent = entry.parent_iterator_index;
+
+							if (parent == umax)
+							{
+								break;
+							}
+
+							ensure(i != parent);
+							i = parent;
+						}
+
+						insert_entry = true;
+
+						// Test if the code is an opening to external code (start of the function is always respected because it is already assumed to have no origin)
+						is_code_backdoor = m_ret_info[target_pc / 4] || (m_entry_info[target_pc / 4] && target_pc != entry_point);
+
+						if (is_code_backdoor || is_loop_connector_or_too_extensive)
+						{
+							// Allow the block to run only once, to avoid unnecessary iterations
+							if (run_on_block[target_pc / 4])
+							{
+								insert_entry = false;
+							}
+							else
+							{
+								run_on_block[target_pc / 4] = true;
+							}
+						}
+
+						state_it->parent_target_index++;
+
+						if (!insert_entry)
+						{
+							continue;
+						}
+
+						break;
+					}
+				}
+
+				// Backup analyser information
+				const auto atomic16_info = reg_state_it[stackframe_it].atomic16;
+
+				// Clean from the back possible because it does not affect old indices
+				// Technically should always do a full cleanup at the moment
+				// TODO: Proper cleanup with keeping old indices valid
+				for (u32 it : to_pop)
+				{
+					if (it == reg_state_it.size() - 1)
+					{
+						reg_state_it.pop_back();
+					}
+					else
+					{
+						// Should not be reachable at the moment
+						//ensure(false);
+					}
+				}
+
+				if (insert_entry)
+				{
+					const u32 target_size = get_block_targets(stackframe_pc).size();
+
+					spu_log.always()("Emplacing: wi=%d, pc=0x%x, target_it=%d/%d, new_pc=0x%x (has_it=%d)", stackframe_it, stackframe_pc, entry_index + 1, target_size, target_pc, atomic16_info.active);
+					auto& next = reg_state_it.emplace_back(target_pc, stackframe_it, 0);
+
+					if (!is_code_backdoor)
+					{
+						// Restore analyser information (if not an entry)
+						next.atomic16 = atomic16_info;
+					}
+					else if (atomic16_info.active)
+					{
+						break_putllc16(39, atomic16_info);
+					}
+
+					next.iterator_id = iterator_id_alloc++;
+					wi++;
+				}
+			}
 
 			if (wi >= reg_state_it.size())
 			{
 				wf++;
 				wi = 0;
+				run_on_block.clear();
 
 				if (wf == 1)
 				{
@@ -4073,14 +5275,14 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 					if (!infos.empty())
 					{
-						reg_state_it.emplace_back(std::make_unique<block_reg_state_iterator>(infos.begin()->second->pc));
+						reg_state_it.emplace_back(::at32(infos, entry_point)->pc).iterator_id = iterator_id_alloc++;;
 					}
 				}
 			}
 
 			if (wi < reg_state_it.size())
 			{
-				wa = ::at32(reg_state_it, wi)->pc;
+				wa = ::at32(reg_state_it, wi).pc;
 				bpc = wa;
 			}
 		};
@@ -4150,54 +5352,26 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 		const auto add_block = [&](u32 target)
 		{
+			if (!is_form_block)
+			{
+				return;
+			}
+
 			// Validate new target (TODO)
-			if (target >= lsa && (target & -4) < limit)
+			if (target >= lsa && target < limit)
 			{
 				if (!infos[target])
 				{
 					infos[target] = block_reg_info::create(target);
 				}
 
-				if (is_form_block)
+				block_reg_info::create_node(target, bpc, infos);
+
+				if (!run_on_block[target / 4])
 				{
-					block_reg_info::create_node(target, bpc, infos);
-
-					if (!run_on_block[target / 4])
-					{
-						reg_state_it.emplace_back(std::make_unique<block_reg_state_iterator>(target));
-						run_on_block[target / 4] = true;
-					}
-
-					return;
+					reg_state_it.emplace_back(target).iterator_id = iterator_id_alloc++;
+					run_on_block[target / 4] = true;
 				}
-
-				// Check block duplication (terminating infinite loops)
-				// Even if duplicated, this still has impact by registering the end of the possible code path outcome
-				std::set<u32> positions;
-
-				for (usz i = wi;;)
-				{
-					auto& entry = ::at32(reg_state_it, i);
-					AUDIT(positions.emplace(entry->pc).second);
-
-					if (entry->pc == target)
-					{
-						return;
-					}
-
-					const usz parent = entry->parent_iterator_index;
-
-					if (parent == umax)
-					{
-						break;
-					}
-
-					ensure(i != parent);
-					i = parent;
-				}
-
-				auto& next = reg_state_it.emplace_back(std::make_unique<block_reg_state_iterator>(target, wi));
-				next->atomic16 = ::at32(reg_state_it, wi)->atomic16;
 			}
 		};
 
@@ -4233,7 +5407,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		const auto type = g_spu_itype.decode(data);
 
 		// For debugging
-		if (false && likely_putllc_loop && is_pattern_match)
+		if (likely_putllc_loop && (log_it || is_pattern_match))
 		{
 			SPUDisAsm dis_asm(cpu_disasm_mode::dump, reinterpret_cast<const u8*>(result.data.data()), result.lower_bound);
 			dis_asm.disasm(pos);
@@ -4282,7 +5456,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				dis_asm.last_opcode.pop_back();
 			}
 
-			spu_log.always()("[SPU=0%x, wi=%d] %s%s", pos, wi, dis_asm.last_opcode, consts);
+			spu_log.always()("[SPU=0%x, it=%d] %s%s     [%d]", pos, reg_state_it[wi].iterator_id, dis_asm.last_opcode, consts, atomic16.active);
 		}
 
 		// Analyse instruction
@@ -4428,10 +5602,20 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					{
 					case MFC_GETLLAR_CMD:
 					{
-						break_putllc16(30, atomic16.discard());
+						const u32 lsa_pc = atomic16.lsa_last_pc == SPU_LS_SIZE ? bpc : atomic16.lsa_last_pc;
+
+						if (atomic16.active)
+						{
+							if (atomic16.lsa_pc != lsa_pc || atomic16.get_pc != pos)
+							{
+								break_putllc16(30, atomic16.discard());
+								break;
+							}
+						}
 
 						// If LSA write has not happened, use block start
-						atomic16.lsa_pc = atomic16.lsa_last_pc == SPU_LS_SIZE ? bpc : atomic16.lsa_last_pc;
+						atomic16.lsa_pc = lsa_pc;
+						atomic16.get_pc = pos;
 						atomic16.active = true;
 
 						const auto lsa = get_reg(s_reg_mfc_lsa);
@@ -5415,975 +6599,6 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		}
 	}
 
-	// Fill block info
-	for (auto& pred : m_preds)
-	{
-		auto& block = m_bbs[pred.first];
-
-		// Copy predeccessors (wrong at this point, needs a fixup later)
-		block.preds = pred.second;
-
-		// Fill register usage info
-		for (u32 ia = pred.first; ia < limit; ia += 4)
-		{
-			block.size++;
-
-			// Decode instruction
-			const spu_opcode_t op{std::bit_cast<be_t<u32>>(result.data[(ia - lsa) / 4])};
-
-			const auto type = g_spu_itype.decode(op.opcode);
-
-			u8 reg_save = 255;
-
-			if (type == spu_itype::STQD && op.ra == s_reg_sp && !block.reg_mod[op.rt] && !block.reg_use[op.rt])
-			{
-				// Register saved onto the stack before use
-				block.reg_save_dom[op.rt] = true;
-
-				reg_save = op.rt;
-			}
-
-			for (auto _use : std::initializer_list<std::pair<u32, bool>>{{op.ra, m_use_ra.test(ia / 4)}
-				, {op.rb, m_use_rb.test(ia / 4)}, {op.rc, m_use_rc.test(ia / 4)}})
-			{
-				if (_use.second)
-				{
-					const u32 reg = _use.first;
-
-					// Register reg use only if it happens before reg mod
-					if (!block.reg_mod[reg])
-					{
-						block.reg_use.set(reg);
-
-						if (reg_save != reg && block.reg_save_dom[reg])
-						{
-							// Register is still used after saving; probably not eligible for optimization
-							block.reg_save_dom[reg] = false;
-						}
-					}
-				}
-			}
-
-			if (type == spu_itype::WRCH && op.ra == MFC_Cmd)
-			{
-				// Expand MFC_Cmd reg use
-				for (u8 reg : {s_reg_mfc_lsa, s_reg_mfc_tag, s_reg_mfc_size})
-				{
-					if (!block.reg_mod[reg])
-						block.reg_use.set(reg);
-				}
-			}
-
-			// Register reg modification
-			if (u8 reg = m_regmod[ia / 4]; reg < s_reg_max)
-			{
-				block.reg_mod.set(reg);
-				block.reg_mod_xf.set(reg, type & spu_itype::xfloat);
-
-				if (type == spu_itype::SELB && (block.reg_mod_xf[op.ra] || block.reg_mod_xf[op.rb]))
-					block.reg_mod_xf.set(reg);
-
-				// Possible post-dominating register load
-				if (type == spu_itype::LQD && op.ra == s_reg_sp)
-					block.reg_load_mod[reg] = ia + 1;
-				else
-					block.reg_load_mod[reg] = 0;
-			}
-
-			// Find targets (also means end of the block)
-			const auto tfound = m_targets.find(ia);
-
-			if (tfound != m_targets.end())
-			{
-				// Copy targets
-				block.targets = tfound->second;
-
-				// Assume that the call reads and modifies all volatile registers (TODO)
-				bool is_call = false;
-				bool is_tail = false;
-				switch (type)
-				{
-				case spu_itype::BRSL:
-					is_call = spu_branch_target(ia, op.i16) != ia + 4;
-					break;
-				case spu_itype::BRASL:
-					is_call = spu_branch_target(0, op.i16) != ia + 4;
-					break;
-				case spu_itype::BISL:
-				case spu_itype::BISLED:
-					is_call = true;
-					break;
-				default:
-					break;
-				}
-
-				if (is_call)
-				{
-					for (u32 i = 0; i < s_reg_max; ++i)
-					{
-						if (i == s_reg_lr || (i >= 2 && i < s_reg_80) || i > s_reg_127)
-						{
-							if (!block.reg_mod[i])
-								block.reg_use.set(i);
-
-							if (!is_tail)
-							{
-								block.reg_mod.set(i);
-								block.reg_mod_xf[i] = false;
-							}
-						}
-					}
-				}
-
-				break;
-			}
-		}
-	}
-
-	// Fixup block predeccessors to point to basic blocks, not last instructions
-	for (auto& bb : m_bbs)
-	{
-		const u32 addr = bb.first;
-
-		for (u32& pred : bb.second.preds)
-		{
-			pred = std::prev(m_bbs.upper_bound(pred))->first;
-		}
-
-		if (m_entry_info[addr / 4] && g_cfg.core.spu_block_size == spu_block_size_type::giga)
-		{
-			// Register empty chunk
-			m_chunks.push_back(addr);
-
-			// Register function if necessary
-			if (!m_ret_info[addr / 4])
-			{
-				m_funcs[addr];
-			}
-		}
-	}
-
-	// Ensure there is a function at the lowest address
-	if (g_cfg.core.spu_block_size == spu_block_size_type::giga)
-	{
-		if (auto emp = m_funcs.try_emplace(m_bbs.begin()->first); emp.second)
-		{
-			const u32 addr = emp.first->first;
-			spu_log.error("[0x%05x] Fixed first function at 0x%05x", entry_point, addr);
-			m_entry_info[addr / 4] = true;
-			m_ret_info[addr / 4] = false;
-		}
-	}
-
-	// Split functions
-	while (g_cfg.core.spu_block_size == spu_block_size_type::giga)
-	{
-		bool need_repeat = false;
-
-		u32 start = 0;
-		u32 limit = 0x40000;
-
-		// Walk block list in ascending order
-		for (auto& block : m_bbs)
-		{
-			const u32 addr = block.first;
-
-			if (m_entry_info[addr / 4] && !m_ret_info[addr / 4])
-			{
-				const auto upper = m_funcs.upper_bound(addr);
-				start = addr;
-				limit = upper == m_funcs.end() ? 0x40000 : upper->first;
-			}
-
-			// Find targets that exceed [start; limit) range and make new functions from them
-			for (u32 target : block.second.targets)
-			{
-				const auto tfound = m_bbs.find(target);
-
-				if (tfound == m_bbs.end())
-				{
-					continue;
-				}
-
-				if (target < start || target >= limit)
-				{
-					if (!m_entry_info[target / 4] || m_ret_info[target / 4])
-					{
-						// Create new function entry (likely a tail call)
-						m_entry_info[target / 4] = true;
-
-						m_ret_info[target / 4] = false;
-
-						m_funcs.try_emplace(target);
-
-						if (target < limit)
-						{
-							need_repeat = true;
-						}
-					}
-				}
-			}
-
-			block.second.func = start;
-		}
-
-		if (!need_repeat)
-		{
-			break;
-		}
-	}
-
-	if (!m_bbs.count(entry_point))
-	{
-		// Invalid code
-		spu_log.error("[0x%x] Invalid code", entry_point);
-		return {};
-	}
-
-	// Fill entry map
-	while (true)
-	{
-		workload.clear();
-		workload.push_back(entry_point);
-		ensure(m_bbs.count(entry_point));
-
-		std::basic_string<u32> new_entries;
-
-		for (u32 wi = 0; wi < workload.size(); wi++)
-		{
-			const u32 addr = workload[wi];
-			auto& block = ::at32(m_bbs, addr);
-			const u32 _new = block.chunk;
-
-			if (!m_entry_info[addr / 4])
-			{
-				// Check block predecessors
-				for (u32 pred : block.preds)
-				{
-					const u32 _old = ::at32(m_bbs, pred).chunk;
-
-					if (_old < 0x40000 && _old != _new)
-					{
-						// If block has multiple 'entry' points, it becomes an entry point itself
-						new_entries.push_back(addr);
-					}
-				}
-			}
-
-			// Update chunk address
-			block.chunk = m_entry_info[addr / 4] ? addr : _new;
-
-			// Process block targets
-			for (u32 target : block.targets)
-			{
-				const auto tfound = m_bbs.find(target);
-
-				if (tfound == m_bbs.end())
-				{
-					continue;
-				}
-
-				auto& tb = tfound->second;
-
-				const u32 value = m_entry_info[target / 4] ? target : block.chunk;
-
-				if (u32& tval = tb.chunk; tval < 0x40000)
-				{
-					// TODO: fix condition
-					if (tval != value && !m_entry_info[target / 4])
-					{
-						new_entries.push_back(target);
-					}
-				}
-				else
-				{
-					tval = value;
-					workload.emplace_back(target);
-				}
-			}
-		}
-
-		if (new_entries.empty())
-		{
-			break;
-		}
-
-		for (u32 entry : new_entries)
-		{
-			m_entry_info[entry / 4] = true;
-
-			// Acknowledge artificial (reversible) chunk entry point
-			m_ret_info[entry / 4] = true;
-		}
-
-		for (auto& bb : m_bbs)
-		{
-			// Reset chunk info
-			bb.second.chunk = 0x40000;
-		}
-	}
-
-	workload.clear();
-	workload.push_back(entry_point);
-
-	// Fill workload adding targets
-	for (u32 wi = 0; wi < workload.size(); wi++)
-	{
-		const u32 addr = workload[wi];
-		auto& block = ::at32(m_bbs, addr);
-		block.analysed = true;
-
-		for (u32 target : block.targets)
-		{
-			const auto tfound = m_bbs.find(target);
-
-			if (tfound == m_bbs.end())
-			{
-				continue;
-			}
-
-			auto& tb = tfound->second;
-
-			if (!tb.analysed)
-			{
-				workload.push_back(target);
-				tb.analysed = true;
-			}
-
-			// Limited xfloat hint propagation (possibly TODO)
-			if (tb.chunk == block.chunk)
-			{
-				tb.reg_maybe_xf &= block.reg_mod_xf;
-			}
-			else
-			{
-				tb.reg_maybe_xf.reset();
-			}
-		}
-
-		block.reg_origin.fill(0x80000000);
-		block.reg_origin_abs.fill(0x80000000);
-	}
-
-	// Fill register origin info
-	while (true)
-	{
-		bool must_repeat = false;
-
-		for (u32 wi = 0; wi < workload.size(); wi++)
-		{
-			const u32 addr = workload[wi];
-			auto& block = ::at32(m_bbs, addr);
-
-			// Initialize entry point with default value: unknown origin (requires load)
-			if (m_entry_info[addr / 4])
-			{
-				for (u32 i = 0; i < s_reg_max; i++)
-				{
-					if (block.reg_origin[i] == 0x80000000)
-						block.reg_origin[i] = 0x40000;
-				}
-			}
-
-			if (g_cfg.core.spu_block_size == spu_block_size_type::giga && m_entry_info[addr / 4] && !m_ret_info[addr / 4])
-			{
-				for (u32 i = 0; i < s_reg_max; i++)
-				{
-					if (block.reg_origin_abs[i] == 0x80000000)
-						block.reg_origin_abs[i] = 0x40000;
-					else if (block.reg_origin_abs[i] + 1 == 0)
-						block.reg_origin_abs[i] = -2;
-				}
-			}
-
-			for (u32 target : block.targets)
-			{
-				const auto tfound = m_bbs.find(target);
-
-				if (tfound == m_bbs.end())
-				{
-					continue;
-				}
-
-				auto& tb = tfound->second;
-
-				for (u32 i = 0; i < s_reg_max; i++)
-				{
-					if (tb.chunk == block.chunk && tb.reg_origin[i] + 1)
-					{
-						const u32 expected = block.reg_mod[i] ? addr : block.reg_origin[i];
-
-						if (tb.reg_origin[i] == 0x80000000)
-						{
-							tb.reg_origin[i] = expected;
-						}
-						else if (tb.reg_origin[i] != expected)
-						{
-							// Set -1 if multiple origins merged (requires PHI node)
-							tb.reg_origin[i] = -1;
-
-							must_repeat |= !tb.targets.empty();
-						}
-					}
-
-					if (g_cfg.core.spu_block_size == spu_block_size_type::giga && tb.func == block.func && tb.reg_origin_abs[i] + 2)
-					{
-						const u32 expected = block.reg_mod[i] ? addr : block.reg_origin_abs[i];
-
-						if (tb.reg_origin_abs[i] == 0x80000000)
-						{
-							tb.reg_origin_abs[i] = expected;
-						}
-						else if (tb.reg_origin_abs[i] != expected)
-						{
-							if (tb.reg_origin_abs[i] == 0x40000 || expected + 2 == 0 || expected == 0x40000)
-							{
-								// Set -2: sticky value indicating possible external reg origin (0x40000)
-								tb.reg_origin_abs[i] = -2;
-
-								must_repeat |= !tb.targets.empty();
-							}
-							else if (tb.reg_origin_abs[i] + 1)
-							{
-								tb.reg_origin_abs[i] = -1;
-
-								must_repeat |= !tb.targets.empty();
-							}
-						}
-					}
-				}
-			}
-		}
-
-		if (!must_repeat)
-		{
-			break;
-		}
-
-		for (u32 wi = 0; wi < workload.size(); wi++)
-		{
-			const u32 addr = workload[wi];
-			auto& block = ::at32(m_bbs, addr);
-
-			// Reset values for the next attempt (keep negative values)
-			for (u32 i = 0; i < s_reg_max; i++)
-			{
-				if (block.reg_origin[i] <= 0x40000)
-					block.reg_origin[i] = 0x80000000;
-				if (block.reg_origin_abs[i] <= 0x40000)
-					block.reg_origin_abs[i] = 0x80000000;
-			}
-		}
-	}
-
-	// Fill more block info
-	for (u32 wi = 0; wi < workload.size(); wi++)
-	{
-		if (g_cfg.core.spu_block_size != spu_block_size_type::giga)
-		{
-			break;
-		}
-
-		const u32 addr = workload[wi];
-		auto& bb = ::at32(m_bbs, addr);
-		auto& func = ::at32(m_funcs, bb.func);
-
-		// Update function size
-		func.size = std::max<u16>(func.size, bb.size + (addr - bb.func) / 4);
-
-		// Copy constants according to reg origin info
-		for (u32 i = 0; i < s_reg_max; i++)
-		{
-			const u32 orig = bb.reg_origin_abs[i];
-
-			if (orig < 0x40000)
-			{
-				auto& src = ::at32(m_bbs, orig);
-				bb.reg_const[i] = src.reg_const[i];
-				bb.reg_val32[i] = src.reg_val32[i];
-			}
-
-			if (!bb.reg_save_dom[i] && bb.reg_use[i] && (orig == 0x40000 || orig + 2 == 0))
-			{
-				// Destroy offset if external reg value is used
-				func.reg_save_off[i] = -1;
-			}
-		}
-
-		if (u32 orig = bb.reg_origin_abs[s_reg_sp]; orig < 0x40000)
-		{
-			auto& prologue = ::at32(m_bbs, orig);
-
-			// Copy stack offset (from the assumed prologue)
-			bb.stack_sub = prologue.stack_sub;
-		}
-		else if (orig > 0x40000)
-		{
-			// Unpredictable stack
-			bb.stack_sub = 0x80000000;
-		}
-
-		spu_opcode_t op{};
-
-		auto last_inst = spu_itype::UNK;
-
-		for (u32 ia = addr; ia < addr + bb.size * 4; ia += 4)
-		{
-			// Decode instruction again
-			op.opcode = std::bit_cast<be_t<u32>>(result.data[(ia - lsa) / 41]);
-			last_inst = g_spu_itype.decode(op.opcode);
-
-			// Propagate some constants
-			switch (last_inst)
-			{
-			case spu_itype::IL:
-			{
-				bb.reg_const[op.rt] = true;
-				bb.reg_val32[op.rt] = op.si16;
-				break;
-			}
-			case spu_itype::ILA:
-			{
-				bb.reg_const[op.rt] = true;
-				bb.reg_val32[op.rt] = op.i18;
-				break;
-			}
-			case spu_itype::ILHU:
-			{
-				bb.reg_const[op.rt] = true;
-				bb.reg_val32[op.rt] = op.i16 << 16;
-				break;
-			}
-			case spu_itype::ILH:
-			{
-				bb.reg_const[op.rt] = true;
-				bb.reg_val32[op.rt] = op.i16 << 16 | op.i16;
-				break;
-			}
-			case spu_itype::IOHL:
-			{
-				bb.reg_val32[op.rt] = bb.reg_val32[op.rt] | op.i16;
-				break;
-			}
-			case spu_itype::ORI:
-			{
-				bb.reg_const[op.rt] = bb.reg_const[op.ra];
-				bb.reg_val32[op.rt] = bb.reg_val32[op.ra] | op.si10;
-				break;
-			}
-			case spu_itype::OR:
-			{
-				bb.reg_const[op.rt] = bb.reg_const[op.ra] && bb.reg_const[op.rb];
-				bb.reg_val32[op.rt] = bb.reg_val32[op.ra] | bb.reg_val32[op.rb];
-				break;
-			}
-			case spu_itype::AI:
-			{
-				bb.reg_const[op.rt] = bb.reg_const[op.ra];
-				bb.reg_val32[op.rt] = bb.reg_val32[op.ra] + op.si10;
-				break;
-			}
-			case spu_itype::A:
-			{
-				bb.reg_const[op.rt] = bb.reg_const[op.ra] && bb.reg_const[op.rb];
-				bb.reg_val32[op.rt] = bb.reg_val32[op.ra] + bb.reg_val32[op.rb];
-				break;
-			}
-			case spu_itype::SFI:
-			{
-				bb.reg_const[op.rt] = bb.reg_const[op.ra];
-				bb.reg_val32[op.rt] = op.si10 - bb.reg_val32[op.ra];
-				break;
-			}
-			case spu_itype::SF:
-			{
-				bb.reg_const[op.rt] = bb.reg_const[op.ra] && bb.reg_const[op.rb];
-				bb.reg_val32[op.rt] = bb.reg_val32[op.rb] - bb.reg_val32[op.ra];
-				break;
-			}
-			case spu_itype::STQD:
-			{
-				if (op.ra == s_reg_sp && bb.stack_sub != 0x80000000 && bb.reg_save_dom[op.rt])
-				{
-					const u32 offset = 0x80000000 + op.si10 * 16 - bb.stack_sub;
-
-					if (func.reg_save_off[op.rt] == 0)
-					{
-						// Store reg save offset
-						func.reg_save_off[op.rt] = offset;
-					}
-					else if (func.reg_save_off[op.rt] != offset)
-					{
-						// Conflict of different offsets
-						func.reg_save_off[op.rt] = -1;
-					}
-				}
-
-				break;
-			}
-			case spu_itype::LQD:
-			{
-				if (op.ra == s_reg_sp && bb.stack_sub != 0x80000000 && bb.reg_load_mod[op.rt] == ia + 1)
-				{
-					// Adjust reg load offset
-					bb.reg_load_mod[op.rt] = 0x80000000 + op.si10 * 16 - bb.stack_sub;
-				}
-
-				// Clear const
-				bb.reg_const[op.rt] = false;
-				break;
-			}
-			default:
-			{
-				// Clear const if reg is modified here
-				if (u8 reg = m_regmod[ia / 4]; reg < s_reg_max)
-					bb.reg_const[reg] = false;
-				break;
-			}
-			}
-
-			// $SP is modified
-			if (m_regmod[ia / 4] == s_reg_sp)
-			{
-				if (bb.reg_const[s_reg_sp])
-				{
-					// Making $SP a constant is a funny thing too.
-					bb.stack_sub = 0x80000000;
-				}
-
-				if (bb.stack_sub != 0x80000000)
-				{
-					switch (last_inst)
-					{
-					case spu_itype::AI:
-					{
-						if (op.ra == s_reg_sp)
-							bb.stack_sub -= op.si10;
-						else
-							bb.stack_sub = 0x80000000;
-						break;
-					}
-					case spu_itype::A:
-					{
-						if (op.ra == s_reg_sp && bb.reg_const[op.rb])
-							bb.stack_sub -= bb.reg_val32[op.rb];
-						else if (op.rb == s_reg_sp && bb.reg_const[op.ra])
-							bb.stack_sub -= bb.reg_val32[op.ra];
-						else
-							bb.stack_sub = 0x80000000;
-						break;
-					}
-					case spu_itype::SF:
-					{
-						if (op.rb == s_reg_sp && bb.reg_const[op.ra])
-							bb.stack_sub += bb.reg_val32[op.ra];
-						else
-							bb.stack_sub = 0x80000000;
-						break;
-					}
-					default:
-					{
-						bb.stack_sub = 0x80000000;
-						break;
-					}
-					}
-				}
-
-				// Check for funny values.
-				if (bb.stack_sub >= 0x40000 || bb.stack_sub % 16)
-				{
-					bb.stack_sub = 0x80000000;
-				}
-			}
-		}
-
-		// Analyse terminator instruction
-		const u32 tia = addr + bb.size * 4 - 4;
-
-		switch (last_inst)
-		{
-		case spu_itype::BR:
-		case spu_itype::BRNZ:
-		case spu_itype::BRZ:
-		case spu_itype::BRHNZ:
-		case spu_itype::BRHZ:
-		case spu_itype::BRSL:
-		{
-			const u32 target = spu_branch_target(tia, op.i16);
-
-			if (target == tia + 4)
-			{
-				bb.terminator = term_type::fallthrough;
-			}
-			else if (last_inst != spu_itype::BRSL)
-			{
-				// No-op terminator or simple branch instruction
-				bb.terminator = term_type::br;
-
-				if (target == bb.func)
-				{
-					// Recursive tail call
-					bb.terminator = term_type::ret;
-				}
-			}
-			else if (op.rt == s_reg_lr)
-			{
-				bb.terminator = term_type::call;
-			}
-			else
-			{
-				bb.terminator = term_type::interrupt_call;
-			}
-
-			break;
-		}
-		case spu_itype::BRA:
-		case spu_itype::BRASL:
-		{
-			bb.terminator = term_type::indirect_call;
-			break;
-		}
-		case spu_itype::BI:
-		{
-			if (op.d || op.e || bb.targets.size() == 1)
-			{
-				bb.terminator = term_type::interrupt_call;
-			}
-			else if (bb.targets.size() > 1)
-			{
-				// Jump table
-				bb.terminator = term_type::br;
-			}
-			else if (op.ra == s_reg_lr)
-			{
-				// Return (TODO)
-				bb.terminator = term_type::ret;
-			}
-			else
-			{
-				// Indirect tail call (TODO)
-				bb.terminator = term_type::interrupt_call;
-			}
-
-			break;
-		}
-		case spu_itype::BISLED:
-		case spu_itype::IRET:
-		{
-			bb.terminator = term_type::interrupt_call;
-			break;
-		}
-		case spu_itype::BISL:
-		case spu_itype::BIZ:
-		case spu_itype::BINZ:
-		case spu_itype::BIHZ:
-		case spu_itype::BIHNZ:
-		{
-			if (op.d || op.e || bb.targets.size() != 1)
-			{
-				bb.terminator = term_type::interrupt_call;
-			}
-			else if (last_inst != spu_itype::BISL && bb.targets[0] == tia + 4 && op.ra == s_reg_lr)
-			{
-				// Conditional return (TODO)
-				bb.terminator = term_type::ret;
-			}
-			else if (last_inst == spu_itype::BISL)
-			{
-				// Indirect call
-				bb.terminator = term_type::indirect_call;
-			}
-			else
-			{
-				// TODO
-				bb.terminator = term_type::interrupt_call;
-			}
-
-			break;
-		}
-		default:
-		{
-			// Normal instruction
-			bb.terminator = term_type::fallthrough;
-			break;
-		}
-		}
-	}
-
-	// Check function blocks, verify and print some reasons
-	for (auto& f : m_funcs)
-	{
-		if (g_cfg.core.spu_block_size != spu_block_size_type::giga)
-		{
-			break;
-		}
-
-		bool is_ok = true;
-
-		u32 used_stack = 0;
-
-		for (auto it = m_bbs.lower_bound(f.first); it != m_bbs.end() && it->second.func == f.first; ++it)
-		{
-			auto& bb = it->second;
-			auto& func = ::at32(m_funcs, bb.func);
-			const u32 addr = it->first;
-			const u32 flim = bb.func + func.size * 4;
-
-			used_stack |= bb.stack_sub;
-
-			if (is_ok && bb.terminator >= term_type::indirect_call)
-			{
-				is_ok = false;
-			}
-
-			if (is_ok && bb.terminator == term_type::ret)
-			{
-				// Check $LR (alternative return registers are currently not supported)
-				if (u32 lr_orig = bb.reg_mod[s_reg_lr] ? addr : bb.reg_origin_abs[s_reg_lr]; lr_orig < 0x40000)
-				{
-					auto& src = ::at32(m_bbs, lr_orig);
-
-					if (src.reg_load_mod[s_reg_lr] != func.reg_save_off[s_reg_lr])
-					{
-						spu_log.error("Function 0x%05x: [0x%05x] $LR mismatch (src=0x%x; 0x%x vs 0x%x)", f.first, addr, lr_orig, src.reg_load_mod[0], func.reg_save_off[0]);
-						is_ok = false;
-					}
-					else if (src.reg_load_mod[s_reg_lr] == 0)
-					{
-						spu_log.error("Function 0x%05x: [0x%05x] $LR modified (src=0x%x)", f.first, addr, lr_orig);
-						is_ok = false;
-					}
-				}
-				else if (lr_orig > 0x40000)
-				{
-					spu_log.todo("Function 0x%05x: [0x%05x] $LR unpredictable (src=0x%x)", f.first, addr, lr_orig);
-					is_ok = false;
-				}
-
-				// Check $80..$127 (should be restored or unmodified)
-				for (u32 i = s_reg_80; is_ok && i <= s_reg_127; i++)
-				{
-					if (u32 orig = bb.reg_mod[i] ? addr : bb.reg_origin_abs[i]; orig < 0x40000)
-					{
-						auto& src = ::at32(m_bbs, orig);
-
-						if (src.reg_load_mod[i] != func.reg_save_off[i])
-						{
-							spu_log.error("Function 0x%05x: [0x%05x] $%u mismatch (src=0x%x; 0x%x vs 0x%x)", f.first, addr, i, orig, src.reg_load_mod[i], func.reg_save_off[i]);
-							is_ok = false;
-						}
-					}
-					else if (orig > 0x40000)
-					{
-						spu_log.todo("Function 0x%05x: [0x%05x] $%u unpredictable (src=0x%x)", f.first, addr, i, orig);
-						is_ok = false;
-					}
-
-					if (func.reg_save_off[i] + 1 == 0)
-					{
-						spu_log.error("Function 0x%05x: [0x%05x] $%u used incorrectly", f.first, addr, i);
-						is_ok = false;
-					}
-				}
-
-				// Check $SP (should be restored or unmodified)
-				if (bb.stack_sub != 0 && bb.stack_sub != 0x80000000)
-				{
-					spu_log.error("Function 0x%05x: [0x%05x] return with stack frame 0x%x", f.first, addr, bb.stack_sub);
-					is_ok = false;
-				}
-			}
-
-			if (is_ok && bb.terminator == term_type::call)
-			{
-				// Check call instruction (TODO)
-				if (bb.stack_sub == 0)
-				{
-					// Call without a stack frame
-					spu_log.error("Function 0x%05x: [0x%05x] frameless call", f.first, addr);
-					is_ok = false;
-				}
-			}
-
-			if (is_ok && bb.terminator == term_type::fallthrough)
-			{
-				// Can't just fall out of the function
-				if (bb.targets.size() != 1 || bb.targets[0] >= flim)
-				{
-					spu_log.error("Function 0x%05x: [0x%05x] bad fallthrough to 0x%x", f.first, addr, bb.targets[0]);
-					is_ok = false;
-				}
-			}
-
-			if (is_ok && bb.stack_sub == 0x80000000)
-			{
-				spu_log.error("Function 0x%05x: [0x%05x] bad stack frame", f.first, addr);
-				is_ok = false;
-			}
-
-			// Fill external function targets (calls, possibly tail calls)
-			for (u32 target : bb.targets)
-			{
-				if (target < bb.func || target >= flim || (bb.terminator == term_type::call && target == bb.func))
-				{
-					if (func.calls.find_first_of(target) + 1 == 0)
-					{
-						func.calls.push_back(target);
-					}
-				}
-			}
-		}
-
-		if (is_ok && used_stack && f.first == entry_point)
-		{
-			spu_log.error("Function 0x%05x: considered possible chunk", f.first);
-			is_ok = false;
-		}
-
-		// if (is_ok && f.first > 0x1d240 && f.first < 0x1e000)
-		// {
-		// 	spu_log.error("Function 0x%05x: manually disabled", f.first);
-		// 	is_ok = false;
-		// }
-
-		f.second.good = is_ok;
-	}
-
-	// Check function call graph
-	while (g_cfg.core.spu_block_size == spu_block_size_type::giga)
-	{
-		bool need_repeat = false;
-
-		for (auto& f : m_funcs)
-		{
-			if (!f.second.good)
-			{
-				continue;
-			}
-
-			for (u32 call : f.second.calls)
-			{
-				const auto ffound = std::as_const(m_funcs).find(call);
-
-				if (ffound == m_funcs.cend() || ffound->second.good == false)
-				{
-					need_repeat = true;
-
-					if (f.second.good)
-					{
-						spu_log.error("Function 0x%05x: calls bad function (0x%05x)", f.first, call);
-						f.second.good = false;
-					}
-				}
-			}
-		}
-
-		if (!need_repeat)
-		{
-			break;
-		}
-	}
-
 	std::string func_hash;
 	if (!result.data.empty())
 	{
@@ -6416,8 +6631,6 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			add_pattern(false, inst_attr::putllc0, pattern.put_pc - lsa);
 			continue;
 		}
-
-		ensure(!pattern.ls_invalid);
 
 		union putllc16_info
 		{
@@ -7296,6 +7509,7 @@ std::array<reg_state_t, s_reg_max>& block_reg_info::evaluate_start_state(const s
 {
 	if (!has_true_state)
 	{
+		std::array<reg_state_t, s_reg_max> temp;
 		std::basic_string<u32> been_there;
 
 		struct iterator_info
@@ -7313,11 +7527,12 @@ std::array<reg_state_t, s_reg_max>& block_reg_info::evaluate_start_state(const s
 			std::vector<state_t> state_prev;
 			usz completed = 0;
 			usz parent_iterator_index = umax;
+			usz parent_state_index = umax;
 		};
 
 		std::vector<iterator_info> info_queue;
 
-		iterator_info first_entry{pc, {}, 0, umax};
+		iterator_info first_entry{pc, {}, 0, umax, umax};
 		info_queue.emplace_back(std::move(first_entry));
 
 		// info_queue may grow
@@ -7395,8 +7610,6 @@ std::array<reg_state_t, s_reg_max>& block_reg_info::evaluate_start_state(const s
 					}
 				}
 
-				std::array<reg_state_t, s_reg_max> temp;
-
 				if (qi == 0)
 				{
 					// TODO: First block is always resolved here, but this logic can be improved to detect more cases of opportunistic resolving
@@ -7453,19 +7666,15 @@ std::array<reg_state_t, s_reg_max>& block_reg_info::evaluate_start_state(const s
 					ensure(it->parent_iterator_index != qi);
 					ensure(it->parent_iterator_index != umax);
 
-					auto& state = ::at32(info_queue, it->parent_iterator_index).state_prev;
+					auto& state_vec = ::at32(info_queue, it->parent_iterator_index).state_prev;
+					auto& state = ::at32(state_vec, it->parent_state_index);
 
-					for (usz i = 0;; i++)
-					{
-						ensure(i < state.size());
+					ensure(state.block_pc == it->block_pc);
 
-						if (state[i].block_pc == it->block_pc)
-						{
-							result_storage = std::addressof(state[i].reg_state);
-							state[i].state_written = true;
-							break;
-						}
-					}
+					result_storage = std::addressof(state.reg_state);
+
+					ensure(!state.state_written);
+					state.state_written = true;
 				}
 
 				// Stack the newer state on top of the old (if exists)
@@ -7499,33 +7708,28 @@ std::array<reg_state_t, s_reg_max>& block_reg_info::evaluate_start_state(const s
 				// Queue for resolving if needed
 				if (!prev_node->has_true_state)
 				{
-					const bool loop_detected = been_there.find_first_of(prev_pc) != umax;
-					const bool avoid_extensive_analysis = qi >= 500;
+					// TODO: The true maximum occurence count need to depend on the amount of branching-outs passed through
+					// Currently allow 2 for short-term code and 1 for long-term code
+					const bool loop_terminator_detected = std::count(been_there.begin(), been_there.end(), prev_pc) >= (qi < 20 ? 2u : 1u);
+					const bool avoid_extensive_analysis = qi >= 25;
 
-					if (!loop_detected && !avoid_extensive_analysis)
+					if (!loop_terminator_detected && !avoid_extensive_analysis)
 					{
-						info_queue.emplace_back(iterator_info{prev_pc, {}, 0, qi});
+						info_queue.emplace_back(iterator_info{prev_pc, {}, 0, qi, it->completed - 1});
 						been_there.push_back(prev_pc);
 						qi++;
 					}
 					else
 					{
-						auto& state = it->state_prev;
+						auto& state = ::at32(it->state_prev, it->completed - 1);
 
-						for (usz i = 0;; i++)
-						{
-							ensure(i < state.size());
-
-							if (state[i].block_pc == prev_pc)
-							{
-								// Loop state, even if not ignored for a million times the result would be the same
-								// This is similar to multiplying zero a million times
-								// This is true at least for now, that any register difference is considered an unknown state change
-								// So ignore it
-								state[i].disconnected = true;
-								break;
-							}
-						}
+						// Loop state, even if not ignored for a million times the result would be the same
+						// This is similar to multiplying zero a million times
+						// This is true at least for now, that any register difference is considered an unknown state change
+						// So ignore it
+						ensure(state.block_pc == prev_pc);
+						ensure(!state.disconnected);
+						state.disconnected = true;
 
 						// Repeat
 						// qi += 0;
