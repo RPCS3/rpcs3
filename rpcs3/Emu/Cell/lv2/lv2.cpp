@@ -976,6 +976,7 @@ enum CellSpursCoreError : u32;
 enum CellSpursPolicyModuleError : u32;
 enum CellSpursTaskError : u32;
 enum CellSpursJobError : u32;
+enum CellSyncError : u32;
 
 enum CellGameError : u32;
 enum CellGameDataError : u32;
@@ -999,6 +1000,7 @@ const std::map<u64, void(*)(std::string&, u64)> s_error_codes_formatting_by_type
 	formatter_of<0x8002b260, CellAudioInError>,
 	formatter_of<0x8002b220, CellVideoOutError>,
 
+	formatter_of<0x80410100, CellSyncError>,
 	formatter_of<0x80410700, CellSpursCoreError>,
 	formatter_of<0x80410800, CellSpursPolicyModuleError>,
 	formatter_of<0x80410900, CellSpursTaskError>,

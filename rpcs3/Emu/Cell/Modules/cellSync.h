@@ -4,6 +4,8 @@
 
 #include "Utilities/BitField.h"
 
+#include "Emu/Cell/ErrorCodes.h"
+
 // Return Codes
 enum CellSyncError : u32
 {

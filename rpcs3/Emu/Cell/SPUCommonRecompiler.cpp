@@ -13,6 +13,8 @@
 #include "util/init_mutex.hpp"
 #include "util/shared_ptr.hpp"
 
+#include "Emu/Cell/Modules/cellSync.h"
+
 #include "SPUThread.h"
 #include "SPUAnalyser.h"
 #include "SPUInterpreter.h"
@@ -6422,6 +6424,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			u32 data;
 			bf_t<u32, 30, 2> type;
 			bf_t<u32, 29, 1> runtime16_select;
+			bf_t<u32, 28, 1> no_notify;
 			bf_t<u32, 18, 8> reg;
 			bf_t<u32, 0, 18> off18;
 			bf_t<u32, 0, 8> reg2;
@@ -6434,6 +6437,25 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			v_reg_offs = 2,
 			v_reg2 = 3,
 		};
+
+		for (auto it = infos.lower_bound(utils::sub_saturate<u32>(pattern.put_pc, 512)); it != infos.end() && it->first < pattern.put_pc + 512; it++)
+		{
+			for (auto& state : it->second->end_reg_state)
+			{
+				if (state.is_const() && (state.value & -0x20) == (CELL_SYNC_ERROR_ALIGN & -0x20))
+				{
+					// Do not notify if it is a cellSync function
+					value.no_notify = 1;
+					spu_log.success("Detected cellSync function at 0x%x, disabling reservation notification.", pattern.put_pc);
+					break;
+				}
+			}
+
+			if (value.no_notify)
+			{
+				break;
+			}
+		}
 
 		value.runtime16_select = pattern.select_16_or_0_at_runtime;
 		value.reg = s_reg_max;
