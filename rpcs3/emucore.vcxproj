@@ -80,6 +80,7 @@
     <ClCompile Include="Emu\Io\Turntable.cpp" />
     <ClCompile Include="Emu\Io\GameTablet.cpp" />
     <ClCompile Include="Emu\Io\GHLtar.cpp" />
+    <ClCompile Include="Emu\Io\GunCon3.cpp" />
     <ClCompile Include="Emu\Io\Buzz.cpp" />
     <ClCompile Include="Emu\Io\usio.cpp" />
     <ClCompile Include="Emu\Audio\AudioBackend.cpp" />
@@ -547,6 +548,7 @@
     <ClInclude Include="Emu\Io\Turntable.h" />
     <ClInclude Include="Emu\Io\GameTablet.h" />
     <ClInclude Include="Emu\Io\GHLtar.h" />
+    <ClInclude Include="Emu\Io\GunCon3.h" />
     <ClInclude Include="Emu\Io\Buzz.h" />
     <ClInclude Include="Emu\Io\turntable_config.h" />
     <ClInclude Include="Emu\Io\usio.h" />

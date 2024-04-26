@@ -1070,7 +1070,10 @@ void gs_frame::take_screenshot(std::vector<u8> data, u32 sshot_width, u32 sshot_
 
 void gs_frame::mouseDoubleClickEvent(QMouseEvent* ev)
 {
-	if (m_disable_mouse || g_cfg.io.move == move_handler::mouse || g_cfg.io.gametablet == gametablet_handler::enabled) return;
+	if (m_disable_mouse
+		|| g_cfg.io.move == move_handler::mouse
+		|| g_cfg.io.gametablet == gametablet_handler::enabled
+		|| g_cfg.io.guncon3 != guncon3_handler::disabled) return;
 #ifdef HAVE_LIBEVDEV
 	if (g_cfg.io.move == move_handler::gun) return;
 #endif

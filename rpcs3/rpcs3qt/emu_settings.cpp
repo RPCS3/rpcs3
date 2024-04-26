@@ -1095,6 +1095,14 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case gametablet_handler::enabled: return tr("Enabled", "GameTablet handler");
 		}
 		break;
+	case emu_settings_type::GunCon3:
+		switch (static_cast<guncon3_handler>(index))
+		{
+		case guncon3_handler::disabled: return tr("Disabled", "GunCon3 handler");
+		case guncon3_handler::one_controller: return tr("1 controller", "GunCon3 handler");
+		case guncon3_handler::two_controllers: return tr("2 controllers", "GunCon3 handler");
+		}
+		break;
 	case emu_settings_type::InternetStatus:
 		switch (static_cast<np_internet_status>(index))
 		{
