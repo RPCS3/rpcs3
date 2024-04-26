@@ -416,6 +416,7 @@ target_sources(rpcs3_emu PRIVATE
     Io/RB3MidiKeyboard.cpp
     Io/recording_config.cpp
     Io/Skylander.cpp
+    Io/TopShotElite.cpp
     Io/Turntable.cpp
     Io/usb_device.cpp
     Io/usb_vfs.cpp

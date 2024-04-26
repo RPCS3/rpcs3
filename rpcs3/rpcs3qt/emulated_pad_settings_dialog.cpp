@@ -5,6 +5,7 @@
 #include "Emu/Io/gem_config.h"
 #include "Emu/Io/ghltar_config.h"
 #include "Emu/Io/guncon3_config.h"
+#include "Emu/Io/topshotelite_config.h"
 #include "Emu/Io/turntable_config.h"
 #include "Emu/Io/usio_config.h"
 #include "util/asm.hpp"
@@ -90,6 +91,10 @@ emulated_pad_settings_dialog::emulated_pad_settings_dialog(pad_type type, QWidge
 		setWindowTitle(tr("Configure Emulated GunCon 3"));
 		add_tabs<guncon3_btn>(tabs);
 		break;
+	case emulated_pad_settings_dialog::pad_type::topshotelite:
+		setWindowTitle(tr("Configure Emulated Top Shot Elite"));
+		add_tabs<topshotelite_btn>(tabs);
+		break;
 	}
 
 	v_layout->addWidget(tabs);
@@ -131,6 +136,9 @@ void emulated_pad_settings_dialog::add_tabs(QTabWidget* tabs)
 	case pad_type::guncon3:
 		players = g_cfg_guncon3.players.size();
 		break;
+	case pad_type::topshotelite:
+		players = g_cfg_topshotelite.players.size();
+		break;
 	}
 
 	m_combos.resize(players);
@@ -158,7 +166,7 @@ void emulated_pad_settings_dialog::add_tabs(QTabWidget* tabs)
 				combo->setItemData(index, i, button_role::emulated_button);
 			}
 
-			if constexpr (std::is_same_v<T, guncon3_btn>)
+			if constexpr (std::is_same_v<T, guncon3_btn> || std::is_same_v<T, topshotelite_btn>)
 			{
 				for (int p = static_cast<int>(pad_button::mouse_button_1); p <= static_cast<int>(pad_button::mouse_button_8); p++)
 				{
@@ -190,6 +198,9 @@ void emulated_pad_settings_dialog::add_tabs(QTabWidget* tabs)
 				break;
 			case pad_type::guncon3:
 				saved_btn_id = ::at32(g_cfg_guncon3.players, player)->get_pad_button(static_cast<guncon3_btn>(id));
+				break;
+			case pad_type::topshotelite:
+				saved_btn_id = ::at32(g_cfg_topshotelite.players, player)->get_pad_button(static_cast<topshotelite_btn>(id));
 				break;
 			}
 
@@ -225,6 +236,9 @@ void emulated_pad_settings_dialog::add_tabs(QTabWidget* tabs)
 					break;
 				case pad_type::guncon3:
 					::at32(g_cfg_guncon3.players, player)->set_button(static_cast<guncon3_btn>(id), btn_id);
+					break;
+				case pad_type::topshotelite:
+					::at32(g_cfg_topshotelite.players, player)->set_button(static_cast<topshotelite_btn>(id), btn_id);
 					break;
 				}
 			});
@@ -286,6 +300,12 @@ void emulated_pad_settings_dialog::load_config()
 			cfg_log.notice("Could not load guncon3 config. Using defaults.");
 		}
 		break;
+	case emulated_pad_settings_dialog::pad_type::topshotelite:
+		if (!g_cfg_topshotelite.load())
+		{
+			cfg_log.notice("Could not load topshotelite config. Using defaults.");
+		}
+		break;
 	}
 }
 
@@ -311,6 +331,9 @@ void emulated_pad_settings_dialog::save_config()
 	case emulated_pad_settings_dialog::pad_type::guncon3:
 		g_cfg_guncon3.save();
 		break;
+	case emulated_pad_settings_dialog::pad_type::topshotelite:
+		g_cfg_topshotelite.save();
+		break;
 	}
 }
 
@@ -335,6 +358,9 @@ void emulated_pad_settings_dialog::reset_config()
 		break;
 	case emulated_pad_settings_dialog::pad_type::guncon3:
 		g_cfg_guncon3.from_default();
+		break;
+	case emulated_pad_settings_dialog::pad_type::topshotelite:
+		g_cfg_topshotelite.from_default();
 		break;
 	}
 
@@ -369,6 +395,9 @@ void emulated_pad_settings_dialog::reset_config()
 				break;
 			case pad_type::guncon3:
 				def_btn_id = ::at32(g_cfg_guncon3.players, player)->default_pad_button(static_cast<guncon3_btn>(data.toInt()));
+				break;
+			case pad_type::topshotelite:
+				def_btn_id = ::at32(g_cfg_topshotelite.players, player)->default_pad_button(static_cast<topshotelite_btn>(data.toInt()));
 				break;
 			}
 
