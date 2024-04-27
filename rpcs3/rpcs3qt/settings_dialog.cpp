@@ -465,14 +465,17 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	{
 		const std::map<video_resolution, u32> resolutions
 		{
-			{ video_resolution::_480,       psf::resolution_flag::_480p | psf::resolution_flag::_480p_16_9 },
-			{ video_resolution::_576,       psf::resolution_flag::_576p | psf::resolution_flag::_576p_16_9 },
-			{ video_resolution::_720,       psf::resolution_flag::_720p  },
-			{ video_resolution::_1080,      psf::resolution_flag::_1080p },
-			{ video_resolution::_1600x1080, psf::resolution_flag::_1080p },
-			{ video_resolution::_1440x1080, psf::resolution_flag::_1080p },
-			{ video_resolution::_1280x1080, psf::resolution_flag::_1080p },
-			{ video_resolution::_960x1080,  psf::resolution_flag::_1080p },
+			{ video_resolution::_480p,      psf::resolution_flag::_480 | psf::resolution_flag::_480_16_9 },
+			{ video_resolution::_480i,      psf::resolution_flag::_480 | psf::resolution_flag::_480_16_9 },
+			{ video_resolution::_576p,      psf::resolution_flag::_576 | psf::resolution_flag::_576_16_9 },
+			{ video_resolution::_576i,      psf::resolution_flag::_576 | psf::resolution_flag::_576_16_9 },
+			{ video_resolution::_720p,      psf::resolution_flag::_720  },
+			{ video_resolution::_1080p,     psf::resolution_flag::_1080 },
+			{ video_resolution::_1080i,     psf::resolution_flag::_1080 },
+			{ video_resolution::_1600x1080, psf::resolution_flag::_1080 },
+			{ video_resolution::_1440x1080, psf::resolution_flag::_1080 },
+			{ video_resolution::_1280x1080, psf::resolution_flag::_1080 },
+			{ video_resolution::_960x1080,  psf::resolution_flag::_1080 },
 		};
 
 		const int saved_index = ui->resBox->currentIndex();
@@ -496,7 +499,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	{
 		const auto [text, value] = get_data(ui->resBox, i);
 
-		if (static_cast<video_resolution>(value) == video_resolution::_720)
+		if (static_cast<video_resolution>(value) == video_resolution::_720p)
 		{
 			// Rename the default resolution for users
 			ui->resBox->setItemText(i, tr("1280x720 (Recommended)", "Resolution"));
