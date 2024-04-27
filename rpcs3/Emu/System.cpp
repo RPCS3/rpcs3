@@ -274,18 +274,21 @@ static void fixup_settings(const psf::registry* _psf)
 	{
 		const std::map<video_resolution, u32> resolutions
 		{
-			{ video_resolution::_480,       psf::resolution_flag::_480p | psf::resolution_flag::_480p_16_9 },
-			{ video_resolution::_576,       psf::resolution_flag::_576p | psf::resolution_flag::_576p_16_9 },
-			{ video_resolution::_720,       psf::resolution_flag::_720p  },
-			{ video_resolution::_1080,      psf::resolution_flag::_1080p },
-			{ video_resolution::_1600x1080, psf::resolution_flag::_1080p },
-			{ video_resolution::_1440x1080, psf::resolution_flag::_1080p },
-			{ video_resolution::_1280x1080, psf::resolution_flag::_1080p },
-			{ video_resolution::_960x1080,  psf::resolution_flag::_1080p },
+			{ video_resolution::_480p,      psf::resolution_flag::_480 | psf::resolution_flag::_480_16_9 },
+			{ video_resolution::_480i,      psf::resolution_flag::_480 | psf::resolution_flag::_480_16_9 },
+			{ video_resolution::_576p,      psf::resolution_flag::_576 | psf::resolution_flag::_576_16_9 },
+			{ video_resolution::_576i,      psf::resolution_flag::_576 | psf::resolution_flag::_576_16_9 },
+			{ video_resolution::_720p,      psf::resolution_flag::_720  },
+			{ video_resolution::_1080p,     psf::resolution_flag::_1080 },
+			{ video_resolution::_1080i,     psf::resolution_flag::_1080 },
+			{ video_resolution::_1600x1080, psf::resolution_flag::_1080 },
+			{ video_resolution::_1440x1080, psf::resolution_flag::_1080 },
+			{ video_resolution::_1280x1080, psf::resolution_flag::_1080 },
+			{ video_resolution::_960x1080,  psf::resolution_flag::_1080 },
 		};
 
 		const video_resolution resolution = g_cfg.video.resolution;
-		constexpr video_resolution new_resolution = video_resolution::_720;
+		constexpr video_resolution new_resolution = video_resolution::_720p;
 
 		if (!resolutions.contains(resolution) || !(psf_resolution & resolutions.at(resolution)))
 		{

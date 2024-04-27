@@ -728,7 +728,14 @@ namespace rsx
 
 	void avconf::save(utils::serial& ar)
 	{
-		ar(*this);
+		[[maybe_unused]] const s32 version = GET_OR_USE_SERIALIZATION_VERSION(ar.is_writing(), rsx);
+
+		ar(stereo_mode, format, aspect, resolution_id, scanline_pitch, gamma, resolution_x, resolution_y, state);
+
+		if (ar.is_writing() || version >= 3)
+		{
+			ar(scan_mode);
+		}
 	}
 
 	void thread::capture_frame(const std::string &name)
