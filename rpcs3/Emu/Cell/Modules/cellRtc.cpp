@@ -1268,20 +1268,20 @@ error_code cellRtcTickAddMonths(ppu_thread& ppu, vm::ptr<CellRtcTick> pTick0, vm
 	const u16 new_year = total_months / 12;
 	const u16 new_month = total_months - new_year * 12 + 1;
 
-	u16 month_days;
+	s32 month_days;
 
 	if (new_year == 0u || new_month < 1u || new_month > 12u)
 	{
-		month_days = static_cast<u16>(CELL_RTC_ERROR_INVALID_ARG); // LLE writes the error to this variable
+		month_days = CELL_RTC_ERROR_INVALID_ARG; // LLE writes the error to this variable
 	}
 	else
 	{
 		month_days = is_leap_year(new_year) ? DAYS_IN_MONTH_LEAP[new_month - 1] : DAYS_IN_MONTH[new_month - 1];
 	}
 
-	if (month_days < date_time->day)
+	if (month_days < static_cast<s32>(date_time->day))
 	{
-		date_time->day = month_days;
+		date_time->day = static_cast<u16>(month_days);
 	}
 
 	date_time->month = new_month;
@@ -1313,20 +1313,20 @@ error_code cellRtcTickAddYears(ppu_thread& ppu, vm::ptr<CellRtcTick> pTick0, vm:
 	const u16 month = date_time->month;
 	const u16 new_year = date_time->year + iAdd;
 
-	u16 month_days;
+	s32 month_days;
 
 	if (new_year == 0u || month < 1u || month > 12u)
 	{
-		month_days = static_cast<u16>(CELL_RTC_ERROR_INVALID_ARG); // LLE writes the error to this variable
+		month_days = CELL_RTC_ERROR_INVALID_ARG; // LLE writes the error to this variable
 	}
 	else
 	{
 		month_days = is_leap_year(new_year) ? DAYS_IN_MONTH_LEAP[month - 1] : DAYS_IN_MONTH[month - 1];
 	}
 
-	if (month_days < date_time->day)
+	if (month_days < static_cast<s32>(date_time->day))
 	{
-		date_time->day = month_days;
+		date_time->day = static_cast<u16>(month_days);
 	}
 
 	date_time->year = new_year;
@@ -1397,6 +1397,7 @@ error_code cellRtcGetCurrentSecureTick(ppu_thread& ppu, vm::ptr<CellRtcTick> tic
 		case 2: ret = CELL_RTC_ERROR_NOT_INITIALIZED; break;
 		case 4: ret = CELL_RTC_ERROR_INVALID_VALUE; break;
 		case 8: ret = CELL_RTC_ERROR_NO_CLOCK; break;
+		default: return ret;
 		}
 	}
 
