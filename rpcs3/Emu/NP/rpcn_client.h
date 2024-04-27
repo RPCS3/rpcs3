@@ -437,9 +437,18 @@ namespace rpcn
 		void remove_message_cb(message_cb_func cb_func, void* cb_param);
 		void mark_message_used(u64 id);
 
-		bool is_connected() const;
-		bool is_authentified() const;
-		rpcn_state get_rpcn_state() const;
+		bool is_connected() const
+		{
+			return connected;
+		}
+		bool is_authentified() const
+		{
+			return authentified;
+		}
+		rpcn_state get_rpcn_state() const
+		{
+			return state;
+		}
 
 		void server_infos_updated();
 
@@ -486,13 +495,44 @@ namespace rpcn
 		bool tus_delete_multislot_data(u32 req_id, SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, s32 arrayNum, bool vuser);
 		bool send_presence(const SceNpCommunicationId& pr_com_id, const std::string& pr_title, const std::string& pr_status, const std::string& pr_comment, const std::vector<u8>& pr_data);
 
-		const std::string& get_online_name() const;
-		const std::string& get_avatar_url() const;
+		const std::string& get_online_name() const
+		{
+			return online_name;
+		}
+		const std::string& get_avatar_url() const
+		{
+			return avatar_url;
+		}
 
-		u32 get_addr_sig() const;
-		u16 get_port_sig() const;
-		u32 get_addr_local() const;
-		void update_local_addr(u32 addr);
+		u32 get_addr_sig() const
+		{
+			if (!addr_sig)
+			{
+				addr_sig.wait(0, static_cast<atomic_wait_timeout>(10'000'000'000));
+			}
+
+			return addr_sig.load();
+		}
+
+		u16 get_port_sig() const
+		{
+			if (!port_sig)
+			{
+				port_sig.wait(0, static_cast<atomic_wait_timeout>(10'000'000'000));
+			}
+
+			return port_sig.load();
+		}
+
+		u32 get_addr_local() const
+		{
+			return local_addr_sig.load();
+		}
+
+		void update_local_addr(u32 addr)
+		{
+			local_addr_sig = std::bit_cast<u32, be_t<u32>>(addr);
+		}
 
 	private:
 		bool get_reply(u64 expected_id, std::vector<u8>& data);

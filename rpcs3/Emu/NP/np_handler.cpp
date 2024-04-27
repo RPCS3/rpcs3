@@ -408,11 +408,11 @@ namespace np
 
 	void np_handler::init_np_handler_dependencies()
 	{
-		if (is_psn_active && g_cfg.net.psn_status == np_psn_status::psn_rpcn && g_fxo->is_init<p2p_context>() && !m_inited_np_handler_dependencies)
+		if (is_psn_active && g_cfg.net.psn_status == np_psn_status::psn_rpcn && g_fxo->is_init<network_context>() && !m_inited_np_handler_dependencies)
 		{
 			m_inited_np_handler_dependencies = true;
 
-			auto& nc = g_fxo->get<p2p_context>();
+			auto& nc = g_fxo->get<network_context>();
 			nc.bind_sce_np_port();
 
 			std::lock_guard lock(mutex_rpcn);
@@ -817,16 +817,6 @@ namespace np
 			string_to_online_name(rpcn->get_online_name(), online_name);
 			string_to_avatar_url(rpcn->get_avatar_url(), avatar_url);
 			public_ip_addr = rpcn->get_addr_sig();
-
-			if (!public_ip_addr)
-			{
-				rsx::overlays::queue_message(rpcn::rpcn_state_to_localized_string_id(rpcn::rpcn_state::failure_other));
-				rpcn_log.error("Failed to get a reply from RPCN signaling!");
-				is_psn_active = false;
-				rpcn->terminate_connection();
-				return;
-			}
-
 			local_ip_addr  = std::bit_cast<u32, be_t<u32>>(rpcn->get_addr_local());
 
 			break;
