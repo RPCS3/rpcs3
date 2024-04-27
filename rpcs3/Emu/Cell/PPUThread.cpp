@@ -3918,12 +3918,12 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 					mself_header hdr{};
 
 					if (mself.read(hdr) && hdr.get_count(mself.size()))
-					{
+					{						
+						std::set<u64> offs;
+
 						for (u32 j = 0; j < hdr.count; j++)
 						{
 							mself_record rec{};
-
-							std::set<u64> offs;
 
 							if (mself.read(rec) && rec.get_pos(mself.size()))
 							{
@@ -4165,7 +4165,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 			}
 
 			ppu_log.notice("Failed to precompile '%s' (prx: %s, ovl: %s): Attempting compilation as executable file", path, prx_err, ovl_err);
-			possible_exec_file_paths.push(path, offset, file_size);
+			possible_exec_file_paths.push(file_queue[func_i]);
 			inc_fdone = 0;
 		}
 
@@ -4680,8 +4680,15 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 			// Copy block or function entry
 			ppu_function& entry = part.funcs.emplace_back(func);
 
+			u32 og_func = entry.addr;
+
+			if (auto it = info.duplicate_map.find(entry.addr); it != info.duplicate_map.end())
+			{
+				og_func = it->second;
+			}
+
 			// Fixup some information
-			entry.name = fmt::format("__0x%x", entry.addr - reloc);
+			entry.name = fmt::format("__0x%x", og_func - reloc);
 
 			if (has_mfvscr && g_cfg.core.ppu_set_sat_bit)
 			{
@@ -4848,7 +4855,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 				settings += ppu_settings::contains_symbol_resolver; // Avoid invalidating all modules for this purpose
 
 			// Write version, hash, CPU, settings
-			fmt::append(obj_name, "v6-kusa-%s-%s-%s.obj", fmt::base57(output, 16), fmt::base57(settings), jit_compiler::cpu(g_cfg.core.llvm_cpu));
+			fmt::append(obj_name, "v7-kusa-%s-%s-%s.obj", fmt::base57(output, 16), fmt::base57(settings), jit_compiler::cpu(g_cfg.core.llvm_cpu));
 		}
 
 		if (cpu ? cpu->state.all_of(cpu_flag::exit) : Emu.IsStopped())
@@ -5086,6 +5093,9 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 	jit_mod.symbol_resolver(vm::g_exec_addr, info.segs[0].addr);
 
 	// Find a BLR-only function in order to copy it to all BLRs (some games need it)
+	bool early_exit = false;
+
+	// Get and install function addresses
 	for (const auto& func : info.funcs)
 	{
 		if (func.size == 4 && *info.get_ptr<u32>(func.addr) == ppu_instructions::BLR())
@@ -5156,6 +5166,11 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 	{
 		if (func.size)
 		{
+			if (auto it = module_part.duplicate_map.find(func.addr); it != module_part.duplicate_map.end() && it->second != it->first)
+			{
+				continue;
+			}
+
 			const auto f = cast<Function>(_module->getOrInsertFunction(func.name, _func).getCallee());
 			f->setCallingConv(CallingConv::GHC);
 			f->addParamAttr(1, llvm::Attribute::NoAlias);
@@ -5229,6 +5244,15 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 
 			if (module_part.funcs[fi].size)
 			{
+				const u32 faddr = module_part.funcs[fi].addr;
+				auto it = module_part.duplicate_map.find(faddr);
+
+				if (it != module_part.duplicate_map.end() && it->second != faddr)
+				{
+					ppu_log.trace("LLVM: Function 0x%x was skipped (duplicate)", faddr);
+					continue;
+				}
+
 				// Translate
 				if (const auto func = translator.Translate(module_part.funcs[fi]))
 				{
