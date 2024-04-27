@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "lv2_socket.h"
-#include "network_context.h"
 
 LOG_CHANNEL(sys_net);
 
@@ -68,17 +67,6 @@ void lv2_socket::poll_queue(std::shared_ptr<ppu_thread> ppu, bs_t<lv2_socket::po
 {
 	set_poll_event(event);
 	queue.emplace_back(std::move(ppu), poll_cb);
-
-	// Makes sure network_context thread is awaken
-	if (type == SYS_NET_SOCK_STREAM || type == SYS_NET_SOCK_DGRAM)
-	{
-		auto& nc = g_fxo->get<network_context>();
-		const u32 prev_value = nc.num_polls.fetch_add(1);
-		if (!prev_value)
-		{
-			nc.num_polls.notify_one();
-		}
-	}
 }
 
 s32 lv2_socket::clear_queue(ppu_thread* ppu)
@@ -93,14 +81,6 @@ s32 lv2_socket::clear_queue(ppu_thread* ppu)
 		{
 			it = queue.erase(it);
 			cleared++;
-
-			// Makes sure network_context thread can go back to sleep if there is no active polling
-			if (type == SYS_NET_SOCK_STREAM || type == SYS_NET_SOCK_DGRAM)
-			{
-				const u32 prev_value = g_fxo->get<network_context>().num_polls.fetch_sub(1);
-				ensure(prev_value);
-			}
-
 			continue;
 		}
 
