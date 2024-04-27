@@ -463,30 +463,26 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	bool saved_index_removed = false;
 	if (game && game->resolution > 0)
 	{
-		const std::map<u32, std::string> resolutions
+		const std::map<video_resolution, u32> resolutions
 		{
-			{ psf::resolution_flag::_480p,      fmt::format("%s", video_resolution::_480) },
-			{ psf::resolution_flag::_576p,      fmt::format("%s", video_resolution::_576) },
-			{ psf::resolution_flag::_720p,      fmt::format("%s", video_resolution::_720) },
-			{ psf::resolution_flag::_1080p,     fmt::format("%s", video_resolution::_1080) },
-			// { psf::resolution_flag::_480p_16_9, fmt::format("%s", video_resolution::_480p_16:9) },
-			// { psf::resolution_flag::_576p_16_9, fmt::format("%s", video_resolution::_576p_16:9) },
+			{ video_resolution::_480,       psf::resolution_flag::_480p | psf::resolution_flag::_480p_16_9 },
+			{ video_resolution::_576,       psf::resolution_flag::_576p | psf::resolution_flag::_576p_16_9 },
+			{ video_resolution::_720,       psf::resolution_flag::_720p  },
+			{ video_resolution::_1080,      psf::resolution_flag::_1080p },
+			{ video_resolution::_1600x1080, 0 },
+			{ video_resolution::_1440x1080, 0 },
+			{ video_resolution::_1280x1080, 0 },
+			{ video_resolution::_960x1080,  0 },
 		};
 
 		const int saved_index = ui->resBox->currentIndex();
 
 		for (int i = ui->resBox->count() - 1; i >= 0; i--)
 		{
-			bool has_resolution = false;
-			for (const auto& res : resolutions)
-			{
-				if ((game->resolution & res.first) && res.second == sstr(ui->resBox->itemText(i)))
-				{
-					has_resolution = true;
-					break;
-				}
-			}
-			if (!has_resolution)
+			const auto [text, value] = get_data(ui->resBox, i);
+			const video_resolution resolution = static_cast<video_resolution>(value);
+
+			if (!resolutions.contains(resolution) || !(game->resolution & resolutions.at(resolution)))
 			{
 				ui->resBox->removeItem(i);
 				if (i == saved_index)
@@ -500,7 +496,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	{
 		const auto [text, value] = get_data(ui->resBox, i);
 
-		if (text == "1280x720")
+		if (static_cast<video_resolution>(value) == video_resolution::_720)
 		{
 			// Rename the default resolution for users
 			ui->resBox->setItemText(i, tr("1280x720 (Recommended)", "Resolution"));
