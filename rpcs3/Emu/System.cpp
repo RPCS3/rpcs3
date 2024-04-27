@@ -247,7 +247,7 @@ void init_fxo_for_exec(utils::serial* ar, bool full = false)
 }
 
 // Some settings are not allowed in certain PPU decoders
-void fixup_ppu_settings()
+static void fixup_settings(const psf::registry* _psf)
 {
 	if (g_cfg.core.ppu_decoder != ppu_decoder_type::_static)
 	{
@@ -267,6 +267,30 @@ void fixup_ppu_settings()
 		{
 			sys_log.todo("The setting '%s' is currently not supported with PPU decoder type '%s' and will therefore be disabled during emulation.", g_cfg.core.ppu_set_fpcc.get_name(), g_cfg.core.ppu_decoder.get());
 			g_cfg.core.ppu_set_fpcc.set(false);
+		}
+	}
+
+	if (const u32 psf_resolution = _psf ? psf::get_integer(*_psf, "RESOLUTION", 0) : 0)
+	{
+		const std::map<video_resolution, u32> resolutions
+		{
+			{ video_resolution::_480,       psf::resolution_flag::_480p | psf::resolution_flag::_480p_16_9 },
+			{ video_resolution::_576,       psf::resolution_flag::_576p | psf::resolution_flag::_576p_16_9 },
+			{ video_resolution::_720,       psf::resolution_flag::_720p  },
+			{ video_resolution::_1080,      psf::resolution_flag::_1080p },
+			{ video_resolution::_1600x1080, 0 },
+			{ video_resolution::_1440x1080, 0 },
+			{ video_resolution::_1280x1080, 0 },
+			{ video_resolution::_960x1080,  0 },
+		};
+
+		const video_resolution resolution = g_cfg.video.resolution;
+		constexpr video_resolution new_resolution = video_resolution::_720;
+
+		if (!resolutions.contains(resolution) || !(psf_resolution & resolutions.at(resolution)))
+		{
+			sys_log.error("The game does not support a resolution of %s, so we are forcing the resolution to %s.", resolution, new_resolution);
+			g_cfg.video.resolution.set(new_resolution);
 		}
 	}
 }
@@ -442,7 +466,7 @@ void Emulator::Init()
 	}
 
 	// Disable incompatible settings
-	fixup_ppu_settings();
+	fixup_settings(nullptr);
 
 	// Backup config
 	g_backup_cfg.from_string(g_cfg.to_string());
@@ -1440,7 +1464,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			}
 
 			// Disable incompatible settings
-			fixup_ppu_settings();
+			fixup_settings(&_psf);
 
 			// Force audio provider
 			if (m_path.ends_with("vsh.self"sv))
@@ -1535,7 +1559,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			g_cfg.core.spu_cache.set(true);
 
 			// Disable incompatible settings
-			fixup_ppu_settings();
+			fixup_settings(&_psf);
 
 			// Force LLE lib loading mode
 			g_cfg.core.libraries_control.set_set([]()
