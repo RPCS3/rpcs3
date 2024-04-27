@@ -278,10 +278,10 @@ static void fixup_settings(const psf::registry* _psf)
 			{ video_resolution::_576,       psf::resolution_flag::_576p | psf::resolution_flag::_576p_16_9 },
 			{ video_resolution::_720,       psf::resolution_flag::_720p  },
 			{ video_resolution::_1080,      psf::resolution_flag::_1080p },
-			{ video_resolution::_1600x1080, 0 },
-			{ video_resolution::_1440x1080, 0 },
-			{ video_resolution::_1280x1080, 0 },
-			{ video_resolution::_960x1080,  0 },
+			{ video_resolution::_1600x1080, psf::resolution_flag::_1080p },
+			{ video_resolution::_1440x1080, psf::resolution_flag::_1080p },
+			{ video_resolution::_1280x1080, psf::resolution_flag::_1080p },
+			{ video_resolution::_960x1080,  psf::resolution_flag::_1080p },
 		};
 
 		const video_resolution resolution = g_cfg.video.resolution;

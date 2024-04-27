@@ -469,10 +469,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			{ video_resolution::_576,       psf::resolution_flag::_576p | psf::resolution_flag::_576p_16_9 },
 			{ video_resolution::_720,       psf::resolution_flag::_720p  },
 			{ video_resolution::_1080,      psf::resolution_flag::_1080p },
-			{ video_resolution::_1600x1080, 0 },
-			{ video_resolution::_1440x1080, 0 },
-			{ video_resolution::_1280x1080, 0 },
-			{ video_resolution::_960x1080,  0 },
+			{ video_resolution::_1600x1080, psf::resolution_flag::_1080p },
+			{ video_resolution::_1440x1080, psf::resolution_flag::_1080p },
+			{ video_resolution::_1280x1080, psf::resolution_flag::_1080p },
+			{ video_resolution::_960x1080,  psf::resolution_flag::_1080p },
 		};
 
 		const int saved_index = ui->resBox->currentIndex();
