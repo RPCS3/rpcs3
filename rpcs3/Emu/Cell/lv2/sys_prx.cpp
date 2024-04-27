@@ -100,7 +100,7 @@ extern const std::map<std::string_view, int> g_prx_list
 	{ "libpngdec.sprx", 0 },
 	{ "libpngenc.sprx", 0 },
 	{ "libresc.sprx", 0 },
-	{ "librtc.sprx", 0 },
+	{ "librtc.sprx", 1 },
 	{ "librudp.sprx", 0 },
 	{ "libsail.sprx", 0 },
 	{ "libsail_avi.sprx", 0 },
