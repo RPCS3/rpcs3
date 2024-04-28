@@ -5987,14 +5987,9 @@ public:
 		// This is odd since SPU code could just use the FM instruction, but it seems common enough
 		if (auto [ok, data] = get_const_vector(c.value, m_pos); ok)
 		{
-			if (is_spu_float_zero(data, -1))
+			if (is_spu_float_zero(data, 0))
 			{
 				return eval(a * b);
-			}
-
-			if (!m_use_fma && is_spu_float_zero(data, +1))
-			{
-				return eval(a * b + fsplat<f32[4]>(0.f));
 			}
 		}
 
@@ -6002,14 +5997,14 @@ public:
 		{
 			if (auto [ok, data] = get_const_vector(a.value, m_pos); ok)
 			{
-				if (!is_spu_float_zero(data, +1))
+				if (!is_spu_float_zero(data, 0))
 				{
 					return false;
 				}
 
 				if (auto [ok0, data0] = get_const_vector(b.value, m_pos); ok0)
 				{
-					if (is_spu_float_zero(data0, +1))
+					if (is_spu_float_zero(data0, 0))
 					{
 						return true;
 					}
@@ -6018,14 +6013,14 @@ public:
 
 			if (auto [ok, data] = get_const_vector(a.value, m_pos); ok)
 			{
-				if (!is_spu_float_zero(data, -1))
+				if (!is_spu_float_zero(data, 0))
 				{
 					return false;
 				}
 
 				if (auto [ok0, data0] = get_const_vector(b.value, m_pos); ok0)
 				{
-					if (is_spu_float_zero(data0, -1))
+					if (is_spu_float_zero(data0, 0))
 					{
 						return true;
 					}
