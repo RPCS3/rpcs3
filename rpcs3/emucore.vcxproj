@@ -283,6 +283,7 @@
     <ClCompile Include="Emu\Cell\Modules\cellAdec.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellAtrac.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellAtracMulti.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellAtracXdec.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellAudio.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellAudioOut.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellAuthDialog.cpp" />
@@ -804,6 +805,7 @@
     <ClInclude Include="Emu\Cell\Modules\cellAdec.h" />
     <ClInclude Include="Emu\Cell\Modules\cellAtrac.h" />
     <ClInclude Include="Emu\Cell\Modules\cellAtracMulti.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellAtracXdec.h" />
     <ClInclude Include="Emu\Cell\Modules\cellAudio.h" />
     <ClInclude Include="Emu\Cell\Modules\cellAudioIn.h" />
     <ClInclude Include="Emu\Cell\Modules\cellAudioOut.h" />
