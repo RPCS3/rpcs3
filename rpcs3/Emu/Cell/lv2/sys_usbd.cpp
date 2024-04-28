@@ -317,9 +317,9 @@ usb_handler_thread::usb_handler_thread()
 		}
 
 		// Top Shot Elite controllers
-		check_device(0x12BA, 0x04A0, 0x04A0, "RO Gun Controller");
-		check_device(0x12BA, 0x04A1, 0x04A1, "RO Gun Controller 2012");
-		check_device(0x12BA, 0x04B0, 0x04B0, "RO Fishing Rod");
+		check_device(0x12BA, 0x04A0, 0x04A0, "Top Shot Elite");
+		check_device(0x12BA, 0x04A1, 0x04A1, "Top Shot Fearmaster");
+		check_device(0x12BA, 0x04B0, 0x04B0, "Rapala Fishing Rod");
 
 		// GT5 Wheels&co
 		check_device(0x046D, 0xC283, 0xC29B, "lgFF_c283_c29b");
@@ -346,7 +346,7 @@ usb_handler_thread::usb_handler_thread()
 		check_device(0x20D6, 0xCB17, 0xCB17, "uDraw GameTablet");
 
 		// DVB-T
-		check_device(0x1415, 0x0003, 0x0003, " PlayTV SCEH-0036");
+		check_device(0x1415, 0x0003, 0x0003, "PlayTV SCEH-0036");
 
 		// 0x0900: "H050 USJ(C) PCB rev00", 0x0910: "USIO PCB rev00"
 		if (check_device(0x0B9A, 0x0900, 0x0910, "PS3A-USJ"))
