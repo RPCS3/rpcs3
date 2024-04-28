@@ -2354,17 +2354,32 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 
 void VKGSRender::patch_transform_constants(rsx::context* ctx, u32 index, u32 count)
 {
+	if (!m_vertex_prog)
+	{
+		// Shouldn't be reachable, but handle it correctly anyway
+		m_graphics_state |= rsx::pipeline_state::transform_constants_dirty;
+		return;
+	}
+
 	// Hot-patching transform constants mid-draw (instanced draw)
 	std::pair<VkDeviceSize, VkDeviceSize> data_range;
 	void* data_source = nullptr;
 
-	if (!m_vertex_prog || m_vertex_prog->has_indexed_constants)
+	if (m_vertex_prog->has_indexed_constants)
 	{
 		// We're working with a full range. We can do a direct patch in this case since no index translation is required.
 		const auto byte_count = count * 16;
 		const auto byte_offset = index * 16;
 
 		data_range = { m_vertex_constants_buffer_info.offset + byte_offset, byte_count };
+		data_source = &REGS(ctx)->transform_constants[index];
+	}
+	else if (auto xform_id = m_vertex_prog->TranslateConstantsRange(index, count); xform_id >= 0)
+	{
+		const auto write_offset = xform_id * 16;
+		const auto byte_count = count * 16;
+
+		data_range = { m_vertex_constants_buffer_info.offset + write_offset, byte_count };
 		data_source = &REGS(ctx)->transform_constants[index];
 	}
 	else
@@ -2390,7 +2405,7 @@ void VKGSRender::patch_transform_constants(rsx::context* ctx, u32 index, u32 cou
 		data_range.first,
 		data_range.second,
 		VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-		VK_ACCESS_MEMORY_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT);
+		VK_ACCESS_UNIFORM_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT);
 
 	vkCmdUpdateBuffer(
 		*m_current_command_buffer,
@@ -2405,7 +2420,7 @@ void VKGSRender::patch_transform_constants(rsx::context* ctx, u32 index, u32 cou
 		data_range.first,
 		data_range.second,
 		VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
-		VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT);
+		VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_UNIFORM_READ_BIT);
 }
 
 void VKGSRender::init_buffers(rsx::framebuffer_creation_context context, bool)
