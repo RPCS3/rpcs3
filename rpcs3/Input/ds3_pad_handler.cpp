@@ -6,39 +6,6 @@
 
 LOG_CHANNEL(ds3_log, "DS3");
 
-struct ds3_rumble
-{
-	u8 padding              = 0x00;
-	u8 small_motor_duration = 0xFF; // 0xff means forever
-	u8 small_motor_on       = 0x00; // 0 or 1 (off/on)
-	u8 large_motor_duration = 0xFF; // 0xff means forever
-	u8 large_motor_force    = 0x00; // 0 to 255
-};
-
-struct ds3_led
-{
-	u8 duration             = 0xFF; // total duration, 0xff means forever
-	u8 interval_duration    = 0xFF; // interval duration in deciseconds
-	u8 enabled              = 0x10;
-	u8 interval_portion_off = 0x00; // in percent (100% = 0xFF)
-	u8 interval_portion_on  = 0xFF; // in percent (100% = 0xFF)
-};
-
-struct ds3_output_report
-{
-#ifdef _WIN32
-	u8 report_id = 0x00;
-	u8 idk_what_this_is[3] = {0x02, 0x00, 0x00};
-#else
-	u8 report_id = 0x01;
-#endif
-	ds3_rumble rumble;
-	u8 padding[4]  = {0x00, 0x00, 0x00, 0x00};
-	u8 led_enabled = 0x00; // LED 1 = 0x02, LED 2 = 0x04, etc.
-	ds3_led led[4];
-	ds3_led led_5;         // reserved for another LED
-};
-
 constexpr std::array<u8, 6> battery_capacity = {0, 1, 25, 50, 75, 100};
 
 constexpr id_pair SONY_DS3_ID_0 = {0x054C, 0x0268};
@@ -144,7 +111,7 @@ int ds3_pad_handler::send_output_report(ds3_device* ds3dev)
 	if (!ds3dev || !ds3dev->hidDevice || !ds3dev->config)
 		return -2;
 
-	ds3_output_report output_report;
+	ds3_output_report output_report{};
 	output_report.rumble.small_motor_on    = ds3dev->small_motor;
 	output_report.rumble.large_motor_force = ds3dev->large_motor;
 
@@ -186,7 +153,7 @@ int ds3_pad_handler::send_output_report(ds3_device* ds3dev)
 		output_report.led[3].interval_portion_off = ds3dev->led_delay_off;
 	}
 
-	return hid_write(ds3dev->hidDevice, &output_report.report_id, sizeof(output_report));
+	return hid_write(ds3dev->hidDevice, &output_report.report_id, sizeof(ds3_output_report));
 }
 
 void ds3_pad_handler::init_config(cfg_pad* cfg)
@@ -328,15 +295,15 @@ ds3_pad_handler::DataStatus ds3_pad_handler::get_data(ds3_device* ds3dev)
 		return DataStatus::ReadError;
 
 #ifdef _WIN32
-	ds3dev->padData[0] = ds3dev->report_id;
-	const int result = hid_get_feature_report(ds3dev->hidDevice, ds3dev->padData.data(), ds3dev->padData.size());
+	ds3dev->report.data[0] = ds3dev->report_id;
+	const int result = hid_get_feature_report(ds3dev->hidDevice, ds3dev->report.data.data(), ds3dev->report.data.size());
 	if (result < 0)
 	{
-		ds3_log.error("get_data: hid_get_feature_report 0x%02x failed! result=%d, buf[0]=0x%x, error=%s", ds3dev->report_id, result, ds3dev->padData[0], hid_error(ds3dev->hidDevice));
+		ds3_log.error("get_data: hid_get_feature_report 0x%02x failed! result=%d, buf[0]=0x%x, error=%s", ds3dev->report_id, result, ds3dev->report.data[0], hid_error(ds3dev->hidDevice));
 		return DataStatus::ReadError;
 	}
 #else
-	const int result = hid_read(ds3dev->hidDevice, ds3dev->padData.data(), ds3dev->padData.size());
+	const int result = hid_read(ds3dev->hidDevice, ds3dev->report.data.data(), ds3dev->report.data.size());
 	if (result < 0)
 	{
 		ds3_log.error("get_data: hid_read failed! result=%d, error=%s", result, hid_error(ds3dev->hidDevice));
@@ -347,12 +314,12 @@ ds3_pad_handler::DataStatus ds3_pad_handler::get_data(ds3_device* ds3dev)
 	if (result > 0)
 	{
 #ifdef _WIN32
-		if (ds3dev->padData[0] == ds3dev->report_id)
+		if (ds3dev->report.data[0] == ds3dev->report_id)
 #else
-		if (ds3dev->padData[0] == 0x01 && ds3dev->padData[1] != 0xFF)
+		if (ds3dev->report.data[0] == 0x01 && ds3dev->report.data[1] != 0xFF)
 #endif
 		{
-			const u8 battery_status = ds3dev->padData[30 + DS3_HID_OFFSET];
+			const u8 battery_status = ds3dev->report.data[30 + DS3_HID_OFFSET];
 
 			if (battery_status >= 0xEE)
 			{
@@ -369,7 +336,7 @@ ds3_pad_handler::DataStatus ds3_pad_handler::get_data(ds3_device* ds3dev)
 			return DataStatus::NewData;
 		}
 
-		ds3_log.warning("get_data: Unknown packet received: 0x%02x", ds3dev->padData[0]);
+		ds3_log.warning("get_data: Unknown packet received: 0x%02x", ds3dev->report.data[0]);
 	}
 
 	return DataStatus::NoNewData;
@@ -382,7 +349,7 @@ std::unordered_map<u64, u16> ds3_pad_handler::get_button_values(const std::share
 	if (!dev)
 		return key_buf;
 
-	auto& dbuf = dev->padData;
+	auto& dbuf = dev->report.data;
 
 	const u8 lsx = dbuf[6 + DS3_HID_OFFSET];
 	const u8 lsy = dbuf[7 + DS3_HID_OFFSET];
@@ -457,14 +424,14 @@ void ds3_pad_handler::get_extended_info(const pad_ensemble& binding)
 
 #ifdef _WIN32
 	// Official Sony Windows DS3 driver seems to do the same modification of this value as the ps3
-	pad->m_sensors[0].m_value = read_from_ptr<le_t<u16>>(ds3dev->padData, 41 + DS3_HID_OFFSET);
+	pad->m_sensors[0].m_value = read_from_ptr<le_t<u16>>(ds3dev->report.data, 41 + DS3_HID_OFFSET);
 #else
 	// When getting raw values from the device this adjustement is needed
-	pad->m_sensors[0].m_value = 512 - (read_from_ptr<le_t<u16>>(ds3dev->padData, 41 + DS3_HID_OFFSET) - 512);
+	pad->m_sensors[0].m_value = 512 - (read_from_ptr<le_t<u16>>(ds3dev->report.data, 41 + DS3_HID_OFFSET) - 512);
 #endif
-	pad->m_sensors[1].m_value = read_from_ptr<le_t<u16>>(ds3dev->padData, 45 + DS3_HID_OFFSET);
-	pad->m_sensors[2].m_value = read_from_ptr<le_t<u16>>(ds3dev->padData, 43 + DS3_HID_OFFSET);
-	pad->m_sensors[3].m_value = read_from_ptr<le_t<u16>>(ds3dev->padData, 47 + DS3_HID_OFFSET);
+	pad->m_sensors[1].m_value = read_from_ptr<le_t<u16>>(ds3dev->report.data, 45 + DS3_HID_OFFSET);
+	pad->m_sensors[2].m_value = read_from_ptr<le_t<u16>>(ds3dev->report.data, 43 + DS3_HID_OFFSET);
+	pad->m_sensors[3].m_value = read_from_ptr<le_t<u16>>(ds3dev->report.data, 47 + DS3_HID_OFFSET);
 
 	// Those are formulas used to adjust sensor values in sys_hid code but I couldn't find all the vars.
 	//auto polish_value = [](s32 value, s32 dword_0x0, s32 dword_0x4, s32 dword_0x8, s32 dword_0xC, s32 dword_0x18, s32 dword_0x1C) -> u16

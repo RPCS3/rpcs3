@@ -143,6 +143,7 @@ class skateboard_device : public HidDevice
 {
 public:
 	bool skateboard_is_on = false;
+	skateboard_input_report report{};
 };
 
 class skateboard_pad_handler final : public hid_pad_handler<skateboard_device>

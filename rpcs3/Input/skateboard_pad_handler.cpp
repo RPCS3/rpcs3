@@ -209,11 +209,11 @@ skateboard_pad_handler::DataStatus skateboard_pad_handler::get_data(skateboard_d
 	if (res != static_cast<int>(sizeof(skateboard_input_report)))
 		return DataStatus::NoNewData;
 
-	if (std::memcmp(device->padData.data(), buf.data(), sizeof(skateboard_input_report)) == 0)
+	if (std::memcmp(&device->report, buf.data(), sizeof(skateboard_input_report)) == 0)
 		return DataStatus::NoNewData;
 
 	// Get the new data
-	memcpy(device->padData.data(), buf.data(), sizeof(skateboard_input_report));
+	std::memcpy(&device->report, buf.data(), sizeof(skateboard_input_report));
 
 	// Check the skateboard's power state based on the input report
 	device->skateboard_is_on =
@@ -272,35 +272,34 @@ PadHandlerBase::connection skateboard_pad_handler::update_connection(const std::
 std::unordered_map<u64, u16> skateboard_pad_handler::get_button_values(const std::shared_ptr<PadDevice>& device)
 {
 	std::unordered_map<u64, u16> key_buf;
-	skateboard_device* dualsense_dev = static_cast<skateboard_device*>(device.get());
-	if (!dualsense_dev)
+	skateboard_device* dev = static_cast<skateboard_device*>(device.get());
+	if (!dev)
 		return key_buf;
 
-	const std::array<u8, 64>& buf = dualsense_dev->padData;
-	const skateboard_input_report* input = reinterpret_cast<const skateboard_input_report*>(buf.data());
+	const skateboard_input_report& input = dev->report;
 
 	// D-Pad
-	key_buf[skateboard_key_codes::left]  = (input->d_pad == dpad_states::left || input->d_pad == dpad_states::up_left || input->d_pad == dpad_states::down_left) ? 255 : 0;
-	key_buf[skateboard_key_codes::right] = (input->d_pad == dpad_states::right || input->d_pad == dpad_states::up_right || input->d_pad == dpad_states::down_right) ? 255 : 0;
-	key_buf[skateboard_key_codes::up]    = (input->d_pad == dpad_states::up || input->d_pad == dpad_states::up_left || input->d_pad == dpad_states::up_right) ? 255 : 0;
-	key_buf[skateboard_key_codes::down]  = (input->d_pad == dpad_states::down || input->d_pad == dpad_states::down_left || input->d_pad == dpad_states::down_right) ? 255 : 0;
+	key_buf[skateboard_key_codes::left]  = (input.d_pad == dpad_states::left || input.d_pad == dpad_states::up_left || input.d_pad == dpad_states::down_left) ? 255 : 0;
+	key_buf[skateboard_key_codes::right] = (input.d_pad == dpad_states::right || input.d_pad == dpad_states::up_right || input.d_pad == dpad_states::down_right) ? 255 : 0;
+	key_buf[skateboard_key_codes::up]    = (input.d_pad == dpad_states::up || input.d_pad == dpad_states::up_left || input.d_pad == dpad_states::up_right) ? 255 : 0;
+	key_buf[skateboard_key_codes::down]  = (input.d_pad == dpad_states::down || input.d_pad == dpad_states::down_left || input.d_pad == dpad_states::down_right) ? 255 : 0;
 
 	// Face buttons
-	key_buf[skateboard_key_codes::cross]    = (input->buttons & button_flags::cross)    ? 255 : 0;
-	key_buf[skateboard_key_codes::square]   = (input->buttons & button_flags::square)   ? 255 : 0;
-	key_buf[skateboard_key_codes::circle]   = (input->buttons & button_flags::circle)   ? 255 : 0;
-	key_buf[skateboard_key_codes::triangle] = (input->buttons & button_flags::triangle) ? 255 : 0;
-	key_buf[skateboard_key_codes::start]    = (input->buttons & button_flags::start)    ? 255 : 0;
-	key_buf[skateboard_key_codes::select]   = (input->buttons & button_flags::select)   ? 255 : 0;
-	key_buf[skateboard_key_codes::ps]       = (input->buttons & button_flags::ps)       ? 255 : 0;
+	key_buf[skateboard_key_codes::cross]    = (input.buttons & button_flags::cross)    ? 255 : 0;
+	key_buf[skateboard_key_codes::square]   = (input.buttons & button_flags::square)   ? 255 : 0;
+	key_buf[skateboard_key_codes::circle]   = (input.buttons & button_flags::circle)   ? 255 : 0;
+	key_buf[skateboard_key_codes::triangle] = (input.buttons & button_flags::triangle) ? 255 : 0;
+	key_buf[skateboard_key_codes::start]    = (input.buttons & button_flags::start)    ? 255 : 0;
+	key_buf[skateboard_key_codes::select]   = (input.buttons & button_flags::select)   ? 255 : 0;
+	key_buf[skateboard_key_codes::ps]       = (input.buttons & button_flags::ps)       ? 255 : 0;
 
 	// Infrared
-	key_buf[skateboard_key_codes::ir_nose]    = input->pressure_triangle;
-	key_buf[skateboard_key_codes::ir_tail]    = input->pressure_circle;
-	key_buf[skateboard_key_codes::ir_left]    = input->pressure_cross;
-	key_buf[skateboard_key_codes::ir_right]   = input->pressure_square;
-	key_buf[skateboard_key_codes::tilt_left]  = input->pressure_l1;
-	key_buf[skateboard_key_codes::tilt_right] = input->pressure_r1;
+	key_buf[skateboard_key_codes::ir_nose]    = input.pressure_triangle;
+	key_buf[skateboard_key_codes::ir_tail]    = input.pressure_circle;
+	key_buf[skateboard_key_codes::ir_left]    = input.pressure_cross;
+	key_buf[skateboard_key_codes::ir_right]   = input.pressure_square;
+	key_buf[skateboard_key_codes::tilt_left]  = input.pressure_l1;
+	key_buf[skateboard_key_codes::tilt_right] = input.pressure_r1;
 
 	// NOTE: Axes X, Y, Z and RZ are always 128, which is the default anyway, so setting the values is omitted.
 
@@ -316,13 +315,12 @@ void skateboard_pad_handler::get_extended_info(const pad_ensemble& binding)
 	if (!dev || !pad)
 		return;
 
-	const std::array<u8, 64>& buf = dev->padData;
-	const skateboard_input_report* input = reinterpret_cast<const skateboard_input_report*>(buf.data());
+	const skateboard_input_report& input = dev->report;
 
-	pad->m_sensors[0].m_value = Clamp0To1023(input->large_axes[0]);
-	pad->m_sensors[1].m_value = Clamp0To1023(input->large_axes[1]);
-	pad->m_sensors[2].m_value = Clamp0To1023(input->large_axes[2]);
-	pad->m_sensors[3].m_value = Clamp0To1023(input->large_axes[3]);
+	pad->m_sensors[0].m_value = Clamp0To1023(input.large_axes[0]);
+	pad->m_sensors[1].m_value = Clamp0To1023(input.large_axes[1]);
+	pad->m_sensors[2].m_value = Clamp0To1023(input.large_axes[2]);
+	pad->m_sensors[3].m_value = Clamp0To1023(input.large_axes[3]);
 }
 
 pad_preview_values skateboard_pad_handler::get_preview_values(const std::unordered_map<u64, u16>& /*data*/)

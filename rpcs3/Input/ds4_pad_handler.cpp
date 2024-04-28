@@ -12,19 +12,6 @@ constexpr id_pair ZEROPLUS_ID_0 = {0x0C12, 0x0E20};
 
 namespace
 {
-	constexpr u32 DS4_ACC_RES_PER_G = 8192;
-	constexpr u32 DS4_GYRO_RES_PER_DEG_S = 86; // technically this could be 1024, but keeping it at 86 keeps us within 16 bits of precision
-	constexpr u32 DS4_FEATURE_REPORT_0x02_SIZE = 37;
-	constexpr u32 DS4_FEATURE_REPORT_0x05_SIZE = 41;
-	//constexpr u32 DS4_FEATURE_REPORT_0x12_SIZE = 16;
-	//constexpr u32 DS4_FEATURE_REPORT_0x81_SIZE = 7;
-	constexpr u32 DS4_FEATURE_REPORT_0xA3_SIZE = 49;
-	constexpr u32 DS4_INPUT_REPORT_0x11_SIZE = 78;
-	constexpr u32 DS4_OUTPUT_REPORT_0x05_SIZE = 32;
-	constexpr u32 DS4_OUTPUT_REPORT_0x11_SIZE = 78;
-	constexpr u32 DS4_INPUT_REPORT_GYRO_X_OFFSET = 13;
-	constexpr u32 DS4_INPUT_REPORT_BATTERY_OFFSET = 30;
-
 	// This tries to convert axis to give us the max even in the corners,
 	// this actually might work 'too' well, we end up actually getting diagonals of actual max/min, we need the corners still a bit rounded to match ds3
 	// im leaving it here for now, and future reference as it probably can be used later
@@ -237,26 +224,26 @@ std::unordered_map<u64, u16> ds4_pad_handler::get_button_values(const std::share
 	if (!ds4_dev)
 		return keyBuffer;
 
-	auto buf = ds4_dev->padData;
+	const ds4_input_report_common& input = ds4_dev->bt_controller ? ds4_dev->report_bt.common : ds4_dev->report_usb.common;
 
 	// Left Stick X Axis
-	keyBuffer[DS4KeyCodes::LSXNeg] = Clamp0To255((127.5f - buf[1]) * 2.0f);
-	keyBuffer[DS4KeyCodes::LSXPos] = Clamp0To255((buf[1] - 127.5f) * 2.0f);
+	keyBuffer[DS4KeyCodes::LSXNeg] = Clamp0To255((127.5f - input.x) * 2.0f);
+	keyBuffer[DS4KeyCodes::LSXPos] = Clamp0To255((input.x - 127.5f) * 2.0f);
 
 	// Left Stick Y Axis (Up is the negative for some reason)
-	keyBuffer[DS4KeyCodes::LSYNeg] = Clamp0To255((buf[2] - 127.5f) * 2.0f);
-	keyBuffer[DS4KeyCodes::LSYPos] = Clamp0To255((127.5f - buf[2]) * 2.0f);
+	keyBuffer[DS4KeyCodes::LSYNeg] = Clamp0To255((input.y - 127.5f) * 2.0f);
+	keyBuffer[DS4KeyCodes::LSYPos] = Clamp0To255((127.5f - input.y) * 2.0f);
 
 	// Right Stick X Axis
-	keyBuffer[DS4KeyCodes::RSXNeg] = Clamp0To255((127.5f - buf[3]) * 2.0f);
-	keyBuffer[DS4KeyCodes::RSXPos] = Clamp0To255((buf[3] - 127.5f) * 2.0f);
+	keyBuffer[DS4KeyCodes::RSXNeg] = Clamp0To255((127.5f - input.rx) * 2.0f);
+	keyBuffer[DS4KeyCodes::RSXPos] = Clamp0To255((input.rx - 127.5f) * 2.0f);
 
 	// Right Stick Y Axis (Up is the negative for some reason)
-	keyBuffer[DS4KeyCodes::RSYNeg] = Clamp0To255((buf[4] - 127.5f) * 2.0f);
-	keyBuffer[DS4KeyCodes::RSYPos] = Clamp0To255((127.5f - buf[4]) * 2.0f);
+	keyBuffer[DS4KeyCodes::RSYNeg] = Clamp0To255((input.ry - 127.5f) * 2.0f);
+	keyBuffer[DS4KeyCodes::RSYPos] = Clamp0To255((127.5f - input.ry) * 2.0f);
 
 	// bleh, dpad in buffer is stored in a different state
-	const u8 dpadState = buf[5] & 0xf;
+	const u8 dpadState = input.buttons[0] & 0xf;
 	switch (dpadState)
 	{
 	case 0x08: // none pressed
@@ -318,28 +305,28 @@ std::unordered_map<u64, u16> ds4_pad_handler::get_button_values(const std::share
 	}
 
 	// square, cross, circle, triangle
-	keyBuffer[DS4KeyCodes::Square] =   ((buf[5] & (1 << 4)) != 0) ? 255 : 0;
-	keyBuffer[DS4KeyCodes::Cross] =    ((buf[5] & (1 << 5)) != 0) ? 255 : 0;
-	keyBuffer[DS4KeyCodes::Circle] =   ((buf[5] & (1 << 6)) != 0) ? 255 : 0;
-	keyBuffer[DS4KeyCodes::Triangle] = ((buf[5] & (1 << 7)) != 0) ? 255 : 0;
+	keyBuffer[DS4KeyCodes::Square] =   ((input.buttons[0] & (1 << 4)) != 0) ? 255 : 0;
+	keyBuffer[DS4KeyCodes::Cross] =    ((input.buttons[0] & (1 << 5)) != 0) ? 255 : 0;
+	keyBuffer[DS4KeyCodes::Circle] =   ((input.buttons[0] & (1 << 6)) != 0) ? 255 : 0;
+	keyBuffer[DS4KeyCodes::Triangle] = ((input.buttons[0] & (1 << 7)) != 0) ? 255 : 0;
 
 	// L1, R1, L2, L3, select, start, L3, L3
-	keyBuffer[DS4KeyCodes::L1]      = ((buf[6] & (1 << 0)) != 0) ? 255 : 0;
-	keyBuffer[DS4KeyCodes::R1]      = ((buf[6] & (1 << 1)) != 0) ? 255 : 0;
-	//keyBuffer[DS4KeyCodes::L2But]   = ((buf[6] & (1 << 2)) != 0) ? 255 : 0;
-	//keyBuffer[DS4KeyCodes::R2But]   = ((buf[6] & (1 << 3)) != 0) ? 255 : 0;
-	keyBuffer[DS4KeyCodes::Share]   = ((buf[6] & (1 << 4)) != 0) ? 255 : 0;
-	keyBuffer[DS4KeyCodes::Options] = ((buf[6] & (1 << 5)) != 0) ? 255 : 0;
-	keyBuffer[DS4KeyCodes::L3]      = ((buf[6] & (1 << 6)) != 0) ? 255 : 0;
-	keyBuffer[DS4KeyCodes::R3]      = ((buf[6] & (1 << 7)) != 0) ? 255 : 0;
+	keyBuffer[DS4KeyCodes::L1]      = ((input.buttons[1] & (1 << 0)) != 0) ? 255 : 0;
+	keyBuffer[DS4KeyCodes::R1]      = ((input.buttons[1] & (1 << 1)) != 0) ? 255 : 0;
+	//keyBuffer[DS4KeyCodes::L2But]   = ((input.buttons[1] & (1 << 2)) != 0) ? 255 : 0;
+	//keyBuffer[DS4KeyCodes::R2But]   = ((input.buttons[1] & (1 << 3)) != 0) ? 255 : 0;
+	keyBuffer[DS4KeyCodes::Share]   = ((input.buttons[1] & (1 << 4)) != 0) ? 255 : 0;
+	keyBuffer[DS4KeyCodes::Options] = ((input.buttons[1] & (1 << 5)) != 0) ? 255 : 0;
+	keyBuffer[DS4KeyCodes::L3]      = ((input.buttons[1] & (1 << 6)) != 0) ? 255 : 0;
+	keyBuffer[DS4KeyCodes::R3]      = ((input.buttons[1] & (1 << 7)) != 0) ? 255 : 0;
 
 	// PS Button, Touch Button
-	keyBuffer[DS4KeyCodes::PSButton] = ((buf[7] & (1 << 0)) != 0) ? 255 : 0;
-	keyBuffer[DS4KeyCodes::TouchPad] = ((buf[7] & (1 << 1)) != 0) ? 255 : 0;
+	keyBuffer[DS4KeyCodes::PSButton] = ((input.buttons[2] & (1 << 0)) != 0) ? 255 : 0;
+	keyBuffer[DS4KeyCodes::TouchPad] = ((input.buttons[2] & (1 << 1)) != 0) ? 255 : 0;
 
 	// L2, R2
-	keyBuffer[DS4KeyCodes::L2] = buf[8];
-	keyBuffer[DS4KeyCodes::R2] = buf[9];
+	keyBuffer[DS4KeyCodes::L2] = input.z;
+	keyBuffer[DS4KeyCodes::R2] = input.rz;
 
 	return keyBuffer;
 }
@@ -371,9 +358,9 @@ bool ds4_pad_handler::GetCalibrationData(DS4Device* ds4Dev) const
 		for (int tries = 0; tries < 3; ++tries)
 		{
 			buf = {};
-			buf[0] = 0x05;
+			buf[0] = 0x05; // Calibration feature report id
 
-			if (int res = hid_get_feature_report(ds4Dev->hidDevice, buf.data(), DS4_FEATURE_REPORT_0x05_SIZE); res != DS4_FEATURE_REPORT_0x05_SIZE || buf[0] != 0x05)
+			if (int res = hid_get_feature_report(ds4Dev->hidDevice, buf.data(), DS4_FEATURE_REPORT_BLUETOOTH_CALIBRATION_SIZE); res != DS4_FEATURE_REPORT_BLUETOOTH_CALIBRATION_SIZE || buf[0] != 0x05)
 			{
 				ds4_log.error("GetCalibrationData: hid_get_feature_report 0x05 for bluetooth controller failed! result=%d, error=%s", res, hid_error(ds4Dev->hidDevice));
 				return false;
@@ -381,8 +368,8 @@ bool ds4_pad_handler::GetCalibrationData(DS4Device* ds4Dev) const
 
 			const u8 btHdr = 0xA3;
 			const u32 crcHdr = CRCPP::CRC::Calculate(&btHdr, 1, crcTable);
-			const u32 crcCalc = CRCPP::CRC::Calculate(buf.data(), (DS4_FEATURE_REPORT_0x05_SIZE - 4), crcTable, crcHdr);
-			const u32 crcReported = read_u32(&buf[DS4_FEATURE_REPORT_0x05_SIZE - 4]);
+			const u32 crcCalc = CRCPP::CRC::Calculate(buf.data(), DS4_FEATURE_REPORT_BLUETOOTH_CALIBRATION_SIZE - 4, crcTable, crcHdr);
+			const u32 crcReported = read_u32(&buf[DS4_FEATURE_REPORT_BLUETOOTH_CALIBRATION_SIZE - 4]);
 
 			if (crcCalc == crcReported)
 				break;
@@ -399,7 +386,7 @@ bool ds4_pad_handler::GetCalibrationData(DS4Device* ds4Dev) const
 	else
 	{
 		buf[0] = 0x02;
-		if (int res = hid_get_feature_report(ds4Dev->hidDevice, buf.data(), DS4_FEATURE_REPORT_0x02_SIZE); res != DS4_FEATURE_REPORT_0x02_SIZE || buf[0] != 0x02)
+		if (int res = hid_get_feature_report(ds4Dev->hidDevice, buf.data(), DS4_FEATURE_REPORT_USB_CALIBRATION_SIZE); res != DS4_FEATURE_REPORT_USB_CALIBRATION_SIZE || buf[0] != 0x02)
 		{
 			ds4_log.error("GetCalibrationData: hid_get_feature_report 0x02 for wired controller failed! result=%d, error=%s", res, hid_error(ds4Dev->hidDevice));
 			return false;
@@ -544,8 +531,8 @@ void ds4_pad_handler::check_add_device(hid_device* hidDevice, std::string_view p
 	std::array<u8, 64> buf{};
 	buf[0] = 0xA3;
 
-	int res = hid_get_feature_report(hidDevice, buf.data(), DS4_FEATURE_REPORT_0xA3_SIZE);
-	if (res != DS4_FEATURE_REPORT_0xA3_SIZE || buf[0] != 0xA3)
+	int res = hid_get_feature_report(hidDevice, buf.data(), DS4_FEATURE_REPORT_FIRMWARE_INFO_SIZE);
+	if (res != DS4_FEATURE_REPORT_FIRMWARE_INFO_SIZE || buf[0] != 0xA3)
 	{
 		ds4_log.error("check_add_device: hid_get_feature_report 0xA3 failed! Could not retrieve firmware version! result=%d, buf[0]=0x%x, error=%s", res, buf[0], hid_error(hidDevice));
 	}
@@ -600,50 +587,44 @@ int ds4_pad_handler::send_output_report(DS4Device* device)
 	if (config == nullptr)
 		return -2; // hid_write and hid_write_control return -1 on error
 
-	std::array<u8, 78> outputBuf{0};
 	// write rumble state
+	ds4_output_report_common common{};
+	common.valid_flag0 = 0x07;
+	common.motor_right = device->small_motor;
+	common.motor_left = device->large_motor;
+
+	// write LED color
+	common.lightbar_red = config->colorR;
+	common.lightbar_green = config->colorG;
+	common.lightbar_blue = config->colorB;
+
+	// alternating blink states with values 0-255: only setting both to zero disables blinking
+	// 255 is roughly 2 seconds, so setting both values to 255 results in a 4 second interval
+	// using something like (0,10) will heavily blink, while using (0, 255) will be slow. you catch the drift
+	common.lightbar_blink_on = device->led_delay_on;
+	common.lightbar_blink_off = device->led_delay_off;
+
 	if (device->bt_controller)
 	{
-		outputBuf[0] = 0x11;
-		outputBuf[1] = 0xC4;
-		outputBuf[3] = 0x07;
-		outputBuf[6] = device->small_motor;
-		outputBuf[7] = device->large_motor;
-		outputBuf[8]  = config->colorR; // red
-		outputBuf[9]  = config->colorG; // green
-		outputBuf[10] = config->colorB; // blue
-
-		// alternating blink states with values 0-255: only setting both to zero disables blinking
-		// 255 is roughly 2 seconds, so setting both values to 255 results in a 4 second interval
-		// using something like (0,10) will heavily blink, while using (0, 255) will be slow. you catch the drift
-		outputBuf[11] = device->led_delay_on;
-		outputBuf[12] = device->led_delay_off;
+		ds4_output_report_bt output{};
+		output.report_id = 0x11;
+		output.hw_control = 0xC4;
+		output.common = std::move(common);
 
 		const u8 btHdr = 0xA2;
 		const u32 crcHdr = CRCPP::CRC::Calculate(&btHdr, 1, crcTable);
-		const u32 crcCalc = CRCPP::CRC::Calculate(outputBuf.data(), (DS4_OUTPUT_REPORT_0x11_SIZE - 4), crcTable, crcHdr);
+		const u32 crcCalc = CRCPP::CRC::Calculate(&output.report_id, offsetof(ds4_output_report_bt, crc32), crcTable, crcHdr);
 
-		outputBuf[74] = (crcCalc >> 0) & 0xFF;
-		outputBuf[75] = (crcCalc >> 8) & 0xFF;
-		outputBuf[76] = (crcCalc >> 16) & 0xFF;
-		outputBuf[77] = (crcCalc >> 24) & 0xFF;
+		write_to_ptr(output.crc32, crcCalc);
 
-		return hid_write_control(device->hidDevice, outputBuf.data(), DS4_OUTPUT_REPORT_0x11_SIZE);
+		return hid_write_control(device->hidDevice, &output.report_id, sizeof(ds4_output_report_bt));
 	}
-	else
-	{
-		outputBuf[0] = 0x05;
-		outputBuf[1] = 0x07;
-		outputBuf[4] = device->small_motor;
-		outputBuf[5] = device->large_motor;
-		outputBuf[6] = config->colorR; // red
-		outputBuf[7] = config->colorG; // green
-		outputBuf[8] = config->colorB; // blue
-		outputBuf[9] = device->led_delay_on;
-		outputBuf[10] = device->led_delay_off;
 
-		return hid_write(device->hidDevice, outputBuf.data(), DS4_OUTPUT_REPORT_0x05_SIZE);
-	}
+	ds4_output_report_usb output{};
+	output.report_id = 0x05;
+	output.common = std::move(common);
+
+	return hid_write(device->hidDevice, &output.report_id, sizeof(ds4_output_report_usb));
 }
 
 ds4_pad_handler::DataStatus ds4_pad_handler::get_data(DS4Device* device)
@@ -651,9 +632,9 @@ ds4_pad_handler::DataStatus ds4_pad_handler::get_data(DS4Device* device)
 	if (!device || !device->hidDevice)
 		return DataStatus::ReadError;
 
-	std::array<u8, 78> buf{};
+	std::array<u8, std::max(sizeof(ds4_input_report_bt), sizeof(ds4_input_report_usb))> buf{};
 
-	const int res = hid_read(device->hidDevice, buf.data(), device->bt_controller ? DS4_INPUT_REPORT_0x11_SIZE : 64);
+	const int res = hid_read(device->hidDevice, buf.data(), device->bt_controller ? sizeof(ds4_input_report_bt) : sizeof(ds4_input_report_usb));
 	if (res == -1)
 	{
 		// looks like controller disconnected or read error
@@ -677,41 +658,42 @@ ds4_pad_handler::DataStatus ds4_pad_handler::get_data(DS4Device* device)
 		return DataStatus::NoNewData;
 	}
 
-	int offset;
+	int offset = 0;
+
 	// check report and set offset
-	if (device->bt_controller && buf[0] == 0x11 && res == DS4_INPUT_REPORT_0x11_SIZE)
+	if (device->bt_controller && buf[0] == 0x11 && res == sizeof(ds4_input_report_bt))
 	{
-		offset = 2;
+		offset = offsetof(ds4_input_report_bt, common);
 
 		const u8 btHdr = 0xA1;
 		const u32 crcHdr = CRCPP::CRC::Calculate(&btHdr, 1, crcTable);
-		const u32 crcCalc = CRCPP::CRC::Calculate(buf.data(), (DS4_INPUT_REPORT_0x11_SIZE - 4), crcTable, crcHdr);
-		const u32 crcReported = read_u32(&buf[DS4_INPUT_REPORT_0x11_SIZE - 4]);
+		const u32 crcCalc = CRCPP::CRC::Calculate(buf.data(), offsetof(ds4_input_report_bt, crc32), crcTable, crcHdr);
+		const u32 crcReported = read_u32(&buf[offsetof(ds4_input_report_bt, crc32)]);
 		if (crcCalc != crcReported)
 		{
 			ds4_log.warning("Data packet CRC check failed, ignoring! Received 0x%x, Expected 0x%x", crcReported, crcCalc);
 			return DataStatus::NoNewData;
 		}
 	}
-	else if (!device->bt_controller && buf[0] == 0x01 && res == 64)
+	else if (!device->bt_controller && buf[0] == 0x01 && res == sizeof(ds4_input_report_usb))
 	{
 		// Ds4 Dongle uses this bit to actually report whether a controller is connected
-		const bool connected = (buf[31] & 0x04) ? false : true;
+		const bool connected = !(buf[31] & 0x04);
 		if (connected && !device->has_calib_data)
 			device->has_calib_data = GetCalibrationData(device);
 
-		offset = 0;
+		offset = offsetof(ds4_input_report_usb, common);
 	}
 	else
 		return DataStatus::NoNewData;
 
-	const int battery_offset = offset + DS4_INPUT_REPORT_BATTERY_OFFSET;
+	const int battery_offset = offset + offsetof(ds4_input_report_common, status);
 	device->cable_state = (buf[battery_offset] >> 4) & 0x01;
 	device->battery_level = buf[battery_offset] & 0x0F; // 0 - 9 while unplugged, 0 - 10 while plugged in, 11 charge complete
 
 	if (device->has_calib_data)
 	{
-		int calibOffset = offset + DS4_INPUT_REPORT_GYRO_X_OFFSET;
+		int calibOffset = offset + offsetof(ds4_input_report_common, gyro);
 		for (int i = 0; i < CalibIndex::COUNT; ++i)
 		{
 			const s16 rawValue = read_s16(&buf[calibOffset]);
@@ -720,7 +702,15 @@ ds4_pad_handler::DataStatus ds4_pad_handler::get_data(DS4Device* device)
 			buf[calibOffset++] = (static_cast<u16>(calValue) >> 8) & 0xFF;
 		}
 	}
-	memcpy(device->padData.data(), &buf[offset], 64);
+
+	if (device->bt_controller)
+	{
+		std::memcpy(&device->report_bt, buf.data(), sizeof(ds4_input_report_bt));
+	}
+	else
+	{
+		std::memcpy(&device->report_usb, buf.data(), sizeof(ds4_input_report_usb));
+	}
 
 	return DataStatus::NewData;
 }
@@ -811,7 +801,7 @@ void ds4_pad_handler::get_extended_info(const pad_ensemble& binding)
 	if (!ds4_device || !pad)
 		return;
 
-	auto buf = ds4_device->padData;
+	const ds4_input_report_common& input = ds4_device->bt_controller ? ds4_device->report_bt.common : ds4_device->report_usb.common;
 
 	pad->m_battery_level = ds4_device->battery_level;
 	pad->m_cable_state   = ds4_device->cable_state;
@@ -819,9 +809,9 @@ void ds4_pad_handler::get_extended_info(const pad_ensemble& binding)
 	// these values come already calibrated, all we need to do is convert to ds3 range
 
 	// accel
-	f32 accelX = static_cast<s16>((buf[20] << 8) | buf[19]) / static_cast<f32>(DS4_ACC_RES_PER_G) * -1;
-	f32 accelY = static_cast<s16>((buf[22] << 8) | buf[21]) / static_cast<f32>(DS4_ACC_RES_PER_G) * -1;
-	f32 accelZ = static_cast<s16>((buf[24] << 8) | buf[23]) / static_cast<f32>(DS4_ACC_RES_PER_G) * -1;
+	f32 accelX = static_cast<s16>(input.accel[0]) / static_cast<f32>(DS4_ACC_RES_PER_G) * -1;
+	f32 accelY = static_cast<s16>(input.accel[1]) / static_cast<f32>(DS4_ACC_RES_PER_G) * -1;
+	f32 accelZ = static_cast<s16>(input.accel[2]) / static_cast<f32>(DS4_ACC_RES_PER_G) * -1;
 
 	// now just use formula from ds3
 	accelX = accelX * 113 + 512;
@@ -833,9 +823,9 @@ void ds4_pad_handler::get_extended_info(const pad_ensemble& binding)
 	pad->m_sensors[2].m_value = Clamp0To1023(accelZ);
 
 	// gyroY is yaw, which is all that we need
-	//f32 gyroX = static_cast<s16>((u16)(buf[14] << 8) | buf[13]) / static_cast<f32>(DS4_GYRO_RES_PER_DEG_S) * -1;
-	f32 gyroY = static_cast<s16>((buf[16] << 8) | buf[15]) / static_cast<f32>(DS4_GYRO_RES_PER_DEG_S) * -1;
-	//f32 gyroZ = static_cast<s16>((u16)(buf[18] << 8) | buf[17]) / static_cast<f32>(DS4_GYRO_RES_PER_DEG_S) * -1;
+	//f32 gyroX = static_cast<s16>(input.gyro[0]) / static_cast<f32>(DS4_GYRO_RES_PER_DEG_S) * -1;
+	f32 gyroY = static_cast<s16>(input.gyro[1]) / static_cast<f32>(DS4_GYRO_RES_PER_DEG_S) * -1;
+	//f32 gyroZ = static_cast<s16>(input.gyro[2]) / static_cast<f32>(DS4_GYRO_RES_PER_DEG_S) * -1;
 
 	// Convert to ds3. The ds3 resolution is 123/90°/sec.
 	gyroY = gyroY * (123.f / 90.f) + 512;
