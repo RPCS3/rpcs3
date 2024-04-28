@@ -13,47 +13,47 @@ LOG_CHANNEL(cellSysutil);
 // NOTE: Unused in this module, but used by gs_frame to determine window size
 const extern std::unordered_map<video_resolution, std::pair<int, int>, value_hash<video_resolution>> g_video_out_resolution_map
 {
-	{ video_resolution::_1080p,     { 1920, 1080 } },
-	{ video_resolution::_1080i,     { 1920, 1080 } },
-	{ video_resolution::_720p,      { 1280, 720 } },
-	{ video_resolution::_480p,      { 720, 480 } },
-	{ video_resolution::_480i,      { 720, 480 } },
-	{ video_resolution::_576p,      { 720, 576 } },
-	{ video_resolution::_576i,      { 720, 576 } },
-	{ video_resolution::_1600x1080, { 1600, 1080 } },
-	{ video_resolution::_1440x1080, { 1440, 1080 } },
-	{ video_resolution::_1280x1080, { 1280, 1080 } },
-	{ video_resolution::_960x1080,  { 960, 1080 } },
+	{ video_resolution::_1080p,      { 1920, 1080 } },
+	{ video_resolution::_1080i,      { 1920, 1080 } },
+	{ video_resolution::_720p,       { 1280, 720 } },
+	{ video_resolution::_480p,       { 720, 480 } },
+	{ video_resolution::_480i,       { 720, 480 } },
+	{ video_resolution::_576p,       { 720, 576 } },
+	{ video_resolution::_576i,       { 720, 576 } },
+	{ video_resolution::_1600x1080p, { 1600, 1080 } },
+	{ video_resolution::_1440x1080p, { 1440, 1080 } },
+	{ video_resolution::_1280x1080p, { 1280, 1080 } },
+	{ video_resolution::_960x1080p,  { 960, 1080 } },
 };
 
 const extern std::unordered_map<video_resolution, CellVideoOutResolutionId, value_hash<video_resolution>> g_video_out_resolution_id
 {
-	{ video_resolution::_1080p,     CELL_VIDEO_OUT_RESOLUTION_1080 },
-	{ video_resolution::_1080i,     CELL_VIDEO_OUT_RESOLUTION_1080 },
-	{ video_resolution::_720p,      CELL_VIDEO_OUT_RESOLUTION_720 },
-	{ video_resolution::_480p,      CELL_VIDEO_OUT_RESOLUTION_480 },
-	{ video_resolution::_480i,      CELL_VIDEO_OUT_RESOLUTION_480 },
-	{ video_resolution::_576p,      CELL_VIDEO_OUT_RESOLUTION_576 },
-	{ video_resolution::_576i,      CELL_VIDEO_OUT_RESOLUTION_576 },
-	{ video_resolution::_1600x1080, CELL_VIDEO_OUT_RESOLUTION_1600x1080 },
-	{ video_resolution::_1440x1080, CELL_VIDEO_OUT_RESOLUTION_1440x1080 },
-	{ video_resolution::_1280x1080, CELL_VIDEO_OUT_RESOLUTION_1280x1080 },
-	{ video_resolution::_960x1080,  CELL_VIDEO_OUT_RESOLUTION_960x1080 },
+	{ video_resolution::_1080p,      CELL_VIDEO_OUT_RESOLUTION_1080 },
+	{ video_resolution::_1080i,      CELL_VIDEO_OUT_RESOLUTION_1080 },
+	{ video_resolution::_720p,       CELL_VIDEO_OUT_RESOLUTION_720 },
+	{ video_resolution::_480p,       CELL_VIDEO_OUT_RESOLUTION_480 },
+	{ video_resolution::_480i,       CELL_VIDEO_OUT_RESOLUTION_480 },
+	{ video_resolution::_576p,       CELL_VIDEO_OUT_RESOLUTION_576 },
+	{ video_resolution::_576i,       CELL_VIDEO_OUT_RESOLUTION_576 },
+	{ video_resolution::_1600x1080p, CELL_VIDEO_OUT_RESOLUTION_1600x1080 },
+	{ video_resolution::_1440x1080p, CELL_VIDEO_OUT_RESOLUTION_1440x1080 },
+	{ video_resolution::_1280x1080p, CELL_VIDEO_OUT_RESOLUTION_1280x1080 },
+	{ video_resolution::_960x1080p,  CELL_VIDEO_OUT_RESOLUTION_960x1080 },
 };
 
 const extern std::unordered_map<video_resolution, CellVideoOutScanMode, value_hash<video_resolution>> g_video_out_scan_mode
 {
-	{ video_resolution::_1080p,     CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE },
-	{ video_resolution::_1080i,     CELL_VIDEO_OUT_SCAN_MODE_INTERLACE },
-	{ video_resolution::_720p,      CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE },
-	{ video_resolution::_480p,      CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE },
-	{ video_resolution::_480i,      CELL_VIDEO_OUT_SCAN_MODE_INTERLACE },
-	{ video_resolution::_576p,      CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE },
-	{ video_resolution::_576i,      CELL_VIDEO_OUT_SCAN_MODE_INTERLACE },
-	{ video_resolution::_1600x1080, CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE },
-	{ video_resolution::_1440x1080, CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE },
-	{ video_resolution::_1280x1080, CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE },
-	{ video_resolution::_960x1080,  CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE },
+	{ video_resolution::_1080p,      CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE },
+	{ video_resolution::_1080i,      CELL_VIDEO_OUT_SCAN_MODE_INTERLACE },
+	{ video_resolution::_720p,       CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE },
+	{ video_resolution::_480p,       CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE },
+	{ video_resolution::_480i,       CELL_VIDEO_OUT_SCAN_MODE_INTERLACE },
+	{ video_resolution::_576p,       CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE },
+	{ video_resolution::_576i,       CELL_VIDEO_OUT_SCAN_MODE_INTERLACE },
+	{ video_resolution::_1600x1080p, CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE },
+	{ video_resolution::_1440x1080p, CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE },
+	{ video_resolution::_1280x1080p, CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE },
+	{ video_resolution::_960x1080p,  CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE },
 };
 
 const extern std::unordered_map<video_aspect, CellVideoOutDisplayAspect, value_hash<video_aspect>> g_video_out_aspect_id
@@ -379,16 +379,16 @@ error_code cellVideoOutGetDeviceInfo(u32 videoOut, u32 deviceIndex, vm::ptr<Cell
 			add_mode(CELL_VIDEO_OUT_RESOLUTION_480, CELL_VIDEO_OUT_SCAN_MODE_INTERLACE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_NONE, CELL_VIDEO_OUT_ASPECT_16_9);
 		}
 		break;
-	case video_resolution::_1600x1080:
+	case video_resolution::_1600x1080p:
 		add_mode(CELL_VIDEO_OUT_RESOLUTION_1600x1080, CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_TO_1080, CELL_VIDEO_OUT_ASPECT_16_9);
 		break;
-	case video_resolution::_1440x1080:
+	case video_resolution::_1440x1080p:
 		add_mode(CELL_VIDEO_OUT_RESOLUTION_1440x1080, CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_TO_1080, CELL_VIDEO_OUT_ASPECT_16_9);
 		break;
-	case video_resolution::_1280x1080:
+	case video_resolution::_1280x1080p:
 		add_mode(CELL_VIDEO_OUT_RESOLUTION_1280x1080, CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_TO_1080, CELL_VIDEO_OUT_ASPECT_16_9);
 		break;
-	case video_resolution::_960x1080:
+	case video_resolution::_960x1080p:
 		add_mode(CELL_VIDEO_OUT_RESOLUTION_960x1080, CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_TO_1080, CELL_VIDEO_OUT_ASPECT_16_9);
 		break;
 	}

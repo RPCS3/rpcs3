@@ -465,17 +465,17 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	{
 		const std::map<video_resolution, u32> resolutions
 		{
-			{ video_resolution::_480p,      psf::resolution_flag::_480 | psf::resolution_flag::_480_16_9 },
-			{ video_resolution::_480i,      psf::resolution_flag::_480 | psf::resolution_flag::_480_16_9 },
-			{ video_resolution::_576p,      psf::resolution_flag::_576 | psf::resolution_flag::_576_16_9 },
-			{ video_resolution::_576i,      psf::resolution_flag::_576 | psf::resolution_flag::_576_16_9 },
-			{ video_resolution::_720p,      psf::resolution_flag::_720  },
-			{ video_resolution::_1080p,     psf::resolution_flag::_1080 },
-			{ video_resolution::_1080i,     psf::resolution_flag::_1080 },
-			{ video_resolution::_1600x1080, psf::resolution_flag::_1080 },
-			{ video_resolution::_1440x1080, psf::resolution_flag::_1080 },
-			{ video_resolution::_1280x1080, psf::resolution_flag::_1080 },
-			{ video_resolution::_960x1080,  psf::resolution_flag::_1080 },
+			{ video_resolution::_480p,       psf::resolution_flag::_480 | psf::resolution_flag::_480_16_9 },
+			{ video_resolution::_480i,       psf::resolution_flag::_480 | psf::resolution_flag::_480_16_9 },
+			{ video_resolution::_576p,       psf::resolution_flag::_576 | psf::resolution_flag::_576_16_9 },
+			{ video_resolution::_576i,       psf::resolution_flag::_576 | psf::resolution_flag::_576_16_9 },
+			{ video_resolution::_720p,       psf::resolution_flag::_720  },
+			{ video_resolution::_1080p,      psf::resolution_flag::_1080 },
+			{ video_resolution::_1080i,      psf::resolution_flag::_1080 },
+			{ video_resolution::_1600x1080p, psf::resolution_flag::_1080 },
+			{ video_resolution::_1440x1080p, psf::resolution_flag::_1080 },
+			{ video_resolution::_1280x1080p, psf::resolution_flag::_1080 },
+			{ video_resolution::_960x1080p,  psf::resolution_flag::_1080 },
 		};
 
 		const int saved_index = ui->resBox->currentIndex();
