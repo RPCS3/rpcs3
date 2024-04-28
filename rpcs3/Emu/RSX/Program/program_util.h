@@ -60,9 +60,9 @@ namespace rsx
 
 	struct VertexProgramBase
 	{
-		u32 id;
+		u32 id = 0;
 		std::vector<u16> constant_ids;
-		bool has_indexed_constants;
+		bool has_indexed_constants = false;
 
 		// Translates an incoming range of constants against our mapping.
 		// If there is no linear mapping available, return -1, otherwise returns the translated index of the first slot
