@@ -999,17 +999,32 @@ void GLGSRender::update_vertex_env(const gl::vertex_upload_info& upload_info)
 
 void GLGSRender::patch_transform_constants(rsx::context* ctx, u32 index, u32 count)
 {
+	if (!m_vertex_prog)
+	{
+		// Shouldn't be reachable, but handle it correctly anyway
+		m_graphics_state |= rsx::pipeline_state::transform_constants_dirty;
+		return;
+	}
+
 	std::pair<u32, u32> data_range {};
 	void* data_source = nullptr;
 	const auto bound_range = m_transform_constants_buffer->bound_range();
 
-	if (!m_vertex_prog || m_vertex_prog->has_indexed_constants)
+	if (m_vertex_prog->has_indexed_constants)
 	{
 		// We're working with a full range. We can do a direct patch in this case since no index translation is required.
 		const auto byte_count = count * 16;
 		const auto byte_offset = index * 16;
 
 		data_range = { bound_range.first + byte_offset, byte_count};
+		data_source = &REGS(ctx)->transform_constants[index];
+	}
+	else if (auto xform_id = m_vertex_prog->TranslateConstantsRange(index, count); xform_id >= 0)
+	{
+		const auto write_offset = xform_id * 16;
+		const auto byte_count = count * 16;
+
+		data_range = { bound_range.first + write_offset, byte_count };
 		data_source = &REGS(ctx)->transform_constants[index];
 	}
 	else
