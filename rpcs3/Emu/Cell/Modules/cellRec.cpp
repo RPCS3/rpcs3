@@ -411,10 +411,10 @@ void rec_info::set_video_params(s32 video_format)
 	case video_resolution::_1080p:
 	case video_resolution::_1080i:
 	case video_resolution::_720p:
-	case video_resolution::_1600x1080:
-	case video_resolution::_1440x1080:
-	case video_resolution::_1280x1080:
-	case video_resolution::_960x1080:
+	case video_resolution::_1600x1080p:
+	case video_resolution::_1440x1080p:
+	case video_resolution::_1280x1080p:
+	case video_resolution::_960x1080p:
 		hd = true;
 		break;
 	case video_resolution::_480p:
