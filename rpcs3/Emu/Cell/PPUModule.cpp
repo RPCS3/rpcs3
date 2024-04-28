@@ -184,6 +184,7 @@ static void ppu_initialize_modules(ppu_linkage_info* link, utils::serial* ar = n
 		&ppu_module_manager::cellAdec,
 		&ppu_module_manager::cellAtrac,
 		&ppu_module_manager::cellAtracMulti,
+		&ppu_module_manager::cellAtracXdec,
 		&ppu_module_manager::cellAudio,
 		&ppu_module_manager::cellAvconfExt,
 		&ppu_module_manager::cellAuthDialogUtility,
