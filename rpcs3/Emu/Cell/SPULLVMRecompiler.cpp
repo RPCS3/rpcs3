@@ -5997,40 +5997,24 @@ public:
 		{
 			if (auto [ok, data] = get_const_vector(a.value, m_pos); ok)
 			{
-				if (!is_spu_float_zero(data, 0))
+				if (is_spu_float_zero(data, 0))
 				{
-					return false;
-				}
-
-				if (auto [ok0, data0] = get_const_vector(b.value, m_pos); ok0)
-				{
-					if (is_spu_float_zero(data0, 0))
-					{
-						return true;
-					}
+					return true;
 				}
 			}
 
-			if (auto [ok, data] = get_const_vector(a.value, m_pos); ok)
+			if (auto [ok, data] = get_const_vector(b.value, m_pos); ok)
 			{
-				if (!is_spu_float_zero(data, 0))
+				if (is_spu_float_zero(data, 0))
 				{
-					return false;
-				}
-
-				if (auto [ok0, data0] = get_const_vector(b.value, m_pos); ok0)
-				{
-					if (is_spu_float_zero(data0, 0))
-					{
-						return true;
-					}
+					return true;
 				}
 			}
 
 			return false;
 		}())
 		{
-			// Just return the added value if both a and b is +0 or -0 (+0 and -0 arent't allowed alone)
+			// Just return the added value if either a or b are +-0
 			return c;
 		}
 
@@ -6403,7 +6387,7 @@ public:
 			const auto bnew = (base - ymul) >> (zext<u32[4]>(comparison) ^ 9); // Shift one less bit if exponent is adjusted
 			const auto base_result = (b & 0xff800000u) | (bnew & ~0xff800000u); // Inject old sign and exponent
 			const auto adjustment = bitcast<u32[4]>(sext<s32[4]>(comparison)) & (1 << 23); // exponent adjustement for negative bnew
-			return bitcast<f32[4]>(base_result - adjustment);
+			return clamp_smax(eval(bitcast<f32[4]>(base_result - adjustment)));
 		});
 
 		const auto [a, b] = get_vrs<f32[4]>(op.ra, op.rb);
@@ -6437,7 +6421,7 @@ public:
 				const auto bnew = (base - ymul) >> (zext<u32[4]>(comparison) ^ 9); // Shift one less bit if exponent is adjusted
 				const auto base_result = (b & 0xff800000u) | (bnew & ~0xff800000u); // Inject old sign and exponent
 				const auto adjustment = bitcast<u32[4]>(sext<s32[4]>(comparison)) & (1 << 23); // exponent adjustement for negative bnew
-				return bitcast<f32[4]>(base_result - adjustment);
+				return clamp_smax(eval(bitcast<f32[4]>(base_result - adjustment)));
 			});
 
 			register_intrinsic("spu_rsqrte", [&](llvm::CallInst* ci)
@@ -6464,7 +6448,7 @@ public:
 				const auto bnew = (base - ymul) >> (zext<u32[4]>(comparison) ^ 9); // Shift one less bit if exponent is adjusted
 				const auto base_result = (b & 0xff800000u) | (bnew & ~0xff800000u); // Inject old sign and exponent
 				const auto adjustment = bitcast<u32[4]>(sext<s32[4]>(comparison)) & (1 << 23); // exponent adjustement for negative bnew
-				return bitcast<f32[4]>(base_result - adjustment);
+				return clamp_smax(eval(bitcast<f32[4]>(base_result - adjustment)));
 			});
 			break;
 		}
