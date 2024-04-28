@@ -461,7 +461,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	SubscribeTooltip(ui->gb_default_resolution, tooltips.settings.resolution);
 	// remove unsupported resolutions from the dropdown
 	bool saved_index_removed = false;
-	if (game && game->resolution > 0)
+	//if (game && game->resolution > 0) // Add this line when interlaced resolutions are implemented
 	{
 		const std::map<video_resolution, u32> resolutions
 		{
@@ -485,7 +485,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			const auto [text, value] = get_data(ui->resBox, i);
 			const video_resolution resolution = static_cast<video_resolution>(value);
 
-			if (!resolutions.contains(resolution) || !(game->resolution & resolutions.at(resolution)))
+			// Remove interlaced resolutions until they are properly implemented
+			const bool is_interlaced = (resolution == video_resolution::_1080i ||
+			                            resolution == video_resolution::_480i ||
+			                            resolution == video_resolution::_576i);
+			const bool supported_by_game = !game || (game && game->resolution > 0 && resolutions.contains(resolution) && (game->resolution & resolutions.at(resolution)));
+
+			if (!supported_by_game || is_interlaced)
 			{
 				ui->resBox->removeItem(i);
 				if (i == saved_index)
