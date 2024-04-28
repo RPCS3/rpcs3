@@ -6,8 +6,6 @@
 
 #include "hidapi.h"
 
-#include <algorithm>
-
 struct CalibData
 {
 	s16 bias;
@@ -34,7 +32,6 @@ class HidDevice : public PadDevice
 public:
 	hid_device* hidDevice{nullptr};
 	std::string path;
-	std::array<u8, 64> padData{};
 	bool new_output_data{true};
 	bool enable_player_leds{false};
 	u8 led_delay_on{0};
