@@ -294,16 +294,18 @@ ds3_pad_handler::DataStatus ds3_pad_handler::get_data(ds3_device* ds3dev)
 	if (!ds3dev)
 		return DataStatus::ReadError;
 
+	std::array<u8, 64> buf{};
+
 #ifdef _WIN32
-	ds3dev->report.data[0] = ds3dev->report_id;
-	const int result = hid_get_feature_report(ds3dev->hidDevice, ds3dev->report.data.data(), ds3dev->report.data.size());
+	buf[0] = ds3dev->report_id;
+	const int result = hid_get_feature_report(ds3dev->hidDevice, buf.data(), buf.size());
 	if (result < 0)
 	{
-		ds3_log.error("get_data: hid_get_feature_report 0x%02x failed! result=%d, buf[0]=0x%x, error=%s", ds3dev->report_id, result, ds3dev->report.data[0], hid_error(ds3dev->hidDevice));
+		ds3_log.error("get_data: hid_get_feature_report 0x%02x failed! result=%d, buf[0]=0x%x, error=%s", ds3dev->report_id, result, buf[0], hid_error(ds3dev->hidDevice));
 		return DataStatus::ReadError;
 	}
 #else
-	const int result = hid_read(ds3dev->hidDevice, ds3dev->report.data.data(), ds3dev->report.data.size());
+	const int result = hid_read(ds3dev->hidDevice, buf.data(), buf.size());
 	if (result < 0)
 	{
 		ds3_log.error("get_data: hid_read failed! result=%d, error=%s", result, hid_error(ds3dev->hidDevice));
@@ -314,14 +316,14 @@ ds3_pad_handler::DataStatus ds3_pad_handler::get_data(ds3_device* ds3dev)
 	if (result > 0)
 	{
 #ifdef _WIN32
-		if (ds3dev->report.data[0] == ds3dev->report_id)
+		if (buf[0] == ds3dev->report_id)
 #else
-		if (ds3dev->report.data[0] == 0x01 && ds3dev->report.data[1] != 0xFF)
+		if (buf[0] == 0x01 && buf[1] != 0xFF)
 #endif
 		{
-			const u8 battery_status = ds3dev->report.data[30 + DS3_HID_OFFSET];
+			std::memcpy(&ds3dev->report, &buf[DS3_HID_OFFSET], sizeof(ds3_input_report));
 
-			if (battery_status >= 0xEE)
+			if (ds3dev->report.battery_status >= 0xEE)
 			{
 				// Charging (0xEE) or full (0xEF). Let's set the level to 100%.
 				ds3dev->battery_level = 100;
@@ -329,14 +331,14 @@ ds3_pad_handler::DataStatus ds3_pad_handler::get_data(ds3_device* ds3dev)
 			}
 			else
 			{
-				ds3dev->battery_level = ::at32(battery_capacity, std::min<usz>(battery_status, battery_capacity.size() - 1));
+				ds3dev->battery_level = ::at32(battery_capacity, std::min<usz>(ds3dev->report.battery_status, battery_capacity.size() - 1));
 				ds3dev->cable_state   = 0;
 			}
 
 			return DataStatus::NewData;
 		}
 
-		ds3_log.warning("get_data: Unknown packet received: 0x%02x", ds3dev->report.data[0]);
+		ds3_log.warning("get_data: Unknown packet received: 0x%02x", buf[0]);
 	}
 
 	return DataStatus::NoNewData;
@@ -349,49 +351,44 @@ std::unordered_map<u64, u16> ds3_pad_handler::get_button_values(const std::share
 	if (!dev)
 		return key_buf;
 
-	auto& dbuf = dev->report.data;
-
-	const u8 lsx = dbuf[6 + DS3_HID_OFFSET];
-	const u8 lsy = dbuf[7 + DS3_HID_OFFSET];
-	const u8 rsx = dbuf[8 + DS3_HID_OFFSET];
-	const u8 rsy = dbuf[9 + DS3_HID_OFFSET];
+	const ds3_input_report& report = dev->report;
 
 	// Left Stick X Axis
-	key_buf[DS3KeyCodes::LSXNeg] = Clamp0To255((127.5f - lsx) * 2.0f);
-	key_buf[DS3KeyCodes::LSXPos] = Clamp0To255((lsx - 127.5f) * 2.0f);
+	key_buf[DS3KeyCodes::LSXNeg] = Clamp0To255((127.5f - report.lsx) * 2.0f);
+	key_buf[DS3KeyCodes::LSXPos] = Clamp0To255((report.lsx - 127.5f) * 2.0f);
 
 	// Left Stick Y Axis (Up is the negative for some reason)
-	key_buf[DS3KeyCodes::LSYNeg] = Clamp0To255((lsy - 127.5f) * 2.0f);
-	key_buf[DS3KeyCodes::LSYPos] = Clamp0To255((127.5f - lsy) * 2.0f);
+	key_buf[DS3KeyCodes::LSYNeg] = Clamp0To255((report.lsy - 127.5f) * 2.0f);
+	key_buf[DS3KeyCodes::LSYPos] = Clamp0To255((127.5f - report.lsy) * 2.0f);
 
 	// Right Stick X Axis
-	key_buf[DS3KeyCodes::RSXNeg] = Clamp0To255((127.5f - rsx) * 2.0f);
-	key_buf[DS3KeyCodes::RSXPos] = Clamp0To255((rsx - 127.5f) * 2.0f);
+	key_buf[DS3KeyCodes::RSXNeg] = Clamp0To255((127.5f - report.rsx) * 2.0f);
+	key_buf[DS3KeyCodes::RSXPos] = Clamp0To255((report.rsx - 127.5f) * 2.0f);
 
 	// Right Stick Y Axis (Up is the negative for some reason)
-	key_buf[DS3KeyCodes::RSYNeg] = Clamp0To255((rsy - 127.5f) * 2.0f);
-	key_buf[DS3KeyCodes::RSYPos] = Clamp0To255((127.5f - rsy) * 2.0f);
+	key_buf[DS3KeyCodes::RSYNeg] = Clamp0To255((report.rsy - 127.5f) * 2.0f);
+	key_buf[DS3KeyCodes::RSYPos] = Clamp0To255((127.5f - report.rsy) * 2.0f);
 
 	// Buttons or triggers with pressure sensitivity
-	key_buf[DS3KeyCodes::Up]       = (dbuf[2 + DS3_HID_OFFSET] & 0x10) ? dbuf[14 + DS3_HID_OFFSET] : 0;
-	key_buf[DS3KeyCodes::Right]    = (dbuf[2 + DS3_HID_OFFSET] & 0x20) ? dbuf[15 + DS3_HID_OFFSET] : 0;
-	key_buf[DS3KeyCodes::Down]     = (dbuf[2 + DS3_HID_OFFSET] & 0x40) ? dbuf[16 + DS3_HID_OFFSET] : 0;
-	key_buf[DS3KeyCodes::Left]     = (dbuf[2 + DS3_HID_OFFSET] & 0x80) ? dbuf[17 + DS3_HID_OFFSET] : 0;
-	key_buf[DS3KeyCodes::L2]       = (dbuf[3 + DS3_HID_OFFSET] & 0x01) ? dbuf[18 + DS3_HID_OFFSET] : 0;
-	key_buf[DS3KeyCodes::R2]       = (dbuf[3 + DS3_HID_OFFSET] & 0x02) ? dbuf[19 + DS3_HID_OFFSET] : 0;
-	key_buf[DS3KeyCodes::L1]       = (dbuf[3 + DS3_HID_OFFSET] & 0x04) ? dbuf[20 + DS3_HID_OFFSET] : 0;
-	key_buf[DS3KeyCodes::R1]       = (dbuf[3 + DS3_HID_OFFSET] & 0x08) ? dbuf[21 + DS3_HID_OFFSET] : 0;
-	key_buf[DS3KeyCodes::Triangle] = (dbuf[3 + DS3_HID_OFFSET] & 0x10) ? dbuf[22 + DS3_HID_OFFSET] : 0;
-	key_buf[DS3KeyCodes::Circle]   = (dbuf[3 + DS3_HID_OFFSET] & 0x20) ? dbuf[23 + DS3_HID_OFFSET] : 0;
-	key_buf[DS3KeyCodes::Cross]    = (dbuf[3 + DS3_HID_OFFSET] & 0x40) ? dbuf[24 + DS3_HID_OFFSET] : 0;
-	key_buf[DS3KeyCodes::Square]   = (dbuf[3 + DS3_HID_OFFSET] & 0x80) ? dbuf[25 + DS3_HID_OFFSET] : 0;
+	key_buf[DS3KeyCodes::Up]       = (report.buttons[0] & 0x10) ? report.button_values[0] : 0;
+	key_buf[DS3KeyCodes::Right]    = (report.buttons[0] & 0x20) ? report.button_values[1] : 0;
+	key_buf[DS3KeyCodes::Down]     = (report.buttons[0] & 0x40) ? report.button_values[2] : 0;
+	key_buf[DS3KeyCodes::Left]     = (report.buttons[0] & 0x80) ? report.button_values[3] : 0;
+	key_buf[DS3KeyCodes::L2]       = (report.buttons[1] & 0x01) ? report.button_values[4] : 0;
+	key_buf[DS3KeyCodes::R2]       = (report.buttons[1] & 0x02) ? report.button_values[5] : 0;
+	key_buf[DS3KeyCodes::L1]       = (report.buttons[1] & 0x04) ? report.button_values[6] : 0;
+	key_buf[DS3KeyCodes::R1]       = (report.buttons[1] & 0x08) ? report.button_values[7] : 0;
+	key_buf[DS3KeyCodes::Triangle] = (report.buttons[1] & 0x10) ? report.button_values[8] : 0;
+	key_buf[DS3KeyCodes::Circle]   = (report.buttons[1] & 0x20) ? report.button_values[9] : 0;
+	key_buf[DS3KeyCodes::Cross]    = (report.buttons[1] & 0x40) ? report.button_values[10] : 0;
+	key_buf[DS3KeyCodes::Square]   = (report.buttons[1] & 0x80) ? report.button_values[11] : 0;
 
 	// Buttons without pressure sensitivity
-	key_buf[DS3KeyCodes::Select]   = (dbuf[2 + DS3_HID_OFFSET] & 0x01) ? 255 : 0;
-	key_buf[DS3KeyCodes::L3]       = (dbuf[2 + DS3_HID_OFFSET] & 0x02) ? 255 : 0;
-	key_buf[DS3KeyCodes::R3]       = (dbuf[2 + DS3_HID_OFFSET] & 0x04) ? 255 : 0;
-	key_buf[DS3KeyCodes::Start]    = (dbuf[2 + DS3_HID_OFFSET] & 0x08) ? 255 : 0;
-	key_buf[DS3KeyCodes::PSButton] = (dbuf[4 + DS3_HID_OFFSET] & 0x01) ? 255 : 0;
+	key_buf[DS3KeyCodes::Select]   = (report.buttons[0] & 0x01) ? 255 : 0;
+	key_buf[DS3KeyCodes::L3]       = (report.buttons[0] & 0x02) ? 255 : 0;
+	key_buf[DS3KeyCodes::R3]       = (report.buttons[0] & 0x04) ? 255 : 0;
+	key_buf[DS3KeyCodes::Start]    = (report.buttons[0] & 0x08) ? 255 : 0;
+	key_buf[DS3KeyCodes::PSButton] = (report.buttons[2] & 0x01) ? 255 : 0;
 
 	return key_buf;
 }
@@ -417,6 +414,8 @@ void ds3_pad_handler::get_extended_info(const pad_ensemble& binding)
 	if (!ds3dev || !pad)
 		return;
 
+	const ds3_input_report& report = ds3dev->report;
+
 	pad->m_battery_level = ds3dev->battery_level;
 	pad->m_cable_state   = ds3dev->cable_state;
 
@@ -424,14 +423,14 @@ void ds3_pad_handler::get_extended_info(const pad_ensemble& binding)
 
 #ifdef _WIN32
 	// Official Sony Windows DS3 driver seems to do the same modification of this value as the ps3
-	pad->m_sensors[0].m_value = read_from_ptr<le_t<u16>>(ds3dev->report.data, 41 + DS3_HID_OFFSET);
+	pad->m_sensors[0].m_value = report.accel_x;
 #else
 	// When getting raw values from the device this adjustement is needed
-	pad->m_sensors[0].m_value = 512 - (read_from_ptr<le_t<u16>>(ds3dev->report.data, 41 + DS3_HID_OFFSET) - 512);
+	pad->m_sensors[0].m_value = 512 - (static_cast<u16>(report.accel_x) - 512);
 #endif
-	pad->m_sensors[1].m_value = read_from_ptr<le_t<u16>>(ds3dev->report.data, 45 + DS3_HID_OFFSET);
-	pad->m_sensors[2].m_value = read_from_ptr<le_t<u16>>(ds3dev->report.data, 43 + DS3_HID_OFFSET);
-	pad->m_sensors[3].m_value = read_from_ptr<le_t<u16>>(ds3dev->report.data, 47 + DS3_HID_OFFSET);
+	pad->m_sensors[1].m_value = report.accel_y;
+	pad->m_sensors[2].m_value = report.accel_z;
+	pad->m_sensors[3].m_value = report.gyro;
 
 	// Those are formulas used to adjust sensor values in sys_hid code but I couldn't find all the vars.
 	//auto polish_value = [](s32 value, s32 dword_0x0, s32 dword_0x4, s32 dword_0x8, s32 dword_0xC, s32 dword_0x18, s32 dword_0x1C) -> u16
