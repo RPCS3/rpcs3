@@ -3701,10 +3701,17 @@ void Emulator::ConfigurePPUCache(bool with_title_id) const
 
 	_main.cache = rpcs3::utils::get_cache_dir();
 
-	if (with_title_id && !m_title_id.empty() && m_cat != "1P")
+	if (with_title_id)
 	{
-		_main.cache += GetTitleID();
-		_main.cache += '/';
+		if (IsVsh())
+		{
+			_main.cache += "vsh/";
+		}
+		else if (!m_title_id.empty() && m_cat != "1P")
+		{
+			_main.cache += GetTitleID();
+			_main.cache += '/';
+		}
 	}
 
 	fmt::append(_main.cache, "ppu-%s-%s/", fmt::base57(_main.sha1), _main.path.substr(_main.path.find_last_of('/') + 1));
