@@ -41,8 +41,24 @@ namespace
 
 	struct ds3_input_report
 	{
-		std::array<u8, 64> data;
+		u8 unknown_0[2];
+		u8 buttons[3];
+		u8 unknown_1;
+		u8 lsx;
+		u8 lsy;
+		u8 rsx;
+		u8 rsy;
+		u8 unknown_2[4];
+		u8 button_values[12];
+		u8 unknown_3[4];
+		u8 battery_status;
+		u8 unknown_4[10];
+		le_t<u16, 1> gyro;
+		le_t<u16, 1> accel_x;
+		le_t<u16, 1> accel_z;
+		le_t<u16, 1> accel_y;
 	};
+	static_assert(sizeof(ds3_input_report) == 49);
 }
 
 class ds3_device : public HidDevice
