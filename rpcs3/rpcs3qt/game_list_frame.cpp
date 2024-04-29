@@ -2032,10 +2032,13 @@ void game_list_frame::BatchRemovePPUCaches()
 	}
 
 	std::set<std::string> serials;
+	serials.emplace("vsh");
+
 	for (const auto& game : m_game_data)
 	{
 		serials.emplace(game->info.serial);
 	}
+
 	const u32 total = ::size32(serials);
 
 	if (total == 0)
@@ -2086,10 +2089,13 @@ void game_list_frame::BatchRemoveSPUCaches()
 	}
 
 	std::set<std::string> serials;
+	serials.emplace("vsh");
+
 	for (const auto& game : m_game_data)
 	{
 		serials.emplace(game->info.serial);
 	}
+
 	const u32 total = ::size32(serials);
 
 	if (total == 0)
@@ -2248,10 +2254,13 @@ void game_list_frame::BatchRemoveShaderCaches()
 	}
 
 	std::set<std::string> serials;
+	serials.emplace("vsh");
+
 	for (const auto& game : m_game_data)
 	{
 		serials.emplace(game->info.serial);
 	}
+
 	const u32 total = ::size32(serials);
 
 	if (total == 0)
