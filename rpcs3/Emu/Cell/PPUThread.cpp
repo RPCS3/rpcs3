@@ -3756,7 +3756,11 @@ extern void ppu_finalize(const ppu_module& info, bool force_mem_release)
 	// Get cache path for this executable
 	std::string cache_path = fs::get_cache_dir() + "cache/";
 
-	if (!info.path.starts_with(dev_flash) && !Emu.GetTitleID().empty() && Emu.GetCat() != "1P")
+	if (Emu.IsVsh())
+	{
+		cache_path += "vsh/";
+	}
+	else if (!info.path.starts_with(dev_flash) && !Emu.GetTitleID().empty() && Emu.GetCat() != "1P")
 	{
 		cache_path += Emu.GetTitleID();
 		cache_path += '/';
@@ -4524,7 +4528,12 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 
 		const std::string dev_flash = vfs::get("/dev_flash/");
 
-		if (!info.path.starts_with(dev_flash) && !Emu.GetTitleID().empty() && Emu.GetCat() != "1P")
+		if (Emu.IsVsh())
+		{
+			// Add prefix for vsh
+			cache_path += "vsh/";
+		}
+		else if (!info.path.starts_with(dev_flash) && !Emu.GetTitleID().empty() && Emu.GetCat() != "1P")
 		{
 			// Add prefix for anything except dev_flash files, standalone elfs or PS1 classics
 			cache_path += Emu.GetTitleID();
