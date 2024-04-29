@@ -274,7 +274,7 @@ const std::array<std::pair<ppu_intrp_func_t, std::string_view>, 1024> g_ppu_sysc
 	BIND_SYSC(sys_time_set_current_time),                   //146 (0x092)  ROOT
 	BIND_SYSC(sys_time_get_timebase_frequency),             //147 (0x093)
 	BIND_SYSC(_sys_rwlock_trywlock),                        //148 (0x094)
-	uns_func,                                               //149 (0x095)  UNS
+	NULL_FUNC(sys_time_get_system_time),                    //149 (0x095)
 	BIND_SYSC(sys_raw_spu_create_interrupt_tag),            //150 (0x096)
 	BIND_SYSC(sys_raw_spu_set_int_mask),                    //151 (0x097)
 	BIND_SYSC(sys_raw_spu_get_int_mask),                    //152 (0x098)
