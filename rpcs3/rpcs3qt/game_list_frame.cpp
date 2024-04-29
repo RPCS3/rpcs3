@@ -1031,7 +1031,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 
 	static const auto is_game_running = [](const std::string& serial)
 	{
-		return Emu.GetStatus(false) != system_state::stopped && serial == Emu.GetTitleID();
+		return Emu.GetStatus(false) != system_state::stopped && (serial == Emu.GetTitleID() || (serial == "vsh.self" && Emu.IsVsh()));
 	};
 
 	const bool is_current_running_game = is_game_running(current_game.serial);
