@@ -286,7 +286,7 @@ bool game_list_frame::IsEntryVisible(const game_info& game, bool search_fallback
 
 std::string game_list_frame::GetCacheDirBySerial(const std::string& serial)
 {
-	return rpcs3::utils::get_cache_dir() + serial;
+	return rpcs3::utils::get_cache_dir() + (serial == "vsh.self" ? "vsh" : serial);
 }
 
 std::string game_list_frame::GetDataDirBySerial(const std::string& serial)
