@@ -160,7 +160,7 @@ extern bool is_input_allowed();
 
 void usb_device_gametablet::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint*/, UsbTransfer* transfer)
 {
-	ensure(buf_size > 0x1a);
+	ensure(buf_size >= sizeof(GameTablet_data));
 
 	transfer->fake            = true;
 	transfer->expected_count  = 27;
