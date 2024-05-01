@@ -88,6 +88,7 @@ struct UsbDeviceHID
 
 struct UsbTransfer
 {
+	u32 assigned_number = 0;
 	u32 transfer_id = 0;
 
 	s32 result = 0;

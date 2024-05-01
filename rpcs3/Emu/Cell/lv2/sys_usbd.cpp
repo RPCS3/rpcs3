@@ -363,6 +363,9 @@ usb_handler_thread::usb_handler_thread()
 
 		// Tony Hawk RIDE Skateboard
 		check_device(0x12BA, 0x0400, 0x0400, "Tony Hawk RIDE Skateboard Controller");
+
+		// PSP in UsbPspCm mode
+		check_device(0x054C, 0x01CB, 0x01CB, "UsbPspcm");
 	}
 
 	libusb_free_device_list(list, 1);
@@ -588,7 +591,15 @@ void usb_handler_thread::transfer_complete(struct libusb_transfer* transfer)
 	case LIBUSB_TRANSFER_CANCELLED:
 	case LIBUSB_TRANSFER_STALL:
 	case LIBUSB_TRANSFER_NO_DEVICE:
-	default: usbd_transfer->result = EHCI_CC_HALTED; break;
+	default:
+		usbd_transfer->result = EHCI_CC_HALTED;
+		if (usbd_transfer->assigned_number && handled_devices.erase(usbd_transfer->assigned_number))
+		{
+			send_message(SYS_USBD_DETACH, usbd_transfer->assigned_number);
+			sys_usbd.warning("USB transfer failed, detach the device %d", usbd_transfer->assigned_number);
+			usbd_transfer->assigned_number = 0;
+		}
+		break;
 	}
 
 	usbd_transfer->count = transfer->actual_length;
@@ -971,6 +982,7 @@ error_code sys_usbd_register_ldd(ppu_thread& ppu, u32 handle, vm::cptr<char> s_p
 	// Unsure how many more devices might need similar treatment (i.e. just a compare and force VID/PID add), or if it's worth adding a full promiscuous capability
 	static const std::unordered_map<std::string, UsbLdd, fmt::string_hash, std::equal_to<>> predefined_ldds
 	{
+		{"cellUsbPspcm", {0x054C, 0x01CB, 0x01CB}},
 		{"guncon3", {0x0B9A, 0x0800, 0x0800}},
 		{"PS3A-USJ", {0x0B9A, 0x0900, 0x0910}}
 	};
@@ -995,11 +1007,12 @@ error_code sys_usbd_unregister_ldd(ppu_thread& ppu, u32 handle, vm::cptr<char> s
 }
 
 // TODO: determine what the unknown params are
-error_code sys_usbd_open_pipe(ppu_thread& ppu, u32 handle, u32 device_handle, u32 unk1, u64 unk2, u64 unk3, u32 endpoint, u64 unk4)
+// attributes (bmAttributes) : 2=Bulk, 3=Interrupt
+error_code sys_usbd_open_pipe(ppu_thread& ppu, u32 handle, u32 device_handle, u32 unk1, u64 unk2, u64 unk3, u32 endpoint, u64 attributes)
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_usbd.warning("sys_usbd_open_pipe(handle=0x%x, device_handle=0x%x, unk1=0x%x, unk2=0x%x, unk3=0x%x, endpoint=0x%x, unk4=0x%x)", handle, device_handle, unk1, unk2, unk3, endpoint, unk4);
+	sys_usbd.warning("sys_usbd_open_pipe(handle=0x%x, device_handle=0x%x, unk1=0x%x, unk2=0x%x, unk3=0x%x, endpoint=0x%x, attributes=0x%x)", handle, device_handle, unk1, unk2, unk3, endpoint, attributes);
 
 	auto& usbh = g_fxo->get<named_thread<usb_handler_thread>>();
 
@@ -1165,6 +1178,8 @@ error_code sys_usbd_transfer_data(ppu_thread& ppu, u32 handle, u32 id_pipe, vm::
 
 	const auto& pipe               = usbh.get_pipe(id_pipe);
 	auto&& [transfer_id, transfer] = usbh.get_free_transfer();
+
+	transfer.assigned_number = pipe.device->assigned_number;
 
 	// Default endpoint is control endpoint
 	if (pipe.endpoint == 0)
