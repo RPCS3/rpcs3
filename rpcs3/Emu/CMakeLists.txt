@@ -132,7 +132,7 @@ target_sources(rpcs3_emu PRIVATE
 
 if(USE_FAUDIO)
     find_package(SDL2)
-    if(SDL2_FOUND AND NOT SDL2_VERSION VERSION_LESS 2.0.9)
+    if(SDL2_FOUND AND SDL2_VERSION VERSION_GREATER_EQUAL 2.0.9)
         target_sources(rpcs3_emu PRIVATE
             Audio/FAudio/FAudioBackend.cpp
             Audio/FAudio/faudio_enumerator.cpp

@@ -96,8 +96,7 @@ target_link_libraries(rpcs3 PRIVATE ${ADDITIONAL_LIBS})
 
 # Unix display manager
 if(X11_FOUND)
-    target_include_directories(rpcs3 PUBLIC ${X11_INCLUDE_DIR})
-    target_link_libraries(rpcs3 PRIVATE ${X11_LIBRARIES})
+    target_link_libraries(rpcs3 PRIVATE X11::X11)
 elseif(USE_VULKAN AND UNIX AND NOT WAYLAND_FOUND AND NOT APPLE)
     # Wayland has been checked in 3rdparty/CMakeLists.txt already.
     message(FATAL_ERROR "RPCS3 requires either X11 or Wayland (or both) for Vulkan.")
