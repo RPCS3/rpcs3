@@ -545,6 +545,7 @@ void main_window::BootElf()
 		"SELF files (EBOOT.BIN *.self);;"
 		"BOOT files (*BOOT.BIN);;"
 		"BIN files (*.bin);;"
+		"All executable files (*.SAVESTAT.gz *.SAVESTAT *.sprx *.SPRX *.self *.SELF *.bin *.BIN *.prx *.PRX *.elf *.ELF *.o *.O);;"
 		"All files (*.*)"),
 		Q_NULLPTR, QFileDialog::DontResolveSymlinks);
 
