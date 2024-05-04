@@ -82,16 +82,6 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 		if (m_progress_dialog)
 		{
 			m_progress_dialog->show();
-			m_progress_dialog_update_timer.start();
-		}
-	});
-
-	m_progress_dialog_update_timer.setInterval(16);
-	connect(&m_progress_dialog_update_timer, &QTimer::timeout, this, [this]()
-	{
-		if (m_progress_dialog)
-		{
-			m_progress_dialog->SetValue(m_progress_dialog_value);
 		}
 	});
 
@@ -147,7 +137,23 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	add_column(gui::game_list_columns::compat,     tr("Compatibility"),         tr("Show Compatibility"));
 	add_column(gui::game_list_columns::dir_size,   tr("Space On Disk"),         tr("Show Space On Disk"));
 
+	m_progress_dialog = new progress_dialog(tr("Loading games"), tr("Loading games, please wait..."), tr("Cancel"), 0, 0, false, this, Qt::Dialog | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
+
 	// Events
+	connect(m_progress_dialog, &QProgressDialog::canceled, this, [this]()
+	{
+		gui::utils::stop_future_watcher(m_parsing_watcher, true);
+		gui::utils::stop_future_watcher(m_refresh_watcher, true);
+
+		m_path_entries.clear();
+		m_path_list.clear();
+		m_serials.clear();
+		m_game_data.clear();
+		m_notes.clear();
+		m_games.pop_all();
+
+		m_progress_dialog_timer.stop();
+	});
 	connect(&m_parsing_watcher, &QFutureWatcher<void>::finished, this, &game_list_frame::OnParsingFinished);
 	connect(&m_parsing_watcher, &QFutureWatcher<void>::canceled, this, [this]()
 	{
@@ -172,12 +178,9 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 		m_serials.clear();
 		m_games.pop_all();
 
-		m_progress_dialog_update_timer.stop();
-
-		if (progress_dialog* dlg = m_progress_dialog)
+		if (m_progress_dialog)
 		{
-			m_progress_dialog = nullptr; // Clear first to avoid further slots
-			dlg->accept();
+			m_progress_dialog->accept();
 		}
 	});
 	connect(&m_refresh_watcher, &QFutureWatcher<void>::progressRangeChanged, this, [this](int minimum, int maximum)
@@ -189,7 +192,10 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	});
 	connect(&m_refresh_watcher, &QFutureWatcher<void>::progressValueChanged, this, [this](int value)
 	{
-		m_progress_dialog_value = value;
+		if (m_progress_dialog)
+		{
+			m_progress_dialog->SetValue(value);
+		}
 	});
 
 	connect(m_game_list, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
@@ -322,14 +328,12 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 	gui::utils::stop_future_watcher(m_parsing_watcher, from_drive);
 	gui::utils::stop_future_watcher(m_refresh_watcher, from_drive);
 
-	m_progress_dialog_update_timer.stop();
 	m_progress_dialog_timer.stop();
 
-	if (progress_dialog* dlg = m_progress_dialog)
+	if (m_progress_dialog)
 	{
-		m_progress_dialog = nullptr; // Clear first to avoid further slots
-		dlg->SetValue(dlg->maximum());
-		dlg->accept();
+		m_progress_dialog->SetValue(m_progress_dialog->maximum());
+		m_progress_dialog->accept();
 	}
 
 	if (from_drive)
@@ -341,34 +345,10 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 		m_notes.clear();
 		m_games.pop_all();
 
-		m_progress_dialog = new progress_dialog(tr("Loading games"), tr("Loading games, please wait..."), tr("Cancel"), 0, 0, true, this, Qt::Dialog | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
-
-		connect(m_progress_dialog, &QProgressDialog::finished, this, [this]()
+		if (m_progress_dialog)
 		{
-			if (m_progress_dialog == QObject::sender())
-			{
-				m_progress_dialog = nullptr;
-			}
-		});
-		connect(m_progress_dialog, &QProgressDialog::canceled, this, [this]()
-		{
-			gui::utils::stop_future_watcher(m_parsing_watcher, true);
-			gui::utils::stop_future_watcher(m_refresh_watcher, true);
-
-			m_path_entries.clear();
-			m_path_list.clear();
-			m_serials.clear();
-			m_game_data.clear();
-			m_notes.clear();
-			m_games.pop_all();
-
-			m_progress_dialog_timer.stop();
-
-			if (m_progress_dialog == QObject::sender())
-			{
-				m_progress_dialog = nullptr;
-			}
-		});
+			m_progress_dialog->SetValue(0);
+		}
 
 		m_progress_dialog_timer.start();
 
@@ -680,8 +660,6 @@ void game_list_frame::OnParsingFinished()
 			}
 		}
 	};
-
-	m_progress_dialog_value = 0;
 
 	m_refresh_watcher.setFuture(QtConcurrent::map(m_path_entries, [this, _hdd, add_disc_dir, add_game](const path_entry& entry)
 	{
