@@ -137,6 +137,21 @@ struct cpu_prof
 			return results;
 		}
 
+		static f64 get_percent(u64 dividend, u64 divisor)
+		{
+			if (!dividend)
+			{
+				return 0;
+			}
+
+			if (dividend >= divisor)
+			{
+				return 100;
+			}
+
+			return 100. * dividend / divisor;
+		}
+
 		// Print info
 		void print(const std::shared_ptr<cpu_thread>& ptr)
 		{
@@ -144,7 +159,7 @@ struct cpu_prof
 			{
 				if (cpu_flag::exit - ptr->state)
 				{
-					profiler.notice("Thread \"%s\" [0x%08x]: %u samples (%.4f%% idle), %u new, %u reservation (%.4f%%): Not enough new samples have been collected since the last print.", ptr->get_name(), ptr->id, samples, 100. * idle / samples, new_samples, reservation_samples, 100. * reservation_samples / samples);
+					profiler.notice("Thread \"%s\" [0x%08x]: %u samples (%.4f%% idle), %u new, %u reservation (%.4f%%): Not enough new samples have been collected since the last print.", ptr->get_name(), ptr->id, samples, get_percent(idle, samples), new_samples, reservation_samples, get_percent(reservation_samples, samples - idle));
 				}
 
 				return;
@@ -160,7 +175,7 @@ struct cpu_prof
 
 			// Print results
 			const std::string results = format(chart, samples, idle);
-			profiler.notice("Thread \"%s\" [0x%08x]: %u samples (%.4f%% idle), %u new, %u reservation (%.4f%%):\n%s", ptr->get_name(), ptr->id, samples, 100. * idle / samples, new_samples, reservation_samples, 100. * reservation_samples / samples, results);
+			profiler.notice("Thread \"%s\" [0x%08x]: %u samples (%.4f%% idle), %u new, %u reservation (%.4f%%):\n%s", ptr->get_name(), ptr->id, samples, get_percent(idle, samples), new_samples, reservation_samples, get_percent(reservation_samples, samples - idle), results);
 
 			new_samples = 0;
 		}
@@ -203,7 +218,7 @@ struct cpu_prof
 
 			if (new_samples < min_print_all_samples && thread_ctrl::state() != thread_state::aborting)
 			{
-				profiler.notice("All Threads: %u samples (%.4f%% idle), %u new, %u reservation (%.4f%%): Not enough new samples have been collected since the last print.", samples, 100. * idle / samples, new_samples, reservation, 100. * reservation / samples);
+				profiler.notice("All Threads: %u samples (%.4f%% idle), %u new, %u reservation (%.4f%%): Not enough new samples have been collected since the last print.", samples, get_percent(idle, samples), new_samples, reservation, get_percent(reservation, samples - idle));
 				return;
 			}
 
@@ -213,7 +228,7 @@ struct cpu_prof
 			}
 
 			const std::string results = format(chart, samples, idle, true);
-			profiler.notice("All Threads: %u samples (%.4f%% idle), %u new, %u reservation (%.4f%%):%s", samples, 100. * idle / samples, new_samples, reservation, 100. * reservation / samples, results);
+			profiler.notice("All Threads: %u samples (%.4f%% idle), %u new, %u reservation (%.4f%%):%s", samples, get_percent(idle, samples), new_samples, reservation, get_percent(reservation, samples - idle), results);
 		}
 	};
 

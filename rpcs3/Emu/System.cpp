@@ -3318,6 +3318,14 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 			set_progress_message("Commiting File");
 
+			fs::file to_close_file;
+			{
+				auto reset = init_mtx->reset();
+				to_close_file = std::move(file.file);
+				reset.set_init();
+			}
+			to_close_file.close();
+
 			if (!file.commit() || !fs::get_stat(path, file_stat))
 			{
 				sys_log.error("Failed to write savestate to file! (path='%s', %s)", path, fs::g_tls_error);

@@ -713,13 +713,26 @@ void gui_application::InitializeCallbacks()
 				std::string verbose_message;
 				usz bytes_written = 0;
 
+				while (true)
 				{
-					auto init = static_cast<stx::init_mutex*>(init_mtx.get())->access();
+					auto mtx = static_cast<stx::init_mutex*>(init_mtx.get());
+					auto init = mtx->access();
 
 					if (!init)
 					{
-						pdlg->reject();
-						return;
+						// Try to wait for the abort process to complete
+						auto fake_reset = mtx->reset();
+						if (!fake_reset)
+						{
+							// End of emulation termination
+							pdlg->reject();
+							return;
+						}
+
+						fake_reset.set_init();
+
+						// Now ar_ptr contains a null file descriptor
+						continue;
 					}
 
 					if (auto str_ptr = code_location->load())
@@ -727,10 +740,11 @@ void gui_application::InitializeCallbacks()
 						verbose_message = "\n" + *str_ptr;
 					}
 
-					*half_seconds += 1;
-
-					bytes_written = ar_ptr->get_size();
+					bytes_written = std::max<usz>(ar_ptr->get_size(), old_written);
+					break;
 				}
+
+				*half_seconds += 1;
 
 				if (old_written == bytes_written)
 				{

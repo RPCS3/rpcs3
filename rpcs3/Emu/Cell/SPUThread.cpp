@@ -1576,6 +1576,19 @@ void spu_thread::cpu_on_stop()
 		dump_all(ret);
 		spu_log.notice("thread context: %s", ret);
 	}
+
+	if (is_stopped(state - cpu_flag::stop))
+	{
+		if (stx == 0 && ftx == 0 && last_succ == 0 && last_fail == 0)
+		{
+			perf_log.notice("SPU thread perf stats are not available.");
+		}
+		else
+		{
+			perf_log.notice("Perf stats for transactions: success %u, failure %u", stx, ftx);
+			perf_log.notice("Perf stats for PUTLLC reload: success %u, failure %u", last_succ, last_fail);
+		}
+	}
 }
 
 void spu_thread::cpu_init()
@@ -1963,9 +1976,6 @@ spu_thread::~spu_thread()
 	shm->unmap(ls);
 	shm->unmap(ls - SPU_LS_SIZE);
 	utils::memory_release(ls - SPU_LS_SIZE * 2, SPU_LS_SIZE * 5);
-
-	perf_log.notice("Perf stats for transactions: success %u, failure %u", stx, ftx);
-	perf_log.notice("Perf stats for PUTLLC reload: success %u, failure %u", last_succ, last_fail);
 }
 
 u8* spu_thread::map_ls(utils::shm& shm, void* ptr)
