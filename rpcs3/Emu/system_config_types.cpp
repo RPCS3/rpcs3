@@ -40,14 +40,17 @@ void fmt_class_string<video_resolution>::format(std::string& out, u64 arg)
 	{
 		switch (value)
 		{
-		case video_resolution::_1080: return "1920x1080";
-		case video_resolution::_720: return "1280x720";
-		case video_resolution::_480: return "720x480";
-		case video_resolution::_576: return "720x576";
-		case video_resolution::_1600x1080: return "1600x1080";
-		case video_resolution::_1440x1080: return "1440x1080";
-		case video_resolution::_1280x1080: return "1280x1080";
-		case video_resolution::_960x1080: return "960x1080";
+		case video_resolution::_1080p: return "1920x1080";
+		case video_resolution::_1080i: return "1920x1080i";
+		case video_resolution::_720p: return "1280x720";
+		case video_resolution::_480p: return "720x480";
+		case video_resolution::_480i: return "720x480i";
+		case video_resolution::_576p: return "720x576";
+		case video_resolution::_576i: return "720x576i";
+		case video_resolution::_1600x1080p: return "1600x1080";
+		case video_resolution::_1440x1080p: return "1440x1080";
+		case video_resolution::_1280x1080p: return "1280x1080";
+		case video_resolution::_960x1080p: return "960x1080";
 		}
 
 		return unknown;

@@ -13,26 +13,47 @@ LOG_CHANNEL(cellSysutil);
 // NOTE: Unused in this module, but used by gs_frame to determine window size
 const extern std::unordered_map<video_resolution, std::pair<int, int>, value_hash<video_resolution>> g_video_out_resolution_map
 {
-	{ video_resolution::_1080,      { 1920, 1080 } },
-	{ video_resolution::_720,       { 1280, 720 } },
-	{ video_resolution::_480,       { 720, 480 } },
-	{ video_resolution::_576,       { 720, 576 } },
-	{ video_resolution::_1600x1080, { 1600, 1080 } },
-	{ video_resolution::_1440x1080, { 1440, 1080 } },
-	{ video_resolution::_1280x1080, { 1280, 1080 } },
-	{ video_resolution::_960x1080,  { 960, 1080 } },
+	{ video_resolution::_1080p,      { 1920, 1080 } },
+	{ video_resolution::_1080i,      { 1920, 1080 } },
+	{ video_resolution::_720p,       { 1280, 720 } },
+	{ video_resolution::_480p,       { 720, 480 } },
+	{ video_resolution::_480i,       { 720, 480 } },
+	{ video_resolution::_576p,       { 720, 576 } },
+	{ video_resolution::_576i,       { 720, 576 } },
+	{ video_resolution::_1600x1080p, { 1600, 1080 } },
+	{ video_resolution::_1440x1080p, { 1440, 1080 } },
+	{ video_resolution::_1280x1080p, { 1280, 1080 } },
+	{ video_resolution::_960x1080p,  { 960, 1080 } },
 };
 
 const extern std::unordered_map<video_resolution, CellVideoOutResolutionId, value_hash<video_resolution>> g_video_out_resolution_id
 {
-	{ video_resolution::_1080,      CELL_VIDEO_OUT_RESOLUTION_1080 },
-	{ video_resolution::_720,       CELL_VIDEO_OUT_RESOLUTION_720 },
-	{ video_resolution::_480,       CELL_VIDEO_OUT_RESOLUTION_480 },
-	{ video_resolution::_576,       CELL_VIDEO_OUT_RESOLUTION_576 },
-	{ video_resolution::_1600x1080, CELL_VIDEO_OUT_RESOLUTION_1600x1080 },
-	{ video_resolution::_1440x1080, CELL_VIDEO_OUT_RESOLUTION_1440x1080 },
-	{ video_resolution::_1280x1080, CELL_VIDEO_OUT_RESOLUTION_1280x1080 },
-	{ video_resolution::_960x1080,  CELL_VIDEO_OUT_RESOLUTION_960x1080 },
+	{ video_resolution::_1080p,      CELL_VIDEO_OUT_RESOLUTION_1080 },
+	{ video_resolution::_1080i,      CELL_VIDEO_OUT_RESOLUTION_1080 },
+	{ video_resolution::_720p,       CELL_VIDEO_OUT_RESOLUTION_720 },
+	{ video_resolution::_480p,       CELL_VIDEO_OUT_RESOLUTION_480 },
+	{ video_resolution::_480i,       CELL_VIDEO_OUT_RESOLUTION_480 },
+	{ video_resolution::_576p,       CELL_VIDEO_OUT_RESOLUTION_576 },
+	{ video_resolution::_576i,       CELL_VIDEO_OUT_RESOLUTION_576 },
+	{ video_resolution::_1600x1080p, CELL_VIDEO_OUT_RESOLUTION_1600x1080 },
+	{ video_resolution::_1440x1080p, CELL_VIDEO_OUT_RESOLUTION_1440x1080 },
+	{ video_resolution::_1280x1080p, CELL_VIDEO_OUT_RESOLUTION_1280x1080 },
+	{ video_resolution::_960x1080p,  CELL_VIDEO_OUT_RESOLUTION_960x1080 },
+};
+
+const extern std::unordered_map<video_resolution, CellVideoOutScanMode, value_hash<video_resolution>> g_video_out_scan_mode
+{
+	{ video_resolution::_1080p,      CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE },
+	{ video_resolution::_1080i,      CELL_VIDEO_OUT_SCAN_MODE_INTERLACE },
+	{ video_resolution::_720p,       CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE },
+	{ video_resolution::_480p,       CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE },
+	{ video_resolution::_480i,       CELL_VIDEO_OUT_SCAN_MODE_INTERLACE },
+	{ video_resolution::_576p,       CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE },
+	{ video_resolution::_576i,       CELL_VIDEO_OUT_SCAN_MODE_INTERLACE },
+	{ video_resolution::_1600x1080p, CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE },
+	{ video_resolution::_1440x1080p, CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE },
+	{ video_resolution::_1280x1080p, CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE },
+	{ video_resolution::_960x1080p,  CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE },
 };
 
 const extern std::unordered_map<video_aspect, CellVideoOutDisplayAspect, value_hash<video_aspect>> g_video_out_aspect_id
@@ -124,7 +145,7 @@ error_code cellVideoOutGetState(u32 videoOut, u32 deviceIndex, vm::ptr<CellVideo
 		state->state = CELL_VIDEO_OUT_OUTPUT_STATE_ENABLED;
 		state->colorSpace = CELL_VIDEO_OUT_COLOR_SPACE_RGB;
 		state->displayMode.resolutionId = conf.state ? conf.resolution_id : ::at32(g_video_out_resolution_id, g_cfg.video.resolution);
-		state->displayMode.scanMode = CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE;
+		state->displayMode.scanMode = conf.state ? conf.scan_mode : ::at32(g_video_out_scan_mode, g_cfg.video.resolution);
 		state->displayMode.conversion = CELL_VIDEO_OUT_DISPLAY_CONVERSION_NONE;
 		state->displayMode.aspect = conf.state ? conf.aspect : ::at32(g_video_out_aspect_id, g_cfg.video.aspect_ratio);
 		state->displayMode.refreshRates = CELL_VIDEO_OUT_REFRESH_RATE_59_94HZ;
@@ -283,7 +304,6 @@ error_code cellVideoOutGetDeviceInfo(u32 videoOut, u32 deviceIndex, vm::ptr<Cell
 	info->portType = CELL_VIDEO_OUT_PORT_HDMI;
 	info->colorSpace = CELL_VIDEO_OUT_COLOR_SPACE_RGB;
 	info->latency = 100;
-	info->availableModeCount = 1;
 	info->state = CELL_VIDEO_OUT_DEVICE_STATE_AVAILABLE;
 	info->rgbOutputRange = 1;
 	info->colorInfo.blueX = 0xFFFF;
@@ -295,20 +315,108 @@ error_code cellVideoOutGetDeviceInfo(u32 videoOut, u32 deviceIndex, vm::ptr<Cell
 	info->colorInfo.whiteX = 0xFFFF;
 	info->colorInfo.whiteY = 0xFFFF;
 	info->colorInfo.gamma = 100;
-	info->availableModes[0].aspect = ::at32(g_video_out_aspect_id, g_cfg.video.aspect_ratio);
-	info->availableModes[0].conversion = CELL_VIDEO_OUT_DISPLAY_CONVERSION_NONE;
-	info->availableModes[0].refreshRates =  CELL_VIDEO_OUT_REFRESH_RATE_60HZ | CELL_VIDEO_OUT_REFRESH_RATE_59_94HZ;
-	info->availableModes[0].resolutionId = ::at32(g_video_out_resolution_id, g_cfg.video.resolution);
-	info->availableModes[0].scanMode = CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE;
 
-	if (g_cfg.video.stereo_render_mode != stereo_render_mode_options::disabled && g_cfg.video.resolution == video_resolution::_720)
+	u32 mode_count = 0;
+
+	const auto add_mode = [&](u8 resolutionId, u8 scanMode, u8 conversion, u8 aspect)
+	{
+		info->availableModes[mode_count].resolutionId = resolutionId;
+		info->availableModes[mode_count].scanMode = scanMode;
+		info->availableModes[mode_count].conversion = conversion;
+		info->availableModes[mode_count].aspect = aspect;
+		info->availableModes[mode_count].refreshRates = CELL_VIDEO_OUT_REFRESH_RATE_60HZ | CELL_VIDEO_OUT_REFRESH_RATE_59_94HZ;
+		mode_count++;
+	};
+
+	switch (g_cfg.video.resolution.get())
+	{
+	case video_resolution::_1080p:
+		add_mode(CELL_VIDEO_OUT_RESOLUTION_1080, CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_NONE, CELL_VIDEO_OUT_ASPECT_16_9);
+		add_mode(CELL_VIDEO_OUT_RESOLUTION_1600x1080, CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_TO_1080, CELL_VIDEO_OUT_ASPECT_16_9);
+		add_mode(CELL_VIDEO_OUT_RESOLUTION_1440x1080, CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_TO_1080, CELL_VIDEO_OUT_ASPECT_16_9);
+		add_mode(CELL_VIDEO_OUT_RESOLUTION_1280x1080, CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_TO_1080, CELL_VIDEO_OUT_ASPECT_16_9);
+		add_mode(CELL_VIDEO_OUT_RESOLUTION_960x1080, CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_TO_1080, CELL_VIDEO_OUT_ASPECT_16_9);
+		break;
+	case video_resolution::_1080i:
+		add_mode(CELL_VIDEO_OUT_RESOLUTION_1080, CELL_VIDEO_OUT_SCAN_MODE_INTERLACE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_NONE, CELL_VIDEO_OUT_ASPECT_16_9);
+		add_mode(CELL_VIDEO_OUT_RESOLUTION_1600x1080, CELL_VIDEO_OUT_SCAN_MODE_INTERLACE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_TO_1080, CELL_VIDEO_OUT_ASPECT_16_9);
+		add_mode(CELL_VIDEO_OUT_RESOLUTION_1440x1080, CELL_VIDEO_OUT_SCAN_MODE_INTERLACE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_TO_1080, CELL_VIDEO_OUT_ASPECT_16_9);
+		add_mode(CELL_VIDEO_OUT_RESOLUTION_1280x1080, CELL_VIDEO_OUT_SCAN_MODE_INTERLACE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_TO_1080, CELL_VIDEO_OUT_ASPECT_16_9);
+		add_mode(CELL_VIDEO_OUT_RESOLUTION_960x1080, CELL_VIDEO_OUT_SCAN_MODE_INTERLACE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_TO_1080, CELL_VIDEO_OUT_ASPECT_16_9);
+		break;
+	case video_resolution::_720p:
+		add_mode(CELL_VIDEO_OUT_RESOLUTION_720, CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_NONE, CELL_VIDEO_OUT_ASPECT_16_9);
+		break;
+	case video_resolution::_480p:
+		add_mode(CELL_VIDEO_OUT_RESOLUTION_480, CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_NONE, CELL_VIDEO_OUT_ASPECT_4_3);
+		if (g_cfg.video.aspect_ratio == video_aspect::_16_9)
+		{
+			add_mode(CELL_VIDEO_OUT_RESOLUTION_480, CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_NONE, CELL_VIDEO_OUT_ASPECT_16_9);
+		}
+		break;
+	case video_resolution::_480i:
+		add_mode(CELL_VIDEO_OUT_RESOLUTION_480, CELL_VIDEO_OUT_SCAN_MODE_INTERLACE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_NONE, CELL_VIDEO_OUT_ASPECT_4_3);
+		if (g_cfg.video.aspect_ratio == video_aspect::_16_9)
+		{
+			add_mode(CELL_VIDEO_OUT_RESOLUTION_480, CELL_VIDEO_OUT_SCAN_MODE_INTERLACE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_NONE, CELL_VIDEO_OUT_ASPECT_16_9);
+		}
+		break;
+	case video_resolution::_576p:
+		add_mode(CELL_VIDEO_OUT_RESOLUTION_576, CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_NONE, CELL_VIDEO_OUT_ASPECT_4_3);
+		add_mode(CELL_VIDEO_OUT_RESOLUTION_480, CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_NONE, CELL_VIDEO_OUT_ASPECT_4_3);
+		if (g_cfg.video.aspect_ratio == video_aspect::_16_9)
+		{
+			add_mode(CELL_VIDEO_OUT_RESOLUTION_576, CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_NONE, CELL_VIDEO_OUT_ASPECT_16_9);
+			add_mode(CELL_VIDEO_OUT_RESOLUTION_480, CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_NONE, CELL_VIDEO_OUT_ASPECT_16_9);
+		}
+		break;
+	case video_resolution::_576i:
+		add_mode(CELL_VIDEO_OUT_RESOLUTION_576, CELL_VIDEO_OUT_SCAN_MODE_INTERLACE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_NONE, CELL_VIDEO_OUT_ASPECT_4_3);
+		add_mode(CELL_VIDEO_OUT_RESOLUTION_480, CELL_VIDEO_OUT_SCAN_MODE_INTERLACE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_NONE, CELL_VIDEO_OUT_ASPECT_4_3);
+		if (g_cfg.video.aspect_ratio == video_aspect::_16_9)
+		{
+			add_mode(CELL_VIDEO_OUT_RESOLUTION_576, CELL_VIDEO_OUT_SCAN_MODE_INTERLACE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_NONE, CELL_VIDEO_OUT_ASPECT_16_9);
+			add_mode(CELL_VIDEO_OUT_RESOLUTION_480, CELL_VIDEO_OUT_SCAN_MODE_INTERLACE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_NONE, CELL_VIDEO_OUT_ASPECT_16_9);
+		}
+		break;
+	case video_resolution::_1600x1080p:
+		add_mode(CELL_VIDEO_OUT_RESOLUTION_1600x1080, CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_TO_1080, CELL_VIDEO_OUT_ASPECT_16_9);
+		break;
+	case video_resolution::_1440x1080p:
+		add_mode(CELL_VIDEO_OUT_RESOLUTION_1440x1080, CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_TO_1080, CELL_VIDEO_OUT_ASPECT_16_9);
+		break;
+	case video_resolution::_1280x1080p:
+		add_mode(CELL_VIDEO_OUT_RESOLUTION_1280x1080, CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_TO_1080, CELL_VIDEO_OUT_ASPECT_16_9);
+		break;
+	case video_resolution::_960x1080p:
+		add_mode(CELL_VIDEO_OUT_RESOLUTION_960x1080, CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_TO_1080, CELL_VIDEO_OUT_ASPECT_16_9);
+		break;
+	}
+
+	if (g_cfg.video.stereo_render_mode != stereo_render_mode_options::disabled && g_cfg.video.resolution == video_resolution::_720p)
 	{
 		// Register 3D-capable display mode
-		info->availableModes[1] = info->availableModes[0];
-		info->availableModes[1].conversion = CELL_VIDEO_OUT_DISPLAY_CONVERSION_TO_720_3D_FRAME_PACKING;
-		info->availableModes[1].resolutionId = CELL_VIDEO_OUT_RESOLUTION_720_3D_FRAME_PACKING;
-		info->availableModeCount++;
+		if (true) // TODO
+		{
+			// 3D stereo
+			add_mode(CELL_VIDEO_OUT_RESOLUTION_720_3D_FRAME_PACKING, CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_NONE, CELL_VIDEO_OUT_ASPECT_16_9);
+			add_mode(CELL_VIDEO_OUT_RESOLUTION_1024x720_3D_FRAME_PACKING, CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_TO_720_3D_FRAME_PACKING, CELL_VIDEO_OUT_ASPECT_16_9);
+			add_mode(CELL_VIDEO_OUT_RESOLUTION_960x720_3D_FRAME_PACKING, CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_TO_720_3D_FRAME_PACKING, CELL_VIDEO_OUT_ASPECT_16_9);
+			add_mode(CELL_VIDEO_OUT_RESOLUTION_800x720_3D_FRAME_PACKING, CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_TO_720_3D_FRAME_PACKING, CELL_VIDEO_OUT_ASPECT_16_9);
+			add_mode(CELL_VIDEO_OUT_RESOLUTION_640x720_3D_FRAME_PACKING, CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_TO_720_3D_FRAME_PACKING, CELL_VIDEO_OUT_ASPECT_16_9);
+		}
+		else
+		{
+			// SimulView
+			add_mode(CELL_VIDEO_OUT_RESOLUTION_720_SIMULVIEW_FRAME_PACKING, CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_TO_720_3D_FRAME_PACKING, CELL_VIDEO_OUT_ASPECT_16_9);
+			add_mode(CELL_VIDEO_OUT_RESOLUTION_1024x720_SIMULVIEW_FRAME_PACKING, CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_TO_720_3D_FRAME_PACKING, CELL_VIDEO_OUT_ASPECT_16_9);
+			add_mode(CELL_VIDEO_OUT_RESOLUTION_960x720_SIMULVIEW_FRAME_PACKING, CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_TO_720_3D_FRAME_PACKING, CELL_VIDEO_OUT_ASPECT_16_9);
+			add_mode(CELL_VIDEO_OUT_RESOLUTION_800x720_SIMULVIEW_FRAME_PACKING, CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_TO_720_3D_FRAME_PACKING, CELL_VIDEO_OUT_ASPECT_16_9);
+			add_mode(CELL_VIDEO_OUT_RESOLUTION_640x720_SIMULVIEW_FRAME_PACKING, CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_TO_720_3D_FRAME_PACKING, CELL_VIDEO_OUT_ASPECT_16_9);
+		}
 	}
+
+	info->availableModeCount = mode_count;
 
 	return CELL_OK;
 }
@@ -346,7 +454,7 @@ error_code cellVideoOutGetResolutionAvailability(u32 videoOut, u32 resolutionId,
 			return not_an_error(1);
 		}
 
-		if ((g_cfg.video.stereo_render_mode != stereo_render_mode_options::disabled) && g_cfg.video.resolution == video_resolution::_720)
+		if ((g_cfg.video.stereo_render_mode != stereo_render_mode_options::disabled) && g_cfg.video.resolution == video_resolution::_720p)
 		{
 			switch (resolutionId)
 			{

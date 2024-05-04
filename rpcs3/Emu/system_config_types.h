@@ -197,14 +197,17 @@ enum class pad_handler_mode
 
 enum class video_resolution
 {
-	_1080,
-	_720,
-	_480,
-	_576,
-	_1600x1080,
-	_1440x1080,
-	_1280x1080,
-	_960x1080,
+	_1080p,
+	_1080i,
+	_720p,
+	_480p,
+	_480i,
+	_576p,
+	_576i,
+	_1600x1080p,
+	_1440x1080p,
+	_1280x1080p,
+	_960x1080p,
 };
 
 enum class video_aspect

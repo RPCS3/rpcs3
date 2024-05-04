@@ -461,32 +461,37 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	SubscribeTooltip(ui->gb_default_resolution, tooltips.settings.resolution);
 	// remove unsupported resolutions from the dropdown
 	bool saved_index_removed = false;
-	if (game && game->resolution > 0)
+	//if (game && game->resolution > 0) // Add this line when interlaced resolutions are implemented
 	{
-		const std::map<u32, std::string> resolutions
+		const std::map<video_resolution, u32> resolutions
 		{
-			{ psf::resolution_flag::_480p,      fmt::format("%s", video_resolution::_480) },
-			{ psf::resolution_flag::_576p,      fmt::format("%s", video_resolution::_576) },
-			{ psf::resolution_flag::_720p,      fmt::format("%s", video_resolution::_720) },
-			{ psf::resolution_flag::_1080p,     fmt::format("%s", video_resolution::_1080) },
-			// { psf::resolution_flag::_480p_16_9, fmt::format("%s", video_resolution::_480p_16:9) },
-			// { psf::resolution_flag::_576p_16_9, fmt::format("%s", video_resolution::_576p_16:9) },
+			{ video_resolution::_480p,       psf::resolution_flag::_480 | psf::resolution_flag::_480_16_9 },
+			{ video_resolution::_480i,       psf::resolution_flag::_480 | psf::resolution_flag::_480_16_9 },
+			{ video_resolution::_576p,       psf::resolution_flag::_576 | psf::resolution_flag::_576_16_9 },
+			{ video_resolution::_576i,       psf::resolution_flag::_576 | psf::resolution_flag::_576_16_9 },
+			{ video_resolution::_720p,       psf::resolution_flag::_720  },
+			{ video_resolution::_1080p,      psf::resolution_flag::_1080 },
+			{ video_resolution::_1080i,      psf::resolution_flag::_1080 },
+			{ video_resolution::_1600x1080p, psf::resolution_flag::_1080 },
+			{ video_resolution::_1440x1080p, psf::resolution_flag::_1080 },
+			{ video_resolution::_1280x1080p, psf::resolution_flag::_1080 },
+			{ video_resolution::_960x1080p,  psf::resolution_flag::_1080 },
 		};
 
 		const int saved_index = ui->resBox->currentIndex();
 
 		for (int i = ui->resBox->count() - 1; i >= 0; i--)
 		{
-			bool has_resolution = false;
-			for (const auto& res : resolutions)
-			{
-				if ((game->resolution & res.first) && res.second == sstr(ui->resBox->itemText(i)))
-				{
-					has_resolution = true;
-					break;
-				}
-			}
-			if (!has_resolution)
+			const auto [text, value] = get_data(ui->resBox, i);
+			const video_resolution resolution = static_cast<video_resolution>(value);
+
+			// Remove interlaced resolutions until they are properly implemented
+			const bool is_interlaced = (resolution == video_resolution::_1080i ||
+			                            resolution == video_resolution::_480i ||
+			                            resolution == video_resolution::_576i);
+			const bool supported_by_game = !game || (game && game->resolution > 0 && resolutions.contains(resolution) && (game->resolution & resolutions.at(resolution)));
+
+			if (!supported_by_game || is_interlaced)
 			{
 				ui->resBox->removeItem(i);
 				if (i == saved_index)
@@ -500,7 +505,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	{
 		const auto [text, value] = get_data(ui->resBox, i);
 
-		if (text == "1280x720")
+		if (static_cast<video_resolution>(value) == video_resolution::_720p)
 		{
 			// Rename the default resolution for users
 			ui->resBox->setItemText(i, tr("1280x720 (Recommended)", "Resolution"));
