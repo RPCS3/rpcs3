@@ -74,17 +74,6 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	m_gui_settings->SetValue(gui::gl_marginFactor, m_margin_factor);
 	m_gui_settings->SetValue(gui::gl_textFactor, m_text_factor);
 
-	// Only show the progress dialog after some time has passed
-	m_progress_dialog_timer.setSingleShot(true);
-	m_progress_dialog_timer.setInterval(200);
-	connect(&m_progress_dialog_timer, &QTimer::timeout, this, [this]()
-	{
-		if (m_progress_dialog)
-		{
-			m_progress_dialog->show();
-		}
-	});
-
 	m_game_dock = new QMainWindow(this);
 	m_game_dock->setWindowFlags(Qt::Widget);
 	setWidget(m_game_dock);
@@ -138,6 +127,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	add_column(gui::game_list_columns::dir_size,   tr("Space On Disk"),         tr("Show Space On Disk"));
 
 	m_progress_dialog = new progress_dialog(tr("Loading games"), tr("Loading games, please wait..."), tr("Cancel"), 0, 0, false, this, Qt::Dialog | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
+	m_progress_dialog->setMinimumDuration(200); // Only show the progress dialog after some time has passed
 
 	// Events
 	connect(m_progress_dialog, &QProgressDialog::canceled, this, [this]()
@@ -151,8 +141,6 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 		m_game_data.clear();
 		m_notes.clear();
 		m_games.pop_all();
-
-		m_progress_dialog_timer.stop();
 	});
 	connect(&m_parsing_watcher, &QFutureWatcher<void>::finished, this, &game_list_frame::OnParsingFinished);
 	connect(&m_parsing_watcher, &QFutureWatcher<void>::canceled, this, [this]()
@@ -328,9 +316,7 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 	gui::utils::stop_future_watcher(m_parsing_watcher, from_drive);
 	gui::utils::stop_future_watcher(m_refresh_watcher, from_drive);
 
-	m_progress_dialog_timer.stop();
-
-	if (m_progress_dialog)
+	if (m_progress_dialog && m_progress_dialog->isVisible())
 	{
 		m_progress_dialog->SetValue(m_progress_dialog->maximum());
 		m_progress_dialog->accept();
@@ -349,8 +335,6 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 		{
 			m_progress_dialog->SetValue(0);
 		}
-
-		m_progress_dialog_timer.start();
 
 		const std::string games_dir = g_cfg_vfs.get(g_cfg_vfs.games_dir, rpcs3::utils::get_emu_dir());
 		const u32 games_added = Emu.AddGamesFromDir(games_dir);

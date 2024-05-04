@@ -158,7 +158,6 @@ private:
 	game_list_table* m_game_list = nullptr;
 	game_compatibility* m_game_compat = nullptr;
 	progress_dialog* m_progress_dialog = nullptr;
-	QTimer m_progress_dialog_timer;
 	QList<QAction*> m_columnActs;
 	Qt::SortOrder m_col_sort_order{};
 	int m_sort_column{};
