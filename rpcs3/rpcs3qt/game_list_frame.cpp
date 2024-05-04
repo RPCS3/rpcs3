@@ -374,12 +374,16 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 			{
 				for (const auto& entry : fs::dir(path))
 				{
+					if (m_parsing_watcher.isCanceled())
+					{
+						break;
+					}
+
 					if (!entry.is_directory || entry.name == "." || entry.name == "..")
 					{
 						continue;
 					}
 
-					QApplication::processEvents();
 					std::lock_guard lock(m_path_mutex);
 					m_path_entries.emplace_back(path_entry{path + entry.name, is_disc, false});
 				}
@@ -392,6 +396,11 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 
 			for (const auto& [serial, path] : Emu.GetGamesConfig().get_games())
 			{
+				if (m_parsing_watcher.isCanceled())
+				{
+					break;
+				}
+
 				std::string game_dir = path;
 				game_dir.resize(game_dir.find_last_not_of('/') + 1);
 
@@ -406,7 +415,6 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 					game_dir = game_dir.substr(0, game_dir.size() - 4);
 				}
 
-				QApplication::processEvents();
 				std::lock_guard lock(m_path_mutex);
 				m_path_entries.emplace_back(path_entry{game_dir, false, true});
 			}
@@ -649,6 +657,11 @@ void game_list_frame::OnParsingFinished()
 	{
 		for (const auto& entry : fs::dir(path))
 		{
+			if (m_refresh_watcher.isCanceled())
+			{
+				break;
+			}
+
 			if (!entry.is_directory || entry.name == "." || entry.name == "..")
 			{
 				continue;
