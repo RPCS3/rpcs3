@@ -723,19 +723,22 @@ namespace rsx
 
 	avconf::avconf(utils::serial& ar)
 	{
-		ar(*this);
+		save(ar);
 	}
 
 	void avconf::save(utils::serial& ar)
 	{
 		[[maybe_unused]] const s32 version = GET_OR_USE_SERIALIZATION_VERSION(ar.is_writing(), rsx);
 
-		ar(stereo_mode, format, aspect, resolution_id, scanline_pitch, gamma, resolution_x, resolution_y, state);
-
-		if (ar.is_writing() || version >= 3)
+		if (!ar.is_writing() && version < 3)
 		{
-			ar(scan_mode);
+			// Be compatible with previous bitwise serialization
+			ar(std::span<u8>(reinterpret_cast<u8*>(this), ::offset32(&avconf::scan_mode)));
+			ar.pos += utils::align<usz>(::offset32(&avconf::scan_mode), alignof(avconf)) - ::offset32(&avconf::scan_mode);
+			return;
 		}
+
+		ar(stereo_mode, format, aspect, resolution_id, scanline_pitch, gamma, resolution_x, resolution_y, state, scan_mode);
 	}
 
 	void thread::capture_frame(const std::string &name)
