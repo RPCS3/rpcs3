@@ -3345,13 +3345,13 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 			set_progress_message("Commiting File");
 
-			fs::file to_close_file;
 			{
+				auto& ar = *to_ar->load();
 				auto reset = init_mtx->reset();
-				to_close_file = std::move(file.file);
+				ar = {};
+				ar.set_reading_state(); // Guard against using it
 				reset.set_init();
 			}
-			to_close_file.close();
 
 			if (!file.commit() || !fs::get_stat(path, file_stat))
 			{

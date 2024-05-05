@@ -215,7 +215,7 @@ std::string get_savestate_file(std::string_view title_id, std::string_view boot_
 	if (abs_id == -1 && rel_id == -1)
 	{
 		// Return directory
-		return fs::get_cache_dir() + "/savestates/" + title + "/";
+		return fs::get_cache_dir() + "savestates/" + title + "/";
 	}
 
 	ensure(rel_id < 0 || abs_id >= 0, "Unimplemented!");
@@ -263,7 +263,7 @@ bool boot_last_savestate(bool testing)
 {
 	if (!g_cfg.savestate.suspend_emu && !Emu.GetTitleID().empty() && (Emu.IsRunning() || Emu.GetStatus() == system_state::paused))
 	{
-		const std::string save_dir = fs::get_cache_dir() + "/savestates/" + Emu.GetTitleID() + '/';
+		const std::string save_dir = fs::get_cache_dir() + "savestates/" + Emu.GetTitleID() + '/';
 
 		std::string savestate_path;
 		s64 mtime = smin;

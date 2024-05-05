@@ -618,7 +618,7 @@ void main_window::BootSavestate()
 		stopped = true;
 	}
 
-	const QString file_path = QFileDialog::getOpenFileName(this, tr("Select Savestate To Boot"), qstr(fs::get_cache_dir() + "/savestates/"), tr(
+	const QString file_path = QFileDialog::getOpenFileName(this, tr("Select Savestate To Boot"), qstr(fs::get_cache_dir() + "savestates/"), tr(
 		"Savestate files (*.SAVESTAT *.SAVESTAT.gz);;"
 		"All files (*.*)"),
 		Q_NULLPTR, QFileDialog::DontResolveSymlinks);

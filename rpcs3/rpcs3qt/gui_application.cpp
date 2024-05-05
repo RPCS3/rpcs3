@@ -740,7 +740,7 @@ void gui_application::InitializeCallbacks()
 						verbose_message = "\n" + *str_ptr;
 					}
 
-					bytes_written = std::max<usz>(ar_ptr->get_size(), old_written);
+					bytes_written = ar_ptr->is_writing() ? std::max<usz>(ar_ptr->get_size(), old_written) : old_written;
 					break;
 				}
 
