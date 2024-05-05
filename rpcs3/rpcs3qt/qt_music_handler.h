@@ -1,13 +1,15 @@
 #pragma once
 
 #include "Emu/Io/music_handler_base.h"
-#include "qt_music_error_handler.h"
 
 #include <QMediaPlayer>
+#include <QObject>
 #include <mutex>
 
-class qt_music_handler final : public music_handler_base
+class qt_music_handler final : public QObject, public music_handler_base
 {
+	Q_OBJECT
+
 public:
 	qt_music_handler();
 	virtual ~qt_music_handler();
@@ -20,9 +22,13 @@ public:
 	void set_volume(f32 volume) override;
 	f32 get_volume() const override;
 
+private Q_SLOTS:
+	void handle_media_status(QMediaPlayer::MediaStatus status);
+	void handle_music_state(QMediaPlayer::PlaybackState state);
+	void handle_music_error(QMediaPlayer::Error error, const QString& errorString);
+
 private:
 	mutable std::mutex m_mutex;
-	std::unique_ptr<qt_music_error_handler> m_error_handler;
 	std::shared_ptr<QMediaPlayer> m_media_player;
 	std::string m_path;
 };
