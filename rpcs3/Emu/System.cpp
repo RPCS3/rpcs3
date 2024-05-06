@@ -3699,20 +3699,7 @@ void Emulator::ConfigurePPUCache() const
 {
 	auto& _main = g_fxo->get<main_ppu_module>();
 
-	_main.cache = rpcs3::utils::get_cache_dir();
-
-	const std::string dev_flash = vfs::get("/dev_flash/");
-	const bool in_dev_flash = _main.path.starts_with(dev_flash);
-
-	if (in_dev_flash && !_main.path.starts_with(dev_flash + "sys/external/"))
-	{
-		_main.cache += "vsh/";
-	}
-	else if (!in_dev_flash && !m_title_id.empty() && m_cat != "1P")
-	{
-		_main.cache += GetTitleID();
-		_main.cache += '/';
-	}
+	_main.cache = rpcs3::utils::get_cache_dir(_main.path);
 
 	fmt::append(_main.cache, "ppu-%s-%s/", fmt::base57(_main.sha1), _main.path.substr(_main.path.find_last_of('/') + 1));
 
