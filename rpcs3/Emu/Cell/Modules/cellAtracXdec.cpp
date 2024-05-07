@@ -273,18 +273,24 @@ void AtracXdecContext::exec(ppu_thread& ppu)
 			lv2_obj::sleep(ppu);
 			std::lock_guard lock{queue_mutex};
 
-			while (cmd_queue.empty() && thread_ctrl::state() != thread_state::aborting)
+			while (cmd_queue.empty() && !ppu.is_stopped())
 			{
 				lv2_obj::sleep(ppu);
 				queue_not_empty.wait(queue_mutex, 20000);
 			}
 
-			if (!run_thread || thread_ctrl::state() == thread_state::aborting)
+			if (ppu.is_stopped())
 			{
+				ppu.state += cpu_flag::again;
 				return;
 			}
 
 			cmd_queue.pop(cmd);
+
+			if (!run_thread)
+			{
+				return;
+			}
 		}
 
 		cellAtracXdec.trace("Command type: %d", static_cast<u32>(cmd.type.get()));
@@ -321,6 +327,7 @@ void AtracXdecContext::exec(ppu_thread& ppu)
 
 			if (!savestate_lock.owns_lock())
 			{
+				ppu.state += cpu_flag::again;
 				return;
 			}
 
@@ -330,7 +337,6 @@ void AtracXdecContext::exec(ppu_thread& ppu)
 			notify_seq_done.cbFunc(ppu, notify_seq_done.cbArg);
 			break;
 		}
-
 		case AtracXdecCmdType::decode_au:
 		{
 			skip_getting_command = true;
@@ -342,13 +348,19 @@ void AtracXdecContext::exec(ppu_thread& ppu)
 			lv2_obj::sleep(ppu);
 			std::unique_lock output_mutex_lock{output_mutex};
 
-			while (output_locked && thread_ctrl::state() != thread_state::aborting)
+			while (output_locked && !ppu.is_stopped())
 			{
 				lv2_obj::sleep(ppu);
 				output_consumed.wait(output_mutex, 20000);
 			}
 
-			if (!run_thread || thread_ctrl::state() == thread_state::aborting)
+			if (ppu.is_stopped())
+			{
+				ppu.state += cpu_flag::again;
+				return;
+			}
+
+			if (!run_thread)
 			{
 				return;
 			}
@@ -365,6 +377,7 @@ void AtracXdecContext::exec(ppu_thread& ppu)
 
 				if (!savestate_lock.owns_lock())
 				{
+					ppu.state += cpu_flag::again;
 					return;
 				}
 
@@ -402,7 +415,7 @@ void AtracXdecContext::exec(ppu_thread& ppu)
 				if (int err = avcodec_receive_frame(decoder.ctx, decoder.frame); err)
 				{
 					cellAtracXdec.error("avcodec_receive_frame() failed (err=0x%x='%s')", err, utils::av_error_to_string(err));
-					error = CELL_ADEC_ERROR_ATX_NON_FATAL; // Not accurate, LLE uses an error code dependant on which part of the access unit is invalid
+					error = CELL_ADEC_ERROR_ATX_NON_FATAL; // Not accurate, FFmpeg doesn't provide detailed errors like LLE
 				}
 
 				decoded_samples_num = decoder.frame->nb_samples;
@@ -432,7 +445,7 @@ void AtracXdecContext::exec(ppu_thread& ppu)
 
 							if (sample >= std::bit_cast<f32>(std::bit_cast<u32>(1.f) - 1))
 							{
-								output_f32[sample_idx * decoder.nch_in + ATXDEC_AVCODEC_CH_MAP[decoder.ch_config_idx - 1][channel_idx]] = std::bit_cast<be_t<f32>>(std::array<u8, 4>{ 0x3f, 0x7f, 0xff, 0xff }); // Prevents an unnecessary endian swap
+								output_f32[sample_idx * decoder.nch_in + ATXDEC_AVCODEC_CH_MAP[decoder.ch_config_idx - 1][channel_idx]] = std::bit_cast<be_t<f32>>("\x3f\x7f\xff\xff"_u32); // Prevents an unnecessary endian swap
 							}
 							else if (sample <= -1.f)
 							{
@@ -524,6 +537,7 @@ void AtracXdecContext::exec(ppu_thread& ppu)
 
 					if (!savestate_lock.owns_lock())
 					{
+						ppu.state += cpu_flag::again;
 						return;
 					}
 
@@ -537,6 +551,7 @@ void AtracXdecContext::exec(ppu_thread& ppu)
 
 			if (!savestate_lock.owns_lock())
 			{
+				ppu.state += cpu_flag::again;
 				return;
 			}
 
@@ -608,15 +623,11 @@ void atracXdecEntry(ppu_thread& ppu, vm::ptr<AtracXdecContext> atxdec)
 
 	atxdec->decoder.free_avcodec();
 
-	if (thread_ctrl::state() == thread_state::aborting)
+	if (ppu.state & cpu_flag::again)
 	{
-		// For savestates, restore argument
-		idm::get<named_thread<ppu_thread>>(static_cast<u32>(atxdec->thread_id))->cmd_list
-		({
-			{ ppu_cmd::set_args, 1 }, static_cast<u64>(atxdec.addr()),
-		});
+		// For savestates, save argument
+		ppu.syscall_args[0] = atxdec.addr();
 
-		ppu.state += cpu_flag::again;
 		return;
 	}
 
@@ -656,11 +667,11 @@ error_code _CellAdecCoreOpOpenExt_atracx(ppu_thread& ppu, vm::ptr<AtracXdecConte
 		handle, notifyAuDone, notifyAuDoneArg, notifyPcmOut, notifyPcmOutArg, notifyError, notifyErrorArg, notifySeqDone, notifySeqDoneArg, res, spursRes);
 
 	ensure(!!handle && !!res); // Not checked on LLE
-	ensure(handle.aligned(0x80)); // LLE cellAdec aligns the address to 128 bytes
-	ensure(!!notifyAuDone && !!notifyAuDoneArg && !!notifyPcmOut && !!notifyPcmOutArg && !!notifyError && !!notifyErrorArg && !!notifySeqDone && !!notifySeqDoneArg); // These should always be set by LLE cellAdec
+	ensure(handle.aligned(0x80)); // On LLE, this functions doesn't check the alignment or aligns the address itself. The address should already be aligned to 128 bytes by cellAdec
+	ensure(!!notifyAuDone && !!notifyAuDoneArg && !!notifyPcmOut && !!notifyPcmOutArg && !!notifyError && !!notifyErrorArg && !!notifySeqDone && !!notifySeqDoneArg); // These should always be set by cellAdec
 
-	new (handle.get_ptr()) AtracXdecContext(notifyAuDone, notifyAuDoneArg, notifyPcmOut, notifyPcmOutArg, notifyError, notifyErrorArg, notifySeqDone, notifySeqDoneArg,
-		vm::bptr<u8>::make(handle.addr() + utils::align(static_cast<u32>(sizeof(AtracXdecContext)), 0x80) + ATXDEC_SPURS_STRUCTS_SIZE));
+	write_to_ptr(handle.get_ptr(), AtracXdecContext(notifyAuDone, notifyAuDoneArg, notifyPcmOut, notifyPcmOutArg, notifyError, notifyErrorArg, notifySeqDone, notifySeqDoneArg,
+		vm::bptr<u8>::make(handle.addr() + utils::align(static_cast<u32>(sizeof(AtracXdecContext)), 0x80) + ATXDEC_SPURS_STRUCTS_SIZE)));
 
 	const vm::var<char[]> _name = vm::make_str("HLE ATRAC3plus decoder");
 	const auto entry = g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(atracXdecEntry));
@@ -745,13 +756,16 @@ error_code _CellAdecCoreOpDecodeAu_atracx(ppu_thread& ppu, vm::ptr<AtracXdecCont
 	return handle->send_command<AtracXdecCmdType::decode_au>(ppu, pcmHandle, *auInfo);
 }
 
-void _CellAdecCoreOpGetVersion_atracx(vm::ptr<std::array<u8, 4>> version)
+void _CellAdecCoreOpGetVersion_atracx(vm::ptr<u8> version)
 {
 	cellAtracXdec.notice("_CellAdecCoreOpGetVersion_atracx(version=*0x%x)", version);
 
 	ensure(!!version); // Not checked on LLE
 
-	*version = { 0x01, 0x02, 0x00, 0x00 };
+	version[0] = 0x01;
+	version[1] = 0x02;
+	version[2] = 0x00;
+	version[3] = 0x00;
 }
 
 error_code _CellAdecCoreOpRealign_atracx(vm::ptr<AtracXdecContext> handle, vm::ptr<void> outBuffer, vm::cptr<void> pcmStartAddr)
@@ -761,6 +775,7 @@ error_code _CellAdecCoreOpRealign_atracx(vm::ptr<AtracXdecContext> handle, vm::p
 	if (outBuffer)
 	{
 		ensure(!!handle && !!pcmStartAddr); // Not checked on LLE
+		ensure(vm::check_addr(outBuffer.addr(), vm::page_info_t::page_writable, handle->decoder.pcm_output_size));
 
 		std::memcpy(outBuffer.get_ptr(), pcmStartAddr.get_ptr(), handle->decoder.pcm_output_size);
 	}
