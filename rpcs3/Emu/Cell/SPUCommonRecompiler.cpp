@@ -27,8 +27,6 @@
 #include "util/simd.hpp"
 #include "util/sysinfo.hpp"
 
-#pragma optimize("", off)
-
 const extern spu_decoder<spu_itype> g_spu_itype;
 const extern spu_decoder<spu_iname> g_spu_iname;
 const extern spu_decoder<spu_iflag> g_spu_iflag;
@@ -4827,6 +4825,9 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		usz parent_target_index = 0;
 		usz iterator_id = 0;
 
+		usz temp_child_index = umax;
+		usz temp_list_index = umax;
+
 		// PUTLLC16 optimization analysis tracker
 		atomic16_t atomic16{};
 
@@ -4843,12 +4844,14 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 	std::map<u32, atomic16_t> atomic16_all; // RdAtomicStat location -> atomic loop optimization state
 	std::map<u32, bool> getllar_starts; // True for failed loops
 	std::map<u32, bool> run_on_block;
+	std::map<u32, bool> logged_block;
 
 	std::array<reg_state_t, s_reg_max>* true_state_walkby = nullptr;
 
 	atomic16_t dummy16{};
 
 	bool likely_putllc_loop = false;
+	bool had_putllc_evaluation = false;
 
 	for (u32 i = 0, count = 0; i < result.data.size(); i++)
 	{
@@ -4873,7 +4876,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		target_count += loc.size();
 	}
 
-	const bool should_search_patterns = likely_putllc_loop && target_count < 100;
+	const bool should_search_patterns = target_count < 300u;
 
 	// Treat start of function as an unknown value with tag (because it is)
 	const reg_state_t start_program_count = reg_state_t::make_unknown();
@@ -4889,8 +4892,6 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		SPU_LS_MASK_4   = (SPU_LS_SIZE - 1) & -4,
 		SPU_LS_MASK_1   = (SPU_LS_SIZE - 1),
 	};
-
-	const bool log_it = result.data.size() == 0x5b && entry_point == 0x9a28;
 
 	u32 iterator_id_alloc = 0;
 
@@ -4914,7 +4915,6 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 			if (!should_search_patterns)
 			{
-				// TODO: Enable constant search for all
 				break;
 			}
 
@@ -4944,9 +4944,10 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					}
 				}
 
-				spu_log.always()("%s", out);
+				spu_log.fatal("%s", out);
 			}
-			true_state_walkby = &infos[bpc]->evaluate_start_state(infos);
+
+			true_state_walkby = &ensure(infos[bpc])->evaluate_start_state(infos);
 
 			for (reg_state_t& f : *true_state_walkby)
 			{
@@ -4976,6 +4977,8 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				{
 					return;
 				}
+
+				had_putllc_evaluation = true;
 
 				g_fxo->get<putllc16_statistics_t>().breaking_reason[cause]++;
 
@@ -5085,15 +5088,14 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				usz stackframe_pc = SPU_LS_SIZE;
 				usz entry_index = umax;
 
-				auto get_block_targets = [&](u32 pc) -> const std::basic_string<u32>&
+				auto get_block_targets = [&](u32 pc) -> std::basic_string_view<u32>
 				{
 					if (m_block_info[pc / 4] && m_bbs.count(pc))
 					{
 						return m_bbs.at(pc).targets;
 					}
 
-					static const std::basic_string<u32> s_empty;
-					return s_empty;
+					return {};
 				};
 
 				u32 target_pc = SPU_LS_SIZE;
@@ -5107,7 +5109,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					stackframe_pc = state_it->pc;
 					entry_index = state_it->parent_target_index;
 
-					const auto& targets = get_block_targets(stackframe_pc);
+					const auto targets = get_block_targets(stackframe_pc);
 
 					const usz target_size = targets.size();
 
@@ -5121,15 +5123,16 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					{
 						const usz parent_index = state_it->parent_iterator_index;
 
+						to_pop.emplace_back(stackframe_it);
+
 						if (parent_index != umax)
 						{
-							to_pop.emplace_back(stackframe_it);
 							stackframe_it = parent_index;
 						}
 						else
 						{
-							spu_log.success("Clearing");
-							reg_state_it.clear();
+							// Final
+							wi = 0;
 							break;
 						}
 					}
@@ -5137,16 +5140,14 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					{
 						target_pc = ::at32(targets, entry_index);
 
-						// Check block duplication (terminating infinite loops)
-						// Even if duplicated, this still has impact by registering the end of the possible code path outcome
-						std::set<u32> positions;
-
-						u32 dup_pc = SPU_LS_SIZE;
-						u32 occurence_count = 0;
+						usz occurence_count = 0;
+						std::array<usz, 16> duplicate_positions;
 
 						// Virtual concept (there is no really such thing as loop connectors from the ccompiled-code level)
 						// But it helps to simplify this process
-						bool is_loop_connector_or_too_extensive = false;
+						bool is_loop_connector = false;
+						bool is_too_extensive = false;
+						bool is_skipable = false;
 
 						// Hack to avoid extensive analysis of all code paths possible:
 						// Allow up to 4 occurences of the upper-most block
@@ -5154,43 +5155,100 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 						// The proper solution would be to add a precursry function analysis stage which identifies all loop "connectors" and allows duplicates based on it
 						for (usz i = stackframe_it, count = 0;; count++)
 						{
-							if (count >= 100)
+							auto& entry = ::at32(reg_state_it, i);
+							const u32 entry_pc = entry.pc;
+
+							if (count == (state_it->atomic16.active ? 40 : 12))
 							{
-								is_loop_connector_or_too_extensive = true;
+								if (state_it->atomic16.active && !std::exchange(logged_block[target_pc / 4], true))
+								{
+									spu_log.notice("SPU Blcok Analysis is too extensive at 0x%x", entry_pc);
+								}
+
+								is_too_extensive = true;
 								break;
 							}
-
-							auto& entry = ::at32(reg_state_it, i);
-
-							const u32 entry_pc = entry.pc;
 
 							if (entry_pc == target_pc)
 							{
-								if (dup_pc == entry_pc)
-								{
-									occurence_count++;
+								duplicate_positions[occurence_count++] = i;
 
-									if (occurence_count == 4)
-									{
-										is_loop_connector_or_too_extensive = true;
-										break;
-									}
-								}
-								else if (dup_pc > entry_pc)
+								if (occurence_count == duplicate_positions.size())
 								{
-									dup_pc = entry_pc;
+									is_loop_connector = true;
+									break;
 								}
 							}
 
-							const usz parent = entry.parent_iterator_index;
+							const usz parent_idx = entry.parent_iterator_index;
 
-							if (parent == umax)
+							if (parent_idx == umax)
 							{
 								break;
 							}
 
-							ensure(i != parent);
-							i = parent;
+							ensure(i != parent_idx);
+
+							// Fill info for later
+							auto& parent = ::at32(reg_state_it, parent_idx);
+							parent.temp_child_index = i;
+							parent.temp_list_index = count;
+
+							i = parent_idx;
+						}
+
+						// Scan the code for "code flow" repetitions (entire sequences of blocks equal to each other)
+						// If found, this is 100% a loop, shoulkd it start a third time ignore it
+						if (occurence_count >= 2)
+						{
+							for (usz it_begin = 0; !is_skipable && it_begin < occurence_count - 1; it_begin++)
+							{
+								const usz block_start = duplicate_positions[it_begin + 1];
+
+								for (usz it_tail = 0; it_tail < it_begin + 1; it_tail++)
+								{
+									const usz block_tail = duplicate_positions[it_begin - it_tail];
+
+									// Check if the distance is precisely two times from the end
+									if (reg_state_it.size() - block_start != utils::rol64(reg_state_it.size() - block_tail, 1))
+									{
+										continue;
+									}
+
+									bool is_equal = true;
+
+									for (usz j = 1; j < reg_state_it.size() - block_tail; j++)
+									{
+										if (reg_state_it[block_start + j].pc != reg_state_it[block_tail + j].pc)
+										{
+											is_equal = false;
+											break;
+										}
+									}
+
+									if (is_equal)
+									{
+										is_skipable = true;
+										break;
+									}
+								}
+							}
+						}
+
+						if (is_skipable)
+						{
+							if (!std::exchange(logged_block[target_pc / 4], true))
+							{
+								spu_log.notice("SPU block is a loop at [0x%05x -> 0x%05x]", state_it->pc, target_pc);
+							}
+
+							state_it->parent_target_index++;
+							continue;
+						}
+
+						if (is_loop_connector && !std::exchange(logged_block[target_pc / 4], true))
+						{
+							spu_log.notice("SPU block analysis is too repetitive at [0x%05x -> 0x%05x]", state_it->pc, target_pc);
 						}
 
 						insert_entry = true;
@@ -5198,17 +5256,19 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 						// Test if the code is an opening to external code (start of the function is always respected because it is already assumed to have no origin)
 						is_code_backdoor = m_ret_info[target_pc / 4] || (m_entry_info[target_pc / 4] && target_pc != entry_point);
 
-						if (is_code_backdoor || is_loop_connector_or_too_extensive)
+						if (run_on_block[target_pc / 4])
 						{
+							insert_entry = false;
+						}
+						else if (is_code_backdoor || is_too_extensive || is_loop_connector)
+						{
+							if (reg_state_it[stackframe_it].atomic16.active)
+							{
+								break_putllc16(40, reg_state_it[stackframe_it].atomic16.discard());
+							}
+
 							// Allow the block to run only once, to avoid unnecessary iterations
-							if (run_on_block[target_pc / 4])
-							{
-								insert_entry = false;
-							}
-							else
-							{
-								run_on_block[target_pc / 4] = true;
-							}
+							run_on_block[target_pc / 4] = true;
 						}
 
 						state_it->parent_target_index++;
@@ -5238,6 +5298,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					{
 						// Should not be reachable at the moment
 						//ensure(false);
+						spu_log.error("Failed to clean block analyis steps at block_id %d", reg_state_it[it].iterator_id);
 					}
 				}
 
@@ -5245,7 +5306,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				{
 					const u32 target_size = get_block_targets(stackframe_pc).size();
 
-					spu_log.always()("Emplacing: wi=%d, pc=0x%x, target_it=%d/%d, new_pc=0x%x (has_it=%d)", stackframe_it, stackframe_pc, entry_index + 1, target_size, target_pc, atomic16_info.active);
+					spu_log.trace("Emplacing: block_id=%d, pc=0x%x, target_it=%d/%d, new_pc=0x%x (has_it=%d)", reg_state_it[stackframe_it].iterator_id, stackframe_pc, entry_index + 1, target_size, target_pc, atomic16_info.active);
 					auto& next = reg_state_it.emplace_back(target_pc, stackframe_it, 0);
 
 					if (!is_code_backdoor)
@@ -5259,7 +5320,8 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					}
 
 					next.iterator_id = iterator_id_alloc++;
-					wi++;
+					wi = stackframe_it + 1;
+					ensure(stackframe_it + 1 == reg_state_it.size() - 1);
 				}
 			}
 
@@ -5407,7 +5469,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		const auto type = g_spu_itype.decode(data);
 
 		// For debugging
-		if (likely_putllc_loop && (log_it || is_pattern_match))
+		if (false && likely_putllc_loop && is_pattern_match)
 		{
 			SPUDisAsm dis_asm(cpu_disasm_mode::dump, reinterpret_cast<const u8*>(result.data.data()), result.lower_bound);
 			dis_asm.disasm(pos);
@@ -6624,6 +6686,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		}
 
 		auto& stats = g_fxo->get<putllc16_statistics_t>();
+		had_putllc_evaluation = true;
 
 		if (!pattern.ls_write)
 		{
@@ -6705,6 +6768,11 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 		spu_log.success("PUTLLC16 Pattern Detected! (mem_count=%d, put_pc=0x%x, pc_rel=%d, offset=0x%x, const=%u, two_regs=%d, reg=%u, runtime=%d, 0x%x-%s) (putllc0=%d, putllc16+0=%d, all=%d)"
 			, pattern.mem_count, pattern.put_pc, value.type == v_relative, value.off18, value.type == v_const, value.type == v_reg2, value.reg, value.runtime16_select, entry_point, func_hash, +stats.nowrite, ++stats.single, +stats.all);
+	}
+
+	if (likely_putllc_loop && !had_putllc_evaluation)
+	{
+		spu_log.notice("Likely missed PUTLLC16 patterns. (entry=0x%x)", entry_point);
 	}
 
 	if (result.data.empty())
