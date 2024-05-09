@@ -2505,8 +2505,9 @@ bool reg_state_t::is_less_than(u32 imm) const
 		return true;
 	}
 
-	if (flag & vf::is_mask && ~known_zeroes < imm)
+	if (~known_zeroes < imm)
 	{
+		// The highest number possible within the mask's limit is less than imm
 		return true;
 	}
 
@@ -4987,7 +4988,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					return;
 				}
 
-				std::string break_error = fmt::format("PUTLLC pattern breakage [%x cause=%u] (lsa_pc=0x%x)", pos, cause, previous.lsa_pc);
+				std::string break_error = fmt::format("PUTLLC pattern breakage [%x mem=%d lsa_const=%d cause=%u] (lsa_pc=0x%x)", pos, previous.mem_count, u32{!previous.ls_offs.is_const()} * 2 + previous.lsa.is_const(), cause, previous.lsa_pc);
 
 				const auto values = g_fxo->get<putllc16_statistics_t>().get_reasons();
 
@@ -5780,24 +5781,26 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 								{
 									if (atomic16.ls.is_const())
 									{
-										if (atomic16.ls_offs != 0)
+										if (atomic16.ls_offs.value != 0)
 										{
 											// Rebase constant so we can get rid of ls_offs
 											atomic16.ls.value = spu_ls_target(atomic16.ls_offs.value + atomic16.ls.value);
 											atomic16.ls_offs = reg_state_t::from_value(0);
 										}
 
-										if (atomic16.ls.value >= (atomic16.lsa.value & -128) && atomic16.ls.value < utils::align<u32>(atomic16.lsa.value + 1, 128))
+										if (atomic16.ls.compare_with_mask_indifference(atomic16.lsa, SPU_LS_MASK_128))
 										{
 											ok = true;
 										}
 									}
-									else if (atomic16.ls_offs.value >= (atomic16.lsa.value & -128) && atomic16.ls_offs.value < utils::align<u32>(atomic16.lsa.value + 1, 128) && atomic16.ls.is_less_than(128 - (atomic16.lsa.value & 127)))
+									else if (atomic16.ls_offs.compare_with_mask_indifference(atomic16.lsa, SPU_LS_MASK_128) && atomic16.ls.is_less_than(128 - (atomic16.ls_offs.value & 127)))
 									{
+										// Relative memory access with offset less than 128 bytes
+										// Common around SPU utilities which have less strict restrictions about memory alignment 
 										ok = true;
 									}
 								}
-								else if (!atomic16.lsa.is_const() && atomic16.lsa.compare_with_mask_indifference(atomic16.ls, SPU_LS_MASK_128) && atomic16.ls_offs == 0)
+								else if (atomic16.lsa.compare_with_mask_indifference(atomic16.ls, SPU_LS_MASK_128) && atomic16.ls_offs == 0)
 								{
 									// Unknown value with known offset of less than 128 bytes
 									ok = true;
@@ -6012,12 +6015,12 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 					if (offs % 16 == 0 && (pos - result.lower_bound + op.si16 * 4) == offs)
 					{
-						const u32 reservation_bound = utils::align<u32>(atomic16.lsa.value + 1, 128);
+						const u32 reservation_bound = (atomic16.lsa.value | 127);
 						const u32 min_offs = offs;
 
 						// Hack: assume there is no overflow in relative instruction offset
 						// Thus, use instruction position + offset as a lower bound for reservation access
-						if (min_offs >= reservation_bound)
+						if (min_offs > reservation_bound)
 						{
 							spu_log.success("STQR/LQR Atomic Loop Hack: abs_pos=0x%x, abs=0x%x, i16*4=0x%x, ls_bound=0x%x", offs, pos + op.si16 * 4, op.si16 * 4, reservation_bound);
 							hack = true;
