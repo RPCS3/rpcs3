@@ -587,11 +587,7 @@ void usb_handler_thread::transfer_complete(struct libusb_transfer* transfer)
 	case LIBUSB_TRANSFER_COMPLETED: usbd_transfer->result = HC_CC_NOERR; break;
 	case LIBUSB_TRANSFER_TIMED_OUT: usbd_transfer->result = EHCI_CC_XACT; break;
 	case LIBUSB_TRANSFER_OVERFLOW: usbd_transfer->result = EHCI_CC_BABBLE; break;
-	case LIBUSB_TRANSFER_ERROR:
-	case LIBUSB_TRANSFER_CANCELLED:
-	case LIBUSB_TRANSFER_STALL:
 	case LIBUSB_TRANSFER_NO_DEVICE:
-	default:
 		usbd_transfer->result = EHCI_CC_HALTED;
 		if (usbd_transfer->assigned_number && handled_devices.erase(usbd_transfer->assigned_number))
 		{
@@ -599,6 +595,12 @@ void usb_handler_thread::transfer_complete(struct libusb_transfer* transfer)
 			sys_usbd.warning("USB transfer failed, detach the device %d", usbd_transfer->assigned_number);
 			usbd_transfer->assigned_number = 0;
 		}
+		break;
+	case LIBUSB_TRANSFER_ERROR:
+	case LIBUSB_TRANSFER_CANCELLED:
+	case LIBUSB_TRANSFER_STALL:
+	default:
+		usbd_transfer->result = EHCI_CC_HALTED;
 		break;
 	}
 
