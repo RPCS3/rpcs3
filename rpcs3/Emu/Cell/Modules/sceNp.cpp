@@ -5834,8 +5834,8 @@ error_code scenp_score_get_ranking_by_npid(s32 transId, SceNpScoreBoardId boardI
 
 	std::vector<std::pair<SceNpId, s32>> npid_vec;
 
-	static constexpr bool is_npid     = std::is_same<T, vm::cptr<SceNpId>>::value;
-	static constexpr bool is_npidpcid = std::is_same<T, vm::cptr<SceNpScoreNpIdPcId>>::value;
+	static constexpr bool is_npid     = std::is_same_v<T, vm::cptr<SceNpId>>;
+	static constexpr bool is_npidpcid = std::is_same_v<T, vm::cptr<SceNpScoreNpIdPcId>>;
 	static_assert(is_npid || is_npidpcid, "T should be vm::cptr<SceNpId> or vm::cptr<SceNpScoreNpIdPcId>");
 
 	if constexpr (is_npid)

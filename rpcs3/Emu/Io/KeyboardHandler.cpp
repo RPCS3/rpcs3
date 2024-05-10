@@ -2,6 +2,8 @@
 #include "KeyboardHandler.h"
 #include "Utilities/StrUtil.h"
 
+LOG_CHANNEL(input_log, "Input");
+
 template <>
 void fmt_class_string<CellKbMappingType>::format(std::string& out, u64 arg)
 {
@@ -40,12 +42,85 @@ void fmt_class_string<CellKbMappingType>::format(std::string& out, u64 arg)
 	});
 }
 
-void KeyboardHandlerBase::Key(u32 code, bool pressed, const std::u32string& key)
+template <>
+void fmt_class_string<keyboard_consumer::identifier>::format(std::string& out, u64 arg)
 {
+	format_enum(out, arg, [](keyboard_consumer::identifier value)
+	{
+		switch (value)
+		{
+		STR_CASE(keyboard_consumer::identifier::unknown);
+		STR_CASE(keyboard_consumer::identifier::overlays);
+		STR_CASE(keyboard_consumer::identifier::cellKb);
+		}
+
+		return unknown;
+	});
+}
+
+keyboard_consumer& KeyboardHandlerBase::AddConsumer(keyboard_consumer::identifier id, u32 max_connect)
+{
+	auto it = m_consumers.find(id);
+	if (it == m_consumers.end())
+	{
+		input_log.notice("Adding keyboard consumer with id %s.", id);
+		keyboard_consumer& consumer = m_consumers[id];
+		consumer = keyboard_consumer(id);
+		Init(consumer, max_connect);
+		return consumer;
+	}
+
+	return it->second;
+}
+
+keyboard_consumer& KeyboardHandlerBase::GetConsumer(keyboard_consumer::identifier id)
+{
+	auto it = m_consumers.find(id);
+	if (it == m_consumers.end())
+	{
+		fmt::throw_exception("No keyboard consumer with id %s", id);
+	}
+
+	return it->second;
+}
+
+void KeyboardHandlerBase::RemoveConsumer(keyboard_consumer::identifier id)
+{
+	auto it = m_consumers.find(id);
+	if (it != m_consumers.end())
+	{
+		input_log.notice("Removing keyboard consumer with id %s.", id);
+		m_consumers.erase(id);
+	}
+}
+
+bool KeyboardHandlerBase::HandleKey(u32 code, bool pressed, bool is_auto_repeat, const std::u32string& key)
+{
+	bool consumed = false;
+
 	std::lock_guard<std::mutex> lock(m_mutex);
+
+	for (auto& [id, consumer] : m_consumers)
+	{
+		consumed |= consumer.ConsumeKey(code, pressed, is_auto_repeat, key);
+	}
+
+	return consumed;
+}
+
+bool keyboard_consumer::ConsumeKey(u32 code, bool pressed, bool is_auto_repeat, const std::u32string& key)
+{
+	bool consumed = false;
 
 	for (Keyboard& keyboard : m_keyboards)
 	{
+		if (is_auto_repeat && !keyboard.m_key_repeat)
+		{
+			continue;
+		}
+
+		consumed = true;
+
 		KbData& data = keyboard.m_data;
 		const KbConfig& config = keyboard.m_config;
 
@@ -163,9 +238,11 @@ void KeyboardHandlerBase::Key(u32 code, bool pressed, const std::u32string& key)
 			}
 		}
 	}
+
+	return consumed;
 }
 
-bool KeyboardHandlerBase::IsMetaKey(u32 code)
+bool keyboard_consumer::IsMetaKey(u32 code)
 {
 	return code == Key_Control
 		|| code == Key_Shift
@@ -178,6 +255,14 @@ void KeyboardHandlerBase::SetIntercepted(bool intercepted)
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
 
+	for (auto& [id, consumer] : m_consumers)
+	{
+		consumer.SetIntercepted(intercepted);
+	}
+}
+
+void keyboard_consumer::SetIntercepted(bool intercepted)
+{
 	m_info.info = intercepted ? CELL_KB_INFO_INTERCEPTED : 0;
 
 	if (intercepted)
@@ -197,16 +282,24 @@ void KeyboardHandlerBase::SetIntercepted(bool intercepted)
 
 void KeyboardHandlerBase::ReleaseAllKeys()
 {
+	for (auto& [id, consumer] : m_consumers)
+	{
+		consumer.ReleaseAllKeys();
+	}
+}
+
+void keyboard_consumer::ReleaseAllKeys()
+{
 	for (Keyboard& keyboard : m_keyboards)
 	{
 		for (const auto& [key_code, button] : keyboard.m_keys)
 		{
-			Key(button.m_keyCode, false, {});
+			ConsumeKey(button.m_keyCode, false, false, {});
 		}
 
 		for (const std::u32string& key : keyboard.m_extra_data.pressed_keys)
 		{
-			Key(CELL_KEYC_NO_EVENT, false, key);
+			ConsumeKey(CELL_KEYC_NO_EVENT, false, false, key);
 		}
 
 		keyboard.m_extra_data.pressed_keys.clear();

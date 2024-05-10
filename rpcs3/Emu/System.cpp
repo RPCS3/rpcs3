@@ -247,7 +247,7 @@ void init_fxo_for_exec(utils::serial* ar, bool full = false)
 }
 
 // Some settings are not allowed in certain PPU decoders
-void fixup_ppu_settings()
+static void fixup_settings(const psf::registry* _psf)
 {
 	if (g_cfg.core.ppu_decoder != ppu_decoder_type::_static)
 	{
@@ -267,6 +267,33 @@ void fixup_ppu_settings()
 		{
 			sys_log.todo("The setting '%s' is currently not supported with PPU decoder type '%s' and will therefore be disabled during emulation.", g_cfg.core.ppu_set_fpcc.get_name(), g_cfg.core.ppu_decoder.get());
 			g_cfg.core.ppu_set_fpcc.set(false);
+		}
+	}
+
+	if (const u32 psf_resolution = _psf ? psf::get_integer(*_psf, "RESOLUTION", 0) : 0)
+	{
+		const std::map<video_resolution, u32> resolutions
+		{
+			{ video_resolution::_480p,       psf::resolution_flag::_480 | psf::resolution_flag::_480_16_9 },
+			{ video_resolution::_480i,       psf::resolution_flag::_480 | psf::resolution_flag::_480_16_9 },
+			{ video_resolution::_576p,       psf::resolution_flag::_576 | psf::resolution_flag::_576_16_9 },
+			{ video_resolution::_576i,       psf::resolution_flag::_576 | psf::resolution_flag::_576_16_9 },
+			{ video_resolution::_720p,       psf::resolution_flag::_720  },
+			{ video_resolution::_1080p,      psf::resolution_flag::_1080 },
+			{ video_resolution::_1080i,      psf::resolution_flag::_1080 },
+			{ video_resolution::_1600x1080p, psf::resolution_flag::_1080 },
+			{ video_resolution::_1440x1080p, psf::resolution_flag::_1080 },
+			{ video_resolution::_1280x1080p, psf::resolution_flag::_1080 },
+			{ video_resolution::_960x1080p,  psf::resolution_flag::_1080 },
+		};
+
+		const video_resolution resolution = g_cfg.video.resolution;
+		constexpr video_resolution new_resolution = video_resolution::_720p;
+
+		if (!resolutions.contains(resolution) || !(psf_resolution & resolutions.at(resolution)))
+		{
+			sys_log.error("The game does not support a resolution of %s, so we are forcing the resolution to %s.", resolution, new_resolution);
+			g_cfg.video.resolution.set(new_resolution);
 		}
 	}
 }
@@ -442,7 +469,7 @@ void Emulator::Init()
 	}
 
 	// Disable incompatible settings
-	fixup_ppu_settings();
+	fixup_settings(nullptr);
 
 	// Backup config
 	g_backup_cfg.from_string(g_cfg.to_string());
@@ -1440,7 +1467,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			}
 
 			// Disable incompatible settings
-			fixup_ppu_settings();
+			fixup_settings(&_psf);
 
 			// Force audio provider
 			if (m_path.ends_with("vsh.self"sv))
@@ -1535,7 +1562,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			g_cfg.core.spu_cache.set(true);
 
 			// Disable incompatible settings
-			fixup_ppu_settings();
+			fixup_settings(&_psf);
 
 			// Force LLE lib loading mode
 			g_cfg.core.libraries_control.set_set([]()
@@ -3318,6 +3345,14 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 			set_progress_message("Commiting File");
 
+			{
+				auto& ar = *to_ar->load();
+				auto reset = init_mtx->reset();
+				ar = {};
+				ar.set_reading_state(); // Guard against using it
+				reset.set_init();
+			}
+
 			if (!file.commit() || !fs::get_stat(path, file_stat))
 			{
 				sys_log.error("Failed to write savestate to file! (path='%s', %s)", path, fs::g_tls_error);
@@ -3660,17 +3695,11 @@ s32 error_code::error_report(s32 result, const logs::message* channel, const cha
 	return result;
 }
 
-void Emulator::ConfigurePPUCache(bool with_title_id) const
+void Emulator::ConfigurePPUCache() const
 {
 	auto& _main = g_fxo->get<main_ppu_module>();
 
-	_main.cache = rpcs3::utils::get_cache_dir();
-
-	if (with_title_id && !m_title_id.empty() && m_cat != "1P")
-	{
-		_main.cache += GetTitleID();
-		_main.cache += '/';
-	}
+	_main.cache = rpcs3::utils::get_cache_dir(_main.path);
 
 	fmt::append(_main.cache, "ppu-%s-%s/", fmt::base57(_main.sha1), _main.path.substr(_main.path.find_last_of('/') + 1));
 

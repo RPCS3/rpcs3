@@ -288,11 +288,11 @@ public:
 			return set_error(elf_error::header_magic);
 
 		// Check class
-		if (header.e_class != (std::is_same<sz_t, u32>::value ? 1 : 2))
+		if (header.e_class != (std::is_same_v<sz_t, u32> ? 1 : 2))
 			return set_error(elf_error::header_class);
 
 		// Check endianness
-		if (header.e_data != (std::is_same<en_t<u32>, le_t<u32>>::value ? 1 : 2))
+		if (header.e_data != (std::is_same_v<en_t<u32>, le_t<u32>> ? 1 : 2))
 			return set_error(elf_error::header_endianness);
 
 		// Check machine
@@ -413,8 +413,8 @@ public:
 		// Write header
 		ehdr_t header{};
 		header.e_magic = "\177ELF"_u32;
-		header.e_class = std::is_same<sz_t, u32>::value ? 1 : 2;
-		header.e_data = std::is_same<en_t<u32>, le_t<u32>>::value ? 1 : 2;
+		header.e_class = std::is_same_v<sz_t, u32> ? 1 : 2;
+		header.e_data = std::is_same_v<en_t<u32>, le_t<u32>> ? 1 : 2;
 		header.e_curver = 1;
 		header.e_os_abi = OS != elf_os::none ? OS : this->header.e_os_abi;
 		header.e_abi_ver = this->header.e_abi_ver;

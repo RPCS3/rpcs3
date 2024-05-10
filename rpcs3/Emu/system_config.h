@@ -127,7 +127,7 @@ struct cfg_root : cfg::node
 		cfg::_enum<video_renderer> renderer{ this, "Renderer", video_renderer::opengl };
 #endif
 
-		cfg::_enum<video_resolution> resolution{ this, "Resolution", video_resolution::_720 };
+		cfg::_enum<video_resolution> resolution{ this, "Resolution", video_resolution::_720p };
 		cfg::_enum<video_aspect> aspect_ratio{ this, "Aspect ratio", video_aspect::_16_9 };
 		cfg::_enum<frame_limit_type> frame_limit{ this, "Frame limit", frame_limit_type::_auto, true };
 		cfg::_float<0, 1000> second_frame_limit{ this, "Second Frame Limit", 0, true }; // 0 disables its effect
@@ -275,6 +275,7 @@ struct cfg_root : cfg::node
 		cfg::_enum<turntable_handler> turntable{this, "Turntable emulated controller", turntable_handler::null};
 		cfg::_enum<ghltar_handler> ghltar{this, "GHLtar emulated controller", ghltar_handler::null};
 		cfg::_enum<gametablet_handler> gametablet{this, "GameTablet emulated controller", gametablet_handler::disabled};
+		cfg::_enum<guncon3_handler> guncon3{this, "GunCon3 emulated controller", guncon3_handler::disabled};
 		cfg::_enum<pad_handler_mode> pad_mode{this, "Pad handler mode", pad_handler_mode::single_threaded, true};
 		cfg::_bool keep_pads_connected{this, "Keep pads connected", false, true};
 		cfg::uint<0, 100'000> pad_sleep{this, "Pad handler sleep (microseconds)", 1'000, true};

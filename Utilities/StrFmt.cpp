@@ -518,7 +518,7 @@ struct fmt::cfmt_src
 		TYPE(llong);
 		TYPE(schar);
 		TYPE(short);
-		if (std::is_signed<char>::value) TYPE(char);
+		if (std::is_signed_v<char>) TYPE(char);
 		TYPE(long);
 		TYPE(s128);
 

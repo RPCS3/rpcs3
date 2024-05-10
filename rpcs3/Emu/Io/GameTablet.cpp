@@ -8,6 +8,60 @@
 
 LOG_CHANNEL(gametablet_log);
 
+#pragma pack(push, 1)
+struct GameTablet_data
+{
+	uint8_t btn_square : 1;
+	uint8_t btn_cross : 1;
+	uint8_t btn_circle : 1;
+	uint8_t btn_triangle : 1;
+	uint8_t : 4;
+
+	uint8_t btn_select : 1;
+	uint8_t btn_start : 1;
+	uint8_t : 2;
+	uint8_t btn_ps: 1;
+	uint8_t : 3;
+
+	uint8_t dpad;
+	uint8_t stick_lx; // 0x80
+	uint8_t stick_ly; // 0x80
+	uint8_t stick_rx; // 0x80
+	uint8_t stick_ry; // 0x80
+
+	uint8_t : 8;
+	uint8_t : 8;
+	uint8_t : 8;
+	uint8_t : 8;
+	uint8_t pen;
+	uint8_t : 8;
+	uint8_t pressure;
+	uint8_t : 8;
+	uint8_t pos_x_hi;
+	uint8_t pos_y_hi;
+	uint8_t pos_x_lo;
+	uint8_t pos_y_lo;
+
+	uint16_t accel_x;
+	uint16_t accel_y;
+	uint16_t accel_z;
+	uint16_t unk; // 0x0200
+};
+#pragma pack(pop)
+
+enum
+{
+	Dpad_North,
+	Dpad_NE,
+	Dpad_East,
+	Dpad_SE,
+	Dpad_South,
+	Dpad_SW,
+	Dpad_West,
+	Dpad_NW,
+	Dpad_None = 0x0f
+};
+
 usb_device_gametablet::usb_device_gametablet(const std::array<u8, 7>& location)
 	: usb_device_emulated(location)
 {
@@ -106,7 +160,7 @@ extern bool is_input_allowed();
 
 void usb_device_gametablet::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint*/, UsbTransfer* transfer)
 {
-	ensure(buf_size > 0x1a);
+	ensure(buf_size >= sizeof(GameTablet_data));
 
 	transfer->fake            = true;
 	transfer->expected_count  = 27;
@@ -114,38 +168,25 @@ void usb_device_gametablet::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endp
 	// Interrupt transfers are slow (6ms, TODO accurate measurement)
 	transfer->expected_time = get_timestamp() + 6000;
 
-	std::memset(buf, 0, buf_size);
+	GameTablet_data gt{};
 
-	buf[0x02] = 0x0f; // dpad
-
-	buf[0x03] = 0x80;
-	buf[0x04] = 0x80;
-	buf[0x05] = 0x80;
-	buf[0x06] = 0x80;
-
-	buf[0x0d] = 0x72; // pressure
-	buf[0x0f] = 0x0f; // pos X
-	buf[0x10] = 0x0f; // pos Y
-	buf[0x11] = 0xff;
-	buf[0x12] = 0xff;
-
-	buf[0x13] = 0x01; // accel X
-	buf[0x14] = 0x02;
-	buf[0x15] = 0x00; // accel Y
-	buf[0x16] = 0x02;
-	buf[0x17] = 0xea; // accel Z
-	buf[0x18] = 0x01;
-
-	buf[0x1a] = 0x02;
+	gt.dpad = Dpad_None;
+	gt.stick_lx = gt.stick_ly = gt.stick_rx = gt.stick_ry = 0x80;
+	gt.pressure = 0x72;
+	gt.pos_x_hi = gt.pos_y_hi = 0x0f;
+	gt.pos_x_lo = gt.pos_y_lo = 0xff;
+	gt.accel_x = gt.accel_y = gt.accel_z = gt.unk = 0x0200;
 
 	if (!is_input_allowed())
 	{
+		std::memcpy(buf, &gt, sizeof(GameTablet_data));
 		return;
 	}
 
-	if (g_cfg.io.mouse != mouse_handler::basic)
+	if (g_cfg.io.mouse == mouse_handler::null)
 	{
-		gametablet_log.warning("GameTablet requires mouse_handler configured to basic");
+		gametablet_log.warning("GameTablet requires a Mouse Handler enabled");
+		std::memcpy(buf, &gt, sizeof(GameTablet_data));
 		return;
 	}
 
@@ -172,10 +213,10 @@ void usb_device_gametablet::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endp
 					switch (button.m_outKeyCode)
 					{
 					case CELL_PAD_CTRL_SELECT:
-						buf[1] |= (1 << 0);
+						gt.btn_select |= 1;
 						break;
 					case CELL_PAD_CTRL_START:
-						buf[1] |= (1 << 1);
+						gt.btn_start |= 1;
 						break;
 					case CELL_PAD_CTRL_UP:
 						up = true;
@@ -198,19 +239,19 @@ void usb_device_gametablet::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endp
 					switch (button.m_outKeyCode)
 					{
 					case CELL_PAD_CTRL_SQUARE:
-						buf[0] |= (1 << 0);
+						gt.btn_square |= 1;
 						break;
 					case CELL_PAD_CTRL_CROSS:
-						buf[0] |= (1 << 1);
+						gt.btn_cross |= 1;
 						break;
 					case CELL_PAD_CTRL_CIRCLE:
-						buf[0] |= (1 << 2);
+						gt.btn_circle |= 1;
 						break;
 					case CELL_PAD_CTRL_TRIANGLE:
-						buf[0] |= (1 << 3);
+						gt.btn_triangle |= 1;
 						break;
 					case CELL_PAD_CTRL_PS:
-						buf[1] |= (1 << 4);
+						gt.btn_ps |= 1;
 						break;
 					default:
 						break;
@@ -221,23 +262,23 @@ void usb_device_gametablet::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endp
 	}
 
 	if (!up && !right && !down && !left)
-		buf[0x02] = 0x0f;
+		gt.dpad = Dpad_None;
 	else if (up && !left && !right)
-		buf[0x02] = 0x00;
+		gt.dpad = Dpad_North;
 	else if (up && right)
-		buf[0x02] = 0x01;
+		gt.dpad = Dpad_NE;
 	else if (right && !up && !down)
-		buf[0x02] = 0x02;
+		gt.dpad = Dpad_East;
 	else if (down && right)
-		buf[0x02] = 0x03;
+		gt.dpad = Dpad_SE;
 	else if (down && !left && !right)
-		buf[0x02] = 0x04;
+		gt.dpad = Dpad_South;
 	else if (down && left)
-		buf[0x02] = 0x05;
+		gt.dpad = Dpad_SW;
 	else if (left && !up && !down)
-		buf[0x02] = 0x06;
+		gt.dpad = Dpad_West;
 	else if (up && left)
-		buf[0x02] = 0x07;
+		gt.dpad = Dpad_NW;
 
 	auto& mouse_handler = g_fxo->get<MouseHandlerBase>();
 	std::lock_guard mouse_lock(mouse_handler.mutex);
@@ -247,12 +288,14 @@ void usb_device_gametablet::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endp
 	constexpr u8 mouse_index = 0;
 	if (mouse_index >= mouse_handler.GetMice().size())
 	{
+		std::memcpy(buf, &gt, sizeof(GameTablet_data));
 		return;
 	}
 
 	const Mouse& mouse_data = ::at32(mouse_handler.GetMice(), mouse_index);
 	if (mouse_data.x_max <= 0 || mouse_data.y_max <= 0)
 	{
+		std::memcpy(buf, &gt, sizeof(GameTablet_data));
 		return;
 	}
 
@@ -266,10 +309,12 @@ void usb_device_gametablet::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endp
 	noise_x ^= 0x1;
 	noise_y ^= 0x1;
 
-	buf[0x0b] = 0x40; // pen
-	buf[0x0d] = mouse_data.buttons & CELL_MOUSE_BUTTON_1 ? 0xbb : 0x72; // pressure
-	buf[0x0f] = static_cast<u8>(tablet_x_pos / 0x100);
-	buf[0x10] = static_cast<u8>(tablet_y_pos / 0x100);
-	buf[0x11] = static_cast<u8>(tablet_x_pos % 0x100);
-	buf[0x12] = static_cast<u8>(tablet_y_pos % 0x100);
+	gt.pen = 0x40;
+	gt.pressure = mouse_data.buttons & CELL_MOUSE_BUTTON_1 ? 0xbb : 0x72;
+	gt.pos_x_hi = static_cast<u8>(tablet_x_pos / 0x100);
+	gt.pos_y_hi = static_cast<u8>(tablet_y_pos / 0x100);
+	gt.pos_x_lo = static_cast<u8>(tablet_x_pos % 0x100);
+	gt.pos_y_lo = static_cast<u8>(tablet_y_pos % 0x100);
+
+	std::memcpy(buf, &gt, sizeof(GameTablet_data));
 }

@@ -868,10 +868,10 @@ public:
 
 	~named_thread_group() noexcept
 	{
-		// Destroy all threads (it should join them)
-		for (u32 i = m_count - 1; i < m_count; i--)
+		// Destroy all threads in reverse order (it should join them)
+		for (u32 i = 0; i < m_count; i++)
 		{
-			std::launder(m_threads + i)->~Thread();
+			std::launder(m_threads + (m_count - i - 1))->~Thread();
 		}
 
 		::operator delete(static_cast<void*>(m_threads), std::align_val_t{alignof(Thread)});

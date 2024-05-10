@@ -735,7 +735,9 @@ static auto ppu_load_exports(const ppu_module& _module, ppu_linkage_info* link, 
 			continue;
 		}
 
-		if (for_observing_callbacks)
+		const bool is_dummy_load = Emu.IsReady() && g_fxo->get<main_ppu_module>().segs.empty() && !Emu.DeserialManager();
+
+		if (!is_dummy_load && for_observing_callbacks)
 		{
 			continue;
 		}
@@ -759,7 +761,7 @@ static auto ppu_load_exports(const ppu_module& _module, ppu_linkage_info* link, 
 			ppu_loader.error("Unexpected num_tlsvar (%u)!", lib.num_tlsvar);
 		}
 
-		const bool should_load = ppu_register_library_lock(module_name, true);
+		const bool should_load = is_dummy_load || ppu_register_library_lock(module_name, true);
 
 		if (loaded_flags)
 		{

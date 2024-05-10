@@ -271,7 +271,7 @@ namespace gui
 
 			for (int y = 0; y < image.height(); ++y)
 			{
-				QRgb* row = reinterpret_cast<QRgb*>(image.scanLine(y));
+				const QRgb* row = reinterpret_cast<const QRgb*>(image.constScanLine(y));
 				bool row_filled = false;
 
 				for (int x = 0; x < image.width(); ++x)

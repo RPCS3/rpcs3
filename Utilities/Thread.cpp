@@ -2664,7 +2664,30 @@ void thread_base::exec()
 
 	if (IsDebuggerPresent())
 	{
-		utils::trap();
+		// Prevent repeatedly halting the debugger in case multiple threads crashed at once
+		static atomic_t<u64> s_last_break = 0;
+		const u64 current_break = get_system_time() & -2;
+
+		if (s_last_break.fetch_op([current_break](u64& v)
+		{
+			if (current_break >= (v & -2) && current_break - (v & -2) >= 20'000'000)
+			{
+				v = current_break;
+				return true;
+			}
+
+			// Let's allow a single more thread to halt the debugger so the programmer sees the pattern
+			if (!(v & 1))
+			{
+				v |= 1;
+				return true;
+			}
+
+			return false;
+		}).second)
+		{
+			utils::trap();
+		}
 	}
 
 	if (const auto _this = g_tls_this_thread)

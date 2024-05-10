@@ -399,6 +399,7 @@ target_sources(rpcs3_emu PRIVATE
     Io/camera_config.cpp
     Io/GameTablet.cpp
     Io/GHLtar.cpp
+    Io/GunCon3.cpp
     Io/Infinity.cpp
     Io/interception.cpp
     Io/KeyboardHandler.cpp

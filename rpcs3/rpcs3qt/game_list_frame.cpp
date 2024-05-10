@@ -74,27 +74,6 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	m_gui_settings->SetValue(gui::gl_marginFactor, m_margin_factor);
 	m_gui_settings->SetValue(gui::gl_textFactor, m_text_factor);
 
-	// Only show the progress dialog after some time has passed
-	m_progress_dialog_timer.setSingleShot(true);
-	m_progress_dialog_timer.setInterval(200);
-	connect(&m_progress_dialog_timer, &QTimer::timeout, this, [this]()
-	{
-		if (m_progress_dialog)
-		{
-			m_progress_dialog->show();
-			m_progress_dialog_update_timer.start();
-		}
-	});
-
-	m_progress_dialog_update_timer.setInterval(16);
-	connect(&m_progress_dialog_update_timer, &QTimer::timeout, this, [this]()
-	{
-		if (m_progress_dialog)
-		{
-			m_progress_dialog->SetValue(m_progress_dialog_value);
-		}
-	});
-
 	m_game_dock = new QMainWindow(this);
 	m_game_dock->setWindowFlags(Qt::Widget);
 	setWidget(m_game_dock);
@@ -147,7 +126,22 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	add_column(gui::game_list_columns::compat,     tr("Compatibility"),         tr("Show Compatibility"));
 	add_column(gui::game_list_columns::dir_size,   tr("Space On Disk"),         tr("Show Space On Disk"));
 
+	m_progress_dialog = new progress_dialog(tr("Loading games"), tr("Loading games, please wait..."), tr("Cancel"), 0, 0, false, this, Qt::Dialog | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
+	m_progress_dialog->setMinimumDuration(200); // Only show the progress dialog after some time has passed
+
 	// Events
+	connect(m_progress_dialog, &QProgressDialog::canceled, this, [this]()
+	{
+		gui::utils::stop_future_watcher(m_parsing_watcher, true);
+		gui::utils::stop_future_watcher(m_refresh_watcher, true);
+
+		m_path_entries.clear();
+		m_path_list.clear();
+		m_serials.clear();
+		m_game_data.clear();
+		m_notes.clear();
+		m_games.pop_all();
+	});
 	connect(&m_parsing_watcher, &QFutureWatcher<void>::finished, this, &game_list_frame::OnParsingFinished);
 	connect(&m_parsing_watcher, &QFutureWatcher<void>::canceled, this, [this]()
 	{
@@ -172,12 +166,9 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 		m_serials.clear();
 		m_games.pop_all();
 
-		m_progress_dialog_update_timer.stop();
-
-		if (progress_dialog* dlg = m_progress_dialog)
+		if (m_progress_dialog)
 		{
-			m_progress_dialog = nullptr; // Clear first to avoid further slots
-			dlg->accept();
+			m_progress_dialog->accept();
 		}
 	});
 	connect(&m_refresh_watcher, &QFutureWatcher<void>::progressRangeChanged, this, [this](int minimum, int maximum)
@@ -189,7 +180,10 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	});
 	connect(&m_refresh_watcher, &QFutureWatcher<void>::progressValueChanged, this, [this](int value)
 	{
-		m_progress_dialog_value = value;
+		if (m_progress_dialog)
+		{
+			m_progress_dialog->SetValue(value);
+		}
 	});
 
 	connect(m_game_list, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
@@ -292,7 +286,7 @@ bool game_list_frame::IsEntryVisible(const game_info& game, bool search_fallback
 
 std::string game_list_frame::GetCacheDirBySerial(const std::string& serial)
 {
-	return rpcs3::utils::get_cache_dir() + serial;
+	return rpcs3::utils::get_cache_dir() + (serial == "vsh.self" ? "vsh" : serial);
 }
 
 std::string game_list_frame::GetDataDirBySerial(const std::string& serial)
@@ -322,14 +316,10 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 	gui::utils::stop_future_watcher(m_parsing_watcher, from_drive);
 	gui::utils::stop_future_watcher(m_refresh_watcher, from_drive);
 
-	m_progress_dialog_update_timer.stop();
-	m_progress_dialog_timer.stop();
-
-	if (progress_dialog* dlg = m_progress_dialog)
+	if (m_progress_dialog && m_progress_dialog->isVisible())
 	{
-		m_progress_dialog = nullptr; // Clear first to avoid further slots
-		dlg->SetValue(dlg->maximum());
-		dlg->accept();
+		m_progress_dialog->SetValue(m_progress_dialog->maximum());
+		m_progress_dialog->accept();
 	}
 
 	if (from_drive)
@@ -341,36 +331,10 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 		m_notes.clear();
 		m_games.pop_all();
 
-		m_progress_dialog = new progress_dialog(tr("Loading games"), tr("Loading games, please wait..."), tr("Cancel"), 0, 0, true, this, Qt::Dialog | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
-
-		connect(m_progress_dialog, &QProgressDialog::finished, this, [this]()
+		if (m_progress_dialog)
 		{
-			if (m_progress_dialog == QObject::sender())
-			{
-				m_progress_dialog = nullptr;
-			}
-		});
-		connect(m_progress_dialog, &QProgressDialog::canceled, this, [this]()
-		{
-			gui::utils::stop_future_watcher(m_parsing_watcher, true);
-			gui::utils::stop_future_watcher(m_refresh_watcher, true);
-
-			m_path_entries.clear();
-			m_path_list.clear();
-			m_serials.clear();
-			m_game_data.clear();
-			m_notes.clear();
-			m_games.pop_all();
-
-			m_progress_dialog_timer.stop();
-
-			if (m_progress_dialog == QObject::sender())
-			{
-				m_progress_dialog = nullptr;
-			}
-		});
-
-		m_progress_dialog_timer.start();
+			m_progress_dialog->SetValue(0);
+		}
 
 		const std::string games_dir = g_cfg_vfs.get(g_cfg_vfs.games_dir, rpcs3::utils::get_emu_dir());
 		const u32 games_added = Emu.AddGamesFromDir(games_dir);
@@ -394,12 +358,16 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 			{
 				for (const auto& entry : fs::dir(path))
 				{
+					if (m_parsing_watcher.isCanceled())
+					{
+						break;
+					}
+
 					if (!entry.is_directory || entry.name == "." || entry.name == "..")
 					{
 						continue;
 					}
 
-					QApplication::processEvents();
 					std::lock_guard lock(m_path_mutex);
 					m_path_entries.emplace_back(path_entry{path + entry.name, is_disc, false});
 				}
@@ -412,6 +380,11 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 
 			for (const auto& [serial, path] : Emu.GetGamesConfig().get_games())
 			{
+				if (m_parsing_watcher.isCanceled())
+				{
+					break;
+				}
+
 				std::string game_dir = path;
 				game_dir.resize(game_dir.find_last_not_of('/') + 1);
 
@@ -426,7 +399,6 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 					game_dir = game_dir.substr(0, game_dir.size() - 4);
 				}
 
-				QApplication::processEvents();
 				std::lock_guard lock(m_path_mutex);
 				m_path_entries.emplace_back(path_entry{game_dir, false, true});
 			}
@@ -669,6 +641,11 @@ void game_list_frame::OnParsingFinished()
 	{
 		for (const auto& entry : fs::dir(path))
 		{
+			if (m_refresh_watcher.isCanceled())
+			{
+				break;
+			}
+
 			if (!entry.is_directory || entry.name == "." || entry.name == "..")
 			{
 				continue;
@@ -680,8 +657,6 @@ void game_list_frame::OnParsingFinished()
 			}
 		}
 	};
-
-	m_progress_dialog_value = 0;
 
 	m_refresh_watcher.setFuture(QtConcurrent::map(m_path_entries, [this, _hdd, add_disc_dir, add_game](const path_entry& entry)
 	{
@@ -1056,7 +1031,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 
 	static const auto is_game_running = [](const std::string& serial)
 	{
-		return Emu.GetStatus(false) != system_state::stopped && serial == Emu.GetTitleID();
+		return Emu.GetStatus(false) != system_state::stopped && (serial == Emu.GetTitleID() || (serial == "vsh.self" && Emu.IsVsh()));
 	};
 
 	const bool is_current_running_game = is_game_running(current_game.serial);
@@ -2057,10 +2032,13 @@ void game_list_frame::BatchRemovePPUCaches()
 	}
 
 	std::set<std::string> serials;
+	serials.emplace("vsh");
+
 	for (const auto& game : m_game_data)
 	{
 		serials.emplace(game->info.serial);
 	}
+
 	const u32 total = ::size32(serials);
 
 	if (total == 0)
@@ -2111,10 +2089,13 @@ void game_list_frame::BatchRemoveSPUCaches()
 	}
 
 	std::set<std::string> serials;
+	serials.emplace("vsh");
+
 	for (const auto& game : m_game_data)
 	{
 		serials.emplace(game->info.serial);
 	}
+
 	const u32 total = ::size32(serials);
 
 	if (total == 0)
@@ -2273,10 +2254,13 @@ void game_list_frame::BatchRemoveShaderCaches()
 	}
 
 	std::set<std::string> serials;
+	serials.emplace("vsh");
+
 	for (const auto& game : m_game_data)
 	{
 		serials.emplace(game->info.serial);
 	}
+
 	const u32 total = ::size32(serials);
 
 	if (total == 0)

@@ -162,6 +162,7 @@ namespace rsx
 		u32 resolution_x = 1280;   // X RES
 		u32 resolution_y = 720;    // Y RES
 		atomic_t<u32> state = 0;   // 1 after cellVideoOutConfigure was called
+		u8 scan_mode = 1;          // CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE
 
 		ENABLE_BITWISE_SERIALIZATION;
 		SAVESTATE_INIT_POS(12);

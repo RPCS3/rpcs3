@@ -408,16 +408,19 @@ void rec_info::set_video_params(s32 video_format)
 
 	switch(g_cfg.video.resolution)
 	{
-	case video_resolution::_1080:
-	case video_resolution::_720:
-	case video_resolution::_1600x1080:
-	case video_resolution::_1440x1080:
-	case video_resolution::_1280x1080:
-	case video_resolution::_960x1080:
+	case video_resolution::_1080p:
+	case video_resolution::_1080i:
+	case video_resolution::_720p:
+	case video_resolution::_1600x1080p:
+	case video_resolution::_1440x1080p:
+	case video_resolution::_1280x1080p:
+	case video_resolution::_960x1080p:
 		hd = true;
 		break;
-	case video_resolution::_480:
-	case video_resolution::_576:
+	case video_resolution::_480p:
+	case video_resolution::_480i:
+	case video_resolution::_576p:
+	case video_resolution::_576i:
 		hd = false;
 		break;
 	}

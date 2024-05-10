@@ -693,9 +693,34 @@ void log_frame::UpdateUI()
 	const QString font_start_tag_stack = "<font color = \"" % m_color_stack.name() % "\">";
 	static const QString font_end_tag = QStringLiteral("</font>");
 
-	static constexpr auto escaped = [](const QString& text)
+	static constexpr auto escaped = [](const QString& text, QString&& storage) -> const QString&
 	{
-		return text.toHtmlEscaped().replace(QStringLiteral("\n"), QStringLiteral("<br/>"));
+		const qsizetype nline = text.indexOf(QChar('\n'));
+		const qsizetype spaces = text.indexOf(QStringLiteral("  "));
+		const qsizetype html = std::max<qsizetype>({ text.indexOf(QChar('<')), text.indexOf(QChar('>')), text.indexOf(QChar('&')), text.indexOf(QChar('\"')) });
+
+		const qsizetype pos = std::max<qsizetype>({ html, nline, spaces });
+
+		if (pos < 0)
+		{
+			// Nothing to change, do not create copies of the string
+			return text;
+		}
+
+		// Allow to return reference of new string by using temporary storage provided by argument
+		storage = html < 0 ? text : text.toHtmlEscaped();
+
+		if (nline >= 0)
+		{
+			storage.replace(QChar('\n'), QStringLiteral("<br/>"));
+		}
+
+		if (spaces >= 0)
+		{
+			storage.replace(QChar::Space, QChar::Nbsp);
+		}
+
+		return storage;
 	};
 
 	// Preserve capacity
@@ -866,7 +891,7 @@ void log_frame::UpdateUI()
 			}
 
 			// Print UTF-8 text.
-			m_log_text += escaped(qstr(packet->msg));
+			m_log_text += escaped(qstr(packet->msg), QString{});
 
 			if (m_stack_log)
 			{

@@ -11,26 +11,34 @@
 
 LOG_CHANNEL(input_log, "Input");
 
-void basic_keyboard_handler::Init(const u32 max_connect)
+void basic_keyboard_handler::Init(keyboard_consumer& consumer, const u32 max_connect)
 {
-	m_keyboards.clear();
-	m_info = {};
+	KbInfo& info = consumer.GetInfo();
+	std::vector<Keyboard>& keyboards = consumer.GetKeyboards();
+
+	info = {};
+	keyboards.clear();
 
 	for (u32 i = 0; i < max_connect; i++)
 	{
 		Keyboard kb{};
-
 		kb.m_config.arrange = g_cfg.sys.keyboard_type;
 
-		m_keyboards.emplace_back(kb);
+		if (consumer.id() == keyboard_consumer::identifier::overlays)
+		{
+			// Enable key repeat
+			kb.m_key_repeat = true;
+		}
+
+		LoadSettings(kb);
+
+		keyboards.emplace_back(kb);
 	}
 
-	LoadSettings();
-
-	m_info.max_connect = max_connect;
-	m_info.now_connect = std::min(::size32(m_keyboards), max_connect);
-	m_info.info        = input::g_keyboards_intercepted ? CELL_KB_INFO_INTERCEPTED : 0; // Ownership of keyboard data: 0=Application, 1=System
-	m_info.status[0]   = CELL_KB_STATUS_CONNECTED; // (TODO: Support for more keyboards)
+	info.max_connect = max_connect;
+	info.now_connect = std::min(::size32(keyboards), max_connect);
+	info.info        = input::g_keyboards_intercepted ? CELL_KB_INFO_INTERCEPTED : 0; // Ownership of keyboard data: 0=Application, 1=System
+	info.status[0]   = CELL_KB_STATUS_CONNECTED; // (TODO: Support for more keyboards)
 }
 
 /* Sets the target window for the event handler, and also installs an event filter on the target. */
@@ -94,7 +102,7 @@ void basic_keyboard_handler::keyPressEvent(QKeyEvent* keyEvent)
 		return;
 	}
 
-	if (m_keyboards.empty() || (keyEvent->isAutoRepeat() && !m_keyboards[0].m_key_repeat))
+	if (m_consumers.empty())
 	{
 		keyEvent->ignore();
 		return;
@@ -102,9 +110,9 @@ void basic_keyboard_handler::keyPressEvent(QKeyEvent* keyEvent)
 
 	const int key = getUnmodifiedKey(keyEvent);
 
-	if (key >= 0)
+	if (key < 0 || !HandleKey(static_cast<u32>(key), true, keyEvent->isAutoRepeat(), keyEvent->text().toStdU32String()))
 	{
-		Key(static_cast<u32>(key), true, keyEvent->text().toStdU32String());
+		keyEvent->ignore();
 	}
 }
 
@@ -115,7 +123,7 @@ void basic_keyboard_handler::keyReleaseEvent(QKeyEvent* keyEvent)
 		return;
 	}
 
-	if (m_keyboards.empty() || (keyEvent->isAutoRepeat() && !m_keyboards[0].m_key_repeat))
+	if (m_consumers.empty())
 	{
 		keyEvent->ignore();
 		return;
@@ -123,9 +131,9 @@ void basic_keyboard_handler::keyReleaseEvent(QKeyEvent* keyEvent)
 
 	const int key = getUnmodifiedKey(keyEvent);
 
-	if (key >= 0)
+	if (key < 0 || !HandleKey(static_cast<u32>(key), false, keyEvent->isAutoRepeat(), keyEvent->text().toStdU32String()))
 	{
-		Key(static_cast<u32>(key), false, keyEvent->text().toStdU32String());
+		keyEvent->ignore();
 	}
 }
 
@@ -166,15 +174,8 @@ s32 basic_keyboard_handler::getUnmodifiedKey(QKeyEvent* keyEvent)
 	return static_cast<s32>(raw_key);
 }
 
-void basic_keyboard_handler::LoadSettings()
+void basic_keyboard_handler::LoadSettings(Keyboard& keyboard)
 {
-	if (m_keyboards.empty())
-	{
-		return;
-	}
-
-	Keyboard& keyboard = m_keyboards[0];
-
 	std::vector<KbButton> buttons;
 
 	// Meta Keys
@@ -194,7 +195,7 @@ void basic_keyboard_handler::LoadSettings()
 	//buttons.emplace_back(, CELL_KEYC_E_UNDEF);
 	buttons.emplace_back(Qt::Key_Escape, CELL_KEYC_ESCAPE);
 	buttons.emplace_back(Qt::Key_Kanji, CELL_KEYC_106_KANJI);
-	//buttons.emplace_back(Qt::Key_CapsLock, CELL_KEYC_CAPS_LOCK);
+	buttons.emplace_back(Qt::Key_CapsLock, CELL_KEYC_CAPS_LOCK);
 	buttons.emplace_back(Qt::Key_F1, CELL_KEYC_F1);
 	buttons.emplace_back(Qt::Key_F2, CELL_KEYC_F2);
 	buttons.emplace_back(Qt::Key_F3, CELL_KEYC_F3);
@@ -221,7 +222,7 @@ void basic_keyboard_handler::LoadSettings()
 	buttons.emplace_back(Qt::Key_Down, CELL_KEYC_DOWN_ARROW);
 	buttons.emplace_back(Qt::Key_Up, CELL_KEYC_UP_ARROW);
 	//buttons.emplace_back(WXK_NUMLOCK, CELL_KEYC_NUM_LOCK);
-	//buttons.emplace_back(, CELL_KEYC_APPLICATION);
+	buttons.emplace_back(Qt::Key_Meta, CELL_KEYC_APPLICATION);
 	buttons.emplace_back(Qt::Key_Kana_Shift, CELL_KEYC_KANA); // maybe Key_Kana_Lock
 	buttons.emplace_back(Qt::Key_Henkan, CELL_KEYC_HENKAN);
 	buttons.emplace_back(Qt::Key_Muhenkan, CELL_KEYC_MUHENKAN);

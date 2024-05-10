@@ -3,7 +3,6 @@
 #include "Emu/system_config.h"
 #include "Emu/System.h"
 #include "Emu/Io/camera_config.h"
-#include "Emu/Cell/lv2/sys_event.h"
 
 #include <QMediaDevices>
 
@@ -35,7 +34,6 @@ qt_camera_handler::~qt_camera_handler()
 void qt_camera_handler::reset()
 {
 	m_camera.reset();
-	m_error_handler.reset();
 	m_video_sink.reset();
 	m_media_capture_session.reset();
 }
@@ -57,18 +55,9 @@ void qt_camera_handler::set_camera(const QCameraDevice& camera_info)
 	m_media_capture_session.reset(new QMediaCaptureSession(nullptr));
 	m_video_sink.reset(new qt_camera_video_sink(front_facing, nullptr));
 	m_camera.reset(new QCamera(camera_info));
-	m_error_handler.reset(new qt_camera_error_handler(m_camera,
-		[this](bool is_active)
-		{
-			if (is_active)
-			{
-				m_state = camera_handler_state::running;
-			}
-			else
-			{
-				m_state = camera_handler_state::closed;
-			}
-		}));
+
+	connect(m_camera.get(), &QCamera::activeChanged, this, &qt_camera_handler::handle_camera_active);
+	connect(m_camera.get(), &QCamera::errorOccurred, this, &qt_camera_handler::handle_camera_error);
 
 	// Setup video sink
 	m_media_capture_session->setCamera(m_camera.get());
@@ -76,6 +65,25 @@ void qt_camera_handler::set_camera(const QCameraDevice& camera_info)
 
 	// Update the settings
 	update_camera_settings();
+}
+
+void qt_camera_handler::handle_camera_active(bool is_active)
+{
+	camera_log.notice("Camera active status changed to %d", is_active);
+
+	if (is_active)
+	{
+		m_state = camera_handler_state::running;
+	}
+	else
+	{
+		m_state = camera_handler_state::closed;
+	}
+}
+
+void qt_camera_handler::handle_camera_error(QCamera::Error error, const QString& errorString)
+{
+	camera_log.error("Error event: \"%s\" (error=%d)", errorString, static_cast<int>(error));
 }
 
 void qt_camera_handler::open_camera()

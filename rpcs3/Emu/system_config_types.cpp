@@ -40,14 +40,17 @@ void fmt_class_string<video_resolution>::format(std::string& out, u64 arg)
 	{
 		switch (value)
 		{
-		case video_resolution::_1080: return "1920x1080";
-		case video_resolution::_720: return "1280x720";
-		case video_resolution::_480: return "720x480";
-		case video_resolution::_576: return "720x576";
-		case video_resolution::_1600x1080: return "1600x1080";
-		case video_resolution::_1440x1080: return "1440x1080";
-		case video_resolution::_1280x1080: return "1280x1080";
-		case video_resolution::_960x1080: return "960x1080";
+		case video_resolution::_1080p: return "1920x1080";
+		case video_resolution::_1080i: return "1920x1080i";
+		case video_resolution::_720p: return "1280x720";
+		case video_resolution::_480p: return "720x480";
+		case video_resolution::_480i: return "720x480i";
+		case video_resolution::_576p: return "720x576";
+		case video_resolution::_576i: return "720x576i";
+		case video_resolution::_1600x1080p: return "1600x1080";
+		case video_resolution::_1440x1080p: return "1440x1080";
+		case video_resolution::_1280x1080p: return "1280x1080";
+		case video_resolution::_960x1080p: return "960x1080";
 		}
 
 		return unknown;
@@ -516,6 +519,22 @@ void fmt_class_string<gametablet_handler>::format(std::string& out, u64 arg)
 		{
 		case gametablet_handler::disabled: return "Disabled";
 		case gametablet_handler::enabled: return "Enabled";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<guncon3_handler>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto value)
+	{
+		switch (value)
+		{
+		case guncon3_handler::disabled: return "Disabled";
+		case guncon3_handler::one_controller: return "1 controller";
+		case guncon3_handler::two_controllers: return "2 controllers";
 		}
 
 		return unknown;

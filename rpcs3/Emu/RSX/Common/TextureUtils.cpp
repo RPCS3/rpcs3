@@ -224,7 +224,7 @@ struct copy_unmodified_block_swizzled
 	template<typename T, typename U>
 	static void copy_mipmap_level(std::span<T> dst, std::span<const U> src, u16 words_per_block, u16 width_in_block, u16 row_count, u16 depth, u8 border, u32 dst_pitch_in_block)
 	{
-		if (std::is_same<T, U>::value && dst_pitch_in_block == width_in_block && words_per_block == 1 && !border)
+		if (std::is_same_v<T, U> && dst_pitch_in_block == width_in_block && words_per_block == 1 && !border)
 		{
 			rsx::convert_linear_swizzle_3d<T>(src.data(), dst.data(), width_in_block, row_count, depth);
 		}

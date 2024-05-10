@@ -147,7 +147,7 @@ public:
 	{
 		using gvar = std::decay_t<decltype(*Var)>;
 
-		static_assert(std::is_same<u32, typename gvar::addr_type>::value, "Static variable registration: vm::gvar<T> expected");
+		static_assert(std::is_same_v<u32, typename gvar::addr_type>, "Static variable registration: vm::gvar<T> expected");
 
 		auto& info = access_static_variable(_module, vnid);
 

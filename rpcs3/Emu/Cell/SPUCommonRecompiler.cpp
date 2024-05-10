@@ -4427,6 +4427,8 @@ void spu_recompiler_base::dump(const spu_program& result, std::string& out)
 	SPUDisAsm dis_asm(cpu_disasm_mode::dump, reinterpret_cast<const u8*>(result.data.data()), result.lower_bound);
 
 	std::string hash;
+
+	if (!result.data.empty())
 	{
 		sha1_context ctx;
 		u8 output[20];
@@ -4435,6 +4437,10 @@ void spu_recompiler_base::dump(const spu_program& result, std::string& out)
 		sha1_update(&ctx, reinterpret_cast<const u8*>(result.data.data()), result.data.size() * 4);
 		sha1_finish(&ctx, output);
 		fmt::append(hash, "%s", fmt::base57(output));
+	}
+	else
+	{
+		hash = "N/A";
 	}
 
 	fmt::append(out, "========== SPU BLOCK 0x%05x (size %u, %s) ==========\n\n", result.entry_point, result.data.size(), hash);
