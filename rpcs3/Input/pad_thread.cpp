@@ -170,7 +170,7 @@ void pad_thread::Init()
 		cur_pad_handler->Init();
 
 		m_pads[i] = std::make_shared<Pad>(handler_type, CELL_PAD_STATUS_DISCONNECTED, pad_settings[i].device_capability, pad_settings[i].device_type);
-		m_pads[i]->is_fake_move = (g_cfg.io.move == move_handler::fake && i >= (CELL_PAD_MAX_PORT_NUM - CELL_GEM_MAX_NUM));
+		m_pads[i]->is_fake_pad = (g_cfg.io.move == move_handler::fake && i >= (CELL_PAD_MAX_PORT_NUM - CELL_GEM_MAX_NUM));
 
 		if (pad_settings[i].is_ldd_pad)
 		{
