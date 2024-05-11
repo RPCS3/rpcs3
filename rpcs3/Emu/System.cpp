@@ -771,10 +771,19 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	std::unique_ptr<rsx::frame_capture_data> frame = std::make_unique<rsx::frame_capture_data>();
 	utils::serial load;
 	load.set_reading_state();
+ 
+ 	const std::string lower = fmt::to_lower(path);
 
-	if (fmt::to_lower(path).ends_with(".gz"))
+	if (lower.ends_with(".SAVESTAT.gz") || lower.ends_with(".SAVESTAT.zst"))
 	{
-		load.m_file_handler = make_compressed_serialization_file_handler(std::move(in_file));
+		if (lower.ends_with(".SAVESTAT.gz"))
+		{
+			load.m_file_handler = make_compressed_serialization_file_handler(std::move(in_file));
+		}
+		else
+		{
+			load.m_file_handler = make_compressed_zstd_serialization_file_handler(std::move(in_file));
+		}
 
 		// Forcefully read some data to check validity
 		load.pop<uchar>();
@@ -956,12 +965,28 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		{
 			fs::file save{m_path, fs::isfile + fs::read};
 
-			if (!m_path.ends_with(".gz") && save && save.size() >= 8 && save.read<u64>() == "RPCS3SAV"_u64)
+			if (m_path.ends_with(".SAVESTAT") && save && save.size() >= 8 && save.read<u64>() == "RPCS3SAV"_u64)
 			{
 				m_ar = std::make_shared<utils::serial>();
 				m_ar->set_reading_state();
 
 				m_ar->m_file_handler = make_uncompressed_serialization_file_handler(std::move(save));
+			}
+			else if (save && m_path.ends_with(".zst"))
+			{
+				m_ar = std::make_shared<utils::serial>();
+				m_ar->set_reading_state();
+
+				m_ar->m_file_handler = make_compressed_zstd_serialization_file_handler(std::move(save));
+
+				if (m_ar->try_read<u64>().second != "RPCS3SAV"_u64)
+				{
+					m_ar.reset();
+				}
+				else
+				{
+					m_ar->pos = 0;
+				}
 			}
 			else if (save && m_path.ends_with(".gz"))
 			{
@@ -3138,12 +3163,11 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 			path = get_savestate_file(m_title_id, m_path, 0, 0);
 
-			// The function is meant for reading files, so if there is no GZ file it would not return compressed file path
+			// The function is meant for reading files, so if there is no ZST file it would not return compressed file path
 			// So this is the only place where the result is edited if need to be
-			if (!path.ends_with(".gz"))
-			{
-				path += ".gz";
-			}
+			constexpr std::string_view save = ".SAVESTAT";
+			path.resize(path.rfind(save) + save.size());
+			path += ".zst";
 
 			if (!fs::create_path(fs::get_parent_dir(path)))
 			{
@@ -3160,7 +3184,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 			}
 
 			auto serial_ptr = stx::make_single<utils::serial>();
-			serial_ptr->m_file_handler = make_compressed_serialization_file_handler(file.file);
+			serial_ptr->m_file_handler = make_compressed_zstd_serialization_file_handler(file.file);
 			*to_ar = std::move(serial_ptr);
 
 			signal_system_cache_can_stay();

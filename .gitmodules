@@ -88,3 +88,7 @@
 	path = 3rdparty/rtmidi/rtmidi
 	url = ../../thestk/rtmidi
 	ignore = dirty
+[submodule "3rdparty/zstd/zstd"]
+	path = 3rdparty/zstd/zstd
+	url = ../../facebook/zstd
+	ignore = dirty
