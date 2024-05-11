@@ -16,6 +16,9 @@ add_library(3rdparty_dummy_lib INTERFACE)
 # ZLib
 add_subdirectory(zlib EXCLUDE_FROM_ALL)
 
+# ZSTD
+add_subdirectory(zstd EXCLUDE_FROM_ALL)
+
 # 7z sdk
 add_subdirectory(7z EXCLUDE_FROM_ALL)
 
@@ -356,6 +359,7 @@ else()
 	add_library(3rdparty::libusb ALIAS usb-1.0-static)
 endif()
 add_library(3rdparty::zlib ALIAS 3rdparty_zlib)
+add_library(3rdparty::zstd ALIAS 3rdparty_zstd)
 add_library(3rdparty::7z ALIAS 3rdparty_7z)
 add_library(3rdparty::flatbuffers ALIAS 3rdparty_flatbuffers)
 add_library(3rdparty::pugixml ALIAS pugixml)

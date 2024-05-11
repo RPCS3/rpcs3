@@ -100,6 +100,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "miniupnpc_static", "3rdpart
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "rtmidi", "3rdparty\rtmidi\rtmidi.vcxproj", "{2C902C67-985C-4BE0-94A3-E0FE2EB929A3}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "zstd", "3rdparty\zstd\zstd.vcxproj", "{4E52A41A-F33B-4C7A-8C36-A1A6B4F4277C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -202,6 +204,10 @@ Global
 		{2C902C67-985C-4BE0-94A3-E0FE2EB929A3}.Debug|x64.Build.0 = Debug|x64
 		{2C902C67-985C-4BE0-94A3-E0FE2EB929A3}.Release|x64.ActiveCfg = Release|x64
 		{2C902C67-985C-4BE0-94A3-E0FE2EB929A3}.Release|x64.Build.0 = Release|x64
+		{4E52A41A-F33B-4C7A-8C36-A1A6B4F4277C}.Debug|x64.ActiveCfg = Debug|x64
+		{4E52A41A-F33B-4C7A-8C36-A1A6B4F4277C}.Debug|x64.Build.0 = Debug|x64
+		{4E52A41A-F33B-4C7A-8C36-A1A6B4F4277C}.Release|x64.ActiveCfg = Release|x64
+		{4E52A41A-F33B-4C7A-8C36-A1A6B4F4277C}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -233,6 +239,7 @@ Global
 		{A55DA1B5-CC17-4525-BE7F-1659CE17BB56} = {6C3B64A0-8F8A-4DC4-8C0B-D71EBEED7FA8}
 		{5228F863-E0DD-4DE7-AA7B-5C52B14CD4D0} = {6C3B64A0-8F8A-4DC4-8C0B-D71EBEED7FA8}
 		{2C902C67-985C-4BE0-94A3-E0FE2EB929A3} = {6C3B64A0-8F8A-4DC4-8C0B-D71EBEED7FA8}
+		{4E52A41A-F33B-4C7A-8C36-A1A6B4F4277C} = {6C3B64A0-8F8A-4DC4-8C0B-D71EBEED7FA8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {06CC7920-E085-4B81-9582-8DE8AAD42510}

@@ -114,6 +114,8 @@ if(MSVC)
     add_compile_options(/wd4530 /utf-8) # C++ exception handler used, but unwind semantics are not enabled
 endif()
 
+set(ALLOW_DUPLICATE_CUSTOM_TARGETS TRUE)
+
 add_subdirectory(3rdparty)
 
 if (DISABLE_LTO)

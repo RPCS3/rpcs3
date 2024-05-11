@@ -126,8 +126,18 @@ std::vector<version_entry> get_savestate_versioning_data(fs::file&& file, std::s
 	utils::serial ar;
 	ar.set_reading_state({}, true);
 
-	ar.m_file_handler = filepath.ends_with(".gz") ? static_cast<std::unique_ptr<utils::serialization_file_handler>>(make_compressed_serialization_file_handler(std::move(file)))
-		: make_uncompressed_serialization_file_handler(std::move(file));
+	if (filepath.ends_with(".zst"))
+	{
+		ar.m_file_handler = make_compressed_zstd_serialization_file_handler(std::move(file));
+	}
+	else if (filepath.ends_with(".gz"))
+	{
+		ar.m_file_handler = make_compressed_serialization_file_handler(std::move(file));
+	}
+	else
+	{
+		ar.m_file_handler = make_uncompressed_serialization_file_handler(std::move(file));
+	}
 
 	if (u64 r = 0; ar.try_read(r) != 0 || r != "RPCS3SAV"_u64)
 	{
@@ -228,6 +238,11 @@ std::string get_savestate_file(std::string_view title_id, std::string_view boot_
 
 	std::string path = fs::get_cache_dir() + "/savestates/" + title + "/" + title + '_' + prefix + '_' + save_id + ".SAVESTAT";
 
+	if (std::string path_compressed = path + ".zst"; fs::is_file(path_compressed))
+	{
+		return path_compressed;
+	}
+
 	if (std::string path_compressed = path + ".gz"; fs::is_file(path_compressed))
 	{
 		return path_compressed;
@@ -278,7 +293,12 @@ bool boot_last_savestate(bool testing)
 			// Find the latest savestate file compatible with the game (TODO: Check app version and anything more)
 			if (entry.name.find(Emu.GetTitleID()) != umax && mtime <= entry.mtime)
 			{
-				if (std::string path = save_dir + entry.name + ".gz"; is_savestate_compatible(fs::file(path), path))
+				if (std::string path = save_dir + entry.name + ".zst"; is_savestate_compatible(fs::file(path), path))
+				{
+					savestate_path = std::move(path);
+					mtime = entry.mtime;
+				}
+				else if (std::string path = save_dir + entry.name + ".gz"; is_savestate_compatible(fs::file(path), path))
 				{
 					savestate_path = std::move(path);
 					mtime = entry.mtime;

@@ -545,7 +545,7 @@ void main_window::BootElf()
 		"SELF files (EBOOT.BIN *.self);;"
 		"BOOT files (*BOOT.BIN);;"
 		"BIN files (*.bin);;"
-		"All executable files (*.SAVESTAT.gz *.SAVESTAT *.sprx *.SPRX *.self *.SELF *.bin *.BIN *.prx *.PRX *.elf *.ELF *.o *.O);;"
+		"All executable files (*.SAVESTAT.zst *.SAVESTAT.gz *.SAVESTAT *.sprx *.SPRX *.self *.SELF *.bin *.BIN *.prx *.PRX *.elf *.ELF *.o *.O);;"
 		"All files (*.*)"),
 		Q_NULLPTR, QFileDialog::DontResolveSymlinks);
 
@@ -619,7 +619,7 @@ void main_window::BootSavestate()
 	}
 
 	const QString file_path = QFileDialog::getOpenFileName(this, tr("Select Savestate To Boot"), qstr(fs::get_cache_dir() + "savestates/"), tr(
-		"Savestate files (*.SAVESTAT *.SAVESTAT.gz);;"
+		"Savestate files (*.SAVESTAT *.SAVESTAT.zst *.SAVESTAT.gz);;"
 		"All files (*.*)"),
 		Q_NULLPTR, QFileDialog::DontResolveSymlinks);
 
@@ -3746,7 +3746,7 @@ main_window::drop_type main_window::IsValidFile(const QMimeData& md, QStringList
 				type = drop_type::drop_rrc;
 			}
 			// The emulator allows to execute ANY filetype, just not from drag-and-drop because it is confusing to users
-			else if (path.toLower().endsWith(".savestat.gz") || suffix_lo == "savestat" || suffix_lo == "sprx" || suffix_lo == "self" || suffix_lo == "bin" || suffix_lo == "prx" || suffix_lo == "elf" || suffix_lo == "o")
+			else if (path.toLower().endsWith(".savestat.gz") || path.toLower().endsWith(".savestat.zst") || suffix_lo == "savestat" || suffix_lo == "sprx" || suffix_lo == "self" || suffix_lo == "bin" || suffix_lo == "prx" || suffix_lo == "elf" || suffix_lo == "o")
 			{
 				type = drop_type::drop_game;
 			}
