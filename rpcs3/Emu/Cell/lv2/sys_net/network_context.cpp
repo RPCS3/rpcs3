@@ -212,9 +212,9 @@ void p2p_thread::operator()()
 
 		// Check P2P sockets for incoming packets
 		auto num_p2p_sockets = 0;
+		std::memset(p2p_fd.data(), 0, p2p_fd.size() * sizeof(::pollfd));
 		{
 			std::lock_guard lock(list_p2p_ports_mutex);
-			std::memset(p2p_fd.data(), 0, p2p_fd.size() * sizeof(::pollfd));
 			for (const auto& p2p_port : list_p2p_ports)
 			{
 				p2p_fd[num_p2p_sockets].events = POLLIN;

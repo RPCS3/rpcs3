@@ -371,6 +371,7 @@ void signaling_handler::process_incoming_messages()
 			schedule_repeat = false;
 			sent_packet.command = signal_finished_ack;
 			update_ext_si_status(si, false);
+			update_si_status(si, SCE_NP_SIGNALING_CONN_STATUS_INACTIVE, SCE_NP_SIGNALING_ERROR_TERMINATED_BY_PEER);
 			break;
 		case signal_finished_ack:
 			reply = false;
@@ -593,6 +594,9 @@ void signaling_handler::update_si_status(std::shared_ptr<signaling_info>& si, s3
 
 void signaling_handler::update_ext_si_status(std::shared_ptr<signaling_info>& si, bool op_activated)
 {
+	if (!si)
+		return;
+
 	if (op_activated && !si->op_activated)
 	{
 		si->op_activated = true;
