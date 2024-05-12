@@ -181,6 +181,7 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 	ui->chooseClass->addItem(tr("Dance Mat"),          u32{CELL_PAD_PCLASS_TYPE_DANCEMAT});
 	ui->chooseClass->addItem(tr("PS Move Navigation"), u32{CELL_PAD_PCLASS_TYPE_NAVIGATION});
 	ui->chooseClass->addItem(tr("Skateboard"),         u32{CELL_PAD_PCLASS_TYPE_SKATEBOARD});
+	ui->chooseClass->addItem(tr("GunCon 3"),           u32{CELL_PAD_FAKE_TYPE_GUNCON3});
 
 	connect(ui->chooseClass, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
 	{
@@ -1680,6 +1681,11 @@ void pad_settings_dialog::HandleDeviceClassChange(u32 class_id) const
 		case input::product_type::ride_skateboard:
 		{
 			ui->chooseProduct->addItem(tr("RIDE Skateboard", "Tony Hawk RIDE Skateboard Controller"), static_cast<int>(product.type));
+			break;
+		}
+		case input::product_type::guncon_3:
+		{
+			ui->chooseProduct->addItem(tr("GunCon 3", "GunCon 3 Controller"), static_cast<int>(product.type));
 			break;
 		}
 		}
