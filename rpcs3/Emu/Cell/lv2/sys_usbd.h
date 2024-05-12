@@ -2,6 +2,7 @@
 
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/Cell/ErrorCodes.h"
+#include "Input/product_info.h"
 
 class ppu_thread;
 
@@ -86,3 +87,5 @@ error_code sys_usbd_free_memory(ppu_thread& ppu);
 error_code sys_usbd_get_device_speed(ppu_thread& ppu);
 error_code sys_usbd_register_extra_ldd(ppu_thread& ppu, u32 handle, vm::cptr<char> s_product, u16 slen_product, u16 id_vendor, u16 id_product_min, u16 id_product_max);
 error_code sys_usbd_unregister_extra_ldd(ppu_thread& ppu, u32 handle, vm::cptr<char> s_product, u16 slen_product);
+
+void connect_usb_controller(u8 index, input::product_type);
