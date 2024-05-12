@@ -498,6 +498,8 @@ struct Pad
 	bool ldd{false};
 	CellPadData ldd_data{};
 
+	bool is_fake_move = false;
+
 	explicit Pad(pad_handler handler, u32 port_status, u32 device_capability, u32 device_type)
 		: m_pad_handler(handler)
 		, m_port_status(port_status)
