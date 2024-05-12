@@ -152,6 +152,9 @@ void cellPad_NotifyStateChange(usz index, u64 /*state*/, bool locked)
 		case CELL_PAD_PCLASS_TYPE_SKATEBOARD:
 			product = input::get_product_info(input::product_type::ride_skateboard);
 			break;
+		case CELL_PAD_FAKE_TYPE_GUNCON3:
+			product = input::get_product_info(input::product_type::guncon_3);
+			break;
 		case CELL_PAD_PCLASS_TYPE_STANDARD:
 		default:
 			product = input::get_product_info(input::product_type::playstation_3_controller);
