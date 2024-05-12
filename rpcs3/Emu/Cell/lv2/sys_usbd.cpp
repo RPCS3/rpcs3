@@ -487,17 +487,6 @@ usb_handler_thread::usb_handler_thread()
 		sys_usbd.notice("Adding emulated uDraw GameTablet");
 		usb_devices.push_back(std::make_shared<usb_device_gametablet>(get_new_location()));
 	}
-
-	if (g_cfg.io.guncon3 != guncon3_handler::disabled)
-	{
-		sys_usbd.notice("Adding emulated GunCon3 (controller 1)");
-		usb_devices.push_back(std::make_shared<usb_device_guncon3>(0, get_new_location()));
-	}
-	if (g_cfg.io.guncon3 == guncon3_handler::two_controllers)
-	{
-		sys_usbd.notice("Adding emulated GunCon3 (controller 2)");
-		usb_devices.push_back(std::make_shared<usb_device_guncon3>(1, get_new_location()));
-	}
 }
 
 usb_handler_thread::~usb_handler_thread()
@@ -864,6 +853,14 @@ void connect_usb_controller(u8 index, input::product_type type)
 			usbh.disconnect_usb_device(it->second.second);
 			usbh.pad_to_usb.erase(it->first);
 		}
+	}
+
+	if (!already_connected && type == input::product_type::guncon_3)
+	{
+		sys_usbd.success("Adding emulated GunCon3 (controller %d)", index);
+		std::shared_ptr<usb_device> dev = std::make_shared<usb_device_guncon3>(index, usbh.get_new_location());
+		usbh.connect_usb_device(dev);
+		usbh.pad_to_usb.emplace(index, std::pair(type, dev));
 	}
 }
 

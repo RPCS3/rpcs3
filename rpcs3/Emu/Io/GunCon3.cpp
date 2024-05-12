@@ -165,7 +165,7 @@ void usb_device_guncon3::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint,
 	transfer->fake = true;
 	transfer->expected_count = buf_size;
 	transfer->expected_result = HC_CC_NOERR;
-	transfer->expected_time = get_timestamp() + 500;
+	transfer->expected_time = get_timestamp() + 4000;
 
 	if ((endpoint & 0x80) == LIBUSB_ENDPOINT_OUT)
 	{
