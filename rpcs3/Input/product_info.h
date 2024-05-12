@@ -260,6 +260,35 @@ namespace input
 		}
 	}
 
+	inline product_type get_product_by_vid_pid(u16 vid, u16 pid)
+	{
+		if (vid == vendor_id::konami_de && pid == product_id::dance_dance_revolution_mat)
+			return product_type::dance_dance_revolution_mat;
+		if (vid == vendor_id::sony_cea && pid == product_id::dj_hero_turntable)
+			return product_type::dj_hero_turntable;
+		if (vid == vendor_id::sony_cea && pid == product_id::harmonix_rockband_drum_kit)
+			return product_type::harmonix_rockband_drum_kit;
+		if (vid == vendor_id::sony_cea && pid == product_id::harmonix_rockband_drum_kit_2)
+			return product_type::harmonix_rockband_drum_kit_2;
+		if (vid == vendor_id::sony_cea && pid == product_id::harmonix_rockband_guitar)
+			return product_type::harmonix_rockband_guitar;
+		if (vid == vendor_id::sony_cea && pid == product_id::red_octane_gh_drum_kit)
+			return product_type::red_octane_gh_drum_kit;
+		if (vid == vendor_id::sony_cea && pid == product_id::red_octane_gh_guitar)
+			return product_type::red_octane_gh_guitar;
+		if (vid == vendor_id::sony_cea && pid == product_id::rock_revolution_drum_kit)
+			return product_type::rock_revolution_drum_kit;
+		if (vid == vendor_id::sony_corp && pid == product_id::ps_move_navigation)
+			return product_type::ps_move_navigation;
+		if (vid == vendor_id::sony_cea && pid == product_id::ride_skateboard)
+			return product_type::ride_skateboard;
+		if (vid == vendor_id::namco && pid == product_id::guncon_3)
+			return product_type::guncon_3;
+		if (vid == vendor_id::sony_corp && pid == product_id::playstation_3_controller)
+			return product_type::playstation_3_controller;
+		return product_type::playstation_3_controller;
+	}
+
 	inline std::vector<product_info> get_products_by_class(int class_id)
 	{
 		switch (class_id)
