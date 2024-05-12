@@ -683,7 +683,6 @@ void signaling_handler::start_sig(u32 conn_id, u32 addr, u16 port)
 	sent_packet.command = signal_connect;
 	sent_packet.timestamp_sender = get_micro_timestamp(steady_clock::now());
 
-	ensure(sig_peers.contains(conn_id));
 	std::shared_ptr<signaling_info> si = ::at32(sig_peers, conn_id);
 
 	const auto now = steady_clock::now();
