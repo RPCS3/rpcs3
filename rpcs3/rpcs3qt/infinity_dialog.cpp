@@ -21,7 +21,7 @@
 #include <QCompleter>
 
 infinity_dialog* infinity_dialog::inst = nullptr;
-std::array<std::optional<u32>, 7> infinity_dialog::figure_slots = {};
+std::array<std::optional<u32>, 9> infinity_dialog::figure_slots = {};
 static QString s_last_figure_path;
 
 LOG_CHANNEL(infinity_log, "infinity");
@@ -426,8 +426,9 @@ figure_creator_dialog::figure_creator_dialog(QWidget* parent, u8 slot)
 		// Only display entry if it is a piece appropriate for the slot
 		if ((slot == 0 &&
 				((figure > 0x1E8480 && figure < 0x2DC6BF) || (figure > 0x3D0900 && figure < 0x4C4B3F))) ||
-			((slot == 1 || slot == 2) && figure < 0x1E847F) ||
-			((slot == 3 || slot == 4 || slot == 5 || slot == 6) &&
+			((slot == 1 || slot == 2) && (figure > 0x3D0900 && figure < 0x4C4B3F)) ||
+			((slot == 3 || slot == 6) && figure < 0x1E847F) ||
+			((slot == 4 || slot == 5 || slot == 7 || slot == 8) &&
 				(figure > 0x2DC6C0 && figure < 0x3D08FF)))
 		{
 			const u32 qnum = (figure << 8) | entry.second.first;
@@ -681,17 +682,21 @@ infinity_dialog::infinity_dialog(QWidget* parent)
 
 	add_figure_slot(vbox_group, QString(tr("Play Set/Power Disc")), 0);
 	add_line(vbox_group);
-	add_figure_slot(vbox_group, QString(tr("Player One")), 1);
+	add_figure_slot(vbox_group, QString(tr("Power Disc Two")), 1);
 	add_line(vbox_group);
-	add_figure_slot(vbox_group, QString(tr("Player One Ability One")), 3);
+	add_figure_slot(vbox_group, QString(tr("Power Disc Three")), 2);
+	add_line(vbox_group);
+	add_figure_slot(vbox_group, QString(tr("Player One")), 3);
+	add_line(vbox_group);
+	add_figure_slot(vbox_group, QString(tr("Player One Ability One")), 4);
 	add_line(vbox_group);
 	add_figure_slot(vbox_group, QString(tr("Player One Ability Two")), 5);
 	add_line(vbox_group);
-	add_figure_slot(vbox_group, QString(tr("Player Two")), 2);
+	add_figure_slot(vbox_group, QString(tr("Player Two")), 6);
 	add_line(vbox_group);
-	add_figure_slot(vbox_group, QString(tr("Player Two Ability One")), 4);
+	add_figure_slot(vbox_group, QString(tr("Player Two Ability One")), 7);
 	add_line(vbox_group);
-	add_figure_slot(vbox_group, QString(tr("Player Two Ability Two")), 6);
+	add_figure_slot(vbox_group, QString(tr("Player Two Ability Two")), 8);
 
 	group_figures->setLayout(vbox_group);
 	vbox_panel->addWidget(group_figures);
