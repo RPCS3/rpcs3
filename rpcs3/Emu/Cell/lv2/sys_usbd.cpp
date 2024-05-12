@@ -108,8 +108,13 @@ public:
 	std::pair<u32, UsbDeviceIsoRequest> get_isochronous_transfer_status(u32 transfer_id);
 	void push_fake_transfer(UsbTransfer* transfer);
 
+	const std::array<u8, 7>& get_new_location();
+	void connect_usb_device(std::shared_ptr<usb_device> dev);
+	void disconnect_usb_device(std::shared_ptr<usb_device> dev);
+
 	// Map of devices actively handled by the ps3(device_id, device)
 	std::map<u32, std::pair<UsbInternalDevice, std::shared_ptr<usb_device>>> handled_devices;
+	std::map<u8, std::pair<input::product_type, std::shared_ptr<usb_device>>> pad_to_usb;
 
 	shared_mutex mutex;
 	atomic_t<bool> is_init = false;
@@ -147,6 +152,7 @@ private:
 	std::queue<std::tuple<u64, u64, u64>> usbd_events;
 
 	// List of devices "connected" to the ps3
+	std::array<u8, 7> location{};
 	std::vector<std::shared_ptr<usb_device>> usb_devices;
 
 	libusb_context* ctx = nullptr;
@@ -228,14 +234,6 @@ usb_handler_thread::usb_handler_thread()
 		sys_usbd.error("Failed to get device list: %s", libusb_error_name(static_cast<s32>(ndev)));
 		return;
 	}
-
-	std::array<u8, 7> location{};
-
-	auto get_new_location = [&]() -> const std::array<u8, 7>&
-	{
-		location[0]++;
-		return location;
-	};
 
 	bool found_skylander = false;
 	bool found_infinity  = false;
@@ -813,6 +811,62 @@ void usb_handler_thread::push_fake_transfer(UsbTransfer* transfer)
 	std::lock_guard lock_tf(mutex_transfers);
 	fake_transfers.push_back(transfer);
 }
+
+const std::array<u8, 7>& usb_handler_thread::get_new_location()
+{
+	location[0]++;
+	return location;
+}
+
+void usb_handler_thread::connect_usb_device(std::shared_ptr<usb_device> new_dev)
+{
+	usb_devices.push_back(new_dev);
+
+	for (const auto& [name, ldd] : ldds)
+	{
+		sys_usbd.success("connect_usb_device : check ldd : name=%s VID=%04x, PID=%04x->%04x", name, ldd.id_vendor, ldd.id_product_min, ldd.id_product_max);
+		if (new_dev->device._device.idVendor == ldd.id_vendor && new_dev->device._device.idProduct >= ldd.id_product_min && new_dev->device._device.idProduct <= ldd.id_product_max)
+		{
+			const int assigned_number = dev_counter++;
+			handled_devices.emplace(assigned_number, std::pair(UsbInternalDevice{narrow<u8>(assigned_number), narrow<u8>(assigned_number), 0x00, 0x00}, new_dev));
+			new_dev->assigned_number = assigned_number;
+			send_message(SYS_USBD_ATTACH, assigned_number);
+			sys_usbd.success("connect_usb_device : ldds already registered : assigned_number = %d", assigned_number);
+		}
+	}
+}
+
+void usb_handler_thread::disconnect_usb_device(std::shared_ptr<usb_device> dev)
+{
+	if (dev->assigned_number && handled_devices.erase(dev->assigned_number))
+	{
+		sys_usbd.success("disconnect_usb_device : detach device %d", dev->assigned_number);
+		send_message(SYS_USBD_DETACH, dev->assigned_number);
+		dev->assigned_number = 0;
+	}
+
+	usb_devices.erase(find(usb_devices.begin(), usb_devices.end(), dev));
+}
+
+void connect_usb_controller(u8 index, input::product_type type)
+{
+	bool already_connected = false;
+	auto& usbh = g_fxo->get<named_thread<usb_handler_thread>>();
+
+	if (const auto it = usbh.pad_to_usb.find(index); it != usbh.pad_to_usb.end())
+	{
+		if (it->second.first == type)
+		{
+			already_connected = true;
+		}
+		else
+		{
+			usbh.disconnect_usb_device(it->second.second);
+			usbh.pad_to_usb.erase(it->first);
+		}
+	}
+}
+
 
 error_code sys_usbd_initialize(ppu_thread& ppu, vm::ptr<u32> handle)
 {
