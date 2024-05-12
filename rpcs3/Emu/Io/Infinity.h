@@ -32,7 +32,7 @@ public:
 
 protected:
 	shared_mutex infinity_mutex;
-	std::array<infinity_figure, 7> figures;
+	std::array<infinity_figure, 9> figures;
 
 private:
 	u8 generate_checksum(const std::array<u8, 32>& data, int num_of_bytes) const;

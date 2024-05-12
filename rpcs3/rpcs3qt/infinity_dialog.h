@@ -41,8 +41,8 @@ protected:
 	void load_figure_path(u8 slot, const QString& path);
 
 protected:
-	std::array<QLineEdit*, 7> m_edit_figures{};
-	static std::array<std::optional<u32>, 7> figure_slots;
+	std::array<QLineEdit*, 9> m_edit_figures{};
+	static std::array<std::optional<u32>, 9> figure_slots;
 
 private:
 	void add_figure_slot(QVBoxLayout* vbox_group, QString name, u8 slot);
