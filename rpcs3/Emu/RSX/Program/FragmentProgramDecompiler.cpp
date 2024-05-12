@@ -497,15 +497,15 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 	std::string ret;
 	u32 precision_modifier = 0;
 
-	if constexpr (std::is_same<T, SRC0>::value)
+	if constexpr (std::is_same_v<T, SRC0>)
 	{
 		precision_modifier = src1.src0_prec_mod;
 	}
-	else if constexpr (std::is_same<T, SRC1>::value)
+	else if constexpr (std::is_same_v<T, SRC1>)
 	{
 		precision_modifier = src1.src1_prec_mod;
 	}
-	else if constexpr (std::is_same<T, SRC2>::value)
+	else if constexpr (std::is_same_v<T, SRC2>)
 	{
 		precision_modifier = src1.src2_prec_mod;
 	}

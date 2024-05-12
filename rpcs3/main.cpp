@@ -28,6 +28,7 @@
 #include "headless_application.h"
 #include "Utilities/sema.h"
 #include "Utilities/date_time.h"
+#include "util/console.h"
 #include "Crypto/decrypt_binaries.h"
 #ifdef _WIN32
 #include "module_verifier.hpp"
@@ -151,11 +152,9 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 
 	if (s_headless)
 	{
-#ifdef _WIN32
-		if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole())
-			[[maybe_unused]] const auto con_out = freopen("conout$", "w", stderr);
-#endif
-		std::cerr << fmt::format("RPCS3: %s\n", text);
+		utils::attach_console(utils::console_stream::std_err, true);
+
+		utils::output_stderr(fmt::format("RPCS3: %s\n", text));
 #ifdef __linux__
 		jit_announce(0, 0, "");
 #endif
@@ -175,7 +174,7 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 	}
 	else
 	{
-		std::cerr << fmt::format("RPCS3: %s\n", text);
+		utils::output_stderr(fmt::format("RPCS3: %s\n", text));
 	}
 
 	static auto show_report = [is_html, include_help_text](std::string_view text)
@@ -255,7 +254,7 @@ struct fatal_error_listener final : logs::listener
 
 	void log(u64 /*stamp*/, const logs::message& msg, const std::string& prefix, const std::string& text) override
 	{
-		if (msg == logs::level::fatal)
+		if (msg <= logs::level::fatal)
 		{
 			std::string _msg = "RPCS3: ";
 
@@ -274,13 +273,11 @@ struct fatal_error_listener final : logs::listener
 			_msg += text;
 			_msg += '\n';
 
-#ifdef _WIN32
 			// If launched from CMD
-			if (AttachConsole(ATTACH_PARENT_PROCESS))
-				[[maybe_unused]] const auto con_out = freopen("CONOUT$", "w", stderr);
-#endif
+			utils::attach_console(utils::console_stream::std_err, false);
+
 			// Output to error stream as is
-			std::cerr << _msg;
+			utils::output_stderr(_msg);
 
 #ifdef _WIN32
 			if (IsDebuggerPresent())
@@ -289,8 +286,11 @@ struct fatal_error_listener final : logs::listener
 				OutputDebugStringA(_msg.c_str());
 			}
 #endif
-			// Pause emulation if fatal error encountered
-			Emu.Pause(true);
+			if (msg == logs::level::fatal)
+			{
+				// Pause emulation if fatal error encountered
+				Emu.Pause(true);
+			}
 		}
 	}
 };
@@ -323,6 +323,11 @@ constexpr auto arg_timer        = "high-res-timer";
 constexpr auto arg_verbose_curl = "verbose-curl";
 constexpr auto arg_any_location = "allow-any-location";
 constexpr auto arg_codecs       = "codecs";
+
+#ifdef _WIN32
+constexpr auto arg_stdout       = "stdout";
+constexpr auto arg_stderr       = "stderr";
+#endif
 
 int find_arg(std::string arg, int& argc, char* argv[])
 {
@@ -396,7 +401,7 @@ QCoreApplication* create_application(int& argc, char* argv[])
 				{
 					const std::string msg = fmt::format("The command line value %s for %s is not allowed. Please use a valid value for Qt::HighDpiScaleFactorRoundingPolicy.", arg_val, arg_rounding);
 					sys_log.error("%s", msg); // Don't exit with fatal error. The resulting dialog might be unreadable with dpi problems.
-					std::cerr << msg << std::endl;
+					utils::output_stderr(msg, true);
 				}
 			}
 		}
@@ -705,6 +710,12 @@ int main(int argc, char** argv)
 	parser.addOption(QCommandLineOption(arg_any_location, "Allow RPCS3 to be run from any location. Dangerous"));
 	const QCommandLineOption codec_option(arg_codecs, "List ffmpeg codecs");
 	parser.addOption(codec_option);
+
+#ifdef _WIN32
+	parser.addOption(QCommandLineOption(arg_stdout, "Attach the console window and listen to standard output stream. (STDOUT)"));
+	parser.addOption(QCommandLineOption(arg_stderr, "Attach the console window and listen to error output stream. (STDERR)"));
+#endif
+
 	parser.process(app->arguments());
 
 	// Don't start up the full rpcs3 gui if we just want the version or help.
@@ -713,13 +724,8 @@ int main(int argc, char** argv)
 
 	if (parser.isSet(codec_option))
 	{
-#ifdef _WIN32
-		if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole())
-		{
-			[[maybe_unused]] const auto con_out = freopen("CONOUT$", "w", stdout);
-			[[maybe_unused]] const auto con_err = freopen("CONOUT$", "w", stderr);
-		}
-#endif
+		utils::attach_console(utils::console_stream::std_out | utils::console_stream::std_err, true);
+
 		for (const utils::ffmpeg_codec& codec : utils::list_ffmpeg_decoders())
 		{
 			fprintf(stdout, "Found ffmpeg decoder: %s (%d, %s)\n", codec.name.c_str(), codec.codec_id, codec.long_name.c_str());
@@ -733,18 +739,28 @@ int main(int argc, char** argv)
 		return 0;
 	}
 
+#ifdef _WIN32
+	if (parser.isSet(arg_stdout) || parser.isSet(arg_stderr))
+	{
+		int stream = 0;
+		if (parser.isSet(arg_stdout))
+		{
+			stream |= utils::console_stream::std_out;
+		}
+		if (parser.isSet(arg_stderr))
+		{
+			stream |= utils::console_stream::std_err;
+		}
+		utils::attach_console(stream, true);
+	}
+#endif
+
 	// Set curl to verbose if needed
 	rpcs3::curl::g_curl_verbose = parser.isSet(arg_verbose_curl);
 
 	if (rpcs3::curl::g_curl_verbose)
 	{
-#ifdef _WIN32
-		if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole())
-		{
-			[[maybe_unused]] const auto con_out = freopen("CONOUT$", "w", stdout);
-			[[maybe_unused]] const auto con_err = freopen("CONOUT$", "w", stderr);
-		}
-#endif
+		utils::attach_console(utils::console_stream::std_out | utils::console_stream::std_err, true);
 		fprintf(stdout, "Enabled Curl verbose logging.\n");
 		sys_log.always()("Enabled Curl verbose logging. Please look at your console output.");
 	}
@@ -752,13 +768,8 @@ int main(int argc, char** argv)
 	// Handle update of commit database
 	if (parser.isSet(arg_commit_db))
 	{
+		utils::attach_console(utils::console_stream::std_out | utils::console_stream::std_err, true);
 #ifdef _WIN32
-		if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole())
-		{
-			[[maybe_unused]] const auto con_out = freopen("CONOUT$", "w", stdout);
-			[[maybe_unused]] const auto con_err = freopen("CONOUT$", "w", stderr);
-		}
-
 		std::string path;
 #else
 		std::string path = "bin/git/commits.lst";
@@ -978,10 +989,8 @@ int main(int argc, char** argv)
 
 	if (parser.isSet(arg_styles))
 	{
-#ifdef _WIN32
-		if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole())
-			[[maybe_unused]] const auto con_out = freopen("CONOUT$", "w", stdout);
-#endif
+		utils::attach_console(utils::console_stream::std_out, true);
+
 		for (const auto& style : QStyleFactory::keys())
 			std::cout << "\n" << style.toStdString();
 
@@ -1134,13 +1143,7 @@ int main(int argc, char** argv)
 
 	if (parser.isSet(arg_decrypt))
 	{
-#ifdef _WIN32
-		if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole())
-		{
-			[[maybe_unused]] const auto con_out = freopen("CONOUT$", "w", stdout);
-			[[maybe_unused]] const auto con_in = freopen("CONIN$", "r", stdin);
-		}
-#endif
+		utils::attach_console(utils::console_stream::std_out | utils::console_stream::std_in, true);
 
 		std::vector<std::string> vec_modules;
 		for (const QString& mod : parser.values(decrypt_option))
@@ -1368,11 +1371,9 @@ int main(int argc, char** argv)
 	}
 	else if (s_headless || s_no_gui)
 	{
-#ifdef _WIN32
 		// If launched from CMD
-		if (AttachConsole(ATTACH_PARENT_PROCESS))
-			[[maybe_unused]] const auto con_out = freopen("CONOUT$", "w", stderr);
-#endif
+		utils::attach_console(utils::console_stream::std_out | utils::console_stream::std_err, false);
+
 		sys_log.error("Cannot run %s mode without boot target. Terminating...", s_headless ? "headless" : "no-gui");
 		fprintf(stderr, "Cannot run %s mode without boot target. Terminating...\n", s_headless ? "headless" : "no-gui");
 

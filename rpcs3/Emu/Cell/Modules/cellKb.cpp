@@ -42,13 +42,16 @@ KeyboardHandlerBase::KeyboardHandlerBase(utils::serial* ar)
 		return;
 	}
 
-	(*ar)(m_info.max_connect);
+	u32 max_connect = 0;
 
-	if (m_info.max_connect)
+	(*ar)(max_connect);
+
+	if (max_connect)
 	{
-		Emu.PostponeInitCode([this]()
+		Emu.PostponeInitCode([this, max_connect]()
 		{
-			Init(m_info.max_connect);
+			std::lock_guard<std::mutex> lock(m_mutex);
+			AddConsumer(keyboard_consumer::identifier::cellKb, max_connect);
 			auto lk = init.init();
 		});
 	}
@@ -56,9 +59,20 @@ KeyboardHandlerBase::KeyboardHandlerBase(utils::serial* ar)
 
 void KeyboardHandlerBase::save(utils::serial& ar)
 {
+	u32 max_connect = 0;
 	const auto inited = init.access();
 
-	ar(inited ? m_info.max_connect : 0);
+	if (inited)
+	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+
+		if (auto it = m_consumers.find(keyboard_consumer::identifier::cellKb); it != m_consumers.end())
+		{
+			max_connect = it->second.GetInfo().max_connect;
+		}
+	}
+
+	ar(max_connect);
 }
 
 error_code cellKbInit(ppu_thread& ppu, u32 max_connect)
@@ -79,7 +93,9 @@ error_code cellKbInit(ppu_thread& ppu, u32 max_connect)
 	}
 
 	sys_config_start(ppu);
-	handler.Init(std::min(max_connect, 7u));
+
+	std::lock_guard<std::mutex> lock(handler.m_mutex);
+	handler.AddConsumer(keyboard_consumer::identifier::cellKb, std::min(max_connect, 7u));
 
 	return CELL_OK;
 }
@@ -94,6 +110,11 @@ error_code cellKbEnd(ppu_thread& ppu)
 
 	if (!init)
 		return CELL_KB_ERROR_UNINITIALIZED;
+
+	{
+		std::lock_guard<std::mutex> lock(handler.m_mutex);
+		handler.RemoveConsumer(keyboard_consumer::identifier::cellKb);
+	}
 
 	// TODO
 	sys_config_stop(ppu);
@@ -116,12 +137,13 @@ error_code cellKbClearBuf(u32 port_no)
 
 	std::lock_guard<std::mutex> lock(handler.m_mutex);
 
-	const KbInfo& current_info = handler.GetInfo();
+	keyboard_consumer& consumer = handler.GetConsumer(keyboard_consumer::identifier::cellKb);
+	const KbInfo& current_info = consumer.GetInfo();
 
-	if (port_no >= handler.GetKeyboards().size() || current_info.status[port_no] != CELL_KB_STATUS_CONNECTED)
+	if (port_no >= consumer.GetKeyboards().size() || current_info.status[port_no] != CELL_KB_STATUS_CONNECTED)
 		return not_an_error(CELL_KB_ERROR_NO_DEVICE);
 
-	KbData& current_data = handler.GetData(port_no);
+	KbData& current_data = consumer.GetData(port_no);
 	current_data.len = 0;
 	current_data.led = 0;
 	current_data.mkey = 0;
@@ -298,8 +320,9 @@ error_code cellKbGetInfo(vm::ptr<CellKbInfo> info)
 	std::memset(info.get_ptr(), 0, info.size());
 
 	std::lock_guard<std::mutex> lock(handler.m_mutex);
+	keyboard_consumer& consumer = handler.GetConsumer(keyboard_consumer::identifier::cellKb);
 
-	const KbInfo& current_info = handler.GetInfo();
+	const KbInfo& current_info = consumer.GetInfo();
 	info->max_connect = current_info.max_connect;
 	info->now_connect = current_info.now_connect;
 	info->info = current_info.info;
@@ -327,13 +350,13 @@ error_code cellKbRead(u32 port_no, vm::ptr<CellKbData> data)
 		return CELL_KB_ERROR_INVALID_PARAMETER;
 
 	std::lock_guard<std::mutex> lock(handler.m_mutex);
+	keyboard_consumer& consumer = handler.GetConsumer(keyboard_consumer::identifier::cellKb);
+	const KbInfo& current_info = consumer.GetInfo();
 
-	const KbInfo& current_info = handler.GetInfo();
-
-	if (port_no >= handler.GetKeyboards().size() || current_info.status[port_no] != CELL_KB_STATUS_CONNECTED)
+	if (port_no >= consumer.GetKeyboards().size() || current_info.status[port_no] != CELL_KB_STATUS_CONNECTED)
 		return not_an_error(CELL_KB_ERROR_NO_DEVICE);
 
-	KbData& current_data = handler.GetData(port_no);
+	KbData& current_data = consumer.GetData(port_no);
 
 	if (current_info.is_null_handler || (current_info.info & CELL_KB_INFO_INTERCEPTED) || !is_input_allowed())
 	{
@@ -355,7 +378,7 @@ error_code cellKbRead(u32 port_no, vm::ptr<CellKbData> data)
 			data->keycode[i] = current_data.buttons[i].m_keyCode;
 		}
 
-		KbConfig& current_config = handler.GetConfig(port_no);
+		KbConfig& current_config = consumer.GetConfig(port_no);
 
 		// For single character mode to work properly we need to "flush" the buffer after reading or else we'll constantly get the same key presses with each call.
 		// Actual key repeats are handled by adding a new key code to the buffer periodically. Key releases are handled in a similar fashion.
@@ -383,12 +406,13 @@ error_code cellKbSetCodeType(u32 port_no, u32 type)
 	if (port_no >= CELL_KB_MAX_KEYBOARDS || type > CELL_KB_CODETYPE_ASCII)
 		return CELL_KB_ERROR_INVALID_PARAMETER;
 
-	if (port_no >= handler.GetKeyboards().size())
+	std::lock_guard<std::mutex> lock(handler.m_mutex);
+	keyboard_consumer& consumer = handler.GetConsumer(keyboard_consumer::identifier::cellKb);
+
+	if (port_no >= consumer.GetKeyboards().size())
 		return CELL_OK;
 
-	std::lock_guard<std::mutex> lock(handler.m_mutex);
-
-	KbConfig& current_config = handler.GetConfig(port_no);
+	KbConfig& current_config = consumer.GetConfig(port_no);
 	current_config.code_type = type;
 
 	// can also return CELL_KB_ERROR_SYS_SETTING_FAILED
@@ -413,12 +437,13 @@ error_code cellKbSetLEDStatus(u32 port_no, u8 led)
 	if (led > 7)
 		return CELL_KB_ERROR_SYS_SETTING_FAILED;
 
-	if (port_no >= handler.GetKeyboards().size() || handler.GetInfo().status[port_no] != CELL_KB_STATUS_CONNECTED)
+	std::lock_guard<std::mutex> lock(handler.m_mutex);
+	keyboard_consumer& consumer = handler.GetConsumer(keyboard_consumer::identifier::cellKb);
+
+	if (port_no >= consumer.GetKeyboards().size() || consumer.GetInfo().status[port_no] != CELL_KB_STATUS_CONNECTED)
 		return CELL_KB_ERROR_FATAL;
 
-	std::lock_guard<std::mutex> lock(handler.m_mutex);
-
-	KbData& current_data = handler.GetData(port_no);
+	KbData& current_data = consumer.GetData(port_no);
 	current_data.led = static_cast<u32>(led);
 
 	return CELL_OK;
@@ -438,16 +463,17 @@ error_code cellKbSetReadMode(u32 port_no, u32 rmode)
 	if (port_no >= CELL_KB_MAX_KEYBOARDS || rmode > CELL_KB_RMODE_PACKET)
 		return CELL_KB_ERROR_INVALID_PARAMETER;
 
-	if (port_no >= handler.GetKeyboards().size())
+	std::lock_guard<std::mutex> lock(handler.m_mutex);
+	keyboard_consumer& consumer = handler.GetConsumer(keyboard_consumer::identifier::cellKb);
+
+	if (port_no >= consumer.GetKeyboards().size())
 		return CELL_OK;
 
-	std::lock_guard<std::mutex> lock(handler.m_mutex);
-
-	KbConfig& current_config = handler.GetConfig(port_no);
+	KbConfig& current_config = consumer.GetConfig(port_no);
 	current_config.read_mode = rmode;
 
 	// Key repeat must be disabled in packet mode. But let's just always enable it otherwise.
-	Keyboard& keyboard = handler.GetKeyboards()[port_no];
+	Keyboard& keyboard = consumer.GetKeyboards()[port_no];
 	keyboard.m_key_repeat = rmode != CELL_KB_RMODE_PACKET;
 
 	// can also return CELL_KB_ERROR_SYS_SETTING_FAILED
@@ -471,16 +497,18 @@ error_code cellKbGetConfiguration(u32 port_no, vm::ptr<CellKbConfig> config)
 
 	std::lock_guard<std::mutex> lock(handler.m_mutex);
 
-	const KbInfo& current_info = handler.GetInfo();
+	keyboard_consumer& consumer = handler.GetConsumer(keyboard_consumer::identifier::cellKb);
 
-	if (port_no >= handler.GetKeyboards().size() || current_info.status[port_no] != CELL_KB_STATUS_CONNECTED)
+	const KbInfo& current_info = consumer.GetInfo();
+
+	if (port_no >= consumer.GetKeyboards().size() || current_info.status[port_no] != CELL_KB_STATUS_CONNECTED)
 		return not_an_error(CELL_KB_ERROR_NO_DEVICE);
 
 	// tests show that config is checked only after the device's status
 	if (!config)
 		return CELL_KB_ERROR_INVALID_PARAMETER;
 
-	const KbConfig& current_config = handler.GetConfig(port_no);
+	const KbConfig& current_config = consumer.GetConfig(port_no);
 	config->arrange = current_config.arrange;
 	config->read_mode = current_config.read_mode;
 	config->code_type = current_config.code_type;

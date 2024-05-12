@@ -247,7 +247,7 @@ void init_fxo_for_exec(utils::serial* ar, bool full = false)
 }
 
 // Some settings are not allowed in certain PPU decoders
-void fixup_ppu_settings()
+static void fixup_settings(const psf::registry* _psf)
 {
 	if (g_cfg.core.ppu_decoder != ppu_decoder_type::_static)
 	{
@@ -267,6 +267,33 @@ void fixup_ppu_settings()
 		{
 			sys_log.todo("The setting '%s' is currently not supported with PPU decoder type '%s' and will therefore be disabled during emulation.", g_cfg.core.ppu_set_fpcc.get_name(), g_cfg.core.ppu_decoder.get());
 			g_cfg.core.ppu_set_fpcc.set(false);
+		}
+	}
+
+	if (const u32 psf_resolution = _psf ? psf::get_integer(*_psf, "RESOLUTION", 0) : 0)
+	{
+		const std::map<video_resolution, u32> resolutions
+		{
+			{ video_resolution::_480p,       psf::resolution_flag::_480 | psf::resolution_flag::_480_16_9 },
+			{ video_resolution::_480i,       psf::resolution_flag::_480 | psf::resolution_flag::_480_16_9 },
+			{ video_resolution::_576p,       psf::resolution_flag::_576 | psf::resolution_flag::_576_16_9 },
+			{ video_resolution::_576i,       psf::resolution_flag::_576 | psf::resolution_flag::_576_16_9 },
+			{ video_resolution::_720p,       psf::resolution_flag::_720  },
+			{ video_resolution::_1080p,      psf::resolution_flag::_1080 },
+			{ video_resolution::_1080i,      psf::resolution_flag::_1080 },
+			{ video_resolution::_1600x1080p, psf::resolution_flag::_1080 },
+			{ video_resolution::_1440x1080p, psf::resolution_flag::_1080 },
+			{ video_resolution::_1280x1080p, psf::resolution_flag::_1080 },
+			{ video_resolution::_960x1080p,  psf::resolution_flag::_1080 },
+		};
+
+		const video_resolution resolution = g_cfg.video.resolution;
+		constexpr video_resolution new_resolution = video_resolution::_720p;
+
+		if (!resolutions.contains(resolution) || !(psf_resolution & resolutions.at(resolution)))
+		{
+			sys_log.error("The game does not support a resolution of %s, so we are forcing the resolution to %s.", resolution, new_resolution);
+			g_cfg.video.resolution.set(new_resolution);
 		}
 	}
 }
@@ -442,7 +469,7 @@ void Emulator::Init()
 	}
 
 	// Disable incompatible settings
-	fixup_ppu_settings();
+	fixup_settings(nullptr);
 
 	// Backup config
 	g_backup_cfg.from_string(g_cfg.to_string());
@@ -1440,7 +1467,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			}
 
 			// Disable incompatible settings
-			fixup_ppu_settings();
+			fixup_settings(&_psf);
 
 			// Force audio provider
 			if (m_path.ends_with("vsh.self"sv))
@@ -1535,7 +1562,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			g_cfg.core.spu_cache.set(true);
 
 			// Disable incompatible settings
-			fixup_ppu_settings();
+			fixup_settings(&_psf);
 
 			// Force LLE lib loading mode
 			g_cfg.core.libraries_control.set_set([]()
@@ -2848,7 +2875,12 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 					if (!g_cfg.savestate.compatible_mode)
 					{
+						rsx::overlays::queue_message(localized_string_id::SAVESTATE_FAILED_DUE_TO_MISSING_SPU_SETTING);
 						sys_log.error("Enabling SPU Savestates-Compatible Mode in Advanced tab may fix this.");
+					}
+					else
+					{
+						rsx::overlays::queue_message(localized_string_id::SAVESTATE_FAILED_DUE_TO_SPU);
 					}
 
 					m_emu_state_close_pending = false;
@@ -2878,6 +2910,8 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 					if (vdec_error)
 					{
+						rsx::overlays::queue_message(localized_string_id::SAVESTATE_FAILED_DUE_TO_VDEC);
+
 						sys_log.error("Failed to savestate: HLE VDEC (video decoder) context(s) exist."
 							"\nLLE libvdec.sprx by selecting it in Advanced tab -> Firmware Libraries."
 							"\nYou need to close the game for it to take effect."
@@ -2886,6 +2920,8 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 					if (savedata_error)
 					{
+						rsx::overlays::queue_message(localized_string_id::SAVESTATE_FAILED_DUE_TO_SAVEDATA);
+
 						sys_log.error("Failed to savestate: Savedata operation is active."
 							"\nYour best chance is to wait for the current game saving operation to finish and retry."
 							"\nThe game is probably displaying a saving cicrle or other gesture to indicate that it is saving.");
@@ -3013,11 +3049,14 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 	*join_thread = make_ptr(new named_thread("Emulation Join Thread"sv, [join_thread, savestate, allow_autoexit, this]() mutable
 	{
 		fs::pending_file file;
-		std::shared_ptr<stx::init_mutex> init_mtx = std::make_shared<stx::init_mutex>();
-		std::shared_ptr<bool> join_ended = std::make_shared<bool>(false);
-		atomic_ptr<utils::serial> to_ar;
 
-		named_thread stop_watchdog("Stop Watchdog"sv, [&to_ar, init_mtx, join_ended, this]()
+		auto verbose_message = std::make_shared<atomic_ptr<std::string>>();
+		auto init_mtx = std::make_shared<stx::init_mutex>();
+		auto join_ended = std::make_shared<bool>(false);
+		auto to_ar = std::make_shared<atomic_ptr<utils::serial>>();
+
+		auto stop_watchdog = make_ptr(new named_thread("Stop Watchdog"sv,
+			[to_ar, init_mtx, join_ended, verbose_message, this]()
 		{
 			const auto closed_sucessfully = std::make_shared<atomic_t<bool>>(false);
 
@@ -3049,10 +3088,10 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 			while (thread_ctrl::state() != thread_state::aborting)
 			{
-				if (auto ar_ptr = to_ar.load())
+				if (auto ar_ptr = to_ar->load())
 				{
 					// Total amount of waiting: about 10s
-					GetCallbacks().on_save_state_progress(closed_sucessfully, ar_ptr, init_mtx);
+					GetCallbacks().on_save_state_progress(closed_sucessfully, ar_ptr, verbose_message.get(), init_mtx);
 
 					while (thread_ctrl::state() != thread_state::aborting)
 					{
@@ -3067,7 +3106,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 
 			*closed_sucessfully = true;
-		});
+		}));
 
 		// Join threads
 		for (const auto& [type, data] : *g_fxo)
@@ -3088,8 +3127,15 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 		static_cast<void>(init_mtx->init());
 
+		auto set_progress_message = [&](std::string_view text)
+		{
+			*verbose_message = stx::make_single<std::string>(text);
+		};
+
 		while (savestate)
 		{
+			set_progress_message("Creating File");
+
 			path = get_savestate_file(m_title_id, m_path, 0, 0);
 
 			// The function is meant for reading files, so if there is no GZ file it would not return compressed file path
@@ -3115,7 +3161,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 			auto serial_ptr = stx::make_single<utils::serial>();
 			serial_ptr->m_file_handler = make_compressed_serialization_file_handler(file.file);
-			to_ar = std::move(serial_ptr);
+			*to_ar = std::move(serial_ptr);
 
 			signal_system_cache_can_stay();
 			break;
@@ -3133,7 +3179,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 					return fmt::format("Emu State Capture Thread: '%s'", g_tls_serialize_name);
 				};
 
-				auto& ar = *to_ar.load();
+				auto& ar = *to_ar->load();
 
 				read_used_savestate_versions(); // Reset version data
 				USING_SERIALIZATION_VERSION(global_version);
@@ -3208,6 +3254,8 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 					ar(std::string{});
 				};
 
+				set_progress_message("Creating Header");
+
 				ar("RPCS3SAV"_u64);
 				ar(std::endian::native == std::endian::little);
 				ar(g_cfg.savestate.state_inspection_mode.get());
@@ -3247,11 +3295,21 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 				ar(klic.empty() ? std::array<u8, 16>{} : std::bit_cast<std::array<u8, 16>>(klic[0]));
 				ar(m_game_dir);
+
+				set_progress_message("Saving HDD1");
 				save_hdd1();
+				set_progress_message("Saving HDD0");
 				save_hdd0();
+
 				ar(std::array<u8, 32>{}); // Reserved for future use
+
+				set_progress_message("Saving VMemory");
 				vm::save(ar);
+
+				set_progress_message("Saving FXO");
 				g_fxo->save(ar);
+
+				set_progress_message("Finalizing File");
 
 				bs_t<SaveStateExtentionFlags1> extension_flags{SaveStateExtentionFlags1::SupportsMenuOpenResume};
 
@@ -3276,17 +3334,24 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 			if (emu_state_cap_thread == thread_state::errored)
 			{
 				sys_log.error("Saving savestate failed due to fatal error!");
-				to_ar.reset();
+				to_ar->reset();
 				savestate = false;
 			}
 		}
 
-		stop_watchdog = thread_state::finished;
-		static_cast<void>(init_mtx->reset());
-
 		if (savestate)
 		{
 			fs::stat_t file_stat{};
+
+			set_progress_message("Commiting File");
+
+			{
+				auto& ar = *to_ar->load();
+				auto reset = init_mtx->reset();
+				ar = {};
+				ar.set_reading_state(); // Guard against using it
+				reset.set_init();
+			}
 
 			if (!file.commit() || !fs::get_stat(path, file_stat))
 			{
@@ -3332,7 +3397,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 			{
 				if (fs::file tty_read_fd{fs::get_cache_dir() + "TTY.log"})
 				{
-					// Enfore an arbitrary limit for now to avoid OOM in case the guest code has bombarded TTY
+					// Enforce an arbitrary limit for now to avoid OOM in case the guest code has bombarded TTY
 					// 3MB, this should be enough
 					constexpr usz c_max_tty_spill_size = 0x30'0000;
 
@@ -3385,8 +3450,10 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 			}
 		}
 
+		set_progress_message("Resetting Objects");
+
 		// Final termination from main thread (move the last ownership of join thread in order to destroy it)
-		CallFromMainThread([join_thread = std::move(join_thread), allow_autoexit, this]() mutable
+		CallFromMainThread([join_thread = std::move(join_thread), verbose_message, stop_watchdog, init_mtx, allow_autoexit, this]()
 		{
 			cpu_thread::cleanup();
 
@@ -3397,6 +3464,9 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 			sys_log.notice("Objects cleared...");
 
 			vm::close();
+
+			*stop_watchdog = thread_state::finished;
+			static_cast<void>(init_mtx->reset());
 
 			jit_runtime::finalize();
 
@@ -3625,17 +3695,11 @@ s32 error_code::error_report(s32 result, const logs::message* channel, const cha
 	return result;
 }
 
-void Emulator::ConfigurePPUCache(bool with_title_id) const
+void Emulator::ConfigurePPUCache() const
 {
 	auto& _main = g_fxo->get<main_ppu_module>();
 
-	_main.cache = rpcs3::utils::get_cache_dir();
-
-	if (with_title_id && !m_title_id.empty() && m_cat != "1P")
-	{
-		_main.cache += GetTitleID();
-		_main.cache += '/';
-	}
+	_main.cache = rpcs3::utils::get_cache_dir(_main.path);
 
 	fmt::append(_main.cache, "ppu-%s-%s/", fmt::base57(_main.sha1), _main.path.substr(_main.path.find_last_of('/') + 1));
 

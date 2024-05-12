@@ -155,13 +155,17 @@ namespace rsx
 				// Ignored if a keyboard pad handler is active in order to prevent double input.
 				if (m_keyboard_input_enabled && !m_keyboard_pad_handler_active && input::g_keyboards_intercepted)
 				{
-					auto& handler = g_fxo->get<KeyboardHandlerBase>();
-					std::lock_guard<std::mutex> lock(handler.m_mutex);
+					auto& kb_handler = g_fxo->get<KeyboardHandlerBase>();
+					std::lock_guard<std::mutex> lock(kb_handler.m_mutex);
 
-					if (!handler.GetKeyboards().empty() && handler.GetInfo().status[0] == CELL_KB_STATUS_CONNECTED)
+					// Add and get consumer
+					keyboard_consumer& kb_consumer = kb_handler.AddConsumer(keyboard_consumer::identifier::overlays, 1);
+					std::vector<Keyboard>& keyboards = kb_consumer.GetKeyboards();
+
+					if (!keyboards.empty() && kb_consumer.GetInfo().status[0] == CELL_KB_STATUS_CONNECTED)
 					{
-						KbData& current_data = handler.GetData(0);
-						KbExtraData& extra_data = handler.GetExtraData(0);
+						KbData& current_data = kb_consumer.GetData(0);
+						KbExtraData& extra_data = kb_consumer.GetExtraData(0);
 
 						if (current_data.len > 0 || !extra_data.pressed_keys.empty())
 						{
@@ -185,16 +189,6 @@ namespace rsx
 							continue;
 						}
 					}
-					else if (g_cfg.io.keyboard != keyboard_handler::null)
-					{
-						// Workaround if cellKb did not init the keyboard handler.
-						handler.Init(1);
-
-						// Enable key repeat
-						std::vector<Keyboard>& keyboards = handler.GetKeyboards();
-						ensure(!keyboards.empty());
-						::at32(keyboards, 0).m_key_repeat = true;
-					}
 				}
 
 				// Get gamepad input
@@ -202,14 +196,9 @@ namespace rsx
 				const auto handler = pad::get_current_handler();
 				const PadInfo& rinfo = handler->GetInfo();
 
-				if (!rinfo.now_connect || !input::g_pads_intercepted)
-				{
-					m_keyboard_pad_handler_active = false;
-					refresh();
-					continue;
-				}
+				const bool ignore_gamepad_input = (!rinfo.now_connect || !input::g_pads_intercepted);
 
-				bool keyboard_pad_handler_active = false;
+				m_keyboard_pad_handler_active = false;
 
 				int pad_index = -1;
 				for (const auto& pad : handler->GetPads())
@@ -242,6 +231,16 @@ namespace rsx
 					if (pad->m_pad_handler == pad_handler::keyboard)
 					{
 						m_keyboard_pad_handler_active = true;
+					}
+
+					if (ignore_gamepad_input)
+					{
+						if (m_keyboard_pad_handler_active)
+						{
+							break;
+						}
+
+						continue;
 					}
 
 					for (const Button& button : pad->m_buttons)
@@ -362,9 +361,14 @@ namespace rsx
 					}
 				}
 
-				m_keyboard_pad_handler_active = keyboard_pad_handler_active;
-
 				refresh();
+			}
+
+			// Remove keyboard consumer. We don't need it anymore.
+			{
+				auto& kb_handler = g_fxo->get<KeyboardHandlerBase>();
+				std::lock_guard<std::mutex> lock(kb_handler.m_mutex);
+				kb_handler.RemoveConsumer(keyboard_consumer::identifier::overlays);
 			}
 
 			// Disable pad interception since this user interface has to be interactive.

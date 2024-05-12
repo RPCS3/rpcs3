@@ -5,6 +5,7 @@
 #include <mutex>
 #include <vector>
 #include <set>
+#include <unordered_map>
 
 #include "util/init_mutex.hpp"
 
@@ -71,7 +72,40 @@ struct Keyboard
 	KbData m_data{};
 	KbExtraData m_extra_data{};
 	KbConfig m_config{};
-	std::vector<KbButton> m_buttons;
+	std::unordered_map<u32, KbButton> m_keys;
+};
+
+class keyboard_consumer
+{
+public:
+	enum class identifier
+	{
+		unknown,
+		overlays,
+		cellKb,
+	};
+
+	keyboard_consumer() {}
+	keyboard_consumer(identifier id) : m_id(id) {}
+
+	bool ConsumeKey(u32 code, bool pressed, bool is_auto_repeat, const std::u32string& key);
+	void SetIntercepted(bool intercepted);
+
+	static bool IsMetaKey(u32 code);
+
+	KbInfo& GetInfo() { return m_info; }
+	std::vector<Keyboard>& GetKeyboards() { return m_keyboards; }
+	KbData& GetData(const u32 keyboard) { return m_keyboards[keyboard].m_data; }
+	KbExtraData& GetExtraData(const u32 keyboard) { return m_keyboards[keyboard].m_extra_data; }
+	KbConfig& GetConfig(const u32 keyboard) { return m_keyboards[keyboard].m_config; }
+	identifier id() const { return m_id; }
+
+	void ReleaseAllKeys();
+
+protected:
+	identifier m_id = identifier::unknown;
+	KbInfo m_info{};
+	std::vector<Keyboard> m_keyboards;
 };
 
 class KeyboardHandlerBase
@@ -79,7 +113,7 @@ class KeyboardHandlerBase
 public:
 	std::mutex m_mutex;
 
-	virtual void Init(const u32 max_connect) = 0;
+	virtual void Init(keyboard_consumer& consumer, const u32 max_connect) = 0;
 
 	virtual ~KeyboardHandlerBase() = default;
 	KeyboardHandlerBase(utils::serial* ar);
@@ -88,23 +122,17 @@ public:
 
 	SAVESTATE_INIT_POS(19);
 
-	void Key(u32 code, bool pressed, const std::u32string& key);
+	keyboard_consumer& AddConsumer(keyboard_consumer::identifier id, u32 max_connect);
+	keyboard_consumer& GetConsumer(keyboard_consumer::identifier id);
+	void RemoveConsumer(keyboard_consumer::identifier id);
+
+	bool HandleKey(u32 code, bool pressed, bool is_auto_repeat, const std::u32string& key);
 	void SetIntercepted(bool intercepted);
-
-	static bool IsMetaKey(u32 code);
-
-	KbInfo& GetInfo() { return m_info; }
-	std::vector<Keyboard>& GetKeyboards() { return m_keyboards; }
-	std::vector<KbButton>& GetButtons(const u32 keyboard) { return m_keyboards[keyboard].m_buttons; }
-	KbData& GetData(const u32 keyboard) { return m_keyboards[keyboard].m_data; }
-	KbExtraData& GetExtraData(const u32 keyboard) { return m_keyboards[keyboard].m_extra_data; }
-	KbConfig& GetConfig(const u32 keyboard) { return m_keyboards[keyboard].m_config; }
 
 	stx::init_mutex init;
 
 protected:
 	void ReleaseAllKeys();
 
-	KbInfo m_info{};
-	std::vector<Keyboard> m_keyboards;
+	std::unordered_map<keyboard_consumer::identifier, keyboard_consumer> m_consumers;
 };

@@ -70,8 +70,9 @@ public:
 	bs_t<poll_t> get_events() const;
 	void set_poll_event(bs_t<poll_t> event);
 	void poll_queue(std::shared_ptr<ppu_thread> ppu, bs_t<poll_t> event, std::function<bool(bs_t<poll_t>)> poll_cb);
-	s32 clear_queue(ppu_thread*);
+	u32 clear_queue(ppu_thread*);
 	void handle_events(const pollfd& native_fd, bool unset_connecting = false);
+	void queue_wake(ppu_thread* ppu);
 
 	lv2_socket_family get_family() const;
 	lv2_socket_type get_type() const;

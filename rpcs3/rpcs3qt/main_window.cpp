@@ -545,6 +545,7 @@ void main_window::BootElf()
 		"SELF files (EBOOT.BIN *.self);;"
 		"BOOT files (*BOOT.BIN);;"
 		"BIN files (*.bin);;"
+		"All executable files (*.SAVESTAT.gz *.SAVESTAT *.sprx *.SPRX *.self *.SELF *.bin *.BIN *.prx *.PRX *.elf *.ELF *.o *.O);;"
 		"All files (*.*)"),
 		Q_NULLPTR, QFileDialog::DontResolveSymlinks);
 
@@ -617,7 +618,7 @@ void main_window::BootSavestate()
 		stopped = true;
 	}
 
-	const QString file_path = QFileDialog::getOpenFileName(this, tr("Select Savestate To Boot"), qstr(fs::get_cache_dir() + "/savestates/"), tr(
+	const QString file_path = QFileDialog::getOpenFileName(this, tr("Select Savestate To Boot"), qstr(fs::get_cache_dir() + "savestates/"), tr(
 		"Savestate files (*.SAVESTAT *.SAVESTAT.gz);;"
 		"All files (*.*)"),
 		Q_NULLPTR, QFileDialog::DontResolveSymlinks);
@@ -3078,7 +3079,7 @@ void main_window::CreateConnects()
 
 	connect(ui->supportAct, &QAction::triggered, this, [this]
 	{
-		QDesktopServices::openUrl(QUrl("https://www.patreon.com/Nekotekina"));
+		QDesktopServices::openUrl(QUrl("https://rpcs3.net/patreon"));
 	});
 
 	connect(ui->aboutAct, &QAction::triggered, this, [this]

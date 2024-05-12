@@ -193,6 +193,7 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 	const Localized localized;
 
 	m_new_version = latest["version"].toString().toStdString();
+	const QString support_message = tr("<br>You can empower our project at <a href=\"https://rpcs3.net/patreon\">RPCS3 Patreon</a>.<br>");
 
 	if (hash_found)
 	{
@@ -201,30 +202,33 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 		if (diff_msec < 0)
 		{
 			// This usually means that the current version was marked as broken and won't be shipped anymore, so we need to downgrade to avoid certain bugs.
-			m_update_message = tr("A better version of RPCS3 is available!\n\nCurrent version: %0 (%1)\nBetter version: %2 (%3)\n\nDo you want to update?")
-				.arg(current["version"].toString())
-				.arg(cur_str)
-				.arg(latest["version"].toString())
-				.arg(lts_str);
-		}
-		else
-		{
-			m_update_message = tr("A new version of RPCS3 is available!\n\nCurrent version: %0 (%1)\nLatest version: %2 (%3)\nYour version is %4 behind.\n\nDo you want to update?")
+			m_update_message = tr("A better version of RPCS3 is available!<br><br>Current version: %0 (%1)<br>Better version: %2 (%3)<br>%4<br>Do you want to update?")
 				.arg(current["version"].toString())
 				.arg(cur_str)
 				.arg(latest["version"].toString())
 				.arg(lts_str)
-				.arg(localized.GetVerboseTimeByMs(diff_msec, true));
+				.arg(support_message);
+		}
+		else
+		{
+			m_update_message = tr("A new version of RPCS3 is available!<br><br>Current version: %0 (%1)<br>Latest version: %2 (%3)<br>Your version is %4 behind.<br>%5<br>Do you want to update?")
+				.arg(current["version"].toString())
+				.arg(cur_str)
+				.arg(latest["version"].toString())
+				.arg(lts_str)
+				.arg(localized.GetVerboseTimeByMs(diff_msec, true))
+				.arg(support_message);
 		}
 	}
 	else
 	{
 		m_old_version = fmt::format("%s-%s-%s", rpcs3::get_full_branch(), rpcs3::get_branch(), rpcs3::get_version().to_string());
 
-		m_update_message = tr("You're currently using a custom or PR build.\n\nLatest version: %0 (%1)\nThe latest version is %2 old.\n\nDo you want to update to the latest official RPCS3 version?")
+		m_update_message = tr("You're currently using a custom or PR build.<br><br>Latest version: %0 (%1)<br>The latest version is %2 old.<br>%3<br>Do you want to update to the latest official RPCS3 version?")
 			.arg(latest["version"].toString())
 			.arg(lts_str)
-			.arg(localized.GetVerboseTimeByMs(std::abs(diff_msec), true));
+			.arg(localized.GetVerboseTimeByMs(std::abs(diff_msec), true))
+			.arg(support_message);
 	}
 
 	m_request_url   = latest[os]["download"].toString().toStdString();
@@ -323,6 +327,7 @@ void update_manager::update(bool auto_accept)
 		}
 
 		QMessageBox mb(QMessageBox::Icon::Question, tr("Update Available"), m_update_message, QMessageBox::Yes | QMessageBox::No, m_downloader->get_progress_dialog() ? m_downloader->get_progress_dialog() : m_parent);
+		mb.setTextFormat(Qt::RichText);
 
 		if (!changelog_content.isEmpty())
 		{
@@ -331,10 +336,15 @@ void update_manager::update(bool auto_accept)
 
 			// Smartass hack to make the unresizeable message box wide enough for the changelog
 			const int changelog_width = QLabel(changelog_content).sizeHint().width();
-			while (QLabel(m_update_message).sizeHint().width() < changelog_width)
+			if (QLabel(m_update_message).sizeHint().width() < changelog_width)
 			{
-				m_update_message += "          ";
+				m_update_message += " &nbsp;";
+				while (QLabel(m_update_message).sizeHint().width() < changelog_width)
+				{
+					m_update_message += "&nbsp;";
+				}
 			}
+
 			mb.setText(m_update_message);
 		}
 

@@ -986,7 +986,7 @@ error_code sceNpTrophyGetLatestTrophies()
 	return CELL_OK;
 }
 
-error_code sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::ptr<u32> platinumId)
+error_code sceNpTrophyUnlockTrophy(ppu_thread& ppu, u32 context, u32 handle, s32 trophyId, vm::ptr<u32> platinumId)
 {
 	sceNpTrophy.warning("sceNpTrophyUnlockTrophy(context=0x%x, handle=0x%x, trophyId=%d, platinumId=*0x%x)", context, handle, trophyId, platinumId);
 
@@ -1028,7 +1028,7 @@ error_code sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::pt
 	}
 
 	vm::var<CellRtcTick> tick;
-	if (error_code error = cellRtcGetCurrentTick(tick))
+	if (error_code error = cellRtcGetCurrentTick(ppu, tick))
 	{
 		sceNpTrophy.error("sceNpTrophyUnlockTrophy: Failed to get timestamp: 0x%x", +error);
 	}

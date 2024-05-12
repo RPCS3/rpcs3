@@ -1595,7 +1595,7 @@ void pad_settings_dialog::ChangeConfig(const QString& config_file)
 	}
 	else
 	{
-		cfg_log.fatal("Handler '%s' not found in handler dropdown.", handler);
+		cfg_log.error("Handler '%s' not found in handler dropdown.", handler);
 	}
 
 	// Force Refresh

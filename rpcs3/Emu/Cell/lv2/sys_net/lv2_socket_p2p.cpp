@@ -121,16 +121,14 @@ s32 lv2_socket_p2p::bind(const sys_net_sockaddr& addr)
 
 	socket_type real_socket{};
 
-	auto& nc = g_fxo->get<network_context>();
+	auto& nc = g_fxo->get<p2p_context>();
 	{
 		std::lock_guard list_lock(nc.list_p2p_ports_mutex);
-		if (!nc.list_p2p_ports.contains(p2p_port))
-		{
-			nc.list_p2p_ports.emplace(std::piecewise_construct, std::forward_as_tuple(p2p_port), std::forward_as_tuple(p2p_port));
-		}
 
+		nc.create_p2p_port(p2p_port);
 		auto& pport = ::at32(nc.list_p2p_ports, p2p_port);
 		real_socket = pport.p2p_socket;
+
 		{
 			std::lock_guard lock(pport.bound_p2p_vports_mutex);
 
@@ -332,7 +330,7 @@ void lv2_socket_p2p::close()
 		return;
 	}
 
-	auto& nc = g_fxo->get<network_context>();
+	auto& nc = g_fxo->get<p2p_context>();
 	{
 		std::lock_guard lock(nc.list_p2p_ports_mutex);
 		ensure(nc.list_p2p_ports.contains(port));

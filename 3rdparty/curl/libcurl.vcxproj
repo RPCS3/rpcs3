@@ -92,9 +92,11 @@
     <ClCompile Include="curl\lib\curl_range.c" />
     <ClCompile Include="curl\lib\curl_rtmp.c" />
     <ClCompile Include="curl\lib\curl_sasl.c" />
+    <ClCompile Include="curl\lib\curl_sha512_256.c" />
     <ClCompile Include="curl\lib\curl_sspi.c" />
     <ClCompile Include="curl\lib\curl_threads.c" />
     <ClCompile Include="curl\lib\curl_trc.c" />
+    <ClCompile Include="curl\lib\cw-out.c" />
     <ClCompile Include="curl\lib\dict.c" />
     <ClCompile Include="curl\lib\doh.c" />
     <ClCompile Include="curl\lib\dynbuf.c" />
@@ -156,6 +158,7 @@
     <ClCompile Include="curl\lib\psl.c" />
     <ClCompile Include="curl\lib\rand.c" />
     <ClCompile Include="curl\lib\rename.c" />
+    <ClCompile Include="curl\lib\request.c" />
     <ClCompile Include="curl\lib\rtsp.c" />
     <ClCompile Include="curl\lib\select.c" />
     <ClCompile Include="curl\lib\sendf.c" />
@@ -286,12 +289,13 @@
     <ClInclude Include="curl\lib\curl_setup.h" />
     <ClInclude Include="curl\lib\curl_setup_once.h" />
     <ClInclude Include="curl\lib\curl_sha256.h" />
+    <ClInclude Include="curl\lib\curl_sha512_256.h" />
     <ClInclude Include="curl\lib\curl_sspi.h" />
     <ClInclude Include="curl\lib\curl_threads.h" />
     <ClInclude Include="curl\lib\curl_trc.h" />
+    <ClInclude Include="curl\lib\cw-out.h" />
     <ClInclude Include="curl\lib\dict.h" />
     <ClInclude Include="curl\lib\doh.h" />
-    <ClInclude Include="curl\lib\dotdot.h" />
     <ClInclude Include="curl\lib\dynbuf.h" />
     <ClInclude Include="curl\lib\dynhds.h" />
     <ClInclude Include="curl\lib\easyif.h" />
@@ -341,6 +345,7 @@
     <ClInclude Include="curl\lib\psl.h" />
     <ClInclude Include="curl\lib\rand.h" />
     <ClInclude Include="curl\lib\rename.h" />
+    <ClInclude Include="curl\lib\request.h" />
     <ClInclude Include="curl\lib\rtsp.h" />
     <ClInclude Include="curl\lib\select.h" />
     <ClInclude Include="curl\lib\sendf.h" />
@@ -386,7 +391,6 @@
     <ClInclude Include="curl\lib\vauth\vauth.h" />
     <ClInclude Include="curl\lib\vquic\vquic.h" />
     <ClInclude Include="curl\lib\vssh\ssh.h" />
-    <ClInclude Include="curl\lib\vssh\wolfssh.h" />
     <ClInclude Include="curl\lib\vtls\bearssl.h" />
     <ClInclude Include="curl\lib\vtls\gtls.h" />
     <ClInclude Include="curl\lib\vtls\keylog.h" />

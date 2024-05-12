@@ -21,6 +21,8 @@
 #include "Emu/Io/ghltar_config.h"
 #include "Emu/Io/Buzz.h"
 #include "Emu/Io/buzz_config.h"
+#include "Emu/Io/GameTablet.h"
+#include "Emu/Io/GunCon3.h"
 #include "Emu/Io/Turntable.h"
 #include "Emu/Io/turntable_config.h"
 #include "Emu/Io/RB3MidiKeyboard.h"
@@ -316,9 +318,9 @@ usb_handler_thread::usb_handler_thread()
 		}
 
 		// Top Shot Elite controllers
-		check_device(0x12BA, 0x04A0, 0x04A0, "RO Gun Controller");
-		check_device(0x12BA, 0x04A1, 0x04A1, "RO Gun Controller 2012");
-		check_device(0x12BA, 0x04B0, 0x04B0, "RO Fishing Rod");
+		check_device(0x12BA, 0x04A0, 0x04A0, "Top Shot Elite");
+		check_device(0x12BA, 0x04A1, 0x04A1, "Top Shot Fearmaster");
+		check_device(0x12BA, 0x04B0, 0x04B0, "Rapala Fishing Rod");
 
 		// GT5 Wheels&co
 		check_device(0x046D, 0xC283, 0xC29B, "lgFF_c283_c29b");
@@ -338,14 +340,14 @@ usb_handler_thread::usb_handler_thread()
 		check_device(0x054C, 0x0042, 0x0042, "buzzer2");
 		check_device(0x046D, 0xC220, 0xC220, "buzzer9");
 
-		// GCon3 Gun
-		check_device(0x0B9A, 0x0800, 0x0800, "guncon3");
+		// GunCon3 Gun
+		check_device(0x0B9A, 0x0800, 0x0800, "GunCon3");
 
 		// uDraw GameTablet
 		check_device(0x20D6, 0xCB17, 0xCB17, "uDraw GameTablet");
 
 		// DVB-T
-		check_device(0x1415, 0x0003, 0x0003, " PlayTV SCEH-0036");
+		check_device(0x1415, 0x0003, 0x0003, "PlayTV SCEH-0036");
 
 		// 0x0900: "H050 USJ(C) PCB rev00", 0x0910: "USIO PCB rev00"
 		if (check_device(0x0B9A, 0x0900, 0x0910, "PS3A-USJ"))
@@ -361,6 +363,9 @@ usb_handler_thread::usb_handler_thread()
 
 		// Tony Hawk RIDE Skateboard
 		check_device(0x12BA, 0x0400, 0x0400, "Tony Hawk RIDE Skateboard Controller");
+
+		// PSP in UsbPspCm mode
+		check_device(0x054C, 0x01CB, 0x01CB, "UsbPspcm");
 	}
 
 	libusb_free_device_list(list, 1);
@@ -478,6 +483,23 @@ usb_handler_thread::usb_handler_thread()
 		sys_usbd.notice("Adding emulated Buzz! buzzer (5-7 players)");
 		usb_devices.push_back(std::make_shared<usb_device_buzz>(4, 6, get_new_location()));
 	}
+
+	if (g_cfg.io.gametablet == gametablet_handler::enabled)
+	{
+		sys_usbd.notice("Adding emulated uDraw GameTablet");
+		usb_devices.push_back(std::make_shared<usb_device_gametablet>(get_new_location()));
+	}
+
+	if (g_cfg.io.guncon3 != guncon3_handler::disabled)
+	{
+		sys_usbd.notice("Adding emulated GunCon3 (controller 1)");
+		usb_devices.push_back(std::make_shared<usb_device_guncon3>(0, get_new_location()));
+	}
+	if (g_cfg.io.guncon3 == guncon3_handler::two_controllers)
+	{
+		sys_usbd.notice("Adding emulated GunCon3 (controller 2)");
+		usb_devices.push_back(std::make_shared<usb_device_guncon3>(1, get_new_location()));
+	}
 }
 
 usb_handler_thread::~usb_handler_thread()
@@ -565,11 +587,21 @@ void usb_handler_thread::transfer_complete(struct libusb_transfer* transfer)
 	case LIBUSB_TRANSFER_COMPLETED: usbd_transfer->result = HC_CC_NOERR; break;
 	case LIBUSB_TRANSFER_TIMED_OUT: usbd_transfer->result = EHCI_CC_XACT; break;
 	case LIBUSB_TRANSFER_OVERFLOW: usbd_transfer->result = EHCI_CC_BABBLE; break;
+	case LIBUSB_TRANSFER_NO_DEVICE:
+		usbd_transfer->result = EHCI_CC_HALTED;
+		if (usbd_transfer->assigned_number && handled_devices.erase(usbd_transfer->assigned_number))
+		{
+			send_message(SYS_USBD_DETACH, usbd_transfer->assigned_number);
+			sys_usbd.warning("USB transfer failed, detach the device %d", usbd_transfer->assigned_number);
+			usbd_transfer->assigned_number = 0;
+		}
+		break;
 	case LIBUSB_TRANSFER_ERROR:
 	case LIBUSB_TRANSFER_CANCELLED:
 	case LIBUSB_TRANSFER_STALL:
-	case LIBUSB_TRANSFER_NO_DEVICE:
-	default: usbd_transfer->result = EHCI_CC_HALTED; break;
+	default:
+		usbd_transfer->result = EHCI_CC_HALTED;
+		break;
 	}
 
 	usbd_transfer->count = transfer->actual_length;
@@ -952,6 +984,7 @@ error_code sys_usbd_register_ldd(ppu_thread& ppu, u32 handle, vm::cptr<char> s_p
 	// Unsure how many more devices might need similar treatment (i.e. just a compare and force VID/PID add), or if it's worth adding a full promiscuous capability
 	static const std::unordered_map<std::string, UsbLdd, fmt::string_hash, std::equal_to<>> predefined_ldds
 	{
+		{"cellUsbPspcm", {0x054C, 0x01CB, 0x01CB}},
 		{"guncon3", {0x0B9A, 0x0800, 0x0800}},
 		{"PS3A-USJ", {0x0B9A, 0x0900, 0x0910}}
 	};
@@ -976,11 +1009,12 @@ error_code sys_usbd_unregister_ldd(ppu_thread& ppu, u32 handle, vm::cptr<char> s
 }
 
 // TODO: determine what the unknown params are
-error_code sys_usbd_open_pipe(ppu_thread& ppu, u32 handle, u32 device_handle, u32 unk1, u64 unk2, u64 unk3, u32 endpoint, u64 unk4)
+// attributes (bmAttributes) : 2=Bulk, 3=Interrupt
+error_code sys_usbd_open_pipe(ppu_thread& ppu, u32 handle, u32 device_handle, u32 unk1, u64 unk2, u64 unk3, u32 endpoint, u64 attributes)
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_usbd.warning("sys_usbd_open_pipe(handle=0x%x, device_handle=0x%x, unk1=0x%x, unk2=0x%x, unk3=0x%x, endpoint=0x%x, unk4=0x%x)", handle, device_handle, unk1, unk2, unk3, endpoint, unk4);
+	sys_usbd.warning("sys_usbd_open_pipe(handle=0x%x, device_handle=0x%x, unk1=0x%x, unk2=0x%x, unk3=0x%x, endpoint=0x%x, attributes=0x%x)", handle, device_handle, unk1, unk2, unk3, endpoint, attributes);
 
 	auto& usbh = g_fxo->get<named_thread<usb_handler_thread>>();
 
@@ -1146,6 +1180,8 @@ error_code sys_usbd_transfer_data(ppu_thread& ppu, u32 handle, u32 id_pipe, vm::
 
 	const auto& pipe               = usbh.get_pipe(id_pipe);
 	auto&& [transfer_id, transfer] = usbh.get_free_transfer();
+
+	transfer.assigned_number = pipe.device->assigned_number;
 
 	// Default endpoint is control endpoint
 	if (pipe.endpoint == 0)

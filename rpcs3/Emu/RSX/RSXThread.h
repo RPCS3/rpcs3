@@ -40,6 +40,8 @@ extern rsx::frame_capture_data frame_capture;
 
 namespace rsx
 {
+	struct context;
+
 	namespace overlays
 	{
 		class display_manager;
@@ -203,6 +205,9 @@ namespace rsx
 
 		// Savestates related
 		u32 m_pause_after_x_flips = 0;
+
+		// Context
+		context* m_ctx = nullptr;
 
 	public:
 		atomic_t<u64> new_get_put = u64{umax};

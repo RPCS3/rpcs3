@@ -32,25 +32,26 @@
 #pragma warning(push, 0)
 #else
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#pragma GCC diagnostic ignored "-Wextra"
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #pragma GCC diagnostic ignored "-Wunused-parameter"
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#pragma GCC diagnostic ignored "-Weffc++"
 #pragma GCC diagnostic ignored "-Wmissing-noreturn"
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #endif
-#include "llvm/Support/FormattedStream.h"
-#include "llvm/TargetParser/Host.h"
-#include "llvm/Object/ObjectFile.h"
+#include <llvm/IR/Verifier.h>
+#include <llvm/Transforms/Utils/BasicBlockUtils.h>
 #if LLVM_VERSION_MAJOR < 17
-#include "llvm/ADT/Triple.h"
+#include <llvm/Support/FormattedStream.h>
+#include <llvm/TargetParser/Host.h>
+#include <llvm/Object/ObjectFile.h>
+#include <llvm/IR/InstIterator.h>
+#include <llvm/IR/LegacyPassManager.h>
+#include <llvm/Transforms/Scalar.h>
+#else
+#include <llvm/Analysis/CGSCCPassManager.h>
+#include <llvm/Analysis/LoopAnalysisManager.h>
+#include <llvm/Passes/PassBuilder.h>
+#include <llvm/Transforms/Scalar/EarlyCSE.h>
 #endif
-#include "llvm/IR/Verifier.h"
-#include "llvm/IR/InstIterator.h"
-#include "llvm/IR/LegacyPassManager.h"
-#include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/Transforms/Scalar.h"
 #ifdef _MSC_VER
 #pragma warning(pop)
 #else
@@ -60,7 +61,6 @@
 #include "PPUTranslator.h"
 #endif
 
-#include <thread>
 #include <cfenv>
 #include <cctype>
 #include <span>
@@ -173,7 +173,7 @@ bool serialize<ppu_thread::cr_bits>(utils::serial& ar, typename ppu_thread::cr_b
 }
 
 extern void ppu_initialize();
-extern void ppu_finalize(const ppu_module& info);
+extern void ppu_finalize(const ppu_module& info, bool force_mem_release = false);
 extern bool ppu_initialize(const ppu_module& info, bool check_only = false, u64 file_size = 0);
 static void ppu_initialize2(class jit_compiler& jit, const ppu_module& module_part, const std::string& cache_path, const std::string& obj_name, const ppu_module& whole_module);
 extern bool ppu_load_exec(const ppu_exec_object&, bool virtual_load, const std::string&, utils::serial* = nullptr);
@@ -2225,7 +2225,7 @@ void ppu_thread::cpu_sleep()
 
 void ppu_thread::cpu_on_stop()
 {
-	if (current_function)
+	if (current_function && is_stopped())
 	{
 		if (start_time)
 		{
@@ -2235,9 +2235,9 @@ void ppu_thread::cpu_on_stop()
 		{
 			ppu_log.warning("'%s' aborted", current_function);
 		}
-
-		current_function = {};
 	}
+
+	current_function = {};
 
 	// TODO: More conditions
 	if (Emu.IsStopped() && g_cfg.core.ppu_debug)
@@ -3482,17 +3482,17 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 	{
 		extern atomic_t<u32> liblv2_begin, liblv2_end;
 
-		const u32 notify = ppu.res_notify;
-
-		if (notify)
-		{
-			vm::reservation_notifier(notify).notify_all();
-			ppu.res_notify = 0;
-		}
-
 		// Avoid notifications from lwmutex or sys_spinlock
-		if (ppu.cia < liblv2_begin || ppu.cia >= liblv2_end)
+		if (new_data != old_data && (ppu.cia < liblv2_begin || ppu.cia >= liblv2_end))
 		{
+			const u32 notify = ppu.res_notify;
+
+			if (notify)
+			{
+				vm::reservation_notifier(notify).notify_all();
+				ppu.res_notify = 0;
+			}
+
 			if (!notify)
 			{
 				// Try to postpone notification to when PPU is asleep or join notifications on the same address
@@ -3595,6 +3595,15 @@ namespace
 			if (found == bucket.map.end()) [[unlikely]]
 			{
 				ppu_log.error("Failed to remove module %s", name);
+
+				for (auto& buck : buckets)
+				{
+					for (auto& mod : buck.map)
+					{
+						ppu_log.notice("But there is module %s", mod.first);
+					}
+				}
+
 				return;
 			}
 
@@ -3707,30 +3716,45 @@ extern fs::file make_file_view(fs::file&& _file, u64 offset, u64 max_size = umax
 	return file;
 }
 
-extern void ppu_finalize(const ppu_module& info)
+extern void ppu_finalize(const ppu_module& info, bool force_mem_release)
 {
-	if (info.name.empty())
+	if (info.segs.empty())
+	{
+		// HLEd modules
+		return;
+	}
+
+	if (!force_mem_release && info.name.empty())
 	{
 		// Don't remove main module from memory
 		return;
 	}
 
-	const std::string dev_flash = vfs::get("/dev_flash/sys/");
-
-	if (info.path.starts_with(dev_flash) || Emu.GetCat() == "1P")
+	if (!force_mem_release && Emu.GetCat() == "1P")
 	{
-		// Don't remove dev_flash prx from memory
+		return;
+	}
+
+	const bool may_be_elf = fmt::to_lower(info.path.substr(std::max<usz>(info.path.size(), 3) - 3)) != "prx";
+
+	const std::string dev_flash = vfs::get("/dev_flash/");
+
+	if (!may_be_elf)
+	{
+		if (!force_mem_release && info.path.starts_with(dev_flash + "sys/external/"))
+		{
+			// Don't remove dev_flash prx from memory
+			return;
+		}
+	}
+
+	if (g_cfg.core.ppu_decoder != ppu_decoder_type::llvm)
+	{
 		return;
 	}
 
 	// Get cache path for this executable
-	std::string cache_path = fs::get_cache_dir() + "cache/";
-
-	if (!Emu.GetTitleID().empty())
-	{
-		cache_path += Emu.GetTitleID();
-		cache_path += '/';
-	}
+	std::string cache_path = rpcs3::utils::get_cache_dir(info.path);
 
 	// Add PPU hash and filename
 	fmt::append(cache_path, "ppu-%s-%s/", fmt::base57(info.sha1), info.path.substr(info.path.find_last_of('/') + 1));
@@ -3959,9 +3983,18 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 
 	lf_queue<file_info> possible_exec_file_paths;
 
-	::semaphore<2> ovl_sema;
+	// Allow to allocate 2000 times the size of each file for the use of LLVM
+	// This works very nicely with Metal Gear Solid 4 for example:
+	// 2 7MB overlay files -> 14GB
+	// The growth in memory requirements of LLVM is not linear with file size of course
+	// But these estimates should hopefully protect RPCS3 in the coming years
+	// Especially when thread count is on the rise with each CPU generation 
+	atomic_t<u32> file_size_limit = static_cast<u32>(std::clamp<u64>(utils::aligned_div<u64>(utils::get_total_memory(), 2000), 65536, u32{umax}));
 
-	named_thread_group workers("SPRX Worker ", std::min<u32>(utils::get_thread_count(), ::size32(file_queue)), [&]
+	const u32 software_thread_limit = std::min<u32>(g_cfg.core.llvm_threads ? g_cfg.core.llvm_threads : u32{umax}, ::size32(file_queue));
+	const u32 cpu_thread_limit = utils::get_thread_count() > 8u ? std::max<u32>(utils::get_thread_count(), 2) - 1 : utils::get_thread_count(); // One LLVM thread less
+
+	named_thread_group workers("SPRX Worker ", std::min<u32>(software_thread_limit, cpu_thread_limit), [&]
 	{
 #ifdef __APPLE__
 		pthread_jit_write_protect_np(false);
@@ -3969,12 +4002,23 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 		// Set low priority
 		thread_ctrl::scoped_priority low_prio(-1);
 		u32 inc_fdone = 1;
+		u32 restore_mem = 0;
 
 		for (usz func_i = fnext++; func_i < file_queue.size(); func_i = fnext++, g_progr_fdone += std::exchange(inc_fdone, 1))
 		{
 			if (Emu.IsStopped())
 			{
 				continue;
+			}
+
+			if (restore_mem)
+			{
+				if (!file_size_limit.fetch_add(restore_mem))
+				{
+					file_size_limit.notify_all();
+				}
+
+				restore_mem = 0;
 			}
 
 			auto& [path, offset, file_size] = file_queue[func_i];
@@ -4008,15 +4052,53 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 				continue;
 			}
 
+			auto wait_for_memory = [&]() -> bool
+			{
+				// Try not to process too many files at once because it seems to reduce performance and cause RAM shortages
+				// Concurrently compiling more OVL or huge PRX files does not have much theoretical benefit
+				while (!file_size_limit.fetch_op([&](u32& value)
+				{
+					if (value)
+					{
+						// Allow at least one file, make 0 the "memory unavailable" sign value for atomic waiting efficiency 
+						const u32 new_val = static_cast<u32>(utils::sub_saturate<u64>(value, file_size));
+						restore_mem = value - new_val;
+						value = new_val;
+						return true;
+					}
+
+					// Resort to waiting
+					restore_mem = 0;
+					return false;
+				}).second)
+				{
+					// Wait until not 0
+					file_size_limit.wait(0);
+				}
+
+				if (Emu.IsStopped())
+				{
+					return false;
+				}
+
+				return true;
+			};
+
 			elf_error prx_err{}, ovl_err{};
 
 			if (ppu_prx_object obj = src; (prx_err = obj, obj == elf_error::ok))
 			{
+				if (!wait_for_memory())
+				{
+					// Emulation stopped
+					continue;
+				}
+
 				if (auto prx = ppu_load_prx(obj, true, path, offset))
 				{
 					obj.clear(), src.close(); // Clear decrypted file and elf object memory
 					ppu_initialize(*prx, false, file_size);
-					ppu_finalize(*prx);
+					ppu_finalize(*prx, true);
 					continue;
 				}
 
@@ -4028,10 +4110,6 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 			{
 				while (ovl_err == elf_error::ok)
 				{
-					// Try not to process too many files at once because it seems to reduce performance
-					// Concurrently compiling more OVL files does not have much theoretical benefit
-					std::lock_guard lock(ovl_sema);
-
 					if (Emu.IsStopped())
 					{
 						break;
@@ -4052,6 +4130,12 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 						break;
 					}
 
+					if (!wait_for_memory())
+					{
+						// Emulation stopped
+						break;
+					}
+
 					// Participate in thread execution limitation (takes a long time)
 					if (std::lock_guard lock(g_fxo->get<jit_core_allocator>().sem); !ovlm->analyse(0, ovlm->entry, ovlm->seg0_code_end, ovlm->applied_patches, []()
 					{
@@ -4064,7 +4148,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 
 					obj.clear(), src.close(); // Clear decrypted file and elf object memory
 					ppu_initialize(*ovlm, false, file_size);
-					ppu_finalize(*ovlm);
+					ppu_finalize(*ovlm, true);
 					break;
 				}
 
@@ -4074,9 +4158,17 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 				}
 			}
 
-			ppu_log.notice("Failed to precompile '%s' (prx: %s, ovl: %s): Attempting tratment as executable file", path, prx_err, ovl_err);
+			ppu_log.notice("Failed to precompile '%s' (prx: %s, ovl: %s): Attempting compilation as executable file", path, prx_err, ovl_err);
 			possible_exec_file_paths.push(path, offset, file_size);
 			inc_fdone = 0;
+		}
+
+		if (restore_mem)
+		{
+			if (!file_size_limit.fetch_add(restore_mem))
+			{
+				file_size_limit.notify_all();
+			}
 		}
 	});
 
@@ -4162,10 +4254,10 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 					obj.clear(), src.close(); // Clear decrypted file and elf object memory
 
 					_main.name = ' '; // Make ppu_finalize work
-					Emu.ConfigurePPUCache(!Emu.IsPathInsideDir(_main.path, g_cfg_vfs.get_dev_flash()));
+					Emu.ConfigurePPUCache();
 					ppu_initialize(_main, false, file_size);
 					spu_cache::initialize(false);
-					ppu_finalize(_main);
+					ppu_finalize(_main, true);
 					_main = {};
 					g_fxo->get<spu_cache>() = std::move(current_cache);
 					break;
@@ -4289,7 +4381,7 @@ extern void ppu_initialize()
 			}
 		}
 
-		const std::string firmware_sprx_path = vfs::get(dev_flash_located ? "/dev_flash/"sv : "/dev_flash/sys/"sv);
+		const std::string firmware_sprx_path = vfs::get(dev_flash_located ? "/dev_flash/"sv : "/dev_flash/sys/external/"sv);
 		dir_queue.emplace_back(firmware_sprx_path);
 	}
 
@@ -4422,16 +4514,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 	else
 	{
 		// New PPU cache location
-		cache_path = fs::get_cache_dir() + "cache/";
-
-		const std::string dev_flash = vfs::get("/dev_flash/");
-
-		if (!info.path.starts_with(dev_flash) && !Emu.GetTitleID().empty() && Emu.GetCat() != "1P")
-		{
-			// Add prefix for anything except dev_flash files, standalone elfs or PS1 classics
-			cache_path += Emu.GetTitleID();
-			cache_path += '/';
-		}
+		cache_path = rpcs3::utils::get_cache_dir(info.path);
 
 		// Add PPU hash and filename
 		fmt::append(cache_path, "ppu-%s-%s/", fmt::base57(info.sha1), info.path.substr(info.path.find_last_of('/') + 1));
@@ -4958,11 +5041,18 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 	// Try to patch all single and unregistered BLRs with the same function (TODO: Maybe generalize it into PIC code detection and patching)
 	ppu_intrp_func_t BLR_func = nullptr;
 
-	const bool is_first = jit && !jit_mod.init;
-
 	const bool showing_only_apply_stage = !g_progr.load() && !g_progr_ptotal && !g_progr_ftotal && g_progr_ptotal.compare_and_swap_test(0, 1);
 
 	progr = "Applying PPU Code...";
+
+	if (!jit)
+	{
+		// No functions - nothing to do
+		ensure(info.funcs.empty());
+		return compiled_new;
+	}
+
+	const bool is_first = !jit_mod.init;
 
 	if (is_first)
 	{
@@ -5064,6 +5154,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 			translator.build_interpreter();
 		}
 
+#if LLVM_VERSION_MAJOR < 17
 		legacy::FunctionPassManager pm(_module.get());
 
 		// Basic optimizations
@@ -5085,6 +5176,32 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 		//pm.add(createAggressiveDCEPass());
 		//pm.add(createCFGSimplificationPass());
 		//pm.add(createLintPass()); // Check
+#else
+		// Create the analysis managers.
+		// These must be declared in this order so that they are destroyed in the
+		// correct order due to inter-analysis-manager references.
+		LoopAnalysisManager lam;
+		FunctionAnalysisManager fam;
+		CGSCCAnalysisManager cgam;
+		ModuleAnalysisManager mam;
+
+		// Create the new pass manager builder.
+		// Take a look at the PassBuilder constructor parameters for more
+		// customization, e.g. specifying a TargetMachine or various debugging
+		// options.
+		PassBuilder pb;
+
+		// Register all the basic analyses with the managers.
+		pb.registerModuleAnalyses(mam);
+		pb.registerCGSCCAnalyses(cgam);
+		pb.registerFunctionAnalyses(fam);
+		pb.registerLoopAnalyses(lam);
+		pb.crossRegisterProxies(lam, fam, cgam, mam);
+
+		FunctionPassManager fpm;
+		// Basic optimizations
+		fpm.addPass(EarlyCSEPass());
+#endif
 
 		// Translate functions
 		for (usz fi = 0, fmax = module_part.funcs.size(); fi < fmax; fi++)
@@ -5101,7 +5218,11 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 				if (const auto func = translator.Translate(module_part.funcs[fi]))
 				{
 					// Run optimization passes
+#if LLVM_VERSION_MAJOR < 17
 					pm.run(*func);
+#else
+					fpm.run(*func, fam);
+#endif
 				}
 				else
 				{
@@ -5117,7 +5238,11 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 			if (const auto func = translator.GetSymbolResolver(whole_module))
 			{
 				// Run optimization passes
+#if LLVM_VERSION_MAJOR < 17
 				pm.run(*func);
+#else
+				fpm.run(*func, fam);
+#endif
 			}
 			else
 			{

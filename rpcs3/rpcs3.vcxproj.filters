@@ -828,13 +828,10 @@
     <ClCompile Include="rpcs3qt\qt_camera_video_sink.cpp">
       <Filter>Io\camera</Filter>
     </ClCompile>
-    <ClCompile Include="rpcs3qt\qt_camera_error_handler.cpp">
-      <Filter>Io\camera</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug\moc_qt_camera_error_handler.cpp">
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_qt_camera_handler.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release\moc_qt_camera_error_handler.cpp">
+    <ClCompile Include="QTGeneratedFiles\Release\moc_qt_camera_handler.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\camera_settings_dialog.cpp">
@@ -852,13 +849,10 @@
     <ClCompile Include="rpcs3qt\qt_music_handler.cpp">
       <Filter>Io\music</Filter>
     </ClCompile>
-    <ClCompile Include="rpcs3qt\qt_music_error_handler.cpp">
-      <Filter>Io\music</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug\moc_qt_music_error_handler.cpp">
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_qt_music_handler.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release\moc_qt_music_error_handler.cpp">
+    <ClCompile Include="QTGeneratedFiles\Release\moc_qt_music_handler.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\vfs_dialog_usb_tab.cpp">
@@ -1065,6 +1059,9 @@
     <ClCompile Include="Input\gui_pad_thread.cpp">
       <Filter>Io</Filter>
     </ClCompile>
+    <ClCompile Include="util\console.cpp">
+      <Filter>rpcs3</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -1196,17 +1193,11 @@
     <ClInclude Include="rpcs3qt\qt_camera_video_sink.h">
       <Filter>Io\camera</Filter>
     </ClInclude>
-    <ClInclude Include="rpcs3qt\qt_camera_handler.h">
-      <Filter>Io\camera</Filter>
-    </ClInclude>
     <ClInclude Include="QTGeneratedFiles\ui_camera_settings_dialog.h">
       <Filter>Generated Files</Filter>
     </ClInclude>
     <ClInclude Include="rpcs3qt\shortcut_utils.h">
       <Filter>Gui\utils</Filter>
-    </ClInclude>
-    <ClInclude Include="rpcs3qt\qt_music_handler.h">
-      <Filter>Io\music</Filter>
     </ClInclude>
     <ClInclude Include="rpcs3qt\uuid.h">
       <Filter>Gui\utils</Filter>
@@ -1241,9 +1232,6 @@
     <ClInclude Include="rpcs3qt\movie_item_base.h">
       <Filter>Gui\custom items</Filter>
     </ClInclude>
-    <ClInclude Include="rpcs3qt\midi_creator.h">
-      <Filter>Gui\settings</Filter>
-    </ClInclude>
     <ClInclude Include="Input\skateboard_pad_handler.h">
       <Filter>Io\Skateboard</Filter>
     </ClInclude>
@@ -1252,6 +1240,9 @@
     </ClInclude>
     <ClInclude Include="Input\gui_pad_thread.h">
       <Filter>Io</Filter>
+    </ClInclude>
+    <ClInclude Include="util\console.h">
+      <Filter>rpcs3</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1480,7 +1471,7 @@
     <CustomBuild Include="rpcs3qt\recvmessage_dialog_frame.h">
       <Filter>Gui\message dialog</Filter>
     </CustomBuild>
-    <CustomBuild Include="rpcs3qt\qt_camera_error_handler.h">
+    <CustomBuild Include="rpcs3qt\qt_camera_handler.h">
       <Filter>Io\camera</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\camera_settings_dialog.ui">
@@ -1489,7 +1480,7 @@
     <CustomBuild Include="rpcs3qt\camera_settings_dialog.h">
       <Filter>Gui\settings</Filter>
     </CustomBuild>
-    <CustomBuild Include="rpcs3qt\qt_music_error_handler.h">
+    <CustomBuild Include="rpcs3qt\qt_music_handler.h">
       <Filter>Io\music</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\vfs_dialog_usb_tab.h">
@@ -1553,6 +1544,9 @@
       <Filter>Gui\dev tools</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\emulated_pad_settings_dialog.h">
+      <Filter>Gui\settings</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\midi_creator.h">
       <Filter>Gui\settings</Filter>
     </CustomBuild>
   </ItemGroup>

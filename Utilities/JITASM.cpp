@@ -19,6 +19,7 @@ LOG_CHANNEL(jit_log, "JIT");
 void jit_announce(uptr func, usz size, std::string_view name)
 {
 #ifdef __linux__
+#if 0
 	static const struct tmp_perf_map
 	{
 		std::string name{fmt::format("/tmp/perf-%d.map", getpid())};
@@ -44,6 +45,7 @@ void jit_announce(uptr func, usz size, std::string_view name)
 		fs::remove_file(s_map.name);
 		return;
 	}
+#endif
 #endif
 
 	if (!size)

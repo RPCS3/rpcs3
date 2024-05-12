@@ -802,6 +802,9 @@ void spu_cache::initialize(bool build_existing_cache)
 
 		compiler->init();
 
+		// Counter for error reporting
+		u32 logged_error = 0;
+
 		// How much every thread compiled
 		uint result = 0;
 
@@ -861,6 +864,14 @@ void spu_cache::initialize(bool build_existing_cache)
 			if (func2 != func)
 			{
 				spu_log.error("[0x%05x] SPU Analyser failed, %u vs %u", func2.entry_point, func2.data.size(), size0);
+
+				if (logged_error < 2)
+				{
+					std::string log;
+					compiler->dump(func, log);
+					spu_log.notice("[0x%05x] Function: %s", func.entry_point, log);
+					logged_error++;
+				}
 			}
 			else if (!compiler->compile(std::move(func2)))
 			{
@@ -2303,6 +2314,12 @@ std::vector<u32> spu_thread::discover_functions(u32 base_addr, std::span<const u
 			continue;
 		}
 
+		if (std::count(calls.begin(), calls.end(), func))
+		{
+			// Cannot call another call instruction (link is overwritten)
+			continue;
+		}
+
 		addrs.push_back(func);
 
 		// Detect an "arguments passing" block, possible queue another function
@@ -2482,9 +2499,9 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 	workload.push_back(entry_point);
 
 	std::memset(m_regmod.data(), 0xff, sizeof(m_regmod));
-	std::memset(m_use_ra.data(), 0xff, sizeof(m_use_ra));
-	std::memset(m_use_rb.data(), 0xff, sizeof(m_use_rb));
-	std::memset(m_use_rc.data(), 0xff, sizeof(m_use_rc));
+	m_use_ra.reset();
+	m_use_rb.reset();
+	m_use_rc.reset();
 	m_targets.clear();
 	m_preds.clear();
 	m_preds[entry_point];
@@ -2579,11 +2596,11 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		if (auto iflags = g_spu_iflag.decode(data))
 		{
 			if (+iflags & +spu_iflag::use_ra)
-				m_use_ra[pos / 4] = op.ra;
+				m_use_ra.set(pos / 4);
 			if (+iflags & +spu_iflag::use_rb)
-				m_use_rb[pos / 4] = op.rb;
+				m_use_rb.set(pos / 4);
 			if (+iflags & +spu_iflag::use_rc)
-				m_use_rc[pos / 4] = op.rc;
+				m_use_rc.set(pos / 4);
 		}
 
 		// Analyse instruction
@@ -2925,7 +2942,6 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			if (g_cfg.core.spu_block_size == spu_block_size_type::giga && !sync)
 			{
 				m_entry_info[target / 4] = true;
-				add_block(target);
 			}
 			else
 			{
@@ -2933,13 +2949,9 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				{
 					spu_log.notice("[0x%x] At 0x%x: ignoring fixed tail call to 0x%x (SYNC)", entry_point, pos, target);
 				}
-
-				if (target > entry_point)
-				{
-					limit = std::min<u32>(limit, target);
-				}
 			}
 
+			add_block(target);
 			next_block();
 			break;
 		}
@@ -3013,11 +3025,6 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			case MFC_Size:
 			{
 				m_regmod[pos / 4] = s_reg_mfc_size;
-				break;
-			}
-			case MFC_Cmd:
-			{
-				m_use_rb[pos / 4] = s_reg_mfc_eal;
 				break;
 			}
 			default: break;
@@ -3466,10 +3473,13 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				reg_save = op.rt;
 			}
 
-			for (auto* _use : {&m_use_ra, &m_use_rb, &m_use_rc})
+			for (auto _use : std::initializer_list<std::pair<u32, bool>>{{op.ra, m_use_ra.test(ia / 4)}
+				, {op.rb, m_use_rb.test(ia / 4)}, {op.rc, m_use_rc.test(ia / 4)}})
 			{
-				if (u8 reg = (*_use)[ia / 4]; reg < s_reg_max)
+				if (_use.second)
 				{
+					const u32 reg = _use.first;
+
 					// Register reg use only if it happens before reg mod
 					if (!block.reg_mod[reg])
 					{
@@ -3484,7 +3494,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				}
 			}
 
-			if (m_use_rb[ia / 4] == s_reg_mfc_eal)
+			if (type == spu_itype::WRCH && op.ra == MFC_Cmd)
 			{
 				// Expand MFC_Cmd reg use
 				for (u8 reg : {s_reg_mfc_lsa, s_reg_mfc_tag, s_reg_mfc_size})
@@ -3528,10 +3538,6 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					break;
 				case spu_itype::BRASL:
 					is_call = spu_branch_target(0, op.i16) != ia + 4;
-					break;
-				case spu_itype::BRA:
-					is_call = true;
-					is_tail = true;
 					break;
 				case spu_itype::BISL:
 				case spu_itype::BISLED:
@@ -4421,6 +4427,8 @@ void spu_recompiler_base::dump(const spu_program& result, std::string& out)
 	SPUDisAsm dis_asm(cpu_disasm_mode::dump, reinterpret_cast<const u8*>(result.data.data()), result.lower_bound);
 
 	std::string hash;
+
+	if (!result.data.empty())
 	{
 		sha1_context ctx;
 		u8 output[20];
@@ -4429,6 +4437,10 @@ void spu_recompiler_base::dump(const spu_program& result, std::string& out)
 		sha1_update(&ctx, reinterpret_cast<const u8*>(result.data.data()), result.data.size() * 4);
 		sha1_finish(&ctx, output);
 		fmt::append(hash, "%s", fmt::base57(output));
+	}
+	else
+	{
+		hash = "N/A";
 	}
 
 	fmt::append(out, "========== SPU BLOCK 0x%05x (size %u, %s) ==========\n\n", result.entry_point, result.data.size(), hash);
@@ -4495,11 +4507,10 @@ struct spu_llvm_worker
 	void operator()()
 	{
 		// SPU LLVM Recompiler instance
-		const auto compiler = spu_recompiler_base::make_llvm_recompiler();
-		compiler->init();
+		std::unique_ptr<spu_recompiler_base> compiler;
 
 		// Fake LS
-		std::vector<be_t<u32>> ls(0x10000);
+		std::vector<be_t<u32>> ls;
 
 		bool set_relax_flag = false;
 
@@ -4540,6 +4551,15 @@ struct spu_llvm_worker
 			if (!prog->second)
 			{
 				break;
+			}
+
+			if (!compiler)
+			{
+				// Postponed initialization
+				compiler = spu_recompiler_base::make_llvm_recompiler();
+				compiler->init();
+
+				ls.resize(SPU_LS_SIZE / sizeof(be_t<u32>));
 			}
 
 			if (!set_relax_flag)
@@ -4620,6 +4640,17 @@ struct spu_llvm
 	void operator()()
 	{
 		if (g_cfg.core.spu_decoder != spu_decoder_type::llvm)
+		{
+			return;
+		}
+
+		while (!registered && thread_ctrl::state() != thread_state::aborting)
+		{
+			// Wait for the first SPU block before launching any thread
+			thread_ctrl::wait_on(utils::bless<atomic_t<u32>>(&registered)[1], 0);
+		}
+
+		if (thread_ctrl::state() == thread_state::aborting)
 		{
 			return;
 		}
@@ -5179,4 +5210,26 @@ struct spu_fast : public spu_recompiler_base
 std::unique_ptr<spu_recompiler_base> spu_recompiler_base::make_fast_llvm_recompiler()
 {
 	return std::make_unique<spu_fast>();
+}
+
+extern std::string format_spu_func_info(u32 addr, cpu_thread* spu)
+{
+	spu_thread* _spu = static_cast<spu_thread*>(spu);
+
+	std::unique_ptr<spu_recompiler_base> compiler = spu_recompiler_base::make_asmjit_recompiler();
+	compiler->init();
+	auto func = compiler->analyse(reinterpret_cast<const be_t<u32>*>(_spu->ls), addr);
+
+	std::string info;
+	{
+		sha1_context ctx;
+		u8 output[20];
+
+		sha1_starts(&ctx);
+		sha1_update(&ctx, reinterpret_cast<const u8*>(func.data.data()), func.data.size() * 4);
+		sha1_finish(&ctx, output);
+		fmt::append(info, "size=%d, end=0x%x, hash=%s", func.data.size(), addr + func.data.size() * 4, fmt::base57(output));
+	}
+
+	return info;
 }

@@ -42,6 +42,8 @@ namespace gl
 			return GL_BGRA8;
 		case CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8B8G8R8:
 			return GL_RGBA8;
+		case CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_R16G16B16X16_FLOAT:
+			return GL_RGBA16F;
 		}
 	}
 }

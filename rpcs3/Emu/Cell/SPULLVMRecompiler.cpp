@@ -11,6 +11,8 @@
 #include "SPUThread.h"
 #include "SPUAnalyser.h"
 #include "SPUInterpreter.h"
+#include "SPUDisAsm.h"
+#include <algorithm>
 #include <thread>
 #include <unordered_set>
 
@@ -30,26 +32,33 @@ const extern spu_decoder<spu_iflag> g_spu_iflag;
 #pragma warning(push, 0)
 #else
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#pragma GCC diagnostic ignored "-Wextra"
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #pragma GCC diagnostic ignored "-Wunused-parameter"
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#pragma GCC diagnostic ignored "-Weffc++"
 #pragma GCC diagnostic ignored "-Wmissing-noreturn"
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #endif
+#include <llvm/ADT/PostOrderIterator.h>
+#include <llvm/Analysis/PostDominators.h>
+#include <llvm/IR/InlineAsm.h>
+#include <llvm/IR/Verifier.h>
+#include <llvm/TargetParser/Host.h>
+#include <llvm/Transforms/Utils/BasicBlockUtils.h>
 #if LLVM_VERSION_MAJOR < 17
-#include "llvm/ADT/Triple.h"
+#include <llvm/IR/LegacyPassManager.h>
+#include <llvm/Transforms/Scalar.h>
+#include <llvm/Analysis/AliasAnalysis.h>
+#else
+#include <llvm/Analysis/CGSCCPassManager.h>
+#include <llvm/Analysis/LoopAnalysisManager.h>
+#include <llvm/IR/PassManager.h>
+#include <llvm/Passes/PassBuilder.h>
+#include <llvm/Transforms/Scalar/ADCE.h>
+#include <llvm/Transforms/Scalar/DeadStoreElimination.h>
+#include <llvm/Transforms/Scalar/EarlyCSE.h>
+#include <llvm/Transforms/Scalar/LICM.h>
+#include <llvm/Transforms/Scalar/LoopPassManager.h>
+#include <llvm/Transforms/Scalar/SimplifyCFG.h>
 #endif
-#include "llvm/TargetParser/Host.h"
-#include "llvm/IR/LegacyPassManager.h"
-#include "llvm/IR/Verifier.h"
-#include "llvm/IR/InlineAsm.h"
-#include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/Transforms/Scalar.h"
-#include "llvm/Analysis/PostDominators.h"
-#include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/ADT/PostOrderIterator.h"
 #ifdef _MSC_VER
 #pragma warning(pop)
 #else
@@ -152,7 +161,8 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		// Store reordering/elimination protection
 		std::array<usz, s_reg_max> store_context_last_id = fill_array<usz>(0); // Protects against illegal forward ordering
 		std::array<usz, s_reg_max> store_context_first_id = fill_array<usz>(usz{umax}); // Protects against illegal past store elimination (backwards ordering is not implemented)
-		std::array<usz, s_reg_max> store_context_ctr = fill_array<usz>(1); // Store barrier cointer
+		std::array<usz, s_reg_max> store_context_ctr = fill_array<usz>(1); // Store barrier counter
+		bool has_gpr_memory_barriers = false; // Summarizes whether GPR barriers exist this block (as if checking all store_context_ctr entries)
 
 		bool does_gpr_barrier_proceed_last_store(u32 i) const noexcept
 		{
@@ -493,8 +503,6 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 			m_ir->SetInsertPoint(cblock);
 			return result;
 		}
-
-		ensure(!absolute);
 
 		auto& result = m_blocks[target].block;
 
@@ -1664,10 +1672,14 @@ public:
 
 			std::vector<block_info*> block_q;
 			block_q.reserve(m_blocks.size());
+
+			bool has_gpr_memory_barriers = false;
+
 			for (auto& [a, b] : m_blocks)
 			{
 				block_q.emplace_back(&b);
 				bb_to_info[b.block] = &b;
+				has_gpr_memory_barriers |= b.has_gpr_memory_barriers;
 			}
 
 			for (usz bi = 0; bi < block_q.size();)
@@ -1675,7 +1687,7 @@ public:
 				auto bqbi = block_q[bi++];
 
 				// TODO: process all registers up to s_reg_max
-				for (u32 i = 0; i < 128; i++)
+				for (u32 i = 0; i <= s_reg_127; i++)
 				{
 					// Check if the store is beyond the last barrier
 					if (auto& bs = bqbi->store[i]; bs && !bqbi->does_gpr_barrier_proceed_last_store(i))
@@ -1724,16 +1736,28 @@ public:
 
 						// Find nearest common post-dominator
 						llvm::BasicBlock* common_pdom = killers[0];
+
+						if (has_gpr_memory_barriers)
+						{
+							// Cannot optimize block walk-through, need to inspect all possible memory barriers in the way
+							common_pdom = nullptr;
+						}
+
 						for (auto* bbb : llvm::drop_begin(killers))
 						{
 							if (!common_pdom)
+							{
 								break;
+							}
+
 							common_pdom = pdt.findNearestCommonDominator(common_pdom, bbb);
 						}
 
 						// Shortcut
-						if (!pdt.dominates(common_pdom, bs->getParent()))
+						if (common_pdom && !pdt.dominates(common_pdom, bs->getParent()))
+						{
 							common_pdom = nullptr;
+						}
 
 						// Look for possibly-dead store in CFG starting from the exit nodes
 						llvm::SetVector<llvm::BasicBlock*> work_list;
@@ -1870,7 +1894,7 @@ public:
 
 			for (usz bi = 0; bi < block_q.size(); bi++)
 			{
-				for (u32 i = 0; i < 128; i++)
+				for (u32 i = 0; i <= s_reg_127; i++)
 				{
 					// If store isn't erased, try to sink it
 					if (auto& bs = block_q[bi]->store[i]; bs && block_q[bi]->bb->targets.size() > 1 && !block_q[bi]->does_gpr_barrier_proceed_last_store(i))
@@ -2017,6 +2041,7 @@ public:
 			m_function_table->eraseFromParent();
 		}
 
+#if LLVM_VERSION_MAJOR < 17
 		// Initialize pass manager
 		legacy::FunctionPassManager pm(_module.get());
 
@@ -2024,16 +2049,42 @@ public:
 		pm.add(createEarlyCSEPass());
 		pm.add(createCFGSimplificationPass());
 		//pm.add(createNewGVNPass());
-#if LLVM_VERSION_MAJOR < 17
 		pm.add(createDeadStoreEliminationPass());
-#endif
 		pm.add(createLICMPass());
-#if LLVM_VERSION_MAJOR < 17
 		pm.add(createAggressiveDCEPass());
-#else
 		pm.add(createDeadCodeEliminationPass());
-#endif
 		//pm.add(createLintPass()); // Check
+#else
+
+		// Create the analysis managers.
+		// These must be declared in this order so that they are destroyed in the
+		// correct order due to inter-analysis-manager references.
+		LoopAnalysisManager lam;
+		FunctionAnalysisManager fam;
+		CGSCCAnalysisManager cgam;
+		ModuleAnalysisManager mam;
+
+		// Create the new pass manager builder.
+		// Take a look at the PassBuilder constructor parameters for more
+		// customization, e.g. specifying a TargetMachine or various debugging
+		// options.
+		PassBuilder pb;
+
+		// Register all the basic analyses with the managers.
+		pb.registerModuleAnalyses(mam);
+		pb.registerCGSCCAnalyses(cgam);
+		pb.registerFunctionAnalyses(fam);
+		pb.registerLoopAnalyses(lam);
+		pb.crossRegisterProxies(lam, fam, cgam, mam);
+
+		FunctionPassManager fpm;
+		// Basic optimizations
+		fpm.addPass(EarlyCSEPass(true));
+		fpm.addPass(SimplifyCFGPass());
+		fpm.addPass(DSEPass());
+		fpm.addPass(createFunctionToLoopPassAdaptor(LICMPass(LICMOptions()), true));
+		fpm.addPass(ADCEPass());
+#endif
 
 		for (auto& f : *m_module)
 		{
@@ -2043,7 +2094,11 @@ public:
 		for (const auto& func : m_functions)
 		{
 			const auto f = func.second.fn ? func.second.fn : func.second.chunk;
+#if LLVM_VERSION_MAJOR < 17
 			pm.run(*f);
+#else
+			fpm.run(*f, fam);
+#endif
 		}
 
 		// Clear context (TODO)
@@ -2507,24 +2562,9 @@ public:
 		m_function_table->setInitializer(ConstantArray::get(ArrayType::get(if_type->getPointerTo(), 1ull << m_interp_magn), iptrs));
 		m_function_table = nullptr;
 
-		// Initialize pass manager
-		legacy::FunctionPassManager pm(_module.get());
-
-		// Basic optimizations
-		pm.add(createEarlyCSEPass());
-		pm.add(createCFGSimplificationPass());
-#if LLVM_VERSION_MAJOR < 17
-		pm.add(createDeadStoreEliminationPass());
-		pm.add(createAggressiveDCEPass());
-#else
-		pm.add(createDeadCodeEliminationPass());
-#endif
-		//pm.add(createLintPass());
-
 		for (auto& f : *_module)
 		{
 			replace_intrinsics(f);
-			//pm.run(f);
 		}
 
 		std::string log;
@@ -2725,6 +2765,7 @@ public:
 		{
 			// Make previous stores not able to be reordered beyond this point or be deleted
 			std::for_each(m_block->store_context_ctr.begin(), m_block->store_context_ctr.end(), FN(x++));
+			m_block->has_gpr_memory_barriers = true;
 		}
 	}
 
@@ -2932,7 +2973,18 @@ public:
 		case SPU_RdInMbox:
 		case SPU_RdEventStat:
 		{
-			if (g_cfg.savestate.compatible_mode)
+			bool loop_is_likely = op.ra == SPU_RdSigNotify1 || op.ra == SPU_RdSigNotify2;
+
+			for (u32 block_start : m_block->bb->preds)
+			{
+				if (block_start >= m_pos)
+				{
+					loop_is_likely = true;
+					break;
+				}
+			}
+
+			if (loop_is_likely || g_cfg.savestate.compatible_mode)
 			{
 				ensure_gpr_stores();
 				check_state(m_pos, false);
@@ -3068,14 +3120,25 @@ public:
 		_spu->do_mfc();
 	}
 
+	template <bool Saveable>
 	static void exec_mfc_cmd(spu_thread* _spu)
 	{
+		if constexpr (!Saveable)
+		{
+			_spu->unsavable = true;
+		}
+
 		if (!_spu->process_mfc_cmd() || _spu->state & cpu_flag::again)
 		{
 			fmt::throw_exception("exec_mfc_cmd(): Should not abort!");
 		}
 
 		static_cast<void>(_spu->test_stopped());
+
+		if constexpr (!Saveable)
+		{
+			_spu->unsavable = false;
+		}
 	}
 
 	void WRCH(spu_opcode_t op) //
@@ -3254,8 +3317,17 @@ public:
 				case MFC_GETLB_CMD:
 				case MFC_GETLF_CMD:
 				{
+					m_ir->CreateBr(next);
+					m_ir->SetInsertPoint(exec);
+					m_ir->CreateUnreachable();
+					m_ir->SetInsertPoint(fail);
+					m_ir->CreateUnreachable();
+					m_ir->SetInsertPoint(next);
+					m_ir->CreateStore(ci, spu_ptr<u8>(&spu_thread::ch_mfc_cmd, &spu_mfc_cmd::cmd));
+					update_pc();
 					ensure_gpr_stores();
-					[[fallthrough]];
+					call("spu_exec_mfc_cmd_saveable", &exec_mfc_cmd<true>, m_thread);
+					return;
 				}
 				case MFC_SDCRZ_CMD:
 				case MFC_GETLLAR_CMD:
@@ -3272,7 +3344,7 @@ public:
 					m_ir->SetInsertPoint(next);
 					m_ir->CreateStore(ci, spu_ptr<u8>(&spu_thread::ch_mfc_cmd, &spu_mfc_cmd::cmd));
 					update_pc();
-					call("spu_exec_mfc_cmd", &exec_mfc_cmd, m_thread);
+					call("spu_exec_mfc_cmd", &exec_mfc_cmd<false>, m_thread);
 					return;
 				}
 				case MFC_SNDSIG_CMD:
@@ -3331,7 +3403,7 @@ public:
 					}
 
 					m_ir->CreateStore(ci, spu_ptr<u8>(&spu_thread::ch_mfc_cmd, &spu_mfc_cmd::cmd));
-					call("spu_exec_mfc_cmd", &exec_mfc_cmd, m_thread);
+					call("spu_exec_mfc_cmd", &exec_mfc_cmd<false>, m_thread);
 					m_ir->CreateBr(next);
 					m_ir->SetInsertPoint(copy);
 
@@ -5915,14 +5987,9 @@ public:
 		// This is odd since SPU code could just use the FM instruction, but it seems common enough
 		if (auto [ok, data] = get_const_vector(c.value, m_pos); ok)
 		{
-			if (is_spu_float_zero(data, -1))
+			if (is_spu_float_zero(data, 0))
 			{
 				return eval(a * b);
-			}
-
-			if (!m_use_fma && is_spu_float_zero(data, +1))
-			{
-				return eval(a * b + fsplat<f32[4]>(0.f));
 			}
 		}
 
@@ -5930,40 +5997,24 @@ public:
 		{
 			if (auto [ok, data] = get_const_vector(a.value, m_pos); ok)
 			{
-				if (!is_spu_float_zero(data, +1))
+				if (is_spu_float_zero(data, 0))
 				{
-					return false;
-				}
-
-				if (auto [ok0, data0] = get_const_vector(b.value, m_pos); ok0)
-				{
-					if (is_spu_float_zero(data0, +1))
-					{
-						return true;
-					}
+					return true;
 				}
 			}
 
-			if (auto [ok, data] = get_const_vector(a.value, m_pos); ok)
+			if (auto [ok, data] = get_const_vector(b.value, m_pos); ok)
 			{
-				if (!is_spu_float_zero(data, -1))
+				if (is_spu_float_zero(data, 0))
 				{
-					return false;
-				}
-
-				if (auto [ok0, data0] = get_const_vector(b.value, m_pos); ok0)
-				{
-					if (is_spu_float_zero(data0, -1))
-					{
-						return true;
-					}
+					return true;
 				}
 			}
 
 			return false;
 		}())
 		{
-			// Just return the added value if both a and b is +0 or -0 (+0 and -0 arent't allowed alone)
+			// Just return the added value if either a or b are +-0
 			return c;
 		}
 
@@ -6336,7 +6387,7 @@ public:
 			const auto bnew = (base - ymul) >> (zext<u32[4]>(comparison) ^ 9); // Shift one less bit if exponent is adjusted
 			const auto base_result = (b & 0xff800000u) | (bnew & ~0xff800000u); // Inject old sign and exponent
 			const auto adjustment = bitcast<u32[4]>(sext<s32[4]>(comparison)) & (1 << 23); // exponent adjustement for negative bnew
-			return bitcast<f32[4]>(base_result - adjustment);
+			return clamp_smax(eval(bitcast<f32[4]>(base_result - adjustment)));
 		});
 
 		const auto [a, b] = get_vrs<f32[4]>(op.ra, op.rb);
@@ -6370,7 +6421,7 @@ public:
 				const auto bnew = (base - ymul) >> (zext<u32[4]>(comparison) ^ 9); // Shift one less bit if exponent is adjusted
 				const auto base_result = (b & 0xff800000u) | (bnew & ~0xff800000u); // Inject old sign and exponent
 				const auto adjustment = bitcast<u32[4]>(sext<s32[4]>(comparison)) & (1 << 23); // exponent adjustement for negative bnew
-				return bitcast<f32[4]>(base_result - adjustment);
+				return clamp_smax(eval(bitcast<f32[4]>(base_result - adjustment)));
 			});
 
 			register_intrinsic("spu_rsqrte", [&](llvm::CallInst* ci)
@@ -6397,7 +6448,7 @@ public:
 				const auto bnew = (base - ymul) >> (zext<u32[4]>(comparison) ^ 9); // Shift one less bit if exponent is adjusted
 				const auto base_result = (b & 0xff800000u) | (bnew & ~0xff800000u); // Inject old sign and exponent
 				const auto adjustment = bitcast<u32[4]>(sext<s32[4]>(comparison)) & (1 << 23); // exponent adjustement for negative bnew
-				return bitcast<f32[4]>(base_result - adjustment);
+				return clamp_smax(eval(bitcast<f32[4]>(base_result - adjustment)));
 			});
 			break;
 		}
@@ -7588,10 +7639,14 @@ public:
 			return;
 		}
 
+		const auto compiled_pos = m_ir->getInt32(m_pos);
 		const u32 target = spu_branch_target(0, op.i16);
 
 		m_block->block_end = m_ir->GetInsertBlock();
-		m_ir->CreateBr(add_block(target, true));
+		const auto real_pos = get_pc(m_pos);
+		value_t<u32> target_val;
+		target_val.value = m_ir->getInt32(target);
+		m_ir->CreateCondBr(m_ir->CreateICmpEQ(real_pos, compiled_pos), add_block(target, true), add_block_indirect({}, target_val));
 	}
 
 	void BRASL(spu_opcode_t op) //

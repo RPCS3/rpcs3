@@ -7,15 +7,18 @@ class NullKeyboardHandler final : public KeyboardHandlerBase
 	using KeyboardHandlerBase::KeyboardHandlerBase;
 
 public:
-	void Init(const u32 max_connect) override
+	void Init(keyboard_consumer& consumer, const u32 max_connect) override
 	{
-		m_info = {};
-		m_info.max_connect = max_connect;
-		m_info.is_null_handler = true;
-		m_keyboards.clear();
+		KbInfo& info = consumer.GetInfo();
+		std::vector<Keyboard>& keyboards = consumer.GetKeyboards();
+
+		info = {};
+		info.max_connect = max_connect;
+		info.is_null_handler = true;
+		keyboards.clear();
 		for (u32 i = 0; i < max_connect; i++)
 		{
-			m_keyboards.emplace_back(Keyboard());
+			keyboards.emplace_back(Keyboard());
 		}
 	}
 };
