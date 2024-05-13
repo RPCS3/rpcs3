@@ -516,7 +516,6 @@ error_code cellAudioOutGetDeviceInfo(u32 audioOut, u32 deviceIndex, vm::ptr<Cell
 
 	audio_out_configuration& cfg = g_fxo->get<audio_out_configuration>();
 	std::lock_guard lock(cfg.mtx);
-	ensure(audioOut < cfg.out.size());
 	const audio_out_configuration::audio_out& out = ::at32(cfg.out, audioOut);
 	ensure(out.sound_modes.size() <= 16);
 

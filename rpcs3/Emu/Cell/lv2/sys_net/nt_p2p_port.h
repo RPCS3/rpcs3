@@ -56,6 +56,8 @@ struct nt_p2p_port
 	// List of active(either from a connect or an accept) P2PS sockets (key, sock_id)
 	// key is ( (src_vport) << 48 | (dst_vport) << 32 | addr ) with src_vport and addr being 0 for listening sockets
 	std::map<u64, s32> bound_p2p_streams{};
+	// Current free port index
+	u16 binding_port = 30000;
 
 	// Queued messages from RPCN
 	shared_mutex s_rpcn_mutex;
@@ -70,6 +72,8 @@ struct nt_p2p_port
 	~nt_p2p_port();
 
 	static void dump_packet(p2ps_encapsulated_tcp* tcph);
+
+	u16 get_port();
 
 	bool handle_connected(s32 sock_id, p2ps_encapsulated_tcp* tcp_header, u8* data, ::sockaddr_storage* op_addr);
 	bool handle_listening(s32 sock_id, p2ps_encapsulated_tcp* tcp_header, u8* data, ::sockaddr_storage* op_addr);
