@@ -4,6 +4,7 @@
 #include <condition_variable>
 #include <thread>
 #include <variant>
+#include <queue>
 
 #include "Utilities/mutex.h"
 
@@ -13,6 +14,8 @@
 #include "Emu/Cell/Modules/sceNp2.h"
 #include "Emu/Cell/Modules/sceNpCommerce2.h"
 #include "Emu/Cell/Modules/sceNpTus.h"
+#include "Emu/NP/np_event_data.h"
+#include "Utilities/Thread.h"
 
 // Used By Score and Tus
 struct generic_async_transaction_context
@@ -259,7 +262,7 @@ struct commerce2_ctx
 };
 s32 create_commerce2_context(u32 version, vm::cptr<SceNpId> npid, vm::ptr<SceNpCommerce2Handler> handler, vm::ptr<void> arg);
 std::shared_ptr<commerce2_ctx> get_commerce2_context(u16 ctx_id);
-bool destroy_commerce2_context(s32 ctx_id);
+bool destroy_commerce2_context(u32 ctx_id);
 
 struct signaling_ctx
 {
@@ -280,4 +283,37 @@ struct signaling_ctx
 };
 s32 create_signaling_context(vm::ptr<SceNpId> npid, vm::ptr<SceNpSignalingHandler> handler, vm::ptr<void> arg);
 std::shared_ptr<signaling_ctx> get_signaling_context(u32 ctx_id);
-bool destroy_signaling_context(s32 ctx_id);
+bool destroy_signaling_context(u32 ctx_id);
+
+struct matching_ctx
+{
+	matching_ctx(vm::ptr<SceNpId> npid, vm::ptr<SceNpMatchingHandler> handler, vm::ptr<void> arg);
+
+	void queue_callback(u32 req_id, s32 event, s32 error_code);
+	void queue_gui_callback(s32 event, s32 error_code);
+
+	static const u32 id_base = 0x9001;
+	static const u32 id_step = 1;
+	static const u32 id_count = 1;
+	SAVESTATE_INIT_POS(32);
+
+	SceNpId npid{};
+	vm::ptr<SceNpMatchingHandler> handler{};
+	vm::ptr<void> arg{};
+
+	atomic_t<u32> busy = 0;
+	u32 ctx_id = 0;
+	vm::ptr<SceNpMatchingGUIHandler> gui_handler{};
+	vm::ptr<void> gui_arg{};
+
+	// Used by QuickMatchGUI
+	u64 timeout = 0;
+	std::unique_ptr<named_thread<std::function<void(SceNpRoomId)>>> thread;
+	atomic_t<u32> wakey = 0;
+
+	// To keep track of which callback to use for sceNpMatchingGetRoomListWithoutGUI / sceNpMatchingGetRoomListGUI / sceNpMatchingGetRoomListLimitGUI
+	atomic_t<bool> get_room_limit_version = false;
+};
+s32 create_matching_context(vm::ptr<SceNpId> npid, vm::ptr<SceNpMatchingHandler> handler, vm::ptr<void> arg);
+std::shared_ptr<matching_ctx> get_matching_context(u32 ctx_id);
+bool destroy_matching_context(u32 ctx_id);
