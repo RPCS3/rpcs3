@@ -30,4 +30,13 @@ namespace extra_nps
 
 	void print_SceNpScoreRankData(const SceNpScoreRankData* data);
 	void print_SceNpScoreRankData_deprecated(const SceNpScoreRankData_deprecated* data);
+
+	void print_SceNpRoomId(const SceNpRoomId& room_id);
+	void print_SceNpMatchingAttr(const SceNpMatchingAttr* data);
+	void print_SceNpMatchingSearchCondition(const SceNpMatchingSearchCondition* data);
+	void print_SceNpMatchingRoom(const SceNpMatchingRoom* data);
+	void print_SceNpMatchingRoomList(const SceNpMatchingRoomList* data);
+	void print_SceNpMatchingRoomStatus(const SceNpMatchingRoomStatus* data);
+	void print_SceNpMatchingJoinedRoomInfo(const SceNpMatchingJoinedRoomInfo* data);
+	void print_SceNpMatchingSearchJoinRoomInfo(const SceNpMatchingSearchJoinRoomInfo* data);
 } // namespace extra_nps

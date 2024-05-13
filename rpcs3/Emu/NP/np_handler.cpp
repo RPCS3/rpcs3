@@ -1122,7 +1122,17 @@ namespace np
 					case rpcn::CommandType::TusGetMultiUserDataStatus: reply_tus_get_multiuser_data_status(req_id, data); break;
 					case rpcn::CommandType::TusGetFriendsDataStatus: reply_tus_get_friends_data_status(req_id, data); break;
 					case rpcn::CommandType::TusDeleteMultiSlotData: reply_tus_delete_multislot_data(req_id, data); break;
-					default: rpcn_log.error("Unknown reply(%d) received!", command); break;
+					case rpcn::CommandType::CreateRoomGUI: reply_create_room_gui(req_id, data); break;
+					case rpcn::CommandType::JoinRoomGUI: reply_join_room_gui(req_id, data); break;
+					case rpcn::CommandType::LeaveRoomGUI: reply_leave_room_gui(req_id, data); break;
+					case rpcn::CommandType::GetRoomListGUI: reply_get_room_list_gui(req_id, data); break;
+					case rpcn::CommandType::SetRoomSearchFlagGUI: reply_set_room_search_flag_gui(req_id, data); break;
+					case rpcn::CommandType::GetRoomSearchFlagGUI: reply_get_room_search_flag_gui(req_id, data); break;
+					case rpcn::CommandType::SetRoomInfoGUI: reply_set_room_info_gui(req_id, data); break;
+					case rpcn::CommandType::GetRoomInfoGUI: reply_get_room_info_gui(req_id, data); break;
+					case rpcn::CommandType::QuickMatchGUI: reply_quickmatch_gui(req_id, data); break;
+					case rpcn::CommandType::SearchJoinRoomGUI: reply_searchjoin_gui(req_id, data); break;
+					default: fmt::throw_exception("Unknown reply(%d) received!", command); break;
 					}
 				}
 
@@ -1139,7 +1149,13 @@ namespace np
 					case rpcn::NotificationType::SignalP2PConnect: notif_p2p_connect(notif.second); break;
 					case rpcn::NotificationType::RoomMessageReceived: notif_room_message_received(notif.second); break;
 					case rpcn::NotificationType::SignalingInfo: notif_signaling_info(notif.second); break;
-					default: rpcn_log.error("Unknown notification(%d) received!", notif.first); break;
+					case rpcn::NotificationType::MemberJoinedRoomGUI: notif_member_joined_room_gui(notif.second); break;
+					case rpcn::NotificationType::MemberLeftRoomGUI: notif_member_left_room_gui(notif.second); break;
+					case rpcn::NotificationType::RoomDisappearedGUI: notif_room_disappeared_gui(notif.second); break;
+					case rpcn::NotificationType::RoomOwnerChangedGUI: notif_room_owner_changed_gui(notif.second); break;
+					case rpcn::NotificationType::UserKickedGUI: notif_user_kicked_gui(notif.second); break;
+					case rpcn::NotificationType::QuickMatchCompleteGUI: notif_quickmatch_complete_gui(notif.second); break;
+					default: fmt::throw_exception("Unknown notification(%d) received!", notif.first); break;
 					}
 				}
 
@@ -1625,4 +1641,50 @@ namespace np
 
 		return {include_onlinename, include_avatarurl};
 	}
+
+	void np_handler::add_gui_request(u32 req_id, u32 ctx_id)
+	{
+		std::lock_guard lock(gui_requests.mutex);
+		ensure(gui_requests.list.insert({req_id, ctx_id}).second);
+	}
+
+	void np_handler::remove_gui_request(u32 req_id)
+	{
+		std::lock_guard lock(gui_requests.mutex);
+		if (gui_requests.list.erase(req_id) != 1)
+		{
+			rpcn_log.error("Failed to erase gui request %d", req_id);
+		}
+	}
+
+	u32 np_handler::take_gui_request(u32 req_id)
+	{
+		std::lock_guard lock(gui_requests.mutex);
+
+		if (!gui_requests.list.contains(req_id))
+		{
+			return 0;
+		}
+
+		const u32 ctx_id = ::at32(gui_requests.list, req_id);
+		gui_requests.list.erase(req_id);
+
+		return ctx_id;
+	}
+
+	std::shared_ptr<matching_ctx> np_handler::take_pending_gui_request(u32 req_id)
+	{
+		const u32 ctx_id = take_gui_request(req_id);
+
+		if (!ctx_id)
+			return {};
+
+		auto ctx = get_matching_context(ctx_id);
+
+		if (!ctx)
+			return {};
+
+		return ctx;
+	}
+
 } // namespace np

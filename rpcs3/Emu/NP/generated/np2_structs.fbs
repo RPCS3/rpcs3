@@ -32,14 +32,14 @@ table GroupConfig {
 	withPassword:bool;
 }
 
-table UserInfo2 {
+table UserInfo {
 	npId:string;
 	onlineName:string;
 	avatarUrl:string;
 }
 
 table RoomMemberDataInternal {
-	userInfo:UserInfo2;
+	userInfo:UserInfo;
 	joinDate:uint64;
 	memberId:uint16;
 	teamId:uint8;
@@ -84,7 +84,7 @@ table RoomDataExternal {
 	openPrivateSlotNum:uint16;
 	curMemberNum:uint16;
 	passwordSlotMask:uint64;
-	owner:UserInfo2;
+	owner:UserInfo;
 	roomGroup:[RoomGroup];
 	flagAttr:uint32;
 	roomSearchableIntAttrExternal:[IntAttr];
@@ -128,7 +128,6 @@ table SearchRoomRequest {
 table SearchRoomResponse {
 	startIndex:uint32;
 	total:uint32;
-	size:uint32;
 	rooms:[RoomDataExternal];
 }
 
@@ -262,7 +261,7 @@ table RoomMessageInfo {
 	filtered:bool;
 	castType:uint8;
 	dst:[uint16];
-	srcMember:UserInfo2;
+	srcMember:UserInfo;
 	msg:[uint8];
 }
 
@@ -482,4 +481,80 @@ table SetPresenceRequest {
 	status:string;
 	comment:string;
 	data:[uint8];
+}
+
+table MatchingSearchCondition {
+	attr_type:uint32;
+	attr_id:uint32;
+	comp_op:uint32;
+	comp_value:uint32;
+}
+
+table MatchingAttr {
+	attr_type:uint32;
+	attr_id:uint32;
+	num:uint32;
+	data:[uint8];
+}
+
+table CreateRoomGUIRequest {
+	total_slots:uint32;
+	private_slots:uint32;
+	privilege_grant:bool;
+	stealth:bool;
+	game_attrs:[MatchingAttr];
+}
+
+table GUIUserInfo {
+	info:UserInfo;
+	owner:bool;
+}
+
+table MatchingRoomStatus {
+	id:[uint8];
+	members:[GUIUserInfo];
+	kick_actor:string;
+	opt:[uint8];
+}
+
+table GetRoomListGUIRequest {
+	range_start:uint32;
+	range_max:uint32;
+	conds:[MatchingSearchCondition];
+	attrs:[MatchingAttr];
+}
+
+table MatchingRoom {
+	id:[uint8];
+	attr:[MatchingAttr];
+}
+
+table MatchingRoomList {
+	start:uint32;
+	total:uint32;
+	rooms:[MatchingRoom];
+}
+
+table MatchingGuiRoomId {
+	id:[uint8];
+}
+
+table SetRoomSearchFlagGUI {
+	roomid:[uint8];
+	stealth:bool;
+}
+
+table QuickMatchGUIRequest {
+	conds:[MatchingSearchCondition];
+	available_num:uint32;
+}
+
+table SearchJoinRoomGUIRequest {
+	conds:[MatchingSearchCondition];
+	attrs:[MatchingAttr];
+}
+
+table MatchingSearchJoinRoomInfo {
+	room:MatchingRoomStatus;
+	attr:[MatchingAttr];
 }
