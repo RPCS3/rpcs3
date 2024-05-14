@@ -25,7 +25,7 @@ endif()
 
 target_link_libraries(rpcs3_emu
     PRIVATE
-        3rdparty::zlib 3rdparty::yaml-cpp
+        3rdparty::zlib 3rdparty::yaml-cpp 3rdparty::zstd
     PUBLIC
         3rdparty::libevdev 3rdparty::flatbuffers)
 
