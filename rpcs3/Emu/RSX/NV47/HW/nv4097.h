@@ -217,7 +217,7 @@ namespace rsx
 		{
 			static void impl(context* ctx, u32 reg, u32 arg)
 			{
-				util::push_draw_parameter_change(ctx, vertex_array_offset_modifier_barrier, reg, arg);
+				util::push_draw_parameter_change(ctx, vertex_array_offset_modifier_barrier, reg, arg, 0, index);
 			}
 		};
 

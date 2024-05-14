@@ -30,7 +30,7 @@ namespace rsx
 			REGS(ctx)->register_vertex_info[attrib_index].data[channel_select] = value;
 		}
 
-		void push_draw_parameter_change(rsx::context* ctx, rsx::command_barrier_type type, u32 reg, u32 arg)
+		void push_draw_parameter_change(rsx::context* ctx, rsx::command_barrier_type type, u32 reg, u32 arg0, u32 arg1, u32 index)
 		{
 			// NOTE: We can't test against latch here, since a previous change may be buffered in a pending barrier.
 			if (!RSX(ctx)->in_begin_end || REGS(ctx)->current_draw_clause.empty())
@@ -42,7 +42,7 @@ namespace rsx
 			REGS(ctx)->decode(reg, REGS(ctx)->latch);
 
 			// Insert barrier to reinsert the value later
-			REGS(ctx)->current_draw_clause.insert_command_barrier(type, arg);
+			REGS(ctx)->current_draw_clause.insert_command_barrier(type, arg0, arg1, index);
 		}
 
 		u32 get_report_data_impl([[maybe_unused]] rsx::context* ctx, u32 offset)
