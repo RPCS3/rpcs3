@@ -10,7 +10,7 @@
 #include "serialization_ext.hpp"
 
 #include <zlib.h>
-#include <3rdparty/zstd/zstd/lib/zstd.h>
+#include <zstd.h>
 
 LOG_CHANNEL(sys_log, "SYS");
 

@@ -1,9 +1,7 @@
-
-project(3rdparty_zstd)
-
-add_library(3rdparty_zstd INTERFACE)
+option(ZSTD_BUILD_PROGRAMS "BUILD PROGRAMS" OFF)
+option(ZSTD_BUILD_SHARED "BUILD SHARED LIBRARIES" OFF)
+option(ZSTD_BUILD_STATIC "BUILD STATIC LIBRARIES" ON)
 
 add_subdirectory(zstd/build/cmake EXLUDE_FROM_ALL)
-
-target_include_directories(3rdparty_zstd INTERFACE zstd zstd/lib)
-
+add_library(3rdparty_zstd INTERFACE)
+target_link_libraries(3rdparty_zstd INTERFACE libzstd_static)
