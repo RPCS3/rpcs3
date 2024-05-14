@@ -1459,8 +1459,13 @@ u32 CPUDisAsm::DisAsmBranchTarget(s32 /*imm*/)
 	return 0;
 }
 
-extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool revert_lock)
+extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool revert_lock, std::vector<std::pair<std::shared_ptr<named_thread<spu_thread>>, u32>>* out_list)
 {
+	if (out_list)
+	{
+		out_list->clear();
+	}
+
 	auto get_spus = [old_counter = u64{umax}, spu_list = std::vector<std::shared_ptr<named_thread<spu_thread>>>()](bool can_collect, bool force_collect) mutable
 	{
 		const u64 new_counter = cpu_thread::g_threads_created + cpu_thread::g_threads_deleted;
@@ -1632,6 +1637,14 @@ extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool reve
 
 			std::this_thread::yield();
 			continue;
+		}
+
+		if (out_list)
+		{
+			for (auto& spu : *spu_list)
+			{
+				out_list->emplace_back(spu, spu->pc);
+			}
 		}
 
 		return true;

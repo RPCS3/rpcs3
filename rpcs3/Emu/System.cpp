@@ -2872,7 +2872,7 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 }
 
 extern bool check_if_vdec_contexts_exist();
-extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool revert_lock = false);
+extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool revert_lock = false, std::vector<std::pair<std::shared_ptr<named_thread<spu_thread>>, u32>>* out_list = nullptr);
 
 void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_stage)
 {
@@ -2894,7 +2894,9 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 			*pause_thread = make_ptr(new named_thread("Savestate Prepare Thread"sv, [pause_thread, allow_autoexit, this]() mutable
 			{
-				if (!try_lock_spu_threads_in_a_state_compatible_with_savestates())
+				std::vector<std::pair<std::shared_ptr<named_thread<spu_thread>>, u32>> paused_spus;
+
+				if (!try_lock_spu_threads_in_a_state_compatible_with_savestates(false, &paused_spus))
 				{
 					sys_log.error("Failed to savestate: failed to lock SPU threads execution.");
 
@@ -2962,10 +2964,11 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 					return;
 				}
 
-				CallFromMainThread([allow_autoexit, this]()
+				CallFromMainThread([allow_autoexit, this, paused_spus]()
 				{
 					savestate_stage stage{};
 					stage.prepared = true;
+					stage.paused_spus = paused_spus;
 					Kill(allow_autoexit, true, &stage);
 				});
 
@@ -3071,7 +3074,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 	// There is no race condition because it is only accessed by the same thread
 	std::shared_ptr<std::shared_ptr<void>> join_thread = std::make_shared<std::shared_ptr<void>>();
 
-	*join_thread = make_ptr(new named_thread("Emulation Join Thread"sv, [join_thread, savestate, allow_autoexit, this]() mutable
+	*join_thread = make_ptr(new named_thread("Emulation Join Thread"sv, [join_thread, savestate, allow_autoexit, save_stage = save_stage ? *save_stage : savestate_stage{}, this]() mutable
 	{
 		fs::pending_file file;
 
@@ -3142,6 +3145,14 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 			}
 		}
 
+		for (const auto& spu : save_stage.paused_spus)
+		{
+			if (spu.first->pc != spu.second)
+			{
+				sys_log.error("SPU thread continued after being paused. (old_pc=0x%x, pc=0x%x, unsavable=%d)", spu.second, spu.first->pc, spu.first->unsavable);
+
+			}
+		}
 		// Save it first for maximum timing accuracy
 		const u64 timestamp = get_timebased_time();
 		const u64 start_time = get_system_time();

@@ -1813,7 +1813,10 @@ void spu_thread::cpu_task()
 			spu_runtime::g_gateway(*this, _ptr<u8>(0), nullptr);
 		}
 
-		unsavable = false;
+		if (unsavable && is_stopped(state - cpu_flag::stop))
+		{
+			spu_log.warning("Aborting unsaveable state");
+		}
 
 		// Print some stats
 		(!group || group->stop_count < 5 ? spu_log.notice : spu_log.trace)("Stats: Block Weight: %u (Retreats: %u);", block_counter, block_failure);
