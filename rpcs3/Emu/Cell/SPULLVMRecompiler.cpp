@@ -1670,21 +1670,21 @@ public:
 			// Basic block to block_info
 			std::unordered_map<llvm::BasicBlock*, block_info*> bb_to_info;
 
-			std::vector<block_info*> block_q;
+			std::vector<std::pair<u32, block_info*>> block_q;
 			block_q.reserve(m_blocks.size());
 
 			bool has_gpr_memory_barriers = false;
 
 			for (auto& [a, b] : m_blocks)
 			{
-				block_q.emplace_back(&b);
+				block_q.emplace_back(a, &b);
 				bb_to_info[b.block] = &b;
 				has_gpr_memory_barriers |= b.has_gpr_memory_barriers;
 			}
 
 			for (usz bi = 0; bi < block_q.size();)
 			{
-				auto bqbi = block_q[bi++];
+				auto bqbi = block_q[bi++].second;
 
 				// TODO: process all registers up to s_reg_max
 				for (u32 i = 0; i <= s_reg_127; i++)
@@ -1889,19 +1889,23 @@ public:
 			block_q.clear();
 			for (auto& [a, b] : m_blocks)
 			{
-				block_q.emplace_back(&b);
+				block_q.emplace_back(a, &b);
 			}
 
 			for (usz bi = 0; bi < block_q.size(); bi++)
 			{
+				auto bqbi = block_q[bi].second;
+
+				std::vector<std::pair<u32, bool>> work_list;
+
 				for (u32 i = 0; i <= s_reg_127; i++)
 				{
 					// If store isn't erased, try to sink it
-					if (auto& bs = block_q[bi]->store[i]; bs && block_q[bi]->bb->targets.size() > 1 && !block_q[bi]->does_gpr_barrier_proceed_last_store(i))
+					if (auto& bs = bqbi->store[i]; bs && bqbi->bb->targets.size() > 1 && !bqbi->does_gpr_barrier_proceed_last_store(i))
 					{
 						std::map<u32, block_info*, std::greater<>> sucs;
 
-						for (u32 tj : block_q[bi]->bb->targets)
+						for (u32 tj : bqbi->bb->targets)
 						{
 							auto b2it = m_blocks.find(tj);
 
@@ -1911,9 +1915,97 @@ public:
 							}
 						}
 
+						work_list.clear();
+						std::unordered_map<u32, bool> worked_on;
+
+						bool has_gpr_barriers_in_the_way = false;
+
 						for (auto [a2, b2] : sucs)
 						{
-							if (b2 != block_q[bi])
+							if (a2 == block_q[bi].first)
+							{
+								if (bqbi->store_context_ctr[i] != 1)
+								{
+									has_gpr_barriers_in_the_way = true;
+									break;
+								}
+
+								continue;
+							}
+
+							work_list.emplace_back(a2, false);
+							worked_on[a2] = true;
+						}
+
+						if (has_gpr_barriers_in_the_way)
+						{
+							// Cannot sink store, has barriers in the way
+							continue;
+						}
+
+						// Need to treat tails differently: do not require checking barrier (checked before in a suitable manner)
+						const usz work_list_start_blocks_max_index = work_list.size();
+
+						for (usz wi = 0; wi < work_list.size(); wi++)
+						{
+							auto [cur, found_barrier] = work_list[wi];
+
+							if (!found_barrier && wi >= work_list_start_blocks_max_index)
+							{
+								if (auto info = m_blocks.count(cur) ? &::at32(m_blocks, cur) : nullptr)
+								{
+									if (info->store_context_ctr[i] != 1)
+									{
+										found_barrier = true;
+									}
+								}
+							}
+
+							if (cur == block_q[bi].first && wi >= work_list_start_blocks_max_index)
+							{
+								if (found_barrier)
+								{
+									has_gpr_barriers_in_the_way = true;
+									break;
+								}
+
+								continue;
+							}
+
+							for (u32 target : m_bbs[cur].targets)
+							{
+								if (!m_block_info[target / 4])
+								{
+									continue;
+								}
+
+								if (m_blocks.find(target) == m_blocks.end())
+								{
+									continue;
+								}
+
+								if (!worked_on[target])
+								{
+									worked_on[target] = true;
+									work_list.emplace_back(target, found_barrier);
+								}
+								// Enqueue a second iteration for found_barrier=true if only found with found_barrier=false 
+								else if (found_barrier && !std::find_if(work_list.rbegin(), work_list.rend(), [&](auto& it){ return it.first == target; })->second)
+								{
+									work_list.emplace_back(target, true);
+								}
+							}
+						}
+
+						if (has_gpr_barriers_in_the_way)
+						{
+							// Cannot sink store, has barriers in the way
+							continue;
+						}
+
+						for (auto [a2, b2] : sucs)
+						{
+							if (b2 != bqbi)
 							{
 								auto ins = b2->block->getFirstNonPHI();
 
@@ -1933,20 +2025,20 @@ public:
 										b2->store_context_last_id[i] = 0;
 										b2->store_context_first_id[i] = b2->store_context_ctr[i] + 1;
 
-										if (!std::count(block_q.begin() + bi, block_q.end(), b2))
+										if (!std::count_if(block_q.begin() + bi, block_q.end(), [&](auto&& a) { return a.second == b2; }))
 										{
 											// Sunk store can be checked again
-											block_q.push_back(b2);
+											block_q.emplace_back(a2, b2);
 										}
 									}
 								}
 								else
 								{
 									// Initialize additional block between two basic blocks
-									auto& edge = block_q[bi]->block_edges[a2];
+									auto& edge = bqbi->block_edges[a2];
 									if (!edge)
 									{
-										const auto succ_range = llvm::successors(block_q[bi]->block_end);
+										const auto succ_range = llvm::successors(bqbi->block_end);
 
 										auto succ = b2->block;
 
@@ -1975,7 +2067,7 @@ public:
 											continue;
 										}
 
-										edge = llvm::SplitEdge(block_q[bi]->block_end, succ);
+										edge = llvm::SplitEdge(bqbi->block_end, succ);
 										pdt.recalculate(*m_function);
 										dt.recalculate(*m_function);
 									}
