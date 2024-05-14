@@ -17,12 +17,14 @@ namespace input
 		harmonix_rockband_drum_kit_2,
 		rock_revolution_drum_kit,
 		ps_move_navigation,
-		ride_skateboard
+		ride_skateboard,
+		guncon_3,
 	};
 
 	enum vendor_id
 	{
 		sony_corp = 0x054C, // Sony Corp.
+		namco     = 0x0B9A, // Namco
 		sony_cea  = 0x12BA, // Sony Computer Entertainment America
 		konami_de = 0x1CCF, // Konami Digital Entertainment
 	};
@@ -40,6 +42,7 @@ namespace input
 		ps_move_navigation           = 0x042F, // PlayStation Move navigation controller
 		dance_dance_revolution_mat   = 0x1010, // Dance Dance Revolution Dance Mat Controller
 		ride_skateboard              = 0x0400, // Tony Hawk RIDE Skateboard Controller
+		guncon_3                     = 0x0800, // GunCon 3 Controller
 	};
 
 	struct product_info
@@ -233,6 +236,16 @@ namespace input
 				.capabilites = CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_SENSOR_MODE
 			};
 		}
+		case product_type::guncon_3:
+		{
+			return product_info{
+				.type = type,
+				.vendor_id = vendor_id::namco,
+				.product_id = product_id::guncon_3,
+				.pclass_profile = 0x0,
+				.capabilites = 0x0
+			};
+		}
 		case product_type::playstation_3_controller:
 		default: // GCC doesn't like it when there is no return value if if all enum values are covered
 		{
@@ -245,6 +258,35 @@ namespace input
 			};
 		}
 		}
+	}
+
+	inline product_type get_product_by_vid_pid(u16 vid, u16 pid)
+	{
+		if (vid == vendor_id::konami_de && pid == product_id::dance_dance_revolution_mat)
+			return product_type::dance_dance_revolution_mat;
+		if (vid == vendor_id::sony_cea && pid == product_id::dj_hero_turntable)
+			return product_type::dj_hero_turntable;
+		if (vid == vendor_id::sony_cea && pid == product_id::harmonix_rockband_drum_kit)
+			return product_type::harmonix_rockband_drum_kit;
+		if (vid == vendor_id::sony_cea && pid == product_id::harmonix_rockband_drum_kit_2)
+			return product_type::harmonix_rockband_drum_kit_2;
+		if (vid == vendor_id::sony_cea && pid == product_id::harmonix_rockband_guitar)
+			return product_type::harmonix_rockband_guitar;
+		if (vid == vendor_id::sony_cea && pid == product_id::red_octane_gh_drum_kit)
+			return product_type::red_octane_gh_drum_kit;
+		if (vid == vendor_id::sony_cea && pid == product_id::red_octane_gh_guitar)
+			return product_type::red_octane_gh_guitar;
+		if (vid == vendor_id::sony_cea && pid == product_id::rock_revolution_drum_kit)
+			return product_type::rock_revolution_drum_kit;
+		if (vid == vendor_id::sony_corp && pid == product_id::ps_move_navigation)
+			return product_type::ps_move_navigation;
+		if (vid == vendor_id::sony_cea && pid == product_id::ride_skateboard)
+			return product_type::ride_skateboard;
+		if (vid == vendor_id::namco && pid == product_id::guncon_3)
+			return product_type::guncon_3;
+		if (vid == vendor_id::sony_corp && pid == product_id::playstation_3_controller)
+			return product_type::playstation_3_controller;
+		return product_type::playstation_3_controller;
 	}
 
 	inline std::vector<product_info> get_products_by_class(int class_id)
@@ -303,6 +345,13 @@ namespace input
 			return
 			{
 				get_product_info(product_type::ride_skateboard)
+			};
+		}
+		case CELL_PAD_FAKE_TYPE_GUNCON3:
+		{
+			return
+			{
+				get_product_info(product_type::guncon_3)
 			};
 		}
 		}

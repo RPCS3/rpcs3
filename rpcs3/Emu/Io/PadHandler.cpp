@@ -748,7 +748,7 @@ void PadHandlerBase::process()
 
 				pad->m_port_status |= CELL_PAD_STATUS_CONNECTED + CELL_PAD_STATUS_ASSIGN_CHANGES;
 
-				if (m_emulation && !pad->is_fake_move)
+				if (m_emulation && !pad->is_fake_pad)
 				{
 					pad_state_notify_state_change(i, CELL_PAD_STATUS_CONNECTED);
 				}
@@ -776,7 +776,7 @@ void PadHandlerBase::process()
 
 					pad->m_port_status |= CELL_PAD_STATUS_CONNECTED + CELL_PAD_STATUS_ASSIGN_CHANGES;
 
-					if (m_emulation && !pad->is_fake_move)
+					if (m_emulation && !pad->is_fake_pad)
 					{
 						pad_state_notify_state_change(i, CELL_PAD_STATUS_CONNECTED);
 					}

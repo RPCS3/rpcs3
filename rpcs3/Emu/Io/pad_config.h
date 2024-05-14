@@ -104,7 +104,7 @@ struct cfg_pad final : cfg::node
 	cfg::uint<0, 100> analog_lerp_factor{ this, "Analog Button Lerp Factor", 100 };
 	cfg::uint<0, 100> trigger_lerp_factor{ this, "Trigger Lerp Factor", 100 };
 
-	cfg::uint<CELL_PAD_PCLASS_TYPE_STANDARD, CELL_PAD_PCLASS_TYPE_SKATEBOARD> device_class_type{ this, "Device Class Type", 0 };
+	cfg::uint<CELL_PAD_PCLASS_TYPE_STANDARD, CELL_PAD_PCLASS_TYPE_MAX> device_class_type{ this, "Device Class Type", 0 };
 	cfg::uint<0, 65535> vendor_id{ this, "Vendor ID", 0 };
 	cfg::uint<0, 65535> product_id{ this, "Product ID", 0 };
 };

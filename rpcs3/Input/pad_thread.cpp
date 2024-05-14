@@ -22,6 +22,7 @@
 #include "Emu/system_config.h"
 #include "Emu/RSX/Overlays/HomeMenu/overlay_home_menu.h"
 #include "Emu/RSX/Overlays/overlay_message.h"
+#include "Emu/Cell/lv2/sys_usbd.h"
 #include "Emu/Cell/Modules/cellGem.h"
 #include "Utilities/Thread.h"
 #include "util/atomic.hpp"
@@ -170,7 +171,6 @@ void pad_thread::Init()
 		cur_pad_handler->Init();
 
 		m_pads[i] = std::make_shared<Pad>(handler_type, CELL_PAD_STATUS_DISCONNECTED, pad_settings[i].device_capability, pad_settings[i].device_type);
-		m_pads[i]->is_fake_move = (g_cfg.io.move == move_handler::fake && i >= (CELL_PAD_MAX_PORT_NUM - CELL_GEM_MAX_NUM));
 
 		if (pad_settings[i].is_ldd_pad)
 		{
@@ -188,6 +188,9 @@ void pad_thread::Init()
 			input_log.notice("Pad %d: device='%s', handler=%s, VID=0x%x, PID=0x%x, class_type=0x%x, class_profile=0x%x",
 				i, cfg->device.to_string(), m_pads[i]->m_pad_handler, m_pads[i]->m_vendor_id, m_pads[i]->m_product_id, m_pads[i]->m_class_type, m_pads[i]->m_class_profile);
 		}
+
+		m_pads[i]->is_fake_pad = (g_cfg.io.move == move_handler::fake && i >= (static_cast<u32>(CELL_PAD_MAX_PORT_NUM) - static_cast<u32>(CELL_GEM_MAX_NUM))) || m_pads[i]->m_class_type == CELL_PAD_FAKE_TYPE_GUNCON3;
+		connect_usb_controller(i, input::get_product_by_vid_pid(m_pads[i]->m_vendor_id, m_pads[i]->m_product_id));
 	}
 }
 
