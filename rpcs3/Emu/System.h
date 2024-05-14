@@ -19,6 +19,11 @@ void init_fxo_for_exec(utils::serial*, bool);
 enum class localized_string_id;
 enum class video_renderer;
 
+class spu_thread;
+
+template <typename T>
+class named_thread;
+
 enum class system_state : u32
 {
 	stopped,
@@ -351,6 +356,7 @@ private:
 	struct savestate_stage
 	{
 		bool prepared = false;
+		std::vector<std::pair<std::shared_ptr<named_thread<spu_thread>>, u32>> paused_spus;
 	};
 public:
 
