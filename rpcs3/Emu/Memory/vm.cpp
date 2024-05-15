@@ -705,12 +705,12 @@ namespace vm
 	{
 		const auto _cpu = get_current_cpu_thread();
 
-		if (_cpu && _cpu->id_type() == 1)
+		if (_cpu && _cpu->get_class() == thread_class::ppu)
 		{
 			// TODO: PPU g_escape
 		}
 
-		if (_cpu && _cpu->id_type() == 2)
+		if (_cpu && _cpu->get_class() == thread_class::spu)
 		{
 			spu_runtime::g_escape(static_cast<spu_thread*>(_cpu));
 		}
