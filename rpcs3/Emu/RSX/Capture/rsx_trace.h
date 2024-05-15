@@ -19,7 +19,6 @@ struct frame_trace_data
 		std::array<std::vector<std::byte>, 2> depth_stencil;
 		std::vector<std::byte> index;
 		u32 vertex_count;
-
 	};
 
 	std::vector<std::pair<u32, u32>> command_queue;

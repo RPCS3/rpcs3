@@ -203,7 +203,7 @@ namespace rsx
 
 		// Profiler
 		rsx::profiling_timer m_profiler;
-		frame_statistics_t m_frame_stats;
+		frame_statistics_t m_frame_stats{};
 
 		// Savestates related
 		u32 m_pause_after_x_flips = 0;
@@ -262,7 +262,7 @@ namespace rsx
 		atomic_bitmask_t<flip_request> async_flip_requested{};
 		u8 async_flip_buffer{ 0 };
 
-		void capture_frame(const std::string &name);
+		void capture_frame(const std::string& name);
 		const backend_configuration& get_backend_config() const { return backend_config; }
 
 	public:
@@ -272,8 +272,8 @@ namespace rsx
 		bool isHLE{ false };
 		bool serialized = false;
 
-		u32 flip_status;
-		int debug_level;
+		u32 flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
+		int debug_level = CELL_GCM_DEBUG_LEVEL0;
 
 		atomic_t<bool> requested_vsync{true};
 		atomic_t<bool> enable_second_vhandler{false};
