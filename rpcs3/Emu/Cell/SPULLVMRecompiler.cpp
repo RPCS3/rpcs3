@@ -1763,7 +1763,7 @@ public:
 						llvm::SetVector<llvm::BasicBlock*> work_list;
 						std::unordered_map<llvm::BasicBlock*, bool> worked_on;
 
-						if (!common_pdom || std::count(killers.begin(), killers.end(), common_pdom) == 0)
+						if (!common_pdom || std::none_of(killers.begin(), killers.end(), [common_pdom](const llvm::BasicBlock* block){ return block == common_pdom;}))
 						{
 							if (common_pdom)
 							{
@@ -1788,7 +1788,7 @@ public:
 						for (usz wi = 0; wi < work_list.size(); wi++)
 						{
 							auto* cur = work_list[wi];
-							if (std::count(killers.begin(), killers.end(), cur))
+							if (std::any_of(killers.begin(), killers.end(), [cur](const llvm::BasicBlock* block){ return block == cur; }))
 							{
 								work2_list.emplace_back(cur, bb_to_info[cur] && bb_to_info[cur]->does_gpr_barrier_preceed_first_store(i));
 								continue;
@@ -1952,9 +1952,9 @@ public:
 
 							if (!found_barrier && wi >= work_list_start_blocks_max_index)
 							{
-								if (auto info = m_blocks.count(cur) ? &::at32(m_blocks, cur) : nullptr)
+								if (const auto it = m_blocks.find(cur); it != m_blocks.cend())
 								{
-									if (info->store_context_ctr[i] != 1)
+									if (it->second.store_context_ctr[i] != 1)
 									{
 										found_barrier = true;
 									}
@@ -2025,7 +2025,7 @@ public:
 										b2->store_context_last_id[i] = 0;
 										b2->store_context_first_id[i] = b2->store_context_ctr[i] + 1;
 
-										if (!std::count_if(block_q.begin() + bi, block_q.end(), [&](auto&& a) { return a.second == b2; }))
+										if (std::none_of(block_q.begin() + bi, block_q.end(), [b_info = b2](auto&& a) { return a.second == b_info; }))
 										{
 											// Sunk store can be checked again
 											block_q.emplace_back(a2, b2);
