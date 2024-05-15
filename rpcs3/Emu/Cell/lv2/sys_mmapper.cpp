@@ -851,7 +851,7 @@ error_code mmapper_thread_recover_page_fault(cpu_thread* cpu)
 
 		pf_events.events.erase(pf_event_ind);
 
-		if (cpu->id_type() == 1u)
+		if (cpu->get_class() == thread_class::ppu)
 		{
 			lv2_obj::awake(cpu);
 		}

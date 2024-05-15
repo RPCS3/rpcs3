@@ -1520,7 +1520,7 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 		return area->falloc(addr & -0x10000, 0x10000) || vm::check_addr(addr, is_writing ? vm::page_writable : vm::page_readable);
 	};
 
-	if (cpu && (cpu->id_type() == 1 || cpu->id_type() == 2))
+	if (cpu && (cpu->get_class() == thread_class::ppu || cpu->get_class() == thread_class::spu))
 	{
 		vm::temporary_unlock(*cpu);
 		u32 pf_port_id = 0;
@@ -1587,7 +1587,7 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 			auto& pf_events = g_fxo->get<page_fault_event_entries>();
 
 			// De-schedule
-			if (cpu->id_type() == 1)
+			if (cpu->get_class() == thread_class::ppu)
 			{
 				cpu->state -= cpu_flag::signal; // Cannot use check_state here and signal must be removed if exists
 				lv2_obj::sleep(*cpu);
@@ -1611,7 +1611,7 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 			sig_log.warning("Page_fault %s location 0x%x because of %s memory", is_writing ? "writing" : "reading",
 				addr, data3 == SYS_MEMORY_PAGE_FAULT_CAUSE_READ_ONLY ? "writing read-only" : "using unmapped");
 
-			if (cpu->id_type() == 1)
+			if (cpu->get_class() == thread_class::ppu)
 			{
 				if (const auto func = static_cast<ppu_thread*>(cpu)->current_function)
 				{
@@ -1661,7 +1661,7 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 			return true;
 		}
 
-		if (cpu->id_type() == 2)
+		if (cpu->get_class() == thread_class::spu)
 		{
 			if (!g_tls_access_violation_recovered)
 			{
@@ -1708,7 +1708,7 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 	// Do not log any further access violations in this case.
 	if (!g_tls_access_violation_recovered)
 	{
-		vm_log.fatal("Access violation %s location 0x%x (%s)", is_writing ? "writing" : (cpu && cpu->id_type() == 1 && cpu->get_pc() == addr ? "executing" : "reading"), addr, (is_writing && vm::check_addr(addr)) ? "read-only memory" : "unmapped memory");
+		vm_log.fatal("Access violation %s location 0x%x (%s)", is_writing ? "writing" : (cpu && cpu->get_class() == thread_class::ppu && cpu->get_pc() == addr ? "executing" : "reading"), addr, (is_writing && vm::check_addr(addr)) ? "read-only memory" : "unmapped memory");
 	}
 
 	while (Emu.IsPaused())

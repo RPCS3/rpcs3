@@ -41,9 +41,9 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, std::shared_ptr<CPUDis
 		const auto cpu = m_get_cpu();
 
 		if (!cpu) return thread_type::none;
-		if (cpu->id_type() == 1) return thread_type::ppu;
-		if (cpu->id_type() == 0x55) return thread_type::rsx;
-		if (cpu->id_type() == 2) return thread_type::spu;
+		if (cpu->get_class() == thread_class::ppu) return thread_type::ppu;
+		if (cpu->get_class() == thread_class::rsx) return thread_type::rsx;
+		if (cpu->get_class() == thread_class::spu) return thread_type::spu;
 
 		fmt::throw_exception("Unknown CPU type (0x%x)", cpu->id_type());
 	}())

@@ -341,7 +341,7 @@ void kernel_explorer::update()
 		{
 			for (; cpu; cpu = cpu->get_next_cpu())
 			{
-				add_leaf(tree, qstr(fmt::format("Waiter: ID: 0x%x", cpu->id_type() == 2 ? static_cast<spu_thread*>(cpu)->lv2_id : cpu->id)));
+				add_leaf(tree, qstr(fmt::format("Waiter: ID: 0x%x", cpu->get_class() == thread_class::spu ? static_cast<spu_thread*>(cpu)->lv2_id : cpu->id)));
 			}
 		};
 

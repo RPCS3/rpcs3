@@ -1325,7 +1325,7 @@ bool lv2_obj::sleep(cpu_thread& cpu, const u64 timeout)
 		prepare_for_sleep(cpu);
 	}
 
-	if (cpu.id_type() == 1)
+	if (cpu.get_class() == thread_class::ppu)
 	{
 		if (u32 addr = static_cast<ppu_thread&>(cpu).res_notify)
 		{
@@ -1571,7 +1571,7 @@ bool lv2_obj::sleep_unlocked(cpu_thread& thread, u64 timeout, u64 current_time)
 bool lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
 {
 	// Check thread type
-	AUDIT(!cpu || cpu->id_type() == 1);
+	AUDIT(!cpu || cpu->get_class() == thread_class::ppu);
 
 	bool push_first = false;
 
