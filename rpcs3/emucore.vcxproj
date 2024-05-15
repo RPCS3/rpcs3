@@ -539,6 +539,7 @@
     <ClInclude Include="Emu\Io\emulated_pad_config.h" />
     <ClInclude Include="Emu\Io\gem_config.h" />
     <ClInclude Include="Emu\Io\ghltar_config.h" />
+    <ClInclude Include="Emu\Io\guncon3_config.h" />
     <ClInclude Include="Emu\Io\midi_config_types.h" />
     <ClInclude Include="Emu\Io\music_handler_base.h" />
     <ClInclude Include="Emu\Io\Null\null_camera_handler.h" />

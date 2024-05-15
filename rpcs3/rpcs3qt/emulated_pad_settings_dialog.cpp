@@ -4,6 +4,7 @@
 #include "Emu/Io/buzz_config.h"
 #include "Emu/Io/gem_config.h"
 #include "Emu/Io/ghltar_config.h"
+#include "Emu/Io/guncon3_config.h"
 #include "Emu/Io/turntable_config.h"
 #include "Emu/Io/usio_config.h"
 #include "util/asm.hpp"
@@ -83,6 +84,10 @@ emulated_pad_settings_dialog::emulated_pad_settings_dialog(pad_type type, QWidge
 		setWindowTitle(tr("Configure Emulated PS Move (Fake)"));
 		add_tabs<gem_btn>(tabs);
 		break;
+	case emulated_pad_settings_dialog::pad_type::guncon3:
+		setWindowTitle(tr("Configure Emulated GunCon 3"));
+		add_tabs<guncon3_btn>(tabs);
+		break;
 	}
 
 	v_layout->addWidget(tabs);
@@ -120,6 +125,9 @@ void emulated_pad_settings_dialog::add_tabs(QTabWidget* tabs)
 		break;
 	case pad_type::ds3gem:
 		players = g_cfg_gem.players.size();
+		break;
+	case pad_type::guncon3:
+		players = g_cfg_guncon3.players.size();
 		break;
 	}
 
@@ -166,6 +174,9 @@ void emulated_pad_settings_dialog::add_tabs(QTabWidget* tabs)
 			case pad_type::ds3gem:
 				saved_btn_id = ::at32(g_cfg_gem.players, player)->get_pad_button(static_cast<gem_btn>(id));
 				break;
+			case pad_type::guncon3:
+				saved_btn_id = ::at32(g_cfg_guncon3.players, player)->get_pad_button(static_cast<guncon3_btn>(id));
+				break;
 			}
 
 			combo->setCurrentIndex(combo->findData(static_cast<int>(saved_btn_id)));
@@ -197,6 +208,9 @@ void emulated_pad_settings_dialog::add_tabs(QTabWidget* tabs)
 					break;
 				case pad_type::ds3gem:
 					::at32(g_cfg_gem.players, player)->set_button(static_cast<gem_btn>(id), btn_id);
+					break;
+				case pad_type::guncon3:
+					::at32(g_cfg_guncon3.players, player)->set_button(static_cast<guncon3_btn>(id), btn_id);
 					break;
 				}
 			});
@@ -252,6 +266,12 @@ void emulated_pad_settings_dialog::load_config()
 			cfg_log.notice("Could not load gem config. Using defaults.");
 		}
 		break;
+	case emulated_pad_settings_dialog::pad_type::guncon3:
+		if (!g_cfg_guncon3.load())
+		{
+			cfg_log.notice("Could not load guncon3 config. Using defaults.");
+		}
+		break;
 	}
 }
 
@@ -274,6 +294,9 @@ void emulated_pad_settings_dialog::save_config()
 	case emulated_pad_settings_dialog::pad_type::ds3gem:
 		g_cfg_gem.save();
 		break;
+	case emulated_pad_settings_dialog::pad_type::guncon3:
+		g_cfg_guncon3.save();
+		break;
 	}
 }
 
@@ -295,6 +318,9 @@ void emulated_pad_settings_dialog::reset_config()
 		break;
 	case emulated_pad_settings_dialog::pad_type::ds3gem:
 		g_cfg_gem.from_default();
+		break;
+	case emulated_pad_settings_dialog::pad_type::guncon3:
+		g_cfg_guncon3.from_default();
 		break;
 	}
 
@@ -326,6 +352,9 @@ void emulated_pad_settings_dialog::reset_config()
 				break;
 			case pad_type::ds3gem:
 				def_btn_id = ::at32(g_cfg_gem.players, player)->default_pad_button(static_cast<gem_btn>(data.toInt()));
+				break;
+			case pad_type::guncon3:
+				def_btn_id = ::at32(g_cfg_guncon3.players, player)->default_pad_button(static_cast<guncon3_btn>(data.toInt()));
 				break;
 			}
 

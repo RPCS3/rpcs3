@@ -2,11 +2,39 @@
 #include "GunCon3.h"
 #include "MouseHandler.h"
 #include "Emu/IdManager.h"
+#include "Emu/Io/guncon3_config.h"
 #include "Emu/Cell/lv2/sys_usbd.h"
 #include "Emu/system_config.h"
 #include "Input/pad_thread.h"
 
 LOG_CHANNEL(guncon3_log);
+
+template <>
+void fmt_class_string<guncon3_btn>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](guncon3_btn value)
+	{
+		switch (value)
+		{			
+		case guncon3_btn::trigger: return "Trigger";
+		case guncon3_btn::a1: return "A1";
+		case guncon3_btn::a2: return "A2";
+		case guncon3_btn::a3: return "A3";
+		case guncon3_btn::b1: return "B1";
+		case guncon3_btn::b2: return "B2";
+		case guncon3_btn::b3: return "B3";
+		case guncon3_btn::c1: return "C1";
+		case guncon3_btn::c2: return "C2";
+		case guncon3_btn::as_x: return "A-stick X-Axis";
+		case guncon3_btn::as_y: return "A-stick Y-Axis";
+		case guncon3_btn::bs_x: return "B-stick X-Axis";
+		case guncon3_btn::bs_y: return "B-stick Y-Axis";
+		case guncon3_btn::count: return "Count";
+		}
+
+		return unknown;
+	});
+}
 
 static const u8 KEY_TABLE[] = {
 	0x91, 0xFD, 0x4C, 0x8B, 0x20, 0xC1, 0x7C, 0x09, 0x58, 0x14, 0xF6, 0x00, 0x52, 0x55, 0xBF, 0x41,
@@ -196,82 +224,33 @@ void usb_device_guncon3::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint,
 		std::lock_guard lock(pad::g_pad_mutex);
 		const auto gamepad_handler = pad::get_current_handler();
 		const auto& pads = gamepad_handler->GetPads();
-
 		const auto& pad = ::at32(pads, m_controller_index);
 		if (pad->m_port_status & CELL_PAD_STATUS_CONNECTED)
 		{
-			for (const Button& button : pad->m_buttons)
+			const auto& cfg = ::at32(g_cfg_guncon3.players, m_controller_index);
+			cfg->handle_input(pad, true, [&](guncon3_btn btn, u16 value, bool pressed)
 			{
-				if (!button.m_pressed)
-				{
-					continue;
-				}
+				if (!pressed)
+					return;
 
-				if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL1)
+				switch (btn)
 				{
-					switch (button.m_outKeyCode)
-					{
-					case CELL_PAD_CTRL_L3:
-						gc.btn_a3 |= 1;
-						break;
-					case CELL_PAD_CTRL_R3:
-						gc.btn_b3 |= 1;
-						break;
-					case CELL_PAD_CTRL_SELECT:
-						gc.btn_c1 |= 1;
-						break;
-					case CELL_PAD_CTRL_START:
-						gc.btn_c2 |= 1;
-						break;
-					default:
-						break;
-					}
+				case guncon3_btn::trigger: gc.btn_trigger |= 1; break;
+				case guncon3_btn::a1: gc.btn_a1 |= 1; break;
+				case guncon3_btn::a2: gc.btn_a2 |= 1; break;
+				case guncon3_btn::a3: gc.btn_a3 |= 1; break;
+				case guncon3_btn::b1: gc.btn_b1 |= 1; break;
+				case guncon3_btn::b2: gc.btn_b2 |= 1; break;
+				case guncon3_btn::b3: gc.btn_b3 |= 1; break;
+				case guncon3_btn::c1: gc.btn_c1 |= 1; break;
+				case guncon3_btn::c2: gc.btn_c2 |= 1; break;
+				case guncon3_btn::as_x: gc.stick_ax = static_cast<uint8_t>(value); break;
+				case guncon3_btn::as_y: gc.stick_ay = static_cast<uint8_t>(value); break;
+				case guncon3_btn::bs_x: gc.stick_bx = static_cast<uint8_t>(value); break;
+				case guncon3_btn::bs_y: gc.stick_by = static_cast<uint8_t>(value); break;
+				case guncon3_btn::count: break;
 				}
-				else if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL2)
-				{
-					switch (button.m_outKeyCode)
-					{
-					case CELL_PAD_CTRL_CROSS:
-						gc.btn_trigger |= 1;
-						break;
-					case CELL_PAD_CTRL_L1:
-						gc.btn_a1 |= 1;
-						break;
-					case CELL_PAD_CTRL_L2:
-						gc.btn_a2 |= 1;
-						break;
-					case CELL_PAD_CTRL_R1:
-						gc.btn_b1 |= 1;
-						break;
-					case CELL_PAD_CTRL_R2:
-						gc.btn_b2 |= 1;
-						break;
-					default:
-						break;
-					}
-				}
-			}
-
-			for (const AnalogStick& stick : pad->m_sticks)
-			{
-				switch (stick.m_offset)
-				{
-				case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X:
-					gc.stick_ax = static_cast<uint8_t>(stick.m_value);
-					break;
-				case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y:
-					gc.stick_ay = static_cast<uint8_t>(stick.m_value);
-					break;
-				case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X:
-					gc.stick_bx = static_cast<uint8_t>(stick.m_value);
-					break;
-				case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y:
-					gc.stick_by = static_cast<uint8_t>(stick.m_value);
-					break;
-				default:
-					break;
-				}
-			}
+			});
 		}
 	}
 

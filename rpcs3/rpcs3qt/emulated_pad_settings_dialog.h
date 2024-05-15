@@ -19,7 +19,8 @@ public:
 		turntable,
 		ghltar,
 		usio,
-		ds3gem
+		ds3gem,
+		guncon3
 	};
 
 	emulated_pad_settings_dialog(pad_type type, QWidget* parent = nullptr);
