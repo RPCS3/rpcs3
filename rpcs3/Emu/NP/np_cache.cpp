@@ -248,7 +248,16 @@ namespace np
 			ptr_member->flagAttr      = member.flagAttr;
 		}
 
-		u32 needed_data_size = sizeof(SceNpOnlineName) + sizeof(SceNpAvatarUrl) + sizeof(SceNpMatching2RoomGroup);
+		u32 needed_data_size = 0;
+		
+		if (member.userInfo.onlineName)
+			needed_data_size += sizeof(SceNpOnlineName);
+		
+		if (member.userInfo.avatarUrl)
+			needed_data_size += sizeof(SceNpAvatarUrl);
+
+		if (member.group_id)
+			needed_data_size += sizeof(SceNpMatching2RoomGroup);
 
 		for (usz i = 0; i < binattrs_list.size(); i++)
 		{
