@@ -240,6 +240,7 @@
      <addaction name="confTurntableAct"/>
      <addaction name="confUSIOAct"/>
      <addaction name="confPSMoveDS3Act"/>
+     <addaction name="confGunCon3Act"/>
     </widget>
     <addaction name="confCPUAct"/>
     <addaction name="confGPUAct"/>
@@ -1322,6 +1323,11 @@
   <action name="confPSMoveDS3Act">
    <property name="text">
     <string>PS Move (Fake)</string>
+   </property>
+  </action>
+  <action name="confGunCon3Act">
+   <property name="text">
+    <string>GunCon 3</string>
    </property>
   </action>
  </widget>

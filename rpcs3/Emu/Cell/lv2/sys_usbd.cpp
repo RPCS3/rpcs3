@@ -19,6 +19,7 @@
 #include "Emu/Io/Infinity.h"
 #include "Emu/Io/GHLtar.h"
 #include "Emu/Io/ghltar_config.h"
+#include "Emu/Io/guncon3_config.h"
 #include "Emu/Io/Buzz.h"
 #include "Emu/Io/buzz_config.h"
 #include "Emu/Io/GameTablet.h"
@@ -41,6 +42,7 @@ cfg_buzz g_cfg_buzz;
 cfg_ghltars g_cfg_ghltar;
 cfg_turntables g_cfg_turntable;
 cfg_usios g_cfg_usio;
+cfg_guncon3 g_cfg_guncon3;
 
 template <>
 void fmt_class_string<libusb_transfer>::format(std::string& out, u64 arg)
@@ -851,6 +853,11 @@ void connect_usb_controller(u8 index, input::product_type type)
 
 	if (!already_connected && type == input::product_type::guncon_3)
 	{
+		if (!g_cfg_guncon3.load())
+		{
+			sys_usbd.notice("Could not load GunCon3 config. Using defaults.");
+		}
+
 		sys_usbd.success("Adding emulated GunCon3 (controller %d)", index);
 		std::shared_ptr<usb_device> dev = std::make_shared<usb_device_guncon3>(index, usbh.get_new_location());
 		usbh.connect_usb_device(dev, true);
