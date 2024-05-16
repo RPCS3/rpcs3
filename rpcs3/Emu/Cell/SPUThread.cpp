@@ -5319,7 +5319,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 						atomic_wait_engine::set_one_time_use_wait_callback(+[](u64) -> bool
 						{
 							const auto _this = static_cast<spu_thread*>(cpu_thread::get_current());
-							AUDIT(_this->get_class() == thread_class::ppu);
+							AUDIT(_this->get_class() == thread_class::spu);
 
 							return !_this->is_stopped();
 						});
