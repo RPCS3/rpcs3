@@ -1044,7 +1044,7 @@ error_code sceNpMatching2GetRoomMemberDataInternalLocal(SceNpMatching2ContextId 
 		return SCE_NP_MATCHING2_ERROR_CONTEXT_NOT_FOUND;
 	}
 
-	return nph.local_get_room_member_data(roomId, memberId, binattrs_list, member ? member.get_ptr() : nullptr, buf.addr(), bufLen);
+	return nph.local_get_room_member_data(roomId, memberId, binattrs_list, member ? member.get_ptr() : nullptr, buf.addr(), bufLen, ctxId);
 }
 
 error_code sceNpMatching2GetCbQueueInfo(SceNpMatching2ContextId ctxId, vm::ptr<SceNpMatching2CbQueueInfo> queueInfo)
@@ -1309,7 +1309,7 @@ error_code sceNpMatching2CreateContext(
 		return SCE_NP_MATCHING2_ERROR_NOT_NP_SIGN_IN;
 	}
 
-	*ctxId = create_match2_context(commId, passPhrase);
+	*ctxId = create_match2_context(commId, passPhrase, option);
 
 	return CELL_OK;
 }

@@ -23,10 +23,11 @@ namespace np
 		}
 
 		u32 event_key = get_event_key();
+		auto [include_onlinename, include_avatarurl] = get_match2_context_options(room_event_cb_ctx);
 
 		auto& edata      = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_RoomMemberUpdateInfo, sizeof(SceNpMatching2RoomMemberUpdateInfo));
 		auto* notif_data = reinterpret_cast<SceNpMatching2RoomMemberUpdateInfo*>(edata.data());
-		RoomMemberUpdateInfo_to_SceNpMatching2RoomMemberUpdateInfo(edata, update_info, notif_data);
+		RoomMemberUpdateInfo_to_SceNpMatching2RoomMemberUpdateInfo(edata, update_info, notif_data, include_onlinename, include_avatarurl);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
 		if (!np_cache.add_member(room_id, notif_data->roomMemberDataInternal.get_ptr()))
@@ -58,10 +59,11 @@ namespace np
 		}
 
 		u32 event_key = get_event_key();
+		auto [include_onlinename, include_avatarurl] = get_match2_context_options(room_event_cb_ctx);
 
 		auto& edata      = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_RoomMemberUpdateInfo, sizeof(SceNpMatching2RoomMemberUpdateInfo));
 		auto* notif_data = reinterpret_cast<SceNpMatching2RoomMemberUpdateInfo*>(edata.data());
-		RoomMemberUpdateInfo_to_SceNpMatching2RoomMemberUpdateInfo(edata, update_info, notif_data);
+		RoomMemberUpdateInfo_to_SceNpMatching2RoomMemberUpdateInfo(edata, update_info, notif_data, include_onlinename, include_avatarurl);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
 		if (!np_cache.del_member(room_id, notif_data->roomMemberDataInternal->memberId))
@@ -127,10 +129,11 @@ namespace np
 		}
 
 		u32 event_key = get_event_key();
+		auto [include_onlinename, include_avatarurl] = get_match2_context_options(room_event_cb_ctx);
 
 		auto& edata      = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_RoomDataInternalUpdateInfo, sizeof(SceNpMatching2RoomDataInternalUpdateInfo));
 		auto* notif_data = reinterpret_cast<SceNpMatching2RoomDataInternalUpdateInfo*>(edata.data());
-		RoomDataInternalUpdateInfo_to_SceNpMatching2RoomDataInternalUpdateInfo(edata, update_info, notif_data, npid);
+		RoomDataInternalUpdateInfo_to_SceNpMatching2RoomDataInternalUpdateInfo(edata, update_info, notif_data, npid, include_onlinename, include_avatarurl);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
 		np_cache.insert_room(notif_data->newRoomDataInternal.get_ptr());
@@ -162,10 +165,11 @@ namespace np
 		}
 
 		u32 event_key = get_event_key();
+		auto [include_onlinename, include_avatarurl] = get_match2_context_options(room_event_cb_ctx);
 
 		auto& edata      = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_RoomMemberDataInternalUpdateInfo, sizeof(SceNpMatching2RoomMemberDataInternalUpdateInfo));
 		auto* notif_data = reinterpret_cast<SceNpMatching2RoomMemberDataInternalUpdateInfo*>(edata.data());
-		RoomMemberDataInternalUpdateInfo_to_SceNpMatching2RoomMemberDataInternalUpdateInfo(edata, update_info, notif_data);
+		RoomMemberDataInternalUpdateInfo_to_SceNpMatching2RoomMemberDataInternalUpdateInfo(edata, update_info, notif_data, include_onlinename, include_avatarurl);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
 		if (!np_cache.add_member(room_id, notif_data->newRoomMemberDataInternal.get_ptr()))
@@ -198,10 +202,11 @@ namespace np
 		}
 
 		u32 event_key = get_event_key();
+		auto [include_onlinename, include_avatarurl] = get_match2_context_options(room_event_cb_ctx);
 
 		auto& edata      = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_RoomMessageInfo, sizeof(SceNpMatching2RoomMessageInfo));
 		auto* notif_data = reinterpret_cast<SceNpMatching2RoomMessageInfo*>(edata.data());
-		RoomMessageInfo_to_SceNpMatching2RoomMessageInfo(edata, message_info, notif_data);
+		RoomMessageInfo_to_SceNpMatching2RoomMessageInfo(edata, message_info, notif_data, include_onlinename, include_avatarurl);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
 		rpcn_log.notice("Received notification of a room message from member(%d) in room(%d)", member_id, room_id);

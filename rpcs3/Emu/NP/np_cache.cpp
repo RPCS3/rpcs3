@@ -220,7 +220,7 @@ namespace np
 		return {CELL_OK, rooms[room_id].password};
 	}
 
-	error_code cache_manager::get_member_and_attrs(SceNpMatching2RoomId room_id, SceNpMatching2RoomMemberId member_id, const std::vector<SceNpMatching2AttributeId>& binattrs_list, SceNpMatching2RoomMemberDataInternal* ptr_member, u32 addr_data, u32 size_data)
+	error_code cache_manager::get_member_and_attrs(SceNpMatching2RoomId room_id, SceNpMatching2RoomMemberId member_id, const std::vector<SceNpMatching2AttributeId>& binattrs_list, SceNpMatching2RoomMemberDataInternal* ptr_member, u32 addr_data, u32 size_data, bool include_onlinename, bool include_avatarurl)
 	{
 		std::lock_guard lock(mutex);
 
@@ -249,11 +249,11 @@ namespace np
 		}
 
 		u32 needed_data_size = 0;
-		
-		if (member.userInfo.onlineName)
+
+		if (include_onlinename && member.userInfo.onlineName)
 			needed_data_size += sizeof(SceNpOnlineName);
-		
-		if (member.userInfo.avatarUrl)
+
+		if (include_avatarurl && member.userInfo.avatarUrl)
 			needed_data_size += sizeof(SceNpAvatarUrl);
 
 		if (member.group_id)
@@ -280,13 +280,13 @@ namespace np
 		memory_allocator mem;
 		mem.setup(vm::ptr<void>(vm::cast(addr_data)), size_data);
 
-		if (member.userInfo.onlineName)
+		if (include_onlinename && member.userInfo.onlineName)
 		{
 			ptr_member->userInfo.onlineName.set(mem.allocate(sizeof(SceNpOnlineName)));
 			memcpy(ptr_member->userInfo.onlineName.get_ptr(), &member.userInfo.onlineName.value(), sizeof(SceNpOnlineName));
 		}
 
-		if (member.userInfo.avatarUrl)
+		if (include_avatarurl && member.userInfo.avatarUrl)
 		{
 			ptr_member->userInfo.avatarUrl.set(mem.allocate(sizeof(SceNpAvatarUrl)));
 			memcpy(ptr_member->userInfo.avatarUrl.get_ptr(), &member.userInfo.avatarUrl.value(), sizeof(SceNpAvatarUrl));
