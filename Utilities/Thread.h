@@ -21,10 +21,10 @@ enum class native_core_arrangement : u32
 
 enum class thread_class : u32
 {
-	general,
-	rsx,
-	spu,
-	ppu
+	general = 0,
+	ppu = 1,
+	spu = 2,
+	rsx = 0x55,
 };
 
 enum class thread_state : u32
@@ -35,17 +35,6 @@ enum class thread_state : u32
 	finished = 3,  // Final state, always set at the end of thread execution
 	mask = 3
 };
-
-static inline thread_class get_thread_class(u32 thread_id_type)
-{
-	switch (thread_id_type)
-	{
-	case 1: return thread_class::ppu;
-	case 2: return thread_class::spu;
-	case 0x55: return thread_class::rsx;
-	default: return thread_class::general;
-	}
-}
 
 template <class Context>
 class named_thread;

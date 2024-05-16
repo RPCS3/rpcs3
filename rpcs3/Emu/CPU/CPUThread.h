@@ -120,7 +120,7 @@ public:
 
 	thread_class get_class() const
 	{
-		return get_thread_class(id_type());
+		return static_cast<thread_class>(id_type()); // Static cast for performance reasons
 	}
 
 	template <DerivedFrom<cpu_thread> T>
