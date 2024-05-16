@@ -20,7 +20,7 @@ namespace rsx
 			RSX(ctx)->m_graphics_state |= rsx::pipeline_state::fragment_program_ucode_dirty;
 		}
 
-		void set_transform_constant::decode_one(context* ctx, u32 reg, u32 arg)
+		void set_transform_constant::decode_one([[maybe_unused]] context* ctx, u32 reg, u32 arg)
 		{
 			const u32 index = reg - NV4097_SET_TRANSFORM_CONSTANT;
 			const u32 constant_id = index / 4;
@@ -44,7 +44,7 @@ namespace rsx
 			RSX(ctx)->patch_transform_constants(ctx, load + constant_id, last_constant_id - constant_id);
 		}
 
-		void set_transform_constant::impl(context* ctx, u32 reg, u32 arg)
+		void set_transform_constant::impl(context* ctx, u32 reg, [[maybe_unused]] u32 arg)
 		{
 			const u32 index = reg - NV4097_SET_TRANSFORM_CONSTANT;
 			const u32 constant_id = index / 4;

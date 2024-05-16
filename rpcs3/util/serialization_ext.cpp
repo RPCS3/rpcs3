@@ -855,8 +855,6 @@ bool compressed_zstd_serialization_file_handler::handle_file_op(utils::serial& a
 			return false;
 		}
 
-		auto& manager = *m_stream;
-
 		if (data)
 		{
 			ensure(false);
@@ -1253,7 +1251,6 @@ void compressed_zstd_serialization_file_handler::stream_data_prepare_thread_op()
 			break;
 		}
 
-		usz buffer_offset = 0;
 		stream_data.resize(::ZSTD_compressBound(data->size()));
 		const usz out_size = ZSTD_compressCCtx(m_zc, stream_data.data(), stream_data.size(), data->data(), data->size(), ZSTD_btultra);
 
@@ -1301,7 +1298,6 @@ void compressed_zstd_serialization_file_handler::file_writer_thread_op()
 			break;
 		}
 
-		const usz last_size = data->size();
 		m_file->write(*data);
 	}
 }
