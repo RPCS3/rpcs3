@@ -2912,7 +2912,7 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
 							spu_mask = 0b0000101010101010;
 							rsx_mask = 0b1000000000000000;
 						}
-						else
+						else // if (g_cfg.core.thread_scheduler == thread_scheduler_mode::old)
 						{
 							ppu_mask = 0b1111111100000000;
 							spu_mask = ppu_mask;
@@ -2953,7 +2953,7 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
 						spu_mask = 0b1111111100000000;
 						rsx_mask = 0b0000000000001111;
 					}
-					else
+					else // if (g_cfg.core.thread_scheduler == thread_scheduler_mode::old)
 					{
 						// Verified by more than one windows user on 16-thread CPU
 						ppu_mask = spu_mask = rsx_mask = (0b10101010101010101010101010101010 & all_cores_mask);
@@ -2967,7 +2967,7 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
 						spu_mask = 0b111111110000;
 						rsx_mask = 0b000000000011;
 					}
-					else
+					else // if (g_cfg.core.thread_scheduler == thread_scheduler_mode::old)
 					{
 						ppu_mask = spu_mask = rsx_mask = all_cores_mask;
 					}
