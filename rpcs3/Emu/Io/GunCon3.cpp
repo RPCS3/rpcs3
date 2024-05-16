@@ -93,7 +93,7 @@ static void guncon3_encode(const GunCon3_data* gc, u8* data, const u8* key)
 {
 	std::memcpy(data, gc, sizeof(GunCon3_data));
 
-	u8 key_offset = ((key[1] ^ key[2]) - key[3] - key[4] ^ key[5]) + key[6] - key[7] ^ data[14];
+	u8 key_offset = ((key[1] ^ key[2]) - key[3] - (key[4] ^ key[5])) + key[6] - (key[7] ^ data[14]);
 	u8 key_index = 0;
 
 	for (int i = 0; i < 13; i++)
@@ -118,9 +118,9 @@ static void guncon3_encode(const GunCon3_data* gc, u8* data, const u8* key)
 		data[i] = byte;
 	}
 
-	data[13] = ((key[7] + data[0] - data[1] - data[2] ^ data[3])
-			 + data[4] + data[5] ^ data[6] ^ data[7])
-			 + data[8] + data[9] - data[10] - data[11] ^ data[12];
+	data[13] = ((key[7] + data[0] - data[1] - (data[2] ^ data[3]))
+			 + data[4] + (data[5] ^ (data[6] ^ data[7])))
+			 + data[8] + data[9] - data[10] - (data[11] ^ data[12]);
 }
 
 usb_device_guncon3::usb_device_guncon3(u32 controller_index, const std::array<u8, 7>& location)
@@ -197,7 +197,7 @@ void usb_device_guncon3::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint,
 
 	if ((endpoint & 0x80) == LIBUSB_ENDPOINT_OUT)
 	{
-		std::memcpy(m_key, buf, std::min(buf_size, static_cast<u32>(sizeof(m_key))));
+		std::memcpy(m_key.data(), buf, std::min<usz>(buf_size, m_key.size()));
 		return;
 	}
 	// else ENDPOINT_IN
@@ -209,14 +209,14 @@ void usb_device_guncon3::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint,
 
 	if (!is_input_allowed())
 	{
-		guncon3_encode(&gc, buf, m_key);
+		guncon3_encode(&gc, buf, m_key.data());
 		return;
 	}
 
 	if (g_cfg.io.mouse == mouse_handler::null)
 	{
 		guncon3_log.warning("GunCon3 requires a Mouse Handler enabled");
-		guncon3_encode(&gc, buf, m_key);
+		guncon3_encode(&gc, buf, m_key.data());
 		return;
 	}
 
@@ -262,14 +262,14 @@ void usb_device_guncon3::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint,
 
 		if (m_controller_index >= mouse_handler.GetMice().size())
 		{
-			guncon3_encode(&gc, buf, m_key);
+			guncon3_encode(&gc, buf, m_key.data());
 			return;
 		}
 
 		const Mouse& mouse_data = ::at32(mouse_handler.GetMice(), m_controller_index);
 		if (mouse_data.x_max <= 0 || mouse_data.y_max <= 0)
 		{
-			guncon3_encode(&gc, buf, m_key);
+			guncon3_encode(&gc, buf, m_key.data());
 			return;
 		}
 
@@ -280,5 +280,5 @@ void usb_device_guncon3::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint,
 		gc.btn_trigger |= !!(mouse_data.buttons & CELL_MOUSE_BUTTON_1);
 	}
 
-	guncon3_encode(&gc, buf, m_key);
+	guncon3_encode(&gc, buf, m_key.data());
 }

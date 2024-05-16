@@ -13,5 +13,5 @@ public:
 
 private:
 	u32 m_controller_index;
-	u8 m_key[8];
+	std::array<u8, 8> m_key{};
 };
