@@ -120,7 +120,7 @@ public:
 
 	thread_class get_class() const
 	{
-		return m_class;
+		return get_thread_class(id_type());
 	}
 
 	template <DerivedFrom<cpu_thread> T>
@@ -301,7 +301,6 @@ public:
 
 private:
 	static thread_local cpu_thread* g_tls_this_thread;
-	const thread_class m_class;
 };
 
 template <DerivedFrom<cpu_thread> T = cpu_thread>

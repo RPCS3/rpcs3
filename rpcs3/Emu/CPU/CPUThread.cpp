@@ -676,7 +676,6 @@ cpu_thread::~cpu_thread()
 
 cpu_thread::cpu_thread(u32 id)
 	: id(id)
-	, m_class(get_thread_class(id_type()))
 {
 	while (Emu.GetStatus() == system_state::paused)
 	{
