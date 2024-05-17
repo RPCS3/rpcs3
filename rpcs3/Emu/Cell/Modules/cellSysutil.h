@@ -323,6 +323,26 @@ struct SysutilEventStatus
 	atomic_t<bool> active = false;
 };
 
+extern atomic_t<usz> g_sysutil_callback_id_assigner;
+
+extern void sysutil_register_cb_with_id_internal(std::function<s32(ppu_thread&)>&& cb, usz call_id);
+extern void sysutil_unregister_cb_with_id_internal(usz call_id);
+
+template <typename T>
+const usz g_sysutil_dispatcher_id = g_sysutil_callback_id_assigner++;
+
+template <typename T>
+void sysutil_register_cb_with_id(std::function<s32(ppu_thread&)>&& cb)
+{
+	sysutil_register_cb_with_id_internal(std::move(cb), g_sysutil_dispatcher_id<T>);
+}
+
+template <typename T>
+void sysutil_unregister_cb_with_id()
+{
+	sysutil_unregister_cb_with_id_internal(g_sysutil_dispatcher_id<T>);
+}
+
 using SysutilMenuOpenStatus = SysutilEventStatus<CELL_SYSUTIL_SYSTEM_MENU_OPEN>;
 
 extern void sysutil_register_cb(std::function<s32(ppu_thread&)>&&);
