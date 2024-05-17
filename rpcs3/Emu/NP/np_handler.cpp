@@ -1594,9 +1594,10 @@ namespace np
 		return np_cache.get_memberids(room_id, sort_method);
 	}
 
-	error_code np_handler::local_get_room_member_data(SceNpMatching2RoomId room_id, SceNpMatching2RoomMemberId member_id, const std::vector<SceNpMatching2AttributeId>& binattrs_list, SceNpMatching2RoomMemberDataInternal* ptr_member, u32 addr_data, u32 size_data)
+	error_code np_handler::local_get_room_member_data(SceNpMatching2RoomId room_id, SceNpMatching2RoomMemberId member_id, const std::vector<SceNpMatching2AttributeId>& binattrs_list, SceNpMatching2RoomMemberDataInternal* ptr_member, u32 addr_data, u32 size_data, u32 ctx_id)
 	{
-		return np_cache.get_member_and_attrs(room_id, member_id, binattrs_list, ptr_member, addr_data, size_data);
+		auto [include_onlinename, include_avatarurl] = get_match2_context_options(ctx_id);
+		return np_cache.get_member_and_attrs(room_id, member_id, binattrs_list, ptr_member, addr_data, size_data, include_onlinename, include_avatarurl);
 	}
 
 	void np_handler::upnp_add_port_mapping(u16 internal_port, std::string_view protocol)
@@ -1607,5 +1608,18 @@ namespace np
 	void np_handler::upnp_remove_port_mapping(u16 internal_port, std::string_view protocol)
 	{
 		upnp.remove_port_redir(internal_port, protocol);
+	}
+
+	std::pair<bool, bool> np_handler::get_match2_context_options(u32 ctx_id)
+	{
+		bool include_onlinename = false, include_avatarurl = false;
+
+		if (auto ctx = get_match2_context(ctx_id))
+		{
+			include_onlinename = ctx->include_onlinename;
+			include_avatarurl = ctx->include_avatarurl;
+		}
+
+		return {include_onlinename, include_avatarurl};
 	}
 } // namespace np

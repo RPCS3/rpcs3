@@ -187,11 +187,12 @@ namespace np
 			return error_and_disconnect("Malformed reply to CreateRoom command");
 
 		u32 event_key = get_event_key();
+		auto [include_onlinename, include_avatarurl] = get_match2_context_options(cb_info_opt->ctx_id);
 
 		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_CreateJoinRoom, sizeof(SceNpMatching2CreateJoinRoomResponse));
 		auto* room_resp = reinterpret_cast<SceNpMatching2CreateJoinRoomResponse*>(edata.data());
 		auto* room_info = edata.allocate<SceNpMatching2RoomDataInternal>(sizeof(SceNpMatching2RoomDataInternal), room_resp->roomDataInternal);
-		RoomDataInternal_to_SceNpMatching2RoomDataInternal(edata, resp, room_info, npid);
+		RoomDataInternal_to_SceNpMatching2RoomDataInternal(edata, resp, room_info, npid, include_onlinename, include_avatarurl);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
 		np_cache.insert_room(room_info);
@@ -253,11 +254,12 @@ namespace np
 			return error_and_disconnect("Malformed reply to JoinRoom command");
 
 		u32 event_key = get_event_key();
+		auto [include_onlinename, include_avatarurl] = get_match2_context_options(cb_info_opt->ctx_id);
 
 		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_JoinRoom, sizeof(SceNpMatching2JoinRoomResponse));
 		auto* room_resp = reinterpret_cast<SceNpMatching2JoinRoomResponse*>(edata.data());
 		auto* room_info = edata.allocate<SceNpMatching2RoomDataInternal>(sizeof(SceNpMatching2RoomDataInternal), room_resp->roomDataInternal);
-		RoomDataInternal_to_SceNpMatching2RoomDataInternal(edata, resp, room_info, npid);
+		RoomDataInternal_to_SceNpMatching2RoomDataInternal(edata, resp, room_info, npid, include_onlinename, include_avatarurl);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
 		np_cache.insert_room(room_info);
@@ -334,6 +336,7 @@ namespace np
 
 		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_SearchRoom, sizeof(SceNpMatching2SearchRoomResponse));
 		auto* search_resp = reinterpret_cast<SceNpMatching2SearchRoomResponse*>(edata.data());
+		// The online_name and avatar_url are naturally filtered by the reply from the server
 		SearchRoomResponse_to_SceNpMatching2SearchRoomResponse(edata, resp, search_resp);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
@@ -372,10 +375,11 @@ namespace np
 			return error_and_disconnect("Malformed reply to GetRoomDataExternalList command");
 
 		u32 event_key = get_event_key();
+		auto [include_onlinename, include_avatarurl] = get_match2_context_options(cb_info_opt->ctx_id);
 
 		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_GetRoomDataExternalList, sizeof(SceNpMatching2GetRoomDataExternalListResponse));
 		auto* sce_get_room_ext_resp = reinterpret_cast<SceNpMatching2GetRoomDataExternalListResponse*>(edata.data());
-		GetRoomDataExternalListResponse_to_SceNpMatching2GetRoomDataExternalListResponse(edata, resp, sce_get_room_ext_resp);
+		GetRoomDataExternalListResponse_to_SceNpMatching2GetRoomDataExternalListResponse(edata, resp, sce_get_room_ext_resp, include_onlinename, include_avatarurl);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
 		extra_nps::print_get_roomdata_external_list_resp(sce_get_room_ext_resp);
@@ -440,11 +444,12 @@ namespace np
 			return error_and_disconnect("Malformed reply to GetRoomDataInternal command");
 
 		u32 event_key = get_event_key();
+		auto [include_onlinename, include_avatarurl] = get_match2_context_options(cb_info_opt->ctx_id);
 
 		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_GetRoomDataInternal, sizeof(SceNpMatching2GetRoomDataInternalResponse));
 		auto* room_resp = reinterpret_cast<SceNpMatching2GetRoomDataInternalResponse*>(edata.data());
 		auto* room_info = edata.allocate<SceNpMatching2RoomDataInternal>(sizeof(SceNpMatching2RoomDataInternal), room_resp->roomDataInternal);
-		RoomDataInternal_to_SceNpMatching2RoomDataInternal(edata, resp, room_info, npid);
+		RoomDataInternal_to_SceNpMatching2RoomDataInternal(edata, resp, room_info, npid, include_onlinename, include_avatarurl);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
 		np_cache.insert_room(room_info);
@@ -527,11 +532,12 @@ namespace np
 			return error_and_disconnect("Malformed reply to GetRoomMemberDataInternal command");
 
 		u32 event_key = get_event_key();
+		auto [include_onlinename, include_avatarurl] = get_match2_context_options(cb_info_opt->ctx_id);
 
 		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_GetRoomMemberDataInternal, sizeof(SceNpMatching2GetRoomMemberDataInternalResponse));
 		auto* mdata_resp = reinterpret_cast<SceNpMatching2GetRoomMemberDataInternalResponse*>(edata.data());
 		auto* mdata_info = edata.allocate<SceNpMatching2RoomMemberDataInternal>(sizeof(SceNpMatching2RoomMemberDataInternal), mdata_resp->roomMemberDataInternal);
-		RoomMemberDataInternal_to_SceNpMatching2RoomMemberDataInternal(edata, resp, nullptr, mdata_info);
+		RoomMemberDataInternal_to_SceNpMatching2RoomMemberDataInternal(edata, resp, nullptr, mdata_info, include_onlinename, include_avatarurl);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
 		cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());

@@ -184,7 +184,7 @@ bool destroy_score_transaction_context(s32 ctx_id);
 // Match2 related
 struct match2_ctx
 {
-	match2_ctx(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpCommunicationPassphrase> passphrase);
+	match2_ctx(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpCommunicationPassphrase> passphrase, s32 option);
 
 	static const u32 id_base  = 1;
 	static const u32 id_step  = 1;
@@ -195,6 +195,7 @@ struct match2_ctx
 
 	SceNpCommunicationId communicationId{};
 	SceNpCommunicationPassphrase passphrase{};
+	bool include_onlinename = false, include_avatarurl = false;
 
 	vm::ptr<SceNpMatching2ContextCallback> context_callback{};
 	vm::ptr<void> context_callback_param{};
@@ -204,7 +205,7 @@ struct match2_ctx
 	vm::ptr<SceNpMatching2SignalingCallback> signaling_cb{};
 	vm::ptr<void> signaling_cb_arg{};
 };
-u16 create_match2_context(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpCommunicationPassphrase> passphrase);
+u16 create_match2_context(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpCommunicationPassphrase> passphrase, s32 option);
 bool check_match2_context(u16 ctx_id);
 std::shared_ptr<match2_ctx> get_match2_context(u16 ctx_id);
 bool destroy_match2_context(u16 ctx_id);
