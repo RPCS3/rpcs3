@@ -1,80 +1,110 @@
-/* Lzma2DecMt.h -- LZMA2 Decoder Multi-thread
-2023-04-13 : Igor Pavlov : Public domain */
+/* Lzma86.h -- LZMA + x86 (BCJ) Filter
+2023-03-03 : Igor Pavlov : Public domain */
 
-#ifndef ZIP7_INC_LZMA2_DEC_MT_H
-#define ZIP7_INC_LZMA2_DEC_MT_H
+#ifndef ZIP7_INC_LZMA86_H
+#define ZIP7_INC_LZMA86_H
 
 #include "7zTypes.h"
 
 EXTERN_C_BEGIN
 
-typedef struct
-{
-  size_t inBufSize_ST;
-  size_t outStep_ST;
-  
-  #ifndef Z7_ST
-  unsigned numThreads;
-  size_t inBufSize_MT;
-  size_t outBlockMax;
-  size_t inBlockMax;
-  #endif
-} CLzma2DecMtProps;
+#define LZMA86_SIZE_OFFSET (1 + 5)
+#define LZMA86_HEADER_SIZE (LZMA86_SIZE_OFFSET + 8)
 
-/* init to single-thread mode */
-void Lzma2DecMtProps_Init(CLzma2DecMtProps *p);
+/*
+It's an example for LZMA + x86 Filter use.
+You can use .lzma86 extension, if you write that stream to file.
+.lzma86 header adds one additional byte to standard .lzma header.
+.lzma86 header (14 bytes):
+  Offset Size  Description
+    0     1    = 0 - no filter, pure LZMA
+               = 1 - x86 filter + LZMA
+    1     1    lc, lp and pb in encoded form
+    2     4    dictSize (little endian)
+    6     8    uncompressed size (little endian)
 
 
-/* ---------- CLzma2DecMtHandle Interface ---------- */
+Lzma86_Encode
+-------------
+level - compression level: 0 <= level <= 9, the default value for "level" is 5.
 
-/* Lzma2DecMt_ * functions can return the following exit codes:
-SRes:
-  SZ_OK           - OK
-  SZ_ERROR_MEM    - Memory allocation error
-  SZ_ERROR_PARAM  - Incorrect paramater in props
-  SZ_ERROR_WRITE  - ISeqOutStream write callback error
-  // SZ_ERROR_OUTPUT_EOF - output buffer overflow - version with (Byte *) output
-  SZ_ERROR_PROGRESS - some break from progress callback
-  SZ_ERROR_THREAD - error in multithreading functions (only for Mt version)
+dictSize - The dictionary size in bytes. The maximum value is
+        128 MB = (1 << 27) bytes for 32-bit version
+          1 GB = (1 << 30) bytes for 64-bit version
+     The default value is 16 MB = (1 << 24) bytes, for level = 5.
+     It's recommended to use the dictionary that is larger than 4 KB and
+     that can be calculated as (1 << N) or (3 << N) sizes.
+     For better compression ratio dictSize must be >= inSize.
+
+filterMode:
+    SZ_FILTER_NO   - no Filter
+    SZ_FILTER_YES  - x86 Filter
+    SZ_FILTER_AUTO - it tries both alternatives to select best.
+              Encoder will use 2 or 3 passes:
+              2 passes when FILTER_NO provides better compression.
+              3 passes when FILTER_YES provides better compression.
+
+Lzma86Encode allocates Data with MyAlloc functions.
+RAM Requirements for compressing:
+  RamSize = dictionarySize * 11.5 + 6MB + FilterBlockSize
+      filterMode     FilterBlockSize
+     SZ_FILTER_NO         0
+     SZ_FILTER_YES      inSize
+     SZ_FILTER_AUTO     inSize
+
+
+Return code:
+  SZ_OK               - OK
+  SZ_ERROR_MEM        - Memory allocation error
+  SZ_ERROR_PARAM      - Incorrect paramater
+  SZ_ERROR_OUTPUT_EOF - output buffer overflow
+  SZ_ERROR_THREAD     - errors in multithreading functions (only for Mt version)
 */
 
-typedef struct CLzma2DecMt CLzma2DecMt;
-typedef CLzma2DecMt * CLzma2DecMtHandle;
-// Z7_DECLARE_HANDLE(CLzma2DecMtHandle)
+enum ESzFilterMode
+{
+  SZ_FILTER_NO,
+  SZ_FILTER_YES,
+  SZ_FILTER_AUTO
+};
 
-CLzma2DecMtHandle Lzma2DecMt_Create(ISzAllocPtr alloc, ISzAllocPtr allocMid);
-void Lzma2DecMt_Destroy(CLzma2DecMtHandle p);
-
-SRes Lzma2DecMt_Decode(CLzma2DecMtHandle p,
-    Byte prop,
-    const CLzma2DecMtProps *props,
-    ISeqOutStreamPtr outStream,
-    const UInt64 *outDataSize, // NULL means undefined
-    int finishMode,            // 0 - partial unpacking is allowed, 1 - if lzma2 stream must be finished
-    // Byte *outBuf, size_t *outBufSize,
-    ISeqInStreamPtr inStream,
-    // const Byte *inData, size_t inDataSize,
-    
-    // out variables:
-    UInt64 *inProcessed,
-    int *isMT,  /* out: (*isMT == 0), if single thread decoding was used */
-
-    // UInt64 *outProcessed,
-    ICompressProgressPtr progress);
+SRes Lzma86_Encode(Byte *dest, size_t *destLen, const Byte *src, size_t srcLen,
+    int level, UInt32 dictSize, int filterMode);
 
 
-/* ---------- Read from CLzma2DecMtHandle Interface ---------- */
+/*
+Lzma86_GetUnpackSize:
+  In:
+    src      - input data
+    srcLen   - input data size
+  Out:
+    unpackSize - size of uncompressed stream
+  Return code:
+    SZ_OK               - OK
+    SZ_ERROR_INPUT_EOF  - Error in headers
+*/
 
-SRes Lzma2DecMt_Init(CLzma2DecMtHandle pp,
-    Byte prop,
-    const CLzma2DecMtProps *props,
-    const UInt64 *outDataSize, int finishMode,
-    ISeqInStreamPtr inStream);
+SRes Lzma86_GetUnpackSize(const Byte *src, SizeT srcLen, UInt64 *unpackSize);
 
-SRes Lzma2DecMt_Read(CLzma2DecMtHandle pp,
-    Byte *data, size_t *outSize,
-    UInt64 *inStreamProcessed);
+/*
+Lzma86_Decode:
+  In:
+    dest     - output data
+    destLen  - output data size
+    src      - input data
+    srcLen   - input data size
+  Out:
+    destLen  - processed output size
+    srcLen   - processed input size
+  Return code:
+    SZ_OK           - OK
+    SZ_ERROR_DATA  - Data error
+    SZ_ERROR_MEM   - Memory allocation error
+    SZ_ERROR_UNSUPPORTED - unsupported file
+    SZ_ERROR_INPUT_EOF - it needs more bytes in input buffer
+*/
 
+SRes Lzma86_Decode(Byte *dest, SizeT *destLen, const Byte *src, SizeT *srcLen);
 
 EXTERN_C_END
 

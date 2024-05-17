@@ -1,5 +1,5 @@
 /* 7zCrc.h -- CRC32 calculation
-2023-04-02 : Igor Pavlov : Public domain */
+2024-01-22 : Igor Pavlov : Public domain */
 
 #ifndef ZIP7_INC_7Z_CRC_H
 #define ZIP7_INC_7Z_CRC_H
@@ -20,7 +20,8 @@ void Z7_FASTCALL CrcGenerateTable(void);
 UInt32 Z7_FASTCALL CrcUpdate(UInt32 crc, const void *data, size_t size);
 UInt32 Z7_FASTCALL CrcCalc(const void *data, size_t size);
 
-typedef UInt32 (Z7_FASTCALL *CRC_FUNC)(UInt32 v, const void *data, size_t size, const UInt32 *table);
+typedef UInt32 (Z7_FASTCALL *Z7_CRC_UPDATE_FUNC)(UInt32 v, const void *data, size_t size);
+Z7_CRC_UPDATE_FUNC z7_GetFunc_CrcUpdate(unsigned algo);
 
 EXTERN_C_END
 

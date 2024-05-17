@@ -1,5 +1,5 @@
 /* 7zArcIn.c -- 7z Input functions
-2023-05-11 : Igor Pavlov : Public domain */
+2023-09-07 : Igor Pavlov : Public domain */
 
 #include "Precomp.h"
 
@@ -301,7 +301,7 @@ static SRes RememberBitVector(CSzData *sd, UInt32 numItems, const Byte **v)
 
 static UInt32 CountDefinedBits(const Byte *bits, UInt32 numItems)
 {
-  Byte b = 0;
+  unsigned b = 0;
   unsigned m = 0;
   UInt32 sum = 0;
   for (; numItems != 0; numItems--)
@@ -312,7 +312,7 @@ static UInt32 CountDefinedBits(const Byte *bits, UInt32 numItems)
       m = 8;
     }
     m--;
-    sum += ((b >> m) & 1);
+    sum += (UInt32)((b >> m) & 1);
   }
   return sum;
 }

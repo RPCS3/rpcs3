@@ -1,535 +1,290 @@
-/* Alloc.c -- Memory allocation functions
-2023-04-02 : Igor Pavlov : Public domain */
+/* Bcj2.c -- BCJ2 Decoder (Converter for x86 code)
+2023-03-01 : Igor Pavlov : Public domain */
 
 #include "Precomp.h"
 
-#ifdef _WIN32
-#include "7zWindows.h"
-#endif
-#include <stdlib.h>
+#include "Bcj2.h"
+#include "CpuArch.h"
 
-#include "Alloc.h"
+#define kTopValue ((UInt32)1 << 24)
+#define kNumBitModelTotalBits 11
+#define kBitModelTotal (1 << kNumBitModelTotalBits)
+#define kNumMoveBits 5
 
-#ifdef _WIN32
-#ifdef Z7_LARGE_PAGES
-#if defined(__clang__) || defined(__GNUC__)
-typedef void (*Z7_voidFunction)(void);
-#define MY_CAST_FUNC (Z7_voidFunction)
-#elif defined(_MSC_VER) && _MSC_VER > 1920
-#define MY_CAST_FUNC  (void *)
-// #pragma warning(disable : 4191) // 'type cast': unsafe conversion from 'FARPROC' to 'void (__cdecl *)()'
-#else
-#define MY_CAST_FUNC
-#endif
-#endif // Z7_LARGE_PAGES
-#endif // _WIN32
+// UInt32 bcj2_stats[256 + 2][2];
 
-// #define SZ_ALLOC_DEBUG
-/* #define SZ_ALLOC_DEBUG */
-
-/* use SZ_ALLOC_DEBUG to debug alloc/free operations */
-#ifdef SZ_ALLOC_DEBUG
-
-#include <string.h>
-#include <stdio.h>
-static int g_allocCount = 0;
-#ifdef _WIN32
-static int g_allocCountMid = 0;
-static int g_allocCountBig = 0;
-#endif
-
-
-#define CONVERT_INT_TO_STR(charType, tempSize) \
-  char temp[tempSize]; unsigned i = 0; \
-  while (val >= 10) { temp[i++] = (char)('0' + (unsigned)(val % 10)); val /= 10; } \
-  *s++ = (charType)('0' + (unsigned)val); \
-  while (i != 0) { i--; *s++ = temp[i]; } \
-  *s = 0;
-
-static void ConvertUInt64ToString(UInt64 val, char *s)
+void Bcj2Dec_Init(CBcj2Dec *p)
 {
-  CONVERT_INT_TO_STR(char, 24)
-}
-
-#define GET_HEX_CHAR(t) ((char)(((t < 10) ? ('0' + t) : ('A' + (t - 10)))))
-
-static void ConvertUInt64ToHex(UInt64 val, char *s)
-{
-  UInt64 v = val;
   unsigned i;
-  for (i = 1;; i++)
+  p->state = BCJ2_STREAM_RC; // BCJ2_DEC_STATE_OK;
+  p->ip = 0;
+  p->temp = 0;
+  p->range = 0;
+  p->code = 0;
+  for (i = 0; i < sizeof(p->probs) / sizeof(p->probs[0]); i++)
+    p->probs[i] = kBitModelTotal >> 1;
+}
+
+SRes Bcj2Dec_Decode(CBcj2Dec *p)
+{
+  UInt32 v = p->temp;
+  // const Byte *src;
+  if (p->range <= 5)
   {
-    v >>= 4;
-    if (v == 0)
-      break;
-  }
-  s[i] = 0;
-  do
-  {
-    unsigned t = (unsigned)(val & 0xF);
-    val >>= 4;
-    s[--i] = GET_HEX_CHAR(t);
-  }
-  while (i);
-}
-
-#define DEBUG_OUT_STREAM stderr
-
-static void Print(const char *s)
-{
-  fputs(s, DEBUG_OUT_STREAM);
-}
-
-static void PrintAligned(const char *s, size_t align)
-{
-  size_t len = strlen(s);
-  for(;;)
-  {
-    fputc(' ', DEBUG_OUT_STREAM);
-    if (len >= align)
-      break;
-    ++len;
-  }
-  Print(s);
-}
-
-static void PrintLn(void)
-{
-  Print("\n");
-}
-
-static void PrintHex(UInt64 v, size_t align)
-{
-  char s[32];
-  ConvertUInt64ToHex(v, s);
-  PrintAligned(s, align);
-}
-
-static void PrintDec(int v, size_t align)
-{
-  char s[32];
-  ConvertUInt64ToString((unsigned)v, s);
-  PrintAligned(s, align);
-}
-
-static void PrintAddr(void *p)
-{
-  PrintHex((UInt64)(size_t)(ptrdiff_t)p, 12);
-}
-
-
-#define PRINT_REALLOC(name, cnt, size, ptr) { \
-    Print(name " "); \
-    if (!ptr) PrintDec(cnt++, 10); \
-    PrintHex(size, 10); \
-    PrintAddr(ptr); \
-    PrintLn(); }
-
-#define PRINT_ALLOC(name, cnt, size, ptr) { \
-    Print(name " "); \
-    PrintDec(cnt++, 10); \
-    PrintHex(size, 10); \
-    PrintAddr(ptr); \
-    PrintLn(); }
- 
-#define PRINT_FREE(name, cnt, ptr) if (ptr) { \
-    Print(name " "); \
-    PrintDec(--cnt, 10); \
-    PrintAddr(ptr); \
-    PrintLn(); }
- 
-#else
-
-#ifdef _WIN32
-#define PRINT_ALLOC(name, cnt, size, ptr)
-#endif
-#define PRINT_FREE(name, cnt, ptr)
-#define Print(s)
-#define PrintLn()
-#define PrintHex(v, align)
-#define PrintAddr(p)
-
-#endif
-
-
-/*
-by specification:
-  malloc(non_NULL, 0)   : returns NULL or a unique pointer value that can later be successfully passed to free()
-  realloc(NULL, size)   : the call is equivalent to malloc(size)
-  realloc(non_NULL, 0)  : the call is equivalent to free(ptr)
-
-in main compilers:
-  malloc(0)             : returns non_NULL
-  realloc(NULL,     0)  : returns non_NULL
-  realloc(non_NULL, 0)  : returns NULL
-*/
-
-
-void *MyAlloc(size_t size)
-{
-  if (size == 0)
-    return NULL;
-  // PRINT_ALLOC("Alloc    ", g_allocCount, size, NULL)
-  #ifdef SZ_ALLOC_DEBUG
-  {
-    void *p = malloc(size);
-    if (p)
+    UInt32 code = p->code;
+    p->state = BCJ2_DEC_STATE_ERROR; /* for case if we return SZ_ERROR_DATA; */
+    for (; p->range != 5; p->range++)
     {
-      PRINT_ALLOC("Alloc    ", g_allocCount, size, p)
-    }
-    return p;
-  }
-  #else
-  return malloc(size);
-  #endif
-}
-
-void MyFree(void *address)
-{
-  PRINT_FREE("Free    ", g_allocCount, address)
-  
-  free(address);
-}
-
-void *MyRealloc(void *address, size_t size)
-{
-  if (size == 0)
-  {
-    MyFree(address);
-    return NULL;
-  }
-  // PRINT_REALLOC("Realloc  ", g_allocCount, size, address)
-  #ifdef SZ_ALLOC_DEBUG
-  {
-    void *p = realloc(address, size);
-    if (p)
-    {
-      PRINT_REALLOC("Realloc    ", g_allocCount, size, address)
-    }
-    return p;
-  }
-  #else
-  return realloc(address, size);
-  #endif
-}
-
-
-#ifdef _WIN32
-
-void *MidAlloc(size_t size)
-{
-  if (size == 0)
-    return NULL;
-  #ifdef SZ_ALLOC_DEBUG
-  {
-    void *p = VirtualAlloc(NULL, size, MEM_COMMIT, PAGE_READWRITE);
-    if (p)
-    {
-      PRINT_ALLOC("Alloc-Mid", g_allocCountMid, size, p)
-    }
-    return p;
-  }
-  #else
-  return VirtualAlloc(NULL, size, MEM_COMMIT, PAGE_READWRITE);
-  #endif
-}
-
-void MidFree(void *address)
-{
-  PRINT_FREE("Free-Mid", g_allocCountMid, address)
-
-  if (!address)
-    return;
-  VirtualFree(address, 0, MEM_RELEASE);
-}
-
-#ifdef Z7_LARGE_PAGES
-
-#ifdef MEM_LARGE_PAGES
-  #define MY__MEM_LARGE_PAGES  MEM_LARGE_PAGES
-#else
-  #define MY__MEM_LARGE_PAGES  0x20000000
-#endif
-
-extern
-SIZE_T g_LargePageSize;
-SIZE_T g_LargePageSize = 0;
-typedef SIZE_T (WINAPI *Func_GetLargePageMinimum)(VOID);
-
-void SetLargePageSize(void)
-{
-  #ifdef Z7_LARGE_PAGES
-  SIZE_T size;
-  const
-   Func_GetLargePageMinimum fn =
-  (Func_GetLargePageMinimum) MY_CAST_FUNC GetProcAddress(GetModuleHandle(TEXT("kernel32.dll")),
-       "GetLargePageMinimum");
-  if (!fn)
-    return;
-  size = fn();
-  if (size == 0 || (size & (size - 1)) != 0)
-    return;
-  g_LargePageSize = size;
-  #endif
-}
-
-#endif // Z7_LARGE_PAGES
-
-void *BigAlloc(size_t size)
-{
-  if (size == 0)
-    return NULL;
-
-  PRINT_ALLOC("Alloc-Big", g_allocCountBig, size, NULL)
-
-  #ifdef Z7_LARGE_PAGES
-  {
-    SIZE_T ps = g_LargePageSize;
-    if (ps != 0 && ps <= (1 << 30) && size > (ps / 2))
-    {
-      size_t size2;
-      ps--;
-      size2 = (size + ps) & ~ps;
-      if (size2 >= size)
+      if (p->range == 1 && code != 0)
+        return SZ_ERROR_DATA;
+      if (p->bufs[BCJ2_STREAM_RC] == p->lims[BCJ2_STREAM_RC])
       {
-        void *p = VirtualAlloc(NULL, size2, MEM_COMMIT | MY__MEM_LARGE_PAGES, PAGE_READWRITE);
-        if (p)
+        p->state = BCJ2_STREAM_RC;
+        return SZ_OK;
+      }
+      code = (code << 8) | *(p->bufs[BCJ2_STREAM_RC])++;
+      p->code = code;
+    }
+    if (code == 0xffffffff)
+      return SZ_ERROR_DATA;
+    p->range = 0xffffffff;
+  }
+  // else
+  {
+    unsigned state = p->state;
+    // we check BCJ2_IS_32BIT_STREAM() here instead of check in the main loop
+    if (BCJ2_IS_32BIT_STREAM(state))
+    {
+      const Byte *cur = p->bufs[state];
+      if (cur == p->lims[state])
+        return SZ_OK;
+      p->bufs[state] = cur + 4;
+      {
+        const UInt32 ip = p->ip + 4;
+        v = GetBe32a(cur) - ip;
+        p->ip = ip;
+      }
+      state = BCJ2_DEC_STATE_ORIG_0;
+    }
+    if ((unsigned)(state - BCJ2_DEC_STATE_ORIG_0) < 4)
+    {
+      Byte *dest = p->dest;
+      for (;;)
+      {
+        if (dest == p->destLim)
         {
-          PRINT_ALLOC("Alloc-BM ", g_allocCountMid, size2, p)
-          return p;
+          p->state = state;
+          p->temp = v;
+          return SZ_OK;
         }
+        *dest++ = (Byte)v;
+        p->dest = dest;
+        if (++state == BCJ2_DEC_STATE_ORIG_3 + 1)
+          break;
+        v >>= 8;
       }
     }
   }
-  #endif
 
-  return MidAlloc(size);
-}
-
-void BigFree(void *address)
-{
-  PRINT_FREE("Free-Big", g_allocCountBig, address)
-  MidFree(address);
-}
-
-#endif // _WIN32
-
-
-static void *SzAlloc(ISzAllocPtr p, size_t size) { UNUSED_VAR(p)  return MyAlloc(size); }
-static void SzFree(ISzAllocPtr p, void *address) { UNUSED_VAR(p)  MyFree(address); }
-const ISzAlloc g_Alloc = { SzAlloc, SzFree };
-
-#ifdef _WIN32
-static void *SzMidAlloc(ISzAllocPtr p, size_t size) { UNUSED_VAR(p)  return MidAlloc(size); }
-static void SzMidFree(ISzAllocPtr p, void *address) { UNUSED_VAR(p)  MidFree(address); }
-static void *SzBigAlloc(ISzAllocPtr p, size_t size) { UNUSED_VAR(p)  return BigAlloc(size); }
-static void SzBigFree(ISzAllocPtr p, void *address) { UNUSED_VAR(p)  BigFree(address); }
-const ISzAlloc g_MidAlloc = { SzMidAlloc, SzMidFree };
-const ISzAlloc g_BigAlloc = { SzBigAlloc, SzBigFree };
-#endif
-
-/*
-  uintptr_t : <stdint.h> C99 (optional)
-            : unsupported in VS6
-*/
-
-#ifdef _WIN32
-  typedef UINT_PTR UIntPtr;
-#else
-  /*
-  typedef uintptr_t UIntPtr;
-  */
-  typedef ptrdiff_t UIntPtr;
-#endif
-
-
-#define ADJUST_ALLOC_SIZE 0
-/*
-#define ADJUST_ALLOC_SIZE (sizeof(void *) - 1)
-*/
-/*
-  Use (ADJUST_ALLOC_SIZE = (sizeof(void *) - 1)), if
-     MyAlloc() can return address that is NOT multiple of sizeof(void *).
-*/
-
-
-/*
-#define MY_ALIGN_PTR_DOWN(p, align) ((void *)((char *)(p) - ((size_t)(UIntPtr)(p) & ((align) - 1))))
-*/
-#define MY_ALIGN_PTR_DOWN(p, align) ((void *)((((UIntPtr)(p)) & ~((UIntPtr)(align) - 1))))
-
-
-#if !defined(_WIN32) && defined(_POSIX_C_SOURCE) && (_POSIX_C_SOURCE >= 200112L)
-  #define USE_posix_memalign
-#endif
-
-#ifndef USE_posix_memalign
-#define MY_ALIGN_PTR_UP_PLUS(p, align) MY_ALIGN_PTR_DOWN(((char *)(p) + (align) + ADJUST_ALLOC_SIZE), align)
-#endif
-
-/*
-  This posix_memalign() is for test purposes only.
-  We also need special Free() function instead of free(),
-  if this posix_memalign() is used.
-*/
-
-/*
-static int posix_memalign(void **ptr, size_t align, size_t size)
-{
-  size_t newSize = size + align;
-  void *p;
-  void *pAligned;
-  *ptr = NULL;
-  if (newSize < size)
-    return 12; // ENOMEM
-  p = MyAlloc(newSize);
-  if (!p)
-    return 12; // ENOMEM
-  pAligned = MY_ALIGN_PTR_UP_PLUS(p, align);
-  ((void **)pAligned)[-1] = p;
-  *ptr = pAligned;
-  return 0;
-}
-*/
-
-/*
-  ALLOC_ALIGN_SIZE >= sizeof(void *)
-  ALLOC_ALIGN_SIZE >= cache_line_size
-*/
-
-#define ALLOC_ALIGN_SIZE ((size_t)1 << 7)
-
-static void *SzAlignedAlloc(ISzAllocPtr pp, size_t size)
-{
-  #ifndef USE_posix_memalign
-  
-  void *p;
-  void *pAligned;
-  size_t newSize;
-  UNUSED_VAR(pp)
-
-  /* also we can allocate additional dummy ALLOC_ALIGN_SIZE bytes after aligned
-     block to prevent cache line sharing with another allocated blocks */
-
-  newSize = size + ALLOC_ALIGN_SIZE * 1 + ADJUST_ALLOC_SIZE;
-  if (newSize < size)
-    return NULL;
-
-  p = MyAlloc(newSize);
-  
-  if (!p)
-    return NULL;
-  pAligned = MY_ALIGN_PTR_UP_PLUS(p, ALLOC_ALIGN_SIZE);
-
-  Print(" size="); PrintHex(size, 8);
-  Print(" a_size="); PrintHex(newSize, 8);
-  Print(" ptr="); PrintAddr(p);
-  Print(" a_ptr="); PrintAddr(pAligned);
-  PrintLn();
-
-  ((void **)pAligned)[-1] = p;
-
-  return pAligned;
-
-  #else
-
-  void *p;
-  UNUSED_VAR(pp)
-  if (posix_memalign(&p, ALLOC_ALIGN_SIZE, size))
-    return NULL;
-
-  Print(" posix_memalign="); PrintAddr(p);
-  PrintLn();
-
-  return p;
-
-  #endif
-}
-
-
-static void SzAlignedFree(ISzAllocPtr pp, void *address)
-{
-  UNUSED_VAR(pp)
-  #ifndef USE_posix_memalign
-  if (address)
-    MyFree(((void **)address)[-1]);
-  #else
-  free(address);
-  #endif
-}
-
-
-const ISzAlloc g_AlignedAlloc = { SzAlignedAlloc, SzAlignedFree };
-
-
-
-#define MY_ALIGN_PTR_DOWN_1(p) MY_ALIGN_PTR_DOWN(p, sizeof(void *))
-
-/* we align ptr to support cases where CAlignOffsetAlloc::offset is not multiply of sizeof(void *) */
-#define REAL_BLOCK_PTR_VAR(p) ((void **)MY_ALIGN_PTR_DOWN_1(p))[-1]
-/*
-#define REAL_BLOCK_PTR_VAR(p) ((void **)(p))[-1]
-*/
-
-static void *AlignOffsetAlloc_Alloc(ISzAllocPtr pp, size_t size)
-{
-  const CAlignOffsetAlloc *p = Z7_CONTAINER_FROM_VTBL_CONST(pp, CAlignOffsetAlloc, vt);
-  void *adr;
-  void *pAligned;
-  size_t newSize;
-  size_t extra;
-  size_t alignSize = (size_t)1 << p->numAlignBits;
-
-  if (alignSize < sizeof(void *))
-    alignSize = sizeof(void *);
-  
-  if (p->offset >= alignSize)
-    return NULL;
-
-  /* also we can allocate additional dummy ALLOC_ALIGN_SIZE bytes after aligned
-     block to prevent cache line sharing with another allocated blocks */
-  extra = p->offset & (sizeof(void *) - 1);
-  newSize = size + alignSize + extra + ADJUST_ALLOC_SIZE;
-  if (newSize < size)
-    return NULL;
-
-  adr = ISzAlloc_Alloc(p->baseAlloc, newSize);
-  
-  if (!adr)
-    return NULL;
-
-  pAligned = (char *)MY_ALIGN_PTR_DOWN((char *)adr +
-      alignSize - p->offset + extra + ADJUST_ALLOC_SIZE, alignSize) + p->offset;
-
-  PrintLn();
-  Print("- Aligned: ");
-  Print(" size="); PrintHex(size, 8);
-  Print(" a_size="); PrintHex(newSize, 8);
-  Print(" ptr="); PrintAddr(adr);
-  Print(" a_ptr="); PrintAddr(pAligned);
-  PrintLn();
-
-  REAL_BLOCK_PTR_VAR(pAligned) = adr;
-
-  return pAligned;
-}
-
-
-static void AlignOffsetAlloc_Free(ISzAllocPtr pp, void *address)
-{
-  if (address)
+  // src = p->bufs[BCJ2_STREAM_MAIN];
+  for (;;)
   {
-    const CAlignOffsetAlloc *p = Z7_CONTAINER_FROM_VTBL_CONST(pp, CAlignOffsetAlloc, vt);
-    PrintLn();
-    Print("- Aligned Free: ");
-    PrintLn();
-    ISzAlloc_Free(p->baseAlloc, REAL_BLOCK_PTR_VAR(address));
+    /*
+    if (BCJ2_IS_32BIT_STREAM(p->state))
+      p->state = BCJ2_DEC_STATE_OK;
+    else
+    */
+    {
+      if (p->range < kTopValue)
+      {
+        if (p->bufs[BCJ2_STREAM_RC] == p->lims[BCJ2_STREAM_RC])
+        {
+          p->state = BCJ2_STREAM_RC;
+          p->temp = v;
+          return SZ_OK;
+        }
+        p->range <<= 8;
+        p->code = (p->code << 8) | *(p->bufs[BCJ2_STREAM_RC])++;
+      }
+      {
+        const Byte *src = p->bufs[BCJ2_STREAM_MAIN];
+        const Byte *srcLim;
+        Byte *dest = p->dest;
+        {
+          const SizeT rem = (SizeT)(p->lims[BCJ2_STREAM_MAIN] - src);
+          SizeT num = (SizeT)(p->destLim - dest);
+          if (num >= rem)
+            num = rem;
+        #define NUM_ITERS 4
+        #if (NUM_ITERS & (NUM_ITERS - 1)) == 0
+          num &= ~((SizeT)NUM_ITERS - 1);   // if (NUM_ITERS == (1 << x))
+        #else
+          num -= num % NUM_ITERS; // if (NUM_ITERS != (1 << x))
+        #endif
+          srcLim = src + num;
+        }
+
+        #define NUM_SHIFT_BITS  24
+        #define ONE_ITER(indx) { \
+          const unsigned b = src[indx]; \
+          *dest++ = (Byte)b; \
+          v = (v << NUM_SHIFT_BITS) | b; \
+          if (((b + (0x100 - 0xe8)) & 0xfe) == 0) break; \
+          if (((v - (((UInt32)0x0f << (NUM_SHIFT_BITS)) + 0x80)) & \
+              ((((UInt32)1 << (4 + NUM_SHIFT_BITS)) - 0x1) << 4)) == 0) break; \
+            /* ++dest */; /* v = b; */ }
+          
+        if (src != srcLim)
+        for (;;)
+        {
+            /* The dependency chain of 2-cycle for (v) calculation is not big problem here.
+               But we can remove dependency chain with v = b in the end of loop. */
+          ONE_ITER(0)
+          #if (NUM_ITERS > 1)
+            ONE_ITER(1)
+          #if (NUM_ITERS > 2)
+            ONE_ITER(2)
+          #if (NUM_ITERS > 3)
+            ONE_ITER(3)
+          #if (NUM_ITERS > 4)
+            ONE_ITER(4)
+          #if (NUM_ITERS > 5)
+            ONE_ITER(5)
+          #if (NUM_ITERS > 6)
+            ONE_ITER(6)
+          #if (NUM_ITERS > 7)
+            ONE_ITER(7)
+          #endif
+          #endif
+          #endif
+          #endif
+          #endif
+          #endif
+          #endif
+          
+          src += NUM_ITERS;
+          if (src == srcLim)
+            break;
+        }
+
+        if (src == srcLim)
+      #if (NUM_ITERS > 1)
+        for (;;)
+      #endif
+        {
+        #if (NUM_ITERS > 1)
+          if (src == p->lims[BCJ2_STREAM_MAIN] || dest == p->destLim)
+        #endif
+          {
+            const SizeT num = (SizeT)(src - p->bufs[BCJ2_STREAM_MAIN]);
+            p->bufs[BCJ2_STREAM_MAIN] = src;
+            p->dest = dest;
+            p->ip += (UInt32)num;
+            /* state BCJ2_STREAM_MAIN has more priority than BCJ2_STATE_ORIG */
+            p->state =
+              src == p->lims[BCJ2_STREAM_MAIN] ?
+                (unsigned)BCJ2_STREAM_MAIN :
+                (unsigned)BCJ2_DEC_STATE_ORIG;
+            p->temp = v;
+            return SZ_OK;
+          }
+        #if (NUM_ITERS > 1)
+          ONE_ITER(0)
+          src++;
+        #endif
+        }
+
+        {
+          const SizeT num = (SizeT)(dest - p->dest);
+          p->dest = dest; // p->dest += num;
+          p->bufs[BCJ2_STREAM_MAIN] += num; // = src;
+          p->ip += (UInt32)num;
+        }
+        {
+          UInt32 bound, ttt;
+          CBcj2Prob *prob; // unsigned index;
+          /*
+          prob = p->probs + (unsigned)((Byte)v == 0xe8 ?
+              2 + (Byte)(v >> 8) :
+              ((v >> 5) & 1));  // ((Byte)v < 0xe8 ? 0 : 1));
+          */
+          {
+            const unsigned c = ((v + 0x17) >> 6) & 1;
+            prob = p->probs + (unsigned)
+                (((0 - c) & (Byte)(v >> NUM_SHIFT_BITS)) + c + ((v >> 5) & 1));
+                // (Byte)
+                // 8x->0     : e9->1     : xxe8->xx+2
+                // 8x->0x100 : e9->0x101 : xxe8->xx
+                // (((0x100 - (e & ~v)) & (0x100 | (v >> 8))) + (e & v));
+                // (((0x101 + (~e | v)) & (0x100 | (v >> 8))) + (e & v));
+          }
+          ttt = *prob;
+          bound = (p->range >> kNumBitModelTotalBits) * ttt;
+          if (p->code < bound)
+          {
+            // bcj2_stats[prob - p->probs][0]++;
+            p->range = bound;
+            *prob = (CBcj2Prob)(ttt + ((kBitModelTotal - ttt) >> kNumMoveBits));
+            continue;
+          }
+          {
+            // bcj2_stats[prob - p->probs][1]++;
+            p->range -= bound;
+            p->code -= bound;
+            *prob = (CBcj2Prob)(ttt - (ttt >> kNumMoveBits));
+          }
+        }
+      }
+    }
+    {
+      /* (v == 0xe8 ? 0 : 1) uses setcc instruction with additional zero register usage in x64 MSVC. */
+      // const unsigned cj = ((Byte)v == 0xe8) ? BCJ2_STREAM_CALL : BCJ2_STREAM_JUMP;
+      const unsigned cj = (((v + 0x57) >> 6) & 1) + BCJ2_STREAM_CALL;
+      const Byte *cur = p->bufs[cj];
+      Byte *dest;
+      SizeT rem;
+      if (cur == p->lims[cj])
+      {
+        p->state = cj;
+        break;
+      }
+      v = GetBe32a(cur);
+      p->bufs[cj] = cur + 4;
+      {
+        const UInt32 ip = p->ip + 4;
+        v -= ip;
+        p->ip = ip;
+      }
+      dest = p->dest;
+      rem = (SizeT)(p->destLim - dest);
+      if (rem < 4)
+      {
+        if ((unsigned)rem > 0) { dest[0] = (Byte)v;  v >>= 8;
+        if ((unsigned)rem > 1) { dest[1] = (Byte)v;  v >>= 8;
+        if ((unsigned)rem > 2) { dest[2] = (Byte)v;  v >>= 8; }}}
+        p->temp = v;
+        p->dest = dest + rem;
+        p->state = BCJ2_DEC_STATE_ORIG_0 + (unsigned)rem;
+        break;
+      }
+      SetUi32(dest, v)
+      v >>= 24;
+      p->dest = dest + 4;
+    }
   }
+
+  if (p->range < kTopValue && p->bufs[BCJ2_STREAM_RC] != p->lims[BCJ2_STREAM_RC])
+  {
+    p->range <<= 8;
+    p->code = (p->code << 8) | *(p->bufs[BCJ2_STREAM_RC])++;
+  }
+  return SZ_OK;
 }
 
-
-void AlignOffsetAlloc_CreateVTable(CAlignOffsetAlloc *p)
-{
-  p->vt.Alloc = AlignOffsetAlloc_Alloc;
-  p->vt.Free = AlignOffsetAlloc_Free;
-}
+#undef NUM_ITERS
+#undef ONE_ITER
+#undef NUM_SHIFT_BITS
+#undef kTopValue
+#undef kNumBitModelTotalBits
+#undef kBitModelTotal
+#undef kNumMoveBits

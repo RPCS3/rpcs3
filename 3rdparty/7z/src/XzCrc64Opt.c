@@ -1,61 +1,61 @@
-/* XzCrc64Opt.c -- CRC64 calculation
-2023-04-02 : Igor Pavlov : Public domain */
+/* XzEnc.h -- Xz Encode
+2023-04-13 : Igor Pavlov : Public domain */
 
-#include "Precomp.h"
+#ifndef ZIP7_INC_XZ_ENC_H
+#define ZIP7_INC_XZ_ENC_H
 
-#include "CpuArch.h"
+#include "Lzma2Enc.h"
 
-#ifndef MY_CPU_BE
+#include "Xz.h"
 
-#define CRC64_UPDATE_BYTE_2(crc, b) (table[((crc) ^ (b)) & 0xFF] ^ ((crc) >> 8))
+EXTERN_C_BEGIN
 
-UInt64 Z7_FASTCALL XzCrc64UpdateT4(UInt64 v, const void *data, size_t size, const UInt64 *table);
-UInt64 Z7_FASTCALL XzCrc64UpdateT4(UInt64 v, const void *data, size_t size, const UInt64 *table)
+
+#define XZ_PROPS_BLOCK_SIZE_AUTO   LZMA2_ENC_PROPS_BLOCK_SIZE_AUTO
+#define XZ_PROPS_BLOCK_SIZE_SOLID  LZMA2_ENC_PROPS_BLOCK_SIZE_SOLID
+
+
+typedef struct
 {
-  const Byte *p = (const Byte *)data;
-  for (; size > 0 && ((unsigned)(ptrdiff_t)p & 3) != 0; size--, p++)
-    v = CRC64_UPDATE_BYTE_2(v, *p);
-  for (; size >= 4; size -= 4, p += 4)
-  {
-    const UInt32 d = (UInt32)v ^ *(const UInt32 *)(const void *)p;
-    v = (v >> 32)
-        ^ (table + 0x300)[((d      ) & 0xFF)]
-        ^ (table + 0x200)[((d >>  8) & 0xFF)]
-        ^ (table + 0x100)[((d >> 16) & 0xFF)]
-        ^ (table + 0x000)[((d >> 24))];
-  }
-  for (; size > 0; size--, p++)
-    v = CRC64_UPDATE_BYTE_2(v, *p);
-  return v;
-}
+  UInt32 id;
+  UInt32 delta;
+  UInt32 ip;
+  int ipDefined;
+} CXzFilterProps;
 
-#endif
+void XzFilterProps_Init(CXzFilterProps *p);
 
 
-#ifndef MY_CPU_LE
-
-#define CRC64_UPDATE_BYTE_2_BE(crc, b) (table[(Byte)((crc) >> 56) ^ (b)] ^ ((crc) << 8))
-
-UInt64 Z7_FASTCALL XzCrc64UpdateT1_BeT4(UInt64 v, const void *data, size_t size, const UInt64 *table);
-UInt64 Z7_FASTCALL XzCrc64UpdateT1_BeT4(UInt64 v, const void *data, size_t size, const UInt64 *table)
+typedef struct
 {
-  const Byte *p = (const Byte *)data;
-  table += 0x100;
-  v = Z7_BSWAP64(v);
-  for (; size > 0 && ((unsigned)(ptrdiff_t)p & 3) != 0; size--, p++)
-    v = CRC64_UPDATE_BYTE_2_BE(v, *p);
-  for (; size >= 4; size -= 4, p += 4)
-  {
-    const UInt32 d = (UInt32)(v >> 32) ^ *(const UInt32 *)(const void *)p;
-    v = (v << 32)
-        ^ (table + 0x000)[((d      ) & 0xFF)]
-        ^ (table + 0x100)[((d >>  8) & 0xFF)]
-        ^ (table + 0x200)[((d >> 16) & 0xFF)]
-        ^ (table + 0x300)[((d >> 24))];
-  }
-  for (; size > 0; size--, p++)
-    v = CRC64_UPDATE_BYTE_2_BE(v, *p);
-  return Z7_BSWAP64(v);
-}
+  CLzma2EncProps lzma2Props;
+  CXzFilterProps filterProps;
+  unsigned checkId;
+  UInt64 blockSize;
+  int numBlockThreads_Reduced;
+  int numBlockThreads_Max;
+  int numTotalThreads;
+  int forceWriteSizesInHeader;
+  UInt64 reduceSize;
+} CXzProps;
+
+void XzProps_Init(CXzProps *p);
+
+typedef struct CXzEnc CXzEnc;
+typedef CXzEnc * CXzEncHandle;
+// Z7_DECLARE_HANDLE(CXzEncHandle)
+
+CXzEncHandle XzEnc_Create(ISzAllocPtr alloc, ISzAllocPtr allocBig);
+void XzEnc_Destroy(CXzEncHandle p);
+SRes XzEnc_SetProps(CXzEncHandle p, const CXzProps *props);
+void XzEnc_SetDataSize(CXzEncHandle p, UInt64 expectedDataSiize);
+SRes XzEnc_Encode(CXzEncHandle p, ISeqOutStreamPtr outStream, ISeqInStreamPtr inStream, ICompressProgressPtr progress);
+
+SRes Xz_Encode(ISeqOutStreamPtr outStream, ISeqInStreamPtr inStream,
+    const CXzProps *props, ICompressProgressPtr progress);
+
+SRes Xz_EncodeEmpty(ISeqOutStreamPtr outStream);
+
+EXTERN_C_END
 
 #endif

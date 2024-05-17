@@ -1,75 +1,75 @@
-/* Sha1.h -- SHA-1 Hash
+/* Sha256.h -- SHA-256 Hash
 2023-04-02 : Igor Pavlov : Public domain */
 
-#ifndef ZIP7_INC_SHA1_H
-#define ZIP7_INC_SHA1_H
+#ifndef ZIP7_INC_SHA256_H
+#define ZIP7_INC_SHA256_H
 
 #include "7zTypes.h"
 
 EXTERN_C_BEGIN
 
-#define SHA1_NUM_BLOCK_WORDS  16
-#define SHA1_NUM_DIGEST_WORDS  5
+#define SHA256_NUM_BLOCK_WORDS  16
+#define SHA256_NUM_DIGEST_WORDS  8
 
-#define SHA1_BLOCK_SIZE   (SHA1_NUM_BLOCK_WORDS * 4)
-#define SHA1_DIGEST_SIZE  (SHA1_NUM_DIGEST_WORDS * 4)
+#define SHA256_BLOCK_SIZE   (SHA256_NUM_BLOCK_WORDS * 4)
+#define SHA256_DIGEST_SIZE  (SHA256_NUM_DIGEST_WORDS * 4)
 
-typedef void (Z7_FASTCALL *SHA1_FUNC_UPDATE_BLOCKS)(UInt32 state[5], const Byte *data, size_t numBlocks);
+typedef void (Z7_FASTCALL *SHA256_FUNC_UPDATE_BLOCKS)(UInt32 state[8], const Byte *data, size_t numBlocks);
 
 /*
-  if (the system supports different SHA1 code implementations)
+  if (the system supports different SHA256 code implementations)
   {
-    (CSha1::func_UpdateBlocks) will be used
-    (CSha1::func_UpdateBlocks) can be set by
-       Sha1_Init()        - to default (fastest)
-       Sha1_SetFunction() - to any algo
+    (CSha256::func_UpdateBlocks) will be used
+    (CSha256::func_UpdateBlocks) can be set by
+       Sha256_Init()        - to default (fastest)
+       Sha256_SetFunction() - to any algo
   }
   else
   {
-    (CSha1::func_UpdateBlocks) is ignored.
+    (CSha256::func_UpdateBlocks) is ignored.
   }
 */
 
 typedef struct
 {
-  SHA1_FUNC_UPDATE_BLOCKS func_UpdateBlocks;
+  SHA256_FUNC_UPDATE_BLOCKS func_UpdateBlocks;
   UInt64 count;
   UInt64 _pad_2[2];
-  UInt32 state[SHA1_NUM_DIGEST_WORDS];
-  UInt32 _pad_3[3];
-  Byte buffer[SHA1_BLOCK_SIZE];
-} CSha1;
+  UInt32 state[SHA256_NUM_DIGEST_WORDS];
+
+  Byte buffer[SHA256_BLOCK_SIZE];
+} CSha256;
 
 
-#define SHA1_ALGO_DEFAULT 0
-#define SHA1_ALGO_SW      1
-#define SHA1_ALGO_HW      2
+#define SHA256_ALGO_DEFAULT 0
+#define SHA256_ALGO_SW      1
+#define SHA256_ALGO_HW      2
 
 /*
-Sha1_SetFunction()
+Sha256_SetFunction()
 return:
   0 - (algo) value is not supported, and func_UpdateBlocks was not changed
   1 - func_UpdateBlocks was set according (algo) value.
 */
 
-BoolInt Sha1_SetFunction(CSha1 *p, unsigned algo);
+BoolInt Sha256_SetFunction(CSha256 *p, unsigned algo);
 
-void Sha1_InitState(CSha1 *p);
-void Sha1_Init(CSha1 *p);
-void Sha1_Update(CSha1 *p, const Byte *data, size_t size);
-void Sha1_Final(CSha1 *p, Byte *digest);
+void Sha256_InitState(CSha256 *p);
+void Sha256_Init(CSha256 *p);
+void Sha256_Update(CSha256 *p, const Byte *data, size_t size);
+void Sha256_Final(CSha256 *p, Byte *digest);
 
-void Sha1_PrepareBlock(const CSha1 *p, Byte *block, unsigned size);
-void Sha1_GetBlockDigest(const CSha1 *p, const Byte *data, Byte *destDigest);
 
-// void Z7_FASTCALL Sha1_UpdateBlocks(UInt32 state[5], const Byte *data, size_t numBlocks);
+
+
+// void Z7_FASTCALL Sha256_UpdateBlocks(UInt32 state[8], const Byte *data, size_t numBlocks);
 
 /*
-call Sha1Prepare() once at program start.
+call Sha256Prepare() once at program start.
 It prepares all supported implementations, and detects the fastest implementation.
 */
 
-void Sha1Prepare(void);
+void Sha256Prepare(void);
 
 EXTERN_C_END
 

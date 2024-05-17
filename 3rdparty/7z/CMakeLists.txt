@@ -51,12 +51,14 @@ if(WIN32 OR APPLE)
 		src/Sort.c
 		src/SwapBytes.c
 		src/Threads.c
+		src/Xxh64.c
 		src/Xz.c
 		src/XzCrc64.c
 		src/XzCrc64Opt.c
 		src/XzDec.c
 		src/XzEnc.c
-		src/XzIn.c)
+		src/XzIn.c
+		src/ZstdDec.c)
 	target_include_directories(3rdparty_7z INTERFACE
 		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
 		$<INSTALL_INTERFACE:/src>)

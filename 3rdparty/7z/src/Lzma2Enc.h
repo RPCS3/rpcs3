@@ -1,57 +1,103 @@
-/* Lzma2Enc.h -- LZMA2 Encoder
-2023-04-13 : Igor Pavlov : Public domain */
+/* Lzma86Enc.c -- LZMA + x86 (BCJ) Filter Encoder
+2023-03-03 : Igor Pavlov : Public domain */
 
-#ifndef ZIP7_INC_LZMA2_ENC_H
-#define ZIP7_INC_LZMA2_ENC_H
+#include "Precomp.h"
 
+#include <string.h>
+
+#include "Lzma86.h"
+
+#include "Alloc.h"
+#include "Bra.h"
 #include "LzmaEnc.h"
 
-EXTERN_C_BEGIN
-
-#define LZMA2_ENC_PROPS_BLOCK_SIZE_AUTO   0
-#define LZMA2_ENC_PROPS_BLOCK_SIZE_SOLID  ((UInt64)(Int64)-1)
-
-typedef struct
+int Lzma86_Encode(Byte *dest, size_t *destLen, const Byte *src, size_t srcLen,
+    int level, UInt32 dictSize, int filterMode)
 {
-  CLzmaEncProps lzmaProps;
-  UInt64 blockSize;
-  int numBlockThreads_Reduced;
-  int numBlockThreads_Max;
-  int numTotalThreads;
-} CLzma2EncProps;
+  size_t outSize2 = *destLen;
+  Byte *filteredStream;
+  BoolInt useFilter;
+  int mainResult = SZ_ERROR_OUTPUT_EOF;
+  CLzmaEncProps props;
+  LzmaEncProps_Init(&props);
+  props.level = level;
+  props.dictSize = dictSize;
+  
+  *destLen = 0;
+  if (outSize2 < LZMA86_HEADER_SIZE)
+    return SZ_ERROR_OUTPUT_EOF;
 
-void Lzma2EncProps_Init(CLzma2EncProps *p);
-void Lzma2EncProps_Normalize(CLzma2EncProps *p);
+  {
+    int i;
+    UInt64 t = srcLen;
+    for (i = 0; i < 8; i++, t >>= 8)
+      dest[LZMA86_SIZE_OFFSET + i] = (Byte)t;
+  }
 
-/* ---------- CLzmaEnc2Handle Interface ---------- */
+  filteredStream = 0;
+  useFilter = (filterMode != SZ_FILTER_NO);
+  if (useFilter)
+  {
+    if (srcLen != 0)
+    {
+      filteredStream = (Byte *)MyAlloc(srcLen);
+      if (filteredStream == 0)
+        return SZ_ERROR_MEM;
+      memcpy(filteredStream, src, srcLen);
+    }
+    {
+      UInt32 x86State = Z7_BRANCH_CONV_ST_X86_STATE_INIT_VAL;
+      z7_BranchConvSt_X86_Enc(filteredStream, srcLen, 0, &x86State);
+    }
+  }
 
-/* Lzma2Enc_* functions can return the following exit codes:
-SRes:
-  SZ_OK           - OK
-  SZ_ERROR_MEM    - Memory allocation error
-  SZ_ERROR_PARAM  - Incorrect paramater in props
-  SZ_ERROR_WRITE  - ISeqOutStream write callback error
-  SZ_ERROR_OUTPUT_EOF - output buffer overflow - version with (Byte *) output
-  SZ_ERROR_PROGRESS - some break from progress callback
-  SZ_ERROR_THREAD - error in multithreading functions (only for Mt version)
-*/
+  {
+    size_t minSize = 0;
+    BoolInt bestIsFiltered = False;
 
-typedef struct CLzma2Enc CLzma2Enc;
-typedef CLzma2Enc * CLzma2EncHandle;
-// Z7_DECLARE_HANDLE(CLzma2EncHandle)
+    /* passes for SZ_FILTER_AUTO:
+        0 - BCJ + LZMA
+        1 - LZMA
+        2 - BCJ + LZMA agaian, if pass 0 (BCJ + LZMA) is better.
+    */
+    int numPasses = (filterMode == SZ_FILTER_AUTO) ? 3 : 1;
 
-CLzma2EncHandle Lzma2Enc_Create(ISzAllocPtr alloc, ISzAllocPtr allocBig);
-void Lzma2Enc_Destroy(CLzma2EncHandle p);
-SRes Lzma2Enc_SetProps(CLzma2EncHandle p, const CLzma2EncProps *props);
-void Lzma2Enc_SetDataSize(CLzma2EncHandle p, UInt64 expectedDataSiize);
-Byte Lzma2Enc_WriteProperties(CLzma2EncHandle p);
-SRes Lzma2Enc_Encode2(CLzma2EncHandle p,
-    ISeqOutStreamPtr outStream,
-    Byte *outBuf, size_t *outBufSize,
-    ISeqInStreamPtr inStream,
-    const Byte *inData, size_t inDataSize,
-    ICompressProgressPtr progress);
-
-EXTERN_C_END
-
-#endif
+    int i;
+    for (i = 0; i < numPasses; i++)
+    {
+      size_t outSizeProcessed = outSize2 - LZMA86_HEADER_SIZE;
+      size_t outPropsSize = 5;
+      SRes curRes;
+      BoolInt curModeIsFiltered = (numPasses > 1 && i == numPasses - 1);
+      if (curModeIsFiltered && !bestIsFiltered)
+        break;
+      if (useFilter && i == 0)
+        curModeIsFiltered = True;
+      
+      curRes = LzmaEncode(dest + LZMA86_HEADER_SIZE, &outSizeProcessed,
+          curModeIsFiltered ? filteredStream : src, srcLen,
+          &props, dest + 1, &outPropsSize, 0,
+          NULL, &g_Alloc, &g_Alloc);
+      
+      if (curRes != SZ_ERROR_OUTPUT_EOF)
+      {
+        if (curRes != SZ_OK)
+        {
+          mainResult = curRes;
+          break;
+        }
+        if (outSizeProcessed <= minSize || mainResult != SZ_OK)
+        {
+          minSize = outSizeProcessed;
+          bestIsFiltered = curModeIsFiltered;
+          mainResult = SZ_OK;
+        }
+      }
+    }
+    dest[0] = (Byte)(bestIsFiltered ? 1 : 0);
+    *destLen = LZMA86_HEADER_SIZE + minSize;
+  }
+  if (useFilter)
+    MyFree(filteredStream);
+  return mainResult;
+}

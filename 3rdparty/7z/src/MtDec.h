@@ -1,202 +1,181 @@
-/* MtDec.h -- Multi-thread Decoder
-2023-04-02 : Igor Pavlov : Public domain */
+/* Ppmd7.h -- Ppmd7 (PPMdH) compression codec
+2023-04-02 : Igor Pavlov : Public domain
+This code is based on:
+  PPMd var.H (2001): Dmitry Shkarin : Public domain */
+ 
 
-#ifndef ZIP7_INC_MT_DEC_H
-#define ZIP7_INC_MT_DEC_H
+#ifndef ZIP7_INC_PPMD7_H
+#define ZIP7_INC_PPMD7_H
 
-#include "7zTypes.h"
-
-#ifndef Z7_ST
-#include "Threads.h"
-#endif
+#include "Ppmd.h"
 
 EXTERN_C_BEGIN
 
-#ifndef Z7_ST
+#define PPMD7_MIN_ORDER 2
+#define PPMD7_MAX_ORDER 64
 
-#ifndef Z7_ST
-  #define MTDEC_THREADS_MAX 32
-#else
-  #define MTDEC_THREADS_MAX 1
-#endif
+#define PPMD7_MIN_MEM_SIZE (1 << 11)
+#define PPMD7_MAX_MEM_SIZE (0xFFFFFFFF - 12 * 3)
+
+struct CPpmd7_Context_;
+
+typedef Ppmd_Ref_Type(struct CPpmd7_Context_) CPpmd7_Context_Ref;
+
+// MY_CPU_pragma_pack_push_1
+
+typedef struct CPpmd7_Context_
+{
+  UInt16 NumStats;
+
+
+  union
+  {
+    UInt16 SummFreq;
+    CPpmd_State2 State2;
+  } Union2;
+
+  union
+  {
+    CPpmd_State_Ref Stats;
+    CPpmd_State4 State4;
+  } Union4;
+
+  CPpmd7_Context_Ref Suffix;
+} CPpmd7_Context;
+
+// MY_CPU_pragma_pop
+
+#define Ppmd7Context_OneState(p) ((CPpmd_State *)&(p)->Union2)
+
+
 
 
 typedef struct
 {
-  ICompressProgressPtr progress;
-  SRes res;
-  UInt64 totalInSize;
-  UInt64 totalOutSize;
-  CCriticalSection cs;
-} CMtProgress;
-
-void MtProgress_Init(CMtProgress *p, ICompressProgressPtr progress);
-SRes MtProgress_Progress_ST(CMtProgress *p);
-SRes MtProgress_ProgressAdd(CMtProgress *p, UInt64 inSize, UInt64 outSize);
-SRes MtProgress_GetError(CMtProgress *p);
-void MtProgress_SetError(CMtProgress *p, SRes res);
-
-struct CMtDec;
-
-typedef struct
-{
-  struct CMtDec_ *mtDec;
-  unsigned index;
-  void *inBuf;
-
-  size_t inDataSize_Start; // size of input data in start block
-  UInt64 inDataSize;       // total size of input data in all blocks
-
-  CThread thread;
-  CAutoResetEvent canRead;
-  CAutoResetEvent canWrite;
-  void  *allocaPtr;
-} CMtDecThread;
-
-void MtDecThread_FreeInBufs(CMtDecThread *t);
-
-
-typedef enum
-{
-  MTDEC_PARSE_CONTINUE, // continue this block with more input data
-  MTDEC_PARSE_OVERFLOW, // MT buffers overflow, need switch to single-thread
-  MTDEC_PARSE_NEW,      // new block
-  MTDEC_PARSE_END       // end of block threading. But we still can return to threading after Write(&needContinue)
-} EMtDecParseState;
-
-typedef struct
-{
-  // in
-  int startCall;
-  const Byte *src;
-  size_t srcSize;
-      // in  : (srcSize == 0) is allowed
-      // out : it's allowed to return less that actually was used ?
-  int srcFinished;
-
-  // out
-  EMtDecParseState state;
-  BoolInt canCreateNewThread;
-  UInt64 outPos; // check it (size_t)
-} CMtDecCallbackInfo;
+  UInt32 Range;
+  UInt32 Code;
+  UInt32 Low;
+  IByteInPtr Stream;
+} CPpmd7_RangeDec;
 
 
 typedef struct
 {
-  void (*Parse)(void *p, unsigned coderIndex, CMtDecCallbackInfo *ci);
-  
-  // PreCode() and Code():
-  // (SRes_return_result != SZ_OK) means stop decoding, no need another blocks
-  SRes (*PreCode)(void *p, unsigned coderIndex);
-  SRes (*Code)(void *p, unsigned coderIndex,
-      const Byte *src, size_t srcSize, int srcFinished,
-      UInt64 *inCodePos, UInt64 *outCodePos, int *stop);
-  // stop - means stop another Code calls
+  UInt32 Range;
+  Byte Cache;
+  // Byte _dummy_[3];
+  UInt64 Low;
+  UInt64 CacheSize;
+  IByteOutPtr Stream;
+} CPpmd7z_RangeEnc;
 
 
-  /* Write() must be called, if Parse() was called
-      set (needWrite) if
-      {
-         && (was not interrupted by progress)
-         && (was not interrupted in previous block)
-      }
-
-    out:
-      if (*needContinue), decoder still need to continue decoding with new iteration,
-         even after MTDEC_PARSE_END
-      if (*canRecode), we didn't flush current block data, so we still can decode current block later.
-  */
-  SRes (*Write)(void *p, unsigned coderIndex,
-      BoolInt needWriteToStream,
-      const Byte *src, size_t srcSize, BoolInt isCross,
-      // int srcFinished,
-      BoolInt *needContinue,
-      BoolInt *canRecode);
-
-} IMtDecCallback2;
-
-
-
-typedef struct CMtDec_
+typedef struct
 {
-  /* input variables */
-  
-  size_t inBufSize;        /* size of input block */
-  unsigned numThreadsMax;
-  // size_t inBlockMax;
-  unsigned numThreadsMax_2;
+  CPpmd7_Context *MinContext, *MaxContext;
+  CPpmd_State *FoundState;
+  unsigned OrderFall, InitEsc, PrevSuccess, MaxOrder, HiBitsFlag;
+  Int32 RunLength, InitRL; /* must be 32-bit at least */
 
-  ISeqInStreamPtr inStream;
-  // const Byte *inData;
-  // size_t inDataSize;
+  UInt32 Size;
+  UInt32 GlueCount;
+  UInt32 AlignOffset;
+  Byte *Base, *LoUnit, *HiUnit, *Text, *UnitsStart;
 
-  ICompressProgressPtr progress;
-  ISzAllocPtr alloc;
-
-  IMtDecCallback2 *mtCallback;
-  void *mtCallbackObject;
 
   
-  /* internal variables */
   
-  size_t allocatedBufsSize;
+  union
+  {
+    CPpmd7_RangeDec dec;
+    CPpmd7z_RangeEnc enc;
+  } rc;
+  
+  Byte Indx2Units[PPMD_NUM_INDEXES + 2]; // +2 for alignment
+  Byte Units2Indx[128];
+  CPpmd_Void_Ref FreeList[PPMD_NUM_INDEXES];
 
-  BoolInt exitThread;
-  WRes exitThreadWRes;
-
-  UInt64 blockIndex;
-  BoolInt isAllocError;
-  BoolInt overflow;
-  SRes threadingErrorSRes;
-
-  BoolInt needContinue;
-
-  // CAutoResetEvent finishedEvent;
-
-  SRes readRes;
-  SRes codeRes;
-
-  BoolInt wasInterrupted;
-
-  unsigned numStartedThreads_Limit;
-  unsigned numStartedThreads;
-
-  Byte *crossBlock;
-  size_t crossStart;
-  size_t crossEnd;
-  UInt64 readProcessed;
-  BoolInt readWasFinished;
-  UInt64 inProcessed;
-
-  unsigned filledThreadStart;
-  unsigned numFilledThreads;
-
-  #ifndef Z7_ST
-  BoolInt needInterrupt;
-  UInt64 interruptIndex;
-  CMtProgress mtProgress;
-  CMtDecThread threads[MTDEC_THREADS_MAX];
-  #endif
-} CMtDec;
+  Byte NS2BSIndx[256], NS2Indx[256];
+  Byte ExpEscape[16];
+  CPpmd_See DummySee, See[25][16];
+  UInt16 BinSumm[128][64];
+  // int LastSymbol;
+} CPpmd7;
 
 
-void MtDec_Construct(CMtDec *p);
-void MtDec_Destruct(CMtDec *p);
+void Ppmd7_Construct(CPpmd7 *p);
+BoolInt Ppmd7_Alloc(CPpmd7 *p, UInt32 size, ISzAllocPtr alloc);
+void Ppmd7_Free(CPpmd7 *p, ISzAllocPtr alloc);
+void Ppmd7_Init(CPpmd7 *p, unsigned maxOrder);
+#define Ppmd7_WasAllocated(p) ((p)->Base != NULL)
+
+
+/* ---------- Internal Functions ---------- */
+
+#define Ppmd7_GetPtr(p, ptr)     Ppmd_GetPtr(p, ptr)
+#define Ppmd7_GetContext(p, ptr) Ppmd_GetPtr_Type(p, ptr, CPpmd7_Context)
+#define Ppmd7_GetStats(p, ctx)   Ppmd_GetPtr_Type(p, (ctx)->Union4.Stats, CPpmd_State)
+
+void Ppmd7_Update1(CPpmd7 *p);
+void Ppmd7_Update1_0(CPpmd7 *p);
+void Ppmd7_Update2(CPpmd7 *p);
+
+#define PPMD7_HiBitsFlag_3(sym) ((((unsigned)sym + 0xC0) >> (8 - 3)) & (1 << 3))
+#define PPMD7_HiBitsFlag_4(sym) ((((unsigned)sym + 0xC0) >> (8 - 4)) & (1 << 4))
+// #define PPMD7_HiBitsFlag_3(sym) ((sym) < 0x40 ? 0 : (1 << 3))
+// #define PPMD7_HiBitsFlag_4(sym) ((sym) < 0x40 ? 0 : (1 << 4))
+
+#define Ppmd7_GetBinSumm(p) \
+    &p->BinSumm[(size_t)(unsigned)Ppmd7Context_OneState(p->MinContext)->Freq - 1] \
+    [ p->PrevSuccess + ((p->RunLength >> 26) & 0x20) \
+    + p->NS2BSIndx[(size_t)Ppmd7_GetContext(p, p->MinContext->Suffix)->NumStats - 1] \
+    + PPMD7_HiBitsFlag_4(Ppmd7Context_OneState(p->MinContext)->Symbol) \
+    + (p->HiBitsFlag = PPMD7_HiBitsFlag_3(p->FoundState->Symbol)) ]
+
+CPpmd_See *Ppmd7_MakeEscFreq(CPpmd7 *p, unsigned numMasked, UInt32 *scale);
+
 
 /*
-MtDec_Code() returns:
-  SZ_OK - in most cases
-  MY_SRes_HRESULT_FROM_WRes(WRes_error) - in case of unexpected error in threading function
+We support two versions of Ppmd7 (PPMdH) methods that use same CPpmd7 structure:
+  1) Ppmd7a_*: original PPMdH
+  2) Ppmd7z_*: modified PPMdH with 7z Range Coder
+Ppmd7_*: the structures and functions that are common for both versions of PPMd7 (PPMdH)
 */
-  
-SRes MtDec_Code(CMtDec *p);
-Byte *MtDec_GetCrossBuff(CMtDec *p);
 
-int MtDec_PrepareRead(CMtDec *p);
-const Byte *MtDec_Read(CMtDec *p, size_t *inLim);
+/* ---------- Decode ---------- */
 
-#endif
+#define PPMD7_SYM_END    (-1)
+#define PPMD7_SYM_ERROR  (-2)
+
+/*
+You must set (CPpmd7::rc.dec.Stream) before Ppmd7*_RangeDec_Init()
+
+Ppmd7*_DecodeSymbol()
+out:
+  >= 0 : decoded byte
+    -1 : PPMD7_SYM_END   : End of payload marker
+    -2 : PPMD7_SYM_ERROR : Data error
+*/
+
+/* Ppmd7a_* : original PPMdH */
+BoolInt Ppmd7a_RangeDec_Init(CPpmd7_RangeDec *p);
+#define Ppmd7a_RangeDec_IsFinishedOK(p) ((p)->Code == 0)
+int Ppmd7a_DecodeSymbol(CPpmd7 *p);
+
+/* Ppmd7z_* : modified PPMdH with 7z Range Coder */
+BoolInt Ppmd7z_RangeDec_Init(CPpmd7_RangeDec *p);
+#define Ppmd7z_RangeDec_IsFinishedOK(p) ((p)->Code == 0)
+int Ppmd7z_DecodeSymbol(CPpmd7 *p);
+// Byte *Ppmd7z_DecodeSymbols(CPpmd7 *p, Byte *buf, const Byte *lim);
+
+
+/* ---------- Encode ---------- */
+
+void Ppmd7z_Init_RangeEnc(CPpmd7 *p);
+void Ppmd7z_Flush_RangeEnc(CPpmd7 *p);
+// void Ppmd7z_EncodeSymbol(CPpmd7 *p, int symbol);
+void Ppmd7z_EncodeSymbols(CPpmd7 *p, const Byte *buf, const Byte *lim);
 
 EXTERN_C_END
-
+ 
 #endif

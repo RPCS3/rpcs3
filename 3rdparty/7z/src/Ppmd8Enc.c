@@ -1,338 +1,498 @@
-/* Ppmd8Enc.c -- Ppmd8 (PPMdI) Encoder
-2023-04-02 : Igor Pavlov : Public domain
-This code is based on:
-  PPMd var.I (2002): Dmitry Shkarin : Public domain
-  Carryless rangecoder (1999): Dmitry Subbotin : Public domain */
+/* Sha1.c -- SHA-1 Hash
+2024-03-01 : Igor Pavlov : Public domain
+This code is based on public domain code of Steve Reid from Wei Dai's Crypto++ library. */
 
 #include "Precomp.h"
 
-#include "Ppmd8.h"
+#include <string.h>
 
-#define kTop ((UInt32)1 << 24)
-#define kBot ((UInt32)1 << 15)
+#include "CpuArch.h"
+#include "RotateDefs.h"
+#include "Sha1.h"
 
-#define WRITE_BYTE(p) IByteOut_Write(p->Stream.Out, (Byte)(p->Low >> 24))
+#if defined(_MSC_VER) && (_MSC_VER < 1900)
+// #define USE_MY_MM
+#endif
 
-void Ppmd8_Flush_RangeEnc(CPpmd8 *p)
+#ifdef MY_CPU_X86_OR_AMD64
+  #if   defined(Z7_LLVM_CLANG_VERSION)  && (Z7_LLVM_CLANG_VERSION  >= 30800) \
+     || defined(Z7_APPLE_CLANG_VERSION) && (Z7_APPLE_CLANG_VERSION >= 50100) \
+     || defined(Z7_GCC_VERSION)         && (Z7_GCC_VERSION         >= 40900) \
+     || defined(__INTEL_COMPILER) && (__INTEL_COMPILER >= 1600) \
+     || defined(_MSC_VER) && (_MSC_VER >= 1200)
+      #define Z7_COMPILER_SHA1_SUPPORTED
+  #endif
+#elif defined(MY_CPU_ARM_OR_ARM64) && defined(MY_CPU_LE) \
+   && (!defined(Z7_MSC_VER_ORIGINAL) || (_MSC_VER >= 1929) && (_MSC_FULL_VER >= 192930037))
+  #if   defined(__ARM_FEATURE_SHA2) \
+     || defined(__ARM_FEATURE_CRYPTO)
+    #define Z7_COMPILER_SHA1_SUPPORTED
+  #else
+    #if  defined(MY_CPU_ARM64) \
+      || defined(__ARM_ARCH) && (__ARM_ARCH >= 4) \
+      || defined(Z7_MSC_VER_ORIGINAL)
+    #if  defined(__ARM_FP) && \
+          (   defined(Z7_CLANG_VERSION) && (Z7_CLANG_VERSION >= 30800) \
+           || defined(__GNUC__) && (__GNUC__ >= 6) \
+          ) \
+      || defined(Z7_MSC_VER_ORIGINAL) && (_MSC_VER >= 1910)
+    #if  defined(MY_CPU_ARM64) \
+      || !defined(Z7_CLANG_VERSION) \
+      || defined(__ARM_NEON) && \
+          (Z7_CLANG_VERSION < 170000 || \
+           Z7_CLANG_VERSION > 170001)
+      #define Z7_COMPILER_SHA1_SUPPORTED
+    #endif
+    #endif
+    #endif
+  #endif
+#endif
+
+void Z7_FASTCALL Sha1_UpdateBlocks(UInt32 state[5], const Byte *data, size_t numBlocks);
+
+#ifdef Z7_COMPILER_SHA1_SUPPORTED
+  void Z7_FASTCALL Sha1_UpdateBlocks_HW(UInt32 state[5], const Byte *data, size_t numBlocks);
+
+  static SHA1_FUNC_UPDATE_BLOCKS g_SHA1_FUNC_UPDATE_BLOCKS = Sha1_UpdateBlocks;
+  static SHA1_FUNC_UPDATE_BLOCKS g_SHA1_FUNC_UPDATE_BLOCKS_HW;
+
+  #define SHA1_UPDATE_BLOCKS(p) p->func_UpdateBlocks
+#else
+  #define SHA1_UPDATE_BLOCKS(p) Sha1_UpdateBlocks
+#endif
+
+
+BoolInt Sha1_SetFunction(CSha1 *p, unsigned algo)
 {
-  unsigned i;
-  for (i = 0; i < 4; i++, p->Low <<= 8 )
-    WRITE_BYTE(p);
-}
-
-
-
-
-
-
-#define RC_NORM(p) \
-  while ((p->Low ^ (p->Low + p->Range)) < kTop \
-    || (p->Range < kBot && ((p->Range = (0 - p->Low) & (kBot - 1)), 1))) \
-    { WRITE_BYTE(p); p->Range <<= 8; p->Low <<= 8; }
-
-
-
-
-
-
-
-
-
-
-
-
-
-// we must use only one type of Normalization from two: LOCAL or REMOTE
-#define RC_NORM_LOCAL(p)    // RC_NORM(p)
-#define RC_NORM_REMOTE(p)   RC_NORM(p)
-
-// #define RC_PRE(total) p->Range /= total;
-// #define RC_PRE(total)
-
-#define R p
-
-
-
-
-Z7_FORCE_INLINE
-// Z7_NO_INLINE
-static void Ppmd8_RangeEnc_Encode(CPpmd8 *p, UInt32 start, UInt32 size, UInt32 total)
-{
-  R->Low += start * (R->Range /= total);
-  R->Range *= size;
-  RC_NORM_LOCAL(R)
-}
-
-
-
-
-
-
-
-
-
-
-#define RC_Encode(start, size, total)  Ppmd8_RangeEnc_Encode(p, start, size, total);
-#define RC_EncodeFinal(start, size, total)  RC_Encode(start, size, total)  RC_NORM_REMOTE(p)
-
-#define CTX(ref) ((CPpmd8_Context *)Ppmd8_GetContext(p, ref))
-
-// typedef CPpmd8_Context * CTX_PTR;
-#define SUCCESSOR(p) Ppmd_GET_SUCCESSOR(p)
-
-void Ppmd8_UpdateModel(CPpmd8 *p);
-
-#define MASK(sym) ((unsigned char *)charMask)[sym]
-
-// Z7_FORCE_INLINE
-// static
-void Ppmd8_EncodeSymbol(CPpmd8 *p, int symbol)
-{
-  size_t charMask[256 / sizeof(size_t)];
+  SHA1_FUNC_UPDATE_BLOCKS func = Sha1_UpdateBlocks;
   
-  if (p->MinContext->NumStats != 0)
-  {
-    CPpmd_State *s = Ppmd8_GetStats(p, p->MinContext);
-    UInt32 sum;
-    unsigned i;
-    UInt32 summFreq = p->MinContext->Union2.SummFreq;
-    
-    PPMD8_CORRECT_SUM_RANGE(p, summFreq)
-
-    // RC_PRE(summFreq);
-
-    if (s->Symbol == symbol)
+  #ifdef Z7_COMPILER_SHA1_SUPPORTED
+    if (algo != SHA1_ALGO_SW)
     {
+      if (algo == SHA1_ALGO_DEFAULT)
+        func = g_SHA1_FUNC_UPDATE_BLOCKS;
+      else
+      {
+        if (algo != SHA1_ALGO_HW)
+          return False;
+        func = g_SHA1_FUNC_UPDATE_BLOCKS_HW;
+        if (!func)
+          return False;
+      }
+    }
+  #else
+    if (algo > 1)
+      return False;
+  #endif
 
-      RC_EncodeFinal(0, s->Freq, summFreq)
-      p->FoundState = s;
-      Ppmd8_Update1_0(p);
+  p->func_UpdateBlocks = func;
+  return True;
+}
+
+
+/* define it for speed optimization */
+// #define Z7_SHA1_UNROLL
+
+// allowed unroll steps: (1, 2, 4, 5, 20)
+
+#undef Z7_SHA1_BIG_W
+#ifdef Z7_SHA1_UNROLL
+  #define STEP_PRE  20
+  #define STEP_MAIN 20
+#else
+  #define Z7_SHA1_BIG_W
+  #define STEP_PRE  5
+  #define STEP_MAIN 5
+#endif
+
+
+#ifdef Z7_SHA1_BIG_W
+  #define kNumW 80
+  #define w(i) W[i]
+#else
+  #define kNumW 16
+  #define w(i) W[(i)&15]
+#endif
+
+#define w0(i) (W[i] = GetBe32(data + (size_t)(i) * 4))
+#define w1(i) (w(i) = rotlFixed(w((size_t)(i)-3) ^ w((size_t)(i)-8) ^ w((size_t)(i)-14) ^ w((size_t)(i)-16), 1))
+
+#define f0(x,y,z)  ( 0x5a827999 + (z^(x&(y^z))) )
+#define f1(x,y,z)  ( 0x6ed9eba1 + (x^y^z) )
+#define f2(x,y,z)  ( 0x8f1bbcdc + ((x&y)|(z&(x|y))) )
+#define f3(x,y,z)  ( 0xca62c1d6 + (x^y^z) )
+
+/*
+#define T1(fx, ww) \
+    tmp = e + fx(b,c,d) + ww + rotlFixed(a, 5); \
+    e = d; \
+    d = c; \
+    c = rotlFixed(b, 30); \
+    b = a; \
+    a = tmp; \
+*/
+
+#define T5(a,b,c,d,e, fx, ww) \
+    e += fx(b,c,d) + ww + rotlFixed(a, 5); \
+    b = rotlFixed(b, 30); \
+
+
+/*
+#define R1(i, fx, wx) \
+    T1 ( fx, wx(i)); \
+
+#define R2(i, fx, wx) \
+    R1 ( (i)    , fx, wx); \
+    R1 ( (i) + 1, fx, wx); \
+
+#define R4(i, fx, wx) \
+    R2 ( (i)    , fx, wx); \
+    R2 ( (i) + 2, fx, wx); \
+*/
+
+#define M5(i, fx, wx0, wx1) \
+    T5 ( a,b,c,d,e, fx, wx0((i)  ) ) \
+    T5 ( e,a,b,c,d, fx, wx1((i)+1) ) \
+    T5 ( d,e,a,b,c, fx, wx1((i)+2) ) \
+    T5 ( c,d,e,a,b, fx, wx1((i)+3) ) \
+    T5 ( b,c,d,e,a, fx, wx1((i)+4) ) \
+
+#define R5(i, fx, wx) \
+    M5 ( i, fx, wx, wx) \
+
+
+#if STEP_PRE > 5
+
+  #define R20_START \
+    R5 (  0, f0, w0) \
+    R5 (  5, f0, w0) \
+    R5 ( 10, f0, w0) \
+    M5 ( 15, f0, w0, w1) \
+  
+  #elif STEP_PRE == 5
+  
+  #define R20_START \
+    { size_t i; for (i = 0; i < 15; i += STEP_PRE) \
+      { R5(i, f0, w0) } } \
+    M5 ( 15, f0, w0, w1) \
+
+#else
+
+  #if STEP_PRE == 1
+    #define R_PRE R1
+  #elif STEP_PRE == 2
+    #define R_PRE R2
+  #elif STEP_PRE == 4
+    #define R_PRE R4
+  #endif
+
+  #define R20_START \
+    { size_t i; for (i = 0; i < 16; i += STEP_PRE) \
+      { R_PRE(i, f0, w0) } } \
+    R4 ( 16, f0, w1) \
+
+#endif
+
+
+
+#if STEP_MAIN > 5
+
+  #define R20(ii, fx) \
+    R5 ( (ii)     , fx, w1) \
+    R5 ( (ii) + 5 , fx, w1) \
+    R5 ( (ii) + 10, fx, w1) \
+    R5 ( (ii) + 15, fx, w1) \
+
+#else
+
+  #if STEP_MAIN == 1
+    #define R_MAIN R1
+  #elif STEP_MAIN == 2
+    #define R_MAIN R2
+  #elif STEP_MAIN == 4
+    #define R_MAIN R4
+  #elif STEP_MAIN == 5
+    #define R_MAIN R5
+  #endif
+
+  #define R20(ii, fx)  \
+    { size_t i; for (i = (ii); i < (ii) + 20; i += STEP_MAIN) \
+      { R_MAIN(i, fx, w1) } } \
+
+#endif
+
+
+
+void Sha1_InitState(CSha1 *p)
+{
+  p->count = 0;
+  p->state[0] = 0x67452301;
+  p->state[1] = 0xEFCDAB89;
+  p->state[2] = 0x98BADCFE;
+  p->state[3] = 0x10325476;
+  p->state[4] = 0xC3D2E1F0;
+}
+
+void Sha1_Init(CSha1 *p)
+{
+  p->func_UpdateBlocks =
+  #ifdef Z7_COMPILER_SHA1_SUPPORTED
+      g_SHA1_FUNC_UPDATE_BLOCKS;
+  #else
+      NULL;
+  #endif
+  Sha1_InitState(p);
+}
+
+
+Z7_NO_INLINE
+void Z7_FASTCALL Sha1_UpdateBlocks(UInt32 state[5], const Byte *data, size_t numBlocks)
+{
+  UInt32 a, b, c, d, e;
+  UInt32 W[kNumW];
+  // if (numBlocks != 0x1264378347) return;
+  if (numBlocks == 0)
+    return;
+
+  a = state[0];
+  b = state[1];
+  c = state[2];
+  d = state[3];
+  e = state[4];
+
+  do
+  {
+  #if STEP_PRE < 5 || STEP_MAIN < 5
+  UInt32 tmp;
+  #endif
+
+  R20_START
+  R20(20, f1)
+  R20(40, f2)
+  R20(60, f3)
+
+  a += state[0];
+  b += state[1];
+  c += state[2];
+  d += state[3];
+  e += state[4];
+
+  state[0] = a;
+  state[1] = b;
+  state[2] = c;
+  state[3] = d;
+  state[4] = e;
+
+  data += 64;
+  }
+  while (--numBlocks);
+}
+
+
+#define Sha1_UpdateBlock(p) SHA1_UPDATE_BLOCKS(p)(p->state, p->buffer, 1)
+
+void Sha1_Update(CSha1 *p, const Byte *data, size_t size)
+{
+  if (size == 0)
+    return;
+
+  {
+    unsigned pos = (unsigned)p->count & 0x3F;
+    unsigned num;
+    
+    p->count += size;
+    
+    num = 64 - pos;
+    if (num > size)
+    {
+      memcpy(p->buffer + pos, data, size);
       return;
     }
-    p->PrevSuccess = 0;
-    sum = s->Freq;
-    i = p->MinContext->NumStats;
-    do
+    
+    if (pos != 0)
     {
-      if ((++s)->Symbol == symbol)
-      {
-
-        RC_EncodeFinal(sum, s->Freq, summFreq)
-        p->FoundState = s;
-        Ppmd8_Update1(p);
-        return;
-      }
-      sum += s->Freq;
-    }
-    while (--i);
-    
-    
-    RC_Encode(sum, summFreq - sum, summFreq)
-    
-    
-    PPMD_SetAllBitsIn256Bytes(charMask)
-    // MASK(s->Symbol) = 0;
-    // i = p->MinContext->NumStats;
-    // do { MASK((--s)->Symbol) = 0; } while (--i);
-    {
-      CPpmd_State *s2 = Ppmd8_GetStats(p, p->MinContext);
-      MASK(s->Symbol) = 0;
-      do
-      {
-        unsigned sym0 = s2[0].Symbol;
-        unsigned sym1 = s2[1].Symbol;
-        s2 += 2;
-        MASK(sym0) = 0;
-        MASK(sym1) = 0;
-      }
-      while (s2 < s);
+      size -= num;
+      memcpy(p->buffer + pos, data, num);
+      data += num;
+      Sha1_UpdateBlock(p);
     }
   }
-  else
   {
-    UInt16 *prob = Ppmd8_GetBinSumm(p);
-    CPpmd_State *s = Ppmd8Context_OneState(p->MinContext);
-    UInt32 pr = *prob;
-    const UInt32 bound = (R->Range >> 14) * pr;
-    pr = PPMD_UPDATE_PROB_1(pr);
-    if (s->Symbol == symbol)
-    {
-      *prob = (UInt16)(pr + (1 << PPMD_INT_BITS));
-      // RangeEnc_EncodeBit_0(p, bound);
-      R->Range = bound;
-      RC_NORM(R)
-
-      // p->FoundState = s;
-      // Ppmd8_UpdateBin(p);
-      {
-        const unsigned freq = s->Freq;
-        CPpmd8_Context *c = CTX(SUCCESSOR(s));
-        p->FoundState = s;
-        p->PrevSuccess = 1;
-        p->RunLength++;
-        s->Freq = (Byte)(freq + (freq < 196)); // Ppmd8 (196)
-        // NextContext(p);
-        if (p->OrderFall == 0 && (const Byte *)c >= p->UnitsStart)
-          p->MaxContext = p->MinContext = c;
-        else
-          Ppmd8_UpdateModel(p);
-      }
+    size_t numBlocks = size >> 6;
+    SHA1_UPDATE_BLOCKS(p)(p->state, data, numBlocks);
+    size &= 0x3F;
+    if (size == 0)
       return;
-    }
-
-    *prob = (UInt16)pr;
-    p->InitEsc = p->ExpEscape[pr >> 10];
-    // RangeEnc_EncodeBit_1(p, bound);
-    R->Low += bound;
-    R->Range = (R->Range & ~((UInt32)PPMD_BIN_SCALE - 1)) - bound;
-    RC_NORM_LOCAL(R)
-
-    PPMD_SetAllBitsIn256Bytes(charMask)
-    MASK(s->Symbol) = 0;
-    p->PrevSuccess = 0;
-  }
-
-  for (;;)
-  {
-    CPpmd_See *see;
-    CPpmd_State *s;
-    UInt32 sum, escFreq;
-    CPpmd8_Context *mc;
-    unsigned i, numMasked;
-
-    RC_NORM_REMOTE(p)
-
-    mc = p->MinContext;
-    numMasked = mc->NumStats;
-
-    do
-    {
-      p->OrderFall++;
-      if (!mc->Suffix)
-        return; /* EndMarker (symbol = -1) */
-      mc = Ppmd8_GetContext(p, mc->Suffix);
-
-    }
-    while (mc->NumStats == numMasked);
-    
-    p->MinContext = mc;
-
-    see = Ppmd8_MakeEscFreq(p, numMasked, &escFreq);
-    
-    
-    
-    
-    
-    
-    
-    
-    
-
-    
-    
-    
-    
-    
-    
-
-    
-    
-    
-    
-    
-    
-    
-    s = Ppmd8_GetStats(p, p->MinContext);
-    sum = 0;
-    i = (unsigned)p->MinContext->NumStats + 1;
-
-    do
-    {
-      const unsigned cur = s->Symbol;
-      if ((int)cur == symbol)
-      {
-        const UInt32 low = sum;
-        const UInt32 freq = s->Freq;
-        unsigned num2;
-
-        Ppmd_See_UPDATE(see)
-        p->FoundState = s;
-        sum += escFreq;
-
-        num2 = i / 2;
-        i &= 1;
-        sum += freq & (0 - (UInt32)i);
-        if (num2 != 0)
-        {
-          s += i;
-          for (;;)
-          {
-            unsigned sym0 = s[0].Symbol;
-            unsigned sym1 = s[1].Symbol;
-            s += 2;
-            sum += (s[-2].Freq & (unsigned)(MASK(sym0)));
-            sum += (s[-1].Freq & (unsigned)(MASK(sym1)));
-            if (--num2 == 0)
-              break;
-          }
-        }
-
-        PPMD8_CORRECT_SUM_RANGE(p, sum)
-
-        RC_EncodeFinal(low, freq, sum)
-        Ppmd8_Update2(p);
-        return;
-      }
-      sum += (s->Freq & (unsigned)(MASK(cur)));
-      s++;
-    }
-    while (--i);
-    
-    {
-      UInt32 total = sum + escFreq;
-      see->Summ = (UInt16)(see->Summ + total);
-      PPMD8_CORRECT_SUM_RANGE(p, total)
-
-      RC_Encode(sum, total - sum, total)
-    }
-
-    {
-      const CPpmd_State *s2 = Ppmd8_GetStats(p, p->MinContext);
-      s--;
-      MASK(s->Symbol) = 0;
-      do
-      {
-        const unsigned sym0 = s2[0].Symbol;
-        const unsigned sym1 = s2[1].Symbol;
-        s2 += 2;
-        MASK(sym0) = 0;
-        MASK(sym1) = 0;
-      }
-      while (s2 < s);
-    }
+    data += (numBlocks << 6);
+    memcpy(p->buffer, data, size);
   }
 }
 
 
+void Sha1_Final(CSha1 *p, Byte *digest)
+{
+  unsigned pos = (unsigned)p->count & 0x3F;
+  
+
+  p->buffer[pos++] = 0x80;
+  
+  if (pos > (64 - 8))
+  {
+    while (pos != 64) { p->buffer[pos++] = 0; }
+    // memset(&p->buf.buffer[pos], 0, 64 - pos);
+    Sha1_UpdateBlock(p);
+    pos = 0;
+  }
+
+  /*
+  if (pos & 3)
+  {
+    p->buffer[pos] = 0;
+    p->buffer[pos + 1] = 0;
+    p->buffer[pos + 2] = 0;
+    pos += 3;
+    pos &= ~3;
+  }
+  {
+    for (; pos < 64 - 8; pos += 4)
+      *(UInt32 *)(&p->buffer[pos]) = 0;
+  }
+  */
+
+  memset(&p->buffer[pos], 0, (64 - 8) - pos);
+
+  {
+    const UInt64 numBits = (p->count << 3);
+    SetBe32(p->buffer + 64 - 8, (UInt32)(numBits >> 32))
+    SetBe32(p->buffer + 64 - 4, (UInt32)(numBits))
+  }
+  
+  Sha1_UpdateBlock(p);
+
+  SetBe32(digest,      p->state[0])
+  SetBe32(digest + 4,  p->state[1])
+  SetBe32(digest + 8,  p->state[2])
+  SetBe32(digest + 12, p->state[3])
+  SetBe32(digest + 16, p->state[4])
+  
 
 
 
+  Sha1_InitState(p);
+}
 
 
+void Sha1_PrepareBlock(const CSha1 *p, Byte *block, unsigned size)
+{
+  const UInt64 numBits = (p->count + size) << 3;
+  SetBe32(&((UInt32 *)(void *)block)[SHA1_NUM_BLOCK_WORDS - 2], (UInt32)(numBits >> 32))
+  SetBe32(&((UInt32 *)(void *)block)[SHA1_NUM_BLOCK_WORDS - 1], (UInt32)(numBits))
+  // SetBe32((UInt32 *)(block + size), 0x80000000);
+  SetUi32((UInt32 *)(void *)(block + size), 0x80)
+  size += 4;
+  while (size != (SHA1_NUM_BLOCK_WORDS - 2) * 4)
+  {
+    *((UInt32 *)(void *)(block + size)) = 0;
+    size += 4;
+  }
+}
+
+void Sha1_GetBlockDigest(const CSha1 *p, const Byte *data, Byte *destDigest)
+{
+  MY_ALIGN (16)
+  UInt32 st[SHA1_NUM_DIGEST_WORDS];
+
+  st[0] = p->state[0];
+  st[1] = p->state[1];
+  st[2] = p->state[2];
+  st[3] = p->state[3];
+  st[4] = p->state[4];
+  
+  SHA1_UPDATE_BLOCKS(p)(st, data, 1);
+
+  SetBe32(destDigest + 0    , st[0])
+  SetBe32(destDigest + 1 * 4, st[1])
+  SetBe32(destDigest + 2 * 4, st[2])
+  SetBe32(destDigest + 3 * 4, st[3])
+  SetBe32(destDigest + 4 * 4, st[4])
+}
 
 
-#undef kTop
-#undef kBot
-#undef WRITE_BYTE
-#undef RC_NORM_BASE
-#undef RC_NORM_1
-#undef RC_NORM
-#undef RC_NORM_LOCAL
-#undef RC_NORM_REMOTE
-#undef R
-#undef RC_Encode
-#undef RC_EncodeFinal
+void Sha1Prepare(void)
+{
+  #ifdef Z7_COMPILER_SHA1_SUPPORTED
+  SHA1_FUNC_UPDATE_BLOCKS f, f_hw;
+  f = Sha1_UpdateBlocks;
+  f_hw = NULL;
+  #ifdef MY_CPU_X86_OR_AMD64
+  #ifndef USE_MY_MM
+  if (CPU_IsSupported_SHA()
+      && CPU_IsSupported_SSSE3()
+      // && CPU_IsSupported_SSE41()
+      )
+  #endif
+  #else
+  if (CPU_IsSupported_SHA1())
+  #endif
+  {
+    // printf("\n========== HW SHA1 ======== \n");
+    #if 0 && defined(MY_CPU_ARM_OR_ARM64) && defined(_MSC_VER)
+    /* there was bug in MSVC compiler for ARM64 -O2 before version VS2019 16.10 (19.29.30037).
+       It generated incorrect SHA-1 code.
+       21.03 : we test sha1-hardware code at runtime initialization */
 
-#undef CTX
-#undef SUCCESSOR
-#undef MASK
+      #pragma message("== SHA1 code: MSC compiler : failure-check code was inserted")
+
+      UInt32 state[5] = { 0, 1, 2, 3, 4 } ;
+      Byte data[64];
+      unsigned i;
+      for (i = 0; i < sizeof(data); i += 2)
+      {
+        data[i    ] = (Byte)(i);
+        data[i + 1] = (Byte)(i + 1);
+      }
+
+      Sha1_UpdateBlocks_HW(state, data, sizeof(data) / 64);
+    
+      if (   state[0] != 0x9acd7297
+          || state[1] != 0x4624d898
+          || state[2] != 0x0bf079f0
+          || state[3] != 0x031e61b3
+          || state[4] != 0x8323fe20)
+      {
+        // printf("\n========== SHA-1 hardware version failure ======== \n");
+      }
+      else
+    #endif
+      {
+        f = f_hw = Sha1_UpdateBlocks_HW;
+      }
+  }
+  g_SHA1_FUNC_UPDATE_BLOCKS    = f;
+  g_SHA1_FUNC_UPDATE_BLOCKS_HW = f_hw;
+  #endif
+}
+
+#undef kNumW
+#undef w
+#undef w0
+#undef w1
+#undef f0
+#undef f1
+#undef f2
+#undef f3
+#undef T1
+#undef T5
+#undef M5
+#undef R1
+#undef R2
+#undef R4
+#undef R5
+#undef R20_START
+#undef R_PRE
+#undef R_MAIN
+#undef STEP_PRE
+#undef STEP_MAIN
+#undef Z7_SHA1_BIG_W
+#undef Z7_SHA1_UNROLL
+#undef Z7_COMPILER_SHA1_SUPPORTED

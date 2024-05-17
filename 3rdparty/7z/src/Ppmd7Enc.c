@@ -1,338 +1,181 @@
-/* Ppmd7Enc.c -- Ppmd7z (PPMdH with 7z Range Coder) Encoder
+/* Ppmd8.h -- Ppmd8 (PPMdI) compression codec
 2023-04-02 : Igor Pavlov : Public domain
 This code is based on:
-  PPMd var.H (2001): Dmitry Shkarin : Public domain */
+  PPMd var.I (2002): Dmitry Shkarin : Public domain
+  Carryless rangecoder (1999): Dmitry Subbotin : Public domain */
+
+#ifndef ZIP7_INC_PPMD8_H
+#define ZIP7_INC_PPMD8_H
+
+#include "Ppmd.h"
+
+EXTERN_C_BEGIN
+
+#define PPMD8_MIN_ORDER 2
+#define PPMD8_MAX_ORDER 16
 
 
-#include "Precomp.h"
 
-#include "Ppmd7.h"
 
-#define kTopValue ((UInt32)1 << 24)
+struct CPpmd8_Context_;
 
-#define R (&p->rc.enc)
+typedef Ppmd_Ref_Type(struct CPpmd8_Context_) CPpmd8_Context_Ref;
 
-void Ppmd7z_Init_RangeEnc(CPpmd7 *p)
+// MY_CPU_pragma_pack_push_1
+
+typedef struct CPpmd8_Context_
 {
-  R->Low = 0;
-  R->Range = 0xFFFFFFFF;
-  R->Cache = 0;
-  R->CacheSize = 1;
-}
-
-Z7_NO_INLINE
-static void Ppmd7z_RangeEnc_ShiftLow(CPpmd7 *p)
-{
-  if ((UInt32)R->Low < (UInt32)0xFF000000 || (unsigned)(R->Low >> 32) != 0)
+  Byte NumStats;
+  Byte Flags;
+  
+  union
   {
-    Byte temp = R->Cache;
-    do
-    {
-      IByteOut_Write(R->Stream, (Byte)(temp + (Byte)(R->Low >> 32)));
-      temp = 0xFF;
-    }
-    while (--R->CacheSize != 0);
-    R->Cache = (Byte)((UInt32)R->Low >> 24);
-  }
-  R->CacheSize++;
-  R->Low = (UInt32)((UInt32)R->Low << 8);
-}
+    UInt16 SummFreq;
+    CPpmd_State2 State2;
+  } Union2;
+  
+  union
+  {
+    CPpmd_State_Ref Stats;
+    CPpmd_State4 State4;
+  } Union4;
 
-#define RC_NORM_BASE(p) if (R->Range < kTopValue) { R->Range <<= 8;  Ppmd7z_RangeEnc_ShiftLow(p);
-#define RC_NORM_1(p)    RC_NORM_BASE(p) }
-#define RC_NORM(p)      RC_NORM_BASE(p)  RC_NORM_BASE(p) }}
+  CPpmd8_Context_Ref Suffix;
+} CPpmd8_Context;
 
-// we must use only one type of Normalization from two: LOCAL or REMOTE
-#define RC_NORM_LOCAL(p)    // RC_NORM(p)
-#define RC_NORM_REMOTE(p)   RC_NORM(p)
+// MY_CPU_pragma_pop
+
+#define Ppmd8Context_OneState(p) ((CPpmd_State *)&(p)->Union2)
+
+/* PPMdI code rev.2 contains the fix over PPMdI code rev.1.
+   But the code PPMdI.2 is not compatible with PPMdI.1 for some files compressed
+   in FREEZE mode. So we disable FREEZE mode support. */
+
+// #define PPMD8_FREEZE_SUPPORT
+
+enum
+{
+  PPMD8_RESTORE_METHOD_RESTART,
+  PPMD8_RESTORE_METHOD_CUT_OFF
+  #ifdef PPMD8_FREEZE_SUPPORT
+  , PPMD8_RESTORE_METHOD_FREEZE
+  #endif
+  , PPMD8_RESTORE_METHOD_UNSUPPPORTED
+};
+
+
+
+
+
+
+
+
+typedef struct
+{
+  CPpmd8_Context *MinContext, *MaxContext;
+  CPpmd_State *FoundState;
+  unsigned OrderFall, InitEsc, PrevSuccess, MaxOrder, RestoreMethod;
+  Int32 RunLength, InitRL; /* must be 32-bit at least */
+
+  UInt32 Size;
+  UInt32 GlueCount;
+  UInt32 AlignOffset;
+  Byte *Base, *LoUnit, *HiUnit, *Text, *UnitsStart;
+
+  UInt32 Range;
+  UInt32 Code;
+  UInt32 Low;
+  union
+  {
+    IByteInPtr In;
+    IByteOutPtr Out;
+  } Stream;
+
+  Byte Indx2Units[PPMD_NUM_INDEXES + 2]; // +2 for alignment
+  Byte Units2Indx[128];
+  CPpmd_Void_Ref FreeList[PPMD_NUM_INDEXES];
+  UInt32 Stamps[PPMD_NUM_INDEXES];
+  Byte NS2BSIndx[256], NS2Indx[260];
+  Byte ExpEscape[16];
+  CPpmd_See DummySee, See[24][32];
+  UInt16 BinSumm[25][64];
+
+} CPpmd8;
+
+
+void Ppmd8_Construct(CPpmd8 *p);
+BoolInt Ppmd8_Alloc(CPpmd8 *p, UInt32 size, ISzAllocPtr alloc);
+void Ppmd8_Free(CPpmd8 *p, ISzAllocPtr alloc);
+void Ppmd8_Init(CPpmd8 *p, unsigned maxOrder, unsigned restoreMethod);
+#define Ppmd8_WasAllocated(p) ((p)->Base != NULL)
+
+
+/* ---------- Internal Functions ---------- */
+
+#define Ppmd8_GetPtr(p, ptr)     Ppmd_GetPtr(p, ptr)
+#define Ppmd8_GetContext(p, ptr) Ppmd_GetPtr_Type(p, ptr, CPpmd8_Context)
+#define Ppmd8_GetStats(p, ctx)   Ppmd_GetPtr_Type(p, (ctx)->Union4.Stats, CPpmd_State)
+
+void Ppmd8_Update1(CPpmd8 *p);
+void Ppmd8_Update1_0(CPpmd8 *p);
+void Ppmd8_Update2(CPpmd8 *p);
+
+
+
+
+
+
+#define Ppmd8_GetBinSumm(p) \
+    &p->BinSumm[p->NS2Indx[(size_t)Ppmd8Context_OneState(p->MinContext)->Freq - 1]] \
+    [ p->PrevSuccess + ((p->RunLength >> 26) & 0x20) \
+    + p->NS2BSIndx[Ppmd8_GetContext(p, p->MinContext->Suffix)->NumStats] + \
+    + p->MinContext->Flags ]
+
+
+CPpmd_See *Ppmd8_MakeEscFreq(CPpmd8 *p, unsigned numMasked, UInt32 *scale);
+
+
+/* 20.01: the original PPMdI encoder and decoder probably could work incorrectly in some rare cases,
+   where the original PPMdI code can give "Divide by Zero" operation.
+   We use the following fix to allow correct working of encoder and decoder in any cases.
+   We correct (Escape_Freq) and (_sum_), if (_sum_) is larger than p->Range) */
+#define PPMD8_CORRECT_SUM_RANGE(p, _sum_) if (_sum_ > p->Range /* /1 */) _sum_ = p->Range;
+
+
+/* ---------- Decode ---------- */
+
+#define PPMD8_SYM_END    (-1)
+#define PPMD8_SYM_ERROR  (-2)
 
 /*
-#define Ppmd7z_RangeEnc_Encode(p, start, _size_) \
-  { UInt32 size = _size_; \
-    R->Low += start * R->Range; \
-    R->Range *= size; \
-    RC_NORM_LOCAL(p); }
+You must set (CPpmd8::Stream.In) before Ppmd8_RangeDec_Init()
+
+Ppmd8_DecodeSymbol()
+out:
+  >= 0 : decoded byte
+    -1 : PPMD8_SYM_END   : End of payload marker
+    -2 : PPMD8_SYM_ERROR : Data error
 */
 
-Z7_FORCE_INLINE
-// Z7_NO_INLINE
-static void Ppmd7z_RangeEnc_Encode(CPpmd7 *p, UInt32 start, UInt32 size)
-{
-  R->Low += start * R->Range;
-  R->Range *= size;
-  RC_NORM_LOCAL(p)
-}
 
-void Ppmd7z_Flush_RangeEnc(CPpmd7 *p)
-{
-  unsigned i;
-  for (i = 0; i < 5; i++)
-    Ppmd7z_RangeEnc_ShiftLow(p);
-}
+BoolInt Ppmd8_Init_RangeDec(CPpmd8 *p);
+#define Ppmd8_RangeDec_IsFinishedOK(p) ((p)->Code == 0)
+int Ppmd8_DecodeSymbol(CPpmd8 *p);
 
 
 
-#define RC_Encode(start, size)  Ppmd7z_RangeEnc_Encode(p, start, size);
-#define RC_EncodeFinal(start, size)  RC_Encode(start, size) RC_NORM_REMOTE(p)
-
-#define CTX(ref) ((CPpmd7_Context *)Ppmd7_GetContext(p, ref))
-#define SUFFIX(ctx) CTX((ctx)->Suffix)
-// typedef CPpmd7_Context * CTX_PTR;
-#define SUCCESSOR(p) Ppmd_GET_SUCCESSOR(p)
-
-void Ppmd7_UpdateModel(CPpmd7 *p);
-
-#define MASK(sym) ((unsigned char *)charMask)[sym]
-
-Z7_FORCE_INLINE
-static
-void Ppmd7z_EncodeSymbol(CPpmd7 *p, int symbol)
-{
-  size_t charMask[256 / sizeof(size_t)];
-  
-  if (p->MinContext->NumStats != 1)
-  {
-    CPpmd_State *s = Ppmd7_GetStats(p, p->MinContext);
-    UInt32 sum;
-    unsigned i;
-   
-
-    
-    
-    R->Range /= p->MinContext->Union2.SummFreq;
-    
-    if (s->Symbol == symbol)
-    {
-      // R->Range /= p->MinContext->Union2.SummFreq;
-      RC_EncodeFinal(0, s->Freq)
-      p->FoundState = s;
-      Ppmd7_Update1_0(p);
-      return;
-    }
-    p->PrevSuccess = 0;
-    sum = s->Freq;
-    i = (unsigned)p->MinContext->NumStats - 1;
-    do
-    {
-      if ((++s)->Symbol == symbol)
-      {
-        // R->Range /= p->MinContext->Union2.SummFreq;
-        RC_EncodeFinal(sum, s->Freq)
-        p->FoundState = s;
-        Ppmd7_Update1(p);
-        return;
-      }
-      sum += s->Freq;
-    }
-    while (--i);
-
-    // R->Range /= p->MinContext->Union2.SummFreq;
-    RC_Encode(sum, p->MinContext->Union2.SummFreq - sum)
-    
-    p->HiBitsFlag = PPMD7_HiBitsFlag_3(p->FoundState->Symbol);
-    PPMD_SetAllBitsIn256Bytes(charMask)
-    // MASK(s->Symbol) = 0;
-    // i = p->MinContext->NumStats - 1;
-    // do { MASK((--s)->Symbol) = 0; } while (--i);
-    {
-      CPpmd_State *s2 = Ppmd7_GetStats(p, p->MinContext);
-      MASK(s->Symbol) = 0;
-      do
-      {
-        unsigned sym0 = s2[0].Symbol;
-        unsigned sym1 = s2[1].Symbol;
-        s2 += 2;
-        MASK(sym0) = 0;
-        MASK(sym1) = 0;
-      }
-      while (s2 < s);
-    }
-  }
-  else
-  {
-    UInt16 *prob = Ppmd7_GetBinSumm(p);
-    CPpmd_State *s = Ppmd7Context_OneState(p->MinContext);
-    UInt32 pr = *prob;
-    const UInt32 bound = (R->Range >> 14) * pr;
-    pr = PPMD_UPDATE_PROB_1(pr);
-    if (s->Symbol == symbol)
-    {
-      *prob = (UInt16)(pr + (1 << PPMD_INT_BITS));
-      // RangeEnc_EncodeBit_0(p, bound);
-      R->Range = bound;
-      RC_NORM_1(p)
-      
-      // p->FoundState = s;
-      // Ppmd7_UpdateBin(p);
-      {
-        const unsigned freq = s->Freq;
-        CPpmd7_Context *c = CTX(SUCCESSOR(s));
-        p->FoundState = s;
-        p->PrevSuccess = 1;
-        p->RunLength++;
-        s->Freq = (Byte)(freq + (freq < 128));
-        // NextContext(p);
-        if (p->OrderFall == 0 && (const Byte *)c > p->Text)
-          p->MaxContext = p->MinContext = c;
-        else
-          Ppmd7_UpdateModel(p);
-      }
-      return;
-    }
-
-    *prob = (UInt16)pr;
-    p->InitEsc = p->ExpEscape[pr >> 10];
-    // RangeEnc_EncodeBit_1(p, bound);
-    R->Low += bound;
-    R->Range -= bound;
-    RC_NORM_LOCAL(p)
-    
-    PPMD_SetAllBitsIn256Bytes(charMask)
-    MASK(s->Symbol) = 0;
-    p->PrevSuccess = 0;
-  }
-
-  for (;;)
-  {
-    CPpmd_See *see;
-    CPpmd_State *s;
-    UInt32 sum, escFreq;
-    CPpmd7_Context *mc;
-    unsigned i, numMasked;
-    
-    RC_NORM_REMOTE(p)
-
-    mc = p->MinContext;
-    numMasked = mc->NumStats;
-
-    do
-    {
-      p->OrderFall++;
-      if (!mc->Suffix)
-        return; /* EndMarker (symbol = -1) */
-      mc = Ppmd7_GetContext(p, mc->Suffix);
-      i = mc->NumStats;
-    }
-    while (i == numMasked);
-
-    p->MinContext = mc;
-    
-    // see = Ppmd7_MakeEscFreq(p, numMasked, &escFreq);
-    {
-      if (i != 256)
-      {
-        unsigned nonMasked = i - numMasked;
-        see = p->See[(unsigned)p->NS2Indx[(size_t)nonMasked - 1]]
-            + p->HiBitsFlag
-            + (nonMasked < (unsigned)SUFFIX(mc)->NumStats - i)
-            + 2 * (unsigned)(mc->Union2.SummFreq < 11 * i)
-            + 4 * (unsigned)(numMasked > nonMasked);
-        {
-          // if (see->Summ) field is larger than 16-bit, we need only low 16 bits of Summ
-          unsigned summ = (UInt16)see->Summ; // & 0xFFFF
-          unsigned r = (summ >> see->Shift);
-          see->Summ = (UInt16)(summ - r);
-          escFreq = r + (r == 0);
-        }
-      }
-      else
-      {
-        see = &p->DummySee;
-        escFreq = 1;
-      }
-    }
-
-    s = Ppmd7_GetStats(p, mc);
-    sum = 0;
-    // i = mc->NumStats;
-
-    do
-    {
-      const unsigned cur = s->Symbol;
-      if ((int)cur == symbol)
-      {
-        const UInt32 low = sum;
-        const UInt32 freq = s->Freq;
-        unsigned num2;
-
-        Ppmd_See_UPDATE(see)
-        p->FoundState = s;
-        sum += escFreq;
-
-        num2 = i / 2;
-        i &= 1;
-        sum += freq & (0 - (UInt32)i);
-        if (num2 != 0)
-        {
-          s += i;
-          for (;;)
-          {
-            unsigned sym0 = s[0].Symbol;
-            unsigned sym1 = s[1].Symbol;
-            s += 2;
-            sum += (s[-2].Freq & (unsigned)(MASK(sym0)));
-            sum += (s[-1].Freq & (unsigned)(MASK(sym1)));
-            if (--num2 == 0)
-              break;
-          }
-        }
-
-        
-        R->Range /= sum;
-        RC_EncodeFinal(low, freq)
-        Ppmd7_Update2(p);
-        return;
-      }
-      sum += (s->Freq & (unsigned)(MASK(cur)));
-      s++;
-    }
-    while (--i);
-    
-    {
-      const UInt32 total = sum + escFreq;
-      see->Summ = (UInt16)(see->Summ + total);
-
-      R->Range /= total;
-      RC_Encode(sum, escFreq)
-    }
-
-    {
-      const CPpmd_State *s2 = Ppmd7_GetStats(p, p->MinContext);
-      s--;
-      MASK(s->Symbol) = 0;
-      do
-      {
-        const unsigned sym0 = s2[0].Symbol;
-        const unsigned sym1 = s2[1].Symbol;
-        s2 += 2;
-        MASK(sym0) = 0;
-        MASK(sym1) = 0;
-      }
-      while (s2 < s);
-    }
-  }
-}
 
 
-void Ppmd7z_EncodeSymbols(CPpmd7 *p, const Byte *buf, const Byte *lim)
-{
-  for (; buf < lim; buf++)
-  {
-    Ppmd7z_EncodeSymbol(p, *buf);
-  }
-}
 
-#undef kTopValue
-#undef WRITE_BYTE
-#undef RC_NORM_BASE
-#undef RC_NORM_1
-#undef RC_NORM
-#undef RC_NORM_LOCAL
-#undef RC_NORM_REMOTE
-#undef R
-#undef RC_Encode
-#undef RC_EncodeFinal
-#undef SUFFIX
-#undef CTX
-#undef SUCCESSOR
-#undef MASK
+
+
+/* ---------- Encode ---------- */
+
+#define Ppmd8_Init_RangeEnc(p) { (p)->Low = 0; (p)->Range = 0xFFFFFFFF; }
+void Ppmd8_Flush_RangeEnc(CPpmd8 *p);
+void Ppmd8_EncodeSymbol(CPpmd8 *p, int symbol);
+
+
+EXTERN_C_END
+ 
+#endif

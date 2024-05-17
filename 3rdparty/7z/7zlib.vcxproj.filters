@@ -42,9 +42,11 @@
     <ClInclude Include="src\Sort.h" />
     <ClInclude Include="src\SwapBytes.h" />
     <ClInclude Include="src\Threads.h" />
+    <ClInclude Include="src\Xxh64.h" />
     <ClInclude Include="src\Xz.h" />
     <ClInclude Include="src\XzCrc64.h" />
     <ClInclude Include="src\XzEnc.h" />
+    <ClInclude Include="src\ZstdDec.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\7zAlloc.c" />
@@ -97,11 +99,13 @@
     <ClCompile Include="src\Sort.c" />
     <ClCompile Include="src\SwapBytes.c" />
     <ClCompile Include="src\Threads.c" />
+    <ClInclude Include="src\Xxh64.c" />
     <ClCompile Include="src\Xz.c" />
     <ClCompile Include="src\XzCrc64.c" />
     <ClCompile Include="src\XzCrc64Opt.c" />
     <ClCompile Include="src\XzDec.c" />
     <ClCompile Include="src\XzEnc.c" />
     <ClCompile Include="src\XzIn.c" />
+    <ClInclude Include="src\ZstdDec.c" />
   </ItemGroup>
 </Project>

@@ -1,169 +1,312 @@
-/* Ppmd.h -- PPMD codec common code
-2023-03-05 : Igor Pavlov : Public domain
-This code is based on PPMd var.H (2001): Dmitry Shkarin : Public domain */
+/* Ppmd7Dec.c -- Ppmd7z (PPMdH with 7z Range Coder) Decoder
+2023-09-07 : Igor Pavlov : Public domain
+This code is based on:
+  PPMd var.H (2001): Dmitry Shkarin : Public domain */
 
-#ifndef ZIP7_INC_PPMD_H
-#define ZIP7_INC_PPMD_H
 
-#include "CpuArch.h"
+#include "Precomp.h"
 
-EXTERN_C_BEGIN
+#include "Ppmd7.h"
 
-#if defined(MY_CPU_SIZEOF_POINTER) && (MY_CPU_SIZEOF_POINTER == 4)
-/*
-   PPMD code always uses 32-bit internal fields in PPMD structures to store internal references in main block.
-   if (PPMD_32BIT is     defined), the PPMD code stores internal pointers to 32-bit reference fields.
-   if (PPMD_32BIT is NOT defined), the PPMD code stores internal UInt32 offsets to reference fields.
-   if (pointer size is 64-bit), then (PPMD_32BIT) mode is not allowed,
-   if (pointer size is 32-bit), then (PPMD_32BIT) mode is optional,
-     and it's allowed to disable PPMD_32BIT mode even if pointer is 32-bit.
-   PPMD code works slightly faster in (PPMD_32BIT) mode.
-*/
-  #define PPMD_32BIT
-#endif
+#define kTopValue ((UInt32)1 << 24)
 
-#define PPMD_INT_BITS 7
-#define PPMD_PERIOD_BITS 7
-#define PPMD_BIN_SCALE (1 << (PPMD_INT_BITS + PPMD_PERIOD_BITS))
 
-#define PPMD_GET_MEAN_SPEC(summ, shift, round) (((summ) + (1 << ((shift) - (round)))) >> (shift))
-#define PPMD_GET_MEAN(summ) PPMD_GET_MEAN_SPEC((summ), PPMD_PERIOD_BITS, 2)
-#define PPMD_UPDATE_PROB_0(prob) ((prob) + (1 << PPMD_INT_BITS) - PPMD_GET_MEAN(prob))
-#define PPMD_UPDATE_PROB_1(prob) ((prob) - PPMD_GET_MEAN(prob))
+#define READ_BYTE(p) IByteIn_Read((p)->Stream)
 
-#define PPMD_N1 4
-#define PPMD_N2 4
-#define PPMD_N3 4
-#define PPMD_N4 ((128 + 3 - 1 * PPMD_N1 - 2 * PPMD_N2 - 3 * PPMD_N3) / 4)
-#define PPMD_NUM_INDEXES (PPMD_N1 + PPMD_N2 + PPMD_N3 + PPMD_N4)
-
-MY_CPU_pragma_pack_push_1
-/* Most compilers works OK here even without #pragma pack(push, 1), but some GCC compilers need it. */
-
-/* SEE-contexts for PPM-contexts with masked symbols */
-typedef struct
+BoolInt Ppmd7z_RangeDec_Init(CPpmd7_RangeDec *p)
 {
-  UInt16 Summ; /* Freq */
-  Byte Shift;  /* Speed of Freq change; low Shift is for fast change */
-  Byte Count;  /* Count to next change of Shift */
-} CPpmd_See;
+  unsigned i;
+  p->Code = 0;
+  p->Range = 0xFFFFFFFF;
+  if (READ_BYTE(p) != 0)
+    return False;
+  for (i = 0; i < 4; i++)
+    p->Code = (p->Code << 8) | READ_BYTE(p);
+  return (p->Code < 0xFFFFFFFF);
+}
 
-#define Ppmd_See_UPDATE(p) \
-  { if ((p)->Shift < PPMD_PERIOD_BITS && --(p)->Count == 0) \
-    { (p)->Summ = (UInt16)((p)->Summ << 1); \
-      (p)->Count = (Byte)(3 << (p)->Shift++); }}
+#define RC_NORM_BASE(p) if ((p)->Range < kTopValue) \
+  { (p)->Code = ((p)->Code << 8) | READ_BYTE(p); (p)->Range <<= 8;
 
+#define RC_NORM_1(p)  RC_NORM_BASE(p) }
+#define RC_NORM(p)    RC_NORM_BASE(p) RC_NORM_BASE(p) }}
 
-typedef struct
+// we must use only one type of Normalization from two: LOCAL or REMOTE
+#define RC_NORM_LOCAL(p)    // RC_NORM(p)
+#define RC_NORM_REMOTE(p)   RC_NORM(p)
+
+#define R (&p->rc.dec)
+
+Z7_FORCE_INLINE
+// Z7_NO_INLINE
+static void Ppmd7z_RD_Decode(CPpmd7 *p, UInt32 start, UInt32 size)
 {
-  Byte Symbol;
-  Byte Freq;
-  UInt16 Successor_0;
-  UInt16 Successor_1;
-} CPpmd_State;
 
-typedef struct CPpmd_State2_
-{
-  Byte Symbol;
-  Byte Freq;
-} CPpmd_State2;
-
-typedef struct CPpmd_State4_
-{
-  UInt16 Successor_0;
-  UInt16 Successor_1;
-} CPpmd_State4;
-
-MY_CPU_pragma_pop
-
-/*
-   PPMD code can write full CPpmd_State structure data to CPpmd*_Context
-      at (byte offset = 2) instead of some fields of original CPpmd*_Context structure.
-   
-   If we use pointers to different types, but that point to shared
-   memory space, we can have aliasing problem (strict aliasing).
-   
-   XLC compiler in -O2 mode can change the order of memory write instructions
-   in relation to read instructions, if we have use pointers to different types.
-   
-   To solve that aliasing problem we use combined CPpmd*_Context structure
-   with unions that contain the fields from both structures:
-   the original CPpmd*_Context and CPpmd_State.
-   So we can access the fields from both structures via one pointer,
-   and the compiler doesn't change the order of write instructions
-   in relation to read instructions.
-
-   If we don't use memory write instructions to shared memory in
-   some local code, and we use only reading instructions (read only),
-   then probably it's safe to use pointers to different types for reading.
-*/
   
+  R->Code -= start * R->Range;
+  R->Range *= size;
+  RC_NORM_LOCAL(R)
+}
+
+#define RC_Decode(start, size)  Ppmd7z_RD_Decode(p, start, size);
+#define RC_DecodeFinal(start, size)  RC_Decode(start, size)  RC_NORM_REMOTE(R)
+#define RC_GetThreshold(total)  (R->Code / (R->Range /= (total)))
 
 
-#ifdef PPMD_32BIT
+#define CTX(ref) ((CPpmd7_Context *)Ppmd7_GetContext(p, ref))
+// typedef CPpmd7_Context * CTX_PTR;
+#define SUCCESSOR(p) Ppmd_GET_SUCCESSOR(p)
+void Ppmd7_UpdateModel(CPpmd7 *p);
 
-  #define Ppmd_Ref_Type(type)   type *
-  #define Ppmd_GetRef(p, ptr)   (ptr)
-  #define Ppmd_GetPtr(p, ptr)   (ptr)
-  #define Ppmd_GetPtr_Type(p, ptr, note_type) (ptr)
+#define MASK(sym)  ((Byte *)charMask)[sym]
+// Z7_FORCE_INLINE
+// static
+int Ppmd7z_DecodeSymbol(CPpmd7 *p)
+{
+  size_t charMask[256 / sizeof(size_t)];
 
-#else
+  if (p->MinContext->NumStats != 1)
+  {
+    CPpmd_State *s = Ppmd7_GetStats(p, p->MinContext);
+    unsigned i;
+    UInt32 count, hiCnt;
+    const UInt32 summFreq = p->MinContext->Union2.SummFreq;
 
-  #define Ppmd_Ref_Type(type)   UInt32
-  #define Ppmd_GetRef(p, ptr)   ((UInt32)((Byte *)(ptr) - (p)->Base))
-  #define Ppmd_GetPtr(p, offs)  ((void *)((p)->Base + (offs)))
-  #define Ppmd_GetPtr_Type(p, offs, type) ((type *)Ppmd_GetPtr(p, offs))
+    
+    
+    
+    count = RC_GetThreshold(summFreq);
+    hiCnt = count;
+    
+    if ((Int32)(count -= s->Freq) < 0)
+    {
+      Byte sym;
+      RC_DecodeFinal(0, s->Freq)
+      p->FoundState = s;
+      sym = s->Symbol;
+      Ppmd7_Update1_0(p);
+      return sym;
+    }
+  
+    p->PrevSuccess = 0;
+    i = (unsigned)p->MinContext->NumStats - 1;
+    
+    do
+    {
+      if ((Int32)(count -= (++s)->Freq) < 0)
+      {
+        Byte sym;
+        RC_DecodeFinal((hiCnt - count) - s->Freq, s->Freq)
+        p->FoundState = s;
+        sym = s->Symbol;
+        Ppmd7_Update1(p);
+        return sym;
+      }
+    }
+    while (--i);
+    
+    if (hiCnt >= summFreq)
+      return PPMD7_SYM_ERROR;
+    
+    hiCnt -= count;
+    RC_Decode(hiCnt, summFreq - hiCnt)
 
-#endif // PPMD_32BIT
+    p->HiBitsFlag = PPMD7_HiBitsFlag_3(p->FoundState->Symbol);
+    PPMD_SetAllBitsIn256Bytes(charMask)
+    // i = p->MinContext->NumStats - 1;
+    // do { MASK((--s)->Symbol) = 0; } while (--i);
+    {
+      CPpmd_State *s2 = Ppmd7_GetStats(p, p->MinContext);
+      MASK(s->Symbol) = 0;
+      do
+      {
+        const unsigned sym0 = s2[0].Symbol;
+        const unsigned sym1 = s2[1].Symbol;
+        s2 += 2;
+        MASK(sym0) = 0;
+        MASK(sym1) = 0;
+      }
+      while (s2 < s);
+    }
+  }
+  else
+  {
+    CPpmd_State *s = Ppmd7Context_OneState(p->MinContext);
+    UInt16 *prob = Ppmd7_GetBinSumm(p);
+    UInt32 pr = *prob;
+    UInt32 size0 = (R->Range >> 14) * pr;
+    pr = PPMD_UPDATE_PROB_1(pr);
+
+    if (R->Code < size0)
+    {
+      Byte sym;
+      *prob = (UInt16)(pr + (1 << PPMD_INT_BITS));
+      
+      // RangeDec_DecodeBit0(size0);
+      R->Range = size0;
+      RC_NORM_1(R)
+      /* we can use single byte normalization here because of
+         (min(BinSumm[][]) = 95) > (1 << (14 - 8)) */
+
+      // sym = (p->FoundState = Ppmd7Context_OneState(p->MinContext))->Symbol;
+      // Ppmd7_UpdateBin(p);
+      {
+        unsigned freq = s->Freq;
+        CPpmd7_Context *c = CTX(SUCCESSOR(s));
+        sym = s->Symbol;
+        p->FoundState = s;
+        p->PrevSuccess = 1;
+        p->RunLength++;
+        s->Freq = (Byte)(freq + (freq < 128));
+        // NextContext(p);
+        if (p->OrderFall == 0 && (const Byte *)c > p->Text)
+          p->MaxContext = p->MinContext = c;
+        else
+          Ppmd7_UpdateModel(p);
+      }
+      return sym;
+    }
+
+    *prob = (UInt16)pr;
+    p->InitEsc = p->ExpEscape[pr >> 10];
+
+    // RangeDec_DecodeBit1(size0);
+    
+    R->Code -= size0;
+    R->Range -= size0;
+    RC_NORM_LOCAL(R)
+    
+    PPMD_SetAllBitsIn256Bytes(charMask)
+    MASK(Ppmd7Context_OneState(p->MinContext)->Symbol) = 0;
+    p->PrevSuccess = 0;
+  }
+
+  for (;;)
+  {
+    CPpmd_State *s, *s2;
+    UInt32 freqSum, count, hiCnt;
+
+    CPpmd_See *see;
+    CPpmd7_Context *mc;
+    unsigned numMasked;
+    RC_NORM_REMOTE(R)
+    mc = p->MinContext;
+    numMasked = mc->NumStats;
+
+    do
+    {
+      p->OrderFall++;
+      if (!mc->Suffix)
+        return PPMD7_SYM_END;
+      mc = Ppmd7_GetContext(p, mc->Suffix);
+    }
+    while (mc->NumStats == numMasked);
+    
+    s = Ppmd7_GetStats(p, mc);
+
+    {
+      unsigned num = mc->NumStats;
+      unsigned num2 = num / 2;
+      
+      num &= 1;
+      hiCnt = (s->Freq & (UInt32)(MASK(s->Symbol))) & (0 - (UInt32)num);
+      s += num;
+      p->MinContext = mc;
+
+      do
+      {
+        const unsigned sym0 = s[0].Symbol;
+        const unsigned sym1 = s[1].Symbol;
+        s += 2;
+        hiCnt += (s[-2].Freq & (UInt32)(MASK(sym0)));
+        hiCnt += (s[-1].Freq & (UInt32)(MASK(sym1)));
+      }
+      while (--num2);
+    }
+
+    see = Ppmd7_MakeEscFreq(p, numMasked, &freqSum);
+    freqSum += hiCnt;
 
 
-typedef Ppmd_Ref_Type(CPpmd_State) CPpmd_State_Ref;
-typedef Ppmd_Ref_Type(void)        CPpmd_Void_Ref;
-typedef Ppmd_Ref_Type(Byte)        CPpmd_Byte_Ref;
 
+
+    count = RC_GetThreshold(freqSum);
+    
+    if (count < hiCnt)
+    {
+      Byte sym;
+
+      s = Ppmd7_GetStats(p, p->MinContext);
+      hiCnt = count;
+      // count -= s->Freq & (UInt32)(MASK(s->Symbol));
+      // if ((Int32)count >= 0)
+      {
+        for (;;)
+        {
+          count -= s->Freq & (UInt32)(MASK((s)->Symbol)); s++; if ((Int32)count < 0) break;
+          // count -= s->Freq & (UInt32)(MASK((s)->Symbol)); s++; if ((Int32)count < 0) break;
+        }
+      }
+      s--;
+      RC_DecodeFinal((hiCnt - count) - s->Freq, s->Freq)
+
+      // new (see->Summ) value can overflow over 16-bits in some rare cases
+      Ppmd_See_UPDATE(see)
+      p->FoundState = s;
+      sym = s->Symbol;
+      Ppmd7_Update2(p);
+      return sym;
+    }
+
+    if (count >= freqSum)
+      return PPMD7_SYM_ERROR;
+    
+    RC_Decode(hiCnt, freqSum - hiCnt)
+
+    // We increase (see->Summ) for sum of Freqs of all non_Masked symbols.
+    // new (see->Summ) value can overflow over 16-bits in some rare cases
+    see->Summ = (UInt16)(see->Summ + freqSum);
+
+    s = Ppmd7_GetStats(p, p->MinContext);
+    s2 = s + p->MinContext->NumStats;
+    do
+    {
+      MASK(s->Symbol) = 0;
+      s++;
+    }
+    while (s != s2);
+  }
+}
 
 /*
-#ifdef MY_CPU_LE_UNALIGN
-// the unaligned 32-bit access latency can be too large, if the data is not in L1 cache.
-#define Ppmd_GET_SUCCESSOR(p) ((CPpmd_Void_Ref)*(const UInt32 *)(const void *)&(p)->Successor_0)
-#define Ppmd_SET_SUCCESSOR(p, v) *(UInt32 *)(void *)(void *)&(p)->Successor_0 = (UInt32)(v)
-
-#else
+Byte *Ppmd7z_DecodeSymbols(CPpmd7 *p, Byte *buf, const Byte *lim)
+{
+  int sym = 0;
+  if (buf != lim)
+  do
+  {
+    sym = Ppmd7z_DecodeSymbol(p);
+    if (sym < 0)
+      break;
+    *buf = (Byte)sym;
+  }
+  while (++buf < lim);
+  p->LastSymbol = sym;
+  return buf;
+}
 */
 
-/*
-   We can write 16-bit halves to 32-bit (Successor) field in any selected order.
-   But the native order is more consistent way.
-   So we use the native order, if LE/BE order can be detected here at compile time.
-*/
-
-#ifdef MY_CPU_BE
-
-  #define Ppmd_GET_SUCCESSOR(p) \
-    ( (CPpmd_Void_Ref) (((UInt32)(p)->Successor_0 << 16) | (p)->Successor_1) )
-
-  #define Ppmd_SET_SUCCESSOR(p, v) { \
-    (p)->Successor_0 = (UInt16)(((UInt32)(v) >> 16) /* & 0xFFFF */); \
-    (p)->Successor_1 = (UInt16)((UInt32)(v) /* & 0xFFFF */); }
-
-#else
-
-  #define Ppmd_GET_SUCCESSOR(p) \
-    ( (CPpmd_Void_Ref) ((p)->Successor_0 | ((UInt32)(p)->Successor_1 << 16)) )
-
-  #define Ppmd_SET_SUCCESSOR(p, v) { \
-    (p)->Successor_0 = (UInt16)((UInt32)(v) /* & 0xFFFF */); \
-    (p)->Successor_1 = (UInt16)(((UInt32)(v) >> 16) /* & 0xFFFF */); }
-
-#endif
-
-// #endif
-
-
-#define PPMD_SetAllBitsIn256Bytes(p) \
-  { size_t z; for (z = 0; z < 256 / sizeof(p[0]); z += 8) { \
-  p[z+7] = p[z+6] = p[z+5] = p[z+4] = p[z+3] = p[z+2] = p[z+1] = p[z+0] = ~(size_t)0; }}
-
-EXTERN_C_END
- 
-#endif
+#undef kTopValue
+#undef READ_BYTE
+#undef RC_NORM_BASE
+#undef RC_NORM_1
+#undef RC_NORM
+#undef RC_NORM_LOCAL
+#undef RC_NORM_REMOTE
+#undef R
+#undef RC_Decode
+#undef RC_DecodeFinal
+#undef RC_GetThreshold
+#undef CTX
+#undef SUCCESSOR
+#undef MASK

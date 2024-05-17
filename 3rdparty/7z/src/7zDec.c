@@ -1,5 +1,5 @@
 /* 7zDec.c -- Decoding from 7z folder
-2023-04-02 : Igor Pavlov : Public domain */
+2024-03-01 : Igor Pavlov : Public domain */
 
 #include "Precomp.h"
 
@@ -51,6 +51,7 @@
 
 #ifndef Z7_NO_METHODS_FILTERS
 #define k_Delta 3
+#define k_RISCV 0xb
 #define k_BCJ   0x3030103
 #define k_PPC   0x3030205
 #define k_IA64  0x3030401
@@ -362,6 +363,7 @@ static SRes CheckSupportedFolder(const CSzFolder *f)
       case k_IA64:
       case k_SPARC:
       case k_ARM:
+      case k_RISCV:
     #endif
     #ifdef Z7_USE_FILTER_ARM64
       case k_ARM64:
@@ -535,10 +537,10 @@ static SRes SzFolder_Decode2(const CSzFolder *folder,
         }
       }
     }
-  #if defined(Z7_USE_BRANCH_FILTER)
+#if defined(Z7_USE_BRANCH_FILTER)
     else if (ci == 1)
     {
-     #if !defined(Z7_NO_METHODS_FILTERS)
+#if !defined(Z7_NO_METHODS_FILTERS)
       if (coder->MethodID == k_Delta)
       {
         if (coder->PropsSize != 1)
@@ -550,22 +552,43 @@ static SRes SzFolder_Decode2(const CSzFolder *folder,
         }
         continue;
       }
-     #endif
+#endif
      
-     #ifdef Z7_USE_FILTER_ARM64
+#ifdef Z7_USE_FILTER_ARM64
       if (coder->MethodID == k_ARM64)
       {
         UInt32 pc = 0;
         if (coder->PropsSize == 4)
+        {
           pc = GetUi32(propsData + coder->PropsOffset);
+          if (pc & 3)
+            return SZ_ERROR_UNSUPPORTED;
+        }
         else if (coder->PropsSize != 0)
           return SZ_ERROR_UNSUPPORTED;
         z7_BranchConv_ARM64_Dec(outBuffer, outSize, pc);
         continue;
       }
-     #endif
-     
-     #if !defined(Z7_NO_METHODS_FILTERS) || defined(Z7_USE_FILTER_ARMT)
+#endif
+
+#if !defined(Z7_NO_METHODS_FILTERS)
+      if (coder->MethodID == k_RISCV)
+      {
+        UInt32 pc = 0;
+        if (coder->PropsSize == 4)
+        {
+          pc = GetUi32(propsData + coder->PropsOffset);
+          if (pc & 1)
+            return SZ_ERROR_UNSUPPORTED;
+        }
+        else if (coder->PropsSize != 0)
+          return SZ_ERROR_UNSUPPORTED;
+        z7_BranchConv_RISCV_Dec(outBuffer, outSize, pc);
+        continue;
+      }
+#endif
+      
+#if !defined(Z7_NO_METHODS_FILTERS) || defined(Z7_USE_FILTER_ARMT)
       {
         if (coder->PropsSize != 0)
           return SZ_ERROR_UNSUPPORTED;
@@ -579,7 +602,8 @@ static SRes SzFolder_Decode2(const CSzFolder *folder,
             z7_BranchConvSt_X86_Dec(outBuffer, outSize, 0, &state); // pc = 0
             break;
           }
-          CASE_BRA_CONV(PPC)
+          case k_PPC: Z7_BRANCH_CONV_DEC_2(BranchConv_PPC)(outBuffer, outSize, 0); break; // pc = 0;
+          // CASE_BRA_CONV(PPC)
           CASE_BRA_CONV(IA64)
           CASE_BRA_CONV(SPARC)
           CASE_BRA_CONV(ARM)
@@ -592,9 +616,9 @@ static SRes SzFolder_Decode2(const CSzFolder *folder,
         }
         continue;
       }
-     #endif
+#endif
     } // (c == 1)
-  #endif
+#endif // Z7_USE_BRANCH_FILTER
     else
       return SZ_ERROR_UNSUPPORTED;
   }

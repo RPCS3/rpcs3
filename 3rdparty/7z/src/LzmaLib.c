@@ -1,42 +1,141 @@
-/* LzmaLib.c -- LZMA library wrapper
-2023-04-02 : Igor Pavlov : Public domain */
+/* MtCoder.h -- Multi-thread Coder
+2023-04-13 : Igor Pavlov : Public domain */
 
-#include "Precomp.h"
+#ifndef ZIP7_INC_MT_CODER_H
+#define ZIP7_INC_MT_CODER_H
 
-#include "Alloc.h"
-#include "LzmaDec.h"
-#include "LzmaEnc.h"
-#include "LzmaLib.h"
+#include "MtDec.h"
 
-Z7_STDAPI LzmaCompress(unsigned char *dest, size_t *destLen, const unsigned char *src, size_t srcLen,
-  unsigned char *outProps, size_t *outPropsSize,
-  int level, /* 0 <= level <= 9, default = 5 */
-  unsigned dictSize, /* use (1 << N) or (3 << N). 4 KB < dictSize <= 128 MB */
-  int lc, /* 0 <= lc <= 8, default = 3  */
-  int lp, /* 0 <= lp <= 4, default = 0  */
-  int pb, /* 0 <= pb <= 4, default = 2  */
-  int fb,  /* 5 <= fb <= 273, default = 32 */
-  int numThreads /* 1 or 2, default = 2 */
-)
+EXTERN_C_BEGIN
+
+/*
+  if (    defined MTCODER_USE_WRITE_THREAD) : main thread writes all data blocks to output stream
+  if (not defined MTCODER_USE_WRITE_THREAD) : any coder thread can write data blocks to output stream
+*/
+/* #define MTCODER_USE_WRITE_THREAD */
+
+#ifndef Z7_ST
+  #define MTCODER_GET_NUM_BLOCKS_FROM_THREADS(numThreads) ((numThreads) + (numThreads) / 8 + 1)
+  #define MTCODER_THREADS_MAX 64
+  #define MTCODER_BLOCKS_MAX (MTCODER_GET_NUM_BLOCKS_FROM_THREADS(MTCODER_THREADS_MAX) + 3)
+#else
+  #define MTCODER_THREADS_MAX 1
+  #define MTCODER_BLOCKS_MAX 1
+#endif
+
+
+#ifndef Z7_ST
+
+
+typedef struct
 {
-  CLzmaEncProps props;
-  LzmaEncProps_Init(&props);
-  props.level = level;
-  props.dictSize = dictSize;
-  props.lc = lc;
-  props.lp = lp;
-  props.pb = pb;
-  props.fb = fb;
-  props.numThreads = numThreads;
+  ICompressProgress vt;
+  CMtProgress *mtProgress;
+  UInt64 inSize;
+  UInt64 outSize;
+} CMtProgressThunk;
 
-  return LzmaEncode(dest, destLen, src, srcLen, &props, outProps, outPropsSize, 0,
-      NULL, &g_Alloc, &g_Alloc);
-}
+void MtProgressThunk_CreateVTable(CMtProgressThunk *p);
+    
+#define MtProgressThunk_INIT(p) { (p)->inSize = 0; (p)->outSize = 0; }
 
 
-Z7_STDAPI LzmaUncompress(unsigned char *dest, size_t *destLen, const unsigned char *src, size_t *srcLen,
-  const unsigned char *props, size_t propsSize)
+struct CMtCoder_;
+
+
+typedef struct
 {
-  ELzmaStatus status;
-  return LzmaDecode(dest, destLen, src, srcLen, props, (unsigned)propsSize, LZMA_FINISH_ANY, &status, &g_Alloc);
-}
+  struct CMtCoder_ *mtCoder;
+  unsigned index;
+  int stop;
+  Byte *inBuf;
+
+  CAutoResetEvent startEvent;
+  CThread thread;
+} CMtCoderThread;
+
+
+typedef struct
+{
+  SRes (*Code)(void *p, unsigned coderIndex, unsigned outBufIndex,
+      const Byte *src, size_t srcSize, int finished);
+  SRes (*Write)(void *p, unsigned outBufIndex);
+} IMtCoderCallback2;
+
+
+typedef struct
+{
+  SRes res;
+  unsigned bufIndex;
+  BoolInt finished;
+} CMtCoderBlock;
+
+
+typedef struct CMtCoder_
+{
+  /* input variables */
+  
+  size_t blockSize;        /* size of input block */
+  unsigned numThreadsMax;
+  UInt64 expectedDataSize;
+
+  ISeqInStreamPtr inStream;
+  const Byte *inData;
+  size_t inDataSize;
+
+  ICompressProgressPtr progress;
+  ISzAllocPtr allocBig;
+
+  IMtCoderCallback2 *mtCallback;
+  void *mtCallbackObject;
+
+  
+  /* internal variables */
+  
+  size_t allocatedBufsSize;
+
+  CAutoResetEvent readEvent;
+  CSemaphore blocksSemaphore;
+
+  BoolInt stopReading;
+  SRes readRes;
+
+  #ifdef MTCODER_USE_WRITE_THREAD
+    CAutoResetEvent writeEvents[MTCODER_BLOCKS_MAX];
+  #else
+    CAutoResetEvent finishedEvent;
+    SRes writeRes;
+    unsigned writeIndex;
+    Byte ReadyBlocks[MTCODER_BLOCKS_MAX];
+    LONG numFinishedThreads;
+  #endif
+
+  unsigned numStartedThreadsLimit;
+  unsigned numStartedThreads;
+
+  unsigned numBlocksMax;
+  unsigned blockIndex;
+  UInt64 readProcessed;
+
+  CCriticalSection cs;
+
+  unsigned freeBlockHead;
+  unsigned freeBlockList[MTCODER_BLOCKS_MAX];
+
+  CMtProgress mtProgress;
+  CMtCoderBlock blocks[MTCODER_BLOCKS_MAX];
+  CMtCoderThread threads[MTCODER_THREADS_MAX];
+} CMtCoder;
+
+
+void MtCoder_Construct(CMtCoder *p);
+void MtCoder_Destruct(CMtCoder *p);
+SRes MtCoder_Code(CMtCoder *p);
+
+
+#endif
+
+
+EXTERN_C_END
+
+#endif

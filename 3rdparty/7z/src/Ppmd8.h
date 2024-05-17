@@ -1,181 +1,127 @@
-/* Ppmd8.h -- Ppmd8 (PPMdI) compression codec
-2023-04-02 : Igor Pavlov : Public domain
-This code is based on:
-  PPMd var.I (2002): Dmitry Shkarin : Public domain
-  Carryless rangecoder (1999): Dmitry Subbotin : Public domain */
+/* Precomp.h -- precompilation file
+2024-01-25 : Igor Pavlov : Public domain */
 
-#ifndef ZIP7_INC_PPMD8_H
-#define ZIP7_INC_PPMD8_H
-
-#include "Ppmd.h"
-
-EXTERN_C_BEGIN
-
-#define PPMD8_MIN_ORDER 2
-#define PPMD8_MAX_ORDER 16
-
-
-
-
-struct CPpmd8_Context_;
-
-typedef Ppmd_Ref_Type(struct CPpmd8_Context_) CPpmd8_Context_Ref;
-
-// MY_CPU_pragma_pack_push_1
-
-typedef struct CPpmd8_Context_
-{
-  Byte NumStats;
-  Byte Flags;
-  
-  union
-  {
-    UInt16 SummFreq;
-    CPpmd_State2 State2;
-  } Union2;
-  
-  union
-  {
-    CPpmd_State_Ref Stats;
-    CPpmd_State4 State4;
-  } Union4;
-
-  CPpmd8_Context_Ref Suffix;
-} CPpmd8_Context;
-
-// MY_CPU_pragma_pop
-
-#define Ppmd8Context_OneState(p) ((CPpmd_State *)&(p)->Union2)
-
-/* PPMdI code rev.2 contains the fix over PPMdI code rev.1.
-   But the code PPMdI.2 is not compatible with PPMdI.1 for some files compressed
-   in FREEZE mode. So we disable FREEZE mode support. */
-
-// #define PPMD8_FREEZE_SUPPORT
-
-enum
-{
-  PPMD8_RESTORE_METHOD_RESTART,
-  PPMD8_RESTORE_METHOD_CUT_OFF
-  #ifdef PPMD8_FREEZE_SUPPORT
-  , PPMD8_RESTORE_METHOD_FREEZE
-  #endif
-  , PPMD8_RESTORE_METHOD_UNSUPPPORTED
-};
-
-
-
-
-
-
-
-
-typedef struct
-{
-  CPpmd8_Context *MinContext, *MaxContext;
-  CPpmd_State *FoundState;
-  unsigned OrderFall, InitEsc, PrevSuccess, MaxOrder, RestoreMethod;
-  Int32 RunLength, InitRL; /* must be 32-bit at least */
-
-  UInt32 Size;
-  UInt32 GlueCount;
-  UInt32 AlignOffset;
-  Byte *Base, *LoUnit, *HiUnit, *Text, *UnitsStart;
-
-  UInt32 Range;
-  UInt32 Code;
-  UInt32 Low;
-  union
-  {
-    IByteInPtr In;
-    IByteOutPtr Out;
-  } Stream;
-
-  Byte Indx2Units[PPMD_NUM_INDEXES + 2]; // +2 for alignment
-  Byte Units2Indx[128];
-  CPpmd_Void_Ref FreeList[PPMD_NUM_INDEXES];
-  UInt32 Stamps[PPMD_NUM_INDEXES];
-  Byte NS2BSIndx[256], NS2Indx[260];
-  Byte ExpEscape[16];
-  CPpmd_See DummySee, See[24][32];
-  UInt16 BinSumm[25][64];
-
-} CPpmd8;
-
-
-void Ppmd8_Construct(CPpmd8 *p);
-BoolInt Ppmd8_Alloc(CPpmd8 *p, UInt32 size, ISzAllocPtr alloc);
-void Ppmd8_Free(CPpmd8 *p, ISzAllocPtr alloc);
-void Ppmd8_Init(CPpmd8 *p, unsigned maxOrder, unsigned restoreMethod);
-#define Ppmd8_WasAllocated(p) ((p)->Base != NULL)
-
-
-/* ---------- Internal Functions ---------- */
-
-#define Ppmd8_GetPtr(p, ptr)     Ppmd_GetPtr(p, ptr)
-#define Ppmd8_GetContext(p, ptr) Ppmd_GetPtr_Type(p, ptr, CPpmd8_Context)
-#define Ppmd8_GetStats(p, ctx)   Ppmd_GetPtr_Type(p, (ctx)->Union4.Stats, CPpmd_State)
-
-void Ppmd8_Update1(CPpmd8 *p);
-void Ppmd8_Update1_0(CPpmd8 *p);
-void Ppmd8_Update2(CPpmd8 *p);
-
-
-
-
-
-
-#define Ppmd8_GetBinSumm(p) \
-    &p->BinSumm[p->NS2Indx[(size_t)Ppmd8Context_OneState(p->MinContext)->Freq - 1]] \
-    [ p->PrevSuccess + ((p->RunLength >> 26) & 0x20) \
-    + p->NS2BSIndx[Ppmd8_GetContext(p, p->MinContext->Suffix)->NumStats] + \
-    + p->MinContext->Flags ]
-
-
-CPpmd_See *Ppmd8_MakeEscFreq(CPpmd8 *p, unsigned numMasked, UInt32 *scale);
-
-
-/* 20.01: the original PPMdI encoder and decoder probably could work incorrectly in some rare cases,
-   where the original PPMdI code can give "Divide by Zero" operation.
-   We use the following fix to allow correct working of encoder and decoder in any cases.
-   We correct (Escape_Freq) and (_sum_), if (_sum_) is larger than p->Range) */
-#define PPMD8_CORRECT_SUM_RANGE(p, _sum_) if (_sum_ > p->Range /* /1 */) _sum_ = p->Range;
-
-
-/* ---------- Decode ---------- */
-
-#define PPMD8_SYM_END    (-1)
-#define PPMD8_SYM_ERROR  (-2)
+#ifndef ZIP7_INC_PRECOMP_H
+#define ZIP7_INC_PRECOMP_H
 
 /*
-You must set (CPpmd8::Stream.In) before Ppmd8_RangeDec_Init()
+  this file must be included before another *.h files and before <windows.h>.
+  this file is included from the following files:
+    C\*.c
+    C\Util\*\Precomp.h   <-  C\Util\*\*.c
+    CPP\Common\Common.h  <-  *\StdAfx.h    <-  *\*.cpp
 
-Ppmd8_DecodeSymbol()
-out:
-  >= 0 : decoded byte
-    -1 : PPMD8_SYM_END   : End of payload marker
-    -2 : PPMD8_SYM_ERROR : Data error
+  this file can set the following macros:
+    Z7_LARGE_PAGES 1
+    Z7_LONG_PATH 1
+    Z7_WIN32_WINNT_MIN  0x0500 (or higher) : we require at least win2000+ for 7-Zip
+    _WIN32_WINNT        0x0500 (or higher)
+    WINVER  _WIN32_WINNT
+    UNICODE 1
+    _UNICODE 1
 */
 
+#include "Compiler.h"
 
-BoolInt Ppmd8_Init_RangeDec(CPpmd8 *p);
-#define Ppmd8_RangeDec_IsFinishedOK(p) ((p)->Code == 0)
-int Ppmd8_DecodeSymbol(CPpmd8 *p);
+#ifdef _MSC_VER
+// #pragma warning(disable : 4206) // nonstandard extension used : translation unit is empty
+#if _MSC_VER >= 1912
+// #pragma warning(disable : 5039) // pointer or reference to potentially throwing function passed to 'extern "C"' function under - EHc.Undefined behavior may occur if this function throws an exception.
+#endif
+#endif
+
+/*
+// for debug:
+#define UNICODE 1
+#define _UNICODE 1
+#define  _WIN32_WINNT  0x0500  // win2000
+#ifndef WINVER
+  #define WINVER  _WIN32_WINNT
+#endif
+*/
+
+#ifdef _WIN32
+/*
+  this "Precomp.h" file must be included before <windows.h>,
+  if we want to define _WIN32_WINNT before <windows.h>.
+*/
+
+#ifndef Z7_LARGE_PAGES
+#ifndef Z7_NO_LARGE_PAGES
+#define Z7_LARGE_PAGES 1
+#endif
+#endif
+
+#ifndef Z7_LONG_PATH
+#ifndef Z7_NO_LONG_PATH
+#define Z7_LONG_PATH 1
+#endif
+#endif
+
+#ifndef Z7_DEVICE_FILE
+#ifndef Z7_NO_DEVICE_FILE
+// #define Z7_DEVICE_FILE 1
+#endif
+#endif
+
+// we don't change macros if included after <windows.h>
+#ifndef _WINDOWS_
+
+#ifndef Z7_WIN32_WINNT_MIN
+  #if defined(_M_ARM64) || defined(__aarch64__)
+    // #define Z7_WIN32_WINNT_MIN  0x0a00  // win10
+    #define Z7_WIN32_WINNT_MIN  0x0600  // vista
+  #elif defined(_M_ARM) && defined(_M_ARMT) && defined(_M_ARM_NT)
+    // #define Z7_WIN32_WINNT_MIN  0x0602  // win8
+    #define Z7_WIN32_WINNT_MIN  0x0600  // vista
+  #elif defined(_M_X64) || defined(_M_AMD64) || defined(__x86_64__) || defined(_M_IA64)
+    #define Z7_WIN32_WINNT_MIN  0x0503  // win2003
+  // #elif defined(_M_IX86) || defined(__i386__)
+  //   #define Z7_WIN32_WINNT_MIN  0x0500  // win2000
+  #else // x86 and another(old) systems
+    #define Z7_WIN32_WINNT_MIN  0x0500  // win2000
+    // #define Z7_WIN32_WINNT_MIN  0x0502  // win2003 // for debug
+  #endif
+#endif // Z7_WIN32_WINNT_MIN
 
 
+#ifndef Z7_DO_NOT_DEFINE_WIN32_WINNT
+#ifdef _WIN32_WINNT
+  // #error Stop_Compiling_Bad_WIN32_WINNT
+#else
+  #ifndef Z7_NO_DEFINE_WIN32_WINNT
+Z7_DIAGNOSTIC_IGNORE_BEGIN_RESERVED_MACRO_IDENTIFIER
+    #define _WIN32_WINNT  Z7_WIN32_WINNT_MIN
+Z7_DIAGNOSTIC_IGNORE_END_RESERVED_MACRO_IDENTIFIER
+  #endif
+#endif // _WIN32_WINNT
+
+#ifndef WINVER
+  #define WINVER  _WIN32_WINNT
+#endif
+#endif // Z7_DO_NOT_DEFINE_WIN32_WINNT
 
 
+#ifndef _MBCS
+#ifndef Z7_NO_UNICODE
+// UNICODE and _UNICODE are used by <windows.h> and by 7-zip code.
 
+#ifndef UNICODE
+#define UNICODE 1
+#endif
 
+#ifndef _UNICODE
+Z7_DIAGNOSTIC_IGNORE_BEGIN_RESERVED_MACRO_IDENTIFIER
+#define _UNICODE 1
+Z7_DIAGNOSTIC_IGNORE_END_RESERVED_MACRO_IDENTIFIER
+#endif
 
+#endif // Z7_NO_UNICODE
+#endif // _MBCS
+#endif // _WINDOWS_
 
-/* ---------- Encode ---------- */
+// #include "7zWindows.h"
 
-#define Ppmd8_Init_RangeEnc(p) { (p)->Low = 0; (p)->Range = 0xFFFFFFFF; }
-void Ppmd8_Flush_RangeEnc(CPpmd8 *p);
-void Ppmd8_EncodeSymbol(CPpmd8 *p, int symbol);
+#endif // _WIN32
 
-
-EXTERN_C_END
- 
 #endif

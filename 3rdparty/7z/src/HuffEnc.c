@@ -1,154 +1,160 @@
-/* HuffEnc.c -- functions for Huffman encoding
-2023-03-04 : Igor Pavlov : Public domain */
+/* LzFind.h -- Match finder for LZ algorithms
+2024-01-22 : Igor Pavlov : Public domain */
 
-#include "Precomp.h"
+#ifndef ZIP7_INC_LZ_FIND_H
+#define ZIP7_INC_LZ_FIND_H
 
-#include "HuffEnc.h"
-#include "Sort.h"
+#include "7zTypes.h"
 
-#define kMaxLen 16
-#define NUM_BITS 10
-#define MASK (((unsigned)1 << NUM_BITS) - 1)
+EXTERN_C_BEGIN
 
-#define NUM_COUNTERS 64
+typedef UInt32 CLzRef;
 
-#define HUFFMAN_SPEED_OPT
-
-void Huffman_Generate(const UInt32 *freqs, UInt32 *p, Byte *lens, UInt32 numSymbols, UInt32 maxLen)
+typedef struct
 {
-  UInt32 num = 0;
-  /* if (maxLen > 10) maxLen = 10; */
-  {
-    UInt32 i;
-    
-    #ifdef HUFFMAN_SPEED_OPT
-    
-    UInt32 counters[NUM_COUNTERS];
-    for (i = 0; i < NUM_COUNTERS; i++)
-      counters[i] = 0;
-    for (i = 0; i < numSymbols; i++)
-    {
-      UInt32 freq = freqs[i];
-      counters[(freq < NUM_COUNTERS - 1) ? freq : NUM_COUNTERS - 1]++;
-    }
- 
-    for (i = 1; i < NUM_COUNTERS; i++)
-    {
-      UInt32 temp = counters[i];
-      counters[i] = num;
-      num += temp;
-    }
+  const Byte *buffer;
+  UInt32 pos;
+  UInt32 posLimit;
+  UInt32 streamPos;  /* wrap over Zero is allowed (streamPos < pos). Use (UInt32)(streamPos - pos) */
+  UInt32 lenLimit;
 
-    for (i = 0; i < numSymbols; i++)
-    {
-      UInt32 freq = freqs[i];
-      if (freq == 0)
-        lens[i] = 0;
-      else
-        p[counters[((freq < NUM_COUNTERS - 1) ? freq : NUM_COUNTERS - 1)]++] = i | (freq << NUM_BITS);
-    }
-    counters[0] = 0;
-    HeapSort(p + counters[NUM_COUNTERS - 2], counters[NUM_COUNTERS - 1] - counters[NUM_COUNTERS - 2]);
-    
-    #else
+  UInt32 cyclicBufferPos;
+  UInt32 cyclicBufferSize; /* it must be = (historySize + 1) */
 
-    for (i = 0; i < numSymbols; i++)
-    {
-      UInt32 freq = freqs[i];
-      if (freq == 0)
-        lens[i] = 0;
-      else
-        p[num++] = i | (freq << NUM_BITS);
-    }
-    HeapSort(p, num);
+  Byte streamEndWasReached;
+  Byte btMode;
+  Byte bigHash;
+  Byte directInput;
 
-    #endif
-  }
+  UInt32 matchMaxLen;
+  CLzRef *hash;
+  CLzRef *son;
+  UInt32 hashMask;
+  UInt32 cutValue;
 
-  if (num < 2)
-  {
-    unsigned minCode = 0;
-    unsigned maxCode = 1;
-    if (num == 1)
-    {
-      maxCode = (unsigned)p[0] & MASK;
-      if (maxCode == 0)
-        maxCode++;
-    }
-    p[minCode] = 0;
-    p[maxCode] = 1;
-    lens[minCode] = lens[maxCode] = 1;
-    return;
-  }
+  Byte *bufBase;
+  ISeqInStreamPtr stream;
   
-  {
-    UInt32 b, e, i;
+  UInt32 blockSize;
+  UInt32 keepSizeBefore;
+  UInt32 keepSizeAfter;
+
+  UInt32 numHashBytes;
+  size_t directInputRem;
+  UInt32 historySize;
+  UInt32 fixedHashSize;
+  Byte numHashBytes_Min;
+  Byte numHashOutBits;
+  Byte _pad2_[2];
+  SRes result;
+  UInt32 crc[256];
+  size_t numRefs;
+
+  UInt64 expectedDataSize;
+} CMatchFinder;
+
+#define Inline_MatchFinder_GetPointerToCurrentPos(p) ((const Byte *)(p)->buffer)
+
+#define Inline_MatchFinder_GetNumAvailableBytes(p) ((UInt32)((p)->streamPos - (p)->pos))
+
+/*
+#define Inline_MatchFinder_IsFinishedOK(p) \
+    ((p)->streamEndWasReached \
+        && (p)->streamPos == (p)->pos \
+        && (!(p)->directInput || (p)->directInputRem == 0))
+*/
+      
+int MatchFinder_NeedMove(CMatchFinder *p);
+/* Byte *MatchFinder_GetPointerToCurrentPos(CMatchFinder *p); */
+void MatchFinder_MoveBlock(CMatchFinder *p);
+void MatchFinder_ReadIfRequired(CMatchFinder *p);
+
+void MatchFinder_Construct(CMatchFinder *p);
+
+/* (directInput = 0) is default value.
+   It's required to provide correct (directInput) value
+   before calling MatchFinder_Create().
+   You can set (directInput) by any of the following calls:
+     - MatchFinder_SET_DIRECT_INPUT_BUF()
+     - MatchFinder_SET_STREAM()
+     - MatchFinder_SET_STREAM_MODE()
+*/
+
+#define MatchFinder_SET_DIRECT_INPUT_BUF(p, _src_, _srcLen_) { \
+  (p)->stream = NULL; \
+  (p)->directInput = 1; \
+  (p)->buffer = (_src_); \
+  (p)->directInputRem = (_srcLen_); }
+
+/*
+#define MatchFinder_SET_STREAM_MODE(p) { \
+  (p)->directInput = 0; }
+*/
+
+#define MatchFinder_SET_STREAM(p, _stream_) { \
+  (p)->stream = _stream_; \
+  (p)->directInput = 0; }
   
-    i = b = e = 0;
-    do
-    {
-      UInt32 n, m, freq;
-      n = (i != num && (b == e || (p[i] >> NUM_BITS) <= (p[b] >> NUM_BITS))) ? i++ : b++;
-      freq = (p[n] & ~MASK);
-      p[n] = (p[n] & MASK) | (e << NUM_BITS);
-      m = (i != num && (b == e || (p[i] >> NUM_BITS) <= (p[b] >> NUM_BITS))) ? i++ : b++;
-      freq += (p[m] & ~MASK);
-      p[m] = (p[m] & MASK) | (e << NUM_BITS);
-      p[e] = (p[e] & MASK) | freq;
-      e++;
-    }
-    while (num - e > 1);
-    
-    {
-      UInt32 lenCounters[kMaxLen + 1];
-      for (i = 0; i <= kMaxLen; i++)
-        lenCounters[i] = 0;
-      
-      p[--e] &= MASK;
-      lenCounters[1] = 2;
-      while (e != 0)
-      {
-        UInt32 len = (p[p[--e] >> NUM_BITS] >> NUM_BITS) + 1;
-        p[e] = (p[e] & MASK) | (len << NUM_BITS);
-        if (len >= maxLen)
-          for (len = maxLen - 1; lenCounters[len] == 0; len--);
-        lenCounters[len]--;
-        lenCounters[(size_t)len + 1] += 2;
-      }
-      
-      {
-        UInt32 len;
-        i = 0;
-        for (len = maxLen; len != 0; len--)
-        {
-          UInt32 k;
-          for (k = lenCounters[len]; k != 0; k--)
-            lens[p[i++] & MASK] = (Byte)len;
-        }
-      }
-      
-      {
-        UInt32 nextCodes[kMaxLen + 1];
-        {
-          UInt32 code = 0;
-          UInt32 len;
-          for (len = 1; len <= kMaxLen; len++)
-            nextCodes[len] = code = (code + lenCounters[(size_t)len - 1]) << 1;
-        }
-        /* if (code + lenCounters[kMaxLen] - 1 != (1 << kMaxLen) - 1) throw 1; */
 
-        {
-          UInt32 k;
-          for (k = 0; k < numSymbols; k++)
-            p[k] = nextCodes[lens[k]]++;
-        }
-      }
-    }
-  }
-}
+int MatchFinder_Create(CMatchFinder *p, UInt32 historySize,
+    UInt32 keepAddBufferBefore, UInt32 matchMaxLen, UInt32 keepAddBufferAfter,
+    ISzAllocPtr alloc);
+void MatchFinder_Free(CMatchFinder *p, ISzAllocPtr alloc);
+void MatchFinder_Normalize3(UInt32 subValue, CLzRef *items, size_t numItems);
 
-#undef kMaxLen
-#undef NUM_BITS
-#undef MASK
-#undef NUM_COUNTERS
-#undef HUFFMAN_SPEED_OPT
+/*
+#define MatchFinder_INIT_POS(p, val) \
+    (p)->pos = (val); \
+    (p)->streamPos = (val);
+*/
+
+// void MatchFinder_ReduceOffsets(CMatchFinder *p, UInt32 subValue);
+#define MatchFinder_REDUCE_OFFSETS(p, subValue) \
+    (p)->pos -= (subValue); \
+    (p)->streamPos -= (subValue);
+
+
+UInt32 * GetMatchesSpec1(UInt32 lenLimit, UInt32 curMatch, UInt32 pos, const Byte *buffer, CLzRef *son,
+    size_t _cyclicBufferPos, UInt32 _cyclicBufferSize, UInt32 _cutValue,
+    UInt32 *distances, UInt32 maxLen);
+
+/*
+Conditions:
+  Mf_GetNumAvailableBytes_Func must be called before each Mf_GetMatchLen_Func.
+  Mf_GetPointerToCurrentPos_Func's result must be used only before any other function
+*/
+
+typedef void (*Mf_Init_Func)(void *object);
+typedef UInt32 (*Mf_GetNumAvailableBytes_Func)(void *object);
+typedef const Byte * (*Mf_GetPointerToCurrentPos_Func)(void *object);
+typedef UInt32 * (*Mf_GetMatches_Func)(void *object, UInt32 *distances);
+typedef void (*Mf_Skip_Func)(void *object, UInt32);
+
+typedef struct
+{
+  Mf_Init_Func Init;
+  Mf_GetNumAvailableBytes_Func GetNumAvailableBytes;
+  Mf_GetPointerToCurrentPos_Func GetPointerToCurrentPos;
+  Mf_GetMatches_Func GetMatches;
+  Mf_Skip_Func Skip;
+} IMatchFinder2;
+
+void MatchFinder_CreateVTable(CMatchFinder *p, IMatchFinder2 *vTable);
+
+void MatchFinder_Init_LowHash(CMatchFinder *p);
+void MatchFinder_Init_HighHash(CMatchFinder *p);
+void MatchFinder_Init_4(CMatchFinder *p);
+// void MatchFinder_Init(CMatchFinder *p);
+void MatchFinder_Init(void *p);
+
+UInt32* Bt3Zip_MatchFinder_GetMatches(CMatchFinder *p, UInt32 *distances);
+UInt32* Hc3Zip_MatchFinder_GetMatches(CMatchFinder *p, UInt32 *distances);
+
+void Bt3Zip_MatchFinder_Skip(CMatchFinder *p, UInt32 num);
+void Hc3Zip_MatchFinder_Skip(CMatchFinder *p, UInt32 num);
+
+void LzFindPrepare(void);
+
+EXTERN_C_END
+
+#endif

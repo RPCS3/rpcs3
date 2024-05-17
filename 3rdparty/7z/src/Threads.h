@@ -1,240 +1,249 @@
-/* Threads.h -- multithreading library
-2023-04-02 : Igor Pavlov : Public domain */
+# Microsoft Developer Studio Project File - Name="7z" - Package Owner=<4>
+# Microsoft Developer Studio Generated Build File, Format Version 6.00
+# ** DO NOT EDIT **
 
-#ifndef ZIP7_INC_THREADS_H
-#define ZIP7_INC_THREADS_H
+# TARGTYPE "Win32 (x86) Console Application" 0x0103
 
-#ifdef _WIN32
-#include "7zWindows.h"
+CFG=7z - Win32 Debug
+!MESSAGE This is not a valid makefile. To build this project using NMAKE,
+!MESSAGE use the Export Makefile command and run
+!MESSAGE 
+!MESSAGE NMAKE /f "7z.mak".
+!MESSAGE 
+!MESSAGE You can specify a configuration when running NMAKE
+!MESSAGE by defining the macro CFG on the command line. For example:
+!MESSAGE 
+!MESSAGE NMAKE /f "7z.mak" CFG="7z - Win32 Debug"
+!MESSAGE 
+!MESSAGE Possible choices for configuration are:
+!MESSAGE 
+!MESSAGE "7z - Win32 Release" (based on "Win32 (x86) Console Application")
+!MESSAGE "7z - Win32 Debug" (based on "Win32 (x86) Console Application")
+!MESSAGE 
 
-#else
+# Begin Project
+# PROP AllowPerConfigDependencies 0
+# PROP Scc_ProjName ""
+# PROP Scc_LocalPath ""
+CPP=cl.exe
+RSC=rc.exe
 
-#if defined(__linux__)
-#if !defined(__APPLE__) && !defined(_AIX) && !defined(__ANDROID__)
-#ifndef Z7_AFFINITY_DISABLE
-#define Z7_AFFINITY_SUPPORTED
-// #pragma message(" ==== Z7_AFFINITY_SUPPORTED")
-// #define _GNU_SOURCE
-#endif
-#endif
-#endif
+!IF  "$(CFG)" == "7z - Win32 Release"
 
-#include <pthread.h>
+# PROP BASE Use_MFC 0
+# PROP BASE Use_Debug_Libraries 0
+# PROP BASE Output_Dir "Release"
+# PROP BASE Intermediate_Dir "Release"
+# PROP BASE Target_Dir ""
+# PROP Use_MFC 0
+# PROP Use_Debug_Libraries 0
+# PROP Output_Dir "Release"
+# PROP Intermediate_Dir "Release"
+# PROP Ignore_Export_Lib 0
+# PROP Target_Dir ""
+# ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /c
+# ADD CPP /nologo /MD /W4 /WX /GX /O2 /D "NDEBUG" /D "WIN32" /D "_CONSOLE" /D "_UNICODE" /D "UNICODE" /D "Z7_PPMD_SUPPORT" /D "Z7_EXTRACT_ONLY" /FAcs /Yu"Precomp.h" /FD /c
+# ADD BASE RSC /l 0x419 /d "NDEBUG"
+# ADD RSC /l 0x419 /d "NDEBUG"
+BSC32=bscmake.exe
+# ADD BASE BSC32 /nologo
+# ADD BSC32 /nologo
+LINK32=link.exe
+# ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /machine:I386
+# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /machine:I386 /out:"c:\util\7zDec.exe" /opt:NOWIN98
+# SUBTRACT LINK32 /pdb:none
 
-#endif
+!ELSEIF  "$(CFG)" == "7z - Win32 Debug"
 
-#include "7zTypes.h"
+# PROP BASE Use_MFC 0
+# PROP BASE Use_Debug_Libraries 1
+# PROP BASE Output_Dir "Debug"
+# PROP BASE Intermediate_Dir "Debug"
+# PROP BASE Target_Dir ""
+# PROP Use_MFC 0
+# PROP Use_Debug_Libraries 1
+# PROP Output_Dir "Debug"
+# PROP Intermediate_Dir "Debug"
+# PROP Ignore_Export_Lib 0
+# PROP Target_Dir ""
+# ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /GZ /c
+# ADD CPP /nologo /W4 /WX /Gm /GX /ZI /Od /D "_DEBUG" /D "_SZ_ALLOC_DEBUG2" /D "_SZ_NO_INT_64_A" /D "WIN32" /D "_CONSOLE" /D "_UNICODE" /D "UNICODE" /D "Z7_PPMD_SUPPORT" /D "Z7_EXTRACT_ONLY" /Yu"Precomp.h" /FD /GZ /c
+# ADD BASE RSC /l 0x419 /d "_DEBUG"
+# ADD RSC /l 0x419 /d "_DEBUG"
+BSC32=bscmake.exe
+# ADD BASE BSC32 /nologo
+# ADD BSC32 /nologo
+LINK32=link.exe
+# ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept
+# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /debug /machine:I386 /out:"c:\util\7zDec.exe" /pdbtype:sept
 
-EXTERN_C_BEGIN
+!ENDIF 
 
-#ifdef _WIN32
+# Begin Target
 
-WRes HandlePtr_Close(HANDLE *h);
-WRes Handle_WaitObject(HANDLE h);
+# Name "7z - Win32 Release"
+# Name "7z - Win32 Debug"
+# Begin Group "Common"
 
-typedef HANDLE CThread;
+# PROP Default_Filter ""
+# Begin Source File
 
-#define Thread_CONSTRUCT(p) { *(p) = NULL; }
-#define Thread_WasCreated(p) (*(p) != NULL)
-#define Thread_Close(p) HandlePtr_Close(p)
-// #define Thread_Wait(p) Handle_WaitObject(*(p))
+SOURCE=..\..\7z.h
+# End Source File
+# Begin Source File
 
-#ifdef UNDER_CE
-  // if (USE_THREADS_CreateThread is      defined), we use _beginthreadex()
-  // if (USE_THREADS_CreateThread is not definned), we use CreateThread()
-  #define USE_THREADS_CreateThread
-#endif
+SOURCE=..\..\7zAlloc.c
+# End Source File
+# Begin Source File
 
-typedef
-    #ifdef USE_THREADS_CreateThread
-      DWORD
-    #else
-      unsigned
-    #endif
-    THREAD_FUNC_RET_TYPE;
+SOURCE=..\..\7zAlloc.h
+# End Source File
+# Begin Source File
 
-#define THREAD_FUNC_RET_ZERO  0
+SOURCE=..\..\7zArcIn.c
+# End Source File
+# Begin Source File
 
-typedef DWORD_PTR CAffinityMask;
-typedef DWORD_PTR CCpuSet;
+SOURCE=..\..\7zBuf.c
+# End Source File
+# Begin Source File
 
-#define CpuSet_Zero(p)        *(p) = (0)
-#define CpuSet_Set(p, cpu)    *(p) |= ((DWORD_PTR)1 << (cpu))
+SOURCE=..\..\7zBuf.h
+# End Source File
+# Begin Source File
 
-#else //  _WIN32
+SOURCE=..\..\7zCrc.c
+# End Source File
+# Begin Source File
 
-typedef struct
-{
-  pthread_t _tid;
-  int _created;
-} CThread;
+SOURCE=..\..\7zCrc.h
+# End Source File
+# Begin Source File
 
-#define Thread_CONSTRUCT(p)   { (p)->_tid = 0;  (p)->_created = 0; }
-#define Thread_WasCreated(p)  ((p)->_created != 0)
-WRes Thread_Close(CThread *p);
-// #define Thread_Wait Thread_Wait_Close
+SOURCE=..\..\7zCrcOpt.c
+# End Source File
+# Begin Source File
 
-typedef void * THREAD_FUNC_RET_TYPE;
-#define THREAD_FUNC_RET_ZERO  NULL
+SOURCE=..\..\7zDec.c
+# ADD CPP /D "_7ZIP_PPMD_SUPPPORT"
+# End Source File
+# Begin Source File
 
+SOURCE=..\..\7zFile.c
+# End Source File
+# Begin Source File
 
-typedef UInt64 CAffinityMask;
+SOURCE=..\..\7zFile.h
+# End Source File
+# Begin Source File
 
-#ifdef Z7_AFFINITY_SUPPORTED
+SOURCE=..\..\7zStream.c
+# End Source File
+# Begin Source File
 
-typedef cpu_set_t CCpuSet;
-#define CpuSet_Zero(p)        CPU_ZERO(p)
-#define CpuSet_Set(p, cpu)    CPU_SET(cpu, p)
-#define CpuSet_IsSet(p, cpu)  CPU_ISSET(cpu, p)
+SOURCE=..\..\7zTypes.h
+# End Source File
+# Begin Source File
 
-#else
+SOURCE=..\..\7zWindows.h
+# End Source File
+# Begin Source File
 
-typedef UInt64 CCpuSet;
-#define CpuSet_Zero(p)        *(p) = (0)
-#define CpuSet_Set(p, cpu)    *(p) |= ((UInt64)1 << (cpu))
-#define CpuSet_IsSet(p, cpu)  ((*(p) & ((UInt64)1 << (cpu))) != 0)
+SOURCE=..\..\Bcj2.c
+# End Source File
+# Begin Source File
 
-#endif
+SOURCE=..\..\Bcj2.h
+# End Source File
+# Begin Source File
 
+SOURCE=..\..\Bra.c
+# End Source File
+# Begin Source File
 
-#endif //  _WIN32
+SOURCE=..\..\Bra.h
+# End Source File
+# Begin Source File
 
+SOURCE=..\..\Bra86.c
+# End Source File
+# Begin Source File
 
-#define THREAD_FUNC_CALL_TYPE Z7_STDCALL
+SOURCE=..\..\BraIA64.c
+# End Source File
+# Begin Source File
 
-#if defined(_WIN32) && defined(__GNUC__)
-/* GCC compiler for x86 32-bit uses the rule:
-   the stack is 16-byte aligned before CALL instruction for function calling.
-   But only root function main() contains instructions that
-   set 16-byte alignment for stack pointer. And another functions
-   just keep alignment, if it was set in some parent function.
-   
-   The problem:
-    if we create new thread in MinGW (GCC) 32-bit x86 via _beginthreadex() or CreateThread(),
-       the root function of thread doesn't set 16-byte alignment.
-       And stack frames in all child functions also will be unaligned in that case.
-   
-   Here we set (force_align_arg_pointer) attribute for root function of new thread.
-   Do we need (force_align_arg_pointer) also for another systems?  */
-  
-  #define THREAD_FUNC_ATTRIB_ALIGN_ARG __attribute__((force_align_arg_pointer))
-  // #define THREAD_FUNC_ATTRIB_ALIGN_ARG // for debug : bad alignment in SSE functions
-#else
-  #define THREAD_FUNC_ATTRIB_ALIGN_ARG
-#endif
+SOURCE=..\..\CpuArch.c
+# End Source File
+# Begin Source File
 
-#define THREAD_FUNC_DECL  THREAD_FUNC_ATTRIB_ALIGN_ARG THREAD_FUNC_RET_TYPE THREAD_FUNC_CALL_TYPE
+SOURCE=..\..\CpuArch.h
+# End Source File
+# Begin Source File
 
-typedef THREAD_FUNC_RET_TYPE (THREAD_FUNC_CALL_TYPE * THREAD_FUNC_TYPE)(void *);
-WRes Thread_Create(CThread *p, THREAD_FUNC_TYPE func, LPVOID param);
-WRes Thread_Create_With_Affinity(CThread *p, THREAD_FUNC_TYPE func, LPVOID param, CAffinityMask affinity);
-WRes Thread_Wait_Close(CThread *p);
+SOURCE=..\..\Delta.c
+# End Source File
+# Begin Source File
 
-#ifdef _WIN32
-#define Thread_Create_With_CpuSet(p, func, param, cs) \
-  Thread_Create_With_Affinity(p, func, param, *cs)
-#else
-WRes Thread_Create_With_CpuSet(CThread *p, THREAD_FUNC_TYPE func, LPVOID param, const CCpuSet *cpuSet);
-#endif
+SOURCE=..\..\Delta.h
+# End Source File
+# Begin Source File
 
+SOURCE=..\..\Lzma2Dec.c
+# End Source File
+# Begin Source File
 
-#ifdef _WIN32
+SOURCE=..\..\Lzma2Dec.h
+# End Source File
+# Begin Source File
 
-typedef HANDLE CEvent;
-typedef CEvent CAutoResetEvent;
-typedef CEvent CManualResetEvent;
-#define Event_Construct(p) *(p) = NULL
-#define Event_IsCreated(p) (*(p) != NULL)
-#define Event_Close(p) HandlePtr_Close(p)
-#define Event_Wait(p) Handle_WaitObject(*(p))
-WRes Event_Set(CEvent *p);
-WRes Event_Reset(CEvent *p);
-WRes ManualResetEvent_Create(CManualResetEvent *p, int signaled);
-WRes ManualResetEvent_CreateNotSignaled(CManualResetEvent *p);
-WRes AutoResetEvent_Create(CAutoResetEvent *p, int signaled);
-WRes AutoResetEvent_CreateNotSignaled(CAutoResetEvent *p);
+SOURCE=..\..\LzmaDec.c
+# End Source File
+# Begin Source File
 
-typedef HANDLE CSemaphore;
-#define Semaphore_Construct(p) *(p) = NULL
-#define Semaphore_IsCreated(p) (*(p) != NULL)
-#define Semaphore_Close(p) HandlePtr_Close(p)
-#define Semaphore_Wait(p) Handle_WaitObject(*(p))
-WRes Semaphore_Create(CSemaphore *p, UInt32 initCount, UInt32 maxCount);
-WRes Semaphore_OptCreateInit(CSemaphore *p, UInt32 initCount, UInt32 maxCount);
-WRes Semaphore_ReleaseN(CSemaphore *p, UInt32 num);
-WRes Semaphore_Release1(CSemaphore *p);
+SOURCE=..\..\LzmaDec.h
+# End Source File
+# Begin Source File
 
-typedef CRITICAL_SECTION CCriticalSection;
-WRes CriticalSection_Init(CCriticalSection *p);
-#define CriticalSection_Delete(p) DeleteCriticalSection(p)
-#define CriticalSection_Enter(p) EnterCriticalSection(p)
-#define CriticalSection_Leave(p) LeaveCriticalSection(p)
+SOURCE=..\..\Ppmd.h
+# End Source File
+# Begin Source File
 
+SOURCE=..\..\Ppmd7.c
+# End Source File
+# Begin Source File
 
-#else // _WIN32
+SOURCE=..\..\Ppmd7.h
+# End Source File
+# Begin Source File
 
-typedef struct _CEvent
-{
-  int _created;
-  int _manual_reset;
-  int _state;
-  pthread_mutex_t _mutex;
-  pthread_cond_t _cond;
-} CEvent;
+SOURCE=..\..\Ppmd7Dec.c
+# End Source File
+# End Group
+# Begin Group "Spec"
 
-typedef CEvent CAutoResetEvent;
-typedef CEvent CManualResetEvent;
+# PROP Default_Filter ""
+# Begin Source File
 
-#define Event_Construct(p) (p)->_created = 0
-#define Event_IsCreated(p) ((p)->_created)
+SOURCE=..\..\Compiler.h
+# End Source File
+# Begin Source File
 
-WRes ManualResetEvent_Create(CManualResetEvent *p, int signaled);
-WRes ManualResetEvent_CreateNotSignaled(CManualResetEvent *p);
-WRes AutoResetEvent_Create(CAutoResetEvent *p, int signaled);
-WRes AutoResetEvent_CreateNotSignaled(CAutoResetEvent *p);
+SOURCE=.\Precomp.c
+# ADD CPP /Yc"Precomp.h"
+# End Source File
+# Begin Source File
 
-WRes Event_Set(CEvent *p);
-WRes Event_Reset(CEvent *p);
-WRes Event_Wait(CEvent *p);
-WRes Event_Close(CEvent *p);
+SOURCE=..\..\Precomp.h
+# End Source File
+# Begin Source File
 
+SOURCE=.\Precomp.h
+# End Source File
+# End Group
+# Begin Source File
 
-typedef struct _CSemaphore
-{
-  int _created;
-  UInt32 _count;
-  UInt32 _maxCount;
-  pthread_mutex_t _mutex;
-  pthread_cond_t _cond;
-} CSemaphore;
-
-#define Semaphore_Construct(p) (p)->_created = 0
-#define Semaphore_IsCreated(p) ((p)->_created)
-
-WRes Semaphore_Create(CSemaphore *p, UInt32 initCount, UInt32 maxCount);
-WRes Semaphore_OptCreateInit(CSemaphore *p, UInt32 initCount, UInt32 maxCount);
-WRes Semaphore_ReleaseN(CSemaphore *p, UInt32 num);
-#define Semaphore_Release1(p) Semaphore_ReleaseN(p, 1)
-WRes Semaphore_Wait(CSemaphore *p);
-WRes Semaphore_Close(CSemaphore *p);
-
-
-typedef struct _CCriticalSection
-{
-  pthread_mutex_t _mutex;
-} CCriticalSection;
-
-WRes CriticalSection_Init(CCriticalSection *p);
-void CriticalSection_Delete(CCriticalSection *cs);
-void CriticalSection_Enter(CCriticalSection *cs);
-void CriticalSection_Leave(CCriticalSection *cs);
-
-LONG InterlockedIncrement(LONG volatile *addend);
-
-#endif  // _WIN32
-
-WRes AutoResetEvent_OptCreate_And_Reset(CAutoResetEvent *p);
-
-EXTERN_C_END
-
-#endif
+SOURCE=.\7zMain.c
+# End Source File
+# End Target
+# End Project
