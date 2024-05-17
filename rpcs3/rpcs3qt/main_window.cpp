@@ -2751,6 +2751,12 @@ void main_window::CreateConnects()
 		dlg->show();
 	});
 
+	connect(ui->confGunCon3Act, &QAction::triggered, this, [this]
+	{
+		emulated_pad_settings_dialog* dlg = new emulated_pad_settings_dialog(emulated_pad_settings_dialog::pad_type::guncon3, this);
+		dlg->show();
+	});
+
 	connect(ui->confCamerasAct, &QAction::triggered, this, [this]()
 	{
 		camera_settings_dialog dlg(this);

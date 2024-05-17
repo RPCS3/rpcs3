@@ -2446,6 +2446,9 @@
     <ClInclude Include="Emu\Io\ghltar_config.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Io\guncon3_config.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\Io\usio_config.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
