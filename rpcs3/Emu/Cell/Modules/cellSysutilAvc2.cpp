@@ -112,6 +112,9 @@ struct avc2_settings
 	}
 };
 
+// Callback handle tag type
+struct avc2_cb_handle_t{};
+
 error_code cellSysutilAvc2GetPlayerInfo(vm::cptr<SceNpMatching2RoomMemberId> player_id, vm::ptr<CellSysutilAvc2PlayerInfo> player_info)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2GetPlayerInfo(player_id=*0x%x, player_info=*0x%x)", player_id, player_info);
@@ -434,6 +437,7 @@ error_code cellSysutilAvc2Unload()
 		return CELL_AVC2_ERROR_NOT_INITIALIZED;
 	}
 
+	sysutil_unregister_cb_with_id<avc2_cb_handle_t>();
 	settings.avc2_cb = vm::null;
 	settings.avc2_cb_arg = vm::null;
 
@@ -455,6 +459,7 @@ error_code cellSysutilAvc2UnloadAsync()
 		});
 	}
 
+	sysutil_unregister_cb_with_id<avc2_cb_handle_t>();
 	settings.avc2_cb = vm::null;
 	settings.avc2_cb_arg = vm::null;
 
@@ -572,7 +577,7 @@ error_code cellSysutilAvc2JoinChatRequest(vm::cptr<SceNpMatching2RoomId> room_id
 
 	if (settings.avc2_cb)
 	{
-		sysutil_register_cb([=, avc2_cb = settings.avc2_cb, avc2_cb_arg = settings.avc2_cb_arg](ppu_thread& cb_ppu) -> s32
+		sysutil_register_cb_with_id<avc2_cb_handle_t>([=, avc2_cb = settings.avc2_cb, avc2_cb_arg = settings.avc2_cb_arg](ppu_thread& cb_ppu) -> s32
 		{
 			avc2_cb(cb_ppu, CELL_AVC2_EVENT_JOIN_SUCCEEDED, 0, avc2_cb_arg);
 			return 0;
@@ -1032,7 +1037,7 @@ error_code cellSysutilAvc2Unload2(u32 mediaType)
 		}
 
 		// TODO: return error if the video chat is still loaded (probably CELL_AVC2_ERROR_INVALID_STATUS)
-
+		sysutil_unregister_cb_with_id<avc2_cb_handle_t>();
 		settings.avc2_cb = vm::null;
 		settings.avc2_cb_arg = vm::null;
 		break;
@@ -1073,6 +1078,7 @@ error_code cellSysutilAvc2UnloadAsync2(u32 mediaType)
 
 		if (mediaType == CELL_SYSUTIL_AVC2_VOICE_CHAT)
 		{
+			sysutil_unregister_cb_with_id<avc2_cb_handle_t>();
 			settings.avc2_cb = vm::null;
 			settings.avc2_cb_arg = vm::null;
 		}
