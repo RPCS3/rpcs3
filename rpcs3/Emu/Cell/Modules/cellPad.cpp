@@ -269,11 +269,11 @@ void pad_get_data(u32 port_no, CellPadData* data, bool get_periph_data = false)
 	}
 	else if (pad->ldd)
 	{
-		pad->ldd_data = *data;
 		if (setting & CELL_PAD_SETTING_SENSOR_ON)
 			data->len = CELL_PAD_LEN_CHANGE_SENSOR_ON;
 		else
 			data->len = (setting & CELL_PAD_SETTING_PRESS_ON) ? CELL_PAD_LEN_CHANGE_PRESS_ON : CELL_PAD_LEN_CHANGE_DEFAULT;
+		std::memcpy(data->button, pad->ldd_data.button, data->len * sizeof(u16));
 		return;
 	}
 	else
