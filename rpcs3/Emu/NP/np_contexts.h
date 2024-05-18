@@ -191,6 +191,8 @@ struct match2_ctx
 	static const u32 id_count = 255; // TODO: constant here?
 	SAVESTATE_INIT_POS(27);
 
+	atomic_t<u32> started = 0;
+
 	shared_mutex mutex;
 
 	SceNpCommunicationId communicationId{};
