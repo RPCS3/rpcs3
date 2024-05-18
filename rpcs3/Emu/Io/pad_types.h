@@ -146,7 +146,9 @@ enum
 	CELL_PAD_PCLASS_TYPE_SKATEBOARD = 0x8001,
 
 	// these are used together with pad->is_fake_pad to capture input events for usbd/gem/move without conflicting with cellPad
+	CELL_PAD_FAKE_TYPE_FIRST        = 0xa000,
 	CELL_PAD_FAKE_TYPE_GUNCON3      = 0xa000,
+	CELL_PAD_FAKE_TYPE_LAST,
 
 	CELL_PAD_PCLASS_TYPE_MAX // last item
 };
