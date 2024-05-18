@@ -190,7 +190,8 @@ void pad_thread::Init()
 				i, cfg->device.to_string(), m_pads[i]->m_pad_handler, m_pads[i]->m_vendor_id, m_pads[i]->m_product_id, m_pads[i]->m_class_type, m_pads[i]->m_class_profile);
 		}
 
-		m_pads[i]->is_fake_pad = (g_cfg.io.move == move_handler::fake && i >= (static_cast<u32>(CELL_PAD_MAX_PORT_NUM) - static_cast<u32>(CELL_GEM_MAX_NUM))) || m_pads[i]->m_class_type == CELL_PAD_FAKE_TYPE_GUNCON3;
+		m_pads[i]->is_fake_pad = (g_cfg.io.move == move_handler::fake && i >= (static_cast<u32>(CELL_PAD_MAX_PORT_NUM) - static_cast<u32>(CELL_GEM_MAX_NUM)))
+			|| (m_pads[i]->m_class_type >= CELL_PAD_FAKE_TYPE_FIRST && m_pads[i]->m_class_type <= CELL_PAD_FAKE_TYPE_LAST);
 		connect_usb_controller(i, input::get_product_by_vid_pid(m_pads[i]->m_vendor_id, m_pads[i]->m_product_id));
 	}
 }
