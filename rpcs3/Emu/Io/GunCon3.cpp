@@ -93,7 +93,7 @@ static void guncon3_encode(const GunCon3_data* gc, u8* data, const u8* key)
 {
 	std::memcpy(data, gc, sizeof(GunCon3_data));
 
-	u8 key_offset = ((key[1] ^ key[2]) - key[3] - (key[4] ^ key[5])) + key[6] - (key[7] ^ data[14]);
+	u8 key_offset = ((((key[1] ^ key[2]) - key[3] - key[4]) ^ key[5]) + key[6] - key[7]) ^ data[14];
 	u8 key_index = 0;
 
 	for (int i = 0; i < 13; i++)
@@ -118,9 +118,9 @@ static void guncon3_encode(const GunCon3_data* gc, u8* data, const u8* key)
 		data[i] = byte;
 	}
 
-	data[13] = ((key[7] + data[0] - data[1] - (data[2] ^ data[3]))
-			 + data[4] + (data[5] ^ (data[6] ^ data[7])))
-			 + data[8] + data[9] - data[10] - (data[11] ^ data[12]);
+	data[13] = ((((((key[7] + data[0] - data[1] - data[2]) ^ data[3])
+			 + data[4] + data[5]) ^ data[6]) ^ data[7])
+			 + data[8] + data[9] - data[10] - data[11]) ^ data[12];
 }
 
 usb_device_guncon3::usb_device_guncon3(u32 controller_index, const std::array<u8, 7>& location)
