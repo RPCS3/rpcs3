@@ -17,6 +17,7 @@ namespace rpcs3::utils
 	std::string get_hdd0_dir();
 	std::string get_hdd1_dir();
 	std::string get_cache_dir();
+	std::string get_cache_dir(std::string_view module_path);
 
 	std::string get_rap_file_path(const std::string_view& rap);
 	bool verify_c00_unlock_edat(const std::string_view& content_id, bool fast = false);

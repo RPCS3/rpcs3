@@ -3754,13 +3754,7 @@ extern void ppu_finalize(const ppu_module& info, bool force_mem_release)
 	}
 
 	// Get cache path for this executable
-	std::string cache_path = fs::get_cache_dir() + "cache/";
-
-	if (!info.path.starts_with(dev_flash) && !Emu.GetTitleID().empty() && Emu.GetCat() != "1P")
-	{
-		cache_path += Emu.GetTitleID();
-		cache_path += '/';
-	}
+	std::string cache_path = rpcs3::utils::get_cache_dir(info.path);
 
 	// Add PPU hash and filename
 	fmt::append(cache_path, "ppu-%s-%s/", fmt::base57(info.sha1), info.path.substr(info.path.find_last_of('/') + 1));
@@ -4260,7 +4254,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 					obj.clear(), src.close(); // Clear decrypted file and elf object memory
 
 					_main.name = ' '; // Make ppu_finalize work
-					Emu.ConfigurePPUCache(!Emu.IsPathInsideDir(_main.path, g_cfg_vfs.get_dev_flash()));
+					Emu.ConfigurePPUCache();
 					ppu_initialize(_main, false, file_size);
 					spu_cache::initialize(false);
 					ppu_finalize(_main, true);
@@ -4520,16 +4514,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 	else
 	{
 		// New PPU cache location
-		cache_path = fs::get_cache_dir() + "cache/";
-
-		const std::string dev_flash = vfs::get("/dev_flash/");
-
-		if (!info.path.starts_with(dev_flash) && !Emu.GetTitleID().empty() && Emu.GetCat() != "1P")
-		{
-			// Add prefix for anything except dev_flash files, standalone elfs or PS1 classics
-			cache_path += Emu.GetTitleID();
-			cache_path += '/';
-		}
+		cache_path = rpcs3::utils::get_cache_dir(info.path);
 
 		// Add PPU hash and filename
 		fmt::append(cache_path, "ppu-%s-%s/", fmt::base57(info.sha1), info.path.substr(info.path.find_last_of('/') + 1));

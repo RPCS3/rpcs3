@@ -25,7 +25,7 @@ endif()
 
 target_link_libraries(rpcs3_emu
     PRIVATE
-        3rdparty::zlib 3rdparty::yaml-cpp
+        3rdparty::zlib 3rdparty::yaml-cpp 3rdparty::zstd
     PUBLIC
         3rdparty::libevdev 3rdparty::flatbuffers)
 
@@ -486,6 +486,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/GL/upscalers/fsr1/fsr_pass.cpp
     RSX/GSRender.cpp
     RSX/Null/NullGSRender.cpp
+    RSX/NV47/FW/draw_call.cpp
     RSX/NV47/FW/reg_context.cpp
     RSX/NV47/HW/common.cpp
     RSX/NV47/HW/nv0039.cpp

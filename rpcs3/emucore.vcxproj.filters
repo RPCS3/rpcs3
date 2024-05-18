@@ -1246,6 +1246,9 @@
     <ClCompile Include="Emu\RSX\NV47\FW\reg_context.cpp">
       <Filter>Emu\GPU\RSX\NV47\FW</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\NV47\FW\draw_call.cpp">
+      <Filter>Emu\GPU\RSX\NV47\FW</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -2443,6 +2446,9 @@
     <ClInclude Include="Emu\Io\ghltar_config.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Io\guncon3_config.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\Io\usio_config.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
@@ -2532,6 +2538,9 @@
     </ClInclude>
     <ClInclude Include="Emu\savestate_utils.hpp">
       <Filter>Emu</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\NV47\FW\GRAPH_backend.h">
+      <Filter>Emu\GPU\RSX\NV47\FW</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

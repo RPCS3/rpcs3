@@ -690,7 +690,6 @@ namespace utils
 
 			while (thread_ctrl::state() != thread_state::aborting)
 			{
-				ensure(m_context.current_track < m_context.playlist.size());
 				media_log.notice("audio_decoder: about to decode: %s (index=%d)", ::at32(m_context.playlist, m_context.current_track), m_context.current_track);
 
 				decode_track(::at32(m_context.playlist, m_context.current_track));

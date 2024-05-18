@@ -21,6 +21,9 @@ namespace rsx
 		// Location of last execution barrier
 		u32 last_execution_barrier_index{};
 
+		// Draw-time iterator to the draw_command_barriers struct
+		mutable simple_array<barrier_t>::iterator current_barrier_it;
+
 		// Helper functions
 		// Add a new draw command
 		void append_draw_command(const draw_range_t& range)
@@ -55,12 +58,13 @@ namespace rsx
 		bool is_immediate_draw{};          // Set if part of the draw is submitted via push registers
 		bool is_disjoint_primitive{};      // Set if primitive type does not rely on adjacency information
 		bool primitive_barrier_enable{};   // Set once to signal that a primitive restart barrier can be inserted
+		bool is_rendering{};               // Set while we're actually pushing the draw calls to host GPU
 
 		simple_array<u32> inline_vertex_array{};
 
 		void operator()(utils::serial& ar);
 
-		void insert_command_barrier(command_barrier_type type, u32 arg, u32 register_index = 0);
+		void insert_command_barrier(command_barrier_type type, u32 arg0, u32 arg1 = 0, u32 register_index = 0);
 
 		/**
 		 * Optimize commands for rendering
@@ -111,7 +115,8 @@ namespace rsx
 					if (draw_command_ranges[index].first == first &&
 						draw_command_ranges[index].count == count)
 					{
-						// Duplicate entry? WTF!
+						// Duplicate entry. Usually this indicates a botched instancing setup.
+						rsx_log.error("Duplicate draw request. Start=%u, Count=%u", first, count);
 						return;
 					}
 
@@ -206,12 +211,13 @@ namespace rsx
 				: primitive_class::non_polygon;
 		}
 
-
 		void reset(rsx::primitive_type type);
 
 		void begin()
 		{
 			current_range_index = 0;
+			current_barrier_it = draw_command_barriers.begin();
+			is_rendering = true;
 		}
 
 		void end()
@@ -225,6 +231,7 @@ namespace rsx
 			if (current_range_index >= draw_command_ranges.size())
 			{
 				current_range_index = 0;
+				is_rendering = false;
 				return false;
 			}
 
@@ -233,6 +240,7 @@ namespace rsx
 				// Dangling execution barrier
 				ensure(current_range_index > 0 && (current_range_index + 1) == draw_command_ranges.size());
 				current_range_index = 0;
+				is_rendering = false;
 				return false;
 			}
 

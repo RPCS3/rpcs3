@@ -195,8 +195,8 @@ namespace extra_nps
 		sceNp2.warning("SceNpMatching2RoomMemberDataInternal:");
 		sceNp2.warning("next: *0x%x", member->next);
 		sceNp2.warning("npId: %s", member->userInfo.npId.handle.data);
-		sceNp2.warning("onlineName: %s", member->userInfo.onlineName->data);
-		sceNp2.warning("avatarUrl: %s", member->userInfo.avatarUrl->data);
+		sceNp2.warning("onlineName: %s", member->userInfo.onlineName ? member->userInfo.onlineName->data : "");
+		sceNp2.warning("avatarUrl: %s", member->userInfo.avatarUrl ? member->userInfo.avatarUrl->data : "");
 		sceNp2.warning("joinDate: %lld", member->joinDate.tick);
 		sceNp2.warning("memberId: %d", member->memberId);
 		sceNp2.warning("teamId: %d", member->teamId);

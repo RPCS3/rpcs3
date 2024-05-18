@@ -16,6 +16,8 @@
 
 #include "lv2_socket_p2p.h"
 
+struct nt_p2p_port;
+
 constexpr be_t<u32> P2PS_U2S_SIG = (static_cast<u32>('U') << 24 | static_cast<u32>('2') << 16 | static_cast<u32>('S') << 8 | static_cast<u32>('0'));
 
 struct p2ps_encapsulated_tcp
@@ -63,9 +65,10 @@ public:
 
 	p2ps_stream_status get_status() const;
 	void set_status(p2ps_stream_status new_status);
-	bool handle_connected(p2ps_encapsulated_tcp* tcp_header, u8* data, ::sockaddr_storage* op_addr);
+	bool handle_connected(p2ps_encapsulated_tcp* tcp_header, u8* data, ::sockaddr_storage* op_addr, nt_p2p_port* p2p_port);
 	bool handle_listening(p2ps_encapsulated_tcp* tcp_header, u8* data, ::sockaddr_storage* op_addr);
 	void send_u2s_packet(std::vector<u8> data, const ::sockaddr_in* dst, u64 seq, bool require_ack);
+	void close_stream();
 
 	std::tuple<bool, s32, std::shared_ptr<lv2_socket>, sys_net_sockaddr> accept(bool is_lock = true) override;
 	s32 bind(const sys_net_sockaddr& addr) override;
@@ -87,7 +90,10 @@ public:
 	s32 poll(sys_net_pollfd& sn_pfd, pollfd& native_pfd) override;
 	std::tuple<bool, bool, bool> select(bs_t<poll_t> selected, pollfd& native_pfd) override;
 
-protected:
+private:
+	void close_stream_nl(nt_p2p_port* p2p_port);
+
+private:
 	static constexpr usz MAX_RECEIVED_BUFFER = (1024 * 1024 * 10);
 
 	p2ps_stream_status status = p2ps_stream_status::stream_closed;

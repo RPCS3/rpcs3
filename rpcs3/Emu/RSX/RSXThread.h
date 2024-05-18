@@ -33,6 +33,8 @@
 #include "Core/RSXIOMap.hpp"
 #include "Core/RSXVertexTypes.h"
 
+#include "NV47/FW/GRAPH_backend.h"
+
 extern atomic_t<bool> g_user_asked_for_frame_capture;
 extern atomic_t<bool> g_disable_frame_limit;
 extern rsx::frame_trace_data frame_debug;
@@ -150,7 +152,7 @@ namespace rsx
 	};
 
 	// TODO: This class is a mess, this needs to be broken into smaller chunks, like I did for RSXFIFO and RSXZCULL (kd)
-	class thread : public cpu_thread, public GCM_context
+	class thread : public cpu_thread, public GCM_context, public GRAPH_backend
 	{
 		u64 timestamp_ctrl = 0;
 		u64 timestamp_subvalue = 0;
@@ -201,7 +203,7 @@ namespace rsx
 
 		// Profiler
 		rsx::profiling_timer m_profiler;
-		frame_statistics_t m_frame_stats;
+		frame_statistics_t m_frame_stats{};
 
 		// Savestates related
 		u32 m_pause_after_x_flips = 0;
@@ -260,7 +262,7 @@ namespace rsx
 		atomic_bitmask_t<flip_request> async_flip_requested{};
 		u8 async_flip_buffer{ 0 };
 
-		void capture_frame(const std::string &name);
+		void capture_frame(const std::string& name);
 		const backend_configuration& get_backend_config() const { return backend_config; }
 
 	public:
@@ -270,8 +272,8 @@ namespace rsx
 		bool isHLE{ false };
 		bool serialized = false;
 
-		u32 flip_status;
-		int debug_level;
+		u32 flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
+		int debug_level = CELL_GCM_DEBUG_LEVEL0;
 
 		atomic_t<bool> requested_vsync{true};
 		atomic_t<bool> enable_second_vhandler{false};

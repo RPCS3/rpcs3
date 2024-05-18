@@ -50,17 +50,14 @@ public:
 	void Task();
 };
 
-class GLVertexProgram
+class GLVertexProgram : public rsx::VertexProgramBase
 {
 public:
 	GLVertexProgram();
 	~GLVertexProgram();
 
 	ParamArray parr;
-	u32 id;
 	gl::glsl::shader shader;
-	std::vector<u16> constant_ids;
-	bool has_indexed_constants;
 
 	void Decompile(const RSXVertexProgram& prog);
 

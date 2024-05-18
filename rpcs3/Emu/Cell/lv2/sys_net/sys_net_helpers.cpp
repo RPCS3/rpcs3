@@ -175,9 +175,9 @@ bool is_ip_public_address(const ::sockaddr_in& addr)
 	return true;
 }
 
-s32 network_clear_queue(ppu_thread& ppu)
+u32 network_clear_queue(ppu_thread& ppu)
 {
-	s32 cleared = 0;
+	u32 cleared = 0;
 
 	idm::select<lv2_socket>([&](u32, lv2_socket& sock)
 	{

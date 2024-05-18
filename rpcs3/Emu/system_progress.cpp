@@ -235,11 +235,13 @@ void progress_dialog_server::operator()()
 					if (ptotal)
 						fmt::append(progr, " module %u of %u", pdone, ptotal);
 
-					if (value)
+					const u32 of_1000 = static_cast<u32>(done >= total ? 1000 : done * 1000 / total);
+
+					if (of_1000 >= 2)
 					{
 						const u64 passed = (get_system_time() - start_time);
 						const u64 seconds_passed = passed / 1'000'000;
-						const u64 seconds_total = (passed / 1'000'000 * 100 / value);
+						const u64 seconds_total = (passed / 1'000'000 * 1000 / of_1000);
 						const u64 seconds_remaining = seconds_total - seconds_passed;
 						const u64 seconds = seconds_remaining % 60;
 						const u64 minutes = (seconds_remaining / 60) % 60;
@@ -249,9 +251,13 @@ void progress_dialog_server::operator()()
 						{
 							// Cannot rely on such small duration of time for estimation
 						}
+						else if (done >= total)
+						{
+							fmt::append(progr, " (done)", minutes, seconds);
+						}
 						else if (hours)
 						{
-							fmt::append(progr, " (%uh %02um remaining)", hours, minutes);
+							fmt::append(progr, " (%uh %2um remaining)", hours, minutes);
 						}
 						else if (minutes >= 2)
 						{
@@ -259,11 +265,11 @@ void progress_dialog_server::operator()()
 						}
 						else if (minutes == 0)
 						{
-							fmt::append(progr, " (%02us remaining)", seconds);
+							fmt::append(progr, " (%us remaining)", std::max<u64>(seconds, 1));
 						}
 						else
 						{
-							fmt::append(progr, " (%um %02us remaining)", minutes, seconds);
+							fmt::append(progr, " (%um %2us remaining)", minutes, seconds);
 						}
 					}
 				}

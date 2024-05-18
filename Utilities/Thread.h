@@ -21,10 +21,10 @@ enum class native_core_arrangement : u32
 
 enum class thread_class : u32
 {
-	general,
-	rsx,
-	spu,
-	ppu
+	general = 0,
+	ppu = 1,
+	spu = 2,
+	rsx = 0x55,
 };
 
 enum class thread_state : u32

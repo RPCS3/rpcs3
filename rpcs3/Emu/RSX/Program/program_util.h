@@ -57,4 +57,16 @@ namespace rsx
 		void set_dimension(texture_dimension_extended type, u32 index);
 		bool operator == (const vertex_program_texture_state& other) const;
 	};
+
+	struct VertexProgramBase
+	{
+		u32 id = 0;
+		std::vector<u16> constant_ids;
+		bool has_indexed_constants = false;
+
+		// Translates an incoming range of constants against our mapping.
+		// If there is no linear mapping available, return -1, otherwise returns the translated index of the first slot
+		// TODO: Move this somewhere else during refactor
+		int TranslateConstantsRange(int first_index, int count) const;
+	};
 }

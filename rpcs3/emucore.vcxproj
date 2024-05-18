@@ -40,10 +40,12 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <AdditionalIncludeDirectories>..\3rdparty\miniupnp\miniupnp\miniupnpc\include;..\3rdparty\wolfssl\wolfssl;..\3rdparty\flatbuffers\include;..\3rdparty\libusb\libusb\libusb;..\3rdparty\yaml-cpp\yaml-cpp\include;..\3rdparty\SoundTouch\soundtouch\include;..\3rdparty\rtmidi\rtmidi;..\3rdparty\zlib\zlib;..\3rdparty\llvm\llvm\include;..\3rdparty\llvm\llvm\llvm\include;..\3rdparty\llvm\llvm_build\include;$(VULKAN_SDK)\Include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\3rdparty\miniupnp\miniupnp\miniupnpc\include;..\3rdparty\wolfssl\wolfssl;..\3rdparty\flatbuffers\include;..\3rdparty\libusb\libusb\libusb;..\3rdparty\yaml-cpp\yaml-cpp\include;..\3rdparty\SoundTouch\soundtouch\include;..\3rdparty\rtmidi\rtmidi;..\3rdparty\zlib\zlib;..\3rdparty\llvm\llvm\include;..\3rdparty\llvm\llvm\llvm\include;..\3rdparty\llvm\llvm_build\include;$(VULKAN_SDK)\Include;..\3rdparty\zstd\zstd\lib</AdditionalIncludeDirectories>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MaxSpeed</Optimization>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MINIUPNP_STATICLIB;HAVE_VULKAN;HAVE_SDL2;ZLIB_CONST;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MINIUPNP_STATICLIB;HAVE_VULKAN;HAVE_SDL2;ZLIB_CONST;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalModuleDependencies)</AdditionalModuleDependencies>
+      <AdditionalModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(AdditionalModuleDependencies)</AdditionalModuleDependencies>
     </ClCompile>
     <PreBuildEvent>
       <Command>cmd.exe /c "$(SolutionDir)\Utilities\git-version-gen.cmd"</Command>
@@ -97,6 +99,7 @@
     <ClCompile Include="Emu\perf_monitor.cpp" />
     <ClCompile Include="Emu\RSX\Common\texture_cache.cpp" />
     <ClCompile Include="Emu\RSX\Core\RSXContext.cpp" />
+    <ClCompile Include="Emu\RSX\NV47\FW\draw_call.cpp" />
     <ClCompile Include="Emu\RSX\NV47\FW\reg_context.cpp" />
     <ClCompile Include="Emu\RSX\NV47\HW\common.cpp" />
     <ClCompile Include="Emu\RSX\NV47\HW\nv0039.cpp" />
@@ -536,6 +539,7 @@
     <ClInclude Include="Emu\Io\emulated_pad_config.h" />
     <ClInclude Include="Emu\Io\gem_config.h" />
     <ClInclude Include="Emu\Io\ghltar_config.h" />
+    <ClInclude Include="Emu\Io\guncon3_config.h" />
     <ClInclude Include="Emu\Io\midi_config_types.h" />
     <ClInclude Include="Emu\Io\music_handler_base.h" />
     <ClInclude Include="Emu\Io\Null\null_camera_handler.h" />
@@ -597,6 +601,7 @@
     <ClInclude Include="Emu\RSX\Core\RSXVertexTypes.h" />
     <ClInclude Include="Emu\RSX\NV47\FW\draw_call.hpp" />
     <ClInclude Include="Emu\RSX\NV47\FW\draw_call.inc.h" />
+    <ClInclude Include="Emu\RSX\NV47\FW\GRAPH_backend.h" />
     <ClInclude Include="Emu\RSX\NV47\FW\reg_context.h" />
     <ClInclude Include="Emu\RSX\NV47\HW\context.h" />
     <ClInclude Include="Emu\RSX\NV47\HW\context_accessors.define.h" />
@@ -943,6 +948,12 @@
     </ProjectReference>
     <ProjectReference Include="..\3rdparty\yaml-cpp\yaml-cpp.vcxproj">
       <Project>{fdc361c5-7734-493b-8cfb-037308b35122}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\3rdparty\zlib\zlib.vcxproj">
+      <Project>{60f89955-91c6-3a36-8000-13c592fec2df}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\3rdparty\zstd\zstd.vcxproj">
+      <Project>{4e52a41a-f33b-4c7a-8c36-a1a6b4f4277c}</Project>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

@@ -1044,7 +1044,7 @@ error_code sceNpMatching2GetRoomMemberDataInternalLocal(SceNpMatching2ContextId 
 		return SCE_NP_MATCHING2_ERROR_CONTEXT_NOT_FOUND;
 	}
 
-	return nph.local_get_room_member_data(roomId, memberId, binattrs_list, member ? member.get_ptr() : nullptr, buf.addr(), bufLen);
+	return nph.local_get_room_member_data(roomId, memberId, binattrs_list, member ? member.get_ptr() : nullptr, buf.addr(), bufLen, ctxId);
 }
 
 error_code sceNpMatching2GetCbQueueInfo(SceNpMatching2ContextId ctxId, vm::ptr<SceNpMatching2CbQueueInfo> queueInfo)
@@ -1290,7 +1290,7 @@ error_code sceNpMatching2GrantRoomOwner(
 error_code sceNpMatching2CreateContext(
     vm::cptr<SceNpId> npId, vm::cptr<SceNpCommunicationId> commId, vm::cptr<SceNpCommunicationPassphrase> passPhrase, vm::ptr<SceNpMatching2ContextId> ctxId, s32 option)
 {
-	sceNp2.warning("sceNpMatching2CreateContext(npId=*0x%x, commId=*0x%x(%s), passPhrase=*0x%x, ctxId=*0x%x, option=%d)", npId, commId, commId ? commId->data : "", ctxId, option);
+	sceNp2.warning("sceNpMatching2CreateContext(npId=*0x%x, commId=*0x%x(%s), passPhrase=*0x%x, ctxId=*0x%x, option=%d)", npId, commId, commId ? commId->data : "", passPhrase, ctxId, option);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -1309,7 +1309,7 @@ error_code sceNpMatching2CreateContext(
 		return SCE_NP_MATCHING2_ERROR_NOT_NP_SIGN_IN;
 	}
 
-	*ctxId = create_match2_context(commId, passPhrase);
+	*ctxId = create_match2_context(commId, passPhrase, option);
 
 	return CELL_OK;
 }

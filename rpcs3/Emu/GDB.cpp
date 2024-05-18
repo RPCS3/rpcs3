@@ -82,15 +82,18 @@ bool check_errno_again()
 #endif
 }
 
-std::string u32_to_hex(u32 i) {
+std::string u32_to_hex(u32 i)
+{
 	return fmt::format("%x", i);
 }
 
-std::string u64_to_padded_hex(u64 value) {
+std::string u64_to_padded_hex(u64 value)
+{
 	return fmt::format("%.16x", value);
 }
 
-std::string u32_to_padded_hex(u32 value) {
+std::string u32_to_padded_hex(u32 value)
+{
 	return fmt::format("%.8x", value);
 }
 
@@ -230,7 +233,8 @@ char gdb_thread::read_char()
 {
 	char result;
 	int cnt = read(&result, 1);
-	if (!cnt) {
+	if (!cnt)
+	{
 		fmt::throw_exception("Tried to read char, but no data was available");
 	}
 	return result;
@@ -248,18 +252,22 @@ bool gdb_thread::try_read_cmd(gdb_cmd& out_cmd)
 {
 	char c = read_char();
 	//interrupt
-	if (c == 0x03) [[unlikely]] {
+	if (c == 0x03) [[unlikely]]
+	{
 		out_cmd.cmd = '\x03';
 		out_cmd.data = "";
 		out_cmd.checksum = 0;
 		return true;
 	}
-	if (c != '$') [[unlikely]] {
+	if (c != '$') [[unlikely]]
+	{
 		//gdb starts conversation with + for some reason
-		if (c == '+') {
+		if (c == '+')
+		{
 			c = read_char();
 		}
-		if (c != '$') {
+		if (c != '$')
+		{
 			fmt::throw_exception("Expected start of packet character '$', got '%c' instead", c);
 		}
 	}
@@ -269,28 +277,36 @@ bool gdb_thread::try_read_cmd(gdb_cmd& out_cmd)
 	out_cmd.checksum = 0;
 	bool cmd_part = true;
 	u8 checksum = 0;
-	while(true) {
+	while (true)
+	{
 		c = read_char();
-		if (c == '#') {
+		if (c == '#')
+		{
 			break;
 		}
 		checksum = (checksum + reinterpret_cast<u8&>(c)) % 256;
 		//escaped char
-		if (c == '}') {
+		if (c == '}')
+		{
 			c = read_char() ^ 0x20;
 			checksum = (checksum + reinterpret_cast<u8&>(c)) % 256;
 		}
 		//cmd-data splitters
-		if (cmd_part && ((c == ':') || (c == '.') || (c == ';'))) {
+		if (cmd_part && ((c == ':') || (c == '.') || (c == ';')))
+		{
 			cmd_part = false;
 		}
-		if (cmd_part) {
+		if (cmd_part)
+		{
 			out_cmd.cmd += c;
 			//only q and v commands can have multi-char command
-			if ((out_cmd.cmd.length() == 1) && (c != 'q') && (c != 'v')) {
+			if ((out_cmd.cmd.length() == 1) && (c != 'q') && (c != 'v'))
+			{
 				cmd_part = false;
 			}
-		} else {
+		}
+		else
+		{
 			out_cmd.data += c;
 		}
 	}
@@ -360,12 +376,14 @@ void gdb_thread::send_cmd(const std::string& cmd)
 
 bool gdb_thread::send_cmd_ack(const std::string& cmd)
 {
-	while (true) {
+	while (true)
+	{
 		send_cmd(cmd);
 		char c = read_char();
 		if (c == '+') [[likely]]
 			return true;
-		if (c != '-') [[unlikely]] {
+		if (c != '-') [[unlikely]]
+		{
 			GDB.error("Wrong acknowledge character received: '%c'.", c);
 			return false;
 		}
@@ -376,7 +394,8 @@ bool gdb_thread::send_cmd_ack(const std::string& cmd)
 u8 gdb_thread::append_encoded_char(char c, std::string& str)
 {
 	u8 checksum = 0;
-	if ((c == '#') || (c == '$') || (c == '}')) [[unlikely]] {
+	if ((c == '#') || (c == '$') || (c == '}')) [[unlikely]]
+	{
 		str += '}';
 		c ^= 0x20;
 		checksum = '}';
@@ -417,7 +436,8 @@ std::string gdb_thread::get_reg(ppu_thread* thread, u32 rid)
 {
 	//ids from gdb/features/rs6000/powerpc-64.c
 	//pc
-	switch (rid) {
+	switch (rid)
+	{
 	case 64:
 		return u64_to_padded_hex(thread->cia);
 	//msr?
@@ -445,7 +465,8 @@ std::string gdb_thread::get_reg(ppu_thread* thread, u32 rid)
 
 bool gdb_thread::set_reg(ppu_thread* thread, u32 rid, std::string value)
 {
-	switch (rid) {
+	switch (rid)
+	{
 	case 64:
 		thread->cia = static_cast<u32>(hex_to_u64(value));
 		return true;
@@ -469,10 +490,13 @@ bool gdb_thread::set_reg(ppu_thread* thread, u32 rid, std::string value)
 		return true;
 	default:
 		if (rid > 70) return false;
-		if (rid > 31) {
+		if (rid > 31)
+		{
 			u64 val = hex_to_u64(value);
 			thread->fpr[rid - 32] = std::bit_cast<f64>(val);
-		} else {
+		}
+		else
+		{
 			thread->gpr[rid] = hex_to_u64(value);
 		}
 		return true;
@@ -481,13 +505,15 @@ bool gdb_thread::set_reg(ppu_thread* thread, u32 rid, std::string value)
 
 u32 gdb_thread::get_reg_size(ppu_thread*, u32 rid)
 {
-	switch (rid) {
+	switch (rid)
+	{
 	case 66:
 	case 69:
 	case 70:
 		return 4;
 	default:
-		if (rid > 70) {
+		if (rid > 70)
+		{
 			return 0;
 		}
 		return 8;
@@ -516,7 +542,9 @@ void gdb_thread::wait_with_interrupts()
 
 			GDB.error("Error during socket read.");
 			fmt::throw_exception("Error during socket read");
-		} else if (c == 0x03) {
+		}
+		else if (c == 0x03)
+		{
 			paused = true;
 		}
 	}
@@ -542,7 +570,8 @@ bool gdb_thread::cmd_thread_info(gdb_cmd&)
 	std::string result;
 	const auto on_select = [&](u32, cpu_thread& cpu)
 	{
-		if (!result.empty()) {
+		if (!result.empty())
+		{
 			result += ",";
 		}
 		result += u64_to_padded_hex(static_cast<u64>(cpu.id));
@@ -563,7 +592,8 @@ bool gdb_thread::cmd_current_thread(gdb_cmd&)
 
 bool gdb_thread::cmd_read_register(gdb_cmd& cmd)
 {
-	if (!select_thread(general_ops_thread_id)) {
+	if (!select_thread(general_ops_thread_id))
+	{
 		return send_cmd_ack("E02");
 	}
 	auto th = selected_thread.lock();
@@ -571,7 +601,8 @@ bool gdb_thread::cmd_read_register(gdb_cmd& cmd)
 	{
 		u32 rid = hex_to_u32(cmd.data);
 		std::string result = get_reg(ppu, rid);
-		if (result.empty()) {
+		if (result.empty())
+		{
 			GDB.warning("Wrong register id %d.", rid);
 			return send_cmd_ack("E01");
 		}
@@ -583,20 +614,24 @@ bool gdb_thread::cmd_read_register(gdb_cmd& cmd)
 
 bool gdb_thread::cmd_write_register(gdb_cmd& cmd)
 {
-	if (!select_thread(general_ops_thread_id)) {
+	if (!select_thread(general_ops_thread_id))
+	{
 		return send_cmd_ack("E02");
 	}
 	auto th = selected_thread.lock();
-	if (th->id_type() == 1) {
+	if (th->get_class() == thread_class::ppu)
+	{
 		auto ppu = static_cast<named_thread<ppu_thread>*>(th.get());
 		usz eq_pos = cmd.data.find('=');
-		if (eq_pos == umax) {
+		if (eq_pos == umax)
+		{
 			GDB.warning("Wrong write_register cmd data '%s'.", cmd.data);
 			return send_cmd_ack("E02");
 		}
 		u32 rid = hex_to_u32(cmd.data.substr(0, eq_pos));
 		std::string value = cmd.data.substr(eq_pos + 1);
-		if (!set_reg(ppu, rid, value)) {
+		if (!set_reg(ppu, rid, value))
+		{
 			GDB.warning("Wrong register id %d.", rid);
 			return send_cmd_ack("E01");
 		}
@@ -613,15 +648,20 @@ bool gdb_thread::cmd_read_memory(gdb_cmd& cmd)
 	u32 len = hex_to_u32(cmd.data.substr(s + 1));
 	std::string result;
 	result.reserve(len * 2);
-	for (u32 i = 0; i < len; ++i) {
-		if (vm::check_addr(addr)) {
+	for (u32 i = 0; i < len; ++i)
+	{
+		if (vm::check_addr(addr))
+		{
 			result += to_hexbyte(vm::read8(addr + i));
-		} else {
+		}
+		else
+		{
 			break;
 			//result += "xx";
 		}
 	}
-	if (len && result.empty()) {
+	if (len && result.empty())
+	{
 		//nothing read
 		return send_cmd_ack("E01");
 	}
@@ -632,24 +672,30 @@ bool gdb_thread::cmd_write_memory(gdb_cmd& cmd)
 {
 	usz s = cmd.data.find(',');
 	usz s2 = cmd.data.find(':');
-	if ((s == umax) || (s2 == umax)) {
+	if ((s == umax) || (s2 == umax))
+	{
 		GDB.warning("Malformed write memory request received: '%s'.", cmd.data);
 		return send_cmd_ack("E01");
 	}
 	u32 addr = hex_to_u32(cmd.data.substr(0, s));
 	u32 len = hex_to_u32(cmd.data.substr(s + 1, s2 - s - 1));
 	const char* data_ptr = (cmd.data.c_str()) + s2 + 1;
-	for (u32 i = 0; i < len; ++i) {
-		if (vm::check_addr(addr + i, vm::page_writable)) {
+	for (u32 i = 0; i < len; ++i)
+	{
+		if (vm::check_addr(addr + i, vm::page_writable))
+		{
 			u8 val;
 			int res = sscanf_s(data_ptr, "%02hhX", &val);
-			if (!res) {
+			if (!res)
+			{
 				GDB.warning("Couldn't read u8 from string '%s'.", data_ptr);
 				return send_cmd_ack("E02");
 			}
 			data_ptr += 2;
 			vm::write8(addr + i, val);
-		} else {
+		}
+		else
+		{
 			return send_cmd_ack("E03");
 		}
 	}
@@ -662,11 +708,13 @@ bool gdb_thread::cmd_read_all_registers(gdb_cmd&)
 	select_thread(general_ops_thread_id);
 
 	auto th = selected_thread.lock();
-	if (th->id_type() == 1) {
+	if (th->get_class() == thread_class::ppu)
+	{
 		auto ppu = static_cast<named_thread<ppu_thread>*>(th.get());
 		//68 64-bit registers, and 3 32-bit
 		result.reserve(68*16 + 3*8);
-		for (int i = 0; i < 71; ++i) {
+		for (int i = 0; i < 71; ++i)
+		{
 			result += get_reg(ppu, i);
 		}
 		return send_cmd_ack(result);
@@ -679,10 +727,12 @@ bool gdb_thread::cmd_write_all_registers(gdb_cmd& cmd)
 {
 	select_thread(general_ops_thread_id);
 	auto th = selected_thread.lock();
-	if (th->id_type() == 1) {
+	if (th->get_class() == thread_class::ppu)
+	{
 		auto ppu = static_cast<named_thread<ppu_thread>*>(th.get());
 		int ptr = 0;
-		for (int i = 0; i < 71; ++i) {
+		for (int i = 0; i < 71; ++i)
+		{
 			int sz = get_reg_size(ppu, i);
 			set_reg(ppu, i, cmd.data.substr(ptr, sz * 2));
 			ptr += sz * 2;
@@ -698,12 +748,16 @@ bool gdb_thread::cmd_set_thread_ops(gdb_cmd& cmd)
 	char type = cmd.data[0];
 	std::string thread = cmd.data.substr(1);
 	u64 id = thread == "-1" ? ALL_THREADS : hex_to_u64(thread);
-	if (type == 'c') {
+	if (type == 'c')
+	{
 		continue_ops_thread_id = id;
-	} else {
+	}
+	else
+	{
 		general_ops_thread_id = id;
 	}
-	if (select_thread(id)) {
+	if (select_thread(id))
+	{
 		return send_cmd_ack("OK");
 	}
 	GDB.warning("Client asked to use thread 0x%x for %s, but no matching thread was found.", id, type == 'c' ? "continue ops" : "general ops");
@@ -732,21 +786,27 @@ bool gdb_thread::cmd_vcont(gdb_cmd& cmd)
 {
 	//todo: handle multiple actions and thread ids
 	this->from_breakpoint = false;
-	if (cmd.data[1] == 'c' || cmd.data[1] == 's') {
+	if (cmd.data[1] == 'c' || cmd.data[1] == 's')
+	{
 		select_thread(continue_ops_thread_id);
 		auto ppu = std::static_pointer_cast<named_thread<ppu_thread>>(selected_thread.lock());
 		paused = false;
-		if (cmd.data[1] == 's') {
+		if (cmd.data[1] == 's')
+		{
 			ppu->state += cpu_flag::dbg_step;
 		}
 		ppu->state -= cpu_flag::dbg_pause;
 		//special case if app didn't start yet (only loaded)
-		if (Emu.IsReady()) {
+		if (Emu.IsReady())
+		{
 			Emu.Run(true);
 		}
-		if (Emu.IsPaused()) {
+		if (Emu.IsPaused())
+		{
 			Emu.Resume();
-		} else {
+		}
+		else
+		{
 			ppu->state.notify_one();
 		}
 		wait_with_interrupts();
@@ -769,14 +829,17 @@ bool gdb_thread::cmd_set_breakpoint(gdb_cmd& cmd)
 {
 	char type = cmd.data[0];
 	//software breakpoint
-	if (type == '0') {
+	if (type == '0')
+	{
 		u32 addr = INVALID_PTR;
-		if (cmd.data.find(';') != umax) {
+		if (cmd.data.find(';') != umax)
+		{
 			GDB.warning("Received request to set breakpoint with condition, but they are not supported.");
 			return send_cmd_ack("E01");
 		}
 		sscanf_s(cmd.data.c_str(), "0,%x", &addr);
-		if (addr == INVALID_PTR) {
+		if (addr == INVALID_PTR)
+		{
 			GDB.warning("Can't parse breakpoint request, data: '%s'.", cmd.data);
 			return send_cmd_ack("E02");
 		}
@@ -791,10 +854,12 @@ bool gdb_thread::cmd_remove_breakpoint(gdb_cmd& cmd)
 {
 	char type = cmd.data[0];
 	//software breakpoint
-	if (type == '0') {
+	if (type == '0')
+	{
 		u32 addr = INVALID_PTR;
 		sscanf_s(cmd.data.c_str(), "0,%x", &addr);
-		if (addr == INVALID_PTR) {
+		if (addr == INVALID_PTR)
+		{
 			GDB.warning("Can't parse breakpoint remove request, data: '%s'.", cmd.data);
 			return send_cmd_ack("E01");
 		}

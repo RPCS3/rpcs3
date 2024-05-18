@@ -46,7 +46,7 @@ debugger_list::debugger_list(QWidget* parent, std::shared_ptr<gui_settings> gui_
 
 		u32 pc = m_start_addr;
 
-		for (; m_cpu && m_cpu->id_type() == 0x55 && row; row--)
+		for (; m_cpu && m_cpu->get_class() == thread_class::rsx && row; row--)
 		{
 			// If scrolling forwards (downwards), we can skip entire commands
 			pc += std::max<u32>(m_disasm->disasm(pc), 4);
@@ -73,12 +73,12 @@ u32 debugger_list::GetStartAddress(u32 address)
 	const u32 steps = m_item_count / 3;
 	const u32 inst_count_jump_on_step = std::min<u32>(steps, 4);
 
-	const bool is_spu = m_cpu && m_cpu->id_type() == 2;
+	const bool is_spu = m_cpu && m_cpu->get_class() == thread_class::spu;
 	const u32 address_mask = (is_spu ? 0x3fffc : ~3);
 
 	u32 result = address & address_mask;
 
-	if (m_cpu && m_cpu->id_type() == 0x55)
+	if (m_cpu && m_cpu->get_class() == thread_class::rsx)
 	{
 		if (auto [count, res] = static_cast<rsx::thread*>(m_cpu)->try_get_pc_of_x_cmds_backwards(steps, address); count == steps)
 		{
@@ -92,7 +92,7 @@ u32 debugger_list::GetStartAddress(u32 address)
 
 	u32 upper_bound = (m_start_addr + (steps * 4)) & address_mask;
 
-	if (m_cpu && m_cpu->id_type() == 0x55)
+	if (m_cpu && m_cpu->get_class() == thread_class::rsx)
 	{
 		if (auto [count, res] = static_cast<rsx::thread*>(m_cpu)->try_get_pc_of_x_cmds_backwards(0 - steps, m_start_addr); count == steps)
 		{
@@ -133,20 +133,20 @@ void debugger_list::ShowAddress(u32 addr, bool select_addr, bool direct)
 {
 	const decltype(spu_thread::local_breakpoints)* spu_bps_list{};
 
-	if (m_cpu && m_cpu->id_type() == 2)
+	if (m_cpu && m_cpu->get_class() == thread_class::spu)
 	{
 		spu_bps_list = &static_cast<spu_thread*>(m_cpu)->local_breakpoints;
 	}
 
 	auto IsBreakpoint = [&](u32 pc)
 	{
-		switch (m_cpu ? m_cpu->id_type() : 0)
+		switch (m_cpu ? m_cpu->get_class() : thread_class::general)
 		{
-		case 1:
+		case thread_class::ppu:
 		{
 			return m_ppu_breakpoint_handler->HasBreakpoint(pc);
 		}
-		case 2:
+		case thread_class::spu:
 		{
 			const u32 pos_at = pc / 4;
 			const u32 pos_bit = 1u << (pos_at % 8);
@@ -202,7 +202,7 @@ void debugger_list::ShowAddress(u32 addr, bool select_addr, bool direct)
 	}
 	else
 	{
-		const bool is_spu = m_cpu->id_type() == 2;
+		const bool is_spu = m_cpu->get_class() == thread_class::spu;
 		const u32 address_limits = (is_spu ? 0x3fffc : ~3);
 		const u32 current_pc = m_cpu->get_pc();
 		m_start_addr &= address_limits;
@@ -238,14 +238,14 @@ void debugger_list::ShowAddress(u32 addr, bool select_addr, bool direct)
 				list_item->setBackground(default_background);
 			}
 
-			if (m_cpu->id_type() == 1 && !vm::check_addr(pc, 0))
+			if (m_cpu->get_class() == thread_class::ppu && !vm::check_addr(pc, 0))
 			{
 				list_item->setText((IsBreakpoint(pc) ? ">> " : "   ") + qstr(fmt::format("[%08x]  ?? ?? ?? ??:", pc)));
 				count = 4;
 				continue;
 			}
 
-			if (m_cpu->id_type() == 1 && !vm::check_addr(pc, vm::page_executable))
+			if (m_cpu->get_class() == thread_class::ppu && !vm::check_addr(pc, vm::page_executable))
 			{
 				const u32 data = *vm::get_super_ptr<atomic_be_t<u32>>(pc);
 				list_item->setText((IsBreakpoint(pc) ? ">> " : "   ") + qstr(fmt::format("[%08x]  %02x %02x %02x %02x:", pc,
@@ -287,13 +287,13 @@ void debugger_list::EnableThreadFollowing(bool enable)
 
 void debugger_list::scroll(s32 steps)
 {
-	for (; m_cpu && m_cpu->id_type() == 0x55 && steps > 0; steps--)
+	for (; m_cpu && m_cpu->get_class() == thread_class::rsx && steps > 0; steps--)
 	{
 		// If scrolling forwards (downwards), we can skip entire commands
 		m_start_addr += std::max<u32>(m_disasm->disasm(m_start_addr), 4);
 	}
 
-	if (m_cpu && m_cpu->id_type() == 0x55 && steps < 0)
+	if (m_cpu && m_cpu->get_class() == thread_class::rsx && steps < 0)
 	{
 		// If scrolling backwards (upwards), try to obtain the start of commands tail
 		if (auto [count, res] = static_cast<rsx::thread*>(m_cpu)->try_get_pc_of_x_cmds_backwards(-steps, m_start_addr); count == 0u - steps)
@@ -347,7 +347,7 @@ void debugger_list::keyPressEvent(QKeyEvent* event)
 			return;
 		}
 
-		if (m_cpu && m_cpu->id_type() == 0x55)
+		if (m_cpu && m_cpu->get_class() == thread_class::rsx)
 		{
 			create_rsx_command_detail(m_showing_selected_instruction ? m_selected_instruction : m_pc);
 			return;
@@ -420,7 +420,7 @@ void debugger_list::mouseDoubleClickEvent(QMouseEvent* event)
 
 		u32 pc = m_start_addr;
 
-		for (; m_cpu && m_cpu->id_type() == 0x55 && i; i--)
+		for (; m_cpu && m_cpu->get_class() == thread_class::rsx && i; i--)
 		{
 			// If scrolling forwards (downwards), we can skip entire commands
 			pc += std::max<u32>(m_disasm->disasm(pc), 4);

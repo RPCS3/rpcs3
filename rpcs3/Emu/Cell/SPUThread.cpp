@@ -1813,7 +1813,10 @@ void spu_thread::cpu_task()
 			spu_runtime::g_gateway(*this, _ptr<u8>(0), nullptr);
 		}
 
-		unsavable = false;
+		if (unsavable && is_stopped(state - cpu_flag::stop))
+		{
+			spu_log.warning("Aborting unsaveable state");
+		}
 
 		// Print some stats
 		(!group || group->stop_count < 5 ? spu_log.notice : spu_log.trace)("Stats: Block Weight: %u (Retreats: %u);", block_counter, block_failure);
@@ -2398,7 +2401,7 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 
 		if (!_this) [[unlikely]]
 		{
-			if (_cpu->id_type() == 2)
+			if (_cpu->get_class() == thread_class::spu)
 			{
 				// Use range_lock of current SPU thread for range locks
 				range_lock = static_cast<spu_thread*>(_cpu)->range_lock;
@@ -3897,7 +3900,7 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 			mov_rdata(sdata, *static_cast<const spu_rdata_t*>(to_write));
 			vm::reservation_acquire(addr) += 32;
 		}
-		else if (cpu->id_type() != 2)
+		else if (cpu->get_class() != thread_class::spu)
 		{
 			u64 stx, ftx;
 			result = spu_putlluc_tx(addr, to_write, &stx, &ftx);
@@ -5316,7 +5319,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 						atomic_wait_engine::set_one_time_use_wait_callback(+[](u64) -> bool
 						{
 							const auto _this = static_cast<spu_thread*>(cpu_thread::get_current());
-							AUDIT(_this->id_type() == 1);
+							AUDIT(_this->get_class() == thread_class::spu);
 
 							return !_this->is_stopped();
 						});
@@ -5330,7 +5333,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 					atomic_wait_engine::set_one_time_use_wait_callback(mask1 != SPU_EVENT_LR ? nullptr : +[](u64 attempts) -> bool
 					{
 						const auto _this = static_cast<spu_thread*>(cpu_thread::get_current());
-						AUDIT(_this->id_type() == 2);
+						AUDIT(_this->get_class() == thread_class::spu);
 
 						const auto old = +_this->state;
 

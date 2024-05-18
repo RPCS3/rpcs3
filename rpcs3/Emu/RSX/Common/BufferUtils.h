@@ -39,7 +39,7 @@ std::tuple<u32, u32, u32> write_index_array_data_to_buffer(std::span<std::byte> 
 void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst, rsx::primitive_type draw_mode, unsigned count);
 
 // Copy and swap data in 32-bit units
-extern void(*const copy_data_swap_u32)(u32*, const u32*, u32);
+extern void(*const copy_data_swap_u32)(u32* dst, const u32* src, u32 count);
 
 // Copy and swap data in 32-bit units, return true if changed
-extern bool(*const copy_data_swap_u32_cmp)(u32*, const u32*, u32);
+extern bool(*const copy_data_swap_u32_cmp)(u32* dst, const u32* src, u32 count);

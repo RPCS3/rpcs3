@@ -22,6 +22,8 @@
 #include "Emu/system_config.h"
 #include "Emu/RSX/Overlays/HomeMenu/overlay_home_menu.h"
 #include "Emu/RSX/Overlays/overlay_message.h"
+#include "Emu/Cell/lv2/sys_usbd.h"
+#include "Emu/Cell/Modules/cellGem.h"
 #include "Utilities/Thread.h"
 #include "util/atomic.hpp"
 
@@ -186,6 +188,9 @@ void pad_thread::Init()
 			input_log.notice("Pad %d: device='%s', handler=%s, VID=0x%x, PID=0x%x, class_type=0x%x, class_profile=0x%x",
 				i, cfg->device.to_string(), m_pads[i]->m_pad_handler, m_pads[i]->m_vendor_id, m_pads[i]->m_product_id, m_pads[i]->m_class_type, m_pads[i]->m_class_profile);
 		}
+
+		m_pads[i]->is_fake_pad = (g_cfg.io.move == move_handler::fake && i >= (static_cast<u32>(CELL_PAD_MAX_PORT_NUM) - static_cast<u32>(CELL_GEM_MAX_NUM))) || m_pads[i]->m_class_type == CELL_PAD_FAKE_TYPE_GUNCON3;
+		connect_usb_controller(i, input::get_product_by_vid_pid(m_pads[i]->m_vendor_id, m_pads[i]->m_product_id));
 	}
 }
 
@@ -394,9 +399,8 @@ void pad_thread::operator()()
 				if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 					continue;
 
-				// TODO: this keeps opening the home menu. Find out how to do it properly.
 				// Check if an LDD pad pressed the PS button (bit 0 of the first button)
-				if (false && pad->ldd && !!(pad->ldd_data.button[0] & CELL_PAD_CTRL_LDD_PS))
+				if (pad->ldd && pad->ldd_data.len >= 1 && !!(pad->ldd_data.button[0] & CELL_PAD_CTRL_LDD_PS))
 				{
 					ps_button_pressed = true;
 					break;

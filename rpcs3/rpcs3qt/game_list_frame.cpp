@@ -286,7 +286,7 @@ bool game_list_frame::IsEntryVisible(const game_info& game, bool search_fallback
 
 std::string game_list_frame::GetCacheDirBySerial(const std::string& serial)
 {
-	return rpcs3::utils::get_cache_dir() + serial;
+	return rpcs3::utils::get_cache_dir() + (serial == "vsh.self" ? "vsh" : serial);
 }
 
 std::string game_list_frame::GetDataDirBySerial(const std::string& serial)
@@ -1031,7 +1031,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 
 	static const auto is_game_running = [](const std::string& serial)
 	{
-		return Emu.GetStatus(false) != system_state::stopped && serial == Emu.GetTitleID();
+		return Emu.GetStatus(false) != system_state::stopped && (serial == Emu.GetTitleID() || (serial == "vsh.self" && Emu.IsVsh()));
 	};
 
 	const bool is_current_running_game = is_game_running(current_game.serial);
@@ -2032,10 +2032,13 @@ void game_list_frame::BatchRemovePPUCaches()
 	}
 
 	std::set<std::string> serials;
+	serials.emplace("vsh");
+
 	for (const auto& game : m_game_data)
 	{
 		serials.emplace(game->info.serial);
 	}
+
 	const u32 total = ::size32(serials);
 
 	if (total == 0)
@@ -2086,10 +2089,13 @@ void game_list_frame::BatchRemoveSPUCaches()
 	}
 
 	std::set<std::string> serials;
+	serials.emplace("vsh");
+
 	for (const auto& game : m_game_data)
 	{
 		serials.emplace(game->info.serial);
 	}
+
 	const u32 total = ::size32(serials);
 
 	if (total == 0)
@@ -2248,10 +2254,13 @@ void game_list_frame::BatchRemoveShaderCaches()
 	}
 
 	std::set<std::string> serials;
+	serials.emplace("vsh");
+
 	for (const auto& game : m_game_data)
 	{
 		serials.emplace(game->info.serial);
 	}
+
 	const u32 total = ::size32(serials);
 
 	if (total == 0)

@@ -109,4 +109,52 @@ namespace rsx
 		return texture_dimensions == other.texture_dimensions &&
 			multisampled_textures == other.multisampled_textures;
 	}
+
+	int VertexProgramBase::TranslateConstantsRange(int first_index, int count) const
+	{
+		// The constant ids should be sorted, so just find the first one and check for continuity
+		int index = -1;
+		int next = first_index;
+		int last = first_index + count - 1;
+
+		// Early rejection test
+		if (constant_ids.empty() || first_index > constant_ids.back() || last < first_index)
+		{
+			return -1;
+		}
+
+		for (size_t i = 0; i < constant_ids.size(); ++i)
+		{
+			if (constant_ids[i] > first_index && index < 0)
+			{
+				// No chance of a match
+				return -1;
+			}
+
+			if (constant_ids[i] == next)
+			{
+				// Index matched
+				if (index < 0)
+				{
+					index = static_cast<int>(i);
+				}
+
+				if (last == next++)
+				{
+					return index;
+				}
+
+				continue;
+			}
+
+			if (index >= 0)
+			{
+				// Previously matched but no more
+				return -1;
+			}
+		}
+
+		// OOB or partial match
+		return -1;
+	}
 }

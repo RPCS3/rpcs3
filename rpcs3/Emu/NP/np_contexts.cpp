@@ -136,16 +136,19 @@ bool destroy_score_transaction_context(s32 ctx_id)
 	return idm::remove<score_transaction_ctx>(static_cast<u32>(ctx_id));
 }
 
-match2_ctx::match2_ctx(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpCommunicationPassphrase> passphrase)
+match2_ctx::match2_ctx(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpCommunicationPassphrase> passphrase, s32 option)
 {
 	ensure(!communicationId->data[9] && strlen(communicationId->data) == 9);
 	memcpy(&this->communicationId, communicationId.get_ptr(), sizeof(SceNpCommunicationId));
 	memcpy(&this->passphrase, passphrase.get_ptr(), sizeof(SceNpCommunicationPassphrase));
+
+	include_onlinename = option & SCE_NP_MATCHING2_CONTEXT_OPTION_USE_ONLINENAME;
+	include_avatarurl = option & SCE_NP_MATCHING2_CONTEXT_OPTION_USE_AVATARURL;
 }
-u16 create_match2_context(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpCommunicationPassphrase> passphrase)
+u16 create_match2_context(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpCommunicationPassphrase> passphrase, s32 option)
 {
 	sceNp2.notice("Creating match2 context with communicationId: <%s>", static_cast<const char*>(communicationId->data));
-	return static_cast<u16>(idm::make<match2_ctx>(communicationId, passphrase));
+	return static_cast<u16>(idm::make<match2_ctx>(communicationId, passphrase, option));
 }
 bool destroy_match2_context(u16 ctx_id)
 {

@@ -3,6 +3,7 @@
 #include "system_config.h"
 #include "vfs_config.h"
 #include "Emu/Io/pad_config.h"
+#include "Emu/System.h"
 #include "util/sysinfo.hpp"
 #include "Utilities/File.h"
 #include "Utilities/StrUtil.h"
@@ -119,6 +120,28 @@ namespace rpcs3::utils
 	std::string get_cache_dir()
 	{
 		return fs::get_cache_dir() + "cache/";
+	}
+
+	std::string get_cache_dir(std::string_view module_path)
+	{
+		std::string cache_dir = get_cache_dir();
+
+		const std::string dev_flash = g_cfg_vfs.get_dev_flash();
+		const bool in_dev_flash = Emu.IsPathInsideDir(module_path, dev_flash);
+
+		if (in_dev_flash && !Emu.IsPathInsideDir(module_path, dev_flash + "sys/external/"))
+		{
+			// Add prefix for vsh
+			cache_dir += "vsh/";
+		}
+		else if (!in_dev_flash && !Emu.GetTitleID().empty() && Emu.GetCat() != "1P")
+		{
+			// Add prefix for anything except dev_flash files, standalone elfs or PS1 classics
+			cache_dir += Emu.GetTitleID();
+			cache_dir += '/';
+		}
+
+		return cache_dir;
 	}
 
 	std::string get_rap_file_path(const std::string_view& rap)

@@ -3,8 +3,10 @@
 #include "../Overlays/Shaders/shader_loading_dialog_native.h"
 #include "GLGSRender.h"
 #include "GLCompute.h"
+
 #include "Emu/Memory/vm_locking.h"
 #include "Emu/RSX/rsx_methods.h"
+#include "Emu/RSX/NV47/HW/context_accessors.define.h"
 
 #include "../Program/program_state_cache2.hpp"
 
@@ -263,6 +265,7 @@ void GLGSRender::on_init_thread()
 		m_vertex_instructions_buffer = std::make_unique<gl::legacy_ring_buffer>();
 		m_fragment_instructions_buffer = std::make_unique<gl::legacy_ring_buffer>();
 		m_raster_env_ring_buffer = std::make_unique<gl::legacy_ring_buffer>();
+		m_scratch_ring_buffer = std::make_unique<gl::legacy_ring_buffer>();
 	}
 	else
 	{
@@ -277,6 +280,7 @@ void GLGSRender::on_init_thread()
 		m_vertex_instructions_buffer = std::make_unique<gl::ring_buffer>();
 		m_fragment_instructions_buffer = std::make_unique<gl::ring_buffer>();
 		m_raster_env_ring_buffer = std::make_unique<gl::ring_buffer>();
+		m_scratch_ring_buffer = std::make_unique<gl::ring_buffer>();
 	}
 
 	m_attrib_ring_buffer->create(gl::buffer::target::texture, 256 * 0x100000);
@@ -288,6 +292,7 @@ void GLGSRender::on_init_thread()
 	m_texture_parameters_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
 	m_vertex_layout_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
 	m_raster_env_ring_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
+	m_scratch_ring_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
 
 	if (shadermode == shader_mode::async_with_interpreter || shadermode == shader_mode::interpreter_only)
 	{
@@ -499,6 +504,11 @@ void GLGSRender::on_exit()
 	if (m_raster_env_ring_buffer)
 	{
 		m_raster_env_ring_buffer->remove();
+	}
+
+	if (m_scratch_ring_buffer)
+	{
+		m_scratch_ring_buffer->remove();
 	}
 
 	m_null_textures.clear();
@@ -823,18 +833,20 @@ void GLGSRender::load_program_env()
 	if (update_transform_constants)
 	{
 		// Vertex constants
-		const usz transform_constants_size = (!m_vertex_prog || m_vertex_prog->has_indexed_constants) ? 8192 : m_vertex_prog->constant_ids.size() * 16;
-		if (transform_constants_size)
+		u32 mem_offset = 0;
+		auto mem_alloc = [&](usz size) -> std::pair<void*, usz>
 		{
-			auto mapping = m_transform_constants_buffer->alloc_from_heap(static_cast<u32>(transform_constants_size), m_uniform_buffer_offset_align);
-			auto buf = static_cast<u8*>(mapping.first);
+			const auto mapping = m_transform_constants_buffer->alloc_from_heap(static_cast<u32>(size), m_uniform_buffer_offset_align);
+			mem_offset = mapping.second;
+			return { mapping.first, size };
+		};
 
-			const auto constant_ids = (transform_constants_size == 8192)
-				? std::span<const u16>{}
-				: std::span<const u16>(m_vertex_prog->constant_ids);
-			fill_vertex_program_constants_data(buf, constant_ids);
+		rsx::io_buffer io_buf(mem_alloc);
+		upload_transform_constants(io_buf);
 
-			m_transform_constants_buffer->bind_range(GL_VERTEX_CONSTANT_BUFFERS_BIND_SLOT, mapping.second, static_cast<u32>(transform_constants_size));
+		if (!io_buf.empty())
+		{
+			m_transform_constants_buffer->bind_range(GL_VERTEX_CONSTANT_BUFFERS_BIND_SLOT, mem_offset, ::size32(io_buf));
 		}
 	}
 
@@ -946,6 +958,20 @@ void GLGSRender::load_program_env()
 		rsx::pipeline_state::fragment_texture_state_dirty);
 }
 
+void GLGSRender::upload_transform_constants(const rsx::io_buffer& buffer)
+{
+	const usz transform_constants_size = (!m_vertex_prog || m_vertex_prog->has_indexed_constants) ? 8192 : m_vertex_prog->constant_ids.size() * 16;
+	if (transform_constants_size)
+	{
+		const auto constant_ids = (transform_constants_size == 8192)
+			? std::span<const u16>{}
+			: std::span<const u16>(m_vertex_prog->constant_ids);
+
+		buffer.reserve(transform_constants_size);
+		fill_vertex_program_constants_data(buffer.data(), constant_ids);
+	}
+}
+
 void GLGSRender::update_vertex_env(const gl::vertex_upload_info& upload_info)
 {
 	if (manually_flush_ring_buffers)
@@ -971,12 +997,76 @@ void GLGSRender::update_vertex_env(const gl::vertex_upload_info& upload_info)
 	}
 }
 
+void GLGSRender::patch_transform_constants(rsx::context* ctx, u32 index, u32 count)
+{
+	if (!m_vertex_prog)
+	{
+		// Shouldn't be reachable, but handle it correctly anyway
+		m_graphics_state |= rsx::pipeline_state::transform_constants_dirty;
+		return;
+	}
+
+	std::pair<u32, u32> data_range {};
+	void* data_source = nullptr;
+	const auto bound_range = m_transform_constants_buffer->bound_range();
+
+	if (m_vertex_prog->has_indexed_constants)
+	{
+		// We're working with a full range. We can do a direct patch in this case since no index translation is required.
+		const auto byte_count = count * 16;
+		const auto byte_offset = index * 16;
+
+		data_range = { bound_range.first + byte_offset, byte_count};
+		data_source = &REGS(ctx)->transform_constants[index];
+	}
+	else if (auto xform_id = m_vertex_prog->TranslateConstantsRange(index, count); xform_id >= 0)
+	{
+		const auto write_offset = xform_id * 16;
+		const auto byte_count = count * 16;
+
+		data_range = { bound_range.first + write_offset, byte_count };
+		data_source = &REGS(ctx)->transform_constants[index];
+	}
+	else
+	{
+		auto allocate_mem = [&](usz size) -> std::pair<void*, usz>
+		{
+			m_scratch_buffer.resize(size);
+			return { m_scratch_buffer.data(), size };
+		};
+
+		rsx::io_buffer iobuf(allocate_mem);
+		upload_transform_constants(iobuf);
+
+		data_range = { bound_range.first, ::size32(iobuf) };
+		data_source = iobuf.data();
+	}
+
+	// Move data to memory that the GPU can work with
+	if (manually_flush_ring_buffers)
+	{
+		m_scratch_ring_buffer->reserve_storage_on_heap(data_range.second);
+	}
+
+	auto mapping = m_scratch_ring_buffer->alloc_from_heap(data_range.second, 16);
+	std::memcpy(mapping.first, data_source, data_range.second);
+
+	if (manually_flush_ring_buffers)
+	{
+		m_scratch_ring_buffer->unmap();
+	}
+	m_scratch_ring_buffer->notify();
+
+	// Do the transfer to patch the constants on the host device
+	m_scratch_ring_buffer->copy_to(m_transform_constants_buffer.get(), mapping.second, data_range.first, data_range.second);
+}
+
 bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 {
 	const bool can_flush = is_current_thread();
-	const rsx::invalidation_cause cause =
-		is_writing ? (can_flush ? rsx::invalidation_cause::write : rsx::invalidation_cause::deferred_write)
-		           : (can_flush ? rsx::invalidation_cause::read  : rsx::invalidation_cause::deferred_read);
+	const rsx::invalidation_cause cause = is_writing
+		? (can_flush ? rsx::invalidation_cause::write : rsx::invalidation_cause::deferred_write)
+		: (can_flush ? rsx::invalidation_cause::read  : rsx::invalidation_cause::deferred_read);
 
 	auto cmd = can_flush ? gl::command_context{ gl_state } : gl::command_context{};
 	auto result = m_gl_texture_cache.invalidate_address(cmd, address, cause);

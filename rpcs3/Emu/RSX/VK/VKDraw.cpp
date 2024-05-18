@@ -707,13 +707,13 @@ void VKGSRender::emit_geometry(u32 sub_index)
 	m_profiler.start();
 
 	const rsx::flags32_t vertex_state_mask = rsx::vertex_base_changed | rsx::vertex_arrays_changed;
-	const rsx::flags32_t vertex_state = (sub_index == 0) ? rsx::vertex_arrays_changed : draw_call.execute_pipeline_dependencies(m_ctx) & vertex_state_mask;
+	const rsx::flags32_t state_flags = (sub_index == 0) ? rsx::vertex_arrays_changed : draw_call.execute_pipeline_dependencies(m_ctx);
 
-	if (vertex_state & rsx::vertex_arrays_changed)
+	if (state_flags & rsx::vertex_arrays_changed)
 	{
 		analyse_inputs_interleaved(m_vertex_layout);
 	}
-	else if (vertex_state & rsx::vertex_base_changed)
+	else if (state_flags & rsx::vertex_base_changed)
 	{
 		// Rebase vertex bases instead of
 		for (auto& info : m_vertex_layout.interleaved_blocks)
@@ -732,7 +732,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 		}
 	}
 
-	if (vertex_state && !m_vertex_layout.validate())
+	if ((state_flags & vertex_state_mask) && !m_vertex_layout.validate())
 	{
 		// No vertex inputs enabled
 		// Execute remainining pipeline barriers with NOP draw

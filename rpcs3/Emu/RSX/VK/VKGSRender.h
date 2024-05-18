@@ -234,10 +234,12 @@ private:
 	VkDescriptorSet allocate_descriptor_set();
 
 	vk::vertex_upload_info upload_vertex_data();
+	rsx::simple_array<u8> m_scratch_mem;
 
 	bool load_program();
 	void load_program_env();
 	void update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_info);
+	void upload_transform_constants(const rsx::io_buffer& buffer);
 
 	void load_texture_env();
 	bool bind_texture_env();
@@ -273,6 +275,9 @@ public:
 
 	// Host sync object
 	inline std::pair<volatile vk::host_data_t*, VkBuffer> map_host_object_data() { return { m_host_data_ptr, m_host_object_data->value }; }
+
+	// GRAPH backend
+	void patch_transform_constants(rsx::context* ctx, u32 index, u32 count) override;
 
 protected:
 	void clear_surface(u32 mask) override;

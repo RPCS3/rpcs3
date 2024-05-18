@@ -771,10 +771,19 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	std::unique_ptr<rsx::frame_capture_data> frame = std::make_unique<rsx::frame_capture_data>();
 	utils::serial load;
 	load.set_reading_state();
+ 
+ 	const std::string lower = fmt::to_lower(path);
 
-	if (fmt::to_lower(path).ends_with(".gz"))
+	if (lower.ends_with(".SAVESTAT.gz") || lower.ends_with(".SAVESTAT.zst"))
 	{
-		load.m_file_handler = make_compressed_serialization_file_handler(std::move(in_file));
+		if (lower.ends_with(".SAVESTAT.gz"))
+		{
+			load.m_file_handler = make_compressed_serialization_file_handler(std::move(in_file));
+		}
+		else
+		{
+			load.m_file_handler = make_compressed_zstd_serialization_file_handler(std::move(in_file));
+		}
 
 		// Forcefully read some data to check validity
 		load.pop<uchar>();
@@ -956,12 +965,28 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		{
 			fs::file save{m_path, fs::isfile + fs::read};
 
-			if (!m_path.ends_with(".gz") && save && save.size() >= 8 && save.read<u64>() == "RPCS3SAV"_u64)
+			if (m_path.ends_with(".SAVESTAT") && save && save.size() >= 8 && save.read<u64>() == "RPCS3SAV"_u64)
 			{
 				m_ar = std::make_shared<utils::serial>();
 				m_ar->set_reading_state();
 
 				m_ar->m_file_handler = make_uncompressed_serialization_file_handler(std::move(save));
+			}
+			else if (save && m_path.ends_with(".zst"))
+			{
+				m_ar = std::make_shared<utils::serial>();
+				m_ar->set_reading_state();
+
+				m_ar->m_file_handler = make_compressed_zstd_serialization_file_handler(std::move(save));
+
+				if (m_ar->try_read<u64>().second != "RPCS3SAV"_u64)
+				{
+					m_ar.reset();
+				}
+				else
+				{
+					m_ar->pos = 0;
+				}
 			}
 			else if (save && m_path.ends_with(".gz"))
 			{
@@ -2847,7 +2872,7 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 }
 
 extern bool check_if_vdec_contexts_exist();
-extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool revert_lock = false);
+extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool revert_lock = false, std::vector<std::pair<std::shared_ptr<named_thread<spu_thread>>, u32>>* out_list = nullptr);
 
 void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_stage)
 {
@@ -2869,7 +2894,9 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 			*pause_thread = make_ptr(new named_thread("Savestate Prepare Thread"sv, [pause_thread, allow_autoexit, this]() mutable
 			{
-				if (!try_lock_spu_threads_in_a_state_compatible_with_savestates())
+				std::vector<std::pair<std::shared_ptr<named_thread<spu_thread>>, u32>> paused_spus;
+
+				if (!try_lock_spu_threads_in_a_state_compatible_with_savestates(false, &paused_spus))
 				{
 					sys_log.error("Failed to savestate: failed to lock SPU threads execution.");
 
@@ -2937,10 +2964,11 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 					return;
 				}
 
-				CallFromMainThread([allow_autoexit, this]()
+				CallFromMainThread([allow_autoexit, this, paused_spus]()
 				{
 					savestate_stage stage{};
 					stage.prepared = true;
+					stage.paused_spus = paused_spus;
 					Kill(allow_autoexit, true, &stage);
 				});
 
@@ -3046,7 +3074,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 	// There is no race condition because it is only accessed by the same thread
 	std::shared_ptr<std::shared_ptr<void>> join_thread = std::make_shared<std::shared_ptr<void>>();
 
-	*join_thread = make_ptr(new named_thread("Emulation Join Thread"sv, [join_thread, savestate, allow_autoexit, this]() mutable
+	*join_thread = make_ptr(new named_thread("Emulation Join Thread"sv, [join_thread, savestate, allow_autoexit, save_stage = save_stage ? *save_stage : savestate_stage{}, this]() mutable
 	{
 		fs::pending_file file;
 
@@ -3117,6 +3145,14 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 			}
 		}
 
+		for (const auto& spu : save_stage.paused_spus)
+		{
+			if (spu.first->pc != spu.second)
+			{
+				sys_log.error("SPU thread continued after being paused. (old_pc=0x%x, pc=0x%x, unsavable=%d)", spu.second, spu.first->pc, spu.first->unsavable);
+
+			}
+		}
 		// Save it first for maximum timing accuracy
 		const u64 timestamp = get_timebased_time();
 		const u64 start_time = get_system_time();
@@ -3138,12 +3174,11 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 			path = get_savestate_file(m_title_id, m_path, 0, 0);
 
-			// The function is meant for reading files, so if there is no GZ file it would not return compressed file path
+			// The function is meant for reading files, so if there is no ZST file it would not return compressed file path
 			// So this is the only place where the result is edited if need to be
-			if (!path.ends_with(".gz"))
-			{
-				path += ".gz";
-			}
+			constexpr std::string_view save = ".SAVESTAT";
+			path.resize(path.rfind(save) + save.size());
+			path += ".zst";
 
 			if (!fs::create_path(fs::get_parent_dir(path)))
 			{
@@ -3160,7 +3195,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 			}
 
 			auto serial_ptr = stx::make_single<utils::serial>();
-			serial_ptr->m_file_handler = make_compressed_serialization_file_handler(file.file);
+			serial_ptr->m_file_handler = make_compressed_zstd_serialization_file_handler(file.file);
 			*to_ar = std::move(serial_ptr);
 
 			signal_system_cache_can_stay();
@@ -3695,17 +3730,11 @@ s32 error_code::error_report(s32 result, const logs::message* channel, const cha
 	return result;
 }
 
-void Emulator::ConfigurePPUCache(bool with_title_id) const
+void Emulator::ConfigurePPUCache() const
 {
 	auto& _main = g_fxo->get<main_ppu_module>();
 
-	_main.cache = rpcs3::utils::get_cache_dir();
-
-	if (with_title_id && !m_title_id.empty() && m_cat != "1P")
-	{
-		_main.cache += GetTitleID();
-		_main.cache += '/';
-	}
+	_main.cache = rpcs3::utils::get_cache_dir(_main.path);
 
 	fmt::append(_main.cache, "ppu-%s-%s/", fmt::base57(_main.sha1), _main.path.substr(_main.path.find_last_of('/') + 1));
 

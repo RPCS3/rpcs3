@@ -6,6 +6,8 @@
 #include "Emu/RSX/gcm_enums.h"
 #include "Emu/RSX/NV47/FW/draw_call.inc.h"
 
+#include <span>
+
 namespace rsx
 {
 	enum command_barrier_type : u32;
@@ -82,6 +84,8 @@ namespace rsx
 		void set_blend_equation(context* ctx, u32 reg, u32 arg);
 
 		void set_blend_factor(context* ctx, u32 reg, u32 arg);
+
+		void set_transform_constant_load(context* ctx, u32 reg, u32 arg);
 
 #define RSX(ctx) ctx->rsxthr
 #define REGS(ctx) (&rsx::method_registers)
@@ -197,6 +201,10 @@ namespace rsx
 		struct set_transform_constant
 		{
 			static void impl(context* ctx, u32 reg, u32 arg);
+
+			static void decode_one(context* ctx, u32 reg, u32 arg);
+
+			static void batch_decode(context* ctx, u32 reg, const std::span<const u32>& args);
 		};
 
 		struct set_transform_program
@@ -209,7 +217,7 @@ namespace rsx
 		{
 			static void impl(context* ctx, u32 reg, u32 arg)
 			{
-				util::push_draw_parameter_change(ctx, vertex_array_offset_modifier_barrier, reg, arg);
+				util::push_draw_parameter_change(ctx, vertex_array_offset_modifier_barrier, reg, arg, 0, index);
 			}
 		};
 

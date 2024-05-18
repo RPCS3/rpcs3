@@ -2594,4 +2594,58 @@ namespace rpcn
 		return it == friend_infos.friends.end() ? std::nullopt : std::optional(*it);
 	}
 
+	bool rpcn_client::is_connected() const
+	{
+		return connected;
+	}
+
+	bool rpcn_client::is_authentified() const
+	{
+		return authentified;
+	}
+	rpcn_state rpcn_client::get_rpcn_state() const
+	{
+		return state;
+	}
+
+	const std::string& rpcn_client::get_online_name() const
+	{
+		return online_name;
+	}
+
+	const std::string& rpcn_client::get_avatar_url() const
+	{
+		return avatar_url;
+	}
+
+	u32 rpcn_client::get_addr_sig() const
+	{
+		if (!addr_sig)
+		{
+			addr_sig.wait(0, static_cast<atomic_wait_timeout>(10'000'000'000));
+		}
+
+		return addr_sig.load();
+	}
+
+	u16 rpcn_client::get_port_sig() const
+	{
+		if (!port_sig)
+		{
+			port_sig.wait(0, static_cast<atomic_wait_timeout>(10'000'000'000));
+		}
+
+		return port_sig.load();
+	}
+
+	u32 rpcn_client::get_addr_local() const
+	{
+		return local_addr_sig.load();
+	}
+
+	void rpcn_client::update_local_addr(u32 addr)
+	{
+		local_addr_sig = std::bit_cast<u32, be_t<u32>>(addr);
+	}
+
 } // namespace rpcn

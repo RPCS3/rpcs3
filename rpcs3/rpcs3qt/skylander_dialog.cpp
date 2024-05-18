@@ -627,7 +627,7 @@ skylander_creator_dialog::skylander_creator_dialog(QWidget* parent)
 			predef_name += QString("Unknown(%1 %2).sky").arg(sky_id).arg(sky_var);
 		}
 
-		file_path = QFileDialog::getSaveFileName(this, tr("Create Skylander File"), predef_name, tr("Skylander Object (*.sky);;"));
+		file_path = QFileDialog::getSaveFileName(this, tr("Create Skylander File"), predef_name, tr("Skylander Object (*.sky);;All Files (*)"));
 		if (file_path.isEmpty())
 		{
 			return;
@@ -768,7 +768,7 @@ void skylander_dialog::create_skylander(u8 slot)
 
 void skylander_dialog::load_skylander(u8 slot)
 {
-	const QString file_path = QFileDialog::getOpenFileName(this, tr("Select Skylander File"), last_skylander_path, tr("Skylander (*.sky);;"));
+	const QString file_path = QFileDialog::getOpenFileName(this, tr("Select Skylander File"), last_skylander_path, tr("Skylander (*.sky *.bin *.dmp *.dump);;All Files (*)"));
 	if (file_path.isEmpty())
 	{
 		return;
