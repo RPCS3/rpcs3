@@ -160,7 +160,6 @@ enum class emu_settings_type
 	Buzz,
 	Turntable,
 	GHLtar,
-	GameTablet,
 	MidiDevices,
 	SDLMappings,
 
@@ -350,7 +349,6 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::Buzz,            { "Input/Output", "Buzz emulated controller" }},
 	{ emu_settings_type::Turntable,       { "Input/Output", "Turntable emulated controller" }},
 	{ emu_settings_type::GHLtar,          { "Input/Output", "GHLtar emulated controller" }},
-	{ emu_settings_type::GameTablet,      { "Input/Output", "GameTablet emulated controller" }},
 	{ emu_settings_type::MidiDevices,     { "Input/Output", "Emulated Midi devices" }},
 	{ emu_settings_type::SDLMappings,     { "Input/Output", "Load SDL GameController Mappings" }},
 

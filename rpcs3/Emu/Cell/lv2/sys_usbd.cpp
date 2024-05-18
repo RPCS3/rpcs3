@@ -483,12 +483,6 @@ usb_handler_thread::usb_handler_thread()
 		sys_usbd.notice("Adding emulated Buzz! buzzer (5-7 players)");
 		usb_devices.push_back(std::make_shared<usb_device_buzz>(4, 6, get_new_location()));
 	}
-
-	if (g_cfg.io.gametablet == gametablet_handler::enabled)
-	{
-		sys_usbd.notice("Adding emulated uDraw GameTablet");
-		usb_devices.push_back(std::make_shared<usb_device_gametablet>(get_new_location()));
-	}
 }
 
 usb_handler_thread::~usb_handler_thread()
@@ -856,17 +850,27 @@ void connect_usb_controller(u8 index, input::product_type type)
 		}
 	}
 
-	if (!already_connected && type == input::product_type::guncon_3)
+	if (!already_connected)
 	{
-		if (!g_cfg_guncon3.load())
+		if (type == input::product_type::guncon_3)
 		{
-			sys_usbd.notice("Could not load GunCon3 config. Using defaults.");
-		}
+			if (!g_cfg_guncon3.load())
+			{
+				sys_usbd.notice("Could not load GunCon3 config. Using defaults.");
+			}
 
-		sys_usbd.success("Adding emulated GunCon3 (controller %d)", index);
-		std::shared_ptr<usb_device> dev = std::make_shared<usb_device_guncon3>(index, usbh->get_new_location());
-		usbh->connect_usb_device(dev, true);
-		usbh->pad_to_usb.emplace(index, std::pair(type, dev));
+			sys_usbd.success("Adding emulated GunCon3 (controller %d)", index);
+			std::shared_ptr<usb_device> dev = std::make_shared<usb_device_guncon3>(index, usbh->get_new_location());
+			usbh->connect_usb_device(dev, true);
+			usbh->pad_to_usb.emplace(index, std::pair(type, dev));
+		}
+		if (type == input::product_type::udraw_gametablet)
+		{
+			sys_usbd.success("Adding emulated uDraw GameTablet (controller %d)", index);
+			std::shared_ptr<usb_device> dev = std::make_shared<usb_device_gametablet>(index, usbh->get_new_location());
+			usbh->connect_usb_device(dev, true);
+			usbh->pad_to_usb.emplace(index, std::pair(type, dev));
+		}
 	}
 }
 

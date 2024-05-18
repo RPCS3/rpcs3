@@ -1088,13 +1088,6 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case ghltar_handler::two_controllers: return tr("2 controllers", "GHLtar handler");
 		}
 		break;
-	case emu_settings_type::GameTablet:
-		switch (static_cast<gametablet_handler>(index))
-		{
-		case gametablet_handler::disabled: return tr("Disabled", "GameTablet handler");
-		case gametablet_handler::enabled: return tr("Enabled", "GameTablet handler");
-		}
-		break;
 	case emu_settings_type::InternetStatus:
 		switch (static_cast<np_internet_status>(index))
 		{

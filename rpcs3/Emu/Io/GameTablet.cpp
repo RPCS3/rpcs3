@@ -62,8 +62,9 @@ enum
 	Dpad_None = 0x0f
 };
 
-usb_device_gametablet::usb_device_gametablet(const std::array<u8, 7>& location)
+usb_device_gametablet::usb_device_gametablet(u32 controller_index, const std::array<u8, 7>& location)
 	: usb_device_emulated(location)
+	, m_controller_index(controller_index)
 {
 	device = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE,
 		UsbDeviceDescriptor {
@@ -163,7 +164,7 @@ void usb_device_gametablet::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endp
 	ensure(buf_size >= sizeof(GameTablet_data));
 
 	transfer->fake            = true;
-	transfer->expected_count  = 27;
+	transfer->expected_count  = sizeof(GameTablet_data);
 	transfer->expected_result = HC_CC_NOERR;
 	// Interrupt transfers are slow (6ms, TODO accurate measurement)
 	transfer->expected_time = get_timestamp() + 6000;
@@ -196,9 +197,7 @@ void usb_device_gametablet::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endp
 		std::lock_guard lock(pad::g_pad_mutex);
 		const auto gamepad_handler = pad::get_current_handler();
 		const auto& pads = gamepad_handler->GetPads();
-
-		constexpr s32 pad_index = 1; // Player2
-		const auto& pad = ::at32(pads, pad_index);
+		const auto& pad = ::at32(pads, m_controller_index);
 		if (pad->m_port_status & CELL_PAD_STATUS_CONNECTED)
 		{
 			for (Button& button : pad->m_buttons)
