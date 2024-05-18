@@ -1224,9 +1224,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceComboBox(ui->ghltarBox, emu_settings_type::GHLtar);
 	SubscribeTooltip(ui->gb_ghltar_emulated, tooltips.settings.ghltar);
 
-	m_emu_settings->EnhanceComboBox(ui->gameTabletBox, emu_settings_type::GameTablet);
-	SubscribeTooltip(ui->gametablet_emulated, tooltips.settings.gametablet);
-
 	m_emu_settings->EnhanceCheckBox(ui->backgroundInputBox, emu_settings_type::BackgroundInput);
 	SubscribeTooltip(ui->backgroundInputBox, tooltips.settings.background_input);
 

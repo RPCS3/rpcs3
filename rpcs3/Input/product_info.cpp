@@ -204,6 +204,17 @@ namespace input
 			.pclass_profile = 0x0,
 			.capabilites = 0x0
 		}
+	},
+	{
+		product_type::udraw_gametablet,
+		{
+			.type = product_type::udraw_gametablet,
+			.class_id = CELL_PAD_FAKE_TYPE_GAMETABLET,
+			.vendor_id = vendor_id::bda,
+			.product_id = product_id::udraw_gametablet,
+			.pclass_profile = 0x0,
+			.capabilites = 0x0
+		}
 	}
 	};
 

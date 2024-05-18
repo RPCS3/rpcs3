@@ -19,6 +19,7 @@ namespace input
 		ps_move_navigation,
 		ride_skateboard,
 		guncon_3,
+		udraw_gametablet,
 	};
 
 	enum vendor_id
@@ -27,6 +28,7 @@ namespace input
 		namco     = 0x0B9A, // Namco
 		sony_cea  = 0x12BA, // Sony Computer Entertainment America
 		konami_de = 0x1CCF, // Konami Digital Entertainment
+		bda       = 0x20D6, // Bensussen Deutsch & Associates
 	};
 
 	enum product_id
@@ -43,6 +45,7 @@ namespace input
 		dance_dance_revolution_mat   = 0x1010, // Dance Dance Revolution Dance Mat Controller
 		ride_skateboard              = 0x0400, // Tony Hawk RIDE Skateboard Controller
 		guncon_3                     = 0x0800, // GunCon 3 Controller
+		udraw_gametablet             = 0xCB17, // uDraw GameTablet Controller
 	};
 
 	struct product_info
