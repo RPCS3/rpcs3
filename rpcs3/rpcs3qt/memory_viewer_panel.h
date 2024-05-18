@@ -1,6 +1,7 @@
 #pragma once
 
 #include "util/types.hpp"
+#include "Utilities/Thread.h"
 
 #include <QDialog>
 #include <QLineEdit>
@@ -91,16 +92,8 @@ private:
 	QHBoxLayout* m_hbox_mem_panel = nullptr;
 	QThread* m_search_thread = nullptr;
 
-	enum class thread_type
-	{
-		none,
-		ppu,
-		spu,
-		rsx,
-	};
-
 	const std::function<cpu_thread*()> m_get_cpu;
-	const thread_type m_type;
+	const thread_class m_type;
 	const std::add_pointer_t<rsx::thread> m_rsx;
 	const std::shared_ptr<utils::shm> m_spu_shm;
 	const u32 m_addr_mask;
