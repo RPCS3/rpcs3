@@ -571,6 +571,9 @@ error_code sceNpMatching2ContextStart(SceNpMatching2ContextId ctxId)
 	if (!ctx)
 		return SCE_NP_MATCHING2_ERROR_CONTEXT_NOT_FOUND;
 
+	if (!ctx->started.compare_and_swap_test(0, 1))
+		return SCE_NP_MATCHING2_ERROR_CONTEXT_ALREADY_STARTED;
+
 	if (ctx->context_callback)
 	{
 		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
@@ -1094,6 +1097,9 @@ error_code sceNpMatching2ContextStartAsync(SceNpMatching2ContextId ctxId, u32 ti
 	const auto ctx = get_match2_context(ctxId);
 	if (!ctx)
 		return SCE_NP_MATCHING2_ERROR_CONTEXT_NOT_FOUND;
+
+	if (!ctx->started.compare_and_swap_test(0, 1))
+		return SCE_NP_MATCHING2_ERROR_CONTEXT_ALREADY_STARTED;
 
 	if (ctx->context_callback)
 	{
@@ -1693,10 +1699,11 @@ error_code sceNpMatching2ContextStop(SceNpMatching2ContextId ctxId)
 	const auto ctx = get_match2_context(ctxId);
 
 	if (!ctx)
-	{
 		return SCE_NP_MATCHING2_ERROR_INVALID_CONTEXT_ID;
-	}
 
+	if (!ctx->started.compare_and_swap_test(1, 0))
+		return SCE_NP_MATCHING2_ERROR_CONTEXT_NOT_STARTED;
+	
 	if (ctx->context_callback)
 	{
 		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
