@@ -5,11 +5,10 @@
 #include "util/logs.hpp"
 
 #include "basic_mouse_handler.h"
+#include "keyboard_pad_handler.h"
 #include "rpcs3qt/gs_frame.h"
 #include "Emu/Io/interception.h"
 #include "Emu/Io/mouse_config.h"
-
-LOG_CHANNEL(input_log, "Input");
 
 mouse_config g_cfg_mouse;
 
@@ -104,7 +103,8 @@ bool basic_mouse_handler::eventFilter(QObject* target, QEvent* ev)
 
 void basic_mouse_handler::MouseButtonDown(QMouseEvent* event)
 {
-	if (const auto it = std::find_if(m_buttons.cbegin(), m_buttons.cend(), [event](const auto& entry){ return entry.second == event->button(); });
+	const int button = event->button();
+	if (const auto it = std::find_if(m_buttons.cbegin(), m_buttons.cend(), [button](const auto& entry){ return entry.second == button; });
 		it != m_buttons.cend())
 	{
 		MouseHandlerBase::Button(0, it->first, true);
@@ -113,7 +113,8 @@ void basic_mouse_handler::MouseButtonDown(QMouseEvent* event)
 
 void basic_mouse_handler::MouseButtonUp(QMouseEvent* event)
 {
-	if (const auto it = std::find_if(m_buttons.cbegin(), m_buttons.cend(), [event](const auto& entry){ return entry.second == event->button(); });
+	const int button = event->button();
+	if (const auto it = std::find_if(m_buttons.cbegin(), m_buttons.cend(), [button](const auto& entry){ return entry.second == button; });
 		it != m_buttons.cend())
 	{
 		MouseHandlerBase::Button(0, it->first, false);
@@ -132,13 +133,14 @@ bool basic_mouse_handler::get_mouse_lock_state() const
 	return false;
 }
 
-Qt::MouseButton basic_mouse_handler::get_mouse_button(const cfg::string& button)
+int basic_mouse_handler::get_mouse_button(const cfg::string& button)
 {
-	const std::string value = button.to_string();
+	const std::string name = button.to_string();
+	const auto it = std::find_if(mouse_list.cbegin(), mouse_list.cend(), [&name](const auto& entry){ return entry.second == name; });
 
-	if (const auto it = qt_mouse_button_map.find(value); it != qt_mouse_button_map.cend())
+	if (it != mouse_list.cend())
 	{
-		return it->second;
+		return it->first;
 	}
 
 	return Qt::MouseButton::NoButton;

@@ -1,9 +1,15 @@
 #pragma once
 
-#include <QComboBox>
-#include <QDialog>
+#include "Emu/Io/MouseHandler.h"
 
-#include <vector>
+#include <QButtonGroup>
+#include <QPushButton>
+#include <QDialog>
+#include <QDialogButtonBox>
+#include <QMouseEvent>
+#include <QTimer>
+
+#include <unordered_map>
 
 class basic_mouse_settings_dialog : public QDialog
 {
@@ -15,5 +21,24 @@ public:
 private:
 	void reset_config();
 
-	std::vector<QComboBox*> m_combos;
+	void on_button_click(int id);
+	void reactivate_buttons();
+
+	// Buttons
+	QDialogButtonBox* m_button_box = nullptr;
+	QButtonGroup* m_buttons = nullptr;
+	std::unordered_map<int, QPushButton*> m_push_buttons;
+	u32 m_button_id = 0;
+
+	// Backup for standard button palette
+	QPalette m_palette;
+
+	// Remap Timer
+	static constexpr int MAX_SECONDS = 5;
+	int m_seconds = MAX_SECONDS;
+	QTimer m_remap_timer;
+
+protected:
+	void mouseReleaseEvent(QMouseEvent* event) override;
+	bool eventFilter(QObject* object, QEvent* event) override;
 };

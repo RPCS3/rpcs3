@@ -56,6 +56,8 @@ emulated_pad_settings_dialog::emulated_pad_settings_dialog(pad_type type, QWidge
 		}
 		else if (button == buttons->button(QDialogButtonBox::Cancel))
 		{
+			// Restore config
+			load_config();
 			reject();
 		}
 	});

@@ -2,14 +2,12 @@
 #include "basic_mouse_settings_dialog.h"
 #include "localized_emu.h"
 #include "Input/basic_mouse_handler.h"
+#include "Input/keyboard_pad_handler.h"
 #include "Emu/Io/mouse_config.h"
-#include "Emu/Io/MouseHandler.h"
 #include "util/asm.hpp"
 
-#include <QDialogButtonBox>
 #include <QGroupBox>
 #include <QMessageBox>
-#include <QPushButton>
 #include <QVBoxLayout>
 
 LOG_CHANNEL(cfg_log, "CFG");
@@ -31,28 +29,33 @@ basic_mouse_settings_dialog::basic_mouse_settings_dialog(QWidget* parent)
 
 	QVBoxLayout* v_layout = new QVBoxLayout(this);
 
-	QDialogButtonBox* buttons = new QDialogButtonBox(this);
-	buttons->setStandardButtons(QDialogButtonBox::Apply | QDialogButtonBox::Cancel | QDialogButtonBox::Save | QDialogButtonBox::RestoreDefaults);
+	m_button_box = new QDialogButtonBox(this);
+	m_button_box->setStandardButtons(QDialogButtonBox::Apply | QDialogButtonBox::Cancel | QDialogButtonBox::Save | QDialogButtonBox::RestoreDefaults);
 
-	connect(buttons, &QDialogButtonBox::clicked, this, [this, buttons](QAbstractButton* button)
+	connect(m_button_box, &QDialogButtonBox::clicked, this, [this](QAbstractButton* button)
 	{
-		if (button == buttons->button(QDialogButtonBox::Apply))
+		if (button == m_button_box->button(QDialogButtonBox::Apply))
 		{
 			g_cfg_mouse.save();
 		}
-		else if (button == buttons->button(QDialogButtonBox::Save))
+		else if (button == m_button_box->button(QDialogButtonBox::Save))
 		{
 			g_cfg_mouse.save();
 			accept();
 		}
-		else if (button == buttons->button(QDialogButtonBox::RestoreDefaults))
+		else if (button == m_button_box->button(QDialogButtonBox::RestoreDefaults))
 		{
 			if (QMessageBox::question(this, tr("Confirm Reset"), tr("Reset all settings?")) != QMessageBox::Yes)
 				return;
 			reset_config();
 		}
-		else if (button == buttons->button(QDialogButtonBox::Cancel))
+		else if (button == m_button_box->button(QDialogButtonBox::Cancel))
 		{
+			// Restore config
+			if (!g_cfg_mouse.load())
+			{
+				cfg_log.notice("Could not restore mouse config. Using defaults.");
+			}
 			reject();
 		}
 	});
@@ -61,6 +64,39 @@ basic_mouse_settings_dialog::basic_mouse_settings_dialog(QWidget* parent)
 	{
 		cfg_log.notice("Could not load basic mouse config. Using defaults.");
 	}
+
+	m_buttons = new QButtonGroup(this);
+
+	connect(m_buttons, &QButtonGroup::idClicked, this, &basic_mouse_settings_dialog::on_button_click);
+
+	connect(&m_remap_timer, &QTimer::timeout, this, [this]()
+	{
+		auto button = m_buttons->button(m_button_id);
+
+		if (--m_seconds <= 0)
+		{
+			if (button)
+			{
+				if (const int button_id = m_buttons->id(button))
+				{
+					const std::string name = g_cfg_mouse.get_button(button_id).to_string();
+					button->setText(name.empty() ? QStringLiteral("-") : QString::fromStdString(name));
+				}
+			}
+			reactivate_buttons();
+			return;
+		}
+		if (button)
+		{
+			button->setText(tr("[ Waiting %1 ]").arg(m_seconds));
+		}
+	});
+
+	const auto insert_button = [this](int id, QPushButton* button)
+	{
+		m_buttons->addButton(button, id);
+		button->installEventFilter(this);
+	};
 
 	constexpr u32 button_count = 8;
 	constexpr u32 max_items_per_column = 4;
@@ -81,33 +117,13 @@ basic_mouse_settings_dialog::basic_mouse_settings_dialog(QWidget* parent)
 
 		QHBoxLayout* h_layout = new QHBoxLayout(this);
 		QGroupBox* gb = new QGroupBox(translated_cell_button, this);
-		QComboBox* combo = new QComboBox;
+		QPushButton* pb = new QPushButton(this);
 
-		for (const auto& [name, btn] : qt_mouse_button_map)
-		{
-			const QString id = QString::fromStdString(name);
-			const QString translated_id = id; // We could localize the id, but I am too lazy at the moment
-			combo->addItem(translated_id);
-			const int index = combo->findText(translated_id);
-			combo->setItemData(index, id, button_role::button_name);
-			combo->setItemData(index, cell_code, button_role::button_code);
-		}
+		insert_button(cell_code, pb);
 
 		const std::string saved_btn = g_cfg_mouse.get_button(cell_code);
 
-		combo->setCurrentIndex(combo->findData(QString::fromStdString(saved_btn), button_role::button_name));
-
-		connect(combo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this, cell_code, combo](int index)
-		{
-			if (index < 0 || !combo)
-				return;
-
-			const QVariant data = combo->itemData(index, button_role::button_name);
-			if (!data.isValid() || !data.canConvert<QString>())
-				return;
-
-			g_cfg_mouse.get_button(cell_code).from_string(data.toString().toStdString());
-		});
+		pb->setText(saved_btn.empty() ? QStringLiteral("-") : QString::fromStdString(saved_btn));
 
 		if (row >= rows)
 		{
@@ -115,8 +131,8 @@ basic_mouse_settings_dialog::basic_mouse_settings_dialog(QWidget* parent)
 			col++;
 		}
 
-		m_combos.push_back(combo);
-		h_layout->addWidget(combo);
+		m_push_buttons[cell_code] = pb;
+		h_layout->addWidget(pb);
 		gb->setLayout(h_layout);
 		grid_layout->addWidget(gb, row, col);
 	}
@@ -124,26 +140,144 @@ basic_mouse_settings_dialog::basic_mouse_settings_dialog(QWidget* parent)
 	widget->setLayout(grid_layout);
 
 	v_layout->addWidget(widget);
-	v_layout->addWidget(buttons);
+	v_layout->addWidget(m_button_box);
 	setLayout(v_layout);
+
+	m_palette = m_push_buttons[CELL_MOUSE_BUTTON_1]->palette(); // save normal palette
 }
 
 void basic_mouse_settings_dialog::reset_config()
 {
 	g_cfg_mouse.from_default();
 
-	for (QComboBox* combo : m_combos)
+	for (auto& [cell_code, pb] : m_push_buttons)
 	{
-		if (!combo)
+		if (!pb)
 			continue;
 
-		const QVariant data = combo->itemData(0, button_role::button_code);
-		if (!data.isValid() || !data.canConvert<int>())
-			continue;
+		const QString text = QString::fromStdString(g_cfg_mouse.get_button(cell_code).def);
+		pb->setText(text.isEmpty() ? QStringLiteral("-") : text);
+	}
+}
 
-		const int cell_code = data.toInt();
-		const QString def_btn_id = QString::fromStdString(g_cfg_mouse.get_button(cell_code).def);
+void basic_mouse_settings_dialog::on_button_click(int id)
+{
+	if (id <= 0)
+	{
+		return;
+	}
 
-		combo->setCurrentIndex(combo->findData(def_btn_id, button_role::button_name));
+	for (auto but : m_buttons->buttons())
+	{
+		but->setFocusPolicy(Qt::ClickFocus);
+	}
+
+	for (auto but : m_button_box->buttons())
+	{
+		but->setFocusPolicy(Qt::ClickFocus);
+	}
+
+	m_button_id = id;
+	if (auto button = m_buttons->button(m_button_id))
+	{
+		button->setText(tr("[ Waiting %1 ]").arg(MAX_SECONDS));
+		button->setPalette(QPalette(Qt::blue));
+		button->grabMouse();
+	}
+
+	// Disable all buttons
+	m_button_box->setEnabled(false);
+	for (auto button : m_buttons->buttons())
+	{
+		button->setEnabled(false);
+	}
+
+	m_remap_timer.start(1000);
+}
+
+void basic_mouse_settings_dialog::mouseReleaseEvent(QMouseEvent* event)
+{
+	if (m_button_id <= 0)
+	{
+		// We are not remapping a button, so pass the event to the base class.
+		QDialog::mouseReleaseEvent(event);
+		return;
+	}
+
+	const std::string name = keyboard_pad_handler::GetMouseName(event);
+	g_cfg_mouse.get_button(m_button_id).from_string(name);
+
+	if (auto button = m_buttons->button(m_button_id))
+	{
+		button->setText(QString::fromStdString(name));
+	}
+
+	reactivate_buttons();
+}
+
+bool basic_mouse_settings_dialog::eventFilter(QObject* object, QEvent* event)
+{
+	switch (event->type())
+	{
+	case QEvent::MouseButtonRelease:
+	{
+		// On right click clear binding if we are not remapping pad button
+		if (m_button_id <= 0)
+		{
+			QMouseEvent* mouse_event = static_cast<QMouseEvent*>(event);
+			if (const auto button = qobject_cast<QPushButton*>(object); button && mouse_event->button() == Qt::RightButton)
+			{
+				if (const int button_id = m_buttons->id(button))
+				{
+					button->setText(QStringLiteral("-"));
+					g_cfg_mouse.get_button(button_id).from_string("");
+					return true;
+				}
+			}
+		}
+
+		// Disabled buttons should not absorb mouseclicks
+		event->ignore();
+		break;
+	}
+	default:
+	{
+		break;
+	}
+	}
+
+	return QDialog::eventFilter(object, event);
+}
+
+void basic_mouse_settings_dialog::reactivate_buttons()
+{
+	m_remap_timer.stop();
+	m_seconds = MAX_SECONDS;
+
+	if (m_button_id <= 0)
+	{
+		return;
+	}
+
+	if (auto button = m_buttons->button(m_button_id))
+	{
+		button->setPalette(m_palette);
+		button->releaseMouse();
+	}
+
+	m_button_id = 0;
+
+	// Enable all buttons
+	m_button_box->setEnabled(true);
+
+	for (auto but : m_buttons->buttons())
+	{
+		but->setEnabled(true);
+		but->setFocusPolicy(Qt::StrongFocus);
+	}
+
+	for (auto but : m_button_box->buttons())
+	{
+		but->setFocusPolicy(Qt::StrongFocus);
 	}
 }
