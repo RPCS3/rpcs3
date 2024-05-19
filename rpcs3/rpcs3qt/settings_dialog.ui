@@ -3814,7 +3814,7 @@
                   <item>
                    <widget class="QLabel" name="label_log_limit">
                     <property name="text">
-                     <string>Maximum log blocks</string>
+                     <string>Maximum log blocks (0 = no limit)</string>
                     </property>
                    </widget>
                   </item>
@@ -3849,7 +3849,7 @@
                   <item>
                    <widget class="QLabel" name="label_tty_limit">
                     <property name="text">
-                     <string>Maximum TTY blocks</string>
+                     <string>Maximum TTY blocks (0 = no limit)</string>
                     </property>
                    </widget>
                   </item>
