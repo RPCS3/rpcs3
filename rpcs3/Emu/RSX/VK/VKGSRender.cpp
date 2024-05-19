@@ -1482,6 +1482,7 @@ void VKGSRender::on_init_thread()
 void VKGSRender::on_exit()
 {
 	GSRender::on_exit();
+	vk::destroy_pipe_compiler(); // Ensure no pending shaders being compiled
 	zcull_ctrl.release();
 }
 
