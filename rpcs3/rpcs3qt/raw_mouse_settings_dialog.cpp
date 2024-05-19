@@ -54,6 +54,11 @@ raw_mouse_settings_dialog::raw_mouse_settings_dialog(QWidget* parent)
 		}
 		else if (button == buttons->button(QDialogButtonBox::Cancel))
 		{
+			// Restore config
+			if (!g_cfg_raw_mouse.load())
+			{
+				cfg_log.notice("Could not restore raw mouse config. Using defaults.");
+			}
 			reject();
 		}
 	});

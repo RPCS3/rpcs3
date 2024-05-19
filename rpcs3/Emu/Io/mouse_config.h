@@ -9,14 +9,14 @@ struct mouse_config final : cfg::node
 
 	const std::string cfg_name;
 
-	cfg::string mouse_button_1{this, "Button 1", "LeftButton"};
-	cfg::string mouse_button_2{this, "Button 2", "RightButton"};
-	cfg::string mouse_button_3{this, "Button 3", "MiddleButton"};
-	cfg::string mouse_button_4{this, "Button 4", "NoButton"};
-	cfg::string mouse_button_5{this, "Button 5", "NoButton"};
-	cfg::string mouse_button_6{this, "Button 6", "NoButton"};
-	cfg::string mouse_button_7{this, "Button 7", "NoButton"};
-	cfg::string mouse_button_8{this, "Button 8", "NoButton"};
+	cfg::string mouse_button_1{this, "Button 1", "Mouse Left"};
+	cfg::string mouse_button_2{this, "Button 2", "Mouse Right"};
+	cfg::string mouse_button_3{this, "Button 3", "Mouse Middle"};
+	cfg::string mouse_button_4{this, "Button 4", ""};
+	cfg::string mouse_button_5{this, "Button 5", ""};
+	cfg::string mouse_button_6{this, "Button 6", ""};
+	cfg::string mouse_button_7{this, "Button 7", ""};
+	cfg::string mouse_button_8{this, "Button 8", ""};
 
 	bool exist() const;
 	bool load();

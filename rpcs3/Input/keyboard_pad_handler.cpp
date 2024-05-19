@@ -658,12 +658,12 @@ std::vector<pad_list_entry> keyboard_pad_handler::list_devices()
 	return list_devices;
 }
 
-std::string keyboard_pad_handler::GetMouseName(const QMouseEvent* event) const
+std::string keyboard_pad_handler::GetMouseName(const QMouseEvent* event)
 {
 	return GetMouseName(event->button());
 }
 
-std::string keyboard_pad_handler::GetMouseName(u32 button) const
+std::string keyboard_pad_handler::GetMouseName(u32 button)
 {
 	if (const auto it = mouse_list.find(button); it != mouse_list.cend())
 		return it->second;
