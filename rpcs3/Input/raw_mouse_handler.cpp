@@ -214,6 +214,12 @@ void raw_mouse::update_values(const RAWMOUSE& state)
 }
 #endif
 
+raw_mouse_handler::raw_mouse_handler(bool ignore_config)
+	: MouseHandlerBase()
+	, m_ignore_config(ignore_config)
+{
+}
+
 raw_mouse_handler::~raw_mouse_handler()
 {
 	if (m_raw_mice.empty())
@@ -253,7 +259,16 @@ void raw_mouse_handler::Init(const u32 max_connect)
 
 	m_mice.clear();
 
-	for (u32 i = 0; i < std::min(::size32(m_raw_mice), max_connect); i++)
+	// Get max device index
+	u32 now_connect = 0;
+	std::set<u32> connected_mice{};
+	for (const auto& [handle, mouse] : m_raw_mice)
+	{
+		now_connect = std::max(now_connect, mouse.index());
+		connected_mice.insert(mouse.index());
+	}
+
+	for (u32 i = 0; i < now_connect; i++)
 	{
 		m_mice.emplace_back(Mouse());
 	}
@@ -265,7 +280,7 @@ void raw_mouse_handler::Init(const u32 max_connect)
 
 	for (u32 i = 0; i < m_info.now_connect; i++)
 	{
-		m_info.status[i] = CELL_MOUSE_STATUS_CONNECTED;
+		m_info.status[i] = connected_mice.contains(i) ? CELL_MOUSE_STATUS_CONNECTED : CELL_MOUSE_STATUS_DISCONNECTED;
 		m_info.mode[i] = CELL_MOUSE_INFO_TABLET_MOUSE_MODE;
 		m_info.tablet_is_supported[i] = CELL_MOUSE_INFO_TABLET_NOT_SUPPORTED;
 		m_info.vendor_id[0] = 0x1234;
@@ -371,9 +386,24 @@ void raw_mouse_handler::enumerate_devices(u32 max_connect)
 
 		const std::string device_name = wchar_to_utf8(buf.data());
 
-		input_log.notice("raw_mouse_handler: adding device %d: '%s'", m_raw_mice.size(), device_name);
+		if (m_ignore_config)
+		{
+			input_log.notice("raw_mouse_handler: adding device %d: '%s'", m_raw_mice.size(), device_name);
+			m_raw_mice[device.hDevice] = raw_mouse(::size32(m_raw_mice), device_name, device.hDevice, this);
+			continue;
+		}
 
-		m_raw_mice[device.hDevice] = raw_mouse(::size32(m_raw_mice), device_name, device.hDevice, this);
+		for (u32 i = 0; i < std::min(max_connect, ::size32(g_cfg_raw_mouse.players)); i++)
+		{
+			const auto& player = ::at32(g_cfg_raw_mouse.players, i);
+
+			if (player && player->device.to_string() == device_name)
+			{
+				input_log.notice("raw_mouse_handler: adding device %d: '%s'", m_raw_mice.size(), device_name);
+				m_raw_mice[device.hDevice] = raw_mouse(i, device_name, device.hDevice, this);
+				break;
+			}
+		}
 	}
 #endif
 
