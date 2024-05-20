@@ -405,6 +405,7 @@ target_sources(rpcs3_emu PRIVATE
     Io/KeyboardHandler.cpp
     Io/midi_config_types.cpp
     Io/mouse_config.cpp
+    Io/MouseHandler.cpp
     Io/pad_config.cpp
     Io/pad_config_types.cpp
     Io/pad_types.cpp
