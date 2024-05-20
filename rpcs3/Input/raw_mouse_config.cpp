@@ -2,6 +2,38 @@
 #include "raw_mouse_config.h"
 #include "Emu/Io/MouseHandler.h"
 
+std::string mouse_button_id(int code)
+{
+	switch (code)
+	{
+	case CELL_MOUSE_BUTTON_1: return "Button 1";
+	case CELL_MOUSE_BUTTON_2: return "Button 2";
+	case CELL_MOUSE_BUTTON_3: return "Button 3";
+	case CELL_MOUSE_BUTTON_4: return "Button 4";
+	case CELL_MOUSE_BUTTON_5: return "Button 5";
+	case CELL_MOUSE_BUTTON_6: return "Button 6";
+	case CELL_MOUSE_BUTTON_7: return "Button 7";
+	case CELL_MOUSE_BUTTON_8: return "Button 8";
+	}
+	return "";
+}
+
+cfg::string& raw_mouse_config::get_button_by_index(int index)
+{
+	switch (index)
+	{
+	case 0: return mouse_button_1;
+	case 1: return mouse_button_2;
+	case 2: return mouse_button_3;
+	case 3: return mouse_button_4;
+	case 4: return mouse_button_5;
+	case 5: return mouse_button_6;
+	case 6: return mouse_button_7;
+	case 7: return mouse_button_8;
+	default: fmt::throw_exception("Invalid index %d", index);
+	}
+}
+
 cfg::string& raw_mouse_config::get_button(int code)
 {
 	switch (code)

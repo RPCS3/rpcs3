@@ -116,12 +116,6 @@ void raw_mouse::update_values(const RAWMOUSE& state)
 	// Update window handle and size
 	update_window_handle();
 
-	// Check if the window handle is active
-	if (!m_window_handle)
-	{
-		return;
-	}
-
 	const auto get_button_pressed = [this](u8 button, int button_flags)
 	{
 		const auto& [down, up] = ::at32(m_buttons, button);
@@ -130,10 +124,12 @@ void raw_mouse::update_values(const RAWMOUSE& state)
 		if ((button_flags & down))
 		{
 			m_handler->Button(m_index, button, true);
+			m_handler->mouse_press_callback(m_device_name, button, true);
 		}
 		else if ((button_flags & up))
 		{
 			m_handler->Button(m_index, button, false);
+			m_handler->mouse_press_callback(m_device_name, button, false);
 		}
 	};
 

@@ -28,7 +28,7 @@ private:
 	QDialogButtonBox* m_button_box = nullptr;
 	QButtonGroup* m_buttons = nullptr;
 	std::unordered_map<int, QPushButton*> m_push_buttons;
-	u32 m_button_id = 0;
+	int m_button_id = -1;
 
 	// Backup for standard button palette
 	QPalette m_palette;

@@ -158,6 +158,18 @@ void emulated_pad_settings_dialog::add_tabs(QTabWidget* tabs)
 				combo->setItemData(index, i, button_role::emulated_button);
 			}
 
+			if constexpr (std::is_same_v<T, guncon3_btn>)
+			{
+				for (int p = static_cast<int>(pad_button::mouse_button_1); p <= static_cast<int>(pad_button::mouse_button_8); p++)
+				{
+					const QString translated = localized_emu::translated_pad_button(static_cast<pad_button>(p));
+					combo->addItem(translated);
+					const int index = combo->findText(translated);
+					combo->setItemData(index, p, button_role::button);
+					combo->setItemData(index, i, button_role::emulated_button);
+				}
+			}
+
 			pad_button saved_btn_id = pad_button::pad_button_max_enum;
 			switch (m_type)
 			{

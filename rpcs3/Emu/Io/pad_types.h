@@ -41,7 +41,17 @@ enum class pad_button : u8
 	rs_x,
 	rs_y,
 
-	pad_button_max_enum
+	pad_button_max_enum,
+
+	// Special buttons for mouse input
+	mouse_button_1,
+	mouse_button_2,
+	mouse_button_3,
+	mouse_button_4,
+	mouse_button_5,
+	mouse_button_6,
+	mouse_button_7,
+	mouse_button_8,
 };
 
 u32 pad_button_offset(pad_button button);

@@ -7,6 +7,8 @@
 
 LOG_CHANNEL(cfg_log, "CFG");
 
+std::string mouse_button_id(int code);
+
 struct raw_mouse_config : cfg::node
 {
 public:
@@ -25,6 +27,7 @@ public:
 	cfg::string mouse_button_7{this, "Button 7", "No Button"};
 	cfg::string mouse_button_8{this, "Button 8", "No Button"};
 
+	cfg::string& get_button_by_index(int index);
 	cfg::string& get_button(int code);
 };
 
