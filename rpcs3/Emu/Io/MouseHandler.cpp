@@ -68,15 +68,15 @@ void MouseHandlerBase::Button(u32 index, u8 button, bool pressed)
 		else
 			mouse.buttons &= ~button;
 
-		MouseData new_data;
+		MouseData new_data{};
 		new_data.update = CELL_MOUSE_DATA_UPDATE;
 		new_data.buttons = mouse.buttons;
 
-		datalist.push_back(new_data);
+		datalist.push_back(std::move(new_data));
 	}
 }
 
-void MouseHandlerBase::Scroll(u32 index, s32 rotation)
+void MouseHandlerBase::Scroll(u32 index, s8 x, s8 y)
 {
 	std::lock_guard lock(mutex);
 
@@ -95,12 +95,13 @@ void MouseHandlerBase::Scroll(u32 index, s32 rotation)
 			datalist.pop_front();
 		}
 
-		MouseData new_data;
+		MouseData new_data{};
 		new_data.update = CELL_MOUSE_DATA_UPDATE;
-		new_data.wheel = std::clamp(rotation / 120, -128, 127); // 120=event.GetWheelDelta()
 		new_data.buttons = mouse.buttons;
+		new_data.wheel = y;
+		new_data.tilt = x;
 
-		datalist.push_back(new_data);
+		datalist.push_back(std::move(new_data));
 	}
 }
 
@@ -123,7 +124,7 @@ void MouseHandlerBase::Move(u32 index, s32 x_pos_new, s32 y_pos_new, s32 x_max, 
 			datalist.pop_front();
 		}
 
-		MouseData new_data;
+		MouseData new_data{};
 		new_data.update = CELL_MOUSE_DATA_UPDATE;
 		new_data.buttons = mouse.buttons;
 
@@ -146,7 +147,7 @@ void MouseHandlerBase::Move(u32 index, s32 x_pos_new, s32 y_pos_new, s32 x_max, 
 		//rawdata.data[rawdata.len % CELL_MOUSE_MAX_CODES] = 0; // (TODO)
 		//rawdata.len++;
 
-		datalist.push_back(new_data);
+		datalist.push_back(std::move(new_data));
 	}
 }
 
