@@ -62,6 +62,7 @@ std::pair<int, int> raw_mouse::get_mouse_button(const cfg::string& button)
 #ifdef _WIN32
 	static const std::unordered_map<int, std::pair<int, int>> btn_pairs
 	{
+		{ 0, {}},
 		{ RI_MOUSE_BUTTON_1_UP, { RI_MOUSE_BUTTON_1_DOWN, RI_MOUSE_BUTTON_1_UP }},
 		{ RI_MOUSE_BUTTON_2_UP, { RI_MOUSE_BUTTON_2_DOWN, RI_MOUSE_BUTTON_2_UP }},
 		{ RI_MOUSE_BUTTON_3_UP, { RI_MOUSE_BUTTON_3_DOWN, RI_MOUSE_BUTTON_3_UP }},
