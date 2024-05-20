@@ -220,6 +220,32 @@ void usb_device_guncon3::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint,
 		return;
 	}
 
+	const auto input_callback = [&gc](guncon3_btn btn, u16 value, bool pressed)
+	{
+		if (!pressed)
+			return;
+
+		switch (btn)
+		{
+		case guncon3_btn::trigger: gc.btn_trigger |= 1; break;
+		case guncon3_btn::a1: gc.btn_a1 |= 1; break;
+		case guncon3_btn::a2: gc.btn_a2 |= 1; break;
+		case guncon3_btn::a3: gc.btn_a3 |= 1; break;
+		case guncon3_btn::b1: gc.btn_b1 |= 1; break;
+		case guncon3_btn::b2: gc.btn_b2 |= 1; break;
+		case guncon3_btn::b3: gc.btn_b3 |= 1; break;
+		case guncon3_btn::c1: gc.btn_c1 |= 1; break;
+		case guncon3_btn::c2: gc.btn_c2 |= 1; break;
+		case guncon3_btn::as_x: gc.stick_ax = static_cast<uint8_t>(value); break;
+		case guncon3_btn::as_y: gc.stick_ay = static_cast<uint8_t>(value); break;
+		case guncon3_btn::bs_x: gc.stick_bx = static_cast<uint8_t>(value); break;
+		case guncon3_btn::bs_y: gc.stick_by = static_cast<uint8_t>(value); break;
+		case guncon3_btn::count: break;
+		}
+	};
+
+	const auto& cfg = ::at32(g_cfg_guncon3.players, m_controller_index);
+
 	{
 		std::lock_guard lock(pad::g_pad_mutex);
 		const auto gamepad_handler = pad::get_current_handler();
@@ -227,30 +253,7 @@ void usb_device_guncon3::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint,
 		const auto& pad = ::at32(pads, m_controller_index);
 		if (pad->m_port_status & CELL_PAD_STATUS_CONNECTED)
 		{
-			const auto& cfg = ::at32(g_cfg_guncon3.players, m_controller_index);
-			cfg->handle_input(pad, true, [&](guncon3_btn btn, u16 value, bool pressed)
-			{
-				if (!pressed)
-					return;
-
-				switch (btn)
-				{
-				case guncon3_btn::trigger: gc.btn_trigger |= 1; break;
-				case guncon3_btn::a1: gc.btn_a1 |= 1; break;
-				case guncon3_btn::a2: gc.btn_a2 |= 1; break;
-				case guncon3_btn::a3: gc.btn_a3 |= 1; break;
-				case guncon3_btn::b1: gc.btn_b1 |= 1; break;
-				case guncon3_btn::b2: gc.btn_b2 |= 1; break;
-				case guncon3_btn::b3: gc.btn_b3 |= 1; break;
-				case guncon3_btn::c1: gc.btn_c1 |= 1; break;
-				case guncon3_btn::c2: gc.btn_c2 |= 1; break;
-				case guncon3_btn::as_x: gc.stick_ax = static_cast<uint8_t>(value); break;
-				case guncon3_btn::as_y: gc.stick_ay = static_cast<uint8_t>(value); break;
-				case guncon3_btn::bs_x: gc.stick_bx = static_cast<uint8_t>(value); break;
-				case guncon3_btn::bs_y: gc.stick_by = static_cast<uint8_t>(value); break;
-				case guncon3_btn::count: break;
-				}
-			});
+			cfg->handle_input(pad, true, input_callback);
 		}
 	}
 
@@ -277,7 +280,7 @@ void usb_device_guncon3::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint,
 		gc.gun_x = (mouse_data.x_pos * USHRT_MAX / mouse_data.x_max) - SHRT_MAX;
 		gc.gun_y = (mouse_data.y_pos * -USHRT_MAX / mouse_data.y_max) + SHRT_MAX;
 
-		gc.btn_trigger |= !!(mouse_data.buttons & CELL_MOUSE_BUTTON_1);
+		cfg->handle_input(mouse_data, true, input_callback);
 	}
 
 	guncon3_encode(&gc, buf, m_key.data());

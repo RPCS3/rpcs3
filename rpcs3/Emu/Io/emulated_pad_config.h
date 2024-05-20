@@ -3,6 +3,7 @@
 #include "Utilities/Config.h"
 #include "Utilities/mutex.h"
 #include "pad_types.h"
+#include "MouseHandler.h"
 
 #include <array>
 #include <map>
@@ -103,6 +104,21 @@ public:
 		for (const AnalogStick& stick : pad->m_sticks)
 		{
 			handle_input(func, stick.m_offset, get_axis_keycode(stick.m_offset, stick.m_value), stick.m_value, true, true);
+		}
+	}
+
+	void handle_input(const Mouse& mouse, bool press_only, const std::function<void(T, u16, bool)>& func) const
+	{
+		for (int i = 0; i < 7; i++)
+		{
+			const MouseButtonCodes cell_code = get_mouse_button_code(i);
+			if ((mouse.buttons & cell_code))
+			{
+				const pad_button button = static_cast<pad_button>(static_cast<int>(pad_button::mouse_button_1) + i);
+				const u32 offset = pad_button_offset(button);
+				const u32 keycode = pad_button_keycode(button);
+				handle_input(func, offset, keycode, 255, true, true);
+			}
 		}
 	}
 

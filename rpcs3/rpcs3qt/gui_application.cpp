@@ -1113,7 +1113,7 @@ void gui_application::OnAppStateChanged(Qt::ApplicationState state)
 bool gui_application::native_event_filter::nativeEventFilter([[maybe_unused]] const QByteArray& eventType, [[maybe_unused]] void* message, [[maybe_unused]] qintptr* result)
 {
 #ifdef _WIN32
-	if (!Emu.IsRunning())
+	if (!Emu.IsRunning() && !g_raw_mouse_handler)
 	{
 		return false;
 	}

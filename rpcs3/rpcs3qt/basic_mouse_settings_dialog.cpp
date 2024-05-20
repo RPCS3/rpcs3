@@ -162,16 +162,18 @@ void basic_mouse_settings_dialog::reset_config()
 
 void basic_mouse_settings_dialog::on_button_click(int id)
 {
-	if (id <= 0)
+	if (id < 0)
 	{
 		return;
 	}
 
 	for (auto but : m_buttons->buttons())
 	{
+		but->setEnabled(false);
 		but->setFocusPolicy(Qt::ClickFocus);
 	}
 
+	m_button_box->setEnabled(false);
 	for (auto but : m_button_box->buttons())
 	{
 		but->setFocusPolicy(Qt::ClickFocus);
@@ -185,19 +187,12 @@ void basic_mouse_settings_dialog::on_button_click(int id)
 		button->grabMouse();
 	}
 
-	// Disable all buttons
-	m_button_box->setEnabled(false);
-	for (auto button : m_buttons->buttons())
-	{
-		button->setEnabled(false);
-	}
-
 	m_remap_timer.start(1000);
 }
 
 void basic_mouse_settings_dialog::mouseReleaseEvent(QMouseEvent* event)
 {
-	if (m_button_id <= 0)
+	if (m_button_id < 0)
 	{
 		// We are not remapping a button, so pass the event to the base class.
 		QDialog::mouseReleaseEvent(event);
@@ -222,7 +217,7 @@ bool basic_mouse_settings_dialog::eventFilter(QObject* object, QEvent* event)
 	case QEvent::MouseButtonRelease:
 	{
 		// On right click clear binding if we are not remapping pad button
-		if (m_button_id <= 0)
+		if (m_button_id < 0)
 		{
 			QMouseEvent* mouse_event = static_cast<QMouseEvent*>(event);
 			if (const auto button = qobject_cast<QPushButton*>(object); button && mouse_event->button() == Qt::RightButton)
@@ -254,7 +249,7 @@ void basic_mouse_settings_dialog::reactivate_buttons()
 	m_remap_timer.stop();
 	m_seconds = MAX_SECONDS;
 
-	if (m_button_id <= 0)
+	if (m_button_id < 0)
 	{
 		return;
 	}
@@ -265,19 +260,19 @@ void basic_mouse_settings_dialog::reactivate_buttons()
 		button->releaseMouse();
 	}
 
-	m_button_id = 0;
+	m_button_id = -1;
 
 	// Enable all buttons
 	m_button_box->setEnabled(true);
 
-	for (auto but : m_buttons->buttons())
+	for (auto but : m_button_box->buttons())
 	{
-		but->setEnabled(true);
 		but->setFocusPolicy(Qt::StrongFocus);
 	}
 
-	for (auto but : m_button_box->buttons())
+	for (auto but : m_buttons->buttons())
 	{
+		but->setEnabled(true);
 		but->setFocusPolicy(Qt::StrongFocus);
 	}
 }

@@ -36,6 +36,14 @@ QString localized_emu::translated_pad_button(pad_button btn)
 	case pad_button::rs_x: return tr("Right Stick X-Axis");
 	case pad_button::rs_y: return tr("Right Stick Y-Axis");
 	case pad_button::pad_button_max_enum: return "";
+	case pad_button::mouse_button_1: return tr("Mouse Button 1");
+	case pad_button::mouse_button_2: return tr("Mouse Button 2");
+	case pad_button::mouse_button_3: return tr("Mouse Button 3");
+	case pad_button::mouse_button_4: return tr("Mouse Button 4");
+	case pad_button::mouse_button_5: return tr("Mouse Button 5");
+	case pad_button::mouse_button_6: return tr("Mouse Button 6");
+	case pad_button::mouse_button_7: return tr("Mouse Button 7");
+	case pad_button::mouse_button_8: return tr("Mouse Button 8");
 	}
 	return "";
 }

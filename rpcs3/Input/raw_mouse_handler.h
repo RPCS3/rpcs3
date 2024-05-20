@@ -69,6 +69,19 @@ public:
 
 	const std::map<void*, raw_mouse>& get_mice() const { return m_raw_mice; };
 
+	void set_mouse_press_callback(std::function<void(const std::string&, s32, bool)> cb)
+	{
+		m_mouse_press_callback = std::move(cb);
+	}
+
+	void mouse_press_callback(const std::string& device_name, s32 cell_code, bool pressed)
+	{
+		if (m_mouse_press_callback)
+		{
+			m_mouse_press_callback(device_name, cell_code, pressed);
+		}
+	}
+
 #ifdef _WIN32
 	void handle_native_event(const MSG& msg);
 #endif
@@ -78,4 +91,5 @@ private:
 
 	bool m_ignore_config = false;
 	std::map<void*, raw_mouse> m_raw_mice;
+	std::function<void(const std::string&, s32, bool)> m_mouse_press_callback;
 };
