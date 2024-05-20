@@ -143,17 +143,15 @@ void raw_mouse::update_values(const RAWMOUSE& state)
 	get_button_pressed(CELL_MOUSE_BUTTON_4, state.usButtonFlags);
 	get_button_pressed(CELL_MOUSE_BUTTON_5, state.usButtonFlags);
 
-	// Get vertical mouse wheel
+	// Get mouse wheel
 	if ((state.usButtonFlags & RI_MOUSE_WHEEL))
 	{
-		m_handler->Scroll(m_index, static_cast<s16>(state.usButtonData));
+		m_handler->Scroll(m_index, 0, std::clamp(static_cast<s16>(state.usButtonData) / WHEEL_DELTA, -128, 127));
 	}
-
-	// Get horizontal mouse wheel. Ignored until needed.
-	//if ((state.usButtonFlags & RI_MOUSE_HWHEEL))
-	//{
-	//	m_handler->Scroll(m_index, static_cast<s16>(state.usButtonData));
-	//}
+	else if ((state.usButtonFlags & RI_MOUSE_HWHEEL))
+	{
+		m_handler->Scroll(m_index, std::clamp(static_cast<s16>(state.usButtonData) / WHEEL_DELTA, -128, 127), 0);
+	}
 
 	// Get mouse movement
 	if ((state.usFlags & MOUSE_MOVE_ABSOLUTE))

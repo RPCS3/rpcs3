@@ -95,7 +95,7 @@ struct MouseData
 	s8 x_axis = 0;
 	s8 y_axis = 0;
 	s8 wheel = 0;
-	s8 tilt = 0; // (TODO)
+	s8 tilt = 0;
 };
 
 struct MouseTabletData
@@ -144,7 +144,7 @@ public:
 	void save(utils::serial& ar);
 
 	void Button(u32 index, u8 button, bool pressed);
-	void Scroll(u32 index, s32 rotation);
+	void Scroll(u32 index, s8 x, s8 y);
 	void Move(u32 index, s32 x_pos_new, s32 y_pos_new, s32 x_max, s32 y_max, const bool is_relative = false, s32 x_delta = 0, s32 y_delta = 0);
 
 	void SetIntercepted(bool intercepted);

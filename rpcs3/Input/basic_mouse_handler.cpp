@@ -103,6 +103,8 @@ bool basic_mouse_handler::eventFilter(QObject* target, QEvent* ev)
 
 void basic_mouse_handler::MouseButtonDown(QMouseEvent* event)
 {
+	if (!event) return;
+
 	const int button = event->button();
 	if (const auto it = std::find_if(m_buttons.cbegin(), m_buttons.cend(), [button](const auto& entry){ return entry.second == button; });
 		it != m_buttons.cend())
@@ -113,6 +115,8 @@ void basic_mouse_handler::MouseButtonDown(QMouseEvent* event)
 
 void basic_mouse_handler::MouseButtonUp(QMouseEvent* event)
 {
+	if (!event) return;
+
 	const int button = event->button();
 	if (const auto it = std::find_if(m_buttons.cbegin(), m_buttons.cend(), [button](const auto& entry){ return entry.second == button; });
 		it != m_buttons.cend())
@@ -123,7 +127,12 @@ void basic_mouse_handler::MouseButtonUp(QMouseEvent* event)
 
 void basic_mouse_handler::MouseScroll(QWheelEvent* event)
 {
-	MouseHandlerBase::Scroll(0, event->angleDelta().y());
+	if (!event) return;
+
+	const QPoint delta = event->angleDelta();
+	const s8 x = std::clamp(delta.x() / 120, -128, 127);
+	const s8 y = std::clamp(delta.y() / 120, -128, 127);
+	MouseHandlerBase::Scroll(0, x, y);
 }
 
 bool basic_mouse_handler::get_mouse_lock_state() const
@@ -148,6 +157,8 @@ int basic_mouse_handler::get_mouse_button(const cfg::string& button)
 
 void basic_mouse_handler::MouseMove(QMouseEvent* event)
 {
+	if (!event) return;
+
 	if (is_time_for_update())
 	{
 		// get the screen dimensions
