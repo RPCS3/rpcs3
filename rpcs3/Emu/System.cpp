@@ -3471,13 +3471,13 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 					for (std::string_view not_logged = log_buffer; !not_logged.empty(); part_ctr++, not_logged.remove_prefix(to_remove))
 					{
 						std::string_view to_log = not_logged;
-						to_log = to_log.substr(0, 0x2'0000);
+						to_log = to_log.substr(0, 0x8000);
 						to_log = to_log.substr(0, utils::add_saturate<usz>(to_log.rfind("\n========== SPU BLOCK"sv), 1));
 						to_remove = to_log.size();
 
 						// Cannot log it all at once due to technical reasons, split it to 8MB at maximum of whole functions
 						// Assume the block prefix exists because it is created by RPCS3 (or log it in an ugly manner if it does not exist)
-						sys_log.notice("Logging spu.log part %u:\n\n%s\n", part_ctr, to_log);
+						sys_log.notice("Logging spu.log #%u:\n\n%s\n", part_ctr, to_log);
 					}
 
 					sys_log.notice("End spu.log (%u bytes)", total_size);
