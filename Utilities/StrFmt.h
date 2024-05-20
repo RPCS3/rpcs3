@@ -363,7 +363,10 @@ namespace fmt
 	template <typename CharT, usz N, typename... Args>
 	struct throw_exception
 	{
+		struct args_break_t {};
+
 		[[noreturn]] FORCE_INLINE SAFE_BUFFERS() throw_exception(const CharT(&fmt)[N], const Args&... args,
+			args_break_t = args_break_t{},
 			u32 line = __builtin_LINE(),
 			u32 col = __builtin_COLUMN(),
 			const char* file = __builtin_FILE(),
