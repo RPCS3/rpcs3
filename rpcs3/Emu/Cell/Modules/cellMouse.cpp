@@ -35,32 +35,6 @@ void fmt_class_string<CellMouseError>::format(std::string& out, u64 arg)
 	});
 }
 
-MouseHandlerBase::MouseHandlerBase(utils::serial* ar)
-{
-	if (!ar)
-	{
-		return;
-	}
-
-	(*ar)(m_info.max_connect);
-
-	if (m_info.max_connect)
-	{
-		Emu.PostponeInitCode([this]()
-		{
-			Init(m_info.max_connect);
-			auto lk = init.init();
-		});
-	}
-}
-
-void MouseHandlerBase::save(utils::serial& ar)
-{
-	const auto inited = init.access();
-
-	ar(inited ? m_info.max_connect : 0);
-}
-
 error_code cellMouseInit(ppu_thread& ppu, u32 max_connect)
 {
 	sys_io.notice("cellMouseInit(max_connect=%d)", max_connect);

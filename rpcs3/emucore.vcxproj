@@ -73,6 +73,7 @@
     <ClCompile Include="Emu\games_config.cpp" />
     <ClCompile Include="Emu\Io\camera_config.cpp" />
     <ClCompile Include="Emu\Io\midi_config_types.cpp" />
+    <ClCompile Include="Emu\Io\MouseHandler.cpp" />
     <ClCompile Include="Emu\Io\pad_types.cpp" />
     <ClCompile Include="Emu\Io\rb3drums_config.cpp" />
     <ClCompile Include="Emu\Io\RB3MidiDrums.cpp" />
