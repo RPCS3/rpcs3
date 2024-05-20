@@ -1,12 +1,12 @@
 #include "stdafx.h"
 #include "raw_mouse_settings_dialog.h"
 #include "localized_emu.h"
+#include "gui_application.h"
 #include "Input/raw_mouse_config.h"
 #include "Input/raw_mouse_handler.h"
 #include "util/asm.hpp"
 
 #include <QDialogButtonBox>
-#include <QDoubleSpinBox>
 #include <QGroupBox>
 #include <QMessageBox>
 #include <QPushButton>
@@ -68,11 +68,19 @@ raw_mouse_settings_dialog::raw_mouse_settings_dialog(QWidget* parent)
 		cfg_log.notice("Could not load raw mouse config. Using defaults.");
 	}
 
+	g_raw_mouse_handler = std::make_unique<raw_mouse_handler>(true);
+	g_raw_mouse_handler->Init(::size32(g_cfg_raw_mouse.players));
+
 	add_tabs(tabs);
 
 	v_layout->addWidget(tabs);
 	v_layout->addWidget(buttons);
 	setLayout(v_layout);
+}
+
+raw_mouse_settings_dialog::~raw_mouse_settings_dialog()
+{
+	g_raw_mouse_handler.reset();
 }
 
 void raw_mouse_settings_dialog::add_tabs(QTabWidget* tabs)
@@ -92,6 +100,9 @@ void raw_mouse_settings_dialog::add_tabs(QTabWidget* tabs)
 
 	m_combos.resize(players);
 
+	ensure(g_raw_mouse_handler);
+	const auto& mice = g_raw_mouse_handler->get_mice();
+
 	for (usz player = 0; player < players; player++)
 	{
 		QWidget* widget = new QWidget(this);
@@ -99,7 +110,38 @@ void raw_mouse_settings_dialog::add_tabs(QTabWidget* tabs)
 
 		auto& config = ::at32(g_cfg_raw_mouse.players, player);
 
-		for (int i = 0, row = 0, col = 0; i < static_cast<int>(button_count); i++, row++)
+		QHBoxLayout* h_layout = new QHBoxLayout(this);
+		QGroupBox* gb = new QGroupBox(tr("Device"), this);
+		QComboBox* combo = new QComboBox(this);
+		m_device_combos.push_back(combo);
+		combo->addItem(tr("Disabled"), QString());
+		for (const auto& [handle, mouse] : mice)
+		{
+			const QString name = QString::fromStdString(mouse.device_name());
+			const QString& pretty_name = name; // Same ugly device path for now
+			combo->addItem(pretty_name, name);
+		}
+		combo->setCurrentText(QString::fromStdString(config->device.to_string()));
+		connect(combo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this, player, combo](int index)
+		{
+			if (index < 0 || !combo)
+				return;
+
+			const QVariant data = combo->itemData(index);
+			if (!data.isValid() || !data.canConvert<QString>())
+				return;
+
+			auto& config = ::at32(g_cfg_raw_mouse.players, player)->device;
+			config.from_string(data.toString().toStdString());
+		});
+
+		h_layout->addWidget(combo);
+		gb->setLayout(h_layout);
+		grid_layout->addWidget(gb, 0, 0, 1, 2);
+
+		const int first_row = grid_layout->rowCount();
+
+		for (int i = 0, row = first_row, col = 0; i < static_cast<int>(button_count); i++, row++)
 		{
 			const int cell_code = get_mouse_button_code(i);
 			const QString translated_cell_button = localized_emu::translated_mouse_button(cell_code);
@@ -134,9 +176,9 @@ void raw_mouse_settings_dialog::add_tabs(QTabWidget* tabs)
 				::at32(g_cfg_raw_mouse.players, player)->get_button(cell_code).from_string(data.toString().toStdString());
 			});
 
-			if (row >= rows)
+			if (row >= rows + first_row)
 			{
-				row = 0;
+				row = first_row;
 				col++;
 			}
 
@@ -146,9 +188,10 @@ void raw_mouse_settings_dialog::add_tabs(QTabWidget* tabs)
 			grid_layout->addWidget(gb, row, col);
 		}
 
-		QHBoxLayout* h_layout = new QHBoxLayout(this);
-		QGroupBox* gb = new QGroupBox(tr("Mouse Acceleration"), this);
+		h_layout = new QHBoxLayout(this);
+		gb = new QGroupBox(tr("Mouse Acceleration"), this);
 		QDoubleSpinBox* mouse_acceleration_spin_box = new QDoubleSpinBox(this);
+		m_accel_spin_boxes.push_back(mouse_acceleration_spin_box);
 		mouse_acceleration_spin_box->setRange(0.1, 10.0);
 		mouse_acceleration_spin_box->setValue(config->mouse_acceleration.get() / 100.0);
 		connect(mouse_acceleration_spin_box, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, [player](double value)
@@ -187,6 +230,16 @@ void raw_mouse_settings_dialog::reset_config()
 			const QString def_btn_id = QString::fromStdString(config->get_button(cell_code).def);
 
 			combo->setCurrentIndex(combo->findData(def_btn_id, button_role::button_name));
+		}
+
+		if (QComboBox* combo = ::at32(m_device_combos, player))
+		{
+			combo->setCurrentIndex(combo->findData(QString::fromStdString(config->device.to_string())));
+		}
+
+		if (QDoubleSpinBox* sb = ::at32(m_accel_spin_boxes, player))
+		{
+			sb->setValue(config->mouse_acceleration.get() / 100.0);
 		}
 	}
 }

@@ -12,6 +12,8 @@ struct raw_mouse_config : cfg::node
 public:
 	using cfg::node::node;
 
+	cfg::string device{this, "Device", ""};
+
 	cfg::_float<10, 1000> mouse_acceleration{ this, "Mouse Acceleration", 100.0f, true };
 
 	cfg::string mouse_button_1{this, "Button 1", "Button 1"};

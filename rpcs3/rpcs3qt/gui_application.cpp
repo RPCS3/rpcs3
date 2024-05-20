@@ -1,3 +1,4 @@
+#include "stdafx.h"
 #include "gui_application.h"
 
 #include "qt_utils.h"
@@ -22,7 +23,6 @@
 #include "Emu/vfs_config.h"
 #include "util/init_mutex.hpp"
 #include "util/console.h"
-#include "Input/raw_mouse_handler.h"
 #include "trophy_notification_helper.h"
 #include "save_data_dialog.h"
 #include "msg_dialog_frame.h"
@@ -57,6 +57,8 @@
 #endif
 
 LOG_CHANNEL(gui_log, "GUI");
+
+std::unique_ptr<raw_mouse_handler> g_raw_mouse_handler;
 
 [[noreturn]] void report_fatal_error(std::string_view text, bool is_html = false, bool include_help_text = true);
 
@@ -1123,6 +1125,11 @@ bool gui_application::native_event_filter::nativeEventFilter([[maybe_unused]] co
 			if (auto* handler = g_fxo->try_get<MouseHandlerBase>(); handler && handler->type == mouse_handler::raw)
 			{
 				static_cast<raw_mouse_handler*>(handler)->handle_native_event(*msg);
+			}
+
+			if (g_raw_mouse_handler)
+			{
+				g_raw_mouse_handler->handle_native_event(*msg);
 			}
 		}
 	}

@@ -2,6 +2,7 @@
 
 #include "Emu/Io/MouseHandler.h"
 #include "Emu/RSX/display.h"
+#include "Utilities/Config.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -37,6 +38,9 @@ public:
 	void update_values(const RAWMOUSE& state);
 #endif
 
+	const std::string& device_name() const { return m_device_name; }
+	u32 index() const { return m_index; }
+
 private:
 	static std::pair<int, int> get_mouse_button(const cfg::string& button);
 
@@ -57,12 +61,13 @@ private:
 
 class raw_mouse_handler final : public MouseHandlerBase
 {
-	using MouseHandlerBase::MouseHandlerBase;
-
 public:
+	raw_mouse_handler(bool ignore_config = false);
 	virtual ~raw_mouse_handler();
 
 	void Init(const u32 max_connect) override;
+
+	const std::map<void*, raw_mouse>& get_mice() const { return m_raw_mice; };
 
 #ifdef _WIN32
 	void handle_native_event(const MSG& msg);
@@ -71,5 +76,6 @@ public:
 private:
 	void enumerate_devices(u32 max_connect);
 
+	bool m_ignore_config = false;
 	std::map<void*, raw_mouse> m_raw_mice;
 };
