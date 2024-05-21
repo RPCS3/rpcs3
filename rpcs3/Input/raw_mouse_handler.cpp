@@ -260,7 +260,7 @@ void raw_mouse_handler::Init(const u32 max_connect)
 	std::set<u32> connected_mice{};
 	for (const auto& [handle, mouse] : m_raw_mice)
 	{
-		now_connect = std::max(now_connect, mouse.index());
+		now_connect = std::max(now_connect, mouse.index() + 1);
 		connected_mice.insert(mouse.index());
 	}
 
