@@ -3,6 +3,8 @@
 #include "Emu/Io/MouseHandler.h"
 #include "Emu/RSX/display.h"
 #include "Utilities/Config.h"
+#include "Utilities/Mutex.h"
+#include "Utilities/Thread.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -87,6 +89,7 @@ public:
 #endif
 
 private:
+	u32 get_now_connect(std::set<u32>& connected_mice);
 	void enumerate_devices(u32 max_connect);
 
 #ifdef _WIN32
@@ -95,7 +98,9 @@ private:
 #endif
 
 	bool m_ignore_config = false;
-	std::mutex m_raw_mutex;
+	shared_mutex m_raw_mutex;
 	std::map<void*, raw_mouse> m_raw_mice;
 	std::function<void(const std::string&, s32, bool)> m_mouse_press_callback;
+
+	std::unique_ptr<named_thread<std::function<void()>>> m_thread;
 };
