@@ -64,7 +64,7 @@ private:
 class raw_mouse_handler final : public MouseHandlerBase
 {
 public:
-	raw_mouse_handler(bool ignore_config = false);
+	raw_mouse_handler(bool is_for_gui = false);
 	virtual ~raw_mouse_handler();
 
 	void Init(const u32 max_connect) override;
@@ -84,9 +84,13 @@ public:
 		}
 	}
 
+	void update_devices();
+
 #ifdef _WIN32
 	void handle_native_event(const MSG& msg);
 #endif
+
+	shared_mutex m_raw_mutex;
 
 private:
 	u32 get_now_connect(std::set<u32>& connected_mice);
@@ -97,8 +101,7 @@ private:
 	bool m_registered_raw_input_devices = false;
 #endif
 
-	bool m_ignore_config = false;
-	shared_mutex m_raw_mutex;
+	bool m_is_for_gui = false;
 	std::map<void*, raw_mouse> m_raw_mice;
 	std::function<void(const std::string&, s32, bool)> m_mouse_press_callback;
 
