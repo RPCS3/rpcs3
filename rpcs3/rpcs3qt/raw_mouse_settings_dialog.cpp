@@ -6,6 +6,7 @@
 #include "Input/raw_mouse_handler.h"
 #include "util/asm.hpp"
 
+#include <QAbstractItemView>
 #include <QGroupBox>
 #include <QMessageBox>
 #include <QVBoxLayout>
@@ -74,6 +75,8 @@ raw_mouse_settings_dialog::raw_mouse_settings_dialog(QWidget* parent)
 	m_buttons = new QButtonGroup(this);
 	connect(m_buttons, &QButtonGroup::idClicked, this, &raw_mouse_settings_dialog::on_button_click);
 
+	connect(&m_update_timer, &QTimer::timeout, this, &raw_mouse_settings_dialog::on_enumeration);
+
 	connect(&m_remap_timer, &QTimer::timeout, this, [this]()
 	{
 		auto button = m_buttons->button(m_button_id);
@@ -117,12 +120,64 @@ raw_mouse_settings_dialog::raw_mouse_settings_dialog(QWidget* parent)
 		handle_device_change(get_current_device_name(index));
 	});
 
+	on_enumeration();
+
 	handle_device_change(get_current_device_name(0));
+
+	m_update_timer.start(1000ms);
 }
 
 raw_mouse_settings_dialog::~raw_mouse_settings_dialog()
 {
 	g_raw_mouse_handler.reset();
+}
+
+void raw_mouse_settings_dialog::update_combo_box(usz player)
+{
+	auto& config = ::at32(g_cfg_raw_mouse.players, player);
+	const std::string device_name = config->device.to_string();
+	const QString current_device = QString::fromStdString(device_name);
+	bool found_device = false;
+
+	QComboBox* combo = ::at32(m_device_combos, player);
+
+	combo->blockSignals(true);
+	combo->clear();
+	combo->addItem(tr("Disabled"), QString());
+
+	{
+		std::lock_guard lock(g_raw_mouse_handler->m_raw_mutex);
+
+		const auto& mice = g_raw_mouse_handler->get_mice();
+
+		for (const auto& [handle, mouse] : mice)
+		{
+			const QString name = QString::fromStdString(mouse.device_name());
+			const QString& pretty_name = name; // Same ugly device path for now
+			combo->addItem(pretty_name, name);
+
+			if (current_device == name)
+			{
+				found_device = true;
+			}
+		}
+	}
+
+	// Keep configured device in list even if it is not connected
+	if (!found_device && !current_device.isEmpty())
+	{
+		const QString& pretty_name = current_device; // Same ugly device path for now
+		combo->addItem(pretty_name, current_device);
+	}
+
+	// Select index
+	combo->setCurrentIndex(std::max(0, combo->findData(current_device)));
+	combo->blockSignals(false);
+
+	if (player == m_tab_widget->currentIndex())
+	{
+		handle_device_change(device_name);
+	}
 }
 
 void raw_mouse_settings_dialog::add_tabs(QTabWidget* tabs)
@@ -137,12 +192,11 @@ void raw_mouse_settings_dialog::add_tabs(QTabWidget* tabs)
 		rows = utils::aligned_div(button_count, ++cols);
 	}
 
-	const usz players = g_cfg_raw_mouse.players.size();
+	constexpr usz players = g_cfg_raw_mouse.players.size();
 
 	m_push_buttons.resize(players);
 
 	ensure(g_raw_mouse_handler);
-	const auto& mice = g_raw_mouse_handler->get_mice();
 
 	const auto insert_button = [this](int id, QPushButton* button)
 	{
@@ -156,35 +210,13 @@ void raw_mouse_settings_dialog::add_tabs(QTabWidget* tabs)
 		QGridLayout* grid_layout = new QGridLayout(this);
 
 		auto& config = ::at32(g_cfg_raw_mouse.players, player);
-		const QString current_device = QString::fromStdString(config->device.to_string());
-		bool found_device = false;
 
 		QHBoxLayout* h_layout = new QHBoxLayout(this);
 		QGroupBox* gb = new QGroupBox(tr("Device"), this);
 		QComboBox* combo = new QComboBox(this);
 		m_device_combos.push_back(combo);
-		combo->addItem(tr("Disabled"), QString());
-		for (const auto& [handle, mouse] : mice)
-		{
-			const QString name = QString::fromStdString(mouse.device_name());
-			const QString& pretty_name = name; // Same ugly device path for now
-			combo->addItem(pretty_name, name);
 
-			if (current_device == name)
-			{
-				found_device = true;
-			}
-		}
-
-		// Keep configured device in list even if it is not connected
-		if (!found_device && !current_device.isEmpty())
-		{
-			const QString& pretty_name = current_device; // Same ugly device path for now
-			combo->addItem(pretty_name, current_device);
-		}
-
-		// Select index
-		combo->setCurrentIndex(std::max(0, combo->findData(current_device)));
+		update_combo_box(player);
 
 		connect(combo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this, player, combo](int index)
 		{
@@ -254,6 +286,31 @@ void raw_mouse_settings_dialog::add_tabs(QTabWidget* tabs)
 
 		widget->setLayout(grid_layout);
 		tabs->addTab(widget, tr("Player %0").arg(player + 1));
+	}
+}
+
+void raw_mouse_settings_dialog::on_enumeration()
+{
+	if (!g_raw_mouse_handler)
+	{
+		return;
+	}
+
+	const int player = m_tab_widget->currentIndex();
+	QComboBox* combo = ::at32(m_device_combos, player);
+
+	// Don't enumerate while the current dropdown is open
+	if (combo && combo->view()->isVisible())
+	{
+		return;
+	}
+
+	g_raw_mouse_handler->update_devices();
+
+	// Update all dropdowns
+	for (usz player = 0; player < g_cfg_raw_mouse.players.size(); player++)
+	{
+		update_combo_box(player);
 	}
 }
 
@@ -334,6 +391,8 @@ bool raw_mouse_settings_dialog::is_device_active(const std::string& device_name)
 		return false;
 	}
 
+	std::lock_guard lock(g_raw_mouse_handler->m_raw_mutex);
+
 	const auto& mice = g_raw_mouse_handler->get_mice();
 
 	return std::any_of(mice.cbegin(), mice.cend(), [&device_name](const auto& entry){ return entry.second.device_name() == device_name; });
@@ -393,6 +452,8 @@ void raw_mouse_settings_dialog::on_button_click(int id)
 	{
 		return;
 	}
+
+	m_update_timer.stop();
 
 	for (auto sb : m_accel_spin_boxes)
 	{
@@ -480,4 +541,5 @@ void raw_mouse_settings_dialog::reactivate_buttons()
 	m_tab_widget->setEnabled(true);
 
 	m_mouse_release_timer.start(100ms);
+	m_update_timer.start(1000ms);
 }

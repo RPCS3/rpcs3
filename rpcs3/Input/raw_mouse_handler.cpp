@@ -211,9 +211,9 @@ void raw_mouse::update_values(const RAWMOUSE& state)
 }
 #endif
 
-raw_mouse_handler::raw_mouse_handler(bool ignore_config)
+raw_mouse_handler::raw_mouse_handler(bool is_for_gui)
 	: MouseHandlerBase()
-	, m_ignore_config(ignore_config)
+	, m_is_for_gui(is_for_gui)
 {
 }
 
@@ -284,36 +284,54 @@ void raw_mouse_handler::Init(const u32 max_connect)
 
 	type = mouse_handler::raw;
 
-	m_thread = std::make_unique<named_thread<std::function<void()>>>("Raw Mouse Thread", [this, max_connect]()
+	if (m_is_for_gui)
+	{
+		// No need for a thread. We call update_devices manually.
+		return;
+	}
+
+	m_thread = std::make_unique<named_thread<std::function<void()>>>("Raw Mouse Thread", [this]()
 	{
 		input_log.notice("raw_mouse_handler: thread started");
 
 		while (thread_ctrl::state() != thread_state::aborting)
 		{
-			enumerate_devices(max_connect);
+			update_devices();
 
-			// Update mouse info
-			std::set<u32> connected_mice{};
-			const u32 now_connect = get_now_connect(connected_mice);
-			{
-				std::lock_guard lock(mutex);
-
-				m_info.now_connect = std::min(now_connect, max_connect);
-
-				for (u32 i = 0; i < m_info.max_connect; i++)
-				{
-					m_info.status[i] = connected_mice.contains(i) ? CELL_MOUSE_STATUS_CONNECTED : CELL_MOUSE_STATUS_DISCONNECTED;
-				}
-			}
-
-#ifdef _WIN32
-			register_raw_input_devices();
-#endif
 			thread_ctrl::wait_for(1'000'000);
 		}
 
 		input_log.notice("raw_mouse_handler: thread stopped");
 	});
+}
+
+void raw_mouse_handler::update_devices()
+{
+	u32 max_connect;
+	{
+		std::lock_guard lock(mutex);
+		max_connect = m_info.max_connect;
+	}
+
+	enumerate_devices(max_connect);
+
+	// Update mouse info
+	std::set<u32> connected_mice{};
+	const u32 now_connect = get_now_connect(connected_mice);
+	{
+		std::lock_guard lock(mutex);
+
+		m_info.now_connect = std::min(now_connect, m_info.max_connect);
+
+		for (u32 i = 0; i < m_info.max_connect; i++)
+		{
+			m_info.status[i] = connected_mice.contains(i) ? CELL_MOUSE_STATUS_CONNECTED : CELL_MOUSE_STATUS_DISCONNECTED;
+		}
+	}
+
+#ifdef _WIN32
+	register_raw_input_devices();
+#endif
 }
 
 #ifdef _WIN32
@@ -443,7 +461,7 @@ void raw_mouse_handler::enumerate_devices(u32 max_connect)
 
 		const std::string device_name = wchar_to_utf8(buf.data());
 
-		if (m_ignore_config)
+		if (m_is_for_gui)
 		{
 			input_log.notice("raw_mouse_handler: adding device %d: '%s'", m_raw_mice.size(), device_name);
 			m_raw_mice[device.hDevice] = raw_mouse(::size32(m_raw_mice), device_name, device.hDevice, this);
