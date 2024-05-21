@@ -132,7 +132,7 @@ namespace rsx
 	{
 	}
 
-	u32 get_address(u32 offset, u32 location, u32 size_to_check, u32 line, u32 col, const char* file, const char* func)
+	u32 get_address(u32 offset, u32 location, u32 size_to_check, std::source_location src_loc)
 	{
 		const auto render = get_current_renderer();
 		std::string_view msg;
@@ -249,11 +249,11 @@ namespace rsx
 		{
 			// Allow failure if specified size
 			// This is to allow accurate recovery for failures
-			rsx_log.warning("rsx::get_address(offset=0x%x, location=0x%x, size=0x%x): %s%s", offset, location, size_to_check, msg, src_loc{line, col, file, func});
+			rsx_log.warning("rsx::get_address(offset=0x%x, location=0x%x, size=0x%x): %s%s", offset, location, size_to_check, msg, src_loc);
 			return 0;
 		}
 
-		fmt::throw_exception("rsx::get_address(offset=0x%x, location=0x%x): %s%s", offset, location, msg, src_loc{line, col, file, func});
+		fmt::throw_exception("rsx::get_address(offset=0x%x, location=0x%x): %s%s", offset, location, msg, src_loc);
 	}
 
 	extern void set_rsx_yield_flag() noexcept
@@ -3276,7 +3276,7 @@ namespace rsx
 		return pair;
 	}
 
-	void thread::recover_fifo(u32 line, u32 col, const char* file, const char* func)
+	void thread::recover_fifo(std::source_location src_loc)
 	{
 		bool kill_itself = g_cfg.core.rsx_fifo_accuracy == rsx_fifo_mode::as_ps3;
 
@@ -3301,7 +3301,7 @@ namespace rsx
 		if (kill_itself)
 		{
 			fmt::throw_exception("Dead FIFO commands queue state has been detected!"
-				"\nTry increasing \"Driver Wake-Up Delay\" setting or setting \"RSX FIFO Accuracy\" to \"%s\", both in Advanced settings. Called from %s", std::min<rsx_fifo_mode>(rsx_fifo_mode{static_cast<u32>(g_cfg.core.rsx_fifo_accuracy.get()) + 1}, rsx_fifo_mode::atomic_ordered), src_loc{line, col, file, func});
+				"\nTry increasing \"Driver Wake-Up Delay\" setting or setting \"RSX FIFO Accuracy\" to \"%s\", both in Advanced settings. Called from %s", std::min<rsx_fifo_mode>(rsx_fifo_mode{static_cast<u32>(g_cfg.core.rsx_fifo_accuracy.get()) + 1}, rsx_fifo_mode::atomic_ordered), src_loc);
 		}
 
 		// Error. Should reset the queue

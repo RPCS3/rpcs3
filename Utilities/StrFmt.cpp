@@ -414,22 +414,35 @@ void fmt_class_string<s128>::format(std::string& out, u64 arg)
 }
 
 template <>
-void fmt_class_string<src_loc>::format(std::string& out, u64 arg)
+void fmt_class_string<std::source_location>::format(std::string& out, u64 arg)
 {
-	const src_loc& loc = get_object(arg);
+	const std::source_location& loc = get_object(arg);
 
-	if (loc.col != umax)
+	auto is_valid = [](auto num)
 	{
-		fmt::append(out, "\n(in file %s:%u[:%u]", loc.file, loc.line, loc.col);
+		return num && num != umax;
+	};
+
+	const bool has_line = is_valid(loc.line());
+
+	if (has_line && is_valid(loc.column()))
+	{
+		fmt::append(out, "\n(in file %s:%u[:%u]", loc.file_name(), loc.line(), loc.column());
 	}
+	else if (has_line)
+	{
+		fmt::append(out, "\n(in file %s:%u", loc.file_name(), loc.line());
+	}
+	// Let's not care about such useless corner cases
+	// else if (is_valid(loc.column())
 	else
 	{
-		fmt::append(out, "\n(in file %s:%u", loc.file, loc.line);
+		fmt::append(out, "\n(in file %s", loc.file_name());
 	}
 
-	if (loc.func && *loc.func)
+	if (auto func = loc.function_name(); func && func[0])
 	{
-		fmt::append(out, ", in function %s)", loc.func);
+		fmt::append(out, ", in function %s)", func);
 	}
 	else
 	{
@@ -452,14 +465,14 @@ void fmt_class_string<src_loc>::format(std::string& out, u64 arg)
 
 namespace fmt
 {
-	[[noreturn]] void raw_verify_error(const src_loc& loc, const char8_t* msg)
+	[[noreturn]] void raw_verify_error(std::source_location loc, const char8_t* msg)
 	{
 		std::string out;
 		fmt::append(out, "%s%s", msg ? msg : u8"Verification failed", loc);
 		thread_ctrl::emergency_exit(out);
 	}
 
-	[[noreturn]] void raw_throw_exception(const src_loc& loc, const char* fmt, const fmt_type_info* sup, const u64* args)
+	[[noreturn]] void raw_throw_exception(std::source_location loc, const char* fmt, const fmt_type_info* sup, const u64* args)
 	{
 		std::string out;
 		raw_append(out, fmt, sup, args);

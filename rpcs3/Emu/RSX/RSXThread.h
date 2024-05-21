@@ -123,11 +123,7 @@ namespace rsx
 
 	u32 get_vertex_type_size_on_host(vertex_base_type type, u32 size);
 
-	u32 get_address(u32 offset, u32 location, u32 size_to_check = 0,
-		u32 line = __builtin_LINE(),
-		u32 col = __builtin_COLUMN(),
-		const char* file = __builtin_FILE(),
-		const char* func = __builtin_FUNCTION());
+	u32 get_address(u32 offset, u32 location, u32 size_to_check = 0, std::source_location src_loc = std::source_location::current());
 
 	struct backend_configuration
 	{
@@ -226,10 +222,7 @@ namespace rsx
 		// Returns [count of found commands, PC of their start]
 		std::pair<u32, u32> try_get_pc_of_x_cmds_backwards(s32 count, u32 get) const;
 
-		void recover_fifo(u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN(),
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION());
+		void recover_fifo(std::source_location src_loc = std::source_location::current());
 
 		static void fifo_wake_delay(u64 div = 1);
 		u32 get_fifo_cmd() const;

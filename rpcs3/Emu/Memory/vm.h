@@ -220,13 +220,9 @@ namespace vm
 	}
 
 	template<typename T> requires (std::is_integral_v<decltype(+T{})> && (sizeof(+T{}) > 4 || std::is_signed_v<decltype(+T{})>))
-	vm::addr_t cast(const T& addr,
-		u32 line = __builtin_LINE(),
-		u32 col = __builtin_COLUMN(),
-		const char* file = __builtin_FILE(),
-		const char* func = __builtin_FUNCTION())
+	vm::addr_t cast(const T& addr, std::source_location src_loc = std::source_location::current())
 	{
-		return vm::addr_t{::narrow<u32>(+addr, line, col, file, func)};
+		return vm::addr_t{::narrow<u32>(+addr, src_loc)};
 	}
 
 	template<typename T> requires (std::is_integral_v<decltype(+T{})> && (sizeof(+T{}) <= 4 && !std::is_signed_v<decltype(+T{})>))
