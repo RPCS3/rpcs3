@@ -83,7 +83,7 @@ raw_mouse_settings_dialog::raw_mouse_settings_dialog(QWidget* parent)
 				if (const int button_id = m_buttons->id(button); button_id >= 0)
 				{
 					auto& config = ::at32(g_cfg_raw_mouse.players, m_tab_widget->currentIndex());
-					const std::string name = config->get_button_by_index(button_id).to_string();
+					const std::string name = config->get_button_by_index(button_id % button_count).to_string();
 					button->setText(name.empty() ? QStringLiteral("-") : QString::fromStdString(name));
 				}
 			}
@@ -349,7 +349,7 @@ bool raw_mouse_settings_dialog::eventFilter(QObject* object, QEvent* event)
 				{
 					button->setText(QStringLiteral("-"));
 					auto& config = ::at32(g_cfg_raw_mouse.players, m_tab_widget->currentIndex());
-					config->get_button_by_index(button_id).from_string("");
+					config->get_button_by_index(button_id % button_count).from_string("");
 					return true;
 				}
 			}
