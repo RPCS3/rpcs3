@@ -8,7 +8,7 @@
 #pragma GCC diagnostic ignored "-Weffc++"
 #endif
 
-template<typename T, uint N>
+template <typename T, uint N>
 struct bf_base
 {
 	using type = T;
@@ -35,7 +35,7 @@ protected:
 };
 
 // Bitfield accessor (N bits from I position, 0 is LSB)
-template<typename T, uint I, uint N>
+template <typename T, uint I, uint N>
 struct bf_t : bf_base<T, N>
 {
 	using type = typename bf_t::type;
@@ -156,8 +156,17 @@ struct bf_t : bf_base<T, N>
 	}
 };
 
+template <typename T, uint I, uint N>
+struct std::common_type<bf_t<T, I, N>, bf_t<T, I, N>> : std::common_type<T> {};
+
+template <typename T, uint I, uint N, typename T2>
+struct std::common_type<bf_t<T, I, N>, T2> : std::common_type<T2, std::common_type_t<T>> {};
+
+template <typename T, uint I, uint N, typename T2>
+struct std::common_type<T2, bf_t<T, I, N>> : std::common_type<std::common_type_t<T>, T2> {};
+
 // Field pack (concatenated from left to right)
-template<typename F = void, typename... Fields>
+template <typename F = void, typename... Fields>
 struct cf_t : bf_base<typename F::type, F::bitsize + cf_t<Fields...>::bitsize>
 {
 	using type = typename cf_t::type;
@@ -198,7 +207,7 @@ struct cf_t : bf_base<typename F::type, F::bitsize + cf_t<Fields...>::bitsize>
 };
 
 // Empty field pack (recursion terminator)
-template<>
+template <>
 struct cf_t<void>
 {
 	static constexpr uint bitsize = 0;
@@ -208,13 +217,13 @@ struct cf_t<void>
 		return 0;
 	}
 
-	template<typename T>
+	template <typename T>
 	static constexpr auto extract(const T&) -> decltype(+T())
 	{
 		return 0;
 	}
 
-	template<typename T>
+	template <typename T>
 	static constexpr T insert(T /*value*/)
 	{
 		return 0;
@@ -222,7 +231,7 @@ struct cf_t<void>
 };
 
 // Fixed field (provides constant values in field pack)
-template<typename T, T V, uint N>
+template <typename T, T V, uint N>
 struct ff_t : bf_base<T, N>
 {
 	using type = typename ff_t::type;
@@ -246,7 +255,7 @@ struct ff_t : bf_base<T, N>
 #pragma GCC diagnostic pop
 #endif
 
-template<typename T, uint I, uint N>
+template <typename T, uint I, uint N>
 struct fmt_unveil<bf_t<T, I, N>, void>
 {
 	using type = typename fmt_unveil<std::common_type_t<T>>::type;
@@ -257,7 +266,7 @@ struct fmt_unveil<bf_t<T, I, N>, void>
 	}
 };
 
-template<typename F, typename... Fields>
+template <typename F, typename... Fields>
 struct fmt_unveil<cf_t<F, Fields...>, void>
 {
 	using type = typename fmt_unveil<std::common_type_t<typename F::type>>::type;
@@ -268,7 +277,7 @@ struct fmt_unveil<cf_t<F, Fields...>, void>
 	}
 };
 
-template<typename T, T V, uint N>
+template <typename T, T V, uint N>
 struct fmt_unveil<ff_t<T, V, N>, void>
 {
 	using type = typename fmt_unveil<std::common_type_t<T>>::type;
