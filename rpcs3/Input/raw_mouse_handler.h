@@ -89,6 +89,11 @@ public:
 private:
 	void enumerate_devices(u32 max_connect);
 
+#ifdef _WIN32
+	void register_raw_input_devices();
+	bool m_registered_raw_input_devices = false;
+#endif
+
 	bool m_ignore_config = false;
 	std::map<void*, raw_mouse> m_raw_mice;
 	std::function<void(const std::string&, s32, bool)> m_mouse_press_callback;
