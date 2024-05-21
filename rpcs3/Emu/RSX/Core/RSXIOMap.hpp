@@ -76,7 +76,7 @@ namespace rsx
 						added_wait |= !self->state.test_and_set(cpu_flag::wait);
 					}
 
-					if (!self || self->id_type() != 0x55u)
+					if (!self || self->get_class() != thread_class::rsx)
 					{
 						mutex_.lock();
 						continue;

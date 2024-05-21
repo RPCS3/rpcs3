@@ -1479,8 +1479,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->llvmPrecompilation, emu_settings_type::LLVMPrecompilation);
 	SubscribeTooltip(ui->llvmPrecompilation, tooltips.settings.llvm_precompilation);
 
-	m_emu_settings->EnhanceCheckBox(ui->suspendSavestates, emu_settings_type::SuspendEmulationSavestateMode);
-	SubscribeTooltip(ui->suspendSavestates, tooltips.settings.suspend_savestates);
+	m_emu_settings->EnhanceCheckBox(ui->antiCheatSavestates, emu_settings_type::SuspendEmulationSavestateMode);
+	SubscribeTooltip(ui->antiCheatSavestates, tooltips.settings.anti_cheat_savestates);
 
 	m_emu_settings->EnhanceCheckBox(ui->compatibleSavestates, emu_settings_type::CompatibleEmulationSavestateMode);
 	SubscribeTooltip(ui->compatibleSavestates, tooltips.settings.compatible_savestates);

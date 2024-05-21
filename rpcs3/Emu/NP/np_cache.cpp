@@ -269,7 +269,7 @@ namespace np
 
 		if (!addr_data || !ptr_member)
 		{
-			return needed_data_size;
+			return not_an_error(needed_data_size);
 		}
 
 		if (size_data < needed_data_size)
@@ -329,7 +329,7 @@ namespace np
 			}
 		}
 
-		return needed_data_size;
+		return not_an_error(needed_data_size);
 	}
 
 	std::pair<error_code, std::optional<SceNpId>> cache_manager::get_npid(u64 room_id, u16 member_id)

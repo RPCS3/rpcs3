@@ -43,23 +43,23 @@ extern atomic_t<bool> g_debugger_pause_all_threads_on_bp;
 
 extern const ppu_decoder<ppu_itype> g_ppu_itype;
 
-extern bool is_using_interpreter(u32 id_type)
+extern bool is_using_interpreter(thread_class t_class)
 {
-	switch (id_type)
+	switch (t_class)
 	{
-	case 1: return g_cfg.core.ppu_decoder != ppu_decoder_type::llvm;
-	case 2: return g_cfg.core.spu_decoder != spu_decoder_type::asmjit && g_cfg.core.spu_decoder != spu_decoder_type::llvm;
+	case thread_class::ppu: return g_cfg.core.ppu_decoder != ppu_decoder_type::llvm;
+	case thread_class::spu: return g_cfg.core.spu_decoder != spu_decoder_type::asmjit && g_cfg.core.spu_decoder != spu_decoder_type::llvm;
 	default: return true;
 	}
 }
 
 extern std::shared_ptr<CPUDisAsm> make_disasm(const cpu_thread* cpu)
 {
-	switch (cpu->id_type())
+	switch (cpu->get_class())
 	{
-	case 1: return std::make_shared<PPUDisAsm>(cpu_disasm_mode::interpreter, vm::g_sudo_addr);
-	case 2: return std::make_shared<SPUDisAsm>(cpu_disasm_mode::interpreter, static_cast<const spu_thread*>(cpu)->ls);
-	case 0x55: return std::make_shared<RSXDisAsm>(cpu_disasm_mode::interpreter, vm::g_sudo_addr, 0, cpu);
+	case thread_class::ppu: return std::make_shared<PPUDisAsm>(cpu_disasm_mode::interpreter, vm::g_sudo_addr);
+	case thread_class::spu: return std::make_shared<SPUDisAsm>(cpu_disasm_mode::interpreter, static_cast<const spu_thread*>(cpu)->ls);
+	case thread_class::rsx: return std::make_shared<RSXDisAsm>(cpu_disasm_mode::interpreter, vm::g_sudo_addr, 0, cpu);
 	default: return nullptr;
 	}
 }
@@ -388,7 +388,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 		return;
 	}
 
-	const u32 address_limits = (cpu->id_type() == 2 ? 0x3fffc : ~3);
+	const u32 address_limits = (cpu->get_class() == thread_class::spu ? 0x3fffc : ~3);
 	const u32 pc = (m_debugger_list->m_pc & address_limits);
 	const u32 selected = (m_debugger_list->m_showing_selected_instruction ? m_debugger_list->m_selected_instruction : cpu->get_pc()) & address_limits;
 
@@ -485,7 +485,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 			};
 
 
-			if (cpu->id_type() == 2 && g_cfg.core.mfc_debug)
+			if (cpu->get_class() == thread_class::spu && g_cfg.core.mfc_debug)
 			{
 				const u32 max = get_max_allowed(tr("Max MFC cmds logged"), tr("Decimal only, max allowed is %0."), spu_thread::max_mfc_dump_idx);
 
@@ -541,7 +541,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 
 				spu_log.success("SPU MFC dump of '%s': %s", cpu->get_name(), ret);
 			}
-			else if (cpu->id_type() == 1 && g_cfg.core.ppu_call_history)
+			else if (cpu->get_class() == thread_class::ppu && g_cfg.core.ppu_call_history)
 			{
 				const u32 max = get_max_allowed(tr("Max PPU calls logged"), tr("Decimal only, max allowed is %0."), ppu_thread::call_history_max_size);
 
@@ -603,7 +603,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 				break;
 			}
 
-			if (cpu->id_type() == 1 || cpu->id_type() == 2)
+			if (cpu->get_class() == thread_class::ppu || cpu->get_class() == thread_class::spu)
 			{
 				if (!m_inst_editor)
 				{
@@ -622,7 +622,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 				break;
 			}
 
-			if (cpu->id_type() == 1)
+			if (cpu->get_class() == thread_class::ppu)
 			{
 				static_cast<ppu_thread*>(cpu)->debugger_mode.atomic_op([](ppu_debugger_mode& mode)
 				{
@@ -631,7 +631,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 
 				return;
 			}
-			if (cpu->id_type() == 2)
+			if (cpu->get_class() == thread_class::spu)
 			{
 				static_cast<spu_thread*>(cpu)->debugger_mode.atomic_op([](spu_debugger_mode& mode)
 				{
@@ -650,9 +650,9 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 				break;
 			}
 
-			if (cpu->id_type() == 1 || cpu->id_type() == 2)
+			if (cpu->get_class() == thread_class::ppu || cpu->get_class() == thread_class::spu)
 			{
-				if (cpu->id_type() == 2 && modifiers & Qt::AltModifier)
+				if (cpu->get_class() == thread_class::spu && modifiers & Qt::AltModifier)
 				{
 					static_cast<spu_thread*>(cpu)->try_load_debug_capture();
 					return;
@@ -677,7 +677,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 
 			if (modifiers & Qt::AltModifier)
 			{
-				if (cpu->id_type() == 0x55)
+				if (cpu->get_class() == thread_class::rsx)
 				{
 					if (u32 addr = static_cast<rsx::thread*>(cpu)->label_addr)
 					{
@@ -688,13 +688,13 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 					return;
 				}
 
-				if (cpu->id_type() == 1)
+				if (cpu->get_class() == thread_class::ppu)
 				{
 					new elf_memory_dumping_dialog(pc, m_gui_settings, this);
 					return;
 				}
 
-				if (cpu->id_type() != 2)
+				if (cpu->get_class() != thread_class::spu)
 				{
 					return;
 				}
@@ -720,14 +720,14 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 
 			const u32 selected = (m_debugger_list->m_showing_selected_instruction ? m_debugger_list->m_selected_instruction : cpu->get_pc()) & address_limits;
 
-			switch (cpu->id_type())
+			switch (cpu->get_class())
 			{
-			case 2:
+			case thread_class::spu:
 			{
 				res = op_branch_targets(selected, spu_opcode_t{static_cast<spu_thread*>(cpu)->_ref<u32>(selected)});
 				break;
 			}
-			case 1:
+			case thread_class::ppu:
 			{
 				be_t<ppu_opcode_t> op{};
 
@@ -751,7 +751,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 				break;
 			}
 
-			if (m_disasm && cpu->id_type() == 2)
+			if (m_disasm && cpu->get_class() == thread_class::spu)
 			{
 				// Save shared pointer to shared memory handle, ensure the destructor will not be called until the SPUDisAsm is destroyed
 				static_cast<SPUDisAsm*>(m_disasm.get())->set_shm(static_cast<const spu_thread*>(cpu)->shm);
@@ -911,8 +911,8 @@ void debugger_frame::UpdateUI()
 	else if (m_ui_update_ctr % 5 == 0 || m_ui_update_ctr < m_ui_fast_update_permission_deadline)
 	{
 		const auto cia = cpu->get_pc();
-		const auto size_context = cpu->id_type() == 1 ? sizeof(ppu_thread) :
-			cpu->id_type() == 2 ? sizeof(spu_thread) : sizeof(cpu_thread);
+		const auto size_context = cpu->get_class() == thread_class::ppu ? sizeof(ppu_thread) :
+			cpu->get_class() == thread_class::spu ? sizeof(spu_thread) : sizeof(cpu_thread);
 
 		if (m_last_pc != cia || m_last_query_state.size() != size_context || std::memcmp(m_last_query_state.data(), static_cast<void *>(cpu), size_context))
 		{
@@ -940,7 +940,7 @@ void debugger_frame::UpdateUI()
 				ShowPC();
 			}
 
-			if (is_using_interpreter(cpu->id_type()))
+			if (is_using_interpreter(cpu->get_class()))
 			{
 				m_btn_step->setEnabled(paused);
 				m_btn_step_over->setEnabled(paused);
@@ -1188,7 +1188,7 @@ void debugger_frame::ShowGotoAddressDialog()
 	expression_input->setFont(m_mono);
 	expression_input->setMaxLength(18);
 
-	if (const auto thread = get_cpu(); !thread || thread->id_type() != 2)
+	if (const auto thread = get_cpu(); !thread || thread->get_class() != thread_class::spu)
 	{
 		expression_input->setValidator(new QRegularExpressionValidator(QRegularExpression("^(0[xX])?0*[a-fA-F0-9]{0,8}$"), this));
 	}
@@ -1343,7 +1343,7 @@ void debugger_frame::DoStep(bool step_over)
 {
 	if (const auto cpu = get_cpu())
 	{
-		bool should_step_over = step_over && cpu->id_type() == 1;
+		bool should_step_over = step_over && cpu->get_class() == thread_class::ppu;
 
 		// If stepping over, lay at the same spot and wait for the thread to finish the call
 		// If not, fixate on the current pointed instruction
@@ -1354,7 +1354,7 @@ void debugger_frame::DoStep(bool step_over)
 			m_debugger_list->ShowAddress(cpu->get_pc() + 4, false);
 		}
 
-		if (step_over && cpu->id_type() == 0x55)
+		if (step_over && cpu->get_class() == thread_class::rsx)
 		{
 			const bool was_paused = cpu->is_paused();
 			static_cast<rsx::thread*>(cpu)->pause_on_draw = true;
@@ -1370,7 +1370,7 @@ void debugger_frame::DoStep(bool step_over)
 
 		if (const auto _state = +cpu->state; _state & s_pause_flags && _state & cpu_flag::wait && !(_state & cpu_flag::dbg_step))
 		{
-			if (should_step_over && cpu->id_type() == 1)
+			if (should_step_over && cpu->get_class() == thread_class::ppu)
 			{
 				const u32 current_instruction_pc = cpu->get_pc();
 
@@ -1480,7 +1480,7 @@ void debugger_frame::EnableButtons(bool enable)
 
 	if (!cpu) enable = false;
 
-	const bool step = enable && is_using_interpreter(cpu->id_type());
+	const bool step = enable && is_using_interpreter(cpu->get_class());
 
 	m_go_to_addr->setEnabled(enable);
 	m_go_to_pc->setEnabled(enable);

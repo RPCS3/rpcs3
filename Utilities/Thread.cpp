@@ -1520,7 +1520,7 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 		return area->falloc(addr & -0x10000, 0x10000) || vm::check_addr(addr, is_writing ? vm::page_writable : vm::page_readable);
 	};
 
-	if (cpu && (cpu->id_type() == 1 || cpu->id_type() == 2))
+	if (cpu && (cpu->get_class() == thread_class::ppu || cpu->get_class() == thread_class::spu))
 	{
 		vm::temporary_unlock(*cpu);
 		u32 pf_port_id = 0;
@@ -1587,7 +1587,7 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 			auto& pf_events = g_fxo->get<page_fault_event_entries>();
 
 			// De-schedule
-			if (cpu->id_type() == 1)
+			if (cpu->get_class() == thread_class::ppu)
 			{
 				cpu->state -= cpu_flag::signal; // Cannot use check_state here and signal must be removed if exists
 				lv2_obj::sleep(*cpu);
@@ -1611,7 +1611,7 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 			sig_log.warning("Page_fault %s location 0x%x because of %s memory", is_writing ? "writing" : "reading",
 				addr, data3 == SYS_MEMORY_PAGE_FAULT_CAUSE_READ_ONLY ? "writing read-only" : "using unmapped");
 
-			if (cpu->id_type() == 1)
+			if (cpu->get_class() == thread_class::ppu)
 			{
 				if (const auto func = static_cast<ppu_thread*>(cpu)->current_function)
 				{
@@ -1661,7 +1661,7 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 			return true;
 		}
 
-		if (cpu->id_type() == 2)
+		if (cpu->get_class() == thread_class::spu)
 		{
 			if (!g_tls_access_violation_recovered)
 			{
@@ -1708,7 +1708,7 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 	// Do not log any further access violations in this case.
 	if (!g_tls_access_violation_recovered)
 	{
-		vm_log.fatal("Access violation %s location 0x%x (%s)", is_writing ? "writing" : (cpu && cpu->id_type() == 1 && cpu->get_pc() == addr ? "executing" : "reading"), addr, (is_writing && vm::check_addr(addr)) ? "read-only memory" : "unmapped memory");
+		vm_log.fatal("Access violation %s location 0x%x (%s)", is_writing ? "writing" : (cpu && cpu->get_class() == thread_class::ppu && cpu->get_pc() == addr ? "executing" : "reading"), addr, (is_writing && vm::check_addr(addr)) ? "read-only memory" : "unmapped memory");
 	}
 
 	while (Emu.IsPaused())
@@ -2912,7 +2912,7 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
 							spu_mask = 0b0000101010101010;
 							rsx_mask = 0b1000000000000000;
 						}
-						else
+						else // if (g_cfg.core.thread_scheduler == thread_scheduler_mode::old)
 						{
 							ppu_mask = 0b1111111100000000;
 							spu_mask = ppu_mask;
@@ -2953,7 +2953,7 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
 						spu_mask = 0b1111111100000000;
 						rsx_mask = 0b0000000000001111;
 					}
-					else
+					else // if (g_cfg.core.thread_scheduler == thread_scheduler_mode::old)
 					{
 						// Verified by more than one windows user on 16-thread CPU
 						ppu_mask = spu_mask = rsx_mask = (0b10101010101010101010101010101010 & all_cores_mask);
@@ -2967,7 +2967,7 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
 						spu_mask = 0b111111110000;
 						rsx_mask = 0b000000000011;
 					}
-					else
+					else // if (g_cfg.core.thread_scheduler == thread_scheduler_mode::old)
 					{
 						ppu_mask = spu_mask = rsx_mask = all_cores_mask;
 					}

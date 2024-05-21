@@ -118,6 +118,11 @@ public:
 		return id >> 24;
 	}
 
+	thread_class get_class() const
+	{
+		return static_cast<thread_class>(id_type()); // Static cast for performance reasons
+	}
+
 	template <DerivedFrom<cpu_thread> T>
 	T* try_get()
 	{

@@ -5,6 +5,7 @@
 #include "Emu/system_config.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/timers.hpp"
+#include "Emu/Memory/vm_reservation.h"
 #include "Crypto/sha1.h"
 #include "Utilities/JIT.h"
 
@@ -533,6 +534,14 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	llvm::Value* _ptr(llvm::Value* base, u32 offset)
 	{
 		return m_ir->CreateGEP(get_type<u8>(), base, m_ir->getInt64(offset));
+	}
+
+	template <typename T = u8>
+	llvm::Value* _ptr(llvm::Value* base, llvm::Value* offset)
+	{
+		const auto off = m_ir->CreateGEP(get_type<u8>(), base, offset);
+		const auto ptr = m_ir->CreateBitCast(off, get_type<T*>());
+		return ptr;
 	}
 
 	template <typename T, typename... Args>
@@ -1079,6 +1088,279 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		m_ir->SetInsertPoint(_body);
 	}
 
+	void putllc16_pattern(const spu_program& prog, utils::address_range range)
+	{
+		// Prevent store elimination
+		m_block->store_context_ctr[s_reg_mfc_eal]++;
+		m_block->store_context_ctr[s_reg_mfc_lsa]++;
+		m_block->store_context_ctr[s_reg_mfc_tag]++;
+		m_block->store_context_ctr[s_reg_mfc_size]++;
+
+		static const auto on_fail = [](spu_thread* _spu, u32 addr)
+		{
+			if (const u32 raddr = _spu->raddr)
+			{
+				// Last check for event before we clear the reservation
+				if (~_spu->ch_events.load().events & SPU_EVENT_LR)
+				{
+					if (raddr == addr)
+					{
+						_spu->set_events(SPU_EVENT_LR);
+					}
+					else
+					{
+						_spu->get_events(SPU_EVENT_LR);
+					}
+				}
+
+				_spu->raddr = 0;
+			}
+		};
+
+		const union putllc16_info
+		{
+			u32 data;
+			bf_t<u32, 30, 2> type;
+			bf_t<u32, 29, 1> runtime16_select;
+			bf_t<u32, 28, 1> no_notify;
+			bf_t<u32, 18, 8> reg;
+			bf_t<u32, 0, 18> off18;
+			bf_t<u32, 0, 8> reg2;
+		} info = std::bit_cast<putllc16_info>(range.end);
+
+		enum : u32
+		{
+			v_const = 0,
+			v_relative = 1,
+			v_reg_offs = 2,
+			v_reg2 = 3,
+		};
+
+		const auto _raddr_match = llvm::BasicBlock::Create(m_context, "__raddr_match", m_function);
+		const auto _lock_success = llvm::BasicBlock::Create(m_context, "__putllc16_lock", m_function);
+		const auto _begin_op = llvm::BasicBlock::Create(m_context, "__putllc16_begin", m_function);
+		const auto _repeat_lock = llvm::BasicBlock::Create(m_context, "__putllc16_repeat", m_function);
+		const auto _repeat_lock_fail = llvm::BasicBlock::Create(m_context, "__putllc16_lock_fail", m_function);
+		const auto _success = llvm::BasicBlock::Create(m_context, "__putllc16_success", m_function);
+		const auto _inc_res = llvm::BasicBlock::Create(m_context, "__putllc16_inc_resv", m_function);
+		const auto _inc_res_unlocked = llvm::BasicBlock::Create(m_context, "__putllc16_inc_resv_unlocked", m_function);
+		const auto _success_and_unlock = llvm::BasicBlock::Create(m_context, "__putllc16_succ_unlock", m_function);
+		const auto _fail = llvm::BasicBlock::Create(m_context, "__putllc16_fail", m_function);
+		const auto _fail_and_unlock = llvm::BasicBlock::Create(m_context, "__putllc16_unlock", m_function);
+		const auto _final = llvm::BasicBlock::Create(m_context, "__putllc16_final", m_function);
+
+		const auto _eal = (get_reg_fixed<u32>(s_reg_mfc_eal) & -128).eval(m_ir);
+		const auto _raddr = m_ir->CreateLoad(get_type<u32>(), spu_ptr<u32>(&spu_thread::raddr));
+
+		m_ir->CreateCondBr(m_ir->CreateAnd(m_ir->CreateICmpEQ(_eal, _raddr), m_ir->CreateIsNotNull(_raddr)), _raddr_match, _fail, m_md_likely);
+		m_ir->SetInsertPoint(_raddr_match);
+
+		value_t<u32> eal_val;
+		eal_val.value = _eal;
+
+		auto get_reg32 = [&](u32 reg)
+		{
+			if (get_reg_type(reg) != get_type<u32[4]>())
+			{
+				return get_reg_fixed(reg, get_type<u32>());
+			}
+
+			return extract(get_reg_fixed(reg), 3).eval(m_ir);
+		};
+
+		const auto _lsa = (get_reg_fixed<u32>(s_reg_mfc_lsa) & 0x3ff80).eval(m_ir);
+
+		llvm::Value* dest{};
+
+		if (info.type == v_const)
+		{
+			dest = m_ir->getInt32(info.off18);
+		}
+		else if (info.type == v_relative)
+		{
+			dest = m_ir->CreateAnd(get_pc(spu_branch_target(info.off18 + m_base)), 0x3fff0);
+		}
+		else if (info.type == v_reg_offs)
+		{
+			dest = m_ir->CreateAnd(m_ir->CreateAdd(get_reg32(info.reg), m_ir->getInt32(info.off18)), 0x3fff0);
+		}
+		else
+		{
+			dest = m_ir->CreateAnd(m_ir->CreateAdd(get_reg32(info.reg), get_reg32(info.reg2)), 0x3fff0);
+		}
+
+		const auto diff = m_ir->CreateZExt(m_ir->CreateSub(dest, _lsa), get_type<u64>());
+
+		const auto _new = m_ir->CreateAlignedLoad(get_type<u128>(), _ptr<u128>(m_lsptr, dest), llvm::MaybeAlign{16});
+		const auto _rdata = m_ir->CreateAlignedLoad(get_type<u128>(), _ptr<u128>(spu_ptr<u8>(&spu_thread::rdata), m_ir->CreateAnd(diff, 0x7f)), llvm::MaybeAlign{16});
+
+		const bool is_accurate_op = false && !!g_cfg.core.spu_accurate_reservations;
+
+		const auto compare_data_change_res = is_accurate_op ? m_ir->getTrue() : m_ir->CreateICmpNE(_new, _rdata);
+
+		if (info.runtime16_select)
+		{
+			m_ir->CreateCondBr(m_ir->CreateAnd(m_ir->CreateICmpULT(diff, m_ir->getInt64(128)), compare_data_change_res), _begin_op, _inc_res, m_md_likely);
+		}
+		else
+		{
+			m_ir->CreateCondBr(compare_data_change_res, _begin_op, _inc_res, m_md_unlikely);
+		}
+
+		m_ir->SetInsertPoint(_begin_op);
+
+		// Touch memory (on the opposite side of the page)
+		m_ir->CreateAtomicRMW(llvm::AtomicRMWInst::Or, _ptr<u8>(m_memptr, m_ir->CreateXor(_eal, 4096 / 2)), m_ir->getInt8(0), llvm::MaybeAlign{16}, llvm::AtomicOrdering::SequentiallyConsistent);
+
+		const auto rptr = _ptr<u64>(m_ir->CreateLoad(get_type<u8*>(), spu_ptr<u8*>(&spu_thread::reserv_base_addr)), ((eal_val & 0xff80) >> 1).eval(m_ir));
+		const auto rtime = m_ir->CreateLoad(get_type<u64>(), spu_ptr<u64>(&spu_thread::rtime));
+
+		m_ir->CreateBr(_repeat_lock);
+		m_ir->SetInsertPoint(_repeat_lock);
+
+		const auto rval = m_ir->CreatePHI(get_type<u64>(), 2);
+		rval->addIncoming(rtime, _begin_op);
+
+		// Lock reservation
+		const auto cmp_res = m_ir->CreateAtomicCmpXchg(rptr, rval, m_ir->CreateOr(rval, 0x7f), llvm::MaybeAlign{16}, llvm::AtomicOrdering::SequentiallyConsistent, llvm::AtomicOrdering::SequentiallyConsistent);
+
+		m_ir->CreateCondBr(m_ir->CreateExtractValue(cmp_res, 1), _lock_success, _repeat_lock_fail, m_md_likely);
+
+		m_ir->SetInsertPoint(_repeat_lock_fail);
+
+		const auto last_rval = m_ir->CreateExtractValue(cmp_res, 0);
+		rval->addIncoming(last_rval, _repeat_lock_fail);
+		m_ir->CreateCondBr(is_accurate_op ? m_ir->CreateICmpEQ(last_rval, rval) : m_ir->CreateIsNull(m_ir->CreateAnd(last_rval, 0x7f)), _repeat_lock, _fail);
+
+		m_ir->SetInsertPoint(_lock_success);
+
+		// Commit 16 bytes compare-exchange
+		const auto sudo_ptr = _ptr<u8>(m_ir->CreateLoad(get_type<u8*>(), spu_ptr<u8*>(&spu_thread::memory_sudo_addr)), _eal);
+
+		m_ir->CreateCondBr(
+			m_ir->CreateExtractValue(m_ir->CreateAtomicCmpXchg(_ptr<u128>(sudo_ptr, diff), _rdata, _new, llvm::MaybeAlign{16}, llvm::AtomicOrdering::SequentiallyConsistent, llvm::AtomicOrdering::SequentiallyConsistent), 1)
+			, _success_and_unlock
+			, _fail_and_unlock);
+
+		// Unlock and notify
+		m_ir->SetInsertPoint(_success_and_unlock);
+		m_ir->CreateAlignedStore(m_ir->CreateAdd(rval, m_ir->getInt64(128)), rptr, llvm::MaybeAlign{8});
+
+		if (!info.no_notify)
+		{
+			call("atomic_wait_engine::notify_all", static_cast<void(*)(const void*)>(atomic_wait_engine::notify_all), rptr);
+		}
+
+		m_ir->CreateBr(_success);
+
+		// Perform unlocked vm::reservation_update if no physical memory changes needed
+		m_ir->SetInsertPoint(_inc_res);
+		const auto rptr2 = _ptr<u64>(m_ir->CreateLoad(get_type<u8*>(), spu_ptr<u8*>(&spu_thread::reserv_base_addr)), ((eal_val & 0xff80) >> 1).eval(m_ir));
+
+		llvm::Value* old_val{};
+
+		if (is_accurate_op)
+		{
+			old_val = m_ir->CreateLoad(get_type<u64>(), spu_ptr<u64>(&spu_thread::rtime));
+		}
+		else
+		{
+			old_val = m_ir->CreateAlignedLoad(get_type<u64>(), rptr2, llvm::MaybeAlign{8});
+			m_ir->CreateCondBr(m_ir->CreateIsNotNull(m_ir->CreateAnd(old_val, 0x7f)), _success, _inc_res_unlocked);
+			m_ir->SetInsertPoint(_inc_res_unlocked);
+		}
+
+		const auto cmp_res2 = m_ir->CreateAtomicCmpXchg(rptr2, old_val, m_ir->CreateAdd(old_val, m_ir->getInt64(128)), llvm::MaybeAlign{16}, llvm::AtomicOrdering::SequentiallyConsistent, llvm::AtomicOrdering::SequentiallyConsistent);
+
+		if (is_accurate_op)
+		{
+			m_ir->CreateCondBr(m_ir->CreateExtractValue(cmp_res2, 1), _success, _fail);
+		}
+		else
+		{
+			m_ir->CreateBr(_success);
+		}
+
+		m_ir->SetInsertPoint(_success);
+		m_ir->CreateStore(m_ir->getInt64(spu_channel::bit_count | MFC_PUTLLC_SUCCESS), spu_ptr<u64>(&spu_thread::ch_atomic_stat));
+		m_ir->CreateStore(m_ir->getInt32(0), spu_ptr<u32>(&spu_thread::raddr));
+		m_ir->CreateBr(_final);
+
+		m_ir->SetInsertPoint(_fail_and_unlock);
+		m_ir->CreateAlignedStore(rval, rptr, llvm::MaybeAlign{8});
+		m_ir->CreateBr(_fail);
+
+		m_ir->SetInsertPoint(_fail);
+		call("PUTLLC16_fail", +on_fail, m_thread, _eal);
+		m_ir->CreateStore(m_ir->getInt64(spu_channel::bit_count | MFC_PUTLLC_FAILURE), spu_ptr<u64>(&spu_thread::ch_atomic_stat));
+		m_ir->CreateBr(_final);
+
+		m_ir->SetInsertPoint(_final);
+	}
+
+	void putllc0_pattern(const spu_program& prog, utils::address_range range)
+	{
+		// Prevent store elimination
+		m_block->store_context_ctr[s_reg_mfc_eal]++;
+		m_block->store_context_ctr[s_reg_mfc_lsa]++;
+		m_block->store_context_ctr[s_reg_mfc_tag]++;
+		m_block->store_context_ctr[s_reg_mfc_size]++;
+
+		static const auto on_fail = [](spu_thread* _spu, u32 addr)
+		{
+			if (const u32 raddr = _spu->raddr)
+			{
+				// Last check for event before we clear the reservation
+				if (~_spu->ch_events.load().events & SPU_EVENT_LR)
+				{
+					if (raddr == addr)
+					{
+						_spu->set_events(SPU_EVENT_LR);
+					}
+					else
+					{
+						_spu->get_events(SPU_EVENT_LR);
+					}
+				}
+				_spu->raddr = 0;
+			}
+		};
+
+		const auto _next = llvm::BasicBlock::Create(m_context, "", m_function);
+		const auto _next0 = llvm::BasicBlock::Create(m_context, "", m_function);
+		const auto _fail = llvm::BasicBlock::Create(m_context, "", m_function);
+		const auto _final = llvm::BasicBlock::Create(m_context, "", m_function);
+
+		const auto _eal = (get_reg_fixed<u32>(s_reg_mfc_eal) & -128).eval(m_ir);
+		const auto _raddr = m_ir->CreateLoad(get_type<u32>(), spu_ptr<u32>(&spu_thread::raddr));
+
+		m_ir->CreateCondBr(m_ir->CreateAnd(m_ir->CreateICmpEQ(_eal, _raddr), m_ir->CreateIsNotNull(_raddr)), _next, _fail, m_md_likely);
+		m_ir->SetInsertPoint(_next);
+
+		value_t<u32> eal_val;
+		eal_val.value = _eal;
+
+		const auto rptr = _ptr<u64>(m_ir->CreateLoad(get_type<u8*>(), spu_ptr<u8*>(&spu_thread::reserv_base_addr)), ((eal_val & 0xff80) >> 1).eval(m_ir));
+		const auto rval = m_ir->CreateLoad(get_type<u64>(), spu_ptr<u64>(&spu_thread::rtime));
+		m_ir->CreateCondBr(
+			m_ir->CreateExtractValue(m_ir->CreateAtomicCmpXchg(rptr, rval, m_ir->CreateAdd(rval, m_ir->getInt64(128)), llvm::MaybeAlign{16}, llvm::AtomicOrdering::SequentiallyConsistent, llvm::AtomicOrdering::SequentiallyConsistent), 1)
+			, _next0
+			, g_cfg.core.spu_accurate_reservations ? _fail : _next0); // Succeed unconditionally
+
+		m_ir->SetInsertPoint(_next0);
+		//call("atomic_wait_engine::notify_all", static_cast<void(*)(const void*)>(atomic_wait_engine::notify_all), rptr);
+		m_ir->CreateStore(m_ir->getInt64(spu_channel::bit_count | MFC_PUTLLC_SUCCESS), spu_ptr<u64>(&spu_thread::ch_atomic_stat));
+		m_ir->CreateBr(_final);
+
+		m_ir->SetInsertPoint(_fail);
+		call("PUTLLC0_fail", +on_fail, m_thread, _eal);
+		m_ir->CreateStore(m_ir->getInt64(spu_channel::bit_count | MFC_PUTLLC_FAILURE), spu_ptr<u64>(&spu_thread::ch_atomic_stat));
+		m_ir->CreateBr(_final);
+
+		m_ir->SetInsertPoint(_final);
+		m_ir->CreateStore(m_ir->getInt32(0), spu_ptr<u32>(&spu_thread::raddr));
+	}
+
 public:
 	spu_llvm_recompiler(u8 interp_magn = 0)
 		: spu_recompiler_base()
@@ -1621,6 +1903,26 @@ public:
 						m_next_op = 0;
 					else
 						m_next_op = func.data[(m_pos - start) / 4 + 1];
+
+					switch (m_inst_attrs[(m_pos - start) / 4])
+					{
+					case inst_attr::putllc0:
+					{
+						putllc0_pattern(func, m_patterns.at(m_pos - start).range);
+						continue;
+					}
+					case inst_attr::putllc16:
+					{
+						putllc16_pattern(func, m_patterns.at(m_pos - start).range);
+						continue;
+					}
+					case inst_attr::omit:
+					{
+						// TODO
+						continue;
+					}
+					default: break;
+					}
 
 					// Execute recompiler function (TODO)
 					(this->*decode(op))({op});

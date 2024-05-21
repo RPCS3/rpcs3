@@ -1163,12 +1163,12 @@ void fs::sync()
 #endif
 }
 
-[[noreturn]] void fs::xnull(const src_loc& loc)
+[[noreturn]] void fs::xnull(std::source_location loc)
 {
 	fmt::throw_exception("Null object.%s", loc);
 }
 
-[[noreturn]] void fs::xfail(const src_loc& loc)
+[[noreturn]] void fs::xfail(std::source_location loc)
 {
 	fmt::throw_exception("Unexpected fs::error %s%s", g_tls_error, loc);
 }

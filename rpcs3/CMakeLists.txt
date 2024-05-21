@@ -76,6 +76,7 @@ target_sources(rpcs3
     Input/keyboard_pad_handler.cpp
     Input/mm_joystick_handler.cpp
     Input/pad_thread.cpp
+    Input/product_info.cpp
     Input/raw_mouse_handler.cpp
     Input/sdl_pad_handler.cpp
     Input/skateboard_pad_handler.cpp

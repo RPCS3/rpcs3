@@ -61,6 +61,9 @@ void fmt_class_string<CellSysutilAvc2AttributeId>::format(std::string& out, u64 
 	});
 }
 
+// Callback handle tag type
+struct avc2_cb_handle_t{};
+
 struct avc2_settings
 {
 	avc2_settings() = default;
@@ -70,8 +73,10 @@ struct avc2_settings
 
 	SAVESTATE_INIT_POS(52);
 
+	shared_mutex mutex_cb;
 	vm::ptr<CellSysutilAvc2Callback> avc2_cb{};
 	vm::ptr<void> avc2_cb_arg{};
+
 	u32 streaming_mode = CELL_SYSUTIL_AVC2_STREAMING_MODE_NORMAL;
 	u8 mic_out_stream_sharing = 0;
 	u8 video_stream_sharing = 0;
@@ -110,6 +115,41 @@ struct avc2_settings
 			ar(voice_muting_players, voice_muting, video_muting, speaker_muting, speaker_volume_level);
 		}
 	}
+
+	void register_cb_call(u32 event, u32 error_code)
+	{
+		// This is equivalent to the dispatcher code
+		sysutil_register_cb_with_id<avc2_cb_handle_t>([=, this](ppu_thread& cb_ppu) -> s32
+			{
+				vm::ptr<CellSysutilAvc2Callback> avc2_cb{};
+				vm::ptr<void> avc2_cb_arg{};
+
+				{
+					std::lock_guard lock(this->mutex_cb);
+					avc2_cb = this->avc2_cb;
+					avc2_cb_arg = this->avc2_cb_arg;
+				}
+
+				if (avc2_cb)
+				{
+					avc2_cb(cb_ppu, event, error_code, avc2_cb_arg);
+
+					if ((event == CELL_AVC2_EVENT_LOAD_FAILED ||
+							event == CELL_AVC2_EVENT_UNLOAD_SUCCEEDED ||
+							event == CELL_AVC2_EVENT_UNLOAD_FAILED) &&
+						error_code < 2)
+					{
+						sysutil_unregister_cb_with_id<avc2_cb_handle_t>();
+
+						std::lock_guard lock(this->mutex_cb);
+						this->avc2_cb = vm::null;
+						this->avc2_cb_arg = vm::null;
+					}
+				}
+
+				return 0;
+			});
+	}
 };
 
 error_code cellSysutilAvc2GetPlayerInfo(vm::cptr<SceNpMatching2RoomMemberId> player_id, vm::ptr<CellSysutilAvc2PlayerInfo> player_info)
@@ -121,7 +161,7 @@ error_code cellSysutilAvc2GetPlayerInfo(vm::cptr<SceNpMatching2RoomMemberId> pla
 
 	player_info->connected = 1;
 	player_info->joined = 1;
-	player_info->mic_attached = 0;
+	player_info->mic_attached = CELL_AVC2_MIC_STATUS_DETACHED;
 	player_info->member_id = *player_id;
 
 	return CELL_OK;
@@ -429,11 +469,14 @@ error_code cellSysutilAvc2Unload()
 
 	auto& settings = g_fxo->get<avc2_settings>();
 
+	std::lock_guard lock(settings.mutex_cb);
+
 	if (!settings.avc2_cb)
 	{
 		return CELL_AVC2_ERROR_NOT_INITIALIZED;
 	}
 
+	sysutil_unregister_cb_with_id<avc2_cb_handle_t>();
 	settings.avc2_cb = vm::null;
 	settings.avc2_cb_arg = vm::null;
 
@@ -445,18 +488,7 @@ error_code cellSysutilAvc2UnloadAsync()
 	cellSysutilAvc2.todo("cellSysutilAvc2UnloadAsync()");
 
 	auto& settings = g_fxo->get<avc2_settings>();
-
-	if (settings.avc2_cb)
-	{
-		sysutil_register_cb([=, avc2_cb = settings.avc2_cb, avc2_cb_arg = settings.avc2_cb_arg](ppu_thread& cb_ppu) -> s32
-		{
-			avc2_cb(cb_ppu, CELL_AVC2_EVENT_UNLOAD_SUCCEEDED, 0, avc2_cb_arg);
-			return 0;
-		});
-	}
-
-	settings.avc2_cb = vm::null;
-	settings.avc2_cb_arg = vm::null;
+	settings.register_cb_call(CELL_AVC2_EVENT_UNLOAD_SUCCEEDED, 0);
 
 	return CELL_OK;
 }
@@ -555,7 +587,7 @@ error_code cellSysutilAvc2JoinChatRequest(vm::cptr<SceNpMatching2RoomId> room_id
 
 	// NOTE: room_id should be null if the current mode is Direct WAN/LAN
 
-	const auto& settings = g_fxo->get<avc2_settings>();
+	auto& settings = g_fxo->get<avc2_settings>();
 
 	[[maybe_unused]] u64 id = 0UL;
 
@@ -569,15 +601,7 @@ error_code cellSysutilAvc2JoinChatRequest(vm::cptr<SceNpMatching2RoomId> room_id
 	}
 
 	// TODO: join chat
-
-	if (settings.avc2_cb)
-	{
-		sysutil_register_cb([=, avc2_cb = settings.avc2_cb, avc2_cb_arg = settings.avc2_cb_arg](ppu_thread& cb_ppu) -> s32
-		{
-			avc2_cb(cb_ppu, CELL_AVC2_EVENT_JOIN_SUCCEEDED, 0, avc2_cb_arg);
-			return 0;
-		});
-	}
+	settings.register_cb_call(CELL_AVC2_EVENT_JOIN_SUCCEEDED, 0);
 
 	return CELL_OK;
 }
@@ -675,16 +699,8 @@ error_code cellSysutilAvc2LeaveChatRequest()
 {
 	cellSysutilAvc2.notice("cellSysutilAvc2LeaveChatRequest()");
 
-	const auto& settings = g_fxo->get<avc2_settings>();
-
-	if (settings.avc2_cb)
-	{
-		sysutil_register_cb([=, avc2_cb = settings.avc2_cb, avc2_cb_arg = settings.avc2_cb_arg](ppu_thread& cb_ppu) -> s32
-		{
-			avc2_cb(cb_ppu, CELL_AVC2_EVENT_LEAVE_SUCCEEDED, 0, avc2_cb_arg);
-			return 0;
-		});
-	}
+	auto& settings = g_fxo->get<avc2_settings>();
+	settings.register_cb_call(CELL_AVC2_EVENT_LEAVE_SUCCEEDED, 0);
 
 	return CELL_OK;
 }
@@ -858,6 +874,8 @@ error_code cellSysutilAvc2Load_shared(SceNpMatching2ContextId /*ctx_id*/, u32 /*
 			return CELL_AVC2_ERROR_INVALID_ARGUMENT;
 		}
 
+		std::lock_guard lock(settings.mutex_cb);
+
 		if (settings.avc2_cb)
 		{
 			return CELL_AVC2_ERROR_ALREADY_INITIALIZED;
@@ -962,15 +980,7 @@ error_code cellSysutilAvc2LoadAsync(SceNpMatching2ContextId ctx_id, u32 containe
 		return error;
 
 	auto& settings = g_fxo->get<avc2_settings>();
-
-	if (settings.avc2_cb && init_param && init_param->media_type == CELL_SYSUTIL_AVC2_VOICE_CHAT)
-	{
-		sysutil_register_cb([=, avc2_cb = settings.avc2_cb, avc2_cb_arg = settings.avc2_cb_arg](ppu_thread& cb_ppu) -> s32
-		{
-			avc2_cb(cb_ppu, CELL_AVC2_EVENT_LOAD_SUCCEEDED, 0, avc2_cb_arg);
-			return 0;
-		});
-	}
+	settings.register_cb_call(CELL_AVC2_EVENT_LOAD_SUCCEEDED, 0);
 
 	return CELL_OK;
 }
@@ -1026,13 +1036,15 @@ error_code cellSysutilAvc2Unload2(u32 mediaType)
 	{
 	case CELL_SYSUTIL_AVC2_VOICE_CHAT:
 	{
+		std::lock_guard lock(settings.mutex_cb);
+
 		if (!settings.avc2_cb)
 		{
 			return CELL_AVC2_ERROR_NOT_INITIALIZED;
 		}
 
 		// TODO: return error if the video chat is still loaded (probably CELL_AVC2_ERROR_INVALID_STATUS)
-
+		sysutil_unregister_cb_with_id<avc2_cb_handle_t>();
 		settings.avc2_cb = vm::null;
 		settings.avc2_cb_arg = vm::null;
 		break;
@@ -1058,29 +1070,10 @@ error_code cellSysutilAvc2UnloadAsync2(u32 mediaType)
 
 	auto& settings = g_fxo->get<avc2_settings>();
 
-	if (settings.avc2_cb)
-	{
-		if (mediaType == CELL_SYSUTIL_AVC2_VOICE_CHAT)
-		{
-			// TODO: signal CELL_AVC2_EVENT_UNLOAD_FAILED instead if the video chat is still loaded
-		}
-
-		sysutil_register_cb([=, avc2_cb = settings.avc2_cb, avc2_cb_arg = settings.avc2_cb_arg](ppu_thread& cb_ppu) -> s32
-		{
-			avc2_cb(cb_ppu, CELL_AVC2_EVENT_UNLOAD_SUCCEEDED, 0, avc2_cb_arg);
-			return 0;
-		});
-
-		if (mediaType == CELL_SYSUTIL_AVC2_VOICE_CHAT)
-		{
-			settings.avc2_cb = vm::null;
-			settings.avc2_cb_arg = vm::null;
-		}
-		else
-		{
-			// TODO: unload video chat.
-		}
-	}
+	if (mediaType == CELL_SYSUTIL_AVC2_VOICE_CHAT)
+		settings.register_cb_call(CELL_AVC2_EVENT_UNLOAD_SUCCEEDED, 0);
+	else
+		settings.register_cb_call(CELL_AVC2_EVENT_UNLOAD_SUCCEEDED, 2);
 
 	return CELL_OK;
 }

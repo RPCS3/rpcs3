@@ -388,10 +388,10 @@ namespace cpu_counter
 {
 	void add(cpu_thread* _this) noexcept
 	{
-		switch (_this->id_type())
+		switch (_this->get_class())
 		{
-		case 1:
-		case 2:
+		case thread_class::ppu:
+		case thread_class::spu:
 			break;
 		default: return;
 		}
@@ -521,7 +521,7 @@ void cpu_thread::operator()()
 
 	if (g_cfg.core.thread_scheduler != thread_scheduler_mode::os)
 	{
-		thread_ctrl::set_thread_affinity_mask(thread_ctrl::get_affinity_mask(id_type() == 1 ? thread_class::ppu : thread_class::spu));
+		thread_ctrl::set_thread_affinity_mask(thread_ctrl::get_affinity_mask(get_class()));
 	}
 
 	while (!g_fxo->is_init<cpu_profiler>())
@@ -535,14 +535,14 @@ void cpu_thread::operator()()
 		thread_ctrl::wait_for(1000);
 	}
 
-	switch (id_type())
+	switch (get_class())
 	{
-	case 1:
+	case thread_class::ppu:
 	{
 		//g_fxo->get<cpu_profiler>().registered.push(id);
 		break;
 	}
-	case 2:
+	case thread_class::spu:
 	{
 		if (g_cfg.core.spu_prof)
 		{
@@ -557,7 +557,7 @@ void cpu_thread::operator()()
 	// Register thread in g_cpu_array
 	s_cpu_counter++;
 
-	atomic_wait_engine::set_notify_callback(g_use_rtm || id_type() != 1 /* PPU */ ? nullptr : +[](const void*, u64 progress)
+	atomic_wait_engine::set_notify_callback(g_use_rtm || get_class() != thread_class::ppu ? nullptr : +[](const void*, u64 progress)
 	{
 		static thread_local bool wait_set = false;
 
@@ -1027,17 +1027,26 @@ void cpu_thread::notify()
 	state.notify_one();
 
 	// Downcast to correct type
-	if (id_type() == 1)
+	switch (get_class())
+	{
+	case thread_class::ppu:
 	{
 		thread_ctrl::notify(*static_cast<named_thread<ppu_thread>*>(this));
+		break;
 	}
-	else if (id_type() == 2)
+	case thread_class::spu:
 	{
 		thread_ctrl::notify(*static_cast<named_thread<spu_thread>*>(this));
+		break;
 	}
-	else if (id_type() != 0x55)
+	case thread_class::rsx:
+	{
+		break;
+	}
+	default:
 	{
 		fmt::throw_exception("Invalid cpu_thread type");
+	}
 	}
 }
 
@@ -1108,13 +1117,13 @@ void cpu_thread::add_remove_flags(bs_t<cpu_flag> to_add, bs_t<cpu_flag> to_remov
 std::string cpu_thread::get_name() const
 {
 	// Downcast to correct type
-	switch (id_type())
+	switch (get_class())
 	{
-	case 1:
+	case thread_class::ppu:
 	{
 		return thread_ctrl::get_name(*static_cast<const named_thread<ppu_thread>*>(this));
 	}
-	case 2:
+	case thread_class::spu:
 	{
 		return thread_ctrl::get_name(*static_cast<const named_thread<spu_thread>*>(this));
 	}
@@ -1125,7 +1134,7 @@ std::string cpu_thread::get_name() const
 			return thread_ctrl::get_name();
 		}
 
-		if (id_type() == 0x55)
+		if (get_class() == thread_class::rsx)
 		{
 			return fmt::format("rsx::thread");
 		}
@@ -1139,19 +1148,19 @@ u32 cpu_thread::get_pc() const
 {
 	const u32* pc = nullptr;
 
-	switch (id_type())
+	switch (get_class())
 	{
-	case 1:
+	case thread_class::ppu:
 	{
 		pc = &static_cast<const ppu_thread*>(this)->cia;
 		break;
 	}
-	case 2:
+	case thread_class::spu:
 	{
 		pc = &static_cast<const spu_thread*>(this)->pc;
 		break;
 	}
-	case 0x55:
+	case thread_class::rsx:
 	{
 		const auto ctrl = static_cast<const rsx::thread*>(this)->ctrl;
 		return ctrl ? ctrl->get.load() : umax;
@@ -1164,17 +1173,17 @@ u32 cpu_thread::get_pc() const
 
 u32* cpu_thread::get_pc2()
 {
-	switch (id_type())
+	switch (get_class())
 	{
-	case 1:
+	case thread_class::ppu:
 	{
 		return &static_cast<ppu_thread*>(this)->dbg_step_pc;
 	}
-	case 2:
+	case thread_class::spu:
 	{
 		return &static_cast<spu_thread*>(this)->dbg_step_pc;
 	}
-	case 0x55:
+	case thread_class::rsx:
 	{
 		const auto ctrl = static_cast<rsx::thread*>(this)->ctrl;
 		return ctrl ? &static_cast<rsx::thread*>(this)->dbg_step_pc : nullptr;
@@ -1187,13 +1196,13 @@ u32* cpu_thread::get_pc2()
 
 cpu_thread* cpu_thread::get_next_cpu()
 {
-	switch (id_type())
+	switch (get_class())
 	{
-	case 1:
+	case thread_class::ppu:
 	{
 		return static_cast<ppu_thread*>(this)->next_cpu;
 	}
-	case 2:
+	case thread_class::spu:
 	{
 		return static_cast<spu_thread*>(this)->next_cpu;
 	}
@@ -1259,7 +1268,7 @@ std::vector<std::pair<u32, u32>> cpu_thread::dump_callstack_list() const
 
 std::string cpu_thread::dump_misc() const
 {
-	return fmt::format("Type: %s; State: %s\n", id_type() == 1 ? "PPU" : id_type() == 2 ? "SPU" : "RSX", state.load());
+	return fmt::format("Type: %s; State: %s\n", get_class() == thread_class::ppu ? "PPU" : get_class() == thread_class::spu ? "SPU" : "RSX", state.load());
 }
 
 bool cpu_thread::suspend_work::push(cpu_thread* _this) noexcept

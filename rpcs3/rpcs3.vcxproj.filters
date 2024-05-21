@@ -345,6 +345,9 @@
     <ClCompile Include="Input\pad_thread.cpp">
       <Filter>Io</Filter>
     </ClCompile>
+    <ClCompile Include="Input\product_info.cpp">
+      <Filter>Io</Filter>
+    </ClCompile>
     <ClCompile Include="rpcs3qt\about_dialog.cpp">
       <Filter>Gui\misc dialogs</Filter>
     </ClCompile>

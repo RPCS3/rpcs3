@@ -2401,7 +2401,7 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 
 		if (!_this) [[unlikely]]
 		{
-			if (_cpu->id_type() == 2)
+			if (_cpu->get_class() == thread_class::spu)
 			{
 				// Use range_lock of current SPU thread for range locks
 				range_lock = static_cast<spu_thread*>(_cpu)->range_lock;
@@ -3778,13 +3778,16 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 		if (raddr)
 		{
 			// Last check for event before we clear the reservation
-			if (raddr == addr)
+			if (~ch_events.load().events & SPU_EVENT_LR)
 			{
-				set_events(SPU_EVENT_LR);
-			}
-			else
-			{
-				get_events(SPU_EVENT_LR);
+				if (raddr == addr)
+				{
+					set_events(SPU_EVENT_LR);
+				}
+				else
+				{
+					get_events(SPU_EVENT_LR);
+				}
 			}
 		}
 
@@ -3900,7 +3903,7 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 			mov_rdata(sdata, *static_cast<const spu_rdata_t*>(to_write));
 			vm::reservation_acquire(addr) += 32;
 		}
-		else if (cpu->id_type() != 2)
+		else if (cpu->get_class() != thread_class::spu)
 		{
 			u64 stx, ftx;
 			result = spu_putlluc_tx(addr, to_write, &stx, &ftx);
@@ -4183,6 +4186,15 @@ bool spu_thread::is_exec_code(u32 addr, std::span<const u8> ls_ptr, u32 base_add
 			}
 		}
 
+		if (type == spu_itype::STOPD && !had_conditional)
+		{
+			return !avoid_dead_code;
+		}
+
+		if (i != 0 && type == spu_itype::STOPD)
+		{
+			return true;
+		}
 		if (type & spu_itype::branch)
 		{
 			if (type == spu_itype::BR && op.rt && op.rt != 127u)
@@ -5319,7 +5331,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 						atomic_wait_engine::set_one_time_use_wait_callback(+[](u64) -> bool
 						{
 							const auto _this = static_cast<spu_thread*>(cpu_thread::get_current());
-							AUDIT(_this->id_type() == 1);
+							AUDIT(_this->get_class() == thread_class::spu);
 
 							return !_this->is_stopped();
 						});
@@ -5333,7 +5345,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 					atomic_wait_engine::set_one_time_use_wait_callback(mask1 != SPU_EVENT_LR ? nullptr : +[](u64 attempts) -> bool
 					{
 						const auto _this = static_cast<spu_thread*>(cpu_thread::get_current());
-						AUDIT(_this->id_type() == 2);
+						AUDIT(_this->get_class() == thread_class::spu);
 
 						const auto old = +_this->state;
 
@@ -6589,7 +6601,7 @@ spu_thread::spu_prio_t spu_thread::priority_t::load() const
 	if (_this->get_type() != spu_type::threaded || !_this->group->has_scheduler_context)
 	{
 		spu_thread::spu_prio_t prio{};
-		prio.prio = smax;
+		prio.prio = s32{smax};
 		return prio;
 	}
 

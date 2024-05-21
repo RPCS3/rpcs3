@@ -129,38 +129,8 @@ void cellPad_NotifyStateChange(usz index, u64 /*state*/, bool locked)
 	if (pad->m_vendor_id == 0 || pad->m_product_id == 0)
 	{
 		// Fallback to defaults
-
-		input::product_info product;
-
-		switch (pad->m_class_type)
-		{
-		case CELL_PAD_PCLASS_TYPE_GUITAR:
-			product = input::get_product_info(input::product_type::red_octane_gh_guitar);
-			break;
-		case CELL_PAD_PCLASS_TYPE_DRUM:
-			product = input::get_product_info(input::product_type::red_octane_gh_drum_kit);
-			break;
-		case CELL_PAD_PCLASS_TYPE_DJ:
-			product = input::get_product_info(input::product_type::dj_hero_turntable);
-			break;
-		case CELL_PAD_PCLASS_TYPE_DANCEMAT:
-			product = input::get_product_info(input::product_type::dance_dance_revolution_mat);
-			break;
-		case CELL_PAD_PCLASS_TYPE_NAVIGATION:
-			product = input::get_product_info(input::product_type::ps_move_navigation);
-			break;
-		case CELL_PAD_PCLASS_TYPE_SKATEBOARD:
-			product = input::get_product_info(input::product_type::ride_skateboard);
-			break;
-		case CELL_PAD_FAKE_TYPE_GUNCON3:
-			product = input::get_product_info(input::product_type::guncon_3);
-			break;
-		case CELL_PAD_PCLASS_TYPE_STANDARD:
-		default:
-			product = input::get_product_info(input::product_type::playstation_3_controller);
-			break;
-		}
-
+		const std::vector<input::product_info> input_products = input::get_products_by_class(pad->m_class_type);
+		const input::product_info& product = ::at32(input_products, 0);
 		reported_info.vendor_id = product.vendor_id;
 		reported_info.product_id = product.product_id;
 	}
@@ -299,11 +269,11 @@ void pad_get_data(u32 port_no, CellPadData* data, bool get_periph_data = false)
 	}
 	else if (pad->ldd)
 	{
-		pad->ldd_data = *data;
 		if (setting & CELL_PAD_SETTING_SENSOR_ON)
 			data->len = CELL_PAD_LEN_CHANGE_SENSOR_ON;
 		else
 			data->len = (setting & CELL_PAD_SETTING_PRESS_ON) ? CELL_PAD_LEN_CHANGE_PRESS_ON : CELL_PAD_LEN_CHANGE_DEFAULT;
+		std::memcpy(data->button, pad->ldd_data.button, data->len * sizeof(u16));
 		return;
 	}
 	else
