@@ -1181,7 +1181,7 @@ void spu_cache::initialize(bool build_existing_cache)
 
 				bool sk = false;
 
-				for (u32 i = 0; i < bytes.size(); i++)
+				for (u32 i = 0; i < std::min<usz>(bytes.size(), std::max<usz>(256, depth_m)); i++)
 				{
 					if (depth_m == i)
 					{
@@ -1208,7 +1208,7 @@ void spu_cache::initialize(bool build_existing_cache)
 
 				fmt::append(dump, "\n\t%49s", "");
 
-				for (u32 i = 0; i < f->data.size(); i++)
+				for (u32 i = 0; i < std::min<usz>(f->data.size(), std::max<usz>(64, utils::aligned_div<u32>(depth_m, 4))); i++)
 				{
 					fmt::append(dump, "%-10s", g_spu_iname.decode(std::bit_cast<be_t<u32>>(f->data[i])));
 				}

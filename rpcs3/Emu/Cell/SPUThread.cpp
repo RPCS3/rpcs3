@@ -6601,7 +6601,7 @@ spu_thread::spu_prio_t spu_thread::priority_t::load() const
 	if (_this->get_type() != spu_type::threaded || !_this->group->has_scheduler_context)
 	{
 		spu_thread::spu_prio_t prio{};
-		prio.prio = smax;
+		prio.prio = s32{smax};
 		return prio;
 	}
 

@@ -11,6 +11,7 @@
 #include <compare>
 #include <memory>
 #include <bit>
+#include <source_location>
 
 #if defined(__SSE2__) || defined(_M_X64) || defined(_M_AMD64) || defined(__x86_64__) || defined(__amd64__)
 #define ARCH_X64 1
@@ -908,47 +909,31 @@ const_str_t(const char8_t(&a)[Size]) -> const_str_t<Size - 1>;
 
 using const_str = const_str_t<>;
 
-struct src_loc
-{
-	u32 line;
-	u32 col;
-	const char* file;
-	const char* func;
-};
-
 namespace fmt
 {
-	[[noreturn]] void raw_verify_error(const src_loc& loc, const char8_t* msg);
+	[[noreturn]] void raw_verify_error(std::source_location loc, const char8_t* msg);
 }
 
 template <typename T>
-constexpr decltype(auto) ensure(T&& arg, const_str msg = const_str(),
-	u32 line = __builtin_LINE(),
-	u32 col = __builtin_COLUMN(),
-	const char* file = __builtin_FILE(),
-	const char* func = __builtin_FUNCTION()) noexcept
+constexpr decltype(auto) ensure(T&& arg, const_str msg = const_str(), std::source_location src_loc = std::source_location::current()) noexcept
 {
 	if (std::forward<T>(arg)) [[likely]]
 	{
 		return std::forward<T>(arg);
 	}
 
-	fmt::raw_verify_error({line, col, file, func}, msg);
+	fmt::raw_verify_error(src_loc, msg);
 }
 
 template <typename T, typename F> requires (std::is_invocable_v<F, T&&>)
-constexpr decltype(auto) ensure(T&& arg, F&& pred, const_str msg = const_str(),
-	u32 line = __builtin_LINE(),
-	u32 col = __builtin_COLUMN(),
-	const char* file = __builtin_FILE(),
-	const char* func = __builtin_FUNCTION()) noexcept
+constexpr decltype(auto) ensure(T&& arg, F&& pred, const_str msg = const_str(), std::source_location src_loc = std::source_location::current()) noexcept
 {
 	if (std::forward<F>(pred)(std::forward<T>(arg))) [[likely]]
 	{
 		return std::forward<T>(arg);
 	}
 
-	fmt::raw_verify_error({line, col, file, func}, msg);
+	fmt::raw_verify_error(src_loc, msg);
 }
 
 // narrow() function details
@@ -1024,16 +1009,12 @@ struct narrow_impl<From, To, std::enable_if_t<!std::is_same_v<std::common_type_t
 };
 
 template <typename To = void, typename From, typename = decltype(static_cast<To>(std::declval<From>()))>
-[[nodiscard]] constexpr To narrow(const From& value,
-	u32 line = __builtin_LINE(),
-	u32 col = __builtin_COLUMN(),
-	const char* file = __builtin_FILE(),
-	const char* func = __builtin_FUNCTION())
+[[nodiscard]] constexpr To narrow(const From& value, std::source_location src_loc = std::source_location::current())
 {
 	// Narrow check
 	if (narrow_impl<From, To>::test(value)) [[unlikely]]
 	{
-		fmt::raw_verify_error({line, col, file, func}, u8"Narrowing error");
+		fmt::raw_verify_error(src_loc, u8"Narrowing error");
 	}
 
 	return static_cast<To>(value);
@@ -1041,11 +1022,7 @@ template <typename To = void, typename From, typename = decltype(static_cast<To>
 
 // Returns u32 size() for container
 template <typename CT> requires requires (const CT& x) { std::size(x); }
-[[nodiscard]] constexpr u32 size32(const CT& container,
-	u32 line = __builtin_LINE(),
-	u32 col = __builtin_COLUMN(),
-	const char* file = __builtin_FILE(),
-	const char* func = __builtin_FUNCTION())
+[[nodiscard]] constexpr u32 size32(const CT& container, std::source_location src_loc = std::source_location::current())
 {
 	// TODO: Support std::array
 	constexpr bool is_const = std::is_array_v<std::remove_cvref_t<CT>>;
@@ -1057,38 +1034,30 @@ template <typename CT> requires requires (const CT& x) { std::size(x); }
 	}
 	else
 	{
-		return narrow<u32>(container.size(), line, col, file, func);
+		return narrow<u32>(container.size(), src_loc);
 	}
 }
 
 template <typename CT, typename T> requires requires (CT&& x) { std::size(x); std::data(x); } || requires (CT&& x) { std::size(x); x.front(); }
-[[nodiscard]] constexpr auto& at32(CT&& container, T&& index,
-	u32 line = __builtin_LINE(),
-	u32 col = __builtin_COLUMN(),
-	const char* file = __builtin_FILE(),
-	const char* func = __builtin_FUNCTION())
+[[nodiscard]] constexpr auto& at32(CT&& container, T&& index, std::source_location src_loc = std::source_location::current())
 {
-	// Make sure the index is within u32 range (TODO: downcast index properly with common_type)
-	const u32 idx = ::narrow<u32>(+index, line, 10001, file, func);
-	const u32 csz = ::size32(container, line, 10002, file, func);
+	// Make sure the index is within u32 range
+	const std::make_unsigned_t<std::common_type_t<T>> idx = index;
+	const u32 csz = ::size32(container, src_loc);
 	if (csz <= idx) [[unlikely]]
-		fmt::raw_verify_error({line, col, file, func}, u8"Out of range");
+		fmt::raw_verify_error(src_loc, u8"Out of range");
 	auto it = std::begin(std::forward<CT>(container));
 	std::advance(it, idx);
 	return *it;
 }
 
 template <typename CT, typename T> requires requires (CT&& x, T&& y) { x.count(y); x.find(y); }
-[[nodiscard]] constexpr auto& at32(CT&& container, T&& index,
-	u32 line = __builtin_LINE(),
-	u32 col = __builtin_COLUMN(),
-	const char* file = __builtin_FILE(),
-	const char* func = __builtin_FUNCTION())
+[[nodiscard]] constexpr auto& at32(CT&& container, T&& index, std::source_location src_loc = std::source_location::current())
 {
 	// Associative container
 	const auto found = container.find(std::forward<T>(index));
 	if (found == container.end()) [[unlikely]]
-		fmt::raw_verify_error({line, col, file, func}, u8"Out of range");
+		fmt::raw_verify_error(src_loc, u8"Out of range");
 	return found->second;
 }
 

@@ -162,9 +162,9 @@ void fmt_class_string<cfg_mode>::format(std::string& out, u64 arg)
 	});
 }
 
-void Emulator::CallFromMainThread(std::function<void()>&& func, atomic_t<u32>* wake_up, bool track_emu_state, u64 stop_ctr, u32 line, u32 col, const char* file, const char* fun) const
+void Emulator::CallFromMainThread(std::function<void()>&& func, atomic_t<u32>* wake_up, bool track_emu_state, u64 stop_ctr, std::source_location src_loc) const
 {
-	std::function<void()> final_func = [this, before = IsStopped(), track_emu_state, thread_name = thread_ctrl::get_name(), src = src_loc{line, col, file, fun}
+	std::function<void()> final_func = [this, before = IsStopped(), track_emu_state, thread_name = thread_ctrl::get_name(), src = src_loc
 		, count = (stop_ctr == umax ? +m_stop_ctr : stop_ctr), func = std::move(func)]
 	{
 		const bool call_it = (!track_emu_state || (count == m_stop_ctr && before == IsStopped()));
@@ -180,19 +180,19 @@ void Emulator::CallFromMainThread(std::function<void()>&& func, atomic_t<u32>* w
 	m_cb.call_from_main_thread(std::move(final_func), wake_up);
 }
 
-void Emulator::BlockingCallFromMainThread(std::function<void()>&& func, u32 line, u32 col, const char* file, const char* fun) const
+void Emulator::BlockingCallFromMainThread(std::function<void()>&& func, std::source_location src_loc) const
 {
 	atomic_t<u32> wake_up = 0;
 
-	sys_log.trace("Blocking Callback from thread '%s' at [%s] is queued", thread_ctrl::get_name(), src_loc{line, col, file, fun});
+	sys_log.trace("Blocking Callback from thread '%s' at [%s] is queued", thread_ctrl::get_name(), src_loc);
 
-	CallFromMainThread(std::move(func), &wake_up, true, umax, line, col, file, fun);
+	CallFromMainThread(std::move(func), &wake_up, true, umax, src_loc);
 
 	while (!wake_up)
 	{
 		if (!thread_ctrl::get_current())
 		{
-			fmt::throw_exception("Calling thread of BlockingCallFromMainThread is not of named_thread<>, calling from %s", src_loc{line, col, file, fun});
+			fmt::throw_exception("Calling thread of BlockingCallFromMainThread is not of named_thread<>, calling from %s", src_loc);
 		}
 
 		wake_up.wait(0);
@@ -3471,13 +3471,13 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 					for (std::string_view not_logged = log_buffer; !not_logged.empty(); part_ctr++, not_logged.remove_prefix(to_remove))
 					{
 						std::string_view to_log = not_logged;
-						to_log = to_log.substr(0, 0x2'0000);
+						to_log = to_log.substr(0, 0x8000);
 						to_log = to_log.substr(0, utils::add_saturate<usz>(to_log.rfind("\n========== SPU BLOCK"sv), 1));
 						to_remove = to_log.size();
 
 						// Cannot log it all at once due to technical reasons, split it to 8MB at maximum of whole functions
 						// Assume the block prefix exists because it is created by RPCS3 (or log it in an ugly manner if it does not exist)
-						sys_log.notice("Logging spu.log part %u:\n\n%s\n", part_ctr, to_log);
+						sys_log.notice("Logging spu.log #%u:\n\n%s\n", part_ctr, to_log);
 					}
 
 					sys_log.notice("End spu.log (%u bytes)", total_size);
