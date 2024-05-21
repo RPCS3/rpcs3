@@ -5,6 +5,7 @@
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/Io/interception.h"
 #include "Input/raw_mouse_config.h"
+#include "Utilities/Timer.h"
 
 #ifdef _WIN32
 #include <hidusage.h>
@@ -337,6 +338,8 @@ void raw_mouse_handler::enumerate_devices(u32 max_connect)
 		return;
 	}
 
+	Timer timer{};
+
 #ifdef _WIN32
 	u32 num_devices{};
 	u32 res = GetRawInputDeviceList(nullptr, &num_devices, sizeof(RAWINPUTDEVICELIST));
@@ -416,7 +419,7 @@ void raw_mouse_handler::enumerate_devices(u32 max_connect)
 	}
 #endif
 
-	input_log.notice("raw_mouse_handler: found %d devices", m_raw_mice.size());
+	input_log.notice("raw_mouse_handler: found %d devices in %f ms", m_raw_mice.size(), timer.GetElapsedTimeInMilliSec());
 }
 
 #ifdef _WIN32
