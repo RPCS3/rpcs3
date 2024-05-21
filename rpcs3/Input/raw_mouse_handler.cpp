@@ -265,14 +265,14 @@ void raw_mouse_handler::Init(const u32 max_connect)
 		connected_mice.insert(mouse.index());
 	}
 
-	for (u32 i = 0; i < now_connect; i++)
+	for (u32 i = 0; i < max_connect; i++)
 	{
 		m_mice.emplace_back(Mouse());
 	}
 
 	m_info = {};
 	m_info.max_connect = max_connect;
-	m_info.now_connect = std::min(::size32(m_mice), max_connect);
+	m_info.now_connect = std::min(now_connect, max_connect);
 	m_info.info = input::g_mice_intercepted ? CELL_MOUSE_INFO_INTERCEPTED : 0; // Ownership of mouse data: 0=Application, 1=System
 
 	for (u32 i = 0; i < m_info.now_connect; i++)
