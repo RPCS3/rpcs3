@@ -259,10 +259,15 @@ void raw_mouse_handler::Init(const u32 max_connect)
 	// Get max device index
 	u32 now_connect = 0;
 	std::set<u32> connected_mice{};
-	for (const auto& [handle, mouse] : m_raw_mice)
+
 	{
-		now_connect = std::max(now_connect, mouse.index() + 1);
-		connected_mice.insert(mouse.index());
+		std::lock_guard lock(m_raw_mutex);
+
+		for (const auto& [handle, mouse] : m_raw_mice)
+		{
+			now_connect = std::max(now_connect, mouse.index() + 1);
+			connected_mice.insert(mouse.index());
+		}
 	}
 
 	for (u32 i = 0; i < max_connect; i++)
@@ -294,6 +299,8 @@ void raw_mouse_handler::Init(const u32 max_connect)
 #ifdef _WIN32
 void raw_mouse_handler::register_raw_input_devices()
 {
+	std::lock_guard lock(m_raw_mutex);
+
 	if (m_registered_raw_input_devices || !m_info.max_connect || m_raw_mice.empty())
 	{
 		return;
@@ -330,6 +337,8 @@ void raw_mouse_handler::register_raw_input_devices()
 void raw_mouse_handler::enumerate_devices(u32 max_connect)
 {
 	input_log.notice("raw_mouse_handler: enumerating devices (max_connect=%d)", max_connect);
+
+	std::lock_guard lock(m_raw_mutex);
 
 	m_raw_mice.clear();
 
@@ -448,6 +457,8 @@ void raw_mouse_handler::handle_native_event(const MSG& msg)
 	{
 	case RIM_TYPEMOUSE:
 	{
+		std::lock_guard lock(m_raw_mutex);
+
 		if (auto it = m_raw_mice.find(raw_input.header.hDevice); it != m_raw_mice.end())
 		{
 			it->second.update_values(raw_input.data.mouse);

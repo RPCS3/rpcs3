@@ -95,6 +95,7 @@ private:
 #endif
 
 	bool m_ignore_config = false;
+	std::mutex m_raw_mutex;
 	std::map<void*, raw_mouse> m_raw_mice;
 	std::function<void(const std::string&, s32, bool)> m_mouse_press_callback;
 };
