@@ -284,34 +284,47 @@ void raw_mouse_handler::Init(const u32 max_connect)
 	}
 
 #ifdef _WIN32
-	if (max_connect && !m_raw_mice.empty())
-	{
-		// Initialize and center all mice
-		for (auto& [handle, mouse] : m_raw_mice)
-		{
-			mouse.update_window_handle();
-			mouse.center_cursor();
-		}
-
-		// Get the window handle of the first mouse
-		raw_mouse& mouse = m_raw_mice.begin()->second;
-
-		std::vector<RAWINPUTDEVICE> raw_input_devices;
-		raw_input_devices.push_back(RAWINPUTDEVICE {
-			.usUsagePage = HID_USAGE_PAGE_GENERIC,
-			.usUsage = HID_USAGE_GENERIC_MOUSE,
-			.dwFlags = 0,
-			.hwndTarget = mouse.window_handle()
-		});
-		if (!RegisterRawInputDevices(raw_input_devices.data(), ::size32(raw_input_devices), sizeof(RAWINPUTDEVICE)))
-		{
-			input_log.error("raw_mouse_handler: RegisterRawInputDevices failed: %s", fmt::win_error{GetLastError(), nullptr});
-		}
-	}
+	register_raw_input_devices();
 #endif
 
 	type = mouse_handler::raw;
 }
+
+#ifdef _WIN32
+void raw_mouse_handler::register_raw_input_devices()
+{
+	if (m_registered_raw_input_devices || !m_info.max_connect || m_raw_mice.empty())
+	{
+		return;
+	}
+
+	// Initialize and center all mice
+	for (auto& [handle, mouse] : m_raw_mice)
+	{
+		mouse.update_window_handle();
+		mouse.center_cursor();
+	}
+
+	// Get the window handle of the first mouse
+	raw_mouse& mouse = m_raw_mice.begin()->second;
+
+	std::vector<RAWINPUTDEVICE> raw_input_devices;
+	raw_input_devices.push_back(RAWINPUTDEVICE {
+		.usUsagePage = HID_USAGE_PAGE_GENERIC,
+		.usUsage = HID_USAGE_GENERIC_MOUSE,
+		.dwFlags = 0,
+		.hwndTarget = mouse.window_handle()
+	});
+
+	if (!RegisterRawInputDevices(raw_input_devices.data(), ::size32(raw_input_devices), sizeof(RAWINPUTDEVICE)))
+	{
+		input_log.error("raw_mouse_handler: RegisterRawInputDevices failed: %s", fmt::win_error{GetLastError(), nullptr});
+		return;
+	}
+
+	m_registered_raw_input_devices = true;
+}
+#endif
 
 void raw_mouse_handler::enumerate_devices(u32 max_connect)
 {
