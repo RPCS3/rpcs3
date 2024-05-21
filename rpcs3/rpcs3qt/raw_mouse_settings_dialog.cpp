@@ -154,6 +154,8 @@ void raw_mouse_settings_dialog::add_tabs(QTabWidget* tabs)
 		QGridLayout* grid_layout = new QGridLayout(this);
 
 		auto& config = ::at32(g_cfg_raw_mouse.players, player);
+		const QString current_device = QString::fromStdString(config->device.to_string());
+		bool found_device = false;
 
 		QHBoxLayout* h_layout = new QHBoxLayout(this);
 		QGroupBox* gb = new QGroupBox(tr("Device"), this);
@@ -165,8 +167,23 @@ void raw_mouse_settings_dialog::add_tabs(QTabWidget* tabs)
 			const QString name = QString::fromStdString(mouse.device_name());
 			const QString& pretty_name = name; // Same ugly device path for now
 			combo->addItem(pretty_name, name);
+
+			if (current_device == name)
+			{
+				found_device = true;
+			}
 		}
-		combo->setCurrentText(QString::fromStdString(config->device.to_string()));
+
+		// Keep configured device in list even if it is not connected
+		if (!found_device && !current_device.isEmpty())
+		{
+			const QString& pretty_name = current_device; // Same ugly device path for now
+			combo->addItem(pretty_name, current_device);
+		}
+
+		// Select index
+		combo->setCurrentIndex(std::max(0, combo->findData(current_device)));
+
 		connect(combo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this, player, combo](int index)
 		{
 			if (index < 0 || !combo)
