@@ -219,7 +219,7 @@ raw_mouse_handler::raw_mouse_handler(bool ignore_config)
 
 raw_mouse_handler::~raw_mouse_handler()
 {
-	if (m_raw_mice.empty())
+	if (!m_registered_raw_input_devices)
 	{
 		return;
 	}
