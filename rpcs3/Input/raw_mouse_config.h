@@ -23,9 +23,9 @@ public:
 	cfg::string mouse_button_3{this, "Button 3", "Button 3"};
 	cfg::string mouse_button_4{this, "Button 4", "Button 4"};
 	cfg::string mouse_button_5{this, "Button 5", "Button 5"};
-	cfg::string mouse_button_6{this, "Button 6", "No Button"};
-	cfg::string mouse_button_7{this, "Button 7", "No Button"};
-	cfg::string mouse_button_8{this, "Button 8", "No Button"};
+	cfg::string mouse_button_6{this, "Button 6", ""};
+	cfg::string mouse_button_7{this, "Button 7", ""};
+	cfg::string mouse_button_8{this, "Button 8", ""};
 
 	cfg::string& get_button_by_index(int index);
 	cfg::string& get_button(int code);

@@ -10,7 +10,7 @@
 
 static const std::map<std::string, int> raw_mouse_button_map
 {
-	{ "No Button", 0 },
+	{ "", 0 },
 #ifdef _WIN32
 	{ "Button 1", RI_MOUSE_BUTTON_1_UP },
 	{ "Button 2", RI_MOUSE_BUTTON_2_UP },
