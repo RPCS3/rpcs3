@@ -3147,12 +3147,16 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 		for (const auto& spu : save_stage.paused_spus)
 		{
-			if (spu.first->pc != spu.second)
+			if (spu.first->pc != spu.second || spu.first->unsavable)
 			{
-				sys_log.error("SPU thread continued after being paused. (old_pc=0x%x, pc=0x%x, unsavable=%d)", spu.second, spu.first->pc, spu.first->unsavable);
+				std::string dump; 
+				spu.first->dump_all(dump);
 
+				sys_log.error("SPU thread continued after being paused. (old_pc=0x%x, pc=0x%x, unsavable=%d)", spu.second, spu.first->pc, spu.first->unsavable);
+				spu_log.notice("SPU thread context:\n%s", dump);
 			}
 		}
+
 		// Save it first for maximum timing accuracy
 		const u64 timestamp = get_timebased_time();
 		const u64 start_time = get_system_time();
