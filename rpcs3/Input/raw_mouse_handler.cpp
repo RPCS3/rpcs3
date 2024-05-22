@@ -313,7 +313,58 @@ void raw_mouse_handler::update_devices()
 		max_connect = m_info.max_connect;
 	}
 
-	enumerate_devices(max_connect);
+	{
+		std::map<void*, raw_mouse> enumerated = enumerate_devices(max_connect);
+
+		std::lock_guard lock(m_raw_mutex);
+
+		if (m_is_for_gui)
+		{
+			// Use the new devices
+			m_raw_mice = std::move(enumerated);
+		}
+		else
+		{
+			// Integrate the new devices
+			std::map<void*, raw_mouse> updated_mice;
+
+			for (u32 i = 0; i < std::min(max_connect, ::size32(g_cfg_raw_mouse.players)); i++)
+			{
+				const auto& player = ::at32(g_cfg_raw_mouse.players, i);
+				const std::string device_name = player->device.to_string();
+
+				// Check if the configured device for this player is connected
+				if (auto it = std::find_if(enumerated.begin(), enumerated.end(), [&device_name](const auto& entry){ return entry.second.device_name() == device_name; });
+					it != enumerated.end())
+				{
+					// Check if the device was already known
+					auto it_exists = m_raw_mice.find(it->first);
+					const bool exists = it_exists != m_raw_mice.end();
+
+					// Copy by value to allow for the same device for multiple players
+					raw_mouse& mouse = updated_mice[it->first];
+					mouse = exists ? it_exists->second : it->second;
+					mouse.set_index(i);
+
+					if (!exists)
+					{
+						input_log.notice("raw_mouse_handler: added new device for player %d: '%s'", i, device_name);
+					}
+				}
+			}
+
+			// Log disconnected devices
+			for (const auto& [handle, mouse] : m_raw_mice)
+			{
+				if (!updated_mice.contains(handle))
+				{
+					input_log.notice("raw_mouse_handler: removed device for player %d: '%s'", mouse.index(), mouse.device_name());
+				}
+			}
+
+			m_raw_mice = std::move(updated_mice);
+		}
+	}
 
 	// Update mouse info
 	std::set<u32> connected_mice{};
@@ -388,17 +439,15 @@ u32 raw_mouse_handler::get_now_connect(std::set<u32>& connected_mice)
 	return now_connect;
 }
 
-void raw_mouse_handler::enumerate_devices(u32 max_connect)
+std::map<void*, raw_mouse> raw_mouse_handler::enumerate_devices(u32 max_connect)
 {
-	input_log.notice("raw_mouse_handler: enumerating devices (max_connect=%d)", max_connect);
+	input_log.trace("raw_mouse_handler: enumerating devices (max_connect=%d)", max_connect);
 
-	std::lock_guard lock(m_raw_mutex);
-
-	m_raw_mice.clear();
+	std::map<void*, raw_mouse> raw_mice;
 
 	if (max_connect == 0)
 	{
-		return;
+		return raw_mice;
 	}
 
 	Timer timer{};
@@ -409,12 +458,12 @@ void raw_mouse_handler::enumerate_devices(u32 max_connect)
 	if (res == umax)
 	{
 		input_log.error("raw_mouse_handler: GetRawInputDeviceList (count) failed: %s", fmt::win_error{GetLastError(), nullptr});
-		return;
+		return raw_mice;
 	}
 
 	if (num_devices == 0)
 	{
-		return;
+		return raw_mice;
 	}
 
 	std::vector<RAWINPUTDEVICELIST> device_list(num_devices);
@@ -423,16 +472,11 @@ void raw_mouse_handler::enumerate_devices(u32 max_connect)
 	if (res == umax)
 	{
 		input_log.error("raw_mouse_handler: GetRawInputDeviceList (fetch) failed: %s", fmt::win_error{GetLastError(), nullptr});
-		return;
+		return raw_mice;
 	}
 
 	for (RAWINPUTDEVICELIST& device : device_list)
 	{
-		if (m_raw_mice.size() >= max_connect)
-		{
-			return;
-		}
-
 		if (device.dwType != RIM_TYPEMOUSE)
 		{
 			continue;
@@ -460,29 +504,14 @@ void raw_mouse_handler::enumerate_devices(u32 max_connect)
 		}
 
 		const std::string device_name = wchar_to_utf8(buf.data());
+		input_log.trace("raw_mouse_handler: found device: '%s'", device_name);
 
-		if (m_is_for_gui)
-		{
-			input_log.notice("raw_mouse_handler: adding device %d: '%s'", m_raw_mice.size(), device_name);
-			m_raw_mice[device.hDevice] = raw_mouse(::size32(m_raw_mice), device_name, device.hDevice, this);
-			continue;
-		}
-
-		for (u32 i = 0; i < std::min(max_connect, ::size32(g_cfg_raw_mouse.players)); i++)
-		{
-			const auto& player = ::at32(g_cfg_raw_mouse.players, i);
-
-			if (player && player->device.to_string() == device_name)
-			{
-				input_log.notice("raw_mouse_handler: adding device %d: '%s'", m_raw_mice.size(), device_name);
-				m_raw_mice[device.hDevice] = raw_mouse(i, device_name, device.hDevice, this);
-				break;
-			}
-		}
+		raw_mice[device.hDevice] = raw_mouse(::size32(raw_mice), device_name, device.hDevice, this);
 	}
 #endif
 
-	input_log.notice("raw_mouse_handler: found %d devices in %f ms", m_raw_mice.size(), timer.GetElapsedTimeInMilliSec());
+	input_log.trace("raw_mouse_handler: found %d devices in %f ms", raw_mice.size(), timer.GetElapsedTimeInMilliSec());
+	return raw_mice;
 }
 
 #ifdef _WIN32
