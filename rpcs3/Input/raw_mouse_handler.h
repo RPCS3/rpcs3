@@ -3,7 +3,7 @@
 #include "Emu/Io/MouseHandler.h"
 #include "Emu/RSX/display.h"
 #include "Utilities/Config.h"
-#include "Utilities/Mutex.h"
+#include "Utilities/mutex.h"
 #include "Utilities/Thread.h"
 
 #ifdef _WIN32
@@ -42,6 +42,7 @@ public:
 
 	const std::string& device_name() const { return m_device_name; }
 	u32 index() const { return m_index; }
+	void set_index(u32 index) { m_index = index; }
 
 private:
 	static std::pair<int, int> get_mouse_button(const cfg::string& button);
@@ -94,7 +95,7 @@ public:
 
 private:
 	u32 get_now_connect(std::set<u32>& connected_mice);
-	void enumerate_devices(u32 max_connect);
+	std::map<void*, raw_mouse> enumerate_devices(u32 max_connect);
 
 #ifdef _WIN32
 	void register_raw_input_devices();
