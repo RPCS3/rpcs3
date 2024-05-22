@@ -1984,9 +1984,9 @@ public:
 				has_gpr_memory_barriers |= b.has_gpr_memory_barriers;
 			}
 
-			for (usz bi = 0; bi < block_q.size();)
+			for (usz bi = 0; bi < block_q.size(); bi++)
 			{
-				auto bqbi = block_q[bi++].second;
+				auto bqbi = block_q[bi].second;
 
 				// TODO: process all registers up to s_reg_max
 				for (u32 i = 0; i <= s_reg_127; i++)
@@ -2001,6 +2001,8 @@ public:
 							{
 								if (pdt.dominates(b.store[i], bs))
 								{
+									spu_log.trace("Erased r%u store from block 0x%x (simple)", i, block_q[bi].first);
+
 									bs->eraseFromParent();
 									bs = nullptr;
 									break;
@@ -2178,6 +2180,8 @@ public:
 						// Finally erase the dead store
 						if (!killers.empty())
 						{
+							spu_log.trace("Erased r%u store from block 0x%x (reversed)", i, block_q[bi].first);
+
 							bs->eraseFromParent();
 							bs = nullptr;
 
@@ -2199,26 +2203,34 @@ public:
 				auto bqbi = block_q[bi].second;
 
 				std::vector<std::pair<u32, bool>> work_list;
+				std::map<u32, block_info*, std::greater<>> sucs;
+				std::unordered_map<u32, bool> worked_on;
 
 				for (u32 i = 0; i <= s_reg_127; i++)
 				{
 					// If store isn't erased, try to sink it
 					if (auto& bs = bqbi->store[i]; bs && bqbi->bb->targets.size() > 1 && !bqbi->does_gpr_barrier_proceed_last_store(i))
 					{
-						std::map<u32, block_info*, std::greater<>> sucs;
-
-						for (u32 tj : bqbi->bb->targets)
+						if (sucs.empty())
 						{
-							auto b2it = m_blocks.find(tj);
-
-							if (b2it != m_blocks.end())
+							for (u32 tj : bqbi->bb->targets)
 							{
-								sucs.emplace(tj, &b2it->second);
+								auto b2it = m_blocks.find(tj);
+
+								if (b2it != m_blocks.end())
+								{
+									sucs.emplace(tj, &b2it->second);
+								}
 							}
 						}
 
+						// Reset
 						work_list.clear();
-						std::unordered_map<u32, bool> worked_on;
+
+						for (auto& [_, worked] : worked_on)
+						{
+							worked = false;
+						}
 
 						bool has_gpr_barriers_in_the_way = false;
 
@@ -2235,8 +2247,11 @@ public:
 								continue;
 							}
 
-							work_list.emplace_back(a2, false);
-							worked_on[a2] = true;
+							if (!worked_on[a2])
+							{
+								work_list.emplace_back(a2, b2->store_context_ctr[i] != 1);
+								worked_on[a2] = true;
+							}
 						}
 
 						if (has_gpr_barriers_in_the_way)
@@ -2245,14 +2260,11 @@ public:
 							continue;
 						}
 
-						// Need to treat tails differently: do not require checking barrier (checked before in a suitable manner)
-						const usz work_list_start_blocks_max_index = work_list.size();
-
 						for (usz wi = 0; wi < work_list.size(); wi++)
 						{
 							auto [cur, found_barrier] = work_list[wi];
 
-							if (!found_barrier && wi >= work_list_start_blocks_max_index)
+							if (!found_barrier)
 							{
 								if (const auto it = m_blocks.find(cur); it != m_blocks.cend())
 								{
@@ -2263,7 +2275,7 @@ public:
 								}
 							}
 
-							if (cur == block_q[bi].first && wi >= work_list_start_blocks_max_index)
+							if (cur == block_q[bi].first)
 							{
 								if (found_barrier)
 								{
@@ -2333,6 +2345,8 @@ public:
 											block_q.emplace_back(a2, b2);
 										}
 									}
+
+									spu_log.trace("Postoned r%u store from block 0x%x (single)", i, block_q[bi].first);
 								}
 								else
 								{
@@ -2372,6 +2386,8 @@ public:
 										edge = llvm::SplitEdge(bqbi->block_end, succ);
 										pdt.recalculate(*m_function);
 										dt.recalculate(*m_function);
+
+										spu_log.trace("Postoned r%u store from block 0x%x (multiple)", i, block_q[bi].first);
 									}
 
 									ins = edge->getTerminator();
