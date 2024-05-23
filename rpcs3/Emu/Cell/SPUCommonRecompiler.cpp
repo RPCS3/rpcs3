@@ -6698,6 +6698,12 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			continue;
 		}
 
+		if (g_cfg.core.rsx_accurate_res_access)
+		{
+			// For now it is skipped completely in this case
+			continue;
+		}
+
 		union putllc16_info
 		{
 			u32 data;
