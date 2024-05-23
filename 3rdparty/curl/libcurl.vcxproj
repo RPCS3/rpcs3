@@ -87,7 +87,6 @@
     <ClCompile Include="curl\lib\curl_memrchr.c" />
     <ClCompile Include="curl\lib\curl_multibyte.c" />
     <ClCompile Include="curl\lib\curl_ntlm_core.c" />
-    <ClCompile Include="curl\lib\curl_ntlm_wb.c" />
     <ClCompile Include="curl\lib\curl_path.c" />
     <ClCompile Include="curl\lib\curl_range.c" />
     <ClCompile Include="curl\lib\curl_rtmp.c" />
@@ -280,7 +279,6 @@
     <ClInclude Include="curl\lib\curl_memrchr.h" />
     <ClInclude Include="curl\lib\curl_multibyte.h" />
     <ClInclude Include="curl\lib\curl_ntlm_core.h" />
-    <ClInclude Include="curl\lib\curl_ntlm_wb.h" />
     <ClInclude Include="curl\lib\curl_path.h" />
     <ClInclude Include="curl\lib\curl_printf.h" />
     <ClInclude Include="curl\lib\curl_range.h" />
