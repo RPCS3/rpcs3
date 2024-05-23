@@ -30,6 +30,8 @@ static inline void draw_overlay_cursor(u32 index, s32 x_pos, s32 y_pos, s32 x_ma
 LOG_CHANNEL(input_log, "Input");
 
 raw_mice_config g_cfg_raw_mouse;
+shared_mutex g_registered_handlers_mutex;
+u32 g_registered_handlers = 0;
 
 raw_mouse::raw_mouse(u32 index, const std::string& device_name, void* handle, raw_mouse_handler* handler)
 	: m_index(index), m_device_name(device_name), m_handle(handle), m_handler(handler)
@@ -227,23 +229,8 @@ raw_mouse_handler::~raw_mouse_handler()
 		m_thread.reset();
 	}
 
-	if (!m_registered_raw_input_devices)
-	{
-		return;
-	}
-
 #ifdef _WIN32
-	std::vector<RAWINPUTDEVICE> raw_input_devices;
-	raw_input_devices.push_back(RAWINPUTDEVICE {
-		.usUsagePage = HID_USAGE_PAGE_GENERIC,
-		.usUsage = HID_USAGE_GENERIC_MOUSE,
-		.dwFlags = RIDEV_REMOVE,
-		.hwndTarget = nullptr
-	});
-	if (!RegisterRawInputDevices(raw_input_devices.data(), ::size32(raw_input_devices), sizeof(RAWINPUTDEVICE)))
-	{
-		input_log.error("raw_mouse_handler: RegisterRawInputDevices (destructor) failed: %s", fmt::win_error{GetLastError(), nullptr});
-	}
+	unregister_raw_input_devices();
 #endif
 }
 
@@ -348,6 +335,10 @@ void raw_mouse_handler::update_devices()
 
 					if (!exists)
 					{
+						// Initialize and center mouse
+						mouse.update_window_handle();
+						mouse.center_cursor();
+
 						input_log.notice("raw_mouse_handler: added new device for player %d: '%s'", i, device_name);
 					}
 				}
@@ -395,13 +386,6 @@ void raw_mouse_handler::register_raw_input_devices()
 		return;
 	}
 
-	// Initialize and center all mice
-	for (auto& [handle, mouse] : m_raw_mice)
-	{
-		mouse.update_window_handle();
-		mouse.center_cursor();
-	}
-
 	// Get the window handle of the first mouse
 	raw_mouse& mouse = m_raw_mice.begin()->second;
 
@@ -413,13 +397,49 @@ void raw_mouse_handler::register_raw_input_devices()
 		.hwndTarget = mouse.window_handle()
 	});
 
-	if (!RegisterRawInputDevices(raw_input_devices.data(), ::size32(raw_input_devices), sizeof(RAWINPUTDEVICE)))
 	{
-		input_log.error("raw_mouse_handler: RegisterRawInputDevices failed: %s", fmt::win_error{GetLastError(), nullptr});
-		return;
+		std::lock_guard lock(g_registered_handlers_mutex);
+
+		if (!RegisterRawInputDevices(raw_input_devices.data(), ::size32(raw_input_devices), sizeof(RAWINPUTDEVICE)))
+		{
+			input_log.error("raw_mouse_handler: RegisterRawInputDevices failed: %s", fmt::win_error{GetLastError(), nullptr});
+			return;
+		}
+
+		g_registered_handlers++;
 	}
 
 	m_registered_raw_input_devices = true;
+}
+
+void raw_mouse_handler::unregister_raw_input_devices()
+{
+	if (!m_registered_raw_input_devices)
+	{
+		return;
+	}
+
+	std::lock_guard lock(g_registered_handlers_mutex);
+
+	if (!g_registered_handlers || (--g_registered_handlers > 0))
+	{
+		input_log.notice("raw_mouse_handler: Skip unregistering devices. %d other handlers are still registered.", g_registered_handlers);
+		return;
+	}
+
+	input_log.notice("raw_mouse_handler: Unregistering devices");
+
+	std::vector<RAWINPUTDEVICE> raw_input_devices;
+	raw_input_devices.push_back(RAWINPUTDEVICE {
+		.usUsagePage = HID_USAGE_PAGE_GENERIC,
+		.usUsage = HID_USAGE_GENERIC_MOUSE,
+		.dwFlags = RIDEV_REMOVE,
+		.hwndTarget = nullptr
+	});
+	if (!RegisterRawInputDevices(raw_input_devices.data(), ::size32(raw_input_devices), sizeof(RAWINPUTDEVICE)))
+	{
+		input_log.error("raw_mouse_handler: RegisterRawInputDevices (unregister) failed: %s", fmt::win_error{GetLastError(), nullptr});
+	}
 }
 #endif
 

@@ -174,7 +174,7 @@ void raw_mouse_settings_dialog::update_combo_box(usz player)
 	combo->setCurrentIndex(std::max(0, combo->findData(current_device)));
 	combo->blockSignals(false);
 
-	if (player == m_tab_widget->currentIndex())
+	if (static_cast<int>(player) == m_tab_widget->currentIndex())
 	{
 		handle_device_change(device_name);
 	}
