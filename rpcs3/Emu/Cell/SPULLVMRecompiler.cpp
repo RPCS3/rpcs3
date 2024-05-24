@@ -6,6 +6,7 @@
 #include "Emu/IdManager.h"
 #include "Emu/Cell/timers.hpp"
 #include "Emu/Memory/vm_reservation.h"
+#include "Emu/RSX/Core/RSXReservationLock.hpp"
 #include "Crypto/sha1.h"
 #include "Utilities/JIT.h"
 
@@ -1189,6 +1190,92 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 			dest = m_ir->CreateAnd(m_ir->CreateAdd(get_reg32(info.reg), get_reg32(info.reg2)), 0x3fff0);
 		}
 
+		if (g_cfg.core.rsx_accurate_res_access)
+		{
+			call("spu_putllc16_rsx_res", +[](spu_thread* _spu, u32 ls_dst, u32 lsa, u32 eal, u32 notify)
+			{
+				const u32 raddr = eal;
+
+				const v128 rdata = read_from_ptr<v128>(_spu->rdata, ls_dst % 0x80);
+				const v128 to_write = _spu->_ref<const nse_t<v128>>(ls_dst);
+
+				const auto dest = raddr | (ls_dst & 127);
+
+				if (rdata == to_write || ((lsa ^ ls_dst) & (SPU_LS_SIZE - 128)))
+				{
+					vm::reservation_update(raddr);
+					_spu->ch_atomic_stat.set_value(MFC_PUTLLC_SUCCESS);
+					_spu->raddr = 0;
+					return;
+				}
+
+				auto& res = vm::reservation_acquire(eal);
+
+				if (res & 127)
+				{
+					_spu->ch_atomic_stat.set_value(MFC_PUTLLC_FAILURE);
+					_spu->set_events(SPU_EVENT_LR);
+					_spu->raddr = 0;
+					return;
+				}
+
+				rsx::reservation_lock rsx_lock(raddr, 128);
+
+				// Tocuh memory
+				vm::_ref<atomic_t<u8>>(dest).compare_and_swap_test(0, 0);
+
+				auto [old_res, ok] = res.fetch_op([](u64& rval)
+				{
+					if (rval & 127)
+					{
+						return false;
+					}
+
+					rval |= 127;
+					return true;
+				});
+
+				if (!ok)
+				{
+					_spu->ch_atomic_stat.set_value(MFC_PUTLLC_FAILURE);
+					_spu->set_events(SPU_EVENT_LR);
+					_spu->raddr = 0;
+					return;
+				}
+
+				if (!vm::get_super_ptr<atomic_t<nse_t<v128>>>(dest)->compare_and_swap_test(rdata, to_write))
+				{
+					res.release(old_res);
+					_spu->ch_atomic_stat.set_value(MFC_PUTLLC_FAILURE);
+					_spu->set_events(SPU_EVENT_LR);
+					_spu->raddr = 0;
+					return;
+				}
+
+				// Success
+				res.release(old_res + 128);
+
+				_spu->ch_atomic_stat.set_value(MFC_PUTLLC_SUCCESS);
+				_spu->raddr = 0;
+
+				if (notify)
+				{
+					res.notify_all();
+				}
+			}, m_thread, dest, _lsa, _eal, m_ir->getInt32(!info.no_notify));
+
+
+			m_ir->CreateBr(_final);
+
+			m_ir->SetInsertPoint(_fail);
+			call("PUTLLC16_fail", +on_fail, m_thread, _eal);
+			m_ir->CreateStore(m_ir->getInt64(spu_channel::bit_count | MFC_PUTLLC_FAILURE), spu_ptr<u64>(&spu_thread::ch_atomic_stat));
+			m_ir->CreateBr(_final);
+
+			m_ir->SetInsertPoint(_final);
+			return;
+		}
+
 		const auto diff = m_ir->CreateZExt(m_ir->CreateSub(dest, _lsa), get_type<u64>());
 
 		const auto _new = m_ir->CreateAlignedLoad(get_type<u128>(), _ptr<u128>(m_lsptr, dest), llvm::MaybeAlign{16});
@@ -1230,6 +1317,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 
 		const auto last_rval = m_ir->CreateExtractValue(cmp_res, 0);
 		rval->addIncoming(last_rval, _repeat_lock_fail);
+
 		m_ir->CreateCondBr(is_accurate_op ? m_ir->CreateICmpEQ(last_rval, rval) : m_ir->CreateIsNull(m_ir->CreateAnd(last_rval, 0x7f)), _repeat_lock, _fail);
 
 		m_ir->SetInsertPoint(_lock_success);
