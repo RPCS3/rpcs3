@@ -284,11 +284,12 @@ u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode)
 
 	if (rawcode >= CELL_KEYC_A && rawcode <= CELL_KEYC_Z) // 'A' - 'Z'
 	{
-		rawcode -=
-			(is_shift)
-				? ((led & (CELL_KB_LED_CAPS_LOCK)) ? 0 : 0x20)
-				: ((led & (CELL_KB_LED_CAPS_LOCK)) ? 0x20 : 0);
-		return rawcode + 0x5D;
+		if (is_shift != is_caps_lock)
+		{
+			return rawcode + 0x3D; // Return uppercase if exactly one is active.
+		}
+
+		return rawcode + 0x5D; // Return lowercase if none or both are active.
 	}
 	if (rawcode >= CELL_KEYC_1 && rawcode <= CELL_KEYC_9) return rawcode + 0x13; // '1' - '9'
 	if (rawcode == CELL_KEYC_0) return 0x30;                                     // '0'
