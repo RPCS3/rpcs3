@@ -5305,7 +5305,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 				if (insert_entry)
 				{
-					const u32 target_size = get_block_targets(stackframe_pc).size();
+					const usz target_size = get_block_targets(stackframe_pc).size();
 
 					spu_log.trace("Emplacing: block_id=%d, pc=0x%x, target_it=%d/%d, new_pc=0x%x (has_it=%d)", reg_state_it[stackframe_it].iterator_id, stackframe_pc, entry_index + 1, target_size, target_pc, atomic16_info.active);
 					auto& next = reg_state_it.emplace_back(target_pc, stackframe_it, 0);
@@ -5321,7 +5321,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					}
 
 					next.iterator_id = iterator_id_alloc++;
-					wi = stackframe_it + 1;
+					wi = static_cast<u32>(stackframe_it + 1);
 					ensure(stackframe_it + 1 == reg_state_it.size() - 1);
 				}
 			}
@@ -6695,12 +6695,6 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		{
 			spu_log.success("PUTLLC0 Pattern Detected! (put_pc=0x%x, %s) (putllc0=%d, putllc16+0=%d, all=%d)", pattern.put_pc, func_hash, ++stats.nowrite, ++stats.single, +stats.all);
 			add_pattern(false, inst_attr::putllc0, pattern.put_pc - lsa);
-			continue;
-		}
-
-		if (g_cfg.core.rsx_accurate_res_access)
-		{
-			// For now it is skipped completely in this case
 			continue;
 		}
 
