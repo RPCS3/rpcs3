@@ -19,8 +19,8 @@ add_subdirectory(zlib EXCLUDE_FROM_ALL)
 # ZSTD
 add_subdirectory(zstd EXCLUDE_FROM_ALL)
 
-# 7z sdk
-add_subdirectory(7z EXCLUDE_FROM_ALL)
+# 7zip sdk
+add_subdirectory(7zip EXCLUDE_FROM_ALL)
 
 add_library(3rdparty_flatbuffers INTERFACE)
 if (USE_SYSTEM_FLATBUFFERS)
@@ -360,7 +360,7 @@ else()
 endif()
 add_library(3rdparty::zlib ALIAS 3rdparty_zlib)
 add_library(3rdparty::zstd ALIAS 3rdparty_zstd)
-add_library(3rdparty::7z ALIAS 3rdparty_7z)
+add_library(3rdparty::7zip ALIAS 3rdparty_7zip)
 add_library(3rdparty::flatbuffers ALIAS 3rdparty_flatbuffers)
 add_library(3rdparty::pugixml ALIAS pugixml)
 add_library(3rdparty::yaml-cpp ALIAS yaml-cpp)

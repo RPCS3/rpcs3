@@ -92,3 +92,7 @@
 	path = 3rdparty/zstd/zstd
 	url = ../../facebook/zstd
 	ignore = dirty
+[submodule "3rdparty/7zip/7zip"]
+	path = 3rdparty/7zip/7zip
+	url = ../../ip7z/7zip.git
+	ignore = dirty

@@ -150,7 +150,7 @@ target_link_libraries(rpcs3_ui
         3rdparty::hidapi
         3rdparty::libusb
         3rdparty::libpng
-        3rdparty::7z
+        3rdparty::7zip
         3rdparty::wolfssl
         3rdparty::libcurl
         3rdparty::rtmidi)
