@@ -107,7 +107,7 @@ public:
 		}
 	}
 
-	void handle_input(const Mouse& mouse, bool press_only, const std::function<void(T, u16, bool)>& func) const
+	void handle_input(const Mouse& mouse, const std::function<void(T, u16, bool)>& func) const
 	{
 		for (int i = 0; i < 7; i++)
 		{
