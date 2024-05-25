@@ -400,7 +400,8 @@ void pad_thread::operator()()
 					continue;
 
 				// Check if an LDD pad pressed the PS button (bit 0 of the first button)
-				if (pad->ldd && pad->ldd_data.len >= 1 && !!(pad->ldd_data.button[0] & CELL_PAD_CTRL_LDD_PS))
+				// NOTE: Rock Band 3 doesn't seem to care about the len. It's always 0.
+				if (pad->ldd /*&& pad->ldd_data.len >= 1 */&& !!(pad->ldd_data.button[0] & CELL_PAD_CTRL_LDD_PS))
 				{
 					ps_button_pressed = true;
 					break;

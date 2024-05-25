@@ -250,7 +250,8 @@ namespace rsx
 					{
 						// LDD pads get passed input data from the game itself.
 
-						if (pad->ldd_data.len > CELL_PAD_BTN_OFFSET_DIGITAL1)
+						// NOTE: Rock Band 3 doesn't seem to care about the len. It's always 0.
+						//if (pad->ldd_data.len > CELL_PAD_BTN_OFFSET_DIGITAL1)
 						{
 							const u16 digital1 = pad->ldd_data.button[CELL_PAD_BTN_OFFSET_DIGITAL1];
 
@@ -264,7 +265,7 @@ namespace rsx
 							handle_button_press(pad_button::start,      !!(digital1 & CELL_PAD_CTRL_START),    pad_index);
 						}
 
-						if (pad->ldd_data.len > CELL_PAD_BTN_OFFSET_DIGITAL2)
+						//if (pad->ldd_data.len > CELL_PAD_BTN_OFFSET_DIGITAL2)
 						{
 							const u16 digital2 = pad->ldd_data.button[CELL_PAD_BTN_OFFSET_DIGITAL2];
 
@@ -281,10 +282,7 @@ namespace rsx
 
 						const auto handle_ldd_stick_input = [&](s32 offset, pad_button id_small, pad_button id_large)
 						{
-							if (pad->ldd_data.len <= offset)
-							{
-								return;
-							}
+							//if (pad->ldd_data.len <= offset) return;
 
 							constexpr u16 threshold = 20; // Let's be careful and use some threshold here
 							const u16 value = pad->ldd_data.button[offset];
