@@ -167,6 +167,17 @@ void fmt_class_string<spu_block_hash>::format(std::string& out, u64 arg)
 	fmt::append(out, "...chunk-0x%05x", (arg & 0xffff) * 4);
 }
 
+enum class spu_block_hash_short : u64{};
+
+template <>
+void fmt_class_string<spu_block_hash_short>::format(std::string& out, u64 arg)
+{
+	fmt::append(out, "%s", fmt::base57(be_t<u64>{arg}));
+
+	// Print only 7 hash characters out of 11 (which covers roughly 48 bits)
+	out.resize(out.size() - 4);
+}
+
 // Verify AVX availability for TSX transactions
 static const bool s_tsx_avx = utils::has_avx();
 
@@ -1776,6 +1787,12 @@ void spu_thread::cpu_task()
 		}
 
 		const auto type = cpu->get_type();
+
+		if (g_cfg.core.spu_prof)
+		{
+			return fmt::format("%sSPU[0x%07x] Thread (%s) [0x%05x: %s]", type >= spu_type::raw ? type == spu_type::isolated ? "Iso" : "Raw" : "", cpu->lv2_id, *name_cache.get(), cpu->pc, spu_block_hash_short{atomic_storage<u64>::load(cpu->block_hash)});
+		}
+
 		return fmt::format("%sSPU[0x%07x] Thread (%s) [0x%05x]", type >= spu_type::raw ? type == spu_type::isolated ? "Iso" : "Raw" : "", cpu->lv2_id, *name_cache.get(), cpu->pc);
 	};
 
