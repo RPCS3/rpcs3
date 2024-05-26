@@ -177,6 +177,7 @@ u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode)
 	const bool is_shift = mkey & (CELL_KB_MKEY_L_SHIFT | CELL_KB_MKEY_R_SHIFT);
 	const bool is_caps_lock = led & (CELL_KB_LED_CAPS_LOCK);
 	const bool is_num_lock = led & (CELL_KB_LED_NUM_LOCK);
+	const bool is_shift_lock = is_caps_lock && (arrange == CELL_KB_MAPPING_GERMAN_GERMANY || arrange == CELL_KB_MAPPING_FRENCH_FRANCE);
 
 	// CELL_KB_NUMPAD
 
@@ -194,13 +195,14 @@ u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode)
 
 	// ASCII
 
-	const auto get_ascii = [is_alt, is_shift, is_caps_lock](u16 raw, u16 shifted = 0, u16 altered = 0)
+	const auto get_ascii = [&](u16 raw, u16 shifted = 0, u16 altered = 0)
 	{
-		if ((is_shift || is_caps_lock) && shifted)
+		// Usually caps lock only applies uppercase to letters, but some layouts treat it as shift lock for all keys.
+		if ((is_shift || (is_caps_lock && (is_shift_lock || std::isalpha(raw)))) && shifted)
 		{
 			return shifted;
 		}
-		else if (is_alt && altered)
+		if (is_alt && altered)
 		{
 			return altered;
 		}
@@ -284,11 +286,12 @@ u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode)
 
 	if (rawcode >= CELL_KEYC_A && rawcode <= CELL_KEYC_Z) // 'A' - 'Z'
 	{
-		rawcode -=
-			(is_shift)
-				? ((led & (CELL_KB_LED_CAPS_LOCK)) ? 0 : 0x20)
-				: ((led & (CELL_KB_LED_CAPS_LOCK)) ? 0x20 : 0);
-		return rawcode + 0x5D;
+		if (is_shift != is_caps_lock)
+		{
+			return rawcode + 0x3D; // Return uppercase if exactly one is active.
+		}
+
+		return rawcode + 0x5D; // Return lowercase if none or both are active.
 	}
 	if (rawcode >= CELL_KEYC_1 && rawcode <= CELL_KEYC_9) return rawcode + 0x13; // '1' - '9'
 	if (rawcode == CELL_KEYC_0) return 0x30;                                     // '0'

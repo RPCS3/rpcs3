@@ -1048,7 +1048,7 @@ namespace rsx
 				CellOskDialogKeyMessage key_message{};
 				key_message.led = led;
 				key_message.mkey = mkey;
-				key_message.keycode = key_code;
+				key_message.keycode = out_key_code;
 				on_osk_key_input_entered(key_message);
 			}
 		}

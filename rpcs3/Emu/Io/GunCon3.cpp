@@ -280,7 +280,7 @@ void usb_device_guncon3::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint,
 		gc.gun_x = (mouse_data.x_pos * USHRT_MAX / mouse_data.x_max) - SHRT_MAX;
 		gc.gun_y = (mouse_data.y_pos * -USHRT_MAX / mouse_data.y_max) + SHRT_MAX;
 
-		cfg->handle_input(mouse_data, true, input_callback);
+		cfg->handle_input(mouse_data, input_callback);
 	}
 
 	guncon3_encode(&gc, buf, m_key.data());
