@@ -59,6 +59,15 @@ void keyboard_pad_handler::init_config(cfg_pad* cfg)
 
 	cfg->pressure_intensity_button.def = GetKeyName(Qt::NoButton);
 
+	cfg->lstick_anti_deadzone.def = 0;
+	cfg->rstick_anti_deadzone.def = 0;
+	cfg->lstickdeadzone.def       = 0;
+	cfg->rstickdeadzone.def       = 0;
+	cfg->ltriggerthreshold.def    = 0;
+	cfg->rtriggerthreshold.def    = 0;
+	cfg->lpadsquircling.def       = 0;
+	cfg->rpadsquircling.def       = 0;
+
 	// apply defaults
 	cfg->from_default();
 }
