@@ -2400,6 +2400,19 @@ void VKGSRender::patch_transform_constants(rsx::context* ctx, u32 index, u32 cou
 		data_source = iobuf.data();
 	}
 
+	// Preserving an active renderpass across a transfer operation is illegal vulkan. However, splitting up the CB into thousands of renderpasses incurs an overhead.
+	// We cheat here for specific cases where we already know the driver can let us get away with this.
+	static const rsx::simple_array<vk::driver_vendor> s_allowed_vendors =
+	{
+		vk::driver_vendor::AMD,
+		vk::driver_vendor::RADV,
+		vk::driver_vendor::LAVAPIPE,
+		vk::driver_vendor::NVIDIA
+	};
+
+	const auto driver_vendor = vk::get_driver_vendor();
+	const bool preserve_renderpass = !g_cfg.video.strict_rendering_mode && s_allowed_vendors.any(FN(x == driver_vendor));
+
 	vk::insert_buffer_memory_barrier(
 		*m_current_command_buffer,
 		m_vertex_constants_buffer_info.buffer,
@@ -2407,7 +2420,7 @@ void VKGSRender::patch_transform_constants(rsx::context* ctx, u32 index, u32 cou
 		data_range.second,
 		VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
 		VK_ACCESS_UNIFORM_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
-		true);
+		preserve_renderpass);
 
 	// FIXME: This is illegal during a renderpass
 	vkCmdUpdateBuffer(
@@ -2424,7 +2437,7 @@ void VKGSRender::patch_transform_constants(rsx::context* ctx, u32 index, u32 cou
 		data_range.second,
 		VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
 		VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_UNIFORM_READ_BIT,
-		true);
+		preserve_renderpass);
 }
 
 void VKGSRender::init_buffers(rsx::framebuffer_creation_context context, bool)
