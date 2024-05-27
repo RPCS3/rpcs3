@@ -131,6 +131,8 @@ void skateboard_pad_handler::init_config(cfg_pad* cfg)
 	cfg->tilt_right.def = ::at32(button_list, skateboard_key_codes::tilt_right);
 
 	// Set default misc variables
+	cfg->lstick_anti_deadzone.def = 0;
+	cfg->rstick_anti_deadzone.def = 0;
 	cfg->lstickdeadzone.def    = 40; // between 0 and 255
 	cfg->rstickdeadzone.def    = 40; // between 0 and 255
 	cfg->ltriggerthreshold.def = 0;  // between 0 and 255

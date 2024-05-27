@@ -75,6 +75,8 @@ struct cfg_pad final : cfg::node
 	cfg::uint<0, 200> rstickmultiplier{ this, "Right Stick Multiplier", 100 };
 	cfg::uint<0, 1000000> lstickdeadzone{ this, "Left Stick Deadzone", 0 };
 	cfg::uint<0, 1000000> rstickdeadzone{ this, "Right Stick Deadzone", 0 };
+	cfg::uint<0, 1000000> lstick_anti_deadzone{ this, "Left Stick Anti-Deadzone", 0 };
+	cfg::uint<0, 1000000> rstick_anti_deadzone{ this, "Right Stick Anti-Deadzone", 0 };
 	cfg::uint<0, 1000000> ltriggerthreshold{ this, "Left Trigger Threshold", 0 };
 	cfg::uint<0, 1000000> rtriggerthreshold{ this, "Right Trigger Threshold", 0 };
 	cfg::uint<0, 1000000> lpadsquircling{ this, "Left Pad Squircling Factor", 0 };

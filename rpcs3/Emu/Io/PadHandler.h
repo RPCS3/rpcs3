@@ -214,7 +214,7 @@ protected:
 	static f32 ScaledAxisInput(f32 raw_value, f32 minimum, f32 maximum, f32 deadzone, f32 range = 255.0f);
 
 	// Get normalized trigger value based on the range defined by a threshold
-	u16 NormalizeTriggerInput(u16 value, s32 threshold) const;
+	u16 NormalizeTriggerInput(u16 value, u32 threshold) const;
 
 	// normalizes a directed input, meaning it will correspond to a single "button" and not an axis with two directions
 	// the input values must lie in 0+
@@ -223,7 +223,7 @@ protected:
 	// This function normalizes stick deadzone based on the DS3's deadzone, which is ~13%
 	// X and Y is expected to be in (-255) to 255 range, deadzone should be in terms of thumb stick range
 	// return is new x and y values in 0-255 range
-	std::tuple<u16, u16> NormalizeStickDeadzone(s32 inX, s32 inY, u32 deadzone) const;
+	std::tuple<u16, u16> NormalizeStickDeadzone(s32 inX, s32 inY, u32 deadzone, u32 anti_deadzone) const;
 
 	// get clamped value between 0 and 255
 	static u16 Clamp0To255(f32 input);
@@ -237,13 +237,13 @@ protected:
 	// using a simple scale/sensitivity increase would *work* although it eats a chunk of our usable range in exchange
 	// this might be the best for now, in practice it seems to push the corners to max of 20x20, with a squircle_factor of 8000
 	// This function assumes inX and inY is already in 0-255
-	static std::tuple<u16, u16> ConvertToSquirclePoint(u16 inX, u16 inY, int squircle_factor);
+	static std::tuple<u16, u16> ConvertToSquirclePoint(u16 inX, u16 inY, u32 squircle_factor);
 
 public:
-	// s32 thumb_min = 0; // Unused. Make sure all handlers report 0+ values for sticks in get_button_values.
-	s32 thumb_max = 255; // NOTE: Better keep this positive
-	s32 trigger_min = 0;
-	s32 trigger_max = 255;
+	// u32 thumb_min = 0; // Unused. Make sure all handlers report 0+ values for sticks in get_button_values.
+	u32 thumb_max = 255;
+	u32 trigger_min = 0;
+	u32 trigger_max = 255;
 	u32 connected_devices = 0;
 
 	pad_handler m_type;
@@ -263,7 +263,7 @@ public:
 	bool has_pressure_intensity_button() const;
 
 	u16 NormalizeStickInput(u16 raw_value, s32 threshold, s32 multiplier, bool ignore_threshold = false) const;
-	void convert_stick_values(u16& x_out, u16& y_out, const s32& x_in, const s32& y_in, const s32& deadzone, const s32& padsquircling) const;
+	void convert_stick_values(u16& x_out, u16& y_out, s32 x_in, s32 y_in, u32 deadzone, u32 anti_deadzone, u32 padsquircling) const;
 
 	virtual bool Init() { return true; }
 	PadHandlerBase(pad_handler type = pad_handler::null, bool emulation = false);
