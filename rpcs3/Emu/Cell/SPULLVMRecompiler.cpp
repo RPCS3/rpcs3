@@ -1552,7 +1552,7 @@ public:
 		if (g_cfg.core.spu_debug && !add_loc->logged.exchange(1))
 		{
 			this->dump(func, log);
-			fs::file(m_spurt->get_cache_path() + "spu.log", fs::write + fs::append).write(log);
+			fs::write_file(m_spurt->get_cache_path() + "spu.log", fs::write + fs::append, log);
 		}
 
 		using namespace llvm;

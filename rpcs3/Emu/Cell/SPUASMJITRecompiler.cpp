@@ -110,7 +110,7 @@ spu_function_t spu_recompiler::compile(spu_program&& _func)
 	{
 		// Dump analyser data
 		this->dump(func, log);
-		fs::file(m_spurt->get_cache_path() + "spu.log", fs::write + fs::append).write(log);
+		fs::write_file(m_spurt->get_cache_path() + "spu.log", fs::write + fs::append, log);
 
 		// Set logger
 		code.setLogger(&logger);
