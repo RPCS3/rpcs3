@@ -2402,7 +2402,7 @@ void VKGSRender::patch_transform_constants(rsx::context* ctx, u32 index, u32 cou
 
 	// Preserving an active renderpass across a transfer operation is illegal vulkan. However, splitting up the CB into thousands of renderpasses incurs an overhead.
 	// We cheat here for specific cases where we already know the driver can let us get away with this.
-	static const rsx::simple_array<vk::driver_vendor> s_allowed_vendors =
+	static const std::set<vk::driver_vendor> s_allowed_vendors =
 	{
 		vk::driver_vendor::AMD,
 		vk::driver_vendor::RADV,
@@ -2411,7 +2411,7 @@ void VKGSRender::patch_transform_constants(rsx::context* ctx, u32 index, u32 cou
 	};
 
 	const auto driver_vendor = vk::get_driver_vendor();
-	const bool preserve_renderpass = !g_cfg.video.strict_rendering_mode && s_allowed_vendors.any(FN(x == driver_vendor));
+	const bool preserve_renderpass = !g_cfg.video.strict_rendering_mode && s_allowed_vendors.contains(driver_vendor);
 
 	vk::insert_buffer_memory_barrier(
 		*m_current_command_buffer,
