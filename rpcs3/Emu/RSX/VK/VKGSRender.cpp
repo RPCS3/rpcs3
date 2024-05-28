@@ -743,7 +743,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 
 	// NVIDIA has broken attribute interpolation
 	backend_config.supports_normalized_barycentrics = (
-		vk::get_driver_vendor() != vk::driver_vendor::NVIDIA ||
+		!vk::is_NVIDIA(vk::get_driver_vendor()) ||
 		!m_device->get_barycoords_support() ||
 		g_cfg.video.shader_precision == gpu_preset_level::low);
 
@@ -758,7 +758,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 
 	// NOTE: On NVIDIA cards going back decades (including the PS3) there is a slight normalization inaccuracy in compressed formats.
 	// Confirmed in BLES01916 (The Evil Within) which uses RGB565 for some virtual texturing data.
-	backend_config.supports_hw_renormalization = (vk::get_driver_vendor() == vk::driver_vendor::NVIDIA);
+	backend_config.supports_hw_renormalization = vk::is_NVIDIA(vk::get_driver_vendor());
 
 	// Conditional rendering support
 	// Do not use on MVK due to a speedhack we rely on (streaming results without stopping the current renderpass)
@@ -799,6 +799,10 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 			rsx_log.notice("Forcing safe async compute for NVIDIA device to avoid crashing.");
 			g_cfg.video.vk.asynchronous_scheduler.set(vk_gpu_scheduler_mode::safe);
 		}
+		break;
+	case vk::driver_vendor::NVK:
+		// TODO: Verify if this driver crashes or not
+		rsx_log.warning("NVK behavior with passthrough DMA is unknown. Proceed with caution.");
 		break;
 #if !defined(_WIN32)
 		// Anything running on AMDGPU kernel driver will not work due to the check for fd-backed memory allocations
@@ -2407,7 +2411,8 @@ void VKGSRender::patch_transform_constants(rsx::context* ctx, u32 index, u32 cou
 		vk::driver_vendor::AMD,
 		vk::driver_vendor::RADV,
 		vk::driver_vendor::LAVAPIPE,
-		vk::driver_vendor::NVIDIA
+		vk::driver_vendor::NVIDIA,
+		vk::driver_vendor::NVK
 	};
 
 	const auto driver_vendor = vk::get_driver_vendor();

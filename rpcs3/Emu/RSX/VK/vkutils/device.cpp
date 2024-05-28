@@ -243,6 +243,11 @@ namespace vk
 
 			if (gpu_name.find("NVIDIA") != umax || gpu_name.find("GeForce") != umax || gpu_name.find("Quadro") != umax)
 			{
+				if (gpu_name.find("NVK") != umax)
+				{
+					return driver_vendor::NVK;
+				}
+
 				return driver_vendor::NVIDIA;
 			}
 
@@ -281,6 +286,8 @@ namespace vk
 				return driver_vendor::DOZEN;
 			case VK_DRIVER_ID_MESA_LLVMPIPE:
 				return driver_vendor::LAVAPIPE;
+			case VK_DRIVER_ID_MESA_NVK:
+				return driver_vendor::NVK;
 			default:
 				// Mobile?
 				return driver_vendor::unknown;
