@@ -36,7 +36,7 @@ namespace vk
 		// INTEL
 		INTEL_generic,
 		INTEL_alchemist,
-		_INTEL_ENUM_MAX, // Do not insert INTEL enums beyond this point
+		_INTEL_ENUM_MAX_, // Do not insert INTEL enums beyond this point
 	};
 
 	enum class driver_vendor
@@ -71,7 +71,7 @@ namespace vk
 
 	static inline bool is_NVIDIA(chip_class chip) { return chip >= chip_class::NV_generic && chip < chip_class::_NV_ENUM_MAX_; }
 	static inline bool is_AMD(chip_class chip) { return chip >= chip_class::AMD_gcn_generic && chip < chip_class::_AMD_ENUM_MAX_; }
-	static inline bool is_INTEL(chip_class chip) { return chip >= chip_class::INTEL_generic && chip < chip_class::_INTEL_ENUM_MAX; }
+	static inline bool is_INTEL(chip_class chip) { return chip >= chip_class::INTEL_generic && chip < chip_class::_INTEL_ENUM_MAX_; }
 
 	static inline bool is_NVIDIA(driver_vendor vendor) { return vendor == driver_vendor::NVIDIA || vendor == driver_vendor::NVK; }
 	static inline bool is_AMD(driver_vendor vendor) { return vendor == driver_vendor::AMD || vendor == driver_vendor::RADV; }
