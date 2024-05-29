@@ -388,6 +388,7 @@ public:
 
 			auto buf = llvm::WritableMemoryBuffer::getNewUninitMemBuffer(cached.size());
 			cached.read(buf->getBufferStart(), buf->getBufferSize());
+
 			return buf;
 		}
 
@@ -614,6 +615,12 @@ void jit_compiler::add(std::unique_ptr<llvm::Module> _module)
 void jit_compiler::add(const std::string& path)
 {
 	auto cache = ObjectCache::load(path);
+
+	if (!cache)
+	{
+		jit_log.error("ObjectCache: Failed to read file. (path='%s', error=%s)", path, fs::g_tls_error);
+		return;		
+	}
 
 	if (auto object_file = llvm::object::ObjectFile::createObjectFile(*cache))
 	{
