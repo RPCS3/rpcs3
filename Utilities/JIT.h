@@ -1,6 +1,7 @@
 #pragma once
 
 #include "util/types.hpp"
+#include "util/atomic.hpp"
 
 // Include asmjit with warnings ignored
 #define ASMJIT_EMBED
@@ -508,6 +509,9 @@ class jit_compiler final
 	// Arch
 	std::string m_cpu{};
 
+	// Disk Space left
+	atomic_t<usz> m_disk_space = umax;
+
 public:
 	jit_compiler(const std::unordered_map<std::string, u64>& _link, const std::string& _cpu, u32 flags = 0);
 	~jit_compiler();
@@ -530,7 +534,7 @@ public:
 	void add(std::unique_ptr<llvm::Module> _module);
 
 	// Add object (path to obj file)
-	void add(const std::string& path);
+	bool add(const std::string& path);
 
 	// Update global mapping for a single value
 	void update_global_mapping(const std::string& name, u64 addr);
@@ -552,6 +556,8 @@ public:
 
 	// Get system triple (SPU)
 	static std::string triple2();
+
+	bool add_sub_disk_space(ssz space);
 };
 
 #endif // LLVM_AVAILABLE
