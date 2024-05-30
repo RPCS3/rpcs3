@@ -320,10 +320,12 @@ struct MemoryManager2 : llvm::RTDyldMemoryManager
 class ObjectCache final : public llvm::ObjectCache
 {
 	const std::string& m_path;
+	const std::add_pointer_t<jit_compiler> m_compiler = nullptr;
 
 public:
-	ObjectCache(const std::string& path)
+	ObjectCache(const std::string& path, jit_compiler* compiler = nullptr)
 		: m_path(path)
+		, m_compiler(compiler)
 	{
 	}
 
@@ -332,15 +334,33 @@ public:
 	void notifyObjectCompiled(const llvm::Module* _module, llvm::MemoryBufferRef obj) override
 	{
 		std::string name = m_path;
+
 		name.append(_module->getName().data());
 		//fs::file(name, fs::rewrite).write(obj.getBufferStart(), obj.getBufferSize());
 		name.append(".gz");
+
+		if (!obj.getBufferSize())
+		{
+			jit_log.error("LLVM: Nothing to write: %s", name);
+			return;
+		}
+
+		ensure(m_compiler);
 
 		fs::file module_file(name, fs::rewrite);
 
 		if (!module_file)
 		{
 			jit_log.error("LLVM: Failed to create module file: %s (%s)", name, fs::g_tls_error);
+			return;
+		}
+
+		// Bold assumption about upper limit of space consumption
+		const usz max_size = obj.getBufferSize() * 4;
+
+		if (!m_compiler->add_sub_disk_space(0 - max_size))
+		{
+			jit_log.error("LLVM: Failed to create module file: %s (not enough disk space left)", name);
 			return;
 		}
 
@@ -353,6 +373,9 @@ public:
 		}
 
 		jit_log.notice("LLVM: Created module: %s", _module->getName().data());
+
+		// Restore space that was overestimated
+		ensure(m_compiler->add_sub_disk_space(max_size - module_file.size()));
 	}
 
 	static std::unique_ptr<llvm::MemoryBuffer> load(const std::string& path)
@@ -509,6 +532,26 @@ std::string jit_compiler::triple2()
 #endif
 }
 
+bool jit_compiler::add_sub_disk_space(ssz space)
+{
+	if (space >= 0)
+	{
+		ensure(m_disk_space.fetch_add(space) < ~static_cast<usz>(space));
+		return true;
+	}
+
+	return m_disk_space.fetch_op([sub_size = static_cast<usz>(0 - space)](usz& val)
+	{
+		if (val >= sub_size)
+		{
+			val -= sub_size;
+			return true;
+		}
+
+		return false;
+	}).second;
+}
+
 jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, const std::string& _cpu, u32 flags)
 	: m_context(new llvm::LLVMContext)
 	, m_cpu(cpu(_cpu))
@@ -575,6 +618,13 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 	{
 		fmt::throw_exception("LLVM: Failed to create ExecutionEngine: %s", result);
 	}
+
+	fs::device_stat stats{};
+
+	if (fs::statfs(fs::get_cache_dir(), stats))
+	{
+		m_disk_space = stats.avail_free / 4;
+	}
 }
 
 jit_compiler::~jit_compiler()
@@ -583,7 +633,7 @@ jit_compiler::~jit_compiler()
 
 void jit_compiler::add(std::unique_ptr<llvm::Module> _module, const std::string& path)
 {
-	ObjectCache cache{path};
+	ObjectCache cache{path, this};
 	m_engine->setObjectCache(&cache);
 
 	const auto ptr = _module.get();
@@ -611,17 +661,26 @@ void jit_compiler::add(std::unique_ptr<llvm::Module> _module)
 	}
 }
 
-void jit_compiler::add(const std::string& path)
+bool jit_compiler::add(const std::string& path)
 {
 	auto cache = ObjectCache::load(path);
+
+	if (!cache)
+	{
+		jit_log.error("ObjectCache: Failed to read file. (path='%s', error=%s)", path, fs::g_tls_error);
+		return false;		
+	}
 
 	if (auto object_file = llvm::object::ObjectFile::createObjectFile(*cache))
 	{
 		m_engine->addObjectFile(llvm::object::OwningBinary<llvm::object::ObjectFile>(std::move(*object_file), std::move(cache)));
+		jit_log.trace("ObjectCache: Successfully added %s", path);
+		return true;
 	}
 	else
 	{
 		jit_log.error("ObjectCache: Adding failed: %s", path);
+		return false;
 	}
 }
 

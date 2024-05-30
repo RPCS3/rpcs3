@@ -5011,6 +5011,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 		g_watchdog_hold_ctr--;
 	}
 
+	bool failed_to_load = false;
 	{
 		if (!is_being_used_in_emulation || (cpu ? cpu->state.all_of(cpu_flag::exit) : Emu.IsStopped()))
 		{
@@ -5030,7 +5031,21 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 				break;
 			}
 
-			jit->add(cache_path + obj_name);
+			if (!failed_to_load && !jit->add(cache_path + obj_name))
+			{
+				ppu_log.error("LLVM: Failed to load module %s", obj_name);
+				failed_to_load = true;
+			}
+
+			if (failed_to_load)
+			{
+				if (!is_compiled)
+				{
+					g_progr_pdone++;
+				}
+
+				continue;
+			}
 
 			if (!is_compiled)
 			{
@@ -5040,7 +5055,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 		}
 	}
 
-	if (!is_being_used_in_emulation || (cpu ? cpu->state.all_of(cpu_flag::exit) : Emu.IsStopped()))
+	if (failed_to_load || !is_being_used_in_emulation || (cpu ? cpu->state.all_of(cpu_flag::exit) : Emu.IsStopped()))
 	{
 		return compiled_new;
 	}
@@ -5073,6 +5088,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 	if (is_first)
 	{
 		jit_mod.symbol_resolver = reinterpret_cast<void(*)(u8*, u64)>(jit->get("__resolve_symbols"));
+		ensure(jit_mod.symbol_resolver);
 	}
 	else
 	{

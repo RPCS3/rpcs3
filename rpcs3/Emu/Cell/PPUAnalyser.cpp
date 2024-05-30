@@ -929,6 +929,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 		}
 	}
 
+	bool used_fallback = false;
 	if (func_queue.empty() && segs[0].size >= 4u)
 	{
 		// Fallback, identify functions using callers (no jumptable detection, tail calls etc)
@@ -955,6 +956,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 					{
 						ppu_log.trace("Enqueued PPU function 0x%x using a caller at 0x%x", target, iaddr);
 						add_func(target, 0, 0);
+						used_fallback = true;
 					}
 				}
 			}
@@ -2053,6 +2055,11 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 	{
 		if (block.attr & ppu_attr::no_size && block.size > 4)
 		{
+			if (used_fallback)
+			{
+				continue;
+			}
+
 			ppu_log.warning("Block 0x%x will be compiled on per-instruction basis (size=0x%x)", block.addr, block.size);
 
 			for (u32 addr = block.addr; addr < block.addr + block.size; addr += 4)

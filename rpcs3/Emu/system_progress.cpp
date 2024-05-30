@@ -167,7 +167,9 @@ void progress_dialog_server::operator()()
 		const char* text1 = nullptr;
 
 		const u64 start_time = get_system_time();
-		u64 wait_no_update_count = 0; 
+		u64 wait_no_update_count = 0;
+
+		std::shared_ptr<atomic_t<u32>> ppu_cue_refs;
 
 		// Update progress
 		while (!g_system_progress_stopping && thread_ctrl::state() != thread_state::aborting)
@@ -208,9 +210,18 @@ void progress_dialog_server::operator()()
 						const u64 remaining_usec = pdone ? utils::rational_mul<u64>(passed_usec, static_cast<u64>(ptotal) - pdone, pdone) : (passed_usec * ptotal);
 
 						// Only show compile notification if we estimate at least 100ms
-						if (remaining_usec >= 100'000ULL)
+						if (remaining_usec >= 100'000ULL && (!ppu_cue_refs || !*ppu_cue_refs))
 						{
-							rsx::overlays::show_ppu_compile_notification();
+							ppu_cue_refs = rsx::overlays::show_ppu_compile_notification();
+						}
+					}
+
+					if (pdone >= ptotal)
+					{
+						if (ppu_cue_refs)
+						{
+							*ppu_cue_refs = 0;
+							ppu_cue_refs.reset();
 						}
 					}
 
@@ -319,6 +330,11 @@ void progress_dialog_server::operator()()
 
 			thread_ctrl::wait_for(10'000);
 			wait_no_update_count++;
+		}
+
+		if (ppu_cue_refs)
+		{
+			*ppu_cue_refs = 0;
 		}
 
 		if (g_system_progress_stopping || thread_ctrl::state() == thread_state::aborting)
