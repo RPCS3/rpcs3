@@ -188,11 +188,14 @@ void Emulator::BlockingCallFromMainThread(std::function<void()>&& func, std::sou
 
 	CallFromMainThread(std::move(func), &wake_up, true, umax, src_loc);
 
+	bool logged = false;
+
 	while (!wake_up)
 	{
-		if (!thread_ctrl::get_current())
+		if (!logged && !thread_ctrl::get_current())
 		{
-			fmt::throw_exception("Calling thread of BlockingCallFromMainThread is not of named_thread<>, calling from %s", src_loc);
+			logged = true;
+			sys_log.error("Calling thread of BlockingCallFromMainThread is not of named_thread<>, calling from %s", src_loc);
 		}
 
 		wake_up.wait(0);
@@ -2390,7 +2393,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 void Emulator::Run(bool start_playtime)
 {
-	ensure(IsReady());
+	ensure(IsReady() || GetStatus(false) == system_state::frozen);
 
 	GetCallbacks().on_run(start_playtime);
 
@@ -2568,21 +2571,35 @@ bool Emulator::Pause(bool freeze_emulation, bool show_resume_message)
 	const system_state pause_state = freeze_emulation ? system_state::frozen : system_state::paused;
 
 	// Try to pause
-	if (!m_state.compare_and_swap_test(system_state::running, pause_state))
+	const auto [old_state, done] = m_state.fetch_op([&](system_state& state)
 	{
+		if (state == system_state::running)
+		{
+			state = pause_state;
+			return true;
+		}
+
 		if (!freeze_emulation)
 		{
 			return false;
 		}
 
-		if (!m_state.compare_and_swap_test(system_state::ready, pause_state))
+		if (state == system_state::ready || state == system_state::paused)
 		{
-			if (!m_state.compare_and_swap_test(system_state::paused, pause_state))
-			{
-				return false;
-			}
+			state = pause_state;
+			return true;
 		}
 
+		return false;
+	});
+
+	if (!done)
+	{
+		return false;
+	}
+
+	if (old_state == system_state::ready || old_state == system_state::paused)
+	{
 		// Perform the side effects of Resume here when transforming paused to frozen state
 		BlockingCallFromMainThread([this]()
 		{
