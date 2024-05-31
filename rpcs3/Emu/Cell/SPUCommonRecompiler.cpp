@@ -6691,6 +6691,12 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		auto& stats = g_fxo->get<putllc16_statistics_t>();
 		had_putllc_evaluation = true;
 
+		if (!g_cfg.core.spu_debug)
+		{
+			// TODO
+			continue;
+		}
+
 		if (!pattern.ls_write)
 		{
 			spu_log.success("PUTLLC0 Pattern Detected! (put_pc=0x%x, %s) (putllc0=%d, putllc16+0=%d, all=%d)", pattern.put_pc, func_hash, ++stats.nowrite, ++stats.single, +stats.all);
