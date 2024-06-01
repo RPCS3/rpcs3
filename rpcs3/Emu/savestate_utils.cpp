@@ -225,7 +225,7 @@ std::string get_savestate_file(std::string_view title_id, std::string_view boot_
 	if (abs_id == -1 && rel_id == -1)
 	{
 		// Return directory
-		return fs::get_cache_dir() + "savestates/" + title + "/";
+		return fs::get_config_dir() + "savestates/" + title + "/";
 	}
 
 	ensure(rel_id < 0 || abs_id >= 0, "Unimplemented!");
@@ -236,7 +236,7 @@ std::string get_savestate_file(std::string_view title_id, std::string_view boot_
 	// While not needing to keep a 59 chars long suffix at all times for this purpose
 	const char prefix = ::at32("0123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"sv, save_id.size());
 
-	std::string path = fs::get_cache_dir() + "/savestates/" + title + "/" + title + '_' + prefix + '_' + save_id + ".SAVESTAT";
+	std::string path = fs::get_config_dir() + "/savestates/" + title + "/" + title + '_' + prefix + '_' + save_id + ".SAVESTAT";
 
 	if (std::string path_compressed = path + ".zst"; fs::is_file(path_compressed))
 	{
@@ -278,7 +278,7 @@ bool boot_last_savestate(bool testing)
 {
 	if (!g_cfg.savestate.suspend_emu && !Emu.GetTitleID().empty() && (Emu.IsRunning() || Emu.GetStatus() == system_state::paused))
 	{
-		const std::string save_dir = fs::get_cache_dir() + "savestates/" + Emu.GetTitleID() + '/';
+		const std::string save_dir = get_savestate_file(Emu.GetTitleID(), Emu.GetBoot(), -1, -1);
 
 		std::string savestate_path;
 		s64 mtime = smin;
