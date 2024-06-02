@@ -31,6 +31,8 @@ void GLFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 	int gl_version = 430;
 	std::vector<std::string> required_extensions;
 
+	required_extensions.push_back("GL_EXT_shader_integer_mix");
+
 	if (device_props.has_native_half_support)
 	{
 		const auto driver_caps = gl::get_driver_caps();

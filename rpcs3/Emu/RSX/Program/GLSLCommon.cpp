@@ -328,6 +328,10 @@ namespace glsl
 				{ "EXPAND_G_BIT" , rsx::texture_control_bits::EXPAND_G },
 				{ "EXPAND_B_BIT" , rsx::texture_control_bits::EXPAND_B },
 				{ "EXPAND_A_BIT" , rsx::texture_control_bits::EXPAND_A },
+				{ "SEXT_R_BIT" , rsx::texture_control_bits::SEXT_R },
+				{ "SEXT_G_BIT" , rsx::texture_control_bits::SEXT_G },
+				{ "SEXT_B_BIT" , rsx::texture_control_bits::SEXT_B },
+				{ "SEXT_A_BIT" , rsx::texture_control_bits::SEXT_A },
 
 				{ "ALPHAKILL    ", rsx::texture_control_bits::ALPHAKILL },
 				{ "RENORMALIZE  ", rsx::texture_control_bits::RENORMALIZE },

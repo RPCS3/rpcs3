@@ -22,6 +22,10 @@ namespace rsx
 		EXPAND_R,
 		EXPAND_G,
 		EXPAND_B,
+		SEXT_A,
+		SEXT_R,
+		SEXT_G,
+		SEXT_B,
 		DEPTH_FLOAT,
 		DEPTH_COMPARE_OP,
 		DEPTH_COMPARE_1,
@@ -33,7 +37,9 @@ namespace rsx
 
 		GAMMA_CTRL_MASK = (1 << GAMMA_R) | (1 << GAMMA_G) | (1 << GAMMA_B) | (1 << GAMMA_A),
 		EXPAND_MASK = (1 << EXPAND_R) | (1 << EXPAND_G) | (1 << EXPAND_B) | (1 << EXPAND_A),
-		EXPAND_OFFSET = EXPAND_A
+		EXPAND_OFFSET = EXPAND_A,
+		SEXT_MASK = (1 << SEXT_R) | (1 << SEXT_G) | (1 << SEXT_B) | (1 << SEXT_A),
+		SEXT_OFFSET = SEXT_A
 	};
 
 	enum ROP_control_bits : u32

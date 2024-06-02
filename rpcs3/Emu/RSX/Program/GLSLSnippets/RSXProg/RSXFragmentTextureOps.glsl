@@ -7,9 +7,14 @@ R"(
 #define EXPAND_G_MASK (1 << EXPAND_G_BIT)
 #define EXPAND_B_MASK (1 << EXPAND_B_BIT)
 #define EXPAND_A_MASK (1 << EXPAND_A_BIT)
+#define SEXT_R_MASK   (1 << SEXT_R_BIT)
+#define SEXT_G_MASK   (1 << SEXT_G_BIT)
+#define SEXT_B_MASK   (1 << SEXT_B_BIT)
+#define SEXT_A_MASK   (1 << SEXT_A_BIT)
 
 #define GAMMA_CTRL_MASK  (GAMMA_R_MASK | GAMMA_G_MASK | GAMMA_B_MASK | GAMMA_A_MASK)
 #define SIGN_EXPAND_MASK (EXPAND_R_MASK | EXPAND_G_MASK | EXPAND_B_MASK | EXPAND_A_MASK)
+#define SEXT_MASK        (SEXT_R_MASK | SEXT_G_MASK | SEXT_B_MASK | SEXT_A_MASK)
 #define FILTERED_MASK    (FILTERED_MAG_BIT | FILTERED_MIN_BIT)
 
 #ifdef _ENABLE_TEXTURE_EXPAND
@@ -164,6 +169,15 @@ vec4 _texcoord_xform_shadow(const in vec4 coord4, const in sampler_info params)
 
 #endif // _EMULATE_SHADOW
 
+vec4 _sext_unorm8x4(const in vec4 x)
+{
+	// TODO: Handle clamped sign-extension
+	const ivec4 bits = ivec4(floor(fma(x, vec4(255.), vec4(0.5f))));
+	const bvec4 sign_check = lessThan(bits, ivec4(0x80));
+	const ivec4 ret = _select(bits - 256, bits, sign_check);
+	return ret / 127.f;
+}
+
 vec4 _process_texel(in vec4 rgba, const in uint control_bits)
 {
 	if (control_bits == 0)
@@ -190,13 +204,22 @@ vec4 _process_texel(in vec4 rgba, const in uint control_bits)
 
 	uvec4 mask;
 	vec4 convert;
-	uint op_mask = control_bits & uint(SIGN_EXPAND_MASK);
 
-	if (op_mask != 0)
+	uint op_mask = control_bits & uint(SIGN_EXPAND_MASK);
+	if (op_mask != 0u)
 	{
-		// Expand to signed normalized
+		// Expand to signed normalized by decompressing the signal
 		mask = uvec4(op_mask) & uvec4(EXPAND_R_MASK, EXPAND_G_MASK, EXPAND_B_MASK, EXPAND_A_MASK);
 		convert = (rgba * 2.f - 1.f);
+		rgba = _select(rgba, convert, notEqual(mask, uvec4(0)));
+	}
+
+	op_mask = control_bits & uint(SEXT_MASK);
+	if (op_mask != 0u)
+	{
+		// Sign-extend the input signal
+		mask = uvec4(op_mask) & uvec4(SEXT_R_MASK, SEXT_G_MASK, SEXT_B_MASK, SEXT_A_MASK);
+		convert = _sext_unorm8x4(rgba);
 		rgba = _select(rgba, convert, notEqual(mask, uvec4(0)));
 	}
 
