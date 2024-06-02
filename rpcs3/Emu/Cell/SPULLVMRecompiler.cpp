@@ -1200,6 +1200,18 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 				const v128 to_write = _spu->_ref<const nse_t<v128>>(ls_dst);
 
 				const auto dest = raddr | (ls_dst & 127);
+				const auto _dest = vm::get_super_ptr<atomic_t<nse_t<v128>>>(dest);
+				using spu_rdata_t = decltype(spu_thread::rdata);
+
+				extern bool cmp_rdata(const spu_rdata_t& _lhs, const spu_rdata_t& _rhs);
+
+				// if (!cmp_rdata(*reinterpret_cast<const decltype(_spu->rdata)*>(_dest), _spu->rdata))
+				// {
+				// 	_spu->ch_atomic_stat.set_value(MFC_PUTLLC_FAILURE);
+				// 	_spu->set_events(SPU_EVENT_LR);
+				// 	_spu->raddr = 0;
+				// 	return;
+				// }
 
 				if (rdata == to_write || ((lsa ^ ls_dst) & (SPU_LS_SIZE - 128)))
 				{
@@ -1219,14 +1231,15 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 					return;
 				}
 
+				const u64 rtime = _spu->rtime;
 				rsx::reservation_lock rsx_lock(raddr, 128);
 
-				// Tocuh memory
+				// Touch memory
 				vm::_ref<atomic_t<u8>>(dest).compare_and_swap_test(0, 0);
 
-				auto [old_res, ok] = res.fetch_op([](u64& rval)
+				auto [old_res, ok] = res.fetch_op([&](u64& rval)
 				{
-					if (rval & 127)
+					if (rval & 127)// || rtime != rval)
 					{
 						return false;
 					}
@@ -1243,7 +1256,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 					return;
 				}
 
-				if (!vm::get_super_ptr<atomic_t<nse_t<v128>>>(dest)->compare_and_swap_test(rdata, to_write))
+				if (!_dest->compare_and_swap_test(rdata, to_write))
 				{
 					res.release(old_res);
 					_spu->ch_atomic_stat.set_value(MFC_PUTLLC_FAILURE);
