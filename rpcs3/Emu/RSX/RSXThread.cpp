@@ -2618,14 +2618,14 @@ namespace rsx
 					const auto remap_ctrl = (tex.remap() >> 8) & 0xAA;
 					if (remap_ctrl == 0xAA)
 					{
-						argb8_convert |= (unsigned_remap & 0xFu) << texture_control_bits::EXPAND_OFFSET;
+						argb8_convert |= (mask & 0xFu) << bit_offset;
 					}
 					else
 					{
-						if (remap_ctrl & 0x03) argb8_convert |= (unsigned_remap & 0x1u) << texture_control_bits::EXPAND_OFFSET;
-						if (remap_ctrl & 0x0C) argb8_convert |= (unsigned_remap & 0x2u) << texture_control_bits::EXPAND_OFFSET;
-						if (remap_ctrl & 0x30) argb8_convert |= (unsigned_remap & 0x4u) << texture_control_bits::EXPAND_OFFSET;
-						if (remap_ctrl & 0xC0) argb8_convert |= (unsigned_remap & 0x8u) << texture_control_bits::EXPAND_OFFSET;
+						if (remap_ctrl & 0x03) argb8_convert |= (mask & 0x1u) << bit_offset;
+						if (remap_ctrl & 0x0C) argb8_convert |= (mask & 0x2u) << bit_offset;
+						if (remap_ctrl & 0x30) argb8_convert |= (mask & 0x4u) << bit_offset;
+						if (remap_ctrl & 0xC0) argb8_convert |= (mask & 0x8u) << bit_offset;
 					}
 				};
 
