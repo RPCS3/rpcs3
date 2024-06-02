@@ -2600,7 +2600,8 @@ namespace rsx
 				}
 
 				// Special operations applied to 8-bit formats such as gamma correction and sign conversion
-				// NOTE: The unsigned_remap being set to anything other than 0 flags the texture as being signed (UE3)
+				// NOTE: The unsigned_remap=bias flag being set flags the texture as being sign-expanded (BX2) (UE3)
+				// NOTE: The ARGB8_signed flag means to reinterpret the raw bytes as signed. This is different than unsigned_remap=bias
 				// This is a separate method of setting the format to signed mode without doing so per-channel
 				// Precedence = SIGNED override > GAMMA > UNSIGNED_REMAP (See Resistance 3 for GAMMA/REMAP relationship, UE3 for REMAP effect)
 
@@ -2609,23 +2610,35 @@ namespace rsx
 				const u32 unsigned_remap = (tex.unsigned_remap() == CELL_GCM_TEXTURE_UNSIGNED_REMAP_NORMAL)? 0u : (~gamma & 0xF);
 				u32 argb8_convert = gamma;
 
-				if (const u32 sign_convert = (argb8_signed | unsigned_remap))
+				// Helper function to apply a per-channel mask based on an input mask
+				const auto apply_sign_convert_mask = [&](u32 mask, u32 bit_offset)
 				{
-					// Apply remap to avoid mapping 1 to -1. Only the sign conversion needs this check
 					// TODO: Use actual remap mask to account for 0 and 1 overrides in default mapping
 					// TODO: Replace this clusterfuck of texture control with matrix transformation
 					const auto remap_ctrl = (tex.remap() >> 8) & 0xAA;
 					if (remap_ctrl == 0xAA)
 					{
-						argb8_convert |= (sign_convert & 0xFu) << texture_control_bits::EXPAND_OFFSET;
+						argb8_convert |= (unsigned_remap & 0xFu) << texture_control_bits::EXPAND_OFFSET;
 					}
 					else
 					{
-						if (remap_ctrl & 0x03) argb8_convert |= (sign_convert & 0x1u) << texture_control_bits::EXPAND_OFFSET;
-						if (remap_ctrl & 0x0C) argb8_convert |= (sign_convert & 0x2u) << texture_control_bits::EXPAND_OFFSET;
-						if (remap_ctrl & 0x30) argb8_convert |= (sign_convert & 0x4u) << texture_control_bits::EXPAND_OFFSET;
-						if (remap_ctrl & 0xC0) argb8_convert |= (sign_convert & 0x8u) << texture_control_bits::EXPAND_OFFSET;
+						if (remap_ctrl & 0x03) argb8_convert |= (unsigned_remap & 0x1u) << texture_control_bits::EXPAND_OFFSET;
+						if (remap_ctrl & 0x0C) argb8_convert |= (unsigned_remap & 0x2u) << texture_control_bits::EXPAND_OFFSET;
+						if (remap_ctrl & 0x30) argb8_convert |= (unsigned_remap & 0x4u) << texture_control_bits::EXPAND_OFFSET;
+						if (remap_ctrl & 0xC0) argb8_convert |= (unsigned_remap & 0x8u) << texture_control_bits::EXPAND_OFFSET;
 					}
+				};
+
+				if (argb8_signed)
+				{
+					// Apply integer sign extension from uint8 to sint8 and renormalize
+					apply_sign_convert_mask(argb8_signed, texture_control_bits::SEXT_OFFSET);
+				}
+
+				if (unsigned_remap)
+				{
+					// Apply sign expansion, compressed normal-map style (2n - 1)
+					apply_sign_convert_mask(unsigned_remap, texture_control_bits::EXPAND_OFFSET);
 				}
 
 				if (argb8_convert)

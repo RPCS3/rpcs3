@@ -29,28 +29,24 @@ std::string VKFragmentDecompilerThread::compareFunction(COMPARE f, const std::st
 
 void VKFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 {
-	int version = 420;
 	std::vector<const char*> required_extensions;
 
 	if (device_props.has_native_half_support)
 	{
-		version = std::max(version, 450);
 		required_extensions.emplace_back("GL_EXT_shader_explicit_arithmetic_types_float16");
 	}
 
 	if (properties.multisampled_sampler_mask)
 	{
-		version = std::max(version, 450);
 		required_extensions.emplace_back("GL_ARB_shader_texture_image_samples");
 	}
 
 	if (m_prog.ctrl & RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION)
 	{
-		version = std::max(version, 450);
 		required_extensions.emplace_back("GL_EXT_fragment_shader_barycentric");
 	}
 
-	OS << "#version " << version << "\n";
+	OS << "#version 450\n";
 	for (const auto ext : required_extensions)
 	{
 		OS << "#extension " << ext << ": require\n";
