@@ -1037,9 +1037,9 @@ std::optional<s32> lv2_socket_native::sendto(s32 flags, const std::vector<u8>& b
 	}
 
 #ifdef _WIN32
-	get_last_error(!so_nbio && (flags & SYS_NET_MSG_DONTWAIT) == 0, connecting);
+	result = get_last_error(!so_nbio && (flags & SYS_NET_MSG_DONTWAIT) == 0, connecting);
 #else
-	get_last_error(!so_nbio && (flags & SYS_NET_MSG_DONTWAIT) == 0);
+	result = get_last_error(!so_nbio && (flags & SYS_NET_MSG_DONTWAIT) == 0);
 #endif
 
 	if (result)
