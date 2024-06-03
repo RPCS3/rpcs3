@@ -308,7 +308,8 @@ usb_handler_thread::usb_handler_thread()
 			sys_usbd.success("Found device: Santroller");
 			// Send the device a specific control transfer so that it jumps to a RPCS3 compatible mode
 			libusb_device_handle* lusb_handle;
-			if (libusb_open(list[index], &lusb_handle) == LIBUSB_SUCCESS) {
+			if (libusb_open(list[index], &lusb_handle) == LIBUSB_SUCCESS)
+			{
 #ifdef __linux__
 				libusb_set_auto_detach_kernel_driver(lusb_handle, true);
 				libusb_claim_interface(lusb_handle, 2);
