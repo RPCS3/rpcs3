@@ -315,7 +315,9 @@ usb_handler_thread::usb_handler_thread()
 #endif
 				libusb_control_transfer(lusb_handle, +LIBUSB_ENDPOINT_IN | +LIBUSB_REQUEST_TYPE_CLASS | +LIBUSB_RECIPIENT_INTERFACE, 0x01, 0x03f2, 2, nullptr, 0, 5000);
 				libusb_close(lusb_handle);
-			} else {
+			}
+			else
+			{
 				sys_usbd.error("Unable to open Santroller device, make sure Santroller isn't open in the background.");
 			}
 		}
