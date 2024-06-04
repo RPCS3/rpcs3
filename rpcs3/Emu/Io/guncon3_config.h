@@ -42,9 +42,9 @@ struct cfg_gc3 final : public emulated_pad_config<guncon3_btn>
 	cfg_pad_btn<guncon3_btn> bs_y{this, "B-stick Y-Axis", guncon3_btn::bs_y, pad_button::rs_y};
 };
 
-struct cfg_guncon3 final : public emulated_pads_config<cfg_gc3, 2>
+struct cfg_guncon3 final : public emulated_pads_config<cfg_gc3, 4>
 {
-	cfg_guncon3() : emulated_pads_config<cfg_gc3, 2>("guncon3") {};
+	cfg_guncon3() : emulated_pads_config<cfg_gc3, 4>("guncon3") {};
 };
 
 extern cfg_guncon3 g_cfg_guncon3;
