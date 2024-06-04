@@ -220,6 +220,13 @@ void usb_device_guncon3::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint,
 		return;
 	}
 
+	if (m_controller_index >= g_cfg_guncon3.players.size())
+	{
+		guncon3_log.warning("GunCon3 controllers are only supported for Player1 to Player%d", g_cfg_guncon3.players.size());
+		guncon3_encode(&gc, buf, m_key.data());
+		return;
+	}
+
 	const auto input_callback = [&gc](guncon3_btn btn, u16 value, bool pressed)
 	{
 		if (!pressed)
@@ -261,15 +268,18 @@ void usb_device_guncon3::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint,
 		auto& mouse_handler = g_fxo->get<MouseHandlerBase>();
 		std::lock_guard mouse_lock(mouse_handler.mutex);
 
-		mouse_handler.Init(2);
+		mouse_handler.Init(4);
 
-		if (m_controller_index >= mouse_handler.GetMice().size())
+		const u32 mouse_index = g_cfg.io.mouse == mouse_handler::basic ? 0 : m_controller_index;
+		if (mouse_index >= mouse_handler.GetMice().size())
 		{
 			guncon3_encode(&gc, buf, m_key.data());
 			return;
 		}
 
-		const Mouse& mouse_data = ::at32(mouse_handler.GetMice(), m_controller_index);
+		const Mouse& mouse_data = ::at32(mouse_handler.GetMice(), mouse_index);
+		cfg->handle_input(mouse_data, input_callback);
+
 		if (mouse_data.x_max <= 0 || mouse_data.y_max <= 0)
 		{
 			guncon3_encode(&gc, buf, m_key.data());
@@ -279,8 +289,6 @@ void usb_device_guncon3::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint,
 		// Expand 0..+wh to -32767..+32767
 		gc.gun_x = (mouse_data.x_pos * USHRT_MAX / mouse_data.x_max) - SHRT_MAX;
 		gc.gun_y = (mouse_data.y_pos * -USHRT_MAX / mouse_data.y_max) + SHRT_MAX;
-
-		cfg->handle_input(mouse_data, input_callback);
 	}
 
 	guncon3_encode(&gc, buf, m_key.data());
