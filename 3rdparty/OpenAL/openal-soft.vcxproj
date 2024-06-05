@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <Keyword>MakeFileProj</Keyword>
+    <ProjectName>openal-soft</ProjectName>
+    <ProjectGuid>{8846A9AA-5539-4C91-8301-F54260E1A07A}</ProjectGuid>
+  </PropertyGroup>
+  <Import Project="$(SolutionDir)\buildfiles\msvc\common_default.props" />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="$(SolutionDir)\buildfiles\msvc\common_default_macros.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <PropertyGroup>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros">
+    <CmakeReleaseCLI>call vsdevcmd.bat -arch=amd64
+      cd ./openal-soft/build
+      cmake -G Ninja -DCMAKE_CXX_COMPILER="cl.exe" -DCMAKE_C_COMPILER="cl.exe" -DCMAKE_BUILD_TYPE="Release" -DCMAKE_INSTALL_PREFIX="./Release" -DCMAKE_SYSTEM_VERSION=6.1 -DLIBTYPE=STATIC -DFORCE_STATIC_VCRT=true -DALSOFT_UTILS=false -DALSOFT_EXAMPLES=false -DALSOFT_INSTALL=false -DALSOFT_INSTALL_CONFIG=false -DALSOFT_INSTALL_HRTF_DATA=false -DALSOFT_INSTALL_AMBDEC_PRESETS=false -DALSOFT_INSTALL_EXAMPLES=false -DALSOFT_INSTALL_UTILS=false ..</CmakeReleaseCLI>
+    <CmakeDebugCLI>call vsdevcmd.bat -arch=amd64
+      cd ./openal-soft/build
+      cmake -G Ninja -DCMAKE_CXX_COMPILER="cl.exe" -DCMAKE_C_COMPILER="cl.exe" -DCMAKE_BUILD_TYPE="Debug" -DCMAKE_INSTALL_PREFIX="./Debug" -DCMAKE_SYSTEM_VERSION=6.1 -DLIBTYPE=STATIC -DALSOFT_UTILS=false -DALSOFT_EXAMPLES=false -DALSOFT_INSTALL=false -DALSOFT_INSTALL_CONFIG=false -DALSOFT_INSTALL_HRTF_DATA=false -DALSOFT_INSTALL_AMBDEC_PRESETS=false -DALSOFT_INSTALL_EXAMPLES=false -DALSOFT_INSTALL_UTILS=false ..</CmakeDebugCLI>
+    <CmakeCleanCLI>echo Cleaning..
+      cd ./openal-soft/build
+    </CmakeCleanCLI>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <NMakeBuildCommandLine>$(CmakeDebugCLI)
+      ninja
+    </NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine>del CMakeCache.txt
+      $(CmakeDebugCLI)
+      ninja
+    </NMakeReBuildCommandLine>
+    <NMakeCleanCommandLine>
+      $(CmakeCleanCLI)
+    </NMakeCleanCommandLine>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <NMakeBuildCommandLine>$(CmakeReleaseCLI)
+      ninja
+    </NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine>del CMakeCache.txt
+      $(CmakeReleaseCLI)
+      ninja
+    </NMakeReBuildCommandLine>
+    <NMakeCleanCommandLine>
+      $(CmakeCleanCLI)
+    </NMakeCleanCommandLine>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
