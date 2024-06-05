@@ -3,7 +3,7 @@
 #include "Utilities/Thread.h"
 #include "Emu/Cell/timers.hpp"
 
-#include "3rdparty/OpenAL/include/alext.h"
+#include "3rdparty/OpenAL/openal-soft/include/AL/alext.h"
 
 // Error Codes
 enum CellMicInError : u32

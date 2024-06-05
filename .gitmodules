@@ -96,3 +96,7 @@
 	path = 3rdparty/7zip/7zip
 	url = ../../ip7z/7zip.git
 	ignore = dirty
+[submodule "3rdparty/OpenAL/openal-soft"]
+	path = 3rdparty/OpenAL/openal-soft
+	url = ../../kcat/openal-soft.git
+	ignore = dirty
