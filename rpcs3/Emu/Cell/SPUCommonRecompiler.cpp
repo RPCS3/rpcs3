@@ -3266,6 +3266,8 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			}
 			else
 			{
+				m_targets[pos].push_back(target);
+
 				if (g_cfg.core.spu_block_size == spu_block_size_type::giga)
 				{
 					spu_log.notice("[0x%x] At 0x%x: ignoring fixed tail call to 0x%x (SYNC)", entry_point, pos, target);
