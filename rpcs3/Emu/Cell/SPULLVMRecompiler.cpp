@@ -2638,6 +2638,14 @@ public:
 				fs::file(m_spurt->get_cache_path() + "spu-ir.log", fs::write + fs::append).write(log);
 			}
 
+			if (auto& cache = g_fxo->get<spu_cache>())
+			{
+				if (add_to_file)
+				{
+					cache.add(func);
+				}
+			}
+
 			fmt::throw_exception("Compilation failed");
 		}
 
