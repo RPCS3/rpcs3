@@ -4430,7 +4430,7 @@ bool spu_thread::process_mfc_cmd()
 					// Need to check twice for it to be accurate, the code is before and not after this check for:
 					// 1. Reduce time between reservation accesses so TSX panelty would be lowered
 					// 2. Increase the chance of change detection: if GETLLAR has been called again new data is probably wanted
-					if (rtime == vm::reservation_acquire(addr) && (!g_cfg.core.spu_accurate_getllar || cmp_rdata(rdata, data)))
+					if (rtime == vm::reservation_acquire(addr) && cmp_rdata(rdata, data))
 					{
 						if ([&]() -> bool
 						{
@@ -4607,7 +4607,7 @@ bool spu_thread::process_mfc_cmd()
 				continue;
 			}
 
-			if (g_cfg.core.spu_accurate_getllar && !cmp_rdata(rdata, data))
+			if (!cmp_rdata(rdata, data))
 			{
 				i += 2;
 				continue;
