@@ -26,7 +26,6 @@ public:
 		const QString lib_default_lle              = tr("Select to HLE. (LLE by default)");
 
 		const QString debug_console_mode           = tr("Increases the amount of usable system memory to match a DECR console and more.\nCauses some software to behave differently than on retail hardware.");
-		const QString accurate_getllar             = tr("Accurately processes SPU MFC_GETLLAR operation.");
 		const QString accurate_rsx_access          = tr("Forces RSX pauses on SPU MFC_GETLLAR and SPU MFC_PUTLLUC operations.");
 		const QString accurate_spu_dma             = tr("Accurately processes SPU DMA operations.");
 		const QString fixup_ppunj                  = tr("Legacy option. Fixup result vector values in Non-Java Mode in PPU LLVM.\nIf unsure, do not modify this setting.");
