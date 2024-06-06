@@ -4,7 +4,11 @@
 #include "Utilities/File.h"
 
 mouse_config::mouse_config()
-	: cfg_name(fs::get_config_dir() + "/config_mouse.yml")
+#ifdef _WIN32
+	: cfg_name(fs::get_config_dir() + "config/config_mouse.yml")
+#else
+	: cfg_name(fs::get_config_dir() + "config_mouse.yml")
+#endif
 {
 }
 
