@@ -172,9 +172,9 @@ vec4 _texcoord_xform_shadow(const in vec4 coord4, const in sampler_info params)
 vec4 _sext_unorm8x4(const in vec4 x)
 {
 	// TODO: Handle clamped sign-extension
-	const ivec4 bits = ivec4(floor(fma(x, vec4(255.), vec4(0.5f))));
-	const bvec4 sign_check = lessThan(bits, ivec4(0x80));
-	const ivec4 ret = _select(bits - 256, bits, sign_check);
+	const vec4 bits = floor(fma(x, vec4(255.), vec4(0.5f)));
+	const bvec4 sign_check = lessThan(bits, vec4(128.f));
+	const vec4 ret = _select(bits - 256.f, bits, sign_check);
 	return ret / 127.f;
 }
 
