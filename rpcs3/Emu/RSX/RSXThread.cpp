@@ -2600,15 +2600,20 @@ namespace rsx
 				}
 
 				// Special operations applied to 8-bit formats such as gamma correction and sign conversion
-				// NOTE: The unsigned_remap=bias flag being set flags the texture as being sign-expanded (BX2) (UE3)
-				// NOTE: The ARGB8_signed flag means to reinterpret the raw bytes as signed. This is different than unsigned_remap=bias
+				// NOTE: The unsigned_remap=bias flag being set flags the texture as being compressed normal (2n-1 / BX2) (UE3)
+				// NOTE: The ARGB8_signed flag means to reinterpret the raw bytes as signed. This is different than unsigned_remap=bias which does range decompression.
 				// This is a separate method of setting the format to signed mode without doing so per-channel
-				// Precedence = SIGNED override > GAMMA > UNSIGNED_REMAP (See Resistance 3 for GAMMA/REMAP relationship, UE3 for REMAP effect)
+				// Precedence = SNORM > GAMMA > UNSIGNED_REMAP (See Resistance 3 for GAMMA/BX2 relationship, UE3 for BX2 effect)
 
-				const u32 argb8_signed = tex.argb_signed();
-				const u32 gamma = tex.gamma() & ~argb8_signed;
-				const u32 unsigned_remap = (tex.unsigned_remap() == CELL_GCM_TEXTURE_UNSIGNED_REMAP_NORMAL)? 0u : (~gamma & 0xF);
+				const u32 argb8_signed = tex.argb_signed(); // _SNROM
+				const u32 gamma = tex.gamma() & ~argb8_signed; // _SRGB
+				const u32 unsigned_remap = (tex.unsigned_remap() == CELL_GCM_TEXTURE_UNSIGNED_REMAP_NORMAL)? 0u : (~(gamma | argb8_signed) & 0xF); // _BX2
 				u32 argb8_convert = gamma;
+
+				// The options are mutually exclusive
+				ensure((argb8_signed & gamma) == 0);
+				ensure((argb8_signed & unsigned_remap) == 0);
+				ensure((gamma & unsigned_remap) == 0);
 
 				// Helper function to apply a per-channel mask based on an input mask
 				const auto apply_sign_convert_mask = [&](u32 mask, u32 bit_offset)
@@ -2619,14 +2624,13 @@ namespace rsx
 					if (remap_ctrl == 0xAA)
 					{
 						argb8_convert |= (mask & 0xFu) << bit_offset;
+						return;
 					}
-					else
-					{
-						if (remap_ctrl & 0x03) argb8_convert |= (mask & 0x1u) << bit_offset;
-						if (remap_ctrl & 0x0C) argb8_convert |= (mask & 0x2u) << bit_offset;
-						if (remap_ctrl & 0x30) argb8_convert |= (mask & 0x4u) << bit_offset;
-						if (remap_ctrl & 0xC0) argb8_convert |= (mask & 0x8u) << bit_offset;
-					}
+
+					if (remap_ctrl & 0x03) argb8_convert |= (mask & 0x1u) << bit_offset;
+					if (remap_ctrl & 0x0C) argb8_convert |= (mask & 0x2u) << bit_offset;
+					if (remap_ctrl & 0x30) argb8_convert |= (mask & 0x4u) << bit_offset;
+					if (remap_ctrl & 0xC0) argb8_convert |= (mask & 0x8u) << bit_offset;
 				};
 
 				if (argb8_signed)
