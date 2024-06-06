@@ -100,3 +100,7 @@
 	path = 3rdparty/OpenAL/openal-soft
 	url = ../../kcat/openal-soft.git
 	ignore = dirty
+[submodule "3rdparty/stblib/stb"]
+	path = 3rdparty/stblib/stb
+	url = ../../nothings/stb.git
+	ignore = dirty
