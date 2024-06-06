@@ -325,6 +325,7 @@ public:
 		case move_handler::raw_mouse:
 		{
 			auto& handler = g_fxo->get<MouseHandlerBase>();
+			std::lock_guard mouse_lock(handler.mutex);
 
 			// Make sure that the mouse handler is initialized
 			handler.Init(std::min<u32>(attribute.max_connect, CELL_GEM_MAX_NUM));
@@ -891,7 +892,7 @@ static bool mouse_input_to_pad(const u32 mouse_no, be_t<u16>& digital_buttons, b
 		return false;
 	}
 
-	const auto& mouse_data = ::at32(handler.GetMice(), mouse_no);
+	const Mouse& mouse_data = ::at32(handler.GetMice(), mouse_no);
 	const auto is_pressed = [&mouse_data](MouseButtonCodes button) -> bool { return !!(mouse_data.buttons & button); };
 
 	digital_buttons = 0;
@@ -1514,7 +1515,9 @@ error_code cellGemGetInfo(vm::ptr<CellGemInfo> info)
 
 	// TODO: Support connecting PlayStation Move controllers
 
-	if (g_cfg.io.move == move_handler::fake)
+	switch (g_cfg.io.move)
+	{
+	case move_handler::fake:
 	{
 		gem.connected_controllers = 0;
 
@@ -1538,6 +1541,39 @@ error_code cellGemGetInfo(vm::ptr<CellGemInfo> info)
 				gem.controllers[i].port = 0;
 			}
 		}
+		break;
+	}
+	case move_handler::raw_mouse:
+	{
+		gem.connected_controllers = 0;
+
+		auto& handler = g_fxo->get<MouseHandlerBase>();
+		std::lock_guard mouse_lock(handler.mutex);
+
+		const MouseInfo& info = handler.GetInfo();
+
+		for (u32 i = 0; i < CELL_GEM_MAX_NUM; i++)
+		{
+			const bool connected = i < gem.attribute.max_connect && info.status[i] == CELL_MOUSE_STATUS_CONNECTED;
+
+			if (connected)
+			{
+				gem.connected_controllers++;
+				gem.controllers[i].status = CELL_GEM_STATUS_READY;
+				gem.controllers[i].port = port_num(i);
+			}
+			else
+			{
+				gem.controllers[i].status = CELL_GEM_STATUS_DISCONNECTED;
+				gem.controllers[i].port = 0;
+			}
+		}
+		break;
+	}
+	default:
+	{
+		break;
+	}
 	}
 
 	info->max_connect = gem.attribute.max_connect;
