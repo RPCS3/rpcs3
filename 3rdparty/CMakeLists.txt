@@ -127,9 +127,7 @@ endif()
 
 
 # stblib
-add_library(3rdparty_stblib INTERFACE)
-target_include_directories(3rdparty_stblib INTERFACE stblib/include)
-
+add_subdirectory(stblib)
 
 # DiscordRPC
 add_subdirectory(discord-rpc)
