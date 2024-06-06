@@ -220,13 +220,13 @@ public:
 		const QString pad_mode          = tr("Single-threaded: All pad handlers run on the same thread sequentially.\nMulti-threaded: Each pad handler has its own thread.\nOnly use multi-threaded if you can spare the extra threads.");
 		const QString pad_connection    = tr("Shows all configured pads as always connected ingame even if they are physically disconnected.");
 		const QString keyboard_handler  = tr("Some games support native keyboard input.\nBasic will work in these cases.");
-		const QString mouse_handler     = tr("Some games support native mouse input.\nBasic will work in these cases.");
+		const QString mouse_handler     = tr("Some games support native mouse input.\nBasic or Raw will work in these cases.");
 		const QString music_handler     = tr("Currently only used for cellMusic emulation.\nSelect Qt to use the default output device of your operating system.\nThis may not be able to play all audio formats.");
 		const QString camera            = tr("Select Qt Camera to use the default camera device of your operating system.");
 		const QString camera_type       = tr("Depending on the game, you may need to select a specific camera type.");
 		const QString camera_flip       = tr("Flips the camera image either horizontally, vertically, or on both axes.");
 		const QString camera_id         = tr("Select the camera that you want to use during gameplay.");
-		const QString move              = tr("PlayStation Move support.\nFake: Experimental! This maps Move controls to DS3 controller mappings.\nMouse: Emulate PSMove with Mouse handler.");
+		const QString move              = tr("PlayStation Move support.\nFake: Experimental! This maps Move controls to DS3 controller mappings.\nMouse: Emulate PSMove with Mouse handler.\nRaw Mouse: Emulate PSMove with Raw Mouse handler.");
 		const QString buzz              = tr("Buzz! support.\nSelect 1 or 2 controllers if the game requires Buzz! controllers and you don't have real controllers.\nSelect Null if the game has support for DualShock or if you have real Buzz! controllers.");
 		const QString turntable         = tr("DJ Hero Turntable controller support.\nSelect 1 or 2 controllers if the game requires DJ Hero Turntable controllers and you don't have real turntable controllers.\nSelect Null if the game has support for DualShock or if you have real turntable controllers.\nA real turntable controller can be used at the same time as an emulated turntable controller.");
 		const QString ghltar            = tr("Guitar Hero Live (GHL) Guitar controller support.\nSelect 1 or 2 controllers if the game requires GHL Guitar controllers and you don't have real guitar controllers.\nSelect Null if the game has support for DualShock or if you have real guitar controllers.\nA real guitar controller can be used at the same time as an emulated guitar controller.");
