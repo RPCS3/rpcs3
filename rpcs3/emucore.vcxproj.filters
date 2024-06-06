@@ -2203,7 +2203,7 @@
     <ClInclude Include="Emu\Cell\timers.hpp">
       <Filter>Emu</Filter>
     </ClInclude>
-    <ClInclude Include="..\3rdparty\stblib\include\stb_image.h" />
+    <ClInclude Include="..\3rdparty\stblib\stb\stb_image.h" />
     <ClInclude Include="Emu\RSX\Program\FragmentProgramDecompiler.h">
       <Filter>Emu\GPU\RSX\Program</Filter>
     </ClInclude>
