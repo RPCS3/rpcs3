@@ -301,7 +301,7 @@ static void fixup_settings(const psf::registry* _psf)
 	}
 }
 
-void dump_executable(std::span<const u8> data, main_ppu_module* _main, std::string_view title_id)
+extern void dump_executable(std::span<const u8> data, ppu_module* _main, std::string_view title_id)
 {
 	// Format filename and directory name
 	// Make each directory for each file so tools like IDA can work on it cleanly
