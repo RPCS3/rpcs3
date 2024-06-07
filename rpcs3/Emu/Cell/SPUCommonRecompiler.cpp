@@ -6310,8 +6310,6 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				ra.value = ra.is_const() ? spu_ls_target(ra.value, op.si10 * 4) : 0;
 				const u32 offs = ra.is_const() ? 0 : spu_ls_target(0, op.si10 * 4);
 				const u32 abs_diff = calculate_absolute_ls_difference(offs, 0);
-				const u32 const_flags = u32{ra.is_const()} + u32{atomic16.ls.is_const()};
-				const u32 const_lsa_flags = u32{ra.is_const()} + u32{_lsa.is_const()};
 
 				if ((_lsa.unequal_with_mask_indifference(ra, SPU_LS_MASK_128) && offs == 0) ||
 					(_lsa.compare_with_mask_indifference(ra, SPU_LS_MASK_1) && abs_diff >= 128u) ||
