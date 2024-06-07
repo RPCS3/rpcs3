@@ -17,6 +17,8 @@
 #include "sys_memory.h"
 #include <span>
 
+extern void dump_executable(std::span<const u8> data, ppu_module* _main, std::string_view title_id);
+
 extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, bool virtual_load, const std::string&, s64, utils::serial* = nullptr);
 extern void ppu_unload_prx(const lv2_prx& prx);
 extern bool ppu_initialize(const ppu_module&, bool check_only = false, u64 file_size = 0);
@@ -270,6 +272,8 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 		return {CELL_PRX_ERROR_UNSUPPORTED_PRX_TYPE, +"Failed to decrypt file"};
 	}
 
+	const auto src_data = g_cfg.core.ppu_debug ? src.to_vector<u8>() : std::vector<u8>{};
+
 	ppu_prx_object obj = std::move(src);
 	src.close();
 
@@ -279,6 +283,11 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 	}
 
 	const auto prx = ppu_load_prx(obj, false, path, file_offset);
+
+	if (g_cfg.core.ppu_debug)
+	{
+		dump_executable({src_data.data(), src_data.size()}, prx.get(), Emu.GetTitleID());
+	}
 
 	obj.clear();
 
