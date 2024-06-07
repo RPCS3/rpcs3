@@ -930,6 +930,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 	}
 
 	bool used_fallback = false;
+
 	if (func_queue.empty() && segs[0].size >= 4u)
 	{
 		// Fallback, identify functions using callers (no jumptable detection, tail calls etc)
@@ -945,9 +946,9 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 			const ppu_opcode_t op{*ptr};
 			const ppu_itype::type type = s_ppu_itype.decode(op.opcode);
 
-			if (type == ppu_itype::B && op.lk && !op.aa)
+			if ((type == ppu_itype::B || type == ppu_itype::BC) && op.lk && (!op.aa || verify_func(iaddr)))
 			{
-				const u32 target = iaddr + op.bt24;
+				const u32 target = (op.aa ? 0 : iaddr) + (type == ppu_itype::B ? +op.bt24 : +op.bt14);
 
 				if (target >= start && target < end && target != iaddr && target != iaddr + 4)
 				{
@@ -1351,7 +1352,12 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 						continue;
 					}
 
-					const bool is_call = op.lk && target != iaddr;
+					if (!op.aa && target == _ptr.addr() && _ptr.addr() < func_end)
+					{
+						ppu_log.notice("[0x%x] Branch to next at 0x%x -> 0x%x", func.addr, iaddr, target);
+					}
+
+					const bool is_call = op.lk && target != iaddr && target != _ptr.addr() && _ptr.addr() < func_end;
 					const auto pfunc = is_call ? &add_func(target, 0, 0) : nullptr;
 
 					if (pfunc && pfunc->blocks.empty())
@@ -2053,13 +2059,8 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 	// Convert map to vector (destructive)
 	for (auto&& [_, block] : as_rvalue(std::move(fmap)))
 	{
-		if (block.attr & ppu_attr::no_size && block.size > 4)
+		if (block.attr & ppu_attr::no_size && block.size > 4 && !used_fallback)
 		{
-			if (used_fallback)
-			{
-				continue;
-			}
-
 			ppu_log.warning("Block 0x%x will be compiled on per-instruction basis (size=0x%x)", block.addr, block.size);
 
 			for (u32 addr = block.addr; addr < block.addr + block.size; addr += 4)
