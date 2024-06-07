@@ -10,6 +10,14 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="openal-soft\include\AL\al.h" />
+    <ClInclude Include="openal-soft\include\AL\alc.h" />
+    <ClInclude Include="openal-soft\include\AL\alext.h" />
+    <ClInclude Include="openal-soft\include\AL\efx-creative.h" />
+    <ClInclude Include="openal-soft\include\AL\efx-presets.h" />
+    <ClInclude Include="openal-soft\include\AL\efx.h" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <Keyword>MakeFileProj</Keyword>
     <ProjectName>openal-soft</ProjectName>
