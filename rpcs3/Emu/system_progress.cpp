@@ -210,9 +210,15 @@ void progress_dialog_server::operator()()
 						const u64 remaining_usec = pdone ? utils::rational_mul<u64>(passed_usec, static_cast<u64>(ptotal) - pdone, pdone) : (passed_usec * ptotal);
 
 						// Only show compile notification if we estimate at least 100ms
-						if (remaining_usec >= 100'000ULL && (!ppu_cue_refs || !*ppu_cue_refs))
+						if (remaining_usec >= 100'000ULL)
 						{
-							ppu_cue_refs = rsx::overlays::show_ppu_compile_notification();
+							if (!ppu_cue_refs || !*ppu_cue_refs)
+							{
+								ppu_cue_refs = rsx::overlays::show_ppu_compile_notification();
+							}
+
+							// Make sure to update any pending messages. PPU compilation may freeze the image.
+							rsx::overlays::refresh_message_queue();
 						}
 					}
 
@@ -222,6 +228,8 @@ void progress_dialog_server::operator()()
 						{
 							*ppu_cue_refs = 0;
 							ppu_cue_refs.reset();
+
+							rsx::overlays::refresh_message_queue();
 						}
 					}
 
