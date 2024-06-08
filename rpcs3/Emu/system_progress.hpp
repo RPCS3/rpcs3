@@ -36,7 +36,7 @@ class scoped_progress_dialog final
 public:
 	scoped_progress_dialog(const char* text) noexcept
 	{
-		std::tie(m_prev, m_prev_id, m_id) = g_progr.atomic_op([this, text = ensure(text)](progress_dialog_string_t& progr)
+		std::tie(m_prev, m_prev_id, m_id) = g_progr.atomic_op([text = ensure(text)](progress_dialog_string_t& progr)
 		{
 			const char* old = progr.m_text;
 			progr.m_user_count++;
