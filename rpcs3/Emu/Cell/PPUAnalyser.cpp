@@ -530,7 +530,7 @@ namespace ppu_patterns
 	};
 }
 
-bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::basic_string<u32>& applied, std::function<bool()> check_aborted)
+bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::basic_string<u32>& applied, const std::vector<u32>& exported_funcs, std::function<bool()> check_aborted)
 {
 	if (segs.empty())
 	{
@@ -930,6 +930,32 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 	}
 
 	bool used_fallback = false;
+
+	if (func_queue.empty())
+	{
+		for (u32 addr : exported_funcs)
+		{
+			const u32 faddr = get_ref<u32>(addr);
+
+			if (addr < start || addr >= start + segs[0].size)
+			{
+				// TODO: Reverse engineer how it works (maybe some flag in exports)
+
+				if (faddr < start || faddr >= start + segs[0].size)
+				{
+					ppu_log.notice("Export not usable at 0x%x / 0x%x (0x%x...0x%x)", addr, faddr, start, start + segs[0].size);
+					continue;
+				}
+
+				addr = faddr;
+			}
+
+			ppu_log.trace("Enqueued exported PPU function 0x%x for analysis", addr);
+
+			add_func(addr, 0, 0);
+			used_fallback = true;
+		}
+	}
 
 	if (func_queue.empty() && segs[0].size >= 4u)
 	{
