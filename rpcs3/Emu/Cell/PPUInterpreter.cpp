@@ -4230,7 +4230,7 @@ auto NEG()
 	const u64 RA = ppu.gpr[op.ra];
 	ppu.gpr[op.rd] = 0 - RA;
 	if constexpr (((Flags == has_oe) || ...))
-		ppu_ov_set(ppu, (~RA >> 63 == 0) && (~RA >> 63 != ppu.gpr[op.rd] >> 63));
+		ppu_ov_set(ppu, RA == (1ull << 63));
 	if constexpr (((Flags == has_rc) || ...))
 		ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.rd], 0);
 	};

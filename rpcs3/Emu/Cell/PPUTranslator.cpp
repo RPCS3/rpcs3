@@ -2657,7 +2657,13 @@ void PPUTranslator::ADDC(ppu_opcode_t op)
 	SetGpr(op.rd, result);
 	SetCarry(m_ir->CreateICmpULT(result, b));
 	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
-	if (op.oe) UNK(op);
+
+	if (op.oe)
+	{
+		//const auto s = m_ir->CreateCall(get_intrinsic<u64>(llvm::Intrinsic::sadd_with_overflow), {a, b});
+		//SetOverflow(m_ir->CreateExtractValue(s, {1}));
+		SetOverflow(m_ir->CreateICmpSLT(m_ir->CreateAnd(m_ir->CreateXor(a, m_ir->CreateNot(b)), m_ir->CreateXor(a, result)), m_ir->getInt64(0)));
+	}
 }
 
 void PPUTranslator::MULHDU(ppu_opcode_t op)
@@ -2812,7 +2818,13 @@ void PPUTranslator::SUBF(ppu_opcode_t op)
 	const auto result = m_ir->CreateSub(b, a);
 	SetGpr(op.rd, result);
 	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
-	if (op.oe) UNK(op);
+
+	if (op.oe)
+	{
+		//const auto s = m_ir->CreateCall(get_intrinsic<u64>(llvm::Intrinsic::ssub_with_overflow), {b, m_ir->CreateNot(a)});
+		//SetOverflow(m_ir->CreateExtractValue(s, {1}));
+		SetOverflow(m_ir->CreateICmpSLT(m_ir->CreateAnd(m_ir->CreateXor(a, b), m_ir->CreateXor(m_ir->CreateNot(a), result)), m_ir->getInt64(0)));
+	}
 }
 
 void PPUTranslator::LDUX(ppu_opcode_t op)
@@ -2914,7 +2926,7 @@ void PPUTranslator::NEG(ppu_opcode_t op)
 	const auto result = m_ir->CreateNeg(reg);
 	SetGpr(op.rd, result);
 	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
-	if (op.oe) UNK(op);
+	if (op.oe) SetOverflow(m_ir->CreateICmpEQ(result, m_ir->getInt64(1ull << 63)));
 }
 
 void PPUTranslator::LBZUX(ppu_opcode_t op)
