@@ -2627,10 +2627,10 @@ namespace rsx
 						return;
 					}
 
-					if (remap_ctrl & 0x03) argb8_convert |= (mask & 0x1u) << bit_offset;
-					if (remap_ctrl & 0x0C) argb8_convert |= (mask & 0x2u) << bit_offset;
-					if (remap_ctrl & 0x30) argb8_convert |= (mask & 0x4u) << bit_offset;
-					if (remap_ctrl & 0xC0) argb8_convert |= (mask & 0x8u) << bit_offset;
+					if ((remap_ctrl & 0x03) == 0x02) argb8_convert |= (mask & 0x1u) << bit_offset;
+					if ((remap_ctrl & 0x0C) == 0x08) argb8_convert |= (mask & 0x2u) << bit_offset;
+					if ((remap_ctrl & 0x30) == 0x20) argb8_convert |= (mask & 0x4u) << bit_offset;
+					if ((remap_ctrl & 0xC0) == 0x80) argb8_convert |= (mask & 0x8u) << bit_offset;
 				};
 
 				if (argb8_signed)
