@@ -42,7 +42,7 @@ namespace rsx
 		std::memcpy(static_cast<u8*>(dst) + mem_offset, reinterpret_cast<const u8*>(src) + mem_offset, mem_size);
 	}
 
-	void fragment_program_texture_config::write_to(void* dst, u16 mask)
+	void fragment_program_texture_config::write_to(void* dst, u16 mask) const
 	{
 		masked_transfer(dst, slots_, mask);
 	}

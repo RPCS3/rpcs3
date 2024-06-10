@@ -165,16 +165,16 @@ public:
 
 	// VP functions
 	std::string GetMaskDisasm(bool is_sca) const;
-	std::string GetVecMaskDisasm();
-	std::string GetScaMaskDisasm();
-	std::string GetDSTDisasm(bool is_sca = false);
-	std::string GetSRCDisasm(u32 n);
+	std::string GetVecMaskDisasm() const;
+	std::string GetScaMaskDisasm() const;
+	std::string GetDSTDisasm(bool is_sca = false) const;
+	std::string GetSRCDisasm(u32 n) const;
 	static std::string GetTexDisasm();
 	std::string GetCondDisasm() const;
 	std::string AddAddrMaskDisasm() const;
-	std::string AddAddrRegDisasm();
+	std::string AddAddrRegDisasm() const;
 	u32 GetAddrDisasm() const;
-	std::string FormatDisasm(const std::string& code);
+	std::string FormatDisasm(const std::string& code) const;
 	void AddScaCodeDisasm(const std::string& code = "");
 	void AddVecCodeDisasm(const std::string& code = "");
 	void AddCodeCondDisasm(const std::string& dst, const std::string& src);
