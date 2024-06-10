@@ -235,7 +235,7 @@ error_code _sys_game_set_system_sw_version(u64 version)
 	sys_game.trace("sys_game_set_system_sw_version(version=%d)", version);
 
 	if (!g_ps3_process_info.has_root_perm())
-		return CELL_EPERM;
+		return CELL_ENOSYS;
 
 	g_fxo->get<system_sw_version>().version = version;
 
