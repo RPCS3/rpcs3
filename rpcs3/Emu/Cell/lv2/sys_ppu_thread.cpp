@@ -185,24 +185,20 @@ error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr
 	{
 		CellError result = thread.joiner.atomic_op([&](ppu_join_status& value) -> CellError
 		{
-			if (value == ppu_join_status::zombie)
+			switch (value)
 			{
+			case ppu_join_status::joinable:
+				value = ppu_join_status{ppu.id};
+				return {};
+			case ppu_join_status::zombie:
 				value = ppu_join_status::exited;
 				return CELL_EAGAIN;
-			}
-
-			if (value == ppu_join_status::exited)
-			{
+			case ppu_join_status::exited:
 				return CELL_ESRCH;
-			}
-
-			if (value >= ppu_join_status::max)
-			{
+			case ppu_join_status::detached:
+			default:
 				return CELL_EINVAL;
 			}
-
-			value = ppu_join_status{ppu.id};
-			return {};
 		});
 
 		if (!result)
@@ -273,29 +269,21 @@ error_code sys_ppu_thread_detach(ppu_thread& ppu, u32 thread_id)
 	{
 		result = thread.joiner.atomic_op([](ppu_join_status& value) -> CellError
 		{
-			if (value == ppu_join_status::zombie)
+			switch (value)
 			{
+			case ppu_join_status::joinable:
+				value = ppu_join_status::detached;
+				return {};
+			case ppu_join_status::detached:
+				return CELL_EINVAL;
+			case ppu_join_status::zombie:
 				value = ppu_join_status::exited;
 				return CELL_EAGAIN;
-			}
-
-			if (value == ppu_join_status::exited)
-			{
+			case ppu_join_status::exited:
 				return CELL_ESRCH;
-			}
-
-			if (value == ppu_join_status::detached)
-			{
-				return CELL_EINVAL;
-			}
-
-			if (value >= ppu_join_status::max)
-			{
+			default:
 				return CELL_EBUSY;
 			}
-
-			value = ppu_join_status::detached;
-			return {};
 		});
 
 		// Remove ID on EAGAIN
