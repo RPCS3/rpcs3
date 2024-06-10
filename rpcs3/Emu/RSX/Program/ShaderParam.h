@@ -179,7 +179,7 @@ struct ParamArray
 		return nullptr;
 	}
 
-	bool HasParamTypeless(const ParamFlag flag, const std::string& name)
+	bool HasParamTypeless(const ParamFlag flag, const std::string& name) const
 	{
 		const auto& p = params[flag];
 		return std::any_of(p.cbegin(), p.cend(), [&name](const auto& param)

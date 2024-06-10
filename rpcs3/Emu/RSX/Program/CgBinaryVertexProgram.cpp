@@ -40,17 +40,17 @@ std::string CgBinaryDisasm::GetMaskDisasm(bool is_sca) const
 	return ret == "."sv || ret == ".xyzw"sv ? "" : (ret);
 }
 
-std::string CgBinaryDisasm::GetVecMaskDisasm()
+std::string CgBinaryDisasm::GetVecMaskDisasm() const
 {
 	return GetMaskDisasm(false);
 }
 
-std::string CgBinaryDisasm::GetScaMaskDisasm()
+std::string CgBinaryDisasm::GetScaMaskDisasm() const
 {
 	return GetMaskDisasm(true);
 }
 
-std::string CgBinaryDisasm::GetDSTDisasm(bool is_sca)
+std::string CgBinaryDisasm::GetDSTDisasm(bool is_sca) const
 {
 	std::string ret;
 	std::string mask = GetMaskDisasm(is_sca);
@@ -107,7 +107,7 @@ std::string CgBinaryDisasm::GetDSTDisasm(bool is_sca)
 	return ret;
 }
 
-std::string CgBinaryDisasm::GetSRCDisasm(const u32 n)
+std::string CgBinaryDisasm::GetSRCDisasm(const u32 n) const
 {
 	ensure(n < 3);
 
@@ -224,7 +224,7 @@ std::string CgBinaryDisasm::GetTexDisasm()
 	return fmt::format("TEX%d", 0);
 }
 
-std::string CgBinaryDisasm::FormatDisasm(const std::string& code)
+std::string CgBinaryDisasm::FormatDisasm(const std::string& code) const
 {
 	const std::pair<std::string_view, std::function<std::string()>> repl_list[] =
 	{
@@ -355,7 +355,7 @@ std::string CgBinaryDisasm::AddAddrMaskDisasm() const
 	return std::string(".") + f[d0.addr_swz];
 }
 
-std::string CgBinaryDisasm::AddAddrRegDisasm()
+std::string CgBinaryDisasm::AddAddrRegDisasm() const
 {
 	//static constexpr std::string_view f = "xyzw";
 	return fmt::format("A%d", d0.addr_reg_sel_1) + AddAddrMaskDisasm();

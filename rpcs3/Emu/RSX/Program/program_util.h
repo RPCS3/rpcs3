@@ -27,7 +27,7 @@ namespace rsx
 
 		TIU_slot& operator[](u32 index) { return slots_[index]; }
 
-		void write_to(void* dst, u16 mask);
+		void write_to(void* dst, u16 mask) const;
 		void load_from(const void* src, u16 mask);
 
 		static void masked_transfer(void* dst, const void* src, u16 mask);
