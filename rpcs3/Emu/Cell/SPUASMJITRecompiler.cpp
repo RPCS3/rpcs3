@@ -925,7 +925,7 @@ spu_function_t spu_recompiler::compile(spu_program&& _func)
 		log += "\n\n\n";
 
 		// Append log file
-		fs::file(m_spurt->get_cache_path() + "spu-ir.log", fs::write + fs::append).write(log);
+		fs::write_file(m_spurt->get_cache_path() + "spu-ir.log", fs::write + fs::append, log);
 	}
 
 	return fn;

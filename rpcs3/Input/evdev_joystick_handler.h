@@ -70,7 +70,13 @@ struct positive_axis : cfg::node
 
 	void save()
 	{
-		fs::file(cfg_name, fs::rewrite).write(to_string());
+		fs::pending_file file(cfg_name);
+
+		if (file.file)
+		{
+			file.file.write(to_string());
+			file.commit();
+		}
 	}
 
 	bool exist()
