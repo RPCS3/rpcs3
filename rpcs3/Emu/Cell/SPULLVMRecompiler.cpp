@@ -2635,7 +2635,7 @@ public:
 
 			if (g_cfg.core.spu_debug)
 			{
-				fs::file(m_spurt->get_cache_path() + "spu-ir.log", fs::write + fs::append).write(log);
+				fs::write_file(m_spurt->get_cache_path() + "spu-ir.log", fs::write + fs::append, log);
 			}
 
 			if (auto& cache = g_fxo->get<spu_cache>())

@@ -1274,7 +1274,7 @@ spu_runtime::spu_runtime()
 		return;
 	}
 
-	if (g_cfg.core.spu_debug)
+	if (g_cfg.core.spu_debug && g_cfg.core.spu_decoder != spu_decoder_type::dynamic && g_cfg.core.spu_decoder != spu_decoder_type::_static)
 	{
 		if (!fs::create_dir(m_cache_path + "llvm/"))
 		{

@@ -5292,7 +5292,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 		if (g_cfg.core.llvm_logs)
 		{
 			out << *_module; // print IR
-			fs::file(cache_path + obj_name + ".log", fs::rewrite).write(out.str());
+			fs::write_file(cache_path + obj_name + ".log", fs::rewrite, out.str());
 			result.clear();
 		}
 
