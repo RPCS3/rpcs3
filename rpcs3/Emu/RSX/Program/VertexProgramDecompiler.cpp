@@ -96,6 +96,8 @@ std::string VertexProgramDecompiler::GetDST(bool is_sca)
 
 std::string VertexProgramDecompiler::GetSRC(const u32 n)
 {
+	ensure(n < 3);
+
 	static const std::string reg_table[] =
 	{
 		"in_pos", "in_weight", "in_normal",
@@ -152,6 +154,7 @@ std::string VertexProgramDecompiler::GetSRC(const u32 n)
 
 	switch (n)
 	{
+	default:
 	case 0: abs = d0.src0_abs; break;
 	case 1: abs = d0.src1_abs; break;
 	case 2: abs = d0.src2_abs; break;

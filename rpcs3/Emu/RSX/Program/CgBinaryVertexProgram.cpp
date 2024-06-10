@@ -109,6 +109,8 @@ std::string CgBinaryDisasm::GetDSTDisasm(bool is_sca)
 
 std::string CgBinaryDisasm::GetSRCDisasm(const u32 n)
 {
+	ensure(n < 3);
+
 	std::string ret;
 
 	static constexpr std::array<std::string_view, 16> reg_table =
@@ -171,6 +173,7 @@ std::string CgBinaryDisasm::GetSRCDisasm(const u32 n)
 
 	switch (n)
 	{
+	default:
 	case 0: abs = d0.src0_abs; break;
 	case 1: abs = d0.src1_abs; break;
 	case 2: abs = d0.src2_abs; break;
