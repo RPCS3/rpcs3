@@ -1221,9 +1221,10 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 					return;
 				}
 
+				const u64 rtime = _spu->rtime;
 				auto& res = vm::reservation_acquire(eal);
 
-				if (res & 127)
+				if (res != rtime)
 				{
 					_spu->ch_atomic_stat.set_value(MFC_PUTLLC_FAILURE);
 					_spu->set_events(SPU_EVENT_LR);
@@ -1234,11 +1235,11 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 				rsx::reservation_lock rsx_lock(raddr, 128);
 
 				// Touch memory
-				vm::_ref<atomic_t<u8>>(dest).compare_and_swap_test(0, 0);
+				vm::_ref<atomic_t<u8>>(dest ^ (4096 / 2)).compare_and_swap_test(0, 0);
 
 				auto [old_res, ok] = res.fetch_op([&](u64& rval)
 				{
-					if (rval & 127)// || rtime != rval)
+					if (rtime != rval)
 					{
 						return false;
 					}
@@ -1293,7 +1294,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		const auto _new = m_ir->CreateAlignedLoad(get_type<u128>(), _ptr<u128>(m_lsptr, dest), llvm::MaybeAlign{16});
 		const auto _rdata = m_ir->CreateAlignedLoad(get_type<u128>(), _ptr<u128>(spu_ptr<u8>(&spu_thread::rdata), m_ir->CreateAnd(diff, 0x7f)), llvm::MaybeAlign{16});
 
-		const bool is_accurate_op = false && !!g_cfg.core.spu_accurate_reservations;
+		const bool is_accurate_op = !!g_cfg.core.spu_accurate_reservations;
 
 		const auto compare_data_change_res = is_accurate_op ? m_ir->getTrue() : m_ir->CreateICmpNE(_new, _rdata);
 
@@ -2634,7 +2635,7 @@ public:
 
 			if (g_cfg.core.spu_debug)
 			{
-				fs::file(m_spurt->get_cache_path() + "spu-ir.log", fs::write + fs::append).write(log);
+				fs::write_file(m_spurt->get_cache_path() + "spu-ir.log", fs::write + fs::append, log);
 			}
 
 			if (auto& cache = g_fxo->get<spu_cache>())

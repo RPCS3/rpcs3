@@ -1274,7 +1274,7 @@ spu_runtime::spu_runtime()
 		return;
 	}
 
-	if (g_cfg.core.spu_debug)
+	if (g_cfg.core.spu_debug && g_cfg.core.spu_decoder != spu_decoder_type::dynamic && g_cfg.core.spu_decoder != spu_decoder_type::_static)
 	{
 		if (!fs::create_dir(m_cache_path + "llvm/"))
 		{
@@ -6685,12 +6685,6 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 		auto& stats = g_fxo->get<putllc16_statistics_t>();
 		had_putllc_evaluation = true;
-
-		if (!g_cfg.core.spu_debug)
-		{
-			// TODO
-			continue;
-		}
 
 		if (!pattern.ls_write)
 		{

@@ -29,7 +29,13 @@ bool mouse_config::load()
 
 void mouse_config::save() const
 {
-	fs::file(cfg_name, fs::rewrite).write(to_string());
+	fs::pending_file file(cfg_name);
+
+	if (file.file)
+	{
+		file.file.write(to_string());
+		file.commit();
+	}
 }
 
 cfg::string& mouse_config::get_button(int code)

@@ -1250,6 +1250,22 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 				gui::utils::open_dir(config_path);
 		});
 	}
+
+	// This is a debug feature, let's hide it by reusing debug tab protection 
+	if (m_gui_settings->GetValue(gui::m_showDebugTab).toBool())
+	{
+		QAction* open_cache_folder = menu.addAction(tr("&Open Cache Folder"));
+		open_cache_folder->setEnabled(fs::is_dir(cache_base_dir));
+
+		if (open_cache_folder->isEnabled())
+		{
+			connect(open_cache_folder, &QAction::triggered, this, [cache_base_dir]()
+			{
+				gui::utils::open_dir(cache_base_dir);
+			});
+		}
+	}
+
 	if (fs::is_dir(data_base_dir))
 	{
 		QAction* open_data_dir = menu.addAction(tr("&Open Data Folder"));
