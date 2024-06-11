@@ -144,7 +144,7 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 	{
 		if (s32 signal = mutex.lv2_control.fetch_op([](auto& data)
 		{
-			if (data.signaled == 1)
+			if (data.signaled)
 			{
 				data.signaled = 0;
 				return true;
@@ -153,7 +153,7 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 			return false;
 		}).first.signaled)
 		{
-			if (signal == smin)
+			if (~signal & 1)
 			{
 				ppu.gpr[3] = CELL_EBUSY;
 			}
@@ -167,7 +167,7 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 
 		if (s32 signal = mutex.try_own(&ppu))
 		{
-			if (signal == smin)
+			if (~signal & 1)
 			{
 				ppu.gpr[3] = CELL_EBUSY;
 			}
