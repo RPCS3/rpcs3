@@ -51,7 +51,7 @@ template <class Device>
 class hid_pad_handler : public PadHandlerBase
 {
 public:
-	hid_pad_handler(pad_handler type, bool emulation, std::vector<id_pair> ids);
+	hid_pad_handler(pad_handler type, std::vector<id_pair> ids);
 	~hid_pad_handler();
 
 	bool Init() override;

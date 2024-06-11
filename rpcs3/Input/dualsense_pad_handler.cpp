@@ -25,8 +25,8 @@ namespace
 	constexpr id_pair SONY_DUALSENSE_ID_1 = {0x054C, 0x0DF2}; // DualSense Edge
 }
 
-dualsense_pad_handler::dualsense_pad_handler(bool emulation)
-    : hid_pad_handler<DualSenseDevice>(pad_handler::dualsense, emulation, {SONY_DUALSENSE_ID_0, SONY_DUALSENSE_ID_1})
+dualsense_pad_handler::dualsense_pad_handler()
+    : hid_pad_handler<DualSenseDevice>(pad_handler::dualsense, {SONY_DUALSENSE_ID_0, SONY_DUALSENSE_ID_1})
 {
 	// Unique names for the config files and our pad settings dialog
 	button_list =

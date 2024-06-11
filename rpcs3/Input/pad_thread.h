@@ -44,18 +44,21 @@ protected:
 	void InitLddPad(u32 handle, const u32* port_status);
 
 	// List of all handlers
-	std::map<pad_handler, std::shared_ptr<PadHandlerBase>> handlers;
+	std::map<pad_handler, std::shared_ptr<PadHandlerBase>> m_handlers;
 
 	// Used for pad_handler::keyboard
 	void* m_curthread = nullptr;
 	void* m_curwindow = nullptr;
 
 	PadInfo m_info{ 0, 0, false };
-	std::array<std::shared_ptr<Pad>, CELL_PAD_MAX_PORT_NUM> m_pads;
+	std::array<std::shared_ptr<Pad>, CELL_PAD_MAX_PORT_NUM> m_pads{};
+	std::array<bool, CELL_PAD_MAX_PORT_NUM> m_pads_connected{};
 
 	u32 num_ldd_pad = 0;
 
 private:
+	void update_pad_states();
+
 	u32 m_mask_start_press_to_resume = 0;
 	u64 m_track_start_press_begin_timestamp = 0;
 	bool m_resume_emulation_flag = false;

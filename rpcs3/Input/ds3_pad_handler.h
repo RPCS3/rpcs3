@@ -135,7 +135,7 @@ class ds3_pad_handler final : public hid_pad_handler<ds3_device>
 #endif
 
 public:
-	ds3_pad_handler(bool emulation);
+	ds3_pad_handler();
 	~ds3_pad_handler();
 
 	void SetPadData(const std::string& padId, u8 player_id, u8 large_motor, u8 small_motor, s32 r, s32 g, s32 b, bool player_led, bool battery_led, u32 battery_led_brightness) override;

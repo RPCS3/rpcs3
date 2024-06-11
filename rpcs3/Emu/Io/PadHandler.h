@@ -248,7 +248,6 @@ public:
 
 	pad_handler m_type;
 	bool m_is_init = false;
-	bool m_emulation = false;
 
 	std::string name_string() const;
 	usz max_devices() const;
@@ -266,7 +265,7 @@ public:
 	void convert_stick_values(u16& x_out, u16& y_out, s32 x_in, s32 y_in, u32 deadzone, u32 anti_deadzone, u32 padsquircling) const;
 
 	virtual bool Init() { return true; }
-	PadHandlerBase(pad_handler type = pad_handler::null, bool emulation = false);
+	PadHandlerBase(pad_handler type = pad_handler::null);
 	virtual ~PadHandlerBase() = default;
 	// Sets window to config the controller(optional)
 	virtual void SetPadData(const std::string& /*padId*/, u8 /*player_id*/, u8 /*large_motor*/, u8 /*small_motor*/, s32 /*r*/, s32 /*g*/, s32 /*b*/, bool /*player_led*/, bool /*battery_led*/, u32 /*battery_led_brightness*/) {}

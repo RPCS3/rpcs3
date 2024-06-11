@@ -2,7 +2,7 @@
 #include "mm_joystick_handler.h"
 #include "Emu/Io/pad_config.h"
 
-mm_joystick_handler::mm_joystick_handler(bool emulation) : PadHandlerBase(pad_handler::mm, emulation)
+mm_joystick_handler::mm_joystick_handler() : PadHandlerBase(pad_handler::mm)
 {
 	init_configs();
 

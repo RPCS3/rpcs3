@@ -37,8 +37,8 @@ namespace
 	static constexpr std::array<u8, sizeof(skateboard_input_report)> disconnected_state  = { 0x00, 0x00, 0x0F, 0x80, 0x80, 0x80, 0x80, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 }
 
-skateboard_pad_handler::skateboard_pad_handler(bool emulation)
-    : hid_pad_handler<skateboard_device>(pad_handler::skateboard, emulation, {SKATEBOARD_ID_0})
+skateboard_pad_handler::skateboard_pad_handler()
+    : hid_pad_handler<skateboard_device>(pad_handler::skateboard, {SKATEBOARD_ID_0})
 {
 	// Unique names for the config files and our pad settings dialog
 	button_list =

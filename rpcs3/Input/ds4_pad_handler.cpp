@@ -59,8 +59,8 @@ namespace
 	}*/
 }
 
-ds4_pad_handler::ds4_pad_handler(bool emulation)
-    : hid_pad_handler<DS4Device>(pad_handler::ds4, emulation, {SONY_DS4_ID_0, SONY_DS4_ID_1, SONY_DS4_ID_2, ZEROPLUS_ID_0})
+ds4_pad_handler::ds4_pad_handler()
+    : hid_pad_handler<DS4Device>(pad_handler::ds4, {SONY_DS4_ID_0, SONY_DS4_ID_1, SONY_DS4_ID_2, ZEROPLUS_ID_0})
 {
 	// Unique names for the config files and our pad settings dialog
 	button_list =

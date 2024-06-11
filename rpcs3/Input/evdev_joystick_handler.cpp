@@ -19,8 +19,8 @@
 
 LOG_CHANNEL(evdev_log, "evdev");
 
-evdev_joystick_handler::evdev_joystick_handler(bool emulation)
-    : PadHandlerBase(pad_handler::evdev, emulation)
+evdev_joystick_handler::evdev_joystick_handler()
+    : PadHandlerBase(pad_handler::evdev)
 {
 	init_configs();
 

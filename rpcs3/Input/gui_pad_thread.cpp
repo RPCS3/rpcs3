@@ -201,26 +201,26 @@ std::shared_ptr<PadHandlerBase> gui_pad_thread::GetHandler(pad_handler type)
 		// Makes no sense to use this if we are in the GUI anyway
 		return nullptr;
 	case pad_handler::ds3:
-		return std::make_shared<ds3_pad_handler>(false);
+		return std::make_shared<ds3_pad_handler>();
 	case pad_handler::ds4:
-		return std::make_shared<ds4_pad_handler>(false);
+		return std::make_shared<ds4_pad_handler>();
 	case pad_handler::dualsense:
-		return std::make_shared<dualsense_pad_handler>(false);
+		return std::make_shared<dualsense_pad_handler>();
 	case pad_handler::skateboard:
-		return std::make_shared<skateboard_pad_handler>(false);
+		return std::make_shared<skateboard_pad_handler>();
 #ifdef _WIN32
 	case pad_handler::xinput:
-		return std::make_shared<xinput_pad_handler>(false);
+		return std::make_shared<xinput_pad_handler>();
 	case pad_handler::mm:
-		return std::make_shared<mm_joystick_handler>(false);
+		return std::make_shared<mm_joystick_handler>();
 #endif
 #ifdef HAVE_SDL2
 	case pad_handler::sdl:
-		return std::make_shared<sdl_pad_handler>(false);
+		return std::make_shared<sdl_pad_handler>();
 #endif
 #ifdef HAVE_LIBEVDEV
 	case pad_handler::evdev:
-		return std::make_shared<evdev_joystick_handler>(false);
+		return std::make_shared<evdev_joystick_handler>();
 #endif
 	}
 

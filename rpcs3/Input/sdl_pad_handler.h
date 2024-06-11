@@ -95,7 +95,7 @@ class sdl_pad_handler : public PadHandlerBase
 	};
 
 public:
-	sdl_pad_handler(bool emulation);
+	sdl_pad_handler();
 	~sdl_pad_handler();
 
 	SDLDevice::sdl_info get_sdl_info(int i);
