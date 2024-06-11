@@ -57,7 +57,7 @@ namespace np
 		mask_password = sce_roomdata->passwordSlotMask;
 
 		groups.clear();
-		for (u32 i = 0; i < sce_roomdata->roomGroupNum; i++)
+		for (u32 i = 0; i < sce_roomdata->roomGroupNum && sce_roomdata->roomGroup; i++)
 		{
 			const SceNpMatching2RoomGroup* sce_group = &sce_roomdata->roomGroup[i];
 			memcpy(&groups[sce_group->groupId], sce_group, sizeof(SceNpMatching2RoomGroup));
