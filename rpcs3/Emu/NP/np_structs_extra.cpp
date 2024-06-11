@@ -382,13 +382,13 @@ namespace extra_nps
 		sceNp2.warning("roomDataExternal: *0x%x", resp->roomDataExternal);
 		sceNp2.warning("roomDataExternalNum: %d", resp->roomDataExternalNum);
 
-		const SceNpMatching2RoomDataExternal* cur_room = resp->roomDataExternal.get_ptr();
+		vm::bptr<SceNpMatching2RoomDataExternal> cur_room = resp->roomDataExternal;
 
 		for (u32 i = 0; i < resp->roomDataExternalNum && cur_room; i++)
 		{
 			sceNp2.warning("SceNpMatching2GetRoomDataExternalListResponse[%d]:", i);
-			print_room_data_external(cur_room);
-			cur_room = cur_room->next.get_ptr();
+			print_room_data_external(cur_room.get_ptr());
+			cur_room = cur_room->next;
 		}
 	}
 
