@@ -14,7 +14,7 @@ namespace XINPUT_INFO
 	};
 } // namespace XINPUT_INFO
 
-xinput_pad_handler::xinput_pad_handler(bool emulation) : PadHandlerBase(pad_handler::xinput, emulation)
+xinput_pad_handler::xinput_pad_handler() : PadHandlerBase(pad_handler::xinput)
 {
 	// Unique names for the config files and our pad settings dialog
 	button_list =

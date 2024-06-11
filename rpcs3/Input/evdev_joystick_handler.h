@@ -400,7 +400,7 @@ class evdev_joystick_handler final : public PadHandlerBase
 	};
 
 public:
-	evdev_joystick_handler(bool emulation);
+	evdev_joystick_handler();
 	~evdev_joystick_handler();
 
 	void init_config(cfg_pad* cfg) override;

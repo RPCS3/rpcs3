@@ -21,8 +21,8 @@ static std::mutex s_hid_mutex; // hid_pad_handler is created by pad_thread and p
 static u8 s_hid_instances{0};
 
 template <class Device>
-hid_pad_handler<Device>::hid_pad_handler(pad_handler type, bool emulation, std::vector<id_pair> ids)
-    : PadHandlerBase(type, emulation), m_ids(std::move(ids))
+hid_pad_handler<Device>::hid_pad_handler(pad_handler type, std::vector<id_pair> ids)
+    : PadHandlerBase(type), m_ids(std::move(ids))
 {
 	std::scoped_lock lock(s_hid_mutex);
 	ensure(s_hid_instances++ < 255);

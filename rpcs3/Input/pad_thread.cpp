@@ -29,6 +29,7 @@
 
 LOG_CHANNEL(sys_log, "SYS");
 
+extern void pad_state_notify_state_change(usz index, u32 state);
 extern bool is_input_allowed();
 extern std::string g_input_config_override;
 
@@ -101,7 +102,7 @@ void pad_thread::Init()
 
 	m_info.now_connect = 0;
 
-	handlers.clear();
+	m_handlers.clear();
 
 	g_cfg_input_configs.load();
 
@@ -138,8 +139,8 @@ void pad_thread::Init()
 	std::shared_ptr<keyboard_pad_handler> keyptr;
 
 	// Always have a Null Pad Handler
-	std::shared_ptr<NullPadHandler> nullpad = std::make_shared<NullPadHandler>(true);
-	handlers.emplace(pad_handler::null, nullpad);
+	std::shared_ptr<NullPadHandler> nullpad = std::make_shared<NullPadHandler>();
+	m_handlers.emplace(pad_handler::null, nullpad);
 
 	for (u32 i = 0; i < CELL_PAD_MAX_PORT_NUM; i++) // max 7 pads
 	{
@@ -148,15 +149,15 @@ void pad_thread::Init()
 
 		const pad_handler handler_type = pad_settings[i].is_ldd_pad ? pad_handler::null : cfg->handler.get();
 
-		if (handlers.contains(handler_type))
+		if (m_handlers.contains(handler_type))
 		{
-			cur_pad_handler = handlers[handler_type];
+			cur_pad_handler = m_handlers[handler_type];
 		}
 		else
 		{
 			if (handler_type == pad_handler::keyboard)
 			{
-				keyptr = std::make_shared<keyboard_pad_handler>(true);
+				keyptr = std::make_shared<keyboard_pad_handler>();
 				keyptr->moveToThread(static_cast<QThread*>(m_curthread));
 				keyptr->SetTargetWindow(static_cast<QWindow*>(m_curwindow));
 				cur_pad_handler = keyptr;
@@ -166,7 +167,7 @@ void pad_thread::Init()
 				cur_pad_handler = GetHandler(handler_type);
 			}
 
-			handlers.emplace(handler_type, cur_pad_handler);
+			m_handlers.emplace(handler_type, cur_pad_handler);
 		}
 		cur_pad_handler->Init();
 
@@ -219,6 +220,22 @@ void pad_thread::SetIntercepted(bool intercepted)
 	}
 }
 
+void pad_thread::update_pad_states()
+{
+	for (usz i = 0; i < m_pads.size(); i++)
+	{
+		const auto& pad = m_pads[i];
+		const bool connected = pad && !pad->is_fake_pad && !!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED);
+
+		if (m_pads_connected[i] == connected)
+			continue;
+
+		pad_state_notify_state_change(i, connected ? CELL_PAD_STATUS_CONNECTED : CELL_PAD_STATUS_DISCONNECTED);
+
+		m_pads_connected[i] = connected;
+	}
+}
+
 void pad_thread::operator()()
 {
 	Init();
@@ -260,7 +277,7 @@ void pad_thread::operator()()
 
 		input_log.notice("Starting pad threads...");
 
-		for (const auto& handler : handlers)
+		for (const auto& handler : m_handlers)
 		{
 			if (handler.first == pad_handler::null)
 			{
@@ -332,7 +349,7 @@ void pad_thread::operator()()
 
 		if (pad_mode == pad_handler_mode::single_threaded)
 		{
-			for (auto& handler : handlers)
+			for (auto& handler : m_handlers)
 			{
 				handler.second->process();
 				connected_devices += handler.second->connected_devices;
@@ -340,11 +357,13 @@ void pad_thread::operator()()
 		}
 		else
 		{
-			for (auto& handler : handlers)
+			for (auto& handler : m_handlers)
 			{
 				connected_devices += handler.second->connected_devices;
 			}
 		}
+
+		update_pad_states();
 
 		m_info.now_connect = connected_devices + num_ldd_pad;
 
@@ -580,30 +599,30 @@ std::shared_ptr<PadHandlerBase> pad_thread::GetHandler(pad_handler type)
 	switch (type)
 	{
 	case pad_handler::null:
-		return std::make_shared<NullPadHandler>(true);
+		return std::make_shared<NullPadHandler>();
 	case pad_handler::keyboard:
-		return std::make_shared<keyboard_pad_handler>(true);
+		return std::make_shared<keyboard_pad_handler>();
 	case pad_handler::ds3:
-		return std::make_shared<ds3_pad_handler>(true);
+		return std::make_shared<ds3_pad_handler>();
 	case pad_handler::ds4:
-		return std::make_shared<ds4_pad_handler>(true);
+		return std::make_shared<ds4_pad_handler>();
 	case pad_handler::dualsense:
-		return std::make_shared<dualsense_pad_handler>(true);
+		return std::make_shared<dualsense_pad_handler>();
 	case pad_handler::skateboard:
-		return std::make_shared<skateboard_pad_handler>(true);
+		return std::make_shared<skateboard_pad_handler>();
 #ifdef _WIN32
 	case pad_handler::xinput:
-		return std::make_shared<xinput_pad_handler>(true);
+		return std::make_shared<xinput_pad_handler>();
 	case pad_handler::mm:
-		return std::make_shared<mm_joystick_handler>(true);
+		return std::make_shared<mm_joystick_handler>();
 #endif
 #ifdef HAVE_SDL2
 	case pad_handler::sdl:
-		return std::make_shared<sdl_pad_handler>(true);
+		return std::make_shared<sdl_pad_handler>();
 #endif
 #ifdef HAVE_LIBEVDEV
 	case pad_handler::evdev:
-		return std::make_shared<evdev_joystick_handler>(true);
+		return std::make_shared<evdev_joystick_handler>();
 #endif
 	}
 

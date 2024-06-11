@@ -102,7 +102,7 @@ class xinput_pad_handler final : public PadHandlerBase
 	};
 
 public:
-	xinput_pad_handler(bool emulation);
+	xinput_pad_handler();
 	~xinput_pad_handler();
 
 	bool Init() override;

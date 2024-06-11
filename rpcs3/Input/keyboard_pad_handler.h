@@ -69,7 +69,7 @@ class keyboard_pad_handler final : public QObject, public PadHandlerBase
 public:
 	bool Init() override;
 
-	keyboard_pad_handler(bool emulation);
+	keyboard_pad_handler();
 
 	void SetTargetWindow(QWindow* target);
 	void processKeyEvent(QKeyEvent* event, bool pressed);

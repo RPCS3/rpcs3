@@ -10,8 +10,8 @@ constexpr std::array<u8, 6> battery_capacity = {0, 1, 25, 50, 75, 100};
 
 constexpr id_pair SONY_DS3_ID_0 = {0x054C, 0x0268};
 
-ds3_pad_handler::ds3_pad_handler(bool emulation)
-    : hid_pad_handler(pad_handler::ds3, emulation, {SONY_DS3_ID_0})
+ds3_pad_handler::ds3_pad_handler()
+    : hid_pad_handler(pad_handler::ds3, {SONY_DS3_ID_0})
 {
 	button_list =
 	{
