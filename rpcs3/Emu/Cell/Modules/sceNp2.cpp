@@ -975,9 +975,12 @@ error_code sceNpMatching2GetRoomMemberIdListLocal(SceNpMatching2ContextId ctxId,
 
 	u32 num_members = std::min(memberIdNum, static_cast<u32>(vec_memberids.size()));
 
-	for (u32 i = 0; i < num_members; i++)
+	if (memberId)
 	{
-		memberId[i] = vec_memberids[i];
+		for (u32 i = 0; i < num_members; i++)
+		{
+			memberId[i] = vec_memberids[i];
+		}
 	}
 
 	return not_an_error(num_members);
@@ -1035,7 +1038,7 @@ error_code sceNpMatching2GetRoomMemberDataInternalLocal(SceNpMatching2ContextId 
 	std::vector<SceNpMatching2AttributeId> binattrs_list;
 	for (u32 i = 0; i < attrIdNum; i++)
 	{
-		if (attrId[i] < SCE_NP_MATCHING2_ROOMMEMBER_BIN_ATTR_INTERNAL_1_ID || attrId[i] >= SCE_NP_MATCHING2_USER_BIN_ATTR_1_ID)
+		if (!attrId || attrId[i] < SCE_NP_MATCHING2_ROOMMEMBER_BIN_ATTR_INTERNAL_1_ID || attrId[i] >= SCE_NP_MATCHING2_USER_BIN_ATTR_1_ID)
 		{
 			return SCE_NP_MATCHING2_ERROR_INVALID_ATTRIBUTE_ID;
 		}
