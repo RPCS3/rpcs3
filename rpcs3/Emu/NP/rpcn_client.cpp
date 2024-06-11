@@ -1379,7 +1379,7 @@ namespace rpcn
 		flatbuffers::FlatBufferBuilder builder(1024);
 
 		flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<BinAttr>>> final_binattrinternal_vec;
-		if (req->roomBinAttrInternalNum)
+		if (req->roomBinAttrInternalNum && req->roomBinAttrInternal)
 		{
 			std::vector<flatbuffers::Offset<BinAttr>> davec;
 			for (u32 i = 0; i < req->roomBinAttrInternalNum; i++)
@@ -1390,7 +1390,7 @@ namespace rpcn
 			final_binattrinternal_vec = builder.CreateVector(davec);
 		}
 		flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<IntAttr>>> final_searchintattrexternal_vec;
-		if (req->roomSearchableIntAttrExternalNum)
+		if (req->roomSearchableIntAttrExternalNum && req->roomSearchableIntAttrExternal)
 		{
 			std::vector<flatbuffers::Offset<IntAttr>> davec;
 			for (u32 i = 0; i < req->roomSearchableIntAttrExternalNum; i++)
@@ -1401,7 +1401,7 @@ namespace rpcn
 			final_searchintattrexternal_vec = builder.CreateVector(davec);
 		}
 		flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<BinAttr>>> final_searchbinattrexternal_vec;
-		if (req->roomSearchableBinAttrExternalNum)
+		if (req->roomSearchableBinAttrExternalNum && req->roomSearchableBinAttrExternal)
 		{
 			std::vector<flatbuffers::Offset<BinAttr>> davec;
 			for (u32 i = 0; i < req->roomSearchableBinAttrExternalNum; i++)
@@ -1412,7 +1412,7 @@ namespace rpcn
 			final_searchbinattrexternal_vec = builder.CreateVector(davec);
 		}
 		flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<BinAttr>>> final_binattrexternal_vec;
-		if (req->roomBinAttrExternalNum)
+		if (req->roomBinAttrExternalNum && req->roomBinAttrExternal)
 		{
 			std::vector<flatbuffers::Offset<BinAttr>> davec;
 			for (u32 i = 0; i < req->roomBinAttrExternalNum; i++)
@@ -1426,7 +1426,7 @@ namespace rpcn
 		if (req->roomPassword)
 			final_roompassword = builder.CreateVector(req->roomPassword->data, 8);
 		flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<GroupConfig>>> final_groupconfigs_vec;
-		if (req->groupConfigNum)
+		if (req->groupConfigNum && req->groupConfig)
 		{
 			std::vector<flatbuffers::Offset<GroupConfig>> davec;
 			for (u32 i = 0; i < req->groupConfigNum; i++)
@@ -1455,7 +1455,7 @@ namespace rpcn
 			final_allowedusers_vec = builder.CreateVector(davec);
 		}
 		flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> final_blockedusers_vec;
-		if (req->blockedUserNum)
+		if (req->blockedUserNum && req->blockedUser)
 		{
 			std::vector<flatbuffers::Offset<flatbuffers::String>> davec;
 			for (u32 i = 0; i < req->blockedUserNum; i++)
@@ -1474,7 +1474,7 @@ namespace rpcn
 		if (req->joinRoomGroupLabel)
 			final_grouplabel = builder.CreateVector(req->joinRoomGroupLabel->data, 8);
 		flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<BinAttr>>> final_memberbinattrinternal_vec;
-		if (req->roomMemberBinAttrInternalNum)
+		if (req->roomMemberBinAttrInternalNum && req->roomMemberBinAttrInternal)
 		{
 			std::vector<flatbuffers::Offset<BinAttr>> davec;
 			for (u32 i = 0; i < req->roomMemberBinAttrInternalNum; i++)
@@ -1511,7 +1511,7 @@ namespace rpcn
 		if (req->joinRoomGroupLabel)
 			final_grouplabel = builder.CreateVector(req->joinRoomGroupLabel->data, 8);
 		flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<BinAttr>>> final_memberbinattrinternal_vec;
-		if (req->roomMemberBinAttrInternalNum)
+		if (req->roomMemberBinAttrInternalNum && req->roomMemberBinAttrInternal)
 		{
 			std::vector<flatbuffers::Offset<BinAttr>> davec;
 			for (u32 i = 0; i < req->roomMemberBinAttrInternalNum; i++)
@@ -1543,7 +1543,7 @@ namespace rpcn
 	{
 		flatbuffers::FlatBufferBuilder builder(1024);
 		flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<IntSearchFilter>>> final_intfilter_vec;
-		if (req->intFilterNum)
+		if (req->intFilterNum && req->intFilter)
 		{
 			std::vector<flatbuffers::Offset<IntSearchFilter>> davec{};
 			for (u32 i = 0; i < req->intFilterNum; i++)
@@ -1555,7 +1555,7 @@ namespace rpcn
 			final_intfilter_vec = builder.CreateVector(davec);
 		}
 		flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<BinSearchFilter>>> final_binfilter_vec;
-		if (req->binFilterNum)
+		if (req->binFilterNum && req->binFilter)
 		{
 			std::vector<flatbuffers::Offset<BinSearchFilter>> davec;
 			for (u32 i = 0; i < req->binFilterNum; i++)
@@ -1568,7 +1568,7 @@ namespace rpcn
 		}
 
 		flatbuffers::Offset<flatbuffers::Vector<u16>> attrid_vec;
-		if (req->attrIdNum)
+		if (req->attrIdNum && req->attrId)
 		{
 			std::vector<u16> attr_ids;
 			for (u32 i = 0; i < req->attrIdNum; i++)
@@ -1603,12 +1603,12 @@ namespace rpcn
 	{
 		flatbuffers::FlatBufferBuilder builder(1024);
 		std::vector<u64> roomIds;
-		for (u32 i = 0; i < req->roomIdNum; i++)
+		for (u32 i = 0; i < req->roomIdNum && req->roomId; i++)
 		{
 			roomIds.push_back(req->roomId[i]);
 		}
 		std::vector<u16> attrIds;
-		for (u32 i = 0; i < req->attrIdNum; i++)
+		for (u32 i = 0; i < req->attrIdNum && req->attrId; i++)
 		{
 			attrIds.push_back(req->attrId[i]);
 		}
@@ -1623,7 +1623,7 @@ namespace rpcn
 	{
 		flatbuffers::FlatBufferBuilder builder(1024);
 		flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<IntAttr>>> final_searchintattrexternal_vec;
-		if (req->roomSearchableIntAttrExternalNum)
+		if (req->roomSearchableIntAttrExternalNum && req->roomSearchableIntAttrExternal)
 		{
 			std::vector<flatbuffers::Offset<IntAttr>> davec;
 			for (u32 i = 0; i < req->roomSearchableIntAttrExternalNum; i++)
@@ -1634,7 +1634,7 @@ namespace rpcn
 			final_searchintattrexternal_vec = builder.CreateVector(davec);
 		}
 		flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<BinAttr>>> final_searchbinattrexternal_vec;
-		if (req->roomSearchableBinAttrExternalNum)
+		if (req->roomSearchableBinAttrExternalNum && req->roomSearchableBinAttrExternal)
 		{
 			std::vector<flatbuffers::Offset<BinAttr>> davec;
 			for (u32 i = 0; i < req->roomSearchableBinAttrExternalNum; i++)
@@ -1645,7 +1645,7 @@ namespace rpcn
 			final_searchbinattrexternal_vec = builder.CreateVector(davec);
 		}
 		flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<BinAttr>>> final_binattrexternal_vec;
-		if (req->roomBinAttrExternalNum)
+		if (req->roomBinAttrExternalNum && req->roomBinAttrExternal)
 		{
 			std::vector<flatbuffers::Offset<BinAttr>> davec;
 			for (u32 i = 0; i < req->roomBinAttrExternalNum; i++)
@@ -1666,7 +1666,7 @@ namespace rpcn
 		flatbuffers::FlatBufferBuilder builder(1024);
 
 		flatbuffers::Offset<flatbuffers::Vector<u16>> final_attr_ids_vec;
-		if (req->attrIdNum)
+		if (req->attrIdNum && req->attrId)
 		{
 			std::vector<u16> attr_ids;
 			for (u32 i = 0; i < req->attrIdNum; i++)
@@ -1686,7 +1686,7 @@ namespace rpcn
 	{
 		flatbuffers::FlatBufferBuilder builder(1024);
 		flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<BinAttr>>> final_binattrinternal_vec;
-		if (req->roomBinAttrInternalNum)
+		if (req->roomBinAttrInternalNum && req->roomBinAttrInternal)
 		{
 			std::vector<flatbuffers::Offset<BinAttr>> davec;
 			for (u32 i = 0; i < req->roomBinAttrInternalNum; i++)
@@ -1697,7 +1697,7 @@ namespace rpcn
 			final_binattrinternal_vec = builder.CreateVector(davec);
 		}
 		flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<RoomGroupPasswordConfig>>> final_grouppasswordconfig_vec;
-		if (req->passwordConfigNum)
+		if (req->passwordConfigNum && req->passwordConfig)
 		{
 			std::vector<flatbuffers::Offset<RoomGroupPasswordConfig>> davec;
 			for (u32 i = 0; i < req->passwordConfigNum; i++)
@@ -1712,7 +1712,7 @@ namespace rpcn
 			final_passwordSlotMask = *req->passwordSlotMask;
 
 		flatbuffers::Offset<flatbuffers::Vector<u16>> final_ownerprivilege_vec;
-		if (req->ownerPrivilegeRankNum)
+		if (req->ownerPrivilegeRankNum && req->ownerPrivilegeRank)
 		{
 			std::vector<u16> priv_ranks;
 			for (u32 i = 0; i < req->ownerPrivilegeRankNum; i++)
@@ -1733,7 +1733,7 @@ namespace rpcn
 	{
 		flatbuffers::FlatBufferBuilder builder(1024);
 		flatbuffers::Offset<flatbuffers::Vector<u16>> final_attrid_vec;
-		if (req->attrIdNum)
+		if (req->attrIdNum && req->attrId)
 		{
 			std::vector<u16> attrid_vec;
 			for (u32 i = 0; i < req->attrIdNum; i++)
@@ -1753,7 +1753,7 @@ namespace rpcn
 	{
 		flatbuffers::FlatBufferBuilder builder(1024);
 		flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<BinAttr>>> final_binattrinternal_vec;
-		if (req->roomMemberBinAttrInternalNum)
+		if (req->roomMemberBinAttrInternalNum && req->roomMemberBinAttrInternal)
 		{
 			std::vector<flatbuffers::Offset<BinAttr>> davec;
 			for (u32 i = 0; i < req->roomMemberBinAttrInternalNum; i++)
@@ -1774,7 +1774,7 @@ namespace rpcn
 	{
 		flatbuffers::FlatBufferBuilder builder(1024);
 		flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<BinAttr>>> final_memberbinattr_vec;
-		if (req->userBinAttrNum)
+		if (req->userBinAttrNum && req->userBinAttr)
 		{
 			std::vector<flatbuffers::Offset<BinAttr>> davec;
 			for (u32 i = 0; i < req->userBinAttrNum; i++)
@@ -1814,7 +1814,7 @@ namespace rpcn
 			dst.push_back(req->dst.unicastTarget);
 			break;
 		case SCE_NP_MATCHING2_CASTTYPE_MULTICAST:
-			for (u32 i = 0; i < req->dst.multicastTarget.memberIdNum; i++)
+			for (u32 i = 0; i < req->dst.multicastTarget.memberIdNum && req->dst.multicastTarget.memberId; i++)
 			{
 				dst.push_back(req->dst.multicastTarget.memberId[i]);
 			}
@@ -1997,7 +1997,7 @@ namespace rpcn
 		flatbuffers::FlatBufferBuilder builder(1024);
 
 		std::vector<flatbuffers::Offset<TusUser>> davec;
-		for (s32 i = 0; i < arrayNum; i++)
+		for (s32 i = 0; i < std::min(arrayNum, ::narrow<s32>(targetNpIdArray.size())); i++)
 		{
 			davec.push_back(CreateTusUser(builder, vuser, builder.CreateString(targetNpIdArray[i].data)));
 		}
@@ -2152,7 +2152,7 @@ namespace rpcn
 		flatbuffers::FlatBufferBuilder builder(1024);
 
 		std::vector<flatbuffers::Offset<TusUser>> davec;
-		for (s32 i = 0; i < arrayNum; i++)
+		for (s32 i = 0; i < std::min(arrayNum, ::narrow<s32>(targetNpIdArray.size())); i++)
 		{
 			davec.push_back(CreateTusUser(builder, vuser, builder.CreateString(targetNpIdArray[i].data)));
 		}

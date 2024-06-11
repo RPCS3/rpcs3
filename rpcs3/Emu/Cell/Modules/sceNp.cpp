@@ -1169,8 +1169,8 @@ error_code sceNpBasicSendMessageGui(ppu_thread& ppu, vm::cptr<SceNpBasicMessageD
 
 	if (msg)
 	{
-		sceNp.notice("sceNpBasicSendMessageGui: msgId: %d, mainType: %d, subType: %d, msgFeatures: %d, count: %d", msg->msgId, msg->mainType, msg->subType, msg->msgFeatures, msg->count);
-		for (u32 i = 0; i < msg->count; i++)
+		sceNp.notice("sceNpBasicSendMessageGui: msgId: %d, mainType: %d, subType: %d, msgFeatures: %d, count: %d, npids: *0x%x", msg->msgId, msg->mainType, msg->subType, msg->msgFeatures, msg->count, msg->npids);
+		for (u32 i = 0; i < msg->count && msg->npids; i++)
 		{
 			sceNp.trace("sceNpBasicSendMessageGui: NpId[%d] = %s", i, static_cast<char*>(&msg->npids[i].handle.data[0]));
 		}
@@ -1338,9 +1338,12 @@ error_code sceNpBasicSendMessageGui(ppu_thread& ppu, vm::cptr<SceNpBasicMessageD
 		.msgFeatures = msg->msgFeatures};
 	std::set<std::string> npids;
 
-	for (u32 i = 0; i < msg->count; i++)
+	if (msg->npids)
 	{
-		npids.insert(std::string(msg->npids[i].handle.data));
+		for (u32 i = 0; i < msg->count; i++)
+		{
+			npids.insert(std::string(msg->npids[i].handle.data));
+		}
 	}
 
 	if (msg->subject)
@@ -2967,7 +2970,7 @@ error_code sceNpCustomMenuRegisterActions(vm::cptr<SceNpCustomMenu> menu, vm::pt
 
 	for (u32 i = 0; i < menu->numActions; i++)
 	{
-		if (!menu->actions[i].name)
+		if (!menu->actions || !menu->actions[i].name)
 		{
 			return SCE_NP_CUSTOM_MENU_ERROR_INVALID_ARGUMENT;
 		}

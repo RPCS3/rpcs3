@@ -776,7 +776,7 @@ error_code sceNpCommerce2DoCheckoutStartAsync(u32 ctx_id, vm::cpptr<char> sku_id
 
 	for (u32 i = 0; i < sku_num; i++)
 	{
-		if (!sku_ids[i] || !sku_ids[i][0])
+		if (!sku_ids || !sku_ids[i] || !sku_ids[i][0])
 			return SCE_NP_COMMERCE2_ERROR_INVALID_SKUID;
 	}
 
@@ -874,7 +874,7 @@ error_code sceNpCommerce2DoDlListStartAsync(u32 ctx_id, vm::cptr<char> service_i
 	{
 		for (u32 i = 0; i < sku_num; i++)
 		{
-			if (!sku_ids[i] || !sku_ids[i][0])
+			if (!sku_ids || !sku_ids[i] || !sku_ids[i][0])
 				return SCE_NP_COMMERCE2_ERROR_INVALID_SKUID;
 		}
 	}

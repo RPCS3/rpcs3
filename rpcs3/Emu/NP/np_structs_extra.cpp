@@ -95,25 +95,25 @@ namespace extra_nps
 		sceNp2.warning("roomBinAttrInternal: *0x%x", req->roomBinAttrInternal);
 		sceNp2.warning("roomBinAttrInternalNum: %d", req->roomBinAttrInternalNum);
 
-		for (u32 i = 0; i < req->roomBinAttrInternalNum; i++)
+		for (u32 i = 0; i < req->roomBinAttrInternalNum && req->roomBinAttrInternal; i++)
 			print_bin_attr(&req->roomBinAttrInternal[i]);
 
 		sceNp2.warning("roomSearchableIntAttrExternal: *0x%x", req->roomSearchableIntAttrExternal);
 		sceNp2.warning("roomSearchableIntAttrExternalNum: %d", req->roomSearchableIntAttrExternalNum);
 
-		for (u32 i = 0; i < req->roomSearchableIntAttrExternalNum; i++)
+		for (u32 i = 0; i < req->roomSearchableIntAttrExternalNum && req->roomSearchableIntAttrExternal; i++)
 			print_int_attr(&req->roomSearchableIntAttrExternal[i]);
 		
 		sceNp2.warning("roomSearchableBinAttrExternal: *0x%x", req->roomSearchableBinAttrExternal);
 		sceNp2.warning("roomSearchableBinAttrExternalNum: %d", req->roomSearchableBinAttrExternalNum);
 
-		for (u32 i = 0; i < req->roomSearchableBinAttrExternalNum; i++)
+		for (u32 i = 0; i < req->roomSearchableBinAttrExternalNum && req->roomSearchableBinAttrExternal; i++)
 			print_bin_attr(&req->roomSearchableBinAttrExternal[i]);
 		
 		sceNp2.warning("roomBinAttrExternal: *0x%x", req->roomBinAttrExternal);
 		sceNp2.warning("roomBinAttrExternalNum: %d", req->roomBinAttrExternalNum);
 
-		for (u32 i = 0; i < req->roomBinAttrExternalNum; i++)
+		for (u32 i = 0; i < req->roomBinAttrExternalNum && req->roomBinAttrExternal; i++)
 			print_bin_attr(&req->roomBinAttrExternal[i]);
 
 		sceNp2.warning("roomPassword: *0x%x", req->roomPassword);
@@ -128,7 +128,7 @@ namespace extra_nps
 		sceNp2.warning("roomMemberBinAttrInternal: *0x%x", req->roomMemberBinAttrInternal);
 		sceNp2.warning("roomMemberBinAttrInternalNum: %d", req->roomMemberBinAttrInternalNum);
 
-		for (u32 i = 0; i < req->roomMemberBinAttrInternalNum; i++)
+		for (u32 i = 0; i < req->roomMemberBinAttrInternalNum && req->roomMemberBinAttrInternal; i++)
 			print_bin_attr(&req->roomMemberBinAttrInternal[i]);
 
 		sceNp2.warning("teamId: %d", req->teamId);
@@ -149,7 +149,7 @@ namespace extra_nps
 		print_presence_data(&req->optData);
 		sceNp2.warning("teamId: %d", req->teamId);
 
-		for (u32 i = 0; i < req->roomMemberBinAttrInternalNum; i++)
+		for (u32 i = 0; i < req->roomMemberBinAttrInternalNum && req->roomMemberBinAttrInternal; i++)
 			print_bin_attr(&req->roomMemberBinAttrInternal[i]);
 	}
 
@@ -164,15 +164,15 @@ namespace extra_nps
 		sceNp2.warning("flagAttr: 0x%x", req->flagAttr);
 		sceNp2.warning("intFilter: *0x%x", req->intFilter);
 		sceNp2.warning("intFilterNum: %d", req->intFilterNum);
-		for (u32 i = 0; i < req->intFilterNum; i++)
+		for (u32 i = 0; i < req->intFilterNum && req->intFilter; i++)
 			print_int_search_filter(&req->intFilter[i]);
 		sceNp2.warning("binFilter: *0x%x", req->binFilter);
 		sceNp2.warning("binFilterNum: %d", req->binFilterNum);
-		for (u32 i = 0; i < req->binFilterNum; i++)
+		for (u32 i = 0; i < req->binFilterNum && req->binFilter; i++)
 			print_bin_search_filter(&req->binFilter[i]);
 		sceNp2.warning("attrId: *0x%x", req->attrId);
 		sceNp2.warning("attrIdNum: %d", req->attrIdNum);
-		for (u32 i = 0; i < req->attrIdNum; i++)
+		for (u32 i = 0; i < req->attrIdNum && req->attrId; i++)
 			sceNp2.warning("attrId[%d] = 0x%x", i, req->attrId[i]);
 	}
 
@@ -205,7 +205,7 @@ namespace extra_nps
 		sceNp2.warning("flagAttr: 0x%x", member->flagAttr);
 		sceNp2.warning("roomMemberBinAttrInternal: *0x%x", member->roomMemberBinAttrInternal);
 		sceNp2.warning("roomMemberBinAttrInternalNum: %d", member->roomMemberBinAttrInternalNum);
-		for (u32 i = 0; i < member->roomMemberBinAttrInternalNum; i++)
+		for (u32 i = 0; i < member->roomMemberBinAttrInternalNum && member->roomMemberBinAttrInternal; i++)
 			print_member_bin_attr_internal(&member->roomMemberBinAttrInternal[i]);
 	}
 
@@ -235,7 +235,7 @@ namespace extra_nps
 		sceNp2.warning("flagAttr: 0x%x", room->flagAttr);
 		sceNp2.warning("roomBinAttrInternal: *0x%x", room->roomBinAttrInternal);
 		sceNp2.warning("roomBinAttrInternalNum: %d", room->roomBinAttrInternalNum);
-		for (u32 i = 0; i < room->roomBinAttrInternalNum; i++)
+		for (u32 i = 0; i < room->roomBinAttrInternalNum && room->roomBinAttrInternal; i++)
 			print_bin_attr_internal(&room->roomBinAttrInternal[i]);
 	}
 
@@ -266,19 +266,19 @@ namespace extra_nps
 		sceNp2.warning("roomSearchableIntAttrExternal: *0x%x", room->roomSearchableIntAttrExternal);
 		sceNp2.warning("roomSearchableIntAttrExternalNum: %d", room->roomSearchableIntAttrExternalNum);
 
-		for (u32 i = 0; i < room->roomSearchableIntAttrExternalNum; i++)
+		for (u32 i = 0; i < room->roomSearchableIntAttrExternalNum && room->roomSearchableIntAttrExternal; i++)
 			print_int_attr(&room->roomSearchableIntAttrExternal[i]);
 
 		sceNp2.warning("roomSearchableBinAttrExternal: *0x%x", room->roomSearchableBinAttrExternal);
 		sceNp2.warning("roomSearchableBinAttrExternalNum: %d", room->roomSearchableBinAttrExternalNum);
 
-		for (u32 i = 0; i < room->roomSearchableBinAttrExternalNum; i++)
+		for (u32 i = 0; i < room->roomSearchableBinAttrExternalNum && room->roomSearchableBinAttrExternal; i++)
 			print_bin_attr(&room->roomSearchableBinAttrExternal[i]);
 
 		sceNp2.warning("roomBinAttrExternal: *0x%x", room->roomBinAttrExternal);
 		sceNp2.warning("roomBinAttrExternalNum: %d", room->roomBinAttrExternalNum);
 
-		for (u32 i = 0; i < room->roomBinAttrExternalNum; i++)
+		for (u32 i = 0; i < room->roomBinAttrExternalNum && room->roomBinAttrExternal; i++)
 			print_bin_attr(&room->roomBinAttrExternal[i]);
 	}
 
@@ -297,19 +297,19 @@ namespace extra_nps
 		sceNp2.warning("roomSearchableIntAttrExternal: *0x%x", req->roomSearchableIntAttrExternal);
 		sceNp2.warning("roomSearchableIntAttrExternalNum: %d", req->roomSearchableIntAttrExternalNum);
 
-		for (u32 i = 0; i < req->roomSearchableIntAttrExternalNum; i++)
+		for (u32 i = 0; i < req->roomSearchableIntAttrExternalNum && req->roomSearchableIntAttrExternal; i++)
 			print_int_attr(&req->roomSearchableIntAttrExternal[i]);
 
 		sceNp2.warning("roomSearchableBinAttrExternal: *0x%x", req->roomSearchableBinAttrExternal);
 		sceNp2.warning("roomSearchableBinAttrExternalNum: %d", req->roomSearchableBinAttrExternalNum);
 
-		for (u32 i = 0; i < req->roomSearchableBinAttrExternalNum; i++)
+		for (u32 i = 0; i < req->roomSearchableBinAttrExternalNum && req->roomSearchableBinAttrExternal; i++)
 			print_bin_attr(&req->roomSearchableBinAttrExternal[i]);
 
 		sceNp2.warning("roomBinAttrExternal: *0x%x", req->roomBinAttrExternal);
 		sceNp2.warning("roomBinAttrExternalNum: %d", req->roomBinAttrExternalNum);
 
-		for (u32 i = 0; i < req->roomBinAttrExternalNum; i++)
+		for (u32 i = 0; i < req->roomBinAttrExternalNum && req->roomBinAttrExternal; i++)
 			print_bin_attr(&req->roomBinAttrExternal[i]);
 	}
 
@@ -322,7 +322,7 @@ namespace extra_nps
 		sceNp2.warning("roomBinAttrInternal: *0x%x", req->roomBinAttrInternal);
 		sceNp2.warning("roomBinAttrInternalNum: %d", req->roomBinAttrInternalNum);
 
-		for (u32 i = 0; i < req->roomBinAttrInternalNum; i++)
+		for (u32 i = 0; i < req->roomBinAttrInternalNum && req->roomBinAttrInternal; i++)
 			print_bin_attr(&req->roomBinAttrInternal[i]);
 
 		sceNp2.warning("passwordConfig: *0x%x", req->passwordConfig);
@@ -337,8 +337,9 @@ namespace extra_nps
 		sceNp2.warning("SceNpMatching2GetRoomMemberDataInternalRequest:");
 		sceNp2.warning("roomId: %d", req->roomId);
 		sceNp2.warning("memberId: %d", req->memberId);
+		sceNp2.warning("attrId: *0x%x", req->attrId);
 		sceNp2.warning("attrIdNum: %d", req->attrIdNum);
-		for (u32 i = 0; i < req->attrIdNum; i++)
+		for (u32 i = 0; i < req->attrIdNum && req->attrId; i++)
 		{
 			sceNp2.warning("attrId[%d] = %d", i, req->attrId[i]);
 		}
@@ -354,7 +355,7 @@ namespace extra_nps
 		sceNp2.warning("flagAttr: 0x%x", req->flagAttr);
 		sceNp2.warning("roomMemberBinAttrInternal: *0x%x", req->roomMemberBinAttrInternal);
 		sceNp2.warning("roomMemberBinAttrInternalNum: %d", req->roomMemberBinAttrInternalNum);
-		for (u32 i = 0; i < req->roomMemberBinAttrInternalNum; i++)
+		for (u32 i = 0; i < req->roomMemberBinAttrInternalNum && req->roomMemberBinAttrInternal; i++)
 			print_bin_attr(&req->roomMemberBinAttrInternal[i]);
 	}
 
@@ -363,13 +364,13 @@ namespace extra_nps
 		sceNp2.warning("SceNpMatching2GetRoomDataExternalListRequest:");
 		sceNp2.warning("roomId: *0x%x", req->roomId);
 		sceNp2.warning("roomIdNum: %d", req->roomIdNum);
-		for (u32 i = 0; i < req->roomIdNum; i++)
+		for (u32 i = 0; i < req->roomIdNum && req->roomId; i++)
 		{
 			sceNp2.warning("RoomId[%d] = %d", i, req->roomId[i]);
 		}
 		sceNp2.warning("attrId: *0x%x", req->attrId);
 		sceNp2.warning("attrIdNum: %d", req->attrIdNum);
-		for (u32 i = 0; i < req->attrIdNum; i++)
+		for (u32 i = 0; i < req->attrIdNum && req->attrId; i++)
 		{
 			sceNp2.warning("attrId[%d] = %d", i, req->attrId[i]);
 		}
@@ -381,13 +382,13 @@ namespace extra_nps
 		sceNp2.warning("roomDataExternal: *0x%x", resp->roomDataExternal);
 		sceNp2.warning("roomDataExternalNum: %d", resp->roomDataExternalNum);
 
-		const SceNpMatching2RoomDataExternal* cur_room = resp->roomDataExternal.get_ptr();
+		vm::bptr<SceNpMatching2RoomDataExternal> cur_room = resp->roomDataExternal;
 
-		for (u32 i = 0; i < resp->roomDataExternalNum; i++)
+		for (u32 i = 0; i < resp->roomDataExternalNum && cur_room; i++)
 		{
 			sceNp2.warning("SceNpMatching2GetRoomDataExternalListResponse[%d]:", i);
-			print_room_data_external(cur_room);
-			cur_room = cur_room->next.get_ptr();
+			print_room_data_external(cur_room.get_ptr());
+			cur_room = cur_room->next;
 		}
 	}
 
