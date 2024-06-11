@@ -153,7 +153,10 @@ void AtracXdecDecoder::free_avcodec()
 
 void AtracXdecDecoder::init_avcodec()
 {
-	avcodec_close(ctx);
+	if (int err = avcodec_close(ctx); err)
+	{
+		fmt::throw_exception("avcodec_close() failed (err=0x%x='%s')", err, utils::av_error_to_string(err));
+	}
 
 	ctx->block_align = nbytes;
 	ctx->ch_layout.nb_channels = nch_in;
@@ -298,6 +301,7 @@ void AtracXdecContext::exec(ppu_thread& ppu)
 		switch (cmd.type)
 		{
 		case AtracXdecCmdType::start_seq:
+		{
 			first_decode = true;
 			skip_next_frame = true;
 
@@ -317,7 +321,7 @@ void AtracXdecContext::exec(ppu_thread& ppu)
 
 			atracx_param = cmd.atracx_param;
 			break;
-
+		}
 		case AtracXdecCmdType::end_seq:
 		{
 			skip_getting_command = true;
@@ -411,11 +415,9 @@ void AtracXdecContext::exec(ppu_thread& ppu)
 					error = CELL_ADEC_ERROR_ATX_NON_FATAL; // Not accurate, FFmpeg doesn't provide detailed errors like LLE
 				}
 
-				// Always call avcodec_receive_frame() to clear the AVFrame, even if avcodec_send_packet() returned an error
-				if (int err = avcodec_receive_frame(decoder.ctx, decoder.frame); err)
+				if (int err = avcodec_receive_frame(decoder.ctx, decoder.frame); err != 0 && err != AVERROR(EAGAIN))
 				{
-					cellAtracXdec.error("avcodec_receive_frame() failed (err=0x%x='%s')", err, utils::av_error_to_string(err));
-					error = CELL_ADEC_ERROR_ATX_NON_FATAL; // Not accurate, FFmpeg doesn't provide detailed errors like LLE
+					fmt::throw_exception("avcodec_receive_frame() failed (err=0x%x='%s')", err, utils::av_error_to_string(err));
 				}
 
 				decoded_samples_num = decoder.frame->nb_samples;
@@ -430,99 +432,109 @@ void AtracXdecContext::exec(ppu_thread& ppu)
 				}
 
 				// Convert FFmpeg output to LLE output
-				const auto output_f32 = vm::static_ptr_cast<f32>(output);
-				const auto output_s16 = vm::static_ptr_cast<s16>(output);
-				const auto output_s32 = vm::static_ptr_cast<s32>(output);
+				const auto output_f32 = vm::static_ptr_cast<f32>(output).get_ptr();
+				const auto output_s16 = vm::static_ptr_cast<s16>(output).get_ptr();
+				const auto output_s32 = vm::static_ptr_cast<s32>(output).get_ptr();
+				const u8* const ch_map = ATXDEC_AVCODEC_CH_MAP[decoder.ch_config_idx - 1];
+				const u32 nch_in = decoder.nch_in;
 
 				switch (decoder.bw_pcm)
 				{
 				case CELL_ADEC_ATRACX_WORD_SZ_FLOAT:
-					for (u32 channel_idx = 0; channel_idx < decoder.nch_in; channel_idx++)
+					for (u32 channel_idx = 0; channel_idx < nch_in; channel_idx++)
 					{
-						for (u32 sample_idx = 0; sample_idx < decoded_samples_num; sample_idx++)
+						const f32* samples = reinterpret_cast<f32*>(decoder.frame->data[channel_idx]);
+
+						for (u32 in_sample_idx = 0, out_sample_idx = ch_map[channel_idx]; in_sample_idx < decoded_samples_num; in_sample_idx++, out_sample_idx += nch_in)
 						{
-							const f32 sample = reinterpret_cast<f32*>(decoder.frame->data[channel_idx])[sample_idx];
+							const f32 sample = samples[in_sample_idx];
 
 							if (sample >= std::bit_cast<f32>(std::bit_cast<u32>(1.f) - 1))
 							{
-								output_f32[sample_idx * decoder.nch_in + ATXDEC_AVCODEC_CH_MAP[decoder.ch_config_idx - 1][channel_idx]] = std::bit_cast<be_t<f32>>("\x3f\x7f\xff\xff"_u32); // Prevents an unnecessary endian swap
+								output_f32[out_sample_idx] = std::bit_cast<be_t<f32>>("\x3f\x7f\xff\xff"_u32); // Prevents an unnecessary endian swap
 							}
 							else if (sample <= -1.f)
 							{
-								output_f32[sample_idx * decoder.nch_in + ATXDEC_AVCODEC_CH_MAP[decoder.ch_config_idx - 1][channel_idx]] = -1.f;
+								output_f32[out_sample_idx] = -1.f;
 							}
 							else
 							{
-								output_f32[sample_idx * decoder.nch_in + ATXDEC_AVCODEC_CH_MAP[decoder.ch_config_idx - 1][channel_idx]] = sample;
+								output_f32[out_sample_idx] = sample;
 							}
 						}
 					}
 					break;
 
 				case CELL_ADEC_ATRACX_WORD_SZ_16BIT:
-					for (u32 channel_idx = 0; channel_idx < decoder.nch_in; channel_idx++)
+					for (u32 channel_idx = 0; channel_idx < nch_in; channel_idx++)
 					{
-						for (u32 sample_idx = 0; sample_idx < decoded_samples_num; sample_idx++)
+						const f32* samples = reinterpret_cast<f32*>(decoder.frame->data[channel_idx]);
+
+						for (u32 in_sample_idx = 0, out_sample_idx = ch_map[channel_idx]; in_sample_idx < decoded_samples_num; in_sample_idx++, out_sample_idx += nch_in)
 						{
-							const f32 sample = reinterpret_cast<f32*>(decoder.frame->data[channel_idx])[sample_idx];
+							const f32 sample = samples[in_sample_idx];
 
 							if (sample >= 1.f)
 							{
-								output_s16[sample_idx * decoder.nch_in + ATXDEC_AVCODEC_CH_MAP[decoder.ch_config_idx - 1][channel_idx]] = INT16_MAX;
+								output_s16[out_sample_idx] = INT16_MAX;
 							}
 							else if (sample <= -1.f)
 							{
-								output_s16[sample_idx * decoder.nch_in + ATXDEC_AVCODEC_CH_MAP[decoder.ch_config_idx - 1][channel_idx]] = INT16_MIN;
+								output_s16[out_sample_idx] = INT16_MIN;
 							}
 							else
 							{
-								output_s16[sample_idx * decoder.nch_in + ATXDEC_AVCODEC_CH_MAP[decoder.ch_config_idx - 1][channel_idx]] = static_cast<s16>(std::floor(sample * 0x8000u));
+								output_s16[out_sample_idx] = static_cast<s16>(std::floor(sample * 0x8000u));
 							}
 						}
 					}
 					break;
 
 				case CELL_ADEC_ATRACX_WORD_SZ_24BIT:
-					for (u32 channel_idx = 0; channel_idx < decoder.nch_in; channel_idx++)
+					for (u32 channel_idx = 0; channel_idx < nch_in; channel_idx++)
 					{
-						for (u32 sample_idx = 0; sample_idx < decoded_samples_num; sample_idx++)
+						const f32* samples = reinterpret_cast<f32*>(decoder.frame->data[channel_idx]);
+
+						for (u32 in_sample_idx = 0, out_sample_idx = ch_map[channel_idx]; in_sample_idx < decoded_samples_num; in_sample_idx++, out_sample_idx += nch_in)
 						{
-							const f32 sample = reinterpret_cast<f32*>(decoder.frame->data[channel_idx])[sample_idx];
+							const f32 sample = samples[in_sample_idx];
 
 							if (sample >= 1.f)
 							{
-								output_s32[sample_idx * decoder.nch_in + ATXDEC_AVCODEC_CH_MAP[decoder.ch_config_idx - 1][channel_idx]] = 0x007fffff;
+								output_s32[out_sample_idx] = 0x007fffff;
 							}
 							else if (sample <= -1.f)
 							{
-								output_s32[sample_idx * decoder.nch_in + ATXDEC_AVCODEC_CH_MAP[decoder.ch_config_idx - 1][channel_idx]] = 0x00800000;
+								output_s32[out_sample_idx] = 0x00800000;
 							}
 							else
 							{
-								output_s32[sample_idx * decoder.nch_in + ATXDEC_AVCODEC_CH_MAP[decoder.ch_config_idx - 1][channel_idx]] = static_cast<s32>(std::floor(sample * 0x00800000u)) & 0x00ffffff;
+								output_s32[out_sample_idx] = static_cast<s32>(std::floor(sample * 0x00800000u)) & 0x00ffffff;
 							}
 						}
 					}
 					break;
 
 				case CELL_ADEC_ATRACX_WORD_SZ_32BIT:
-					for (u32 channel_idx = 0; channel_idx < decoder.nch_in; channel_idx++)
+					for (u32 channel_idx = 0; channel_idx < nch_in; channel_idx++)
 					{
-						for (u32 sample_idx = 0; sample_idx < decoded_samples_num; sample_idx++)
+						const f32* samples = reinterpret_cast<f32*>(decoder.frame->data[channel_idx]);
+
+						for (u32 in_sample_idx = 0, out_sample_idx = ch_map[channel_idx]; in_sample_idx < decoded_samples_num; in_sample_idx++, out_sample_idx += nch_in)
 						{
-							const f32 sample = reinterpret_cast<f32*>(decoder.frame->data[channel_idx])[sample_idx];
+							const f32 sample = samples[in_sample_idx];
 
 							if (sample >= 1.f)
 							{
-								output_s32[sample_idx * decoder.nch_in + ATXDEC_AVCODEC_CH_MAP[decoder.ch_config_idx - 1][channel_idx]] = INT32_MAX;
+								output_s32[out_sample_idx] = INT32_MAX;
 							}
 							else if (sample <= -1.f)
 							{
-								output_s32[sample_idx * decoder.nch_in + ATXDEC_AVCODEC_CH_MAP[decoder.ch_config_idx - 1][channel_idx]] = INT32_MIN;
+								output_s32[out_sample_idx] = INT32_MIN;
 							}
 							else
 							{
-								output_s32[sample_idx * decoder.nch_in + ATXDEC_AVCODEC_CH_MAP[decoder.ch_config_idx - 1][channel_idx]] = static_cast<s32>(std::floor(sample * 0x80000000u));
+								output_s32[out_sample_idx] = static_cast<s32>(std::floor(sample * 0x80000000u));
 							}
 						}
 					}
@@ -568,13 +580,16 @@ void AtracXdecContext::exec(ppu_thread& ppu)
 
 			const vm::var<CellAdecAtracXInfo> bsi_info{{ decoder.sampling_freq, decoder.ch_config_idx, decoder.nbytes }};
 
-			AdecCorrectPtsValueType correct_pts_type = ADEC_CORRECT_PTS_VALUE_TYPE_UNSPECIFIED;
-			switch (decoder.sampling_freq)
+			const AdecCorrectPtsValueType correct_pts_type = [&]
 			{
-			case 32000u: correct_pts_type = ADEC_CORRECT_PTS_VALUE_TYPE_ATRACX_32000Hz; break;
-			case 44100u: correct_pts_type = ADEC_CORRECT_PTS_VALUE_TYPE_ATRACX_44100Hz; break;
-			case 48000u: correct_pts_type = ADEC_CORRECT_PTS_VALUE_TYPE_ATRACX_48000Hz; break;
-			}
+				switch (decoder.sampling_freq)
+				{
+				case 32000u: return ADEC_CORRECT_PTS_VALUE_TYPE_ATRACX_32000Hz;
+				case 44100u: return ADEC_CORRECT_PTS_VALUE_TYPE_ATRACX_44100Hz;
+				case 48000u: return ADEC_CORRECT_PTS_VALUE_TYPE_ATRACX_48000Hz;
+				default:     return ADEC_CORRECT_PTS_VALUE_TYPE_UNSPECIFIED;
+				}
+			}();
 
 			notify_pcm_out.cbFunc(ppu, cmd.pcm_handle, output, output_size, notify_pcm_out.cbArg, vm::make_var<vm::bcptr<void>>(bsi_info), correct_pts_type, error);
 			break;
