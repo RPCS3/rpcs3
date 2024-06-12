@@ -108,29 +108,31 @@ struct lv2_lwmutex final : lv2_obj
 			}
 		}).signaled;
 
-		const bool notify = lwcond_waiters.fetch_op([](s32& val)
-		{
-			if (val + 0u <= 1u << 31)
-			{
-				// Value was either positive or INT32_MIN
-				return false;
-			}
-
-			// lwmutex was set to be destroyed, but there are lwcond waiters
-			// Turn off the "lwcond_waiters notification" bit as we are adding an lwmutex waiter
-			val &= 0x7fff'ffff;
-			return true;
-		}).second;
-
-		if (notify)
-		{
-			// Notify lwmutex destroyer (may cause EBUSY to be returned for it)
-			lwcond_waiters.notify_all();
-		}
-
 		if (signal)
 		{
 			cpu->next_cpu = nullptr;
+		}
+		else
+		{
+			const bool notify = lwcond_waiters.fetch_op([](s32& val)
+			{
+				if (val + 0u <= 1u << 31)
+				{
+					// Value was either positive or INT32_MIN
+					return false;
+				}
+
+				// lwmutex was set to be destroyed, but there are lwcond waiters
+				// Turn off the "lwcond_waiters notification" bit as we are adding an lwmutex waiter
+				val &= 0x7fff'ffff;
+				return true;
+			}).second;
+
+			if (notify)
+			{
+				// Notify lwmutex destroyer (may cause EBUSY to be returned for it)
+				lwcond_waiters.notify_all();
+			}
 		}
 
 		return signal;
