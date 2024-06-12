@@ -196,6 +196,12 @@ error_code sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 					continue;
 				}
 
+				if (!atomic_storage<ppu_thread*>::load(rwlock->rq))
+				{
+					// Waiters queue is empty, so the thread must have been signaled
+					break;
+				}
+
 				std::lock_guard lock(rwlock->mutex);
 
 				if (!rwlock->unqueue(rwlock->rq, &ppu))

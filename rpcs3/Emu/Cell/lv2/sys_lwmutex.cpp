@@ -234,6 +234,12 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 					continue;
 				}
 
+				if (!mutex->load_sq())
+				{
+					// Sleep queue is empty, so the thread must have been signaled
+					break;
+				}
+
 				std::lock_guard lock(mutex->mutex);
 
 				bool success = false;

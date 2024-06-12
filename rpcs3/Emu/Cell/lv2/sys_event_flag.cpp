@@ -240,6 +240,12 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 					continue;
 				}
 
+				if (!atomic_storage<ppu_thread*>::load(flag->sq))
+				{
+					// Waiters queue is empty, so the thread must have been signaled
+					break;
+				}
+
 				std::lock_guard lock(flag->mutex);
 
 				if (!flag->unqueue(flag->sq, &ppu))
