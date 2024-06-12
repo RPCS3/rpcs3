@@ -237,6 +237,7 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 				if (!mutex->load_sq())
 				{
 					// Sleep queue is empty, so the thread must have been signaled
+					mutex->mutex.lock_unlock();
 					break;
 				}
 
