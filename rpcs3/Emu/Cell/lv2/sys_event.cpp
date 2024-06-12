@@ -521,6 +521,12 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 					continue;
 				}
 
+				if (!atomic_storage<ppu_thread*>::load(queue->pq))
+				{
+					// Waiters queue is empty, so the thread must have been signaled
+					break;
+				}
+
 				std::lock_guard lock(queue->mutex);
 
 				if (!queue->unqueue(queue->pq, &ppu))
