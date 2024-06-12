@@ -414,7 +414,9 @@ namespace rsx
 			requires std::is_invocable_v<F, const Ty&>
 		simple_array<U> map(F&& xform) const
 		{
-			simple_array<U> result(size());
+			simple_array<U> result;
+			result.reserve(size());
+
 			for (auto it = begin(); it != end(); ++it)
 			{
 				result.push_back(xform(*it));
