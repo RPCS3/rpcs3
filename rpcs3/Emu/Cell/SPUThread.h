@@ -896,7 +896,7 @@ public:
 	static atomic_t<u32> g_raw_spu_ctr;
 	static atomic_t<u32> g_raw_spu_id[5];
 	static atomic_t<u32> g_spu_work_count;
-	static atomic_t<u8> g_reservation_waiters[32];
+	static atomic_t<u8> g_reservation_waiters[128];
 
 	static u32 find_raw_spu(u32 id)
 	{
