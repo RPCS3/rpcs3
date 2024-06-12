@@ -111,6 +111,8 @@ void AtracXdecDecoder::alloc_avcodec()
 		fmt::throw_exception("avcodec_find_decoder() failed");
 	}
 
+	ensure(!(codec->capabilities & AV_CODEC_CAP_SUBFRAMES));
+
 	ctx = avcodec_alloc_context3(codec);
 	if (!ctx)
 	{
@@ -411,11 +413,19 @@ void AtracXdecContext::exec(ppu_thread& ppu)
 
 				if (int err = avcodec_send_packet(decoder.ctx, decoder.packet); err)
 				{
+					// These errors should never occur
+					if (err == AVERROR(EAGAIN) || err == AVERROR_EOF || err == AVERROR(EINVAL) || err == AVERROR(ENOMEM))
+					{
+						fmt::throw_exception("avcodec_send_packet() failed (err=0x%x='%s')", err, utils::av_error_to_string(err));
+					}
+
+					// Game sent invalid data
 					cellAtracXdec.error("avcodec_send_packet() failed (err=0x%x='%s')", err, utils::av_error_to_string(err));
 					error = CELL_ADEC_ERROR_ATX_NON_FATAL; // Not accurate, FFmpeg doesn't provide detailed errors like LLE
-				}
 
-				if (int err = avcodec_receive_frame(decoder.ctx, decoder.frame); err != 0 && err != AVERROR(EAGAIN))
+					av_frame_unref(decoder.frame);
+				}
+				else if (err = avcodec_receive_frame(decoder.ctx, decoder.frame))
 				{
 					fmt::throw_exception("avcodec_receive_frame() failed (err=0x%x='%s')", err, utils::av_error_to_string(err));
 				}
