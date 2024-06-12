@@ -444,6 +444,12 @@ waitpkg_func static void __tpause(u32 cycles, u32 cstate)
 }
 #endif
 
+static inline atomic_t<u8>& get_resrv_waiters_count(u32 raddr)
+{
+	// Storage efficient method to distinguish different nearby addresses (which are likely)
+	 return spu_thread::g_reservation_waiters[std::popcount(raddr) + ((raddr / 128) % 4) * 32];
+}
+
 void do_cell_atomic_128_store(u32 addr, const void* to_write);
 
 extern thread_local u64 g_tls_fault_spu;
@@ -4586,11 +4592,11 @@ bool spu_thread::process_mfc_cmd()
 						state += cpu_flag::wait;
 
 						// Storage efficient method to distinguish different nearby addresses (which are likely)
-						g_reservation_waiters[std::popcount(addr)]++;
+						get_resrv_waiters_count(addr)++;
 
 						vm::reservation_notifier(addr).wait(this_time, atomic_wait_timeout{100'000});
 
-						g_reservation_waiters[std::popcount(addr)]--;
+						get_resrv_waiters_count(addr)--;
 
 						// Reset perf
 						perf0.restart();
@@ -4628,8 +4634,8 @@ bool spu_thread::process_mfc_cmd()
 						{
 							spu_log.trace("RTIME unchanged on address 0x%x", addr);
 
-							// Try to forcefully change in order to notify threads
-							if (g_reservation_waiters[std::popcount(addr)] && res.compare_and_swap_test(this_time, this_time + 128))
+							// Try to forcefully change timestamp in order to notify threads
+							if (get_resrv_waiters_count(addr) && res.compare_and_swap_test(this_time, this_time + 128))
 							{
 								vm::reservation_notifier(addr).notify_all();
 							}
@@ -4639,8 +4645,8 @@ bool spu_thread::process_mfc_cmd()
 
 				if (this_time == rtime)
 				{
-					// Try to forcefully change in order to notify threads
-					if (g_reservation_waiters[std::popcount(addr)] && res.compare_and_swap_test(this_time, this_time + 128))
+					// Try to forcefully change timestamp in order to notify threads
+					if (get_resrv_waiters_count(addr) && res.compare_and_swap_test(this_time, this_time + 128))
 					{
 						vm::reservation_notifier(addr).notify_all();
 					}
@@ -5431,11 +5437,31 @@ s64 spu_thread::get_ch_value(u32 ch)
 			}
 
 			// Optimized check
-			if (raddr && (!vm::check_addr(raddr) || rtime != vm::reservation_acquire(raddr) || !cmp_rdata(rdata, *resrv_mem)))
+			if (raddr)
 			{
-				raddr = 0;
-				set_events(SPU_EVENT_LR);
-				continue;
+				bool set_lr = false;
+
+				if (!vm::check_addr(raddr) || rtime != vm::reservation_acquire(raddr))
+				{
+					set_lr = true;
+				}
+				else if (!cmp_rdata(rdata, *resrv_mem))
+				{
+					// Only data changed, try to notify waiters
+					if (get_resrv_waiters_count(raddr) && vm::reservation_acquire(raddr).compare_and_swap_test(rtime, rtime + 128))
+					{
+						vm::reservation_notifier(raddr).notify_all();
+					}
+
+					set_lr = true;
+				}
+
+				if (set_lr)
+				{
+					raddr = 0;
+					set_events(SPU_EVENT_LR);
+					continue;
+				}
 			}
 
 			if (raddr && (mask1 & ~SPU_EVENT_TM) == SPU_EVENT_LR)
@@ -5507,7 +5533,9 @@ s64 spu_thread::get_ch_value(u32 ch)
 						return true;
 					});
 
+					get_resrv_waiters_count(raddr)++;
 					vm::reservation_notifier(raddr).wait(rtime, atomic_wait_timeout{80'000});
+					get_resrv_waiters_count(raddr)--;
 #endif
 				}
 				else
