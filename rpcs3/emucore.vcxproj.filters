@@ -1252,7 +1252,9 @@
     <ClCompile Include="Emu\Io\mouse_config.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\Io\MouseHandler.cpp" />
+    <ClCompile Include="Emu\Io\MouseHandler.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
