@@ -96,9 +96,9 @@ void base_network_thread::wake_threads()
 
 	if (!ppu_to_awake.empty())
 	{
+		ppu_to_awake.clear();
 		lv2_obj::awake_all();
 	}
-	ppu_to_awake.clear();
 }
 
 p2p_thread::p2p_thread()
