@@ -2309,6 +2309,12 @@ public:
 
 				for (u32 i = 0; i <= s_reg_127; i++)
 				{
+					if (i == s_reg_sp)
+					{
+						// If we postpone R1 store we lose effortless meta-analytical capabilities for little gain
+						continue;
+					}
+
 					// If store isn't erased, try to sink it
 					if (auto& bs = bqbi->store[i]; bs && bqbi->bb->targets.size() > 1 && !bqbi->does_gpr_barrier_proceed_last_store(i))
 					{
@@ -2447,7 +2453,7 @@ public:
 										}
 									}
 
-									spu_log.trace("Postoned r%u store from block 0x%x (single)", i, block_q[bi].first);
+									spu_log.trace("Postponed r%u store from block 0x%x (single)", i, block_q[bi].first);
 								}
 								else
 								{
@@ -2488,7 +2494,7 @@ public:
 										pdt.recalculate(*m_function);
 										dt.recalculate(*m_function);
 
-										spu_log.trace("Postoned r%u store from block 0x%x (multiple)", i, block_q[bi].first);
+										spu_log.trace("Postponed r%u store from block 0x%x (multiple)", i, block_q[bi].first);
 									}
 
 									ins = edge->getTerminator();
