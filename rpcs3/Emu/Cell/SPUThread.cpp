@@ -5507,7 +5507,9 @@ s64 spu_thread::get_ch_value(u32 ch)
 						}
 					}
 #ifdef __linux__
+					get_resrv_waiters_count(raddr)++;
 					vm::reservation_notifier(raddr).wait(rtime, atomic_wait_timeout{50'000});
+					get_resrv_waiters_count(raddr)--;
 #else
 					if (raddr - spurs_addr <= 0x80 && !g_cfg.core.spu_accurate_reservations && mask1 == SPU_EVENT_LR)
 					{
@@ -5524,6 +5526,11 @@ s64 spu_thread::get_ch_value(u32 ch)
 						vm::reservation_notifier(raddr).wait(rtime);
 						continue;
 					}
+
+					static thread_local bool s_tls_try_notify = false;
+					s_tls_try_notify = false;
+
+					const u32 _raddr = this->raddr;
 
 					atomic_wait_engine::set_one_time_use_wait_callback(mask1 != SPU_EVENT_LR ? nullptr : +[](u64 attempts) -> bool
 					{
@@ -5543,19 +5550,47 @@ s64 spu_thread::get_ch_value(u32 ch)
 							return true;
 						}
 
-						if (!vm::check_addr(_this->raddr) || !cmp_rdata(_this->rdata, *_this->resrv_mem))
+						bool set_lr = false;
+						const u32 raddr = _this->raddr;
+
+						if (!raddr)
 						{
-							_this->set_events(SPU_EVENT_LR);
+							return true;
+						}
+
+						if (!vm::check_addr(raddr))
+						{
+							set_lr = true;
+						}
+						else if (!cmp_rdata(_this->rdata, *_this->resrv_mem))
+						{
+							// Only data changed, try to notify waiters
+							if (get_resrv_waiters_count(raddr) >= 2 && vm::reservation_acquire(raddr).compare_and_swap_test(_this->rtime, _this->rtime + 128))
+							{
+								s_tls_try_notify = true;
+							}
+
+							set_lr = true;
+						}
+
+						if (set_lr)
+						{
 							_this->raddr = 0;
+							_this->set_events(SPU_EVENT_LR);
 							return false;
 						}
 
 						return true;
 					});
 
-					get_resrv_waiters_count(raddr)++;
-					vm::reservation_notifier(raddr).wait(rtime, atomic_wait_timeout{80'000});
-					get_resrv_waiters_count(raddr)--;
+					get_resrv_waiters_count(_raddr)++;
+					vm::reservation_notifier(_raddr).wait(rtime, atomic_wait_timeout{80'000});
+					get_resrv_waiters_count(_raddr)--;
+
+					if (s_tls_try_notify && get_resrv_waiters_count(_raddr) && vm::reservation_acquire(_raddr) == rtime + 128)
+					{
+						vm::reservation_notifier(_raddr).notify_all();
+					}
 #endif
 				}
 				else
