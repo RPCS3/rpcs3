@@ -4583,13 +4583,11 @@ bool spu_thread::process_mfc_cmd()
 									busy_wait(300);
 								}
 
-								last_gtsc = utils::get_tsc();
-							}
-							else
-							{
-								last_gtsc = perf0.get();
+								// Reset perf
+								perf0.restart();
 							}
 
+							last_gtsc = perf0.get();
 							return true;
 						}
 
@@ -4602,9 +4600,6 @@ bool spu_thread::process_mfc_cmd()
 						vm::reservation_notifier(addr).wait(this_time, atomic_wait_timeout{100'000});
 
 						get_resrv_waiters_count(addr)--;
-
-						// Reset perf
-						perf0.restart();
 
 						// Quick check if there were reservation changes
 						const u64 new_time = res;
@@ -4630,17 +4625,19 @@ bool spu_thread::process_mfc_cmd()
 							u8& val = getllar_wait_time[pc / 32].front();
 							val = static_cast<u8>(std::min<u32>(val + 1, u8{umax}));
 
-							last_gtsc = utils::get_tsc();
+							// Reset perf
+							perf0.restart();
+							last_gtsc = perf0.get();
 							return true;
 						}
 
-						static atomic_t<u32> g_ctr, g_fail;
+						static atomic_t<u32> g_changed, g_unchanged;
 
 						if (new_time == this_time && res == this_time)
 						{
 							spu_log.trace("RTIME unchanged on address 0x%x", addr);
 
-							g_fail++;
+							g_unchanged++;
 
 							// Try to forcefully change timestamp in order to notify threads
 							if (get_resrv_waiters_count(addr) && res.compare_and_swap_test(this_time, this_time + 128))
@@ -4650,11 +4647,13 @@ bool spu_thread::process_mfc_cmd()
 						}
 						else
 						{
-							g_ctr++;
+							g_changed++;
 						}
 
-						if ((g_ctr + g_fail) % 200 == 0)
-							spu_log.trace("SPU 100WAIT: fail=%d, ok=%d", +g_fail, +g_ctr);
+						if ((g_changed + g_unchanged) % 200 == 0)
+						{
+							spu_log.trace("SPU GETLLAR wait on RTIME stats: unchanged=%d, changed=%d", +g_unchanged, +g_changed);
+						}
 					}
 				}
 
@@ -4670,6 +4669,9 @@ bool spu_thread::process_mfc_cmd()
 				// We can't, LR needs to be set now
 				set_events(SPU_EVENT_LR);
 				static_cast<void>(test_stopped());
+
+				// Reset perf
+				perf0.restart();
 			}
 
 			last_getllar = pc;
