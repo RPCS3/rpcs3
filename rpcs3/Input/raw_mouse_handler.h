@@ -65,10 +65,16 @@ private:
 class raw_mouse_handler final : public MouseHandlerBase
 {
 public:
-	raw_mouse_handler(bool is_for_gui = false);
+	using MouseHandlerBase::MouseHandlerBase;
+
 	virtual ~raw_mouse_handler();
 
 	void Init(const u32 max_connect) override;
+
+	void SetIsForGui(bool value)
+	{
+		m_is_for_gui = value;
+	}
 
 	const std::map<void*, raw_mouse>& get_mice() const { return m_raw_mice; };
 

@@ -65,7 +65,8 @@ raw_mouse_settings_dialog::raw_mouse_settings_dialog(QWidget* parent)
 
 	constexpr u32 max_devices = 16;
 
-	g_raw_mouse_handler = std::make_unique<raw_mouse_handler>(true);
+	g_raw_mouse_handler = std::make_unique<raw_mouse_handler>();
+	g_raw_mouse_handler->SetIsForGui(true);
 	g_raw_mouse_handler->Init(std::max(max_devices, ::size32(g_cfg_raw_mouse.players)));
 	g_raw_mouse_handler->set_mouse_press_callback([this](const std::string& device_name, s32 cell_code, bool pressed)
 	{

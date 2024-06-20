@@ -213,12 +213,6 @@ void raw_mouse::update_values(const RAWMOUSE& state)
 }
 #endif
 
-raw_mouse_handler::raw_mouse_handler(bool is_for_gui)
-	: MouseHandlerBase()
-	, m_is_for_gui(is_for_gui)
-{
-}
-
 raw_mouse_handler::~raw_mouse_handler()
 {
 	if (m_thread)
