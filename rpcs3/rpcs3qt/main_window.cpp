@@ -988,7 +988,7 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 	pdlg.setAutoClose(false);
 	pdlg.show();
 
-	package_error error = package_error::no_error;
+	package_install_result result = {};
 
 	auto get_app_info = [](compat::package_info& package)
 	{
@@ -1029,16 +1029,16 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 	std::deque<std::string> bootable_paths;
 
 	// Run PKG unpacking asynchronously
-	named_thread worker("PKG Installer", [&readers, &error, &bootable_paths]
+	named_thread worker("PKG Installer", [&readers, &result, &bootable_paths]
 	{
-		error = package_reader::extract_data(readers, bootable_paths);
-		return error == package_error::no_error;
+		result = package_reader::extract_data(readers, bootable_paths);
+		return result.error == package_install_result::error_type::no_error;
 	});
 
 	pdlg.show();
 
 	// Wait for the completion
-	for (usz i = 0, set_text = umax; i < readers.size() && error == package_error::no_error;)
+	for (usz i = 0, set_text = umax; i < readers.size() && result.error == package_install_result::error_type::no_error;)
 	{
 		std::this_thread::sleep_for(5ms);
 
@@ -1191,10 +1191,28 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 
 			ensure(package);
 
-			if (error == package_error::app_version)
+			if (result.error == package_install_result::error_type::app_version)
 			{
 				gui_log.error("Cannot install %s.", package->path);
-				QMessageBox::warning(this, tr("Warning!"), tr("The following package cannot be installed on top of the current data:\n%1!").arg(package->path));
+				bool hasExpected = !result.version.expected.empty();
+				bool hasFound = !result.version.expected.empty();
+				if (hasExpected && hasFound)
+				{
+					QMessageBox::warning(this, tr("Warning!"), tr("Package cannot be installed on top of the current data.\nUpdate is for version %1, but you have version %2.\n\nTried to install: %3")
+							.arg(QString::fromStdString(result.version.expected.data())).arg(QString::fromStdString(result.version.found.data())).arg(package->path));
+				}
+				else if (hasExpected)
+				{
+					QMessageBox::warning(this, tr("Warning!"), tr("Package cannot be installed on top of the current data.\nUpdate is for version %1, but you don't have any data installed.\n\nTried to install: %3")
+							.arg(QString::fromStdString(result.version.expected.data())).arg(package->path));
+				}
+				else
+				{
+					// probably unreachable
+					QString found = hasFound ? tr("version %1").arg(QString::fromStdString(result.version.found.data())) : tr("no data installed");
+					QMessageBox::warning(this, tr("Warning!"), tr("Package cannot be installed on top of the current data.\nUpdate is for unknown version, but you have version %2.\n\nTried to install: %3")
+							.arg(QString::fromStdString(result.version.expected.data())).arg(found).arg(package->path));
+				}
 			}
 			else
 			{
