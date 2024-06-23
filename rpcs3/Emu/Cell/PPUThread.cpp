@@ -2760,7 +2760,7 @@ void ppu_thread::fast_call(u32 addr, u64 rtoc, bool is_thread_entry)
 
 		const auto cia = _this->cia;
 
-		if (_this->current_function && vm::read32(cia) != ppu_instructions::SC(0))
+		if (_this->current_function && g_fxo->get<ppu_function_manager>().is_func(cia))
 		{
 			return fmt::format("PPU[0x%x] Thread (%s) [HLE:0x%08x, LR:0x%08x]", _this->id, *name_cache.get(), cia, _this->lr);
 		}
