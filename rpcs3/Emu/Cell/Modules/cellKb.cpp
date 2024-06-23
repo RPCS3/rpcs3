@@ -11,7 +11,7 @@ error_code sys_config_stop(ppu_thread& ppu);
 
 extern bool is_input_allowed();
 
-LOG_CHANNEL(sys_io);
+LOG_CHANNEL(cellKb);
 
 template<>
 void fmt_class_string<CellKbError>::format(std::string& out, u64 arg)
@@ -77,7 +77,7 @@ void KeyboardHandlerBase::save(utils::serial& ar)
 
 error_code cellKbInit(ppu_thread& ppu, u32 max_connect)
 {
-	sys_io.warning("cellKbInit(max_connect=%d)", max_connect);
+	cellKb.warning("cellKbInit(max_connect=%d)", max_connect);
 
 	auto& handler = g_fxo->get<KeyboardHandlerBase>();
 
@@ -102,7 +102,7 @@ error_code cellKbInit(ppu_thread& ppu, u32 max_connect)
 
 error_code cellKbEnd(ppu_thread& ppu)
 {
-	sys_io.notice("cellKbEnd()");
+	cellKb.notice("cellKbEnd()");
 
 	auto& handler = g_fxo->get<KeyboardHandlerBase>();
 
@@ -123,7 +123,7 @@ error_code cellKbEnd(ppu_thread& ppu)
 
 error_code cellKbClearBuf(u32 port_no)
 {
-	sys_io.trace("cellKbClearBuf(port_no=%d)", port_no);
+	cellKb.trace("cellKbClearBuf(port_no=%d)", port_no);
 
 	auto& handler = g_fxo->get<KeyboardHandlerBase>();
 
@@ -158,7 +158,7 @@ error_code cellKbClearBuf(u32 port_no)
 
 u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode)
 {
-	sys_io.trace("cellKbCnvRawCode(arrange=%d, mkey=%d, led=%d, rawcode=0x%x)", arrange, mkey, led, rawcode);
+	cellKb.trace("cellKbCnvRawCode(arrange=%d, mkey=%d, led=%d, rawcode=0x%x)", arrange, mkey, led, rawcode);
 
 	// CELL_KB_RAWDAT
 	if (rawcode <= CELL_KEYC_E_UNDEF ||
@@ -308,7 +308,7 @@ u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode)
 
 error_code cellKbGetInfo(vm::ptr<CellKbInfo> info)
 {
-	sys_io.trace("cellKbGetInfo(info=*0x%x)", info);
+	cellKb.trace("cellKbGetInfo(info=*0x%x)", info);
 
 	auto& handler = g_fxo->get<KeyboardHandlerBase>();
 
@@ -340,7 +340,7 @@ error_code cellKbGetInfo(vm::ptr<CellKbInfo> info)
 
 error_code cellKbRead(u32 port_no, vm::ptr<CellKbData> data)
 {
-	sys_io.trace("cellKbRead(port_no=%d, data=*0x%x)", port_no, data);
+	cellKb.trace("cellKbRead(port_no=%d, data=*0x%x)", port_no, data);
 
 	auto& handler = g_fxo->get<KeyboardHandlerBase>();
 
@@ -397,7 +397,7 @@ error_code cellKbRead(u32 port_no, vm::ptr<CellKbData> data)
 
 error_code cellKbSetCodeType(u32 port_no, u32 type)
 {
-	sys_io.trace("cellKbSetCodeType(port_no=%d, type=%d)", port_no, type);
+	cellKb.trace("cellKbSetCodeType(port_no=%d, type=%d)", port_no, type);
 
 	auto& handler = g_fxo->get<KeyboardHandlerBase>();
 
@@ -425,7 +425,7 @@ error_code cellKbSetCodeType(u32 port_no, u32 type)
 
 error_code cellKbSetLEDStatus(u32 port_no, u8 led)
 {
-	sys_io.trace("cellKbSetLEDStatus(port_no=%d, led=%d)", port_no, led);
+	cellKb.trace("cellKbSetLEDStatus(port_no=%d, led=%d)", port_no, led);
 
 	auto& handler = g_fxo->get<KeyboardHandlerBase>();
 
@@ -454,7 +454,7 @@ error_code cellKbSetLEDStatus(u32 port_no, u8 led)
 
 error_code cellKbSetReadMode(u32 port_no, u32 rmode)
 {
-	sys_io.trace("cellKbSetReadMode(port_no=%d, rmode=%d)", port_no, rmode);
+	cellKb.trace("cellKbSetReadMode(port_no=%d, rmode=%d)", port_no, rmode);
 
 	auto& handler = g_fxo->get<KeyboardHandlerBase>();
 
@@ -486,7 +486,7 @@ error_code cellKbSetReadMode(u32 port_no, u32 rmode)
 
 error_code cellKbGetConfiguration(u32 port_no, vm::ptr<CellKbConfig> config)
 {
-	sys_io.trace("cellKbGetConfiguration(port_no=%d, config=*0x%x)", port_no, config);
+	cellKb.trace("cellKbGetConfiguration(port_no=%d, config=*0x%x)", port_no, config);
 
 	auto& handler = g_fxo->get<KeyboardHandlerBase>();
 
