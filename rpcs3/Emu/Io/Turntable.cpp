@@ -264,7 +264,8 @@ void usb_device_turntable::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpo
 				buf[1] |= 0x01; // Select
 				break;
 			case turntable_btn::right_turntable:
-				buf[6] = 255 - value; // Right Turntable
+				// DJ Hero does not register input if the turntable is 0, so force it to 1.
+				buf[6] = std::max(1, 255 - value); // Right Turntable
 				// DJ Hero requires turntables to be centered at 128.
 				// If this axis ends up centered at 127, force it to 128.
 				if (buf[6] == 127)
