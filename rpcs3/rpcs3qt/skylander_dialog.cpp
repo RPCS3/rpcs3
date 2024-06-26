@@ -748,9 +748,9 @@ skylander_dialog* skylander_dialog::get_dlg(QWidget* parent)
 
 void skylander_dialog::clear_skylander(u8 slot)
 {
-	if (auto slot_infos = sky_slots[slot])
+	if (const auto& slot_infos = sky_slots[slot])
 	{
-		auto [cur_slot, id, var] = slot_infos.value();
+		const auto& [cur_slot, id, var] = slot_infos.value();
 		g_skyportal.remove_skylander(cur_slot);
 		sky_slots[slot] = {};
 		update_edits();
@@ -811,10 +811,10 @@ void skylander_dialog::update_edits()
 	for (auto i = 0; i < UI_SKY_NUM; i++)
 	{
 		QString display_string;
-		if (auto sd = sky_slots[i])
+		if (const auto& sd = sky_slots[i])
 		{
-			auto [portal_slot, sky_id, sky_var] = sd.value();
-			auto found_sky                      = list_skylanders.find(std::make_pair(sky_id, sky_var));
+			const auto& [portal_slot, sky_id, sky_var] = sd.value();
+			const auto found_sky = list_skylanders.find(std::make_pair(sky_id, sky_var));
 			if (found_sky != list_skylanders.end())
 			{
 				display_string = QString::fromStdString(found_sky->second);
