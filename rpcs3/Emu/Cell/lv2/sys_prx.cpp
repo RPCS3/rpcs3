@@ -17,7 +17,7 @@
 #include "sys_memory.h"
 #include <span>
 
-extern void dump_executable(std::span<const u8> data, ppu_module* _main, std::string_view title_id);
+extern void dump_executable(std::span<const u8> data, const ppu_module* _module, std::string_view title_id);
 
 extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, bool virtual_load, const std::string&, s64, utils::serial* = nullptr);
 extern void ppu_unload_prx(const lv2_prx& prx);
