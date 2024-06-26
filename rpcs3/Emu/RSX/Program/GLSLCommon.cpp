@@ -332,6 +332,9 @@ namespace glsl
 				{ "SEXT_G_BIT" , rsx::texture_control_bits::SEXT_G },
 				{ "SEXT_B_BIT" , rsx::texture_control_bits::SEXT_B },
 				{ "SEXT_A_BIT" , rsx::texture_control_bits::SEXT_A },
+				{ "WRAP_S_BIT", rsx::texture_control_bits::WRAP_S },
+				{ "WRAP_T_BIT", rsx::texture_control_bits::WRAP_T },
+				{ "WRAP_R_BIT", rsx::texture_control_bits::WRAP_R },
 
 				{ "ALPHAKILL    ", rsx::texture_control_bits::ALPHAKILL },
 				{ "RENORMALIZE  ", rsx::texture_control_bits::RENORMALIZE },
