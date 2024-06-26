@@ -2,6 +2,8 @@
 #include "dualsense_pad_handler.h"
 #include "Emu/Io/pad_config.h"
 
+#include <limits>
+
 LOG_CHANNEL(dualsense_log, "DualSense");
 
 template <>
@@ -462,7 +464,6 @@ bool dualsense_pad_handler::get_calibration_data(DualSenseDevice* dualsense_devi
 	{
 		dualsense_log.error("get_calibration_data: calibration data check failed! pitch_plus=%d, pitch_minus=%d, roll_plus=%d, roll_minus=%d, yaw_plus=%d, yaw_minus=%d",
 		    pitch_plus, pitch_minus, roll_plus, roll_minus, yaw_plus, yaw_minus);
-		return false;
 	}
 
 	const s32 gyro_speed_scale = read_s16(&buf[19]) + read_s16(&buf[21]);
@@ -501,12 +502,16 @@ bool dualsense_pad_handler::get_calibration_data(DualSenseDevice* dualsense_devi
 
 	// Make sure data 'looks' valid, dongle will report invalid calibration data with no controller connected
 
-	for (const CalibData& data : dualsense_device->calib_data)
+	for (size_t i = 0; i < dualsense_device->calib_data.size(); i++)
 	{
+		CalibData& data = dualsense_device->calib_data[i];
+
 		if (data.sens_denom == 0)
 		{
-			dualsense_log.error("get_calibration_data: Failure: sens_denom == 0");
-			return false;
+			dualsense_log.error("GetCalibrationData: Invalid accelerometer calibration data for axis %d, disabling calibration.", i);
+			data.bias = 0;
+			data.sens_numer = 4 * DUALSENSE_ACC_RES_PER_G;
+			data.sens_denom = std::numeric_limits<s16>::max();
 		}
 	}
 

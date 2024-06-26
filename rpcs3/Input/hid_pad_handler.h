@@ -8,9 +8,9 @@
 
 struct CalibData
 {
-	s16 bias;
-	s32 sens_numer;
-	s32 sens_denom;
+	s16 bias = 0;
+	s32 sens_numer = 0;
+	s32 sens_denom = 0;
 };
 
 enum CalibIndex
@@ -87,12 +87,12 @@ protected:
 	virtual int send_output_report(Device* device) = 0;
 	virtual DataStatus get_data(Device* device) = 0;
 
-	static s16 apply_calibration(s32 rawValue, const CalibData& calibData)
+	static s16 apply_calibration(s32 raw_value, const CalibData& calib_data)
 	{
-		const s32 biased = rawValue - calibData.bias;
-		const s32 quot   = calibData.sens_numer / calibData.sens_denom;
-		const s32 rem    = calibData.sens_numer % calibData.sens_denom;
-		const s32 output = (quot * biased) + ((rem * biased) / calibData.sens_denom);
+		const s32 biased = raw_value - calib_data.bias;
+		const s32 quot   = calib_data.sens_numer / calib_data.sens_denom;
+		const s32 rem    = calib_data.sens_numer % calib_data.sens_denom;
+		const s32 output = (quot * biased) + ((rem * biased) / calib_data.sens_denom);
 
 		return static_cast<s16>(std::clamp<s32>(output, s16{smin}, s16{smax}));
 	}
