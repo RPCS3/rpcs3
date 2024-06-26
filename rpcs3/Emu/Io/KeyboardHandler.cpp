@@ -306,6 +306,8 @@ void keyboard_consumer::SetIntercepted(bool intercepted)
 
 void KeyboardHandlerBase::ReleaseAllKeys()
 {
+	std::lock_guard<std::mutex> lock(m_mutex);
+
 	for (auto& [id, consumer] : m_consumers)
 	{
 		consumer.ReleaseAllKeys();
