@@ -2,6 +2,8 @@
 #include "dualsense_pad_handler.h"
 #include "Emu/Io/pad_config.h"
 
+#include <limits>
+
 LOG_CHANNEL(dualsense_log, "DualSense");
 
 template <>
@@ -430,31 +432,12 @@ bool dualsense_pad_handler::get_calibration_data(DualSenseDevice* dualsense_devi
 	dualsense_device->calib_data[CalibIndex::YAW].bias   = read_s16(&buf[3]);
 	dualsense_device->calib_data[CalibIndex::ROLL].bias  = read_s16(&buf[5]);
 
-	s16 pitch_plus, pitch_minus, roll_plus, roll_minus, yaw_plus, yaw_minus;
-
-	// TODO: This was copied from DS4. Find out if it applies here.
-	// Check for calibration data format
-	// It's going to be either alternating +/- or +++---
-	if (read_s16(&buf[9]) < 0 && read_s16(&buf[7]) > 0)
-	{
-		// Wired mode for OEM controllers
-		pitch_plus  = read_s16(&buf[7]);
-		pitch_minus = read_s16(&buf[9]);
-		yaw_plus    = read_s16(&buf[11]);
-		yaw_minus   = read_s16(&buf[13]);
-		roll_plus   = read_s16(&buf[15]);
-		roll_minus  = read_s16(&buf[17]);
-	}
-	else
-	{
-		// Bluetooth mode and wired mode for some 3rd party controllers
-		pitch_plus  = read_s16(&buf[7]);
-		yaw_plus    = read_s16(&buf[9]);
-		roll_plus   = read_s16(&buf[11]);
-		pitch_minus = read_s16(&buf[13]);
-		yaw_minus   = read_s16(&buf[15]);
-		roll_minus  = read_s16(&buf[17]);
-	}
+	const s16 pitch_plus  = read_s16(&buf[7]);
+	const s16 pitch_minus = read_s16(&buf[9]);
+	const s16 yaw_plus    = read_s16(&buf[11]);
+	const s16 yaw_minus   = read_s16(&buf[13]);
+	const s16 roll_plus   = read_s16(&buf[15]);
+	const s16 roll_minus  = read_s16(&buf[17]);
 
 	// Confirm correctness. Need confirmation with dongle with no active controller
 	if (pitch_plus <= 0 || yaw_plus <= 0 || roll_plus <= 0 ||
@@ -462,7 +445,6 @@ bool dualsense_pad_handler::get_calibration_data(DualSenseDevice* dualsense_devi
 	{
 		dualsense_log.error("get_calibration_data: calibration data check failed! pitch_plus=%d, pitch_minus=%d, roll_plus=%d, roll_minus=%d, yaw_plus=%d, yaw_minus=%d",
 		    pitch_plus, pitch_minus, roll_plus, roll_minus, yaw_plus, yaw_minus);
-		return false;
 	}
 
 	const s32 gyro_speed_scale = read_s16(&buf[19]) + read_s16(&buf[21]);
@@ -501,12 +483,16 @@ bool dualsense_pad_handler::get_calibration_data(DualSenseDevice* dualsense_devi
 
 	// Make sure data 'looks' valid, dongle will report invalid calibration data with no controller connected
 
-	for (const CalibData& data : dualsense_device->calib_data)
+	for (size_t i = 0; i < dualsense_device->calib_data.size(); i++)
 	{
+		CalibData& data = dualsense_device->calib_data[i];
+
 		if (data.sens_denom == 0)
 		{
-			dualsense_log.error("get_calibration_data: Failure: sens_denom == 0");
-			return false;
+			dualsense_log.error("GetCalibrationData: Invalid accelerometer calibration data for axis %d, disabling calibration.", i);
+			data.bias = 0;
+			data.sens_numer = 4 * DUALSENSE_ACC_RES_PER_G;
+			data.sens_denom = std::numeric_limits<s16>::max();
 		}
 	}
 
