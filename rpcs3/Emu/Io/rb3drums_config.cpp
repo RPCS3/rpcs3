@@ -33,7 +33,7 @@ bool cfg_rb3drums::load()
 	return false;
 }
 
-void cfg_rb3drums::save() const
+void cfg_rb3drums::save()
 {
 	cfg_log.notice("Saving rb3drums config to '%s'", path);
 
@@ -41,4 +41,6 @@ void cfg_rb3drums::save() const
 	{
 		cfg_log.error("Failed to save rb3drums config to '%s' (error=%s)", path, fs::g_tls_error);
 	}
+
+	reload_requested = true;
 }
