@@ -2533,15 +2533,18 @@ namespace rsx
 					texture_control |= (static_cast<u32>(tex.min_filter() != rsx::texture_minify_filter::nearest) << texture_control_bits::FILTERED_MIN);
 					texture_control |= (((tex.format() & CELL_GCM_TEXTURE_UN) >> 6) << texture_control_bits::UNNORMALIZED_COORDS);
 
-					if (rsx::is_texcoord_wrapping_mode(tex.wrap_s())) {
+					if (rsx::is_texcoord_wrapping_mode(tex.wrap_s()))
+					{
 						texture_control |= (1 << texture_control_bits::WRAP_S);
 					}
 
-					if (rsx::is_texcoord_wrapping_mode(tex.wrap_t())) {
+					if (rsx::is_texcoord_wrapping_mode(tex.wrap_t()))
+					{
 						texture_control |= (1 << texture_control_bits::WRAP_T);
 					}
 
-					if (rsx::is_texcoord_wrapping_mode(tex.wrap_r())) {
+					if (rsx::is_texcoord_wrapping_mode(tex.wrap_r()))
+					{
 						texture_control |= (1 << texture_control_bits::WRAP_R);
 					}
 				}
