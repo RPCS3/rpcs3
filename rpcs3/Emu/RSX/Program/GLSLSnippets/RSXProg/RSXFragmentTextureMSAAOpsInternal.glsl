@@ -1,4 +1,16 @@
 R"(
+vec2 texture2DMSCoord(const in vec2 coords, const in uint flags)
+{
+	if (0u == (flags & (WRAP_S_MASK | WRAP_T_MASK)))
+	{
+		return coords;
+	}
+
+	const vec2 wrapped_coords = mod(coords, vec2(1.0));
+	const bvec2 wrap_control_mask = bvec2(uvec2(flags) & uvec2(WRAP_S_MASK, WRAP_T_MASK));
+	return _select(coords, wrapped_coords, wrap_control_mask);
+}
+
 vec4 texelFetch2DMS(in _MSAA_SAMPLER_TYPE_ tex, const in vec2 sample_count, const in ivec2 icoords, const in int index, const in ivec2 offset)
 {
 	const vec2 resolve_coords = vec2(icoords + offset);
@@ -12,7 +24,7 @@ vec4 sampleTexture2DMS(in _MSAA_SAMPLER_TYPE_ tex, const in vec2 coords, const i
 {
 	const uint flags = TEX_FLAGS(index);
 	const vec2 scaled_coords = COORD_SCALE2(index, coords);
-	const vec2 normalized_coords = mod(scaled_coords, vec2(1.0));
+	const vec2 normalized_coords = texture2DMSCoord(scaled_coords, flags);
 	const vec2 sample_count = vec2(2., textureSamples(tex) * 0.5);
 	const vec2 image_size = textureSize(tex) * sample_count;
 	const ivec2 icoords = ivec2(normalized_coords * image_size);

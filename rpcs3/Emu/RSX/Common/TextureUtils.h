@@ -286,4 +286,6 @@ namespace rsx
 
 	format_class classify_format(rsx::surface_depth_format2 format);
 	format_class classify_format(u32 gcm_format);
+
+	bool is_texcoord_wrapping_mode(rsx::texture_wrap_mode mode);
 }
