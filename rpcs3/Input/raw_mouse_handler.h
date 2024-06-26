@@ -43,8 +43,10 @@ public:
 	const std::string& device_name() const { return m_device_name; }
 	u32 index() const { return m_index; }
 	void set_index(u32 index) { m_index = index; }
+	void request_reload() { reload_requested = true; }
 
 private:
+	void reload_config();
 	static std::pair<int, int> get_mouse_button(const cfg::string& button);
 
 	u32 m_index = 0;
@@ -60,6 +62,7 @@ private:
 	float m_mouse_acceleration = 1.0f;
 	raw_mouse_handler* m_handler{};
 	std::map<u8, std::pair<int, int>> m_buttons;
+	bool reload_requested = false;
 };
 
 class raw_mouse_handler final : public MouseHandlerBase

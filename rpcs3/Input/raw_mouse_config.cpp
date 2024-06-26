@@ -102,4 +102,6 @@ void raw_mice_config::save()
 	{
 		cfg_log.error("Failed to save %s config to '%s' (error=%s)", cfg_id, cfg_name, fs::g_tls_error);
 	}
+
+	reload_requested = true;
 }

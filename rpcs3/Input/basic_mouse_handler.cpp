@@ -23,14 +23,7 @@ void basic_mouse_handler::Init(const u32 max_connect)
 	g_cfg_mouse.from_default();
 	g_cfg_mouse.load();
 
-	m_buttons[CELL_MOUSE_BUTTON_1] = get_mouse_button(g_cfg_mouse.mouse_button_1);
-	m_buttons[CELL_MOUSE_BUTTON_2] = get_mouse_button(g_cfg_mouse.mouse_button_2);
-	m_buttons[CELL_MOUSE_BUTTON_3] = get_mouse_button(g_cfg_mouse.mouse_button_3);
-	m_buttons[CELL_MOUSE_BUTTON_4] = get_mouse_button(g_cfg_mouse.mouse_button_4);
-	m_buttons[CELL_MOUSE_BUTTON_5] = get_mouse_button(g_cfg_mouse.mouse_button_5);
-	m_buttons[CELL_MOUSE_BUTTON_6] = get_mouse_button(g_cfg_mouse.mouse_button_6);
-	m_buttons[CELL_MOUSE_BUTTON_7] = get_mouse_button(g_cfg_mouse.mouse_button_7);
-	m_buttons[CELL_MOUSE_BUTTON_8] = get_mouse_button(g_cfg_mouse.mouse_button_8);
+	reload_config();
 
 	m_mice.clear();
 	m_mice.emplace_back(Mouse());
@@ -50,6 +43,18 @@ void basic_mouse_handler::Init(const u32 max_connect)
 	m_info.product_id[0] = 0x1234;
 
 	type = mouse_handler::basic;
+}
+
+void basic_mouse_handler::reload_config()
+{
+	m_buttons[CELL_MOUSE_BUTTON_1] = get_mouse_button(g_cfg_mouse.mouse_button_1);
+	m_buttons[CELL_MOUSE_BUTTON_2] = get_mouse_button(g_cfg_mouse.mouse_button_2);
+	m_buttons[CELL_MOUSE_BUTTON_3] = get_mouse_button(g_cfg_mouse.mouse_button_3);
+	m_buttons[CELL_MOUSE_BUTTON_4] = get_mouse_button(g_cfg_mouse.mouse_button_4);
+	m_buttons[CELL_MOUSE_BUTTON_5] = get_mouse_button(g_cfg_mouse.mouse_button_5);
+	m_buttons[CELL_MOUSE_BUTTON_6] = get_mouse_button(g_cfg_mouse.mouse_button_6);
+	m_buttons[CELL_MOUSE_BUTTON_7] = get_mouse_button(g_cfg_mouse.mouse_button_7);
+	m_buttons[CELL_MOUSE_BUTTON_8] = get_mouse_button(g_cfg_mouse.mouse_button_8);
 }
 
 /* Sets the target window for the event handler, and also installs an event filter on the target. */
@@ -80,6 +85,11 @@ bool basic_mouse_handler::eventFilter(QObject* target, QEvent* ev)
 	// !m_target->isVisible() is a hack since currently a guiless application will STILL inititialize a gsrender (providing a valid target)
 	if (!m_target || !m_target->isVisible() || target == m_target)
 	{
+		if (g_cfg_mouse.reload_requested.exchange(false))
+		{
+			reload_config();
+		}
+
 		switch (ev->type())
 		{
 		case QEvent::MouseButtonPress:

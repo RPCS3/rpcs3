@@ -27,9 +27,10 @@ public:
 
 	bool eventFilter(QObject* obj, QEvent* ev) override;
 private:
-	QWindow* m_target = nullptr;
+	void reload_config();
 	bool get_mouse_lock_state() const;
 	static int get_mouse_button(const cfg::string& button);
 
+	QWindow* m_target = nullptr;
 	std::map<u8, int> m_buttons;
 };

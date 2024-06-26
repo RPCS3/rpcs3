@@ -36,6 +36,15 @@ u32 g_registered_handlers = 0;
 raw_mouse::raw_mouse(u32 index, const std::string& device_name, void* handle, raw_mouse_handler* handler)
 	: m_index(index), m_device_name(device_name), m_handle(handle), m_handler(handler)
 {
+	reload_config();
+}
+
+raw_mouse::~raw_mouse()
+{
+}
+
+void raw_mouse::reload_config()
+{
 	if (m_index < ::size32(g_cfg_raw_mouse.players))
 	{
 		if (const auto& player = ::at32(g_cfg_raw_mouse.players, m_index))
@@ -52,10 +61,6 @@ raw_mouse::raw_mouse(u32 index, const std::string& device_name, void* handle, ra
 			m_buttons[CELL_MOUSE_BUTTON_8] = get_mouse_button(player->mouse_button_8);
 		}
 	}
-}
-
-raw_mouse::~raw_mouse()
-{
 }
 
 std::pair<int, int> raw_mouse::get_mouse_button(const cfg::string& button)
@@ -119,6 +124,11 @@ void raw_mouse::update_values(const RAWMOUSE& state)
 	// Update window handle and size
 	update_window_handle();
 
+	if (std::exchange(reload_requested, false))
+	{
+		reload_config();
+	}
+
 	const auto get_button_pressed = [this](u8 button, int button_flags)
 	{
 		const auto& [down, up] = ::at32(m_buttons, button);
@@ -142,6 +152,9 @@ void raw_mouse::update_values(const RAWMOUSE& state)
 	get_button_pressed(CELL_MOUSE_BUTTON_3, state.usButtonFlags);
 	get_button_pressed(CELL_MOUSE_BUTTON_4, state.usButtonFlags);
 	get_button_pressed(CELL_MOUSE_BUTTON_5, state.usButtonFlags);
+	get_button_pressed(CELL_MOUSE_BUTTON_6, state.usButtonFlags);
+	get_button_pressed(CELL_MOUSE_BUTTON_7, state.usButtonFlags);
+	get_button_pressed(CELL_MOUSE_BUTTON_8, state.usButtonFlags);
 
 	// Get mouse wheel
 	if ((state.usButtonFlags & RI_MOUSE_WHEEL))
@@ -555,6 +568,14 @@ void raw_mouse_handler::handle_native_event(const MSG& msg)
 	case RIM_TYPEMOUSE:
 	{
 		std::lock_guard lock(m_raw_mutex);
+
+		if (g_cfg_raw_mouse.reload_requested.exchange(false))
+		{
+			for (auto& [handle, mouse] : m_raw_mice)
+			{
+				mouse.request_reload();
+			}
+		}
 
 		if (auto it = m_raw_mice.find(raw_input.header.hDevice); it != m_raw_mice.end())
 		{

@@ -314,9 +314,9 @@ std::unordered_map<Id, Note> create_id_to_note_mapping()
 
 Note id_to_note(Id id)
 {
-	static auto mapping = create_id_to_note_mapping();
-	auto it = mapping.find(id);
-	return it != std::end(mapping) ? it->second : Note::Invalid;
+	static const auto mapping = create_id_to_note_mapping();
+	const auto it = mapping.find(id);
+	return it != mapping.cend() ? it->second : Note::Invalid;
 }
 
 namespace combo
