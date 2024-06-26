@@ -195,8 +195,8 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 	}
 
 	std::string vpath0;
-	const std::string path = vfs::get(vpath, nullptr, &vpath0);
-	const std::string name = vpath0.substr(vpath0.find_last_of('/') + 1);
+	std::string path = vfs::get(vpath, nullptr, &vpath0);
+	std::string name = vpath0.substr(vpath0.find_last_of('/') + 1);
 
 	bool ignore = false;
 
