@@ -17,7 +17,7 @@
 #include "sys_memory.h"
 #include <span>
 
-extern void dump_executable(std::span<const u8> data, ppu_module* _main, std::string_view title_id);
+extern void dump_executable(std::span<const u8> data, const ppu_module* _module, std::string_view title_id);
 
 extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, bool virtual_load, const std::string&, s64, utils::serial* = nullptr);
 extern void ppu_unload_prx(const lv2_prx& prx);
@@ -195,8 +195,8 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 	}
 
 	std::string vpath0;
-	const std::string path = vfs::get(vpath, nullptr, &vpath0);
-	const std::string name = vpath0.substr(vpath0.find_last_of('/') + 1);
+	std::string path = vfs::get(vpath, nullptr, &vpath0);
+	std::string name = vpath0.substr(vpath0.find_last_of('/') + 1);
 
 	bool ignore = false;
 
