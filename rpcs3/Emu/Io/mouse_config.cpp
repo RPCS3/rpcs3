@@ -27,7 +27,7 @@ bool mouse_config::load()
 	return false;
 }
 
-void mouse_config::save() const
+void mouse_config::save()
 {
 	fs::pending_file file(cfg_name);
 
@@ -36,6 +36,8 @@ void mouse_config::save() const
 		file.file.write(to_string());
 		file.commit();
 	}
+
+	reload_requested = true;
 }
 
 cfg::string& mouse_config::get_button(int code)
