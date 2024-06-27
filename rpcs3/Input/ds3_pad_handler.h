@@ -53,10 +53,10 @@ namespace
 		u8 unknown_3[4];
 		u8 battery_status;
 		u8 unknown_4[10];
-		le_t<u16, 1> gyro;
 		le_t<u16, 1> accel_x;
 		le_t<u16, 1> accel_z;
 		le_t<u16, 1> accel_y;
+		le_t<u16, 1> gyro;
 	};
 	static_assert(sizeof(ds3_input_report) == 49);
 }

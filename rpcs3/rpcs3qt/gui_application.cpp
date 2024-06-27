@@ -64,6 +64,7 @@ std::unique_ptr<raw_mouse_handler> g_raw_mouse_handler;
 
 gui_application::gui_application(int& argc, char** argv) : QApplication(argc, argv)
 {
+	std::setlocale(LC_NUMERIC, "C"); // On linux Qt changes to system locale while initializing QCoreApplication
 }
 
 gui_application::~gui_application()

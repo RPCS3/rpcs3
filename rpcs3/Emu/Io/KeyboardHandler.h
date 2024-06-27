@@ -22,6 +22,39 @@ enum QtKeys
 	Key_Super_R    = 0x01000054
 };
 
+// See https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_code_values
+enum native_key : u32
+{
+#ifdef _WIN32
+	ctrl_l = 0x001D,
+	ctrl_r = 0xE01D,
+	shift_l = 0x002A,
+	shift_r = 0x0036,
+	alt_l = 0x0038,
+	alt_r = 0xE038,
+	meta_l = 0xE05B,
+	meta_r = 0xE05C,
+#elif defined (__APPLE__)
+	ctrl_l = 0x3B,  // kVK_Control
+	ctrl_r = 0x3E,  // kVK_RightControl
+	shift_l = 0x38, // kVK_Shift
+	shift_r = 0x3C, // kVK_RightShift
+	alt_l = 0x3A,   // kVK_Option
+	alt_r = 0x3D,   // kVK_RightOption
+	meta_l = 0x37,  // kVK_Command
+	meta_r = 0x36,  // kVK_RightCommand
+#else
+	ctrl_l = 0x0025,
+	ctrl_r = 0x0069,
+	shift_l = 0x0032,
+	shift_r = 0x003E,
+	alt_l = 0x0040,
+	alt_r = 0x006C,
+	meta_l = 0x0085,
+	meta_r = 0x0086,
+#endif
+};
+
 struct KbInfo
 {
 	u32 max_connect = 0;
@@ -88,7 +121,7 @@ public:
 	keyboard_consumer() {}
 	keyboard_consumer(identifier id) : m_id(id) {}
 
-	bool ConsumeKey(u32 code, bool pressed, bool is_auto_repeat, const std::u32string& key);
+	bool ConsumeKey(u32 qt_code, u32 native_code, bool pressed, bool is_auto_repeat, const std::u32string& key);
 	void SetIntercepted(bool intercepted);
 
 	static bool IsMetaKey(u32 code);
@@ -103,6 +136,8 @@ public:
 	void ReleaseAllKeys();
 
 protected:
+	u32 get_out_key_code(u32 qt_code, u32 native_code, u32 out_key_code);
+
 	identifier m_id = identifier::unknown;
 	KbInfo m_info{};
 	std::vector<Keyboard> m_keyboards;
@@ -126,7 +161,7 @@ public:
 	keyboard_consumer& GetConsumer(keyboard_consumer::identifier id);
 	void RemoveConsumer(keyboard_consumer::identifier id);
 
-	bool HandleKey(u32 code, bool pressed, bool is_auto_repeat, const std::u32string& key);
+	bool HandleKey(u32 qt_code, u32 native_code, bool pressed, bool is_auto_repeat, const std::u32string& key);
 	void SetIntercepted(bool intercepted);
 
 	stx::init_mutex init;

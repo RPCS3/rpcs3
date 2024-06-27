@@ -110,7 +110,7 @@ void basic_keyboard_handler::keyPressEvent(QKeyEvent* keyEvent)
 
 	const int key = getUnmodifiedKey(keyEvent);
 
-	if (key < 0 || !HandleKey(static_cast<u32>(key), true, keyEvent->isAutoRepeat(), keyEvent->text().toStdU32String()))
+	if (key < 0 || !HandleKey(static_cast<u32>(key), keyEvent->nativeScanCode(), true, keyEvent->isAutoRepeat(), keyEvent->text().toStdU32String()))
 	{
 		keyEvent->ignore();
 	}
@@ -131,7 +131,7 @@ void basic_keyboard_handler::keyReleaseEvent(QKeyEvent* keyEvent)
 
 	const int key = getUnmodifiedKey(keyEvent);
 
-	if (key < 0 || !HandleKey(static_cast<u32>(key), false, keyEvent->isAutoRepeat(), keyEvent->text().toStdU32String()))
+	if (key < 0 || !HandleKey(static_cast<u32>(key), keyEvent->nativeScanCode(), false, keyEvent->isAutoRepeat(), keyEvent->text().toStdU32String()))
 	{
 		keyEvent->ignore();
 	}
@@ -179,17 +179,20 @@ void basic_keyboard_handler::LoadSettings(Keyboard& keyboard)
 	std::vector<KbButton> buttons;
 
 	// Meta Keys
-	//buttons.emplace_back(Qt::Key_Control, CELL_KB_MKEY_L_CTRL);
+	buttons.emplace_back(Qt::Key_Control, CELL_KB_MKEY_L_CTRL);
 	buttons.emplace_back(Qt::Key_Shift, CELL_KB_MKEY_L_SHIFT);
 	buttons.emplace_back(Qt::Key_Alt, CELL_KB_MKEY_L_ALT);
-	buttons.emplace_back(Qt::Key_Super_L, CELL_KB_MKEY_L_WIN);
-	//buttons.emplace_back(, CELL_KB_MKEY_R_CTRL);
-	//buttons.emplace_back(, CELL_KB_MKEY_R_SHIFT);
-	//buttons.emplace_back(, CELL_KB_MKEY_R_ALT);
-	buttons.emplace_back(Qt::Key_Super_R, CELL_KB_MKEY_R_WIN);
+	buttons.emplace_back(Qt::Key_Meta, CELL_KB_MKEY_L_WIN);
+	//buttons.emplace_back(, CELL_KB_MKEY_R_CTRL);  // There is no way to know if it's left or right in Qt at the moment
+	//buttons.emplace_back(, CELL_KB_MKEY_R_SHIFT); // There is no way to know if it's left or right in Qt at the moment
+	//buttons.emplace_back(, CELL_KB_MKEY_R_ALT);   // There is no way to know if it's left or right in Qt at the moment
+	//buttons.emplace_back(, CELL_KB_MKEY_R_WIN);   // There is no way to know if it's left or right in Qt at the moment
+
+	buttons.emplace_back(Qt::Key_Super_L, CELL_KB_MKEY_L_WIN); // The super keys are supposed to be the windows keys, but they trigger the meta key instead. Let's assign the windows keys to both.
+	buttons.emplace_back(Qt::Key_Super_R, CELL_KB_MKEY_R_WIN); // The super keys are supposed to be the windows keys, but they trigger the meta key instead. Let's assign the windows keys to both.
 
 	// CELL_KB_RAWDAT
-	//buttons.emplace_back(, CELL_KEYC_NO_EVENT);
+	//buttons.emplace_back(, CELL_KEYC_NO_EVENT); // Redundant, listed for completeness
 	//buttons.emplace_back(, CELL_KEYC_E_ROLLOVER);
 	//buttons.emplace_back(, CELL_KEYC_E_POSTFAIL);
 	//buttons.emplace_back(, CELL_KEYC_E_UNDEF);
@@ -221,8 +224,8 @@ void basic_keyboard_handler::LoadSettings(Keyboard& keyboard)
 	buttons.emplace_back(Qt::Key_Left, CELL_KEYC_LEFT_ARROW);
 	buttons.emplace_back(Qt::Key_Down, CELL_KEYC_DOWN_ARROW);
 	buttons.emplace_back(Qt::Key_Up, CELL_KEYC_UP_ARROW);
-	//buttons.emplace_back(WXK_NUMLOCK, CELL_KEYC_NUM_LOCK);
-	buttons.emplace_back(Qt::Key_Meta, CELL_KEYC_APPLICATION);
+	//buttons.emplace_back(, CELL_KEYC_NUM_LOCK);
+	//buttons.emplace_back(, CELL_KEYC_APPLICATION); // This is probably the PS key on the PS3 keyboard
 	buttons.emplace_back(Qt::Key_Kana_Shift, CELL_KEYC_KANA); // maybe Key_Kana_Lock
 	buttons.emplace_back(Qt::Key_Henkan, CELL_KEYC_HENKAN);
 	buttons.emplace_back(Qt::Key_Muhenkan, CELL_KEYC_MUHENKAN);

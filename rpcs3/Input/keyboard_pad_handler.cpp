@@ -1,6 +1,7 @@
 #include "keyboard_pad_handler.h"
 #include "pad_thread.h"
 #include "Emu/Io/pad_config.h"
+#include "Emu/Io/KeyboardHandler.h"
 #include "Input/product_info.h"
 #include "rpcs3qt/gs_frame.h"
 
@@ -821,12 +822,16 @@ u32 keyboard_pad_handler::GetKeyCode(const QString& keyName)
 
 int keyboard_pad_handler::native_scan_code_from_string([[maybe_unused]] const std::string& key)
 {
-	// NOTE: Qt throws a Ctrl key at us when using Alt Gr, so there is no point in distinguishing left and right Alt at the moment
+	// NOTE: Qt throws a Ctrl key at us when using Alt Gr first, so right Alt does not work at the moment
+	if (key == "Shift Left") return native_key::shift_l;
+	if (key == "Shift Right") return native_key::shift_r;
+	if (key == "Ctrl Left") return native_key::ctrl_l;
+	if (key == "Ctrl Right") return native_key::ctrl_r;
+	if (key == "Alt Left") return native_key::alt_l;
+	if (key == "Alt Right") return native_key::alt_r;
+	if (key == "Meta Left") return native_key::meta_l;
+	if (key == "Meta Right") return native_key::meta_r;
 #ifdef _WIN32
-	if (key == "Shift Left") return 42;
-	if (key == "Shift Right") return 54;
-	if (key == "Ctrl Left") return 29;
-	if (key == "Ctrl Right") return 285;
 	if (key == "Num+0" || key == "Num+Ins") return 82;
 	if (key == "Num+1" || key == "Num+End") return 79;
 	if (key == "Num+2" || key == "Num+Down") return 80;
@@ -851,15 +856,20 @@ int keyboard_pad_handler::native_scan_code_from_string([[maybe_unused]] const st
 
 std::string keyboard_pad_handler::native_scan_code_to_string(int native_scan_code)
 {
+	// NOTE: the other Qt function "nativeVirtualKey" does not distinguish between VK_SHIFT and VK_RSHIFT key in Qt at the moment
+	// NOTE: Qt throws a Ctrl key at us when using Alt Gr first, so right Alt does not work at the moment
+	// NOTE: for MacOs: nativeScanCode may not work
 	switch (native_scan_code)
 	{
+	case native_key::shift_l: return "Shift Left";
+	case native_key::shift_r: return "Shift Right";
+	case native_key::ctrl_l: return "Ctrl Left";
+	case native_key::ctrl_r: return "Ctrl Right";
+	case native_key::alt_l: return "Alt Left";
+	case native_key::alt_r: return "Alt Right";
+	case native_key::meta_l: return "Meta Left";
+	case native_key::meta_r: return "Meta Right";
 #ifdef _WIN32
-	// NOTE: the other Qt function "nativeVirtualKey" does not distinguish between VK_SHIFT and VK_RSHIFT key in Qt at the moment
-	// NOTE: Qt throws a Ctrl key at us when using Alt Gr, so there is no point in distinguishing left and right Alt at the moment
-	case 42: return "Shift Left";
-	case 54: return "Shift Right";
-	case 29: return "Ctrl Left";
-	case 285: return "Ctrl Right";
 	case 82: return "Num+0"; // Also "Num+Ins" depending on numlock
 	case 79: return "Num+1"; // Also "Num+End" depending on numlock
 	case 80: return "Num+2"; // Also "Num+Down" depending on numlock
@@ -878,7 +888,6 @@ std::string keyboard_pad_handler::native_scan_code_to_string(int native_scan_cod
 	case 284: return "Num+Enter";
 #else
 	// TODO
-	// NOTE for MacOs: nativeScanCode may not work
 #endif
 	default: return "";
 	}
