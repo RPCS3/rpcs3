@@ -208,6 +208,7 @@ public:
 		u32 tag = umax;
 		u32 known_ones{};
 		u32 known_zeroes{};
+		u32 origin = SPU_LS_SIZE;
 
 		bool is_const() const;
 
@@ -222,21 +223,33 @@ public:
 		bool compare_with_mask_indifference(u32 imm, u32 mask_bits) const;
 		bool unequal_with_mask_indifference(const reg_state_t& r, u32 mask_bits) const;
 
+		// Convert constant-based value to mask-based value
 		reg_state_t downgrade() const;
-		reg_state_t merge(const reg_state_t& rhs) const;
+
+		// Connect two register states between different blocks
+		reg_state_t merge(const reg_state_t& rhs, u32 current_pc) const;
+
+		// Override value with newer value if needed
 		reg_state_t build_on_top_of(const reg_state_t& rhs) const;
 
+		// Get known zeroes mask
 		u32 get_known_zeroes() const;
+
+		// Get known ones mask
 		u32 get_known_ones() const;
 
+		// Invalidate value if non-constant and reached the point in history of its creation
+		void invalidate_if_created(u32 current_pc);
+
 		template <usz Count = 1>
-		static std::conditional_t<Count == 1, reg_state_t, std::array<reg_state_t, Count>> make_unknown() noexcept
+		static std::conditional_t<Count == 1, reg_state_t, std::array<reg_state_t, Count>> make_unknown(u32 pc) noexcept
 		{
 			if constexpr (Count == 1)
 			{
 				reg_state_t v{};
 				v.tag = alloc_tag();
 				v.flag = {};
+				v.origin = pc;
 				return v;
 			}
 			else
@@ -245,7 +258,7 @@ public:
 
 				for (reg_state_t& state : result)
 				{
-					state = make_unknown<1>();
+					state = make_unknown<1>(pc);
 				}
 
 				return result;
