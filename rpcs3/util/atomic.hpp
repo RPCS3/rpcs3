@@ -257,7 +257,6 @@ public:
 	static void notify_all(const void* data);
 
 	static void set_wait_callback(bool(*cb)(const void* data, u64 attempts, u64 stamp0));
-	static void set_notify_callback(void(*cb)(const void* data, u64 progress));
 	static void set_one_time_use_wait_callback(bool (*cb)(u64 progress));
 };
 

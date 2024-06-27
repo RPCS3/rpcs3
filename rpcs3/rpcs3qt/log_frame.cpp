@@ -81,7 +81,7 @@ struct gui_listener : logs::listener
 
 			_new->msg += text;
 
-			queue.push(std::move(p));
+			queue.push<false>(std::move(p));
 		}
 	}
 

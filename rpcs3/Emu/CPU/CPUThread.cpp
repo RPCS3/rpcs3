@@ -557,29 +557,6 @@ void cpu_thread::operator()()
 	// Register thread in g_cpu_array
 	s_cpu_counter++;
 
-	atomic_wait_engine::set_notify_callback(g_use_rtm || get_class() != thread_class::ppu ? nullptr : +[](const void*, u64 progress)
-	{
-		static thread_local bool wait_set = false;
-
-		cpu_thread* _cpu = get_current_cpu_thread();
-
-		// Wait flag isn't set asynchronously so this should be thread-safe
-		if (progress == 0 && _cpu->state.none_of(cpu_flag::wait + cpu_flag::temp))
-		{
-			// Operation just started and syscall is imminent
-			_cpu->state += cpu_flag::wait + cpu_flag::temp;
-			wait_set = true;
-			return;
-		}
-
-		if (progress == umax && std::exchange(wait_set, false))
-		{
-			// Operation finished: need to clean wait flag
-			ensure(!_cpu->check_state());
-			return;
-		}
-	});
-
 	static thread_local struct thread_cleanup_t
 	{
 		cpu_thread* _this = nullptr;
@@ -597,8 +574,6 @@ void cpu_thread::operator()()
 			{
 				ptr->compare_and_swap(_this, nullptr);
 			}
-
-			atomic_wait_engine::set_notify_callback(nullptr);
 
 			g_tls_log_control = [](const char*, u64){};
 
