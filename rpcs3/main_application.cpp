@@ -138,31 +138,28 @@ EmuCallbacks main_application::CreateCallbacks()
 
 	callbacks.init_mouse_handler = [this]()
 	{
-		switch (g_cfg.io.mouse.get())
-		{
-		case mouse_handler::null:
+		mouse_handler handler = g_cfg.io.mouse;
+
+		if (handler == mouse_handler::null)
 		{
 			switch (g_cfg.io.move)
 			{
 			case move_handler::mouse:
-			{
-				basic_mouse_handler* ret = g_fxo->init<MouseHandlerBase, basic_mouse_handler>(Emu.DeserialManager());
-				ret->moveToThread(get_thread());
-				ret->SetTargetWindow(m_game_window);
+				handler = mouse_handler::basic;
 				break;
-			}
 			case move_handler::raw_mouse:
-			{
-				g_fxo->init<MouseHandlerBase, raw_mouse_handler>(Emu.DeserialManager());
+				handler = mouse_handler::raw;
 				break;
-			}
 			default:
-			{
-				g_fxo->init<MouseHandlerBase, NullMouseHandler>(Emu.DeserialManager());
 				break;
 			}
-			}
+		}
 
+		switch (handler)
+		{
+		case mouse_handler::null:
+		{
+			g_fxo->init<MouseHandlerBase, NullMouseHandler>(Emu.DeserialManager());
 			break;
 		}
 		case mouse_handler::basic:
