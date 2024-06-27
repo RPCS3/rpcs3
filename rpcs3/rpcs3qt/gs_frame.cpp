@@ -1070,10 +1070,22 @@ void gs_frame::take_screenshot(std::vector<u8> data, u32 sshot_width, u32 sshot_
 
 void gs_frame::mouseDoubleClickEvent(QMouseEvent* ev)
 {
-	if (m_disable_mouse || g_cfg.io.move == move_handler::mouse) return;
+	if (m_disable_mouse)
+	{
+		return;
+	}
+
+	switch (g_cfg.io.move)
+	{
+	case move_handler::mouse:
+	case move_handler::raw_mouse:
 #ifdef HAVE_LIBEVDEV
-	if (g_cfg.io.move == move_handler::gun) return;
+	case move_handler::gun:
 #endif
+		return;
+	default:
+		break;
+	}
 
 	if (ev->button() == Qt::LeftButton)
 	{
