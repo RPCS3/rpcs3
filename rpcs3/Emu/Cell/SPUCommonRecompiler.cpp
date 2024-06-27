@@ -2627,18 +2627,18 @@ reg_state_t reg_state_t::downgrade() const
 {
 	if (flag & vf::is_const)
 	{
-		return reg_state_t{vf::is_mask, 0, umax, this->value, ~this->value};
+		return reg_state_t{vf::is_mask, 0, umax, this->value, ~this->value, this->origin};
 	}
 
 	if (!(flag - vf::is_null))
 	{
-		return reg_state_t{vf::is_mask, 0, this->tag, 0, 0};
+		return reg_state_t{vf::is_mask, 0, this->tag, 0, 0, this->origin};
 	}
 
 	return *this;
 }
 
-reg_state_t reg_state_t::merge(const reg_state_t& rhs) const
+reg_state_t reg_state_t::merge(const reg_state_t& rhs, u32 current_pc) const
 {
 	if (rhs == *this)
 	{
@@ -2661,12 +2661,13 @@ reg_state_t reg_state_t::merge(const reg_state_t& rhs) const
 			{
 				// Success (create new value tag)
 				res.tag = reg_state_t::alloc_tag();
+				res.origin = current_pc;
 				return res;
 			}
 		}
 	}
 
-	return make_unknown();
+	return make_unknown(current_pc);
 }
 
 reg_state_t reg_state_t::build_on_top_of(const reg_state_t& rhs) const
@@ -2728,9 +2729,17 @@ u32 reg_state_t::alloc_tag(bool reset) noexcept
 	return ++g_tls_tag;
 }
 
+void reg_state_t::invalidate_if_created(u32 current_pc)
+{
+	if (!is_const() && origin == current_pc)
+	{
+		tag = reg_state_t::alloc_tag();
+	}
+}
+
 // Converge 2 register states to the same flow in execution
 template <usz N>
-static void merge(std::array<reg_state_t, N>& result, const std::array<reg_state_t, N>& lhs, const std::array<reg_state_t, N>& rhs)
+static void merge(std::array<reg_state_t, N>& result, const std::array<reg_state_t, N>& lhs, const std::array<reg_state_t, N>& rhs, u32 current_pc)
 {
 	usz index = umax;
 
@@ -2738,7 +2747,7 @@ static void merge(std::array<reg_state_t, N>& result, const std::array<reg_state
 	{
 		index++;
 
-		state = lhs[index].merge(rhs[index]);
+		state = lhs[index].merge(rhs[index], current_pc);
 	}
 }
 
@@ -2777,7 +2786,7 @@ struct block_reg_info
 
 	static std::unique_ptr<block_reg_info> create(u32 pc) noexcept
 	{
-		auto ptr = new block_reg_info{ pc, reg_state_t::make_unknown<s_reg_max>() };
+		auto ptr = new block_reg_info{ pc, reg_state_t::make_unknown<s_reg_max>(pc) };
 
 		for (reg_state_t& f : ptr->local_state)
 		{
@@ -4882,7 +4891,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 	const bool should_search_patterns = target_count < 300u;
 
 	// Treat start of function as an unknown value with tag (because it is)
-	const reg_state_t start_program_count = reg_state_t::make_unknown();
+	const reg_state_t start_program_count = reg_state_t::make_unknown(entry_point - 1);
 
 	// Initialize
 	reg_state_it.emplace_back(entry_point);
@@ -5375,10 +5384,20 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			vregs[reg] = reg_state_t::from_value(value);
 		};
 
-		const auto inherit_const_value = [&](u32 reg, bs_t<vf> flag, u32 value)
+		const auto inherit_const_value = [&](u32 reg, const reg_state_t& ra, const reg_state_t& rb, u32 value, u32 pos)
 		{
-			flag -= vf::is_null;
-			vregs[reg] = reg_state_t{flag, value, flag & vf::is_const ? u32{umax} : reg_state_t::alloc_tag()};
+			if (ra.origin != rb.origin)
+			{
+				pos = reg_state_it[wi].pc;
+			}
+			else
+			{
+				pos = ra.origin;
+			}
+
+			const bs_t<vf> flag = (ra.flag & rb.flag) - vf::is_null;
+
+			vregs[reg] = reg_state_t{flag, value, flag & vf::is_const ? u32{umax} : reg_state_t::alloc_tag(), 0, 0, pos};
 		};
 
 		const auto inherit_const_mask_value = [&](u32 reg, reg_state_t state, u32 mask_ones, u32 mask_zeroes)
@@ -5407,12 +5426,12 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			}
 
 			ensure(state.tag != umax);
-			vregs[reg] = reg_state_t{vf::is_mask, 0, state.tag, ones, zeroes};
+			vregs[reg] = reg_state_t{vf::is_mask, 0, state.tag, ones, zeroes, state.origin};
 		};
 
-		const auto unconst = [&](u32 reg)
+		const auto unconst = [&](u32 reg, u32 pc)
 		{
-			vregs[reg] = {{}, {}, reg_state_t::alloc_tag()};
+			vregs[reg] = reg_state_t::make_unknown(pc);
 		};
 
 		const auto add_block = [&](u32 target)
@@ -5464,6 +5483,14 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			{
 				// Call for external code
 				break_putllc16(25, atomic16.discard());
+			}
+		}
+
+		if (atomic16.active)
+		{
+			for (auto state : {&atomic16.lsa, &atomic16.ls, &atomic16.ls_offs})
+			{
+				state->invalidate_if_created(pos);
 			}
 		}
 
@@ -5650,7 +5677,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			}
 			case MFC_Cmd:
 			{
-				const auto [af, av, atagg, _3, _5] = get_reg(op.rt);
+				const auto [af, av, atagg, _3, _5, apc] = get_reg(op.rt);
 
 				if (!is_pattern_match)
 				{
@@ -5662,9 +5689,15 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					{
 					case MFC_GETLLAR_CMD:
 					{
+						// Get LSA and apply mask for GETLLAR
+						// TODO: Simplify this to be a value returning function
+						auto old_lsa = get_reg(s_reg_mfc_lsa);
+						inherit_const_mask_value(s_reg_mfc_lsa, old_lsa, 0, ~SPU_LS_MASK_128);
+
+						// Restore LSA
 						auto lsa = get_reg(s_reg_mfc_lsa);
-						inherit_const_mask_value(s_reg_mfc_lsa, lsa, 0, ~SPU_LS_MASK_128);
-						lsa = get_reg(s_reg_mfc_lsa);
+						vregs[s_reg_mfc_lsa] = old_lsa;
+
 						const u32 lsa_pc = atomic16.lsa_last_pc == SPU_LS_SIZE ? bpc : atomic16.lsa_last_pc;
 
 						if (atomic16.active)
@@ -5716,7 +5749,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 										continue;
 									}
 
-									if (vregs[s_reg_mfc_lsa].compare_with_mask_indifference(*val, SPU_LS_MASK_1))
+									if (vregs[s_reg_mfc_lsa].compare_with_mask_indifference(*val, SPU_LS_MASK_16))
 									{
 										regs[reg_it] = s_reg_mfc_lsa;
 										continue;
@@ -5726,7 +5759,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 									{
 										const auto& _reg = vregs[i];
 
-										if (_reg == *val)
+										if (_reg.compare_with_mask_indifference(*val, SPU_LS_MASK_16))
 										{
 											regs[reg_it] = i;
 											break;
@@ -5908,14 +5941,25 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 							// Merge pattern attributes between different code paths, may cause detection of failures
 							atomic16_t& existing = it->second;
 
-							if (existing.lsa_pc != atomic16.lsa_pc || existing.put_pc != atomic16.put_pc || existing.lsa != atomic16.lsa)
+							auto compare_tag_and_reg = [](std::pair<const reg_state_t*, u32> a, std::pair<const reg_state_t*, u32> b)
+							{
+								if (b.first->is_const() && a.first->is_const())
+								{
+									return a.first->compare_with_mask_indifference(*b.first, SPU_LS_MASK_1);
+								}
+
+								// Compare register source
+								return a.second == b.second;
+							};
+
+							if (existing.lsa_pc != atomic16.lsa_pc || existing.put_pc != atomic16.put_pc || !existing.lsa.compare_with_mask_indifference(atomic16.lsa, SPU_LS_MASK_128))
 							{
 								// Register twice
 								break_putllc16(22, atomic16.discard());
 								break_putllc16(22, existing.discard());
 							}
 
-							if (existing.active && existing.ls_access && atomic16.ls_access && (!existing.ls.compare_with_mask_indifference(atomic16.ls, SPU_LS_MASK_1) || existing.ls_offs != atomic16.ls_offs))
+							if (existing.active && existing.ls_access && atomic16.ls_access && (!compare_tag_and_reg({&existing.ls, existing.reg}, {&atomic16.ls, atomic16.reg}) || existing.ls_offs != atomic16.ls_offs || existing.reg2 != atomic16.reg2))
 							{
 								// Conflicting loads with stores in more than one code path
 								break_putllc16(27, atomic16.set_invalid_ls(existing.ls_write || atomic16.ls_write));
@@ -5938,6 +5982,8 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 							{
 								// Propagate LS access
 								existing.ls = atomic16.ls;
+								existing.reg = atomic16.reg;
+								existing.reg2 = atomic16.reg2;
 								existing.ls_offs = atomic16.ls_offs;
 							}
 
@@ -5989,7 +6035,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 			if (invalidate)
 			{
-				unconst(op.rt);
+				unconst(op.rt, pos);
 			}
 
 			break;
@@ -6068,7 +6114,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			}
 
 			// Unconst
-			unconst(op.rt);
+			unconst(op.rt, pos);
 			break;
 		}
 
@@ -6237,7 +6283,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			}
 
 			// Unconst
-			unconst(op.rt);
+			unconst(op.rt, pos);
 			break;
 		}
 		case spu_itype::STQA:
@@ -6291,7 +6337,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			}
 
 			// Unconst
-			unconst(op.rt);
+			unconst(op.rt, pos);
 			break;
 		}
 
@@ -6371,14 +6417,14 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			}
 
 			// Unconst
-			unconst(op.rt);
+			unconst(op.rt, pos);
 			break;
 		}
 
 		case spu_itype::HBR:
 		{
 			hbr_loc = spu_branch_target(pos, op.roh << 7 | op.rt);
-			const auto [af, av, at, ao, az] = get_reg(op.ra);
+			const auto [af, av, at, ao, az, apc] = get_reg(op.ra);
 			hbr_tg  = af & vf::is_const && !op.c ? av & 0x3fffc : -1;
 			break;
 		}
@@ -6443,9 +6489,13 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				break;
 			}
 
-			const auto [af, av, at, ao, az] = get_reg(op.ra);
-			const auto [bf, bv, _2, _4, _6] = get_reg(op.rb);
-			inherit_const_value(op.rt, af & bf, bv | av);
+			const auto ra = get_reg(op.ra);
+			const auto rb = get_reg(op.rb);
+
+			const auto [af, av, at, ao, az, apc] = ra;
+			const auto [bf, bv, bt, bo, bz, bpc] = rb;
+
+			inherit_const_value(op.rt, ra, rb, av | bv, pos);
 			break;
 		}
 		case spu_itype::XORI:
@@ -6456,8 +6506,11 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				break;
 			}
 
-			const auto [af, av, at, ao, az] = get_reg(op.ra);
-			inherit_const_value(op.rt, af, av ^ op.si10);
+			const auto ra = get_reg(op.ra);
+
+			const auto [af, av, at, ao, az, apc] = ra;
+
+			inherit_const_value(op.rt, ra, ra, av ^ op.si10, pos);
 			break;
 		}
 		case spu_itype::XOR:
@@ -6468,16 +6521,24 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				break;
 			}
 
-			const auto [af, av, at, ao, az] = get_reg(op.ra);
-			const auto [bf, bv, _2, _4, _6] = get_reg(op.rb);
-			inherit_const_value(op.rt, af & bf, bv ^ av);
+			const auto ra = get_reg(op.ra);
+			const auto rb = get_reg(op.rb);
+
+			const auto [af, av, at, ao, az, apc] = ra;
+			const auto [bf, bv, bt, bo, bz, bpc] = rb;
+
+			inherit_const_value(op.rt, ra, rb, bv ^ av, pos);
 			break;
 		}
 		case spu_itype::NOR:
 		{
-			const auto [af, av, at, ao, az] = get_reg(op.ra);
-			const auto [bf, bv, _2, _4, _6] = get_reg(op.rb);
-			inherit_const_value(op.rt, af & bf, ~(bv | av));
+			const auto ra = get_reg(op.ra);
+			const auto rb = get_reg(op.rb);
+
+			const auto [af, av, at, ao, az, apc] = ra;
+			const auto [bf, bv, bt, bo, bz, bpc] = rb;
+
+			inherit_const_value(op.rt, ra, rb, ~(bv | av), pos);
 			break;
 		}
 		case spu_itype::ANDI:
@@ -6494,9 +6555,13 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				break;
 			}
 
-			const auto [af, av, at, ao, az] = get_reg(op.ra);
-			const auto [bf, bv, _2, _4, _6] = get_reg(op.rb);
-			inherit_const_value(op.rt, af & bf, bv & av);
+			const auto ra = get_reg(op.ra);
+			const auto rb = get_reg(op.rb);
+
+			const auto [af, av, at, ao, az, apc] = ra;
+			const auto [bf, bv, bt, bo, bz, bpc] = rb;
+
+			inherit_const_value(op.rt, ra, rb, bv & av, pos);
 			break;
 		}
 		case spu_itype::AI:
@@ -6508,9 +6573,9 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			}
 
 			const auto ra = get_reg(op.ra);
-			const auto [af, av, at, ao, az] = ra;
+			const auto [af, av, at, ao, az, apc] = ra;
 
-			inherit_const_value(op.rt, af, av + op.si10);
+			inherit_const_value(op.rt, ra, ra, av + op.si10, pos);
 
 			if (u32 mask = ra.get_known_zeroes() & ~op.si10; mask & 1)
 			{
@@ -6525,10 +6590,10 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			const auto ra = get_reg(op.ra);
 			const auto rb = get_reg(op.rb);
 
-			const auto [af, av, at, ao, az] = ra;
-			const auto [bf, bv, bt, bo, bz] = rb;
+			const auto [af, av, at, ao, az, apc] = ra;
+			const auto [bf, bv, bt, bo, bz, bpc] = rb;
 
-			inherit_const_value(op.rt, af & bf, bv + av);
+			inherit_const_value(op.rt, ra, rb, bv + av, pos);
 
 			if (u32 mask = ra.get_known_zeroes() & rb.get_known_zeroes(); mask & 1)
 			{
@@ -6540,8 +6605,10 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		}
 		case spu_itype::SFI:
 		{
-			const auto [af, av, at, ao, az] = get_reg(op.ra);
-			inherit_const_value(op.rt, af, op.si10 - av);
+			const auto ra = get_reg(op.ra);
+			const auto [af, av, at, ao, az, apc] = get_reg(op.ra);
+
+			inherit_const_value(op.rt, ra, ra, op.si10 - av, pos);
 			break;
 		}
 		case spu_itype::SF:
@@ -6549,10 +6616,10 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			const auto ra = get_reg(op.ra);
 			const auto rb = get_reg(op.rb);
 
-			const auto [af, av, at, ao, az] = ra;
-			const auto [bf, bv, bt, bo, bz] = rb;
+			const auto [af, av, at, ao, az, apc] = ra;
+			const auto [bf, bv, bt, bo, bz, bpc] = rb;
 
-			inherit_const_value(op.rt, af & bf, bv - av);
+			inherit_const_value(op.rt, ra, rb, bv - av, pos);
 
 			if (u32 mask = ra.get_known_zeroes() & rb.get_known_zeroes(); mask & 1)
 			{
@@ -6588,8 +6655,10 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				break;
 			}
 
-			const auto [af, av, at, ao, az] = get_reg(op.ra);
-			inherit_const_value(op.rt, af, av >> ((0 - op.i7) & 0x1f));
+			const auto ra = get_reg(op.ra);
+			const auto [af, av, at, ao, az, apc] = get_reg(op.ra);
+
+			inherit_const_value(op.rt, ra, ra, av >> ((0 - op.i7) & 0x1f), pos);
 			break;
 		}
 		case spu_itype::SHLI:
@@ -6606,8 +6675,10 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				break;
 			}
 
-			const auto [af, av, at, ao, az] = get_reg(op.ra);
-			inherit_const_value(op.rt, af, av << (op.i7 & 0x1f));
+			const auto ra = get_reg(op.ra);
+			const auto [af, av, at, ao, az, apc] = ra;
+
+			inherit_const_value(op.rt, ra, ra, av << (op.i7 & 0x1f), pos);
 			break;
 		}
 		case spu_itype::SELB:
@@ -6616,7 +6687,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			const auto rb = get_reg(op.rb);
 
 			// Ignore RC, perform a value merge which also respect bitwise information
-			vregs[op.rt4] = ra.merge(rb);
+			vregs[op.rt4] = ra.merge(rb, pos);
 			break;
 		}
 		case spu_itype::SHLQBYI:
@@ -6641,7 +6712,49 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			if (!(type & spu_itype::zregmod))
 			{
 				const u32 op_rt = type & spu_itype::_quadrop ? +op.rt4 : +op.rt;
-				unconst(op_rt);
+
+				u32 ra = s_reg_max, rb = s_reg_max, rc = s_reg_max;
+
+				if (m_use_ra.test(pos / 4))
+				{
+					ra = op.ra;
+				}
+
+				if (m_use_rb.test(pos / 4))
+				{
+					rb = op.rb;
+				}
+
+				if (type & spu_itype::_quadrop && m_use_rc.test(pos / 4))
+				{
+					rc = op.rc;
+				}
+
+				u32 reg_pos = SPU_LS_SIZE;
+
+				for (u32 reg : {ra, rb, rc})
+				{
+					if (reg != s_reg_max)
+					{
+						if (reg_pos == SPU_LS_SIZE)
+						{
+							reg = vregs[reg].origin;
+						}
+						else if (reg_pos != vregs[reg].origin)
+						{
+							const u32 block_start = reg_state_it[wi].pc;
+
+							// if (vregs[reg].origin >= block_start && vregs[reg].origin <= pos)
+							// {
+							// 	reg_pos = std::max<u32>(vregs[reg].origin, reg_pos);
+							// }
+							reg_pos = block_start;
+							break;
+						}
+					}
+				}
+
+				unconst(op_rt, reg_pos == SPU_LS_SIZE ? pos : reg_pos);
 			}
 
 			break;
@@ -7714,7 +7827,7 @@ std::array<reg_state_t, s_reg_max>& block_reg_info::evaluate_start_state(const s
 					}
 					else
 					{
-						merge(res_state, res_state, *arg_state);
+						merge(res_state, res_state, *arg_state, it->block_pc);
 					}
 				}
 

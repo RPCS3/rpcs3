@@ -1292,7 +1292,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		const auto diff = m_ir->CreateZExt(m_ir->CreateSub(dest, _lsa), get_type<u64>());
 
 		const auto _new = m_ir->CreateAlignedLoad(get_type<u128>(), _ptr<u128>(m_lsptr, dest), llvm::MaybeAlign{16});
-		const auto _rdata = m_ir->CreateAlignedLoad(get_type<u128>(), _ptr<u128>(spu_ptr<u8>(&spu_thread::rdata), m_ir->CreateAnd(diff, 0x7f)), llvm::MaybeAlign{16});
+		const auto _rdata = m_ir->CreateAlignedLoad(get_type<u128>(), _ptr<u128>(spu_ptr<u8>(&spu_thread::rdata), m_ir->CreateAnd(diff, 0x70)), llvm::MaybeAlign{16});
 
 		const bool is_accurate_op = !!g_cfg.core.spu_accurate_reservations;
 
@@ -1360,7 +1360,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 
 		llvm::Value* old_val{};
 
-		if (is_accurate_op)
+		if (true || is_accurate_op)
 		{
 			old_val = m_ir->CreateLoad(get_type<u64>(), spu_ptr<u64>(&spu_thread::rtime));
 		}
@@ -1373,7 +1373,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 
 		const auto cmp_res2 = m_ir->CreateAtomicCmpXchg(rptr2, old_val, m_ir->CreateAdd(old_val, m_ir->getInt64(128)), llvm::MaybeAlign{16}, llvm::AtomicOrdering::SequentiallyConsistent, llvm::AtomicOrdering::SequentiallyConsistent);
 
-		if (is_accurate_op)
+		if (true || is_accurate_op)
 		{
 			m_ir->CreateCondBr(m_ir->CreateExtractValue(cmp_res2, 1), _success, _fail);
 		}

@@ -301,14 +301,17 @@ static void fixup_settings(const psf::registry* _psf)
 	}
 }
 
-extern void dump_executable(std::span<const u8> data, ppu_module* _module, std::string_view title_id)
+extern void dump_executable(std::span<const u8> data, const ppu_module* _module, std::string_view title_id)
 {
-	const std::string_view filename = _module->path.substr(_module->path.find_last_of('/') + 1);
+	std::string_view filename = _module->path;
+	filename = filename.substr(filename.find_last_of('/') + 1);
+
+	const std::string lower = fmt::to_lower(filename);
 
 	// Format filename and directory name
 	// Make each directory for each file so tools like IDA can work on it cleanly
 	const std::string dir_path = fs::get_cache_dir() + "ppu_progs/" + std::string{!title_id.empty() ? title_id : "untitled"} + fmt::format("-%s-%s", fmt::base57(_module->sha1), filename)  + '/';
-	const std::string file_path = dir_path + (fmt::to_lower(filename).ends_with(".prx") || fmt::to_lower(filename).ends_with(".sprx") ? "prog.prx" : "exec.elf");
+	const std::string file_path = dir_path + (lower.ends_with(".prx") || lower.ends_with(".sprx") ? "prog.prx" : "exec.elf");
 
 	if (fs::create_dir(dir_path) || fs::g_tls_error == fs::error::exist)
 	{
