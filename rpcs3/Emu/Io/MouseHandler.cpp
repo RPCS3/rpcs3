@@ -105,7 +105,7 @@ void MouseHandlerBase::Scroll(u32 index, s8 x, s8 y)
 	}
 }
 
-void MouseHandlerBase::Move(u32 index, s32 x_pos_new, s32 y_pos_new, s32 x_max, s32 y_max, const bool is_relative, s32 x_delta, s32 y_delta)
+void MouseHandlerBase::Move(u32 index, s32 x_pos_new, s32 y_pos_new, s32 x_max, s32 y_max, bool is_relative, s32 x_delta, s32 y_delta)
 {
 	std::lock_guard lock(mutex);
 
