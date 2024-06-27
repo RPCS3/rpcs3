@@ -2525,14 +2525,28 @@ namespace rsx
 					}
 				}
 
-				if (backend_config.supports_hw_msaa &&
-					sampler_descriptors[i]->samples > 1)
+				if (backend_config.supports_hw_msaa && sampler_descriptors[i]->samples > 1)
 				{
 					current_fp_texture_state.multisampled_textures |= (1 << i);
 					texture_control |= (static_cast<u32>(tex.zfunc()) << texture_control_bits::DEPTH_COMPARE_OP);
 					texture_control |= (static_cast<u32>(tex.mag_filter() != rsx::texture_magnify_filter::nearest) << texture_control_bits::FILTERED_MAG);
 					texture_control |= (static_cast<u32>(tex.min_filter() != rsx::texture_minify_filter::nearest) << texture_control_bits::FILTERED_MIN);
 					texture_control |= (((tex.format() & CELL_GCM_TEXTURE_UN) >> 6) << texture_control_bits::UNNORMALIZED_COORDS);
+
+					if (rsx::is_texcoord_wrapping_mode(tex.wrap_s()))
+					{
+						texture_control |= (1 << texture_control_bits::WRAP_S);
+					}
+
+					if (rsx::is_texcoord_wrapping_mode(tex.wrap_t()))
+					{
+						texture_control |= (1 << texture_control_bits::WRAP_T);
+					}
+
+					if (rsx::is_texcoord_wrapping_mode(tex.wrap_r()))
+					{
+						texture_control |= (1 << texture_control_bits::WRAP_R);
+					}
 				}
 
 				if (sampler_descriptors[i]->format_class != RSX_FORMAT_CLASS_COLOR)

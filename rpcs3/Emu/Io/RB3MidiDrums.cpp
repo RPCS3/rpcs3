@@ -315,6 +315,9 @@ usb_device_rb3_midi_drums::Definition::Definition(std::string name, const std::s
 usb_device_rb3_midi_drums::usb_device_rb3_midi_drums(const std::array<u8, 7>& location, const std::string& device_name)
 	: usb_device_emulated(location)
 {
+	m_id_to_note_mapping = midi::create_id_to_note_mapping();
+	combo.reload_definitions();
+
 	UsbDeviceDescriptor descriptor{};
 	descriptor.bcdDevice = 0x0200;
 	descriptor.bDeviceClass = 0x00;

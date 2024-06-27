@@ -1549,4 +1549,26 @@ namespace rsx
 	{
 		return get_format_block_size_in_bytes(format) == 2 ? 0xFFFF : 0xFFFFFF;
 	}
+
+	bool is_texcoord_wrapping_mode(rsx::texture_wrap_mode mode)
+	{
+		switch (mode)
+		{
+			// Clamping modes
+			default:
+				rsx_log.error("Unknown texture wrap mode: %d", static_cast<int>(mode));
+				[[ fallthrough ]];
+			case rsx::texture_wrap_mode::border:
+			case rsx::texture_wrap_mode::clamp:
+			case rsx::texture_wrap_mode::clamp_to_edge:
+			case rsx::texture_wrap_mode::mirror_once_clamp_to_edge:
+			case rsx::texture_wrap_mode::mirror_once_border:
+			case rsx::texture_wrap_mode::mirror_once_clamp:
+				return false;
+			// Wrapping modes
+			case rsx::texture_wrap_mode::wrap:
+			case rsx::texture_wrap_mode::mirror:
+				return true;
+		}
+	}
 }
