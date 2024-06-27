@@ -5689,9 +5689,15 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					{
 					case MFC_GETLLAR_CMD:
 					{
+						// Get LSA and apply mask for GETLLAR
+						// TODO: Simplify this to be a value returning function
+						auto old_lsa = get_reg(s_reg_mfc_lsa);
+						inherit_const_mask_value(s_reg_mfc_lsa, old_lsa, 0, ~SPU_LS_MASK_128);
+
+						// Restore LSA
 						auto lsa = get_reg(s_reg_mfc_lsa);
-						inherit_const_mask_value(s_reg_mfc_lsa, lsa, 0, ~SPU_LS_MASK_128);
-						lsa = get_reg(s_reg_mfc_lsa);
+						vregs[s_reg_mfc_lsa] = old_lsa;
+
 						const u32 lsa_pc = atomic16.lsa_last_pc == SPU_LS_SIZE ? bpc : atomic16.lsa_last_pc;
 
 						if (atomic16.active)
@@ -5743,7 +5749,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 										continue;
 									}
 
-									if (vregs[s_reg_mfc_lsa].compare_with_mask_indifference(*val, SPU_LS_MASK_1))
+									if (vregs[s_reg_mfc_lsa].compare_with_mask_indifference(*val, SPU_LS_MASK_16))
 									{
 										regs[reg_it] = s_reg_mfc_lsa;
 										continue;
@@ -5753,7 +5759,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 									{
 										const auto& _reg = vregs[i];
 
-										if (_reg == *val)
+										if (_reg.compare_with_mask_indifference(*val, SPU_LS_MASK_16))
 										{
 											regs[reg_it] = i;
 											break;
