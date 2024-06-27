@@ -6,6 +6,8 @@
 
 LOG_CHANNEL(ds4_log, "DS4");
 
+using namespace reports;
+
 constexpr id_pair SONY_DS4_ID_0 = {0x054C, 0x0BA0}; // Dongle
 constexpr id_pair SONY_DS4_ID_1 = {0x054C, 0x05C4}; // CUH-ZCT1x
 constexpr id_pair SONY_DS4_ID_2 = {0x054C, 0x09CC}; // CUH-ZCT2x

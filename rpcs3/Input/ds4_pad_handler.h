@@ -4,7 +4,7 @@
 
 #include <unordered_map>
 
-namespace
+namespace reports
 {
 	constexpr u32 DS4_ACC_RES_PER_G = 8192;
 	constexpr u32 DS4_GYRO_RES_PER_DEG_S = 86; // technically this could be 1024, but keeping it at 86 keeps us within 16 bits of precision
@@ -119,8 +119,8 @@ public:
 	bool bt_controller{false};
 	bool has_calib_data{false};
 	std::array<CalibData, CalibIndex::COUNT> calib_data{};
-	ds4_input_report_usb report_usb{};
-	ds4_input_report_bt report_bt{};
+	reports::ds4_input_report_usb report_usb{};
+	reports::ds4_input_report_bt report_bt{};
 };
 
 class ds4_pad_handler final : public hid_pad_handler<DS4Device>

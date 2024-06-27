@@ -6,6 +6,8 @@
 
 LOG_CHANNEL(ds3_log, "DS3");
 
+using namespace reports;
+
 constexpr std::array<u8, 6> battery_capacity = {0, 1, 25, 50, 75, 100};
 
 constexpr id_pair SONY_DS3_ID_0 = {0x054C, 0x0268};

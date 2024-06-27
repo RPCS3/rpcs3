@@ -6,6 +6,8 @@
 
 LOG_CHANNEL(dualsense_log, "DualSense");
 
+using namespace reports;
+
 template <>
 void fmt_class_string<DualSenseDevice::DualSenseDataMode>::format(std::string& out, u64 arg)
 {

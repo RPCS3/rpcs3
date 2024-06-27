@@ -4,7 +4,7 @@
 
 #include <unordered_map>
 
-namespace
+namespace reports
 {
 	constexpr u32 DUALSENSE_ACC_RES_PER_G = 8192;
 	constexpr u32 DUALSENSE_GYRO_RES_PER_DEG_S = 86; // technically this could be 1024, but keeping it at 86 keeps us within 16 bits of precision
@@ -172,7 +172,7 @@ public:
 	u8 bt_sequence{0};
 	bool has_calib_data{false};
 	std::array<CalibData, CalibIndex::COUNT> calib_data{};
-	dualsense_input_report_common report{}; // No need to have separate reports for usb and bluetooth
+	reports::dualsense_input_report_common report{}; // No need to have separate reports for usb and bluetooth
 	DualSenseDataMode data_mode{DualSenseDataMode::Simple};
 	DualSenseFeatureSet feature_set{DualSenseFeatureSet::Normal};
 	bool init_lightbar{true};

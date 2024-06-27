@@ -4,7 +4,7 @@
 
 #include <unordered_map>
 
-namespace
+namespace reports
 {
 	struct ds3_rumble
 	{
@@ -67,7 +67,7 @@ public:
 #ifdef _WIN32
 	u8 report_id = 0;
 #endif
-	ds3_input_report report{};
+	reports::ds3_input_report report{};
 };
 
 class ds3_pad_handler final : public hid_pad_handler<ds3_device>
