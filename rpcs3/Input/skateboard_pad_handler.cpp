@@ -4,6 +4,8 @@
 
 LOG_CHANNEL(skateboard_log, "Skateboard");
 
+using namespace reports;
+
 namespace
 {
 	constexpr id_pair SKATEBOARD_ID_0 = {0x12BA, 0x0400}; // Tony Hawk RIDE Skateboard
