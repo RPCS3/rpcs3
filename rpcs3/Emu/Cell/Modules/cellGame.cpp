@@ -1447,14 +1447,14 @@ public:
 		switch (mode)
 		{
 		case content_permission::check_mode::game_data:
-		case content_permission::check_mode::patch: // TODO: it's unclear if patch mode should also support these flags
 		{
 			return !!(flags & (is_setter ? strkey_flag::set_game_data : strkey_flag::get_game_data));
 		}
+		case content_permission::check_mode::patch:
 		case content_permission::check_mode::hdd_game:
 		case content_permission::check_mode::disc_game:
 		{
-			return !is_setter && (flags & (strkey_flag::get_other));
+			return !is_setter && !!(flags & (strkey_flag::get_other)) || !!(flags & (strkey_flag::get_game_data)); // TODO: speculative
 		}
 		case content_permission::check_mode::not_set:
 		{
