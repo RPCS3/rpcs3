@@ -3256,6 +3256,8 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime
 #endif
 });
 
+extern atomic_t<u8>& get_resrv_waiters_count(u32 raddr);
+
 template <typename T>
 static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 {
@@ -3500,19 +3502,30 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 
 			if (notify)
 			{
-				vm::reservation_notifier(notify).notify_all();
+				bool notified = false;
+
+				if (ppu.res_notify_time == (vm::reservation_acquire(notify) & -128))
+				{
+					vm::reservation_notifier(notify).notify_all();
+					notified = true;
+				}
+
+				if (!notified || (addr ^ notify) & -128)
+				{
+					res.notify_all();
+				}
+
 				ppu.res_notify = 0;
 			}
-
-			if (!notify)
+			else
 			{
 				// Try to postpone notification to when PPU is asleep or join notifications on the same address
 				// This also optimizes a mutex - won't notify after lock is aqcuired (prolonging the critical section duration), only notifies on unlock
-				ppu.res_notify = addr;
-			}
-			else if ((addr ^ notify) & -128)
-			{
-				res.notify_all();
+				if (get_resrv_waiters_count(addr))
+				{
+					ppu.res_notify = addr;
+					ppu.res_notify_time = rtime + 128;
+				}
 			}
 		}
 
@@ -3531,7 +3544,11 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 	// And on failure it has some time to do something else
 	if (notify && ((addr ^ notify) & -128))
 	{
-		vm::reservation_notifier(notify).notify_all();
+		if (ppu.res_notify_time == (vm::reservation_acquire(notify) & -128))
+		{
+			vm::reservation_notifier(notify).notify_all();
+		}
+
 		ppu.res_notify = 0;
 	}
 
