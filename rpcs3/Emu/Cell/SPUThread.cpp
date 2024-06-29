@@ -446,10 +446,10 @@ waitpkg_func static void __tpause(u32 cycles, u32 cstate)
 
 static std::array<atomic_t<u8>, 128> g_resrv_waiters_count;
 
-static inline atomic_t<u8>& get_resrv_waiters_count(u32 raddr)
+extern atomic_t<u8>& get_resrv_waiters_count(u32 raddr)
 {
 	// Storage efficient method to distinguish different nearby addresses (which are likely)
-	 return g_resrv_waiters_count[std::popcount(raddr) + ((raddr / 128) % 4) * 32];
+	 return g_resrv_waiters_count[std::popcount(raddr & -512) + ((raddr / 128) % 4) * 32];
 }
 
 void do_cell_atomic_128_store(u32 addr, const void* to_write);

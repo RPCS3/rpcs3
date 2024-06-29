@@ -1333,9 +1333,12 @@ bool lv2_obj::sleep(cpu_thread& cpu, const u64 timeout)
 		{
 			static_cast<ppu_thread&>(cpu).res_notify = 0;
 
-			const usz notify_later_idx = std::basic_string_view<const void*>{g_to_notify, std::size(g_to_notify)}.find_first_of(std::add_pointer_t<const void>{});
-
-			if (notify_later_idx != umax)
+			if (static_cast<ppu_thread&>(cpu).res_notify_time != (vm::reservation_acquire(addr) & -128))
+			{
+				// Ignore outdated notification request
+			}
+			else if (usz notify_later_idx = std::basic_string_view<const void*>{g_to_notify, std::size(g_to_notify)}.find_first_of(std::add_pointer_t<const void>{});
+				notify_later_idx != umax)
 			{
 				g_to_notify[notify_later_idx] = &vm::reservation_notifier(addr);
 
@@ -1384,9 +1387,12 @@ bool lv2_obj::awake(cpu_thread* thread, s32 prio)
 		{
 			ppu->res_notify = 0;
 
-			const usz notify_later_idx = std::basic_string_view<const void*>{g_to_notify, std::size(g_to_notify)}.find_first_of(std::add_pointer_t<const void>{});
-
-			if (notify_later_idx != umax)
+			if (ppu->res_notify_time != (vm::reservation_acquire(addr) & -128))
+			{
+				// Ignore outdated notification request
+			}
+			else if (usz notify_later_idx = std::basic_string_view<const void*>{g_to_notify, std::size(g_to_notify)}.find_first_of(std::add_pointer_t<const void>{});
+				notify_later_idx != umax)
 			{
 				g_to_notify[notify_later_idx] = &vm::reservation_notifier(addr);
 
