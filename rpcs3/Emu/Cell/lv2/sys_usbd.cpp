@@ -240,7 +240,6 @@ usb_handler_thread::usb_handler_thread()
 	bool found_skylander = false;
 	bool found_infinity  = false;
 	bool found_usj       = false;
-	bool found_rb3drums  = false;
 
 	for (ssize_t index = 0; index < ndev; index++)
 	{
@@ -426,17 +425,12 @@ usb_handler_thread::usb_handler_thread()
 			usb_devices.push_back(std::make_shared<usb_device_rb3_midi_keyboard>(get_new_location(), device.name));
 			break;
 		case midi_device_type::drums:
-			found_rb3drums = true;
+			if (!g_cfg_rb3drums.load())
+			{
+				sys_usbd.notice("Could not load rb3drums config. Using defaults.");
+			}
 			usb_devices.push_back(std::make_shared<usb_device_rb3_midi_drums>(get_new_location(), device.name));
 			break;
-		}
-	}
-
-	if (found_rb3drums)
-	{
-		if (!g_cfg_rb3drums.load())
-		{
-			sys_usbd.notice("Could not load rb3drums config. Using defaults.");
 		}
 	}
 
