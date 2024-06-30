@@ -20,6 +20,15 @@ LOG_CHANNEL(hid_log, "HID");
 static std::mutex s_hid_mutex; // hid_pad_handler is created by pad_thread and pad_settings_dialog
 static u8 s_hid_instances{0};
 
+void HidDevice::close()
+{
+	if (hidDevice)
+	{
+		hid_close(hidDevice);
+		hidDevice = nullptr;
+	}
+}
+
 template <class Device>
 hid_pad_handler<Device>::hid_pad_handler(pad_handler type, std::vector<id_pair> ids)
     : PadHandlerBase(type), m_ids(std::move(ids))
@@ -40,9 +49,9 @@ hid_pad_handler<Device>::~hid_pad_handler()
 
 	for (auto& controller : m_controllers)
 	{
-		if (controller.second && controller.second->hidDevice)
+		if (controller.second)
 		{
-			hid_close(controller.second->hidDevice);
+			controller.second->close();
 		}
 	}
 
@@ -170,7 +179,7 @@ void hid_pad_handler<Device>::update_devices()
 	{
 		if (controller.second && !controller.second->path.empty() && !m_new_enumerated_devices.contains(controller.second->path))
 		{
-			hid_close(controller.second->hidDevice);
+			controller.second->close();
 			cfg_pad* config = controller.second->config;
 			controller.second.reset(new Device());
 			controller.second->config = config;

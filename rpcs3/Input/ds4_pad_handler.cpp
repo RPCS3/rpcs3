@@ -527,8 +527,7 @@ void ds4_pad_handler::check_add_device(hid_device* hidDevice, std::string_view p
 	if (!GetCalibrationData(device))
 	{
 		ds4_log.error("check_add_device: GetCalibrationData failed!");
-		hid_close(hidDevice);
-		device->hidDevice = nullptr;
+		device->close();
 		return;
 	}
 
@@ -553,8 +552,7 @@ void ds4_pad_handler::check_add_device(hid_device* hidDevice, std::string_view p
 	if (hid_set_nonblocking(hidDevice, 1) == -1)
 	{
 		ds4_log.error("check_add_device: hid_set_nonblocking failed! Reason: %s", hid_error(hidDevice));
-		hid_close(hidDevice);
-		device->hidDevice = nullptr;
+		device->close();
 		return;
 	}
 
@@ -790,8 +788,7 @@ PadHandlerBase::connection ds4_pad_handler::update_connection(const std::shared_
 	if (get_data(ds4_dev) == DataStatus::ReadError)
 	{
 		// this also can mean disconnected, either way deal with it on next loop and reconnect
-		hid_close(ds4_dev->hidDevice);
-		ds4_dev->hidDevice = nullptr;
+		ds4_dev->close();
 
 		return connection::no_data;
 	}

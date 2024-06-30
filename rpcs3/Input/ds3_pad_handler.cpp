@@ -519,8 +519,7 @@ PadHandlerBase::connection ds3_pad_handler::update_connection(const std::shared_
 	if (get_data(dev) == DataStatus::ReadError)
 	{
 		// this also can mean disconnected, either way deal with it on next loop and reconnect
-		hid_close(dev->hidDevice);
-		dev->hidDevice = nullptr;
+		dev->close();
 
 		return connection::no_data;
 	}
