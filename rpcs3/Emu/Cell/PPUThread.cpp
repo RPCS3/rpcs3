@@ -3506,16 +3506,30 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 
 				if (ppu.res_notify_time == (vm::reservation_acquire(notify) & -128))
 				{
+					ppu.state += cpu_flag::wait;
 					vm::reservation_notifier(notify).notify_all();
 					notified = true;
 				}
 
-				if (!notified || (addr ^ notify) & -128)
+				if (get_resrv_waiters_count(addr))
 				{
-					res.notify_all();
+					if (!notified)
+					{
+						ppu.res_notify = addr;
+						ppu.res_notify_time = rtime + 128;
+					}
+					else if ((addr ^ notify) & -128)
+					{
+						res.notify_all();
+						ppu.res_notify = 0;
+					}
+				}
+				else
+				{
+					ppu.res_notify = 0;
 				}
 
-				ppu.res_notify = 0;
+				static_cast<void>(ppu.test_stopped());
 			}
 			else
 			{
@@ -3546,7 +3560,9 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 	{
 		if (ppu.res_notify_time == (vm::reservation_acquire(notify) & -128))
 		{
+			ppu.state += cpu_flag::wait;
 			vm::reservation_notifier(notify).notify_all();
+			static_cast<void>(ppu.test_stopped());
 		}
 
 		ppu.res_notify = 0;
