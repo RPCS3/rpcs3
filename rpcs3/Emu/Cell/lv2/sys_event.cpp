@@ -521,6 +521,8 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 					continue;
 				}
 
+				ppu.state += cpu_flag::wait;
+
 				if (!atomic_storage<ppu_thread*>::load(queue->pq))
 				{
 					// Waiters queue is empty, so the thread must have been signaled

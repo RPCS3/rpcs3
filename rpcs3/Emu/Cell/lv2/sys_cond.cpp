@@ -538,6 +538,8 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 					continue;
 				}
 
+				ppu.state += cpu_flag::wait;
+
 				std::lock_guard lock(cond->mutex->mutex);
 
 				// Try to cancel the waiting

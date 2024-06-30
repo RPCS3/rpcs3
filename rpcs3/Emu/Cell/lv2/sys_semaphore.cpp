@@ -202,6 +202,8 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 					continue;
 				}
 
+				ppu.state += cpu_flag::wait;
+
 				std::lock_guard lock(sem->mutex);
 
 				if (!sem->unqueue(sem->sq, &ppu))
