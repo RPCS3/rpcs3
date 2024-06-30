@@ -204,7 +204,7 @@ skateboard_pad_handler::DataStatus skateboard_pad_handler::get_data(skateboard_d
 	if (res == -1)
 	{
 		// looks like controller disconnected or read error
-		skateboard_log.error("get_data ReadError", device->path);
+		skateboard_log.error("get_data ReadError: %s", hid_error(device->hidDevice));
 		return DataStatus::ReadError;
 	}
 
@@ -254,8 +254,7 @@ PadHandlerBase::connection skateboard_pad_handler::update_connection(const std::
 	if (get_data(skateboard_dev) == DataStatus::ReadError)
 	{
 		// this also can mean disconnected, either way deal with it on next loop and reconnect
-		hid_close(skateboard_dev->hidDevice);
-		skateboard_dev->hidDevice = nullptr;
+		skateboard_dev->close();
 
 		return connection::no_data;
 	}

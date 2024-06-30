@@ -155,8 +155,7 @@ void dualsense_pad_handler::check_add_device(hid_device* hidDevice, std::string_
 	if (!get_calibration_data(device))
 	{
 		dualsense_log.error("check_add_device: get_calibration_data failed!");
-		hid_close(hidDevice);
-		device->hidDevice = nullptr;
+		device->close();
 		return;
 	}
 
@@ -182,8 +181,7 @@ void dualsense_pad_handler::check_add_device(hid_device* hidDevice, std::string_
 	if (hid_set_nonblocking(hidDevice, 1) == -1)
 	{
 		dualsense_log.error("check_add_device: hid_set_nonblocking failed! Reason: %s", hid_error(hidDevice));
-		hid_close(hidDevice);
-		device->hidDevice = nullptr;
+		device->close();
 		return;
 	}
 
@@ -569,8 +567,7 @@ PadHandlerBase::connection dualsense_pad_handler::update_connection(const std::s
 	if (get_data(dualsense_dev) == DataStatus::ReadError)
 	{
 		// this also can mean disconnected, either way deal with it on next loop and reconnect
-		hid_close(dualsense_dev->hidDevice);
-		dualsense_dev->hidDevice = nullptr;
+		dualsense_dev->close();
 
 		return connection::no_data;
 	}
