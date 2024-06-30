@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "Core/RSXEngLock.hpp"
 #include "Core/RSXReservationLock.hpp"
-#include "Emu/Memory/vm_reservation.h"
 #include "RSXThread.h"
 
 namespace rsx

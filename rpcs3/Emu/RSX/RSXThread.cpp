@@ -19,7 +19,6 @@
 #include "Emu/Cell/lv2/sys_event.h"
 #include "Emu/Cell/lv2/sys_time.h"
 #include "Emu/Cell/Modules/cellGcmSys.h"
-#include "Emu/Memory/vm_reservation.h"
 #include "util/serialization_ext.hpp"
 #include "Overlays/overlay_perf_metrics.h"
 #include "Overlays/overlay_debug_overlay.h"
@@ -3115,19 +3114,8 @@ namespace rsx
 			}
 		}
 
-		CellGcmReportData report_data{ timestamp(), value, 0};
-
-		if (sink < label_addr || sink >= label_addr + sizeof(RsxReports::report))
-		{
-			vm::light_op<false>(vm::_ref<atomic_t<CellGcmReportData>>(sink), [&](atomic_t<CellGcmReportData>& data)
-			{
-				data.release(report_data);
-			});
-		}
-		else
-		{
-			vm::_ref<atomic_t<CellGcmReportData>>(sink).store(report_data);
-		}
+		rsx::reservation_lock<true> lock(sink, 16);
+		vm::_ref<atomic_t<CellGcmReportData>>(sink).store({timestamp(), value, 0});
 	}
 
 	u32 thread::copy_zcull_stats(u32 memory_range_start, u32 memory_range, u32 destination)
