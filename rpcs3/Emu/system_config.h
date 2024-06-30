@@ -344,7 +344,8 @@ struct cfg_root : cfg::node
 		cfg::string gdb_server{ this, "GDB Server", "127.0.0.1:2345" };
 		cfg::_bool silence_all_logs{ this, "Silence All Logs", false, true };
 		cfg::string title_format{ this, "Window Title Format", "FPS: %F | %R | %V | %T [%t]", true };
-		cfg::_bool pause_during_home_menu{this, "Pause Emulation During Home Menu", false, false };
+		cfg::_bool pause_during_home_menu{ this, "Pause Emulation During Home Menu", false, false };
+		cfg::_bool disable_zcull_write_report_optimization{ this, "Disable ZCULL Write Report Optimization", false, true };
 
 	} misc{ this };
 

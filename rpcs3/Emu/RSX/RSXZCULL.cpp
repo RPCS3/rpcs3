@@ -356,15 +356,23 @@ namespace rsx
 
 			CellGcmReportData report_data{ timestamp, value, 0 };
 
-			if (sink < label_addr || sink >= label_addr + sizeof(RsxReports::report))
+			if (!g_cfg.misc.disable_zcull_write_report_optimization)
 			{
-				vm::light_op<false>(*vm::get_super_ptr<atomic_t<CellGcmReportData>>(sink), [&](atomic_t<CellGcmReportData>& data)
+				if (sink < label_addr || sink >= label_addr + sizeof(RsxReports::report))
 				{
-					data.release(report_data);
-				});
+					vm::light_op<false>(*vm::get_super_ptr<atomic_t<CellGcmReportData>>(sink), [&](atomic_t<CellGcmReportData>& data)
+					{
+						data.release(report_data);
+					});
+				}
+				else
+				{
+					vm::get_super_ptr<atomic_t<CellGcmReportData>>(sink)->store(report_data);
+				}
 			}
 			else
 			{
+				rsx::reservation_lock<true> lock(sink, 16);
 				vm::get_super_ptr<atomic_t<CellGcmReportData>>(sink)->store(report_data);
 			}
 		}
