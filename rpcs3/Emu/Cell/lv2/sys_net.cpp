@@ -1736,7 +1736,7 @@ error_code lv2_socket::abort_socket(s32 flags)
 		lv2_obj::append(ppu.get());
 	}
 
-	const u32 num_waiters = qcopy.size();
+	const u32 num_waiters = ::size32(qcopy);
 	if (num_waiters && (type == SYS_NET_SOCK_STREAM || type == SYS_NET_SOCK_DGRAM))
 	{
 		auto& nc = g_fxo->get<network_context>();

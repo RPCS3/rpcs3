@@ -6747,7 +6747,7 @@ auto FCFID()
 
 	static const auto exec = [](ppu_thread& ppu, auto&& d, auto&& b)
 	{
-		f64 r = std::bit_cast<s64>(b);
+		f64 r = static_cast<f64>(std::bit_cast<s64>(b));
 		d = r;
 		ppu_set_fpcc<Flags...>(ppu, r, 0.);
 	};
