@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "Core/RSXEngLock.hpp"
 #include "Core/RSXReservationLock.hpp"
-#include "Emu/Memory/vm_reservation.h"
 #include "RSXThread.h"
 
 namespace rsx
@@ -352,21 +351,9 @@ namespace rsx
 				break;
 			}
 
-			const u32 label_addr = rsx::get_current_renderer()->label_addr;
-
-			CellGcmReportData report_data{ timestamp, value, 0 };
-
-			if (sink < label_addr || sink >= label_addr + sizeof(RsxReports::report))
-			{
-				vm::light_op<false>(*vm::get_super_ptr<atomic_t<CellGcmReportData>>(sink), [&](atomic_t<CellGcmReportData>& data)
-				{
-					data.release(report_data);
-				});
-			}
-			else
-			{
-				vm::get_super_ptr<atomic_t<CellGcmReportData>>(sink)->store(report_data);
-			}
+			rsx::reservation_lock<true> lock(sink, 16);
+			auto report = vm::get_super_ptr<atomic_t<CellGcmReportData>>(sink);
+			report->store({timestamp, value, 0});
 		}
 
 		void ZCULL_control::write(queued_report_write* writer, u64 timestamp, u32 value)
