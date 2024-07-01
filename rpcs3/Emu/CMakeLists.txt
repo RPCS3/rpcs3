@@ -239,6 +239,7 @@ target_sources(rpcs3_emu PRIVATE
     Cell/Modules/cellAdec.cpp
     Cell/Modules/cellAtrac.cpp
     Cell/Modules/cellAtracMulti.cpp
+    Cell/Modules/cellAtracXdec.cpp
     Cell/Modules/cellAudio.cpp
     Cell/Modules/cellAudioOut.cpp
     Cell/Modules/cellAuthDialog.cpp

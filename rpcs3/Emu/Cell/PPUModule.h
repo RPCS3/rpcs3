@@ -168,6 +168,7 @@ public:
 	static const ppu_static_module cellAdec;
 	static const ppu_static_module cellAtrac;
 	static const ppu_static_module cellAtracMulti;
+	static const ppu_static_module cellAtracXdec;
 	static const ppu_static_module cellAudio;
 	static const ppu_static_module cellAvconfExt;
 	static const ppu_static_module cellAuthDialogUtility;
