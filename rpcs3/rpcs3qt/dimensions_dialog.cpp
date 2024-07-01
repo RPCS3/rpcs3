@@ -536,6 +536,8 @@ minifig_move_dialog::minifig_move_dialog(QWidget* parent, u8 old_index)
 
 void minifig_move_dialog::add_minifig_position(QGridLayout* grid_panel, u8 index, u8 row, u8 column, u8 old_index)
 {
+	ensure(index < figure_slots.size());
+
 	auto* vbox_panel = new QVBoxLayout();
 
 	if (figure_slots[index])
@@ -559,7 +561,7 @@ void minifig_move_dialog::add_minifig_position(QGridLayout* grid_panel, u8 index
 				m_index = index;
 				m_pad = index == 1                             ? 1 :
 			            index == 0 || index == 3 || index == 4 ? 2 :
-			                                                       3;
+			                                                     3;
 				accept();
 			});
 	}
@@ -728,8 +730,8 @@ void dimensions_dialog::move_figure(u8 pad, u8 index)
 	if (move_dlg.exec() == Accepted)
 	{
 		g_dimensionstoypad.move_figure(move_dlg.get_new_pad(), move_dlg.get_new_index(), pad, index);
-		figure_slots[move_dlg.get_new_index() - 1] = figure_slots[index];
-		m_edit_figures[move_dlg.get_new_index() - 1]->setText(m_edit_figures[index]->text());
+		figure_slots[move_dlg.get_new_index()] = figure_slots[index];
+		m_edit_figures[move_dlg.get_new_index()]->setText(m_edit_figures[index]->text());
 		figure_slots[index] = 0;
 		m_edit_figures[index]->setText(tr("None"));
 	}
