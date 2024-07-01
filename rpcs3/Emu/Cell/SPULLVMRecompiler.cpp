@@ -6271,9 +6271,9 @@ public:
 		// Presumably 1/x might result in Zero/NaN when a/x doesn't
 		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::relaxed)
 		{
-			auto full_fm_accurate = [&](const auto& a, const auto& div)
+			auto full_fm_accurate = [&](const auto& num, const auto& div)
 			{
-				const auto div_result = a / div;
+				const auto div_result = num / div;
 				const auto result_and = bitcast<u32[4]>(div_result) & 0x7fffffffu;
 				const auto result_cmp_inf = sext<s32[4]>(result_and == splat<u32[4]>(0x7F800000u));
 				const auto result_cmp_nan = sext<s32[4]>(result_and <= splat<u32[4]>(0x7F800000u));
@@ -6284,18 +6284,18 @@ public:
 			};
 
 			// FM(a, re_accurate(div))
-			if (const auto [ok_re_acc, div, one] = match_expr(b, re_accurate(match<f32[4]>(), match<f32[4]>())); ok_re_acc)
+			if (const auto [ok_re_acc, div] = match_expr(b, re_accurate(match<f32[4]>())); ok_re_acc)
 			{
 				full_fm_accurate(a, div);
-				erase_stores(one, b);
+				erase_stores(b);
 				return;
 			}
 
 			// FM(re_accurate(div), b)
-			if (const auto [ok_re_acc, div, one] = match_expr(a, re_accurate(match<f32[4]>(), match<f32[4]>())); ok_re_acc)
+			if (const auto [ok_re_acc, div] = match_expr(a, re_accurate(match<f32[4]>())); ok_re_acc)
 			{
 				full_fm_accurate(b, div);
-				erase_stores(one, a);
+				erase_stores(a);
 				return;
 			}
 		}
@@ -6599,10 +6599,10 @@ public:
 		return llvm_calli<f32[4], T, U, V>{"spu_fma", {std::forward<T>(a), std::forward<U>(b), std::forward<V>(c)}}.set_order_equality_hint(1, 1, 0);
 	}
 
-	template <typename T, typename U>
-	static llvm_calli<f32[4], T, U> re_accurate(T&& a, U&& b)
+	template <typename T>
+	static llvm_calli<f32[4], T> re_accurate(T&& a)
 	{
-		return {"spu_re_acc", {std::forward<T>(a), std::forward<U>(b)}};
+		return {"spu_re_acc", {std::forward<T>(a)}};
 	}
 
 	void FMA(spu_opcode_t op)
@@ -6621,198 +6621,159 @@ public:
 			const auto b = value<f32[4]>(ci->getOperand(1));
 			const auto c = value<f32[4]>(ci->getOperand(2));
 
-			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
-			{
-				const auto ma = sext<s32[4]>(fcmp_uno(a != fsplat<f32[4]>(0.)));
-				const auto mb = sext<s32[4]>(fcmp_uno(b != fsplat<f32[4]>(0.)));
-				const auto ca = bitcast<f32[4]>(bitcast<s32[4]>(a) & mb);
-				const auto cb = bitcast<f32[4]>(bitcast<s32[4]>(b) & ma);
-				return fma32x4(eval(ca), eval(cb), c);
-			}
-			else
-			{
-				return fma32x4(a, b, c);
-			}
+			const auto ma = sext<s32[4]>(fcmp_uno(a != fsplat<f32[4]>(0.)));
+			const auto mb = sext<s32[4]>(fcmp_uno(b != fsplat<f32[4]>(0.)));
+			const auto ca = bitcast<f32[4]>(bitcast<s32[4]>(a) & mb);
+			const auto cb = bitcast<f32[4]>(bitcast<s32[4]>(b) & ma);
+
+			return fma32x4(eval(ca), eval(cb), c);
 		});
 
 		register_intrinsic("spu_re_acc", [&](llvm::CallInst* ci)
 		{
 			const auto div = value<f32[4]>(ci->getOperand(0));
-			const auto the_one = value<f32[4]>(ci->getOperand(1));
+			const auto div_result = fsplat<f32[4]>(1.0f) / div;
 
-			const auto div_result = the_one / div;
-
-			// from ps3 hardware testing: Inf => NaN and NaN => Zero
-			const auto result_and = bitcast<u32[4]>(div_result) & 0x7fffffffu;
+			// From ps3 hardware testing: Inf => NaN and NaN => Zero, Signed Zero => Zero
+			// This results in full accuracy within 1ulp(Currently x86 seems to be rounding up?)
+			const auto result_and = bitcast<u32[4]>(div_result) & 0x7FFFFFFFu;
 			const auto result_cmp_inf = sext<s32[4]>(result_and == splat<u32[4]>(0x7F800000u));
 			const auto result_cmp_nan = sext<s32[4]>(result_and <= splat<u32[4]>(0x7F800000u));
 
+			const auto and_mask_zero = bitcast<u32[4]>(sext<s32[4]>(result_and != splat<u32[4]>(0u)));
 			const auto and_mask = bitcast<u32[4]>(result_cmp_nan) & splat<u32[4]>(0xFFFFFFFFu);
 			const auto or_mask = bitcast<u32[4]>(result_cmp_inf) & splat<u32[4]>(0xFFFFFFFu);
 
-			return bitcast<f32[4]>((bitcast<u32[4]>(div_result) & and_mask) | or_mask);
+			return bitcast<f32[4]>(((bitcast<u32[4]>(div_result) & and_mask) & and_mask_zero) | or_mask);
 		});
+
+		constexpr f32 ONEISH = std::bit_cast<f32>(std::bit_cast<u32>(1.0f) + 1);
 
 		const auto [a, b, c] = get_vrs<f32[4]>(op.ra, op.rb, op.rc);
 		static const auto MT = match<f32[4]>();
+		const auto full_expr = fma(a, b, c);
 
-		auto check_sqrt_pattern_for_float = [&](f32 float_value) -> bool
+		// eval_sqrt = x * spu_resqrt(x)
+		// eval_sqrt + (1 - (spu_resqrt(x) * eval_sqrt)) * (0.5 * eval_sqrt)
+		// FMA(FNMS(spu_resqrt(x) <*> eval_sqrt, float_value) <*> FM(0.5f, eval_sqrt), eval_sqrt)
+		if (auto [ok_fm_c, x, maybe_x] = match_expr(c, fm(MT, spu_rsqrte(MT))); ok_fm_c && x.eq(maybe_x))
 		{
-			auto match_fnms = [&](f32 float_value)
+			auto check_sqrt_pattern_for_float = [&](f32 float_value) -> bool
 			{
-				auto res = match_expr(a, fnms(MT, MT, fsplat<f32[4]>(float_value)));
-				if (std::get<0>(res))
-					return res;
-
-				return match_expr(b, fnms(MT, MT, fsplat<f32[4]>(float_value)));
+				if (auto [ok_fma] = match_expr(full_expr, fma(fnms(spu_rsqrte(x), c, fsplat<f32[4]>(float_value)), fm(fsplat<f32[4]>(0.5f), c), c)); ok_fma)
+				{
+					auto [ok_final_fm, to_del] = match_expr(c, fm(x, MT));
+					ensure(ok_final_fm);
+					erase_stores(a, b, c, to_del);
+					set_vr(op.rt4, fsqrt(fabs(x)));
+					return true;
+				}
+				return false;
 			};
 
-			auto match_fm_half = [&]()
+			if (check_sqrt_pattern_for_float(1.0f))
+				return;
+
+			if (check_sqrt_pattern_for_float(ONEISH))
+				return;
+			
+			// Generate dynamic pattern for when floats are unknown because of scope
+			if (auto [ok_fma, fnms_float, fm_float] = match_expr(full_expr, fma(fnms(spu_rsqrte(x), c, MT), fm(MT, c), c)); ok_fma)
 			{
-				auto res = match_expr(a, fm(MT, fsplat<f32[4]>(0.5)));
-				if (std::get<0>(res))
-					return res;
+				erase_stores(a, b, c);
+				const auto bitcast_float = bitcast<u32[4]>(fnms_float);
+				set_vr(op.rt4, select(fcmp_uno(fm_float == fsplat<f32[4]>(0.5f)) & (bitcast_float == splat<u32[4]>(0x3F800000) | bitcast_float == splat<u32[4]>(0x3F800001)), fsqrt(fabs(x)), fma(fnms(spu_rsqrte(x), c, fnms_float), fm(fm_float, fm(x, spu_rsqrte(x))), fm(x, spu_rsqrte(x)))));
+				return;
+			}
+		}
 
-				res = match_expr(a, fm(fsplat<f32[4]>(0.5), MT));
-				if (std::get<0>(res))
-					return res;
-
-				res = match_expr(b, fm(MT, fsplat<f32[4]>(0.5)));
-				if (std::get<0>(res))
-					return res;
-
-				return match_expr(b, fm(fsplat<f32[4]>(0.5), MT));
+		if (auto [ok_c, x] = match_expr(c, spu_rsqrte(MT)); ok_c)
+		{
+			auto check_accurate_resqrt_for_float = [&](f32 float_value) -> bool
+			{
+				if (auto [ok_fma] = match_expr(full_expr, fma(fnms(fm(c, c), x, fsplat<f32[4]>(float_value)), fm(fsplat<f32[4]>(0.5f), c), c)); ok_fma)
+				{
+					erase_stores(a, b, c);
+					set_vr(op.rt4, fsplat<f32[4]>(1.0f)/fsqrt(fabs(x)));
+					return true;
+				}
+				return false;
 			};
 
+			if (check_accurate_resqrt_for_float(1.0f))
+				return;
 
-			if (auto [ok_fnma, a1, b1] = match_fnms(float_value); ok_fnma)
+			if (check_accurate_resqrt_for_float(ONEISH))
+				return;
+
+			// Generate dynamic pattern for when floats are unknown because of scope
+			if (auto [ok_fma, fnms_float, fm_float] = match_expr(full_expr, fma(fnms(fm(c, c), x, MT), fm(MT, c),c)); ok_fma)
 			{
-				if (auto [ok_fm2, fm_half_mul] = match_fm_half(); ok_fm2 && fm_half_mul.eq(b1))
-				{
-					if (fm_half_mul.eq(b1))
-					{
-						if (auto [ok_fm1, a3, b3] = match_expr(c, fm(MT, MT)); ok_fm1 && a3.eq(a1))
-						{
-							if (auto [ok_sqrte, src] = match_expr(a3, spu_rsqrte(MT)); ok_sqrte && src.eq(b3))
-							{
-								erase_stores(a, b, c, a3);
-								set_vr(op.rt4, fsqrt(fabs(src)));
-								return true;
-							}	
-						}
-						else if (auto [ok_fm1, a3, b3] = match_expr(c, fm(MT, MT)); ok_fm1 && b3.eq(a1))
-						{
-							if (auto [ok_sqrte, src] = match_expr(b3, spu_rsqrte(MT)); ok_sqrte && src.eq(a3))
-							{
-								erase_stores(a, b, c, b3);
-								set_vr(op.rt4, fsqrt(fabs(src)));
-								return true;
-							}	
-						}
-					}
-					else if (fm_half_mul.eq(a1))
-					{
-						if (auto [ok_fm1, a3, b3] = match_expr(c, fm(MT, MT)); ok_fm1 && a3.eq(b1))
-						{
-							if (auto [ok_sqrte, src] = match_expr(a3, spu_rsqrte(MT)); ok_sqrte && src.eq(b3))
-							{
-								erase_stores(a, b, c, a3);
-								set_vr(op.rt4, fsqrt(fabs(src)));
-								return true;
-							}	
-						}
-						else if (auto [ok_fm1, a3, b3] = match_expr(c, fm(MT, MT)); ok_fm1 && b3.eq(b1))
-						{
-							if (auto [ok_sqrte, src] = match_expr(b3, spu_rsqrte(MT)); ok_sqrte && src.eq(a3))
-							{
-								erase_stores(a, b, c, b3);
-								set_vr(op.rt4, fsqrt(fabs(src)));
-								return true;
-							}	
-						}
-					}
-				}
+				erase_stores(a, b, c);
+				const auto bitcast_float = bitcast<u32[4]>(fnms_float);
+				set_vr(op.rt4, select(fcmp_uno(fm_float == fsplat<f32[4]>(0.5f)) & (bitcast_float == splat<u32[4]>(0x3F800000) | bitcast_float == splat<u32[4]>(0x3F800001)), fsplat<f32[4]>(1.0f)/fsqrt(fabs(x)), fma(fnms(fm(spu_rsqrte(x), spu_rsqrte(x)), x, fnms_float), fm(fm_float, spu_rsqrte(x)), spu_rsqrte(x))));
+				return;
 			}
+		}
 
-			return false;
-		};
-
-		if (check_sqrt_pattern_for_float(1.0f))
-			return;
-
-		if (check_sqrt_pattern_for_float(std::bit_cast<f32>(std::bit_cast<u32>(1.0f) + 1)))
-			return;
-
-		auto check_accurate_reciprocal_pattern_for_float = [&](f32 float_value) -> bool
+		// Full reciprocal patterns
+		// FMA(FNMS(div <*> spu_re(div), float_value) <*> spu_re(div), spu_re(div))
+		if (auto [ok_c, div] = match_expr(c, spu_re(MT)); ok_c)
 		{
-			// FMA(FNMS(div, spu_re(div), float_value), spu_re(div), spu_re(div))
-			if (auto [ok_fnms, div] = match_expr(a, fnms(MT, b, fsplat<f32[4]>(float_value))); ok_fnms && op.rb == op.rc)
+			auto check_accurate_reciprocal_pattern_for_float = [&](f32 float_value) -> bool
 			{
-				if (auto [ok_re] = match_expr(b, spu_re(div)); ok_re)
+				if (auto [ok_fma] = match_expr(full_expr, fma(fnms(div, c, fsplat<f32[4]>(float_value)), c, c)); ok_fma)
 				{
 					erase_stores(a, b, c);
-					set_vr(op.rt4, re_accurate(div, fsplat<f32[4]>(float_value)));
+					set_vr(op.rt4, re_accurate(div));
 					return true;
 				}
-			}
+				return false;
+			};
 
-			// FMA(FNMS(spu_re(div), div, float_value), spu_re(div), spu_re(div))
-			if (auto [ok_fnms, div] = match_expr(a, fnms(b, MT, fsplat<f32[4]>(float_value))); ok_fnms && op.rb == op.rc)
+			if (check_accurate_reciprocal_pattern_for_float(1.0f))
+				return;
+
+			if (check_accurate_reciprocal_pattern_for_float(ONEISH))
+				return;
+
+			// Generate dynamic pattern for when floats are unknown because of scope
+			if (auto [ok_fma, fnms_float] = match_expr(full_expr, fma(fnms(div, c, MT), c, c)); ok_fma)
 			{
-				if (auto [ok_re] = match_expr(b, spu_re(div)); ok_re)
-				{
-					erase_stores(a, b, c);
-					set_vr(op.rt4, re_accurate(div, fsplat<f32[4]>(float_value)));
-					return true;
-				}
+				erase_stores(a, b, c);
+				const auto bitcast_float = bitcast<u32[4]>(fnms_float);
+				set_vr(op.rt4, select(bitcast_float == splat<u32[4]>(0x3F800000) | bitcast_float == splat<u32[4]>(0x3F800001), re_accurate(div), fma(fnms(spu_re(div), div, fnms_float), spu_re(div), spu_re(div))));
+				return;
 			}
+		}
 
-			// FMA(spu_re(div), FNMS(div, spu_re(div), float_value), spu_re(div))
-			if (auto [ok_fnms, div] = match_expr(b, fnms(MT, a, fsplat<f32[4]>(float_value))); ok_fnms && op.ra == op.rc)
-			{
-				if (auto [ok_re] = match_expr(a, spu_re(div)); ok_re)
-				{
-					erase_stores(a, b, c);
-					set_vr(op.rt4, re_accurate(div, fsplat<f32[4]>(float_value)));
-					return true;
-				}
-			}
-
-			// FMA(spu_re(div), FNMS(spu_re(div), div, float_value), spu_re(div))
-			if (auto [ok_fnms, div] = match_expr(b, fnms(a, MT, fsplat<f32[4]>(float_value))); ok_fnms && op.ra == op.rc)
-			{
-				if (auto [ok_re] = match_expr(a, spu_re(div)); ok_re)
-				{
-					erase_stores(a, b, c);
-					set_vr(op.rt4, re_accurate(div, fsplat<f32[4]>(float_value)));
-					return true;
-				}
-			}
-
-			return false;
-		};
-
-		if (check_accurate_reciprocal_pattern_for_float(1.0f))
-			return;
-
-		if (check_accurate_reciprocal_pattern_for_float(std::bit_cast<f32>(std::bit_cast<u32>(1.0f) + 1)))
-			return;
-
-		// NFS Most Wanted doesn't like this
 		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::relaxed)
 		{
-			// Those patterns are not safe vs non optimization as inaccuracy from spu_re will spread with early fm before the accuracy is improved
-
 			// Match division (fast)
-			// FMA(FNMS(fm(diva<*> spu_re(divb)), divb, diva), spu_re(divb), fm(diva<*> spu_re(divb)))
+			// FMA(FNMS(fm(diva <*> spu_re(divb)), divb, diva), spu_re(divb), fm(diva <*> spu_re(divb)))
+			// NFS: Most Wanted doesn't like this pattern
+
+			auto full_fast_div = [&](const auto& diva, const auto& divb)
+			{
+				const auto div_result = diva / divb;
+				const auto result_and = bitcast<u32[4]>(div_result) & 0x7FFFFFFFu;
+				const auto result_cmp_inf = sext<s32[4]>(result_and == splat<u32[4]>(0x7F800000u));
+				const auto result_cmp_nan = sext<s32[4]>(result_and <= splat<u32[4]>(0x7F800000u));
+				const auto and_mask_zero = bitcast<u32[4]>(sext<s32[4]>(result_and != splat<u32[4]>(0u)));
+				const auto and_mask = bitcast<u32[4]>(result_cmp_nan) & splat<u32[4]>(0xFFFFFFFFu);
+				const auto or_mask = bitcast<u32[4]>(result_cmp_inf) & splat<u32[4]>(0xFFFFFFFu);
+				const auto final_result = bitcast<f32[4]>(((bitcast<u32[4]>(div_result) & and_mask) & and_mask_zero) | or_mask);
+				set_vr(op.rt4, final_result);
+			};
+
 			if (auto [ok_fnma, divb, diva] = match_expr(a, fnms(c, MT, MT)); ok_fnma)
 			{
 				if (auto [ok_fm, fm1, fm2] = match_expr(c, fm(MT, MT)); ok_fm && ((fm1.eq(diva) && fm2.eq(b)) || (fm1.eq(b) && fm2.eq(diva))))
 				{
 					if (auto [ok_re] = match_expr(b, spu_re(divb)); ok_re)
 					{
-						erase_stores(b, c);
-						set_vr(op.rt4, diva / divb);
+						erase_stores(a, b, c);
+						full_fast_div(diva, divb);
 						return;
 					}
 				}
@@ -6825,8 +6786,8 @@ public:
 				{
 					if (auto [ok_re] = match_expr(a, spu_re(divb)); ok_re)
 					{
-						erase_stores(a, c);
-						set_vr(op.rt4, diva / divb);
+						erase_stores(a, b, c);
+						full_fast_div(diva, divb);
 						return;
 					}
 				}
@@ -6840,18 +6801,28 @@ public:
 		{
 			spu_log.todo("[%s:0x%05x] Unmatched spu_re(a) found in FMA", m_hash, m_pos);
 		}
-
-		if (auto [ok_re, mystery] = match_expr(b, spu_re(MT)); ok_re)
+		else if (auto [ok_re, mystery] = match_expr(b, spu_re(MT)); ok_re)
 		{
 			spu_log.todo("[%s:0x%05x] Unmatched spu_re(b) found in FMA", m_hash, m_pos);
 		}
-
-		if (auto [ok_resq, mystery] = match_expr(c, spu_rsqrte(MT)); ok_resq)
+		else if (auto [ok_re, mystery] = match_expr(c, spu_re(MT)); ok_re)
+		{
+			spu_log.todo("[%s:0x%05x] Unmatched spu_re(c) found in FMA", m_hash, m_pos);
+		}
+		else if (auto [ok_resq, mystery] = match_expr(a, spu_rsqrte(MT)); ok_resq)
+		{
+			spu_log.todo("[%s:0x%05x] Unmatched spu_rsqrte(a) found in FMA", m_hash, m_pos);
+		}
+		else if (auto [ok_resq, mystery] = match_expr(b, spu_rsqrte(MT)); ok_resq)
+		{
+			spu_log.todo("[%s:0x%05x] Unmatched spu_rsqrte(b) found in FMA", m_hash, m_pos);
+		}
+		else if (auto [ok_resq, mystery] = match_expr(c, spu_rsqrte(MT)); ok_resq)
 		{
 			spu_log.todo("[%s:0x%05x] Unmatched spu_rsqrte(c) found in FMA", m_hash, m_pos);
 		}
 
-		set_vr(op.rt4, fma(a, b, c));
+		set_vr(op.rt4, full_expr);
 	}
 
 	template <typename T, typename U, typename V>
