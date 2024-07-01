@@ -592,17 +592,17 @@ dimensions_dialog::dimensions_dialog(QWidget* parent)
 	QGroupBox* group_figures = new QGroupBox(tr("Active Dimensions Figures:"));
 	QGridLayout* grid_group = new QGridLayout();
 
-	add_minifig_slot(grid_group, 2, 1, 0, 0);
+	add_minifig_slot(grid_group, 2, 0, 0, 0);
 	grid_group->addWidget(new QLabel(tr("")), 0, 1);
-	add_minifig_slot(grid_group, 1, 2, 0, 2);
+	add_minifig_slot(grid_group, 1, 1, 0, 2);
 	grid_group->addWidget(new QLabel(tr("")), 0, 1);
-	add_minifig_slot(grid_group, 3, 3, 0, 4);
+	add_minifig_slot(grid_group, 3, 2, 0, 4);
 
-	add_minifig_slot(grid_group, 2, 4, 1, 0);
-	add_minifig_slot(grid_group, 2, 5, 1, 1);
+	add_minifig_slot(grid_group, 2, 3, 1, 0);
+	add_minifig_slot(grid_group, 2, 4, 1, 1);
 	grid_group->addWidget(new QLabel(tr("")), 0, 1);
-	add_minifig_slot(grid_group, 3, 6, 1, 3);
-	add_minifig_slot(grid_group, 3, 7, 1, 4);
+	add_minifig_slot(grid_group, 3, 5, 1, 3);
+	add_minifig_slot(grid_group, 3, 6, 1, 4);
 
 	group_figures->setLayout(grid_group);
 	vbox_panel->addWidget(group_figures);

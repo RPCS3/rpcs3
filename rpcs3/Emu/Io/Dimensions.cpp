@@ -159,14 +159,7 @@ std::array<u8, 8> dimensions_toypad::encrypt(const u8* buf)
 
 dimensions_figure& dimensions_toypad::get_figure_by_index(u8 index)
 {
-	for (dimensions_figure& figure : m_figures)
-	{
-		if (figure.index == index + 1)
-		{
-			return figure;
-		}
-	}
-	return m_figures[0];
+	return m_figures[index];
 }
 
 void dimensions_toypad::random_uid(u8* uid_buffer)
@@ -207,7 +200,8 @@ void dimensions_toypad::query_block(u8 index, u8 page, std::array<u8, 32>& reply
 {
 	std::lock_guard lock(dimensions_mutex);
 
-	dimensions_figure& figure = get_figure_by_index(index);
+	// Index from game begins at 1 rather than 0, so minus 1 here
+	dimensions_figure& figure = get_figure_by_index(index - 1);
 
 	reply_buf[0] = 0x55;
 	reply_buf[1] = 0x12;
@@ -225,7 +219,8 @@ void dimensions_toypad::write_block(u8 index, u8 page, const u8* to_write_buf, s
 {
 	std::lock_guard lock(dimensions_mutex);
 
-	dimensions_figure& figure = get_figure_by_index(index);
+	// Index from game begins at 1 rather than 0, so minus 1 here
+	dimensions_figure& figure = get_figure_by_index(index - 1);
 
 	reply_buf[0] = 0x55;
 	reply_buf[1] = 0x02;
@@ -246,7 +241,8 @@ void dimensions_toypad::get_model(const u8* buf, u8 sequence, std::array<u8, 32>
 	const std::array<u8, 8> value = decrypt(buf);
 	const u8 index = value[0];
 	const u32 conf = read_from_ptr<be_t<u32>>(value.data(), 4);
-	dimensions_figure& figure = get_figure_by_index(index);
+	// Index from game begins at 1 rather than 0, so minus 1 here
+	dimensions_figure& figure = get_figure_by_index(index - 1);
 	std::array<u8, 8> value_to_encrypt = {};
 	// Response is the figure's id (little endian) followed by the confirmation from payload
 	write_to_ptr<le_t<u32>>(value_to_encrypt.data(), figure.id);
@@ -291,13 +287,13 @@ bool dimensions_toypad::remove_figure(u8 pad, u8 index, bool save)
 	}
 	// When a figure is removed from the toypad, respond to the game with the pad they were removed from, their index,
 	// the direction (0x01 in byte 6 for removed) and their UID
-	std::array<u8, 32> figure_change_response = {0x56, 0x0b, figure.pad, 0x00, figure.index, 0x01};
+	std::array<u8, 32> figure_change_response = {0x56, 0x0b, pad, 0x00, figure.index, 0x01};
 	std::memcpy(&figure_change_response[6], figure.data.data(), 7);
 	if (save)
 	{
 		figure.save();
+		figure.dim_file.close();
 	}
-	figure.dim_file.close();
 	figure.index = 255;
 	figure.pad = 255;
 	figure.id = 0;
@@ -395,7 +391,6 @@ void usb_device_dimensions::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoi
 	}
 	else if (endpoint == 0x01)
 	{
-		dimensions_log.error("Request: %s", fmt::buf_to_hexstring(buf, buf_size));
 		// Write endpoint, similar structure of request to the Infinity Base with a command for byte 3,
 		// sequence for byte 4, the payload after that, then a checksum for the final byte.
 		transfer->fake = true;
