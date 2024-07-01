@@ -34,7 +34,7 @@ u8 dimensions_toypad::generate_checksum(const std::array<u8, 32>& data, u32 num_
 {
 	int checksum = 0;
 	ensure(num_of_bytes <= data.size());
-	for (int i = 0; i < num_of_bytes; i++)
+	for (u8 i = 0; i < num_of_bytes; i++)
 	{
 		checksum += data[i];
 	}
@@ -289,6 +289,7 @@ bool dimensions_toypad::remove_figure(u8 pad, u8 index, bool save)
 	{
 		return false;
 	}
+	u8 old_index = index + 1;
 	if (save)
 	{
 		figure.save();
@@ -299,7 +300,7 @@ bool dimensions_toypad::remove_figure(u8 pad, u8 index, bool save)
 	figure.id = 0;
 	// When a figure is removed from the toypad, respond to the game with the pad they were removed from, their index,
 	// the direction (0x01 in byte 6 for removed) and their UID
-	std::array<u8, 32> figure_change_response = {0x56, 0x0b, pad, 0x00, index + 1, 0x01};
+	std::array<u8, 32> figure_change_response = {0x56, 0x0b, pad, 0x00, old_index, 0x01};
 	std::memcpy(&figure_change_response[6], figure.data.data(), 7);
 	figure_change_response[13] = generate_checksum(figure_change_response, 13);
 	m_figure_added_removed_responses.push(figure_change_response);
@@ -321,11 +322,6 @@ bool dimensions_toypad::move_figure(u8 pad, u8 index, u8 old_pad, u8 old_index)
 	load_figure(data, std::move(in_file), pad, index);
 
 	return true;
-}
-
-bool dimensions_toypad::has_figure_been_added_removed() const
-{
-	return !m_figure_added_removed_responses.empty();
 }
 
 std::optional<std::array<u8, 32>> dimensions_toypad::pop_added_removed_response()
