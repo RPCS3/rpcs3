@@ -2783,6 +2783,12 @@ void main_window::CreateConnects()
 		dlg->show();
 	});
 
+	connect(ui->confTopShotFearmasterAct, &QAction::triggered, this, [this]
+	{
+		emulated_pad_settings_dialog* dlg = new emulated_pad_settings_dialog(emulated_pad_settings_dialog::pad_type::topshotfearmaster, this);
+		dlg->show();
+	});
+
 	connect(ui->actionBasic_Mouse, &QAction::triggered, this, [this]
 	{
 		basic_mouse_settings_dialog* dlg = new basic_mouse_settings_dialog(this);

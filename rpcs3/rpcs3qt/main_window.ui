@@ -242,6 +242,7 @@
      <addaction name="confPSMoveDS3Act"/>
      <addaction name="confGunCon3Act"/>
      <addaction name="confTopShotEliteAct"/>
+     <addaction name="confTopShotFearmasterAct"/>
     </widget>
     <widget class="QMenu" name="menuMice">
      <property name="title">
@@ -1342,6 +1343,11 @@
   <action name="confTopShotEliteAct">
    <property name="text">
     <string>Top Shot Elite</string>
+   </property>
+  </action>
+  <action name="confTopShotFearmasterAct">
+   <property name="text">
+    <string>Top Shot Fearmaster</string>
    </property>
   </action>
   <action name="actionBasic_Mouse">

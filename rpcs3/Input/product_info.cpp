@@ -217,6 +217,17 @@ namespace input
 		}
 	},
 	{
+		product_type::top_shot_fearmaster,
+		{
+			.type = product_type::top_shot_fearmaster,
+			.class_id = CELL_PAD_FAKE_TYPE_TOP_SHOT_FEARMASTER,
+			.vendor_id = vendor_id::sony_cea,
+			.product_id = product_id::top_shot_fearmaster,
+			.pclass_profile = 0x0,
+			.capabilites = 0x0
+		}
+	},
+	{
 		product_type::udraw_gametablet,
 		{
 			.type = product_type::udraw_gametablet,
