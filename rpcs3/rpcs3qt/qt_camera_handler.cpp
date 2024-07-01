@@ -6,6 +6,11 @@
 
 #include <QMediaDevices>
 
+#if QT_CONFIG(permissions)
+#include <QGuiApplication>
+#include <QPermissions>
+#endif
+
 LOG_CHANNEL(camera_log, "Camera");
 
 qt_camera_handler::qt_camera_handler() : camera_handler_base()
@@ -179,6 +184,26 @@ void qt_camera_handler::start_camera()
 		camera_log.notice("Camera already started");
 		return;
 	}
+
+#if QT_CONFIG(permissions)
+	QCameraPermission permission;
+	switch (qApp->checkPermission(permission))
+	{
+	case Qt::PermissionStatus::Undetermined:
+		camera_log.notice("Requesting camera permission");
+		qApp->requestPermission(permission, [this]()
+		{
+			start_camera();
+		});
+		return;
+	case Qt::PermissionStatus::Denied:
+		camera_log.error("RPCS3 has no permissions to access cameras on this device.");
+		return;
+	case Qt::PermissionStatus::Granted:
+		camera_log.notice("Camera permission granted");
+		break;
+	}
+#endif
 
 	// Start camera. We will start receiving frames now.
 	m_camera->start();
