@@ -521,17 +521,17 @@ minifig_move_dialog::minifig_move_dialog(QWidget* parent, u8 old_index)
 
 	auto* grid_panel = new QGridLayout();
 
-	add_minifig_position(grid_panel, 1, 0, 0, old_index);
+	add_minifig_position(grid_panel, 0, 0, 0, old_index);
 	grid_panel->addWidget(new QLabel(tr("")), 0, 1);
-	add_minifig_position(grid_panel, 2, 0, 2, old_index);
+	add_minifig_position(grid_panel, 1, 0, 2, old_index);
 	grid_panel->addWidget(new QLabel(tr(""), this), 0, 3);
-	add_minifig_position(grid_panel, 3, 0, 4, old_index);
+	add_minifig_position(grid_panel, 2, 0, 4, old_index);
 
-	add_minifig_position(grid_panel, 4, 1, 0, old_index);
-	add_minifig_position(grid_panel, 5, 1, 1, old_index);
+	add_minifig_position(grid_panel, 3, 1, 0, old_index);
+	add_minifig_position(grid_panel, 4, 1, 1, old_index);
 	grid_panel->addWidget(new QLabel(tr("")), 1, 2);
-	add_minifig_position(grid_panel, 6, 1, 3, old_index);
-	add_minifig_position(grid_panel, 7, 1, 4, old_index);
+	add_minifig_position(grid_panel, 5, 1, 3, old_index);
+	add_minifig_position(grid_panel, 6, 1, 4, old_index);
 
 	setLayout(grid_panel);
 }
@@ -540,9 +540,9 @@ void minifig_move_dialog::add_minifig_position(QGridLayout* grid_panel, u8 index
 {
 	auto* vbox_panel = new QVBoxLayout();
 
-	if (figure_slots[index - 1])
+	if (figure_slots[index])
 	{
-		const auto found_figure = list_minifigs.find(figure_slots[index - 1].value());
+		const auto found_figure = list_minifigs.find(figure_slots[index].value());
 		if (found_figure != list_minifigs.end())
 		{
 			vbox_panel->addWidget(new QLabel(tr(found_figure->second.c_str())));
@@ -624,9 +624,9 @@ dimensions_dialog* dimensions_dialog::get_dlg(QWidget* parent)
 
 void dimensions_dialog::add_minifig_slot(QGridLayout* grid_group, u8 pad, u8 index, u8 row, u8 column)
 {
-	ensure(index - 1 < figure_slots.size());
+	ensure(index < figure_slots.size());
 
-    QVBoxLayout* vbox_layout = new QVBoxLayout();
+	QVBoxLayout* vbox_layout = new QVBoxLayout();
 
 	QHBoxLayout* hbox_name_move = new QHBoxLayout();
 	QHBoxLayout* hbox_actions = new QHBoxLayout();
@@ -636,23 +636,23 @@ void dimensions_dialog::add_minifig_slot(QGridLayout* grid_group, u8 pad, u8 ind
 	QPushButton* load_btn = new QPushButton(tr("Load"));
 	QPushButton* move_btn = new QPushButton(tr("Move"));
 
-	m_edit_figures[index - 1] = new QLineEdit();
-	m_edit_figures[index - 1]->setEnabled(false);
-	if (figure_slots[index - 1])
+	m_edit_figures[index] = new QLineEdit();
+	m_edit_figures[index]->setEnabled(false);
+	if (figure_slots[index])
 	{
-		const auto found_figure = list_minifigs.find(figure_slots[index - 1].value());
+		const auto found_figure = list_minifigs.find(figure_slots[index].value());
 		if (found_figure != list_minifigs.end())
 		{
-			m_edit_figures[index - 1]->setText(QString::fromStdString(found_figure->second));
+			m_edit_figures[index]->setText(QString::fromStdString(found_figure->second));
 		}
 		else
 		{
-			m_edit_figures[index - 1]->setText(tr("Unknown Figure"));
+			m_edit_figures[index]->setText(tr("Unknown Figure"));
 		}
 	}
 	else
 	{
-		m_edit_figures[index - 1]->setText(tr("None"));
+		m_edit_figures[index]->setText(tr("None"));
 	}
 
 	connect(clear_btn, &QAbstractButton::clicked, this, [this, pad, index]
@@ -669,39 +669,39 @@ void dimensions_dialog::add_minifig_slot(QGridLayout* grid_group, u8 pad, u8 ind
 		});
 	connect(move_btn, &QAbstractButton::clicked, this, [this, pad, index]
 		{
-			if (figure_slots[index - 1] && figure_slots[index - 1] != 0)
+			if (figure_slots[index] && figure_slots[index] != 0)
 			{
 				move_figure(pad, index);
 			}
 		});
 
-	hbox_name_move->addWidget(m_edit_figures[index - 1]);
+	hbox_name_move->addWidget(m_edit_figures[index]);
 	hbox_name_move->addWidget(move_btn);
 	hbox_actions->addWidget(clear_btn);
 	hbox_actions->addWidget(create_btn);
 	hbox_actions->addWidget(load_btn);
 
-    vbox_layout->addLayout(hbox_name_move);
-    vbox_layout->addLayout(hbox_actions);
+	vbox_layout->addLayout(hbox_name_move);
+	vbox_layout->addLayout(hbox_actions);
 
 	grid_group->addLayout(vbox_layout, row, column);
 }
 
 void dimensions_dialog::clear_figure(u8 pad, u8 index)
 {
-	ensure(index - 1 < figure_slots.size());
+	ensure(index < figure_slots.size());
 
-	if (figure_slots[index - 1])
+	if (figure_slots[index])
 	{
 		g_dimensionstoypad.remove_figure(pad, index, true);
-		figure_slots[index - 1] = 0;
-		m_edit_figures[index - 1]->setText(tr("None"));
+		figure_slots[index] = 0;
+		m_edit_figures[index]->setText(tr("None"));
 	}
 }
 
 void dimensions_dialog::create_figure(u8 pad, u8 index)
 {
-	ensure(index - 1 < figure_slots.size());
+	ensure(index < figure_slots.size());
 	minifig_creator_dialog create_dlg(this);
 	if (create_dlg.exec() == Accepted)
 	{
@@ -711,7 +711,7 @@ void dimensions_dialog::create_figure(u8 pad, u8 index)
 
 void dimensions_dialog::load_figure(u8 pad, u8 index)
 {
-	ensure(index - 1 < figure_slots.size());
+	ensure(index < figure_slots.size());
 	const QString file_path = QFileDialog::getOpenFileName(this, tr("Select Dimensions File"), s_last_figure_path, tr("Dimensions Figure (*.bin);;"));
 	if (file_path.isEmpty())
 	{
@@ -725,15 +725,15 @@ void dimensions_dialog::load_figure(u8 pad, u8 index)
 
 void dimensions_dialog::move_figure(u8 pad, u8 index)
 {
-	ensure(index - 1 < figure_slots.size());
+	ensure(index < figure_slots.size());
 	minifig_move_dialog move_dlg(this, index);
 	if (move_dlg.exec() == Accepted)
 	{
 		g_dimensionstoypad.move_figure(move_dlg.get_new_pad(), move_dlg.get_new_index(), pad, index);
-		figure_slots[move_dlg.get_new_index() - 1] = figure_slots[index - 1];
-		m_edit_figures[move_dlg.get_new_index() - 1]->setText(m_edit_figures[index - 1]->text());
-		figure_slots[index - 1] = 0;
-		m_edit_figures[index - 1]->setText(tr("None"));
+		figure_slots[move_dlg.get_new_index() - 1] = figure_slots[index];
+		m_edit_figures[move_dlg.get_new_index() - 1]->setText(m_edit_figures[index]->text());
+		figure_slots[index] = 0;
+		m_edit_figures[index]->setText(tr("None"));
 	}
 }
 
@@ -757,14 +757,14 @@ void dimensions_dialog::load_figure_path(u8 pad, u8 index, const QString& path)
 
 	u16 fig_num = g_dimensionstoypad.load_figure(data, std::move(dim_file), pad, index);
 
-	figure_slots[index - 1] = fig_num;
+	figure_slots[index] = fig_num;
 	auto name = list_minifigs.find(fig_num);
 	if (name != list_minifigs.end())
 	{
-		m_edit_figures[index - 1]->setText(QString::fromStdString(name->second));
+		m_edit_figures[index]->setText(QString::fromStdString(name->second));
 	}
 	else
 	{
-		m_edit_figures[index - 1]->setText(tr("Unknown Figure"));
+		m_edit_figures[index]->setText(tr("Unknown Figure"));
 	}
 }

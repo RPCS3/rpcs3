@@ -5,7 +5,7 @@
 #include <QDialog>
 #include <QLineEdit>
 #include <QGridLayout>
-=
+
 class minifig_creator_dialog : public QDialog
 {
 	Q_OBJECT
@@ -28,8 +28,8 @@ public:
 	u8 get_new_index() const;
 
 protected:
-	u8 m_pad;
-	u8 m_index;
+	u8 m_pad = 0;
+	u8 m_index = 0;
 
 private:
 	void add_minifig_position(QGridLayout* grid_panel, u8 index, u8 row, u8 column, u8 old_index);
