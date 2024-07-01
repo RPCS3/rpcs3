@@ -1041,6 +1041,9 @@
     <ClCompile Include="Emu\Io\TopShotElite.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Io\TopShotFearmaster.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Io\Turntable.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
@@ -2187,6 +2190,9 @@
     <ClInclude Include="Emu\Io\TopShotElite.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Io\TopShotFearmaster.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\Io\Turntable.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
@@ -2468,6 +2474,9 @@
       <Filter>Emu\Io</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Io\topshotelite_config.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\topshotfearmaster_config.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Io\usio_config.h">

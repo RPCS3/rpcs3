@@ -85,6 +85,7 @@
     <ClCompile Include="Emu\Io\RB3MidiKeyboard.cpp" />
     <ClCompile Include="Emu\Io\recording_config.cpp" />
     <ClCompile Include="Emu\Io\TopShotElite.cpp" />
+    <ClCompile Include="Emu\Io\TopShotFearmaster.cpp" />
     <ClCompile Include="Emu\Io\Turntable.cpp" />
     <ClCompile Include="Emu\Io\usio.cpp" />
     <ClCompile Include="Emu\Audio\AudioBackend.cpp" />
@@ -564,6 +565,8 @@
     <ClInclude Include="Emu\Io\recording_config.h" />
     <ClInclude Include="Emu\Io\TopShotElite.h" />
     <ClInclude Include="Emu\Io\topshotelite_config.h" />
+    <ClInclude Include="Emu\Io\TopShotFearmaster.h" />
+    <ClInclude Include="Emu\Io\topshotfearmaster_config.h" />
     <ClInclude Include="Emu\Io\Turntable.h" />
     <ClInclude Include="Emu\Io\turntable_config.h" />
     <ClInclude Include="Emu\Io\usio.h" />
