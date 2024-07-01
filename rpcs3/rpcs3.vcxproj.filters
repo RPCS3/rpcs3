@@ -101,6 +101,9 @@
     <Filter Include="Io\DS3">
       <UniqueIdentifier>{66e6027b-d3dd-4894-814c-cc4444a4c7df}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Gui\dimensions">
+      <UniqueIdentifier>{d138e7e2-861a-4078-badf-80ecb10b0d04}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Gui\infinity">
       <UniqueIdentifier>{f5fcca0d-918b-46ba-bb91-2f2f9d9ddbba}</UniqueIdentifier>
     </Filter>
@@ -576,6 +579,9 @@
     <ClCompile Include="headless_application.cpp">
       <Filter>rpcs3</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\dimensions_dialog.cpp">
+      <Filter>Gui\dimensions</Filter>
+    </ClCompile>
     <ClCompile Include="rpcs3qt\infinity_dialog.cpp">
       <Filter>Gui\infinity</Filter>
     </ClCompile>
@@ -679,6 +685,12 @@
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_screenshot_preview.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_dimensions_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_dimensions_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_infinity_dialog.cpp">
@@ -1446,6 +1458,9 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\screenshot_preview.h">
       <Filter>Gui\screenshot manager</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\dimensions_dialog.h">
+      <Filter>Gui\dimensions</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\infinity_dialog.h">
       <Filter>Gui\infinity</Filter>
