@@ -159,7 +159,7 @@ std::array<u8, 8> dimensions_toypad::encrypt(const u8* buf)
 
 dimensions_figure& dimensions_toypad::get_figure_by_index(u8 index)
 {
-	return m_figures[index];
+	return ::at32(m_figures, index);
 }
 
 void dimensions_toypad::random_uid(u8* uid_buffer)
