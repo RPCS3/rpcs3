@@ -391,16 +391,14 @@ minifig_creator_dialog::minifig_creator_dialog(QWidget* parent)
 	QStringList filterlist;
 	u32 first_entry = 0;
 
-	for (const auto& entry : list_minifigs)
+	for (const auto& [figure, figure_name] : list_minifigs)
 	{
-		const auto figure = entry.first;
+		const QString name = QString::fromStdString(figure_name);
+		combo_figlist->addItem(name, QVariant(figure));
+		filterlist << name;
+		if (first_entry == 0)
 		{
-			combo_figlist->addItem(QString::fromStdString(entry.second), QVariant(figure));
-			filterlist << entry.second.c_str();
-			if (first_entry == 0)
-			{
-				first_entry = figure;
-			}
+			first_entry = figure;
 		}
 	}
 
@@ -559,8 +557,8 @@ void minifig_move_dialog::add_minifig_position(QGridLayout* grid_panel, u8 index
 		connect(btn_move, &QAbstractButton::clicked, this, [this, index]
 			{
 				m_index = index;
-				m_pad = index == 2                               ? 1 :
-			            (index == 1 || index == 4 || index == 5) ? 2 :
+				m_pad = index == 1                             ? 1 :
+			            index == 0 || index == 3 || index == 4 ? 2 :
 			                                                       3;
 				accept();
 			});
