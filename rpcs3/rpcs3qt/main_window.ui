@@ -282,6 +282,7 @@
     <addaction name="actionManage_Trophy_Data"/>
     <addaction name="actionManage_Skylanders_Portal"/>
     <addaction name="actionManage_Infinity_Base"/>
+    <addaction name="actionManage_Dimensions_ToyPad"/>
     <addaction name="actionManage_Cheats"/>
     <addaction name="actionManage_Game_Patches"/>
     <addaction name="actionManage_Screenshots"/>
@@ -1157,6 +1158,11 @@
   <action name="actionManage_Infinity_Base">
    <property name="text">
     <string>Infinity Base</string>
+   </property>
+  </action>
+  <action name="actionManage_Dimensions_ToyPad">
+   <property name="text">
+    <string>Dimensions Toypad</string>
    </property>
   </action>
   <action name="actionManage_Cheats">

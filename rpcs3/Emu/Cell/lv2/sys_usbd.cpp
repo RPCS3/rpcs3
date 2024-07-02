@@ -17,6 +17,7 @@
 #include "Emu/Io/usb_vfs.h"
 #include "Emu/Io/Skylander.h"
 #include "Emu/Io/Infinity.h"
+#include "Emu/Io/Dimensions.h"
 #include "Emu/Io/GHLtar.h"
 #include "Emu/Io/ghltar_config.h"
 #include "Emu/Io/guncon3_config.h"
@@ -239,6 +240,7 @@ usb_handler_thread::usb_handler_thread()
 
 	bool found_skylander = false;
 	bool found_infinity  = false;
+	bool found_dimension = false;	
 	bool found_usj       = false;
 
 	for (ssize_t index = 0; index < ndev; index++)
@@ -274,7 +276,11 @@ usb_handler_thread::usb_handler_thread()
 			found_infinity = true;
 		}
 
-		check_device(0x0E6F, 0x0241, 0x0241, "Lego Dimensions Portal");
+		if (check_device(0x0E6F, 0x0241, 0x0241, "Lego Dimensions Portal"))
+		{
+			found_dimension = true;
+		}
+
 		check_device(0x0E6F, 0x200A, 0x200A, "Kamen Rider Summonride Portal");
 
 		// Cameras
@@ -392,6 +398,12 @@ usb_handler_thread::usb_handler_thread()
 	{
 		sys_usbd.notice("Adding emulated infinity base");
 		usb_devices.push_back(std::make_shared<usb_device_infinity>(get_new_location()));
+	}
+
+	if (!found_dimension)
+	{
+		sys_usbd.notice("Adding emulated dimension toypad");
+		usb_devices.push_back(std::make_shared<usb_device_dimensions>(get_new_location()));
 	}
 
 	if (!found_usj)
