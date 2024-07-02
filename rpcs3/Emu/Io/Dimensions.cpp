@@ -12,8 +12,6 @@
 
 LOG_CHANNEL(dimensions_log, "dimensions");
 
-extern void fake_callback_transfer(UsbTransfer* transfer, u32 buf_size);
-
 dimensions_toypad g_dimensionstoypad;
 
 static constexpr std::array<u8, 16> KEY = {0x55, 0xFE, 0xF6, 0xB0, 0x62, 0xBF, 0x0B, 0x41,
@@ -357,45 +355,36 @@ void usb_device_dimensions::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoi
 {
 	ensure(buf_size == 0x20);
 
+	transfer->fake = true;
+	transfer->expected_count = buf_size;
+	transfer->expected_result = HC_CC_NOERR;
+
 	if (endpoint == 0x81)
 	{
-		// Read Endpoint, it is required to wait until there is a response to reply with
-		// otherwise the game believes that the portal is disconnected. Loop through queries
-		// in a seperate thread, then use fake transfer callback method to push the response
-		// to the list of other fake response
-		std::thread read_message([this, buf, transfer, buf_size]()
-			{
-				bool responded = false;
-				do
-				{
-					std::unique_lock lock(query_mutex);
-					std::optional<std::array<u8, 32>> response = g_dimensionstoypad.pop_added_removed_response();
-					if (response)
-					{
-						std::memcpy(buf, response.value().data(), 0x20);
-						responded = true;
-					}
-					else if (!m_queries.empty())
-					{
-						std::memcpy(buf, m_queries.front().data(), 0x20);
-						m_queries.pop();
-						responded = true;
-					}
-					lock.unlock();
-					std::this_thread::sleep_for(100ms);
-				} while (!responded);
-
-				fake_callback_transfer(transfer, buf_size);
-			});
-		read_message.detach();
+		// Read Endpoint, if a request has not been sent via the write endpoint, set expected result as
+		// EHCI_CC_HALTED so the game doesn't report the Toypad as being disconnected.
+		std::unique_lock lock(query_mutex);
+		std::optional<std::array<u8, 32>> response = g_dimensionstoypad.pop_added_removed_response();
+		if (response)
+		{
+			std::memcpy(buf, response.value().data(), 0x20);
+		}
+		else if (!m_queries.empty())
+		{
+			std::memcpy(buf, m_queries.front().data(), 0x20);
+			m_queries.pop();
+		}
+		else
+		{
+			transfer->expected_count = 0;
+			transfer->expected_result = EHCI_CC_HALTED;
+		}
+		lock.unlock();
 	}
 	else if (endpoint == 0x01)
 	{
 		// Write endpoint, similar structure of request to the Infinity Base with a command for byte 3,
 		// sequence for byte 4, the payload after that, then a checksum for the final byte.
-		transfer->fake = true;
-		transfer->expected_count = buf_size;
-		transfer->expected_result = HC_CC_NOERR;
 
 		const u8 command = buf[2];
 		const u8 sequence = buf[3];

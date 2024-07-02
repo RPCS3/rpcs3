@@ -171,20 +171,6 @@ void LIBUSB_CALL callback_transfer(struct libusb_transfer* transfer)
 	usbh.transfer_complete(transfer);
 }
 
-void fake_callback_transfer(UsbTransfer* transfer, u32 buf_size)
-{
-	transfer->fake = true;
-	transfer->expected_count = buf_size;
-	transfer->expected_result = HC_CC_NOERR;
-
-	auto& usbh = g_fxo->get<named_thread<usb_handler_thread>>();
-
-	if (!usbh.is_init)
-		return;
-
-	usbh.push_fake_transfer(transfer);
-}
-
 static void LIBUSB_CALL log_cb(libusb_context* /*ctx*/, enum libusb_log_level level, const char* str)
 {
 	if (!str)
