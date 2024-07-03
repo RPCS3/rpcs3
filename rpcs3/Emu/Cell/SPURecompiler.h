@@ -209,6 +209,7 @@ public:
 		u32 known_ones{};
 		u32 known_zeroes{};
 		u32 origin = SPU_LS_SIZE;
+		bool is_instruction = false;
 
 		bool is_const() const;
 
@@ -242,7 +243,7 @@ public:
 		void invalidate_if_created(u32 current_pc);
 
 		template <usz Count = 1>
-		static std::conditional_t<Count == 1, reg_state_t, std::array<reg_state_t, Count>> make_unknown(u32 pc) noexcept
+		static std::conditional_t<Count == 1, reg_state_t, std::array<reg_state_t, Count>> make_unknown(u32 pc, u32 current_pc = SPU_LS_SIZE) noexcept
 		{
 			if constexpr (Count == 1)
 			{
@@ -250,6 +251,7 @@ public:
 				v.tag = alloc_tag();
 				v.flag = {};
 				v.origin = pc;
+				v.is_instruction = pc == current_pc;
 				return v;
 			}
 			else
@@ -258,12 +260,14 @@ public:
 
 				for (reg_state_t& state : result)
 				{
-					state = make_unknown<1>(pc);
+					state = make_unknown<1>(pc, current_pc);
 				}
 
 				return result;
 			}
 		}
+
+		bool compare_tags(const reg_state_t& rhs) const;
 
 		static reg_state_t from_value(u32 value) noexcept;
 		static u32 alloc_tag(bool reset = false) noexcept;
