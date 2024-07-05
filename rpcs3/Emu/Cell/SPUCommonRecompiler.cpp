@@ -2805,7 +2805,7 @@ struct block_reg_info
 	}
 
 	// Evaluate registers state
-	std::array<reg_state_t, s_reg_max>& evaluate_start_state(const std::map<u32, std::unique_ptr<block_reg_info>>& map);
+	std::array<reg_state_t, s_reg_max>& evaluate_start_state(const std::map<u32, std::unique_ptr<block_reg_info>>& map, bool extensive_evaluation);
 
 	// This function creates new node if not found and links the proceeding node to the old node
 	// In a manner in which no duplicate paths are formed
@@ -4966,7 +4966,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				for (auto& [addr, block] : infos)
 				{
 					// Evaluate state for all blocks
-					block->evaluate_start_state(infos);
+					block->evaluate_start_state(infos, should_search_patterns);
 				}
 			}
 
@@ -5004,7 +5004,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				spu_log.fatal("%s", out);
 			}
 
-			true_state_walkby = &ensure(infos[bpc])->evaluate_start_state(infos);
+			true_state_walkby = &ensure(infos[bpc])->evaluate_start_state(infos, should_search_patterns);
 
 			for (reg_state_t& f : *true_state_walkby)
 			{
@@ -7971,7 +7971,7 @@ std::unique_ptr<spu_recompiler_base> spu_recompiler_base::make_fast_llvm_recompi
 	return std::make_unique<spu_fast>();
 }
 
-std::array<reg_state_t, s_reg_max>& block_reg_info::evaluate_start_state(const std::map<u32, std::unique_ptr<block_reg_info>>& map)
+std::array<reg_state_t, s_reg_max>& block_reg_info::evaluate_start_state(const std::map<u32, std::unique_ptr<block_reg_info>>& map, bool extensive_evaluation)
 {
 	if (!has_true_state)
 	{
@@ -8177,7 +8177,7 @@ std::array<reg_state_t, s_reg_max>& block_reg_info::evaluate_start_state(const s
 					// TODO: The true maximum occurence count need to depend on the amount of branching-outs passed through
 					// Currently allow 2 for short-term code and 1 for long-term code
 					const bool loop_terminator_detected = std::count(been_there.begin(), been_there.end(), prev_pc) >= (qi < 20 ? 2u : 1u);
-					const bool avoid_extensive_analysis = qi >= 25;
+					const bool avoid_extensive_analysis = qi >= (extensive_evaluation ? 22 : 16);
 
 					if (!loop_terminator_detected && !avoid_extensive_analysis)
 					{
