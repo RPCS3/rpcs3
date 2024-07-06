@@ -363,7 +363,10 @@ void pad_thread::operator()()
 			}
 		}
 
-		update_pad_states();
+		if (Emu.IsRunning())
+		{
+			update_pad_states();
+		}
 
 		m_info.now_connect = connected_devices + num_ldd_pad;
 

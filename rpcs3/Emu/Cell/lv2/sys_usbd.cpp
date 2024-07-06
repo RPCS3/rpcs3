@@ -835,10 +835,15 @@ void usb_handler_thread::disconnect_usb_device(std::shared_ptr<usb_device> dev, 
 
 void connect_usb_controller(u8 index, input::product_type type)
 {
-	bool already_connected = false;
-	auto& usbh = g_fxo->get<named_thread<usb_handler_thread>>();
+	auto usbh = g_fxo->try_get<named_thread<usb_handler_thread>>();
+	if (!usbh)
+	{
+		return;
+	}
 
-	if (const auto it = usbh.pad_to_usb.find(index); it != usbh.pad_to_usb.end())
+	bool already_connected = false;
+
+	if (const auto it = usbh->pad_to_usb.find(index); it != usbh->pad_to_usb.end())
 	{
 		if (it->second.first == type)
 		{
@@ -846,8 +851,8 @@ void connect_usb_controller(u8 index, input::product_type type)
 		}
 		else
 		{
-			usbh.disconnect_usb_device(it->second.second, true);
-			usbh.pad_to_usb.erase(it->first);
+			usbh->disconnect_usb_device(it->second.second, true);
+			usbh->pad_to_usb.erase(it->first);
 		}
 	}
 
@@ -859,9 +864,9 @@ void connect_usb_controller(u8 index, input::product_type type)
 		}
 
 		sys_usbd.success("Adding emulated GunCon3 (controller %d)", index);
-		std::shared_ptr<usb_device> dev = std::make_shared<usb_device_guncon3>(index, usbh.get_new_location());
-		usbh.connect_usb_device(dev, true);
-		usbh.pad_to_usb.emplace(index, std::pair(type, dev));
+		std::shared_ptr<usb_device> dev = std::make_shared<usb_device_guncon3>(index, usbh->get_new_location());
+		usbh->connect_usb_device(dev, true);
+		usbh->pad_to_usb.emplace(index, std::pair(type, dev));
 	}
 }
 
