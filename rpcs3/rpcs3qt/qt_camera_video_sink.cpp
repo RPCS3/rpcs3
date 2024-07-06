@@ -103,10 +103,6 @@ bool qt_camera_video_sink::present(const QVideoFrame& frame)
 
 		switch (m_format)
 		{
-		case CELL_CAMERA_JPG:
-			break;
-		case CELL_CAMERA_RGBA:
-			break;
 		case CELL_CAMERA_RAW8: // The game seems to expect BGGR
 		{
 			// Let's use a very simple algorithm to convert the image to raw BGGR
@@ -233,6 +229,8 @@ bool qt_camera_video_sink::present(const QVideoFrame& frame)
 			synchronizer.waitForFinished();
 			break;
 		}
+		case CELL_CAMERA_JPG:
+		case CELL_CAMERA_RGBA:
 		case CELL_CAMERA_RAW10:
 		case CELL_CAMERA_YUV420:
 		case CELL_CAMERA_FORMAT_UNKNOWN:
