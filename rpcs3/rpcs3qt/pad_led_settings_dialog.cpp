@@ -5,7 +5,7 @@
 #include <QPixmap>
 #include <QPainterPath>
 
-pad_led_settings_dialog::pad_led_settings_dialog(QDialog* parent, int colorR, int colorG, int colorB, bool has_rgb, bool has_player_led, bool player_led_enabled, bool has_battery, bool led_low_battery_blink, bool led_battery_indicator, int led_battery_indicator_brightness)
+pad_led_settings_dialog::pad_led_settings_dialog(QDialog* parent, int colorR, int colorG, int colorB, bool has_rgb, bool has_player_led, bool player_led_enabled, bool has_battery, bool has_battery_led, bool led_low_battery_blink, bool led_battery_indicator, int led_battery_indicator_brightness)
     : QDialog(parent)
     , ui(new Ui::pad_led_settings_dialog)
     , m_initial{colorR, colorG, colorB, player_led_enabled, led_low_battery_blink, led_battery_indicator, led_battery_indicator_brightness}
@@ -23,8 +23,8 @@ pad_led_settings_dialog::pad_led_settings_dialog(QDialog* parent, int colorR, in
 
 	ui->gb_player_led->setEnabled(has_player_led);
 	ui->gb_led_color->setEnabled(has_rgb);
-	ui->gb_battery_status->setEnabled(has_battery);
-	ui->gb_indicator_brightness->setEnabled(has_battery && has_rgb); // Let's restrict this to rgb capable devices for now
+	ui->gb_battery_status->setEnabled(has_battery && has_battery_led);
+	ui->gb_indicator_brightness->setEnabled(has_battery && has_battery_led && has_rgb); // Let's restrict this to rgb capable devices for now
 
 	connect(ui->bb_dialog_buttons, &QDialogButtonBox::clicked, [this](QAbstractButton* button)
 	{
@@ -61,8 +61,18 @@ pad_led_settings_dialog::pad_led_settings_dialog(QDialog* parent, int colorR, in
 				redraw_color_sample();
 			}
 		});
-		connect(ui->hs_indicator_brightness, &QAbstractSlider::valueChanged, this, &pad_led_settings_dialog::update_slider_label);
-		connect(ui->cb_led_indicate, &QCheckBox::toggled, this, &pad_led_settings_dialog::battery_indicator_checked);
+
+		if (ui->gb_battery_status->isEnabled())
+		{
+			connect(ui->hs_indicator_brightness, &QAbstractSlider::valueChanged, this, &pad_led_settings_dialog::update_slider_label);
+		}
+
+		if (ui->cb_led_indicate->isEnabled())
+		{
+			connect(ui->cb_led_indicate, &QCheckBox::toggled, this, &pad_led_settings_dialog::battery_indicator_checked);
+		}
+
+		battery_indicator_checked(ui->cb_led_indicate->isChecked());
 	}
 
 	// Draw color sample after showing the dialog, in order to have proper dimensions

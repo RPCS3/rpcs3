@@ -404,7 +404,7 @@ void pad_settings_dialog::InitButtons()
 		ensure(m_handler);
 		const cfg_pad& cfg = GetPlayerConfig();
 		SetPadData(0, 0, cfg.led_battery_indicator.get());
-		pad_led_settings_dialog dialog(this, cfg.colorR, cfg.colorG, cfg.colorB, m_handler->has_rgb(), m_handler->has_player_led(), cfg.player_led_enabled.get(), m_handler->has_battery(), cfg.led_low_battery_blink.get(), cfg.led_battery_indicator.get(), cfg.led_battery_indicator_brightness);
+		pad_led_settings_dialog dialog(this, cfg.colorR, cfg.colorG, cfg.colorB, m_handler->has_rgb(), m_handler->has_player_led(), cfg.player_led_enabled.get(), m_handler->has_battery(), m_handler->has_battery_led(), cfg.led_low_battery_blink.get(), cfg.led_battery_indicator.get(), cfg.led_battery_indicator_brightness);
 		connect(&dialog, &pad_led_settings_dialog::pass_led_settings, this, [this](const pad_led_settings_dialog::led_settings& settings)
 		{
 			ensure(m_handler);
@@ -1220,6 +1220,7 @@ void pad_settings_dialog::UpdateLabels(bool is_reset)
 
 		// Apply stored/default LED settings to the device
 		m_enable_led = m_handler->has_led();
+		m_enable_battery_led = m_handler->has_battery_led();
 		SetPadData(0, 0);
 
 		// Enable battery and LED group box

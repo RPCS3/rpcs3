@@ -118,6 +118,7 @@ private:
 	bool m_enable_deadzones{ false };
 	bool m_enable_led{ false };
 	bool m_enable_battery{ false };
+	bool m_enable_battery_led{ false };
 	bool m_enable_motion{ false };
 	bool m_enable_pressure_intensity_button{ true };
 
