@@ -558,7 +558,7 @@ void PadHandlerBase::get_mapping(const pad_ensemble& binding)
 
 	// Find out if special buttons are pressed (introduced by RPCS3).
 	// These buttons will have a delay of one cycle, but whatever.
-	const bool adjust_pressure = pad->get_pressure_intensity_button_active(cfg->pressure_intensity_toggle_mode.get());
+	const bool adjust_pressure = pad->get_pressure_intensity_button_active(cfg->pressure_intensity_toggle_mode.get(), pad->m_player_id);
 	const u32 pressure_intensity_deadzone = cfg->pressure_intensity_deadzone.get();
 
 	// Translate any corresponding keycodes to our normal DS3 buttons and triggers
