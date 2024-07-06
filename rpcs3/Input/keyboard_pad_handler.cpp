@@ -122,7 +122,7 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 			}
 		}
 
-		const bool adjust_pressure = pad.get_pressure_intensity_button_active(m_pressure_intensity_toggle_mode);
+		const bool adjust_pressure = pad.get_pressure_intensity_button_active(m_pressure_intensity_toggle_mode, pad.m_player_id);
 		const bool adjust_pressure_changed = pad.m_adjust_pressure_last != adjust_pressure;
 
 		if (adjust_pressure_changed)

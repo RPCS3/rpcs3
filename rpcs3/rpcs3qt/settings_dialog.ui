@@ -2980,6 +2980,13 @@
                 </widget>
                </item>
                <item>
+                <widget class="QCheckBox" name="showPressureIntensityToggleHint">
+                 <property name="text">
+                  <string>Show pressure intensity toggle hint</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QCheckBox" name="startGameFullscreen">
                  <property name="text">
                   <string>Start games in fullscreen mode</string>

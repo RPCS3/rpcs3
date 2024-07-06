@@ -65,6 +65,8 @@ private:
 		case localized_string_id::RSX_OVERLAYS_LIST_SELECT: return tr("Enter", "Enter Dialog List");
 		case localized_string_id::RSX_OVERLAYS_LIST_CANCEL: return tr("Back", "Cancel Dialog List");
 		case localized_string_id::RSX_OVERLAYS_LIST_DENY: return tr("Deny", "Deny Dialog List");
+		case localized_string_id::RSX_OVERLAYS_PRESSURE_INTENSITY_TOGGLED_OFF: return tr("Pressure intensity mode of player %0 disabled", "Pressure intensity toggled off").arg(std::forward<Args>(args)...);
+		case localized_string_id::RSX_OVERLAYS_PRESSURE_INTENSITY_TOGGLED_ON: return tr("Pressure intensity mode of player %0 enabled", "Pressure intensity toggled on").arg(std::forward<Args>(args)...);
 		case localized_string_id::CELL_GAME_ERROR_BROKEN_GAMEDATA: return tr("ERROR: Game data is corrupted. The application will continue.", "Game Error");
 		case localized_string_id::CELL_GAME_ERROR_BROKEN_HDDGAME: return tr("ERROR: HDD boot game is corrupted. The application will continue.", "Game Error");
 		case localized_string_id::CELL_GAME_ERROR_BROKEN_EXIT_GAMEDATA: return tr("ERROR: Game data is corrupted. The application will be terminated.", "Game Error");
