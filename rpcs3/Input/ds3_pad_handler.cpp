@@ -53,6 +53,7 @@ ds3_pad_handler::ds3_pad_handler()
 	b_has_motion = true;
 	b_has_deadzones = true;
 	b_has_battery = true;
+	b_has_battery_led = true;
 	b_has_led = true;
 	b_has_rgb = false;
 	b_has_player_led = true;

@@ -81,6 +81,7 @@ skateboard_pad_handler::skateboard_pad_handler()
 	b_has_rgb = false;
 	b_has_player_led = false;
 	b_has_battery = false;
+	b_has_battery_led = false;
 	b_has_pressure_intensity_button = false;
 
 	m_name_string = "Skateboard #";

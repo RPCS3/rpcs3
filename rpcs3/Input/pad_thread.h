@@ -34,6 +34,8 @@ public:
 
 	void open_home_menu();
 
+	std::map<pad_handler, std::shared_ptr<PadHandlerBase>>& get_handlers() { return m_handlers; }
+
 	static std::shared_ptr<PadHandlerBase> GetHandler(pad_handler type);
 	static void InitPadConfig(cfg_pad& cfg, pad_handler type, std::shared_ptr<PadHandlerBase>& handler);
 
