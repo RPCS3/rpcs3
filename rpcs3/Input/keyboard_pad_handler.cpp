@@ -893,17 +893,17 @@ std::string keyboard_pad_handler::native_scan_code_to_string(int native_scan_cod
 	}
 }
 
-bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, u8 player_id)
+bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 {
-	if (!pad || player_id >= g_cfg_input.player.size())
+	if (!pad || pad->m_player_id >= g_cfg_input.player.size())
 		return false;
 
-	const cfg_player* player_config = g_cfg_input.player[player_id];
+	const cfg_player* player_config = g_cfg_input.player[pad->m_player_id];
 	if (!player_config || player_config->device.to_string() != pad::keyboard_device_name)
 		return false;
 
-	m_pad_configs[player_id].from_string(player_config->config.to_string());
-	const cfg_pad* cfg = &m_pad_configs[player_id];
+	m_pad_configs[pad->m_player_id].from_string(player_config->config.to_string());
+	const cfg_pad* cfg = &m_pad_configs[pad->m_player_id];
 	if (cfg == nullptr)
 		return false;
 

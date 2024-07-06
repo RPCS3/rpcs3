@@ -131,9 +131,9 @@ bool gui_pad_thread::init()
 		cur_pad_handler->Init();
 
 		m_handler = cur_pad_handler;
-		m_pad = std::make_shared<Pad>(handler_type, CELL_PAD_STATUS_DISCONNECTED, CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_ACTUATOR, CELL_PAD_DEV_TYPE_STANDARD);
+		m_pad = std::make_shared<Pad>(handler_type, i, CELL_PAD_STATUS_DISCONNECTED, CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_ACTUATOR, CELL_PAD_DEV_TYPE_STANDARD);
 
-		if (!cur_pad_handler->bindPadToDevice(m_pad, i))
+		if (!cur_pad_handler->bindPadToDevice(m_pad))
 		{
 			gui_log.error("gui_pad_thread: Failed to bind device '%s' to handler %s.", cfg->device.to_string(), handler_type);
 		}

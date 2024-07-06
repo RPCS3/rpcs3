@@ -85,7 +85,7 @@ public:
 	void init_config(cfg_pad* cfg) override;
 	std::vector<pad_list_entry> list_devices() override;
 	connection get_next_button_press(const std::string& /*padId*/, const pad_callback& /*callback*/, const pad_fail_callback& /*fail_callback*/, bool /*get_blacklist*/ = false, const std::vector<std::string>& /*buttons*/ = {}) override { return connection::connected; }
-	bool bindPadToDevice(std::shared_ptr<Pad> pad, u8 player_id) override;
+	bool bindPadToDevice(std::shared_ptr<Pad> pad) override;
 	void process() override;
 
 	static std::string GetMouseName(const QMouseEvent* event);

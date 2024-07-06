@@ -171,7 +171,7 @@ void pad_thread::Init()
 		}
 		cur_pad_handler->Init();
 
-		m_pads[i] = std::make_shared<Pad>(handler_type, CELL_PAD_STATUS_DISCONNECTED, pad_settings[i].device_capability, pad_settings[i].device_type);
+		m_pads[i] = std::make_shared<Pad>(handler_type, i, CELL_PAD_STATUS_DISCONNECTED, pad_settings[i].device_capability, pad_settings[i].device_type);
 
 		if (pad_settings[i].is_ldd_pad)
 		{
@@ -179,11 +179,11 @@ void pad_thread::Init()
 		}
 		else
 		{
-			if (!cur_pad_handler->bindPadToDevice(m_pads[i], i))
+			if (!cur_pad_handler->bindPadToDevice(m_pads[i]))
 			{
 				// Failed to bind the device to cur_pad_handler so binds to NullPadHandler
 				input_log.error("Failed to bind device '%s' to handler %s. Falling back to NullPadHandler.", cfg->device.to_string(), handler_type);
-				nullpad->bindPadToDevice(m_pads[i], i);
+				nullpad->bindPadToDevice(m_pads[i]);
 			}
 
 			input_log.notice("Pad %d: device='%s', handler=%s, VID=0x%x, PID=0x%x, class_type=0x%x, class_profile=0x%x",

@@ -450,6 +450,7 @@ struct VibrateMotor
 struct Pad
 {
 	const pad_handler m_pad_handler;
+	const u32 m_player_id;
 
 	bool m_buffer_cleared{true};
 	u32 m_port_status{0};
@@ -466,7 +467,7 @@ struct Pad
 	bool m_pressure_intensity_toggled{}; // Whether the sensitivity is toggled on or off.
 	u8 m_pressure_intensity{127}; // 0-255
 	bool m_adjust_pressure_last{}; // only used in keyboard_pad_handler
-	bool get_pressure_intensity_button_active(bool is_toggle_mode);
+	bool get_pressure_intensity_button_active(bool is_toggle_mode, u32 player_id);
 
 	// Cable State:   0 - 1  plugged in ?
 	u8 m_cable_state{0};
@@ -515,8 +516,9 @@ struct Pad
 
 	bool is_fake_pad = false;
 
-	explicit Pad(pad_handler handler, u32 port_status, u32 device_capability, u32 device_type)
+	explicit Pad(pad_handler handler, u32 player_id, u32 port_status, u32 device_capability, u32 device_type)
 		: m_pad_handler(handler)
+		, m_player_id(player_id)
 		, m_port_status(port_status)
 		, m_device_capability(device_capability)
 		, m_device_type(device_type)

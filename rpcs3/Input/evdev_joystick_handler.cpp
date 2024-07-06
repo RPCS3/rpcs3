@@ -1242,12 +1242,12 @@ void evdev_joystick_handler::apply_pad_data(const pad_ensemble& binding)
 	SetRumble(evdev_device, force_large, force_small);
 }
 
-bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, u8 player_id)
+bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 {
-	if (!pad || player_id >= g_cfg_input.player.size())
+	if (!pad || pad->m_player_id >= g_cfg_input.player.size())
 		return false;
 
-	const cfg_player* player_config = g_cfg_input.player[player_id];
+	const cfg_player* player_config = g_cfg_input.player[pad->m_player_id];
 	if (!pad)
 		return false;
 
@@ -1255,9 +1255,9 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, u8 player
 
 	m_dev = std::make_shared<EvdevDevice>();
 
-	m_pad_configs[player_id].from_string(player_config->config.to_string());
-	m_dev->config = &m_pad_configs[player_id];
-	m_dev->player_id = player_id;
+	m_pad_configs[pad->m_player_id].from_string(player_config->config.to_string());
+	m_dev->config = &m_pad_configs[pad->m_player_id];
+	m_dev->player_id = pad->m_player_id;
 	cfg_pad* cfg = m_dev->config;
 	if (!cfg)
 		return false;
