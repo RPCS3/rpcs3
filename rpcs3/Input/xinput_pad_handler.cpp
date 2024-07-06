@@ -59,6 +59,7 @@ xinput_pad_handler::xinput_pad_handler() : PadHandlerBase(pad_handler::xinput)
 	b_has_rumble = true;
 	b_has_deadzones = true;
 	b_has_battery = true;
+	b_has_battery_led = false;
 
 	m_name_string = "XInput Pad #";
 	m_max_devices = XUSER_MAX_COUNT;

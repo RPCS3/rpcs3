@@ -85,6 +85,7 @@ dualsense_pad_handler::dualsense_pad_handler()
 	b_has_rgb = true;
 	b_has_player_led = true;
 	b_has_battery = true;
+	b_has_battery_led = true;
 
 	m_name_string = "DualSense Pad #";
 	m_max_devices = CELL_PAD_MAX_PORT_NUM;

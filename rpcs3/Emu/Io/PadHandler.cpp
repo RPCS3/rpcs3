@@ -192,61 +192,6 @@ std::tuple<u16, u16> PadHandlerBase::ConvertToSquirclePoint(u16 inX, u16 inY, u3
 	return std::tuple<u16, u16>(newX, newY);
 }
 
-std::string PadHandlerBase::name_string() const
-{
-	return m_name_string;
-}
-
-usz PadHandlerBase::max_devices() const
-{
-	return m_max_devices;
-}
-
-bool PadHandlerBase::has_config() const
-{
-	return b_has_config;
-}
-
-bool PadHandlerBase::has_rumble() const
-{
-	return b_has_rumble;
-}
-
-bool PadHandlerBase::has_motion() const
-{
-	return b_has_motion;
-}
-
-bool PadHandlerBase::has_deadzones() const
-{
-	return b_has_deadzones;
-}
-
-bool PadHandlerBase::has_led() const
-{
-	return b_has_led;
-}
-
-bool PadHandlerBase::has_rgb() const
-{
-	return b_has_rgb;
-}
-
-bool PadHandlerBase::has_player_led() const
-{
-	return b_has_player_led;
-}
-
-bool PadHandlerBase::has_battery() const
-{
-	return b_has_battery;
-}
-
-bool PadHandlerBase::has_pressure_intensity_button() const
-{
-	return b_has_pressure_intensity_button;
-}
-
 void PadHandlerBase::init_configs()
 {
 	for (u32 i = 0; i < MAX_GAMEPADS; i++)

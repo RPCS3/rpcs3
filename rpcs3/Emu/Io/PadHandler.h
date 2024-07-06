@@ -123,6 +123,7 @@ protected:
 	bool b_has_rgb = false;
 	bool b_has_player_led = false;
 	bool b_has_battery = false;
+	bool b_has_battery_led = false;
 	bool b_has_deadzones = false;
 	bool b_has_rumble = false;
 	bool b_has_motion = false;
@@ -249,17 +250,19 @@ public:
 	pad_handler m_type;
 	bool m_is_init = false;
 
-	std::string name_string() const;
-	usz max_devices() const;
-	bool has_config() const;
-	bool has_rumble() const;
-	bool has_motion() const;
-	bool has_deadzones() const;
-	bool has_led() const;
-	bool has_rgb() const;
-	bool has_player_led() const;
-	bool has_battery() const;
-	bool has_pressure_intensity_button() const;
+	std::vector<pad_ensemble>& bindings() { return m_bindings; }
+	std::string name_string() const { return m_name_string; }
+	usz max_devices() const { return m_max_devices; }
+	bool has_config() const { return b_has_config; }
+	bool has_rumble() const { return b_has_rumble; }
+	bool has_motion() const { return b_has_motion; }
+	bool has_deadzones() const { return b_has_deadzones; }
+	bool has_led() const { return b_has_led; }
+	bool has_rgb() const { return b_has_rgb; }
+	bool has_player_led() const { return b_has_player_led; }
+	bool has_battery() const { return b_has_battery; }
+	bool has_battery_led() const { return b_has_battery_led; }
+	bool has_pressure_intensity_button() const { return b_has_pressure_intensity_button; }
 
 	u16 NormalizeStickInput(u16 raw_value, s32 threshold, s32 multiplier, bool ignore_threshold = false) const;
 	void convert_stick_values(u16& x_out, u16& y_out, s32 x_in, s32 y_in, u32 deadzone, u32 anti_deadzone, u32 padsquircling) const;

@@ -170,6 +170,7 @@ sdl_pad_handler::sdl_pad_handler() : PadHandlerBase(pad_handler::sdl)
 	b_has_led = true;
 	b_has_rgb = true;
 	b_has_battery = true;
+	b_has_battery_led = true;
 
 	m_trigger_threshold = trigger_max / 2;
 	m_thumb_threshold = thumb_max / 2;
