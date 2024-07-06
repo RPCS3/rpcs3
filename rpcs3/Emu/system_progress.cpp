@@ -171,6 +171,9 @@ void progress_dialog_server::operator()()
 
 		std::shared_ptr<atomic_t<u32>> ppu_cue_refs;
 
+		std::vector<std::pair<u64, u64>> time_left_queue(1024);
+		usz time_left_queue_idx = 0;
+
 		// Update progress
 		while (!g_system_progress_stopping && thread_ctrl::state() != thread_state::aborting)
 		{
@@ -259,14 +262,40 @@ void progress_dialog_server::operator()()
 					if (of_1000 >= 2)
 					{
 						const u64 passed = (get_system_time() - start_time);
-						const u64 seconds_passed = passed / 1'000'000;
-						const u64 seconds_total = (passed / 1'000'000 * 1000 / of_1000);
-						const u64 seconds_remaining = seconds_total - seconds_passed;
-						const u64 seconds = seconds_remaining % 60;
-						const u64 minutes = (seconds_remaining / 60) % 60;
-						const u64 hours = (seconds_remaining / 3600);
+						const u64 total = utils::rational_mul<u64>(passed, 1000, of_1000);
+						const u64 remaining = total - passed;
 
-						if (seconds_passed < 4)
+						// Stabilize the result by using the maximum one from the recent history
+						// This is a very simple approach yet appears to solve most inconsistencies
+						u64 max_remaining = remaining;
+
+						for (usz i = 0; i < time_left_queue.size(); i++)
+						{
+							const auto& sample = time_left_queue[(time_left_queue.size() + time_left_queue_idx - i) % time_left_queue.size()];
+
+							const u64 sample_age = passed - sample.first;
+
+							if (passed - sample.first >= 4'000'000)
+							{
+								// Ignore old samples
+								break;
+							}
+
+							max_remaining = std::max<u64>(max_remaining, sample.second >= sample_age ? sample.second - sample_age : 0);
+						}
+
+						if (auto new_val = std::make_pair(passed, remaining); time_left_queue[time_left_queue_idx] != new_val)
+						{
+							time_left_queue_idx = (time_left_queue_idx + 1) % time_left_queue.size();
+							time_left_queue[time_left_queue_idx] = new_val;
+						}
+
+						const u64 max_seconds_remaining = max_remaining / 1'000'000;
+						const u64 seconds = max_seconds_remaining % 60;
+						const u64 minutes = (max_seconds_remaining / 60) % 60;
+						const u64 hours = (max_seconds_remaining / 3600);
+
+						if (passed < 4'000'000)
 						{
 							// Cannot rely on such small duration of time for estimation
 						}
