@@ -278,7 +278,7 @@ public:
 	// Callback called during pad_thread::ThreadFunc
 	virtual void process();
 	// Binds a Pad to a device
-	virtual bool bindPadToDevice(std::shared_ptr<Pad> pad, u8 player_id);
+	virtual bool bindPadToDevice(std::shared_ptr<Pad> pad);
 	virtual void init_config(cfg_pad* cfg) = 0;
 	virtual connection get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist, const std::vector<std::string>& buttons = {});
 	virtual void get_motion_sensors(const std::string& pad_id, const motion_callback& callback, const motion_fail_callback& fail_callback, motion_preview_values preview_values, const std::array<AnalogSensor, 4>& sensors);

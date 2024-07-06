@@ -322,7 +322,7 @@ void PadHandlerBase::get_motion_sensors(const std::string& pad_id, const motion_
 	}
 
 	// Get the current motion values
-	std::shared_ptr<Pad> pad = std::make_shared<Pad>(m_type, 0, 0, 0);
+	std::shared_ptr<Pad> pad = std::make_shared<Pad>(m_type, 0, 0, 0, 0);
 	pad->m_sensors.resize(preview_values.size(), AnalogSensor(0, 0, 0, 0, 0));
 	pad_ensemble binding{pad, device, nullptr};
 	get_extended_info(binding);
@@ -382,14 +382,14 @@ void PadHandlerBase::TranslateButtonPress(const std::shared_ptr<PadDevice>& devi
 	}
 }
 
-bool PadHandlerBase::bindPadToDevice(std::shared_ptr<Pad> pad, u8 player_id)
+bool PadHandlerBase::bindPadToDevice(std::shared_ptr<Pad> pad)
 {
-	if (!pad || player_id >= g_cfg_input.player.size())
+	if (!pad || pad->m_player_id >= g_cfg_input.player.size())
 	{
 		return false;
 	}
 
-	const cfg_player* player_config = g_cfg_input.player[player_id];
+	const cfg_player* player_config = g_cfg_input.player[pad->m_player_id];
 	if (!player_config)
 	{
 		return false;
@@ -402,9 +402,9 @@ bool PadHandlerBase::bindPadToDevice(std::shared_ptr<Pad> pad, u8 player_id)
 		return false;
 	}
 
-	m_pad_configs[player_id].from_string(player_config->config.to_string());
-	pad_device->config = &m_pad_configs[player_id];
-	pad_device->player_id = player_id;
+	m_pad_configs[pad->m_player_id].from_string(player_config->config.to_string());
+	pad_device->config = &m_pad_configs[pad->m_player_id];
+	pad_device->player_id = pad->m_player_id;
 	cfg_pad* config = pad_device->config;
 	if (config == nullptr)
 	{

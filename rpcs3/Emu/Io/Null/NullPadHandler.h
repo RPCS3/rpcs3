@@ -59,7 +59,7 @@ public:
 		return nulllist;
 	}
 
-	bool bindPadToDevice(std::shared_ptr<Pad> /*pad*/, u8 /*player_id*/) override
+	bool bindPadToDevice(std::shared_ptr<Pad> /*pad*/) override
 	{
 		return true;
 	}
