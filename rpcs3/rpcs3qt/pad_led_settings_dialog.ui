@@ -46,7 +46,7 @@
    <item>
     <widget class="QGroupBox" name="gb_player_led">
      <property name="title">
-      <string>GroupBox</string>
+      <string>Player LED</string>
      </property>
      <layout class="QVBoxLayout" name="gb_player_led_layout">
       <item>
