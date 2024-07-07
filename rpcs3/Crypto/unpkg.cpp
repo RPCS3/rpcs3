@@ -577,11 +577,11 @@ bool package_reader::read_param_sfo()
 }
 
 // TODO: maybe also check if VERSION matches
-package_error package_reader::check_target_app_version() const
+package_install_result package_reader::check_target_app_version() const
 {
 	if (!m_is_valid)
 	{
-		return package_error::other;
+		return {package_install_result::error_type::other};
 	}
 
 	const auto category       = psf::get_string(m_psf, "CATEGORY", "");
@@ -592,13 +592,13 @@ package_error package_reader::check_target_app_version() const
 	if (category != "GD")
 	{
 		// We allow anything that isn't an update for now
-		return package_error::no_error;
+		return {package_install_result::error_type::no_error};
 	}
 
 	if (title_id.empty())
 	{
 		// Let's allow packages without ID for now
-		return package_error::no_error;
+		return {package_install_result::error_type::no_error};
 	}
 
 	if (app_ver.empty())
@@ -610,7 +610,7 @@ package_error package_reader::check_target_app_version() const
 		}
 
 		// This is probably not a version dependant patch, so we may install the package
-		return package_error::no_error;
+		return {package_install_result::error_type::no_error};
 	}
 
 	const std::string sfo_path = rpcs3::utils::get_hdd0_dir() + "game/" + std::string(title_id) + "/PARAM.SFO";
@@ -621,11 +621,11 @@ package_error package_reader::check_target_app_version() const
 		{
 			// We are unable to compare anything with the target app version
 			pkg_log.error("A target app version is required (%s), but no PARAM.SFO was found for %s. (path='%s', error=%s)", target_app_ver, title_id, sfo_path, fs::g_tls_error);
-			return package_error::app_version;
+			return {package_install_result::error_type::app_version, {std::string(target_app_ver)}};
 		}
 
 		// There is nothing we need to compare, so we may install the package
-		return package_error::no_error;
+		return {package_install_result::error_type::no_error};
 	}
 
 	const auto installed_psf = psf::load_object(installed_sfo_file, sfo_path);
@@ -636,7 +636,7 @@ package_error package_reader::check_target_app_version() const
 	if (title_id != installed_title_id || installed_app_ver.empty())
 	{
 		// Let's allow this package for now
-		return package_error::no_error;
+		return {package_install_result::error_type::no_error};
 	}
 
 	std::add_pointer_t<char> ev0, ev1;
@@ -645,7 +645,7 @@ package_error package_reader::check_target_app_version() const
 	if (installed_app_ver.data() + installed_app_ver.size() != ev0)
 	{
 		pkg_log.error("Failed to convert the installed app version to double (%s)", installed_app_ver);
-		return package_error::other;
+		return {package_install_result::error_type::other};
 	}
 
 	if (target_app_ver.empty())
@@ -657,17 +657,17 @@ package_error package_reader::check_target_app_version() const
 		if (app_ver.data() + app_ver.size() != ev1)
 		{
 			pkg_log.error("Failed to convert the package's app version to double (%s)", app_ver);
-			return package_error::other;
+			return {package_install_result::error_type::other};
 		}
 
 		if (new_version >= old_version)
 		{
 			// Yay! The patch has a higher or equal version than the installed game.
-			return package_error::no_error;
+			return {package_install_result::error_type::no_error};
 		}
 
 		pkg_log.error("The new app version (%s) is smaller than the installed app version (%s)", app_ver, installed_app_ver);
-		return package_error::app_version;
+		return {package_install_result::error_type::app_version, {std::string(app_ver), std::string(installed_app_ver)}};
 	}
 
 	// Check if the installed app version matches the target app version
@@ -677,17 +677,17 @@ package_error package_reader::check_target_app_version() const
 	if (target_app_ver.data() + target_app_ver.size() != ev1)
 	{
 		pkg_log.error("Failed to convert the package's target app version to double (%s)", target_app_ver);
-		return package_error::other;
+		return {package_install_result::error_type::other};
 	}
 
 	if (target_version == old_version)
 	{
 		// Yay! This patch is for the installed game version.
-		return package_error::no_error;
+		return {package_install_result::error_type::no_error};
 	}
 
 	pkg_log.error("The installed app version (%s) does not match the target app version (%s)", installed_app_ver, target_app_ver);
-	return package_error::app_version;
+	return {package_install_result::error_type::app_version, {std::string(target_app_ver), std::string(installed_app_ver)}};
 }
 
 bool package_reader::set_install_path()
@@ -1173,9 +1173,9 @@ void package_reader::extract_worker(thread_key thread_data_key)
 	}
 }
 
-package_error package_reader::extract_data(std::deque<package_reader>& readers, std::deque<std::string>& bootable_paths)
+package_install_result package_reader::extract_data(std::deque<package_reader>& readers, std::deque<std::string>& bootable_paths)
 {
-	package_error error = package_error::no_error;
+	package_install_result::error_type error = package_install_result::error_type::no_error;
 	usz num_failures = 0;
 
 	// Set paths first in order to know if the install dir was empty before starting any installations.
@@ -1186,9 +1186,9 @@ package_error package_reader::extract_data(std::deque<package_reader>& readers, 
 
 		if (!reader.set_install_path())
 		{
-			error = package_error::other;
+			error = package_install_result::error_type::other;
 			reader.m_result = result::error; // We don't know if it's dirty yet.
-			return error;
+			return {error};
 		}
 	}
 
@@ -1197,19 +1197,19 @@ package_error package_reader::extract_data(std::deque<package_reader>& readers, 
 		// Use a seperate map for each reader. We need to check if the target app version exists for each package in sequence.
 		std::map<std::string, install_entry*> all_install_entries;
 
-		if (error != package_error::no_error || num_failures > 0)
+		if (error != package_install_result::error_type::no_error || num_failures > 0)
 		{
 			ensure(reader.m_result == result::error || reader.m_result == result::error_dirty);
-			return error;
+			return {error};
 		}
 
 		// Check if this package is allowed to be installed on top of the existing data
-		error = reader.check_target_app_version();
+		const package_install_result version_check = reader.check_target_app_version();
 
-		if (error != package_error::no_error)
+		if (version_check.error != package_install_result::error_type::no_error)
 		{
 			reader.m_result = result::error; // We don't know if it's dirty yet.
-			return error;
+			return version_check;
 		}
 
 		reader.m_result = result::started;
@@ -1217,11 +1217,11 @@ package_error package_reader::extract_data(std::deque<package_reader>& readers, 
 		// Parse the files to be installed and create all paths.
 		if (!reader.fill_data(all_install_entries))
 		{
-			error = package_error::other;
+			error = package_install_result::error_type::other;
 			// Do not return yet. We may need to clean up down below.
 		}
 
-		reader.m_num_failures = error == package_error::no_error ? 0 : 1;
+		reader.m_num_failures = error == package_install_result::error_type::no_error ? 0 : 1;
 
 		if (reader.m_num_failures == 0)
 		{
@@ -1288,12 +1288,12 @@ package_error package_reader::extract_data(std::deque<package_reader>& readers, 
 		bootable_paths.emplace_back(std::move(reader.m_bootable_file_path));
 	}
 
-	if (error == package_error::no_error && num_failures > 0)
+	if (error == package_install_result::error_type::no_error && num_failures > 0)
 	{
-		error = package_error::other;
+		error = package_install_result::error_type::other;
 	}
 
-	return error;
+	return {error};
 }
 
 void package_reader::archive_seek(const s64 new_offset, const fs::seek_mode damode)

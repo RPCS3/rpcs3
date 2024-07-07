@@ -81,8 +81,8 @@ namespace rpcs3::utils
 		named_thread worker("PKG Installer", [&]
 		{
 			std::deque<std::string> bootables;
-			const package_error error = package_reader::extract_data(reader, bootables);
-			return error == package_error::no_error;
+			const package_install_result result = package_reader::extract_data(reader, bootables);
+			return result.error == package_install_result::error_type::no_error;
 		});
 
 		// Wait for the completion

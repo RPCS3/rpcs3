@@ -297,11 +297,19 @@ public:
 	} self_info;
 };
 
-enum class package_error
+struct package_install_result
 {
-	no_error,
-	app_version,
-	other
+	enum class error_type
+	{
+		no_error,
+		app_version,
+		other
+	} error = error_type::no_error;
+	struct version
+	{
+		std::string expected;
+		std::string found;
+	} version;
 };
 
 class package_reader
@@ -344,8 +352,8 @@ public:
 	};
 
 	bool is_valid() const { return m_is_valid; }
-	package_error check_target_app_version() const;
-	static package_error extract_data(std::deque<package_reader>& readers, std::deque<std::string>& bootable_paths);
+	package_install_result check_target_app_version() const;
+	static package_install_result extract_data(std::deque<package_reader>& readers, std::deque<std::string>& bootable_paths);
 	psf::registry get_psf() const { return m_psf; }
 	result get_result() const { return m_result; };
 
