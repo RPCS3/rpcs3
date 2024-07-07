@@ -1194,8 +1194,8 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 			if (result.error == package_install_result::error_type::app_version)
 			{
 				gui_log.error("Cannot install %s.", package->path);
-				bool has_expected = !result.version.expected.empty();
-				bool has_found = !result.version.found.empty();
+				const bool has_expected = !result.version.expected.empty();
+				const bool has_found = !result.version.found.empty();
 				if (has_expected && has_found)
 				{
 					QMessageBox::warning(this, tr("Warning!"), tr("Package cannot be installed on top of the current data.\nUpdate is for version %1, but you have version %2.\n\nTried to install: %3")
