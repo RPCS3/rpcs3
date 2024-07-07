@@ -16,7 +16,7 @@ public:
 
 	cfg::string device{this, "Device", ""};
 
-	cfg::_float<10, 1000> mouse_acceleration{ this, "Mouse Acceleration", 100.0f, true };
+	cfg::_float<10.0, 1000.0> mouse_acceleration{ this, "Mouse Acceleration", 100.0f, true };
 
 	cfg::string mouse_button_1{ this, "Button 1", "Button 1", true };
 	cfg::string mouse_button_2{ this, "Button 2", "Button 2", true };

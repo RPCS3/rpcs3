@@ -212,7 +212,7 @@ namespace rsx
 			using home_menu_slider<u64, cfg::uint<Min, Max>>::home_menu_slider;
 		};
 
-		template <s32 Min, s32 Max>
+		template <f64 Min, f64 Max>
 		struct home_menu_float_slider : public home_menu_slider<f64, cfg::_float<Min, Max>>
 		{
 			using home_menu_slider<f64, cfg::_float<Min, Max>>::home_menu_slider;

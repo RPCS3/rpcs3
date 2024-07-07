@@ -165,7 +165,7 @@ namespace rsx
 				});
 			}
 
-			template <s32 Min, s32 Max>
+			template <f64 Min, f64 Max>
 			void add_float_slider(cfg::_float<Min, Max>* setting, const std::string& text, const std::string& suffix, f32 step_size, std::map<f64, std::string> special_labels = {}, s32 minimum = Min, s32 maximum = Max)
 			{
 				ensure(setting && setting->get_is_dynamic());

@@ -353,7 +353,7 @@ namespace cfg
 	};
 
 	// Float entry with custom Min/Max range.
-	template <s32 Min, s32 Max>
+	template <f64 Min, f64 Max>
 	class _float final : public _base
 	{
 		static_assert(Min < Max, "Invalid cfg::_float range");
