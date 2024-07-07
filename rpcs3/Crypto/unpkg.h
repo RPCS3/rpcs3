@@ -304,11 +304,11 @@ struct package_install_result
 		no_error,
 		app_version,
 		other
-	} error;
+	} error = error_type::no_error;
 	struct version
 	{
-		std::string_view expected;
-		std::string_view found;
+		std::string expected;
+		std::string found;
 	} version;
 };
 

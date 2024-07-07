@@ -1194,24 +1194,24 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 			if (result.error == package_install_result::error_type::app_version)
 			{
 				gui_log.error("Cannot install %s.", package->path);
-				bool hasExpected = !result.version.expected.empty();
-				bool hasFound = !result.version.expected.empty();
-				if (hasExpected && hasFound)
+				bool has_expected = !result.version.expected.empty();
+				bool has_found = !result.version.found.empty();
+				if (has_expected && has_found)
 				{
 					QMessageBox::warning(this, tr("Warning!"), tr("Package cannot be installed on top of the current data.\nUpdate is for version %1, but you have version %2.\n\nTried to install: %3")
-							.arg(QString::fromStdString(result.version.expected.data())).arg(QString::fromStdString(result.version.found.data())).arg(package->path));
+							.arg(QString::fromStdString(result.version.expected)).arg(QString::fromStdString(result.version.found)).arg(package->path));
 				}
-				else if (hasExpected)
+				else if (has_expected)
 				{
-					QMessageBox::warning(this, tr("Warning!"), tr("Package cannot be installed on top of the current data.\nUpdate is for version %1, but you don't have any data installed.\n\nTried to install: %3")
-							.arg(QString::fromStdString(result.version.expected.data())).arg(package->path));
+					QMessageBox::warning(this, tr("Warning!"), tr("Package cannot be installed on top of the current data.\nUpdate is for version %1, but you don't have any data installed.\n\nTried to install: %2")
+							.arg(QString::fromStdString(result.version.expected)).arg(package->path));
 				}
 				else
 				{
 					// probably unreachable
-					QString found = hasFound ? tr("version %1").arg(QString::fromStdString(result.version.found.data())) : tr("no data installed");
-					QMessageBox::warning(this, tr("Warning!"), tr("Package cannot be installed on top of the current data.\nUpdate is for unknown version, but you have version %2.\n\nTried to install: %3")
-							.arg(QString::fromStdString(result.version.expected.data())).arg(found).arg(package->path));
+					const QString found = has_found ? tr("version %1").arg(QString::fromStdString(result.version.found)) : tr("no data installed");
+					QMessageBox::warning(this, tr("Warning!"), tr("Package cannot be installed on top of the current data.\nUpdate is for unknown version, but you have version %1.\n\nTried to install: %2")
+							.arg(QString::fromStdString(result.version.expected)).arg(found).arg(package->path));
 				}
 			}
 			else

@@ -621,7 +621,7 @@ package_install_result package_reader::check_target_app_version() const
 		{
 			// We are unable to compare anything with the target app version
 			pkg_log.error("A target app version is required (%s), but no PARAM.SFO was found for %s. (path='%s', error=%s)", target_app_ver, title_id, sfo_path, fs::g_tls_error);
-			return {package_install_result::error_type::app_version, {target_app_ver}};
+			return {package_install_result::error_type::app_version, {std::string(target_app_ver)}};
 		}
 
 		// There is nothing we need to compare, so we may install the package
@@ -667,7 +667,7 @@ package_install_result package_reader::check_target_app_version() const
 		}
 
 		pkg_log.error("The new app version (%s) is smaller than the installed app version (%s)", app_ver, installed_app_ver);
-		return {package_install_result::error_type::app_version, {app_ver, installed_app_ver}};
+		return {package_install_result::error_type::app_version, {std::string(app_ver), std::string(installed_app_ver)}};
 	}
 
 	// Check if the installed app version matches the target app version
@@ -687,7 +687,7 @@ package_install_result package_reader::check_target_app_version() const
 	}
 
 	pkg_log.error("The installed app version (%s) does not match the target app version (%s)", installed_app_ver, target_app_ver);
-	return {package_install_result::error_type::app_version, {target_app_ver, installed_app_ver}};
+	return {package_install_result::error_type::app_version, {std::string(target_app_ver), std::string(installed_app_ver)}};
 }
 
 bool package_reader::set_install_path()
@@ -1204,7 +1204,7 @@ package_install_result package_reader::extract_data(std::deque<package_reader>& 
 		}
 
 		// Check if this package is allowed to be installed on top of the existing data
-		auto version_check = reader.check_target_app_version();
+		const package_install_result version_check = reader.check_target_app_version();
 
 		if (version_check.error != package_install_result::error_type::no_error)
 		{
