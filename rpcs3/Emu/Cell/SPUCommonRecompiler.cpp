@@ -7169,7 +7169,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		{
 			//add_pattern(false, inst_attr::ch_lop, get_pc - result.entry_point);
 
-			spu_log.success("Channel Loop Pattern Detected! (read_pc=0x%x, branch_pc=0x%x, branch_target=0x%x, 0x%x-%s)", read_pc, pattern.branch_pc, pattern.branch_target, entry_point, func_hash);
+			spu_log.error("Channel Loop Pattern Detected! Report to developers! (read_pc=0x%x, branch_pc=0x%x, branch_target=0x%x, 0x%x-%s)", read_pc, pattern.branch_pc, pattern.branch_target, entry_point, func_hash);
 		}
 	}
 
