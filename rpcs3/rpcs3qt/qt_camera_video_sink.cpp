@@ -73,6 +73,11 @@ bool qt_camera_video_sink::present(const QVideoFrame& frame)
 		{
 			image = image.mirrored(flip_horizontally, flip_vertically);
 		}
+
+		if (image.format() != QImage::Format_RGBA8888)
+		{
+			image.convertTo(QImage::Format_RGBA8888);
+		}
 	}
 
 	const u64 new_size = m_bytesize;
@@ -112,39 +117,39 @@ bool qt_camera_video_sink::present(const QVideoFrame& frame)
 
 				for (u32 y = y_begin; y < height && y < y_end; y++)
 				{
-					const QRgb* src = reinterpret_cast<const QRgb*>(image.constScanLine(y));
+					const u8* src = image.constScanLine(y);
 					const bool is_top_pixel = (y % 2) == 0;
 
 					// Split loops (roughly twice the performance by removing one condition)
 					if (is_top_pixel)
 					{
-						for (u32 x = 0; x < width; x++, dst++, src++)
+						for (u32 x = 0; x < width; x++, dst++, src += 4)
 						{
 							const bool is_left_pixel = (x % 2) == 0;
 
 							if (is_left_pixel)
 							{
-								*dst = qBlue(*src);
+								*dst = src[2]; // Blue
 							}
 							else
 							{
-								*dst = qGreen(*src);
+								*dst = src[1]; // Green
 							}
 						}
 					}
 					else
 					{
-						for (u32 x = 0; x < width; x++, dst++, src++)
+						for (u32 x = 0; x < width; x++, dst++, src += 4)
 						{
 							const bool is_left_pixel = (x % 2) == 0;
 
 							if (is_left_pixel)
 							{
-								*dst = qGreen(*src);
+								*dst = src[1]; // Green
 							}
 							else
 							{
-								*dst = qRed(*src);
+								*dst = src[0]; // Red
 							}
 						}
 					}
@@ -184,20 +189,17 @@ bool qt_camera_video_sink::present(const QVideoFrame& frame)
 
 				for (u32 y = y_begin; y < height && y < y_end; y++)
 				{
-					const QRgb* src = reinterpret_cast<const QRgb*>(image.constScanLine(y));
-					uint8_t* yuv_row_ptr = &image_buffer.data[y * yuv_pitch];
+					const u8* src = image.constScanLine(y);
+					u8* yuv_row_ptr = &image_buffer.data[y * yuv_pitch];
 
-					for (u32 x = 0; x < width - 1; x += 2)
+					for (u32 x = 0; x < width - 1; x += 2, src += 8)
 					{
-						const QRgb pixel_1 = *src++;
-						const QRgb pixel_2 = *src++;
-
-						const float r1 = qRed(pixel_1);
-						const float g1 = qGreen(pixel_1);
-						const float b1 = qBlue(pixel_1);
-						const float r2 = qRed(pixel_2);
-						const float g2 = qGreen(pixel_2);
-						const float b2 = qBlue(pixel_2);
+						const float r1 = src[0];
+						const float g1 = src[1];
+						const float b1 = src[2];
+						const float r2 = src[4];
+						const float g2 = src[5];
+						const float b2 = src[6];
 
 						const int y0 =  (0.257f * r1) + (0.504f * g1) + (0.098f * b1) +  16.0f;
 						const int u  = -(0.148f * r1) - (0.291f * g1) + (0.439f * b1) + 128.0f;
