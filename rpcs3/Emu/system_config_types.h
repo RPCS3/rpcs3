@@ -138,6 +138,7 @@ enum class fake_camera_type
 enum class move_handler
 {
 	null,
+	real,
 	fake,
 	mouse,
 	raw_mouse,

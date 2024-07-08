@@ -1150,6 +1150,7 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		switch (static_cast<move_handler>(index))
 		{
 		case move_handler::null: return tr("Null", "Move handler");
+		case move_handler::real: return tr("Real", "Move handler");
 		case move_handler::fake: return tr("Fake", "Move handler");
 		case move_handler::mouse: return tr("Mouse", "Move handler");
 		case move_handler::raw_mouse: return tr("Raw Mouse", "Move handler");

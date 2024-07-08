@@ -337,8 +337,9 @@ struct CellPadData
 	be_t<u16> button[CELL_PAD_MAX_CODES];
 };
 
+static constexpr u16 MOTION_ONE_G = 113;
 static constexpr u16 DEFAULT_MOTION_X = 512;
-static constexpr u16 DEFAULT_MOTION_Y = 399;
+static constexpr u16 DEFAULT_MOTION_Y = 399; // 512 - 113 (113 is 1G gravity)
 static constexpr u16 DEFAULT_MOTION_Z = 512;
 static constexpr u16 DEFAULT_MOTION_G = 512;
 
@@ -455,6 +456,25 @@ struct VibrateMotor
 	{}
 };
 
+struct ps_move_data
+{
+	bool external_device_connected = false;
+	u32 external_device_id = 0;
+	std::array<u8, 5> external_device_data{};
+	std::array<u8, 38> external_device_read{};  // CELL_GEM_EXTERNAL_PORT_DEVICE_INFO_SIZE
+	std::array<u8, 40> external_device_write{}; // CELL_GEM_EXTERNAL_PORT_OUTPUT_SIZE
+	bool external_device_read_requested = false;
+	bool external_device_write_requested = false;
+
+	s16 accelerometer_x = 0;
+	s16 accelerometer_y = 0;
+	s16 accelerometer_z = 0;
+	s16 gyro_x = 0;
+	s16 gyro_y = 0;
+	s16 gyro_z = 0;
+	s16 temperature = 0;
+};
+
 struct Pad
 {
 	const pad_handler m_pad_handler;
@@ -519,7 +539,6 @@ struct Pad
 	u16 m_press_R2{0};
 
 	// Except for these...0-1023
-	// ~399 on sensor y is a level non moving controller
 	u16 m_sensor_x{DEFAULT_MOTION_X};
 	u16 m_sensor_y{DEFAULT_MOTION_Y};
 	u16 m_sensor_z{DEFAULT_MOTION_Z};
@@ -529,6 +548,8 @@ struct Pad
 	CellPadData ldd_data{};
 
 	bool is_fake_pad = false;
+
+	ps_move_data move_data{};
 
 	explicit Pad(pad_handler handler, u32 player_id, u32 port_status, u32 device_capability, u32 device_type)
 		: m_pad_handler(handler)
