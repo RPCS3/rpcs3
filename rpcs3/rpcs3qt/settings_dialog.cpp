@@ -1181,7 +1181,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		for (const QCameraDevice& camera_info : QMediaDevices::videoInputs())
 		{
 			if (!camera_info.isNull())
-				ui->cameraIdBox->addItem(camera_info.description(), camera_info.id());
+			{
+				ui->cameraIdBox->addItem(camera_info.description(), QString(camera_info.id()));
+			}
 		}
 		if (const int index = ui->cameraIdBox->findData(qstr(selected_camera)); index >= 0)
 		{
