@@ -10,6 +10,7 @@ enum class pad_handler
 	ds4,
 	dualsense,
 	skateboard,
+	move,
 #ifdef _WIN32
 	xinput,
 	mm,

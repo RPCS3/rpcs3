@@ -29,6 +29,15 @@ public:
 	std::set<u64> trigger_code_right{};
 	std::array<std::set<u64>, 4> axis_code_left{};
 	std::array<std::set<u64>, 4> axis_code_right{};
+
+	struct color
+	{
+		u8 r{};
+		u8 g{};
+		u8 b{};
+	};
+	color color_override{};
+	bool color_override_active{};
 };
 
 struct pad_ensemble
@@ -150,6 +159,8 @@ protected:
 	std::unordered_map<u32, std::string> button_list;
 	std::unordered_map<u32, u16> min_button_values;
 	std::set<u32> blacklist;
+
+	std::shared_ptr<Pad> m_pad_for_pad_settings;
 
 	static std::set<u32> narrow_set(const std::set<u64>& src);
 

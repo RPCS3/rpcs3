@@ -19,6 +19,7 @@ public:
 		turntable,
 		ghltar,
 		usio,
+		gem,
 		ds3gem,
 		guncon3,
 		topshotelite,

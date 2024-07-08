@@ -279,6 +279,7 @@ public:
 		const QString dualsense_linux   = tr("The DualSense handler is recommended for official DualSense controllers.");
 		const QString dualsense_other   = tr("The DualSense handler is recommended for official DualSense controllers.");
 		const QString skateboard  = tr("The Skateboard handler is recommended for official RIDE skateboard controllers.");
+		const QString move        = tr("The PS Move handler is recommended for official PS Move controllers.");
 		const QString xinput      = tr("The XInput handler will work with Xbox controllers and many third-party PC-compatible controllers. Pressure sensitive buttons from SCP are supported when SCP's XInput1_3.dll is placed in the main RPCS3 directory. For more details, see the <a %0 href=\"https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration\">RPCS3 Wiki</a>.").arg(gui::utils::get_link_style());
 		const QString evdev       = tr("The evdev handler should work with any controller that has Linux support.<br>If your joystick is not being centered properly, read the <a %0 href=\"https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration\">RPCS3 Wiki</a> for instructions.").arg(gui::utils::get_link_style());
 		const QString mmjoy       = tr("The MMJoystick handler should work with almost any controller recognized by Windows. However, it is recommended that you use the more specific handlers if you have a controller that supports them.");

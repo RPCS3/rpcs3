@@ -247,6 +247,21 @@ PadHandlerBase::connection PadHandlerBase::get_next_button_press(const std::stri
 		return status;
 	}
 
+	if (m_type == pad_handler::move)
+	{
+		// Keep the pad cached to reduce expensive one time requests
+		if (!m_pad_for_pad_settings || m_pad_for_pad_settings->m_pad_handler != m_type)
+		{
+			const pad_preview_values preview_values{};
+			m_pad_for_pad_settings = std::make_shared<Pad>(m_type, 0, 0, 0, 0);
+			m_pad_for_pad_settings->m_sensors.resize(preview_values.size(), AnalogSensor(0, 0, 0, 0, 0));
+		}
+
+		// Get extended device ID
+		pad_ensemble binding{m_pad_for_pad_settings, device, nullptr};
+		get_extended_info(binding);
+	}
+
 	// Get the current button values
 	auto data = get_button_values(device);
 
@@ -348,14 +363,20 @@ void PadHandlerBase::get_motion_sensors(const std::string& pad_id, const motion_
 		return;
 	}
 
+	// Keep the pad cached to reduce expensive one time requests
+	if (!m_pad_for_pad_settings || m_pad_for_pad_settings->m_pad_handler != m_type)
+	{
+		m_pad_for_pad_settings = std::make_shared<Pad>(m_type, 0, 0, 0, 0);
+		m_pad_for_pad_settings->m_sensors.resize(preview_values.size(), AnalogSensor(0, 0, 0, 0, 0));
+	}
+
 	// Get the current motion values
-	std::shared_ptr<Pad> pad = std::make_shared<Pad>(m_type, 0, 0, 0, 0);
-	pad_ensemble binding{pad, device, nullptr};
+	pad_ensemble binding{m_pad_for_pad_settings, device, nullptr};
 	get_extended_info(binding);
 
 	for (usz i = 0; i < preview_values.size(); i++)
 	{
-		preview_values[i] = pad->m_sensors[i].m_value;
+		preview_values[i] = m_pad_for_pad_settings->m_sensors[i].m_value;
 	}
 
 	callback(pad_id, std::move(preview_values));

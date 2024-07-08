@@ -242,6 +242,7 @@
      <addaction name="confGHLtarAct"/>
      <addaction name="confTurntableAct"/>
      <addaction name="confUSIOAct"/>
+     <addaction name="confPSMoveAct"/>
      <addaction name="confPSMoveDS3Act"/>
      <addaction name="confGunCon3Act"/>
      <addaction name="confTopShotEliteAct"/>
@@ -261,6 +262,7 @@
     <addaction name="menuMice"/>
     <addaction name="menuEmulatedPads"/>
     <addaction name="confCamerasAct"/>
+    <addaction name="actionPS_Move_Tracker"/>
     <addaction name="confAudioAct"/>
     <addaction name="confIOAct"/>
     <addaction name="confSystemAct"/>
@@ -1388,6 +1390,16 @@
   <action name="toolsVfsDialogAct">
    <property name="text">
     <string>VFS Tool</string>
+   </property>
+  </action>
+  <action name="actionPS_Move_Tracker">
+   <property name="text">
+    <string>PS Move Tracker</string>
+   </property>
+  </action>
+  <action name="confPSMoveAct">
+   <property name="text">
+    <string>PS Move</string>
    </property>
   </action>
  </widget>

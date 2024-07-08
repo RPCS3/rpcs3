@@ -3,6 +3,7 @@
 #include "ds4_pad_handler.h"
 #include "dualsense_pad_handler.h"
 #include "skateboard_pad_handler.h"
+#include "ps_move_handler.h"
 #include "util/logs.hpp"
 #include "Utilities/Timer.h"
 #include "Emu/System.h"
@@ -77,6 +78,13 @@ void HidDevice::close()
 		hid_close(hidDevice);
 		hidDevice = nullptr;
 	}
+#ifdef _WIN32
+	if (bt_device)
+	{
+		hid_close(bt_device);
+		bt_device = nullptr;
+	}
+#endif
 }
 
 template <class Device>
@@ -185,9 +193,19 @@ void hid_pad_handler<Device>::enumerate_devices()
 				hid_log.error("Skipping enumeration of device with empty path.");
 				continue;
 			}
-			device_paths.insert(dev_info->path);
-			serials[dev_info->path] = dev_info->serial_number ? std::wstring(dev_info->serial_number) : std::wstring();
-			dev_info                = dev_info->next;
+
+			const std::string path = dev_info->path;
+			device_paths.insert(path);
+
+#ifdef _WIN32
+			// Only add serials for col01 ps move device
+			if (m_type == pad_handler::move && path.find("&Col01#") != umax)
+#endif
+			{
+				serials[path] = dev_info->serial_number ? std::wstring(dev_info->serial_number) : std::wstring();
+			}
+
+			dev_info = dev_info->next;
 		}
 		hid_free_enumeration(head);
 	}
@@ -196,6 +214,29 @@ void hid_pad_handler<Device>::enumerate_devices()
 	std::lock_guard lock(m_enumeration_mutex);
 	m_new_enumerated_devices = device_paths;
 	m_enumerated_serials = std::move(serials);
+
+#ifdef _WIN32
+	if (m_type == pad_handler::move)
+	{
+		// Windows enumerates 3 ps move devices: Col01, Col02, and Col03.
+		// We use Col01 for data and Col02 for bluetooth.
+
+		// Filter paths. We only want the Col01 paths.
+		std::set<std::string> col01_paths;
+
+		for (const std::string& path : m_new_enumerated_devices)
+		{
+			hid_log.trace("Found ps move device: %s", path);
+
+			if (path.find("&Col01#") != umax)
+			{
+				col01_paths.insert(path);
+			}
+		}
+
+		m_new_enumerated_devices = std::move(col01_paths);
+	}
+#endif
 }
 
 template <class Device>
@@ -235,8 +276,15 @@ void hid_pad_handler<Device>::update_devices()
 		if (std::any_of(m_controllers.cbegin(), m_controllers.cend(), [&path](const auto& c) { return c.second && c.second->path == path; }))
 			continue;
 
-		hid_device* dev = hid_open_path(path.c_str());
-		if (dev)
+#ifdef _WIN32
+		if (m_type == pad_handler::move)
+		{
+			check_add_device(nullptr, path, m_enumerated_serials[path]);
+			continue;
+		}
+#endif
+
+		if (hid_device* dev = hid_open_path(path.c_str()))
 		{
 			if (const hid_device_info* info = hid_get_device_info(dev))
 			{
@@ -314,3 +362,4 @@ template class hid_pad_handler<ds3_device>;
 template class hid_pad_handler<DS4Device>;
 template class hid_pad_handler<DualSenseDevice>;
 template class hid_pad_handler<skateboard_device>;
+template class hid_pad_handler<ps_move_device>;

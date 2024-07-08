@@ -313,9 +313,10 @@ void clear_pad_buffer(const std::shared_ptr<Pad>& pad)
 	pad->m_press_triangle = pad->m_press_circle = pad->m_press_cross = pad->m_press_square = 0;
 	pad->m_press_L1 = pad->m_press_L2 = pad->m_press_R1 = pad->m_press_R2 = 0;
 
-	// ~399 on sensor y is a level non moving controller
-	pad->m_sensor_y = 399;
-	pad->m_sensor_x = pad->m_sensor_z = pad->m_sensor_g = 512;
+	pad->m_sensor_x = DEFAULT_MOTION_X;
+	pad->m_sensor_y = DEFAULT_MOTION_Y;
+	pad->m_sensor_z = DEFAULT_MOTION_Z;
+	pad->m_sensor_g = DEFAULT_MOTION_G;
 }
 
 error_code cellPadClearBuf(u32 port_no)

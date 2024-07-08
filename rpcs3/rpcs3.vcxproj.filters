@@ -184,6 +184,12 @@
     <Filter Include="buildfiles\msvc">
       <UniqueIdentifier>{5cace00d-92fc-4b03-82a2-72706cd04e84}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Gui\ps_move_tracker_dialog">
+      <UniqueIdentifier>{4a270c26-740b-46e8-880c-bb22e708b897}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Io\Move">
+      <UniqueIdentifier>{f8a98f7b-dc23-47c0-8a5f-d0b76eaf0df5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -879,6 +885,15 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_camera_settings_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\ps_move_tracker_dialog.cpp">
+      <Filter>Gui\ps_move_tracker_dialog</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_ps_move_tracker_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_ps_move_tracker_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
     <ClCompile Include="rpcs3qt\shortcut_utils.cpp">
       <Filter>Gui\utils</Filter>
     </ClCompile>
@@ -1119,6 +1134,15 @@
     <ClCompile Include="rpcs3qt\vfs_tool_dialog.cpp">
       <Filter>Gui\vfs</Filter>
     </ClCompile>
+    <ClCompile Include="Input\ps_move_handler.cpp">
+      <Filter>Io\Move</Filter>
+    </ClCompile>
+    <ClCompile Include="Input\ps_move_tracker.cpp">
+      <Filter>Io\Move</Filter>
+    </ClCompile>
+    <ClCompile Include="Input\ps_move_config.cpp">
+      <Filter>Io\Move</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -1253,6 +1277,9 @@
     <ClInclude Include="QTGeneratedFiles\ui_camera_settings_dialog.h">
       <Filter>Generated Files</Filter>
     </ClInclude>
+    <ClInclude Include="QTGeneratedFiles\ui_ps_move_tracker_dialog.h">
+      <Filter>Generated Files</Filter>
+    </ClInclude>
     <ClInclude Include="rpcs3qt\shortcut_utils.h">
       <Filter>Gui\utils</Filter>
     </ClInclude>
@@ -1306,6 +1333,15 @@
     </ClInclude>
     <ClInclude Include="Input\raw_mouse_config.h">
       <Filter>Io\raw</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\ps_move_handler.h">
+      <Filter>Io\Move</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\ps_move_tracker.h">
+      <Filter>Io\Move</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\ps_move_config.h">
+      <Filter>Io\Move</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1545,6 +1581,12 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\camera_settings_dialog.h">
       <Filter>Gui\settings</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\ps_move_tracker_dialog.ui">
+      <Filter>Form Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\ps_move_tracker_dialog.h">
+      <Filter>Gui\ps_move_tracker_dialog</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\qt_music_handler.h">
       <Filter>Io\music</Filter>

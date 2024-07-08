@@ -198,6 +198,7 @@ std::shared_ptr<PadHandlerBase> gui_pad_thread::GetHandler(pad_handler type)
 	{
 	case pad_handler::null:
 	case pad_handler::keyboard:
+	case pad_handler::move:
 		// Makes no sense to use this if we are in the GUI anyway
 		return nullptr;
 	case pad_handler::ds3:

@@ -5,6 +5,7 @@
 #include "ds4_pad_handler.h"
 #include "dualsense_pad_handler.h"
 #include "skateboard_pad_handler.h"
+#include "ps_move_handler.h"
 #ifdef _WIN32
 #include "xinput_pad_handler.h"
 #include "mm_joystick_handler.h"
@@ -198,7 +199,7 @@ void pad_thread::Init()
 			}
 		}
 
-		pad->is_fake_pad = (g_cfg.io.move == move_handler::fake && i >= (static_cast<u32>(CELL_PAD_MAX_PORT_NUM) - static_cast<u32>(CELL_GEM_MAX_NUM)))
+		pad->is_fake_pad = ((g_cfg.io.move == move_handler::real || g_cfg.io.move == move_handler::fake) && i >= (static_cast<u32>(CELL_PAD_MAX_PORT_NUM) - static_cast<u32>(CELL_GEM_MAX_NUM)))
 			|| (pad->m_class_type >= CELL_PAD_FAKE_TYPE_FIRST && pad->m_class_type < CELL_PAD_FAKE_TYPE_LAST);
 		connect_usb_controller(i, input::get_product_by_vid_pid(pad->m_vendor_id, pad->m_product_id));
 	}
@@ -622,6 +623,8 @@ std::shared_ptr<PadHandlerBase> pad_thread::GetHandler(pad_handler type)
 		return std::make_shared<dualsense_pad_handler>();
 	case pad_handler::skateboard:
 		return std::make_shared<skateboard_pad_handler>();
+	case pad_handler::move:
+		return std::make_shared<ps_move_handler>();
 #ifdef _WIN32
 	case pad_handler::xinput:
 		return std::make_shared<xinput_pad_handler>();

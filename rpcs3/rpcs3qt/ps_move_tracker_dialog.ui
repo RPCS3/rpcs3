@@ -1,0 +1,393 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ps_move_tracker_dialog</class>
+ <widget class="QDialog" name="ps_move_tracker_dialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>988</width>
+    <height>710</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="windowTitle">
+   <string>Dialog</string>
+  </property>
+  <layout class="QVBoxLayout" name="main_layout" stretch="0,0">
+   <item>
+    <layout class="QHBoxLayout" name="mainLayout">
+     <item>
+      <layout class="QVBoxLayout" name="previewLayout">
+       <item>
+        <widget class="QGroupBox" name="gbPreview">
+         <property name="title">
+          <string>Preview</string>
+         </property>
+         <layout class="QVBoxLayout" name="gb_view_layout">
+          <item>
+           <widget class="QLabel" name="imageLabel">
+            <property name="minimumSize">
+             <size>
+              <width>640</width>
+              <height>480</height>
+             </size>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="gistoGb">
+            <property name="title">
+             <string>Histogram</string>
+            </property>
+            <layout class="QVBoxLayout" name="gistoGbLayout">
+             <item>
+              <widget class="QLabel" name="histogramLabel">
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>100</height>
+                </size>
+               </property>
+               <property name="text">
+                <string/>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <spacer name="verticalSpacer_2">
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+            <property name="sizeType">
+             <enum>QSizePolicy::MinimumExpanding</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QVBoxLayout" name="rightLayout">
+       <item>
+        <widget class="QGroupBox" name="settingsGb">
+         <property name="minimumSize">
+          <size>
+           <width>300</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="title">
+          <string>Settings</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_2">
+          <item>
+           <widget class="QGroupBox" name="minRadiusGb">
+            <property name="title">
+             <string>Min Radius</string>
+            </property>
+            <layout class="QVBoxLayout" name="minRadiusGbLayout">
+             <item>
+              <widget class="QSlider" name="minRadiusSlider">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="maxRadiusGb">
+            <property name="title">
+             <string>Max Radius</string>
+            </property>
+            <layout class="QVBoxLayout" name="maxRadiusGbLayout">
+             <item>
+              <widget class="QSlider" name="maxRadiusSlider">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="psMoveGb">
+            <property name="title">
+             <string>PS Move</string>
+            </property>
+            <layout class="QVBoxLayout" name="psMoveGbLayout">
+             <item>
+              <widget class="QComboBox" name="comboSelectDevice"/>
+             </item>
+             <item>
+              <widget class="QGroupBox" name="colorGb">
+               <property name="title">
+                <string>Color</string>
+               </property>
+               <layout class="QVBoxLayout" name="colorGbLayout">
+                <item>
+                 <widget class="QSlider" name="colorSliderR">
+                  <property name="maximum">
+                   <number>255</number>
+                  </property>
+                  <property name="orientation">
+                   <enum>Qt::Horizontal</enum>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QSlider" name="colorSliderG">
+                  <property name="maximum">
+                   <number>255</number>
+                  </property>
+                  <property name="orientation">
+                   <enum>Qt::Horizontal</enum>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QSlider" name="colorSliderB">
+                  <property name="maximum">
+                   <number>255</number>
+                  </property>
+                  <property name="orientation">
+                   <enum>Qt::Horizontal</enum>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
+             </item>
+             <item>
+              <widget class="QGroupBox" name="hueGb">
+               <property name="title">
+                <string>Hue</string>
+               </property>
+               <layout class="QVBoxLayout" name="hueGbLayout">
+                <item>
+                 <widget class="QSlider" name="hueSlider">
+                  <property name="maximum">
+                   <number>359</number>
+                  </property>
+                  <property name="orientation">
+                   <enum>Qt::Horizontal</enum>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
+             </item>
+             <item>
+              <widget class="QGroupBox" name="hueThresholdGb">
+               <property name="title">
+                <string>Hue Threshold</string>
+               </property>
+               <layout class="QVBoxLayout" name="hueThresholdLayout">
+                <item>
+                 <widget class="QSlider" name="hueThresholdSlider">
+                  <property name="maximum">
+                   <number>359</number>
+                  </property>
+                  <property name="orientation">
+                   <enum>Qt::Horizontal</enum>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
+             </item>
+             <item>
+              <widget class="QGroupBox" name="saturationThresholdGb">
+               <property name="title">
+                <string>Saturation Threshold</string>
+               </property>
+               <layout class="QVBoxLayout" name="saturationThresholdGbLayout">
+                <item>
+                 <widget class="QSlider" name="saturationThresholdSlider">
+                  <property name="maximum">
+                   <number>255</number>
+                  </property>
+                  <property name="orientation">
+                   <enum>Qt::Horizontal</enum>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="inputFormatGb">
+         <property name="title">
+          <string>Input Format</string>
+         </property>
+         <layout class="QVBoxLayout" name="input_format_layout">
+          <item>
+           <widget class="QComboBox" name="inputFormatCombo"/>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="viewGb">
+         <property name="title">
+          <string>View</string>
+         </property>
+         <layout class="QVBoxLayout" name="view_layout">
+          <item>
+           <widget class="QComboBox" name="viewCombo"/>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="histoSettingsGb">
+         <property name="title">
+          <string>Histogram</string>
+         </property>
+         <layout class="QVBoxLayout" name="histoSettingsGbLayout">
+          <item>
+           <widget class="QComboBox" name="histoCombo"/>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="displayGb">
+         <property name="title">
+          <string>Display</string>
+         </property>
+         <layout class="QVBoxLayout" name="filterGbLayout">
+          <item>
+           <widget class="QCheckBox" name="filterSmallContoursBox">
+            <property name="text">
+             <string>Filter Small Contours</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="freezeFrameBox">
+            <property name="text">
+             <string>Freeze Frame</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="showAllContoursBox">
+            <property name="text">
+             <string>Show All Contours</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="drawContoursBox">
+            <property name="text">
+             <string>Draw Contours</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="drawOverlaysBox">
+            <property name="text">
+             <string>Draw Overlays</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <spacer name="verticalSpacer">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::MinimumExpanding</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>0</width>
+           <height>0</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Apply|QDialogButtonBox::Close|QDialogButtonBox::Save</set>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>accepted()</signal>
+   <receiver>ps_move_tracker_dialog</receiver>
+   <slot>accept()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>248</x>
+     <y>254</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>157</x>
+     <y>274</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>rejected()</signal>
+   <receiver>ps_move_tracker_dialog</receiver>
+   <slot>reject()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>316</x>
+     <y>260</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>286</x>
+     <y>274</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>
