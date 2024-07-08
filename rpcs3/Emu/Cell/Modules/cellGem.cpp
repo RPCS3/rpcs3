@@ -22,10 +22,7 @@
 
 LOG_CHANNEL(cellGem);
 
-static inline constexpr u32 rgba(u8 r, u8 g, u8 b, u8 a)
-{
-	return ((r & 0xffu) << 24) | ((g & 0xffu) << 16) | ((b & 0xffu) << 8) | (a & 0xffu);
-}
+extern u32 get_buffer_size_by_format(s32 format, s32 width, s32 height);
 
 template <>
 void fmt_class_string<gem_btn>::format(std::string& out, u64 arg)
@@ -354,7 +351,6 @@ public:
 		}
 #endif
 		case move_handler::null:
-		default:
 			break;
 		}
 
@@ -431,6 +427,136 @@ static inline int32_t cellGemGetVideoConvertSize(s32 output_format)
 	}
 }
 
+namespace gem
+{
+	bool convert_image_format(CellCameraFormat input_format, CellGemVideoConvertFormatEnum output_format,
+	                          const std::vector<u8>& video_data_in, u32 width, u32 height,
+	                          u8* video_data_out, u32 video_data_out_size)
+	{
+		if (output_format != CELL_GEM_NO_VIDEO_OUTPUT && !video_data_out)
+		{
+			return false;
+		}
+
+		const u32 required_in_size = get_buffer_size_by_format(static_cast<s32>(input_format), width, height);
+		const s32 required_out_size = cellGemGetVideoConvertSize(output_format);
+
+		if (video_data_in.size() != required_in_size)
+		{
+			cellGem.error("convert: in_size mismatch: required=%d, actual=%d", required_in_size, video_data_in.size());
+			return false;
+		}
+
+		if (required_out_size < 0 || video_data_out_size != static_cast<u32>(required_out_size))
+		{
+			cellGem.error("convert: out_size unknown: required=%d, format %d", required_out_size, output_format);
+			return false;
+		}
+
+		if (required_out_size == 0)
+		{
+			return false;
+		}
+
+		switch (output_format)
+		{
+		case CELL_GEM_RGBA_640x480: // RGBA output; 640*480*4-byte output buffer required
+		{
+			switch (input_format)
+			{
+			case CELL_CAMERA_RAW8:
+			{
+				const u32 in_pitch = width;
+				const u32 out_pitch = width * 4;
+
+				for (u32 y = 0; y < height - 1; y += 2)
+				{
+					const u8* src = &video_data_in[y * in_pitch];
+					const u8* src0 = src;
+					const u8* src1 = src + in_pitch;
+
+					u8* dst_row = video_data_out + y * out_pitch;
+					u8* dst0 = dst_row;
+					u8* dst1 = dst_row + out_pitch;
+
+					for (uint32_t x = 0; x < width - 1; x += 2, src0 += 2, src1 += 2, dst0 += 8, dst1 += 8)
+					{
+						const uint8_t b  = src0[0];
+						const uint8_t g0 = src0[1];
+						const uint8_t g1 = src1[0];
+						const uint8_t r  = src1[1];
+
+						const uint8_t top[4] = { r, g0, b, 255 };
+						const uint8_t bottom[4] = { r, g1, b, 255 };
+
+						// Top-Left
+						std::memcpy(dst0, top, 4);
+
+						// Top-Right Pixel
+						std::memcpy(dst0 + 4, top, 4);
+
+						// Bottom-Left Pixel
+						std::memcpy(dst1, bottom, 4);
+
+						// Bottom-Right Pixel
+						std::memcpy(dst1 + 4, bottom, 4);
+					}
+				}
+				break;
+			}
+			case CELL_CAMERA_RGBA:
+			{
+				std::memcpy(video_data_out, video_data_in.data(), std::min<usz>(required_in_size, required_out_size));
+				break;
+			}
+			default:
+			{
+				cellGem.error("Unimplemented: Converting %s to %s", input_format, output_format);
+				std::memcpy(video_data_out, video_data_in.data(), std::min<usz>(required_in_size, required_out_size));
+				return false;
+			}
+			}
+			break;
+		}
+		case CELL_GEM_BAYER_RESTORED: // Bayer pattern output, 640x480, gamma and white balance applied, output buffer required
+		{
+			if (input_format == CELL_CAMERA_RAW8)
+			{
+				std::memcpy(video_data_out, video_data_in.data(), std::min<usz>(required_in_size, required_out_size));
+			}
+			else
+			{
+				cellGem.error("Unimplemented: Converting %s to %s", input_format, output_format);
+				return false;
+			}
+			break;
+		}
+		case CELL_GEM_RGBA_320x240: // RGBA output; 320*240*4-byte output buffer required
+		case CELL_GEM_YUV_640x480: // YUV output; 640*480+640*480+640*480-byte output buffer required (contiguous)
+		case CELL_GEM_YUV422_640x480: // YUV output; 640*480+320*480+320*480-byte output buffer required (contiguous)
+		case CELL_GEM_YUV411_640x480: // YUV411 output; 640*480+320*240+320*240-byte output buffer required (contiguous)
+		case CELL_GEM_BAYER_RESTORED_RGGB: // Restored Bayer output, 2x2 pixels rearranged into 320x240 RG1G2B
+		case CELL_GEM_BAYER_RESTORED_RASTERIZED: // Restored Bayer output, R,G1,G2,B rearranged into 4 contiguous 320x240 1-channel rasters
+		{
+			cellGem.error("Unimplemented: Converting %s to %s", input_format, output_format);
+			return false;
+		}
+		case CELL_GEM_NO_VIDEO_OUTPUT: // Disable video output
+		{
+			cellGem.trace("Ignoring frame conversion for CELL_GEM_NO_VIDEO_OUTPUT");
+			break;
+		}
+		default:
+		{
+			cellGem.error("Trying to convert %s to %s", input_format, output_format);
+			return false;
+		}
+		}
+
+		return true;
+	}
+}
+
 void gem_config_data::operator()()
 {
 	cellGem.notice("Starting thread");
@@ -461,122 +587,11 @@ void gem_config_data::operator()()
 
 		const auto& shared_data = g_fxo->get<gem_camera_shared>();
 
-		if (vc.output_format != CELL_GEM_NO_VIDEO_OUTPUT && !vc_attribute.video_data_out)
+		if (gem::convert_image_format(shared_data.format, vc.output_format, video_data_in, shared_data.width, shared_data.height, vc_attribute.video_data_out ? vc_attribute.video_data_out.get_ptr() : nullptr, video_data_out_size))
 		{
-			video_conversion_in_progress = false;
-			continue;
+			cellGem.trace("Converted video frame of format %s to %s", shared_data.format.load(), vc.output_format.get());
 		}
 
-		extern u32 get_buffer_size_by_format(s32, s32, s32);
-		const u32 required_in_size = get_buffer_size_by_format(static_cast<s32>(shared_data.format), shared_data.width, shared_data.height);
-		const s32 required_out_size = cellGemGetVideoConvertSize(vc.output_format);
-
-		if (video_data_in.size() != required_in_size)
-		{
-			cellGem.error("convert: in_size mismatch: required=%d, actual=%d", required_in_size, video_data_in.size());
-			video_conversion_in_progress = false;
-			continue;
-		}
-
-		if (required_out_size < 0 || video_data_out_size != required_out_size)
-		{
-			cellGem.error("convert: out_size unknown: required=%d, format %d", required_out_size, vc.output_format);
-			video_conversion_in_progress = false;
-			continue;
-		}
-
-		if (required_out_size == 0)
-		{
-			video_conversion_in_progress = false;
-			continue;
-		}
-
-		switch (vc.output_format)
-		{
-		case CELL_GEM_RGBA_640x480: // RGBA output; 640*480*4-byte output buffer required
-		{
-			if (shared_data.format == CELL_CAMERA_RAW8)
-			{
-				constexpr u32 in_pitch = 640;
-				constexpr u32 out_pitch = 640 * 4;
-				u8* dst = vc_attribute.video_data_out.get_ptr();
-
-				for (u32 y = 0; y < 480 - 1; y += 2)
-				{
-					const u8* src = &video_data_in[y * in_pitch];
-					const u16* src0 = reinterpret_cast<const u16*>(src);
-					const u16* src1 = reinterpret_cast<const u16*>(src + in_pitch);
-
-					u8* dst_row = dst + y * out_pitch;
-					u32* dst0 = reinterpret_cast<u32*>(dst_row);
-					u32* dst1 = reinterpret_cast<u32*>(dst_row + out_pitch);
-
-					for (u32 x = 0; x < 640 - 1; x += 2)
-					{
-						const u16 top = *src0++;
-						const u16 bottom = *src1++;
-
-						const u8 b  = (top & 0xFF);
-						const u8 g0 = ((top >> 8) & 0xFF);
-						const u8 g1 = (bottom & 0xFF);
-						const u8 r  = ((bottom >> 8) & 0xFF);
-
-						// Top-Left
-						*dst0++ = rgba(r, g0, b, 255);
-
-						// Top-Right Pixel
-						*dst0++ = rgba(r, g0, b, 255);
-
-						// Bottom-Left Pixel
-						*dst1++ = rgba(r, g1, b, 255);
-
-						// Bottom-Right Pixel
-						*dst1++ = rgba(r, g1, b, 255);
-					}
-				}
-			}
-			else
-			{
-				cellGem.error("Unimplemented: Converting %s to %s", shared_data.format.load(), vc.output_format);
-				std::memcpy(vc_attribute.video_data_out.get_ptr(), video_data_in.data(), std::min<usz>(required_in_size, required_out_size));
-			}
-			break;
-		}
-		case CELL_GEM_BAYER_RESTORED: // Bayer pattern output, 640x480, gamma and white balance applied, output buffer required
-		{
-			if (shared_data.format == CELL_CAMERA_RAW8)
-			{
-				std::memcpy(vc_attribute.video_data_out.get_ptr(), video_data_in.data(), std::min<usz>(required_in_size, required_out_size));
-			}
-			else
-			{
-				cellGem.error("Unimplemented: Converting %s to %s", shared_data.format.load(), vc.output_format);
-			}
-			break;
-		}
-		case CELL_GEM_RGBA_320x240: // RGBA output; 320*240*4-byte output buffer required
-		case CELL_GEM_YUV_640x480: // YUV output; 640*480+640*480+640*480-byte output buffer required (contiguous)
-		case CELL_GEM_YUV422_640x480: // YUV output; 640*480+320*480+320*480-byte output buffer required (contiguous)
-		case CELL_GEM_YUV411_640x480: // YUV411 output; 640*480+320*240+320*240-byte output buffer required (contiguous)
-		case CELL_GEM_BAYER_RESTORED_RGGB: // Restored Bayer output, 2x2 pixels rearranged into 320x240 RG1G2B
-		case CELL_GEM_BAYER_RESTORED_RASTERIZED: // Restored Bayer output, R,G1,G2,B rearranged into 4 contiguous 320x240 1-channel rasters
-		{
-			cellGem.error("Unimplemented: Converting %s to %s", shared_data.format.load(), vc.output_format);
-			break;
-		}
-		case CELL_GEM_NO_VIDEO_OUTPUT: // Disable video output
-		{
-			cellGem.trace("Ignoring frame conversion for CELL_GEM_NO_VIDEO_OUTPUT");
-			break;
-		}
-		default:
-		{
-			cellGem.error("Trying to convert %s to %s", shared_data.format.load(), vc.output_format);
-			break;
-		}
-		}
-
-		cellGem.notice("Converted video frame of format %s to %s", shared_data.format.load(), vc.output_format.get());
 		video_conversion_in_progress = false;
 	}
 }
@@ -588,7 +603,7 @@ using gem_config = named_thread<gem_config_data>;
  * \param gem_num Move controler ID to verify
  * \return True if the ID is valid, false otherwise
  */
-static bool check_gem_num(const u32 gem_num)
+static bool check_gem_num(u32 gem_num)
 {
 	return gem_num < CELL_GEM_MAX_NUM;
 }
@@ -1317,10 +1332,10 @@ error_code cellGemGetAccelerometerPositionInDevice(u32 gem_num, vm::ptr<f32> pos
 	}
 
 	// TODO
-	pos[0] = 0.f;
-	pos[1] = 0.f;
-	pos[2] = 0.f;
-	pos[3] = 0.f;
+	pos[0] = 0.0f;
+	pos[1] = 0.0f;
+	pos[2] = 0.0f;
+	pos[3] = 0.0f;
 
 	return CELL_OK;
 }
@@ -1444,25 +1459,27 @@ error_code cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> gem_imag
 	if (g_cfg.io.move != move_handler::null)
 	{
 		auto& shared_data = g_fxo->get<gem_camera_shared>();
+		const auto& controller = gem.controllers[gem_num];
+
 		gem_image_state->frame_timestamp = shared_data.frame_timestamp_us.load();
 		gem_image_state->timestamp = gem_image_state->frame_timestamp + 10;
-		gem_image_state->r = gem.controllers[gem_num].radius; // Radius in camera pixels
-		gem_image_state->distance = gem.controllers[gem_num].distance; // 1.5 meters away from camera
+		gem_image_state->r = controller.radius; // Radius in camera pixels
+		gem_image_state->distance = controller.distance; // 1.5 meters away from camera
 		gem_image_state->visible = gem.is_controller_ready(gem_num);
 		gem_image_state->r_valid = true;
 
 		switch (g_cfg.io.move)
 		{
 		case move_handler::fake:
-			ds3_pos_to_gem_state(gem_num, gem.controllers[gem_num], gem_image_state);
+			ds3_pos_to_gem_state(gem_num, controller, gem_image_state);
 			break;
 		case move_handler::mouse:
 		case move_handler::raw_mouse:
-			mouse_pos_to_gem_state(gem_num, gem.controllers[gem_num], gem_image_state);
+			mouse_pos_to_gem_state(gem_num, controller, gem_image_state);
 			break;
 #ifdef HAVE_LIBEVDEV
 		case move_handler::gun:
-			gun_pos_to_gem_state(gem_num, gem.controllers[gem_num], gem_image_state);
+			gun_pos_to_gem_state(gem_num, controller, gem_image_state);
 			break;
 #endif
 		case move_handler::null:
@@ -1729,15 +1746,17 @@ error_code cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<Ce
 		return CELL_GEM_TIME_OUT_OF_RANGE;
 	}
 
+	const auto& controller = gem.controllers[gem_num];
+
 	*gem_state = {};
 
 	if (g_cfg.io.move != move_handler::null)
 	{
-		ds3_input_to_ext(gem_num, gem.controllers[gem_num], gem_state->ext);
+		ds3_input_to_ext(gem_num, controller, gem_state->ext);
 
 		u32 tracking_flags = CELL_GEM_TRACKING_FLAG_VISIBLE;
 
-		if (gem.controllers[gem_num].enabled_tracking)
+		if (controller.enabled_tracking)
 			tracking_flags |= CELL_GEM_TRACKING_FLAG_POSITION_TRACKED;
 
 		gem_state->tracking_flags = tracking_flags;
@@ -1749,17 +1768,17 @@ error_code cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<Ce
 		{
 		case move_handler::fake:
 			ds3_input_to_pad(gem_num, gem_state->pad.digitalbuttons, gem_state->pad.analog_T);
-			ds3_pos_to_gem_state(gem_num, gem.controllers[gem_num], gem_state);
+			ds3_pos_to_gem_state(gem_num, controller, gem_state);
 			break;
 		case move_handler::mouse:
 		case move_handler::raw_mouse:
 			mouse_input_to_pad(gem_num, gem_state->pad.digitalbuttons, gem_state->pad.analog_T);
-			mouse_pos_to_gem_state(gem_num, gem.controllers[gem_num], gem_state);
+			mouse_pos_to_gem_state(gem_num, controller, gem_state);
 			break;
 #ifdef HAVE_LIBEVDEV
 		case move_handler::gun:
 			gun_input_to_pad(gem_num, gem_state->pad.digitalbuttons, gem_state->pad.analog_T);
-			gun_pos_to_gem_state(gem_num, gem.controllers[gem_num], gem_state);
+			gun_pos_to_gem_state(gem_num, controller, gem_state);
 			break;
 #endif
 		case move_handler::null:
@@ -1777,12 +1796,12 @@ error_code cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<Ce
 		return CELL_GEM_SPHERE_CALIBRATING;
 	}
 
-	if (!gem.controllers[gem_num].calibrated_magnetometer)
+	if (!controller.calibrated_magnetometer)
 	{
 		return CELL_GEM_SPHERE_NOT_CALIBRATED;
 	}
 
-	if (!gem.controllers[gem_num].hue_set)
+	if (!controller.hue_set)
 	{
 		return CELL_GEM_HUE_NOT_SET;
 	}
@@ -1831,12 +1850,14 @@ error_code cellGemGetTrackerHue(u32 gem_num, vm::ptr<u32> hue)
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
-	if (!gem.controllers[gem_num].enabled_tracking || gem.controllers[gem_num].hue > 359)
+	const auto& controller = gem.controllers[gem_num];
+
+	if (!controller.enabled_tracking || controller.hue > 359)
 	{
-		return { CELL_GEM_ERROR_NOT_A_HUE, gem.controllers[gem_num].hue };
+		return { CELL_GEM_ERROR_NOT_A_HUE, controller.hue };
 	}
 
-	*hue = gem.controllers[gem_num].hue;
+	*hue = controller.hue;
 
 	return CELL_OK;
 }
