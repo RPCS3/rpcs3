@@ -5275,7 +5275,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 							auto& entry = ::at32(reg_state_it, i);
 							const u32 entry_pc = entry.pc;
 
-							if (count == (state_it->atomic16.active ? 40 : 12))
+							if (count == (state_it->atomic16.active ? 25 : 12))
 							{
 								if (state_it->atomic16.active && !std::exchange(logged_block[target_pc / 4], true))
 								{
@@ -6929,7 +6929,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			const auto ra = get_reg(op.ra);
 			const auto [af, av, at, ao, az, apc, ainst] = ra;
 
-			inherit_const_value(op.rt, ra, ra, av == op.si10, pos);
+			inherit_const_value(op.rt, ra, ra, av == op.si10 + 0u, pos);
 
 			if (rchcnt_loop.active)
 			{
