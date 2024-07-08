@@ -30,6 +30,7 @@
 #include "gui_settings.h"
 #include "input_dialog.h"
 #include "camera_settings_dialog.h"
+#include "ps_move_tracker_dialog.h"
 #include "ipc_settings_dialog.h"
 #include "shortcut_utils.h"
 #include "config_checker.h"
@@ -1957,6 +1958,7 @@ void main_window::OnEmuStop()
 
 	ui->actionManage_Users->setEnabled(true);
 	ui->confCamerasAct->setEnabled(true);
+	ui->actionPS_Move_Tracker->setEnabled(true);
 
 	// Refresh game list in order to update time played
 	if (m_game_list_frame && m_is_list_mode)
@@ -1999,6 +2001,7 @@ void main_window::OnEmuReady() const
 
 	ui->actionManage_Users->setEnabled(false);
 	ui->confCamerasAct->setEnabled(false);
+	ui->actionPS_Move_Tracker->setEnabled(false);
 
 	ui->batchRemovePPUCachesAct->setEnabled(false);
 	ui->batchRemoveSPUCachesAct->setEnabled(false);
@@ -2766,6 +2769,12 @@ void main_window::CreateConnects()
 		dlg->show();
 	});
 
+	connect(ui->confPSMoveAct, &QAction::triggered, this, [this]
+	{
+		emulated_pad_settings_dialog* dlg = new emulated_pad_settings_dialog(emulated_pad_settings_dialog::pad_type::gem, this);
+		dlg->show();
+	});
+
 	connect(ui->confGunCon3Act, &QAction::triggered, this, [this]
 	{
 		emulated_pad_settings_dialog* dlg = new emulated_pad_settings_dialog(emulated_pad_settings_dialog::pad_type::guncon3, this);
@@ -2917,6 +2926,12 @@ void main_window::CreateConnects()
 		log_viewer* viewer = new log_viewer(m_gui_settings);
 		viewer->show();
 		viewer->show_log();
+	});
+
+	connect(ui->actionPS_Move_Tracker, &QAction::triggered, this, [this]
+	{
+		ps_move_tracker_dialog* dlg = new ps_move_tracker_dialog(this);
+		dlg->open();
 	});
 
 	connect(ui->toolsCheckConfigAct, &QAction::triggered, this, [this]
