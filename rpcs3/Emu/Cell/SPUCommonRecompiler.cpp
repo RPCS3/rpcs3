@@ -6253,10 +6253,15 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					rchcnt_loop.ch_state = vregs[op.rt];
 					invalidate = false;
 				}
-				else if (rchcnt_loop.active && it != rchcnt_loop_all.end())
+				else if (rchcnt_loop.active)
 				{
 					// Success
-					it->second.active = false;
+					rchcnt_loop.active = false;
+
+					if (it == rchcnt_loop_all.end())
+					{
+						rchcnt_loop_all.emplace(pos, rchcnt_loop);
+					}
 				}
 
 				break;
@@ -7167,7 +7172,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 		if (inst_attr attr = m_inst_attrs[(read_pc - entry_point) / 4]; attr == inst_attr::none)
 		{
-			//add_pattern(false, inst_attr::ch_lop, get_pc - result.entry_point);
+			add_pattern(false, inst_attr::rchcnt_loop, read_pc - result.entry_point);
 
 			spu_log.error("Channel Loop Pattern Detected! Report to developers! (read_pc=0x%x, branch_pc=0x%x, branch_target=0x%x, 0x%x-%s)", read_pc, pattern.branch_pc, pattern.branch_target, entry_point, func_hash);
 		}

@@ -2235,7 +2235,7 @@ void spu_thread::push_snr(u32 number, u32 value)
 	const bool bitor_bit = !!((snr_config >> number) & 1);
 
 	// Redundant, g_use_rtm is checked inside tx_start now.
-	if (g_use_rtm)
+	if (g_use_rtm && false)
 	{
 		bool channel_notify = false;
 		bool thread_notify = false;
@@ -2295,8 +2295,21 @@ void spu_thread::push_snr(u32 number, u32 value)
 	});
 
 	// Check corresponding SNR register settings
-	if (channel->push(value, bitor_bit))
+	auto push_state = channel->push(value, bitor_bit);
+
+	if (push_state.old_count < push_state.count)
+	{
 		set_events(event_bit);
+	}
+	else if (!push_state.op_done)
+	{
+		ensure(is_stopped());
+
+		if (auto cpu = cpu_thread::get_current())
+		{
+			cpu->state += cpu_flag::again;
+		}
+	}
 
 	ch_events.atomic_op([](ch_events_t& ev)
 	{
@@ -6846,8 +6859,13 @@ s64 spu_channel::pop_wait(cpu_thread& spu, bool pop)
 			return false;
 		}
 
-		data = bit_wait;
-		jostling_value.release(bit_wait);
+		data = (pop ? bit_occupy : 0) | bit_wait;
+
+		if (pop)
+		{
+			jostling_value.release(bit_occupy);
+		}
+
 		return true;
 	}).first;
 
@@ -6862,29 +6880,39 @@ s64 spu_channel::pop_wait(cpu_thread& spu, bool pop)
 
 		if (!(data & bit_wait))
 		{
-			return static_cast<u32>(jostling_value);
+			return static_cast<u32>(pop ? jostling_value.exchange(0) : +data);
 		}
 	}
 
+	const u32 wait_on_val = static_cast<u32>(((pop ? bit_occupy : 0) | bit_wait) >> 32);
+
 	while (true)
 	{
-		thread_ctrl::wait_on(utils::bless<atomic_t<u32>>(&data)[1], u32{bit_wait >> 32});
+		thread_ctrl::wait_on(utils::bless<atomic_t<u32>>(&data)[1], wait_on_val);
 		old = data;
 
 		if (!(old & bit_wait))
 		{
-			return static_cast<u32>(jostling_value);
+			return static_cast<u32>(pop ? jostling_value.exchange(0) : +data);
 		}
 
 		if (spu.is_stopped())
 		{
 			// Abort waiting and test if a value has been received
-			if (u64 v = jostling_value.exchange(0); !(v & bit_wait))
+			if (pop)
 			{
-				return static_cast<u32>(v);
+				if (u64 v = jostling_value.exchange(0); !(v & bit_occupy))
+				{
+					return static_cast<u32>(v);
+				}
+
+				ensure(data.fetch_and(~(bit_wait | bit_occupy)) & bit_wait);
+			}
+			else
+			{
+				data.bit_test_reset(off_wait);
 			}
 
-			ensure(data.bit_test_reset(off_wait));
 			return -1;
 		}
 	}
@@ -6898,8 +6926,8 @@ bool spu_channel::push_wait(cpu_thread& spu, u32 value, bool push)
 	{
 		if (data & bit_count) [[unlikely]]
 		{
-			jostling_value.release(push ? value : static_cast<u32>(data));
-			data |= bit_wait;
+			jostling_value.release(push ? (bit_occupy | value) : static_cast<u32>(data));
+			data |= (push ? bit_occupy : 0) | bit_wait;
 		}
 		else if (push)
 		{
@@ -6919,11 +6947,6 @@ bool spu_channel::push_wait(cpu_thread& spu, u32 value, bool push)
 	{
 		if (!(state & bit_wait))
 		{
-			if (!push)
-			{
-				data &= ~bit_count;
-			}
-
 			return true;
 		}
 
@@ -6935,18 +6958,12 @@ bool spu_channel::push_wait(cpu_thread& spu, u32 value, bool push)
 	{
 		if (!(state & bit_wait))
 		{
-			if (!push)
-			{
-				data &= ~bit_count;
-			}
-
 			return true;
 		}
 
 		if (spu.is_stopped())
 		{
-			data &= ~bit_wait;
-			return false;
+			return !data.bit_test_reset(off_wait);
 		}
 
 		thread_ctrl::wait_on(utils::bless<atomic_t<u32>>(&data)[1], u32(state >> 32));
@@ -6954,12 +6971,17 @@ bool spu_channel::push_wait(cpu_thread& spu, u32 value, bool push)
 	}
 }
 
-std::pair<u32, u32> spu_channel_4_t::pop_wait(cpu_thread& spu)
+std::pair<u32, u32> spu_channel_4_t::pop_wait(cpu_thread& spu, bool pop_value)
 {
 	auto old = values.fetch_op([&](sync_var_t& data)
 	{
 		if (data.count != 0)
 		{
+			if (!pop_value)
+			{
+				return;
+			}
+
 			data.waiting = 0;
 			data.count--;
 
@@ -6969,8 +6991,8 @@ std::pair<u32, u32> spu_channel_4_t::pop_wait(cpu_thread& spu)
 		}
 		else
 		{
-			data.waiting = 1;
-			jostling_value.release(bit_wait);
+			data.waiting = (pop_value ? bit_occupy : 0) | bit_wait;
+			jostling_value.release(pop_value ? jostling_flag : 0);
 		}
 	});
 
@@ -6979,7 +7001,7 @@ std::pair<u32, u32> spu_channel_4_t::pop_wait(cpu_thread& spu)
 		return {old.count, old.value0};
 	}
 
-	old.waiting = 1;
+	old.waiting = (pop_value ? bit_occupy : 0) | bit_wait;
 
 	for (int i = 0; i < 10; i++)
 	{
@@ -6987,7 +7009,7 @@ std::pair<u32, u32> spu_channel_4_t::pop_wait(cpu_thread& spu)
 
 		if (!atomic_storage<u8>::load(values.raw().waiting))
 		{
-			return {1, static_cast<u32>(jostling_value)};
+			return {1, static_cast<u32>(pop_value ? jostling_value.exchange(0) : 0)};
 		}
 	}
 
@@ -6996,23 +7018,88 @@ std::pair<u32, u32> spu_channel_4_t::pop_wait(cpu_thread& spu)
 		thread_ctrl::wait_on(utils::bless<atomic_t<u32>>(&values)[0], u32(u64(std::bit_cast<u128>(old))));
 		old = values;
 
-		if (!old.waiting)
+		if (~old.waiting & bit_wait)
 		{
 			// Count of 1 because a value has been inserted and popped in the same step.
-			return {1, static_cast<u32>(jostling_value)};
+			return {1, static_cast<u32>(pop_value ? jostling_value.exchange(0) : 0)};
 		}
 
 		if (spu.is_stopped())
 		{
-			// Abort waiting and test if a value has been received
-			if (u64 v = jostling_value.exchange(0); !(v & bit_wait))
+			if (pop_value)
 			{
-				return {1, static_cast<u32>(v)};
+				// Abort waiting and test if a value has been received
+				if (u64 v = jostling_value.exchange(0); !(v & jostling_flag))
+				{
+					return {1, static_cast<u32>(v)};
+				}
 			}
 
-			ensure(atomic_storage<u8>::exchange(values.raw().waiting, 0));
+			if (~atomic_storage<u8>::exchange(values.raw().waiting, 0) & bit_wait)
+			{
+				// Count of 1 because a value has been inserted and popped in the same step.
+				return {1, static_cast<u32>(pop_value ? jostling_value.exchange(0) : 0)};
+			}
+
 			return {};
 		}
+	}
+}
+
+spu_channel_op_state spu_channel_4_t::push(u32 value, bool postpone_notify)
+{
+	while (true)
+	{
+		value3.release(value);
+		const auto [old, pushed_to_data] = values.fetch_op([&](sync_var_t& data)
+		{
+			if (data.waiting & bit_occupy)
+			{
+				return false;
+			}
+
+			switch (data.count++)
+			{
+			case 0: data.value0 = value; break;
+			case 1: data.value1 = value; break;
+			case 2: data.value2 = value; break;
+			default:
+			{
+				data.count = 4;
+				data.value3_inval++; // Ensure the SPU reads the most recent value3 write in try_pop by re-loading
+				break;
+			}
+			}
+
+			return true;
+		});
+
+		if (!pushed_to_data)
+		{
+			// Insert the pending value in special storage for waiting SPUs, leave no time in which the channel has data
+			if (!jostling_value.compare_and_swap_test(jostling_flag, value))
+			{
+				// Other thread has inserted a value through jostling_value, retry
+				continue;
+			}
+		}
+
+		if (old.waiting & bit_wait)
+		{
+			// Turn off waiting bit manually (must succeed because waiting bit can only be resetted by the thread pushing to jostling_value)
+			if (~atomic_storage<u8>::exchange(values.raw().waiting, 0) & bit_wait)
+			{
+				// Could be fatal or at emulation stopping, to be checked by the caller
+				return { old.count, old.count, false, false };
+			}
+
+			if (!postpone_notify)
+			{
+				utils::bless<atomic_t<u32>>(&values)[0].notify_one();
+			}
+		}
+
+		return { old.count, std::min<u8>(static_cast<u8>(old.count + 1), 4), !!(old.waiting & bit_wait), true };
 	}
 }
 
