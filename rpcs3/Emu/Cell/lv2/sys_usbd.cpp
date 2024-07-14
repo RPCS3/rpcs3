@@ -858,7 +858,9 @@ void connect_usb_controller(u8 index, input::product_type type)
 
 	if (!already_connected)
 	{
-		if (type == input::product_type::guncon_3)
+		switch (type)
+		{
+		case input::product_type::guncon_3:
 		{
 			if (!g_cfg_guncon3.load())
 			{
@@ -869,8 +871,9 @@ void connect_usb_controller(u8 index, input::product_type type)
 			std::shared_ptr<usb_device> dev = std::make_shared<usb_device_guncon3>(index, usbh->get_new_location());
 			usbh->connect_usb_device(dev, true);
 			usbh->pad_to_usb.emplace(index, std::pair(type, dev));
+			break;
 		}
-		if (type == input::product_type::top_shot_elite)
+		case input::product_type::top_shot_elite:
 		{
 			if (!g_cfg_topshotelite.load())
 			{
@@ -881,8 +884,9 @@ void connect_usb_controller(u8 index, input::product_type type)
 			std::shared_ptr<usb_device> dev = std::make_shared<usb_device_topshotelite>(index, usbh->get_new_location());
 			usbh->connect_usb_device(dev, true);
 			usbh->pad_to_usb.emplace(index, std::pair(type, dev));
+			break;
 		}
-		if (type == input::product_type::top_shot_fearmaster)
+		case input::product_type::top_shot_fearmaster:
 		{
 			if (!g_cfg_topshotfearmaster.load())
 			{
@@ -893,13 +897,18 @@ void connect_usb_controller(u8 index, input::product_type type)
 			std::shared_ptr<usb_device> dev = std::make_shared<usb_device_topshotfearmaster>(index, usbh->get_new_location());
 			usbh->connect_usb_device(dev, true);
 			usbh->pad_to_usb.emplace(index, std::pair(type, dev));
+			break;
 		}
-		if (type == input::product_type::udraw_gametablet)
+		case input::product_type::udraw_gametablet:
 		{
 			sys_usbd.success("Adding emulated uDraw GameTablet (controller %d)", index);
 			std::shared_ptr<usb_device> dev = std::make_shared<usb_device_gametablet>(index, usbh->get_new_location());
 			usbh->connect_usb_device(dev, true);
 			usbh->pad_to_usb.emplace(index, std::pair(type, dev));
+			break;
+		}
+		default:
+			break;
 		}
 	}
 }
