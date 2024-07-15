@@ -765,6 +765,25 @@ llvm::Value* PPUTranslator::GetMemory(llvm::Value* addr)
 	return m_ir->CreateGEP(get_type<u8>(), m_base, addr);
 }
 
+void PPUTranslator::TestAborted()
+{
+	const auto body = BasicBlock::Create(m_context, fmt::format("__body_0x%x_%s", m_cia, m_ir->GetInsertBlock()->getName().str()), m_function);
+
+	// Check status register in the entry block
+	auto ptr = llvm::dyn_cast<GetElementPtrInst>(m_ir->CreateStructGEP(m_thread_type, m_thread, 1));
+	assert(ptr->getResultElementType() == GetType<u32>());
+	const auto vstate = m_ir->CreateLoad(ptr->getResultElementType(), ptr, true);
+	const auto vcheck = BasicBlock::Create(m_context, fmt::format("__test_0x%x_%s", m_cia, m_ir->GetInsertBlock()->getName().str()), m_function);
+	m_ir->CreateCondBr(m_ir->CreateIsNull(m_ir->CreateAnd(vstate, static_cast<u32>(cpu_flag::again + cpu_flag::exit))), body, vcheck, m_md_likely);
+
+	m_ir->SetInsertPoint(vcheck);
+
+	// Create tail call to the check function
+	Call(GetType<void>(), "__check", m_thread, GetAddr())->setTailCall();
+	m_ir->CreateRetVoid();
+	m_ir->SetInsertPoint(body);
+}
+
 Value* PPUTranslator::ReadMemory(Value* addr, Type* type, bool is_be, u32 align)
 {
 	const u32 size = ::narrow<u32>(+type->getPrimitiveSizeInBits());
@@ -797,8 +816,13 @@ Value* PPUTranslator::ReadMemory(Value* addr, Type* type, bool is_be, u32 align)
 
 		if (m_may_be_mmio && size == 32)
 		{
+			FlushRegisters();
+			RegStore(Trunc(GetAddr()), m_cia);
+
 			ppu_log.notice("LLVM: Detected potential MMIO32 read at [0x%08x]", m_addr + (m_reloc ? m_reloc->addr : 0));
 			value = Call(GetType<u32>(), "__read_maybe_mmio32", m_base, addr);
+
+			TestAborted();
 		}
 		else
 		{
@@ -812,8 +836,13 @@ Value* PPUTranslator::ReadMemory(Value* addr, Type* type, bool is_be, u32 align)
 
 	if (m_may_be_mmio && size == 32)
 	{
+		FlushRegisters();
+		RegStore(Trunc(GetAddr()), m_cia);
+
 		ppu_log.notice("LLVM: Detected potential MMIO32 read at [0x%08x]", m_addr + (m_reloc ? m_reloc->addr : 0));
-		return Call(GetType<u32>(), "__read_maybe_mmio32", m_base, addr);
+		Value* r = Call(GetType<u32>(), "__read_maybe_mmio32", m_base, addr);
+		TestAborted();
+		return r;
 	}
 
 	// Read normally
@@ -846,8 +875,12 @@ void PPUTranslator::WriteMemory(Value* addr, Value* value, bool is_be, u32 align
 		{
 			if (ppu_test_address_may_be_mmio(std::span(ptr->insts)))
 			{
+				FlushRegisters();
+				RegStore(Trunc(GetAddr()), m_cia);
+
 				ppu_log.notice("LLVM: Detected potential MMIO32 write at [0x%08x]", m_addr + (m_reloc ? m_reloc->addr : 0));
 				Call(GetType<void>(), "__write_maybe_mmio32", m_base, addr, value);
+				TestAborted();
 				return;
 			}
 		}
