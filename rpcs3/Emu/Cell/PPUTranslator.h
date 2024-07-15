@@ -150,6 +150,9 @@ public:
 	// Emit function call
 	void CallFunction(u64 target, llvm::Value* indirect = nullptr);
 
+	// Emit state check mid-block
+	void TestAborted();
+
 	// Initialize global for writing
 	llvm::Value* RegInit(llvm::Value*& local);
 
