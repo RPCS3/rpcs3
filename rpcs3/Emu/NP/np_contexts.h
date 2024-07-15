@@ -77,6 +77,8 @@ struct tdata_get_score_generic
 	u32 arrayNum = 0;
 	vm::ptr<CellRtcTick> lastSortDate;
 	vm::ptr<SceNpScoreRankNumber> totalRecord;
+	bool player_rank_data = false;
+	bool deprecated = false;
 };
 
 // TUS transaction data

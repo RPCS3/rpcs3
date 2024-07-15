@@ -1434,12 +1434,33 @@ struct SceNpScoreRankData
 	CellRtcTick recordDate;
 };
 
+// Version of SceNpScoreRankData that was deprecated in 180.002
+struct SceNpScoreRankData_deprecated
+{
+	SceNpId npId;
+	SceNpOnlineName onlineName;
+	be_t<u32> serialRank;
+	be_t<u32> rank;
+	be_t<u32> highestRank;
+	be_t<s32> hasGameData;
+	be_t<s64> scoreValue;
+	CellRtcTick recordDate;
+};
+
 // Ranking information of a player or a clan member
 struct SceNpScorePlayerRankData
 {
 	be_t<s32> hasData;
 	u8 pad0[4];
 	SceNpScoreRankData rankData;
+};
+
+// Version of SceNpScorePlayerRankData that was deprecated in 180.002
+struct SceNpScorePlayerRankData_deprecated
+{
+	be_t<s32> hasData;
+	u8 pad0[4];
+	SceNpScoreRankData_deprecated rankData;
 };
 
 // Scoreboard information

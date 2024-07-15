@@ -411,4 +411,31 @@ namespace extra_nps
 		sceNp.warning("markedAsUsed: %d", data->markedAsUsed);
 	}
 
+	void print_SceNpScoreRankData(const SceNpScoreRankData* data)
+	{
+		sceNp.warning("sceNpScoreRankData:");
+		sceNp.warning("npId: %s", static_cast<const char*>(data->npId.handle.data));
+		sceNp.warning("onlineName: %s", static_cast<const char*>(data->onlineName.data));
+		sceNp.warning("pcId: %d", data->pcId);
+		sceNp.warning("serialRank: %d", data->serialRank);
+		sceNp.warning("rank: %d", data->rank);
+		sceNp.warning("highestRank: %d", data->highestRank);
+		sceNp.warning("scoreValue: %d", data->scoreValue);
+		sceNp.warning("hasGameData: %d", data->hasGameData);
+		sceNp.warning("recordDate: %d", data->recordDate.tick);
+	}
+
+	void print_SceNpScoreRankData_deprecated(const SceNpScoreRankData_deprecated* data)
+	{
+		sceNp.warning("sceNpScoreRankData_deprecated:");
+		sceNp.warning("npId: %s", static_cast<const char*>(data->npId.handle.data));
+		sceNp.warning("onlineName: %s", static_cast<const char*>(data->onlineName.data));
+		sceNp.warning("serialRank: %d", data->serialRank);
+		sceNp.warning("rank: %d", data->rank);
+		sceNp.warning("highestRank: %d", data->highestRank);
+		sceNp.warning("scoreValue: %d", data->scoreValue);
+		sceNp.warning("hasGameData: %d", data->hasGameData);
+		sceNp.warning("recordDate: %d", data->recordDate.tick);
+	}
+
 } // namespace extra_nps
