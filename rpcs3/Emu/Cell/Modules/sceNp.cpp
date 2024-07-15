@@ -5829,8 +5829,10 @@ error_code scenp_score_get_ranking_by_npid(s32 transId, SceNpScoreBoardId boardI
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
 	}
 
-	// Function can actually accept SceNpScoreRankData though it is undocumented
-	if (rankArraySize != (arrayNum * sizeof(SceNpScorePlayerRankData)) && rankArraySize != (arrayNum * sizeof(SceNpScoreRankData)))
+	// SceNpScorePlayerRankData changed with 180.002
+	const bool deprecated = (rankArraySize == (arrayNum * sizeof(SceNpScorePlayerRankData_deprecated)));
+
+	if (rankArraySize != (arrayNum * sizeof(SceNpScorePlayerRankData)) && !deprecated)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
 	}
@@ -5866,7 +5868,7 @@ error_code scenp_score_get_ranking_by_npid(s32 transId, SceNpScoreBoardId boardI
 		}
 	}
 
-	nph.get_score_npid(trans_ctx, boardId, npid_vec, rankArray, rankArraySize, commentArray, commentArraySize, infoArray, infoArraySize, arrayNum, lastSortDate, totalRecord, async);
+	nph.get_score_npid(trans_ctx, boardId, npid_vec, rankArray, rankArraySize, commentArray, commentArraySize, infoArray, infoArraySize, arrayNum, lastSortDate, totalRecord, async, deprecated);
 
 	if (async)
 	{
@@ -5957,7 +5959,10 @@ error_code scenp_score_get_ranking_by_range(s32 transId, SceNpScoreBoardId board
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
 	}
 
-	if (rankArraySize != (arrayNum * sizeof(SceNpScoreRankData)))
+	// SceNpScoreRankData changed with 180.002
+	const bool deprecated = (rankArraySize == (arrayNum * sizeof(SceNpScoreRankData_deprecated)));
+
+	if (rankArraySize != (arrayNum * sizeof(SceNpScoreRankData)) && !deprecated)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
 	}
@@ -5967,7 +5972,7 @@ error_code scenp_score_get_ranking_by_range(s32 transId, SceNpScoreBoardId board
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
-	nph.get_score_range(trans_ctx, boardId, startSerialRank, rankArray, rankArraySize, commentArray, commentArraySize, infoArray, infoArraySize, arrayNum, lastSortDate, totalRecord, async);
+	nph.get_score_range(trans_ctx, boardId, startSerialRank, rankArray, rankArraySize, commentArray, commentArraySize, infoArray, infoArraySize, arrayNum, lastSortDate, totalRecord, async, deprecated);
 
 	if (async)
 	{
@@ -6036,7 +6041,10 @@ error_code scenp_score_get_friends_ranking(s32 transId, SceNpScoreBoardId boardI
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
 	}
 
-	if (rankArraySize != (arrayNum * sizeof(SceNpScoreRankData)))
+	// The SceNpScoreRankData changed with 180.002
+	const bool deprecated = (rankArraySize == (arrayNum * sizeof(SceNpScoreRankData_deprecated)));
+
+	if (rankArraySize != (arrayNum * sizeof(SceNpScoreRankData)) && !deprecated)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
 	}
@@ -6046,7 +6054,7 @@ error_code scenp_score_get_friends_ranking(s32 transId, SceNpScoreBoardId boardI
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
-	nph.get_score_friend(trans_ctx, boardId, includeSelf, rankArray, rankArraySize, commentArray, commentArraySize, infoArray, infoArraySize, arrayNum, lastSortDate, totalRecord, async);
+	nph.get_score_friend(trans_ctx, boardId, includeSelf, rankArray, rankArraySize, commentArray, commentArraySize, infoArray, infoArraySize, arrayNum, lastSortDate, totalRecord, async, deprecated);
 
 	if (async)
 	{

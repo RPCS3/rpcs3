@@ -27,4 +27,7 @@ namespace extra_nps
 
 	void print_SceNpBasicAttachmentData(const SceNpBasicAttachmentData* data);
 	void print_SceNpBasicExtendedAttachmentData(const SceNpBasicExtendedAttachmentData* data);
+
+	void print_SceNpScoreRankData(const SceNpScoreRankData* data);
+	void print_SceNpScoreRankData_deprecated(const SceNpScoreRankData_deprecated* data);
 } // namespace extra_nps

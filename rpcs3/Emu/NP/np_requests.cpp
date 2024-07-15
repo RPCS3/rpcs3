@@ -1062,7 +1062,7 @@ namespace np
 		return score_trans->set_result_and_wake(not_an_error(to_copy));
 	}
 
-	void np_handler::get_score_range(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, SceNpScoreRankNumber startSerialRank, vm::ptr<SceNpScoreRankData> rankArray, u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, [[maybe_unused]] u32 commentArraySize, vm::ptr<void> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, bool async)
+	void np_handler::get_score_range(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, SceNpScoreRankNumber startSerialRank, vm::ptr<SceNpScoreRankData> rankArray, u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, [[maybe_unused]] u32 commentArraySize, vm::ptr<void> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, bool async, bool deprecated)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
 		u32 req_id = get_req_id(REQUEST_ID_HIGH::SCORE);
@@ -1076,6 +1076,8 @@ namespace np
 			.arrayNum = arrayNum,
 			.lastSortDate = lastSortDate,
 			.totalRecord = totalRecord,
+			.player_rank_data = false,
+			.deprecated = deprecated,
 		};
 
 		bool with_comments = !!commentArray;
@@ -1084,6 +1086,25 @@ namespace np
 		get_rpcn()->get_score_range(req_id, trans_ctx->communicationId, boardId, startSerialRank, arrayNum, with_comments, with_gameinfo);
 
 		transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
+	}
+
+	template <typename T>
+	void set_rankdata_values(T& cur_rank, const ScoreRankData* fb_rankdata)
+	{
+		string_to_npid(fb_rankdata->npId()->string_view(), cur_rank.npId);
+		string_to_online_name(fb_rankdata->onlineName()->string_view(), cur_rank.onlineName);
+
+		static_assert(std::is_same_v<T, SceNpScoreRankData> || std::is_same_v<T, SceNpScoreRankData_deprecated>);
+
+		if constexpr (std::is_same_v<T, SceNpScoreRankData>)
+			cur_rank.pcId = fb_rankdata->pcId();
+
+		cur_rank.serialRank = fb_rankdata->rank();
+		cur_rank.rank = fb_rankdata->rank();
+		cur_rank.highestRank = fb_rankdata->rank();
+		cur_rank.scoreValue = fb_rankdata->score();
+		cur_rank.hasGameData = fb_rankdata->hasGameData();
+		cur_rank.recordDate.tick = fb_rankdata->recordDate();
 	}
 
 	bool np_handler::handle_GetScoreResponse(u32 req_id, std::vector<u8>& reply_data, bool simple_result)
@@ -1120,8 +1141,10 @@ namespace np
 		memset(tdata->rankArray.get_ptr(), 0, tdata->rankArraySize);
 		auto* fb_rankarray = resp->rankArray();
 
-		vm::ptr<SceNpScoreRankData> rankArray = vm::static_ptr_cast<SceNpScoreRankData>(tdata->rankArray);
 		vm::ptr<SceNpScorePlayerRankData> rankPlayerArray = vm::static_ptr_cast<SceNpScorePlayerRankData>(tdata->rankArray);
+		vm::ptr<SceNpScorePlayerRankData_deprecated> rankPlayerArray_deprecated = vm::static_ptr_cast<SceNpScorePlayerRankData_deprecated>(tdata->rankArray);
+		vm::ptr<SceNpScoreRankData> rankArray = vm::static_ptr_cast<SceNpScoreRankData>(tdata->rankArray);
+		vm::ptr<SceNpScoreRankData_deprecated> rankArray_deprecated = vm::static_ptr_cast<SceNpScoreRankData_deprecated>(tdata->rankArray);
 
 		for (flatbuffers::uoffset_t i = 0; i < fb_rankarray->size(); i++)
 		{
@@ -1131,27 +1154,30 @@ namespace np
 			if (fb_rankdata->recordDate() == 0)
 				continue;
 
-			SceNpScoreRankData* cur_rank;
-			if (tdata->rankArraySize == (tdata->arrayNum * sizeof(SceNpScoreRankData)))
+			if (tdata->player_rank_data)
 			{
-				cur_rank = &rankArray[i];
+				if (tdata->deprecated)
+				{
+					rankPlayerArray_deprecated[i].hasData = 1;
+					set_rankdata_values(rankPlayerArray_deprecated[i].rankData, fb_rankdata);
+				}
+				else
+				{
+					rankPlayerArray[i].hasData = 1;
+					set_rankdata_values(rankPlayerArray[i].rankData, fb_rankdata);
+				}
 			}
 			else
 			{
-				rankPlayerArray[i].hasData = 1;
-				cur_rank = &rankPlayerArray[i].rankData;
+				if (tdata->deprecated)
+				{
+					set_rankdata_values(rankArray_deprecated[i], fb_rankdata);
+				}
+				else
+				{
+					set_rankdata_values(rankArray[i], fb_rankdata);
+				}
 			}
-
-			string_to_npid(fb_rankdata->npId()->string_view(), cur_rank->npId);
-			string_to_online_name(fb_rankdata->onlineName()->string_view(), cur_rank->onlineName);
-
-			cur_rank->pcId = fb_rankdata->pcId();
-			cur_rank->serialRank = fb_rankdata->rank();
-			cur_rank->rank = fb_rankdata->rank();
-			cur_rank->highestRank = fb_rankdata->rank();
-			cur_rank->scoreValue = fb_rankdata->score();
-			cur_rank->hasGameData = fb_rankdata->hasGameData();
-			cur_rank->recordDate.tick = fb_rankdata->recordDate();
 		}
 
 		if (tdata->commentArray)
@@ -1214,7 +1240,7 @@ namespace np
 		return handle_GetScoreResponse(req_id, reply_data);
 	}
 
-	void np_handler::get_score_friend(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, bool include_self, vm::ptr<SceNpScoreRankData> rankArray, u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, [[maybe_unused]] u32 commentArraySize, vm::ptr<void> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, bool async)
+	void np_handler::get_score_friend(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, bool include_self, vm::ptr<SceNpScoreRankData> rankArray, u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, [[maybe_unused]] u32 commentArraySize, vm::ptr<void> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, bool async, bool deprecated)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
 		u32 req_id = get_req_id(REQUEST_ID_HIGH::SCORE);
@@ -1227,6 +1253,8 @@ namespace np
 			.arrayNum = arrayNum,
 			.lastSortDate = lastSortDate,
 			.totalRecord = totalRecord,
+			.player_rank_data = false,
+			.deprecated = deprecated,
 		};
 
 		bool with_comments = !!commentArray;
@@ -1241,7 +1269,7 @@ namespace np
 		return handle_GetScoreResponse(req_id, reply_data);
 	}
 
-	void np_handler::get_score_npid(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, const std::vector<std::pair<SceNpId, s32>>& npid_vec, vm::ptr<SceNpScorePlayerRankData> rankArray, u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, [[maybe_unused]] u32 commentArraySize, vm::ptr<void> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, bool async)
+	void np_handler::get_score_npid(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, const std::vector<std::pair<SceNpId, s32>>& npid_vec, vm::ptr<SceNpScorePlayerRankData> rankArray, u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, [[maybe_unused]] u32 commentArraySize, vm::ptr<void> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, bool async, bool deprecated)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
 		u32 req_id = get_req_id(REQUEST_ID_HIGH::SCORE);
@@ -1254,6 +1282,8 @@ namespace np
 			.arrayNum = arrayNum,
 			.lastSortDate = lastSortDate,
 			.totalRecord = totalRecord,
+			.player_rank_data = true,
+			.deprecated = deprecated,
 		};
 
 		bool with_comments = !!commentArray;
