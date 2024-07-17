@@ -978,17 +978,20 @@ namespace np
 			queue_basic_events.pop();
 		}
 
-		const u32 size_avail = *size;
-		u32 res_size         = std::min(static_cast<u32>(cur_event.data.size()), size_avail);
-
 		*event = cur_event.event;
 		memcpy(from.get_ptr(), &cur_event.from, sizeof(cur_event.from));
-		memcpy(data.get_ptr(), cur_event.data.data(), res_size);
-		*size = res_size;
-
-		if (res_size < cur_event.data.size())
+		if (cur_event.event != SCE_NP_BASIC_EVENT_OFFLINE)
 		{
-			return SCE_NP_BASIC_ERROR_DATA_LOST;
+			const u32 size_avail = *size;
+			const u32 res_size   = std::min(static_cast<u32>(cur_event.data.size()), size_avail);
+
+			memcpy(data.get_ptr(), cur_event.data.data(), res_size);
+			*size = res_size;
+
+			if (res_size < cur_event.data.size())
+			{
+				return SCE_NP_BASIC_ERROR_DATA_LOST;
+			}
 		}
 
 		nph_log.notice("basic_event: event:%d, from:%s(%s), size:%d", *event, static_cast<char*>(from->userId.handle.data), static_cast<char*>(from->name.data), *size);
