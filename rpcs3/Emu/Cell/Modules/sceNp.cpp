@@ -922,7 +922,7 @@ error_code sceNpDrmProcessExitSpawn2(ppu_thread& ppu, vm::cptr<u8> klicensee, vm
 
 error_code sceNpBasicRegisterHandler(vm::cptr<SceNpCommunicationId> context, vm::ptr<SceNpBasicEventHandler> handler, vm::ptr<void> arg)
 {
-	sceNp.warning("sceNpBasicRegisterHandler(context=*0x%x(%s), handler=*0x%x, arg=*0x%x)", context, context ? static_cast<const char *>(context->data) : "", handler, arg);
+	sceNp.warning("sceNpBasicRegisterHandler(context=*0x%x(%s), handler=*0x%x, arg=*0x%x)", context, context ? context->data : "", handler, arg);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -948,7 +948,7 @@ error_code sceNpBasicRegisterHandler(vm::cptr<SceNpCommunicationId> context, vm:
 
 error_code sceNpBasicRegisterContextSensitiveHandler(vm::cptr<SceNpCommunicationId> context, vm::ptr<SceNpBasicEventHandler> handler, vm::ptr<void> arg)
 {
-	sceNp.notice("sceNpBasicRegisterContextSensitiveHandler(context=*0x%x, handler=*0x%x, arg=*0x%x)", context, handler, arg);
+	sceNp.notice("sceNpBasicRegisterContextSensitiveHandler(context=*0x%x(%s), handler=*0x%x, arg=*0x%x)", context, context ? context->data : "", handler, arg);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -5300,7 +5300,7 @@ error_code sceNpScoreTerm()
 
 error_code sceNpScoreCreateTitleCtx(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpCommunicationPassphrase> passphrase, vm::cptr<SceNpId> selfNpId)
 {
-	sceNp.warning("sceNpScoreCreateTitleCtx(communicationId=*0x%x, passphrase=*0x%x, selfNpId=*0x%x)", communicationId, passphrase, selfNpId);
+	sceNp.warning("sceNpScoreCreateTitleCtx(communicationId=*0x%x(%s), passphrase=*0x%x, selfNpId=*0x%x)", communicationId, communicationId ? np::communication_id_to_string(*communicationId).c_str() : "", passphrase, selfNpId);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
