@@ -9,6 +9,7 @@ namespace np
 {
 	std::string ip_to_string(u32 addr);
 	std::string ether_to_string(std::array<u8, 6>& ether);
+	std::string communication_id_to_string(const SceNpCommunicationId& communicationId);
 
 	void string_to_npid(std::string_view str, SceNpId& npid);
 	void string_to_online_name(std::string_view str, SceNpOnlineName& online_name);
