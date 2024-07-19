@@ -82,6 +82,9 @@ target_sources(rpcs3
     Input/mm_joystick_handler.cpp
     Input/pad_thread.cpp
     Input/product_info.cpp
+    Input/ps_move_config.cpp
+    Input/ps_move_handler.cpp
+    Input/ps_move_tracker.cpp
     Input/raw_mouse_config.cpp
     Input/raw_mouse_handler.cpp
     Input/sdl_pad_handler.cpp

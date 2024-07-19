@@ -412,7 +412,7 @@ void ps_move_tracker_dialog::process_camera_frame()
 {
 	std::lock_guard camera_lock(m_camera_handler_mutex);
 
-	if (!m_camera_handler)
+	if (!m_camera_handler || m_camera_handler->get_state() == qt_camera_handler::camera_handler_state::closed)
 	{
 		// Wait some time
 		std::this_thread::sleep_for(100us);

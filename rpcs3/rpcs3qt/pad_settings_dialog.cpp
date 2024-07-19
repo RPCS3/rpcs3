@@ -1984,6 +1984,7 @@ QString pad_settings_dialog::GetLocalizedPadName(pad_handler handler, const QStr
 		case pad_handler::ds4: return tr("DS4 Pad #%0").arg(index);
 		case pad_handler::dualsense: return tr("DualSense Pad #%0").arg(index);
 		case pad_handler::skateboard: return tr("Skateboard #%0").arg(index);
+		case pad_handler::move: return tr("PS Move #%0").arg(index);
 #ifdef _WIN32
 		case pad_handler::xinput: return tr("XInput Pad #%0").arg(index);
 		case pad_handler::mm: return tr("Joystick #%0").arg(index);

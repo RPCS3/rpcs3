@@ -65,6 +65,7 @@ add_library(rpcs3_ui STATIC
     pkg_install_dialog.cpp
     progress_dialog.cpp
     progress_indicator.cpp
+    ps_move_tracker_dialog.cpp
     qt_camera_handler.cpp
     qt_camera_video_sink.cpp
     qt_music_handler.cpp
@@ -117,6 +118,7 @@ add_library(rpcs3_ui STATIC
     pad_settings_dialog.ui
     patch_creator_dialog.ui
     patch_manager_dialog.ui
+    ps_move_tracker_dialog.ui
     settings_dialog.ui
     shortcut_dialog.ui
     welcome_dialog.ui
