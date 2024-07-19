@@ -3484,10 +3484,10 @@ public:
 		const auto val = m_ir->CreateLoad(get_type<u64>(), _ptr<u64>(m_thread, off));
 		val->setAtomic(llvm::AtomicOrdering::Acquire);
 		const auto shv = m_ir->CreateLShr(val, spu_channel::off_count);
-		return m_ir->CreateTrunc(m_ir->CreateXor(shv, u64{inv}), get_type<u32>());
+		return m_ir->CreateTrunc(m_ir->CreateXor(shv, inv), get_type<u32>());
 	}
 
-	llvm::Value* wait_rchcnt(u32 off, u64 inv = 0)
+	llvm::Value* wait_rchcnt(u32 off, u32 inv = 0)
 	{
 		auto wait_on_channel = [](spu_thread* _spu, spu_channel* ch, u32 is_read) -> u32
 		{
@@ -3503,7 +3503,7 @@ public:
 			return ch->get_count();
 		};
 
-		return m_ir->CreateXor(call("wait_on_spu_channel", +wait_on_channel, m_thread, _ptr<u64>(m_thread, off), m_ir->getInt32(!inv)), m_ir->getInt32(inv));
+		return m_ir->CreateXor(call("wait_on_spu_channel", +wait_on_channel, m_thread, _ptr<u64>(m_thread, off), m_ir->getInt32(inv == 0u)), m_ir->getInt32(inv));
 	}
 
 	void RCHCNT(spu_opcode_t op) //

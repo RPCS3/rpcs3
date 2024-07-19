@@ -4757,7 +4757,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 	auto sort_breakig_reasons = [](const std::array<atomic_t<u64>, 128>& breaking_reason)
 	{
 		std::vector<std::pair<u32, u64>> map;
-		for (usz i = 0; i < breaking_reason.size(); i++)
+		for (u32 i = 0; i < static_cast<u32>(breaking_reason.size()); i++)
 		{
 			if (u64 v = breaking_reason[i])
 			{
@@ -5199,7 +5199,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			}
 			else
 			{
-				std::vector<u32> to_pop;
+				std::vector<usz> to_pop;
 
 				usz stackframe_it = wi;
 				u32 stackframe_pc = SPU_LS_SIZE;
@@ -5425,7 +5425,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				// Clean from the back possible because it does not affect old indices
 				// Technically should always do a full cleanup at the moment
 				// TODO: Proper cleanup with keeping old indices valid
-				for (u32 it : to_pop)
+				for (usz it : to_pop)
 				{
 					if (it == reg_state_it.size() - 1)
 					{

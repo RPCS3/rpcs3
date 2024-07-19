@@ -1992,8 +1992,8 @@ std::pair<ppu_thread_status, u32> lv2_obj::ppu_state(ppu_thread* ppu, bool lock_
 		opt_lock[1].emplace(lv2_obj::g_mutex);
 	}
 
-	usz pos = umax;
-	usz i = 0;
+	u32 pos = umax;
+	u32 i = 0;
 
 	for (auto target = +g_ppu; target; target = target->next_ppu, i++)
 	{
