@@ -252,9 +252,7 @@ PadHandlerBase::connection PadHandlerBase::get_next_button_press(const std::stri
 		// Keep the pad cached to reduce expensive one time requests
 		if (!m_pad_for_pad_settings || m_pad_for_pad_settings->m_pad_handler != m_type)
 		{
-			const pad_preview_values preview_values{};
 			m_pad_for_pad_settings = std::make_shared<Pad>(m_type, 0, 0, 0, 0);
-			m_pad_for_pad_settings->m_sensors.resize(preview_values.size(), AnalogSensor(0, 0, 0, 0, 0));
 		}
 
 		// Get extended device ID
@@ -367,7 +365,6 @@ void PadHandlerBase::get_motion_sensors(const std::string& pad_id, const motion_
 	if (!m_pad_for_pad_settings || m_pad_for_pad_settings->m_pad_handler != m_type)
 	{
 		m_pad_for_pad_settings = std::make_shared<Pad>(m_type, 0, 0, 0, 0);
-		m_pad_for_pad_settings->m_sensors.resize(preview_values.size(), AnalogSensor(0, 0, 0, 0, 0));
 	}
 
 	// Get the current motion values

@@ -127,11 +127,6 @@ yaml-cpp.pc
 # miniupnp
 /3rdparty/miniupnp/x64/*
 
-# opencv
-/3rdparty/opencv/*
-!/3rdparty/opencv/opencv410/build/x64/vc16/bin/opencv_world4100.dll
-!/3rdparty/opencv/opencv410/build/x64/vc16/lib/opencv_world4100.lib
-
 # llvm
 /3rdparty/llvm/llvm_build
 
