@@ -343,6 +343,9 @@ add_subdirectory(miniupnp EXCLUDE_FROM_ALL)
 # RTMIDI
 add_subdirectory(rtmidi EXCLUDE_FROM_ALL)
 
+# OPENCV
+# TODO: add library and -DHAVE_OPENCV
+
 # add nice ALIAS targets for ease of use
 if(USE_SYSTEM_LIBUSB)
 	add_library(3rdparty::libusb ALIAS usb-1.0-shared)
