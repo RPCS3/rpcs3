@@ -508,7 +508,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		if (static_cast<video_resolution>(value) == video_resolution::_720p)
 		{
 			// Rename the default resolution for users
-			ui->resBox->setItemText(i, tr("1280x720 (Recommended)", "Resolution"));
+			ui->resBox->setItemText(i, tr("720p (Recommended)", "Resolution"));
 
 			// Set the current selection to the default if the original setting wasn't valid
 			if (saved_index_removed)
