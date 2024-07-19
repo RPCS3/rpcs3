@@ -5,7 +5,9 @@
 
 #include <cmath>
 
+#ifdef HAVE_OPENCV
 #include <opencv2/photo.hpp>
+#endif
 
 LOG_CHANNEL(ps_move);
 
@@ -277,6 +279,7 @@ void ps_move_tracker<DiagnosticsEnabled>::process_hues()
 	}
 }
 
+#ifdef HAVE_OPENCV
 static bool is_circular_contour(const std::vector<cv::Point>& contour, float& area)
 {
 	std::vector<cv::Point> approx;
@@ -457,6 +460,22 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 		}
 	}
 }
+#else
+template <bool DiagnosticsEnabled>
+void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u32 index)
+{
+	ensure(index < m_config.size());
+
+	const u32 width = m_width;
+	const u32 height = m_height;
+
+	info.valid = false;
+	info.x_max = width;
+	info.y_max = height;
+
+	ps_move.error("The tracker is not implemented for this operating system.");
+}
+#endif
 
 template <bool DiagnosticsEnabled>
 std::tuple<u8, u8, u8> ps_move_tracker<DiagnosticsEnabled>::hsv_to_rgb(u16 hue, float saturation, float value)
