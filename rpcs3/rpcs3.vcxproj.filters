@@ -1280,12 +1280,6 @@
     <ClInclude Include="util\console.h">
       <Filter>rpcs3</Filter>
     </ClInclude>
-    <ClInclude Include="rpcs3qt\basic_mouse_settings_dialog.h">
-      <Filter>Gui\settings</Filter>
-    </ClInclude>
-    <ClInclude Include="rpcs3qt\raw_mouse_settings_dialog.h">
-      <Filter>Gui\settings</Filter>
-    </ClInclude>
     <ClInclude Include="Input\raw_mouse_config.h">
       <Filter>Io\raw</Filter>
     </ClInclude>
@@ -1595,6 +1589,12 @@
       <Filter>Gui\settings</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\midi_creator.h">
+      <Filter>Gui\settings</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\basic_mouse_settings_dialog.h">
+      <Filter>Gui\settings</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\raw_mouse_settings_dialog.h">
       <Filter>Gui\settings</Filter>
     </CustomBuild>
   </ItemGroup>
