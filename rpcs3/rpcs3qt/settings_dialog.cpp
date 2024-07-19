@@ -588,14 +588,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 		switch (static_cast<zcull_precision_level>(ui->zcullPrecisionMode->itemData(index).toInt()))
 		{
-		case zcull_precision_level::precise:
-			precise = true; break;
-		case zcull_precision_level::approximate:
-			break;
-		case zcull_precision_level::relaxed:
-			relaxed = true; break;
-		default:
-			fmt::throw_exception("Unexpected selection");
+		case zcull_precision_level::precise: precise = true; break;
+		case zcull_precision_level::approximate: break;
+		case zcull_precision_level::relaxed: relaxed = true; break;
+		default: fmt::throw_exception("Unexpected selection");
 		}
 
 		m_emu_settings->SetSetting(emu_settings_type::RelaxedZCULL, relaxed ? "true" : "false");
@@ -609,6 +605,21 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	// 3D
 	m_emu_settings->EnhanceComboBox(ui->stereoRenderMode, emu_settings_type::StereoRenderMode);
 	SubscribeTooltip(ui->gb_stereo, tooltips.settings.stereo_render_mode);
+	if (game)
+	{
+		const auto on_resolution = [this](int index)
+		{
+			const auto [text, value] = get_data(ui->resBox, index);
+			ui->stereoRenderMode->setEnabled(value == static_cast<int>(video_resolution::_720p));
+		};
+		connect(ui->resBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, on_resolution);
+		on_resolution(ui->resBox->currentIndex());
+	}
+	else
+	{
+		ui->stereoRenderMode->setCurrentIndex(find_item(ui->stereoRenderMode, static_cast<int>(g_cfg.video.stereo_render_mode.def)));
+		ui->stereoRenderMode->setEnabled(false);
+	}
 
 	// Checkboxes: main options
 	m_emu_settings->EnhanceCheckBox(ui->dumpColor, emu_settings_type::WriteColorBuffers);
