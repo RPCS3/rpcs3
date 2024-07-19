@@ -390,6 +390,7 @@ protected:
 		omit,
 		putllc16,
 		putllc0,
+		rchcnt_loop,
 	};
 
 	std::vector<inst_attr> m_inst_attrs;

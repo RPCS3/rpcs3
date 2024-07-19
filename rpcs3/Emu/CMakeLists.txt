@@ -397,6 +397,7 @@ target_link_libraries(rpcs3_emu
 target_sources(rpcs3_emu PRIVATE
     Io/Buzz.cpp
     Io/camera_config.cpp
+    Io/Dimensions.cpp
     Io/GameTablet.cpp
     Io/GHLtar.cpp
     Io/GunCon3.cpp

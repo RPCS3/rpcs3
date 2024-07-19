@@ -414,6 +414,7 @@
     <ClCompile Include="Emu\Cell\SPUDisAsm.cpp" />
     <ClCompile Include="Emu\Cell\SPUInterpreter.cpp" />
     <ClCompile Include="Emu\IdManager.cpp" />
+    <ClCompile Include="Emu\Io\Dimensions.cpp" />
     <ClCompile Include="Emu\Io\Infinity.cpp" />
     <ClCompile Include="Emu\Io\Skylander.cpp" />
     <ClCompile Include="Emu\Io\usb_device.cpp" />
@@ -746,6 +747,7 @@
     <ClInclude Include="Emu\Cell\PPUAnalyser.h" />
     <ClInclude Include="Emu\Cell\PPUTranslator.h" />
     <ClInclude Include="Emu\CPU\CPUTranslator.h" />
+    <ClInclude Include="Emu\Io\Dimensions.h" />
     <ClInclude Include="Emu\Io\Infinity.h" />
     <ClInclude Include="Emu\Io\Skylander.h" />
     <ClInclude Include="Emu\Io\usb_device.h" />

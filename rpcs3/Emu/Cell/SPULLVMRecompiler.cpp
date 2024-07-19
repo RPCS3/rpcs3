@@ -3487,9 +3487,28 @@ public:
 		return m_ir->CreateTrunc(m_ir->CreateXor(shv, u64{inv}), get_type<u32>());
 	}
 
+	llvm::Value* wait_rchcnt(u32 off, u64 inv = 0)
+	{
+		auto wait_on_channel = [](spu_thread* _spu, spu_channel* ch, u32 is_read) -> u32
+		{
+			if (is_read)
+			{
+				ch->pop_wait(*_spu, false);
+			}
+			else
+			{
+				ch->push_wait(*_spu, 0, false);
+			}
+
+			return ch->get_count();
+		};
+
+		return m_ir->CreateXor(call("wait_on_spu_channel", +wait_on_channel, m_thread, _ptr<u64>(m_thread, off), m_ir->getInt32(!inv)), m_ir->getInt32(inv));
+	}
+
 	void RCHCNT(spu_opcode_t op) //
 	{
-		value_t<u32> res;
+		value_t<u32> res{};
 
 		if (m_interp_magn)
 		{
@@ -3530,6 +3549,50 @@ public:
 		{
 			break;
 		}
+		}
+
+		if (m_inst_attrs[(m_pos - m_base) / 4] == inst_attr::rchcnt_loop)
+		{
+			switch (op.ra)
+			{
+			case SPU_WrOutMbox:
+			{
+				res.value = wait_rchcnt(::offset32(&spu_thread::ch_out_mbox), true);
+				break;
+			}
+			case SPU_WrOutIntrMbox:
+			{
+				res.value = wait_rchcnt(::offset32(&spu_thread::ch_out_intr_mbox), true);
+				break;
+			}
+			case SPU_RdSigNotify1:
+			{
+				res.value = wait_rchcnt(::offset32(&spu_thread::ch_snr1));
+				break;
+			}
+			case SPU_RdSigNotify2:
+			{
+				res.value = wait_rchcnt(::offset32(&spu_thread::ch_snr2));
+				break;
+			}
+			case SPU_RdInMbox:
+			{
+				auto wait_inbox = [](spu_thread* _spu, spu_channel_4_t* ch) -> u32
+				{
+					return ch->pop_wait(*_spu, false), ch->get_count();
+				};
+
+				res.value = call("wait_spu_inbox", +wait_inbox, m_thread, spu_ptr<void*>(&spu_thread::ch_in_mbox));
+				break;
+			}
+			default: break;
+			}
+
+			if (res.value)
+			{
+				set_vr(op.rt, insert(splat<u32[4]>(0), 3, res));
+				return;
+			}
 		}
 
 		switch (op.ra)

@@ -16,6 +16,7 @@ add_library(rpcs3_ui STATIC
     debugger_frame.cpp
     debugger_list.cpp
     downloader.cpp
+    dimensions_dialog.cpp
     _discord_utils.cpp
     emu_settings.cpp
     elf_memory_dumping_dialog.cpp

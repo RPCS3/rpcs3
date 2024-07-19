@@ -21,6 +21,7 @@
 #include "progress_dialog.h"
 #include "skylander_dialog.h"
 #include "infinity_dialog.h"
+#include "dimensions_dialog.h"
 #include "cheat_manager.h"
 #include "patch_manager_dialog.h"
 #include "patch_creator_dialog.h"
@@ -2861,6 +2862,12 @@ void main_window::CreateConnects()
 	{
 		infinity_dialog* inf_dlg = infinity_dialog::get_dlg(this);
 		inf_dlg->show();
+	});
+
+	connect(ui->actionManage_Dimensions_ToyPad, &QAction::triggered, this, [this]
+	{
+		dimensions_dialog* dim_dlg = dimensions_dialog::get_dlg(this);
+		dim_dlg->show();
 	});
 
 	connect(ui->actionManage_Cheats, &QAction::triggered, this, [this]
