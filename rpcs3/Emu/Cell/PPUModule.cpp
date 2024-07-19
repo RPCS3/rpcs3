@@ -1557,7 +1557,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, bool virtual_lo
 				_seg.size = mem_size;
 				_seg.filesz = file_size;
 
-				prx->addr_to_seg_index.emplace(addr, prx->segs.size() - 1);
+				prx->addr_to_seg_index.emplace(addr, ::size32(prx->segs) - 1);
 
 				// Copy segment data
 				if (!ar) std::memcpy(ensure(prx->get_ptr<void>(addr)), prog.bin.data(), file_size);
@@ -2129,7 +2129,7 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 
 			// Store only LOAD segments (TODO)
 			_main.segs.emplace_back(_seg);
-			_main.addr_to_seg_index.emplace(addr, _main.segs.size() - 1);
+			_main.addr_to_seg_index.emplace(addr, ::size32(_main.segs) - 1);
 
 			// Copy segment data, hash it
 			if (!already_loaded)
@@ -2825,7 +2825,7 @@ std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_ex
 
 			// Store only LOAD segments (TODO)
 			ovlm->segs.emplace_back(_seg);
-			ovlm->addr_to_seg_index.emplace(addr, ovlm->segs.size() - 1);
+			ovlm->addr_to_seg_index.emplace(addr, ::size32(ovlm->segs) - 1);
 
 			// Copy segment data, hash it
 			if (!already_loaded) std::memcpy(ensure(ovlm->get_ptr<void>(addr)), prog.bin.data(), prog.bin.size());
