@@ -114,6 +114,7 @@
     <PostBuildEvent>
       <Command>
         $(QTDIR)\bin\windeployqt --no-compiler-runtime --no-opengl-sw --no-patchqt --no-translations --no-quick --no-system-d3d-compiler --no-quick-import --plugindir "$(TargetDir)qt6\plugins" --release "$(TargetPath)"
+        xcopy /y /d "..\3rdparty\opencv\opencv410\build\x64\vc16\bin\opencv_world4100.dll" "$(OutDir)"
       </Command>
     </PostBuildEvent>
     <PostBuildEvent>
@@ -166,6 +167,7 @@
     <PostBuildEvent>
       <Command>
         $(QTDIR)\bin\windeployqt --no-compiler-runtime --no-opengl-sw --no-patchqt --no-translations --no-quick --no-system-d3d-compiler --no-quick-import --plugindir "$(TargetDir)qt6\plugins" --debug "$(TargetPath)"
+        xcopy /y /d "..\3rdparty\opencv\opencv410\build\x64\vc16\bin\opencv_world4100.dll" "$(OutDir)"
       </Command>
     </PostBuildEvent>
     <PostBuildEvent>
