@@ -18,9 +18,6 @@ namespace gem
 	                                 u8* video_data_out, u32 video_data_out_size);
 }
 
-template class ps_move_tracker<false>;
-template class ps_move_tracker<true>;
-
 template <bool DiagnosticsEnabled>
 ps_move_tracker<DiagnosticsEnabled>::ps_move_tracker()
 {
@@ -239,8 +236,6 @@ void ps_move_tracker<DiagnosticsEnabled>::process_hues()
 {
 	const u32 width = m_width;
 	const u32 height = m_height;
-
-	static const double sqrt3 = sqrt(3);
 
 	if constexpr (DiagnosticsEnabled)
 	{
@@ -562,3 +557,6 @@ std::tuple<s16, float, float> ps_move_tracker<DiagnosticsEnabled>::rgb_to_hsv(fl
 
 	return { hue, saturation, cmax };
 }
+
+template class ps_move_tracker<false>;
+template class ps_move_tracker<true>;

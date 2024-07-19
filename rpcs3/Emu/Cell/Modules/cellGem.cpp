@@ -25,8 +25,6 @@
 
 LOG_CHANNEL(cellGem);
 
-extern u32 get_buffer_size_by_format(s32 format, s32 width, s32 height);
-
 template <>
 void fmt_class_string<gem_btn>::format(std::string& out, u64 arg)
 {
@@ -674,7 +672,7 @@ public:
 
 		if (m_camera_info.buffer.addr() != addr && m_camera_info.pbuf[0].addr() != addr && m_camera_info.pbuf[1].addr() != addr)
 		{
-			cellGem.error("gem_tracker: unexcepted image address: addr=0x%x, expected one of: 0x%x, 0x%x, 0x%x", addr, m_camera_info.buffer.addr(), m_camera_info.pbuf[0].addr(), m_camera_info.pbuf[1].addr());
+			cellGem.error("gem_tracker: unexpected image address: addr=0x%x, expected one of: 0x%x, 0x%x, 0x%x", addr, m_camera_info.buffer.addr(), m_camera_info.pbuf[0].addr(), m_camera_info.pbuf[1].addr());
 			return false;
 		}
 
@@ -683,15 +681,15 @@ public:
 		const auto& [width, height] = get_video_resolution(m_camera_info);
 		const u32 expected_size = get_buffer_size_by_format(m_camera_info.format, width, height);
 
-		if (!m_camera_info.bytesize || m_camera_info.bytesize != expected_size)
+		if (!m_camera_info.bytesize || static_cast<u32>(m_camera_info.bytesize) != expected_size)
 		{
-			cellGem.error("gem_tracker: unexcepted image size: size=%d, expected=%d", m_camera_info.bytesize, expected_size);
+			cellGem.error("gem_tracker: unexpected image size: size=%d, expected=%d", m_camera_info.bytesize, expected_size);
 			return false;
 		}
 
 		if (!m_camera_info.bytesize)
 		{
-			cellGem.error("gem_tracker: unexcepted image size: %d", m_camera_info.bytesize);
+			cellGem.error("gem_tracker: unexpected image size: %d", m_camera_info.bytesize);
 			return false;
 		}
 
