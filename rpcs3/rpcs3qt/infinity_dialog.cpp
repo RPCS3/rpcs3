@@ -420,9 +420,8 @@ figure_creator_dialog::figure_creator_dialog(QWidget* parent, u8 slot)
 	QStringList filterlist;
 	u32 first_entry = 0;
 
-	for (const auto& entry : list_figures)
+	for (const auto& [figure, entry] : list_figures)
 	{
-		const auto figure = entry.first;
 		// Only display entry if it is a piece appropriate for the slot
 		if ((slot == 0 &&
 				((figure > 0x1E8480 && figure < 0x2DC6BF) || (figure > 0x3D0900 && figure < 0x4C4B3F))) ||
@@ -431,9 +430,11 @@ figure_creator_dialog::figure_creator_dialog(QWidget* parent, u8 slot)
 			((slot == 4 || slot == 5 || slot == 7 || slot == 8) &&
 				(figure > 0x2DC6C0 && figure < 0x3D08FF)))
 		{
-			const u32 qnum = (figure << 8) | entry.second.first;
-			combo_figlist->addItem(QString::fromStdString(entry.second.second), QVariant(qnum));
-			filterlist << entry.second.second.c_str();
+			const auto& [num, figure_name] = entry;
+			const u32 qnum = (figure << 8) | num;
+			QString name = QString::fromStdString(figure_name);
+			combo_figlist->addItem(name, QVariant(qnum));
+			filterlist << std::move(name);
 			if (first_entry == 0)
 			{
 				first_entry = figure;
@@ -444,6 +445,7 @@ figure_creator_dialog::figure_creator_dialog(QWidget* parent, u8 slot)
 	combo_figlist->addItem(tr("--Unknown--"), QVariant(0xFFFFFFFF));
 	combo_figlist->setEditable(true);
 	combo_figlist->setInsertPolicy(QComboBox::NoInsert);
+	combo_figlist->model()->sort(0, Qt::AscendingOrder);
 
 	QCompleter* co_compl = new QCompleter(filterlist, this);
 	co_compl->setCaseSensitivity(Qt::CaseInsensitive);
@@ -460,7 +462,7 @@ figure_creator_dialog::figure_creator_dialog(QWidget* parent, u8 slot)
 
 	QHBoxLayout* hbox_number = new QHBoxLayout();
 	QLabel* label_number = new QLabel(tr("Figure Number:"));
-	QLineEdit* edit_number = new QLineEdit(QString::fromStdString(std::to_string(first_entry)));
+	QLineEdit* edit_number = new QLineEdit(QString::number(first_entry));
 	QLabel* label_series = new QLabel(tr("Series:"));
 	QLineEdit* edit_series = new QLineEdit("1");
 	QRegularExpressionValidator* rxv = new QRegularExpressionValidator(QRegularExpression("\\d*"), this);
@@ -512,7 +514,7 @@ figure_creator_dialog::figure_creator_dialog(QWidget* parent, u8 slot)
 				return;
 			}
 			const auto found_figure = list_figures.find(fig_num);
-			if (found_figure != list_figures.end())
+			if (found_figure != list_figures.cend())
 			{
 				s_last_figure_path += QString::fromStdString(found_figure->second.second + ".bin");
 			}
@@ -733,7 +735,7 @@ void infinity_dialog::add_figure_slot(QVBoxLayout* vbox_group, QString name, u8 
 	if (figure_slots[slot])
 	{
 		const auto found_figure = list_figures.find(figure_slots[slot].value());
-		if (found_figure != list_figures.end())
+		if (found_figure != list_figures.cend())
 		{
 			m_edit_figures[slot]->setText(QString::fromStdString(found_figure->second.second));
 		}
@@ -824,8 +826,8 @@ void infinity_dialog::load_figure_path(u8 slot, const QString& path)
 	clear_figure(slot);
 
 	const u32 fignum = g_infinitybase.load_figure(data, std::move(inf_file), slot);
-	auto name = list_figures.find(fignum);
-	if (name != list_figures.end())
+	const auto name = list_figures.find(fignum);
+	if (name != list_figures.cend())
 	{
 		m_edit_figures[slot]->setText(QString::fromStdString(name->second.second));
 	}
