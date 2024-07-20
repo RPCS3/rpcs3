@@ -540,15 +540,17 @@ skylander_creator_dialog::skylander_creator_dialog(QWidget* parent)
 
 	QComboBox* combo_skylist = new QComboBox();
 	QStringList filterlist;
-	for (const auto& entry : list_skylanders)
+	for (const auto& [entry, figure_name] : list_skylanders)
 	{
-		const uint qvar = (entry.first.first << 16) | entry.first.second;
-		combo_skylist->addItem(QString::fromStdString(entry.second), QVariant(qvar));
-		filterlist << entry.second.c_str();
+		const uint qvar = (entry.first << 16) | entry.second;
+		QString name = QString::fromStdString(figure_name);
+		combo_skylist->addItem(name, QVariant(qvar));
+		filterlist << std::move(name);
 	}
 	combo_skylist->addItem(tr("--Unknown--"), QVariant(0xFFFFFFFF));
 	combo_skylist->setEditable(true);
 	combo_skylist->setInsertPolicy(QComboBox::NoInsert);
+	combo_skylist->model()->sort(0, Qt::AscendingOrder);
 
 	QCompleter* co_compl = new QCompleter(filterlist, this);
 	co_compl->setCaseSensitivity(Qt::CaseInsensitive);
@@ -618,7 +620,7 @@ skylander_creator_dialog::skylander_creator_dialog(QWidget* parent)
 
 		QString predef_name = last_skylander_path;
 		const auto found_sky = list_skylanders.find(std::make_pair(sky_id, sky_var));
-		if (found_sky != list_skylanders.end())
+		if (found_sky != list_skylanders.cend())
 		{
 			predef_name += QString::fromStdString(found_sky->second + ".sky");
 		}
@@ -815,7 +817,7 @@ void skylander_dialog::update_edits()
 		{
 			const auto& [portal_slot, sky_id, sky_var] = sd.value();
 			const auto found_sky = list_skylanders.find(std::make_pair(sky_id, sky_var));
-			if (found_sky != list_skylanders.end())
+			if (found_sky != list_skylanders.cend())
 			{
 				display_string = QString::fromStdString(found_sky->second);
 			}
