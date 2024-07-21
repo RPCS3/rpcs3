@@ -3,6 +3,7 @@
 #include "Emu/Io/usb_device.h"
 #include "Utilities/mutex.h"
 #include <array>
+#include <optional>
 #include <queue>
 
 struct dimensions_figure
