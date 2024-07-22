@@ -58,6 +58,6 @@ protected:
 	std::array<QLineEdit*, 7> m_edit_figures{};
 
 private:
-	void add_minifig_slot(QGridLayout* grid_group, u8 pad, u8 index, u8 row, u8 column);
+	void add_minifig_slot(QHBoxLayout* layout, u8 pad, u8 index);
 	static dimensions_dialog* inst;
 };

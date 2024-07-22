@@ -395,14 +395,15 @@ minifig_creator_dialog::minifig_creator_dialog(QWidget* parent)
 
 	for (const auto& [figure, figure_name] : list_minifigs)
 	{
-		const QString name = QString::fromStdString(figure_name);
+		QString name = QString::fromStdString(figure_name);
 		combo_figlist->addItem(name, QVariant(figure));
-		filterlist << name;
+		filterlist << std::move(name);
 	}
 
 	combo_figlist->addItem(tr("--Unknown--"), QVariant(0xFFFF));
 	combo_figlist->setEditable(true);
 	combo_figlist->setInsertPolicy(QComboBox::NoInsert);
+	combo_figlist->model()->sort(0, Qt::AscendingOrder);
 
 	QCompleter* co_compl = new QCompleter(filterlist, this);
 	co_compl->setCaseSensitivity(Qt::CaseInsensitive);
@@ -455,7 +456,7 @@ minifig_creator_dialog::minifig_creator_dialog(QWidget* parent)
 				return;
 			}
 			const auto found_figure = list_minifigs.find(fig_num);
-			if (found_figure != list_minifigs.end())
+			if (found_figure != list_minifigs.cend())
 			{
 				s_last_figure_path += QString::fromStdString(found_figure->second + ".bin");
 			}
@@ -533,7 +534,7 @@ void minifig_move_dialog::add_minifig_position(QGridLayout* grid_panel, u8 index
 	if (figure_slots[index])
 	{
 		const auto found_figure = list_minifigs.find(figure_slots[index].value());
-		if (found_figure != list_minifigs.end())
+		if (found_figure != list_minifigs.cend())
 		{
 			vbox_panel->addWidget(new QLabel(tr(found_figure->second.c_str())));
 		}
@@ -575,26 +576,31 @@ dimensions_dialog::dimensions_dialog(QWidget* parent)
 	setWindowTitle(tr("Dimensions Manager"));
 	setObjectName("dimensions_manager");
 	setAttribute(Qt::WA_DeleteOnClose);
-	setMinimumSize(QSize(1200, 500));
+	setMinimumSize(QSize(800, 200));
 
 	QVBoxLayout* vbox_panel = new QVBoxLayout();
+	QVBoxLayout* vbox_group = new QVBoxLayout();
+	QHBoxLayout* hbox_group_1 = new QHBoxLayout();
+	QHBoxLayout* hbox_group_2 = new QHBoxLayout();
 
 	QGroupBox* group_figures = new QGroupBox(tr("Active Dimensions Figures:"));
-	QGridLayout* grid_group = new QGridLayout();
 
-	add_minifig_slot(grid_group, 2, 0, 0, 0);
-	grid_group->addWidget(new QLabel(tr("")), 0, 1);
-	add_minifig_slot(grid_group, 1, 1, 0, 2);
-	grid_group->addWidget(new QLabel(tr("")), 0, 1);
-	add_minifig_slot(grid_group, 3, 2, 0, 4);
+	add_minifig_slot(hbox_group_1, 2, 0);
+	hbox_group_1->addSpacerItem(new QSpacerItem(50, 0, QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding));
+	add_minifig_slot(hbox_group_1, 1, 1);
+	hbox_group_1->addSpacerItem(new QSpacerItem(50, 0, QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding));
+	add_minifig_slot(hbox_group_1, 3, 2);
 
-	add_minifig_slot(grid_group, 2, 3, 1, 0);
-	add_minifig_slot(grid_group, 2, 4, 1, 1);
-	grid_group->addWidget(new QLabel(tr("")), 0, 1);
-	add_minifig_slot(grid_group, 3, 5, 1, 3);
-	add_minifig_slot(grid_group, 3, 6, 1, 4);
+	add_minifig_slot(hbox_group_2, 2, 3);
+	add_minifig_slot(hbox_group_2, 2, 4);
+	hbox_group_2->addSpacerItem(new QSpacerItem(50, 0, QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding));
+	add_minifig_slot(hbox_group_2, 3, 5);
+	add_minifig_slot(hbox_group_2, 3, 6);
 
-	group_figures->setLayout(grid_group);
+	vbox_group->addLayout(hbox_group_1);
+	vbox_group->addSpacerItem(new QSpacerItem(0, 20, QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding));
+	vbox_group->addLayout(hbox_group_2);
+	group_figures->setLayout(vbox_group);
 	vbox_panel->addWidget(group_figures);
 	setLayout(vbox_panel);
 }
@@ -612,7 +618,7 @@ dimensions_dialog* dimensions_dialog::get_dlg(QWidget* parent)
 	return inst;
 }
 
-void dimensions_dialog::add_minifig_slot(QGridLayout* grid_group, u8 pad, u8 index, u8 row, u8 column)
+void dimensions_dialog::add_minifig_slot(QHBoxLayout* layout, u8 pad, u8 index)
 {
 	ensure(index < figure_slots.size());
 
@@ -631,7 +637,7 @@ void dimensions_dialog::add_minifig_slot(QGridLayout* grid_group, u8 pad, u8 ind
 	if (figure_slots[index])
 	{
 		const auto found_figure = list_minifigs.find(figure_slots[index].value());
-		if (found_figure != list_minifigs.end())
+		if (found_figure != list_minifigs.cend())
 		{
 			m_edit_figures[index]->setText(QString::fromStdString(found_figure->second));
 		}
@@ -674,7 +680,7 @@ void dimensions_dialog::add_minifig_slot(QGridLayout* grid_group, u8 pad, u8 ind
 	vbox_layout->addLayout(hbox_name_move);
 	vbox_layout->addLayout(hbox_actions);
 
-	grid_group->addLayout(vbox_layout, row, column);
+	layout->addLayout(vbox_layout);
 }
 
 void dimensions_dialog::clear_figure(u8 pad, u8 index)
@@ -748,15 +754,15 @@ void dimensions_dialog::load_figure_path(u8 pad, u8 index, const QString& path)
 	const u32 fig_num = g_dimensionstoypad.load_figure(data, std::move(dim_file), pad, index);
 
 	figure_slots[index] = fig_num;
-	auto name = list_minifigs.find(fig_num);
-	if (name != list_minifigs.end())
+	const auto name = list_minifigs.find(fig_num);
+	if (name != list_minifigs.cend())
 	{
 		m_edit_figures[index]->setText(QString::fromStdString(name->second));
 	}
 	else
 	{
-		auto blank_name = list_tokens.find(fig_num);
-		if (blank_name != list_tokens.end())
+		const auto blank_name = list_tokens.find(fig_num);
+		if (blank_name != list_tokens.cend())
 		{
 			m_edit_figures[index]->setText(QString::fromStdString(blank_name->second));
 		}
