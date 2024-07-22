@@ -51,9 +51,9 @@ namespace cfg_adapter
 	QStringList get_options(const cfg_location& location)
 	{
 		QStringList values;
-		for (const auto& v : cfg_adapter::get_cfg(g_cfg, location.cbegin(), location.cend()).to_list())
+		for (const std::string& value : cfg_adapter::get_cfg(g_cfg, location.cbegin(), location.cend()).to_list())
 		{
-			values.append(QString::fromStdString(v));
+			values.append(QString::fromStdString(value));
 		}
 		return values;
 	}
