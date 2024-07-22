@@ -5697,7 +5697,7 @@ error_code scenp_score_record_game_data(s32 transId, SceNpScoreBoardId boardId, 
 		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
 	}
 
-	auto [res, trans_ctx] = get_score_transaction_context(transId);
+	auto [res, trans_ctx] = get_score_transaction_context(transId, false);
 	if (res)
 		return *res;
 
