@@ -69,12 +69,7 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 	, m_gui_settings(std::move(gui_settings))
 	, m_start_games_fullscreen(force_fullscreen)
 {
-	m_disable_mouse = m_gui_settings->GetValue(gui::gs_disableMouse).toBool();
-	m_disable_kb_hotkeys = m_gui_settings->GetValue(gui::gs_disableKbHotkeys).toBool();
-	m_show_mouse_in_fullscreen = m_gui_settings->GetValue(gui::gs_showMouseFs).toBool();
-	m_lock_mouse_in_fullscreen  = m_gui_settings->GetValue(gui::gs_lockMouseFs).toBool();
-	m_hide_mouse_after_idletime = m_gui_settings->GetValue(gui::gs_hideMouseIdle).toBool();
-	m_hide_mouse_idletime = m_gui_settings->GetValue(gui::gs_hideMouseIdleTime).toUInt();
+	load_gui_settings();
 
 	m_window_title = Emu.GetFormattedTitle(0);
 
@@ -128,14 +123,14 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 	// Change cursor when in fullscreen.
 	connect(this, &QWindow::visibilityChanged, this, [this](QWindow::Visibility visibility)
 	{
-		handle_cursor(visibility, true, true);
+		handle_cursor(visibility, true, false, true);
 	});
 
 	// Change cursor when this window gets or loses focus.
 	connect(this, &QWindow::activeChanged, this, [this]()
 	{
 		g_game_window_focused = isActive();
-		handle_cursor(visibility(), false, true);
+		handle_cursor(visibility(), false, true, true);
 	});
 
 	// Configure the mouse hide on idle timer
@@ -164,6 +159,16 @@ gs_frame::~gs_frame()
 	}
 
 	m_gui_settings->SetValue(gui::gs_screen, screen_index);
+}
+
+void gs_frame::load_gui_settings()
+{
+	m_disable_mouse = m_gui_settings->GetValue(gui::gs_disableMouse).toBool();
+	m_disable_kb_hotkeys = m_gui_settings->GetValue(gui::gs_disableKbHotkeys).toBool();
+	m_show_mouse_in_fullscreen = m_gui_settings->GetValue(gui::gs_showMouseFs).toBool();
+	m_lock_mouse_in_fullscreen  = m_gui_settings->GetValue(gui::gs_lockMouseFs).toBool();
+	m_hide_mouse_after_idletime = m_gui_settings->GetValue(gui::gs_hideMouseIdle).toBool();
+	m_hide_mouse_idletime = m_gui_settings->GetValue(gui::gs_hideMouseIdleTime).toUInt();
 }
 
 void gs_frame::paintEvent(QPaintEvent *event)
@@ -571,7 +576,7 @@ void gs_frame::toggle_mouselock()
 	m_mouse_hide_and_lock = !m_mouse_hide_and_lock;
 
 	// and update the cursor
-	handle_cursor(visibility(), false, true);
+	handle_cursor(visibility(), false, false, true);
 }
 
 void gs_frame::update_cursor()
@@ -608,7 +613,7 @@ void gs_frame::update_cursor()
 
 bool gs_frame::get_mouse_lock_state()
 {
-	handle_cursor(visibility(), false, true);
+	handle_cursor(visibility(), false, false, true);
 
 	return isActive() && m_mouse_hide_and_lock;
 }
@@ -1093,13 +1098,19 @@ void gs_frame::mouseDoubleClickEvent(QMouseEvent* ev)
 	}
 }
 
-void gs_frame::handle_cursor(QWindow::Visibility visibility, bool from_event, bool start_idle_timer)
+void gs_frame::handle_cursor(QWindow::Visibility visibility, bool visibility_changed, bool active_changed, bool start_idle_timer)
 {
-	// Update the mouse lock state if the visibility changed.
-	if (from_event)
+	// Let's reload the gui settings when the visibility or the active window changes.
+	if (visibility_changed || active_changed)
 	{
-		// In fullscreen we default to hiding and locking. In windowed mode we do not want the lock by default.
-		m_mouse_hide_and_lock = (visibility == QWindow::Visibility::FullScreen) && m_lock_mouse_in_fullscreen;
+		load_gui_settings();
+
+		// Update the mouse lock state if the visibility changed.
+		if (visibility_changed)
+		{
+			// In fullscreen we default to hiding and locking. In windowed mode we do not want the lock by default.
+			m_mouse_hide_and_lock = (visibility == QWindow::Visibility::FullScreen) && m_lock_mouse_in_fullscreen;
+		}
 	}
 
 	// Update the mouse hide timer
@@ -1121,7 +1132,7 @@ void gs_frame::mouse_hide_timeout()
 	// Our idle timeout occured, so we update the cursor
 	if (m_hide_mouse_after_idletime && m_show_mouse)
 	{
-		handle_cursor(visibility(), false, false);
+		handle_cursor(visibility(), false, false, false);
 	}
 }
 
@@ -1172,7 +1183,7 @@ bool gs_frame::event(QEvent* ev)
 	else if (ev->type() == QEvent::MouseMove && (!m_show_mouse || m_mousehide_timer.isActive()))
 	{
 		// This will make the cursor visible again if it was hidden by the mouse idle timeout
-		handle_cursor(visibility(), false, true);
+		handle_cursor(visibility(), false, false, true);
 	}
 	return QWindow::event(ev);
 }
