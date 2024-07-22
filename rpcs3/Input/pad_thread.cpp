@@ -171,7 +171,8 @@ void pad_thread::Init()
 		}
 		cur_pad_handler->Init();
 
-		m_pads[i] = std::make_shared<Pad>(handler_type, i, CELL_PAD_STATUS_DISCONNECTED, pad_settings[i].device_capability, pad_settings[i].device_type);
+		std::shared_ptr<Pad> pad = std::make_shared<Pad>(handler_type, i, CELL_PAD_STATUS_DISCONNECTED, pad_settings[i].device_capability, pad_settings[i].device_type);
+		m_pads[i] = pad;
 
 		if (pad_settings[i].is_ldd_pad)
 		{
@@ -179,20 +180,25 @@ void pad_thread::Init()
 		}
 		else
 		{
-			if (!cur_pad_handler->bindPadToDevice(m_pads[i]))
+			if (!cur_pad_handler->bindPadToDevice(pad))
 			{
 				// Failed to bind the device to cur_pad_handler so binds to NullPadHandler
 				input_log.error("Failed to bind device '%s' to handler %s. Falling back to NullPadHandler.", cfg->device.to_string(), handler_type);
-				nullpad->bindPadToDevice(m_pads[i]);
+				nullpad->bindPadToDevice(pad);
 			}
 
 			input_log.notice("Pad %d: device='%s', handler=%s, VID=0x%x, PID=0x%x, class_type=0x%x, class_profile=0x%x",
-				i, cfg->device.to_string(), m_pads[i]->m_pad_handler, m_pads[i]->m_vendor_id, m_pads[i]->m_product_id, m_pads[i]->m_class_type, m_pads[i]->m_class_profile);
+				i, cfg->device.to_string(), pad->m_pad_handler, pad->m_vendor_id, pad->m_product_id, pad->m_class_type, pad->m_class_profile);
+
+			if (pad->m_pad_handler != pad_handler::null)
+			{
+				input_log.notice("Pad %d: config=\n%s", i, cfg->to_string());
+			}
 		}
 
-		m_pads[i]->is_fake_pad = (g_cfg.io.move == move_handler::fake && i >= (static_cast<u32>(CELL_PAD_MAX_PORT_NUM) - static_cast<u32>(CELL_GEM_MAX_NUM)))
-			|| (m_pads[i]->m_class_type >= CELL_PAD_FAKE_TYPE_FIRST && m_pads[i]->m_class_type < CELL_PAD_FAKE_TYPE_LAST);
-		connect_usb_controller(i, input::get_product_by_vid_pid(m_pads[i]->m_vendor_id, m_pads[i]->m_product_id));
+		pad->is_fake_pad = (g_cfg.io.move == move_handler::fake && i >= (static_cast<u32>(CELL_PAD_MAX_PORT_NUM) - static_cast<u32>(CELL_GEM_MAX_NUM)))
+			|| (pad->m_class_type >= CELL_PAD_FAKE_TYPE_FIRST && pad->m_class_type < CELL_PAD_FAKE_TYPE_LAST);
+		connect_usb_controller(i, input::get_product_by_vid_pid(pad->m_vendor_id, pad->m_product_id));
 	}
 }
 
