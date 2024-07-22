@@ -479,6 +479,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		};
 
 		const int saved_index = ui->resBox->currentIndex();
+		bool remove_720p = false;
 
 		for (int i = ui->resBox->count() - 1; i >= 0; i--)
 		{
@@ -489,18 +490,36 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			const bool is_interlaced = (resolution == video_resolution::_1080i ||
 			                            resolution == video_resolution::_480i ||
 			                            resolution == video_resolution::_576i);
-			const bool supported_by_game = !game || (game && game->resolution > 0 && resolutions.contains(resolution) && (game->resolution & resolutions.at(resolution)));
+			const bool supported_by_game = !game || !game->resolution || (resolutions.contains(resolution) && (game->resolution & resolutions.at(resolution)));
 
 			if (!supported_by_game || is_interlaced)
 			{
+				// Don't remove 720p yet. We may need it as fallback if no other resolution is supported.
+				if (resolution == video_resolution::_720p)
+				{
+					remove_720p = true;
+					continue;
+				}
+
 				ui->resBox->removeItem(i);
+
 				if (i == saved_index)
 				{
 					saved_index_removed = true;
 				}
 			}
 		}
+
+		// Remove 720p if unsupported unless it's the only option
+		if (remove_720p && ui->resBox->count() > 1)
+		{
+			if (const int index = find_item(ui->resBox, static_cast<int>(video_resolution::_720p)); index >= 0)
+			{
+				ui->resBox->removeItem(index);
+			}
+		}
 	}
+
 	for (int i = 0; i < ui->resBox->count(); i++)
 	{
 		const auto [text, value] = get_data(ui->resBox, i);

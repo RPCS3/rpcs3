@@ -104,7 +104,7 @@ Q_SIGNALS:
 
 public Q_SLOTS:
 	/** Writes the unsaved settings to file.  Used in settings dialog on accept.*/
-	void SaveSettings();
+	void SaveSettings() const;
 
 private:
 	YAML::Node m_default_settings; // The default settings as a YAML node.
