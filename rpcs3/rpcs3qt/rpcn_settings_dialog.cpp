@@ -200,7 +200,7 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 		{
 			rpcn_add_server_dialog dlg(this);
 			dlg.exec();
-			const auto new_server = dlg.get_new_server();
+			const auto& new_server = dlg.get_new_server();
 			if (new_server)
 			{
 				if (!g_cfg_rpcn.add_host(new_server->first, new_server->second))
@@ -221,8 +221,8 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 			if (index < 0)
 				return;
 
-			const auto desc = cbx_servers->itemText(index).toStdString();
-			const auto host = cbx_servers->itemData(index).toString().toStdString();
+			const std::string desc = cbx_servers->itemText(index).toStdString();
+			const std::string host = cbx_servers->itemData(index).toString().toStdString();
 
 			ensure(g_cfg_rpcn.del_host(desc, host));
 			g_cfg_rpcn.save();
@@ -237,14 +237,14 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 			                                               "- Username can only contain a-z A-Z 0-9 '-' '_'\n"
 			                                               "- Username is case sensitive\n"));
 			dlg_username.exec();
-			auto username = dlg_username.get_username();
+			const auto& username = dlg_username.get_username();
 
 			if (!username)
 				return;
 
 			rpcn_ask_password_dialog dlg_password(this, tr("Please choose your password:\n\n"));
 			dlg_password.exec();
-			auto password = dlg_password.get_password();
+			const auto& password = dlg_password.get_password();
 
 			if (!password)
 				return;
@@ -253,7 +253,7 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 			                                         "- A valid email is needed to receive the token that validates your account.\n"
 			                                         "- Your email won't be used for anything beyond sending you this token or the password reset token.\n\n"));
 			dlg_email.exec();
-			auto email = dlg_email.get_email();
+			const auto& email = dlg_email.get_email();
 
 			if (!email)
 				return;
@@ -297,7 +297,7 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 			                                         "Now all you need is to enter the token that was sent to your email.\n"
 			                                         "You can skip this step by leaving it empty and entering it later in the Edit Account section too.\n"));
 			token_dlg.exec();
-			auto token = token_dlg.get_token();
+			const auto& token = token_dlg.get_token();
 
 			if (!token)
 				return;
@@ -340,7 +340,7 @@ void rpcn_account_dialog::refresh_combobox()
 {
 	g_cfg_rpcn.load();
 	const auto vec_hosts = g_cfg_rpcn.get_hosts();
-	auto cur_host        = g_cfg_rpcn.get_host();
+	const auto cur_host  = g_cfg_rpcn.get_host();
 	int i = 0, index = 0;
 
 	cbx_servers->clear();
@@ -382,8 +382,8 @@ rpcn_add_server_dialog::rpcn_add_server_dialog(QWidget* parent)
 
 	connect(btn_box, &QDialogButtonBox::accepted, this, [this, edt_description, edt_host]()
 		{
-			auto description = edt_description->text();
-			auto host        = edt_host->text();
+			const QString description = edt_description->text();
+			const QString host        = edt_host->text();
 
 			if (description.isEmpty())
 			{
@@ -563,14 +563,14 @@ rpcn_ask_email_dialog::rpcn_ask_email_dialog(QWidget* parent, const QString& des
 				return;
 			}
 
-			auto email = m_edit_pass1->text().toStdString();
+			std::string email = m_edit_pass1->text().toStdString();
 			if (!validate_email(email))
 			{
 				QMessageBox::critical(this, tr("Invalid Email"), tr("You need to enter a valid email!"), QMessageBox::Ok);
 				return;
 			}
 
-			m_email = email;
+			m_email = std::move(email);
 			QDialog::accept();
 		});
 	connect(btn_box, &QDialogButtonBox::rejected, this, &QDialog::reject);
@@ -608,7 +608,7 @@ rpcn_ask_token_dialog::rpcn_ask_token_dialog(QWidget* parent, const QString& des
 
 	connect(btn_box, &QDialogButtonBox::accepted, this, [this, edt_token]()
 		{
-			const auto token = edt_token->text().toStdString();
+			std::string token = edt_token->text().toStdString();
 
 			if (!token.empty())
 			{
@@ -621,7 +621,7 @@ rpcn_ask_token_dialog::rpcn_ask_token_dialog(QWidget* parent, const QString& des
 					return;
 				}
 
-				m_token = token;
+				m_token = std::move(token);
 			}
 
 			QDialog::accept();
@@ -687,7 +687,7 @@ rpcn_account_edit_dialog::rpcn_account_edit_dialog(QWidget* parent)
 			rpcn_ask_password_dialog ask_pass(this, tr("Please enter your password:"));
 			ask_pass.exec();
 
-			auto& password = ask_pass.get_password();
+			const auto& password = ask_pass.get_password();
 			if (!password)
 				return;
 
@@ -713,8 +713,8 @@ rpcn_account_edit_dialog::rpcn_account_edit_dialog(QWidget* parent)
 
 bool rpcn_account_edit_dialog::save_config()
 {
-	const auto username = m_edit_username->text().toStdString();
-	const auto token    = m_edit_token->text().toStdString();
+	const std::string username = m_edit_username->text().toStdString();
+	const std::string token    = m_edit_token->text().toStdString();
 
 	if (username.empty() || g_cfg_rpcn.get_password().empty())
 	{
@@ -749,8 +749,8 @@ void rpcn_account_edit_dialog::resend_token()
 
 	const auto rpcn = rpcn::rpcn_client::get_instance();
 
-	const auto npid     = g_cfg_rpcn.get_npid();
-	const auto password = g_cfg_rpcn.get_password();
+	const std::string npid     = g_cfg_rpcn.get_npid();
+	const std::string password = g_cfg_rpcn.get_password();
 
 	if (auto result = rpcn->wait_for_connection(); result != rpcn::rpcn_state::failure_no_failure)
 	{
@@ -782,19 +782,19 @@ void rpcn_account_edit_dialog::change_password()
 {
 	rpcn_ask_username_dialog dlg_username(this, tr("Please confirm your username:"));
 	dlg_username.exec();
-	auto username = dlg_username.get_username();
+	const auto& username = dlg_username.get_username();
 
 	if (!username)
 		return;
 
 	switch (QMessageBox::question(this, tr("RPCN: Change Password"), tr("Do you already have a reset password token?\n"
-																		"Note that the reset password token is different from the email verification token.")))
+	                                                                    "Note that the reset password token is different from the email verification token.")))
 	{
 	case QMessageBox::No:
 	{
 		rpcn_ask_email_dialog dlg_email(this, tr("Please enter the email you used to create the account:"));
 		dlg_email.exec();
-		const auto email = dlg_email.get_email();
+		const auto& email = dlg_email.get_email();
 
 		if (!email)
 			return;
@@ -832,14 +832,14 @@ void rpcn_account_edit_dialog::change_password()
 	{
 		rpcn_ask_token_dialog dlg_token(this, tr("Please enter the password reset token you received:"));
 		dlg_token.exec();
-		const auto token = dlg_token.get_token();
+		const auto& token = dlg_token.get_token();
 
 		if (!token)
 			return;
 
 		rpcn_ask_password_dialog dlg_password(this, tr("Please enter your new password:"));
 		dlg_password.exec();
-		const auto password = dlg_password.get_password();
+		const auto& password = dlg_password.get_password();
 
 		if (!password)
 			return;
@@ -1014,16 +1014,16 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 	auto history = np::load_players_history();
 	std::map<u64, std::pair<std::string, std::string>, std::greater<u64>> sorted_history;
 
-	for (const auto& [username, user_info] : history)
+	for (auto& [username, user_info] : history)
 	{
 		if (!data.friends.contains(username) && !data.requests_sent.contains(username) && !data.requests_received.contains(username))
-			sorted_history.insert(std::make_pair(user_info.timestamp, std::make_pair(std::move(username), std::move(user_info.description))));
+			sorted_history.insert(std::make_pair(user_info.timestamp, std::make_pair(username, std::move(user_info.description))));
 	}
 
 	for (const auto& [_, username_and_description] : sorted_history)
 	{
 		const auto& [username, description] = username_and_description;
-		auto* item = new QListWidgetItem(QString::fromStdString(username));
+		QListWidgetItem* item = new QListWidgetItem(QString::fromStdString(username));
 
 		if (!description.empty())
 			item->setToolTip(QString::fromStdString(description));
