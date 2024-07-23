@@ -863,6 +863,8 @@ void pad_settings_dialog::RepaintPreviewLabel(QLabel* l, int deadzone, int anti_
 		painter.drawEllipse(QRectF(ingame_x - 0.5, ingame_y - 0.5, 1.0, 1.0));
 	}
 
+	painter.end();
+
 	l->setPixmap(pixmap);
 }
 

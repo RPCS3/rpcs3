@@ -4,6 +4,7 @@
 #include <QApplication>
 #include <QStyledItemDelegate>
 #include <QTextDocument>
+#include <QPainter>
 
 class richtext_item_delegate : public QStyledItemDelegate
 {
