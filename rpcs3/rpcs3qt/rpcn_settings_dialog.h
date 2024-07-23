@@ -124,7 +124,12 @@ Q_SIGNALS:
 	void signal_add_query(QString name);
 
 private:
-	const QIcon m_green_icon, m_red_icon, m_yellow_icon, m_orange_icon, m_black_icon;
+	QIcon m_icon_online;
+	QIcon m_icon_offline;
+	QIcon m_icon_blocked;
+	QIcon m_icon_request_received;
+	QIcon m_icon_request_sent;
+
 	// list of friends
 	QListWidget* m_lst_friends = nullptr;
 	// list of friend requests sent by/to the current user
