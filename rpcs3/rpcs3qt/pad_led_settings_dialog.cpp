@@ -111,6 +111,7 @@ void pad_led_settings_dialog::redraw_color_sample() const
 	painter.setPen(QPen(Qt::black, 1));
 	painter.fillPath(path, led_color);
 	painter.drawPath(path);
+	painter.end();
 
 	// Update the color sample widget
 	ui->w_color_sample->setPixmap(color_sample.scaled(w * dpr, h * dpr, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));

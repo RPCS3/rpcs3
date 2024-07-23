@@ -1018,6 +1018,7 @@ void gs_frame::take_screenshot(std::vector<u8> data, u32 sshot_width, u32 sshot_
 						QImage screenshot_img(rows[0], img.width(), img.height(), QImage::Format_RGBA8888);
 						QPainter painter(&screenshot_img);
 						painter.drawImage(manager.overlay_offset_x, manager.overlay_offset_y, overlay_img);
+						painter.end();
 
 						std::memcpy(rows[0], screenshot_img.constBits(), screenshot_img.sizeInBytes());
 

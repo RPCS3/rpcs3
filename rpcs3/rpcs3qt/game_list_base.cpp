@@ -3,6 +3,7 @@
 #include "localized.h"
 
 #include <QDir>
+#include <QPainter>
 
 #include <cmath>
 #include <unordered_set>

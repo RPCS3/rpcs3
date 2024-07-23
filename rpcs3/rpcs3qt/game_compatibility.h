@@ -2,7 +2,6 @@
 
 #include <memory>
 
-#include <QPainter>
 #include <QJsonObject>
 
 class downloader;
