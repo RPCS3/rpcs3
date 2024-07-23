@@ -7,6 +7,7 @@
 #include <QGroupBox>
 #include <QMenu>
 #include <QDialogButtonBox>
+
 #include <thread>
 
 #include "qt_utils.h"
@@ -898,13 +899,75 @@ namespace np
 }
 
 rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
-	: QDialog(parent),
-	  m_green_icon(gui::utils::circle_pixmap(QColorConstants::Svg::green, devicePixelRatioF() * 2)),
-	  m_red_icon(gui::utils::circle_pixmap(QColorConstants::Svg::red, devicePixelRatioF() * 2)),
-	  m_yellow_icon(gui::utils::circle_pixmap(QColorConstants::Svg::yellow, devicePixelRatioF() * 2)),
-	  m_orange_icon(gui::utils::circle_pixmap(QColorConstants::Svg::orange, devicePixelRatioF() * 2)),
-	  m_black_icon(gui::utils::circle_pixmap(QColorConstants::Svg::black, devicePixelRatioF() * 2))
+	: QDialog(parent)
 {
+	const qreal pixel_ratio = devicePixelRatioF();
+
+	// Create colored circle pixmaps
+	gui::utils::circle_pixmap online_pixmap(QColorConstants::Svg::green, pixel_ratio * 2);
+	gui::utils::circle_pixmap offline_pixmap(QColorConstants::Svg::red, pixel_ratio * 2);
+	gui::utils::circle_pixmap blocked_pixmap(QColorConstants::Svg::red, pixel_ratio * 2);
+	gui::utils::circle_pixmap req_rcvd_pixmap(QColorConstants::Svg::yellow, pixel_ratio * 2);
+	gui::utils::circle_pixmap req_sent_pixmap(QColorConstants::Svg::orange, pixel_ratio * 2);
+
+	// Reset device pixel ratios for further painting
+	online_pixmap.setDevicePixelRatio(1.0);
+	offline_pixmap.setDevicePixelRatio(1.0);
+	blocked_pixmap.setDevicePixelRatio(1.0);
+	req_rcvd_pixmap.setDevicePixelRatio(1.0);
+	req_sent_pixmap.setDevicePixelRatio(1.0);
+
+	// The width and height are identical for all pixmaps
+	const int w = online_pixmap.width();
+	const int h = online_pixmap.height();
+
+	const QPen pen1(QBrush(Qt::black), w * 0.1, Qt::SolidLine, Qt::RoundCap, Qt::MiterJoin);
+	const QPen pen2(QBrush(Qt::black), w * 0.15, Qt::SolidLine, Qt::RoundCap, Qt::MiterJoin);
+
+	QPainter painter;
+	painter.setRenderHint(QPainter::Antialiasing);
+
+	// Render a bar into the offline pixmap
+	{
+		painter.begin(&offline_pixmap);
+		painter.setPen(pen2);
+		painter.drawLine(QPointF(w * 0.25, h * 0.5), QPointF(w * 0.75, h * 0.5));
+		painter.end();
+	}
+
+	// Render a cross into the blocked pixmap
+	{
+		painter.begin(&blocked_pixmap);
+		painter.setPen(pen1);
+		painter.drawLine(QPointF(w * 0.25, h * 0.25), QPointF(w * 0.75, h * 0.75));
+		painter.drawLine(QPointF(w * 0.25, h * 0.75), QPointF(w * 0.75, h * 0.25));
+		painter.end();
+	}
+
+	// Render a downward arrow into the request received pixmap
+	{
+		painter.begin(&req_rcvd_pixmap);
+		painter.setPen(pen1);
+		painter.drawLine(QPointF(w * 0.5, h * 0.25), QPointF(w * 0.5, h * 0.75));
+		painter.drawLines({ QLineF(w * 0.5, h * 0.75, w * 0.25, h * 0.5), QLineF(w * 0.5, h * 0.75, w * 0.75, h * 0.5) });
+		painter.end();
+	}
+
+	// Render an upward arrow into the request sent pixmap
+	{
+		painter.begin(&req_sent_pixmap);
+		painter.setPen(pen1);
+		painter.drawLine(QPointF(w * 0.5, h * 0.25), QPointF(w * 0.5, h * 0.75));
+		painter.drawLines({ QLineF(w * 0.5, h * 0.25, w * 0.25, h * 0.5), QLineF(w * 0.5, h * 0.25, w * 0.75, h * 0.5) });
+		painter.end();
+	}
+
+	m_icon_online = online_pixmap;
+	m_icon_offline = offline_pixmap;
+	m_icon_blocked = blocked_pixmap;
+	m_icon_request_received = req_rcvd_pixmap;
+	m_icon_request_sent = req_sent_pixmap;
+
 	const auto set_title = [this]()
 	{
 		if (const std::string npid = g_cfg_rpcn.get_npid(); !npid.empty())
@@ -993,22 +1056,22 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 
 	for (const auto& fr : data.friends)
 	{
-		add_update_list(m_lst_friends, QString::fromStdString(fr.first), fr.second.online ? m_green_icon : m_red_icon, fr.second.online);
+		add_update_list(m_lst_friends, QString::fromStdString(fr.first), fr.second.online ? m_icon_online : m_icon_offline, fr.second.online);
 	}
 
 	for (const auto& fr_req : data.requests_sent)
 	{
-		add_update_list(m_lst_requests, QString::fromStdString(fr_req), m_orange_icon, QVariant(false));
+		add_update_list(m_lst_requests, QString::fromStdString(fr_req), m_icon_request_sent, QVariant(false));
 	}
 
 	for (const auto& fr_req : data.requests_received)
 	{
-		add_update_list(m_lst_requests, QString::fromStdString(fr_req), m_yellow_icon, QVariant(true));
+		add_update_list(m_lst_requests, QString::fromStdString(fr_req), m_icon_request_received, QVariant(true));
 	}
 
 	for (const auto& blck : data.blocked)
 	{
-		add_update_list(m_lst_blocks, QString::fromStdString(blck), m_red_icon, QVariant(false));
+		add_update_list(m_lst_blocks, QString::fromStdString(blck), m_icon_blocked, QVariant(false));
 	}
 
 	auto history = np::load_players_history();
@@ -1123,7 +1186,7 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 					}
 
 					QString qstr_friend = QString::fromStdString(str_sel_friend);
-					add_update_list(m_lst_requests, qstr_friend, m_orange_icon, QVariant(false));
+					add_update_list(m_lst_requests, qstr_friend, m_icon_request_sent, QVariant(false));
 					remove_list(m_lst_history, qstr_friend);
 				});
 
@@ -1159,7 +1222,7 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 			}
 			else
 			{
-				add_update_list(m_lst_requests, QString::fromStdString(str_friend_username), m_orange_icon, QVariant(false));
+				add_update_list(m_lst_requests, QString::fromStdString(str_friend_username), m_icon_request_sent, QVariant(false));
 				QMessageBox::information(this, tr("Friend added!"), tr("Friend was successfully added!"), QMessageBox::Ok);
 			}
 		});
@@ -1205,7 +1268,7 @@ void rpcn_friends_dialog::remove_list(QListWidget* list, const QString& name)
 
 void rpcn_friends_dialog::add_update_friend(QString name, bool status)
 {
-	add_update_list(m_lst_friends, name, status ? m_green_icon : m_red_icon, status);
+	add_update_list(m_lst_friends, name, status ? m_icon_online : m_icon_offline, status);
 	remove_list(m_lst_requests, name);
 }
 
@@ -1217,7 +1280,7 @@ void rpcn_friends_dialog::remove_friend(QString name)
 
 void rpcn_friends_dialog::add_query(QString name)
 {
-	add_update_list(m_lst_requests, name, m_yellow_icon, QVariant(true));
+	add_update_list(m_lst_requests, name, m_icon_request_received, QVariant(true));
 	remove_list(m_lst_history, name);
 }
 
