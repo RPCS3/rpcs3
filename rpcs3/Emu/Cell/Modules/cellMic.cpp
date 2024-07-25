@@ -149,6 +149,8 @@ void mic_context::load_config_and_init()
 			{
 				device.add_device(device_list[1]);
 			}
+
+			wake_up();
 		}
 		else
 		{
