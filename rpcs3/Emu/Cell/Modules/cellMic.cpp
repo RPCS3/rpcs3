@@ -863,9 +863,9 @@ error_code cellMicGetDeviceAttr(s32 dev_num, CellMicDeviceAttr deviceAttributes,
 		switch (deviceAttributes)
 		{
 		case CELLMIC_DEVATTR_CHANVOL:
-			if (*arg1 > 2 || !arg2)
+			if (*arg1 == 0 || *arg1 > 2 || !arg2)
 				return CELL_MICIN_ERROR_PARAM;
-			*arg2 = ::at32(device.attr_chanvol, *arg1);
+			*arg2 = ::at32(device.attr_chanvol, *arg1 - 1);
 			break;
 		case CELLMIC_DEVATTR_LED: *arg1 = device.attr_led; break;
 		case CELLMIC_DEVATTR_GAIN: *arg1 = device.attr_gain; break;
@@ -897,9 +897,9 @@ error_code cellMicSetDeviceAttr(s32 dev_num, CellMicDeviceAttr deviceAttributes,
 	{
 	case CELLMIC_DEVATTR_CHANVOL:
 		// Used by SingStar to set the volume of each mic
-		if (arg1 > 2)
+		if (arg1 == 0 || arg1 > 2)
 			return CELL_MICIN_ERROR_PARAM;
-		::at32(device.attr_chanvol, arg1) = arg2;
+		::at32(device.attr_chanvol, arg1 - 1) = arg2;
 		break;
 	case CELLMIC_DEVATTR_LED: device.attr_led = arg1; break;
 	case CELLMIC_DEVATTR_GAIN: device.attr_gain = arg1; break;
