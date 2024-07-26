@@ -2138,16 +2138,24 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto VREFP()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<use_nj, fix_nj, set_vnan, fix_vnan>();
+		return ppu_exec_select<Flags...>::template select<>();
 
-	static const auto exec = [](auto&& d, auto&& b_, auto&& jm_mask)
+	static const auto exec = [](auto&& d, auto&& b)
 	{
-		auto m = gv_bcst32(jm_mask, &ppu_thread::jm_mask);
-		auto b = ppu_flush_denormal<false, Flags...>(m, std::move(b_));
-		d = ppu_flush_denormal<true, Flags...>(std::move(m), ppu_set_vnan<Flags...>(gv_divfs(gv_bcstfs(1.0f), b), b));
+		auto f = gv_eqfs(b, b); // not NaN
+		auto e = gv_and32(b, gv_bcst32(0x7f800000)); // exp
+		auto z = gv_eq32(e, gv_bcst32(0)); // test for zero/denormal
+		auto m = gv_and32(b, gv_bcst32(0x7fffff)); // mantissa
+		auto a = gv_gather32(ppu_vrefp_mantissas, gv_shr32(m, 9)); // LUT
+		auto x = gv_subus_u16(gv_bcst32(0x7e800000), e); // new_exp = 0xff - 2 - exp (saturated to 0)
+		auto n = gv_eq32(x, gv_bcst32(0)); // test for zero/denormal result
+		auto l = gv_eq32(gv_shl32(b, 1), gv_bcst32(0x7e800000 << 1)); // test for special case producing FLT_MIN result
+		auto s = gv_and32(b, gv_bcst32(0x80000000)); // extract sign
+		auto r = gv_select32(n, gv_and32(l, gv_bcst32(0x00800000)), gv_select32(z, gv_bcst32(0x7f800000), x | a));
+		d = gv_select32(f, r | s, b | gv_bcst32(0x7fc00000));
 	};
 
-	RETURN_(ppu.vr[op.vd], ppu.vr[op.vb], ppu.jm_mask);
+	RETURN_(ppu.vr[op.vd], ppu.vr[op.vb]);
 }
 
 template <u32 Build, ppu_exec_bit... Flags>
