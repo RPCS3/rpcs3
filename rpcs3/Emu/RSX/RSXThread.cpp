@@ -933,7 +933,7 @@ namespace rsx
 					{ ppu_cmd::sleep, 0 }
 				});
 
-				intr_thread->cmd_notify++;
+				intr_thread->cmd_notify.store(1);
 				intr_thread->cmd_notify.notify_one();
 			}
 		}
@@ -3923,7 +3923,7 @@ namespace rsx
 					{ ppu_cmd::sleep, 0 }
 				});
 
-				intr_thread->cmd_notify++;
+				intr_thread->cmd_notify.store(1);
 				intr_thread->cmd_notify.notify_one();
 			}
 		}

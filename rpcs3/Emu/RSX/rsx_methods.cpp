@@ -57,7 +57,7 @@ namespace rsx
 				{ ppu_cmd::sleep, 0 }
 			});
 
-			RSX(ctx)->intr_thread->cmd_notify++;
+			RSX(ctx)->intr_thread->cmd_notify.store(1);
 			RSX(ctx)->intr_thread->cmd_notify.notify_one();
 		}
 
@@ -84,7 +84,7 @@ namespace rsx
 				{ ppu_cmd::sleep, 0 }
 			});
 
-			RSX(ctx)->intr_thread->cmd_notify++;
+			RSX(ctx)->intr_thread->cmd_notify.store(1);
 			RSX(ctx)->intr_thread->cmd_notify.notify_one();
 		}
 	}
