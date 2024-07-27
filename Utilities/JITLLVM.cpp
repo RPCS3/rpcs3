@@ -372,7 +372,7 @@ public:
 			return;
 		}
 
-		jit_log.notice("LLVM: Created module: %s", _module->getName().data());
+		jit_log.trace("LLVM: Created module: %s", _module->getName().data());
 
 		// Restore space that was overestimated
 		ensure(m_compiler->add_sub_disk_space(max_size - module_file.size()));
