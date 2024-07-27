@@ -171,6 +171,135 @@ void fmt_class_string<fmt::base57>::format(std::string& out, u64 arg)
 	}
 }
 
+fmt::base57_result fmt::base57_result::from_string(std::string_view str)
+{
+	// Precomputed tail sizes if input data is not multiple of 8
+	static constexpr u8 s_tail[8] = {0, 2, 3, 5, 6, 7, 9, 10};
+
+	fmt::base57_result result(str.size() / 11 * 8 + (str.size() % 11 ? 8 : 0));
+
+	// Each 11 chars of input produces 8 bytes of byte output
+	for (usz i = 0, p = 0; i < result.size; i += 8, p += 11)
+	{
+		// Load up to 8 bytes
+		const std::string_view be_value = str.substr(p);
+		be_t<u64> value = 0;
+
+		for (u64 j = 10, multiplier = 0; j != umax; j--)
+		{
+			if (multiplier == 0)
+			{
+				multiplier = 1;
+			}
+			else
+			{
+				// Do it first to avoid overflow
+				multiplier *= 57;
+			}
+
+			if (j < be_value.size())
+			{
+				auto to_val = [](u8 c) -> u64
+				{
+					if (std::isdigit(c))
+					{
+						return c - '0';
+					}
+
+					if (std::isupper(c))
+					{
+						// Omitted characters
+						if (c == 'B' || c == 'D' || c == 'I' || c == 'O')
+						{
+							return umax;
+						}
+
+						if (c > 'O')
+						{
+							c -= 4;
+						}
+						else if (c > 'I')
+						{
+							c -= 3;
+						}
+						else if (c > 'D')
+						{
+							c -= 2;
+						}
+						else if (c > 'B')
+						{
+							c--;
+						}
+
+						return c - 'A' + 10;
+					}
+
+					if (std::islower(c))
+					{
+						// Omitted characters
+						if (c == 'l')
+						{
+							return umax;
+						}
+
+						if (c > 'l')
+						{
+							c--;
+						}
+
+						return c - 'a' + 10 + 22;
+					}
+
+					return umax;
+				};
+
+				const u64 res = to_val(be_value[j]);
+
+				if (res == umax)
+				{
+					// Invalid input character
+					result = {};
+					break;
+				}
+
+				if (u64{umax} / multiplier < res)
+				{
+					// Overflow
+					result = {};
+					break;
+				}
+
+				const u64 addend = res * multiplier;
+
+				if (~value < addend)
+				{
+					// Overflow
+					result = {};
+					break;
+				}
+
+				value += addend;
+			}
+		}
+
+		if (!result.size)
+		{
+			break;
+		}
+
+		if (result.size - i < sizeof(value))
+		{
+			std::memcpy(result.memory.get() + i, &value, result.size - i);
+		}
+		else
+		{
+			std::memcpy(result.memory.get() + i, &value, sizeof(value));
+		}
+	}
+
+	return std::move(result);
+}
+
 void fmt_class_string<const void*>::format(std::string& out, u64 arg)
 {
 	fmt::append(out, "%p", arg);
