@@ -320,18 +320,37 @@ namespace fmt
 		const uchar* data;
 		usz size;
 
+		base57() = default;
+
 		template <typename T>
-		base57(const T& arg)
-			: data(reinterpret_cast<const uchar*>(&arg))
+		base57(const T& arg) noexcept
+			: data(reinterpret_cast<const uchar*>(std::addressof(arg)))
 			, size(sizeof(T))
 		{
 		}
 
-		base57(const uchar* data, usz size)
+		base57(const uchar* data, usz size) noexcept
 			: data(data)
 			, size(size)
 		{
 		}
+	};
+
+	struct base57_result : public base57
+	{
+		std::unique_ptr<uchar[]> memory;
+
+		base57_result() noexcept = default;
+		base57_result(base57_result&&) = default;
+		base57_result& operator=(base57_result&&) = default;
+
+		explicit base57_result(usz size) noexcept
+			: base57(size ? new uchar[size] : nullptr, size)
+			, memory(const_cast<uchar*>(this->data))
+		{
+		}
+
+		static base57_result from_string(std::string_view str);
 	};
 
 	template <typename... Args>
