@@ -73,14 +73,13 @@ void mic_context::operator()()
 	// Timestep in microseconds
 	constexpr u64 TIMESTEP = 256ull * 1'000'000ull / 48000ull;
 	u64 timeout = 0;
-	u32 oldvalue = 0;
 
 	while (thread_ctrl::state() != thread_state::aborting)
 	{
 		if (timeout != 0)
 		{
-			thread_ctrl::wait_on(wakey, oldvalue, timeout);
-			oldvalue = wakey;
+			thread_ctrl::wait_on(wakey, 0, timeout);
+			wakey.store(0);
 		}
 
 		std::lock_guard lock(mutex);
@@ -124,7 +123,7 @@ void mic_context::operator()()
 
 void mic_context::wake_up()
 {
-	wakey++;
+	wakey.store(1);
 	wakey.notify_one();
 }
 
