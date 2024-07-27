@@ -16,7 +16,6 @@ void fmt_class_string<gui::shortcuts::shortcut>::format(std::string& out, u64 ar
 		case shortcut::mw_toggle_fullscreen: return "mw_toggle_fullscreen";
 		case shortcut::mw_exit_fullscreen: return "mw_exit_fullscreen";
 		case shortcut::mw_refresh: return "mw_refresh";
-		case shortcut::mw_welcome_dialog: return "mw_welcome_dialog";
 		case shortcut::gw_toggle_fullscreen: return "gw_toggle_fullscreen";
 		case shortcut::gw_exit_fullscreen: return "gw_exit_fullscreen";
 		case shortcut::gw_log_mark: return "gw_log_mark";
@@ -44,7 +43,6 @@ shortcut_settings::shortcut_settings()
 		{ shortcut::mw_toggle_fullscreen, shortcut_info{ "main_window_toggle_fullscreen", tr("Toggle Fullscreen"), "Alt+Return", shortcut_handler_id::main_window } },
 		{ shortcut::mw_exit_fullscreen, shortcut_info{ "main_window_exit_fullscreen", tr("Exit Fullscreen"), "Esc", shortcut_handler_id::main_window } },
 		{ shortcut::mw_refresh, shortcut_info{ "main_window_refresh", tr("Refresh"), "Ctrl+F5", shortcut_handler_id::main_window } },
-		{ shortcut::mw_welcome_dialog, shortcut_info{ "main_window_welcome_dialog", tr("Show Welcome Dialog"), "F1", shortcut_handler_id::main_window } },
 		{ shortcut::gw_toggle_fullscreen, shortcut_info{ "game_window_toggle_fullscreen", tr("Toggle Fullscreen"), "Alt+Return", shortcut_handler_id::game_window } },
 		{ shortcut::gw_exit_fullscreen, shortcut_info{ "game_window_exit_fullscreen", tr("Exit Fullscreen"), "Esc", shortcut_handler_id::game_window } },
 		{ shortcut::gw_log_mark, shortcut_info{ "game_window_log_mark", tr("Add Log Mark"), "Alt+L", shortcut_handler_id::game_window } },
