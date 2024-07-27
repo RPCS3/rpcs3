@@ -23,7 +23,6 @@ namespace gui
 			mw_toggle_fullscreen,
 			mw_exit_fullscreen,
 			mw_refresh,
-			mw_welcome_dialog,
 
 			gw_toggle_fullscreen,
 			gw_exit_fullscreen,

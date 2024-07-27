@@ -65,7 +65,7 @@ extern std::shared_ptr<CPUDisAsm> make_disasm(const cpu_thread* cpu)
 }
 
 debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidget *parent)
-	: custom_dock_widget(tr("Debugger"), parent)
+	: custom_dock_widget(tr("Debugger [Press F1 for help]"), parent)
 	, m_gui_settings(std::move(gui_settings))
 {
 	setContentsMargins(0, 0, 0, 0);
