@@ -581,7 +581,7 @@ error_code sys_ppu_thread_start(ppu_thread& ppu, u32 thread_id)
 	}
 	else
 	{
-		thread->cmd_notify++;
+		thread->cmd_notify.store(1);
 		thread->cmd_notify.notify_one();
 	}
 
