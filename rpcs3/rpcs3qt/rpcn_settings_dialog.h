@@ -23,9 +23,11 @@ public:
 
 private:
 	void refresh_combobox();
+	void refresh_countrybox();
 
 private:
 	QComboBox* cbx_servers = nullptr;
+	QComboBox* cbx_countries = nullptr;
 };
 
 class rpcn_add_server_dialog : public QDialog

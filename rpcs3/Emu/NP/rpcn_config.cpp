@@ -106,6 +106,37 @@ std::vector<std::pair<std::string, std::string>> cfg_rpcn::get_hosts()
 	return vec_hosts;
 }
 
+std::string cfg_rpcn::get_country() const
+{
+	return country.to_string();
+}
+
+std::vector<std::pair<std::string, std::string>> cfg_rpcn::get_countries()
+{
+	std::vector<std::pair<std::string, std::string>> vec_countries;
+	auto countries_list = fmt::split(countries.to_string(), {"|||"});
+
+	for (const auto& cur_country : countries_list)
+	{
+		auto cnty_and_code = fmt::split(cur_country, {"|"});
+		if (cnty_and_code.size() != 2)
+		{
+			rpcn_log.error("Invalid item in the list of countries: %s", cur_country);
+			continue;
+		}
+		vec_countries.push_back(std::make_pair(std::move(cnty_and_code[0]), std::move(cnty_and_code[1])));
+	}
+
+	if (vec_countries.empty())
+	{
+		countries.from_default();
+		save();
+		return get_countries();
+	}
+
+	return vec_countries;
+}
+
 std::string cfg_rpcn::get_npid()
 {
 	std::string final_npid = npid.to_string();
@@ -131,6 +162,11 @@ std::string cfg_rpcn::get_token() const
 void cfg_rpcn::set_host(std::string_view host)
 {
 	this->host.from_string(host);
+}
+
+void cfg_rpcn::set_country(std::string_view country)
+{
+	this->country.from_string(country);
 }
 
 void cfg_rpcn::set_npid(std::string_view npid)
@@ -164,6 +200,24 @@ void cfg_rpcn::set_hosts(const std::vector<std::pair<std::string, std::string>>&
 
 	final_string.resize(final_string.size() - 3);
 	hosts.from_string(final_string);
+}
+
+void cfg_rpcn::set_countries(const std::vector<std::pair<std::string, std::string>>& vec_countries)
+{
+	std::string final_string;
+	for (const auto& [cur_cnty, cur_code] : vec_countries)
+	{
+		fmt::append(final_string, "%s|%s|||", cur_cnty, cur_code);
+	}
+
+	if (final_string.empty())
+	{
+		countries.from_default();
+		return;
+	}
+
+	final_string.resize(final_string.size() - 3);
+	countries.from_string(final_string);
 }
 
 bool cfg_rpcn::add_host(std::string_view new_description, std::string_view new_host)
