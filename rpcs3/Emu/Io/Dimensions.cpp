@@ -406,15 +406,16 @@ bool dimensions_toypad::move_figure(u8 pad, u8 index, u8 old_pad, u8 old_index)
 	if (old_index == index)
 	{
 		// Don't bother removing and loading again, just send response to the game
-		dimensions_figure& figure = get_figure_by_index(old_index);
+		const dimensions_figure& figure = get_figure_by_index(old_index);
 		std::array<u8, 32> figure_remove_response = {0x56, 0x0b, pad, 0x00, figure.index, 0x01};
 		figure_remove_response[13] = generate_checksum(figure_remove_response, 13);
 		std::array<u8, 32> figure_add_response = {0x56, 0x0b, pad, 0x00, figure.index, 0x00};
 		figure_add_response[13] = generate_checksum(figure_add_response, 13);
-		m_figure_added_removed_responses.push(figure_remove_response);
-		m_figure_added_removed_responses.push(figure_add_response);
+		m_figure_added_removed_responses.push(std::move(figure_remove_response));
+		m_figure_added_removed_responses.push(std::move(figure_add_response));
 		return true;
 	}
+
 	// When moving figures between spaces on the toypad, remove any figure from the space they are moving to,
 	// then remove them from their current space, then load them to the space they are moving to
 	remove_figure(pad, index, true);

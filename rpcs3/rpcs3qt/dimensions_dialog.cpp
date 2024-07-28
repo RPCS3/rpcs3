@@ -546,7 +546,7 @@ void minifig_move_dialog::add_minifig_position(QGridLayout* grid_panel, u8 index
 	auto* btn_move = new QPushButton(tr("Move Here"), this);
 	if (old_index == index)
 	{
-		btn_move->setText("Pick up and Place");
+		btn_move->setText(tr("Pick up and Place"));
 	}
 	vbox_panel->addWidget(btn_move);
 	connect(btn_move, &QAbstractButton::clicked, this, [this, index]
