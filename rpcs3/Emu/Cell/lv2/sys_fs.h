@@ -384,7 +384,9 @@ struct lv2_dir final : lv2_fs_object
 	// Read next
 	const fs::dir_entry* dir_read()
 	{
-		if (const u64 cur = pos++; cur < entries.size())
+		const u64 old_pos = pos;
+
+		if (const u64 cur = (old_pos < entries.size() ? pos++ : old_pos); cur < entries.size())
 		{
 			return &entries[cur];
 		}
