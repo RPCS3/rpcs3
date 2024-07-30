@@ -193,6 +193,7 @@
     <ClCompile Include="Input\mm_joystick_handler.cpp" />
     <ClCompile Include="Input\pad_thread.cpp" />
     <ClCompile Include="Input\product_info.cpp" />
+    <ClCompile Include="module_verifier.cpp" />
     <ClCompile Include="QTGeneratedFiles\Debug\moc_about_dialog.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
