@@ -738,6 +738,11 @@ namespace np
 		return npid;
 	}
 
+	const SceNpCountryCode& np_handler::get_countryCode() const
+	{
+		return countrycode;
+	}
+
 	const SceNpOnlineId& np_handler::get_online_id() const
 	{
 		return npid.handle;

@@ -103,6 +103,7 @@ namespace np
 		s32 get_upnp_status() const;
 
 		const SceNpId& get_npid() const;
+		const SceNpCountryCode& get_countryCode() const;
 		const SceNpOnlineId& get_online_id() const;
 		const SceNpOnlineName& get_online_name() const;
 		const SceNpAvatarUrl& get_avatar_url() const;
@@ -394,6 +395,7 @@ namespace np
 
 		// User infos
 		SceNpId npid{};
+		SceNpCountryCode countrycode{};
 		SceNpOnlineName online_name{};
 		SceNpAvatarUrl avatar_url{};
 
@@ -453,6 +455,16 @@ namespace np
 			std::string pr_comment;
 			std::vector<u8> pr_data;
 		} presence_self;
+
+		// Countries
+		struct country
+		{
+			std::string name;
+			s32 ccode[2];
+		};
+		std::vector<std::pair<std::string,s32>> get_countries();
+
+
 
 		player_history& get_player_and_set_timestamp(const SceNpId& npid, u64 timestamp);
 		void save_players_history();
