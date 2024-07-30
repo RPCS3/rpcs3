@@ -261,9 +261,13 @@ PadHandlerBase::connection PadHandlerBase::get_next_button_press(const std::stri
 
 		const bool is_trigger = get_is_left_trigger(device, keycode) || get_is_right_trigger(device, keycode);
 		const bool is_stick   = !is_trigger && (get_is_left_stick(device, keycode) || get_is_right_stick(device, keycode));
-		const bool is_button = !is_trigger && !is_stick;
+		const bool is_touch_motion = !is_trigger && !is_stick && get_is_touch_pad_motion(device, keycode);
+		const bool is_button = !is_trigger && !is_stick && !is_touch_motion;
 
-		if ((is_trigger && (value > m_trigger_threshold)) || (is_stick && (value > m_thumb_threshold)) || (is_button && (value > 0)))
+		if ((is_trigger && (value > m_trigger_threshold)) ||
+			(is_stick && (value > m_thumb_threshold)) ||
+			(is_button && (value > 0)) ||
+			(is_touch_motion && (value > 255 * 0.9)))
 		{
 			if (get_blacklist)
 			{

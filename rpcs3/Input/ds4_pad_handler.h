@@ -19,6 +19,7 @@ namespace reports
 	constexpr u32 DS4_OUTPUT_REPORT_BLUETOOTH_SIZE = 78;
 	constexpr u32 DS4_TOUCHPAD_WIDTH = 1920;
 	constexpr u32 DS4_TOUCHPAD_HEIGHT = 942;
+	constexpr u32 DS4_TOUCH_POINT_INACTIVE = 0x80;
 
 	struct ds4_touch_point
 	{
@@ -33,7 +34,7 @@ namespace reports
 	struct ds4_touch_report
 	{
 		u8 timestamp;
-		ds4_touch_point points[2];
+		std::array<ds4_touch_point, 2> points;
 	};
 	static_assert(sizeof(ds4_touch_report) == 9);
 
@@ -61,7 +62,7 @@ namespace reports
 		u8 report_id;
 		ds4_input_report_common common;
 		u8 num_touch_reports;
-		ds4_touch_report touch_reports[3];
+		std::array<ds4_touch_report, 3> touch_reports;
 		u8 reserved[3];
 	};
 	static_assert(sizeof(ds4_input_report_usb) == DS4_INPUT_REPORT_USB_SIZE);
@@ -72,7 +73,7 @@ namespace reports
 		u8 reserved[2];
 		ds4_input_report_common common;
 		u8 num_touch_reports;
-		ds4_touch_report touch_reports[4];
+		std::array<ds4_touch_report, 4> touch_reports;
 		u8 reserved2[2];
 		u8 crc32[4];
 	};
@@ -150,6 +151,11 @@ class ds4_pad_handler final : public hid_pad_handler<DS4Device>
 		PSButton,
 		TouchPad,
 
+		Touch_L,
+		Touch_R,
+		Touch_U,
+		Touch_D,
+
 		L2,
 		R2,
 
@@ -184,6 +190,7 @@ private:
 	bool get_is_right_trigger(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
 	bool get_is_left_stick(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
 	bool get_is_right_stick(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
+	bool get_is_touch_pad_motion(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
 	PadHandlerBase::connection update_connection(const std::shared_ptr<PadDevice>& device) override;
 	void get_extended_info(const pad_ensemble& binding) override;
 	void apply_pad_data(const pad_ensemble& binding) override;
