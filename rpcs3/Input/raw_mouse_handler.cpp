@@ -45,6 +45,8 @@ raw_mouse::~raw_mouse()
 
 void raw_mouse::reload_config()
 {
+	m_buttons.clear();
+
 	if (m_index < ::size32(g_cfg_raw_mouse.players))
 	{
 		if (const auto& player = ::at32(g_cfg_raw_mouse.players, m_index))
@@ -61,6 +63,12 @@ void raw_mouse::reload_config()
 			m_buttons[CELL_MOUSE_BUTTON_8] = get_mouse_button(player->mouse_button_8);
 		}
 	}
+}
+
+void raw_mouse::set_index(u32 index)
+{
+	m_index = index;
+	reload_requested = true;
 }
 
 std::pair<int, int> raw_mouse::get_mouse_button(const cfg::string& button)
@@ -131,7 +139,10 @@ void raw_mouse::update_values(const RAWMOUSE& state)
 
 	const auto get_button_pressed = [this](u8 button, int button_flags)
 	{
-		const auto& [down, up] = ::at32(m_buttons, button);
+		const auto it = m_buttons.find(button);
+		if (it == m_buttons.cend()) return;
+
+		const auto& [down, up] = it->second;
 
 		// Only update the value if either down or up flags are present
 		if ((button_flags & down))
@@ -328,12 +339,12 @@ void raw_mouse_handler::update_devices()
 				const std::string device_name = player->device.to_string();
 
 				// Check if the configured device for this player is connected
-				if (auto it = std::find_if(enumerated.begin(), enumerated.end(), [&device_name](const auto& entry){ return entry.second.device_name() == device_name; });
-					it != enumerated.end())
+				if (const auto it = std::find_if(enumerated.begin(), enumerated.end(), [&device_name](const auto& entry){ return entry.second.device_name() == device_name; });
+					it != enumerated.cend())
 				{
 					// Check if the device was already known
-					auto it_exists = m_raw_mice.find(it->first);
-					const bool exists = it_exists != m_raw_mice.end();
+					const auto it_exists = m_raw_mice.find(it->first);
+					const bool exists = it_exists != m_raw_mice.cend();
 
 					// Copy by value to allow for the same device for multiple players
 					raw_mouse& mouse = updated_mice[it->first];
