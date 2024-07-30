@@ -111,30 +111,18 @@ std::string cfg_rpcn::get_country() const
 	return country.to_string();
 }
 
-std::vector<std::pair<std::string, std::string>> cfg_rpcn::get_countries()
+std::vector<cfg_rpcn::country_code> cfg_rpcn::get_countries()
 {
-	std::vector<std::pair<std::string, std::string>> vec_countries;
-	auto countries_list = fmt::split(countries.to_string(), {"|||"});
+	std::vector<country_code> countries;
+	countries.push_back({"United States", {'u','s'}});
+	countries.push_back({"Japan", {'j', 'p'}});
+	countries.push_back({"Canada", {'c','a'}});
+	countries.push_back({"France", {'f','r'}});
+	countries.push_back({"China", {'c','n'}});
+	countries.push_back({"Russia", {'r','u'}});
+	countries.push_back({"South Korea", {'k','r'}});
 
-	for (const auto& cur_country : countries_list)
-	{
-		auto cnty_and_code = fmt::split(cur_country, {"|"});
-		if (cnty_and_code.size() != 2)
-		{
-			rpcn_log.error("Invalid item in the list of countries: %s", cur_country);
-			continue;
-		}
-		vec_countries.push_back(std::make_pair(std::move(cnty_and_code[0]), std::move(cnty_and_code[1])));
-	}
-
-	if (vec_countries.empty())
-	{
-		countries.from_default();
-		save();
-		return get_countries();
-	}
-
-	return vec_countries;
+	return countries;
 }
 
 std::string cfg_rpcn::get_npid()

@@ -11,7 +11,6 @@ struct cfg_rpcn : cfg::node
 	cfg::string password{this, "Password", ""};
 	cfg::string token{this, "Token", ""};
 	cfg::string hosts{this, "Hosts", "Official RPCN Server|np.rpcs3.net|||RPCN Test Server|test-np.rpcs3.net"};
-	cfg::string countries{this, "Countries", "Canada|ca|||United States|us|||France|fr|||Japan|jp|||China|cn|||Russia|ru|||South Korea|kr"};
 
 	void load();
 	void save() const;
@@ -22,7 +21,6 @@ struct cfg_rpcn : cfg::node
 	std::string get_password() const;
 	std::string get_token() const;
 	std::vector<std::pair<std::string, std::string>> get_hosts(); // saves default if no valid server in the list
-	std::vector<std::pair<std::string, std::string>> get_countries(); // saves default if no valid country in the list
 
 	void set_host(std::string_view host);
 	void set_country(std::string_view country);
@@ -31,6 +29,13 @@ struct cfg_rpcn : cfg::node
 	void set_token(std::string_view token);
 	bool add_host(std::string_view description, std::string_view host);
 	bool del_host(std::string_view description, std::string_view host);
+
+	struct country_code
+	{
+		std::string name;
+		std::string ccode;
+	};
+	std::vector<country_code> get_countries();
 
 private:
 	static std::string get_path();
