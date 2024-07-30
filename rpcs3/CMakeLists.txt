@@ -60,6 +60,7 @@ target_sources(rpcs3
     headless_application.cpp
     main.cpp
     main_application.cpp
+    module_verifier.cpp
     rpcs3_version.cpp
     stb_image.cpp
     stdafx.cpp
