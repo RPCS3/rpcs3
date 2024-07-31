@@ -52,7 +52,6 @@ cfg::string& mouse_config::get_button(int code)
 	case CELL_MOUSE_BUTTON_6: return mouse_button_6;
 	case CELL_MOUSE_BUTTON_7: return mouse_button_7;
 	case CELL_MOUSE_BUTTON_8: return mouse_button_8;
-	case CELL_MOUSE_BUTTON_9: return mouse_button_9;
 	default: fmt::throw_exception("Invalid code %d", code);
 	}
 }

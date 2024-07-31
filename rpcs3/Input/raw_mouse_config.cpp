@@ -14,7 +14,6 @@ std::string mouse_button_id(int code)
 	case CELL_MOUSE_BUTTON_6: return "Button 6";
 	case CELL_MOUSE_BUTTON_7: return "Button 7";
 	case CELL_MOUSE_BUTTON_8: return "Button 8";
-	case CELL_MOUSE_BUTTON_9: return "Button 9";
 	}
 	return "";
 }
@@ -31,7 +30,6 @@ cfg::string& raw_mouse_config::get_button_by_index(int index)
 	case 5: return mouse_button_6;
 	case 6: return mouse_button_7;
 	case 7: return mouse_button_8;
-	case 8: return mouse_button_9;
 	default: fmt::throw_exception("Invalid index %d", index);
 	}
 }
@@ -48,7 +46,6 @@ cfg::string& raw_mouse_config::get_button(int code)
 	case CELL_MOUSE_BUTTON_6: return mouse_button_6;
 	case CELL_MOUSE_BUTTON_7: return mouse_button_7;
 	case CELL_MOUSE_BUTTON_8: return mouse_button_8;
-	case CELL_MOUSE_BUTTON_9: return mouse_button_9;
 	default: fmt::throw_exception("Invalid code %d", code);
 	}
 }

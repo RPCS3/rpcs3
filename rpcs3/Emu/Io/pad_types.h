@@ -52,7 +52,6 @@ enum class pad_button : u8
 	mouse_button_6,
 	mouse_button_7,
 	mouse_button_8,
-	mouse_button_9,
 };
 
 u32 pad_button_offset(pad_button button);

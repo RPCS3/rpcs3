@@ -59,7 +59,6 @@ void raw_mouse::reload_config()
 			m_buttons[CELL_MOUSE_BUTTON_6] = get_mouse_button(player->mouse_button_6);
 			m_buttons[CELL_MOUSE_BUTTON_7] = get_mouse_button(player->mouse_button_7);
 			m_buttons[CELL_MOUSE_BUTTON_8] = get_mouse_button(player->mouse_button_8);
-			m_buttons[CELL_MOUSE_BUTTON_9] = get_mouse_button(player->mouse_button_9);
 		}
 	}
 }
@@ -156,7 +155,6 @@ void raw_mouse::update_values(const RAWMOUSE& state)
 	get_button_pressed(CELL_MOUSE_BUTTON_6, state.usButtonFlags);
 	get_button_pressed(CELL_MOUSE_BUTTON_7, state.usButtonFlags);
 	get_button_pressed(CELL_MOUSE_BUTTON_8, state.usButtonFlags);
-	get_button_pressed(CELL_MOUSE_BUTTON_9, state.usButtonFlags);
 
 	// Get mouse wheel
 	if ((state.usButtonFlags & RI_MOUSE_WHEEL))

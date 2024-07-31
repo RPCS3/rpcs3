@@ -42,7 +42,6 @@ enum MouseButtonCodes
 	CELL_MOUSE_BUTTON_6 = 0x00000020,
 	CELL_MOUSE_BUTTON_7 = 0x00000040,
 	CELL_MOUSE_BUTTON_8 = 0x00000080,
-	CELL_MOUSE_BUTTON_9 = 0x00000100,
 };
 
 enum
@@ -62,7 +61,6 @@ static inline MouseButtonCodes get_mouse_button_code(int i)
 	case 5:	return CELL_MOUSE_BUTTON_6;
 	case 6:	return CELL_MOUSE_BUTTON_7;
 	case 7:	return CELL_MOUSE_BUTTON_8;
-	case 8:	return CELL_MOUSE_BUTTON_9;
 	default: fmt::throw_exception("get_mouse_button_code: Invalid index %d", i);
 	}
 }
