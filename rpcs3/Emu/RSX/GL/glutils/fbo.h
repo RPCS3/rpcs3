@@ -181,6 +181,12 @@ namespace gl
 			draw_frame_buffer = GL_DRAW_FRAMEBUFFER
 		};
 
+		enum class swapchain_buffer
+		{
+			back = GL_BACK,
+			front = GL_FRONT
+		};
+
 		void create();
 		void bind() const;
 		void blit(const fbo& dst, areai src_area, areai dst_area, buffers buffers_ = buffers::color, filter filter_ = filter::nearest) const;
@@ -191,9 +197,11 @@ namespace gl
 
 		void recreate();
 		void draw_buffer(const attachment& buffer) const;
+		void draw_buffer(swapchain_buffer buffer) const;
 		void draw_buffers(const std::initializer_list<attachment>& indexes) const;
 
 		void read_buffer(const attachment& buffer) const;
+		void read_buffer(swapchain_buffer buffer) const;
 
 		void draw_arrays(GLenum mode, GLsizei count, GLint first = 0) const;
 		void draw_arrays(const buffer& buffer, GLenum mode, GLsizei count, GLint first = 0) const;

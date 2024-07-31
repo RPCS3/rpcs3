@@ -75,6 +75,12 @@ namespace gl
 		DSA_CALL3(NamedFramebufferDrawBuffers, FramebufferDrawBuffers, m_id, 1, &buf);
 	}
 
+	void fbo::draw_buffer(swapchain_buffer buffer) const
+	{
+		GLenum buf = static_cast<GLenum>(buffer);
+		DSA_CALL3(NamedFramebufferDrawBuffers, FramebufferDrawBuffers, m_id, 1, &buf);
+	}
+
 	void fbo::draw_buffers(const std::initializer_list<attachment>& indexes) const
 	{
 		rsx::simple_array<GLenum> ids;
@@ -89,6 +95,12 @@ namespace gl
 	void fbo::read_buffer(const attachment& buffer) const
 	{
 		DSA_CALL3(NamedFramebufferReadBuffer, FramebufferReadBuffer, m_id, buffer.id());
+	}
+
+	void fbo::read_buffer(swapchain_buffer buffer) const
+	{
+		GLenum buf = static_cast<GLenum>(buffer);
+		DSA_CALL3(NamedFramebufferReadBuffer, FramebufferReadBuffer, m_id, buf);
 	}
 
 	void fbo::draw_arrays(GLenum mode, GLsizei count, GLint first) const
