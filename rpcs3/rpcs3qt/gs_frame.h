@@ -89,6 +89,7 @@ protected:
 	void flip(draw_context_t context, bool skip_frame = false) override;
 	int client_width() override;
 	int client_height() override;
+	bool has_alpha() override;
 
 	bool event(QEvent* ev) override;
 

@@ -113,8 +113,14 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 	setScreen(screen);
 	setGeometry(geometry);
 	setTitle(qstr(m_window_title));
-	setVisibility(startup_visibility);
-	create();
+
+	if (g_cfg.video.renderer != video_renderer::opengl)
+	{
+		// Do not display the window before OpenGL is configured!
+		// This works fine in windows and X11 but wayland-egl will crash later.
+		setVisibility(startup_visibility);
+		create();
+	}
 
 	// TODO: enable in Qt6
 	//m_shortcut_handler = new shortcut_handler(gui::shortcuts::shortcut_handler_id::game_window, this, m_gui_settings);
@@ -1215,4 +1221,9 @@ void gs_frame::progress_increment(int delta)
 void gs_frame::progress_set_limit(int limit)
 {
 	m_progress_indicator->set_range(0, limit);
+}
+
+bool gs_frame::has_alpha()
+{
+	return format().hasAlpha();
 }
