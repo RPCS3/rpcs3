@@ -177,6 +177,7 @@ void LIBUSB_CALL callback_transfer(struct libusb_transfer* transfer)
 	usbh.transfer_complete(transfer);
 }
 
+#if LIBUSB_API_VERSION >= 0x0100010A
 static void LIBUSB_CALL log_cb(libusb_context* /*ctx*/, enum libusb_log_level level, const char* str)
 {
 	if (!str)
@@ -202,6 +203,7 @@ static void LIBUSB_CALL log_cb(libusb_context* /*ctx*/, enum libusb_log_level le
 		break;
 	}
 }
+#endif
 
 usb_handler_thread::usb_handler_thread()
 {
