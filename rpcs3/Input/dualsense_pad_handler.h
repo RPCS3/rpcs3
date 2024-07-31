@@ -19,6 +19,7 @@ namespace reports
 	constexpr u32 DUALSENSE_INPUT_REPORT_GYRO_X_OFFSET = 15;
 	constexpr u32 DUALSENSE_TOUCHPAD_WIDTH  = 1920;
 	constexpr u32 DUALSENSE_TOUCHPAD_HEIGHT = 1080;
+	constexpr u32 DUALSENSE_TOUCH_POINT_INACTIVE = 0x80;
 
 	enum
 	{
@@ -82,7 +83,7 @@ namespace reports
 		le_t<u16, 1> accel[3];
 		le_t<u32, 1> sensor_timestamp;
 		u8 reserved2;
-		dualsense_touch_point points[2];
+		std::array<dualsense_touch_point, 2> points;
 		u8 reserved3[12];
 		u8 status;
 		u8 reserved4[10];
@@ -210,6 +211,11 @@ class dualsense_pad_handler final : public hid_pad_handler<DualSenseDevice>
 		Mic,
 		TouchPad,
 
+		Touch_L,
+		Touch_R,
+		Touch_U,
+		Touch_D,
+
 		L2,
 		R2,
 
@@ -247,6 +253,7 @@ private:
 	bool get_is_right_trigger(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
 	bool get_is_left_stick(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
 	bool get_is_right_stick(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
+	bool get_is_touch_pad_motion(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
 	PadHandlerBase::connection update_connection(const std::shared_ptr<PadDevice>& device) override;
 	std::unordered_map<u64, u16> get_button_values(const std::shared_ptr<PadDevice>& device) override;
 	pad_preview_values get_preview_values(const std::unordered_map<u64, u16>& data) override;

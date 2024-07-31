@@ -52,6 +52,10 @@ dualsense_pad_handler::dualsense_pad_handler()
 		{ DualSenseKeyCodes::PSButton, "PS Button" },
 		{ DualSenseKeyCodes::Mic,      "Mic" },
 		{ DualSenseKeyCodes::TouchPad, "Touch Pad" },
+		{ DualSenseKeyCodes::Touch_L,  "Touch Left" },
+		{ DualSenseKeyCodes::Touch_R,  "Touch Right" },
+		{ DualSenseKeyCodes::Touch_U,  "Touch Up" },
+		{ DualSenseKeyCodes::Touch_D,  "Touch Down" },
 		{ DualSenseKeyCodes::L1,       "L1" },
 		{ DualSenseKeyCodes::L2,       "L2" },
 		{ DualSenseKeyCodes::L3,       "L3" },
@@ -538,6 +542,20 @@ bool dualsense_pad_handler::get_is_right_stick(const std::shared_ptr<PadDevice>&
 	}
 }
 
+bool dualsense_pad_handler::get_is_touch_pad_motion(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
+{
+	switch (keyCode)
+	{
+	case DualSenseKeyCodes::Touch_L:
+	case DualSenseKeyCodes::Touch_R:
+	case DualSenseKeyCodes::Touch_U:
+	case DualSenseKeyCodes::Touch_D:
+		return true;
+	default:
+		return false;
+	}
+}
+
 PadHandlerBase::connection dualsense_pad_handler::update_connection(const std::shared_ptr<PadDevice>& device)
 {
 	DualSenseDevice* dualsense_dev = static_cast<DualSenseDevice*>(device.get());
@@ -727,6 +745,25 @@ std::unordered_map<u64, u16> dualsense_pad_handler::get_button_values(const std:
 	keyBuffer[DualSenseKeyCodes::PSButton] = ((data & 0x01) != 0) ? 255 : 0;
 	keyBuffer[DualSenseKeyCodes::TouchPad] = ((data & 0x02) != 0) ? 255 : 0;
 	keyBuffer[DualSenseKeyCodes::Mic]      = ((data & 0x04) != 0) ? 255 : 0;
+
+	// Touch Pad
+	for (const dualsense_touch_point& point : input.points)
+	{
+		if (!(point.contact & DUALSENSE_TOUCH_POINT_INACTIVE))
+		{
+			const s32 x = (point.x_hi << 8) | point.x_lo;
+			const s32 y = (point.y_hi << 4) | point.y_lo;
+
+			const f32 x_scaled = ScaledInput(static_cast<float>(x), 0.0f, static_cast<float>(DUALSENSE_TOUCHPAD_WIDTH), 0.0f, 255.0f);
+			const f32 y_scaled = ScaledInput(static_cast<float>(y), 0.0f, static_cast<float>(DUALSENSE_TOUCHPAD_HEIGHT), 0.0f, 255.0f);
+
+			keyBuffer[DualSenseKeyCodes::Touch_L] = Clamp0To255((127.5f - x_scaled) * 2.0f);
+			keyBuffer[DualSenseKeyCodes::Touch_R] = Clamp0To255((x_scaled - 127.5f) * 2.0f);
+
+			keyBuffer[DualSenseKeyCodes::Touch_U] = Clamp0To255((127.5f - y_scaled) * 2.0f);
+			keyBuffer[DualSenseKeyCodes::Touch_D] = Clamp0To255((y_scaled - 127.5f) * 2.0f);
+		}
+	}
 
 	if (dualsense_dev->feature_set == DualSenseDevice::DualSenseFeatureSet::Edge)
 	{
