@@ -297,7 +297,7 @@ fmt::base57_result fmt::base57_result::from_string(std::string_view str)
 		}
 	}
 
-	return std::move(result);
+	return result;
 }
 
 void fmt_class_string<const void*>::format(std::string& out, u64 arg)
