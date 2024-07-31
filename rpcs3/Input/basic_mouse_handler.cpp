@@ -55,6 +55,7 @@ void basic_mouse_handler::reload_config()
 	m_buttons[CELL_MOUSE_BUTTON_6] = get_mouse_button(g_cfg_mouse.mouse_button_6);
 	m_buttons[CELL_MOUSE_BUTTON_7] = get_mouse_button(g_cfg_mouse.mouse_button_7);
 	m_buttons[CELL_MOUSE_BUTTON_8] = get_mouse_button(g_cfg_mouse.mouse_button_8);
+	m_buttons[CELL_MOUSE_BUTTON_9] = get_mouse_button(g_cfg_mouse.mouse_button_9);
 }
 
 /* Sets the target window for the event handler, and also installs an event filter on the target. */

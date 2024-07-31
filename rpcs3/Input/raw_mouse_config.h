@@ -26,6 +26,7 @@ public:
 	cfg::string mouse_button_6{ this, "Button 6", "", true };
 	cfg::string mouse_button_7{ this, "Button 7", "", true };
 	cfg::string mouse_button_8{ this, "Button 8", "", true };
+	cfg::string mouse_button_9{ this, "Button 9", "", true };
 
 	cfg::string& get_button_by_index(int index);
 	cfg::string& get_button(int code);

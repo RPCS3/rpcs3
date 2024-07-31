@@ -48,6 +48,7 @@ void fmt_class_string<pad_button>::format(std::string& out, u64 arg)
 		case pad_button::mouse_button_6: return "Mouse Button 6";
 		case pad_button::mouse_button_7: return "Mouse Button 7";
 		case pad_button::mouse_button_8: return "Mouse Button 8";
+		case pad_button::mouse_button_9: return "Mouse Button 9";
 		}
 
 		return unknown;
@@ -96,6 +97,7 @@ u32 pad_button_offset(pad_button button)
 	case pad_button::mouse_button_6:
 	case pad_button::mouse_button_7:
 	case pad_button::mouse_button_8:
+	case pad_button::mouse_button_9:
 		return 0;
 	}
 	return 0;
@@ -143,6 +145,7 @@ u32 pad_button_keycode(pad_button button)
 	case pad_button::mouse_button_6: return 6;
 	case pad_button::mouse_button_7: return 7;
 	case pad_button::mouse_button_8: return 8;
+	case pad_button::mouse_button_9: return 9;
 	}
 	return 0;
 }
