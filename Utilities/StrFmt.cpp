@@ -173,9 +173,6 @@ void fmt_class_string<fmt::base57>::format(std::string& out, u64 arg)
 
 fmt::base57_result fmt::base57_result::from_string(std::string_view str)
 {
-	// Precomputed tail sizes if input data is not multiple of 8
-	static constexpr u8 s_tail[8] = {0, 2, 3, 5, 6, 7, 9, 10};
-
 	fmt::base57_result result(str.size() / 11 * 8 + (str.size() % 11 ? 8 : 0));
 
 	// Each 11 chars of input produces 8 bytes of byte output
