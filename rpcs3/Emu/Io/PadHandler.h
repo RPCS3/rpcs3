@@ -290,6 +290,7 @@ private:
 	virtual bool get_is_right_trigger(const std::shared_ptr<PadDevice>& /*device*/, u64 /*keyCode*/) { return false; }
 	virtual bool get_is_left_stick(const std::shared_ptr<PadDevice>& /*device*/, u64 /*keyCode*/) { return false; }
 	virtual bool get_is_right_stick(const std::shared_ptr<PadDevice>& /*device*/, u64 /*keyCode*/) { return false; }
+	virtual bool get_is_touch_pad_motion(const std::shared_ptr<PadDevice>& /*device*/, u64 /*keyCode*/) { return false; }
 	virtual PadHandlerBase::connection update_connection(const std::shared_ptr<PadDevice>& /*device*/) { return connection::disconnected; }
 	virtual void get_extended_info(const pad_ensemble& /*binding*/) {}
 	virtual void apply_pad_data(const pad_ensemble& /*binding*/) {}
