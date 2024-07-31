@@ -17,6 +17,16 @@
 #include <errno.h>
 #endif
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4996)
+#elif defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#else
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
 std::string wchar_to_utf8(std::wstring_view src)
 {
 #ifdef _WIN32
@@ -32,16 +42,6 @@ std::string wchar_to_utf8(std::wstring_view src)
 #endif
 }
 
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4996)
-#elif defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#else
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#endif
 std::string utf16_to_utf8(std::u16string_view src)
 {
 	std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> converter{};
@@ -53,13 +53,6 @@ std::u16string utf8_to_utf16(std::string_view src)
 	std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> converter{};
 	return converter.from_bytes(src.data());
 }
-#ifdef _MSC_VER
-#pragma warning(pop)
-#elif defined(__clang__)
-#pragma clang diagnostic pop
-#else
-#pragma GCC diagnostic pop
-#endif
 
 std::wstring utf8_to_wchar(std::string_view src)
 {
@@ -75,6 +68,13 @@ std::wstring utf8_to_wchar(std::string_view src)
 	return converter.from_bytes(src.data());
 #endif
 }
+#ifdef _MSC_VER
+#pragma warning(pop)
+#elif defined(__clang__)
+#pragma clang diagnostic pop
+#else
+#pragma GCC diagnostic pop
+#endif
 
 #ifdef _WIN32
 std::string fmt::win_error_to_string(unsigned long error, void* module_handle)
