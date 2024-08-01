@@ -928,6 +928,10 @@ std::conditional_t<std::is_integral_v<std::remove_cvref_t<T>>, usz, std::string_
 	{
 		return obj;
 	}
+	else if constexpr (std::is_array_v<type> && std::is_constructible_v<std::string_view, type>)
+	{
+		return { obj, std::size(obj) - 1 };
+	}
 	else
 	{
 		return std::string_view{};
