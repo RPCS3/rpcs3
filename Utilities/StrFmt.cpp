@@ -591,10 +591,42 @@ void fmt_class_string<std::source_location>::format(std::string& out, u64 arg)
 
 namespace fmt
 {
-	[[noreturn]] void raw_verify_error(std::source_location loc, const char8_t* msg)
+	[[noreturn]] void raw_verify_error(std::source_location loc, const char8_t* msg, usz object)
 	{
 		std::string out;
-		fmt::append(out, "%s%s", msg ? msg : u8"Verification failed", loc);
+		fmt::append(out, "%s (object: 0x%x)%s", msg ? msg : u8"Verification failed", object, loc);
+		thread_ctrl::emergency_exit(out);
+	}
+
+	[[noreturn]] void raw_range_error(std::source_location loc, std::string_view index, usz container_size)
+	{
+		std::string out;
+
+		if (container_size != umax)
+		{
+			fmt::append(out, "Range check failed (index: %s, container_size: %u)%s", index, container_size, loc);
+		}
+		else
+		{
+			fmt::append(out, "Range check failed (index: %s)%s", index, loc);
+		}
+
+		thread_ctrl::emergency_exit(out);
+	}
+
+	[[noreturn]] void raw_range_error(std::source_location loc, usz index, usz container_size)
+	{
+		std::string out;
+
+		if (container_size != umax)
+		{
+			fmt::append(out, "Range check failed (index: %u, container_size: %u)%s", index, container_size, loc);
+		}
+		else
+		{
+			fmt::append(out, "Range check failed (index: %u)%s", index, loc);
+		}
+
 		thread_ctrl::emergency_exit(out);
 	}
 
