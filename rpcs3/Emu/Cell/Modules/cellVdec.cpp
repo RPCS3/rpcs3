@@ -185,6 +185,7 @@ struct vdec_context final
 	atomic_t<sequence_state> seq_state = sequence_state::closed;
 
 	const AVCodec* codec{};
+	const AVCodecDescriptor* codec_desc{};
 	AVCodecContext* ctx{};
 	SwsContext* sws{};
 
@@ -244,6 +245,13 @@ struct vdec_context final
 		if (!codec)
 		{
 			fmt::throw_exception("avcodec_find_decoder() failed (type=0x%x)", type);
+		}
+
+		codec_desc = avcodec_descriptor_get(codec->id);
+
+		if (!codec_desc)
+		{
+			fmt::throw_exception("avcodec_descriptor_get() failed (type=0x%x)", type);
 		}
 
 		ctx = avcodec_alloc_context3(codec);
@@ -425,10 +433,22 @@ struct vdec_context final
 							fmt::throw_exception("AU decoding error (handle=0x%x, seq_id=%d, cmd_id=%d, error=0x%x): %s", handle, cmd->seq_id, cmd->id, ret, utils::av_error_to_string(ret));
 						}
 
-						if (frame->interlaced_frame)
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(60, 31, 102)
+						const int ticks_per_frame = ctx->ticks_per_frame;
+#else
+						const int ticks_per_frame = (codec_desc->props & AV_CODEC_PROP_FIELDS) ? 2 : 1;
+#endif
+
+#if LIBAVUTIL_VERSION_INT < AV_VERSION_INT(58, 29, 100)
+						const bool is_interlaced = frame->interlaced_frame != 0;
+#else
+						const bool is_interlaced = !!(frame->flags & AV_FRAME_FLAG_INTERLACED);
+#endif
+
+						if (is_interlaced)
 						{
 							// NPEB01838, NPUB31260
-							cellVdec.todo("Interlaced frames not supported (handle=0x%x, seq_id=%d, cmd_id=%d, interlaced_frame=0x%x)", handle, cmd->seq_id, cmd->id, frame->interlaced_frame);
+							cellVdec.todo("Interlaced frames not supported (handle=0x%x, seq_id=%d, cmd_id=%d)", handle, cmd->seq_id, cmd->id);
 						}
 
 						if (frame->repeat_pict)
@@ -479,7 +499,7 @@ struct vdec_context final
 						{
 							if (log_time_base.den != ctx->time_base.den || log_time_base.num != ctx->time_base.num)
 							{
-								cellVdec.error("time_base.num is 0 (handle=0x%x, seq_id=%d, cmd_id=%d, %d/%d, tpf=%d framerate=%d/%d)", handle, cmd->seq_id, cmd->id, ctx->time_base.num, ctx->time_base.den, ctx->ticks_per_frame, ctx->framerate.num, ctx->framerate.den);
+								cellVdec.error("time_base.num is 0 (handle=0x%x, seq_id=%d, cmd_id=%d, %d/%d, tpf=%d framerate=%d/%d)", handle, cmd->seq_id, cmd->id, ctx->time_base.num, ctx->time_base.den, ticks_per_frame, ctx->framerate.num, ctx->framerate.den);
 								log_time_base = ctx->time_base;
 							}
 
@@ -491,8 +511,8 @@ struct vdec_context final
 						}
 						else
 						{
-							u64 amend = u64{90000} * ctx->time_base.num * ctx->ticks_per_frame / ctx->time_base.den;
-							const auto freq = 1. * ctx->time_base.den / ctx->time_base.num / ctx->ticks_per_frame;
+							u64 amend = u64{90000} * ctx->time_base.num * ticks_per_frame / ctx->time_base.den;
+							const auto freq = 1. * ctx->time_base.den / ctx->time_base.num / ticks_per_frame;
 
 							if (std::abs(freq - 23.976) < 0.002)
 								frame.frc = CELL_VDEC_FRC_24000DIV1001;
@@ -515,7 +535,7 @@ struct vdec_context final
 								if (log_time_base.den != ctx->time_base.den || log_time_base.num != ctx->time_base.num)
 								{
 									// 1/1000 usually means that the time stamps are written in 1ms units and that the frame rate may vary.
-									cellVdec.error("Unsupported time_base (handle=0x%x, seq_id=%d, cmd_id=%d, %d/%d, tpf=%d framerate=%d/%d)", handle, cmd->seq_id, cmd->id, ctx->time_base.num, ctx->time_base.den, ctx->ticks_per_frame, ctx->framerate.num, ctx->framerate.den);
+									cellVdec.error("Unsupported time_base (handle=0x%x, seq_id=%d, cmd_id=%d, %d/%d, tpf=%d framerate=%d/%d)", handle, cmd->seq_id, cmd->id, ctx->time_base.num, ctx->time_base.den, ticks_per_frame, ctx->framerate.num, ctx->framerate.den);
 									log_time_base = ctx->time_base;
 								}
 
