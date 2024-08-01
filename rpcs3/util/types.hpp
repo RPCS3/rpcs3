@@ -11,6 +11,7 @@
 #include <compare>
 #include <memory>
 #include <bit>
+#include <string>
 #include <source_location>
 
 #if defined(__SSE2__) || defined(_M_X64) || defined(_M_AMD64) || defined(__x86_64__) || defined(__amd64__)
@@ -912,7 +913,25 @@ using const_str = const_str_t<>;
 
 namespace fmt
 {
-	[[noreturn]] void raw_verify_error(std::source_location loc, const char8_t* msg);
+	[[noreturn]] void raw_verify_error(std::source_location loc, const char8_t* msg, usz object);
+	[[noreturn]] void raw_range_error(std::source_location loc, std::string_view index, usz container_size);
+	[[noreturn]] void raw_range_error(std::source_location loc, usz index, usz container_size);
+}
+
+// No full implementation to ease on header weight
+template <typename T>
+std::conditional_t<std::is_integral_v<std::remove_cvref_t<T>>, usz, std::string_view> format_object_simplified(const T& obj)
+{
+	using type = std::remove_cvref_t<T>;
+
+	if constexpr (std::is_integral_v<type> || std::is_same_v<std::string, type> || std::is_same_v<std::string_view, type>)
+	{
+		return obj;
+	}
+	else
+	{
+		return std::string_view{};
+	}
 }
 
 template <typename T>
@@ -923,7 +942,7 @@ constexpr decltype(auto) ensure(T&& arg, const_str msg = const_str(), std::sourc
 		return std::forward<T>(arg);
 	}
 
-	fmt::raw_verify_error(src_loc, msg);
+	fmt::raw_verify_error(src_loc, msg, 0);
 }
 
 template <typename T, typename F> requires (std::is_invocable_v<F, T&&>)
@@ -934,7 +953,7 @@ constexpr decltype(auto) ensure(T&& arg, F&& pred, const_str msg = const_str(), 
 		return std::forward<T>(arg);
 	}
 
-	fmt::raw_verify_error(src_loc, msg);
+	fmt::raw_verify_error(src_loc, msg, 0);
 }
 
 // narrow() function details
@@ -1015,7 +1034,7 @@ template <typename To = void, typename From, typename = decltype(static_cast<To>
 	// Narrow check
 	if (narrow_impl<From, To>::test(value)) [[unlikely]]
 	{
-		fmt::raw_verify_error(src_loc, u8"Narrowing error");
+		fmt::raw_verify_error(src_loc, u8"Narrowing error", +value);
 	}
 
 	return static_cast<To>(value);
@@ -1046,7 +1065,7 @@ template <typename CT, typename T> requires requires (CT&& x) { std::size(x); st
 	const std::make_unsigned_t<std::common_type_t<T>> idx = index;
 	const u32 csz = ::size32(container, src_loc);
 	if (csz <= idx) [[unlikely]]
-		fmt::raw_verify_error(src_loc, u8"Out of range");
+		fmt::raw_range_error(src_loc, format_object_simplified(index), csz);
 	auto it = std::begin(std::forward<CT>(container));
 	std::advance(it, idx);
 	return *it;
@@ -1057,8 +1076,11 @@ template <typename CT, typename T> requires requires (CT&& x, T&& y) { x.count(y
 {
 	// Associative container
 	const auto found = container.find(std::forward<T>(index));
+	usz csv = umax;
+	if constexpr ((requires () { container.size(); }))
+		csv = container.size();
 	if (found == container.end()) [[unlikely]]
-		fmt::raw_verify_error(src_loc, u8"Out of range");
+		fmt::raw_range_error(src_loc, format_object_simplified(index), csv);
 	return found->second;
 }
 
