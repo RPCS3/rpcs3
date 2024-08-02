@@ -32,6 +32,13 @@ public:
 
 	camera_handler_state get_state() const { return m_state.load(); };
 
+	bool mirrored() const { return m_mirrored; };
+	s32 format() const { return m_format; };
+	u32 bytesize() const { return m_bytesize; };
+	u32 width() const { return m_width; };
+	u32 height() const { return m_height; };
+	u32 frame_rate() const { return m_frame_rate; };
+
 protected:
 	std::mutex m_mutex;
 	atomic_t<camera_handler_state> m_state = camera_handler_state::closed;

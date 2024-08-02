@@ -84,6 +84,10 @@ emulated_pad_settings_dialog::emulated_pad_settings_dialog(pad_type type, QWidge
 		setWindowTitle(tr("Configure Emulated USIO"));
 		add_tabs<usio_btn>(tabs);
 		break;
+	case emulated_pad_settings_dialog::pad_type::gem:
+		setWindowTitle(tr("Configure Emulated PS Move (Real)"));
+		add_tabs<gem_btn>(tabs);
+		break;
 	case emulated_pad_settings_dialog::pad_type::ds3gem:
 		setWindowTitle(tr("Configure Emulated PS Move (Fake)"));
 		add_tabs<gem_btn>(tabs);
@@ -113,12 +117,7 @@ void emulated_pad_settings_dialog::add_tabs(QTabWidget* tabs)
 	ensure(!!tabs);
 
 	constexpr u32 max_items_per_column = 6;
-	int rows = static_cast<int>(T::count);
-
-	for (u32 cols = 1; utils::aligned_div(static_cast<u32>(T::count), cols) > max_items_per_column;)
-	{
-		rows = utils::aligned_div(static_cast<u32>(T::count), ++cols);
-	}
+	int count = static_cast<int>(T::count);
 
 	usz players = 0;
 	switch (m_type)
@@ -135,8 +134,16 @@ void emulated_pad_settings_dialog::add_tabs(QTabWidget* tabs)
 	case pad_type::usio:
 		players = g_cfg_usio.players.size();
 		break;
+	case pad_type::gem:
+		players = g_cfg_gem_real.players.size();
+
+		// Ignore x and y axis
+		static_assert(static_cast<int>(gem_btn::y_axis) == static_cast<int>(gem_btn::count) - 1);
+		static_assert(static_cast<int>(gem_btn::x_axis) == static_cast<int>(gem_btn::count) - 2);
+		count -= 2;
+		break;
 	case pad_type::ds3gem:
-		players = g_cfg_gem.players.size();
+		players = g_cfg_gem_fake.players.size();
 		break;
 	case pad_type::guncon3:
 		players = g_cfg_guncon3.players.size();
@@ -149,6 +156,13 @@ void emulated_pad_settings_dialog::add_tabs(QTabWidget* tabs)
 		break;
 	}
 
+	int rows = count;
+
+	for (u32 cols = 1; utils::aligned_div(static_cast<u32>(count), cols) > max_items_per_column;)
+	{
+		rows = utils::aligned_div(static_cast<u32>(count), ++cols);
+	}
+
 	m_combos.resize(players);
 
 	for (usz player = 0; player < players; player++)
@@ -156,7 +170,7 @@ void emulated_pad_settings_dialog::add_tabs(QTabWidget* tabs)
 		QWidget* widget = new QWidget(this);
 		QGridLayout* grid_layout = new QGridLayout(this);
 
-		for (int i = 0, row = 0, col = 0; i < static_cast<int>(T::count); i++, row++)
+		for (int i = 0, row = 0, col = 0; i < count; i++, row++)
 		{
 			const T id = static_cast<T>(i);
 			const QString name = QString::fromStdString(fmt::format("%s", id));
@@ -201,8 +215,11 @@ void emulated_pad_settings_dialog::add_tabs(QTabWidget* tabs)
 			case pad_type::usio:
 				saved_btn_id = ::at32(g_cfg_usio.players, player)->get_pad_button(static_cast<usio_btn>(id));
 				break;
+			case pad_type::gem:
+				saved_btn_id = ::at32(g_cfg_gem_real.players, player)->get_pad_button(static_cast<gem_btn>(id));
+				break;
 			case pad_type::ds3gem:
-				saved_btn_id = ::at32(g_cfg_gem.players, player)->get_pad_button(static_cast<gem_btn>(id));
+				saved_btn_id = ::at32(g_cfg_gem_fake.players, player)->get_pad_button(static_cast<gem_btn>(id));
 				break;
 			case pad_type::guncon3:
 				saved_btn_id = ::at32(g_cfg_guncon3.players, player)->get_pad_button(static_cast<guncon3_btn>(id));
@@ -242,8 +259,11 @@ void emulated_pad_settings_dialog::add_tabs(QTabWidget* tabs)
 				case pad_type::usio:
 					::at32(g_cfg_usio.players, player)->set_button(static_cast<usio_btn>(id), btn_id);
 					break;
+				case pad_type::gem:
+					::at32(g_cfg_gem_real.players, player)->set_button(static_cast<gem_btn>(id), btn_id);
+					break;
 				case pad_type::ds3gem:
-					::at32(g_cfg_gem.players, player)->set_button(static_cast<gem_btn>(id), btn_id);
+					::at32(g_cfg_gem_fake.players, player)->set_button(static_cast<gem_btn>(id), btn_id);
 					break;
 				case pad_type::guncon3:
 					::at32(g_cfg_guncon3.players, player)->set_button(static_cast<guncon3_btn>(id), btn_id);
@@ -302,10 +322,16 @@ void emulated_pad_settings_dialog::load_config()
 			cfg_log.notice("Could not load usio config. Using defaults.");
 		}
 		break;
-	case emulated_pad_settings_dialog::pad_type::ds3gem:
-		if (!g_cfg_gem.load())
+	case emulated_pad_settings_dialog::pad_type::gem:
+		if (!g_cfg_gem_real.load())
 		{
 			cfg_log.notice("Could not load gem config. Using defaults.");
+		}
+		break;
+	case emulated_pad_settings_dialog::pad_type::ds3gem:
+		if (!g_cfg_gem_fake.load())
+		{
+			cfg_log.notice("Could not load fake gem config. Using defaults.");
 		}
 		break;
 	case emulated_pad_settings_dialog::pad_type::guncon3:
@@ -345,8 +371,11 @@ void emulated_pad_settings_dialog::save_config()
 	case emulated_pad_settings_dialog::pad_type::usio:
 		g_cfg_usio.save();
 		break;
+	case emulated_pad_settings_dialog::pad_type::gem:
+		g_cfg_gem_real.save();
+		break;
 	case emulated_pad_settings_dialog::pad_type::ds3gem:
-		g_cfg_gem.save();
+		g_cfg_gem_fake.save();
 		break;
 	case emulated_pad_settings_dialog::pad_type::guncon3:
 		g_cfg_guncon3.save();
@@ -376,8 +405,11 @@ void emulated_pad_settings_dialog::reset_config()
 	case emulated_pad_settings_dialog::pad_type::usio:
 		g_cfg_usio.from_default();
 		break;
+	case emulated_pad_settings_dialog::pad_type::gem:
+		g_cfg_gem_real.from_default();
+		break;
 	case emulated_pad_settings_dialog::pad_type::ds3gem:
-		g_cfg_gem.from_default();
+		g_cfg_gem_fake.from_default();
 		break;
 	case emulated_pad_settings_dialog::pad_type::guncon3:
 		g_cfg_guncon3.from_default();
@@ -416,8 +448,11 @@ void emulated_pad_settings_dialog::reset_config()
 			case pad_type::usio:
 				def_btn_id = ::at32(g_cfg_usio.players, player)->default_pad_button(static_cast<usio_btn>(data.toInt()));
 				break;
+			case pad_type::gem:
+				def_btn_id = ::at32(g_cfg_gem_real.players, player)->default_pad_button(static_cast<gem_btn>(data.toInt()));
+				break;
 			case pad_type::ds3gem:
-				def_btn_id = ::at32(g_cfg_gem.players, player)->default_pad_button(static_cast<gem_btn>(data.toInt()));
+				def_btn_id = ::at32(g_cfg_gem_fake.players, player)->default_pad_button(static_cast<gem_btn>(data.toInt()));
 				break;
 			case pad_type::guncon3:
 				def_btn_id = ::at32(g_cfg_guncon3.players, player)->default_pad_button(static_cast<guncon3_btn>(data.toInt()));
