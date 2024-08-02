@@ -23,6 +23,7 @@ gl_gs_frame::gl_gs_frame(QScreen* screen, const QRect& geometry, const QIcon& ap
 		m_format.setOption(QSurfaceFormat::FormatOption::DebugContext);
 	}
 	setFormat(m_format);
+	create();
 }
 
 draw_context_t gl_gs_frame::make_context()
