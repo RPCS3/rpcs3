@@ -29,10 +29,10 @@ void WIN32_module_verifier::run_module_verification()
 
 	const std::vector<module_info_t> special_module_infos = {
 		{ L"vulkan-1.dll", "Vulkan Runtime", "https://sdk.lunarg.com/sdk/download/latest/windows/vulkan-runtime.exe" },
-		{ L"msvcp140.dll", "Microsoft Visual C++ 2015-2019 Redistributable", "https://aka.ms/vs/16/release/VC_redist.x64.exe" },
-		{ L"vcruntime140.dll", "Microsoft Visual C++ 2015-2019 Redistributable", "https://aka.ms/vs/16/release/VC_redist.x64.exe" },
-		{ L"msvcp140_1.dll", "Microsoft Visual C++ 2015-2019 Redistributable", "https://aka.ms/vs/16/release/VC_redist.x64.exe" },
-		{ L"vcruntime140_1.dll", "Microsoft Visual C++ 2015-2019 Redistributable", "https://aka.ms/vs/16/release/VC_redist.x64.exe" }
+		{ L"msvcp140.dll", "Microsoft Visual C++ 2015-2022 Redistributable", "https://aka.ms/vs/17/release/VC_redist.x64.exe" },
+		{ L"vcruntime140.dll", "Microsoft Visual C++ 2015-2022 Redistributable", "https://aka.ms/vs/17/release/VC_redist.x64.exe" },
+		{ L"msvcp140_1.dll", "Microsoft Visual C++ 2015-2022 Redistributable", "https://aka.ms/vs/17/release/VC_redist.x64.exe" },
+		{ L"vcruntime140_1.dll", "Microsoft Visual C++ 2015-2022 Redistributable", "https://aka.ms/vs/17/release/VC_redist.x64.exe" }
 	};
 
 	WCHAR windir[MAX_PATH];
