@@ -17,6 +17,16 @@
 #include <errno.h>
 #endif
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4996)
+#elif defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#else
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
 std::string wchar_to_utf8(std::wstring_view src)
 {
 #ifdef _WIN32
@@ -32,16 +42,6 @@ std::string wchar_to_utf8(std::wstring_view src)
 #endif
 }
 
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4996)
-#elif defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#else
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#endif
 std::string utf16_to_utf8(std::u16string_view src)
 {
 	std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> converter{};
@@ -53,13 +53,6 @@ std::u16string utf8_to_utf16(std::string_view src)
 	std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> converter{};
 	return converter.from_bytes(src.data());
 }
-#ifdef _MSC_VER
-#pragma warning(pop)
-#elif defined(__clang__)
-#pragma clang diagnostic pop
-#else
-#pragma GCC diagnostic pop
-#endif
 
 std::wstring utf8_to_wchar(std::string_view src)
 {
@@ -75,6 +68,13 @@ std::wstring utf8_to_wchar(std::string_view src)
 	return converter.from_bytes(src.data());
 #endif
 }
+#ifdef _MSC_VER
+#pragma warning(pop)
+#elif defined(__clang__)
+#pragma clang diagnostic pop
+#else
+#pragma GCC diagnostic pop
+#endif
 
 #ifdef _WIN32
 std::string fmt::win_error_to_string(unsigned long error, void* module_handle)
@@ -173,9 +173,6 @@ void fmt_class_string<fmt::base57>::format(std::string& out, u64 arg)
 
 fmt::base57_result fmt::base57_result::from_string(std::string_view str)
 {
-	// Precomputed tail sizes if input data is not multiple of 8
-	static constexpr u8 s_tail[8] = {0, 2, 3, 5, 6, 7, 9, 10};
-
 	fmt::base57_result result(str.size() / 11 * 8 + (str.size() % 11 ? 8 : 0));
 
 	// Each 11 chars of input produces 8 bytes of byte output
@@ -297,7 +294,7 @@ fmt::base57_result fmt::base57_result::from_string(std::string_view str)
 		}
 	}
 
-	return std::move(result);
+	return result;
 }
 
 void fmt_class_string<const void*>::format(std::string& out, u64 arg)
@@ -594,10 +591,42 @@ void fmt_class_string<std::source_location>::format(std::string& out, u64 arg)
 
 namespace fmt
 {
-	[[noreturn]] void raw_verify_error(std::source_location loc, const char8_t* msg)
+	[[noreturn]] void raw_verify_error(std::source_location loc, const char8_t* msg, usz object)
 	{
 		std::string out;
-		fmt::append(out, "%s%s", msg ? msg : u8"Verification failed", loc);
+		fmt::append(out, "%s (object: 0x%x)%s", msg ? msg : u8"Verification failed", object, loc);
+		thread_ctrl::emergency_exit(out);
+	}
+
+	[[noreturn]] void raw_range_error(std::source_location loc, std::string_view index, usz container_size)
+	{
+		std::string out;
+
+		if (container_size != umax)
+		{
+			fmt::append(out, "Range check failed (index: %s, container_size: %u)%s", index, container_size, loc);
+		}
+		else
+		{
+			fmt::append(out, "Range check failed (index: %s)%s", index, loc);
+		}
+
+		thread_ctrl::emergency_exit(out);
+	}
+
+	[[noreturn]] void raw_range_error(std::source_location loc, usz index, usz container_size)
+	{
+		std::string out;
+
+		if (container_size != umax)
+		{
+			fmt::append(out, "Range check failed (index: %u, container_size: %u)%s", index, container_size, loc);
+		}
+		else
+		{
+			fmt::append(out, "Range check failed (index: %u)%s", index, loc);
+		}
+
 		thread_ctrl::emergency_exit(out);
 	}
 
