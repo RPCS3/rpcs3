@@ -190,24 +190,6 @@ void cfg_rpcn::set_hosts(const std::vector<std::pair<std::string, std::string>>&
 	hosts.from_string(final_string);
 }
 
-void cfg_rpcn::set_countries(const std::vector<std::pair<std::string, std::string>>& vec_countries)
-{
-	std::string final_string;
-	for (const auto& [cur_cnty, cur_code] : vec_countries)
-	{
-		fmt::append(final_string, "%s|%s|||", cur_cnty, cur_code);
-	}
-
-	if (final_string.empty())
-	{
-		countries.from_default();
-		return;
-	}
-
-	final_string.resize(final_string.size() - 3);
-	countries.from_string(final_string);
-}
-
 bool cfg_rpcn::add_host(std::string_view new_description, std::string_view new_host)
 {
 	auto cur_hosts = get_hosts();

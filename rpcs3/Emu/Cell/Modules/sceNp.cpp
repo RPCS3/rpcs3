@@ -3957,7 +3957,7 @@ error_code sceNpManagerGetAccountRegion(vm::ptr<SceNpCountryCode> countryCode, v
 	}
 
 	memset(countryCode.get_ptr(), 0, sizeof(SceNpCountryCode));
-	auto country_code = nph.get_countryCode();
+	//auto country_code = nph.get_countryCode();
 	countryCode->data[0] = 'u';
 	countryCode->data[1] = 's';
 

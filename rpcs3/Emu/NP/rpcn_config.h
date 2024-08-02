@@ -41,7 +41,6 @@ private:
 	static std::string get_path();
 	static std::string generate_npid();
 	void set_hosts(const std::vector<std::pair<std::string, std::string>>& vec_hosts);
-	void set_countries(const std::vector<std::pair<std::string, std::string>>& vec_countries);
 };
 
 extern cfg_rpcn g_cfg_rpcn;
