@@ -918,23 +918,23 @@ static bool mouse_input_to_pad(const u32 mouse_no, be_t<u16>& digital_buttons, b
 	if (is_pressed(CELL_MOUSE_BUTTON_2))
 		digital_buttons |= CELL_GEM_CTRL_MOVE;
 
-	if (is_pressed(CELL_MOUSE_BUTTON_3))
-		digital_buttons |= CELL_GEM_CTRL_CROSS;
-
 	if (is_pressed(CELL_MOUSE_BUTTON_4))
 		digital_buttons |= CELL_GEM_CTRL_CIRCLE;
 
 	if (is_pressed(CELL_MOUSE_BUTTON_5))
-		digital_buttons |= CELL_GEM_CTRL_SQUARE;
+		digital_buttons |= CELL_GEM_CTRL_CROSS;
 
-	if (is_pressed(CELL_MOUSE_BUTTON_6) || (is_pressed(CELL_MOUSE_BUTTON_1) && is_pressed(CELL_MOUSE_BUTTON_2)))
+	if ((is_pressed(CELL_MOUSE_BUTTON_3) && is_pressed(CELL_MOUSE_BUTTON_1)) || is_pressed(CELL_MOUSE_BUTTON_6))
 		digital_buttons |= CELL_GEM_CTRL_SELECT;
 
-	if (is_pressed(CELL_MOUSE_BUTTON_7) || (is_pressed(CELL_MOUSE_BUTTON_1) && is_pressed(CELL_MOUSE_BUTTON_3)))
+	if ((is_pressed(CELL_MOUSE_BUTTON_3) && is_pressed(CELL_MOUSE_BUTTON_2)) || is_pressed(CELL_MOUSE_BUTTON_7))
 		digital_buttons |= CELL_GEM_CTRL_START;
 
-	if (is_pressed(CELL_MOUSE_BUTTON_8) || (is_pressed(CELL_MOUSE_BUTTON_2) && is_pressed(CELL_MOUSE_BUTTON_3)))
+	if ((is_pressed(CELL_MOUSE_BUTTON_3) && is_pressed(CELL_MOUSE_BUTTON_4)) || is_pressed(CELL_MOUSE_BUTTON_8))
 		digital_buttons |= CELL_GEM_CTRL_TRIANGLE;
+
+	if (is_pressed(CELL_MOUSE_BUTTON_3) && is_pressed(CELL_MOUSE_BUTTON_5))
+		digital_buttons |= CELL_GEM_CTRL_SQUARE;
 
 	analog_t = (mouse_data.buttons & CELL_MOUSE_BUTTON_1) ? 0xFFFF : 0;
 
