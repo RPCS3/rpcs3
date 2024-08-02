@@ -491,9 +491,6 @@ int main(int argc, char** argv)
 		report_fatal_error(error);
 	}
 
-	// Before we proceed, run some sanity checks
-	run_platform_sanity_checks();
-
 	const std::string lock_name = fs::get_cache_dir() + "RPCS3.buf";
 
 	static fs::file instance_lock;
@@ -546,7 +543,7 @@ int main(int argc, char** argv)
 	const int osx_ver_minor = Darwin_Version::getNSminorVersion();
 	if ((osx_ver_major == 14 && osx_ver_minor < 3) && (utils::get_cpu_brand().rfind("VirtualApple", 0) == 0))
 	{
-    	int osx_ver_patch = Darwin_Version::getNSpatchVersion();
+		const int osx_ver_patch = Darwin_Version::getNSpatchVersion();
 		report_fatal_error(fmt::format("RPCS3 requires macOS 14.3.0 or later.\nYou're currently using macOS %i.%i.%i.\nPlease update macOS from System Settings.\n\n", osx_ver_major, osx_ver_minor, osx_ver_patch));
 	}
 #endif
@@ -611,6 +608,9 @@ int main(int argc, char** argv)
 		if (i != argc - 1) argument_str += " ";
 	}
 	sys_log.notice("argc: %d, argv: %s", argc, argument_str);
+
+	// Before we proceed, run some sanity checks
+	run_platform_sanity_checks();
 
 #ifdef __linux__
 	struct ::rlimit rlim;

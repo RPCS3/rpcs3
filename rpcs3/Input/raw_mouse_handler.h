@@ -42,7 +42,7 @@ public:
 
 	const std::string& device_name() const { return m_device_name; }
 	u32 index() const { return m_index; }
-	void set_index(u32 index) { m_index = index; }
+	void set_index(u32 index);
 	void request_reload() { reload_requested = true; }
 
 private:

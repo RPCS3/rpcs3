@@ -122,7 +122,7 @@ void GLGSRender::on_init_thread()
 	gl::init();
 	gl::set_command_context(gl_state);
 
-	//Enable adaptive vsync if vsync is requested
+	// Enable adaptive vsync if vsync is requested
 	gl::set_swapinterval(g_cfg.video.vsync ? -1 : 0);
 
 	if (g_cfg.video.debug_output)
