@@ -114,7 +114,7 @@ std::string cfg_rpcn::get_country() const
 std::vector<cfg_rpcn::country_code> cfg_rpcn::get_countries()
 {
 	std::vector<country_code> countries;
-	countries.push_back({"United States", {'u','s'}});
+	countries.push_back({"United States", {'u', 's'}});
 	countries.push_back({"Japan", {'j', 'p'}});
 	countries.push_back({"Afghanistan", {'a', 'f'}});
 	countries.push_back({"Albania", {'a', 'l'}});
