@@ -751,10 +751,30 @@ llvm::StringRef fallback_cpu_detection()
 			return "znver5"; // Return newest known model here
 		}
 	}
-	else if (brand.startswith("Virtual Apple"))
+	else if (brand.contains("Intel"))
+	{
+		if (!utils::has_avx())
+		{
+			return "nehalem";
+		}
+		if (!utils::has_avx2())
+		{
+			return "ivybridge";
+		}
+		if (!utils::has_avx512())
+		{
+			return "skylake";
+		}
+		if (utils::has_avx512_icl())
+		{
+			return "cannonlake";
+		}
+		return "icelake-client";
+	}
+	else if (brand.startswith("VirtualApple"))
 	{
 		// No AVX. This will change in MacOS 15+, at which point we may revise this.
-		return "nehalem";
+		return utils::has_avx() ? "haswell" : "nehalem";
 	}
 
 #elif defined(ARCH_ARM64)
