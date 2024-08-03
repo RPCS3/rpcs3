@@ -16,6 +16,7 @@ namespace np
 	void string_to_avatar_url(std::string_view str, SceNpAvatarUrl& avatar_url);
 	void string_to_communication_id(std::string_view str, SceNpCommunicationId& comm_id);
 	void strings_to_userinfo(std::string_view npid, std::string_view online_name, std::string_view avatar_url, SceNpUserInfo& user_info);
+	void string_to_country_code(std::string_view str, SceNpCountryCode& country_code);
 
 	template <typename T>
 	void onlinedata_to_presencedetails(const rpcn::friend_online_data& data, bool same_context, T& details);

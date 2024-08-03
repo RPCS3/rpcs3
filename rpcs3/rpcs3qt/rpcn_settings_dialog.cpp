@@ -140,14 +140,14 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 	refresh_combobox();
 
 	hbox_lbl_combo->addWidget(lbl_server);
-	hbox_lbl_combo->addWidget(cbx_servers);
+	hbox_lbl_combo->addWidget(cbx_servers, Qt::AlignCenter);
 
 	QHBoxLayout* hbox_buttons   = new QHBoxLayout();
 	QPushButton* btn_add_server = new QPushButton(tr("Add"));
 	QPushButton* btn_del_server = new QPushButton(tr("Del"));
 	hbox_buttons->addStretch();
-	hbox_buttons->addWidget(btn_add_server);
-	hbox_buttons->addWidget(btn_del_server);
+	hbox_buttons->addWidget(btn_add_server, Qt::AlignCenter);
+	hbox_buttons->addWidget(btn_del_server, Qt::AlignCenter);
 
 	vbox_server->addLayout(hbox_lbl_combo);
 	vbox_server->addLayout(hbox_buttons);

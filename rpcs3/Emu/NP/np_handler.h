@@ -106,6 +106,7 @@ namespace np
 		const SceNpOnlineId& get_online_id() const;
 		const SceNpOnlineName& get_online_name() const;
 		const SceNpAvatarUrl& get_avatar_url() const;
+		const SceNpCountryCode& get_country_code() const;
 
 		// handles async messages from server(only needed for RPCN)
 		void operator()();
@@ -396,6 +397,7 @@ namespace np
 		SceNpId npid{};
 		SceNpOnlineName online_name{};
 		SceNpAvatarUrl avatar_url{};
+		SceNpCountryCode country_code{};
 
 		// Memory pool for sceNp/sceNp2
 		memory_allocator np_memory;
