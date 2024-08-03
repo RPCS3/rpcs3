@@ -120,7 +120,7 @@ std::vector<cfg_rpcn::country_code> cfg_rpcn::get_countries()
 	countries.push_back({"Albania", {'a', 'l'}});
 	countries.push_back({"Algeria", {'d', 'z'}});
 	countries.push_back({"American Samoa", {'a', 's'}});
-	countries.push_back({"&orra", {'a', 'd'}});
+	countries.push_back({"Andorra", {'a', 'd'}});
 	countries.push_back({"Angola", {'a', 'o'}});
 	countries.push_back({"Anguilla", {'a', 'i'}});
 	countries.push_back({"Antarctica", {'a', 'q'}});
