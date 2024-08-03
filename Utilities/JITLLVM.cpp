@@ -745,10 +745,11 @@ llvm::StringRef fallback_cpu_detection()
 				? "znver3"
 				: "znver4";
 		case 0x1a:
-			// Only one generation in family 1a so far
-			return "znver5";
+			// Only one generation in family 1a so far, zen5, which we do not support yet.
+			// Return zen4 as a workaround until the next LLVM upgrade.
+			return "znver4";
 		default:
-			return "znver5"; // Return newest known model here
+			return "znver4"; // Return newest known model here
 		}
 	}
 	else if (brand.contains("Intel"))
