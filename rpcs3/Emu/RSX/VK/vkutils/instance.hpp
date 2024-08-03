@@ -328,7 +328,7 @@ namespace vk
 				}
 				else
 #endif
-#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+#ifdef HAVE_WAYLAND
 					if constexpr (std::is_same_v<T, std::pair<wl_display*, wl_surface*>>)
 					{
 						VkWaylandSurfaceCreateInfoKHR createInfo = {};

@@ -27,6 +27,10 @@ if(UNIX AND NOT APPLE)
     if(X11_FOUND)
         add_definitions(-DHAVE_X11)
     endif()
+    find_package(Wayland)
+    if(WAYLAND_FOUND)
+        add_definitions(-DHAVE_WAYLAND)
+    endif()
 endif()
 
 # Qt

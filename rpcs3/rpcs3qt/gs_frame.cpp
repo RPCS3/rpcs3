@@ -35,7 +35,7 @@
 #elif defined(__APPLE__)
 //nothing
 #else
-#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+#ifdef HAVE_WAYLAND
 #include <QGuiApplication>
 #include <qpa/qplatformnativeinterface.h>
 #endif
@@ -712,7 +712,7 @@ display_handle_t gs_frame::handle() const
 #elif defined(__APPLE__)
 	return reinterpret_cast<void*>(this->winId()); //NSView
 #else
-#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+#ifdef HAVE_WAYLAND
 	QPlatformNativeInterface *native = QGuiApplication::platformNativeInterface();
 	struct wl_display *wl_dpy = static_cast<struct wl_display *>(
 		native->nativeResourceForWindow("display", NULL));
@@ -723,15 +723,13 @@ display_handle_t gs_frame::handle() const
 		return std::make_pair(wl_dpy, wl_surf);
 	}
 	else
-	{
 #endif
 #ifdef HAVE_X11
+	{
 		return std::make_pair(XOpenDisplay(0), static_cast<ulong>(this->winId()));
+	}
 #else
 		fmt::throw_exception("Vulkan X11 support disabled at compile-time.");
-#endif
-#ifdef VK_USE_PLATFORM_WAYLAND_KHR
-	}
 #endif
 #endif
 }
