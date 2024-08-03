@@ -62,13 +62,11 @@ namespace np
 		// npid->reserved[0] = 1;
 	}
 
-	void string_to_country_code(std::string_view str, SceNpCountryCode& country_code)
+	void string_to_country_code(std::string str, SceNpCountryCode& country_code)
 	{
 		std::memset(&country_code, 0, sizeof(country_code));
-		for (u32 c = 0; c <= str.length(); c++)
-		{
-			country_code.data[c] = str[c];
-		}
+		ensure(str.size() == sizeof(SceNpCountryCode::data));
+		std::memcpy(country_code.data, str.c_str(), sizeof(SceNpCountryCode::data));
 	}
 
 	void string_to_online_name(std::string_view str, SceNpOnlineName& online_name)
