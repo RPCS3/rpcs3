@@ -62,7 +62,7 @@ namespace np
 		// npid->reserved[0] = 1;
 	}
 
-	void string_to_country_code(std::string str, SceNpCountryCode& country_code)
+	void string_to_country_code(std::string_view str, SceNpCountryCode& country_code)
 	{
 		std::memset(&country_code, 0, sizeof(country_code));
 		ensure(str.size() == sizeof(SceNpCountryCode::data));
