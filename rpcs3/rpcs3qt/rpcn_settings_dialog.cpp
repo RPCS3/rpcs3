@@ -407,9 +407,8 @@ void rpcn_account_dialog::refresh_countrybox()
 
 		i++;
 	}
-
-	cbx_countries->model()->sort(0, Qt::AscendingOrder);
 	cbx_countries->setCurrentIndex(index);
+	cbx_countries->model()->sort(0, Qt::AscendingOrder);
 }
 
 rpcn_add_server_dialog::rpcn_add_server_dialog(QWidget* parent)
