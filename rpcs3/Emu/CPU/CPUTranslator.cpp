@@ -90,7 +90,13 @@ void cpu_translator::initialize(llvm::LLVMContext& context, llvm::ExecutionEngin
 	m_context = context;
 	m_engine = &engine;
 
-	const auto cpu = m_engine->getTargetMachine()->getTargetCPU();
+	auto cpu = m_engine->getTargetMachine()->getTargetCPU();
+
+	if (cpu == "generic")
+	{
+		// Detection failed, try to guess
+		cpu = fallback_cpu_detection();
+	}
 
 	// Test SSSE3 feature (TODO)
 	if (cpu == "generic" ||
