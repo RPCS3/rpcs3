@@ -32,8 +32,6 @@ LOG_CHANNEL(gui_log, "GUI");
 namespace
 {
 	// Helper converters
-	constexpr auto qstr = QString::fromStdString;
-
 	QString FormatTimestamp(s64 time)
 	{
 		QDateTime dateTime;
@@ -61,7 +59,7 @@ enum SaveUserRole
 
 save_manager_dialog::save_manager_dialog(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<persistent_settings> persistent_settings, std::string dir, QWidget* parent)
 	: QDialog(parent)
-	, m_dir(dir)
+	, m_dir(std::move(dir))
 	, m_gui_settings(std::move(gui_settings))
 	, m_persistent_settings(std::move(persistent_settings))
 {
@@ -176,7 +174,7 @@ void save_manager_dialog::Init()
 			return;
 		}
 		const int idx_real = item->data(Qt::UserRole).toInt();
-		const QString path = qstr(m_dir + ::at32(m_save_entries, idx_real).dirName + "/");
+		const QString path = QString::fromStdString(m_dir + ::at32(m_save_entries, idx_real).dirName + "/");
 		gui::utils::open_dir(path);
 	});
 	connect(slider_icon_size, &QAbstractSlider::valueChanged, this, &save_manager_dialog::SetIconSize);
@@ -196,7 +194,7 @@ void save_manager_dialog::Init()
 		}
 		const int original_index = user_item->data(Qt::UserRole).toInt();
 		const SaveDataEntry originalEntry = ::at32(m_save_entries, original_index);
-		const QString original_dir_name = qstr(originalEntry.dirName);
+		const QString original_dir_name = QString::fromStdString(originalEntry.dirName);
 		QVariantMap notes = m_persistent_settings->GetValue(gui::persistent::save_notes).toMap();
 		notes[original_dir_name] = text_item->text();
 		m_persistent_settings->SetValue(gui::persistent::save_notes, notes);
@@ -326,8 +324,8 @@ void save_manager_dialog::UpdateList()
 	{
 		const SaveDataEntry& entry = ::at32(m_save_entries, i);
 
-		const QString title = qstr(entry.title) + QStringLiteral("\n") + qstr(entry.subtitle);
-		const QString dir_name = qstr(entry.dirName);
+		const QString title = QString::fromStdString(entry.title) + QStringLiteral("\n") + QString::fromStdString(entry.subtitle);
+		const QString dir_name = QString::fromStdString(entry.dirName);
 
 		custom_table_widget_item* iconItem = new custom_table_widget_item;
 		iconItem->setData(Qt::DecorationRole, placeholder);
@@ -510,7 +508,7 @@ void save_manager_dialog::OnEntryRemove(int row, bool user_interaction)
 		const int idx_real = item->data(Qt::UserRole).toInt();
 		const SaveDataEntry& entry = ::at32(m_save_entries, idx_real);
 
-		if (!user_interaction || QMessageBox::question(this, tr("Delete Confirmation"), tr("Are you sure you want to delete:\n%1?").arg(qstr(entry.title)), QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
+		if (!user_interaction || QMessageBox::question(this, tr("Delete Confirmation"), tr("Are you sure you want to delete:\n%1?").arg(QString::fromStdString(entry.title)), QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
 		{
 			fs::remove_all(m_dir + entry.dirName + "/");
 			m_list->removeRow(row);
@@ -565,11 +563,10 @@ void save_manager_dialog::ShowContextMenu(const QPoint &pos)
 	menu->addAction(showDirAct);
 
 	showDirAct->setEnabled(!selectedItems);
-	removeAct->setEnabled(idx != -1);
 
 	// Events
 	connect(removeAct, &QAction::triggered, this, &save_manager_dialog::OnEntriesRemove); // entriesremove handles case of one as well
-	connect(showDirAct, &QAction::triggered, [=, this]()
+	connect(showDirAct, &QAction::triggered, [this, idx]()
 	{
 		QTableWidgetItem* item = m_list->item(idx, SaveColumns::Name);
 		if (!item)
@@ -577,7 +574,7 @@ void save_manager_dialog::ShowContextMenu(const QPoint &pos)
 			return;
 		}
 		const int idx_real = item->data(Qt::UserRole).toInt();
-		const QString path = qstr(m_dir + ::at32(m_save_entries, idx_real).dirName + "/");
+		const QString path = QString::fromStdString(m_dir + ::at32(m_save_entries, idx_real).dirName + "/");
 		gui::utils::open_dir(path);
 	});
 
@@ -638,15 +635,16 @@ void save_manager_dialog::UpdateDetails()
 		const SaveDataEntry& save = ::at32(m_save_entries, idx);
 
 		m_details_icon->setPixmap(icon_item->data(Qt::UserRole).value<QPixmap>());
-		m_details_title->setText(qstr(save.title));
-		m_details_subtitle->setText(qstr(save.subtitle));
+		m_details_title->setText(QString::fromStdString(save.title));
+		m_details_subtitle->setText(QString::fromStdString(save.subtitle));
 		m_details_modified->setText(tr("Last modified: %1").arg(FormatTimestamp(save.mtime)));
-		m_details_details->setText(tr("Details:\n").append(qstr(save.details)));
+		m_details_details->setText(tr("Details:\n").append(QString::fromStdString(save.details)));
 		QString note = tr("Note:\n");
+		const QString dir_name = QString::fromStdString(save.dirName);
 		if (const QVariantMap map = m_persistent_settings->GetValue(gui::persistent::save_notes).toMap();
-			map.contains(qstr(save.dirName)))
+			map.contains(dir_name))
 		{
-			note.append(map[qstr(save.dirName)].toString());
+			note.append(map[dir_name].toString());
 		}
 		m_details_note->setText(note);
 
