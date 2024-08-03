@@ -782,7 +782,6 @@ namespace np
 			sigh.set_self_sig_info(npid);
 
 			const std::string s_country = g_cfg_rpcn.get_country();
-			ensure(!s_country.empty());
 			string_to_country_code(s_country, country_code);
 		}
 
