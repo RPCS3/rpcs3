@@ -769,7 +769,7 @@ namespace np
 		memset(&npid, 0, sizeof(npid));
 		memset(&online_name, 0, sizeof(online_name));
 		memset(&avatar_url, 0, sizeof(avatar_url));
-		memset(&country_code, 0, sizeof(country_code));
+		std::memset(&country_code, 0, sizeof(country_code));
 
 		if (g_cfg.net.psn_status >= np_psn_status::psn_fake)
 		{
@@ -781,7 +781,7 @@ namespace np
 			auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
 			sigh.set_self_sig_info(npid);
 
-			std::string s_country = g_cfg_rpcn.get_country();
+			const std::string s_country = g_cfg_rpcn.get_country();
 			ensure(!s_country.empty());
 			string_to_country_code(s_country, country_code);
 		}

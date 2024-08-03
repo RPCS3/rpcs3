@@ -64,7 +64,7 @@ namespace np
 
 	void string_to_country_code(std::string_view str, SceNpCountryCode& country_code)
 	{
-		memset(&country_code, 0, sizeof(country_code));
+		std::memset(&country_code, 0, sizeof(country_code));
 		for (u32 c = 0; c <= str.length(); c++)
 		{
 			country_code.data[c] = str[c];

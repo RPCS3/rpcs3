@@ -220,7 +220,7 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 			if (index < 0)
 				return;
 
-			QVariant country = cbx_countries->itemData(index);
+			const QVariant country = cbx_countries->itemData(index);
 
 			if (!country.isValid() || !country.canConvert<QString>())
 				return;
@@ -394,7 +394,7 @@ void rpcn_account_dialog::refresh_countrybox()
 {
 	g_cfg_rpcn.load();
 	const auto vec_countries = g_cfg_rpcn.get_countries();
-	const auto cur_country  = g_cfg_rpcn.get_country();
+	const auto cur_country = g_cfg_rpcn.get_country();
 	int i = 0, index = 0;
 
 	cbx_countries->clear();
@@ -408,6 +408,7 @@ void rpcn_account_dialog::refresh_countrybox()
 		i++;
 	}
 
+	cbx_countries->model()->sort(0, Qt::AscendingOrder);
 	cbx_countries->setCurrentIndex(index);
 }
 
