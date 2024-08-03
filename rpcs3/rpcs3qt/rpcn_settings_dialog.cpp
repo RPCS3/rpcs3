@@ -407,7 +407,7 @@ void rpcn_account_dialog::refresh_countrybox()
 
 		i++;
 	}
-	cbx_countries->setCurrentIndex(index);
+	cbx_countries->setCurrentIndex(cbx_countries->findData(QString::fromStdString(cur_country)));
 	cbx_countries->model()->sort(0, Qt::AscendingOrder);
 }
 
