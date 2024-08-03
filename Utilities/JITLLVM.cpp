@@ -735,6 +735,11 @@ llvm::StringRef fallback_cpu_detection()
 	{
 		switch (family)
 		{
+		case 0x10:
+			return "amdfam10";
+		case 0x15:
+			// Bulldozer class, includes piledriver, excavator, steamroller, etc
+			return utils::has_avx2() ? "bdver4" : "bdver1";
 		case 0x17:
 		case 0x18:
 			// No major differences between znver1 and znver2, return the lesser
@@ -749,7 +754,9 @@ llvm::StringRef fallback_cpu_detection()
 			// Return zen4 as a workaround until the next LLVM upgrade.
 			return "znver4";
 		default:
-			return "znver4"; // Return newest known model here
+			return utils::has_avx512()
+				? "znver4"
+				: "znver3";
 		}
 	}
 	else if (brand.contains("Intel"))
