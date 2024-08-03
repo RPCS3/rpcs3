@@ -66,7 +66,7 @@ namespace np
 	{
 		std::memset(&country_code, 0, sizeof(country_code));
 		ensure(str.size() == sizeof(SceNpCountryCode::data));
-		std::memcpy(country_code.data, str.c_str(), sizeof(SceNpCountryCode::data));
+		std::memcpy(country_code.data, str.data(), sizeof(SceNpCountryCode::data));
 	}
 
 	void string_to_online_name(std::string_view str, SceNpOnlineName& online_name)
