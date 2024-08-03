@@ -440,6 +440,12 @@ std::string jit_compiler::cpu(const std::string& _cpu)
 	{
 		m_cpu = llvm::sys::getHostCPUName().str();
 
+		if (m_cpu == "generic")
+		{
+			// Try to detect a best match based on other criteria
+			m_cpu = fallback_cpu_detection();
+		}
+
 		if (m_cpu == "sandybridge" ||
 			m_cpu == "ivybridge" ||
 			m_cpu == "haswell" ||
@@ -715,6 +721,79 @@ void jit_compiler::fin()
 u64 jit_compiler::get(const std::string& name)
 {
 	return m_engine->getGlobalValueAddress(name);
+}
+
+llvm::StringRef fallback_cpu_detection()
+{
+#if defined (ARCH_X64)
+	// If we got here we either have a very old and outdated CPU or a new CPU that has not been seen by LLVM yet.
+	llvm::StringRef brand = utils::get_cpu_brand();
+	const auto family = utils::get_cpu_family();
+	const auto model = utils::get_cpu_model();
+
+	if (brand.startswith("AMD"))
+	{
+		switch (family)
+		{
+		case 0x10:
+			return "amdfam10";
+		case 0x15:
+			// Bulldozer class, includes piledriver, excavator, steamroller, etc
+			return utils::has_avx2() ? "bdver4" : "bdver1";
+		case 0x17:
+		case 0x18:
+			// No major differences between znver1 and znver2, return the lesser
+			return "znver1";
+		case 0x19:
+			// Models 0-Fh are zen3 as are 20h-60h. The rest we can assume are zen4
+			return ((model >= 0x20 && model <= 0x60) || model < 0x10)
+				? "znver3"
+				: "znver4";
+		case 0x1a:
+			// Only one generation in family 1a so far, zen5, which we do not support yet.
+			// Return zen4 as a workaround until the next LLVM upgrade.
+			return "znver4";
+		default:
+			return utils::has_avx512()
+				? "znver4"
+				: "znver3";
+		}
+	}
+	else if (brand.contains("Intel"))
+	{
+		if (!utils::has_avx())
+		{
+			return "nehalem";
+		}
+		if (!utils::has_avx2())
+		{
+			return "ivybridge";
+		}
+		if (!utils::has_avx512())
+		{
+			return "skylake";
+		}
+		if (utils::has_avx512_icl())
+		{
+			return "cannonlake";
+		}
+		return "icelake-client";
+	}
+	else if (brand.startswith("VirtualApple"))
+	{
+		// No AVX. This will change in MacOS 15+, at which point we may revise this.
+		return utils::has_avx() ? "haswell" : "nehalem";
+	}
+
+#elif defined(ARCH_ARM64)
+	// TODO: Read the data from /proc/cpuinfo. ARM CPU registers are not accessible from usermode.
+	// This will be a pain when supporting snapdragon on windows but we'll cross that bridge when we get there.
+	// Require at least armv8-2a. Older chips are going to be useless anyway.
+	return "cortex-a78";
+#endif
+
+	// Failed to guess, use generic fallback
+	return "generic";
 }
 
 #endif // LLVM_AVAILABLE
