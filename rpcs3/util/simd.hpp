@@ -25,6 +25,14 @@
 #include <math.h>
 #include <cfenv>
 
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-parameter"
+#elif defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
+
 namespace asmjit
 {
 	struct vec_builder;
@@ -541,7 +549,7 @@ namespace asmjit
 	}
 #define FOR_X64(f, ...) do { using enum asmjit::x86::Inst::Id; return asmjit::f(__VA_ARGS__); } while (0)
 #elif defined(ARCH_ARM64)
-#define FOR_X64(...) do {} while (0)
+#define FOR_X64(...) do { fmt::throw_exception("Unimplemented for this architecture!"); } while (0)
 #endif
 }
 
@@ -3098,3 +3106,9 @@ inline auto gv_shuffle_right(A&& a)
 {
 	FOR_X64(unary_op, kIdPsrldq, kIdVpsrldq, std::forward<A>(a), Count);
 }
+
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#elif defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
