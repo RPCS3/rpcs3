@@ -294,17 +294,21 @@ void dimensions_toypad::query_block(u8 index, u8 page, std::array<u8, 32>& reply
 {
 	std::lock_guard lock(m_dimensions_mutex);
 
-	// Index from game begins at 1 rather than 0, so minus 1 here
-	const dimensions_figure& figure = get_figure_by_index(index - 1);
-
 	reply_buf[0] = 0x55;
 	reply_buf[1] = 0x12;
 	reply_buf[2] = sequence;
 	reply_buf[3] = 0x00;
-	// Query 4 pages of 4 bytes from the figure, copy this to the response
-	if (figure.index != 255 && (4 * page) < ((0x2D * 4) - 16))
+
+	// Index from game begins at 1 rather than 0, so minus 1 here
+	if (const u8 figure_index = index - 1; figure_index < dimensions_figure_count)
 	{
-		std::memcpy(&reply_buf[4], figure.data.data() + (4 * page), 16);
+		const dimensions_figure& figure = get_figure_by_index(figure_index);
+
+		// Query 4 pages of 4 bytes from the figure, copy this to the response
+		if (figure.index != 255 && (4 * page) < ((0x2D * 4) - 16))
+		{
+			std::memcpy(&reply_buf[4], figure.data.data() + (4 * page), 16);
+		}
 	}
 	reply_buf[20] = generate_checksum(reply_buf, 20);
 }
@@ -313,23 +317,27 @@ void dimensions_toypad::write_block(u8 index, u8 page, const u8* to_write_buf, s
 {
 	std::lock_guard lock(m_dimensions_mutex);
 
-	// Index from game begins at 1 rather than 0, so minus 1 here
-	dimensions_figure& figure = get_figure_by_index(index - 1);
-
 	reply_buf[0] = 0x55;
 	reply_buf[1] = 0x02;
 	reply_buf[2] = sequence;
 	reply_buf[3] = 0x00;
-	// Copy 4 bytes to the page on the figure requested by the game
-	if (figure.index != 255 && page < 0x2D)
+
+	// Index from game begins at 1 rather than 0, so minus 1 here
+	if (const u8 figure_index = index - 1; figure_index < dimensions_figure_count)
 	{
-		// Id is written to page 36
-		if (page == 36)
+		dimensions_figure& figure = get_figure_by_index(figure_index);
+
+		// Copy 4 bytes to the page on the figure requested by the game
+		if (figure.index != 255 && page < 0x2D)
 		{
-			figure.id = read_from_ptr<le_t<u32>>(to_write_buf);
+			// Id is written to page 36
+			if (page == 36)
+			{
+				figure.id = read_from_ptr<le_t<u32>>(to_write_buf);
+			}
+			std::memcpy(figure.data.data() + (page * 4), to_write_buf, 4);
+			figure.save();
 		}
-		std::memcpy(figure.data.data() + (page * 4), to_write_buf, 4);
-		figure.save();
 	}
 	reply_buf[4] = generate_checksum(reply_buf, 4);
 }
@@ -340,11 +348,14 @@ void dimensions_toypad::get_model(const u8* buf, u8 sequence, std::array<u8, 32>
 	const std::array<u8, 8> value = decrypt(buf, std::nullopt);
 	const u8 index = value[0];
 	const u32 conf = read_from_ptr<be_t<u32>>(value, 4);
-	// Index from game begins at 1 rather than 0, so minus 1 here
-	const dimensions_figure& figure = get_figure_by_index(index - 1);
 	std::array<u8, 8> value_to_encrypt = {};
 	// Response is the figure's id (little endian) followed by the confirmation from payload
-	write_to_ptr<le_t<u32>>(value_to_encrypt, figure.id);
+	// Index from game begins at 1 rather than 0, so minus 1 here
+	if (const u8 figure_index = index - 1; figure_index < dimensions_figure_count)
+	{
+		const dimensions_figure& figure = get_figure_by_index(figure_index);
+		write_to_ptr<le_t<u32>>(value_to_encrypt, figure.id);
+	}
 	write_to_ptr<be_t<u32>>(value_to_encrypt, 4, conf);
 	const std::array<u8, 8> encrypted = encrypt(value_to_encrypt.data(), std::nullopt);
 	reply_buf[0] = 0x55;
