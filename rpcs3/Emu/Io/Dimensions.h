@@ -28,13 +28,13 @@ public:
 	void get_model(const u8* buf, u8 sequence, std::array<u8, 32>& reply_buf);
 	std::optional<std::array<u8, 32>> pop_added_removed_response();
 
-	bool remove_figure(u8 pad, u8 index, bool save);
-	u32 load_figure(const std::array<u8, 0x2D * 0x04>& buf, fs::file in_file, u8 pad, u8 index);
+	bool remove_figure(u8 pad, u8 index, bool save, bool lock);
+	u32 load_figure(const std::array<u8, 0x2D * 0x04>& buf, fs::file in_file, u8 pad, u8 index, bool lock);
 	bool move_figure(u8 pad, u8 index, u8 old_pad, u8 old_index);
 	static bool create_blank_character(std::array<u8, 0x2D * 0x04>& buf, u16 id);
 
 protected:
-	shared_mutex dimensions_mutex;
+	shared_mutex m_dimensions_mutex;
 	std::array<dimensions_figure, 7> m_figures;
 
 private:
@@ -50,10 +50,10 @@ private:
 	u32 get_next();
 	dimensions_figure& get_figure_by_index(u8 index);
 
-	u32 random_a;
-	u32 random_b;
-	u32 random_c;
-	u32 random_d;
+	u32 m_random_a{};
+	u32 m_random_b{};
+	u32 m_random_c{};
+	u32 m_random_d{};
 
 	u8 m_figure_order = 0;
 	std::queue<std::array<u8, 32>> m_figure_added_removed_responses;
@@ -72,6 +72,6 @@ public:
 	void isochronous_transfer(UsbTransfer* transfer) override;
 
 protected:
-	shared_mutex query_mutex;
+	shared_mutex m_query_mutex;
 	std::queue<std::array<u8, 32>> m_queries;
 };
