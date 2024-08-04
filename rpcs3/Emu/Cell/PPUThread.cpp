@@ -291,6 +291,13 @@ const auto ppu_gateway = build_function_asm<void(*)(ppu_thread*)>("ppu_gateway",
 	// and https://developer.arm.com/documentation/den0024/a/The-ABI-for-ARM-64-bit-Architecture/Register-use-in-the-AArch64-Procedure-Call-Standard/Parameters-in-general-purpose-registers
 	// for AArch64 calling convention
 
+	// PPU function argument layout:
+	// x19 = m_exec
+	// x20 = m_thread,
+	// x21 = seg0
+	// x22 = m_base
+	// x23 - x25 = gpr[0] - gpr[3]
+
 	// Push callee saved registers to the hv context
 	// Assume our LLVM compiled code is unsafe and can clobber our stack. GHC on aarch64 treats stack as scratch.
 	// We also want to store the register context at a fixed place so we can read the hypervisor state from any lcoation.

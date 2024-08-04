@@ -11,7 +11,7 @@
 
 namespace aarch64
 {
-    enum gprs : s32
+    enum gpr : s32
     {
         x0 = 0,
         x1, x2, x3, x4, x5, x6, x7, x8, x9,
@@ -21,7 +21,7 @@ namespace aarch64
 
     // On non-x86 architectures GHC runs stackless. SP is treated as a pointer to scratchpad memory.
     // This pass keeps this behavior intact while preserving the expectations of the host's C++ ABI.
-    class GHC_frame_preservation_pass : translator_pass
+    class GHC_frame_preservation_pass : public translator_pass
     {
     public:
         struct function_info_t
@@ -46,7 +46,7 @@ namespace aarch64
 
         struct
         {
-            gprs base_register;
+            gpr base_register;
             u32  hypervisor_context_offset;
         } execution_context;
 
@@ -60,7 +60,7 @@ namespace aarch64
     public:
 
         GHC_frame_preservation_pass(
-            gprs base_reg,
+            gpr base_reg,
             u32 hv_ctx_offset,
             std::function<bool(const std::string&)> exclusion_callback = {});
         ~GHC_frame_preservation_pass() = default;
