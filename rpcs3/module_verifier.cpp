@@ -41,8 +41,6 @@ void WIN32_module_verifier::run_module_verification()
 		report_fatal_error(fmt::format("WIN32_module_verifier: Failed to query WindowsDirectory"), false, true);
 	}
 
-	const std::wstring_view windir_wsv = windir;
-
 	for (const auto& module : special_module_infos)
 	{
 		const HMODULE hModule = GetModuleHandle(module.name.data());
@@ -54,8 +52,7 @@ void WIN32_module_verifier::run_module_verification()
 		WCHAR wpath[MAX_PATH];
 		if (const auto len = GetModuleFileName(hModule, wpath, MAX_PATH))
 		{
-			const std::wstring_view path_wsv = wpath;
-			if (path_wsv.find(windir_wsv) != 0)
+			if (::StrStrI(wpath, windir) != wpath)
 			{
 				const std::string path = wchar_to_utf8(wpath);
 				const std::string win_path = wchar_to_utf8(windir);
