@@ -387,6 +387,7 @@ target_link_libraries(rpcs3_emu
 target_sources(rpcs3_emu PRIVATE
     CPU/CPUThread.cpp
     CPU/CPUTranslator.cpp
+    CPU/Backends/AArch64JIT.cpp
 )
 
 target_link_libraries(rpcs3_emu

@@ -2605,7 +2605,7 @@ public:
 
 		for (auto& f : *m_module)
 		{
-			replace_intrinsics(f);
+			run_transforms(f);
 		}
 
 		for (const auto& func : m_functions)
@@ -3089,7 +3089,7 @@ public:
 
 		for (auto& f : *_module)
 		{
-			replace_intrinsics(f);
+			run_transforms(f);
 		}
 
 		std::string log;

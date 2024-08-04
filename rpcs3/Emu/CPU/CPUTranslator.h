@@ -3033,6 +3033,16 @@ struct llvm_calli
 	}
 };
 
+class translator_pass
+{
+public:
+	translator_pass() = default;
+	virtual ~translator_pass() {}
+
+	virtual void run(llvm::IRBuilder<>* irb, llvm::Function& func) = 0;
+	virtual void reset() = 0;
+};
+
 class cpu_translator
 {
 protected:
@@ -3074,9 +3084,18 @@ protected:
 	// IR builder
 	llvm::IRBuilder<>* m_ir = nullptr;
 
+	// CUstomized transformation passes. Technically the intrinsics replacement belongs here.
+	std::vector<std::unique_ptr<translator_pass>> m_transform_passes;
+
 	void initialize(llvm::LLVMContext& context, llvm::ExecutionEngine& engine);
 
 public:
+	// Register a transformation pass to be run before final compilation by llvm
+	void register_transform_pass(std::unique_ptr<translator_pass>& pass)
+	{
+		m_transform_passes.emplace_back(std::move(pass));
+	}
+
 	// Convert a C++ type to an LLVM type (TODO: remove)
 	template <typename T>
 	llvm::Type* GetType()
@@ -3778,8 +3797,11 @@ public:
 		}
 	}
 
-	// Finalize processing custom intrinsics
+	// Run intrinsics replacement pass
 	void replace_intrinsics(llvm::Function&);
+
+	// Finalize processing
+	void run_transforms(llvm::Function&);
 
 	// Erase store instructions of provided
 	void erase_stores(llvm::ArrayRef<llvm::Value*> args);

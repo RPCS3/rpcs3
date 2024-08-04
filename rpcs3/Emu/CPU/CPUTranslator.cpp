@@ -392,6 +392,17 @@ void cpu_translator::replace_intrinsics(llvm::Function& f)
 	}
 }
 
+void cpu_translator::run_transforms(llvm::Function& f)
+{
+	// This pass must run first because the other passes may depend on resolved names.
+	replace_intrinsics(f);
+
+	for (auto& pass : m_transform_passes)
+	{
+		pass->run(m_ir, f);
+	}
+}
+
 void cpu_translator::erase_stores(llvm::ArrayRef<llvm::Value*> args)
 {
 	for (auto v : args)

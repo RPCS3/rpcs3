@@ -269,7 +269,7 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 		}
 	}
 
-	replace_intrinsics(*m_function);
+	run_transforms(*m_function);
 	return m_function;
 }
 
@@ -321,7 +321,7 @@ Function* PPUTranslator::GetSymbolResolver(const ppu_module& info)
 	{
 		// Possible special case for no functions (allowing the do-while optimization)
 		m_ir->CreateRetVoid(); // FIXME: Aarch64. It should work fine as long as there is no callchain beyond this function with a ret path.
-		replace_intrinsics(*m_function);
+		run_transforms(*m_function);
 		return m_function;
 	}
 
@@ -379,7 +379,7 @@ Function* PPUTranslator::GetSymbolResolver(const ppu_module& info)
 
 	m_ir->CreateRetVoid(); // FIXME: Aarch64 - Should be ok as long as no ret-based callchain proceeds from here
 
-	replace_intrinsics(*m_function);
+	run_transforms(*m_function);
 	return m_function;
 }
 
@@ -5375,7 +5375,7 @@ void PPUTranslator::build_interpreter()
 		op.vc = 3; \
 		this->i(op); \
 		VMEscape(); \
-		replace_intrinsics(*m_function); \
+		run_transforms(*m_function); \
 	}
 
 	BUILD_VEC_INST(VADDCUW);
