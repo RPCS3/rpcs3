@@ -8,6 +8,7 @@
 #endif
 
 #include <Windows.h>
+#include <Shlwapi.h>
 
 #include <util/types.hpp>
 #include <util/logs.hpp>
