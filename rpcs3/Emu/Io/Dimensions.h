@@ -37,7 +37,7 @@ public:
 
 protected:
 	shared_mutex m_dimensions_mutex;
-	std::array<dimensions_figure, dimensions_figure_count> m_figures;
+	std::array<dimensions_figure, dimensions_figure_count> m_figures{};
 
 private:
 	static void random_uid(u8* uid_buffer);
