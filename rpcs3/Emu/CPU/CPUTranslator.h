@@ -26,6 +26,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
+#include "llvm/IR/InlineAsm.h"
 
 #ifdef _MSC_VER
 #pragma warning(pop)
@@ -3897,5 +3898,40 @@ struct fmt_unveil<llvm::TypeSize, void>
 		return arg;
 	}
 };
+
+// Inline assembly wrappers.
+// TODO: Move these to proper location and replace macros with templates
+static inline
+llvm::InlineAsm* compile_inline_asm(
+	llvm::Type* returnType,
+	llvm::ArrayRef<llvm::Type*> argTypes,
+	const std::string& code,
+	const std::string& constraints)
+{
+	const auto callSig = llvm::FunctionType::get(returnType, argTypes, false);
+	return llvm::InlineAsm::get(callSig, code, constraints, true, false);
+}
+
+// Helper for ASM generation with dynamic number of arguments
+#define LLVM_ASM(asm_, args, constraints, irb, ctx)\
+	do {\
+		std::vector<llvm::Type*> _argTypes;\
+		_argTypes.reserve(args.size());\
+		for (const auto& _arg : args) _argTypes.push_back(_arg->getType());\
+		auto _returnType = llvm::Type::getVoidTy(ctx); \
+		llvm::FunctionCallee _callee = compile_inline_asm(_returnType, _argTypes, asm_, constraints); \
+		auto _c = irb->CreateCall(_callee, args); \
+		_c->addFnAttr(llvm::Attribute::AlwaysInline); \
+	} while(0)
+
+// Helper for ASM generation with 0 args
+#define LLVM_ASM_0(asm_, irb, ctx)\
+	do {\
+		const auto _voidTy = llvm::Type::getVoidTy(ctx); \
+		auto _callee = compile_inline_asm(_voidTy, std::nullopt, asm_, ""); \
+		auto _c = irb->CreateCall(_callee); \
+		_c->setTailCall(); \
+		_c->addFnAttr(llvm::Attribute::AlwaysInline); \
+	} while(0)
 
 #endif

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../CPU/CPUThread.h"
+#include "../CPU/Hypervisor.h"
 #include "../Memory/vm_ptr.h"
 #include "Utilities/lockless.h"
 #include "Utilities/BitField.h"
@@ -162,6 +163,9 @@ public:
 	void save(utils::serial& ar);
 
 	using cpu_thread::operator=;
+
+	// Hypervisor context data
+	alignas(16) rpcs3::hypervisor_context_t hv_ctx; // HV context for gate enter exit. Keep at a low struct offset.
 
 	u64 gpr[32] = {}; // General-Purpose Registers
 	f64 fpr[32] = {}; // Floating Point Registers

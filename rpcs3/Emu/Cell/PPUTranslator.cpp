@@ -208,8 +208,7 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 		m_ir->CreateAtomicRMW(llvm::AtomicRMWInst::Or, ptr, m_ir->getInt32((+cpu_flag::wait).operator u32()), llvm::MaybeAlign{4}, llvm::AtomicOrdering::AcquireRelease);
 
 		// Create tail call to the check function
-		Call(GetType<void>(), "__check", m_thread, GetAddr())->setTailCall();
-		m_ir->CreateRetVoid();
+		VMEscape(Call(GetType<void>(), "__check", m_thread, GetAddr()));
 	}
 	else
 	{
@@ -321,7 +320,7 @@ Function* PPUTranslator::GetSymbolResolver(const ppu_module& info)
 	if (vec_addrs.empty())
 	{
 		// Possible special case for no functions (allowing the do-while optimization)
-		m_ir->CreateRetVoid();
+		m_ir->CreateRetVoid(); // FIXME: Aarch64. It should work fine as long as there is no callchain beyond this function with a ret path.
 		replace_intrinsics(*m_function);
 		return m_function;
 	}
@@ -378,7 +377,7 @@ Function* PPUTranslator::GetSymbolResolver(const ppu_module& info)
 	// Set insertion point to afterloop_block
 	m_ir->SetInsertPoint(after_loop);
 
-	m_ir->CreateRetVoid();
+	m_ir->CreateRetVoid(); // FIXME: Aarch64 - Should be ok as long as no ret-based callchain proceeds from here
 
 	replace_intrinsics(*m_function);
 	return m_function;
@@ -482,8 +481,8 @@ void PPUTranslator::CallFunction(u64 target, Value* indirect)
 
 		if (_target >= u32{umax})
 		{
-			Call(GetType<void>(), "__error", m_thread, GetAddr(), m_ir->getInt32(*ensure(m_info.get_ptr<u32>(::narrow<u32>(m_addr + base)))));
-			m_ir->CreateRetVoid();
+			auto c = Call(GetType<void>(), "__error", m_thread, GetAddr(), m_ir->getInt32(*ensure(m_info.get_ptr<u32>(::narrow<u32>(m_addr + base)))));
+			VMEscape(c);
 			return;
 		}
 		else if (_target >= caddr && _target <= cend)
@@ -565,7 +564,7 @@ void PPUTranslator::CallFunction(u64 target, Value* indirect)
 	const auto c = m_ir->CreateCall(callee, {m_exec, m_thread, seg0, m_base, GetGpr(0), GetGpr(1), GetGpr(2)});
 	c->setTailCallKind(llvm::CallInst::TCK_Tail);
 	c->setCallingConv(CallingConv::GHC);
-	m_ir->CreateRetVoid();
+	VMEscape(c);
 }
 
 Value* PPUTranslator::RegInit(Value*& local)
@@ -779,8 +778,8 @@ void PPUTranslator::TestAborted()
 	m_ir->SetInsertPoint(vcheck);
 
 	// Create tail call to the check function
-	Call(GetType<void>(), "__check", m_thread, GetAddr())->setTailCall();
-	m_ir->CreateRetVoid();
+	auto c = Call(GetType<void>(), "__check", m_thread, GetAddr());
+	VMEscape(c);
 	m_ir->SetInsertPoint(body);
 }
 
@@ -2206,16 +2205,14 @@ void PPUTranslator::SC(ppu_opcode_t op)
 
 		if (index < 1024)
 		{
-			Call(GetType<void>(), fmt::format("%s", ppu_syscall_code(index)), m_thread);
-			//Call(GetType<void>(), "__escape", m_thread)->setTailCall();
-			m_ir->CreateRetVoid();
+			auto c = Call(GetType<void>(), fmt::format("%s", ppu_syscall_code(index)), m_thread);
+			VMEscape(c, true);
 			return;
 		}
 	}
 
-	Call(GetType<void>(), op.lev ? "__lv1call" : "__syscall", m_thread, num);
-	//Call(GetType<void>(), "__escape", m_thread)->setTailCall();
-	m_ir->CreateRetVoid();
+	auto c = Call(GetType<void>(), op.lev ? "__lv1call" : "__syscall", m_thread, num);
+	VMEscape(c, true);
 }
 
 void PPUTranslator::B(ppu_opcode_t op)
@@ -2776,9 +2773,9 @@ void PPUTranslator::LWARX(ppu_opcode_t op)
 	{
 		RegStore(Trunc(GetAddr()), m_cia);
 		FlushRegisters();
-		Call(GetType<void>(), "__resinterp", m_thread);
-		//Call(GetType<void>(), "__escape", m_thread)->setTailCall();
-		m_ir->CreateRetVoid();
+
+		auto inst = Call(GetType<void>(), "__resinterp", m_thread);
+		VMEscape(inst, true);
 		return;
 	}
 
@@ -2928,9 +2925,9 @@ void PPUTranslator::LDARX(ppu_opcode_t op)
 	{
 		RegStore(Trunc(GetAddr()), m_cia);
 		FlushRegisters();
-		Call(GetType<void>(), "__resinterp", m_thread);
-		//Call(GetType<void>(), "__escape", m_thread)->setTailCall();
-		m_ir->CreateRetVoid();
+
+		auto inst = Call(GetType<void>(), "__resinterp", m_thread);
+		VMEscape(inst, true);
 		return;
 	}
 
@@ -4998,9 +4995,8 @@ void PPUTranslator::FCFID(ppu_opcode_t op)
 void PPUTranslator::UNK(ppu_opcode_t op)
 {
 	FlushRegisters();
-	Call(GetType<void>(), "__error", m_thread, GetAddr(), m_ir->getInt32(op.opcode));
-	//Call(GetType<void>(), "__escape", m_thread)->setTailCall();
-	m_ir->CreateRetVoid();
+	auto c = Call(GetType<void>(), "__error", m_thread, GetAddr(), m_ir->getInt32(op.opcode));
+	VMEscape(c, true);
 }
 
 
@@ -5279,9 +5275,8 @@ Value* PPUTranslator::CheckTrapCondition(u32 to, Value* left, Value* right)
 
 void PPUTranslator::Trap()
 {
-	Call(GetType<void>(), "__trap", m_thread, GetAddr());
-	//Call(GetType<void>(), "__escape", m_thread)->setTailCall();
-	m_ir->CreateRetVoid();
+	auto c = Call(GetType<void>(), "__trap", m_thread, GetAddr());
+	VMEscape(c);
 }
 
 Value* PPUTranslator::CheckBranchCondition(u32 bo, u32 bi)
@@ -5328,6 +5323,42 @@ MDNode* PPUTranslator::CheckBranchProbability(u32 bo)
 	return nullptr;
 }
 
+void PPUTranslator::VMEscape([[maybe_unused]] llvm::CallInst* tail_call, [[maybe_unused]] bool skip_flush)
+{
+	//if (!skip_flush)
+	{
+		// Flush
+		FlushRegisters();
+	}
+
+#ifdef ARCH_X64
+	// Optionally flag last call as a tail
+	if (tail_call)
+	{
+		tail_call->setTailCall();
+	}
+
+	// This is actually AMD64 specific but good enough for now
+	m_ir->CreateRetVoid();
+#else
+
+	// Validation. Make sure we're escaping from a correct context. Only guest JIT should ever go through the "escape" gate.
+	const auto bb = m_ir->GetInsertPoint();
+	const auto arg = llvm::dyn_cast<llvm::Argument>(m_thread);
+	ensure(bb->getParent()->getName().str() == arg->getParent()->getName().str());
+
+	const u32 hv_register_array_offset = ::offset32(&ppu_thread::hv_ctx, &rpcs3::hypervisor_context_t::regs);
+	const std::string asm_ = fmt::format(
+		"ldr x20, $0;\n"
+		"ldr x30, [x20, #%u];\n",
+		hv_register_array_offset);
+
+	LLVM_ASM(asm_, std::array{ m_thread }, "m", m_ir, m_function->getContext());
+	m_ir->CreateRetVoid();
+
+#endif
+}
+
 void PPUTranslator::build_interpreter()
 {
 #define BUILD_VEC_INST(i) { \
@@ -5343,8 +5374,7 @@ void PPUTranslator::build_interpreter()
 		op.vb = 2; \
 		op.vc = 3; \
 		this->i(op); \
-		FlushRegisters(); \
-		m_ir->CreateRetVoid(); \
+		VMEscape(); \
 		replace_intrinsics(*m_function); \
 	}
 

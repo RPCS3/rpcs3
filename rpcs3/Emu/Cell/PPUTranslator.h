@@ -150,6 +150,9 @@ public:
 	// Emit function call
 	void CallFunction(u64 target, llvm::Value* indirect = nullptr);
 
+	// Emit escape sequence back to hypervisor
+	void VMEscape(llvm::CallInst* tail_call = nullptr, bool skip_flush = false);
+
 	// Emit state check mid-block
 	void TestAborted();
 
