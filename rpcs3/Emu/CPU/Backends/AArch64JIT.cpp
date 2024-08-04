@@ -23,7 +23,7 @@ namespace aarch64
     using function_info_t = GHC_frame_preservation_pass::function_info_t;
 
     GHC_frame_preservation_pass::GHC_frame_preservation_pass(
-        gprs base_reg,
+        gpr base_reg,
         u32 hv_ctx_offset,
         std::function<bool(const std::string&)> exclusion_callback)
     {
@@ -226,7 +226,7 @@ namespace aarch64
             "add x30, x%u, x30;\n"     // Add to base register
             "ldr x30, [x30];\n",       // Load x30
             execution_context.hypervisor_context_offset,
-            execution_context.base_register);
+            static_cast<u32>(execution_context.base_register));
 
         if (function_info.stack_frame_size > 0)
         {
