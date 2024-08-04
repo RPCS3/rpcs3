@@ -19,7 +19,7 @@ struct dimensions_figure
 class dimensions_toypad
 {
 public:
-	void get_blank_response(u8 type, u8 sequence, std::array<u8, 32>& reply_buf);
+	static void get_blank_response(u8 type, u8 sequence, std::array<u8, 32>& reply_buf);
 	void generate_random_number(const u8* buf, u8 sequence, std::array<u8, 32>& reply_buf);
 	void initialize_rng(u32 seed);
 	void get_challenge_response(const u8* buf, u8 sequence, std::array<u8, 32>& reply_buf);
@@ -31,22 +31,22 @@ public:
 	bool remove_figure(u8 pad, u8 index, bool save);
 	u32 load_figure(const std::array<u8, 0x2D * 0x04>& buf, fs::file in_file, u8 pad, u8 index);
 	bool move_figure(u8 pad, u8 index, u8 old_pad, u8 old_index);
-	bool create_blank_character(std::array<u8, 0x2D * 0x04>& buf, u16 id);
+	static bool create_blank_character(std::array<u8, 0x2D * 0x04>& buf, u16 id);
 
 protected:
 	shared_mutex dimensions_mutex;
 	std::array<dimensions_figure, 7> m_figures;
 
 private:
-	void random_uid(u8* uid_buffer);
-	u8 generate_checksum(const std::array<u8, 32>& data, u32 num_of_bytes) const;
-	std::array<u8, 8> decrypt(const u8* buf, std::optional<std::array<u8, 16>> key);
-	std::array<u8, 8> encrypt(const u8* buf, std::optional<std::array<u8, 16>> key);
-	std::array<u8, 16> generate_figure_key(const std::array<u8, 0x2D * 0x04>& buf);
-	u32 scramble(const std::array<u8, 7>& uid, u8 count);
-	std::array<u8, 4> pwd_generate(const std::array<u8, 7>& uid);
-	std::array<u8, 4> dimensions_randomize(const std::vector<u8> key, u8 count);
-	u32 get_figure_id(const std::array<u8, 0x2D * 0x04>& buf);
+	static void random_uid(u8* uid_buffer);
+	static u8 generate_checksum(const std::array<u8, 32>& data, u32 num_of_bytes);
+	static std::array<u8, 8> decrypt(const u8* buf, std::optional<std::array<u8, 16>> key);
+	static std::array<u8, 8> encrypt(const u8* buf, std::optional<std::array<u8, 16>> key);
+	static std::array<u8, 16> generate_figure_key(const std::array<u8, 0x2D * 0x04>& buf);
+	static u32 scramble(const std::array<u8, 7>& uid, u8 count);
+	static std::array<u8, 4> pwd_generate(const std::array<u8, 7>& uid);
+	static std::array<u8, 4> dimensions_randomize(const std::vector<u8> key, u8 count);
+	static u32 get_figure_id(const std::array<u8, 0x2D * 0x04>& buf);
 	u32 get_next();
 	dimensions_figure& get_figure_by_index(u8 index);
 

@@ -34,7 +34,7 @@ void dimensions_figure::save()
 	dim_file.write(data.data(), 0x2D * 0x04);
 }
 
-u8 dimensions_toypad::generate_checksum(const std::array<u8, 32>& data, u32 num_of_bytes) const
+u8 dimensions_toypad::generate_checksum(const std::array<u8, 32>& data, u32 num_of_bytes)
 {
 	int checksum = 0;
 	ensure(num_of_bytes <= data.size());
@@ -90,7 +90,7 @@ void dimensions_toypad::initialize_rng(u32 seed)
 
 u32 dimensions_toypad::get_next()
 {
-	u32 e = random_a - std::rotl(random_b, 21);
+	const u32 e = random_a - std::rotl(random_b, 21);
 	random_a = random_b ^ std::rotl(random_c, 19);
 	random_b = random_c + std::rotl(random_d, 6);
 	random_c = random_d + e;
@@ -237,9 +237,9 @@ std::array<u8, 4> dimensions_toypad::dimensions_randomize(const std::vector<u8> 
 
 u32 dimensions_toypad::get_figure_id(const std::array<u8, 0x2D * 0x04>& buf)
 {
-	std::array<u8, 16> figure_key = generate_figure_key(buf);
+	const std::array<u8, 16> figure_key = generate_figure_key(buf);
 
-	std::array<u8, 8> decrypted = decrypt(&buf[36 * 4], figure_key);
+	const std::array<u8, 8> decrypted = decrypt(&buf[36 * 4], figure_key);
 
 	const u32 fig_num = read_from_ptr<le_t<u32>>(decrypted);
 	// Characters have their model number encrypted in page 36
@@ -295,7 +295,7 @@ void dimensions_toypad::query_block(u8 index, u8 page, std::array<u8, 32>& reply
 	std::lock_guard lock(dimensions_mutex);
 
 	// Index from game begins at 1 rather than 0, so minus 1 here
-	dimensions_figure& figure = get_figure_by_index(index - 1);
+	const dimensions_figure& figure = get_figure_by_index(index - 1);
 
 	reply_buf[0] = 0x55;
 	reply_buf[1] = 0x12;
@@ -341,7 +341,7 @@ void dimensions_toypad::get_model(const u8* buf, u8 sequence, std::array<u8, 32>
 	const u8 index = value[0];
 	const u32 conf = read_from_ptr<be_t<u32>>(value, 4);
 	// Index from game begins at 1 rather than 0, so minus 1 here
-	dimensions_figure& figure = get_figure_by_index(index - 1);
+	const dimensions_figure& figure = get_figure_by_index(index - 1);
 	std::array<u8, 8> value_to_encrypt = {};
 	// Response is the figure's id (little endian) followed by the confirmation from payload
 	write_to_ptr<le_t<u32>>(value_to_encrypt, figure.id);
