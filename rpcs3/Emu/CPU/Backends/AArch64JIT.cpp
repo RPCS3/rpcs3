@@ -4,17 +4,17 @@
 
 LOG_CHANNEL(jit_log, "JIT");
 
-#define STDOUT_DEBUG
+#define STDOUT_DEBUG 0
 
-#ifndef STDOUT_DEBUG
-#define DPRINT jit_log.trace
-#else
+#if STDOUT_DEBUG
 #define DPRINT(...)\
     do {\
         printf(__VA_ARGS__);\
         printf("\n");\
         fflush(stdout);\
     } while (0)
+#else
+#define DPRINT jit_log.trace
 #endif
 
 namespace aarch64
@@ -37,15 +37,9 @@ namespace aarch64
     using instruction_info_t = GHC_frame_preservation_pass::instruction_info_t;
     using function_info_t = GHC_frame_preservation_pass::function_info_t;
 
-    GHC_frame_preservation_pass::GHC_frame_preservation_pass(
-        u32 hv_ctx_offset,
-        const std::vector<std::pair<std::string, gpr>>& base_register_lookup,
-        std::function<bool(const std::string&)> exclusion_callback)
-    {
-        execution_context.base_register_lookup = base_register_lookup;
-        execution_context.hypervisor_context_offset = hv_ctx_offset;
-        this->exclusion_callback = exclusion_callback;
-    }
+    GHC_frame_preservation_pass::GHC_frame_preservation_pass(const config_t& configuration)
+        : execution_context(configuration)
+    {}
 
     void GHC_frame_preservation_pass::reset()
     {
@@ -94,23 +88,29 @@ namespace aarch64
             return result;
         }
 
-        // Stack frame estimation. SPU code can be very long and consumes several KB of stack.
-        u32 stack_frame_size = 128u;
-        // Actual ratio is usually around 1:4
-        const u32 expected_compiled_instr_count = f.getInstructionCount() * 4;
-        // Because GHC doesn't preserve stack (all stack is scratch), we know we'll start to spill once we go over the number of actual regs.
-        // We use a naive allocator that just assumes each instruction consumes a register slot. We "spill" every 32 instructions.
-        // FIXME: Aggressive spill is only really a thing with vector operations. We can detect those instead.
-        // A proper fix is to port this to a MF pass, but I have PTSD from working at MF level.
-        const u32 spill_pages = (expected_compiled_instr_count + 127u) / 128u;
-        stack_frame_size *= std::min(spill_pages, 32u); // 128 to 4k dynamic. It is unlikely that any frame consumes more than 4096 bytes
+        if (execution_context.use_stack_frames)
+        {
+            // Stack frame estimation. SPU code can be very long and consumes several KB of stack.
+            u32 stack_frame_size = 128u;
+            // Actual ratio is usually around 1:4
+            const u32 expected_compiled_instr_count = f.getInstructionCount() * 4;
+            // Because GHC doesn't preserve stack (all stack is scratch), we know we'll start to spill once we go over the number of actual regs.
+            // We use a naive allocator that just assumes each instruction consumes a register slot. We "spill" every 32 instructions.
+            // FIXME: Aggressive spill is only really a thing with vector operations. We can detect those instead.
+            // A proper fix is to port this to a MF pass, but I have PTSD from working at MF level.
+            const u32 spill_pages = (expected_compiled_instr_count + 127u) / 128u;
+            stack_frame_size *= std::min(spill_pages, 32u); // 128 to 4k dynamic. It is unlikely that any frame consumes more than 4096 bytes
 
-        result.stack_frame_size = stack_frame_size;
+            result.stack_frame_size = stack_frame_size;
+        }
+
         result.instruction_count = f.getInstructionCount();
         result.num_external_calls = 0;
 
         // The LR is not spared by LLVM in cases where there is a lot of spilling.
-        // This is another thing to be moved to a MachineFunction pass.
+        // This is much easier to manage with a custom LLVM branch as we can just mark X30 as off-limits as a GPR.
+        // This is another thing to be moved to a MachineFunction pass. Ideally we should check the instruction stream for writes to LR and reload it on exit.
+        // For now, assume it is dirtied if the function is of any reasonable length.
         result.clobbers_x30 = result.instruction_count > 32;
 
         for (auto& bb : f)
@@ -323,13 +323,7 @@ namespace aarch64
                     llvm::Instruction* original_inst = llvm::dyn_cast<llvm::Instruction>(bit);
                     irb->SetInsertPoint(ensure(llvm::dyn_cast<llvm::Instruction>(bit)));
 
-                    if (function_info.stack_frame_size > 0)
-                    {
-                        // 1. Nuke the local stack frame if any
-                        LLVM_ASM_VOID(frame_epilogue, irb, f.getContext());
-                    }
-
-                    // 2. We're about to make a tail call. This means after this call, we're supposed to return immediately. In that case, don't link, lower to branch only.
+                    // We're about to make a tail call. This means after this call, we're supposed to return immediately. In that case, don't link, lower to branch only.
                     // Note that branches have some undesirable side-effects. For one, we lose the argument inputs, which the callee is expecting.
                     // This means we burn some cycles on every exit, but in return we do not require one instruction on the prologue + the ret chain is eliminated.
                     // No ret-chain also means two BBs can call each other indefinitely without running out of stack without relying on llvm to optimize that away.
@@ -372,6 +366,18 @@ namespace aarch64
                             execution_context.hypervisor_context_offset);
 
                         exit_fn += x30_tail_restore;
+                    }
+
+                    // Stack cleanup. We need to do this last to allow the spiller to find it's own spilled variables.
+                    if (function_info.stack_frame_size > 0)
+                    {
+                        exit_fn += frame_epilogue;
+                    }
+
+                    if (execution_context.debug_info)
+                    {
+                        // Store x27 as our current address taking the place of LR (for debugging since bt is now useless)
+                        exit_fn += "adr x27, .;\n";
                     }
 
                     auto target = ensure(ci->getCalledOperand());

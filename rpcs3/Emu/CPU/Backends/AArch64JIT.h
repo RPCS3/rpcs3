@@ -43,14 +43,20 @@ namespace aarch64
             llvm::Function* callee;   // Callee if any
             std::string callee_name;  // Name of the callee.
         };
+
+        struct config_t
+        {
+            bool debug_info = false;         // Record debug information
+            bool use_stack_frames = true;    // Allocate a stack frame for each function. The gateway can alternatively manage a global stack to use as scratch.
+            u32 hypervisor_context_offset = 0; // Offset within the "thread" object where we can find the hypervisor context (registers configured at gateway).
+            std::function<bool(const std::string&)> exclusion_callback;    // [Optional] Callback run on each function before transform. Return "true" to exclude from frame processing.
+            std::vector<std::pair<std::string, gpr>> base_register_lookup; // [Optional] Function lookup table to determine the location of the "thread" context.
+        };
+
     protected:
         std::unordered_set<std::string> visited_functions;
 
-        struct
-        {
-            std::vector<std::pair<std::string, gpr>> base_register_lookup;
-            u32  hypervisor_context_offset;
-        } execution_context;
+        config_t execution_context;
 
         std::function<bool(const std::string&)> exclusion_callback;
 
@@ -63,10 +69,7 @@ namespace aarch64
         gpr get_base_register_for_call(const std::string& callee_name);
     public:
 
-        GHC_frame_preservation_pass(
-            u32 hv_ctx_offset,
-            const std::vector<std::pair<std::string, gpr>>& base_register_lookup = {},
-            std::function<bool(const std::string&)> exclusion_callback = {});
+        GHC_frame_preservation_pass(const config_t& configuration);
         ~GHC_frame_preservation_pass() = default;
 
         void run(llvm::IRBuilder<>* irb, llvm::Function& f) override;

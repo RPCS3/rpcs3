@@ -36,22 +36,31 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* _module, const ppu_mo
 
 	// Initialize transform passes
 #ifdef ARCH_ARM64
-	// Base reg table definition
-	// Assume all functions named __0x... are PPU functions and take the m_exec as the first arg
-	std::vector<std::pair<std::string, aarch64::gpr>> base_reg_lookup = {
-		{ "__0x", aarch64::x20 }, // PPU blocks
-		{ "__indirect", aarch64::x20 }, // Indirect jumps
-		{ "ppu_", aarch64::x19 }, // Fixed JIT helpers (e.g ppu_gateway)
-		{ "__", aarch64::x19 }    // Probably link table entries
-	};
+	{
+		// Base reg table definition
+		// Assume all functions named __0x... are PPU functions and take the m_exec as the first arg
+		std::vector<std::pair<std::string, aarch64::gpr>> base_reg_lookup = {
+			{ "__0x", aarch64::x20 }, // PPU blocks
+			{ "__indirect", aarch64::x20 }, // Indirect jumps
+			{ "ppu_", aarch64::x19 }, // Fixed JIT helpers (e.g ppu_gateway)
+			{ "__", aarch64::x19 }    // Probably link table entries
+		};
 
-	// Create transform pass
-	std::unique_ptr<translator_pass> ghc_fixup_pass = std::make_unique<aarch64::GHC_frame_preservation_pass>(
-		::offset32(&ppu_thread::hv_ctx),
-		base_reg_lookup);
+		aarch64::GHC_frame_preservation_pass::config_t config =
+		{
+			.debug_info = false,         // Set to "true" to insert debug frames on x27
+			.use_stack_frames = false,   // GW allocates 4k of scratch on the stack
+			.hypervisor_context_offset = ::offset32(&ppu_thread::hv_ctx),
+			.exclusion_callback = {},    // Unused, we don't have special exclusion functions on PPU
+			.base_register_lookup = base_reg_lookup
+		};
 
-	// Register it
-	register_transform_pass(ghc_fixup_pass);
+		// Create transform pass
+		std::unique_ptr<translator_pass> ghc_fixup_pass = std::make_unique<aarch64::GHC_frame_preservation_pass>(config);
+
+		// Register it
+		register_transform_pass(ghc_fixup_pass);
+	}
 #endif
 
 	// Thread context struct (TODO: safer member access)

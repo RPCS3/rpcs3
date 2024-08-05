@@ -3938,7 +3938,7 @@ llvm::InlineAsm* compile_inline_asm(
 static inline
 llvm::CallInst* llvm_asm(
 	llvm::IRBuilder<>* irb,
-	std::string& asm_,
+	const std::string& asm_,
 	llvm::ArrayRef<llvm::Value*> args,
 	const std::string& constraints,
 	llvm::LLVMContext& context)
