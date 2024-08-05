@@ -12,6 +12,8 @@ extern "C"
 {
 #include "libavcodec/avcodec.h"
 }
+
+constexpr int averror_eof = AVERROR_EOF; // Workaround for old-style-cast error
 #ifdef _MSC_VER
 #pragma warning(pop)
 #else
