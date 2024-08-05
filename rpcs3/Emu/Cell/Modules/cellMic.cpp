@@ -410,9 +410,9 @@ error_code microphone_device::open_microphone(const u8 type, const u32 dsp_r, co
 
 	ALCdevice* device = alcCaptureOpenDevice(device_name[0].c_str(), raw_samplingrate, num_al_channels, inbuf_size);
 
-	if (alcGetError(device) != ALC_NO_ERROR)
+	if (ALCenum err = alcGetError(device); err != ALC_NO_ERROR || !device)
 	{
-		cellMic.error("Error opening capture device %s", device_name[0]);
+		cellMic.error("Error opening capture device %s (error=0x%x, device=*0x%x)", device_name[0], err, device);
 #ifdef _WIN32
 		cellMic.error("Make sure microphone use is authorized under \"Microphone privacy settings\" in windows configuration");
 #endif
@@ -428,10 +428,11 @@ error_code microphone_device::open_microphone(const u8 type, const u32 dsp_r, co
 	{
 		// Open a 2nd microphone into the same device
 		device = alcCaptureOpenDevice(device_name[1].c_str(), raw_samplingrate, AL_FORMAT_MONO16, inbuf_size);
-		if (alcGetError(device) != ALC_NO_ERROR)
+
+		if (ALCenum err = alcGetError(device); err != ALC_NO_ERROR || !device)
 		{
 			// Ignore it and move on
-			cellMic.error("Error opening 2nd SingStar capture device %s", device_name[1]);
+			cellMic.error("Error opening 2nd SingStar capture device %s (error=0x%x, device=*0x%x)", device_name[1], err, device);
 		}
 		else
 		{
@@ -472,12 +473,12 @@ error_code microphone_device::close_microphone()
 
 error_code microphone_device::start_microphone()
 {
-	for (const auto& micdevice : input_devices)
+	for (ALCdevice* micdevice : input_devices)
 	{
 		alcCaptureStart(micdevice);
-		if (alcGetError(micdevice) != ALC_NO_ERROR)
+		if (ALCenum err = alcGetError(micdevice); err != ALC_NO_ERROR)
 		{
-			cellMic.error("Error starting capture");
+			cellMic.error("Error starting capture (error=0x%x)", err);
 			stop_microphone();
 			return CELL_MICIN_ERROR_FATAL;
 		}
@@ -490,12 +491,12 @@ error_code microphone_device::start_microphone()
 
 error_code microphone_device::stop_microphone()
 {
-	for (const auto& micdevice : input_devices)
+	for (ALCdevice* micdevice : input_devices)
 	{
 		alcCaptureStop(micdevice);
-		if (alcGetError(micdevice) != ALC_NO_ERROR)
+		if (ALCenum err = alcGetError(micdevice); err != ALC_NO_ERROR)
 		{
-			cellMic.error("Error stopping capture");
+			cellMic.error("Error stopping capture (error=0x%x)", err);
 		}
 	}
 
@@ -532,13 +533,13 @@ u32 microphone_device::capture_audio()
 
 	u32 num_samples = inbuf_size / sample_size;
 
-	for (const auto micdevice : input_devices)
+	for (ALCdevice* micdevice : input_devices)
 	{
 		ALCint samples_in = 0;
 		alcGetIntegerv(micdevice, ALC_CAPTURE_SAMPLES, 1, &samples_in);
-		if (alcGetError(micdevice) != ALC_NO_ERROR)
+		if (ALCenum err = alcGetError(micdevice); err != ALC_NO_ERROR)
 		{
-			cellMic.error("Error getting number of captured samples");
+			cellMic.error("Error getting number of captured samples (error=0x%x)", err);
 			return CELL_MICIN_ERROR_FATAL;
 		}
 		num_samples = std::min<u32>(num_samples, samples_in);
