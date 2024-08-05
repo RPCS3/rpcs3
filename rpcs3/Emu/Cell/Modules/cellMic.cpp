@@ -871,7 +871,7 @@ error_code cellMicGetDeviceAttr(s32 dev_num, CellMicDeviceAttr deviceAttributes,
 			if (*arg1 == 0)
 			{
 				// Calculate average volume of the channels
-				*arg2 = std::accumulate(device.attr_chanvol.begin(), device.attr_chanvol.end(), 0) / device.attr_chanvol.size();
+				*arg2 = std::accumulate(device.attr_chanvol.begin(), device.attr_chanvol.end(), 0u) / ::size32(device.attr_chanvol);
 			}
 			else
 			{
