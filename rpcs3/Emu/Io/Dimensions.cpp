@@ -34,7 +34,7 @@ void dimensions_figure::save()
 	dim_file.write(data.data(), 0x2D * 0x04);
 }
 
-u8 dimensions_toypad::generate_checksum(const std::array<u8, 32>& data, u32 num_of_bytes) const
+u8 dimensions_toypad::generate_checksum(const std::array<u8, 32>& data, u32 num_of_bytes)
 {
 	int checksum = 0;
 	ensure(num_of_bytes <= data.size());
@@ -77,10 +77,10 @@ void dimensions_toypad::generate_random_number(const u8* buf, u8 sequence, std::
 
 void dimensions_toypad::initialize_rng(u32 seed)
 {
-	random_a = 0xF1EA5EED;
-	random_b = seed;
-	random_c = seed;
-	random_d = seed;
+	m_random_a = 0xF1EA5EED;
+	m_random_b = seed;
+	m_random_c = seed;
+	m_random_d = seed;
 
 	for (int i = 0; i < 42; i++)
 	{
@@ -90,12 +90,12 @@ void dimensions_toypad::initialize_rng(u32 seed)
 
 u32 dimensions_toypad::get_next()
 {
-	u32 e = random_a - std::rotl(random_b, 21);
-	random_a = random_b ^ std::rotl(random_c, 19);
-	random_b = random_c + std::rotl(random_d, 6);
-	random_c = random_d + e;
-	random_d = e + random_a;
-	return random_d;
+	const u32 e = m_random_a - std::rotl(m_random_b, 21);
+	m_random_a = m_random_b ^ std::rotl(m_random_c, 19);
+	m_random_b = m_random_c + std::rotl(m_random_d, 6);
+	m_random_c = m_random_d + e;
+	m_random_d = e + m_random_a;
+	return m_random_d;
 }
 
 std::array<u8, 8> dimensions_toypad::decrypt(const u8* buf, std::optional<std::array<u8, 16>> key)
@@ -237,9 +237,9 @@ std::array<u8, 4> dimensions_toypad::dimensions_randomize(const std::vector<u8> 
 
 u32 dimensions_toypad::get_figure_id(const std::array<u8, 0x2D * 0x04>& buf)
 {
-	std::array<u8, 16> figure_key = generate_figure_key(buf);
+	const std::array<u8, 16> figure_key = generate_figure_key(buf);
 
-	std::array<u8, 8> decrypted = decrypt(&buf[36 * 4], figure_key);
+	const std::array<u8, 8> decrypted = decrypt(&buf[36 * 4], figure_key);
 
 	const u32 fig_num = read_from_ptr<le_t<u32>>(decrypted);
 	// Characters have their model number encrypted in page 36
@@ -292,44 +292,52 @@ void dimensions_toypad::get_challenge_response(const u8* buf, u8 sequence, std::
 
 void dimensions_toypad::query_block(u8 index, u8 page, std::array<u8, 32>& reply_buf, u8 sequence)
 {
-	std::lock_guard lock(dimensions_mutex);
-
-	// Index from game begins at 1 rather than 0, so minus 1 here
-	dimensions_figure& figure = get_figure_by_index(index - 1);
+	std::lock_guard lock(m_dimensions_mutex);
 
 	reply_buf[0] = 0x55;
 	reply_buf[1] = 0x12;
 	reply_buf[2] = sequence;
 	reply_buf[3] = 0x00;
-	// Query 4 pages of 4 bytes from the figure, copy this to the response
-	if (figure.index != 255 && (4 * page) < ((0x2D * 4) - 16))
+
+	// Index from game begins at 1 rather than 0, so minus 1 here
+	if (const u8 figure_index = index - 1; figure_index < dimensions_figure_count)
 	{
-		std::memcpy(&reply_buf[4], figure.data.data() + (4 * page), 16);
+		const dimensions_figure& figure = get_figure_by_index(figure_index);
+
+		// Query 4 pages of 4 bytes from the figure, copy this to the response
+		if (figure.index != 255 && (4 * page) < ((0x2D * 4) - 16))
+		{
+			std::memcpy(&reply_buf[4], figure.data.data() + (4 * page), 16);
+		}
 	}
 	reply_buf[20] = generate_checksum(reply_buf, 20);
 }
 
 void dimensions_toypad::write_block(u8 index, u8 page, const u8* to_write_buf, std::array<u8, 32>& reply_buf, u8 sequence)
 {
-	std::lock_guard lock(dimensions_mutex);
-
-	// Index from game begins at 1 rather than 0, so minus 1 here
-	dimensions_figure& figure = get_figure_by_index(index - 1);
+	std::lock_guard lock(m_dimensions_mutex);
 
 	reply_buf[0] = 0x55;
 	reply_buf[1] = 0x02;
 	reply_buf[2] = sequence;
 	reply_buf[3] = 0x00;
-	// Copy 4 bytes to the page on the figure requested by the game
-	if (figure.index != 255 && page < 0x2D)
+
+	// Index from game begins at 1 rather than 0, so minus 1 here
+	if (const u8 figure_index = index - 1; figure_index < dimensions_figure_count)
 	{
-		// Id is written to page 36
-		if (page == 36)
+		dimensions_figure& figure = get_figure_by_index(figure_index);
+
+		// Copy 4 bytes to the page on the figure requested by the game
+		if (figure.index != 255 && page < 0x2D)
 		{
-			figure.id = read_from_ptr<le_t<u32>>(to_write_buf);
+			// Id is written to page 36
+			if (page == 36)
+			{
+				figure.id = read_from_ptr<le_t<u32>>(to_write_buf);
+			}
+			std::memcpy(figure.data.data() + (page * 4), to_write_buf, 4);
+			figure.save();
 		}
-		std::memcpy(figure.data.data() + (page * 4), to_write_buf, 4);
-		figure.save();
 	}
 	reply_buf[4] = generate_checksum(reply_buf, 4);
 }
@@ -340,11 +348,14 @@ void dimensions_toypad::get_model(const u8* buf, u8 sequence, std::array<u8, 32>
 	const std::array<u8, 8> value = decrypt(buf, std::nullopt);
 	const u8 index = value[0];
 	const u32 conf = read_from_ptr<be_t<u32>>(value, 4);
-	// Index from game begins at 1 rather than 0, so minus 1 here
-	dimensions_figure& figure = get_figure_by_index(index - 1);
 	std::array<u8, 8> value_to_encrypt = {};
 	// Response is the figure's id (little endian) followed by the confirmation from payload
-	write_to_ptr<le_t<u32>>(value_to_encrypt, figure.id);
+	// Index from game begins at 1 rather than 0, so minus 1 here
+	if (const u8 figure_index = index - 1; figure_index < dimensions_figure_count)
+	{
+		const dimensions_figure& figure = get_figure_by_index(figure_index);
+		write_to_ptr<le_t<u32>>(value_to_encrypt, figure.id);
+	}
 	write_to_ptr<be_t<u32>>(value_to_encrypt, 4, conf);
 	const std::array<u8, 8> encrypted = encrypt(value_to_encrypt.data(), std::nullopt);
 	reply_buf[0] = 0x55;
@@ -356,9 +367,12 @@ void dimensions_toypad::get_model(const u8* buf, u8 sequence, std::array<u8, 32>
 	reply_buf[12] = generate_checksum(reply_buf, 12);
 }
 
-u32 dimensions_toypad::load_figure(const std::array<u8, 0x2D * 0x04>& buf, fs::file in_file, u8 pad, u8 index)
+u32 dimensions_toypad::load_figure(const std::array<u8, 0x2D * 0x04>& buf, fs::file in_file, u8 pad, u8 index, bool lock)
 {
-	std::lock_guard lock(dimensions_mutex);
+	if (lock)
+	{
+		m_dimensions_mutex.lock();
+	}
 
 	const u32 id = get_figure_id(buf);
 
@@ -374,17 +388,27 @@ u32 dimensions_toypad::load_figure(const std::array<u8, 0x2D * 0x04>& buf, fs::f
 	std::memcpy(&figure_change_response[6], buf.data(), 7);
 	figure_change_response[13] = generate_checksum(figure_change_response, 13);
 	m_figure_added_removed_responses.push(figure_change_response);
+
+	if (lock)
+	{
+		m_dimensions_mutex.unlock();
+	}
 	return id;
 }
 
-bool dimensions_toypad::remove_figure(u8 pad, u8 index, bool save)
+bool dimensions_toypad::remove_figure(u8 pad, u8 index, bool save, bool lock)
 {
-	std::lock_guard lock(dimensions_mutex);
 	dimensions_figure& figure = get_figure_by_index(index);
 	if (figure.index == 255)
 	{
 		return false;
 	}
+
+	if (lock)
+	{
+		m_dimensions_mutex.lock();
+	}
+
 	// When a figure is removed from the toypad, respond to the game with the pad they were removed from, their index,
 	// the direction (0x01 in byte 6 for removed) and their UID
 	std::array<u8, 32> figure_change_response = {0x56, 0x0b, pad, 0x00, figure.index, 0x01};
@@ -398,11 +422,18 @@ bool dimensions_toypad::remove_figure(u8 pad, u8 index, bool save)
 	figure.pad = 255;
 	figure_change_response[13] = generate_checksum(figure_change_response, 13);
 	m_figure_added_removed_responses.push(figure_change_response);
+
+	if (lock)
+	{
+		m_dimensions_mutex.unlock();
+	}
 	return true;
 }
 
 bool dimensions_toypad::move_figure(u8 pad, u8 index, u8 old_pad, u8 old_index)
 {
+	std::lock_guard lock(m_dimensions_mutex);
+
 	if (old_index == index)
 	{
 		// Don't bother removing and loading again, just send response to the game
@@ -418,15 +449,15 @@ bool dimensions_toypad::move_figure(u8 pad, u8 index, u8 old_pad, u8 old_index)
 
 	// When moving figures between spaces on the toypad, remove any figure from the space they are moving to,
 	// then remove them from their current space, then load them to the space they are moving to
-	remove_figure(pad, index, true);
+	remove_figure(pad, index, true, false);
 
 	dimensions_figure& figure = get_figure_by_index(old_index);
 	const std::array<u8, 0x2D * 0x04> data = figure.data;
 	fs::file in_file = std::move(figure.dim_file);
 
-	remove_figure(old_pad, old_index, false);
+	remove_figure(old_pad, old_index, false, false);
 
-	load_figure(data, std::move(in_file), pad, index);
+	load_figure(data, std::move(in_file), pad, index, false);
 
 	return true;
 }
@@ -477,16 +508,16 @@ std::array<u8, 4> dimensions_toypad::pwd_generate(const std::array<u8, 7>& uid)
 
 std::optional<std::array<u8, 32>> dimensions_toypad::pop_added_removed_response()
 {
+	std::lock_guard lock(m_dimensions_mutex);
+
 	if (m_figure_added_removed_responses.empty())
 	{
 		return std::nullopt;
 	}
-	else
-	{
-		std::array<u8, 32> response = m_figure_added_removed_responses.front();
-		m_figure_added_removed_responses.pop();
-		return response;
-	}
+
+	std::array<u8, 32> response = m_figure_added_removed_responses.front();
+	m_figure_added_removed_responses.pop();
+	return response;
 }
 
 usb_device_dimensions::usb_device_dimensions(const std::array<u8, 7>& location)
@@ -517,11 +548,13 @@ void usb_device_dimensions::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoi
 	transfer->expected_count = buf_size;
 	transfer->expected_result = HC_CC_NOERR;
 
-	if (endpoint == 0x81)
+	switch (endpoint)
+	{
+	case 0x81:
 	{
 		// Read Endpoint, if a request has not been sent via the write endpoint, set expected result as
 		// EHCI_CC_HALTED so the game doesn't report the Toypad as being disconnected.
-		std::unique_lock lock(query_mutex);
+		std::lock_guard lock(m_query_mutex);
 		std::optional<std::array<u8, 32>> response = g_dimensionstoypad.pop_added_removed_response();
 		if (response)
 		{
@@ -537,9 +570,9 @@ void usb_device_dimensions::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoi
 			transfer->expected_count = 0;
 			transfer->expected_result = EHCI_CC_HALTED;
 		}
-		lock.unlock();
+		break;
 	}
-	else if (endpoint == 0x01)
+	case 0x01:
 	{
 		// Write endpoint, similar structure of request to the Infinity Base with a command for byte 3,
 		// sequence for byte 4, the payload after that, then a checksum for the final byte.
@@ -620,8 +653,12 @@ void usb_device_dimensions::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoi
 			break;
 		}
 		}
-		std::lock_guard lock(query_mutex);
+		std::lock_guard lock(m_query_mutex);
 		m_queries.push(q_result);
+		break;
+	}
+	default:
+		break;
 	}
 }
 
