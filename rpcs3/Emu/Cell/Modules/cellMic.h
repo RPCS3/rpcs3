@@ -197,11 +197,11 @@ public:
 
 	u32 read_bytes(u8* buf, const u32 size)
 	{
-		ensure(buf);
-
 		const u32 to_read = size > m_used ? m_used : size;
 		if (!to_read)
 			return 0;
+
+		ensure(buf);
 
 		u8* data = m_container.data();
 		const u32 new_tail = m_tail + to_read;
@@ -226,6 +226,11 @@ public:
 
 	void write_bytes(const u8* buf, const u32 size)
 	{
+		if (size == 0)
+		{
+			return;
+		}
+
 		ensure(size <= Size);
 
 		const u32 over_size = m_used + size;
@@ -280,7 +285,7 @@ public:
 	error_code start_microphone();
 	error_code stop_microphone();
 
-	std::string get_device_name() const { return device_name.empty() ? "" : device_name.front(); }
+	std::string get_device_name() const { return devices.empty() ? "" : devices.front().name; }
 
 	void update_audio();
 	bool has_data() const;
@@ -320,18 +325,24 @@ private:
 
 	u32 capture_audio();
 
+	void get_data(const u32 num_samples);
 	void get_raw(const u32 num_samples);
 	void get_dsp(const u32 num_samples);
 
 	microphone_handler device_type = microphone_handler::null;
-	std::vector<std::string> device_name;
 
 	bool mic_registered = false;
 	bool mic_opened  = false;
 	bool mic_started = false;
 
-	std::vector<ALCdevice*> input_devices;
-	std::vector<std::vector<u8>> internal_bufs;
+	struct mic_device
+	{
+		std::string name;
+		ALCdevice* device = nullptr;
+		std::vector<u8> buf;
+	};
+
+	std::vector<mic_device> devices;
 	std::vector<u8> temp_buf;
 
 	// Sampling information provided at opening of mic
