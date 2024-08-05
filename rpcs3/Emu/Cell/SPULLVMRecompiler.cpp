@@ -2340,7 +2340,6 @@ public:
 						}
 
 						bool has_gpr_barriers_in_the_way = false;
-						bool potential_loop = false;
 
 						for (auto [a2, b2] : sucs)
 						{
@@ -2352,7 +2351,6 @@ public:
 									break;
 								}
 
-								potential_loop = true;
 								continue;
 							}
 
@@ -2392,7 +2390,6 @@ public:
 									break;
 								}
 
-								potential_loop = true;
 								continue;
 							}
 
@@ -2424,12 +2421,6 @@ public:
 						if (has_gpr_barriers_in_the_way)
 						{
 							// Cannot sink store, has barriers in the way
-							continue;
-						}
-
-						if (!potential_loop)
-						{
-							spu_log.trace("Avoided postponing r%u store from block 0x%x (not loop)", i, block_q[bi].first);
 							continue;
 						}
 
