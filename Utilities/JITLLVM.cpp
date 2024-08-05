@@ -731,7 +731,7 @@ llvm::StringRef fallback_cpu_detection()
 	const auto family = utils::get_cpu_family();
 	const auto model = utils::get_cpu_model();
 
-	if (brand.startswith("AMD"))
+	if (brand.starts_with("AMD"))
 	{
 		switch (family)
 		{
@@ -780,6 +780,7 @@ llvm::StringRef fallback_cpu_detection()
 		return "icelake-client";
 	}
 	else if (brand.startswith("VirtualApple"))
+	else if (brand.starts_with("VirtualApple"))
 	{
 		// No AVX. This will change in MacOS 15+, at which point we may revise this.
 		return utils::has_avx() ? "haswell" : "nehalem";
