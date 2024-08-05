@@ -371,8 +371,16 @@ const auto ppu_gateway = build_function_asm<void(*)(ppu_thread*)>("ppu_gateway",
 	c.ldr(a64::x24, arm::Mem(gpr_addr_reg, 8));
 	c.ldr(a64::x25, arm::Mem(gpr_addr_reg, 16));
 
-	// GHC frame for the guest. This seems dodgy but the only thing stored on stack is actually registers before making calls to C++ code.
-	// Injected stack frames also work, but are not free and are completely unnecessary.
+	// Thread context save. This is needed for PPU because different functions can switch between x19 and x20 for the base register.
+	// We need a different solution to ensure that no matter which version, we get the right vaue on far return.
+	c.mov(a64::x26, ppu_t_base);
+
+	// Save thread pointer to stack. SP is the only register preserved across GHC calls.
+	c.sub(a64::sp, a64::sp, Imm(16));
+	c.str(a64::x20, arm::Mem(a64::sp));
+
+	// GHC scratchpad mem. If managed correctly (i.e no returns ever), GHC functions should never require a stack frame.
+	// We allocate a slab to use for all functions as they tail-call into each other.
 	c.sub(a64::sp, a64::sp, Imm(4096));
 
 	// Execute LLE call
@@ -381,11 +389,14 @@ const auto ppu_gateway = build_function_asm<void(*)(ppu_thread*)>("ppu_gateway",
 	// Return address after far jump. Reset sp and start unwinding...
 	c.bind(hv_ctx_pc);
 
-	// Execution guard undo (unneded since we're going to hard-reset the SP)
-	//c.add(a64::sp, a64::sp, Imm(4096));
+	// Clear scratchpad allocation
+	c.add(a64::sp, a64::sp, Imm(4096));
+
+	c.ldr(a64::x20, arm::Mem(a64::sp));
+	c.add(a64::sp, a64::sp, Imm(16));
 
 	// We either got here through normal "ret" which keeps our x20 intact, or we jumped here and the escape reset our x20 reg
-	// Either way, x20 contains our thread base and we forcefully reset the stack pointer
+	// Either way, x26 contains our thread base and we forcefully reset the stack pointer
 	c.add(a64::x14, a64::x20, Imm(hv_register_array_offset));  // Per-thread context save
 
 	c.ldr(a64::x15, arm::Mem(a64::x14, 8));

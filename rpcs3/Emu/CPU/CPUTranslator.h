@@ -3089,6 +3089,9 @@ protected:
 
 	void initialize(llvm::LLVMContext& context, llvm::ExecutionEngine& engine);
 
+	// Run intrinsics replacement pass
+	void replace_intrinsics(llvm::Function&);
+
 public:
 	// Register a transformation pass to be run before final compilation by llvm
 	void register_transform_pass(std::unique_ptr<translator_pass>& pass)
@@ -3797,9 +3800,6 @@ public:
 		}
 	}
 
-	// Run intrinsics replacement pass
-	void replace_intrinsics(llvm::Function&);
-
 	// Finalize processing
 	void run_transforms(llvm::Function&);
 
@@ -3935,25 +3935,39 @@ llvm::InlineAsm* compile_inline_asm(
 }
 
 // Helper for ASM generation with dynamic number of arguments
+static inline
+llvm::CallInst* llvm_asm(
+	llvm::IRBuilder<>* irb,
+	std::string& asm_,
+	llvm::ArrayRef<llvm::Value*> args,
+	const std::string& constraints,
+	llvm::LLVMContext& context)
+{
+	llvm::ArrayRef<llvm::Type*> types_ref = std::nullopt;
+	std::vector<llvm::Type*> types;
+	types.reserve(args.size());
+
+	if (!args.empty())
+	{
+		for (const auto& arg : args)
+		{
+			types.push_back(arg->getType());
+		}
+		types_ref = types;
+	}
+
+	auto return_type = llvm::Type::getVoidTy(context);
+	auto callee = compile_inline_asm(return_type, types_ref, asm_, constraints);
+	auto c = irb->CreateCall(callee, args);
+	c->addFnAttr(llvm::Attribute::AlwaysInline);
+	return c;
+}
+
 #define LLVM_ASM(asm_, args, constraints, irb, ctx)\
-	do {\
-		std::vector<llvm::Type*> _argTypes;\
-		_argTypes.reserve(args.size());\
-		for (const auto& _arg : args) _argTypes.push_back(_arg->getType());\
-		auto _returnType = llvm::Type::getVoidTy(ctx); \
-		llvm::FunctionCallee _callee = compile_inline_asm(_returnType, _argTypes, asm_, constraints); \
-		auto _c = irb->CreateCall(_callee, args); \
-		_c->addFnAttr(llvm::Attribute::AlwaysInline); \
-	} while(0)
+	llvm_asm(irb, asm_, args, constraints, ctx)
 
 // Helper for ASM generation with 0 args
-#define LLVM_ASM_0(asm_, irb, ctx)\
-	do {\
-		const auto _voidTy = llvm::Type::getVoidTy(ctx); \
-		auto _callee = compile_inline_asm(_voidTy, std::nullopt, asm_, ""); \
-		auto _c = irb->CreateCall(_callee); \
-		_c->setTailCall(); \
-		_c->addFnAttr(llvm::Attribute::AlwaysInline); \
-	} while(0)
+#define LLVM_ASM_VOID(asm_, irb, ctx)\
+	llvm_asm(irb, asm_, {}, "", ctx)
 
 #endif

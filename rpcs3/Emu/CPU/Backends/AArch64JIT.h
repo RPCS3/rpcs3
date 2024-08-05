@@ -39,14 +39,16 @@ namespace aarch64
             bool is_returning;        // This instruction "returns" to the next instruction (typically just llvm::CallInst*)
             bool callee_is_GHC;       // The other function is GHC
             bool is_tail_call;        // Tail call. Assume it is an exit/terminator.
+            bool is_indirect;         // Indirect call. Target is the first operand.
             llvm::Function* callee;   // Callee if any
+            std::string callee_name;  // Name of the callee.
         };
     protected:
         std::unordered_set<std::string> visited_functions;
 
         struct
         {
-            gpr base_register;
+            std::vector<std::pair<std::string, gpr>> base_register_lookup;
             u32  hypervisor_context_offset;
         } execution_context;
 
@@ -57,11 +59,13 @@ namespace aarch64
         function_info_t preprocess_function(llvm::Function& f);
 
         instruction_info_t decode_instruction(llvm::Function& f, llvm::Instruction* i);
+
+        gpr get_base_register_for_call(const std::string& callee_name);
     public:
 
         GHC_frame_preservation_pass(
-            gpr base_reg,
             u32 hv_ctx_offset,
+            const std::vector<std::pair<std::string, gpr>>& base_register_lookup = {},
             std::function<bool(const std::string&)> exclusion_callback = {});
         ~GHC_frame_preservation_pass() = default;
 

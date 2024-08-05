@@ -2,6 +2,21 @@
 #include "AArch64JIT.h"
 #include "../Hypervisor.h"
 
+LOG_CHANNEL(jit_log, "JIT");
+
+#define STDOUT_DEBUG
+
+#ifndef STDOUT_DEBUG
+#define DPRINT jit_log.trace
+#else
+#define DPRINT(...)\
+    do {\
+        printf(__VA_ARGS__);\
+        printf("\n");\
+        fflush(stdout);\
+    } while (0)
+#endif
+
 namespace aarch64
 {
     // FIXME: This really should be part of fmt
@@ -23,11 +38,11 @@ namespace aarch64
     using function_info_t = GHC_frame_preservation_pass::function_info_t;
 
     GHC_frame_preservation_pass::GHC_frame_preservation_pass(
-        gpr base_reg,
         u32 hv_ctx_offset,
+        const std::vector<std::pair<std::string, gpr>>& base_register_lookup,
         std::function<bool(const std::string&)> exclusion_callback)
     {
-        execution_context.base_register = base_reg;
+        execution_context.base_register_lookup = base_register_lookup;
         execution_context.hypervisor_context_offset = hv_ctx_offset;
         this->exclusion_callback = exclusion_callback;
     }
@@ -118,6 +133,13 @@ namespace aarch64
         instruction_info_t result{};
         if (auto ci = llvm::dyn_cast<llvm::CallInst>(i))
         {
+            // Watch out for injected ASM blocks...
+            if (llvm::isa<llvm::InlineAsm>(ci->getCalledOperand()))
+            {
+                // Not a real call. This is just an insert of inline asm
+                return result;
+            }
+
             result.is_call_inst = true;
             result.is_returning = true;
             result.preserve_stack = !ci->isTailCall();
@@ -126,12 +148,15 @@ namespace aarch64
 
             if (!result.callee)
             {
-                // TODO: What are these?????? Patchpoints maybe? Need to check again
-                result.is_call_inst = f.getName() == "__spu-null";
+                // Indirect call (call from raw value).
+                result.is_indirect = true;
+                result.callee_is_GHC = ci->getCallingConv() == llvm::CallingConv::GHC;
+                result.callee_name = "__indirect_call";
             }
             else
             {
                 result.callee_is_GHC = result.callee->getCallingConv() == llvm::CallingConv::GHC;
+                result.callee_name = result.callee->getName().str();
             }
             return result;
         }
@@ -145,7 +170,8 @@ namespace aarch64
                 auto targetbb = bi->getSuccessor(0);
 
                 result.callee = targetbb->getParent();
-                result.is_call_inst = result.callee->getName() != f.getName();
+                result.callee_name = result.callee->getName().str();
+                result.is_call_inst = result.callee_name != f.getName();
             }
 
             return result;
@@ -155,10 +181,11 @@ namespace aarch64
         {
             // Very unlikely to be the same function. Can be considered a function exit.
             ensure(bi->getNumDestinations() == 1);
-            auto targetbb = bi->getSuccessor(0);
+            auto targetbb = ensure(bi->getSuccessor(0)); // This is guaranteed to fail but I've yet to encounter this
 
             result.callee = targetbb->getParent();
-            result.is_call_inst = result.callee->getName() != f.getName();
+            result.callee_name = result.callee->getName().str();
+            result.is_call_inst = result.callee_name != f.getName();
             return result;
         }
 
@@ -168,7 +195,8 @@ namespace aarch64
             auto targetbb = bi->getSuccessor(0);
 
             result.callee = targetbb->getParent();
-            result.is_call_inst = result.callee->getName() != f.getName();
+            result.callee_name = result.callee->getName().str();
+            result.is_call_inst = result.callee_name != f.getName();
             return result;
         }
 
@@ -178,11 +206,27 @@ namespace aarch64
             auto targetbb = bi->getSuccessor(0);
 
             result.callee = targetbb->getParent();
-            result.is_call_inst = result.callee->getName() != f.getName();
+            result.callee_name = result.callee->getName().str();
+            result.is_call_inst = result.callee_name != f.getName();
             return result;
         }
 
         return result;
+    }
+
+    gpr GHC_frame_preservation_pass::get_base_register_for_call(const std::string& callee_name)
+    {
+        // We go over the base_register_lookup table and find the first matching pattern
+        for (const auto& pattern : execution_context.base_register_lookup)
+        {
+            if (callee_name.starts_with(pattern.first))
+            {
+                return pattern.second;
+            }
+        }
+
+        // Default is x19
+        return aarch64::x19;
     }
 
     void GHC_frame_preservation_pass::run(llvm::IRBuilder<>* irb, llvm::Function& f)
@@ -200,6 +244,14 @@ namespace aarch64
         }
 
         const auto this_name = f.getName().str();
+        if (visited_functions.find(this_name) != visited_functions.end())
+        {
+            // Already processed. Only useful when recursing which is currently not used.
+            DPRINT("Function %s was already processed. Skipping.\n", this_name.c_str());
+            return;
+        }
+        visited_functions.insert(this_name);
+
         if (exclusion_callback && exclusion_callback(this_name))
         {
             // Function is explicitly excluded
@@ -220,14 +272,6 @@ namespace aarch64
         // Asm snippets for patching stack frame
         std::string frame_prologue, frame_epilogue;
 
-        // Return address reload on exit. This is safer than trying to stuff things into the stack frame since the size is largely just guesswork at this time.
-        std::string x30_tail_restore = fmt::format(
-            "mov x30, #%u;\n"          // Load offset to last gateway exit
-            "add x30, x%u, x30;\n"     // Add to base register
-            "ldr x30, [x30];\n",       // Load x30
-            execution_context.hypervisor_context_offset,
-            static_cast<u32>(execution_context.base_register));
-
         if (function_info.stack_frame_size > 0)
         {
             // NOTE: The stack frame here is purely optional, we can pre-allocate scratch on the gateway.
@@ -235,8 +279,12 @@ namespace aarch64
             frame_prologue = fmt::format("sub sp, sp, #%u;", function_info.stack_frame_size);
             frame_epilogue = fmt::format("add sp, sp, #%u;", function_info.stack_frame_size);
 
-            // Emit the frame prologue
-            LLVM_ASM_0(frame_prologue, irb, f.getContext());
+            // Emit the frame prologue. We use a BB here for extra safety as it solves the problem of backwards jumps re-executing the prologue.
+            auto functionStart = &f.front();
+            auto prologueBB = llvm::BasicBlock::Create(f.getContext(), "", &f, functionStart);
+            irb->SetInsertPoint(prologueBB, prologueBB->begin());
+            LLVM_ASM_VOID(frame_prologue, irb, f.getContext());
+            irb->CreateBr(functionStart);
         }
 
         // Now we start processing
@@ -259,7 +307,6 @@ namespace aarch64
                     if (cf->hasFnAttribute(llvm::Attribute::AlwaysInline) || callee_name.starts_with("llvm."))
                     {
                         // Always inlined call. Likely inline Asm. Skip
-                        // log("Function %s will ignore call to intrinsic function %s\n", this_name.c_str(), callee_name.c_str());
                         ++bit;
                         continue;
                     }
@@ -278,48 +325,62 @@ namespace aarch64
 
                     if (function_info.stack_frame_size > 0)
                     {
-                        // 1. Nuke all scratch
-                        LLVM_ASM_0(frame_epilogue, irb, f.getContext());
+                        // 1. Nuke the local stack frame if any
+                        LLVM_ASM_VOID(frame_epilogue, irb, f.getContext());
                     }
 
-                    if (function_info.clobbers_x30)
-                    {
-                        // 2. Restore the gateway as the current return address
-                        LLVM_ASM_0(x30_tail_restore, irb, f.getContext());
-                    }
-
-                    // 3. We're about to make a tail call. This means after this call, we're supposed to return immediately. In that case, don't link, lower to branch only.
+                    // 2. We're about to make a tail call. This means after this call, we're supposed to return immediately. In that case, don't link, lower to branch only.
                     // Note that branches have some undesirable side-effects. For one, we lose the argument inputs, which the callee is expecting.
                     // This means we burn some cycles on every exit, but in return we do not require one instruction on the prologue + the ret chain is eliminated.
                     // No ret-chain also means two BBs can call each other indefinitely without running out of stack without relying on llvm to optimize that away.
 
                     std::string exit_fn;
                     auto ci = ensure(llvm::dyn_cast<llvm::CallInst>(original_inst));
-                    auto operand_count = ci->getNumOperands();
+                    auto operand_count = ci->getNumOperands() - 1; // The last operand is the callee, not a real operand
                     std::vector<std::string> constraints;
                     std::vector<llvm::Value*> args;
 
                     // We now load the callee args.
                     // FIXME: This is often times redundant and wastes cycles, we'll clean this up in a MachineFunction pass later.
-                    int base_reg = execution_context.base_register;
+                    int args_base_reg = instruction_info.callee_is_GHC ? aarch64::x19 : aarch64::x0; // GHC args are always x19..x25
                     for (unsigned i = 0; i < operand_count; ++i)
                     {
                         args.push_back(ci->getOperand(i));
-                        exit_fn += fmt::format("mov x%d, $%u;\n", base_reg++, i);
+                        exit_fn += fmt::format("mov x%d, $%u;\n", args_base_reg++, i);
                         constraints.push_back("r");
                     }
 
-                    std::copy(ci->operands().begin(), ci->operands().end(), args.begin());
+                    auto context_base_reg = get_base_register_for_call(instruction_info.callee_name);
+                    if (!instruction_info.callee_is_GHC)
+                    {
+                        // For non-GHC calls, we have to remap the arguments to x0...
+                        context_base_reg = static_cast<gpr>(context_base_reg - 19);
+                    }
+
+                    if (function_info.clobbers_x30)
+                    {
+                        // 3. Restore the exit gate as the current return address
+                        // We want to do this after loading the arguments in case there was any spilling involved.
+                        DPRINT("Patching call from %s to %s on register %d...",
+                            this_name.c_str(),
+                            instruction_info.callee_name.c_str(),
+                            static_cast<int>(context_base_reg));
+
+                        const auto x30_tail_restore = fmt::format(
+                            "ldr x30, [x%u, #%u];\n",       // Load x30 from thread context
+                            static_cast<u32>(context_base_reg),
+                            execution_context.hypervisor_context_offset);
+
+                        exit_fn += x30_tail_restore;
+                    }
+
                     auto target = ensure(ci->getCalledOperand());
                     args.push_back(target);
 
-                    if (ci->isIndirectCall())
+                    if (instruction_info.is_indirect)
                     {
                         constraints.push_back("r");
-                        exit_fn += fmt::format(
-                            "mov x15, $%u;\n"
-                            "br x15",
-                            operand_count);
+                        exit_fn += fmt::format("br $%u;\n", operand_count);
                     }
                     else
                     {
@@ -328,7 +389,7 @@ namespace aarch64
                     }
 
                     // Emit the branch
-                    LLVM_ASM(exit_fn, args, join_strings(constraints, ","), irb, f.getContext());
+                    llvm_asm(irb, exit_fn, args, join_strings(constraints, ","), f.getContext());
 
                     // Delete original call instruction
                     bit = ci->eraseFromParent();
