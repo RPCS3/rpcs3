@@ -414,7 +414,7 @@ void AtracXdecContext::exec(ppu_thread& ppu)
 				if (int err = avcodec_send_packet(decoder.ctx, decoder.packet); err)
 				{
 					// These errors should never occur
-					if (err == AVERROR(EAGAIN) || err == AVERROR_EOF || err == AVERROR(EINVAL) || err == AVERROR(ENOMEM))
+					if (err == AVERROR(EAGAIN) || err == averror_eof || err == AVERROR(EINVAL) || err == AVERROR(ENOMEM))
 					{
 						fmt::throw_exception("avcodec_send_packet() failed (err=0x%x='%s')", err, utils::av_error_to_string(err));
 					}
@@ -425,7 +425,7 @@ void AtracXdecContext::exec(ppu_thread& ppu)
 
 					av_frame_unref(decoder.frame);
 				}
-				else if (err = avcodec_receive_frame(decoder.ctx, decoder.frame))
+				else if ((err = avcodec_receive_frame(decoder.ctx, decoder.frame)))
 				{
 					fmt::throw_exception("avcodec_receive_frame() failed (err=0x%x='%s')", err, utils::av_error_to_string(err));
 				}
@@ -433,7 +433,7 @@ void AtracXdecContext::exec(ppu_thread& ppu)
 				decoded_samples_num = decoder.frame->nb_samples;
 				ensure(decoded_samples_num == 0u || decoded_samples_num == ATXDEC_SAMPLES_PER_FRAME);
 
-				// The first frame after a starting a new sequence or after an error is replaced with silence
+				// The first frame after starting a new sequence or after an error is replaced with silence
 				if (skip_next_frame && error == CELL_OK)
 				{
 					skip_next_frame = false;
@@ -781,16 +781,13 @@ error_code _CellAdecCoreOpDecodeAu_atracx(ppu_thread& ppu, vm::ptr<AtracXdecCont
 	return handle->send_command<AtracXdecCmdType::decode_au>(ppu, pcmHandle, *auInfo);
 }
 
-void _CellAdecCoreOpGetVersion_atracx(vm::ptr<u8> version)
+void _CellAdecCoreOpGetVersion_atracx(vm::ptr<be_t<u32, 1>> version)
 {
 	cellAtracXdec.notice("_CellAdecCoreOpGetVersion_atracx(version=*0x%x)", version);
 
 	ensure(!!version); // Not checked on LLE
 
-	version[0] = 0x01;
-	version[1] = 0x02;
-	version[2] = 0x00;
-	version[3] = 0x00;
+	*version = 0x01020000;
 }
 
 error_code _CellAdecCoreOpRealign_atracx(vm::ptr<AtracXdecContext> handle, vm::ptr<void> outBuffer, vm::cptr<void> pcmStartAddr)

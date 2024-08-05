@@ -325,7 +325,7 @@ struct AdecCb
 	vm::bptr<void> cbArg;
 };
 
-typedef AdecCb<CellAdecCbMsg> CellAdecCb;
+using CellAdecCb = AdecCb<CellAdecCbMsg>;
 
 // AU Info
 struct CellAdecAuInfo
@@ -409,7 +409,7 @@ using CellAdecCoreOpClose = error_code(vm::ptr<void> coreHandle);
 using CellAdecCoreOpStartSeq = error_code(vm::ptr<void> coreHandle, vm::cptr<void> param);
 using CellAdecCoreOpEndSeq = error_code(vm::ptr<void> coreHandle);
 using CellAdecCoreOpDecodeAu = error_code(vm::ptr<void> coreHandle, s32 pcmHandle, vm::cptr<CellAdecAuInfo> auInfo);
-using CellAdecCoreOpGetVersion = void(vm::ptr<std::array<u8, 4>> version);
+using CellAdecCoreOpGetVersion = void(vm::ptr<be_t<u32, 1>> version);
 using CellAdecCoreOpRealign = error_code(vm::ptr<void> coreHandle, vm::ptr<void> outBuffer, vm::cptr<void> pcmStartAddr);
 using CellAdecCoreOpReleasePcm = error_code(vm::ptr<void> coreHandle, s32 pcmHandle, vm::cptr<void> outBuffer);
 using CellAdecCoreOpGetPcmHandleNum = s32();
