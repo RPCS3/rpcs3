@@ -779,7 +779,6 @@ llvm::StringRef fallback_cpu_detection()
 		}
 		return "icelake-client";
 	}
-	else if (brand.startswith("VirtualApple"))
 	else if (brand.starts_with("VirtualApple"))
 	{
 		// No AVX. This will change in MacOS 15+, at which point we may revise this.
