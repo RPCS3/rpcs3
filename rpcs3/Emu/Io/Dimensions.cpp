@@ -606,9 +606,13 @@ void usb_device_dimensions::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoi
 			break;
 		}
 		case 0xC0: // Color
+		case 0xC1: // Get Pad Color
 		case 0xC2: // Fade
 		case 0xC3: // Flash
+		case 0xC4: // Fade Random
 		case 0xC6: // Fade All
+		case 0xC7: // Flash All
+		case 0xC8: // Color All
 		{
 			// Send a blank response to acknowledge color has been sent to toypad
 			g_dimensionstoypad.get_blank_response(0x01, sequence, q_result);
@@ -632,10 +636,6 @@ void usb_device_dimensions::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoi
 			g_dimensionstoypad.get_model(&buf[4], sequence, q_result);
 			break;
 		}
-		case 0xC1: // Get Pad Color
-		case 0xC4: // Fade Random
-		case 0xC7: // Flash All
-		case 0xC8: // Color All
 		case 0xD0: // Tag List
 		case 0xE1: // PWD
 		case 0xE5: // Active
