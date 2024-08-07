@@ -1493,12 +1493,17 @@ public:
 			// Initialize transform passes
 #ifdef ARCH_ARM64
 			{
+				auto should_exclude_function = [](const std::string& fn_name)
+				{
+					return fn_name.starts_with("spu_") || fn_name.starts_with("tr_");
+				};
+
 				aarch64::GHC_frame_preservation_pass::config_t config =
 				{
 					.debug_info = false,         // Set to "true" to insert debug frames on x27
 					.use_stack_frames = false,   // We don't need this since the SPU GW allocates global scratch on the stack
 					.hypervisor_context_offset = ::offset32(&spu_thread::hv_ctx),
-					.exclusion_callback = {},    // Unused
+					.exclusion_callback = should_exclude_function,
 					.base_register_lookup = {}   // Unused, always x19 on SPU
 				};
 

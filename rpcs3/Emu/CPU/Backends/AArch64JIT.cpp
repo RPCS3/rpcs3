@@ -6,13 +6,15 @@ LOG_CHANNEL(jit_log, "JIT");
 
 #define STDOUT_DEBUG 0
 
-#if STDOUT_DEBUG
-#define DPRINT(...)\
+#define DPRINT1(...)\
     do {\
         printf(__VA_ARGS__);\
         printf("\n");\
         fflush(stdout);\
     } while (0)
+
+#if STDOUT_DEBUG
+#define DPRINT DPRINT1
 #else
 #define DPRINT jit_log.trace
 #endif
@@ -38,12 +40,12 @@ namespace aarch64
     using function_info_t = GHC_frame_preservation_pass::function_info_t;
 
     GHC_frame_preservation_pass::GHC_frame_preservation_pass(const config_t& configuration)
-        : execution_context(configuration)
+        : m_config(configuration)
     {}
 
     void GHC_frame_preservation_pass::reset()
     {
-        visited_functions.clear();
+        m_visited_functions.clear();
     }
 
     void GHC_frame_preservation_pass::force_tail_call_terminators(llvm::Function& f)
@@ -85,10 +87,11 @@ namespace aarch64
         if (f.getName() == "__spu-null")
         {
             // Don't waste the effort processing this stub. It has no points of concern
+            result.num_external_calls = 1;
             return result;
         }
 
-        if (execution_context.use_stack_frames)
+        if (m_config.use_stack_frames)
         {
             // Stack frame estimation. SPU code can be very long and consumes several KB of stack.
             u32 stack_frame_size = 128u;
@@ -217,7 +220,7 @@ namespace aarch64
     gpr GHC_frame_preservation_pass::get_base_register_for_call(const std::string& callee_name)
     {
         // We go over the base_register_lookup table and find the first matching pattern
-        for (const auto& pattern : execution_context.base_register_lookup)
+        for (const auto& pattern : m_config.base_register_lookup)
         {
             if (callee_name.starts_with(pattern.first))
             {
@@ -244,15 +247,19 @@ namespace aarch64
         }
 
         const auto this_name = f.getName().str();
-        if (visited_functions.find(this_name) != visited_functions.end())
+        if (m_visited_functions.find(this_name) != m_visited_functions.end())
         {
             // Already processed. Only useful when recursing which is currently not used.
             DPRINT("Function %s was already processed. Skipping.\n", this_name.c_str());
             return;
         }
-        visited_functions.insert(this_name);
 
-        if (exclusion_callback && exclusion_callback(this_name))
+        if (this_name != "__spu-null") // This name is meaningless and doesn't uniquely identify a function
+        {
+            m_visited_functions.insert(this_name);
+        }
+
+        if (m_config.exclusion_callback && m_config.exclusion_callback(this_name))
         {
             // Function is explicitly excluded
             return;
@@ -263,6 +270,7 @@ namespace aarch64
         if (function_info.num_external_calls == 0 && function_info.stack_frame_size == 0)
         {
             // No stack frame injection and no external calls to patch up. This is a leaf function, nothing to do.
+            DPRINT("Ignoring function %s", this_name.c_str());
             return;
         }
 
@@ -364,7 +372,7 @@ namespace aarch64
                         const auto x30_tail_restore = fmt::format(
                             "ldr x30, [x%u, #%u];\n",       // Load x30 from thread context
                             static_cast<u32>(context_base_reg),
-                            execution_context.hypervisor_context_offset);
+                            m_config.hypervisor_context_offset);
 
                         exit_fn += x30_tail_restore;
                     }
@@ -375,7 +383,7 @@ namespace aarch64
                         exit_fn += frame_epilogue;
                     }
 
-                    if (execution_context.debug_info)
+                    if (m_config.debug_info)
                     {
                         // Store x27 as our current address taking the place of LR (for debugging since bt is now useless)
                         // x28 and x29 are used as breadcrumb registers in this mode to form a pseudo-backtrace.
