@@ -54,11 +54,9 @@ namespace aarch64
         };
 
     protected:
-        std::unordered_set<std::string> visited_functions;
+        std::unordered_set<std::string> m_visited_functions;
 
-        config_t execution_context;
-
-        std::function<bool(const std::string&)> exclusion_callback;
+        config_t m_config;
 
         void force_tail_call_terminators(llvm::Function& f);
 
