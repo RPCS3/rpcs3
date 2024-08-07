@@ -430,7 +430,6 @@ error_code microphone_device::open_microphone(const u8 type, const u32 dsp_r, co
 
 	devices[0].device = device;
 	devices[0].buf.resize(inbuf_size, 0);
-	temp_buf.resize(inbuf_size, 0);
 
 	if (device_type == microphone_handler::singstar && devices.size() >= 2)
 	{
@@ -447,6 +446,11 @@ error_code microphone_device::open_microphone(const u8 type, const u32 dsp_r, co
 			devices[1].device = device;
 			devices[1].buf.resize(inbuf_size, 0);
 		}
+	}
+
+	if (device_type != microphone_handler::real_singstar)
+	{
+		temp_buf.resize(inbuf_size, 0);
 	}
 
 	sample_size = (bit_resolution / 8) * num_channels;
