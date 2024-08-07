@@ -561,12 +561,19 @@ u32 microphone_device::capture_audio()
 	{
 		ALCint samples_in = 0;
 		alcGetIntegerv(micdevice.device, ALC_CAPTURE_SAMPLES, 1, &samples_in);
+
 		if (ALCenum err = alcGetError(micdevice.device); err != ALC_NO_ERROR)
 		{
 			cellMic.error("Error getting number of captured samples of device %s (error=0x%x)", micdevice.name, err);
 			return CELL_MICIN_ERROR_FATAL;
 		}
+
 		num_samples = std::min<u32>(num_samples, samples_in);
+	}
+
+	if (num_samples == 0)
+	{
+		return 0;
 	}
 
 	for (mic_device& micdevice : devices)
@@ -586,7 +593,10 @@ u32 microphone_device::capture_audio()
 
 void microphone_device::get_data(const u32 num_samples)
 {
-	ensure(num_samples > 0);
+	if (num_samples == 0)
+	{
+		return;
+	}
 
 	switch (device_type)
 	{
