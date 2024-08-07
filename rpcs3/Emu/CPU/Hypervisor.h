@@ -4,6 +4,18 @@
 
 namespace rpcs3
 {
+#if defined(ARCH_x64)
+	union hypervisor_context_t
+	{
+		u64 regs[1];
+		struct
+		{
+			u64 rsp;
+		} x86;
+	};
+
+	static_assert(sizeof(hypervisor_context_t) == 8);
+#else
 	union alignas(16) hypervisor_context_t
 	{
 		u64 regs[16];
@@ -29,12 +41,6 @@ namespace rpcs3
 
 			// x0-x17 unused
 		} aarch64;
-
-		struct
-		{
-			u64 sp;
-
-			// Other regs unused
-		} x86;
 	};
+#endif
 }

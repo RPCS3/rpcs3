@@ -21,21 +21,6 @@ LOG_CHANNEL(jit_log, "JIT");
 
 namespace aarch64
 {
-    // FIXME: This really should be part of fmt
-    static std::string join_strings(const std::vector<std::string>& v, const char* delim)
-    {
-        std::string result;
-        for (const auto& s : v)
-        {
-            if (!result.empty())
-            {
-                result += delim;
-            }
-            result += s;
-        }
-        return result;
-    }
-
     using instruction_info_t = GHC_frame_preservation_pass::instruction_info_t;
     using function_info_t = GHC_frame_preservation_pass::function_info_t;
 
@@ -414,7 +399,7 @@ namespace aarch64
                     }
 
                     // Emit the branch
-                    llvm_asm(irb, exit_fn, args, join_strings(constraints, ","), f.getContext());
+                    llvm_asm(irb, exit_fn, args, fmt::merge(constraints, ","), f.getContext());
 
                     // Delete original call instruction
                     bit = ci->eraseFromParent();
