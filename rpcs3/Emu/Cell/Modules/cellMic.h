@@ -294,7 +294,7 @@ public:
 	bool is_opened() const { return mic_opened; }
 	bool is_started() const { return mic_started; }
 	u8 get_signal_types() const { return signal_types; }
-	u8 get_bit_resolution() const {	return bit_resolution; }
+	constexpr u8 get_bit_resolution() const { return bit_resolution; }
 	u32 get_raw_samplingrate() const { return raw_samplingrate; }
 	u8 get_num_channels() const { return num_channels; }
 	u8 get_datatype() const
@@ -321,7 +321,8 @@ public:
 	u32 attr_dsptype    = 0;
 
 private:
-	static void variable_byteswap(const void* src, void* dst, const u32 bytesize);
+	template <u32 bytesize>
+	static inline void variable_byteswap(const void* src, void* dst);
 
 	u32 capture_audio();
 
@@ -349,13 +350,13 @@ private:
 	u32 raw_samplingrate = 48000;
 	u32 dsp_samplingrate = 48000;
 	u32 aux_samplingrate = 48000;
-	u8 bit_resolution    = 16;
 	u8 num_channels      = 2;
 
 	u8 signal_types = CELLMIC_SIGTYPE_NULL;
 
 	u32 sample_size = 0; // Determined at opening for internal use
 
+	static constexpr u8 bit_resolution = 16;
 	static constexpr usz inbuf_size = 400000; // Default value unknown
 
 	simple_ringbuf<inbuf_size> rbuf_raw;

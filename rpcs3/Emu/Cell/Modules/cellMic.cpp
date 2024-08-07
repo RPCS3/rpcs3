@@ -241,13 +241,20 @@ bool mic_context::check_device(u32 dev_num)
 
 // Static functions
 
-void microphone_device::variable_byteswap(const void* src, void* dst, const u32 bytesize)
+template <u32 bytesize>
+inline void microphone_device::variable_byteswap(const void* src, void* dst)
 {
-	switch (bytesize)
+	if constexpr (bytesize == 4)
 	{
-	case 4: *static_cast<u32*>(dst) = *static_cast<const be_t<u32>*>(src); break;
-	case 2: *static_cast<u16*>(dst) = *static_cast<const be_t<u16>*>(src); break;
-	default: break;
+		*static_cast<u32*>(dst) = *static_cast<const be_t<u32>*>(src);
+	}
+	else if constexpr (bytesize == 2)
+	{
+		*static_cast<u16*>(dst) = *static_cast<const be_t<u16>*>(src);
+	}
+	else
+	{
+		fmt::throw_exception("variable_byteswap with bytesize %d unimplemented", bytesize);
 	}
 }
 
@@ -588,7 +595,7 @@ void microphone_device::get_data(const u32 num_samples)
 	case microphone_handler::standard:
 	case microphone_handler::rocksmith:
 	{
-		const u8 channel_size = bit_resolution / 8;
+		constexpr u8 channel_size = bit_resolution / 8;
 		const usz bufsize = num_samples * sample_size;
 		const std::vector<u8>& buf = ::at32(devices, 0).buf;
 		ensure(bufsize <= buf.size());
@@ -602,7 +609,7 @@ void microphone_device::get_data(const u32 num_samples)
 			for (u32 indchan = 0; indchan < num_channels; indchan++)
 			{
 				const u32 curindex = sample_pos + indchan * channel_size;
-				microphone_device::variable_byteswap(buf.data() + curindex, tmp_ptr + curindex, channel_size);
+				microphone_device::variable_byteswap<channel_size>(buf.data() + curindex, tmp_ptr + curindex);
 			}
 		}
 		break;
