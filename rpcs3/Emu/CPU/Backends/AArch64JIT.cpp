@@ -334,26 +334,27 @@ namespace aarch64
                     std::vector<std::string> constraints;
                     std::vector<llvm::Value*> args;
 
-                    // We now load the callee args.
+                    // We now load the callee args in reverse order to avoid self-clobbering of dependencies.
                     // FIXME: This is often times redundant and wastes cycles, we'll clean this up in a MachineFunction pass later.
                     int args_base_reg = instruction_info.callee_is_GHC ? aarch64::x19 : aarch64::x0; // GHC args are always x19..x25
-                    for (unsigned i = 0; i < operand_count; ++i)
+                    for (auto i = static_cast<int>(operand_count) - 1; i >= 0; --i)
                     {
                         args.push_back(ci->getOperand(i));
-                        exit_fn += fmt::format("mov x%d, $%u;\n", args_base_reg++, i);
+                        exit_fn += fmt::format("mov x%d, $%u;\n", (args_base_reg + i), ::size32(args) - 1);
                         constraints.push_back("r");
                     }
 
-                    auto context_base_reg = get_base_register_for_call(instruction_info.callee_name);
-                    if (!instruction_info.callee_is_GHC)
-                    {
-                        // For non-GHC calls, we have to remap the arguments to x0...
-                        context_base_reg = static_cast<gpr>(context_base_reg - 19);
-                    }
-
+                    // Restore LR to the exit gate if we think it may have been trampled.
                     if (function_info.clobbers_x30)
                     {
-                        // 3. Restore the exit gate as the current return address
+                        // Load the context "base" thread register to restore the link register from
+                        auto context_base_reg = get_base_register_for_call(instruction_info.callee_name);
+                        if (!instruction_info.callee_is_GHC)
+                        {
+                            // For non-GHC calls, we have to remap the arguments to x0...
+                            context_base_reg = static_cast<gpr>(context_base_reg - 19);
+                        }
+
                         // We want to do this after loading the arguments in case there was any spilling involved.
                         DPRINT("Patching call from %s to %s on register %d...",
                             this_name.c_str(),
@@ -377,7 +378,11 @@ namespace aarch64
                     if (execution_context.debug_info)
                     {
                         // Store x27 as our current address taking the place of LR (for debugging since bt is now useless)
-                        exit_fn += "adr x27, .;\n";
+                        // x28 and x29 are used as breadcrumb registers in this mode to form a pseudo-backtrace.
+                        exit_fn +=
+                            "mov x29, x28;\n"
+                            "mov x28, x27;\n"
+                            "adr x27, .;\n";
                     }
 
                     auto target = ensure(ci->getCalledOperand());
@@ -385,8 +390,14 @@ namespace aarch64
 
                     if (instruction_info.is_indirect)
                     {
+                        // NOTE: For indirect calls, we read the callee register before we load the operands
+                        // If we don't do that the operands will overwrite our callee address if it lies in the x19-x25 range
+                        // There is no safe temp register to stuff the call address to either, you just have to stuff it below sp and load it after operands are all assigned.
                         constraints.push_back("r");
-                        exit_fn += fmt::format("br $%u;\n", operand_count);
+                        exit_fn = fmt::format("str $%u, [sp, #-8];\n", operand_count) + exit_fn;
+                        exit_fn +=
+                            "ldr x15, [sp, #-8];\n"
+                            "br x15;\n";
                     }
                     else
                     {
