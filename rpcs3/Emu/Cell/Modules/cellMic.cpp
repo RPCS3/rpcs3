@@ -602,15 +602,9 @@ void microphone_device::get_data(const u32 num_samples)
 		ensure(bufsize <= temp_buf.size());
 
 		// BE Translation
-		for (u32 index = 0; index < num_samples; index++)
+		for (u32 index = 0; index < bufsize; index += channel_size)
 		{
-			const u32 sample_pos = index * sample_size;
-
-			for (u32 indchan = 0; indchan < num_channels; indchan++)
-			{
-				const u32 curindex = sample_pos + indchan * channel_size;
-				microphone_device::variable_byteswap<channel_size>(buf.data() + curindex, tmp_ptr + curindex);
-			}
+			microphone_device::variable_byteswap<channel_size>(buf.data() + index, tmp_ptr + index);
 		}
 		break;
 	}
