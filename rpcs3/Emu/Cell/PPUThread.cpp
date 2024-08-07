@@ -3548,7 +3548,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 
 			if (notify)
 			{
-bool notified = false;
+				bool notified = false;
 
 				if (ppu.res_notify_time == (vm::reservation_acquire(notify) & -128))
 				{

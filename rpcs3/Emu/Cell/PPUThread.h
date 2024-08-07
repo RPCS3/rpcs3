@@ -164,9 +164,6 @@ public:
 
 	using cpu_thread::operator=;
 
-	// Hypervisor context data
-	alignas(16) rpcs3::hypervisor_context_t hv_ctx; // HV context for gate enter exit. Keep at a low struct offset.
-
 	u64 gpr[32] = {}; // General-Purpose Registers
 	f64 fpr[32] = {}; // Floating Point Registers
 	v128 vr[32] = {}; // Vector Registers
@@ -307,7 +304,8 @@ public:
 	// Thread name
 	atomic_ptr<std::string> ppu_tname;
 
-	u64 saved_native_sp = 0; // Host thread's stack pointer for emulated longjmp
+	// Hypervisor context data
+	rpcs3::hypervisor_context_t hv_ctx; // HV context for gate enter exit. Keep at a low struct offset.
 
 	u64 last_ftsc = 0;
 	u64 last_ftime = 0;
