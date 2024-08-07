@@ -521,6 +521,12 @@ void microphone_device::update_audio()
 
 		const u32 num_samples = capture_audio();
 
+		if ((signal_types & CELLMIC_SIGTYPE_RAW) ||
+			(signal_types & CELLMIC_SIGTYPE_DSP))
+		{
+			get_data(num_samples);
+		}
+
 		if (signal_types & CELLMIC_SIGTYPE_RAW)
 		{
 			get_raw(num_samples);
@@ -661,8 +667,6 @@ void microphone_device::get_raw(const u32 num_samples)
 		return;
 	}
 
-	get_data(num_samples);
-
 	rbuf_raw.write_bytes(temp_buf.data(), num_samples * sample_size);
 }
 
@@ -672,8 +676,6 @@ void microphone_device::get_dsp(const u32 num_samples)
 	{
 		return;
 	}
-
-	get_data(num_samples);
 
 	rbuf_dsp.write_bytes(temp_buf.data(), num_samples * sample_size);
 }
