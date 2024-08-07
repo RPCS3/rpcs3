@@ -473,6 +473,7 @@ error_code microphone_device::close_microphone()
 		micdevice.buf.clear();
 	}
 
+	temp_buf.clear();
 	mic_opened = false;
 
 	return CELL_OK;
