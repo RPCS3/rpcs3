@@ -583,19 +583,11 @@ void microphone_device::get_data(const u32 num_samples)
 {
 	ensure(num_samples > 0);
 
-	u8* tmp_ptr = temp_buf.data();
-
 	switch (device_type)
 	{
 	case microphone_handler::real_singstar:
 	{
-		const usz bufsize = num_samples * sample_size;
-		const mic_device& device = ::at32(devices, 0);
-		ensure(bufsize <= device.buf.size());
-		ensure(bufsize <= temp_buf.size());
-
-		// Straight copy from device
-		std::memcpy(tmp_ptr, device.buf.data(), bufsize);
+		// Straight copy from device. No need for intermediate buffer.
 		break;
 	}
 	case microphone_handler::standard:
@@ -606,6 +598,8 @@ void microphone_device::get_data(const u32 num_samples)
 		const std::vector<u8>& buf = ::at32(devices, 0).buf;
 		ensure(bufsize <= buf.size());
 		ensure(bufsize <= temp_buf.size());
+
+		u8* tmp_ptr = temp_buf.data();
 
 		// BE Translation
 		for (u32 index = 0; index < bufsize; index += channel_size)
@@ -622,6 +616,8 @@ void microphone_device::get_data(const u32 num_samples)
 		const usz bufsize = num_samples * sizeof(u16);
 		const std::vector<u8>& buf_0 = ::at32(devices, 0).buf;
 		ensure(bufsize <= buf_0.size());
+
+		u8* tmp_ptr = temp_buf.data();
 
 		// Mixing the 2 mics into the 2 destination channels
 		if (devices.size() == 2)
@@ -667,7 +663,11 @@ void microphone_device::get_raw(const u32 num_samples)
 		return;
 	}
 
-	rbuf_raw.write_bytes(temp_buf.data(), num_samples * sample_size);
+	const std::vector<u8>& buf = device_type == microphone_handler::real_singstar ? ::at32(devices, 0).buf : temp_buf;
+	const u32 bufsize = num_samples * sample_size;
+	ensure(bufsize <= buf.size());
+
+	rbuf_raw.write_bytes(buf.data(), bufsize);
 }
 
 void microphone_device::get_dsp(const u32 num_samples)
@@ -677,7 +677,11 @@ void microphone_device::get_dsp(const u32 num_samples)
 		return;
 	}
 
-	rbuf_dsp.write_bytes(temp_buf.data(), num_samples * sample_size);
+	const std::vector<u8>& buf = device_type == microphone_handler::real_singstar ? ::at32(devices, 0).buf : temp_buf;
+	const u32 bufsize = num_samples * sample_size;
+	ensure(bufsize <= buf.size());
+
+	rbuf_dsp.write_bytes(buf.data(), bufsize);
 }
 
 /// Initialization/Shutdown Functions
