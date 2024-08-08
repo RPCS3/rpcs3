@@ -25,8 +25,6 @@ void basic_mouse_handler::Init(const u32 max_connect)
 		input_log.notice("basic_mouse_handler: Could not load basic mouse config. Using defaults.");
 	}
 
-	g_cfg_mouse.reload_requested = true;
-
 	reload_config();
 
 	m_mice.clear();
@@ -82,6 +80,12 @@ void basic_mouse_handler::SetTargetWindow(QWindow* target)
 
 bool basic_mouse_handler::eventFilter(QObject* target, QEvent* ev)
 {
+	if (m_info.max_connect == 0)
+	{
+		// Not initialized
+		return false;
+	}
+
 	if (!ev)
 	{
 		return false;
