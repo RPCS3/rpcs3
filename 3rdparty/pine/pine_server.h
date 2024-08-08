@@ -10,7 +10,6 @@
 // conflict with each others
 #define IPC_DEFAULT_SLOT 28012
 
-//#include "Utilities/Thread.h"
 #include <string>
 #include "stdafx.h"
 #include <stdio.h>
@@ -574,9 +573,11 @@ namespace pine
 				m_socket_name += "/rpcs3.sock";
 			}
 
-			int slot = Impl::get_port();
+			const int slot = Impl::get_port();
 			if (slot != IPC_DEFAULT_SLOT)
-				m_socket_name = fmt::format("%s.%d", m_socket_name, slot);
+			{
+				fmt::append(m_socket_name, ".%d", slot);
+			}
 
 			struct sockaddr_un server;
 
