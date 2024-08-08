@@ -4,7 +4,12 @@
 
 #pragma once
 
-//#include "Utilities/Thread.h"
+// IPC uses a concept of "slot" to be able to communicate with multiple
+// emulators at the same time, each slot should be unique to each emulator to
+// allow PnP and configurable by the end user so that several runs don't
+// conflict with each others
+#define IPC_DEFAULT_SLOT 28012
+
 #include <string>
 #include "stdafx.h"
 #include <stdio.h>
@@ -568,7 +573,11 @@ namespace pine
 				m_socket_name += "/rpcs3.sock";
 			}
 
-			m_socket_name = fmt::format("%s.%d", m_socket_name, Impl::get_port());
+			const int slot = Impl::get_port();
+			if (slot != IPC_DEFAULT_SLOT)
+			{
+				fmt::append(m_socket_name, ".%d", slot);
+			}
 
 			struct sockaddr_un server;
 
