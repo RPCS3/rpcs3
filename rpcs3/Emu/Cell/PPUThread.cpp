@@ -222,7 +222,7 @@ const auto ppu_gateway = build_function_asm<void(*)(ppu_thread*)>("ppu_gateway",
 #endif
 
 	// Save native stack pointer for longjmp emulation
-	c.mov(x86::qword_ptr(args[0], ::offset32(&ppu_thread::saved_native_sp)), x86::rsp);
+	c.mov(x86::qword_ptr(args[0], ::offset32(&ppu_thread::hv_ctx, &rpcs3::hypervisor_context_t::regs)), x86::rsp);
 
 	// Initialize args
 	c.mov(x86::r13, x86::qword_ptr(reinterpret_cast<u64>(&vm::g_exec_addr)));
@@ -291,37 +291,55 @@ const auto ppu_gateway = build_function_asm<void(*)(ppu_thread*)>("ppu_gateway",
 	// and https://developer.arm.com/documentation/den0024/a/The-ABI-for-ARM-64-bit-Architecture/Register-use-in-the-AArch64-Procedure-Call-Standard/Parameters-in-general-purpose-registers
 	// for AArch64 calling convention
 
-	// Save sp for native longjmp emulation
-	Label native_sp_offset = c.newLabel();
-	c.ldr(a64::x10, arm::Mem(native_sp_offset));
-	// sp not allowed to be used in load/stores directly
-	c.mov(a64::x15, a64::sp);
-	c.str(a64::x15, arm::Mem(args[0], a64::x10));
+	// PPU function argument layout:
+	// x19 = m_exec
+	// x20 = m_thread,
+	// x21 = seg0
+	// x22 = m_base
+	// x23 - x25 = gpr[0] - gpr[3]
 
-	// Push callee saved registers to the stack
+	// Push callee saved registers to the hv context
+	// Assume our LLVM compiled code is unsafe and can clobber our stack. GHC on aarch64 treats stack as scratch.
+	// We also want to store the register context at a fixed place so we can read the hypervisor state from any lcoation.
 	// We need to save x18-x30 = 13 x 8B each + 8 bytes for 16B alignment = 112B
-	c.sub(a64::sp, a64::sp, Imm(112));
-	c.stp(a64::x18, a64::x19, arm::Mem(a64::sp));
-	c.stp(a64::x20, a64::x21, arm::Mem(a64::sp, 16));
-	c.stp(a64::x22, a64::x23, arm::Mem(a64::sp, 32));
-	c.stp(a64::x24, a64::x25, arm::Mem(a64::sp, 48));
-	c.stp(a64::x26, a64::x27, arm::Mem(a64::sp, 64));
-	c.stp(a64::x28, a64::x29, arm::Mem(a64::sp, 80));
-	c.str(a64::x30, arm::Mem(a64::sp, 96));
+
+	// Pre-context save
+	// Layout:
+	// pc, sp
+	// x18, x19...x30
+	// NOTE: Do not touch x19..x30 before saving the registers!
+	const u64 hv_register_array_offset = ::offset32(&ppu_thread::hv_ctx, &rpcs3::hypervisor_context_t::regs);
+	Label hv_ctx_pc = c.newLabel(); // Used to hold the far jump return address
+
+	// Sanity
+	ensure(hv_register_array_offset < 4096); // Imm10
+
+	c.mov(a64::x15, args[0]);
+	c.add(a64::x14, a64::x15, Imm(hv_register_array_offset));  // Per-thread context save
+
+	c.adr(a64::x15, hv_ctx_pc); // x15 = pc
+	c.mov(a64::x13, a64::sp);   // x16 = sp
+
+	c.stp(a64::x15, a64::x13, arm::Mem(a64::x14));
+	c.stp(a64::x18, a64::x19, arm::Mem(a64::x14, 16));
+	c.stp(a64::x20, a64::x21, arm::Mem(a64::x14, 32));
+	c.stp(a64::x22, a64::x23, arm::Mem(a64::x14, 48));
+	c.stp(a64::x24, a64::x25, arm::Mem(a64::x14, 64));
+	c.stp(a64::x26, a64::x27, arm::Mem(a64::x14, 80));
+	c.stp(a64::x28, a64::x29, arm::Mem(a64::x14, 96));
+	c.str(a64::x30, arm::Mem(a64::x14, 112));
 
 	// Load REG_Base - use absolute jump target to bypass rel jmp range limits
-	Label exec_addr = c.newLabel();
-	c.ldr(a64::x19, arm::Mem(exec_addr));
+	c.mov(a64::x19, Imm(reinterpret_cast<u64>(&vm::g_exec_addr)));
 	c.ldr(a64::x19, arm::Mem(a64::x19));
 	// Load PPUThread struct base -> REG_Sp
 	const arm::GpX ppu_t_base = a64::x20;
 	c.mov(ppu_t_base, args[0]);
 	// Load PC
 	const arm::GpX pc = a64::x15;
-	Label cia_offset = c.newLabel();
 	const arm::GpX cia_addr_reg = a64::x11;
 	// Load offset value
-	c.ldr(cia_addr_reg, arm::Mem(cia_offset));
+	c.mov(cia_addr_reg, Imm(static_cast<u64>(::offset32(&ppu_thread::cia))));
 	// Load cia
 	c.ldr(a64::w15, arm::Mem(ppu_t_base, cia_addr_reg));
 	// Multiply by 2 to index into ptr table
@@ -343,44 +361,56 @@ const auto ppu_gateway = build_function_asm<void(*)(ppu_thread*)>("ppu_gateway",
 	c.lsr(call_target, call_target, Imm(16));
 
 	// Load registers
-	Label base_addr = c.newLabel();
-	c.ldr(a64::x22, arm::Mem(base_addr));
+	c.mov(a64::x22, Imm(reinterpret_cast<u64>(&vm::g_base_addr)));
 	c.ldr(a64::x22, arm::Mem(a64::x22));
 
-	Label gpr_addr_offset = c.newLabel();
 	const arm::GpX gpr_addr_reg = a64::x9;
-	c.ldr(gpr_addr_reg, arm::Mem(gpr_addr_offset));
+	c.mov(gpr_addr_reg, Imm(static_cast<u64>(::offset32(&ppu_thread::gpr))));
 	c.add(gpr_addr_reg, gpr_addr_reg, ppu_t_base);
 	c.ldr(a64::x23, arm::Mem(gpr_addr_reg));
 	c.ldr(a64::x24, arm::Mem(gpr_addr_reg, 8));
 	c.ldr(a64::x25, arm::Mem(gpr_addr_reg, 16));
 
+	// Thread context save. This is needed for PPU because different functions can switch between x19 and x20 for the base register.
+	// We need a different solution to ensure that no matter which version, we get the right vaue on far return.
+	c.mov(a64::x26, ppu_t_base);
+
+	// Save thread pointer to stack. SP is the only register preserved across GHC calls.
+	c.sub(a64::sp, a64::sp, Imm(16));
+	c.str(a64::x20, arm::Mem(a64::sp));
+
+	// GHC scratchpad mem. If managed correctly (i.e no returns ever), GHC functions should never require a stack frame.
+	// We allocate a slab to use for all functions as they tail-call into each other.
+	c.sub(a64::sp, a64::sp, Imm(8192));
+
 	// Execute LLE call
 	c.blr(call_target);
 
-	// Restore registers from the stack
-	c.ldp(a64::x18, a64::x19, arm::Mem(a64::sp));
-	c.ldp(a64::x20, a64::x21, arm::Mem(a64::sp, 16));
-	c.ldp(a64::x22, a64::x23, arm::Mem(a64::sp, 32));
-	c.ldp(a64::x24, a64::x25, arm::Mem(a64::sp, 48));
-	c.ldp(a64::x26, a64::x27, arm::Mem(a64::sp, 64));
-	c.ldp(a64::x28, a64::x29, arm::Mem(a64::sp, 80));
-	c.ldr(a64::x30, arm::Mem(a64::sp, 96));
-	// Restore stack ptr
-	c.add(a64::sp, a64::sp, Imm(112));
-	// Return
-	c.ret(a64::x30);
+	// Return address after far jump. Reset sp and start unwinding...
+	c.bind(hv_ctx_pc);
 
-	c.bind(exec_addr);
-	c.embedUInt64(reinterpret_cast<u64>(&vm::g_exec_addr));
-	c.bind(base_addr);
-	c.embedUInt64(reinterpret_cast<u64>(&vm::g_base_addr));
-	c.bind(cia_offset);
-	c.embedUInt64(static_cast<u64>(::offset32(&ppu_thread::cia)));
-	c.bind(gpr_addr_offset);
-	c.embedUInt64(static_cast<u64>(::offset32(&ppu_thread::gpr)));
-	c.bind(native_sp_offset);
-	c.embedUInt64(static_cast<u64>(::offset32(&ppu_thread::saved_native_sp)));
+	// Clear scratchpad allocation
+	c.add(a64::sp, a64::sp, Imm(8192));
+
+	c.ldr(a64::x20, arm::Mem(a64::sp));
+	c.add(a64::sp, a64::sp, Imm(16));
+
+	// We either got here through normal "ret" which keeps our x20 intact, or we jumped here and the escape reset our x20 reg
+	// Either way, x26 contains our thread base and we forcefully reset the stack pointer
+	c.add(a64::x14, a64::x20, Imm(hv_register_array_offset));  // Per-thread context save
+
+	c.ldr(a64::x15, arm::Mem(a64::x14, 8));
+	c.ldp(a64::x18, a64::x19, arm::Mem(a64::x14, 16));
+	c.ldp(a64::x20, a64::x21, arm::Mem(a64::x14, 32));
+	c.ldp(a64::x22, a64::x23, arm::Mem(a64::x14, 48));
+	c.ldp(a64::x24, a64::x25, arm::Mem(a64::x14, 64));
+	c.ldp(a64::x26, a64::x27, arm::Mem(a64::x14, 80));
+	c.ldp(a64::x28, a64::x29, arm::Mem(a64::x14, 96));
+	c.ldr(a64::x30, arm::Mem(a64::x14, 112));
+
+	// Return
+	c.mov(a64::sp, a64::x15);
+	c.ret(a64::x30);
 #endif
 });
 
@@ -390,11 +420,20 @@ const extern auto ppu_escape = build_function_asm<void(*)(ppu_thread*)>("ppu_esc
 
 #if defined(ARCH_X64)
 	// Restore native stack pointer (longjmp emulation)
-	c.mov(x86::rsp, x86::qword_ptr(args[0], ::offset32(&ppu_thread::saved_native_sp)));
+	c.mov(x86::rsp, x86::qword_ptr(args[0], ::offset32(&ppu_thread::hv_ctx, &rpcs3::hypervisor_context_t::regs)));
 
 	// Return to the return location
 	c.sub(x86::rsp, 8);
 	c.ret();
+#else
+	// We really shouldn't be using this, but an implementation shoudln't hurt
+	// Far jump return. Only clobbers x30.
+	const arm::GpX ppu_t_base = a64::x20;
+	const u64 hv_register_array_offset = ::offset32(&ppu_thread::hv_ctx, &rpcs3::hypervisor_context_t::regs);
+	c.mov(ppu_t_base, args[0]);
+	c.mov(a64::x30, Imm(hv_register_array_offset));
+	c.ldr(a64::x30, arm::Mem(ppu_t_base, a64::x30));
+	c.ret(a64::x30);
 #endif
 });
 
@@ -2265,6 +2304,9 @@ void ppu_thread::exec_task()
 {
 	if (g_cfg.core.ppu_decoder != ppu_decoder_type::_static)
 	{
+		// HVContext push to allow recursion. This happens with guest callback invocations.
+		const auto old_hv_ctx = hv_ctx;
+
 		while (true)
 		{
 			if (state) [[unlikely]]
@@ -2276,6 +2318,8 @@ void ppu_thread::exec_task()
 			ppu_gateway(this);
 		}
 
+		// HVContext pop
+		hv_ctx = old_hv_ctx;
 		return;
 	}
 
@@ -2313,6 +2357,8 @@ ppu_thread::ppu_thread(const ppu_thread_params& param, std::string_view name, u3
 	, ppu_tname(make_single<std::string>(name))
 {
 	prio.raw().prio = _prio;
+
+	memset(&hv_ctx, 0, sizeof(hv_ctx));
 
 	gpr[1] = stack_addr + stack_size - ppu_stack_start_offset;
 
@@ -5277,12 +5323,14 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 				// Translate
 				if (const auto func = translator.Translate(module_part.funcs[fi]))
 				{
+#ifdef ARCH_X64 // TODO
 					// Run optimization passes
 #if LLVM_VERSION_MAJOR < 17
 					pm.run(*func);
 #else
 					fpm.run(*func, fam);
 #endif
+#endif // ARCH_X64
 				}
 				else
 				{
@@ -5297,12 +5345,14 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 		{
 			if (const auto func = translator.GetSymbolResolver(whole_module))
 			{
+#ifdef ARCH_X64 // TODO
 				// Run optimization passes
 #if LLVM_VERSION_MAJOR < 17
 				pm.run(*func);
 #else
 				fpm.run(*func, fam);
 #endif
+#endif // ARCH_X64
 			}
 			else
 			{

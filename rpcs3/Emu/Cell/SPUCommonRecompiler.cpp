@@ -58,19 +58,13 @@ static void ghc_cpp_trampoline(u64 fn_target, native_asm& c, auto& args)
 {
 	using namespace asmjit;
 
-	Label target = c.newLabel();
 	c.mov(args[0], a64::x19);
 	c.mov(args[1], a64::x20);
 	c.mov(args[2], a64::x21);
 	c.mov(args[3], a64::x22);
 
-	c.ldr(a64::x15, arm::Mem(target));
+	c.mov(a64::x15, Imm(fn_target));
 	c.br(a64::x15);
-
-	c.brk(Imm(0x42)); // Unreachable
-
-	c.bind(target);
-	c.embedUInt64(fn_target);
 }
 #endif
 
@@ -97,8 +91,6 @@ DECLARE(spu_runtime::tr_dispatch) = []
 		{
 			c.yield();
 			ghc_cpp_trampoline(reinterpret_cast<u64>(&spu_recompiler_base::dispatch), c, args);
-
-			c.embed("tr_dispatch", 11);
 		});
 	return trptr;
 #else
@@ -124,8 +116,6 @@ DECLARE(spu_runtime::tr_branch) = []
 		[](native_asm& c, auto& args)
 		{
 			ghc_cpp_trampoline(reinterpret_cast<u64>(&spu_recompiler_base::branch), c, args);
-
-			c.embed("tr_branch", 9);
 		});
 	return trptr;
 #else
@@ -149,9 +139,8 @@ DECLARE(spu_runtime::tr_interpreter) = []
 		[](native_asm& c, auto& args)
 		{
 			ghc_cpp_trampoline(reinterpret_cast<u64>(&spu_recompiler_base::old_interpreter), c, args);
-
-			c.embed("tr_interpreter", 14);
 		});
+	return trptr;
 	return trptr;
 #endif
 }();
@@ -228,13 +217,15 @@ DECLARE(spu_runtime::tr_all) = []
 		{
 			using namespace asmjit;
 
-			// w1: PC (eax in x86 SPU)
-			// x7: lsa (rcx in x86 SPU)
+			// Inputs:
+			// x19 = m_thread a.k.a arg[0]
+			// x20 = ls_base
+			// x21 - x22 = args[2 - 3]
+			//ensure(::offset32(&spu_thread::pc) <= 32760);
+			//ensure(::offset32(&spu_thread::block_hash) <= 32760);
 
 			// Load PC
-			Label pc_offset = c.newLabel();
-			c.ldr(a64::x0, arm::Mem(pc_offset));
-			c.ldr(a64::w1, arm::Mem(a64::x19, a64::x0)); // REG_Base + offset(spu_thread::pc)
+			c.ldr(a64::w1, arm::Mem(a64::x19, ::offset32(&spu_thread::pc))); // REG_Base + offset(spu_thread::pc)
 			// Compute LS address = REG_Sp + PC, store into x7 (use later)
 			c.add(a64::x7, a64::x20, a64::x1);
 			// Load 32b from LS address
@@ -242,27 +233,18 @@ DECLARE(spu_runtime::tr_all) = []
 			// shr (32 - 20)
 			c.lsr(a64::w3, a64::w3, Imm(32 - 20));
 			// Load g_dispatcher
-			Label g_dispatcher_offset = c.newLabel();
-			c.ldr(a64::x4, arm::Mem(g_dispatcher_offset));
+			c.mov(a64::x4, Imm(reinterpret_cast<u64>(g_dispatcher)));
 			// Update block hash
-			Label block_hash_offset = c.newLabel();
 			c.mov(a64::x5, Imm(0));
-			c.ldr(a64::x6, arm::Mem(block_hash_offset));
-			c.str(a64::x5, arm::Mem(a64::x19, a64::x6)); // REG_Base + offset(spu_thread::block_hash)
+			c.str(a64::x5, arm::Mem(a64::x19, ::offset32(&spu_thread::block_hash))); // REG_Base + offset(spu_thread::block_hash)
 			// Jump to [g_dispatcher + idx * 8]
 			c.mov(a64::x6, Imm(8));
 			c.mul(a64::x6, a64::x3, a64::x6);
 			c.add(a64::x4, a64::x4, a64::x6);
 			c.ldr(a64::x4, arm::Mem(a64::x4));
 			c.br(a64::x4);
-
-			c.bind(pc_offset);
-			c.embedUInt64(::offset32(&spu_thread::pc));
-			c.bind(g_dispatcher_offset);
-			c.embedUInt64(reinterpret_cast<u64>(g_dispatcher));
-			c.bind(block_hash_offset);
-			c.embedUInt64(::offset32(&spu_thread::block_hash));
-			c.embed("tr_all", 6);
+			// Unreachable guard
+			c.brk(0x42);
 		});
 	return trptr;
 #else
@@ -307,7 +289,7 @@ DECLARE(spu_runtime::g_gateway) = build_function_asm<spu_function_t>("spu_gatewa
 #endif
 
 	// Save native stack pointer for longjmp emulation
-	c.mov(x86::qword_ptr(args[0], ::offset32(&spu_thread::saved_native_sp)), x86::rsp);
+	c.mov(x86::qword_ptr(args[0], ::offset32(&spu_thread::hv_ctx, &rpcs3::hypervisor_context_t::regs)), x86::rsp);
 
 	// Move 4 args (despite spu_function_t def)
 	c.mov(x86::r13, args[0]);
@@ -359,23 +341,28 @@ DECLARE(spu_runtime::g_gateway) = build_function_asm<spu_function_t>("spu_gatewa
 
 	c.ret();
 #elif defined(ARCH_ARM64)
-	// Push callee saved registers to the stack
-	// We need to save x18-x30 = 13 x 8B each + 8 bytes for 16B alignment = 112B
-	c.sub(a64::sp, a64::sp, Imm(112));
-	c.stp(a64::x18, a64::x19, arm::Mem(a64::sp));
-	c.stp(a64::x20, a64::x21, arm::Mem(a64::sp, 16));
-	c.stp(a64::x22, a64::x23, arm::Mem(a64::sp, 32));
-	c.stp(a64::x24, a64::x25, arm::Mem(a64::sp, 48));
-	c.stp(a64::x26, a64::x27, arm::Mem(a64::sp, 64));
-	c.stp(a64::x28, a64::x29, arm::Mem(a64::sp, 80));
-	c.str(a64::x30, arm::Mem(a64::sp, 96));
 
-	// Save native stack pointer for longjmp emulation
-	Label sp_offset = c.newLabel();
-	c.ldr(a64::x26, arm::Mem(sp_offset));
-	// sp not allowed to be used in load/stores directly
-	c.mov(a64::x15, a64::sp);
-	c.str(a64::x15, arm::Mem(args[0], a64::x26));
+	// Save non-volatile regs. We do this within the thread context instead of normal stack
+	const u32 hv_regs_base = ::offset32(&spu_thread::hv_ctx, &rpcs3::hypervisor_context_t::regs);
+	// NOTE: A64 gp-gp-imm add only takes immediates of upto 4095. Larger numbers can work, but need to be multiples of 2 for lowering to replace the instruction correctly
+	// Unfortunately asmjit fails silently on these patterns which can generate incorrect code
+	c.mov(a64::x15, args[0]);
+	c.mov(a64::x14, Imm(hv_regs_base));
+	c.add(a64::x14, a64::x14, a64::x15); // Reg context offset
+
+	// Return address of escape should jump to the restore block
+	auto epilogue_addr = c.newLabel();
+	c.adr(a64::x15, epilogue_addr);
+	c.mov(a64::x16, a64::sp);
+
+	c.stp(a64::x15, a64::x16, arm::Mem(a64::x14));
+	c.stp(a64::x18, a64::x19, arm::Mem(a64::x14, 16));
+	c.stp(a64::x20, a64::x21, arm::Mem(a64::x14, 32));
+	c.stp(a64::x22, a64::x23, arm::Mem(a64::x14, 48));
+	c.stp(a64::x24, a64::x25, arm::Mem(a64::x14, 64));
+	c.stp(a64::x26, a64::x27, arm::Mem(a64::x14, 80));
+	c.stp(a64::x28, a64::x29, arm::Mem(a64::x14, 96));
+	c.str(a64::x30, arm::Mem(a64::x14, 112));
 
 	// Move 4 args (despite spu_function_t def)
 	c.mov(a64::x19, args[0]);
@@ -383,42 +370,34 @@ DECLARE(spu_runtime::g_gateway) = build_function_asm<spu_function_t>("spu_gatewa
 	c.mov(a64::x21, args[2]);
 	c.mov(a64::x22, args[3]);
 
-	// Save ret address to stack
-	// since non-tail calls to cpp fns may corrupt lr and
-	// g_tail_escape may jump out of a fn before the epilogue can restore lr
-	Label ret_addr = c.newLabel();
-	c.adr(a64::x0, ret_addr);
-	c.str(a64::x0, arm::Mem(a64::sp, 104));
+	// Inject stack frame for scratchpad. Alternatively use per-function frames but that adds some overhead
+	c.sub(a64::sp, a64::sp, Imm(8192));
 
-	Label call_target = c.newLabel();
-	c.ldr(a64::x0, arm::Mem(call_target));
+	c.mov(a64::x0, Imm(reinterpret_cast<u64>(spu_runtime::tr_all)));
 	c.blr(a64::x0);
 
-	c.bind(ret_addr);
+	// This is the return point for the far ret. Never jump back into host code without coming through this exit
+	c.bind(epilogue_addr);
 
-	// Restore stack ptr
-	c.ldr(a64::x26, arm::Mem(sp_offset));
-	c.ldr(a64::x15, arm::Mem(a64::x19, a64::x26));
-	c.mov(a64::sp, a64::x15);
+	// Cleanup scratchpad (not needed, we'll reload sp shortly)
+	// c.add(a64::sp, a64::sp, Imm(8192));
 
-	// Restore registers from the stack
-	c.ldp(a64::x18, a64::x19, arm::Mem(a64::sp));
-	c.ldp(a64::x20, a64::x21, arm::Mem(a64::sp, 16));
-	c.ldp(a64::x22, a64::x23, arm::Mem(a64::sp, 32));
-	c.ldp(a64::x24, a64::x25, arm::Mem(a64::sp, 48));
-	c.ldp(a64::x26, a64::x27, arm::Mem(a64::sp, 64));
-	c.ldp(a64::x28, a64::x29, arm::Mem(a64::sp, 80));
-	c.ldr(a64::x30, arm::Mem(a64::sp, 96));
-	// Restore stack ptr
-	c.add(a64::sp, a64::sp, Imm(112));
+	// Restore thread context
+	c.mov(a64::x14, Imm(hv_regs_base));
+	c.add(a64::x14, a64::x14, a64::x19);
+
+	c.ldr(a64::x16, arm::Mem(a64::x14, 8));
+	c.ldp(a64::x18, a64::x19, arm::Mem(a64::x14, 16));
+	c.ldp(a64::x20, a64::x21, arm::Mem(a64::x14, 32));
+	c.ldp(a64::x22, a64::x23, arm::Mem(a64::x14, 48));
+	c.ldp(a64::x24, a64::x25, arm::Mem(a64::x14, 64));
+	c.ldp(a64::x26, a64::x27, arm::Mem(a64::x14, 80));
+	c.ldp(a64::x28, a64::x29, arm::Mem(a64::x14, 96));
+	c.ldr(a64::x30, arm::Mem(a64::x14, 112));
+
 	// Return
+	c.mov(a64::sp, a64::x16);
 	c.ret(a64::x30);
-
-	c.bind(sp_offset);
-	c.embedUInt64(::offset32(&spu_thread::saved_native_sp));
-	c.bind(call_target);
-	c.embedUInt64(reinterpret_cast<u64>(spu_runtime::tr_all));
-	c.embed("spu_gateway", 11);
 #else
 #error "Unimplemented"
 #endif
@@ -430,25 +409,19 @@ DECLARE(spu_runtime::g_escape) = build_function_asm<void(*)(spu_thread*)>("spu_e
 
 #if defined(ARCH_X64)
 	// Restore native stack pointer (longjmp emulation)
-	c.mov(x86::rsp, x86::qword_ptr(args[0], ::offset32(&spu_thread::saved_native_sp)));
+	c.mov(x86::rsp, x86::qword_ptr(args[0], ::offset32(&spu_thread::hv_ctx, &rpcs3::hypervisor_context_t::regs)));
 
 	// Return to the return location
 	c.sub(x86::rsp, 8);
 	c.ret();
 #elif defined(ARCH_ARM64)
-	// Restore native stack pointer (longjmp emulation)
-	Label sp_offset = c.newLabel();
-	c.ldr(a64::x15, arm::Mem(sp_offset));
-	c.ldr(a64::x15, arm::Mem(args[0], a64::x15));
-	c.mov(a64::sp, a64::x15);
-
-	c.ldr(a64::x30, arm::Mem(a64::sp, 104));
+	// Far ret, jumps to gateway epilogue
+	const u32 reg_base = ::offset32(&spu_thread::hv_ctx, &rpcs3::hypervisor_context_t::regs);
+	c.mov(a64::x19, args[0]);
+	c.mov(a64::x15, Imm(reg_base));
+	c.add(a64::x15, a64::x15, args[0]);
+	c.ldr(a64::x30, arm::Mem(a64::x15));
 	c.ret(a64::x30);
-
-	c.bind(sp_offset);
-	c.embedUInt64(::offset32(&spu_thread::saved_native_sp));
-
-	c.embed("spu_escape", 10);
 #else
 #error "Unimplemented"
 #endif
@@ -460,7 +433,7 @@ DECLARE(spu_runtime::g_tail_escape) = build_function_asm<void(*)(spu_thread*, sp
 
 #if defined(ARCH_X64)
 	// Restore native stack pointer (longjmp emulation)
-	c.mov(x86::rsp, x86::qword_ptr(args[0], ::offset32(&spu_thread::saved_native_sp)));
+	c.mov(x86::rsp, x86::qword_ptr(args[0], ::offset32(&spu_thread::hv_ctx, &rpcs3::hypervisor_context_t::regs)));
 
 	// Adjust stack for initial call instruction in the gateway
 	c.sub(x86::rsp, 16);
@@ -473,32 +446,47 @@ DECLARE(spu_runtime::g_tail_escape) = build_function_asm<void(*)(spu_thread*, sp
 	c.mov(x86::qword_ptr(x86::rsp), args[1]);
 	c.ret();
 #elif defined(ARCH_ARM64)
-	// Restore native stack pointer (longjmp emulation)
-	Label sp_offset = c.newLabel();
-	c.ldr(a64::x15, arm::Mem(sp_offset));
-	c.ldr(a64::x15, arm::Mem(args[0], a64::x15));
-	c.mov(a64::sp, a64::x15);
-
-	// Reload lr, since it might've been clobbered by a cpp fn
-	// and g_tail_escape runs before epilogue
-	c.ldr(a64::x30, arm::Mem(a64::sp, 104));
+	// HV pointer
+	const u32 reg_base = ::offset32(&spu_thread::hv_ctx, &rpcs3::hypervisor_context_t::regs);
 
 	// Tail call, GHC CC
 	c.mov(a64::x19, args[0]); // REG_Base
-	Label ls_offset = c.newLabel();
-	c.ldr(a64::x20, arm::Mem(ls_offset));
-	c.ldr(a64::x20, arm::Mem(args[0], a64::x20)); // REG_Sp
-	c.mov(a64::x21, args[2]); // REG_Hp
-	c.eor(a64::w22, a64::w22, a64::w22); // REG_R1
+	c.mov(a64::x15, Imm(::offset32(&spu_thread::ls))); // SPU::ls offset cannot be correctly encoded for ldr as it is too large
+	c.ldr(a64::x20, arm::Mem(a64::x19, a64::x15)); // REG_Sp
+	c.mov(a64::x21, args[2]);  // REG_Hp
+	c.mov(a64::x22, a64::xzr); // REG_R1
 
-	c.br(args[1]);
+	// Reset sp to patch leaks. Calls to tail escape may leave their stack "dirty" due to optimizations.
+	c.mov(a64::x14, Imm(reg_base + 8));
+	c.ldr(a64::x15, arm::Mem(a64::x19, a64::x14));
+	c.mov(a64::sp, a64::x15);
 
-	c.bind(ls_offset);
-	c.embedUInt64(::offset32(&spu_thread::ls));
-	c.bind(sp_offset);
-	c.embedUInt64(::offset32(&spu_thread::saved_native_sp));
+	// Push context. This gateway can be returned to normally through a ret chain.
+	// FIXME: Push the current PC and "this" as part of the pseudo-frame and return here directly.
+	c.sub(a64::sp, a64::sp, Imm(16));
+	c.str(args[0], arm::Mem(a64::sp));
 
-	c.embed("spu_tail_escape", 15);
+	// Allocate scratchpad. Not needed if using per-function frames, or if we just don't care about returning to C++ (jump to gw exit instead)
+	c.sub(a64::sp, a64::sp, Imm(8192));
+
+	// Make the far jump
+	c.mov(a64::x15, args[1]);
+	c.blr(a64::x15);
+
+	// Clear scratch allocation
+	c.add(a64::sp, a64::sp, Imm(8192));
+
+	// Restore context. Escape point expects the current thread pointer at x19
+	c.ldr(a64::x19, arm::Mem(a64::sp));
+	c.add(a64::sp, a64::sp, Imm(16));
+
+	// <Optional> We could technically just emit a return here, but we may not want to for now until support is more mature.
+	// Should we attempt a normal return after this point, we'd be going back to C++ code which we really don't want.
+	// We can't guarantee stack sanity for the C++ code and it's cookies since we're basically treating stack as a scratch playground since we entered the main gateway.
+	// Instead, just fall back to hypervisor here. It also makes debugging easier.
+	c.mov(a64::x15, Imm(reg_base));
+	c.ldr(a64::x30, arm::Mem(a64::x19, a64::x15));
+	c.ret(a64::x30);
 #else
 #error "Unimplemented"
 #endif
@@ -7628,6 +7616,10 @@ struct spu_fast : public spu_recompiler_base
 
 	virtual spu_function_t compile(spu_program&& _func) override
 	{
+#ifndef ARCH_X64
+		fmt::throw_exception("Fast LLVM recompiler is unimplemented for architectures other than X86-64");
+#endif
+
 		const auto add_loc = m_spurt->add_empty(std::move(_func));
 
 		if (!add_loc)

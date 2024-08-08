@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Emu/CPU/CPUThread.h"
+#include "Emu/CPU/Hypervisor.h"
 #include "Emu/Cell/SPUInterpreter.h"
 #include "Emu/Memory/vm.h"
 #include "MFC.h"
@@ -778,7 +779,7 @@ public:
 	u64 block_recover = 0;
 	u64 block_failure = 0;
 
-	u64 saved_native_sp = 0; // Host thread's stack pointer for emulated longjmp
+	rpcs3::hypervisor_context_t hv_ctx; // NOTE: The offset within the class must be within the first 1MiB
 
 	u64 ftx = 0; // Failed transactions
 	u64 stx = 0; // Succeeded transactions (pure counters)

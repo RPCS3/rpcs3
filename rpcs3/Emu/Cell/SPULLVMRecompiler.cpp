@@ -67,6 +67,10 @@ const extern spu_decoder<spu_iflag> g_spu_iflag;
 #pragma GCC diagnostic pop
 #endif
 
+#ifdef ARCH_ARM64
+#include "Emu/CPU/Backends/AArch64JIT.h"
+#endif
+
 class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 {
 	// JIT Instance
@@ -1485,6 +1489,31 @@ public:
 			// Metadata for branch weights
 			m_md_likely = llvm::MDTuple::get(m_context, {md_name, md_high, md_low});
 			m_md_unlikely = llvm::MDTuple::get(m_context, {md_name, md_low, md_high});
+
+			// Initialize transform passes
+#ifdef ARCH_ARM64
+			{
+				auto should_exclude_function = [](const std::string& fn_name)
+				{
+					return fn_name.starts_with("spu_") || fn_name.starts_with("tr_");
+				};
+
+				aarch64::GHC_frame_preservation_pass::config_t config =
+				{
+					.debug_info = false,         // Set to "true" to insert debug frames on x27
+					.use_stack_frames = false,   // We don't need this since the SPU GW allocates global scratch on the stack
+					.hypervisor_context_offset = ::offset32(&spu_thread::hv_ctx),
+					.exclusion_callback = should_exclude_function,
+					.base_register_lookup = {}   // Unused, always x19 on SPU
+				};
+
+				// Create transform pass
+				std::unique_ptr<translator_pass> ghc_fixup_pass = std::make_unique<aarch64::GHC_frame_preservation_pass>(config);
+
+				// Register it
+				register_transform_pass(ghc_fixup_pass);
+			}
+#endif
 		}
 	}
 
@@ -2605,7 +2634,7 @@ public:
 
 		for (auto& f : *m_module)
 		{
-			replace_intrinsics(f);
+			run_transforms(f);
 		}
 
 		for (const auto& func : m_functions)
@@ -2806,7 +2835,7 @@ public:
 		m_interp_regs = _ptr(m_thread, get_reg_offset(0));
 
 		// Save host thread's stack pointer
-		const auto native_sp = spu_ptr<u64>(&spu_thread::saved_native_sp);
+		const auto native_sp = spu_ptr<u64>(&spu_thread::hv_ctx, &rpcs3::hypervisor_context_t::regs);
 #if defined(ARCH_X64)
 		const auto rsp_name = MetadataAsValue::get(m_context, MDNode::get(m_context, {MDString::get(m_context, "rsp")}));
 #elif defined(ARCH_ARM64)
@@ -3089,7 +3118,7 @@ public:
 
 		for (auto& f : *_module)
 		{
-			replace_intrinsics(f);
+			run_transforms(f);
 		}
 
 		std::string log;
