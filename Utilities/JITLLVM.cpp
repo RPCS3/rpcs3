@@ -727,7 +727,7 @@ llvm::StringRef fallback_cpu_detection()
 {
 #if defined (ARCH_X64)
 	// If we got here we either have a very old and outdated CPU or a new CPU that has not been seen by LLVM yet.
-	std::string brand = utils::get_cpu_brand();
+	const std::string brand = utils::get_cpu_brand();
 	const auto family = utils::get_cpu_family();
 	const auto model = utils::get_cpu_model();
 
