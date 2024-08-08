@@ -20,8 +20,12 @@ void basic_mouse_handler::Init(const u32 max_connect)
 		return;
 	}
 
-	g_cfg_mouse.from_default();
-	g_cfg_mouse.load();
+	if (!g_cfg_mouse.load())
+	{
+		input_log.notice("basic_mouse_handler: Could not load basic mouse config. Using defaults.");
+	}
+
+	g_cfg_mouse.reload_requested = true;
 
 	reload_config();
 
