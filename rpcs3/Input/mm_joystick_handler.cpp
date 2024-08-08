@@ -221,10 +221,13 @@ std::array<std::set<u32>, PadHandlerBase::button::button_count> mm_joystick_hand
 	return mapping;
 }
 
-PadHandlerBase::connection mm_joystick_handler::get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist, const std::vector<std::string>& buttons)
+PadHandlerBase::connection mm_joystick_handler::get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool first_call, bool get_blacklist, const std::vector<std::string>& buttons)
 {
 	if (get_blacklist)
 		m_blacklist.clear();
+
+	if (first_call)
+		m_min_button_values.clear();
 
 	if (!Init())
 	{
@@ -280,46 +283,69 @@ PadHandlerBase::connection mm_joystick_handler::get_next_button_press(const std:
 			std::string name;
 		} pressed_button{};
 
+		const auto set_button_press = [this, &pressed_button](const u16 value, const u64& keycode, const std::string& name)
+		{
+			const u16 min_value = m_min_button_values.contains(keycode) ? m_min_button_values[keycode] : 0;
+			const u16 diff = std::abs(min_value - value);
+
+			if (diff > button_press_threshold && value > pressed_button.value)
+			{
+				pressed_button = { .value = value, .name = name };
+			}
+		};
+
 		for (const auto& [keycode, name] : axis_list)
 		{
-			u16 value = data[keycode];
-
 			if (!get_blacklist && m_blacklist.contains(keycode))
 				continue;
 
-			if (value > m_thumb_threshold)
+			const u16 value = data[keycode];
+			u16& min_value = m_min_button_values[keycode];
+
+			if (first_call || value < min_value)
 			{
-				if (get_blacklist)
-				{
-					m_blacklist.insert(keycode);
-					input_log.error("MMJOY Calibration: Added axis [ %d = %s ] to blacklist. Value = %d", keycode, name, value);
-				}
-				else if (value > pressed_button.value)
-				{
-					pressed_button = { .value = value, .name = name };
-				}
+				min_value = value;
+				continue;
 			}
+
+			if (value <= m_thumb_threshold)
+				continue;
+
+			if (get_blacklist)
+			{
+				m_blacklist.insert(keycode);
+				input_log.error("MMJOY Calibration: Added axis [ %d = %s ] to blacklist. Value = %d", keycode, name, value);
+				continue;
+			}
+
+			set_button_press(value, keycode, name);
 		}
 
 		for (const auto& [keycode, name] : pov_list)
 		{
-			const u16 value = data[keycode];
-
 			if (!get_blacklist && m_blacklist.contains(keycode))
 				continue;
 
-			if (value > 0)
+			const u16 value = data[keycode];
+			u16& min_value = m_min_button_values[keycode];
+
+			if (first_call || value < min_value)
 			{
-				if (get_blacklist)
-				{
-					m_blacklist.insert(keycode);
-					input_log.error("MMJOY Calibration: Added pov [ %d = %s ] to blacklist. Value = %d", keycode, name, value);
-				}
-				else if (value > pressed_button.value)
-				{
-					pressed_button = { .value = value, .name = name };
-				}
+				min_value = value;
+				continue;
 			}
+
+			if (value <= 0)
+				continue;
+
+			if (get_blacklist)
+			{
+				m_blacklist.insert(keycode);
+				input_log.error("MMJOY Calibration: Added pov [ %d = %s ] to blacklist. Value = %d", keycode, name, value);
+				continue;
+			}
+
+			set_button_press(value, keycode, name);
 		}
 
 		for (const auto& [keycode, name] : button_list)
@@ -331,19 +357,30 @@ PadHandlerBase::connection mm_joystick_handler::get_next_button_press(const std:
 				continue;
 
 			const u16 value = data[keycode];
+			u16& min_value = m_min_button_values[keycode];
 
-			if (value > 0)
+			if (first_call || value < min_value)
 			{
-				if (get_blacklist)
-				{
-					m_blacklist.insert(keycode);
-					input_log.error("MMJOY Calibration: Added button [ %d = %s ] to blacklist. Value = %d", keycode, name, value);
-				}
-				else if (value > pressed_button.value)
-				{
-					pressed_button = { .value = value, .name = name };
-				}
+				min_value = value;
+				continue;
 			}
+
+			if (value <= 0)
+				continue;
+
+			if (get_blacklist)
+			{
+				m_blacklist.insert(keycode);
+				input_log.error("MMJOY Calibration: Added button [ %d = %s ] to blacklist. Value = %d", keycode, name, value);
+				continue;
+			}
+
+			set_button_press(value, keycode, name);
+		}
+
+		if (first_call)
+		{
+			return connection::no_data;
 		}
 
 		if (get_blacklist)
