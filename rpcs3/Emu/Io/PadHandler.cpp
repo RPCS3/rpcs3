@@ -269,8 +269,6 @@ PadHandlerBase::connection PadHandlerBase::get_next_button_press(const std::stri
 			continue;
 		}
 
-		constexpr u16 touch_threshold = static_cast<u16>(255 * 0.9f);
-
 		const bool is_trigger = get_is_left_trigger(device, keycode) || get_is_right_trigger(device, keycode);
 		const bool is_stick   = !is_trigger && (get_is_left_stick(device, keycode) || get_is_right_stick(device, keycode));
 		const bool is_touch_motion = !is_trigger && !is_stick && get_is_touch_pad_motion(device, keycode);
