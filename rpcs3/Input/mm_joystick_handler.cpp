@@ -379,9 +379,9 @@ PadHandlerBase::connection mm_joystick_handler::get_next_button_press(const std:
 			}
 
 			if (pressed_button.value > 0)
-				callback(pressed_button.value, pressed_button.name, padId, 0, preview_values);
+				callback(pressed_button.value, pressed_button.name, padId, 0, std::move(preview_values));
 			else
-				callback(0, "", padId, 0, preview_values);
+				callback(0, "", padId, 0, std::move(preview_values));
 		}
 
 		return connection::connected;

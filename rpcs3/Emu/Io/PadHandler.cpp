@@ -290,13 +290,13 @@ PadHandlerBase::connection PadHandlerBase::get_next_button_press(const std::stri
 
 	if (callback)
 	{
-		const pad_preview_values preview_values = get_preview_values(data);
+		pad_preview_values preview_values = get_preview_values(data);
 		const u32 battery_level = get_battery_level(pad_id);
 
 		if (pressed_button.value > 0)
-			callback(pressed_button.value, pressed_button.name, pad_id, battery_level, preview_values);
+			callback(pressed_button.value, pressed_button.name, pad_id, battery_level, std::move(preview_values));
 		else
-			callback(0, "", pad_id, battery_level, preview_values);
+			callback(0, "", pad_id, battery_level, std::move(preview_values));
 	}
 
 	return status;

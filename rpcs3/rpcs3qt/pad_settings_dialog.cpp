@@ -575,9 +575,15 @@ void pad_settings_dialog::InitButtons()
 
 			const std::vector<std::string> buttons =
 			{
-				m_cfg_entries[button_ids::id_pad_l2].keys, m_cfg_entries[button_ids::id_pad_r2].keys, m_cfg_entries[button_ids::id_pad_lstick_left].keys,
-				m_cfg_entries[button_ids::id_pad_lstick_right].keys, m_cfg_entries[button_ids::id_pad_lstick_down].keys, m_cfg_entries[button_ids::id_pad_lstick_up].keys,
-				m_cfg_entries[button_ids::id_pad_rstick_left].keys, m_cfg_entries[button_ids::id_pad_rstick_right].keys, m_cfg_entries[button_ids::id_pad_rstick_down].keys,
+				m_cfg_entries[button_ids::id_pad_l2].keys,
+				m_cfg_entries[button_ids::id_pad_r2].keys,
+				m_cfg_entries[button_ids::id_pad_lstick_left].keys,
+				m_cfg_entries[button_ids::id_pad_lstick_right].keys,
+				m_cfg_entries[button_ids::id_pad_lstick_down].keys,
+				m_cfg_entries[button_ids::id_pad_lstick_up].keys,
+				m_cfg_entries[button_ids::id_pad_rstick_left].keys,
+				m_cfg_entries[button_ids::id_pad_rstick_right].keys,
+				m_cfg_entries[button_ids::id_pad_rstick_down].keys,
 				m_cfg_entries[button_ids::id_pad_rstick_up].keys
 			};
 
