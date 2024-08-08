@@ -372,6 +372,8 @@ public:
 		{
 			cellGem.notice("Could not load gem config. Using defaults.");
 		}
+
+		cellGem.notice("Gem config=\n", g_cfg_gem.to_string());
 	};
 
 	SAVESTATE_INIT_POS(15);
@@ -395,10 +397,15 @@ public:
 	{
 		save(ar);
 
-		if (!ar.is_writing() && !g_cfg_gem.load())
+		if (ar.is_writing())
+			return;
+
+		if (!g_cfg_gem.load())
 		{
 			cellGem.notice("Could not load gem config. Using defaults.");
 		}
+
+		cellGem.notice("Gem config=\n", g_cfg_gem.to_string());
 	}
 };
 
