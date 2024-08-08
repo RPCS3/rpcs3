@@ -690,7 +690,7 @@ void dimensions_dialog::clear_figure(u8 pad, u8 index)
 
 	if (figure_slots[index])
 	{
-		g_dimensionstoypad.remove_figure(pad, index, true);
+		g_dimensionstoypad.remove_figure(pad, index, true, true);
 		figure_slots[index] = std::nullopt;
 		m_edit_figures[index]->setText(tr("None"));
 	}
@@ -755,7 +755,7 @@ void dimensions_dialog::load_figure_path(u8 pad, u8 index, const QString& path)
 
 	clear_figure(pad, index);
 
-	const u32 fig_num = g_dimensionstoypad.load_figure(data, std::move(dim_file), pad, index);
+	const u32 fig_num = g_dimensionstoypad.load_figure(data, std::move(dim_file), pad, index, true);
 
 	figure_slots[index] = fig_num;
 	const auto name = list_minifigs.find(fig_num);

@@ -2569,8 +2569,8 @@
     <ClInclude Include="Emu\RSX\NV47\FW\GRAPH_backend.h">
       <Filter>Emu\GPU\RSX\NV47\FW</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\Io\mouse_config.h">
-      <Filter>Emu\Io</Filter>
+    <ClInclude Include="Emu\CPU\Hypervisor.h">
+      <Filter>Emu\CPU</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

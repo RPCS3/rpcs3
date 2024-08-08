@@ -79,7 +79,7 @@
       <DisableSpecificWarnings>4577;4467;4281;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <ObjectFileName>$(IntDir)</ObjectFileName>
       <Optimization>MaxSpeed</Optimization>
-      <PreprocessorDefinitions>_WINDOWS;UNICODE;WIN32;WIN64;WIN32_LEAN_AND_MEAN;HAVE_VULKAN;MINIUPNP_STATICLIB;ZLIB_CONST;HAVE_SDL2;WITH_DISCORD_RPC;QT_NO_DEBUG;QT_WIDGETS_LIB;QT_GUI_LIB;QT_CORE_LIB;NDEBUG;QT_WINEXTRAS_LIB;QT_CONCURRENT_LIB;QT_MULTIMEDIA_LIB;QT_MULTIMEDIAWIDGETS_LIB;QT_SVG_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WINDOWS;UNICODE;WIN32;WIN64;WIN32_LEAN_AND_MEAN;HAVE_VULKAN;MINIUPNP_STATICLIB;ZLIB_CONST;AL_LIBTYPE_STATIC;HAVE_SDL2;WITH_DISCORD_RPC;QT_NO_DEBUG;QT_WIDGETS_LIB;QT_GUI_LIB;QT_CORE_LIB;NDEBUG;QT_WINEXTRAS_LIB;QT_CONCURRENT_LIB;QT_MULTIMEDIA_LIB;QT_MULTIMEDIAWIDGETS_LIB;QT_SVG_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessToFile>false</PreprocessToFile>
       <ProgramDataBaseFileName>$(IntDir)vc$(PlatformToolsetVersion).pdb</ProgramDataBaseFileName>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
@@ -131,7 +131,7 @@
       <DisableSpecificWarnings>4577;4467;4281;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <ObjectFileName>$(IntDir)</ObjectFileName>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_WINDOWS;UNICODE;WIN32;WIN64;WIN32_LEAN_AND_MEAN;HAVE_VULKAN;MINIUPNP_STATICLIB;ZLIB_CONST;QT_WIDGETS_LIB;QT_GUI_LIB;QT_CORE_LIB;QT_WINEXTRAS_LIB;QT_CONCURRENT_LIB;QT_MULTIMEDIA_LIB;QT_MULTIMEDIAWIDGETS_LIB;QT_SVG_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WINDOWS;UNICODE;WIN32;WIN64;WIN32_LEAN_AND_MEAN;HAVE_VULKAN;MINIUPNP_STATICLIB;ZLIB_CONST;AL_LIBTYPE_STATIC;QT_WIDGETS_LIB;QT_GUI_LIB;QT_CORE_LIB;QT_WINEXTRAS_LIB;QT_CONCURRENT_LIB;QT_MULTIMEDIA_LIB;QT_MULTIMEDIAWIDGETS_LIB;QT_SVG_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessToFile>false</PreprocessToFile>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <SuppressStartupBanner>true</SuppressStartupBanner>

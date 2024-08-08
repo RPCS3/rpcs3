@@ -276,26 +276,26 @@ bool infinity_base::remove_figure(u8 position)
 	std::lock_guard lock(infinity_mutex);
 	infinity_figure& figure = figures[position];
 
-	if (figure.present)
+	if (!figure.present)
 	{
-		position = derive_figure_position(position);
-		if (position == 0)
-		{
-			return false;
-		}
-
-		figure.present = false;
-
-		std::array<u8, 32> figure_change_response = {0xab, 0x04, position, 0x09, figure.order_added,
-			0x01};
-		figure_change_response[6] = generate_checksum(figure_change_response, 6);
-		m_figure_added_removed_responses.push(figure_change_response);
-
-		figure.save();
-		figure.inf_file.close();
-		return true;
+		return false;
 	}
-	return false;
+
+	position = derive_figure_position(position);
+	if (position == 0)
+	{
+		return false;
+	}
+
+	figure.present = false;
+
+	std::array<u8, 32> figure_change_response = {0xab, 0x04, position, 0x09, figure.order_added, 0x01};
+	figure_change_response[6] = generate_checksum(figure_change_response, 6);
+	m_figure_added_removed_responses.push(figure_change_response);
+
+	figure.save();
+	figure.inf_file.close();
+	return true;
 }
 
 u32 infinity_base::load_figure(const std::array<u8, 0x14 * 0x10>& buf, fs::file in_file, u8 position)

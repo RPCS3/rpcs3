@@ -2062,6 +2062,8 @@ spu_thread::spu_thread(lv2_spu_group* group, u32 index, std::string_view name, u
 	}
 
 	range_lock = vm::alloc_range_lock();
+
+	memset(&hv_ctx, 0, sizeof(hv_ctx));
 }
 
 void spu_thread::serialize_common(utils::serial& ar)
