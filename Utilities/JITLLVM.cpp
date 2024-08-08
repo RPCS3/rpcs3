@@ -727,11 +727,11 @@ llvm::StringRef fallback_cpu_detection()
 {
 #if defined (ARCH_X64)
 	// If we got here we either have a very old and outdated CPU or a new CPU that has not been seen by LLVM yet.
-	llvm::StringRef brand = utils::get_cpu_brand();
+	const std::string brand = utils::get_cpu_brand();
 	const auto family = utils::get_cpu_family();
 	const auto model = utils::get_cpu_model();
 
-	if (brand.startswith("AMD"))
+	if (brand.starts_with("AMD"))
 	{
 		switch (family)
 		{
@@ -759,7 +759,7 @@ llvm::StringRef fallback_cpu_detection()
 				: "znver3";
 		}
 	}
-	else if (brand.contains("Intel"))
+	else if (brand.find("Intel") != std::string::npos)
 	{
 		if (!utils::has_avx())
 		{
@@ -779,7 +779,7 @@ llvm::StringRef fallback_cpu_detection()
 		}
 		return "icelake-client";
 	}
-	else if (brand.startswith("VirtualApple"))
+	else if (brand.starts_with("VirtualApple"))
 	{
 		// No AVX. This will change in MacOS 15+, at which point we may revise this.
 		return utils::has_avx() ? "haswell" : "nehalem";
