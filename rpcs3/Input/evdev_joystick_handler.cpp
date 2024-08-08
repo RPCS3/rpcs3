@@ -395,9 +395,41 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 		std::string name;
 	} pressed_button{};
 
-	const auto set_button_press = [this, &pressed_button](const u16 value, const std::string& name)
+	const auto set_button_press = [&](const u32 code, const std::string& name, std::string_view type, u16 threshold, int ev_type)
 	{
-		const u16 min_value = m_min_button_values.contains(name) ? m_min_button_values[name] : 0;
+		if (!get_blacklist && m_blacklist.contains(name))
+			return;
+
+		const u16 value = data[code].first;
+		u16& min_value = m_min_button_values[name];
+
+		if (first_call || value < min_value)
+		{
+			min_value = value;
+			return;
+		}
+
+		if (value <= threshold)
+			return;
+
+		if (get_blacklist)
+		{
+			m_blacklist.insert(name);
+
+			if (ev_type == EV_ABS)
+			{
+				const int min = libevdev_get_abs_minimum(dev, code);
+				const int max = libevdev_get_abs_maximum(dev, code);
+				evdev_log.error("Evdev Calibration: Added %s [ %d = %s = %s ] to blacklist. [ Value = %d ] [ Min = %d ] [ Max = %d ]", type, code, libevdev_event_code_get_name(ev_type, code), name, value, min, max);
+			}
+			else
+			{
+				evdev_log.error("Evdev Calibration: Added %s [ %d = %s = %s ] to blacklist. Value = %d", type, code, libevdev_event_code_get_name(ev_type, code), name, value);
+			}
+
+			return;
+		}
+
 		const u16 diff = std::abs(min_value - value);
 
 		if (diff > button_press_threshold && value > pressed_button.value)
@@ -420,29 +452,7 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 		if (is_sony_controller && !is_sony_guitar && (code == BTN_TL2 || code == BTN_TR2))
 			continue;
 
-		if (!get_blacklist && m_blacklist.contains(name))
-			continue;
-
-		const u16 value = data[code].first;
-		u16& min_value = m_min_button_values[name];
-
-		if (first_call || value < min_value)
-		{
-			min_value = value;
-			return;
-		}
-
-		if (value <= 0)
-			continue;
-
-		if (get_blacklist)
-		{
-			m_blacklist.insert(name);
-			evdev_log.error("Evdev Calibration: Added button [ %d = %s = %s ] to blacklist. Value = %d", code, libevdev_event_code_get_name(EV_KEY, code), name, value);
-			continue;
-		}
-
-		set_button_press(value, name);
+		set_button_press(code, name, "button"sv, 0, EV_KEY);
 	}
 
 	for (const auto& [code, name] : axis_list)
@@ -450,31 +460,7 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 		if (data[code].second)
 			continue;
 
-		if (!get_blacklist && m_blacklist.contains(name))
-			continue;
-
-		const u16 value = data[code].first;
-		u16& min_value = m_min_button_values[name];
-
-		if (first_call || value < min_value)
-		{
-			min_value = value;
-			return;
-		}
-
-		if (value <= m_thumb_threshold)
-			continue;
-
-		if (get_blacklist)
-		{
-			const int min = libevdev_get_abs_minimum(dev, code);
-			const int max = libevdev_get_abs_maximum(dev, code);
-			m_blacklist.insert(name);
-			evdev_log.error("Evdev Calibration: Added axis [ %d = %s = %s ] to blacklist. [ Value = %d ] [ Min = %d ] [ Max = %d ]", code, libevdev_event_code_get_name(EV_ABS, code), name, value, min, max);
-			continue;
-		}
-
-		set_button_press(value, name);
+		set_button_press(code, name, "axis"sv, m_thumb_threshold, EV_ABS);
 	}
 
 	for (const auto& [code, name] : rev_axis_list)
@@ -482,31 +468,7 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 		if (!data[code].second)
 			continue;
 
-		if (!get_blacklist && m_blacklist.contains(name))
-			continue;
-
-		const u16 value = data[code].first;
-		u16& min_value = m_min_button_values[name];
-
-		if (first_call || value < min_value)
-		{
-			min_value = value;
-			return;
-		}
-
-		if (value <= m_thumb_threshold)
-			continue;
-
-		if (get_blacklist)
-		{
-			const int min = libevdev_get_abs_minimum(dev, code);
-			const int max = libevdev_get_abs_maximum(dev, code);
-			m_blacklist.insert(name);
-			evdev_log.error("Evdev Calibration: Added rev axis [ %d = %s = %s ] to blacklist. [ Value = %d ] [ Min = %d ] [ Max = %d ]", code, libevdev_event_code_get_name(EV_ABS, code), name, value, min, max);
-			continue;
-		}
-
-		set_button_press(value, name);
+		set_button_press(code, name, "rev axis"sv, m_thumb_threshold, EV_ABS);
 	}
 
 	if (first_call)
