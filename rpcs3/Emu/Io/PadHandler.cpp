@@ -220,10 +220,13 @@ cfg_pad* PadHandlerBase::get_config(const std::string& pad_id)
 	return nullptr;
 }
 
-PadHandlerBase::connection PadHandlerBase::get_next_button_press(const std::string& pad_id, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist, const std::vector<std::string>& /*buttons*/)
+PadHandlerBase::connection PadHandlerBase::get_next_button_press(const std::string& pad_id, const pad_callback& callback, const pad_fail_callback& fail_callback, bool first_call, bool get_blacklist, const std::vector<std::string>& /*buttons*/)
 {
 	if (get_blacklist)
 		blacklist.clear();
+
+	if (first_call)
+		min_button_values.clear();
 
 	auto device = get_device(pad_id);
 
@@ -254,10 +257,19 @@ PadHandlerBase::connection PadHandlerBase::get_next_button_press(const std::stri
 
 	for (const auto& [keycode, name] : button_list)
 	{
-		const u16& value = data[keycode];
-
 		if (!get_blacklist && blacklist.contains(keycode))
 			continue;
+
+		const u16 value = data[keycode];
+		u16& min_value = min_button_values[keycode];
+
+		if (first_call || value < min_value)
+		{
+			min_value = value;
+			continue;
+		}
+
+		constexpr u16 touch_threshold = static_cast<u16>(255 * 0.9f);
 
 		const bool is_trigger = get_is_left_trigger(device, keycode) || get_is_right_trigger(device, keycode);
 		const bool is_stick   = !is_trigger && (get_is_left_stick(device, keycode) || get_is_right_stick(device, keycode));
@@ -266,19 +278,28 @@ PadHandlerBase::connection PadHandlerBase::get_next_button_press(const std::stri
 
 		if ((is_trigger && (value > m_trigger_threshold)) ||
 			(is_stick && (value > m_thumb_threshold)) ||
-			(is_button && (value > 0)) ||
-			(is_touch_motion && (value > 255 * 0.9)))
+			(is_button && (value > button_press_threshold)) ||
+			(is_touch_motion && (value > touch_threshold)))
 		{
 			if (get_blacklist)
 			{
 				blacklist.insert(keycode);
 				input_log.error("%s Calibration: Added key [ %d = %s ] to blacklist. Value = %d", m_type, keycode, name, value);
+				continue;
 			}
-			else if (value > pressed_button.value)
+
+			const u16 diff = std::abs(min_value - value);
+
+			if (diff > button_press_threshold && value > pressed_button.value)
 			{
 				pressed_button = { .value = value, .name = name };
 			}
 		}
+	}
+
+	if (first_call)
+	{
+		return connection::no_data;
 	}
 
 	if (get_blacklist)

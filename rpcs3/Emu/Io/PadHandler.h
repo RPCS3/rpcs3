@@ -111,13 +111,14 @@ protected:
 	};
 
 	static constexpr u32 MAX_GAMEPADS = 7;
+	static constexpr u16 button_press_threshold = 50;
 
 	std::array<bool, MAX_GAMEPADS> last_connection_status{{ false, false, false, false, false, false, false }};
 
 	std::string m_name_string;
 	usz m_max_devices = 0;
-	int m_trigger_threshold = 0;
-	int m_thumb_threshold = 0;
+	u32 m_trigger_threshold = 0;
+	u32 m_thumb_threshold = 0;
 
 	bool b_has_led = false;
 	bool b_has_rgb = false;
@@ -132,6 +133,7 @@ protected:
 	std::array<cfg_pad, MAX_GAMEPADS> m_pad_configs;
 	std::vector<pad_ensemble> m_bindings;
 	std::unordered_map<u32, std::string> button_list;
+	std::unordered_map<u32, u16> min_button_values;
 	std::set<u32> blacklist;
 
 	static std::set<u32> narrow_set(const std::set<u64>& src);
@@ -280,7 +282,7 @@ public:
 	// Binds a Pad to a device
 	virtual bool bindPadToDevice(std::shared_ptr<Pad> pad);
 	virtual void init_config(cfg_pad* cfg) = 0;
-	virtual connection get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist, const std::vector<std::string>& buttons = {});
+	virtual connection get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool first_call, bool get_blacklist, const std::vector<std::string>& buttons);
 	virtual void get_motion_sensors(const std::string& pad_id, const motion_callback& callback, const motion_fail_callback& fail_callback, motion_preview_values preview_values, const std::array<AnalogSensor, 4>& sensors);
 	virtual std::unordered_map<u32, std::string> get_motion_axis_list() const { return {}; }
 

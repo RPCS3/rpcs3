@@ -114,7 +114,7 @@ public:
 	bool Init() override;
 
 	std::vector<pad_list_entry> list_devices() override;
-	connection get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist = false, const std::vector<std::string>& buttons = {}) override;
+	connection get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool first_call, bool get_blacklist, const std::vector<std::string>& buttons) override;
 	void init_config(cfg_pad* cfg) override;
 
 private:
@@ -127,6 +127,7 @@ private:
 	bool m_is_init = false;
 
 	std::set<u64> m_blacklist;
+	std::unordered_map<u64, u16> m_min_button_values;
 	std::map<std::string, std::shared_ptr<MMJOYDevice>> m_devices;
 
 	template <typename T>

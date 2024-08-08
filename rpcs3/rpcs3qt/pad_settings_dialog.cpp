@@ -450,7 +450,7 @@ void pad_settings_dialog::InitButtons()
 	});
 
 	// Enable Button Remapping
-	const auto callback = [this](PadHandlerBase::connection status, u16 val, std::string name, std::string pad_name, u32 battery_level, pad_preview_values preview_values)
+	const auto callback = [this](PadHandlerBase::connection status, u32 button_id, u16 val, std::string name, std::string pad_name, u32 battery_level, pad_preview_values preview_values)
 	{
 		SwitchPadInfo(pad_name, true);
 
@@ -487,7 +487,7 @@ void pad_settings_dialog::InitButtons()
 
 		cfg_log.notice("get_next_button_press: %s device %s button %s pressed with value %d", m_handler->m_type, pad_name, name, val);
 
-		if (m_button_id > button_ids::id_pad_begin && m_button_id < button_ids::id_pad_end)
+		if (m_button_id > button_ids::id_pad_begin && m_button_id < button_ids::id_pad_end && m_button_id == button_id)
 		{
 			m_cfg_entries[m_button_id].insert_key(name, m_enable_multi_binding);
 			ReactivateButtons();
@@ -544,7 +544,7 @@ void pad_settings_dialog::InitButtons()
 			}
 			else
 			{
-				callback(data.status, data.val, std::move(data.name), std::move(data.pad_name), data.battery_level, std::move(data.preview_values));
+				callback(data.status, data.button_id, data.val, std::move(data.name), std::move(data.pad_name), data.battery_level, std::move(data.preview_values));
 			}
 		}
 	});
@@ -555,6 +555,8 @@ void pad_settings_dialog::InitButtons()
 	// Use thread to get button input
 	m_input_thread = std::make_unique<named_thread<std::function<void()>>>("Pad Settings Thread", [this]()
 	{
+		u32 button_id = button_ids::id_pad_begin; // Used to check if this is the first call during a remap
+
 		while (thread_ctrl::state() != thread_state::aborting)
 		{
 			thread_ctrl::wait_for(1000);
@@ -587,8 +589,13 @@ void pad_settings_dialog::InitButtons()
 				m_cfg_entries[button_ids::id_pad_rstick_up].keys
 			};
 
+			// Check if this is the first call during a remap
+			const u32 new_button_id = m_button_id;
+			const bool is_mapping = new_button_id > button_ids::id_pad_begin && new_button_id < button_ids::id_pad_end;
+			const bool first_call = std::exchange(button_id, new_button_id) != button_id && is_mapping;
+
 			const PadHandlerBase::connection status = m_handler->get_next_button_press(m_device_name,
-				[this](u16 val, std::string name, std::string pad_name, u32 battery_level, pad_preview_values preview_values)
+				[this, button_id](u16 val, std::string name, std::string pad_name, u32 battery_level, pad_preview_values preview_values)
 				{
 					std::lock_guard lock(m_input_mutex);
 					m_input_callback_data.val = val;
@@ -598,15 +605,17 @@ void pad_settings_dialog::InitButtons()
 					m_input_callback_data.preview_values = std::move(preview_values);
 					m_input_callback_data.has_new_data = true;
 					m_input_callback_data.status = PadHandlerBase::connection::connected;
+					m_input_callback_data.button_id = button_id;
 				},
-				[this](std::string pad_name)
+				[this, button_id](std::string pad_name)
 				{
 					std::lock_guard lock(m_input_mutex);
 					m_input_callback_data.pad_name = std::move(pad_name);
 					m_input_callback_data.has_new_data = true;
 					m_input_callback_data.status = PadHandlerBase::connection::disconnected;
+					m_input_callback_data.button_id = button_id;
 				},
-				false, buttons);
+				first_call, false, buttons);
 
 			if (status == PadHandlerBase::connection::no_data)
 			{
@@ -614,6 +623,7 @@ void pad_settings_dialog::InitButtons()
 				m_input_callback_data.pad_name = m_device_name;
 				m_input_callback_data.has_new_data = true;
 				m_input_callback_data.status = status;
+				m_input_callback_data.button_id = button_id;
 			}
 		}
 	});
@@ -631,7 +641,7 @@ void pad_settings_dialog::RefreshPads()
 		}
 
 		std::lock_guard lock(m_handler_mutex);
-		const PadHandlerBase::connection status = m_handler->get_next_button_press(info.name, nullptr, nullptr, false);
+		const PadHandlerBase::connection status = m_handler->get_next_button_press(info.name, nullptr, nullptr, false, false, {});
 		switch_pad_info(i, info, status != PadHandlerBase::connection::disconnected);
 	}
 }
@@ -896,7 +906,7 @@ void pad_settings_dialog::keyPressEvent(QKeyEvent *keyEvent)
 
 	if (m_button_id <= button_ids::id_pad_begin || m_button_id >= button_ids::id_pad_end)
 	{
-		cfg_log.error("Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id);
+		cfg_log.error("Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id.load());
 	}
 	else
 	{
@@ -923,7 +933,7 @@ void pad_settings_dialog::mouseReleaseEvent(QMouseEvent* event)
 
 	if (m_button_id <= button_ids::id_pad_begin || m_button_id >= button_ids::id_pad_end)
 	{
-		cfg_log.error("Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id);
+		cfg_log.error("Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id.load());
 	}
 	else
 	{
@@ -950,7 +960,7 @@ void pad_settings_dialog::wheelEvent(QWheelEvent *event)
 
 	if (m_button_id <= button_ids::id_pad_begin || m_button_id >= button_ids::id_pad_end)
 	{
-		cfg_log.error("Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id);
+		cfg_log.error("Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id.load());
 		return;
 	}
 
@@ -1010,7 +1020,7 @@ void pad_settings_dialog::mouseMoveEvent(QMouseEvent* event)
 
 	if (m_button_id <= button_ids::id_pad_begin || m_button_id >= button_ids::id_pad_end)
 	{
-		cfg_log.error("Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id);
+		cfg_log.error("Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id.load());
 	}
 	else
 	{
@@ -1311,7 +1321,7 @@ void pad_settings_dialog::OnPadButtonClicked(int id)
 	case button_ids::id_blacklist:
 	{
 		std::lock_guard lock(m_handler_mutex);
-		[[maybe_unused]] const PadHandlerBase::connection status = m_handler->get_next_button_press(m_device_name, nullptr, nullptr, true);
+		[[maybe_unused]] const PadHandlerBase::connection status = m_handler->get_next_button_press(m_device_name, nullptr, nullptr, false, true, {});
 		return;
 	}
 	default:

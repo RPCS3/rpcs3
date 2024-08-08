@@ -762,14 +762,14 @@ void sdl_pad_handler::get_motion_sensors(const std::string& pad_id, const motion
 	PadHandlerBase::get_motion_sensors(pad_id, callback, fail_callback, preview_values, sensors);
 }
 
-PadHandlerBase::connection sdl_pad_handler::get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist, const std::vector<std::string>& buttons)
+PadHandlerBase::connection sdl_pad_handler::get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool first_call, bool get_blacklist, const std::vector<std::string>& buttons)
 {
 	if (!m_is_init)
 		return connection::disconnected;
 
 	SDL_PumpEvents();
 
-	return PadHandlerBase::get_next_button_press(padId, callback, fail_callback, get_blacklist, buttons);
+	return PadHandlerBase::get_next_button_press(padId, callback, fail_callback, first_call, get_blacklist, buttons);
 }
 
 void sdl_pad_handler::apply_pad_data(const pad_ensemble& binding)
