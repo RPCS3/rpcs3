@@ -226,7 +226,7 @@ PadHandlerBase::connection mm_joystick_handler::get_next_button_press(const std:
 	if (get_blacklist)
 		m_blacklist.clear();
 
-	if (first_call)
+	if (first_call || get_blacklist)
 		m_min_button_values.clear();
 
 	if (!Init())

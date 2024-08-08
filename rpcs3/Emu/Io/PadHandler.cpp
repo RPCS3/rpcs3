@@ -225,7 +225,7 @@ PadHandlerBase::connection PadHandlerBase::get_next_button_press(const std::stri
 	if (get_blacklist)
 		blacklist.clear();
 
-	if (first_call)
+	if (first_call || get_blacklist)
 		min_button_values.clear();
 
 	auto device = get_device(pad_id);
