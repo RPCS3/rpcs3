@@ -302,7 +302,7 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 	if (get_blacklist)
 		m_blacklist.clear();
 
-	if (first_call)
+	if (first_call || get_blacklist)
 		m_min_button_values.clear();
 
 	// Get our evdev device
