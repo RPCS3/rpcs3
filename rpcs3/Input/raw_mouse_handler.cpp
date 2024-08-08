@@ -267,8 +267,6 @@ void raw_mouse_handler::Init(const u32 max_connect)
 		input_log.notice("raw_mouse_handler: Could not load raw mouse config. Using defaults.");
 	}
 
-	g_cfg_raw_mouse.reload_requested = true;
-
 	m_mice.clear();
 	m_mice.resize(max_connect);
 
@@ -559,6 +557,12 @@ std::map<void*, raw_mouse> raw_mouse_handler::enumerate_devices(u32 max_connect)
 #ifdef _WIN32
 void raw_mouse_handler::handle_native_event(const MSG& msg)
 {
+	if (m_info.max_connect == 0)
+	{
+		// Not initialized
+		return;
+	}
+
 	if (msg.message != WM_INPUT)
 	{
 		return;
