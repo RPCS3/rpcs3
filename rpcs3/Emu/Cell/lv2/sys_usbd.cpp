@@ -423,6 +423,8 @@ usb_handler_thread::usb_handler_thread()
 
 		sys_usbd.notice("Adding emulated USIO");
 		usb_devices.push_back(std::make_shared<usb_device_usio>(get_new_location()));
+
+		sys_usbd.notice("USIO config=\n", g_cfg_usio.to_string());
 	}
 
 	const std::vector<std::string> devices_list = fmt::split(g_cfg.io.midi_devices.to_string(), { "@@@" });
@@ -449,7 +451,10 @@ usb_handler_thread::usb_handler_thread()
 			{
 				sys_usbd.notice("Could not load rb3drums config. Using defaults.");
 			}
+
 			usb_devices.push_back(std::make_shared<usb_device_rb3_midi_drums>(get_new_location(), device.name));
+
+			sys_usbd.notice("RB3 drums config=\n", g_cfg_rb3drums.to_string());
 			break;
 		}
 	}
@@ -463,11 +468,14 @@ usb_handler_thread::usb_handler_thread()
 
 		sys_usbd.notice("Adding emulated GHLtar (1 player)");
 		usb_devices.push_back(std::make_shared<usb_device_ghltar>(0, get_new_location()));
-	}
-	if (g_cfg.io.ghltar == ghltar_handler::two_controllers)
-	{
-		sys_usbd.notice("Adding emulated GHLtar (2 players)");
-		usb_devices.push_back(std::make_shared<usb_device_ghltar>(1, get_new_location()));
+
+		if (g_cfg.io.ghltar == ghltar_handler::two_controllers)
+		{
+			sys_usbd.notice("Adding emulated GHLtar (2 players)");
+			usb_devices.push_back(std::make_shared<usb_device_ghltar>(1, get_new_location()));
+		}
+
+		sys_usbd.notice("Ghltar config=\n", g_cfg_ghltar.to_string());
 	}
 
 	if (g_cfg.io.turntable == turntable_handler::one_controller || g_cfg.io.turntable == turntable_handler::two_controllers)
@@ -479,11 +487,14 @@ usb_handler_thread::usb_handler_thread()
 
 		sys_usbd.notice("Adding emulated turntable (1 player)");
 		usb_devices.push_back(std::make_shared<usb_device_turntable>(0, get_new_location()));
-	}
-	if (g_cfg.io.turntable == turntable_handler::two_controllers)
-	{
-		sys_usbd.notice("Adding emulated turntable (2 players)");
-		usb_devices.push_back(std::make_shared<usb_device_turntable>(1, get_new_location()));
+
+		if (g_cfg.io.turntable == turntable_handler::two_controllers)
+		{
+			sys_usbd.notice("Adding emulated turntable (2 players)");
+			usb_devices.push_back(std::make_shared<usb_device_turntable>(1, get_new_location()));
+		}
+
+		sys_usbd.notice("Turntable config=\n", g_cfg_turntable.to_string());
 	}
 
 	if (g_cfg.io.buzz == buzz_handler::one_controller || g_cfg.io.buzz == buzz_handler::two_controllers)
@@ -495,13 +506,16 @@ usb_handler_thread::usb_handler_thread()
 
 		sys_usbd.notice("Adding emulated Buzz! buzzer (1-4 players)");
 		usb_devices.push_back(std::make_shared<usb_device_buzz>(0, 3, get_new_location()));
-	}
-	if (g_cfg.io.buzz == buzz_handler::two_controllers)
-	{
-		// The current buzz emulation piggybacks on the pad input.
-		// Since there can only be 7 pads connected on a PS3 the 8th player is currently not supported
-		sys_usbd.notice("Adding emulated Buzz! buzzer (5-7 players)");
-		usb_devices.push_back(std::make_shared<usb_device_buzz>(4, 6, get_new_location()));
+
+		if (g_cfg.io.buzz == buzz_handler::two_controllers)
+		{
+			// The current buzz emulation piggybacks on the pad input.
+			// Since there can only be 7 pads connected on a PS3 the 8th player is currently not supported
+			sys_usbd.notice("Adding emulated Buzz! buzzer (5-7 players)");
+			usb_devices.push_back(std::make_shared<usb_device_buzz>(4, 6, get_new_location()));
+		}
+
+		sys_usbd.notice("Buzz config=\n", g_cfg_buzz.to_string());
 	}
 }
 
@@ -885,6 +899,8 @@ void connect_usb_controller(u8 index, input::product_type type)
 			std::shared_ptr<usb_device> dev = std::make_shared<usb_device_guncon3>(index, usbh->get_new_location());
 			usbh->connect_usb_device(dev, true);
 			usbh->pad_to_usb.emplace(index, std::pair(type, dev));
+
+			sys_usbd.notice("GunCon3 config=\n", g_cfg_guncon3.to_string());
 			break;
 		}
 		case input::product_type::top_shot_elite:
@@ -898,6 +914,8 @@ void connect_usb_controller(u8 index, input::product_type type)
 			std::shared_ptr<usb_device> dev = std::make_shared<usb_device_topshotelite>(index, usbh->get_new_location());
 			usbh->connect_usb_device(dev, true);
 			usbh->pad_to_usb.emplace(index, std::pair(type, dev));
+
+			sys_usbd.notice("Top shot elite config=\n", g_cfg_topshotelite.to_string());
 			break;
 		}
 		case input::product_type::top_shot_fearmaster:
@@ -911,6 +929,8 @@ void connect_usb_controller(u8 index, input::product_type type)
 			std::shared_ptr<usb_device> dev = std::make_shared<usb_device_topshotfearmaster>(index, usbh->get_new_location());
 			usbh->connect_usb_device(dev, true);
 			usbh->pad_to_usb.emplace(index, std::pair(type, dev));
+
+			sys_usbd.notice("Top shot fearmaster config=\n", g_cfg_topshotfearmaster.to_string());
 			break;
 		}
 		case input::product_type::udraw_gametablet:

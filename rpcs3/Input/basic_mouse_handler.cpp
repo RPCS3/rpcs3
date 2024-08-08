@@ -47,6 +47,8 @@ void basic_mouse_handler::Init(const u32 max_connect)
 
 void basic_mouse_handler::reload_config()
 {
+	input_log.notice("Basic mouse config=\n%s", g_cfg_mouse.to_string());
+
 	m_buttons[CELL_MOUSE_BUTTON_1] = get_mouse_button(g_cfg_mouse.mouse_button_1);
 	m_buttons[CELL_MOUSE_BUTTON_2] = get_mouse_button(g_cfg_mouse.mouse_button_2);
 	m_buttons[CELL_MOUSE_BUTTON_3] = get_mouse_button(g_cfg_mouse.mouse_button_3);
