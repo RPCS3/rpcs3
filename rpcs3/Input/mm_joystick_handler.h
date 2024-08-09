@@ -114,7 +114,7 @@ public:
 	bool Init() override;
 
 	std::vector<pad_list_entry> list_devices() override;
-	connection get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool first_call, bool get_blacklist, const std::vector<std::string>& buttons) override;
+	connection get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, gui_call_type call_type, const std::vector<std::string>& buttons) override;
 	void init_config(cfg_pad* cfg) override;
 
 private:

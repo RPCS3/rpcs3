@@ -230,12 +230,12 @@ std::array<std::set<u32>, PadHandlerBase::button::button_count> mm_joystick_hand
 	return mapping;
 }
 
-PadHandlerBase::connection mm_joystick_handler::get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool first_call, bool get_blacklist, const std::vector<std::string>& buttons)
+PadHandlerBase::connection mm_joystick_handler::get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, gui_call_type call_type, const std::vector<std::string>& buttons)
 {
-	if (get_blacklist)
+	if (call_type == gui_call_type::blacklist)
 		m_blacklist.clear();
 
-	if (first_call || get_blacklist)
+	if (call_type == gui_call_type::reset_input || call_type == gui_call_type::blacklist)
 		m_min_button_values.clear();
 
 	if (!Init())
@@ -281,6 +281,11 @@ PadHandlerBase::connection mm_joystick_handler::get_next_button_press(const std:
 	}
 	case JOYERR_NOERROR:
 	{
+		if (call_type == gui_call_type::get_connection)
+		{
+			return connection::connected;
+		}
+
 		auto data = GetButtonValues(js_info, js_caps);
 
 		// Check for each button in our list if its corresponding (maybe remapped) button or axis was pressed.
@@ -294,13 +299,13 @@ PadHandlerBase::connection mm_joystick_handler::get_next_button_press(const std:
 
 		const auto set_button_press = [&](const u64& keycode, const std::string& name, std::string_view type, u16 threshold)
 		{
-			if (!get_blacklist && m_blacklist.contains(keycode))
+			if (call_type != gui_call_type::blacklist && m_blacklist.contains(keycode))
 				return;
 
 			const u16 value = data[keycode];
 			u16& min_value = m_min_button_values[keycode];
 
-			if (first_call || value < min_value)
+			if (call_type == gui_call_type::reset_input || value < min_value)
 			{
 				min_value = value;
 				return;
@@ -309,14 +314,14 @@ PadHandlerBase::connection mm_joystick_handler::get_next_button_press(const std:
 			if (value <= threshold)
 				return;
 
-			if (get_blacklist)
+			if (call_type == gui_call_type::blacklist)
 			{
 				m_blacklist.insert(keycode);
 				input_log.error("MMJOY Calibration: Added %s [ %d = %s ] to blacklist. Value = %d", type, keycode, name, value);
 				return;
 			}
 
-			const u16 diff = std::abs(min_value - value);
+			const u16 diff = value > min_value ? value - min_value : 0;
 
 			if (diff > button_press_threshold && value > pressed_button.value)
 			{
@@ -342,12 +347,12 @@ PadHandlerBase::connection mm_joystick_handler::get_next_button_press(const std:
 			set_button_press(keycode, name, "button"sv, 0);
 		}
 
-		if (first_call)
+		if (call_type == gui_call_type::reset_input)
 		{
 			return connection::no_data;
 		}
 
-		if (get_blacklist)
+		if (call_type == gui_call_type::blacklist)
 		{
 			if (m_blacklist.empty())
 				input_log.success("MMJOY Calibration: Blacklist is clear. No input spam detected");

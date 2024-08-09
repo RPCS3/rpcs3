@@ -594,6 +594,7 @@ void pad_settings_dialog::InitButtons()
 			const u32 new_button_id = m_button_id;
 			const bool is_mapping = new_button_id > button_ids::id_pad_begin && new_button_id < button_ids::id_pad_end;
 			const bool first_call = std::exchange(button_id, new_button_id) != button_id && is_mapping;
+			const PadHandlerBase::gui_call_type call_type = first_call ? PadHandlerBase::gui_call_type::reset_input : PadHandlerBase::gui_call_type::normal;
 
 			const PadHandlerBase::connection status = m_handler->get_next_button_press(m_device_name,
 				[this, button_id](u16 val, std::string name, std::string pad_name, u32 battery_level, pad_preview_values preview_values)
@@ -616,7 +617,7 @@ void pad_settings_dialog::InitButtons()
 					m_input_callback_data.status = PadHandlerBase::connection::disconnected;
 					m_input_callback_data.button_id = button_id;
 				},
-				first_call, false, buttons);
+				call_type, buttons);
 
 			if (status == PadHandlerBase::connection::no_data)
 			{
@@ -642,7 +643,7 @@ void pad_settings_dialog::RefreshPads()
 		}
 
 		std::lock_guard lock(m_handler_mutex);
-		const PadHandlerBase::connection status = m_handler->get_next_button_press(info.name, nullptr, nullptr, false, false, {});
+		const PadHandlerBase::connection status = m_handler->get_next_button_press(info.name, nullptr, nullptr, PadHandlerBase::gui_call_type::get_connection, {});
 		switch_pad_info(i, info, status != PadHandlerBase::connection::disconnected);
 	}
 }
@@ -1327,7 +1328,7 @@ void pad_settings_dialog::OnPadButtonClicked(int id)
 	case button_ids::id_blacklist:
 	{
 		std::lock_guard lock(m_handler_mutex);
-		[[maybe_unused]] const PadHandlerBase::connection status = m_handler->get_next_button_press(m_device_name, nullptr, nullptr, false, true, {});
+		[[maybe_unused]] const PadHandlerBase::connection status = m_handler->get_next_button_press(m_device_name, nullptr, nullptr, PadHandlerBase::gui_call_type::blacklist, {});
 		return;
 	}
 	default:

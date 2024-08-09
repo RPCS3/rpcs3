@@ -220,12 +220,12 @@ cfg_pad* PadHandlerBase::get_config(const std::string& pad_id)
 	return nullptr;
 }
 
-PadHandlerBase::connection PadHandlerBase::get_next_button_press(const std::string& pad_id, const pad_callback& callback, const pad_fail_callback& fail_callback, bool first_call, bool get_blacklist, const std::vector<std::string>& /*buttons*/)
+PadHandlerBase::connection PadHandlerBase::get_next_button_press(const std::string& pad_id, const pad_callback& callback, const pad_fail_callback& fail_callback, gui_call_type call_type, const std::vector<std::string>& /*buttons*/)
 {
-	if (get_blacklist)
+	if (call_type == gui_call_type::blacklist)
 		blacklist.clear();
 
-	if (first_call || get_blacklist)
+	if (call_type == gui_call_type::reset_input || call_type == gui_call_type::blacklist)
 		min_button_values.clear();
 
 	auto device = get_device(pad_id);
@@ -238,7 +238,7 @@ PadHandlerBase::connection PadHandlerBase::get_next_button_press(const std::stri
 		return status;
 	}
 
-	if (status == connection::no_data)
+	if (status == connection::no_data || call_type == gui_call_type::get_connection)
 	{
 		return status;
 	}
@@ -257,13 +257,13 @@ PadHandlerBase::connection PadHandlerBase::get_next_button_press(const std::stri
 
 	for (const auto& [keycode, name] : button_list)
 	{
-		if (!get_blacklist && blacklist.contains(keycode))
+		if (call_type != gui_call_type::blacklist && blacklist.contains(keycode))
 			continue;
 
 		const u16 value = data[keycode];
 		u16& min_value = min_button_values[keycode];
 
-		if (first_call || value < min_value)
+		if (call_type == gui_call_type::reset_input || value < min_value)
 		{
 			min_value = value;
 			continue;
@@ -279,14 +279,14 @@ PadHandlerBase::connection PadHandlerBase::get_next_button_press(const std::stri
 			(is_button && (value > button_press_threshold)) ||
 			(is_touch_motion && (value > touch_threshold)))
 		{
-			if (get_blacklist)
+			if (call_type == gui_call_type::blacklist)
 			{
 				blacklist.insert(keycode);
 				input_log.error("%s Calibration: Added key [ %d = %s ] to blacklist. Value = %d", m_type, keycode, name, value);
 				continue;
 			}
 
-			const u16 diff = std::abs(min_value - value);
+			const u16 diff = value > min_value ? value - min_value : 0;
 
 			if (diff > button_press_threshold && value > pressed_button.value)
 			{
@@ -295,12 +295,12 @@ PadHandlerBase::connection PadHandlerBase::get_next_button_press(const std::stri
 		}
 	}
 
-	if (first_call)
+	if (call_type == gui_call_type::reset_input)
 	{
 		return connection::no_data;
 	}
 
-	if (get_blacklist)
+	if (call_type == gui_call_type::blacklist)
 	{
 		if (blacklist.empty())
 			input_log.success("%s Calibration: Blacklist is clear. No input spam detected", m_type);

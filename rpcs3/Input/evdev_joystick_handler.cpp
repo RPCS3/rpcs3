@@ -239,10 +239,8 @@ std::unordered_map<u64, std::pair<u16, bool>> evdev_joystick_handler::GetButtonV
 	if (!Init())
 		return button_values;
 
-	for (const auto& entry : button_list)
+	for (const auto& [code, name] : button_list)
 	{
-		const u32 code = entry.first;
-
 		if (code == NO_BUTTON)
 			continue;
 
@@ -254,9 +252,8 @@ std::unordered_map<u64, std::pair<u16, bool>> evdev_joystick_handler::GetButtonV
 		button_values.emplace(code, std::make_pair<u16, bool>(static_cast<u16>(val > 0 ? 255 : 0), false));
 	}
 
-	for (const auto& entry : axis_list)
+	for (const auto& [code, name] : axis_list)
 	{
-		const u32 code = entry.first;
 		int val = 0;
 
 		if (libevdev_fetch_event_value(dev, EV_ABS, code, &val) == 0)
@@ -298,12 +295,12 @@ std::shared_ptr<evdev_joystick_handler::EvdevDevice> evdev_joystick_handler::get
 	return evdev_device;
 }
 
-PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool first_call, bool get_blacklist, const std::vector<std::string>& buttons)
+PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, gui_call_type call_type, const std::vector<std::string>& buttons)
 {
-	if (get_blacklist)
+	if (call_type == gui_call_type::blacklist)
 		m_blacklist.clear();
 
-	if (first_call || get_blacklist)
+	if (call_type == gui_call_type::reset_input || call_type == gui_call_type::blacklist)
 		m_min_button_values.clear();
 
 	// Get our evdev device
@@ -336,7 +333,12 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 		has_new_event |= ret == LIBEVDEV_READ_STATUS_SUCCESS;
 	}
 
-	auto data = GetButtonValues(device);
+	if (call_type == gui_call_type::get_connection)
+	{
+		return has_new_event ? connection::connected : connection::no_data;
+	}
+
+	const auto data = GetButtonValues(device);
 
 	const auto find_value = [&, this](const std::string& str)
 	{
@@ -382,8 +384,8 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 		preview_values[5] = find_value(buttons[9]) - find_value(buttons[8]); // Right Stick Y
 	}
 
-	// return if nothing new has happened. ignore this to get the current state for blacklist or first_call
-	if (!get_blacklist && !first_call && !has_new_event)
+	// return if nothing new has happened. ignore this to get the current state for blacklist or reset_input
+	if (call_type != gui_call_type::blacklist && call_type != gui_call_type::reset_input && !has_new_event)
 	{
 		if (callback)
 			callback(0, "", padId, 0, preview_values);
@@ -396,15 +398,43 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 		std::string name;
 	} pressed_button{};
 
-	const auto set_button_press = [&](const u32 code, const std::string& name, std::string_view type, u16 threshold, int ev_type)
+	const auto set_button_press = [&](const u32 code, const std::string& name, std::string_view type, u16 threshold, int ev_type, bool is_rev_axis)
 	{
-		if (!get_blacklist && m_blacklist.contains(name))
+		if (call_type != gui_call_type::blacklist && m_blacklist.contains(name))
 			return;
 
-		const u16 value = data[code].first;
+		// Ignore codes that aren't part of the latest events. Otherwise we will get value 0 which will reset our min_value.
+		const auto it = data.find(static_cast<u64>(code));
+		if (it == data.cend())
+		{
+			if (call_type == gui_call_type::reset_input)
+			{
+				// Set to max. We won't have all the events for all the buttons or axis at this point.
+				m_min_button_values[name] = 65535;
+
+				if (ev_type == EV_ABS)
+				{
+					// Also set the other direction to max if it wasn't already found.
+					const auto it_other_axis = is_rev_axis ? axis_list.find(code) : rev_axis_list.find(code);
+					ensure(it_other_axis != (is_rev_axis ? axis_list.cend() : rev_axis_list.cend()));
+					if (const std::string& other_name = it_other_axis->second; !m_min_button_values.contains(other_name))
+					{
+						m_min_button_values[other_name] = 65535;
+					}
+				}
+			}
+			return;
+		}
+
+		const auto& [value, is_rev_ax] = it->second;
+
+		// If we want the value for an axis, its direction has to match the direction of the data.
+		if (ev_type == EV_ABS && is_rev_axis != is_rev_ax)
+			return;
+
 		u16& min_value = m_min_button_values[name];
 
-		if (first_call || value < min_value)
+		if (call_type == gui_call_type::reset_input || value < min_value)
 		{
 			min_value = value;
 			return;
@@ -413,7 +443,7 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 		if (value <= threshold)
 			return;
 
-		if (get_blacklist)
+		if (call_type == gui_call_type::blacklist)
 		{
 			m_blacklist.insert(name);
 
@@ -431,7 +461,7 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 			return;
 		}
 
-		const u16 diff = std::abs(min_value - value);
+		const u16 diff = value > min_value ? value - min_value : 0;
 
 		if (diff > button_press_threshold && value > pressed_button.value)
 		{
@@ -453,31 +483,25 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 		if (is_sony_controller && !is_sony_guitar && (code == BTN_TL2 || code == BTN_TR2))
 			continue;
 
-		set_button_press(code, name, "button"sv, 0, EV_KEY);
+		set_button_press(code, name, "button"sv, 0, EV_KEY, false);
 	}
 
 	for (const auto& [code, name] : axis_list)
 	{
-		if (data[code].second)
-			continue;
-
-		set_button_press(code, name, "axis"sv, m_thumb_threshold, EV_ABS);
+		set_button_press(code, name, "axis"sv, m_thumb_threshold, EV_ABS, false);
 	}
 
 	for (const auto& [code, name] : rev_axis_list)
 	{
-		if (!data[code].second)
-			continue;
-
-		set_button_press(code, name, "rev axis"sv, m_thumb_threshold, EV_ABS);
+		set_button_press(code, name, "rev axis"sv, m_thumb_threshold, EV_ABS, true);
 	}
 
-	if (first_call)
+	if (call_type == gui_call_type::reset_input)
 	{
 		return connection::no_data;
 	}
 
-	if (get_blacklist)
+	if (call_type == gui_call_type::blacklist)
 	{
 		if (m_blacklist.empty())
 			evdev_log.success("Evdev Calibration: Blacklist is clear. No input spam detected");
