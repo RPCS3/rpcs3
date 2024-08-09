@@ -18,7 +18,6 @@
 #include "Emu/RSX/NV47/HW/context_accessors.define.h"
 #include "Emu/Memory/vm_locking.h"
 
-#include "../Program/program_state_cache2.hpp"
 #include "../Program/SPIRVCommon.h"
 
 #include "util/asm.hpp"

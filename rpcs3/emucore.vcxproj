@@ -915,7 +915,6 @@
     <ClInclude Include="Emu\RSX\Program\CgBinaryProgram.h" />
     <ClInclude Include="Emu\RSX\Common\BufferUtils.h" />
     <ClInclude Include="Emu\RSX\Program\FragmentProgramDecompiler.h" />
-    <ClInclude Include="Emu\RSX\Program\program_state_cache2.hpp" />
     <ClInclude Include="Emu\RSX\Common\ring_buffer_helper.h" />
     <ClInclude Include="Emu\RSX\Program\ShaderParam.h" />
     <ClInclude Include="Emu\RSX\Common\surface_store.h" />

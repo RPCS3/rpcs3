@@ -47,7 +47,7 @@ namespace aarch64
                     continue;
                 }
 
-                if (auto ri = llvm::dyn_cast<llvm::ReturnInst>(&*bit))
+                if (llvm::dyn_cast<llvm::ReturnInst>(&*bit))
                 {
                     if (auto ci = llvm::dyn_cast<llvm::CallInst>(&*prev))
                     {

@@ -8,8 +8,6 @@
 #include "Emu/RSX/rsx_methods.h"
 #include "Emu/RSX/NV47/HW/context_accessors.define.h"
 
-#include "../Program/program_state_cache2.hpp"
-
 [[noreturn]] extern void report_fatal_error(std::string_view _text, bool is_html = false, bool include_help_text = true);
 
 namespace

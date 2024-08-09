@@ -141,7 +141,6 @@ DECLARE(spu_runtime::tr_interpreter) = []
 			ghc_cpp_trampoline(reinterpret_cast<u64>(&spu_recompiler_base::old_interpreter), c, args);
 		});
 	return trptr;
-	return trptr;
 #endif
 }();
 
