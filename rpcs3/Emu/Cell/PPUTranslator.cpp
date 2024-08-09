@@ -16,6 +16,10 @@
 #include <unordered_set>
 #include <span>
 
+#ifdef ARCH_ARM64
+#include "Emu/CPU/Backends/AArch64JIT.h"
+#endif
+
 using namespace llvm;
 
 const ppu_decoder<PPUTranslator> s_ppu_decoder;
@@ -29,6 +33,35 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* _module, const ppu_mo
 {
 	// Bind context
 	cpu_translator::initialize(context, engine);
+
+	// Initialize transform passes
+#ifdef ARCH_ARM64
+	{
+		// Base reg table definition
+		// Assume all functions named __0x... are PPU functions and take the m_exec as the first arg
+		std::vector<std::pair<std::string, aarch64::gpr>> base_reg_lookup = {
+			{ "__0x", aarch64::x20 }, // PPU blocks
+			{ "__indirect", aarch64::x20 }, // Indirect jumps
+			{ "ppu_", aarch64::x19 }, // Fixed JIT helpers (e.g ppu_gateway)
+			{ "__", aarch64::x19 }    // Probably link table entries
+		};
+
+		aarch64::GHC_frame_preservation_pass::config_t config =
+		{
+			.debug_info = false,         // Set to "true" to insert debug frames on x27
+			.use_stack_frames = false,   // We don't need this since the PPU GW allocates global scratch on the stack
+			.hypervisor_context_offset = ::offset32(&ppu_thread::hv_ctx),
+			.exclusion_callback = {},    // Unused, we don't have special exclusion functions on PPU
+			.base_register_lookup = base_reg_lookup
+		};
+
+		// Create transform pass
+		std::unique_ptr<translator_pass> ghc_fixup_pass = std::make_unique<aarch64::GHC_frame_preservation_pass>(config);
+
+		// Register it
+		register_transform_pass(ghc_fixup_pass);
+	}
+#endif
 
 	// Thread context struct (TODO: safer member access)
 	const u32 off0 = offset32(&ppu_thread::state);
@@ -270,7 +303,7 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 		}
 	}
 
-	replace_intrinsics(*m_function);
+	run_transforms(*m_function);
 	return m_function;
 }
 
@@ -322,7 +355,7 @@ Function* PPUTranslator::GetSymbolResolver(const ppu_module& info)
 	{
 		// Possible special case for no functions (allowing the do-while optimization)
 		m_ir->CreateRetVoid();
-		replace_intrinsics(*m_function);
+		run_transforms(*m_function);
 		return m_function;
 	}
 
@@ -380,7 +413,7 @@ Function* PPUTranslator::GetSymbolResolver(const ppu_module& info)
 
 	m_ir->CreateRetVoid();
 
-	replace_intrinsics(*m_function);
+	run_transforms(*m_function);
 	return m_function;
 }
 
@@ -5345,7 +5378,7 @@ void PPUTranslator::build_interpreter()
 		this->i(op); \
 		FlushRegisters(); \
 		m_ir->CreateRetVoid(); \
-		replace_intrinsics(*m_function); \
+		run_transforms(*m_function); \
 	}
 
 	BUILD_VEC_INST(VADDCUW);

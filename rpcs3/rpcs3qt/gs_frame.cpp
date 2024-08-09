@@ -35,7 +35,7 @@
 #elif defined(__APPLE__)
 //nothing
 #else
-#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+#ifdef HAVE_WAYLAND
 #include <QGuiApplication>
 #include <qpa/qplatformnativeinterface.h>
 #endif
@@ -113,8 +113,14 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 	setScreen(screen);
 	setGeometry(geometry);
 	setTitle(qstr(m_window_title));
-	setVisibility(startup_visibility);
-	create();
+
+	if (g_cfg.video.renderer != video_renderer::opengl)
+	{
+		// Do not display the window before OpenGL is configured!
+		// This works fine in windows and X11 but wayland-egl will crash later.
+		setVisibility(startup_visibility);
+		create();
+	}
 
 	// TODO: enable in Qt6
 	//m_shortcut_handler = new shortcut_handler(gui::shortcuts::shortcut_handler_id::game_window, this, m_gui_settings);
@@ -706,7 +712,7 @@ display_handle_t gs_frame::handle() const
 #elif defined(__APPLE__)
 	return reinterpret_cast<void*>(this->winId()); //NSView
 #else
-#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+#ifdef HAVE_WAYLAND
 	QPlatformNativeInterface *native = QGuiApplication::platformNativeInterface();
 	struct wl_display *wl_dpy = static_cast<struct wl_display *>(
 		native->nativeResourceForWindow("display", NULL));
@@ -717,15 +723,13 @@ display_handle_t gs_frame::handle() const
 		return std::make_pair(wl_dpy, wl_surf);
 	}
 	else
-	{
 #endif
 #ifdef HAVE_X11
+	{
 		return std::make_pair(XOpenDisplay(0), static_cast<ulong>(this->winId()));
+	}
 #else
 		fmt::throw_exception("Vulkan X11 support disabled at compile-time.");
-#endif
-#ifdef VK_USE_PLATFORM_WAYLAND_KHR
-	}
 #endif
 #endif
 }
@@ -1215,4 +1219,9 @@ void gs_frame::progress_increment(int delta)
 void gs_frame::progress_set_limit(int limit)
 {
 	m_progress_indicator->set_range(0, limit);
+}
+
+bool gs_frame::has_alpha()
+{
+	return format().hasAlpha();
 }

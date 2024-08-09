@@ -85,6 +85,10 @@ ds4_pad_handler::ds4_pad_handler()
 		{ DS4KeyCodes::Share,    "Share" },
 		{ DS4KeyCodes::PSButton, "PS Button" },
 		{ DS4KeyCodes::TouchPad, "Touch Pad" },
+		{ DS4KeyCodes::Touch_L,  "Touch Left" },
+		{ DS4KeyCodes::Touch_R,  "Touch Right" },
+		{ DS4KeyCodes::Touch_U,  "Touch Up" },
+		{ DS4KeyCodes::Touch_D,  "Touch Down" },
 		{ DS4KeyCodes::L1,       "L1" },
 		{ DS4KeyCodes::L2,       "L2" },
 		{ DS4KeyCodes::L3,       "L3" },
@@ -332,6 +336,47 @@ std::unordered_map<u64, u16> ds4_pad_handler::get_button_values(const std::share
 	// L2, R2
 	keyBuffer[DS4KeyCodes::L2] = input.z;
 	keyBuffer[DS4KeyCodes::R2] = input.rz;
+
+	// Touch Pad
+	const auto apply_touch = [&keyBuffer](const ds4_touch_report& touch)
+	{
+		for (const ds4_touch_point& point : touch.points)
+		{
+			if (!(point.contact & DS4_TOUCH_POINT_INACTIVE))
+			{
+				const s32 x = (point.x_hi << 8) | point.x_lo;
+				const s32 y = (point.y_hi << 4) | point.y_lo;
+
+				const f32 x_scaled = ScaledInput(static_cast<float>(x), 0.0f, static_cast<float>(DS4_TOUCHPAD_WIDTH), 0.0f, 255.0f);
+				const f32 y_scaled = ScaledInput(static_cast<float>(y), 0.0f, static_cast<float>(DS4_TOUCHPAD_HEIGHT), 0.0f, 255.0f);
+
+				keyBuffer[DS4KeyCodes::Touch_L] = Clamp0To255((127.5f - x_scaled) * 2.0f);
+				keyBuffer[DS4KeyCodes::Touch_R] = Clamp0To255((x_scaled - 127.5f) * 2.0f);
+
+				keyBuffer[DS4KeyCodes::Touch_U] = Clamp0To255((127.5f - y_scaled) * 2.0f);
+				keyBuffer[DS4KeyCodes::Touch_D] = Clamp0To255((y_scaled - 127.5f) * 2.0f);
+			}
+		}
+	};
+
+	if (ds4_dev->bt_controller)
+	{
+		const ds4_input_report_bt& report = ds4_dev->report_bt;
+
+		for (u32 i = 0; i < std::min<u32>(report.num_touch_reports, ::size32(report.touch_reports)); i++)
+		{
+			apply_touch(report.touch_reports[i]);
+		}
+	}
+	else
+	{
+		const ds4_input_report_usb& report = ds4_dev->report_usb;
+
+		for (u32 i = 0; i < std::min<u32>(report.num_touch_reports, ::size32(report.touch_reports)); i++)
+		{
+			apply_touch(report.touch_reports[i]);
+		}
+	}
 
 	return keyBuffer;
 }
@@ -753,6 +798,20 @@ bool ds4_pad_handler::get_is_right_stick(const std::shared_ptr<PadDevice>& /*dev
 	case DS4KeyCodes::RSXPos:
 	case DS4KeyCodes::RSYPos:
 	case DS4KeyCodes::RSYNeg:
+		return true;
+	default:
+		return false;
+	}
+}
+
+bool ds4_pad_handler::get_is_touch_pad_motion(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
+{
+	switch (keyCode)
+	{
+	case DS4KeyCodes::Touch_L:
+	case DS4KeyCodes::Touch_R:
+	case DS4KeyCodes::Touch_U:
+	case DS4KeyCodes::Touch_D:
 		return true;
 	default:
 		return false;

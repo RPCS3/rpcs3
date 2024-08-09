@@ -372,6 +372,8 @@ public:
 		{
 			cellGem.notice("Could not load gem config. Using defaults.");
 		}
+
+		cellGem.notice("Gem config=\n", g_cfg_gem.to_string());
 	};
 
 	SAVESTATE_INIT_POS(15);
@@ -395,10 +397,15 @@ public:
 	{
 		save(ar);
 
-		if (!ar.is_writing() && !g_cfg_gem.load())
+		if (ar.is_writing())
+			return;
+
+		if (!g_cfg_gem.load())
 		{
 			cellGem.notice("Could not load gem config. Using defaults.");
 		}
+
+		cellGem.notice("Gem config=\n", g_cfg_gem.to_string());
 	}
 };
 
@@ -907,10 +914,27 @@ static bool mouse_input_to_pad(const u32 mouse_no, be_t<u16>& digital_buttons, b
 		return false;
 	}
 
+	std::set<MouseButtonCodes> pressed_buttons;
 	const Mouse& mouse_data = ::at32(handler.GetMice(), mouse_no);
-	const auto is_pressed = [&mouse_data](MouseButtonCodes button) -> bool { return !!(mouse_data.buttons & button); };
+	const auto is_pressed = [&mouse_data, &pressed_buttons](MouseButtonCodes button) -> bool
+	{
+		// Only allow each button to be used for one action unless it's the combo button.
+		return (mouse_data.buttons & button) && (button == (CELL_MOUSE_BUTTON_3 + 0u/*fix warning*/) || pressed_buttons.insert(button).second);
+	};
 
 	digital_buttons = 0;
+
+	if ((is_pressed(CELL_MOUSE_BUTTON_3) && is_pressed(CELL_MOUSE_BUTTON_1)) || is_pressed(CELL_MOUSE_BUTTON_6))
+		digital_buttons |= CELL_GEM_CTRL_SELECT;
+
+	if ((is_pressed(CELL_MOUSE_BUTTON_3) && is_pressed(CELL_MOUSE_BUTTON_2)) || is_pressed(CELL_MOUSE_BUTTON_7))
+		digital_buttons |= CELL_GEM_CTRL_START;
+
+	if ((is_pressed(CELL_MOUSE_BUTTON_3) && is_pressed(CELL_MOUSE_BUTTON_4)) || is_pressed(CELL_MOUSE_BUTTON_8))
+		digital_buttons |= CELL_GEM_CTRL_TRIANGLE;
+
+	if (is_pressed(CELL_MOUSE_BUTTON_3) && is_pressed(CELL_MOUSE_BUTTON_5))
+		digital_buttons |= CELL_GEM_CTRL_SQUARE;
 
 	if (is_pressed(CELL_MOUSE_BUTTON_1))
 		digital_buttons |= CELL_GEM_CTRL_T;
@@ -918,23 +942,11 @@ static bool mouse_input_to_pad(const u32 mouse_no, be_t<u16>& digital_buttons, b
 	if (is_pressed(CELL_MOUSE_BUTTON_2))
 		digital_buttons |= CELL_GEM_CTRL_MOVE;
 
-	if (is_pressed(CELL_MOUSE_BUTTON_3))
-		digital_buttons |= CELL_GEM_CTRL_CROSS;
-
 	if (is_pressed(CELL_MOUSE_BUTTON_4))
 		digital_buttons |= CELL_GEM_CTRL_CIRCLE;
 
 	if (is_pressed(CELL_MOUSE_BUTTON_5))
-		digital_buttons |= CELL_GEM_CTRL_SQUARE;
-
-	if (is_pressed(CELL_MOUSE_BUTTON_6) || (is_pressed(CELL_MOUSE_BUTTON_1) && is_pressed(CELL_MOUSE_BUTTON_2)))
-		digital_buttons |= CELL_GEM_CTRL_SELECT;
-
-	if (is_pressed(CELL_MOUSE_BUTTON_7) || (is_pressed(CELL_MOUSE_BUTTON_1) && is_pressed(CELL_MOUSE_BUTTON_3)))
-		digital_buttons |= CELL_GEM_CTRL_START;
-
-	if (is_pressed(CELL_MOUSE_BUTTON_8) || (is_pressed(CELL_MOUSE_BUTTON_2) && is_pressed(CELL_MOUSE_BUTTON_3)))
-		digital_buttons |= CELL_GEM_CTRL_TRIANGLE;
+		digital_buttons |= CELL_GEM_CTRL_CROSS;
 
 	analog_t = (mouse_data.buttons & CELL_MOUSE_BUTTON_1) ? 0xFFFF : 0;
 

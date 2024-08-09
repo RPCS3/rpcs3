@@ -20,8 +20,10 @@ void basic_mouse_handler::Init(const u32 max_connect)
 		return;
 	}
 
-	g_cfg_mouse.from_default();
-	g_cfg_mouse.load();
+	if (!g_cfg_mouse.load())
+	{
+		input_log.notice("basic_mouse_handler: Could not load basic mouse config. Using defaults.");
+	}
 
 	reload_config();
 
@@ -47,6 +49,8 @@ void basic_mouse_handler::Init(const u32 max_connect)
 
 void basic_mouse_handler::reload_config()
 {
+	input_log.notice("Basic mouse config=\n%s", g_cfg_mouse.to_string());
+
 	m_buttons[CELL_MOUSE_BUTTON_1] = get_mouse_button(g_cfg_mouse.mouse_button_1);
 	m_buttons[CELL_MOUSE_BUTTON_2] = get_mouse_button(g_cfg_mouse.mouse_button_2);
 	m_buttons[CELL_MOUSE_BUTTON_3] = get_mouse_button(g_cfg_mouse.mouse_button_3);
@@ -76,6 +80,12 @@ void basic_mouse_handler::SetTargetWindow(QWindow* target)
 
 bool basic_mouse_handler::eventFilter(QObject* target, QEvent* ev)
 {
+	if (m_info.max_connect == 0)
+	{
+		// Not initialized
+		return false;
+	}
+
 	if (!ev)
 	{
 		return false;

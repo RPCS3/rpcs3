@@ -8,8 +8,6 @@
 #include "Emu/RSX/rsx_methods.h"
 #include "Emu/RSX/NV47/HW/context_accessors.define.h"
 
-#include "../Program/program_state_cache2.hpp"
-
 [[noreturn]] extern void report_fatal_error(std::string_view _text, bool is_html = false, bool include_help_text = true);
 
 namespace
@@ -122,7 +120,7 @@ void GLGSRender::on_init_thread()
 	gl::init();
 	gl::set_command_context(gl_state);
 
-	//Enable adaptive vsync if vsync is requested
+	// Enable adaptive vsync if vsync is requested
 	gl::set_swapinterval(g_cfg.video.vsync ? -1 : 0);
 
 	if (g_cfg.video.debug_output)
