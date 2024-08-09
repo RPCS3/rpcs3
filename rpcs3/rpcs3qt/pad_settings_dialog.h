@@ -65,6 +65,7 @@ class pad_settings_dialog : public QDialog
 		id_pad_rstick_up,
 
 		id_pressure_intensity, // Special button for pressure intensity
+		id_analog_limiter, // Special button for analog limiter
 
 		id_pad_end, // end
 
@@ -121,6 +122,7 @@ private:
 	bool m_enable_battery_led{ false };
 	bool m_enable_motion{ false };
 	bool m_enable_pressure_intensity_button{ true };
+	bool m_enable_analog_limiter_button{ true };
 
 	// Button Mapping
 	QButtonGroup* m_pad_buttons = nullptr;

@@ -371,7 +371,7 @@ void PadHandlerBase::convert_stick_values(u16& x_out, u16& y_out, s32 x_in, s32 
 }
 
 // Update the pad button values based on their type and thresholds. With this you can use axis or triggers as buttons or vice versa
-void PadHandlerBase::TranslateButtonPress(const std::shared_ptr<PadDevice>& device, u64 keyCode, bool& pressed, u16& val, bool ignore_stick_threshold, bool ignore_trigger_threshold)
+void PadHandlerBase::TranslateButtonPress(const std::shared_ptr<PadDevice>& device, u64 keyCode, bool& pressed, u16& val, bool use_stick_multipliers, bool ignore_stick_threshold, bool ignore_trigger_threshold)
 {
 	if (!device || !device->config)
 	{
@@ -391,12 +391,12 @@ void PadHandlerBase::TranslateButtonPress(const std::shared_ptr<PadDevice>& devi
 	else if (get_is_left_stick(device, keyCode))
 	{
 		pressed = val > (ignore_stick_threshold ? 0 : device->config->lstickdeadzone);
-		val = pressed ? NormalizeStickInput(val, device->config->lstickdeadzone, device->config->lstickmultiplier, ignore_stick_threshold) : 0;
+		val = pressed ? NormalizeStickInput(val, device->config->lstickdeadzone, use_stick_multipliers ? device->config->lstickmultiplier : 100, ignore_stick_threshold) : 0;
 	}
 	else if (get_is_right_stick(device, keyCode))
 	{
 		pressed = val > (ignore_stick_threshold ? 0 : device->config->rstickdeadzone);
-		val = pressed ? NormalizeStickInput(val, device->config->rstickdeadzone, device->config->rstickmultiplier, ignore_stick_threshold) : 0;
+		val = pressed ? NormalizeStickInput(val, device->config->rstickdeadzone, use_stick_multipliers ? device->config->rstickmultiplier : 100, ignore_stick_threshold) : 0;
 	}
 	else // normal button (should in theory also support sensitive buttons)
 	{
@@ -461,8 +461,17 @@ bool PadHandlerBase::bindPadToDevice(std::shared_ptr<Pad> pad)
 		config->pressure_intensity
 	);
 
-	pad->m_buttons.emplace_back(special_button_offset, mapping[button::pressure_intensity_button], special_button_value::pressure_intensity);
-	pad->m_pressure_intensity_button_index = static_cast<s32>(pad->m_buttons.size()) - 1;
+	if (b_has_pressure_intensity_button)
+	{
+		pad->m_buttons.emplace_back(special_button_offset, mapping[button::pressure_intensity_button], special_button_value::pressure_intensity);
+		pad->m_pressure_intensity_button_index = static_cast<s32>(pad->m_buttons.size()) - 1;
+	}
+
+	if (b_has_analog_limiter_button)
+	{
+		pad->m_buttons.emplace_back(special_button_offset, mapping[button::analog_limiter_button], special_button_value::analog_limiter);
+		pad->m_analog_limiter_button_index = static_cast<s32>(pad->m_buttons.size()) - 1;
+	}
 
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, mapping[button::up], CELL_PAD_CTRL_UP);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, mapping[button::down], CELL_PAD_CTRL_DOWN);
@@ -560,7 +569,15 @@ std::array<std::set<u32>, PadHandlerBase::button::button_count> PadHandlerBase::
 	mapping[button::skateboard_tilt_left]  = FindKeyCodes<u32, u32>(button_list, cfg->tilt_left);
 	mapping[button::skateboard_tilt_right] = FindKeyCodes<u32, u32>(button_list, cfg->tilt_right);
 
-	mapping[button::pressure_intensity_button] = FindKeyCodes<u32, u32>(button_list, cfg->pressure_intensity_button);
+	if (b_has_pressure_intensity_button)
+	{
+		mapping[button::pressure_intensity_button] = FindKeyCodes<u32, u32>(button_list, cfg->pressure_intensity_button);
+	}
+
+	if (b_has_analog_limiter_button)
+	{
+		mapping[button::analog_limiter_button] = FindKeyCodes<u32, u32>(button_list, cfg->analog_limiter_button);
+	}
 
 	return mapping;
 }
@@ -581,6 +598,7 @@ void PadHandlerBase::get_mapping(const pad_ensemble& binding)
 
 	// Find out if special buttons are pressed (introduced by RPCS3).
 	// These buttons will have a delay of one cycle, but whatever.
+	const bool analog_limiter_enabled = pad->get_analog_limiter_button_active(cfg->analog_limiter_toggle_mode.get(), pad->m_player_id);
 	const bool adjust_pressure = pad->get_pressure_intensity_button_active(cfg->pressure_intensity_toggle_mode.get(), pad->m_player_id);
 	const u32 pressure_intensity_deadzone = cfg->pressure_intensity_deadzone.get();
 
@@ -595,7 +613,7 @@ void PadHandlerBase::get_mapping(const pad_ensemble& binding)
 			bool press{};
 			u16 val = button_values[code];
 
-			TranslateButtonPress(device, code, press, val);
+			TranslateButtonPress(device, code, press, val, analog_limiter_enabled);
 
 			if (press)
 			{
@@ -637,7 +655,7 @@ void PadHandlerBase::get_mapping(const pad_ensemble& binding)
 		{
 			u16 val = button_values[key_min];
 
-			TranslateButtonPress(device, key_min, pressed, val, true);
+			TranslateButtonPress(device, key_min, pressed, val, analog_limiter_enabled, true);
 
 			if (pressed)
 			{
@@ -650,7 +668,7 @@ void PadHandlerBase::get_mapping(const pad_ensemble& binding)
 		{
 			u16 val = button_values[key_max];
 
-			TranslateButtonPress(device, key_max, pressed, val, true);
+			TranslateButtonPress(device, key_max, pressed, val, analog_limiter_enabled, true);
 
 			if (pressed)
 			{

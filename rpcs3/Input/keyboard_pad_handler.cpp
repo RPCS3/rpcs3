@@ -59,6 +59,7 @@ void keyboard_pad_handler::init_config(cfg_pad* cfg)
 	cfg->l3.def       = GetKeyName(Qt::Key_F);
 
 	cfg->pressure_intensity_button.def = GetKeyName(Qt::NoButton);
+	cfg->analog_limiter_button.def = GetKeyName(Qt::NoButton);
 
 	cfg->lstick_anti_deadzone.def = 0;
 	cfg->rstick_anti_deadzone.def = 0;
@@ -130,11 +131,35 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 			pad.m_adjust_pressure_last = adjust_pressure;
 		}
 
+		if (pad.m_analog_limiter_button_index >= 0)
+		{
+			Button& analog_limiter_button = pad.m_buttons[pad.m_analog_limiter_button_index];
+
+			if (analog_limiter_button.m_key_codes.contains(code))
+			{
+				const u16 actual_value = register_new_button_value(analog_limiter_button.m_pressed_keys);
+
+				analog_limiter_button.m_pressed = actual_value > 0;
+				analog_limiter_button.m_value = actual_value;
+			}
+		}
+
+		const bool analog_limiter_enabled = pad.get_analog_limiter_button_active(m_analog_limiter_toggle_mode, pad.m_player_id);
+		const bool analog_limiter_changed = pad.m_analog_limiter_enabled_last != analog_limiter_enabled;
+		const u32 l_stick_multiplier = analog_limiter_enabled ? m_l_stick_multiplier : 100;
+		const u32 r_stick_multiplier = analog_limiter_enabled ? m_r_stick_multiplier : 100;
+
+		if (analog_limiter_changed)
+		{
+			pad.m_analog_limiter_enabled_last = analog_limiter_enabled;
+		}
+
 		// Handle buttons
 		for (usz i = 0; i < pad.m_buttons.size(); i++)
 		{
-			// Ignore pressure intensity button
-			if (static_cast<s32>(i) == pad.m_pressure_intensity_button_index)
+			// Ignore special buttons
+			if (static_cast<s32>(i) == pad.m_pressure_intensity_button_index ||
+				static_cast<s32>(i) == pad.m_analog_limiter_button_index)
 				continue;
 
 			Button& button = pad.m_buttons[i];
@@ -161,31 +186,31 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 				}
 			}
 
-			if (update_button)
-			{
-				if (button.m_actual_value > 0)
-				{
-					// Modify pressure if necessary if the button was pressed
-					if (adjust_pressure)
-					{
-						button.m_value = pad.m_pressure_intensity;
-					}
-					else if (m_pressure_intensity_deadzone > 0)
-					{
-						button.m_value = NormalizeDirectedInput(button.m_actual_value, m_pressure_intensity_deadzone, 255);
-					}
-					else
-					{
-						button.m_value = button.m_actual_value;
-					}
+			if (!update_button)
+				continue;
 
-					button.m_pressed = button.m_value > 0;
+			if (button.m_actual_value > 0)
+			{
+				// Modify pressure if necessary if the button was pressed
+				if (adjust_pressure)
+				{
+					button.m_value = pad.m_pressure_intensity;
+				}
+				else if (m_pressure_intensity_deadzone > 0)
+				{
+					button.m_value = NormalizeDirectedInput(button.m_actual_value, m_pressure_intensity_deadzone, 255);
 				}
 				else
 				{
-					button.m_value = 0;
-					button.m_pressed = false;
+					button.m_value = button.m_actual_value;
 				}
+
+				button.m_pressed = button.m_value > 0;
+			}
+			else
+			{
+				button.m_value = 0;
+				button.m_pressed = false;
 			}
 		}
 
@@ -194,54 +219,72 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 		{
 			AnalogStick& stick = pad.m_sticks[i];
 
+			const bool is_left_stick = i < 2;
+
 			const bool is_max = stick.m_key_codes_max.contains(code);
 			const bool is_min = stick.m_key_codes_min.contains(code);
 
 			if (!is_max && !is_min)
 			{
-				continue;
-			}
+				if (!analog_limiter_changed)
+					continue;
 
-			const bool is_left_stick = i < 2;
-
-			const u16 actual_value = pressed ? MultipliedInput(value, is_left_stick ? m_l_stick_multiplier : m_r_stick_multiplier) : value;
-			u16 normalized_value = std::ceil(actual_value / 2.0);
-
-			const auto register_new_stick_value = [&](std::map<u32, u16>& pressed_keys, bool is_max)
-			{
-				// Make sure we keep this stick pressed until all related keys are released.
-				if (pressed)
-				{
-					pressed_keys[code] = normalized_value;
-				}
-				else
-				{
-					pressed_keys.erase(code);
-				}
-
-				// Get the min/max value of all pressed keys for this stick
-				for (const auto& [key, val] : pressed_keys)
-				{
-					normalized_value = is_max ? std::max(normalized_value, val) : std::min(normalized_value, val);
-				}
-			};
-
-			if (is_max)
-			{
-				register_new_stick_value(stick.m_pressed_keys_max, true);
-
+				// Update already pressed sticks
+				const bool is_min_pressed = !stick.m_pressed_keys_min.empty();
 				const bool is_max_pressed = !stick.m_pressed_keys_max.empty();
 
-				m_stick_max[i] = is_max_pressed ? std::min<int>(128 + normalized_value, 255) : 128;
+				const u32 stick_multiplier = is_left_stick ? l_stick_multiplier : r_stick_multiplier;
+
+				const u16 actual_min_value = is_min_pressed ? MultipliedInput(255, stick_multiplier) : 255;
+				const u16 normalized_min_value = std::ceil(actual_min_value / 2.0);
+
+				const u16 actual_max_value = is_max_pressed ? MultipliedInput(255, stick_multiplier) : 255;
+				const u16 normalized_max_value = std::ceil(actual_max_value / 2.0);
+
+				m_stick_min[i] = is_min_pressed ? std::min<u8>(normalized_min_value, 128) : 0;
+				m_stick_max[i] = is_max_pressed ? std::min<int>(128 + normalized_max_value, 255) : 128;
 			}
-
-			if (is_min)
+			else
 			{
-				register_new_stick_value(stick.m_pressed_keys_min, false);
+				const u16 actual_value = pressed ? MultipliedInput(value, is_left_stick ? l_stick_multiplier : r_stick_multiplier) : value;
+				u16 normalized_value = std::ceil(actual_value / 2.0);
 
-				const bool is_min_pressed = !stick.m_pressed_keys_min.empty();
+				const auto register_new_stick_value = [&](std::map<u32, u16>& pressed_keys, bool is_max)
+				{
+					// Make sure we keep this stick pressed until all related keys are released.
+					if (pressed)
+					{
+						pressed_keys[code] = normalized_value;
+					}
+					else
+					{
+						pressed_keys.erase(code);
+					}
 
-				m_stick_min[i] = is_min_pressed ? std::min<u8>(normalized_value, 128) : 0;
+					// Get the min/max value of all pressed keys for this stick
+					for (const auto& [key, val] : pressed_keys)
+					{
+						normalized_value = is_max ? std::max(normalized_value, val) : std::min(normalized_value, val);
+					}
+				};
+
+				if (is_max)
+				{
+					register_new_stick_value(stick.m_pressed_keys_max, true);
+
+					const bool is_max_pressed = !stick.m_pressed_keys_max.empty();
+
+					m_stick_max[i] = is_max_pressed ? std::min<int>(128 + normalized_value, 255) : 128;
+				}
+
+				if (is_min)
+				{
+					register_new_stick_value(stick.m_pressed_keys_min, false);
+
+					const bool is_min_pressed = !stick.m_pressed_keys_min.empty();
+
+					m_stick_min[i] = is_min_pressed ? std::min<u8>(normalized_value, 128) : 0;
+				}
 			}
 
 			m_stick_val[i] = m_stick_max[i] - m_stick_min[i];
@@ -920,6 +963,7 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 	m_trigger_lerp_factor = cfg->trigger_lerp_factor / 100.0f;
 	m_l_stick_multiplier = cfg->lstickmultiplier;
 	m_r_stick_multiplier = cfg->rstickmultiplier;
+	m_analog_limiter_toggle_mode = cfg->analog_limiter_toggle_mode.get();
 	m_pressure_intensity_toggle_mode = cfg->pressure_intensity_toggle_mode.get();
 	m_pressure_intensity_deadzone = cfg->pressure_intensity_deadzone.get();
 
@@ -965,8 +1009,17 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 		cfg->pressure_intensity
 	);
 
-	pad->m_buttons.emplace_back(special_button_offset, find_keys(cfg->pressure_intensity_button), special_button_value::pressure_intensity);
-	pad->m_pressure_intensity_button_index = static_cast<s32>(pad->m_buttons.size()) - 1;
+	if (b_has_pressure_intensity_button)
+	{
+		pad->m_buttons.emplace_back(special_button_offset, find_keys(cfg->pressure_intensity_button), special_button_value::pressure_intensity);
+		pad->m_pressure_intensity_button_index = static_cast<s32>(pad->m_buttons.size()) - 1;
+	}
+
+	if (b_has_analog_limiter_button)
+	{
+		pad->m_buttons.emplace_back(special_button_offset, find_keys(cfg->analog_limiter_button), special_button_value::analog_limiter);
+		pad->m_analog_limiter_button_index = static_cast<s32>(pad->m_buttons.size()) - 1;
+	}
 
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_keys(cfg->left),     CELL_PAD_CTRL_LEFT);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_keys(cfg->down),     CELL_PAD_CTRL_DOWN);

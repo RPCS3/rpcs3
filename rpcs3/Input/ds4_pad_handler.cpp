@@ -158,6 +158,7 @@ void ds4_pad_handler::init_config(cfg_pad* cfg)
 	cfg->l3.def       = ::at32(button_list, DS4KeyCodes::L3);
 
 	cfg->pressure_intensity_button.def = ::at32(button_list, DS4KeyCodes::None);
+	cfg->analog_limiter_button.def = ::at32(button_list, DS4KeyCodes::None);
 
 	// Set default misc variables
 	cfg->lstick_anti_deadzone.def = static_cast<u32>(0.13 * thumb_max); // 13%
