@@ -2230,9 +2230,6 @@
     <ClInclude Include="Emu\RSX\Program\GLSLCommon.h">
       <Filter>Emu\GPU\RSX\Program</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\RSX\Program\program_state_cache2.hpp">
-      <Filter>Emu\GPU\RSX\Program</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\RSX\Program\program_util.h">
       <Filter>Emu\GPU\RSX\Program</Filter>
     </ClInclude>
