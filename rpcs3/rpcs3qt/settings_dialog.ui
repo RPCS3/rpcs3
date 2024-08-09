@@ -2968,6 +2968,13 @@
                 </widget>
                </item>
                <item>
+                <widget class="QCheckBox" name="showAnalogLimiterToggleHint">
+                 <property name="text">
+                  <string>Show analog limiter toggle hint</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QCheckBox" name="showPressureIntensityToggleHint">
                  <property name="text">
                   <string>Show pressure intensity toggle hint</string>

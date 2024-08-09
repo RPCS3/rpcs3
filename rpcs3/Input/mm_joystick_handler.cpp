@@ -53,6 +53,7 @@ void mm_joystick_handler::init_config(cfg_pad* cfg)
 	cfg->l3.def       = ::at32(button_list, JOY_BUTTON11);
 
 	cfg->pressure_intensity_button.def = ::at32(button_list, NO_BUTTON);
+	cfg->analog_limiter_button.def = ::at32(button_list, NO_BUTTON);
 
 	// Set default misc variables
 	cfg->lstick_anti_deadzone.def = static_cast<u32>(0.13 * thumb_max); // 13%
@@ -216,7 +217,15 @@ std::array<std::set<u32>, PadHandlerBase::button::button_count> mm_joystick_hand
 	mapping[button::skateboard_tilt_left]  = find_keys<u32>(cfg->tilt_left);
 	mapping[button::skateboard_tilt_right] = find_keys<u32>(cfg->tilt_right);
 
-	mapping[button::pressure_intensity_button] = find_keys<u32>(cfg->pressure_intensity_button);
+	if (b_has_pressure_intensity_button)
+	{
+		mapping[button::pressure_intensity_button] = find_keys<u32>(cfg->pressure_intensity_button);
+	}
+
+	if (b_has_analog_limiter_button)
+	{
+		mapping[button::analog_limiter_button] = find_keys<u32>(cfg->analog_limiter_button);
+	}
 
 	return mapping;
 }

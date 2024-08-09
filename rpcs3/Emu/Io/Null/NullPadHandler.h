@@ -47,6 +47,7 @@ public:
 		cfg->l3.def       = "";
 
 		cfg->pressure_intensity_button.def = "";
+		cfg->analog_limiter_button.def = "";
 
 		// Apply defaults
 		cfg->from_default();

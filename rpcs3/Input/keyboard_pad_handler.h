@@ -116,6 +116,7 @@ private:
 	steady_clock::time_point m_button_time;
 	f32 m_analog_lerp_factor  = 1.0f;
 	f32 m_trigger_lerp_factor = 1.0f;
+	bool m_analog_limiter_toggle_mode = false;
 	bool m_pressure_intensity_toggle_mode = false;
 	u32 m_pressure_intensity_deadzone = 0;
 

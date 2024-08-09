@@ -191,6 +191,7 @@ void ds3_pad_handler::init_config(cfg_pad* cfg)
 	cfg->l3.def = ::at32(button_list, DS3KeyCodes::L3);
 
 	cfg->pressure_intensity_button.def = ::at32(button_list, DS3KeyCodes::None);
+	cfg->analog_limiter_button.def = ::at32(button_list, DS3KeyCodes::None);
 
 	// Set default misc variables
 	cfg->lstick_anti_deadzone.def = 0;

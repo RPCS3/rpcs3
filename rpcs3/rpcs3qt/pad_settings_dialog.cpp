@@ -312,6 +312,7 @@ void pad_settings_dialog::InitButtons()
 	insert_button(button_ids::id_pad_rstick_up, ui->b_rstick_up);
 
 	insert_button(button_ids::id_pressure_intensity, ui->b_pressure_intensity);
+	insert_button(button_ids::id_analog_limiter, ui->b_analog_limiter);
 
 	m_pad_buttons->addButton(ui->b_refresh, button_ids::id_refresh);
 	m_pad_buttons->addButton(ui->b_addConfig, button_ids::id_add_config_file);
@@ -748,6 +749,7 @@ void pad_settings_dialog::ReloadButtons()
 	updateButton(button_ids::id_pad_rstick_up, ui->b_rstick_up, &cfg.rs_up);
 
 	updateButton(button_ids::id_pressure_intensity, ui->b_pressure_intensity, &cfg.pressure_intensity_button);
+	updateButton(button_ids::id_analog_limiter, ui->b_analog_limiter, &cfg.analog_limiter_button);
 
 	UpdateLabels(true);
 }
@@ -1226,6 +1228,9 @@ void pad_settings_dialog::UpdateLabels(bool is_reset)
 		RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->anti_deadzone_slider_stick_left->value(), ui->slider_stick_left->size().width(), m_lx, m_ly, cfg.lpadsquircling, cfg.lstickmultiplier / 100.0);
 		RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->anti_deadzone_slider_stick_right->value(), ui->slider_stick_right->size().width(), m_rx, m_ry, cfg.rpadsquircling, cfg.rstickmultiplier / 100.0);
 
+		// Update analog limiter toggle mode
+		ui->cb_analog_limiter_toggle_mode->setChecked(cfg.analog_limiter_toggle_mode.get());
+
 		// Update pressure sensitivity factors
 		range = cfg.pressure_intensity.to_list();
 		ui->sb_pressure_intensity->setRange(std::stoi(range.front()), std::stoi(range.back()));
@@ -1278,6 +1283,7 @@ void pad_settings_dialog::SwitchButtons(bool is_enabled)
 	ui->squircle_right->setEnabled(is_enabled);
 	ui->gb_pressure_intensity_deadzone->setEnabled(is_enabled);
 	ui->gb_pressure_intensity->setEnabled(is_enabled && m_enable_pressure_intensity_button);
+	ui->gb_analog_limiter->setEnabled(is_enabled && m_enable_analog_limiter_button);
 	ui->gb_vibration->setEnabled(is_enabled && m_enable_rumble);
 	ui->gb_motion_controls->setEnabled(is_enabled && m_enable_motion);
 	ui->gb_stick_deadzones->setEnabled(is_enabled && m_enable_deadzones);
@@ -1489,10 +1495,14 @@ void pad_settings_dialog::ChangeHandler()
 	// Enable Pressure Sensitivity Settings
 	m_enable_pressure_intensity_button = m_handler->has_pressure_intensity_button();
 
+	// Enable Analog Limiter Settings
+	m_enable_analog_limiter_button = m_handler->has_analog_limiter_button();
+
 	// Change our contextual widgets
 	ui->left_stack->setCurrentIndex((m_handler->m_type == pad_handler::keyboard) ? 1 : 0);
 	ui->right_stack->setCurrentIndex((m_handler->m_type == pad_handler::keyboard) ? 1 : 0);
 	ui->gb_pressure_intensity->setVisible(m_handler->has_pressure_intensity_button());
+	ui->gb_analog_limiter->setVisible(m_handler->has_analog_limiter_button());
 
 	// Update device dropdown and block signals while doing so
 	ui->chooseDevice->blockSignals(true);
@@ -1849,7 +1859,7 @@ void pad_settings_dialog::ApplyCurrentPlayerConfig(int new_player_id)
 		for (const auto& [id, button] : m_cfg_entries)
 		{
 			// Let's ignore special keys, unless we're using a keyboard
-			if (id == button_ids::id_pressure_intensity && m_handler->m_type != pad_handler::keyboard)
+			if ((id == button_ids::id_pressure_intensity || id == button_ids::id_analog_limiter) && m_handler->m_type != pad_handler::keyboard)
 				continue;
 
 			for (const std::string& key : cfg_pad::get_buttons(button.keys))
@@ -1901,6 +1911,11 @@ void pad_settings_dialog::ApplyCurrentPlayerConfig(int new_player_id)
 		cfg.rstickdeadzone.set(ui->slider_stick_right->value());
 		cfg.lstick_anti_deadzone.set(ui->anti_deadzone_slider_stick_left->value());
 		cfg.rstick_anti_deadzone.set(ui->anti_deadzone_slider_stick_right->value());
+	}
+
+	if (m_handler->has_analog_limiter_button())
+	{
+		cfg.analog_limiter_toggle_mode.set(ui->cb_analog_limiter_toggle_mode->isChecked());
 	}
 
 	if (m_handler->has_pressure_intensity_button())
@@ -2098,6 +2113,7 @@ void pad_settings_dialog::SubscribeTooltips()
 	// Localized tooltips
 	const Tooltips tooltips;
 
+	SubscribeTooltip(ui->gb_analog_limiter, tooltips.gamepad_settings.analog_limiter);
 	SubscribeTooltip(ui->gb_pressure_intensity, tooltips.gamepad_settings.pressure_intensity);
 	SubscribeTooltip(ui->gb_pressure_intensity_deadzone, tooltips.gamepad_settings.pressure_deadzone);
 	SubscribeTooltip(ui->gb_squircle, tooltips.gamepad_settings.squircle_factor);
