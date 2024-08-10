@@ -3956,7 +3956,7 @@ error_code sceNpManagerGetAccountRegion(vm::ptr<SceNpCountryCode> countryCode, v
 		return SCE_NP_ERROR_INVALID_STATE;
 	}
 
-	std::string ccode = g_cfg.net.country.to_string();
+	const std::string ccode = g_cfg.net.country.to_string();
 	std::memset(countryCode.get_ptr(), 0, sizeof(countryCode));
 	ensure(ccode.size() == sizeof(SceNpCountryCode::data));
 	std::memcpy(countryCode->data, ccode.data(), sizeof(SceNpCountryCode::data));
