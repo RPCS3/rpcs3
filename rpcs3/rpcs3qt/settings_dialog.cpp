@@ -24,7 +24,7 @@
 #include "emu_settings_type.h"
 #include "render_creator.h"
 #include "microphone_creator.h"
-#include "rpcn_countries.h"
+#include "Emu/NP/rpcn_countries.h"
 
 #include "Emu/GameInfo.h"
 #include "Emu/System.h"
