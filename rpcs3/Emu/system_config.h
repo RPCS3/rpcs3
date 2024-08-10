@@ -314,6 +314,7 @@ struct cfg_root : cfg::node
 		cfg::_bool upnp_enabled{this, "UPNP Enabled", false};
 
 		cfg::_enum<np_psn_status> psn_status{this, "PSN status", np_psn_status::disabled};
+		cfg::string country{this, "PSN Country", "us"};
 	} net{this};
 
 	struct node_savestate : cfg::node

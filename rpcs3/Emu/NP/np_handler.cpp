@@ -771,6 +771,9 @@ namespace np
 		std::memset(&avatar_url, 0, sizeof(avatar_url));
 		std::memset(&country_code, 0, sizeof(country_code));
 
+		const std::string s_country = g_cfg.net.country.to_string();
+		string_to_country_code(s_country, country_code);
+
 		if (g_cfg.net.psn_status >= np_psn_status::psn_fake)
 		{
 			g_cfg_rpcn.load(); // Ensures config is loaded even if rpcn is not running for simulated
@@ -780,9 +783,6 @@ namespace np
 			string_to_npid(s_npid, npid);
 			auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
 			sigh.set_self_sig_info(npid);
-
-			const std::string s_country = g_cfg_rpcn.get_country();
-			string_to_country_code(s_country, country_code);
 		}
 
 		switch (g_cfg.net.psn_status)

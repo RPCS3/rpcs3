@@ -140,14 +140,14 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 	refresh_combobox();
 
 	hbox_lbl_combo->addWidget(lbl_server);
-	hbox_lbl_combo->addWidget(cbx_servers, Qt::AlignCenter);
+	hbox_lbl_combo->addWidget(cbx_servers);
 
 	QHBoxLayout* hbox_buttons   = new QHBoxLayout();
 	QPushButton* btn_add_server = new QPushButton(tr("Add"));
 	QPushButton* btn_del_server = new QPushButton(tr("Del"));
 	hbox_buttons->addStretch();
-	hbox_buttons->addWidget(btn_add_server, Qt::AlignCenter);
-	hbox_buttons->addWidget(btn_del_server, Qt::AlignCenter);
+	hbox_buttons->addWidget(btn_add_server);
+	hbox_buttons->addWidget(btn_del_server);
 
 	vbox_server->addLayout(hbox_lbl_combo);
 	vbox_server->addLayout(hbox_buttons);
@@ -181,24 +181,6 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 
 	vbox_global->addWidget(grp_buttons);
 
-	// Adds country selection to menu
-	QGroupBox* grp_country = new QGroupBox(tr("Country:"));
-	QVBoxLayout* vbox_country = new QVBoxLayout();
-
-	QHBoxLayout* hbox_lbl_country = new QHBoxLayout();
-	QLabel* lbl_country = new QLabel(tr("Country:"));
-	cbx_countries = new QComboBox();
-
-	refresh_countrybox();
-
-	hbox_lbl_country->addWidget(lbl_country);
-	hbox_lbl_country->addWidget(cbx_countries);
-
-	vbox_country->addLayout(hbox_lbl_country);
-
-	grp_country->setLayout(vbox_country);
-	vbox_global->addWidget(grp_country);
-
 	setLayout(vbox_global);
 
 	connect(cbx_servers, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
@@ -212,20 +194,6 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 				return;
 
 			g_cfg_rpcn.set_host(host.toString().toStdString());
-			g_cfg_rpcn.save();
-		});
-
-	connect(cbx_countries, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
-		{
-			if (index < 0)
-				return;
-
-			const QVariant country = cbx_countries->itemData(index);
-
-			if (!country.isValid() || !country.canConvert<QString>())
-				return;
-
-			g_cfg_rpcn.set_country(country.toString().toStdString());
 			g_cfg_rpcn.save();
 		});
 
@@ -388,27 +356,6 @@ void rpcn_account_dialog::refresh_combobox()
 	}
 
 	cbx_servers->setCurrentIndex(index);
-}
-
-void rpcn_account_dialog::refresh_countrybox()
-{
-	g_cfg_rpcn.load();
-	const auto vec_countries = g_cfg_rpcn.get_countries();
-	const auto cur_country = g_cfg_rpcn.get_country();
-	int i = 0, index = 0;
-
-	cbx_countries->clear();
-
-	for (const auto& [cnty, code] : vec_countries)
-	{
-		cbx_countries->addItem(QString::fromStdString(cnty), QString::fromStdString(code));
-		if (cur_country == code)
-			index = i;
-
-		i++;
-	}
-	cbx_countries->setCurrentIndex(cbx_countries->findData(QString::fromStdString(cur_country)));
-	cbx_countries->model()->sort(0, Qt::AscendingOrder);
 }
 
 rpcn_add_server_dialog::rpcn_add_server_dialog(QWidget* parent)

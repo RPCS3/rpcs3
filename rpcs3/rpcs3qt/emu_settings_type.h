@@ -184,6 +184,7 @@ enum class emu_settings_type
 	PSNStatus,
 	BindAddress,
 	EnableUpnp,
+	PSNCountry,
 
 	// System
 	LicenseArea,
@@ -374,6 +375,7 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::PSNStatus,      { "Net", "PSN status"}},
 	{ emu_settings_type::BindAddress,    { "Net", "Bind address"}},
 	{ emu_settings_type::EnableUpnp,     { "Net", "UPNP Enabled"}},
+	{ emu_settings_type::PSNCountry,     { "Net", "PSN Country"}},
 
 	// System
 	{ emu_settings_type::LicenseArea,           { "System", "License Area"}},
