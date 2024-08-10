@@ -1264,6 +1264,9 @@
     <ClCompile Include="Emu\Io\MouseHandler.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\NP\np_countries.cpp">
+      <Filter>Emu\NP</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -2569,8 +2572,8 @@
     <ClInclude Include="Emu\RSX\NV47\FW\GRAPH_backend.h">
       <Filter>Emu\GPU\RSX\NV47\FW</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\Io\mouse_config.h">
-      <Filter>Emu\Io</Filter>
+    <ClInclude Include="Emu\NP\np_countries.h">
+      <Filter>Emu\NP</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
