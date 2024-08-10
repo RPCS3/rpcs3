@@ -65,10 +65,10 @@ target_sources(rpcs3
     main.cpp
     main_application.cpp
     module_verifier.cpp
+    rpcn_countries.cpp
     rpcs3_version.cpp
     stb_image.cpp
     stdafx.cpp
-    rpcn_countries.cpp
 
     Input/basic_keyboard_handler.cpp
     Input/basic_mouse_handler.cpp
