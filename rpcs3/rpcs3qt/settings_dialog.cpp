@@ -2456,7 +2456,7 @@ void settings_dialog::refresh_countrybox()
 
 	for (const auto& [cnty, code] : vec_countries)
 	{
-		ui->psnCountryBox->addItem(QString::fromStdString(cnty.data()), QString::fromStdString(code.data()));
+		ui->psnCountryBox->addItem(QString::fromUtf8(cnty.data(), static_cast<int>(cnty.size())), QString::fromUtf8(code.data(), static_cast<int>(code.size())));
 	}
 	ui->psnCountryBox->setCurrentIndex(ui->psnCountryBox->findData(QString::fromStdString(cur_country)));
 	ui->psnCountryBox->model()->sort(0, Qt::AscendingOrder);
