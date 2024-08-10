@@ -407,7 +407,7 @@ public:
 	bool Init() override;
 	std::vector<pad_list_entry> list_devices() override;
 	bool bindPadToDevice(std::shared_ptr<Pad> pad) override;
-	connection get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist = false, const std::vector<std::string>& buttons = {}) override;
+	connection get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool first_call, bool get_blacklist, const std::vector<std::string>& buttons) override;
 	void get_motion_sensors(const std::string& padId, const motion_callback& callback, const motion_fail_callback& fail_callback, motion_preview_values preview_values, const std::array<AnalogSensor, 4>& sensors) override;
 	std::unordered_map<u32, std::string> get_motion_axis_list() const override;
 	void SetPadData(const std::string& padId, u8 player_id, u8 large_motor, u8 small_motor, s32 r, s32 g, s32 b, bool player_led, bool battery_led, u32 battery_led_brightness) override;
@@ -425,6 +425,7 @@ private:
 	positive_axis m_pos_axis_config;
 	std::set<u32> m_positive_axis;
 	std::set<std::string> m_blacklist;
+	std::unordered_map<std::string, u16> m_min_button_values;
 	std::unordered_map<std::string, std::shared_ptr<evdev_joystick_handler::EvdevDevice>> m_settings_added;
 	std::unordered_map<std::string, std::shared_ptr<evdev_joystick_handler::EvdevDevice>> m_motion_settings_added;
 	std::shared_ptr<EvdevDevice> m_dev;

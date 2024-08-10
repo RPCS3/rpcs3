@@ -83,6 +83,7 @@ void evdev_joystick_handler::init_config(cfg_pad* cfg)
 	cfg->motion_sensor_g.axis.def = ::at32(motion_axis_list, ABS_RY); // DS3 uses the yaw axis for gyros
 
 	cfg->pressure_intensity_button.def = ::at32(button_list, NO_BUTTON);
+	cfg->analog_limiter_button.def = ::at32(button_list, NO_BUTTON);
 
 	// Set default misc variables
 	cfg->lstick_anti_deadzone.def = static_cast<u32>(0.13 * thumb_max); // 13%
@@ -297,10 +298,13 @@ std::shared_ptr<evdev_joystick_handler::EvdevDevice> evdev_joystick_handler::get
 	return evdev_device;
 }
 
-PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist, const std::vector<std::string>& buttons)
+PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool first_call, bool get_blacklist, const std::vector<std::string>& buttons)
 {
 	if (get_blacklist)
 		m_blacklist.clear();
+
+	if (first_call || get_blacklist)
+		m_min_button_values.clear();
 
 	// Get our evdev device
 	std::shared_ptr<EvdevDevice> device = get_evdev_device(padId);
@@ -310,6 +314,7 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 			fail_callback(padId);
 		return connection::disconnected;
 	}
+
 	libevdev* dev = device->device;
 
 	// Try to fetch all new events from the joystick.
@@ -377,8 +382,8 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 		preview_values[5] = find_value(buttons[9]) - find_value(buttons[8]); // Right Stick Y
 	}
 
-	// return if nothing new has happened. ignore this to get the current state for blacklist
-	if (!get_blacklist && !has_new_event)
+	// return if nothing new has happened. ignore this to get the current state for blacklist or first_call
+	if (!get_blacklist && !first_call && !has_new_event)
 	{
 		if (callback)
 			callback(0, "", padId, 0, preview_values);
@@ -390,6 +395,49 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 		u16 value = 0;
 		std::string name;
 	} pressed_button{};
+
+	const auto set_button_press = [&](const u32 code, const std::string& name, std::string_view type, u16 threshold, int ev_type)
+	{
+		if (!get_blacklist && m_blacklist.contains(name))
+			return;
+
+		const u16 value = data[code].first;
+		u16& min_value = m_min_button_values[name];
+
+		if (first_call || value < min_value)
+		{
+			min_value = value;
+			return;
+		}
+
+		if (value <= threshold)
+			return;
+
+		if (get_blacklist)
+		{
+			m_blacklist.insert(name);
+
+			if (ev_type == EV_ABS)
+			{
+				const int min = libevdev_get_abs_minimum(dev, code);
+				const int max = libevdev_get_abs_maximum(dev, code);
+				evdev_log.error("Evdev Calibration: Added %s [ %d = %s = %s ] to blacklist. [ Value = %d ] [ Min = %d ] [ Max = %d ]", type, code, libevdev_event_code_get_name(ev_type, code), name, value, min, max);
+			}
+			else
+			{
+				evdev_log.error("Evdev Calibration: Added %s [ %d = %s = %s ] to blacklist. Value = %d", type, code, libevdev_event_code_get_name(ev_type, code), name, value);
+			}
+
+			return;
+		}
+
+		const u16 diff = std::abs(min_value - value);
+
+		if (diff > button_press_threshold && value > pressed_button.value)
+		{
+			pressed_button = { .value = value, .name = name };
+		}
+	};
 
 	const bool is_xbox_360_controller = padId.find("Xbox 360") != umax;
 	const bool is_sony_controller = !is_xbox_360_controller && padId.find("Sony") != umax;
@@ -405,22 +453,7 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 		if (is_sony_controller && !is_sony_guitar && (code == BTN_TL2 || code == BTN_TR2))
 			continue;
 
-		if (!get_blacklist && m_blacklist.contains(name))
-			continue;
-
-		const u16 value = data[code].first;
-		if (value > 0)
-		{
-			if (get_blacklist)
-			{
-				m_blacklist.insert(name);
-				evdev_log.error("Evdev Calibration: Added button [ %d = %s = %s ] to blacklist. Value = %d", code, libevdev_event_code_get_name(EV_KEY, code), name, value);
-			}
-			else if (value > pressed_button.value)
-			{
-				pressed_button = { value, name };
-			}
-		}
+		set_button_press(code, name, "button"sv, 0, EV_KEY);
 	}
 
 	for (const auto& [code, name] : axis_list)
@@ -428,24 +461,7 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 		if (data[code].second)
 			continue;
 
-		if (!get_blacklist && m_blacklist.contains(name))
-			continue;
-
-		const u16 value = data[code].first;
-		if (value > 0 && value >= m_thumb_threshold)
-		{
-			if (get_blacklist)
-			{
-				const int min = libevdev_get_abs_minimum(dev, code);
-				const int max = libevdev_get_abs_maximum(dev, code);
-				m_blacklist.insert(name);
-				evdev_log.error("Evdev Calibration: Added axis [ %d = %s = %s ] to blacklist. [ Value = %d ] [ Min = %d ] [ Max = %d ]", code, libevdev_event_code_get_name(EV_ABS, code), name, value, min, max);
-			}
-			else if (value > pressed_button.value)
-			{
-				pressed_button = { value, name };
-			}
-		}
+		set_button_press(code, name, "axis"sv, m_thumb_threshold, EV_ABS);
 	}
 
 	for (const auto& [code, name] : rev_axis_list)
@@ -453,24 +469,12 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 		if (!data[code].second)
 			continue;
 
-		if (!get_blacklist && m_blacklist.contains(name))
-			continue;
+		set_button_press(code, name, "rev axis"sv, m_thumb_threshold, EV_ABS);
+	}
 
-		const u16 value = data[code].first;
-		if (value > 0 && value >= m_thumb_threshold)
-		{
-			if (get_blacklist)
-			{
-				const int min = libevdev_get_abs_minimum(dev, code);
-				const int max = libevdev_get_abs_maximum(dev, code);
-				m_blacklist.insert(name);
-				evdev_log.error("Evdev Calibration: Added rev axis [ %d = %s = %s ] to blacklist. [ Value = %d ] [ Min = %d ] [ Max = %d ]", code, libevdev_event_code_get_name(EV_ABS, code), name, value, min, max);
-			}
-			else if (value > pressed_button.value)
-			{
-				pressed_button = { value, name };
-			}
-		}
+	if (first_call)
+	{
+		return connection::no_data;
 	}
 
 	if (get_blacklist)
@@ -483,9 +487,9 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 	if (callback)
 	{
 		if (pressed_button.value > 0)
-			callback(pressed_button.value, pressed_button.name, padId, 0, preview_values);
+			callback(pressed_button.value, pressed_button.name, padId, 0, std::move(preview_values));
 		else
-			callback(0, "", padId, 0, preview_values);
+			callback(0, "", padId, 0, std::move(preview_values));
 	}
 
 	return connection::connected;
@@ -1084,13 +1088,14 @@ void evdev_joystick_handler::apply_input_events(const std::shared_ptr<Pad>& pad)
 
 	// Find out if special buttons are pressed (introduced by RPCS3).
 	// These buttons will have a delay of one cycle, but whatever.
+	const bool analog_limiter_enabled = pad->get_analog_limiter_button_active(cfg->analog_limiter_toggle_mode.get(), pad->m_player_id);
 	const bool adjust_pressure = pad->get_pressure_intensity_button_active(cfg->pressure_intensity_toggle_mode.get(), pad->m_player_id);
 	const u32 pressure_intensity_deadzone = cfg->pressure_intensity_deadzone.get();
 
 	const auto update_values = [&](bool& pressed, u16& final_value, bool is_stick_value, u32 code, u16 val)
 	{
 		bool press{};
-		TranslateButtonPress(m_dev, code, press, val, is_stick_value);
+		TranslateButtonPress(m_dev, code, press, val, analog_limiter_enabled, is_stick_value);
 
 		if (press)
 		{
@@ -1338,8 +1343,17 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 		cfg->pressure_intensity
 	);
 
-	pad->m_buttons.emplace_back(special_button_offset, find_buttons(cfg->pressure_intensity_button), special_button_value::pressure_intensity);
-	pad->m_pressure_intensity_button_index = static_cast<s32>(pad->m_buttons.size()) - 1;
+	if (b_has_pressure_intensity_button)
+	{
+		pad->m_buttons.emplace_back(special_button_offset, find_buttons(cfg->pressure_intensity_button), special_button_value::pressure_intensity);
+		pad->m_pressure_intensity_button_index = static_cast<s32>(pad->m_buttons.size()) - 1;
+	}
+
+	if (b_has_analog_limiter_button)
+	{
+		pad->m_buttons.emplace_back(special_button_offset, find_buttons(cfg->analog_limiter_button), special_button_value::analog_limiter);
+		pad->m_analog_limiter_button_index = static_cast<s32>(pad->m_buttons.size()) - 1;
+	}
 
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2,find_buttons(cfg->triangle), CELL_PAD_CTRL_TRIANGLE);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2,find_buttons(cfg->circle),   CELL_PAD_CTRL_CIRCLE);

@@ -65,6 +65,7 @@ class pad_settings_dialog : public QDialog
 		id_pad_rstick_up,
 
 		id_pressure_intensity, // Special button for pressure intensity
+		id_analog_limiter, // Special button for analog limiter
 
 		id_pad_end, // end
 
@@ -121,10 +122,11 @@ private:
 	bool m_enable_battery_led{ false };
 	bool m_enable_motion{ false };
 	bool m_enable_pressure_intensity_button{ true };
+	bool m_enable_analog_limiter_button{ true };
 
 	// Button Mapping
 	QButtonGroup* m_pad_buttons = nullptr;
-	u32 m_button_id = id_pad_begin;
+	atomic_t<u32> m_button_id = button_ids::id_pad_begin;
 	std::map<int /*id*/, pad_button /*info*/> m_cfg_entries;
 	std::map<int /*id*/, std::string> m_duplicate_buttons;
 
@@ -166,6 +168,7 @@ private:
 	{
 		PadHandlerBase::connection status = PadHandlerBase::connection::disconnected;
 		bool has_new_data = false;
+		u32 button_id = button_ids::id_pad_begin;
 		u16 val = 0;
 		std::string name;
 		std::string pad_name;

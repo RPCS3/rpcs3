@@ -363,7 +363,8 @@ constexpr u32 special_button_offset = 666; // Must not conflict with other CELL 
 
 enum special_button_value
 {
-	pressure_intensity
+	pressure_intensity,
+	analog_limiter
 };
 
 struct Button
@@ -473,6 +474,12 @@ struct Pad
 	u8 m_pressure_intensity{127}; // 0-255
 	bool m_adjust_pressure_last{}; // only used in keyboard_pad_handler
 	bool get_pressure_intensity_button_active(bool is_toggle_mode, u32 player_id);
+
+	s32 m_analog_limiter_button_index{-1}; // Special button index. -1 if not set.
+	bool m_analog_limiter_button_pressed{}; // Last sensitivity button press state, used for toggle.
+	bool m_analog_limiter_toggled{}; // Whether the sensitivity is toggled on or off.
+	bool m_analog_limiter_enabled_last{}; // only used in keyboard_pad_handler
+	bool get_analog_limiter_button_active(bool is_toggle_mode, u32 player_id);
 
 	// Cable State:   0 - 1  plugged in ?
 	u8 m_cable_state{0};
