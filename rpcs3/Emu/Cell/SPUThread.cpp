@@ -1330,8 +1330,24 @@ void spu_thread::dump_regs(std::string& ret, std::any& /*custom_data*/) const
 	}
 
 	const u32 addr = raddr;
+	const u32 rtime0 = rtime;
 
-	fmt::append(ret, "Reservation Addr: %s\n", addr ? fmt::format("0x%x", addr) : "N/A");
+	if (vm::check_addr(addr))
+	{
+		fmt::append(ret, "Reservation Addr: 0x%x\n", addr);
+		fmt::append(ret, "Reservation Time: 0x%x\n", rtime0 & 0xff'ff'ff);
+	}
+	else if (addr)
+	{
+		fmt::append(ret, "Reservation Addr: 0x%x (unmapped)\n", addr);
+		fmt::append(ret, "Reservation Time: 0x%x\n", rtime0 & 0xff'ff'ff);
+	}
+	else
+	{
+		fmt::append(ret, "Reservation Addr: N/A\n");
+		fmt::append(ret, "Reservation Time: N/A\n");
+	}
+
 	fmt::append(ret, "Reservation Data:\n");
 
 	be_t<u32> data[32]{};
@@ -4616,6 +4632,8 @@ bool spu_thread::process_mfc_cmd()
 
 						get_resrv_waiters_count(addr)--;
 
+						static_cast<void>(test_stopped());
+
 						// Quick check if there were reservation changes
 						const u64 new_time = res;
 
@@ -4634,7 +4652,7 @@ bool spu_thread::process_mfc_cmd()
 							{
 								// Reservation was lost but the data itself remains unchanged so try to ignore it
 								set_events(SPU_EVENT_LR);
-								rtime = this_time;
+								rtime = new_time;
 							}
 
 							u8& val = getllar_wait_time[pc / 32].front();
@@ -4655,8 +4673,9 @@ bool spu_thread::process_mfc_cmd()
 							g_unchanged++;
 
 							// Try to forcefully change timestamp in order to notify threads
-							if (get_resrv_waiters_count(addr) && res.compare_and_swap_test(this_time, this_time + 128))
+							if (get_resrv_waiters_count(addr) && res.compare_and_swap_test(new_time, new_time + 128))
 							{
+								rtime = this_time - 128;
 								vm::reservation_notifier(addr).notify_all();
 							}
 						}
@@ -4722,8 +4741,9 @@ bool spu_thread::process_mfc_cmd()
 				}
 			}
 
-			if (++i < 25) [[likely]]
+			if (i < 24) [[likely]]
 			{
+				i++;
 				busy_wait(300);
 			}
 			else
