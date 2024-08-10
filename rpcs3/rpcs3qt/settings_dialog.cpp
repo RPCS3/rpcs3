@@ -24,12 +24,12 @@
 #include "emu_settings_type.h"
 #include "render_creator.h"
 #include "microphone_creator.h"
+#include "rpcn_countries.h"
 
 #include "Emu/GameInfo.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/title.h"
-#include "Emu/NP/np_countries.h"
 
 #include "Emu/Audio/audio_device_enumerator.h"
 
@@ -1469,7 +1469,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceComboBox(ui->psnStatusBox, emu_settings_type::PSNStatus);
 	SubscribeTooltip(ui->gb_psnStatusBox, tooltips.settings.psn_status);
 
-	refresh_countrybox();
+	settings_dialog::refresh_countrybox();
 	connect(ui->psnCountryBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
 		{
 			if (index < 0)
