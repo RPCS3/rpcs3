@@ -560,7 +560,7 @@ void pad_settings_dialog::InitButtons()
 
 		while (thread_ctrl::state() != thread_state::aborting)
 		{
-			thread_ctrl::wait_for(1000);
+			thread_ctrl::wait_for(10000);
 
 			if (m_input_thread_state != input_thread_state::active)
 			{
@@ -796,7 +796,7 @@ void pad_settings_dialog::ReactivateButtons()
 	ui->chooseProduct->setFocusPolicy(Qt::WheelFocus);
 }
 
-void pad_settings_dialog::RepaintPreviewLabel(QLabel* l, int deadzone, int anti_deadzone, int desired_width, int x, int y, int squircle, double multiplier) const
+void pad_settings_dialog::RepaintPreviewLabel(QLabel* label, int deadzone, int anti_deadzone, int desired_width, int x, int y, int squircle, double multiplier) const
 {
 	desired_width = 100; // Let's keep a fixed size for these labels for now
 	const qreal deadzone_max = m_handler ? m_handler->thumb_max : 255; // 255 used as fallback. The deadzone circle shall be small.
@@ -884,7 +884,7 @@ void pad_settings_dialog::RepaintPreviewLabel(QLabel* l, int deadzone, int anti_
 
 	painter.end();
 
-	l->setPixmap(pixmap);
+	label->setPixmap(pixmap);
 }
 
 void pad_settings_dialog::keyPressEvent(QKeyEvent *keyEvent)
@@ -1624,7 +1624,7 @@ void pad_settings_dialog::ChangeHandler()
 	if (ui->chooseDevice->isEnabled() && ui->chooseDevice->currentIndex() >= 0)
 	{
 		start_input_thread();
-		m_timer_input.start(1);
+		m_timer_input.start(10);
 		m_timer_pad_refresh.start(1000);
 	}
 }
