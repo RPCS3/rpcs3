@@ -10,6 +10,6 @@ namespace countries
 		std::string name;
 		std::string ccode;
 	};
-	const std::vector<country_code> get_countries();
+	const std::array<country_code, 72> get_countries();
 } // namespace countries
 
