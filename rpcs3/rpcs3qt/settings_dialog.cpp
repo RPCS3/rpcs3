@@ -2449,14 +2449,14 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 void settings_dialog::refresh_countrybox()
 {
-	const auto vec_countries = countries::get_countries();
-	const auto cur_country = m_emu_settings->GetSetting(emu_settings_type::PSNCountry);
+	const auto& vec_countries = countries::g_countries;
+	const auto& cur_country = m_emu_settings->GetSetting(emu_settings_type::PSNCountry);
 
 	ui->psnCountryBox->clear();
 
 	for (const auto& [cnty, code] : vec_countries)
 	{
-		ui->psnCountryBox->addItem(QString::fromStdString(cnty), QString::fromStdString(code));
+		ui->psnCountryBox->addItem(QString::fromStdString(cnty.data()), QString::fromStdString(code.data()));
 	}
 	ui->psnCountryBox->setCurrentIndex(ui->psnCountryBox->findData(QString::fromStdString(cur_country)));
 	ui->psnCountryBox->model()->sort(0, Qt::AscendingOrder);

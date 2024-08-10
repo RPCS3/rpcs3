@@ -3,9 +3,7 @@
 
 namespace countries
 {
-	const std::array<country_code, 72> get_countries()
-	{
-		std::array<country_code, 72> countries =
+	const std::array<country_code, 72> g_countries =
 		{
 				country_code{"Japan", "jp"},
 				country_code{"United States", "us"},
@@ -80,7 +78,5 @@ namespace countries
 				country_code{"Uruguay", "uy"},
 				country_code{"Vietnam", "vn"}
 		};
-
-		return countries;
-	}
 } // namespace countries
+

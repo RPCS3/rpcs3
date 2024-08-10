@@ -7,9 +7,9 @@ namespace countries
 {
 	struct country_code
 	{
-		std::string name;
-		std::string ccode;
+		std::string_view name;
+		std::string_view ccode;
 	};
-	const std::array<country_code, 72> get_countries();
+	extern const std::array<country_code, 72> g_countries;
 } // namespace countries
 
