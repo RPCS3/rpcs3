@@ -2450,7 +2450,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 void settings_dialog::refresh_countrybox()
 {
 	const auto& vec_countries = countries::g_countries;
-	const auto& cur_country = m_emu_settings->GetSetting(emu_settings_type::PSNCountry);
+	const std::string cur_country = m_emu_settings->GetSetting(emu_settings_type::PSNCountry);
 
 	ui->psnCountryBox->clear();
 
