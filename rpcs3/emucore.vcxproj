@@ -98,6 +98,7 @@
     <ClCompile Include="Emu\IPC_socket.cpp" />
     <ClCompile Include="Emu\localized_string.cpp" />
     <ClCompile Include="Emu\NP\rpcn_config.cpp" />
+    <ClCompile Include="Emu\NP\rpcn_countries.cpp" />
     <ClCompile Include="Emu\NP\upnp_config.cpp" />
     <ClCompile Include="Emu\NP\upnp_handler.cpp" />
     <ClCompile Include="Emu\perf_monitor.cpp" />
@@ -578,6 +579,7 @@
     <ClInclude Include="Emu\localized_string_id.h" />
     <ClInclude Include="Emu\NP\generated\np2_structs_generated.h" />
     <ClInclude Include="Emu\NP\np_handler.h" />
+    <ClInclude Include="Emu\NP\rpcn_countries.h" />
     <ClInclude Include="Emu\NP\signaling_handler.h" />
     <ClInclude Include="Emu\NP\upnp_config.h" />
     <ClInclude Include="Emu\NP\upnp_handler.h" />

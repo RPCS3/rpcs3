@@ -24,6 +24,7 @@
 #include "emu_settings_type.h"
 #include "render_creator.h"
 #include "microphone_creator.h"
+#include "Emu/NP/rpcn_countries.h"
 
 #include "Emu/GameInfo.h"
 #include "Emu/System.h"
@@ -1468,6 +1469,22 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceComboBox(ui->psnStatusBox, emu_settings_type::PSNStatus);
 	SubscribeTooltip(ui->gb_psnStatusBox, tooltips.settings.psn_status);
 
+	settings_dialog::refresh_countrybox();
+	connect(ui->psnCountryBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
+	{
+		if (index < 0)
+			return;
+
+		const QVariant country_code = ui->psnCountryBox->itemData(index);
+
+		if (!country_code.isValid() || !country_code.canConvert<QString>())
+			return;
+
+		m_emu_settings->SetSetting(emu_settings_type::PSNCountry, country_code.toString().toStdString());
+	});
+	
+	SubscribeTooltip(ui->gb_psnCountryBox, tooltips.settings.psn_country);
+
 	if (!game)
 	{
 		remove_item(ui->psnStatusBox, static_cast<int>(np_psn_status::psn_fake), static_cast<int>(g_cfg.net.psn_status.def));
@@ -2431,6 +2448,21 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	{
 		// Ignore. This will most likely only fail if the setting doesn't contain any values
 	}
+}
+
+void settings_dialog::refresh_countrybox()
+{
+	const auto& vec_countries = countries::g_countries;
+	const std::string cur_country = m_emu_settings->GetSetting(emu_settings_type::PSNCountry);
+
+	ui->psnCountryBox->clear();
+
+	for (const auto& [cnty, code] : vec_countries)
+	{
+		ui->psnCountryBox->addItem(QString::fromUtf8(cnty.data(), static_cast<int>(cnty.size())), QString::fromUtf8(code.data(), static_cast<int>(code.size())));
+	}
+	ui->psnCountryBox->setCurrentIndex(ui->psnCountryBox->findData(QString::fromStdString(cur_country)));
+	ui->psnCountryBox->model()->sort(0, Qt::AscendingOrder);
 }
 
 void settings_dialog::closeEvent([[maybe_unused]] QCloseEvent* event)

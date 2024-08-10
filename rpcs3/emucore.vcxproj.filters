@@ -1264,6 +1264,9 @@
     <ClCompile Include="Emu\Io\MouseHandler.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\NP\rpcn_countries.cpp">
+      <Filter>Emu\NP</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -2568,6 +2571,9 @@
     </ClInclude>
     <ClInclude Include="Emu\CPU\Hypervisor.h">
       <Filter>Emu\CPU</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\NP\rpcn_countries.h">
+      <Filter>Emu\NP</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

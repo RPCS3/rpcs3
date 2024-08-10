@@ -3956,9 +3956,10 @@ error_code sceNpManagerGetAccountRegion(vm::ptr<SceNpCountryCode> countryCode, v
 		return SCE_NP_ERROR_INVALID_STATE;
 	}
 
-	memset(countryCode.get_ptr(), 0, sizeof(SceNpCountryCode));
-	countryCode->data[0] = 'u';
-	countryCode->data[1] = 's';
+	const std::string ccode = g_cfg.net.country.to_string();
+	std::memset(countryCode.get_ptr(), 0, sizeof(countryCode));
+	ensure(ccode.size() == sizeof(SceNpCountryCode::data));
+	std::memcpy(countryCode->data, ccode.data(), sizeof(SceNpCountryCode::data));
 
 	*language = CELL_SYSUTIL_LANG_ENGLISH_US;
 

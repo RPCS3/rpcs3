@@ -68,4 +68,7 @@ private:
 	void SubscribeTooltip(QObject* object, const QString& tooltip);
 	bool eventFilter(QObject* object, QEvent* event) override;
 	void closeEvent(QCloseEvent* event) override;
+
+	// Countries
+	void refresh_countrybox();
 };

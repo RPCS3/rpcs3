@@ -761,9 +761,9 @@ namespace np
 			np_memory.setup(poolptr, poolsize);
 		}
 
-		memset(&npid, 0, sizeof(npid));
-		memset(&online_name, 0, sizeof(online_name));
-		memset(&avatar_url, 0, sizeof(avatar_url));
+		std::memset(&npid, 0, sizeof(npid));
+		std::memset(&online_name, 0, sizeof(online_name));
+		std::memset(&avatar_url, 0, sizeof(avatar_url));
 
 		if (g_cfg.net.psn_status >= np_psn_status::psn_fake)
 		{

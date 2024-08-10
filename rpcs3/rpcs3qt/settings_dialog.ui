@@ -2276,6 +2276,18 @@
               </widget>
              </item>
              <item>
+              <widget class="QGroupBox" name="gb_psnCountryBox">
+                <property name="title">
+                 <string>Country</string>
+                </property>
+                <layout class="QVBoxLayout" name="gb_psnCountryBox_layout">
+                  <item>
+                   <widget class="QComboBox" name="psnCountryBox"/>
+                  </item>
+                </layout>
+               </widget>
+              </item>
+              <item>
               <spacer name="networkTabSpacerRight">
                <property name="orientation">
                 <enum>Qt::Vertical</enum>
