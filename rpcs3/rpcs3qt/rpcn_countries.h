@@ -1,7 +1,8 @@
 #pragma once
 
-#include "util/types.hpp"
+#include <vector>
 #include <string>
+
 namespace countries
 {
 	struct country_code
@@ -11,3 +12,4 @@ namespace countries
 	};
 	const std::vector<country_code> get_countries();
 } // namespace countries
+

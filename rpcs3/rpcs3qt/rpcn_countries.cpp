@@ -1,7 +1,3 @@
-#pragma once
-
-#include "util/types.hpp"
-#include <string>
 #include "stdafx.h"
 #include "rpcn_countries.h"
 
@@ -88,3 +84,4 @@ namespace countries
 		return countries;
 	}
 } // namespace countries
+

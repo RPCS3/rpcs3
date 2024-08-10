@@ -1471,18 +1471,17 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	settings_dialog::refresh_countrybox();
 	connect(ui->psnCountryBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
-		{
-			if (index < 0)
-				return;
+	{
+		if (index < 0)
+			return;
 
-			const QVariant country_code = ui->psnCountryBox->itemData(index);
-			const QVariant country_name = ui->psnCountryBox->itemText(index);
+		const QVariant country_code = ui->psnCountryBox->itemData(index);
 
-			if (!country_code.isValid() || !country_code.canConvert<QString>())
-				return;
+		if (!country_code.isValid() || !country_code.canConvert<QString>())
+			return;
 
-			m_emu_settings->SetSetting(emu_settings_type::PSNCountry, country_code.toString().toStdString());
-		});
+		m_emu_settings->SetSetting(emu_settings_type::PSNCountry, country_code.toString().toStdString());
+	});
 	
 	SubscribeTooltip(ui->gb_psnCountryBox, tooltips.settings.psn_country);
 
@@ -2452,17 +2451,12 @@ void settings_dialog::refresh_countrybox()
 {
 	const auto vec_countries = countries::get_countries();
 	const auto cur_country = m_emu_settings->GetSetting(emu_settings_type::PSNCountry);
-	int i = 0, index = 0;
 
 	ui->psnCountryBox->clear();
 
 	for (const auto& [cnty, code] : vec_countries)
 	{
 		ui->psnCountryBox->addItem(QString::fromStdString(cnty), QString::fromStdString(code));
-		if (cur_country == code)
-			index = i;
-
-		i++;
 	}
 	ui->psnCountryBox->setCurrentIndex(ui->psnCountryBox->findData(QString::fromStdString(cur_country)));
 	ui->psnCountryBox->model()->sort(0, Qt::AscendingOrder);
