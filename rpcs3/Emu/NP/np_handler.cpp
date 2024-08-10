@@ -753,11 +753,6 @@ namespace np
 		return avatar_url;
 	}
 
-	const SceNpCountryCode& np_handler::get_country_code() const
-	{
-		return country_code;
-	}
-
 	void np_handler::init_NP(u32 poolsize, vm::ptr<void> poolptr)
 	{
 		if (poolsize)
@@ -769,10 +764,6 @@ namespace np
 		std::memset(&npid, 0, sizeof(npid));
 		std::memset(&online_name, 0, sizeof(online_name));
 		std::memset(&avatar_url, 0, sizeof(avatar_url));
-		std::memset(&country_code, 0, sizeof(country_code));
-
-		const std::string s_country = g_cfg.net.country.to_string();
-		string_to_country_code(s_country, country_code);
 
 		if (g_cfg.net.psn_status >= np_psn_status::psn_fake)
 		{
