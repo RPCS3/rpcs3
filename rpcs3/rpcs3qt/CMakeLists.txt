@@ -73,6 +73,7 @@ add_library(rpcs3_ui STATIC
     register_editor_dialog.cpp
     recvmessage_dialog_frame.cpp
     render_creator.cpp
+    rpcn_countries.cpp
     rpcn_settings_dialog.cpp
     rsx_debugger.cpp
     save_data_dialog.cpp

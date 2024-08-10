@@ -87,8 +87,6 @@ target_sources(rpcs3
     Input/sdl_pad_handler.cpp
     Input/skateboard_pad_handler.cpp
     Input/xinput_pad_handler.cpp
-
-    rpcs3qt/rpcn_countries.cpp
 )
 
 gen_git_version(${CMAKE_CURRENT_SOURCE_DIR})
