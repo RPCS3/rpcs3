@@ -19,9 +19,14 @@ bool mouse_config::exist() const
 
 bool mouse_config::load()
 {
+	g_cfg_mouse.from_default();
+
 	if (fs::file cfg_file{cfg_name, fs::read})
 	{
-		return from_string(cfg_file.to_string());
+		if (const std::string content = cfg_file.to_string(); !content.empty())
+		{
+			return from_string(content);
+		}
 	}
 
 	return false;

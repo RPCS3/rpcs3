@@ -8,6 +8,20 @@
 class SDLDevice : public PadDevice
 {
 public:
+
+	struct touch_point
+	{
+		int index = 0;
+		int x = 0;
+		int y = 0;
+	};
+
+	struct touchpad
+	{
+		int index = 0;
+		std::vector<touch_point> fingers;
+	};
+
 	struct sdl_info
 	{
 		SDL_GameController* game_controller = nullptr;
@@ -37,6 +51,8 @@ public:
 
 		std::set<SDL_GameControllerButton> button_ids;
 		std::set<SDL_GameControllerAxis> axis_ids;
+
+		std::vector<touchpad> touchpads;
 	};
 
 	sdl_info sdl{};
@@ -81,6 +97,11 @@ class sdl_pad_handler : public PadHandlerBase
 		Paddle4,
 		Touchpad,
 
+		Touch_L,
+		Touch_R,
+		Touch_U,
+		Touch_D,
+
 		LT,
 		RT,
 
@@ -124,6 +145,7 @@ private:
 	bool get_is_right_trigger(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
 	bool get_is_left_stick(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
 	bool get_is_right_stick(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
+	bool get_is_touch_pad_motion(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
 	std::unordered_map<u64, u16> get_button_values(const std::shared_ptr<PadDevice>& device) override;
 	pad_preview_values get_preview_values(const std::unordered_map<u64, u16>& data) override;
 

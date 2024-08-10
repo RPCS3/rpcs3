@@ -543,19 +543,20 @@ void minifig_move_dialog::add_minifig_position(QGridLayout* grid_panel, u8 index
 	{
 		vbox_panel->addWidget(new QLabel(tr("None")));
 	}
-	if (old_index != index)
+	auto* btn_move = new QPushButton(tr("Move Here"), this);
+	if (old_index == index)
 	{
-		auto* btn_move = new QPushButton(tr("Move Here"), this);
-		vbox_panel->addWidget(btn_move);
-		connect(btn_move, &QAbstractButton::clicked, this, [this, index]
-			{
-				m_index = index;
-				m_pad = index == 1                             ? 1 :
-			            index == 0 || index == 3 || index == 4 ? 2 :
-			                                                     3;
-				accept();
-			});
+		btn_move->setText(tr("Pick up and Place"));
 	}
+	vbox_panel->addWidget(btn_move);
+	connect(btn_move, &QAbstractButton::clicked, this, [this, index]
+		{
+			m_index = index;
+			m_pad = index == 1                             ? 1 :
+		            index == 0 || index == 3 || index == 4 ? 2 :
+		                                                     3;
+			accept();
+		});
 
 	grid_panel->addLayout(vbox_panel, row, column);
 }
@@ -689,7 +690,7 @@ void dimensions_dialog::clear_figure(u8 pad, u8 index)
 
 	if (figure_slots[index])
 	{
-		g_dimensionstoypad.remove_figure(pad, index, true);
+		g_dimensionstoypad.remove_figure(pad, index, true, true);
 		figure_slots[index] = std::nullopt;
 		m_edit_figures[index]->setText(tr("None"));
 	}
@@ -726,10 +727,13 @@ void dimensions_dialog::move_figure(u8 pad, u8 index)
 	if (move_dlg.exec() == Accepted)
 	{
 		g_dimensionstoypad.move_figure(move_dlg.get_new_pad(), move_dlg.get_new_index(), pad, index);
-		figure_slots[move_dlg.get_new_index()] = figure_slots[index];
-		m_edit_figures[move_dlg.get_new_index()]->setText(m_edit_figures[index]->text());
-		figure_slots[index] = std::nullopt;
-		m_edit_figures[index]->setText(tr("None"));
+		if (index != move_dlg.get_new_index())
+		{
+			figure_slots[move_dlg.get_new_index()] = figure_slots[index];
+			m_edit_figures[move_dlg.get_new_index()]->setText(m_edit_figures[index]->text());
+			figure_slots[index] = std::nullopt;
+			m_edit_figures[index]->setText(tr("None"));
+		}
 	}
 }
 
@@ -751,7 +755,7 @@ void dimensions_dialog::load_figure_path(u8 pad, u8 index, const QString& path)
 
 	clear_figure(pad, index);
 
-	const u32 fig_num = g_dimensionstoypad.load_figure(data, std::move(dim_file), pad, index);
+	const u32 fig_num = g_dimensionstoypad.load_figure(data, std::move(dim_file), pad, index, true);
 
 	figure_slots[index] = fig_num;
 	const auto name = list_minifigs.find(fig_num);

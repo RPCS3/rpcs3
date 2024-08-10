@@ -90,7 +90,13 @@ void cpu_translator::initialize(llvm::LLVMContext& context, llvm::ExecutionEngin
 	m_context = context;
 	m_engine = &engine;
 
-	const auto cpu = m_engine->getTargetMachine()->getTargetCPU();
+	auto cpu = m_engine->getTargetMachine()->getTargetCPU();
+
+	if (cpu == "generic")
+	{
+		// Detection failed, try to guess
+		cpu = fallback_cpu_detection();
+	}
 
 	// Test SSSE3 feature (TODO)
 	if (cpu == "generic" ||
@@ -383,6 +389,17 @@ void cpu_translator::replace_intrinsics(llvm::Function& f)
 
 			++bit;
 		}
+	}
+}
+
+void cpu_translator::run_transforms(llvm::Function& f)
+{
+	// This pass must run first because the other passes may depend on resolved names.
+	replace_intrinsics(f);
+
+	for (auto& pass : m_transform_passes)
+	{
+		pass->run(m_ir, f);
 	}
 }
 

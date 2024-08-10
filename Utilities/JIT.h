@@ -495,6 +495,7 @@ namespace llvm
 	class LLVMContext;
 	class ExecutionEngine;
 	class Module;
+	class StringRef;
 }
 
 // Temporary compiler interface
@@ -559,5 +560,7 @@ public:
 
 	bool add_sub_disk_space(ssz space);
 };
+
+llvm::StringRef fallback_cpu_detection();
 
 #endif // LLVM_AVAILABLE

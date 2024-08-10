@@ -389,6 +389,12 @@ target_sources(rpcs3_emu PRIVATE
     CPU/CPUTranslator.cpp
 )
 
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm64|aarch64")
+    target_sources(rpcs3_emu PRIVATE
+        CPU/Backends/AArch64JIT.cpp
+    )
+endif()
+
 target_link_libraries(rpcs3_emu
     PUBLIC 3rdparty::llvm 3rdparty::asmjit)
 

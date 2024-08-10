@@ -17,6 +17,16 @@
 #include <errno.h>
 #endif
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4996)
+#elif defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#else
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
 std::string wchar_to_utf8(std::wstring_view src)
 {
 #ifdef _WIN32
@@ -32,16 +42,6 @@ std::string wchar_to_utf8(std::wstring_view src)
 #endif
 }
 
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4996)
-#elif defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#else
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#endif
 std::string utf16_to_utf8(std::u16string_view src)
 {
 	std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> converter{};
@@ -53,13 +53,6 @@ std::u16string utf8_to_utf16(std::string_view src)
 	std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> converter{};
 	return converter.from_bytes(src.data());
 }
-#ifdef _MSC_VER
-#pragma warning(pop)
-#elif defined(__clang__)
-#pragma clang diagnostic pop
-#else
-#pragma GCC diagnostic pop
-#endif
 
 std::wstring utf8_to_wchar(std::string_view src)
 {
@@ -75,6 +68,13 @@ std::wstring utf8_to_wchar(std::string_view src)
 	return converter.from_bytes(src.data());
 #endif
 }
+#ifdef _MSC_VER
+#pragma warning(pop)
+#elif defined(__clang__)
+#pragma clang diagnostic pop
+#else
+#pragma GCC diagnostic pop
+#endif
 
 #ifdef _WIN32
 std::string fmt::win_error_to_string(unsigned long error, void* module_handle)
@@ -169,6 +169,132 @@ void fmt_class_string<fmt::base57>::format(std::string& out, u64 arg)
 			}
 		}
 	}
+}
+
+fmt::base57_result fmt::base57_result::from_string(std::string_view str)
+{
+	fmt::base57_result result(str.size() / 11 * 8 + (str.size() % 11 ? 8 : 0));
+
+	// Each 11 chars of input produces 8 bytes of byte output
+	for (usz i = 0, p = 0; i < result.size; i += 8, p += 11)
+	{
+		// Load up to 8 bytes
+		const std::string_view be_value = str.substr(p);
+		be_t<u64> value = 0;
+
+		for (u64 j = 10, multiplier = 0; j != umax; j--)
+		{
+			if (multiplier == 0)
+			{
+				multiplier = 1;
+			}
+			else
+			{
+				// Do it first to avoid overflow
+				multiplier *= 57;
+			}
+
+			if (j < be_value.size())
+			{
+				auto to_val = [](u8 c) -> u64
+				{
+					if (std::isdigit(c))
+					{
+						return c - '0';
+					}
+
+					if (std::isupper(c))
+					{
+						// Omitted characters
+						if (c == 'B' || c == 'D' || c == 'I' || c == 'O')
+						{
+							return umax;
+						}
+
+						if (c > 'O')
+						{
+							c -= 4;
+						}
+						else if (c > 'I')
+						{
+							c -= 3;
+						}
+						else if (c > 'D')
+						{
+							c -= 2;
+						}
+						else if (c > 'B')
+						{
+							c--;
+						}
+
+						return c - 'A' + 10;
+					}
+
+					if (std::islower(c))
+					{
+						// Omitted characters
+						if (c == 'l')
+						{
+							return umax;
+						}
+
+						if (c > 'l')
+						{
+							c--;
+						}
+
+						return c - 'a' + 10 + 22;
+					}
+
+					return umax;
+				};
+
+				const u64 res = to_val(be_value[j]);
+
+				if (res == umax)
+				{
+					// Invalid input character
+					result = {};
+					break;
+				}
+
+				if (u64{umax} / multiplier < res)
+				{
+					// Overflow
+					result = {};
+					break;
+				}
+
+				const u64 addend = res * multiplier;
+
+				if (~value < addend)
+				{
+					// Overflow
+					result = {};
+					break;
+				}
+
+				value += addend;
+			}
+		}
+
+		if (!result.size)
+		{
+			break;
+		}
+
+		if (result.size - i < sizeof(value))
+		{
+			std::memcpy(result.memory.get() + i, &value, result.size - i);
+		}
+		else
+		{
+			std::memcpy(result.memory.get() + i, &value, sizeof(value));
+		}
+	}
+
+	return result;
 }
 
 void fmt_class_string<const void*>::format(std::string& out, u64 arg)
@@ -465,10 +591,42 @@ void fmt_class_string<std::source_location>::format(std::string& out, u64 arg)
 
 namespace fmt
 {
-	[[noreturn]] void raw_verify_error(std::source_location loc, const char8_t* msg)
+	[[noreturn]] void raw_verify_error(std::source_location loc, const char8_t* msg, usz object)
 	{
 		std::string out;
-		fmt::append(out, "%s%s", msg ? msg : u8"Verification failed", loc);
+		fmt::append(out, "%s (object: 0x%x)%s", msg ? msg : u8"Verification failed", object, loc);
+		thread_ctrl::emergency_exit(out);
+	}
+
+	[[noreturn]] void raw_range_error(std::source_location loc, std::string_view index, usz container_size)
+	{
+		std::string out;
+
+		if (container_size != umax)
+		{
+			fmt::append(out, "Range check failed (index: %s, container_size: %u)%s", index, container_size, loc);
+		}
+		else
+		{
+			fmt::append(out, "Range check failed (index: %s)%s", index, loc);
+		}
+
+		thread_ctrl::emergency_exit(out);
+	}
+
+	[[noreturn]] void raw_range_error(std::source_location loc, usz index, usz container_size)
+	{
+		std::string out;
+
+		if (container_size != umax)
+		{
+			fmt::append(out, "Range check failed (index: %u, container_size: %u)%s", index, container_size, loc);
+		}
+		else
+		{
+			fmt::append(out, "Range check failed (index: %u)%s", index, loc);
+		}
+
 		thread_ctrl::emergency_exit(out);
 	}
 

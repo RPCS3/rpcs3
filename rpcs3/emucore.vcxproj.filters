@@ -2233,9 +2233,6 @@
     <ClInclude Include="Emu\RSX\Program\GLSLCommon.h">
       <Filter>Emu\GPU\RSX\Program</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\RSX\Program\program_state_cache2.hpp">
-      <Filter>Emu\GPU\RSX\Program</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\RSX\Program\program_util.h">
       <Filter>Emu\GPU\RSX\Program</Filter>
     </ClInclude>
@@ -2571,6 +2568,9 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\NV47\FW\GRAPH_backend.h">
       <Filter>Emu\GPU\RSX\NV47\FW</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\CPU\Hypervisor.h">
+      <Filter>Emu\CPU</Filter>
     </ClInclude>
     <ClInclude Include="Emu\NP\np_countries.h">
       <Filter>Emu\NP</Filter>

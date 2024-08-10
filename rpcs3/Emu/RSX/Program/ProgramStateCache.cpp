@@ -4,6 +4,25 @@
 
 #include <stack>
 #include "util/v128.hpp"
+#include "util/asm.hpp"
+
+
+#if defined(ARCH_X64)
+#include "emmintrin.h"
+#include "immintrin.h"
+#endif
+
+#ifdef ARCH_ARM64
+#ifndef _MSC_VER
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
+#include "Emu/CPU/sse2neon.h"
+#ifndef _MSC_VER
+#pragma GCC diagnostic pop
+#endif
+#endif
 
 using namespace program_hash_util;
 
@@ -559,5 +578,73 @@ bool fragment_program_compare::operator()(const RSXFragmentProgram& binary1, con
 		bool end = ((inst1._u32[0] >> 8) & 0x1) && ((inst2._u32[0] >> 8) & 0x1);
 		if (end)
 			return true;
+	}
+}
+
+namespace rsx
+{
+#if defined(ARCH_X64) || defined(ARCH_ARM64)
+	static void write_fragment_constants_to_buffer_sse2(const std::span<f32>& buffer, const RSXFragmentProgram& rsx_prog, const std::vector<usz>& offsets_cache, bool sanitize)
+	{
+		f32* dst = buffer.data();
+		for (usz offset_in_fragment_program : offsets_cache)
+		{
+			char* data = static_cast<char*>(rsx_prog.get_data()) + offset_in_fragment_program;
+
+			const __m128i vector = _mm_loadu_si128(reinterpret_cast<__m128i*>(data));
+			const __m128i shuffled_vector = _mm_or_si128(_mm_slli_epi16(vector, 8), _mm_srli_epi16(vector, 8));
+
+			if (sanitize)
+			{
+				//Convert NaNs and Infs to 0
+				const auto masked = _mm_and_si128(shuffled_vector, _mm_set1_epi32(0x7fffffff));
+				const auto valid = _mm_cmplt_epi32(masked, _mm_set1_epi32(0x7f800000));
+				const auto result = _mm_and_si128(shuffled_vector, valid);
+				_mm_stream_si128(utils::bless<__m128i>(dst), result);
+			}
+			else
+			{
+				_mm_stream_si128(utils::bless<__m128i>(dst), shuffled_vector);
+			}
+
+			dst += 4;
+		}
+	}
+#endif
+
+	static void write_fragment_constants_to_buffer_fallback(const std::span<f32>& buffer, const RSXFragmentProgram& rsx_prog, const std::vector<usz>& offsets_cache, bool sanitize)
+	{
+		f32* dst = buffer.data();
+
+		for (usz offset_in_fragment_program : offsets_cache)
+		{
+			char* data = static_cast<char*>(rsx_prog.get_data()) + offset_in_fragment_program;
+
+			for (u32 i = 0; i < 4; i++)
+			{
+				const u32 value = reinterpret_cast<u32*>(data)[i];
+				const u32 shuffled = ((value >> 8) & 0xff00ff) | ((value << 8) & 0xff00ff00);
+
+				if (sanitize && (shuffled & 0x7fffffff) >= 0x7f800000)
+				{
+					dst[i] = 0.f;
+				}
+				else
+				{
+					dst[i] = std::bit_cast<f32>(shuffled);
+				}
+			}
+
+			dst += 4;
+		}
+	}
+
+	void write_fragment_constants_to_buffer(const std::span<f32>& buffer, const RSXFragmentProgram& rsx_prog, const std::vector<usz>& offsets_cache, bool sanitize)
+	{
+#if defined(ARCH_X64) || defined(ARCH_ARM64)
+		write_fragment_constants_to_buffer_sse2(buffer, rsx_prog, offsets_cache, sanitize);
+#else
+		write_fragment_constants_to_buffer_fallback(buffer, rsx_prog, offsets_cache, sanitize);
+#endif
 	}
 }

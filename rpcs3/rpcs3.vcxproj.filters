@@ -1098,6 +1098,9 @@
     <ClCompile Include="Input\raw_mouse_config.cpp">
       <Filter>Io\raw</Filter>
     </ClCompile>
+    <ClCompile Include="module_verifier.cpp">
+      <Filter>rpcs3</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">

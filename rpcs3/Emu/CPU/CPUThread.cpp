@@ -180,7 +180,7 @@ struct cpu_prof
 			new_samples = 0;
 		}
 
-		static void print_all(std::unordered_map<std::shared_ptr<cpu_thread>, sample_info>& threads)
+		static void print_all(std::unordered_map<std::shared_ptr<cpu_thread>, sample_info>& threads, sample_info& all_info)
 		{
 			u64 new_samples = 0;
 
@@ -193,23 +193,23 @@ struct cpu_prof
 
 			std::multimap<u64, u64, std::greater<u64>> chart;
 
-			std::unordered_map<u64, u64, value_hash<u64>> freq;
-
-			u64 samples = 0, idle = 0;
-			u64 reservation = 0;
-
 			for (auto& [_, info] : threads)
 			{
 				// This function collects thread information regardless of 'new_samples' member state
 				for (auto& [name, count] : info.freq)
 				{
-					freq[name] += count;
+					all_info.freq[name] += count;
 				}
 
-				samples += info.samples;
-				idle += info.idle;
-				reservation += info.reservation_samples;
+				all_info.samples += info.samples;
+				all_info.idle += info.idle;
+				all_info.reservation_samples += info.reservation_samples;
 			}
+
+			const u64 samples = all_info.samples;
+			const u64 idle = all_info.idle;
+			const u64 reservation = all_info.reservation_samples;
+			const auto& freq = all_info.freq;
 
 			if (samples == idle)
 			{
@@ -231,6 +231,8 @@ struct cpu_prof
 			profiler.notice("All Threads: %u samples (%.4f%% idle), %u new, %u reservation (%.4f%%):%s", samples, get_percent(idle, samples), new_samples, reservation, get_percent(reservation, samples - idle), results);
 		}
 	};
+
+	sample_info all_threads_info{};
 
 	void operator()()
 	{
@@ -335,7 +337,8 @@ struct cpu_prof
 			{
 				profiler.success("Flushing profiling results...");
 
-				sample_info::print_all(threads);
+				all_threads_info = {};
+				sample_info::print_all(threads, all_threads_info);
 			}
 
 			if (Emu.IsPaused())
@@ -356,13 +359,42 @@ struct cpu_prof
 		}
 
 		// Print all remaining results
-		sample_info::print_all(threads);
+		sample_info::print_all(threads, all_threads_info);
 	}
 
 	static constexpr auto thread_name = "CPU Profiler"sv;
 };
 
+
 using cpu_profiler = named_thread<cpu_prof>;
+
+extern f64 get_cpu_program_usage_percent(u64 hash)
+{
+	if (auto prof = g_fxo->try_get<cpu_profiler>(); prof && *prof == thread_state::finished)
+	{
+		if (Emu.IsStopped())
+		{
+			u64 total = 0;
+
+			for (auto [name, count] : prof->all_threads_info.freq)
+			{
+				if ((name & -65536) == hash)
+				{
+					total += count;
+				}
+			}
+
+			if (!total)
+			{
+				return 0;
+			}
+
+			return std::max<f64>(0.0001, static_cast<f64>(total) * 100 / (prof->all_threads_info.samples - prof->all_threads_info.idle));
+		}
+	}
+
+	return 0;
+}
 
 thread_local DECLARE(cpu_thread::g_tls_this_thread) = nullptr;
 
