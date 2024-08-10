@@ -1264,6 +1264,7 @@
     <ClCompile Include="Emu\Io\MouseHandler.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\rpcn_countries.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -2569,6 +2570,7 @@
     <ClInclude Include="Emu\CPU\Hypervisor.h">
       <Filter>Emu\CPU</Filter>
     </ClInclude>
+    <ClInclude Include="rpcs3qt\rpcn_countries.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Emu\RSX\Program\GLSLSnippets\GPUDeswizzle.glsl">
