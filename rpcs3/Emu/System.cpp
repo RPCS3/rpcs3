@@ -3541,6 +3541,13 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 							const u64 hash_val = read_from_ptr<be_t<u64>>(result.data) & -65536;
 							const f64 usage = get_cpu_program_usage_percent(hash_val);
+
+							if (usage == 0)
+							{
+								iter = index + 1;
+								continue;
+							}
+
 							const std::string text_append = fmt::format("usage %%%g, ", usage);
 							new_log.insert(new_log.begin() + seperator + out_added + 2, text_append.begin(), text_append.end());
 
