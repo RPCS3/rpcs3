@@ -7133,8 +7133,9 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			value.reg2 = pattern.reg2;
 		}
 
-		if (true)
+		if (g_cfg.core.spu_accurate_reservations)
 		{
+			// Because enabling it is a hack, as it turns out
 			continue;
 		}
 

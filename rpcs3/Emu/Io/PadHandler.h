@@ -256,6 +256,14 @@ public:
 	pad_handler m_type;
 	bool m_is_init = false;
 
+	enum class gui_call_type
+	{
+		normal,
+		get_connection,
+		reset_input,
+		blacklist
+	};
+
 	std::vector<pad_ensemble>& bindings() { return m_bindings; }
 	std::string name_string() const { return m_name_string; }
 	usz max_devices() const { return m_max_devices; }
@@ -287,7 +295,7 @@ public:
 	// Binds a Pad to a device
 	virtual bool bindPadToDevice(std::shared_ptr<Pad> pad);
 	virtual void init_config(cfg_pad* cfg) = 0;
-	virtual connection get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool first_call, bool get_blacklist, const std::vector<std::string>& buttons);
+	virtual connection get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, gui_call_type call_type, const std::vector<std::string>& buttons);
 	virtual void get_motion_sensors(const std::string& pad_id, const motion_callback& callback, const motion_fail_callback& fail_callback, motion_preview_values preview_values, const std::array<AnalogSensor, 4>& sensors);
 	virtual std::unordered_map<u32, std::string> get_motion_axis_list() const { return {}; }
 

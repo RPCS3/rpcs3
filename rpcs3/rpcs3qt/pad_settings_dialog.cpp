@@ -560,7 +560,7 @@ void pad_settings_dialog::InitButtons()
 
 		while (thread_ctrl::state() != thread_state::aborting)
 		{
-			thread_ctrl::wait_for(1000);
+			thread_ctrl::wait_for(10000);
 
 			if (m_input_thread_state != input_thread_state::active)
 			{
@@ -594,6 +594,7 @@ void pad_settings_dialog::InitButtons()
 			const u32 new_button_id = m_button_id;
 			const bool is_mapping = new_button_id > button_ids::id_pad_begin && new_button_id < button_ids::id_pad_end;
 			const bool first_call = std::exchange(button_id, new_button_id) != button_id && is_mapping;
+			const PadHandlerBase::gui_call_type call_type = first_call ? PadHandlerBase::gui_call_type::reset_input : PadHandlerBase::gui_call_type::normal;
 
 			const PadHandlerBase::connection status = m_handler->get_next_button_press(m_device_name,
 				[this, button_id](u16 val, std::string name, std::string pad_name, u32 battery_level, pad_preview_values preview_values)
@@ -616,7 +617,7 @@ void pad_settings_dialog::InitButtons()
 					m_input_callback_data.status = PadHandlerBase::connection::disconnected;
 					m_input_callback_data.button_id = button_id;
 				},
-				first_call, false, buttons);
+				call_type, buttons);
 
 			if (status == PadHandlerBase::connection::no_data)
 			{
@@ -642,7 +643,7 @@ void pad_settings_dialog::RefreshPads()
 		}
 
 		std::lock_guard lock(m_handler_mutex);
-		const PadHandlerBase::connection status = m_handler->get_next_button_press(info.name, nullptr, nullptr, false, false, {});
+		const PadHandlerBase::connection status = m_handler->get_next_button_press(info.name, nullptr, nullptr, PadHandlerBase::gui_call_type::get_connection, {});
 		switch_pad_info(i, info, status != PadHandlerBase::connection::disconnected);
 	}
 }
@@ -795,7 +796,7 @@ void pad_settings_dialog::ReactivateButtons()
 	ui->chooseProduct->setFocusPolicy(Qt::WheelFocus);
 }
 
-void pad_settings_dialog::RepaintPreviewLabel(QLabel* l, int deadzone, int anti_deadzone, int desired_width, int x, int y, int squircle, double multiplier) const
+void pad_settings_dialog::RepaintPreviewLabel(QLabel* label, int deadzone, int anti_deadzone, int desired_width, int x, int y, int squircle, double multiplier) const
 {
 	desired_width = 100; // Let's keep a fixed size for these labels for now
 	const qreal deadzone_max = m_handler ? m_handler->thumb_max : 255; // 255 used as fallback. The deadzone circle shall be small.
@@ -883,7 +884,7 @@ void pad_settings_dialog::RepaintPreviewLabel(QLabel* l, int deadzone, int anti_
 
 	painter.end();
 
-	l->setPixmap(pixmap);
+	label->setPixmap(pixmap);
 }
 
 void pad_settings_dialog::keyPressEvent(QKeyEvent *keyEvent)
@@ -1327,7 +1328,7 @@ void pad_settings_dialog::OnPadButtonClicked(int id)
 	case button_ids::id_blacklist:
 	{
 		std::lock_guard lock(m_handler_mutex);
-		[[maybe_unused]] const PadHandlerBase::connection status = m_handler->get_next_button_press(m_device_name, nullptr, nullptr, false, true, {});
+		[[maybe_unused]] const PadHandlerBase::connection status = m_handler->get_next_button_press(m_device_name, nullptr, nullptr, PadHandlerBase::gui_call_type::blacklist, {});
 		return;
 	}
 	default:
@@ -1623,7 +1624,7 @@ void pad_settings_dialog::ChangeHandler()
 	if (ui->chooseDevice->isEnabled() && ui->chooseDevice->currentIndex() >= 0)
 	{
 		start_input_thread();
-		m_timer_input.start(1);
+		m_timer_input.start(10);
 		m_timer_pad_refresh.start(1000);
 	}
 }
