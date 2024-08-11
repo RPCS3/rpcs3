@@ -1135,17 +1135,36 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 			}
 
 			QListWidgetItem* selected_item = m_lst_requests->selectedItems().first();
+			std::string str_sel_friend = selected_item->text().toStdString();
 
-			// Only create context menu for incoming requests
+			QMenu* context_menu = new QMenu();
+
+			// Presents different context based on role
 			if (selected_item->data(Qt::UserRole) == false)
 			{
+				QAction* cancel_friend_request = context_menu->addAction(tr("&Cancel Request"));
+
+				connect(cancel_friend_request, &QAction::triggered, this, [this, str_sel_friend]()
+					{
+						if (!m_rpcn->remove_friend(str_sel_friend))
+						{
+							QMessageBox::critical(this, tr("Error cancelling friend request!"), tr("An error occurred while trying to cancel friend request!"), QMessageBox::Ok);
+						}
+						else
+						{
+							QMessageBox::information(this, tr("Friend request cancelled!"), tr("You've successfully cancelled the friend request!"), QMessageBox::Ok);
+						}
+					});
+
+				context_menu->exec(m_lst_requests->viewport()->mapToGlobal(pos));
+				context_menu->deleteLater();
+
 				return;
 			}
 
-			std::string str_sel_friend = selected_item->text().toStdString();
 
-			QMenu* context_menu           = new QMenu();
 			QAction* accept_request_action = context_menu->addAction(tr("&Accept Request"));
+			QAction* reject_friend_request = context_menu->addAction(tr("&Reject Request"));
 
 			connect(accept_request_action, &QAction::triggered, this, [this, str_sel_friend]()
 				{
@@ -1158,6 +1177,18 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 						QMessageBox::information(this, tr("Friend added!"), tr("You've successfully added a friend!"), QMessageBox::Ok);
 					}
 				});
+
+			connect(reject_friend_request, &QAction::triggered, this, [this, str_sel_friend]()
+			{
+				if (!m_rpcn->remove_friend(str_sel_friend))
+				{
+					QMessageBox::critical(this, tr("Error rejecting friend request!"), tr("An error occurred while trying to reject the friend request!"), QMessageBox::Ok);
+				}
+				else
+				{
+					QMessageBox::information(this, tr("Friend request cancelled!"), tr("You've successfully rejected the friend request!"), QMessageBox::Ok);
+				}
+			});
 
 			context_menu->exec(m_lst_requests->viewport()->mapToGlobal(pos));
 			context_menu->deleteLater();
