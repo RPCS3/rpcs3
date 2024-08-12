@@ -16,6 +16,7 @@
 #include "Emu/Cell/lv2/sys_rsxaudio.h"
 #include "Emu/RSX/rsx_utils.h"
 #include "Emu/RSX/Overlays/overlay_message.h"
+#include "Emu/Io/interception.h"
 #include "Emu/Io/recording_config.h"
 
 #include <QApplication>
@@ -295,7 +296,10 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 	}
 	case Qt::Key_F11:
 	{
-		handle_shortcut(gui::shortcuts::shortcut::gw_toggle_recording, {});
+		if (keyEvent->modifiers() == Qt::ControlModifier)
+			handle_shortcut(gui::shortcuts::shortcut::gw_toggle_mouse_and_keyboard, {});
+		else
+			handle_shortcut(gui::shortcuts::shortcut::gw_toggle_recording, {});
 		break;
 	}
 	case Qt::Key_F12:
@@ -419,6 +423,11 @@ void gs_frame::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKey
 	{
 		g_disable_frame_limit = !g_disable_frame_limit;
 		gui_log.warning("%s boost mode", g_disable_frame_limit.load() ? "Enabled" : "Disabled");
+		break;
+	}
+	case gui::shortcuts::shortcut::gw_toggle_mouse_and_keyboard:
+	{
+		input::toggle_mouse_and_keyboard();
 		break;
 	}
 	default:
