@@ -628,10 +628,20 @@ namespace rsx
 			}
 			else
 			{
+				// Swizzle_copy_1 prepares usable output buffer from our original source. It mostly deals with cropping and scaling the input pixels so that the final swizzle does not need to apply that.
 				const auto swz_temp = swizzled_copy_1(dst, src, out_w, out_h, slice_h, in_format, out_format, need_convert, need_clip, interpolate);
-				auto pixels_src = swz_temp.empty() ? src.pixels : swz_temp.data();
+				const u8* pixels_src = src.pixels;
+				auto src_pitch = src.pitch;
 
-				swizzled_copy_2(const_cast<u8*>(pixels_src), dst.pixels, src.pitch, out_w, out_h, dst.bpp);
+				// NOTE: Swizzled copy routine creates temp output buffer that uses dst pitch, not source pitch. We need to account for this if using that output as intermediary buffer.
+				if (!swz_temp.empty())
+				{
+					pixels_src = swz_temp.data();
+					src_pitch = dst.pitch;
+				}
+
+				// Swizzle_copy_2 only pads the data and encodes it as a swizzled output. Transformation (scaling, rotation, etc) is done in swizzle_copy_1
+				swizzled_copy_2(const_cast<u8*>(pixels_src), dst.pixels, src_pitch, out_w, out_h, dst.bpp);
 			}
 
 			if (tiled_region)
