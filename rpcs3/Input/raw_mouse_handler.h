@@ -108,7 +108,7 @@ private:
 
 #ifdef _WIN32
 	void register_raw_input_devices();
-	void unregister_raw_input_devices();
+	void unregister_raw_input_devices() const;
 	bool m_registered_raw_input_devices = false;
 #endif
 

@@ -35,6 +35,7 @@ namespace gui
 			gw_restart,
 			gw_rsx_capture,
 			gw_frame_limit,
+			gw_toggle_mouse_and_keyboard,
 
 			count
 		};
