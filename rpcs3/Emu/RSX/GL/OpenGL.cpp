@@ -1,6 +1,10 @@
 #include "stdafx.h"
 #include "OpenGL.h"
 
+#if defined(HAVE_WAYLAND)
+#include <EGL/egl.h>
+#endif
+
 #ifdef _WIN32
 
 extern "C"
@@ -53,6 +57,14 @@ void gl::set_swapinterval(int interval)
 			return;
 		}
 	}
+
+#ifdef HAVE_WAYLAND
+	if (auto egl_display = eglGetCurrentDisplay(); egl_display != EGL_NO_DISPLAY)
+	{
+		eglSwapInterval(egl_display, interval);
+		return;
+	}
+#endif
 
 	//No existing drawable or missing swap extension, EGL?
 	rsx_log.error("Failed to set swap interval");
