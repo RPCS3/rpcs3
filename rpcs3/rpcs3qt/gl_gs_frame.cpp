@@ -18,12 +18,14 @@ gl_gs_frame::gl_gs_frame(QScreen* screen, const QRect& geometry, const QIcon& ap
 	m_format.setAlphaBufferSize(0);
 	m_format.setDepthBufferSize(0);
 	m_format.setSwapBehavior(QSurfaceFormat::SwapBehavior::DoubleBuffer);
+	m_format.setSwapInterval(0);
 	if (g_cfg.video.debug_output)
 	{
 		m_format.setOption(QSurfaceFormat::FormatOption::DebugContext);
 	}
 	setFormat(m_format);
 	create();
+	show();
 }
 
 draw_context_t gl_gs_frame::make_context()
