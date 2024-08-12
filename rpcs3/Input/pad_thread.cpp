@@ -16,6 +16,7 @@
 #endif
 #include "keyboard_pad_handler.h"
 #include "Emu/Io/Null/NullPadHandler.h"
+#include "Emu/Io/interception.h"
 #include "Emu/Io/PadHandler.h"
 #include "Emu/Io/pad_config.h"
 #include "Emu/System.h"
@@ -200,6 +201,9 @@ void pad_thread::Init()
 			|| (pad->m_class_type >= CELL_PAD_FAKE_TYPE_FIRST && pad->m_class_type < CELL_PAD_FAKE_TYPE_LAST);
 		connect_usb_controller(i, input::get_product_by_vid_pid(pad->m_vendor_id, pad->m_product_id));
 	}
+
+	// Initialize active mouse and keyboard. Activate pad handler if one exists.
+	input::set_mouse_and_keyboard(m_handlers.contains(pad_handler::keyboard) ? input::active_mouse_and_keyboard::pad : input::active_mouse_and_keyboard::emulated);
 }
 
 void pad_thread::SetRumble(const u32 pad, u8 large_motor, bool small_motor)

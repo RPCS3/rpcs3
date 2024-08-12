@@ -27,8 +27,9 @@ void fmt_class_string<gui::shortcuts::shortcut>::format(std::string& out, u64 ar
 		case shortcut::gw_restart: return "gw_restart";
 		case shortcut::gw_rsx_capture: return "gw_rsx_capture";
 		case shortcut::gw_frame_limit: return "gw_frame_limit";
+		case shortcut::gw_toggle_mouse_and_keyboard: return "gw_toggle_mouse_and_keyboard";
 		case shortcut::count: return "count";
-		};
+		}
 
 		return unknown;
 	});
@@ -53,7 +54,8 @@ shortcut_settings::shortcut_settings()
 		{ shortcut::gw_savestate, shortcut_info{ "game_window_savestate", tr("Savestate"), "Ctrl+S", shortcut_handler_id::game_window } },
 		{ shortcut::gw_restart, shortcut_info{ "game_window_restart", tr("Restart"), "Ctrl+R", shortcut_handler_id::game_window } },
 		{ shortcut::gw_rsx_capture, shortcut_info{ "game_window_rsx_capture", tr("RSX Capture"), "Alt+C", shortcut_handler_id::game_window } },
-		{ shortcut::gw_frame_limit, shortcut_info{ "game_window_gw_frame_limit", tr("Toggle Framelimit"), "Ctrl+F10", shortcut_handler_id::game_window } },
+		{ shortcut::gw_frame_limit, shortcut_info{ "game_window_frame_limit", tr("Toggle Framelimit"), "Ctrl+F10", shortcut_handler_id::game_window } },
+		{ shortcut::gw_toggle_mouse_and_keyboard, shortcut_info{ "game_window_toggle_mouse_and_keyboard", tr("Toggle Keyboard"), "Ctrl+F11", shortcut_handler_id::game_window } },
 	})
 {
 }

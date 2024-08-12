@@ -312,6 +312,8 @@ void KeyboardHandlerBase::ReleaseAllKeys()
 	{
 		consumer.ReleaseAllKeys();
 	}
+
+	m_keys_released = true;
 }
 
 void keyboard_consumer::ReleaseAllKeys()
