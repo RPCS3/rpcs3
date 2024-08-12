@@ -985,6 +985,7 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 		return false;
 
 	m_pad_configs[pad->m_player_id].from_string(player_config->config.to_string());
+
 	const cfg_pad* cfg = &m_pad_configs[pad->m_player_id];
 	if (cfg == nullptr)
 		return false;

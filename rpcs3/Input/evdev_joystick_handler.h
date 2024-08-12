@@ -439,7 +439,7 @@ private:
 
 protected:
 	PadHandlerBase::connection update_connection(const std::shared_ptr<PadDevice>& device) override;
-	void get_mapping(const pad_ensemble& binding) override;
+	void get_mapping(pad_ensemble& binding) override;
 	void get_extended_info(const pad_ensemble& binding) override;
 	void apply_pad_data(const pad_ensemble& binding) override;
 	bool get_is_left_trigger(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;

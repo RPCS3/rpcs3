@@ -108,6 +108,11 @@ struct cfg_pad final : cfg::node
 	cfg::uint<0, 100> analog_lerp_factor{ this, "Analog Button Lerp Factor", 100 };
 	cfg::uint<0, 100> trigger_lerp_factor{ this, "Trigger Lerp Factor", 100 };
 
+	cfg::uint<0, 100> l_trigger_step_percent{ this, "Left Trigger Step Percent", 0 }; // 0 means that we don't step
+	cfg::uint<0, 100> r_trigger_step_percent{ this, "Right Trigger Step Percent", 0 }; // 0 means that we don't step
+	cfg::uint<0, 100> l_trigger_step_offset_percent{ this, "Left Trigger Step Offset Percent", 0 }; // our first step starts here
+	cfg::uint<0, 100> r_trigger_step_offset_percent{ this, "Right Trigger Step Offset Percent", 0 }; // our first step starts here
+
 	cfg::uint<CELL_PAD_PCLASS_TYPE_STANDARD, CELL_PAD_PCLASS_TYPE_MAX> device_class_type{ this, "Device Class Type", 0 };
 	cfg::uint<0, 65535> vendor_id{ this, "Vendor ID", 0 };
 	cfg::uint<0, 65535> product_id{ this, "Product ID", 0 };

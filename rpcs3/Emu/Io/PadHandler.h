@@ -23,6 +23,12 @@ public:
 	u8 player_id{0};
 	u8 large_motor{0};
 	u8 small_motor{0};
+	u8 l_trigger_step_index{0};
+	u8 r_trigger_step_index{0};
+	bool l_trigger_pressed{false};
+	bool r_trigger_pressed{false};
+	u16 l_trigger_value{0};
+	u16 r_trigger_value{0};
 	std::set<u64> trigger_code_left{};
 	std::set<u64> trigger_code_right{};
 	std::array<std::set<u64>, 4> axis_code_left{};
@@ -314,8 +320,9 @@ private:
 
 protected:
 	virtual std::array<std::set<u32>, PadHandlerBase::button::button_count> get_mapped_key_codes(const std::shared_ptr<PadDevice>& device, const cfg_pad* cfg);
-	virtual void get_mapping(const pad_ensemble& binding);
+	virtual void get_mapping(pad_ensemble& binding);
 	void TranslateButtonPress(const std::shared_ptr<PadDevice>& device, u64 keyCode, bool& pressed, u16& val, bool use_stick_multipliers, bool ignore_stick_threshold = false, bool ignore_trigger_threshold = false);
+	static inline void set_trigger_step(PadDevice& device, const Button& button, u16& value, bool& pressed);
 	void init_configs();
 	cfg_pad* get_config(const std::string& pad_id);
 };

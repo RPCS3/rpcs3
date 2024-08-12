@@ -405,6 +405,69 @@ void PadHandlerBase::TranslateButtonPress(const std::shared_ptr<PadDevice>& devi
 	}
 }
 
+void PadHandlerBase::set_trigger_step(PadDevice& device, const Button& button, u16& value, bool& pressed)
+{
+	if (button.m_offset != CELL_PAD_BTN_OFFSET_DIGITAL2)
+	{
+		return;
+	}
+
+	if (button.m_outKeyCode == CELL_PAD_CTRL_L2)
+	{
+		if (const u32 step = device.config->l_trigger_step_percent)
+		{
+			if (pressed && !device.l_trigger_pressed)
+			{
+				const u16 base_offset = static_cast<u16>(device.config->l_trigger_step_offset_percent * 255.0f / 100.0f);
+				const u16 step_offset = static_cast<u16>(++device.l_trigger_step_index * step * 255.0f / 100.0f);
+				value = base_offset + step_offset;
+
+				if (value > 255)
+				{
+					device.l_trigger_step_index = 0;
+					value = base_offset;
+				}
+
+				device.l_trigger_value = value;
+			}
+			else
+			{
+				value = device.l_trigger_value;
+			}
+
+			device.l_trigger_pressed = pressed;
+			pressed = value != 0;
+		}
+	}
+	else if (button.m_outKeyCode == CELL_PAD_CTRL_R2)
+	{
+		if (const u32 step = device.config->r_trigger_step_percent)
+		{
+			if (pressed && !device.r_trigger_pressed)
+			{
+				const u16 base_offset = static_cast<u16>(device.config->r_trigger_step_offset_percent * 255.0f / 100.0f);
+				const u16 step_offset = static_cast<u16>(++device.r_trigger_step_index * step * 255.0f / 100.0f);
+				value = base_offset + step_offset;
+
+				if (value > 255)
+				{
+					device.r_trigger_step_index = 0;
+					value = base_offset;
+				}
+
+				device.r_trigger_value = value;
+			}
+			else
+			{
+				value = device.r_trigger_value;
+			}
+
+			device.r_trigger_pressed = pressed;
+			pressed = value != 0;
+		}
+	}
+}
+
 bool PadHandlerBase::bindPadToDevice(std::shared_ptr<Pad> pad)
 {
 	if (!pad || pad->m_player_id >= g_cfg_input.player.size())
@@ -428,12 +491,16 @@ bool PadHandlerBase::bindPadToDevice(std::shared_ptr<Pad> pad)
 	m_pad_configs[pad->m_player_id].from_string(player_config->config.to_string());
 	pad_device->config = &m_pad_configs[pad->m_player_id];
 	pad_device->player_id = pad->m_player_id;
+
 	cfg_pad* config = pad_device->config;
 	if (config == nullptr)
 	{
 		input_log.error("PadHandlerBase::bindPadToDevice: no profile found for device %d '%s'", m_bindings.size(), player_config->device.to_string());
 		return false;
 	}
+
+	pad_device->l_trigger_value = static_cast<u16>(config->l_trigger_step_offset_percent * 255.0f / 100.0f);
+	pad_device->r_trigger_value = static_cast<u16>(config->r_trigger_step_offset_percent * 255.0f / 100.0f);
 
 	std::array<std::set<u32>, button::button_count> mapping = get_mapped_key_codes(pad_device, config);
 
@@ -582,9 +649,9 @@ std::array<std::set<u32>, PadHandlerBase::button::button_count> PadHandlerBase::
 	return mapping;
 }
 
-void PadHandlerBase::get_mapping(const pad_ensemble& binding)
+void PadHandlerBase::get_mapping(pad_ensemble& binding)
 {
-	const auto& device = binding.device;
+	auto& device = binding.device;
 	const auto& pad = binding.pad;
 
 	if (!device || !pad)
@@ -635,6 +702,9 @@ void PadHandlerBase::get_mapping(const pad_ensemble& binding)
 				pressed = value > 0;
 			}
 		}
+
+		// Handle trigger step if configured
+		set_trigger_step(*device, button, value, pressed);
 
 		button.m_value = value;
 		button.m_pressed = pressed;

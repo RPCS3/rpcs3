@@ -893,7 +893,7 @@ PadHandlerBase::connection evdev_joystick_handler::update_connection(const std::
 	return connection::connected;
 }
 
-void evdev_joystick_handler::get_mapping(const pad_ensemble& binding)
+void evdev_joystick_handler::get_mapping(pad_ensemble& binding)
 {
 	m_dev = std::static_pointer_cast<EvdevDevice>(binding.device);
 	const auto& pad = binding.pad;
@@ -1103,7 +1103,7 @@ u16 evdev_joystick_handler::get_sensor_value(const libevdev* dev, const AnalogSe
 
 void evdev_joystick_handler::apply_input_events(const std::shared_ptr<Pad>& pad)
 {
-	if (!pad)
+	if (!pad || !m_dev)
 		return;
 
 	const cfg_pad* cfg = m_dev->config;
@@ -1208,6 +1208,9 @@ void evdev_joystick_handler::apply_input_events(const std::shared_ptr<Pad>& pad)
 			process_mapped_button(index, pressed, final_value, false);
 		}
 
+		// Handle trigger step if configured
+		set_trigger_step(*m_dev, button, final_value, pressed);
+
 		button.m_value = final_value;
 		button.m_pressed = pressed;
 	}
@@ -1287,9 +1290,13 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 	m_pad_configs[pad->m_player_id].from_string(player_config->config.to_string());
 	m_dev->config = &m_pad_configs[pad->m_player_id];
 	m_dev->player_id = pad->m_player_id;
+
 	cfg_pad* cfg = m_dev->config;
 	if (!cfg)
 		return false;
+
+	m_dev->l_trigger_value = static_cast<u16>(cfg->l_trigger_step_offset_percent * 255.0f / 100.0f);
+	m_dev->r_trigger_value = static_cast<u16>(cfg->r_trigger_step_offset_percent * 255.0f / 100.0f);
 
 	// We need to register EvdevButtons due to their axis directions.
 	const auto register_evdevbutton = [this](u32 code, bool is_axis, bool is_reverse) -> u32
