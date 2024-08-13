@@ -184,12 +184,15 @@ error_code cellPadEnd(ppu_thread& ppu)
 {
 	cellPad.notice("cellPadEnd()");
 
-	std::lock_guard lock(pad::g_pad_mutex);
+	// Don't lock sys_config_stop. This may lead to a deadlock with the pad_thread.
+	{
+		std::lock_guard lock(pad::g_pad_mutex);
 
-	auto& config = g_fxo->get<pad_info>();
+		auto& config = g_fxo->get<pad_info>();
 
-	if (!config.max_connect.exchange(0))
-		return CELL_PAD_ERROR_UNINITIALIZED;
+		if (!config.max_connect.exchange(0))
+			return CELL_PAD_ERROR_UNINITIALIZED;
+	}
 
 	sys_config_stop(ppu);
 	return CELL_OK;
