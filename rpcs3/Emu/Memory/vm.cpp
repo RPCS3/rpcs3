@@ -101,6 +101,13 @@ namespace vm
 		u64 old = -1;
 		const auto cpu = get_current_cpu_thread();
 
+		const bool had_wait = cpu && cpu->state & cpu_flag::wait;
+
+		if (cpu && !had_wait)
+		{
+			cpu->state += cpu_flag::wait;
+		}
+
 		while (true)
 		{
 			const auto [ok, rtime] = try_reservation_update(addr);
@@ -112,15 +119,15 @@ namespace vm
 					reservation_notifier(addr).notify_all();
 				}
 
+				if (cpu && !had_wait && cpu->test_stopped())
+				{
+					//
+				}
+
 				return;
 			}
 
 			old = rtime;
-
-			if (cpu && cpu->test_stopped())
-			{
-				return;
-			}
 		}
 	}
 
