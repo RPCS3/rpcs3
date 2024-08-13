@@ -24,8 +24,8 @@ std::pair<YAML::Node, std::string> yaml_load(const std::string& from);
 
 // Use try/catch in YAML::Node::as<T>() instead of YAML::Node::as<T>(fallback) in order to get an error message
 template <typename T>
-T get_yaml_node_value(YAML::Node node, std::string& error_message);
+T get_yaml_node_value(const YAML::Node& node, std::string& error_message);
 
 // Get the location of the node in the document
-std::string get_yaml_node_location(YAML::Node node);
+std::string get_yaml_node_location(const YAML::Node& node);
 std::string get_yaml_node_location(const YAML::detail::iterator_value& it);
