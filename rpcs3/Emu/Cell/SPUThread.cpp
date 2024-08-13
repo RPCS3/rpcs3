@@ -5509,6 +5509,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 					}
 
 					set_lr = true;
+					spu_log.trace("SPU Reservation Wait: Did not encounter notification (raddr=0x%x)", raddr);
 				}
 
 				if (set_lr)
@@ -5541,31 +5542,30 @@ s64 spu_thread::get_ch_value(u32 ch)
 							}
 						}
 					}
-#ifdef __linux__
-					get_resrv_waiters_count(raddr)++;
-					vm::reservation_notifier(raddr).wait(rtime, atomic_wait_timeout{50'000});
-					get_resrv_waiters_count(raddr)--;
-#else
+
 					if (raddr - spurs_addr <= 0x80 && !g_cfg.core.spu_accurate_reservations && mask1 == SPU_EVENT_LR)
 					{
-						atomic_wait_engine::set_one_time_use_wait_callback(+[](u64) -> bool
-						{
-							const auto _this = static_cast<spu_thread*>(cpu_thread::get_current());
-							AUDIT(_this->get_class() == thread_class::spu);
-
-							return !_this->is_stopped();
-						});
-
-						// Wait without timeout, in this situation we have notifications for all writes making it possible
+						// Wait with extended timeout, in this situation we have notifications for nearly all writes making it possible
 						// Abort notifications are handled specially for performance reasons
-						vm::reservation_notifier(raddr).wait(rtime);
+						get_resrv_waiters_count(raddr)++;
+						vm::reservation_notifier(raddr).wait(rtime, atomic_wait_timeout{300'000});
+						get_resrv_waiters_count(raddr)--;
 						continue;
 					}
 
+					const u32 _raddr = this->raddr;
+#ifdef __linux__
+					get_resrv_waiters_count(_raddr)++;
+					vm::reservation_notifier(_raddr).wait(rtime, atomic_wait_timeout{50'000});
+					get_resrv_waiters_count(_raddr)--;
+
+					if (get_resrv_waiters_count(_raddr) && vm::reservation_acquire(_raddr) == rtime + 128)
+					{
+						vm::reservation_notifier(_raddr).notify_all();
+					}
+#else
 					static thread_local bool s_tls_try_notify = false;
 					s_tls_try_notify = false;
-
-					const u32 _raddr = this->raddr;
 
 					atomic_wait_engine::set_one_time_use_wait_callback(mask1 != SPU_EVENT_LR ? nullptr : +[](u64 attempts) -> bool
 					{
