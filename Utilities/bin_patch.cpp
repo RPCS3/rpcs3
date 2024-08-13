@@ -754,6 +754,18 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 	}
 	}
 
+	// Validate value
+	const auto get_node_value = [&]<typename U, typename S>(U, S) // Add unused params. The lambda doesn't compile otherwise.
+	{
+		p_data.value.long_value = is_config_value ? static_cast<U>(config_value.value) : get_yaml_node_value<U>(value_node, error_message);
+
+		if (error_message.find("bad conversion") != std::string::npos)
+		{
+			error_message.clear();
+			p_data.value.long_value = get_yaml_node_value<S>(value_node, error_message);
+		}
+	};
+
 	switch (p_data.type)
 	{
 	case patch_type::bp_exec:
@@ -766,21 +778,37 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 	}
 	case patch_type::bef32:
 	case patch_type::lef32:
+	{
+		p_data.value.double_value = is_config_value ? config_value.value : get_yaml_node_value<f32>(value_node, error_message);
+		break;
+	}
 	case patch_type::bef64:
 	case patch_type::lef64:
 	{
 		p_data.value.double_value = is_config_value ? config_value.value : get_yaml_node_value<f64>(value_node, error_message);
 		break;
 	}
+	case patch_type::byte:
+	{
+		get_node_value(u8{}, s8{});
+		break;
+	}
+	case patch_type::le16:
+	case patch_type::be16:
+	{
+		get_node_value(u16{}, s16{});
+		break;
+	}
+	case patch_type::le32:
+	case patch_type::be32:
+	case patch_type::bd32:
+	{
+		get_node_value(u32{}, s32{});
+		break;
+	}
 	default:
 	{
-		p_data.value.long_value = is_config_value ? static_cast<u64>(config_value.value) : get_yaml_node_value<u64>(value_node, error_message);
-
-		if (error_message.find("bad conversion") != std::string::npos)
-		{
-			error_message.clear();
-			p_data.value.long_value = get_yaml_node_value<s64>(value_node, error_message);
-		}
+		get_node_value(u64{}, s64{});
 		break;
 	}
 	}
