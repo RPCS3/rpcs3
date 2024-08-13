@@ -418,7 +418,7 @@ void keyboard_pad_handler::processKeyEvent(QKeyEvent* event, bool pressed)
 			return;
 
 		const bool is_num_key = list.removeAll("Num") > 0;
-		const QString name = QString::fromStdString(GetKeyName(event));
+		const QString name = QString::fromStdString(GetKeyName(event, true));
 
 		// TODO: Edge case: switching numlock keeps numpad keys pressed due to now different modifier
 
@@ -824,7 +824,7 @@ QStringList keyboard_pad_handler::GetKeyNames(const QKeyEvent* keyEvent)
 	return list;
 }
 
-std::string keyboard_pad_handler::GetKeyName(const QKeyEvent* keyEvent)
+std::string keyboard_pad_handler::GetKeyName(const QKeyEvent* keyEvent, bool with_modifiers)
 {
 	// Handle special cases first
 	if (std::string name = native_scan_code_to_string(keyEvent->nativeScanCode()); !name.empty())
@@ -852,7 +852,13 @@ std::string keyboard_pad_handler::GetKeyName(const QKeyEvent* keyEvent)
 	default:
 		break;
 	}
-	return QKeySequence(keyEvent->key() | keyEvent->modifiers()).toString(QKeySequence::NativeText).toStdString();
+
+	if (with_modifiers)
+	{
+		return QKeySequence(keyEvent->key() | keyEvent->modifiers()).toString(QKeySequence::NativeText).toStdString();
+	}
+
+	return QKeySequence(keyEvent->key()).toString(QKeySequence::NativeText).toStdString();
 }
 
 std::string keyboard_pad_handler::GetKeyName(const u32& keyCode)
