@@ -36,10 +36,102 @@ namespace vm
 	// Update reservation status
 	void reservation_update(u32 addr);
 
-	// Get reservation sync variable
-	inline atomic_t<u64>& reservation_notifier(u32 addr)
+	struct reservation_waiter_t
 	{
-		return *reinterpret_cast<atomic_t<u64>*>(g_reservations + (addr & 0xff80) / 2);
+		u32 wait_flag = 0;
+		u8 waiters_count = 0;
+		u8 waiters_index = 0;
+	};
+
+	static inline std::pair<atomic_t<reservation_waiter_t>*, atomic_t<reservation_waiter_t>*> reservation_notifier(u32 raddr)
+	{
+		extern std::array<atomic_t<reservation_waiter_t>, 512> g_resrv_waiters_count;
+
+		// Storage efficient method to distinguish different nearby addresses (which are likely)
+		const usz index = std::popcount(raddr & -512) + ((raddr / 128) % 4) * 32;
+		auto& waiter = g_resrv_waiters_count[index * 4];
+		return { &g_resrv_waiters_count[index * 4 + waiter.load().waiters_index % 4], &waiter };
+	}
+
+	static inline u32 reservation_notifier_count(u32 raddr)
+	{
+		return reservation_notifier(raddr).first->load().waiters_count;
+	}
+
+	static inline void reservation_notifier_end_wait(atomic_t<reservation_waiter_t>& waiter)
+	{
+		waiter.atomic_op([](reservation_waiter_t& value)
+		{
+			if (value.waiters_count-- == 1)
+			{
+				value.wait_flag = 0;
+			}
+		});
+	}
+
+	static inline atomic_t<reservation_waiter_t>* reservation_notifier_begin_wait(u32 raddr, u64 rtime)
+	{
+		atomic_t<reservation_waiter_t>& waiter = *reservation_notifier(raddr).first;
+
+		waiter.atomic_op([](reservation_waiter_t& value)
+		{
+			value.wait_flag = 1;
+			value.waiters_count++;
+		});
+
+		if ((reservation_acquire(raddr) & -128) != rtime)
+		{
+			reservation_notifier_end_wait(waiter);
+			return nullptr;
+		}
+
+		return &waiter;
+	}
+
+	static inline atomic_t<u32>* reservation_notifier_notify(u32 raddr, bool pospone = false)
+	{
+		const auto notifiers = reservation_notifier(raddr);
+
+		if (notifiers.first->load().wait_flag)
+		{
+			if (notifiers.first == notifiers.second)
+			{
+				if (!notifiers.first->fetch_op([](reservation_waiter_t& value)
+				{
+					if (value.waiters_index == 0)
+					{
+						value.wait_flag = 0;
+						value.waiters_count = 0;
+						value.waiters_index++;
+						return true;
+					}
+
+					return false;
+				}).second)
+				{
+					return nullptr;
+				}
+			}
+			else
+			{
+				u8 old_index = static_cast<u8>(notifiers.first - notifiers.second);
+				if (!atomic_storage<u8>::compare_exchange(notifiers.second->raw().waiters_index, old_index, (old_index + 1) % 4))
+				{
+					return nullptr;
+				}
+
+				notifiers.first->release(reservation_waiter_t{});
+			}
+
+			if (pospone)
+			{
+				return utils::bless<atomic_t<u32>>(&notifiers.first->raw().wait_flag);
+			}
+
+			utils::bless<atomic_t<u32>>(&notifiers.first->raw().wait_flag)->notify_all();
+		}
+
+		return nullptr;
 	}
 
 	u64 reservation_lock_internal(u32, atomic_t<u64>&);

@@ -3302,8 +3302,6 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime
 #endif
 });
 
-extern atomic_t<u8>& get_resrv_waiters_count(u32 raddr);
-
 template <typename T>
 static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 {
@@ -3553,11 +3551,11 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 				if (ppu.res_notify_time == (vm::reservation_acquire(notify) & -128))
 				{
 					ppu.state += cpu_flag::wait;
-					vm::reservation_notifier(notify).notify_all();
+					vm::reservation_notifier_notify(notify);
 					notified = true;
 				}
 
-				if (get_resrv_waiters_count(addr))
+				if (vm::reservation_notifier_count(addr))
 				{
 					if (!notified)
 					{
@@ -3566,7 +3564,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 					}
 					else if ((addr ^ notify) & -128)
 					{
-						res.notify_all();
+						vm::reservation_notifier_notify(addr);
 						ppu.res_notify = 0;
 					}
 				}
@@ -3581,7 +3579,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 			{
 				// Try to postpone notification to when PPU is asleep or join notifications on the same address
 				// This also optimizes a mutex - won't notify after lock is aqcuired (prolonging the critical section duration), only notifies on unlock
-				if (get_resrv_waiters_count(addr))
+				if (vm::reservation_notifier_count(addr))
 				{
 					ppu.res_notify = addr;
 					ppu.res_notify_time = rtime + 128;
@@ -3607,7 +3605,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 		if (ppu.res_notify_time == (vm::reservation_acquire(notify) & -128))
 		{
 			ppu.state += cpu_flag::wait;
-			vm::reservation_notifier(notify).notify_all();
+			vm::reservation_notifier_notify(notify);
 			static_cast<void>(ppu.test_stopped());
 		}
 
