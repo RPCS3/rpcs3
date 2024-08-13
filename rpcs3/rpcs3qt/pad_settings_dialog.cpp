@@ -1311,6 +1311,9 @@ void pad_settings_dialog::OnPadButtonClicked(int id)
 		m_enable_multi_binding = true;
 	}
 
+	// On alt+click or alt+space allow to handle triggers as the entire stick axis
+	m_handler->set_triggers_as_sticks_only(QApplication::keyboardModifiers() & Qt::KeyboardModifier::AltModifier);
+
 	for (auto but : m_pad_buttons->buttons())
 	{
 		but->setFocusPolicy(Qt::ClickFocus);

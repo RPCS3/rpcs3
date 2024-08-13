@@ -78,6 +78,11 @@ class xinput_pad_handler final : public PadHandlerBase
 		LT,
 		RT,
 
+		LT_Pos,
+		LT_Neg,
+		RT_Pos,
+		RT_Neg,
+
 		LSXNeg,
 		LSXPos,
 		LSYNeg,
@@ -120,8 +125,8 @@ private:
 	typedef DWORD (WINAPI * PFN_XINPUTGETBATTERYINFORMATION)(DWORD, BYTE, XINPUT_BATTERY_INFORMATION *);
 
 	int GetDeviceNumber(const std::string& padId);
-	static PadButtonValues get_button_values_base(const XINPUT_STATE& state);
-	static PadButtonValues get_button_values_scp(const SCP_EXTN& state);
+	static PadButtonValues get_button_values_base(const XINPUT_STATE& state, bool triggers_as_sticks_only);
+	static PadButtonValues get_button_values_scp(const SCP_EXTN& state, bool triggers_as_sticks_only);
 
 	HMODULE library{ nullptr };
 	PFN_XINPUTGETEXTENDED xinputGetExtended{ nullptr };
