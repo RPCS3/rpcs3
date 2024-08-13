@@ -47,7 +47,7 @@ namespace aarch64
                     continue;
                 }
 
-                if (llvm::dyn_cast<llvm::ReturnInst>(&*bit))
+                if (llvm::isa<llvm::ReturnInst>(&*bit))
                 {
                     if (auto ci = llvm::dyn_cast<llvm::CallInst>(&*prev))
                     {
@@ -63,7 +63,7 @@ namespace aarch64
         }
     }
 
-    function_info_t GHC_frame_preservation_pass::preprocess_function(llvm::Function& f)
+    function_info_t GHC_frame_preservation_pass::preprocess_function(const llvm::Function& f)
     {
         function_info_t result{};
         result.instruction_count = f.getInstructionCount();
@@ -100,6 +100,7 @@ namespace aarch64
         // This is another thing to be moved to a MachineFunction pass. Ideally we should check the instruction stream for writes to LR and reload it on exit.
         // For now, assume it is dirtied if the function is of any reasonable length.
         result.clobbers_x30 = result.instruction_count > 32;
+        result.is_leaf = true;
 
         for (auto& bb : f)
         {
@@ -107,8 +108,23 @@ namespace aarch64
             {
                 if (auto ci = llvm::dyn_cast<llvm::CallInst>(&inst))
                 {
+                    if (llvm::isa<llvm::InlineAsm>(ci->getCalledOperand()))
+                    {
+                        // Inline ASM blocks are ignored
+                        continue;
+                    }
+
                     result.num_external_calls++;
-                    result.clobbers_x30 |= (!ci->isTailCall());
+                    if (ci->isTailCall())
+                    {
+                        // This is not a leaf if it has at least one exit point / terminator that is not a return instruction.
+                        result.is_leaf = false;
+                    }
+                    else
+                    {
+                        // Returning calls always clobber x30
+                        result.clobbers_x30 = true;
+                    }
                 }
             }
         }
@@ -116,7 +132,7 @@ namespace aarch64
         return result;
     }
 
-    instruction_info_t GHC_frame_preservation_pass::decode_instruction(llvm::Function& f, llvm::Instruction* i)
+    instruction_info_t GHC_frame_preservation_pass::decode_instruction(const llvm::Function& f, const llvm::Instruction* i)
     {
         instruction_info_t result{};
         if (auto ci = llvm::dyn_cast<llvm::CallInst>(i))
@@ -202,7 +218,7 @@ namespace aarch64
         return result;
     }
 
-    gpr GHC_frame_preservation_pass::get_base_register_for_call(const std::string& callee_name)
+    gpr GHC_frame_preservation_pass::get_base_register_for_call(const std::string& callee_name, gpr default_reg)
     {
         // We go over the base_register_lookup table and find the first matching pattern
         for (const auto& pattern : m_config.base_register_lookup)
@@ -213,8 +229,7 @@ namespace aarch64
             }
         }
 
-        // Default is x19
-        return aarch64::x19;
+        return default_reg;
     }
 
     void GHC_frame_preservation_pass::run(llvm::IRBuilder<>* irb, llvm::Function& f)
@@ -261,6 +276,16 @@ namespace aarch64
 
         // Force tail calls on all terminators
         force_tail_call_terminators(f);
+
+        // Check for leaves
+        if (function_info.is_leaf && !m_config.use_stack_frames)
+        {
+            // Sanity check. If this function had no returning calls, it should have been omitted from processing.
+            ensure(function_info.clobbers_x30, "Function has no terminator and no non-tail calls but was allowed for frame processing!");
+            DPRINT("Function %s is a leaf.", this_name.c_str());
+            process_leaf_function(irb, f);
+            return;
+        }
 
         // Asm snippets for patching stack frame
         std::string frame_prologue, frame_epilogue;
@@ -413,6 +438,149 @@ namespace aarch64
             }
         }
 
-        ensure(terminator_found, "Could not find terminator for function!");
+        if (!terminator_found)
+        {
+            // If we got here, we must be using stack frames.
+            ensure(function_info.is_leaf && function_info.stack_frame_size > 0, "Leaf function was processed without using stack frames!");
+
+            // We want to insert a frame cleanup at the tail at every return instruction we find.
+            for (auto& bb : f)
+            {
+                for (auto& i : bb)
+                {
+                    if (is_ret_instruction(&i))
+                    {
+                        irb->SetInsertPoint(&i);
+                        LLVM_ASM_VOID(frame_epilogue, irb, f.getContext());
+                    }
+                }
+            }
+        }
+    }
+
+    bool GHC_frame_preservation_pass::is_ret_instruction(const llvm::Instruction* i)
+    {
+        if (llvm::isa<llvm::ReturnInst>(i))
+        {
+            return true;
+        }
+
+        // Check for inline asm invoking "ret". This really shouldn't be a thing, but it is present in SPULLVMRecompiler for some reason.
+        if (auto ci = llvm::dyn_cast<llvm::CallInst>(i))
+        {
+            if (auto asm_ = llvm::dyn_cast<llvm::InlineAsm>(ci->getCalledOperand()))
+            {
+                if (asm_->getAsmString() == "ret")
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    bool GHC_frame_preservation_pass::is_inlined_call(const llvm::CallInst* ci)
+    {
+        const auto callee = ci->getCalledFunction();
+        if (!callee)
+        {
+            // Indirect BLR
+            return false;
+        }
+
+        const std::string callee_name = callee->getName().str();
+        if (callee_name.starts_with("llvm."))
+        {
+            // Intrinsic
+            return true;
+        }
+
+        if (callee->hasFnAttribute(llvm::Attribute::AlwaysInline))
+        {
+            // Assume LLVM always obeys this
+            return true;
+        }
+
+        return false;
+    }
+
+    void GHC_frame_preservation_pass::process_leaf_function(llvm::IRBuilder<>* irb, llvm::Function& f)
+    {
+        // Leaf functions have no true external calls.
+        // After every external call, restore LR from the thread context register.
+        bool restore_LR = false;
+        gpr thread_context_reg = aarch64::x19;
+
+        const auto restore_x30 = [&](llvm::Instruction* where)
+        {
+            const auto x30_tail_restore = fmt::format(
+                "ldr x30, [x%u, #%u];\n",       // Load x30 from thread context
+                static_cast<u32>(thread_context_reg),
+                m_config.hypervisor_context_offset);
+
+            ensure(where);
+            irb->SetInsertPoint(where);
+            LLVM_ASM_VOID(x30_tail_restore, irb, f.getContext());
+        };
+
+        for (auto &bb : f)
+        {
+            for (auto bit = bb.begin(); bit != bb.end();)
+            {
+                if (restore_LR)
+                {
+                    restore_x30(llvm::dyn_cast<llvm::Instruction>(bit));
+                    restore_LR = false;
+                }
+
+                if (auto ci = llvm::dyn_cast<llvm::CallInst>(bit))
+                {
+                    // Returning call?
+                    if (is_inlined_call(ci))
+                    {
+                        ++bit;
+                        continue;
+                    }
+
+                    const auto callee = ci->getCalledFunction();
+                    const std::string callee_name = callee ? callee->getName().str() : "__indirect";
+                    auto base_reg = get_base_register_for_call(callee_name, m_config.base_register_lookup.empty() ? gpr::x19 : gpr::xzr);
+
+                    // Check if the call is unexpected. We cannot guarantee that the reload is well-formed in such scenarios
+                    if (base_reg == gpr::xzr)
+                    {
+                        if (callee)
+                        {
+                            // We don't know what we're dealing with here
+                            DPRINT("Unexpected call to %s. We cannot guarantee sane codegen!", callee_name.c_str());
+                        }
+
+                        // Assume x19
+                        base_reg = gpr::x19;
+                    }
+
+                    restore_LR = true;
+                    thread_context_reg = base_reg;
+                }
+
+                if (m_config.debug_info && is_ret_instruction(llvm::dyn_cast<llvm::Instruction>(bit)))
+                {
+                    // We need to save the chain return point.
+                    LLVM_ASM_VOID(
+                        "mov x29, x28;\n"
+                        "mov x28, x27;\n"
+                        "adr x27, .;\n",
+                        irb, f.getContext());
+                }
+
+                if (bit != bb.end())
+                {
+                    ++bit;
+                }
+            }
+        }
+
+        ensure(!restore_LR, "Dangling function call found");
     }
 }
