@@ -402,7 +402,7 @@ void patch_manager_dialog::populate_tree()
 		const auto item = all_title_items[0];
 		ensure(item && all_title_items.size() == 1);
 
-		if (const int index = ui->patch_tree->indexOfTopLevelItem(item); index >= 0)
+		if (const int index = ui->patch_tree->indexOfTopLevelItem(item); item && index >= 0)
 		{
 			const bool all_titles_expanded = item->isExpanded();
 			const auto all_serials_item = item->child(0);
@@ -1065,9 +1065,9 @@ void patch_manager_dialog::dropEvent(QDropEvent* event)
 			else
 			{
 				QString message = tr("Errors were found in the patch file.");
-				QMessageBox mb(QMessageBox::Icon::Critical, tr("Validation failed"), message, QMessageBox::Ok, this);
-				mb.setInformativeText(tr("To see the error log, please click \"Show Details\"."));
-				mb.setDetailedText(tr("%0").arg(summary));
+				QMessageBox* mb = new QMessageBox(QMessageBox::Icon::Critical, tr("Validation failed"), message, QMessageBox::Ok, this);
+				mb->setInformativeText(tr("To see the error log, please click \"Show Details\"."));
+				mb->setDetailedText(tr("%0").arg(summary));
 
 				// Smartass hack to make the unresizeable message box wide enough for the changelog
 				const int log_width = QLabel(summary).sizeHint().width();
@@ -1076,8 +1076,8 @@ void patch_manager_dialog::dropEvent(QDropEvent* event)
 					message += "          ";
 				}
 
-				mb.setText(message);
-				mb.exec();
+				mb->setText(message);
+				mb->show();
 			}
 		}
 	}
@@ -1277,9 +1277,9 @@ bool patch_manager_dialog::handle_json(const QByteArray& data)
 		else
 		{
 			QString message = tr("Errors were found in the downloaded patch file.");
-			QMessageBox mb(QMessageBox::Icon::Critical, tr("Validation failed"), message, QMessageBox::Ok, this);
-			mb.setInformativeText(tr("To see the error log, please click \"Show Details\"."));
-			mb.setDetailedText(tr("%0").arg(summary));
+			QMessageBox* mb = new QMessageBox(QMessageBox::Icon::Critical, tr("Validation failed"), message, QMessageBox::Ok, this);
+			mb->setInformativeText(tr("To see the error log, please click \"Show Details\"."));
+			mb->setDetailedText(tr("%0").arg(summary));
 
 			// Smartass hack to make the unresizeable message box wide enough for the changelog
 			const int log_width = QLabel(message).sizeHint().width();
@@ -1288,8 +1288,8 @@ bool patch_manager_dialog::handle_json(const QByteArray& data)
 				message += "          ";
 			}
 
-			mb.setText(message);
-			mb.exec();
+			mb->setText(message);
+			mb->show();
 		}
 	}
 
