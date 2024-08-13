@@ -50,6 +50,10 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug" AND NOT MSVC)
     add_compile_definitions(_DEBUG)
 endif()
 
+if(UNIX AND NOT APPLE)
+    option(USE_WAYLAND "Include wayland support when building for nix OSes" ON)
+endif()
+
 if(MSVC)
     option(USE_MSVC_STATIC_CRT "Use static MSVC C runtime" OFF)
 
