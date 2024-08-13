@@ -121,6 +121,7 @@ protected:
 	usz m_max_devices = 0;
 	u32 m_trigger_threshold = 0;
 	u32 m_thumb_threshold = 0;
+	bool m_triggers_as_sticks_only = false;
 
 	bool b_has_led = false;
 	bool b_has_rgb = false;
@@ -281,6 +282,7 @@ public:
 
 	u16 NormalizeStickInput(u16 raw_value, s32 threshold, s32 multiplier, bool ignore_threshold = false) const;
 	void convert_stick_values(u16& x_out, u16& y_out, s32 x_in, s32 y_in, u32 deadzone, u32 anti_deadzone, u32 padsquircling) const;
+	void set_triggers_as_sticks_only(bool enabled) { m_triggers_as_sticks_only = enabled; }
 
 	virtual bool Init() { return true; }
 	PadHandlerBase(pad_handler type = pad_handler::null);
