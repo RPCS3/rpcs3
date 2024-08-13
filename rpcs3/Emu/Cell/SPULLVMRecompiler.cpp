@@ -1205,7 +1205,6 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 
 				const auto dest = raddr | (ls_dst & 127);
 				const auto _dest = vm::get_super_ptr<atomic_t<nse_t<v128>>>(dest);
-				using spu_rdata_t = decltype(spu_thread::rdata);
 
 				if (rdata == to_write || ((lsa ^ ls_dst) & (SPU_LS_SIZE - 128)))
 				{
