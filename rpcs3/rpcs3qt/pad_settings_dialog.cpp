@@ -883,7 +883,7 @@ void pad_settings_dialog::keyPressEvent(QKeyEvent *keyEvent)
 	}
 	else
 	{
-		m_cfg_entries[m_button_id].insert_key(keyboard_pad_handler::GetKeyName(keyEvent), m_enable_multi_binding);
+		m_cfg_entries[m_button_id].insert_key(keyboard_pad_handler::GetKeyName(keyEvent, false), m_enable_multi_binding);
 	}
 
 	ReactivateButtons();
