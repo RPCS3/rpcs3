@@ -2,6 +2,7 @@
 #include "pad_thread.h"
 #include "Emu/Io/pad_config.h"
 #include "Emu/Io/KeyboardHandler.h"
+#include "Emu/Io/interception.h"
 #include "Input/product_info.h"
 #include "rpcs3qt/gs_frame.h"
 
@@ -324,10 +325,28 @@ void keyboard_pad_handler::release_all_keys()
 			pad.m_sticks[i].m_value = 128;
 		}
 	}
+
+	m_keys_released = true;
 }
 
 bool keyboard_pad_handler::eventFilter(QObject* target, QEvent* ev)
 {
+	if (!ev) [[unlikely]]
+	{
+		return false;
+	}
+
+	if (input::g_active_mouse_and_keyboard != input::active_mouse_and_keyboard::pad)
+	{
+		if (!m_keys_released)
+		{
+			release_all_keys();
+		}
+		return false;
+	}
+
+	m_keys_released = false;
+
 	// !m_target is for future proofing when gsrender isn't automatically initialized on load.
 	// !m_target->isVisible() is a hack since currently a guiless application will STILL inititialize a gsrender (providing a valid target)
 	if (!m_target || !m_target->isVisible()|| target == m_target)
@@ -381,6 +400,11 @@ void keyboard_pad_handler::SetTargetWindow(QWindow* target)
 
 void keyboard_pad_handler::processKeyEvent(QKeyEvent* event, bool pressed)
 {
+	if (!event) [[unlikely]]
+	{
+		return;
+	}
+
 	if (event->isAutoRepeat())
 	{
 		event->ignore();
@@ -444,6 +468,11 @@ void keyboard_pad_handler::processKeyEvent(QKeyEvent* event, bool pressed)
 
 void keyboard_pad_handler::keyPressEvent(QKeyEvent* event)
 {
+	if (!event) [[unlikely]]
+	{
+		return;
+	}
+
 	if (event->modifiers() & Qt::AltModifier)
 	{
 		switch (event->key())
@@ -502,12 +531,22 @@ void keyboard_pad_handler::keyReleaseEvent(QKeyEvent* event)
 
 void keyboard_pad_handler::mousePressEvent(QMouseEvent* event)
 {
+	if (!event) [[unlikely]]
+	{
+		return;
+	}
+
 	Key(event->button(), true);
 	event->ignore();
 }
 
 void keyboard_pad_handler::mouseReleaseEvent(QMouseEvent* event)
 {
+	if (!event) [[unlikely]]
+	{
+		return;
+	}
+
 	Key(event->button(), false, 0);
 	event->ignore();
 }
@@ -521,7 +560,7 @@ bool keyboard_pad_handler::get_mouse_lock_state() const
 
 void keyboard_pad_handler::mouseMoveEvent(QMouseEvent* event)
 {
-	if (!m_mouse_move_used)
+	if (!m_mouse_move_used || !event)
 	{
 		event->ignore();
 		return;
@@ -659,7 +698,7 @@ void keyboard_pad_handler::mouseMoveEvent(QMouseEvent* event)
 
 void keyboard_pad_handler::mouseWheelEvent(QWheelEvent* event)
 {
-	if (!m_mouse_wheel_used)
+	if (!m_mouse_wheel_used || !event)
 	{
 		return;
 	}

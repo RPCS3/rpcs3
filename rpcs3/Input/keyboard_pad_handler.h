@@ -105,6 +105,7 @@ protected:
 private:
 	QWindow* m_target = nullptr;
 	mouse_movement_mode m_mouse_movement_mode = mouse_movement_mode::relative;
+	bool m_keys_released = false;
 	bool m_mouse_move_used = false;
 	bool m_mouse_wheel_used = false;
 	bool get_mouse_lock_state() const;

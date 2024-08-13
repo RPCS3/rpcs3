@@ -432,7 +432,7 @@ void raw_mouse_handler::register_raw_input_devices()
 	m_registered_raw_input_devices = true;
 }
 
-void raw_mouse_handler::unregister_raw_input_devices()
+void raw_mouse_handler::unregister_raw_input_devices() const
 {
 	if (!m_registered_raw_input_devices)
 	{

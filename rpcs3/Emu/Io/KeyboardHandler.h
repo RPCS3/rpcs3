@@ -169,5 +169,6 @@ public:
 protected:
 	void ReleaseAllKeys();
 
+	bool m_keys_released = false;
 	std::unordered_map<keyboard_consumer::identifier, keyboard_consumer> m_consumers;
 };

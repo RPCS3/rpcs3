@@ -450,85 +450,8 @@ void pad_settings_dialog::InitButtons()
 		}
 	});
 
-	// Enable Button Remapping
-	const auto callback = [this](PadHandlerBase::connection status, u32 button_id, u16 val, std::string name, std::string pad_name, u32 battery_level, pad_preview_values preview_values)
-	{
-		SwitchPadInfo(pad_name, true);
-
-		if (!m_enable_buttons && !m_remap_timer.isActive())
-		{
-			SwitchButtons(true);
-		}
-
-		if (m_handler->has_deadzones())
-		{
-			ui->preview_trigger_left->setValue(preview_values[0]);
-			ui->preview_trigger_right->setValue(preview_values[1]);
-
-			if (m_lx != preview_values[2] || m_ly != preview_values[3])
-			{
-				m_lx = preview_values[2];
-				m_ly = preview_values[3];
-				RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->anti_deadzone_slider_stick_left->value(), ui->slider_stick_left->size().width(), m_lx, m_ly, ui->squircle_left->value(), ui->stick_multi_left->value());
-			}
-			if (m_rx != preview_values[4] || m_ry != preview_values[5])
-			{
-				m_rx = preview_values[4];
-				m_ry = preview_values[5];
-				RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->anti_deadzone_slider_stick_right->value(), ui->slider_stick_right->size().width(), m_rx, m_ry, ui->squircle_right->value(), ui->stick_multi_right->value());
-			}
-		}
-
-		ui->pb_battery->setValue(m_enable_battery ? battery_level : 0);
-
-		if (val <= 0 || status == PadHandlerBase::connection::no_data)
-		{
-			return;
-		}
-
-		cfg_log.notice("get_next_button_press: %s device %s button %s pressed with value %d", m_handler->m_type, pad_name, name, val);
-
-		if (m_button_id > button_ids::id_pad_begin && m_button_id < button_ids::id_pad_end && m_button_id == button_id)
-		{
-			m_cfg_entries[m_button_id].insert_key(name, m_enable_multi_binding);
-			ReactivateButtons();
-		}
-	};
-
-	// Disable Button Remapping
-	const auto fail_callback = [this](const std::string& pad_name)
-	{
-		SwitchPadInfo(pad_name, false);
-
-		if (m_enable_buttons)
-		{
-			SwitchButtons(false);
-		}
-
-		ui->pb_battery->setValue(0);
-
-		if (m_handler->has_deadzones())
-		{
-			ui->preview_trigger_left->setValue(0);
-			ui->preview_trigger_right->setValue(0);
-
-			if (m_lx != 0 || m_ly != 0)
-			{
-				m_lx = 0;
-				m_ly = 0;
-				RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->anti_deadzone_slider_stick_left->value(), ui->slider_stick_left->size().width(), m_lx, m_ly, ui->squircle_left->value(), ui->stick_multi_left->value());
-			}
-			if (m_rx != 0 || m_ry != 0)
-			{
-				m_rx = 0;
-				m_ry = 0;
-				RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->anti_deadzone_slider_stick_right->value(), ui->slider_stick_right->size().width(), m_rx, m_ry, ui->squircle_right->value(), ui->stick_multi_right->value());
-			}
-		}
-	};
-
 	// Use timer to display button input
-	connect(&m_timer_input, &QTimer::timeout, this, [this, callback, fail_callback]()
+	connect(&m_timer_input, &QTimer::timeout, this, [this]()
 	{
 		input_callback_data data;
 		{
@@ -537,16 +460,63 @@ void pad_settings_dialog::InitButtons()
 			m_input_callback_data.has_new_data = false;
 		}
 
-		if (data.has_new_data)
+		if (!data.has_new_data)
 		{
-			if (data.status == PadHandlerBase::connection::disconnected)
+			return;
+		}
+
+		const auto update_preview = [this](const std::string& pad_name, bool is_connected, int battery_level, int trigger_left, int trigger_right, int lx, int ly, int rx, int ry)
+		{
+			SwitchPadInfo(pad_name, is_connected);
+
+			if (is_connected != m_enable_buttons && (!is_connected || !m_remap_timer.isActive()))
 			{
-				fail_callback(data.pad_name);
+				SwitchButtons(is_connected);
 			}
-			else
+
+			ui->pb_battery->setValue(m_enable_battery ? battery_level : 0);
+
+			if (m_handler->has_deadzones())
 			{
-				callback(data.status, data.button_id, data.val, std::move(data.name), std::move(data.pad_name), data.battery_level, std::move(data.preview_values));
+				ui->preview_trigger_left->setValue(trigger_left);
+				ui->preview_trigger_right->setValue(trigger_right);
+
+				if (m_lx != lx || m_ly != ly)
+				{
+					m_lx = lx;
+					m_ly = ly;
+					RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->anti_deadzone_slider_stick_left->value(), ui->slider_stick_left->size().width(), m_lx, m_ly, ui->squircle_left->value(), ui->stick_multi_left->value());
+				}
+				if (m_rx != rx || m_ry != ry)
+				{
+					m_rx = rx;
+					m_ry = ry;
+					RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->anti_deadzone_slider_stick_right->value(), ui->slider_stick_right->size().width(), m_rx, m_ry, ui->squircle_right->value(), ui->stick_multi_right->value());
+				}
 			}
+		};
+
+		if (data.status == PadHandlerBase::connection::disconnected)
+		{
+			// Disable Button Remapping
+			update_preview(data.pad_name, false, 0, 0, 0, 0, 0, 0, 0);
+			return;
+		}
+
+		// Enable Button Remapping
+		update_preview(data.pad_name, true, data.battery_level, data.preview_values[0], data.preview_values[1], data.preview_values[2], data.preview_values[3], data.preview_values[4], data.preview_values[5]);
+
+		if (data.val <= 0 || data.status == PadHandlerBase::connection::no_data)
+		{
+			return;
+		}
+
+		cfg_log.notice("get_next_button_press: %s device %s button %s pressed with value %d", m_handler->m_type, data.pad_name, data.name, data.val);
+
+		if (m_button_id > button_ids::id_pad_begin && m_button_id < button_ids::id_pad_end && m_button_id == data.button_id)
+		{
+			m_cfg_entries[m_button_id].insert_key(data.name, m_enable_multi_binding);
+			ReactivateButtons();
 		}
 	});
 

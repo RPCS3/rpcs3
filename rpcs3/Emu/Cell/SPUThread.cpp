@@ -1330,7 +1330,7 @@ void spu_thread::dump_regs(std::string& ret, std::any& /*custom_data*/) const
 	}
 
 	const u32 addr = raddr;
-	const u32 rtime0 = rtime;
+	const u64 rtime0 = rtime;
 
 	if (vm::check_addr(addr))
 	{

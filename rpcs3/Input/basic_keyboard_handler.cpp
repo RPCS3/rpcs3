@@ -60,10 +60,21 @@ void basic_keyboard_handler::SetTargetWindow(QWindow* target)
 
 bool basic_keyboard_handler::eventFilter(QObject* watched, QEvent* event)
 {
-	if (!event)
+	if (!event) [[unlikely]]
 	{
 		return false;
 	}
+
+	if (input::g_active_mouse_and_keyboard != input::active_mouse_and_keyboard::emulated)
+	{
+		if (!m_keys_released)
+		{
+			ReleaseAllKeys();
+		}
+		return false;
+	}
+
+	m_keys_released = false;
 
 	// !m_target is for future proofing when gsrender isn't automatically initialized on load.
 	// !m_target->isVisible() is a hack since currently a guiless application will STILL inititialize a gsrender (providing a valid target)
@@ -97,7 +108,7 @@ bool basic_keyboard_handler::eventFilter(QObject* watched, QEvent* event)
 
 void basic_keyboard_handler::keyPressEvent(QKeyEvent* keyEvent)
 {
-	if (!keyEvent)
+	if (!keyEvent) [[unlikely]]
 	{
 		return;
 	}
@@ -118,7 +129,7 @@ void basic_keyboard_handler::keyPressEvent(QKeyEvent* keyEvent)
 
 void basic_keyboard_handler::keyReleaseEvent(QKeyEvent* keyEvent)
 {
-	if (!keyEvent)
+	if (!keyEvent) [[unlikely]]
 	{
 		return;
 	}
@@ -141,7 +152,7 @@ void basic_keyboard_handler::keyReleaseEvent(QKeyEvent* keyEvent)
 // key() only shows the modifiers and the modified key (e.g. no easy way of knowing that - was pressed in 'SHIFT+-' in order to get _)
 s32 basic_keyboard_handler::getUnmodifiedKey(QKeyEvent* keyEvent)
 {
-	if (!keyEvent)
+	if (!keyEvent) [[unlikely]]
 	{
 		return -1;
 	}
