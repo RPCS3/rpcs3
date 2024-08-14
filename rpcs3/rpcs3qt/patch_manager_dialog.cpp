@@ -1069,6 +1069,7 @@ void patch_manager_dialog::dropEvent(QDropEvent* event)
 				QMessageBox* mb = new QMessageBox(QMessageBox::Icon::Critical, tr("Validation failed"), message, QMessageBox::Ok, this);
 				mb->setInformativeText(tr("To see the error log, please click \"Show Details\"."));
 				mb->setDetailedText(tr("%0").arg(summary));
+				mb->setAttribute(Qt::WA_DeleteOnClose);
 
 				// Smartass hack to make the unresizeable message box wide enough for the changelog
 				const int log_width = QLabel(summary).sizeHint().width();
@@ -1281,6 +1282,7 @@ bool patch_manager_dialog::handle_json(const QByteArray& data)
 			QMessageBox* mb = new QMessageBox(QMessageBox::Icon::Critical, tr("Validation failed"), message, QMessageBox::Ok, this);
 			mb->setInformativeText(tr("To see the error log, please click \"Show Details\"."));
 			mb->setDetailedText(tr("%0").arg(summary));
+			mb->setAttribute(Qt::WA_DeleteOnClose);
 
 			// Smartass hack to make the unresizeable message box wide enough for the changelog
 			const int log_width = QLabel(message).sizeHint().width();
