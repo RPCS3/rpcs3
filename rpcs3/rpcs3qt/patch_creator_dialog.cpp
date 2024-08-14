@@ -497,7 +497,7 @@ void patch_creator_dialog::generate_yml(const QString& /*text*/)
 					out << YAML::BeginMap;
 					out << ui->serialEdit->text().simplified().toStdString();
 					{
-						out << YAML::Flow << YAML::BeginSeq << ui->gameVersionEdit->text().toStdString() << YAML::EndSeq;
+						out << YAML::Flow << fmt::split(ui->gameVersionEdit->text().toStdString(), { ",", " " });
 					}
 					out << YAML::EndMap;
 				}
