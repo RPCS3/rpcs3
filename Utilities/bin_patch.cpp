@@ -360,6 +360,13 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 								continue;
 							}
 
+							if (app_versions.contains(app_version))
+							{
+								append_log_message(log_messages, fmt::format("Error: Skipping duplicate app version '%s' (title: %s, serial: %s, patch: %s, key: %s, location: %s, file: %s)", app_version, title, serial, description, main_key, get_yaml_node_location(serial_node), path), &patch_log.error);
+								is_valid = false;
+								continue;
+							}
+
 							// Get this patch's config values
 							const patch_config_values& config_values = patch_config[main_key].patch_info_map[description].titles[title][serial][app_version];
 
