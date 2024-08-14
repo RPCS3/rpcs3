@@ -38,6 +38,7 @@
 #include "emulated_pad_settings_dialog.h"
 #include "basic_mouse_settings_dialog.h"
 #include "raw_mouse_settings_dialog.h"
+#include "vfs_tool_dialog.h"
 #include "welcome_dialog.h"
 
 #include <thread>
@@ -3016,6 +3017,12 @@ void main_window::CreateConnects()
 	connect(ui->toolsExtractPUPAct, &QAction::triggered, this, &main_window::ExtractPup);
 
 	connect(ui->toolsExtractTARAct, &QAction::triggered, this, &main_window::ExtractTar);
+
+	connect(ui->toolsVfsDialogAct, &QAction::triggered, this, [this]()
+	{
+		vfs_tool_dialog* dlg = new vfs_tool_dialog(this);
+		dlg->show();
+	});
 
 	connect(ui->showDebuggerAct, &QAction::triggered, this, [this](bool checked)
 	{

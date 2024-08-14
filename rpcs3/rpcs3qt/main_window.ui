@@ -301,6 +301,7 @@
     <addaction name="toolsRsxDebuggerAct"/>
     <addaction name="toolsSystemCommandsAct"/>
     <addaction name="patchCreatorAct"/>
+    <addaction name="toolsVfsDialogAct"/>
     <addaction name="separator"/>
     <addaction name="toolsDecryptSprxLibsAct"/>
     <addaction name="separator"/>
@@ -1364,6 +1365,11 @@
   <action name="actionRaw_Mouse">
    <property name="text">
     <string>Raw Mouse</string>
+   </property>
+  </action>
+  <action name="toolsVfsDialogAct">
+   <property name="text">
+    <string>VFS Tool</string>
    </property>
   </action>
  </widget>

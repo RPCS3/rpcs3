@@ -972,6 +972,12 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_shortcut_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_vfs_tool_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_vfs_tool_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
     <ClCompile Include="rpcs3qt\progress_indicator.cpp">
       <Filter>Gui\progress</Filter>
     </ClCompile>
@@ -1100,6 +1106,9 @@
     </ClCompile>
     <ClCompile Include="module_verifier.cpp">
       <Filter>rpcs3</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\vfs_tool_dialog.cpp">
+      <Filter>Gui\vfs</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1257,6 +1266,9 @@
       <Filter>Io\SDL</Filter>
     </ClInclude>
     <ClInclude Include="QTGeneratedFiles\ui_shortcut_dialog.h">
+      <Filter>Generated Files</Filter>
+    </ClInclude>
+    <ClInclude Include="QTGeneratedFiles\ui_vfs_tool_dialog.h">
       <Filter>Generated Files</Filter>
     </ClInclude>
     <ClInclude Include="rpcs3qt\progress_indicator.h">
@@ -1561,6 +1573,9 @@
     <CustomBuild Include="rpcs3qt\shortcut_dialog.ui">
       <Filter>Form Files</Filter>
     </CustomBuild>
+    <CustomBuild Include="rpcs3qt\vfs_tool_dialog.ui">
+      <Filter>Form Files</Filter>
+    </CustomBuild>
     <CustomBuild Include="rpcs3qt\system_cmd_dialog.h">
       <Filter>Gui\dev tools</Filter>
     </CustomBuild>
@@ -1599,6 +1614,9 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\raw_mouse_settings_dialog.h">
       <Filter>Gui\settings</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\vfs_tool_dialog.h">
+      <Filter>Gui\vfs</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
