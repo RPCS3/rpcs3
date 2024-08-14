@@ -4668,10 +4668,9 @@ bool spu_thread::process_mfc_cmd()
 
 							g_unchanged++;
 
-							// Try to forcefully change timestamp in order to notify threads
-							if (vm::reservation_notifier_count(addr) && res.compare_and_swap_test(new_time, new_time + 128))
+							// Notify threads manually, memory data has likely changed and broke the reservation for others
+							if (vm::reservation_notifier_count(addr) && res == new_time)
 							{
-								rtime = this_time - 128;
 								vm::reservation_notifier_notify(addr);
 							}
 						}
@@ -4689,8 +4688,8 @@ bool spu_thread::process_mfc_cmd()
 
 				if (this_time == rtime)
 				{
-					// Try to forcefully change timestamp in order to notify threads
-					if (vm::reservation_notifier_count(addr) && res.compare_and_swap_test(this_time, this_time + 128))
+					// Notify threads manually, memory data has likely changed and broke the reservation for others
+					if (vm::reservation_notifier_count(addr) && res == this_time)
 					{
 						vm::reservation_notifier_notify(addr);
 					}
@@ -5498,8 +5497,8 @@ s64 spu_thread::get_ch_value(u32 ch)
 				}
 				else if (!cmp_rdata(rdata, *resrv_mem))
 				{
-					// Only data changed, try to notify waiters
-					if (vm::reservation_notifier_count(raddr) && vm::reservation_acquire(raddr).compare_and_swap_test(rtime, rtime + 128))
+					// Notify threads manually, memory data has likely changed and broke the reservation for others
+					if (vm::reservation_notifier_count(raddr) && vm::reservation_acquire(raddr) == rtime)
 					{
 						vm::reservation_notifier_notify(raddr);
 					}
@@ -5595,8 +5594,8 @@ s64 spu_thread::get_ch_value(u32 ch)
 						}
 						else if (!cmp_rdata(_this->rdata, *_this->resrv_mem))
 						{
-							// Only data changed, try to notify waiters
-							if (vm::reservation_notifier_count(raddr) >= 2 && vm::reservation_acquire(raddr).compare_and_swap_test(_this->rtime, _this->rtime + 128))
+							// Notify threads manually, memory data has likely changed and broke the reservation for others
+							if (vm::reservation_notifier_count(raddr) >= 2 && vm::reservation_acquire(raddr) == _this->rtime)
 							{
 								s_tls_try_notify = true;
 							}
@@ -5620,7 +5619,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 						vm::reservation_notifier_end_wait(*wait_var);
 					}
 
-					if (s_tls_try_notify && vm::reservation_notifier_count(_raddr) && vm::reservation_acquire(_raddr) == rtime + 128)
+					if (s_tls_try_notify && vm::reservation_notifier_count(_raddr) && vm::reservation_acquire(_raddr) == rtime)
 					{
 						vm::reservation_notifier_notify(_raddr);
 					}
