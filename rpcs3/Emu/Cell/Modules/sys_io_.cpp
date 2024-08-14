@@ -36,10 +36,12 @@ extern void sys_io_serialize(utils::serial& ar)
 	ensure(g_fxo->try_get<libio_sys_config>())->save_or_load(ar);
 }
 
-extern void cellPad_NotifyStateChange(usz index, u64 state, bool lock = true);
+extern bool cellPad_NotifyStateChange(usz index, u64 state, bool lock = true, bool is_blocking = true);
 
 void config_event_entry(ppu_thread& ppu)
 {
+	ppu.state += cpu_flag::wait;
+
 	auto& cfg = *ensure(g_fxo->try_get<libio_sys_config>());
 
 	if (!ppu.loaded_from_savestate)
@@ -48,7 +50,10 @@ void config_event_entry(ppu_thread& ppu)
 		ppu.check_state();
 	}
 
-	while (!sys_event_queue_receive(ppu, cfg.queue_id, vm::null, 0))
+	const u32 queue_id = cfg.queue_id;
+	auto queue = idm::get<lv2_obj, lv2_event_queue>(queue_id);
+
+	while (queue && sys_event_queue_receive(ppu, queue_id, vm::null, 0) == CELL_OK)
 	{
 		if (ppu.is_stopped())
 		{
@@ -61,6 +66,7 @@ void config_event_entry(ppu_thread& ppu)
 
 		// Wakeup
 		ppu.check_state();
+		ppu.state += cpu_flag::wait;
 
 		const u64 arg1 = ppu.gpr[5];
 		const u64 arg2 = ppu.gpr[6];
@@ -70,7 +76,17 @@ void config_event_entry(ppu_thread& ppu)
 
 		if (arg1 == 1)
 		{
-			cellPad_NotifyStateChange(arg2, arg3);
+			while (!cellPad_NotifyStateChange(arg2, arg3, false))
+			{
+				if (!queue->exists)
+				{
+					// Exit condition
+					queue = nullptr;
+					break;
+				}
+
+				thread_ctrl::wait_for(100);
+			}
 		}
 	}
 
