@@ -347,7 +347,7 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 							// Get this patch's config values
 							const patch_config_values& config_values = patch_config[main_key].patch_info_map[description].titles[title][serial][app_version];
 
-							app_versions[version.Scalar()] = config_values;
+							app_versions[app_version] = config_values;
 						}
 
 						if (app_versions.empty())
@@ -357,7 +357,7 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 						}
 						else
 						{
-							info.titles[title][serial] = app_versions;
+							info.titles[title][serial] = std::move(app_versions);
 						}
 					}
 				}
@@ -544,7 +544,7 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 													}
 													else
 													{
-														config_value.allowed_values.push_back(new_allowed_value);
+														config_value.allowed_values.push_back(std::move(new_allowed_value));
 													}
 												}
 												else
@@ -627,7 +627,7 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 			}
 
 			// Insert patch information
-			container.patch_info_map[description] = info;
+			container.patch_info_map[description] = std::move(info);
 		}
 	}
 
@@ -821,7 +821,7 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 		return false;
 	}
 
-	info.data_list.emplace_back(p_data);
+	info.data_list.emplace_back(std::move(p_data));
 
 	return true;
 }
