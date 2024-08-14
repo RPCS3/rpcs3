@@ -3835,9 +3835,11 @@ error_code sceNpManagerGetNpId(vm::ptr<SceNpId> npId)
 	return CELL_OK;
 }
 
-error_code sceNpManagerGetOnlineName(vm::ptr<SceNpOnlineName> onlineName)
+error_code sceNpManagerGetOnlineName(ppu_thread& ppu, vm::ptr<SceNpOnlineName> onlineName)
 {
-	sceNp.warning("sceNpManagerGetOnlineName(onlineName=*0x%x)", onlineName);
+	ppu.state += cpu_flag::wait;
+
+	sceNp.trace("sceNpManagerGetOnlineName(onlineName=*0x%x)", onlineName);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -3861,14 +3863,17 @@ error_code sceNpManagerGetOnlineName(vm::ptr<SceNpOnlineName> onlineName)
 		return SCE_NP_ERROR_INVALID_STATE;
 	}
 
-	memcpy(onlineName.get_ptr(), &nph.get_online_name(), onlineName.size());
+	ppu.check_state();
+	std::memcpy(onlineName.get_ptr(), &nph.get_online_name(), onlineName.size());
 
 	return CELL_OK;
 }
 
-error_code sceNpManagerGetAvatarUrl(vm::ptr<SceNpAvatarUrl> avatarUrl)
+error_code sceNpManagerGetAvatarUrl(ppu_thread& ppu, vm::ptr<SceNpAvatarUrl> avatarUrl)
 {
-	sceNp.warning("sceNpManagerGetAvatarUrl(avatarUrl=*0x%x)", avatarUrl);
+	ppu.state += cpu_flag::wait;
+
+	sceNp.trace("sceNpManagerGetAvatarUrl(avatarUrl=*0x%x)", avatarUrl);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -3892,7 +3897,8 @@ error_code sceNpManagerGetAvatarUrl(vm::ptr<SceNpAvatarUrl> avatarUrl)
 		return SCE_NP_ERROR_INVALID_STATE;
 	}
 
-	memcpy(avatarUrl.get_ptr(), &nph.get_avatar_url(), avatarUrl.size());
+	ppu.check_state();
+	std::memcpy(avatarUrl.get_ptr(), &nph.get_avatar_url(), avatarUrl.size());
 
 	return CELL_OK;
 }
