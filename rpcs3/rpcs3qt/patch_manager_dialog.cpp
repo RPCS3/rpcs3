@@ -211,11 +211,12 @@ void patch_manager_dialog::load_patches(bool show_error)
 
 	bool has_errors = false;
 
-	for (const auto& path : path_list)
+	for (const QString& path : path_list)
 	{
 		if (!patch_engine::load(m_map, patches_path + path.toStdString()))
 		{
 			has_errors = true;
+			patch_log.error("Errors in patch file '%s'", path);
 		}
 	}
 
