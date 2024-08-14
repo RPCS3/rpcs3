@@ -1455,18 +1455,14 @@ void ppu_thread::dump_regs(std::string& ret, std::any& custom_data) const
 			continue;
 		}
 
-		if (usz index = dis_asm.last_opcode.rfind(",cr"); index < dis_asm.last_opcode.size() - 4)
-		{
-			const char result = dis_asm.last_opcode[index + 3];
+		usz index = dis_asm.last_opcode.rfind(",cr");
 
-			if (result >= '0' && result <= '7')
-			{
-				func_data->preferred_cr_field_index = result - '0';
-				break;
-			}
+		if (index > dis_asm.last_opcode.size() - 4)
+		{
+			index = dis_asm.last_opcode.rfind(" cr");
 		}
 
-		if (usz index = dis_asm.last_opcode.rfind(" cr"); index < dis_asm.last_opcode.size() - 4)
+		if (index <= dis_asm.last_opcode.size() - 4)
 		{
 			const char result = dis_asm.last_opcode[index + 3];
 
