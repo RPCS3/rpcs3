@@ -87,7 +87,7 @@ void fmt_class_string<patch_type>::format(std::string& out, u64 arg)
 	});
 }
 
-void patch_engine::patch_config_value::set_and_check_value(f64 new_value, const std::string& name)
+void patch_engine::patch_config_value::set_and_check_value(f64 new_value, std::string_view name)
 {
 	switch (type)
 	{
@@ -147,7 +147,7 @@ std::string patch_engine::get_imported_patch_path()
 	return get_patches_path() + "imported_patch.yml";
 }
 
-static void append_log_message(std::stringstream* log_messages, const std::string& message, const logs::message* channel = nullptr)
+static void append_log_message(std::stringstream* log_messages, std::string_view message, const logs::message* channel = nullptr)
 {
 	if (channel)
 	{
@@ -593,13 +593,13 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 
 			if (const auto patch_node = patches_entry.second[patch_key::patch])
 			{
-				if (!read_patch_node(info, patch_node, root, log_messages))
+				if (!read_patch_node(info, patch_node, root, path, log_messages))
 				{
 					for (const auto& it : patches_entry.second)
 					{
 						if (it.first.Scalar() == patch_key::patch)
 						{
-							append_log_message(log_messages, fmt::format("Skipping invalid patch node %s: (key: %s, location: %s)", info.description, main_key, get_yaml_node_location(it.first)), &patch_log.error);
+							append_log_message(log_messages, fmt::format("Skipping invalid patch node %s: (key: %s, location: %s, file: %s)", info.description, main_key, get_yaml_node_location(it.first), path), &patch_log.error);
 							break;
 						}
 					}
@@ -634,7 +634,7 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 	return is_valid;
 }
 
-patch_type patch_engine::get_patch_type(const std::string& text)
+patch_type patch_engine::get_patch_type(std::string_view text)
 {
 	u64 type_val = 0;
 
@@ -656,11 +656,11 @@ patch_type patch_engine::get_patch_type(YAML::Node node)
 	return get_patch_type(node.Scalar());
 }
 
-bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifier, const YAML::Node& root, std::stringstream* log_messages)
+bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifier, const YAML::Node& root, std::string_view path, std::stringstream* log_messages)
 {
 	if (!node || !node.IsSequence())
 	{
-		append_log_message(log_messages, fmt::format("Skipping invalid patch node %s. (key: %s, location: %s)", info.description, info.hash, get_yaml_node_location(node)), &patch_log.error);
+		append_log_message(log_messages, fmt::format("Skipping invalid patch node %s. (key: %s, location: %s, file: %s)", info.description, info.hash, get_yaml_node_location(node), path), &patch_log.error);
 		return false;
 	}
 
@@ -673,7 +673,7 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 	if (type == patch_type::invalid)
 	{
 		const auto type_str = type_node && type_node.IsScalar() ? type_node.Scalar() : "";
-		append_log_message(log_messages, fmt::format("Skipping patch node %s: type '%s' is invalid. (key: %s, location: %s)", info.description, type_str, info.hash, get_yaml_node_location(node)), &patch_log.error);
+		append_log_message(log_messages, fmt::format("Skipping patch node %s: type '%s' is invalid. (key: %s, location: %s, file: %s)", info.description, type_str, info.hash, get_yaml_node_location(node), path), &patch_log.error);
 		return false;
 	}
 
@@ -684,7 +684,7 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 		// Check if the anchor was resolved.
 		if (const auto yml_type = addr_node.Type(); yml_type != YAML::NodeType::Sequence)
 		{
-			append_log_message(log_messages, fmt::format("Skipping patch node %s: expected Sequence, found %s (key: %s, location: %s)", info.description, yml_type, info.hash, get_yaml_node_location(node)), &patch_log.error);
+			append_log_message(log_messages, fmt::format("Skipping patch node %s: expected Sequence, found %s (key: %s, location: %s, file: %s)", info.description, yml_type, info.hash, get_yaml_node_location(node), path), &patch_log.error);
 			return false;
 		}
 
@@ -695,7 +695,7 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 
 		for (const auto& item : addr_node)
 		{
-			if (!add_patch_data(item, info, mod, root, log_messages))
+			if (!add_patch_data(item, info, mod, root, path, log_messages))
 			{
 				is_valid = false;
 			}
@@ -706,13 +706,13 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 
 	if (const auto yml_type = value_node.Type(); yml_type != YAML::NodeType::Scalar)
 	{
-		append_log_message(log_messages, fmt::format("Skipping patch node %s. Value element has wrong type %s. (key: %s, location: %s)", info.description, yml_type, info.hash, get_yaml_node_location(node)), &patch_log.error);
+		append_log_message(log_messages, fmt::format("Skipping patch node %s. Value element has wrong type %s. (key: %s, location: %s, file: %s)", info.description, yml_type, info.hash, get_yaml_node_location(node), path), &patch_log.error);
 		return false;
 	}
 
 	if (patch_type_uses_hex_offset(type) && !addr_node.Scalar().starts_with("0x"))
 	{
-		append_log_message(log_messages, fmt::format("Skipping patch node %s. Address element has wrong format %s. (key: %s, location: %s)", info.description, addr_node.Scalar(), info.hash, get_yaml_node_location(node)), &patch_log.error);
+		append_log_message(log_messages, fmt::format("Skipping patch node %s. Address element has wrong format %s. (key: %s, location: %s, file: %s)", info.description, addr_node.Scalar(), info.hash, get_yaml_node_location(node), path), &patch_log.error);
 		return false;
 	}
 
@@ -738,21 +738,33 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 		[[maybe_unused]] const u32 offset = get_yaml_node_value<u32>(addr_node, error_message);
 		if (!error_message.empty())
 		{
-			error_message = fmt::format("Skipping patch data entry: [ %s, 0x%.8x, %s ] (key: %s, location: %s) Invalid patch offset '%s' (not a valid u32 or overflow)",
-				p_data.type, p_data.offset, p_data.original_value.empty() ? "?" : p_data.original_value, info.hash, get_yaml_node_location(node), p_data.original_offset);
+			error_message = fmt::format("Skipping patch data entry: [ %s, 0x%.8x, %s ] (key: %s, location: %s, file: %s) Invalid patch offset '%s' (not a valid u32 or overflow)",
+				p_data.type, p_data.offset, p_data.original_value.empty() ? "?" : p_data.original_value, info.hash, get_yaml_node_location(node), path, p_data.original_offset);
 			append_log_message(log_messages, error_message, &patch_log.error);
 			return false;
 		}
 		if ((0xFFFFFFFF - modifier) < p_data.offset)
 		{
-			error_message = fmt::format("Skipping patch data entry: [ %s, 0x%.8x, %s ] (key: %s, location: %s) Invalid combination of patch offset 0x%.8x and modifier 0x%.8x (overflow)",
-				p_data.type, p_data.offset, p_data.original_value.empty() ? "?" : p_data.original_value, info.hash, get_yaml_node_location(node), p_data.offset, modifier);
+			error_message = fmt::format("Skipping patch data entry: [ %s, 0x%.8x, %s ] (key: %s, location: %s, file: %s) Invalid combination of patch offset 0x%.8x and modifier 0x%.8x (overflow)",
+				p_data.type, p_data.offset, p_data.original_value.empty() ? "?" : p_data.original_value, info.hash, get_yaml_node_location(node), path, p_data.offset, modifier);
 			append_log_message(log_messages, error_message, &patch_log.error);
 			return false;
 		}
 		break;
 	}
 	}
+
+	// Validate value
+	const auto get_node_value = [&]<typename U, typename S>(U, S) // Add unused params. The lambda doesn't compile otherwise.
+	{
+		p_data.value.long_value = is_config_value ? static_cast<U>(config_value.value) : get_yaml_node_value<U>(value_node, error_message);
+
+		if (error_message.find("bad conversion") != std::string::npos)
+		{
+			error_message.clear();
+			p_data.value.long_value = get_yaml_node_value<S>(value_node, error_message);
+		}
+	};
 
 	switch (p_data.type)
 	{
@@ -766,29 +778,45 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 	}
 	case patch_type::bef32:
 	case patch_type::lef32:
+	{
+		p_data.value.double_value = is_config_value ? config_value.value : get_yaml_node_value<f32>(value_node, error_message);
+		break;
+	}
 	case patch_type::bef64:
 	case patch_type::lef64:
 	{
 		p_data.value.double_value = is_config_value ? config_value.value : get_yaml_node_value<f64>(value_node, error_message);
 		break;
 	}
+	case patch_type::byte:
+	{
+		get_node_value(u8{}, s8{});
+		break;
+	}
+	case patch_type::le16:
+	case patch_type::be16:
+	{
+		get_node_value(u16{}, s16{});
+		break;
+	}
+	case patch_type::le32:
+	case patch_type::be32:
+	case patch_type::bd32:
+	{
+		get_node_value(u32{}, s32{});
+		break;
+	}
 	default:
 	{
-		p_data.value.long_value = is_config_value ? static_cast<u64>(config_value.value) : get_yaml_node_value<u64>(value_node, error_message);
-
-		if (error_message.find("bad conversion") != std::string::npos)
-		{
-			error_message.clear();
-			p_data.value.long_value = get_yaml_node_value<s64>(value_node, error_message);
-		}
+		get_node_value(u64{}, s64{});
 		break;
 	}
 	}
 
 	if (!error_message.empty())
 	{
-		error_message = fmt::format("Skipping patch data entry: [ %s, 0x%.8x, %s ] (key: %s, location: %s) %s",
-			p_data.type, p_data.offset, p_data.original_value.empty() ? "?" : p_data.original_value, info.hash, get_yaml_node_location(node), error_message);
+		error_message = fmt::format("Skipping patch data entry: [ %s, 0x%.8x, %s ] (key: %s, location: %s, file: %s) %s",
+			p_data.type, p_data.offset, p_data.original_value.empty() ? "?" : p_data.original_value, info.hash, get_yaml_node_location(node), path, error_message);
 		append_log_message(log_messages, error_message, &patch_log.error);
 		return false;
 	}
@@ -798,7 +826,7 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 	return true;
 }
 
-bool patch_engine::read_patch_node(patch_info& info, YAML::Node node, const YAML::Node& root, std::stringstream* log_messages)
+bool patch_engine::read_patch_node(patch_info& info, YAML::Node node, const YAML::Node& root, std::string_view path, std::stringstream* log_messages)
 {
 	if (!node)
 	{
@@ -816,7 +844,7 @@ bool patch_engine::read_patch_node(patch_info& info, YAML::Node node, const YAML
 
 	for (auto patch : node)
 	{
-		if (!add_patch_data(patch, info, 0, root, log_messages))
+		if (!add_patch_data(patch, info, 0, root, path, log_messages))
 		{
 			is_valid = false;
 		}
@@ -834,7 +862,7 @@ void patch_engine::append_global_patches()
 	load(m_map, get_imported_patch_path());
 }
 
-void patch_engine::append_title_patches(const std::string& title_id)
+void patch_engine::append_title_patches(std::string_view title_id)
 {
 	if (title_id.empty())
 	{
@@ -842,7 +870,7 @@ void patch_engine::append_title_patches(const std::string& title_id)
 	}
 
 	// Regular patch.yml
-	load(m_map, get_patches_path() + title_id + "_patch.yml");
+	load(m_map, fmt::format("%s%s_patch.yml", get_patches_path(), title_id));
 }
 
 void ppu_register_range(u32 addr, u32 size);
@@ -1675,7 +1703,7 @@ void patch_engine::save_config(const patch_map& patches_map)
 	}
 }
 
-static void append_patches(patch_engine::patch_map& existing_patches, const patch_engine::patch_map& new_patches, usz& count, usz& total, std::stringstream* log_messages)
+static void append_patches(patch_engine::patch_map& existing_patches, const patch_engine::patch_map& new_patches, usz& count, usz& total, std::stringstream* log_messages, std::string_view path)
 {
 	for (const auto& [hash, new_container] : new_patches)
 	{
@@ -1706,13 +1734,13 @@ static void append_patches(patch_engine::patch_map& existing_patches, const patc
 
 			if (!ok)
 			{
-				append_log_message(log_messages, fmt::format("Failed to compare patch versions ('%s' vs '%s') for %s: %s", new_info.patch_version, info.patch_version, hash, description), &patch_log.error);
+				append_log_message(log_messages, fmt::format("Failed to compare patch versions ('%s' vs '%s') for %s: %s (file: %s)", new_info.patch_version, info.patch_version, hash, description, path), &patch_log.error);
 				continue;
 			}
 
 			if (!version_is_bigger)
 			{
-				append_log_message(log_messages, fmt::format("A higher or equal patch version already exists ('%s' vs '%s') for %s: %s", new_info.patch_version, info.patch_version, hash, description), &patch_log.error);
+				append_log_message(log_messages, fmt::format("A higher or equal patch version already exists ('%s' vs '%s') for %s: %s (file: %s)", new_info.patch_version, info.patch_version, hash, description, path), &patch_log.error);
 				continue;
 			}
 
@@ -1866,7 +1894,7 @@ bool patch_engine::import_patches(const patch_engine::patch_map& patches, const 
 
 	if (load(existing_patches, path, "", true, log_messages))
 	{
-		append_patches(existing_patches, patches, count, total, log_messages);
+		append_patches(existing_patches, patches, count, total, log_messages, path);
 		return count == 0 || save_patches(existing_patches, path, log_messages);
 	}
 

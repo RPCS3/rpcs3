@@ -116,7 +116,7 @@ namespace vm
 			{
 				if (ok)
 				{
-					reservation_notifier(addr).notify_all();
+					reservation_notifier_notify(addr);
 				}
 
 				if (cpu && !had_wait && cpu->test_stopped())

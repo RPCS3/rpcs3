@@ -113,7 +113,7 @@ public:
 			return value == other.value && min == other.min && max == other.max && type == other.type && allowed_values == other.allowed_values;
 		}
 
-		void set_and_check_value(f64 new_value, const std::string& name);
+		void set_and_check_value(f64 new_value, std::string_view name);
 	};
 
 	struct patch_config_values
@@ -182,16 +182,16 @@ public:
 	static bool load(patch_map& patches, const std::string& path, std::string content = "", bool importing = false, std::stringstream* log_messages = nullptr);
 
 	// Read and add a patch node to the patch info
-	static bool read_patch_node(patch_info& info, YAML::Node node, const YAML::Node& root, std::stringstream* log_messages = nullptr);
+	static bool read_patch_node(patch_info& info, YAML::Node node, const YAML::Node& root, std::string_view path, std::stringstream* log_messages = nullptr);
 
 	// Get the patch type from a string
-	static patch_type get_patch_type(const std::string& text);
+	static patch_type get_patch_type(std::string_view text);
 
 	// Get the patch type of a patch node
 	static patch_type get_patch_type(YAML::Node node);
 
 	// Add the data of a patch node
-	static bool add_patch_data(YAML::Node node, patch_info& info, u32 modifier, const YAML::Node& root, std::stringstream* log_messages = nullptr);
+	static bool add_patch_data(YAML::Node node, patch_info& info, u32 modifier, const YAML::Node& root, std::string_view path, std::stringstream* log_messages = nullptr);
 
 	// Save to patch_config.yml
 	static void save_config(const patch_map& patches_map);
@@ -212,7 +212,7 @@ public:
 	void append_global_patches();
 
 	// Load from title relevant files and append to member patches map
-	void append_title_patches(const std::string& title_id);
+	void append_title_patches(std::string_view title_id);
 
 	// Apply patch (returns the number of entries applied)
 	std::basic_string<u32> apply(const std::string& name, std::function<u8*(u32, u32)> mem_translate, u32 filesz = -1, u32 min_addr = 0);

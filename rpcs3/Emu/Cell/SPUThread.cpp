@@ -444,12 +444,9 @@ waitpkg_func static void __tpause(u32 cycles, u32 cstate)
 }
 #endif
 
-static std::array<atomic_t<u8>, 128> g_resrv_waiters_count;
-
-extern atomic_t<u8>& get_resrv_waiters_count(u32 raddr)
+namespace vm
 {
-	// Storage efficient method to distinguish different nearby addresses (which are likely)
-	 return g_resrv_waiters_count[std::popcount(raddr & -512) + ((raddr / 128) % 4) * 32];
+	std::array<atomic_t<reservation_waiter_t>, 512> g_resrv_waiters_count{};
 }
 
 void do_cell_atomic_128_store(u32 addr, const void* to_write);
@@ -3822,7 +3819,7 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 	{
 		if (raddr)
 		{
-			vm::reservation_notifier(addr).notify_all();
+			vm::reservation_notifier_notify(addr);
 			raddr = 0;
 		}
 
@@ -4012,7 +4009,7 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 	}
 
 	do_cell_atomic_128_store(addr, _ptr<spu_rdata_t>(args.lsa & 0x3ff80));
-	vm::reservation_notifier(addr).notify_all();
+	vm::reservation_notifier_notify(addr);
 }
 
 bool spu_thread::do_mfc(bool can_escape, bool must_finish)
@@ -4625,12 +4622,11 @@ bool spu_thread::process_mfc_cmd()
 						// Spinning, might as well yield cpu resources
 						state += cpu_flag::wait;
 
-						// Storage efficient method to distinguish different nearby addresses (which are likely)
-						get_resrv_waiters_count(addr)++;
-
-						vm::reservation_notifier(addr).wait(this_time, atomic_wait_timeout{100'000});
-
-						get_resrv_waiters_count(addr)--;
+						if (auto wait_var = vm::reservation_notifier_begin_wait(addr, rtime))
+						{
+							utils::bless<atomic_t<u32>>(&wait_var->raw().wait_flag)->wait(1, atomic_wait_timeout{100'000});
+							vm::reservation_notifier_end_wait(*wait_var);
+						}
 
 						static_cast<void>(test_stopped());
 
@@ -4672,11 +4668,10 @@ bool spu_thread::process_mfc_cmd()
 
 							g_unchanged++;
 
-							// Try to forcefully change timestamp in order to notify threads
-							if (get_resrv_waiters_count(addr) && res.compare_and_swap_test(new_time, new_time + 128))
+							// Notify threads manually, memory data has likely changed and broke the reservation for others
+							if (vm::reservation_notifier_count(addr) && res == new_time)
 							{
-								rtime = this_time - 128;
-								vm::reservation_notifier(addr).notify_all();
+								vm::reservation_notifier_notify(addr);
 							}
 						}
 						else
@@ -4693,10 +4688,10 @@ bool spu_thread::process_mfc_cmd()
 
 				if (this_time == rtime)
 				{
-					// Try to forcefully change timestamp in order to notify threads
-					if (get_resrv_waiters_count(addr) && res.compare_and_swap_test(this_time, this_time + 128))
+					// Notify threads manually, memory data has likely changed and broke the reservation for others
+					if (vm::reservation_notifier_count(addr) && res == this_time)
 					{
-						vm::reservation_notifier(addr).notify_all();
+						vm::reservation_notifier_notify(addr);
 					}
 				}
 
@@ -5502,10 +5497,10 @@ s64 spu_thread::get_ch_value(u32 ch)
 				}
 				else if (!cmp_rdata(rdata, *resrv_mem))
 				{
-					// Only data changed, try to notify waiters
-					if (get_resrv_waiters_count(raddr) && vm::reservation_acquire(raddr).compare_and_swap_test(rtime, rtime + 128))
+					// Notify threads manually, memory data has likely changed and broke the reservation for others
+					if (vm::reservation_notifier_count(raddr) && vm::reservation_acquire(raddr) == rtime)
 					{
-						vm::reservation_notifier(raddr).notify_all();
+						vm::reservation_notifier_notify(raddr);
 					}
 
 					set_lr = true;
@@ -5547,21 +5542,21 @@ s64 spu_thread::get_ch_value(u32 ch)
 					{
 						// Wait with extended timeout, in this situation we have notifications for nearly all writes making it possible
 						// Abort notifications are handled specially for performance reasons
-						get_resrv_waiters_count(raddr)++;
-						vm::reservation_notifier(raddr).wait(rtime, atomic_wait_timeout{300'000});
-						get_resrv_waiters_count(raddr)--;
+						if (auto wait_var = vm::reservation_notifier_begin_wait(raddr, rtime))
+						{
+							utils::bless<atomic_t<u32>>(&wait_var->raw().wait_flag)->wait(1, atomic_wait_timeout{300'000});
+							vm::reservation_notifier_end_wait(*wait_var);
+						}
+
 						continue;
 					}
 
 					const u32 _raddr = this->raddr;
 #ifdef __linux__
-					get_resrv_waiters_count(_raddr)++;
-					vm::reservation_notifier(_raddr).wait(rtime, atomic_wait_timeout{50'000});
-					get_resrv_waiters_count(_raddr)--;
-
-					if (get_resrv_waiters_count(_raddr) && vm::reservation_acquire(_raddr) == rtime + 128)
+					if (auto wait_var = vm::reservation_notifier_begin_wait(_raddr, rtime))
 					{
-						vm::reservation_notifier(_raddr).notify_all();
+						utils::bless<atomic_t<u32>>(&wait_var->raw().wait_flag)->wait(1, atomic_wait_timeout{50'000});
+						vm::reservation_notifier_end_wait(*wait_var);
 					}
 #else
 					static thread_local bool s_tls_try_notify = false;
@@ -5599,8 +5594,8 @@ s64 spu_thread::get_ch_value(u32 ch)
 						}
 						else if (!cmp_rdata(_this->rdata, *_this->resrv_mem))
 						{
-							// Only data changed, try to notify waiters
-							if (get_resrv_waiters_count(raddr) >= 2 && vm::reservation_acquire(raddr).compare_and_swap_test(_this->rtime, _this->rtime + 128))
+							// Notify threads manually, memory data has likely changed and broke the reservation for others
+							if (vm::reservation_notifier_count(raddr) >= 2 && vm::reservation_acquire(raddr) == _this->rtime)
 							{
 								s_tls_try_notify = true;
 							}
@@ -5618,13 +5613,15 @@ s64 spu_thread::get_ch_value(u32 ch)
 						return true;
 					});
 
-					get_resrv_waiters_count(_raddr)++;
-					vm::reservation_notifier(_raddr).wait(rtime, atomic_wait_timeout{80'000});
-					get_resrv_waiters_count(_raddr)--;
-
-					if (s_tls_try_notify && get_resrv_waiters_count(_raddr) && vm::reservation_acquire(_raddr) == rtime + 128)
+					if (auto wait_var = vm::reservation_notifier_begin_wait(_raddr, rtime))
 					{
-						vm::reservation_notifier(_raddr).notify_all();
+						utils::bless<atomic_t<u32>>(&wait_var->raw().wait_flag)->wait(1, atomic_wait_timeout{80'000});
+						vm::reservation_notifier_end_wait(*wait_var);
+					}
+
+					if (s_tls_try_notify && vm::reservation_notifier_count(_raddr) && vm::reservation_acquire(_raddr) == rtime)
+					{
+						vm::reservation_notifier_notify(_raddr);
 					}
 #endif
 				}
@@ -6548,7 +6545,7 @@ bool spu_thread::stop_and_signal(u32 code)
 						if (prev_resv && prev_resv != resv)
 						{
 							// Batch reservation notifications if possible
-							vm::reservation_notifier(prev_resv).notify_all();
+							vm::reservation_notifier_notify(prev_resv);
 						}
 
 						prev_resv = resv;
@@ -6559,7 +6556,7 @@ bool spu_thread::stop_and_signal(u32 code)
 
 		if (prev_resv)
 		{
-			vm::reservation_notifier(prev_resv).notify_all();
+			vm::reservation_notifier_notify(prev_resv);
 		}
 
 		check_state();

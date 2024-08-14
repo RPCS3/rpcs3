@@ -75,25 +75,35 @@ void pad_info::save(utils::serial& ar)
 
 extern void send_sys_io_connect_event(usz index, u32 state);
 
-void cellPad_NotifyStateChange(usz index, u64 /*state*/, bool locked)
+bool cellPad_NotifyStateChange(usz index, u64 /*state*/, bool locked, bool is_blocking = true)
 {
 	auto info = g_fxo->try_get<pad_info>();
 
 	if (!info)
 	{
-		return;
+		return true;
 	}
 
 	std::unique_lock lock(pad::g_pad_mutex, std::defer_lock);
 
 	if (locked)
 	{
-		lock.lock();
+		if (is_blocking)
+		{
+			lock.lock();
+		}
+		else
+		{
+			if (!lock.try_lock())
+			{
+				return false;
+			}
+		}
 	}
 
 	if (index >= info->get_max_connect())
 	{
-		return;
+		return true;
 	}
 
 	const auto handler = pad::get_current_handler();
@@ -102,7 +112,7 @@ void cellPad_NotifyStateChange(usz index, u64 /*state*/, bool locked)
 
 	if (pad->is_fake_pad)
 	{
-		return;
+		return true;
 	}
 
 	pad_data_internal& reported_info = info->reported_info[index];
@@ -117,7 +127,7 @@ void cellPad_NotifyStateChange(usz index, u64 /*state*/, bool locked)
 	if (~(old_status ^ new_status) & CELL_PAD_STATUS_CONNECTED)
 	{
 		// old and new have the same connection status
-		return;
+		return true;
 	}
 
 	reported_info.port_status = new_status | CELL_PAD_STATUS_ASSIGN_CHANGES;
@@ -139,6 +149,8 @@ void cellPad_NotifyStateChange(usz index, u64 /*state*/, bool locked)
 		reported_info.vendor_id = pad->m_vendor_id;
 		reported_info.product_id = pad->m_product_id;
 	}
+
+	return true;
 }
 
 extern void pad_state_notify_state_change(usz index, u32 state)
