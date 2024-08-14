@@ -120,6 +120,9 @@
                 <property name="wordWrap">
                  <bool>true</bool>
                 </property>
+                <property name="textInteractionFlags">
+                 <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
+                </property>
                </widget>
               </item>
              </layout>
@@ -139,6 +142,9 @@
                 <property name="wordWrap">
                  <bool>true</bool>
                 </property>
+                <property name="textInteractionFlags">
+                 <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
+                </property>
                </widget>
               </item>
              </layout>
@@ -154,6 +160,9 @@
                <widget class="QLabel" name="label_app_version">
                 <property name="text">
                  <string/>
+                </property>
+                <property name="textInteractionFlags">
+                 <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
                 </property>
                </widget>
               </item>
@@ -174,6 +183,9 @@
                 <property name="wordWrap">
                  <bool>true</bool>
                 </property>
+                <property name="textInteractionFlags">
+                 <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
+                </property>
                </widget>
               </item>
              </layout>
@@ -192,6 +204,9 @@
                 </property>
                 <property name="wordWrap">
                  <bool>true</bool>
+                </property>
+                <property name="textInteractionFlags">
+                 <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
                 </property>
                </widget>
               </item>
@@ -212,6 +227,9 @@
                 <property name="wordWrap">
                  <bool>true</bool>
                 </property>
+                <property name="textInteractionFlags">
+                 <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
+                </property>
                </widget>
               </item>
              </layout>
@@ -230,6 +248,9 @@
                 </property>
                 <property name="wordWrap">
                  <bool>true</bool>
+                </property>
+                <property name="textInteractionFlags">
+                 <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
                 </property>
                </widget>
               </item>
@@ -252,6 +273,9 @@
                 </property>
                 <property name="wordWrap">
                  <bool>true</bool>
+                </property>
+                <property name="textInteractionFlags">
+                 <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
                 </property>
                </widget>
               </item>
