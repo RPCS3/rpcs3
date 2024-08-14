@@ -11,6 +11,7 @@
 #include "util/asm.hpp"
 
 #include <charconv>
+#include <regex>
 
 LOG_CHANNEL(patch_log, "PAT");
 
@@ -349,6 +350,15 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 						for (const auto version : serial_node.second)
 						{
 							const std::string& app_version = version.Scalar();
+
+							static const std::regex app_ver_regexp("^([0-9]{2}\\.[0-9]{2})$");
+
+							if (app_version != patch_key::all && (app_version.size() != 5 || !std::regex_match(app_version, app_ver_regexp)))
+							{
+								append_log_message(log_messages, fmt::format("Error: Skipping invalid app version '%s' (title: %s, serial: %s, patch: %s, key: %s, location: %s, file: %s)", app_version, title, serial, description, main_key, get_yaml_node_location(serial_node), path), &patch_log.error);
+								is_valid = false;
+								continue;
+							}
 
 							// Get this patch's config values
 							const patch_config_values& config_values = patch_config[main_key].patch_info_map[description].titles[title][serial][app_version];
