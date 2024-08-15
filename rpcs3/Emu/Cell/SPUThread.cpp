@@ -2831,6 +2831,46 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 		}
 		default:
 		{
+			if (eal >> 28 == rsx::constants::local_mem_base >> 28)
+			{
+				if (size > s_rep_movsb_threshold)
+				{
+					__movsb(dst, src, size);
+				}
+				else
+				{
+					// Avoid unaligned stores in mov_rdata_avx
+					if (reinterpret_cast<u64>(dst) & 0x10)
+					{
+						*reinterpret_cast<v128*>(dst) = *reinterpret_cast<const v128*>(src);
+
+						dst += 16;
+						src += 16;
+						size -= 16;
+					}
+
+					while (size >= 128)
+					{
+						mov_rdata(*reinterpret_cast<spu_rdata_t*>(dst), *reinterpret_cast<const spu_rdata_t*>(src));
+
+						dst += 128;
+						src += 128;
+						size -= 128;
+					}
+
+					while (size)
+					{
+						*reinterpret_cast<v128*>(dst) = *reinterpret_cast<const v128*>(src);
+
+						dst += 16;
+						src += 16;
+						size -= 16;
+					}
+				}
+
+				break;
+			}
+
 			if (((eal & 127) + size) <= 128)
 			{
 				vm::range_lock(range_lock, eal, size);
