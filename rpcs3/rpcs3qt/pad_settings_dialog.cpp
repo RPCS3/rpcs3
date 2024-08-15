@@ -445,7 +445,7 @@ void pad_settings_dialog::InitButtons()
 		if (ui->chooseDevice->isEnabled() && ui->chooseDevice->currentIndex() >= 0)
 		{
 			start_input_thread();
-			m_timer_input.start(1);
+			m_timer_input.start(10);
 			m_timer_pad_refresh.start(1000);
 		}
 	});
@@ -530,7 +530,7 @@ void pad_settings_dialog::InitButtons()
 
 		while (thread_ctrl::state() != thread_state::aborting)
 		{
-			thread_ctrl::wait_for(10000);
+			thread_ctrl::wait_for(1000);
 
 			if (m_input_thread_state != input_thread_state::active)
 			{
