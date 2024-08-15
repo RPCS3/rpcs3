@@ -16,8 +16,26 @@ namespace aarch64
         x0 = 0,
         x1, x2, x3, x4, x5, x6, x7, x8, x9,
         x10, x11, x12, x13, x14, x15, x16, x17, x18, x19,
-        x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30,
-        xzr, pc, sp
+        x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30
+    };
+
+    enum spr : s32
+    {
+        xzr = 0,
+        pc,
+        sp
+    };
+
+    static const char* gpr_names[] =
+    {
+        "x0", "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9",
+        "x10", "x11", "x12", "x13", "x14", "x15", "x16", "x17", "x18", "x19",
+        "x20", "x21", "x22", "x23", "x24", "x25", "x26", "x27", "x28", "x29", "x30"
+    };
+
+    static const char* spr_names[] =
+    {
+        "xzr", "pc", "sp"
     };
 
     // On non-x86 architectures GHC runs stackless. SP is treated as a pointer to scratchpad memory.
@@ -50,6 +68,7 @@ namespace aarch64
         {
             bool debug_info = false;         // Record debug information
             bool use_stack_frames = true;    // Allocate a stack frame for each function. The gateway can alternatively manage a global stack to use as scratch.
+            bool optimize = true;            // Optimize instructions when possible. Set to false when debugging.
             u32 hypervisor_context_offset = 0; // Offset within the "thread" object where we can find the hypervisor context (registers configured at gateway).
             std::function<bool(const std::string&)> exclusion_callback;    // [Optional] Callback run on each function before transform. Return "true" to exclude from frame processing.
             std::vector<std::pair<std::string, gpr>> base_register_lookup; // [Optional] Function lookup table to determine the location of the "thread" context.
@@ -73,6 +92,14 @@ namespace aarch64
         gpr get_base_register_for_call(const std::string& callee_name, gpr default_reg = gpr::x19);
 
         void process_leaf_function(llvm::IRBuilder<>* irb, llvm::Function& f);
+
+        bool patch_tail_call(
+            llvm::IRBuilder<>* irb,
+            llvm::Function& f,
+            llvm::CallInst* where,
+            const instruction_info_t& instruction_info,
+            const function_info_t& function_info,
+            const std::string& frame_epilogue);
     public:
 
         GHC_frame_preservation_pass(const config_t& configuration);
