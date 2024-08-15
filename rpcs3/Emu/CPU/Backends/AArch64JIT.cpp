@@ -333,99 +333,20 @@ namespace aarch64
                     // However, there is not much guarantee that those are safe with only rare exceptions, and it doesn't hurt to patch the frame around them that much anyway.
                 }
 
-                terminator_found |= instruction_info.is_tail_call;
-
-                if (!instruction_info.preserve_stack)
+                if (instruction_info.preserve_stack)
                 {
-                    // Now we patch the call if required. For normal calls that 'return' (i.e calls to C/C++ ABI), we do not patch them as they will manage the stack themselves (callee-managed)
-                    llvm::Instruction* original_inst = llvm::dyn_cast<llvm::Instruction>(bit);
-                    irb->SetInsertPoint(ensure(llvm::dyn_cast<llvm::Instruction>(bit)));
+                    // Non-tail call. If we have a stack allocated, we preserve it across the call
+                    ++bit;
+                    continue;
+                }
 
-                    // We're about to make a tail call. This means after this call, we're supposed to return immediately. In that case, don't link, lower to branch only.
-                    // Note that branches have some undesirable side-effects. For one, we lose the argument inputs, which the callee is expecting.
-                    // This means we burn some cycles on every exit, but in return we do not require one instruction on the prologue + the ret chain is eliminated.
-                    // No ret-chain also means two BBs can call each other indefinitely without running out of stack without relying on llvm to optimize that away.
+                ensure(instruction_info.is_tail_call);
+                terminator_found = true;
 
-                    std::string exit_fn;
-                    auto ci = ensure(llvm::dyn_cast<llvm::CallInst>(original_inst));
-                    auto operand_count = ci->getNumOperands() - 1; // The last operand is the callee, not a real operand
-                    std::vector<std::string> constraints;
-                    std::vector<llvm::Value*> args;
-
-                    // We now load the callee args in reverse order to avoid self-clobbering of dependencies.
-                    // FIXME: This is often times redundant and wastes cycles, we'll clean this up in a MachineFunction pass later.
-                    int args_base_reg = instruction_info.callee_is_GHC ? aarch64::x19 : aarch64::x0; // GHC args are always x19..x25
-                    for (auto i = static_cast<int>(operand_count) - 1; i >= 0; --i)
-                    {
-                        args.push_back(ci->getOperand(i));
-                        exit_fn += fmt::format("mov x%d, $%u;\n", (args_base_reg + i), ::size32(args) - 1);
-                        constraints.push_back("r");
-                    }
-
-                    // Restore LR to the exit gate if we think it may have been trampled.
-                    if (function_info.clobbers_x30)
-                    {
-                        // Load the context "base" thread register to restore the link register from
-                        auto context_base_reg = get_base_register_for_call(instruction_info.callee_name);
-                        if (!instruction_info.callee_is_GHC)
-                        {
-                            // For non-GHC calls, we have to remap the arguments to x0...
-                            context_base_reg = static_cast<gpr>(context_base_reg - 19);
-                        }
-
-                        // We want to do this after loading the arguments in case there was any spilling involved.
-                        DPRINT("Patching call from %s to %s on register %d...",
-                            this_name.c_str(),
-                            instruction_info.callee_name.c_str(),
-                            static_cast<int>(context_base_reg));
-
-                        const auto x30_tail_restore = fmt::format(
-                            "ldr x30, [x%u, #%u];\n",       // Load x30 from thread context
-                            static_cast<u32>(context_base_reg),
-                            m_config.hypervisor_context_offset);
-
-                        exit_fn += x30_tail_restore;
-                    }
-
-                    // Stack cleanup. We need to do this last to allow the spiller to find it's own spilled variables.
-                    if (function_info.stack_frame_size > 0)
-                    {
-                        exit_fn += frame_epilogue;
-                    }
-
-                    if (m_config.debug_info)
-                    {
-                        // Store x27 as our current address taking the place of LR (for debugging since bt is now useless)
-                        // x28 and x29 are used as breadcrumb registers in this mode to form a pseudo-backtrace.
-                        exit_fn +=
-                            "mov x29, x28;\n"
-                            "mov x28, x27;\n"
-                            "adr x27, .;\n";
-                    }
-
-                    auto target = ensure(ci->getCalledOperand());
-                    args.push_back(target);
-
-                    if (instruction_info.is_indirect)
-                    {
-                        // NOTE: For indirect calls, we read the callee register before we load the operands
-                        // If we don't do that the operands will overwrite our callee address if it lies in the x19-x25 range
-                        // There is no safe temp register to stuff the call address to either, you just have to stuff it below sp and load it after operands are all assigned.
-                        constraints.push_back("r");
-                        exit_fn = fmt::format("str $%u, [sp, #-8];\n", operand_count) + exit_fn;
-                        exit_fn +=
-                            "ldr x15, [sp, #-8];\n"
-                            "br x15;\n";
-                    }
-                    else
-                    {
-                        constraints.push_back("i");
-                        exit_fn += fmt::format("b $%u;\n", operand_count);
-                    }
-
-                    // Emit the branch
-                    llvm_asm(irb, exit_fn, args, fmt::merge(constraints, ","), f.getContext());
-
+                // Now we patch the call if required. For normal calls that 'return' (i.e calls to C/C++ ABI), we do not patch them as they will manage the stack themselves (callee-managed)
+                auto ci = llvm::dyn_cast<llvm::CallInst>(bit);
+                if (patch_tail_call(irb, f, ci, instruction_info, function_info, frame_epilogue))
+                {
                     // Delete original call instruction
                     bit = ci->eraseFromParent();
                 }
@@ -456,6 +377,120 @@ namespace aarch64
                 }
             }
         }
+    }
+
+    bool GHC_frame_preservation_pass::patch_tail_call(
+        llvm::IRBuilder<>* irb,
+        llvm::Function& f,
+        llvm::CallInst* ci,
+        const instruction_info_t& instruction_info,
+        const function_info_t& function_info,
+        const std::string& frame_epilogue)
+    {
+        ensure(ci);
+
+        const auto this_name = f.getName().str();
+        irb->SetInsertPoint(ci);
+
+        // We're about to make a tail call. This means after this call, we're supposed to return immediately. In that case, don't link, lower to branch only.
+        // Note that branches have some undesirable side-effects. For one, we lose the argument inputs, which the callee is expecting.
+        // This means we burn some cycles on every exit, but in return we do not require one instruction on the prologue + the ret chain is eliminated.
+        // No ret-chain also means two BBs can call each other indefinitely without running out of stack without relying on llvm to optimize that away.
+
+        std::string exit_fn;
+        auto operand_count = ci->getNumOperands() - 1; // The last operand is the callee, not a real operand
+        std::vector<std::string> arg_constraints;
+        std::vector<llvm::Value*> unused_args; // To ref/touch
+        std::vector<llvm::Value*> args;
+
+        // We now load the callee args in reverse order to avoid self-clobbering of dependencies.
+        // FIXME: This is often times redundant and wastes cycles, we'll clean this up in a MachineFunction pass later.
+        int args_base_reg = instruction_info.callee_is_GHC ? aarch64::x19 : aarch64::x0; // GHC args are always x19..x25
+        for (auto i = static_cast<int>(operand_count) - 1; i >= 0; --i)
+        {
+            llvm::Value* arg = ci->getOperand(i);
+            args.push_back(arg);
+            exit_fn += fmt::format("mov %s, $%u;\n", gpr_names[args_base_reg + i], ::size32(args) - 1);
+            arg_constraints.push_back("r");
+        }
+
+        // Restore LR to the exit gate if we think it may have been trampled.
+        if (function_info.clobbers_x30)
+        {
+            // Load the context "base" thread register to restore the link register from
+            auto context_base_reg = get_base_register_for_call(instruction_info.callee_name);
+            if (!instruction_info.callee_is_GHC)
+            {
+                // For non-GHC calls, we have to remap the arguments to x0...
+                context_base_reg = static_cast<gpr>(context_base_reg - 19);
+            }
+
+            // We want to do this after loading the arguments in case there was any spilling involved.
+            DPRINT("Patching call from %s to %s on register %d...",
+                this_name.c_str(),
+                instruction_info.callee_name.c_str(),
+                static_cast<int>(context_base_reg));
+
+            const auto x30_tail_restore = fmt::format(
+                "ldr x30, [%s, #%u];\n",       // Load x30 from thread context
+                gpr_names[context_base_reg],
+                m_config.hypervisor_context_offset);
+
+            exit_fn += x30_tail_restore;
+        }
+
+        // Stack cleanup. We need to do this last to allow the spiller to find it's own spilled variables.
+        if (function_info.stack_frame_size > 0)
+        {
+            exit_fn += frame_epilogue;
+        }
+
+        if (m_config.debug_info)
+        {
+            // Store x27 as our current address taking the place of LR (for debugging since bt is now useless)
+            // x28 and x29 are used as breadcrumb registers in this mode to form a pseudo-backtrace.
+            exit_fn +=
+                "mov x29, x28;\n"
+                "mov x28, x27;\n"
+                "adr x27, .;\n";
+        }
+
+        const auto callee_arg = ::size32(args);
+        auto target = ensure(ci->getCalledOperand());
+        args.push_back(target);
+
+        if (instruction_info.is_indirect)
+        {
+            // NOTE: For indirect calls, we read the callee register before we load the operands
+            // If we don't do that the operands will overwrite our callee address if it lies in the x19-x25 range
+            // There is no safe temp register to stuff the call address to either, you just have to stuff it below sp and load it after operands are all assigned.
+            arg_constraints.push_back("r");
+            exit_fn = fmt::format(
+                "str $%u, [sp, #-8];\n",
+                callee_arg) + exit_fn;
+
+            exit_fn +=
+                "ldr x15, [sp, #-8];\n"
+                "br x15;\n";
+        }
+        else
+        {
+            arg_constraints.push_back("i");
+            exit_fn += fmt::format("b $%u;\n", callee_arg);
+        }
+
+        // Touch the unused args by adding them to the instruction. This actually stops LLVM from clobbering the register during lowering.
+        for (auto& arg : unused_args)
+        {
+            args.push_back(arg);            // Consume arg to tell LLVM about the reference
+            arg_constraints.push_back("r"); // Always a register in this case
+        }
+
+        // Emit the branch
+        llvm_asm(irb, exit_fn, args, fmt::merge(arg_constraints, ","), f.getContext());
+
+        // Successful patch
+        return true;
     }
 
     bool GHC_frame_preservation_pass::is_ret_instruction(const llvm::Instruction* i)
@@ -515,8 +550,8 @@ namespace aarch64
         const auto restore_x30 = [&](llvm::Instruction* where)
         {
             const auto x30_tail_restore = fmt::format(
-                "ldr x30, [x%u, #%u];\n",       // Load x30 from thread context
-                static_cast<u32>(thread_context_reg),
+                "ldr x30, [%s, #%u];\n",       // Load x30 from thread context
+                gpr_names[thread_context_reg],
                 m_config.hypervisor_context_offset);
 
             ensure(where);
@@ -545,10 +580,10 @@ namespace aarch64
 
                     const auto callee = ci->getCalledFunction();
                     const std::string callee_name = callee ? callee->getName().str() : "__indirect";
-                    auto base_reg = get_base_register_for_call(callee_name, m_config.base_register_lookup.empty() ? gpr::x19 : gpr::xzr);
+                    auto base_reg = get_base_register_for_call(callee_name, m_config.base_register_lookup.empty() ? gpr::x19 : gpr::x30);
 
                     // Check if the call is unexpected. We cannot guarantee that the reload is well-formed in such scenarios
-                    if (base_reg == gpr::xzr)
+                    if (base_reg == gpr::x30)
                     {
                         if (callee)
                         {
