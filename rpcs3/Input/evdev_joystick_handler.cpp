@@ -1448,7 +1448,11 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 		else
 		{
 			m_bindings.emplace_back(pad, evdev_device, nullptr);
-			evdev_log.warning("evdev add_motion_device in bindPadToDevice failed for device %s", player_config->buddy_device.to_string());
+
+			if (const std::string buddy_device_name = player_config->buddy_device.to_string(); buddy_device_name != "Null")
+			{
+				evdev_log.warning("evdev add_motion_device in bindPadToDevice failed for device %s", buddy_device_name);
+			}
 		}
 	}
 	else
