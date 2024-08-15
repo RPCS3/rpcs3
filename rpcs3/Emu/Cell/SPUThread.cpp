@@ -3504,13 +3504,21 @@ bool spu_thread::do_list_transfer(spu_mfc_cmd& args)
 			arg_lsa += utils::align<u32>(size, 16);
 		}
 		// Avoid inlining huge transfers because it intentionally drops range lock unlock
-		else if (addr < RAW_SPU_BASE_ADDR && size - 1 <= 0x400 - 1 && optimization_compatible == MFC_PUT_CMD && (addr % 0x10000 + (size - 1)) < 0x10000)
+		else if (optimization_compatible == MFC_PUT_CMD && ((addr >> 28 == rsx::constants::local_mem_base >> 28) || (addr < RAW_SPU_BASE_ADDR && size - 1 <= 0x400 - 1 && (addr % 0x10000 + (size - 1)) < 0x10000)))
 		{
-			rsx_lock.update_if_enabled(addr, size, range_lock);
-
-			if (!g_use_rtm)
+			if (addr >> 28 != rsx::constants::local_mem_base >> 28)
 			{
-				vm::range_lock(range_lock, addr & -128, utils::align<u32>(addr + size, 128) - (addr & -128));
+				rsx_lock.update_if_enabled(addr, size, range_lock);
+
+				if (!g_use_rtm)
+				{
+					vm::range_lock(range_lock, addr & -128, utils::align<u32>(addr + size, 128) - (addr & -128));
+				}
+			}
+			else
+			{
+				range_lock->release(0);
+				rsx_lock.unlock();
 			}
 
 			u8* dst = vm::_ptr<u8>(addr);
