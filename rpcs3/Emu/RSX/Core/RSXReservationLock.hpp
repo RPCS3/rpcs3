@@ -73,8 +73,9 @@ namespace rsx
 		template <typename T = void>
 		void update_if_enabled(u32 addr, u32 _length, const std::add_pointer_t<T>& lock_release = std::add_pointer_t<void>{})
 		{
-			if (!length || _length <= 1)
+			if (!length)
 			{
+				unlock();
 				return;
 			}
 
