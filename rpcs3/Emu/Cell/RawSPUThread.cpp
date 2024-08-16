@@ -392,14 +392,35 @@ void spu_load_exec(const spu_exec_object& elf)
 
 	const auto funcs = spu->discover_functions(0, { spu->ls , SPU_LS_SIZE }, true, umax);
 
-	for (u32 addr : funcs)
+	if (spu_log.notice && !funcs.empty())
 	{
-		spu_log.success("Found SPU function at: 0x%08x", addr);
+		std::string to_log;
+
+		for (usz i = 0; i < funcs.size(); i++)
+		{
+			if (i == 0 && funcs.size() < 4)
+			{
+				// Skip newline in this case
+				to_log += ' ';
+			}
+			else if (i % 4 == 0)
+			{
+				to_log += '\n';
+			}
+			else
+			{
+				to_log += ", ";
+			}
+
+			fmt::append(to_log, "0x%05x", funcs[i]);
+		}
+
+		spu_log.notice("Found SPU function(s) at:%s", to_log);
 	}
 
 	if (!funcs.empty())
 	{
-		spu_log.success("Found %u SPU functions", funcs.size());
+		spu_log.success("Found %u SPU function(s)", funcs.size());
 	}
 }
 
