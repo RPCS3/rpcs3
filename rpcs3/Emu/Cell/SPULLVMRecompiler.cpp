@@ -68,7 +68,7 @@ const extern spu_decoder<spu_iflag> g_spu_iflag;
 #endif
 
 #ifdef ARCH_ARM64
-#include "Emu/CPU/Backends/AArch64JIT.h"
+#include "Emu/CPU/Backends/AArch64/AArch64JIT.h"
 #endif
 
 class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
