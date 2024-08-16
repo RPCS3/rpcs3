@@ -543,12 +543,33 @@ extern void utilize_spu_data_segment(u32 vaddr, const void* ls_data_vaddr, u32 s
 		return;
 	}
 
-	for (u32 addr : obj.funcs)
+	if (spu_log.notice)
 	{
-		spu_log.notice("Found SPU function at: 0x%05x", addr);
+		std::string to_log;
+
+		for (usz i = 0; i < obj.funcs.size(); i++)
+		{
+			if (i == 0 && obj.funcs.size() < 4)
+			{
+				// Skip newline in this case
+				to_log += ' ';
+			}
+			else if (i % 4 == 0)
+			{
+				to_log += '\n';
+			}
+			else
+			{
+				to_log += ", ";
+			}
+
+			fmt::append(to_log, "0x%05x", obj.funcs[i]);
+		}
+
+		spu_log.notice("Found SPU function(s) at:%s", to_log);
 	}
 
-	spu_log.notice("Found %u SPU functions", obj.funcs.size());
+	spu_log.success("Found %u SPU function(s)", obj.funcs.size());
 
 	g_fxo->get<spu_cache>().precompile_funcs.push(std::move(obj));
 }
