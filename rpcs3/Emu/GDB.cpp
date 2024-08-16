@@ -894,7 +894,7 @@ void gdb_thread::operator()()
 {
 	start_server();
 
-	while (server_socket != -1 && thread_ctrl::state() != thread_state::aborting)
+	for (u64 sleep_until = get_system_time(); server_socket != -1 && thread_ctrl::state() != thread_state::aborting;)
 	{
 		sockaddr_in client;
 		socklen_t client_len = sizeof(client);
@@ -904,7 +904,7 @@ void gdb_thread::operator()()
 		{
 			if (check_errno_again())
 			{
-				thread_ctrl::wait_for(5000);
+				thread_ctrl::wait_until(&sleep_until, 5000);
 				continue;
 			}
 

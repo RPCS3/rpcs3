@@ -1622,7 +1622,7 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 			error_code sending_error = not_an_error(CELL_EBUSY);
 
 			// If we fail due to being busy, wait a bit and try again.
-			for (; static_cast<u32>(sending_error) == CELL_EBUSY; thread_ctrl::wait_for(1000))
+			for (u64 sleep_until = get_system_time(); static_cast<u32>(sending_error) == CELL_EBUSY; thread_ctrl::wait_until(&sleep_until, 1000))
 			{
 				sending_error = send_event();
 
@@ -2412,6 +2412,34 @@ void thread_ctrl::wait_for(u64 usec, [[maybe_unused]] bool alert /* true */)
 	}
 
 	list.wait(atomic_wait_timeout{usec <= 0xffff'ffff'ffff'ffff / 1000 ? usec * 1000 : 0xffff'ffff'ffff'ffff});
+}
+
+
+void thread_ctrl::wait_until(u64* wait_time, u64 add_time, u64 min_wait, bool update_to_current_time)
+{
+	*wait_time = utils::add_saturate<u64>(*wait_time, add_time);
+
+	// TODO: Implement proper support for "waiting until" inside atomic wait engine
+	const u64 current_time = get_system_time();
+
+	if (current_time > *wait_time)
+	{
+		if (update_to_current_time)
+		{
+			*wait_time = current_time + (add_time - (current_time - *wait_time) % add_time);
+		}
+		else if (!min_wait)
+		{
+			return;
+		}
+	}
+
+	if (min_wait)
+	{
+		*wait_time = std::max<u64>(*wait_time, utils::add_saturate<u64>(current_time, min_wait));
+	}
+
+	wait_for(*wait_time - current_time);
 }
 
 void thread_ctrl::wait_for_accurate(u64 usec)

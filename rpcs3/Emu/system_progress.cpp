@@ -175,7 +175,9 @@ void progress_dialog_server::operator()()
 		usz time_left_queue_idx = 0;
 
 		// Update progress
-		while (!g_system_progress_stopping && thread_ctrl::state() != thread_state::aborting)
+		for (u64 sleep_until = get_system_time(), sleep_for = 500;
+			!g_system_progress_stopping && thread_ctrl::state() != thread_state::aborting;
+			thread_ctrl::wait_until(&sleep_until, std::exchange(sleep_for, 500)))
 		{
 			const auto& [text_new, ftotal_new, fdone_new, ftotal_bits_new, fknown_bits_new, ptotal_new, pdone_new] = get_state();
 
@@ -236,7 +238,7 @@ void progress_dialog_server::operator()()
 						}
 					}
 
-					thread_ctrl::wait_for(10000);
+					sleep_for = 10000;
 					continue;
 				}
 
@@ -365,7 +367,7 @@ void progress_dialog_server::operator()()
 				break;
 			}
 
-			thread_ctrl::wait_for(10'000);
+			sleep_for = 10'000;
 			wait_no_update_count++;
 		}
 

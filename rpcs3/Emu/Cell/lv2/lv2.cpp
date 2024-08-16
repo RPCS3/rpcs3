@@ -1206,10 +1206,11 @@ public:
 	void operator()()
 	{
 		bool was_paused = false;
+		u64 sleep_until = get_system_time();
 
 		for (u32 i = 1; thread_ctrl::state() != thread_state::aborting; i++)
 		{
-			thread_ctrl::wait_for(1'000'000);
+			thread_ctrl::wait_until(&sleep_until, 1'000'000);
 
 			const bool is_paused = Emu.IsPaused();
 
