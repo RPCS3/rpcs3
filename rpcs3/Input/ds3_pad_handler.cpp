@@ -75,7 +75,11 @@ ds3_pad_handler::~ds3_pad_handler()
 			// Disable blinking and vibration
 			controller.second->large_motor = 0;
 			controller.second->small_motor = 0;
-			send_output_report(controller.second.get());
+
+			if (send_output_report(controller.second.get()) == -1)
+			{
+				ds3_log.error("~ds3_pad_handler: send_output_report failed! error=%s", hid_error(controller.second->hidDevice));
+			}
 		}
 	}
 }
@@ -106,7 +110,10 @@ void ds3_pad_handler::SetPadData(const std::string& padId, u8 player_id, u8 larg
 	device->config->player_led_enabled.set(player_led);
 
 	// Start/Stop the engines :)
-	send_output_report(device.get());
+	if (send_output_report(device.get()) == -1)
+	{
+		ds3_log.error("SetPadData: send_output_report failed! error=%s", hid_error(device->hidDevice));
+	}
 }
 
 int ds3_pad_handler::send_output_report(ds3_device* ds3dev)
@@ -593,9 +600,13 @@ void ds3_pad_handler::apply_pad_data(const pad_ensemble& binding)
 
 	if (dev->new_output_data)
 	{
-		if (send_output_report(dev) >= 0)
+		if (const int res = send_output_report(dev); res >= 0)
 		{
 			dev->new_output_data = false;
+		}
+		else if (res == -1)
+		{
+			ds3_log.error("apply_pad_data: send_output_report failed! error=%s", hid_error(dev->hidDevice));
 		}
 	}
 }

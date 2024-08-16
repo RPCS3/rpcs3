@@ -126,6 +126,26 @@ ds4_pad_handler::ds4_pad_handler()
 	m_thumb_threshold = thumb_max / 2;
 }
 
+ds4_pad_handler::~ds4_pad_handler()
+{
+	for (auto& controller : m_controllers)
+	{
+		if (controller.second && controller.second->hidDevice)
+		{
+			// Disable blinking and vibration
+			controller.second->small_motor = 0;
+			controller.second->large_motor = 0;
+			controller.second->led_delay_on = 0;
+			controller.second->led_delay_off = 0;
+
+			if (send_output_report(controller.second.get()) == -1)
+			{
+				ds4_log.error("~ds4_pad_handler: send_output_report failed! error=%s", hid_error(controller.second->hidDevice));
+			}
+		}
+	}
+}
+
 void ds4_pad_handler::init_config(cfg_pad* cfg)
 {
 	if (!cfg) return;
@@ -224,7 +244,10 @@ void ds4_pad_handler::SetPadData(const std::string& padId, u8 player_id, u8 larg
 	}
 
 	// Start/Stop the engines :)
-	send_output_report(device.get());
+	if (send_output_report(device.get()) == -1)
+	{
+		ds4_log.error("SetPadData: send_output_report failed! error=%s", hid_error(device->hidDevice));
+	}
 }
 
 std::unordered_map<u64, u16> ds4_pad_handler::get_button_values(const std::shared_ptr<PadDevice>& device)
@@ -614,22 +637,6 @@ void ds4_pad_handler::check_add_device(hid_device* hidDevice, std::string_view p
 	ds4_log.notice("Added device: bluetooth=%d, serial='%s', hw_version: 0x%x, fw_version: 0x%x, path='%s'", device->bt_controller, serial, hw_version, fw_version, device->path);
 }
 
-ds4_pad_handler::~ds4_pad_handler()
-{
-	for (auto& controller : m_controllers)
-	{
-		if (controller.second && controller.second->hidDevice)
-		{
-			// Disable blinking and vibration
-			controller.second->small_motor = 0;
-			controller.second->large_motor = 0;
-			controller.second->led_delay_on = 0;
-			controller.second->led_delay_off = 0;
-			send_output_report(controller.second.get());
-		}
-	}
-}
-
 int ds4_pad_handler::send_output_report(DS4Device* device)
 {
 	if (!device || !device->hidDevice)
@@ -961,9 +968,13 @@ void ds4_pad_handler::apply_pad_data(const pad_ensemble& binding)
 
 	if (ds4_dev->new_output_data)
 	{
-		if (send_output_report(ds4_dev) >= 0)
+		if (const int res = send_output_report(ds4_dev); res >= 0)
 		{
 			ds4_dev->new_output_data = false;
+		}
+		else if (res == -1)
+		{
+			ds4_log.error("apply_pad_data: send_output_report failed! error=%s", hid_error(ds4_dev->hidDevice));
 		}
 	}
 }
