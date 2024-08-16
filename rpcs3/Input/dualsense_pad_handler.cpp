@@ -802,7 +802,10 @@ dualsense_pad_handler::~dualsense_pad_handler()
 			// Turns off the lights (disabled due to user complaints)
 			//controller.second->release_leds = true;
 
-			send_output_report(controller.second.get());
+			if (send_output_report(controller.second.get()) == -1)
+			{
+				dualsense_log.error("~dualsense_pad_handler: send_output_report failed! Reason: %s", hid_error(controller.second->hidDevice));
+			}
 		}
 	}
 }
@@ -1008,9 +1011,13 @@ void dualsense_pad_handler::apply_pad_data(const pad_ensemble& binding)
 
 	if (dualsense_dev->new_output_data)
 	{
-		if (send_output_report(dualsense_dev) >= 0)
+		if (const int res = send_output_report(dualsense_dev); res >= 0)
 		{
 			dualsense_dev->new_output_data = false;
+		}
+		else if (res == -1)
+		{
+			dualsense_log.error("apply_pad_data: send_output_report failed! error=%s", hid_error(dualsense_dev->hidDevice));
 		}
 	}
 }
@@ -1050,11 +1057,17 @@ void dualsense_pad_handler::SetPadData(const std::string& padId, u8 player_id, u
 	if (device->init_lightbar)
 	{
 		// Initialize first
-		send_output_report(device.get());
+		if (send_output_report(device.get()) == -1)
+		{
+			dualsense_log.error("SetPadData: send_output_report failed! Reason: %s", hid_error(device->hidDevice));
+		}
 	}
 
 	// Start/Stop the engines :)
-	send_output_report(device.get());
+	if (send_output_report(device.get()) == -1)
+	{
+		dualsense_log.error("SetPadData: send_output_report failed! Reason: %s", hid_error(device->hidDevice));
+	}
 }
 
 u32 dualsense_pad_handler::get_battery_level(const std::string& padId)
