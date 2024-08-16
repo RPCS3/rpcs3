@@ -212,31 +212,34 @@ std::unordered_map<u64, u16> xinput_pad_handler::get_button_values(const std::sh
 	// Try SCP first, if it fails for that pad then try normal XInput
 	if (dev->is_scp_device)
 	{
-		return get_button_values_scp(dev->state_scp, m_triggers_as_sticks_only);
+		return get_button_values_scp(dev->state_scp, m_trigger_recognition_mode);
 	}
 
-	return get_button_values_base(dev->state_base, m_triggers_as_sticks_only);
+	return get_button_values_base(dev->state_base, m_trigger_recognition_mode);
 }
 
-xinput_pad_handler::PadButtonValues xinput_pad_handler::get_button_values_base(const XINPUT_STATE& state, bool triggers_as_sticks_only)
+xinput_pad_handler::PadButtonValues xinput_pad_handler::get_button_values_base(const XINPUT_STATE& state, trigger_recognition_mode trigger_mode)
 {
 	PadButtonValues values;
 
 	// Triggers
-	if (!triggers_as_sticks_only)
+	if (trigger_mode == trigger_recognition_mode::any || trigger_mode == trigger_recognition_mode::one_directional)
 	{
 		values[XInputKeyCodes::LT] = state.Gamepad.bLeftTrigger;
 		values[XInputKeyCodes::RT] = state.Gamepad.bRightTrigger;
 	}
 
-	const float lTrigger = state.Gamepad.bLeftTrigger / 255.0f;
-	const float rTrigger = state.Gamepad.bRightTrigger / 255.0f;
+	if (trigger_mode == trigger_recognition_mode::any || trigger_mode == trigger_recognition_mode::two_directional)
+	{
+		const float lTrigger = state.Gamepad.bLeftTrigger / 255.0f;
+		const float rTrigger = state.Gamepad.bRightTrigger / 255.0f;
 
-	values[XInputKeyCodes::LT_Pos] = static_cast<u16>(lTrigger > 0.5f ? std::clamp((lTrigger - 0.5f) * 2.0f * 255.0f, 0.0f, 255.0f) : 0.0f);
-	values[XInputKeyCodes::LT_Neg] = static_cast<u16>(lTrigger < 0.5f ? std::clamp((0.5f - lTrigger) * 2.0f * 255.0f, 0.0f, 255.0f) : 0.0f);
+		values[XInputKeyCodes::LT_Pos] = static_cast<u16>(lTrigger > 0.5f ? std::clamp((lTrigger - 0.5f) * 2.0f * 255.0f, 0.0f, 255.0f) : 0.0f);
+		values[XInputKeyCodes::LT_Neg] = static_cast<u16>(lTrigger < 0.5f ? std::clamp((0.5f - lTrigger) * 2.0f * 255.0f, 0.0f, 255.0f) : 0.0f);
 
-	values[XInputKeyCodes::RT_Pos] = static_cast<u16>(rTrigger > 0.5f ? std::clamp((rTrigger - 0.5f) * 2.0f * 255.0f, 0.0f, 255.0f) : 0.0f);
-	values[XInputKeyCodes::RT_Neg] = static_cast<u16>(rTrigger < 0.5f ? std::clamp((0.5f - rTrigger) * 2.0f * 255.0f, 0.0f, 255.0f) : 0.0f);
+		values[XInputKeyCodes::RT_Pos] = static_cast<u16>(rTrigger > 0.5f ? std::clamp((rTrigger - 0.5f) * 2.0f * 255.0f, 0.0f, 255.0f) : 0.0f);
+		values[XInputKeyCodes::RT_Neg] = static_cast<u16>(rTrigger < 0.5f ? std::clamp((0.5f - rTrigger) * 2.0f * 255.0f, 0.0f, 255.0f) : 0.0f);
+	}
 
 	// Sticks
 	const int lx = state.Gamepad.sThumbLX;
@@ -289,22 +292,25 @@ xinput_pad_handler::PadButtonValues xinput_pad_handler::get_button_values_base(c
 	return values;
 }
 
-xinput_pad_handler::PadButtonValues xinput_pad_handler::get_button_values_scp(const SCP_EXTN& state, bool triggers_as_sticks_only)
+xinput_pad_handler::PadButtonValues xinput_pad_handler::get_button_values_scp(const SCP_EXTN& state, trigger_recognition_mode trigger_mode)
 {
 	PadButtonValues values;
 
 	// Triggers
-	if (!triggers_as_sticks_only)
+	if (trigger_mode == trigger_recognition_mode::any || trigger_mode == trigger_recognition_mode::one_directional)
 	{
 		values[xinput_pad_handler::XInputKeyCodes::LT] = static_cast<u16>(state.SCP_L2 * 255.0f);
 		values[xinput_pad_handler::XInputKeyCodes::RT] = static_cast<u16>(state.SCP_R2 * 255.0f);
 	}
 
-	values[XInputKeyCodes::LT_Pos] = static_cast<u16>(state.SCP_L2 > 0.5f ? std::clamp((state.SCP_L2 - 0.5f) * 2.0f * 255.0f, 0.0f, 255.0f) : 0.0f);
-	values[XInputKeyCodes::LT_Neg] = static_cast<u16>(state.SCP_L2 < 0.5f ? std::clamp((0.5f - state.SCP_L2) * 2.0f * 255.0f, 0.0f, 255.0f) : 0.0f);
+	if (trigger_mode == trigger_recognition_mode::any || trigger_mode == trigger_recognition_mode::two_directional)
+	{
+		values[XInputKeyCodes::LT_Pos] = static_cast<u16>(state.SCP_L2 > 0.5f ? std::clamp((state.SCP_L2 - 0.5f) * 2.0f * 255.0f, 0.0f, 255.0f) : 0.0f);
+		values[XInputKeyCodes::LT_Neg] = static_cast<u16>(state.SCP_L2 < 0.5f ? std::clamp((0.5f - state.SCP_L2) * 2.0f * 255.0f, 0.0f, 255.0f) : 0.0f);
 
-	values[XInputKeyCodes::RT_Pos] = static_cast<u16>(state.SCP_R2 > 0.5f ? std::clamp((state.SCP_R2 - 0.5f) * 2.0f * 255.0f, 0.0f, 255.0f) : 0.0f);
-	values[XInputKeyCodes::RT_Neg] = static_cast<u16>(state.SCP_R2 < 0.5f ? std::clamp((0.5f - state.SCP_R2) * 2.0f * 255.0f, 0.0f, 255.0f) : 0.0f);
+		values[XInputKeyCodes::RT_Pos] = static_cast<u16>(state.SCP_R2 > 0.5f ? std::clamp((state.SCP_R2 - 0.5f) * 2.0f * 255.0f, 0.0f, 255.0f) : 0.0f);
+		values[XInputKeyCodes::RT_Neg] = static_cast<u16>(state.SCP_R2 < 0.5f ? std::clamp((0.5f - state.SCP_R2) * 2.0f * 255.0f, 0.0f, 255.0f) : 0.0f);
+	}
 
 	// Sticks
 	const float lx = state.SCP_LX;

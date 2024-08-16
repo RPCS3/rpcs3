@@ -1312,7 +1312,7 @@ void pad_settings_dialog::OnPadButtonClicked(int id)
 	}
 
 	// On alt+click or alt+space allow to handle triggers as the entire stick axis
-	m_handler->set_triggers_as_sticks_only(QApplication::keyboardModifiers() & Qt::KeyboardModifier::AltModifier);
+	m_handler->set_trigger_recognition_mode((QApplication::keyboardModifiers() & Qt::KeyboardModifier::AltModifier) ? PadHandlerBase::trigger_recognition_mode::two_directional : PadHandlerBase::trigger_recognition_mode::one_directional);
 
 	for (auto but : m_pad_buttons->buttons())
 	{
