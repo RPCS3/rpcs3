@@ -1128,6 +1128,7 @@ static void ppu_check_patch_spu_images(const ppu_module& mod, const ppu_segment&
 		{
 			bool next = true;
 			const u32 old_i = i;
+			u32 guid_start = umax, guid_end = umax;
 
 			for (u32 search = i & -128, tries = 10; tries && search >= prev_bound; tries--, search = utils::sub_saturate<u32>(search, 128))
 			{
@@ -1146,7 +1147,7 @@ static void ppu_check_patch_spu_images(const ppu_module& mod, const ppu_segment&
 					continue;
 				}
 
-				ppu_log.success("Found SPURS GUID Pattern at 0x%05x", search + seg.addr);
+				guid_start = search + seg.addr;
 				i = search;
 				next = false;
 				break;
@@ -1218,7 +1219,7 @@ static void ppu_check_patch_spu_images(const ppu_module& mod, const ppu_segment&
 						{
 							// SPURS GUID pattern
 							end = it;
-							ppu_log.success("Found SPURS GUID Pattern for terminator at 0x%05x", end + seg.addr);
+							guid_end = end + seg.addr;
 							break;
 						}
 
@@ -1252,7 +1253,7 @@ static void ppu_check_patch_spu_images(const ppu_module& mod, const ppu_segment&
 						end = begin + std::min<u32>(end - begin, SPU_LS_SIZE - guessed_ls_addr);
 					}
 
-					ppu_log.success("Found valid roaming SPU code at 0x%x..0x%x (guessed_ls_addr=0x%x)", seg.addr + begin, seg.addr + end, guessed_ls_addr);
+					ppu_log.success("Found valid roaming SPU code at 0x%x..0x%x (guessed_ls_addr=0x%x, GUID=0x%05x..0x%05x)", seg.addr + begin, seg.addr + end, guessed_ls_addr, guid_start, guid_end);
 
 					if (!is_firmware && _main == &mod)
 					{

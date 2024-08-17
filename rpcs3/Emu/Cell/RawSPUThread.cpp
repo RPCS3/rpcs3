@@ -405,7 +405,7 @@ void spu_load_exec(const spu_exec_object& elf)
 			}
 			else if (i % 4 == 0)
 			{
-				to_log += '\n';
+				fmt::append(to_log, "\n[%02u] ", i / 8);
 			}
 			else
 			{
