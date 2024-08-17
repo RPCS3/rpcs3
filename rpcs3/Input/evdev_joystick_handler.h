@@ -396,7 +396,6 @@ class evdev_joystick_handler final : public PadHandlerBase
 		int effect_id = -1;
 		bool has_rumble = false;
 		bool has_motion = false;
-		clock_t last_vibration = 0;
 	};
 
 public:

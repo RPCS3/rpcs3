@@ -383,9 +383,9 @@ dualsense_pad_handler::DataStatus dualsense_pad_handler::get_data(DualSenseDevic
 	return DataStatus::NewData;
 }
 
-bool dualsense_pad_handler::get_calibration_data(DualSenseDevice* dualsense_device) const
+bool dualsense_pad_handler::get_calibration_data(DualSenseDevice* dev) const
 {
-	if (!dualsense_device || !dualsense_device->hidDevice)
+	if (!dev || !dev->hidDevice)
 	{
 		dualsense_log.error("get_calibration_data called with null device");
 		return false;
@@ -393,16 +393,16 @@ bool dualsense_pad_handler::get_calibration_data(DualSenseDevice* dualsense_devi
 
 	std::array<u8, 64> buf{};
 
-	if (dualsense_device->bt_controller)
+	if (dev->bt_controller)
 	{
 		for (int tries = 0; tries < 3; ++tries)
 		{
 			buf = {};
 			buf[0] = 0x05;
 
-			if (int res = hid_get_feature_report(dualsense_device->hidDevice, buf.data(), DUALSENSE_CALIBRATION_REPORT_SIZE); res != DUALSENSE_CALIBRATION_REPORT_SIZE || buf[0] != 0x05)
+			if (int res = hid_get_feature_report(dev->hidDevice, buf.data(), DUALSENSE_CALIBRATION_REPORT_SIZE); res != DUALSENSE_CALIBRATION_REPORT_SIZE || buf[0] != 0x05)
 			{
-				dualsense_log.error("get_calibration_data: hid_get_feature_report 0x05 for bluetooth controller failed! result=%d, buf[0]=0x%x, error=%s", res, buf[0], hid_error(dualsense_device->hidDevice));
+				dualsense_log.error("get_calibration_data: hid_get_feature_report 0x05 for bluetooth controller failed! result=%d, buf[0]=0x%x, error=%s", res, buf[0], hid_error(dev->hidDevice));
 				return false;
 			}
 
@@ -427,16 +427,16 @@ bool dualsense_pad_handler::get_calibration_data(DualSenseDevice* dualsense_devi
 	{
 		buf[0] = 0x05;
 
-		if (int res = hid_get_feature_report(dualsense_device->hidDevice, buf.data(), DUALSENSE_CALIBRATION_REPORT_SIZE); res != DUALSENSE_CALIBRATION_REPORT_SIZE || buf[0] != 0x05)
+		if (int res = hid_get_feature_report(dev->hidDevice, buf.data(), DUALSENSE_CALIBRATION_REPORT_SIZE); res != DUALSENSE_CALIBRATION_REPORT_SIZE || buf[0] != 0x05)
 		{
-			dualsense_log.error("get_calibration_data: hid_get_feature_report 0x05 for wired controller failed! result=%d, buf[0]=0x%x, error=%s", res, buf[0], hid_error(dualsense_device->hidDevice));
+			dualsense_log.error("get_calibration_data: hid_get_feature_report 0x05 for wired controller failed! result=%d, buf[0]=0x%x, error=%s", res, buf[0], hid_error(dev->hidDevice));
 			return false;
 		}
 	}
 
-	dualsense_device->calib_data[CalibIndex::PITCH].bias = read_s16(&buf[1]);
-	dualsense_device->calib_data[CalibIndex::YAW].bias   = read_s16(&buf[3]);
-	dualsense_device->calib_data[CalibIndex::ROLL].bias  = read_s16(&buf[5]);
+	dev->calib_data[CalibIndex::PITCH].bias = read_s16(&buf[1]);
+	dev->calib_data[CalibIndex::YAW].bias   = read_s16(&buf[3]);
+	dev->calib_data[CalibIndex::ROLL].bias  = read_s16(&buf[5]);
 
 	const s16 pitch_plus  = read_s16(&buf[7]);
 	const s16 pitch_minus = read_s16(&buf[9]);
@@ -455,14 +455,14 @@ bool dualsense_pad_handler::get_calibration_data(DualSenseDevice* dualsense_devi
 
 	const s32 gyro_speed_scale = read_s16(&buf[19]) + read_s16(&buf[21]);
 
-	dualsense_device->calib_data[CalibIndex::PITCH].sens_numer = gyro_speed_scale * DUALSENSE_GYRO_RES_PER_DEG_S;
-	dualsense_device->calib_data[CalibIndex::PITCH].sens_denom = pitch_plus - pitch_minus;
+	dev->calib_data[CalibIndex::PITCH].sens_numer = gyro_speed_scale * DUALSENSE_GYRO_RES_PER_DEG_S;
+	dev->calib_data[CalibIndex::PITCH].sens_denom = pitch_plus - pitch_minus;
 
-	dualsense_device->calib_data[CalibIndex::YAW].sens_numer = gyro_speed_scale * DUALSENSE_GYRO_RES_PER_DEG_S;
-	dualsense_device->calib_data[CalibIndex::YAW].sens_denom = yaw_plus - yaw_minus;
+	dev->calib_data[CalibIndex::YAW].sens_numer = gyro_speed_scale * DUALSENSE_GYRO_RES_PER_DEG_S;
+	dev->calib_data[CalibIndex::YAW].sens_denom = yaw_plus - yaw_minus;
 
-	dualsense_device->calib_data[CalibIndex::ROLL].sens_numer = gyro_speed_scale * DUALSENSE_GYRO_RES_PER_DEG_S;
-	dualsense_device->calib_data[CalibIndex::ROLL].sens_denom = roll_plus - roll_minus;
+	dev->calib_data[CalibIndex::ROLL].sens_numer = gyro_speed_scale * DUALSENSE_GYRO_RES_PER_DEG_S;
+	dev->calib_data[CalibIndex::ROLL].sens_denom = roll_plus - roll_minus;
 
 	const s16 accel_x_plus  = read_s16(&buf[23]);
 	const s16 accel_x_minus = read_s16(&buf[25]);
@@ -475,23 +475,23 @@ bool dualsense_pad_handler::get_calibration_data(DualSenseDevice* dualsense_devi
 	const s32 accel_y_range = accel_y_plus - accel_y_minus;
 	const s32 accel_z_range = accel_z_plus - accel_z_minus;
 
-	dualsense_device->calib_data[CalibIndex::X].bias       = accel_x_plus - accel_x_range / 2;
-	dualsense_device->calib_data[CalibIndex::X].sens_numer = 2 * DUALSENSE_ACC_RES_PER_G;
-	dualsense_device->calib_data[CalibIndex::X].sens_denom = accel_x_range;
+	dev->calib_data[CalibIndex::X].bias       = accel_x_plus - accel_x_range / 2;
+	dev->calib_data[CalibIndex::X].sens_numer = 2 * DUALSENSE_ACC_RES_PER_G;
+	dev->calib_data[CalibIndex::X].sens_denom = accel_x_range;
 
-	dualsense_device->calib_data[CalibIndex::Y].bias       = accel_y_plus - accel_y_range / 2;
-	dualsense_device->calib_data[CalibIndex::Y].sens_numer = 2 * DUALSENSE_ACC_RES_PER_G;
-	dualsense_device->calib_data[CalibIndex::Y].sens_denom = accel_y_range;
+	dev->calib_data[CalibIndex::Y].bias       = accel_y_plus - accel_y_range / 2;
+	dev->calib_data[CalibIndex::Y].sens_numer = 2 * DUALSENSE_ACC_RES_PER_G;
+	dev->calib_data[CalibIndex::Y].sens_denom = accel_y_range;
 
-	dualsense_device->calib_data[CalibIndex::Z].bias       = accel_z_plus - accel_z_range / 2;
-	dualsense_device->calib_data[CalibIndex::Z].sens_numer = 2 * DUALSENSE_ACC_RES_PER_G;
-	dualsense_device->calib_data[CalibIndex::Z].sens_denom = accel_z_range;
+	dev->calib_data[CalibIndex::Z].bias       = accel_z_plus - accel_z_range / 2;
+	dev->calib_data[CalibIndex::Z].sens_numer = 2 * DUALSENSE_ACC_RES_PER_G;
+	dev->calib_data[CalibIndex::Z].sens_denom = accel_z_range;
 
 	// Make sure data 'looks' valid, dongle will report invalid calibration data with no controller connected
 
-	for (size_t i = 0; i < dualsense_device->calib_data.size(); i++)
+	for (size_t i = 0; i < dev->calib_data.size(); i++)
 	{
-		CalibData& data = dualsense_device->calib_data[i];
+		CalibData& data = dev->calib_data[i];
 
 		if (data.sens_denom == 0)
 		{
@@ -559,23 +559,26 @@ bool dualsense_pad_handler::get_is_touch_pad_motion(const std::shared_ptr<PadDev
 
 PadHandlerBase::connection dualsense_pad_handler::update_connection(const std::shared_ptr<PadDevice>& device)
 {
-	DualSenseDevice* dualsense_dev = static_cast<DualSenseDevice*>(device.get());
-	if (!dualsense_dev || dualsense_dev->path.empty())
+	DualSenseDevice* dev = static_cast<DualSenseDevice*>(device.get());
+	if (!dev || dev->path.empty())
 		return connection::disconnected;
 
-	if (dualsense_dev->hidDevice == nullptr)
+	if (dev->hidDevice == nullptr)
 	{
 		// try to reconnect
-		hid_device* dev = hid_open_path(dualsense_dev->path.c_str());
-		if (dev)
+		if (hid_device* hid_dev = hid_open_path(dev->path.c_str()))
 		{
-			if (hid_set_nonblocking(dev, 1) == -1)
+			if (hid_set_nonblocking(hid_dev, 1) == -1)
 			{
-				dualsense_log.error("Reconnecting Device %s: hid_set_nonblocking failed with error %s", dualsense_dev->path, hid_error(dev));
+				dualsense_log.error("Reconnecting Device %s: hid_set_nonblocking failed with error %s", dev->path, hid_error(hid_dev));
 			}
-			dualsense_dev->hidDevice = dev;
-			if (!dualsense_dev->has_calib_data)
-				dualsense_dev->has_calib_data = get_calibration_data(dualsense_dev);
+
+			dev->hidDevice = hid_dev;
+
+			if (!dev->has_calib_data)
+			{
+				dev->has_calib_data = get_calibration_data(dev);
+			}
 		}
 		else
 		{
@@ -584,10 +587,10 @@ PadHandlerBase::connection dualsense_pad_handler::update_connection(const std::s
 		}
 	}
 
-	if (get_data(dualsense_dev) == DataStatus::ReadError)
+	if (get_data(dev) == DataStatus::ReadError)
 	{
 		// this also can mean disconnected, either way deal with it on next loop and reconnect
-		dualsense_dev->close();
+		dev->close();
 
 		return connection::no_data;
 	}
@@ -600,14 +603,14 @@ void dualsense_pad_handler::get_extended_info(const pad_ensemble& binding)
 	const auto& device = binding.device;
 	const auto& pad = binding.pad;
 
-	DualSenseDevice* dualsense_device = static_cast<DualSenseDevice*>(device.get());
-	if (!dualsense_device || !pad)
+	DualSenseDevice* dev = static_cast<DualSenseDevice*>(device.get());
+	if (!dev || !pad)
 		return;
 
-	pad->m_battery_level = dualsense_device->battery_level;
-	pad->m_cable_state   = dualsense_device->cable_state;
+	pad->m_battery_level = dev->battery_level;
+	pad->m_cable_state   = dev->cable_state;
 
-	const dualsense_input_report_common& input = dualsense_device->report;
+	const dualsense_input_report_common& input = dev->report;
 
 	// these values come already calibrated, all we need to do is convert to ds3 range
 
@@ -638,13 +641,13 @@ void dualsense_pad_handler::get_extended_info(const pad_ensemble& binding)
 std::unordered_map<u64, u16> dualsense_pad_handler::get_button_values(const std::shared_ptr<PadDevice>& device)
 {
 	std::unordered_map<u64, u16> keyBuffer;
-	DualSenseDevice* dualsense_dev = static_cast<DualSenseDevice*>(device.get());
-	if (!dualsense_dev)
+	DualSenseDevice* dev = static_cast<DualSenseDevice*>(device.get());
+	if (!dev)
 		return keyBuffer;
 
-	const dualsense_input_report_common& input = dualsense_dev->report;
+	const dualsense_input_report_common& input = dev->report;
 
-	const bool is_simple_mode = dualsense_dev->data_mode == DualSenseDevice::DualSenseDataMode::Simple;
+	const bool is_simple_mode = dev->data_mode == DualSenseDevice::DualSenseDataMode::Simple;
 
 	// Left Stick X Axis
 	keyBuffer[DualSenseKeyCodes::LSXNeg] = Clamp0To255((127.5f - input.x) * 2.0f);
@@ -766,7 +769,7 @@ std::unordered_map<u64, u16> dualsense_pad_handler::get_button_values(const std:
 		}
 	}
 
-	if (dualsense_dev->feature_set == DualSenseDevice::DualSenseFeatureSet::Edge)
+	if (dev->feature_set == DualSenseDevice::DualSenseFeatureSet::Edge)
 	{
 		keyBuffer[DualSenseKeyCodes::EdgeFnL] = ((data & 0x10) != 0) ? 255 : 0;
 		keyBuffer[DualSenseKeyCodes::EdgeFnR] = ((data & 0x20) != 0) ? 255 : 0;
@@ -930,11 +933,11 @@ void dualsense_pad_handler::apply_pad_data(const pad_ensemble& binding)
 	const auto& device = binding.device;
 	const auto& pad = binding.pad;
 
-	DualSenseDevice* dualsense_dev = static_cast<DualSenseDevice*>(device.get());
-	if (!dualsense_dev || !dualsense_dev->hidDevice || !dualsense_dev->config || !pad)
+	DualSenseDevice* dev = static_cast<DualSenseDevice*>(device.get());
+	if (!dev || !dev->hidDevice || !dev->config || !pad)
 		return;
 
-	cfg_pad* config = dualsense_dev->config;
+	cfg_pad* config = dev->config;
 
 	// Attempt to send rumble no matter what
 	const int idx_l = config->switch_vibration_motors ? 1 : 0;
@@ -943,9 +946,9 @@ void dualsense_pad_handler::apply_pad_data(const pad_ensemble& binding)
 	const u8 speed_large = config->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value : 0;
 	const u8 speed_small = config->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value : 0;
 
-	const bool wireless    = dualsense_dev->cable_state == 0;
-	const bool low_battery = dualsense_dev->battery_level <= 1;
-	const bool is_blinking = dualsense_dev->led_delay_on > 0 || dualsense_dev->led_delay_off > 0;
+	const bool wireless    = dev->cable_state == 0;
+	const bool low_battery = dev->battery_level <= 1;
+	const bool is_blinking = dev->led_delay_on > 0 || dev->led_delay_off > 0;
 
 	// Blink LED when battery is low
 	if (config->led_low_battery_blink)
@@ -953,71 +956,75 @@ void dualsense_pad_handler::apply_pad_data(const pad_ensemble& binding)
 		// we are now wired or have okay battery level -> stop blinking
 		if (is_blinking && !(wireless && low_battery))
 		{
-			dualsense_dev->lightbar_on = true;
-			dualsense_dev->led_delay_on = 0;
-			dualsense_dev->led_delay_off = 0;
-			dualsense_dev->update_lightbar = true;
+			dev->lightbar_on = true;
+			dev->led_delay_on = 0;
+			dev->led_delay_off = 0;
+			dev->update_lightbar = true;
 		}
 		// we are now wireless and low on battery -> blink
 		else if (!is_blinking && wireless && low_battery)
 		{
-			dualsense_dev->led_delay_on = 100;
-			dualsense_dev->led_delay_off = 100;
-			dualsense_dev->update_lightbar = true;
+			dev->led_delay_on = 100;
+			dev->led_delay_off = 100;
+			dev->update_lightbar = true;
 		}
 
 		// Turn lightbar on and off in an interval. I wanted to do an automatic pulse, but I haven't found out how to do that yet.
-		if (dualsense_dev->led_delay_on > 0)
+		if (dev->led_delay_on > 0)
 		{
-			if (const steady_clock::time_point now = steady_clock::now(); (now - dualsense_dev->last_lightbar_time) > 500ms)
+			if (const steady_clock::time_point now = steady_clock::now(); (now - dev->last_lightbar_time) > 500ms)
 			{
-				dualsense_dev->lightbar_on = !dualsense_dev->lightbar_on;
-				dualsense_dev->last_lightbar_time = now;
-				dualsense_dev->update_lightbar = true;
+				dev->lightbar_on = !dev->lightbar_on;
+				dev->last_lightbar_time = now;
+				dev->update_lightbar = true;
 			}
 		}
 	}
-	else if (!dualsense_dev->lightbar_on)
+	else if (!dev->lightbar_on)
 	{
-		dualsense_dev->lightbar_on = true;
-		dualsense_dev->update_lightbar = true;
+		dev->lightbar_on = true;
+		dev->update_lightbar = true;
 	}
 
 	// Use LEDs to indicate battery level
 	if (config->led_battery_indicator)
 	{
 		// This makes sure that the LED color doesn't update every 1ms. DS4 only reports battery level in 10% increments
-		if (dualsense_dev->last_battery_level != dualsense_dev->battery_level)
+		if (dev->last_battery_level != dev->battery_level)
 		{
-			const u32 combined_color = get_battery_color(dualsense_dev->battery_level, config->led_battery_indicator_brightness);
+			const u32 combined_color = get_battery_color(dev->battery_level, config->led_battery_indicator_brightness);
 			config->colorR.set(combined_color >> 8);
 			config->colorG.set(combined_color & 0xff);
 			config->colorB.set(0);
-			dualsense_dev->update_lightbar = true;
-			dualsense_dev->last_battery_level = dualsense_dev->battery_level;
+			dev->update_lightbar = true;
+			dev->last_battery_level = dev->battery_level;
 		}
 	}
 
-	if (dualsense_dev->enable_player_leds != config->player_led_enabled.get())
+	if (dev->enable_player_leds != config->player_led_enabled.get())
 	{
-		dualsense_dev->enable_player_leds = config->player_led_enabled.get();
-		dualsense_dev->update_player_leds = true;
+		dev->enable_player_leds = config->player_led_enabled.get();
+		dev->update_player_leds = true;
 	}
 
-	dualsense_dev->new_output_data |= dualsense_dev->release_leds || dualsense_dev->update_player_leds || dualsense_dev->update_lightbar || dualsense_dev->large_motor != speed_large || dualsense_dev->small_motor != speed_small;
+	dev->new_output_data |= dev->release_leds || dev->update_player_leds || dev->update_lightbar || dev->large_motor != speed_large || dev->small_motor != speed_small;
 
-	dualsense_dev->large_motor = speed_large;
-	dualsense_dev->small_motor = speed_small;
+	dev->large_motor = speed_large;
+	dev->small_motor = speed_small;
 
-	if (dualsense_dev->new_output_data)
+	const auto now = steady_clock::now();
+	const auto elapsed = now - dev->last_output;
+
+	if (dev->new_output_data || elapsed > min_output_interval)
 	{
-		if (const int res = send_output_report(dualsense_dev); res >= 0)
+		if (const int res = send_output_report(dev); res >= 0)
 		{
-			dualsense_dev->new_output_data = false;
+			dev->new_output_data = false;
+			dev->last_output = now;
 		}
 		else if (res == -1)
 		{
-			dualsense_log.error("apply_pad_data: send_output_report failed! error=%s", hid_error(dualsense_dev->hidDevice));
+			dualsense_log.error("apply_pad_data: send_output_report failed! error=%s", hid_error(dev->hidDevice));
 		}
 	}
 }
