@@ -98,8 +98,6 @@ class xinput_pad_handler final : public PadHandlerBase
 	struct XInputDevice : public PadDevice
 	{
 		u32 deviceNumber{ 0 };
-		bool newVibrateData{ true };
-		steady_clock::time_point last_vibration;
 		bool is_scp_device{ false };
 		DWORD state{ ERROR_NOT_CONNECTED }; // holds internal controller state change
 		SCP_EXTN state_scp{};

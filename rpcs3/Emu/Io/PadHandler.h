@@ -23,6 +23,8 @@ public:
 	u8 player_id{0};
 	u8 large_motor{0};
 	u8 small_motor{0};
+	bool new_output_data{true};
+	steady_clock::time_point last_output;
 	std::set<u64> trigger_code_left{};
 	std::set<u64> trigger_code_right{};
 	std::array<std::set<u64>, 4> axis_code_left{};
@@ -114,6 +116,7 @@ protected:
 	static constexpr u32 MAX_GAMEPADS = 7;
 	static constexpr u16 button_press_threshold = 50;
 	static constexpr u16 touch_threshold = static_cast<u16>(255 * 0.9f);
+	static constexpr auto min_output_interval = 300ms;
 
 	std::array<bool, MAX_GAMEPADS> last_connection_status{{ false, false, false, false, false, false, false }};
 

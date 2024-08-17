@@ -421,14 +421,14 @@ void ds3_pad_handler::get_extended_info(const pad_ensemble& binding)
 	const auto& device = binding.device;
 	const auto& pad = binding.pad;
 
-	ds3_device* ds3dev = static_cast<ds3_device*>(device.get());
-	if (!ds3dev || !pad)
+	ds3_device* dev = static_cast<ds3_device*>(device.get());
+	if (!dev || !pad)
 		return;
 
-	const ds3_input_report& report = ds3dev->report;
+	const ds3_input_report& report = dev->report;
 
-	pad->m_battery_level = ds3dev->battery_level;
-	pad->m_cable_state   = ds3dev->cable_state;
+	pad->m_battery_level = dev->battery_level;
+	pad->m_cable_state   = dev->cable_state;
 
 	// For unknown reasons the sixaxis values seem to be in little endian on linux
 
@@ -510,14 +510,13 @@ PadHandlerBase::connection ds3_pad_handler::update_connection(const std::shared_
 
 	if (dev->hidDevice == nullptr)
 	{
-		hid_device* devhandle = hid_open_path(dev->path.c_str());
-		if (devhandle)
+		if (hid_device* hid_dev = hid_open_path(dev->path.c_str()))
 		{
-			if (hid_set_nonblocking(devhandle, 1) == -1)
+			if (hid_set_nonblocking(hid_dev, 1) == -1)
 			{
-				ds3_log.error("Reconnecting Device %s: hid_set_nonblocking failed with error %s", dev->path, hid_error(devhandle));
+				ds3_log.error("Reconnecting Device %s: hid_set_nonblocking failed with error %s", dev->path, hid_error(hid_dev));
 			}
-			dev->hidDevice = devhandle;
+			dev->hidDevice = hid_dev;
 		}
 		else
 		{
@@ -598,11 +597,15 @@ void ds3_pad_handler::apply_pad_data(const pad_ensemble& binding)
 	dev->large_motor = speed_large;
 	dev->small_motor = speed_small;
 
-	if (dev->new_output_data)
+	const auto now = steady_clock::now();
+	const auto elapsed = now - dev->last_output;
+
+	if (dev->new_output_data || elapsed > min_output_interval)
 	{
 		if (const int res = send_output_report(dev); res >= 0)
 		{
 			dev->new_output_data = false;
+			dev->last_output = now;
 		}
 		else if (res == -1)
 		{

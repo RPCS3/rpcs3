@@ -587,15 +587,18 @@ void evdev_joystick_handler::SetRumble(EvdevDevice* device, u8 large, u8 small)
 	if (fd < 0)
 		return;
 
-	if (large == device->large_motor && small == device->small_motor)
-		return;
+	device->new_output_data = large != device->large_motor || small != device->small_motor;
+
+	const auto now = steady_clock::now();
+	const auto elapsed = now - device->last_output;
 
 	// XBox One Controller can't handle faster vibration updates than ~10ms. Elite is even worse.
 	// So I'll use 20ms to be on the safe side. No lag was noticable.
-	if (clock() - device->last_vibration < 20)
+	if ((!device->new_output_data || elapsed <= 20ms) && elapsed <= min_output_interval)
 		return;
 
-	device->last_vibration = clock();
+	device->new_output_data = false;
+	device->last_output = now;
 
 	// delete the previous effect (which also stops it)
 	if (device->effect_id != -1)

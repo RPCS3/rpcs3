@@ -243,7 +243,7 @@ public:
 	void init_config(cfg_pad* cfg) override;
 
 private:
-	bool get_calibration_data(DualSenseDevice* dualsense_device) const;
+	bool get_calibration_data(DualSenseDevice* dev) const;
 
 	DataStatus get_data(DualSenseDevice* device) override;
 	void check_add_device(hid_device* hidDevice, std::string_view path, std::wstring_view wide_serial) override;

@@ -64,9 +64,6 @@ public:
 	bool led_is_on = true;
 	bool led_is_blinking = false;
 	steady_clock::time_point led_timestamp{};
-
-	bool has_new_rumble_data = true;
-	steady_clock::time_point last_vibration{};
 };
 
 class sdl_pad_handler : public PadHandlerBase

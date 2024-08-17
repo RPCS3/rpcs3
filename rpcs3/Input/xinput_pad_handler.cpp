@@ -142,10 +142,11 @@ void xinput_pad_handler::SetPadData(const std::string& padId, u8 /*player_id*/, 
 
 	// The left motor is the low-frequency rumble motor. The right motor is the high-frequency rumble motor.
 	// The two motors are not the same, and they create different vibration effects.
-	XINPUT_VIBRATION vibrate;
-
-	vibrate.wLeftMotorSpeed = large_motor * 257;  // between 0 to 65535
-	vibrate.wRightMotorSpeed = small_motor * 257; // between 0 to 65535
+	XINPUT_VIBRATION vibrate
+	{
+		.wLeftMotorSpeed = static_cast<u16>(large_motor * 257), // between 0 to 65535
+		.wRightMotorSpeed = static_cast<u16>(small_motor * 257) // between 0 to 65535
+	};
 
 	xinputSetState(static_cast<u32>(device_number), &vibrate);
 }
@@ -449,10 +450,10 @@ std::shared_ptr<PadDevice> xinput_pad_handler::get_device(const std::string& dev
 	if (device_number < 0)
 		return nullptr;
 
-	std::shared_ptr<XInputDevice> x_device = std::make_shared<XInputDevice>();
-	x_device->deviceNumber = static_cast<u32>(device_number);
+	std::shared_ptr<XInputDevice> dev = std::make_shared<XInputDevice>();
+	dev->deviceNumber = static_cast<u32>(device_number);
 
-	return x_device;
+	return dev;
 }
 
 bool xinput_pad_handler::get_is_left_trigger(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
@@ -568,22 +569,27 @@ void xinput_pad_handler::apply_pad_data(const pad_ensemble& binding)
 	const u8 speed_large = cfg->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value : 0;
 	const u8 speed_small = cfg->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value : 0;
 
-	dev->newVibrateData |= dev->large_motor != speed_large || dev->small_motor != speed_small;
+	dev->new_output_data |= dev->large_motor != speed_large || dev->small_motor != speed_small;
 
 	dev->large_motor = speed_large;
 	dev->small_motor = speed_small;
 
+	const auto now = steady_clock::now();
+	const auto elapsed = now - dev->last_output;
+
 	// XBox One Controller can't handle faster vibration updates than ~10ms. Elite is even worse. So I'll use 20ms to be on the safe side. No lag was noticable.
-	if (dev->newVibrateData && steady_clock::now() - dev->last_vibration > 20ms)
+	if ((dev->new_output_data && elapsed > 20ms) || elapsed > min_output_interval)
 	{
-		XINPUT_VIBRATION vibrate;
-		vibrate.wLeftMotorSpeed = speed_large * 257;  // between 0 to 65535
-		vibrate.wRightMotorSpeed = speed_small * 257; // between 0 to 65535
+		XINPUT_VIBRATION vibrate
+		{
+			.wLeftMotorSpeed = static_cast<u16>(speed_large * 257), // between 0 to 65535
+			.wRightMotorSpeed = static_cast<u16>(speed_small * 257) // between 0 to 65535
+		};
 
 		if (xinputSetState(padnum, &vibrate) == ERROR_SUCCESS)
 		{
-			dev->newVibrateData = false;
-			dev->last_vibration = steady_clock::now();
+			dev->new_output_data = false;
+			dev->last_output = now;
 		}
 	}
 }

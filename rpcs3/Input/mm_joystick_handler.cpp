@@ -169,20 +169,20 @@ std::array<std::set<u32>, PadHandlerBase::button::button_count> mm_joystick_hand
 {
 	std::array<std::set<u32>, button::button_count> mapping{};
 
-	MMJOYDevice* joy_device = static_cast<MMJOYDevice*>(device.get());
-	if (!joy_device || !cfg)
+	MMJOYDevice* dev = static_cast<MMJOYDevice*>(device.get());
+	if (!dev || !cfg)
 		return mapping;
 
-	joy_device->trigger_code_left  = find_keys<u64>(cfg->l2);
-	joy_device->trigger_code_right = find_keys<u64>(cfg->r2);
-	joy_device->axis_code_left[0]  = find_keys<u64>(cfg->ls_left);
-	joy_device->axis_code_left[1]  = find_keys<u64>(cfg->ls_right);
-	joy_device->axis_code_left[2]  = find_keys<u64>(cfg->ls_down);
-	joy_device->axis_code_left[3]  = find_keys<u64>(cfg->ls_up);
-	joy_device->axis_code_right[0] = find_keys<u64>(cfg->rs_left);
-	joy_device->axis_code_right[1] = find_keys<u64>(cfg->rs_right);
-	joy_device->axis_code_right[2] = find_keys<u64>(cfg->rs_down);
-	joy_device->axis_code_right[3] = find_keys<u64>(cfg->rs_up);
+	dev->trigger_code_left  = find_keys<u64>(cfg->l2);
+	dev->trigger_code_right = find_keys<u64>(cfg->r2);
+	dev->axis_code_left[0]  = find_keys<u64>(cfg->ls_left);
+	dev->axis_code_left[1]  = find_keys<u64>(cfg->ls_right);
+	dev->axis_code_left[2]  = find_keys<u64>(cfg->ls_down);
+	dev->axis_code_left[3]  = find_keys<u64>(cfg->ls_up);
+	dev->axis_code_right[0] = find_keys<u64>(cfg->rs_left);
+	dev->axis_code_right[1] = find_keys<u64>(cfg->rs_right);
+	dev->axis_code_right[2] = find_keys<u64>(cfg->rs_down);
+	dev->axis_code_right[3] = find_keys<u64>(cfg->rs_up);
 
 	mapping[button::up]       = find_keys<u32>(cfg->up);
 	mapping[button::down]     = find_keys<u32>(cfg->down);
@@ -193,22 +193,22 @@ std::array<std::set<u32>, PadHandlerBase::button::button_count> mm_joystick_hand
 	mapping[button::circle]   = find_keys<u32>(cfg->circle);
 	mapping[button::triangle] = find_keys<u32>(cfg->triangle);
 	mapping[button::l1]       = find_keys<u32>(cfg->l1);
-	mapping[button::l2]       = narrow_set(joy_device->trigger_code_left);
+	mapping[button::l2]       = narrow_set(dev->trigger_code_left);
 	mapping[button::l3]       = find_keys<u32>(cfg->l3);
 	mapping[button::r1]       = find_keys<u32>(cfg->r1);
-	mapping[button::r2]       = narrow_set(joy_device->trigger_code_right);
+	mapping[button::r2]       = narrow_set(dev->trigger_code_right);
 	mapping[button::r3]       = find_keys<u32>(cfg->r3);
 	mapping[button::start]    = find_keys<u32>(cfg->start);
 	mapping[button::select]   = find_keys<u32>(cfg->select);
 	mapping[button::ps]       = find_keys<u32>(cfg->ps);
-	mapping[button::ls_left]  = narrow_set(joy_device->axis_code_left[0]);
-	mapping[button::ls_right] = narrow_set(joy_device->axis_code_left[1]);
-	mapping[button::ls_down]  = narrow_set(joy_device->axis_code_left[2]);
-	mapping[button::ls_up]    = narrow_set(joy_device->axis_code_left[3]);
-	mapping[button::rs_left]  = narrow_set(joy_device->axis_code_right[0]);
-	mapping[button::rs_right] = narrow_set(joy_device->axis_code_right[1]);
-	mapping[button::rs_down]  = narrow_set(joy_device->axis_code_right[2]);
-	mapping[button::rs_up]    = narrow_set(joy_device->axis_code_right[3]);
+	mapping[button::ls_left]  = narrow_set(dev->axis_code_left[0]);
+	mapping[button::ls_right] = narrow_set(dev->axis_code_left[1]);
+	mapping[button::ls_down]  = narrow_set(dev->axis_code_left[2]);
+	mapping[button::ls_up]    = narrow_set(dev->axis_code_left[3]);
+	mapping[button::rs_left]  = narrow_set(dev->axis_code_right[0]);
+	mapping[button::rs_right] = narrow_set(dev->axis_code_right[1]);
+	mapping[button::rs_down]  = narrow_set(dev->axis_code_right[2]);
+	mapping[button::rs_up]    = narrow_set(dev->axis_code_right[3]);
 
 	mapping[button::skateboard_ir_nose]    = find_keys<u32>(cfg->ir_nose);
 	mapping[button::skateboard_ir_tail]    = find_keys<u32>(cfg->ir_tail);

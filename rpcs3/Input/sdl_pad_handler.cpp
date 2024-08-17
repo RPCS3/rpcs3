@@ -114,9 +114,6 @@ private:
 	bool m_initialized = false;
 };
 
-constexpr u32 rumble_duration_ms = 500; // Some high number to keep rumble updates at a minimum.
-constexpr u32 rumble_refresh_ms = rumble_duration_ms - 100; // We need to keep updating the rumble. Choose a refresh timeout that is unlikely to run into missed rumble updates.
-
 sdl_pad_handler::sdl_pad_handler() : PadHandlerBase(pad_handler::sdl)
 {
 	button_list =
@@ -792,21 +789,21 @@ void sdl_pad_handler::apply_pad_data(const pad_ensemble& binding)
 		const u8 speed_large = cfg->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value : 0;
 		const u8 speed_small = cfg->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value : 0;
 
-		dev->has_new_rumble_data |= dev->large_motor != speed_large || dev->small_motor != speed_small;
+		dev->new_output_data |= dev->large_motor != speed_large || dev->small_motor != speed_small;
 
 		dev->large_motor = speed_large;
 		dev->small_motor = speed_small;
 
-		const steady_clock::time_point now = steady_clock::now();
-		const s64 elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - dev->last_vibration).count();
+		const auto now = steady_clock::now();
+		const auto elapsed = now - dev->last_output;
 
 		// XBox One Controller can't handle faster vibration updates than ~10ms. Elite is even worse. So I'll use 20ms to be on the safe side. No lag was noticable.
-		if ((dev->has_new_rumble_data && elapsed_ms > 20) || (elapsed_ms > rumble_refresh_ms))
+		if ((dev->new_output_data && elapsed > 20ms) || elapsed > min_output_interval)
 		{
 			set_rumble(dev, speed_large, speed_small);
 
-			dev->has_new_rumble_data = false;
-			dev->last_vibration = steady_clock::now();
+			dev->new_output_data = false;
+			dev->last_output = now;
 		}
 	}
 
@@ -879,6 +876,8 @@ void sdl_pad_handler::apply_pad_data(const pad_ensemble& binding)
 void sdl_pad_handler::set_rumble(SDLDevice* dev, u8 speed_large, u8 speed_small)
 {
 	if (!dev || !dev->sdl.game_controller) return;
+
+	constexpr u32 rumble_duration_ms = static_cast<u32>((min_output_interval + 100ms).count()); // Some number higher than the min_output_interval.
 
 	if (dev->sdl.has_rumble)
 	{
