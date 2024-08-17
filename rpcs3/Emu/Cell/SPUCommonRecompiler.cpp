@@ -559,7 +559,7 @@ extern void utilize_spu_data_segment(u32 vaddr, const void* ls_data_vaddr, u32 s
 			}
 			else if (i % 4 == 0)
 			{
-				to_log += '\n';
+				fmt::append(to_log, "\n[%02u] ", i / 8);
 			}
 			else
 			{
