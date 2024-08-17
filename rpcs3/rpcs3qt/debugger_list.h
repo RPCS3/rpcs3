@@ -52,6 +52,7 @@ private:
 	* It really upsetted me I had to copy this code to make debugger_list/frame not circularly dependent.
 	*/
 	u32 GetStartAddress(u32 address);
+	bool IsSpu() const;
 
 	std::shared_ptr<gui_settings> m_gui_settings;
 

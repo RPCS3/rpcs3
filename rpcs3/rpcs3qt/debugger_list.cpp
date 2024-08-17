@@ -73,7 +73,7 @@ u32 debugger_list::GetStartAddress(u32 address)
 	const u32 steps = m_item_count / 3;
 	const u32 inst_count_jump_on_step = std::min<u32>(steps, 4);
 
-	const bool is_spu = m_cpu && m_cpu->get_class() == thread_class::spu;
+	const bool is_spu = IsSpu();
 	const u32 address_mask = (is_spu ? 0x3fffc : ~3);
 
 	u32 result = address & address_mask;
@@ -127,6 +127,11 @@ u32 debugger_list::GetStartAddress(u32 address)
 	}
 
 	return m_start_addr;
+}
+
+bool debugger_list::IsSpu() const
+{
+	return (m_cpu && m_cpu->get_class() == thread_class::spu) || (m_disasm && !m_cpu);
 }
 
 void debugger_list::ShowAddress(u32 addr, bool select_addr, bool direct)
@@ -190,7 +195,7 @@ void debugger_list::ShowAddress(u32 addr, bool select_addr, bool direct)
 		}
 	}
 
-	if (!m_cpu || !m_disasm || +m_cpu->state + cpu_flag::exit + cpu_flag::wait == +m_cpu->state)
+	if (!m_disasm || (m_cpu && m_cpu->state.all_of(cpu_flag::exit + cpu_flag::wait)))
 	{
 		for (uint i = 0; i < m_item_count; ++i)
 		{
@@ -202,9 +207,9 @@ void debugger_list::ShowAddress(u32 addr, bool select_addr, bool direct)
 	}
 	else
 	{
-		const bool is_spu = m_cpu->get_class() == thread_class::spu;
+		const bool is_spu = IsSpu();
 		const u32 address_limits = (is_spu ? 0x3fffc : ~3);
-		const u32 current_pc = m_cpu->get_pc();
+		const u32 current_pc = (m_cpu ? m_cpu->get_pc() : 0);
 		m_start_addr &= address_limits;
 		pc = m_start_addr;
 
@@ -238,14 +243,14 @@ void debugger_list::ShowAddress(u32 addr, bool select_addr, bool direct)
 				list_item->setBackground(default_background);
 			}
 
-			if (m_cpu->get_class() == thread_class::ppu && !vm::check_addr(pc, 0))
+			if (m_cpu && m_cpu->get_class() == thread_class::ppu && !vm::check_addr(pc, 0))
 			{
 				list_item->setText((IsBreakpoint(pc) ? ">> " : "   ") + qstr(fmt::format("[%08x]  ?? ?? ?? ??:", pc)));
 				count = 4;
 				continue;
 			}
 
-			if (m_cpu->get_class() == thread_class::ppu && !vm::check_addr(pc, vm::page_executable))
+			if (m_cpu && m_cpu->get_class() == thread_class::ppu && !vm::check_addr(pc, vm::page_executable))
 			{
 				const u32 data = *vm::get_super_ptr<atomic_be_t<u32>>(pc);
 				list_item->setText((IsBreakpoint(pc) ? ">> " : "   ") + qstr(fmt::format("[%08x]  %02x %02x %02x %02x:", pc,
