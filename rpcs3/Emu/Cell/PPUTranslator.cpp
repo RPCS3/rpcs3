@@ -48,7 +48,7 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* _module, const ppu_mo
 
 		aarch64::GHC_frame_preservation_pass::config_t config =
 		{
-			.debug_info = true,         // Set to "true" to insert debug frames on x27
+			.debug_info = false,         // Set to "true" to insert debug frames on x27
 			.use_stack_frames = false,   // We don't need this since the PPU GW allocates global scratch on the stack
 			.hypervisor_context_offset = ::offset32(&ppu_thread::hv_ctx),
 			.exclusion_callback = {},    // Unused, we don't have special exclusion functions on PPU
