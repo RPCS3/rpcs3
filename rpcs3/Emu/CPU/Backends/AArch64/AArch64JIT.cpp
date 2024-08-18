@@ -391,6 +391,9 @@ namespace aarch64
         const auto this_name = f.getName().str();
 
         // Insert breadcrumb info before the call
+        // WARNING: This can corrupt the call because LLVM somehow ignores the clobbered register during a call instruction for some reason
+        // In case of a blr on x27..x29 you can end up corrupting the binary, but it is invaluable for debugging.
+        // Debug frames are disabled in shipping code so this is not a big deal.
         if (m_config.debug_info)
         {
             // Call-chain tracing
