@@ -3292,6 +3292,8 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime
 	maybe_flush_lbr(c);
 	c.ret();
 #else
+	UNUSED(args);
+
 	// Unimplemented should fail.
 	c.brk(Imm(0x42));
 	c.ret(a64::x30);
