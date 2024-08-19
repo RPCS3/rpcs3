@@ -496,6 +496,7 @@ namespace aarch64
                 auto i = llvm::dyn_cast<llvm::Instruction>(bit);
                 if (!is_ret_instruction(i))
                 {
+                    ++bit;
                     continue;
                 }
 
