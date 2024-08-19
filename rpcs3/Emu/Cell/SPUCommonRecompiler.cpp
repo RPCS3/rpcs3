@@ -216,6 +216,9 @@ DECLARE(spu_runtime::tr_all) = []
 		{
 			using namespace asmjit;
 
+			// Args implicitly defined via registers
+			UNUSED(args);
+
 			// Inputs:
 			// x19 = m_thread a.k.a arg[0]
 			// x20 = ls_base

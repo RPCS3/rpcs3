@@ -2310,6 +2310,10 @@ thread_base::native_entry thread_base::make_trampoline(u64(*entry)(thread_base* 
 		c.bind(_ret);
 		c.add(x86::rsp, 0x28);
 		c.ret();
+#else
+	UNUSED(c);
+	UNUSED(args);
+	UNUSED(entry);
 #endif
 	});
 }
