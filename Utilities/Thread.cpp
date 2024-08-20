@@ -1929,16 +1929,20 @@ static void signal_handler(int /*sig*/, siginfo_t* info, void* uct) noexcept
 #elif defined(ARCH_ARM64)
 	const bool is_executing = uptr(info->si_addr) == uptr(RIP(context));
 	const u32 insn = is_executing ? 0 : *reinterpret_cast<u32*>(RIP(context));
-	const bool is_writing = (insn & 0xbfff0000) == 0x0c000000
-		|| (insn & 0xbfe00000) == 0x0c800000
-		|| (insn & 0xbfdf0000) == 0x0d000000
-		|| (insn & 0xbfc00000) == 0x0d800000
-		|| (insn & 0x3f400000) == 0x08000000
-		|| (insn & 0x3bc00000) == 0x39000000
-		|| (insn & 0x3fc00000) == 0x3d800000
-		|| (insn & 0x3bc00000) == 0x38000000
-		|| (insn & 0x3fe00000) == 0x3c800000
-		|| (insn & 0x3a400000) == 0x28000000;
+	const bool is_writing = 
+		(insn & 0xbfff0000) == 0x0c000000 ||  // STR <Wt>, [<Xn>, #<imm>] (store word with immediate offset)
+		(insn & 0xbfe00000) == 0x0c800000 ||  // STP <Wt1>, <Wt2>, [<Xn>, #<imm>] (store pair of registers with immediate offset)
+		(insn & 0xbfdf0000) == 0x0d000000 ||  // STR <Wt>, [<Xn>, <Xm>] (store word with register offset)
+		(insn & 0xbfc00000) == 0x0d800000 ||  // STP <Wt1>, <Wt2>, [<Xn>, <Xm>] (store pair of registers with register offset)
+		(insn & 0x3f400000) == 0x08000000 ||  // STR <Vd>, [<Xn>, #<imm>] (store SIMD/FP register with immediate offset)
+		(insn & 0x3bc00000) == 0x39000000 ||  // STR <Wt>, [<Xn>, #<imm>] (store word with immediate offset)
+		(insn & 0x3fc00000) == 0x3d800000 ||  // STR <Vd>, [<Xn>, <Xm>] (store SIMD/FP register with register offset)
+		(insn & 0x3bc00000) == 0x38000000 ||  // STR <Wt>, [<Xn>, <Xm>] (store word with register offset)
+		(insn & 0x3fe00000) == 0x3c800000 ||  // STUR <Vd>, [<Xn>, #<imm>] (store unprivileged register with immediate offset)
+		(insn & 0x3fe00000) == 0x3ca00000 ||  // STR <Vd>, [<Xn>, #<imm>] (store SIMD/FP register with immediate offset)
+		(insn & 0x3a400000) == 0x28000000 ||  // STP <Wt1>, <Wt2>, [<Xn>, #<imm>] (store pair of registers with immediate offset)
+		(insn & 0xad000000) == 0xad000000 ||  // STP <Vd1>, <Vd2>, [<Xn>, #<imm>] (store SIMD/FP 128-bit register pair with immediate offset)
+		(insn & 0xad000000) == 0xad000000;    // STP <Dd1>, <Dd2>, [<Xn>, #<imm>] (store SIMD/FP 64-bit register pair with immediate offset)
 
 #else
 #error "signal_handler not implemented"
