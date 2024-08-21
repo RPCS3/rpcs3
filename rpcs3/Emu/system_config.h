@@ -166,7 +166,7 @@ struct cfg_root : cfg::node
 		cfg::_bool precise_zpass_count{ this, "Accurate ZCULL stats", true };
 		cfg::_int<1, 8> consecutive_frames_to_draw{ this, "Consecutive Frames To Draw", 1, true};
 		cfg::_int<1, 8> consecutive_frames_to_skip{ this, "Consecutive Frames To Skip", 1, true};
-		cfg::_int<50, 800> resolution_scale_percent{ this, "Resolution Scale", 100 };
+		cfg::_int<25, 800> resolution_scale_percent{ this, "Resolution Scale", 100 };
 		cfg::uint<0, 16> anisotropic_level_override{ this, "Anisotropic Filter Override", 0, true };
 		cfg::_float<-32, 32> texture_lod_bias{ this, "Texture LOD Bias Addend", 0, true };
 		cfg::_int<1, 1024> min_scalable_dimension{ this, "Minimum Scalable Dimension", 16 };

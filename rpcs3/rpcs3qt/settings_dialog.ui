@@ -624,7 +624,7 @@
                     <item>
                      <widget class="QLabel" name="resolutionScaleMin">
                       <property name="text">
-                       <string>50</string>
+                       <string>25</string>
                       </property>
                       <property name="alignment">
                        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
