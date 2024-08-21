@@ -3824,8 +3824,8 @@ public:
 				m_ir->CreateStore(stat_val, stat_ptr);
 				m_ir->CreateBr(next);
 				m_ir->SetInsertPoint(next);
-				return;
 			}
+			return;
 		}
 		case MFC_LSA:
 		{
