@@ -11,6 +11,10 @@
 #include <thread>
 #include <cfenv>
 
+#ifdef ARCH_ARM64
+#include "Emu/CPU/Backends/AArch64/AArch64Signal.h"
+#endif
+
 #ifdef _WIN32
 #include <Windows.h>
 #include <Psapi.h>
@@ -1929,6 +1933,20 @@ static void signal_handler(int /*sig*/, siginfo_t* info, void* uct) noexcept
 #elif defined(ARCH_ARM64)
 	const bool is_executing = uptr(info->si_addr) == uptr(RIP(context));
 	const u32 insn = is_executing ? 0 : *reinterpret_cast<u32*>(RIP(context));
+
+#ifdef __linux__
+	// Current CPU state decoder is reverse-engineered from the linux kernel and may not work on other platforms.
+	const auto decoded_reason = aarch64::decode_fault_reason(context);
+	const bool is_writing = (decoded_reason == aarch64::fault_reason::data_write);
+
+	if (decoded_reason != aarch64::fault_reason::data_write &&
+		decoded_reason != aarch64::fault_reason::data_read)
+	{
+		// We don't expect other classes of exceptions during normal executions
+		sig_log.warning("Unexpected fault. Reason: %d", static_cast<int>(decoded_reason));
+	}
+
+#else
 	const bool is_writing = 
 		(insn & 0xbfff0000) == 0x0c000000 ||  // STR <Wt>, [<Xn>, #<imm>] (store word with immediate offset)
 		(insn & 0xbfe00000) == 0x0c800000 ||  // STP <Wt1>, <Wt2>, [<Xn>, #<imm>] (store pair of registers with immediate offset)
@@ -1941,8 +1959,9 @@ static void signal_handler(int /*sig*/, siginfo_t* info, void* uct) noexcept
 		(insn & 0x3fe00000) == 0x3c800000 ||  // STUR <Vd>, [<Xn>, #<imm>] (store unprivileged register with immediate offset)
 		(insn & 0x3fe00000) == 0x3ca00000 ||  // STR <Vd>, [<Xn>, #<imm>] (store SIMD/FP register with immediate offset)
 		(insn & 0x3a400000) == 0x28000000 ||  // STP <Wt1>, <Wt2>, [<Xn>, #<imm>] (store pair of registers with immediate offset)
-		(insn & 0xad000000) == 0xad000000 ||  // STP <Vd1>, <Vd2>, [<Xn>, #<imm>] (store SIMD/FP 128-bit register pair with immediate offset)
-		(insn & 0xad000000) == 0xad000000;    // STP <Dd1>, <Dd2>, [<Xn>, #<imm>] (store SIMD/FP 64-bit register pair with immediate offset)
+		(insn & 0xbf000000) == 0xad000000 ||  // STP <Vd1>, <Vd2>, [<Xn>, #<imm>] (store SIMD/FP 128-bit register pair with immediate offset)
+		(insn & 0xbf000000) == 0x6d000000;    // STP <Dd1>, <Dd2>, [<Xn>, #<imm>] (store SIMD/FP 64-bit register pair with immediate offset)
+#endif
 
 #else
 #error "signal_handler not implemented"
