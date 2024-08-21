@@ -265,6 +265,11 @@ namespace vk
 				return driver_vendor::LAVAPIPE;
 			}
 
+			if (gpu_name.find("V3D") != umax)
+			{
+				return driver_vendor::V3DV;
+			}
+
 			return driver_vendor::unknown;
 		}
 		else
@@ -288,6 +293,8 @@ namespace vk
 				return driver_vendor::LAVAPIPE;
 			case VK_DRIVER_ID_MESA_NVK:
 				return driver_vendor::NVK;
+			case VK_DRIVER_ID_MESA_V3DV:
+				return driver_vendor::V3DV;
 			default:
 				// Mobile?
 				return driver_vendor::unknown;

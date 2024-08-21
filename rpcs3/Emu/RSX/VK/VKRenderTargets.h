@@ -188,6 +188,7 @@ namespace vk
 			case driver_vendor::MVK:
 			case driver_vendor::DOZEN:
 			case driver_vendor::LAVAPIPE:
+			case driver_vendor::V3DV:
 				break;
 			}
 

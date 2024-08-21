@@ -124,6 +124,9 @@ namespace vk
 		case driver_vendor::LAVAPIPE:
 			// This software device works well, with poor performance as the only downside
 			break;
+		case driver_vendor::V3DV:
+			// Broadcom GPUs need more testing, driver currently largely unstable
+			break;
 		case driver_vendor::DOZEN:
 			// This driver is often picked by mistake when the user meant to select something else. Complain loudly.
 #ifdef _WIN32
