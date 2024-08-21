@@ -606,6 +606,13 @@ namespace vk
 			enabled_features.logicOp = VK_FALSE;
 		}
 
+		if (!pgpu->features.textureCompressionBC)
+		{
+			// v3dv supports BC1-BC3 which is all we require, support is reported as false since not all formats are supported
+			rsx_log.error("Your GPU does not support full texture block compression. Graphics may not render correctly.");
+			enabled_features.textureCompressionBC = VK_FALSE;
+		}
+
 		VkDeviceCreateInfo device = {};
 		device.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 		device.pNext = nullptr;
