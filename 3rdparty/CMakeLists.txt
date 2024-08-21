@@ -108,7 +108,7 @@ endif()
 
 # OpenGL
 
-find_package(OpenGL REQUIRED)
+find_package(OpenGL REQUIRED OPTIONAL_COMPONENTS EGL)
 
 add_library(3rdparty_opengl INTERFACE)
 target_include_directories(3rdparty_opengl INTERFACE GL)
