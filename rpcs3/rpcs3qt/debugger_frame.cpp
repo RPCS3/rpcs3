@@ -65,7 +65,7 @@ extern std::shared_ptr<CPUDisAsm> make_disasm(const cpu_thread* cpu)
 }
 
 debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidget *parent)
-	: custom_dock_widget(tr("Debugger [Press F1 for help]"), parent)
+	: custom_dock_widget(tr("Debugger [Press F1 for Help]"), parent)
 	, m_gui_settings(std::move(gui_settings))
 {
 	setContentsMargins(0, 0, 0, 0);
@@ -177,7 +177,7 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidg
 	});
 
 	connect(m_choice_units, QOverload<int>::of(&QComboBox::activated), this, &debugger_frame::UpdateUI);
-	connect(m_choice_units, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &debugger_frame::OnSelectUnit);
+	connect(m_choice_units, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [&](){ m_is_spu_disasm_mode = false; OnSelectUnit(); });
 	connect(this, &QDockWidget::visibilityChanged, this, &debugger_frame::EnableUpdateTimer);
 
 	connect(m_debugger_list, &debugger_list::BreakpointRequested, m_breakpoint_list, &breakpoint_list::HandleBreakpointRequest);
@@ -317,6 +317,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 			"\nKeys Alt+S: Capture SPU images of selected SPU or generalized form when used from PPU."
 			"\nKeys Alt+S: Launch a memory viewer pointed to the current RSX semaphores location when used from RSX."
 			"\nKeys Alt+R: Load last saved SPU state capture."
+			"\nKeys Alt+F5: Show the SPU disassmebler dialog."
 			"\nKey D: SPU MFC commands logger, MFC debug setting must be enabled."
 			"\nKey D: Also PPU calling history logger, interpreter and non-zero call history size must be used."
 			"\nKey E: Instruction Editor: click on the instruction you want to modify, then press E."
@@ -483,7 +484,6 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 					index = 0;
 				}
 			};
-
 
 			if (cpu->get_class() == thread_class::spu && g_cfg.core.mfc_debug)
 			{
@@ -771,6 +771,16 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 			DoStep(false);
 			return;
 		}
+		case Qt::Key_F5:
+		{
+			if (modifiers & Qt::AltModifier)
+			{
+				OnSelectSPUDisassembler();
+				return;
+			}
+
+			break;
+		}
 		default: break;
 		}
 	}
@@ -1030,6 +1040,11 @@ void debugger_frame::UpdateUnitList()
 
 void debugger_frame::OnSelectUnit()
 {
+	if (m_is_spu_disasm_mode)
+	{
+		return;
+	}
+
 	cpu_thread* selected = nullptr;
 
 	if (m_emu_state != system_state::stopped)
@@ -1059,6 +1074,7 @@ void debugger_frame::OnSelectUnit()
 	m_disasm.reset();
 	m_cpu.reset();
 	m_rsx = nullptr;
+	m_spu_disasm_memory.reset();
 
 	if (selected)
 	{
@@ -1120,6 +1136,150 @@ void debugger_frame::OnSelectUnit()
 	ShowPC(true);
 	DoUpdate();
 	UpdateUI();
+}
+
+void debugger_frame::OnSelectSPUDisassembler()
+{
+	if (m_spu_disasm_dialog)
+	{
+		m_spu_disasm_dialog->move(QCursor::pos());
+		m_spu_disasm_dialog->show();
+		m_spu_disasm_dialog->setFocus();
+		return;
+	}
+
+	m_spu_disasm_dialog = new QDialog(this);
+	m_spu_disasm_dialog->setWindowTitle(tr("SPU Disassmebler Properties"));
+
+	// Panels
+	QVBoxLayout* vbox_panel(new QVBoxLayout());
+	QHBoxLayout* hbox_expression_input_panel = new QHBoxLayout();
+	QHBoxLayout* hbox_button_panel(new QHBoxLayout());
+
+	// Address expression input
+	QLineEdit* source_eal(new QLineEdit(m_spu_disasm_dialog));
+	QLineEdit* start_pc(new QLineEdit(m_spu_disasm_dialog));
+	source_eal->setFont(m_mono);
+	source_eal->setMaxLength(12);
+	source_eal->setValidator(new QRegularExpressionValidator(QRegularExpression("^(0[xX])?0*[a-fA-F0-9]{0,8}$"), this));
+	start_pc->setFont(m_mono);
+	start_pc->setMaxLength(7);
+	start_pc->setValidator(new QRegularExpressionValidator(QRegularExpression("^(0[xX])?0*[a-fA-F0-9]{0,5}$"), this));
+
+	// Ok/Cancel
+	QPushButton* button_ok = new QPushButton(tr("OK"));
+	QPushButton* button_cancel = new QPushButton(tr("Cancel"));
+
+	hbox_expression_input_panel->addWidget(new QLabel(tr("Source Address: ")));
+	hbox_expression_input_panel->addWidget(source_eal);
+	hbox_expression_input_panel->addSpacing(10);
+	hbox_expression_input_panel->addWidget(new QLabel(tr("Load PC: ")));
+	hbox_expression_input_panel->addWidget(start_pc);
+
+	hbox_button_panel->addWidget(button_ok);
+	hbox_button_panel->addWidget(button_cancel);
+
+	vbox_panel->addLayout(hbox_expression_input_panel);
+	vbox_panel->addSpacing(8);
+	vbox_panel->addLayout(hbox_button_panel);
+
+	m_spu_disasm_dialog->setLayout(vbox_panel);
+
+	const QFont font = source_eal->font();
+
+	source_eal->setPlaceholderText(QString::fromStdString(fmt::format("0x%08x", 0)));
+	start_pc->setPlaceholderText(QString::fromStdString(fmt::format("0x%05x", 0)));
+
+	source_eal->setFixedWidth(gui::utils::get_label_width(source_eal->placeholderText(), &font) + 5);
+	start_pc->setFixedWidth(gui::utils::get_label_width(start_pc->placeholderText(), &font) + 5);
+
+	if (m_spu_disasm_origin_eal)
+	{
+		source_eal->setText(QString::fromStdString(fmt::format("0x%08x", m_spu_disasm_origin_eal)));
+		start_pc->setText(QString::fromStdString(fmt::format("0x%05x", m_spu_disasm_pc)));
+	}
+
+	connect(button_ok, &QAbstractButton::clicked, m_spu_disasm_dialog, &QDialog::accept);
+	connect(button_cancel, &QAbstractButton::clicked, m_spu_disasm_dialog, &QDialog::reject);
+
+	m_spu_disasm_dialog->move(QCursor::pos());
+	m_spu_disasm_dialog->setAttribute(Qt::WA_DeleteOnClose);
+
+	connect(m_spu_disasm_dialog, &QDialog::finished, this, [this, source_eal, start_pc](int result)
+	{
+		m_spu_disasm_dialog = nullptr;
+
+		if (result != QDialog::Accepted)
+		{
+			return;
+		}
+		const u64 spu_base = EvaluateExpression(start_pc->text());
+
+		if (spu_base > SPU_LS_SIZE - 4 || spu_base % 4)
+		{
+			return;
+		}
+
+		const u64 spu_addr = EvaluateExpression(source_eal->text());
+
+		if (spu_addr == umax || !spu_addr)
+		{
+			return;
+		}
+
+		// Try to load as much memory as possible until SPU local memory ends
+		// Because I don't think there is a need for a size argument
+		// The user probably does not know the exact size of the SPU code either
+		u32 spu_size = SPU_LS_SIZE - spu_base;
+
+		for (u32 passed = spu_base; passed < SPU_LS_SIZE; passed += 4096)
+		{
+			if (!vm::check_addr(spu_addr + passed))
+			{
+				if (passed == spu_base)
+				{
+					return;
+				}
+
+				spu_size = passed - spu_base - (spu_addr + passed) % 4096;
+				break;
+			}
+
+			if (4096 > ~(spu_addr + passed))
+			{
+				// For overflow
+				spu_size = std::min<u32>(SPU_LS_SIZE, 0 - spu_addr);
+				break;
+			}
+		}
+
+		m_disasm.reset();
+		m_cpu.reset();
+		m_rsx = nullptr;
+
+		m_spu_disasm_memory = std::make_shared<utils::shm>(SPU_LS_SIZE);
+		m_spu_disasm_memory->map_self();
+		m_is_spu_disasm_mode = true;
+
+		std::memset(m_spu_disasm_memory->get(), 0, spu_base);
+		std::memcpy(m_spu_disasm_memory->get() + spu_base, vm::get_super_ptr(spu_addr), spu_size);
+		std::memset(m_spu_disasm_memory->get() + spu_base + spu_size, 0, SPU_LS_SIZE - (spu_base + spu_size));
+
+		m_spu_disasm_pc = spu_base;
+		m_spu_disasm_origin_eal = spu_addr;
+
+		m_disasm = std::make_shared<SPUDisAsm>(cpu_disasm_mode::interpreter, m_spu_disasm_memory->get());
+
+		EnableButtons(true);
+
+		m_debugger_list->UpdateCPUData(nullptr, m_disasm.get());
+		m_breakpoint_list->UpdateCPUData(nullptr, m_disasm.get());
+		ShowPC(true);
+		DoUpdate();
+		UpdateUI();
+	});
+
+	m_spu_disasm_dialog->show();
 }
 
 void debugger_frame::DoUpdate()
@@ -1219,7 +1379,7 @@ void debugger_frame::ShowGotoAddressDialog()
 	// -1 from get_pc() turns into 0
 	const u32 pc = cpu ? utils::align<u32>(cpu->get_pc(), 4) : 0;
 	expression_input->setPlaceholderText(QString("0x%1").arg(pc, 16, 16, QChar('0')));
-	expression_input->setFixedWidth(gui::utils::get_label_width(expression_input->placeholderText(), &font));
+	expression_input->setFixedWidth(gui::utils::get_label_width(expression_input->placeholderText(), &font) + 5);
 
 	connect(button_ok, &QAbstractButton::clicked, m_goto_dialog, &QDialog::accept);
 	connect(button_cancel, &QAbstractButton::clicked, m_goto_dialog, &QDialog::reject);
@@ -1329,7 +1489,7 @@ void debugger_frame::ShowPC(bool user_requested)
 {
 	const auto cpu0 = get_cpu();
 
-	const u32 pc = (cpu0 ? cpu0->get_pc() : 0);
+	const u32 pc = (cpu0 ? cpu0->get_pc() : (m_is_spu_disasm_mode ? m_spu_disasm_pc : 0));
 
 	if (user_requested)
 	{

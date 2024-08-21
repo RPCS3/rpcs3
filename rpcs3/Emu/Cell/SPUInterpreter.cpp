@@ -69,7 +69,9 @@ struct spu_exec_select
 	}
 };
 
+#ifdef ARCH_X64
 static constexpr spu_opcode_t s_op{};
+#endif
 
 namespace asmjit
 {

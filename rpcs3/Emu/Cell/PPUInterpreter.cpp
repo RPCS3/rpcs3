@@ -129,7 +129,9 @@ struct ppu_exec_select
 		}; \
 	}
 
+#ifdef ARCH_X64
 static constexpr ppu_opcode_t s_op{};
+#endif
 
 namespace asmjit
 {
@@ -293,7 +295,7 @@ struct ppu_abstract_t
 			}
 
 			template <typename T>
-			void operator=(T&& _val) const
+			void operator=([[maybe_unused]] T&& _val) const
 			{
 				FOR_X64(store_op, kIdMovaps, kIdVmovaps, static_cast<asmjit::ppu_builder*>(g_vc)->ppu_vr(bf_t<u32, I, N>{}, true), std::forward<T>(_val));
 			}
@@ -316,11 +318,9 @@ struct ppu_abstract_t
 		}
 
 		template <typename T>
-		void operator=(T&& _val) const
+		void operator=([[maybe_unused]] T&& _val) const
 		{
-		#if defined(ARCH_X64)
 			FOR_X64(store_op, kIdMovaps, kIdVmovaps, *this, std::forward<T>(_val));
-		#endif
 		}
 	} sat{};
 };

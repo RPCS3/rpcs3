@@ -393,6 +393,7 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm64|aarch64")
     target_sources(rpcs3_emu PRIVATE
         CPU/Backends/AArch64/AArch64ASM.cpp
         CPU/Backends/AArch64/AArch64JIT.cpp
+        CPU/Backends/AArch64/AArch64Signal.cpp
     )
 endif()
 
