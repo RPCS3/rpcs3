@@ -1219,7 +1219,7 @@ cpu_thread* cpu_thread::get_next_cpu()
 	return nullptr;
 }
 
-std::shared_ptr<CPUDisAsm> make_disasm(const cpu_thread* cpu);
+std::shared_ptr<CPUDisAsm> make_disasm(const cpu_thread* cpu, std::shared_ptr<cpu_thread> handle);
 
 void cpu_thread::dump_all(std::string& ret) const
 {
@@ -1235,7 +1235,7 @@ void cpu_thread::dump_all(std::string& ret) const
 	if (u32 cur_pc = get_pc(); cur_pc != umax)
 	{
 		// Dump a snippet of currently executed code (may be unreliable with non-static-interpreter decoders)
-		auto disasm = make_disasm(this);
+		auto disasm = make_disasm(this, nullptr);
 
 		const auto rsx = try_get<rsx::thread>();
 

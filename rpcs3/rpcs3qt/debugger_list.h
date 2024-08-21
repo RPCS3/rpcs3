@@ -33,7 +33,7 @@ Q_SIGNALS:
 	void BreakpointRequested(u32 loc, bool only_add = false);
 public:
 	debugger_list(QWidget* parent, std::shared_ptr<gui_settings> settings, breakpoint_handler* handler);
-	void UpdateCPUData(cpu_thread* cpu, CPUDisAsm* disasm);
+	void UpdateCPUData(std::shared_ptr<CPUDisAsm> disasm);
 	void EnableThreadFollowing(bool enable = true);
 public Q_SLOTS:
 	void ShowAddress(u32 addr, bool select_addr = true, bool direct = false);
@@ -58,7 +58,7 @@ private:
 
 	breakpoint_handler* m_ppu_breakpoint_handler;
 	cpu_thread* m_cpu = nullptr;
-	CPUDisAsm* m_disasm = nullptr;
+	std::shared_ptr<CPUDisAsm> m_disasm;
 	QDialog* m_cmd_detail = nullptr;
 	QLabel* m_detail_label = nullptr;
 };

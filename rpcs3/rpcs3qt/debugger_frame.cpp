@@ -53,15 +53,30 @@ extern bool is_using_interpreter(thread_class t_class)
 	}
 }
 
-extern std::shared_ptr<CPUDisAsm> make_disasm(const cpu_thread* cpu)
+extern std::shared_ptr<CPUDisAsm> make_disasm(const cpu_thread* cpu, std::shared_ptr<cpu_thread> handle)
 {
+	if (!handle)
+	{
+		switch (cpu->get_class())
+		{
+		case thread_class::ppu: handle = idm::get<named_thread<ppu_thread>>(cpu->id); break;
+		case thread_class::spu: handle = idm::get<named_thread<spu_thread>>(cpu->id); break;
+		default: break;
+		}
+	}
+
+	std::shared_ptr<CPUDisAsm> result;
+
 	switch (cpu->get_class())
 	{
-	case thread_class::ppu: return std::make_shared<PPUDisAsm>(cpu_disasm_mode::interpreter, vm::g_sudo_addr);
-	case thread_class::spu: return std::make_shared<SPUDisAsm>(cpu_disasm_mode::interpreter, static_cast<const spu_thread*>(cpu)->ls);
-	case thread_class::rsx: return std::make_shared<RSXDisAsm>(cpu_disasm_mode::interpreter, vm::g_sudo_addr, 0, cpu);
-	default: return nullptr;
+	case thread_class::ppu: result = std::make_shared<PPUDisAsm>(cpu_disasm_mode::interpreter, vm::g_sudo_addr); break;
+	case thread_class::spu: result = std::make_shared<SPUDisAsm>(cpu_disasm_mode::interpreter, static_cast<const spu_thread*>(cpu)->ls); break;
+	case thread_class::rsx: result = std::make_shared<RSXDisAsm>(cpu_disasm_mode::interpreter, vm::g_sudo_addr, 0, cpu); break;
+	default: return result;
 	}
+
+	result->set_cpu_handle(std::move(handle));
+	return result;
 }
 
 debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidget *parent)
@@ -1088,12 +1103,7 @@ void debugger_frame::OnSelectUnit()
 
 			if (selected == m_cpu.get())
 			{
-				m_disasm = make_disasm(selected);
-			}
-			else
-			{
-				m_cpu.reset();
-				selected = nullptr;
+				m_disasm = make_disasm(selected, m_cpu);
 			}
 
 			break;
@@ -1104,12 +1114,7 @@ void debugger_frame::OnSelectUnit()
 
 			if (selected == m_cpu.get())
 			{
-				m_disasm = make_disasm(selected);
-			}
-			else
-			{
-				m_cpu.reset();
-				selected = nullptr;
+				m_disasm = make_disasm(selected, m_cpu);
 			}
 
 			break;
@@ -1120,7 +1125,7 @@ void debugger_frame::OnSelectUnit()
 
 			if (get_cpu())
 			{
-				m_disasm = make_disasm(m_rsx);
+				m_disasm = make_disasm(m_rsx, nullptr);
 			}
 
 			break;
@@ -1129,10 +1134,17 @@ void debugger_frame::OnSelectUnit()
 		}
 	}
 
+	if (!m_disasm)
+	{
+		m_cpu.reset();
+		m_rsx = nullptr;
+	}
+
 	EnableButtons(true);
 
-	m_debugger_list->UpdateCPUData(get_cpu(), m_disasm.get());
-	m_breakpoint_list->UpdateCPUData(get_cpu(), m_disasm.get());
+	m_debugger_list->UpdateCPUData(m_disasm);
+	m_breakpoint_list->UpdateCPUData(m_disasm);
+
 	ShowPC(true);
 	DoUpdate();
 	UpdateUI();
@@ -1272,8 +1284,8 @@ void debugger_frame::OnSelectSPUDisassembler()
 
 		EnableButtons(true);
 
-		m_debugger_list->UpdateCPUData(nullptr, m_disasm.get());
-		m_breakpoint_list->UpdateCPUData(nullptr, m_disasm.get());
+		m_debugger_list->UpdateCPUData(m_disasm);
+		m_breakpoint_list->UpdateCPUData(m_disasm);
 		ShowPC(true);
 		DoUpdate();
 		UpdateUI();
