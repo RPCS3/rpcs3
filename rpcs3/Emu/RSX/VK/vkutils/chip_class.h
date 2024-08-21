@@ -50,7 +50,8 @@ namespace vk
 		MVK,
 		DOZEN,
 		LAVAPIPE,
-		NVK
+		NVK,
+		V3DV
 	};
 
 	driver_vendor get_driver_vendor();
