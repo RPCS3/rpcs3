@@ -613,10 +613,10 @@ namespace vk
 			enabled_features.logicOp = VK_FALSE;
 		}
 
-		if (!pgpu->features.textureCompressionBC)
+		if (!pgpu->features.textureCompressionBC && get_driver_vendor() == driver_vendor::V3DV)
 		{
 			// v3dv supports BC1-BC3 which is all we require, support is reported as false since not all formats are supported
-			rsx_log.error("Your GPU does not support full texture block compression. Graphics may not render correctly.");
+			rsx_log.error("Your GPU running on the V3DV driver does not support full texture block compression. Graphics may not render correctly.");
 			enabled_features.textureCompressionBC = VK_FALSE;
 		}
 
