@@ -29,7 +29,7 @@ namespace aarch64
 
         while ((offset + 4) < sizeof(mctx.__reserved))
         {
-            auto head = reinterpret_cast<const aarch64_cpu_ctx_block*>(&mctx.__reserved[offset]);
+            const auto head = reinterpret_cast<const aarch64_cpu_ctx_block*>(&mctx.__reserved[offset]);
             if (!head->magic)
             {
                 // End of linked list
@@ -50,7 +50,8 @@ namespace aarch64
     fault_reason decode_fault_reason(const ucontext_t* uctx)
     {
         auto esr_ctx = find_EL1_esr_context(uctx);
-        if (!esr_ctx) {
+        if (!esr_ctx)
+        {
             return fault_reason::undefined;
         }
 
