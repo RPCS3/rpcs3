@@ -30,7 +30,6 @@ if(UNIX AND NOT APPLE)
     find_package(Wayland)
     if(WAYLAND_FOUND)
         add_definitions(-DHAVE_WAYLAND)
-        set(ADDITIONAL_LIBS ${ADDITIONAL_LIBS} "EGL")
     endif()
 endif()
 

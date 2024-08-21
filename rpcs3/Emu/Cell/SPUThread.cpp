@@ -848,6 +848,8 @@ const auto spu_putllc_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime, void*
 	maybe_flush_lbr(c);
 	c.ret();
 #else
+	UNUSED(args);
+
 	c.brk(Imm(0x42));
 	c.ret(a64::x30);
 #endif
@@ -972,6 +974,8 @@ const auto spu_putlluc_tx = build_function_asm<u64(*)(u32 raddr, const void* rda
 	maybe_flush_lbr(c);
 	c.ret();
 #else
+	UNUSED(args);
+
 	c.brk(Imm(0x42));
 	c.ret(a64::x30);
 #endif
@@ -1105,6 +1109,8 @@ const auto spu_getllar_tx = build_function_asm<u64(*)(u32 raddr, void* rdata, cp
 	maybe_flush_lbr(c);
 	c.ret();
 #else
+	UNUSED(args);
+
 	c.brk(Imm(0x42));
 	c.ret(a64::x30);
 #endif

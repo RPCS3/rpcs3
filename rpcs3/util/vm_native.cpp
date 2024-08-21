@@ -942,7 +942,7 @@ namespace utils
 	{
 		void* ptr = m_ptr;
 
-		if (!ptr)
+		while (!ptr)
 		{
 			const auto mapped = this->map(nullptr, prot);
 

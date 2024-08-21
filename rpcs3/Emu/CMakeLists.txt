@@ -393,6 +393,7 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm64|aarch64")
     target_sources(rpcs3_emu PRIVATE
         CPU/Backends/AArch64/AArch64ASM.cpp
         CPU/Backends/AArch64/AArch64JIT.cpp
+        CPU/Backends/AArch64/AArch64Signal.cpp
     )
 endif()
 
@@ -624,4 +625,8 @@ endif()
 
 if(USE_PRECOMPILED_HEADERS)
     target_precompile_headers(rpcs3_emu PRIVATE "${PROJECT_SOURCE_DIR}/rpcs3/stdafx.h")
+endif()
+
+if(WAYLAND_FOUND)
+    target_link_libraries(rpcs3_emu PRIVATE OpenGL::EGL)
 endif()

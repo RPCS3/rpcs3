@@ -216,6 +216,9 @@ DECLARE(spu_runtime::tr_all) = []
 		{
 			using namespace asmjit;
 
+			// Args implicitly defined via registers
+			UNUSED(args);
+
 			// Inputs:
 			// x19 = m_thread a.k.a arg[0]
 			// x20 = ls_base
@@ -556,7 +559,7 @@ extern void utilize_spu_data_segment(u32 vaddr, const void* ls_data_vaddr, u32 s
 			}
 			else if (i % 4 == 0)
 			{
-				to_log += '\n';
+				fmt::append(to_log, "\n[%02u] ", i / 8);
 			}
 			else
 			{
