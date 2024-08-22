@@ -22,6 +22,7 @@ namespace aarch64
         breakpoint = 60,        // BRK
     };
 
+#ifdef __linux__
     const aarch64_esr_ctx* find_EL1_esr_context(const ucontext_t* ctx)
     {
         u32 offset = 0;
@@ -47,16 +48,29 @@ namespace aarch64
         return nullptr;
     }
 
-    fault_reason decode_fault_reason(const ucontext_t* uctx)
+    u64 _read_ESR_EL1(const ucontext_t* uctx)
     {
         auto esr_ctx = find_EL1_esr_context(uctx);
-        if (!esr_ctx)
+        return esr_ctx ? esr_ctx->esr : 0;
+    }
+#else
+    u64 _read_ESR_EL1(const ucontext_t* uctx)
+    {
+        // Unimplemented
+        return 0;
+    }
+#endif
+
+    fault_reason decode_fault_reason(const ucontext_t* uctx)
+    {
+        auto esr = _read_ESR_EL1(uctx);
+        if (!esr)
         {
             return fault_reason::undefined;
         }
 
         // We don't really care about most of the register fields, but we can check for a few things.
-        const auto exception_class = (esr_ctx->esr >> 26) & 0b111111;
+        const auto exception_class = (esr >> 26) & 0b111111;
         switch (static_cast<EL1_exception_class>(exception_class))
         {
         case EL1_exception_class::breakpoint:
@@ -78,7 +92,7 @@ namespace aarch64
         }
 
         // Check direction bit
-        const auto direction = (esr_ctx->esr >> 6u) & 1u;
+        const auto direction = (esr >> 6u) & 1u;
         return direction ? fault_reason::data_write : fault_reason::data_read;
     }
 }
