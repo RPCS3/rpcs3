@@ -3094,10 +3094,13 @@ protected:
 
 public:
 	// Register a transformation pass to be run before final compilation by llvm
-	void register_transform_pass(std::unique_ptr<translator_pass>& pass)
-	{
-		m_transform_passes.emplace_back(std::move(pass));
-	}
+	void register_transform_pass(std::unique_ptr<translator_pass>& pass);
+
+	// Delete all transform passes
+	void clear_transforms();
+
+	// Reset internal state of all passes to evict caches and such. Use when resetting a JIT.
+	void reset_transforms();
 
 	// Convert a C++ type to an LLVM type (TODO: remove)
 	template <typename T>

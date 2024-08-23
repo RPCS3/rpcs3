@@ -403,6 +403,24 @@ void cpu_translator::run_transforms(llvm::Function& f)
 	}
 }
 
+void cpu_translator::register_transform_pass(std::unique_ptr<translator_pass>& pass)
+{
+	m_transform_passes.emplace_back(std::move(pass));
+}
+
+void cpu_translator::clear_transforms()
+{
+	m_transform_passes.clear();
+}
+
+void cpu_translator::reset_transforms()
+{
+	for (auto& pass : m_transform_passes)
+	{
+		pass->reset();
+	}
+}
+
 void cpu_translator::erase_stores(llvm::ArrayRef<llvm::Value*> args)
 {
 	for (auto v : args)
