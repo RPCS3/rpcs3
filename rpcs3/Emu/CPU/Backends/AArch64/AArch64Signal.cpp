@@ -54,7 +54,7 @@ namespace aarch64
         return esr_ctx ? esr_ctx->esr : 0;
     }
 #else
-    u64 _read_ESR_EL1(const ucontext_t* uctx)
+    u64 _read_ESR_EL1(const ucontext_t*)
     {
         // Unimplemented
         return 0;

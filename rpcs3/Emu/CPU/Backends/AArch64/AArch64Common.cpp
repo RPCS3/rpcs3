@@ -73,11 +73,11 @@ namespace aarch64
         { 0x61, 0x22, "armv8.5-a", "M1", "Firestorm" },
         { 0x61, 0x23, "armv8.5-a", "M1", "IceStorm" },
         { 0x61, 0x28, "armv8.5-a", "M1 Max", "Firestorm" },
-        { 0x61, 0x28, "armv8.5-a", "M1 Max", "Icestorm" },
+        { 0x61, 0x29, "armv8.5-a", "M1 Max", "Icestorm" },
         { 0x61, 0x24, "armv8.5-a", "M1 Pro", "Firestorm" },
         { 0x61, 0x25, "armv8.5-a", "M1 Pro", "Icestorm" },
         { 0x61, 0x32, "armv8.5-a", "M2", "Avalanche" },
-        { 0x61, 0x32, "armv8.5-a", "M2", "Blizzard" },
+        { 0x61, 0x33, "armv8.5-a", "M2", "Blizzard" },
 
         // QUALCOMM
         { 0x51, 0x01, "armv8.5-a", "Snapdragon", "X-Elite" },
@@ -110,10 +110,10 @@ namespace aarch64
     }
 
     // Read main ID register
-    static u64 read_MIDR_EL1(u32 cpu_id)
+    static u64 read_MIDR_EL1([[maybe_unused]] u32 cpu_id)
     {
 #if defined(__linux__)
-        std::string path = fmt::format("/sys/devices/system/cpu/cpu%u/regs/identification/midr_el1", cpu_id);
+        const std::string path = fmt::format("/sys/devices/system/cpu/cpu%u/regs/identification/midr_el1", cpu_id);
         if (!fs::is_file(path))
         {
             return umax;
