@@ -1474,6 +1474,7 @@ public:
 			m_md_unlikely = llvm::MDTuple::get(m_context, {md_name, md_low, md_high});
 
 			// Initialize transform passes
+			clear_transforms();
 #ifdef ARCH_ARM64
 			{
 				auto should_exclude_function = [](const std::string& fn_name)
@@ -1498,6 +1499,8 @@ public:
 			}
 #endif
 		}
+
+		reset_transforms();
 	}
 
 	void init_luts()

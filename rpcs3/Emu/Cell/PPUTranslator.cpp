@@ -35,6 +35,8 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* _module, const ppu_mo
 	cpu_translator::initialize(context, engine);
 
 	// Initialize transform passes
+	clear_transforms();
+
 #ifdef ARCH_ARM64
 	{
 		// Base reg table definition
@@ -62,6 +64,8 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* _module, const ppu_mo
 		register_transform_pass(ghc_fixup_pass);
 	}
 #endif
+
+	reset_transforms();
 
 	// Thread context struct (TODO: safer member access)
 	const u32 off0 = offset32(&ppu_thread::state);
