@@ -1932,9 +1932,8 @@ static void signal_handler(int /*sig*/, siginfo_t* info, void* uct) noexcept
 	const bool is_writing = err & 0x2;
 #elif defined(ARCH_ARM64)
 	const bool is_executing = uptr(info->si_addr) == uptr(RIP(context));
-	const u32 insn = is_executing ? 0 : *reinterpret_cast<u32*>(RIP(context));
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
 	// Current CPU state decoder is reverse-engineered from the linux kernel and may not work on other platforms.
 	const auto decoded_reason = aarch64::decode_fault_reason(context);
 	const bool is_writing = (decoded_reason == aarch64::fault_reason::data_write);
@@ -1947,6 +1946,7 @@ static void signal_handler(int /*sig*/, siginfo_t* info, void* uct) noexcept
 	}
 
 #else
+	const u32 insn = is_executing ? 0 : *reinterpret_cast<u32*>(RIP(context));
 	const bool is_writing = 
 		(insn & 0xbfff0000) == 0x0c000000 ||  // STR <Wt>, [<Xn>, #<imm>] (store word with immediate offset)
 		(insn & 0xbfe00000) == 0x0c800000 ||  // STP <Wt1>, <Wt2>, [<Xn>, #<imm>] (store pair of registers with immediate offset)

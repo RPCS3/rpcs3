@@ -53,6 +53,13 @@ namespace aarch64
         auto esr_ctx = find_EL1_esr_context(uctx);
         return esr_ctx ? esr_ctx->esr : 0;
     }
+#elif defined(__APPLE__)
+    u64 _read_ESR_EL1(const ucontext_t* uctx)
+    {
+        // Easy to read from mcontext
+        const auto darwin_ctx = reinterpret_cast<aarch64_darwin_mcontext64*>(uctx->uc_mcontext);
+        return darwin_ctx->es.ESR;
+    }
 #else
     u64 _read_ESR_EL1(const ucontext_t*)
     {
