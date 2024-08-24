@@ -585,13 +585,12 @@ void save_manager_dialog::SetIconSize(int size)
 {
 	m_icon_size = QSize(size, size * 176 / 320);
 	UpdateIcons();
-	m_gui_settings->SetValue(gui::sd_icon_size, size);
+	m_gui_settings->SetValue(gui::sd_icon_size, size, false); // Don't sync while sliding
 }
 
 void save_manager_dialog::closeEvent(QCloseEvent *event)
 {
 	m_gui_settings->SetValue(gui::sd_geometry, saveGeometry());
-	m_gui_settings->sync();
 
 	QDialog::closeEvent(event);
 }

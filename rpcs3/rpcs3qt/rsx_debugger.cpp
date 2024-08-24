@@ -265,9 +265,8 @@ void rsx_debugger::closeEvent(QCloseEvent* event)
 	for (int i = 0; i < m_tw_rsx->count(); i++)
 		states[QString::number(i)] = (static_cast<QTableWidget*>(m_tw_rsx->widget(i)))->horizontalHeader()->saveState();
 
-	m_gui_settings->SetValue(gui::rsx_states, states);
-	m_gui_settings->SetValue(gui::rsx_geometry, saveGeometry());
-	m_gui_settings->sync();
+	m_gui_settings->SetValue(gui::rsx_states, states, false);
+	m_gui_settings->SetValue(gui::rsx_geometry, saveGeometry(), true);
 
 	QDialog::closeEvent(event);
 }

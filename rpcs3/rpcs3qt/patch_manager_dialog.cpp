@@ -154,9 +154,8 @@ patch_manager_dialog::patch_manager_dialog(std::shared_ptr<gui_settings> gui_set
 void patch_manager_dialog::closeEvent(QCloseEvent* event)
 {
 	// Save gui settings
-	m_gui_settings->SetValue(gui::pm_geometry, saveGeometry());
-	m_gui_settings->SetValue(gui::pm_splitter_state, ui->splitter->saveState());
-	m_gui_settings->sync();
+	m_gui_settings->SetValue(gui::pm_geometry, saveGeometry(), false);
+	m_gui_settings->SetValue(gui::pm_splitter_state, ui->splitter->saveState(), true);
 
 	QDialog::closeEvent(event);
 }

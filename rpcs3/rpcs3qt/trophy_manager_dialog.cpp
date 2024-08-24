@@ -1300,11 +1300,10 @@ bool trophy_manager_dialog::eventFilter(QObject *object, QEvent *event)
 void trophy_manager_dialog::closeEvent(QCloseEvent *event)
 {
 	// Save gui settings
-	m_gui_settings->SetValue(gui::tr_geometry, saveGeometry());
-	m_gui_settings->SetValue(gui::tr_splitterState, m_splitter->saveState());
-	m_gui_settings->SetValue(gui::tr_games_state,  m_game_table->horizontalHeader()->saveState());
-	m_gui_settings->SetValue(gui::tr_trophy_state, m_trophy_table->horizontalHeader()->saveState());
-	m_gui_settings->sync();
+	m_gui_settings->SetValue(gui::tr_geometry, saveGeometry(), false);
+	m_gui_settings->SetValue(gui::tr_splitterState, m_splitter->saveState(), false);
+	m_gui_settings->SetValue(gui::tr_games_state,  m_game_table->horizontalHeader()->saveState(), false);
+	m_gui_settings->SetValue(gui::tr_trophy_state, m_trophy_table->horizontalHeader()->saveState(), true);
 
 	QWidget::closeEvent(event);
 }

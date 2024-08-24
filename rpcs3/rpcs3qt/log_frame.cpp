@@ -273,10 +273,10 @@ void log_frame::CreateAndConnectActions()
 	m_ansi_act_tty = new QAction(tr("ANSI Code (TTY)"), this);
 	m_ansi_act_tty->setCheckable(true);
 	connect(m_ansi_act_tty, &QAction::toggled, [this](bool checked)
-		{
-			m_gui_settings->SetValue(gui::l_ansi_code, checked);
-			m_ansi_tty = checked;
-		});
+	{
+		m_gui_settings->SetValue(gui::l_ansi_code, checked);
+		m_ansi_tty = checked;
+	});
 
 	m_tty_channel_acts = new QActionGroup(this);
 	// Special Channel: All

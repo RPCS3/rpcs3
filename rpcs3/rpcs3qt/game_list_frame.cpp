@@ -70,9 +70,9 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	m_old_layout_is_list = m_is_list_layout;
 
 	// Save factors for first setup
-	m_gui_settings->SetValue(gui::gl_iconColor, m_icon_color);
-	m_gui_settings->SetValue(gui::gl_marginFactor, m_margin_factor);
-	m_gui_settings->SetValue(gui::gl_textFactor, m_text_factor);
+	m_gui_settings->SetValue(gui::gl_iconColor, m_icon_color, false);
+	m_gui_settings->SetValue(gui::gl_marginFactor, m_margin_factor, false);
+	m_gui_settings->SetValue(gui::gl_textFactor, m_text_factor, true);
 
 	m_game_dock = new QMainWindow(this);
 	m_game_dock->setWindowFlags(Qt::Widget);
@@ -260,8 +260,8 @@ void game_list_frame::OnColClicked(int col)
 	}
 	m_sort_column = col;
 
-	m_gui_settings->SetValue(gui::gl_sortAsc, m_col_sort_order == Qt::AscendingOrder);
-	m_gui_settings->SetValue(gui::gl_sortCol, col);
+	m_gui_settings->SetValue(gui::gl_sortAsc, m_col_sort_order == Qt::AscendingOrder, false);
+	m_gui_settings->SetValue(gui::gl_sortCol, col, true);
 
 	m_game_list->sort(m_game_data.count(), m_sort_column, m_col_sort_order);
 }
@@ -573,17 +573,17 @@ void game_list_frame::OnParsingFinished()
 		// Read persistent_settings values
 		const QString note  = m_persistent_settings->GetValue(gui::persistent::notes, serial, "").toString();
 		const QString title = m_persistent_settings->GetValue(gui::persistent::titles, serial, "").toString().simplified();
-		QString last_played = m_persistent_settings->GetValue(gui::persistent::last_played, serial, "").toString();
-		quint64 playtime    = m_persistent_settings->GetValue(gui::persistent::playtime, serial, 0).toULongLong();
+		const QString last_played = m_persistent_settings->GetValue(gui::persistent::last_played, serial, "").toString();
+		const quint64 playtime    = m_persistent_settings->GetValue(gui::persistent::playtime, serial, 0).toULongLong();
 
 		// Set persistent_settings values if values exist
 		if (!last_played.isEmpty())
 		{
-			m_persistent_settings->SetLastPlayed(serial, last_played);
+			m_persistent_settings->SetLastPlayed(serial, last_played, false); // No need to sync here. It would slow down the refresh anyway.
 		}
 		if (playtime > 0)
 		{
-			m_persistent_settings->SetPlaytime(serial, playtime);
+			m_persistent_settings->SetPlaytime(serial, playtime, false); // No need to sync here. It would slow down the refresh anyway.
 		}
 
 		m_serials.insert(serial);
@@ -851,9 +851,9 @@ void game_list_frame::SaveSettings()
 	{
 		m_gui_settings->SetGamelistColVisibility(static_cast<gui::game_list_columns>(col), m_columnActs[col]->isChecked());
 	}
-	m_gui_settings->SetValue(gui::gl_sortCol, m_sort_column);
-	m_gui_settings->SetValue(gui::gl_sortAsc, m_col_sort_order == Qt::AscendingOrder);
-	m_gui_settings->SetValue(gui::gl_state, m_game_list->horizontalHeader()->saveState());
+	m_gui_settings->SetValue(gui::gl_sortCol, m_sort_column, false);
+	m_gui_settings->SetValue(gui::gl_sortAsc, m_col_sort_order == Qt::AscendingOrder, false);
+	m_gui_settings->SetValue(gui::gl_state, m_game_list->horizontalHeader()->saveState(), true);
 }
 
 void game_list_frame::doubleClickedSlot(QTableWidgetItem *item)
@@ -1627,9 +1627,8 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	{
 		if (QMessageBox::question(this, tr("Confirm Reset"), tr("Reset time played?\n\n%0 [%1]").arg(name).arg(serial)) == QMessageBox::Yes)
 		{
-			m_persistent_settings->SetPlaytime(serial, 0);
-			m_persistent_settings->SetLastPlayed(serial, 0);
-			m_persistent_settings->sync();
+			m_persistent_settings->SetPlaytime(serial, 0, false);
+			m_persistent_settings->SetLastPlayed(serial, 0, true);
 			Refresh();
 		}
 	});
@@ -2432,7 +2431,6 @@ void game_list_frame::FocusAndSelectFirstEntryIfNoneIs()
 void game_list_frame::closeEvent(QCloseEvent *event)
 {
 	SaveSettings();
-	m_gui_settings->sync();
 
 	QDockWidget::closeEvent(event);
 	Q_EMIT GameListFrameClosed();
