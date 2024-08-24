@@ -5170,7 +5170,17 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 		ensure(jit_mod.symbol_resolver);
 	}
 
+#ifdef __APPLE__
+	// Symbol resolver is in JIT mem, so we must enable execution
+	pthread_jit_write_protect_np(true);
+#endif
+
 	jit_mod.symbol_resolver(vm::g_exec_addr, info.segs[0].addr);
+
+#ifdef __APPLE__
+	// Symbol resolver is in JIT mem, so we must enable execution
+	pthread_jit_write_protect_np(false);
+#endif
 
 	// Find a BLR-only function in order to copy it to all BLRs (some games need it)
 	for (const auto& func : info.funcs)
