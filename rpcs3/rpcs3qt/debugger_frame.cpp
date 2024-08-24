@@ -248,7 +248,6 @@ bool debugger_frame::eventFilter(QObject* object, QEvent* event)
 void debugger_frame::closeEvent(QCloseEvent* event)
 {
 	SaveSettings();
-	m_gui_settings->sync();
 
 	QDockWidget::closeEvent(event);
 	Q_EMIT DebugFrameClosed();

@@ -1731,16 +1731,14 @@ void main_window::DecryptSPRXLibraries()
 void main_window::SaveWindowState() const
 {
 	// Save gui settings
-	m_gui_settings->SetValue(gui::mw_geometry, saveGeometry());
-	m_gui_settings->SetValue(gui::mw_windowState, saveState());
-	m_gui_settings->SetValue(gui::mw_mwState, m_mw->saveState());
+	m_gui_settings->SetValue(gui::mw_geometry, saveGeometry(), false);
+	m_gui_settings->SetValue(gui::mw_windowState, saveState(), false);
+	m_gui_settings->SetValue(gui::mw_mwState, m_mw->saveState(), true);
 
 	// Save column settings
 	m_game_list_frame->SaveSettings();
 	// Save splitter state
 	m_debugger_frame->SaveSettings();
-
-	m_gui_settings->sync();
 }
 
 void main_window::RepaintThumbnailIcons()

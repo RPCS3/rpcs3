@@ -40,13 +40,13 @@ public:
 
 public Q_SLOTS:
 	/** Remove entry */
-	void RemoveValue(const QString& key, const QString& name) const;
-	void RemoveValue(const gui_save& entry) const;
+	void RemoveValue(const QString& key, const QString& name, bool sync = true) const;
+	void RemoveValue(const gui_save& entry, bool sync = true) const;
 
 	/** Write value to entry */
-	void SetValue(const gui_save& entry, const QVariant& value) const;
-	void SetValue(const QString& key, const QVariant& value) const;
-	void SetValue(const QString& key, const QString& name, const QVariant& value) const;
+	void SetValue(const gui_save& entry, const QVariant& value, bool sync = true) const;
+	void SetValue(const QString& key, const QVariant& value, bool sync = true) const;
+	void SetValue(const QString& key, const QString& name, const QVariant& value, bool sync = true) const;
 
 protected:
 	static QString ComputeSettingsDir();

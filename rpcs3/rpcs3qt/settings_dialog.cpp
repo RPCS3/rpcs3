@@ -200,8 +200,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		Q_EMIT EmuSettingsApplied();
 
 		// Discord Settings can be saved regardless of WITH_DISCORD_RPC
-		m_gui_settings->SetValue(gui::m_richPresence, m_use_discord);
-		m_gui_settings->SetValue(gui::m_discordState, m_discord_state);
+		m_gui_settings->SetValue(gui::m_richPresence, m_use_discord, false);
+		m_gui_settings->SetValue(gui::m_discordState, m_discord_state, true);
 
 #ifdef WITH_DISCORD_RPC
 		if (m_use_discord != use_discord_old)
@@ -2471,7 +2471,6 @@ void settings_dialog::refresh_countrybox()
 void settings_dialog::closeEvent([[maybe_unused]] QCloseEvent* event)
 {
 	m_gui_settings->SetValue(gui::cfg_geometry, saveGeometry());
-	m_gui_settings->sync();
 }
 
 settings_dialog::~settings_dialog()

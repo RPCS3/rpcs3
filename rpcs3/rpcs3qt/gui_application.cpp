@@ -166,8 +166,6 @@ bool gui_application::Init()
 		{
 			m_gui_settings->SetValue(gui::m_currentStylesheet, "Darker Style by TheMitoSan");
 		}
-
-		m_gui_settings->sync();
 	}
 
 	// Check maxfiles
@@ -819,7 +817,7 @@ void gui_application::StartPlaytime(bool start_playtime = true)
 		return;
 	}
 
-	m_persistent_settings->SetLastPlayed(serial, QDateTime::currentDateTime().toString(gui::persistent::last_played_date_format));
+	m_persistent_settings->SetLastPlayed(serial, QDateTime::currentDateTime().toString(gui::persistent::last_played_date_format), true);
 	m_timer_playtime.start();
 	m_timer.start(10000); // Update every 10 seconds in case the emulation crashes
 }
@@ -840,8 +838,8 @@ void gui_application::UpdatePlaytime()
 		return;
 	}
 
-	m_persistent_settings->AddPlaytime(serial, m_timer_playtime.restart());
-	m_persistent_settings->SetLastPlayed(serial, QDateTime::currentDateTime().toString(gui::persistent::last_played_date_format));
+	m_persistent_settings->AddPlaytime(serial, m_timer_playtime.restart(), false);
+	m_persistent_settings->SetLastPlayed(serial, QDateTime::currentDateTime().toString(gui::persistent::last_played_date_format), true);
 }
 
 void gui_application::StopPlaytime()
@@ -858,8 +856,8 @@ void gui_application::StopPlaytime()
 		return;
 	}
 
-	m_persistent_settings->AddPlaytime(serial, m_timer_playtime.restart());
-	m_persistent_settings->SetLastPlayed(serial, QDateTime::currentDateTime().toString(gui::persistent::last_played_date_format));
+	m_persistent_settings->AddPlaytime(serial, m_timer_playtime.restart(), false);
+	m_persistent_settings->SetLastPlayed(serial, QDateTime::currentDateTime().toString(gui::persistent::last_played_date_format), true);
 	m_timer_playtime.invalidate();
 }
 

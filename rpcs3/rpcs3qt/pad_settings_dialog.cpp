@@ -233,7 +233,6 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 void pad_settings_dialog::closeEvent(QCloseEvent* event)
 {
 	m_gui_settings->SetValue(gui::pads_geometry, saveGeometry());
-	m_gui_settings->sync();
 
 	QDialog::closeEvent(event);
 }
