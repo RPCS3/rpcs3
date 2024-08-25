@@ -83,6 +83,13 @@ sys_net_error convert_error(bool is_blocking, int native_error, [[maybe_unused]]
 		ERROR_CASE(ECONNREFUSED);
 		ERROR_CASE(EHOSTDOWN);
 		ERROR_CASE(EHOSTUNREACH);
+#ifdef _WIN32
+		// Windows likes to be special with unique errors
+		case WSAENETRESET:
+			result = SYS_NET_ECONNRESET;
+			name = "WSAENETRESET";
+			break;
+#endif
 	default:
 		fmt::throw_exception("sys_net get_last_error(is_blocking=%d, native_error=%d): Unknown/illegal socket error", is_blocking, native_error);
 	}
