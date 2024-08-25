@@ -6,6 +6,7 @@
 
 namespace aarch64
 {
+#if !defined(__APPLE__)
     struct cpu_entry_t
     {
         u32 vendor;
@@ -194,4 +195,87 @@ namespace aarch64
         result += suffix;
         return result;
     }
+#else
+    // Sysctl wrappers. Maybe should be moved somewhere else later.
+    static std::pair<int, std::string> cli_exec(const std::string_view& command)
+    {
+        std::array<char, 128> buffer; // iobuf for stdout
+        std::string result;           // accumulated output
+        int exit_code = -1;
+
+        // Invoke command, stream result over pipe
+        FILE* pipe = ::popen(command.data(), "r");
+        if (!pipe)
+        {
+            return { exit_code, result };
+        }
+
+        // Accumulate stdout buffer
+        while (true)
+        {
+            memset(buffer.data(), 0, buffer.size());
+            if (!::fgets(buffer.data(), buffer.size(), pipe))
+            {
+                break;
+            }
+            result += buffer.data();
+        }
+
+        // Grab exit code. This is not really definitive but should be good enough to detect problems.
+        exit_code = ::pclose(pipe);
+
+        // Return the output and exit code
+        return { exit_code, result };
+    }
+
+    static std::string sysctl_s(const std::string_view& variable_name)
+    {
+        const auto command = fmt::format("sysctl -n %s", variable_name);
+        const auto [exit_code, result] = cli_exec(command);
+
+        if (exit_code != 0)
+        {
+            return {};
+        }
+
+        return fmt::trim(result, "\n\t ");
+    }
+
+    static u64 sysctl_u64(const std::string_view& variable_name)
+    {
+        const auto value = sysctl_s(variable_name);
+        if (value.empty())
+        {
+            return umax;
+        }
+        return std::stoull(value, nullptr, 16);
+    }
+
+    // We can get the brand name from sysctl directly
+    // Once we have windows implemented, we should probably separate the different OS-dependent bits to avoid clutter
+    std::string get_cpu_brand()
+    {
+        const auto brand = sysctl_s("machdep.cpu.brand_string");
+        if (brand.empty())
+        {
+            return "Unidentified CPU";
+        }
+
+        // Parse extra core information (P and E cores)
+        if (sysctl_u64("hw.nperflevels") < 2)
+        {
+            return brand;
+        }
+
+        u64 pcores = sysctl_u64("hw.perflevel0.physicalcpu");
+        u64 ecores = sysctl_u64("hw.perflevel1.physicalcpu");
+
+        if (sysctl_s("hw.perflevel0.name") == "Efficiency")
+        {
+            std::swap(ecores, pcores);
+        }
+
+        return fmt::format("%s (%lluP+%lluE)", brand, pcores, ecores);
+    }
+#endif
 }
