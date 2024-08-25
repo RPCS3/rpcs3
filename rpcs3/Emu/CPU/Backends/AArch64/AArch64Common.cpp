@@ -4,6 +4,10 @@
 #include <thread>
 #include <map>
 
+#if defined(__APPLE__)
+#include <sys/sysctl.h>
+#endif
+
 namespace aarch64
 {
 #if !defined(__APPLE__)
@@ -196,59 +200,35 @@ namespace aarch64
         return result;
     }
 #else
-    // Sysctl wrappers. Maybe should be moved somewhere else later.
-    static std::pair<int, std::string> cli_exec(const std::string_view& command)
-    {
-        std::array<char, 128> buffer; // iobuf for stdout
-        std::string result;           // accumulated output
-        int exit_code = -1;
-
-        // Invoke command, stream result over pipe
-        FILE* pipe = ::popen(command.data(), "r");
-        if (!pipe)
-        {
-            return { exit_code, result };
-        }
-
-        // Accumulate stdout buffer
-        while (true)
-        {
-            memset(buffer.data(), 0, buffer.size());
-            if (!::fgets(buffer.data(), buffer.size(), pipe))
-            {
-                break;
-            }
-            result += buffer.data();
-        }
-
-        // Grab exit code. This is not really definitive but should be good enough to detect problems.
-        exit_code = ::pclose(pipe);
-
-        // Return the output and exit code
-        return { exit_code, result };
-    }
-
     static std::string sysctl_s(const std::string_view& variable_name)
     {
-        const auto command = fmt::format("sysctl -n %s", variable_name);
-        const auto [exit_code, result] = cli_exec(command);
-
-        if (exit_code != 0)
+        // Determine required buffer size
+        size_t length = 0;
+        if (sysctlbyname(variable_name.data(), nullptr, &length, nullptr, 0) == -1)
         {
-            return {};
+            return "";
         }
 
-        return fmt::trim(result, "\n\t ");
+        // Allocate space for the variable.
+        std::vector<char> text(length + 1);
+        text[length] = 0;
+        if (sysctlbyname(variable_name.data(), text.data(), &length, nullptr, 0) == -1)
+        {
+            return "";
+        }
+
+        return text.data();
     }
 
     static u64 sysctl_u64(const std::string_view& variable_name)
     {
-        const auto value = sysctl_s(variable_name);
-        if (value.empty())
+        u64 value = 0;
+        size_t data_len = sizeof(value);
+        if (sysctlbyname(variable_name.data(), &value, &data_len, nullptr, 0) == -1)
         {
             return umax;
         }
-        return std::stoull(value, nullptr, 16);
+        return value;
     }
 
     // We can get the brand name from sysctl directly
