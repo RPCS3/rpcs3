@@ -4533,7 +4533,7 @@ bool spu_thread::process_mfc_cmd()
 						if ([&]() -> bool
 						{
 							// Validation that it is indeed GETLLAR spinning (large time window is intentional)
-							if (last_getllar_addr != addr || last_getllar != pc || last_getllar_gpr1 != gpr[1]._u32[3] || perf0.get() - last_gtsc >= 5'000 || (interrupts_enabled && ch_events.load().mask))
+							if (last_getllar_addr != addr || last_getllar_gpr1 != gpr[1]._u32[3] || perf0.get() - last_gtsc >= 5'000 || (interrupts_enabled && ch_events.load().mask))
 							{
 								// Seemingly not
 								getllar_busy_waiting_switch = umax;
@@ -4553,7 +4553,7 @@ bool spu_thread::process_mfc_cmd()
 								if (percent != 101)
 								{
 									// Predict whether or not to use operating system sleep based on history
-									auto& stats = getllar_wait_time[pc / 32];
+									auto& stats = getllar_wait_time[(addr % SPU_LS_SIZE) / 128];
 
 									const auto old_stats = stats;
 									std::array<u8, 4> new_stats{};
@@ -4613,7 +4613,7 @@ bool spu_thread::process_mfc_cmd()
 								if (percent != 101)
 								{
 									spu_log.trace("SPU wait for 0x%x", addr);
-									getllar_wait_time[pc / 32].front() = 1;
+									getllar_wait_time[(addr % SPU_LS_SIZE) / 128].front() = 1;
 									getllar_busy_waiting_switch = 0;
 								}
 							}
@@ -4636,7 +4636,7 @@ bool spu_thread::process_mfc_cmd()
 
 							if (getllar_busy_waiting_switch == 1)
 							{
-								getllar_wait_time[pc / 32].front() = 0;
+								getllar_wait_time[(addr % SPU_LS_SIZE) / 128].front() = 0;
 
 #if defined(ARCH_X64)
 								if (utils::has_um_wait())
@@ -4705,7 +4705,7 @@ bool spu_thread::process_mfc_cmd()
 								rtime = new_time;
 							}
 
-							u8& val = getllar_wait_time[pc / 32].front();
+							u8& val = getllar_wait_time[(addr % SPU_LS_SIZE) / 128].front();
 							val = static_cast<u8>(std::min<u32>(val + 1, u8{umax}));
 
 							// Reset perf

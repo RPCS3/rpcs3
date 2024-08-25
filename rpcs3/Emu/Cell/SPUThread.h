@@ -819,7 +819,7 @@ public:
 	u32 current_bp_pc = umax;
 	bool stop_flag_removal_protection = false;
 
-	std::array<std::array<u8, 4>, SPU_LS_SIZE / 32> getllar_wait_time{};
+	std::array<std::array<u8, 4>, SPU_LS_SIZE / 128> getllar_wait_time{};
  
 	void push_snr(u32 number, u32 value);
 	static void do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8* ls);
