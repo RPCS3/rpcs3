@@ -785,9 +785,9 @@ bool Emulator::BootRsxCapture(const std::string& path)
  
  	const std::string lower = fmt::to_lower(path);
 
-	if (lower.ends_with(".SAVESTAT.gz") || lower.ends_with(".SAVESTAT.zst"))
+	if (lower.ends_with(".gz") || lower.ends_with(".zst"))
 	{
-		if (lower.ends_with(".SAVESTAT.gz"))
+		if (lower.ends_with(".gz"))
 		{
 			load.m_file_handler = make_compressed_serialization_file_handler(std::move(in_file));
 		}
